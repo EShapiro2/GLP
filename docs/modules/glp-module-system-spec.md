@@ -1,7 +1,7 @@
 # GLP Module System — Language Specification
 
 **Status:** Draft  
-**Date:** 2026-02-22  
+**Date:** 2026-03-11  
 **Supersedes:** `archive/glp-module-system-v1-spec.md`, `archive/glp-modules-spec-future.md`
 
 ---
@@ -45,7 +45,7 @@ project/
     mediator.glp         — sees ui/self.glp and project/self.glp
 ```
 
-A `self.glp` file may contain only type definitions and no procedures. This is the natural place for shared protocol types (e.g., `AgentContent`, `Response`).
+A `self.glp` file may contain type definitions, procedure declarations, and procedure clauses.  Types and procedures defined in `self.glp` are visible to all modules in the subtree without qualification.  This is the natural place for shared protocol types (e.g., `AgentContent`, `Response`) and shared utility procedures.
 
 ### 2.3 Module Naming and Paths
 
@@ -392,4 +392,4 @@ Key differences:
 
 ---
 
-*Version 1.1 — 2026-02-22*
+*Version 1.2 — 2026-03-11*

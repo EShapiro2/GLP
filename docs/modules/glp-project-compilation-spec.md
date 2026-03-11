@@ -1,7 +1,7 @@
 # GLP Project Compilation — Specification
 
 **Status:** Draft  
-**Date:** 2026-02-23  
+**Date:** 2026-03-11  
 **Extends:** `glp-module-system-spec.md` Section 6
 
 ---
@@ -16,7 +16,7 @@ Project compilation transforms a hierarchy of modules into a single flat program
 
 A project root directory containing:
 - One or more `.glp` module files
-- Zero or more `self.glp` scope files
+- Zero or more `self.glp` files (defining shared types and procedures for their subtree)
 - Zero or more subdirectories (recursively)
 
 ---
@@ -27,7 +27,7 @@ A project root directory containing:
 
 Walk the project directory tree. Collect every `.glp` file. Parse each into a Module AST. Build the ancestor scope chain for each module (per `glp-module-system-spec.md` Section 3).
 
-`self.glp` files contribute only type definitions to the scope — they have no procedures to compile.
+`self.glp` files contribute both type definitions and procedure definitions to the ancestor scope.  Their procedures are compiled to bytecode and available to all modules in the subtree without qualification, just like their types.  If a `self.glp` file contains procedure clauses, they are compiled but not renamed (see §3.2).
 
 ### 3.2 Procedure Renaming
 
@@ -43,6 +43,8 @@ Every procedure in every module is prefixed with its module path:
 | `boot.glp` | `tee/3` | `boot:tee/3` |
 | `boot.glp` | `play1/0` | `boot:play1/0` |
 
+Procedures defined in `self.glp` files are not renamed — they act as the local prelude for their subtree.  If an inner `self.glp` defines a procedure with the same name and arity as an outer `self.glp`, the inner definition shadows the outer.
+
 The prefix is the module name (from `-module(name)` or filename), not the full path. If two modules at different levels have the same name, the full relative path is used (e.g., `ui/mediator:proc`).
 
 ### 3.3 Call Resolution
@@ -53,7 +55,7 @@ Every goal in every clause body is resolved:
 
 **Cross-module calls** — a call to `agent # agent(alice, ...)` inside `boot.glp` becomes `agent:agent(alice, ...)`.
 
-**Prelude calls** — calls to prelude procedures (`send`, `receive`, `new_channel`, etc.) are left unprefixed.
+**Ancestor self.glp calls** — calls to procedures defined in any ancestor `self.glp` file (including the root prelude) are left unprefixed.  A local call is resolved as a `self.glp` call if no local procedure with that name and arity exists in the module, but one exists in an ancestor `self.glp`.
 
 ### 3.4 Entry Points
 
@@ -75,7 +77,7 @@ After linking, `imported` and `exported` declarations are no longer needed — t
 
 A single Module AST containing:
 - All type definitions from all `self.glp` files and all modules (deduplicated by name, inner scopes shadow outer)
-- All procedures from all modules, renamed
+- All procedures from all modules (renamed) and all `self.glp` files (not renamed)
 - Entry point aliases for all modules' exported procedures
 
 This AST is fed into the existing compilation pipeline (partial evaluation → codegen).

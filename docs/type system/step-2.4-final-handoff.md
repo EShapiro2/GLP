@@ -1,7 +1,11 @@
 # Handoff: Complete Step 2.4 — Remove Monomorphic Types
 
 **Date**: 2026-03-11
-**State**: HEAD is `da11bfb4` (Batch J complete). 390/390 REPL tests pass. Monomorphic types still in `programs/self.glp`.
+**State**: HEAD at `9f1646f1` (handoff doc commit on top of `da11bfb4` Batch J). 390/390 REPL tests pass. Monomorphic types still in `programs/self.glp`.
+
+## IMPORTANT: Follow Standard Startup
+
+This handoff does NOT replace the mandatory startup sequence in `CLAUDE.md`. Follow `CLAUDE.md` steps 1–9 first (read CLAUDE.md, DISCIPLINE.md, typed-glp-manual.md, glp-cheat-sheet.md, then STOP AND WAIT). When the user directs you here, read this handoff and execute the plan below.
 
 ## What's Done
 

@@ -1,0 +1,163 @@
+%% self.glp — CSSG shared type vocabulary (v2)
+%%
+%% All protocol types for the Child-Safe Social Graph application.
+%% Defined once here, visible to all modules via ancestor scoping.
+%%
+%% v2 changes:
+%%   - Added parent(Constant) to OutputKey (child's channel to parent)
+
+-module(cssg).
+
+%% =============================================================================
+%% CORE PROTOCOL TYPES
+%% =============================================================================
+
+%% Friend messages (after connection established)
+FriendContent ::= response(Response)
+                ; text(Constant)
+                ; intro(Constant, IntroChannel)
+                ; child_intro(Constant, IntroChannel).
+FriendMsg     ::= msg(Constant, Constant, FriendContent).
+FriendStream  ::= [] ; [FriendMsg | FriendStream].
+FriendChannel ::= ch(FriendStream, FriendStream?).
+
+Response ::= accept(FriendChannel) ; no.
+Decision ::= yes ; no.
+
+%% Intro channel (handshake protocol)
+IntroContent ::= ack(Constant) ; nack.
+IntroStream  ::= [] ; [IntroContent | IntroStream].
+IntroChannel ::= ch(IntroStream, IntroStream?).
+
+%% Pending values — opaque values stored by mediator, forwarded to agent
+PendingValue ::= response(Response?) ; channel(IntroChannel) ; error.
+
+%% =============================================================================
+%% AGENT ↔ MEDIATOR INTERFACE
+%% =============================================================================
+
+%% Content carried inside agent-to-user messages
+AgentContent ::= befriend(Constant, Response?)
+               ; befriend_intro(Constant, Constant, IntroChannel)
+               ; child_befriend(Constant, Constant, IntroChannel)
+               ; connected(Constant)
+               ; rejected
+               ; rejected(Constant)
+               ; received(Constant, Constant).
+
+%% Content carried inside user-to-agent messages
+UserContent ::= connect(Constant)
+              ; decision(Decision, Constant, PendingValue)
+              ; send(Constant, Constant)
+              ; introduce(Constant, Constant)
+              ; accept_intro(Constant, PendingValue)
+              ; reject_intro(Constant, PendingValue)
+              ; child_introduce(Constant, Constant, Constant)
+              ; accept_child_intro(Constant, PendingValue)
+              ; reject_child_intro(Constant, PendingValue)
+              ; approve_child_intro(Constant, Constant, PendingValue)
+              ; response(Response).
+
+%% Precise message streams for agent ↔ mediator channel
+AgentToUserMsg        ::= msg(Constant, Constant, AgentContent).
+AgentToUserStream     ::= [] ; [AgentToUserMsg | AgentToUserStream].
+MediatorToAgentMsg    ::= msg(Constant, Constant, UserContent).
+MediatorToAgentStream ::= [] ; [MediatorToAgentMsg | MediatorToAgentStream].
+
+%% Precise channel between agent and mediator
+AgentChannel ::= ch(AgentToUserStream, MediatorToAgentStream?).
+
+%% =============================================================================
+%% AGENT INPUT TYPES
+%% =============================================================================
+
+%% Network content (2-arg cold-call: msg(Dest, Content))
+NetColdCall ::= intro(Constant, Response?).
+
+%% Network input stream (cold calls + friend messages)
+NetInMsg    ::= msg(Constant, NetColdCall)
+              ; msg(Constant, Constant, FriendContent).
+NetInStream ::= [] ; [NetInMsg | NetInStream].
+
+%% Intro result — written by intro_await_peer, injected into UserIn
+IntroResult ::= intro_result(Constant, IntroChannel) ; intro_rejected(Constant).
+
+%% Agent input stream (user messages + injected intro results)
+UserInMsg    ::= msg(Constant, Constant, UserContent)
+               ; intro_result(Constant, IntroChannel)
+               ; intro_rejected(Constant).
+UserInStream ::= [] ; [UserInMsg | UserInStream].
+
+%% =============================================================================
+%% AGENT OUTPUT TYPES
+%% =============================================================================
+
+%% Union of all content the agent sends on output streams
+OutputContent ::= befriend(Constant, Response?)
+                ; befriend_intro(Constant, Constant, IntroChannel)
+                ; child_befriend(Constant, Constant, IntroChannel)
+                ; connected(Constant)
+                ; rejected
+                ; rejected(Constant)
+                ; received(Constant, Constant)
+                ; response(Response)
+                ; text(Constant)
+                ; intro(Constant, IntroChannel)
+                ; child_intro(Constant, IntroChannel).
+OutputMsg     ::= msg(Constant, Constant, OutputContent)
+                ; msg(Constant, NetColdCall).
+OutputStream  ::= [] ; [OutputMsg | OutputStream].
+
+%% Output list — keys distinguish system channels, friends, children, and parent
+OutputKey   ::= '_user' ; '_net' ; friend(Constant) ; child(Constant) ; parent(Constant).
+OutputEntry ::= output(OutputKey, OutputStream?).
+OutputsList ::= [] ; [OutputEntry | OutputsList].
+
+%% =============================================================================
+%% MEDIATOR ↔ USER (UI) INTERFACE
+%% =============================================================================
+
+ReqId ::= req(Constant).
+
+%% User → Mediator commands
+UserCmd ::= decision(Decision, Constant, ReqId)
+          ; accept_intro(Constant, ReqId)
+          ; reject_intro(Constant, ReqId)
+          ; accept_child_intro(Constant, ReqId)
+          ; reject_child_intro(Constant, ReqId)
+          ; approve_child_intro(Constant, Constant, ReqId)
+          ; child_introduce(Constant, Constant, Constant)
+          ; connect(Constant)
+          ; send(Constant, Constant)
+          ; introduce(Constant, Constant).
+
+%% Mediator → User notifications
+UserNotify ::= befriend(Constant, ReqId)
+             ; befriend_intro(Constant, Constant, ReqId)
+             ; child_befriend(Constant, Constant, ReqId)
+             ; connected(Constant)
+             ; rejected
+             ; rejected(Constant)
+             ; received(Constant, Constant).
+
+UserCmdStream    ::= [] ; [UserCmd | UserCmdStream].
+UserNotifyStream ::= [] ; [UserNotify | UserNotifyStream].
+UserChannel      ::= ch(UserCmdStream, UserNotifyStream?).
+
+%% Actor's view of the user channel (reversed)
+ActorChannel ::= ch(UserNotifyStream, UserCmdStream?).
+
+%% =============================================================================
+%% MEDIATOR PENDING LIST
+%% =============================================================================
+
+PendingEntry ::= pending(ReqId, PendingValue).
+PendingList  ::= [] ; [PendingEntry | PendingList].
+
+%% =============================================================================
+%% NOTE ON HELPER PROCEDURES
+%% =============================================================================
+%% The static linker (project_linker.dart) skips self.glp during module
+%% discovery — it parses self.glp for type definitions only, not procedures.
+%% Therefore helper procedures must be defined in each module that uses them
+%% (agent.glp, child_agent.glp). This is a runtime limitation, not a convention.
