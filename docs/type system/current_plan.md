@@ -12,14 +12,12 @@ Started: 2026-03-07
 - [x] 7. Step 2.4: Parameterize self.glp procedures + remove monomorphic types
 - [x] 8. Step 2.5: Remove renamed procedure copies (send_agent, send_user, etc.)
 - [x] 9. Step 2.6: Archive book/ directory (done out of order, commit 1473fb31)
-- [ ] 10. **Step 2.7: Adopt tight typing discipline (documentation)** ← CURRENT
-- [ ] 11. Step 2.8: Final validation
+- [x] 10. Step 2.7: Adopt tight typing discipline (documentation)
+- [x] 11. Step 2.8: Final validation
 
 ## Context
 
-Step 2.5 complete. All renamed procedure copies (send_agent, send_user, merge_net_in, new_friend_channel) removed from 13 files across module mediators, typed_book, and test files. Calls replaced with generic send/merge/new_channel. typed-glp-manual.md Section 14 marked obsolete. 390/390 REPL tests pass.
-
-Next: Step 2.7 — adopt tight typing discipline (documentation).
+**Stage 2 complete.** All steps done. typed-glp-manual.md updated to v2.8 with tight typing discipline (Section 18), correct 2-arg Channel arity throughout, and Section 14 marked obsolete. Tight typing audit found no violations — all bare `_`/`_?` occurrences are in legitimate contexts (multiagent files, meta-interpreters, system builtins). 390/390 REPL tests pass.
 
 ## Master Plan
 
