@@ -1,10 +1,12 @@
 %% test_blocklace.glp - Unit tests for blocklace operations
 
 %% Type definitions
-Block ::= block(Number, _, Stream).
+Block ::= block(Number, X, Blocklace).
 Blocklace ::= [] ; [Block | Blocklace].
-Result ::= passed ; failed(_).
-ResultList ::= [] ; [_ | ResultList].
+Result ::= passed ; failed(X).
+TaggedResult ::= blocks_at_round(Result) ; nonempty(Result) ; max_round(Result)
+               ; conflict(Result) ; single_candidate(Result).
+ResultList ::= [] ; [TaggedResult | ResultList].
 
 %% ============================================
 %% Block Query Tests

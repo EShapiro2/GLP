@@ -2,10 +2,10 @@
 %% Single transaction, no conflicts, finalized in one wave
 
 %% Type definitions
-Block ::= block(Number, _, Stream).
+Block ::= block(Number, X, Blocklace).
 Blocklace ::= [] ; [Block | Blocklace].
-Result ::= passed ; failed(_, _).
-ParticipantList ::= [] ; [_ | ParticipantList].
+Result ::= passed ; failed(X, Y).
+ParticipantList ::= [] ; [Constant | ParticipantList].
 
 %% ============================================
 %% The Play

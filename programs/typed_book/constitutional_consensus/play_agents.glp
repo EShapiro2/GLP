@@ -2,13 +2,15 @@
 %% Three agents running the full consensus protocol
 
 %% Type definitions
-Block ::= block(Number, _, Stream).
+Block ::= block(Number, X, Blocklace).
 Blocklace ::= [] ; [Block | Blocklace].
 Mode ::= low ; high.
-Event ::= receive(Block) ; submit(_) ; advance(Number) ; timeout(Number).
-State ::= state(Blocklace, Mode, Stream, Stream, _).
-Result ::= passed ; failed(_).
-ResultList ::= [] ; [_ | ResultList].
+Event ::= receive(Block) ; submit(X) ; advance(Number) ; timeout(Number).
+ParticipantList ::= [] ; [Constant | ParticipantList].
+State ::= state(Blocklace, Mode, ParticipantList, Stream(X), Constant).
+Result ::= passed ; failed(X).
+TaggedResult ::= propose(Result) ; endorse(Result).
+ResultList ::= [] ; [TaggedResult | ResultList].
 
 %% ============================================
 %% Three-Agent Play
