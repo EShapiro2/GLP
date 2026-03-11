@@ -126,7 +126,7 @@ TypeEnvironment assembleTypeScope({
 
     // Build environment from this self.glp (without prelude check — ancestors
     // can define types with same names, shadowing is allowed)
-    final selfEnv = _buildScopeFromModule(expandedSelfModule);
+    final selfEnv = buildScopeFromModule(expandedSelfModule);
 
     // Merge: later entries overwrite earlier ones (shadowing).
     // Include this self.glp's templates in the environment for descendants.
@@ -139,7 +139,7 @@ TypeEnvironment assembleTypeScope({
   final expandedModule = expandParameterizedTypes(module,
       knownTypeNames: env.types.keys.toSet(),
       externalTemplates: env.typeTemplates);
-  final moduleEnv = _buildScopeFromModule(expandedModule);
+  final moduleEnv = buildScopeFromModule(expandedModule);
   env = env.merge(moduleEnv);
 
   return env;
@@ -151,7 +151,7 @@ TypeEnvironment assembleTypeScope({
 /// this does NOT check for predefined type redefinition (because shadowing
 /// ancestor types is allowed) and does NOT resolve aliases (that happens
 /// after all scopes are assembled).
-TypeEnvironment _buildScopeFromModule(ast.Module module) {
+TypeEnvironment buildScopeFromModule(ast.Module module) {
   final types = <String, TypeDef>{};
   final procedures = <String, ProcDecl>{};
   final paramProcDecls = <String, ProcDecl>{};

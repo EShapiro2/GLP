@@ -14,7 +14,7 @@ import 'lexer.dart';
 import 'parser.dart';
 import 'partial_evaluator.dart';
 import '../analysis/type_checker/type_ast.dart';
-import '../analysis/type_checker/type_environment_builder.dart';
+import '../analysis/type_checker/param_expansion.dart';
 import '../analysis/type_checker/type_checker.dart';
 import '../runtime/module_hierarchy.dart';
 
@@ -53,7 +53,8 @@ class LinkResult {
 ///
 /// `self.glp` files contribute both types AND procedures to the ancestor scope.
 /// Their procedures are compiled to bytecode and renamed like any other module.
-List<DiscoveredModule> discoverProject(String rootDir) {
+List<DiscoveredModule> discoverProject(String rootDir,
+    {String? rootSelfGlpPath}) {
   final root = Directory(rootDir);
   if (!root.existsSync()) {
     throw ArgumentError('Project root directory not found: $rootDir');
@@ -95,7 +96,8 @@ List<DiscoveredModule> discoverProject(String rootDir) {
       targetFile: file.absolute.path,
       rootDir: root.absolute.path,
     );
-    final ancestorScope = _buildAncestorScope(chain);
+    final ancestorScope =
+        _buildAncestorScope(chain, rootSelfGlpPath: rootSelfGlpPath);
 
     modules.add(DiscoveredModule(
       filePath: file.path,
@@ -426,25 +428,50 @@ String _moduleNameFromDirPath(String dirPath) {
 }
 
 /// Build ancestor type scope from self.glp chain.
-TypeEnvironment _buildAncestorScope(List<String> chain) {
-  var env = buildPreludeEnvironment();
+///
+/// If [rootSelfGlpPath] is provided, it is prepended to the chain as the
+/// outermost ancestor (the root self.glp, e.g. programs/self.glp).
+///
+/// Uses the same expansion pattern as assembleTypeScope in module_hierarchy.dart:
+/// each self.glp's parameterized types are expanded before merging, and templates
+/// are tracked for downstream modules.
+TypeEnvironment _buildAncestorScope(List<String> chain,
+    {String? rootSelfGlpPath}) {
+  var env = TypeEnvironment({}, {});
 
-  for (final selfGlpPath in chain) {
+  // Root self.glp is the outermost ancestor
+  final fullChain = [
+    if (rootSelfGlpPath != null) rootSelfGlpPath,
+    ...chain,
+  ];
+
+  for (final selfGlpPath in fullChain) {
     final source = File(selfGlpPath).readAsStringSync();
     final lexer = Lexer(source);
     final tokens = lexer.tokenize();
     final parser = Parser(tokens);
     final selfModule = parser.parseModule();
 
-    final types = <String, TypeDef>{};
-    for (final t in selfModule.typeDefs) {
-      types[t.name] = t;
+    // Extract templates before expansion removes them.
+    final selfTemplates = <String, TypeDef>{};
+    for (final td in selfModule.typeDefs) {
+      if (td.isParameterized) {
+        selfTemplates[td.name] = td;
+      }
     }
-    final procs = <String, ProcDecl>{};
-    for (final p in selfModule.procDeclarations) {
-      procs[p.qualifiedKey] = p;
-    }
-    env = env.merge(TypeEnvironment(types, procs));
+
+    // Expand parameterized types before building scope.
+    final expandedSelfModule = expandParameterizedTypes(selfModule,
+        knownTypeNames: env.types.keys.toSet(),
+        externalTemplates: env.typeTemplates);
+
+    // Build environment from this self.glp (shadowing allowed).
+    final selfEnv = buildScopeFromModule(expandedSelfModule);
+
+    // Merge: later entries shadow earlier ones. Include templates for descendants.
+    env = env.merge(TypeEnvironment(selfEnv.types, selfEnv.procedures,
+        paramProcDecls: selfEnv.paramProcDecls,
+        typeTemplates: selfTemplates));
   }
 
   return env;

@@ -250,7 +250,8 @@ class GlpEngine {
   /// [topModuleName] specifies the top module (for entry point aliases).
   ///   If null, auto-detects (the module with the most procedures).
   bool loadProject(String projectDir, {String? topModuleName}) {
-    final modules = discoverProject(projectDir);
+    final modules = discoverProject(projectDir,
+        rootSelfGlpPath: _rootSelfGlpPath);
     if (modules.isEmpty) {
       throw Exception('No modules found in $projectDir');
     }
