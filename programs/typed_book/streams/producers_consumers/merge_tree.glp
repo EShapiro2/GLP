@@ -15,7 +15,7 @@
 % of many streams efficiently.
 
 %% Type definitions
-ListOfLists ::= [] ; [Stream | ListOfLists].
+ListOfLists ::= [] ; [Stream(_) | ListOfLists].
 
 procedure merge_tree(ListOfLists?, Stream(X)).
 % Base case: empty list of streams

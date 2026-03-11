@@ -5,7 +5,7 @@
 %% T is the hole for new messages. Bounded size creates backpressure.
 
 %% Type definitions
-Buffer ::= Stream \ Stream?.
+Buffer ::= Stream(_) \ Stream(_)?.
 
 %% Unbounded buffer send/receive (standard stream communication)
 procedure send_unbounded(_?, Stream(X), Stream(X)?).

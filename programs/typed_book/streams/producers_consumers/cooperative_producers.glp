@@ -11,7 +11,7 @@
 
 %% Type definitions
 Done ::= done.
-Control ::= control(Stream, Control).
+Control ::= control(Stream(_), Control).
 
 procedure producer_a(Control).
 producer_a(control(Xs,Next?)) :-

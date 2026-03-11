@@ -6,10 +6,9 @@
 
 %% Type definitions
 CounterMsg ::= clear ; up ; down ; show(Number).
-CounterStream ::= [] ; [CounterMsg | CounterStream].
 
 %% Procedure type declaration
-procedure counter(CounterStream?, Number?).
+procedure counter(Stream(CounterMsg)?, Number?).
 
 counter([clear|S], _) :-
     counter(S?, 0).

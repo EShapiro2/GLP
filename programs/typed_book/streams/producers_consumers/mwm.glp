@@ -9,7 +9,7 @@
 
 %% Type definitions
 Done ::= done.
-StreamCmd ::= stream(Stream) ; merge(StreamOfStreams).
+StreamCmd ::= stream(Stream(_)) ; merge(StreamOfStreams).
 StreamOfStreams ::= [] ; [StreamCmd | StreamOfStreams].
 
 procedure mwm(StreamOfStreams?, Stream(X)).
