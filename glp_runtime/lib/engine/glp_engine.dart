@@ -121,7 +121,7 @@ class GlpEngine {
   GlpEngine({required String stdlibDir}) {
     // Derive root self.glp path from stdlib dir
     // e.g., '../programs/stdlib' → '../programs/self.glp'
-    _rootSelfGlpPath = stdlibDir.replaceAll('/stdlib', '/self.glp');
+    _rootSelfGlpPath = File(stdlibDir.replaceAll('/stdlib', '/self.glp')).absolute.path;
 
     // Set prelude sources from programs/self.glp for PE and type checker
     final rootSelfFile = File(_rootSelfGlpPath);
