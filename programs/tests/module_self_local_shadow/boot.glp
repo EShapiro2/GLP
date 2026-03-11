@@ -1,0 +1,6 @@
+-module(boot).
+
+imported procedure worker#test_local(Result).
+
+exported procedure test_local_shadow(Result).
+test_local_shadow(R?) :- worker # test_local(R).

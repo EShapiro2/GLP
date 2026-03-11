@@ -1,0 +1,8 @@
+-module(boot).
+
+imported procedure inner#inner_tag(Tag).
+
+exported procedure test_shadow(Tag, Tag).
+test_shadow(OuterT?, InnerT?) :-
+    get_tag(OuterT),
+    inner # inner_tag(InnerT).

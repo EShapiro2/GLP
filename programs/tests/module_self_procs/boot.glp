@@ -1,0 +1,6 @@
+-module(boot).
+
+imported procedure worker#do_work(Integer?, Integer).
+
+exported procedure test_self_proc(Integer?, Integer).
+test_self_proc(X, Y?) :- worker # do_work(X?, Y).

@@ -1,0 +1,6 @@
+-module(localshadow).
+
+Result ::= from_self ; from_local.
+
+procedure helper(Result).
+helper(from_self).

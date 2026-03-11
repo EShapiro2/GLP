@@ -1,0 +1,4 @@
+-module(worker).
+
+exported procedure test(Integer?, Integer).
+test(X, Y?) :- bad_proc(X?, Y).

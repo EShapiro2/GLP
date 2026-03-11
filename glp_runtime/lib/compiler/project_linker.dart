@@ -24,12 +24,14 @@ class DiscoveredModule {
   final String moduleName;
   final Module ast;
   final TypeEnvironment ancestorScope;
+  final bool isSelfGlp;
 
   DiscoveredModule({
     required this.filePath,
     required this.moduleName,
     required this.ast,
     required this.ancestorScope,
+    this.isSelfGlp = false,
   });
 }
 
@@ -43,12 +45,14 @@ class LinkResult {
 
 /// Walk the project directory tree and discover all modules.
 ///
-/// For each `.glp` file (excluding `self.glp` and `boot_direct.glp`):
+/// For each `.glp` file (excluding `boot_direct.glp`):
 /// - Parse into Module AST
-/// - Extract module name (from `-module(M).` or filename)
+/// - Extract module name (from `-module(M).` or filename; for `self.glp` without
+///   `-module()`, derives name from parent directory)
 /// - Build ancestor type scope chain
 ///
-/// `self.glp` files are parsed for type definitions but produce no module.
+/// `self.glp` files contribute both types AND procedures to the ancestor scope.
+/// Their procedures are compiled to bytecode and renamed like any other module.
 List<DiscoveredModule> discoverProject(String rootDir) {
   final root = Directory(rootDir);
   if (!root.existsSync()) {
@@ -67,9 +71,6 @@ List<DiscoveredModule> discoverProject(String rootDir) {
   for (final file in glpFiles) {
     final filename = file.path.split(Platform.pathSeparator).last;
 
-    // Skip self.glp (type definitions only, no procedures)
-    if (filename == 'self.glp') continue;
-
     // Skip boot_direct.glp (copy of boot.glp with direct calls, not a module)
     if (filename == 'boot_direct.glp') continue;
 
@@ -83,8 +84,11 @@ List<DiscoveredModule> discoverProject(String rootDir) {
     final parser = Parser(tokens);
     final module = parser.parseModule();
 
-    // Extract module name
-    final moduleName = module.name ?? _moduleNameFromFilename(filename);
+    // Extract module name: for self.glp without -module(), derive from parent dir
+    final moduleName = module.name ??
+        (filename == 'self.glp'
+            ? _moduleNameFromDirPath(file.parent.path)
+            : _moduleNameFromFilename(filename));
 
     // Build ancestor scope chain
     final chain = discoverSelfChain(
@@ -98,6 +102,7 @@ List<DiscoveredModule> discoverProject(String rootDir) {
       moduleName: moduleName,
       ast: module,
       ancestorScope: ancestorScope,
+      isSelfGlp: filename == 'self.glp',
     ));
   }
 
@@ -155,11 +160,43 @@ LinkResult linkProject(List<DiscoveredModule> modules, String topModuleName) {
     registry[mod.moduleName] = sigs;
   }
 
+  // Build ancestor self.glp procedure map for each module.
+  // Maps module name → { sig → ancestorModuleName } (inner-most ancestor wins).
+  final selfGlpModules = modules.where((m) => m.isSelfGlp).toList();
+  final ancestorSelfProcs = <String, Map<String, String>>{};
+
+  for (final mod in modules) {
+    final modDir = File(mod.filePath).parent.absolute.path;
+    final procs = <String, String>{}; // sig → ancestorModuleName
+
+    // Walk self.glp modules from inner-most to outer-most.
+    // Inner-most wins (first entry in putIfAbsent).
+    // Sort by path length descending (longer path = more nested = inner).
+    final ancestors = selfGlpModules
+        .where((s) {
+          if (identical(s, mod)) return false; // skip self
+          final selfDir = File(s.filePath).parent.absolute.path;
+          return modDir.startsWith(selfDir);
+        })
+        .toList()
+      ..sort((a, b) => b.filePath.length.compareTo(a.filePath.length));
+
+    for (final selfMod in ancestors) {
+      for (final proc in selfMod.ast.procedures) {
+        final sig = '${proc.name}/${proc.arity}';
+        procs.putIfAbsent(sig, () => selfMod.moduleName);
+      }
+    }
+
+    ancestorSelfProcs[mod.moduleName] = procs;
+  }
+
   final allProcedures = <Procedure>[];
 
   // Process each module
   for (final mod in modules) {
     final localSigs = registry[mod.moduleName]!;
+    final modAncestorProcs = ancestorSelfProcs[mod.moduleName] ?? {};
 
     for (final proc in mod.ast.procedures) {
       final renamedName = '${mod.moduleName}:${proc.name}';
@@ -176,7 +213,8 @@ LinkResult linkProject(List<DiscoveredModule> modules, String topModuleName) {
 
         // Resolve calls in body
         final resolvedBody = clause.body
-            ?.map((g) => _resolveGoal(g, mod.moduleName, localSigs))
+            ?.map((g) =>
+                _resolveGoal(g, mod.moduleName, localSigs, modAncestorProcs))
             .toList();
 
         renamedClauses.add(Clause(
@@ -272,7 +310,10 @@ LinkResult linkProject(List<DiscoveredModule> modules, String topModuleName) {
 }
 
 /// Resolve a single goal in a clause body.
-Goal _resolveGoal(Goal goal, String moduleName, Set<String> localSigs) {
+///
+/// Resolution order: local procedure → ancestor self.glp chain → prelude/stdlib.
+Goal _resolveGoal(Goal goal, String moduleName, Set<String> localSigs,
+    Map<String, String> ancestorSelfProcs) {
   // RemoteGoal: M' # p(...) → M':p(...)
   if (goal is RemoteGoal) {
     final targetModule = goal.staticModuleName;
@@ -292,7 +333,7 @@ Goal _resolveGoal(Goal goal, String moduleName, Set<String> localSigs) {
   // SpawnGoal: resolve inner goal, keep wrapper
   if (goal is SpawnGoal) {
     final resolvedInner =
-        _resolveGoal(goal.innerGoal, moduleName, localSigs);
+        _resolveGoal(goal.innerGoal, moduleName, localSigs, ancestorSelfProcs);
     if (!identical(resolvedInner, goal.innerGoal)) {
       return SpawnGoal(resolvedInner, goal.agentId, goal.line, goal.column);
     }
@@ -304,6 +345,17 @@ Goal _resolveGoal(Goal goal, String moduleName, Set<String> localSigs) {
   if (localSigs.contains(sig)) {
     return Goal(
       '$moduleName:${goal.functor}',
+      goal.args,
+      goal.line,
+      goal.column,
+    );
+  }
+
+  // Check ancestor self.glp procedures
+  final ancestorModule = ancestorSelfProcs[sig];
+  if (ancestorModule != null) {
+    return Goal(
+      '$ancestorModule:${goal.functor}',
       goal.args,
       goal.line,
       goal.column,
@@ -365,6 +417,12 @@ String _moduleNameFromFilename(String filename) {
     return filename.substring(0, filename.length - 4);
   }
   return filename;
+}
+
+/// Extract module name from directory path (last component).
+String _moduleNameFromDirPath(String dirPath) {
+  final parts = dirPath.split(Platform.pathSeparator);
+  return parts.last;
 }
 
 /// Build ancestor type scope from self.glp chain.

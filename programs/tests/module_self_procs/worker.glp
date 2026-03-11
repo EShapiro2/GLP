@@ -1,0 +1,4 @@
+-module(worker).
+
+exported procedure do_work(Integer?, Integer).
+do_work(X, Y?) :- shared_double(X?, Y).

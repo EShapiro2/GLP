@@ -12,6 +12,7 @@
 #   F - CSSG Modules (modular play tests via project-directory loading)
 #   G - Social Graph Simulated UI Modules (project-directory loading)
 #   H - CSSN Modules (project-directory loading, plays 1-12)
+#   I - self.glp Procedure Tests (shared procs, shadowing, local shadow, type error)
 
 set -e
 
@@ -1314,6 +1315,64 @@ HEREDOC
 
 check "CSSN fplay12 succeeds" "succeeds\|suspended" "$h_fp12"
 check "CSSN fplay12 tagged output" "tagged(" "$h_fp12"
+
+echo ""
+
+# =============================================================================
+# Section I: self.glp Procedure Tests
+# =============================================================================
+echo "=== Section I: self.glp Procedure Tests ==="
+echo ""
+
+SELFPROC_TESTS="$GLP_DIR/programs/tests"
+
+# --- I1: self.glp shared procedure ---
+echo "--- I1: self.glp shared procedure ---"
+i1=$($DART run "$REPL" <<HEREDOC
+$SELFPROC_TESTS/module_self_procs
+test_self_proc(5, R).
+:quit
+HEREDOC
+2>&1)
+
+check "self.glp shared proc loads" "Loaded project" "$i1"
+check "self.glp shared proc result" "R = 10" "$i1"
+
+# --- I2: self.glp shadowing ---
+echo "--- I2: self.glp shadowing ---"
+i2=$($DART run "$REPL" <<HEREDOC
+$SELFPROC_TESTS/module_self_shadow
+test_shadow(X, Y).
+:quit
+HEREDOC
+2>&1)
+
+check "self.glp shadow loads" "Loaded project" "$i2"
+check "self.glp shadow outer" "X = outer" "$i2"
+check "self.glp shadow inner" "Y = inner" "$i2"
+
+# --- I3: Local shadows self.glp ---
+echo "--- I3: Local shadows self.glp ---"
+i3=$($DART run "$REPL" <<HEREDOC
+$SELFPROC_TESTS/module_self_local_shadow
+test_local_shadow(R).
+:quit
+HEREDOC
+2>&1)
+
+check "local shadow loads" "Loaded project" "$i3"
+check "local shadow result" "R = from_local" "$i3"
+
+# --- I4: Type error in self.glp (negative) ---
+echo "--- I4: Type error in self.glp (negative) ---"
+i4=$($DART run "$REPL" <<HEREDOC
+$SELFPROC_TESTS/module_self_type_error
+:quit
+HEREDOC
+2>&1)
+
+check "self.glp type error rejected" "Type checking failed\|type.*error\|Error" "$i4"
+check_not "self.glp type error not loaded" "Loaded project" "$i4"
 
 echo ""
 

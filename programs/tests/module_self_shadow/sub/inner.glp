@@ -1,0 +1,4 @@
+-module(inner).
+
+exported procedure inner_tag(Tag).
+inner_tag(T?) :- get_tag(T).

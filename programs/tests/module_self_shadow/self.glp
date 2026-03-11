@@ -1,0 +1,6 @@
+-module(shadow_root).
+
+Tag ::= outer ; inner.
+
+procedure get_tag(Tag).
+get_tag(outer).
