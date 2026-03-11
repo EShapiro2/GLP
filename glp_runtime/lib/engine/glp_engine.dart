@@ -119,9 +119,9 @@ class GlpEngine {
   /// [stdlibDir] is the path to the stdlib directory (e.g., '../programs/stdlib').
   /// Loading stdlib is not optional — it's part of engine initialization.
   GlpEngine({required String stdlibDir}) {
-    // Derive root self.glp path from stdlib dir
-    // e.g., '../programs/stdlib' → '../programs/self.glp'
-    _rootSelfGlpPath = File(stdlibDir.replaceAll('/stdlib', '/self.glp')).absolute.path;
+    // Derive root self.glp path from stdlib dir (caller must pass absolute path)
+    // e.g., '/abs/path/programs/stdlib' → '/abs/path/programs/self.glp'
+    _rootSelfGlpPath = stdlibDir.replaceAll('/stdlib', '/self.glp');
 
     // Set prelude sources from programs/self.glp for PE and type checker
     final rootSelfFile = File(_rootSelfGlpPath);
