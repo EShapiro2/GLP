@@ -310,10 +310,10 @@ agent(Id, UserIn, [msg(_, Id1, group_invite_child(GroupId, Child, Ch))|NetIn], O
     agent(Id?, UserIn?, NetIn?, Outs1?).
 
 %% Consent request from child — forward to parent user via mediator (v2)
-agent(Id, UserIn, [msg(Child, Id1, group_consent_req(GroupId, Consent))|NetIn], Outs) :-
+agent(Id, UserIn, [msg(Child, Id1, group_consent_req(GroupId, Consent?))|NetIn], Outs) :-
     Id? =?= Id1?, ground(Child?), ground(GroupId?) |
     lookup_send('_user', msg(agent, '_user',
-        child_group_consent(Child?, GroupId?, Consent?)), Outs?, Outs1),
+        child_group_consent(Child?, GroupId?, Consent)), Outs?, Outs1),
     agent(Id?, UserIn?, NetIn?, Outs1?).
 
 %% Group message from group channel — distribute to all members and notify user

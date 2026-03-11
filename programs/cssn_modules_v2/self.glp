@@ -164,7 +164,8 @@ OutputContent ::= befriend(Constant, Response?)
                 ; group_left(GroupId)
                 ; group_received(GroupId, Constant, Constant)
                 ; group_msg(GroupId, Constant, Constant)
-                ; group_consent_req(GroupId, Decision?).
+                ; group_consent_req(GroupId, Decision?)
+                ; child_group_consent(Constant, GroupId, Decision?).
 OutputMsg ::= msg(Constant, Constant, OutputContent)
             ; msg(Constant, NetColdCall).
 OutputStream ::= [] ; [OutputMsg | OutputStream].
