@@ -3,13 +3,13 @@
 Started: 2026-03-11
 
 ## Steps
-- [ ] 1. Pull main, run baseline tests (expect 399/399), commit baseline
-- [ ] 2. Rename `stdlibDir` → `rootSelfGlpPath` in glp_runtime core (files 1–5) ← CURRENT
-- [ ] 3. Run REPL tests — must be 399/399
-- [ ] 4. Commit core rename
-- [ ] 5. Rename in Flutter app (files 6–9) and test files
-- [ ] 6. Final REPL tests — 399/399
-- [ ] 7. Commit and push
+- [x] 1. Pull main, run baseline tests (expect 399/399), commit baseline
+- [x] 2. Rename `stdlibDir` → `rootSelfGlpPath` in glp_runtime core (files 1–5)
+- [x] 3. Run REPL tests — 399/399 ✓
+- [x] 4. Commit core rename
+- [x] 5. Rename in Flutter app (files 6–9 + main.dart) and test files
+- [x] 6. Final REPL tests — 399/399 ✓
+- [x] 7. Commit and push ← CURRENT
 
 ## Context
 

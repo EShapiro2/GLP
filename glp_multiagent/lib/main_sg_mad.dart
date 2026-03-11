@@ -26,8 +26,16 @@ const _glpFileNames = [
   'play_ui_madglp_boot.glp',
 ];
 
-/// Stdlib directory (repo-relative from glp_multiagent/).
-const _stdlibDir = '../programs/stdlib';
+/// Resolve absolute path to programs/self.glp.
+String _resolveRootSelfGlpPath() {
+  final candidate = File('../programs/self.glp').absolute.path;
+  if (File(candidate).existsSync()) return candidate;
+  const fallback = '/Users/udi/Grassroots/GLP/programs/self.glp';
+  if (File(fallback).existsSync()) return fallback;
+  return candidate;
+}
+
+final _rootSelfGlpPath = _resolveRootSelfGlpPath();
 
 /// GLP source directory (repo-relative from glp_multiagent/).
 const _glpDir = '../programs/typed_book/cssg';
@@ -261,7 +269,7 @@ class _SgMadScreenState extends State<SgMadScreen> {
       final initMsg = InitAgent(
         agentId: agentId,
         glpSources: sources,
-        stdlibDir: _stdlibDir,
+        rootSelfGlpPath: _rootSelfGlpPath,
         friends: [],
         replyPort: _replyPort.sendPort,
         goalLabel: 'agent_init_play/3',

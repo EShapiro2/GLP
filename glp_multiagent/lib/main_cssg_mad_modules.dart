@@ -29,8 +29,16 @@ const _projectDir = '../programs/cssg_modules';
 /// madGLP boot source — loaded on top of the linked project.
 const _bootFileName = 'mad_boot.glp';
 
-/// Stdlib directory (repo-relative from glp_multiagent/).
-const _stdlibDir = '../programs/stdlib';
+/// Resolve absolute path to programs/self.glp.
+String _resolveRootSelfGlpPath() {
+  final candidate = File('../programs/self.glp').absolute.path;
+  if (File(candidate).existsSync()) return candidate;
+  const fallback = '/Users/udi/Grassroots/GLP/programs/self.glp';
+  if (File(fallback).existsSync()) return fallback;
+  return candidate;
+}
+
+final _rootSelfGlpPath = _resolveRootSelfGlpPath();
 
 /// Tagged output regex: tagged(alice, cmd(connect(bob)))
 final _taggedRegex = RegExp(r'^tagged\((\w+), (cmd|notify)\((.+)\)\)$');
@@ -292,7 +300,7 @@ class _CssgMadModulesScreenState extends State<CssgMadModulesScreen> {
       final initMsg = InitAgent(
         agentId: config.agentId,
         glpSources: [bootSource],  // Only the madGLP boot source
-        stdlibDir: _stdlibDir,
+        rootSelfGlpPath: _rootSelfGlpPath,
         friends: [],
         replyPort: _replyPort.sendPort,
         goalLabel: config.goalLabel,

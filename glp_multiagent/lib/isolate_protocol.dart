@@ -47,7 +47,7 @@ sealed class ToAgentMsg {}
 class InitAgent extends ToAgentMsg {
   final String agentId;
   final List<String> glpSources;
-  final String stdlibDir;
+  final String rootSelfGlpPath;
   final List<String> friends;
   final SendPort replyPort;
 
@@ -70,7 +70,7 @@ class InitAgent extends ToAgentMsg {
   InitAgent({
     required this.agentId,
     required this.glpSources,
-    required this.stdlibDir,
+    required this.rootSelfGlpPath,
     required this.friends,
     required this.replyPort,
     this.goalLabel = 'agent_init/3',
@@ -179,7 +179,7 @@ Future<void> _runAgent(InitAgent init) async {
   final agent = AgentRuntime(
     agentId: agentId,
     glpSources: init.glpSources,
-    stdlibDir: init.stdlibDir,
+    rootSelfGlpPath: init.rootSelfGlpPath,
     friends: init.friends,
     goalLabel: init.goalLabel,
     extraArgs: init.extraArgs,
