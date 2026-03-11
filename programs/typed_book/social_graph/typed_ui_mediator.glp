@@ -19,9 +19,15 @@
 %% TYPE DEFINITIONS
 %% =============================================================================
 
-Response ::= accept(Channel) ; no.
+Response ::= accept(FriendChannel) ; no.
 Decision ::= yes ; no.
 ReqId    ::= req(Constant).
+
+%% Friend channel types (duplicated from typed_social_agent.glp)
+FriendContent ::= response(Response) ; text(Constant) ; intro(Constant, FriendChannel).
+FriendMsg     ::= msg(Constant, Constant, FriendContent).
+FriendStream  ::= [] ; [FriendMsg | FriendStream].
+FriendChannel ::= ch(FriendStream, FriendStream?).
 
 %% --- User channel messages (all ground, mediator-specific) ---
 
@@ -42,7 +48,7 @@ UserNotify  ::= befriend(Constant, ReqId)
               ; received(Constant, Constant).
 
 %% --- Pending entries ---
-PendingValue ::= response(Response?) ; channel(Channel?) ; error.
+PendingValue ::= response(Response?) ; channel(FriendChannel?) ; error.
 PendingEntry ::= pending(ReqId, PendingValue).
 PendingList  ::= [] ; [PendingEntry | PendingList].
 

@@ -155,9 +155,74 @@ PendingEntry ::= pending(ReqId, PendingValue).
 PendingList  ::= [] ; [PendingEntry | PendingList].
 
 %% =============================================================================
-%% NOTE ON HELPER PROCEDURES
+%% SHARED HELPER PROCEDURES
 %% =============================================================================
-%% The static linker (project_linker.dart) skips self.glp during module
-%% discovery — it parses self.glp for type definitions only, not procedures.
-%% Therefore helper procedures must be defined in each module that uses them
-%% (agent.glp, child_agent.glp). This is a runtime limitation, not a convention.
+%% Defined here, visible to all sibling modules via ancestor scoping.
+%% The linker resolves calls in agent.glp/child_agent.glp to these procedures.
+%%
+%% Note: merge, bind_response, handle_response remain in each module because
+%% merge uses Stream(X) and the type checker cannot verify that concrete stream
+%% types (NetInStream, etc.) are subtypes of the polymorphic Stream(X).
+
+%% =============================================================================
+%% LOOKUP_SEND
+%% =============================================================================
+
+procedure lookup_send(OutputKey?, OutputMsg?, OutputsList?, OutputsList).
+lookup_send(Key, Msg, Outs, Outs1?) :-
+    ground(Key?) |
+    lookup_send_step(Key?, Msg?, Outs?, Outs1).
+
+procedure lookup_send_step(OutputKey?, OutputMsg?, OutputsList?, OutputsList).
+lookup_send_step(Key, Msg, [output(K, [Msg?|Out1?])|Rest], [output(K?, Out1)|Rest?]) :-
+    Key? =?= K? | true.
+lookup_send_step(Key, Msg, [output(K, Out?)|Rest], [output(K?, Out)|Rest1?]) :-
+    otherwise |
+    lookup_send_step(Key?, Msg?, Rest?, Rest1).
+lookup_send_step(_, _, [], []).
+
+%% =============================================================================
+%% INJECT_MSG
+%% =============================================================================
+
+procedure inject_msg(Response?, Constant?, Constant?, UserInStream?, UserInStream).
+inject_msg(Resp, Target, Id, Ys, [msg(Target?, Id?, response(Resp?))|Ys?]) :-
+    known(Resp?) | true.
+inject_msg(Resp, Target, Id, [Y|Ys], [Y?|Ys1?]) :-
+    inject_msg(Resp?, Target?, Id?, Ys?, Ys1).
+
+%% =============================================================================
+%% ADD_OUTPUT / CLOSE_OUTPUTS
+%% =============================================================================
+
+procedure add_output(OutputKey?, OutputStream, OutputsList?, OutputsList).
+add_output(Key, Out?, Outs, [output(Key?, Out)|Outs?]).
+
+procedure close_outputs(OutputsList?).
+close_outputs([output(_, [])|Outs]) :- close_outputs(Outs?).
+close_outputs([]).
+
+%% =============================================================================
+%% INTRO_AWAIT_PEER
+%% =============================================================================
+
+procedure intro_await_peer(Constant?, IntroChannel?, IntroResult).
+
+intro_await_peer(Other, ch([ack(_)|ChIn], ChOut?),
+                 intro_result(Other?, ch(ChIn?, ChOut))).
+
+intro_await_peer(Other, ch([nack|_], []),
+                 intro_rejected(Other?)).
+
+%% =============================================================================
+%% INJECT_INTRO_RESULT
+%% =============================================================================
+
+procedure inject_intro_result(IntroResult?, UserInStream?, UserInStream).
+inject_intro_result(intro_result(Other, Ch), Ys, [intro_result(Other?, Ch?)|Ys?]) :-
+    ground(Other?) | true.
+inject_intro_result(intro_rejected(Other), Ys, [intro_rejected(Other?)|Ys?]) :-
+    ground(Other?) | true.
+inject_intro_result(Res, [Y|Ys], [Y?|Ys1?]) :-
+    inject_intro_result(Res?, Ys?, Ys1).
+

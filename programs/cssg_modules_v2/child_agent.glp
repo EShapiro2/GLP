@@ -1,8 +1,8 @@
 %% child_agent.glp — Child agent module (CSSG, befriending only)
 %%
 %% Exports: child_agent/5
-%% Types: from self.glp (ancestor scoping)
-%% All helpers: local (self.glp is types-only; see note in self.glp)
+%% Types and most helpers: from self.glp (ancestor scoping)
+%% merge: local (Stream(X) subtyping limitation)
 %%
 %% CSSG child_agent handles befriending via parent introductions and messaging.
 %% No groups, no consent.
@@ -11,7 +11,7 @@
 -mode(system).
 
 %% =============================================================================
-%% MERGE — local (Stream(X) not visible in self.glp procedure declarations)
+%% MERGE — local (Stream(X) cross-module subtyping not supported)
 %% =============================================================================
 
 procedure merge(Stream(X)?, Stream(X)?, Stream(X)).
@@ -19,58 +19,6 @@ merge([X|Xs], Ys, [X?|Zs?]) :- merge(Ys?, Xs?, Zs).
 merge(Xs, [Y|Ys], [Y?|Zs?]) :- merge(Xs?, Ys?, Zs).
 merge([], Ys, Ys?).
 merge(Xs, [], Xs?).
-
-%% =============================================================================
-%% LOOKUP_SEND
-%% =============================================================================
-
-procedure lookup_send(OutputKey?, OutputMsg?, OutputsList?, OutputsList).
-lookup_send(Key, Msg, Outs, Outs1?) :-
-    ground(Key?) |
-    lookup_send_step(Key?, Msg?, Outs?, Outs1).
-
-procedure lookup_send_step(OutputKey?, OutputMsg?, OutputsList?, OutputsList).
-lookup_send_step(Key, Msg, [output(K, [Msg?|Out1?])|Rest], [output(K?, Out1)|Rest?]) :-
-    Key? =?= K? | true.
-lookup_send_step(Key, Msg, [output(K, Out?)|Rest], [output(K?, Out)|Rest1?]) :-
-    otherwise |
-    lookup_send_step(Key?, Msg?, Rest?, Rest1).
-lookup_send_step(_, _, [], []).
-
-%% =============================================================================
-%% ADD_OUTPUT / CLOSE_OUTPUTS
-%% =============================================================================
-
-procedure add_output(OutputKey?, OutputStream, OutputsList?, OutputsList).
-add_output(Key, Out?, Outs, [output(Key?, Out)|Outs?]).
-
-procedure close_outputs(OutputsList?).
-close_outputs([output(_, [])|Outs]) :- close_outputs(Outs?).
-close_outputs([]).
-
-%% =============================================================================
-%% INTRO_AWAIT_PEER
-%% =============================================================================
-
-procedure intro_await_peer(Constant?, IntroChannel?, IntroResult).
-
-intro_await_peer(Other, ch([ack(_)|ChIn], ChOut?),
-                 intro_result(Other?, ch(ChIn?, ChOut))).
-
-intro_await_peer(Other, ch([nack|_], []),
-                 intro_rejected(Other?)).
-
-%% =============================================================================
-%% INJECT_INTRO_RESULT
-%% =============================================================================
-
-procedure inject_intro_result(IntroResult?, UserInStream?, UserInStream).
-inject_intro_result(intro_result(Other, Ch), Ys, [intro_result(Other?, Ch?)|Ys?]) :-
-    ground(Other?) | true.
-inject_intro_result(intro_rejected(Other), Ys, [intro_rejected(Other?)|Ys?]) :-
-    ground(Other?) | true.
-inject_intro_result(Res, [Y|Ys], [Y?|Ys1?]) :-
-    inject_intro_result(Res?, Ys?, Ys1).
 
 %% =============================================================================
 %% CHILD_AGENT/5 — Main loop

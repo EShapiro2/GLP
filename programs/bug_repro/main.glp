@@ -1,0 +1,4 @@
+%% Minimal module — calls echo from self.glp
+-module(main).
+procedure greet(Constant?, Constant).
+greet(X, Y) :- echo(X?, Y).

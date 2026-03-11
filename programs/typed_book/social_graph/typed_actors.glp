@@ -17,12 +17,18 @@
 %% Duplicated from typed_social_agent.glp because cross-file type
 %% references are not supported.
 
-Response ::= accept(Channel) ; no.
+Response ::= accept(FriendChannel) ; no.
 Decision ::= yes ; no.
-PendingValue ::= response(Response?) ; channel(Channel?) ; error.
+PendingValue ::= response(Response?) ; channel(FriendChannel?) ; error.
+
+%% Friend channel types (duplicated from typed_social_agent.glp)
+FriendContent ::= response(Response) ; text(Constant) ; intro(Constant, FriendChannel).
+FriendMsg     ::= msg(Constant, Constant, FriendContent).
+FriendStream  ::= [] ; [FriendMsg | FriendStream].
+FriendChannel ::= ch(FriendStream, FriendStream?).
 
 AgentContent ::= befriend(Constant, Response)
-               ; befriend_intro(Constant, Constant, Channel)
+               ; befriend_intro(Constant, Constant, FriendChannel)
                ; connected(Constant)
                ; rejected
                ; rejected(Constant)
