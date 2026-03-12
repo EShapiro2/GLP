@@ -262,11 +262,14 @@ class GlpEngine {
     // Auto-activate modules with exports for dynamic dispatch.
     // If the compiled program has _select/1, it means the module has exported
     // procedures and can serve goals via a GLP channel.
+    // Merge with stdlib so dispatched procedures can find :=/2 etc.
     if (program.labels.containsKey('_select/1')) {
+      final stdlib = _loadedPrograms['__root_self__'];
+      final moduleBytecode = stdlib != null ? program.merge(stdlib) : program;
       activateModule(
         rt: _runtime,
         serveBytecode: _serveBytecode,
-        moduleBytecode: program,
+        moduleBytecode: moduleBytecode,
         moduleName: moduleInfo.name,
       );
     }
@@ -346,6 +349,42 @@ class GlpEngine {
         error: e.toString(),
       );
     }
+  }
+
+  /// Activate a loaded module for dynamic dispatch.
+  ///
+  /// Creates a GLP channel, spawns serve(Module, ChannelReader?),
+  /// and registers the channel in rt.glpChannels.
+  /// The module must have been loaded via loadFile() or loadSource() first.
+  /// The module must have exported procedures (_select/1 in its bytecode).
+  ///
+  /// After activation, cross-module calls via Distribute/Transmit opcodes
+  /// route goals through the module's channel.
+  void activateDynamicModule(String moduleName) {
+    // Skip if already activated (loadSource auto-activates modules with exports)
+    if (_runtime.glpChannels.containsKey(moduleName)) {
+      return;
+    }
+
+    final moduleInfo = _loadedModules[moduleName];
+    if (moduleInfo == null) {
+      throw Exception('Module "$moduleName" not loaded');
+    }
+    final moduleProg = moduleInfo.program;
+
+    if (!moduleProg.labels.containsKey('_select/1')) {
+      throw Exception('Module "$moduleName" has no exported procedures');
+    }
+
+    // Merge with stdlib so dispatched procedures can find :=/2 etc.
+    final stdlib = _loadedPrograms['__root_self__'];
+    final moduleBytecode = stdlib != null ? moduleProg.merge(stdlib) : moduleProg;
+    activateModule(
+      rt: _runtime,
+      serveBytecode: _serveBytecode,
+      moduleBytecode: moduleBytecode,
+      moduleName: moduleName,
+    );
   }
 
   /// Enable madGLP mode for this engine.
@@ -598,8 +637,17 @@ class GlpEngine {
       name = _moduleNameFromFilename(filename);
     }
 
-    // Imports are no longer declared via -import(). Cross-module calls use Module # Goal.
+    // Extract imported module names from `imported procedure Module#Proc(...)` declarations.
+    // The order of unique module names determines the import index (1-based),
+    // matching the compiler's ImportTable.addImport() order.
     final imports = <String>[];
+    final importPattern = RegExp(r'imported\s+procedure\s+(\w+)#');
+    for (final match in importPattern.allMatches(source)) {
+      final moduleName = match.group(1)!;
+      if (!imports.contains(moduleName)) {
+        imports.add(moduleName);
+      }
+    }
 
     return ModuleInfo(name: name, program: program, imports: imports);
   }

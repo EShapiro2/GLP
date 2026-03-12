@@ -15,6 +15,7 @@
 #   I - self.glp Procedure Tests (shared procs, shadowing, local shadow, type error)
 #   J - CSSG v2 Modules (child_agent with parent(X) output keys)
 #   K - CSSN v2 Modules (child_agent with blocking consent)
+#   L - Dynamic Module Dispatch Tests (activate + M # goal)
 
 set -e
 
@@ -1523,6 +1524,56 @@ HEREDOC
 
 check "CSSN v2 fplay12 succeeds" "succeeds\|suspended" "$k_fp12"
 check "CSSN v2 fplay12 tagged output" "tagged(" "$k_fp12"
+
+echo ""
+
+# =============================================================================
+# Section L: Dynamic Module Dispatch Tests
+# =============================================================================
+echo "=== Section L: Dynamic Module Dispatch Tests ==="
+echo ""
+
+DD="$GLP_DIR/programs/tests/dynamic_dispatch"
+
+# --- L1: Activate module and dispatch double via client ---
+echo "--- L1: Dynamic dispatch double ---"
+l1=$($DART run "$REPL" <<HEREDOC
+$DD/math_service.glp
+:activate math_service
+$DD/dispatch_client.glp
+test_double(5, X).
+:quit
+HEREDOC
+2>&1)
+
+check "math_service activated" "Activated module" "$l1"
+check "test_double(5, X) = 10" "X = 10" "$l1"
+
+# --- L2: Triple dispatch ---
+echo "--- L2: Dynamic dispatch triple ---"
+l2=$($DART run "$REPL" <<HEREDOC
+$DD/math_service.glp
+:activate math_service
+$DD/dispatch_client.glp
+test_triple(4, X).
+:quit
+HEREDOC
+2>&1)
+
+check "test_triple(4, X) = 12" "X = 12" "$l2"
+
+# --- L3: Add_ten dispatch ---
+echo "--- L3: Dynamic dispatch add_ten ---"
+l3=$($DART run "$REPL" <<HEREDOC
+$DD/math_service.glp
+:activate math_service
+$DD/dispatch_client.glp
+test_add_ten(7, X).
+:quit
+HEREDOC
+2>&1)
+
+check "test_add_ten(7, X) = 17" "X = 17" "$l3"
 
 echo ""
 

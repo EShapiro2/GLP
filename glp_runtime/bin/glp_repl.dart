@@ -24,7 +24,7 @@ void main() async {
   print('Working directory: ${Directory.current.path}');
   print('');
   print('Input: filename.glp to load, or goal to execute');
-  print('Commands: :quit, :help, :trace, :debug, :limit');
+  print('Commands: :quit, :help, :trace, :debug, :limit, :activate');
   print('');
 
   // Resolve programs/self.glp relative to this script's location.
@@ -100,6 +100,22 @@ void main() async {
       }
       engine.maxCycles = limit;
       print('Goal reduction limit set to ${engine.maxCycles}');
+      continue;
+    }
+
+    if (trimmed.startsWith(':activate')) {
+      final parts = trimmed.split(RegExp(r'\s+'));
+      if (parts.length != 2) {
+        print('Usage: :activate <module_name>');
+        continue;
+      }
+      final moduleName = parts[1];
+      try {
+        engine.activateDynamicModule(moduleName);
+        print('Activated module: $moduleName');
+      } catch (e) {
+        print('Error activating $moduleName: $e');
+      }
       continue;
     }
 
@@ -229,6 +245,7 @@ void _printHelp() {
   print('  :debug, :d             Toggle DEBUG output');
   print('  :strict, :s            Toggle strict type checking (default: on)');
   print('  :limit <n>             Set goal reduction limit to <n>');
+  print('  :activate <module>     Activate module for dynamic dispatch');
   print('  :bytecode, :bc         Show loaded bytecode');
   print('');
   print('Type Checking:');

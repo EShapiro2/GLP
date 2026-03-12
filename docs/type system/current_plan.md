@@ -1,23 +1,29 @@
-# Current Plan: Dynamic Module Dispatch — Test & Debug
+# Current Plan: Dynamic Module Dispatch — REPL Integration
 
 Started: 2026-03-12
 
 ## Steps
-- [x] 1. Baseline tests (424/424)
-- [x] 2. Write Dart integration tests (test/dynamic_dispatch_test.dart) — 8 tests
-- [x] 3. Run compilation tests (Tests 1-3) — passed immediately
-- [x] 4. Run end-to-end dispatch test (Test 4) — found bug, fixed
-- [x] 5. Fix: _activate now dispatches directly to procedure (bypasses _select clause execution)
-- [ ] 6. Add REPL tests (Section J) ← CURRENT
-- [ ] 7. Update claude.md, final test suite, commit and push
+- [x] 1. Baseline tests (424/424), commit
+- [x] 2. Write Dart integration tests — 8 tests pass
+- [x] 3. Fix _activate bug (direct dispatch, bypass _select)
+- [x] 4. All Dart tests pass, 424 REPL tests pass
+- [x] 5. Add activateDynamicModule() to GlpEngine
+- [x] 6. Add :activate REPL command
+- [x] 7. Add REPL tests (Section L) — 4 tests, 428/428 total
+- [x] 8. Final test suite, commit and push
 
-## Bug Found & Fixed
+## Completed
 
-_activate previously routed goals through _select/1 clause execution. This failed for procedures with output parameters: _select's body call passed all args as readers, causing Reader x Reader failure when the target clause also had a reader at the output position. Fixed by having _activate extract functor/arity from the goal term and spawn the target procedure directly, preserving writer/reader polarity.
+All steps done. Dynamic module dispatch works end-to-end:
+- Dart integration tests: 8/8
+- REPL tests: 428/428 (including 4 new Section L tests)
+
+### Key fixes during REPL integration
+- **Module context**: Fixed `_extractModuleInfo` to extract imported module names from `imported procedure Module#Proc(...)` declarations. Without this, the Distribute opcode had no module context.
+- **Stdlib merge**: Module bytecode must be merged with stdlib (`__root_self__`) before activation, so dispatched procedures can find `:=/2` and other stdlib labels.
+- **Idempotent activation**: `activateDynamicModule()` skips if the module is already activated (loadSource auto-activates modules with exports).
 
 ## Context
 
-All 5 phases of dynamic dispatch are implemented and tested. 8 Dart integration tests pass (compilation, serve/2, end-to-end dispatch with output params, fallback). 424 REPL tests pass. 8 CSSG GLP dispatch tests pass.
-
-Full instructions: `docs/modules/dynamic-dispatch-claude-code-instructions.md`
-Test GLP files: `programs/tests/dynamic_dispatch/` (math_service.glp, private_only.glp, single_export.glp)
+Full instructions: `docs/modules/dynamic-dispatch-repl-instructions.md`
+Test GLP files: `programs/tests/dynamic_dispatch/` (math_service.glp, dispatch_client.glp)
