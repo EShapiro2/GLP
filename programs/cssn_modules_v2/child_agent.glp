@@ -153,6 +153,14 @@ child_agent(Id, ParentId, [msg('_user', Id1, leave_group(GroupId))|UserIn], NetI
     lookup_send('_user', msg(agent, '_user', group_left(GroupId?)), Outs2?, Outs3),
     child_agent(Id?, ParentId?, UserIn?, NetIn?, Outs3?).
 
+%% Child initiates unfriend
+child_agent(Id, ParentId, [msg('_user', Id1, unfriend_child(Target))|UserIn], NetIn, Outs) :-
+    Id? =?= Id1?, ground(Target?) |
+    lookup_send(friend(Target?), msg(Id?, Target?, unfriend), Outs?, Outs1),
+    close_output(friend(Target?), Outs1?, Outs2),
+    lookup_send('_user', msg(agent, '_user', unfriended(Target?)), Outs2?, Outs3),
+    child_agent(Id?, ParentId?, UserIn?, NetIn?, Outs3?).
+
 %% --- Injected intro results ---
 
 %% Intro result: peer acked — add friend
@@ -208,6 +216,14 @@ child_agent(Id, ParentId, UserIn, [msg(From, Id1, leave_group(GroupId))|NetIn], 
     lookup_send('_user', msg(agent, '_user', group_left(GroupId?)), Outs2?, Outs3),
     child_agent(Id?, ParentId?, UserIn?, NetIn?, Outs3?).
 
+%% Parent tells child to unfriend
+child_agent(Id, ParentId, UserIn, [msg(From, Id1, unfriend_child(Target))|NetIn], Outs) :-
+    Id? =?= Id1?, From? =?= ParentId?, ground(Target?) |
+    lookup_send(friend(Target?), msg(Id?, Target?, unfriend), Outs?, Outs1),
+    close_output(friend(Target?), Outs1?, Outs2),
+    lookup_send('_user', msg(agent, '_user', unfriended(Target?)), Outs2?, Outs3),
+    child_agent(Id?, ParentId?, UserIn?, NetIn?, Outs3?).
+
 %% --- Network messages from friends (otherwise) ---
 
 %% Friend sends text — notify UI
@@ -246,6 +262,13 @@ child_agent(Id, ParentId, UserIn, [msg(Member, _, group_leave(GroupId, Member1))
     ground(Id?), ground(GroupId?), ground(Member?), Member? =?= Member1? |
     close_output(group_member(GroupId?, Member?), Outs?, Outs1),
     child_agent(Id?, ParentId?, UserIn?, NetIn?, Outs1?).
+
+%% Receive unfriend from friend — close friend channel, notify UI
+child_agent(Id, ParentId, UserIn, [msg(From, Id1, unfriend)|NetIn], Outs) :-
+    Id? =?= Id1?, ground(From?) |
+    close_output(friend(From?), Outs?, Outs1),
+    lookup_send('_user', msg(agent, '_user', unfriended(From?)), Outs1?, Outs2),
+    child_agent(Id?, ParentId?, UserIn?, NetIn?, Outs2?).
 
 %% --- Termination ---
 

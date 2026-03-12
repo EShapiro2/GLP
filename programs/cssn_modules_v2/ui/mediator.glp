@@ -361,6 +361,29 @@ ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
     send(group_removed(GroupId?), UserCh?, UserCh1),
     ui_mediator(Id?, AgentCh1?, UserCh1?, Ps?, N?).
 
+%% --- Unfriend commands (v3) ---
+
+ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
+    receive(unfriend_child(Target), UserCh?, UserCh1),
+    ground(Id?), ground(Target?) |
+    send(msg('_user', Id?, unfriend_child(Target?)),
+         AgentCh?, AgentCh1),
+    ui_mediator(Id?, AgentCh1?, UserCh1?, Ps?, N?).
+
+ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
+    receive(unfriend_child_of(MyChild, Target), UserCh?, UserCh1),
+    ground(Id?), ground(MyChild?), ground(Target?) |
+    send(msg('_user', Id?, unfriend_child_of(MyChild?, Target?)),
+         AgentCh?, AgentCh1),
+    ui_mediator(Id?, AgentCh1?, UserCh1?, Ps?, N?).
+
+ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
+    receive(msg(agent, '_user', unfriended(Target)),
+            AgentCh?, AgentCh1),
+    ground(Target?) |
+    send(unfriended(Target?), UserCh?, UserCh1),
+    ui_mediator(Id?, AgentCh1?, UserCh1?, Ps?, N?).
+
 %% --- Termination ---
 
 ui_mediator(_, ch([], []), ch([], []), _, _).

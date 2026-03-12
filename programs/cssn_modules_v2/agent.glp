@@ -296,6 +296,14 @@ agent(Id, [msg('_user', Id1, reject_child_group(_, _, consent(no)))|UserIn],
     Id? =?= Id1? |
     agent(Id?, UserIn?, NetIn?, Outs?).
 
+%% --- Unfriend (v3) ---
+
+%% Parent initiates unfriend on behalf of child
+agent(Id, [msg('_user', Id1, unfriend_child_of(MyChild, Target))|UserIn], NetIn, Outs) :-
+    Id? =?= Id1?, ground(MyChild?), ground(Target?) |
+    lookup_send(child(MyChild?), msg(Id?, MyChild?, unfriend_child(Target?)), Outs?, Outs1),
+    agent(Id?, UserIn?, NetIn?, Outs1?).
+
 %% --- Network messages ---
 
 %% Cold-call from network
@@ -371,6 +379,13 @@ agent(Id, UserIn, [msg(_, Id1, group_removed(GroupId))|NetIn], Outs) :-
     Id? =?= Id1?, ground(GroupId?) |
     close_output(group(GroupId?), Outs?, Outs1),
     lookup_send('_user', msg(agent, '_user', group_removed(GroupId?)), Outs1?, Outs2),
+    agent(Id?, UserIn?, NetIn?, Outs2?).
+
+%% Receive unfriend from friend — close friend channel, notify UI
+agent(Id, UserIn, [msg(From, Id1, unfriend)|NetIn], Outs) :-
+    Id? =?= Id1?, ground(From?) |
+    close_output(friend(From?), Outs?, Outs1),
+    lookup_send('_user', msg(agent, '_user', unfriended(From?)), Outs1?, Outs2),
     agent(Id?, UserIn?, NetIn?, Outs2?).
 
 %% --- Termination ---

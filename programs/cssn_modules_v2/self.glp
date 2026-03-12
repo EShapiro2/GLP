@@ -25,7 +25,9 @@ FriendContent ::= response(Response)
                 ; group_consent_req(GroupId, Decision?)
                 ; group_leave(GroupId, Constant)
                 ; group_removed(GroupId)
-                ; leave_group(GroupId).
+                ; leave_group(GroupId)
+                ; unfriend
+                ; unfriend_child(Constant).
 FriendMsg     ::= msg(Constant, Constant, FriendContent).
 FriendStream  ::= [] ; [FriendMsg | FriendStream].
 FriendChannel ::= ch(FriendStream, FriendStream?).
@@ -74,7 +76,9 @@ UserContent ::= connect(Constant)
               ; leave_child_group(Constant, GroupId)
               ; remove_from_group(GroupId, Constant)
               ; approve_child_group(Constant, GroupId, PendingValue)
-              ; reject_child_group(Constant, GroupId, PendingValue).
+              ; reject_child_group(Constant, GroupId, PendingValue)
+              ; unfriend_child(Constant)
+              ; unfriend_child_of(Constant, Constant).
 
 %% Content carried inside agent-to-user messages (msg(agent, '_user', Content))
 AgentContent ::= befriend(Constant, Response?)
@@ -91,7 +95,8 @@ AgentContent ::= befriend(Constant, Response?)
                ; group_left(GroupId)
                ; group_removed(GroupId)
                ; group_received(GroupId, Constant, Constant)
-               ; child_group_consent(Constant, GroupId, Decision?).
+               ; child_group_consent(Constant, GroupId, Decision?)
+               ; unfriended(Constant).
 
 %% Precise message streams for agent <-> mediator channel
 AgentToUserMsg        ::= msg(Constant, Constant, AgentContent).
@@ -175,7 +180,10 @@ OutputContent ::= befriend(Constant, Response?)
                 ; child_group_consent(Constant, GroupId, Decision?)
                 ; group_leave(GroupId, Constant)
                 ; group_removed(GroupId)
-                ; leave_group(GroupId).
+                ; leave_group(GroupId)
+                ; unfriend
+                ; unfriend_child(Constant)
+                ; unfriended(Constant).
 OutputMsg ::= msg(Constant, Constant, OutputContent)
             ; msg(Constant, NetColdCall).
 OutputStream ::= [] ; [OutputMsg | OutputStream].
@@ -216,7 +224,9 @@ UserCmd ::= decision(Decision, Constant, ReqId)
           ; leave_child_group(Constant, GroupId)
           ; remove_from_group(GroupId, Constant)
           ; approve_child_group(Constant, GroupId, ReqId)
-          ; reject_child_group(Constant, GroupId, ReqId).
+          ; reject_child_group(Constant, GroupId, ReqId)
+          ; unfriend_child(Constant)
+          ; unfriend_child_of(Constant, Constant).
 
 %% Mediator -> User notifications
 UserNotify ::= befriend(Constant, ReqId)
@@ -233,7 +243,8 @@ UserNotify ::= befriend(Constant, ReqId)
              ; group_left(GroupId)
              ; group_removed(GroupId)
              ; group_received(GroupId, Constant, Constant)
-             ; child_group_consent(Constant, GroupId, ReqId).
+             ; child_group_consent(Constant, GroupId, ReqId)
+             ; unfriended(Constant).
 
 UserCmdStream    ::= [] ; [UserCmd | UserCmdStream].
 UserNotifyStream ::= [] ; [UserNotify | UserNotifyStream].
