@@ -654,11 +654,11 @@ New typed test programs go in `programs/tests/typed/`. All programs must have `p
 2. Tests should cover the main use cases of the feature
 3. This ensures the feature continues to work as the codebase evolves
 
-### Deferred: Dynamic RPC Testing
+### Dynamic Module Dispatch
 
-**Status**: Dynamic RPC (`M? # goal`) and `reduce/2` for guarded rules are currently broken.
-**Reason**: Module system needs revision to integrate with type system.
-**Action**: Frozen until module system revision. Do not attempt to fix these tests.
+**Status**: Dynamic dispatch works end-to-end. The `_activate` kernel dispatches goals directly to exported procedures (bypassing `_select/1` clause execution to preserve writer/reader polarity for output parameters).
+**Tests**: 8 Dart integration tests in `test/dynamic_dispatch_test.dart`, 8 CSSG GLP dispatch tests in `test/runtime/cssg_glp_dispatch_test.dart`.
+**Auto-activation**: Modules with exports are auto-activated when loaded via `loadSource`/`loadFile`.
 
 ### Test Troubleshooting
 
