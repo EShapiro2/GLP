@@ -805,14 +805,18 @@ String formatGroundTerm(Term term) {
 // MODULE DISPATCH KERNELS
 // ============================================================================
 
-/// '_activate'(Module?, Goal) — resolve Goal against a module's _select/1 table.
+/// '_activate'(Module?, Goal) — dispatch Goal directly to the exported procedure.
 ///
 /// Module? is a reader referencing a ModuleTerm (wrapping a BytecodeProgram).
-/// Goal is a term representing the remote procedure call (e.g., factorial(5, F)).
+/// Goal is a term representing the remote procedure call (e.g., double(5, F)).
 ///
-/// The kernel looks up _select/1 in the module's bytecode, creates a new goal
-/// _select(Goal) with that entry point, and enqueues it to run against the
-/// module's procedure table.
+/// The kernel extracts the functor and args from the Goal, looks up the
+/// procedure in the module's bytecode labels, and spawns it with the original
+/// args.  This direct dispatch preserves argument polarity (writer/reader),
+/// which is essential for output parameters.
+///
+/// If the procedure is not found, the goal silently succeeds (fallback
+/// behavior matching _select/1's otherwise clause).
 BodyKernelResult activateKernel(GlpRuntime rt, List<Object?> args) {
   if (args.length != 2) {
     print('[ABORT] _activate/2: expected 2 arguments, got ${args.length}');
@@ -832,25 +836,37 @@ BodyKernelResult activateKernel(GlpRuntime rt, List<Object?> args) {
     return BodyKernelResult.abort;
   }
 
-  // Look up _select/1 entry point in the module's bytecode
-  final selectPc = bytecode.labels['_select/1'];
-  if (selectPc == null) {
-    print('[ABORT] _activate/2: module "${moduleArg.name}" has no _select/1 entry point');
-    return BodyKernelResult.abort;
+  // Dereference the Goal term (second arg)
+  final goalArg = _deref(rt, args[1]);
+  if (goalArg is! StructTerm) {
+    // Not a structured goal — silently succeed (fallback)
+    return BodyKernelResult.success;
   }
 
-  // Get the Goal term (second arg) and store it on the heap
-  final goalArg = args[1];
-  final goalTerm = goalArg is Term ? goalArg : ConstTerm(goalArg);
-  final goalAddr = rt.heap.storeTermOnHeap(goalTerm);
+  // Extract functor/arity and look up the procedure directly
+  final functor = goalArg.functor;
+  final arity = goalArg.args.length;
+  final label = '$functor/$arity';
+  final entryPc = bytecode.labels[label];
 
-  // Create a new goal: _select(Goal) against the module's bytecode
-  // CallEnv arguments must be VarRefs pointing to heap cells
+  if (entryPc == null) {
+    // Procedure not found — silently succeed (fallback behavior)
+    return BodyKernelResult.success;
+  }
+
+  // Spawn the procedure with the goal's original arguments.
+  // Each arg is stored on the heap as a VarRef. For VarRef args (e.g.,
+  // unbound writers for output params), storeTermOnHeap returns the
+  // existing heap address, preserving writer/reader polarity.
+  final argSlots = <int, Term>{};
+  for (int i = 0; i < goalArg.args.length; i++) {
+    final addr = rt.heap.storeTermOnHeap(goalArg.args[i]);
+    argSlots[i] = VarRef(addr);
+  }
+
   final newGoalId = rt.nextGoalId++;
-  final env = CallEnv(args: {0: VarRef(goalAddr)});
+  final env = CallEnv(args: argSlots);
   rt.setGoalEnv(newGoalId, env);
-
-  // Use the BytecodeProgram itself as the program key
   rt.setGoalProgram(newGoalId, bytecode);
 
   // Ensure a BytecodeRunner exists for this program in rt.runners
@@ -859,7 +875,7 @@ BodyKernelResult activateKernel(GlpRuntime rt, List<Object?> args) {
   }
 
   // Enqueue the goal
-  rt.gq.enqueue(GoalRef(newGoalId, selectPc));
+  rt.gq.enqueue(GoalRef(newGoalId, entryPc));
 
   return BodyKernelResult.success;
 }
