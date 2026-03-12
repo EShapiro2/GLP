@@ -13,6 +13,8 @@
 #   G - Social Graph Simulated UI Modules (project-directory loading)
 #   H - CSSN Modules (project-directory loading, plays 1-12)
 #   I - self.glp Procedure Tests (shared procs, shadowing, local shadow, type error)
+#   J - CSSG v2 Modules (child_agent with parent(X) output keys)
+#   K - CSSN v2 Modules (child_agent with blocking consent)
 
 set -e
 
@@ -1373,6 +1375,154 @@ HEREDOC
 
 check "self.glp type error rejected" "Type checking failed\|type.*error\|Error" "$i4"
 check_not "self.glp type error not loaded" "Loaded project" "$i4"
+
+echo ""
+
+# =============================================================================
+# Section J: CSSG v2 Modules (child_agent with parent(X) output keys)
+# =============================================================================
+echo "=== Section J: CSSG v2 Modules ==="
+echo ""
+
+CSSG_V2="$GLP_DIR/programs/cssg_modules_v2"
+
+# Loading
+j_load=$($DART run "$REPL" <<HEREDOC
+$CSSG_V2
+:quit
+HEREDOC
+2>&1)
+
+check "CSSG v2 project loads" "Loaded project" "$j_load"
+check_not "CSSG v2 no type errors" "Type checking failed" "$j_load"
+
+# fplay4-7: child_agent plays
+echo "--- CSSG v2 child_agent plays (fplay4-fplay7) ---"
+
+j_fp4=$($DART run "$REPL" <<HEREDOC
+$CSSG_V2
+fplay4.
+:quit
+HEREDOC
+2>&1)
+
+check "CSSG v2 fplay4 succeeds" "succeeds\|suspended" "$j_fp4"
+check "CSSG v2 fplay4 carol connected dave" "tagged(carol.*connected(dave)" "$j_fp4"
+
+for play_num in 5 6 7; do
+    j_fpN=$($DART run "$REPL" <<HEREDOC
+$CSSG_V2
+fplay${play_num}.
+:quit
+HEREDOC
+2>&1)
+    check "CSSG v2 fplay${play_num} succeeds" "succeeds\|suspended" "$j_fpN"
+done
+
+echo ""
+
+# =============================================================================
+# Section K: CSSN v2 Modules (child_agent with blocking consent)
+# =============================================================================
+echo "=== Section K: CSSN v2 Modules ==="
+echo ""
+
+CSSN_V2="$GLP_DIR/programs/cssn_modules_v2"
+
+# Loading
+k_load=$($DART run "$REPL" <<HEREDOC
+$CSSN_V2
+:quit
+HEREDOC
+2>&1)
+
+check "CSSN v2 project loads" "Loaded project" "$k_load"
+check_not "CSSN v2 no type errors" "Type checking failed" "$k_load"
+
+# fplay1-3: Basic social graph (adult-only, unchanged)
+echo "--- CSSN v2 basic social graph (fplay1-fplay3) ---"
+
+for play_num in 1 2 3; do
+    k_fpN=$($DART run "$REPL" <<HEREDOC
+$CSSN_V2
+fplay${play_num}.
+:quit
+HEREDOC
+2>&1)
+    check "CSSN v2 fplay${play_num} succeeds" "succeeds\|suspended" "$k_fpN"
+done
+
+# fplay4-7: child_agent befriending
+echo "--- CSSN v2 child_agent befriending (fplay4-fplay7) ---"
+
+k_fp4=$($DART run "$REPL" <<HEREDOC
+$CSSN_V2
+fplay4.
+:quit
+HEREDOC
+2>&1)
+
+check "CSSN v2 fplay4 succeeds" "succeeds\|suspended" "$k_fp4"
+check "CSSN v2 fplay4 carol connected dave" "tagged(carol.*connected(dave)" "$k_fp4"
+
+for play_num in 5 6 7; do
+    k_fpN=$($DART run "$REPL" <<HEREDOC
+$CSSN_V2
+fplay${play_num}.
+:quit
+HEREDOC
+2>&1)
+    check "CSSN v2 fplay${play_num} succeeds" "succeeds\|suspended" "$k_fpN"
+done
+
+# fplay8-10: CSSN groups
+echo "--- CSSN v2 group plays (fplay8-fplay10) ---"
+
+k_fp8=$($DART run "$REPL" <<HEREDOC
+$CSSN_V2
+fplay8.
+:quit
+HEREDOC
+2>&1)
+
+check "CSSN v2 fplay8 succeeds" "succeeds\|suspended" "$k_fp8"
+check "CSSN v2 fplay8 group_joined" "tagged(alice.*group_joined" "$k_fp8"
+
+for play_num in 9 10; do
+    k_fpN=$($DART run "$REPL" <<HEREDOC
+$CSSN_V2
+fplay${play_num}.
+:quit
+HEREDOC
+2>&1)
+    check "CSSN v2 fplay${play_num} succeeds" "succeeds\|suspended" "$k_fpN"
+done
+
+# fplay11: child-managed group with blocking consent
+echo "--- CSSN v2 blocking consent play (fplay11) ---"
+
+k_fp11=$($DART run "$REPL" <<HEREDOC
+$CSSN_V2
+fplay11.
+:quit
+HEREDOC
+2>&1)
+
+check "CSSN v2 fplay11 succeeds" "succeeds\|suspended" "$k_fp11"
+check "CSSN v2 fplay11 tagged output" "tagged(" "$k_fp11"
+
+# fplay12: adult-managed group with children
+echo "--- CSSN v2 adult-managed group play (fplay12) ---"
+
+k_fp12=$($DART run "$REPL" <<HEREDOC
+$CSSN_V2
+fplay12.
+:quit
+HEREDOC
+2>&1)
+
+check "CSSN v2 fplay12 succeeds" "succeeds\|suspended" "$k_fp12"
+check "CSSN v2 fplay12 tagged output" "tagged(" "$k_fp12"
 
 echo ""
 

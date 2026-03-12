@@ -489,7 +489,7 @@ alice8(ch(In, [connect(bob)|Out?])) :-
 
 procedure alice8_wait_connected(UserNotifyStream?, UserCmdStream).
 alice8_wait_connected([connected(bob)|In],
-                      [create_group(book_club, clique)|Out?]) :-
+                      [create_group(book_club)|Out?]) :-
     alice8_wait_group_joined(In?, Out).
 alice8_wait_connected([_|In], Out?) :-
     otherwise | alice8_wait_connected(In?, Out).
@@ -497,8 +497,8 @@ alice8_wait_connected([], []).
 
 procedure alice8_wait_group_joined(UserNotifyStream?, UserCmdStream).
 alice8_wait_group_joined(
-        [group_joined(group_id(alice, book_club, clique))|In],
-        [invite_group(group_id(alice, book_club, clique), bob)|Out?]) :-
+        [group_joined(group_id(alice, book_club))|In],
+        [invite_group(group_id(alice, book_club), bob)|Out?]) :-
     alice8_wait_member_joined(In?, Out).
 alice8_wait_group_joined([_|In], Out?) :-
     otherwise | alice8_wait_group_joined(In?, Out).
@@ -506,7 +506,7 @@ alice8_wait_group_joined([], []).
 
 procedure alice8_wait_member_joined(UserNotifyStream?, UserCmdStream).
 alice8_wait_member_joined(
-        [group_joined_member(group_id(alice, book_club, clique), bob)|In],
+        [group_joined_member(group_id(alice, book_club), bob)|In],
         Out?) :-
     alice8_wait_bob_msg(In?, Out).
 alice8_wait_member_joined([_|In], Out?) :-
@@ -515,8 +515,8 @@ alice8_wait_member_joined([], []).
 
 procedure alice8_wait_bob_msg(UserNotifyStream?, UserCmdStream).
 alice8_wait_bob_msg(
-        [group_received(group_id(alice, book_club, clique), bob, 'Hello everyone')|_],
-        [send_group(group_id(alice, book_club, clique), 'Hi Bob')]).
+        [group_received(group_id(alice, book_club), bob, 'Hello everyone')|_],
+        [send_group(group_id(alice, book_club), 'Hi Bob')]).
 alice8_wait_bob_msg([_|In], Out?) :-
     otherwise | alice8_wait_bob_msg(In?, Out).
 alice8_wait_bob_msg([], []).
@@ -538,8 +538,8 @@ bob8_wait_connected([], []).
 
 procedure bob8_wait_group_invite(UserNotifyStream?, UserCmdStream).
 bob8_wait_group_invite(
-        [group_invite(group_id(alice, book_club, clique), ReqId)|In],
-        [accept_group(group_id(alice, book_club, clique), ReqId?)|Out?]) :-
+        [group_invite(group_id(alice, book_club), ReqId)|In],
+        [accept_group(group_id(alice, book_club), ReqId?)|Out?]) :-
     ground(ReqId?) |
     bob8_wait_group_joined(In?, Out).
 bob8_wait_group_invite([_|In], Out?) :-
@@ -548,8 +548,8 @@ bob8_wait_group_invite([], []).
 
 procedure bob8_wait_group_joined(UserNotifyStream?, UserCmdStream).
 bob8_wait_group_joined(
-        [group_joined(group_id(alice, book_club, clique))|In],
-        [send_group(group_id(alice, book_club, clique), 'Hello everyone')|Out?]) :-
+        [group_joined(group_id(alice, book_club))|In],
+        [send_group(group_id(alice, book_club), 'Hello everyone')|Out?]) :-
     bob8_wait_alice_reply(In?, Out).
 bob8_wait_group_joined([_|In], Out?) :-
     otherwise | bob8_wait_group_joined(In?, Out).
@@ -557,13 +557,13 @@ bob8_wait_group_joined([], []).
 
 procedure bob8_wait_alice_reply(UserNotifyStream?, UserCmdStream).
 bob8_wait_alice_reply(
-        [group_received(group_id(alice, book_club, clique), alice, 'Hi Bob')|_], []).
+        [group_received(group_id(alice, book_club), alice, 'Hi Bob')|_], []).
 bob8_wait_alice_reply([_|In], Out?) :-
     otherwise | bob8_wait_alice_reply(In?, Out).
 bob8_wait_alice_reply([], []).
 
 %% =============================================================================
-%% PLAY 9 — CSSN: Child joins star group with parental consent
+%% PLAY 9 — CSSN: Child joins adult-managed group with parental consent
 %% =============================================================================
 
 exported procedure alice9(ActorChannel?).
@@ -572,7 +572,7 @@ alice9(ch(In, [connect(bob)|Out?])) :-
 
 procedure alice9_wait_connected(UserNotifyStream?, UserCmdStream).
 alice9_wait_connected([connected(bob)|In],
-                      [create_group(study, star)|Out?]) :-
+                      [create_group(study)|Out?]) :-
     alice9_wait_group_joined(In?, Out).
 alice9_wait_connected([_|In], Out?) :-
     otherwise | alice9_wait_connected(In?, Out).
@@ -580,8 +580,8 @@ alice9_wait_connected([], []).
 
 procedure alice9_wait_group_joined(UserNotifyStream?, UserCmdStream).
 alice9_wait_group_joined(
-        [group_joined(group_id(alice, study, star))|In],
-        [invite_group(group_id(alice, study, star), bob)|Out?]) :-
+        [group_joined(group_id(alice, study))|In],
+        [invite_group(group_id(alice, study), bob)|Out?]) :-
     alice9_wait_bob_joined(In?, Out).
 alice9_wait_group_joined([_|In], Out?) :-
     otherwise | alice9_wait_group_joined(In?, Out).
@@ -589,8 +589,8 @@ alice9_wait_group_joined([], []).
 
 procedure alice9_wait_bob_joined(UserNotifyStream?, UserCmdStream).
 alice9_wait_bob_joined(
-        [group_joined_member(group_id(alice, study, star), bob)|In],
-        [invite_group(group_id(alice, study, star), dave, bob)|Out?]) :-
+        [group_joined_member(group_id(alice, study), bob)|In],
+        [invite_group(group_id(alice, study), dave, bob)|Out?]) :-
     alice9_wait_dave_joined(In?, Out).
 alice9_wait_bob_joined([_|In], Out?) :-
     otherwise | alice9_wait_bob_joined(In?, Out).
@@ -598,7 +598,7 @@ alice9_wait_bob_joined([], []).
 
 procedure alice9_wait_dave_joined(UserNotifyStream?, UserCmdStream).
 alice9_wait_dave_joined(
-        [group_joined_member(group_id(alice, study, star), dave)|In],
+        [group_joined_member(group_id(alice, study), dave)|In],
         Out?) :-
     alice9_wait_bob_msg(In?, Out).
 alice9_wait_dave_joined([_|In], Out?) :-
@@ -607,8 +607,8 @@ alice9_wait_dave_joined([], []).
 
 procedure alice9_wait_bob_msg(UserNotifyStream?, UserCmdStream).
 alice9_wait_bob_msg(
-        [group_received(group_id(alice, study, star), bob, 'Hello from Bob')|_],
-        [send_group(group_id(alice, study, star), 'Hi all from Alice')]).
+        [group_received(group_id(alice, study), bob, 'Hello from Bob')|_],
+        [send_group(group_id(alice, study), 'Hi all from Alice')]).
 alice9_wait_bob_msg([_|In], Out?) :-
     otherwise | alice9_wait_bob_msg(In?, Out).
 alice9_wait_bob_msg([], []).
@@ -630,8 +630,8 @@ bob9_wait_connected([], []).
 
 procedure bob9_wait_group_invite(UserNotifyStream?, UserCmdStream).
 bob9_wait_group_invite(
-        [group_invite(group_id(alice, study, star), ReqId)|In],
-        [accept_group(group_id(alice, study, star), ReqId?)|Out?]) :-
+        [group_invite(group_id(alice, study), ReqId)|In],
+        [accept_group(group_id(alice, study), ReqId?)|Out?]) :-
     ground(ReqId?) |
     bob9_wait_group_joined(In?, Out).
 bob9_wait_group_invite([_|In], Out?) :-
@@ -640,7 +640,7 @@ bob9_wait_group_invite([], []).
 
 procedure bob9_wait_group_joined(UserNotifyStream?, UserCmdStream).
 bob9_wait_group_joined(
-        [group_joined(group_id(alice, study, star))|In], Out?) :-
+        [group_joined(group_id(alice, study))|In], Out?) :-
     bob9_wait_child_invite(In?, Out).
 bob9_wait_group_joined([_|In], Out?) :-
     otherwise | bob9_wait_group_joined(In?, Out).
@@ -648,8 +648,8 @@ bob9_wait_group_joined([], []).
 
 procedure bob9_wait_child_invite(UserNotifyStream?, UserCmdStream).
 bob9_wait_child_invite(
-        [group_invite_child(group_id(alice, study, star), dave, ReqId)|In],
-        [approve_group(dave, group_id(alice, study, star), ReqId?)|Out?]) :-
+        [group_invite_child(group_id(alice, study), dave, ReqId)|In],
+        [approve_group(dave, group_id(alice, study), ReqId?)|Out?]) :-
     ground(ReqId?) |
     bob9_wait_dave_joined(In?, Out).
 bob9_wait_child_invite([_|In], Out?) :-
@@ -658,8 +658,8 @@ bob9_wait_child_invite([], []).
 
 procedure bob9_wait_dave_joined(UserNotifyStream?, UserCmdStream).
 bob9_wait_dave_joined(
-        [group_joined_member(group_id(alice, study, star), dave)|In],
-        [send_group(group_id(alice, study, star), 'Hello from Bob')|Out?]) :-
+        [group_joined_member(group_id(alice, study), dave)|In],
+        [send_group(group_id(alice, study), 'Hello from Bob')|Out?]) :-
     bob9_wait_alice_reply(In?, Out).
 bob9_wait_dave_joined([_|In], Out?) :-
     otherwise | bob9_wait_dave_joined(In?, Out).
@@ -667,14 +667,14 @@ bob9_wait_dave_joined([], []).
 
 procedure bob9_wait_alice_reply(UserNotifyStream?, UserCmdStream).
 bob9_wait_alice_reply(
-        [group_received(group_id(alice, study, star), alice, 'Hi all from Alice')|_], []).
+        [group_received(group_id(alice, study), alice, 'Hi all from Alice')|_], []).
 bob9_wait_alice_reply([_|In], Out?) :-
     otherwise | bob9_wait_alice_reply(In?, Out).
 bob9_wait_alice_reply([], []).
 
 exported procedure dave9(ActorChannel?).
-dave9(ch([group_invite(group_id(alice, study, star), ReqId)|In],
-         [accept_group(group_id(alice, study, star), ReqId?)|Out?])) :-
+dave9(ch([group_invite(group_id(alice, study), ReqId)|In],
+         [accept_group(group_id(alice, study), ReqId?)|Out?])) :-
     ground(ReqId?) |
     dave9_wait_group_joined(In?, Out).
 dave9(ch([_|In], Out?)) :-
@@ -682,7 +682,7 @@ dave9(ch([_|In], Out?)) :-
 
 procedure dave9_wait_group_joined(UserNotifyStream?, UserCmdStream).
 dave9_wait_group_joined(
-        [group_joined(group_id(alice, study, star))|In], Out?) :-
+        [group_joined(group_id(alice, study))|In], Out?) :-
     dave9_wait_bob_msg(In?, Out).
 dave9_wait_group_joined([_|In], Out?) :-
     otherwise | dave9_wait_group_joined(In?, Out).
@@ -690,7 +690,7 @@ dave9_wait_group_joined([], []).
 
 procedure dave9_wait_bob_msg(UserNotifyStream?, UserCmdStream).
 dave9_wait_bob_msg(
-        [group_received(group_id(alice, study, star), bob, 'Hello from Bob')|In],
+        [group_received(group_id(alice, study), bob, 'Hello from Bob')|In],
         Out?) :-
     dave9_wait_alice_msg(In?, Out).
 dave9_wait_bob_msg([_|In], Out?) :-
@@ -699,7 +699,7 @@ dave9_wait_bob_msg([], []).
 
 procedure dave9_wait_alice_msg(UserNotifyStream?, UserCmdStream).
 dave9_wait_alice_msg(
-        [group_received(group_id(alice, study, star), alice, 'Hi all from Alice')|_], []).
+        [group_received(group_id(alice, study), alice, 'Hi all from Alice')|_], []).
 dave9_wait_alice_msg([_|In], Out?) :-
     otherwise | dave9_wait_alice_msg(In?, Out).
 dave9_wait_alice_msg([], []).
@@ -714,7 +714,7 @@ alice10(ch(In, [connect(bob)|Out?])) :-
 
 procedure alice10_wait_connected(UserNotifyStream?, UserCmdStream).
 alice10_wait_connected([connected(bob)|In],
-                       [create_group(study, star)|Out?]) :-
+                       [create_group(study)|Out?]) :-
     alice10_wait_group_joined(In?, Out).
 alice10_wait_connected([_|In], Out?) :-
     otherwise | alice10_wait_connected(In?, Out).
@@ -722,8 +722,8 @@ alice10_wait_connected([], []).
 
 procedure alice10_wait_group_joined(UserNotifyStream?, UserCmdStream).
 alice10_wait_group_joined(
-        [group_joined(group_id(alice, study, star))|In],
-        [invite_group(group_id(alice, study, star), bob)|Out?]) :-
+        [group_joined(group_id(alice, study))|In],
+        [invite_group(group_id(alice, study), bob)|Out?]) :-
     alice10_wait_bob_joined(In?, Out).
 alice10_wait_group_joined([_|In], Out?) :-
     otherwise | alice10_wait_group_joined(In?, Out).
@@ -731,9 +731,9 @@ alice10_wait_group_joined([], []).
 
 procedure alice10_wait_bob_joined(UserNotifyStream?, UserCmdStream).
 alice10_wait_bob_joined(
-        [group_joined_member(group_id(alice, study, star), bob)|In],
-        [invite_group(group_id(alice, study, star), dave, bob),
-         send_group(group_id(alice, study, star), 'Hello Bob')|Out?]) :-
+        [group_joined_member(group_id(alice, study), bob)|In],
+        [invite_group(group_id(alice, study), dave, bob),
+         send_group(group_id(alice, study), 'Hello Bob')|Out?]) :-
     alice10_wait_bob_reply(In?, Out).
 alice10_wait_bob_joined([_|In], Out?) :-
     otherwise | alice10_wait_bob_joined(In?, Out).
@@ -741,7 +741,7 @@ alice10_wait_bob_joined([], []).
 
 procedure alice10_wait_bob_reply(UserNotifyStream?, UserCmdStream).
 alice10_wait_bob_reply(
-        [group_received(group_id(alice, study, star), bob, 'Hi Alice')|_], []).
+        [group_received(group_id(alice, study), bob, 'Hi Alice')|_], []).
 alice10_wait_bob_reply([_|In], Out?) :-
     otherwise | alice10_wait_bob_reply(In?, Out).
 alice10_wait_bob_reply([], []).
@@ -763,8 +763,8 @@ bob10_wait_connected([], []).
 
 procedure bob10_wait_group_invite(UserNotifyStream?, UserCmdStream).
 bob10_wait_group_invite(
-        [group_invite(group_id(alice, study, star), ReqId)|In],
-        [accept_group(group_id(alice, study, star), ReqId?)|Out?]) :-
+        [group_invite(group_id(alice, study), ReqId)|In],
+        [accept_group(group_id(alice, study), ReqId?)|Out?]) :-
     ground(ReqId?) |
     bob10_wait_group_joined(In?, Out).
 bob10_wait_group_invite([_|In], Out?) :-
@@ -773,7 +773,7 @@ bob10_wait_group_invite([], []).
 
 procedure bob10_wait_group_joined(UserNotifyStream?, UserCmdStream).
 bob10_wait_group_joined(
-        [group_joined(group_id(alice, study, star))|In], Out?) :-
+        [group_joined(group_id(alice, study))|In], Out?) :-
     bob10_wait_child_invite(In?, Out).
 bob10_wait_group_joined([_|In], Out?) :-
     otherwise | bob10_wait_group_joined(In?, Out).
@@ -781,8 +781,8 @@ bob10_wait_group_joined([], []).
 
 procedure bob10_wait_child_invite(UserNotifyStream?, UserCmdStream).
 bob10_wait_child_invite(
-        [group_invite_child(group_id(alice, study, star), dave, ReqId)|In],
-        [reject_group(group_id(alice, study, star), ReqId?)|Out?]) :-
+        [group_invite_child(group_id(alice, study), dave, ReqId)|In],
+        [reject_group(group_id(alice, study), ReqId?)|Out?]) :-
     ground(ReqId?) |
     bob10_wait_alice_msg(In?, Out).
 bob10_wait_child_invite([_|In], Out?) :-
@@ -791,8 +791,8 @@ bob10_wait_child_invite([], []).
 
 procedure bob10_wait_alice_msg(UserNotifyStream?, UserCmdStream).
 bob10_wait_alice_msg(
-        [group_received(group_id(alice, study, star), alice, 'Hello Bob')|_],
-        [send_group(group_id(alice, study, star), 'Hi Alice')]).
+        [group_received(group_id(alice, study), alice, 'Hello Bob')|_],
+        [send_group(group_id(alice, study), 'Hi Alice')]).
 bob10_wait_alice_msg([_|In], Out?) :-
     otherwise | bob10_wait_alice_msg(In?, Out).
 bob10_wait_alice_msg([], []).
@@ -859,8 +859,8 @@ bob11_wait_child_intro([], []).
 
 procedure bob11_wait_group_consent(UserNotifyStream?, UserCmdStream).
 bob11_wait_group_consent(
-    [child_group_consent(dave, group_id(carol, kids_chat, clique), ReqId)|_],
-    [approve_child_group(dave, group_id(carol, kids_chat, clique), ReqId?)]) :-
+    [child_group_consent(dave, group_id(carol, kids_chat), ReqId)|_],
+    [approve_child_group(dave, group_id(carol, kids_chat), ReqId?)]) :-
     ground(ReqId?) | true.
 bob11_wait_group_consent([_|In], Out?) :-
     otherwise | bob11_wait_group_consent(In?, Out).
@@ -929,8 +929,8 @@ charlie11_wait_carol_intro([], []).
 
 procedure charlie11_wait_group_consent(UserNotifyStream?, UserCmdStream).
 charlie11_wait_group_consent(
-    [child_group_consent(eve, group_id(carol, kids_chat, clique), ReqId)|_],
-    [approve_child_group(eve, group_id(carol, kids_chat, clique), ReqId?)]) :-
+    [child_group_consent(eve, group_id(carol, kids_chat), ReqId)|_],
+    [approve_child_group(eve, group_id(carol, kids_chat), ReqId?)]) :-
     ground(ReqId?) | true.
 charlie11_wait_group_consent([_|In], Out?) :-
     otherwise | charlie11_wait_group_consent(In?, Out).
@@ -1013,13 +1013,13 @@ carol11_wait_eve_connected([], []).
 
 procedure carol11_create_group(UserNotifyStream?, UserCmdStream).
 carol11_create_group(In,
-    [create_group(kids_chat, clique)|Out?]) :-
+    [create_group(kids_chat)|Out?]) :-
     carol11_wait_group_joined(In?, Out).
 
 procedure carol11_wait_group_joined(UserNotifyStream?, UserCmdStream).
 carol11_wait_group_joined(
-    [group_joined(group_id(carol, kids_chat, clique))|In],
-    [invite_group(group_id(carol, kids_chat, clique), dave)|Out?]) :-
+    [group_joined(group_id(carol, kids_chat))|In],
+    [invite_group(group_id(carol, kids_chat), dave)|Out?]) :-
     carol11_wait_dave_joined(In?, Out).
 carol11_wait_group_joined([_|In], Out?) :-
     otherwise | carol11_wait_group_joined(In?, Out).
@@ -1027,8 +1027,8 @@ carol11_wait_group_joined([], []).
 
 procedure carol11_wait_dave_joined(UserNotifyStream?, UserCmdStream).
 carol11_wait_dave_joined(
-    [group_joined_member(group_id(carol, kids_chat, clique), dave)|In],
-    [invite_group(group_id(carol, kids_chat, clique), eve)|Out?]) :-
+    [group_joined_member(group_id(carol, kids_chat), dave)|In],
+    [invite_group(group_id(carol, kids_chat), eve)|Out?]) :-
     carol11_wait_eve_joined(In?, Out).
 carol11_wait_dave_joined([_|In], Out?) :-
     otherwise | carol11_wait_dave_joined(In?, Out).
@@ -1036,8 +1036,8 @@ carol11_wait_dave_joined([], []).
 
 procedure carol11_wait_eve_joined(UserNotifyStream?, UserCmdStream).
 carol11_wait_eve_joined(
-    [group_joined_member(group_id(carol, kids_chat, clique), eve)|In],
-    [send_group(group_id(carol, kids_chat, clique), 'Just had the best ice cream ever!')|Out?]) :-
+    [group_joined_member(group_id(carol, kids_chat), eve)|In],
+    [send_group(group_id(carol, kids_chat), 'Just had the best ice cream ever!')|Out?]) :-
     carol11_wait_replies(In?, Out).
 carol11_wait_eve_joined([_|In], Out?) :-
     otherwise | carol11_wait_eve_joined(In?, Out).
@@ -1045,11 +1045,11 @@ carol11_wait_eve_joined([], []).
 
 procedure carol11_wait_replies(UserNotifyStream?, UserCmdStream).
 carol11_wait_replies(
-    [group_received(group_id(carol, kids_chat, clique), dave, 'Just had the best ice cream ever!')|In],
+    [group_received(group_id(carol, kids_chat), dave, 'Just had the best ice cream ever!')|In],
     Out?) :-
     carol11_wait_eve_reply(In?, Out).
 carol11_wait_replies(
-    [group_received(group_id(carol, kids_chat, clique), eve, 'Anyone want to play soccer after school?')|In],
+    [group_received(group_id(carol, kids_chat), eve, 'Anyone want to play soccer after school?')|In],
     Out?) :-
     carol11_wait_dave_reply(In?, Out).
 carol11_wait_replies([_|In], Out?) :-
@@ -1058,8 +1058,8 @@ carol11_wait_replies([], []).
 
 procedure carol11_wait_eve_reply(UserNotifyStream?, UserCmdStream).
 carol11_wait_eve_reply(
-    [group_received(group_id(carol, kids_chat, clique), eve, 'Anyone want to play soccer after school?')|In],
-    [send_group(group_id(carol, kids_chat, clique), 'Count me in! Chocolate or vanilla Dave?')|Out?]) :-
+    [group_received(group_id(carol, kids_chat), eve, 'Anyone want to play soccer after school?')|In],
+    [send_group(group_id(carol, kids_chat), 'Count me in! Chocolate or vanilla Dave?')|Out?]) :-
     carol11_wait_echo(In?, Out).
 carol11_wait_eve_reply([_|In], Out?) :-
     otherwise | carol11_wait_eve_reply(In?, Out).
@@ -1067,8 +1067,8 @@ carol11_wait_eve_reply([], []).
 
 procedure carol11_wait_dave_reply(UserNotifyStream?, UserCmdStream).
 carol11_wait_dave_reply(
-    [group_received(group_id(carol, kids_chat, clique), dave, 'Just had the best ice cream ever!')|In],
-    [send_group(group_id(carol, kids_chat, clique), 'Count me in! Chocolate or vanilla Dave?')|Out?]) :-
+    [group_received(group_id(carol, kids_chat), dave, 'Just had the best ice cream ever!')|In],
+    [send_group(group_id(carol, kids_chat), 'Count me in! Chocolate or vanilla Dave?')|Out?]) :-
     carol11_wait_echo(In?, Out).
 carol11_wait_dave_reply([_|In], Out?) :-
     otherwise | carol11_wait_dave_reply(In?, Out).
@@ -1076,7 +1076,7 @@ carol11_wait_dave_reply([], []).
 
 procedure carol11_wait_echo(UserNotifyStream?, UserCmdStream).
 carol11_wait_echo(
-    [group_received(group_id(carol, kids_chat, clique), carol, 'Count me in! Chocolate or vanilla Dave?')|_], []).
+    [group_received(group_id(carol, kids_chat), carol, 'Count me in! Chocolate or vanilla Dave?')|_], []).
 carol11_wait_echo([_|In], Out?) :-
     otherwise | carol11_wait_echo(In?, Out).
 carol11_wait_echo([], []).
@@ -1158,8 +1158,8 @@ dave11_wait_eve_connected([], []).
 
 procedure dave11_wait_group_invite(UserNotifyStream?, UserCmdStream).
 dave11_wait_group_invite(
-    [group_invite(group_id(carol, kids_chat, clique), ReqId)|In],
-    [accept_group(group_id(carol, kids_chat, clique), ReqId?)|Out?]) :-
+    [group_invite(group_id(carol, kids_chat), ReqId)|In],
+    [accept_group(group_id(carol, kids_chat), ReqId?)|Out?]) :-
     ground(ReqId?) |
     dave11_wait_group_joined(In?, Out).
 dave11_wait_group_invite([_|In], Out?) :-
@@ -1168,7 +1168,7 @@ dave11_wait_group_invite([], []).
 
 procedure dave11_wait_group_joined(UserNotifyStream?, UserCmdStream).
 dave11_wait_group_joined(
-    [group_joined(group_id(carol, kids_chat, clique))|In],
+    [group_joined(group_id(carol, kids_chat))|In],
     Out?) :-
     dave11_wait_carol_msg(In?, Out).
 dave11_wait_group_joined([_|In], Out?) :-
@@ -1177,8 +1177,8 @@ dave11_wait_group_joined([], []).
 
 procedure dave11_wait_carol_msg(UserNotifyStream?, UserCmdStream).
 dave11_wait_carol_msg(
-    [group_received(group_id(carol, kids_chat, clique), carol, 'Just had the best ice cream ever!')|In],
-    [send_group(group_id(carol, kids_chat, clique), 'Just had the best ice cream ever!')|Out?]) :-
+    [group_received(group_id(carol, kids_chat), carol, 'Just had the best ice cream ever!')|In],
+    [send_group(group_id(carol, kids_chat), 'Just had the best ice cream ever!')|Out?]) :-
     dave11_wait_carol_final(In?, Out).
 dave11_wait_carol_msg([_|In], Out?) :-
     otherwise | dave11_wait_carol_msg(In?, Out).
@@ -1186,7 +1186,7 @@ dave11_wait_carol_msg([], []).
 
 procedure dave11_wait_carol_final(UserNotifyStream?, UserCmdStream).
 dave11_wait_carol_final(
-    [group_received(group_id(carol, kids_chat, clique), carol, 'Count me in! Chocolate or vanilla Dave?')|_], []).
+    [group_received(group_id(carol, kids_chat), carol, 'Count me in! Chocolate or vanilla Dave?')|_], []).
 dave11_wait_carol_final([_|In], Out?) :-
     otherwise | dave11_wait_carol_final(In?, Out).
 dave11_wait_carol_final([], []).
@@ -1268,8 +1268,8 @@ eve11_wait_dave_connected([], []).
 
 procedure eve11_wait_group_invite(UserNotifyStream?, UserCmdStream).
 eve11_wait_group_invite(
-    [group_invite(group_id(carol, kids_chat, clique), ReqId)|In],
-    [accept_group(group_id(carol, kids_chat, clique), ReqId?)|Out?]) :-
+    [group_invite(group_id(carol, kids_chat), ReqId)|In],
+    [accept_group(group_id(carol, kids_chat), ReqId?)|Out?]) :-
     ground(ReqId?) |
     eve11_wait_group_joined(In?, Out).
 eve11_wait_group_invite([_|In], Out?) :-
@@ -1278,7 +1278,7 @@ eve11_wait_group_invite([], []).
 
 procedure eve11_wait_group_joined(UserNotifyStream?, UserCmdStream).
 eve11_wait_group_joined(
-    [group_joined(group_id(carol, kids_chat, clique))|In],
+    [group_joined(group_id(carol, kids_chat))|In],
     Out?) :-
     eve11_wait_carol_msg(In?, Out).
 eve11_wait_group_joined([_|In], Out?) :-
@@ -1287,8 +1287,8 @@ eve11_wait_group_joined([], []).
 
 procedure eve11_wait_carol_msg(UserNotifyStream?, UserCmdStream).
 eve11_wait_carol_msg(
-    [group_received(group_id(carol, kids_chat, clique), carol, 'Just had the best ice cream ever!')|In],
-    [send_group(group_id(carol, kids_chat, clique), 'Anyone want to play soccer after school?')|Out?]) :-
+    [group_received(group_id(carol, kids_chat), carol, 'Just had the best ice cream ever!')|In],
+    [send_group(group_id(carol, kids_chat), 'Anyone want to play soccer after school?')|Out?]) :-
     eve11_wait_carol_final(In?, Out).
 eve11_wait_carol_msg([_|In], Out?) :-
     otherwise | eve11_wait_carol_msg(In?, Out).
@@ -1296,7 +1296,7 @@ eve11_wait_carol_msg([], []).
 
 procedure eve11_wait_carol_final(UserNotifyStream?, UserCmdStream).
 eve11_wait_carol_final(
-    [group_received(group_id(carol, kids_chat, clique), carol, 'Count me in! Chocolate or vanilla Dave?')|_], []).
+    [group_received(group_id(carol, kids_chat), carol, 'Count me in! Chocolate or vanilla Dave?')|_], []).
 eve11_wait_carol_final([_|In], Out?) :-
     otherwise | eve11_wait_carol_final(In?, Out).
 eve11_wait_carol_final([], []).
@@ -1320,7 +1320,7 @@ alice12_wait_connected([], []).
 
 procedure alice12_wait_connected_charlie(UserNotifyStream?, UserCmdStream).
 alice12_wait_connected_charlie([connected(charlie)|In],
-                               [create_group(study, star)|Out?]) :-
+                               [create_group(study)|Out?]) :-
     alice12_wait_group_joined(In?, Out).
 alice12_wait_connected_charlie([_|In], Out?) :-
     otherwise | alice12_wait_connected_charlie(In?, Out).
@@ -1328,7 +1328,7 @@ alice12_wait_connected_charlie([], []).
 
 procedure alice12_wait_connected_bob(UserNotifyStream?, UserCmdStream).
 alice12_wait_connected_bob([connected(bob)|In],
-                           [create_group(study, star)|Out?]) :-
+                           [create_group(study)|Out?]) :-
     alice12_wait_group_joined(In?, Out).
 alice12_wait_connected_bob([_|In], Out?) :-
     otherwise | alice12_wait_connected_bob(In?, Out).
@@ -1336,8 +1336,8 @@ alice12_wait_connected_bob([], []).
 
 procedure alice12_wait_group_joined(UserNotifyStream?, UserCmdStream).
 alice12_wait_group_joined(
-        [group_joined(group_id(alice, study, star))|In],
-        [invite_group(group_id(alice, study, star), dave, bob)|Out?]) :-
+        [group_joined(group_id(alice, study))|In],
+        [invite_group(group_id(alice, study), dave, bob)|Out?]) :-
     alice12_wait_dave_joined(In?, Out).
 alice12_wait_group_joined([_|In], Out?) :-
     otherwise | alice12_wait_group_joined(In?, Out).
@@ -1345,8 +1345,8 @@ alice12_wait_group_joined([], []).
 
 procedure alice12_wait_dave_joined(UserNotifyStream?, UserCmdStream).
 alice12_wait_dave_joined(
-        [group_joined_member(group_id(alice, study, star), dave)|In],
-        [invite_group(group_id(alice, study, star), eve, charlie)|Out?]) :-
+        [group_joined_member(group_id(alice, study), dave)|In],
+        [invite_group(group_id(alice, study), eve, charlie)|Out?]) :-
     alice12_wait_eve_joined(In?, Out).
 alice12_wait_dave_joined([_|In], Out?) :-
     otherwise | alice12_wait_dave_joined(In?, Out).
@@ -1354,8 +1354,8 @@ alice12_wait_dave_joined([], []).
 
 procedure alice12_wait_eve_joined(UserNotifyStream?, UserCmdStream).
 alice12_wait_eve_joined(
-        [group_joined_member(group_id(alice, study, star), eve)|In],
-        [send_group(group_id(alice, study, star), 'Welcome to the study group!')|Out?]) :-
+        [group_joined_member(group_id(alice, study), eve)|In],
+        [send_group(group_id(alice, study), 'Welcome to the study group!')|Out?]) :-
     alice12_wait_replies(In?, Out).
 alice12_wait_eve_joined([_|In], Out?) :-
     otherwise | alice12_wait_eve_joined(In?, Out).
@@ -1363,11 +1363,11 @@ alice12_wait_eve_joined([], []).
 
 procedure alice12_wait_replies(UserNotifyStream?, UserCmdStream).
 alice12_wait_replies(
-        [group_received(group_id(alice, study, star), dave, 'Thanks Alice!')|In],
+        [group_received(group_id(alice, study), dave, 'Thanks Alice!')|In],
         Out?) :-
     alice12_wait_eve_reply(In?, Out).
 alice12_wait_replies(
-        [group_received(group_id(alice, study, star), eve, 'Excited to learn!')|In],
+        [group_received(group_id(alice, study), eve, 'Excited to learn!')|In],
         Out?) :-
     alice12_wait_dave_reply(In?, Out).
 alice12_wait_replies([_|In], Out?) :-
@@ -1376,14 +1376,14 @@ alice12_wait_replies([], []).
 
 procedure alice12_wait_eve_reply(UserNotifyStream?, UserCmdStream).
 alice12_wait_eve_reply(
-        [group_received(group_id(alice, study, star), eve, 'Excited to learn!')|_], []).
+        [group_received(group_id(alice, study), eve, 'Excited to learn!')|_], []).
 alice12_wait_eve_reply([_|In], Out?) :-
     otherwise | alice12_wait_eve_reply(In?, Out).
 alice12_wait_eve_reply([], []).
 
 procedure alice12_wait_dave_reply(UserNotifyStream?, UserCmdStream).
 alice12_wait_dave_reply(
-        [group_received(group_id(alice, study, star), dave, 'Thanks Alice!')|_], []).
+        [group_received(group_id(alice, study), dave, 'Thanks Alice!')|_], []).
 alice12_wait_dave_reply([_|In], Out?) :-
     otherwise | alice12_wait_dave_reply(In?, Out).
 alice12_wait_dave_reply([], []).
@@ -1405,8 +1405,8 @@ bob12_wait_connected([], []).
 
 procedure bob12_wait_child_invite(UserNotifyStream?, UserCmdStream).
 bob12_wait_child_invite(
-        [group_invite_child(group_id(alice, study, star), dave, ReqId)|_],
-        [approve_group(dave, group_id(alice, study, star), ReqId?)]) :-
+        [group_invite_child(group_id(alice, study), dave, ReqId)|_],
+        [approve_group(dave, group_id(alice, study), ReqId?)]) :-
     ground(ReqId?) | true.
 bob12_wait_child_invite([_|In], Out?) :-
     otherwise | bob12_wait_child_invite(In?, Out).
@@ -1429,16 +1429,16 @@ charlie12_wait_connected([], []).
 
 procedure charlie12_wait_child_invite(UserNotifyStream?, UserCmdStream).
 charlie12_wait_child_invite(
-        [group_invite_child(group_id(alice, study, star), eve, ReqId)|_],
-        [approve_group(eve, group_id(alice, study, star), ReqId?)]) :-
+        [group_invite_child(group_id(alice, study), eve, ReqId)|_],
+        [approve_group(eve, group_id(alice, study), ReqId?)]) :-
     ground(ReqId?) | true.
 charlie12_wait_child_invite([_|In], Out?) :-
     otherwise | charlie12_wait_child_invite(In?, Out).
 charlie12_wait_child_invite([], []).
 
 exported procedure dave12(ActorChannel?).
-dave12(ch([group_invite(group_id(alice, study, star), ReqId)|In],
-          [accept_group(group_id(alice, study, star), ReqId?)|Out?])) :-
+dave12(ch([group_invite(group_id(alice, study), ReqId)|In],
+          [accept_group(group_id(alice, study), ReqId?)|Out?])) :-
     ground(ReqId?) |
     dave12_wait_group_joined(In?, Out).
 dave12(ch([_|In], Out?)) :-
@@ -1446,7 +1446,7 @@ dave12(ch([_|In], Out?)) :-
 
 procedure dave12_wait_group_joined(UserNotifyStream?, UserCmdStream).
 dave12_wait_group_joined(
-        [group_joined(group_id(alice, study, star))|In], Out?) :-
+        [group_joined(group_id(alice, study))|In], Out?) :-
     dave12_wait_alice_msg(In?, Out).
 dave12_wait_group_joined([_|In], Out?) :-
     otherwise | dave12_wait_group_joined(In?, Out).
@@ -1454,8 +1454,8 @@ dave12_wait_group_joined([], []).
 
 procedure dave12_wait_alice_msg(UserNotifyStream?, UserCmdStream).
 dave12_wait_alice_msg(
-        [group_received(group_id(alice, study, star), alice, 'Welcome to the study group!')|In],
-        [send_group(group_id(alice, study, star), 'Thanks Alice!')|Out?]) :-
+        [group_received(group_id(alice, study), alice, 'Welcome to the study group!')|In],
+        [send_group(group_id(alice, study), 'Thanks Alice!')|Out?]) :-
     dave12_wait_eve_msg(In?, Out).
 dave12_wait_alice_msg([_|In], Out?) :-
     otherwise | dave12_wait_alice_msg(In?, Out).
@@ -1463,14 +1463,14 @@ dave12_wait_alice_msg([], []).
 
 procedure dave12_wait_eve_msg(UserNotifyStream?, UserCmdStream).
 dave12_wait_eve_msg(
-        [group_received(group_id(alice, study, star), eve, 'Excited to learn!')|_], []).
+        [group_received(group_id(alice, study), eve, 'Excited to learn!')|_], []).
 dave12_wait_eve_msg([_|In], Out?) :-
     otherwise | dave12_wait_eve_msg(In?, Out).
 dave12_wait_eve_msg([], []).
 
 exported procedure eve12(ActorChannel?).
-eve12(ch([group_invite(group_id(alice, study, star), ReqId)|In],
-         [accept_group(group_id(alice, study, star), ReqId?)|Out?])) :-
+eve12(ch([group_invite(group_id(alice, study), ReqId)|In],
+         [accept_group(group_id(alice, study), ReqId?)|Out?])) :-
     ground(ReqId?) |
     eve12_wait_group_joined(In?, Out).
 eve12(ch([_|In], Out?)) :-
@@ -1478,7 +1478,7 @@ eve12(ch([_|In], Out?)) :-
 
 procedure eve12_wait_group_joined(UserNotifyStream?, UserCmdStream).
 eve12_wait_group_joined(
-        [group_joined(group_id(alice, study, star))|In], Out?) :-
+        [group_joined(group_id(alice, study))|In], Out?) :-
     eve12_wait_alice_msg(In?, Out).
 eve12_wait_group_joined([_|In], Out?) :-
     otherwise | eve12_wait_group_joined(In?, Out).
@@ -1486,8 +1486,8 @@ eve12_wait_group_joined([], []).
 
 procedure eve12_wait_alice_msg(UserNotifyStream?, UserCmdStream).
 eve12_wait_alice_msg(
-        [group_received(group_id(alice, study, star), alice, 'Welcome to the study group!')|In],
-        [send_group(group_id(alice, study, star), 'Excited to learn!')|Out?]) :-
+        [group_received(group_id(alice, study), alice, 'Welcome to the study group!')|In],
+        [send_group(group_id(alice, study), 'Excited to learn!')|Out?]) :-
     eve12_wait_dave_msg(In?, Out).
 eve12_wait_alice_msg([_|In], Out?) :-
     otherwise | eve12_wait_alice_msg(In?, Out).
@@ -1495,7 +1495,7 @@ eve12_wait_alice_msg([], []).
 
 procedure eve12_wait_dave_msg(UserNotifyStream?, UserCmdStream).
 eve12_wait_dave_msg(
-        [group_received(group_id(alice, study, star), dave, 'Thanks Alice!')|_], []).
+        [group_received(group_id(alice, study), dave, 'Thanks Alice!')|_], []).
 eve12_wait_dave_msg([_|In], Out?) :-
     otherwise | eve12_wait_dave_msg(In?, Out).
 eve12_wait_dave_msg([], []).

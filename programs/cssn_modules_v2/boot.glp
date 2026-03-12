@@ -564,7 +564,7 @@ fplay8 :-
     send_to_user_tagged(bob, BobDispCmd?, BobDispNotify?).
 
 %% =============================================================================
-%% FPLAY9 — CSSN: Child joins star group (tagged output)
+%% FPLAY9 — CSSN: Child joins adult-managed group (tagged output)
 %% =============================================================================
 
 fplay9 :-

@@ -148,9 +148,19 @@ agent(Id, [msg(From, Id1, response(Resp))|UserIn], NetIn, Outs) :-
 
 %% --- CSSG: Child-safe social graph ---
 
-%% Parent initiates child introduction (fire and forget)
+%% Sibling case: parent introduces own children to each other (Friend =?= Id)
+agent(Id, [msg('_user', Id1, child_introduce(Child1, Friend, Child2))|UserIn], NetIn, Outs) :-
+    Id? =?= Id1?, Friend? =?= Id?,
+    ground(Child1?), ground(Child2?),
+    new_channel(C1Ch, C2Ch) |
+    lookup_send(child(Child1?), msg(Id?, Child1?, child_intro(Child2?, C1Ch?)), Outs?, Outs1),
+    lookup_send(child(Child2?), msg(Id?, Child2?, child_intro(Child1?, C2Ch?)), Outs1?, Outs2),
+    agent(Id?, UserIn?, NetIn?, Outs2?).
+
+%% Non-sibling case: parent introduces own child to friend's child (otherwise)
 agent(Id, [msg('_user', Id1, child_introduce(MyChild, Friend, FriendChild))|UserIn], NetIn, Outs) :-
     Id? =?= Id1?, ground(MyChild?), ground(Friend?), ground(FriendChild?),
+    otherwise,
     new_channel(C1Ch, C2Ch) |
     lookup_send(child(MyChild?), msg(Id?, MyChild?, child_intro(FriendChild?, C1Ch?)), Outs?, Outs1),
     lookup_send(friend(Friend?), msg(Id?, Friend?, child_intro(MyChild?, C2Ch?)), Outs1?, Outs2),
@@ -178,11 +188,11 @@ agent(Id, [msg('_user', Id1, approve_child_intro(OtherChild, MyChild, channel(Ch
 %% --- CSSN: Child-safe social networking (groups) ---
 
 %% User creates a group — creator sets up member-side write (no hub self-loop)
-agent(Id, [msg('_user', Id1, create_group(Name, Type))|UserIn], NetIn, Outs) :-
-    Id? =?= Id1?, ground(Name?), ground(Type?) |
-    setup_group_creator(group_id(Id?, Name?, Type?),
+agent(Id, [msg('_user', Id1, create_group(Name))|UserIn], NetIn, Outs) :-
+    Id? =?= Id1?, ground(Name?) |
+    setup_group_creator(group_id(Id?, Name?),
         Outs?, Outs1, NetIn?, NetIn1),
-    lookup_send('_user', msg(agent, '_user', group_joined(group_id(Id?, Name?, Type?))),
+    lookup_send('_user', msg(agent, '_user', group_joined(group_id(Id?, Name?))),
         Outs1?, Outs2),
     agent(Id?, UserIn?, NetIn1?, Outs2?).
 
@@ -246,6 +256,31 @@ agent(Id, [msg('_user', Id1, approve_group(Child, GroupId, group_channel(Ch)))|U
     Id? =?= Id1?, ground(GroupId?), ground(Child?) |
     lookup_send(child(Child?), msg(Id?, Child?, group_invite(GroupId?, Ch?)), Outs?, Outs1),
     agent(Id?, UserIn?, NetIn?, Outs1?).
+
+%% --- Leave group (v3) ---
+
+%% Member leaves group (own choice)
+agent(Id, [msg('_user', Id1, leave_group(GroupId))|UserIn], NetIn, Outs) :-
+    Id? =?= Id1?, ground(GroupId?) |
+    lookup_send_group(group(GroupId?),
+        msg(Id?, Id?, group_leave(GroupId?, Id?)), Outs?, Outs1),
+    close_output(group(GroupId?), Outs1?, Outs2),
+    lookup_send('_user', msg(agent, '_user', group_left(GroupId?)), Outs2?, Outs3),
+    agent(Id?, UserIn?, NetIn?, Outs3?).
+
+%% Parent tells child to leave group
+agent(Id, [msg('_user', Id1, leave_child_group(Child, GroupId))|UserIn], NetIn, Outs) :-
+    Id? =?= Id1?, ground(Child?), ground(GroupId?) |
+    lookup_send(child(Child?), msg(Id?, Child?, leave_group(GroupId?)), Outs?, Outs1),
+    agent(Id?, UserIn?, NetIn?, Outs1?).
+
+%% Creator removes member from group
+agent(Id, [msg('_user', Id1, remove_from_group(GroupId, Member))|UserIn], NetIn, Outs) :-
+    Id? =?= Id1?, ground(GroupId?), ground(Member?) |
+    lookup_send_group(group_member(GroupId?, Member?),
+        msg(Id?, Member?, group_removed(GroupId?)), Outs?, Outs1),
+    close_output(group_member(GroupId?, Member?), Outs1?, Outs2),
+    agent(Id?, UserIn?, NetIn?, Outs2?).
 
 %% --- Parent consent for child-managed groups (v2) ---
 
@@ -323,6 +358,19 @@ agent(Id, UserIn, [msg(_, _, group_msg(GroupId, Author, Text))|NetIn], Outs) :-
         msg(Author?, Author?, group_msg(GroupId?, Author?, Text?)), Outs?, Outs1),
     lookup_send('_user', msg(agent, '_user', group_received(GroupId?, Author?, Text?)),
         Outs1?, Outs2),
+    agent(Id?, UserIn?, NetIn?, Outs2?).
+
+%% Creator receives leave notification from member
+agent(Id, UserIn, [msg(Member, _, group_leave(GroupId, Member1))|NetIn], Outs) :-
+    ground(Id?), ground(GroupId?), ground(Member?), Member? =?= Member1? |
+    close_output(group_member(GroupId?, Member?), Outs?, Outs1),
+    agent(Id?, UserIn?, NetIn?, Outs1?).
+
+%% Member receives removal notification from creator
+agent(Id, UserIn, [msg(_, Id1, group_removed(GroupId))|NetIn], Outs) :-
+    Id? =?= Id1?, ground(GroupId?) |
+    close_output(group(GroupId?), Outs?, Outs1),
+    lookup_send('_user', msg(agent, '_user', group_removed(GroupId?)), Outs1?, Outs2),
     agent(Id?, UserIn?, NetIn?, Outs2?).
 
 %% --- Termination ---

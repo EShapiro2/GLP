@@ -106,11 +106,11 @@ child_agent(Id, ParentId, [msg('_user', Id1, reject_child_intro(_, channel(ch(_,
 %% --- Group user messages ---
 
 %% Child creates a group
-child_agent(Id, ParentId, [msg('_user', Id1, create_group(Name, Type))|UserIn], NetIn, Outs) :-
-    Id? =?= Id1?, ground(Name?), ground(Type?) |
-    setup_group_creator(group_id(Id?, Name?, Type?),
+child_agent(Id, ParentId, [msg('_user', Id1, create_group(Name))|UserIn], NetIn, Outs) :-
+    Id? =?= Id1?, ground(Name?) |
+    setup_group_creator(group_id(Id?, Name?),
         Outs?, Outs1, NetIn?, NetIn1),
-    lookup_send('_user', msg(agent, '_user', group_joined(group_id(Id?, Name?, Type?))),
+    lookup_send('_user', msg(agent, '_user', group_joined(group_id(Id?, Name?))),
         Outs1?, Outs2),
     child_agent(Id?, ParentId?, UserIn?, NetIn1?, Outs2?).
 
@@ -143,6 +143,15 @@ child_agent(Id, ParentId, [msg('_user', Id1, send_group(GroupId, Text))|UserIn],
     lookup_send_group(group(GroupId?),
         msg(Id?, Id?, group_msg(GroupId?, Id?, Text?)), Outs?, Outs1),
     child_agent(Id?, ParentId?, UserIn?, NetIn?, Outs1?).
+
+%% Child leaves group (own choice)
+child_agent(Id, ParentId, [msg('_user', Id1, leave_group(GroupId))|UserIn], NetIn, Outs) :-
+    Id? =?= Id1?, ground(GroupId?) |
+    lookup_send_group(group(GroupId?),
+        msg(Id?, Id?, group_leave(GroupId?, Id?)), Outs?, Outs1),
+    close_output(group(GroupId?), Outs1?, Outs2),
+    lookup_send('_user', msg(agent, '_user', group_left(GroupId?)), Outs2?, Outs3),
+    child_agent(Id?, ParentId?, UserIn?, NetIn?, Outs3?).
 
 %% --- Injected intro results ---
 
@@ -190,6 +199,15 @@ child_agent(Id, ParentId, UserIn, [msg(From, Id1, group_invite(GroupId, Ch))|Net
     lookup_send('_user', msg(agent, '_user', group_invite(GroupId?, Ch?)), Outs?, Outs1),
     child_agent(Id?, ParentId?, UserIn?, NetIn?, Outs1?).
 
+%% Parent tells child to leave group
+child_agent(Id, ParentId, UserIn, [msg(From, Id1, leave_group(GroupId))|NetIn], Outs) :-
+    Id? =?= Id1?, From? =?= ParentId?, ground(GroupId?) |
+    lookup_send_group(group(GroupId?),
+        msg(Id?, Id?, group_leave(GroupId?, Id?)), Outs?, Outs1),
+    close_output(group(GroupId?), Outs1?, Outs2),
+    lookup_send('_user', msg(agent, '_user', group_left(GroupId?)), Outs2?, Outs3),
+    child_agent(Id?, ParentId?, UserIn?, NetIn?, Outs3?).
+
 %% --- Network messages from friends (otherwise) ---
 
 %% Friend sends text — notify UI
@@ -215,6 +233,19 @@ child_agent(Id, ParentId, UserIn, [msg(_, _, group_msg(GroupId, Author, Text))|N
     lookup_send('_user', msg(agent, '_user', group_received(GroupId?, Author?, Text?)),
         Outs1?, Outs2),
     child_agent(Id?, ParentId?, UserIn?, NetIn?, Outs2?).
+
+%% Creator removes child from group
+child_agent(Id, ParentId, UserIn, [msg(_, Id1, group_removed(GroupId))|NetIn], Outs) :-
+    Id? =?= Id1?, ground(GroupId?) |
+    close_output(group(GroupId?), Outs?, Outs1),
+    lookup_send('_user', msg(agent, '_user', group_removed(GroupId?)), Outs1?, Outs2),
+    child_agent(Id?, ParentId?, UserIn?, NetIn?, Outs2?).
+
+%% Creator receives leave notification from child member
+child_agent(Id, ParentId, UserIn, [msg(Member, _, group_leave(GroupId, Member1))|NetIn], Outs) :-
+    ground(Id?), ground(GroupId?), ground(Member?), Member? =?= Member1? |
+    close_output(group_member(GroupId?, Member?), Outs?, Outs1),
+    child_agent(Id?, ParentId?, UserIn?, NetIn?, Outs1?).
 
 %% --- Termination ---
 

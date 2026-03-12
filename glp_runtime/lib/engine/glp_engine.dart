@@ -26,6 +26,7 @@ import 'package:glp_runtime/analysis/type_checker/type_ast.dart';
 import 'package:glp_runtime/analysis/type_checker/param_expansion.dart';
 import 'package:glp_runtime/analysis/type_checker/type_environment_builder.dart';
 import 'package:glp_runtime/runtime/module_hierarchy.dart';
+import 'package:glp_runtime/runtime/glp_activation.dart';
 import 'package:glp_runtime/multiagent/mad_context.dart';
 import 'package:glp_runtime/compiler/project_linker.dart';
 
@@ -54,6 +55,24 @@ class ModuleInfo {
 
   ModuleInfo({required this.name, required this.program, required this.imports});
 }
+
+/// serve/2 system predicate (embedded).
+///
+/// Service loop for dynamic module dispatch: reads goals from a GLP channel
+/// and dispatches each via '_activate' against the module's _select/1 table.
+/// Compiled once at engine init; passed to activateModule() as serveBytecode.
+const String _serveSource = r'''
+-mode(system).
+
+procedure serve(_?, Stream(_)?).
+serve(Module, [Goal | In]) :-
+    ground(Module?) |
+    '_activate'(Module?, Goal?),
+    serve(Module?, In?).
+serve(_, []) :-
+    otherwise |
+    true.
+''';
 
 /// madGLP system predicates (embedded).
 ///
@@ -86,6 +105,9 @@ class GlpEngine {
   final GlpRuntime _runtime = GlpRuntime();
   final Map<String, BytecodeProgram> _loadedPrograms = {};
   final Map<String, ModuleInfo> _loadedModules = {};
+
+  /// Compiled serve/2 bytecode for dynamic module dispatch.
+  late final BytecodeProgram _serveBytecode;
 
   int _goalId = 1;
 
@@ -131,7 +153,11 @@ class GlpEngine {
 
     registerStandardPredicates(_runtime.systemPredicates);
     _loadRootSelf();
+    _serveBytecode = _compiler.compile(_serveSource);
   }
+
+  /// Compiled serve/2 bytecode for activateModule().
+  BytecodeProgram get serveBytecode => _serveBytecode;
 
   /// Clear all loaded programs except stdlib
   ///
@@ -232,6 +258,18 @@ class GlpEngine {
 
     final moduleInfo = _extractModuleInfo(source, program, name);
     _loadedModules[moduleInfo.name] = moduleInfo;
+
+    // Auto-activate modules with exports for dynamic dispatch.
+    // If the compiled program has _select/1, it means the module has exported
+    // procedures and can serve goals via a GLP channel.
+    if (program.labels.containsKey('_select/1')) {
+      activateModule(
+        rt: _runtime,
+        serveBytecode: _serveBytecode,
+        moduleBytecode: program,
+        moduleName: moduleInfo.name,
+      );
+    }
 
     return true;
   }

@@ -1,7 +1,7 @@
 %% self.glp — CSSN shared type vocabulary
 %%
 %% All protocol types for the Child-Safe Social Network application.
-%% Extends CSSG types with group support (GroupType, GroupId, group messaging).
+%% Extends CSSG types with group support (GroupId, group messaging).
 %% Defined once here, visible to all modules via ancestor scoping.
 
 -module(cssn).
@@ -22,7 +22,10 @@ FriendContent ::= response(Response)
                 ; group_invite(GroupId, GroupSetupInviteeChannel)
                 ; group_invite_child(GroupId, Constant, GroupSetupInviteeChannel)
                 ; group_msg(GroupId, Constant, Constant)
-                ; group_consent_req(GroupId, Decision?).
+                ; group_consent_req(GroupId, Decision?)
+                ; group_leave(GroupId, Constant)
+                ; group_removed(GroupId)
+                ; leave_group(GroupId).
 FriendMsg     ::= msg(Constant, Constant, FriendContent).
 FriendStream  ::= [] ; [FriendMsg | FriendStream].
 FriendChannel ::= ch(FriendStream, FriendStream?).
@@ -36,9 +39,8 @@ IntroContent ::= ack(Constant) ; nack.
 IntroStream  ::= [] ; [IntroContent | IntroStream].
 IntroChannel ::= ch(IntroStream, IntroStream?).
 
-%% Group types
-GroupType ::= clique ; star.
-GroupId   ::= group_id(Constant, Constant, GroupType).
+%% Group identifier
+GroupId   ::= group_id(Constant, Constant).
 
 %% Pending values — opaque values stored by mediator, forwarded to agent
 PendingValue ::= response(Response?) ; channel(IntroChannel)
@@ -61,7 +63,7 @@ UserContent ::= connect(Constant)
               ; reject_child_intro(Constant, PendingValue)
               ; approve_child_intro(Constant, Constant, PendingValue)
               ; response(Response)
-              ; create_group(Constant, GroupType)
+              ; create_group(Constant)
               ; invite_group(GroupId, Constant)
               ; invite_group(GroupId, Constant, Constant)
               ; accept_group(GroupId, PendingValue)
@@ -69,6 +71,8 @@ UserContent ::= connect(Constant)
               ; approve_group(Constant, GroupId, PendingValue)
               ; send_group(GroupId, Constant)
               ; leave_group(GroupId)
+              ; leave_child_group(Constant, GroupId)
+              ; remove_from_group(GroupId, Constant)
               ; approve_child_group(Constant, GroupId, PendingValue)
               ; reject_child_group(Constant, GroupId, PendingValue).
 
@@ -85,6 +89,7 @@ AgentContent ::= befriend(Constant, Response?)
                ; group_joined(GroupId)
                ; group_joined_member(GroupId, Constant)
                ; group_left(GroupId)
+               ; group_removed(GroupId)
                ; group_received(GroupId, Constant, Constant)
                ; child_group_consent(Constant, GroupId, Decision?).
 
@@ -129,7 +134,9 @@ UserInStream ::= [] ; [UserInMsg | UserInStream].
 %% =============================================================================
 
 %% Group channel stream — subtype of both OutputStream and NetInStream
-GroupContent ::= group_msg(GroupId, Constant, Constant).
+GroupContent ::= group_msg(GroupId, Constant, Constant)
+               ; group_leave(GroupId, Constant)
+               ; group_removed(GroupId).
 GroupMsg     ::= msg(Constant, Constant, GroupContent).
 GroupStream  ::= [] ; [GroupMsg | GroupStream].
 GroupChannel ::= ch(GroupStream, GroupStream?).
@@ -165,7 +172,10 @@ OutputContent ::= befriend(Constant, Response?)
                 ; group_received(GroupId, Constant, Constant)
                 ; group_msg(GroupId, Constant, Constant)
                 ; group_consent_req(GroupId, Decision?)
-                ; child_group_consent(Constant, GroupId, Decision?).
+                ; child_group_consent(Constant, GroupId, Decision?)
+                ; group_leave(GroupId, Constant)
+                ; group_removed(GroupId)
+                ; leave_group(GroupId).
 OutputMsg ::= msg(Constant, Constant, OutputContent)
             ; msg(Constant, NetColdCall).
 OutputStream ::= [] ; [OutputMsg | OutputStream].
@@ -195,7 +205,7 @@ UserCmd ::= decision(Decision, Constant, ReqId)
           ; connect(Constant)
           ; send(Constant, Constant)
           ; introduce(Constant, Constant)
-          ; create_group(Constant, GroupType)
+          ; create_group(Constant)
           ; invite_group(GroupId, Constant)
           ; invite_group(GroupId, Constant, Constant)
           ; accept_group(GroupId, ReqId)
@@ -203,6 +213,8 @@ UserCmd ::= decision(Decision, Constant, ReqId)
           ; approve_group(Constant, GroupId, ReqId)
           ; send_group(GroupId, Constant)
           ; leave_group(GroupId)
+          ; leave_child_group(Constant, GroupId)
+          ; remove_from_group(GroupId, Constant)
           ; approve_child_group(Constant, GroupId, ReqId)
           ; reject_child_group(Constant, GroupId, ReqId).
 
@@ -218,6 +230,8 @@ UserNotify ::= befriend(Constant, ReqId)
              ; group_invite_child(GroupId, Constant, ReqId)
              ; group_joined(GroupId)
              ; group_joined_member(GroupId, Constant)
+             ; group_left(GroupId)
+             ; group_removed(GroupId)
              ; group_received(GroupId, Constant, Constant)
              ; child_group_consent(Constant, GroupId, ReqId).
 
@@ -378,3 +392,20 @@ inject_group_result(group_join_nack(G, I), Ys,
     ground(I?) | true.
 inject_group_result(Res, [Y|Ys], [Y?|Ys1?]) :-
     inject_group_result(Res?, Ys?, Ys1).
+
+%% =============================================================================
+%% CLOSE_OUTPUT — close a stream and remove its entry from the outputs list
+%% =============================================================================
+
+procedure close_output(OutputKey?, OutputsList?, OutputsList).
+close_output(_, [], []).
+close_output(Key, [output(K, [])|Rest], Rest?) :-
+    Key? =?= K? | true.
+close_output(Key, [group_entry(K, [])|Rest], Rest?) :-
+    Key? =?= K? | true.
+close_output(Key, [output(K, Out?)|Rest], [output(K?, Out)|Rest1?]) :-
+    otherwise |
+    close_output(Key?, Rest?, Rest1).
+close_output(Key, [group_entry(K, Out?)|Rest], [group_entry(K?, Out)|Rest1?]) :-
+    otherwise |
+    close_output(Key?, Rest?, Rest1).

@@ -297,9 +297,9 @@ ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
 %% --- User-to-agent: group pass-through commands ---
 
 ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
-    receive(create_group(Name, Type), UserCh?, UserCh1),
-    ground(Id?), ground(Name?), ground(Type?) |
-    send(msg('_user', Id?, create_group(Name?, Type?)),
+    receive(create_group(Name), UserCh?, UserCh1),
+    ground(Id?), ground(Name?) |
+    send(msg('_user', Id?, create_group(Name?)),
          AgentCh?, AgentCh1),
     ui_mediator(Id?, AgentCh1?, UserCh1?, Ps?, N?).
 
@@ -329,6 +329,36 @@ ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
     ground(Id?), ground(GroupId?) |
     send(msg('_user', Id?, leave_group(GroupId?)),
          AgentCh?, AgentCh1),
+    ui_mediator(Id?, AgentCh1?, UserCh1?, Ps?, N?).
+
+ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
+    receive(leave_child_group(Child, GroupId), UserCh?, UserCh1),
+    ground(Id?), ground(Child?), ground(GroupId?) |
+    send(msg('_user', Id?, leave_child_group(Child?, GroupId?)),
+         AgentCh?, AgentCh1),
+    ui_mediator(Id?, AgentCh1?, UserCh1?, Ps?, N?).
+
+ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
+    receive(remove_from_group(GroupId, Member), UserCh?, UserCh1),
+    ground(Id?), ground(GroupId?), ground(Member?) |
+    send(msg('_user', Id?, remove_from_group(GroupId?, Member?)),
+         AgentCh?, AgentCh1),
+    ui_mediator(Id?, AgentCh1?, UserCh1?, Ps?, N?).
+
+%% --- Agent notifications: group_left, group_removed ---
+
+ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
+    receive(msg(agent, '_user', group_left(GroupId)),
+            AgentCh?, AgentCh1),
+    ground(GroupId?) |
+    send(group_left(GroupId?), UserCh?, UserCh1),
+    ui_mediator(Id?, AgentCh1?, UserCh1?, Ps?, N?).
+
+ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
+    receive(msg(agent, '_user', group_removed(GroupId)),
+            AgentCh?, AgentCh1),
+    ground(GroupId?) |
+    send(group_removed(GroupId?), UserCh?, UserCh1),
     ui_mediator(Id?, AgentCh1?, UserCh1?, Ps?, N?).
 
 %% --- Termination ---

@@ -1,0 +1,6 @@
+%% Test module with no exported procedures.
+%% _select/1 should NOT be generated for this module.
+-module(private_only).
+
+procedure helper(Integer?, Integer).
+helper(X, Y?) :- Y := X? + 1.
