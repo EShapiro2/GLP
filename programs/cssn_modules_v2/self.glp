@@ -261,6 +261,16 @@ PendingEntry ::= pending(ReqId, PendingValue).
 PendingList  ::= [] ; [PendingEntry | PendingList].
 
 %% =============================================================================
+%% NARRATIVE TYPES (for village scenario actors)
+%% =============================================================================
+
+NarrativeItem   ::= friend(Constant)
+                  ; say(Constant)
+                  ; act(Constant)
+                  ; event(Constant).
+NarrativeStream ::= [] ; [NarrativeItem | NarrativeStream].
+
+%% =============================================================================
 %% SHARED HELPER PROCEDURES
 %% =============================================================================
 %% Defined here, visible to all sibling modules via ancestor scoping.

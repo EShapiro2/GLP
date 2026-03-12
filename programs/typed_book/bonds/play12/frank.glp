@@ -116,7 +116,7 @@ frank_p12_wait_trade_pay([], [], []).
 %% Act 5: Receive escrow from Charlie (dock work)
 procedure frank_p12_wait_escrow_received(UserNotifyStream?, UserCmdStream, NarrativeStream).
 frank_p12_wait_escrow_received([escrow_received(charlie, _)|In], Out?,
-                               [event('Escrow from Charlie: 8 alice-coins, release day 15')|Narr?]) :-
+                               [event('Escrow from Charlie: 5 frank-coins, release day 15')|Narr?]) :-
     frank_p12_wait_escrow_released(In?, Out, Narr).
 frank_p12_wait_escrow_received([_|In], Out?, Narr?) :-
     otherwise | frank_p12_wait_escrow_received(In?, Out, Narr).
@@ -126,7 +126,7 @@ frank_p12_wait_escrow_received([], [], []).
 procedure frank_p12_wait_escrow_released(UserNotifyStream?, UserCmdStream, NarrativeStream).
 frank_p12_wait_escrow_released([escrow_released(charlie)|In],
                                [trade(diana, [lot(diana, 0, 1)], [lot(frank, 28, 1)])|Out?],
-                               [event('Escrow released — received 8 alice-coins for dock'),
+                               [event('Escrow released — received 5 frank-coins for dock'),
                                 say('Diana, Id like to redeem 5 of your coins')|Narr?]) :-
     frank_p12_wait_redeem1(In?, Out, Narr).
 frank_p12_wait_escrow_released([_|In], Out?, Narr?) :-
@@ -176,7 +176,7 @@ frank_p12_wait_redeem5([], [], []).
 
 procedure frank_p12_wait_balance(UserNotifyStream?, UserCmdStream, NarrativeStream).
 frank_p12_wait_balance([balance_report(_)|In], [done|Out?],
-                       [act('Balance: 8 alice-coins, 7 diana-coins, 10 eve-coins')|Narr?]) :-
+                       [act('Balance: 7 diana-coins, 10 eve-coins')|Narr?]) :-
     frank_p12_finish(In?, Out, Narr).
 frank_p12_wait_balance([_|In], Out?, Narr?) :-
     otherwise | frank_p12_wait_balance(In?, Out, Narr).

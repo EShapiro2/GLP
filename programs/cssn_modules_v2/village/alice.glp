@@ -1,0 +1,61 @@
+%% alice.glp — Alice actor for Village scenario
+%%
+%% Alice is an adult, parent of Carol.
+%% Act 1: Connects to Bob. Texts Bob. Connects to Frank.
+%% Act 2: Introduces Carol to Dave (via Bob) and Carol to Eve (via Bob).
+%% Act 4: Approves Carol joining Frank's study group.
+%% Types: from village/self.glp (ancestor scoping)
+
+-mode(system).
+
+%% =============================================================================
+%% Act 1: Adult friendships
+%% =============================================================================
+
+exported procedure alice13(Constant?, ActorChannel?, NarrativeStream).
+alice13(_, ch(In, [connect(bob)|Out?]), Narr?) :-
+    alice13_wait_bob(In?, Out, Narr).
+
+%% Wait for connected(bob), then text Bob and connect to Frank
+procedure alice13_wait_bob(UserNotifyStream?, UserCmdStream, NarrativeStream).
+alice13_wait_bob([connected(bob)|In],
+                 [send(bob, 'Hello Bob'), connect(frank)|Out?],
+                 [friend(bob), say('Hello Bob')|Narr?]) :-
+    alice13_wait_frank(In?, Out, Narr).
+alice13_wait_bob([_|In], Out?, Narr?) :-
+    otherwise | alice13_wait_bob(In?, Out, Narr).
+alice13_wait_bob([], [], []).
+
+%% Wait for connected(frank), then fire both child introductions
+procedure alice13_wait_frank(UserNotifyStream?, UserCmdStream, NarrativeStream).
+alice13_wait_frank([connected(frank)|In],
+                   [child_introduce(carol, bob, dave),
+                    child_introduce(carol, bob, eve)|Out?],
+                   [friend(frank),
+                    act('Introducing Carol to Dave via Bob'),
+                    act('Introducing Carol to Eve via Bob')|Narr?]) :-
+    alice13_wait_act4(In?, Out, Narr).
+alice13_wait_frank([_|In], Out?, Narr?) :-
+    otherwise | alice13_wait_frank(In?, Out, Narr).
+alice13_wait_frank([], [], []).
+
+%% =============================================================================
+%% Act 4: Approve Carol joining Frank's study group
+%% =============================================================================
+
+procedure alice13_wait_act4(UserNotifyStream?, UserCmdStream, NarrativeStream).
+alice13_wait_act4([group_invite_child(group_id(frank, study), carol, ReqId)|In],
+                  [approve_group(carol, group_id(frank, study), ReqId?)|Out?],
+                  [act('Approved Carol joining study group')|Narr?]) :-
+    ground(ReqId?) |
+    alice13_finish(In?, Out, Narr).
+alice13_wait_act4([_|In], Out?, Narr?) :-
+    otherwise | alice13_wait_act4(In?, Out, Narr).
+alice13_wait_act4([], [], []).
+
+%% =============================================================================
+%% Act 7: Termination
+%% =============================================================================
+
+procedure alice13_finish(UserNotifyStream?, UserCmdStream, NarrativeStream).
+alice13_finish(_, [], []).

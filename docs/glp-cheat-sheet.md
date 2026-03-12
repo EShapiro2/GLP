@@ -237,3 +237,64 @@ Three concurrent processes: escrow, inject, and the next agent iteration.
 2. Study the existing `bond_agent.glp` — every pattern you need is already there
 3. For each new procedure, find the closest existing analogue and follow its pattern exactly
 4. Type-check after every change: `dart run bin/glp_repl.dart` with `load bond_agent.glp`
+
+## 12. Modules
+
+### Module Declaration
+
+Every `.glp` file is a module. Declare the module name:
+```prolog
+-module(math_service).
+```
+
+### Procedure Visibility
+
+```prolog
+procedure helper(Integer?, Integer).              %% Local — only this module
+exported procedure double(Integer?, Integer).      %% Public — callable via M # goal(...)
+imported procedure math_service#double(Integer?, Integer).  %% Dependency — enables type checking
+```
+
+### Cross-Module Calls
+
+Use the `#` operator to call an exported procedure in another module:
+```prolog
+test(X, Y?) :- math_service # double(X?, Y).
+```
+
+The call is routed through a GLP channel to the target module's service loop at runtime.
+
+### Imports Must Match Exports
+
+The `imported procedure` declaration's types and modes must match the target module's `exported procedure`. This enables fully local type checking — no need to parse the other module.
+
+### The self.glp Scope Chain
+
+Each directory may have a `self.glp` defining types visible to all modules in that subtree. The root `programs/self.glp` is the prelude (predefined types and procedures) — visible everywhere.
+
+### REPL Workflow
+
+```
+GLP> math_service.glp          %% Load and auto-activate (has exports)
+GLP> dispatch_client.glp       %% Load client (has imported procedures)
+GLP> test_double(5, X).        %% Run goal → X = 10
+```
+
+Modules with `exported procedure` declarations are auto-activated on load. Use `:activate <name>` to activate manually if needed.
+
+### Static Linking (Projects)
+
+For multi-module projects in a directory tree, load the entire directory:
+```
+GLP> social_graph/
+✓ Loaded project: social_graph/
+```
+
+The project linker resolves all `M # goal(...)` calls at compile time.
+
+### Module Checklist
+
+1. Every cross-module call needs a matching `imported procedure` declaration
+2. Only `exported procedure` procedures are callable from outside
+3. Types flow through declarations — no separate type export needed
+4. Import/export modes must match exactly

@@ -106,8 +106,8 @@ charlie_p12_wait_trade_pay_eve(_, [], [], []).
 procedure charlie_p12_wait_trade_eve2(Constant?, UserNotifyStream?, UserCmdStream, NarrativeStream).
 charlie_p12_wait_trade_eve2(T, [trade_proposed(eve, _, ReqId)|In],
                             [accept_trade(eve, ReqId?),
-                             deposit_escrow(frank, [lot(alice, 0, 8)], T?)|Out?],
-                            [say('Frank, 8 alice-coins in escrow for the dock — release day 15')|Narr?]) :-
+                             deposit_escrow(frank, [lot(frank, 0, 5)], T?)|Out?],
+                            [say('Frank, 5 frank-coins in escrow for the dock — release day 15')|Narr?]) :-
     ground(ReqId?) |
     charlie_p12_wait_escrow_deposited(In?, Out, Narr).
 charlie_p12_wait_trade_eve2(T, [_|In], Out?, Narr?) :-
@@ -117,7 +117,7 @@ charlie_p12_wait_trade_eve2(_, [], [], []).
 %% Act 5: Escrow deposited, wait for expiry (dock done)
 procedure charlie_p12_wait_escrow_deposited(UserNotifyStream?, UserCmdStream, NarrativeStream).
 charlie_p12_wait_escrow_deposited([escrow_deposited(frank, _, _)|In], Out?,
-                                  [act('Escrow deposited: 8 alice-coins for Frank, release day 15')|Narr?]) :-
+                                  [act('Escrow deposited: 5 frank-coins for Frank, release day 15')|Narr?]) :-
     charlie_p12_wait_escrow_expired(In?, Out, Narr).
 charlie_p12_wait_escrow_deposited([_|In], Out?, Narr?) :-
     otherwise | charlie_p12_wait_escrow_deposited(In?, Out, Narr).
@@ -133,7 +133,7 @@ charlie_p12_wait_escrow_expired([], [], []).
 
 procedure charlie_p12_wait_balance(UserNotifyStream?, UserCmdStream, NarrativeStream).
 charlie_p12_wait_balance([balance_report(_)|In], [done|Out?],
-                         [act('Balance: 2 alice-coins, 10 eve-coins, 6 charlie-coins, 5 frank-coins')|Narr?]) :-
+                         [act('Balance: 10 alice-coins, 10 eve-coins, 6 charlie-coins')|Narr?]) :-
     charlie_p12_finish(In?, Out, Narr).
 charlie_p12_wait_balance([_|In], Out?, Narr?) :-
     otherwise | charlie_p12_wait_balance(In?, Out, Narr).

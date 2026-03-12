@@ -233,8 +233,8 @@ child_agent(Id, ParentId, UserIn, [msg(From, Id1, text(Text))|NetIn], Outs) :-
     child_agent(Id?, ParentId?, UserIn?, NetIn?, Outs1?).
 
 %% Friend sends group_invite — child-managed group, need parental consent (consent flow 3)
-child_agent(Id, ParentId, UserIn, [msg(_, Id1, group_invite(GroupId, Ch))|NetIn], Outs) :-
-    Id? =?= Id1?, ground(GroupId?), otherwise |
+child_agent(Id, ParentId, UserIn, [msg(From, Id1, group_invite(GroupId, Ch))|NetIn], Outs) :-
+    Id? =?= Id1?, ~(From? =?= ParentId?), ground(GroupId?) |
     lookup_send(parent(ParentId?),
         msg(Id?, ParentId?, group_consent_req(GroupId?, Consent)),
         Outs?, Outs1),

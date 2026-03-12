@@ -1,10 +1,10 @@
 # Typed GLP Manual
 
-**Version**: 2.8
-**Date**: 2026-03-11
+**Version**: 2.9
+**Date**: 2026-03-12
 **Status**: ACTIVE
 
-This manual captures essential programming principles and advice for writing correct Typed GLP programs. It covers the SRSW (Single-Reader Single-Writer) constraint, type declarations, moding, and common pitfalls.
+This manual captures essential programming principles and advice for writing correct Typed GLP programs. It covers the SRSW (Single-Reader Single-Writer) constraint, type declarations, moding, modules, parameterized types, and common pitfalls.
 
 ---
 
@@ -736,10 +736,143 @@ The `-mode(system)` directive permits calling kernel predicates and using reserv
 
 ---
 
+## 19. Modules
+
+### 19.1 Overview
+
+GLP programs are organized into modules. Each `.glp` file is a module. A module controls which procedures are visible to other modules through `exported procedure` and `imported procedure` declarations. Cross-module calls use the `M # goal(...)` syntax, following FCP conventions.
+
+### 19.2 Module Declaration
+
+A module declares its name with the `-module` directive:
+
+```prolog
+-module(math_service).
+```
+
+The module name should match the filename (without `.glp`). If no `-module` directive is present, the module name is derived from the filename.
+
+### 19.3 Procedure Visibility
+
+There are three kinds of procedure declarations:
+
+**Local procedure** — visible only within this module:
+```prolog
+procedure helper(Integer?, Integer).
+helper(X, Y?) :- Y := X? + 1.
+```
+
+**Exported procedure** — callable from other modules:
+```prolog
+exported procedure double(Integer?, Integer).
+double(X, Y?) :- Y := X? * 2.
+```
+
+**Imported procedure** — declares a dependency on another module's export:
+```prolog
+imported procedure math_service#double(Integer?, Integer).
+```
+
+The `imported procedure` declaration enables type checking to verify the cross-module call locally, without parsing the target module. The types in the import must be compatible with the export's types.
+
+### 19.4 Cross-Module Calls
+
+To call an exported procedure from another module, use the `#` operator:
+
+```prolog
+test_double(X, Y?) :- math_service # double(X?, Y).
+```
+
+This sends the goal `double(X?, Y)` to the `math_service` module for execution. The runtime routes the goal through a GLP channel to the target module's service loop, which dispatches it to the exported procedure.
+
+### 19.5 Complete Example
+
+**Service module** (`math_service.glp`):
+```prolog
+-module(math_service).
+
+exported procedure double(Integer?, Integer).
+double(X, Y?) :- Y := X? * 2.
+
+exported procedure triple(Integer?, Integer).
+triple(X, Y?) :- Y := X? * 3.
+```
+
+**Client module** (`client.glp`):
+```prolog
+-module(client).
+
+imported procedure math_service#double(Integer?, Integer).
+imported procedure math_service#triple(Integer?, Integer).
+
+exported procedure compute(Integer?, Integer).
+compute(X, Y?) :- math_service # double(X?, Y).
+```
+
+### 19.6 The `self.glp` Scope Chain
+
+Each directory may contain a `self.glp` file that defines types and procedures visible to all modules in that directory and its subdirectories. This follows FCP's `self.cp` convention.
+
+```
+project/
+  self.glp               — shared types (AgentMsg, Response, etc.)
+  agent.glp              — sees project/self.glp
+  mediator.glp           — sees project/self.glp
+  ui/
+    self.glp             — UI-specific types
+    actors.glp           — sees ui/self.glp + project/self.glp
+```
+
+The root `programs/self.glp` is the prelude: it defines all predefined types (`Stream(X)`, `Channel(In, Out)`, `DiffList(X)`, `OpenStream(X)`) and all prelude procedure declarations (`merge`, `send`, `receive`, `new_channel`, etc.). Every module sees the prelude automatically.
+
+### 19.7 Compilation Modes
+
+GLP supports two compilation modes for multi-module programs:
+
+**Static linking** (for projects): All modules in a directory tree are compiled together. The project linker resolves `M # goal(...)` calls at compile time by renaming and merging procedures into a single flat program. Use the REPL command `<directory>` to load a project:
+```
+GLP> social_graph/
+✓ Loaded project: social_graph/
+```
+
+**Dynamic dispatch** (for independently loaded modules): Each module is loaded and activated separately. Cross-module calls route through GLP channels at runtime. This is the model described in Sections 19.3–19.5.
+
+### 19.8 REPL Workflow for Dynamic Dispatch
+
+```
+GLP> programs/tests/dynamic_dispatch/math_service.glp
+✓ Loaded and activated: math_service
+
+GLP> programs/tests/dynamic_dispatch/dispatch_client.glp
+✓ Loaded and activated: dispatch_client
+
+GLP> test_double(5, X).
+X = 10
+```
+
+Modules with `exported procedure` declarations are automatically activated when loaded — a GLP channel is created, and a service loop is spawned to dispatch incoming goals. The `:activate` REPL command can also be used explicitly:
+```
+GLP> :activate math_service
+✓ Activated module: math_service
+```
+
+### 19.9 Module Design Guidelines
+
+1. **Declare all dependencies.** Every cross-module call must have a corresponding `imported procedure` declaration. This makes the module self-contained for type checking.
+
+2. **Export the minimal interface.** Only mark procedures as `exported` if they are intended to be called from other modules. Internal helper procedures should use plain `procedure`.
+
+3. **Types flow through declarations.** A procedure declaration implicitly carries the types it references. You do not need to export types separately — they are carried by the `exported procedure` declaration.
+
+4. **Matching modes matter.** The `imported procedure` declaration's argument modes must match the `exported procedure` declaration's modes. If the export says `double(Integer?, Integer)`, the import must say the same.
+
+---
+
 ## Version History
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 2.9 | 2026-03-12 | Added Section 19: Modules (declarations, exports/imports, `#` syntax, self.glp chain, REPL workflow) |
 | 2.8 | 2026-03-11 | Added Section 18: Tight Typing Discipline; corrected send/receive Channel arity to 2-arg form |
 | 2.7 | 2026-03-11 | Section 14 marked obsolete — renamed procedure copies removed, replaced by parameterized types |
 | 2.6 | 2026-03-06 | Added Section 17: Parameterized Types; updated Section 14.6 |

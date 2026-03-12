@@ -5,21 +5,22 @@ Completed: 2026-03-12
 
 ## Steps
 - [x] 1. Baseline tests (428/428)
-- [x] 2. Remove `_generateSelectProcedure()` from compiler.dart, add `hasExports` to ModuleInfo, update Dart tests
+- [x] 2. Remove `_generateSelectProcedure()`, replace auto-activation trigger with `ModuleInfo.hasExports`
 - [x] 3. Remove Distribute fallback path in runner.dart
-- [x] 4. Remove `execute/2` (opcodes, codegen, runner) + helper functions
+- [x] 4. Remove `execute/2` (Execute, SetClauseVar opcodes, codegen, runner handlers)
 - [x] 5. Add TODO to `combinedProgram` re: future module boundary enforcement
-- [x] 6. Run all tests (428/428 REPL, 5/5 Dart), commit and push
+- [x] 6. 428/428 REPL tests, 5/5 Dart tests. Committed and pushed.
+
+## Net result: -259 lines
 
 ## What was removed
-- `_generateSelectProcedure()` — compiler no longer generates `_select/1` bytecode
-- `_select/1` label check replaced by `ModuleInfo.hasExports` (regex on source)
-- Distribute fallback (direct spawn via combinedProgram) — only GLP channel path remains
-- `Execute` and `SetClauseVar` opcodes
-- `_generateExecuteCall()` and `_termToValue()` from codegen
-- Execute/SetClauseVar handlers from runner
-- `_resolveHeadVarRefs()` and `_dereferenceForExecute()` helper functions from runner
+1. `_generateSelectProcedure()` — dead since `_activate` bypasses `_select/1`
+2. Distribute fallback — dead since `loadSource()` auto-activates modules with exports
+3. `execute/2` — unused feature (zero programs, zero tests)
+4. Associated helpers: `_termToValue`, `_resolveHeadVarRefs`, `_dereferenceForExecute`
 
-## Context
-
-Full instructions: `docs/modules/dead-code-removal-instructions.md`
+## What remains (by design)
+- `reduce/2` generation — kept for future metaprogramming (FCP heritage)
+- `combinedProgram` — TODO noted, deferred to future module boundary enforcement
+- Transmit handler — live path for dynamic RPC
+- Distribute GLP channel path — live path for static RPC

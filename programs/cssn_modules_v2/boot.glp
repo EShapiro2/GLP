@@ -75,6 +75,14 @@ imported procedure actors#charlie12(ActorChannel?).
 imported procedure actors#dave12(ActorChannel?).
 imported procedure actors#eve12(ActorChannel?).
 
+%% From village/*.glp — play 13 (6 agents: village scenario)
+imported procedure alice#alice13(Constant?, ActorChannel?, NarrativeStream).
+imported procedure bob#bob13(Constant?, ActorChannel?, NarrativeStream).
+imported procedure frank#frank13(Constant?, ActorChannel?, NarrativeStream).
+imported procedure carol#carol13(Constant?, ActorChannel?, NarrativeStream).
+imported procedure dave#dave13(Constant?, ActorChannel?, NarrativeStream).
+imported procedure eve#eve13(Constant?, ActorChannel?, NarrativeStream).
+
 %% =============================================================================
 %% LOCAL UTILITIES
 %% =============================================================================
@@ -795,3 +803,189 @@ fplay12 :-
     merge(DaveToBob?, [], BobFromDave),
     merge(CharlieToEve?, [], EveFromCharlie),
     merge(EveToCharlie?, [], CharlieFromEve).
+
+%% =============================================================================
+%% NARRATIVE DISPLAY — for village scenario actors
+%% =============================================================================
+
+procedure send_to_user_narrate(Constant?, NarrativeStream?).
+send_to_user_narrate(Id, [friend(X)|Ns]) :-
+    ground(Id?), ground(X?) |
+    '_output'(tagged(Id?, friend(X?))),
+    send_to_user_narrate(Id?, Ns?).
+send_to_user_narrate(Id, [say(X)|Ns]) :-
+    ground(Id?), ground(X?) |
+    '_output'(tagged(Id?, say(X?))),
+    send_to_user_narrate(Id?, Ns?).
+send_to_user_narrate(Id, [act(X)|Ns]) :-
+    ground(Id?), ground(X?) |
+    '_output'(tagged(Id?, act(X?))),
+    send_to_user_narrate(Id?, Ns?).
+send_to_user_narrate(Id, [event(X)|Ns]) :-
+    ground(Id?), ground(X?) |
+    '_output'(tagged(Id?, event(X?))),
+    send_to_user_narrate(Id?, Ns?).
+send_to_user_narrate(_, []).
+
+%% =============================================================================
+%% VILLAGE NETWORK (3-way: alice, bob, frank)
+%% =============================================================================
+
+%% --- Cold-call routing (2-arg msg) ---
+
+village_net(ch([msg(bob, X)|AliceIn], AliceOut?),
+            ch(BobIn, [msg(bob, X?)|BobOut?]),
+            ch(FrankIn, FrankOut?)) :-
+    village_net(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut), ch(FrankIn?, FrankOut)).
+
+village_net(ch([msg(frank, X)|AliceIn], AliceOut?),
+            ch(BobIn, BobOut?),
+            ch(FrankIn, [msg(frank, X?)|FrankOut?])) :-
+    village_net(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut), ch(FrankIn?, FrankOut)).
+
+village_net(ch(AliceIn, [msg(alice, X?)|AliceOut?]),
+            ch([msg(alice, X)|BobIn], BobOut?),
+            ch(FrankIn, FrankOut?)) :-
+    village_net(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut), ch(FrankIn?, FrankOut)).
+
+village_net(ch(AliceIn, AliceOut?),
+            ch([msg(frank, X)|BobIn], BobOut?),
+            ch(FrankIn, [msg(frank, X?)|FrankOut?])) :-
+    village_net(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut), ch(FrankIn?, FrankOut)).
+
+village_net(ch(AliceIn, [msg(alice, X?)|AliceOut?]),
+            ch(BobIn, BobOut?),
+            ch([msg(alice, X)|FrankIn], FrankOut?)) :-
+    village_net(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut), ch(FrankIn?, FrankOut)).
+
+village_net(ch(AliceIn, AliceOut?),
+            ch(BobIn, [msg(bob, X?)|BobOut?]),
+            ch([msg(bob, X)|FrankIn], FrankOut?)) :-
+    village_net(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut), ch(FrankIn?, FrankOut)).
+
+%% --- Friend-to-friend routing (3-arg msg) ---
+
+village_net(ch([msg(alice, bob, X)|AliceIn], AliceOut?),
+            ch(BobIn, [msg(alice, bob, X?)|BobOut?]),
+            ch(FrankIn, FrankOut?)) :-
+    village_net(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut), ch(FrankIn?, FrankOut)).
+
+village_net(ch([msg(alice, frank, X)|AliceIn], AliceOut?),
+            ch(BobIn, BobOut?),
+            ch(FrankIn, [msg(alice, frank, X?)|FrankOut?])) :-
+    village_net(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut), ch(FrankIn?, FrankOut)).
+
+village_net(ch(AliceIn, [msg(bob, alice, X?)|AliceOut?]),
+            ch([msg(bob, alice, X)|BobIn], BobOut?),
+            ch(FrankIn, FrankOut?)) :-
+    village_net(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut), ch(FrankIn?, FrankOut)).
+
+village_net(ch(AliceIn, AliceOut?),
+            ch([msg(bob, frank, X)|BobIn], BobOut?),
+            ch(FrankIn, [msg(bob, frank, X?)|FrankOut?])) :-
+    village_net(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut), ch(FrankIn?, FrankOut)).
+
+village_net(ch(AliceIn, [msg(frank, alice, X?)|AliceOut?]),
+            ch(BobIn, BobOut?),
+            ch([msg(frank, alice, X)|FrankIn], FrankOut?)) :-
+    village_net(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut), ch(FrankIn?, FrankOut)).
+
+village_net(ch(AliceIn, AliceOut?),
+            ch(BobIn, [msg(frank, bob, X?)|BobOut?]),
+            ch([msg(frank, bob, X)|FrankIn], FrankOut?)) :-
+    village_net(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut), ch(FrankIn?, FrankOut)).
+
+%% Termination
+village_net(ch([], []), ch([], []), ch([], [])).
+
+%% =============================================================================
+%% FPLAY13 — Village Scenario: 3 adults, 3 children (tagged output + narrative)
+%% =============================================================================
+
+fplay13 :-
+    village_net(ch(AliceNetOut?, AliceNetIn),
+             ch(BobNetOut?, BobNetIn),
+             ch(FrankNetOut?, FrankNetIn)),
+
+    %% Alice — adult, parent of Carol
+    alice # alice13(alice, ch(AliceActorIn?, AliceActorOut), AliceNarr),
+    send_to_user_narrate(alice, AliceNarr?),
+    tee(AliceActorOut?, AliceMedIn, AliceDispCmd),
+    agent # agent(alice, AliceAgentIn?, AliceNetAndChildIn?,
+          [output('_user', AliceAgentToUser),
+           output('_net', AliceNetOut),
+           output(child(carol), AliceToCarol)]),
+    merge(AliceNetIn?, AliceFromCarol?, AliceNetAndChildIn),
+    mediator # ui_mediator(alice, ch(AliceAgentToUser?, AliceAgentIn),
+                ch(AliceMedIn?, AliceMedOut), [], 1),
+    tee(AliceMedOut?, AliceActorIn, AliceDispNotify),
+    send_to_user_tagged(alice, AliceDispCmd?, AliceDispNotify?),
+
+    %% Bob — adult, parent of Dave and Eve
+    bob # bob13(bob, ch(BobActorIn?, BobActorOut), BobNarr),
+    send_to_user_narrate(bob, BobNarr?),
+    tee(BobActorOut?, BobMedIn, BobDispCmd),
+    agent # agent(bob, BobAgentIn?, BobNetAndChildIn?,
+          [output('_user', BobAgentToUser),
+           output('_net', BobNetOut),
+           output(child(dave), BobToDave),
+           output(child(eve), BobToEve)]),
+    merge(BobNetIn?, BobFromChildren?, BobNetAndChildIn),
+    mediator # ui_mediator(bob, ch(BobAgentToUser?, BobAgentIn),
+                ch(BobMedIn?, BobMedOut), [], 1),
+    tee(BobMedOut?, BobActorIn, BobDispNotify),
+    send_to_user_tagged(bob, BobDispCmd?, BobDispNotify?),
+
+    %% Frank — adult, no children
+    frank # frank13(frank, ch(FrankActorIn?, FrankActorOut), FrankNarr),
+    send_to_user_narrate(frank, FrankNarr?),
+    tee(FrankActorOut?, FrankMedIn, FrankDispCmd),
+    agent # agent(frank, FrankAgentIn?, FrankNetIn?,
+          [output('_user', FrankAgentToUser), output('_net', FrankNetOut)]),
+    mediator # ui_mediator(frank, ch(FrankAgentToUser?, FrankAgentIn),
+                ch(FrankMedIn?, FrankMedOut), [], 1),
+    tee(FrankMedOut?, FrankActorIn, FrankDispNotify),
+    send_to_user_tagged(frank, FrankDispCmd?, FrankDispNotify?),
+
+    %% Carol — child of Alice
+    carol # carol13(carol, ch(CarolActorIn?, CarolActorOut), CarolNarr),
+    send_to_user_narrate(carol, CarolNarr?),
+    tee(CarolActorOut?, CarolMedIn, CarolDispCmd),
+    child_agent # child_agent(carol, alice, CarolAgentIn?, CarolFromAlice?,
+          [output('_user', CarolAgentToUser),
+           output(parent(alice), CarolToAlice)]),
+    mediator # ui_mediator(carol, ch(CarolAgentToUser?, CarolAgentIn),
+                ch(CarolMedIn?, CarolMedOut), [], 1),
+    tee(CarolMedOut?, CarolActorIn, CarolDispNotify),
+    send_to_user_tagged(carol, CarolDispCmd?, CarolDispNotify?),
+
+    %% Dave — child of Bob
+    dave # dave13(dave, ch(DaveActorIn?, DaveActorOut), DaveNarr),
+    send_to_user_narrate(dave, DaveNarr?),
+    tee(DaveActorOut?, DaveMedIn, DaveDispCmd),
+    child_agent # child_agent(dave, bob, DaveAgentIn?, DaveFromBob?,
+          [output('_user', DaveAgentToUser),
+           output(parent(bob), DaveToBob)]),
+    mediator # ui_mediator(dave, ch(DaveAgentToUser?, DaveAgentIn),
+                ch(DaveMedIn?, DaveMedOut), [], 1),
+    tee(DaveMedOut?, DaveActorIn, DaveDispNotify),
+    send_to_user_tagged(dave, DaveDispCmd?, DaveDispNotify?),
+
+    %% Eve — child of Bob
+    eve # eve13(eve, ch(EveActorIn?, EveActorOut), EveNarr),
+    send_to_user_narrate(eve, EveNarr?),
+    tee(EveActorOut?, EveMedIn, EveDispCmd),
+    child_agent # child_agent(eve, bob, EveAgentIn?, EveFromBob?,
+          [output('_user', EveAgentToUser),
+           output(parent(bob), EveToBob)]),
+    mediator # ui_mediator(eve, ch(EveAgentToUser?, EveAgentIn),
+                ch(EveMedIn?, EveMedOut), [], 1),
+    tee(EveMedOut?, EveActorIn, EveDispNotify),
+    send_to_user_tagged(eve, EveDispCmd?, EveDispNotify?),
+
+    %% Parent-child channel wiring
+    merge(AliceToCarol?, [], CarolFromAlice),
+    merge(CarolToAlice?, [], AliceFromCarol),
+    merge(BobToDave?, [], DaveFromBob),
+    merge(DaveToBob?, EveToBob?, BobFromChildren),
+    merge(BobToEve?, [], EveFromBob).

@@ -88,6 +88,12 @@ class ReplPlayRunner {
     '../programs/typed_book/cssn/play_ui_sim_boot.glp',
   ];
 
+  /// CSSN v2 modules project (village scenario, fplay13).
+  /// Loaded as a project directory — the REPL treats the path as a project root.
+  static const cssnVillageFiles = [
+    '../programs/cssn_modules_v2',
+  ];
+
   /// Regex for parsing tagged output lines.
   /// Matches cmd, notify (protocol), and friend, say, act, event (narrative).
   static final _taggedRegex =
