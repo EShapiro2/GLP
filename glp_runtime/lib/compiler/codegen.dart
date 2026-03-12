@@ -462,12 +462,6 @@ class CodeGenerator {
     for (int i = 0; i < goals.length; i++) {
       final goal = goals[i];
 
-      // Special handling for execute/2 system predicate
-      if (goal.functor == 'execute' && goal.arity == 2) {
-        _generateExecuteCall(goal, varTable, ctx);
-        continue;
-      }
-
       // Special handling for RemoteGoal (Module # Goal)
       if (goal is RemoteGoal) {
         _generateRemoteGoal(goal, varTable, ctx);
@@ -537,98 +531,6 @@ class CodeGenerator {
       final index = ctx.importTable.addImport(moduleName);
 
       ctx.emit(bc.Distribute(index, innerGoal.functor, innerGoal.arity));
-    }
-  }
-
-  void _generateExecuteCall(Goal goal, VariableTable varTable, CodeGenContext ctx) {
-    // execute('pred_name', [arg1, arg2, ...])
-    // Args: goal.args[0] = predicate name (const string), goal.args[1] = argument list
-
-    // Extract predicate name from first argument
-    if (goal.args[0] is! ConstTerm) {
-      throw CompileError('execute/2 first argument must be a constant string', goal.line, goal.column, phase: 'codegen');
-    }
-    final predicateName = (goal.args[0] as ConstTerm).value as String;
-
-    // Extract argument list from second argument
-    if (goal.args[1] is! ListTerm) {
-      throw CompileError('execute/2 second argument must be a list', goal.line, goal.column, phase: 'codegen');
-    }
-    final argList = goal.args[1] as ListTerm;
-
-    // Collect argument terms
-    final argTerms = <Term>[];
-    var current = argList;
-    while (!current.isNil) {
-      if (current.head != null) {
-        argTerms.add(current.head!);
-      }
-      if (current.tail is ListTerm) {
-        current = current.tail as ListTerm;
-      } else {
-        break;
-      }
-    }
-
-    // Build arguments as Terms directly - DO NOT use SetClauseVar
-    // Per spec Section 18.1: Execute takes "arguments as list of Terms"
-    final argValues = <Object?>[];
-    for (final term in argTerms) {
-      // Convert AST Term to runtime value
-      final value = _termToValue(term, varTable, ctx);
-      argValues.add(value);
-    }
-
-    // Generate Execute instruction with direct arguments (not slots)
-    ctx.emit(bc.Execute(predicateName, argValues));
-  }
-
-  Object? _termToValue(Term term, VariableTable varTable, CodeGenContext ctx) {
-    if (term is ConstTerm) {
-      // For execute(), return the raw value, not wrapped in ConstTerm
-      return term.value;
-    } else if (term is VarTerm) {
-      final varInfo = varTable.getVar(term.name);
-      if (varInfo == null) {
-        throw CompileError('Undefined variable: ${term.name}', term.line, term.column, phase: 'codegen');
-      }
-      // In pointer architecture, VarRef just has addr.
-      // For execute/2, we pass the register index and let runtime resolve.
-      // Reader vs writer distinction is handled by the Execute instruction handler.
-      return rt.VarRef(varInfo.registerIndex!);
-    } else if (term is ListTerm) {
-      if (term.isNil) {
-        return 'nil';  // Empty list represented as 'nil'
-      }
-      // Build Dart list recursively (for execute() arguments)
-      final elements = <Object?>[];
-      var current = term;
-      while (!current.isNil) {
-        if (current.head != null) {
-          elements.add(_termToValue(current.head!, varTable, ctx));
-        }
-        if (current.tail is ListTerm) {
-          current = current.tail as ListTerm;
-        } else {
-          break;
-        }
-      }
-      return elements;
-    } else if (term is StructTerm) {
-      // For structures, we do need to build Term objects
-      final argTerms = <rt.Term>[];
-      for (final arg in term.args) {
-        final value = _termToValue(arg, varTable, ctx);
-        if (value is rt.Term) {
-          argTerms.add(value);
-        } else {
-          // Wrap primitive values in ConstTerm
-          argTerms.add(rt.ConstTerm(value));
-        }
-      }
-      return rt.StructTerm(term.functor, argTerms);
-    } else {
-      throw CompileError('Unsupported term type in execute(): $term', term.line, term.column, phase: 'codegen');
     }
   }
 

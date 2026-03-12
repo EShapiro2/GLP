@@ -1,29 +1,25 @@
-# Current Plan: Dynamic Module Dispatch — REPL Integration
+# Current Plan: Dead Code Removal — COMPLETE
 
 Started: 2026-03-12
+Completed: 2026-03-12
 
 ## Steps
-- [x] 1. Baseline tests (424/424), commit
-- [x] 2. Write Dart integration tests — 8 tests pass
-- [x] 3. Fix _activate bug (direct dispatch, bypass _select)
-- [x] 4. All Dart tests pass, 424 REPL tests pass
-- [x] 5. Add activateDynamicModule() to GlpEngine
-- [x] 6. Add :activate REPL command
-- [x] 7. Add REPL tests (Section L) — 4 tests, 428/428 total
-- [x] 8. Final test suite, commit and push
+- [x] 1. Baseline tests (428/428)
+- [x] 2. Remove `_generateSelectProcedure()` from compiler.dart, add `hasExports` to ModuleInfo, update Dart tests
+- [x] 3. Remove Distribute fallback path in runner.dart
+- [x] 4. Remove `execute/2` (opcodes, codegen, runner) + helper functions
+- [x] 5. Add TODO to `combinedProgram` re: future module boundary enforcement
+- [x] 6. Run all tests (428/428 REPL, 5/5 Dart), commit and push
 
-## Completed
-
-All steps done. Dynamic module dispatch works end-to-end:
-- Dart integration tests: 8/8
-- REPL tests: 428/428 (including 4 new Section L tests)
-
-### Key fixes during REPL integration
-- **Module context**: Fixed `_extractModuleInfo` to extract imported module names from `imported procedure Module#Proc(...)` declarations. Without this, the Distribute opcode had no module context.
-- **Stdlib merge**: Module bytecode must be merged with stdlib (`__root_self__`) before activation, so dispatched procedures can find `:=/2` and other stdlib labels.
-- **Idempotent activation**: `activateDynamicModule()` skips if the module is already activated (loadSource auto-activates modules with exports).
+## What was removed
+- `_generateSelectProcedure()` — compiler no longer generates `_select/1` bytecode
+- `_select/1` label check replaced by `ModuleInfo.hasExports` (regex on source)
+- Distribute fallback (direct spawn via combinedProgram) — only GLP channel path remains
+- `Execute` and `SetClauseVar` opcodes
+- `_generateExecuteCall()` and `_termToValue()` from codegen
+- Execute/SetClauseVar handlers from runner
+- `_resolveHeadVarRefs()` and `_dereferenceForExecute()` helper functions from runner
 
 ## Context
 
-Full instructions: `docs/modules/dynamic-dispatch-repl-instructions.md`
-Test GLP files: `programs/tests/dynamic_dispatch/` (math_service.glp, dispatch_client.glp)
+Full instructions: `docs/modules/dead-code-removal-instructions.md`

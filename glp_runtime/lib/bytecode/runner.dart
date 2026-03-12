@@ -2974,37 +2974,10 @@ class BytecodeRunner {
                   print('[MODULE] Distribute (GLP channel): ${replCtx.moduleName} -> ${target.name} # ${op.functor}/${op.arity}');
                 }
               } else {
-              // Find entry point - use combined program if available, otherwise target's program
-              final signature = '${op.functor}/${op.arity}';
-              final program = replCtx.combinedProgram ?? target.program;
-              final entryPC = program.labels[signature];
-
-              if (entryPC != null) {
-                // Create argument slots for the new goal
-                final argSlots = <int, Term>{};
-                for (int i = 0; i < args.length; i++) {
-                  argSlots[i] = args[i];
-                }
-
-                // Allocate new goal ID and enqueue
-                final newGoalId = cx.rt.nextGoalId++;
-                final env = CallEnv(args: argSlots);
-                cx.rt.setGoalEnv(newGoalId, env);
-                cx.rt.setGoalProgram(newGoalId, replCtx.programKey);  // Use consistent key
-
-                // Pass same module context for nested RPCs
-                cx.rt.setGoalModuleContext(newGoalId, replCtx);
-
-                cx.rt.gq.enqueue(GoalRef(newGoalId, entryPC));
-
+                // Module not activated — no GLP channel available
                 if (cx.debugOutput) {
-                  print('[MODULE] Distribute (REPL): ${replCtx.moduleName} -> ${target.name} # $signature (goal $newGoalId @ PC $entryPC)');
+                  print('[MODULE] Distribute: module ${target.name} not activated (no GLP channel)');
                 }
-              } else {
-                if (cx.debugOutput) {
-                  print('[MODULE] Distribute: Entry point not found for ${op.functor}/${op.arity} in ${target.name}');
-                }
-              }
               }
             } else {
               if (cx.debugOutput) {
@@ -3730,73 +3703,6 @@ class BytecodeRunner {
         }
       }
 
-      // ===== SET CLAUSE VARIABLE =====
-      if (op is SetClauseVar) {
-        // Set a clause variable directly to a value
-        cx.clauseVars[op.slot] = op.value;
-        pc++;
-        continue;
-      }
-
-      // ===== SYSTEM PREDICATE EXECUTION =====
-      if (op is Execute) {
-        // Execute system predicate: call registered Dart function
-        // System predicates can succeed, fail, or suspend on unbound readers
-
-        // Look up the system predicate
-        final predicate = cx.rt.systemPredicates.lookup(op.predicateName);
-        if (predicate == null) {
-          print('[ERROR] System predicate not found: ${op.predicateName}');
-          _softFailToNextClause(cx, pc);
-          pc = _findNextClauseTry(pc);
-          continue;
-        }
-
-        // Process arguments directly - they're already Terms (per spec Section 18.1)
-        // No need to look up in clauseVars - args are passed directly
-        print('[EXECUTE] Direct args: ${op.args}');
-        final processedArgs = <Object?>[];
-
-        for (final arg in op.args) {
-          print('[EXECUTE] Processing arg: $arg (${arg.runtimeType})');
-
-          // Resolve VarRefs that reference HEAD variables
-          // HEAD variables stored via GetVariable remain in clauseVars
-          final resolved = _resolveHeadVarRefs(arg, cx);
-          print('[EXECUTE] After HEAD resolve: $resolved');
-
-          // Dereference to get actual values from heap
-          final derefArg = _dereferenceForExecute(resolved, cx.rt, cx);
-          print('[EXECUTE] After deref: $derefArg (${derefArg.runtimeType})');
-
-          processedArgs.add(derefArg);
-        }
-
-        // Create system call context
-        final call = SystemCall(op.predicateName, processedArgs);
-
-        // Execute the system predicate
-        final result = predicate(cx.rt, call);
-
-        // Handle result based on three-valued semantics
-        if (result == SystemResult.success) {
-          // Predicate succeeded - continue execution
-          pc++;
-          continue;
-        } else if (result == SystemResult.failure) {
-          // Predicate failed - try next clause
-          _softFailToNextClause(cx, pc);
-          pc = _findNextClauseTry(pc);
-          continue;
-        } else {
-          // result == SystemResult.suspend
-          // Predicate suspended on unbound readers - add to Si and continue
-          pc = _suspendAndFailMulti(cx, call.suspendedReaders, pc); continue;
-          pc++;
-          continue;
-        }
-      }
-
       // ===== LIST-SPECIFIC HEAD INSTRUCTIONS =====
       if (op is HeadNil) {
         // Match empty list [] with argument or clause variable
@@ -4210,108 +4116,6 @@ class BytecodeRunner {
     assert(arg == null || arg is VarRef,
            'CallEnv arguments must be VarRefs, got ${arg.runtimeType}');
     return arg;
-  }
-
-  /// Resolves VarRefs that reference HEAD variables to actual heap IDs
-  /// HEAD variables are stored in clauseVars via GetVariable
-  /// This converts VarRef(headIndex) → VarRef(heapId)
-  static Object? _resolveHeadVarRefs(Object? term, RunnerContext cx) {
-    if (term is VarRef) {
-      // Check if this VarRef's addr is a HEAD variable index
-      // GetVariable stores heap addrs in clauseVars, so we can look them up
-      if (cx.clauseVars.containsKey(term.addr)) {
-        final binding = cx.clauseVars[term.addr];
-        if (binding is int) {
-          // It's a heap addr from HEAD phase - create new VarRef with actual addr
-          return VarRef(binding);
-        } else if (binding is VarRef) {
-          // Already a VarRef - return as is
-          return binding;
-        } else if (binding is Term) {
-          // It's a Term - return as is
-          return binding;
-        }
-      }
-      // Not in clauseVars or not resolvable - return as is
-      return term;
-    } else if (term is StructTerm) {
-      // Recursively resolve arguments in structures
-      final resolvedArgs = <Term>[];
-      for (final arg in term.args) {
-        final resolved = _resolveHeadVarRefs(arg, cx);
-        if (resolved is Term) {
-          resolvedArgs.add(resolved);
-        } else {
-          resolvedArgs.add(ConstTerm(resolved));
-        }
-      }
-      return StructTerm(term.functor, resolvedArgs);
-    } else {
-      // Other types - return as is
-      return term;
-    }
-  }
-
-  /// Helper to dereference values for execute() arguments
-  /// Recursively dereferences readers to get actual bound values
-  static Object? _dereferenceForExecute(Object? term, GlpRuntime rt, RunnerContext cx) {
-    if (term is VarRef) {
-      // Now addr should be an actual heap addr (after _resolveHeadVarRefs)
-      final addr = term.addr;
-      final isReader = rt.heap.isReader(addr);
-      print('[DEREF] VarRef: $term (addr=$addr, isReader=$isReader)');
-
-      // Check sigma-hat for tentative bindings (during HEAD/GUARD phase)
-      if (cx.sigmaHat.containsKey(addr)) {
-        final value = cx.sigmaHat[addr];
-        print('[DEREF] Found in sigma-hat: $value');
-        return _dereferenceForExecute(value, rt, cx);
-      }
-
-      // Check if bound using appropriate method for reader/writer
-      if (isReader) {
-        // Use isReaderBound for imported reader support
-        final isBound = rt.heap.isReaderBound(addr);
-        print('[DEREF] isReaderBound($addr) = $isBound');
-        if (isBound) {
-          final value = rt.heap.getReaderValue(addr);
-          print('[DEREF] Bound to: $value');
-          return _dereferenceForExecute(value, rt, cx);
-        } else {
-          print('[DEREF] Unbound - returning as-is');
-          return term;
-        }
-      } else {
-        // Writer - check if bound
-        print('[DEREF] isFullyBound($addr) = ${rt.heap.isFullyBound(addr)}');
-        if (rt.heap.isFullyBound(addr)) {
-          final value = rt.heap.getValue(addr);
-          print('[DEREF] Bound to: $value');
-          return _dereferenceForExecute(value, rt, cx);
-        } else {
-          print('[DEREF] Unbound - returning as-is');
-          return term;
-        }
-      }
-    } else if (term is StructTerm) {
-      print('[DEREF] StructTerm: ${term.functor}/${term.args.length}');
-      // Recursively dereference arguments in structures
-      final derefArgs = <Term>[];
-      for (final arg in term.args) {
-        final derefArg = _dereferenceForExecute(arg, rt, cx);
-        // Wrap primitives in ConstTerm
-        if (derefArg is Term) {
-          derefArgs.add(derefArg);
-        } else {
-          derefArgs.add(ConstTerm(derefArg));
-        }
-      }
-      return StructTerm(term.functor, derefArgs);
-    } else {
-      // Const, List, or other - return as-is
-      print('[DEREF] Other: $term (${term.runtimeType})');
-      return term;
-    }
   }
 
   /// Dereference a term and track any unbound readers encountered

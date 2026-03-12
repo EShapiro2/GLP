@@ -111,17 +111,11 @@ class GlpCompiler {
       // Generate reduce/2 for all files except system-mode code (stdlib)
       final generateReduce = module.compileMode != CompileMode.system;
 
-      // Phase 2.6: Generate _select/1 dispatch table for modules with exports
-      final selectProc = _generateSelectProcedure(module.procDeclarations);
-      final programForAnalyzer = selectProc != null
-          ? Program([...ast.procedures, selectProc], ast.line, ast.column)
-          : ast;
-
       // Phase 3: Semantic analysis (with reduce generation flag and proc declarations)
       // Pass proc declarations for type-based SRSW relaxation
       final analyzer = _createAnalyzer();
       final annotatedAst = analyzer.analyze(
-        programForAnalyzer,
+        ast,
         generateReduce: generateReduce,
         procDeclarations: module.procDeclarations,
         compileMode: module.compileMode,
@@ -161,41 +155,4 @@ class GlpCompiler {
 
   /// Generate _select/1 dispatch table from exported procedure declarations.
   ///
-  /// For each exported procedure p/n, generates one clause:
-  ///   _select(p(A0, ..., An-1)) :- true | p(A0?, ..., An-1?).
-  /// Plus a fallback:
-  ///   _select(_) :- otherwise | true.
-  ///
-  /// Returns null if the module has no exports.
-  Procedure? _generateSelectProcedure(List<ProcDecl> procDeclarations) {
-    final exports = procDeclarations.where((d) => d.exported).toList();
-    if (exports.isEmpty) return null;
-
-    final clauses = <Clause>[];
-
-    for (final decl in exports) {
-      // _select(p(V0, V1, ..., Vn-1)) :- p(V0?, V1?, ..., Vn-1?).
-      final headArgs = List.generate(decl.arity,
-          (i) => VarTerm('V$i', false, 0, 0) as Term);
-      final goalPattern = StructTerm(decl.name, headArgs, 0, 0);
-      final head = Atom('_select', [goalPattern], 0, 0);
-
-      final bodyArgs = List.generate(decl.arity,
-          (i) => VarTerm('V$i', true, 0, 0) as Term);
-      final bodyGoal = Goal(decl.name, bodyArgs, 0, 0);
-
-      clauses.add(Clause(head,
-          body: [bodyGoal], line: 0, column: 0));
-    }
-
-    // Fallback: _select(_) :- otherwise | true.
-    final fallbackHead = Atom('_select', [UnderscoreTerm(0, 0)], 0, 0);
-    final otherwiseGuard = Guard('otherwise', [], 0, 0);
-    final trueGoal = Goal('true', [], 0, 0);
-
-    clauses.add(Clause(fallbackHead,
-        guards: [otherwiseGuard], body: [trueGoal], line: 0, column: 0));
-
-    return Procedure('_select', 1, clauses, 0, 0);
-  }
 }

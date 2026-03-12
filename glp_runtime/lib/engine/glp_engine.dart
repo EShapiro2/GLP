@@ -52,8 +52,9 @@ class ModuleInfo {
   final String name;
   final BytecodeProgram program;
   final List<String> imports;
+  final bool hasExports;
 
-  ModuleInfo({required this.name, required this.program, required this.imports});
+  ModuleInfo({required this.name, required this.program, required this.imports, required this.hasExports});
 }
 
 /// serve/2 system predicate (embedded).
@@ -159,19 +160,19 @@ class GlpEngine {
   /// Compiled serve/2 bytecode for activateModule().
   BytecodeProgram get serveBytecode => _serveBytecode;
 
-  /// Clear all loaded programs except stdlib
+  /// Clear all loaded programs except root self.glp.
   ///
   /// Useful for test scripts that need to reset state between tests
   /// without restarting the REPL process.
   void clear() {
-    // Remember stdlib program
+    // Remember root self.glp program
     BytecodeProgram? rootSelf = _loadedPrograms['__root_self__'];
 
     // Clear everything
     _loadedPrograms.clear();
     _loadedModules.clear();
 
-    // Restore stdlib
+    // Restore root self.glp
     if (rootSelf != null) {
       _loadedPrograms['__root_self__'] = rootSelf;
     }
@@ -222,7 +223,7 @@ class GlpEngine {
     // Discover ancestor scope from self.glp hierarchy (if loading from a file)
     TypeEnvironment? ancestorScope;
     if (name != '_source_' && name != '__mad_predicates__' &&
-        !name.startsWith('__stdlib_') && name != '__root_self__' &&
+        name != '__root_self__' &&
         File(name).existsSync()) {
       final rootDir = _findProjectRoot(name);
       if (rootDir != null) {
@@ -260,12 +261,10 @@ class GlpEngine {
     _loadedModules[moduleInfo.name] = moduleInfo;
 
     // Auto-activate modules with exports for dynamic dispatch.
-    // If the compiled program has _select/1, it means the module has exported
-    // procedures and can serve goals via a GLP channel.
-    // Merge with stdlib so dispatched procedures can find :=/2 etc.
-    if (program.labels.containsKey('_select/1')) {
-      final stdlib = _loadedPrograms['__root_self__'];
-      final moduleBytecode = stdlib != null ? program.merge(stdlib) : program;
+    // Merge with root self.glp so dispatched procedures can find :=/2 etc.
+    if (moduleInfo.hasExports) {
+      final rootSelf = _loadedPrograms['__root_self__'];
+      final moduleBytecode = rootSelf != null ? program.merge(rootSelf) : program;
       activateModule(
         rt: _runtime,
         serveBytecode: _serveBytecode,
@@ -356,7 +355,7 @@ class GlpEngine {
   /// Creates a GLP channel, spawns serve(Module, ChannelReader?),
   /// and registers the channel in rt.glpChannels.
   /// The module must have been loaded via loadFile() or loadSource() first.
-  /// The module must have exported procedures (_select/1 in its bytecode).
+  /// The module must have exported procedures.
   ///
   /// After activation, cross-module calls via Distribute/Transmit opcodes
   /// route goals through the module's channel.
@@ -372,13 +371,13 @@ class GlpEngine {
     }
     final moduleProg = moduleInfo.program;
 
-    if (!moduleProg.labels.containsKey('_select/1')) {
+    if (!moduleInfo.hasExports) {
       throw Exception('Module "$moduleName" has no exported procedures');
     }
 
-    // Merge with stdlib so dispatched procedures can find :=/2 etc.
-    final stdlib = _loadedPrograms['__root_self__'];
-    final moduleBytecode = stdlib != null ? moduleProg.merge(stdlib) : moduleProg;
+    // Merge with root self.glp so dispatched procedures can find :=/2 etc.
+    final rootSelf = _loadedPrograms['__root_self__'];
+    final moduleBytecode = rootSelf != null ? moduleProg.merge(rootSelf) : moduleProg;
     activateModule(
       rt: _runtime,
       serveBytecode: _serveBytecode,
@@ -398,7 +397,14 @@ class GlpEngine {
     _runtime.madContext = madContext;
   }
 
-  /// Get the combined bytecode program from all loaded sources
+  /// Get the combined bytecode program from all loaded sources.
+  ///
+  /// TODO: This merges all modules into one flat program, bypassing
+  /// `exported procedure` access control. Goals typed at the REPL can
+  /// call any procedure from any loaded module, not just exported ones.
+  /// A future revision should enforce module boundaries by restricting
+  /// goal resolution to the current module's local procedures plus
+  /// exports of activated modules.
   BytecodeProgram get combinedProgram {
     final allOps = <dynamic>[];
     for (final loaded in _loadedPrograms.values) {
@@ -649,7 +655,10 @@ class GlpEngine {
       }
     }
 
-    return ModuleInfo(name: name, program: program, imports: imports);
+    // Detect exported procedures from `exported procedure` declarations.
+    final hasExports = RegExp(r'exported\s+procedure\s+').hasMatch(source);
+
+    return ModuleInfo(name: name, program: program, imports: imports, hasExports: hasExports);
   }
 
   String _moduleNameFromFilename(String filename) {

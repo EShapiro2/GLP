@@ -1,10 +1,9 @@
 /// Dynamic Module Dispatch — Integration Tests
 ///
 /// Tests the full dispatch chain:
-///   caller → channel → serve → _activate → _select → procedure
+///   caller → channel → serve → _activate → procedure
 ///
 /// Spec: docs/type system/dynamic-module-dispatch.md
-/// Instructions: docs/modules/dynamic-dispatch-claude-code-instructions.md
 
 import 'dart:io';
 import 'package:test/test.dart';
@@ -32,30 +31,7 @@ void main() {
 
   final ddDir = '../programs/tests/dynamic_dispatch';
 
-  group('Phase 1: _select/1 generation', () {
-    test('module with 3 exports has _select/1 label', () {
-      final source =
-          File('$ddDir/math_service.glp').readAsStringSync();
-      final program = GlpCompiler().compile(source);
-      expect(program.labels.containsKey('_select/1'), isTrue);
-    });
-
-    test('module without exports has no _select/1', () {
-      final source =
-          File('$ddDir/private_only.glp').readAsStringSync();
-      final program = GlpCompiler().compile(source);
-      expect(program.labels.containsKey('_select/1'), isFalse);
-    });
-
-    test('module with 1 export has _select/1 label', () {
-      final source =
-          File('$ddDir/single_export.glp').readAsStringSync();
-      final program = GlpCompiler().compile(source);
-      expect(program.labels.containsKey('_select/1'), isTrue);
-    });
-  });
-
-  group('Phase 3: serve/2', () {
+  group('serve/2', () {
     test('serve/2 compiles and has label', () {
       final engine = GlpEngine(
           rootSelfGlpPath: File('../programs/self.glp').absolute.path);
@@ -63,13 +39,13 @@ void main() {
     });
   });
 
-  group('Phase 4: end-to-end dispatch', () {
+  group('end-to-end dispatch', () {
     test('activate module and dispatch double(5, F) → F = 10', () {
       final compiler = GlpCompiler();
       final rt = GlpRuntime();
 
-      // Compile stdlib (needed for arithmetic body kernels at runtime)
-      final stdlibBytecode =
+      // Compile root self.glp (needed for arithmetic at runtime)
+      final rootSelfBytecode =
           compiler.compile(File('../programs/self.glp').readAsStringSync());
 
       // Compile serve/2
@@ -77,11 +53,10 @@ void main() {
           rootSelfGlpPath: File('../programs/self.glp').absolute.path);
       final serveBytecode = engine.serveBytecode;
 
-      // Compile math_service, merge with stdlib
+      // Compile math_service, merge with root self.glp
       final mathSource =
           File('$ddDir/math_service.glp').readAsStringSync();
-      final mathBytecode = compiler.compile(mathSource).merge(stdlibBytecode);
-      expect(mathBytecode.labels.containsKey('_select/1'), isTrue);
+      final mathBytecode = compiler.compile(mathSource).merge(rootSelfBytecode);
 
       // Activate the module
       final handle = activateModule(
@@ -123,7 +98,7 @@ void main() {
       final compiler = GlpCompiler();
       final rt = GlpRuntime();
 
-      final stdlibBytecode =
+      final rootSelfBytecode =
           compiler.compile(File('../programs/self.glp').readAsStringSync());
       final engine = GlpEngine(
           rootSelfGlpPath: File('../programs/self.glp').absolute.path);
@@ -131,7 +106,7 @@ void main() {
 
       final mathSource =
           File('$ddDir/math_service.glp').readAsStringSync();
-      final mathBytecode = compiler.compile(mathSource).merge(stdlibBytecode);
+      final mathBytecode = compiler.compile(mathSource).merge(rootSelfBytecode);
 
       final handle = activateModule(
         rt: rt,
@@ -156,11 +131,11 @@ void main() {
       expect((fValue as ConstTerm).value, equals(12));
     });
 
-    test('unknown goal does not crash (fallback clause)', () {
+    test('unknown goal does not crash (fallback)', () {
       final compiler = GlpCompiler();
       final rt = GlpRuntime();
 
-      final stdlibBytecode =
+      final rootSelfBytecode =
           compiler.compile(File('../programs/self.glp').readAsStringSync());
       final engine = GlpEngine(
           rootSelfGlpPath: File('../programs/self.glp').absolute.path);
@@ -168,7 +143,7 @@ void main() {
 
       final mathSource =
           File('$ddDir/math_service.glp').readAsStringSync();
-      final mathBytecode = compiler.compile(mathSource).merge(stdlibBytecode);
+      final mathBytecode = compiler.compile(mathSource).merge(rootSelfBytecode);
 
       final handle = activateModule(
         rt: rt,
@@ -187,7 +162,7 @@ void main() {
         rt.gq.enqueue(g);
       }
 
-      // Should not crash — _select/1 fallback clause handles it
+      // Should not crash — _activate fallback handles unknown procedures
       final result = scheduler.drainWithStatus(maxCycles: 5000);
       // The serve loop should continue running (suspended, waiting for more input)
       expect(result.status, equals(ExecutionStatus.suspended));
@@ -197,7 +172,7 @@ void main() {
       final compiler = GlpCompiler();
       final rt = GlpRuntime();
 
-      final stdlibBytecode =
+      final rootSelfBytecode =
           compiler.compile(File('../programs/self.glp').readAsStringSync());
       final engine = GlpEngine(
           rootSelfGlpPath: File('../programs/self.glp').absolute.path);
@@ -205,7 +180,7 @@ void main() {
 
       final source =
           File('$ddDir/single_export.glp').readAsStringSync();
-      final moduleBytecode = compiler.compile(source).merge(stdlibBytecode);
+      final moduleBytecode = compiler.compile(source).merge(rootSelfBytecode);
 
       final handle = activateModule(
         rt: rt,
