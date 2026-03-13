@@ -1,0 +1,74 @@
+%% mad_fplay5.glp — madGLP boot for fplay5 (2 families: alice+carol, bob+dave)
+%%
+%% Derived from: cssn_modules_v2/boot.glp fplay5 clause
+%% CSSG: Bob rejects
+
+-mode(system).
+
+procedure boot.
+boot :-
+    parent_init(alice, carol, 5, _)@alice,
+    parent_init(bob, dave, 5, _)@bob.
+
+%% Parent isolate: sets up parent agent + child agent + merge wiring
+procedure parent_init(Constant?, Constant?, Constant?, Stream(_)?).
+parent_init(Id, ChildId, PlayNum, NetIn) :-
+    ground(Id?), ground(ChildId?), ground(PlayNum?) |
+    %% Parent actor + mediator + display
+    actor_dispatch(Id?, PlayNum?, ch(ActorIn?, ActorOut)),
+    tee(ActorOut?, MedIn, DispCmd),
+    agent(Id?, AgentIn?, NetAndChildIn?,
+          [output('_user', AgentToUser),
+           output('_net', NetOut),
+           output(child(ChildId?), ParentToChild)]),
+    send_to_net(NetOut?),
+    ui_mediator(Id?, ch(AgentToUser?, AgentIn),
+                ch(MedIn?, MedOut), [], 1),
+    tee(MedOut?, ActorIn, DispNotify),
+    send_to_user_tagged(Id?, DispCmd?, DispNotify?),
+    %% Child actor + mediator + display
+    actor_dispatch(ChildId?, PlayNum?, ch(ChildActorIn?, ChildActorOut)),
+    tee(ChildActorOut?, ChildMedIn, ChildDispCmd),
+    child_agent(ChildId?, Id?, ChildAgentIn?, ChildFromParent?,
+          [output('_user', ChildAgentToUser),
+           output(parent(Id?), ChildToParent)]),
+    ui_mediator(ChildId?, ch(ChildAgentToUser?, ChildAgentIn),
+                ch(ChildMedIn?, ChildMedOut), [], 1),
+    tee(ChildMedOut?, ChildActorIn, ChildDispNotify),
+    send_to_user_tagged(ChildId?, ChildDispCmd?, ChildDispNotify?),
+    %% Parent-child stream wiring (matching boot.glp pattern)
+    merge(ParentToChild?, [], ChildFromParent),
+    merge(ChildToParent?, [], FromChild),
+    merge(NetIn?, FromChild?, NetAndChildIn).
+
+procedure merge(Stream(_)?, Stream(_)?, Stream(_)).
+merge([X|Xs], Ys, [X?|Zs?]) :- merge(Ys?, Xs?, Zs).
+merge(Xs, [Y|Ys], [Y?|Zs?]) :- merge(Xs?, Ys?, Zs).
+merge([], Ys, Ys?).
+merge(Xs, [], Xs?).
+
+procedure tee(Stream(_)?, Stream(_), Stream(_)).
+tee([X|Xs], [X?|Ys?], [X?|Zs?]) :- ground(X?) | tee(Xs?, Ys, Zs).
+tee([], [], []).
+
+procedure send_to_user_tagged(Constant?, Stream(_)?, Stream(_)?).
+send_to_user_tagged(Id, [T|Cmds], Notifies) :-
+    ground(Id?), ground(T?) |
+    '_output'(tagged(Id?, cmd(T?))),
+    send_to_user_tagged(Id?, Cmds?, Notifies?).
+send_to_user_tagged(Id, Cmds, [T|Notifies]) :-
+    ground(Id?), ground(T?) |
+    '_output'(tagged(Id?, notify(T?))),
+    send_to_user_tagged(Id?, Cmds?, Notifies?).
+send_to_user_tagged(_, [], []).
+send_to_user_tagged(_, Cmds, []) :- sink(Cmds?).
+
+procedure sink(Stream(_)?).
+sink([_|Xs]) :- sink(Xs?).
+sink([]).
+
+procedure actor_dispatch(Constant?, Constant?, Channel(Stream(UserNotify), Stream(UserCmd))).
+actor_dispatch(alice, 5, Ch) :- alice5(Ch?).
+actor_dispatch(bob, 5, Ch) :- bob5(Ch?).
+actor_dispatch(carol, 5, Ch) :- carol5(Ch?).
+actor_dispatch(dave, 5, Ch) :- dave5(Ch?).

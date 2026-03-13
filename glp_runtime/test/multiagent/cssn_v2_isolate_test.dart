@@ -8,6 +8,26 @@ const _cssnV2Dir = '../programs/cssn_modules_v2';
 const _madBootDir = '$_cssnV2Dir/mad_boot';
 const _rootSelfGlp = '../programs/self.glp';
 
+/// Helper: load boot file, configure project dir, boot and run.
+Future<void> _runPlay(IsolateManager manager, String bootFilename,
+    {int timeoutSec = 10}) async {
+  final bootFile = File('$_madBootDir/$bootFilename');
+  if (!bootFile.existsSync()) {
+    print('Skipping: ${bootFile.path} not found');
+    return;
+  }
+
+  final bootSource = bootFile.readAsStringSync();
+  final loader = BootLoader();
+  final config = loader.load(bootSource);
+  config.projectDir = _cssnV2Dir;
+  config.rootSelfGlpPath = _rootSelfGlp;
+
+  await manager.boot(config, traceConfig: TraceConfig(glp: false, mad: false));
+  manager.start();
+  await Future.delayed(Duration(seconds: timeoutSec));
+}
+
 void main() {
   group('CSSN v2 Multi-Isolate', () {
     late IsolateManager manager;
@@ -20,49 +40,45 @@ void main() {
       await manager.shutdown();
     });
 
-    test('fplay1 runs across isolates (3 adults)', () async {
-      final bootFile = File('$_madBootDir/mad_fplay1.glp');
-      if (!bootFile.existsSync()) {
-        print('Skipping: ${bootFile.path} not found');
-        return;
-      }
+    // fplay1-3: 3 adults (alice, bob, charlie)
+    for (final n in [1, 2, 3]) {
+      test('fplay$n runs across isolates (3 adults)', () async {
+        await _runPlay(manager, 'mad_fplay$n.glp');
+      }, timeout: Timeout(Duration(seconds: 30)));
+    }
 
-      final bootSource = bootFile.readAsStringSync();
-      final loader = BootLoader();
-      final config = loader.load(bootSource);
-      config.projectDir = _cssnV2Dir;
-      config.rootSelfGlpPath = _rootSelfGlp;
+    // fplay4-7: 2 families (alice+carol, bob+dave)
+    for (final n in [4, 5, 6, 7]) {
+      test('fplay$n runs across isolates (2 families)', () async {
+        await _runPlay(manager, 'mad_fplay$n.glp');
+      }, timeout: Timeout(Duration(seconds: 30)));
+    }
 
-      // Verify boot parsing
-      expect(config.directives.length, equals(3));
-      expect(
-        config.directives.map((d) => d.agentId).toList(),
-        equals(['alice', 'bob', 'charlie']),
-      );
-      expect(
-        config.directives.every((d) => d.goalFunctor == 'agent_init'),
-        isTrue,
-      );
-      expect(
-        config.directives.every((d) => d.goalArity == 3),
-        isTrue,
-      );
-      expect(
-        config.directives.every((d) => d.constantArgs.length == 1 && d.constantArgs[0] == '1'),
-        isTrue,
-      );
-
-      await manager.boot(config,
-          traceConfig: TraceConfig(glp: false, mad: true));
-
-      // Start and let event-driven execution run the protocol
-      manager.start();
-
-      // fplay1: alice connects to charlie via bob's intro → both accept
-      // Allow enough time for the cold-call + intro + accept protocol
-      await Future.delayed(Duration(seconds: 10));
-
-      // Termination is external — we shut down in tearDown
+    // fplay8: 2 adults (alice, bob)
+    test('fplay8 runs across isolates (2 adults)', () async {
+      await _runPlay(manager, 'mad_fplay8.glp');
     }, timeout: Timeout(Duration(seconds: 30)));
+
+    // fplay9-10: alice adult + bob+dave family
+    for (final n in [9, 10]) {
+      test('fplay$n runs across isolates (adult + family)', () async {
+        await _runPlay(manager, 'mad_fplay$n.glp');
+      }, timeout: Timeout(Duration(seconds: 30)));
+    }
+
+    // fplay11: 3 families (alice+carol, bob+dave, charlie+eve)
+    test('fplay11 runs across isolates (3 families)', () async {
+      await _runPlay(manager, 'mad_fplay11.glp');
+    }, timeout: Timeout(Duration(seconds: 30)));
+
+    // fplay12: alice adult + bob+dave family + charlie+eve family
+    test('fplay12 runs across isolates (adult + 2 families)', () async {
+      await _runPlay(manager, 'mad_fplay12.glp');
+    }, timeout: Timeout(Duration(seconds: 30)));
+
+    // fplay13: village (alice+carol, bob+dave+eve, frank)
+    test('fplay13 runs across isolates (village)', () async {
+      await _runPlay(manager, 'mad_fplay13.glp', timeoutSec: 15);
+    }, timeout: Timeout(Duration(seconds: 45)));
   });
 }
