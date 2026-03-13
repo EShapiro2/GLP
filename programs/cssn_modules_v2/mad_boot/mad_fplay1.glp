@@ -1,0 +1,53 @@
+%% mad_fplay1.glp — madGLP boot for fplay1 (3 adults: alice, bob, charlie)
+%%
+%% Each agent runs in its own isolate. IsolateManager routes network messages.
+%% Project-directory loading makes all cssn_modules_v2 exports available
+%% as aliases (agent/4, ui_mediator/5, alice1/1, etc.).
+%%
+%% Derived from: cssn_modules_v2/boot.glp fplay1 clause
+
+-mode(system).
+
+procedure boot.
+boot :-
+    agent_init(alice, 1, _)@alice,
+    agent_init(bob, 1, _)@bob,
+    agent_init(charlie, 1, _)@charlie.
+
+procedure agent_init(Constant?, Constant?, Stream(_)?).
+agent_init(Id, PlayNum, NetIn) :-
+    ground(Id?), ground(PlayNum?) |
+    actor_dispatch(Id?, PlayNum?, ch(ActorIn?, ActorOut)),
+    tee(ActorOut?, MedIn, DispCmd),
+    agent(Id?, AgentIn?, NetIn?,
+          [output('_user', AgentToUser), output('_net', NetOut)]),
+    send_to_net(NetOut?),
+    ui_mediator(Id?, ch(AgentToUser?, AgentIn),
+                ch(MedIn?, MedOut), [], 1),
+    tee(MedOut?, ActorIn, DispNotify),
+    send_to_user_tagged(Id?, DispCmd?, DispNotify?).
+
+procedure tee(Stream(_)?, Stream(_), Stream(_)).
+tee([X|Xs], [X?|Ys?], [X?|Zs?]) :- ground(X?) | tee(Xs?, Ys, Zs).
+tee([], [], []).
+
+procedure send_to_user_tagged(Constant?, Stream(_)?, Stream(_)?).
+send_to_user_tagged(Id, [T|Cmds], Notifies) :-
+    ground(Id?), ground(T?) |
+    '_output'(tagged(Id?, cmd(T?))),
+    send_to_user_tagged(Id?, Cmds?, Notifies?).
+send_to_user_tagged(Id, Cmds, [T|Notifies]) :-
+    ground(Id?), ground(T?) |
+    '_output'(tagged(Id?, notify(T?))),
+    send_to_user_tagged(Id?, Cmds?, Notifies?).
+send_to_user_tagged(_, [], []).
+send_to_user_tagged(_, Cmds, []) :- sink(Cmds?).
+
+procedure sink(Stream(_)?).
+sink([_|Xs]) :- sink(Xs?).
+sink([]).
+
+procedure actor_dispatch(Constant?, Constant?, Channel(Stream(UserNotify), Stream(UserCmd))).
+actor_dispatch(alice, 1, Ch) :- alice1(Ch?).
+actor_dispatch(bob, 1, Ch) :- bob1(Ch?).
+actor_dispatch(charlie, 1, Ch) :- charlie1(Ch?).

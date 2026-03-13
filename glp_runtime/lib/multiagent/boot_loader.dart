@@ -72,7 +72,7 @@ class BootConfig {
     required this.source,
     this.sharedSources,
     this.projectDir,
-    required this.rootSelfGlpPath,
+    this.rootSelfGlpPath = '',
   });
 }
 

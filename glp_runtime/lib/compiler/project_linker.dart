@@ -75,8 +75,11 @@ List<DiscoveredModule> discoverProject(String rootDir,
     // Skip boot_direct.glp (copy of boot.glp with direct calls, not a module)
     if (filename == 'boot_direct.glp') continue;
 
-    // Skip mad_boot.glp (madGLP boot procedures, loaded on top of linked project)
+    // Skip mad_boot.glp and files in mad_boot/ directory
+    // (madGLP boot procedures, loaded on top of linked project)
     if (filename == 'mad_boot.glp') continue;
+    if (file.parent.path.endsWith('${Platform.pathSeparator}mad_boot') ||
+        file.parent.path.endsWith('/mad_boot')) continue;
 
     // Parse the module
     final source = file.readAsStringSync();
