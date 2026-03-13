@@ -47,9 +47,9 @@ void main() {
       }, timeout: Timeout(Duration(seconds: 30)));
     }
 
-    // fplay4-7: 2 families (alice+carol, bob+dave)
+    // fplay4-7: 4 agents (alice, bob, carol, dave)
     for (final n in [4, 5, 6, 7]) {
-      test('fplay$n runs across isolates (2 families)', () async {
+      test('fplay$n runs across isolates (4 agents)', () async {
         await _runPlay(manager, 'mad_fplay$n.glp');
       }, timeout: Timeout(Duration(seconds: 30)));
     }
@@ -59,25 +59,25 @@ void main() {
       await _runPlay(manager, 'mad_fplay8.glp');
     }, timeout: Timeout(Duration(seconds: 30)));
 
-    // fplay9-10: alice adult + bob+dave family
+    // fplay9-10: 3 agents (alice, bob, dave)
     for (final n in [9, 10]) {
-      test('fplay$n runs across isolates (adult + family)', () async {
+      test('fplay$n runs across isolates (3 agents)', () async {
         await _runPlay(manager, 'mad_fplay$n.glp');
       }, timeout: Timeout(Duration(seconds: 30)));
     }
 
-    // fplay11: 3 families (alice+carol, bob+dave, charlie+eve)
-    test('fplay11 runs across isolates (3 families)', () async {
+    // fplay11: 6 agents (alice, bob, charlie, carol, dave, eve)
+    test('fplay11 runs across isolates (6 agents)', () async {
       await _runPlay(manager, 'mad_fplay11.glp');
     }, timeout: Timeout(Duration(seconds: 30)));
 
-    // fplay12: alice adult + bob+dave family + charlie+eve family
-    test('fplay12 runs across isolates (adult + 2 families)', () async {
+    // fplay12: 5 agents (alice, bob, charlie, dave, eve)
+    test('fplay12 runs across isolates (5 agents)', () async {
       await _runPlay(manager, 'mad_fplay12.glp');
     }, timeout: Timeout(Duration(seconds: 30)));
 
-    // fplay13: village (alice+carol, bob+dave+eve, frank)
-    test('fplay13 runs across isolates (village)', () async {
+    // fplay13: village — 6 agents (alice, bob, frank, carol, dave, eve)
+    test('fplay13 runs across isolates (village, 6 agents)', () async {
       await _runPlay(manager, 'mad_fplay13.glp', timeoutSec: 15);
     }, timeout: Timeout(Duration(seconds: 45)));
   });

@@ -1,51 +1,49 @@
-%% mad_fplay4.glp — madGLP boot for fplay4 (2 families: alice+carol, bob+dave)
+%% mad_fplay4.glp — madGLP boot for fplay4 (4 isolates: alice, bob, carol, dave)
 %%
 %% Derived from: cssn_modules_v2/boot.glp fplay4 clause
 %% CSSG: All four accept
+%% One isolate per agent — parent-child streams cross isolate boundaries.
 
 -mode(system).
 
 procedure boot.
 boot :-
-    parent_init(alice, carol, 4, _)@alice,
-    parent_init(bob, dave, 4, _)@bob.
+    parent_agent_init(alice, carol, 4, _)@alice,
+    parent_agent_init(bob, dave, 4, _)@bob,
+    child_init(carol, alice, 4, _)@carol,
+    child_init(dave, bob, 4, _)@dave.
 
-%% Parent isolate: sets up parent agent + child agent + merge wiring
-procedure parent_init(Constant?, Constant?, Constant?, Stream(_)?).
-parent_init(Id, ChildId, PlayNum, NetIn) :-
+%% Adult agent with one child — child output globalized via send_to_remote
+procedure parent_agent_init(Constant?, Constant?, Constant?, Stream(_)?).
+parent_agent_init(Id, ChildId, PlayNum, NetIn) :-
     ground(Id?), ground(ChildId?), ground(PlayNum?) |
-    %% Parent actor + mediator + display
     actor_dispatch(Id?, PlayNum?, ch(ActorIn?, ActorOut)),
     tee(ActorOut?, MedIn, DispCmd),
-    agent(Id?, AgentIn?, NetAndChildIn?,
+    agent(Id?, AgentIn?, NetIn?,
           [output('_user', AgentToUser),
            output('_net', NetOut),
-           output(child(ChildId?), ParentToChild)]),
+           output(child(ChildId?), ChildOut)]),
     send_to_net(NetOut?),
+    send_to_remote(ChildId?, ChildOut?),
     ui_mediator(Id?, ch(AgentToUser?, AgentIn),
                 ch(MedIn?, MedOut), [], 1),
     tee(MedOut?, ActorIn, DispNotify),
-    send_to_user_tagged(Id?, DispCmd?, DispNotify?),
-    %% Child actor + mediator + display
-    actor_dispatch(ChildId?, PlayNum?, ch(ChildActorIn?, ChildActorOut)),
-    tee(ChildActorOut?, ChildMedIn, ChildDispCmd),
-    child_agent(ChildId?, Id?, ChildAgentIn?, ChildFromParent?,
-          [output('_user', ChildAgentToUser),
-           output(parent(Id?), ChildToParent)]),
-    ui_mediator(ChildId?, ch(ChildAgentToUser?, ChildAgentIn),
-                ch(ChildMedIn?, ChildMedOut), [], 1),
-    tee(ChildMedOut?, ChildActorIn, ChildDispNotify),
-    send_to_user_tagged(ChildId?, ChildDispCmd?, ChildDispNotify?),
-    %% Parent-child stream wiring (matching boot.glp pattern)
-    merge(ParentToChild?, [], ChildFromParent),
-    merge(ChildToParent?, [], FromChild),
-    merge(NetIn?, FromChild?, NetAndChildIn).
+    send_to_user_tagged(Id?, DispCmd?, DispNotify?).
 
-procedure merge(Stream(_)?, Stream(_)?, Stream(_)).
-merge([X|Xs], Ys, [X?|Zs?]) :- merge(Ys?, Xs?, Zs).
-merge(Xs, [Y|Ys], [Y?|Zs?]) :- merge(Xs?, Ys?, Zs).
-merge([], Ys, Ys?).
-merge(Xs, [], Xs?).
+%% Child agent — parent output globalized via send_to_remote
+procedure child_init(Constant?, Constant?, Constant?, Stream(_)?).
+child_init(Id, Parent, PlayNum, NetIn) :-
+    ground(Id?), ground(Parent?), ground(PlayNum?) |
+    actor_dispatch(Id?, PlayNum?, ch(ActorIn?, ActorOut)),
+    tee(ActorOut?, MedIn, DispCmd),
+    child_agent(Id?, Parent?, AgentIn?, NetIn?,
+          [output('_user', AgentToUser),
+           output(parent(Parent?), ParentOut)]),
+    send_to_remote(Parent?, ParentOut?),
+    ui_mediator(Id?, ch(AgentToUser?, AgentIn),
+                ch(MedIn?, MedOut), [], 1),
+    tee(MedOut?, ActorIn, DispNotify),
+    send_to_user_tagged(Id?, DispCmd?, DispNotify?).
 
 procedure tee(Stream(_)?, Stream(_), Stream(_)).
 tee([X|Xs], [X?|Ys?], [X?|Zs?]) :- ground(X?) | tee(Xs?, Ys, Zs).

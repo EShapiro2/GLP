@@ -77,7 +77,7 @@ serve(_, []) :-
 
 /// madGLP system predicates (embedded).
 ///
-/// Provides send_to_net/1, global_send/3, send_to_user/1.
+/// Provides send_to_net/1, send_to_remote/2, global_send/3, send_to_user/1.
 /// Loaded by enableMadGLP().
 const String _madPredicatesSource = r'''
 -mode(system).  %% Uses reserved constants like '_w' and '_send'
@@ -89,6 +89,12 @@ const String _madPredicatesSource = r'''
 procedure send_to_net(Stream(_)?).
 send_to_net([msg(Q, T) | In]) :- ground(Q?) | global_send(msg(Q?, T?), '_w'(Q?, 0), Q?), send_to_net(In?).
 send_to_net([]).
+
+%% send_to_remote/2 - Globalize any output stream to a specific remote agent
+%% Used for parent-child streams that cross isolate boundaries.
+procedure send_to_remote(Constant?, Stream(_)?).
+send_to_remote(Agent, [Msg | In]) :- ground(Agent?), ground(Msg?) | global_send(Msg?, '_w'(Agent?, 0), Agent?), send_to_remote(Agent?, In?).
+send_to_remote(_, []).
 
 %% global_send/3 - Send via global link
 procedure global_send(_?, _?, _?).
