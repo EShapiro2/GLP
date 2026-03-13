@@ -10,17 +10,17 @@
 %% CORE PROTOCOL TYPES
 %% =============================================================================
 
-%% Stream and Channel are predefined in prelude:
-%%   Stream ::= [] ; [_|Stream].
-%%   Channel ::= ch(Stream, Stream?).
+%% Stream(X) and Channel(In, Out) are predefined in prelude:
+%%   Stream(X) ::= [] ; [X | Stream(X)].
+%%   Channel(In, Out) ::= ch(In, Out?).
 
 %% Friend messages (after connection established)
 FriendContent ::= response(Response)
                 ; text(Constant)
-                ; intro(Constant, IntroChannel)
-                ; child_intro(Constant, IntroChannel)
-                ; group_invite(GroupId, GroupSetupInviteeChannel)
-                ; group_invite_child(GroupId, Constant, GroupSetupInviteeChannel)
+                ; intro(Constant, Channel(Stream(IntroContent), Stream(IntroContent)))
+                ; child_intro(Constant, Channel(Stream(IntroContent), Stream(IntroContent)))
+                ; group_invite(GroupId, Channel(Stream(GroupSetupResponse), Stream(IntroContent)))
+                ; group_invite_child(GroupId, Constant, Channel(Stream(GroupSetupResponse), Stream(IntroContent)))
                 ; group_msg(GroupId, Constant, Constant)
                 ; group_consent_req(GroupId, Decision?)
                 ; group_leave(GroupId, Constant)
@@ -29,24 +29,20 @@ FriendContent ::= response(Response)
                 ; unfriend
                 ; unfriend_child(Constant).
 FriendMsg     ::= msg(Constant, Constant, FriendContent).
-FriendStream  ::= [] ; [FriendMsg | FriendStream].
-FriendChannel ::= ch(FriendStream, FriendStream?).
 
-Response ::= accept(FriendChannel) ; no.
+Response ::= accept(Channel(Stream(FriendMsg), Stream(FriendMsg))) ; no.
 Decision ::= yes ; no.
 Handshake ::= ack(Constant) ; nack.
 
-%% Intro channel (handshake protocol)
+%% Intro content (handshake protocol)
 IntroContent ::= ack(Constant) ; nack.
-IntroStream  ::= [] ; [IntroContent | IntroStream].
-IntroChannel ::= ch(IntroStream, IntroStream?).
 
 %% Group identifier
 GroupId   ::= group_id(Constant, Constant).
 
 %% Pending values — opaque values stored by mediator, forwarded to agent
-PendingValue ::= response(Response?) ; channel(IntroChannel)
-               ; group_channel(GroupSetupInviteeChannel)
+PendingValue ::= response(Response?) ; channel(Channel(Stream(IntroContent), Stream(IntroContent)))
+               ; group_channel(Channel(Stream(GroupSetupResponse), Stream(IntroContent)))
                ; consent(Decision?) ; error.
 
 %% =============================================================================
@@ -82,14 +78,14 @@ UserContent ::= connect(Constant)
 
 %% Content carried inside agent-to-user messages (msg(agent, '_user', Content))
 AgentContent ::= befriend(Constant, Response?)
-               ; befriend_intro(Constant, Constant, IntroChannel)
-               ; child_befriend(Constant, Constant, IntroChannel)
+               ; befriend_intro(Constant, Constant, Channel(Stream(IntroContent), Stream(IntroContent)))
+               ; child_befriend(Constant, Constant, Channel(Stream(IntroContent), Stream(IntroContent)))
                ; connected(Constant)
                ; rejected
                ; rejected(Constant)
                ; received(Constant, Constant)
-               ; group_invite(GroupId, GroupSetupInviteeChannel)
-               ; group_invite_child(GroupId, Constant, GroupSetupInviteeChannel)
+               ; group_invite(GroupId, Channel(Stream(GroupSetupResponse), Stream(IntroContent)))
+               ; group_invite_child(GroupId, Constant, Channel(Stream(GroupSetupResponse), Stream(IntroContent)))
                ; group_joined(GroupId)
                ; group_joined_member(GroupId, Constant)
                ; group_left(GroupId)
@@ -98,14 +94,9 @@ AgentContent ::= befriend(Constant, Response?)
                ; child_group_consent(Constant, GroupId, Decision?)
                ; unfriended(Constant).
 
-%% Precise message streams for agent <-> mediator channel
+%% Precise message types for agent <-> mediator channel
 AgentToUserMsg        ::= msg(Constant, Constant, AgentContent).
-AgentToUserStream     ::= [] ; [AgentToUserMsg | AgentToUserStream].
 MediatorToAgentMsg    ::= msg(Constant, Constant, UserContent).
-MediatorToAgentStream ::= [] ; [MediatorToAgentMsg | MediatorToAgentStream].
-
-%% Precise channel between agent and mediator
-AgentChannel ::= ch(AgentToUserStream, MediatorToAgentStream?).
 
 %% =============================================================================
 %% AGENT INPUT TYPES
@@ -114,63 +105,53 @@ AgentChannel ::= ch(AgentToUserStream, MediatorToAgentStream?).
 %% Network content (2-arg cold-call: msg(Dest, Content))
 NetColdCall ::= intro(Constant, Response?).
 
-%% Network input stream (cold calls + friend messages)
+%% Network input message (cold calls + friend messages)
 NetInMsg    ::= msg(Constant, NetColdCall)
               ; msg(Constant, Constant, FriendContent).
-NetInStream ::= [] ; [NetInMsg | NetInStream].
 
 %% Intro result — written by intro_await_peer, injected into UserIn
-IntroResult ::= intro_result(Constant, IntroChannel) ; intro_rejected(Constant).
+IntroResult ::= intro_result(Constant, Channel(Stream(IntroContent), Stream(IntroContent)))
+              ; intro_rejected(Constant).
 
 %% Group join result — written by group_await_join, injected into UserIn
-GroupJoinResult ::= group_join_ack(GroupId, Constant, GroupSetupCreatorChannel)
+GroupJoinResult ::= group_join_ack(GroupId, Constant, Channel(Stream(IntroContent), Stream(GroupSetupResponse)))
                   ; group_join_nack(GroupId, Constant).
 
-%% Agent input stream (user messages + injected intro results + group results)
+%% Agent input message (user messages + injected intro results + group results)
 UserInMsg ::= msg(Constant, Constant, UserContent)
-            ; intro_result(Constant, IntroChannel)
+            ; intro_result(Constant, Channel(Stream(IntroContent), Stream(IntroContent)))
             ; intro_rejected(Constant)
-            ; group_join_ack(GroupId, Constant, GroupSetupCreatorChannel)
+            ; group_join_ack(GroupId, Constant, Channel(Stream(IntroContent), Stream(GroupSetupResponse)))
             ; group_join_nack(GroupId, Constant).
-UserInStream ::= [] ; [UserInMsg | UserInStream].
 
 %% =============================================================================
 %% AGENT OUTPUT TYPES
 %% =============================================================================
 
-%% Group channel stream — subtype of both OutputStream and NetInStream
+%% Group channel message content
 GroupContent ::= group_msg(GroupId, Constant, Constant)
                ; group_leave(GroupId, Constant)
                ; group_removed(GroupId).
 GroupMsg     ::= msg(Constant, Constant, GroupContent).
-GroupStream  ::= [] ; [GroupMsg | GroupStream].
-GroupChannel ::= ch(GroupStream, GroupStream?).
 
 %% Group invite setup protocol (asymmetric channel)
 %% Creator→Invitee stream carries the group channel after handshake
-GroupSetupResponse       ::= group_channel(GroupChannel).
-GroupSetupResponseStream ::= [] ; [GroupSetupResponse | GroupSetupResponseStream].
-
-%% The two endpoints of the group invite setup channel
-%% Invitee reads responses, writes ack/nack (IntroStream)
-GroupSetupInviteeChannel ::= ch(GroupSetupResponseStream, IntroStream?).
-%% Creator reads ack/nack (IntroStream), writes responses
-GroupSetupCreatorChannel ::= ch(IntroStream, GroupSetupResponseStream?).
+GroupSetupResponse ::= group_channel(Channel(Stream(GroupMsg), Stream(GroupMsg))).
 
 %% Union of all content the agent sends on output streams
 OutputContent ::= befriend(Constant, Response?)
-                ; befriend_intro(Constant, Constant, IntroChannel)
-                ; child_befriend(Constant, Constant, IntroChannel)
+                ; befriend_intro(Constant, Constant, Channel(Stream(IntroContent), Stream(IntroContent)))
+                ; child_befriend(Constant, Constant, Channel(Stream(IntroContent), Stream(IntroContent)))
                 ; connected(Constant)
                 ; rejected
                 ; rejected(Constant)
                 ; received(Constant, Constant)
                 ; response(Response)
                 ; text(Constant)
-                ; intro(Constant, IntroChannel)
-                ; child_intro(Constant, IntroChannel)
-                ; group_invite(GroupId, GroupSetupInviteeChannel)
-                ; group_invite_child(GroupId, Constant, GroupSetupInviteeChannel)
+                ; intro(Constant, Channel(Stream(IntroContent), Stream(IntroContent)))
+                ; child_intro(Constant, Channel(Stream(IntroContent), Stream(IntroContent)))
+                ; group_invite(GroupId, Channel(Stream(GroupSetupResponse), Stream(IntroContent)))
+                ; group_invite_child(GroupId, Constant, Channel(Stream(GroupSetupResponse), Stream(IntroContent)))
                 ; group_joined(GroupId)
                 ; group_joined_member(GroupId, Constant)
                 ; group_left(GroupId)
@@ -186,14 +167,13 @@ OutputContent ::= befriend(Constant, Response?)
                 ; unfriended(Constant).
 OutputMsg ::= msg(Constant, Constant, OutputContent)
             ; msg(Constant, NetColdCall).
-OutputStream ::= [] ; [OutputMsg | OutputStream].
 
 %% Output list — keys distinguish system channels, friends, children, and groups
 OutputKey   ::= '_user' ; '_net' ; friend(Constant) ; child(Constant)
               ; parent(Constant)
               ; group(GroupId) ; group_member(GroupId, Constant).
-OutputEntry ::= output(OutputKey, OutputStream?)
-              ; group_entry(OutputKey, GroupStream?).
+OutputEntry ::= output(OutputKey, Stream(OutputMsg)?)
+              ; group_entry(OutputKey, Stream(GroupMsg)?).
 OutputsList ::= [] ; [OutputEntry|OutputsList].
 
 %% =============================================================================
@@ -246,19 +226,12 @@ UserNotify ::= befriend(Constant, ReqId)
              ; child_group_consent(Constant, GroupId, ReqId)
              ; unfriended(Constant).
 
-UserCmdStream    ::= [] ; [UserCmd | UserCmdStream].
-UserNotifyStream ::= [] ; [UserNotify | UserNotifyStream].
-UserChannel      ::= ch(UserCmdStream, UserNotifyStream?).
-
-%% Actor's view of the user channel (reversed)
-ActorChannel ::= ch(UserNotifyStream, UserCmdStream?).
 
 %% =============================================================================
 %% MEDIATOR PENDING LIST
 %% =============================================================================
 
 PendingEntry ::= pending(ReqId, PendingValue).
-PendingList  ::= [] ; [PendingEntry | PendingList].
 
 %% =============================================================================
 %% NARRATIVE TYPES (for village scenario actors)
@@ -268,7 +241,6 @@ NarrativeItem   ::= friend(Constant)
                   ; say(Constant)
                   ; act(Constant)
                   ; event(Constant).
-NarrativeStream ::= [] ; [NarrativeItem | NarrativeStream].
 
 %% =============================================================================
 %% SHARED HELPER PROCEDURES
@@ -276,21 +248,50 @@ NarrativeStream ::= [] ; [NarrativeItem | NarrativeStream].
 %% Defined here, visible to all sibling modules via ancestor scoping.
 %% The linker resolves calls in agent.glp/child_agent.glp to these procedures.
 %%
-%% Note: merge, bind_response, handle_response, setup_group_hub_side,
-%% setup_group_creator, await_group_channel remain in each module because
-%% merge uses Stream(X) and the type checker cannot verify that concrete stream
-%% types (NetInStream, etc.) are subtypes of the polymorphic Stream(X).
+%% Note: bind_response, handle_response, await_group_channel remain in each
+%% module because they call agent/child_agent (recursive tail calls).
+
+%% =============================================================================
+%% MERGE
+%% =============================================================================
+
+procedure merge(Stream(X)?, Stream(X)?, Stream(X)).
+merge([X|Xs], Ys, [X?|Zs?]) :- merge(Ys?, Xs?, Zs).
+merge(Xs, [Y|Ys], [Y?|Zs?]) :- merge(Xs?, Ys?, Zs).
+merge([], Ys, Ys?).
+merge(Xs, [], Xs?).
+
+%% =============================================================================
+%% SETUP_GROUP_HUB_SIDE
+%% =============================================================================
+
+procedure setup_group_hub_side(GroupId?, Constant?, Stream(OutputEntry)?, Stream(OutputEntry), Stream(NetInMsg)?, Stream(NetInMsg), Channel(Stream(GroupMsg), Stream(GroupMsg))).
+setup_group_hub_side(GroupId, Member, Outs, Outs1?, NetIn, NetIn1?,
+    ch(HubToMember?, MemberToHub)) :-
+    ground(GroupId?), ground(Member?) |
+    add_group_output(group_member(GroupId?, Member?), HubToMember, Outs?, Outs1),
+    merge(NetIn?, MemberToHub?, NetIn1).
+
+%% =============================================================================
+%% SETUP_GROUP_CREATOR
+%% =============================================================================
+
+procedure setup_group_creator(GroupId?, Stream(OutputEntry)?, Stream(OutputEntry), Stream(NetInMsg)?, Stream(NetInMsg)).
+setup_group_creator(GroupId, Outs, Outs1?, NetIn, NetIn1?) :-
+    ground(GroupId?) |
+    add_group_output(group(GroupId?), MemberToHub, Outs?, Outs1),
+    merge(NetIn?, MemberToHub?, NetIn1).
 
 %% =============================================================================
 %% LOOKUP_SEND
 %% =============================================================================
 
-procedure lookup_send(OutputKey?, OutputMsg?, OutputsList?, OutputsList).
+procedure lookup_send(OutputKey?, OutputMsg?, Stream(OutputEntry)?, Stream(OutputEntry)).
 lookup_send(Key, Msg, Outs, Outs1?) :-
     ground(Key?) |
     lookup_send_step(Key?, Msg?, Outs?, Outs1).
 
-procedure lookup_send_step(OutputKey?, OutputMsg?, OutputsList?, OutputsList).
+procedure lookup_send_step(OutputKey?, OutputMsg?, Stream(OutputEntry)?, Stream(OutputEntry)).
 lookup_send_step(Key, Msg, [output(K, [Msg?|Out1?])|Rest], [output(K?, Out1)|Rest?]) :-
     Key? =?= K? | true.
 lookup_send_step(Key, Msg, [output(K, Out?)|Rest], [output(K?, Out)|Rest1?]) :-
@@ -305,12 +306,12 @@ lookup_send_step(_, _, [], []).
 %% LOOKUP_SEND_GROUP
 %% =============================================================================
 
-procedure lookup_send_group(OutputKey?, GroupMsg?, OutputsList?, OutputsList).
+procedure lookup_send_group(OutputKey?, GroupMsg?, Stream(OutputEntry)?, Stream(OutputEntry)).
 lookup_send_group(Key, Msg, Outs, Outs1?) :-
     ground(Key?) |
     lookup_send_group_step(Key?, Msg?, Outs?, Outs1).
 
-procedure lookup_send_group_step(OutputKey?, GroupMsg?, OutputsList?, OutputsList).
+procedure lookup_send_group_step(OutputKey?, GroupMsg?, Stream(OutputEntry)?, Stream(OutputEntry)).
 lookup_send_group_step(Key, Msg, [group_entry(K, [Msg?|Out1?])|Rest], [group_entry(K?, Out1)|Rest?]) :-
     Key? =?= K? | true.
 lookup_send_group_step(Key, Msg, [output(K, Out?)|Rest], [output(K?, Out)|Rest1?]) :-
@@ -325,7 +326,7 @@ lookup_send_group_step(_, _, [], []).
 %% DISTRIBUTE_GROUP_MSG
 %% =============================================================================
 
-procedure distribute_group_msg(GroupId?, GroupMsg?, OutputsList?, OutputsList).
+procedure distribute_group_msg(GroupId?, GroupMsg?, Stream(OutputEntry)?, Stream(OutputEntry)).
 distribute_group_msg(GroupId, Msg,
     [group_entry(group_member(GId, M), [Msg?|Out1?])|Rest],
     [group_entry(group_member(GId?, M?), Out1)|Rest1?]) :-
@@ -343,7 +344,7 @@ distribute_group_msg(_, _, [], []).
 %% INJECT_MSG
 %% =============================================================================
 
-procedure inject_msg(Response?, Constant?, Constant?, UserInStream?, UserInStream).
+procedure inject_msg(Response?, Constant?, Constant?, Stream(UserInMsg)?, Stream(UserInMsg)).
 inject_msg(Resp, Target, Id, Ys, [msg(Target?, Id?, response(Resp?))|Ys?]) :-
     known(Resp?) | true.
 inject_msg(Resp, Target, Id, [Y|Ys], [Y?|Ys1?]) :-
@@ -353,13 +354,13 @@ inject_msg(Resp, Target, Id, [Y|Ys], [Y?|Ys1?]) :-
 %% ADD_OUTPUT / ADD_GROUP_OUTPUT / CLOSE_OUTPUTS
 %% =============================================================================
 
-procedure add_output(OutputKey?, OutputStream, OutputsList?, OutputsList).
+procedure add_output(OutputKey?, Stream(OutputMsg), Stream(OutputEntry)?, Stream(OutputEntry)).
 add_output(Key, Out?, Outs, [output(Key?, Out)|Outs?]).
 
-procedure add_group_output(OutputKey?, GroupStream, OutputsList?, OutputsList).
+procedure add_group_output(OutputKey?, Stream(GroupMsg), Stream(OutputEntry)?, Stream(OutputEntry)).
 add_group_output(Key, Out?, Outs, [group_entry(Key?, Out)|Outs?]).
 
-procedure close_outputs(OutputsList?).
+procedure close_outputs(Stream(OutputEntry)?).
 close_outputs([output(_, [])|Outs]) :- close_outputs(Outs?).
 close_outputs([group_entry(_, [])|Outs]) :- close_outputs(Outs?).
 close_outputs([]).
@@ -368,7 +369,7 @@ close_outputs([]).
 %% INTRO_AWAIT_PEER
 %% =============================================================================
 
-procedure intro_await_peer(Constant?, IntroChannel?, IntroResult).
+procedure intro_await_peer(Constant?, Channel(Stream(IntroContent), Stream(IntroContent))?, IntroResult).
 
 intro_await_peer(Other, ch([ack(_)|ChIn], ChOut?),
                  intro_result(Other?, ch(ChIn?, ChOut))).
@@ -380,7 +381,7 @@ intro_await_peer(Other, ch([nack|_], []),
 %% INJECT_INTRO_RESULT
 %% =============================================================================
 
-procedure inject_intro_result(IntroResult?, UserInStream?, UserInStream).
+procedure inject_intro_result(IntroResult?, Stream(UserInMsg)?, Stream(UserInMsg)).
 inject_intro_result(intro_result(Other, Ch), Ys, [intro_result(Other?, Ch?)|Ys?]) :-
     ground(Other?) | true.
 inject_intro_result(intro_rejected(Other), Ys, [intro_rejected(Other?)|Ys?]) :-
@@ -392,7 +393,7 @@ inject_intro_result(Res, [Y|Ys], [Y?|Ys1?]) :-
 %% GROUP_AWAIT_JOIN
 %% =============================================================================
 
-procedure group_await_join(GroupId?, Constant?, GroupSetupCreatorChannel?, GroupJoinResult).
+procedure group_await_join(GroupId?, Constant?, Channel(Stream(IntroContent), Stream(GroupSetupResponse))?, GroupJoinResult).
 
 group_await_join(GroupId, Invitee, ch([ack(_)|ChIn], ChOut?),
                  group_join_ack(GroupId?, Invitee?, ch(ChIn?, ChOut))).
@@ -404,7 +405,7 @@ group_await_join(GroupId, Invitee, ch([nack|_], []),
 %% INJECT_GROUP_RESULT
 %% =============================================================================
 
-procedure inject_group_result(GroupJoinResult?, UserInStream?, UserInStream).
+procedure inject_group_result(GroupJoinResult?, Stream(UserInMsg)?, Stream(UserInMsg)).
 inject_group_result(group_join_ack(G, I, Ch), Ys,
     [group_join_ack(G?, I?, Ch?)|Ys?]) :-
     ground(I?) | true.
@@ -418,7 +419,7 @@ inject_group_result(Res, [Y|Ys], [Y?|Ys1?]) :-
 %% CLOSE_OUTPUT — close a stream and remove its entry from the outputs list
 %% =============================================================================
 
-procedure close_output(OutputKey?, OutputsList?, OutputsList).
+procedure close_output(OutputKey?, Stream(OutputEntry)?, Stream(OutputEntry)).
 close_output(_, [], []).
 close_output(Key, [output(K, [])|Rest], Rest?) :-
     Key? =?= K? | true.

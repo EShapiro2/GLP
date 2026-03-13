@@ -1,9 +1,8 @@
 %% child_agent.glp — Child agent module (CSSN, full groups + blocking consent)
 %%
 %% Exports: child_agent/5
-%% Types and most helpers: from self.glp (ancestor scoping)
-%% merge, setup_group_hub_side, setup_group_creator, await_group_channel:
-%%   local (Stream(X) subtyping limitation)
+%% Types and helpers (merge, setup_group_*): from self.glp (ancestor scoping)
+%% await_group_channel, child_consent_wait: local (call child_agent recursively)
 %%
 %% CSSN child_agent handles befriending via parent introductions, messaging,
 %% group creation/inviting/joining/messaging, and blocking parental consent
@@ -13,41 +12,10 @@
 -mode(system).
 
 %% =============================================================================
-%% MERGE — local (Stream(X) cross-module subtyping not supported)
-%% =============================================================================
-
-procedure merge(Stream(X)?, Stream(X)?, Stream(X)).
-merge([X|Xs], Ys, [X?|Zs?]) :- merge(Ys?, Xs?, Zs).
-merge(Xs, [Y|Ys], [Y?|Zs?]) :- merge(Xs?, Ys?, Zs).
-merge([], Ys, Ys?).
-merge(Xs, [], Xs?).
-
-%% =============================================================================
-%% SETUP_GROUP_HUB_SIDE — local (calls merge)
-%% =============================================================================
-
-procedure setup_group_hub_side(GroupId?, Constant?, OutputsList?, OutputsList, NetInStream?, NetInStream, GroupChannel).
-setup_group_hub_side(GroupId, Member, Outs, Outs1?, NetIn, NetIn1?,
-    ch(HubToMember?, MemberToHub)) :-
-    ground(GroupId?), ground(Member?) |
-    add_group_output(group_member(GroupId?, Member?), HubToMember, Outs?, Outs1),
-    merge(NetIn?, MemberToHub?, NetIn1).
-
-%% =============================================================================
-%% SETUP_GROUP_CREATOR — local (calls merge)
-%% =============================================================================
-
-procedure setup_group_creator(GroupId?, OutputsList?, OutputsList, NetInStream?, NetInStream).
-setup_group_creator(GroupId, Outs, Outs1?, NetIn, NetIn1?) :-
-    ground(GroupId?) |
-    add_group_output(group(GroupId?), MemberToHub, Outs?, Outs1),
-    merge(NetIn?, MemberToHub?, NetIn1).
-
-%% =============================================================================
 %% AWAIT_GROUP_CHANNEL — local (calls merge and child_agent)
 %% =============================================================================
 
-procedure await_group_channel(Constant?, Constant?, GroupId?, GroupSetupResponseStream?, UserInStream?, NetInStream?, OutputsList?).
+procedure await_group_channel(Constant?, Constant?, GroupId?, Stream(GroupSetupResponse)?, Stream(UserInMsg)?, Stream(NetInMsg)?, Stream(OutputEntry)?).
 await_group_channel(Id, ParentId, GroupId, [group_channel(ch(FromHub, ToHub?))|_],
         UserIn, NetIn, Outs) :-
     ground(Id?), ground(GroupId?) |
@@ -63,7 +31,7 @@ await_group_channel(_, _, _, [], _, _, _) :- true.
 %% =============================================================================
 
 procedure child_consent_wait(Decision?, Constant?, Constant?, GroupId?,
-    GroupSetupInviteeChannel?, UserInStream?, NetInStream?, OutputsList?).
+    Channel(Stream(GroupSetupResponse), Stream(IntroContent))?, Stream(UserInMsg)?, Stream(NetInMsg)?, Stream(OutputEntry)?).
 
 %% Parent approved — present invite to child's UI
 child_consent_wait(yes, Id, ParentId, GroupId, Ch, UserIn, NetIn, Outs) :-
@@ -80,7 +48,7 @@ child_consent_wait(no, Id, ParentId, _, ch(_, [nack|[]]), UserIn, NetIn, Outs) :
 %% CHILD_AGENT/5 — Main loop
 %% =============================================================================
 
-exported procedure child_agent(Constant?, Constant?, UserInStream?, NetInStream?, OutputsList?).
+exported procedure child_agent(Constant?, Constant?, Stream(UserInMsg)?, Stream(NetInMsg)?, Stream(OutputEntry)?).
 
 %% --- User messages ---
 

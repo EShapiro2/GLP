@@ -1,9 +1,8 @@
 %% agent.glp — CSSN social agent module (v2)
 %%
 %% Exports: agent/4
-%% Types and most helpers: from self.glp (ancestor scoping)
-%% merge, bind_response, handle_response, setup_group_hub_side,
-%% setup_group_creator, await_group_channel: local (Stream(X) subtyping limitation)
+%% Types and helpers (merge, setup_group_*): from self.glp (ancestor scoping)
+%% bind_response, handle_response, await_group_channel: local (call agent recursively)
 %%
 %% v2 changes:
 %%   - Helpers moved to self.glp (except merge-dependent ones)
@@ -13,41 +12,10 @@
 -mode(system).
 
 %% =============================================================================
-%% MERGE — local (Stream(X) cross-module subtyping not supported)
-%% =============================================================================
-
-procedure merge(Stream(X)?, Stream(X)?, Stream(X)).
-merge([X|Xs], Ys, [X?|Zs?]) :- merge(Ys?, Xs?, Zs).
-merge(Xs, [Y|Ys], [Y?|Zs?]) :- merge(Xs?, Ys?, Zs).
-merge([], Ys, Ys?).
-merge(Xs, [], Xs?).
-
-%% =============================================================================
-%% SETUP_GROUP_HUB_SIDE — local (calls merge)
-%% =============================================================================
-
-procedure setup_group_hub_side(GroupId?, Constant?, OutputsList?, OutputsList, NetInStream?, NetInStream, GroupChannel).
-setup_group_hub_side(GroupId, Member, Outs, Outs1?, NetIn, NetIn1?,
-    ch(HubToMember?, MemberToHub)) :-
-    ground(GroupId?), ground(Member?) |
-    add_group_output(group_member(GroupId?, Member?), HubToMember, Outs?, Outs1),
-    merge(NetIn?, MemberToHub?, NetIn1).
-
-%% =============================================================================
-%% SETUP_GROUP_CREATOR — local (calls merge)
-%% =============================================================================
-
-procedure setup_group_creator(GroupId?, OutputsList?, OutputsList, NetInStream?, NetInStream).
-setup_group_creator(GroupId, Outs, Outs1?, NetIn, NetIn1?) :-
-    ground(GroupId?) |
-    add_group_output(group(GroupId?), MemberToHub, Outs?, Outs1),
-    merge(NetIn?, MemberToHub?, NetIn1).
-
-%% =============================================================================
 %% AWAIT_GROUP_CHANNEL — local (calls merge and agent)
 %% =============================================================================
 
-procedure await_group_channel(Constant?, GroupId?, GroupSetupResponseStream?, UserInStream?, NetInStream?, OutputsList?).
+procedure await_group_channel(Constant?, GroupId?, Stream(GroupSetupResponse)?, Stream(UserInMsg)?, Stream(NetInMsg)?, Stream(OutputEntry)?).
 await_group_channel(Id, GroupId, [group_channel(ch(FromHub, ToHub?))|_],
         UserIn, NetIn, Outs) :-
     ground(Id?), ground(GroupId?) |
@@ -62,14 +30,14 @@ await_group_channel(_, _, [], _, _, _) :- true.
 %% RESPONSE HANDLING — local (calls merge)
 %% =============================================================================
 
-procedure bind_response(Decision?, Constant?, Response, OutputsList?, OutputsList, NetInStream?, NetInStream).
+procedure bind_response(Decision?, Constant?, Response, Stream(OutputEntry)?, Stream(OutputEntry), Stream(NetInMsg)?, Stream(NetInMsg)).
 bind_response(yes, From, accept(RetCh?), Outs, Outs1?, In, In1?) :-
     new_channel(RetCh, LocalCh) |
     handle_response(accept(LocalCh?), From?, Outs?, Outs1, In?, In1).
 bind_response(no, _, no, Outs, Outs1?, In, In?) :-
     lookup_send('_user', msg(agent, '_user', rejected), Outs?, Outs1).
 
-procedure handle_response(Response?, Constant?, OutputsList?, OutputsList, NetInStream?, NetInStream).
+procedure handle_response(Response?, Constant?, Stream(OutputEntry)?, Stream(OutputEntry), Stream(NetInMsg)?, Stream(NetInMsg)).
 handle_response(accept(ch(FIn, FOut?)), From, Outs, Outs2?, In, In1?) :-
     ground(From?) |
     add_output(friend(From?), FOut, Outs?, Outs1),
@@ -83,7 +51,7 @@ handle_response(no, From, Outs, Outs1?, In, In?) :-
 %% AGENT/4
 %% =============================================================================
 
-exported procedure agent(Constant?, UserInStream?, NetInStream?, OutputsList?).
+exported procedure agent(Constant?, Stream(UserInMsg)?, Stream(NetInMsg)?, Stream(OutputEntry)?).
 
 %% --- User messages ---
 

@@ -13,75 +13,75 @@
 %% =============================================================================
 
 %% From agent.glp (sibling)
-imported procedure agent#agent(Constant?, UserInStream?, NetInStream?, OutputsList?).
+imported procedure agent#agent(Constant?, Stream(UserInMsg)?, Stream(NetInMsg)?, Stream(OutputEntry)?).
 
 %% From child_agent.glp (sibling)
-imported procedure child_agent#child_agent(Constant?, Constant?, UserInStream?, NetInStream?, OutputsList?).
+imported procedure child_agent#child_agent(Constant?, Constant?, Stream(UserInMsg)?, Stream(NetInMsg)?, Stream(OutputEntry)?).
 
 %% From ui/mediator.glp
-imported procedure mediator#ui_mediator(Constant?, AgentChannel?, UserChannel?, PendingList?, Constant?).
+imported procedure mediator#ui_mediator(Constant?, Channel(Stream(AgentToUserMsg), Stream(MediatorToAgentMsg))?, Channel(Stream(UserCmd), Stream(UserNotify))?, Stream(PendingEntry)?, Constant?).
 
 %% From ui/actors.glp — plays 1-3 (3 agents)
-imported procedure actors#alice1(ActorChannel?).
-imported procedure actors#bob1(ActorChannel?).
-imported procedure actors#charlie1(ActorChannel?).
-imported procedure actors#alice2(ActorChannel?).
-imported procedure actors#bob2(ActorChannel?).
-imported procedure actors#charlie2(ActorChannel?).
-imported procedure actors#alice3(ActorChannel?).
-imported procedure actors#bob3(ActorChannel?).
-imported procedure actors#charlie3(ActorChannel?).
+imported procedure actors#alice1(Channel(Stream(UserNotify), Stream(UserCmd))?).
+imported procedure actors#bob1(Channel(Stream(UserNotify), Stream(UserCmd))?).
+imported procedure actors#charlie1(Channel(Stream(UserNotify), Stream(UserCmd))?).
+imported procedure actors#alice2(Channel(Stream(UserNotify), Stream(UserCmd))?).
+imported procedure actors#bob2(Channel(Stream(UserNotify), Stream(UserCmd))?).
+imported procedure actors#charlie2(Channel(Stream(UserNotify), Stream(UserCmd))?).
+imported procedure actors#alice3(Channel(Stream(UserNotify), Stream(UserCmd))?).
+imported procedure actors#bob3(Channel(Stream(UserNotify), Stream(UserCmd))?).
+imported procedure actors#charlie3(Channel(Stream(UserNotify), Stream(UserCmd))?).
 
 %% From ui/actors.glp — plays 4-7 (4 agents: CSSG)
-imported procedure actors#alice4(ActorChannel?).
-imported procedure actors#bob4(ActorChannel?).
-imported procedure actors#carol4(ActorChannel?).
-imported procedure actors#dave4(ActorChannel?).
-imported procedure actors#alice5(ActorChannel?).
-imported procedure actors#bob5(ActorChannel?).
-imported procedure actors#carol5(ActorChannel?).
-imported procedure actors#dave5(ActorChannel?).
-imported procedure actors#alice6(ActorChannel?).
-imported procedure actors#bob6(ActorChannel?).
-imported procedure actors#carol6(ActorChannel?).
-imported procedure actors#dave6(ActorChannel?).
-imported procedure actors#alice7(ActorChannel?).
-imported procedure actors#bob7(ActorChannel?).
-imported procedure actors#carol7(ActorChannel?).
-imported procedure actors#dave7(ActorChannel?).
+imported procedure actors#alice4(Channel(Stream(UserNotify), Stream(UserCmd))?).
+imported procedure actors#bob4(Channel(Stream(UserNotify), Stream(UserCmd))?).
+imported procedure actors#carol4(Channel(Stream(UserNotify), Stream(UserCmd))?).
+imported procedure actors#dave4(Channel(Stream(UserNotify), Stream(UserCmd))?).
+imported procedure actors#alice5(Channel(Stream(UserNotify), Stream(UserCmd))?).
+imported procedure actors#bob5(Channel(Stream(UserNotify), Stream(UserCmd))?).
+imported procedure actors#carol5(Channel(Stream(UserNotify), Stream(UserCmd))?).
+imported procedure actors#dave5(Channel(Stream(UserNotify), Stream(UserCmd))?).
+imported procedure actors#alice6(Channel(Stream(UserNotify), Stream(UserCmd))?).
+imported procedure actors#bob6(Channel(Stream(UserNotify), Stream(UserCmd))?).
+imported procedure actors#carol6(Channel(Stream(UserNotify), Stream(UserCmd))?).
+imported procedure actors#dave6(Channel(Stream(UserNotify), Stream(UserCmd))?).
+imported procedure actors#alice7(Channel(Stream(UserNotify), Stream(UserCmd))?).
+imported procedure actors#bob7(Channel(Stream(UserNotify), Stream(UserCmd))?).
+imported procedure actors#carol7(Channel(Stream(UserNotify), Stream(UserCmd))?).
+imported procedure actors#dave7(Channel(Stream(UserNotify), Stream(UserCmd))?).
 
 %% From ui/actors.glp — plays 8-10 (CSSN groups)
-imported procedure actors#alice8(ActorChannel?).
-imported procedure actors#bob8(ActorChannel?).
-imported procedure actors#alice9(ActorChannel?).
-imported procedure actors#bob9(ActorChannel?).
-imported procedure actors#dave9(ActorChannel?).
-imported procedure actors#alice10(ActorChannel?).
-imported procedure actors#bob10(ActorChannel?).
-imported procedure actors#dave10(ActorChannel?).
+imported procedure actors#alice8(Channel(Stream(UserNotify), Stream(UserCmd))?).
+imported procedure actors#bob8(Channel(Stream(UserNotify), Stream(UserCmd))?).
+imported procedure actors#alice9(Channel(Stream(UserNotify), Stream(UserCmd))?).
+imported procedure actors#bob9(Channel(Stream(UserNotify), Stream(UserCmd))?).
+imported procedure actors#dave9(Channel(Stream(UserNotify), Stream(UserCmd))?).
+imported procedure actors#alice10(Channel(Stream(UserNotify), Stream(UserCmd))?).
+imported procedure actors#bob10(Channel(Stream(UserNotify), Stream(UserCmd))?).
+imported procedure actors#dave10(Channel(Stream(UserNotify), Stream(UserCmd))?).
 
 %% From ui/actors.glp — play 11 (6 agents: CSSN child-safe groups)
-imported procedure actors#alice11(ActorChannel?).
-imported procedure actors#bob11(ActorChannel?).
-imported procedure actors#charlie11(ActorChannel?).
-imported procedure actors#carol11(ActorChannel?).
-imported procedure actors#dave11(ActorChannel?).
-imported procedure actors#eve11(ActorChannel?).
+imported procedure actors#alice11(Channel(Stream(UserNotify), Stream(UserCmd))?).
+imported procedure actors#bob11(Channel(Stream(UserNotify), Stream(UserCmd))?).
+imported procedure actors#charlie11(Channel(Stream(UserNotify), Stream(UserCmd))?).
+imported procedure actors#carol11(Channel(Stream(UserNotify), Stream(UserCmd))?).
+imported procedure actors#dave11(Channel(Stream(UserNotify), Stream(UserCmd))?).
+imported procedure actors#eve11(Channel(Stream(UserNotify), Stream(UserCmd))?).
 
 %% From ui/actors.glp — play 12 (5 agents: parental consent for groups)
-imported procedure actors#alice12(ActorChannel?).
-imported procedure actors#bob12(ActorChannel?).
-imported procedure actors#charlie12(ActorChannel?).
-imported procedure actors#dave12(ActorChannel?).
-imported procedure actors#eve12(ActorChannel?).
+imported procedure actors#alice12(Channel(Stream(UserNotify), Stream(UserCmd))?).
+imported procedure actors#bob12(Channel(Stream(UserNotify), Stream(UserCmd))?).
+imported procedure actors#charlie12(Channel(Stream(UserNotify), Stream(UserCmd))?).
+imported procedure actors#dave12(Channel(Stream(UserNotify), Stream(UserCmd))?).
+imported procedure actors#eve12(Channel(Stream(UserNotify), Stream(UserCmd))?).
 
 %% From village/*.glp — play 13 (6 agents: village scenario)
-imported procedure alice#alice13(Constant?, ActorChannel?, NarrativeStream).
-imported procedure bob#bob13(Constant?, ActorChannel?, NarrativeStream).
-imported procedure frank#frank13(Constant?, ActorChannel?, NarrativeStream).
-imported procedure carol#carol13(Constant?, ActorChannel?, NarrativeStream).
-imported procedure dave#dave13(Constant?, ActorChannel?, NarrativeStream).
-imported procedure eve#eve13(Constant?, ActorChannel?, NarrativeStream).
+imported procedure alice#alice13(Constant?, Channel(Stream(UserNotify), Stream(UserCmd))?, Stream(NarrativeItem)).
+imported procedure bob#bob13(Constant?, Channel(Stream(UserNotify), Stream(UserCmd))?, Stream(NarrativeItem)).
+imported procedure frank#frank13(Constant?, Channel(Stream(UserNotify), Stream(UserCmd))?, Stream(NarrativeItem)).
+imported procedure carol#carol13(Constant?, Channel(Stream(UserNotify), Stream(UserCmd))?, Stream(NarrativeItem)).
+imported procedure dave#dave13(Constant?, Channel(Stream(UserNotify), Stream(UserCmd))?, Stream(NarrativeItem)).
+imported procedure eve#eve13(Constant?, Channel(Stream(UserNotify), Stream(UserCmd))?, Stream(NarrativeItem)).
 
 %% =============================================================================
 %% LOCAL UTILITIES
@@ -808,7 +808,7 @@ fplay12 :-
 %% NARRATIVE DISPLAY — for village scenario actors
 %% =============================================================================
 
-procedure send_to_user_narrate(Constant?, NarrativeStream?).
+procedure send_to_user_narrate(Constant?, Stream(NarrativeItem)?).
 send_to_user_narrate(Id, [friend(X)|Ns]) :-
     ground(Id?), ground(X?) |
     '_output'(tagged(Id?, friend(X?))),

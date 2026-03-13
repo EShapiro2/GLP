@@ -14,7 +14,7 @@
 %% So child_befriend(bob,carol) may arrive before connected(dave). Handle both orderings.
 %% =============================================================================
 
-exported procedure eve13(Constant?, ActorChannel?, NarrativeStream).
+exported procedure eve13(Constant?, Channel(Stream(UserNotify), Stream(UserCmd))?, Stream(NarrativeItem)).
 eve13(_, ch([child_befriend(bob, dave, ReqId)|In],
             [accept_child_intro(dave, ReqId?)|Out?]),
       Narr?) :-
@@ -22,7 +22,7 @@ eve13(_, ch([child_befriend(bob, dave, ReqId)|In],
     eve13_wait_dave_or_carol(In?, Out, Narr).
 
 %% After accepting Dave intro, either connected(dave) or child_befriend(carol) first
-procedure eve13_wait_dave_or_carol(UserNotifyStream?, UserCmdStream, NarrativeStream).
+procedure eve13_wait_dave_or_carol(Stream(UserNotify)?, Stream(UserCmd), Stream(NarrativeItem)).
 %% Case 1: connected(dave) arrives first
 eve13_wait_dave_or_carol([connected(dave)|In], Out?,
                          [friend(dave)|Narr?]) :-
@@ -38,7 +38,7 @@ eve13_wait_dave_or_carol([_|In], Out?, Narr?) :-
 eve13_wait_dave_or_carol([], [], []).
 
 %% Case 1: Dave connected, wait for Carol intro
-procedure eve13_wait_carol_intro(UserNotifyStream?, UserCmdStream, NarrativeStream).
+procedure eve13_wait_carol_intro(Stream(UserNotify)?, Stream(UserCmd), Stream(NarrativeItem)).
 eve13_wait_carol_intro([child_befriend(bob, carol, ReqId)|In],
                        [accept_child_intro(carol, ReqId?)|Out?],
                        Narr?) :-
@@ -49,7 +49,7 @@ eve13_wait_carol_intro([_|In], Out?, Narr?) :-
 eve13_wait_carol_intro([], [], []).
 
 %% Case 1: Wait for connected(carol)
-procedure eve13_wait_carol_connected(UserNotifyStream?, UserCmdStream, NarrativeStream).
+procedure eve13_wait_carol_connected(Stream(UserNotify)?, Stream(UserCmd), Stream(NarrativeItem)).
 eve13_wait_carol_connected([connected(carol)|In], Out?,
                            [friend(carol)|Narr?]) :-
     eve13_act3(In?, Out, Narr).
@@ -58,7 +58,7 @@ eve13_wait_carol_connected([_|In], Out?, Narr?) :-
 eve13_wait_carol_connected([], [], []).
 
 %% Case 2: Both intros accepted, wait for connected(dave) then connected(carol)
-procedure eve13_wait_both_connected(UserNotifyStream?, UserCmdStream, NarrativeStream).
+procedure eve13_wait_both_connected(Stream(UserNotify)?, Stream(UserCmd), Stream(NarrativeItem)).
 eve13_wait_both_connected([connected(dave)|In], Out?,
                           [friend(dave)|Narr?]) :-
     eve13_wait_carol_connected(In?, Out, Narr).
@@ -71,7 +71,7 @@ eve13_wait_both_connected([], [], []).
 %% =============================================================================
 
 %% Wait for group_invite from Carol's kids_chat
-procedure eve13_act3(UserNotifyStream?, UserCmdStream, NarrativeStream).
+procedure eve13_act3(Stream(UserNotify)?, Stream(UserCmd), Stream(NarrativeItem)).
 eve13_act3([group_invite(group_id(carol, kids_chat), ReqId)|In],
            [accept_group(group_id(carol, kids_chat), ReqId?)|Out?],
            [act('Accepting kids_chat invite')|Narr?]) :-
@@ -82,7 +82,7 @@ eve13_act3([_|In], Out?, Narr?) :-
 eve13_act3([], [], []).
 
 %% Wait for group_joined
-procedure eve13_wait_kids_joined(UserNotifyStream?, UserCmdStream, NarrativeStream).
+procedure eve13_wait_kids_joined(Stream(UserNotify)?, Stream(UserCmd), Stream(NarrativeItem)).
 eve13_wait_kids_joined([group_joined(group_id(carol, kids_chat))|In], Out?,
                        [event('Joined kids_chat')|Narr?]) :-
     eve13_wait_kids_welcome(In?, Out, Narr).
@@ -91,7 +91,7 @@ eve13_wait_kids_joined([_|In], Out?, Narr?) :-
 eve13_wait_kids_joined([], [], []).
 
 %% Wait for Carol's welcome message, then reply
-procedure eve13_wait_kids_welcome(UserNotifyStream?, UserCmdStream, NarrativeStream).
+procedure eve13_wait_kids_welcome(Stream(UserNotify)?, Stream(UserCmd), Stream(NarrativeItem)).
 eve13_wait_kids_welcome([group_received(group_id(carol, kids_chat), carol, _)|In],
                         [send_group(group_id(carol, kids_chat), 'Hi all!')|Out?],
                         [say('Hi all!')|Narr?]) :-
@@ -101,13 +101,13 @@ eve13_wait_kids_welcome([_|In], Out?, Narr?) :-
 eve13_wait_kids_welcome([], [], []).
 
 %% Leave kids_chat
-procedure eve13_leave_kids(UserNotifyStream?, UserCmdStream, NarrativeStream).
+procedure eve13_leave_kids(Stream(UserNotify)?, Stream(UserCmd), Stream(NarrativeItem)).
 eve13_leave_kids(In, [leave_group(group_id(carol, kids_chat))|Out?],
                  [act('Leaving kids_chat')|Narr?]) :-
     eve13_wait_kids_left(In?, Out, Narr).
 
 %% Wait for group_left
-procedure eve13_wait_kids_left(UserNotifyStream?, UserCmdStream, NarrativeStream).
+procedure eve13_wait_kids_left(Stream(UserNotify)?, Stream(UserCmd), Stream(NarrativeItem)).
 eve13_wait_kids_left([group_left(group_id(carol, kids_chat))|In], Out?,
                      [event('Left kids_chat')|Narr?]) :-
     eve13_finish(In?, Out, Narr).
@@ -119,5 +119,5 @@ eve13_wait_kids_left([], [], []).
 %% Act 7: Termination
 %% =============================================================================
 
-procedure eve13_finish(UserNotifyStream?, UserCmdStream, NarrativeStream).
+procedure eve13_finish(Stream(UserNotify)?, Stream(UserCmd), Stream(NarrativeItem)).
 eve13_finish(_, [], []).

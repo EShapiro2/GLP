@@ -12,12 +12,12 @@
 %% Act 1: Adult friendships
 %% =============================================================================
 
-exported procedure alice13(Constant?, ActorChannel?, NarrativeStream).
+exported procedure alice13(Constant?, Channel(Stream(UserNotify), Stream(UserCmd))?, Stream(NarrativeItem)).
 alice13(_, ch(In, [connect(bob)|Out?]), Narr?) :-
     alice13_wait_bob(In?, Out, Narr).
 
 %% Wait for connected(bob), then text Bob and connect to Frank
-procedure alice13_wait_bob(UserNotifyStream?, UserCmdStream, NarrativeStream).
+procedure alice13_wait_bob(Stream(UserNotify)?, Stream(UserCmd), Stream(NarrativeItem)).
 alice13_wait_bob([connected(bob)|In],
                  [send(bob, 'Hello Bob'), connect(frank)|Out?],
                  [friend(bob), say('Hello Bob')|Narr?]) :-
@@ -27,7 +27,7 @@ alice13_wait_bob([_|In], Out?, Narr?) :-
 alice13_wait_bob([], [], []).
 
 %% Wait for connected(frank), then fire both child introductions
-procedure alice13_wait_frank(UserNotifyStream?, UserCmdStream, NarrativeStream).
+procedure alice13_wait_frank(Stream(UserNotify)?, Stream(UserCmd), Stream(NarrativeItem)).
 alice13_wait_frank([connected(frank)|In],
                    [child_introduce(carol, bob, dave),
                     child_introduce(carol, bob, eve)|Out?],
@@ -43,7 +43,7 @@ alice13_wait_frank([], [], []).
 %% Act 4: Approve Carol joining Frank's study group
 %% =============================================================================
 
-procedure alice13_wait_act4(UserNotifyStream?, UserCmdStream, NarrativeStream).
+procedure alice13_wait_act4(Stream(UserNotify)?, Stream(UserCmd), Stream(NarrativeItem)).
 alice13_wait_act4([group_invite_child(group_id(frank, study), carol, ReqId)|In],
                   [approve_group(carol, group_id(frank, study), ReqId?)|Out?],
                   [act('Approved Carol joining study group')|Narr?]) :-
@@ -57,5 +57,5 @@ alice13_wait_act4([], [], []).
 %% Act 7: Termination
 %% =============================================================================
 
-procedure alice13_finish(UserNotifyStream?, UserCmdStream, NarrativeStream).
+procedure alice13_finish(Stream(UserNotify)?, Stream(UserCmd), Stream(NarrativeItem)).
 alice13_finish(_, [], []).
