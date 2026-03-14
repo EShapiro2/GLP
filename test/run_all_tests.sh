@@ -17,6 +17,7 @@
 #   K - CSSN v2 Modules (child_agent with blocking consent)
 #   L - Dynamic Module Dispatch Tests (activate + M # goal)
 #   M - Multi-Isolate (madGLP) Tests (dart test, one isolate per agent)
+#   N - Bonds V2 Modules (project-directory loading, plays 1-12)
 
 set -e
 
@@ -1605,6 +1606,128 @@ else
     PASS=$((PASS + MAD_PASSED))
     FAIL=$((FAIL + MAD_FAILED))
 fi
+
+echo ""
+
+# =============================================================================
+# Section N: Bonds V2 Modules (project-directory loading, plays 1-12)
+# =============================================================================
+echo "=== Section N: Bonds V2 Modules ==="
+echo ""
+
+BONDS_V2="$GLP_DIR/programs/bonds_v2"
+
+# Loading
+n_load=$($DART run "$REPL" <<HEREDOC
+$BONDS_V2
+:quit
+HEREDOC
+2>&1)
+
+check "Bonds v2 project loads" "Loaded project" "$n_load"
+check_not "Bonds v2 no type errors" "Type checking failed" "$n_load"
+
+# fplay1: solo mint
+echo "--- Bonds v2 solo mint (fplay1) ---"
+
+n_fp1=$($DART run "$REPL" <<HEREDOC
+$BONDS_V2
+fplay1.
+:quit
+HEREDOC
+2>&1)
+
+check "Bonds v2 fplay1 succeeds" "succeeds" "$n_fp1"
+check "Bonds v2 fplay1 minted" "tagged(alice.*minted" "$n_fp1"
+
+# fplay2: befriend + trade
+echo "--- Bonds v2 befriend + trade (fplay2) ---"
+
+n_fp2=$($DART run "$REPL" <<HEREDOC
+$BONDS_V2
+fplay2.
+:quit
+HEREDOC
+2>&1)
+
+check "Bonds v2 fplay2 succeeds" "succeeds" "$n_fp2"
+check "Bonds v2 fplay2 connected" "tagged(alice.*connected(bob)" "$n_fp2"
+check "Bonds v2 fplay2 trade_completed" "trade_completed" "$n_fp2"
+
+# fplay3-6: trade variations
+echo "--- Bonds v2 trade plays (fplay3-fplay6) ---"
+
+for play_num in 3 4 5 6; do
+    n_fpN=$($DART run "$REPL" <<HEREDOC
+$BONDS_V2
+fplay${play_num}.
+:quit
+HEREDOC
+2>&1)
+    check "Bonds v2 fplay${play_num} succeeds" "succeeds" "$n_fpN"
+done
+
+# fplay4b: time-dependent trade
+echo "--- Bonds v2 time-dependent trade (fplay4b) ---"
+
+n_fp4b=$($DART run "$REPL" <<HEREDOC
+$BONDS_V2
+fplay4b.
+:quit
+HEREDOC
+2>&1)
+
+check "Bonds v2 fplay4b succeeds" "succeeds" "$n_fp4b"
+
+# fplay8-9: buyback + symmetric trade
+echo "--- Bonds v2 buyback + symmetric (fplay8-fplay9) ---"
+
+for play_num in 8 9; do
+    n_fpN=$($DART run "$REPL" <<HEREDOC
+$BONDS_V2
+fplay${play_num}.
+:quit
+HEREDOC
+2>&1)
+    check "Bonds v2 fplay${play_num} succeeds" "succeeds" "$n_fpN"
+done
+
+# fplay10-11: escrow
+echo "--- Bonds v2 escrow plays (fplay10-fplay11) ---"
+
+n_fp10=$($DART run "$REPL" <<HEREDOC
+$BONDS_V2
+fplay10.
+:quit
+HEREDOC
+2>&1)
+
+check "Bonds v2 fplay10 succeeds" "succeeds" "$n_fp10"
+check "Bonds v2 fplay10 escrow" "escrow" "$n_fp10"
+
+n_fp11=$($DART run "$REPL" <<HEREDOC
+$BONDS_V2
+fplay11.
+:quit
+HEREDOC
+2>&1)
+
+check "Bonds v2 fplay11 succeeds" "succeeds" "$n_fp11"
+check "Bonds v2 fplay11 escrow_cancelled" "escrow_cancelled" "$n_fp11"
+
+# fplay12: village market (6 agents)
+echo "--- Bonds v2 village market (fplay12) ---"
+
+n_fp12=$($DART run "$REPL" <<HEREDOC
+$BONDS_V2
+:limit 5000000
+fplay12.
+:quit
+HEREDOC
+2>&1)
+
+check "Bonds v2 fplay12 succeeds" "succeeds" "$n_fp12"
+check "Bonds v2 fplay12 tagged output" "tagged(" "$n_fp12"
 
 echo ""
 
