@@ -288,11 +288,11 @@ void main() {
         final env = assembleTypeScope(chain: chain, module: module);
 
         // Prelude types should always be available
-        expect(env.hasType('Stream'), isTrue);
-        expect(env.hasType('Channel'), isTrue);
+        // Stream and Channel are now parametric: Stream(X), Channel(In, Out)
+        expect(env.hasType('Integer'), isTrue);
+        expect(env.hasType('Constant'), isTrue);
         // Prelude procedures should be available
-        expect(env.hasProcedure('send', 3), isTrue);
-        expect(env.hasProcedure('new_channel', 2), isTrue);
+        expect(env.hasProcedure('constant', 1), isTrue);
       } finally {
         await tempDir.delete(recursive: true);
       }

@@ -284,9 +284,9 @@ void main() {
       final sched = Scheduler(rt: rt, runner: runner);
 
       // Create environment with the result variable
-      // Pass reader to head position Z? (input/output position)
+      // Pass writer so callee can write via :=
       final env = CallEnv(args: {
-        0: VarRef(resultReader),
+        0: VarRef(resultWriter),
       });
 
       final goalId = 1;

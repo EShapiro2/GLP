@@ -267,6 +267,7 @@ void main() {
       final stdlibProg = stdlibCompiler.compile(stdlibSource);
 
       // Compile user program
+      // Z? is reader in head; Z (writer) used by := in body
       final userSource = '''
         compute_sum(Z?) :- Z := 5 + 3.
       ''';
@@ -289,9 +290,9 @@ void main() {
       final sched = Scheduler(rt: rt, runner: runner);
 
       // Create environment with the result variable as argument
-      // The query is compute_sum(Result?) where Result is our allocated variable
+      // Pass writer so callee can write to it via :=
       final env = CallEnv(args: {
-        0: VarRef(resultReader),  // Pass reader to head position Z?
+        0: VarRef(resultWriter),  // Pass writer to head position Z
       });
 
       // Set up goal

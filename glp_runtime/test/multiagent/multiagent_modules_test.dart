@@ -107,6 +107,7 @@ void main() {
     test('boots CSSG play 4 with project-linked modules', () async {
       final loader = BootLoader();
       final config = loader.load(cssgPlay4BootSource);
+      config.rootSelfGlpPath = File('../programs/self.glp').absolute.path;
       config.projectDir = projectDir;
 
       // Verify directives parsed correctly

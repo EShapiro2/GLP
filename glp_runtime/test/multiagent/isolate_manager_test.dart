@@ -37,12 +37,13 @@ boot :-
     agent_init(bob, _)@bob,
     agent_init(charlie, _)@charlie.
 
-procedure agent_init(_?, Channel?).
+procedure agent_init(_?, _?).
 agent_init(_, _) :- true.
 ''';
 
       final loader = BootLoader();
       final config = loader.load(source);
+      config.rootSelfGlpPath = File('../programs/self.glp').absolute.path;
 
       await manager.boot(config);
 
@@ -62,6 +63,7 @@ agent_init(_, _) :- true.
 
       final loader = BootLoader();
       final config = loader.load(source);
+      config.rootSelfGlpPath = File('../programs/self.glp').absolute.path;
       config.sharedSources = [agentSource, actorSource];
 
       // Should parse correctly with agent_init goal (actors spawned internally)
@@ -92,6 +94,7 @@ agent_init(_, _) :- true.
 
       final loader = BootLoader();
       final config = loader.load(source);
+      config.rootSelfGlpPath = File('../programs/self.glp').absolute.path;
       config.sharedSources = [agentSource, mediatorSource, uiActorSource];
 
       // Should parse correctly with agent_init goal

@@ -25,6 +25,7 @@ void main() {
     setPreludeEnvironmentSource(source);
   }
   final cssgRoot = '../programs/cssg_modules';
+  final rootSelfPath = rootSelfGlp.existsSync() ? rootSelfGlp.absolute.path : null;
 
   if (!Directory(cssgRoot).existsSync()) {
     print('cssg_modules directory not found at $cssgRoot, skipping tests');
@@ -33,33 +34,33 @@ void main() {
 
   group('Project discovery', () {
     test('discovers all modules in cssg_modules', () {
-      final modules = discoverProject(cssgRoot);
+      final modules = discoverProject(cssgRoot, rootSelfGlpPath: rootSelfPath);
 
-      // Should find 4 modules: agent, mediator, actors, boot
+      // Should find 5 modules: agent, mediator, actors, boot, cssg
       final names = modules.map((m) => m.moduleName).toSet();
       expect(names, contains('agent'));
       expect(names, contains('mediator'));
       expect(names, contains('actors'));
       expect(names, contains('boot'));
-      expect(names.length, equals(4),
-          reason: 'Should discover exactly 4 modules (excluding self.glp and boot_direct.glp)');
+      expect(names, contains('cssg'));
+      expect(names.length, equals(5));
     });
 
     test('excludes self.glp from modules', () {
-      final modules = discoverProject(cssgRoot);
+      final modules = discoverProject(cssgRoot, rootSelfGlpPath: rootSelfPath);
       final names = modules.map((m) => m.moduleName).toSet();
       expect(names, isNot(contains('self')));
     });
 
     test('excludes boot_direct.glp from modules', () {
-      final modules = discoverProject(cssgRoot);
+      final modules = discoverProject(cssgRoot, rootSelfGlpPath: rootSelfPath);
       final filenames = modules.map((m) => m.filePath).toList();
       expect(filenames.any((f) => f.contains('boot_direct')), isFalse,
           reason: 'boot_direct.glp should be excluded');
     });
 
     test('modules have correct ancestor scopes', () {
-      final modules = discoverProject(cssgRoot);
+      final modules = discoverProject(cssgRoot, rootSelfGlpPath: rootSelfPath);
 
       // All modules should have ancestor scope with self.glp types
       for (final mod in modules) {
@@ -71,7 +72,7 @@ void main() {
 
   group('Type checking', () {
     test('all modules type-check successfully', () {
-      final modules = discoverProject(cssgRoot);
+      final modules = discoverProject(cssgRoot, rootSelfGlpPath: rootSelfPath);
       // Should not throw
       expect(() => typeCheckProject(modules), returnsNormally);
     });
@@ -83,7 +84,7 @@ void main() {
     late Program linked;
 
     setUp(() {
-      modules = discoverProject(cssgRoot);
+      modules = discoverProject(cssgRoot, rootSelfGlpPath: rootSelfPath);
       linkResult = linkProject(modules, 'boot');
       linked = linkResult.program;
     });
@@ -234,7 +235,7 @@ void main() {
 
   group('End-to-end compilation', () {
     test('linked program compiles to bytecode', () {
-      final modules = discoverProject(cssgRoot);
+      final modules = discoverProject(cssgRoot, rootSelfGlpPath: rootSelfPath);
       final result = linkProject(modules, 'boot');
 
       final compiler = GlpCompiler();
@@ -254,7 +255,7 @@ void main() {
     });
 
     test('fplay1 produces correct output', () {
-      final modules = discoverProject(cssgRoot);
+      final modules = discoverProject(cssgRoot, rootSelfGlpPath: rootSelfPath);
       final result = linkProject(modules, 'boot');
       final compiler = GlpCompiler();
       final bytecode = compiler.compileProgram(

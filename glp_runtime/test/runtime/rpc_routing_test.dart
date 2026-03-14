@@ -33,7 +33,8 @@ void main() {
 exported procedure process(Any?).
 process(_) :- otherwise | true.
 ''');
-      expect(bBytecode.labels.containsKey('_select/1'), isTrue);
+      // _select/1 generation was removed — module exports are dispatched via
+      // GLP channels now, tested by the remaining assertions.
 
       // 2. Compile serve.glp
       final serveBytecode = compiler.compile(serveSource);

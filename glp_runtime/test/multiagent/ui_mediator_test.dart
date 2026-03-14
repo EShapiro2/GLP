@@ -31,11 +31,11 @@ void main() {
 $socialSource
 $mediatorSource
 
-procedure send_to_user(Stream?).
+procedure send_to_user(_?).
 send_to_user([T | In]) :- ground(T?) | '_output'(T?), send_to_user(In?).
 send_to_user([]).
 
-procedure consume(Stream?).
+procedure consume(_?).
 consume([_|Rest]) :- consume(Rest?).
 consume([]).
 
@@ -64,11 +64,11 @@ test :-
 $socialSource
 $mediatorSource
 
-procedure send_to_user(Stream?).
+procedure send_to_user(_?).
 send_to_user([T | In]) :- ground(T?) | '_output'(T?), send_to_user(In?).
 send_to_user([]).
 
-procedure consume(Stream?).
+procedure consume(_?).
 consume([_|Rest]) :- consume(Rest?).
 consume([]).
 
@@ -97,11 +97,11 @@ test :-
 $socialSource
 $mediatorSource
 
-procedure send_to_user(Stream?).
+procedure send_to_user(_?).
 send_to_user([T | In]) :- ground(T?) | '_output'(T?), send_to_user(In?).
 send_to_user([]).
 
-procedure consume(Stream?).
+procedure consume(_?).
 consume([_|Rest]) :- consume(Rest?).
 consume([]).
 

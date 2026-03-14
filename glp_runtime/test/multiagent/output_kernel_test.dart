@@ -63,7 +63,7 @@ test :- '_output'([a, b, c]).
       engine.loadSource('''
 -mode(system).
 
-procedure send_to_user(Stream?).
+procedure send_to_user(_?).
 send_to_user([T | In]) :- ground(T?) | '_output'(T?), send_to_user(In?).
 send_to_user([]).
 
@@ -80,7 +80,7 @@ test :- send_to_user([hello, world, msg(a, b)]).
       engine.loadSource('''
 -mode(system).
 
-procedure send_to_user(Stream?).
+procedure send_to_user(_?).
 send_to_user([T | In]) :- ground(T?) | '_output'(T?), send_to_user(In?).
 send_to_user([]).
 
