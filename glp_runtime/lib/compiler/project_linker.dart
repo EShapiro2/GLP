@@ -17,6 +17,7 @@ import '../analysis/type_checker/type_ast.dart';
 import '../analysis/type_checker/param_expansion.dart';
 import '../analysis/type_checker/type_checker.dart';
 import '../runtime/module_hierarchy.dart';
+import '../analysis/type_checker/type_environment_builder.dart';
 
 /// A discovered module in the project tree.
 class DiscoveredModule {
@@ -440,15 +441,13 @@ String _moduleNameFromDirPath(String dirPath) {
 /// are tracked for downstream modules.
 TypeEnvironment _buildAncestorScope(List<String> chain,
     {String? rootSelfGlpPath}) {
-  var env = TypeEnvironment({}, {});
+  // Start from prelude (which includes root self.glp), matching
+  // the individual-load path in assembleTypeScope.
+  var env = buildPreludeEnvironment();
 
-  // Root self.glp is the outermost ancestor
-  final fullChain = [
-    if (rootSelfGlpPath != null) rootSelfGlpPath,
-    ...chain,
-  ];
-
-  for (final selfGlpPath in fullChain) {
+  // Chain contains only project-local self.glp files.
+  // Root self.glp is already included in the prelude environment.
+  for (final selfGlpPath in chain) {
     final source = File(selfGlpPath).readAsStringSync();
     final lexer = Lexer(source);
     final tokens = lexer.tokenize();

@@ -55,9 +55,11 @@ List<String> discoverSelfChain({
   var currentDir = startDir;
 
   while (true) {
-    // Normalize for comparison
-    final currentNorm = Directory(currentDir).absolute.path;
-    final rootNorm = Directory(root).absolute.path;
+    // Normalize for comparison, stripping trailing slashes for consistency
+    var currentNorm = Directory(currentDir).absolute.path;
+    var rootNorm = Directory(root).absolute.path;
+    if (currentNorm.endsWith('/')) currentNorm = currentNorm.substring(0, currentNorm.length - 1);
+    if (rootNorm.endsWith('/')) rootNorm = rootNorm.substring(0, rootNorm.length - 1);
 
     // Check if we've gone above the root
     if (!currentNorm.startsWith(rootNorm)) {
