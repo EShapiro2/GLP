@@ -16,6 +16,7 @@
 #   J - CSSG v2 Modules (child_agent with parent(X) output keys)
 #   K - CSSN v2 Modules (child_agent with blocking consent)
 #   L - Dynamic Module Dispatch Tests (activate + M # goal)
+#   M - Multi-Isolate (madGLP) Tests (dart test, one isolate per agent)
 
 set -e
 
@@ -1574,6 +1575,36 @@ HEREDOC
 2>&1)
 
 check "test_add_ten(7, X) = 17" "X = 17" "$l3"
+
+echo ""
+
+# =============================================================================
+# Section M: Multi-Isolate (madGLP) Tests
+# =============================================================================
+
+echo "=== Section M: Multi-Isolate (madGLP) Tests ==="
+echo ""
+
+MAD_RESULT=$("$DART" test "$GLP_RUNTIME/test/multiagent/cssn_v2_isolate_test.dart" 2>&1)
+MAD_EXIT=$?
+
+if [ $MAD_EXIT -eq 0 ]; then
+    # Count passing tests from output like "+13: All tests passed!"
+    MAD_PASSED=$(echo "$MAD_RESULT" | grep -oE '\+[0-9]+' | tail -1 | tr -d '+')
+    MAD_PASSED=${MAD_PASSED:-13}
+    echo "  PASS: All $MAD_PASSED multi-isolate tests passed"
+    PASS=$((PASS + MAD_PASSED))
+else
+    # Extract failure count
+    MAD_FAILED=$(echo "$MAD_RESULT" | grep -oE '\-[0-9]+' | tail -1 | tr -d '-')
+    MAD_FAILED=${MAD_FAILED:-1}
+    MAD_PASSED=$(echo "$MAD_RESULT" | grep -oE '\+[0-9]+' | tail -1 | tr -d '+')
+    MAD_PASSED=${MAD_PASSED:-0}
+    echo "  FAIL: $MAD_FAILED multi-isolate test(s) failed ($MAD_PASSED passed)"
+    echo "$MAD_RESULT" | tail -20
+    PASS=$((PASS + MAD_PASSED))
+    FAIL=$((FAIL + MAD_FAILED))
+fi
 
 echo ""
 
