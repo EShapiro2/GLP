@@ -87,17 +87,7 @@ UserInMsg    ::= msg(Constant, Constant, UserContent)
 %% =============================================================================
 
 %% Union of all content the agent sends on output streams
-OutputContent ::= befriend(Constant, Response?)
-                ; befriend_intro(Constant, Constant, Channel(Stream(IntroContent), Stream(IntroContent)))
-                ; child_befriend(Constant, Constant, Channel(Stream(IntroContent), Stream(IntroContent)))
-                ; connected(Constant)
-                ; rejected
-                ; rejected(Constant)
-                ; received(Constant, Constant)
-                ; response(Response)
-                ; text(Constant)
-                ; intro(Constant, Channel(Stream(IntroContent), Stream(IntroContent)))
-                ; child_intro(Constant, Channel(Stream(IntroContent), Stream(IntroContent))).
+OutputContent ::= AgentContent ; FriendContent.
 OutputMsg     ::= msg(Constant, Constant, OutputContent)
                 ; msg(Constant, NetColdCall).
 
