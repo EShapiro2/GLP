@@ -61,6 +61,10 @@ class GlpRuntime {
   // Updated by suspendGoalFCP, cleared when goals reactivate
   final Map<int, Set<GoalRef>> suspended = <int, Set<GoalRef>>{};
 
+  // Infrastructure goal IDs (spec §3.4): serve goals spawned by auto-activation.
+  // Their suspension does not affect user goal status determination.
+  final Set<int> infrastructureGoalIds = {};
+
   // madGLP context (set when running in multiagent mode)
   // Used by '_cold_send' kernel to access globalization infrastructure
   Object? madContext;

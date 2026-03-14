@@ -74,15 +74,18 @@ GlpChannelHandle activateModule({
   final servePc = serveBytecode.labels['serve/2']!;
   rt.gq.enqueue(GoalRef(goalId, servePc));
 
-  // 4. Register serve runner if not already present
+  // 4. Tag as infrastructure goal (spec §3.4, §3.5)
+  rt.infrastructureGoalIds.add(goalId);
+
+  // 5. Register serve runner if not already present
   if (!rt.runners.containsKey(serveBytecode)) {
     rt.runners[serveBytecode] = BytecodeRunner(serveBytecode);
   }
 
-  // 5. Register channel handle in rt.glpChannels for RPC routing (Phase 5)
+  // 6. Register channel handle in rt.glpChannels for RPC routing (Phase 5)
   final channel = GlpChannelHandle(rt.heap, writerAddr);
   rt.glpChannels[moduleName] = channel;
 
-  // 6. Return channel handle (writer end)
+  // 7. Return channel handle (writer end)
   return channel;
 }

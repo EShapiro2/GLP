@@ -317,16 +317,21 @@ class Scheduler {
     }
 
     // Determine final status
+    // Per spec §3.4: exclude infrastructure goals (serve goals from auto-activation)
+    // from status determination — their suspension is normal steady state
+    final userSuspendedGoals = Map<int, String>.from(suspendedGoals)
+      ..removeWhere((goalId, _) => rt.infrastructureGoalIds.contains(goalId));
+
     final ExecutionStatus status;
     if (hasFailed) {
       status = ExecutionStatus.failed;
-    } else if (suspendedGoals.isNotEmpty) {
+    } else if (userSuspendedGoals.isNotEmpty) {
       status = ExecutionStatus.suspended;
     } else {
       status = ExecutionStatus.succeeded;
     }
 
-    final suspendedList = suspendedGoals.values.map((g) =>
+    final suspendedList = userSuspendedGoals.values.map((g) =>
       g.replaceAllMapped(RegExp(r'(\w+)/\d+\('), (m) => '${m.group(1)}(')
     ).toList();
 
