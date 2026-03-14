@@ -19,6 +19,7 @@
 #   M - Multi-Isolate (madGLP) Tests (dart test, CSSN v2, one isolate per agent)
 #   N - Bonds V2 Modules (project-directory loading, plays 1-12)
 #   O - Bonds V2 Multi-Isolate Tests (dart test, one isolate per agent)
+#   P - Module Boundary Enforcement Tests (exported vs private procedures)
 
 set -e
 
@@ -1757,6 +1758,26 @@ else
     PASS=$((PASS + BONDS_MAD_PASSED))
     FAIL=$((FAIL + BONDS_MAD_FAILED))
 fi
+
+echo ""
+
+# =============================================================================
+# SECTION P: MODULE BOUNDARY ENFORCEMENT TESTS
+# =============================================================================
+echo "=== Section P: Module Boundary Enforcement Tests ==="
+echo ""
+
+echo "--- Module boundary: exported vs private ---"
+output=$($DART run "$REPL" <<HEREDOC
+$TYPED/test_module_boundary.glp
+public_proc(5, X).
+private_proc(5, X).
+:quit
+HEREDOC
+2>&1)
+check "public_proc(5,X) returns X=6" "X = 6" "$output"
+check_not "private_proc not callable from REPL" "X = 7" "$output"
+check "private_proc fails or not found" "not found\|failed\|Error" "$output"
 
 echo ""
 
