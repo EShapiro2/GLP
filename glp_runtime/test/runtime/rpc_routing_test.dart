@@ -62,7 +62,7 @@ caller(X) :- ground(X?) | target_b # process(X?).
       // 5. Drain — serve suspends waiting for input
       final scheduler = Scheduler(rt: rt);
       var result = scheduler.drainWithStatus(maxCycles: 100);
-      expect(result.status, equals(ExecutionStatus.suspended));
+      expect(result.status, equals(ExecutionStatus.succeeded));
 
       // 6. Set up caller goal with ReplModuleContext
       final callerGoalId = rt.nextGoalId++;
@@ -92,7 +92,7 @@ caller(X) :- ground(X?) | target_b # process(X?).
       result = scheduler.drainWithStatus(maxCycles: 500);
 
       // serve should process the goal and suspend on the next channel element
-      expect(result.status, equals(ExecutionStatus.suspended),
+      expect(result.status, equals(ExecutionStatus.succeeded),
           reason:
               'serve should process the RPC goal and suspend waiting for next input');
     });
@@ -126,7 +126,7 @@ caller(X) :- ground(X?) | target_b # process(X?).
         traceSink: (s) => trace.add(s),
       );
       var result = scheduler.drainWithStatus(maxCycles: 100);
-      expect(result.status, equals(ExecutionStatus.suspended));
+      expect(result.status, equals(ExecutionStatus.succeeded));
 
       // Set up caller with ReplModuleContext
       final callerGoalId = rt.nextGoalId++;
@@ -153,7 +153,7 @@ caller(X) :- ground(X?) | target_b # process(X?).
         debug: true,
       );
 
-      expect(result.status, equals(ExecutionStatus.suspended));
+      expect(result.status, equals(ExecutionStatus.succeeded));
 
       // Verify trace shows the dispatch chain
       final traceStr = trace.join('\n');
@@ -190,7 +190,7 @@ run_both(X, Y) :- ground(X?), ground(Y?) | target_b # greet(X?), target_b # fare
 
       final scheduler = Scheduler(rt: rt);
       var result = scheduler.drainWithStatus(maxCycles: 100);
-      expect(result.status, equals(ExecutionStatus.suspended));
+      expect(result.status, equals(ExecutionStatus.succeeded));
 
       // Set up caller
       final callerGoalId = rt.nextGoalId++;
@@ -214,7 +214,7 @@ run_both(X, Y) :- ground(X?), ground(Y?) | target_b # greet(X?), target_b # fare
 
       // Drain — both RPCs should route through GLP channel
       result = scheduler.drainWithStatus(maxCycles: 1000);
-      expect(result.status, equals(ExecutionStatus.suspended),
+      expect(result.status, equals(ExecutionStatus.succeeded),
           reason: 'serve should process both RPCs and suspend');
     });
 
@@ -267,7 +267,7 @@ caller(X) :- ground(X?) | target_b # process(X?).
 
       final scheduler = Scheduler(rt: rt);
       var result = scheduler.drainWithStatus(maxCycles: 100);
-      expect(result.status, equals(ExecutionStatus.suspended));
+      expect(result.status, equals(ExecutionStatus.succeeded));
 
       // Run caller — RPC routes through GLP channel
       final callerGoalId = rt.nextGoalId++;
@@ -289,7 +289,7 @@ caller(X) :- ground(X?) | target_b # process(X?).
       rt.gq.enqueue(GoalRef(callerGoalId, aBytecode.labels['caller/1']!));
 
       result = scheduler.drainWithStatus(maxCycles: 500);
-      expect(result.status, equals(ExecutionStatus.suspended));
+      expect(result.status, equals(ExecutionStatus.succeeded));
 
       // Close channel — serve should terminate
       final activations = channel.close();

@@ -2868,6 +2868,11 @@ class BytecodeRunner {
           // Enqueue the goal
           cx.rt.gq.enqueue(newGoalRef);
 
+          // Propagate infrastructure goal status to child goals
+          if (cx.rt.infrastructureGoalIds.contains(cx.goalId)) {
+            cx.rt.infrastructureGoalIds.add(newGoalId);
+          }
+
           // Clear argument registers for next spawn
           cx.argSlots.clear();
         }

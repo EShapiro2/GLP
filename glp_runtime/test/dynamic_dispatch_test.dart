@@ -68,9 +68,10 @@ void main() {
       expect(rt.glpChannels.containsKey('math_service'), isTrue);
 
       // Drain to let serve loop suspend waiting for input
+      // (serve is an infrastructure goal, excluded from status — reports succeeded)
       final scheduler = Scheduler(rt: rt);
       var result = scheduler.drainWithStatus(maxCycles: 300);
-      expect(result.status, equals(ExecutionStatus.suspended));
+      expect(result.status, equals(ExecutionStatus.succeeded));
 
       // Create goal: double(5, F)
       // F is a fresh writer — the result will be bound to it
@@ -164,8 +165,8 @@ void main() {
 
       // Should not crash — _activate fallback handles unknown procedures
       final result = scheduler.drainWithStatus(maxCycles: 5000);
-      // The serve loop should continue running (suspended, waiting for more input)
-      expect(result.status, equals(ExecutionStatus.suspended));
+      // The serve loop should continue running (infrastructure goal, excluded from status)
+      expect(result.status, equals(ExecutionStatus.succeeded));
     });
 
     test('single_export module: dispatch inc(7, F) → F = 8', () {

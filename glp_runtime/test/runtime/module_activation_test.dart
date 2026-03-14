@@ -60,7 +60,7 @@ process(_) :- otherwise | true.
       final scheduler = Scheduler(rt: rt);
       final result = scheduler.drainWithStatus(maxCycles: 100);
 
-      expect(result.status, equals(ExecutionStatus.suspended),
+      expect(result.status, equals(ExecutionStatus.succeeded),
           reason: 'serve should suspend waiting for channel input');
 
       // Channel writer should still be valid (not yet bound)
@@ -85,7 +85,7 @@ process(_) :- otherwise | true.
 
       // Step 1: Drain — serve suspends on empty channel
       var result = scheduler.drainWithStatus(maxCycles: 100);
-      expect(result.status, equals(ExecutionStatus.suspended));
+      expect(result.status, equals(ExecutionStatus.succeeded));
 
       // Step 2: Send a goal on the channel
       final goal = StructTerm('process', [ConstTerm(42)]);
@@ -100,7 +100,7 @@ process(_) :- otherwise | true.
       result = scheduler.drainWithStatus(maxCycles: 200);
 
       // serve processes the goal and suspends again on the new tail
-      expect(result.status, equals(ExecutionStatus.suspended),
+      expect(result.status, equals(ExecutionStatus.succeeded),
           reason:
               'serve should process goal and suspend on next channel element');
     });
@@ -126,7 +126,7 @@ farewell(_) :- otherwise | true.
 
       // Drain — serve suspends
       var result = scheduler.drainWithStatus(maxCycles: 100);
-      expect(result.status, equals(ExecutionStatus.suspended));
+      expect(result.status, equals(ExecutionStatus.succeeded));
 
       // Send first goal
       var activations = channel.send(StructTerm('greet', [ConstTerm('alice')]));
@@ -134,7 +134,7 @@ farewell(_) :- otherwise | true.
         rt.gq.enqueue(act);
       }
       result = scheduler.drainWithStatus(maxCycles: 200);
-      expect(result.status, equals(ExecutionStatus.suspended));
+      expect(result.status, equals(ExecutionStatus.succeeded));
 
       // Send second goal
       activations =
@@ -143,7 +143,7 @@ farewell(_) :- otherwise | true.
         rt.gq.enqueue(act);
       }
       result = scheduler.drainWithStatus(maxCycles: 200);
-      expect(result.status, equals(ExecutionStatus.suspended));
+      expect(result.status, equals(ExecutionStatus.succeeded));
 
       // Send third goal
       activations =
@@ -152,7 +152,7 @@ farewell(_) :- otherwise | true.
         rt.gq.enqueue(act);
       }
       result = scheduler.drainWithStatus(maxCycles: 200);
-      expect(result.status, equals(ExecutionStatus.suspended));
+      expect(result.status, equals(ExecutionStatus.succeeded));
     });
 
     test('close channel after sending goals, serve terminates', () {
@@ -173,7 +173,7 @@ process(_) :- otherwise | true.
 
       // Drain — serve suspends
       var result = scheduler.drainWithStatus(maxCycles: 100);
-      expect(result.status, equals(ExecutionStatus.suspended));
+      expect(result.status, equals(ExecutionStatus.succeeded));
 
       // Send a goal
       var activations = channel.send(StructTerm('process', [ConstTerm(1)]));
@@ -181,7 +181,7 @@ process(_) :- otherwise | true.
         rt.gq.enqueue(act);
       }
       result = scheduler.drainWithStatus(maxCycles: 200);
-      expect(result.status, equals(ExecutionStatus.suspended));
+      expect(result.status, equals(ExecutionStatus.succeeded));
 
       // Close the channel (bind writer to nil)
       activations = channel.close();
@@ -222,7 +222,7 @@ consume(_) :- otherwise | true.
 
       // Drain — serve suspends
       var result = scheduler.drainWithStatus(maxCycles: 100);
-      expect(result.status, equals(ExecutionStatus.suspended));
+      expect(result.status, equals(ExecutionStatus.succeeded));
 
       // Send process(42)
       var activations =
@@ -233,7 +233,7 @@ consume(_) :- otherwise | true.
 
       // Drain with debug to capture the full dispatch chain
       result = scheduler.drainWithStatus(maxCycles: 500, debug: true);
-      expect(result.status, equals(ExecutionStatus.suspended));
+      expect(result.status, equals(ExecutionStatus.succeeded));
 
       // Verify trace shows the dispatch chain: serve → _select → process → consume
       final traceStr = trace.join('\n');
