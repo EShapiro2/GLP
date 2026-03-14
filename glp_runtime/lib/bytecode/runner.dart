@@ -2975,20 +2975,17 @@ class BytecodeRunner {
                 }
               } else {
                 // Module not activated — no GLP channel available
-                if (cx.debugOutput) {
-                  print('[MODULE] Distribute: module ${target.name} not activated (no GLP channel)');
-                }
+                print('ERROR: Distribute: module ${target.name} not activated (no GLP channel for ${op.functor}/${op.arity})');
+                return RunResult.terminated;
               }
             } else {
-              if (cx.debugOutput) {
-                print('[MODULE] Distribute: No target for import index ${op.importIndex}');
-              }
+              print('ERROR: Distribute: no target for import index ${op.importIndex} (${op.functor}/${op.arity})');
+              return RunResult.terminated;
             }
           } else {
-            // No module context - log only (standalone execution)
-            if (cx.debugOutput) {
-              print('[MODULE] Distribute (no context): import[${op.importIndex}] # ${op.functor}/${op.arity}');
-            }
+            // No module context
+            print('ERROR: Distribute: no module context for import[${op.importIndex}] # ${op.functor}/${op.arity}');
+            return RunResult.terminated;
           }
           cx.argSlots.clear();
         }
@@ -3038,14 +3035,12 @@ class BytecodeRunner {
                 print('[MODULE] Transmit (GLP channel): -> $moduleName # ${op.functor}/${op.arity}');
               }
             } else {
-              if (cx.debugOutput) {
-                print('[MODULE] Transmit (no context): $moduleName # ${op.functor}/${op.arity}');
-              }
+              print('ERROR: Transmit: module $moduleName not activated (no GLP channel for ${op.functor}/${op.arity})');
+              return RunResult.terminated;
             }
           } else {
-            if (cx.debugOutput) {
-              print('[MODULE] Transmit: Could not resolve module name from X${op.moduleVarIndex}');
-            }
+            print('ERROR: Transmit: could not resolve module name from X${op.moduleVarIndex} (${op.functor}/${op.arity})');
+            return RunResult.terminated;
           }
           cx.argSlots.clear();
         }
