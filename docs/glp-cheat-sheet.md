@@ -270,7 +270,7 @@ The `imported procedure` declaration's types and modes must match the target mod
 
 ### The self.glp Scope Chain
 
-Each directory may have a `self.glp` defining types visible to all modules in that subtree. The root `programs/self.glp` is the prelude (predefined types and procedures) — visible everywhere.
+Each directory may have a `self.glp` defining types visible to all modules in that subtree. The root `programs/self.glp` defines all predefined types and procedures — visible everywhere.
 
 ### REPL Workflow
 
@@ -280,7 +280,7 @@ GLP> dispatch_client.glp       %% Load client (has imported procedures)
 GLP> test_double(5, X).        %% Run goal → X = 10
 ```
 
-Modules with `exported procedure` declarations are auto-activated on load. Use `:activate <name>` to activate manually if needed.
+Modules with `exported procedure` declarations are auto-activated on load. Use `:activate <n>` to activate manually if needed.
 
 ### Static Linking (Projects)
 

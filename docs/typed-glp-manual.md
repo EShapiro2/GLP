@@ -325,9 +325,9 @@ When consuming `Channel?` with pattern `ch(In, Out?)`:
 
 A **single-unit-clause procedure** is a regular procedure defined by exactly one clause with no guards and no body. These procedures serve as defined guards: when called in guard position, the partial evaluator unfolds them at compile time. In general, they are NOT expected to work as body predicates.
 
-The prelude defines several single-unit-clause procedures. The PE automatically includes them when processing any program, so user programs do not need to redefine them. User programs may override a prelude unit clause by defining a procedure with the same name/arity.
+The root self.glp defines several single-unit-clause procedures. The PE automatically includes them when processing any program, so user programs do not need to redefine them. User programs may override a root self.glp unit clause by defining a procedure with the same name/arity.
 
-Examples from the prelude:
+Examples from root self.glp:
 
 ```prolog
 procedure new_channel(Channel(X, Y), Channel(Y, X)).
@@ -534,7 +534,7 @@ The `reduce/2` clause for `:=` handles arithmetic assignment by extracting the a
 
 ## 14. Precise Typing via Renamed Procedures (OBSOLETE)
 
-**This section is obsolete.** Parameterized types (Section 17) eliminate the need for renamed procedure copies. The prelude's generic procedures (`send`, `receive`, `new_channel`, `merge`) now have parameterized signatures, and the type checker infers precise types at each call site. Use the generic procedures directly.
+**This section is obsolete.** Parameterized types (Section 17) eliminate the need for renamed procedure copies. The root self.glp's generic procedures (`send`, `receive`, `new_channel`, `merge`) now have parameterized signatures, and the type checker infers precise types at each call site. Use the generic procedures directly.
 
 ### 14.1 Historical Context
 
@@ -712,7 +712,7 @@ The GLP language continues to support `_` and `_?` as primitive types.  The disc
 
 ### 18.2 Parameterized Types Replace Imprecise Types
 
-Every local imprecise type definition should be replaced by a parameterized instantiation from the root prelude:
+Every local imprecise type definition should be replaced by a parameterized instantiation from root self.glp:
 
 | Before (imprecise) | After (precise) |
 |---|---|
@@ -823,7 +823,7 @@ project/
     actors.glp           — sees ui/self.glp + project/self.glp
 ```
 
-The root `programs/self.glp` is the prelude: it defines all predefined types (`Stream(X)`, `Channel(In, Out)`, `DiffList(X)`, `OpenStream(X)`) and all prelude procedure declarations (`merge`, `send`, `receive`, `new_channel`, etc.). Every module sees the prelude automatically.
+The root `programs/self.glp` defines all predefined types (`Stream(X)`, `Channel(In, Out)`, `DiffList(X)`, `OpenStream(X)`) and all predefined procedure declarations (`merge`, `send`, `receive`, `new_channel`, etc.). Every module sees root self.glp automatically.
 
 ### 19.7 Compilation Modes
 

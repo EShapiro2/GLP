@@ -11,7 +11,7 @@
 %% PENDING MANAGEMENT
 %% =============================================================================
 
-procedure lookup_pending(ReqId?, PendingValue, PendingList?, PendingList).
+procedure lookup_pending(ReqId?, PendingValue, Stream(PendingEntry)?, Stream(PendingEntry)).
 lookup_pending(ReqId, Val?,
     [pending(Id, Val) | Rest], Rest?) :-
     ReqId? =?= Id? | true.
@@ -24,7 +24,7 @@ lookup_pending(_, error, [], []).
 %% UI MEDIATOR — Main loop
 %% =============================================================================
 
-exported procedure ui_mediator(Constant?, AgentChannel?, UserChannel?, PendingList?, Constant?).
+exported procedure ui_mediator(Constant?, Channel(Stream(AgentToUserMsg), Stream(MediatorToAgentMsg))?, Channel(Stream(UserCmd), Stream(UserNotify))?, Stream(PendingEntry)?, Constant?).
 
 %% --- Agent-to-user: non-ground (replace variable with req ID) ---
 

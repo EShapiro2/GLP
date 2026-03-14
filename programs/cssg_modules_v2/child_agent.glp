@@ -1,8 +1,7 @@
 %% child_agent.glp — Child agent module (CSSG, befriending only)
 %%
 %% Exports: child_agent/5
-%% Types and most helpers: from self.glp (ancestor scoping)
-%% merge: local (Stream(X) subtyping limitation)
+%% Types and helpers: from self.glp (ancestor scoping)
 %%
 %% CSSG child_agent handles befriending via parent introductions and messaging.
 %% No groups, no consent.
@@ -11,20 +10,10 @@
 -mode(system).
 
 %% =============================================================================
-%% MERGE — local (Stream(X) cross-module subtyping not supported)
-%% =============================================================================
-
-procedure merge(Stream(X)?, Stream(X)?, Stream(X)).
-merge([X|Xs], Ys, [X?|Zs?]) :- merge(Ys?, Xs?, Zs).
-merge(Xs, [Y|Ys], [Y?|Zs?]) :- merge(Xs?, Ys?, Zs).
-merge([], Ys, Ys?).
-merge(Xs, [], Xs?).
-
-%% =============================================================================
 %% CHILD_AGENT/5 — Main loop
 %% =============================================================================
 
-exported procedure child_agent(Constant?, Constant?, UserInStream?, NetInStream?, OutputsList?).
+exported procedure child_agent(Constant?, Constant?, Stream(UserInMsg)?, Stream(NetInMsg)?, Stream(OutputEntry)?).
 
 %% --- User messages ---
 

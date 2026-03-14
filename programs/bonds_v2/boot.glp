@@ -1,0 +1,1419 @@
+%% boot.glp — Bonds V2 play orchestrator
+%%
+%% Full stack: network2 <-> agent/6 <-> ui_mediator <-> tee <-> actor
+%%                                                       |
+%%                                                  sink (display)
+%%
+%% Phase 1: Single-agent plays (no network).
+%% Phase 2: Two-agent plays with network2.
+%% Phase 3: Credit + payment (two-agent).
+%% Phase 4: Credit + redemption (two-agent).
+
+-module(boot).
+-mode(system).
+
+%% =============================================================================
+%% IMPORTED PROCEDURES
+%% =============================================================================
+
+%% From agent.glp
+imported procedure agent#agent(Constant?, Stream(UserInMsg)?, Stream(NetInMsg)?, Stream(OutputEntry)?, Stream(Bond)?, Constant?).
+
+%% From mediator.glp
+imported procedure mediator#ui_mediator(Constant?, AgentChannel?, UserChannel?, Stream(PendingEntry)?, Constant?).
+
+%% From actors.glp — play actors
+imported procedure actors#alice_p1(ActorChannel?).
+imported procedure actors#alice_p2(ActorChannel?).
+imported procedure actors#bob_p2(ActorChannel?).
+imported procedure actors#alice_p3(ActorChannel?).
+imported procedure actors#bob_p3(ActorChannel?).
+imported procedure actors#alice_p4(ActorChannel?).
+imported procedure actors#bob_p4(ActorChannel?).
+imported procedure actors#alice_p4b(ActorChannel?, Constant?).
+imported procedure actors#bob_p4b(ActorChannel?, Constant?).
+imported procedure actors#alice_p5(ActorChannel?).
+imported procedure actors#bob_p5(ActorChannel?).
+imported procedure actors#alice_p6(ActorChannel?).
+imported procedure actors#bob_p6(ActorChannel?).
+imported procedure actors#alice_p8(ActorChannel?).
+imported procedure actors#bob_p8(ActorChannel?).
+imported procedure actors#alice_p9(ActorChannel?).
+imported procedure actors#bob_p9(ActorChannel?).
+imported procedure actors#alice_p10(Constant?, ActorChannel?).
+imported procedure actors#bob_p10(ActorChannel?).
+imported procedure actors#alice_p11(Constant?, ActorChannel?).
+imported procedure actors#bob_p11(ActorChannel?).
+
+%% From play12/*.glp — village actors
+imported procedure alice#alice_p12(Constant?, ActorChannel?, Stream(NarrativeItem)).
+imported procedure bob#bob_p12(ActorChannel?, Stream(NarrativeItem)).
+imported procedure charlie#charlie_p12(Constant?, ActorChannel?, Stream(NarrativeItem)).
+imported procedure diana#diana_p12(ActorChannel?, Stream(NarrativeItem)).
+imported procedure eve#eve_p12(ActorChannel?, Stream(NarrativeItem)).
+imported procedure frank#frank_p12(ActorChannel?, Stream(NarrativeItem)).
+
+%% =============================================================================
+%% TEE — Stream splitter
+%% =============================================================================
+
+procedure tee(Stream(X)?, Stream(X), Stream(X)).
+tee([X|Xs], [X?|Ys?], [X?|Zs?]) :- ground(X?) | tee(Xs?, Ys, Zs).
+tee([], [], []).
+
+%% =============================================================================
+%% SINK — Dummy consumer (discards stream)
+%% =============================================================================
+
+procedure sink(Stream(X)?).
+sink([_|Xs]) :- sink(Xs?).
+sink([]).
+
+%% =============================================================================
+%% SEND_TO_USER_TAGGED — Merge display streams, tag with agent ID
+%% =============================================================================
+
+send_to_user_tagged(Id, [T|Cmds], Notifies) :-
+    ground(Id?), ground(T?) |
+    '_output'(tagged(Id?, cmd(T?))),
+    send_to_user_tagged(Id?, Cmds?, Notifies?).
+send_to_user_tagged(Id, Cmds, [T|Notifies]) :-
+    ground(Id?), ground(T?) |
+    '_output'(tagged(Id?, notify(T?))),
+    send_to_user_tagged(Id?, Cmds?, Notifies?).
+send_to_user_tagged(_, [], []).
+send_to_user_tagged(_, Cmds, []) :- sink(Cmds?).
+
+%% =============================================================================
+%% SEND_TO_USER_NARRATE — Emit narrative items as tagged output
+%% =============================================================================
+
+procedure send_to_user_narrate(Constant?, Stream(NarrativeItem)?).
+
+send_to_user_narrate(Id, [friend(X)|Ns]) :-
+    ground(Id?), ground(X?) |
+    '_output'(tagged(Id?, friend(X?))),
+    send_to_user_narrate(Id?, Ns?).
+send_to_user_narrate(Id, [say(X)|Ns]) :-
+    ground(Id?), ground(X?) |
+    '_output'(tagged(Id?, say(X?))),
+    send_to_user_narrate(Id?, Ns?).
+send_to_user_narrate(Id, [act(X)|Ns]) :-
+    ground(Id?), ground(X?) |
+    '_output'(tagged(Id?, act(X?))),
+    send_to_user_narrate(Id?, Ns?).
+send_to_user_narrate(Id, [event(X)|Ns]) :-
+    ground(Id?), ground(X?) |
+    '_output'(tagged(Id?, event(X?))),
+    send_to_user_narrate(Id?, Ns?).
+send_to_user_narrate(_, []).
+
+%% =============================================================================
+%% NETWORK SWITCH (2-way)
+%% =============================================================================
+
+%% Cold-call routing (2-arg msg)
+network2(ch([msg(bob, X)|AliceIn], AliceOut?),
+         ch(BobIn, [msg(bob, X?)|BobOut?])) :-
+    network2(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut)).
+
+network2(ch(AliceIn, [msg(alice, X?)|AliceOut?]),
+         ch([msg(alice, X)|BobIn], BobOut?)) :-
+    network2(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut)).
+
+%% Friend-to-friend routing (3-arg msg)
+network2(ch([msg(alice, bob, X)|AliceIn], AliceOut?),
+         ch(BobIn, [msg(alice, bob, X?)|BobOut?])) :-
+    network2(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut)).
+
+network2(ch(AliceIn, [msg(bob, alice, X?)|AliceOut?]),
+         ch([msg(bob, alice, X)|BobIn], BobOut?)) :-
+    network2(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut)).
+
+%% Termination
+network2(ch([], []), ch([], [])).
+
+%% =============================================================================
+%% PLAY 1 — Solo mint + balance (with tee + sink display)
+%% =============================================================================
+
+play1 :-
+    actors # alice_p1(ch(AliceActorIn?, AliceActorOut)),
+    tee(AliceActorOut?, AliceMedIn, AliceDispCmd),
+    agent # agent(alice, AliceAgentIn?, _,
+          [output('_user', AliceAgentToUser)], [], 1),
+    mediator # ui_mediator(alice, ch(AliceAgentToUser?, AliceAgentIn),
+                ch(AliceMedIn?, AliceMedOut), [], 1),
+    tee(AliceMedOut?, AliceActorIn, AliceDispNotify),
+    sink(AliceDispCmd?), sink(AliceDispNotify?).
+
+%% =============================================================================
+%% FLUTTER PLAY 1 — Solo mint + balance (with tagged output for UI)
+%% =============================================================================
+
+fplay1 :-
+    actors # alice_p1(ch(AliceActorIn?, AliceActorOut)),
+    tee(AliceActorOut?, AliceMedIn, AliceDispCmd),
+    agent # agent(alice, AliceAgentIn?, _,
+          [output('_user', AliceAgentToUser)], [], 1),
+    mediator # ui_mediator(alice, ch(AliceAgentToUser?, AliceAgentIn),
+                ch(AliceMedIn?, AliceMedOut), [], 1),
+    tee(AliceMedOut?, AliceActorIn, AliceDispNotify),
+    send_to_user_tagged(alice, AliceDispCmd?, AliceDispNotify?).
+
+%% =============================================================================
+%% PLAY 2 — Befriend + credit line (with tee + sink display)
+%% =============================================================================
+
+play2 :-
+    network2(ch(AliceNetOut?, AliceNetIn),
+             ch(BobNetOut?, BobNetIn)),
+
+    %% Alice
+    actors # alice_p2(ch(AliceActorIn?, AliceActorOut)),
+    tee(AliceActorOut?, AliceMedIn, AliceDispCmd),
+    agent # agent(alice, AliceAgentIn?, AliceNetIn?,
+          [output('_user', AliceAgentToUser), output('_net', AliceNetOut)],
+          [], 1),
+    mediator # ui_mediator(alice, ch(AliceAgentToUser?, AliceAgentIn),
+                ch(AliceMedIn?, AliceMedOut), [], 1),
+    tee(AliceMedOut?, AliceActorIn, AliceDispNotify),
+    sink(AliceDispCmd?), sink(AliceDispNotify?),
+
+    %% Bob
+    actors # bob_p2(ch(BobActorIn?, BobActorOut)),
+    tee(BobActorOut?, BobMedIn, BobDispCmd),
+    agent # agent(bob, BobAgentIn?, BobNetIn?,
+          [output('_user', BobAgentToUser), output('_net', BobNetOut)],
+          [], 1),
+    mediator # ui_mediator(bob, ch(BobAgentToUser?, BobAgentIn),
+                ch(BobMedIn?, BobMedOut), [], 1),
+    tee(BobMedOut?, BobActorIn, BobDispNotify),
+    sink(BobDispCmd?), sink(BobDispNotify?).
+
+%% =============================================================================
+%% FLUTTER PLAY 2 — Befriend + credit line (with tagged output for UI)
+%% =============================================================================
+
+fplay2 :-
+    network2(ch(AliceNetOut?, AliceNetIn),
+             ch(BobNetOut?, BobNetIn)),
+
+    %% Alice
+    actors # alice_p2(ch(AliceActorIn?, AliceActorOut)),
+    tee(AliceActorOut?, AliceMedIn, AliceDispCmd),
+    agent # agent(alice, AliceAgentIn?, AliceNetIn?,
+          [output('_user', AliceAgentToUser), output('_net', AliceNetOut)],
+          [], 1),
+    mediator # ui_mediator(alice, ch(AliceAgentToUser?, AliceAgentIn),
+                ch(AliceMedIn?, AliceMedOut), [], 1),
+    tee(AliceMedOut?, AliceActorIn, AliceDispNotify),
+    send_to_user_tagged(alice, AliceDispCmd?, AliceDispNotify?),
+
+    %% Bob
+    actors # bob_p2(ch(BobActorIn?, BobActorOut)),
+    tee(BobActorOut?, BobMedIn, BobDispCmd),
+    agent # agent(bob, BobAgentIn?, BobNetIn?,
+          [output('_user', BobAgentToUser), output('_net', BobNetOut)],
+          [], 1),
+    mediator # ui_mediator(bob, ch(BobAgentToUser?, BobAgentIn),
+                ch(BobMedIn?, BobMedOut), [], 1),
+    tee(BobMedOut?, BobActorIn, BobDispNotify),
+    send_to_user_tagged(bob, BobDispCmd?, BobDispNotify?).
+
+%% =============================================================================
+%% PLAY 3 — Credit + payment (with tee + sink display)
+%% =============================================================================
+
+play3 :-
+    network2(ch(AliceNetOut?, AliceNetIn),
+             ch(BobNetOut?, BobNetIn)),
+
+    %% Alice
+    actors # alice_p3(ch(AliceActorIn?, AliceActorOut)),
+    tee(AliceActorOut?, AliceMedIn, AliceDispCmd),
+    agent # agent(alice, AliceAgentIn?, AliceNetIn?,
+          [output('_user', AliceAgentToUser), output('_net', AliceNetOut)],
+          [], 1),
+    mediator # ui_mediator(alice, ch(AliceAgentToUser?, AliceAgentIn),
+                ch(AliceMedIn?, AliceMedOut), [], 1),
+    tee(AliceMedOut?, AliceActorIn, AliceDispNotify),
+    sink(AliceDispCmd?), sink(AliceDispNotify?),
+
+    %% Bob
+    actors # bob_p3(ch(BobActorIn?, BobActorOut)),
+    tee(BobActorOut?, BobMedIn, BobDispCmd),
+    agent # agent(bob, BobAgentIn?, BobNetIn?,
+          [output('_user', BobAgentToUser), output('_net', BobNetOut)],
+          [], 1),
+    mediator # ui_mediator(bob, ch(BobAgentToUser?, BobAgentIn),
+                ch(BobMedIn?, BobMedOut), [], 1),
+    tee(BobMedOut?, BobActorIn, BobDispNotify),
+    sink(BobDispCmd?), sink(BobDispNotify?).
+
+%% =============================================================================
+%% FLUTTER PLAY 3 — Credit + payment (with tagged output for UI)
+%% =============================================================================
+
+fplay3 :-
+    network2(ch(AliceNetOut?, AliceNetIn),
+             ch(BobNetOut?, BobNetIn)),
+
+    %% Alice
+    actors # alice_p3(ch(AliceActorIn?, AliceActorOut)),
+    tee(AliceActorOut?, AliceMedIn, AliceDispCmd),
+    agent # agent(alice, AliceAgentIn?, AliceNetIn?,
+          [output('_user', AliceAgentToUser), output('_net', AliceNetOut)],
+          [], 1),
+    mediator # ui_mediator(alice, ch(AliceAgentToUser?, AliceAgentIn),
+                ch(AliceMedIn?, AliceMedOut), [], 1),
+    tee(AliceMedOut?, AliceActorIn, AliceDispNotify),
+    send_to_user_tagged(alice, AliceDispCmd?, AliceDispNotify?),
+
+    %% Bob
+    actors # bob_p3(ch(BobActorIn?, BobActorOut)),
+    tee(BobActorOut?, BobMedIn, BobDispCmd),
+    agent # agent(bob, BobAgentIn?, BobNetIn?,
+          [output('_user', BobAgentToUser), output('_net', BobNetOut)],
+          [], 1),
+    mediator # ui_mediator(bob, ch(BobAgentToUser?, BobAgentIn),
+                ch(BobMedIn?, BobMedOut), [], 1),
+    tee(BobMedOut?, BobActorIn, BobDispNotify),
+    send_to_user_tagged(bob, BobDispCmd?, BobDispNotify?).
+
+%% =============================================================================
+%% PLAY 4 — Credit + redemption (with tee + sink display)
+%% =============================================================================
+
+play4 :-
+    network2(ch(AliceNetOut?, AliceNetIn),
+             ch(BobNetOut?, BobNetIn)),
+
+    %% Alice
+    actors # alice_p4(ch(AliceActorIn?, AliceActorOut)),
+    tee(AliceActorOut?, AliceMedIn, AliceDispCmd),
+    agent # agent(alice, AliceAgentIn?, AliceNetIn?,
+          [output('_user', AliceAgentToUser), output('_net', AliceNetOut)],
+          [], 1),
+    mediator # ui_mediator(alice, ch(AliceAgentToUser?, AliceAgentIn),
+                ch(AliceMedIn?, AliceMedOut), [], 1),
+    tee(AliceMedOut?, AliceActorIn, AliceDispNotify),
+    sink(AliceDispCmd?), sink(AliceDispNotify?),
+
+    %% Bob
+    actors # bob_p4(ch(BobActorIn?, BobActorOut)),
+    tee(BobActorOut?, BobMedIn, BobDispCmd),
+    agent # agent(bob, BobAgentIn?, BobNetIn?,
+          [output('_user', BobAgentToUser), output('_net', BobNetOut)],
+          [], 1),
+    mediator # ui_mediator(bob, ch(BobAgentToUser?, BobAgentIn),
+                ch(BobMedIn?, BobMedOut), [], 1),
+    tee(BobMedOut?, BobActorIn, BobDispNotify),
+    sink(BobDispCmd?), sink(BobDispNotify?).
+
+%% =============================================================================
+%% FLUTTER PLAY 4 — Credit + redemption (with tagged output for UI)
+%% =============================================================================
+
+fplay4 :-
+    network2(ch(AliceNetOut?, AliceNetIn),
+             ch(BobNetOut?, BobNetIn)),
+
+    %% Alice
+    actors # alice_p4(ch(AliceActorIn?, AliceActorOut)),
+    tee(AliceActorOut?, AliceMedIn, AliceDispCmd),
+    agent # agent(alice, AliceAgentIn?, AliceNetIn?,
+          [output('_user', AliceAgentToUser), output('_net', AliceNetOut)],
+          [], 1),
+    mediator # ui_mediator(alice, ch(AliceAgentToUser?, AliceAgentIn),
+                ch(AliceMedIn?, AliceMedOut), [], 1),
+    tee(AliceMedOut?, AliceActorIn, AliceDispNotify),
+    send_to_user_tagged(alice, AliceDispCmd?, AliceDispNotify?),
+
+    %% Bob
+    actors # bob_p4(ch(BobActorIn?, BobActorOut)),
+    tee(BobActorOut?, BobMedIn, BobDispCmd),
+    agent # agent(bob, BobAgentIn?, BobNetIn?,
+          [output('_user', BobAgentToUser), output('_net', BobNetOut)],
+          [], 1),
+    mediator # ui_mediator(bob, ch(BobAgentToUser?, BobAgentIn),
+                ch(BobMedIn?, BobMedOut), [], 1),
+    tee(BobMedOut?, BobActorIn, BobDispNotify),
+    send_to_user_tagged(bob, BobDispCmd?, BobDispNotify?).
+
+%% =============================================================================
+%% PLAY 4b — Time-dependent redemption (with tee + sink display)
+%% =============================================================================
+
+play4b :-
+    now(Now),
+    T := Now? + 500,
+    play4b_run(T?).
+
+play4b_run(T) :-
+    ground(T?) |
+    network2(ch(AliceNetOut?, AliceNetIn),
+             ch(BobNetOut?, BobNetIn)),
+
+    %% Alice
+    actors # alice_p4b(ch(AliceActorIn?, AliceActorOut), T?),
+    tee(AliceActorOut?, AliceMedIn, AliceDispCmd),
+    agent # agent(alice, AliceAgentIn?, AliceNetIn?,
+          [output('_user', AliceAgentToUser), output('_net', AliceNetOut)],
+          [], 1),
+    mediator # ui_mediator(alice, ch(AliceAgentToUser?, AliceAgentIn),
+                ch(AliceMedIn?, AliceMedOut), [], 1),
+    tee(AliceMedOut?, AliceActorIn, AliceDispNotify),
+    sink(AliceDispCmd?), sink(AliceDispNotify?),
+
+    %% Bob
+    actors # bob_p4b(ch(BobActorIn?, BobActorOut), T?),
+    tee(BobActorOut?, BobMedIn, BobDispCmd),
+    agent # agent(bob, BobAgentIn?, BobNetIn?,
+          [output('_user', BobAgentToUser), output('_net', BobNetOut)],
+          [], 1),
+    mediator # ui_mediator(bob, ch(BobAgentToUser?, BobAgentIn),
+                ch(BobMedIn?, BobMedOut), [], 1),
+    tee(BobMedOut?, BobActorIn, BobDispNotify),
+    sink(BobDispCmd?), sink(BobDispNotify?).
+
+%% =============================================================================
+%% FLUTTER PLAY 4b — Time-dependent redemption (with tagged output for UI)
+%% =============================================================================
+
+fplay4b :-
+    now(Now),
+    T := Now? + 500,
+    fplay4b_run(T?).
+
+fplay4b_run(T) :-
+    ground(T?) |
+    network2(ch(AliceNetOut?, AliceNetIn),
+             ch(BobNetOut?, BobNetIn)),
+
+    %% Alice
+    actors # alice_p4b(ch(AliceActorIn?, AliceActorOut), T?),
+    tee(AliceActorOut?, AliceMedIn, AliceDispCmd),
+    agent # agent(alice, AliceAgentIn?, AliceNetIn?,
+          [output('_user', AliceAgentToUser), output('_net', AliceNetOut)],
+          [], 1),
+    mediator # ui_mediator(alice, ch(AliceAgentToUser?, AliceAgentIn),
+                ch(AliceMedIn?, AliceMedOut), [], 1),
+    tee(AliceMedOut?, AliceActorIn, AliceDispNotify),
+    send_to_user_tagged(alice, AliceDispCmd?, AliceDispNotify?),
+
+    %% Bob
+    actors # bob_p4b(ch(BobActorIn?, BobActorOut), T?),
+    tee(BobActorOut?, BobMedIn, BobDispCmd),
+    agent # agent(bob, BobAgentIn?, BobNetIn?,
+          [output('_user', BobAgentToUser), output('_net', BobNetOut)],
+          [], 1),
+    mediator # ui_mediator(bob, ch(BobAgentToUser?, BobAgentIn),
+                ch(BobMedIn?, BobMedOut), [], 1),
+    tee(BobMedOut?, BobActorIn, BobDispNotify),
+    send_to_user_tagged(bob, BobDispCmd?, BobDispNotify?).
+
+%% =============================================================================
+%% PLAY 5 — Zero-coupon loan (with tee + sink display)
+%% =============================================================================
+
+play5 :-
+    network2(ch(AliceNetOut?, AliceNetIn),
+             ch(BobNetOut?, BobNetIn)),
+
+    %% Alice
+    actors # alice_p5(ch(AliceActorIn?, AliceActorOut)),
+    tee(AliceActorOut?, AliceMedIn, AliceDispCmd),
+    agent # agent(alice, AliceAgentIn?, AliceNetIn?,
+          [output('_user', AliceAgentToUser), output('_net', AliceNetOut)],
+          [], 1),
+    mediator # ui_mediator(alice, ch(AliceAgentToUser?, AliceAgentIn),
+                ch(AliceMedIn?, AliceMedOut), [], 1),
+    tee(AliceMedOut?, AliceActorIn, AliceDispNotify),
+    sink(AliceDispCmd?), sink(AliceDispNotify?),
+
+    %% Bob
+    actors # bob_p5(ch(BobActorIn?, BobActorOut)),
+    tee(BobActorOut?, BobMedIn, BobDispCmd),
+    agent # agent(bob, BobAgentIn?, BobNetIn?,
+          [output('_user', BobAgentToUser), output('_net', BobNetOut)],
+          [], 1),
+    mediator # ui_mediator(bob, ch(BobAgentToUser?, BobAgentIn),
+                ch(BobMedIn?, BobMedOut), [], 1),
+    tee(BobMedOut?, BobActorIn, BobDispNotify),
+    sink(BobDispCmd?), sink(BobDispNotify?).
+
+%% =============================================================================
+%% FLUTTER PLAY 5 — Zero-coupon loan (with tagged output for UI)
+%% =============================================================================
+
+fplay5 :-
+    network2(ch(AliceNetOut?, AliceNetIn),
+             ch(BobNetOut?, BobNetIn)),
+
+    %% Alice
+    actors # alice_p5(ch(AliceActorIn?, AliceActorOut)),
+    tee(AliceActorOut?, AliceMedIn, AliceDispCmd),
+    agent # agent(alice, AliceAgentIn?, AliceNetIn?,
+          [output('_user', AliceAgentToUser), output('_net', AliceNetOut)],
+          [], 1),
+    mediator # ui_mediator(alice, ch(AliceAgentToUser?, AliceAgentIn),
+                ch(AliceMedIn?, AliceMedOut), [], 1),
+    tee(AliceMedOut?, AliceActorIn, AliceDispNotify),
+    send_to_user_tagged(alice, AliceDispCmd?, AliceDispNotify?),
+
+    %% Bob
+    actors # bob_p5(ch(BobActorIn?, BobActorOut)),
+    tee(BobActorOut?, BobMedIn, BobDispCmd),
+    agent # agent(bob, BobAgentIn?, BobNetIn?,
+          [output('_user', BobAgentToUser), output('_net', BobNetOut)],
+          [], 1),
+    mediator # ui_mediator(bob, ch(BobAgentToUser?, BobAgentIn),
+                ch(BobMedIn?, BobMedOut), [], 1),
+    tee(BobMedOut?, BobActorIn, BobDispNotify),
+    send_to_user_tagged(bob, BobDispCmd?, BobDispNotify?).
+
+%% =============================================================================
+%% PLAY 6 — Balloon loan (with tee + sink display)
+%% =============================================================================
+
+play6 :-
+    network2(ch(AliceNetOut?, AliceNetIn),
+             ch(BobNetOut?, BobNetIn)),
+
+    %% Alice
+    actors # alice_p6(ch(AliceActorIn?, AliceActorOut)),
+    tee(AliceActorOut?, AliceMedIn, AliceDispCmd),
+    agent # agent(alice, AliceAgentIn?, AliceNetIn?,
+          [output('_user', AliceAgentToUser), output('_net', AliceNetOut)],
+          [], 1),
+    mediator # ui_mediator(alice, ch(AliceAgentToUser?, AliceAgentIn),
+                ch(AliceMedIn?, AliceMedOut), [], 1),
+    tee(AliceMedOut?, AliceActorIn, AliceDispNotify),
+    sink(AliceDispCmd?), sink(AliceDispNotify?),
+
+    %% Bob
+    actors # bob_p6(ch(BobActorIn?, BobActorOut)),
+    tee(BobActorOut?, BobMedIn, BobDispCmd),
+    agent # agent(bob, BobAgentIn?, BobNetIn?,
+          [output('_user', BobAgentToUser), output('_net', BobNetOut)],
+          [], 1),
+    mediator # ui_mediator(bob, ch(BobAgentToUser?, BobAgentIn),
+                ch(BobMedIn?, BobMedOut), [], 1),
+    tee(BobMedOut?, BobActorIn, BobDispNotify),
+    sink(BobDispCmd?), sink(BobDispNotify?).
+
+%% =============================================================================
+%% FLUTTER PLAY 6 — Balloon loan (with tagged output for UI)
+%% =============================================================================
+
+fplay6 :-
+    network2(ch(AliceNetOut?, AliceNetIn),
+             ch(BobNetOut?, BobNetIn)),
+
+    %% Alice
+    actors # alice_p6(ch(AliceActorIn?, AliceActorOut)),
+    tee(AliceActorOut?, AliceMedIn, AliceDispCmd),
+    agent # agent(alice, AliceAgentIn?, AliceNetIn?,
+          [output('_user', AliceAgentToUser), output('_net', AliceNetOut)],
+          [], 1),
+    mediator # ui_mediator(alice, ch(AliceAgentToUser?, AliceAgentIn),
+                ch(AliceMedIn?, AliceMedOut), [], 1),
+    tee(AliceMedOut?, AliceActorIn, AliceDispNotify),
+    send_to_user_tagged(alice, AliceDispCmd?, AliceDispNotify?),
+
+    %% Bob
+    actors # bob_p6(ch(BobActorIn?, BobActorOut)),
+    tee(BobActorOut?, BobMedIn, BobDispCmd),
+    agent # agent(bob, BobAgentIn?, BobNetIn?,
+          [output('_user', BobAgentToUser), output('_net', BobNetOut)],
+          [], 1),
+    mediator # ui_mediator(bob, ch(BobAgentToUser?, BobAgentIn),
+                ch(BobMedIn?, BobMedOut), [], 1),
+    tee(BobMedOut?, BobActorIn, BobDispNotify),
+    send_to_user_tagged(bob, BobDispCmd?, BobDispNotify?).
+
+%% =============================================================================
+%% PLAY 8 — Sale of Debt (with tee + sink display)
+%% =============================================================================
+
+play8 :-
+    network2(ch(AliceNetOut?, AliceNetIn),
+             ch(BobNetOut?, BobNetIn)),
+
+    %% Alice
+    actors # alice_p8(ch(AliceActorIn?, AliceActorOut)),
+    tee(AliceActorOut?, AliceMedIn, AliceDispCmd),
+    agent # agent(alice, AliceAgentIn?, AliceNetIn?,
+          [output('_user', AliceAgentToUser), output('_net', AliceNetOut)],
+          [], 1),
+    mediator # ui_mediator(alice, ch(AliceAgentToUser?, AliceAgentIn),
+                ch(AliceMedIn?, AliceMedOut), [], 1),
+    tee(AliceMedOut?, AliceActorIn, AliceDispNotify),
+    sink(AliceDispCmd?), sink(AliceDispNotify?),
+
+    %% Bob
+    actors # bob_p8(ch(BobActorIn?, BobActorOut)),
+    tee(BobActorOut?, BobMedIn, BobDispCmd),
+    agent # agent(bob, BobAgentIn?, BobNetIn?,
+          [output('_user', BobAgentToUser), output('_net', BobNetOut)],
+          [], 1),
+    mediator # ui_mediator(bob, ch(BobAgentToUser?, BobAgentIn),
+                ch(BobMedIn?, BobMedOut), [], 1),
+    tee(BobMedOut?, BobActorIn, BobDispNotify),
+    sink(BobDispCmd?), sink(BobDispNotify?).
+
+%% =============================================================================
+%% FLUTTER PLAY 8 — Sale of Debt (with tagged output for UI)
+%% =============================================================================
+
+fplay8 :-
+    network2(ch(AliceNetOut?, AliceNetIn),
+             ch(BobNetOut?, BobNetIn)),
+
+    %% Alice
+    actors # alice_p8(ch(AliceActorIn?, AliceActorOut)),
+    tee(AliceActorOut?, AliceMedIn, AliceDispCmd),
+    agent # agent(alice, AliceAgentIn?, AliceNetIn?,
+          [output('_user', AliceAgentToUser), output('_net', AliceNetOut)],
+          [], 1),
+    mediator # ui_mediator(alice, ch(AliceAgentToUser?, AliceAgentIn),
+                ch(AliceMedIn?, AliceMedOut), [], 1),
+    tee(AliceMedOut?, AliceActorIn, AliceDispNotify),
+    send_to_user_tagged(alice, AliceDispCmd?, AliceDispNotify?),
+
+    %% Bob
+    actors # bob_p8(ch(BobActorIn?, BobActorOut)),
+    tee(BobActorOut?, BobMedIn, BobDispCmd),
+    agent # agent(bob, BobAgentIn?, BobNetIn?,
+          [output('_user', BobAgentToUser), output('_net', BobNetOut)],
+          [], 1),
+    mediator # ui_mediator(bob, ch(BobAgentToUser?, BobAgentIn),
+                ch(BobMedIn?, BobMedOut), [], 1),
+    tee(BobMedOut?, BobActorIn, BobDispNotify),
+    send_to_user_tagged(bob, BobDispCmd?, BobDispNotify?).
+
+%% =============================================================================
+%% PLAY 9 — Forward Contract (with tee + sink display)
+%% =============================================================================
+
+play9 :-
+    network2(ch(AliceNetOut?, AliceNetIn),
+             ch(BobNetOut?, BobNetIn)),
+
+    %% Alice
+    actors # alice_p9(ch(AliceActorIn?, AliceActorOut)),
+    tee(AliceActorOut?, AliceMedIn, AliceDispCmd),
+    agent # agent(alice, AliceAgentIn?, AliceNetIn?,
+          [output('_user', AliceAgentToUser), output('_net', AliceNetOut)],
+          [], 1),
+    mediator # ui_mediator(alice, ch(AliceAgentToUser?, AliceAgentIn),
+                ch(AliceMedIn?, AliceMedOut), [], 1),
+    tee(AliceMedOut?, AliceActorIn, AliceDispNotify),
+    sink(AliceDispCmd?), sink(AliceDispNotify?),
+
+    %% Bob
+    actors # bob_p9(ch(BobActorIn?, BobActorOut)),
+    tee(BobActorOut?, BobMedIn, BobDispCmd),
+    agent # agent(bob, BobAgentIn?, BobNetIn?,
+          [output('_user', BobAgentToUser), output('_net', BobNetOut)],
+          [], 1),
+    mediator # ui_mediator(bob, ch(BobAgentToUser?, BobAgentIn),
+                ch(BobMedIn?, BobMedOut), [], 1),
+    tee(BobMedOut?, BobActorIn, BobDispNotify),
+    sink(BobDispCmd?), sink(BobDispNotify?).
+
+%% =============================================================================
+%% FLUTTER PLAY 9 — Forward Contract (with tagged output for UI)
+%% =============================================================================
+
+fplay9 :-
+    network2(ch(AliceNetOut?, AliceNetIn),
+             ch(BobNetOut?, BobNetIn)),
+
+    %% Alice
+    actors # alice_p9(ch(AliceActorIn?, AliceActorOut)),
+    tee(AliceActorOut?, AliceMedIn, AliceDispCmd),
+    agent # agent(alice, AliceAgentIn?, AliceNetIn?,
+          [output('_user', AliceAgentToUser), output('_net', AliceNetOut)],
+          [], 1),
+    mediator # ui_mediator(alice, ch(AliceAgentToUser?, AliceAgentIn),
+                ch(AliceMedIn?, AliceMedOut), [], 1),
+    tee(AliceMedOut?, AliceActorIn, AliceDispNotify),
+    send_to_user_tagged(alice, AliceDispCmd?, AliceDispNotify?),
+
+    %% Bob
+    actors # bob_p9(ch(BobActorIn?, BobActorOut)),
+    tee(BobActorOut?, BobMedIn, BobDispCmd),
+    agent # agent(bob, BobAgentIn?, BobNetIn?,
+          [output('_user', BobAgentToUser), output('_net', BobNetOut)],
+          [], 1),
+    mediator # ui_mediator(bob, ch(BobAgentToUser?, BobAgentIn),
+                ch(BobMedIn?, BobMedOut), [], 1),
+    tee(BobMedOut?, BobActorIn, BobDispNotify),
+    send_to_user_tagged(bob, BobDispCmd?, BobDispNotify?).
+
+%% =============================================================================
+%% PLAY 10 — Escrow: Time Release
+%% =============================================================================
+%%
+%% T = now + 500 ms. Alice deposits 3 bob-coins for Bob.
+%% Timer expires. Bob gets bonds. Alice gets escrow_expired.
+
+play10 :-
+    now(Now),
+    T := Now? + 500,
+    network2(ch(AliceNetOut?, AliceNetIn),
+             ch(BobNetOut?, BobNetIn)),
+
+    %% Alice
+    actors # alice_p10(T?, ch(AliceActorIn?, AliceActorOut)),
+    tee(AliceActorOut?, AliceMedIn, AliceDispCmd),
+    agent # agent(alice, AliceAgentIn?, AliceNetIn?,
+          [output('_user', AliceAgentToUser), output('_net', AliceNetOut)],
+          [], 1),
+    mediator # ui_mediator(alice, ch(AliceAgentToUser?, AliceAgentIn),
+                ch(AliceMedIn?, AliceMedOut), [], 1),
+    tee(AliceMedOut?, AliceActorIn, AliceDispNotify),
+    sink(AliceDispCmd?), sink(AliceDispNotify?),
+
+    %% Bob
+    actors # bob_p10(ch(BobActorIn?, BobActorOut)),
+    tee(BobActorOut?, BobMedIn, BobDispCmd),
+    agent # agent(bob, BobAgentIn?, BobNetIn?,
+          [output('_user', BobAgentToUser), output('_net', BobNetOut)],
+          [], 1),
+    mediator # ui_mediator(bob, ch(BobAgentToUser?, BobAgentIn),
+                ch(BobMedIn?, BobMedOut), [], 1),
+    tee(BobMedOut?, BobActorIn, BobDispNotify),
+    sink(BobDispCmd?), sink(BobDispNotify?).
+
+%% =============================================================================
+%% FLUTTER PLAY 10 — Escrow: Time Release (with tagged output for UI)
+%% =============================================================================
+
+fplay10 :-
+    now(Now),
+    T := Now? + 500,
+    network2(ch(AliceNetOut?, AliceNetIn),
+             ch(BobNetOut?, BobNetIn)),
+
+    %% Alice
+    actors # alice_p10(T?, ch(AliceActorIn?, AliceActorOut)),
+    tee(AliceActorOut?, AliceMedIn, AliceDispCmd),
+    agent # agent(alice, AliceAgentIn?, AliceNetIn?,
+          [output('_user', AliceAgentToUser), output('_net', AliceNetOut)],
+          [], 1),
+    mediator # ui_mediator(alice, ch(AliceAgentToUser?, AliceAgentIn),
+                ch(AliceMedIn?, AliceMedOut), [], 1),
+    tee(AliceMedOut?, AliceActorIn, AliceDispNotify),
+    send_to_user_tagged(alice, AliceDispCmd?, AliceDispNotify?),
+
+    %% Bob
+    actors # bob_p10(ch(BobActorIn?, BobActorOut)),
+    tee(BobActorOut?, BobMedIn, BobDispCmd),
+    agent # agent(bob, BobAgentIn?, BobNetIn?,
+          [output('_user', BobAgentToUser), output('_net', BobNetOut)],
+          [], 1),
+    mediator # ui_mediator(bob, ch(BobAgentToUser?, BobAgentIn),
+                ch(BobMedIn?, BobMedOut), [], 1),
+    tee(BobMedOut?, BobActorIn, BobDispNotify),
+    send_to_user_tagged(bob, BobDispCmd?, BobDispNotify?).
+
+%% =============================================================================
+%% PLAY 11 — Escrow: Cancel
+%% =============================================================================
+%%
+%% T = now + 5000 ms (far future). Alice deposits 3 bob-coins for Bob.
+%% Alice cancels immediately. Alice gets bonds back. Bob gets escrow_cancelled.
+
+play11 :-
+    now(Now),
+    T := Now? + 5000,
+    network2(ch(AliceNetOut?, AliceNetIn),
+             ch(BobNetOut?, BobNetIn)),
+
+    %% Alice
+    actors # alice_p11(T?, ch(AliceActorIn?, AliceActorOut)),
+    tee(AliceActorOut?, AliceMedIn, AliceDispCmd),
+    agent # agent(alice, AliceAgentIn?, AliceNetIn?,
+          [output('_user', AliceAgentToUser), output('_net', AliceNetOut)],
+          [], 1),
+    mediator # ui_mediator(alice, ch(AliceAgentToUser?, AliceAgentIn),
+                ch(AliceMedIn?, AliceMedOut), [], 1),
+    tee(AliceMedOut?, AliceActorIn, AliceDispNotify),
+    sink(AliceDispCmd?), sink(AliceDispNotify?),
+
+    %% Bob
+    actors # bob_p11(ch(BobActorIn?, BobActorOut)),
+    tee(BobActorOut?, BobMedIn, BobDispCmd),
+    agent # agent(bob, BobAgentIn?, BobNetIn?,
+          [output('_user', BobAgentToUser), output('_net', BobNetOut)],
+          [], 1),
+    mediator # ui_mediator(bob, ch(BobAgentToUser?, BobAgentIn),
+                ch(BobMedIn?, BobMedOut), [], 1),
+    tee(BobMedOut?, BobActorIn, BobDispNotify),
+    sink(BobDispCmd?), sink(BobDispNotify?).
+
+%% =============================================================================
+%% FLUTTER PLAY 11 — Escrow: Cancel (with tagged output for UI)
+%% =============================================================================
+
+fplay11 :-
+    now(Now),
+    T := Now? + 5000,
+    network2(ch(AliceNetOut?, AliceNetIn),
+             ch(BobNetOut?, BobNetIn)),
+
+    %% Alice
+    actors # alice_p11(T?, ch(AliceActorIn?, AliceActorOut)),
+    tee(AliceActorOut?, AliceMedIn, AliceDispCmd),
+    agent # agent(alice, AliceAgentIn?, AliceNetIn?,
+          [output('_user', AliceAgentToUser), output('_net', AliceNetOut)],
+          [], 1),
+    mediator # ui_mediator(alice, ch(AliceAgentToUser?, AliceAgentIn),
+                ch(AliceMedIn?, AliceMedOut), [], 1),
+    tee(AliceMedOut?, AliceActorIn, AliceDispNotify),
+    send_to_user_tagged(alice, AliceDispCmd?, AliceDispNotify?),
+
+    %% Bob
+    actors # bob_p11(ch(BobActorIn?, BobActorOut)),
+    tee(BobActorOut?, BobMedIn, BobDispCmd),
+    agent # agent(bob, BobAgentIn?, BobNetIn?,
+          [output('_user', BobAgentToUser), output('_net', BobNetOut)],
+          [], 1),
+    mediator # ui_mediator(bob, ch(BobAgentToUser?, BobAgentIn),
+                ch(BobMedIn?, BobMedOut), [], 1),
+    tee(BobMedOut?, BobActorIn, BobDispNotify),
+    send_to_user_tagged(bob, BobDispCmd?, BobDispNotify?).
+
+%% =============================================================================
+%% FLUTTER PLAY 12 — Village Market Month (6 agents + narrative)
+%% =============================================================================
+
+fplay12 :-
+    now(Now),
+    T := Now? + 700,
+    network6(ch(AliceNetOut?, AliceNetIn),
+             ch(BobNetOut?, BobNetIn),
+             ch(CharlieNetOut?, CharlieNetIn),
+             ch(DianaNetOut?, DianaNetIn),
+             ch(EveNetOut?, EveNetIn),
+             ch(FrankNetOut?, FrankNetIn)),
+
+    %% Alice (T unused by alice, pass dummy constant to avoid SRSW on T?)
+    alice # alice_p12(0, ch(AliceActorIn?, AliceActorOut), AliceNarr),
+    send_to_user_narrate(alice, AliceNarr?),
+    tee(AliceActorOut?, AliceMedIn, AliceDispCmd),
+    agent # agent(alice, AliceAgentIn?, AliceNetIn?,
+          [output('_user', AliceAgentToUser), output('_net', AliceNetOut)], [], 1),
+    mediator # ui_mediator(alice, ch(AliceAgentToUser?, AliceAgentIn),
+                ch(AliceMedIn?, AliceMedOut), [], 1),
+    tee(AliceMedOut?, AliceActorIn, AliceDispNotify),
+    send_to_user_tagged(alice, AliceDispCmd?, AliceDispNotify?),
+
+    %% Bob
+    bob # bob_p12(ch(BobActorIn?, BobActorOut), BobNarr),
+    send_to_user_narrate(bob, BobNarr?),
+    tee(BobActorOut?, BobMedIn, BobDispCmd),
+    agent # agent(bob, BobAgentIn?, BobNetIn?,
+          [output('_user', BobAgentToUser), output('_net', BobNetOut)], [], 1),
+    mediator # ui_mediator(bob, ch(BobAgentToUser?, BobAgentIn),
+                ch(BobMedIn?, BobMedOut), [], 1),
+    tee(BobMedOut?, BobActorIn, BobDispNotify),
+    send_to_user_tagged(bob, BobDispCmd?, BobDispNotify?),
+
+    %% Charlie
+    charlie # charlie_p12(T?, ch(CharlieActorIn?, CharlieActorOut), CharlieNarr),
+    send_to_user_narrate(charlie, CharlieNarr?),
+    tee(CharlieActorOut?, CharlieMedIn, CharlieDispCmd),
+    agent # agent(charlie, CharlieAgentIn?, CharlieNetIn?,
+          [output('_user', CharlieAgentToUser), output('_net', CharlieNetOut)], [], 1),
+    mediator # ui_mediator(charlie, ch(CharlieAgentToUser?, CharlieAgentIn),
+                ch(CharlieMedIn?, CharlieMedOut), [], 1),
+    tee(CharlieMedOut?, CharlieActorIn, CharlieDispNotify),
+    send_to_user_tagged(charlie, CharlieDispCmd?, CharlieDispNotify?),
+
+    %% Diana
+    diana # diana_p12(ch(DianaActorIn?, DianaActorOut), DianaNarr),
+    send_to_user_narrate(diana, DianaNarr?),
+    tee(DianaActorOut?, DianaMedIn, DianaDispCmd),
+    agent # agent(diana, DianaAgentIn?, DianaNetIn?,
+          [output('_user', DianaAgentToUser), output('_net', DianaNetOut)], [], 1),
+    mediator # ui_mediator(diana, ch(DianaAgentToUser?, DianaAgentIn),
+                ch(DianaMedIn?, DianaMedOut), [], 1),
+    tee(DianaMedOut?, DianaActorIn, DianaDispNotify),
+    send_to_user_tagged(diana, DianaDispCmd?, DianaDispNotify?),
+
+    %% Eve
+    eve # eve_p12(ch(EveActorIn?, EveActorOut), EveNarr),
+    send_to_user_narrate(eve, EveNarr?),
+    tee(EveActorOut?, EveMedIn, EveDispCmd),
+    agent # agent(eve, EveAgentIn?, EveNetIn?,
+          [output('_user', EveAgentToUser), output('_net', EveNetOut)], [], 1),
+    mediator # ui_mediator(eve, ch(EveAgentToUser?, EveAgentIn),
+                ch(EveMedIn?, EveMedOut), [], 1),
+    tee(EveMedOut?, EveActorIn, EveDispNotify),
+    send_to_user_tagged(eve, EveDispCmd?, EveDispNotify?),
+
+    %% Frank
+    frank # frank_p12(ch(FrankActorIn?, FrankActorOut), FrankNarr),
+    send_to_user_narrate(frank, FrankNarr?),
+    tee(FrankActorOut?, FrankMedIn, FrankDispCmd),
+    agent # agent(frank, FrankAgentIn?, FrankNetIn?,
+          [output('_user', FrankAgentToUser), output('_net', FrankNetOut)], [], 1),
+    mediator # ui_mediator(frank, ch(FrankAgentToUser?, FrankAgentIn),
+                ch(FrankMedIn?, FrankMedOut), [], 1),
+    tee(FrankMedOut?, FrankActorIn, FrankDispNotify),
+    send_to_user_tagged(frank, FrankDispCmd?, FrankDispNotify?).
+
+%% =============================================================================
+%% NETWORK SWITCH (6-way)
+%% =============================================================================
+
+%% --- Cold-call routing (2-arg msg) ---
+
+network6(ch([msg(bob, X)|AliceIn], AliceOut?),
+         ch(BobIn, [msg(bob, X?)|BobOut?]),
+         ch(CharlieIn, CharlieOut?),
+         ch(DianaIn, DianaOut?),
+         ch(EveIn, EveOut?),
+         ch(FrankIn, FrankOut?)) :-
+    network6(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut), ch(CharlieIn?, CharlieOut),
+             ch(DianaIn?, DianaOut), ch(EveIn?, EveOut), ch(FrankIn?, FrankOut)).
+
+network6(ch([msg(charlie, X)|AliceIn], AliceOut?),
+         ch(BobIn, BobOut?),
+         ch(CharlieIn, [msg(charlie, X?)|CharlieOut?]),
+         ch(DianaIn, DianaOut?),
+         ch(EveIn, EveOut?),
+         ch(FrankIn, FrankOut?)) :-
+    network6(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut), ch(CharlieIn?, CharlieOut),
+             ch(DianaIn?, DianaOut), ch(EveIn?, EveOut), ch(FrankIn?, FrankOut)).
+
+network6(ch([msg(diana, X)|AliceIn], AliceOut?),
+         ch(BobIn, BobOut?),
+         ch(CharlieIn, CharlieOut?),
+         ch(DianaIn, [msg(diana, X?)|DianaOut?]),
+         ch(EveIn, EveOut?),
+         ch(FrankIn, FrankOut?)) :-
+    network6(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut), ch(CharlieIn?, CharlieOut),
+             ch(DianaIn?, DianaOut), ch(EveIn?, EveOut), ch(FrankIn?, FrankOut)).
+
+network6(ch([msg(eve, X)|AliceIn], AliceOut?),
+         ch(BobIn, BobOut?),
+         ch(CharlieIn, CharlieOut?),
+         ch(DianaIn, DianaOut?),
+         ch(EveIn, [msg(eve, X?)|EveOut?]),
+         ch(FrankIn, FrankOut?)) :-
+    network6(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut), ch(CharlieIn?, CharlieOut),
+             ch(DianaIn?, DianaOut), ch(EveIn?, EveOut), ch(FrankIn?, FrankOut)).
+
+network6(ch([msg(frank, X)|AliceIn], AliceOut?),
+         ch(BobIn, BobOut?),
+         ch(CharlieIn, CharlieOut?),
+         ch(DianaIn, DianaOut?),
+         ch(EveIn, EveOut?),
+         ch(FrankIn, [msg(frank, X?)|FrankOut?])) :-
+    network6(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut), ch(CharlieIn?, CharlieOut),
+             ch(DianaIn?, DianaOut), ch(EveIn?, EveOut), ch(FrankIn?, FrankOut)).
+
+network6(ch(AliceIn, [msg(alice, X?)|AliceOut?]),
+         ch([msg(alice, X)|BobIn], BobOut?),
+         ch(CharlieIn, CharlieOut?),
+         ch(DianaIn, DianaOut?),
+         ch(EveIn, EveOut?),
+         ch(FrankIn, FrankOut?)) :-
+    network6(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut), ch(CharlieIn?, CharlieOut),
+             ch(DianaIn?, DianaOut), ch(EveIn?, EveOut), ch(FrankIn?, FrankOut)).
+
+network6(ch(AliceIn, AliceOut?),
+         ch([msg(charlie, X)|BobIn], BobOut?),
+         ch(CharlieIn, [msg(charlie, X?)|CharlieOut?]),
+         ch(DianaIn, DianaOut?),
+         ch(EveIn, EveOut?),
+         ch(FrankIn, FrankOut?)) :-
+    network6(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut), ch(CharlieIn?, CharlieOut),
+             ch(DianaIn?, DianaOut), ch(EveIn?, EveOut), ch(FrankIn?, FrankOut)).
+
+network6(ch(AliceIn, AliceOut?),
+         ch([msg(diana, X)|BobIn], BobOut?),
+         ch(CharlieIn, CharlieOut?),
+         ch(DianaIn, [msg(diana, X?)|DianaOut?]),
+         ch(EveIn, EveOut?),
+         ch(FrankIn, FrankOut?)) :-
+    network6(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut), ch(CharlieIn?, CharlieOut),
+             ch(DianaIn?, DianaOut), ch(EveIn?, EveOut), ch(FrankIn?, FrankOut)).
+
+network6(ch(AliceIn, AliceOut?),
+         ch([msg(eve, X)|BobIn], BobOut?),
+         ch(CharlieIn, CharlieOut?),
+         ch(DianaIn, DianaOut?),
+         ch(EveIn, [msg(eve, X?)|EveOut?]),
+         ch(FrankIn, FrankOut?)) :-
+    network6(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut), ch(CharlieIn?, CharlieOut),
+             ch(DianaIn?, DianaOut), ch(EveIn?, EveOut), ch(FrankIn?, FrankOut)).
+
+network6(ch(AliceIn, AliceOut?),
+         ch([msg(frank, X)|BobIn], BobOut?),
+         ch(CharlieIn, CharlieOut?),
+         ch(DianaIn, DianaOut?),
+         ch(EveIn, EveOut?),
+         ch(FrankIn, [msg(frank, X?)|FrankOut?])) :-
+    network6(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut), ch(CharlieIn?, CharlieOut),
+             ch(DianaIn?, DianaOut), ch(EveIn?, EveOut), ch(FrankIn?, FrankOut)).
+
+network6(ch(AliceIn, [msg(alice, X?)|AliceOut?]),
+         ch(BobIn, BobOut?),
+         ch([msg(alice, X)|CharlieIn], CharlieOut?),
+         ch(DianaIn, DianaOut?),
+         ch(EveIn, EveOut?),
+         ch(FrankIn, FrankOut?)) :-
+    network6(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut), ch(CharlieIn?, CharlieOut),
+             ch(DianaIn?, DianaOut), ch(EveIn?, EveOut), ch(FrankIn?, FrankOut)).
+
+network6(ch(AliceIn, AliceOut?),
+         ch(BobIn, [msg(bob, X?)|BobOut?]),
+         ch([msg(bob, X)|CharlieIn], CharlieOut?),
+         ch(DianaIn, DianaOut?),
+         ch(EveIn, EveOut?),
+         ch(FrankIn, FrankOut?)) :-
+    network6(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut), ch(CharlieIn?, CharlieOut),
+             ch(DianaIn?, DianaOut), ch(EveIn?, EveOut), ch(FrankIn?, FrankOut)).
+
+network6(ch(AliceIn, AliceOut?),
+         ch(BobIn, BobOut?),
+         ch([msg(diana, X)|CharlieIn], CharlieOut?),
+         ch(DianaIn, [msg(diana, X?)|DianaOut?]),
+         ch(EveIn, EveOut?),
+         ch(FrankIn, FrankOut?)) :-
+    network6(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut), ch(CharlieIn?, CharlieOut),
+             ch(DianaIn?, DianaOut), ch(EveIn?, EveOut), ch(FrankIn?, FrankOut)).
+
+network6(ch(AliceIn, AliceOut?),
+         ch(BobIn, BobOut?),
+         ch([msg(eve, X)|CharlieIn], CharlieOut?),
+         ch(DianaIn, DianaOut?),
+         ch(EveIn, [msg(eve, X?)|EveOut?]),
+         ch(FrankIn, FrankOut?)) :-
+    network6(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut), ch(CharlieIn?, CharlieOut),
+             ch(DianaIn?, DianaOut), ch(EveIn?, EveOut), ch(FrankIn?, FrankOut)).
+
+network6(ch(AliceIn, AliceOut?),
+         ch(BobIn, BobOut?),
+         ch([msg(frank, X)|CharlieIn], CharlieOut?),
+         ch(DianaIn, DianaOut?),
+         ch(EveIn, EveOut?),
+         ch(FrankIn, [msg(frank, X?)|FrankOut?])) :-
+    network6(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut), ch(CharlieIn?, CharlieOut),
+             ch(DianaIn?, DianaOut), ch(EveIn?, EveOut), ch(FrankIn?, FrankOut)).
+
+network6(ch(AliceIn, [msg(alice, X?)|AliceOut?]),
+         ch(BobIn, BobOut?),
+         ch(CharlieIn, CharlieOut?),
+         ch([msg(alice, X)|DianaIn], DianaOut?),
+         ch(EveIn, EveOut?),
+         ch(FrankIn, FrankOut?)) :-
+    network6(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut), ch(CharlieIn?, CharlieOut),
+             ch(DianaIn?, DianaOut), ch(EveIn?, EveOut), ch(FrankIn?, FrankOut)).
+
+network6(ch(AliceIn, AliceOut?),
+         ch(BobIn, [msg(bob, X?)|BobOut?]),
+         ch(CharlieIn, CharlieOut?),
+         ch([msg(bob, X)|DianaIn], DianaOut?),
+         ch(EveIn, EveOut?),
+         ch(FrankIn, FrankOut?)) :-
+    network6(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut), ch(CharlieIn?, CharlieOut),
+             ch(DianaIn?, DianaOut), ch(EveIn?, EveOut), ch(FrankIn?, FrankOut)).
+
+network6(ch(AliceIn, AliceOut?),
+         ch(BobIn, BobOut?),
+         ch(CharlieIn, [msg(charlie, X?)|CharlieOut?]),
+         ch([msg(charlie, X)|DianaIn], DianaOut?),
+         ch(EveIn, EveOut?),
+         ch(FrankIn, FrankOut?)) :-
+    network6(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut), ch(CharlieIn?, CharlieOut),
+             ch(DianaIn?, DianaOut), ch(EveIn?, EveOut), ch(FrankIn?, FrankOut)).
+
+network6(ch(AliceIn, AliceOut?),
+         ch(BobIn, BobOut?),
+         ch(CharlieIn, CharlieOut?),
+         ch([msg(eve, X)|DianaIn], DianaOut?),
+         ch(EveIn, [msg(eve, X?)|EveOut?]),
+         ch(FrankIn, FrankOut?)) :-
+    network6(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut), ch(CharlieIn?, CharlieOut),
+             ch(DianaIn?, DianaOut), ch(EveIn?, EveOut), ch(FrankIn?, FrankOut)).
+
+network6(ch(AliceIn, AliceOut?),
+         ch(BobIn, BobOut?),
+         ch(CharlieIn, CharlieOut?),
+         ch([msg(frank, X)|DianaIn], DianaOut?),
+         ch(EveIn, EveOut?),
+         ch(FrankIn, [msg(frank, X?)|FrankOut?])) :-
+    network6(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut), ch(CharlieIn?, CharlieOut),
+             ch(DianaIn?, DianaOut), ch(EveIn?, EveOut), ch(FrankIn?, FrankOut)).
+
+network6(ch(AliceIn, [msg(alice, X?)|AliceOut?]),
+         ch(BobIn, BobOut?),
+         ch(CharlieIn, CharlieOut?),
+         ch(DianaIn, DianaOut?),
+         ch([msg(alice, X)|EveIn], EveOut?),
+         ch(FrankIn, FrankOut?)) :-
+    network6(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut), ch(CharlieIn?, CharlieOut),
+             ch(DianaIn?, DianaOut), ch(EveIn?, EveOut), ch(FrankIn?, FrankOut)).
+
+network6(ch(AliceIn, AliceOut?),
+         ch(BobIn, [msg(bob, X?)|BobOut?]),
+         ch(CharlieIn, CharlieOut?),
+         ch(DianaIn, DianaOut?),
+         ch([msg(bob, X)|EveIn], EveOut?),
+         ch(FrankIn, FrankOut?)) :-
+    network6(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut), ch(CharlieIn?, CharlieOut),
+             ch(DianaIn?, DianaOut), ch(EveIn?, EveOut), ch(FrankIn?, FrankOut)).
+
+network6(ch(AliceIn, AliceOut?),
+         ch(BobIn, BobOut?),
+         ch(CharlieIn, [msg(charlie, X?)|CharlieOut?]),
+         ch(DianaIn, DianaOut?),
+         ch([msg(charlie, X)|EveIn], EveOut?),
+         ch(FrankIn, FrankOut?)) :-
+    network6(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut), ch(CharlieIn?, CharlieOut),
+             ch(DianaIn?, DianaOut), ch(EveIn?, EveOut), ch(FrankIn?, FrankOut)).
+
+network6(ch(AliceIn, AliceOut?),
+         ch(BobIn, BobOut?),
+         ch(CharlieIn, CharlieOut?),
+         ch(DianaIn, [msg(diana, X?)|DianaOut?]),
+         ch([msg(diana, X)|EveIn], EveOut?),
+         ch(FrankIn, FrankOut?)) :-
+    network6(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut), ch(CharlieIn?, CharlieOut),
+             ch(DianaIn?, DianaOut), ch(EveIn?, EveOut), ch(FrankIn?, FrankOut)).
+
+network6(ch(AliceIn, AliceOut?),
+         ch(BobIn, BobOut?),
+         ch(CharlieIn, CharlieOut?),
+         ch(DianaIn, DianaOut?),
+         ch([msg(frank, X)|EveIn], EveOut?),
+         ch(FrankIn, [msg(frank, X?)|FrankOut?])) :-
+    network6(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut), ch(CharlieIn?, CharlieOut),
+             ch(DianaIn?, DianaOut), ch(EveIn?, EveOut), ch(FrankIn?, FrankOut)).
+
+network6(ch(AliceIn, [msg(alice, X?)|AliceOut?]),
+         ch(BobIn, BobOut?),
+         ch(CharlieIn, CharlieOut?),
+         ch(DianaIn, DianaOut?),
+         ch(EveIn, EveOut?),
+         ch([msg(alice, X)|FrankIn], FrankOut?)) :-
+    network6(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut), ch(CharlieIn?, CharlieOut),
+             ch(DianaIn?, DianaOut), ch(EveIn?, EveOut), ch(FrankIn?, FrankOut)).
+
+network6(ch(AliceIn, AliceOut?),
+         ch(BobIn, [msg(bob, X?)|BobOut?]),
+         ch(CharlieIn, CharlieOut?),
+         ch(DianaIn, DianaOut?),
+         ch(EveIn, EveOut?),
+         ch([msg(bob, X)|FrankIn], FrankOut?)) :-
+    network6(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut), ch(CharlieIn?, CharlieOut),
+             ch(DianaIn?, DianaOut), ch(EveIn?, EveOut), ch(FrankIn?, FrankOut)).
+
+network6(ch(AliceIn, AliceOut?),
+         ch(BobIn, BobOut?),
+         ch(CharlieIn, [msg(charlie, X?)|CharlieOut?]),
+         ch(DianaIn, DianaOut?),
+         ch(EveIn, EveOut?),
+         ch([msg(charlie, X)|FrankIn], FrankOut?)) :-
+    network6(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut), ch(CharlieIn?, CharlieOut),
+             ch(DianaIn?, DianaOut), ch(EveIn?, EveOut), ch(FrankIn?, FrankOut)).
+
+network6(ch(AliceIn, AliceOut?),
+         ch(BobIn, BobOut?),
+         ch(CharlieIn, CharlieOut?),
+         ch(DianaIn, [msg(diana, X?)|DianaOut?]),
+         ch(EveIn, EveOut?),
+         ch([msg(diana, X)|FrankIn], FrankOut?)) :-
+    network6(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut), ch(CharlieIn?, CharlieOut),
+             ch(DianaIn?, DianaOut), ch(EveIn?, EveOut), ch(FrankIn?, FrankOut)).
+
+network6(ch(AliceIn, AliceOut?),
+         ch(BobIn, BobOut?),
+         ch(CharlieIn, CharlieOut?),
+         ch(DianaIn, DianaOut?),
+         ch(EveIn, [msg(eve, X?)|EveOut?]),
+         ch([msg(eve, X)|FrankIn], FrankOut?)) :-
+    network6(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut), ch(CharlieIn?, CharlieOut),
+             ch(DianaIn?, DianaOut), ch(EveIn?, EveOut), ch(FrankIn?, FrankOut)).
+
+%% --- Friend-to-friend routing (3-arg msg) ---
+
+network6(ch([msg(alice, bob, X)|AliceIn], AliceOut?),
+         ch(BobIn, [msg(alice, bob, X?)|BobOut?]),
+         ch(CharlieIn, CharlieOut?),
+         ch(DianaIn, DianaOut?),
+         ch(EveIn, EveOut?),
+         ch(FrankIn, FrankOut?)) :-
+    network6(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut), ch(CharlieIn?, CharlieOut),
+             ch(DianaIn?, DianaOut), ch(EveIn?, EveOut), ch(FrankIn?, FrankOut)).
+
+network6(ch([msg(alice, charlie, X)|AliceIn], AliceOut?),
+         ch(BobIn, BobOut?),
+         ch(CharlieIn, [msg(alice, charlie, X?)|CharlieOut?]),
+         ch(DianaIn, DianaOut?),
+         ch(EveIn, EveOut?),
+         ch(FrankIn, FrankOut?)) :-
+    network6(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut), ch(CharlieIn?, CharlieOut),
+             ch(DianaIn?, DianaOut), ch(EveIn?, EveOut), ch(FrankIn?, FrankOut)).
+
+network6(ch([msg(alice, diana, X)|AliceIn], AliceOut?),
+         ch(BobIn, BobOut?),
+         ch(CharlieIn, CharlieOut?),
+         ch(DianaIn, [msg(alice, diana, X?)|DianaOut?]),
+         ch(EveIn, EveOut?),
+         ch(FrankIn, FrankOut?)) :-
+    network6(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut), ch(CharlieIn?, CharlieOut),
+             ch(DianaIn?, DianaOut), ch(EveIn?, EveOut), ch(FrankIn?, FrankOut)).
+
+network6(ch([msg(alice, eve, X)|AliceIn], AliceOut?),
+         ch(BobIn, BobOut?),
+         ch(CharlieIn, CharlieOut?),
+         ch(DianaIn, DianaOut?),
+         ch(EveIn, [msg(alice, eve, X?)|EveOut?]),
+         ch(FrankIn, FrankOut?)) :-
+    network6(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut), ch(CharlieIn?, CharlieOut),
+             ch(DianaIn?, DianaOut), ch(EveIn?, EveOut), ch(FrankIn?, FrankOut)).
+
+network6(ch([msg(alice, frank, X)|AliceIn], AliceOut?),
+         ch(BobIn, BobOut?),
+         ch(CharlieIn, CharlieOut?),
+         ch(DianaIn, DianaOut?),
+         ch(EveIn, EveOut?),
+         ch(FrankIn, [msg(alice, frank, X?)|FrankOut?])) :-
+    network6(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut), ch(CharlieIn?, CharlieOut),
+             ch(DianaIn?, DianaOut), ch(EveIn?, EveOut), ch(FrankIn?, FrankOut)).
+
+network6(ch(AliceIn, [msg(bob, alice, X?)|AliceOut?]),
+         ch([msg(bob, alice, X)|BobIn], BobOut?),
+         ch(CharlieIn, CharlieOut?),
+         ch(DianaIn, DianaOut?),
+         ch(EveIn, EveOut?),
+         ch(FrankIn, FrankOut?)) :-
+    network6(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut), ch(CharlieIn?, CharlieOut),
+             ch(DianaIn?, DianaOut), ch(EveIn?, EveOut), ch(FrankIn?, FrankOut)).
+
+network6(ch(AliceIn, AliceOut?),
+         ch([msg(bob, charlie, X)|BobIn], BobOut?),
+         ch(CharlieIn, [msg(bob, charlie, X?)|CharlieOut?]),
+         ch(DianaIn, DianaOut?),
+         ch(EveIn, EveOut?),
+         ch(FrankIn, FrankOut?)) :-
+    network6(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut), ch(CharlieIn?, CharlieOut),
+             ch(DianaIn?, DianaOut), ch(EveIn?, EveOut), ch(FrankIn?, FrankOut)).
+
+network6(ch(AliceIn, AliceOut?),
+         ch([msg(bob, diana, X)|BobIn], BobOut?),
+         ch(CharlieIn, CharlieOut?),
+         ch(DianaIn, [msg(bob, diana, X?)|DianaOut?]),
+         ch(EveIn, EveOut?),
+         ch(FrankIn, FrankOut?)) :-
+    network6(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut), ch(CharlieIn?, CharlieOut),
+             ch(DianaIn?, DianaOut), ch(EveIn?, EveOut), ch(FrankIn?, FrankOut)).
+
+network6(ch(AliceIn, AliceOut?),
+         ch([msg(bob, eve, X)|BobIn], BobOut?),
+         ch(CharlieIn, CharlieOut?),
+         ch(DianaIn, DianaOut?),
+         ch(EveIn, [msg(bob, eve, X?)|EveOut?]),
+         ch(FrankIn, FrankOut?)) :-
+    network6(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut), ch(CharlieIn?, CharlieOut),
+             ch(DianaIn?, DianaOut), ch(EveIn?, EveOut), ch(FrankIn?, FrankOut)).
+
+network6(ch(AliceIn, AliceOut?),
+         ch([msg(bob, frank, X)|BobIn], BobOut?),
+         ch(CharlieIn, CharlieOut?),
+         ch(DianaIn, DianaOut?),
+         ch(EveIn, EveOut?),
+         ch(FrankIn, [msg(bob, frank, X?)|FrankOut?])) :-
+    network6(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut), ch(CharlieIn?, CharlieOut),
+             ch(DianaIn?, DianaOut), ch(EveIn?, EveOut), ch(FrankIn?, FrankOut)).
+
+network6(ch(AliceIn, [msg(charlie, alice, X?)|AliceOut?]),
+         ch(BobIn, BobOut?),
+         ch([msg(charlie, alice, X)|CharlieIn], CharlieOut?),
+         ch(DianaIn, DianaOut?),
+         ch(EveIn, EveOut?),
+         ch(FrankIn, FrankOut?)) :-
+    network6(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut), ch(CharlieIn?, CharlieOut),
+             ch(DianaIn?, DianaOut), ch(EveIn?, EveOut), ch(FrankIn?, FrankOut)).
+
+network6(ch(AliceIn, AliceOut?),
+         ch(BobIn, [msg(charlie, bob, X?)|BobOut?]),
+         ch([msg(charlie, bob, X)|CharlieIn], CharlieOut?),
+         ch(DianaIn, DianaOut?),
+         ch(EveIn, EveOut?),
+         ch(FrankIn, FrankOut?)) :-
+    network6(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut), ch(CharlieIn?, CharlieOut),
+             ch(DianaIn?, DianaOut), ch(EveIn?, EveOut), ch(FrankIn?, FrankOut)).
+
+network6(ch(AliceIn, AliceOut?),
+         ch(BobIn, BobOut?),
+         ch([msg(charlie, diana, X)|CharlieIn], CharlieOut?),
+         ch(DianaIn, [msg(charlie, diana, X?)|DianaOut?]),
+         ch(EveIn, EveOut?),
+         ch(FrankIn, FrankOut?)) :-
+    network6(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut), ch(CharlieIn?, CharlieOut),
+             ch(DianaIn?, DianaOut), ch(EveIn?, EveOut), ch(FrankIn?, FrankOut)).
+
+network6(ch(AliceIn, AliceOut?),
+         ch(BobIn, BobOut?),
+         ch([msg(charlie, eve, X)|CharlieIn], CharlieOut?),
+         ch(DianaIn, DianaOut?),
+         ch(EveIn, [msg(charlie, eve, X?)|EveOut?]),
+         ch(FrankIn, FrankOut?)) :-
+    network6(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut), ch(CharlieIn?, CharlieOut),
+             ch(DianaIn?, DianaOut), ch(EveIn?, EveOut), ch(FrankIn?, FrankOut)).
+
+network6(ch(AliceIn, AliceOut?),
+         ch(BobIn, BobOut?),
+         ch([msg(charlie, frank, X)|CharlieIn], CharlieOut?),
+         ch(DianaIn, DianaOut?),
+         ch(EveIn, EveOut?),
+         ch(FrankIn, [msg(charlie, frank, X?)|FrankOut?])) :-
+    network6(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut), ch(CharlieIn?, CharlieOut),
+             ch(DianaIn?, DianaOut), ch(EveIn?, EveOut), ch(FrankIn?, FrankOut)).
+
+network6(ch(AliceIn, [msg(diana, alice, X?)|AliceOut?]),
+         ch(BobIn, BobOut?),
+         ch(CharlieIn, CharlieOut?),
+         ch([msg(diana, alice, X)|DianaIn], DianaOut?),
+         ch(EveIn, EveOut?),
+         ch(FrankIn, FrankOut?)) :-
+    network6(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut), ch(CharlieIn?, CharlieOut),
+             ch(DianaIn?, DianaOut), ch(EveIn?, EveOut), ch(FrankIn?, FrankOut)).
+
+network6(ch(AliceIn, AliceOut?),
+         ch(BobIn, [msg(diana, bob, X?)|BobOut?]),
+         ch(CharlieIn, CharlieOut?),
+         ch([msg(diana, bob, X)|DianaIn], DianaOut?),
+         ch(EveIn, EveOut?),
+         ch(FrankIn, FrankOut?)) :-
+    network6(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut), ch(CharlieIn?, CharlieOut),
+             ch(DianaIn?, DianaOut), ch(EveIn?, EveOut), ch(FrankIn?, FrankOut)).
+
+network6(ch(AliceIn, AliceOut?),
+         ch(BobIn, BobOut?),
+         ch(CharlieIn, [msg(diana, charlie, X?)|CharlieOut?]),
+         ch([msg(diana, charlie, X)|DianaIn], DianaOut?),
+         ch(EveIn, EveOut?),
+         ch(FrankIn, FrankOut?)) :-
+    network6(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut), ch(CharlieIn?, CharlieOut),
+             ch(DianaIn?, DianaOut), ch(EveIn?, EveOut), ch(FrankIn?, FrankOut)).
+
+network6(ch(AliceIn, AliceOut?),
+         ch(BobIn, BobOut?),
+         ch(CharlieIn, CharlieOut?),
+         ch([msg(diana, eve, X)|DianaIn], DianaOut?),
+         ch(EveIn, [msg(diana, eve, X?)|EveOut?]),
+         ch(FrankIn, FrankOut?)) :-
+    network6(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut), ch(CharlieIn?, CharlieOut),
+             ch(DianaIn?, DianaOut), ch(EveIn?, EveOut), ch(FrankIn?, FrankOut)).
+
+network6(ch(AliceIn, AliceOut?),
+         ch(BobIn, BobOut?),
+         ch(CharlieIn, CharlieOut?),
+         ch([msg(diana, frank, X)|DianaIn], DianaOut?),
+         ch(EveIn, EveOut?),
+         ch(FrankIn, [msg(diana, frank, X?)|FrankOut?])) :-
+    network6(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut), ch(CharlieIn?, CharlieOut),
+             ch(DianaIn?, DianaOut), ch(EveIn?, EveOut), ch(FrankIn?, FrankOut)).
+
+network6(ch(AliceIn, [msg(eve, alice, X?)|AliceOut?]),
+         ch(BobIn, BobOut?),
+         ch(CharlieIn, CharlieOut?),
+         ch(DianaIn, DianaOut?),
+         ch([msg(eve, alice, X)|EveIn], EveOut?),
+         ch(FrankIn, FrankOut?)) :-
+    network6(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut), ch(CharlieIn?, CharlieOut),
+             ch(DianaIn?, DianaOut), ch(EveIn?, EveOut), ch(FrankIn?, FrankOut)).
+
+network6(ch(AliceIn, AliceOut?),
+         ch(BobIn, [msg(eve, bob, X?)|BobOut?]),
+         ch(CharlieIn, CharlieOut?),
+         ch(DianaIn, DianaOut?),
+         ch([msg(eve, bob, X)|EveIn], EveOut?),
+         ch(FrankIn, FrankOut?)) :-
+    network6(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut), ch(CharlieIn?, CharlieOut),
+             ch(DianaIn?, DianaOut), ch(EveIn?, EveOut), ch(FrankIn?, FrankOut)).
+
+network6(ch(AliceIn, AliceOut?),
+         ch(BobIn, BobOut?),
+         ch(CharlieIn, [msg(eve, charlie, X?)|CharlieOut?]),
+         ch(DianaIn, DianaOut?),
+         ch([msg(eve, charlie, X)|EveIn], EveOut?),
+         ch(FrankIn, FrankOut?)) :-
+    network6(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut), ch(CharlieIn?, CharlieOut),
+             ch(DianaIn?, DianaOut), ch(EveIn?, EveOut), ch(FrankIn?, FrankOut)).
+
+network6(ch(AliceIn, AliceOut?),
+         ch(BobIn, BobOut?),
+         ch(CharlieIn, CharlieOut?),
+         ch(DianaIn, [msg(eve, diana, X?)|DianaOut?]),
+         ch([msg(eve, diana, X)|EveIn], EveOut?),
+         ch(FrankIn, FrankOut?)) :-
+    network6(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut), ch(CharlieIn?, CharlieOut),
+             ch(DianaIn?, DianaOut), ch(EveIn?, EveOut), ch(FrankIn?, FrankOut)).
+
+network6(ch(AliceIn, AliceOut?),
+         ch(BobIn, BobOut?),
+         ch(CharlieIn, CharlieOut?),
+         ch(DianaIn, DianaOut?),
+         ch([msg(eve, frank, X)|EveIn], EveOut?),
+         ch(FrankIn, [msg(eve, frank, X?)|FrankOut?])) :-
+    network6(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut), ch(CharlieIn?, CharlieOut),
+             ch(DianaIn?, DianaOut), ch(EveIn?, EveOut), ch(FrankIn?, FrankOut)).
+
+network6(ch(AliceIn, [msg(frank, alice, X?)|AliceOut?]),
+         ch(BobIn, BobOut?),
+         ch(CharlieIn, CharlieOut?),
+         ch(DianaIn, DianaOut?),
+         ch(EveIn, EveOut?),
+         ch([msg(frank, alice, X)|FrankIn], FrankOut?)) :-
+    network6(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut), ch(CharlieIn?, CharlieOut),
+             ch(DianaIn?, DianaOut), ch(EveIn?, EveOut), ch(FrankIn?, FrankOut)).
+
+network6(ch(AliceIn, AliceOut?),
+         ch(BobIn, [msg(frank, bob, X?)|BobOut?]),
+         ch(CharlieIn, CharlieOut?),
+         ch(DianaIn, DianaOut?),
+         ch(EveIn, EveOut?),
+         ch([msg(frank, bob, X)|FrankIn], FrankOut?)) :-
+    network6(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut), ch(CharlieIn?, CharlieOut),
+             ch(DianaIn?, DianaOut), ch(EveIn?, EveOut), ch(FrankIn?, FrankOut)).
+
+network6(ch(AliceIn, AliceOut?),
+         ch(BobIn, BobOut?),
+         ch(CharlieIn, [msg(frank, charlie, X?)|CharlieOut?]),
+         ch(DianaIn, DianaOut?),
+         ch(EveIn, EveOut?),
+         ch([msg(frank, charlie, X)|FrankIn], FrankOut?)) :-
+    network6(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut), ch(CharlieIn?, CharlieOut),
+             ch(DianaIn?, DianaOut), ch(EveIn?, EveOut), ch(FrankIn?, FrankOut)).
+
+network6(ch(AliceIn, AliceOut?),
+         ch(BobIn, BobOut?),
+         ch(CharlieIn, CharlieOut?),
+         ch(DianaIn, [msg(frank, diana, X?)|DianaOut?]),
+         ch(EveIn, EveOut?),
+         ch([msg(frank, diana, X)|FrankIn], FrankOut?)) :-
+    network6(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut), ch(CharlieIn?, CharlieOut),
+             ch(DianaIn?, DianaOut), ch(EveIn?, EveOut), ch(FrankIn?, FrankOut)).
+
+network6(ch(AliceIn, AliceOut?),
+         ch(BobIn, BobOut?),
+         ch(CharlieIn, CharlieOut?),
+         ch(DianaIn, DianaOut?),
+         ch(EveIn, [msg(frank, eve, X?)|EveOut?]),
+         ch([msg(frank, eve, X)|FrankIn], FrankOut?)) :-
+    network6(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut), ch(CharlieIn?, CharlieOut),
+             ch(DianaIn?, DianaOut), ch(EveIn?, EveOut), ch(FrankIn?, FrankOut)).
+
+%% Termination
+network6(ch([], []), ch([], []), ch([], []), ch([], []), ch([], []), ch([], [])).
