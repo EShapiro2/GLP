@@ -1,26 +1,23 @@
-# Current Plan: Dead Code Removal — COMPLETE
+# Current Plan: Dart Test Suite Cleanup
 
-Started: 2026-03-12
-Completed: 2026-03-12
+Started: 2026-03-13
 
-## Steps
-- [x] 1. Baseline tests (428/428)
-- [x] 2. Remove `_generateSelectProcedure()`, replace auto-activation trigger with `ModuleInfo.hasExports`
-- [x] 3. Remove Distribute fallback path in runner.dart
-- [x] 4. Remove `execute/2` (Execute, SetClauseVar opcodes, codegen, runner handlers)
-- [x] 5. Add TODO to `combinedProgram` re: future module boundary enforcement
-- [x] 6. 428/428 REPL tests, 5/5 Dart tests. Committed and pushed.
+## Goal
 
-## Net result: -259 lines
+Zero Dart test failures. Currently 53 failures across 21 files. The runtime is correct (428/428 REPL tests pass) — these are stale unit tests.
 
-## What was removed
-1. `_generateSelectProcedure()` — dead since `_activate` bypasses `_select/1`
-2. Distribute fallback — dead since `loadSource()` auto-activates modules with exports
-3. `execute/2` — unused feature (zero programs, zero tests)
-4. Associated helpers: `_termToValue`, `_resolveHeadVarRefs`, `_dereferenceForExecute`
+## Phases
 
-## What remains (by design)
-- `reduce/2` generation — kept for future metaprogramming (FCP heritage)
-- `combinedProgram` — TODO noted, deferred to future module boundary enforcement
-- Transmit handler — live path for dynamic RPC
-- Distribute GLP channel path — live path for static RPC
+Work in phases. **Read only the current phase file — do not read ahead.**
+
+- [ ] **Phase 0: Baseline** — Run `dart test` and `bash test/run_all_tests.sh`. Commit.
+- [ ] **Phase 1** — Read `docs/infra/dart-test-phase1.md`. Archive dead tests. Commit.
+- [ ] **Phase 2** — Read `docs/infra/dart-test-phase2.md`. Fix isolate rootSelfGlpPath. Commit.
+- [ ] **Phase 3** — Read `docs/infra/dart-test-phase3.md`. Fix remaining individual tests. Commit.
+- [ ] **Final** — `dart test` = 0 failures, `run_all_tests.sh` = 428/428. Push.
+
+## Constraints
+
+- Do NOT modify any `.glp` program files
+- Do NOT modify runtime or compiler code (unless a test exposes a genuine bug)
+- Do NOT add `@Skip` annotations — either fix or archive
