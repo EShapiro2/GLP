@@ -2,61 +2,61 @@
 % Uses prelude-defined send, receive, new_channel
 
 % User-defined guards (single unit clause, no body)
-procedure channel_guard(_?).
+exported procedure channel_guard(_?).
 channel_guard(ch(_, _)).
 
-procedure pair_guard(_?).
+exported procedure pair_guard(_?).
 pair_guard(p(_, _)).
 
-procedure wrapper_guard(_?).
+exported procedure wrapper_guard(_?).
 wrapper_guard(w(_)).
 
-procedure make_pair(Channel(X, Y), Channel(Y, X)).
+exported procedure make_pair(Channel(X, Y), Channel(Y, X)).
 make_pair(C1?, C2?) :- new_channel(C1, C2) | true.
 
-procedure relay_send(Stream(X)?, Channel(Y, Stream(X))?, Channel(Y, Stream(X))).
+exported procedure relay_send(Stream(X)?, Channel(Y, Stream(X))?, Channel(Y, Stream(X))).
 relay_send([X|In1], Ch, Ch2?) :- send(X?, Ch?, Ch1) | relay_send(In1?, Ch1?, Ch2).
 relay_send([], Ch, Ch?).
 
-procedure relay_recv(Stream(X), Channel(Stream(X), Y)?, Channel(Stream(X), Y)).
+exported procedure relay_recv(Stream(X), Channel(Stream(X), Y)?, Channel(Stream(X), Y)).
 relay_recv([X?|Out1?], Ch, Ch2?) :- receive(X, Ch?, Ch1) | relay_recv(Out1, Ch1?, Ch2).
 relay_recv([], Ch, Ch?).
 
-procedure bind_response(Constant?, _, _).
+exported procedure bind_response(Constant?, _, _).
 bind_response(yes, accept(RemoteCh?), LocalCh?) :- new_channel(LocalCh, RemoteCh) | true.
 bind_response(no, no, none).
 
-procedure test_channel(_?, Constant).
+exported procedure test_channel(_?, Constant).
 test_channel(X, ok) :- channel_guard(X?) | true.
 test_channel(_, not_channel) :- otherwise | true.
 
-procedure test_pair(_?, Constant).
+exported procedure test_pair(_?, Constant).
 test_pair(X, ok) :- pair_guard(X?) | true.
 test_pair(_, not_pair) :- otherwise | true.
 
-procedure test_wrapper(_?, Constant).
+exported procedure test_wrapper(_?, Constant).
 test_wrapper(X, ok) :- wrapper_guard(X?) | true.
 test_wrapper(_, not_wrapper) :- otherwise | true.
 
-procedure test_nested(_?, Constant).
+exported procedure test_nested(_?, Constant).
 test_nested(w(p(_, _)), wrapper_with_pair) :- true.
 test_nested(w(_), just_wrapper) :- otherwise | true.
 test_nested(_, neither) :- otherwise | true.
 
-procedure wrap(_?, _).
+exported procedure wrap(_?, _).
 wrap(X, wrapped(X?)).
 
-procedure test_wrap(_?, _).
+exported procedure test_wrap(_?, _).
 test_wrap(X, Y?) :- wrap(X?, Y) | true.
 
-procedure deep(_?, _).
+exported procedure deep(_?, _).
 deep(X, outer(inner(X?))).
 
-procedure test_deep(_?, _).
+exported procedure test_deep(_?, _).
 test_deep(X, Y?) :- deep(X?, Y) | true.
 
-procedure triple_guard(_?, _?, _).
+exported procedure triple_guard(_?, _?, _).
 triple_guard(X, Y, pair(X?, Y?)).
 
-procedure test_triple(_?, _?, _).
+exported procedure test_triple(_?, _?, _).
 test_triple(A, B, C?) :- triple_guard(A?, B?, C) | true.

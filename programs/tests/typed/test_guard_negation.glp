@@ -1,17 +1,17 @@
 % test_guard_negation.glp - Guard negation (~G) feature
 
-procedure test_neg_int(_?, Constant).
+exported procedure test_neg_int(_?, Constant).
 test_neg_int(X, not_int) :- ~integer(X?) | true.
 test_neg_int(X, is_int) :- integer(X?) | true.
 
-procedure test_neg_number(_?, Constant).
+exported procedure test_neg_number(_?, Constant).
 test_neg_number(X, not_num) :- ~number(X?) | true.
 test_neg_number(X, is_num) :- number(X?) | true.
 
-procedure test_neg_ground(_?, Constant).
+exported procedure test_neg_ground(_?, Constant).
 test_neg_ground(X, not_ground) :- ~ground(X?) | true.
 test_neg_ground(X, is_ground) :- ground(X?) | true.
 
-procedure test_neg_eq(_?, _?, Constant).
+exported procedure test_neg_eq(_?, _?, Constant).
 test_neg_eq(X, Y, neq) :- ~(X? =?= Y?) | true.
 test_neg_eq(X, Y, eq) :- X? =?= Y? | true.

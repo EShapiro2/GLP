@@ -10,8 +10,8 @@
 % NOTE: Only one clause — no fallback [] clause that would mask the bug
 % by providing an alternative suspension path through Commit.
 
-procedure wait_ground(_?).
+exported procedure wait_ground(_?).
 wait_ground([data(X)|_]) :- ground(X?) | done.
 
-procedure done.
+exported procedure done.
 done.

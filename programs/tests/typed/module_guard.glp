@@ -8,5 +8,5 @@
 
 -module(module_guard).
 
-procedure test_not_module(Integer?, Constant).
+exported procedure test_not_module(Integer?, Constant).
 test_not_module(X, not_module) :- ~module(X?) | true.

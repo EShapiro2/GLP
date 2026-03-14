@@ -1,14 +1,14 @@
 % merge_standalone.glp - Merge with test predicates
 
-procedure merge(Stream(X)?, Stream(X)?, Stream(X)).
+exported procedure merge(Stream(X)?, Stream(X)?, Stream(X)).
 merge([X|Xs], Ys, [X?|Zs?]) :- merge(Ys?, Xs?, Zs).
 merge(Xs, [Y|Ys], [Y?|Zs?]) :- merge(Xs?, Ys?, Zs).
 merge(Xs, [], Xs?).
 merge([], Ys, Ys?).
 
-procedure p(Constant?).
+exported procedure p(Constant?).
 p(a).
 p(b).
 
-procedure merge2(Stream(Constant)?, Stream(Constant)).
+exported procedure merge2(Stream(Constant)?, Stream(Constant)).
 merge2(In, Out?) :- merge([a,b], In?, Out).

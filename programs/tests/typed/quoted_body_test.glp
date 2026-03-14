@@ -1,4 +1,4 @@
 % quoted_body_test.glp - Quoted atom functor test
 
-procedure double(Number?, Number).
+exported procedure double(Number?, Number).
 double(X, R?) :- number(X?) | R := X? * 2.

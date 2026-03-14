@@ -1,7 +1,7 @@
 %% fibonacci.glp - Fibonacci in GLP
 %% Source: Standard GLP arithmetic
 
-procedure fib(Number?, Number).
+exported procedure fib(Number?, Number).
 fib(0, 0).
 fib(1, 1).
 fib(N, F?) :-
@@ -13,10 +13,10 @@ fib(N, F?) :-
     F := F1? + F2?.
 
 %% Linear Fibonacci with accumulator
-procedure fib_linear(Number?, Number).
+exported procedure fib_linear(Number?, Number).
 fib_linear(N, F?) :- fib_acc(N?, 0, 1, F).
 
-procedure fib_acc(Number?, Number?, Number?, Number).
+exported procedure fib_acc(Number?, Number?, Number?, Number).
 fib_acc(0, A, _, A?).
 fib_acc(N, A, B, F?) :-
     N? > 0, number(B?) |
@@ -25,7 +25,7 @@ fib_acc(N, A, B, F?) :-
     fib_acc(N1?, B?, AB?, F).
 
 %% Metainterpreter support - all reduce clauses together
-procedure reduce(_?, _).
+exported procedure reduce(_?, _).
 reduce(fib(0, 0), true).
 reduce(fib(1, 1), true).
 reduce(fib(N, F?), (N1 := N? - 1, N2 := N? - 2, fib(N1?, F1), fib(N2?, F2), F := F1? + F2?)) :- N? > 1 | true.

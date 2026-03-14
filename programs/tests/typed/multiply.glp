@@ -1,6 +1,6 @@
 % multiply.glp - Scalar multiply stream
 
-procedure multiply(Number?, Stream(Number)?, Stream(Number)).
+exported procedure multiply(Number?, Stream(Number)?, Stream(Number)).
 multiply(_, [], []).
 multiply(N, [X|Xs], [Y?|Ys?]) :-
   ground(N?) |

@@ -1,7 +1,7 @@
 # Typed GLP Manual
 
-**Version**: 2.9
-**Date**: 2026-03-12
+**Version**: 2.10
+**Date**: 2026-03-14
 **Status**: ACTIVE
 
 This manual captures essential programming principles and advice for writing correct Typed GLP programs. It covers the SRSW (Single-Reader Single-Writer) constraint, type declarations, moding, modules, parameterized types, and common pitfalls.
@@ -868,10 +868,40 @@ GLP> :activate math_service
 
 ---
 
+## 20. Type Union
+
+### 20.1 The Rule
+
+An alternative in a type definition may be a type name. This provides type union: all alternatives of the named type are inherited. The top-level functors across all alternatives (including inherited ones) must be distinct.
+
+```prolog
+AgentContent ::= connected(Constant) ; rejected.
+FriendContent ::= friend_connected(Constant).
+
+OutputContent ::= AgentContent ; FriendContent.
+```
+
+`OutputContent` inherits `connected/1` and `rejected/0` from `AgentContent`, and `friend_connected/1` from `FriendContent`. All functors are distinct, so this is valid.
+
+### 20.2 Invalid: Overlapping Functors
+
+```prolog
+A ::= msg(String).
+B ::= msg(Integer).
+C ::= A ; B.          %% INVALID: msg/1 appears in both A and B
+```
+
+### 20.3 Structural Type Identity
+
+Type identity is structural. Two independently defined types with the same alternatives are compatible, regardless of name or defining module.
+
+---
+
 ## Version History
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 2.10 | 2026-03-14 | Added Section 20: Type Union (type names as alternatives, disjoint functor requirement, structural identity) |
 | 2.9 | 2026-03-12 | Added Section 19: Modules (declarations, exports/imports, `#` syntax, self.glp chain, REPL workflow) |
 | 2.8 | 2026-03-11 | Added Section 18: Tight Typing Discipline; corrected send/receive Channel arity to 2-arg form |
 | 2.7 | 2026-03-11 | Section 14 marked obsolete — renamed procedure copies removed, replaced by parameterized types |

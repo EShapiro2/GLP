@@ -1,13 +1,13 @@
 % struct_demo.glp - Structure demonstration
 
-procedure make_person(Constant?, Constant?, Constant?, _).
+exported procedure make_person(Constant?, Constant?, Constant?, _).
 make_person(Name, Age, City, person(Name?, age(Age?), city(City?))).
 
-procedure get_age(_?, Constant).
+exported procedure get_age(_?, Constant).
 get_age(person(_, age(Age), _), Age?).
 
-procedure get_city(_?, Constant).
+exported procedure get_city(_?, Constant).
 get_city(person(_, _, city(City)), City?).
 
-procedure build_person(_).
+exported procedure build_person(_).
 build_person(person(alice, age(thirty), city(seattle))).

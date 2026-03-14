@@ -4,11 +4,11 @@
 %% Uses predefined Stream type
 
 %% Procedure type declaration
-procedure append(Stream(X)?, Stream(X)?, Stream(X)).
+exported procedure append(Stream(X)?, Stream(X)?, Stream(X)).
 append([], Ys, Ys?).
 append([X|Xs], Ys, [X?|Zs?]) :- append(Xs?, Ys?, Zs).
 
 %% Metainterpreter support
-procedure reduce(_?, _).
+exported procedure reduce(_?, _).
 reduce(append([], Ys, Ys?), true).
 reduce(append([X|Xs], Ys, [X?|Zs?]), append(Xs?, Ys?, Zs)).

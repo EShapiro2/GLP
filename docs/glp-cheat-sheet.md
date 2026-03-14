@@ -298,3 +298,24 @@ The project linker resolves all `M # goal(...)` calls at compile time.
 2. Only `exported procedure` procedures are callable from outside
 3. Types flow through declarations — no separate type export needed
 4. Import/export modes must match exactly
+
+## 13. Type Union
+
+An alternative in a type definition may be a type name. This inherits all its alternatives (type union). All top-level functors must be distinct.
+
+```prolog
+AgentContent ::= connected(Constant) ; rejected.
+FriendContent ::= friend_connected(Constant).
+
+OutputContent ::= AgentContent ; FriendContent.
+%% Inherits connected/1, rejected/0, friend_connected/1 — all distinct, valid
+```
+
+WRONG:
+```prolog
+A ::= msg(String).
+B ::= msg(Integer).
+C ::= A ; B.          %% INVALID: msg/1 in both A and B
+```
+
+Type identity is structural — two types with the same alternatives are compatible regardless of name or module.
