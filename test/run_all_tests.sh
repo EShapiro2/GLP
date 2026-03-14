@@ -16,8 +16,9 @@
 #   J - CSSG v2 Modules (child_agent with parent(X) output keys)
 #   K - CSSN v2 Modules (child_agent with blocking consent)
 #   L - Dynamic Module Dispatch Tests (activate + M # goal)
-#   M - Multi-Isolate (madGLP) Tests (dart test, one isolate per agent)
+#   M - Multi-Isolate (madGLP) Tests (dart test, CSSN v2, one isolate per agent)
 #   N - Bonds V2 Modules (project-directory loading, plays 1-12)
+#   O - Bonds V2 Multi-Isolate Tests (dart test, one isolate per agent)
 
 set -e
 
@@ -1728,6 +1729,34 @@ HEREDOC
 
 check "Bonds v2 fplay12 succeeds" "succeeds" "$n_fp12"
 check "Bonds v2 fplay12 tagged output" "tagged(" "$n_fp12"
+
+echo ""
+
+# =============================================================================
+# Section O: Bonds V2 Multi-Isolate Tests
+# =============================================================================
+
+echo "=== Section O: Bonds V2 Multi-Isolate Tests ==="
+echo ""
+
+BONDS_MAD_RESULT=$("$DART" test "$GLP_RUNTIME/test/multiagent/bonds_v2_isolate_test.dart" 2>&1)
+BONDS_MAD_EXIT=$?
+
+if [ $BONDS_MAD_EXIT -eq 0 ]; then
+    BONDS_MAD_PASSED=$(echo "$BONDS_MAD_RESULT" | grep -oE '\+[0-9]+' | tail -1 | tr -d '+')
+    BONDS_MAD_PASSED=${BONDS_MAD_PASSED:-12}
+    echo "  PASS: All $BONDS_MAD_PASSED bonds_v2 multi-isolate tests passed"
+    PASS=$((PASS + BONDS_MAD_PASSED))
+else
+    BONDS_MAD_FAILED=$(echo "$BONDS_MAD_RESULT" | grep -oE '\-[0-9]+' | tail -1 | tr -d '-')
+    BONDS_MAD_FAILED=${BONDS_MAD_FAILED:-1}
+    BONDS_MAD_PASSED=$(echo "$BONDS_MAD_RESULT" | grep -oE '\+[0-9]+' | tail -1 | tr -d '+')
+    BONDS_MAD_PASSED=${BONDS_MAD_PASSED:-0}
+    echo "  FAIL: $BONDS_MAD_FAILED bonds_v2 multi-isolate test(s) failed ($BONDS_MAD_PASSED passed)"
+    echo "$BONDS_MAD_RESULT" | tail -20
+    PASS=$((PASS + BONDS_MAD_PASSED))
+    FAIL=$((FAIL + BONDS_MAD_FAILED))
+fi
 
 echo ""
 

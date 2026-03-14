@@ -53,8 +53,14 @@ class ModuleInfo {
   final BytecodeProgram program;
   final List<String> imports;
   final bool hasExports;
+  final Set<String> exportedLabels;  // e.g., {'append/3', 'member/2'}
 
-  ModuleInfo({required this.name, required this.program, required this.imports, required this.hasExports});
+  /// True when the source has no `-module(...)` directive.
+  /// Top-level programs (boot files, user programs) have all labels visible.
+  /// Only explicitly declared modules have export-boundary filtering.
+  final bool isTopLevel;
+
+  ModuleInfo({required this.name, required this.program, required this.imports, required this.hasExports, this.exportedLabels = const {}, this.isTopLevel = false});
 }
 
 /// serve/2 system predicate (embedded).
@@ -405,18 +411,47 @@ class GlpEngine {
 
   /// Get the combined bytecode program from all loaded sources.
   ///
-  /// TODO: This merges all modules into one flat program, bypassing
-  /// `exported procedure` access control. Goals typed at the REPL can
-  /// call any procedure from any loaded module, not just exported ones.
-  /// A future revision should enforce module boundaries by restricting
-  /// goal resolution to the current module's local procedures plus
-  /// exports of activated modules.
+  /// Enforces module boundaries (spec §19.3): REPL goals can only resolve
+  /// procedures that are exported, or defined in root self.glp / project.
+  /// All bytecode is included (internal procedures still execute when called
+  /// by exported procedures), but only exported labels are addressable as
+  /// entry points.
   BytecodeProgram get combinedProgram {
     final allOps = <dynamic>[];
     for (final loaded in _loadedPrograms.values) {
       allOps.addAll(loaded.ops);
     }
-    return BytecodeProgram(allOps);
+    final combined = BytecodeProgram(allOps);
+
+    // Build the set of allowed labels: root self.glp + project + exported procedures
+    final allowedLabels = <String>{};
+
+    // Root self.glp: all labels are visible everywhere (ancestor scoping §19.6)
+    final rootSelf = _loadedPrograms['__root_self__'];
+    if (rootSelf != null) {
+      allowedLabels.addAll(rootSelf.labels.keys);
+    }
+
+    // Project: all labels are visible (static linking already handles exports)
+    final project = _loadedPrograms['__project__'];
+    if (project != null) {
+      allowedLabels.addAll(project.labels.keys);
+    }
+
+    // Per-module: top-level programs (no -module directive) have all labels visible;
+    // explicitly declared modules only expose exported labels.
+    for (final moduleInfo in _loadedModules.values) {
+      if (moduleInfo.isTopLevel) {
+        allowedLabels.addAll(moduleInfo.program.labels.keys);
+      } else {
+        allowedLabels.addAll(moduleInfo.exportedLabels);
+      }
+    }
+
+    // Filter combined labels to only allowed ones
+    combined.labels.removeWhere((label, _) => !allowedLabels.contains(label));
+
+    return combined;
   }
 
   // ============ Private Methods ============
@@ -642,11 +677,14 @@ class GlpEngine {
   ModuleInfo _extractModuleInfo(
       String source, BytecodeProgram program, String filename) {
     String name;
+    bool isTopLevel;
     final moduleMatch = RegExp(r'-module\((\w+)\)\.').firstMatch(source);
     if (moduleMatch != null) {
       name = moduleMatch.group(1)!;
+      isTopLevel = false;
     } else {
       name = _moduleNameFromFilename(filename);
+      isTopLevel = true;
     }
 
     // Extract imported module names from `imported procedure Module#Proc(...)` declarations.
@@ -662,9 +700,21 @@ class GlpEngine {
     }
 
     // Detect exported procedures from `exported procedure` declarations.
-    final hasExports = RegExp(r'exported\s+procedure\s+').hasMatch(source);
+    // Extract functor names, then find matching labels in the compiled program.
+    final exportedLabels = <String>{};
+    final exportPattern = RegExp(r'exported\s+procedure\s+(\w+)\s*\(');
+    for (final match in exportPattern.allMatches(source)) {
+      final functor = match.group(1)!;
+      // Find the label with this functor (functor/arity format)
+      for (final label in program.labels.keys) {
+        if (label.startsWith('$functor/')) {
+          exportedLabels.add(label);
+        }
+      }
+    }
+    final hasExports = exportedLabels.isNotEmpty;
 
-    return ModuleInfo(name: name, program: program, imports: imports, hasExports: hasExports);
+    return ModuleInfo(name: name, program: program, imports: imports, hasExports: hasExports, exportedLabels: exportedLabels, isTopLevel: isTopLevel);
   }
 
   String _moduleNameFromFilename(String filename) {
