@@ -969,13 +969,14 @@ BodyKernelResult mapShowKernel(GlpRuntime rt, List<Object?> args) {
     return BodyKernelResult.abort;
   }
 
-  // Format map entries
+  // Format map entries (deep-deref values to resolve VarRefs inside structs)
   String mapStr;
   if (mapArg.entries.isEmpty) {
     mapStr = '{}';
   } else {
     final pairs = mapArg.entries.entries.map((e) {
-      final val = (e.value is Term) ? formatGroundTerm(e.value) : e.value.toString();
+      final derefed = (e.value is Term) ? _deepDeref(rt, e.value) : e.value;
+      final val = (derefed is Term) ? formatGroundTerm(derefed) : derefed.toString();
       return '${e.key}: $val';
     }).join(', ');
     mapStr = '{$pairs}';

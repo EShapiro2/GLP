@@ -329,8 +329,7 @@ handle_response(Id, accept(ch(FIn, FOut?)), From, Epoch, Outs, Outs4?, In, In1?,
     lookup_send(friend(From?), msg(Id?, From?, update_friend_list(Names?)), Outs2?, Outs3),
     lookup_send('_user', msg(agent, '_user', connected(From?)), Outs3?, Outs4),
     merge_net_in(In?, FIn?, In1),
-    EpochVal := Epoch? + 0,
-    map_put(FMap?, From?, flv1(From?, EpochVal?, active), FMap1),
+    map_put(FMap?, From?, flv1(From?, Epoch?, active), FMap1),
     map_show(Id?, FMap1?, FMap2).
 handle_response(_, no, From, _, Outs, Outs1?, In, In?, FMap, FMap?, FoFMap, FoFMap?) :-
     ground(From?) |
