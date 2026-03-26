@@ -1,7 +1,7 @@
 %% play_dglp_boot.glp - dGLP entry point
 %%
 %% network3 and play are untyped (no procedure declarations)
-%% since they call cross-file agent/4.
+%% since they call cross-file agent/6.
 %%
 %% Usage:
 %%   load typed_social_agent.glp
@@ -93,9 +93,12 @@ play :-
              ch(BobNetOut?, BobNetIn),
              ch(CharlieNetOut?, CharlieNetIn)),
 
-    agent(alice, AliceUserOut?, AliceNetIn?, [output('_user', AliceUserIn), output('_net', AliceNetOut)]),
-    agent(bob, BobUserOut?, BobNetIn?, [output('_user', BobUserIn), output('_net', BobNetOut)]),
-    agent(charlie, CharlieUserOut?, CharlieNetIn?, [output('_user', CharlieUserIn), output('_net', CharlieNetOut)]),
+    map_new(AliceFMap), map_new(AliceFoFMap),
+    agent(alice, AliceUserOut?, AliceNetIn?, [output('_user', AliceUserIn), output('_net', AliceNetOut)], AliceFMap?, AliceFoFMap?),
+    map_new(BobFMap), map_new(BobFoFMap),
+    agent(bob, BobUserOut?, BobNetIn?, [output('_user', BobUserIn), output('_net', BobNetOut)], BobFMap?, BobFoFMap?),
+    map_new(CharlieFMap), map_new(CharlieFoFMap),
+    agent(charlie, CharlieUserOut?, CharlieNetIn?, [output('_user', CharlieUserIn), output('_net', CharlieNetOut)], CharlieFMap?, CharlieFoFMap?),
 
     alice_actor(ch(AliceUserIn?, AliceUserOut)),
     bob_actor(ch(BobUserIn?, BobUserOut)),

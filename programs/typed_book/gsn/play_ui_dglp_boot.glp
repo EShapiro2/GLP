@@ -1,9 +1,9 @@
 %% play_ui_dglp_boot.glp - dGLP entry point with UI mediator
 %%
-%% Full stack: network3 ↔ agent/4 ↔ ui_mediator ↔ ui_actor
+%% Full stack: network3 ↔ agent/6 ↔ ui_mediator ↔ ui_actor
 %%
 %% network3 and play are untyped (no procedure declarations)
-%% since they call cross-file agent/4 and ui_mediator/5.
+%% since they call cross-file agent/6 and ui_mediator/5.
 %%
 %% Usage:
 %%   load typed_social_agent.glp
@@ -96,20 +96,26 @@ play1 :-
              ch(BobNetOut?, BobNetIn),
              ch(CharlieNetOut?, CharlieNetIn)),
 
+    map_new(AliceFMap), map_new(AliceFoFMap),
     agent(alice, AliceAgentIn?, AliceNetIn?,
-          [output('_user', AliceAgentToUser), output('_net', AliceNetOut)]),
+          [output('_user', AliceAgentToUser), output('_net', AliceNetOut)],
+          AliceFMap?, AliceFoFMap?),
     ui_mediator(alice, ch(AliceAgentToUser?, AliceAgentIn),
                 ch(AliceUserOut?, AliceUserIn), [], 1),
     alice1(ch(AliceUserIn?, AliceUserOut)),
 
+    map_new(BobFMap), map_new(BobFoFMap),
     agent(bob, BobAgentIn?, BobNetIn?,
-          [output('_user', BobAgentToUser), output('_net', BobNetOut)]),
+          [output('_user', BobAgentToUser), output('_net', BobNetOut)],
+          BobFMap?, BobFoFMap?),
     ui_mediator(bob, ch(BobAgentToUser?, BobAgentIn),
                 ch(BobUserOut?, BobUserIn), [], 1),
     bob1(ch(BobUserIn?, BobUserOut)),
 
+    map_new(CharlieFMap), map_new(CharlieFoFMap),
     agent(charlie, CharlieAgentIn?, CharlieNetIn?,
-          [output('_user', CharlieAgentToUser), output('_net', CharlieNetOut)]),
+          [output('_user', CharlieAgentToUser), output('_net', CharlieNetOut)],
+          CharlieFMap?, CharlieFoFMap?),
     ui_mediator(charlie, ch(CharlieAgentToUser?, CharlieAgentIn),
                 ch(CharlieUserOut?, CharlieUserIn), [], 1),
     charlie1(ch(CharlieUserIn?, CharlieUserOut)).
@@ -123,20 +129,26 @@ play2 :-
              ch(BobNetOut?, BobNetIn),
              ch(CharlieNetOut?, CharlieNetIn)),
 
+    map_new(AliceFMap), map_new(AliceFoFMap),
     agent(alice, AliceAgentIn?, AliceNetIn?,
-          [output('_user', AliceAgentToUser), output('_net', AliceNetOut)]),
+          [output('_user', AliceAgentToUser), output('_net', AliceNetOut)],
+          AliceFMap?, AliceFoFMap?),
     ui_mediator(alice, ch(AliceAgentToUser?, AliceAgentIn),
                 ch(AliceUserOut?, AliceUserIn), [], 1),
     alice2(ch(AliceUserIn?, AliceUserOut)),
 
+    map_new(BobFMap), map_new(BobFoFMap),
     agent(bob, BobAgentIn?, BobNetIn?,
-          [output('_user', BobAgentToUser), output('_net', BobNetOut)]),
+          [output('_user', BobAgentToUser), output('_net', BobNetOut)],
+          BobFMap?, BobFoFMap?),
     ui_mediator(bob, ch(BobAgentToUser?, BobAgentIn),
                 ch(BobUserOut?, BobUserIn), [], 1),
     bob2(ch(BobUserIn?, BobUserOut)),
 
+    map_new(CharlieFMap), map_new(CharlieFoFMap),
     agent(charlie, CharlieAgentIn?, CharlieNetIn?,
-          [output('_user', CharlieAgentToUser), output('_net', CharlieNetOut)]),
+          [output('_user', CharlieAgentToUser), output('_net', CharlieNetOut)],
+          CharlieFMap?, CharlieFoFMap?),
     ui_mediator(charlie, ch(CharlieAgentToUser?, CharlieAgentIn),
                 ch(CharlieUserOut?, CharlieUserIn), [], 1),
     charlie2(ch(CharlieUserIn?, CharlieUserOut)).
@@ -150,20 +162,26 @@ play3 :-
              ch(BobNetOut?, BobNetIn),
              ch(CharlieNetOut?, CharlieNetIn)),
 
+    map_new(AliceFMap), map_new(AliceFoFMap),
     agent(alice, AliceAgentIn?, AliceNetIn?,
-          [output('_user', AliceAgentToUser), output('_net', AliceNetOut)]),
+          [output('_user', AliceAgentToUser), output('_net', AliceNetOut)],
+          AliceFMap?, AliceFoFMap?),
     ui_mediator(alice, ch(AliceAgentToUser?, AliceAgentIn),
                 ch(AliceUserOut?, AliceUserIn), [], 1),
     alice3(ch(AliceUserIn?, AliceUserOut)),
 
+    map_new(BobFMap), map_new(BobFoFMap),
     agent(bob, BobAgentIn?, BobNetIn?,
-          [output('_user', BobAgentToUser), output('_net', BobNetOut)]),
+          [output('_user', BobAgentToUser), output('_net', BobNetOut)],
+          BobFMap?, BobFoFMap?),
     ui_mediator(bob, ch(BobAgentToUser?, BobAgentIn),
                 ch(BobUserOut?, BobUserIn), [], 1),
     bob3(ch(BobUserIn?, BobUserOut)),
 
+    map_new(CharlieFMap), map_new(CharlieFoFMap),
     agent(charlie, CharlieAgentIn?, CharlieNetIn?,
-          [output('_user', CharlieAgentToUser), output('_net', CharlieNetOut)]),
+          [output('_user', CharlieAgentToUser), output('_net', CharlieNetOut)],
+          CharlieFMap?, CharlieFoFMap?),
     ui_mediator(charlie, ch(CharlieAgentToUser?, CharlieAgentIn),
                 ch(CharlieUserOut?, CharlieUserIn), [], 1),
     charlie3(ch(CharlieUserIn?, CharlieUserOut)).
