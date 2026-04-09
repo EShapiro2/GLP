@@ -1,20 +1,23 @@
-%% signaling_server.glp - Lightweight Reconnection Signaling Server
+%% rv_agent.glp - Rendezvous Agent
 %%
 %% A minimal GLP agent that coordinates reconnection between agents
 %% that lost connectivity due to IP address changes.
 %%
 %% - Accepts cold-calls from any agent (no friends list, no social graph)
-%% - Verifies friendship proofs cryptographically
+%% - Verifies friendship proofs cryptographically (via body system predicate)
 %% - Relays addresses to coordinate hole-punching
 %%
 %% Protocol:
-%%   1. A detects IP change, cold-calls S: reconnect(A_pk, B_pk, Proof, Reply)
-%%   2. B detects A went silent, cold-calls S: available(B_pk, A_pk, Reply)
-%%   3. S matches the requests, tells B to punch to A's address via Reply
+%%   1. A detects IP change, learns its own address (via STUN), cold-calls:
+%%      reconnect(A_pk, B_pk, Proof, AddrA, Reply)
+%%   2. B detects A went silent, cold-calls: available(B_pk, A_pk, Reply)
+%%   3. Agent matches the requests, tells B to punch to A's address via Reply
 %%
 %% System predicates assumed:
-%%   verify_friendship(Proof?, A?, B?) — guard, verifies A is B's friend
-%%   peer_address(A?, Addr) — guard, unifies Addr with A's observed public address
+%%   verify_friendship(Proof?, A?, B?) — body predicate,
+%%     succeeds if Proof cryptographically proves A is B's friend.
+
+-module(rv_agent).
 
 %% =============================================================================
 %% TYPE DEFINITIONS
@@ -23,9 +26,9 @@
 %% Reply sent back to agents via their reply variable
 SignalReply ::= punch(Constant) ; initiated.
 
-%% Messages arriving via cold-call on the server's input stream
-SignalMsg ::= reconnect(Constant, Constant, Constant, SignalReply?)
-              %% reconnect(A_pk, B_pk, Proof, Reply)
+%% Messages arriving via cold-call on the agent's input stream
+SignalMsg ::= reconnect(Constant, Constant, Constant, Constant, SignalReply?)
+              %% reconnect(A_pk, B_pk, Proof, AddrA, Reply)
             ; available(Constant, Constant, SignalReply?).
               %% available(B_pk, A_pk, Reply)
 
@@ -40,21 +43,21 @@ PendingList ::= [] ; [PendingEntry | PendingList].
 %% MAIN LOOP
 %% =============================================================================
 
-exported procedure signal_server(Stream(SignalMsg)?, PendingList?).
+exported procedure rv_agent(Stream(SignalMsg)?, PendingList?).
 
-%% A requests reconnection to B with friendship proof
-signal_server([reconnect(A, B, Proof, ReplyA?)|In], Pending) :-
+%% A requests reconnection to B with friendship proof and self-reported address
+rv_agent([reconnect(A, B, Proof, AddrA, ReplyA?)|In], Pending) :-
+    ground(A?), ground(B?) |
     verify_friendship(Proof?, A?, B?),
-    peer_address(A?, AddrA) |
     find_ready(A?, B?, AddrA?, ReplyA, Pending?, Pending1),
-    signal_server(In?, Pending1?).
+    rv_agent(In?, Pending1?).
 
 %% B is available for reconnection from A
-signal_server([available(B, A, ReplyB?)|In], Pending) :-
+rv_agent([available(B, A, ReplyB?)|In], Pending) :-
     find_needs(A?, B?, ReplyB, Pending?, Pending1),
-    signal_server(In?, Pending1?).
+    rv_agent(In?, Pending1?).
 
-signal_server([], _).
+rv_agent([], _).
 
 %% =============================================================================
 %% find_ready: A arrived, search pending for a matching ready(B, A, ReplyB)
@@ -99,16 +102,6 @@ find_needs(A, B, ReplyB?, [], [ready(B?, A?, ReplyB)]).
 %% =============================================================================
 %% complete_rendezvous: Both sides matched — assign reply variables
 %% =============================================================================
-%%
-%% AddrA is A's public address (Constant, from peer_address)
-%% ReplyA? and ReplyB? are readers chained from the original reply writers
-%%   in the cold-call messages. Assigning the paired writers here propagates
-%%   punch(AddrA) back to B and initiated back to A.
-%%
-%% NOTE: This is the part I'm least sure about.  The reply variables have been
-%% passed through as reader references.  I believe assignment via the writers
-%% (constructed in head) propagates back to the original agents, but this
-%% needs verification.
 
 procedure complete_rendezvous(Constant?, SignalReply, SignalReply).
 complete_rendezvous(AddrA, initiated, punch(AddrA?)).
@@ -117,16 +110,9 @@ complete_rendezvous(AddrA, initiated, punch(AddrA?)).
 %% STUBS for system predicates (testing only)
 %% =============================================================================
 %%
-%% verify_friendship(Proof?, A_pk?, B_pk?) — guard
+%% verify_friendship(Proof?, A_pk?, B_pk?) — body predicate
 %%   Succeeds if Proof cryptographically proves that A is B's friend.
 %%   Stub: always succeeds.
-%%
-%% peer_address(PubKey?, Addr) — guard
-%%   Suspends until peer PubKey is connected.
-%%   Stub: always returns 'stub_addr'.
 
 procedure verify_friendship(Constant?, Constant?, Constant?).
 verify_friendship(_, _, _).
-
-procedure peer_address(Constant?, Constant).
-peer_address(_, 'stub_addr').

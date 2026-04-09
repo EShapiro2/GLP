@@ -1,0 +1,61 @@
+%% friend_mediated_rendezvous_test.glp — test suite for fmrv
+%%
+%% Load friend_mediated_rendezvous.glp first, then this file.
+
+%% Local type redeclarations (structural identity across modules)
+MsgOp ::= mediate(Constant)
+        ; punch_to(Constant)
+        ; addr_update(Constant).
+
+Msg ::= msg(Constant, Constant, MsgOp).
+
+MsgStream ::= [] ; [Msg | MsgStream].
+FriendStream ::= [] ; [Msg | FriendStream].
+
+FriendEntry ::= fe(Constant, FriendStream?, Constant).
+FriendList ::= [] ; [FriendEntry | FriendList].
+
+imported procedure fmrv#fmrv(Constant?, MsgStream?, FriendList?).
+
+%% =============================================================================
+%% Test 1: A single addr_update message updates a friend's address
+%% =============================================================================
+
+procedure test1_addr_update.
+test1_addr_update :-
+    fmrv # fmrv(bob, [msg(alice, bob, addr_update(addr_alice_new))],
+                 [fe(alice, [], addr_alice_old)]).
+
+%% =============================================================================
+%% Test 2: A mediation request prepends punch_to to both friends' streams
+%% =============================================================================
+%%
+%% B=bob has alice (addr_alice) and carol (addr_carol) as friends.
+%% Alice sends msg(alice, bob, mediate(carol)).
+%% Expected: alice's output stream gets msg(bob, alice, punch_to(addr_carol)),
+%%           carol's output stream gets msg(bob, carol, punch_to(addr_alice)).
+
+procedure test2_mediate(FriendStream, FriendStream).
+test2_mediate(AliceOut?, CarolOut?) :-
+    fmrv # fmrv(bob,
+        [msg(alice, bob, mediate(carol))],
+        [fe(alice, AliceOut, addr_alice),
+         fe(carol, CarolOut, addr_carol)]).
+
+%% =============================================================================
+%% Test 3: A punch_to message triggers punch_udp (stub succeeds silently)
+%% =============================================================================
+
+procedure test3_punch_to.
+test3_punch_to :-
+    fmrv # fmrv(bob,
+        [msg(alice, bob, punch_to(addr_somewhere))],
+        [fe(alice, [], addr_alice)]).
+
+%% =============================================================================
+%% Test 4: empty input stream terminates cleanly
+%% =============================================================================
+
+procedure test4_empty.
+test4_empty :-
+    fmrv # fmrv(bob, [], []).
