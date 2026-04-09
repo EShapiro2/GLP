@@ -386,7 +386,7 @@ Alice and Bob each receive `Channel?`, giving them the consumer's view of their 
 
 ### 6.1 The Principle
 
-The `=` predicate (assignment/unification) in guards or bodies is typically a sign of sloppy thinking. In GLP, bindings should flow through head patterns rather than explicit assignments.
+The `=` predicate (assignment) in guards or bodies is typically a sign of sloppy thinking.  In GLP, bindings should flow through head patterns rather than explicit assignments.
 
 **Bad pattern:**
 ```prolog
@@ -446,6 +446,9 @@ The root self.glp defines several single-unit-clause procedures. The PE automati
 Examples from root self.glp:
 
 ```prolog
+procedure =(_?, _).
+X? = X.
+
 procedure new_channel(Channel(X, Y), Channel(Y, X)).
 new_channel(ch(Xs?, Ys), ch(Ys?, Xs)).
 
@@ -455,6 +458,8 @@ send(X, ch(In, [X?|Out?]), ch(In?, Out)).
 procedure receive(X, Channel(Stream(X), Y)?, Channel(Stream(X), Y)).
 receive(X?, ch([X|In], Out?), ch(In?, Out)).
 ```
+
+The `=` predicate performs assignment: the call `X = T` assigns the value `T` on the right to the writer `X` on the left.  Using `=` in clause bodies should be avoided where head construction suffices (Section 6).
 
 ### 8.2 Guard Position Usage
 
