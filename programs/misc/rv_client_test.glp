@@ -9,7 +9,7 @@
 %% Local type redeclarations (structural identity allows sharing)
 SignalReply ::= punch(Constant) ; initiated ; rejected.
 
-SignalMsg ::= reconnect(Constant, Constant, Constant, Constant, SignalReply?)
+SignalMsg ::= reconnect(Constant, Constant, Constant, SignalReply?)
             ; available(Constant, Constant, SignalReply?).
 
 PendingEntry ::= needs(Constant, Constant, Constant, SignalReply?)
@@ -17,7 +17,7 @@ PendingEntry ::= needs(Constant, Constant, Constant, SignalReply?)
 PendingList ::= [] ; [PendingEntry | PendingList].
 
 imported procedure rv_client#make_reconnect(Constant?, Constant?, Constant?,
-                                             Constant?, SignalMsg, SignalReply).
+                                             SignalMsg, SignalReply).
 imported procedure rv_client#make_available(Constant?, Constant?,
                                              SignalMsg, SignalReply).
 imported procedure rv_client#handle_reply(SignalReply?).
@@ -29,9 +29,9 @@ imported procedure rv_agent#rv_agent(Stream(SignalMsg)?, PendingList?).
 
 procedure test1_make_reconnect(SignalMsg, SignalReply).
 test1_make_reconnect(Msg?, Reply?) :-
-    rv_client # make_reconnect(alice, bob, proof, new_alice_addr, Msg, Reply).
+    rv_client # make_reconnect(alice, bob, proof, Msg, Reply).
 
-%% Expected: Msg = reconnect(alice, bob, proof, new_alice_addr, <unbound>)
+%% Expected: Msg = reconnect(alice, bob, proof, <unbound>)
 %%           Reply = <unbound>
 
 %% =============================================================================
@@ -49,15 +49,16 @@ test2_make_available(Msg?, Reply?) :-
 %% Test 3: full scenario — A first, B second
 %% =============================================================================
 %%
-%% Alice's IP changed to new_alice_addr.  Alice sends reconnect; bob
-%% (having detected the disconnect) sends available.  The RV agent
-%% matches them and both replies are bound.
+%% Alice's IP changed.  Alice sends reconnect; bob (having detected the
+%% disconnect) sends available.  The RV agent reads alice's address from
+%% the networking layer via peer_address (stub returns stub_addr_alice),
+%% matches the requests, and binds both replies.
 %%
-%% Expected: ReplyA = initiated, ReplyB = punch(new_alice_addr)
+%% Expected: ReplyA = initiated, ReplyB = punch(stub_addr_alice)
 
 procedure test3_full_scenario_a_first(SignalReply, SignalReply).
 test3_full_scenario_a_first(ReplyA?, ReplyB?) :-
-    rv_client # make_reconnect(alice, bob, proof, new_alice_addr, MsgA, ReplyA),
+    rv_client # make_reconnect(alice, bob, proof, MsgA, ReplyA),
     rv_client # make_available(bob, alice, MsgB, ReplyB),
     rv_agent # rv_agent([MsgA?, MsgB?], []).
 
@@ -66,14 +67,14 @@ test3_full_scenario_a_first(ReplyA?, ReplyB?) :-
 %% =============================================================================
 %%
 %% Bob detects the disconnect and contacts the RV agent before alice
-%% has reported her new address.  When alice later sends reconnect,
-%% the RV agent matches bob's waiting available entry.
+%% has cold-called.  When alice later sends reconnect, the RV agent
+%% matches bob's waiting available entry.
 %%
-%% Expected: ReplyA = initiated, ReplyB = punch(new_alice_addr)
+%% Expected: ReplyA = initiated, ReplyB = punch(stub_addr_alice)
 
 procedure test4_full_scenario_b_first(SignalReply, SignalReply).
 test4_full_scenario_b_first(ReplyA?, ReplyB?) :-
-    rv_client # make_reconnect(alice, bob, proof, new_alice_addr, MsgA, ReplyA),
+    rv_client # make_reconnect(alice, bob, proof, MsgA, ReplyA),
     rv_client # make_available(bob, alice, MsgB, ReplyB),
     rv_agent # rv_agent([MsgB?, MsgA?], []).
 
@@ -87,7 +88,7 @@ test4_full_scenario_b_first(ReplyA?, ReplyB?) :-
 
 procedure test5_full_scenario_with_handlers.
 test5_full_scenario_with_handlers :-
-    rv_client # make_reconnect(alice, bob, proof, new_alice_addr, MsgA, ReplyA),
+    rv_client # make_reconnect(alice, bob, proof, MsgA, ReplyA),
     rv_client # make_available(bob, alice, MsgB, ReplyB),
     rv_agent # rv_agent([MsgA?, MsgB?], []),
     rv_client # handle_reply(ReplyA?),
@@ -103,6 +104,6 @@ test5_full_scenario_with_handlers :-
 
 procedure test6_bad_proof(SignalReply, SignalReply).
 test6_bad_proof(ReplyA?, ReplyB?) :-
-    rv_client # make_reconnect(alice, bob, bad_proof, new_alice_addr, MsgA, ReplyA),
+    rv_client # make_reconnect(alice, bob, bad_proof, MsgA, ReplyA),
     rv_client # make_available(bob, alice, MsgB, ReplyB),
     rv_agent # rv_agent([MsgA?, MsgB?], []).

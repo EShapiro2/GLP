@@ -9,7 +9,7 @@ PendingEntry ::= needs(Constant, Constant, Constant, SignalReply?)
                ; ready(Constant, Constant, SignalReply?).
 PendingList ::= [] ; [PendingEntry | PendingList].
 
-SignalMsg ::= reconnect(Constant, Constant, Constant, Constant, SignalReply?)
+SignalMsg ::= reconnect(Constant, Constant, Constant, SignalReply?)
             ; available(Constant, Constant, SignalReply?).
 
 imported procedure rv_agent#find_ready(Constant?, Constant?, Constant?,
@@ -93,7 +93,7 @@ test6_find_ready_skip_then_match(ReplyA?, ReplyB?, Pending1?) :-
 procedure test7_agent_single_reconnect(SignalReply).
 test7_agent_single_reconnect(ReplyA?) :-
     rv_agent # rv_agent(
-        [reconnect(alice, bob, proof, addr_alice, ReplyA)], []).
+        [reconnect(alice, bob, proof, ReplyA)], []).
 
 %% Expected: ReplyA unbound (suspended), agent terminates on empty stream
 
@@ -105,9 +105,9 @@ procedure test8_agent_full_rendezvous(SignalReply, SignalReply).
 test8_agent_full_rendezvous(ReplyA?, ReplyB?) :-
     rv_agent # rv_agent(
         [available(bob, alice, ReplyB),
-         reconnect(alice, bob, proof, addr_alice, ReplyA)], []).
+         reconnect(alice, bob, proof, ReplyA)], []).
 
-%% Expected: ReplyA = initiated, ReplyB = punch(addr_alice)
+%% Expected: ReplyA = initiated, ReplyB = punch(stub_addr_alice)
 
 %% =============================================================================
 %% Test 9: Two reconnect messages for unrelated pairs → both stored
@@ -116,8 +116,8 @@ test8_agent_full_rendezvous(ReplyA?, ReplyB?) :-
 procedure test9_two_reconnects_no_match(SignalReply, SignalReply).
 test9_two_reconnects_no_match(RA1?, RA2?) :-
     rv_agent # rv_agent(
-        [reconnect(alice, bob, proof1, addr_alice, RA1),
-         reconnect(carol, dave, proof2, addr_carol, RA2)], []).
+        [reconnect(alice, bob, proof1, RA1),
+         reconnect(carol, dave, proof2, RA2)], []).
 
 %% Expected: RA1 and RA2 both unbound (both stored as needs entries)
 
@@ -128,10 +128,10 @@ test9_two_reconnects_no_match(RA1?, RA2?) :-
 procedure test10_reconnect_then_available(SignalReply, SignalReply).
 test10_reconnect_then_available(RA?, RB?) :-
     rv_agent # rv_agent(
-        [reconnect(alice, bob, proof, addr_alice, RA),
+        [reconnect(alice, bob, proof, RA),
          available(bob, alice, RB)], []).
 
-%% Expected: RA = initiated, RB = punch(addr_alice)
+%% Expected: RA = initiated, RB = punch(stub_addr_alice)
 
 %% =============================================================================
 %% Test 11: reconnect with invalid proof → reply is rejected
@@ -143,7 +143,7 @@ test10_reconnect_then_available(RA?, RB?) :-
 procedure test11_reconnect_rejected(SignalReply).
 test11_reconnect_rejected(RA?) :-
     rv_agent # rv_agent(
-        [reconnect(alice, bob, bad_proof, addr_alice, RA)], []).
+        [reconnect(alice, bob, bad_proof, RA)], []).
 
 %% Expected: RA = rejected
 
@@ -157,8 +157,8 @@ test11_reconnect_rejected(RA?) :-
 procedure test12_rejected_then_match(SignalReply, SignalReply, SignalReply).
 test12_rejected_then_match(RA1?, RA2?, RB?) :-
     rv_agent # rv_agent(
-        [reconnect(alice, bob, bad_proof, addr_alice, RA1),
+        [reconnect(alice, bob, bad_proof, RA1),
          available(bob, alice, RB),
-         reconnect(alice, bob, good_proof, addr_alice, RA2)], []).
+         reconnect(alice, bob, good_proof, RA2)], []).
 
-%% Expected: RA1 = rejected, RA2 = initiated, RB = punch(addr_alice)
+%% Expected: RA1 = rejected, RA2 = initiated, RB = punch(stub_addr_alice)

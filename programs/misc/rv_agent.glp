@@ -5,17 +5,23 @@
 %%
 %% - Accepts cold-calls from any agent (no friends list, no social graph)
 %% - Verifies friendship proofs cryptographically (via body system predicate)
+%% - Learns A's current public address via peer_address (reading the
+%%   source address of the incoming cold-call packet)
 %% - Relays addresses to coordinate hole-punching
 %%
 %% Protocol:
-%%   1. A detects IP change, learns its own address (via STUN), cold-calls:
-%%      reconnect(A_pk, B_pk, Proof, AddrA, Reply)
+%%   1. A detects IP change, cold-calls: reconnect(A_pk, B_pk, Proof, Reply)
 %%   2. B detects A went silent, cold-calls: available(B_pk, A_pk, Reply)
-%%   3. Agent matches the requests, tells B to punch to A's address via Reply
+%%   3. The RV agent reads A's source address from the networking layer
+%%      via peer_address(A?, AddrA), matches the requests, and tells B
+%%      to punch to AddrA via Reply
 %%
 %% System predicates assumed:
-%%   verify_friendship(Proof?, A?, B?) — body predicate,
-%%     succeeds if Proof cryptographically proves A is B's friend.
+%%   verify_friendship(Proof?, A?, B?, Result) — body predicate,
+%%     returns ok if Proof cryptographically proves A is B's friend,
+%%     invalid otherwise.
+%%   peer_address(Pk?, Addr) — body predicate, reads the observed
+%%     source address for peer Pk from the networking layer.
 
 -module(rv_agent).
 
@@ -30,8 +36,8 @@ SignalReply ::= punch(Constant) ; initiated ; rejected.
 VerifyResult ::= ok ; invalid.
 
 %% Messages arriving via cold-call on the agent's input stream
-SignalMsg ::= reconnect(Constant, Constant, Constant, Constant, SignalReply?)
-              %% reconnect(A_pk, B_pk, Proof, AddrA, Reply)
+SignalMsg ::= reconnect(Constant, Constant, Constant, SignalReply?)
+              %% reconnect(A_pk, B_pk, Proof, Reply)
             ; available(Constant, Constant, SignalReply?).
               %% available(B_pk, A_pk, Reply)
 
@@ -48,13 +54,16 @@ PendingList ::= [] ; [PendingEntry | PendingList].
 
 exported procedure rv_agent(Stream(SignalMsg)?, PendingList?).
 
-%% A requests reconnection to B with friendship proof and self-reported address.
-%% verify_friendship returns a status; handle_verify dispatches on it.
-%% If the proof is invalid, ReplyA is bound to `rejected` and the request is
-%% not added to the pending list.
-rv_agent([reconnect(A, B, Proof, AddrA, ReplyA?)|In], Pending) :-
+%% A requests reconnection to B with friendship proof.  The RV agent
+%% reads A's source address from the networking layer via peer_address
+%% (so A does not need to self-report its address).  verify_friendship
+%% returns a status; handle_verify dispatches on it.  If the proof is
+%% invalid, ReplyA is bound to `rejected` and the request is not added
+%% to the pending list.
+rv_agent([reconnect(A, B, Proof, ReplyA?)|In], Pending) :-
     ground(A?), ground(B?) |
     verify_friendship(Proof?, A?, B?, Status),
+    peer_address(A?, AddrA),
     handle_verify(Status?, A?, B?, AddrA?, ReplyA, Pending?, Pending1),
     rv_agent(In?, Pending1?).
 
@@ -138,3 +147,13 @@ handle_verify(invalid, _, _, _, rejected, Pending, Pending?).
 procedure verify_friendship(Constant?, Constant?, Constant?, VerifyResult).
 verify_friendship(Proof, _, _, invalid) :- Proof? =?= bad_proof | true.
 verify_friendship(_, _, _, ok) :- otherwise | true.
+
+%% peer_address(Pk?, Addr) — body predicate
+%%   Reads the observed source address of the incoming packet from peer Pk.
+%%   Stub: hardcoded mapping for alice, bob, carol.  A real implementation
+%%   would consult the networking layer's recent-packet table.
+
+procedure peer_address(Constant?, Constant).
+peer_address(alice, stub_addr_alice).
+peer_address(bob, stub_addr_bob).
+peer_address(carol, stub_addr_carol).

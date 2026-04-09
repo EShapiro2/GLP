@@ -17,9 +17,13 @@
 %%
 %% This module provides the client-side building blocks used by a real
 %% agent loop:
-%%   make_reconnect/6 — build a reconnect cold-call message + reply
+%%   make_reconnect/5 — build a reconnect cold-call message + reply
 %%   make_available/4 — build an available cold-call message + reply
 %%   handle_reply/1   — dispatch on reply: punch(Addr) → punch_udp(Addr)
+%%
+%% Note: the reconnect cold-call no longer carries A's address.  The RV
+%% agent discovers A's current address from the incoming packet's source
+%% via peer_address (a body system predicate on the server side).
 %%
 %% The tests wire these together with rv_agent to show the full end-to-end
 %% scenario in a single process.
@@ -37,8 +41,8 @@
 SignalReply ::= punch(Constant) ; initiated ; rejected.
 
 %% Messages sent to the RV agent as cold-calls
-SignalMsg ::= reconnect(Constant, Constant, Constant, Constant, SignalReply?)
-              %% reconnect(A_pk, B_pk, Proof, AddrA, Reply)
+SignalMsg ::= reconnect(Constant, Constant, Constant, SignalReply?)
+              %% reconnect(A_pk, B_pk, Proof, Reply)
             ; available(Constant, Constant, SignalReply?).
               %% available(B_pk, A_pk, Reply)
 
@@ -47,16 +51,17 @@ SignalMsg ::= reconnect(Constant, Constant, Constant, Constant, SignalReply?)
 %% =============================================================================
 %%
 %% Called by agent A when its own IP changes.  Produces (Msg, Reply):
-%%   Msg is a reconnect(A, B, Proof, NewAddr, _) message ready to be sent
-%%   to A's own RV agent, with a fresh reply variable embedded.
+%%   Msg is a reconnect(A, B, Proof, _) message ready to be sent to A's
+%%   own RV agent, with a fresh reply variable embedded.  The RV agent
+%%   will read A's current address from the incoming packet's source.
 %%   Reply is the paired reader that A uses to observe the RV agent's
 %%   response: punch(AddrB) means bob is waiting and A should hole-punch
 %%   to AddrB; initiated means A will wait for bob's punch.
 
-exported procedure make_reconnect(Constant?, Constant?, Constant?, Constant?,
+exported procedure make_reconnect(Constant?, Constant?, Constant?,
                                   SignalMsg, SignalReply).
-make_reconnect(A, B, Proof, AddrA,
-               reconnect(A?, B?, Proof?, AddrA?, Reply),
+make_reconnect(A, B, Proof,
+               reconnect(A?, B?, Proof?, Reply),
                Reply?).
 
 %% =============================================================================
