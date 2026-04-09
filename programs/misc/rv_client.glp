@@ -1,0 +1,102 @@
+%% rv_client.glp — Client-Side Rendezvous Protocol
+%%
+%% Companion to rv_agent.glp.  Demonstrates how a pair of friends use an
+%% RV agent to re-establish a direct connection after one of them (A) has
+%% changed IP address.
+%%
+%% Model (simplified for the paper):
+%%   - Each agent has exactly one RV agent, identified by a known address.
+%%   - While connected, friends share their RV agent address via rv_info
+%%     messages (so each agent's friends list entry for a friend includes
+%%     the friend's RV agent address).
+%%   - When A's IP changes, A sends a reconnect cold-call to its own RV
+%%     agent S.  When B detects that A went silent, B sends an available
+%%     cold-call to A's RV agent S (which B learned while connected).
+%%   - Both sides converge on the same RV agent S (A's own), which matches
+%%     them and binds their reply variables to `initiated` and `punch(addr)`.
+%%
+%% This module provides the client-side building blocks used by a real
+%% agent loop:
+%%   make_reconnect/6 — build a reconnect cold-call message + reply
+%%   make_available/4 — build an available cold-call message + reply
+%%   handle_reply/1   — dispatch on reply: punch(Addr) → punch_udp(Addr)
+%%
+%% The tests wire these together with rv_agent to show the full end-to-end
+%% scenario in a single process.
+%%
+%% System predicates assumed:
+%%   punch_udp(Addr?) — body predicate, initiates UDP hole-punch to Addr
+
+-module(rv_client).
+
+%% =============================================================================
+%% TYPE DEFINITIONS (must match rv_agent for cross-module calls)
+%% =============================================================================
+
+%% Reply carried back from the RV agent via the shared reply variable
+SignalReply ::= punch(Constant) ; initiated ; rejected.
+
+%% Messages sent to the RV agent as cold-calls
+SignalMsg ::= reconnect(Constant, Constant, Constant, Constant, SignalReply?)
+              %% reconnect(A_pk, B_pk, Proof, AddrA, Reply)
+            ; available(Constant, Constant, SignalReply?).
+              %% available(B_pk, A_pk, Reply)
+
+%% =============================================================================
+%% make_reconnect: build a reconnect cold-call message
+%% =============================================================================
+%%
+%% Called by agent A when its own IP changes.  Produces (Msg, Reply):
+%%   Msg is a reconnect(A, B, Proof, NewAddr, _) message ready to be sent
+%%   to A's own RV agent, with a fresh reply variable embedded.
+%%   Reply is the paired reader that A uses to observe the RV agent's
+%%   response: punch(AddrB) means bob is waiting and A should hole-punch
+%%   to AddrB; initiated means A will wait for bob's punch.
+
+exported procedure make_reconnect(Constant?, Constant?, Constant?, Constant?,
+                                  SignalMsg, SignalReply).
+make_reconnect(A, B, Proof, AddrA,
+               reconnect(A?, B?, Proof?, AddrA?, Reply),
+               Reply?).
+
+%% =============================================================================
+%% make_available: build an available cold-call message
+%% =============================================================================
+%%
+%% Called by agent B when the networking layer reports that friend A went
+%% silent.  Produces (Msg, Reply):
+%%   Msg is an available(B, A, _) message ready to be sent to A's RV agent
+%%   (which B knows from its friends list entry for A).
+%%   Reply is the paired reader that B uses to observe the RV agent's
+%%   response: punch(AddrA) means A is reconnecting and B should
+%%   hole-punch to AddrA.
+
+exported procedure make_available(Constant?, Constant?, SignalMsg, SignalReply).
+make_available(B, A,
+               available(B?, A?, Reply),
+               Reply?).
+
+%% =============================================================================
+%% handle_reply: dispatch on the RV agent's reply
+%% =============================================================================
+%%
+%% When the reply variable is bound by the RV agent, the agent should:
+%%   punch(Addr) → call punch_udp(Addr) to initiate UDP hole-punch
+%%   initiated   → no immediate action; wait for peer to hole-punch
+%%   rejected    → mediation failed (bad proof); give up
+
+exported procedure handle_reply(SignalReply?).
+handle_reply(punch(Addr)) :- ground(Addr?) | punch_udp(Addr?).
+handle_reply(initiated).
+handle_reply(rejected).
+
+%% =============================================================================
+%% STUB for system predicate
+%% =============================================================================
+%%
+%% punch_udp(Addr?) — body predicate
+%%   Real: initiates UDP hole-punch to Addr.
+%%   Stub: always succeeds.
+
+procedure punch_udp(Constant?).
+punch_udp(_).
