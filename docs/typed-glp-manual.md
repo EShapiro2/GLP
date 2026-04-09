@@ -172,6 +172,122 @@ For recursive clauses:
 
 ---
 
+## 2A. Determining Variable Modes in Clause Heads
+
+### 2A.1 The Problem
+
+Given a procedure declaration and its type definitions, what form—writer (`X`) or reader (`X?`)—should each variable take at each position in a clause head?  The answer is straightforward at top-level argument positions, but requires a precise compositional rule when structures with embedded `?` annotations appear in the head.
+
+### 2A.2 The Rule
+
+**Step 1: Determine the structural mode at each position.**
+
+Start with the mode declared for the procedure argument:
+- `Type?` in the procedure declaration → ↓ (consume)
+- `Type` (no `?`) → ↑ (produce)
+
+Traverse into the type structure.  Each `?` encountered in the type definition **flips** the mode: ↓ becomes ↑, ↑ becomes ↓.  Two flips cancel out.
+
+**Step 2: Choose the variable form in the head.**
+
+- At a ↓ (consume) position → use a **writer** (`X`): it captures the incoming value
+- At a ↑ (produce) position → use a **reader** (`X?`): it is a hole to be filled
+
+**Step 3: Body variables follow from SRSW.**
+
+The body occurrence is the paired variable: if the head has `X` (writer), the body has `X?` (reader), and vice versa.
+
+### 2A.3 Worked Example: Signaling Server
+
+Consider a signaling server that coordinates reconnection between agents.  Agents send messages containing reply variables; the server stores these and later binds them when a matching request arrives.
+
+**Type definitions:**
+
+```prolog
+SignalReply ::= punch(Constant) ; initiated.
+
+SignalMsg ::= reconnect(Constant, Constant, Constant, SignalReply?)
+            ; available(Constant, Constant, SignalReply?).
+
+PendingEntry ::= needs(Constant, Constant, Constant, SignalReply?)
+               ; ready(Constant, Constant, SignalReply?).
+PendingList ::= [] ; [PendingEntry | PendingList].
+```
+
+The `SignalReply?` in `reconnect` and in `PendingEntry` means that these positions carry a reader reference to an unbound `SignalReply` writer—a reply variable that will be bound later.
+
+**Receiving a message with a reply variable:**
+
+```prolog
+procedure signal_server(Stream(SignalMsg)?, PendingList?).
+
+signal_server([reconnect(A, B, Proof, ReplyA?)|In], Pending) :-
+    verify_friendship(Proof?, A?, B?),
+    peer_address(A?, AddrA) |
+    find_ready(A?, B?, AddrA?, ReplyA, Pending?, Pending1),
+    signal_server(In?, Pending1?).
+```
+
+Mode analysis of arg 1 (`Stream(SignalMsg)?`, ↓):
+
+| Position | Type path | Mode | Flips | Head variable |
+|----------|-----------|------|-------|---------------|
+| List element | `SignalMsg` within `Stream(SignalMsg)?` | ↓ | none | — |
+| `reconnect` arg 1 | `Constant` within `SignalMsg` at ↓ | ↓ | none | `A` (writer) |
+| `reconnect` arg 2 | `Constant` at ↓ | ↓ | none | `B` (writer) |
+| `reconnect` arg 3 | `Constant` at ↓ | ↓ | none | `Proof` (writer) |
+| `reconnect` arg 4 | `SignalReply?` at ↓ | **↑** | `?` flips ↓→↑ | `ReplyA?` (reader) |
+| List tail | `Stream(SignalMsg)` at ↓ | ↓ | none | `In` (writer) |
+
+The `?` on `SignalReply?` in the type definition flips the mode from ↓ to ↑ at arg 4 of `reconnect`.  Hence `ReplyA?` is a reader—a hole through which the server will later send a reply back to agent A.
+
+In the body, `ReplyA` (writer, the SRSW pair) is passed to `find_ready` at its output position.
+
+**Storing the reply variable in a pending list:**
+
+```prolog
+procedure find_ready(Constant?, Constant?, Constant?, SignalReply,
+                     PendingList?, PendingList).
+
+%% No match found — store A's request for later
+find_ready(A, B, AddrA, ReplyA?, [], [needs(A?, B?, AddrA?, ReplyA)]).
+```
+
+Mode analysis of the head-constructed `needs(A?, B?, AddrA?, ReplyA)` in arg 6 (`PendingList`, ↑):
+
+| Position | Type path | Mode | Flips | Head variable |
+|----------|-----------|------|-------|---------------|
+| `needs` arg 1 | `Constant` within `PendingEntry` at ↑ | ↑ | none | `A?` (reader) |
+| `needs` arg 2 | `Constant` at ↑ | ↑ | none | `B?` (reader) |
+| `needs` arg 3 | `Constant` at ↑ | ↑ | none | `AddrA?` (reader) |
+| `needs` arg 4 | `SignalReply?` at ↑ | **↓** | `?` flips ↑→↓ | `ReplyA` (writer) |
+
+The same `?` on `SignalReply?` now flips in the opposite direction: ↑→↓.  Hence `ReplyA` is a writer—it stores the reply variable in the pending list for later retrieval.
+
+The variable pair in this clause: `ReplyA?` (reader at arg 4, ↑) and `ReplyA` (writer at arg 6 inside `needs`, ↓).  Both occur in the head—this is the head-to-head transfer from Section 2.3.
+
+**Binding the reply variable:**
+
+```prolog
+procedure complete_rendezvous(Constant?, SignalReply, SignalReply).
+complete_rendezvous(AddrA, initiated, punch(AddrA?)).
+```
+
+- Arg 1 (`Constant?`, ↓): `AddrA` writer — captures the address
+- Arg 2 (`SignalReply`, ↑): `initiated` constant — produced as reply to A
+- Arg 3 (`SignalReply`, ↑): `punch(AddrA?)` — produced as reply to B, with `AddrA?` (reader at ↑) filling in A's address
+
+### 2A.4 Summary
+
+The rule composes recursively: at any depth within a structure in the head, the mode is determined by starting from the argument's declared mode and flipping at each `?` in the type path.  Writers capture at ↓ positions, readers are holes at ↑ positions.
+
+| Structural mode | Head variable form | Semantic role |
+|-----------------|-------------------|---------------|
+| ↓ (consume) | writer `X` | captures incoming value |
+| ↑ (produce) | reader `X?` | hole to be filled |
+
+---
+
 ## 3. SRSW Relaxation for Constant Types
 
 ### 3.1 The Rule

@@ -34,6 +34,46 @@ In procedure declarations:
 - `BondList` = writer (output from this procedure) 
 - The `?` marks the reader side
 
+## 2.5 Variable Modes at Nested Positions in the Head
+
+When a clause head contains structures with embedded `?` in the type definition (e.g., reply variables), use this rule:
+
+**Step 1 — Determine structural mode:** Start with the argument's declared mode (`Type?` → ↓, `Type` → ↑). Each `?` in the type definition path **flips** the mode.
+
+**Step 2 — Choose variable form:** ↓ → writer (`X`), ↑ → reader (`X?`).
+
+**Step 3 — Body:** SRSW pair of the head occurrence.
+
+Example with reply variables:
+
+```prolog
+SignalReply ::= punch(Constant) ; initiated.
+SignalMsg ::= reconnect(Constant, Constant, Constant, SignalReply?).
+
+procedure signal_server(Stream(SignalMsg)?, PendingList?).
+signal_server([reconnect(A, B, Proof, ReplyA?)|In], Pending) :- ...
+%%                       ↓  ↓  ↓     ↑        ↓
+%%                       W  W  W     R        W
+```
+
+Arg 1 is `Stream(SignalMsg)?` → ↓. Inside `reconnect` at ↓, the first three `Constant` positions stay ↓ → writers. But `SignalReply?` has a `?` that flips ↓→↑ → `ReplyA?` is a **reader** (hole for the reply).
+
+Storing the reply variable in an output list:
+
+```prolog
+PendingEntry ::= needs(Constant, Constant, Constant, SignalReply?).
+
+procedure find_ready(Constant?, Constant?, Constant?, SignalReply,
+                     PendingList?, PendingList).
+find_ready(A, B, AddrA, ReplyA?, [], [needs(A?, B?, AddrA?, ReplyA)]).
+%%                                          ↑   ↑    ↑       ↓
+%%                                          R   R    R       W
+```
+
+Arg 6 is `PendingList` → ↑. Inside `needs` at ↑, `Constant` positions stay ↑ → readers. But `SignalReply?` flips ↑→↓ → `ReplyA` is a **writer** (stores the reply variable).
+
+The same `?` in the type definition flips differently depending on which direction you start from. See `typed-glp-manual.md` Section 2A for the complete worked example.
+
 ## 3. SRSW (Single Reader Single Writer)
 
 Each reader `X?` can appear at most ONCE in a clause (one read).
