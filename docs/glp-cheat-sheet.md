@@ -270,6 +270,7 @@ Three concurrent processes: escrow, inject, and the next agent iteration.
 - **Never write `X = value` for output binding** — decompose in the head
 - **Never use `otherwise` expecting it to fire after a suspending clause** — `otherwise` fires only after FAILURE, not suspension
 - **Never use `true | true` for guardless clauses** — `true` is not a guard. Write a unit clause instead: `foo(X, bar(X?)).` (head + period, no `:-`)
+- **Never operate on a non-constant-type list more than once in a clause** — SRSW means each list element can only be read once. To lookup and send on the same list, fuse the operations into a single traversal procedure
 
 ## 11. Before Writing Code
 
