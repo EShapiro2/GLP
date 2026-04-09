@@ -9,10 +9,14 @@
 %%
 %% Protocol:
 %%   1. A sends B: msg(A, B, mediate(C))
-%%   2. B looks up A's and C's addresses in its friends list
-%%   3. B sends C: msg(B, C, punch_to(addr_A))   — via B's existing link to C
-%%   4. B sends A: msg(B, A, punch_to(addr_C))   — via B's existing link to A
-%%   5. A and C each receive punch_to and call punch_udp(Addr)
+%%   2. B looks up A's and C's addresses in its friends list and
+%%      prepends a punch_to message to each of their output streams
+%%      in one pass.  The punch_to argument carries an AddrResult:
+%%        - found(Addr) if the other peer was located in B's friends list
+%%        - not_found if the other peer was unknown to B
+%%   3. Each recipient dispatches on the punch_to argument:
+%%        - found(Addr) → call punch_udp(Addr) to hole-punch
+%%        - not_found   → do nothing (mediation was unsuccessful)
 %%
 %% Address updates: when an agent's address changes, it notifies its friends
 %% via msg(_, _, addr_update(NewAddr)).  Recipients update their friends list.
@@ -26,10 +30,13 @@
 %% TYPE DEFINITIONS
 %% =============================================================================
 
+%% Result of an address lookup in the mediator's friends list
+AddrResult ::= found(Constant) ; not_found.
+
 %% Friend-mediated rendezvous message operations
-MsgOp ::= mediate(Constant)       %% mediate(C_pk) — A asks B to help reconnect to C
-        ; punch_to(Constant)      %% punch_to(Addr) — instruction to hole-punch to Addr
-        ; addr_update(Constant).  %% addr_update(NewAddr) — notify friends of address change
+MsgOp ::= mediate(Constant)        %% mediate(C_pk) — A asks B to help reconnect to C
+        ; punch_to(AddrResult)     %% punch_to(found(Addr)) or punch_to(not_found)
+        ; addr_update(Constant).   %% addr_update(NewAddr) — notify friends of address change
 
 %% Protocol message: msg(From, To, Op)
 Msg ::= msg(Constant, Constant, MsgOp).
@@ -60,24 +67,30 @@ fmrv(Id, [msg(From, To, addr_update(Addr))|In], Fs) :-
     fmrv(Id?, In?, Fs1?).
 
 %% Mediation request: A asks us (B=Id) to help reconnect to C.
-%% We use fused lookup-and-send: each call looks up a friend by key,
-%% binds that friend's address, and prepends a punch_to message to
-%% the friend's output stream in a single traversal.
 %%
-%% The two punch_to messages contain each other's addresses.  The
-%% second call (for C) binds AddrC; the first call's body already
-%% prepended msg(_, From, punch_to(AddrC?)) where AddrC? is still
-%% unbound — the stream writer fills in as soon as AddrC is bound.
+%% Two fused lookup_and_send calls: each looks up a friend by key and
+%% prepends the punch_to message to that friend's output stream in one
+%% pass.  The other peer's AddrResult is passed as the punch_to argument.
+%%
+%% If the other peer is found, AddrResult is bound to found(Addr); the
+%% recipient's punch_to handler dispatches to punch_udp(Addr).  If not,
+%% AddrResult is bound to not_found; the recipient's handler does nothing.
+%% Either way, punch_udp is never called with an invalid address.
 fmrv(Id, [msg(From, To, mediate(C))|In], Fs) :-
     ground(Id?), ground(From?), ground(C?), Id? =?= To? |
     lookup_and_send(From?, Id?, AddrC?, AddrFrom, Fs?, Fs1),
     lookup_and_send(C?, Id?, AddrFrom?, AddrC, Fs1?, Fs2),
     fmrv(Id?, In?, Fs2?).
 
-%% Punch instruction received: do UDP hole punch
-fmrv(Id, [msg(_, To, punch_to(Addr))|In], Fs) :-
+%% Punch instruction received with a valid address: do UDP hole punch
+fmrv(Id, [msg(_, To, punch_to(found(Addr)))|In], Fs) :-
     ground(Id?), Id? =?= To? |
     punch_udp(Addr?),
+    fmrv(Id?, In?, Fs?).
+
+%% Punch instruction received for an unknown peer: no-op
+fmrv(Id, [msg(_, To, punch_to(not_found))|In], Fs) :-
+    ground(Id?), Id? =?= To? |
     fmrv(Id?, In?, Fs?).
 
 fmrv(_, [], _).
@@ -90,21 +103,19 @@ fmrv(_, [], _).
 %%
 %% Finds Key's entry in Fs.  When found:
 %%   (a) Prepends msg(Id, Key, punch_to(OtherAddr)) to Key's output stream
-%%   (b) Binds KeyAddr to Key's own address from the entry
-%% Otherwise passes the entry through unchanged and recurses.
+%%   (b) Binds KeyAddr to found(Key's own address)
+%% When Key is not found (end of list reached), KeyAddr is bound to
+%% not_found, no message is sent.
 
-procedure lookup_and_send(Constant?, Constant?, Constant?, Constant,
+procedure lookup_and_send(Constant?, Constant?, AddrResult?, AddrResult,
                           FriendList?, FriendList).
 
-%% Match: this is Key's entry.  The output stream at fe field 2 is
-%% `FriendStream?`, so the `?` flips the mode at that position.  In the
-%% input head, field 2 is at ↑ → we use the reader form and deconstruct
-%% the stream as `[msg(...)|Out1?]`.  In the output head, field 2 is at
-%% ↓ → we pass `Out1` (writer) which will carry the remaining tail.
-lookup_and_send(Key, Id, OtherAddr, Addr?,
+%% Match: this is Key's entry.  Prepend punch_to message to the stream
+%% and bind KeyAddr to found(Addr).
+lookup_and_send(Key, Id, OtherAddr, found(Addr?),
     [fe(K, [msg(Id?, K?, punch_to(OtherAddr?))|Out1?], Addr)|Rest],
     [fe(K?, Out1, Addr?)|Rest?]) :-
-    Key? =?= K? | true.
+    Key? =?= K?, ground(Addr?) | true.
 
 %% No match: pass entry through, continue searching
 lookup_and_send(Key, Id, OtherAddr, KeyAddr?,
@@ -112,8 +123,8 @@ lookup_and_send(Key, Id, OtherAddr, KeyAddr?,
     otherwise |
     lookup_and_send(Key?, Id?, OtherAddr?, KeyAddr, Rest?, Rest1).
 
-%% End of list: Key not found; KeyAddr gets a sentinel
-lookup_and_send(_, _, _, 'unknown', [], []).
+%% End of list: Key not found
+lookup_and_send(_, _, _, not_found, [], []).
 
 %% =============================================================================
 %% update_addr: replace a friend's address in the friends list

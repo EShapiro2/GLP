@@ -24,7 +24,10 @@
 %% =============================================================================
 
 %% Reply sent back to agents via their reply variable
-SignalReply ::= punch(Constant) ; initiated.
+SignalReply ::= punch(Constant) ; initiated ; rejected.
+
+%% Result of cryptographic friendship verification
+VerifyResult ::= ok ; invalid.
 
 %% Messages arriving via cold-call on the agent's input stream
 SignalMsg ::= reconnect(Constant, Constant, Constant, Constant, SignalReply?)
@@ -45,11 +48,14 @@ PendingList ::= [] ; [PendingEntry | PendingList].
 
 exported procedure rv_agent(Stream(SignalMsg)?, PendingList?).
 
-%% A requests reconnection to B with friendship proof and self-reported address
+%% A requests reconnection to B with friendship proof and self-reported address.
+%% verify_friendship returns a status; handle_verify dispatches on it.
+%% If the proof is invalid, ReplyA is bound to `rejected` and the request is
+%% not added to the pending list.
 rv_agent([reconnect(A, B, Proof, AddrA, ReplyA?)|In], Pending) :-
     ground(A?), ground(B?) |
-    verify_friendship(Proof?, A?, B?),
-    find_ready(A?, B?, AddrA?, ReplyA, Pending?, Pending1),
+    verify_friendship(Proof?, A?, B?, Status),
+    handle_verify(Status?, A?, B?, AddrA?, ReplyA, Pending?, Pending1),
     rv_agent(In?, Pending1?).
 
 %% B is available for reconnection from A
@@ -107,12 +113,28 @@ procedure complete_rendezvous(Constant?, SignalReply, SignalReply).
 complete_rendezvous(AddrA, initiated, punch(AddrA?)).
 
 %% =============================================================================
+%% handle_verify: dispatch on verify_friendship result
+%% =============================================================================
+
+procedure handle_verify(VerifyResult?, Constant?, Constant?, Constant?,
+                        SignalReply, PendingList?, PendingList).
+
+%% Proof valid — proceed to find_ready
+handle_verify(ok, A, B, AddrA, ReplyA?, Pending, Pending1?) :-
+    find_ready(A?, B?, AddrA?, ReplyA, Pending?, Pending1).
+
+%% Proof invalid — bind reply to rejected, leave pending unchanged
+handle_verify(invalid, _, _, _, rejected, Pending, Pending?).
+
+%% =============================================================================
 %% STUBS for system predicates (testing only)
 %% =============================================================================
 %%
-%% verify_friendship(Proof?, A_pk?, B_pk?) — body predicate
-%%   Succeeds if Proof cryptographically proves that A is B's friend.
-%%   Stub: always succeeds.
+%% verify_friendship(Proof?, A_pk?, B_pk?, Result) — body predicate
+%%   Returns Result = ok if Proof cryptographically proves A is B's friend,
+%%   or Result = invalid otherwise.
+%%   Stub: returns invalid when Proof = 'bad_proof', ok otherwise.
 
-procedure verify_friendship(Constant?, Constant?, Constant?).
-verify_friendship(_, _, _).
+procedure verify_friendship(Constant?, Constant?, Constant?, VerifyResult).
+verify_friendship(Proof, _, _, invalid) :- Proof? =?= bad_proof | true.
+verify_friendship(_, _, _, ok) :- otherwise | true.

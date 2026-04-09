@@ -3,7 +3,7 @@
 %% Load rv_agent.glp first, then this file, then invoke test goals.
 
 %% Local type redeclarations (structural identity allows sharing across modules)
-SignalReply ::= punch(Constant) ; initiated.
+SignalReply ::= punch(Constant) ; initiated ; rejected.
 
 PendingEntry ::= needs(Constant, Constant, Constant, SignalReply?)
                ; ready(Constant, Constant, SignalReply?).
@@ -132,3 +132,33 @@ test10_reconnect_then_available(RA?, RB?) :-
          available(bob, alice, RB)], []).
 
 %% Expected: RA = initiated, RB = punch(addr_alice)
+
+%% =============================================================================
+%% Test 11: reconnect with invalid proof → reply is rejected
+%% =============================================================================
+%%
+%% The verify_friendship stub returns invalid when Proof = bad_proof.
+%% Expected: RA = rejected, agent terminates.
+
+procedure test11_reconnect_rejected(SignalReply).
+test11_reconnect_rejected(RA?) :-
+    rv_agent # rv_agent(
+        [reconnect(alice, bob, bad_proof, addr_alice, RA)], []).
+
+%% Expected: RA = rejected
+
+%% =============================================================================
+%% Test 12: rejected reconnect does not block subsequent valid reconnect
+%% =============================================================================
+%%
+%% First reconnect has bad proof → rejected.  Second has good proof and
+%% finds a waiting available entry → matches normally.
+
+procedure test12_rejected_then_match(SignalReply, SignalReply, SignalReply).
+test12_rejected_then_match(RA1?, RA2?, RB?) :-
+    rv_agent # rv_agent(
+        [reconnect(alice, bob, bad_proof, addr_alice, RA1),
+         available(bob, alice, RB),
+         reconnect(alice, bob, good_proof, addr_alice, RA2)], []).
+
+%% Expected: RA1 = rejected, RA2 = initiated, RB = punch(addr_alice)
