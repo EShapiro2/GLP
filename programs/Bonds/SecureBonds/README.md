@@ -1,48 +1,47 @@
-# Secure Bonds — GLP Implementation
+# Secure Bonds — Architecture
 
-## Overview
+## Entities
 
-Extends the bond agent (`../agent.glp`) with sovereign transaction logs,
-state custodians, and finality via interlaced streams.
+- **Sovereign** of currency p: maintains the authoritative log of all p-coin transactions
+- **State custodian** of p: a friend of p who mirrors p's log for recovery
+- **Trader** in p-coins: any friend of p who holds/transacts p-coins
 
-## Architecture
+## Streams
 
-### Streams per agent p
+Each sovereign p maintains:
+- **Sovereign stream**: `[block(TxId, TxRecord, Tips) | ...]`
+  - Written by p, read by custodians
+  - Tips = list of latest observed custodian ack blocks (explicit DAG)
+- **Custodian ack streams** (one per custodian): `[ack(TxId, SovBlockRef) | ...]`
+  - Written by custodian, read by sovereign
+  - SovBlockRef = reference to the sovereign block being acknowledged
 
-1. **Sovereign stream** (if p is a sovereign, i.e., has issued p-coins):
-   - Append-only stream of transaction blocks: `[block(TxRecord, CustodianTips) | Rest]`
-   - Each block records a p-coin transaction (mint, approve payment, approve redemption, approve swap)
-   - Tips point to the latest blocks in each custodian's stream (acknowledgments)
+## Transaction flow (pay q→r in p-coins)
 
-2. **Custodian streams** (for each agent q that p is a state custodian of):
-   - p reads q's sovereign stream
-   - p creates acknowledgment blocks in its own custodian stream
-   - Each acknowledgment block has a tip pointing to the sovereign's block it acknowledges
+1. q sends pay request to sovereign p (friend channel)
+2. p checks log: does q hold the coins?
+3. p writes `block(N, tx_pay(q,r,coins), Tips)` to sovereign stream
+4. Custodian reads block, writes `ack(N, ...)` to ack stream
+5. p reads ack — transaction is final
+6. p notifies q (remove coins) and r (add coins) via friend channels
 
-### Finality
+## Holdings
 
-A transaction is **final** when the sovereign's stream contains a block whose tips
-include a custodian's acknowledgment of the approval block. The sovereign communicates
-finality to payer/payee only after observing this acknowledgment.
+- Sovereign's log is authoritative: current holder of each p-coin is derived from the log
+- Traders maintain local cache, updated upon finality notification from sovereign
+- On discrepancy, sovereign's log wins
 
-### Minimal constraint
+## Finality
 
-All parties to a transaction (payer, payee, sovereign) must be friends.
-Extension to diameter-2 payments (via a common friend) is future work.
+- **Sovereign-final**: block written to sovereign stream
+- **Custodian-final**: sovereign observes custodian ack — recorded as tip in next block
+- Sovereign notifies payer/payee only after custodian-final
 
-### Transaction flow (Pay q->r in s-coins)
+## Recovery
 
-1. q sends pay request to sovereign s (via friend channel)
-2. s verifies q holds the coins, creates approval block in sovereign stream
-3. s sends approval block to custodians (via SharedBroadcastStream or direct)
-4. Custodian creates acknowledgment block in its stream with tip to approval
-5. s observes custodian acknowledgment (tip in next sovereign block)
-6. s notifies q and r: transaction is final
-7. q removes coins from local holdings, r adds them
+- Sovereign loses log → recovers from any custodian's copy
+- Trader loses local cache → requests balance from sovereign
 
-### Files
+## Minimal constraint
 
-- `sovereign.glp` — sovereign stream management, approval, finality
-- `custodian.glp` — custodian stream, acknowledgment
-- `secure_agent.glp` — extends bond agent with sovereign/custodian roles
-- `boot.glp` — test scenario
+All parties (payer, payee, sovereign) must be friends.
