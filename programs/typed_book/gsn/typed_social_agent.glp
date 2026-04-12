@@ -68,6 +68,10 @@ AgentContent ::= befriend(Constant, Constant, Response)
 %% Ch is friend(Name) when active, nil when inactive
 FLv1 ::= flv1(Constant, Constant, Constant, Constant).
 
+%% FLv2 struct for FoFMap values: flv2(Name, Epoch, State)
+%% Observed friend record (no channel)
+FLv2 ::= flv2(Constant, Constant, Constant).
+
 %% Network content (2-arg cold-call: msg(Dest, Content))
 NetColdCall ::= intro(Constant, Constant, Response?).
 
@@ -77,8 +81,8 @@ FriendContent ::= response(Constant, Response)
                 ; intro(Constant, IntroChannel)
                 ; child_intro(Constant, IntroChannel)
                 ; unfriend(Constant)
-                ; update_befriend(Constant)
-                ; update_unfriend(Constant)
+                ; update_befriend(Constant, Constant)
+                ; update_unfriend(Constant, Constant)
                 ; update_friend_list(_).
 
 %% Intro channel content (first message is ack/nack handshake)
@@ -131,6 +135,47 @@ should_update(InEpoch, StoredEpoch, _, _) :-
     InEpoch? > StoredEpoch? | true.
 should_update(InEpoch, StoredEpoch, active, inactive) :-
     InEpoch? =:= StoredEpoch? | true.
+
+%% =============================================================================
+%% UPDATE_FOFMAP — update friend-of-friend map
+%% =============================================================================
+%% update_fofmap(FoFMap?, From?, Who?, Epoch?, Status?, FoFMap1)
+%% Updates FoFMap[From][Who] = flv2(Who, Epoch, Status)
+%% Symmetric: also updates FoFMap[Who][From] = flv2(From, Epoch, Status)
+%% Only updates if should_update passes (or no existing entry)
+
+procedure update_fofmap(_?, Constant?, Constant?, Constant?, Constant?, _).
+
+%% From's inner map exists — update it
+update_fofmap(FoFMap, From, Who, Epoch, Status, FoFMap2?) :-
+    map_contains(FoFMap?, From?) |
+    _map_get(FoFMap?, From?, Inner),
+    map_put(Inner?, Who?, flv2(Who?, Epoch?, Status?), Inner1),
+    map_put(FoFMap?, From?, Inner1?, FoFMap1),
+    update_fofmap_sym(FoFMap1?, Who?, From?, Epoch?, Status?, FoFMap2).
+
+%% From's inner map doesn't exist — create it
+update_fofmap(FoFMap, From, Who, Epoch, Status, FoFMap2?) :-
+    otherwise |
+    map_new(Inner),
+    map_put(Inner?, Who?, flv2(Who?, Epoch?, Status?), Inner1),
+    map_put(FoFMap?, From?, Inner1?, FoFMap1),
+    update_fofmap_sym(FoFMap1?, Who?, From?, Epoch?, Status?, FoFMap2).
+
+%% Symmetric update: FoFMap[Who][From]
+procedure update_fofmap_sym(_?, Constant?, Constant?, Constant?, Constant?, _).
+
+update_fofmap_sym(FoFMap, Who, From, Epoch, Status, FoFMap1?) :-
+    map_contains(FoFMap?, Who?) |
+    _map_get(FoFMap?, Who?, Inner),
+    map_put(Inner?, From?, flv2(From?, Epoch?, Status?), Inner1),
+    map_put(FoFMap?, Who?, Inner1?, FoFMap1).
+
+update_fofmap_sym(FoFMap, Who, From, Epoch, Status, FoFMap1?) :-
+    otherwise |
+    map_new(Inner),
+    map_put(Inner?, From?, flv2(From?, Epoch?, Status?), Inner1),
+    map_put(FoFMap?, Who?, Inner1?, FoFMap1).
 
 %% =============================================================================
 %% CHANNEL OPERATIONS (Defined Guards)
@@ -322,7 +367,7 @@ unfriend_with_epoch(Id, Target, Epoch, UserIn, NetIn, Outs, FMap, FoFMap, SBS) :
     lookup_send(friend(Target?), msg(Id?, Target?, unfriend(Epoch?)), Outs?, Outs1),
     remove_output(friend(Target?), Outs1?, Outs2),
     sbs_write_update(SBS?, flv1(Target?, Epoch?, inactive, nil), SBS1, Recipients),
-    sbs_broadcast(Id?, update_unfriend(Target?), Recipients?, Outs2?, Outs3),
+    sbs_broadcast(Id?, update_unfriend(Target?, Epoch?), Recipients?, Outs2?, Outs3),
     lookup_send('_user', msg(agent, '_user', unfriended(Target?)), Outs3?, Outs4),
     map_put(FMap?, Target?, flv1(Target?, Epoch?, inactive, nil), FMap1),
     map_show(Id?, FMap1?, FMap2),
@@ -384,7 +429,7 @@ handle_response(Id, accept(ch(FIn, FOut?)), From, Epoch, Outs, Outs4?, In, In1?,
     ground(From?), ground(Epoch?) |
     sbs_add_recipient(SBS?, From?, SBS1),
     sbs_write_update(SBS1?, flv1(From?, Epoch?, active, nil), SBS2, Recipients),
-    sbs_broadcast(Id?, update_befriend(From?), Recipients?, Outs?, Outs1),
+    sbs_broadcast(Id?, update_befriend(From?, Epoch?), Recipients?, Outs?, Outs1),
     add_output(friend(From?), FOut, Outs1?, Outs2),
     lookup_send(friend(From?), msg(Id?, From?, update_friend_list([])), Outs2?, Outs3),
     lookup_send('_user', msg(agent, '_user', connected(From?)), Outs3?, Outs4),
@@ -471,7 +516,7 @@ agent(Id, [intro_result(Other, ch(FIn, FOut?))|UserIn], NetIn, Outs, FMap, FoFMa
     ground(Id?), ground(Other?) |
     sbs_add_recipient(SBS?, Other?, SBS1),
     sbs_write_update(SBS1?, flv1(Other?, 1, active, nil), SBS2, Recipients),
-    sbs_broadcast(Id?, update_befriend(Other?), Recipients?, Outs?, Outs1),
+    sbs_broadcast(Id?, update_befriend(Other?, 1), Recipients?, Outs?, Outs1),
     add_output(friend(Other?), FOut, Outs1?, Outs2),
     lookup_send(friend(Other?), msg(Id?, Other?, update_friend_list([])), Outs2?, Outs3),
     lookup_send('_user', msg(agent, '_user', connected(Other?)), Outs3?, Outs4),
@@ -595,18 +640,19 @@ agent(Id, UserIn, [msg(From, Id1, child_intro(Other, Ch))|NetIn], Outs, FMap, Fo
 
 %% --- Friendship updates from friends ---
 
-%% Friendship update: friend befriended someone — pass to user
-%% (FoFMap tracking deferred to Step 9)
-agent(Id, UserIn, [msg(From, Id1, update_befriend(Who))|NetIn], Outs, FMap, FoFMap, SBS) :-
-    Id? =?= Id1?, ground(From?), ground(Who?) |
+%% Friendship update: friend befriended someone — update FoFMap, pass to user
+agent(Id, UserIn, [msg(From, Id1, update_befriend(Who, Epoch))|NetIn], Outs, FMap, FoFMap, SBS) :-
+    Id? =?= Id1?, ground(From?), ground(Who?), ground(Epoch?) |
+    update_fofmap(FoFMap?, From?, Who?, Epoch?, active, FoFMap1),
     lookup_send('_user', msg(agent, '_user', update_befriend(From?, Who?)), Outs?, Outs1),
-    agent(Id?, UserIn?, NetIn?, Outs1?, FMap?, FoFMap?, SBS?).
+    agent(Id?, UserIn?, NetIn?, Outs1?, FMap?, FoFMap1?, SBS?).
 
-%% Friendship update: friend unfriended someone — pass to user
-agent(Id, UserIn, [msg(From, Id1, update_unfriend(Who))|NetIn], Outs, FMap, FoFMap, SBS) :-
-    Id? =?= Id1? |
+%% Friendship update: friend unfriended someone — update FoFMap, pass to user
+agent(Id, UserIn, [msg(From, Id1, update_unfriend(Who, Epoch))|NetIn], Outs, FMap, FoFMap, SBS) :-
+    Id? =?= Id1?, ground(From?), ground(Who?), ground(Epoch?) |
+    update_fofmap(FoFMap?, From?, Who?, Epoch?, inactive, FoFMap1),
     lookup_send('_user', msg(agent, '_user', update_unfriend(From?, Who?)), Outs?, Outs1),
-    agent(Id?, UserIn?, NetIn?, Outs1?, FMap?, FoFMap?, SBS?).
+    agent(Id?, UserIn?, NetIn?, Outs1?, FMap?, FoFMap1?, SBS?).
 
 %% Friend list exchange: friend sends their current friend names on befriend
 agent(Id, UserIn, [msg(From, Id1, update_friend_list(Names))|NetIn], Outs, FMap, FoFMap, SBS) :-
