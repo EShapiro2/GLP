@@ -3,44 +3,37 @@
 ## Entities
 
 - **Sovereign** of currency p: maintains the authoritative log of all p-coin transactions
-- **State custodian** of p: a friend of p who mirrors p's log for recovery
-- **Trader** in p-coins: any friend of p who holds/transacts p-coins
+- **State custodian** of p: friend of p who mirrors p's log for recovery
+- **Trader** in p-coins: friend of p who holds/transacts p-coins
 
 ## Streams
 
-Each sovereign p maintains:
-- **Sovereign stream**: `[block(TxId, TxRecord, Tips) | ...]`
-  - Written by p, read by custodians
-  - Tips = list of latest observed custodian ack blocks (explicit DAG)
-- **Custodian ack streams** (one per custodian): `[ack(TxId, SovBlockRef) | ...]`
-  - Written by custodian, read by sovereign
-  - SovBlockRef = reference to the sovereign block being acknowledged
+- **Sovereign stream**: `[block(TxId, TxRecord, Tips) | ...]` — written by sovereign, read by custodians. Tips = latest observed custodian ack blocks.
+- **Custodian ack streams**: `[ack(TxId) | ...]` — written by custodian, read by sovereign.
 
-## Transaction flow (pay q→r in p-coins)
+## Pay (one p-coin from q to r)
 
-1. q sends pay request to sovereign p (friend channel)
-2. p checks log: does q hold the coins?
-3. p writes `block(N, tx_pay(q,r,coins), Tips)` to sovereign stream
-4. Custodian reads block, writes `ack(N, ...)` to ack stream
-5. p reads ack — transaction is final
-6. p notifies q (remove coins) and r (add coins) via friend channels
+1. q sends to sovereign p: `approve_pay(q, r, coin, ApprovedQ?)`
+2. p sends to r: `incoming_pay(q, coin, ApprovedR?)`
+3. p checks log: does q hold the coin?
+4. p writes `block(N, tx_pay(q, r, coin), Tips)` to sovereign stream
+5. Custodian reads block, writes `ack(N)` to ack stream
+6. p reads ack, binds `ApprovedQ` and `ApprovedR` to `finalized`
+7. q observes `ApprovedQ?` — removes coin from local cache
+8. r observes `ApprovedR?` — adds coin to local cache
+
+Two reply variables, each with one writer (sovereign) and one reader. SRSW preserved.
+
+Finality = custodian has acknowledged.
 
 ## Holdings
 
-- Sovereign's log is authoritative: current holder of each p-coin is derived from the log
-- Traders maintain local cache, updated upon finality notification from sovereign
-- On discrepancy, sovereign's log wins
-
-## Finality
-
-- **Sovereign-final**: block written to sovereign stream
-- **Custodian-final**: sovereign observes custodian ack — recorded as tip in next block
-- Sovereign notifies payer/payee only after custodian-final
+Sovereign's log is authoritative. Traders maintain local cache, updated upon observing finality.
 
 ## Recovery
 
 - Sovereign loses log → recovers from any custodian's copy
-- Trader loses local cache → requests balance from sovereign
+- Trader loses cache → after Replace, asks each friend: "do I hold any of your coins?" Each sovereign friend checks log and reports.
 
 ## Minimal constraint
 
