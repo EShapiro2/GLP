@@ -95,6 +95,10 @@ procedure struct_arg(_?, Constant?, Constant).
 procedure struct_arg_eq(_?, Constant?, Constant?).
 procedure map_entry_arg_eq(_?, Constant?, Constant?, Constant?).
 procedure map_entry_arg_ge(_?, Constant?, Constant?, Constant?).
+procedure sbs_new(Constant?, _).
+procedure sbs_add_recipient(_?, Constant?, _).
+procedure sbs_write_update(_?, _?, _, _).
+procedure sbs_get_checkpoint(_?, _).
 
 % Output/debugging primitives
 procedure write(_?).
@@ -207,6 +211,10 @@ const Set<String> predefinedProcedureNames = {
   'struct_arg_eq',
   'map_entry_arg_eq',
   'map_entry_arg_ge',
+  'sbs_new',
+  'sbs_add_recipient',
+  'sbs_write_update',
+  'sbs_get_checkpoint',
   // Note: map_get is NOT protected - it's a stdlib wrapper that can be redefined
   // Note: dl_append, dl_to_list, new_channel, send, receive
   // are NOT protected - they are library-level and can be redefined
@@ -278,6 +286,10 @@ const Set<String> builtinProcedures = {
   'struct_arg_eq/3',
   'map_entry_arg_eq/4',
   'map_entry_arg_ge/4',
+  'sbs_new/2',
+  'sbs_add_recipient/3',
+  'sbs_write_update/4',
+  'sbs_get_checkpoint/2',
   // Output/debugging primitives
   'write/1',
   'writeln/1',

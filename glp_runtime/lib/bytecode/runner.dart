@@ -4613,6 +4613,22 @@ class BytecodeRunner {
         }
         return GuardResult.failure;
 
+      case '@<':
+        // Lexicographic string comparison: @<(A?, B?) succeeds if A < B
+        if (args.length < 2) return GuardResult.failure;
+        final aVal = getValue(args[0]);
+        final bVal = getValue(args[1]);
+        String? aStr;
+        if (aVal is ConstTerm && aVal.value is String) aStr = aVal.value as String;
+        else if (aVal is String) aStr = aVal;
+        String? bStr;
+        if (bVal is ConstTerm && bVal.value is String) bStr = bVal.value as String;
+        else if (bVal is String) bStr = bVal;
+        if (aStr != null && bStr != null) {
+          return aStr.compareTo(bStr) < 0 ? GuardResult.success : GuardResult.failure;
+        }
+        return GuardResult.failure;
+
       // Type guards
       case 'ground':
         // Already checked for unbound readers in caller

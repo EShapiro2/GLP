@@ -113,6 +113,12 @@ void registerStandardBodyKernels(BodyKernelRegistry registry) {
   registry.register('map_show', 3, mapShowKernel);
   registry.register('map_list_append', 4, mapListAppendKernel);
 
+  // SharedBroadcastStream operations
+  registry.register('sbs_new', 2, sbsNewKernel);
+  registry.register('sbs_add_recipient', 3, sbsAddRecipientKernel);
+  registry.register('sbs_write_update', 4, sbsWriteUpdateKernel);
+  registry.register('sbs_get_checkpoint', 2, sbsGetCheckpointKernel);
+
   // Arithmetic assignment
   registry.register(':=', 2, assignKernel);
 }
@@ -1069,6 +1075,99 @@ BodyKernelResult assignKernel(GlpRuntime rt, List<Object?> args) {
   }
   final value = result == result.toInt() ? result.toInt() : result;
   return _bindResult(rt, args[0], ConstTerm(value));
+}
+
+// =============================================================================
+// SharedBroadcastStream Kernels
+// =============================================================================
+
+/// sbs_new(Id?, SBS) — Create a new SharedBroadcastStream for agent Id.
+BodyKernelResult sbsNewKernel(GlpRuntime rt, List<Object?> args) {
+  if (args.length != 2) {
+    print('[ABORT] sbs_new/2: expected 2 arguments, got ${args.length}');
+    return BodyKernelResult.abort;
+  }
+  final idArg = _deref(rt, args[0]);
+  final id = (idArg is ConstTerm) ? idArg.value! : idArg!;
+  return _bindResult(rt, args[1], SbsTerm(id));
+}
+
+/// sbs_add_recipient(SBS?, Name?, SBS1) — Add Name to SBS recipients.
+BodyKernelResult sbsAddRecipientKernel(GlpRuntime rt, List<Object?> args) {
+  if (args.length != 3) {
+    print('[ABORT] sbs_add_recipient/3: expected 3 arguments, got ${args.length}');
+    return BodyKernelResult.abort;
+  }
+  final sbsArg = _deref(rt, args[0]);
+  if (sbsArg is! SbsTerm) {
+    print('[ABORT] sbs_add_recipient/3: first argument must be SbsTerm, got ${sbsArg.runtimeType}');
+    return BodyKernelResult.abort;
+  }
+  final nameArg = _deref(rt, args[1]);
+  final name = (nameArg is ConstTerm) ? nameArg.value! : nameArg!;
+  if (!sbsArg.recipients.contains(name)) {
+    sbsArg.recipients.add(name);
+  }
+  // SRSW: old SBS is dead after read, return the same (mutated) object
+  return _bindResult(rt, args[2], sbsArg);
+}
+
+/// sbs_write_update(SBS?, Value?, SBS1, RecipientList) — Write update to SBS.
+/// Appends Value to pending, increments counter, returns recipients as GLP list.
+/// If counter == |recipients|, rotates: checkpoint += pending, pending = [], counter = 0.
+BodyKernelResult sbsWriteUpdateKernel(GlpRuntime rt, List<Object?> args) {
+  if (args.length != 4) {
+    print('[ABORT] sbs_write_update/4: expected 4 arguments, got ${args.length}');
+    return BodyKernelResult.abort;
+  }
+  final sbsArg = _deref(rt, args[0]);
+  if (sbsArg is! SbsTerm) {
+    print('[ABORT] sbs_write_update/4: first argument must be SbsTerm, got ${sbsArg.runtimeType}');
+    return BodyKernelResult.abort;
+  }
+  final valArg = _deref(rt, args[1]);
+  final value = (valArg is Term) ? valArg : ConstTerm(valArg);
+
+  // Append to pending
+  sbsArg.pending.add(value);
+  sbsArg.updateCounter++;
+
+  // Check for rotation
+  if (sbsArg.recipients.isNotEmpty &&
+      sbsArg.updateCounter >= sbsArg.recipients.length) {
+    // Rotate: checkpoint = checkpoint + pending, pending = [], counter = 0
+    sbsArg.checkpoint.addAll(sbsArg.pending);
+    sbsArg.pending.clear();
+    sbsArg.updateCounter = 0;
+  }
+
+  // Build recipients as GLP list
+  final recipientTerms = sbsArg.recipients
+      .map<Object?>((r) => r is Term ? r : ConstTerm(r))
+      .toList();
+  final recipientList = _dartListToGlpList(recipientTerms);
+
+  // Bind SBS1 (output SBS — same object, mutated)
+  final bindSbs = _bindResult(rt, args[2], sbsArg);
+  if (bindSbs == BodyKernelResult.abort) return bindSbs;
+
+  // Bind RecipientList
+  return _bindResult(rt, args[3], recipientList);
+}
+
+/// sbs_get_checkpoint(SBS?, List) — Get current checkpoint as GLP list.
+BodyKernelResult sbsGetCheckpointKernel(GlpRuntime rt, List<Object?> args) {
+  if (args.length != 2) {
+    print('[ABORT] sbs_get_checkpoint/2: expected 2 arguments, got ${args.length}');
+    return BodyKernelResult.abort;
+  }
+  final sbsArg = _deref(rt, args[0]);
+  if (sbsArg is! SbsTerm) {
+    print('[ABORT] sbs_get_checkpoint/2: first argument must be SbsTerm, got ${sbsArg.runtimeType}');
+    return BodyKernelResult.abort;
+  }
+  final list = _dartListToGlpList(sbsArg.checkpoint.cast<Object?>());
+  return _bindResult(rt, args[1], list);
 }
 
 /// Format a ground term as readable GLP syntax.
