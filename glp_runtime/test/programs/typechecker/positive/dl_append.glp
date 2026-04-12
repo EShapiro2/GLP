@@ -2,8 +2,8 @@
 % expected: pass
 % description: Difference list append from paper (lines 228-232)
 
-% Uses predefined DiffList from stdlib (DiffList ::= Stream \ Stream?)
+% Uses predefined DiffList(X) from stdlib (DiffList(X) ::= Stream(X) \ Stream(X)?)
 
-procedure my_dl_append(DiffList?, DiffList?, DiffList).
+procedure my_dl_append(DiffList(_)?, DiffList(_)?, DiffList(_)).
 
 my_dl_append(A\B?, B\C?, A?\C).

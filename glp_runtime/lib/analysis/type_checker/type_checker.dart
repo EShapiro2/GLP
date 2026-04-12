@@ -10,6 +10,7 @@
 //    a clause C ∈ Cs that accepts it
 
 import 'type_ast.dart';
+import 'param_expansion.dart';
 import 'program_dfa.dart';
 import 'type_environment_builder.dart';
 import 'well_typed_clause.dart' as wtc;
@@ -621,12 +622,27 @@ class TypeChecker {
 ///
 /// This is the primary entry point for type checking.
 /// The module should be parsed using the main parser.
-/// 
+///
 /// If transformedProcedures is provided, uses those instead of module.procedures.
 /// This allows running partial evaluation (defined guard expansion) before type checking.
-TypeCheckResult checkModule(ast.Module module, {List<ast.Procedure>? transformedProcedures}) {
-  // Build type environment from module (includes prelude)
-  final typeEnv = buildTypeEnvironment(module);
+///
+/// If [ancestorScope] is provided, it is used as the base type environment
+/// (prelude + ancestor self.glp definitions) instead of just the prelude.
+/// See module_hierarchy.dart for how ancestor scopes are assembled.
+TypeCheckResult checkModule(ast.Module module, {List<ast.Procedure>? transformedProcedures, TypeEnvironment? ancestorScope}) {
+  // Build base environment first so we know all type names for expansion.
+  // This avoids mistaking prelude type names for type parameters.
+  final baseEnv = ancestorScope ?? buildPreludeEnvironment();
+
+  // Expand parameterized types to monomorphic equivalents before type checking.
+  // Pass prelude/ancestor templates so downstream modules can expand references
+  // to parameterized types defined in ancestor scopes.
+  final expandedModule = expandParameterizedTypes(module,
+      knownTypeNames: baseEnv.types.keys.toSet(),
+      externalTemplates: baseEnv.typeTemplates);
+
+  // Build type environment from expanded module (reuses baseEnv)
+  final typeEnv = buildTypeEnvironment(expandedModule, ancestorScope: baseEnv);
 
   // Extract clauses - from transformed procedures if provided, otherwise from module
   final clauses = <ast.Clause>[];

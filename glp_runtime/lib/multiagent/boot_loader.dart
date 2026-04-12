@@ -8,20 +8,37 @@
 /// A single spawn directive extracted from the boot clause.
 ///
 /// Represents `goalFunctor(agentId, ...)@agentId`
+///
+/// For `parent_init(alice, carol, 4, _)@alice`:
+///   agentId = 'alice', goalFunctor = 'parent_init', goalArity = 4,
+///   constantArgs = ['carol', '4']
+///
+/// The isolate entry point always passes: arg0 = agentId (constant),
+/// args 1..n-2 = constantArgs, arg n-1 = netInReader.
 class SpawnDirective {
   /// The agent identifier (e.g., 'alice', 'bob')
   final String agentId;
 
-  /// The goal functor to spawn (e.g., 'agent_init', 'alice_agent')
+  /// The goal functor to spawn (e.g., 'agent_init', 'parent_init')
   final String goalFunctor;
+
+  /// The arity of the goal (e.g., 2 for agent_init/2, 4 for parent_init/4)
+  final int goalArity;
+
+  /// Constant arguments between agentId and the final netIn variable.
+  /// For `parent_init(alice, carol, 4, _)@alice`: ['carol', '4']
+  /// For `agent_init(alice, _)@alice`: [] (empty)
+  final List<String> constantArgs;
 
   SpawnDirective({
     required this.agentId,
     required this.goalFunctor,
+    required this.goalArity,
+    this.constantArgs = const [],
   });
 
   @override
-  String toString() => 'SpawnDirective($goalFunctor($agentId, ...)@$agentId)';
+  String toString() => 'SpawnDirective($goalFunctor/$goalArity($agentId, ...)@$agentId)';
 }
 
 /// Configuration extracted from a GLP boot file.
@@ -41,15 +58,21 @@ class BootConfig {
   /// Each entry is loaded separately to preserve per-file -mode() directives.
   List<String>? sharedSources;
 
-  /// Path to stdlib directory (repo-relative, e.g., '../programs/stdlib')
-  String stdlibDir;
+  /// Optional project directory for static linking.
+  /// When set, each isolate loads the project via loadProject() instead of
+  /// loading individual shared sources. The boot source is loaded on top.
+  String? projectDir;
+
+  /// Absolute path to programs/self.glp
+  String rootSelfGlpPath;
 
   BootConfig({
     required this.directives,
     required this.fullSource,
     required this.source,
     this.sharedSources,
-    this.stdlibDir = '../programs/stdlib',
+    this.projectDir,
+    this.rootSelfGlpPath = '',
   });
 }
 
@@ -190,22 +213,14 @@ class BootLoader {
       if (functorMatch == null) continue;
       final functor = functorMatch.group(1)!;
 
-      // Extract first argument (agent ID) from inside the parentheses
+      // Extract all arguments from inside the parentheses, splitting at depth-0 commas.
       final argsStr = beforeAt.substring(parenStart + 1, beforeAt.length - 1);
-      // First arg is everything up to the first comma at depth 0
-      var argDepth = 0;
-      var firstArgEnd = argsStr.length;
-      for (var i = 0; i < argsStr.length; i++) {
-        if (argsStr[i] == '(' || argsStr[i] == '[') argDepth++;
-        if (argsStr[i] == ')' || argsStr[i] == ']') argDepth--;
-        if (argsStr[i] == ',' && argDepth == 0) {
-          firstArgEnd = i;
-          break;
-        }
-      }
-      final goalAgentId = argsStr.substring(0, firstArgEnd).trim();
+      final allArgs = _splitArgs(argsStr);
 
-      // Agent ID must be a simple atom (word characters only)
+      if (allArgs.isEmpty) continue;
+
+      // First arg is the agent ID (must be a simple atom)
+      final goalAgentId = allArgs[0].trim();
       if (!RegExp(r'^\w+$').hasMatch(goalAgentId)) {
         throw BootLoaderException(
             'First argument of spawn goal must be an agent ID (atom), '
@@ -219,13 +234,40 @@ class BootLoader {
             'They must match.');
       }
 
+      // Middle args (between agentId and last arg which is netIn) are constants.
+      // For parent_init(alice, carol, 4, _)@alice: constantArgs = ['carol', '4']
+      // For agent_init(alice, _)@alice: constantArgs = []
+      final constantArgs = <String>[];
+      for (var i = 1; i < allArgs.length - 1; i++) {
+        constantArgs.add(allArgs[i].trim());
+      }
+
       directives.add(SpawnDirective(
         agentId: goalAgentId,
         goalFunctor: functor,
+        goalArity: allArgs.length,
+        constantArgs: constantArgs,
       ));
     }
 
     return directives;
+  }
+
+  /// Split argument string at depth-0 commas, respecting nested parens/brackets.
+  List<String> _splitArgs(String argsStr) {
+    final args = <String>[];
+    var depth = 0;
+    var start = 0;
+    for (var i = 0; i < argsStr.length; i++) {
+      if (argsStr[i] == '(' || argsStr[i] == '[') depth++;
+      if (argsStr[i] == ')' || argsStr[i] == ']') depth--;
+      if (argsStr[i] == ',' && depth == 0) {
+        args.add(argsStr.substring(start, i));
+        start = i + 1;
+      }
+    }
+    args.add(argsStr.substring(start));
+    return args;
   }
 
   /// Strip the boot clause and procedure declaration from source.

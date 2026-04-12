@@ -1,0 +1,142 @@
+%% sovereign.glp — Sovereign stream and custodian acknowledgment
+%%
+%% The sovereign of currency p maintains an append-only stream of
+%% transaction blocks.  State custodians read this stream and produce
+%% acknowledgment streams.  A transaction is final when the sovereign
+%% observes a custodian's acknowledgment.
+%%
+%% Minimal implementation: all parties are friends (direct channels).
+%% Extension to diameter-2 (via common friend) is future work.
+
+-mode(system).
+
+%% =============================================================================
+%% TYPE DEFINITIONS
+%% =============================================================================
+
+Bond     ::= bond(Constant, Constant, Constant).
+BondList ::= [] ; [Bond | BondList].
+
+%% Transaction records in the sovereign's log
+TxRecord ::= tx_mint(Constant, Constant)                    %% tx_mint(K, Maturity)
+            ; tx_pay(Constant, Constant, BondList)           %% tx_pay(From, To, Coins)
+            ; tx_redeem(Constant, Constant, Bond, Bond)      %% tx_redeem(Redeemer, Sovereign, CoinIn, BondOut)
+            ; tx_swap(Constant, Constant, BondList, BondList). %% tx_swap(P, Q, X, Y)
+
+%% A block in the sovereign's stream
+SovBlock  ::= block(Constant, TxRecord).   %% block(TxId, Record)
+SovStream ::= [] ; [SovBlock | SovStream].
+
+%% Custodian acknowledgment
+AckMsg    ::= ack(Constant).               %% ack(TxId)
+AckStream ::= [] ; [AckMsg | AckStream].
+
+%% Approval request from bond agent to sovereign process
+ApprovalReq    ::= approve(TxRecord, Constant?).  %% approve(Record, FinalityVar)
+ApprovalStream ::= [] ; [ApprovalReq | ApprovalStream].
+
+%% =============================================================================
+%% CUSTODIAN MIRROR
+%% =============================================================================
+%%
+%% A custodian reads the sovereign's stream and acknowledges each block
+%% by writing ack(TxId) to its own stream.  This is the custodian's
+%% copy of the sovereign's log — if the sovereign suffers a major fault,
+%% the custodian's ack stream (together with the sovereign blocks it
+%% has observed) constitutes the recoverable log.
+
+procedure custodian_mirror(SovStream?, AckStream).
+
+custodian_mirror([block(TxId, _)|SovRest], [ack(TxId?)|AckRest?]) :-
+    custodian_mirror(SovRest?, AckRest).
+
+custodian_mirror([], []).
+
+%% =============================================================================
+%% SOVEREIGN PROCESS
+%% =============================================================================
+%%
+%% Reads approval requests, writes blocks to the sovereign stream,
+%% and waits for acknowledgment from a custodian before declaring
+%% the transaction final (binding the FinalityVar to 'finalized').
+%%
+%% The sovereign stream is the append-only log of all transactions
+%% in this currency.  It is the source of truth for who holds what.
+
+procedure sovereign(ApprovalStream?, AckStream?, Constant?, SovStream).
+
+sovereign([approve(TxRecord, Finality?)|Requests], Acks, Counter,
+    [block(Counter?, TxRecord?)|SovTail?]) :-
+    Counter1 := Counter? + 1,
+    wait_ack(Counter?, Acks?, Finality, AcksRest),
+    sovereign(Requests?, AcksRest?, Counter1?, SovTail).
+
+sovereign([], _, _, []).
+
+%% =============================================================================
+%% WAIT_ACK
+%% =============================================================================
+%%
+%% Reads the custodian ack stream until ack(TxId) is found.
+%% Binds FinalityVar to 'finalized' and returns the remaining stream.
+%% Non-matching acks (from multi-custodian setups or out-of-order
+%% delivery) are passed through to the remaining stream.
+
+procedure wait_ack(Constant?, AckStream?, Constant, AckStream).
+
+wait_ack(TxId, [ack(Id)|Rest], finalized, Rest?) :-
+    TxId? =?= Id? | true.
+
+wait_ack(TxId, [Ack|Rest], Finality?, [Ack?|Rest1?]) :-
+    otherwise |
+    wait_ack(TxId?, Rest?, Finality, Rest1).
+
+%% =============================================================================
+%% SETUP_SOVEREIGN
+%% =============================================================================
+%%
+%% Creates a sovereign stream with one custodian.
+%%
+%% Returns:
+%%   - ApprovalChannel: the bond agent sends approval requests here
+%%   - SovStreamReader: the sovereign's log (reader side)
+%%
+%% The custodian_mirror process runs concurrently, reading the
+%% sovereign stream and producing acks.
+
+procedure setup_sovereign(ApprovalStream?, SovStream).
+
+setup_sovereign(Requests, SovStreamOut?) :-
+    custodian_mirror(SovStreamOut?, AckStream),
+    sovereign(Requests?, AckStream?, 1, SovStreamOut).
+
+%% =============================================================================
+%% SETUP_SOVEREIGN_MULTI
+%% =============================================================================
+%%
+%% Creates a sovereign stream with multiple custodians.
+%% Each custodian gets a reader of the sovereign stream.
+%% Their ack streams are merged into one for the sovereign to read.
+%%
+%% CustodianCount: number of custodians (each gets a copy of SovStream)
+
+procedure setup_sovereign_multi(ApprovalStream?, Constant?, SovStream).
+
+setup_sovereign_multi(Requests, 1, SovStreamOut?) :-
+    custodian_mirror(SovStreamOut?, AckStream),
+    sovereign(Requests?, AckStream?, 1, SovStreamOut).
+
+%% For multiple custodians, spawn mirrors and merge their ack streams.
+%% (Simplified: using 2 custodians as example; generalise with a list.)
+
+%% setup_sovereign_multi(Requests, 2, SovStreamOut?) :-
+%%     custodian_mirror(SovStreamOut?, AckStream1),
+%%     custodian_mirror(SovStreamOut?, AckStream2),
+%%     merge_acks(AckStream1?, AckStream2?, MergedAcks),
+%%     sovereign(Requests?, MergedAcks?, 1, SovStreamOut).
+
+%% procedure merge_acks(AckStream?, AckStream?, AckStream).
+%% merge_acks([X|Xs], Ys, [X?|Zs?]) :- merge_acks(Ys?, Xs?, Zs).
+%% merge_acks(Xs, [Y|Ys], [Y?|Zs?]) :- merge_acks(Xs?, Ys?, Zs).
+%% merge_acks([], Ys, Ys?).
+%% merge_acks(Xs, [], Xs?).

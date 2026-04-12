@@ -35,12 +35,12 @@ boot :-
 %% =============================================================================
 
 %% Alice: sends ping with fresh response variable, waits for response
-procedure cc_alice(_?, Channel?, Channel?).
+procedure cc_alice(_?, Channel(X, Y)?, Channel(X, Y)?).
 cc_alice(_, _, ch(_, [msg(bob, ping(Resp))|Tail?])) :-
     wait_resp(Resp?, Tail).
 
 %% Alice waits for Resp? to be bound to pong
-procedure wait_resp(_?, Stream).
+procedure wait_resp(_?, Stream(X)).
 wait_resp(pong, []).
 
 %% =============================================================================
@@ -48,11 +48,11 @@ wait_resp(pong, []).
 %% =============================================================================
 
 %% Bob: waits for ping, binds response variable to pong via head unification
-procedure cc_bob(_?, Channel?, Channel?).
+procedure cc_bob(_?, Channel(X, Y)?, Channel(X, Y)?).
 cc_bob(_, _, ch(NetIn, NetOut?)) :-
     wait_ping(NetIn?, NetOut).
 
-procedure wait_ping(Stream?, Stream).
+procedure wait_ping(Stream(X)?, Stream(X)).
 %% Received ping - bind response to pong via head pattern match
 wait_ping([msg(_, ping(pong))|_], []).
 %% Skip non-ping messages

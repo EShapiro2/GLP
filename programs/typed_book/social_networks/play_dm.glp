@@ -10,20 +10,19 @@
 %% 4. Both exchange messages on the DM channel
 
 %% Type definitions
-Channel ::= ch(Stream?, Stream).
 DMReq ::= dm_request(_).
 ReqList ::= [] ; [DMReq | ReqList].
 Result ::= result(_, _).
 
 %% === Channel primitives ===
 
-procedure new_channel(Channel, Channel).
+procedure new_channel(Channel(X, Y), Channel(X, Y)).
 new_channel(ch(Xs?, Ys), ch(Ys?, Xs)).
 
-procedure dm_send(_?, Channel?, Channel).
+procedure dm_send(_?, Channel(X, Y)?, Channel(X, Y)).
 dm_send(Msg, ch(In, [Msg?|Out?]), ch(In?, Out)).
 
-procedure dm_receive(_, Channel?, Channel).
+procedure dm_receive(_, Channel(X, Y)?, Channel(X, Y)).
 dm_receive(Msg?, ch([Msg|In], Out?), ch(In?, Out)).
 
 %% === DM Protocol ===
@@ -34,11 +33,11 @@ bind_resp(Ch?, Ch).
 %% === Alice's process ===
 %% Sends DM request, waits for channel, sends message, receives reply
 
-procedure alice(ReqList?, Stream?, Result).
+procedure alice(ReqList?, Stream(X)?, Result).
 alice([dm_request(Resp)|_], FriendIn?, AliceResult?) :-
     alice_continue(Resp?, FriendIn, AliceResult).
 
-procedure alice_continue(Channel?, Stream?, Result).
+procedure alice_continue(Channel(X, Y)?, Stream(X)?, Result).
 alice_continue(DMCh, _, result(sent, Reply?)) :-
     known(DMCh?) |
     dm_send(hello_bob, DMCh?, DMCh1),
@@ -47,13 +46,13 @@ alice_continue(DMCh, _, result(sent, Reply?)) :-
 %% === Bob's process ===
 %% Receives DM request, creates channel, responds, receives message, replies
 
-procedure bob(ReqList?, Stream?, Result).
+procedure bob(ReqList?, Stream(X)?, Result).
 bob([dm_request(Resp)|_], _, BobResult?) :-
     new_channel(BobDM, AliceDM),
     bind_resp(Resp?, AliceDM?),
     bob_continue(BobDM?, BobResult).
 
-procedure bob_continue(Channel?, Result).
+procedure bob_continue(Channel(X, Y)?, Result).
 bob_continue(DMCh, result(Msg?, replied)) :-
     dm_receive(Msg, DMCh?, DMCh1),
     dm_send(hello_alice, DMCh1?, _).

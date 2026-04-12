@@ -4,13 +4,12 @@
 %% conversation channel, separate from the control channel.
 
 %% Type definitions
-Stream ::= [] ; [_ | Stream].
 
 %% Request DM channel from friend
 %% FriendOut: current state of friend's output stream
 %% FriendOut1: new state with dm_request prepended
 %% Resp: response variable to receive DM channel
-procedure request_dm(Stream, _, _).
+procedure request_dm(Stream(X), _, _).
 request_dm([dm_request(Resp?)|FriendOut?], FriendOut, Resp).
 
 %% Process incoming DM request - create channel and respond

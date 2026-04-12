@@ -56,6 +56,7 @@ void main() {
 
       final loader = BootLoader();
       final config = loader.load(source);
+      config.rootSelfGlpPath = File('../programs/self.glp').absolute.path;
 
       final traceConfig = TraceConfig(
         glp: traceGlp,

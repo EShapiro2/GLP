@@ -1,6 +1,6 @@
 # GLP Guards Quick Reference
 
-**Last Updated**: 2026-02-08
+**Last Updated**: 2026-03-06
 
 ---
 
@@ -55,6 +55,7 @@ These guards can be negated with `~`:
 | `constant(X?)` | Test for constant | `~constant(X?)` succeeds if X is not a constant |
 | `compound(X?)` | Test for compound term | `~compound(X?)` succeeds if X is not compound |
 | `list(X?)` | Test for list type | `~list(X?)` succeeds if X is not a list |
+| `module(X?)` | Test for module term | `~module(X?)` succeeds if X is not a module |
 | `is_mutual_ref(X?)` | Test for mutual reference | `~is_mutual_ref(X?)` succeeds if X is not a mutual ref |
 | `no_readers(X?)` | Test for no readers in term | `~no_readers(X?)` succeeds if X contains readers |
 | `X =?= Y` | Ground equality test | `~(X =?= Y)` succeeds if X and Y are not equal |
@@ -197,8 +198,7 @@ replicate(X, [X?, X?, X?]) :- ground(X?) | true.
 ```prolog
 % Metainterpreter catch-all
 run(Goal) :- clause(Goal?, Body) | run(Body?).
-run(Goal) :- otherwise | execute('write', ['No clauses for: ']),
-                         execute('write', [Goal?]).
+run(Goal) :- otherwise | send_to_user(no_clauses(Goal?)).
 ```
 
 **Usage**: Common in metainterpreters and default case handling.
@@ -292,6 +292,7 @@ This is distinct from the multiple-occurrence relaxation below. Guard reader cou
 | ✅ `integer(X?)` | Yes | ✅ Yes |
 | ✅ `number(X?)` | Yes | ✅ Yes |
 | ✅ `string(X?)` | Yes | ✅ Yes |
+| ✅ `module(X?)` | Yes | ✅ Yes |
 | ✅ `X? < Y?` | Yes (both operands, when succeeds) | ✅ Yes |
 | ✅ `X? =< Y?` | Yes (both operands, when succeeds) | ✅ Yes |
 | ✅ `X? > Y?` | Yes (both operands, when succeeds) | ✅ Yes |
@@ -442,6 +443,20 @@ safe_divide(X, Y, Z) :- integer(X?), integer(Y?), Y? =\= 0 |
 handle(X, Y) :- list(X?) | process_list(X?, Y).
 handle(X, Y) :- otherwise | process_other(X?, Y).
 ```
+
+---
+
+### ✅ `module(X?)`
+**Test if X is a module term**
+
+**Semantics**:
+- Success: X? bound to a `ModuleTerm` (compiled module binary)
+- Suspend: X? is unbound reader
+- Fail: X? bound to any other value
+
+**SRSW Relaxation**: Yes. Module terms are ground (opaque compiled values with no unbound variables), so `module(X?)` implies groundness and permits multiple occurrences.
+
+**Use Case**: Guards in module-based code that need to verify a term is a module before dispatching goals to it via `_activate/2`.
 
 ---
 
@@ -630,7 +645,7 @@ factorial(N, 1) :- integer(N?), N? =< 0 | true.
 | **Syntax** | `Head :- Guard \| Body` | `execute('name', [Args])` |
 | **Phase** | HEAD/GUARDS (before commit) | BODY (after commit) |
 | **Side Effects** | Never | May have (I/O, mutations) |
-| **Examples** | `known(X?)`, `ground(X?)`, `number(X?)` | `evaluate/2`, `write/1`, `file_read/2` |
+| **Examples** | `known(X?)`, `ground(X?)`, `number(X?)` | `evaluate/2`, `file_read/2` |
 
 ---
 
@@ -723,12 +738,12 @@ broadcast(Msg, [Msg?, Msg?, Msg?]) :- ground(Msg?) | true.
 test_known_success :-
   X = 42,
   known(X) |  % Should succeed
-  execute('write', ['known(42) succeeded']).
+  send_to_user(known_42_succeeded).
 
 % Test suspension (requires runtime trace)
 test_known_suspend :-
   known(X) |  % Should suspend on unbound X
-  execute('write', ['Should not reach here']).
+  send_to_user(should_not_reach_here).
 
 % Test failure (writer case)
 test_known_fail :-
@@ -744,32 +759,6 @@ test_known_fail :-
 - **glp-bytecode-v216-complete.md** - Complete guard instruction specifications
 - **parser-spec.md** - Parser implementation for guard expressions
 - **main_GLP_to_Dart (1).tex** - Formal specification
-
----
-
-## Equator Guard
-
-### `equator(X?)`
-**Test if X is an equator structure**
-
-**Semantics**:
-- Success: X is bound to `'_equator'(E, C)` where C is a constant
-- Suspend: X is unbound reader
-- Fail: X is any other value
-
-**SRSW Relaxation**: Like `ground(X?)`, the `equator(X?)` guard permits multiple occurrences of both `X` and `X?` in the clause. See "Ground Guards - SRSW Relaxation" above.
-
-**Example**:
-```prolog
-% Meta-interpreter with emergency brake
-run(M, (A,B), Commands, Eq) :-
-    equator(Eq?) |
-    distribute(Commands?, Commands1, Commands2),
-    run(M?, A?, Commands1?, Eq?),  % Eq? appears twice - OK with equator guard
-    run(M?, B?, Commands2?, Eq?).
-```
-
-**See also**: `docs/equators-spec.md` for full specification.
 
 ---
 
@@ -809,21 +798,21 @@ delayed_action(Result?) :- wait(100) | Result = done.
 ---
 
 ### ✅ `wait_until(Timestamp)`
-**Test if absolute time has passed**
+**Suspend until absolute time has passed**
 
 **Semantics**:
 - Success: current time (milliseconds since epoch) ≥ Timestamp
-- Fail: current time < Timestamp
+- Suspend: current time < Timestamp — starts a timer for the remaining duration, suspends until the timer fires, then succeeds
 - Timestamp is non-number: fail
 - Timestamp is unbound reader: suspend (handled by caller)
 
-**Note**: Unlike `wait`, this guard does NOT suspend when the time has not passed — it fails. The caller must arrange for the goal to be retried later if needed.
+**Mechanism**: Like `wait`, uses a reader/writer pair and a Dart timer. Computes `remaining = timestamp - now`, starts a timer for that duration, and suspends the goal on the reader. When the timer fires, the writer is bound, reactivating the goal via the ROQ. On resume, the guard re-checks `now >= timestamp` and succeeds.
 
 **Non-Negatable**: Time-based control flow guard.
 
 **Example**:
 ```prolog
-% Proceed only after a given timestamp
+% Suspend until a given timestamp, then proceed
 after_deadline(T, Result?) :- wait_until(T?) | Result = done.
 ```
 

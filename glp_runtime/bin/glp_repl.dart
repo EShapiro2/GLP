@@ -24,11 +24,15 @@ void main() async {
   print('Working directory: ${Directory.current.path}');
   print('');
   print('Input: filename.glp to load, or goal to execute');
-  print('Commands: :quit, :help, :trace, :debug, :limit');
+  print('Commands: :quit, :help, :trace, :debug, :limit, :activate');
   print('');
 
-  final engine = GlpEngine(stdlibDir: '../programs/stdlib');
-  print('Loaded stdlib');
+  // Resolve programs/self.glp relative to this script's location.
+  // Platform.script points to glp_runtime/bin/glp_repl.dart.
+  // Two levels up (../../) reaches the GLP repo root; then programs/self.glp.
+  final rootSelfGlpPath = Platform.script.resolve('../../programs/self.glp').toFilePath();
+  final engine = GlpEngine(rootSelfGlpPath: rootSelfGlpPath);
+  print('Loaded root self.glp');
   print('');
 
   while (true) {
@@ -79,7 +83,7 @@ void main() async {
 
     if (trimmed == ':clear' || trimmed == ':c') {
       engine.clear();
-      print('Cleared loaded programs (stdlib retained)');
+      print('Cleared loaded programs (root self.glp retained)');
       continue;
     }
 
@@ -99,6 +103,22 @@ void main() async {
       continue;
     }
 
+    if (trimmed.startsWith(':activate')) {
+      final parts = trimmed.split(RegExp(r'\s+'));
+      if (parts.length != 2) {
+        print('Usage: :activate <module_name>');
+        continue;
+      }
+      final moduleName = parts[1];
+      try {
+        engine.activateDynamicModule(moduleName);
+        print('Activated module: $moduleName');
+      } catch (e) {
+        print('Error activating $moduleName: $e');
+      }
+      continue;
+    }
+
     if (trimmed.startsWith(':bytecode') || trimmed.startsWith(':bc')) {
       if (engine.loadedPrograms.isEmpty) {
         print('No programs loaded');
@@ -113,6 +133,24 @@ void main() async {
         }
       }
       continue;
+    }
+
+    // Check if input is a project directory to load.
+    // Supports: <dir> or <dir> <top_module>
+    {
+      final parts = trimmed.split(' ');
+      final dirCandidate = parts[0];
+      if (!dirCandidate.endsWith('.glp') &&
+          Directory(dirCandidate).existsSync()) {
+        final topModule = parts.length > 1 ? parts[1] : null;
+        try {
+          engine.loadProject(dirCandidate, topModuleName: topModule);
+          print('✓ Loaded project: $dirCandidate');
+        } catch (e) {
+          print('Error loading project $dirCandidate: $e');
+        }
+        continue;
+      }
     }
 
     // Check if input is a .glp file to load
@@ -207,6 +245,7 @@ void _printHelp() {
   print('  :debug, :d             Toggle DEBUG output');
   print('  :strict, :s            Toggle strict type checking (default: on)');
   print('  :limit <n>             Set goal reduction limit to <n>');
+  print('  :activate <module>     Activate module for dynamic dispatch');
   print('  :bytecode, :bc         Show loaded bytecode');
   print('');
   print('Type Checking:');

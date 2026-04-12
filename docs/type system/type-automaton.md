@@ -2,6 +2,10 @@
 
 **Paper Reference**: Definitions 5.11, 5.12, 5.13; Appendix B.6
 
+## Parameterized Types
+
+Parameterized types are expanded to monomorphic types before automaton construction (see typed-program.md, Section "Parameterized Types"). The automaton is built only from the expanded monomorphic definitions. No changes to automaton construction, well-typing, or subtyping are needed.
+
 ## Definition 5.11 (Type Automaton)
 
 > Given a typed GLP program P = (Cs, D), the type automaton A_D = (Q, Σ, δ, q₀, F) is defined as follows:

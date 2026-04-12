@@ -9,13 +9,25 @@ import 'abandon.dart';
 import 'fairness.dart';
 import 'system_predicates.dart';
 import 'body_kernels.dart';
-import 'package:glp_runtime/bytecode/runner.dart' show CallEnv;
+import 'package:glp_runtime/bytecode/runner.dart' show CallEnv, BytecodeRunner;
+import 'package:glp_runtime/runtime/glp_activation.dart' show GlpChannelHandle;
 
 class GlpRuntime {
   final HeapFCP heap;
   final GoalQueue gq;
   final SystemPredicateRegistry systemPredicates;
   final BodyKernelRegistry bodyKernels;
+
+  /// Shared runners map: program key → BytecodeRunner.
+  /// Used by the Scheduler to find the runner for a goal's program.
+  /// Body kernels (e.g., _activate) can register new runners here.
+  final Map<Object?, BytecodeRunner> runners = {};
+
+  /// GLP channel handles: module name → GlpChannelHandle.
+  /// Registered by activateModule() (Phase 4). Used by the runner's
+  /// Distribute/Transmit opcodes to route RPCs via GLP channels
+  /// instead of Dart-level dispatch.
+  final Map<String, GlpChannelHandle> glpChannels = {};
 
   final Map<GoalId, int> _budgets = <GoalId, int>{};
   final Map<GoalId, CallEnv> _goalEnvs = <GoalId, CallEnv>{};
@@ -48,6 +60,10 @@ class GlpRuntime {
   // Maps reader varId -> Set<GoalRef> of goals blocked on that reader
   // Updated by suspendGoalFCP, cleared when goals reactivate
   final Map<int, Set<GoalRef>> suspended = <int, Set<GoalRef>>{};
+
+  // Infrastructure goal IDs (spec §3.4): serve goals spawned by auto-activation.
+  // Their suspension does not affect user goal status determination.
+  final Set<int> infrastructureGoalIds = {};
 
   // madGLP context (set when running in multiagent mode)
   // Used by '_cold_send' kernel to access globalization infrastructure

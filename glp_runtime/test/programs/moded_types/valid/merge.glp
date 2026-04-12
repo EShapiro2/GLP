@@ -1,7 +1,7 @@
 %% Well-moded merge procedure
-%% Uses predefined Stream type from prelude
+%% Uses predefined Stream(X) type from prelude
 
-procedure merge(Stream?, Stream?, Stream).
+procedure merge(Stream(_)?, Stream(_)?, Stream(_)).
 
 merge([], Ys, Ys?).
 merge([X|Xs], Ys, [X?|Zs?]) :- merge(Xs?, Ys?, Zs).

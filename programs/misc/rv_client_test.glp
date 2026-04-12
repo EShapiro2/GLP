@@ -1,0 +1,109 @@
+%% rv_client_test.glp — integration test for rv_client + rv_agent
+%%
+%% Demonstrates the full end-to-end rendezvous scenario: alice's IP
+%% changes, bob detects it, both sides contact the RV agent, the RV
+%% agent matches them, and both sides receive their replies.
+%%
+%% Load rv_agent.glp, rv_client.glp, then this file.
+
+%% Local type redeclarations (structural identity allows sharing)
+SignalReply ::= punch(Constant) ; initiated ; rejected.
+
+SignalMsg ::= reconnect(Constant, Constant, Constant, SignalReply?)
+            ; available(Constant, Constant, SignalReply?).
+
+PendingEntry ::= needs(Constant, Constant, Constant, SignalReply?)
+               ; ready(Constant, Constant, SignalReply?).
+PendingList ::= [] ; [PendingEntry | PendingList].
+
+imported procedure rv_client#make_reconnect(Constant?, Constant?, Constant?,
+                                             SignalMsg, SignalReply).
+imported procedure rv_client#make_available(Constant?, Constant?,
+                                             SignalMsg, SignalReply).
+imported procedure rv_client#handle_reply(SignalReply?).
+imported procedure rv_agent#rv_agent(Stream(SignalMsg)?, PendingList?).
+
+%% =============================================================================
+%% Test 1: make_reconnect produces the expected message shape
+%% =============================================================================
+
+procedure test1_make_reconnect(SignalMsg, SignalReply).
+test1_make_reconnect(Msg?, Reply?) :-
+    rv_client # make_reconnect(alice, bob, proof, Msg, Reply).
+
+%% Expected: Msg = reconnect(alice, bob, proof, <unbound>)
+%%           Reply = <unbound>
+
+%% =============================================================================
+%% Test 2: make_available produces the expected message shape
+%% =============================================================================
+
+procedure test2_make_available(SignalMsg, SignalReply).
+test2_make_available(Msg?, Reply?) :-
+    rv_client # make_available(bob, alice, Msg, Reply).
+
+%% Expected: Msg = available(bob, alice, <unbound>)
+%%           Reply = <unbound>
+
+%% =============================================================================
+%% Test 3: full scenario — A first, B second
+%% =============================================================================
+%%
+%% Alice's IP changed.  Alice sends reconnect; bob (having detected the
+%% disconnect) sends available.  The RV agent reads alice's address from
+%% the networking layer via peer_address (stub returns stub_addr_alice),
+%% matches the requests, and binds both replies.
+%%
+%% Expected: ReplyA = initiated, ReplyB = punch(stub_addr_alice)
+
+procedure test3_full_scenario_a_first(SignalReply, SignalReply).
+test3_full_scenario_a_first(ReplyA?, ReplyB?) :-
+    rv_client # make_reconnect(alice, bob, proof, MsgA, ReplyA),
+    rv_client # make_available(bob, alice, MsgB, ReplyB),
+    rv_agent # rv_agent([MsgA?, MsgB?], []).
+
+%% =============================================================================
+%% Test 4: full scenario — B first, A second
+%% =============================================================================
+%%
+%% Bob detects the disconnect and contacts the RV agent before alice
+%% has cold-called.  When alice later sends reconnect, the RV agent
+%% matches bob's waiting available entry.
+%%
+%% Expected: ReplyA = initiated, ReplyB = punch(stub_addr_alice)
+
+procedure test4_full_scenario_b_first(SignalReply, SignalReply).
+test4_full_scenario_b_first(ReplyA?, ReplyB?) :-
+    rv_client # make_reconnect(alice, bob, proof, MsgA, ReplyA),
+    rv_client # make_available(bob, alice, MsgB, ReplyB),
+    rv_agent # rv_agent([MsgB?, MsgA?], []).
+
+%% =============================================================================
+%% Test 5: full scenario with handle_reply dispatch
+%% =============================================================================
+%%
+%% Runs the full scenario and then calls handle_reply on both replies.
+%% This exercises the dispatch: handle_reply(punch(addr)) should call
+%% punch_udp(addr) (stub succeeds silently).
+
+procedure test5_full_scenario_with_handlers.
+test5_full_scenario_with_handlers :-
+    rv_client # make_reconnect(alice, bob, proof, MsgA, ReplyA),
+    rv_client # make_available(bob, alice, MsgB, ReplyB),
+    rv_agent # rv_agent([MsgA?, MsgB?], []),
+    rv_client # handle_reply(ReplyA?),
+    rv_client # handle_reply(ReplyB?).
+
+%% =============================================================================
+%% Test 6: rejected proof — reply is rejected
+%% =============================================================================
+%%
+%% Alice sends reconnect with bad_proof.  The RV agent rejects via
+%% handle_verify.  Expected: ReplyA = rejected, ReplyB still unbound
+%% (no match happens because the needs entry was never stored).
+
+procedure test6_bad_proof(SignalReply, SignalReply).
+test6_bad_proof(ReplyA?, ReplyB?) :-
+    rv_client # make_reconnect(alice, bob, bad_proof, MsgA, ReplyA),
+    rv_client # make_available(bob, alice, MsgB, ReplyB),
+    rv_agent # rv_agent([MsgA?, MsgB?], []).

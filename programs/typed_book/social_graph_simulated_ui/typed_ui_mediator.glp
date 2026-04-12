@@ -19,9 +19,16 @@
 %% TYPE DEFINITIONS
 %% =============================================================================
 
-Response ::= accept(Channel) ; no.
 Decision ::= yes ; no.
 ReqId    ::= req(Constant).
+
+%% Friend channel types
+FriendContent ::= response(Response) ; text(Constant) ; intro(Constant, FriendChannel).
+FriendMsg ::= msg(Constant, Constant, FriendContent).
+FriendStream ::= [] ; [FriendMsg | FriendStream].
+FriendChannel ::= ch(FriendStream, FriendStream?).
+
+Response ::= accept(FriendChannel) ; no.
 
 %% --- User channel messages (all ground, mediator-specific) ---
 
@@ -42,7 +49,7 @@ UserNotify  ::= befriend(Constant, ReqId)
               ; received(Constant, Constant).
 
 %% --- Pending entries ---
-PendingValue ::= response(Response?) ; channel(Channel?) ; error.
+PendingValue ::= response(Response?) ; channel(FriendChannel?) ; error.
 PendingEntry ::= pending(ReqId, PendingValue).
 PendingList  ::= [] ; [PendingEntry | PendingList].
 
@@ -50,7 +57,7 @@ PendingList  ::= [] ; [PendingEntry | PendingList].
 %% UI MEDIATOR - Main loop
 %% =============================================================================
 
-procedure ui_mediator(Constant?, Channel?, Channel?, PendingList?, Constant?).
+procedure ui_mediator(Constant?, Channel(X, Y)?, Channel(X, Y)?, PendingList?, Constant?).
 
 %% --- Agent-to-user: non-ground (replace variable with req ID) ---
 

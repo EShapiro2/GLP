@@ -1,0 +1,156 @@
+%% mad_fplay13.glp — madGLP boot for fplay13 (6 isolates: alice, bob, frank, carol, dave, eve)
+%%
+%% Derived from: cssn_modules_v2/boot.glp fplay13 clause
+%% Village scenario: 3 adults, 3 children, narrative streams
+%% One isolate per agent — parent-child streams cross isolate boundaries.
+
+-mode(system).
+
+procedure boot.
+boot :-
+    alice_init(alice, carol, _)@alice,
+    bob_init(bob, dave, eve, _)@bob,
+    frank_init(frank, _)@frank,
+    carol_init(carol, alice, _)@carol,
+    dave_init(dave, bob, _)@dave,
+    eve_init(eve, bob, _)@eve.
+
+%% Alice isolate: alice (parent of carol) — village actor with narrative
+procedure alice_init(Constant?, Constant?, Stream(_)?).
+alice_init(Id, ChildId, NetIn) :-
+    ground(Id?), ground(ChildId?) |
+    alice13(Id?, ch(ActorIn?, ActorOut), Narr),
+    send_to_user_narrate(Id?, Narr?),
+    tee(ActorOut?, MedIn, DispCmd),
+    agent(Id?, AgentIn?, NetIn?,
+          [output('_user', AgentToUser),
+           output('_net', NetOut),
+           output(child(ChildId?), ChildOut)]),
+    send_to_net(NetOut?),
+    send_to_remote(ChildId?, ChildOut?),
+    ui_mediator(Id?, ch(AgentToUser?, AgentIn),
+                ch(MedIn?, MedOut), [], 1),
+    tee(MedOut?, ActorIn, DispNotify),
+    send_to_user_tagged(Id?, DispCmd?, DispNotify?).
+
+%% Bob isolate: bob (parent of dave AND eve) — village actor with narrative
+procedure bob_init(Constant?, Constant?, Constant?, Stream(_)?).
+bob_init(Id, Child1Id, Child2Id, NetIn) :-
+    ground(Id?), ground(Child1Id?), ground(Child2Id?) |
+    bob13(Id?, ch(ActorIn?, ActorOut), Narr),
+    send_to_user_narrate(Id?, Narr?),
+    tee(ActorOut?, MedIn, DispCmd),
+    agent(Id?, AgentIn?, NetIn?,
+          [output('_user', AgentToUser),
+           output('_net', NetOut),
+           output(child(Child1Id?), Child1Out),
+           output(child(Child2Id?), Child2Out)]),
+    send_to_net(NetOut?),
+    send_to_remote(Child1Id?, Child1Out?),
+    send_to_remote(Child2Id?, Child2Out?),
+    ui_mediator(Id?, ch(AgentToUser?, AgentIn),
+                ch(MedIn?, MedOut), [], 1),
+    tee(MedOut?, ActorIn, DispNotify),
+    send_to_user_tagged(Id?, DispCmd?, DispNotify?).
+
+%% Frank isolate: frank (no children) — village actor with narrative
+procedure frank_init(Constant?, Stream(_)?).
+frank_init(Id, NetIn) :-
+    ground(Id?) |
+    frank13(Id?, ch(ActorIn?, ActorOut), Narr),
+    send_to_user_narrate(Id?, Narr?),
+    tee(ActorOut?, MedIn, DispCmd),
+    agent(Id?, AgentIn?, NetIn?,
+          [output('_user', AgentToUser), output('_net', NetOut)]),
+    send_to_net(NetOut?),
+    ui_mediator(Id?, ch(AgentToUser?, AgentIn),
+                ch(MedIn?, MedOut), [], 1),
+    tee(MedOut?, ActorIn, DispNotify),
+    send_to_user_tagged(Id?, DispCmd?, DispNotify?).
+
+%% Carol child — village actor with narrative, parent output via send_to_remote
+procedure carol_init(Constant?, Constant?, Stream(_)?).
+carol_init(Id, Parent, NetIn) :-
+    ground(Id?), ground(Parent?) |
+    carol13(Id?, ch(ActorIn?, ActorOut), Narr),
+    send_to_user_narrate(Id?, Narr?),
+    tee(ActorOut?, MedIn, DispCmd),
+    child_agent(Id?, Parent?, AgentIn?, NetIn?,
+          [output('_user', AgentToUser),
+           output(parent(Parent?), ParentOut)]),
+    send_to_remote(Parent?, ParentOut?),
+    ui_mediator(Id?, ch(AgentToUser?, AgentIn),
+                ch(MedIn?, MedOut), [], 1),
+    tee(MedOut?, ActorIn, DispNotify),
+    send_to_user_tagged(Id?, DispCmd?, DispNotify?).
+
+%% Dave child — village actor with narrative, parent output via send_to_remote
+procedure dave_init(Constant?, Constant?, Stream(_)?).
+dave_init(Id, Parent, NetIn) :-
+    ground(Id?), ground(Parent?) |
+    dave13(Id?, ch(ActorIn?, ActorOut), Narr),
+    send_to_user_narrate(Id?, Narr?),
+    tee(ActorOut?, MedIn, DispCmd),
+    child_agent(Id?, Parent?, AgentIn?, NetIn?,
+          [output('_user', AgentToUser),
+           output(parent(Parent?), ParentOut)]),
+    send_to_remote(Parent?, ParentOut?),
+    ui_mediator(Id?, ch(AgentToUser?, AgentIn),
+                ch(MedIn?, MedOut), [], 1),
+    tee(MedOut?, ActorIn, DispNotify),
+    send_to_user_tagged(Id?, DispCmd?, DispNotify?).
+
+%% Eve child — village actor with narrative, parent output via send_to_remote
+procedure eve_init(Constant?, Constant?, Stream(_)?).
+eve_init(Id, Parent, NetIn) :-
+    ground(Id?), ground(Parent?) |
+    eve13(Id?, ch(ActorIn?, ActorOut), Narr),
+    send_to_user_narrate(Id?, Narr?),
+    tee(ActorOut?, MedIn, DispCmd),
+    child_agent(Id?, Parent?, AgentIn?, NetIn?,
+          [output('_user', AgentToUser),
+           output(parent(Parent?), ParentOut)]),
+    send_to_remote(Parent?, ParentOut?),
+    ui_mediator(Id?, ch(AgentToUser?, AgentIn),
+                ch(MedIn?, MedOut), [], 1),
+    tee(MedOut?, ActorIn, DispNotify),
+    send_to_user_tagged(Id?, DispCmd?, DispNotify?).
+
+procedure tee(Stream(_)?, Stream(_), Stream(_)).
+tee([X|Xs], [X?|Ys?], [X?|Zs?]) :- ground(X?) | tee(Xs?, Ys, Zs).
+tee([], [], []).
+
+procedure send_to_user_tagged(Constant?, Stream(_)?, Stream(_)?).
+send_to_user_tagged(Id, [T|Cmds], Notifies) :-
+    ground(Id?), ground(T?) |
+    '_output'(tagged(Id?, cmd(T?))),
+    send_to_user_tagged(Id?, Cmds?, Notifies?).
+send_to_user_tagged(Id, Cmds, [T|Notifies]) :-
+    ground(Id?), ground(T?) |
+    '_output'(tagged(Id?, notify(T?))),
+    send_to_user_tagged(Id?, Cmds?, Notifies?).
+send_to_user_tagged(_, [], []).
+send_to_user_tagged(_, Cmds, []) :- sink(Cmds?).
+
+procedure send_to_user_narrate(Constant?, Stream(_)?).
+send_to_user_narrate(Id, [friend(X)|Ns]) :-
+    ground(Id?), ground(X?) |
+    '_output'(tagged(Id?, friend(X?))),
+    send_to_user_narrate(Id?, Ns?).
+send_to_user_narrate(Id, [say(X)|Ns]) :-
+    ground(Id?), ground(X?) |
+    '_output'(tagged(Id?, say(X?))),
+    send_to_user_narrate(Id?, Ns?).
+send_to_user_narrate(Id, [act(X)|Ns]) :-
+    ground(Id?), ground(X?) |
+    '_output'(tagged(Id?, act(X?))),
+    send_to_user_narrate(Id?, Ns?).
+send_to_user_narrate(Id, [event(X)|Ns]) :-
+    ground(Id?), ground(X?) |
+    '_output'(tagged(Id?, event(X?))),
+    send_to_user_narrate(Id?, Ns?).
+send_to_user_narrate(_, []).
+
+procedure sink(Stream(_)?).
+sink([_|Xs]) :- sink(Xs?).
+sink([]).

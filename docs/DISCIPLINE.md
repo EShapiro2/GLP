@@ -1,7 +1,7 @@
 # GLP Development Discipline
 
-**Version**: 2.0  
-**Date**: 2026-01-18  
+**Version**: 3.0  
+**Date**: 2026-03-05  
 **Status**: DRAFT (for review)
 
 This document consolidates all development standards, testing protocols, and handover requirements for GLP projects. It supersedes `DEVELOPMENT_DISCIPLINE_v1.1.md` by incorporating practical operational guidance.
@@ -42,7 +42,18 @@ When a bug or issue is discovered:
 4. **Decide**: Fix the code (if violates spec) OR fix the spec (if spec is wrong/unclear)
 5. **Never** bypass, work around, or defer bugs
 
-### 1.3 Traceability
+### 1.3 Fix Infrastructure, Not Symptoms
+
+When multiple files need the same local fix, the problem is in the infrastructure, not in the files.
+
+**Rules:**
+1. If a fix must be repeated in every file that uses a feature, the feature's infrastructure is broken
+2. Fix the infrastructure so the repeated fix becomes unnecessary
+3. Never add boilerplate declarations, imports, or workarounds to individual files to compensate for missing shared infrastructure
+
+**Example:** If the type checker doesn't see stdlib procedure declarations (like `now/1`, `:=/2`), the fix is to include stdlib declarations in the prelude environment — not to add `procedure now(Constant).` to every file that calls `now`.
+
+### 1.4 Traceability
 
 Every artifact must be traceable:
 
@@ -52,7 +63,7 @@ Every artifact must be traceable:
 | Test file | Spec section being tested |
 | Implementation | Spec section and test file |
 
-### 1.4 Verify Before Acting on Reported Information
+### 1.5 Verify Before Acting on Reported Information
 
 When receiving information about the codebase state (via pasted transcripts, reports, or descriptions):
 
@@ -60,7 +71,7 @@ When receiving information about the codebase state (via pasted transcripts, rep
 2. **Transcripts may be outdated** — the situation may have been fixed between when the transcript was created and when you receive it
 3. **Trust filesystem reads over pasted content** when they conflict
 
-### 1.5 Command Output Conventions
+### 1.6 Command Output Conventions
 
 When providing shell commands for the user to execute:
 
@@ -97,7 +108,7 @@ cd /Users/udi/Grassroots/GLP && bash test/run_book_tests.sh > /private/tmp/book-
 - Never use `| cat` or `| tee` 
 - Never ask user to paste output — read from /private/tmp file instead
 
-### 1.6 Terminology: Errors, Not "Limitations" or "Issues"
+### 1.7 Terminology: Errors, Not "Limitations" or "Issues"
 
 When code does not conform to the spec, use precise language:
 
@@ -106,7 +117,7 @@ When code does not conform to the spec, use precise language:
 
 If the spec is unclear, say "the spec needs clarification". If the code violates the spec, say "the code is wrong" or "this is an error". Do not soften errors with euphemisms.
 
-### 1.7 Bug Handling: Never Bypass, Always Report
+### 1.8 Bug Handling: Never Bypass, Always Report
 
 When encountering a bug in the codebase — whether in your own area of responsibility or in another module:
 
@@ -130,7 +141,7 @@ When encountering a bug in the codebase — whether in your own area of responsi
 - Either fix the bug (if in scope) or wait for fix before proceeding
 - If the bug blocks your work entirely, say so explicitly
 
-### 1.8 Complete and Comprehensive Fixes: No Prioritization
+### 1.9 Complete and Comprehensive Fixes: No Prioritization
 
 When fixing errors or implementing features:
 
@@ -152,7 +163,7 @@ When fixing errors or implementing features:
 - Create a plan that addresses every failure
 - Execute until all tests pass
 
-### 1.9 Spec Authority: Follow the Spec, Clarify the Spec
+### 1.10 Spec Authority: Follow the Spec, Clarify the Spec
 
 When implementing or fixing code:
 
@@ -182,7 +193,7 @@ When implementing or fixing code:
 
 Existing code may itself be wrong. Using code as reference when the spec is unclear perpetuates errors and creates circular reasoning. The spec defines correctness; code is merely an implementation that may or may not be correct.
 
-### 1.10 Debugging Protocol: Read First, Run Second
+### 1.11 Debugging Protocol: Read First, Run Second
 
 When debugging issues:
 
@@ -203,7 +214,7 @@ When debugging issues:
 - Adding trace logging before understanding the code
 - Generating large trace outputs hoping to spot the problem
 
-### 1.11 GLP-First Implementation Principle
+### 1.12 GLP-First Implementation Principle
 
 **Any functionality that can be implemented in GLP should be implemented in GLP, not in Dart (or any other host language).**
 
@@ -219,7 +230,7 @@ Rationale:
 3. If you find yourself implementing wait/suspend logic in Dart, stop and move it to GLP
 4. New guards or predicates should be added to GLP, not worked around in Dart
 
-### 1.12 FCP Reference Architecture
+### 1.13 FCP Reference Architecture
 
 The GLP runtime follows the original FCP (Flat Concurrent Prolog) heap architecture. When implementing or modifying heap-related code:
 
@@ -250,7 +261,29 @@ The GLP runtime follows the original FCP (Flat Concurrent Prolog) heap architect
 
 **Rationale:** FCP is a mature, proven implementation. Reinventing heap architecture leads to subtle bugs and inconsistencies. When in doubt, read the FCP source.
 
-### 1.13 Disagreement Protocol: Discuss Before Overriding
+### 1.14 Language Design Authority
+
+The GLP language definition — its primitives, guards, system predicates, body kernels, directives, and type system features — cannot be revised, extended, or added to without explicit discussion with Udi and his express approval.
+
+**This applies to:**
+- Adding new guards, system predicates, or body kernels
+- Changing the semantics of existing language features
+- Adding new directives (e.g., `-mode(...)`, `-stdlib.`)
+- Extending the type system
+- Adding new primitive types
+- Any change to what the language IS, as opposed to how it is implemented
+
+**Correct behavior:**
+1. Propose the change with rationale
+2. Wait for explicit approval ("yes", "approved", "go ahead")
+3. Only then implement
+
+**Incorrect behavior:**
+- Adding a new guard because it seems useful
+- Implementing a new concurrency primitive because it solves a problem
+- Extending the prelude with new declarations without discussion
+
+### 1.15 Disagreement Protocol: Discuss Before Overriding
 
 When the user provides explicit code, instructions, or decisions:
 
@@ -661,4 +694,6 @@ cd glp_multiagent && flutter build macos
 | 2.7 | 2026-01-31 | Added section 1.11: FCP Reference Architecture |
 | 2.8 | 2026-02-01 | Added section 1.11: GLP-First Implementation Principle (renumbered FCP to 1.12) |
 | 2.9 | 2026-02-01 | Added section 1.13: Disagreement Protocol - Discuss Before Overriding |
+| 3.0 | 2026-03-05 | Added section 1.3: Fix Infrastructure, Not Symptoms. Renumbered 1.3-1.13 → 1.4-1.14 |
+| 3.1 | 2026-03-05 | Added section 1.14: Language Design Authority. Renumbered 1.14 → 1.15 |
 

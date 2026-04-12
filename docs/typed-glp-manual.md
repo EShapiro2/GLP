@@ -1,10 +1,10 @@
 # Typed GLP Manual
 
-**Version**: 2.4
-**Date**: 2026-02-21
+**Version**: 2.10
+**Date**: 2026-03-14
 **Status**: ACTIVE
 
-This manual captures essential programming principles and advice for writing correct Typed GLP programs. It covers the SRSW (Single-Reader Single-Writer) constraint, type declarations, moding, and common pitfalls.
+This manual captures essential programming principles and advice for writing correct Typed GLP programs. It covers the SRSW (Single-Reader Single-Writer) constraint, type declarations, moding, modules, parameterized types, and common pitfalls.
 
 ---
 
@@ -172,6 +172,122 @@ For recursive clauses:
 
 ---
 
+## 2A. Determining Variable Modes in Clause Heads
+
+### 2A.1 The Problem
+
+Given a procedure declaration and its type definitions, what form—writer (`X`) or reader (`X?`)—should each variable take at each position in a clause head?  The answer is straightforward at top-level argument positions, but requires a precise compositional rule when structures with embedded `?` annotations appear in the head.
+
+### 2A.2 The Rule
+
+**Step 1: Determine the structural mode at each position.**
+
+Start with the mode declared for the procedure argument:
+- `Type?` in the procedure declaration → ↓ (consume)
+- `Type` (no `?`) → ↑ (produce)
+
+Traverse into the type structure.  Each `?` encountered in the type definition **flips** the mode: ↓ becomes ↑, ↑ becomes ↓.  Two flips cancel out.
+
+**Step 2: Choose the variable form in the head.**
+
+- At a ↓ (consume) position → use a **writer** (`X`): it captures the incoming value
+- At a ↑ (produce) position → use a **reader** (`X?`): it is a hole to be filled
+
+**Step 3: Body variables follow from SRSW.**
+
+The body occurrence is the paired variable: if the head has `X` (writer), the body has `X?` (reader), and vice versa.
+
+### 2A.3 Worked Example: Signaling Server
+
+Consider a signaling server that coordinates reconnection between agents.  Agents send messages containing reply variables; the server stores these and later binds them when a matching request arrives.
+
+**Type definitions:**
+
+```prolog
+SignalReply ::= punch(Constant) ; initiated.
+
+SignalMsg ::= reconnect(Constant, Constant, Constant, SignalReply?)
+            ; available(Constant, Constant, SignalReply?).
+
+PendingEntry ::= needs(Constant, Constant, Constant, SignalReply?)
+               ; ready(Constant, Constant, SignalReply?).
+PendingList ::= [] ; [PendingEntry | PendingList].
+```
+
+The `SignalReply?` in `reconnect` and in `PendingEntry` means that these positions carry a reader reference to an unbound `SignalReply` writer—a reply variable that will be bound later.
+
+**Receiving a message with a reply variable:**
+
+```prolog
+procedure signal_server(Stream(SignalMsg)?, PendingList?).
+
+signal_server([reconnect(A, B, Proof, ReplyA?)|In], Pending) :-
+    verify_friendship(Proof?, A?, B?),
+    peer_address(A?, AddrA) |
+    find_ready(A?, B?, AddrA?, ReplyA, Pending?, Pending1),
+    signal_server(In?, Pending1?).
+```
+
+Mode analysis of arg 1 (`Stream(SignalMsg)?`, ↓):
+
+| Position | Type path | Mode | Flips | Head variable |
+|----------|-----------|------|-------|---------------|
+| List element | `SignalMsg` within `Stream(SignalMsg)?` | ↓ | none | — |
+| `reconnect` arg 1 | `Constant` within `SignalMsg` at ↓ | ↓ | none | `A` (writer) |
+| `reconnect` arg 2 | `Constant` at ↓ | ↓ | none | `B` (writer) |
+| `reconnect` arg 3 | `Constant` at ↓ | ↓ | none | `Proof` (writer) |
+| `reconnect` arg 4 | `SignalReply?` at ↓ | **↑** | `?` flips ↓→↑ | `ReplyA?` (reader) |
+| List tail | `Stream(SignalMsg)` at ↓ | ↓ | none | `In` (writer) |
+
+The `?` on `SignalReply?` in the type definition flips the mode from ↓ to ↑ at arg 4 of `reconnect`.  Hence `ReplyA?` is a reader—a hole through which the server will later send a reply back to agent A.
+
+In the body, `ReplyA` (writer, the SRSW pair) is passed to `find_ready` at its output position.
+
+**Storing the reply variable in a pending list:**
+
+```prolog
+procedure find_ready(Constant?, Constant?, Constant?, SignalReply,
+                     PendingList?, PendingList).
+
+%% No match found — store A's request for later
+find_ready(A, B, AddrA, ReplyA?, [], [needs(A?, B?, AddrA?, ReplyA)]).
+```
+
+Mode analysis of the head-constructed `needs(A?, B?, AddrA?, ReplyA)` in arg 6 (`PendingList`, ↑):
+
+| Position | Type path | Mode | Flips | Head variable |
+|----------|-----------|------|-------|---------------|
+| `needs` arg 1 | `Constant` within `PendingEntry` at ↑ | ↑ | none | `A?` (reader) |
+| `needs` arg 2 | `Constant` at ↑ | ↑ | none | `B?` (reader) |
+| `needs` arg 3 | `Constant` at ↑ | ↑ | none | `AddrA?` (reader) |
+| `needs` arg 4 | `SignalReply?` at ↑ | **↓** | `?` flips ↑→↓ | `ReplyA` (writer) |
+
+The same `?` on `SignalReply?` now flips in the opposite direction: ↑→↓.  Hence `ReplyA` is a writer—it stores the reply variable in the pending list for later retrieval.
+
+The variable pair in this clause: `ReplyA?` (reader at arg 4, ↑) and `ReplyA` (writer at arg 6 inside `needs`, ↓).  Both occur in the head—this is the head-to-head transfer from Section 2.3.
+
+**Binding the reply variable:**
+
+```prolog
+procedure complete_rendezvous(Constant?, SignalReply, SignalReply).
+complete_rendezvous(AddrA, initiated, punch(AddrA?)).
+```
+
+- Arg 1 (`Constant?`, ↓): `AddrA` writer — captures the address
+- Arg 2 (`SignalReply`, ↑): `initiated` constant — produced as reply to A
+- Arg 3 (`SignalReply`, ↑): `punch(AddrA?)` — produced as reply to B, with `AddrA?` (reader at ↑) filling in A's address
+
+### 2A.4 Summary
+
+The rule composes recursively: at any depth within a structure in the head, the mode is determined by starting from the argument's declared mode and flipping at each `?` in the type path.  Writers capture at ↓ positions, readers are holes at ↑ positions.
+
+| Structural mode | Head variable form | Semantic role |
+|-----------------|-------------------|---------------|
+| ↓ (consume) | writer `X` | captures incoming value |
+| ↑ (produce) | reader `X?` | hole to be filled |
+
+---
+
 ## 3. SRSW Relaxation for Constant Types
 
 ### 3.1 The Rule
@@ -208,15 +324,15 @@ Guards that imply groundness include: `ground/1`, `integer/1`, `number/1`, `stri
 
 ## 4. Channel Type Convention
 
-### 4.1 Recommended Definition
+### 4.1 Definition
 
 ```prolog
-Channel ::= ch(Stream, Stream?).
+Channel(In, Out) ::= ch(In, Out?).
 ```
 
 This means:
-- Position 1 (`Stream`): output/produce mode — the channel owner writes here
-- Position 2 (`Stream?`): input/consume mode — the channel owner reads here
+- Position 1 (`In`): output/produce mode — the channel owner writes here
+- Position 2 (`Out?`): input/consume mode — the channel owner reads here
 
 ### 4.2 When Consuming a Channel (Channel?)
 
@@ -244,7 +360,7 @@ The agent receives `Channel?` (inverted view), reads from position 1 (`In?`), an
 ### 5.1 The new_channel Pattern
 
 ```prolog
-procedure new_channel(Channel, Channel).
+procedure new_channel(Channel(X, Y), Channel(Y, X)).
 new_channel(ch(Xs?, Ys), ch(Ys?, Xs)).
 ```
 
@@ -252,7 +368,7 @@ This creates two "ends" of a bidirectional channel:
 - First channel: reads from `Xs?`, writes to `Ys`
 - Second channel: reads from `Ys?`, writes to `Xs`
 
-What one end writes, the other reads.
+The type parameters `X` and `Y` capture the asymmetry: what one end reads, the other writes.
 
 ### 5.2 Usage
 
@@ -270,7 +386,7 @@ Alice and Bob each receive `Channel?`, giving them the consumer's view of their 
 
 ### 6.1 The Principle
 
-The `=` predicate (assignment/unification) in guards or bodies is typically a sign of sloppy thinking. In GLP, bindings should flow through head patterns rather than explicit assignments.
+The `=` predicate (assignment) in guards or bodies is typically a sign of sloppy thinking.  In GLP, bindings should flow through head patterns rather than explicit assignments.
 
 **Bad pattern:**
 ```prolog
@@ -325,20 +441,25 @@ When consuming `Channel?` with pattern `ch(In, Out?)`:
 
 A **single-unit-clause procedure** is a regular procedure defined by exactly one clause with no guards and no body. These procedures serve as defined guards: when called in guard position, the partial evaluator unfolds them at compile time. In general, they are NOT expected to work as body predicates.
 
-The prelude defines several single-unit-clause procedures. The PE automatically includes them when processing any program, so user programs do not need to redefine them. User programs may override a prelude unit clause by defining a procedure with the same name/arity.
+The root self.glp defines several single-unit-clause procedures. The PE automatically includes them when processing any program, so user programs do not need to redefine them. User programs may override a root self.glp unit clause by defining a procedure with the same name/arity.
 
-Examples from the prelude:
+Examples from root self.glp:
 
 ```prolog
-procedure new_channel(Channel, Channel).
+procedure =(_?, _).
+X? = X.
+
+procedure new_channel(Channel(X, Y), Channel(Y, X)).
 new_channel(ch(Xs?, Ys), ch(Ys?, Xs)).
 
-procedure send(_?, Channel?, Channel).
+procedure send(X?, Channel(Y, Stream(X))?, Channel(Y, Stream(X))).
 send(X, ch(In, [X?|Out?]), ch(In?, Out)).
 
-procedure receive(_, Channel?, Channel).
+procedure receive(X, Channel(Stream(X), Y)?, Channel(Stream(X), Y)).
 receive(X?, ch([X|In], Out?), ch(In?, Out)).
 ```
+
+The `=` predicate performs assignment: the call `X = T` assigns the value `T` on the right to the writer `X` on the left.  Using `=` in clause bodies should be avoided where head construction suffices (Section 6).
 
 ### 8.2 Guard Position Usage
 
@@ -358,7 +479,7 @@ play :- alice(ch(Xs?, Ys)?), bob(ch(Ys?, Xs)?).
 
 ### 9.1 Definition
 
-An anonymous variable is any variable whose name begins with `_` (e.g., `_`, `_In?`, `_Out`). Anonymous writers may appear in the head, denoting a fresh writer with no paired reader, so that a value assigned to it is discarded. This provides a controlled exception to the SRSW restriction, allowing a process to abandon an input (e.g. an input stream) they are no longer interested in.
+An anonymous variable is any variable whose name begins with `_` (e.g., `_`, `_In?`, `_Out`). Anonymous writers may appear in the head, denoting a fresh writer with no paired reader, so that a value assigned to it is discarded. This provides a controlled exception to the SRSW restriction, allowing a process to abandon an input (e.g. an input stream) they are no longer interested in.  Only anonymous writers are permitted in clause positions; `_?` (anonymous reader) is not allowed.
 
 ### 9.3 Examples
 
@@ -382,8 +503,8 @@ Using named anonymous variables like `_From` and `_To` documents what is being d
 The symbols `_` and `_?` in **type definitions** are primitive type symbols meaning "any produced term" and "any consumed term" respectively. They are not variables and should not be confused with anonymous variables in program clauses.
 
 ```prolog
-%% In type definition: _ is a type symbol
-Stream ::= [] ; [_|Stream].
+%% In type definition: _ is a type symbol (system builtins only)
+procedure ground(_?).
 
 %% In clause: _ is an anonymous variable
 second([_, X | _], X?).
@@ -532,134 +653,368 @@ The `reduce/2` clause for `:=` handles arithmetic assignment by extracting the a
 
 ---
 
-## 14. Precise Typing via Renamed Procedures
+## 14. Precise Typing via Renamed Procedures (OBSOLETE)
 
-### 14.1 The Problem
+**This section is obsolete.** Parameterized types (Section 17) eliminate the need for renamed procedure copies. The root self.glp's generic procedures (`send`, `receive`, `new_channel`, `merge`) now have parameterized signatures, and the type checker infers precise types at each call site. Use the generic procedures directly.
 
-Generic procedures like `send`, `new_channel`, and `merge` are declared with generic types:
+### 14.1 Historical Context
 
-```prolog
-procedure send(_?, Channel?, Channel).
-send(X, ch(In, [X?|Out?]), ch(In?, Out)).
+Before parameterized types, generic procedures declared with monomorphic types (e.g., `procedure send(_?, Channel?, Channel)`) assigned generic output types in body position. To preserve precise types, modules defined renamed copies with precisely-typed signatures (e.g., `send_agent`, `send_user`, `merge_net_in`). The clause bodies were identical to the originals — only the name and type declaration differed.
 
-procedure new_channel(Channel, Channel).
-new_channel(ch(Xs?, Ys), ch(Ys?, Xs)).
+### 14.2 Current Practice
 
-procedure merge(Stream?, Stream?, Stream).
-merge([], Ys, Ys?).
-merge(Xs, [], Xs?).
-merge([X|Xs], Ys, [X?|Zs?]) :- merge(Ys?, Xs?, Zs).
-merge(Xs, [Y|Ys], [Y?|Zs?]) :- merge(Xs?, Ys?, Zs).
-```
-
-When a program defines precisely-typed channels or streams:
+With parameterized types, write:
 
 ```prolog
-AgentMsg ::= befriend(_?) ; status(_).
-AgentStream ::= [] ; [AgentMsg|AgentStream].
-AgentChannel ::= ch(AgentStream, Stream?).
+procedure merge(Stream(X)?, Stream(X)?, Stream(X)).
+procedure send(X?, Channel(Y, Stream(X))?, Channel(Y, Stream(X))).
 ```
 
-and uses these generic procedures in the body of a clause, the type checker assigns output variables the generic type from the procedure's declaration. For example, `send` on an `AgentChannel` produces a `Channel` output — not `AgentChannel`. Similarly, `merge` on two `AgentStream` inputs produces a generic `Stream` output — not `AgentStream`.
+The type checker instantiates `X` (and `Y`) from context. No renamed copies are needed.
 
-This loses precision: the recursive call or subsequent use expects the precise type, but the variable has the generic type. The generic type is a supertype, not a subtype, so subtyping does not help — the variance goes the wrong way.
+All renamed copies (`send_agent`, `send_user`, `merge_net_in`, `new_friend_channel`, etc.) have been removed from the codebase as of Step 2.5 (March 2026).
 
-Note: this problem occurs only for procedures called in **body position**. Defined guards called in **guard position** are eliminated by partial evaluation before type checking, so the type checker never sees the generic signature — it sees the inlined structure and infers the precise type from the surrounding context.
+---
 
-### 14.2 The Solution: Renamed Copies with Precise Types
+## 15. Receiving and Forwarding Non-Ground Variables
 
-Create a copy of the generic procedure with a new name and a precisely-typed signature. The clauses are identical — only the procedure name and type declaration change.
+### 15.1 The Pattern
 
-**Example 1: send**
+When a process receives a message containing a non-ground variable (e.g., an unbound response variable) and needs to pass it to another concurrent process, use the standard writer/reader pattern:
 
 ```prolog
-%% Generic (from prelude)
-procedure send(_?, Channel?, Channel).
-send(X, ch(In, [X?|Out?]), ch(In?, Out)).
-
-%% Precisely-typed copy for AgentChannel
-procedure send_agent(AgentMsg?, AgentChannel?, AgentChannel).
-send_agent(X, ch(In, [X?|Out?]), ch(In?, Out)).
+p(..., [msg(From, escrow_offer(Time, Result))|Rest], ...) :-
+    ... |
+    monitor(Result?, ...),
+    p(..., Rest?, ...).
 ```
 
-**Example 2: merge**
+- `Result` (writer, no `?`) in the HEAD — receives the variable from the message
+- `Result?` (reader) in the BODY — passes it to the monitoring process
+- Total: 1 writer + 1 reader = SRSW satisfied
+
+This is the same pattern as Section 2's "input continues to recursive call," applied to inter-process communication rather than recursion.
+
+### 15.2 Common Mistake
+
+Writing `Result?` (reader) in the head:
 
 ```prolog
-%% Generic (from prelude)
-procedure merge(Stream?, Stream?, Stream).
-merge([], Ys, Ys?).
-merge(Xs, [], Xs?).
-merge([X|Xs], Ys, [X?|Zs?]) :- merge(Ys?, Xs?, Zs).
-merge(Xs, [Y|Ys], [Y?|Zs?]) :- merge(Xs?, Ys?, Zs).
-
-%% Precisely-typed copy for AgentStream
-procedure merge_agent(AgentStream?, AgentStream?, AgentStream).
-merge_agent([], Ys, Ys?).
-merge_agent(Xs, [], Xs?).
-merge_agent([X|Xs], Ys, [X?|Zs?]) :- merge_agent(Ys?, Xs?, Zs).
-merge_agent(Xs, [Y|Ys], [Y?|Zs?]) :- merge_agent(Xs?, Ys?, Zs).
+%% WRONG — 2 readers, 0 writers
+p(..., [msg(From, offer(Time, Result?))|Rest], ...) :-
+    ... |
+    monitor(Result?, ...).   %% SRSW violation!
 ```
 
-Note: recursive calls within `merge_agent` must also use `merge_agent` (not `merge`), otherwise the output of the recursive call would revert to `Stream`.
+This mistake often arises when the programmer sees `?` in the type definition (e.g., `offer(Constant, SomeType?)`) and assumes the clause variable must also carry `?`.
 
-Then use the precise versions in clause bodies:
+### 15.3 Existing Examples in the Codebase
+
+The bond agent uses this pattern in every protocol:
+
+- Cold-call: `intro(From, Resp?)` in the message → `Resp` (writer) in head, `Resp` forwarded as writer in outgoing befriend message
+- Credit: `credit_propose(K, Maturity, Bonds, CreditResp?)` → `CreditResp` forwarded as writer to mediator
+- Trade: `trade_propose(WantSpec, Bonds, TradeResp?)` → `TradeResp` forwarded as writer to mediator
+- Escrow: `escrow_offer(Time, BenResult?)` → `BenResult` (writer) in head, `BenResult?` (reader) passed to inject
+
+The escrow case is notable because the receiver calls `inject` directly rather than forwarding the writer to another message. The SRSW pattern is the same either way.
+
+---
+
+## 16. `?` in Type Definitions vs `?` on Clause Variables
+
+### 16.1 The Distinction
+
+The `?` symbol appears in two different contexts with different meanings:
+
+- **In type definitions**: `?` describes the mode of data as it flows through the structure. For example, `credit_propose(Constant, Constant, BondList, CreditResponse?)` means the fourth position carries a reader reference — the data at that position is a reader pointing to an unbound writer.
+
+- **On clause variables**: `?` marks the reader half of a variable in that clause. `X?` reads the value that `X` (the writer) provides.
+
+These are independent. The `?` in a type definition does NOT constrain the clause variable to be a reader.
+
+### 16.2 Why This Matters
+
+When matching against `credit_propose(K, Maturity, Bonds, CreditResp?)` in a clause head:
 
 ```prolog
-ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
-    receive(Msg, AgentCh?, AgentCh1), ground(Msg?) |
-    send_agent(Response, AgentCh1?, AgentCh2),   %% precise type preserved
-    ui_mediator(Id?, AgentCh2?, UserCh?, Ps?, N1?).
-
-agent(Id, In, Outs) :-
-    ...
-    merge_agent(UserIn?, NetIn?, In),             %% precise type preserved
-    agent(Id?, In?, Outs?).
+p(..., [msg(From, credit_propose(K, Maturity, Bonds, CreditResp?))|Rest], ...) :-
 ```
 
-The type checker now assigns precise types to the output variables, and recursive calls type-check.
-
-### 14.3 Why This Works
-
-The renamed procedure has identical operational behavior to the generic one — same clause, same unification. The only difference is the type signature, which constrains the type checker to assign precise types to the output variables.
-
-With subtyping, the caller's message type only needs to be a subtype of the declared message type, so the precise signature is not overly rigid — it accommodates subtype-compatible callers.
-
-### 14.4 When This Technique Is Needed
-
-This technique is needed for **every** generic procedure that is called in **body position** and whose output variables must carry a precise type. This includes but is not limited to `send`, `new_channel`, `merge`, `append`, `copy`, `distribute`, and any user-defined generic procedure.
-
-The three conditions are:
-
-1. A generic procedure is called in **body position** (not guard position)
-2. The procedure's output arguments need to carry a precise type (not the generic one)
-3. The precise type is a subtype of the generic type, not the other way around
-
-If the procedure is only called in **guard position**, partial evaluation eliminates it and no renamed copy is needed.
-
-### 14.5 Naming Convention
-
-Use the generic name followed by an underscore and a descriptive qualifier:
-
-| Generic | Precise Copy | For |
-|---------|-------------|-----|
-| `send` | `send_agent` | Sending on AgentChannel |
-| `send` | `send_user` | Sending on UserChannel |
-| `new_channel` | `new_agent_channel` | Creating AgentChannel pairs |
-| `merge` | `merge_net_in` | Merging into agent's net input |
-| `merge` | `merge_agent` | Merging AgentStreams |
-| `append` | `append_agent` | Appending AgentStreams |
-| `copy` | `copy_agent` | Copying an AgentStream |
-| `distribute` | `distribute_agent` | Distributing over AgentStreams |
-
-### 14.6 Relationship to Parametric Types
-
-This technique is a workaround for the absence of parametric types. With parametric types, one could write:
+The `CreditResp?` extracts the reader from the message. But `CreditResp` (the writer half) is also available in the clause. If the body needs to forward this variable, it uses the writer `CreditResp`:
 
 ```prolog
-procedure send(X?, Channel(Stream(X))?, Channel(Stream(X))).
+    send_msg(credit_proposed(From?, K?, CreditResp, Bonds?), ...),
 ```
 
-and the type checker would instantiate `X` to `AgentMsg` automatically. Until parametric types are implemented, renamed copies are the way to achieve precise typing for generic procedures used in body position.
+The type's `?` describes what's IN the data structure. The clause variable's `?` describes how you USE the variable in this particular clause.
+
+### 16.3 Contrast with Section 9.4
+
+Section 9.4 notes that `_` and `_?` in type definitions are type symbols (meaning "any type"), not anonymous variables. Section 16 generalizes this: ALL `?` annotations in type definitions describe data modes, not clause variable constraints.
+
+---
+
+## 17. Parameterized Types
+
+### 17.1 Overview
+
+Parameterized types allow generic type definitions with type parameters. They are syntactic sugar: each use is expanded into a monomorphic type before type checking. This eliminates the need for renamed procedure copies (Section 14) when generic procedures are used in body position.
+
+### 17.2 Defining Parameterized Types
+
+Type parameters are uppercase identifiers in parentheses after the type name:
+
+```prolog
+Stream(X) ::= [] ; [X | Stream(X)].
+Pair(A, B) ::= pair(A, B).
+Channel(In, Out) ::= ch(In, Out?).
+```
+
+Mode annotations within the template (e.g., `Out?`) are preserved during expansion.
+
+### 17.3 Parameterized Procedure Declarations
+
+Use type parameters in procedure declarations to express uniform behaviour:
+
+```prolog
+procedure merge(Stream(X)?, Stream(X)?, Stream(X)).
+procedure send(X?, Channel(Y, Stream(X))?, Channel(Y, Stream(X))).
+procedure receive(X, Channel(Stream(X), Y)?, Channel(Stream(X), Y)).
+procedure new_channel(Channel(X, Y), Channel(Y, X)).
+```
+
+The type parameter `X` is implicitly universally quantified. The type checker infers its binding from the call context by structural matching.
+
+### 17.4 Using Parameterized Types
+
+Use concrete instantiations in procedure declarations:
+
+```prolog
+AgentMsg ::= befriend(Constant, Response?) ; connected(Constant) ; rejected.
+
+procedure agent_merge(Stream(AgentMsg)?, Stream(AgentMsg)?, Stream(AgentMsg)).
+agent_merge(A, B, C) :- merge(A?, B?, C).
+```
+
+The call `merge(A?, B?, C)` matches `Stream(X)` against `Stream(AgentMsg)`, infers `X = AgentMsg`, and type-checks the body against the expanded monomorphic declaration.
+
+### 17.5 In Module Declarations
+
+Imported procedure declarations instantiate type parameters to the local message type:
+
+```prolog
+imported procedure merge(Stream(CounterCall)?, Stream(CounterCall)?, Stream(CounterCall)).
+```
+
+The defining module's parameterized declaration `merge(Stream(X)?, ...)` is instantiated at the importing site.
+
+### 17.6 What Parameterized Types Replace
+
+With parameterized types, the following Section 14 workarounds are no longer needed:
+
+| Before (renamed copy) | After (parameterized) |
+|-----------------------|-----------------------|
+| `merge_agent(AgentStream?, ...)` | `merge(Stream(AgentMsg)?, ...)` |
+| `send_agent(AgentMsg?, AgentChannel?, ...)` | `send(X?, Channel(Y, Stream(X))?, ...)` |
+| `new_agent_channel(AgentChannel, ...)` | `new_channel(Channel(X,Y), ...)` |
+
+The generic procedures `merge`, `send`, `new_channel` work directly with precise types through parameter inference.
+
+---
+
+## 18. Tight Typing Discipline
+
+### 18.1 The Discipline
+
+As a project discipline, we do not use `_` or `_?` in type definitions or procedure declarations.  All type definitions use concrete types or type parameters; all procedure declarations use concrete or parameterized types.
+
+The GLP language continues to support `_` and `_?` as primitive types.  The discipline is a coding standard, not a language restriction.
+
+### 18.2 Parameterized Types Replace Imprecise Types
+
+Every local imprecise type definition should be replaced by a parameterized instantiation from root self.glp:
+
+| Before (imprecise) | After (precise) |
+|---|---|
+| `MsgStream ::= [] ; [_ \| MsgStream].` | Remove; use `Stream(Msg)` |
+| `Channel ::= ch(Stream, Stream?).` | Remove; use `Channel(In, Out)` |
+| `DiffList ::= Stream \ Stream?.` | Remove; use `DiffList(X)` |
+| `NonEmptyList ::= [_ \| Stream].` | Remove; use `OpenStream(X)` |
+| `procedure merge(Stream?, Stream?, Stream).` | `procedure merge(Stream(X)?, Stream(X)?, Stream(X)).` |
+
+### 18.3 Exceptions
+
+Two categories of code may retain `_` and `_?`:
+
+1. **System builtins** in `self.glp` that genuinely accept any term: `ground(_?)`, `=(_?, _)`, `=?=(_?, _?)`, `=..(_, Stream(_)?)`, `compound(_?)`, etc.  These are implemented by the runtime and have no meaningful type restriction.
+
+2. **Meta-interpreters** that manipulate arbitrary terms (goals, clause representations).  Types like `DumpList ::= [] ; [_ | DumpList].` or `Chain ::= chain(Stream(_)?, Stream(_)).` are acceptable with a comment explaining why.  Meta-interpreter typing is deferred to future work.
+
+### 18.4 `-mode(system)` Does Not Exempt From Type Checking
+
+The `-mode(system)` directive permits calling kernel predicates and using reserved constants.  It does **not** exempt the module from type checking.  All modules, including system-mode modules, are fully type-checked.  Type definitions and procedure declarations in system-mode files must follow the tight typing discipline.
+
+---
+
+## 19. Modules
+
+### 19.1 Overview
+
+GLP programs are organized into modules. Each `.glp` file is a module. A module controls which procedures are visible to other modules through `exported procedure` and `imported procedure` declarations. Cross-module calls use the `M # goal(...)` syntax, following FCP conventions.
+
+### 19.2 Module Declaration
+
+A module declares its name with the `-module` directive:
+
+```prolog
+-module(math_service).
+```
+
+The module name should match the filename (without `.glp`). If no `-module` directive is present, the module name is derived from the filename.
+
+### 19.3 Procedure Visibility
+
+There are three kinds of procedure declarations:
+
+**Local procedure** — visible only within this module:
+```prolog
+procedure helper(Integer?, Integer).
+helper(X, Y?) :- Y := X? + 1.
+```
+
+**Exported procedure** — callable from other modules:
+```prolog
+exported procedure double(Integer?, Integer).
+double(X, Y?) :- Y := X? * 2.
+```
+
+**Imported procedure** — declares a dependency on another module's export:
+```prolog
+imported procedure math_service#double(Integer?, Integer).
+```
+
+The `imported procedure` declaration enables type checking to verify the cross-module call locally, without parsing the target module. The types in the import must be compatible with the export's types.
+
+### 19.4 Cross-Module Calls
+
+To call an exported procedure from another module, use the `#` operator:
+
+```prolog
+test_double(X, Y?) :- math_service # double(X?, Y).
+```
+
+This sends the goal `double(X?, Y)` to the `math_service` module for execution. The runtime routes the goal through a GLP channel to the target module's service loop, which dispatches it to the exported procedure.
+
+### 19.5 Complete Example
+
+**Service module** (`math_service.glp`):
+```prolog
+-module(math_service).
+
+exported procedure double(Integer?, Integer).
+double(X, Y?) :- Y := X? * 2.
+
+exported procedure triple(Integer?, Integer).
+triple(X, Y?) :- Y := X? * 3.
+```
+
+**Client module** (`client.glp`):
+```prolog
+-module(client).
+
+imported procedure math_service#double(Integer?, Integer).
+imported procedure math_service#triple(Integer?, Integer).
+
+exported procedure compute(Integer?, Integer).
+compute(X, Y?) :- math_service # double(X?, Y).
+```
+
+### 19.6 The `self.glp` Scope Chain
+
+Each directory may contain a `self.glp` file that defines types and procedures visible to all modules in that directory and its subdirectories. This follows FCP's `self.cp` convention.
+
+```
+project/
+  self.glp               — shared types (AgentMsg, Response, etc.)
+  agent.glp              — sees project/self.glp
+  mediator.glp           — sees project/self.glp
+  ui/
+    self.glp             — UI-specific types
+    actors.glp           — sees ui/self.glp + project/self.glp
+```
+
+The root `programs/self.glp` defines all predefined types (`Stream(X)`, `Channel(In, Out)`, `DiffList(X)`, `OpenStream(X)`) and all predefined procedure declarations (`merge`, `send`, `receive`, `new_channel`, etc.). Every module sees root self.glp automatically.
+
+### 19.7 Compilation Modes
+
+GLP supports two compilation modes for multi-module programs:
+
+**Static linking** (for projects): All modules in a directory tree are compiled together. The project linker resolves `M # goal(...)` calls at compile time by renaming and merging procedures into a single flat program. Use the REPL command `<directory>` to load a project:
+```
+GLP> social_graph/
+✓ Loaded project: social_graph/
+```
+
+**Dynamic dispatch** (for independently loaded modules): Each module is loaded and activated separately. Cross-module calls route through GLP channels at runtime. This is the model described in Sections 19.3–19.5.
+
+### 19.8 REPL Workflow for Dynamic Dispatch
+
+```
+GLP> programs/tests/dynamic_dispatch/math_service.glp
+✓ Loaded and activated: math_service
+
+GLP> programs/tests/dynamic_dispatch/dispatch_client.glp
+✓ Loaded and activated: dispatch_client
+
+GLP> test_double(5, X).
+X = 10
+```
+
+Modules with `exported procedure` declarations are automatically activated when loaded — a GLP channel is created, and a service loop is spawned to dispatch incoming goals. The `:activate` REPL command can also be used explicitly:
+```
+GLP> :activate math_service
+✓ Activated module: math_service
+```
+
+### 19.9 Module Design Guidelines
+
+1. **Declare all dependencies.** Every cross-module call must have a corresponding `imported procedure` declaration. This makes the module self-contained for type checking.
+
+2. **Export the minimal interface.** Only mark procedures as `exported` if they are intended to be called from other modules. Internal helper procedures should use plain `procedure`.
+
+3. **Types flow through declarations.** A procedure declaration implicitly carries the types it references. You do not need to export types separately — they are carried by the `exported procedure` declaration.
+
+4. **Matching modes matter.** The `imported procedure` declaration's argument modes must match the `exported procedure` declaration's modes. If the export says `double(Integer?, Integer)`, the import must say the same.
+
+---
+
+## 20. Type Union
+
+### 20.1 The Rule
+
+An alternative in a type definition may be a type name. This provides type union: all alternatives of the named type are inherited. The top-level functors across all alternatives (including inherited ones) must be distinct.
+
+```prolog
+AgentContent ::= connected(Constant) ; rejected.
+FriendContent ::= friend_connected(Constant).
+
+OutputContent ::= AgentContent ; FriendContent.
+```
+
+`OutputContent` inherits `connected/1` and `rejected/0` from `AgentContent`, and `friend_connected/1` from `FriendContent`. All functors are distinct, so this is valid.
+
+### 20.2 Invalid: Overlapping Functors
+
+```prolog
+A ::= msg(String).
+B ::= msg(Integer).
+C ::= A ; B.          %% INVALID: msg/1 appears in both A and B
+```
+
+### 20.3 Structural Type Identity
+
+Type identity is structural. Two independently defined types with the same alternatives are compatible, regardless of name or defining module.
 
 ---
 
@@ -667,6 +1022,12 @@ and the type checker would instantiate `X` to `AgentMsg` automatically. Until pa
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 2.10 | 2026-03-14 | Added Section 20: Type Union (type names as alternatives, disjoint functor requirement, structural identity) |
+| 2.9 | 2026-03-12 | Added Section 19: Modules (declarations, exports/imports, `#` syntax, self.glp chain, REPL workflow) |
+| 2.8 | 2026-03-11 | Added Section 18: Tight Typing Discipline; corrected send/receive Channel arity to 2-arg form |
+| 2.7 | 2026-03-11 | Section 14 marked obsolete — renamed procedure copies removed, replaced by parameterized types |
+| 2.6 | 2026-03-06 | Added Section 17: Parameterized Types; updated Section 14.6 |
+| 2.5 | 2026-03-06 | Added Section 15: Receiving and Forwarding Non-Ground Variables; Added Section 16: `?` in Type Definitions vs `?` on Clause Variables |
 | 2.4 | 2026-02-21 | Added Section 14: Precise Typing via Renamed Procedures (workaround for absent parametric types) |
 | 2.3 | 2026-02-02 | Added Section 12: Reserved Constants (underscore-prefixed constants reserved for system use, `-mode(system).` directive) |
 | 2.2 | 2026-02-01 | Added Section 10: Channel Creation vs Channel Reception |

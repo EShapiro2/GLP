@@ -1,6 +1,6 @@
 % meta.glp - Meta-interpreter for testing
 -module(meta).
--export([run/2]).
+exported procedure run(_, _).
 
 run(true, _Module).
 run((A, B), Module) :-

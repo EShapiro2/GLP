@@ -1,0 +1,51 @@
+%% mad_fplay5.glp — madGLP boot for bonds_v2 fplay5 (2 isolates: alice, bob)
+%%
+%% Derived from: bonds_v2/boot.glp fplay5 clause
+%% Bonds: Zero-coupon loan (2 agents)
+%% One isolate per agent.
+
+-mode(system).
+
+procedure boot.
+boot :-
+    agent_init(alice, 5, _)@alice,
+    agent_init(bob, 5, _)@bob.
+
+%% Adult agent — no children, no bonds
+procedure agent_init(Constant?, Constant?, Stream(_)?).
+agent_init(Id, PlayNum, NetIn) :-
+    ground(Id?), ground(PlayNum?) |
+    actor_dispatch(Id?, PlayNum?, ch(ActorIn?, ActorOut)),
+    tee(ActorOut?, MedIn, DispCmd),
+    agent(Id?, AgentIn?, NetIn?,
+          [output('_user', AgentToUser), output('_net', NetOut)],
+          [], 1),
+    send_to_net(NetOut?),
+    ui_mediator(Id?, ch(AgentToUser?, AgentIn),
+                ch(MedIn?, MedOut), [], 1),
+    tee(MedOut?, ActorIn, DispNotify),
+    send_to_user_tagged(Id?, DispCmd?, DispNotify?).
+
+procedure tee(Stream(_)?, Stream(_), Stream(_)).
+tee([X|Xs], [X?|Ys?], [X?|Zs?]) :- ground(X?) | tee(Xs?, Ys, Zs).
+tee([], [], []).
+
+procedure send_to_user_tagged(Constant?, Stream(_)?, Stream(_)?).
+send_to_user_tagged(Id, [T|Cmds], Notifies) :-
+    ground(Id?), ground(T?) |
+    '_output'(tagged(Id?, cmd(T?))),
+    send_to_user_tagged(Id?, Cmds?, Notifies?).
+send_to_user_tagged(Id, Cmds, [T|Notifies]) :-
+    ground(Id?), ground(T?) |
+    '_output'(tagged(Id?, notify(T?))),
+    send_to_user_tagged(Id?, Cmds?, Notifies?).
+send_to_user_tagged(_, [], []).
+send_to_user_tagged(_, Cmds, []) :- sink(Cmds?).
+
+procedure sink(Stream(_)?).
+sink([_|Xs]) :- sink(Xs?).
+sink([]).
+
+procedure actor_dispatch(Constant?, Constant?, Channel(Stream(UserNotify), Stream(UserCmd))).
+actor_dispatch(alice, 5, Ch) :- alice_p5(Ch?).
+actor_dispatch(bob, 5, Ch) :- bob_p5(Ch?).

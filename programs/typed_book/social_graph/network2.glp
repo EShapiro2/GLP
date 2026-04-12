@@ -6,9 +6,10 @@
 %% Switch holds inverse: ch(Out?, In) - reads agent's output, writes to agent's input.
 
 %% Type definitions
-Msg ::= msg(_, _, _).
-Channel ::= ch(Stream?, Stream).
-AgentEntry ::= (_, Channel?).
+%% 3-arg network messages: msg(From, To, Content)
+%% Content is protocol-opaque — router forwards without inspection
+Msg ::= msg(Constant, Constant, _).
+AgentEntry ::= (Constant, Channel(Stream(Msg), Stream(Msg))?).
 
 procedure network2(AgentEntry?, AgentEntry?).
 %% Alice sends to Bob

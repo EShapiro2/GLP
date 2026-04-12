@@ -401,16 +401,16 @@ void main() {
       expect(arg2.functor, equals('ch'));
       expect(arg2.mode, equals(Mode.consume));  // Channel? is consumed
       
-      // With explicit dual, internal modes are preserved:
-      // Position 1 (Stream?) should be mode ↓ (consume)
-      // Position 2 (Stream) should be mode ↑ (produce)
+      // At consume position, internal modes are complemented:
+      // Position 1 (Stream?) becomes mode ↑ (produce)
+      // Position 2 (Stream) becomes mode ↓ (consume)
       final in2 = arg2.args[0] as ModedVariable;
-      expect(in2.mode, equals(Mode.consume));  // Stream? position
-      expect(in2.isReader, isTrue);  // writer at ↓ becomes reader
-      
+      expect(in2.mode, equals(Mode.produce));  // Stream? complemented
+      expect(in2.isReader, isTrue);  // writer at ↑ complemented to reader
+
       final out2 = arg2.args[1] as ModedVariable;
-      expect(out2.mode, equals(Mode.produce));  // Stream position
-      expect(out2.isReader, isTrue);  // writer at ↑ becomes reader
+      expect(out2.mode, equals(Mode.consume));  // Stream complemented
+      expect(out2.isReader, isTrue);  // writer at ↓ complemented to reader
     });
 
     test('DiffList with explicit dual preserves internal structure', () {
@@ -482,16 +482,16 @@ void main() {
       expect(arg1.functor, equals(r'\'));
       expect(arg1.mode, equals(Mode.consume));  // DiffList? is consumed
       
-      // With explicit dual, internal modes are preserved:
-      // Position 1 (Stream? content) should be mode ↓ (consume)
-      // Position 2 (Stream hole) should be mode ↑ (produce)
+      // At consume position, internal modes are complemented:
+      // Position 1 (Stream? content) becomes mode ↑ (produce)
+      // Position 2 (Stream hole) becomes mode ↓ (consume)
       final a1 = arg1.args[0] as ModedVariable;
-      expect(a1.mode, equals(Mode.consume));  // Stream? position
-      expect(a1.isReader, isTrue);  // writer at ↓ becomes reader
-      
+      expect(a1.mode, equals(Mode.produce));  // Stream? complemented
+      expect(a1.isReader, isTrue);  // writer at ↑ complemented to reader
+
       final b1 = arg1.args[1] as ModedVariable;
-      expect(b1.mode, equals(Mode.produce));  // Stream position
-      expect(b1.isReader, isFalse);  // reader at ↑ becomes writer
+      expect(b1.mode, equals(Mode.consume));  // Stream complemented
+      expect(b1.isReader, isFalse);  // reader at ↓ complemented to writer
     });
   });
 }

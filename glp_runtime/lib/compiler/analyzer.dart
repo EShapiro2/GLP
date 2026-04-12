@@ -283,6 +283,7 @@ class Analyzer {
     bool generateReduce = false,
     List<ProcDecl>? procDeclarations,
     CompileMode compileMode = CompileMode.user,
+    bool skipGlobalSRSW = false,
   }) {
     _compileMode = compileMode;
 
@@ -297,16 +298,23 @@ class Analyzer {
     // STEP 1: Run SRSW validation on the ORIGINAL program
     // This must happen BEFORE partial evaluation, because partial eval removes defined guards.
     // Guard readers (like X? in send(X?, Ch?, Ch1)) must be counted for SRSW pairing.
-    final allViolations = <String>[];
-    for (final proc in program.procedures) {
-      final violations = _collectSRSWViolationsForProcedure(proc);
-      allViolations.addAll(violations);
-    }
+    //
+    // skipGlobalSRSW: Linked programs skip this check because each module was already
+    // type-checked independently, and the generated alias clauses use a forwarding
+    // pattern (writer pass-through for output args) that doesn't satisfy SRSW locally
+    // but is safe at the program level.
+    if (!skipGlobalSRSW) {
+      final allViolations = <String>[];
+      for (final proc in program.procedures) {
+        final violations = _collectSRSWViolationsForProcedure(proc);
+        allViolations.addAll(violations);
+      }
 
-    // Report SRSW violations early (before partial evaluation)
-    if (allViolations.isNotEmpty) {
-      final message = 'SRSW violations found:\n${allViolations.map((v) => '  • $v').join('\n')}';
-      throw CompileError(message, 0, 0, phase: 'analyzer');
+      // Report SRSW violations early (before partial evaluation)
+      if (allViolations.isNotEmpty) {
+        final message = 'SRSW violations found:\n${allViolations.map((v) => '  • $v').join('\n')}';
+        throw CompileError(message, 0, 0, phase: 'analyzer');
+      }
     }
 
     // STEP 2: Transform defined guards via partial evaluation
@@ -598,7 +606,8 @@ class Analyzer {
   static const _negatableGuards = {
     // Type guards
     'ground', 'known', 'unknown', 'integer', 'number', 'atom', 'string',
-    'constant', 'compound', 'tuple', 'list', 'is_list', 'no_readers',
+    'constant', 'compound', 'tuple', 'list', 'is_list', 'module',
+    'is_mutual_ref', 'no_readers',
     // Equality
     '=?=',
   };
@@ -668,8 +677,8 @@ class Analyzer {
       }
     }
 
-    // is_mutual_ref/1 guard marks argument as ground (MutualRefTerm can be read multiple times)
-    if (guard.predicate == 'is_mutual_ref' && guard.args.length == 1) {
+    // module/1 guard marks argument as ground (ModuleTerm is ground)
+    if (guard.predicate == 'module' && guard.args.length == 1) {
       final arg = guard.args[0];
       if (arg is VarTerm) {
         varTable.markGrounded(arg.name);
@@ -715,6 +724,14 @@ class Analyzer {
     // equator/1 guard marks argument as ground (equator structure can be read multiple times)
     // Equators enable many-to-one signaling where multiple recipients receive the same structure
     if (guard.predicate == 'equator' && guard.args.length == 1) {
+      final arg = guard.args[0];
+      if (arg is VarTerm) {
+        varTable.markGrounded(arg.name);
+      }
+    }
+
+    // is_mutual_ref/1 guard marks argument as ground (MutualRefTerm can be read multiple times)
+    if (guard.predicate == 'is_mutual_ref' && guard.args.length == 1) {
       final arg = guard.args[0];
       if (arg is VarTerm) {
         varTable.markGrounded(arg.name);
@@ -1195,6 +1212,20 @@ class PartialEvaluator {
     return UnifySuccess(resolved);
   }
 
+  /// Set subst[key] = value, propagating to any existing alias.
+  /// If subst[key] was previously a VarTerm (alias), also bind that variable.
+  void _substSet(Map<String, Term> subst, String key, Term value) {
+    if (subst.containsKey(key)) {
+      final old = subst[key]!;
+      if (old is VarTerm && !old.isReader && value is! VarTerm) {
+        if (!subst.containsKey(old.name)) {
+          subst[old.name] = value;
+        }
+      }
+    }
+    subst[key] = value;
+  }
+
   /// Unify two terms, updating substitution and suspension set.
   /// Returns UnifyFail on structural mismatch, null on success.
   UnifyResult? _unifyTerms(
@@ -1261,11 +1292,11 @@ class PartialEvaluator {
         }
       } else if (unitArg is VarTerm && !unitArg.isReader) {
         // Constant vs Writer: bind unit writer to constant
-        subst[unitArg.name] = callArg;
+        _substSet(subst, unitArg.name, callArg);
         return null;
       } else if (unitArg is VarTerm && unitArg.isReader) {
         // Constant vs Reader in unit clause - unusual
-        subst[unitArg.name] = callArg;
+        _substSet(subst, unitArg.name, callArg);
         return null;
       } else {
         return UnifyFail('Constant ${callArg.value} cannot match structure $unitArg');
@@ -1285,10 +1316,10 @@ class PartialEvaluator {
         }
         return null;
       } else if (unitArg is VarTerm && !unitArg.isReader) {
-        subst[unitArg.name] = callArg;
+        _substSet(subst, unitArg.name, callArg);
         return null;
       } else if (unitArg is VarTerm && unitArg.isReader) {
-        subst[unitArg.name] = callArg;
+        _substSet(subst, unitArg.name, callArg);
         return null;
       } else {
         return UnifyFail('Structure ${callArg.functor} cannot match $unitArg');
@@ -1317,10 +1348,10 @@ class PartialEvaluator {
         }
         return null;
       } else if (unitArg is VarTerm && !unitArg.isReader) {
-        subst[unitArg.name] = callArg;
+        _substSet(subst, unitArg.name, callArg);
         return null;
       } else if (unitArg is VarTerm && unitArg.isReader) {
-        subst[unitArg.name] = callArg;
+        _substSet(subst, unitArg.name, callArg);
         return null;
       } else {
         return UnifyFail('List cannot match $unitArg');

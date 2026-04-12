@@ -1,5 +1,5 @@
 % append_dl.glp - Append two difference lists
 % Uses prelude DiffList type and dl_append
 
-procedure test_append_dl(DiffList?, DiffList?, DiffList).
+procedure test_append_dl(DiffList(X)?, DiffList(X)?, DiffList(X)).
 test_append_dl(D1, D2, D3?) :- dl_append(D1?, D2?, D3) | true.

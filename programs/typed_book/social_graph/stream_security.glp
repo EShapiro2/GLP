@@ -20,10 +20,10 @@
 
 %% Type definitions
 Done ::= done.
-Control ::= control(Stream, Control).
+Control ::= control(Stream(X), Control).
 
 %% Cooperative extension example - only holder of tail writer can extend
-procedure extend_stream(Stream?, _, Stream).
+procedure extend_stream(Stream(X)?, _, Stream(X)).
 extend_stream([H?|T], H, T).
 
 %% Round-robin production through explicit handover
@@ -37,9 +37,9 @@ producer_b(control(Xs,Next?)) :-
     produce_batch_b(Xs,Xs1,Done),
     handover(Done?,Xs1?,Next).
 
-procedure handover(Done?, Stream, Control).
+procedure handover(Done?, Stream(X), Control).
 handover(done, Xs, control(Xs?,Next?)).
 
 %% External procedures (defined elsewhere)
-procedure produce_batch_a(Stream, Stream?, Done).
-procedure produce_batch_b(Stream, Stream?, Done).
+procedure produce_batch_a(Stream(X), Stream(X)?, Done).
+procedure produce_batch_b(Stream(X), Stream(X)?, Done).

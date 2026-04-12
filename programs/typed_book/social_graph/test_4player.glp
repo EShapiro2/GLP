@@ -5,7 +5,7 @@
 %% The actual test predicates are in the referenced files.
 
 %% External procedures (for referenced predicates)
-procedure social_graph(_?, Stream?, Stream?).
+procedure social_graph(_?, Stream(X)?, Stream(X)?).
 
 %% Scenario:
 %%   Round 1: Alice -> Bob (accept)

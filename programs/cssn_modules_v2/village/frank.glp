@@ -1,0 +1,144 @@
+%% frank.glp — Frank actor for Village scenario
+%%
+%% Frank is an adult teacher (no children).
+%% Act 1: Accepts befriend from Alice. Accepts befriend from Bob (Bob initiates after Act 2).
+%% Act 4: Creates study group after Bob's ready signal.
+%%         Invites Dave (via Bob) and Carol (via Alice).
+%%         Sends group message, receives replies.
+%% Types: from village/self.glp (ancestor scoping)
+
+-mode(system).
+
+%% =============================================================================
+%% Act 1: Adult friendships
+%% =============================================================================
+
+%% Wait for befriend(alice, ReqId) — Alice connects to Frank
+exported procedure frank13(Constant?, Channel(Stream(UserNotify), Stream(UserCmd))?, Stream(NarrativeItem)).
+frank13(_, ch([befriend(alice, ReqId)|In],
+              [decision(yes, alice, ReqId?)|Out?]),
+         Narr?) :-
+    ground(ReqId?) |
+    frank13_wait_alice_connected(In?, Out, Narr).
+
+%% Wait for connected(alice), then wait for Bob's befriend
+procedure frank13_wait_alice_connected(Stream(UserNotify)?, Stream(UserCmd), Stream(NarrativeItem)).
+frank13_wait_alice_connected([connected(alice)|In], Out?,
+                             [friend(alice)|Narr?]) :-
+    frank13_wait_bob_befriend(In?, Out, Narr).
+frank13_wait_alice_connected([_|In], Out?, Narr?) :-
+    otherwise | frank13_wait_alice_connected(In?, Out, Narr).
+frank13_wait_alice_connected([], [], []).
+
+%% Wait for befriend(bob) — Bob connects to Frank after completing Act 2
+procedure frank13_wait_bob_befriend(Stream(UserNotify)?, Stream(UserCmd), Stream(NarrativeItem)).
+frank13_wait_bob_befriend([befriend(bob, ReqId)|In],
+                          [decision(yes, bob, ReqId?)|Out?],
+                          Narr?) :-
+    ground(ReqId?) |
+    frank13_wait_bob_connected(In?, Out, Narr).
+frank13_wait_bob_befriend([_|In], Out?, Narr?) :-
+    otherwise | frank13_wait_bob_befriend(In?, Out, Narr).
+frank13_wait_bob_befriend([], [], []).
+
+%% Wait for connected(bob), then wait for Bob's ready signal
+procedure frank13_wait_bob_connected(Stream(UserNotify)?, Stream(UserCmd), Stream(NarrativeItem)).
+frank13_wait_bob_connected([connected(bob)|In], Out?,
+                           [friend(bob)|Narr?]) :-
+    frank13_wait_bob_ready(In?, Out, Narr).
+frank13_wait_bob_connected([_|In], Out?, Narr?) :-
+    otherwise | frank13_wait_bob_connected(In?, Out, Narr).
+frank13_wait_bob_connected([], [], []).
+
+%% Wait for Bob's "ready" signal (Bob sends after Act 3 consent approvals complete)
+procedure frank13_wait_bob_ready(Stream(UserNotify)?, Stream(UserCmd), Stream(NarrativeItem)).
+frank13_wait_bob_ready([received(bob, _)|In], Out?,
+                       [event('Bob ready')|Narr?]) :-
+    frank13_act4(In?, Out, Narr).
+frank13_wait_bob_ready([_|In], Out?, Narr?) :-
+    otherwise | frank13_wait_bob_ready(In?, Out, Narr).
+frank13_wait_bob_ready([], [], []).
+
+%% =============================================================================
+%% Act 4: Create study group and invite members
+%% =============================================================================
+
+%% Create group
+procedure frank13_act4(Stream(UserNotify)?, Stream(UserCmd), Stream(NarrativeItem)).
+frank13_act4(In, [create_group(study)|Out?],
+             [act('Creating study group')|Narr?]) :-
+    frank13_wait_group_created(In?, Out, Narr).
+
+%% Wait for group_joined(group_id(frank, study))
+procedure frank13_wait_group_created(Stream(UserNotify)?, Stream(UserCmd), Stream(NarrativeItem)).
+frank13_wait_group_created([group_joined(group_id(frank, study))|In],
+                           [invite_group(group_id(frank, study), dave, bob)|Out?],
+                           [event('Study group created'),
+                            act('Inviting Dave to study group via Bob')|Narr?]) :-
+    frank13_wait_dave_joined(In?, Out, Narr).
+frank13_wait_group_created([_|In], Out?, Narr?) :-
+    otherwise | frank13_wait_group_created(In?, Out, Narr).
+frank13_wait_group_created([], [], []).
+
+%% Wait for Dave to join
+procedure frank13_wait_dave_joined(Stream(UserNotify)?, Stream(UserCmd), Stream(NarrativeItem)).
+frank13_wait_dave_joined([group_joined_member(group_id(frank, study), dave)|In],
+                         [invite_group(group_id(frank, study), carol, alice)|Out?],
+                         [event('Dave joined study group'),
+                          act('Inviting Carol to study group via Alice')|Narr?]) :-
+    frank13_wait_carol_joined(In?, Out, Narr).
+frank13_wait_dave_joined([_|In], Out?, Narr?) :-
+    otherwise | frank13_wait_dave_joined(In?, Out, Narr).
+frank13_wait_dave_joined([], [], []).
+
+%% Wait for Carol to join
+procedure frank13_wait_carol_joined(Stream(UserNotify)?, Stream(UserCmd), Stream(NarrativeItem)).
+frank13_wait_carol_joined([group_joined_member(group_id(frank, study), carol)|In],
+                          [send_group(group_id(frank, study), 'Welcome to the study group')|Out?],
+                          [event('Carol joined study group'),
+                           say('Welcome to the study group')|Narr?]) :-
+    frank13_wait_replies(In?, Out, Narr).
+frank13_wait_carol_joined([_|In], Out?, Narr?) :-
+    otherwise | frank13_wait_carol_joined(In?, Out, Narr).
+frank13_wait_carol_joined([], [], []).
+
+%% Wait for replies from Dave and Carol (either order)
+procedure frank13_wait_replies(Stream(UserNotify)?, Stream(UserCmd), Stream(NarrativeItem)).
+%% Dave replies first
+frank13_wait_replies([group_received(group_id(frank, study), dave, _)|In], Out?,
+                     [event('Dave replied in study group')|Narr?]) :-
+    frank13_wait_carol_reply(In?, Out, Narr).
+%% Carol replies first
+frank13_wait_replies([group_received(group_id(frank, study), carol, _)|In], Out?,
+                     [event('Carol replied in study group')|Narr?]) :-
+    frank13_wait_dave_reply(In?, Out, Narr).
+frank13_wait_replies([_|In], Out?, Narr?) :-
+    otherwise | frank13_wait_replies(In?, Out, Narr).
+frank13_wait_replies([], [], []).
+
+%% Only Carol's reply remaining
+procedure frank13_wait_carol_reply(Stream(UserNotify)?, Stream(UserCmd), Stream(NarrativeItem)).
+frank13_wait_carol_reply([group_received(group_id(frank, study), carol, _)|In],
+                         [send(bob, done)|Out?],
+                         [event('Carol replied in study group')|Narr?]) :-
+    frank13_finish(In?, Out, Narr).
+frank13_wait_carol_reply([_|In], Out?, Narr?) :-
+    otherwise | frank13_wait_carol_reply(In?, Out, Narr).
+frank13_wait_carol_reply([], [], []).
+
+%% Only Dave's reply remaining
+procedure frank13_wait_dave_reply(Stream(UserNotify)?, Stream(UserCmd), Stream(NarrativeItem)).
+frank13_wait_dave_reply([group_received(group_id(frank, study), dave, _)|In],
+                        [send(bob, done)|Out?],
+                        [event('Dave replied in study group')|Narr?]) :-
+    frank13_finish(In?, Out, Narr).
+frank13_wait_dave_reply([_|In], Out?, Narr?) :-
+    otherwise | frank13_wait_dave_reply(In?, Out, Narr).
+frank13_wait_dave_reply([], [], []).
+
+%% =============================================================================
+%% Act 7: Termination
+%% =============================================================================
+
+procedure frank13_finish(Stream(UserNotify)?, Stream(UserCmd), Stream(NarrativeItem)).
+frank13_finish(_, [], []).

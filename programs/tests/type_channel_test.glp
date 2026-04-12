@@ -3,18 +3,18 @@
 %% recursive complementation flips internal modes incorrectly
 
 %% Type definitions
-Stream ::= [] ; [_ | Stream].
-Channel ::= ch(Stream?, Stream).
-Response ::= accept(Channel) ; no.
+Msg ::= hello ; goodbye.
+MsgChannel ::= Channel(Stream(Msg), Stream(Msg)).
+Response ::= accept(MsgChannel) ; no.
 
 %% Handler receives Response? (consumed)
-%% Inside Response?, we have Channel? which has:
+%% Inside Response?, we have MsgChannel? which has:
 %%   - With recursive complementation: ch(Stream, Stream?) - WRONG
 %%   - With explicit dual: ch(Stream?, Stream) - CORRECT (fixed semantics)
 
-procedure handle_response(Response?, Stream?, Stream).
+procedure handle_response(Response?, Stream(Msg)?, Stream(Msg)).
 handle_response(accept(ch(FIn, FOut)), In, In1) :-
     merge(In?, FIn?, In1).
 handle_response(no, In, In?).
 
-procedure merge(Stream?, Stream?, Stream).
+procedure merge(Stream(X)?, Stream(X)?, Stream(X)).

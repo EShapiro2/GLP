@@ -12,17 +12,14 @@ void main() {
   });
 
   test('Anonymous variable _ in head argument compiles without SRSW error', () {
-    print('\nTesting anonymous variable in head: _ := X / Y');
+    print('\nTesting anonymous variable in head argument');
 
     final compiler = GlpCompiler();
 
-    // This clause uses _ as first argument - should compile without error
-    // The _ is a writer that nobody reads (used in abort clauses)
-    // X and Y are grounded by number() guards, so guard readers count for SRSW
+    // _ as a writer argument with no reader should compile without SRSW error
     final source = '''
-_ := X / Y :-
-  number(X?), number(Y?), Y? =:= 0 |
-  abort("Division by zero").
+procedure foo(_?, _).
+foo(X, _) :- ground(X?) | true.
 ''';
 
     final program = compiler.compile(source);
@@ -32,28 +29,25 @@ _ := X / Y :-
     print('   Generated ${program.ops.length} instructions');
   });
 
-  test('Anonymous variable _ passes SRSW where Result? would fail', () {
-    print('\nTesting _ vs Result? in abort clause');
+  test('Anonymous variable _ passes SRSW where named variable would fail', () {
+    print('\nTesting _ vs named variable in head');
 
     final compiler = GlpCompiler();
 
-    // This should FAIL - Result? has no writer
+    // This should FAIL - Result has no reader
     final badSource = '''
-Result? := X / Y :-
-  number(X?), number(Y?), Y? =:= 0 |
-  abort("Division by zero").
+procedure foo(_?, _).
+foo(X, Result) :- ground(X?) | true.
 ''';
 
     expect(() => compiler.compile(badSource), throwsException,
-        reason: 'Result? with no writer should fail SRSW');
-    print('✅ Result? correctly rejected (no writer)');
+        reason: 'Result with no reader should fail SRSW');
+    print('✅ Named variable correctly rejected (no reader)');
 
     // This should PASS - _ has no SRSW requirements
-    // X and Y are grounded by number() guards, so guard readers count
     final goodSource = '''
-_ := X / Y :-
-  number(X?), number(Y?), Y? =:= 0 |
-  abort("Division by zero").
+procedure foo(_?, _).
+foo(X, _) :- ground(X?) | true.
 ''';
 
     final program = compiler.compile(goodSource);

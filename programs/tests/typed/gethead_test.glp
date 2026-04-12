@@ -1,8 +1,8 @@
 % gethead_test.glp - Extract head from a list
 
-procedure gethead(Stream?, _).
+exported procedure gethead(Stream(X)?, X).
 gethead([H|_], H?).
 gethead([], none).
 
-procedure test_gethead(Constant).
+exported procedure test_gethead(Constant).
 test_gethead(R?) :- gethead([a,b,c], R).

@@ -7,8 +7,6 @@ import 'package:glp_runtime/runtime/commit.dart';
 import 'package:glp_runtime/runtime/cells.dart';
 import 'package:glp_runtime/runtime/system_predicates.dart';
 import 'package:glp_runtime/runtime/body_kernels.dart';
-import 'package:glp_runtime/runtime/module_runtime.dart' show ModuleGoalContext;
-import 'package:glp_runtime/runtime/module_messages.dart';
 import 'package:glp_runtime/multiagent/variable_table.dart' show VariableEntry;
 import 'opcodes.dart';
 import 'opcodes_v2.dart' as opv2;
@@ -2870,6 +2868,11 @@ class BytecodeRunner {
           // Enqueue the goal
           cx.rt.gq.enqueue(newGoalRef);
 
+          // Propagate infrastructure goal status to child goals
+          if (cx.rt.infrastructureGoalIds.contains(cx.goalId)) {
+            cx.rt.infrastructureGoalIds.add(newGoalId);
+          }
+
           // Clear argument registers for next spawn
           cx.argSlots.clear();
         }
@@ -2947,8 +2950,7 @@ class BytecodeRunner {
         // Static RPC to imported module at known index
         // Following FCP: distribute # {Index, Goal}
         //
-        // Writes ExportMessage to import vector which routes via
-        // serve_import to target module's dispatcher.
+        // Routes RPC via GLP channels or REPL module context.
         if (cx.inBody) {
           // Collect arguments from argSlots
           final args = <Term>[];
@@ -2964,69 +2966,31 @@ class BytecodeRunner {
             final target = replCtx.imports[op.importIndex];
 
             if (target != null) {
-              // Find entry point - use combined program if available, otherwise target's program
-              final signature = '${op.functor}/${op.arity}';
-              final program = replCtx.combinedProgram ?? target.program;
-              final entryPC = program.labels[signature];
-
-              if (entryPC != null) {
-                // Create argument slots for the new goal
-                final argSlots = <int, Term>{};
-                for (int i = 0; i < args.length; i++) {
-                  argSlots[i] = args[i];
+              // Check GLP channel first (Phase 5: RPC routing via GLP channels)
+              final glpChannel = cx.rt.glpChannels[target.name];
+              if (glpChannel != null) {
+                // Route via GLP channel — build goal term, send on channel
+                final goalTerm = StructTerm(op.functor, args);
+                final activations = glpChannel.send(goalTerm);
+                for (final act in activations) {
+                  cx.rt.enqueueReactivatedGoal(act);
                 }
-
-                // Allocate new goal ID and enqueue
-                final newGoalId = cx.rt.nextGoalId++;
-                final env = CallEnv(args: argSlots);
-                cx.rt.setGoalEnv(newGoalId, env);
-                cx.rt.setGoalProgram(newGoalId, replCtx.programKey);  // Use consistent key
-
-                // Pass same module context for nested RPCs
-                cx.rt.setGoalModuleContext(newGoalId, replCtx);
-
-                cx.rt.gq.enqueue(GoalRef(newGoalId, entryPC));
-
                 if (cx.debugOutput) {
-                  print('[MODULE] Distribute (REPL): ${replCtx.moduleName} -> ${target.name} # $signature (goal $newGoalId @ PC $entryPC)');
+                  print('[MODULE] Distribute (GLP channel): ${replCtx.moduleName} -> ${target.name} # ${op.functor}/${op.arity}');
                 }
               } else {
-                if (cx.debugOutput) {
-                  print('[MODULE] Distribute: Entry point not found for ${op.functor}/${op.arity} in ${target.name}');
-                }
+                // Module not activated — no GLP channel available
+                print('ERROR: Distribute: module ${target.name} not activated (no GLP channel for ${op.functor}/${op.arity})');
+                return RunResult.terminated;
               }
             } else {
-              if (cx.debugOutput) {
-                print('[MODULE] Distribute: No target for import index ${op.importIndex}');
-              }
-            }
-          } else if (cx.moduleContext is ModuleGoalContext) {
-            final modCtx = cx.moduleContext as ModuleGoalContext;
-            final vector = modCtx.module.importVector;
-
-            if (vector != null && op.importIndex <= vector.size) {
-              // Build and send ExportMessage
-              final message = ExportMessage.trust(
-                sourceModule: modCtx.module.name,
-                functor: op.functor,
-                arity: op.arity,
-                args: args,
-              );
-              vector.write(op.importIndex, message);
-
-              if (cx.debugOutput) {
-                print('[MODULE] Distribute: ${modCtx.module.name} -> import[${op.importIndex}] # ${op.functor}/${op.arity}');
-              }
-            } else {
-              if (cx.debugOutput) {
-                print('[MODULE] Distribute: No vector or index out of range for ${op.functor}/${op.arity}');
-              }
+              print('ERROR: Distribute: no target for import index ${op.importIndex} (${op.functor}/${op.arity})');
+              return RunResult.terminated;
             }
           } else {
-            // No module context - log only (standalone execution)
-            if (cx.debugOutput) {
-              print('[MODULE] Distribute (no context): import[${op.importIndex}] # ${op.functor}/${op.arity}');
-            }
+            // No module context
+            print('ERROR: Distribute: no module context for import[${op.importIndex}] # ${op.functor}/${op.arity}');
+            return RunResult.terminated;
           }
           cx.argSlots.clear();
         }
@@ -3038,7 +3002,7 @@ class BytecodeRunner {
         // Following FCP: transmit # {ModuleVar, Goal}
         //
         // Resolves module name from variable, looks up in registry,
-        // sends ExportMessage directly to target module's input channel.
+        // Routes via GLP channels to target module.
         if (cx.inBody) {
           // Collect arguments from argSlots
           final args = <Term>[];
@@ -3050,53 +3014,38 @@ class BytecodeRunner {
           // Get module name from clause variable
           final moduleVar = cx.clauseVars[op.moduleVarIndex];
 
-          // Check if module context is available
-          if (cx.moduleContext is ModuleGoalContext) {
-            final modCtx = cx.moduleContext as ModuleGoalContext;
-
-            // Resolve module name from variable
-            String? moduleName;
-            if (moduleVar is ConstTerm) {
-              moduleName = moduleVar.value?.toString();
-            } else if (moduleVar is VarRef) {
-              // Dereference variable to get bound value
-              final deref = cx.rt.heap.dereference(moduleVar);
-              if (deref is ConstTerm) {
-                moduleName = deref.value?.toString();
-              }
+          // Resolve module name from variable
+          String? moduleName;
+          if (moduleVar is ConstTerm) {
+            moduleName = moduleVar.value?.toString();
+          } else if (moduleVar is VarRef) {
+            // Dereference variable to get bound value
+            final deref = cx.rt.heap.dereference(moduleVar);
+            if (deref is ConstTerm) {
+              moduleName = deref.value?.toString();
             }
+          }
 
-            if (moduleName != null) {
-              // Look up target module in registry
-              final targetModule = modCtx.registry.lookup(moduleName);
-              if (targetModule != null) {
-                // Build and send ExportMessage directly to target
-                final message = ExportMessage.trust(
-                  sourceModule: modCtx.module.name,
-                  functor: op.functor,
-                  arity: op.arity,
-                  args: args,
-                );
-                targetModule.inputSink.add(message);
-
-                if (cx.debugOutput) {
-                  print('[MODULE] Transmit: ${modCtx.module.name} -> $moduleName # ${op.functor}/${op.arity}');
-                }
-              } else {
-                if (cx.debugOutput) {
-                  print('[MODULE] Transmit: Module "$moduleName" not found in registry');
-                }
+          if (moduleName != null) {
+            // Check GLP channel first (Phase 5: RPC routing via GLP channels)
+            final glpChannel = cx.rt.glpChannels[moduleName];
+            if (glpChannel != null) {
+              // Route via GLP channel — build goal term, send on channel
+              final goalTerm = StructTerm(op.functor, args);
+              final activations = glpChannel.send(goalTerm);
+              for (final act in activations) {
+                cx.rt.enqueueReactivatedGoal(act);
+              }
+              if (cx.debugOutput) {
+                print('[MODULE] Transmit (GLP channel): -> $moduleName # ${op.functor}/${op.arity}');
               }
             } else {
-              if (cx.debugOutput) {
-                print('[MODULE] Transmit: Could not resolve module name from X${op.moduleVarIndex}');
-              }
+              print('ERROR: Transmit: module $moduleName not activated (no GLP channel for ${op.functor}/${op.arity})');
+              return RunResult.terminated;
             }
           } else {
-            // No module context - log only (standalone execution)
-            if (cx.debugOutput) {
-              print('[MODULE] Transmit (no context): X${op.moduleVarIndex}($moduleVar) # ${op.functor}/${op.arity}');
-            }
+            print('ERROR: Transmit: could not resolve module name from X${op.moduleVarIndex} (${op.functor}/${op.arity})');
+            return RunResult.terminated;
           }
           cx.argSlots.clear();
         }
@@ -3754,73 +3703,6 @@ class BytecodeRunner {
         }
       }
 
-      // ===== SET CLAUSE VARIABLE =====
-      if (op is SetClauseVar) {
-        // Set a clause variable directly to a value
-        cx.clauseVars[op.slot] = op.value;
-        pc++;
-        continue;
-      }
-
-      // ===== SYSTEM PREDICATE EXECUTION =====
-      if (op is Execute) {
-        // Execute system predicate: call registered Dart function
-        // System predicates can succeed, fail, or suspend on unbound readers
-
-        // Look up the system predicate
-        final predicate = cx.rt.systemPredicates.lookup(op.predicateName);
-        if (predicate == null) {
-          print('[ERROR] System predicate not found: ${op.predicateName}');
-          _softFailToNextClause(cx, pc);
-          pc = _findNextClauseTry(pc);
-          continue;
-        }
-
-        // Process arguments directly - they're already Terms (per spec Section 18.1)
-        // No need to look up in clauseVars - args are passed directly
-        print('[EXECUTE] Direct args: ${op.args}');
-        final processedArgs = <Object?>[];
-
-        for (final arg in op.args) {
-          print('[EXECUTE] Processing arg: $arg (${arg.runtimeType})');
-
-          // Resolve VarRefs that reference HEAD variables
-          // HEAD variables stored via GetVariable remain in clauseVars
-          final resolved = _resolveHeadVarRefs(arg, cx);
-          print('[EXECUTE] After HEAD resolve: $resolved');
-
-          // Dereference to get actual values from heap
-          final derefArg = _dereferenceForExecute(resolved, cx.rt, cx);
-          print('[EXECUTE] After deref: $derefArg (${derefArg.runtimeType})');
-
-          processedArgs.add(derefArg);
-        }
-
-        // Create system call context
-        final call = SystemCall(op.predicateName, processedArgs);
-
-        // Execute the system predicate
-        final result = predicate(cx.rt, call);
-
-        // Handle result based on three-valued semantics
-        if (result == SystemResult.success) {
-          // Predicate succeeded - continue execution
-          pc++;
-          continue;
-        } else if (result == SystemResult.failure) {
-          // Predicate failed - try next clause
-          _softFailToNextClause(cx, pc);
-          pc = _findNextClauseTry(pc);
-          continue;
-        } else {
-          // result == SystemResult.suspend
-          // Predicate suspended on unbound readers - add to Si and continue
-          pc = _suspendAndFailMulti(cx, call.suspendedReaders, pc); continue;
-          pc++;
-          continue;
-        }
-      }
-
       // ===== LIST-SPECIFIC HEAD INSTRUCTIONS =====
       if (op is HeadNil) {
         // Match empty list [] with argument or clause variable
@@ -4236,108 +4118,6 @@ class BytecodeRunner {
     return arg;
   }
 
-  /// Resolves VarRefs that reference HEAD variables to actual heap IDs
-  /// HEAD variables are stored in clauseVars via GetVariable
-  /// This converts VarRef(headIndex) → VarRef(heapId)
-  static Object? _resolveHeadVarRefs(Object? term, RunnerContext cx) {
-    if (term is VarRef) {
-      // Check if this VarRef's addr is a HEAD variable index
-      // GetVariable stores heap addrs in clauseVars, so we can look them up
-      if (cx.clauseVars.containsKey(term.addr)) {
-        final binding = cx.clauseVars[term.addr];
-        if (binding is int) {
-          // It's a heap addr from HEAD phase - create new VarRef with actual addr
-          return VarRef(binding);
-        } else if (binding is VarRef) {
-          // Already a VarRef - return as is
-          return binding;
-        } else if (binding is Term) {
-          // It's a Term - return as is
-          return binding;
-        }
-      }
-      // Not in clauseVars or not resolvable - return as is
-      return term;
-    } else if (term is StructTerm) {
-      // Recursively resolve arguments in structures
-      final resolvedArgs = <Term>[];
-      for (final arg in term.args) {
-        final resolved = _resolveHeadVarRefs(arg, cx);
-        if (resolved is Term) {
-          resolvedArgs.add(resolved);
-        } else {
-          resolvedArgs.add(ConstTerm(resolved));
-        }
-      }
-      return StructTerm(term.functor, resolvedArgs);
-    } else {
-      // Other types - return as is
-      return term;
-    }
-  }
-
-  /// Helper to dereference values for execute() arguments
-  /// Recursively dereferences readers to get actual bound values
-  static Object? _dereferenceForExecute(Object? term, GlpRuntime rt, RunnerContext cx) {
-    if (term is VarRef) {
-      // Now addr should be an actual heap addr (after _resolveHeadVarRefs)
-      final addr = term.addr;
-      final isReader = rt.heap.isReader(addr);
-      print('[DEREF] VarRef: $term (addr=$addr, isReader=$isReader)');
-
-      // Check sigma-hat for tentative bindings (during HEAD/GUARD phase)
-      if (cx.sigmaHat.containsKey(addr)) {
-        final value = cx.sigmaHat[addr];
-        print('[DEREF] Found in sigma-hat: $value');
-        return _dereferenceForExecute(value, rt, cx);
-      }
-
-      // Check if bound using appropriate method for reader/writer
-      if (isReader) {
-        // Use isReaderBound for imported reader support
-        final isBound = rt.heap.isReaderBound(addr);
-        print('[DEREF] isReaderBound($addr) = $isBound');
-        if (isBound) {
-          final value = rt.heap.getReaderValue(addr);
-          print('[DEREF] Bound to: $value');
-          return _dereferenceForExecute(value, rt, cx);
-        } else {
-          print('[DEREF] Unbound - returning as-is');
-          return term;
-        }
-      } else {
-        // Writer - check if bound
-        print('[DEREF] isFullyBound($addr) = ${rt.heap.isFullyBound(addr)}');
-        if (rt.heap.isFullyBound(addr)) {
-          final value = rt.heap.getValue(addr);
-          print('[DEREF] Bound to: $value');
-          return _dereferenceForExecute(value, rt, cx);
-        } else {
-          print('[DEREF] Unbound - returning as-is');
-          return term;
-        }
-      }
-    } else if (term is StructTerm) {
-      print('[DEREF] StructTerm: ${term.functor}/${term.args.length}');
-      // Recursively dereference arguments in structures
-      final derefArgs = <Term>[];
-      for (final arg in term.args) {
-        final derefArg = _dereferenceForExecute(arg, rt, cx);
-        // Wrap primitives in ConstTerm
-        if (derefArg is Term) {
-          derefArgs.add(derefArg);
-        } else {
-          derefArgs.add(ConstTerm(derefArg));
-        }
-      }
-      return StructTerm(term.functor, derefArgs);
-    } else {
-      // Const, List, or other - return as-is
-      print('[DEREF] Other: $term (${term.runtimeType})');
-      return term;
-    }
-  }
-
   /// Dereference a term and track any unbound readers encountered
   /// Used by guard evaluation to detect suspension conditions
   static (Object?, Set<int>) _dereferenceWithTracking(Object? term, RunnerContext cx) {
@@ -4734,6 +4514,15 @@ class BytecodeRunner {
         }
         return GuardResult.failure;
 
+      case 'module':
+        // Succeeds if X is a ModuleTerm (ground module reference)
+        if (args.isEmpty) return GuardResult.failure;
+        final mval = getValue(args[0]);
+        if (mval is ModuleTerm) {
+          return GuardResult.success;
+        }
+        return GuardResult.failure;
+
       case 'is_mutual_ref':
         // Succeeds if X is a MutualRefTerm (enables SRSW multiple reads)
         if (args.isEmpty) return GuardResult.failure;
@@ -5037,17 +4826,48 @@ class BytecodeRunner {
         return GuardResult.failure;
 
       case 'wait_until':
-        // wait_until(Timestamp) - Test if absolute time has passed
+        // wait_until(Timestamp) - Suspend until absolute time has passed
         // Semantics:
         // - Unbound Timestamp: handled by caller (suspend on reader)
         // - Non-number: fail
         // - current time >= Timestamp: succeed
-        // - current time < Timestamp: FAIL (not suspend!)
+        // - current time < Timestamp: suspend until time passes (timer-based)
         if (args.isEmpty) return GuardResult.failure;
         final timestamp = evaluateNumeric(args[0]);
         if (timestamp == null) return GuardResult.failure;
         final now = DateTime.now().millisecondsSinceEpoch;
-        return now >= timestamp ? GuardResult.success : GuardResult.failure;
+        if (now >= timestamp) return GuardResult.success;
+
+        // Time hasn't arrived yet — use timer-based suspension (same as wait)
+        final remaining = timestamp.toInt() - now;
+
+        // Check if this goal already has a pending wait_until
+        final existingReaderWU = cx.rt.getWaitReader(cx.goalId);
+        if (existingReaderWU != null) {
+          if (cx.rt.heap.isFullyBound(existingReaderWU)) {
+            cx.rt.clearWaitState(cx.goalId);
+            return GuardResult.success;
+          } else {
+            cx.U.add(existingReaderWU);
+            return GuardResult.failure;
+          }
+        }
+
+        // First call — create fresh reader/writer pair for timer notification
+        final (writerAddrWU, readerAddrWU) = cx.rt.heap.allocateVariable();
+        cx.rt.setWaitReader(cx.goalId, readerAddrWU);
+        cx.rt.incrementPendingTimers();
+
+        Timer(Duration(milliseconds: remaining), () {
+          final reactivated = cx.rt.heap.bindWriterConst(writerAddrWU, 0);
+          for (final goalRef in reactivated) {
+            cx.rt.enqueueReactivatedGoal(goalRef);
+          }
+          cx.rt.decrementPendingTimers();
+        });
+
+        cx.U.add(readerAddrWU);
+        return GuardResult.failure;
 
       case '=?=':
         // Ground equality test

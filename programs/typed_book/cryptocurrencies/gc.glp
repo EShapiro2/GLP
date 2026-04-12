@@ -3,23 +3,37 @@
 %% Reference: lewis2023grassroots, shapiro2024gc
 
 %% Type definitions
-BalanceList ::= [] ; [_ | BalanceList].
-RequestList ::= [] ; [_ | RequestList].
-BlockStream ::= [] ; [_ | BlockStream].
+Payment ::= payment(Constant, Number).
+PaymentList ::= [] ; [Payment | PaymentList].
+Tx ::= tx(Constant, PaymentList).
+PrefList ::= [] ; [Constant | PrefList].
+Block ::= block(Tx, X, BlockStream).
+BlockStream ::= [] ; [Block | BlockStream].
+BalanceEntry ::= (Constant, Number).
+BalanceList ::= [] ; [BalanceEntry | BalanceList].
+RepayEntry ::= (Constant, Number).
+RepayList ::= [] ; [RepayEntry | RepayList].
+Request ::= issue(Constant, Number, Constant)
+          ; accept(Number, Constant, X, Y)
+          ; approve(X)
+          ; mint(Number)
+          ; redeem(Constant, Number, PrefList)
+          ; repay(Constant, Number, PrefList, Constant).
+RequestList ::= [] ; [Request | RequestList].
 
 %% ============================================
 %% Balance Management
 %% ============================================
 
 %% Get balance in a currency (0 if not found)
-procedure get_balance(_, BalanceList, Number).
+procedure get_balance(Constant, BalanceList, Number).
 get_balance(Currency, [(K, Bal)|_], Bal?) :- Currency? =?= K? | true.
 get_balance(Currency, [_|Balances], Bal?) :-
     otherwise | get_balance(Currency?, Balances?, Bal).
 get_balance(_, [], 0).
 
 %% Update balance in a currency
-procedure set_balance(_, Number, BalanceList, BalanceList).
+procedure set_balance(Constant, Number, BalanceList, BalanceList).
 set_balance(Currency, NewBal, [], [(Currency?, NewBal?)]).
 set_balance(Currency, NewBal, [(K, _)|Bs], [(K?, NewBal?)|Bs?]) :-
     Currency? =?= K? | true.
@@ -39,7 +53,7 @@ agent([Request|Requests], Balances, Stream) :-
     prepend_blocks(BlockOrBlocks?, Stream?, Stream1),
     agent(Requests?, Balances1?, Stream1?).
 
-procedure prepend_blocks(_, BlockStream, BlockStream).
+procedure prepend_blocks(X, BlockStream, BlockStream).
 prepend_blocks(block(A,B,C), Stream, [block(A?,B?,C?) | Stream?]).
 prepend_blocks([], Stream, Stream?).
 prepend_blocks([B|Bs], Stream, [B? | Stream1?]) :- prepend_blocks(Bs?, Stream?, Stream1).
@@ -48,7 +62,7 @@ prepend_blocks([B|Bs], Stream, [B? | Stream1?]) :- prepend_blocks(Bs?, Stream?, 
 %% Request Handlers (all handle/4 clauses together)
 %% ============================================
 
-procedure handle(_, BalanceList, BalanceList, _).
+procedure handle(Request, BalanceList, BalanceList, X).
 
 %% Issue: pay someone in a given currency
 handle(issue(To, Amount, Currency), Balances, BalancesOut?, Block?) :-
@@ -101,18 +115,18 @@ handle(repay(Claimer, Amount, Preferences, ClaimHash),
 %% Block Construction Helpers
 %% ============================================
 
-procedure make_issue_block(_, _, _, _, _).
+procedure make_issue_block(Constant, Constant, Number, Number, Block).
 make_issue_block(Currency, To, Amount, NewBal,
                  block(tx(Currency?, [payment(To?, Amount?), payment(self, NewBal?)]), issue, [])).
 
-procedure make_accept_block(_, _, _, _, _).
+procedure make_accept_block(Constant, Number, X, Y, Block).
 make_accept_block(Currency, NewBal, PaymentBlock, ApprovalBlock,
                   block(tx(Currency?, [payment(self, NewBal?)]), accept, [PaymentBlock?, ApprovalBlock?])).
 
-procedure make_mint_block(_, _).
+procedure make_mint_block(Number, Block).
 make_mint_block(NewBal, block(tx(self, [payment(self, NewBal?)]), mint, [])).
 
-procedure make_redeem_block(_, _, _, _).
+procedure make_redeem_block(Constant, Number, PrefList, Block).
 make_redeem_block(Sovereign, Amount, Preferences,
                   block(tx(Sovereign?, [payment(Sovereign?, Amount?)]), (redeem, Preferences?), [])).
 
@@ -120,7 +134,7 @@ make_redeem_block(Sovereign, Amount, Preferences,
 %% Repayment Computation
 %% ============================================
 
-procedure compute_repayments(Number?, _, BalanceList?, _, BalanceList).
+procedure compute_repayments(Number?, PrefList?, BalanceList?, RepayList, BalanceList).
 
 %% Base case: nothing to repay
 compute_repayments(0, _, Balances, [], Balances?).
@@ -136,7 +150,7 @@ compute_repayments(Amount, [Currency|Rest], Balances, Repayments?, Balances1?) :
     take_from_currency(Amount?, Currency?, Available?, Rest?,
                        Balances?, Repayments, Balances1).
 
-procedure take_from_currency(Number?, _, Number?, _, BalanceList?, _, BalanceList).
+procedure take_from_currency(Number?, Constant?, Number?, PrefList?, BalanceList?, RepayList, BalanceList).
 
 %% No coins of this currency available
 take_from_currency(Amount, _, 0, Rest, Balances, Repayments?, Balances1?) :-
@@ -161,7 +175,7 @@ take_from_currency(Amount, Currency, Available, Rest, Balances,
 %% Repayment Block Construction
 %% ============================================
 
-procedure make_repay_blocks(_, _, _, _).
+procedure make_repay_blocks(Constant, RepayList, Constant, BlockStream).
 make_repay_blocks(_, [], _, []).
 
 %% Pay in sovereign's own currency
@@ -177,11 +191,11 @@ make_repay_blocks(Claimer, [(Currency, Amount)|Rest], ClaimHash, [Block | Blocks
     make_foreign_repay_block(Currency?, Claimer?, Amount?, ClaimHash?, Block),
     make_repay_blocks(Claimer?, Rest?, ClaimHash?, Blocks).
 
-procedure make_self_repay_block(_, _, _, _).
+procedure make_self_repay_block(Constant, Number, Constant, Block).
 make_self_repay_block(Claimer, Amount, ClaimHash,
                       block(tx(self, [payment(Claimer?, Amount?)]), (repay, ClaimHash?), [])).
 
-procedure make_foreign_repay_block(_, _, _, _, _).
+procedure make_foreign_repay_block(Constant, Constant, Number, Constant, Block).
 make_foreign_repay_block(Currency, Claimer, Amount, ClaimHash,
                          block(tx(Currency?, [payment(Claimer?, Amount?)]), (repay, ClaimHash?), [])).
 
@@ -190,27 +204,27 @@ make_foreign_repay_block(Currency, Claimer, Amount, ClaimHash,
 %% ============================================
 
 %% Find a payment block to a specific recipient
-procedure find_payment_to(_, _, _).
+procedure find_payment_to(Constant, BlockStream, Block).
 find_payment_to(Recipient, [Block|_], Block?) :-
     Block = block(tx(_, Payments), issue, _),
     has_payment_to(Recipient?, Payments?) | true.
 find_payment_to(Recipient?, [_|Blocks], Block?) :-
     find_payment_to(Recipient, Blocks?, Block).
 
-procedure has_payment_to(_, _).
+procedure has_payment_to(Constant, PaymentList).
 has_payment_to(Recipient, [payment(Recipient?, _)|_]).
 has_payment_to(Recipient?, [_|Payments]) :-
     has_payment_to(Recipient, Payments?).
 
 %% Find an approval block
-procedure find_approval(_, _).
+procedure find_approval(BlockStream, Block).
 find_approval([Block|_], Block?) :-
     Block = block(_, approve, _) | true.
 find_approval([_|Blocks], Block?) :-
     find_approval(Blocks?, Block).
 
 %% Find a redemption claim block
-procedure find_claim(_, _).
+procedure find_claim(BlockStream, Block).
 find_claim([Block|_], Block?) :-
     Block = block(tx(_, _), (redeem, _), _) | true.
 find_claim([_|Blocks], Block?) :-

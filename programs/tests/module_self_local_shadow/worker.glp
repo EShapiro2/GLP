@@ -1,0 +1,7 @@
+-module(worker).
+
+procedure helper(Result).
+helper(from_local).
+
+exported procedure test_local(Result).
+test_local(R?) :- helper(R).

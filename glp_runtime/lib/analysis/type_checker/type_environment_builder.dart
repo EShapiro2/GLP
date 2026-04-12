@@ -8,6 +8,7 @@
 
 import 'type_ast.dart';
 import 'prelude.dart';
+import 'param_expansion.dart';
 import '../../compiler/ast.dart' as ast;
 import '../../compiler/lexer.dart';
 import '../../compiler/parser.dart';
@@ -60,36 +61,73 @@ class AliasExpansionError implements Exception {
   String toString() => '$message at line $line, column $column';
 }
 
+/// Source for the prelude environment (set by engine from programs/self.glp).
+String? _preludeEnvironmentSource;
+
+/// Set the source from which the prelude environment is built.
+/// Call this once during engine initialization with the content of programs/self.glp.
+void setPreludeEnvironmentSource(String source) {
+  _preludeEnvironmentSource = source;
+}
+
 /// Build TypeEnvironment from prelude
 TypeEnvironment buildPreludeEnvironment() {
-  final lexer = Lexer(typePrelude);
+  final source = _preludeEnvironmentSource ?? typePrelude;
+  if (source.isEmpty) {
+    return TypeEnvironment({}, {});
+  }
+
+  final lexer = Lexer(source);
   final tokens = lexer.tokenize();
   final parser = Parser(tokens);
   final module = parser.parseModule();
 
-  return _buildEnvironmentFromModule(module, checkRedefinitions: false, resolveAliasesNow: true);
+  // Extract templates before expansion removes them.
+  // These are passed to downstream modules so they can expand references
+  // to prelude-defined parameterized types (e.g., Stream(X), Channel(X,Y)).
+  final preludeTemplates = <String, TypeDef>{};
+  for (final td in module.typeDefs) {
+    if (td.isParameterized) {
+      preludeTemplates[td.name] = td;
+    }
+  }
+
+  // Expand parameterized types before building the environment.
+  // Templates (e.g., Stream(X)) are removed; only concrete expansions remain.
+  final expandedModule = expandParameterizedTypes(module);
+
+  final env = _buildEnvironmentFromModule(expandedModule, checkRedefinitions: false, resolveAliasesNow: true);
+  return TypeEnvironment(env.types, env.procedures,
+      paramProcDecls: env.paramProcDecls,
+      typeTemplates: preludeTemplates);
 }
 
 /// Build TypeEnvironment from a parsed Module
 ///
 /// Loads prelude first, then merges user definitions.
 /// Throws RedefinitionError if user redefines predefined types/procedures.
-TypeEnvironment buildTypeEnvironment(ast.Module module) {
-  // Load prelude (with aliases resolved)
-  final preludeEnv = buildPreludeEnvironment();
+///
+/// If [ancestorScope] is provided, it is used as the base environment
+/// instead of just the prelude. The ancestor scope should already include
+/// the prelude and all ancestor self.glp definitions (built by
+/// assembleTypeScope in module_hierarchy.dart). The module's own
+/// definitions are then merged on top (shadowing ancestors).
+TypeEnvironment buildTypeEnvironment(ast.Module module, {TypeEnvironment? ancestorScope}) {
+  // Base environment: ancestor scope if provided, otherwise just prelude
+  final baseEnv = ancestorScope ?? buildPreludeEnvironment();
 
   // Build user environment WITHOUT resolving aliases yet
-  final userEnv = _buildEnvironmentFromModule(module, checkRedefinitions: true, resolveAliasesNow: false);
+  final userEnv = _buildEnvironmentFromModule(module, checkRedefinitions: ancestorScope == null, resolveAliasesNow: false);
 
-  // Merge: prelude first, then user (user can shadow non-predefined)
-  final merged = preludeEnv.merge(userEnv);
+  // Merge: base first, then user (user can shadow non-predefined)
+  final merged = baseEnv.merge(userEnv);
 
   // Now resolve aliases on the merged environment (so user aliases can reference prelude types)
   final types = Map<String, TypeDef>.from(merged.types);
   final procedures = Map<String, ProcDecl>.from(merged.procedures);
   _resolveAliases(types, procedures);
 
-  return TypeEnvironment(types, procedures);
+  return TypeEnvironment(types, procedures, paramProcDecls: merged.paramProcDecls);
 }
 
 /// Build TypeEnvironment from Module's type definitions and procedure declarations
@@ -100,6 +138,7 @@ TypeEnvironment _buildEnvironmentFromModule(
 }) {
   final types = <String, TypeDef>{};
   final procedures = <String, ProcDecl>{};
+  final paramProcDecls = <String, ProcDecl>{};
 
   // Add type definitions (including aliases - will be resolved later)
   for (final typeDef in module.typeDefs) {
@@ -130,16 +169,24 @@ TypeEnvironment _buildEnvironmentFromModule(
     final isBuiltin = isBuiltinProcedure(procDecl.key);
     if (isBuiltin && !procDecl.isBuiltin) {
       // Create new ProcDecl with isBuiltin flag set
-      procedures[procDecl.key] = ProcDecl(
+      procedures[procDecl.qualifiedKey] = ProcDecl(
         procDecl.name,
         procDecl.argTypes,
         procDecl.line,
         procDecl.column,
         isBuiltin: true,
+        exported: procDecl.exported,
+        imported: procDecl.imported,
+        modulePath: procDecl.modulePath,
       );
     } else {
-      procedures[procDecl.key] = procDecl;
+      procedures[procDecl.qualifiedKey] = procDecl;
     }
+  }
+
+  // Add parameterized proc decl templates (for call-site inference)
+  for (final paramDecl in module.paramProcDecls) {
+    paramProcDecls[paramDecl.qualifiedKey] = paramDecl;
   }
 
   // Resolve aliases (preprocessing step per v0.8 spec) - only if requested
@@ -147,7 +194,7 @@ TypeEnvironment _buildEnvironmentFromModule(
     _resolveAliases(types, procedures);
   }
 
-  return TypeEnvironment(types, procedures);
+  return TypeEnvironment(types, procedures, paramProcDecls: paramProcDecls);
 }
 
 /// Extract all clauses from a Module's procedures
@@ -369,6 +416,9 @@ void _resolveAliases(Map<String, TypeDef> types, Map<String, ProcDecl> procedure
       entry.value.line,
       entry.value.column,
       isBuiltin: entry.value.isBuiltin,
+      exported: entry.value.exported,
+      imported: entry.value.imported,
+      modulePath: entry.value.modulePath,
     );
   }
 

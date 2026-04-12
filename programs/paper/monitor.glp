@@ -4,10 +4,9 @@
 % Tests embedded output type (Integer? in read message)
 
 CounterCall ::= add ; clear ; read(Integer?).
-CounterStream ::= [] ; [CounterCall|CounterStream].
 
-procedure monitor(CounterStream?).
-procedure monitor(Integer?, CounterStream?).
+procedure monitor(Stream(CounterCall)?).
+procedure monitor(Integer?, Stream(CounterCall)?).
 
 monitor(In) :- monitor(0, In?).
 monitor(N, [add|In]) :- N1 := N? + 1, monitor(N1?, In?).

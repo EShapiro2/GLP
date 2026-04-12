@@ -1,10 +1,10 @@
 %% test_repayments.glp - Unit tests for repayment computation
 
 %% Type definitions
-BalanceEntry ::= (_, Number).
+BalanceEntry ::= (Constant, Number).
 BalanceList ::= [] ; [BalanceEntry | BalanceList].
-PrefList ::= [] ; [_ | PrefList].
-RepayEntry ::= (_, Number).
+PrefList ::= [] ; [Constant | PrefList].
+RepayEntry ::= (Constant, Number).
 RepayList ::= [] ; [RepayEntry | RepayList].
 
 %% ============================================
@@ -13,7 +13,7 @@ RepayList ::= [] ; [RepayEntry | RepayList].
 
 procedure compute_repayments(Number?, PrefList?, BalanceList?, RepayList, BalanceList).
 
-procedure get_balance(_?, BalanceList?, Number).
+procedure get_balance(Constant?, BalanceList?, Number).
 
 %% Test: nothing to repay
 procedure test_repay_zero.

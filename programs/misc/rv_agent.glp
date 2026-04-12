@@ -1,0 +1,159 @@
+%% rv_agent.glp - Rendezvous Agent
+%%
+%% A minimal GLP agent that coordinates reconnection between agents
+%% that lost connectivity due to IP address changes.
+%%
+%% - Accepts cold-calls from any agent (no friends list, no social graph)
+%% - Verifies friendship proofs cryptographically (via body system predicate)
+%% - Learns A's current public address via peer_address (reading the
+%%   source address of the incoming cold-call packet)
+%% - Relays addresses to coordinate hole-punching
+%%
+%% Protocol:
+%%   1. A detects IP change, cold-calls: reconnect(A_pk, B_pk, Proof, Reply)
+%%   2. B detects A went silent, cold-calls: available(B_pk, A_pk, Reply)
+%%   3. The RV agent reads A's source address from the networking layer
+%%      via peer_address(A?, AddrA), matches the requests, and tells B
+%%      to punch to AddrA via Reply
+%%
+%% System predicates assumed:
+%%   verify_friendship(Proof?, A?, B?, Result) — body predicate,
+%%     returns ok if Proof cryptographically proves A is B's friend,
+%%     invalid otherwise.
+%%   peer_address(Pk?, Addr) — body predicate, reads the observed
+%%     source address for peer Pk from the networking layer.
+
+-module(rv_agent).
+
+%% =============================================================================
+%% TYPE DEFINITIONS
+%% =============================================================================
+
+%% Reply sent back to agents via their reply variable
+SignalReply ::= punch(Constant) ; initiated ; rejected.
+
+%% Result of cryptographic friendship verification
+VerifyResult ::= ok ; invalid.
+
+%% Messages arriving via cold-call on the agent's input stream
+SignalMsg ::= reconnect(Constant, Constant, Constant, SignalReply?)
+              %% reconnect(A_pk, B_pk, Proof, Reply)
+            ; available(Constant, Constant, SignalReply?).
+              %% available(B_pk, A_pk, Reply)
+
+%% Pending entries awaiting a match
+PendingEntry ::= needs(Constant, Constant, Constant, SignalReply?)
+                 %% needs(A_pk, B_pk, AddrA, ReplyA?) — A wants to reconnect to B
+               ; ready(Constant, Constant, SignalReply?).
+                 %% ready(B_pk, A_pk, ReplyB?) — B is available for A
+PendingList ::= [] ; [PendingEntry | PendingList].
+
+%% =============================================================================
+%% MAIN LOOP
+%% =============================================================================
+
+exported procedure rv_agent(Stream(SignalMsg)?, PendingList?).
+
+%% A requests reconnection to B with friendship proof.  The RV agent
+%% reads A's source address from the networking layer via peer_address
+%% (so A does not need to self-report its address).  verify_friendship
+%% returns a status; handle_verify dispatches on it.  If the proof is
+%% invalid, ReplyA is bound to `rejected` and the request is not added
+%% to the pending list.
+rv_agent([reconnect(A, B, Proof, ReplyA?)|In], Pending) :-
+    ground(A?), ground(B?) |
+    verify_friendship(Proof?, A?, B?, Status),
+    peer_address(A?, AddrA),
+    handle_verify(Status?, A?, B?, AddrA?, ReplyA, Pending?, Pending1),
+    rv_agent(In?, Pending1?).
+
+%% B is available for reconnection from A
+rv_agent([available(B, A, ReplyB?)|In], Pending) :-
+    find_needs(A?, B?, ReplyB, Pending?, Pending1),
+    rv_agent(In?, Pending1?).
+
+rv_agent([], _).
+
+%% =============================================================================
+%% find_ready: A arrived, search pending for a matching ready(B, A, ReplyB)
+%% =============================================================================
+
+exported procedure find_ready(Constant?, Constant?, Constant?, SignalReply,
+                              PendingList?, PendingList).
+
+%% Match found: B was waiting — assign replies
+find_ready(A, B, AddrA, ReplyA?, [ready(B2, A2, ReplyB?)|Ps], Ps?) :-
+    A? =?= A2?, B? =?= B2? |
+    complete_rendezvous(AddrA?, ReplyA, ReplyB).
+
+%% No match at this entry, keep searching
+find_ready(A, B, AddrA, ReplyA?, [P|Ps], [P?|Ps1?]) :-
+    otherwise |
+    find_ready(A?, B?, AddrA?, ReplyA, Ps?, Ps1).
+
+%% End of list, no match: store A's request in pending
+find_ready(A, B, AddrA, ReplyA?, [], [needs(A?, B?, AddrA?, ReplyA)]).
+
+%% =============================================================================
+%% find_needs: B arrived, search pending for a matching needs(A, B, AddrA, ReplyA)
+%% =============================================================================
+
+exported procedure find_needs(Constant?, Constant?, SignalReply,
+                              PendingList?, PendingList).
+
+%% Match found: A was waiting — assign replies
+find_needs(A, B, ReplyB?, [needs(A2, B2, AddrA, ReplyA?)|Ps], Ps?) :-
+    A? =?= A2?, B? =?= B2? |
+    complete_rendezvous(AddrA?, ReplyA, ReplyB).
+
+%% No match at this entry, keep searching
+find_needs(A, B, ReplyB?, [P|Ps], [P?|Ps1?]) :-
+    otherwise |
+    find_needs(A?, B?, ReplyB, Ps?, Ps1).
+
+%% End of list, no match: store B's availability in pending
+find_needs(A, B, ReplyB?, [], [ready(B?, A?, ReplyB)]).
+
+%% =============================================================================
+%% complete_rendezvous: Both sides matched — assign reply variables
+%% =============================================================================
+
+procedure complete_rendezvous(Constant?, SignalReply, SignalReply).
+complete_rendezvous(AddrA, initiated, punch(AddrA?)).
+
+%% =============================================================================
+%% handle_verify: dispatch on verify_friendship result
+%% =============================================================================
+
+procedure handle_verify(VerifyResult?, Constant?, Constant?, Constant?,
+                        SignalReply, PendingList?, PendingList).
+
+%% Proof valid — proceed to find_ready
+handle_verify(ok, A, B, AddrA, ReplyA?, Pending, Pending1?) :-
+    find_ready(A?, B?, AddrA?, ReplyA, Pending?, Pending1).
+
+%% Proof invalid — bind reply to rejected, leave pending unchanged
+handle_verify(invalid, _, _, _, rejected, Pending, Pending?).
+
+%% =============================================================================
+%% STUBS for system predicates (testing only)
+%% =============================================================================
+%%
+%% verify_friendship(Proof?, A_pk?, B_pk?, Result) — body predicate
+%%   Returns Result = ok if Proof cryptographically proves A is B's friend,
+%%   or Result = invalid otherwise.
+%%   Stub: returns invalid when Proof = 'bad_proof', ok otherwise.
+
+procedure verify_friendship(Constant?, Constant?, Constant?, VerifyResult).
+verify_friendship(Proof, _, _, invalid) :- Proof? =?= bad_proof | true.
+verify_friendship(_, _, _, ok) :- otherwise | true.
+
+%% peer_address(Pk?, Addr) — body predicate
+%%   Reads the observed source address of the incoming packet from peer Pk.
+%%   Stub: hardcoded mapping for alice, bob, carol.  A real implementation
+%%   would consult the networking layer's recent-packet table.
+
+procedure peer_address(Constant?, Constant).
+peer_address(alice, stub_addr_alice).
+peer_address(bob, stub_addr_bob).
+peer_address(carol, stub_addr_carol).

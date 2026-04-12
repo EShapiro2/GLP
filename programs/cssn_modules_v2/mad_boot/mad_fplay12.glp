@@ -1,0 +1,88 @@
+%% mad_fplay12.glp — madGLP boot for fplay12 (5 isolates: alice, bob, charlie, dave, eve)
+%%
+%% Derived from: cssn_modules_v2/boot.glp fplay12 clause
+%% CSSN: Parental consent for groups (5 agents)
+%% One isolate per agent — parent-child streams cross isolate boundaries.
+
+-mode(system).
+
+procedure boot.
+boot :-
+    agent_init(alice, 12, _)@alice,
+    parent_agent_init(bob, dave, 12, _)@bob,
+    parent_agent_init(charlie, eve, 12, _)@charlie,
+    child_init(dave, bob, 12, _)@dave,
+    child_init(eve, charlie, 12, _)@eve.
+
+%% Adult agent without children
+procedure agent_init(Constant?, Constant?, Stream(_)?).
+agent_init(Id, PlayNum, NetIn) :-
+    ground(Id?), ground(PlayNum?) |
+    actor_dispatch(Id?, PlayNum?, ch(ActorIn?, ActorOut)),
+    tee(ActorOut?, MedIn, DispCmd),
+    agent(Id?, AgentIn?, NetIn?,
+          [output('_user', AgentToUser), output('_net', NetOut)]),
+    send_to_net(NetOut?),
+    ui_mediator(Id?, ch(AgentToUser?, AgentIn),
+                ch(MedIn?, MedOut), [], 1),
+    tee(MedOut?, ActorIn, DispNotify),
+    send_to_user_tagged(Id?, DispCmd?, DispNotify?).
+
+%% Adult agent with one child — child output globalized via send_to_remote
+procedure parent_agent_init(Constant?, Constant?, Constant?, Stream(_)?).
+parent_agent_init(Id, ChildId, PlayNum, NetIn) :-
+    ground(Id?), ground(ChildId?), ground(PlayNum?) |
+    actor_dispatch(Id?, PlayNum?, ch(ActorIn?, ActorOut)),
+    tee(ActorOut?, MedIn, DispCmd),
+    agent(Id?, AgentIn?, NetIn?,
+          [output('_user', AgentToUser),
+           output('_net', NetOut),
+           output(child(ChildId?), ChildOut)]),
+    send_to_net(NetOut?),
+    send_to_remote(ChildId?, ChildOut?),
+    ui_mediator(Id?, ch(AgentToUser?, AgentIn),
+                ch(MedIn?, MedOut), [], 1),
+    tee(MedOut?, ActorIn, DispNotify),
+    send_to_user_tagged(Id?, DispCmd?, DispNotify?).
+
+%% Child agent — parent output globalized via send_to_remote
+procedure child_init(Constant?, Constant?, Constant?, Stream(_)?).
+child_init(Id, Parent, PlayNum, NetIn) :-
+    ground(Id?), ground(Parent?), ground(PlayNum?) |
+    actor_dispatch(Id?, PlayNum?, ch(ActorIn?, ActorOut)),
+    tee(ActorOut?, MedIn, DispCmd),
+    child_agent(Id?, Parent?, AgentIn?, NetIn?,
+          [output('_user', AgentToUser),
+           output(parent(Parent?), ParentOut)]),
+    send_to_remote(Parent?, ParentOut?),
+    ui_mediator(Id?, ch(AgentToUser?, AgentIn),
+                ch(MedIn?, MedOut), [], 1),
+    tee(MedOut?, ActorIn, DispNotify),
+    send_to_user_tagged(Id?, DispCmd?, DispNotify?).
+
+procedure tee(Stream(_)?, Stream(_), Stream(_)).
+tee([X|Xs], [X?|Ys?], [X?|Zs?]) :- ground(X?) | tee(Xs?, Ys, Zs).
+tee([], [], []).
+
+procedure send_to_user_tagged(Constant?, Stream(_)?, Stream(_)?).
+send_to_user_tagged(Id, [T|Cmds], Notifies) :-
+    ground(Id?), ground(T?) |
+    '_output'(tagged(Id?, cmd(T?))),
+    send_to_user_tagged(Id?, Cmds?, Notifies?).
+send_to_user_tagged(Id, Cmds, [T|Notifies]) :-
+    ground(Id?), ground(T?) |
+    '_output'(tagged(Id?, notify(T?))),
+    send_to_user_tagged(Id?, Cmds?, Notifies?).
+send_to_user_tagged(_, [], []).
+send_to_user_tagged(_, Cmds, []) :- sink(Cmds?).
+
+procedure sink(Stream(_)?).
+sink([_|Xs]) :- sink(Xs?).
+sink([]).
+
+procedure actor_dispatch(Constant?, Constant?, Channel(Stream(UserNotify), Stream(UserCmd))).
+actor_dispatch(alice, 12, Ch) :- alice12(Ch?).
+actor_dispatch(bob, 12, Ch) :- bob12(Ch?).
+actor_dispatch(charlie, 12, Ch) :- charlie12(Ch?).
+actor_dispatch(dave, 12, Ch) :- dave12(Ch?).
+actor_dispatch(eve, 12, Ch) :- eve12(Ch?).

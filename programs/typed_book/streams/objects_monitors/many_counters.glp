@@ -6,9 +6,9 @@
 
 %% Type definitions
 CounterMsg ::= clear ; up ; down ; show(Number).
-CounterEntry ::= (_, Stream).
+CounterEntry ::= (Constant, Stream(CounterMsg)).
 CounterList ::= [] ; [CounterEntry | CounterList].
-Command ::= create(_) ; (_, CounterMsg).
+Command ::= create(Constant) ; (Constant, CounterMsg).
 CommandStream ::= [] ; [Command | CommandStream].
 
 procedure use_many_counters(CommandStream?, CounterList).
@@ -28,13 +28,13 @@ use_many_counters([X|Input?], Stream_of_counters) :-
     use_many_counters(Input?, NewList?).
 
 %% Send message to named counter
-procedure send(CounterList?, _?, CounterMsg?, CounterList).
+procedure send(CounterList?, Constant?, CounterMsg?, CounterList).
 send([(Name, [Message|Y?])|Stream?], Name, Message, [(Name?, Y)|Stream]).
 send([C|Stream?], Name, Message, [C?|L1?]) :-
     send(Stream?, Name?, Message?, L1).
 
 %% Counter from counter.glp
-procedure counter(Stream?, Number?).
+procedure counter(Stream(CounterMsg)?, Number?).
 counter([clear|S?], _) :-
     counter(S?, 0).
 counter([up|S?], State) :-

@@ -7,7 +7,7 @@
 
 %% Uses predefined Stream type
 
-procedure switch2x2(Stream?, Stream?, Stream, Stream).
+procedure switch2x2(Stream(X)?, Stream(X)?, Stream(X), Stream(X)).
 switch2x2(In1, In2, Out1, Out2) :-
     receive(M, In1?, Ins1), send(M?, Out1?, Outs1) |
     switch2x2(Ins1?, In2?, Outs1?, Out2?).
@@ -22,8 +22,8 @@ switch2x2(In1, In2, Out1, Out2) :-
     switch2x2(In1?, Ins2?, Out1?, Outs2?).
 
 %% Helper predicates (from bounded_buffer.glp)
-procedure send(_?, Stream?, Stream).
+procedure send(_?, Stream(X)?, Stream(X)).
 send(Msg, [Msg?|NBuf?], NBuf).
 
-procedure receive(_, Stream?, Stream).
+procedure receive(_, Stream(X)?, Stream(X)).
 receive(Msg?, [Msg|NBuf?], NBuf).

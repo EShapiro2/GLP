@@ -3,9 +3,9 @@
 
 %% Type definitions
 BST ::= empty ; node(_, BST, BST).
-NonEmptyList ::= [_ | Stream].
+NonEmptyList(X) ::= [X | Stream(X)].
 
-procedure list_to_bst(Stream?, BST).
+procedure list_to_bst(Stream(X)?, BST).
 list_to_bst([], empty).
 list_to_bst(Xs, node(Mid?, L?, R?)) :-
     ~(Xs? =?= []) |
@@ -16,7 +16,7 @@ list_to_bst(Xs, node(Mid?, L?, R?)) :-
     list_to_bst(Right?, R).
 
 %% split_at(Stream, N, Left, Mid, Right) - split list at position N
-procedure split_at(NonEmptyList?, Number?, Stream, _, Stream).
+procedure split_at(NonEmptyList(X)?, Number?, Stream(X), X, Stream(X)).
 split_at([X|Xs], 0, [], X?, Xs?).
 split_at([X|Xs], N, [X?|Left?], Mid?, Right?) :-
     N? > 0 |
@@ -24,10 +24,10 @@ split_at([X|Xs], N, [X?|Left?], Mid?, Right?) :-
     split_at(Xs?, N1?, Left, Mid, Right).
 
 %% Helper: length with accumulator
-procedure length(Stream?, Number).
+procedure length(Stream(X)?, Number).
 length(Xs, N?) :- length_acc(Xs?, 0, N).
 
-procedure length_acc(Stream?, Number?, Number).
+procedure length_acc(Stream(X)?, Number?, Number).
 length_acc([], Acc, Acc?).
 length_acc([_|Xs], Acc, N?) :-
     Acc1 := Acc? + 1,

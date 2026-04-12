@@ -1,0 +1,67 @@
+%% mad_fplay11.glp — madGLP boot for bonds_v2 fplay11 (2 isolates: alice, bob)
+%%
+%% Derived from: bonds_v2/boot.glp fplay11 clause
+%% Bonds: Escrow — Cancel (2 agents)
+%% Alice computes T = now() + 5000 locally. Bob has no time arg.
+
+-mode(system).
+
+procedure boot.
+boot :-
+    alice_init_11(alice, _)@alice,
+    agent_init(bob, 11, _)@bob.
+
+%% Alice — time-dependent escrow depositor (far future deadline)
+procedure alice_init_11(Constant?, Stream(_)?).
+alice_init_11(Id, NetIn) :-
+    ground(Id?) |
+    now(Now),
+    T := Now? + 5000,
+    alice_p11(T?, ch(ActorIn?, ActorOut)),
+    tee(ActorOut?, MedIn, DispCmd),
+    agent(Id?, AgentIn?, NetIn?,
+          [output('_user', AgentToUser), output('_net', NetOut)],
+          [], 1),
+    send_to_net(NetOut?),
+    ui_mediator(Id?, ch(AgentToUser?, AgentIn),
+                ch(MedIn?, MedOut), [], 1),
+    tee(MedOut?, ActorIn, DispNotify),
+    send_to_user_tagged(Id?, DispCmd?, DispNotify?).
+
+%% Bob — standard agent (no time)
+procedure agent_init(Constant?, Constant?, Stream(_)?).
+agent_init(Id, PlayNum, NetIn) :-
+    ground(Id?), ground(PlayNum?) |
+    actor_dispatch(Id?, PlayNum?, ch(ActorIn?, ActorOut)),
+    tee(ActorOut?, MedIn, DispCmd),
+    agent(Id?, AgentIn?, NetIn?,
+          [output('_user', AgentToUser), output('_net', NetOut)],
+          [], 1),
+    send_to_net(NetOut?),
+    ui_mediator(Id?, ch(AgentToUser?, AgentIn),
+                ch(MedIn?, MedOut), [], 1),
+    tee(MedOut?, ActorIn, DispNotify),
+    send_to_user_tagged(Id?, DispCmd?, DispNotify?).
+
+procedure tee(Stream(_)?, Stream(_), Stream(_)).
+tee([X|Xs], [X?|Ys?], [X?|Zs?]) :- ground(X?) | tee(Xs?, Ys, Zs).
+tee([], [], []).
+
+procedure send_to_user_tagged(Constant?, Stream(_)?, Stream(_)?).
+send_to_user_tagged(Id, [T|Cmds], Notifies) :-
+    ground(Id?), ground(T?) |
+    '_output'(tagged(Id?, cmd(T?))),
+    send_to_user_tagged(Id?, Cmds?, Notifies?).
+send_to_user_tagged(Id, Cmds, [T|Notifies]) :-
+    ground(Id?), ground(T?) |
+    '_output'(tagged(Id?, notify(T?))),
+    send_to_user_tagged(Id?, Cmds?, Notifies?).
+send_to_user_tagged(_, [], []).
+send_to_user_tagged(_, Cmds, []) :- sink(Cmds?).
+
+procedure sink(Stream(_)?).
+sink([_|Xs]) :- sink(Xs?).
+sink([]).
+
+procedure actor_dispatch(Constant?, Constant?, Channel(Stream(UserNotify), Stream(UserCmd))).
+actor_dispatch(bob, 11, Ch) :- bob_p11(Ch?).

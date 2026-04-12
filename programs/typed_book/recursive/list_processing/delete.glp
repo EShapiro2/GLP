@@ -5,7 +5,7 @@
 %% Uses predefined Stream type
 
 %% Procedure type declarations
-procedure delete(Stream?, _?, Stream).
+procedure delete(Stream(X)?, X?, Stream(X)).
 delete([X|Xs], Y, Ys?) :- X? =:= Y? | delete(Xs?, Y?, Ys).
 delete([H|Xs], Z, [H?|Ys?]) :- otherwise | delete(Xs?, Z?, Ys).
 delete([], _, []).

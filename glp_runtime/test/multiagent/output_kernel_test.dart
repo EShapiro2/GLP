@@ -1,4 +1,5 @@
 /// Tests for '_output'/1 kernel and send_to_user/1 GLP predicate.
+import 'dart:io';
 import 'package:test/test.dart';
 import 'package:glp_runtime/engine/glp_engine.dart';
 
@@ -8,7 +9,7 @@ void main() {
     late List<String> outputLines;
 
     setUp(() {
-      engine = GlpEngine(stdlibDir: '../programs/stdlib')..strictTypes = false;
+      engine = GlpEngine(rootSelfGlpPath: File('../programs/self.glp').absolute.path)..strictTypes = false;
       outputLines = [];
       engine.runtime.outputCallback = (line) => outputLines.add(line);
     });
@@ -52,7 +53,7 @@ test :- '_output'([a, b, c]).
     late List<String> outputLines;
 
     setUp(() {
-      engine = GlpEngine(stdlibDir: '../programs/stdlib')..strictTypes = false;
+      engine = GlpEngine(rootSelfGlpPath: File('../programs/self.glp').absolute.path)..strictTypes = false;
       outputLines = [];
       engine.runtime.outputCallback = (line) => outputLines.add(line);
     });
@@ -62,7 +63,7 @@ test :- '_output'([a, b, c]).
       engine.loadSource('''
 -mode(system).
 
-procedure send_to_user(Stream?).
+procedure send_to_user(_?).
 send_to_user([T | In]) :- ground(T?) | '_output'(T?), send_to_user(In?).
 send_to_user([]).
 
@@ -79,7 +80,7 @@ test :- send_to_user([hello, world, msg(a, b)]).
       engine.loadSource('''
 -mode(system).
 
-procedure send_to_user(Stream?).
+procedure send_to_user(_?).
 send_to_user([T | In]) :- ground(T?) | '_output'(T?), send_to_user(In?).
 send_to_user([]).
 

@@ -28,7 +28,7 @@ boot :-
 %% AGENT INITIALIZATION
 %% =============================================================================
 
-procedure agent_init(Constant?, Stream?).
+procedure agent_init(Constant?, Stream(X)?).
 agent_init(Id, NetIn) :-
     ground(Id?) |
     send_to_net(NetOut?),

@@ -37,7 +37,7 @@ import 'package:glp_runtime/multiagent/payload_serializer.dart';
 class AgentRuntime {
   final String agentId;
   final List<String> glpSources;
-  final String stdlibDir;
+  final String rootSelfGlpPath;
   final List<String> friends;
 
   /// Entry-point goal label, e.g. 'agent_init/3', 'agent_init_play/3',
@@ -47,6 +47,11 @@ class AgentRuntime {
   /// Extra arguments inserted between Id (arg 0) and NetIn (last arg).
   /// For example, ['carol', '4'] for parent_init(alice, carol, 4, NetIn).
   final List<String> extraArgs;
+
+  /// Optional project directory for static linking.
+  /// When set, the engine calls loadProject(projectDir) first, then loads
+  /// glpSources on top (typically just the madGLP boot source).
+  final String? projectDir;
 
   // Callbacks set by UI layer
   void Function(String line)? onOutput;
@@ -73,10 +78,11 @@ class AgentRuntime {
   AgentRuntime({
     required this.agentId,
     required this.glpSources,
-    required this.stdlibDir,
+    required this.rootSelfGlpPath,
     this.friends = const [],
     this.goalLabel = 'agent_init/3',
     this.extraArgs = const [],
+    this.projectDir,
   });
 
   bool get initialized => _initialized;
@@ -111,16 +117,35 @@ class AgentRuntime {
     _output('[INIT] Creating MadContext...');
 
     // Use GlpEngine — the ONE way to run GLP programs.
-    final engine = GlpEngine(stdlibDir: stdlibDir)..strictTypes = false;
+    final engine = GlpEngine(rootSelfGlpPath: rootSelfGlpPath)..strictTypes = false;
 
     // Enable madGLP mode (loads madPredicates + creates MadContext)
     engine.enableMadGLP(agentId: agentIdLower);
 
-    // Load user GLP sources (each file separately to preserve -mode() directives)
-    for (var i = 0; i < glpSources.length; i++) {
-      engine.loadSource(glpSources[i], filename: 'source_$i');
+    // Load program: either project-linked or individual source files.
+    if (projectDir != null) {
+      // Project mode: load linked project, then boot source(s) on top.
+      _log('INIT: Loading project from $projectDir');
+      engine.loadProject(projectDir!);
+      _log('INIT: Project loaded, loading ${glpSources.length} boot source(s)');
+      for (var i = 0; i < glpSources.length; i++) {
+        engine.loadSource(glpSources[i], filename: 'source_$i');
+      }
+      // Diagnostic: check key labels
+      final program = engine.combinedProgram;
+      final keyLabels = ['parent_init/4', 'child_init/3', 'agent/4', 'ui_mediator/5', 'merge/3', 'tee/3'];
+      for (final key in keyLabels) {
+        final pc = program.labels[key];
+        _log('INIT: Label $key -> ${pc != null ? "PC=$pc" : "NOT FOUND"}');
+      }
+      _log('INIT: Program loaded via project linking ($projectDir) + ${glpSources.length} boot source(s), ${program.labels.length} labels');
+    } else {
+      // Legacy mode: load each source file separately.
+      for (var i = 0; i < glpSources.length; i++) {
+        engine.loadSource(glpSources[i], filename: 'source_$i');
+      }
+      _log('INIT: Program loaded via GlpEngine (stdlib + madPredicates + ${glpSources.length} source files)');
     }
-    _log('INIT: Program loaded via GlpEngine (stdlib + madPredicates + ${glpSources.length} source files)');
 
     _runtime = engine.runtime;
     _ctx = engine.madContext;
@@ -208,9 +233,11 @@ class AgentRuntime {
     final argsDesc = [agentIdLower, ...extraArgs, 'NetIn'].join(', ');
     final goalName = goalLabel.split('/').first;
     _output('[GOAL] Started $goalName($argsDesc)');
+    _log('INIT: GQ length before initial run: ${_runtime!.gq.length}');
 
     // Initial run
-    await _runUntilQuiescent();
+    final initStatus = await _runUntilQuiescent();
+    _log('INIT: Initial run status: $initStatus, GQ after: ${_runtime!.gq.length}');
 
     _initialized = true;
     updateStats();

@@ -36,8 +36,6 @@ void registerStandardPredicates(SystemPredicateRegistry registry) {
   registry.register('directory_list', directoryListPredicate);
 
   // Terminal I/O
-  registry.register('write', writePredicate);
-  registry.register('nl', nlPredicate);
   registry.register('read', readPredicate);
 
   // Module loading
@@ -665,89 +663,6 @@ SystemResult fileWritePredicate(GlpRuntime rt, SystemCall call) {
 // ============================================================================
 // TERMINAL I/O PREDICATES
 // ============================================================================
-
-/// write/1: Write term to stdout
-///
-/// Usage: execute('write', [Term])
-///
-/// Writes a term to standard output (no newline).
-///
-/// Behavior:
-/// - Term can be constant, bound writer, or reader
-/// - If Term is unbound reader → SUSPEND
-/// - Otherwise → print to stdout → SUCCESS
-///
-/// Example:
-///   write('Hello')  % prints: Hello
-///   write(42)       % prints: 42
-SystemResult writePredicate(GlpRuntime rt, SystemCall call) {
-  if (call.args.length != 1) {
-    print('[ERROR] write/1 requires exactly 1 argument, got ${call.args.length}');
-    return SystemResult.failure;
-  }
-
-  final term = call.args[0];
-  
-  // Extract the actual value to write
-  Object? value;
-  
-  if (term is ConstTerm) {
-    value = term.value;
-  } else if (term is VarRef && rt.heap.isWriter(term.addr)) {
-    final wid = term.addr;
-    if (!rt.heap.isWriterBound(wid)) {
-      // Unbound writer - fail
-      return SystemResult.failure;
-    }
-    final writerValue = rt.heap.getValue(wid);
-    if (writerValue is ConstTerm) {
-      value = writerValue.value;
-    } else {
-      value = writerValue;
-    }
-  } else if (term is VarRef && rt.heap.isReader(term.addr)) {
-    final rid = term.addr;
-    // Use isReaderBound/getReaderValue for imported reader support
-    if (!rt.heap.isReaderBound(rid)) {
-      // Unbound reader - suspend
-      call.suspendedReaders.add(rid);
-      return SystemResult.suspend;
-    }
-    final readerValue = rt.heap.getReaderValue(rid);
-    if (readerValue is ConstTerm) {
-      value = readerValue.value;
-    } else {
-      value = readerValue;
-    }
-  } else {
-    value = term;
-  }
-
-  // Write to stdout
-  stdout.write(value);
-  return SystemResult.success;
-}
-
-/// nl/0: Write newline to stdout
-///
-/// Usage: execute('nl', [])
-///
-/// Writes a newline character to standard output.
-///
-/// Behavior:
-/// - Always succeeds
-///
-/// Example:
-///   nl  % prints newline
-SystemResult nlPredicate(GlpRuntime rt, SystemCall call) {
-  if (call.args.isNotEmpty) {
-    print('[ERROR] nl/0 requires no arguments, got ${call.args.length}');
-    return SystemResult.failure;
-  }
-
-  stdout.writeln();
-  return SystemResult.success;
-}
 
 /// read/1: Read line from stdin
 ///

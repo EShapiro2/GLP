@@ -15,6 +15,7 @@ import 'dart:math' as math;
 import 'runtime.dart';
 import 'terms.dart';
 import 'machine_state.dart' show GoalRef;
+import 'package:glp_runtime/bytecode/runner.dart' show BytecodeRunner, BytecodeProgram, CallEnv;
 import 'package:glp_runtime/multiagent/mad_context.dart';
 
 /// Result of executing a body kernel
@@ -95,9 +96,6 @@ void registerStandardBodyKernels(BodyKernelRegistry registry) {
   registry.register('_stream_append', 3, streamAppendKernel);
   registry.register('_close_mutual_reference', 1, mutualRefCloseKernel);
 
-  // Equator operations (many-to-one signaling)
-  registry.register('_equator', 1, equatorKernel);
-
   // madGLP kernels
   registry.register('_send', 3, sendKernel);
 
@@ -122,6 +120,9 @@ void registerStandardBodyKernels(BodyKernelRegistry registry) {
 
   // Arithmetic assignment
   registry.register(':=', 2, assignKernel);
+
+  // Module dispatch kernels
+  registry.register('_activate', 2, activateKernel);
 }
 
 /// Helper to get numeric value from argument (with arithmetic evaluation)
@@ -688,44 +689,6 @@ BodyKernelResult mutualRefCloseKernel(GlpRuntime rt, List<Object?> args) {
 }
 
 // ============================================================================
-// EQUATOR KERNELS (Many-to-One Signaling)
-// ============================================================================
-
-BodyKernelResult equatorKernel(GlpRuntime rt, List<Object?> args) {
-  if (args.length != 1) {
-    return BodyKernelResult.success;
-  }
-
-  final deref = _deref(rt, args[0]);
-
-  if (deref is! StructTerm ||
-      deref.functor != '_equator' ||
-      deref.args.length != 2) {
-    return BodyKernelResult.success;
-  }
-
-  final e = deref.args[0];
-  final c = _deref(rt, deref.args[1]);
-
-  if (e is VarRef && rt.heap.isWriter(e.addr)) {
-    if (!rt.heap.isFullyBound(e.addr)) {
-      final List<GoalRef> activations;
-      if (c is Term) {
-        activations = rt.heap.bindVariable(e.addr, c);
-      } else {
-        activations = rt.heap.bindVariableConst(e.addr, c);
-      }
-
-      for (final act in activations) {
-        rt.gq.enqueue(act);
-      }
-    }
-  }
-
-  return BodyKernelResult.success;
-}
-
-// ============================================================================
 // MADGLP KERNELS
 // ============================================================================
 
@@ -1251,4 +1214,83 @@ String formatGroundTerm(Term term) {
     return '${term.functor}($args)';
   }
   return term.toString();
+}
+
+// ============================================================================
+// MODULE DISPATCH KERNELS
+// ============================================================================
+
+/// '_activate'(Module?, Goal) — dispatch Goal directly to the exported procedure.
+///
+/// Module? is a reader referencing a ModuleTerm (wrapping a BytecodeProgram).
+/// Goal is a term representing the remote procedure call (e.g., double(5, F)).
+///
+/// The kernel extracts the functor and args from the Goal, looks up the
+/// procedure in the module's bytecode labels, and spawns it with the original
+/// args.  This direct dispatch preserves argument polarity (writer/reader),
+/// which is essential for output parameters.
+///
+/// If the procedure is not found, the goal silently succeeds (fallback
+/// behavior matching _select/1's otherwise clause).
+BodyKernelResult activateKernel(GlpRuntime rt, List<Object?> args) {
+  if (args.length != 2) {
+    print('[ABORT] _activate/2: expected 2 arguments, got ${args.length}');
+    return BodyKernelResult.abort;
+  }
+
+  // Dereference Module? (first arg) to get the ModuleTerm
+  final moduleArg = _deref(rt, args[0]);
+  if (moduleArg is! ModuleTerm) {
+    print('[ABORT] _activate/2: first argument must be a ModuleTerm, got ${moduleArg.runtimeType}');
+    return BodyKernelResult.abort;
+  }
+
+  final bytecode = moduleArg.bytecode;
+  if (bytecode is! BytecodeProgram) {
+    print('[ABORT] _activate/2: ModuleTerm does not contain a BytecodeProgram');
+    return BodyKernelResult.abort;
+  }
+
+  // Dereference the Goal term (second arg)
+  final goalArg = _deref(rt, args[1]);
+  if (goalArg is! StructTerm) {
+    // Not a structured goal — silently succeed (fallback)
+    return BodyKernelResult.success;
+  }
+
+  // Extract functor/arity and look up the procedure directly
+  final functor = goalArg.functor;
+  final arity = goalArg.args.length;
+  final label = '$functor/$arity';
+  final entryPc = bytecode.labels[label];
+
+  if (entryPc == null) {
+    // Procedure not found — silently succeed (fallback behavior)
+    return BodyKernelResult.success;
+  }
+
+  // Spawn the procedure with the goal's original arguments.
+  // Each arg is stored on the heap as a VarRef. For VarRef args (e.g.,
+  // unbound writers for output params), storeTermOnHeap returns the
+  // existing heap address, preserving writer/reader polarity.
+  final argSlots = <int, Term>{};
+  for (int i = 0; i < goalArg.args.length; i++) {
+    final addr = rt.heap.storeTermOnHeap(goalArg.args[i]);
+    argSlots[i] = VarRef(addr);
+  }
+
+  final newGoalId = rt.nextGoalId++;
+  final env = CallEnv(args: argSlots);
+  rt.setGoalEnv(newGoalId, env);
+  rt.setGoalProgram(newGoalId, bytecode);
+
+  // Ensure a BytecodeRunner exists for this program in rt.runners
+  if (!rt.runners.containsKey(bytecode)) {
+    rt.runners[bytecode] = BytecodeRunner(bytecode);
+  }
+
+  // Enqueue the goal
+  rt.gq.enqueue(GoalRef(newGoalId, entryPc));
+
+  return BodyKernelResult.success;
 }

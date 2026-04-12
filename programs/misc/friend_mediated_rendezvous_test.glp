@@ -1,0 +1,106 @@
+%% friend_mediated_rendezvous_test.glp — test suite for fmrv
+%%
+%% Load friend_mediated_rendezvous.glp first, then this file.
+
+%% Local type redeclarations (structural identity across modules)
+AddrResult ::= found(Constant) ; not_found.
+
+MsgOp ::= mediate(Constant)
+        ; punch_to(AddrResult)
+        ; addr_update(Constant).
+
+Msg ::= msg(Constant, Constant, MsgOp).
+
+MsgStream ::= [] ; [Msg | MsgStream].
+FriendStream ::= [] ; [Msg | FriendStream].
+
+FriendEntry ::= fe(Constant, FriendStream?, Constant).
+FriendList ::= [] ; [FriendEntry | FriendList].
+
+imported procedure fmrv#fmrv(Constant?, MsgStream?, FriendList?).
+
+%% =============================================================================
+%% Test 1: A single addr_update message updates a friend's address
+%% =============================================================================
+
+procedure test1_addr_update.
+test1_addr_update :-
+    fmrv # fmrv(bob, [msg(alice, bob, addr_update(addr_alice_new))],
+                 [fe(alice, [], addr_alice_old)]).
+
+%% =============================================================================
+%% Test 2: A mediation request prepends punch_to to both friends' streams
+%% =============================================================================
+%%
+%% B=bob has alice (addr_alice) and carol (addr_carol) as friends.
+%% Alice sends msg(alice, bob, mediate(carol)).
+%% Expected: alice's output stream gets msg(bob, alice, punch_to(found(addr_carol))),
+%%           carol's output stream gets msg(bob, carol, punch_to(found(addr_alice))).
+
+procedure test2_mediate(FriendStream, FriendStream).
+test2_mediate(AliceOut?, CarolOut?) :-
+    fmrv # fmrv(bob,
+        [msg(alice, bob, mediate(carol))],
+        [fe(alice, AliceOut, addr_alice),
+         fe(carol, CarolOut, addr_carol)]).
+
+%% =============================================================================
+%% Test 3: A punch_to(found(...)) message triggers punch_udp
+%% =============================================================================
+
+procedure test3_punch_to.
+test3_punch_to :-
+    fmrv # fmrv(bob,
+        [msg(alice, bob, punch_to(found(addr_somewhere)))],
+        [fe(alice, [], addr_alice)]).
+
+%% =============================================================================
+%% Test 4: empty input stream terminates cleanly
+%% =============================================================================
+
+procedure test4_empty.
+test4_empty :-
+    fmrv # fmrv(bob, [], []).
+
+%% =============================================================================
+%% Test 5: mediate with unknown peer → punch_to(not_found) delivered
+%% =============================================================================
+%%
+%% B=bob has alice as a friend, but does NOT know dave.
+%% Alice sends msg(alice, bob, mediate(dave)).
+%% Expected: alice's output stream gets msg(bob, alice, punch_to(not_found)),
+%%           no message is sent to dave (no such friend), and punch_udp is
+%%           never called with an invalid address.
+
+procedure test5_mediate_unknown(FriendStream).
+test5_mediate_unknown(AliceOut?) :-
+    fmrv # fmrv(bob,
+        [msg(alice, bob, mediate(dave))],
+        [fe(alice, AliceOut, addr_alice)]).
+
+%% =============================================================================
+%% Test 6: punch_to(not_found) recipient handler is a no-op
+%% =============================================================================
+%%
+%% The recipient simply ignores not_found and continues processing.
+
+procedure test6_punch_to_not_found.
+test6_punch_to_not_found :-
+    fmrv # fmrv(bob,
+        [msg(alice, bob, punch_to(not_found))],
+        [fe(alice, [], addr_alice)]).
+
+%% =============================================================================
+%% Test 7: mediate where the requester (From) itself is unknown
+%% =============================================================================
+%%
+%% B=bob receives mediate(alice) from an unknown sender 'eve'.
+%% Since 'eve' is not in bob's friends list, no message can be sent to eve.
+%% Alice is known, so alice's stream should receive punch_to(not_found)
+%% (because eve's address lookup failed).
+
+procedure test7_mediate_unknown_from(FriendStream).
+test7_mediate_unknown_from(AliceOut?) :-
+    fmrv # fmrv(bob,
+        [msg(eve, bob, mediate(alice))],
+        [fe(alice, AliceOut, addr_alice)]).

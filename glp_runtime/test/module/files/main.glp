@@ -1,7 +1,6 @@
 % main.glp - Main module that imports math
 -module(main).
--import([math]).
--export([compute/2]).
+exported procedure compute(_, _).
 
 compute(5, Y?) :- math # double(5, Y).
 compute(10, Y?) :- math # double(10, Y).

@@ -1,0 +1,163 @@
+%% play_ui_madglp_boot.glp - madGLP boot for scripted actor plays
+%%
+%% Multi-isolate version of play_ui_sim_boot.glp.
+%% Each agent runs in its own Dart isolate.
+%% Network communication uses madGLP (send_to_net / global_send).
+%%
+%% SG plays (1-3): 3 isolates (alice, bob, charlie).
+%% CSSG plays (4-7): 4 isolates (alice, bob, carol, dave).
+%%   Parent-child channels established at boot via cold call.
+%%
+%% Requires: load typed_social_agent.glp first
+%% Requires: load typed_ui_mediator.glp first
+%% Requires: load typed_ui_actors.glp first
+%%
+%% Date: 2026-02-21
+
+-mode(system).
+
+%% =============================================================================
+%% TEE — Stream splitter
+%% =============================================================================
+
+procedure tee(Stream(X)?, Stream(X), Stream(X)).
+tee([X|Xs], [X?|Ys?], [X?|Zs?]) :- ground(X?) | tee(Xs?, Ys, Zs).
+tee([], [], []).
+
+%% =============================================================================
+%% SEND_TO_USER_TAGGED — Merge display streams, tag with agent ID
+%% =============================================================================
+
+send_to_user_tagged(Id, [T|Cmds], Notifies) :-
+    ground(Id?), ground(T?) |
+    '_output'(tagged(Id?, cmd(T?))),
+    send_to_user_tagged(Id?, Cmds?, Notifies?).
+send_to_user_tagged(Id, Cmds, [T|Notifies]) :-
+    ground(Id?), ground(T?) |
+    '_output'(tagged(Id?, notify(T?))),
+    send_to_user_tagged(Id?, Cmds?, Notifies?).
+send_to_user_tagged(_, [], []).
+
+%% =============================================================================
+%% SG MULTI-ISOLATE AGENT INIT (plays 1-3)
+%% =============================================================================
+%%
+%% Each agent gets its own isolate.  Dart spawns each with:
+%%   agent_init_play(Id, PlayNum, NetIn)
+
+agent_init_play(Id, PlayNum, NetIn) :-
+    ground(Id?), ground(PlayNum?) |
+    send_to_net(NetOut?),
+    agent(Id?, AgentIn?, NetIn?,
+          [output('_user', AgentToUser), output('_net', NetOut)]),
+    ui_mediator(Id?, ch(AgentToUser?, AgentIn),
+                ch(MedIn?, MedOut), [], 1),
+    ui_actor(Id?, PlayNum?, ch(ActorIn?, ActorOut)),
+    tee(ActorOut?, MedIn, DispCmd),
+    tee(MedOut?, ActorIn, DispNotify),
+    send_to_user_tagged(Id?, DispCmd?, DispNotify?).
+
+%% =============================================================================
+%% CSSG MULTI-ISOLATE PARENT INIT (plays 4-7)
+%% =============================================================================
+%%
+%% Parent sends parent_connect cold call to child at boot, then starts agent.
+%% The parent_connect message goes as the first element of the network output
+%% stream, followed by whatever the agent writes.
+%%
+%% Dart spawns each parent with:
+%%   parent_init(Id, ChildName, PlayNum, NetIn)
+
+%% extract_child_stream/2 - extract stream from accept(Stream) response.
+%% Suspends on Response? until child binds it.
+extract_child_stream(accept(Stream), Stream?).
+
+parent_init(Id, Child, PlayNum, NetIn) :-
+    ground(Id?), ground(Child?), ground(PlayNum?) |
+
+    %% Send parent_connect as first message, agent writes rest.
+    %% Pass reader ParentToChild? so child can read from it.
+    send_to_net([msg(Child?, parent_connect(Id?, ParentToChild?, Response))
+                 | AgentNetOut?]),
+
+    %% Extract child's return stream from Response once child binds it
+    extract_child_stream(Response?, ChildToParent),
+
+    %% merge suspends on ChildToParent? until extract_child_stream binds it
+    merge(ChildToParent?, NetIn?, AgentNetIn),
+
+    agent(Id?, AgentIn?, AgentNetIn?,
+          [output('_user', AgentToUser),
+           output('_net', AgentNetOut),
+           output(child(Child?), ParentToChild)]),
+    ui_mediator(Id?, ch(AgentToUser?, AgentIn),
+                ch(MedIn?, MedOut), [], 1),
+    ui_actor(Id?, PlayNum?, ch(ActorIn?, ActorOut)),
+    tee(ActorOut?, MedIn, DispCmd),
+    tee(MedOut?, ActorIn, DispNotify),
+    send_to_user_tagged(Id?, DispCmd?, DispNotify?).
+
+%% =============================================================================
+%% CSSG MULTI-ISOLATE CHILD INIT (plays 4-7)
+%% =============================================================================
+%%
+%% Child intercepts parent_connect as first message on NetIn, binds Response
+%% to establish return channel, then starts agent.
+%%
+%% Dart spawns each child with:
+%%   child_init(Id, PlayNum, NetIn)
+
+child_init(Id, PlayNum,
+           [msg(Id, parent_connect(Parent, ParentToChild, accept(ChildToParent?))) | NetInRest]) :-
+    ground(Id?), ground(PlayNum?), ground(Parent?) |
+
+    %% parent_connect is accepted via head unification:
+    %% Response (parent's writer) is bound to accept(ChildToParent?).
+    %% Reader ChildToParent? is passed to parent so parent can read child's output.
+    %% Writer ChildToParent stays in child's output list.
+
+    %% Merge parent's stream with remaining network input
+    merge(ParentToChild?, NetInRest?, AgentNetIn),
+
+    agent(Id?, AgentIn?, AgentNetIn?,
+          [output('_user', AgentToUser),
+           output(child(Parent?), ChildToParent)]),
+    ui_mediator(Id?, ch(AgentToUser?, AgentIn),
+                ch(MedIn?, MedOut), [], 1),
+    ui_actor(Id?, PlayNum?, ch(ActorIn?, ActorOut)),
+    tee(ActorOut?, MedIn, DispCmd),
+    tee(MedOut?, ActorIn, DispNotify),
+    send_to_user_tagged(Id?, DispCmd?, DispNotify?).
+
+%% =============================================================================
+%% UI_ACTOR DISPATCH — selects actor for (agent, play) pair
+%% =============================================================================
+
+%% SG plays (1-3)
+ui_actor(alice, 1, Ch) :- alice1(Ch?).
+ui_actor(bob, 1, Ch) :- bob1(Ch?).
+ui_actor(charlie, 1, Ch) :- charlie1(Ch?).
+ui_actor(alice, 2, Ch) :- alice2(Ch?).
+ui_actor(bob, 2, Ch) :- bob2(Ch?).
+ui_actor(charlie, 2, Ch) :- charlie2(Ch?).
+ui_actor(alice, 3, Ch) :- alice3(Ch?).
+ui_actor(bob, 3, Ch) :- bob3(Ch?).
+ui_actor(charlie, 3, Ch) :- charlie3(Ch?).
+
+%% CSSG plays (4-7)
+ui_actor(alice, 4, Ch) :- alice4(Ch?).
+ui_actor(bob, 4, Ch) :- bob4(Ch?).
+ui_actor(carol, 4, Ch) :- carol4(Ch?).
+ui_actor(dave, 4, Ch) :- dave4(Ch?).
+ui_actor(alice, 5, Ch) :- alice5(Ch?).
+ui_actor(bob, 5, Ch) :- bob5(Ch?).
+ui_actor(carol, 5, Ch) :- carol5(Ch?).
+ui_actor(dave, 5, Ch) :- dave5(Ch?).
+ui_actor(alice, 6, Ch) :- alice6(Ch?).
+ui_actor(bob, 6, Ch) :- bob6(Ch?).
+ui_actor(carol, 6, Ch) :- carol6(Ch?).
+ui_actor(dave, 6, Ch) :- dave6(Ch?).
+ui_actor(alice, 7, Ch) :- alice7(Ch?).
+ui_actor(bob, 7, Ch) :- bob7(Ch?).
+ui_actor(carol, 7, Ch) :- carol7(Ch?).
+ui_actor(dave, 7, Ch) :- dave7(Ch?).

@@ -46,19 +46,26 @@ extension ProcArgTypeExpr on TypeExpr {
 
 /// Reference to a named type: Nat, List, Number, String, Any
 /// Optionally with input mode annotation (Type?)
+/// Optionally with type arguments for parameterized types: Stream(Integer)
 class TypeRef extends TypeExpr {
   final String name;
   final bool isInput;  // true if Type?, false if Type
+  final List<TypeExpr> typeArgs;  // e.g., [TypeRef('Integer')] for Stream(Integer), [] for simple refs
 
-  TypeRef(this.name, int line, int column, {this.isInput = false})
+  TypeRef(this.name, int line, int column, {this.isInput = false, this.typeArgs = const []})
       : super(line, column);
+
+  bool get isParameterized => typeArgs.isNotEmpty;
 
   /// Mode dual operator per Definition 5.1
   /// Returns a new TypeRef with inverted mode
-  TypeRef dual() => TypeRef(name, line, column, isInput: !isInput);
+  TypeRef dual() => TypeRef(name, line, column, isInput: !isInput, typeArgs: typeArgs);
 
   @override
-  String toString() => isInput ? '$name?' : name;
+  String toString() {
+    final argsStr = typeArgs.isNotEmpty ? '(${typeArgs.join(', ')})' : '';
+    return isInput ? '$name$argsStr?' : '$name$argsStr';
+  }
 
   /// Primitive types (not defined via ::=, handled specially by compiler)
   static const builtins = {'Integer', 'Real', 'Number', 'String'};
@@ -70,10 +77,19 @@ class TypeRef extends TypeExpr {
 
   @override
   bool operator ==(Object other) =>
-      other is TypeRef && other.name == name && other.isInput == isInput;
+      other is TypeRef && other.name == name && other.isInput == isInput &&
+      _listEquals(other.typeArgs, typeArgs);
 
   @override
-  int get hashCode => Object.hash(name, isInput);
+  int get hashCode => Object.hash(name, isInput, Object.hashAll(typeArgs));
+
+  static bool _listEquals(List<TypeExpr> a, List<TypeExpr> b) {
+    if (a.length != b.length) return false;
+    for (int i = 0; i < a.length; i++) {
+      if (a[i] != b[i]) return false;
+    }
+    return true;
+  }
 }
 
 /// A constant alternative in a type: 0, [], foo
@@ -142,13 +158,17 @@ class DiffListAlt extends TypeExpr {
 }
 
 /// A type definition: TypeName ::= alt1 ; alt2 ; ... .
+/// Parameterized types have non-empty typeParams: Stream(X) ::= [] ; [X | Stream(X)].
 class TypeDef {
   final String name;
+  final List<String> typeParams;  // e.g., ['X'] for Stream(X), [] for monomorphic
   final List<TypeExpr> alternatives;
   final int line;
   final int column;
 
-  TypeDef(this.name, this.alternatives, this.line, this.column);
+  TypeDef(this.name, this.alternatives, this.line, this.column, {this.typeParams = const []});
+
+  bool get isParameterized => typeParams.isNotEmpty;
 
   /// Classify this type based on mode structure
   /// Per spec (type-environment.md v0.5):
@@ -190,18 +210,34 @@ class TypeDef {
 /// Argument types can be:
 /// - TypeRef: a named type reference (e.g., Nat, Stream?)
 /// - PrimitiveModeAlt: a primitive type directly (e.g., _, _?)
+///
+/// Parameterized procedure declarations have non-empty typeParams:
+///   procedure gethead(Stream(X)?, X).  → typeParams: ['X']
+/// These are templates instantiated per call site by the type checker.
 class ProcDecl {
   final String name;
   final List<TypeExpr> argTypes;  // TypeRef or PrimitiveModeAlt
+  final List<String> typeParams;  // e.g., ['X'] for parameterized proc decls, [] for monomorphic
   final int line;
   final int column;
   final bool isBuiltin;  // True if implemented in Dart runtime (no GLP clauses)
+  final bool exported;   // True if declared with 'exported procedure'
+  final bool imported;   // True if declared with 'imported procedure'
+  final String? modulePath;  // For imported procedures: module path (e.g., 'social' or 'ui#actors'), null for ancestor scope
 
-  ProcDecl(this.name, this.argTypes, this.line, this.column, {this.isBuiltin = false});
+  ProcDecl(this.name, this.argTypes, this.line, this.column, {this.typeParams = const [], this.isBuiltin = false, this.exported = false, this.imported = false, this.modulePath});
+
+  bool get isParameterized => typeParams.isNotEmpty;
 
   int get arity => argTypes.length;
 
   String get key => '$name/$arity';
+
+  /// Key for TypeEnvironment lookup, including module path for imported procedures.
+  /// - Local/exported: 'factorial/2'
+  /// - Imported with path: 'math#factorial/2'
+  /// - Imported from ancestor (no path): 'factorial/2'
+  String get qualifiedKey => '$qualifiedName/$arity';
 
   /// Get the mode for argument at index i (true = input mode)
   bool isInputArg(int i) {
@@ -219,24 +255,49 @@ class ProcDecl {
     return null;  // Primitive types have no name
   }
 
+  /// The visibility prefix for this declaration
+  String get _visibilityPrefix {
+    if (exported) return 'exported ';
+    if (imported) return 'imported ';
+    return '';
+  }
+
+  /// The full qualified name (with module path for imported procedures)
+  String get qualifiedName {
+    if (modulePath != null) return '$modulePath#$name';
+    return name;
+  }
+
   @override
-  String toString() => 'procedure $name(${argTypes.join(', ')}).';
+  String toString() => '${_visibilityPrefix}procedure $qualifiedName(${argTypes.join(', ')}).';
 }
 
 /// The type environment: all type definitions and procedure declarations in a module
 class TypeEnvironment {
   final Map<String, TypeDef> types;
   final Map<String, ProcDecl> procedures;  // keyed by "name/arity"
-  
-  TypeEnvironment(this.types, this.procedures);
-  
+  /// Parameterized procedure declaration templates, keyed by "name/arity".
+  /// Used for call-site type parameter inference (Case B).
+  final Map<String, ProcDecl> paramProcDecls;
+  /// Parameterized type templates from prelude/ancestors.
+  /// Passed to downstream expansions so they can expand references
+  /// to templates defined in ancestor scopes.
+  final Map<String, TypeDef> typeTemplates;
+
+  TypeEnvironment(this.types, this.procedures, {
+      Map<String, ProcDecl>? paramProcDecls,
+      this.typeTemplates = const {},
+  }) : paramProcDecls = paramProcDecls ?? {};
+
   factory TypeEnvironment.empty() => TypeEnvironment({}, {});
-  
+
   /// Merge another environment into this one
   TypeEnvironment merge(TypeEnvironment other) {
     return TypeEnvironment(
       {...types, ...other.types},
       {...procedures, ...other.procedures},
+      paramProcDecls: {...paramProcDecls, ...other.paramProcDecls},
+      typeTemplates: {...typeTemplates, ...other.typeTemplates},
     );
   }
   
@@ -259,7 +320,7 @@ class TypeEnvironment {
 
   /// Add a procedure declaration to the environment
   void addProcedure(ProcDecl procDecl) {
-    procedures[procDecl.key] = procDecl;
+    procedures[procDecl.qualifiedKey] = procDecl;
   }
 
   @override

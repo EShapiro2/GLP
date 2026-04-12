@@ -1,0 +1,5 @@
+%% Minimal self.glp — references Constant (a prelude type)
+Msg ::= text(Constant).
+
+procedure echo(Constant?, Constant).
+echo(X, X?).

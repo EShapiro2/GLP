@@ -1,0 +1,7 @@
+%% Test: parameterized Channel with mode annotations preserved
+Stream(X) ::= [] ; [X | Stream(X)].
+Channel(In, Out) ::= ch(In, Out?).
+Msg ::= hello ; goodbye.
+
+procedure new_channel(Channel(Stream(Msg), Stream(Msg)), Channel(Stream(Msg), Stream(Msg))).
+new_channel(ch(Xs?, Ys), ch(Ys?, Xs)).

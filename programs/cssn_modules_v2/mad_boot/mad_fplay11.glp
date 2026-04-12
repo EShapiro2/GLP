@@ -1,0 +1,76 @@
+%% mad_fplay11.glp — madGLP boot for fplay11 (6 isolates: alice, bob, charlie, carol, dave, eve)
+%%
+%% Derived from: cssn_modules_v2/boot.glp fplay11 clause
+%% CSSN: Child-safe social groups (6 agents)
+%% One isolate per agent — parent-child streams cross isolate boundaries.
+
+-mode(system).
+
+procedure boot.
+boot :-
+    parent_agent_init(alice, carol, 11, _)@alice,
+    parent_agent_init(bob, dave, 11, _)@bob,
+    parent_agent_init(charlie, eve, 11, _)@charlie,
+    child_init(carol, alice, 11, _)@carol,
+    child_init(dave, bob, 11, _)@dave,
+    child_init(eve, charlie, 11, _)@eve.
+
+%% Adult agent with one child — child output globalized via send_to_remote
+procedure parent_agent_init(Constant?, Constant?, Constant?, Stream(_)?).
+parent_agent_init(Id, ChildId, PlayNum, NetIn) :-
+    ground(Id?), ground(ChildId?), ground(PlayNum?) |
+    actor_dispatch(Id?, PlayNum?, ch(ActorIn?, ActorOut)),
+    tee(ActorOut?, MedIn, DispCmd),
+    agent(Id?, AgentIn?, NetIn?,
+          [output('_user', AgentToUser),
+           output('_net', NetOut),
+           output(child(ChildId?), ChildOut)]),
+    send_to_net(NetOut?),
+    send_to_remote(ChildId?, ChildOut?),
+    ui_mediator(Id?, ch(AgentToUser?, AgentIn),
+                ch(MedIn?, MedOut), [], 1),
+    tee(MedOut?, ActorIn, DispNotify),
+    send_to_user_tagged(Id?, DispCmd?, DispNotify?).
+
+%% Child agent — parent output globalized via send_to_remote
+procedure child_init(Constant?, Constant?, Constant?, Stream(_)?).
+child_init(Id, Parent, PlayNum, NetIn) :-
+    ground(Id?), ground(Parent?), ground(PlayNum?) |
+    actor_dispatch(Id?, PlayNum?, ch(ActorIn?, ActorOut)),
+    tee(ActorOut?, MedIn, DispCmd),
+    child_agent(Id?, Parent?, AgentIn?, NetIn?,
+          [output('_user', AgentToUser),
+           output(parent(Parent?), ParentOut)]),
+    send_to_remote(Parent?, ParentOut?),
+    ui_mediator(Id?, ch(AgentToUser?, AgentIn),
+                ch(MedIn?, MedOut), [], 1),
+    tee(MedOut?, ActorIn, DispNotify),
+    send_to_user_tagged(Id?, DispCmd?, DispNotify?).
+
+procedure tee(Stream(_)?, Stream(_), Stream(_)).
+tee([X|Xs], [X?|Ys?], [X?|Zs?]) :- ground(X?) | tee(Xs?, Ys, Zs).
+tee([], [], []).
+
+procedure send_to_user_tagged(Constant?, Stream(_)?, Stream(_)?).
+send_to_user_tagged(Id, [T|Cmds], Notifies) :-
+    ground(Id?), ground(T?) |
+    '_output'(tagged(Id?, cmd(T?))),
+    send_to_user_tagged(Id?, Cmds?, Notifies?).
+send_to_user_tagged(Id, Cmds, [T|Notifies]) :-
+    ground(Id?), ground(T?) |
+    '_output'(tagged(Id?, notify(T?))),
+    send_to_user_tagged(Id?, Cmds?, Notifies?).
+send_to_user_tagged(_, [], []).
+send_to_user_tagged(_, Cmds, []) :- sink(Cmds?).
+
+procedure sink(Stream(_)?).
+sink([_|Xs]) :- sink(Xs?).
+sink([]).
+
+procedure actor_dispatch(Constant?, Constant?, Channel(Stream(UserNotify), Stream(UserCmd))).
+actor_dispatch(alice, 11, Ch) :- alice11(Ch?).
+actor_dispatch(bob, 11, Ch) :- bob11(Ch?).
+actor_dispatch(charlie, 11, Ch) :- charlie11(Ch?).
+actor_dispatch(carol, 11, Ch) :- carol11(Ch?).
+actor_dispatch(dave, 11, Ch) :- dave11(Ch?).
+actor_dispatch(eve, 11, Ch) :- eve11(Ch?).

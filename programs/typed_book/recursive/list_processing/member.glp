@@ -2,11 +2,8 @@
 %% Source: Standard GLP list operations
 %% Note: Uses ground guard to allow comparison
 
-%% Type definitions
-NonEmptyList ::= [_ | Stream].
-
 %% Procedure type declarations
-procedure member(_?, NonEmptyList?).
+procedure member(X?, OpenStream(X)?).
 member(X, [H|_]) :- ground(X?), ground(H?), X? =:= H? | true.
 member(X, [_|Xs]) :- member(X?, Xs?).
 

@@ -4,11 +4,11 @@
 %% Uses predefined Stream type
 
 %% Procedure type declarations
-procedure copy(Stream?, Stream).
+exported procedure copy(Stream(X)?, Stream(X)).
 copy([], []).
 copy([X|Xs], [X?|Ys?]) :- copy(Xs?, Ys).
 
 %% Metainterpreter support
-procedure reduce(_?, _).
+exported procedure reduce(_?, _).
 reduce(copy([], []), true).
 reduce(copy([X|Xs], [X?|Ys?]), copy(Xs?, Ys)).

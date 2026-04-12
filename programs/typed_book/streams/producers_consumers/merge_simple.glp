@@ -5,7 +5,7 @@
 % merge([1,2], [a,b], Out).
 
 %% Procedure type declarations
-procedure merge(Stream?, Stream?, Stream).
+exported procedure merge(Stream(X)?, Stream(X)?, Stream(X)).
 
 merge([X|Xs], Ys, [X?|Zs?]) :- merge(Ys?, Xs?, Zs).
 merge(Xs, [Y|Ys], [Y?|Zs?]) :- merge(Xs?, Ys?, Zs).

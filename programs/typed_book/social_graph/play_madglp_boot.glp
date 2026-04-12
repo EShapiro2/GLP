@@ -24,7 +24,7 @@ boot :-
 %% AGENT INITIALIZATION
 %% =============================================================================
 
-procedure agent_init(Constant?, Stream?).
+procedure agent_init(Constant?, Stream(X)?).
 agent_init(Id, NetIn) :-
     ground(Id?) |
     send_to_net(NetOut?),
@@ -35,7 +35,7 @@ agent_init(Id, NetIn) :-
 %% ACTOR DISPATCH - Routes to actors in typed_actors.glp
 %% =============================================================================
 
-procedure actor(_?, Channel?).
+procedure actor(_?, Channel(X, Y)?).
 actor(alice, Ch) :- alice_actor(Ch?).
 actor(bob, Ch) :- bob_actor(Ch?).
 actor(charlie, Ch) :- charlie_actor(Ch?).

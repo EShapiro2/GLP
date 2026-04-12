@@ -5,7 +5,7 @@
 Move ::= move(_, _).
 MoveList ::= [] ; [Move | MoveList].
 
-procedure hanoi(Number?, _?, _?, MoveList).
+exported procedure hanoi(Number?, _?, _?, MoveList).
 hanoi(0, _, _, []).
 hanoi(N, From, To, Moves?) :-
     number(N?), N? > 0, atom(From?), atom(To?) |
@@ -15,23 +15,23 @@ hanoi(N, From, To, Moves?) :-
     append(M1?, [move(From?,To?)|M2?], Moves).
 
 %% Helper to make two recursive hanoi calls
-procedure hanoi_two(Number?, _?, _?, _?, MoveList, MoveList).
+exported procedure hanoi_two(Number?, _?, _?, _?, MoveList, MoveList).
 hanoi_two(N, From, To, Via, M1?, M2?) :-
     number(N?), atom(From?), atom(To?), atom(Via?) |
     hanoi(N?, From?, Via?, M1),
     hanoi(N?, Via?, To?, M2).
 
-procedure other(_?, _?, _).
+exported procedure other(_?, _?, _).
 other(a, b, c). other(a, c, b).
 other(b, a, c). other(b, c, a).
 other(c, a, b). other(c, b, a).
 
-procedure append(MoveList?, MoveList?, MoveList).
+exported procedure append(MoveList?, MoveList?, MoveList).
 append([], Ys, Ys?).
 append([X|Xs], Ys, [X?|Zs?]) :- append(Xs?, Ys?, Zs).
 
 %% Metainterpreter support
-procedure reduce(_?, _).
+exported procedure reduce(_?, _).
 reduce(hanoi(0, _, _, []), true).
 reduce(hanoi(N, From, To, Moves?),
        (N1 := N? - 1, other(From?, To?, Via),

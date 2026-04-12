@@ -4,7 +4,7 @@
 %% Uses predefined Stream type
 
 %% Procedure type declarations
-procedure prefix(Stream?, Stream?).
+procedure prefix(Stream(X)?, Stream(X)?).
 prefix([], _).
 prefix([X|Xs], [X?|Ys]) :- prefix(Xs?, Ys?).
 

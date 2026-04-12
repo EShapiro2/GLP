@@ -1,0 +1,16 @@
+%% Client module that calls math_service dynamically via M # goal(...)
+%% Used to test dynamic dispatch from the REPL.
+-module(dispatch_client).
+
+imported procedure math_service#double(Integer?, Integer).
+imported procedure math_service#triple(Integer?, Integer).
+imported procedure math_service#add_ten(Integer?, Integer).
+
+exported procedure test_double(Integer?, Integer).
+test_double(X, Y?) :- math_service # double(X?, Y).
+
+exported procedure test_triple(Integer?, Integer).
+test_triple(X, Y?) :- math_service # triple(X?, Y).
+
+exported procedure test_add_ten(Integer?, Integer).
+test_add_ten(X, Y?) :- math_service # add_ten(X?, Y).

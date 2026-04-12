@@ -891,6 +891,13 @@ class HeapFCP {
       return addr;
     }
 
+    if (term is ModuleTerm) {
+      // ModuleTerm wraps a compiled module binary — stored as opaque value
+      final addr = HP++;
+      cells.add(HeapCell(term, CellTag.ValueTag));
+      return addr;
+    }
+
     throw ArgumentError('Unknown term type: ${term.runtimeType}');
   }
 }

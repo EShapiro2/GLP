@@ -1,0 +1,18 @@
+% Test: Parameterized merge - wrong mode in body atom
+% Description: Body error - reader at output position in body
+% This tests Case A (wildcard instantiation): parameterized proc decl
+% clauses are now checked, not silently skipped.
+
+%% TEST: Parameterized merge wrong mode in body
+%% EXPECT: ill-typed
+%% ERROR: body: mode mismatch
+
+Stream(X) ::= [] ; [X | Stream(X)].
+
+procedure merge(Stream(X)?, Stream(X)?, Stream(X)).
+
+% WRONG: Zs? is reader at output position in body (should be writer Zs)
+merge([X|Xs], Ys, [X?|Zs?]) :- merge(Ys?, Xs?, Zs?).
+merge(Xs, [Y|Ys], [Y?|Zs?]) :- merge(Xs?, Ys?, Zs).
+merge(Xs, [], Xs?).
+merge([], Ys, Ys?).

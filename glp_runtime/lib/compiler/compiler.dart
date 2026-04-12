@@ -5,7 +5,8 @@ import 'codegen.dart';
 import 'error.dart';
 import 'token.dart';
 import 'result.dart';
-import 'ast.dart' show Program;
+import 'ast.dart' show Program, Procedure, Clause, Atom, Goal, Guard, Term, VarTerm, StructTerm, UnderscoreTerm, CompileMode;
+import '../analysis/type_checker/type_ast.dart' show ProcDecl;
 import 'package:glp_runtime/bytecode/runner.dart' show BytecodeProgram;
 import '../analysis/type_checker/type_checker.dart' show checkModule;
 
@@ -55,10 +56,6 @@ class GlpCompiler {
   CompilationResult compileWithMetadata(String source, [CompileOptions? options]) {
     final opts = options ?? const CompileOptions();
     try {
-      // Phase 0a: Detect stdlib status from original source BEFORE stripping
-      // (stripping removes -stdlib. directive, so we must detect it first)
-      final isStdlib = source.contains(RegExp(r'^\s*-stdlib\s*\.', multiLine: true));
-
       // Phase 1: Lexical analysis
       // Note: Main lexer now handles type declarations (::= and procedure)
       final lexer = _createLexer(source);
@@ -111,10 +108,8 @@ class GlpCompiler {
         }
       }
 
-      // Generate reduce/2 for all files except stdlib
-      // (use isStdlib detected from original source, not module.isStdlib which is
-      // unreliable after stripping directives)
-      final generateReduce = !isStdlib;
+      // Generate reduce/2 for all files except system-mode code (stdlib)
+      final generateReduce = module.compileMode != CompileMode.system;
 
       // Phase 3: Semantic analysis (with reduce generation flag and proc declarations)
       // Pass proc declarations for type-based SRSW relaxation
@@ -136,4 +131,28 @@ class GlpCompiler {
       throw CompileError(e.message, e.line, e.column, source: source, phase: e.category?.toString().split('.').last);
     }
   }
+
+  /// Compile a Program AST directly to bytecode.
+  ///
+  /// Used by the project linker for statically linked programs.
+  /// Skips lexing, parsing, type checking, and _select generation.
+  ///
+  /// [procDeclarations] should contain renamed declarations (e.g., from
+  /// [linkProject]) for SRSW type-based relaxation.
+  BytecodeProgram compileProgram(Program ast, {List<ProcDecl>? procDeclarations}) {
+    final analyzer = _createAnalyzer();
+    final annotated = analyzer.analyze(
+      ast,
+      generateReduce: true,
+      compileMode: CompileMode.system,
+      procDeclarations: procDeclarations ?? [],
+      skipGlobalSRSW: true,  // Linked programs: modules already type-checked individually
+    );
+
+    final codegen = _createCodegen();
+    return codegen.generateWithMetadata(annotated).program;
+  }
+
+  /// Generate _select/1 dispatch table from exported procedure declarations.
+  ///
 }

@@ -1,19 +1,19 @@
 % arithmetic_fixed.glp - Arithmetic operations with := assignment
 
-procedure add(Number?, Number?, Number).
+exported procedure add(Number?, Number?, Number).
 add(X, Y, Z?) :- Z := X? + Y?.
 
-procedure multiply(Number?, Number?, Number).
+exported procedure multiply(Number?, Number?, Number).
 multiply(X, Y, Z?) :- Z := X? * Y?.
 
-procedure subtract(Number?, Number?, Number).
+exported procedure subtract(Number?, Number?, Number).
 subtract(X, Y, Z?) :- Z := X? - Y?.
 
-procedure divide(Number?, Number?, Number).
+exported procedure divide(Number?, Number?, Number).
 divide(X, Y, Z?) :- Z := X? / Y?.
 
-procedure modulo(Number?, Number?, Number).
+exported procedure modulo(Number?, Number?, Number).
 modulo(X, Y, Z?) :- Z := X? mod Y?.
 
-procedure compute(Number).
+exported procedure compute(Number).
 compute(X?) :- X := (2 * 3) + 4.

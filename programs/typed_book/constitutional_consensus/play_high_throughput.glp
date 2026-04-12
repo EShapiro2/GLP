@@ -2,10 +2,10 @@
 %% Multiple transactions create conflict, formal leader resolves
 
 %% Type definitions
-Block ::= block(Number, _, Stream).
+Block ::= block(Number, X, Blocklace).
 Blocklace ::= [] ; [Block | Blocklace].
-Result ::= passed ; failed(_, _).
-ParticipantList ::= [] ; [_ | ParticipantList].
+Result ::= passed ; failed(X, Y).
+ParticipantList ::= [] ; [Constant | ParticipantList].
 
 %% ============================================
 %% The Play
@@ -14,7 +14,7 @@ ParticipantList ::= [] ; [_ | ParticipantList].
 %% Scenario: Alice and Bob both propose in the same round (conflict)
 %% Formal leader (Alice for wave 1) wins, Bob retries in wave 2
 
-procedure tau(Blocklace?, ParticipantList?, Stream).
+procedure tau(Blocklace?, ParticipantList?, Stream(X)).
 
 procedure has_conflict(Number?, Blocklace?).
 
@@ -70,7 +70,7 @@ play_high_throughput(Result) :-
     %% Verify: tx_a first (leader), then tx_b
     verify_high_throughput(Sequence?, Result).
 
-procedure verify_high_throughput(Stream?, Result).
+procedure verify_high_throughput(Stream(X)?, Result).
 verify_high_throughput([tx_a, tx_b], passed).
 verify_high_throughput(Other, failed(expected_tx_a_tx_b, got(Other?))).
 

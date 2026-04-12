@@ -1,12 +1,12 @@
 % run1.glp - Metainterpreter
 
-procedure run(_?).
+exported procedure run(_?).
 run(true).
 run((A, B)) :- run(A?), run(B?).
 run(A) :- otherwise | clause(A?, B), run(B?).
 
 % clause database
-procedure clause(_?, _).
+exported procedure clause(_?, _).
 clause(merge([X|Xs], Ys, [X?|Zs?]), merge(Ys?, Xs?, Zs)).
 clause(merge(Xs, [Y|Ys], [Y?|Zs?]), merge(Xs?, Ys?, Zs)).
 clause(merge([], [], []), true).
@@ -16,17 +16,17 @@ clause(q(X), p(X?)).
 clause(q(a), true).
 clause(r(a,b), true).
 
-procedure run2(Stream).
+exported procedure run2(Stream(X)).
 run2(Ys?) :- run((merge([],[],Xs1), merge([],Xs1?,Ys))).
 
-procedure run3(Stream).
+exported procedure run3(Stream(X)).
 run3(Ys?) :- run(merge([],[a],Ys)).
 
-procedure run4(Stream).
+exported procedure run4(Stream(X)).
 run4(Ys?) :- run(merge([],[],Ys)).
 
-procedure run6(Stream).
+exported procedure run6(Stream(X)).
 run6(Ys?) :- run(merge([a],[],Ys)).
 
-procedure runA(Stream).
+exported procedure runA(Stream(X)).
 runA(X?) :- run(merge([],[],X)).

@@ -9,6 +9,17 @@
 #   C - Negative Type Tests (load must be rejected)
 #   D - SRSW Violation Tests (load must be rejected)
 #   E - Invalid Guard Test (true in guard rejected)
+#   F - CSSG Modules (modular play tests via project-directory loading)
+#   G - Social Graph Simulated UI Modules (project-directory loading)
+#   H - CSSN Modules (project-directory loading, plays 1-12)
+#   I - self.glp Procedure Tests (shared procs, shadowing, local shadow, type error)
+#   J - CSSG v2 Modules (child_agent with parent(X) output keys)
+#   K - CSSN v2 Modules (child_agent with blocking consent)
+#   L - Dynamic Module Dispatch Tests (activate + M # goal)
+#   M - Multi-Isolate (madGLP) Tests (dart test, CSSN v2, one isolate per agent)
+#   N - Bonds V2 Modules (project-directory loading, plays 1-12)
+#   O - Bonds V2 Multi-Isolate Tests (dart test, one isolate per agent)
+#   P - Module Boundary Enforcement Tests (exported vs private procedures)
 
 set -e
 
@@ -503,6 +514,17 @@ HEREDOC
 check "constant ground" "Rcgt1 = foo" "$a18"
 check "gethead" "Rgh1 = a" "$a18"
 
+# --- A18b: Parameterized proc decl with bare type var ---
+echo "--- A18b: Param bare typevar ---"
+a18b=$($DART run "$REPL" <<HEREDOC
+$TYPED/param_bare_typevar.glp
+test_gethead_param(Rpbt1).
+:quit
+HEREDOC
+2>&1)
+
+check "param bare typevar" "Rpbt1 = a" "$a18b"
+
 # --- A19: Defined guards ---
 echo "--- A19: Defined guards ---"
 a19=$($DART run "$REPL" <<HEREDOC
@@ -696,6 +718,16 @@ HEREDOC
 2>&1)
 check_not "reader-to-reader no reduction" "req(2)" "$a27"
 
+# --- A28: Module guard ---
+echo "--- A28: Module guard ---"
+a28=$($DART run "$REPL" <<HEREDOC
+$TYPED/module_guard.glp
+test_not_module(42, Rm1).
+:quit
+HEREDOC
+2>&1)
+check "module guard ~module(42)" "Rm1 = not_module" "$a28"
+
 SECTION_A_PASS=$PASS
 SECTION_A_FAIL=$FAIL
 
@@ -839,6 +871,14 @@ POSITIVE_FILES=(
     "$TC_DIR/positive/subtyping/contravariant_response_slot.glp"
     "$TC_DIR/positive/subtyping/direct_constant_subtype.glp"
     "$TC_DIR/positive/subtyping/struct_fewer_functors.glp"
+
+    # --- module guard test ---
+    "$TYPED/module_guard.glp"
+
+    # --- parameterized types ---
+    "$TYPED/param_stream_integer.glp"
+    "$TYPED/param_channel.glp"
+    "$TYPED/param_procedure_inference.glp"
 )
 
 # Build REPL input: load each positive file with :clear between
@@ -965,6 +1005,12 @@ NEGATIVE_FILES=(
     "$TC_DIR/negative/subtyping/contravariant_wrong_direction.glp"
     "$TC_DIR/negative/subtyping/disjoint_types.glp"
     "$TC_DIR/negative/subtyping/arg_type_mismatch.glp"
+
+    # --- parameterized types negative ---
+    "$TYPED/param_arity_mismatch.glp"
+
+    # --- parameterized proc decl negative (Case A: own clauses checked) ---
+    "$TC_DIR/negative/body/param_merge_wrong_mode.glp"
 )
 
 # Build REPL input with :clear between each negative file
@@ -1057,6 +1103,681 @@ else
     echo "  FAIL: true in guard position should be rejected"
     FAIL=$((FAIL + 1))
 fi
+
+echo ""
+
+# =============================================================================
+# Section F: CSSG Modules (modular play tests)
+# =============================================================================
+echo "=== Section F: CSSG Modules ==="
+echo ""
+
+cssg_result=$(bash "$SCRIPT_DIR/cssg_modules_test.sh" 2>&1)
+cssg_pass=$(echo "$cssg_result" | grep "^Total:" | sed 's/.*Passed: \([0-9]*\).*/\1/')
+cssg_fail=$(echo "$cssg_result" | grep "^Total:" | sed 's/.*Failed: \([0-9]*\).*/\1/')
+
+if [ -n "$cssg_pass" ] && [ -n "$cssg_fail" ]; then
+    PASS=$((PASS + cssg_pass))
+    FAIL=$((FAIL + cssg_fail))
+    echo "$cssg_result" | grep -E "PASS:|FAIL:|CSSG|Using"
+else
+    echo "  FAIL: cssg_modules_test.sh did not produce expected output"
+    FAIL=$((FAIL + 1))
+fi
+
+echo ""
+
+# =============================================================================
+# Section G: Social Graph Simulated UI Modules (project-directory loading)
+# =============================================================================
+echo "=== Section G: Social Graph Simulated UI Modules ==="
+echo ""
+
+SGSIM="$GLP_DIR/programs/social_graph_simulated_ui_modules"
+
+# Loading
+g_load=$($DART run "$REPL" <<HEREDOC
+$SGSIM
+:quit
+HEREDOC
+2>&1)
+
+check "SG-SIM project loads" "Loaded project" "$g_load"
+check_not "SG-SIM no type errors" "Type checking failed" "$g_load"
+check_not "SG-SIM no load errors" "Error loading" "$g_load"
+
+# Silent plays (play1-play3)
+echo "--- Silent plays (play1-play3) ---"
+for play_num in 1 2 3; do
+    g_play=$($DART run "$REPL" <<HEREDOC
+$SGSIM
+play${play_num}.
+:quit
+HEREDOC
+2>&1)
+    check "SG play${play_num} succeeds" "succeeds\|suspended" "$g_play"
+done
+
+# Tagged plays (fplay1-fplay3) with output checks
+echo "--- Tagged plays (fplay1-fplay3) ---"
+
+g_fp1=$($DART run "$REPL" <<HEREDOC
+$SGSIM
+fplay1.
+:quit
+HEREDOC
+2>&1)
+
+check "SG fplay1 succeeds" "succeeds\|suspended" "$g_fp1"
+check "SG fplay1 alice connected bob" "tagged(alice.*connected(bob)" "$g_fp1"
+check "SG fplay1 charlie connected alice" "tagged(charlie.*connected(alice)" "$g_fp1"
+
+g_fp2=$($DART run "$REPL" <<HEREDOC
+$SGSIM
+fplay2.
+:quit
+HEREDOC
+2>&1)
+
+check "SG fplay2 succeeds" "succeeds\|suspended" "$g_fp2"
+check "SG fplay2 rejected" "tagged(alice.*rejected" "$g_fp2"
+
+g_fp3=$($DART run "$REPL" <<HEREDOC
+$SGSIM
+fplay3.
+:quit
+HEREDOC
+2>&1)
+
+check "SG fplay3 succeeds" "succeeds\|suspended" "$g_fp3"
+
+echo ""
+
+# =============================================================================
+# Section H: CSSN Modules (project-directory loading)
+# =============================================================================
+echo "=== Section H: CSSN Modules ==="
+echo ""
+
+CSSN="$GLP_DIR/programs/cssn_modules"
+
+# Loading
+h_load=$($DART run "$REPL" <<HEREDOC
+$CSSN
+:quit
+HEREDOC
+2>&1)
+
+check "CSSN project loads" "Loaded project" "$h_load"
+check_not "CSSN no type errors" "Type checking failed" "$h_load"
+check_not "CSSN no load errors" "Error loading" "$h_load"
+
+# fplay1-3: Basic social graph
+echo "--- Basic social graph (fplay1-fplay3) ---"
+
+h_fp1=$($DART run "$REPL" <<HEREDOC
+$CSSN
+fplay1.
+:quit
+HEREDOC
+2>&1)
+
+check "CSSN fplay1 succeeds" "succeeds\|suspended" "$h_fp1"
+check "CSSN fplay1 alice connected bob" "tagged(alice.*connected(bob)" "$h_fp1"
+check "CSSN fplay1 charlie connected alice" "tagged(charlie.*connected(alice)" "$h_fp1"
+
+h_fp2=$($DART run "$REPL" <<HEREDOC
+$CSSN
+fplay2.
+:quit
+HEREDOC
+2>&1)
+
+check "CSSN fplay2 succeeds" "succeeds\|suspended" "$h_fp2"
+check "CSSN fplay2 rejected" "tagged(alice.*rejected" "$h_fp2"
+
+h_fp3=$($DART run "$REPL" <<HEREDOC
+$CSSN
+fplay3.
+:quit
+HEREDOC
+2>&1)
+
+check "CSSN fplay3 succeeds" "succeeds\|suspended" "$h_fp3"
+
+# fplay4-7: CSSG (child-safe social graph)
+echo "--- CSSG plays (fplay4-fplay7) ---"
+
+h_fp4=$($DART run "$REPL" <<HEREDOC
+$CSSN
+fplay4.
+:quit
+HEREDOC
+2>&1)
+
+check "CSSN fplay4 succeeds" "succeeds\|suspended" "$h_fp4"
+check "CSSN fplay4 carol connected dave" "tagged(carol.*connected(dave)" "$h_fp4"
+
+for play_num in 5 6 7; do
+    h_fpN=$($DART run "$REPL" <<HEREDOC
+$CSSN
+fplay${play_num}.
+:quit
+HEREDOC
+2>&1)
+    check "CSSN fplay${play_num} succeeds" "succeeds\|suspended" "$h_fpN"
+done
+
+# fplay8-10: CSSN groups
+echo "--- CSSN group plays (fplay8-fplay10) ---"
+
+h_fp8=$($DART run "$REPL" <<HEREDOC
+$CSSN
+fplay8.
+:quit
+HEREDOC
+2>&1)
+
+check "CSSN fplay8 succeeds" "succeeds\|suspended" "$h_fp8"
+check "CSSN fplay8 group_joined" "tagged(alice.*group_joined" "$h_fp8"
+check "CSSN fplay8 group_received" "group_received" "$h_fp8"
+
+h_fp9=$($DART run "$REPL" <<HEREDOC
+$CSSN
+fplay9.
+:quit
+HEREDOC
+2>&1)
+
+check "CSSN fplay9 succeeds" "succeeds\|suspended" "$h_fp9"
+
+h_fp10=$($DART run "$REPL" <<HEREDOC
+$CSSN
+fplay10.
+:quit
+HEREDOC
+2>&1)
+
+check "CSSN fplay10 succeeds" "succeeds\|suspended" "$h_fp10"
+
+# fplay11-12: Large CSSN scenarios
+echo "--- Large CSSN plays (fplay11-fplay12) ---"
+
+h_fp11=$($DART run "$REPL" <<HEREDOC
+$CSSN
+fplay11.
+:quit
+HEREDOC
+2>&1)
+
+check "CSSN fplay11 succeeds" "succeeds\|suspended" "$h_fp11"
+check "CSSN fplay11 tagged output" "tagged(" "$h_fp11"
+
+h_fp12=$($DART run "$REPL" <<HEREDOC
+$CSSN
+fplay12.
+:quit
+HEREDOC
+2>&1)
+
+check "CSSN fplay12 succeeds" "succeeds\|suspended" "$h_fp12"
+check "CSSN fplay12 tagged output" "tagged(" "$h_fp12"
+
+echo ""
+
+# =============================================================================
+# Section I: self.glp Procedure Tests
+# =============================================================================
+echo "=== Section I: self.glp Procedure Tests ==="
+echo ""
+
+SELFPROC_TESTS="$GLP_DIR/programs/tests"
+
+# --- I1: self.glp shared procedure ---
+echo "--- I1: self.glp shared procedure ---"
+i1=$($DART run "$REPL" <<HEREDOC
+$SELFPROC_TESTS/module_self_procs
+test_self_proc(5, R).
+:quit
+HEREDOC
+2>&1)
+
+check "self.glp shared proc loads" "Loaded project" "$i1"
+check "self.glp shared proc result" "R = 10" "$i1"
+
+# --- I2: self.glp shadowing ---
+echo "--- I2: self.glp shadowing ---"
+i2=$($DART run "$REPL" <<HEREDOC
+$SELFPROC_TESTS/module_self_shadow
+test_shadow(X, Y).
+:quit
+HEREDOC
+2>&1)
+
+check "self.glp shadow loads" "Loaded project" "$i2"
+check "self.glp shadow outer" "X = outer" "$i2"
+check "self.glp shadow inner" "Y = inner" "$i2"
+
+# --- I3: Local shadows self.glp ---
+echo "--- I3: Local shadows self.glp ---"
+i3=$($DART run "$REPL" <<HEREDOC
+$SELFPROC_TESTS/module_self_local_shadow
+test_local_shadow(R).
+:quit
+HEREDOC
+2>&1)
+
+check "local shadow loads" "Loaded project" "$i3"
+check "local shadow result" "R = from_local" "$i3"
+
+# --- I4: Type error in self.glp (negative) ---
+echo "--- I4: Type error in self.glp (negative) ---"
+i4=$($DART run "$REPL" <<HEREDOC
+$SELFPROC_TESTS/module_self_type_error
+:quit
+HEREDOC
+2>&1)
+
+check "self.glp type error rejected" "Type checking failed\|type.*error\|Error" "$i4"
+check_not "self.glp type error not loaded" "Loaded project" "$i4"
+
+echo ""
+
+# =============================================================================
+# Section J: CSSG v2 Modules (child_agent with parent(X) output keys)
+# =============================================================================
+echo "=== Section J: CSSG v2 Modules ==="
+echo ""
+
+CSSG_V2="$GLP_DIR/programs/cssg_modules_v2"
+
+# Loading
+j_load=$($DART run "$REPL" <<HEREDOC
+$CSSG_V2
+:quit
+HEREDOC
+2>&1)
+
+check "CSSG v2 project loads" "Loaded project" "$j_load"
+check_not "CSSG v2 no type errors" "Type checking failed" "$j_load"
+
+# fplay4-7: child_agent plays
+echo "--- CSSG v2 child_agent plays (fplay4-fplay7) ---"
+
+j_fp4=$($DART run "$REPL" <<HEREDOC
+$CSSG_V2
+fplay4.
+:quit
+HEREDOC
+2>&1)
+
+check "CSSG v2 fplay4 succeeds" "succeeds\|suspended" "$j_fp4"
+check "CSSG v2 fplay4 carol connected dave" "tagged(carol.*connected(dave)" "$j_fp4"
+
+for play_num in 5 6 7; do
+    j_fpN=$($DART run "$REPL" <<HEREDOC
+$CSSG_V2
+fplay${play_num}.
+:quit
+HEREDOC
+2>&1)
+    check "CSSG v2 fplay${play_num} succeeds" "succeeds\|suspended" "$j_fpN"
+done
+
+echo ""
+
+# =============================================================================
+# Section K: CSSN v2 Modules (child_agent with blocking consent)
+# =============================================================================
+echo "=== Section K: CSSN v2 Modules ==="
+echo ""
+
+CSSN_V2="$GLP_DIR/programs/cssn_modules_v2"
+
+# Loading
+k_load=$($DART run "$REPL" <<HEREDOC
+$CSSN_V2
+:quit
+HEREDOC
+2>&1)
+
+check "CSSN v2 project loads" "Loaded project" "$k_load"
+check_not "CSSN v2 no type errors" "Type checking failed" "$k_load"
+
+# fplay1-3: Basic social graph (adult-only, unchanged)
+echo "--- CSSN v2 basic social graph (fplay1-fplay3) ---"
+
+for play_num in 1 2 3; do
+    k_fpN=$($DART run "$REPL" <<HEREDOC
+$CSSN_V2
+fplay${play_num}.
+:quit
+HEREDOC
+2>&1)
+    check "CSSN v2 fplay${play_num} succeeds" "succeeds\|suspended" "$k_fpN"
+done
+
+# fplay4-7: child_agent befriending
+echo "--- CSSN v2 child_agent befriending (fplay4-fplay7) ---"
+
+k_fp4=$($DART run "$REPL" <<HEREDOC
+$CSSN_V2
+fplay4.
+:quit
+HEREDOC
+2>&1)
+
+check "CSSN v2 fplay4 succeeds" "succeeds\|suspended" "$k_fp4"
+check "CSSN v2 fplay4 carol connected dave" "tagged(carol.*connected(dave)" "$k_fp4"
+
+for play_num in 5 6 7; do
+    k_fpN=$($DART run "$REPL" <<HEREDOC
+$CSSN_V2
+fplay${play_num}.
+:quit
+HEREDOC
+2>&1)
+    check "CSSN v2 fplay${play_num} succeeds" "succeeds\|suspended" "$k_fpN"
+done
+
+# fplay8-10: CSSN groups
+echo "--- CSSN v2 group plays (fplay8-fplay10) ---"
+
+k_fp8=$($DART run "$REPL" <<HEREDOC
+$CSSN_V2
+fplay8.
+:quit
+HEREDOC
+2>&1)
+
+check "CSSN v2 fplay8 succeeds" "succeeds\|suspended" "$k_fp8"
+check "CSSN v2 fplay8 group_joined" "tagged(alice.*group_joined" "$k_fp8"
+
+for play_num in 9 10; do
+    k_fpN=$($DART run "$REPL" <<HEREDOC
+$CSSN_V2
+fplay${play_num}.
+:quit
+HEREDOC
+2>&1)
+    check "CSSN v2 fplay${play_num} succeeds" "succeeds\|suspended" "$k_fpN"
+done
+
+# fplay11: child-managed group with blocking consent
+echo "--- CSSN v2 blocking consent play (fplay11) ---"
+
+k_fp11=$($DART run "$REPL" <<HEREDOC
+$CSSN_V2
+fplay11.
+:quit
+HEREDOC
+2>&1)
+
+check "CSSN v2 fplay11 succeeds" "succeeds\|suspended" "$k_fp11"
+check "CSSN v2 fplay11 tagged output" "tagged(" "$k_fp11"
+
+# fplay12: adult-managed group with children
+echo "--- CSSN v2 adult-managed group play (fplay12) ---"
+
+k_fp12=$($DART run "$REPL" <<HEREDOC
+$CSSN_V2
+fplay12.
+:quit
+HEREDOC
+2>&1)
+
+check "CSSN v2 fplay12 succeeds" "succeeds\|suspended" "$k_fp12"
+check "CSSN v2 fplay12 tagged output" "tagged(" "$k_fp12"
+
+echo ""
+
+# =============================================================================
+# Section L: Dynamic Module Dispatch Tests
+# =============================================================================
+echo "=== Section L: Dynamic Module Dispatch Tests ==="
+echo ""
+
+DD="$GLP_DIR/programs/tests/dynamic_dispatch"
+
+# --- L1: Activate module and dispatch double via client ---
+echo "--- L1: Dynamic dispatch double ---"
+l1=$($DART run "$REPL" <<HEREDOC
+$DD/math_service.glp
+:activate math_service
+$DD/dispatch_client.glp
+test_double(5, X).
+:quit
+HEREDOC
+2>&1)
+
+check "math_service activated" "Activated module" "$l1"
+check "test_double(5, X) = 10" "X = 10" "$l1"
+
+# --- L2: Triple dispatch ---
+echo "--- L2: Dynamic dispatch triple ---"
+l2=$($DART run "$REPL" <<HEREDOC
+$DD/math_service.glp
+:activate math_service
+$DD/dispatch_client.glp
+test_triple(4, X).
+:quit
+HEREDOC
+2>&1)
+
+check "test_triple(4, X) = 12" "X = 12" "$l2"
+
+# --- L3: Add_ten dispatch ---
+echo "--- L3: Dynamic dispatch add_ten ---"
+l3=$($DART run "$REPL" <<HEREDOC
+$DD/math_service.glp
+:activate math_service
+$DD/dispatch_client.glp
+test_add_ten(7, X).
+:quit
+HEREDOC
+2>&1)
+
+check "test_add_ten(7, X) = 17" "X = 17" "$l3"
+
+echo ""
+
+# =============================================================================
+# Section M: Multi-Isolate (madGLP) Tests
+# =============================================================================
+
+echo "=== Section M: Multi-Isolate (madGLP) Tests ==="
+echo ""
+
+MAD_RESULT=$("$DART" test "$GLP_RUNTIME/test/multiagent/cssn_v2_isolate_test.dart" 2>&1)
+MAD_EXIT=$?
+
+if [ $MAD_EXIT -eq 0 ]; then
+    # Count passing tests from output like "+13: All tests passed!"
+    MAD_PASSED=$(echo "$MAD_RESULT" | grep -oE '\+[0-9]+' | tail -1 | tr -d '+')
+    MAD_PASSED=${MAD_PASSED:-13}
+    echo "  PASS: All $MAD_PASSED multi-isolate tests passed"
+    PASS=$((PASS + MAD_PASSED))
+else
+    # Extract failure count
+    MAD_FAILED=$(echo "$MAD_RESULT" | grep -oE '\-[0-9]+' | tail -1 | tr -d '-')
+    MAD_FAILED=${MAD_FAILED:-1}
+    MAD_PASSED=$(echo "$MAD_RESULT" | grep -oE '\+[0-9]+' | tail -1 | tr -d '+')
+    MAD_PASSED=${MAD_PASSED:-0}
+    echo "  FAIL: $MAD_FAILED multi-isolate test(s) failed ($MAD_PASSED passed)"
+    echo "$MAD_RESULT" | tail -20
+    PASS=$((PASS + MAD_PASSED))
+    FAIL=$((FAIL + MAD_FAILED))
+fi
+
+echo ""
+
+# =============================================================================
+# Section N: Bonds V2 Modules (project-directory loading, plays 1-12)
+# =============================================================================
+echo "=== Section N: Bonds V2 Modules ==="
+echo ""
+
+BONDS_V2="$GLP_DIR/programs/bonds_v2"
+
+# Loading
+n_load=$($DART run "$REPL" <<HEREDOC
+$BONDS_V2
+:quit
+HEREDOC
+2>&1)
+
+check "Bonds v2 project loads" "Loaded project" "$n_load"
+check_not "Bonds v2 no type errors" "Type checking failed" "$n_load"
+
+# fplay1: solo mint
+echo "--- Bonds v2 solo mint (fplay1) ---"
+
+n_fp1=$($DART run "$REPL" <<HEREDOC
+$BONDS_V2
+fplay1.
+:quit
+HEREDOC
+2>&1)
+
+check "Bonds v2 fplay1 succeeds" "succeeds" "$n_fp1"
+check "Bonds v2 fplay1 minted" "tagged(alice.*minted" "$n_fp1"
+
+# fplay2: befriend + trade
+echo "--- Bonds v2 befriend + trade (fplay2) ---"
+
+n_fp2=$($DART run "$REPL" <<HEREDOC
+$BONDS_V2
+fplay2.
+:quit
+HEREDOC
+2>&1)
+
+check "Bonds v2 fplay2 succeeds" "succeeds" "$n_fp2"
+check "Bonds v2 fplay2 connected" "tagged(alice.*connected(bob)" "$n_fp2"
+check "Bonds v2 fplay2 trade_completed" "trade_completed" "$n_fp2"
+
+# fplay3-6: trade variations
+echo "--- Bonds v2 trade plays (fplay3-fplay6) ---"
+
+for play_num in 3 4 5 6; do
+    n_fpN=$($DART run "$REPL" <<HEREDOC
+$BONDS_V2
+fplay${play_num}.
+:quit
+HEREDOC
+2>&1)
+    check "Bonds v2 fplay${play_num} succeeds" "succeeds" "$n_fpN"
+done
+
+# fplay4b: time-dependent trade
+echo "--- Bonds v2 time-dependent trade (fplay4b) ---"
+
+n_fp4b=$($DART run "$REPL" <<HEREDOC
+$BONDS_V2
+fplay4b.
+:quit
+HEREDOC
+2>&1)
+
+check "Bonds v2 fplay4b succeeds" "succeeds" "$n_fp4b"
+
+# fplay8-9: buyback + symmetric trade
+echo "--- Bonds v2 buyback + symmetric (fplay8-fplay9) ---"
+
+for play_num in 8 9; do
+    n_fpN=$($DART run "$REPL" <<HEREDOC
+$BONDS_V2
+fplay${play_num}.
+:quit
+HEREDOC
+2>&1)
+    check "Bonds v2 fplay${play_num} succeeds" "succeeds" "$n_fpN"
+done
+
+# fplay10-11: escrow
+echo "--- Bonds v2 escrow plays (fplay10-fplay11) ---"
+
+n_fp10=$($DART run "$REPL" <<HEREDOC
+$BONDS_V2
+fplay10.
+:quit
+HEREDOC
+2>&1)
+
+check "Bonds v2 fplay10 succeeds" "succeeds" "$n_fp10"
+check "Bonds v2 fplay10 escrow" "escrow" "$n_fp10"
+
+n_fp11=$($DART run "$REPL" <<HEREDOC
+$BONDS_V2
+fplay11.
+:quit
+HEREDOC
+2>&1)
+
+check "Bonds v2 fplay11 succeeds" "succeeds" "$n_fp11"
+check "Bonds v2 fplay11 escrow_cancelled" "escrow_cancelled" "$n_fp11"
+
+# fplay12: village market (6 agents)
+echo "--- Bonds v2 village market (fplay12) ---"
+
+n_fp12=$($DART run "$REPL" <<HEREDOC
+$BONDS_V2
+:limit 5000000
+fplay12.
+:quit
+HEREDOC
+2>&1)
+
+check "Bonds v2 fplay12 succeeds" "succeeds" "$n_fp12"
+check "Bonds v2 fplay12 tagged output" "tagged(" "$n_fp12"
+
+echo ""
+
+# =============================================================================
+# Section O: Bonds V2 Multi-Isolate Tests
+# =============================================================================
+
+echo "=== Section O: Bonds V2 Multi-Isolate Tests ==="
+echo ""
+
+BONDS_MAD_RESULT=$("$DART" test "$GLP_RUNTIME/test/multiagent/bonds_v2_isolate_test.dart" 2>&1)
+BONDS_MAD_EXIT=$?
+
+if [ $BONDS_MAD_EXIT -eq 0 ]; then
+    BONDS_MAD_PASSED=$(echo "$BONDS_MAD_RESULT" | grep -oE '\+[0-9]+' | tail -1 | tr -d '+')
+    BONDS_MAD_PASSED=${BONDS_MAD_PASSED:-12}
+    echo "  PASS: All $BONDS_MAD_PASSED bonds_v2 multi-isolate tests passed"
+    PASS=$((PASS + BONDS_MAD_PASSED))
+else
+    BONDS_MAD_FAILED=$(echo "$BONDS_MAD_RESULT" | grep -oE '\-[0-9]+' | tail -1 | tr -d '-')
+    BONDS_MAD_FAILED=${BONDS_MAD_FAILED:-1}
+    BONDS_MAD_PASSED=$(echo "$BONDS_MAD_RESULT" | grep -oE '\+[0-9]+' | tail -1 | tr -d '+')
+    BONDS_MAD_PASSED=${BONDS_MAD_PASSED:-0}
+    echo "  FAIL: $BONDS_MAD_FAILED bonds_v2 multi-isolate test(s) failed ($BONDS_MAD_PASSED passed)"
+    echo "$BONDS_MAD_RESULT" | tail -20
+    PASS=$((PASS + BONDS_MAD_PASSED))
+    FAIL=$((FAIL + BONDS_MAD_FAILED))
+fi
+
+echo ""
+
+# =============================================================================
+# SECTION P: MODULE BOUNDARY ENFORCEMENT TESTS
+# =============================================================================
+echo "=== Section P: Module Boundary Enforcement Tests ==="
+echo ""
+
+echo "--- Module boundary: exported vs private ---"
+output=$($DART run "$REPL" <<HEREDOC
+$TYPED/test_module_boundary.glp
+public_proc(5, X).
+private_proc(5, X).
+:quit
+HEREDOC
+2>&1)
+check "public_proc(5,X) returns X=6" "X = 6" "$output"
+check_not "private_proc not callable from REPL" "X = 7" "$output"
+check "private_proc fails or not found" "not found\|failed\|Error" "$output"
 
 echo ""
 

@@ -1,24 +1,24 @@
 % circular_test.glp - Circular term creation and handling
 
-procedure is_ground(_?, Constant).
+exported procedure is_ground(_?, Constant).
 is_ground(X, yes) :- ground(X?) | true.
 is_ground(_, no) :- otherwise | true.
 
-procedure test_equal(_?, _?, Constant).
+exported procedure test_equal(_?, _?, Constant).
 test_equal(X, Y, yes) :- X? =?= Y? | true.
 test_equal(_, _, no) :- otherwise | true.
 
-procedure test_self_equal(_?, Constant).
+exported procedure test_self_equal(_?, Constant).
 test_self_equal(X, yes) :- X? =?= X? | true.
 test_self_equal(_, no) :- otherwise | true.
 
-procedure show(_?, _).
+exported procedure show(_?, _).
 show(X, X?).
 
-procedure test_ground(_?, Constant).
+exported procedure test_ground(_?, Constant).
 test_ground(X, yes) :- ground(X?) | true.
 test_ground(_, no) :- otherwise | true.
 
-procedure test_eq(_?, _?, Constant).
+exported procedure test_eq(_?, _?, Constant).
 test_eq(X, Y, yes) :- X? =?= Y? | true.
 test_eq(_, _, no) :- otherwise | true.

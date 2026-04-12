@@ -1,10 +1,10 @@
 % test_guards_comprehensive.glp - Comprehensive guard tests
 
-procedure test_list_ok(_?, Constant).
+exported procedure test_list_ok(_?, Constant).
 test_list_ok(X, ok) :- list(X?) | true.
 
-procedure test_string_ok(_?, Constant).
+exported procedure test_string_ok(_?, Constant).
 test_string_ok(X, ok) :- string(X?) | true.
 
-procedure test_constant_ok(_?, Constant).
+exported procedure test_constant_ok(_?, Constant).
 test_constant_ok(X, ok) :- constant(X?) | true.

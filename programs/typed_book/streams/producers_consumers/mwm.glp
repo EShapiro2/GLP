@@ -5,14 +5,14 @@
 % Uses MutualRef for O(1) stream append.
 % Uses short-circuit L/R pairs for termination detection.
 % allocate_mutual_reference/2 is a kernel predicate called directly.
--stdlib.
+-mode(system).
 
 %% Type definitions
 Done ::= done.
-StreamCmd ::= stream(Stream) ; merge(StreamOfStreams).
+StreamCmd ::= stream(Stream(_)) ; merge(StreamOfStreams).
 StreamOfStreams ::= [] ; [StreamCmd | StreamOfStreams].
 
-procedure mwm(StreamOfStreams?, Stream).
+procedure mwm(StreamOfStreams?, Stream(X)).
 mwm(In, Out?) :-
     '_allocate_mutual_reference'(Ref, Out),
     mwm_main(In?, Ref?).
@@ -37,7 +37,7 @@ mwm1([merge(NewIn)|Streams], Ref, L, R?) :-
 
 mwm1([], _, L, L?).
 
-procedure mwm_copy(Stream?, _?, Done?, Done).
+procedure mwm_copy(Stream(X)?, _?, Done?, Done).
 mwm_copy([X|Xs], Ref, L, R?) :-
     is_mutual_ref(Ref?) |
     stream_append(X?, Ref?, Ref1),

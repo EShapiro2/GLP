@@ -29,11 +29,11 @@ boot :-
 %% ALICE - Sends to Charlie via Bob, waits for response
 %% =============================================================================
 
-procedure fi_alice(_?, Channel?, Channel?).
+procedure fi_alice(_?, Channel(X, Y)?, Channel(X, Y)?).
 fi_alice(_, _, ch(NetIn, [msg(bob, forward(charlie, hello_charlie))|Tail?])) :-
     alice_wait_response(NetIn?, Tail).
 
-procedure alice_wait_response(Stream?, Stream).
+procedure alice_wait_response(Stream(X)?, Stream(X)).
 %% Received response from Charlie (via Bob)
 alice_wait_response([msg(_, from_charlie(hello_alice))|_], []).
 %% Skip other messages
@@ -43,11 +43,11 @@ alice_wait_response([_|In], Out?) :- otherwise | alice_wait_response(In?, Out).
 %% BOB - Relays messages between Alice and Charlie
 %% =============================================================================
 
-procedure fi_bob(_?, Channel?, Channel?).
+procedure fi_bob(_?, Channel(X, Y)?, Channel(X, Y)?).
 fi_bob(_, _, ch(NetIn, NetOut?)) :-
     bob_relay(NetIn?, NetOut).
 
-procedure bob_relay(Stream?, Stream).
+procedure bob_relay(Stream(X)?, Stream(X)).
 %% Forward from Alice to Charlie
 bob_relay([msg(alice, forward(charlie, Content))|In], [msg(charlie, from_alice(Content?))|Out?]) :-
     bob_relay(In?, Out).
@@ -63,11 +63,11 @@ bob_relay([_|In], Out?) :- otherwise | bob_relay(In?, Out).
 %% CHARLIE - Receives from Alice (via Bob), responds
 %% =============================================================================
 
-procedure fi_charlie(_?, Channel?, Channel?).
+procedure fi_charlie(_?, Channel(X, Y)?, Channel(X, Y)?).
 fi_charlie(_, _, ch(NetIn, NetOut?)) :-
     charlie_wait(NetIn?, NetOut).
 
-procedure charlie_wait(Stream?, Stream).
+procedure charlie_wait(Stream(X)?, Stream(X)).
 %% Received message from Alice, respond via Bob
 charlie_wait([msg(_, from_alice(hello_charlie))|_], [msg(bob, forward(alice, hello_alice))|[]]).
 %% Skip other messages

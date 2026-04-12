@@ -61,7 +61,7 @@ alice(Commands?, Followers, FinalFollowers?) :-
 %% === Bob: Subscriber ===
 %% Subscribes to feed, receives posts
 
-procedure bob(Stream?, Result).
+procedure bob(Stream(X)?, Result).
 bob([subscribe(bob, BobFeed)|_], BobResult?) :-
     bob_receive(BobFeed?, BobResult).
 

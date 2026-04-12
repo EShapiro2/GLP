@@ -7,147 +7,10 @@
 // Specification: docs/modules/type-environment.md
 // Paper Reference: Section 8 (Prelude)
 
-/// The prelude source containing all predefined definitions
-///
-/// IMPORTANT: Procedure declarations must appear immediately before their clauses.
-/// Type definitions can appear anywhere before first use.
-/// Builtin procedure declarations (no clauses) can be grouped.
-const String typePrelude = r'''
-% =============================================================================
-% TYPE DEFINITIONS
-% =============================================================================
-
-% Collections
-Stream ::= [] ; [_|Stream].
-OpenStream ::= [_|Stream].
-DiffList ::= Stream \ Stream?.
-
-% Communication
-Channel ::= ch(Stream, Stream?).
-
-% Primitive types
-Constant ::= Number ; String.
-
-% Arithmetic expressions
-% Exp accepts numeric literals and arithmetic operator expressions
-% Note: Arguments are NOT moded (Exp, not Exp?) because expression types
-% are homogeneous - consuming an expression means consuming its subexpressions.
-Exp ::= Number ; +(Exp, Exp) ; -(Exp, Exp) ; *(Exp, Exp) ; /(Exp, Exp) ; //(Exp, Exp) ; mod(Exp, Exp) ; neg(Exp).
-
-% =============================================================================
-% BUILTIN PROCEDURE DECLARATIONS (no clauses - implemented by runtime)
-% =============================================================================
-
-% Type guards
-procedure integer(Integer?).
-procedure number(Number?).
-procedure string(String?).
-procedure constant(Constant?).
-procedure compound(_?).
-procedure list(_?).
-procedure equator(_?).
-
-% Groundness guards
-procedure ground(_?).
-procedure known(_?).
-procedure unknown(_?).
-procedure no_readers(_?).
-
-% Time guards
-procedure wait(Number?).
-procedure wait_until(Number?).
-
-% Arithmetic comparison guards
-procedure <(Exp?, Exp?).
-procedure >(Exp?, Exp?).
-procedure =<(Exp?, Exp?).
-procedure >=(Exp?, Exp?).
-procedure =:=(Exp?, Exp?).
-procedure =\=(Exp?, Exp?).
-
-% Equality guard
-procedure =?=(_?, _?).
-
-% Univ operations (term ↔ list conversion)
-procedure =..(_, Stream?).      % Compose: Stream? → Compound
-procedure ..=(Stream, _?).      % Decompose: Compound? → Stream
-
-% MWM (Mutual Write Merge) runtime primitives
-procedure _allocate_mutual_reference(_, _).
-procedure is_mutual_ref(_?).
-procedure _stream_append(_?, _?, _).
-procedure _close_mutual_reference(_?).
-
-% Map operations (O(1) key-value lookup)
-procedure map_new(_).
-procedure map_put(_?, _?, _?, _).
-procedure _map_get(_?, _?, _).
-procedure map_contains(_?, _?).
-procedure map_get(_?, _?, _).
-procedure map_remove(_?, _?, _).
-procedure map_keys(_?, _).
-procedure map_show(_?, _?, _).
-procedure fofmap_show(_?, _?, _).
-procedure map_list_append(_?, _?, _?, _).
-procedure _copy(_?, _).
-procedure _list_to_tuple(_?, _).
-procedure _tuple_to_list(_?, _).
-procedure struct_arg(_?, Constant?, Constant).
-procedure struct_arg_eq(_?, Constant?, Constant?).
-procedure map_entry_arg_eq(_?, Constant?, Constant?, Constant?).
-procedure map_entry_arg_ge(_?, Constant?, Constant?, Constant?).
-procedure sbs_new(Constant?, _).
-procedure sbs_add_recipient(_?, Constant?, _).
-procedure sbs_write_update(_?, _?, _, _).
-procedure sbs_get_checkpoint(_?, _).
-
-% Output/debugging primitives
-procedure write(_?).
-procedure writeln(_?).
-
-% madGLP network primitives
-procedure _send(_?, _?, _?).
-
-% =============================================================================
-% SINGLE-UNIT-CLAUSE PROCEDURES (DEFINED GUARDS)
-% =============================================================================
-%
-% These are regular procedures defined by exactly one clause with no guards and
-% no body (a "unit clause").  They serve as defined guards: when called in guard
-% position, the partial evaluator unfolds them at compile time.  In general,
-% they are NOT expected to work as body predicates.
-%
-% The PE automatically includes these prelude unit clauses when processing any
-% program, so user programs do not need to redefine them.  User programs may
-% override a prelude unit clause by defining a procedure with the same
-% name/arity.
-%
-% Example: new_channel(Ch1, Ch2) in a guard is unfolded at compile time to
-% create cross-linked channel structures.
-%
-% =============================================================================
-
-% Assignment (unification)
-procedure =(_?, _).
-X = X?.
-
-% Difference list operations
-procedure dl_append(DiffList?, DiffList?, DiffList).
-dl_append(A\B?, B\C?, A?\C).
-
-procedure dl_to_list(DiffList?, Stream).
-dl_to_list(L\[], L?).
-
-% Channel operations
-procedure new_channel(Channel, Channel).
-new_channel(ch(Xs?, Ys), ch(Ys?, Xs)).
-
-procedure send(_?, Channel?, Channel).
-send(X, ch(In, [X?|Out?]), ch(In?, Out)).
-
-procedure receive(_, Channel?, Channel).
-receive(X?, ch([X|In], Out?), ch(In?, Out)).
-''';
+/// The prelude source — now empty.
+/// All type definitions, procedure declarations, and unit clauses
+/// live in programs/self.glp and are loaded via the scope chain.
+const String typePrelude = '';
 
 /// Names of predefined types that cannot be redefined by user modules
 /// Note: Only fundamental primitive types are protected.
@@ -175,7 +38,7 @@ const Set<String> predefinedProcedureNames = {
   'constant',
   'compound',
   'list',
-  'equator',
+  'module',
   // Groundness guards (fundamental - implemented by runtime)
   'ground',
   'known',
@@ -196,7 +59,7 @@ const Set<String> predefinedProcedureNames = {
   // Univ operations (fundamental)
   '=..',
   '..=',
-  // Map operations (fundamental builtins - implemented by runtime)
+  // Map operations (fundamental builtins)
   'map_new',
   'map_put',
   '_map_get',
@@ -206,6 +69,7 @@ const Set<String> predefinedProcedureNames = {
   'map_show',
   'fofmap_show',
   'map_list_append',
+  // Structure manipulation
   '_copy',
   '_list_to_tuple',
   '_tuple_to_list',
@@ -213,11 +77,11 @@ const Set<String> predefinedProcedureNames = {
   'struct_arg_eq',
   'map_entry_arg_eq',
   'map_entry_arg_ge',
+  // SharedBroadcastStream
   'sbs_new',
   'sbs_add_recipient',
   'sbs_write_update',
   'sbs_get_checkpoint',
-  // Note: map_get is NOT protected - it's a stdlib wrapper that can be redefined
   // Note: dl_append, dl_to_list, new_channel, send, receive
   // are NOT protected - they are library-level and can be redefined
 };
@@ -225,12 +89,11 @@ const Set<String> predefinedProcedureNames = {
 /// Built-in goals that don't need type checking
 /// - true, otherwise: 0-arity control
 /// - :=: arithmetic assignment, handled specially
-/// - #: remote module call (Module # Goal) - inner goal is in remote module
+/// Note: # (remote module call) is handled as RemoteGoal before the builtin check
 const Set<String> builtinGoals = {
   'true',
   'otherwise',
   ':=',
-  '#',
 };
 
 /// True builtins: procedures implemented in Dart runtime with NO GLP clauses.
@@ -245,7 +108,7 @@ const Set<String> builtinProcedures = {
   'constant/1',
   'compound/1',
   'list/1',
-  'equator/1',
+  'module/1',
   // Groundness/validation guards
   'ground/1',
   'known/1',
@@ -282,6 +145,7 @@ const Set<String> builtinProcedures = {
   'map_show/3',
   'fofmap_show/3',
   'map_list_append/4',
+  // Structure manipulation
   '_copy/2',
   '_list_to_tuple/2',
   '_tuple_to_list/2',
@@ -289,15 +153,15 @@ const Set<String> builtinProcedures = {
   'struct_arg_eq/3',
   'map_entry_arg_eq/4',
   'map_entry_arg_ge/4',
+  // SharedBroadcastStream
   'sbs_new/2',
   'sbs_add_recipient/3',
   'sbs_write_update/4',
   'sbs_get_checkpoint/2',
-  // Output/debugging primitives
-  'write/1',
-  'writeln/1',
   // madGLP network primitives
   '_send/3',
+  // Output (system predicate)
+  '_output/1',
 };
 
 /// Check if a type name is predefined

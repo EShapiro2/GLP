@@ -2,9 +2,12 @@
 %% Two agents exchange personal coins to establish a credit line
 
 %% Type definitions
-BalanceList ::= [] ; [_ | BalanceList].
-RequestList ::= [] ; [_ | RequestList].
-BlockStream ::= [] ; [_ | BlockStream].
+BalanceEntry ::= (Constant, Number).
+BalanceList ::= [] ; [BalanceEntry | BalanceList].
+Block ::= block(X, Y, BlockStream).
+BlockStream ::= [] ; [Block | BlockStream].
+Request ::= issue(Constant, Number, Constant) ; accept(Number, Constant, X, Y).
+RequestList ::= [] ; [Request | RequestList].
 
 %% ============================================
 %% The Play
@@ -16,7 +19,7 @@ BlockStream ::= [] ; [_ | BlockStream].
 
 procedure agent(RequestList?, BalanceList?, BlockStream).
 
-procedure find_payment_to(_?, BlockStream?, _).
+procedure find_payment_to(Constant?, BlockStream?, Block).
 
 procedure play_mutual_credit.
 play_mutual_credit :-

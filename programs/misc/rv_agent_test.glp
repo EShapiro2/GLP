@@ -1,0 +1,164 @@
+%% rv_agent_test.glp — test suite for rv_agent.glp
+%%
+%% Load rv_agent.glp first, then this file, then invoke test goals.
+
+%% Local type redeclarations (structural identity allows sharing across modules)
+SignalReply ::= punch(Constant) ; initiated ; rejected.
+
+PendingEntry ::= needs(Constant, Constant, Constant, SignalReply?)
+               ; ready(Constant, Constant, SignalReply?).
+PendingList ::= [] ; [PendingEntry | PendingList].
+
+SignalMsg ::= reconnect(Constant, Constant, Constant, SignalReply?)
+            ; available(Constant, Constant, SignalReply?).
+
+imported procedure rv_agent#find_ready(Constant?, Constant?, Constant?,
+                                        SignalReply,
+                                        PendingList?, PendingList).
+imported procedure rv_agent#find_needs(Constant?, Constant?, SignalReply,
+                                        PendingList?, PendingList).
+imported procedure rv_agent#rv_agent(Stream(SignalMsg)?,
+                                      PendingList?).
+
+%% =============================================================================
+%% Test 1: A arrives first, no B waiting → entry stored in pending
+%% =============================================================================
+
+procedure test1_needs_stored(PendingList).
+test1_needs_stored(Pending1?) :-
+    rv_agent # find_ready(alice, bob, addr_a, _, [], Pending1).
+
+%% Expected: Pending1 = [needs(alice, bob, addr_a, _)]
+
+%% =============================================================================
+%% Test 2: B arrives first, no A waiting → entry stored in pending
+%% =============================================================================
+
+procedure test2_ready_stored(PendingList).
+test2_ready_stored(Pending1?) :-
+    rv_agent # find_needs(alice, bob, _, [], Pending1).
+
+%% Expected: Pending1 = [ready(bob, alice, _)]
+
+%% =============================================================================
+%% Test 3: A arrives after B is waiting → match, replies get bound
+%% =============================================================================
+
+procedure test3_match_find_ready(SignalReply, SignalReply, PendingList).
+test3_match_find_ready(ReplyA?, ReplyB?, Pending1?) :-
+    rv_agent # find_ready(alice, bob, addr_a, ReplyA,
+                           [ready(bob, alice, ReplyB)], Pending1).
+
+%% Expected: ReplyA = initiated, ReplyB = punch(addr_a), Pending1 = []
+
+%% =============================================================================
+%% Test 4: B arrives after A is waiting → match, replies get bound
+%% =============================================================================
+
+procedure test4_match_find_needs(SignalReply, SignalReply, PendingList).
+test4_match_find_needs(ReplyA?, ReplyB?, Pending1?) :-
+    rv_agent # find_needs(alice, bob, ReplyB,
+                           [needs(alice, bob, addr_a, ReplyA)], Pending1).
+
+%% Expected: ReplyA = initiated, ReplyB = punch(addr_a), Pending1 = []
+
+%% =============================================================================
+%% Test 5: find_ready with non-matching ready entry → pass-through, store needs
+%% =============================================================================
+
+procedure test5_find_ready_no_match(PendingList).
+test5_find_ready_no_match(Pending1?) :-
+    rv_agent # find_ready(alice, bob, addr_a, _,
+                           [ready(carol, dave, _)], Pending1).
+
+%% Expected: Pending1 = [ready(carol, dave, _), needs(alice, bob, addr_a, _)]
+
+%% =============================================================================
+%% Test 6: find_ready with multiple entries, one matches
+%% =============================================================================
+
+procedure test6_find_ready_skip_then_match(SignalReply, SignalReply, PendingList).
+test6_find_ready_skip_then_match(ReplyA?, ReplyB?, Pending1?) :-
+    rv_agent # find_ready(alice, bob, addr_a, ReplyA,
+                           [ready(carol, dave, _),
+                            ready(bob, alice, ReplyB)], Pending1).
+
+%% Expected: ReplyA = initiated, ReplyB = punch(addr_a),
+%%           Pending1 = [ready(carol, dave, _)]
+
+%% =============================================================================
+%% Test 7: Run rv_agent on a single reconnect message
+%% =============================================================================
+
+procedure test7_agent_single_reconnect(SignalReply).
+test7_agent_single_reconnect(ReplyA?) :-
+    rv_agent # rv_agent(
+        [reconnect(alice, bob, proof, ReplyA)], []).
+
+%% Expected: ReplyA unbound (suspended), agent terminates on empty stream
+
+%% =============================================================================
+%% Test 8: Run rv_agent with available then reconnect (B first, A second)
+%% =============================================================================
+
+procedure test8_agent_full_rendezvous(SignalReply, SignalReply).
+test8_agent_full_rendezvous(ReplyA?, ReplyB?) :-
+    rv_agent # rv_agent(
+        [available(bob, alice, ReplyB),
+         reconnect(alice, bob, proof, ReplyA)], []).
+
+%% Expected: ReplyA = initiated, ReplyB = punch(stub_addr_alice)
+
+%% =============================================================================
+%% Test 9: Two reconnect messages for unrelated pairs → both stored
+%% =============================================================================
+
+procedure test9_two_reconnects_no_match(SignalReply, SignalReply).
+test9_two_reconnects_no_match(RA1?, RA2?) :-
+    rv_agent # rv_agent(
+        [reconnect(alice, bob, proof1, RA1),
+         reconnect(carol, dave, proof2, RA2)], []).
+
+%% Expected: RA1 and RA2 both unbound (both stored as needs entries)
+
+%% =============================================================================
+%% Test 10: reconnect, then available for same pair → match on second msg
+%% =============================================================================
+
+procedure test10_reconnect_then_available(SignalReply, SignalReply).
+test10_reconnect_then_available(RA?, RB?) :-
+    rv_agent # rv_agent(
+        [reconnect(alice, bob, proof, RA),
+         available(bob, alice, RB)], []).
+
+%% Expected: RA = initiated, RB = punch(stub_addr_alice)
+
+%% =============================================================================
+%% Test 11: reconnect with invalid proof → reply is rejected
+%% =============================================================================
+%%
+%% The verify_friendship stub returns invalid when Proof = bad_proof.
+%% Expected: RA = rejected, agent terminates.
+
+procedure test11_reconnect_rejected(SignalReply).
+test11_reconnect_rejected(RA?) :-
+    rv_agent # rv_agent(
+        [reconnect(alice, bob, bad_proof, RA)], []).
+
+%% Expected: RA = rejected
+
+%% =============================================================================
+%% Test 12: rejected reconnect does not block subsequent valid reconnect
+%% =============================================================================
+%%
+%% First reconnect has bad proof → rejected.  Second has good proof and
+%% finds a waiting available entry → matches normally.
+
+procedure test12_rejected_then_match(SignalReply, SignalReply, SignalReply).
+test12_rejected_then_match(RA1?, RA2?, RB?) :-
+    rv_agent # rv_agent(
+        [reconnect(alice, bob, bad_proof, RA1),
+         available(bob, alice, RB),
+         reconnect(alice, bob, good_proof, RA2)], []).
+
+%% Expected: RA1 = rejected, RA2 = initiated, RB = punch(stub_addr_alice)

@@ -5,12 +5,12 @@
 NumList ::= [] ; [Number | NumList].
 
 %% Procedure type declarations
-procedure inner_product(NumList?, NumList?, Number).
+exported procedure inner_product(NumList?, NumList?, Number).
 inner_product([X|Xs], [Y|Ys], IP?) :-
     inner_product(Xs?, Ys?, IP1), IP := X? * Y? + IP1?.
 inner_product([], [], 0).
 
 %% reduce clauses for metainterpreter
-procedure reduce(_?, _).
+exported procedure reduce(_?, _).
 reduce(inner_product([X|Xs], [Y|Ys], IP?), (inner_product(Xs?, Ys?, IP1), IP := X? * Y? + IP1?)).
 reduce(inner_product([], [], 0), true).

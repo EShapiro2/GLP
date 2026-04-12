@@ -1,5 +1,9 @@
 # Instructions for Claude Code (Terminal Interface)
 
+## 🔴 CRITICAL - FILE HANDLING
+
+**When you need to read a file that is not in your context window (especially PDFs, PPTX, or binary files), ask Udi to upload it immediately.**  Do NOT waste time trying multiple tools, workarounds, or copy commands.  If a file path contains spaces or the first read/copy attempt fails, do not retry — ask for an upload.
+
 ## 🔴 CRITICAL - NEVER ASSUME, ALWAYS VERIFY
 
 **Before referencing any file, path, or fact:**
@@ -15,6 +19,10 @@ This applies to:
 - Documentation
 - Any file or directory mentioned in instructions
 
+## 🔴 CRITICAL - LANGUAGE DESIGN AUTHORITY
+
+The GLP language definition — guards, system predicates, body kernels, directives, type system features, primitive types — **cannot be revised, extended, or added to without explicit discussion with Udi and his express approval.** This includes adding new guards, new system predicates, new body kernels, new directives, or extending the type system. Propose first, wait for approval, then implement. See DISCIPLINE.md section 1.14.
+
 ## 🔴 CRITICAL - AFTER CONTEXT COMPACTION
 
 When emerging from compaction (you see a session summary replacing the original conversation), do NOT silently continue working.  Stop immediately, tell the user you have emerged from compaction, summarise where things stand, and ask how to proceed.  Never assume the summary is complete or that prior agreements still hold.
@@ -29,7 +37,9 @@ When emerging from compaction (you see a session summary replacing the original 
 4. **ACKNOWLEDGE DISCIPLINE.md** - State "I have read DISCIPLINE.md completely"
 5. **READ docs/typed-glp-manual.md** - Read to completion
 6. **ACKNOWLEDGE typed-glp-manual.md** - State "I have read typed-glp-manual.md completely"
-7. **STOP AND WAIT** - Do not read any other files. Wait for user direction.
+7. **READ docs/glp-cheat-sheet.md** - Read to completion. This is a compact reference for GLP programming patterns. GLP is NOT Prolog — study the wrong vs right examples carefully.
+8. **ACKNOWLEDGE glp-cheat-sheet.md** - State "I have read glp-cheat-sheet.md completely"
+9. **STOP AND WAIT** - Do not read any other files. Wait for user direction. The user will tell you which project or workstream to work on and where to find its plan.
 
 **DO NOT read handovers, specs, code, or any other files until user gives direction.**
 
@@ -264,10 +274,10 @@ You are the **executor and tester** for the GLP Runtime project. You run command
 ## Key Context
 - **Project**: GLP (Grassroots Logic Programs) - a secure concurrent logic programming language
 - **Implementation Language**: Dart
-- **Current State**: 317 REPL tests passing (as of Feb 2026)
-- **Test Suite**: `bash /Users/ohadey/Desktop/Grassroots/GLP2/GLP/test/run_all_tests.sh` — ALWAYS run before committing
+- **Current State**: 384 REPL tests passing, 374 Dart tests passing (as of Mar 2026)
+- **Test Suite**: `bash /Users/udi/Grassroots/GLP/test/run_all_tests.sh` — ALWAYS run before committing
 - **User Expertise**: Deep understanding of GLP semantics but does not write code
-- **Working Directory**: `/Users/ohadey/Desktop/Grassroots/GLP2/GLP/` (user's Mac)
+- **Working Directory**: `/Users/udi/Grassroots/GLP/` (user's Mac)
 
 ## Working Modes
 
@@ -373,9 +383,9 @@ You are the **executor and tester** for the GLP Runtime project. You run command
 | Environment | Path | Used by |
 |-------------|------|---------|
 | Claude Code (Linux) | `/home/user/GLP` | Claude running commands |
-| User's Mac | `/Users/ohadey/Desktop/Grassroots/GLP2/GLP` | User running commands |
+| User's Mac | `/Users/udi/Grassroots/GLP` | User running commands |
 
-**When giving instructions TO THE USER (merge commands, etc.), ALWAYS use Mac paths (`/Users/ohadey/Desktop/Grassroots/GLP2/GLP`).**
+**When giving instructions TO THE USER (merge commands, etc.), ALWAYS use Mac paths (`/Users/udi/Grassroots/GLP`).**
 
 ---
 
@@ -405,7 +415,7 @@ If a file loads successfully, it has passed SRSW analysis, partial evaluation, a
 
 **Correct pattern (no approval needed):**
 ```bash
-cd /Users/ohadey/Desktop/Grassroots/GLP2/GLP/glp_runtime
+cd /Users/udi/Grassroots/GLP/glp_runtime
 echo -e 'load ../programs/path/to/file.glp\ngoal.' | dart run bin/glp_repl.dart
 ```
 
@@ -416,25 +426,44 @@ dart run bin/glp_repl.dart <<< 'load file.glp'  # DON'T USE - needs approval
 
 **Or compile for faster repeated testing:**
 ```bash
-cd /Users/ohadey/Desktop/Grassroots/GLP2/GLP/glp_runtime
+cd /Users/udi/Grassroots/GLP/glp_runtime
 dart compile exe bin/glp_repl.dart -o glp_repl
 echo -e 'load ../programs/path/to/file.glp\ngoal.' | ./glp_repl
 ```
 
 **REPL Test Suite:**
 ```bash
-# Unified test suite - 317 tests (ALWAYS run before committing)
-bash /Users/ohadey/Desktop/Grassroots/GLP2/GLP/test/run_all_tests.sh
+# Unified test suite - 384 tests (ALWAYS run before committing)
+bash /Users/udi/Grassroots/GLP/test/run_all_tests.sh
 
 # Book examples only - 141 files (tests compilation only)
-bash /Users/ohadey/Desktop/Grassroots/GLP2/GLP/test/run_book_tests.sh
+bash /Users/udi/Grassroots/GLP/test/run_book_tests.sh
 ```
 
+**Testing Bonds (Grassroots Bonds plays):**
+
+The bonds code lives in `programs/typed_book/bonds/` and is NOT included in `test/run_all_tests.sh`.  To test bonds, load the individual `.glp` files (not the directory) into the REPL, then run fplay goals.  There is no `fplay7` — plays are: fplay1-6, fplay8-12, plus fplay4b.  Play 12 (village market) also needs the play12 sub-module actor files.
+
+```bash
+cd /Users/udi/Grassroots/GLP/glp_runtime
+BONDS=/Users/udi/Grassroots/GLP/programs/typed_book/bonds
+
+# Single play (fplay1-6, fplay8-11):
+printf 'load $BONDS/agent.glp\nload $BONDS/mediator.glp\nload $BONDS/actors.glp\nload $BONDS/boot.glp\n:limit 1000000\nfplay1.\n' | dart run bin/glp_repl.dart
+
+# Play 12 (village market — needs play12 actor files + higher limit):
+printf 'load $BONDS/agent.glp\nload $BONDS/mediator.glp\nload $BONDS/actors.glp\nload $BONDS/play12/alice.glp\nload $BONDS/play12/bob.glp\nload $BONDS/play12/charlie.glp\nload $BONDS/play12/diana.glp\nload $BONDS/play12/eve.glp\nload $BONDS/play12/frank.glp\nload $BONDS/boot.glp\n:limit 5000000\nfplay12.\n' | dart run bin/glp_repl.dart
+```
+
+Expected results: `→ succeeds` or `→ suspended` (suspended is normal for plays with escrow timers: fplay3, fplay4, fplay4b, fplay12).
+
+**IMPORTANT:** Do NOT try to load the bonds directory as a project (`/path/to/bonds` at the REPL prompt).  The bonds directory has no `self.glp` at the top level, and while loadProject succeeds, it does not export the fplay goals.  Load files individually with `load /absolute/path/file.glp`.
+
 **Key paths:**
-- REPL: `/Users/ohadey/Desktop/Grassroots/GLP2/GLP/glp_runtime/bin/glp_repl.dart`
-- stdlib: `/Users/ohadey/Desktop/Grassroots/GLP2/GLP/programs/stdlib/`
-- GLP programs: `/Users/ohadey/Desktop/Grassroots/GLP2/GLP/programs/`
-- Test files: `/Users/ohadey/Desktop/Grassroots/GLP2/GLP/programs/tests/`
+- REPL: `/Users/udi/Grassroots/GLP/glp_runtime/bin/glp_repl.dart`
+- Root prelude: `/Users/udi/Grassroots/GLP/programs/self.glp`
+- GLP programs: `/Users/udi/Grassroots/GLP/programs/`
+- Test files: `/Users/udi/Grassroots/GLP/programs/tests/`
 
 **Commands that DON'T exist in this environment:**
 - `timeout` - not available
@@ -447,12 +476,12 @@ bash /Users/ohadey/Desktop/Grassroots/GLP2/GLP/test/run_book_tests.sh
 
 ## GLP Code Location Policy
 
-**All `.glp` code lives in `/Users/ohadey/Desktop/Grassroots/GLP2/GLP/programs/`.**  No GLP source files should reside in paper repos (SGLP, CGLP, etc.) or elsewhere.  Paper repos may reference GLP code by path but must not contain copies.  This ensures a single source of truth for all GLP programs.
+**All `.glp` code lives in `/Users/udi/Grassroots/GLP/programs/`.**  No GLP source files should reside in paper repos (SGLP, CGLP, etc.) or elsewhere.  Paper repos may reference GLP code by path but must not contain copies.  This ensures a single source of truth for all GLP programs.
 
 ## Directory Structure
 
 ```
-/Users/ohadey/Desktop/Grassroots/GLP2/GLP/
+/Users/udi/Grassroots/GLP/
 ├── CLAUDE.md                    # ← This file - ESSENTIAL for Claude Code
 ├── README.md                    # ← Project readme
 │
@@ -472,8 +501,8 @@ bash /Users/ohadey/Desktop/Grassroots/GLP2/GLP/test/run_book_tests.sh
 │   │   └── glp_repl.dart      # ← REPL source
 │   └── glp_repl               # ← Compiled REPL executable
 │
-├── programs/                    # ← ALL GLP SOURCE FILES (380 files total)
-│   ├── stdlib/                 # ← Standard library (6 files)
+├── programs/                    # ← ALL GLP SOURCE FILES
+│   ├── self.glp               # ← Root prelude: types, procedures, unit clauses
 │   ├── book/                   # ← Art of GLP book examples (140 files)
 │   │   ├── recursive/         # ← arithmetic_trees/, list_processing/, structure_processing/
 │   │   ├── streams/           # ← producers_consumers/, objects_monitors/, buffered_communication/
@@ -489,7 +518,7 @@ bash /Users/ohadey/Desktop/Grassroots/GLP2/GLP/test/run_book_tests.sh
 │   └── misc/                   # ← Miscellaneous examples (26 files)
 │
 └── test/                        # ← TEST SCRIPTS
-    ├── run_all_tests.sh        # ← Unified REPL tests (317 tests) — ALWAYS run before committing
+    ├── run_all_tests.sh        # ← Unified REPL tests (382 tests) — ALWAYS run before committing
     └── run_book_tests.sh       # ← Book examples compilation test (141 files)
 ```
 
@@ -525,26 +554,29 @@ You:
 
 | Suite | Location | Tests | Purpose |
 |-------|----------|-------|---------|
-| Unified | `test/run_all_tests.sh` | 316 | All REPL-based tests (runtime + type-check + negative) |
+| Unified | `test/run_all_tests.sh` | 384 | All REPL-based tests (runtime + type-check + negative + modules) |
 | Book | `test/run_book_tests.sh` | 141 | Book examples compile check |
-| Unit | `glp_runtime/test/` | 236 | Dart unit tests |
+| Dart | `glp_runtime/test/` | 374 | Dart unit tests (14 known failures, 5 skipped) |
 
-The unified test suite (`run_all_tests.sh`) has five sections:
+The unified test suite (`run_all_tests.sh`) has eight sections:
 
-| Section | Tests | Description |
-|---------|-------|-------------|
-| A: Typed Runtime Tests | 176 | Load typed programs, run queries, check output |
-| B: Positive Type Check | 97 | Verify typed programs load successfully |
-| C: Negative Type Tests | 39 | Verify ill-typed programs are rejected |
-| D: SRSW Violations | 3 | Verify SRSW violations are detected |
-| E: Invalid Guard | 1 | Verify `true` in guard position is rejected |
+| Section | Description |
+|---------|-------------|
+| A: Typed Runtime Tests | Load typed programs, run queries, check output |
+| B: Positive Type Check | Verify typed programs load successfully |
+| C: Negative Type Tests | Verify ill-typed programs are rejected |
+| D: SRSW Violations | Verify SRSW violations are detected |
+| E: Invalid Guard | Verify `true` in guard position is rejected |
+| F: CSSG Modules | Modular play tests via project-directory loading |
+| G: Social Graph Modules | Project-directory loading |
+| H: CSSN Modules | Project-directory loading, plays 1-12 |
 
 ### Standard Test Protocol
 
 **ALWAYS run the unified tests before and after changes:**
 
 ```bash
-cd /Users/ohadey/Desktop/Grassroots/GLP2/GLP/glp_runtime
+cd /Users/udi/Grassroots/GLP/glp_runtime
 
 # Unified REPL tests (ALWAYS run this)
 bash ../test/run_all_tests.sh
@@ -557,9 +589,9 @@ dart test
 ```
 
 **Expected results:**
-- Unified: 316/316 pass
+- Unified: 384/384 pass
 - Book: 84/141 pass (57 fail due to SRSW violations in book code)
-- Unit: All pass
+- Dart: 374 pass, 14 known failures, 5 skipped
 
 ### MANDATORY: Test Protocol for GLP System Changes
 
@@ -581,7 +613,7 @@ This ensures:
 
 ### REPL Development Protocol
 1. Make changes to `glp_runtime/lib/` or `glp_runtime/bin/glp_repl.dart`
-2. Run full tests: `cd /Users/ohadey/Desktop/Grassroots/GLP2/GLP && bash test/run_all_tests.sh`
+2. Run full tests: `cd /Users/udi/Grassroots/GLP && bash test/run_all_tests.sh`
 3. Report results
 
 ### Adding New Tests
@@ -622,31 +654,31 @@ New typed test programs go in `programs/tests/typed/`. All programs must have `p
 2. Tests should cover the main use cases of the feature
 3. This ensures the feature continues to work as the codebase evolves
 
-### Deferred: Dynamic RPC Testing
+### Dynamic Module Dispatch
 
-**Status**: Dynamic RPC (`M? # goal`) and `reduce/2` for guarded rules are currently broken.
-**Reason**: Module system needs revision to integrate with type system.
-**Action**: Frozen until module system revision. Do not attempt to fix these tests.
+**Status**: Dynamic dispatch works end-to-end. The `_activate` kernel dispatches goals directly to exported procedures (bypassing `_select/1` clause execution to preserve writer/reader polarity for output parameters).
+**Tests**: 8 Dart integration tests in `test/dynamic_dispatch_test.dart`, 8 CSSG GLP dispatch tests in `test/runtime/cssg_glp_dispatch_test.dart`.
+**Auto-activation**: Modules with exports are auto-activated when loaded via `loadSource`/`loadFile`.
 
 ### Test Troubleshooting
 
 If unified tests fail unexpectedly, check these common causes:
 
 1. **Stale REPL snapshot** - The test script compiles a kernel snapshot (`.dart_tool/repl.dill`) for speed. It recompiles when any `.dart` file in `lib/` or `bin/` is newer than the snapshot. If you suspect staleness (e.g., tests fail after changing `prelude.dart` or other lib files), delete the snapshot: `rm glp_runtime/.dart_tool/repl.dill`
-2. **Working directory** - Tests must run from the GLP root. The script handles this via `cd "$GLP_RUNTIME"`, but verify you are starting from `/Users/ohadey/Desktop/Grassroots/GLP2/GLP`
+2. **Working directory** - Tests must run from the GLP root. The script handles this via `cd "$GLP_RUNTIME"`, but verify you are starting from `/Users/udi/Grassroots/GLP`
 3. **DART variable** - Should auto-detect via `which dart`
 4. **Path resolution** - `$GLP_DIR` should resolve to absolute path
 
 **Standard test invocation:**
 ```bash
-cd /Users/ohadey/Desktop/Grassroots/GLP2/GLP
+cd /Users/udi/Grassroots/GLP
 bash test/run_all_tests.sh
 ```
 
 **Debug individual test manually:**
 ```bash
-cd /Users/ohadey/Desktop/Grassroots/GLP2/GLP/glp_runtime
-echo -e '/Users/ohadey/Desktop/Grassroots/GLP2/GLP/programs/tests/typed/TESTFILE.glp\nQUERY.\n:quit' | dart run .dart_tool/repl.dill
+cd /Users/udi/Grassroots/GLP/glp_runtime
+echo -e '/Users/udi/Grassroots/GLP/programs/tests/typed/TESTFILE.glp\nQUERY.\n:quit' | dart run .dart_tool/repl.dill
 ```
 
 ## Working Principles
@@ -661,8 +693,8 @@ echo -e '/Users/ohadey/Desktop/Grassroots/GLP2/GLP/programs/tests/typed/TESTFILE
 ```bash
 # ALWAYS run test suites first
 cd /home/user/GLP/glp_runtime
-bash ../test/full_run_repl_tests.sh    # 181 REPL tests
-dart test                              # Unit tests
+bash ../test/run_all_tests.sh          # 384 REPL tests
+dart test                              # Dart unit tests
 ```
 If tests failing BEFORE changes, STOP and inform user.
 
@@ -717,12 +749,13 @@ This protocol is required when debugging GLP programs. Do not skip steps. Stop a
 
 ### Secondary References (Consult as Needed)
 
-4. **WAM Paper**: `/Users/ohadey/Desktop/Grassroots/GLP2/GLP/docs/wam.pdf` - Warren's Abstract Machine
+3. **CSSN Group Spec**: `/Users/udi/Grassroots/SGLP/docs/group-glp-implementation-spec.md` - Group creation, membership, messaging protocol
+4. **WAM Paper**: `/Users/udi/Grassroots/GLP/docs/wam.pdf` - Warren's Abstract Machine
 5. **GLP Spec**: `/tmp/GLP-2025/main GLP 2025.tex` - Formal GLP specification (paper source)
 6. **FCP Implementation**: 
-   - **Local Source**: `/Users/ohadey/Dropbox/Concurrent Prolog/FCP/Savannah`
+   - **Local Source**: `/Users/udi/Dropbox/Concurrent Prolog/FCP/Savannah`
    - **GitHub Mirror**: https://github.com/EShapiro2/FCP
-   - **Paper**: `/Users/ohadey/Desktop/Grassroots/GLP2/GLP/docs/1-s2.0-0743106689900113-main.pdf`
+   - **Paper**: `/Users/udi/Grassroots/GLP/docs/1-s2.0-0743106689900113-main.pdf`
 
 ## Critical Implementation Details
 
@@ -750,11 +783,11 @@ This protocol is required when debugging GLP programs. Do not skip steps. Stop a
 
 ### dump_bytecode.dart - Bytecode Disassembler ✅
 
-**Location:** `/Users/ohadey/Desktop/Grassroots/GLP2/GLP/udi/dump_bytecode.dart`
+**Location:** `/Users/udi/Grassroots/GLP/udi/dump_bytecode.dart`
 
 **Usage:**
 ```bash
-cd /Users/ohadey/Desktop/Grassroots/GLP2/GLP/udi
+cd /Users/udi/Grassroots/GLP/udi
 dart dump_bytecode.dart glp/<filename>.glp
 ```
 
@@ -794,8 +827,8 @@ PC 44: Proceed
 These must continue passing:
 ```bash
 cd /home/user/GLP/glp_runtime
-bash ../test/full_run_repl_tests.sh  # Should show 181 passing
-dart test                            # Should show ~27 passing
+bash ../test/run_all_tests.sh  # Should show 384 passing
+dart test                      # Should show 374 passing (14 known failures, 5 skipped)
 ```
 
 Example REPL tests:
@@ -881,7 +914,7 @@ git push -u origin claude/<your-session-branch>
 Option 2 (Recommended) - User merges previous work to main first:
 ```bash
 # User runs on their Mac:
-cd /Users/ohadey/Desktop/Grassroots/GLP2/GLP
+cd /Users/udi/Grassroots/GLP
 git checkout main
 git pull origin main
 git fetch origin claude/<previous-session-branch>
@@ -894,7 +927,7 @@ Then new Claude session pulls from main and starts fresh.
 
 **At session start:**
 1. Pull from main: `git pull origin main`
-2. Run baseline tests: `dart test` and `bash test/full_run_repl_tests.sh`
+2. Run baseline tests: `dart test` and `bash test/run_all_tests.sh`
 3. Work on your branch
 
 **During work:**
@@ -906,7 +939,7 @@ Then new Claude session pulls from main and starts fresh.
 When a task is completed, committed, and pushed, ALWAYS provide the user with merge instructions so they can integrate the work into main. Use the exact format below with the actual branch name:
 
 ```bash
-cd /Users/ohadey/Desktop/Grassroots/GLP2/GLP
+cd /Users/udi/Grassroots/GLP
 git checkout main
 git pull origin main
 git fetch origin claude/<ACTUAL-BRANCH-NAME>
@@ -921,21 +954,21 @@ git push origin main
 
 **🔴 MANDATORY FORMAT for merge instructions - USE THIS EXACTLY:**
 ```bash
-cd /Users/ohadey/Desktop/Grassroots/GLP2/GLP
+cd /Users/udi/Grassroots/GLP
 git checkout main
 git pull origin main
 git fetch origin claude/<ACTUAL-BRANCH-NAME>
 git merge -m "Merge claude/<ACTUAL-BRANCH-NAME> into main" origin/claude/<ACTUAL-BRANCH-NAME>
 git push origin main
 ```
-- **ALWAYS include `cd /Users/ohadey/Desktop/Grassroots/GLP2/GLP`** - user may be in wrong directory
+- **ALWAYS include `cd /Users/udi/Grassroots/GLP`** - user may be in wrong directory
 - **ALWAYS substitute the actual branch name** - never use placeholders like `<branch-name>`
 - **ALWAYS include the fetch step** - do NOT skip it
 
 **When user asks to "merge with main" or "push to main":**
 Output the EXACT commands with actual values (no placeholders):
 ```bash
-cd /Users/ohadey/Desktop/Grassroots/GLP2/GLP
+cd /Users/udi/Grassroots/GLP
 git checkout main
 git pull origin main
 git fetch origin claude/xxx-actual-session-id
@@ -965,7 +998,7 @@ git push origin main
 **To verify merge:**
 ```bash
 cd glp_runtime && dart test
-bash ../test/full_run_repl_tests.sh
+bash ../test/run_all_tests.sh
 ```
 
 ### Common Issues and Fixes
@@ -1050,6 +1083,7 @@ You are part of an AI team building GLP. Claude Chat handles architecture and de
 - i want  dart run glp_repl.dart  please remember that
 - always test all repl tests after a change
 - NEVER work not following precisely the spec
+- Any question to Udi must be at most two sentences. Be concise.
 - always offer to fetch/merge/push when finishing a task
 
 ## 🔴 ABSOLUTE RULE: Spec-First Development
@@ -1063,11 +1097,14 @@ Before writing ANY code:
 4. **IF SPEC IS UNCLEAR OR MISSING**: STOP. Discuss with user. Clarify/write spec FIRST.
 5. **ONLY THEN** implement, and the implementation MUST match the spec exactly
 
+**This applies to ALL code, including actor scripts and demo plays.**  Before writing or modifying any actor script that uses agent/4 protocols (groups, befriending, introductions, etc.), find and read the relevant spec (e.g., `SGLP/docs/group-glp-implementation-spec.md`).  Do not reverse-engineer protocol behavior from test output or guess from procedure names.  If a message is not delivered, the answer is in the spec, not in adding more interleaving states.
+
 **If you find yourself:**
 - Making the code "work" without spec backing → STOP
 - Adding logic that isn't in the spec → STOP
 - Fixing something by guessing what the behavior should be → STOP
 - Using try-catch or null checks to "handle" cases the spec doesn't address → STOP
+- Adding interleaving/race-condition workarounds without understanding the protocol spec → STOP
 
 **The correct action is ALWAYS:**
 1. STOP implementation
@@ -1212,7 +1249,7 @@ When modifying `glp_runtime` code that affects the Flutter multiagent app (`glp_
 1. **Path dependency**: The Flutter app uses `glp_runtime` via path dependency in pubspec.yaml
 2. **Clean rebuild required**: After modifying glp_runtime, you MUST do a clean Flutter rebuild:
    ```bash
-   cd /Users/ohadey/Desktop/Grassroots/GLP2/GLP/glp_multiagent
+   cd /Users/udi/Grassroots/GLP/glp_multiagent
    pkill -f "glp_multiagent" 2>/dev/null  # Kill running app
    flutter clean                            # Clear cached builds
    flutter pub get                          # Re-resolve dependencies
@@ -1223,3 +1260,7 @@ When modifying `glp_runtime` code that affects the Flutter multiagent app (`glp_
 5. **Launch and check log**: The app logs to `/private/tmp/glp_multiagent_trace.log`
 
 **Common mistake**: Running `flutter build macos` without `flutter clean` may use cached dependencies and miss your glp_runtime changes.
+
+## Interaction Style
+
+Never ask Udi closed-form questions (multiple choice, yes/no, pick-from-list). Only ask free-text questions when clarification is needed.

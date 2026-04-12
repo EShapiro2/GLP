@@ -1,0 +1,21 @@
+% GLP System Predicate: serve/2
+% Module service loop — reads goals from a stream and dispatches via _activate
+% Spec: docs/type system/dynamic-module-dispatch.md Section 3.4
+%
+% serve(Module, Stream?) reads goal terms from Stream and for each,
+% calls '_activate'(Module?, Goal?) to dispatch via the module's _select/1 table.
+%
+% This is the GLP equivalent of FCP's in_server (domain_server.cp).
+
+-mode(system).
+
+procedure serve(Any?, Any?).
+
+serve(Module, [Goal | In]) :-
+    ground(Module?) |
+    '_activate'(Module?, Goal?),
+    serve(Module?, In?).
+
+serve(_, []) :-
+    otherwise |
+    true.

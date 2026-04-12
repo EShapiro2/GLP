@@ -4,16 +4,15 @@
 %% Type definitions
 FriendEntry ::= (_, _).
 FriendList ::= [] ; [FriendEntry | FriendList].
-Channel ::= ch(Stream?, Stream).
 
 % agent/3: Main agent process
 % Args: MyId, UserCh (channel to user), NetCh (channel to network)
-procedure agent(_?, Channel?, Channel?).
+procedure agent(_?, Channel(X, Y)?, Channel(X, Y)?).
 agent(MyId, UserCh, NetCh) :-
     agent_loop(MyId?, UserCh?, NetCh?, []).
 
 % agent_loop/4: Main loop with friends list
-procedure agent_loop(_?, Channel?, Channel?, FriendList?).
+procedure agent_loop(_?, Channel(X, Y)?, Channel(X, Y)?, FriendList?).
 agent_loop(MyId, UserCh, NetCh, Friends) :-
     receive(Msg?, UserCh?, UserCh1),
     Msg = connect(Target) |
@@ -52,7 +51,7 @@ agent_loop(MyId, UserCh, NetCh, Friends) :-
     agent_loop(MyId?, UserCh1?, NetCh?, Friends?).
 
 % agent_wait_response/6: Waiting for cold-call response
-procedure agent_wait_response(_?, Channel?, Channel?, FriendList?, _?, _?).
+procedure agent_wait_response(_?, Channel(X, Y)?, Channel(X, Y)?, FriendList?, _?, _?).
 agent_wait_response(MyId, UserCh, NetCh, Friends, Target, Resp) :-
     Resp? = accept(Ch) |
     send(response(accept(Ch?)), UserCh?, UserCh1),
@@ -71,6 +70,6 @@ lookup_friend(Target, [(Other, _)|Friends?], Ch?) :-
     lookup_friend(Target?, Friends, Ch).
 
 %% External procedures (defined elsewhere)
-procedure receive(_, Channel?, Channel).
-procedure send(_?, Channel?, Channel).
-procedure new_channel(Channel, Channel).
+procedure receive(_, Channel(X, Y)?, Channel(X, Y)).
+procedure send(_?, Channel(X, Y)?, Channel(X, Y)).
+procedure new_channel(Channel(X, Y), Channel(X, Y)).

@@ -271,30 +271,6 @@ class GroundEqual implements Op {
       : 'X$leftVarIndex =?= X$rightVarIndex';
 }
 
-// ===== SYSTEM PREDICATE execution =====
-/// Execute system predicate: call registered Dart function
-/// Used for I/O, arithmetic, and other operations requiring side effects
-/// System predicates can succeed, fail, or suspend on unbound readers
-///
-/// Per spec Section 18.1: Execute takes "arguments as list of Terms"
-class Execute implements Op {
-  final String predicateName;     // name of system predicate (e.g., "evaluate", "file_read")
-  final List<Object?> args;       // arguments as Terms (not slot indices)
-
-  const Execute(this.predicateName, this.args);
-
-  @override
-  String toString() => 'Execute($predicateName, args: $args)';
-}
-
-/// SetClauseVar: Directly set a clause variable to a term value
-/// Used for setting up constants/terms before Execute calls
-class SetClauseVar implements Op {
-  final int slot;      // clause variable index
-  final Object? value; // Term or primitive value to set
-  SetClauseVar(this.slot, this.value);
-}
-
 // Legacy opcodes (for backward compatibility with existing tests)
 class HeadBindWriter implements Op {
   final int writerId;

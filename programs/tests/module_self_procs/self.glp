@@ -1,0 +1,4 @@
+-module(selfprocs).
+
+procedure shared_double(Integer?, Integer).
+shared_double(X, Y?) :- Y := X? * 2.

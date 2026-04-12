@@ -1,5 +1,5 @@
 % with_guard.glp - Pattern matching with ground guard
 
-procedure with_guard(Stream?, Stream).
+exported procedure with_guard(Stream(X)?, Stream(X)).
 with_guard([N|Xs], [N?, a, b|Xs?]) :- ground(N?) | true.
 with_guard([], []).

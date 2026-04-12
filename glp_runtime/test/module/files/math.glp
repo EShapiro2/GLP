@@ -1,6 +1,6 @@
 % math.glp - Math module for testing
 -module(math).
--export([double/2]).
+exported procedure double(_, _).
 
 double(5, 10).
 double(10, 20).

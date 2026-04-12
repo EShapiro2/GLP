@@ -1,8 +1,8 @@
 % test_defined_guards.glp - Defined guards via unit clauses
 
-procedure channel(_?).
+exported procedure channel(_?).
 channel(ch(_, _)).
 
-procedure test(_?, Constant).
+exported procedure test(_?, Constant).
 test(X, ok) :- channel(X?) | true.
 test(_, not_channel) :- otherwise | true.

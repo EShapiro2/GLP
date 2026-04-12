@@ -10,16 +10,15 @@
 
 %% Type definitions
 List ::= [] ; [_ | List].
-Channel ::= List ; branch(Channel, Channel).
 
 %% Basic stream operations (for comparison)
-procedure stream_read(_?, Stream?, Stream).
+procedure stream_read(_?, Stream(X)?, Stream(X)).
 stream_read(Message?, [Message|Stream], Stream?).
 
-procedure stream_write(_?, Stream?, Stream).
+procedure stream_write(_?, Stream(X)?, Stream(X)).
 stream_write(Message, [Message?|Stream], Stream?).
 
-procedure stream_empty(Stream?).
+procedure stream_empty(Stream(X)?).
 stream_empty([]).
 
 %% Channel operations using multistream representation
@@ -28,7 +27,7 @@ stream_empty([]).
 %%   - A branch: branch(Left, Right) where Left and Right are multistreams
 
 %% Read from channel - nondeterministically reads a minimal element
-procedure read(_?, Channel?, Channel).
+procedure read(_?, Channel(X, Y)?, Channel(X, Y)).
 read(Message, [Message?|Channel?], Channel).
 read(Message, branch(Left1, Right?), branch(Left2, Right)) :-
     read(Message?, Left1?, Left2).
@@ -36,33 +35,33 @@ read(Message, branch(Left?, Right1), branch(Left, Right2)) :-
     read(Message?, Right1?, Right2).
 
 %% Write to channel - creates branch for concurrent writers
-procedure write(_?, Channel?, Channel).
+procedure write(_?, Channel(X, Y)?, Channel(X, Y)).
 write(Message, branch([Message?|Left?], _), Left).
 write(Message, branch(_, Right), Out?) :-
     write(Message?, Right?, Out).
 
 %% Empty test
-procedure empty(Channel?).
+procedure empty(Channel(X, Y)?).
 empty([]).
 empty(branch(Left, Right)) :-
     empty(Left?), empty(Right?) | true.
 
 %% Close a channel
-procedure close(Channel?).
+procedure close(Channel(X, Y)?).
 close([]).
 close(branch(Left, Right)) :-
     close(Left?), close(Right?).
 
 %% Read minimum element (if one exists)
-procedure min(_?, Channel?, Channel).
+procedure min(_?, Channel(X, Y)?, Channel(X, Y)).
 min(Message, [Message?|Channel?], Channel).
 
 %% Split channel into two disjoint subchannels
-procedure branches(Channel?, Channel, Channel).
+procedure branches(Channel(X, Y)?, Channel(X, Y), Channel(X, Y)).
 branches(branch(C1, C2?), C1, C2).
 
 %% Serialize: convert channel to totally ordered stream
-procedure serialize(Channel?, Stream).
+procedure serialize(Channel(X, Y)?, Stream(X)).
 serialize(Channel, [Message|Stream?]) :-
     min(Message?, Channel?, Channel2) |
     serialize(Channel2?, Stream).
@@ -75,7 +74,7 @@ serialize(Channel, []) :-
     empty(Channel?) | true.
 
 %% Subset: associate a subset channel with a larger superset
-procedure subset(Channel?, Channel?).
+procedure subset(Channel(X, Y)?, Channel(X, Y)?).
 subset(Subset, Superset) :-
     min(Message?, Subset?, Subset2) |
     write(Message?, Superset?, Superset2),
@@ -87,4 +86,4 @@ subset(Subset, Superset) :-
 subset(Subset, _) :-
     empty(Subset?) | true.
 
-procedure merge(Stream?, Stream?, Stream).
+procedure merge(Stream(X)?, Stream(X)?, Stream(X)).

@@ -3,9 +3,32 @@
 /// Defines message types for communication between the main Flutter isolate
 /// (which owns the UI) and agent isolates (which run AgentRuntime).
 ///
-/// The main isolate spawns one Dart isolate per agent. Each agent isolate
-/// creates an AgentRuntime, wires its callbacks to send messages back via
-/// SendPort, and listens for commands (user input, network messages).
+/// ## Agent lifecycle
+///
+/// Each agent isolate follows one of two lifecycles:
+///
+/// **Immediate start** (`deferStart: false`, the default):
+///   1. Main spawns isolate with [InitAgent].
+///   2. Isolate creates [AgentRuntime], wires callbacks, sends [AgentReady].
+///   3. Isolate immediately runs GLP initialization (`agent.initialize()`).
+///   4. Isolate enters command loop (handles [UserInput], [DeliverMad], etc.).
+///
+///   Used by interactive apps where agents are spawned one at a time and
+///   don't need to communicate during initialization.
+///
+/// **Deferred start** (`deferStart: true`):
+///   1. Main spawns isolate with [InitAgent] (`deferStart: true`).
+///   2. Isolate creates [AgentRuntime], wires callbacks, sends [AgentReady].
+///   3. Isolate enters command loop **without** running GLP initialization.
+///   4. Main collects all [AgentReady] messages and registers all ports.
+///   5. Main sends [StartAgent] to each isolate.
+///   6. Isolate receives [StartAgent], runs GLP initialization, then
+///      continues the command loop.
+///
+///   Used by scripted-play apps (SG madGLP, CSSG madGLP) where all agents
+///   are spawned at once.  By deferring GLP execution until all ports are
+///   registered, network messages sent during initialization are guaranteed
+///   to reach their destination — no race conditions.
 library;
 
 import 'dart:async';
@@ -24,16 +47,36 @@ sealed class ToAgentMsg {}
 class InitAgent extends ToAgentMsg {
   final String agentId;
   final List<String> glpSources;
-  final String stdlibDir;
+  final String rootSelfGlpPath;
   final List<String> friends;
   final SendPort replyPort;
+
+  /// Entry-point goal label, e.g. 'agent_init/3', 'agent_init_play/3'.
+  final String goalLabel;
+
+  /// Extra arguments inserted between Id and NetIn.
+  final List<String> extraArgs;
+
+  /// Optional project directory for static linking.
+  /// When set, each isolate loads the project via loadProject() before
+  /// loading glpSources (typically just the madGLP boot source) on top.
+  final String? projectDir;
+
+  /// If true, the isolate waits for a [StartAgent] command before running
+  /// GLP initialization.  This allows the main isolate to register all agent
+  /// ports first, eliminating message-routing race conditions.
+  final bool deferStart;
 
   InitAgent({
     required this.agentId,
     required this.glpSources,
-    required this.stdlibDir,
+    required this.rootSelfGlpPath,
     required this.friends,
     required this.replyPort,
+    this.goalLabel = 'agent_init/3',
+    this.extraArgs = const [],
+    this.projectDir,
+    this.deferStart = false,
   });
 }
 
@@ -50,6 +93,9 @@ class DeliverMad extends ToAgentMsg {
   DeliverMad(this.from, this.payload);
 }
 
+/// Begin GLP initialization (only used with `deferStart: true`).
+class StartAgent extends ToAgentMsg {}
+
 /// Request graceful shutdown.
 class DisposeAgent extends ToAgentMsg {}
 
@@ -59,8 +105,12 @@ class DisposeAgent extends ToAgentMsg {}
 
 sealed class FromAgentMsg {}
 
-/// Agent has initialized and is ready. Carries the command port for sending
-/// ToAgentMsg instances to this agent.
+/// Agent isolate is up and its command port is ready.  Carries the [SendPort]
+/// for sending [ToAgentMsg] instances to this agent.
+///
+/// With `deferStart: false`, GLP initialization follows immediately.
+/// With `deferStart: true`, the isolate waits for [StartAgent] before
+/// running GLP initialization.
 class AgentReady extends FromAgentMsg {
   final String agentId;
   final SendPort commandPort;
@@ -129,8 +179,11 @@ Future<void> _runAgent(InitAgent init) async {
   final agent = AgentRuntime(
     agentId: agentId,
     glpSources: init.glpSources,
-    stdlibDir: init.stdlibDir,
+    rootSelfGlpPath: init.rootSelfGlpPath,
     friends: init.friends,
+    goalLabel: init.goalLabel,
+    extraArgs: init.extraArgs,
+    projectDir: init.projectDir,
   );
 
   // Wire callbacks to send messages back to the main isolate.
@@ -149,20 +202,32 @@ Future<void> _runAgent(InitAgent init) async {
   // Signal ready with our command port.
   init.replyPort.send(AgentReady(agentId, commandPort.sendPort));
 
-  // Initialize runtime.
-  try {
-    await agent.initialize();
-    _sendStats(agent, init.replyPort);
-  } catch (e) {
-    init.replyPort.send(AgentError(agentId, e.toString()));
-    commandPort.close();
-    return;
+  // Immediate start: initialize GLP now (before entering command loop).
+  if (!init.deferStart) {
+    try {
+      await agent.initialize();
+      _sendStats(agent, init.replyPort);
+    } catch (e) {
+      init.replyPort.send(AgentError(agentId, e.toString()));
+      commandPort.close();
+      return;
+    }
   }
 
   // Listen for commands. Each message is fully awaited before the next,
   // preventing concurrent _runUntilQuiescent() calls.
   await for (final msg in commandPort) {
-    if (msg is UserInput) {
+    if (msg is StartAgent) {
+      // Deferred start: initialize GLP now (all ports are registered).
+      try {
+        await agent.initialize();
+        _sendStats(agent, init.replyPort);
+      } catch (e) {
+        init.replyPort.send(AgentError(agentId, e.toString()));
+        commandPort.close();
+        break;
+      }
+    } else if (msg is UserInput) {
       await agent.injectUserInput(msg.text);
       _sendStats(agent, init.replyPort);
     } else if (msg is DeliverMad) {

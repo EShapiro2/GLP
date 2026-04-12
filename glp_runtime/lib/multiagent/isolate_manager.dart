@@ -79,9 +79,12 @@ class TraceConfig {
 class AgentConfig {
   final String agentId;
   final String goalFunctor;
+  final int goalArity; // Arity of the goal (e.g., 2, 3, 4)
+  final List<String> goalConstantArgs; // Constant args between agentId and netIn
   final String programSource;
   final List<String>? sharedSources; // Optional shared code files (e.g., social_agent.glp)
-  final String stdlibDir; // Path to stdlib directory
+  final String? projectDir; // Optional project directory for static linking
+  final String rootSelfGlpPath; // Absolute path to programs/self.glp
   final SendPort mainPort;
   final SendPort? uiPort; // null for headless
   final TraceConfig traceConfig;
@@ -89,9 +92,12 @@ class AgentConfig {
   AgentConfig({
     required this.agentId,
     required this.goalFunctor,
+    this.goalArity = 2,
+    this.goalConstantArgs = const [],
     required this.programSource,
     this.sharedSources,
-    required this.stdlibDir,
+    this.projectDir,
+    required this.rootSelfGlpPath,
     required this.mainPort,
     this.uiPort,
     this.traceConfig = const TraceConfig(),
@@ -145,9 +151,12 @@ class IsolateManager {
       final agentConfig = AgentConfig(
         agentId: directive.agentId,
         goalFunctor: directive.goalFunctor,
+        goalArity: directive.goalArity,
+        goalConstantArgs: directive.constantArgs,
         programSource: config.source,
         sharedSources: config.sharedSources,
-        stdlibDir: config.stdlibDir,
+        projectDir: config.projectDir,
+        rootSelfGlpPath: config.rootSelfGlpPath,
         mainPort: _mainPort.sendPort,
         traceConfig: traceConfig,
       );
@@ -246,21 +255,29 @@ void _agentIsolateEntry(AgentConfig config) async {
 
   // Create GlpEngine — the ONE way to run GLP programs.
   // Non-strict types: actor code may have type warnings that shouldn't be fatal.
-  final engine = GlpEngine(stdlibDir: config.stdlibDir)..strictTypes = false;
+  final engine = GlpEngine(rootSelfGlpPath: config.rootSelfGlpPath)..strictTypes = false;
 
   // Enable madGLP mode (loads madPredicates + creates MadContext)
   engine.enableMadGLP(agentId: agentId);
 
-  // Load shared source files (e.g., social_agent.glp) and boot program sequentially.
-  // Each file is loaded separately to preserve per-file -mode() directives.
-  if (config.sharedSources != null) {
-    for (var i = 0; i < config.sharedSources!.length; i++) {
-      engine.loadSource(config.sharedSources![i], filename: 'shared_$i');
+  // Load program code: either via project linking or individual file loading.
+  if (config.projectDir != null) {
+    // Project-directory mode: static-link the project, then load boot source on top.
+    engine.loadProject(config.projectDir!);
+    engine.loadSource(config.programSource, filename: 'program');
+    log('Program loaded via project linking (${config.projectDir}) + boot source');
+  } else {
+    // Legacy mode: load shared source files and boot program sequentially.
+    // Each file is loaded separately to preserve per-file -mode() directives.
+    if (config.sharedSources != null) {
+      for (var i = 0; i < config.sharedSources!.length; i++) {
+        engine.loadSource(config.sharedSources![i], filename: 'shared_$i');
+      }
     }
+    engine.loadSource(config.programSource, filename: 'program');
+    log('Program loaded via GlpEngine (stdlib + madPredicates + user code)');
   }
-  engine.loadSource(config.programSource, filename: 'program');
   engine.debugTrace = tc.glp;  // Enable GLP trace only when requested
-  log('Program loaded via GlpEngine (stdlib + madPredicates + user code)');
   final ctx = engine.madContext!;
   final runtime = engine.runtime;
 
@@ -280,16 +297,20 @@ void _agentIsolateEntry(AgentConfig config) async {
 
   log('Network input ready: writer=$netInWriter, reader=$netInReader');
 
-  // Find goal entry point (arity 2: goal(agentId, netIn))
+  // Find goal entry point with the actual arity from the boot directive.
+  // Arity 2: agent_init(agentId, netIn)
+  // Arity 3: child_init(agentId, playNum, netIn)
+  // Arity 4: parent_init(agentId, childName, playNum, netIn)
   final program = engine.combinedProgram;
-  final goalLabel = '${config.goalFunctor}/2';
+  final arity = config.goalArity;
+  final goalLabel = '${config.goalFunctor}/$arity';
   final goalPC = program.labels[goalLabel];
   if (goalPC == null) {
     print('[$agentId] ERROR: Goal $goalLabel not found');  // Always print errors
     return;
   }
 
-  // Build argument map: arg 0 = agent ID, arg 1 = network input reader
+  // Build argument map: arg 0 = agent ID, args 1..n-2 = constants, arg n-1 = netIn
   final args = <int, Term>{};
 
   // Arg 0: agent ID (constant)
@@ -297,16 +318,30 @@ void _agentIsolateEntry(AgentConfig config) async {
   runtime.heap.bindVariable(idArgWriter, ConstTerm(agentId));
   args[0] = VarRef(idArgReader);
 
-  // Arg 1: network input reader
+  // Args 1..n-2: additional constant arguments from boot directive
+  for (var i = 0; i < config.goalConstantArgs.length; i++) {
+    final constVal = config.goalConstantArgs[i];
+    final (cw, cr) = runtime.heap.allocateVariable();
+    // Try to parse as integer, otherwise treat as atom
+    final intVal = int.tryParse(constVal);
+    if (intVal != null) {
+      runtime.heap.bindVariable(cw, ConstTerm(intVal));
+    } else {
+      runtime.heap.bindVariable(cw, ConstTerm(constVal));
+    }
+    args[i + 1] = VarRef(cr);
+  }
+
+  // Last arg: network input reader
   final (netInArgWriter, netInArgReader) = runtime.heap.allocateVariable();
   runtime.heap.bindVariable(netInArgWriter, VarRef(netInReader));
-  args[1] = VarRef(netInArgReader);
+  args[arity - 1] = VarRef(netInArgReader);
 
   // Spawn main goal
   runtime.setGoalEnv(1, CallEnv(args: args));
   runtime.setGoalProgram(1, 'main');
   runtime.gq.enqueue(GoalRef(1, goalPC));
-  log('Spawned ${config.goalFunctor}/2');
+  log('Spawned ${config.goalFunctor}/$arity');
 
   // Create scheduler for this engine
   final runner = BytecodeRunner(program);

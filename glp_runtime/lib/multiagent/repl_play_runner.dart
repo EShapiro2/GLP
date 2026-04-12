@@ -5,6 +5,9 @@
 ///
 /// Tagged output format from GLP: tagged(alice, cmd(connect(bob)))
 /// Parsed into: agentId="alice", kind="cmd", content="connect(bob)"
+///
+/// Narrative kinds (play 12): friend, say, act, event
+/// e.g. tagged(alice, friend(bob)) → agentId="alice", kind="friend", content="bob"
 library;
 
 import 'dart:async';
@@ -14,7 +17,7 @@ import 'dart:io';
 /// Parsed output line from a simulated play.
 class PlayOutput {
   final String agentId; // e.g. "alice"
-  final String kind; // "cmd" or "notify"
+  final String kind; // "cmd", "notify", "friend", "say", "act", or "event"
   final String content; // e.g. "connect(bob)"
 
   PlayOutput(this.agentId, this.kind, this.content);
@@ -47,22 +50,56 @@ class ReplPlayRunner {
 
   Process? _process;
 
-  /// Default CSSG GLP files to load (relative to glp_runtime/).
-  static const _cssgFiles = [
-    '../programs/typed_book/project_cssg/project_typed_social_agent.glp',
-    '../programs/typed_book/project_cssg/project_typed_ui_mediator.glp',
-    '../programs/typed_book/project_cssg/project_typed_ui_actors.glp',
-    '../programs/typed_book/project_cssg/project_play_ui_sim_boot.glp',
+  /// Which GLP files to load (relative to glp_runtime/).
+  final List<String> glpFiles;
+
+  /// CSSG GLP files (child-safe social graph, plays 1–7).
+  static const cssgFiles = [
+    '../programs/typed_book/cssg/typed_social_agent.glp',
+    '../programs/typed_book/cssg/typed_ui_mediator.glp',
+    '../programs/typed_book/cssg/typed_ui_actors.glp',
+    '../programs/typed_book/cssg/play_ui_sim_boot.glp',
   ];
 
-  /// Custom GLP source files. If provided, these are loaded instead of _cssgFiles.
-  final List<String>? sourceFiles;
+  /// Bonds GLP files (grassroots bonds, plays 1–11).
+  static const bondsFiles = [
+    '../programs/typed_book/bonds/agent.glp',
+    '../programs/typed_book/bonds/mediator.glp',
+    '../programs/typed_book/bonds/actors.glp',
+    '../programs/typed_book/bonds/boot.glp',
+  ];
+
+  /// Bonds GLP files for play 12 (adds play12 actor files).
+  static const bondsPlay12Files = [
+    ...bondsFiles,
+    '../programs/typed_book/bonds/play12/alice.glp',
+    '../programs/typed_book/bonds/play12/bob.glp',
+    '../programs/typed_book/bonds/play12/charlie.glp',
+    '../programs/typed_book/bonds/play12/diana.glp',
+    '../programs/typed_book/bonds/play12/eve.glp',
+    '../programs/typed_book/bonds/play12/frank.glp',
+  ];
+
+  /// CSSN GLP files (child-safe social networking, plays 1–10).
+  static const cssnFiles = [
+    '../programs/typed_book/cssn/typed_social_agent.glp',
+    '../programs/typed_book/cssn/typed_ui_mediator.glp',
+    '../programs/typed_book/cssn/typed_ui_actors.glp',
+    '../programs/typed_book/cssn/play_ui_sim_boot.glp',
+  ];
+
+  /// CSSN v2 modules project (village scenario, fplay13).
+  /// Loaded as a project directory — the REPL treats the path as a project root.
+  static const cssnVillageFiles = [
+    '../programs/cssn_modules_v2',
+  ];
 
   /// Regex for parsing tagged output lines.
+  /// Matches cmd, notify (protocol), and friend, say, act, event (narrative).
   static final _taggedRegex =
-      RegExp(r'^tagged\((\w+), (cmd|notify)\((.+)\)\)$');
+      RegExp(r'^tagged\((\w+), (cmd|notify|friend|say|act|event)\((.+)\)\)$');
 
-  ReplPlayRunner({required this.repoRoot, this.sourceFiles});
+  ReplPlayRunner({required this.repoRoot, this.glpFiles = cssgFiles});
 
   bool get isRunning => _process != null;
 
@@ -96,9 +133,8 @@ class ReplPlayRunner {
       onLog?.call('REPL: process started (pid=${process.pid})');
 
       // Feed load commands + play goal + quit
-      final files = sourceFiles ?? _cssgFiles;
       final commands = [
-        for (final f in files) f,
+        for (final f in glpFiles) f,
         'fplay$playNumber.',
         ':quit',
       ].join('\n');

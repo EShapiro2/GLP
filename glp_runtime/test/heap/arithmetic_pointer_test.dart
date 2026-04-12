@@ -22,7 +22,7 @@ void main() {
 
   setUpAll(() {
     // Compile assign.glp
-    final stdlibSource = File('../programs/stdlib/assign.glp').readAsStringSync();
+    final stdlibSource = File('../programs/self.glp').readAsStringSync();
     final stdlibCompiler = GlpCompiler();
     stdlibProg = stdlibCompiler.compile(stdlibSource);
     print('Stdlib compiled: ${stdlibProg.ops.length} instructions');
@@ -224,7 +224,7 @@ void main() {
 
   group('End-to-end := system predicate - Pointer Architecture', () {
     test('assign.glp compiles and merges correctly', () {
-      final stdlibSource = File('../programs/stdlib/assign.glp').readAsStringSync();
+      final stdlibSource = File('../programs/self.glp').readAsStringSync();
       final stdlibCompiler = GlpCompiler();
       final stdlibProg = stdlibCompiler.compile(stdlibSource);
 
@@ -261,7 +261,7 @@ void main() {
     test('Z := 5 + 3 executes and binds Z to 8', () {
       print('\n=== END-TO-END ARITHMETIC TEST (Pointer Architecture) ===');
 
-      final stdlibSource = File('../programs/stdlib/assign.glp').readAsStringSync();
+      final stdlibSource = File('../programs/self.glp').readAsStringSync();
       final stdlibCompiler = GlpCompiler();
       final stdlibProg = stdlibCompiler.compile(stdlibSource);
 
@@ -284,9 +284,9 @@ void main() {
       final sched = Scheduler(rt: rt, runner: runner);
 
       // Create environment with the result variable
-      // Pass reader to head position Z? (input/output position)
+      // Pass writer so callee can write via :=
       final env = CallEnv(args: {
-        0: VarRef(resultReader),
+        0: VarRef(resultWriter),
       });
 
       final goalId = 1;

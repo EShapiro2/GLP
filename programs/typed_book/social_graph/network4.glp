@@ -5,9 +5,10 @@
 %% Uses swap idiom: HEAD has Out?, BODY has Out (writer preserved)
 
 %% Type definitions
-Msg ::= msg(_, _, _).
-Channel ::= ch(Stream?, Stream).
-AgentEntry ::= (_, Channel?).
+%% 3-arg network messages: msg(From, To, Content)
+%% Content is protocol-opaque — router forwards without inspection
+Msg ::= msg(Constant, Constant, _).
+AgentEntry ::= (Constant, Channel(Stream(Msg), Stream(Msg))?).
 
 procedure network4(AgentEntry?, AgentEntry?, AgentEntry?, AgentEntry?).
 %% Alice sends to Bob

@@ -1,0 +1,149 @@
+%% friend_mediated_rendezvous.glp - Friend-Mediated Rendezvous
+%%
+%% A social-graph extension for cascade reconnection: when A loses
+%% connectivity to C, but both are connected to a common friend B,
+%% B mediates the reconnection by sending punch instructions to both.
+%%
+%% This is a self-contained illustration for the paper — not a production
+%% integration into the full social graph protocol.
+%%
+%% Protocol:
+%%   1. A sends B: msg(A, B, mediate(C))
+%%   2. B looks up A's and C's addresses in its friends list and
+%%      prepends a punch_to message to each of their output streams
+%%      in one pass.  The punch_to argument carries an AddrResult:
+%%        - found(Addr) if the other peer was located in B's friends list
+%%        - not_found if the other peer was unknown to B
+%%   3. Each recipient dispatches on the punch_to argument:
+%%        - found(Addr) → call punch_udp(Addr) to hole-punch
+%%        - not_found   → do nothing (mediation was unsuccessful)
+%%
+%% Address updates: when an agent's address changes, it notifies its friends
+%% via msg(_, _, addr_update(NewAddr)).  Recipients update their friends list.
+%%
+%% System predicates assumed:
+%%   punch_udp(Addr?) — body predicate, initiates UDP hole-punch to Addr
+
+-module(fmrv).
+
+%% =============================================================================
+%% TYPE DEFINITIONS
+%% =============================================================================
+
+%% Result of an address lookup in the mediator's friends list
+AddrResult ::= found(Constant) ; not_found.
+
+%% Friend-mediated rendezvous message operations
+MsgOp ::= mediate(Constant)        %% mediate(C_pk) — A asks B to help reconnect to C
+        ; punch_to(AddrResult)     %% punch_to(found(Addr)) or punch_to(not_found)
+        ; addr_update(Constant).   %% addr_update(NewAddr) — notify friends of address change
+
+%% Protocol message: msg(From, To, Op)
+Msg ::= msg(Constant, Constant, MsgOp).
+
+%% Input stream to the agent
+MsgStream ::= [] ; [Msg | MsgStream].
+
+%% Per-friend output stream
+FriendStream ::= [] ; [Msg | FriendStream].
+
+%% Extended friends list: fe(Name, OutputStream, Addr)
+%% The `?` on FriendStream indicates the data carries a reader reference
+%% to the friend's output stream; the agent holds the paired writer and
+%% prepends messages by binding the writer.
+FriendEntry ::= fe(Constant, FriendStream?, Constant).
+FriendList ::= [] ; [FriendEntry | FriendList].
+
+%% =============================================================================
+%% MAIN LOOP
+%% =============================================================================
+
+exported procedure fmrv(Constant?, MsgStream?, FriendList?).
+
+%% Address update: a friend tells us its new address — update friends list
+fmrv(Id, [msg(From, To, addr_update(Addr))|In], Fs) :-
+    ground(Id?), Id? =?= To? |
+    update_addr(From?, Addr?, Fs?, Fs1),
+    fmrv(Id?, In?, Fs1?).
+
+%% Mediation request: A asks us (B=Id) to help reconnect to C.
+%%
+%% Two fused lookup_and_send calls: each looks up a friend by key and
+%% prepends the punch_to message to that friend's output stream in one
+%% pass.  The other peer's AddrResult is passed as the punch_to argument.
+%%
+%% If the other peer is found, AddrResult is bound to found(Addr); the
+%% recipient's punch_to handler dispatches to punch_udp(Addr).  If not,
+%% AddrResult is bound to not_found; the recipient's handler does nothing.
+%% Either way, punch_udp is never called with an invalid address.
+fmrv(Id, [msg(From, To, mediate(C))|In], Fs) :-
+    ground(Id?), ground(From?), ground(C?), Id? =?= To? |
+    lookup_and_send(From?, Id?, AddrC?, AddrFrom, Fs?, Fs1),
+    lookup_and_send(C?, Id?, AddrFrom?, AddrC, Fs1?, Fs2),
+    fmrv(Id?, In?, Fs2?).
+
+%% Punch instruction received with a valid address: do UDP hole punch
+fmrv(Id, [msg(_, To, punch_to(found(Addr)))|In], Fs) :-
+    ground(Id?), Id? =?= To? |
+    punch_udp(Addr?),
+    fmrv(Id?, In?, Fs?).
+
+%% Punch instruction received for an unknown peer: no-op
+fmrv(Id, [msg(_, To, punch_to(not_found))|In], Fs) :-
+    ground(Id?), Id? =?= To? |
+    fmrv(Id?, In?, Fs?).
+
+fmrv(_, [], _).
+
+%% =============================================================================
+%% lookup_and_send: fused lookup + send in a single traversal
+%% =============================================================================
+%%
+%% Args: Key, Id, OtherAddr, KeyAddr, FsIn, FsOut
+%%
+%% Finds Key's entry in Fs.  When found:
+%%   (a) Prepends msg(Id, Key, punch_to(OtherAddr)) to Key's output stream
+%%   (b) Binds KeyAddr to found(Key's own address)
+%% When Key is not found (end of list reached), KeyAddr is bound to
+%% not_found, no message is sent.
+
+procedure lookup_and_send(Constant?, Constant?, AddrResult?, AddrResult,
+                          FriendList?, FriendList).
+
+%% Match: this is Key's entry.  Prepend punch_to message to the stream
+%% and bind KeyAddr to found(Addr).
+lookup_and_send(Key, Id, OtherAddr, found(Addr?),
+    [fe(K, [msg(Id?, K?, punch_to(OtherAddr?))|Out1?], Addr)|Rest],
+    [fe(K?, Out1, Addr?)|Rest?]) :-
+    Key? =?= K?, ground(Addr?) | true.
+
+%% No match: pass entry through, continue searching
+lookup_and_send(Key, Id, OtherAddr, KeyAddr?,
+    [F|Rest], [F?|Rest1?]) :-
+    otherwise |
+    lookup_and_send(Key?, Id?, OtherAddr?, KeyAddr, Rest?, Rest1).
+
+%% End of list: Key not found
+lookup_and_send(_, _, _, not_found, [], []).
+
+%% =============================================================================
+%% update_addr: replace a friend's address in the friends list
+%% =============================================================================
+
+procedure update_addr(Constant?, Constant?, FriendList?, FriendList).
+update_addr(Key, NewAddr, [fe(K, Out?, _)|Fs], [fe(K?, Out, NewAddr?)|Fs?]) :-
+    Key? =?= K? | true.
+update_addr(Key, NewAddr, [F|Fs], [F?|Fs1?]) :-
+    otherwise | update_addr(Key?, NewAddr?, Fs?, Fs1).
+update_addr(_, _, [], []).
+
+%% =============================================================================
+%% STUB for system predicate
+%% =============================================================================
+%%
+%% punch_udp(Addr?) — body predicate
+%%   Real: initiates UDP hole-punch to Addr.
+%%   Stub: always succeeds.
+
+procedure punch_udp(Constant?).
+punch_udp(_).

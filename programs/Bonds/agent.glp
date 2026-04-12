@@ -1,0 +1,742 @@
+%% bond_agent.glp - Bond agent for Grassroots Bonds
+%%
+%% Extends the social graph agent (agent/4) to agent/6 with:
+%%   - Holdings: list of bonds held by this agent
+%%   - NextSerial: next serial number for minting
+%%
+%% Phase 1: mint + balance + done (single-agent, no network)
+%% Phase 2: social graph befriending
+%% Phase 7: trade (credit, loan, payment, redemption, sale of debt, etc.)
+%%
+%% Date: 2026-03-03
+
+-mode(system).
+
+%% =============================================================================
+%% TYPE DEFINITIONS
+%% =============================================================================
+
+%% Stream and Channel are predefined in prelude:
+%%   Stream ::= [] ; [_|Stream].
+%%   Channel ::= ch(Stream, Stream?).
+
+%% Bond representation: bond(Issuer, Maturity, Serial)
+Bond     ::= bond(Constant, Constant, Constant).
+BondList ::= [] ; [Bond | BondList].
+
+%% Trade types
+Lot     ::= lot(Constant, Constant, Constant).
+LotList ::= [] ; [Lot | LotList].
+TradeResponse ::= trade_accept(BondList)
+               ; trade_decline(BondList)
+               ; trade_decline_menu(BondList, BondList).
+
+%% Escrow cancel signal
+EscrowCancel ::= cancel.
+
+%% Escrow results — typed unions for escrow output variables
+EscrowBenResult ::= escrow_bonds(BondList) ; escrow_cancelled.
+EscrowDepResult ::= escrow_bonds(BondList) ; escrow_expired.
+
+%% Friend messages (after connection established)
+FriendContent ::= response(Response)
+                ; text(Constant)
+                ; trade_propose(LotList, BondList, TradeResponse?)
+                ; escrow_offer(Constant, EscrowBenResult).
+FriendMsg     ::= msg(Constant, Constant, FriendContent).
+FriendStream  ::= [] ; [FriendMsg | FriendStream].
+FriendChannel ::= ch(FriendStream, FriendStream?).
+
+Response ::= accept(FriendChannel) ; no.
+Decision ::= yes ; no.
+
+%% Network content (2-arg cold-call: msg(Dest, Content))
+NetColdCall ::= intro(Constant, Response?).
+
+%% --- Content types for messages ---
+
+%% Content carried inside user-to-agent messages (msg('_user', Id, Content))
+UserContent ::= mint(Constant, Constant)       %% mint(K, Maturity)
+              ; balance                         %% query holdings
+              ; done                            %% terminate agent
+              ; connect(Constant)               %% cold-call target
+              ; decision(Decision, Constant, PendingValue)  %% accept/reject cold-call
+              ; response(Response)              %% injected cold-call response
+              ; trade(Constant, LotList, LotList)      %% trade(Target, GiveSpec, WantSpec)
+              ; accept_trade(Constant, PendingValue)   %% accept_trade(From, PendingValue)
+              ; reject_trade(Constant, PendingValue)   %% reject_trade(From, PendingValue)
+              ; deposit_escrow(Constant, LotList, Constant)  %% deposit_escrow(Target, GiveSpec, ReleaseTime)
+              ; cancel_escrow(Constant, PendingValue).       %% cancel_escrow(Target, PendingValue)
+
+%% Pending values stored by mediator
+PendingValue ::= response(Response?)
+               ; trade_pending(TradeResponse?, LotList, BondList)
+               ; escrow_pending(EscrowCancel?)
+               ; error.
+
+%% Content carried inside agent-to-user messages (msg(agent, '_user', Content))
+AgentContent ::= minted(Constant, Constant)     %% minted(K, Maturity)
+               ; balance_report(BondList)        %% balance_report(Holdings)
+               ; befriend(Constant, Response?)   %% cold-call received
+               ; connected(Constant)             %% friend established
+               ; rejected                        %% cold-call rejected (our side)
+               ; rejected(Constant)              %% cold-call rejected by target
+               ; trade_proposed(Constant, LotList, TradeResponse?, BondList)
+               ; trade_completed(Constant)
+               ; trade_failed(Constant)
+               ; trade_returned(Constant)
+               ; escrow_deposited(Constant, Constant, EscrowCancel?)
+               ; escrow_received(Constant, Constant)
+               ; escrow_released(Constant)
+               ; escrow_cancelled(Constant)
+               ; escrow_expired(Constant)
+               ; escrow_returned(Constant)
+               ; escrow_failed(Constant)
+               ; trade_returned_menu(Constant, BondList).
+
+%% Agent input stream (from mediator + injected results)
+UserInMsg    ::= msg(Constant, Constant, UserContent)
+               ; trade_complete(Constant, BondList)
+               ; trade_returned_bonds(Constant, BondList)
+               ; escrow_ben_released(Constant, BondList)
+               ; escrow_ben_cancelled(Constant)
+               ; escrow_dep_expired(Constant)
+               ; escrow_dep_returned(Constant, BondList)
+               ; trade_returned_bonds_menu(Constant, BondList, BondList).
+UserInStream ::= [] ; [UserInMsg | UserInStream].
+
+MediatorToAgentMsg    ::= msg(Constant, Constant, UserContent).
+MediatorToAgentStream ::= [] ; [MediatorToAgentMsg | MediatorToAgentStream].
+
+%% Agent-to-user output
+AgentToUserMsg    ::= msg(Constant, Constant, AgentContent).
+AgentToUserStream ::= [] ; [AgentToUserMsg | AgentToUserStream].
+
+%% Agent-mediator channel
+AgentChannel ::= ch(AgentToUserStream, MediatorToAgentStream?).
+
+%% Network input: cold-calls (2-arg) and friend messages (3-arg)
+NetInMsg ::= msg(Constant, NetColdCall)
+           ; msg(Constant, Constant, FriendContent).
+NetInStream ::= [] ; [NetInMsg | NetInStream].
+
+%% Output list — keys distinguish system channels and friends
+OutputKey   ::= '_user' ; '_net' ; friend(Constant).
+
+%% Union of all content the agent sends on output streams
+OutputContent ::= minted(Constant, Constant)
+                ; balance_report(BondList)
+                ; befriend(Constant, Response?)
+                ; connected(Constant)
+                ; rejected
+                ; rejected(Constant)
+                ; response(Response)
+                ; trade_propose(LotList, BondList, TradeResponse?)
+                ; trade_proposed(Constant, LotList, TradeResponse?, BondList)
+                ; trade_completed(Constant)
+                ; trade_failed(Constant)
+                ; trade_returned(Constant)
+                ; escrow_offer(Constant, EscrowBenResult)
+                ; escrow_deposited(Constant, Constant, EscrowCancel?)
+                ; escrow_received(Constant, Constant)
+                ; escrow_released(Constant)
+                ; escrow_cancelled(Constant)
+                ; escrow_expired(Constant)
+                ; escrow_returned(Constant)
+                ; escrow_failed(Constant)
+                ; trade_returned_menu(Constant, BondList).
+OutputMsg    ::= msg(Constant, Constant, OutputContent)
+               ; msg(Constant, NetColdCall).
+OutputStream ::= [] ; [OutputMsg | OutputStream].
+
+OutputEntry ::= output(OutputKey, OutputStream?).
+OutputsList ::= [] ; [OutputEntry | OutputsList].
+
+%% =============================================================================
+%% MERGE_NET_IN
+%% =============================================================================
+
+procedure merge_net_in(NetInStream?, NetInStream?, NetInStream).
+merge_net_in([X|Xs], Ys, [X?|Zs?]) :- merge_net_in(Ys?, Xs?, Zs).
+merge_net_in(Xs, [Y|Ys], [Y?|Zs?]) :- merge_net_in(Xs?, Ys?, Zs).
+merge_net_in([], Ys, Ys?).
+merge_net_in(Xs, [], Xs?).
+
+%% =============================================================================
+%% LOOKUP_SEND
+%% =============================================================================
+
+procedure lookup_send(OutputKey?, OutputMsg?, OutputsList?, OutputsList).
+lookup_send(Key, Msg, Outs, Outs1?) :-
+    ground(Key?) |
+    lookup_send_step(Key?, Msg?, Outs?, Outs1).
+
+procedure lookup_send_step(OutputKey?, OutputMsg?, OutputsList?, OutputsList).
+lookup_send_step(Key, Msg, [output(K, [Msg?|Out1?])|Rest], [output(K?, Out1)|Rest?]) :-
+    Key? =?= K? | true.
+lookup_send_step(Key, Msg, [output(K, Out?)|Rest], [output(K?, Out)|Rest1?]) :-
+    otherwise |
+    lookup_send_step(Key?, Msg?, Rest?, Rest1).
+lookup_send_step(_, _, [], []).
+
+%% =============================================================================
+%% ADD_OUTPUT
+%% =============================================================================
+
+procedure add_output(OutputKey?, OutputStream, OutputsList?, OutputsList).
+add_output(Key, Out?, Outs, [output(Key?, Out)|Outs?]).
+
+%% =============================================================================
+%% CLOSE_OUTPUTS
+%% =============================================================================
+
+procedure close_outputs(OutputsList?).
+close_outputs([output(_, [])|Outs]) :- close_outputs(Outs?).
+close_outputs([]).
+
+%% =============================================================================
+%% INJECT_MSG — Inject cold-call response into UserIn
+%% =============================================================================
+
+procedure inject_msg(Response?, Constant?, Constant?, UserInStream?, UserInStream).
+inject_msg(Resp, Target, Id, Ys, [msg(Target?, Id?, response(Resp?))|Ys?]) :-
+    known(Resp?) | true.
+inject_msg(Resp, Target, Id, [Y|Ys], [Y?|Ys1?]) :-
+    inject_msg(Resp?, Target?, Id?, Ys?, Ys1).
+
+%% =============================================================================
+%% NEW_FRIEND_CHANNEL — Create a bidirectional FriendChannel pair
+%% =============================================================================
+
+procedure new_friend_channel(FriendChannel, FriendChannel).
+new_friend_channel(ch(Xs?, Ys), ch(Ys?, Xs)).
+
+%% =============================================================================
+%% RESPONSE HANDLING — bind cold-call decision
+%% =============================================================================
+
+procedure bind_response(Decision?, Constant?, Response, OutputsList?, OutputsList, NetInStream?, NetInStream).
+bind_response(yes, From, accept(RetCh?), Outs, Outs1?, In, In1?) :-
+    new_friend_channel(RetCh, LocalCh) |
+    handle_response(accept(LocalCh?), From?, Outs?, Outs1, In?, In1).
+bind_response(no, _, no, Outs, Outs1?, In, In?) :-
+    lookup_send('_user', msg(agent, '_user', rejected), Outs?, Outs1).
+
+procedure handle_response(Response?, Constant?, OutputsList?, OutputsList, NetInStream?, NetInStream).
+handle_response(accept(ch(FIn, FOut?)), From, Outs, Outs2?, In, In1?) :-
+    ground(From?) |
+    add_output(friend(From?), FOut, Outs?, Outs1),
+    lookup_send('_user', msg(agent, '_user', connected(From?)), Outs1?, Outs2),
+    merge_net_in(In?, FIn?, In1).
+handle_response(no, From, Outs, Outs1?, In, In?) :-
+    ground(From?) |
+    lookup_send('_user', msg(agent, '_user', rejected(From?)), Outs?, Outs1).
+
+%% =============================================================================
+%% CREATE_BONDS — Create K bonds with given issuer and maturity
+%% =============================================================================
+
+procedure create_bonds(Constant?, Constant?, Constant?, Constant?, BondList).
+create_bonds(Issuer, Maturity, K, Serial,
+             [bond(Issuer?, Maturity?, Serial?)|Rest?]) :-
+    K? > 0 |
+    K1 := K? - 1,
+    S1 := Serial? + 1,
+    create_bonds(Issuer?, Maturity?, K1?, S1?, Rest).
+create_bonds(_, _, 0, _, []).
+
+%% =============================================================================
+%% APPEND — Append two bond lists
+%% =============================================================================
+
+procedure append(BondList?, BondList?, BondList).
+append([X|Xs], Ys, [X?|Zs?]) :- append(Xs?, Ys?, Zs).
+append([], Ys, Ys?).
+
+%% =============================================================================
+%% SELECT_BONDS_EXACT — Select K bonds with exact Issuer+Maturity
+%% =============================================================================
+
+procedure select_bonds_exact(Constant?, Constant?, Constant?, BondList?, Constant, BondList, BondList).
+select_bonds_exact(_, _, 0, Hs, ok, [], Hs?).
+select_bonds_exact(Issuer, Maturity, K, [bond(I, M, S)|Rest], Status?, [bond(I?, M?, S?)|Sel?], Rem?) :-
+    K? > 0, Issuer? =?= I?, Maturity? =?= M? |
+    K1 := K? - 1,
+    select_bonds_exact(Issuer?, Maturity?, K1?, Rest?, Status, Sel, Rem).
+select_bonds_exact(Issuer, Maturity, K, [B|Rest], Status?, Sel?, [B?|Rem?]) :-
+    otherwise |
+    select_bonds_exact(Issuer?, Maturity?, K?, Rest?, Status, Sel, Rem).
+select_bonds_exact(_, _, K, [], fail, [], []) :- K? > 0 | true.
+
+%% =============================================================================
+%% SELECT_BONDS_BY_SPEC — Fold over LotList
+%% =============================================================================
+
+procedure select_bonds_by_spec(LotList?, BondList?, Constant, BondList, BondList).
+select_bonds_by_spec([lot(Issuer, Maturity, Count)|Rest], Holdings, Status?, AllSel?, FinalRem?) :-
+    ground(Issuer?), ground(Maturity?), ground(Count?) |
+    select_bonds_exact(Issuer?, Maturity?, Count?, Holdings?, LotStatus, LotSel, LotRem),
+    select_by_spec_continue(LotStatus?, Rest?, LotSel?, LotRem?, Status, AllSel, FinalRem).
+select_bonds_by_spec([], Holdings, ok, [], Holdings?).
+
+procedure select_by_spec_continue(Constant?, LotList?, BondList?, BondList?, Constant, BondList, BondList).
+select_by_spec_continue(ok, Rest, LotSel, LotRem, Status?, AllSel?, FinalRem?) :-
+    select_bonds_by_spec(Rest?, LotRem?, Status, RestSel, FinalRem),
+    append(LotSel?, RestSel?, AllSel).
+select_by_spec_continue(fail, _, LotSel, LotRem, fail, LotSel?, LotRem?).
+
+%% =============================================================================
+%% BIND_TRADE — Bind TradeResponse variable (writer mode)
+%% =============================================================================
+
+procedure bind_trade_accept(TradeResponse, BondList?).
+bind_trade_accept(trade_accept(Bonds?), Bonds).
+
+procedure bind_trade_decline(TradeResponse, BondList?).
+bind_trade_decline(trade_decline(Bonds?), Bonds).
+
+%% =============================================================================
+%% INJECT_TRADE_RESULT — Inject trade response into UserIn
+%% =============================================================================
+
+procedure inject_trade_result(TradeResponse?, Constant?, UserInStream?, UserInStream).
+inject_trade_result(trade_accept(TheirBonds), From, Ys,
+    [trade_complete(From?, TheirBonds?)|Ys?]) :-
+    ground(From?), ground(TheirBonds?) | true.
+inject_trade_result(trade_decline(OurBonds), From, Ys,
+    [trade_returned_bonds(From?, OurBonds?)|Ys?]) :-
+    ground(From?), ground(OurBonds?) | true.
+inject_trade_result(trade_decline_menu(OurBonds, Menu), From, Ys,
+    [trade_returned_bonds_menu(From?, OurBonds?, Menu?)|Ys?]) :-
+    ground(From?), ground(OurBonds?), ground(Menu?) | true.
+inject_trade_result(Resp, From, [Y|Ys], [Y?|Ys1?]) :-
+    inject_trade_result(Resp?, From?, Ys?, Ys1).
+
+%% =============================================================================
+%% DO_TRADE — Select bonds matching GiveSpec, then send or fail
+%% =============================================================================
+
+procedure do_trade(Constant?, Constant?, LotList?, LotList?, BondList?, UserInStream?, NetInStream?, OutputsList?, Constant?).
+do_trade(Id, Target, GiveSpec, WantSpec, Holdings, UserIn, NetIn, Outs, NextSerial) :-
+    select_bonds_by_spec(GiveSpec?, Holdings?, Status, Selected, Remaining),
+    do_trade_result(Status?, Id?, Target?, WantSpec?, Selected?, Remaining?, UserIn?, NetIn?, Outs?, NextSerial?).
+
+procedure do_trade_result(Constant?, Constant?, Constant?, LotList?, BondList?, BondList?, UserInStream?, NetInStream?, OutputsList?, Constant?).
+do_trade_result(ok, Id, Target, WantSpec, Selected, Remaining, UserIn, NetIn, Outs, NextSerial) :-
+    lookup_send(friend(Target?),
+        msg(Id?, Target?, trade_propose(WantSpec?, Selected?, TradeResp)),
+        Outs?, Outs1),
+    inject_trade_result(TradeResp?, Target?, UserIn?, UserIn1),
+    agent(Id?, UserIn1?, NetIn?, Outs1?, Remaining?, NextSerial?).
+do_trade_result(fail, Id, Target, _, Selected, Remaining, UserIn, NetIn, Outs, NextSerial) :-
+    append(Selected?, Remaining?, OrigHoldings),
+    lookup_send('_user', msg(agent, '_user', trade_failed(Target?)), Outs?, Outs1),
+    agent(Id?, UserIn?, NetIn?, Outs1?, OrigHoldings?, NextSerial?).
+
+%% =============================================================================
+%% HANDLE_TRADE_FILL — Bind TradeResponse after selection attempt
+%% =============================================================================
+
+procedure handle_trade_fill(Constant?, Constant?, Constant?, TradeResponse, BondList?, BondList?, BondList?, UserInStream?, NetInStream?, OutputsList?, Constant?).
+%% Can fill: bind accept(our bonds), take offered bonds, notify user
+handle_trade_fill(ok, Id, From, trade_accept(Selected?), OfferedBonds, Selected, Remaining, UserIn, NetIn, Outs, NextSerial) :-
+    append(Remaining?, OfferedBonds?, NewHoldings),
+    lookup_send('_user', msg(agent, '_user', trade_completed(From?)), Outs?, Outs1),
+    agent(Id?, UserIn?, NetIn?, Outs1?, NewHoldings?, NextSerial?).
+%% Can't fill: bind decline(offered bonds back), reconstruct own holdings
+handle_trade_fill(fail, Id, From, trade_decline(OfferedBonds?), OfferedBonds, Selected, Remaining, UserIn, NetIn, Outs, NextSerial) :-
+    append(Selected?, Remaining?, OrigHoldings),
+    lookup_send('_user', msg(agent, '_user', trade_failed(From?)), Outs?, Outs1),
+    agent(Id?, UserIn?, NetIn?, Outs1?, OrigHoldings?, NextSerial?).
+
+%% =============================================================================
+%% CLASSIFY_TRADE — Classify incoming trade for auto-accept
+%% =============================================================================
+%%
+%% Three classifications:
+%%   payment    — WantSpec is empty (proposer gives coins, wants nothing back).
+%%                Auto-accept: nobody refuses free money.
+%%   redemption — OfferedBonds is exactly one coin issued by me.
+%%                Auto-accept with requested bond, or reject with menu.
+%%   normal     — everything else. Present to user for decision.
+
+procedure classify_trade(Constant?, LotList?, BondList?, Constant).
+
+%% Payment: empty WantSpec
+classify_trade(_, [], _, payment).
+
+%% Redemption: exactly one of my coins
+classify_trade(Id, _, [bond(I, 0, _)], redemption) :- Id? =?= I? | true.
+
+%% Normal: everything else
+classify_trade(_, _, _, normal) :- otherwise | true.
+
+%% =============================================================================
+%% BUILD_MENU — One bond per issuer, earliest maturity
+%% =============================================================================
+%%
+%% Walks holdings, collecting the earliest bond per issuer (excluding own).
+%% Menu items show what's available for a rejected redeemer to choose from.
+
+procedure build_menu(Constant?, BondList?, BondList).
+build_menu(Id, Holdings, Menu?) :-
+    build_menu_acc(Id?, Holdings?, [], Menu).
+
+procedure build_menu_acc(Constant?, BondList?, BondList?, BondList).
+
+%% Skip own bonds
+build_menu_acc(Id, [bond(I, _, _)|Rest], Acc, Menu?) :-
+    Id? =?= I? |
+    build_menu_acc(Id?, Rest?, Acc?, Menu).
+
+%% Foreign bond — check if issuer already in accumulator
+build_menu_acc(Id, [bond(I, M, S)|Rest], Acc, Menu?) :-
+    otherwise |
+    menu_update(I?, M?, S?, Acc?, Acc1),
+    build_menu_acc(Id?, Rest?, Acc1?, Menu).
+
+%% Done
+build_menu_acc(_, [], Acc, Acc?).
+
+%% --- menu_update: insert or replace if earlier maturity ---
+
+procedure menu_update(Constant?, Constant?, Constant?, BondList?, BondList).
+
+%% Found same issuer — keep earlier maturity
+menu_update(I, M, S, [bond(I2, M2, _)|Rest],
+    [bond(I2?, M?, S?)|Rest?]) :-
+    I? =?= I2?, M? < M2? | true.
+
+%% Found same issuer — existing is earlier or equal, keep it
+menu_update(I, _, _, [bond(I2, M2, S2)|Rest],
+    [bond(I2?, M2?, S2?)|Rest?]) :-
+    I? =?= I2? | true.
+
+%% Different issuer — keep looking
+menu_update(I, M, S, [B|Rest], [B?|Rest1?]) :-
+    otherwise |
+    menu_update(I?, M?, S?, Rest?, Rest1).
+
+%% Not found — add new entry
+menu_update(I, M, S, [], [bond(I?, M?, S?)]).
+
+%% =============================================================================
+%% TRADE_DISPATCH — Branch on auto-accept vs. user decision
+%% =============================================================================
+
+procedure trade_dispatch(Constant?, Constant?, Constant?, LotList?, BondList?, TradeResponse,
+    BondList?, UserInStream?, NetInStream?, OutputsList?, Constant?).
+
+%% Payment — auto-accept (proposer gives coins, wants nothing)
+trade_dispatch(payment, Id, From, _, OfferedBonds, trade_accept([]),
+    Holdings, UserIn, NetIn, Outs, NextSerial) :-
+    append(Holdings?, OfferedBonds?, NewHoldings),
+    lookup_send('_user', msg(agent, '_user', trade_completed(From?)), Outs?, Outs1),
+    agent(Id?, UserIn?, NetIn?, Outs1?, NewHoldings?, NextSerial?).
+
+%% Redemption — auto-accept with requested bond, or reject with menu
+trade_dispatch(redemption, Id, From, WantSpec, OfferedBonds, TradeResp?,
+    Holdings, UserIn, NetIn, Outs, NextSerial) :-
+    select_bonds_by_spec(WantSpec?, Holdings?, Status, Selected, Remaining),
+    redemption_result(Status?, Id?, From?, TradeResp, OfferedBonds?,
+        Selected?, Remaining?,
+        UserIn?, NetIn?, Outs?, NextSerial?).
+
+%% Normal trade — present to user
+trade_dispatch(normal, Id, From, WantSpec, OfferedBonds, TradeResp?,
+    Holdings, UserIn, NetIn, Outs, NextSerial) :-
+    lookup_send('_user',
+        msg(agent, '_user', trade_proposed(From?, WantSpec?, TradeResp, OfferedBonds?)),
+        Outs?, Outs1),
+    agent(Id?, UserIn?, NetIn?, Outs1?, Holdings?, NextSerial?).
+
+%% =============================================================================
+%% REDEMPTION_RESULT — Accept with requested bond or reject with menu
+%% =============================================================================
+
+procedure redemption_result(Constant?, Constant?, Constant?, TradeResponse, BondList?,
+    BondList?, BondList?,
+    UserInStream?, NetInStream?, OutputsList?, Constant?).
+
+%% Can fill — accept with requested bonds
+redemption_result(ok, Id, From, trade_accept(Selected?), OfferedBonds,
+    Selected, Remaining,
+    UserIn, NetIn, Outs, NextSerial) :-
+    append(Remaining?, OfferedBonds?, NewHoldings),
+    lookup_send('_user', msg(agent, '_user', trade_completed(From?)), Outs?, Outs1),
+    agent(Id?, UserIn?, NetIn?, Outs1?, NewHoldings?, NextSerial?).
+
+%% Can't fill — reject with menu
+redemption_result(fail, Id, From, trade_decline_menu(OfferedBonds?, Menu?), OfferedBonds,
+    Selected, Remaining,
+    UserIn, NetIn, Outs, NextSerial) :-
+    append(Selected?, Remaining?, OrigHoldings),
+    redemption_reject(Id?, From?, OrigHoldings?, Menu,
+        UserIn?, NetIn?, Outs?, NextSerial?).
+
+procedure redemption_reject(Constant?, Constant?, BondList?, BondList,
+    UserInStream?, NetInStream?, OutputsList?, Constant?).
+redemption_reject(Id, From, OrigHoldings, Menu?, UserIn, NetIn, Outs, NextSerial) :-
+    ground(OrigHoldings?) |
+    build_menu(Id?, OrigHoldings?, Menu),
+    lookup_send('_user', msg(agent, '_user', trade_failed(From?)), Outs?, Outs1),
+    agent(Id?, UserIn?, NetIn?, Outs1?, OrigHoldings?, NextSerial?).
+
+%% =============================================================================
+%% ESCROW — Concurrent race between timer and cancel signal
+%% =============================================================================
+%%
+%% Two-clause race:
+%%   Clause 1: wait_until(T?) suspends until time T, then beneficiary wins
+%%   Clause 2: head match on cancel suspends until CancelSignal bound, then depositor wins
+%% First clause to commit wins; the other is abandoned.
+
+procedure escrow(Constant?, BondList?, EscrowCancel?, EscrowBenResult, EscrowDepResult).
+
+%% Time passes — beneficiary gets bonds, depositor gets 'expired'
+escrow(T, Bonds, _,
+    escrow_bonds(Bonds?),
+    escrow_expired) :-
+    wait_until(T?) | true.
+
+%% Depositor cancels — depositor gets bonds back, beneficiary gets 'cancelled'
+escrow(_, Bonds, cancel,
+    escrow_cancelled,
+    escrow_bonds(Bonds?)).
+
+%% =============================================================================
+%% INJECT_ESCROW_BEN_RESULT — Monitor beneficiary's escrow outcome
+%% =============================================================================
+
+procedure inject_escrow_ben_result(EscrowBenResult?, Constant?, UserInStream?, UserInStream).
+inject_escrow_ben_result(escrow_bonds(Bonds), From, Ys,
+    [escrow_ben_released(From?, Bonds?)|Ys?]) :-
+    ground(From?), ground(Bonds?) | true.
+inject_escrow_ben_result(escrow_cancelled, From, Ys,
+    [escrow_ben_cancelled(From?)|Ys?]) :-
+    ground(From?) | true.
+inject_escrow_ben_result(Resp, From, [Y|Ys], [Y?|Ys1?]) :-
+    inject_escrow_ben_result(Resp?, From?, Ys?, Ys1).
+
+%% =============================================================================
+%% INJECT_ESCROW_DEP_RESULT — Monitor depositor's escrow outcome
+%% =============================================================================
+
+procedure inject_escrow_dep_result(EscrowDepResult?, Constant?, UserInStream?, UserInStream).
+inject_escrow_dep_result(escrow_bonds(Bonds), Target, Ys,
+    [escrow_dep_returned(Target?, Bonds?)|Ys?]) :-
+    ground(Target?), ground(Bonds?) | true.
+inject_escrow_dep_result(escrow_expired, Target, Ys,
+    [escrow_dep_expired(Target?)|Ys?]) :-
+    ground(Target?) | true.
+inject_escrow_dep_result(Resp, Target, [Y|Ys], [Y?|Ys1?]) :-
+    inject_escrow_dep_result(Resp?, Target?, Ys?, Ys1).
+
+%% =============================================================================
+%% DO_DEPOSIT_ESCROW — Select bonds and create escrow or fail
+%% =============================================================================
+
+procedure do_deposit_escrow(Constant?, Constant?, LotList?, Constant?, BondList?, UserInStream?, NetInStream?, OutputsList?, Constant?).
+do_deposit_escrow(Id, Target, GiveSpec, ReleaseTime, Holdings, UserIn, NetIn, Outs, NextSerial) :-
+    select_bonds_by_spec(GiveSpec?, Holdings?, Status, Selected, Remaining),
+    do_deposit_escrow_result(Status?, Id?, Target?, ReleaseTime?, Selected?, Remaining?, UserIn?, NetIn?, Outs?, NextSerial?).
+
+procedure do_deposit_escrow_result(Constant?, Constant?, Constant?, Constant?, BondList?, BondList?, UserInStream?, NetInStream?, OutputsList?, Constant?).
+do_deposit_escrow_result(ok, Id, Target, ReleaseTime, Selected, Remaining, UserIn, NetIn, Outs, NextSerial) :-
+    ground(Selected?) |
+    escrow(ReleaseTime?, Selected?, CancelSignal?, BenResult, DepResult),
+    inject_escrow_dep_result(DepResult?, Target?, UserIn?, UserIn1),
+    lookup_send(friend(Target?),
+        msg(Id?, Target?, escrow_offer(ReleaseTime?, BenResult?)),
+        Outs?, Outs1),
+    lookup_send('_user',
+        msg(agent, '_user', escrow_deposited(Target?, ReleaseTime?, CancelSignal)),
+        Outs1?, Outs2),
+    agent(Id?, UserIn1?, NetIn?, Outs2?, Remaining?, NextSerial?).
+do_deposit_escrow_result(fail, Id, Target, _, Selected, Remaining, UserIn, NetIn, Outs, NextSerial) :-
+    append(Selected?, Remaining?, OrigHoldings),
+    lookup_send('_user', msg(agent, '_user', escrow_failed(Target?)), Outs?, Outs1),
+    agent(Id?, UserIn?, NetIn?, Outs1?, OrigHoldings?, NextSerial?).
+
+%% =============================================================================
+%% BIND_ESCROW_CANCEL — Bind CancelSignal to cancel
+%% =============================================================================
+
+procedure bind_escrow_cancel(EscrowCancel).
+bind_escrow_cancel(cancel).
+
+%% =============================================================================
+%% AGENT/6 — Bond agent
+%% =============================================================================
+%%
+%% agent(Id, UserIn, NetIn, Outs, Holdings, NextSerial)
+%%   Id         — agent identity (constant)
+%%   UserIn     — stream of messages from mediator (+ injected results)
+%%   NetIn      — stream of messages from network
+%%   Outs       — output list ('_user', '_net', friend(X), ...)
+%%   Holdings   — list of bonds held by this agent
+%%   NextSerial — next serial number for minting
+
+procedure agent(Constant?, UserInStream?, NetInStream?, OutputsList?, BondList?, Constant?).
+
+%% --- Phase 1: Mint / Balance / Done ---
+
+%% User requests mint: create K bonds, add to holdings, notify user
+agent(Id, [msg('_user', Id1, mint(K, Maturity))|UserIn], NetIn, Outs, Holdings, NextSerial) :-
+    Id? =?= Id1?, ground(K?), ground(Maturity?) |
+    NewNextSerial := NextSerial? + K?,
+    create_bonds(Id?, Maturity?, K?, NextSerial?, NewBonds),
+    append(Holdings?, NewBonds?, NewHoldings),
+    lookup_send('_user', msg(agent, '_user', minted(K?, Maturity?)), Outs?, Outs1),
+    agent(Id?, UserIn?, NetIn?, Outs1?, NewHoldings?, NewNextSerial?).
+
+%% User requests balance: report current holdings
+agent(Id, [msg('_user', Id1, balance)|UserIn], NetIn, Outs, Holdings, NextSerial) :-
+    Id? =?= Id1?, ground(Holdings?) |
+    lookup_send('_user', msg(agent, '_user', balance_report(Holdings?)), Outs?, Outs1),
+    agent(Id?, UserIn?, NetIn?, Outs1?, Holdings?, NextSerial?).
+
+%% User sends done: terminate agent
+agent(Id, [msg('_user', Id1, done)|_], _, Outs, _, _) :-
+    Id? =?= Id1? |
+    close_outputs(Outs?).
+
+%% --- Phase 2: Social graph (cold-call befriending) ---
+
+%% User initiates cold call
+agent(Id, [msg('_user', Id1, connect(Target))|UserIn], NetIn, Outs, Holdings, NextSerial) :-
+    Id? =?= Id1?, ground(Target?) |
+    lookup_send('_net', msg(Target?, intro(Id?, Resp)), Outs?, Outs1),
+    inject_msg(Resp?, Target?, Id?, UserIn?, UserIn1),
+    agent(Id?, UserIn1?, NetIn?, Outs1?, Holdings?, NextSerial?).
+
+%% User decision on cold-call
+agent(Id, [msg('_user', Id1, decision(Dec, From, response(Resp?)))|UserIn], NetIn, Outs, Holdings, NextSerial) :-
+    Id? =?= Id1? |
+    bind_response(Dec?, From?, Resp, Outs?, Outs1, NetIn?, NetIn1),
+    agent(Id?, UserIn?, NetIn1?, Outs1?, Holdings?, NextSerial?).
+
+%% Response to cold-call (injected by inject_msg)
+agent(Id, [msg(From, Id1, response(Resp))|UserIn], NetIn, Outs, Holdings, NextSerial) :-
+    Id? =?= Id1? |
+    handle_response(Resp?, From?, Outs?, Outs1, NetIn?, NetIn1),
+    agent(Id?, UserIn?, NetIn1?, Outs1?, Holdings?, NextSerial?).
+
+%% Cold-call from network
+agent(Id, UserIn, [msg(Id1, intro(From, Resp?))|NetIn], Outs, Holdings, NextSerial) :-
+    Id? =?= Id1? |
+    lookup_send('_user', msg(agent, '_user', befriend(From?, Resp)), Outs?, Outs1),
+    agent(Id?, UserIn?, NetIn?, Outs1?, Holdings?, NextSerial?).
+
+%% --- Phase 7: Trade ---
+
+%% Proposer: trade command
+agent(Id, [msg('_user', Id1, trade(Target, GiveSpec, WantSpec))|UserIn],
+      NetIn, Outs, Holdings, NextSerial) :-
+    Id? =?= Id1?, ground(Target?), ground(GiveSpec?), ground(WantSpec?) |
+    do_trade(Id?, Target?, GiveSpec?, WantSpec?, Holdings?, UserIn?, NetIn?, Outs?, NextSerial?).
+
+%% Proposer: trade_complete (injected — accept)
+agent(Id, [trade_complete(From, TheirBonds)|UserIn], NetIn, Outs, Holdings, NextSerial) :-
+    ground(Id?), ground(From?), ground(TheirBonds?) |
+    append(Holdings?, TheirBonds?, NewHoldings),
+    lookup_send('_user', msg(agent, '_user', trade_completed(From?)), Outs?, Outs1),
+    agent(Id?, UserIn?, NetIn?, Outs1?, NewHoldings?, NextSerial?).
+
+%% Proposer: trade_returned_bonds (injected — decline)
+agent(Id, [trade_returned_bonds(From, OurBonds)|UserIn], NetIn, Outs, Holdings, NextSerial) :-
+    ground(Id?), ground(From?), ground(OurBonds?) |
+    append(Holdings?, OurBonds?, NewHoldings),
+    lookup_send('_user', msg(agent, '_user', trade_returned(From?)), Outs?, Outs1),
+    agent(Id?, UserIn?, NetIn?, Outs1?, NewHoldings?, NextSerial?).
+
+%% Proposer: trade returned with menu (redemption rejected — menu of available bonds)
+agent(Id, [trade_returned_bonds_menu(From, OurBonds, Menu)|UserIn], NetIn, Outs, Holdings, NextSerial) :-
+    ground(Id?), ground(From?), ground(OurBonds?), ground(Menu?) |
+    append(Holdings?, OurBonds?, NewHoldings),
+    lookup_send('_user', msg(agent, '_user', trade_returned_menu(From?, Menu?)), Outs?, Outs1),
+    agent(Id?, UserIn?, NetIn?, Outs1?, NewHoldings?, NextSerial?).
+
+%% Responder: incoming trade_propose (auto-accept if offered bonds include own)
+agent(Id, UserIn, [msg(From, Id1, trade_propose(WantSpec, OfferedBonds, TradeResp?))|NetIn],
+      Outs, Holdings, NextSerial) :-
+    Id? =?= Id1?, ground(From?), ground(WantSpec?), ground(OfferedBonds?) |
+    classify_trade(Id?, WantSpec?, OfferedBonds?, TradeClass),
+    trade_dispatch(TradeClass?, Id?, From?, WantSpec?, OfferedBonds?, TradeResp,
+        Holdings?, UserIn?, NetIn?, Outs?, NextSerial?).
+
+%% Responder: accept_trade (inlined — select bonds then fill)
+agent(Id, [msg('_user', Id1, accept_trade(From,
+        trade_pending(TradeResp?, WantSpec, OfferedBonds)))|UserIn],
+      NetIn, Outs, Holdings, NextSerial) :-
+    Id? =?= Id1?, ground(From?), ground(WantSpec?), ground(OfferedBonds?) |
+    select_bonds_by_spec(WantSpec?, Holdings?, Status, Selected, Remaining),
+    handle_trade_fill(Status?, Id?, From?, TradeResp, OfferedBonds?, Selected?, Remaining?, UserIn?, NetIn?, Outs?, NextSerial?).
+
+%% Responder: reject_trade
+agent(Id, [msg('_user', Id1, reject_trade(From,
+        trade_pending(TradeResp?, _, OfferedBonds)))|UserIn],
+      NetIn, Outs, Holdings, NextSerial) :-
+    Id? =?= Id1?, ground(From?), ground(OfferedBonds?) |
+    bind_trade_decline(TradeResp, OfferedBonds?),
+    agent(Id?, UserIn?, NetIn?, Outs?, Holdings?, NextSerial?).
+
+%% --- Phase 8: Escrow ---
+
+%% Depositor: deposit_escrow command
+agent(Id, [msg('_user', Id1, deposit_escrow(Target, GiveSpec, ReleaseTime))|UserIn],
+      NetIn, Outs, Holdings, NextSerial) :-
+    Id? =?= Id1?, ground(Target?), ground(GiveSpec?), ground(ReleaseTime?) |
+    do_deposit_escrow(Id?, Target?, GiveSpec?, ReleaseTime?, Holdings?, UserIn?, NetIn?, Outs?, NextSerial?).
+
+%% Depositor: escrow expired (injected — time passed, bonds went to beneficiary)
+agent(Id, [escrow_dep_expired(Target)|UserIn], NetIn, Outs, Holdings, NextSerial) :-
+    ground(Id?) |
+    lookup_send('_user', msg(agent, '_user', escrow_expired(Target?)), Outs?, Outs1),
+    agent(Id?, UserIn?, NetIn?, Outs1?, Holdings?, NextSerial?).
+
+%% Depositor: escrow returned (injected — cancel succeeded, bonds back)
+agent(Id, [escrow_dep_returned(Target, OurBonds)|UserIn], NetIn, Outs, Holdings, NextSerial) :-
+    ground(Id?), ground(Target?), ground(OurBonds?) |
+    append(Holdings?, OurBonds?, NewHoldings),
+    lookup_send('_user', msg(agent, '_user', escrow_returned(Target?)), Outs?, Outs1),
+    agent(Id?, UserIn?, NetIn?, Outs1?, NewHoldings?, NextSerial?).
+
+%% Depositor: cancel_escrow — bind CancelSignal to cancel
+agent(Id, [msg('_user', Id1, cancel_escrow(Target,
+        escrow_pending(CancelSignal?)))|UserIn],
+      NetIn, Outs, Holdings, NextSerial) :-
+    Id? =?= Id1?, ground(Target?) |
+    bind_escrow_cancel(CancelSignal),
+    agent(Id?, UserIn?, NetIn?, Outs?, Holdings?, NextSerial?).
+
+%% Beneficiary: incoming escrow_offer
+agent(Id, UserIn, [msg(From, Id1, escrow_offer(ReleaseTime, BenResult))|NetIn],
+      Outs, Holdings, NextSerial) :-
+    Id? =?= Id1?, ground(From?), ground(ReleaseTime?) |
+    inject_escrow_ben_result(BenResult?, From?, UserIn?, UserIn1),
+    lookup_send('_user', msg(agent, '_user', escrow_received(From?, ReleaseTime?)), Outs?, Outs1),
+    agent(Id?, UserIn1?, NetIn?, Outs1?, Holdings?, NextSerial?).
+
+%% Beneficiary: escrow released (injected — time passed, bonds received)
+agent(Id, [escrow_ben_released(From, Bonds)|UserIn], NetIn, Outs, Holdings, NextSerial) :-
+    ground(Id?), ground(From?), ground(Bonds?) |
+    append(Holdings?, Bonds?, NewHoldings),
+    lookup_send('_user', msg(agent, '_user', escrow_released(From?)), Outs?, Outs1),
+    agent(Id?, UserIn?, NetIn?, Outs1?, NewHoldings?, NextSerial?).
+
+%% Beneficiary: escrow cancelled (injected — depositor cancelled)
+agent(Id, [escrow_ben_cancelled(From)|UserIn], NetIn, Outs, Holdings, NextSerial) :-
+    ground(Id?) |
+    lookup_send('_user', msg(agent, '_user', escrow_cancelled(From?)), Outs?, Outs1),
+    agent(Id?, UserIn?, NetIn?, Outs1?, Holdings?, NextSerial?).
+
+%% --- Termination ---
+%%
+%% Only terminate on UserIn closure. NetIn closure is NOT used because
+%% in single-agent plays NetIn is unbound, and an unbound variable
+%% matches [] in GLP, causing premature termination.
+%% Multi-agent plays terminate via explicit 'done' commands.
+
+agent(_, [], _, Outs, _, _) :- close_outputs(Outs?).
+

@@ -1,0 +1,4 @@
+%% Negative test: wrong number of type arguments — should fail
+Stream(X) ::= [] ; [X | Stream(X)].
+procedure bad(Stream(Integer, String)?).
+bad([]).

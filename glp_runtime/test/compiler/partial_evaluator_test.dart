@@ -9,6 +9,7 @@
 // Spec: docs/typed-glp-manual.md Section 8 (Single-Unit-Clause Procedures)
 // Spec: docs/guards-reference.md
 
+import 'dart:io';
 import 'package:test/test.dart';
 import 'package:glp_runtime/compiler/partial_evaluator.dart';
 import 'package:glp_runtime/compiler/parser.dart';
@@ -17,6 +18,11 @@ import 'package:glp_runtime/compiler/ast.dart';
 import 'package:glp_runtime/compiler/error.dart';
 
 void main() {
+  // Set prelude unit clause source from programs/self.glp
+  final rootSelfGlp = File('../programs/self.glp');
+  if (rootSelfGlp.existsSync()) {
+    setPreludeUnitClauseSource(rootSelfGlp.readAsStringSync());
+  }
   group('PartialEvaluator guard validation', () {
     late PartialEvaluator pe;
 

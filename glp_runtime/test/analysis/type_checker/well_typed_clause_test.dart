@@ -191,14 +191,16 @@ void main() {
     });
 
     group('Condition 3a: Variables in same part need dual types', () {
-      test('X at _ and X? at _? in head are dual (well-typed)', () {
-        // Create environment with a test procedure
+      test('X at _? and X? at _ in head are dual (well-typed)', () {
+        // Create environment with a test procedure: test(_?, _)
+        // In a head, writer X goes at input position (_?) and reader X? at output (_).
+        // After head complementation: writer→reader at consume (OK), reader→writer at produce (OK).
         final env = TypeEnvironment.empty();
         env.addProcedure(ProcDecl(
           'test',
           [
-            PrimitiveModeAlt(false, 0, 0),  // _ (output wildcard)
             PrimitiveModeAlt(true, 0, 0),   // _? (input wildcard)
+            PrimitiveModeAlt(false, 0, 0),  // _ (output wildcard)
           ],
           0, 0,
         ));
@@ -208,8 +210,8 @@ void main() {
         final testState = state('test/2', isProcedure: true);
 
         final testTransitions = <(DFAState, TransitionLabel), DFAState>{
-          (testState, TransitionLabel.functor('test', 2, 1, mode: Mode.produce)): prodWild,
-          (testState, TransitionLabel.functor('test', 2, 2, mode: Mode.consume)): consWild,
+          (testState, TransitionLabel.functor('test', 2, 1, mode: Mode.consume)): consWild,
+          (testState, TransitionLabel.functor('test', 2, 2, mode: Mode.produce)): prodWild,
         };
 
         final dfa = ProgramDFA(
@@ -222,7 +224,7 @@ void main() {
         );
 
         // Clause: test(X, X?) :- true.
-        // X at _ (output), X? at _? (input) - these are dual
+        // X (writer) at _? (input), X? (reader) at _ (output) - these are dual
         final clause = TypedClause(
           head: goal('test', [writer('X'), reader('X')]),
           bodyAtoms: [],

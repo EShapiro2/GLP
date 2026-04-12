@@ -22,7 +22,13 @@ import 'package:glp_runtime/runtime/system_predicates_impl.dart';
 import 'package:glp_runtime/runtime/terms.dart' as rt;
 import 'package:glp_runtime/compiler/partial_evaluator.dart';
 import 'package:glp_runtime/analysis/type_checker/type_checker.dart';
+import 'package:glp_runtime/analysis/type_checker/type_ast.dart';
+import 'package:glp_runtime/analysis/type_checker/param_expansion.dart';
+import 'package:glp_runtime/analysis/type_checker/type_environment_builder.dart';
+import 'package:glp_runtime/runtime/module_hierarchy.dart';
+import 'package:glp_runtime/runtime/glp_activation.dart';
 import 'package:glp_runtime/multiagent/mad_context.dart';
+import 'package:glp_runtime/compiler/project_linker.dart';
 
 /// Result of running a goal
 class ExecutionResult {
@@ -46,13 +52,38 @@ class ModuleInfo {
   final String name;
   final BytecodeProgram program;
   final List<String> imports;
+  final bool hasExports;
+  final Set<String> exportedLabels;  // e.g., {'append/3', 'member/2'}
 
-  ModuleInfo({required this.name, required this.program, required this.imports});
+  /// True when the source has no `-module(...)` directive.
+  /// Top-level programs (boot files, user programs) have all labels visible.
+  /// Only explicitly declared modules have export-boundary filtering.
+  final bool isTopLevel;
+
+  ModuleInfo({required this.name, required this.program, required this.imports, required this.hasExports, this.exportedLabels = const {}, this.isTopLevel = false});
 }
+
+/// serve/2 system predicate (embedded).
+///
+/// Service loop for dynamic module dispatch: reads goals from a GLP channel
+/// and dispatches each via '_activate' against the module's _select/1 table.
+/// Compiled once at engine init; passed to activateModule() as serveBytecode.
+const String _serveSource = r'''
+-mode(system).
+
+procedure serve(_?, Stream(_)?).
+serve(Module, [Goal | In]) :-
+    ground(Module?) |
+    '_activate'(Module?, Goal?),
+    serve(Module?, In?).
+serve(_, []) :-
+    otherwise |
+    true.
+''';
 
 /// madGLP system predicates (embedded).
 ///
-/// Provides send_to_net/1, global_send/3, send_to_user/1.
+/// Provides send_to_net/1, send_to_remote/2, global_send/3, send_to_user/1.
 /// Loaded by enableMadGLP().
 const String _madPredicatesSource = r'''
 -mode(system).  %% Uses reserved constants like '_w' and '_send'
@@ -61,16 +92,22 @@ const String _madPredicatesSource = r'''
 %% See: madGLP-spec.md Section 4 and Section 12
 
 %% send_to_net/1 - Process network output stream
-procedure send_to_net(Stream?).
+procedure send_to_net(Stream(_)?).
 send_to_net([msg(Q, T) | In]) :- ground(Q?) | global_send(msg(Q?, T?), '_w'(Q?, 0), Q?), send_to_net(In?).
 send_to_net([]).
+
+%% send_to_remote/2 - Globalize any output stream to a specific remote agent
+%% Used for parent-child streams that cross isolate boundaries.
+procedure send_to_remote(Constant?, Stream(_)?).
+send_to_remote(Agent, [Msg | In]) :- ground(Agent?), ground(Msg?) | global_send(Msg?, '_w'(Agent?, 0), Agent?), send_to_remote(Agent?, In?).
+send_to_remote(_, []).
 
 %% global_send/3 - Send via global link
 procedure global_send(_?, _?, _?).
 global_send(T, G, Q) :- known(T?) | '_send'(T?, G?, Q?).
 
 %% send_to_user/1 - Process user output stream (ground terms only)
-procedure send_to_user(Stream?).
+procedure send_to_user(Stream(_)?).
 send_to_user([T | In]) :- ground(T?) | '_output'(T?), send_to_user(In?).
 send_to_user([]).
 ''';
@@ -81,6 +118,9 @@ class GlpEngine {
   final GlpRuntime _runtime = GlpRuntime();
   final Map<String, BytecodeProgram> _loadedPrograms = {};
   final Map<String, ModuleInfo> _loadedModules = {};
+
+  /// Compiled serve/2 bytecode for dynamic module dispatch.
+  late final BytecodeProgram _serveBytecode;
 
   int _goalId = 1;
 
@@ -96,6 +136,9 @@ class GlpEngine {
   /// When true, type errors abort program loading (default: true)
   bool strictTypes = true;
 
+  /// Path to the root self.glp (programs/self.glp) for the type scope chain.
+  late final String _rootSelfGlpPath;
+
   /// For madGLP: the MadContext for this engine
   MadContext? madContext;
 
@@ -106,61 +149,58 @@ class GlpEngine {
   Map<String, BytecodeProgram> get loadedPrograms =>
       Map.unmodifiable(_loadedPrograms);
 
-  /// Constructor - registers standard predicates and loads stdlib.
+  /// Constructor - registers standard predicates and loads root self.glp.
   ///
-  /// [stdlibDir] is the path to the stdlib directory (e.g., '../programs/stdlib').
-  /// Loading stdlib is not optional — it's part of engine initialization.
-  GlpEngine({required String stdlibDir}) {
+  /// [rootSelfGlpPath] is the absolute path to programs/self.glp.
+  /// Loading root self.glp is not optional — it's part of engine initialization.
+  GlpEngine({required String rootSelfGlpPath}) {
+    _rootSelfGlpPath = rootSelfGlpPath;
+
+    // Set prelude sources from programs/self.glp for PE and type checker
+    final rootSelfFile = File(_rootSelfGlpPath);
+    if (rootSelfFile.existsSync()) {
+      final rootSource = rootSelfFile.readAsStringSync();
+      setPreludeUnitClauseSource(rootSource);
+      setPreludeEnvironmentSource(rootSource);
+    }
+
     registerStandardPredicates(_runtime.systemPredicates);
-    _loadStdlib(stdlibDir);
+    _loadRootSelf();
+    _serveBytecode = _compiler.compile(_serveSource);
   }
 
-  /// Clear all loaded programs except stdlib
+  /// Compiled serve/2 bytecode for activateModule().
+  BytecodeProgram get serveBytecode => _serveBytecode;
+
+  /// Clear all loaded programs except root self.glp.
   ///
   /// Useful for test scripts that need to reset state between tests
   /// without restarting the REPL process.
   void clear() {
-    // Remember stdlib programs
-    final stdlibKeys = _loadedPrograms.keys
-        .where((k) => k.startsWith('__stdlib_'))
-        .toList();
-    final stdlibPrograms = <String, BytecodeProgram>{};
-    for (final key in stdlibKeys) {
-      stdlibPrograms[key] = _loadedPrograms[key]!;
-    }
+    // Remember root self.glp program
+    BytecodeProgram? rootSelf = _loadedPrograms['__root_self__'];
 
     // Clear everything
     _loadedPrograms.clear();
     _loadedModules.clear();
 
-    // Restore stdlib
-    _loadedPrograms.addAll(stdlibPrograms);
+    // Restore root self.glp
+    if (rootSelf != null) {
+      _loadedPrograms['__root_self__'] = rootSelf;
+    }
   }
 
-  /// Load stdlib files from a directory (private — called by constructor).
-  void _loadStdlib(String stdlibDir) {
-    final stdlibFiles = [
-      'assign.glp',
-      'univ.glp',
-      'unify.glp',
-      'mwm.glp',
-      'equator.glp',
-      'time.glp',
-      'map.glp'
-    ];
-
-    for (final filename in stdlibFiles) {
-      final path = '$stdlibDir/$filename';
-      final file = File(path);
-      if (file.existsSync()) {
-        try {
-          final source = file.readAsStringSync();
-          final stdlibCompiler = GlpCompiler();
-          final prog = stdlibCompiler.compile(source);
-          _loadedPrograms['__stdlib_${filename}__'] = prog;
-        } catch (e) {
-          // Silently skip failed stdlib loads
-        }
+  /// Load root self.glp (private — called by constructor).
+  void _loadRootSelf() {
+    final file = File(_rootSelfGlpPath);
+    if (file.existsSync()) {
+      try {
+        final source = file.readAsStringSync();
+        final compiler = GlpCompiler();
+        final prog = compiler.compile(source);
+        _loadedPrograms['__root_self__'] = prog;
+      } catch (e) {
+        // Silently skip failed load
       }
     }
   }
@@ -192,14 +232,29 @@ class GlpEngine {
     final parser = Parser(tokens);
     final module = parser.parseModule();
 
+    // Discover ancestor scope from self.glp hierarchy (if loading from a file)
+    TypeEnvironment? ancestorScope;
+    if (name != '_source_' && name != '__mad_predicates__' &&
+        name != '__root_self__' &&
+        File(name).existsSync()) {
+      final rootDir = _findProjectRoot(name);
+      if (rootDir != null) {
+        final chain = discoverSelfChain(targetFile: name, rootDir: rootDir);
+        if (chain.isNotEmpty) {
+          ancestorScope = _buildAncestorScope(chain);
+        }
+      }
+    }
+
     // Type check if program has procedure declarations
     if (module.procDeclarations.isNotEmpty) {
       final ast = Program(module.procedures, module.line, module.column);
       final partialEvaluator = PartialEvaluator();
       final transformedAst = partialEvaluator.transformDefinedGuards(ast);
 
-      final typeResult =
-          checkModule(module, transformedProcedures: transformedAst.procedures);
+      final typeResult = checkModule(module,
+          transformedProcedures: transformedAst.procedures,
+          ancestorScope: ancestorScope);
       if (!typeResult.isWellTyped) {
         final errors = typeResult.errors.map((e) => '  ${e.message} at line ${e.line}').join('\n');
         if (strictTypes) {
@@ -217,7 +272,69 @@ class GlpEngine {
     final moduleInfo = _extractModuleInfo(source, program, name);
     _loadedModules[moduleInfo.name] = moduleInfo;
 
+    // Auto-activate modules with exports for dynamic dispatch.
+    // Merge with root self.glp so dispatched procedures can find :=/2 etc.
+    if (moduleInfo.hasExports) {
+      final rootSelf = _loadedPrograms['__root_self__'];
+      final moduleBytecode = rootSelf != null ? program.merge(rootSelf) : program;
+      activateModule(
+        rt: _runtime,
+        serveBytecode: _serveBytecode,
+        moduleBytecode: moduleBytecode,
+        moduleName: moduleInfo.name,
+      );
+    }
+
     return true;
+  }
+
+  /// Load an entire project directory via static linking.
+  ///
+  /// Discovers all modules, type-checks each independently, links into a
+  /// single flat program, and compiles it. The result is loaded as a single
+  /// program accessible via `combinedProgram`.
+  ///
+  /// [projectDir] is the path to the project root directory.
+  /// [topModuleName] specifies the top module (for entry point aliases).
+  ///   If null, auto-detects (the module with the most procedures).
+  bool loadProject(String projectDir, {String? topModuleName}) {
+    final modules = discoverProject(projectDir,
+        rootSelfGlpPath: _rootSelfGlpPath);
+    if (modules.isEmpty) {
+      throw Exception('No modules found in $projectDir');
+    }
+
+    typeCheckProject(modules);
+
+    // Auto-detect top module: prefer the orchestrator (has imported procedures)
+    final top = topModuleName ?? _detectTopModule(modules);
+
+    final linked = linkProject(modules, top);
+    final program = _compiler.compileProgram(
+      linked.program,
+      procDeclarations: linked.procDeclarations,
+    );
+    _loadedPrograms['__project__'] = program;
+
+    return true;
+  }
+
+  /// Detect the top module in a project.
+  ///
+  /// Prefers the module with imported procedure declarations (the orchestrator
+  /// that depends on other modules via M#p(...) calls). Falls back to the
+  /// module with the most procedures.
+  String _detectTopModule(List<DiscoveredModule> modules) {
+    final withImports = modules
+        .where((m) => m.ast.procDeclarations.any((d) => d.imported))
+        .toList();
+    if (withImports.length == 1) {
+      return withImports.first.moduleName;
+    }
+    // Fallback: module with the most procedures
+    modules.sort(
+        (a, b) => b.ast.procedures.length.compareTo(a.ast.procedures.length));
+    return modules.first.moduleName;
   }
 
   /// Run a goal and return the result
@@ -245,6 +362,42 @@ class GlpEngine {
     }
   }
 
+  /// Activate a loaded module for dynamic dispatch.
+  ///
+  /// Creates a GLP channel, spawns serve(Module, ChannelReader?),
+  /// and registers the channel in rt.glpChannels.
+  /// The module must have been loaded via loadFile() or loadSource() first.
+  /// The module must have exported procedures.
+  ///
+  /// After activation, cross-module calls via Distribute/Transmit opcodes
+  /// route goals through the module's channel.
+  void activateDynamicModule(String moduleName) {
+    // Skip if already activated (loadSource auto-activates modules with exports)
+    if (_runtime.glpChannels.containsKey(moduleName)) {
+      return;
+    }
+
+    final moduleInfo = _loadedModules[moduleName];
+    if (moduleInfo == null) {
+      throw Exception('Module "$moduleName" not loaded');
+    }
+    final moduleProg = moduleInfo.program;
+
+    if (!moduleInfo.hasExports) {
+      throw Exception('Module "$moduleName" has no exported procedures');
+    }
+
+    // Merge with root self.glp so dispatched procedures can find :=/2 etc.
+    final rootSelf = _loadedPrograms['__root_self__'];
+    final moduleBytecode = rootSelf != null ? moduleProg.merge(rootSelf) : moduleProg;
+    activateModule(
+      rt: _runtime,
+      serveBytecode: _serveBytecode,
+      moduleBytecode: moduleBytecode,
+      moduleName: moduleName,
+    );
+  }
+
   /// Enable madGLP mode for this engine.
   ///
   /// Loads madGLP system predicates (send_to_net, global_send, send_to_user)
@@ -256,13 +409,49 @@ class GlpEngine {
     _runtime.madContext = madContext;
   }
 
-  /// Get the combined bytecode program from all loaded sources
+  /// Get the combined bytecode program from all loaded sources.
+  ///
+  /// Enforces module boundaries (spec §19.3): REPL goals can only resolve
+  /// procedures that are exported, or defined in root self.glp / project.
+  /// All bytecode is included (internal procedures still execute when called
+  /// by exported procedures), but only exported labels are addressable as
+  /// entry points.
   BytecodeProgram get combinedProgram {
     final allOps = <dynamic>[];
     for (final loaded in _loadedPrograms.values) {
       allOps.addAll(loaded.ops);
     }
-    return BytecodeProgram(allOps);
+    final combined = BytecodeProgram(allOps);
+
+    // Build the set of allowed labels: root self.glp + project + exported procedures
+    final allowedLabels = <String>{};
+
+    // Root self.glp: all labels are visible everywhere (ancestor scoping §19.6)
+    final rootSelf = _loadedPrograms['__root_self__'];
+    if (rootSelf != null) {
+      allowedLabels.addAll(rootSelf.labels.keys);
+    }
+
+    // Project: all labels are visible (static linking already handles exports)
+    final project = _loadedPrograms['__project__'];
+    if (project != null) {
+      allowedLabels.addAll(project.labels.keys);
+    }
+
+    // Per-module: top-level programs (no -module directive) have all labels visible;
+    // explicitly declared modules only expose exported labels.
+    for (final moduleInfo in _loadedModules.values) {
+      if (moduleInfo.isTopLevel) {
+        allowedLabels.addAll(moduleInfo.program.labels.keys);
+      } else {
+        allowedLabels.addAll(moduleInfo.exportedLabels);
+      }
+    }
+
+    // Filter combined labels to only allowed ones
+    combined.labels.removeWhere((label, _) => !allowedLabels.contains(label));
+
+    return combined;
   }
 
   // ============ Private Methods ============
@@ -488,24 +677,44 @@ class GlpEngine {
   ModuleInfo _extractModuleInfo(
       String source, BytecodeProgram program, String filename) {
     String name;
+    bool isTopLevel;
     final moduleMatch = RegExp(r'-module\((\w+)\)\.').firstMatch(source);
     if (moduleMatch != null) {
       name = moduleMatch.group(1)!;
+      isTopLevel = false;
     } else {
       name = _moduleNameFromFilename(filename);
+      isTopLevel = true;
     }
 
+    // Extract imported module names from `imported procedure Module#Proc(...)` declarations.
+    // The order of unique module names determines the import index (1-based),
+    // matching the compiler's ImportTable.addImport() order.
     final imports = <String>[];
-    final importMatch = RegExp(r'-import\(\[([^\]]*)\]\)\.').firstMatch(source);
-    if (importMatch != null) {
-      imports.addAll(importMatch
-          .group(1)!
-          .split(',')
-          .map((e) => e.trim())
-          .where((e) => e.isNotEmpty));
+    final importPattern = RegExp(r'imported\s+procedure\s+(\w+)#');
+    for (final match in importPattern.allMatches(source)) {
+      final moduleName = match.group(1)!;
+      if (!imports.contains(moduleName)) {
+        imports.add(moduleName);
+      }
     }
 
-    return ModuleInfo(name: name, program: program, imports: imports);
+    // Detect exported procedures from `exported procedure` declarations.
+    // Extract functor names, then find matching labels in the compiled program.
+    final exportedLabels = <String>{};
+    final exportPattern = RegExp(r'exported\s+procedure\s+(\w+)\s*\(');
+    for (final match in exportPattern.allMatches(source)) {
+      final functor = match.group(1)!;
+      // Find the label with this functor (functor/arity format)
+      for (final label in program.labels.keys) {
+        if (label.startsWith('$functor/')) {
+          exportedLabels.add(label);
+        }
+      }
+    }
+    final hasExports = exportedLabels.isNotEmpty;
+
+    return ModuleInfo(name: name, program: program, imports: imports, hasExports: hasExports, exportedLabels: exportedLabels, isTopLevel: isTopLevel);
   }
 
   String _moduleNameFromFilename(String filename) {
@@ -514,6 +723,84 @@ class GlpEngine {
       return baseName.substring(0, baseName.length - 4);
     }
     return baseName;
+  }
+
+  /// Walk up from the file's directory to find the topmost directory
+  /// containing self.glp.
+  String? _findProjectRoot(String filePath) {
+    var dir = File(filePath).parent;
+    String? root;
+    while (true) {
+      final selfGlp = File('${dir.path}/self.glp');
+      if (selfGlp.existsSync()) {
+        root = dir.path;
+      }
+      final parent = dir.parent;
+      if (parent.path == dir.path) break; // filesystem root
+      dir = parent;
+    }
+    return root;
+  }
+
+  /// Build prelude + chain scope (WITHOUT the target module — checkModule
+  /// adds that via buildTypeEnvironment).
+  TypeEnvironment _buildAncestorScope(List<String> chain) {
+    var env = buildPreludeEnvironment();
+
+    // Include root self.glp (programs/self.glp) as first scope layer
+    final rootSelfGlp = File(_rootSelfGlpPath);
+    if (rootSelfGlp.existsSync()) {
+      env = _mergeModuleIntoEnv(env, rootSelfGlp.readAsStringSync());
+    }
+
+    for (final selfGlpPath in chain) {
+      // Skip if this chain entry IS the root self.glp (avoid double-merging)
+      if (File(selfGlpPath).absolute.path == rootSelfGlp.absolute.path) {
+        continue;
+      }
+      env = _mergeModuleIntoEnv(env, File(selfGlpPath).readAsStringSync());
+    }
+    return env;
+  }
+
+  /// Parse GLP source and merge its types/procedures into an environment.
+  TypeEnvironment _mergeModuleIntoEnv(TypeEnvironment env, String source) {
+    final lexer = Lexer(source);
+    final tokens = lexer.tokenize();
+    final parser = Parser(tokens);
+    final selfModule = parser.parseModule();
+
+    // Extract templates before expansion removes them.
+    // These chain to downstream modules for expansion of ancestor templates.
+    final selfTemplates = <String, TypeDef>{};
+    for (final td in selfModule.typeDefs) {
+      if (td.isParameterized) {
+        selfTemplates[td.name] = td;
+      }
+    }
+
+    // Expand parameterized types (strips templates, keeps monomorphic defs)
+    // Pass existing env type names so prelude types aren't mistaken for type params.
+    // Pass ancestor templates so this module can expand references to them.
+    final expandedModule = expandParameterizedTypes(selfModule,
+        knownTypeNames: env.types.keys.toSet(),
+        externalTemplates: env.typeTemplates);
+
+    final types = <String, TypeDef>{};
+    for (final t in expandedModule.typeDefs) {
+      types[t.name] = t;
+    }
+    final procs = <String, ProcDecl>{};
+    for (final p in expandedModule.procDeclarations) {
+      procs[p.qualifiedKey] = p;
+    }
+    final paramProcs = <String, ProcDecl>{};
+    for (final p in expandedModule.paramProcDecls) {
+      paramProcs[p.qualifiedKey] = p;
+    }
+    return env.merge(TypeEnvironment(types, procs,
+        paramProcDecls: paramProcs,
+        typeTemplates: selfTemplates));
   }
 
   ModuleInfo? _findModuleForProcedure(String procedureLabel) {

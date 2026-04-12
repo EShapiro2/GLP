@@ -91,12 +91,12 @@ IntroStream  ::= [] ; [IntroContent | IntroStream].
 IntroChannel ::= ch(IntroStream, IntroStream?).
 
 %% Intro result — written by intro_await_peer, injected into UserIn
-IntroResult ::= intro_result(Constant, Channel) ; intro_rejected(Constant).
+IntroResult ::= intro_result(Constant, FriendChannel) ; intro_rejected(Constant).
 
 %% Agent input stream element types
 %% UserIn carries msg/3 (from user and friend responses) and injected IntroResult
 UserInMsg ::= msg(Constant, Constant, UserContent)
-            ; intro_result(Constant, Channel)
+            ; intro_result(Constant, FriendChannel)
             ; intro_rejected(Constant).
 UserInStream ::= [] ; [UserInMsg | UserInStream].
 
@@ -120,7 +120,7 @@ NetInStream ::= [] ; [NetInMsg | NetInStream].
 
 %% Output list — keys distinguish system channels, friends, and children
 OutputKey   ::= '_user' ; '_net' ; friend(Constant) ; child(Constant).
-OutputEntry ::= output(OutputKey, Stream?).
+OutputEntry ::= output(OutputKey, _?).
 OutputsList ::= [] ; [OutputEntry|OutputsList].
 
 %% =============================================================================
@@ -190,7 +190,7 @@ new_channel(ch(Xs?, Ys), ch(Ys?, Xs)).
 %% MERGE
 %% =============================================================================
 
-procedure merge(Stream?, Stream?, Stream).
+procedure merge(_?, _?, _).
 merge([X|Xs], Ys, [X?|Zs?]) :- merge(Ys?, Xs?, Zs).
 merge(Xs, [Y|Ys], [Y?|Zs?]) :- merge(Xs?, Ys?, Zs).
 merge([], Ys, Ys?).
@@ -233,7 +233,7 @@ inject_msg(Resp, Target, Id, Epoch, [Y|Ys], [Y?|Ys1?]) :-
 %% ADD_OUTPUT
 %% =============================================================================
 
-procedure add_output(OutputKey?, Stream, OutputsList?, OutputsList).
+procedure add_output(OutputKey?, _, OutputsList?, OutputsList).
 add_output(Key, Out?, Outs, [output(Key?, Out)|Outs?]).
 
 %% =============================================================================
@@ -305,7 +305,7 @@ collect_friend_names([], [], []).
 %% Uses generic Channel because after the handshake the channel
 %% transitions from intro protocol to friend messaging protocol.
 
-procedure intro_await_peer(Constant?, Channel?, IntroResult).
+procedure intro_await_peer(Constant?, _?, IntroResult).
 
 %% Peer sent ack: write intro_result with the live channel
 intro_await_peer(Other, ch([ack(_)|ChIn], ChOut?),

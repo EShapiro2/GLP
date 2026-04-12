@@ -14,7 +14,7 @@ void main() {
   setUpAll(() {
     // Compile assign.glp - now SRSW compliant
     // Use relative path from glp_runtime directory
-    final stdlibSource = File('../programs/stdlib/assign.glp').readAsStringSync();
+    final stdlibSource = File('../programs/self.glp').readAsStringSync();
     final stdlibCompiler = GlpCompiler();
     stdlibProg = stdlibCompiler.compile(stdlibSource);
     print('Stdlib compiled: ${stdlibProg.ops.length} instructions');
@@ -218,7 +218,7 @@ void main() {
     test('assign.glp compiles and merges correctly', () {
       // Load stdlib (assign.glp) - now SRSW compliant
       // Use relative path from glp_runtime directory
-      final stdlibSource = File('../programs/stdlib/assign.glp').readAsStringSync();
+      final stdlibSource = File('../programs/self.glp').readAsStringSync();
       final stdlibCompiler = GlpCompiler();
       final stdlibProg = stdlibCompiler.compile(stdlibSource);
 
@@ -262,11 +262,12 @@ void main() {
 
       // Load stdlib (assign.glp) - now SRSW compliant
       // Use relative path from glp_runtime directory
-      final stdlibSource = File('../programs/stdlib/assign.glp').readAsStringSync();
+      final stdlibSource = File('../programs/self.glp').readAsStringSync();
       final stdlibCompiler = GlpCompiler();
       final stdlibProg = stdlibCompiler.compile(stdlibSource);
 
       // Compile user program
+      // Z? is reader in head; Z (writer) used by := in body
       final userSource = '''
         compute_sum(Z?) :- Z := 5 + 3.
       ''';
@@ -289,9 +290,9 @@ void main() {
       final sched = Scheduler(rt: rt, runner: runner);
 
       // Create environment with the result variable as argument
-      // The query is compute_sum(Result?) where Result is our allocated variable
+      // Pass writer so callee can write to it via :=
       final env = CallEnv(args: {
-        0: VarRef(resultReader),  // Pass reader to head position Z?
+        0: VarRef(resultWriter),  // Pass writer to head position Z
       });
 
       // Set up goal

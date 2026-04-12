@@ -1,0 +1,12 @@
+%% module_guard.glp — Test the module/1 type guard
+%%
+%% module/1 succeeds if argument is a ModuleTerm (compiled module binary).
+%% ModuleTerms are ground, so module/1 implies groundness (SRSW relaxation).
+%%
+%% Since ModuleTerm is created by the runtime's module activation infrastructure,
+%% we test the negative case here: ~module/1 on non-module values.
+
+-module(module_guard).
+
+exported procedure test_not_module(Integer?, Constant).
+test_not_module(X, not_module) :- ~module(X?) | true.

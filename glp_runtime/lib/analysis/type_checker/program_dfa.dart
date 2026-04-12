@@ -260,11 +260,11 @@ ProgramDFA buildProgramDFA(TypeEnvironment env) {
   }
 
   // Create procedure states (no complement)
-  for (final procKey in env.procedures.keys) {
-    states[procKey] = DFAState(procKey,
+  for (final entry in env.procedures.entries) {
+    states[entry.key] = DFAState(entry.key,
       isDual: false,
       isFinal: false,
-      isProcedure: true);  // Fix 3.1: mark as procedure
+      isProcedure: true);
   }
 
   // Build procedure automata
@@ -440,7 +440,7 @@ Mode _modeOf(TypeExpr typeExpr, Mode contextMode) {
 /// Implements spec algorithm: buildProcedureAutomaton
 Automaton _buildProcedureAutomaton(
     ProcDecl procDecl, Map<String, DFAState> states) {
-  final procState = states[procDecl.key]!;
+  final procState = states[procDecl.qualifiedKey]!;
   final transitions = <(DFAState, TransitionLabel), DFAState>{};
 
   for (var i = 0; i < procDecl.arity; i++) {

@@ -187,38 +187,8 @@ class ModuleDeclaration extends AstNode {
   String toString() => '-module($name).';
 }
 
-/// Export declaration: -export([pred/arity, ...]).
-class ExportDeclaration extends AstNode {
-  final List<ProcRef> exports;
-
-  ExportDeclaration(this.exports, int line, int column) : super(line, column);
-
-  @override
-  String toString() => '-export([${exports.join(", ")}]).';
-}
-
-/// Import declaration: -import([module1, module2, ...]).
-class ImportDeclaration extends AstNode {
-  final List<String> imports;
-
-  ImportDeclaration(this.imports, int line, int column) : super(line, column);
-
-  @override
-  String toString() => '-import([${imports.join(", ")}]).';
-}
-
-/// Procedure reference: pred/arity
-class ProcRef {
-  final String name;
-  final int arity;
-
-  ProcRef(this.name, this.arity);
-
-  String get signature => '$name/$arity';
-
-  @override
-  String toString() => signature;
-}
+// ExportDeclaration, ImportDeclaration, and ProcRef removed in Phase 1.
+// Visibility is now declared per-procedure via 'exported procedure'.
 
 /// Remote goal: Module # Goal
 /// Used for cross-module procedure calls
@@ -279,22 +249,18 @@ class SpawnGoal extends Goal {
 /// Complete module structure
 class Module extends AstNode {
   final ModuleDeclaration? declaration;
-  final List<ExportDeclaration> exports;
-  final List<ImportDeclaration> imports;
   final List<TypeDef> typeDefs;              // Type definitions: Name ::= alt ; alt.
-  final List<ProcDecl> procDeclarations;     // Procedure declarations: procedure name(Type?, Type).
+  final List<ProcDecl> procDeclarations;     // Procedure declarations (each with exported flag)
+  final List<ProcDecl> paramProcDecls;       // Parameterized proc decl templates (for call-site inference)
   final List<Procedure> procedures;
-  final bool isStdlib;  // true if -stdlib. declaration present
   final CompileMode compileMode;  // user (default) or system
 
   Module({
     this.declaration,
-    this.exports = const [],
-    this.imports = const [],
     this.typeDefs = const [],
     this.procDeclarations = const [],
+    this.paramProcDecls = const [],
     this.procedures = const [],
-    this.isStdlib = false,
     this.compileMode = CompileMode.user,
     required int line,
     required int column,
@@ -303,22 +269,13 @@ class Module extends AstNode {
   /// Get module name, or null if anonymous
   String? get name => declaration?.name;
 
-  /// Get all exported procedure signatures
+  /// Get all exported procedure signatures (from procedure declarations with exported=true)
   Set<String> get exportedSignatures {
     final result = <String>{};
-    for (final decl in exports) {
-      for (final ref in decl.exports) {
-        result.add(ref.signature);
+    for (final decl in procDeclarations) {
+      if (decl.exported) {
+        result.add(decl.key);
       }
-    }
-    return result;
-  }
-
-  /// Get all imported module names
-  List<String> get importedModules {
-    final result = <String>[];
-    for (final decl in imports) {
-      result.addAll(decl.imports);
     }
     return result;
   }

@@ -1,0 +1,275 @@
+%% actors.glp — Ground-term actors for the UI mediator
+%%
+%% Exports: alice1-3, bob1-3, charlie1-3
+%% Types: from ../self.glp (ancestor scoping)
+%% No cross-module imports — all helpers are local.
+
+-module(actors).
+-mode(system).
+
+%% =============================================================================
+%% PLAY 1 — Both accept introduction
+%% =============================================================================
+
+%% --- Alice (play1) ---
+
+exported procedure alice1(ActorChannel?).
+alice1(ch(In, [connect(bob)|Out?])) :-
+    alice1_wait_connected(In?, Out).
+
+procedure alice1_wait_connected(UserNotifyStream?, UserCmdStream).
+alice1_wait_connected([connected(bob)|In],
+                      [send(bob, hello)|Out?]) :-
+    alice1_wait_intro(In?, Out).
+alice1_wait_connected([_|In], Out?) :-
+    otherwise | alice1_wait_connected(In?, Out).
+alice1_wait_connected([], []).
+
+procedure alice1_wait_intro(UserNotifyStream?, UserCmdStream).
+alice1_wait_intro([befriend_intro(bob, charlie, ReqId)|In],
+                  [accept_intro(charlie, ReqId?)|Out?]) :-
+    ground(ReqId?) |
+    alice1_wait_charlie(In?, Out).
+alice1_wait_intro([_|In], Out?) :-
+    otherwise | alice1_wait_intro(In?, Out).
+alice1_wait_intro([], []).
+
+procedure alice1_wait_charlie(UserNotifyStream?, UserCmdStream).
+alice1_wait_charlie([connected(charlie)|In],
+                    [send(charlie, 'Hi Charlie')|Out?]) :-
+    alice1_wait_reply(In?, Out).
+alice1_wait_charlie([_|In], Out?) :-
+    otherwise | alice1_wait_charlie(In?, Out).
+alice1_wait_charlie([], []).
+
+procedure alice1_wait_reply(UserNotifyStream?, UserCmdStream).
+alice1_wait_reply([received(charlie, _)|_], []).
+alice1_wait_reply([_|In], Out?) :-
+    otherwise | alice1_wait_reply(In?, Out).
+alice1_wait_reply([], []).
+
+%% --- Bob (play1) ---
+
+exported procedure bob1(ActorChannel?).
+bob1(ch([befriend(alice, ReqId)|In],
+        [decision(yes, alice, ReqId?)|Out?])) :-
+    ground(ReqId?) |
+    bob1_wait_alice_msg(In?, Out).
+bob1(ch([_|In], Out?)) :-
+    otherwise | bob1(ch(In?, Out)).
+
+procedure bob1_wait_alice_msg(UserNotifyStream?, UserCmdStream).
+bob1_wait_alice_msg([connected(_)|In], Out?) :-
+    bob1_wait_alice_msg(In?, Out).
+bob1_wait_alice_msg([received(alice, _)|In],
+                    [connect(charlie)|Out?]) :-
+    bob1_wait_charlie_connected(In?, Out).
+bob1_wait_alice_msg([_|In], Out?) :-
+    otherwise | bob1_wait_alice_msg(In?, Out).
+bob1_wait_alice_msg([], []).
+
+procedure bob1_wait_charlie_connected(UserNotifyStream?, UserCmdStream).
+bob1_wait_charlie_connected([connected(charlie)|In], Out?) :-
+    bob1_wait_charlie_msg(In?, Out).
+bob1_wait_charlie_connected([_|In], Out?) :-
+    otherwise | bob1_wait_charlie_connected(In?, Out).
+bob1_wait_charlie_connected([], []).
+
+procedure bob1_wait_charlie_msg(UserNotifyStream?, UserCmdStream).
+bob1_wait_charlie_msg([received(charlie, _)|_],
+                      [introduce(alice, charlie)]).
+bob1_wait_charlie_msg([_|In], Out?) :-
+    otherwise | bob1_wait_charlie_msg(In?, Out).
+bob1_wait_charlie_msg([], []).
+
+%% --- Charlie (play1) ---
+
+exported procedure charlie1(ActorChannel?).
+charlie1(ch([befriend(bob, ReqId)|In],
+            [decision(yes, bob, ReqId?),
+             send(bob, hello)|Out?])) :-
+    ground(ReqId?) |
+    charlie1_wait_intro(In?, Out).
+charlie1(ch([_|In], Out?)) :-
+    otherwise | charlie1(ch(In?, Out)).
+
+procedure charlie1_wait_intro(UserNotifyStream?, UserCmdStream).
+charlie1_wait_intro([befriend_intro(bob, alice, ReqId)|In],
+                    [accept_intro(alice, ReqId?)|Out?]) :-
+    ground(ReqId?) |
+    charlie1_wait_alice_msg(In?, Out).
+charlie1_wait_intro([_|In], Out?) :-
+    otherwise | charlie1_wait_intro(In?, Out).
+charlie1_wait_intro([], []).
+
+procedure charlie1_wait_alice_msg(UserNotifyStream?, UserCmdStream).
+charlie1_wait_alice_msg([received(alice, _)|_],
+                        [send(alice, 'Hi Alice')]).
+charlie1_wait_alice_msg([_|In], Out?) :-
+    otherwise | charlie1_wait_alice_msg(In?, Out).
+charlie1_wait_alice_msg([], []).
+
+%% =============================================================================
+%% PLAY 2 — Alice accepts, Charlie rejects
+%% =============================================================================
+
+%% --- Alice (play2) ---
+
+exported procedure alice2(ActorChannel?).
+alice2(ch(In, [connect(bob)|Out?])) :-
+    alice2_wait_connected(In?, Out).
+
+procedure alice2_wait_connected(UserNotifyStream?, UserCmdStream).
+alice2_wait_connected([connected(bob)|In],
+                      [send(bob, hello)|Out?]) :-
+    alice2_wait_intro(In?, Out).
+alice2_wait_connected([_|In], Out?) :-
+    otherwise | alice2_wait_connected(In?, Out).
+alice2_wait_connected([], []).
+
+procedure alice2_wait_intro(UserNotifyStream?, UserCmdStream).
+alice2_wait_intro([befriend_intro(bob, charlie, ReqId)|In],
+                  [accept_intro(charlie, ReqId?)|Out?]) :-
+    ground(ReqId?) |
+    alice2_wait_rejected(In?, Out).
+alice2_wait_intro([_|In], Out?) :-
+    otherwise | alice2_wait_intro(In?, Out).
+alice2_wait_intro([], []).
+
+procedure alice2_wait_rejected(UserNotifyStream?, UserCmdStream).
+alice2_wait_rejected([rejected(charlie)|_], []).
+alice2_wait_rejected([_|In], Out?) :-
+    otherwise | alice2_wait_rejected(In?, Out).
+alice2_wait_rejected([], []).
+
+%% --- Bob (play2) — same as play1 ---
+
+exported procedure bob2(ActorChannel?).
+bob2(ch([befriend(alice, ReqId)|In],
+        [decision(yes, alice, ReqId?)|Out?])) :-
+    ground(ReqId?) |
+    bob2_wait_alice_msg(In?, Out).
+bob2(ch([_|In], Out?)) :-
+    otherwise | bob2(ch(In?, Out)).
+
+procedure bob2_wait_alice_msg(UserNotifyStream?, UserCmdStream).
+bob2_wait_alice_msg([connected(_)|In], Out?) :-
+    bob2_wait_alice_msg(In?, Out).
+bob2_wait_alice_msg([received(alice, _)|In],
+                    [connect(charlie)|Out?]) :-
+    bob2_wait_charlie_connected(In?, Out).
+bob2_wait_alice_msg([_|In], Out?) :-
+    otherwise | bob2_wait_alice_msg(In?, Out).
+bob2_wait_alice_msg([], []).
+
+procedure bob2_wait_charlie_connected(UserNotifyStream?, UserCmdStream).
+bob2_wait_charlie_connected([connected(charlie)|In], Out?) :-
+    bob2_wait_charlie_msg(In?, Out).
+bob2_wait_charlie_connected([_|In], Out?) :-
+    otherwise | bob2_wait_charlie_connected(In?, Out).
+bob2_wait_charlie_connected([], []).
+
+procedure bob2_wait_charlie_msg(UserNotifyStream?, UserCmdStream).
+bob2_wait_charlie_msg([received(charlie, _)|_],
+                      [introduce(alice, charlie)]).
+bob2_wait_charlie_msg([_|In], Out?) :-
+    otherwise | bob2_wait_charlie_msg(In?, Out).
+bob2_wait_charlie_msg([], []).
+
+%% --- Charlie (play2) ---
+
+exported procedure charlie2(ActorChannel?).
+charlie2(ch([befriend(bob, ReqId)|In],
+            [decision(yes, bob, ReqId?),
+             send(bob, hello)|Out?])) :-
+    ground(ReqId?) |
+    charlie2_wait_intro(In?, Out).
+charlie2(ch([_|In], Out?)) :-
+    otherwise | charlie2(ch(In?, Out)).
+
+procedure charlie2_wait_intro(UserNotifyStream?, UserCmdStream).
+charlie2_wait_intro([befriend_intro(bob, alice, ReqId)|_],
+                    [reject_intro(alice, ReqId?)]) :-
+    ground(ReqId?) | true.
+charlie2_wait_intro([_|In], Out?) :-
+    otherwise | charlie2_wait_intro(In?, Out).
+charlie2_wait_intro([], []).
+
+%% =============================================================================
+%% PLAY 3 — Both reject introduction
+%% =============================================================================
+
+%% --- Alice (play3) ---
+
+exported procedure alice3(ActorChannel?).
+alice3(ch(In, [connect(bob)|Out?])) :-
+    alice3_wait_connected(In?, Out).
+
+procedure alice3_wait_connected(UserNotifyStream?, UserCmdStream).
+alice3_wait_connected([connected(bob)|In],
+                      [send(bob, hello)|Out?]) :-
+    alice3_wait_intro(In?, Out).
+alice3_wait_connected([_|In], Out?) :-
+    otherwise | alice3_wait_connected(In?, Out).
+alice3_wait_connected([], []).
+
+procedure alice3_wait_intro(UserNotifyStream?, UserCmdStream).
+alice3_wait_intro([befriend_intro(bob, charlie, ReqId)|_],
+                  [reject_intro(charlie, ReqId?)]) :-
+    ground(ReqId?) | true.
+alice3_wait_intro([_|In], Out?) :-
+    otherwise | alice3_wait_intro(In?, Out).
+alice3_wait_intro([], []).
+
+%% --- Bob (play3) — same as play1 ---
+
+exported procedure bob3(ActorChannel?).
+bob3(ch([befriend(alice, ReqId)|In],
+        [decision(yes, alice, ReqId?)|Out?])) :-
+    ground(ReqId?) |
+    bob3_wait_alice_msg(In?, Out).
+bob3(ch([_|In], Out?)) :-
+    otherwise | bob3(ch(In?, Out)).
+
+procedure bob3_wait_alice_msg(UserNotifyStream?, UserCmdStream).
+bob3_wait_alice_msg([connected(_)|In], Out?) :-
+    bob3_wait_alice_msg(In?, Out).
+bob3_wait_alice_msg([received(alice, _)|In],
+                    [connect(charlie)|Out?]) :-
+    bob3_wait_charlie_connected(In?, Out).
+bob3_wait_alice_msg([_|In], Out?) :-
+    otherwise | bob3_wait_alice_msg(In?, Out).
+bob3_wait_alice_msg([], []).
+
+procedure bob3_wait_charlie_connected(UserNotifyStream?, UserCmdStream).
+bob3_wait_charlie_connected([connected(charlie)|In], Out?) :-
+    bob3_wait_charlie_msg(In?, Out).
+bob3_wait_charlie_connected([_|In], Out?) :-
+    otherwise | bob3_wait_charlie_connected(In?, Out).
+bob3_wait_charlie_connected([], []).
+
+procedure bob3_wait_charlie_msg(UserNotifyStream?, UserCmdStream).
+bob3_wait_charlie_msg([received(charlie, _)|_],
+                      [introduce(alice, charlie)]).
+bob3_wait_charlie_msg([_|In], Out?) :-
+    otherwise | bob3_wait_charlie_msg(In?, Out).
+bob3_wait_charlie_msg([], []).
+
+%% --- Charlie (play3) ---
+
+exported procedure charlie3(ActorChannel?).
+charlie3(ch([befriend(bob, ReqId)|In],
+            [decision(yes, bob, ReqId?),
+             send(bob, hello)|Out?])) :-
+    ground(ReqId?) |
+    charlie3_wait_intro(In?, Out).
+charlie3(ch([_|In], Out?)) :-
+    otherwise | charlie3(ch(In?, Out)).
+
+procedure charlie3_wait_intro(UserNotifyStream?, UserCmdStream).
+charlie3_wait_intro([befriend_intro(bob, alice, ReqId)|_],
+                    [reject_intro(alice, ReqId?)]) :-
+    ground(ReqId?) | true.
+charlie3_wait_intro([_|In], Out?) :-
+    otherwise | charlie3_wait_intro(In?, Out).
+charlie3_wait_intro([], []).

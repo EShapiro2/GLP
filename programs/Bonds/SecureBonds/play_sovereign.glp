@@ -1,0 +1,102 @@
+%% play_sovereign.glp — Demonstrate sovereign stream with custodian finality
+%%
+%% Scenario: Alice is sovereign of alice-coins.
+%%   1. Alice mints 10 coins
+%%   2. Bob (who holds some alice-coins) pays Charlie 3 alice-coins
+%%   3. The sovereign (Alice) approves the payment
+%%   4. A custodian (Diana) acknowledges the approval
+%%   5. Alice observes Diana's acknowledgment — transaction is final
+%%
+%% All agents are friends (minimal constraint).
+
+-mode(system).
+
+%% =============================================================================
+%% TYPES
+%% =============================================================================
+
+Bond     ::= bond(Constant, Constant, Constant).
+BondList ::= [] ; [Bond | BondList].
+
+TxRecord ::= tx_mint(Constant, Constant)
+            ; tx_pay(Constant, Constant, BondList).
+
+SovBlock  ::= block(Constant, TxRecord).
+SovStream ::= [] ; [SovBlock | SovStream].
+
+AckMsg    ::= ack(Constant).
+AckStream ::= [] ; [AckMsg | AckStream].
+
+ApprovalReq    ::= approve(TxRecord, Constant?).
+ApprovalStream ::= [] ; [ApprovalReq | ApprovalStream].
+
+%% =============================================================================
+%% CUSTODIAN MIRROR (from sovereign.glp)
+%% =============================================================================
+
+procedure custodian_mirror(SovStream?, AckStream).
+
+custodian_mirror([block(TxId, _)|SovRest], [ack(TxId?)|AckRest?]) :-
+    custodian_mirror(SovRest?, AckRest).
+
+custodian_mirror([], []).
+
+%% =============================================================================
+%% SOVEREIGN PROCESS (from sovereign.glp)
+%% =============================================================================
+
+procedure sovereign(ApprovalStream?, AckStream?, Constant?, SovStream).
+
+sovereign([approve(TxRecord, Finality?)|Requests], Acks, Counter,
+    [block(Counter?, TxRecord?)|SovTail?]) :-
+    Counter1 := Counter? + 1,
+    wait_ack(Counter?, Acks?, Finality, AcksRest),
+    sovereign(Requests?, AcksRest?, Counter1?, SovTail).
+
+sovereign([], _, _, []).
+
+%% =============================================================================
+%% WAIT_ACK (from sovereign.glp)
+%% =============================================================================
+
+procedure wait_ack(Constant?, AckStream?, Constant, AckStream).
+
+wait_ack(TxId, [ack(Id)|Rest], finalized, Rest?) :-
+    TxId? =?= Id? | true.
+
+wait_ack(TxId, [Ack|Rest], Finality?, [Ack?|Rest1?]) :-
+    otherwise |
+    wait_ack(TxId?, Rest?, Finality, Rest1).
+
+%% =============================================================================
+%% FINALITY OBSERVER — waits for finality then prints
+%% =============================================================================
+
+procedure observe_finality(Constant?, Constant?, Constant?).
+
+observe_finality(Label, TxId, finalized) :-
+    ground(Label?), ground(TxId?) |
+    true.  %% Transaction TxId is final
+
+%% =============================================================================
+%% PLAY
+%% =============================================================================
+
+procedure play.
+play :-
+    %% Set up sovereign (Alice) with one custodian (Diana)
+    %% SovStream is written by sovereign, read by custodian
+    custodian_mirror(SovStream?, AckStream),
+    sovereign(Requests?, AckStream?, 1, SovStream),
+
+    %% Submit approval requests
+    Requests = [
+        approve(tx_mint(10, 0), MintFinality?) ,
+        approve(tx_pay(bob, charlie,
+            [bond(alice, 0, 1), bond(alice, 0, 2), bond(alice, 0, 3)]),
+            PayFinality?)
+    ],
+
+    %% Observe finality
+    observe_finality(mint, 1, MintFinality?),
+    observe_finality(pay, 2, PayFinality?).

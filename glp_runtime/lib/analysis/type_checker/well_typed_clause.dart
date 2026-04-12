@@ -265,7 +265,8 @@ ClauseCheckResult checkClause(
   // Step 2: Check each body atom
   for (int i = 0; i < clause.bodyAtoms.length; i++) {
     final atom = clause.bodyAtoms[i];
-    final (atomResult, modedAtomTerm) = _checkBodyAtomWithTerm(atom, i, dfa, env);
+    final (atomResult, modedAtomTerm) = _checkBodyAtomWithTerm(atom, i, dfa, env,
+        callerVarTypes: allVariableTypes);
 
     if (modedAtomTerm != null) {
       constructedModedBodyAtoms.add(modedAtomTerm);
@@ -463,9 +464,11 @@ WellTypedResult _checkBodyAtom(
   ast.Goal atom,
   int atomIndex,
   ProgramDFA dfa,
-  TypeEnvironment env,
-) {
-  final (result, _) = _checkBodyAtomWithTerm(atom, atomIndex, dfa, env);
+  TypeEnvironment env, {
+  Map<String, VariableTypeInfo>? callerVarTypes,
+}) {
+  final (result, _) = _checkBodyAtomWithTerm(atom, atomIndex, dfa, env,
+      callerVarTypes: callerVarTypes);
   return result;
 }
 
@@ -475,21 +478,28 @@ WellTypedResult _checkBodyAtom(
   ast.Goal atom,
   int atomIndex,
   ProgramDFA dfa,
-  TypeEnvironment env,
-) {
+  TypeEnvironment env, {
+  Map<String, VariableTypeInfo>? callerVarTypes,
+}) {
   // Handle SpawnGoal (Goal@Agent) - type-check the inner goal
   if (atom is ast.SpawnGoal) {
     // Recursively type-check the inner goal
-    return _checkBodyAtomWithTerm(atom.innerGoal, atomIndex, dfa, env);
+    return _checkBodyAtomWithTerm(atom.innerGoal, atomIndex, dfa, env,
+        callerVarTypes: callerVarTypes);
   }
 
-  // Skip builtin goals (true, otherwise, :=, #)
+  // Handle RemoteGoal (M # proc(...)) - type-check against imported declaration
+  if (atom is ast.RemoteGoal) {
+    return _checkRemoteGoal(atom, atomIndex, dfa, env);
+  }
+
+  // Skip builtin goals (true, otherwise, :=)
   if (isBuiltinGoal(atom.functor)) {
     return (WellTypedResult.success({}), null);
   }
 
   // Look up procedure declaration
-  final procDecl = env.getProcedure(atom.functor, atom.arity);
+  var procDecl = env.getProcedure(atom.functor, atom.arity);
   if (procDecl == null) {
     return (WellTypedResult.failure([
       InconsistentPathError(
@@ -503,11 +513,101 @@ WellTypedResult _checkBodyAtom(
     ]), null);
   }
 
+  // Case B: Call-site instantiation for parameterized procedures.
+  // If a parameterized template exists, try to infer type param bindings
+  // from the caller's variable types and create a concrete proc decl.
+  final paramTemplate = env.paramProcDecls[procDecl.key];
+  if (paramTemplate != null) {
+    if (callerVarTypes != null && callerVarTypes.isNotEmpty) {
+      final inferredDecl = _inferConcreteDecl(paramTemplate, atom, callerVarTypes, dfa, env);
+      if (inferredDecl != null) {
+        procDecl = inferredDecl;
+      } else {
+        // Inference failed (e.g., caller uses monomorphic types like NetInStream
+        // instead of parameterized Stream<NetInMsg>). Skip body atom check —
+        // the proc's own clauses are already checked via Case A (wildcard instantiation).
+        return (WellTypedResult.success({}), null);
+      }
+    } else {
+      // No caller variable types available — can't infer type params.
+      // Skip body atom check; Case A covers the proc's own clauses.
+      return (WellTypedResult.success({}), null);
+    }
+  }
+
   // Build produced term (no variable flip for body atoms)
   try {
     final modedAtomTerm = producedTerm(atom, procDecl, typeEnv: env);
 
     // Check each argument against its declared type's automaton
+    final result = _checkModedTermPerArg(modedAtomTerm, procDecl, dfa);
+    return (result, modedAtomTerm);
+  } on ArityMismatchError catch (e) {
+    return (WellTypedResult.failure([
+      InconsistentPathError(
+        ModedPath([PathStep(symbol: e.message, argIndex: 0, mode: Mode.produce)]),
+        e.message,
+      ),
+    ]), null);
+  }
+}
+
+/// Check a remote goal (M # proc(...)) against the imported procedure declaration.
+///
+/// Per spec Section 5.1: type checking is local — we look up the imported
+/// declaration in the local TypeEnvironment, not the remote module.
+///
+/// Dynamic dispatch (variable module) is skipped — can't resolve at compile time.
+(WellTypedResult, ModedTerm?) _checkRemoteGoal(
+  ast.RemoteGoal remote,
+  int atomIndex,
+  ProgramDFA dfa,
+  TypeEnvironment env,
+) {
+  // Dynamic dispatch (variable module) — skip type checking
+  if (remote.isDynamic) {
+    return (WellTypedResult.success({}), null);
+  }
+
+  // Flatten nested RemoteGoals to extract full module path and actual goal.
+  // Example: ui#actors # render(X?) parses as RemoteGoal(ui, RemoteGoal(actors, render(X?)))
+  // We need: modulePath = "ui#actors", innerGoal = render(X?)
+  final pathParts = <String>[];
+  ast.Goal innerGoal = remote;
+  while (innerGoal is ast.RemoteGoal) {
+    final rg = innerGoal as ast.RemoteGoal;
+    if (rg.isDynamic) {
+      // If any part of the path is dynamic, skip type checking
+      return (WellTypedResult.success({}), null);
+    }
+    pathParts.add(rg.staticModuleName!);
+    innerGoal = rg.goal;
+  }
+  final modulePath = pathParts.join('#');
+  final goalFunctor = innerGoal.functor;
+  final goalArity = innerGoal.arity;
+
+  // Look up: 'modulePath#goalFunctor/arity'
+  final qualifiedKey = '$modulePath#$goalFunctor/$goalArity';
+  final procDecl = env.procedures[qualifiedKey];
+
+  if (procDecl == null) {
+    return (WellTypedResult.failure([
+      InconsistentPathError(
+        ModedPath([PathStep(
+          symbol: qualifiedKey,
+          argIndex: 0,
+          mode: Mode.produce,
+        )]),
+        'No imported declaration for $modulePath#$goalFunctor/$goalArity — '
+        'add "imported procedure $modulePath#$goalFunctor(...)" to this module',
+      ),
+    ]), null);
+  }
+
+  // Type-check the inner goal's arguments against the imported declaration
+  try {
+    final modedAtomTerm = producedTerm(innerGoal, procDecl, typeEnv: env);
     final result = _checkModedTermPerArg(modedAtomTerm, procDecl, dfa);
     return (result, modedAtomTerm);
   } on ArityMismatchError catch (e) {
@@ -791,4 +891,155 @@ bool _areDualTypes(VariableTypeInfo writerInfo, VariableTypeInfo readerInfo) {
   }
 
   return (true, null);
+}
+
+// =============================================================================
+// Case B: Call-site instantiation for parameterized procedures
+// =============================================================================
+
+/// Infer a concrete proc decl by matching a parameterized template against
+/// the actual argument types at a call site.
+///
+/// Returns null if inference fails (e.g., no matching variable types found).
+ProcDecl? _inferConcreteDecl(
+  ProcDecl paramTemplate,
+  ast.Goal atom,
+  Map<String, VariableTypeInfo> callerVarTypes,
+  ProgramDFA dfa,
+  TypeEnvironment env,
+) {
+  final bindings = <String, String>{}; // typeParam -> concreteTypeName
+
+  // For each argument, try to infer type param bindings
+  for (int i = 0; i < paramTemplate.arity && i < atom.args.length; i++) {
+    final declaredType = paramTemplate.argTypes[i];
+    final actualArg = atom.args[i];
+
+    // Get the actual variable's type from callerVarTypes
+    String? actualTypeName;
+    if (actualArg is ast.VarTerm) {
+      final varKey = actualArg.isReader ? '${actualArg.name}?' : actualArg.name;
+      final info = callerVarTypes[varKey];
+      if (info != null) {
+        actualTypeName = info.typeState.baseName;
+      }
+    }
+    if (actualTypeName == null) continue;
+
+    // Match declared type against actual type to extract bindings
+    _matchTypeForInference(declaredType, actualTypeName, paramTemplate.typeParams, bindings);
+  }
+
+  // If no bindings found, can't infer — fall back to wildcard version
+  if (bindings.isEmpty) return null;
+
+  // Check all type params are bound
+  for (final tp in paramTemplate.typeParams) {
+    if (!bindings.containsKey(tp)) return null;
+  }
+
+  // Create concrete arg types by substituting bindings
+  final concreteArgTypes = <TypeExpr>[];
+  for (final argType in paramTemplate.argTypes) {
+    concreteArgTypes.add(_substituteTypeParams(argType, bindings));
+  }
+
+  // Verify all referenced types exist in the DFA
+  for (final argType in concreteArgTypes) {
+    final typeName = getFullTypeName(argType);
+    if (!dfa.automata.containsKey(typeName)) {
+      return null; // Type doesn't exist in DFA — can't use this instantiation
+    }
+  }
+
+  return ProcDecl(paramTemplate.name, concreteArgTypes,
+      paramTemplate.line, paramTemplate.column,
+      exported: paramTemplate.exported,
+      imported: paramTemplate.imported,
+      modulePath: paramTemplate.modulePath);
+}
+
+/// Match a declared type expression against an actual type name to infer
+/// type parameter bindings.
+void _matchTypeForInference(
+  TypeExpr declaredType,
+  String actualTypeName,
+  List<String> typeParams,
+  Map<String, String> bindings,
+) {
+  if (declaredType is TypeRef) {
+    if (declaredType.typeArgs.isEmpty && typeParams.contains(declaredType.name)) {
+      // Bare type parameter: X → actualTypeName
+      bindings.putIfAbsent(declaredType.name, () => actualTypeName);
+      return;
+    }
+
+    if (declaredType.typeArgs.isNotEmpty) {
+      // Parameterized type ref: Stream(X) vs Stream<AgentMsg>
+      // Parse the actual type name to extract template and args
+      final ltIdx = actualTypeName.indexOf('<');
+      if (ltIdx < 0) return; // actual is not parameterized, can't match
+
+      final actualTemplate = actualTypeName.substring(0, ltIdx);
+      if (actualTemplate != declaredType.name) return; // template name mismatch
+
+      // Extract actual type args from "Stream<AgentMsg>" format
+      final argsStr = actualTypeName.substring(ltIdx + 1, actualTypeName.length - 1);
+      final actualArgs = _splitTypeArgs(argsStr);
+
+      if (actualArgs.length != declaredType.typeArgs.length) return;
+
+      for (int j = 0; j < actualArgs.length; j++) {
+        final declArg = declaredType.typeArgs[j];
+        if (declArg is TypeRef && declArg.typeArgs.isEmpty && typeParams.contains(declArg.name)) {
+          bindings.putIfAbsent(declArg.name, () => actualArgs[j]);
+        }
+      }
+    }
+  }
+}
+
+/// Split comma-separated type args, respecting nested angle brackets.
+List<String> _splitTypeArgs(String s) {
+  final result = <String>[];
+  var depth = 0;
+  var start = 0;
+  for (int i = 0; i < s.length; i++) {
+    if (s[i] == '<') depth++;
+    if (s[i] == '>') depth--;
+    if (s[i] == ',' && depth == 0) {
+      result.add(s.substring(start, i).trim());
+      start = i + 1;
+    }
+  }
+  if (start < s.length) {
+    result.add(s.substring(start).trim());
+  }
+  return result;
+}
+
+/// Substitute type parameter names in a TypeExpr with concrete type names.
+TypeExpr _substituteTypeParams(TypeExpr expr, Map<String, String> bindings) {
+  if (expr is TypeRef) {
+    if (expr.typeArgs.isEmpty && bindings.containsKey(expr.name)) {
+      // Bare type param → concrete type name
+      return TypeRef(bindings[expr.name]!, expr.line, expr.column, isInput: expr.isInput);
+    }
+    if (expr.typeArgs.isNotEmpty) {
+      // Parameterized ref: substitute args and create expanded name
+      final newArgs = expr.typeArgs.map((a) => _substituteTypeParams(a, bindings)).toList();
+      // Check if all args are now concrete (no more type params)
+      final allConcrete = newArgs.every((a) =>
+          a is TypeRef && a.typeArgs.isEmpty && !bindings.containsKey(a.name));
+      if (allConcrete) {
+        // Create expanded name: Stream<AgentMsg>
+        final expandedName = '${expr.name}<${newArgs.map((a) => (a as TypeRef).name).join(',')}>';
+        return TypeRef(expandedName, expr.line, expr.column, isInput: expr.isInput);
+      }
+      return TypeRef(expr.name, expr.line, expr.column, isInput: expr.isInput, typeArgs: newArgs);
+    }
+    return expr;
+  }
+  if (expr is PrimitiveModeAlt) return expr;
+  return expr;
 }
