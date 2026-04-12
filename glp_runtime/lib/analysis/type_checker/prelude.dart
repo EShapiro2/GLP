@@ -87,6 +87,7 @@ procedure map_get(_?, _?, _).
 procedure map_remove(_?, _?, _).
 procedure map_keys(_?, _).
 procedure map_show(_?, _?, _).
+procedure fofmap_show(_?, _?, _).
 procedure map_list_append(_?, _?, _?, _).
 procedure _copy(_?, _).
 procedure _list_to_tuple(_?, _).
@@ -203,6 +204,7 @@ const Set<String> predefinedProcedureNames = {
   'map_remove',
   'map_keys',
   'map_show',
+  'fofmap_show',
   'map_list_append',
   '_copy',
   '_list_to_tuple',
@@ -278,6 +280,7 @@ const Set<String> builtinProcedures = {
   'map_remove/3',
   'map_keys/2',
   'map_show/3',
+  'fofmap_show/3',
   'map_list_append/4',
   '_copy/2',
   '_list_to_tuple/2',

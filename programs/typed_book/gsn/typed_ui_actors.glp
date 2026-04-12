@@ -1440,3 +1440,253 @@ dave15_wait_connected([connected(bob)|_], []).
 dave15_wait_connected([_|In], Out?) :-
     otherwise | dave15_wait_connected(In?, Out).
 dave15_wait_connected([], []).
+
+%% =============================================================================
+%% PLAY 16 — Epoch increment test
+%% Alice connects Bob, Bob accepts, Alice unfriends Bob, Alice reconnects Bob,
+%% Bob accepts again. Expected: FMap shows epoch=2 on reconnect.
+%% =============================================================================
+
+%% --- Alice (play16) ---
+%% 1. connect(bob)
+%% 2. Wait connected(bob) → unfriend(bob)
+%% 3. Wait unfriended(bob) → connect(bob)
+%% 4. Wait connected(bob) → done
+
+procedure alice16(ActorChannel?).
+alice16(ch(In, [connect(bob)|Out?])) :-
+    alice16_wait_connected1(In?, Out).
+
+procedure alice16_wait_connected1(UserNotifyStream?, UserCmdStream).
+alice16_wait_connected1([connected(bob)|In],
+                        [unfriend(bob)|Out?]) :-
+    alice16_wait_unfriended(In?, Out).
+alice16_wait_connected1([_|In], Out?) :-
+    otherwise | alice16_wait_connected1(In?, Out).
+alice16_wait_connected1([], []).
+
+procedure alice16_wait_unfriended(UserNotifyStream?, UserCmdStream).
+alice16_wait_unfriended([unfriended(bob)|In],
+                        [connect(bob)|Out?]) :-
+    alice16_wait_connected2(In?, Out).
+alice16_wait_unfriended([_|In], Out?) :-
+    otherwise | alice16_wait_unfriended(In?, Out).
+alice16_wait_unfriended([], []).
+
+procedure alice16_wait_connected2(UserNotifyStream?, UserCmdStream).
+alice16_wait_connected2([connected(bob)|_], []).
+alice16_wait_connected2([_|In], Out?) :-
+    otherwise | alice16_wait_connected2(In?, Out).
+alice16_wait_connected2([], []).
+
+%% --- Bob (play16) ---
+%% 1. Wait befriend(alice, _, ReqId) → decision(yes, alice, ReqId)
+%% 2. Wait connected(alice) → wait unfriended(alice)
+%% 3. Wait befriend(alice, _, ReqId2) → decision(yes, alice, ReqId2)
+%% 4. Wait connected(alice) → done
+
+procedure bob16(ActorChannel?).
+bob16(ch([befriend(alice, _, ReqId)|In],
+         [decision(yes, alice, ReqId?)|Out?])) :-
+    ground(ReqId?) |
+    bob16_wait_connected1(In?, Out).
+bob16(ch([_|In], Out?)) :-
+    otherwise | bob16(ch(In?, Out)).
+
+procedure bob16_wait_connected1(UserNotifyStream?, UserCmdStream).
+bob16_wait_connected1([connected(alice)|In], Out?) :-
+    bob16_wait_unfriended(In?, Out).
+bob16_wait_connected1([_|In], Out?) :-
+    otherwise | bob16_wait_connected1(In?, Out).
+bob16_wait_connected1([], []).
+
+procedure bob16_wait_unfriended(UserNotifyStream?, UserCmdStream).
+bob16_wait_unfriended([unfriended(alice)|In], Out?) :-
+    bob16_wait_befriend2(In?, Out).
+bob16_wait_unfriended([_|In], Out?) :-
+    otherwise | bob16_wait_unfriended(In?, Out).
+bob16_wait_unfriended([], []).
+
+procedure bob16_wait_befriend2(UserNotifyStream?, UserCmdStream).
+bob16_wait_befriend2([befriend(alice, _, ReqId)|In],
+                     [decision(yes, alice, ReqId?)|Out?]) :-
+    ground(ReqId?) |
+    bob16_wait_connected2(In?, Out).
+bob16_wait_befriend2([_|In], Out?) :-
+    otherwise | bob16_wait_befriend2(In?, Out).
+bob16_wait_befriend2([], []).
+
+procedure bob16_wait_connected2(UserNotifyStream?, UserCmdStream).
+bob16_wait_connected2([connected(alice)|_], []).
+bob16_wait_connected2([_|In], Out?) :-
+    otherwise | bob16_wait_connected2(In?, Out).
+bob16_wait_connected2([], []).
+
+%% =============================================================================
+%% PLAY 17 — FoFMap verification: 3 agents all befriend
+%% Alice connects Bob, Bob accepts. Bob connects Charlie, Charlie accepts.
+%% Alice gets update_befriend(bob, charlie). Then done.
+%% =============================================================================
+
+%% --- Alice (play17) ---
+%% 1. connect(bob)
+%% 2. Wait connected(bob) → wait update_befriend(bob, charlie) → done
+
+procedure alice17(ActorChannel?).
+alice17(ch(In, [connect(bob)|Out?])) :-
+    alice17_wait_connected(In?, Out).
+
+procedure alice17_wait_connected(UserNotifyStream?, UserCmdStream).
+alice17_wait_connected([connected(bob)|In], Out?) :-
+    alice17_wait_update(In?, Out).
+alice17_wait_connected([_|In], Out?) :-
+    otherwise | alice17_wait_connected(In?, Out).
+alice17_wait_connected([], []).
+
+procedure alice17_wait_update(UserNotifyStream?, UserCmdStream).
+alice17_wait_update([update_befriend(bob, charlie)|_], []).
+alice17_wait_update([_|In], Out?) :-
+    otherwise | alice17_wait_update(In?, Out).
+alice17_wait_update([], []).
+
+%% --- Bob (play17) ---
+%% 1. Wait befriend(alice, _, ReqId) → decision(yes, alice, ReqId)
+%% 2. Wait connected(alice) → connect(charlie)
+%% 3. Wait connected(charlie) → done
+
+procedure bob17(ActorChannel?).
+bob17(ch([befriend(alice, _, ReqId)|In],
+         [decision(yes, alice, ReqId?)|Out?])) :-
+    ground(ReqId?) |
+    bob17_wait_connected_alice(In?, Out).
+bob17(ch([_|In], Out?)) :-
+    otherwise | bob17(ch(In?, Out)).
+
+procedure bob17_wait_connected_alice(UserNotifyStream?, UserCmdStream).
+bob17_wait_connected_alice([connected(alice)|In],
+                           [connect(charlie)|Out?]) :-
+    bob17_wait_connected_charlie(In?, Out).
+bob17_wait_connected_alice([_|In], Out?) :-
+    otherwise | bob17_wait_connected_alice(In?, Out).
+bob17_wait_connected_alice([], []).
+
+procedure bob17_wait_connected_charlie(UserNotifyStream?, UserCmdStream).
+bob17_wait_connected_charlie([connected(charlie)|_], []).
+bob17_wait_connected_charlie([_|In], Out?) :-
+    otherwise | bob17_wait_connected_charlie(In?, Out).
+bob17_wait_connected_charlie([], []).
+
+%% --- Charlie (play17) ---
+%% 1. Wait befriend(bob, _, ReqId) → decision(yes, bob, ReqId)
+%% 2. Wait connected(bob) → done
+
+procedure charlie17(ActorChannel?).
+charlie17(ch([befriend(bob, _, ReqId)|In],
+             [decision(yes, bob, ReqId?)|Out?])) :-
+    ground(ReqId?) |
+    charlie17_wait_connected(In?, Out).
+charlie17(ch([_|In], Out?)) :-
+    otherwise | charlie17(ch(In?, Out)).
+
+procedure charlie17_wait_connected(UserNotifyStream?, UserCmdStream).
+charlie17_wait_connected([connected(bob)|_], []).
+charlie17_wait_connected([_|In], Out?) :-
+    otherwise | charlie17_wait_connected(In?, Out).
+charlie17_wait_connected([], []).
+
+%% =============================================================================
+%% PLAY 18 — Full cycle with 3 agents
+%% Alice connects Bob, Bob accepts. Alice connects Charlie, Charlie accepts.
+%% Bob gets update_befriend(alice, charlie). Alice unfriends Charlie.
+%% Bob gets update_unfriend(alice, charlie). Done.
+%% =============================================================================
+
+%% --- Alice (play18) ---
+%% 1. connect(bob)
+%% 2. Wait connected(bob) → connect(charlie)
+%% 3. Wait connected(charlie) → unfriend(charlie)
+%% 4. Wait unfriended(charlie) → done
+
+procedure alice18(ActorChannel?).
+alice18(ch(In, [connect(bob)|Out?])) :-
+    alice18_wait_connected_bob(In?, Out).
+
+procedure alice18_wait_connected_bob(UserNotifyStream?, UserCmdStream).
+alice18_wait_connected_bob([connected(bob)|In],
+                           [connect(charlie)|Out?]) :-
+    alice18_wait_connected_charlie(In?, Out).
+alice18_wait_connected_bob([_|In], Out?) :-
+    otherwise | alice18_wait_connected_bob(In?, Out).
+alice18_wait_connected_bob([], []).
+
+procedure alice18_wait_connected_charlie(UserNotifyStream?, UserCmdStream).
+alice18_wait_connected_charlie([connected(charlie)|In],
+                               [unfriend(charlie)|Out?]) :-
+    alice18_wait_unfriended(In?, Out).
+alice18_wait_connected_charlie([_|In], Out?) :-
+    otherwise | alice18_wait_connected_charlie(In?, Out).
+alice18_wait_connected_charlie([], []).
+
+procedure alice18_wait_unfriended(UserNotifyStream?, UserCmdStream).
+alice18_wait_unfriended([unfriended(charlie)|_], []).
+alice18_wait_unfriended([_|In], Out?) :-
+    otherwise | alice18_wait_unfriended(In?, Out).
+alice18_wait_unfriended([], []).
+
+%% --- Bob (play18) ---
+%% 1. Wait befriend(alice, _, ReqId) → decision(yes, alice, ReqId)
+%% 2. Wait connected(alice) → wait update_befriend(alice, charlie)
+%% 3. Wait update_unfriend(alice, charlie) → done
+
+procedure bob18(ActorChannel?).
+bob18(ch([befriend(alice, _, ReqId)|In],
+         [decision(yes, alice, ReqId?)|Out?])) :-
+    ground(ReqId?) |
+    bob18_wait_connected(In?, Out).
+bob18(ch([_|In], Out?)) :-
+    otherwise | bob18(ch(In?, Out)).
+
+procedure bob18_wait_connected(UserNotifyStream?, UserCmdStream).
+bob18_wait_connected([connected(alice)|In], Out?) :-
+    bob18_wait_update_befriend(In?, Out).
+bob18_wait_connected([_|In], Out?) :-
+    otherwise | bob18_wait_connected(In?, Out).
+bob18_wait_connected([], []).
+
+procedure bob18_wait_update_befriend(UserNotifyStream?, UserCmdStream).
+bob18_wait_update_befriend([update_befriend(alice, charlie)|In], Out?) :-
+    bob18_wait_update_unfriend(In?, Out).
+bob18_wait_update_befriend([_|In], Out?) :-
+    otherwise | bob18_wait_update_befriend(In?, Out).
+bob18_wait_update_befriend([], []).
+
+procedure bob18_wait_update_unfriend(UserNotifyStream?, UserCmdStream).
+bob18_wait_update_unfriend([update_unfriend(alice, charlie)|_], []).
+bob18_wait_update_unfriend([_|In], Out?) :-
+    otherwise | bob18_wait_update_unfriend(In?, Out).
+bob18_wait_update_unfriend([], []).
+
+%% --- Charlie (play18) ---
+%% 1. Wait befriend(alice, _, ReqId) → decision(yes, alice, ReqId)
+%% 2. Wait connected(alice) → wait unfriended(alice) → done
+
+procedure charlie18(ActorChannel?).
+charlie18(ch([befriend(alice, _, ReqId)|In],
+             [decision(yes, alice, ReqId?)|Out?])) :-
+    ground(ReqId?) |
+    charlie18_wait_connected(In?, Out).
+charlie18(ch([_|In], Out?)) :-
+    otherwise | charlie18(ch(In?, Out)).
+
+procedure charlie18_wait_connected(UserNotifyStream?, UserCmdStream).
+charlie18_wait_connected([connected(alice)|In], Out?) :-
+    charlie18_wait_unfriended(In?, Out).
+charlie18_wait_connected([_|In], Out?) :-
+    otherwise | charlie18_wait_connected(In?, Out).
+charlie18_wait_connected([], []).
+
+procedure charlie18_wait_unfriended(UserNotifyStream?, UserCmdStream).
+charlie18_wait_unfriended([unfriended(alice)|_], []).
+charlie18_wait_unfriended([_|In], Out?) :-
+    otherwise | charlie18_wait_unfriended(In?, Out).
+charlie18_wait_unfriended([], []).

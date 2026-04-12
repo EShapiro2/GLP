@@ -111,6 +111,7 @@ void registerStandardBodyKernels(BodyKernelRegistry registry) {
   registry.register('map_remove', 3, mapRemoveKernel);
   registry.register('map_keys', 2, mapKeysKernel);
   registry.register('map_show', 3, mapShowKernel);
+  registry.register('fofmap_show', 3, fofmapShowKernel);
   registry.register('map_list_append', 4, mapListAppendKernel);
 
   // SharedBroadcastStream operations
@@ -1025,6 +1026,60 @@ BodyKernelResult mapShowKernel(GlpRuntime rt, List<Object?> args) {
   }
 
   // Pass-through: copy the map so it remains usable
+  final copy = MapTerm(Map<Object, Term>.from(mapArg.entries));
+  return _bindResult(rt, args[2], copy);
+}
+
+/// fofmap_show(AgentId?, FoFMapIn?, FoFMapOut) — Print FoFMap contents to screen.
+/// FoFMap is a nested map: HashMap<name, HashMap<name, FLv2>>.
+/// Outputs tagged(id, notify(fofmap({...}))) for Flutter UI routing.
+BodyKernelResult fofmapShowKernel(GlpRuntime rt, List<Object?> args) {
+  if (args.length != 3) {
+    print('[ABORT] fofmap_show/3: expected 3 arguments, got ${args.length}');
+    return BodyKernelResult.abort;
+  }
+
+  final idArg = _deref(rt, args[0]);
+  final id = (idArg is ConstTerm) ? idArg.value.toString() : idArg.toString();
+
+  final mapArg = _deref(rt, args[1]);
+  if (mapArg is! MapTerm) {
+    print('[ABORT] fofmap_show/3: second argument must be a MapTerm, got ${mapArg.runtimeType}');
+    return BodyKernelResult.abort;
+  }
+
+  String mapStr;
+  if (mapArg.entries.isEmpty) {
+    mapStr = '{}';
+  } else {
+    final outerPairs = mapArg.entries.entries.map((outerEntry) {
+      final innerMap = _deref(rt, outerEntry.value);
+      String innerStr;
+      if (innerMap is MapTerm && innerMap.entries.isNotEmpty) {
+        final innerPairs = innerMap.entries.entries.map((e) {
+          final derefed = (e.value is Term) ? _deepDeref(rt, e.value) : e.value;
+          final val = (derefed is Term) ? formatGroundTerm(derefed) : derefed.toString();
+          return '${e.key}: $val';
+        }).join(', ');
+        innerStr = '{$innerPairs}';
+      } else if (innerMap is MapTerm) {
+        innerStr = '{}';
+      } else {
+        innerStr = innerMap.toString();
+      }
+      return '${outerEntry.key}: $innerStr';
+    }).join(', ');
+    mapStr = '{$outerPairs}';
+  }
+
+  final line = 'tagged($id, notify(fofmap($mapStr)))';
+  final callback = rt.outputCallback;
+  if (callback != null) {
+    callback(line);
+  } else {
+    print(line);
+  }
+
   final copy = MapTerm(Map<Object, Term>.from(mapArg.entries));
   return _bindResult(rt, args[2], copy);
 }
