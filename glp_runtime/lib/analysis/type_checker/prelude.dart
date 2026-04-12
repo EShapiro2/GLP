@@ -88,6 +88,11 @@ procedure map_remove(_?, _?, _).
 procedure map_keys(_?, _).
 procedure map_show(_?, _?, _).
 procedure map_list_append(_?, _?, _?, _).
+procedure _copy(_?, _).
+procedure _list_to_tuple(_?, _).
+procedure _tuple_to_list(_?, _).
+procedure struct_arg(_?, Constant?, Constant).
+procedure struct_arg_eq(_?, Constant?, Constant?).
 
 % Output/debugging primitives
 procedure write(_?).
@@ -193,6 +198,11 @@ const Set<String> predefinedProcedureNames = {
   'map_keys',
   'map_show',
   'map_list_append',
+  '_copy',
+  '_list_to_tuple',
+  '_tuple_to_list',
+  'struct_arg',
+  'struct_arg_eq',
   // Note: map_get is NOT protected - it's a stdlib wrapper that can be redefined
   // Note: dl_append, dl_to_list, new_channel, send, receive
   // are NOT protected - they are library-level and can be redefined
@@ -257,6 +267,11 @@ const Set<String> builtinProcedures = {
   'map_keys/2',
   'map_show/3',
   'map_list_append/4',
+  '_copy/2',
+  '_list_to_tuple/2',
+  '_tuple_to_list/2',
+  'struct_arg/3',
+  'struct_arg_eq/3',
   // Output/debugging primitives
   'write/1',
   'writeln/1',

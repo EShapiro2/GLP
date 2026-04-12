@@ -82,6 +82,7 @@ void registerStandardBodyKernels(BodyKernelRegistry registry) {
   // Structure manipulation
   registry.register('_list_to_tuple', 2, listToTupleKernel);
   registry.register('_tuple_to_list', 2, tupleToListKernel);
+  registry.register('struct_arg', 3, structArgKernel);
 
   // Identity/copy
   registry.register('_copy', 2, copyKernel);
@@ -533,6 +534,33 @@ BodyKernelResult tupleToListKernel(GlpRuntime rt, List<Object?> args) {
 
   final list = _dartListToGlpList(items);
   return _bindResult(rt, args[1], list);
+}
+
+/// struct_arg(Struct?, Index?, Value) — Extract the Nth argument (1-based) from a struct.
+/// Used to destructure structs when head pattern matching is not available.
+BodyKernelResult structArgKernel(GlpRuntime rt, List<Object?> args) {
+  if (args.length != 3) {
+    print('[ABORT] struct_arg/3: expected 3 arguments, got ${args.length}');
+    return BodyKernelResult.abort;
+  }
+
+  final structArg = _deref(rt, args[0]);
+  if (structArg is! StructTerm) {
+    print('[ABORT] struct_arg/3: first argument must be a structure, got ${structArg.runtimeType}');
+    return BodyKernelResult.abort;
+  }
+
+  final indexArg = _deref(rt, args[1]);
+  final index = (indexArg is ConstTerm && indexArg.value is int)
+      ? indexArg.value as int
+      : (indexArg is int ? indexArg : null);
+  if (index == null || index < 1 || index > structArg.args.length) {
+    print('[ABORT] struct_arg/3: index $index out of range [1..${structArg.args.length}]');
+    return BodyKernelResult.abort;
+  }
+
+  final value = _deepDeref(rt, structArg.args[index - 1]);
+  return _bindResult(rt, args[2], value);
 }
 
 BodyKernelResult copyKernel(GlpRuntime rt, List<Object?> args) {

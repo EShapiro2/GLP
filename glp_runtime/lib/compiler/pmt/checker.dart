@@ -183,6 +183,11 @@ class PmtChecker {
         _collectVarNames(guard.args[0], grounded);
         _collectVarNames(guard.args[1], grounded);
       }
+
+      // struct_arg_eq/3: struct arg is grounded
+      if (guard.predicate == 'struct_arg_eq' && guard.args.length == 3) {
+        _collectVarNames(guard.args[0], grounded);
+      }
     }
 
     return grounded;

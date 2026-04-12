@@ -34,7 +34,7 @@ UserCmd     ::= decision(Decision, Constant, ReqId)
               ; unfriend(Constant).
 
 %% Mediator -> User (actor reads these)
-UserNotify  ::= befriend(Constant, ReqId)
+UserNotify  ::= befriend(Constant, Constant, ReqId)
               ; befriend_intro(Constant, Constant, ReqId)
               ; child_befriend(Constant, Constant, ReqId)
               ; connected(Constant)
@@ -105,7 +105,7 @@ alice1_wait_reply([], []).
 %% 4. Done
 
 procedure bob1(ActorChannel?).
-bob1(ch([befriend(alice, ReqId)|In],
+bob1(ch([befriend(alice, _, ReqId)|In],
         [decision(yes, alice, ReqId?)|Out?])) :-
     ground(ReqId?) |
     bob1_wait_alice_msg(In?, Out).
@@ -143,7 +143,7 @@ bob1_wait_charlie_msg([], []).
 %% 4. Done
 
 procedure charlie1(ActorChannel?).
-charlie1(ch([befriend(bob, ReqId)|In],
+charlie1(ch([befriend(bob, _, ReqId)|In],
             [decision(yes, bob, ReqId?),
              send(bob, hello)|Out?])) :-
     ground(ReqId?) |
@@ -203,7 +203,7 @@ alice2_wait_rejected([], []).
 %% --- Bob (play2) — same as play1 ---
 
 procedure bob2(ActorChannel?).
-bob2(ch([befriend(alice, ReqId)|In],
+bob2(ch([befriend(alice, _, ReqId)|In],
         [decision(yes, alice, ReqId?)|Out?])) :-
     ground(ReqId?) |
     bob2_wait_alice_msg(In?, Out).
@@ -237,7 +237,7 @@ bob2_wait_charlie_msg([], []).
 %% --- Charlie (play2) ---
 
 procedure charlie2(ActorChannel?).
-charlie2(ch([befriend(bob, ReqId)|In],
+charlie2(ch([befriend(bob, _, ReqId)|In],
             [decision(yes, bob, ReqId?),
              send(bob, hello)|Out?])) :-
     ground(ReqId?) |
@@ -282,7 +282,7 @@ alice3_wait_intro([], []).
 %% --- Bob (play3) — same as play1 ---
 
 procedure bob3(ActorChannel?).
-bob3(ch([befriend(alice, ReqId)|In],
+bob3(ch([befriend(alice, _, ReqId)|In],
         [decision(yes, alice, ReqId?)|Out?])) :-
     ground(ReqId?) |
     bob3_wait_alice_msg(In?, Out).
@@ -316,7 +316,7 @@ bob3_wait_charlie_msg([], []).
 %% --- Charlie (play3) ---
 
 procedure charlie3(ActorChannel?).
-charlie3(ch([befriend(bob, ReqId)|In],
+charlie3(ch([befriend(bob, _, ReqId)|In],
             [decision(yes, bob, ReqId?),
              send(bob, hello)|Out?])) :-
     ground(ReqId?) |
@@ -352,7 +352,7 @@ alice4_wait_connected([], []).
 %% --- Bob (play4) ---
 
 procedure bob4(ActorChannel?).
-bob4(ch([befriend(alice, ReqId)|In],
+bob4(ch([befriend(alice, _, ReqId)|In],
         [decision(yes, alice, ReqId?)|Out?])) :-
     ground(ReqId?) |
     bob4_wait_child_intro(In?, Out).
@@ -430,7 +430,7 @@ alice5_wait_connected([], []).
 %% --- Bob (play5) — rejects child intro ---
 
 procedure bob5(ActorChannel?).
-bob5(ch([befriend(alice, ReqId)|In],
+bob5(ch([befriend(alice, _, ReqId)|In],
         [decision(yes, alice, ReqId?)|Out?])) :-
     ground(ReqId?) |
     bob5_wait_child_intro(In?, Out).
@@ -486,7 +486,7 @@ alice6_wait_connected([], []).
 %% --- Bob (play6) — approves ---
 
 procedure bob6(ActorChannel?).
-bob6(ch([befriend(alice, ReqId)|In],
+bob6(ch([befriend(alice, _, ReqId)|In],
         [decision(yes, alice, ReqId?)|Out?])) :-
     ground(ReqId?) |
     bob6_wait_child_intro(In?, Out).
@@ -546,7 +546,7 @@ alice7_wait_connected([], []).
 %% --- Bob (play7) — approves ---
 
 procedure bob7(ActorChannel?).
-bob7(ch([befriend(alice, ReqId)|In],
+bob7(ch([befriend(alice, _, ReqId)|In],
         [decision(yes, alice, ReqId?)|Out?])) :-
     ground(ReqId?) |
     bob7_wait_child_intro(In?, Out).
@@ -620,7 +620,7 @@ alice8_wait_unfriended([], []).
 %% 4. Done
 
 procedure bob8(ActorChannel?).
-bob8(ch([befriend(alice, ReqId)|In],
+bob8(ch([befriend(alice, _, ReqId)|In],
         [decision(yes, alice, ReqId?)|Out?])) :-
     ground(ReqId?) |
     bob8_wait_connected(In?, Out).
@@ -688,7 +688,7 @@ alice9_wait_connected2([], []).
 %% 6. Done
 
 procedure bob9(ActorChannel?).
-bob9(ch([befriend(alice, ReqId)|In],
+bob9(ch([befriend(alice, _, ReqId)|In],
         [decision(yes, alice, ReqId?)|Out?])) :-
     ground(ReqId?) |
     bob9_wait_connected1(In?, Out).
@@ -710,7 +710,7 @@ bob9_wait_unfriended([_|In], Out?) :-
 bob9_wait_unfriended([], []).
 
 procedure bob9_wait_befriend2(UserNotifyStream?, UserCmdStream).
-bob9_wait_befriend2([befriend(alice, ReqId)|In],
+bob9_wait_befriend2([befriend(alice, _, ReqId)|In],
                     [decision(yes, alice, ReqId?)|Out?]) :-
     ground(ReqId?) |
     bob9_wait_connected2(In?, Out).
@@ -759,7 +759,7 @@ alice10_wait_unfriended([_|In], Out?) :-
 alice10_wait_unfriended([], []).
 
 procedure alice10_wait_befriend(UserNotifyStream?, UserCmdStream).
-alice10_wait_befriend([befriend(bob, ReqId)|In],
+alice10_wait_befriend([befriend(bob, _, ReqId)|In],
                       [decision(yes, bob, ReqId?)|Out?]) :-
     ground(ReqId?) |
     alice10_wait_connected2(In?, Out).
@@ -782,7 +782,7 @@ alice10_wait_connected2([], []).
 %% 5. Done
 
 procedure bob10(ActorChannel?).
-bob10(ch([befriend(alice, ReqId)|In],
+bob10(ch([befriend(alice, _, ReqId)|In],
          [decision(yes, alice, ReqId?)|Out?])) :-
     ground(ReqId?) |
     bob10_wait_connected1(In?, Out).
@@ -858,7 +858,7 @@ alice11_r2_wait_unfriended([_|In], Out?) :-
 alice11_r2_wait_unfriended([], []).
 
 procedure alice11_r3_wait_befriend(UserNotifyStream?, UserCmdStream).
-alice11_r3_wait_befriend([befriend(bob, ReqId)|In],
+alice11_r3_wait_befriend([befriend(bob, _, ReqId)|In],
                          [decision(yes, bob, ReqId?)|Out?]) :-
     ground(ReqId?) |
     alice11_r3_wait_connected(In?, Out).
@@ -879,7 +879,7 @@ alice11_r3_wait_connected([], []).
 %% Round 3: wait unfriended → connect(alice) → wait connected → done
 
 procedure bob11(ActorChannel?).
-bob11(ch([befriend(alice, ReqId)|In],
+bob11(ch([befriend(alice, _, ReqId)|In],
          [decision(yes, alice, ReqId?)|Out?])) :-
     ground(ReqId?) |
     bob11_r1_wait_connected(In?, Out).
@@ -902,7 +902,7 @@ bob11_r1_wait_unfriended([_|In], Out?) :-
 bob11_r1_wait_unfriended([], []).
 
 procedure bob11_r2_wait_befriend(UserNotifyStream?, UserCmdStream).
-bob11_r2_wait_befriend([befriend(alice, ReqId)|In],
+bob11_r2_wait_befriend([befriend(alice, _, ReqId)|In],
                        [decision(yes, alice, ReqId?)|Out?]) :-
     ground(ReqId?) |
     bob11_r2_wait_connected(In?, Out).
@@ -988,7 +988,7 @@ alice12_wait_unfriended([], []).
 %% 4. Wait update_unfriend(alice, charlie) → done
 
 procedure bob12(ActorChannel?).
-bob12(ch([befriend(alice, ReqId)|In],
+bob12(ch([befriend(alice, _, ReqId)|In],
          [decision(yes, alice, ReqId?)|Out?])) :-
     ground(ReqId?) |
     bob12_wait_connected(In?, Out).
@@ -1022,7 +1022,7 @@ bob12_wait_update_unfriend([], []).
 %% 4. Wait unfriended(alice) → done
 
 procedure charlie12(ActorChannel?).
-charlie12(ch([befriend(alice, ReqId)|In],
+charlie12(ch([befriend(alice, _, ReqId)|In],
              [decision(no, alice, ReqId?)|Out?])) :-
     ground(ReqId?) |
     charlie12_wait_befriend2(In?, Out).
@@ -1030,7 +1030,7 @@ charlie12(ch([_|In], Out?)) :-
     otherwise | charlie12(ch(In?, Out)).
 
 procedure charlie12_wait_befriend2(UserNotifyStream?, UserCmdStream).
-charlie12_wait_befriend2([befriend(alice, ReqId)|In],
+charlie12_wait_befriend2([befriend(alice, _, ReqId)|In],
                          [decision(yes, alice, ReqId?)|Out?]) :-
     ground(ReqId?) |
     charlie12_wait_connected(In?, Out).
@@ -1079,7 +1079,7 @@ alice13_wait_bob_connected([_|In], Out?) :-
 alice13_wait_bob_connected([], []).
 
 procedure alice13_wait_befriend1(UserNotifyStream?, UserCmdStream).
-alice13_wait_befriend1([befriend(charlie, ReqId)|In],
+alice13_wait_befriend1([befriend(charlie, _, ReqId)|In],
                        [decision(no, charlie, ReqId?)|Out?]) :-
     ground(ReqId?) |
     alice13_wait_befriend2(In?, Out).
@@ -1088,7 +1088,7 @@ alice13_wait_befriend1([_|In], Out?) :-
 alice13_wait_befriend1([], []).
 
 procedure alice13_wait_befriend2(UserNotifyStream?, UserCmdStream).
-alice13_wait_befriend2([befriend(charlie, ReqId)|In],
+alice13_wait_befriend2([befriend(charlie, _, ReqId)|In],
                        [decision(yes, charlie, ReqId?)|Out?]) :-
     ground(ReqId?) |
     alice13_wait_charlie_connected(In?, Out).
@@ -1116,7 +1116,7 @@ alice13_wait_unfriended([], []).
 %% 4. Wait update_unfriend(alice, charlie) → done
 
 procedure bob13(ActorChannel?).
-bob13(ch([befriend(alice, ReqId)|In],
+bob13(ch([befriend(alice, _, ReqId)|In],
          [decision(yes, alice, ReqId?)|Out?])) :-
     ground(ReqId?) |
     bob13_wait_connected(In?, Out).
@@ -1241,7 +1241,7 @@ alice14_wait_unfriended([], []).
 %%       update_unfriend(charlie, alice) — skipped by otherwise, visible in UI.
 
 procedure bob14(ActorChannel?).
-bob14(ch([befriend(alice, ReqId)|In],
+bob14(ch([befriend(alice, _, ReqId)|In],
          [decision(yes, alice, ReqId?)|Out?])) :-
     ground(ReqId?) |
     bob14_wait_alice_connected(In?, Out).
@@ -1256,7 +1256,7 @@ bob14_wait_alice_connected([_|In], Out?) :-
 bob14_wait_alice_connected([], []).
 
 procedure bob14_wait_charlie_befriend(UserNotifyStream?, UserCmdStream).
-bob14_wait_charlie_befriend([befriend(charlie, ReqId)|In],
+bob14_wait_charlie_befriend([befriend(charlie, _, ReqId)|In],
                             [decision(yes, charlie, ReqId?)|Out?]) :-
     ground(ReqId?) |
     bob14_wait_charlie_connected(In?, Out).
@@ -1305,7 +1305,7 @@ charlie14_wait_connected([_|In], Out?) :-
 charlie14_wait_connected([], []).
 
 procedure charlie14_wait_alice_befriend(UserNotifyStream?, UserCmdStream).
-charlie14_wait_alice_befriend([befriend(alice, ReqId)|In],
+charlie14_wait_alice_befriend([befriend(alice, _, ReqId)|In],
                               [decision(yes, alice, ReqId?)|Out?]) :-
     ground(ReqId?) |
     charlie14_wait_alice_connected(In?, Out).
@@ -1376,7 +1376,7 @@ alice15_wait_update([], []).
 %% 4. Wait connected(dave) → done
 
 procedure bob15(ActorChannel?).
-bob15(ch([befriend(alice, ReqId)|In],
+bob15(ch([befriend(alice, _, ReqId)|In],
          [decision(yes, alice, ReqId?)|Out?])) :-
     ground(ReqId?) |
     bob15_wait_connected(In?, Out).
@@ -1410,7 +1410,7 @@ bob15_wait_dave([], []).
 %% 2. Wait connected(alice) → done
 
 procedure charlie15(ActorChannel?).
-charlie15(ch([befriend(alice, ReqId)|In],
+charlie15(ch([befriend(alice, _, ReqId)|In],
              [decision(yes, alice, ReqId?)|Out?])) :-
     ground(ReqId?) |
     charlie15_wait_connected(In?, Out).
@@ -1428,7 +1428,7 @@ charlie15_wait_connected([], []).
 %% 2. Wait connected(bob) → done
 
 procedure dave15(ActorChannel?).
-dave15(ch([befriend(bob, ReqId)|In],
+dave15(ch([befriend(bob, _, ReqId)|In],
           [decision(yes, bob, ReqId?)|Out?])) :-
     ground(ReqId?) |
     dave15_wait_connected(In?, Out).

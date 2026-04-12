@@ -689,6 +689,15 @@ class Analyzer {
       }
     }
 
+    // struct_arg_eq/3 guard checks if struct's Nth arg equals a value
+    // Marks struct arg as ground (safe to read multiple times like MapTerm)
+    if (guard.predicate == 'struct_arg_eq' && guard.args.length == 3) {
+      final structArg = guard.args[0];
+      if (structArg is VarTerm) {
+        varTable.markGrounded(structArg.name);
+      }
+    }
+
     // equator/1 guard marks argument as ground (equator structure can be read multiple times)
     // Equators enable many-to-one signaling where multiple recipients receive the same structure
     if (guard.predicate == 'equator' && guard.args.length == 1) {

@@ -4748,6 +4748,43 @@ class BytecodeRunner {
             ? GuardResult.success
             : GuardResult.failure;
 
+      case 'struct_arg_eq':
+        // struct_arg_eq(Struct?, Index?, Value?) — guard version of struct_arg
+        // Succeeds if Struct is a StructTerm and its Nth arg (1-based) equals Value
+        if (args.length < 3) return GuardResult.failure;
+        final saStruct = getValue(args[0]);
+        if (saStruct is! StructTerm) return GuardResult.failure;
+        final saIndexVal = getValue(args[1]);
+        int? saIndex;
+        if (saIndexVal is int) saIndex = saIndexVal;
+        else if (saIndexVal is ConstTerm && saIndexVal.value is int) saIndex = saIndexVal.value as int;
+        if (saIndex == null || saIndex < 1 || saIndex > saStruct.args.length) return GuardResult.failure;
+        // Deep-deref the struct arg
+        var saArgVal = saStruct.args[saIndex - 1];
+        while (saArgVal is VarRef) {
+          final v = getValue(saArgVal.addr);
+          if (v == null || v is! Term) break;
+          saArgVal = v;
+        }
+        // Deep-deref the expected value
+        var saExpected = getValue(args[2]);
+        if (saExpected is VarRef) {
+          final v = getValue(saExpected.addr);
+          if (v != null) saExpected = v;
+        }
+        // Compare
+        Object? saArgKey;
+        if (saArgVal is ConstTerm) saArgKey = saArgVal.value;
+        else if (saArgVal is String) saArgKey = saArgVal;
+        else if (saArgVal is num) saArgKey = saArgVal;
+        Object? saExpKey;
+        if (saExpected is ConstTerm) saExpKey = saExpected.value;
+        else if (saExpected is String) saExpKey = saExpected;
+        else if (saExpected is num) saExpKey = saExpected;
+        return (saArgKey != null && saExpKey != null && saArgKey == saExpKey)
+            ? GuardResult.success
+            : GuardResult.failure;
+
       case 'equator':
         // Succeeds if X is bound to '_equator'(E, C) where C is a constant
         // Enables many-to-one signaling via equators
