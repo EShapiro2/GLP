@@ -120,6 +120,19 @@ OutputEntry ::= output(OutputKey, Stream?).
 OutputsList ::= [] ; [OutputEntry|OutputsList].
 
 %% =============================================================================
+%% SHOULD_UPDATE — epoch-based staleness check for FoFMap updates
+%% =============================================================================
+%% should_update(InEpoch?, StoredEpoch?, StoredStatus?, InStatus?) succeeds when
+%% an incoming update should override the stored entry.
+%% Per spec: incoming.epoch > stored.epoch, OR same epoch + active→inactive.
+
+procedure should_update(Constant?, Constant?, Constant?, Constant?).
+should_update(InEpoch, StoredEpoch, _, _) :-
+    InEpoch? > StoredEpoch? | true.
+should_update(InEpoch, StoredEpoch, active, inactive) :-
+    InEpoch? =:= StoredEpoch? | true.
+
+%% =============================================================================
 %% CHANNEL OPERATIONS (Defined Guards)
 %% =============================================================================
 
@@ -354,6 +367,17 @@ bind_response(_, no, _, _, no, Outs, Outs1?, In, In?, FMap, FMap?, FoFMap, FoFMa
     lookup_send('_user', msg(agent, '_user', rejected), Outs?, Outs1).
 
 procedure handle_response(Constant?, Response?, Constant?, Constant?, OutputsList?, OutputsList, NetInStream?, NetInStream, _?, _, _?, _).
+
+%% Skip if From already active in FMap (already friends)
+handle_response(_, accept(_), From, _, Outs, Outs?, In, In?, FMap, FMap?, FoFMap, FoFMap?) :-
+    ground(From?), map_entry_arg_eq(FMap?, From?, 3, active) | true.
+
+%% Skip if stored epoch >= incoming epoch (stale accept)
+handle_response(_, accept(_), From, Epoch, Outs, Outs?, In, In?, FMap, FMap?, FoFMap, FoFMap?) :-
+    ground(From?), ground(Epoch?),
+    map_entry_arg_ge(FMap?, From?, 2, Epoch?) | true.
+
+%% Normal accept path
 handle_response(Id, accept(ch(FIn, FOut?)), From, Epoch, Outs, Outs4?, In, In1?, FMap, FMap2?, FoFMap, FoFMap?) :-
     ground(From?), ground(Epoch?) |
     collect_friend_names(Outs?, Names, Outs0),
@@ -492,6 +516,17 @@ agent(Id, [msg('_user', Id1, approve_child_intro(OtherChild, MyChild, channel(Ch
 
 %% --- Network messages ---
 
+%% Cold-call from network — skip if already active friends
+agent(Id, UserIn, [msg(Id1, intro(From, _, no))|NetIn], Outs, FMap, FoFMap) :-
+    Id? =?= Id1?, map_entry_arg_eq(FMap?, From?, 3, active) |
+    agent(Id?, UserIn?, NetIn?, Outs?, FMap?, FoFMap?).
+
+%% Cold-call from network — skip if stored epoch >= incoming (stale)
+agent(Id, UserIn, [msg(Id1, intro(From, Epoch, no))|NetIn], Outs, FMap, FoFMap) :-
+    Id? =?= Id1?, ground(Epoch?),
+    map_entry_arg_ge(FMap?, From?, 2, Epoch?) |
+    agent(Id?, UserIn?, NetIn?, Outs?, FMap?, FoFMap?).
+
 %% Cold-call from network — pass to user for decision (include Epoch)
 agent(Id, UserIn, [msg(Id1, intro(From, Epoch, Resp?))|NetIn], Outs, FMap, FoFMap) :-
     Id? =?= Id1? |
@@ -509,6 +544,13 @@ agent(Id, UserIn, [msg(From, Id1, text(Text))|NetIn], Outs, FMap, FoFMap) :-
     Id? =?= Id1? |
     lookup_send('_user', msg(agent, '_user', received(From?, Text?)), Outs?, Outs1),
     agent(Id?, UserIn?, NetIn?, Outs1?, FMap?, FoFMap?).
+
+%% Unfriend from friend — stale: stored epoch > incoming epoch, skip
+agent(Id, UserIn, [msg(From, Id1, unfriend(Epoch))|NetIn], Outs, FMap, FoFMap) :-
+    Id? =?= Id1?, map_contains(FMap?, From?),
+    map_entry_arg_ge(FMap?, From?, 2, Epoch?),
+    map_entry_arg_eq(FMap?, From?, 3, inactive) |
+    agent(Id?, UserIn?, NetIn?, Outs?, FMap?, FoFMap?).
 
 %% Unfriend from friend — From in FMap, process
 agent(Id, UserIn, [msg(From, Id1, unfriend(Epoch))|NetIn], Outs, FMap, FoFMap) :-

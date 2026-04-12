@@ -4748,6 +4748,99 @@ class BytecodeRunner {
             ? GuardResult.success
             : GuardResult.failure;
 
+      case 'map_entry_arg_eq':
+        // map_entry_arg_eq(Map?, Key?, Index?, Value?) — combined guard
+        // Succeeds if Map contains Key, the entry is a StructTerm, and its
+        // Nth arg (1-based) equals Value. Combines map_contains + _map_get + struct_arg_eq.
+        if (args.length < 4) return GuardResult.failure;
+        final meMap = getValue(args[0]);
+        if (meMap is! MapTerm) return GuardResult.failure;
+        final meKeyArg = getValue(args[1]);
+        Object? meKey;
+        if (meKeyArg is num) meKey = meKeyArg;
+        else if (meKeyArg is String) meKey = meKeyArg;
+        else if (meKeyArg is ConstTerm) meKey = meKeyArg.value;
+        if (meKey == null) return GuardResult.failure;
+        final meEntry = meMap.entries[meKey];
+        if (meEntry == null) return GuardResult.failure;
+        // Deep-deref the entry
+        var meStruct = meEntry;
+        while (meStruct is VarRef) {
+          final v = getValue(meStruct.addr);
+          if (v == null || v is! Term) break;
+          meStruct = v;
+        }
+        if (meStruct is! StructTerm) return GuardResult.failure;
+        final meIdxArg = getValue(args[2]);
+        int? meIdx;
+        if (meIdxArg is int) meIdx = meIdxArg;
+        else if (meIdxArg is ConstTerm && meIdxArg.value is int) meIdx = meIdxArg.value as int;
+        if (meIdx == null || meIdx < 1 || meIdx > meStruct.args.length) return GuardResult.failure;
+        var meArgVal = meStruct.args[meIdx - 1];
+        while (meArgVal is VarRef) {
+          final v = getValue(meArgVal.addr);
+          if (v == null || v is! Term) break;
+          meArgVal = v;
+        }
+        var meExpected = getValue(args[3]);
+        if (meExpected is VarRef) {
+          final v = getValue(meExpected.addr);
+          if (v != null) meExpected = v;
+        }
+        Object? meArgKey;
+        if (meArgVal is ConstTerm) meArgKey = meArgVal.value;
+        else if (meArgVal is String) meArgKey = meArgVal;
+        else if (meArgVal is num) meArgKey = meArgVal;
+        Object? meExpKey;
+        if (meExpected is ConstTerm) meExpKey = meExpected.value;
+        else if (meExpected is String) meExpKey = meExpected;
+        else if (meExpected is num) meExpKey = meExpected;
+        return (meArgKey != null && meExpKey != null && meArgKey == meExpKey)
+            ? GuardResult.success
+            : GuardResult.failure;
+
+      case 'map_entry_arg_ge':
+        // map_entry_arg_ge(Map?, Key?, Index?, Value?) — combined guard
+        // Succeeds if Map[Key] exists and its Nth arg >= Value (numeric)
+        if (args.length < 4) return GuardResult.failure;
+        final geMap = getValue(args[0]);
+        if (geMap is! MapTerm) return GuardResult.failure;
+        final geKeyArg = getValue(args[1]);
+        Object? geKey;
+        if (geKeyArg is num) geKey = geKeyArg;
+        else if (geKeyArg is String) geKey = geKeyArg;
+        else if (geKeyArg is ConstTerm) geKey = geKeyArg.value;
+        if (geKey == null) return GuardResult.failure;
+        final geEntry = geMap.entries[geKey];
+        if (geEntry == null) return GuardResult.failure;
+        var geStruct = geEntry;
+        while (geStruct is VarRef) {
+          final v = getValue(geStruct.addr);
+          if (v == null || v is! Term) break;
+          geStruct = v;
+        }
+        if (geStruct is! StructTerm) return GuardResult.failure;
+        final geIdxArg = getValue(args[2]);
+        int? geIdx;
+        if (geIdxArg is int) geIdx = geIdxArg;
+        else if (geIdxArg is ConstTerm && geIdxArg.value is int) geIdx = geIdxArg.value as int;
+        if (geIdx == null || geIdx < 1 || geIdx > geStruct.args.length) return GuardResult.failure;
+        var geArgVal = geStruct.args[geIdx - 1];
+        while (geArgVal is VarRef) {
+          final v = getValue(geArgVal.addr);
+          if (v == null || v is! Term) break;
+          geArgVal = v;
+        }
+        num? geArgNum;
+        if (geArgVal is ConstTerm && geArgVal.value is num) geArgNum = geArgVal.value as num;
+        final geValArg = getValue(args[3]);
+        num? geValNum;
+        if (geValArg is ConstTerm && geValArg.value is num) geValNum = geValArg.value as num;
+        else if (geValArg is num) geValNum = geValArg;
+        return (geArgNum != null && geValNum != null && geArgNum >= geValNum)
+            ? GuardResult.success
+            : GuardResult.failure;
+
       case 'struct_arg_eq':
         // struct_arg_eq(Struct?, Index?, Value?) — guard version of struct_arg
         // Succeeds if Struct is a StructTerm and its Nth arg (1-based) equals Value

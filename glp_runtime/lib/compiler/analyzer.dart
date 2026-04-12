@@ -698,6 +698,20 @@ class Analyzer {
       }
     }
 
+    // map_entry_arg_eq/4 and map_entry_arg_ge/4: combined map+struct guards
+    // Mark map arg as ground
+    if ((guard.predicate == 'map_entry_arg_eq' || guard.predicate == 'map_entry_arg_ge')
+        && guard.args.length == 4) {
+      final mapArg = guard.args[0];
+      if (mapArg is VarTerm) {
+        varTable.markGrounded(mapArg.name);
+      }
+      final keyArg = guard.args[1];
+      if (keyArg is VarTerm) {
+        varTable.markGrounded(keyArg.name);
+      }
+    }
+
     // equator/1 guard marks argument as ground (equator structure can be read multiple times)
     // Equators enable many-to-one signaling where multiple recipients receive the same structure
     if (guard.predicate == 'equator' && guard.args.length == 1) {

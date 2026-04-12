@@ -93,6 +93,8 @@ procedure _list_to_tuple(_?, _).
 procedure _tuple_to_list(_?, _).
 procedure struct_arg(_?, Constant?, Constant).
 procedure struct_arg_eq(_?, Constant?, Constant?).
+procedure map_entry_arg_eq(_?, Constant?, Constant?, Constant?).
+procedure map_entry_arg_ge(_?, Constant?, Constant?, Constant?).
 
 % Output/debugging primitives
 procedure write(_?).
@@ -203,6 +205,8 @@ const Set<String> predefinedProcedureNames = {
   '_tuple_to_list',
   'struct_arg',
   'struct_arg_eq',
+  'map_entry_arg_eq',
+  'map_entry_arg_ge',
   // Note: map_get is NOT protected - it's a stdlib wrapper that can be redefined
   // Note: dl_append, dl_to_list, new_channel, send, receive
   // are NOT protected - they are library-level and can be redefined
@@ -272,6 +276,8 @@ const Set<String> builtinProcedures = {
   '_tuple_to_list/2',
   'struct_arg/3',
   'struct_arg_eq/3',
+  'map_entry_arg_eq/4',
+  'map_entry_arg_ge/4',
   // Output/debugging primitives
   'write/1',
   'writeln/1',
