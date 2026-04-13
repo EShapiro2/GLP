@@ -41,6 +41,8 @@ When emerging from compaction (you see a session summary replacing the original 
 8. **ACKNOWLEDGE glp-cheat-sheet.md** - State "I have read glp-cheat-sheet.md completely"
 9. **STOP AND WAIT** - Do not read any other files. Wait for user direction. The user will tell you which project or workstream to work on and where to find its plan.
 
+🔴 **NEVER program based on ignorance of GLP and its type system.** Read the manual (`docs/typed-glp-manual.md`) and cheat sheet (`docs/glp-cheat-sheet.md`) BEFORE writing or modifying any `.glp` code. If they do not provide an answer, STOP and state what the problem or gap in documentation is, and wait till it is fixed. Do NOT speculate, guess, or assume. Do NOT grope in the dark or try workarounds. Programming based on incomplete understanding of GLP produces incorrect code and wastes time.
+
 **DO NOT read handovers, specs, code, or any other files until user gives direction.**
 
 ### After User Gives Direction
@@ -123,7 +125,7 @@ https://download-directory.github.io/?url=https://github.com/EShapiro2/GLP/tree/
 
 ### 🔴 Code Modification Protocol
 
-**`.glp` files:** NEVER modify without discussing with the user first. Always discuss the intended change and get explicit approval before making any edit. This includes creating, modifying, or deleting any `.glp` file.
+**`.glp` files written by the user:** NEVER modify without discussing with the user first. Always discuss the intended change and get explicit approval before making any edit. `.glp` files written by Claude in the current session may be modified freely without asking permission.
 
 **Dart files:** You may modify Dart code, but always tell the user what you are changing and why before or as you do it.
 
@@ -376,22 +378,24 @@ You are the **executor and tester** for the GLP Runtime project. You run command
 
 **Use this message:** "This requires architectural understanding. Please consult Claude Chat for the design, then provide me with specific implementation instructions."
 
-## Two Environments: Claude (Linux) vs User (Mac)
+## Environments and Dart Path
 
-**CRITICAL: There are TWO different environments:**
+**Claude Code may run in TWO different environments:**
 
-| Environment | Path | Used by |
-|-------------|------|---------|
-| Claude Code (Linux) | `/home/user/GLP` | Claude running commands |
-| User's Mac | `/Users/udi/Grassroots/GLP` | User running commands |
+| Environment | GLP Path | Dart binary |
+|-------------|----------|-------------|
+| Claude Code (Linux) | `/home/user/GLP` | `/home/user/dart-sdk/bin/dart` |
+| Claude Code (Mac) | `/Users/udi/Grassroots/GLP` | `/opt/homebrew/bin/dart` |
 
-**When giving instructions TO THE USER (merge commands, etc.), ALWAYS use Mac paths (`/Users/udi/Grassroots/GLP`).**
+**At session start, detect which environment you are in** by checking whether `/Users/udi/Grassroots/GLP` exists. Then:
 
----
+1. **Set dart on PATH immediately:**
+   - Linux: `export PATH="/home/user/dart-sdk/bin:$PATH"`
+   - Mac: `export PATH="/opt/homebrew/bin:$PATH"`
+2. **Verify:** `dart --version`
+3. **Use Mac paths** (`/Users/udi/Grassroots/GLP`) when giving instructions to the user.
 
-## Practical Environment Info (Linux - Claude Code)
-
-**Before running commands, VERIFY - don't guess:**
+**Before running commands, VERIFY — don't guess:**
 - Run `ls` to check directories exist
 - Run `pwd` to confirm current directory
 - Check file locations with `ls` before referencing them
@@ -1264,3 +1268,12 @@ When modifying `glp_runtime` code that affects the Flutter multiagent app (`glp_
 ## Interaction Style
 
 Never ask Udi closed-form questions (multiple choice, yes/no, pick-from-list). Only ask free-text questions when clarification is needed.
+## 🔴 Commit Scope and Revert Discipline
+
+**Multiple Claude Code sessions may be working on this repository concurrently.** To prevent sessions from stepping on each other's work:
+
+1. **Commit only files you worked on in this session.** Do NOT use `git add -A` or `git add .` blindly. Use `git add <specific-files>` to stage only the files you created or modified. If another session's changes are in the working tree, committing them can revert or overwrite that session's work.
+
+2. **NEVER revert, reset, or undo commits without Udi's express permission.** If you believe a revert is needed, STOP and explain why. Do not use `git reset`, `git revert`, `git checkout -- <file>`, or `git restore` on any file you did not modify in this session. If you need to undo your own change from this session, that is acceptable — but undoing anyone else's work requires permission.
+
+3. **If you encounter merge conflicts or unexpected changes from other sessions**, STOP and report to Udi. Do not resolve conflicts silently — the other session's work may be more recent and important.

@@ -944,8 +944,19 @@ class PartialEvaluator {
     );
   }
 
-  /// Apply substitution to a Goal
+  /// Apply substitution to a Goal, preserving RemoteGoal and SpawnGoal types.
   Goal _applySubstitutionToGoal(Goal goal, Map<String, Term> subst) {
+    // Preserve RemoteGoal (M # proc(...))
+    if (goal is RemoteGoal) {
+      final newModule = _applySubstitution(goal.module, subst);
+      final newInnerGoal = _applySubstitutionToGoal(goal.goal, subst);
+      return RemoteGoal(newModule, newInnerGoal, goal.line, goal.column);
+    }
+    // Preserve SpawnGoal (Goal@Agent)
+    if (goal is SpawnGoal) {
+      final newInnerGoal = _applySubstitutionToGoal(goal.innerGoal, subst);
+      return SpawnGoal(newInnerGoal, goal.agentId, goal.line, goal.column);
+    }
     return Goal(
       goal.functor,
       goal.args.map((a) => _applySubstitution(a, subst)).toList(),
