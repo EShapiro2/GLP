@@ -1,142 +1,179 @@
-%% sovereign.glp — Sovereign stream and custodian acknowledgment
-%%
-%% The sovereign of currency p maintains an append-only stream of
-%% transaction blocks.  State custodians read this stream and produce
-%% acknowledgment streams.  A transaction is final when the sovereign
-%% observes a custodian's acknowledgment.
-%%
-%% Minimal implementation: all parties are friends (direct channels).
-%% Extension to diameter-2 (via common friend) is future work.
-
+-module(sovereign).
 -mode(system).
 
-%% =============================================================================
-%% TYPE DEFINITIONS
-%% =============================================================================
-
-Bond     ::= bond(Constant, Constant, Constant).
-BondList ::= [] ; [Bond | BondList].
-
-%% Transaction records in the sovereign's log
-TxRecord ::= tx_mint(Constant, Constant)                    %% tx_mint(K, Maturity)
-            ; tx_pay(Constant, Constant, BondList)           %% tx_pay(From, To, Coins)
-            ; tx_redeem(Constant, Constant, Bond, Bond)      %% tx_redeem(Redeemer, Sovereign, CoinIn, BondOut)
-            ; tx_swap(Constant, Constant, BondList, BondList). %% tx_swap(P, Q, X, Y)
-
-%% A block in the sovereign's stream
-SovBlock  ::= block(Constant, TxRecord).   %% block(TxId, Record)
-SovStream ::= [] ; [SovBlock | SovStream].
-
-%% Custodian acknowledgment
-AckMsg    ::= ack(Constant).               %% ack(TxId)
-AckStream ::= [] ; [AckMsg | AckStream].
-
-%% Approval request from bond agent to sovereign process
-ApprovalReq    ::= approve(TxRecord, Constant?).  %% approve(Record, FinalityVar)
-ApprovalStream ::= [] ; [ApprovalReq | ApprovalStream].
+%% sovereign.glp — Sovereign setup with custodian finality and recovery
+%%
+%% The sovereign processes approval requests, producing an interlaced
+%% sovereign stream. A custodian mirrors the stream and acknowledges
+%% each block. When the sovereign observes a custodian's ack (via tips
+%% in subsequent blocks), it binds the corresponding finality variables.
+%%
+%% Architecture (5 concurrent processes):
+%%   request comes in → sovereign_loop produces blocks with tips
+%%                    → custodian reads blocks, produces acks
+%%                    → tee splits acks into two copies
+%%                    → one copy feeds back to sovereign_loop (via collect_tips)
+%%                    → other copy goes to finality_binder
+%%                    → finality_binder binds reply variables
+%%
+%% The first block is produced with empty tips (no acks exist yet)
+%% to break the circular dependency and bootstrap the system.
 
 %% =============================================================================
-%% CUSTODIAN MIRROR
+%% IMPORTED PROCEDURES
+%% =============================================================================
+
+imported procedure interlace#collect_tips(AckStreams?, TipList, AckStreams).
+imported procedure custodian#custodian(Stream(SovBlock)?, Stream(AckMsg)).
+
+%% =============================================================================
+%% TEE — Split a ground-element stream into two copies
 %% =============================================================================
 %%
-%% A custodian reads the sovereign's stream and acknowledges each block
-%% by writing ack(TxId) to its own stream.  This is the custodian's
-%% copy of the sovereign's log — if the sovereign suffers a major fault,
-%% the custodian's ack stream (together with the sovereign blocks it
-%% has observed) constitutes the recoverable log.
+%% Uses ground(X?) relaxation to allow two reader occurrences
+%% of X? in the output streams.
 
-procedure custodian_mirror(SovStream?, AckStream).
+procedure tee(Stream(X)?, Stream(X), Stream(X)).
 
-custodian_mirror([block(TxId, _)|SovRest], [ack(TxId?)|AckRest?]) :-
-    custodian_mirror(SovRest?, AckRest).
+tee([X|Xs], [X?|Ys?], [X?|Zs?]) :-
+    ground(X?) |
+    tee(Xs?, Ys, Zs).
 
-custodian_mirror([], []).
+tee([], [], []).
 
 %% =============================================================================
-%% SOVEREIGN PROCESS
+%% BIND_FINALITY — Bind a finality reply variable to finalized
+%% =============================================================================
+
+procedure bind_finality(Finality).
+bind_finality(finalized).
+
+%% =============================================================================
+%% FIRST_REQUEST — Process first approval request (empty tips)
 %% =============================================================================
 %%
-%% Reads approval requests, writes blocks to the sovereign stream,
-%% and waits for acknowledgment from a custodian before declaring
-%% the transaction final (binding the FinalityVar to 'finalized').
+%% The first block has no tips because no custodian acks exist yet.
+%% Produces a SovBlock and a PendingFinality entry.
+
+procedure first_request(ApprovalReq?, Constant?, SovBlock, PendingFinality).
+
+first_request(approve_mint(K, Maturity, FinalityM?), Counter,
+    block(tx(Counter?, tx_mint(K?, Maturity?)), []),
+    pending_mint(Counter?, FinalityM)).
+
+first_request(approve_pay(From, To, Coin, FinalityQ?, FinalityR?), Counter,
+    block(tx(Counter?, tx_pay(From?, To?, Coin?)), []),
+    pending_pay(Counter?, FinalityQ, FinalityR)).
+
+%% =============================================================================
+%% SOVEREIGN_LOOP — Process subsequent requests with interlaced tips
+%% =============================================================================
 %%
-%% The sovereign stream is the append-only log of all transactions
-%% in this currency.  It is the source of truth for who holds what.
+%% Like interlace, but specialized: each payload comes from an approval
+%% request, and finality reply variables are extracted into a parallel
+%% pending stream for later binding.
 
-procedure sovereign(ApprovalStream?, AckStream?, Constant?, SovStream).
+procedure sovereign_loop(Stream(ApprovalReq)?, Constant?, AckStreams?,
+    Stream(SovBlock), Stream(PendingFinality)).
 
-sovereign([approve(TxRecord, Finality?)|Requests], Acks, Counter,
-    [block(Counter?, TxRecord?)|SovTail?]) :-
+%% Mint request
+sovereign_loop(
+    [approve_mint(K, Maturity, FinalityM?)|Reqs], Counter, Others,
+    [block(tx(Counter?, tx_mint(K?, Maturity?)), Tips?)|SovTail?],
+    [pending_mint(Counter?, FinalityM)|PendTail?]) :-
+    interlace # collect_tips(Others?, Tips, Others1),
     Counter1 := Counter? + 1,
-    wait_ack(Counter?, Acks?, Finality, AcksRest),
-    sovereign(Requests?, AcksRest?, Counter1?, SovTail).
+    sovereign_loop(Reqs?, Counter1?, Others1?, SovTail, PendTail).
 
-sovereign([], _, _, []).
+%% Pay request
+sovereign_loop(
+    [approve_pay(From, To, Coin, FinalityQ?, FinalityR?)|Reqs], Counter, Others,
+    [block(tx(Counter?, tx_pay(From?, To?, Coin?)), Tips?)|SovTail?],
+    [pending_pay(Counter?, FinalityQ, FinalityR)|PendTail?]) :-
+    interlace # collect_tips(Others?, Tips, Others1),
+    Counter1 := Counter? + 1,
+    sovereign_loop(Reqs?, Counter1?, Others1?, SovTail, PendTail).
 
-%% =============================================================================
-%% WAIT_ACK
-%% =============================================================================
-%%
-%% Reads the custodian ack stream until ack(TxId) is found.
-%% Binds FinalityVar to 'finalized' and returns the remaining stream.
-%% Non-matching acks (from multi-custodian setups or out-of-order
-%% delivery) are passed through to the remaining stream.
-
-procedure wait_ack(Constant?, AckStream?, Constant, AckStream).
-
-wait_ack(TxId, [ack(Id)|Rest], finalized, Rest?) :-
-    TxId? =?= Id? | true.
-
-wait_ack(TxId, [Ack|Rest], Finality?, [Ack?|Rest1?]) :-
-    otherwise |
-    wait_ack(TxId?, Rest?, Finality, Rest1).
+%% No more requests
+sovereign_loop([], _, _, [], []).
 
 %% =============================================================================
-%% SETUP_SOVEREIGN
+%% FINALITY_BINDER — Bind finality variables when acks arrive
 %% =============================================================================
 %%
-%% Creates a sovereign stream with one custodian.
-%%
-%% Returns:
-%%   - ApprovalChannel: the bond agent sends approval requests here
-%%   - SovStreamReader: the sovereign's log (reader side)
-%%
-%% The custodian_mirror process runs concurrently, reading the
-%% sovereign stream and producing acks.
+%% Reads acks and the parallel pending stream in lockstep.
+%% Acks and pendings arrive in the same order (both follow block order).
 
-procedure setup_sovereign(ApprovalStream?, SovStream).
+procedure finality_binder(Stream(AckMsg)?, Stream(PendingFinality)?).
 
-setup_sovereign(Requests, SovStreamOut?) :-
-    custodian_mirror(SovStreamOut?, AckStream),
-    sovereign(Requests?, AckStream?, 1, SovStreamOut).
+%% Mint: bind one finality variable
+finality_binder([ack(N)|Acks], [pending_mint(Id, FinalityM?)|Pendings]) :-
+    N? =?= Id? |
+    bind_finality(FinalityM),
+    finality_binder(Acks?, Pendings?).
+
+%% Pay: bind two finality variables
+finality_binder([ack(N)|Acks], [pending_pay(Id, FinalityQ?, FinalityR?)|Pendings]) :-
+    N? =?= Id? |
+    bind_finality(FinalityQ),
+    bind_finality(FinalityR),
+    finality_binder(Acks?, Pendings?).
+
+%% Done
+finality_binder([], []).
 
 %% =============================================================================
-%% SETUP_SOVEREIGN_MULTI
+%% SETUP — Wire everything together
+%% =============================================================================
+
+exported procedure setup(Stream(ApprovalReq)?).
+
+setup([FirstReq|RestReqs]) :-
+    first_request(FirstReq?, 1, FirstBlock, FirstPending),
+    custodian # custodian([FirstBlock?|SovTail?], RawAcks),
+    tee(RawAcks?, TipAcks, FinAcks),
+    sovereign_loop(RestReqs?, 2, [TipAcks?], SovTail, RestPendings),
+    finality_binder(FinAcks?, [FirstPending?|RestPendings?]).
+
+setup([]).
+
+%% =============================================================================
+%% SETUP_WITH_LOG — Setup with a log copy for recovery
 %% =============================================================================
 %%
-%% Creates a sovereign stream with multiple custodians.
-%% Each custodian gets a reader of the sovereign stream.
-%% Their ack streams are merged into one for the sovereign to read.
+%% Like setup, but tees the sovereign stream so a copy is available.
+%% The log copy can be used after a fault to recover the counter
+%% and reconstruct holdings.
+
+exported procedure setup_with_log(Stream(ApprovalReq)?, Stream(SovBlock)).
+
+setup_with_log([FirstReq|RestReqs], LogCopy?) :-
+    first_request(FirstReq?, 1, FirstBlock, FirstPending),
+    tee([FirstBlock?|SovTail?], CustodianCopy, LogCopy),
+    custodian # custodian(CustodianCopy?, RawAcks),
+    tee(RawAcks?, TipAcks, FinAcks),
+    sovereign_loop(RestReqs?, 2, [TipAcks?], SovTail, RestPendings),
+    finality_binder(FinAcks?, [FirstPending?|RestPendings?]).
+
+setup_with_log([], []).
+
+%% =============================================================================
+%% RECOVER_COUNTER — Walk a log stream, return the last block counter
+%% =============================================================================
 %%
-%% CustodianCount: number of custodians (each gets a copy of SovStream)
+%% After a fault (major or minor), the recovered sovereign reads
+%% the custodian's copy of the log to determine where to resume.
 
-procedure setup_sovereign_multi(ApprovalStream?, Constant?, SovStream).
+exported procedure recover_counter(Stream(SovBlock)?, Constant).
 
-setup_sovereign_multi(Requests, 1, SovStreamOut?) :-
-    custodian_mirror(SovStreamOut?, AckStream),
-    sovereign(Requests?, AckStream?, 1, SovStreamOut).
+recover_counter([block(tx(N, _), _)|Rest], Counter?) :-
+    recover_counter_next(N?, Rest?, Counter).
 
-%% For multiple custodians, spawn mirrors and merge their ack streams.
-%% (Simplified: using 2 custodians as example; generalise with a list.)
+recover_counter([], 0).
 
-%% setup_sovereign_multi(Requests, 2, SovStreamOut?) :-
-%%     custodian_mirror(SovStreamOut?, AckStream1),
-%%     custodian_mirror(SovStreamOut?, AckStream2),
-%%     merge_acks(AckStream1?, AckStream2?, MergedAcks),
-%%     sovereign(Requests?, MergedAcks?, 1, SovStreamOut).
+procedure recover_counter_next(Constant?, Stream(SovBlock)?, Constant).
 
-%% procedure merge_acks(AckStream?, AckStream?, AckStream).
-%% merge_acks([X|Xs], Ys, [X?|Zs?]) :- merge_acks(Ys?, Xs?, Zs).
-%% merge_acks(Xs, [Y|Ys], [Y?|Zs?]) :- merge_acks(Xs?, Ys?, Zs).
-%% merge_acks([], Ys, Ys?).
-%% merge_acks(Xs, [], Xs?).
+recover_counter_next(_, [block(tx(N, _), _)|Rest], Counter?) :-
+    recover_counter_next(N?, Rest?, Counter).
+
+recover_counter_next(N, [], N?).
