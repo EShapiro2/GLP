@@ -877,6 +877,20 @@ class HeapFCP {
       return addr;
     }
 
+    if (term is MapTerm) {
+      // MapTerm is an opaque Dart map stored as a ground value
+      final addr = HP++;
+      cells.add(HeapCell(term, CellTag.ValueTag));
+      return addr;
+    }
+
+    if (term is SbsTerm) {
+      // SbsTerm is an opaque SharedBroadcastStream stored as a ground value
+      final addr = HP++;
+      cells.add(HeapCell(term, CellTag.ValueTag));
+      return addr;
+    }
+
     if (term is ModuleTerm) {
       // ModuleTerm wraps a compiled module binary — stored as opaque value
       final addr = HP++;

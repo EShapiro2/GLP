@@ -1,0 +1,32 @@
+%% project_play_ui_boot.glp - Interactive UI boot for madGLP
+%%
+%% Arity 3: agent_init(Id, UserIn, NetIn)
+%% - Id:      agent identifier (alice, bob, charlie)
+%% - UserIn:  ground command stream from Dart (via InputInjector)
+%% - NetIn:   network input stream (from IsolateManager)
+%%
+%% Dart provides ground-only I/O:
+%% - Input:  REPL-like parser produces ground terms, injected into UserIn
+%% - Output: send_to_user/1 calls _output/1 kernel to print ground terms
+%%
+%% The ui_mediator sits between agent/4 and Dart, using two channels:
+%% - AgentCh: ch(AgentToUser?, AgentIn) — agent's _user output/input
+%% - UserCh:  ch(UserIn?, UserOut)      — Dart's input/output
+%%
+%% Requires: load project_typed_social_agent.glp first
+%% Requires: load project_typed_ui_mediator.glp first
+%%
+%% Date: 2026-02-17
+
+-mode(system).
+
+%% =============================================================================
+%% AGENT INITIALIZATION
+%% =============================================================================
+
+agent_init(Id, UserIn, NetIn) :-
+    ground(Id?) |
+    send_to_net(NetOut?),
+    agent(Id?, AgentIn?, NetIn?, [output('_user', AgentToUser), output('_net', NetOut)]),
+    ui_mediator(Id?, ch(AgentToUser?, AgentIn), ch(UserIn?, UserOut), [], 1),
+    send_to_user(UserOut?).

@@ -83,6 +83,7 @@ void registerStandardBodyKernels(BodyKernelRegistry registry) {
   // Structure manipulation
   registry.register('_list_to_tuple', 2, listToTupleKernel);
   registry.register('_tuple_to_list', 2, tupleToListKernel);
+  registry.register('struct_arg', 3, structArgKernel);
 
   // Identity/copy
   registry.register('_copy', 2, copyKernel);
@@ -100,6 +101,25 @@ void registerStandardBodyKernels(BodyKernelRegistry registry) {
 
   // I/O kernels
   registry.register('_output', 1, outputKernel);
+
+  // Map operations (O(1) key-value lookup)
+  registry.register('map_new', 1, mapNewKernel);
+  registry.register('map_put', 4, mapPutKernel);
+  registry.register('_map_get', 3, mapGetKernel);
+  registry.register('map_remove', 3, mapRemoveKernel);
+  registry.register('map_keys', 2, mapKeysKernel);
+  registry.register('map_show', 3, mapShowKernel);
+  registry.register('fofmap_show', 3, fofmapShowKernel);
+  registry.register('map_list_append', 4, mapListAppendKernel);
+
+  // SharedBroadcastStream operations
+  registry.register('sbs_new', 2, sbsNewKernel);
+  registry.register('sbs_add_recipient', 3, sbsAddRecipientKernel);
+  registry.register('sbs_write_update', 4, sbsWriteUpdateKernel);
+  registry.register('sbs_get_checkpoint', 2, sbsGetCheckpointKernel);
+
+  // Arithmetic assignment
+  registry.register(':=', 2, assignKernel);
 
   // Module dispatch kernels
   registry.register('_activate', 2, activateKernel);
@@ -524,6 +544,33 @@ BodyKernelResult tupleToListKernel(GlpRuntime rt, List<Object?> args) {
   return _bindResult(rt, args[1], list);
 }
 
+/// struct_arg(Struct?, Index?, Value) — Extract the Nth argument (1-based) from a struct.
+/// Used to destructure structs when head pattern matching is not available.
+BodyKernelResult structArgKernel(GlpRuntime rt, List<Object?> args) {
+  if (args.length != 3) {
+    print('[ABORT] struct_arg/3: expected 3 arguments, got ${args.length}');
+    return BodyKernelResult.abort;
+  }
+
+  final structArg = _deref(rt, args[0]);
+  if (structArg is! StructTerm) {
+    print('[ABORT] struct_arg/3: first argument must be a structure, got ${structArg.runtimeType}');
+    return BodyKernelResult.abort;
+  }
+
+  final indexArg = _deref(rt, args[1]);
+  final index = (indexArg is ConstTerm && indexArg.value is int)
+      ? indexArg.value as int
+      : (indexArg is int ? indexArg : null);
+  if (index == null || index < 1 || index > structArg.args.length) {
+    print('[ABORT] struct_arg/3: index $index out of range [1..${structArg.args.length}]');
+    return BodyKernelResult.abort;
+  }
+
+  final value = _deepDeref(rt, structArg.args[index - 1]);
+  return _bindResult(rt, args[2], value);
+}
+
 BodyKernelResult copyKernel(GlpRuntime rt, List<Object?> args) {
   if (args.length != 2) {
     print('[ABORT] copy/2: expected 2 arguments, got ${args.length}');
@@ -771,6 +818,374 @@ BodyKernelResult outputKernel(GlpRuntime rt, List<Object?> args) {
   }
 
   return BodyKernelResult.success;
+}
+
+// ============================================================================
+// MAP KERNELS (O(1) Key-Value Lookup)
+// ============================================================================
+
+/// Extract a Dart-level key from a GLP term.
+/// Keys must be ground constants (string, int, double).
+Object? _extractMapKey(GlpRuntime rt, Object? arg) {
+  final val = _deref(rt, arg);
+  if (val is ConstTerm) return val.value;
+  if (val is num) return val;
+  if (val is String) return val;
+  return null; // not a valid map key
+}
+
+/// map_new(M) — Create empty map, bind M to it.
+BodyKernelResult mapNewKernel(GlpRuntime rt, List<Object?> args) {
+  if (args.length != 1) {
+    print('[ABORT] map_new/1: expected 1 argument, got ${args.length}');
+    return BodyKernelResult.abort;
+  }
+  return _bindResult(rt, args[0], MapTerm({}));
+}
+
+/// map_put(M?, Key?, Val?, M1) — Mutate map in place + bind M1.
+/// O(1) — SRSW guarantees the old map variable (M) is dead after this
+/// read, so in-place mutation is safe. No copy needed.
+BodyKernelResult mapPutKernel(GlpRuntime rt, List<Object?> args) {
+  if (args.length != 4) {
+    print('[ABORT] map_put/4: expected 4 arguments, got ${args.length}');
+    return BodyKernelResult.abort;
+  }
+
+  final mapArg = _deref(rt, args[0]);
+  if (mapArg is! MapTerm) {
+    print('[ABORT] map_put/4: first argument must be a MapTerm, got ${mapArg.runtimeType}');
+    return BodyKernelResult.abort;
+  }
+
+  final key = _extractMapKey(rt, args[1]);
+  if (key == null) {
+    print('[ABORT] map_put/4: second argument must be a ground constant');
+    return BodyKernelResult.abort;
+  }
+
+  final val = _deref(rt, args[2]);
+  mapArg.entries[key] = (val is Term) ? val : ConstTerm(val);
+
+  return _bindResult(rt, args[3], mapArg);
+}
+
+/// _map_get(M?, Key?, Val) — Look up key, bind Val to value.
+/// Only called after map_contains guard confirms key exists.
+BodyKernelResult mapGetKernel(GlpRuntime rt, List<Object?> args) {
+  if (args.length != 3) {
+    print('[ABORT] _map_get/3: expected 3 arguments, got ${args.length}');
+    return BodyKernelResult.abort;
+  }
+
+  final mapArg = _deref(rt, args[0]);
+  if (mapArg is! MapTerm) {
+    print('[ABORT] _map_get/3: first argument must be a MapTerm, got ${mapArg.runtimeType}');
+    return BodyKernelResult.abort;
+  }
+
+  final key = _extractMapKey(rt, args[1]);
+  if (key == null) {
+    print('[ABORT] _map_get/3: second argument must be a ground constant');
+    return BodyKernelResult.abort;
+  }
+
+  final val = mapArg.entries[key];
+  if (val == null) {
+    print('[ABORT] _map_get/3: key not found (guard should have checked)');
+    return BodyKernelResult.abort;
+  }
+
+  return _bindResult(rt, args[2], val);
+}
+
+/// map_remove(M?, Key?, M1) — Remove key from map in place + bind M1.
+/// O(1) — SRSW guarantees the old map variable (M) is dead after this
+/// read, so in-place mutation is safe.
+/// If the key is not present, the map is unchanged (no error).
+BodyKernelResult mapRemoveKernel(GlpRuntime rt, List<Object?> args) {
+  if (args.length != 3) {
+    print('[ABORT] map_remove/3: expected 3 arguments, got ${args.length}');
+    return BodyKernelResult.abort;
+  }
+
+  final mapArg = _deref(rt, args[0]);
+  if (mapArg is! MapTerm) {
+    print('[ABORT] map_remove/3: first argument must be a MapTerm, got ${mapArg.runtimeType}');
+    return BodyKernelResult.abort;
+  }
+
+  final key = _extractMapKey(rt, args[1]);
+  if (key == null) {
+    print('[ABORT] map_remove/3: second argument must be a ground constant');
+    return BodyKernelResult.abort;
+  }
+
+  mapArg.entries.remove(key); // O(1) in-place removal; no-op if absent
+
+  return _bindResult(rt, args[2], mapArg);
+}
+
+/// map_keys(M?, Keys) — Extract all keys as a GLP list.
+/// O(n) where n = number of entries — must iterate all keys and
+/// build the list.  Identical complexity to Dart HashMap.keys.
+BodyKernelResult mapKeysKernel(GlpRuntime rt, List<Object?> args) {
+  if (args.length != 2) {
+    print('[ABORT] map_keys/2: expected 2 arguments, got ${args.length}');
+    return BodyKernelResult.abort;
+  }
+
+  final mapArg = _deref(rt, args[0]);
+  if (mapArg is! MapTerm) {
+    print('[ABORT] map_keys/2: first argument must be a MapTerm, got ${mapArg.runtimeType}');
+    return BodyKernelResult.abort;
+  }
+
+  // Convert Dart keys to GLP list: [k1, k2, ..., kn]
+  final keys = mapArg.entries.keys.toList();
+  final glpList = _dartListToGlpList(keys);
+
+  return _bindResult(rt, args[1], glpList);
+}
+
+/// map_show(AgentId?, MapIn?, MapOut) — Print FMap contents to screen.
+/// Outputs tagged(id, notify(fmap({...}))) via _output path so it
+/// routes to the correct agent panel in Flutter UI.
+/// Pass-through: binds MapOut to a copy of MapIn so the map remains usable.
+BodyKernelResult mapShowKernel(GlpRuntime rt, List<Object?> args) {
+  if (args.length != 3) {
+    print('[ABORT] map_show/3: expected 3 arguments, got ${args.length}');
+    return BodyKernelResult.abort;
+  }
+
+  final idArg = _deref(rt, args[0]);
+  final id = (idArg is ConstTerm) ? idArg.value.toString() : idArg.toString();
+
+  final mapArg = _deref(rt, args[1]);
+  if (mapArg is! MapTerm) {
+    print('[ABORT] map_show/3: second argument must be a MapTerm, got ${mapArg.runtimeType}');
+    return BodyKernelResult.abort;
+  }
+
+  // Format map entries (deep-deref values to resolve VarRefs inside structs)
+  String mapStr;
+  if (mapArg.entries.isEmpty) {
+    mapStr = '{}';
+  } else {
+    final pairs = mapArg.entries.entries.map((e) {
+      final derefed = (e.value is Term) ? _deepDeref(rt, e.value) : e.value;
+      final val = (derefed is Term) ? formatGroundTerm(derefed) : derefed.toString();
+      return '${e.key}: $val';
+    }).join(', ');
+    mapStr = '{$pairs}';
+  }
+
+  final line = 'tagged($id, notify(fmap($mapStr)))';
+  final callback = rt.outputCallback;
+  if (callback != null) {
+    callback(line);
+  } else {
+    print(line);
+  }
+
+  // Pass-through: copy the map so it remains usable
+  final copy = MapTerm(Map<Object, Term>.from(mapArg.entries));
+  return _bindResult(rt, args[2], copy);
+}
+
+/// fofmap_show(AgentId?, FoFMapIn?, FoFMapOut) — Print FoFMap contents to screen.
+/// FoFMap is a nested map: HashMap<name, HashMap<name, FLv2>>.
+/// Outputs tagged(id, notify(fofmap({...}))) for Flutter UI routing.
+BodyKernelResult fofmapShowKernel(GlpRuntime rt, List<Object?> args) {
+  if (args.length != 3) {
+    print('[ABORT] fofmap_show/3: expected 3 arguments, got ${args.length}');
+    return BodyKernelResult.abort;
+  }
+
+  final idArg = _deref(rt, args[0]);
+  final id = (idArg is ConstTerm) ? idArg.value.toString() : idArg.toString();
+
+  final mapArg = _deref(rt, args[1]);
+  if (mapArg is! MapTerm) {
+    print('[ABORT] fofmap_show/3: second argument must be a MapTerm, got ${mapArg.runtimeType}');
+    return BodyKernelResult.abort;
+  }
+
+  String mapStr;
+  if (mapArg.entries.isEmpty) {
+    mapStr = '{}';
+  } else {
+    final outerPairs = mapArg.entries.entries.map((outerEntry) {
+      final innerMap = _deref(rt, outerEntry.value);
+      String innerStr;
+      if (innerMap is MapTerm && innerMap.entries.isNotEmpty) {
+        final innerPairs = innerMap.entries.entries.map((e) {
+          final derefed = (e.value is Term) ? _deepDeref(rt, e.value) : e.value;
+          final val = (derefed is Term) ? formatGroundTerm(derefed) : derefed.toString();
+          return '${e.key}: $val';
+        }).join(', ');
+        innerStr = '{$innerPairs}';
+      } else if (innerMap is MapTerm) {
+        innerStr = '{}';
+      } else {
+        innerStr = innerMap.toString();
+      }
+      return '${outerEntry.key}: $innerStr';
+    }).join(', ');
+    mapStr = '{$outerPairs}';
+  }
+
+  final line = 'tagged($id, notify(fofmap($mapStr)))';
+  final callback = rt.outputCallback;
+  if (callback != null) {
+    callback(line);
+  } else {
+    print(line);
+  }
+
+  final copy = MapTerm(Map<Object, Term>.from(mapArg.entries));
+  return _bindResult(rt, args[2], copy);
+}
+
+/// map_list_append(MapIn?, Key?, Value?, MapOut) — Append Value to list at Key.
+/// Looks up Key in the map. If found and value is a list, prepends Value.
+/// If Key not found, creates new entry with [Value].
+BodyKernelResult mapListAppendKernel(GlpRuntime rt, List<Object?> args) {
+  if (args.length != 4) {
+    print('[ABORT] map_list_append/4: expected 4 arguments, got ${args.length}');
+    return BodyKernelResult.abort;
+  }
+
+  final mapArg = _deref(rt, args[0]);
+  if (mapArg is! MapTerm) {
+    print('[ABORT] map_list_append/4: first argument must be a MapTerm, got ${mapArg.runtimeType}');
+    return BodyKernelResult.abort;
+  }
+
+  final key = _extractMapKey(rt, args[1]);
+  if (key == null) {
+    print('[ABORT] map_list_append/4: second argument must be a ground constant');
+    return BodyKernelResult.abort;
+  }
+
+  final value = _deref(rt, args[2]);
+  final valueTerm = (value is Term) ? value : ConstTerm(value);
+
+  // Get current list (or start with nil = empty list)
+  final current = mapArg.entries[key];
+  // Prepend value: [Value | CurrentList]
+  final newList = StructTerm('.', [valueTerm, current ?? ConstTerm('nil')]);
+  mapArg.entries[key] = newList;
+
+  return _bindResult(rt, args[3], mapArg);
+}
+
+/// :=(Result, Expr) — Arithmetic assignment.
+BodyKernelResult assignKernel(GlpRuntime rt, List<Object?> args) {
+  if (args.length != 2) {
+    print('[ABORT] :=/2: expected 2 arguments, got ${args.length}');
+    return BodyKernelResult.abort;
+  }
+  final result = _getNum(rt, args[1]);
+  if (result == null) {
+    print('[ABORT] :=/2: right-hand side must evaluate to a number');
+    return BodyKernelResult.abort;
+  }
+  final value = result == result.toInt() ? result.toInt() : result;
+  return _bindResult(rt, args[0], ConstTerm(value));
+}
+
+// =============================================================================
+// SharedBroadcastStream Kernels
+// =============================================================================
+
+/// sbs_new(Id?, SBS) — Create a new SharedBroadcastStream for agent Id.
+BodyKernelResult sbsNewKernel(GlpRuntime rt, List<Object?> args) {
+  if (args.length != 2) {
+    print('[ABORT] sbs_new/2: expected 2 arguments, got ${args.length}');
+    return BodyKernelResult.abort;
+  }
+  final idArg = _deref(rt, args[0]);
+  final id = (idArg is ConstTerm) ? idArg.value! : idArg!;
+  return _bindResult(rt, args[1], SbsTerm(id));
+}
+
+/// sbs_add_recipient(SBS?, Name?, SBS1) — Add Name to SBS recipients.
+BodyKernelResult sbsAddRecipientKernel(GlpRuntime rt, List<Object?> args) {
+  if (args.length != 3) {
+    print('[ABORT] sbs_add_recipient/3: expected 3 arguments, got ${args.length}');
+    return BodyKernelResult.abort;
+  }
+  final sbsArg = _deref(rt, args[0]);
+  if (sbsArg is! SbsTerm) {
+    print('[ABORT] sbs_add_recipient/3: first argument must be SbsTerm, got ${sbsArg.runtimeType}');
+    return BodyKernelResult.abort;
+  }
+  final nameArg = _deref(rt, args[1]);
+  final name = (nameArg is ConstTerm) ? nameArg.value! : nameArg!;
+  if (!sbsArg.recipients.contains(name)) {
+    sbsArg.recipients.add(name);
+  }
+  // SRSW: old SBS is dead after read, return the same (mutated) object
+  return _bindResult(rt, args[2], sbsArg);
+}
+
+/// sbs_write_update(SBS?, Value?, SBS1, RecipientList) — Write update to SBS.
+/// Appends Value to pending, increments counter, returns recipients as GLP list.
+/// If counter == |recipients|, rotates: checkpoint += pending, pending = [], counter = 0.
+BodyKernelResult sbsWriteUpdateKernel(GlpRuntime rt, List<Object?> args) {
+  if (args.length != 4) {
+    print('[ABORT] sbs_write_update/4: expected 4 arguments, got ${args.length}');
+    return BodyKernelResult.abort;
+  }
+  final sbsArg = _deref(rt, args[0]);
+  if (sbsArg is! SbsTerm) {
+    print('[ABORT] sbs_write_update/4: first argument must be SbsTerm, got ${sbsArg.runtimeType}');
+    return BodyKernelResult.abort;
+  }
+  final valArg = _deref(rt, args[1]);
+  final value = (valArg is Term) ? valArg : ConstTerm(valArg);
+
+  // Append to pending
+  sbsArg.pending.add(value);
+  sbsArg.updateCounter++;
+
+  // Check for rotation
+  if (sbsArg.recipients.isNotEmpty &&
+      sbsArg.updateCounter >= sbsArg.recipients.length) {
+    // Rotate: checkpoint = checkpoint + pending, pending = [], counter = 0
+    sbsArg.checkpoint.addAll(sbsArg.pending);
+    sbsArg.pending.clear();
+    sbsArg.updateCounter = 0;
+  }
+
+  // Build recipients as GLP list
+  final recipientTerms = sbsArg.recipients
+      .map<Object?>((r) => r is Term ? r : ConstTerm(r))
+      .toList();
+  final recipientList = _dartListToGlpList(recipientTerms);
+
+  // Bind SBS1 (output SBS — same object, mutated)
+  final bindSbs = _bindResult(rt, args[2], sbsArg);
+  if (bindSbs == BodyKernelResult.abort) return bindSbs;
+
+  // Bind RecipientList
+  return _bindResult(rt, args[3], recipientList);
+}
+
+/// sbs_get_checkpoint(SBS?, List) — Get current checkpoint as GLP list.
+BodyKernelResult sbsGetCheckpointKernel(GlpRuntime rt, List<Object?> args) {
+  if (args.length != 2) {
+    print('[ABORT] sbs_get_checkpoint/2: expected 2 arguments, got ${args.length}');
+    return BodyKernelResult.abort;
+  }
+  final sbsArg = _deref(rt, args[0]);
+  if (sbsArg is! SbsTerm) {
+    print('[ABORT] sbs_get_checkpoint/2: first argument must be SbsTerm, got ${sbsArg.runtimeType}');
+    return BodyKernelResult.abort;
+  }
+  final list = _dartListToGlpList(sbsArg.checkpoint.cast<Object?>());
+  return _bindResult(rt, args[1], list);
 }
 
 /// Format a ground term as readable GLP syntax.

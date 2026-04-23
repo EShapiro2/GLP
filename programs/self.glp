@@ -69,6 +69,33 @@ procedure _send(_?, _?, _?).
 % Output (system predicate)
 procedure _output(_?).
 
+% Map operations (O(1) key-value lookup)
+procedure map_new(_).
+procedure map_put(_?, _?, _?, _).
+procedure _map_get(_?, _?, _).
+procedure map_contains(_?, _?).
+procedure map_get(_?, _?, _).
+procedure map_remove(_?, _?, _).
+procedure map_keys(_?, _).
+procedure map_show(_?, _?, _).
+procedure fofmap_show(_?, _?, _).
+procedure map_list_append(_?, _?, _?, _).
+
+% Structure manipulation
+procedure _copy(_?, _).
+procedure _list_to_tuple(_?, _).
+procedure _tuple_to_list(_?, _).
+procedure struct_arg(_?, Constant?, Constant).
+procedure struct_arg_eq(_?, Constant?, Constant?).
+procedure map_entry_arg_eq(_?, Constant?, Constant?, Constant?).
+procedure map_entry_arg_ge(_?, Constant?, Constant?, Constant?).
+
+% SharedBroadcastStream operations
+procedure sbs_new(Constant?, _).
+procedure sbs_add_recipient(_?, Constant?, _).
+procedure sbs_write_update(_?, _?, _, _).
+procedure sbs_get_checkpoint(_?, _).
+
 % =============================================================================
 % SINGLE-UNIT-CLAUSE PROCEDURES (DEFINED GUARDS)
 % =============================================================================

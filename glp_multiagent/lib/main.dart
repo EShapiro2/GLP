@@ -53,8 +53,34 @@ class TraceLogger {
   }
 }
 
-/// Default GLP program directory (repo-relative from glp_multiagent/)
-const _defaultGlpDir = '../programs/typed_book/social_graph';
+/// Default GLP program directory.
+/// Override locally by creating glp_multiagent/glp_config.json:
+///   { "glp_dir": "/your/path/to/GLP/programs/typed_book/social_graph" }
+/// That file is .gitignore'd so it won't be pushed.
+final _defaultGlpDir = () {
+  try {
+    // Look for glp_config.json next to the repo's glp_multiagent/ directory.
+    // Walk up from executable to find it, or check current working directory.
+    for (final base in [
+      File(Platform.resolvedExecutable).parent,
+      Directory.current,
+    ]) {
+      var dir = base is File ? (base as File).parent : base as Directory;
+      for (var i = 0; i < 10; i++) {
+        final configFile = File('${dir.path}/glp_multiagent/glp_config.json');
+        if (configFile.existsSync()) {
+          final content = configFile.readAsStringSync();
+          // Simple JSON parse — extract glp_dir value
+          final match = RegExp(r'"glp_dir"\s*:\s*"([^"]+)"').firstMatch(content);
+          if (match != null) return match.group(1)!;
+        }
+        dir = dir.parent;
+      }
+    }
+  } catch (_) {}
+  // Fallback to original default
+  return '/Users/ohadey/Desktop/Grassroots/GLP2/GLP/programs/typed_book/social_graph';
+}();
 
 /// Resolve absolute path to programs/self.glp.
 String _resolveRootSelfGlpPath() {
@@ -69,9 +95,9 @@ final _rootSelfGlpPath = _resolveRootSelfGlpPath();
 
 /// GLP files loaded for UI agents (order matters: shared first, then boot)
 const _glpFiles = [
-  'typed_social_agent.glp',
-  'typed_ui_mediator.glp',
-  'play_ui_boot.glp',
+  'social_graph_agent.glp',
+  'social_graph_ui_mediator.glp',
+  'social_graph_ui_boot.glp',
 ];
 
 // =============================================================================
@@ -377,10 +403,15 @@ class _CoordinatorScreenState extends State<CoordinatorScreen> {
     if (Directory('$devRoot/glp_runtime').existsSync()) {
       return devRoot;
     }
-    // Fallback: try absolute path (Udi's machine)
-    const fallback = '/Users/udi/Grassroots/GLP';
-    if (Directory('$fallback/glp_runtime').existsSync()) {
-      return fallback;
+    // Fallback: try absolute paths
+    const fallbacks = [
+      '/Users/ohadey/Desktop/Grassroots/GLP2/GLP',
+      '/Users/udi/Grassroots/GLP',
+    ];
+    for (final fallback in fallbacks) {
+      if (Directory('$fallback/glp_runtime').existsSync()) {
+        return fallback;
+      }
     }
     return devRoot; // best guess
   }
@@ -388,8 +419,18 @@ class _CoordinatorScreenState extends State<CoordinatorScreen> {
   Future<void> _runPlay(int playNumber) async {
     await _closeAll();
 
-    // Create read-only agent panels (Alice, Bob, Charlie)
-    for (final id in ['Alice', 'Bob', 'Charlie']) {
+    // Create read-only agent panels based on play type
+    final List<String> agentIds;
+    if (playNumber == 15) {
+      agentIds = ['Alice', 'Bob', 'Charlie', 'Dave'];
+    } else if (playNumber <= 3 || (playNumber >= 12 && playNumber <= 14)) {
+      agentIds = ['Alice', 'Bob', 'Charlie'];
+    } else if (playNumber >= 8) {
+      agentIds = ['Alice', 'Bob'];
+    } else {
+      agentIds = ['Alice', 'Carol', 'Bob', 'Dave'];
+    }
+    for (final id in agentIds) {
       final agent = AgentState(id, [], readOnly: true);
       agent.initialized = true;
       agent.status = 'Play $playNumber';
@@ -401,7 +442,12 @@ class _CoordinatorScreenState extends State<CoordinatorScreen> {
       _log.add('Starting fplay$playNumber (repo: $repoRoot)...');
     });
 
-    final runner = ReplPlayRunner(repoRoot: repoRoot);
+    final runner = ReplPlayRunner(repoRoot: repoRoot, sourceFiles: const [
+      '../programs/typed_book/gsn/typed_social_agent.glp',
+      '../programs/typed_book/gsn/typed_ui_mediator.glp',
+      '../programs/typed_book/gsn/typed_ui_actors.glp',
+      '../programs/typed_book/gsn/play_ui_sim_boot.glp',
+    ]);
     _playRunner = runner;
 
     runner.onOutput = (output) {
@@ -515,38 +561,35 @@ class _CoordinatorScreenState extends State<CoordinatorScreen> {
   }
 
   Widget _buildControlBar() {
+    Widget playButton(int n) => ElevatedButton.icon(
+          onPressed: () => _runPlay(n),
+          icon: const Icon(Icons.play_arrow),
+          label: Text('Play $n'),
+          style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
+        );
+    Widget sep() => Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 8),
+          child: Container(width: 1, height: 30, color: Colors.grey),
+        );
+
     return Container(
       padding: const EdgeInsets.all(16.0),
       color: Colors.orange.shade50,
-      child: Row(
-        children: [
-          ElevatedButton.icon(
-            onPressed: () => _runPlay(1),
-            icon: const Icon(Icons.play_arrow),
-            label: const Text('Play 1'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.green,
-            ),
-          ),
-          const SizedBox(width: 8),
-          ElevatedButton.icon(
-            onPressed: () => _runPlay(2),
-            icon: const Icon(Icons.play_arrow),
-            label: const Text('Play 2'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.green,
-            ),
-          ),
-          const SizedBox(width: 8),
-          ElevatedButton.icon(
-            onPressed: () => _runPlay(3),
-            icon: const Icon(Icons.play_arrow),
-            label: const Text('Play 3'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.green,
-            ),
-          ),
-        ],
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Row(
+          children: [
+            for (final n in [1, 2, 3]) ...[playButton(n), const SizedBox(width: 8)],
+            sep(),
+            for (final n in [4, 5, 6, 7]) ...[playButton(n), const SizedBox(width: 8)],
+            sep(),
+            for (final n in [8, 9, 10, 11]) ...[playButton(n), const SizedBox(width: 8)],
+            sep(),
+            for (final n in [12, 13, 14]) ...[playButton(n), const SizedBox(width: 8)],
+            sep(),
+            playButton(15), const SizedBox(width: 8),
+          ],
+        ),
       ),
     );
   }

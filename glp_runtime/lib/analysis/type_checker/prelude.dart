@@ -59,6 +59,29 @@ const Set<String> predefinedProcedureNames = {
   // Univ operations (fundamental)
   '=..',
   '..=',
+  // Map operations (fundamental builtins)
+  'map_new',
+  'map_put',
+  '_map_get',
+  'map_contains',
+  'map_remove',
+  'map_keys',
+  'map_show',
+  'fofmap_show',
+  'map_list_append',
+  // Structure manipulation
+  '_copy',
+  '_list_to_tuple',
+  '_tuple_to_list',
+  'struct_arg',
+  'struct_arg_eq',
+  'map_entry_arg_eq',
+  'map_entry_arg_ge',
+  // SharedBroadcastStream
+  'sbs_new',
+  'sbs_add_recipient',
+  'sbs_write_update',
+  'sbs_get_checkpoint',
   // Note: dl_append, dl_to_list, new_channel, send, receive
   // are NOT protected - they are library-level and can be redefined
 };
@@ -111,6 +134,30 @@ const Set<String> builtinProcedures = {
   'is_mutual_ref/1',
   '_stream_append/3',
   '_close_mutual_reference/1',
+  // Map operations (O(1) key-value lookup)
+  'map_new/1',
+  'map_put/4',
+  '_map_get/3',
+  'map_contains/2',
+  'map_get/3',
+  'map_remove/3',
+  'map_keys/2',
+  'map_show/3',
+  'fofmap_show/3',
+  'map_list_append/4',
+  // Structure manipulation
+  '_copy/2',
+  '_list_to_tuple/2',
+  '_tuple_to_list/2',
+  'struct_arg/3',
+  'struct_arg_eq/3',
+  'map_entry_arg_eq/4',
+  'map_entry_arg_ge/4',
+  // SharedBroadcastStream
+  'sbs_new/2',
+  'sbs_add_recipient/3',
+  'sbs_write_update/4',
+  'sbs_get_checkpoint/2',
   // madGLP network primitives
   '_send/3',
   // Output (system predicate)

@@ -4393,6 +4393,22 @@ class BytecodeRunner {
         }
         return GuardResult.failure;
 
+      case '@<':
+        // Lexicographic string comparison: @<(A?, B?) succeeds if A < B
+        if (args.length < 2) return GuardResult.failure;
+        final aVal = getValue(args[0]);
+        final bVal = getValue(args[1]);
+        String? aStr;
+        if (aVal is ConstTerm && aVal.value is String) aStr = aVal.value as String;
+        else if (aVal is String) aStr = aVal;
+        String? bStr;
+        if (bVal is ConstTerm && bVal.value is String) bStr = bVal.value as String;
+        else if (bVal is String) bStr = bVal;
+        if (aStr != null && bStr != null) {
+          return aStr.compareTo(bStr) < 0 ? GuardResult.success : GuardResult.failure;
+        }
+        return GuardResult.failure;
+
       // Type guards
       case 'ground':
         // Already checked for unbound readers in caller
@@ -4513,6 +4529,196 @@ class BytecodeRunner {
         final val = getValue(args[0]);
         if (val is MutualRefTerm) {
           return GuardResult.success;
+        }
+        return GuardResult.failure;
+
+      case 'map_contains':
+        // Succeeds if M is a MapTerm and contains Key
+        // Suspension on unbound readers handled by caller
+        if (args.length < 2) return GuardResult.failure;
+        final mapVal = getValue(args[0]);
+        if (mapVal is! MapTerm) return GuardResult.failure;
+        final keyArg = getValue(args[1]);
+        // Extract Dart-level key from constant
+        Object? mapKey;
+        if (keyArg is num) {
+          mapKey = keyArg;
+        } else if (keyArg is String) {
+          mapKey = keyArg;
+        } else if (keyArg is ConstTerm) {
+          mapKey = keyArg.value;
+        }
+        if (mapKey == null) return GuardResult.failure;
+        return mapVal.entries.containsKey(mapKey)
+            ? GuardResult.success
+            : GuardResult.failure;
+
+      case 'map_entry_arg_eq':
+        // map_entry_arg_eq(Map?, Key?, Index?, Value?) — combined guard
+        // Succeeds if Map contains Key, the entry is a StructTerm, and its
+        // Nth arg (1-based) equals Value. Combines map_contains + _map_get + struct_arg_eq.
+        if (args.length < 4) return GuardResult.failure;
+        final meMap = getValue(args[0]);
+        if (meMap is! MapTerm) return GuardResult.failure;
+        final meKeyArg = getValue(args[1]);
+        Object? meKey;
+        if (meKeyArg is num) meKey = meKeyArg;
+        else if (meKeyArg is String) meKey = meKeyArg;
+        else if (meKeyArg is ConstTerm) meKey = meKeyArg.value;
+        if (meKey == null) return GuardResult.failure;
+        final meEntry = meMap.entries[meKey];
+        if (meEntry == null) return GuardResult.failure;
+        // Deep-deref the entry
+        var meStruct = meEntry;
+        while (meStruct is VarRef) {
+          final v = getValue(meStruct.addr);
+          if (v == null || v is! Term) break;
+          meStruct = v;
+        }
+        if (meStruct is! StructTerm) return GuardResult.failure;
+        final meIdxArg = getValue(args[2]);
+        int? meIdx;
+        if (meIdxArg is int) meIdx = meIdxArg;
+        else if (meIdxArg is ConstTerm && meIdxArg.value is int) meIdx = meIdxArg.value as int;
+        if (meIdx == null || meIdx < 1 || meIdx > meStruct.args.length) return GuardResult.failure;
+        var meArgVal = meStruct.args[meIdx - 1];
+        while (meArgVal is VarRef) {
+          final v = getValue(meArgVal.addr);
+          if (v == null || v is! Term) break;
+          meArgVal = v;
+        }
+        var meExpected = getValue(args[3]);
+        if (meExpected is VarRef) {
+          final v = getValue(meExpected.addr);
+          if (v != null) meExpected = v;
+        }
+        Object? meArgKey;
+        if (meArgVal is ConstTerm) meArgKey = meArgVal.value;
+        else if (meArgVal is String) meArgKey = meArgVal;
+        else if (meArgVal is num) meArgKey = meArgVal;
+        Object? meExpKey;
+        if (meExpected is ConstTerm) meExpKey = meExpected.value;
+        else if (meExpected is String) meExpKey = meExpected;
+        else if (meExpected is num) meExpKey = meExpected;
+        return (meArgKey != null && meExpKey != null && meArgKey == meExpKey)
+            ? GuardResult.success
+            : GuardResult.failure;
+
+      case 'map_entry_arg_ge':
+        // map_entry_arg_ge(Map?, Key?, Index?, Value?) — combined guard
+        // Succeeds if Map[Key] exists and its Nth arg >= Value (numeric)
+        if (args.length < 4) return GuardResult.failure;
+        final geMap = getValue(args[0]);
+        if (geMap is! MapTerm) return GuardResult.failure;
+        final geKeyArg = getValue(args[1]);
+        Object? geKey;
+        if (geKeyArg is num) geKey = geKeyArg;
+        else if (geKeyArg is String) geKey = geKeyArg;
+        else if (geKeyArg is ConstTerm) geKey = geKeyArg.value;
+        if (geKey == null) return GuardResult.failure;
+        final geEntry = geMap.entries[geKey];
+        if (geEntry == null) return GuardResult.failure;
+        var geStruct = geEntry;
+        while (geStruct is VarRef) {
+          final v = getValue(geStruct.addr);
+          if (v == null || v is! Term) break;
+          geStruct = v;
+        }
+        if (geStruct is! StructTerm) return GuardResult.failure;
+        final geIdxArg = getValue(args[2]);
+        int? geIdx;
+        if (geIdxArg is int) geIdx = geIdxArg;
+        else if (geIdxArg is ConstTerm && geIdxArg.value is int) geIdx = geIdxArg.value as int;
+        if (geIdx == null || geIdx < 1 || geIdx > geStruct.args.length) return GuardResult.failure;
+        var geArgVal = geStruct.args[geIdx - 1];
+        while (geArgVal is VarRef) {
+          final v = getValue(geArgVal.addr);
+          if (v == null || v is! Term) break;
+          geArgVal = v;
+        }
+        num? geArgNum;
+        if (geArgVal is ConstTerm && geArgVal.value is num) geArgNum = geArgVal.value as num;
+        final geValArg = getValue(args[3]);
+        num? geValNum;
+        if (geValArg is ConstTerm && geValArg.value is num) geValNum = geValArg.value as num;
+        else if (geValArg is num) geValNum = geValArg;
+        return (geArgNum != null && geValNum != null && geArgNum >= geValNum)
+            ? GuardResult.success
+            : GuardResult.failure;
+
+      case 'struct_arg_eq':
+        // struct_arg_eq(Struct?, Index?, Value?) — guard version of struct_arg
+        // Succeeds if Struct is a StructTerm and its Nth arg (1-based) equals Value
+        if (args.length < 3) return GuardResult.failure;
+        final saStruct = getValue(args[0]);
+        if (saStruct is! StructTerm) return GuardResult.failure;
+        final saIndexVal = getValue(args[1]);
+        int? saIndex;
+        if (saIndexVal is int) saIndex = saIndexVal;
+        else if (saIndexVal is ConstTerm && saIndexVal.value is int) saIndex = saIndexVal.value as int;
+        if (saIndex == null || saIndex < 1 || saIndex > saStruct.args.length) return GuardResult.failure;
+        // Deep-deref the struct arg
+        var saArgVal = saStruct.args[saIndex - 1];
+        while (saArgVal is VarRef) {
+          final v = getValue(saArgVal.addr);
+          if (v == null || v is! Term) break;
+          saArgVal = v;
+        }
+        // Deep-deref the expected value
+        var saExpected = getValue(args[2]);
+        if (saExpected is VarRef) {
+          final v = getValue(saExpected.addr);
+          if (v != null) saExpected = v;
+        }
+        // Compare
+        Object? saArgKey;
+        if (saArgVal is ConstTerm) saArgKey = saArgVal.value;
+        else if (saArgVal is String) saArgKey = saArgVal;
+        else if (saArgVal is num) saArgKey = saArgVal;
+        Object? saExpKey;
+        if (saExpected is ConstTerm) saExpKey = saExpected.value;
+        else if (saExpected is String) saExpKey = saExpected;
+        else if (saExpected is num) saExpKey = saExpected;
+        return (saArgKey != null && saExpKey != null && saArgKey == saExpKey)
+            ? GuardResult.success
+            : GuardResult.failure;
+
+      case 'equator':
+        // Succeeds if X is bound to '_equator'(E, C) where C is a constant
+        // Enables many-to-one signaling via equators
+        if (args.isEmpty) return GuardResult.failure;
+        final eqVal = getValue(args[0]);
+        // Check for _equator(E, C) structure with constant C
+        if (eqVal is StructTerm &&
+            eqVal.functor == '_equator' &&
+            eqVal.args.length == 2) {
+          // Check that second arg is a constant (after dereferencing)
+          final cArg = eqVal.args[1];
+          Object? cVal;
+          if (cArg is VarRef) {
+            // Dereference the variable - use abstraction methods for imported reader support
+            final addr = cArg.addr;
+            if (cx.rt.heap.isReader(addr)) {
+              final writerAddr = cx.rt.heap.tryWriterForReader(addr);
+              if (writerAddr != null && cx.sigmaHat.containsKey(writerAddr)) {
+                cVal = cx.sigmaHat[writerAddr];
+              } else if (cx.rt.heap.isReaderBound(addr)) {
+                cVal = cx.rt.heap.getReaderValue(addr);
+              }
+            } else {
+              if (cx.sigmaHat.containsKey(addr)) {
+                cVal = cx.sigmaHat[addr];
+              } else if (cx.rt.heap.isFullyBound(addr)) {
+                cVal = cx.rt.heap.getValue(addr);
+              }
+            }
+          } else {
+            cVal = cArg;
+          }
+          // Check if it's a constant (ConstTerm or primitive)
+          if (cVal is ConstTerm || cVal is num || cVal is String) {
+            return GuardResult.success;
+          }
         }
         return GuardResult.failure;
 

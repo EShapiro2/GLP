@@ -177,6 +177,24 @@ class PmtChecker {
         _collectVarNames(guard.args[0], grounded);
         _collectVarNames(guard.args[1], grounded);
       }
+
+      // map_contains/2: both map and key args are grounded
+      if (guard.predicate == 'map_contains' && guard.args.length == 2) {
+        _collectVarNames(guard.args[0], grounded);
+        _collectVarNames(guard.args[1], grounded);
+      }
+
+      // struct_arg_eq/3: struct arg is grounded
+      if (guard.predicate == 'struct_arg_eq' && guard.args.length == 3) {
+        _collectVarNames(guard.args[0], grounded);
+      }
+
+      // map_entry_arg_eq/4, map_entry_arg_ge/4: map and key are grounded
+      if ((guard.predicate == 'map_entry_arg_eq' || guard.predicate == 'map_entry_arg_ge')
+          && guard.args.length == 4) {
+        _collectVarNames(guard.args[0], grounded);
+        _collectVarNames(guard.args[1], grounded);
+      }
     }
 
     return grounded;

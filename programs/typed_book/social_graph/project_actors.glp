@@ -1,0 +1,130 @@
+%% project_actors.glp - Extended actor scripts with unfriend scenario
+%%
+%% Extends the social graph protocol with unfriend steps:
+%%   Steps 1-6: Same as typed_actors.glp (connect, message, introduce)
+%%   Step 7: Alice unfriends Bob
+%%   Step 8: Alice receives unfriended(bob) confirmation
+%%   Step 9: Bob receives unfriended(alice) notification
+%%   Step 10: Bob tries send(alice, ...) — silently dropped (friend output removed)
+%%
+%% Requires: load typed_social_agent.glp first
+%%
+%% Date: 2026-02-21
+
+-mode(system).
+
+%% =============================================================================
+%% ALICE — with unfriend
+%% =============================================================================
+
+procedure alice_actor(Channel?).
+alice_actor(ch(In, [msg('_user', alice, connect(bob))|Out?])) :-
+    alice_wait_bob_connected(In?, Out).
+
+procedure alice_wait_bob_connected(Stream?, Stream).
+alice_wait_bob_connected([msg(agent, '_user', connected(bob))|In],
+                         [msg('_user', alice, send(bob, 'Hi Bob, this is Alice'))|Out?]) :-
+    alice_wait_intro(In?, Out).
+alice_wait_bob_connected([_|In], Out?) :-
+    otherwise | alice_wait_bob_connected(In?, Out).
+alice_wait_bob_connected([], []).
+
+procedure alice_wait_intro(Stream?, Stream).
+alice_wait_intro([msg(agent, '_user', befriend_intro(_, Other, Ch))|In],
+                 [msg('_user', alice, accept_intro(Other?, Ch?))|Out?]) :-
+    ground(Other?) |
+    alice_send_to_charlie(In?, Out).
+alice_wait_intro([_|In], Out?) :-
+    otherwise | alice_wait_intro(In?, Out).
+alice_wait_intro([], []).
+
+procedure alice_send_to_charlie(Stream?, Stream).
+alice_send_to_charlie(In, [msg('_user', alice, send(charlie, 'Hi Charlie, this is Alice'))|Out?]) :-
+    alice_wait_charlie_reply(In?, Out).
+
+procedure alice_wait_charlie_reply(Stream?, Stream).
+alice_wait_charlie_reply([msg(agent, '_user', received(charlie, _))|In],
+                         [msg('_user', alice, unfriend(bob))|Out?]) :-
+    alice_wait_unfriended(In?, Out).
+alice_wait_charlie_reply([_|In], Out?) :-
+    otherwise | alice_wait_charlie_reply(In?, Out).
+alice_wait_charlie_reply([], []).
+
+procedure alice_wait_unfriended(Stream?, Stream).
+alice_wait_unfriended([msg(agent, '_user', unfriended(bob))|_], []).
+alice_wait_unfriended([_|In], Out?) :-
+    otherwise | alice_wait_unfriended(In?, Out).
+alice_wait_unfriended([], []).
+
+%% =============================================================================
+%% BOB — with unfriend notification and post-unfriend send attempt
+%% =============================================================================
+
+procedure bob_actor(Channel?).
+bob_actor(ch([msg(agent, '_user', befriend(From, Resp))|In],
+             [msg('_user', bob, decision(yes, From?, Resp?))|Out?])) :-
+    ground(From?) |
+    bob_wait_alice_msg(In?, Out).
+bob_actor(ch([_|In], Out?)) :-
+    otherwise | bob_actor(ch(In?, Out)).
+
+procedure bob_wait_alice_msg(Stream?, Stream).
+bob_wait_alice_msg([msg(agent, '_user', connected(_))|In], Out?) :-
+    bob_wait_alice_msg(In?, Out).
+bob_wait_alice_msg([msg(agent, '_user', received(alice, _))|In],
+                   [msg('_user', bob, connect(charlie))|Out?]) :-
+    bob_wait_charlie_connected(In?, Out).
+bob_wait_alice_msg([_|In], Out?) :-
+    otherwise | bob_wait_alice_msg(In?, Out).
+bob_wait_alice_msg([], []).
+
+procedure bob_wait_charlie_connected(Stream?, Stream).
+bob_wait_charlie_connected([msg(agent, '_user', connected(charlie))|In], Out?) :-
+    bob_wait_charlie_msg(In?, Out).
+bob_wait_charlie_connected([_|In], Out?) :-
+    otherwise | bob_wait_charlie_connected(In?, Out).
+bob_wait_charlie_connected([], []).
+
+procedure bob_wait_charlie_msg(Stream?, Stream).
+bob_wait_charlie_msg([msg(agent, '_user', received(charlie, _))|In],
+                     [msg('_user', bob, introduce(alice, charlie))|Out?]) :-
+    bob_wait_unfriended(In?, Out).
+bob_wait_charlie_msg([_|In], Out?) :-
+    otherwise | bob_wait_charlie_msg(In?, Out).
+bob_wait_charlie_msg([], []).
+
+procedure bob_wait_unfriended(Stream?, Stream).
+bob_wait_unfriended([msg(agent, '_user', unfriended(alice))|_],
+                    [msg('_user', bob, send(alice, 'test after unfriend'))]).
+bob_wait_unfriended([_|In], Out?) :-
+    otherwise | bob_wait_unfriended(In?, Out).
+bob_wait_unfriended([], []).
+
+%% =============================================================================
+%% CHARLIE — same as original (no unfriend involvement)
+%% =============================================================================
+
+procedure charlie_actor(Channel?).
+charlie_actor(ch([msg(agent, '_user', befriend(From, Resp))|In],
+                 [msg('_user', charlie, decision(yes, From?, Resp?)),
+                  msg('_user', charlie, send(bob, 'Hi Bob, this is Charlie'))|Out?])) :-
+    ground(From?) |
+    charlie_wait_intro(In?, Out).
+charlie_actor(ch([_|In], Out?)) :-
+    otherwise | charlie_actor(ch(In?, Out)).
+
+procedure charlie_wait_intro(Stream?, Stream).
+charlie_wait_intro([msg(agent, '_user', befriend_intro(_, Other, Ch))|In],
+                   [msg('_user', charlie, accept_intro(Other?, Ch?))|Out?]) :-
+    ground(Other?) |
+    charlie_wait_alice_msg(In?, Out).
+charlie_wait_intro([_|In], Out?) :-
+    otherwise | charlie_wait_intro(In?, Out).
+charlie_wait_intro([], []).
+
+procedure charlie_wait_alice_msg(Stream?, Stream).
+charlie_wait_alice_msg([msg(agent, '_user', received(alice, _))|_],
+                       [msg('_user', charlie, send(alice, 'Hi Alice, this is Charlie'))]).
+charlie_wait_alice_msg([_|In], Out?) :-
+    otherwise | charlie_wait_alice_msg(In?, Out).
+charlie_wait_alice_msg([], []).

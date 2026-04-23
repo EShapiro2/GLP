@@ -83,6 +83,58 @@ class MutualRefTerm implements Term {
   int get hashCode => id.hashCode;
 }
 
+/// Opaque map term wrapping a Dart HashMap for O(1) key-value lookup.
+///
+/// Keys are Dart-level objects (strings, ints, doubles) extracted from GLP
+/// ConstTerm values. Values are GLP Term objects stored as-is.
+///
+/// Stored on the heap in a ValueTag cell, same as MutualRefTerm.
+/// Mutated in place by map_put: SRSW guarantees the old variable is dead
+/// after read, so the single owner can safely mutate. O(1) put.
+class MapTerm implements Term {
+  final Map<Object, Term> entries;
+
+  MapTerm(this.entries);
+
+  @override
+  String toString() {
+    if (entries.isEmpty) return 'map({})';
+    final pairs = entries.entries.map((e) => '${e.key}: ${e.value}').join(', ');
+    return 'map({$pairs})';
+  }
+}
+
+/// SharedBroadcastStream — opaque term for managing broadcast updates.
+///
+/// Per spec:
+/// - distributor: agent name that owns this SBS
+/// - recipients: list of friend names
+/// - checkpoint: accumulated snapshot from prior rotations
+/// - pending: updates since last rotation
+/// - updateCounter: incremented per write_update, reset on rotation
+///
+/// Rotation happens when updateCounter == recipients.length.
+/// On rotation: checkpoint = checkpoint + pending, pending = [], counter = 0.
+class SbsTerm implements Term {
+  final Object distributor;
+  final List<Object> recipients;
+  final List<Term> checkpoint;
+  final List<Term> pending;
+  int updateCounter;
+
+  SbsTerm(this.distributor)
+      : recipients = [],
+        checkpoint = [],
+        pending = [],
+        updateCounter = 0;
+
+  @override
+  String toString() =>
+      'sbs(${distributor}, recipients=${recipients.length}, '
+      'checkpoint=${checkpoint.length}, pending=${pending.length}, '
+      'counter=$updateCounter)';
+}
+
 /// Module reference term — wraps a compiled BytecodeProgram.
 ///
 /// Used by the '_activate' body kernel to resolve goals against a module's
