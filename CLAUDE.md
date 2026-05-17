@@ -753,7 +753,7 @@ This protocol is required when debugging GLP programs. Do not skip steps. Stop a
 
 ### Secondary References (Consult as Needed)
 
-3. **CSSN Group Spec**: `/Users/udi/Grassroots/SGLP/docs/group-glp-implementation-spec.md` - Group creation, membership, messaging protocol
+3. **CSSN GLP Implementation Spec**: `/Users/udi/Grassroots/CSSN/docs/cssn-glp-implementation-spec.md` - Master spec for the CSSN GLP implementation: child-befriending, sibling intro, groups, leave-group, unfriend
 4. **WAM Paper**: `/Users/udi/Grassroots/GLP/docs/wam.pdf` - Warren's Abstract Machine
 5. **GLP Spec**: `/tmp/GLP-2025/main GLP 2025.tex` - Formal GLP specification (paper source)
 6. **FCP Implementation**: 
@@ -1089,6 +1089,7 @@ You are part of an AI team building GLP. Claude Chat handles architecture and de
 - NEVER work not following precisely the spec
 - Any question to Udi must be at most two sentences. Be concise.
 - always offer to fetch/merge/push when finishing a task
+- Always NUMBER your questions so Udi can respond by number, even if there is only one question.
 
 ## 🔴 ABSOLUTE RULE: Spec-First Development
 
@@ -1101,7 +1102,7 @@ Before writing ANY code:
 4. **IF SPEC IS UNCLEAR OR MISSING**: STOP. Discuss with user. Clarify/write spec FIRST.
 5. **ONLY THEN** implement, and the implementation MUST match the spec exactly
 
-**This applies to ALL code, including actor scripts and demo plays.**  Before writing or modifying any actor script that uses agent/4 protocols (groups, befriending, introductions, etc.), find and read the relevant spec (e.g., `SGLP/docs/group-glp-implementation-spec.md`).  Do not reverse-engineer protocol behavior from test output or guess from procedure names.  If a message is not delivered, the answer is in the spec, not in adding more interleaving states.
+**This applies to ALL code, including actor scripts and demo plays.**  Before writing or modifying any actor script that uses agent/4 protocols (groups, befriending, introductions, etc.), find and read the relevant spec (e.g., `CSSN/docs/cssn-glp-implementation-spec.md`).  Do not reverse-engineer protocol behavior from test output or guess from procedure names.  If a message is not delivered, the answer is in the spec, not in adding more interleaving states.
 
 **If you find yourself:**
 - Making the code "work" without spec backing → STOP
