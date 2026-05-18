@@ -1499,3 +1499,99 @@ eve12_wait_dave_msg(
 eve12_wait_dave_msg([_|In], Out?) :-
     otherwise | eve12_wait_dave_msg(In?, Out).
 eve12_wait_dave_msg([], []).
+
+%% =============================================================================
+%% PLAY 14 — Idempotent befriend commit: redundant child_introduce
+%% Alice issues child_introduce(carol, bob, dave) TWICE.  Each child accepts
+%% both child_befriend notifications.  Idempotent commit suppresses the second.
+%% Expect exactly one `connected(dave)` on carol's side (smaller-name installs
+%% once; second commit suppressed) and exactly one `connected(carol)` on dave's
+%% side (larger-name installs via await_canonical once; second drops on [].
+%% =============================================================================
+
+exported procedure alice14(Channel(Stream(UserNotify), Stream(UserCmd))?).
+alice14(ch(In, [connect(bob)|Out?])) :-
+    alice14_wait_connected(In?, Out).
+
+procedure alice14_wait_connected(Stream(UserNotify)?, Stream(UserCmd)).
+alice14_wait_connected([connected(bob)|_],
+                       [child_introduce(carol, bob, dave),
+                        child_introduce(carol, bob, dave)]).
+alice14_wait_connected([_|In], Out?) :-
+    otherwise | alice14_wait_connected(In?, Out).
+alice14_wait_connected([], []).
+
+exported procedure bob14(Channel(Stream(UserNotify), Stream(UserCmd))?).
+bob14(ch([befriend(alice, ReqId)|In],
+         [decision(yes, alice, ReqId?)|Out?])) :-
+    ground(ReqId?) |
+    bob14_first(In?, Out).
+bob14(ch([_|In], Out?)) :-
+    otherwise | bob14(ch(In?, Out)).
+
+procedure bob14_first(Stream(UserNotify)?, Stream(UserCmd)).
+bob14_first([child_befriend(alice, carol, ReqId)|In],
+            [approve_child_intro(carol, dave, ReqId?)|Out?]) :-
+    ground(ReqId?) |
+    bob14_second(In?, Out).
+bob14_first([_|In], Out?) :-
+    otherwise | bob14_first(In?, Out).
+bob14_first([], []).
+
+procedure bob14_second(Stream(UserNotify)?, Stream(UserCmd)).
+bob14_second([child_befriend(alice, carol, ReqId)|In],
+             [approve_child_intro(carol, dave, ReqId?)|Out?]) :-
+    ground(ReqId?) |
+    bob14_done(In?, Out).
+bob14_second([_|In], Out?) :-
+    otherwise | bob14_second(In?, Out).
+bob14_second([], []).
+
+procedure bob14_done(Stream(UserNotify)?, Stream(UserCmd)).
+bob14_done([_|In], Out?) :-
+    otherwise | bob14_done(In?, Out).
+bob14_done([], []).
+
+exported procedure carol14(Channel(Stream(UserNotify), Stream(UserCmd))?).
+carol14(ch([child_befriend(alice, dave, ReqId)|In],
+           [accept_child_intro(dave, ReqId?)|Out?])) :-
+    ground(ReqId?) |
+    carol14_second(In?, Out).
+carol14(ch([_|In], Out?)) :-
+    otherwise | carol14(ch(In?, Out)).
+
+procedure carol14_second(Stream(UserNotify)?, Stream(UserCmd)).
+carol14_second([child_befriend(alice, dave, ReqId)|In],
+               [accept_child_intro(dave, ReqId?)|Out?]) :-
+    ground(ReqId?) |
+    carol14_done(In?, Out).
+carol14_second([_|In], Out?) :-
+    otherwise | carol14_second(In?, Out).
+carol14_second([], []).
+
+procedure carol14_done(Stream(UserNotify)?, Stream(UserCmd)).
+carol14_done([_|In], Out?) :-
+    otherwise | carol14_done(In?, Out).
+carol14_done([], []).
+
+exported procedure dave14(Channel(Stream(UserNotify), Stream(UserCmd))?).
+dave14(ch([child_befriend(bob, carol, ReqId)|In],
+          [accept_child_intro(carol, ReqId?)|Out?])) :-
+    ground(ReqId?) |
+    dave14_second(In?, Out).
+dave14(ch([_|In], Out?)) :-
+    otherwise | dave14(ch(In?, Out)).
+
+procedure dave14_second(Stream(UserNotify)?, Stream(UserCmd)).
+dave14_second([child_befriend(bob, carol, ReqId)|In],
+              [accept_child_intro(carol, ReqId?)|Out?]) :-
+    ground(ReqId?) |
+    dave14_done(In?, Out).
+dave14_second([_|In], Out?) :-
+    otherwise | dave14_second(In?, Out).
+dave14_second([], []).
+
+procedure dave14_done(Stream(UserNotify)?, Stream(UserCmd)).
+dave14_done([_|In], Out?) :-
+    otherwise | dave14_done(In?, Out).
+dave14_done([], []).

@@ -1480,6 +1480,44 @@ HEREDOC
     check "CSSN v2 fplay${play_num} succeeds" "succeeds\|suspended" "$k_fpN"
 done
 
+# fplay14: Idempotent befriend commit — redundant child_introduce.
+# Alice issues child_introduce(carol, bob, dave) TWICE.  Each child accepts both
+# child_befriend notifications.  Idempotency suppresses the second commit, so
+# `connected(dave)` is emitted exactly once on carol's side and `connected(carol)`
+# exactly once on dave's side.
+echo "--- CSSN v2 idempotent befriend commit (fplay14) ---"
+k_fp14=$($DART run "$REPL" <<HEREDOC
+$CSSN_V2
+fplay14.
+:quit
+HEREDOC
+2>&1)
+check "CSSN v2 fplay14 succeeds" "succeeds\|suspended" "$k_fp14"
+fp14_alice_introduces=$(echo "$k_fp14" | grep -c "tagged(alice, cmd(child_introduce(carol, bob, dave))")
+fp14_carol_connected=$(echo "$k_fp14" | grep -c "tagged(carol, notify(connected(dave))")
+fp14_dave_connected=$(echo "$k_fp14" | grep -c "tagged(dave, notify(connected(carol))")
+if [ "$fp14_alice_introduces" = "2" ]; then
+    echo "  PASS: CSSN v2 fplay14 alice issued two child_introduces"
+    PASS=$((PASS + 1))
+else
+    echo "  FAIL: CSSN v2 fplay14 alice issued $fp14_alice_introduces child_introduces (expected 2)"
+    FAIL=$((FAIL + 1))
+fi
+if [ "$fp14_carol_connected" = "1" ]; then
+    echo "  PASS: CSSN v2 fplay14 carol connected(dave) emitted exactly once"
+    PASS=$((PASS + 1))
+else
+    echo "  FAIL: CSSN v2 fplay14 carol connected(dave) emitted $fp14_carol_connected times (expected 1)"
+    FAIL=$((FAIL + 1))
+fi
+if [ "$fp14_dave_connected" = "1" ]; then
+    echo "  PASS: CSSN v2 fplay14 dave connected(carol) emitted exactly once"
+    PASS=$((PASS + 1))
+else
+    echo "  FAIL: CSSN v2 fplay14 dave connected(carol) emitted $fp14_dave_connected times (expected 1)"
+    FAIL=$((FAIL + 1))
+fi
+
 # fplay8-10: CSSN groups
 echo "--- CSSN v2 group plays (fplay8-fplay10) ---"
 
@@ -1778,6 +1816,49 @@ HEREDOC
 check "public_proc(5,X) returns X=6" "X = 6" "$output"
 check_not "private_proc not callable from REPL" "X = 7" "$output"
 check "private_proc fails or not found" "not found\|failed\|Error" "$output"
+
+echo ""
+
+# =============================================================================
+# Section J: SecureBonds (project-directory loading)
+# =============================================================================
+echo "=== Section J: SecureBonds ==="
+echo ""
+
+SECUREBONDS="$GLP_DIR/programs/Bonds/SecureBonds"
+
+# Loading
+sb_load=$($DART run "$REPL" <<HEREDOC
+$SECUREBONDS
+:quit
+HEREDOC
+2>&1)
+
+check "SecureBonds project loads" "Loaded project" "$sb_load"
+check_not "SecureBonds no type errors" "Type checking failed" "$sb_load"
+check_not "SecureBonds no load errors" "Error loading" "$sb_load"
+
+# Play — sovereign finality with custodian acks
+echo "--- SecureBonds play ---"
+sb_play=$($DART run "$REPL" <<HEREDOC
+$SECUREBONDS
+play.
+:quit
+HEREDOC
+2>&1)
+
+check "SecureBonds play succeeds" "succeeds" "$sb_play"
+
+# Play_recover — finality + recovery from log copy
+echo "--- SecureBonds play_recover ---"
+sb_recover=$($DART run "$REPL" <<HEREDOC
+$SECUREBONDS
+play_recover.
+:quit
+HEREDOC
+2>&1)
+
+check "SecureBonds play_recover succeeds" "succeeds" "$sb_recover"
 
 echo ""
 

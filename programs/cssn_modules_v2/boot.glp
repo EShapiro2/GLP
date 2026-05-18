@@ -83,6 +83,12 @@ imported procedure carol#carol13(Constant?, Channel(Stream(UserNotify), Stream(U
 imported procedure dave#dave13(Constant?, Channel(Stream(UserNotify), Stream(UserCmd))?, Stream(NarrativeItem)).
 imported procedure eve#eve13(Constant?, Channel(Stream(UserNotify), Stream(UserCmd))?, Stream(NarrativeItem)).
 
+%% From ui/actors.glp — play 14 (4 agents: redundant child_introduce, idempotent commit)
+imported procedure actors#alice14(Channel(Stream(UserNotify), Stream(UserCmd))?).
+imported procedure actors#bob14(Channel(Stream(UserNotify), Stream(UserCmd))?).
+imported procedure actors#carol14(Channel(Stream(UserNotify), Stream(UserCmd))?).
+imported procedure actors#dave14(Channel(Stream(UserNotify), Stream(UserCmd))?).
+
 %% =============================================================================
 %% LOCAL UTILITIES
 %% =============================================================================
@@ -989,3 +995,65 @@ fplay13 :-
     merge(BobToDave?, [], DaveFromBob),
     merge(DaveToBob?, EveToBob?, BobFromChildren),
     merge(BobToEve?, [], EveFromBob).
+
+%% =============================================================================
+%% FPLAY14 — Idempotent befriend commit: redundant child_introduce
+%% Same wiring as fplay4 (alice, bob, carol, dave) but with the alice14/bob14/
+%% carol14/dave14 actors which exercise a duplicate child_introduce.
+%% Each child accepts both introductions; the second commit is suppressed by
+%% the idempotency rule, so only one `connected(dave)` / `connected(carol)` is
+%% emitted per child.
+%% =============================================================================
+
+fplay14 :-
+    network2(ch(AliceNetOut?, AliceNetIn),
+             ch(BobNetOut?, BobNetIn)),
+
+    actors # alice14(ch(AliceActorIn?, AliceActorOut)),
+    tee(AliceActorOut?, AliceMedIn, AliceDispCmd),
+    agent # agent(alice, AliceAgentIn?, AliceNetAndChildIn?,
+          [output('_user', AliceAgentToUser),
+           output('_net', AliceNetOut),
+           output(child(carol), AliceToCarol)]),
+    merge(AliceNetIn?, AliceFromCarol?, AliceNetAndChildIn),
+    mediator # ui_mediator(alice, ch(AliceAgentToUser?, AliceAgentIn),
+                ch(AliceMedIn?, AliceMedOut), [], 1),
+    tee(AliceMedOut?, AliceActorIn, AliceDispNotify),
+    send_to_user_tagged(alice, AliceDispCmd?, AliceDispNotify?),
+
+    actors # bob14(ch(BobActorIn?, BobActorOut)),
+    tee(BobActorOut?, BobMedIn, BobDispCmd),
+    agent # agent(bob, BobAgentIn?, BobNetAndChildIn?,
+          [output('_user', BobAgentToUser),
+           output('_net', BobNetOut),
+           output(child(dave), BobToDave)]),
+    merge(BobNetIn?, BobFromDave?, BobNetAndChildIn),
+    mediator # ui_mediator(bob, ch(BobAgentToUser?, BobAgentIn),
+                ch(BobMedIn?, BobMedOut), [], 1),
+    tee(BobMedOut?, BobActorIn, BobDispNotify),
+    send_to_user_tagged(bob, BobDispCmd?, BobDispNotify?),
+
+    actors # carol14(ch(CarolActorIn?, CarolActorOut)),
+    tee(CarolActorOut?, CarolMedIn, CarolDispCmd),
+    child_agent # child_agent(carol, alice, CarolAgentIn?, CarolFromAlice?,
+          [output('_user', CarolAgentToUser),
+           output(parent(alice), CarolToAlice)]),
+    mediator # ui_mediator(carol, ch(CarolAgentToUser?, CarolAgentIn),
+                ch(CarolMedIn?, CarolMedOut), [], 1),
+    tee(CarolMedOut?, CarolActorIn, CarolDispNotify),
+    send_to_user_tagged(carol, CarolDispCmd?, CarolDispNotify?),
+
+    actors # dave14(ch(DaveActorIn?, DaveActorOut)),
+    tee(DaveActorOut?, DaveMedIn, DaveDispCmd),
+    child_agent # child_agent(dave, bob, DaveAgentIn?, DaveFromBob?,
+          [output('_user', DaveAgentToUser),
+           output(parent(bob), DaveToBob)]),
+    mediator # ui_mediator(dave, ch(DaveAgentToUser?, DaveAgentIn),
+                ch(DaveMedIn?, DaveMedOut), [], 1),
+    tee(DaveMedOut?, DaveActorIn, DaveDispNotify),
+    send_to_user_tagged(dave, DaveDispCmd?, DaveDispNotify?),
+
+    merge(AliceToCarol?, [], CarolFromAlice),
+    merge(CarolToAlice?, [], AliceFromCarol),
+    merge(BobToDave?, [], DaveFromBob),
+    merge(DaveToBob?, [], BobFromDave).
