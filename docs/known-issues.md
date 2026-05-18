@@ -1,5 +1,42 @@
 # GLP Known Issues
 
+**Last updated:** 2026-05-18
+
+## Issue 0a: Parser does not support `=..` as a goal in clause bodies
+
+**Status:** Open
+
+```glp
+%% This FAILS:
+compose(List, Tuple) :- Tuple? =.. List?.
+%% Error: "Expected predicate name or comparison" at =..
+
+%% This WORKS (in clause head):
+X? =.. [Y|Ys] :- list(Ys?) | list_to_tuple([Y|Ys], X).
+```
+
+Parser needs to recognise `=..` as a valid goal in bodies.
+
+## Issue 0b: REPL cannot parse compound terms inside lists in goal arguments
+
+**Status:** Open
+**Location:** `glp_runtime/bin/glp_repl.dart` — functions `_buildListTermForConj` and `_buildListTerm` handle `ConstTerm`, `VarTerm`, `ListTerm` but not `StructTerm`.
+
+```glp
+%% This FAILS in REPL goal:
+distribute_indexed([send(1,a), send(2,b)], Y, Z).
+%% Error: Exception: Unsupported list head type: StructTerm
+
+%% This WORKS:
+distribute_indexed([], Y, Z).
+```
+
+What works: simple lists `[a,b,c]`, nested lists `[[a,b], [1,2]]`, variables `[X?, Y?]`. What fails: structs in lists `[send(1,a), foo(x)]`.
+
+Impact: can't test predicates that take lists of structures from REPL goals.  Workaround: test from within a program clause.
+
+---
+
 ## Issue 1: Localize uses writer address where reader address is needed
 
 **Status**: Open
