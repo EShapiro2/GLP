@@ -1,17 +1,0 @@
-00:00 [32m+0[0m: [1m[90mloading test/analysis/type_checker/type_environment_test.dart[0m[0m                                                                                                                                00:00 [32m+0[0m[31m -1[0m: [1m[90mloading test/analysis/type_checker/type_environment_test.dart[0m [1m[31m[E][0m[0m                                                                                                                         
-  [31mFailed to load "test/analysis/type_checker/type_environment_test.dart":[0m
-  test/analysis/type_checker/type_environment_test.dart:36:52: Error: 'TypeAliasError' isn't a type.
-        expect(() => checkTypes(source), throwsA(isA<TypeAliasError>()));
-                                                     ^^^^^^^^^^^^^^
-  test/analysis/type_checker/type_environment_test.dart:41:52: Error: 'TypeAliasError' isn't a type.
-        expect(() => checkTypes(source), throwsA(isA<TypeAliasError>()));
-                                                     ^^^^^^^^^^^^^^
-  test/analysis/type_checker/type_environment_test.dart:49:52: Error: 'TypeAliasError' isn't a type.
-        expect(() => checkTypes(source), throwsA(isA<TypeAliasError>()));
-                                                     ^^^^^^^^^^^^^^
-  test/analysis/type_checker/type_environment_test.dart:57:52: Error: 'TypeAliasError' isn't a type.
-        expect(() => checkTypes(source), throwsA(isA<TypeAliasError>()));
-                                                     ^^^^^^^^^^^^^^
-
-[1m[36mTo run this test again:[0m /opt/homebrew/share/flutter/bin/cache/dart-sdk/bin/dart test test/analysis/type_checker/type_environment_test.dart -p vm --plain-name 'loading test/analysis/type_checker/type_environment_test.dart'
-00:00 [32m+0[0m[31m -1[0m: [31mSome tests failed.[0m                                                                                                                                                                        

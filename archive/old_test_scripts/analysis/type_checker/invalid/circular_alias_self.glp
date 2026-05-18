@@ -1,5 +1,0 @@
-%% INVALID: Self-referential alias
-%% Should be rejected: circular alias chain
-%% Per spec type-environment.md v0.7
-
-A ::= A.

@@ -1,1 +1,0 @@
-Error: Duplicate functor alternative: neg/1 in Exp at line 15, column 1

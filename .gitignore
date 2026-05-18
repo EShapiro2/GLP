@@ -1,3 +1,19 @@
-glp_runtime/glp_repl_new
+## Build artefacts
 glp_runtime/build/
+glp_runtime/glp_repl_new
+glp_runtime/glp_repl
+glp_multiagent/build/
+glp_multiagent/macos/Pods/
+glp_multiagent/macos/Flutter/ephemeral/
+
+## Dart and Flutter caches
+.dart_tool/
+.packages
+pubspec.lock
+
+## macOS
 .DS_Store
+
+## Editor / IDE
+.vscode/
+.idea/

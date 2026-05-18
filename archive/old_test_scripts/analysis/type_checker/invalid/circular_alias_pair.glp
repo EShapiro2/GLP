@@ -1,6 +1,0 @@
-%% INVALID: Simple circular alias chain
-%% Should be rejected: A -> B -> A
-%% Per spec type-environment.md v0.7
-
-A ::= B.
-B ::= A.

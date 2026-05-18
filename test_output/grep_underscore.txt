@@ -1,8 +1,0 @@
-238:      } else if (name == ':=' && (_peek().type == TokenType.VARIABLE || _peek().type == TokenType.READER || _peek().type == TokenType.UNDERSCORE)) {
-244:      } else if (name == '=..' && (_peek().type == TokenType.VARIABLE || _peek().type == TokenType.READER || _peek().type == TokenType.UNDERSCORE)) {
-250:      } else if (name == '=' && (_peek().type == TokenType.VARIABLE || _peek().type == TokenType.READER || _peek().type == TokenType.UNDERSCORE)) {
-534:    if (_check(TokenType.VARIABLE) || _check(TokenType.READER) || _check(TokenType.UNDERSCORE)) {
-537:      final isUnderscore = varToken.type == TokenType.UNDERSCORE;
-743:    if (_match(TokenType.UNDERSCORE)) {
-1114:    if (_match(TokenType.UNDERSCORE)) {
-1289:    if (_match(TokenType.UNDERSCORE)) {

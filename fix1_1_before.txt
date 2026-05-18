@@ -1,31 +1,0 @@
-00:00 [32m+0[0m: [1m[90mloading test/analysis/type_checker/type_environment_test.dart[0m[0m                                                                                                                                00:00 [32m+0[0m: Predefined types in TypeRef.builtins Integer is a builtin type[0m                                                                                                                               00:00 [32m+0[0m[31m -1[0m: Predefined types in TypeRef.builtins Integer is a builtin type [1m[31m[E][0m[0m                                                                                                                        
-  Expected: true
-    Actual: <false>
-  
-  package:matcher                                             expect
-  test/analysis/type_checker/type_environment_test.dart 11:7  main.<fn>.<fn>
-  
-
-[1m[36mTo run this test again:[0m /opt/homebrew/share/flutter/bin/cache/dart-sdk/bin/dart test test/analysis/type_checker/type_environment_test.dart -p vm --plain-name 'Predefined types in TypeRef.builtins Integer is a builtin type'
-00:00 [32m+0[0m[31m -1[0m: Predefined types in TypeRef.builtins Real is a builtin type[0m                                                                                                                               00:00 [32m+0[0m[31m -2[0m: Predefined types in TypeRef.builtins Real is a builtin type [1m[31m[E][0m[0m                                                                                                                           
-  Expected: true
-    Actual: <false>
-  
-  package:matcher                                             expect
-  test/analysis/type_checker/type_environment_test.dart 15:7  main.<fn>.<fn>
-  
-
-[1m[36mTo run this test again:[0m /opt/homebrew/share/flutter/bin/cache/dart-sdk/bin/dart test test/analysis/type_checker/type_environment_test.dart -p vm --plain-name 'Predefined types in TypeRef.builtins Real is a builtin type'
-00:00 [32m+0[0m[31m -2[0m: Predefined types in TypeRef.builtins Number is a builtin type[0m                                                                                                                             00:00 [32m+1[0m[31m -2[0m: Predefined types in TypeRef.builtins Number is a builtin type[0m                                                                                                                             00:00 [32m+1[0m[31m -2[0m: Predefined types in TypeRef.builtins String is a builtin type[0m                                                                                                                             00:00 [32m+2[0m[31m -2[0m: Predefined types in TypeRef.builtins String is a builtin type[0m                                                                                                                             00:00 [32m+2[0m[31m -2[0m: Predefined types in TypeRef.builtins builtins contains exactly 4 types[0m                                                                                                                    00:00 [32m+2[0m[31m -3[0m: Predefined types in TypeRef.builtins builtins contains exactly 4 types [1m[31m[E][0m[0m                                                                                                                
-  Expected: <4>
-    Actual: <2>
-  
-  package:matcher                                             expect
-  test/analysis/type_checker/type_environment_test.dart 27:7  main.<fn>.<fn>
-  
-
-[1m[36mTo run this test again:[0m /opt/homebrew/share/flutter/bin/cache/dart-sdk/bin/dart test test/analysis/type_checker/type_environment_test.dart -p vm --plain-name 'Predefined types in TypeRef.builtins builtins contains exactly 4 types'
-00:00 [32m+2[0m[31m -3[0m: [31mSome tests failed.[0m                                                                                                                                                                        
-
-Consider enabling the flag chain-stack-traces to receive more detailed exceptions.
-For example, 'dart test --chain-stack-traces'.

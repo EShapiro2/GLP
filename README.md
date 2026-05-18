@@ -1,110 +1,77 @@
-# GLP - Grassroots Logic Programs
+# GLP — Grassroots Logic Programs
 
-A secure concurrent logic programming language implementation in Dart.
+**Last updated:** 2026-05-18
 
-## Overview
+A concurrent, multi-agent, grassroots logic programming language with a Dart implementation.
 
-GLP (Grassroots Logic Programs) is a concurrent logic programming language with:
-- **SRSW Constraint**: Single-Reader/Single-Writer - each variable occurs at most once per clause
-- **Three-Phase Execution**: HEAD (tentative unification) → GUARDS (pure tests) → BODY (mutations)
-- **Suspension Mechanism**: Goals suspend on unbound readers, reactivate when writers are bound
+## Core ideas
 
-## Quick Start
+- **SRSW** (Single-Reader Single-Writer): each variable occurs at most once as writer and at most once as reader per clause.
+- **Three-phase execution**: HEAD (tentative unification) → GUARDS (pure three-valued tests) → BODY (mutations).
+- **Suspension**: goals suspend on unbound readers and reactivate when writers are bound.
+- **Multi-agent**: agents run in separate Dart isolates and communicate via message-passing.
+
+## Quick start
 
 ```bash
-# Set up Dart (if needed)
-export PATH="/home/user/dart-sdk/bin:$PATH"
-
-# Run the REPL
-cd glp_runtime
-./glp_repl          # Use compiled executable (fast)
-# or
-dart run bin/glp_repl.dart   # Recompile each time (slow)
-
-# In REPL:
-# Load a file, then run queries
-> programs/stdlib/meta.glp
-> run(append([1,2], [3,4], X)).
+cd /Users/udi/Grassroots/GLP/glp_runtime
+dart run bin/glp_repl.dart
 ```
 
-## Directory Structure
+In the REPL: enter a `.glp` filename to load it (the REPL runs the full pipeline — SRSW → PE → type-check → compile → execute), then enter a goal.  Or enter a directory (e.g. `../programs/cssn_modules_v2/`) to load a multi-module project.
+
+Non-interactive:
+
+```bash
+cd /Users/udi/Grassroots/GLP/glp_runtime
+echo -e 'load ../programs/path/to/file.glp\ngoal.\n:quit' | dart run bin/glp_repl.dart
+```
+
+## Running tests
+
+From `/Users/udi/Grassroots/GLP/`:
+
+```bash
+bash test/run_all_tests.sh           # canonical REPL test suite (489 tests)
+cd glp_runtime && dart test          # Dart unit tests (353 tests)
+bash test/run_book_tests.sh          # book examples compilation
+```
+
+## Directory map
 
 ```
 GLP/
-├── glp_runtime/           # Main Dart project
-│   ├── lib/              # VM implementation
-│   ├── test/             # Unit tests
-│   └── bin/glp_repl.dart # REPL source
-│
-├── programs/              # All GLP source files (380 files)
-│   ├── stdlib/           # Standard library (6 files)
-│   ├── book/             # Art of GLP book examples (140 files)
-│   │   ├── recursive/    # Recursive programming
-│   │   ├── streams/      # Stream programming
-│   │   ├── social_graph/ # Agent protocols
-│   │   └── ...
-│   ├── tests/            # REPL test files (115 files)
-│   ├── lib/              # Reusable modules (8 files)
-│   └── archive/          # Historical files (76 files)
-│
-├── test/                  # Test scripts
-│   ├── run_all_tests.sh         # 311 unified tests (runtime + type-check)
-│   ├── run_book_tests.sh        # 141 book example tests
-│   └── archive/                 # Old test scripts
-│
-├── docs/                  # Specifications
-│   ├── glp-bytecode-v216-complete.md
-│   └── glp-runtime-spec.txt
-│
-└── CLAUDE.md              # Development instructions
+├── CLAUDE.md                 # development instructions (read first)
+├── README.md                 # this file
+├── glp_runtime/              # Dart implementation
+│   ├── lib/                  # compiler, runtime, type-checker, multi-agent
+│   ├── bin/glp_repl.dart     # REPL source
+│   └── test/                 # Dart unit tests
+├── glp_multiagent/           # Flutter app for multi-agent demos
+├── programs/                 # all GLP source files
+│   ├── self.glp              # root prelude (types, primitives)
+│   ├── book/                 # Art of GLP book examples
+│   ├── typed_book/           # typed version of book examples
+│   ├── cssg_modules_v2/      # child-safe social graph
+│   ├── cssn_modules_v2/      # child-safe social networking
+│   ├── bonds_v2/             # grassroots bonds
+│   └── tests/                # REPL test programs
+├── docs/                     # specifications and references
+├── test/                     # test scripts
+├── AofGLP/                   # Art of GLP book sources
+├── ArtOfProlog/              # Art of Prolog reference
+└── archive/                  # historical material (pruned 2026-05)
 ```
-
-## Running Tests
-
-```bash
-cd glp_runtime
-
-# Unified tests (311 tests — runtime + type-check + negative)
-bash ../test/run_all_tests.sh
-
-# Book examples compilation test (141 files)
-bash ../test/run_book_tests.sh
-
-# Dart unit tests
-dart test
-```
-
-## Standard Library
-
-The `programs/stdlib/` directory contains:
-- `meta.glp` - Metainterpreter for running GLP programs
-- `arithmetic.glp` - Arithmetic operations (`:=`)
-- `time.glp` - Time primitives
-- `assign.glp` - Assignment operator
-- `unify.glp` - Unification primitives
-- `univ.glp` - `=..` operator (term decomposition)
-
-## Book Examples
-
-The `programs/book/` directory contains examples from "The Art of GLP":
-
-| Directory | Contents |
-|-----------|----------|
-| `recursive/arithmetic_trees/` | factorial, fibonacci, gcd, etc. |
-| `recursive/list_processing/` | append, reverse, quicksort, etc. |
-| `recursive/structure_processing/` | trees, traversals |
-| `streams/producers_consumers/` | merge, distribute, etc. |
-| `streams/objects_monitors/` | counters, monitors |
-| `social_graph/` | Agent protocols, plays |
-| `meta/` | Metainterpreters |
-| `constants/` | Logic gates, circuits |
 
 ## Documentation
 
-- `CLAUDE.md` - Development instructions for Claude Code
-- `docs/glp-bytecode-v216-complete.md` - Bytecode specification
-- `docs/glp-runtime-spec.txt` - Runtime architecture
+- `CLAUDE.md` — development instructions
+- `docs/DISCIPLINE.md` — spec-first discipline
+- `docs/typed-glp-manual.md` — typed GLP programming manual
+- `docs/glp-cheat-sheet.md` — patterns and idioms (GLP is not Prolog)
+- `docs/README.md` — full documentation index
+- `docs/known-issues.md` — outstanding known issues
 
 ## License
 
-See LICENSE file for details.
+See `LICENSE` (if present).
