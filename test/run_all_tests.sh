@@ -1518,6 +1518,44 @@ else
     FAIL=$((FAIL + 1))
 fi
 
+# fplay15: Idempotent befriend commit — simultaneous bilateral cold-call.
+# Alice and Bob cold-call each other simultaneously, both accept.  The smaller-name
+# tie-break converges both sides on a single canonical channel; the other commit
+# is suppressed.  Each side emits exactly one connected/2 notification.
+echo "--- CSSN v2 bilateral cold-call (fplay15) ---"
+k_fp15=$($DART run "$REPL" <<HEREDOC
+$CSSN_V2
+fplay15.
+:quit
+HEREDOC
+2>&1)
+check "CSSN v2 fplay15 succeeds" "succeeds\|suspended" "$k_fp15"
+fp15_alice_connect=$(echo "$k_fp15" | grep -c "tagged(alice, cmd(connect(bob))")
+fp15_bob_connect=$(echo "$k_fp15" | grep -c "tagged(bob, cmd(connect(alice))")
+fp15_alice_connected=$(echo "$k_fp15" | grep -c "tagged(alice, notify(connected(bob))")
+fp15_bob_connected=$(echo "$k_fp15" | grep -c "tagged(bob, notify(connected(alice))")
+if [ "$fp15_alice_connect" = "1" ] && [ "$fp15_bob_connect" = "1" ]; then
+    echo "  PASS: CSSN v2 fplay15 both agents issued connect"
+    PASS=$((PASS + 1))
+else
+    echo "  FAIL: CSSN v2 fplay15 connects: alice=$fp15_alice_connect bob=$fp15_bob_connect (expected 1 each)"
+    FAIL=$((FAIL + 1))
+fi
+if [ "$fp15_alice_connected" = "1" ]; then
+    echo "  PASS: CSSN v2 fplay15 alice connected(bob) emitted exactly once"
+    PASS=$((PASS + 1))
+else
+    echo "  FAIL: CSSN v2 fplay15 alice connected(bob) emitted $fp15_alice_connected times (expected 1)"
+    FAIL=$((FAIL + 1))
+fi
+if [ "$fp15_bob_connected" = "1" ]; then
+    echo "  PASS: CSSN v2 fplay15 bob connected(alice) emitted exactly once"
+    PASS=$((PASS + 1))
+else
+    echo "  FAIL: CSSN v2 fplay15 bob connected(alice) emitted $fp15_bob_connected times (expected 1)"
+    FAIL=$((FAIL + 1))
+fi
+
 # fplay8-10: CSSN groups
 echo "--- CSSN v2 group plays (fplay8-fplay10) ---"
 

@@ -1595,3 +1595,47 @@ procedure dave14_done(Stream(UserNotify)?, Stream(UserCmd)).
 dave14_done([_|In], Out?) :-
     otherwise | dave14_done(In?, Out).
 dave14_done([], []).
+
+%% =============================================================================
+%% PLAY 15 — Idempotent befriend commit: simultaneous bilateral cold-call
+%% Both alice and bob cold-call each other.  Both UIs accept the resulting
+%% befriend prompts.  The smaller-name tie-break (`@<`) selects one canonical
+%% channel; the other commit is suppressed.  Each side emits exactly one
+%% connected/2 notification.
+%% =============================================================================
+
+exported procedure alice15(Channel(Stream(UserNotify), Stream(UserCmd))?).
+alice15(ch(In, [connect(bob)|Out?])) :-
+    alice15_listen(In?, Out).
+
+procedure alice15_listen(Stream(UserNotify)?, Stream(UserCmd)).
+alice15_listen([befriend(bob, ReqId)|In],
+               [decision(yes, bob, ReqId?)|Out?]) :-
+    ground(ReqId?) |
+    alice15_done(In?, Out).
+alice15_listen([_|In], Out?) :-
+    otherwise | alice15_listen(In?, Out).
+alice15_listen([], []).
+
+procedure alice15_done(Stream(UserNotify)?, Stream(UserCmd)).
+alice15_done([_|In], Out?) :-
+    otherwise | alice15_done(In?, Out).
+alice15_done([], []).
+
+exported procedure bob15(Channel(Stream(UserNotify), Stream(UserCmd))?).
+bob15(ch(In, [connect(alice)|Out?])) :-
+    bob15_listen(In?, Out).
+
+procedure bob15_listen(Stream(UserNotify)?, Stream(UserCmd)).
+bob15_listen([befriend(alice, ReqId)|In],
+             [decision(yes, alice, ReqId?)|Out?]) :-
+    ground(ReqId?) |
+    bob15_done(In?, Out).
+bob15_listen([_|In], Out?) :-
+    otherwise | bob15_listen(In?, Out).
+bob15_listen([], []).
+
+procedure bob15_done(Stream(UserNotify)?, Stream(UserCmd)).
+bob15_done([_|In], Out?) :-
+    otherwise | bob15_done(In?, Out).
+bob15_done([], []).
