@@ -50,6 +50,9 @@ procedure >=(Exp?, Exp?).
 procedure =:=(Exp?, Exp?).
 procedure =\=(Exp?, Exp?).
 
+% Lexicographic comparison of ground constants
+procedure @<(Constant?, Constant?).
+
 % Equality guard
 procedure =?=(_?, _?).
 

@@ -616,6 +616,8 @@ class Analyzer {
   static const _nonNegatableGuards = {
     // Arithmetic (type error on non-numeric)
     '<', '>', '=<', '>=', '=:=', '=\\=',
+    // Lexicographic (type error on non-constant)
+    '@<',
     // Control
     'otherwise',
     // Time
@@ -724,7 +726,7 @@ class Analyzer {
     // Per spec: comparison guards require both operands to be bound numeric values,
     // which means they're ground. This allows multiple reader occurrences.
     // Arguments may be complex arithmetic expressions, so extract all reader variables.
-    final comparisonOps = ['<', '>', '=<', '>=', '=:=', '=\\='];
+    final comparisonOps = ['<', '>', '=<', '>=', '=:=', '=\\=', '@<'];
     if (comparisonOps.contains(guard.predicate) && guard.args.length == 2) {
       for (final arg in guard.args) {
         _extractAndMarkGroundedVars(arg, varTable);

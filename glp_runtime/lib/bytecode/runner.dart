@@ -4393,6 +4393,32 @@ class BytecodeRunner {
         }
         return GuardResult.failure;
 
+      // Lexicographic comparison of ground constants (atoms/strings/numbers)
+      case '@<':
+        if (args.length < 2) return GuardResult.failure;
+        String? evalConst(dynamic v) {
+          if (v is ConstTerm) {
+            final cv = v.value;
+            return cv?.toString();
+          }
+          if (v is String || v is num) return v.toString();
+          if (v is VarRef) {
+            if (cx.rt.heap.isReader(v.addr)) {
+              if (!cx.rt.heap.isReaderBound(v.addr)) return null;
+              return evalConst(cx.rt.heap.getReaderValue(v.addr));
+            }
+            final deref = cx.rt.heap.getValue(v.addr);
+            return deref == null ? null : evalConst(deref);
+          }
+          return null;
+        }
+        final lc = evalConst(args[0]);
+        final rc = evalConst(args[1]);
+        if (lc != null && rc != null) {
+          return lc.compareTo(rc) < 0 ? GuardResult.success : GuardResult.failure;
+        }
+        return GuardResult.failure;
+
       // Type guards
       case 'ground':
         // Already checked for unbound readers in caller

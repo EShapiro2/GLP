@@ -58,7 +58,12 @@ class Lexer {
       case '~': return _makeToken(TokenType.TILDE, startLine, startColumn);
       case '#': return _makeToken(TokenType.HASH, startLine, startColumn);
       case '\\': return _makeToken(TokenType.BACKSLASH, startLine, startColumn);
-      case '@': return _makeToken(TokenType.AT, startLine, startColumn);
+      case '@':
+        if (_match('<')) {
+          final lexeme = source.substring(_current - 2, _current);
+          return Token(TokenType.AT_LESS, lexeme, startLine, startColumn);
+        }
+        return _makeToken(TokenType.AT, startLine, startColumn);
 
       // Arithmetic operators
       case '+': return _makeToken(TokenType.PLUS, startLine, startColumn);

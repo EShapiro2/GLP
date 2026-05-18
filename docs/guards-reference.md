@@ -68,6 +68,7 @@ These guards cannot be negated (due to type-error semantics or special behavior)
 |-------|--------|
 | `<`, `>`, `=<`, `>=` | Type error on non-numeric operands |
 | `=:=`, `=\=` | Type error on non-numeric operands |
+| `@<` | Type error on non-constant operands |
 | `otherwise` | Special clause-ordering semantics |
 | `wait`, `wait_until` | Time-based control flow |
 
@@ -633,6 +634,37 @@ factorial(N, 1) :- integer(N?), N? =< 0 | true.
 - Fail: Both bound and not numerically equal
 
 **Note on `=\=`**: The arithmetic inequality guard `=\=` is **redundant** once guard negation (`~`) is implemented. It becomes equivalent to `~(X =:= Y)`. Use `~(X? =:= Y?)` for arithmetic inequality.
+
+---
+
+### ✅ `X @< Y`
+**Lexicographic less-than on ground constants**
+
+**Semantics**:
+- Success: Both X and Y bound to ground constants AND X's name lexicographically precedes Y's name
+- Suspend: Either operand is an unbound reader
+- Fail: Both bound and not (X precedes Y), or either operand is bound to a non-constant (type error)
+
+**Procedure signature**: `procedure @<(Constant?, Constant?).`
+
+**Use case**: Symmetry-breaking on participant identity, e.g. choosing a canonical channel when two agents attempt to establish a friendship concurrently.
+
+**Example**:
+```prolog
+befriend_commit(Id, Other, ...) :- Id? @< Other? | ...   % smaller-named side
+befriend_commit(Id, Other, ...) :- otherwise | ...        % larger-named side
+```
+
+**Negation**: Non-negatable (same rationale as arithmetic comparisons — `~(X @< Y)` would conflate "X is not lex-smaller" with "type error", so negation is forbidden).
+
+**Implementation in tables**:
+- `prelude.dart`'s `predefinedProcedureNames` and `builtinProcedures` sets include `@<` and `@</2`.
+- `analyzer.dart`'s `_nonNegatableGuards` includes `@<`.
+- `analyzer.dart`'s `comparisonOps` (groundness inference) includes `@<`.
+- `runner.dart`'s guard switch implements the lex comparison via the local `evalConst` helper.
+- `lexer.dart` tokenizes `@<` as `TokenType.AT_LESS` (distinct from `@` followed by `<`).
+- `parser.dart`'s infix-comparison check includes `AT_LESS`.
+- `self.glp` declares `procedure @<(Constant?, Constant?).`.
 
 ---
 

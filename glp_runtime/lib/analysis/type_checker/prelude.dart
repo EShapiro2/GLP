@@ -54,6 +54,8 @@ const Set<String> predefinedProcedureNames = {
   '>=',
   '=:=',
   '=\\=',
+  // Lexicographic comparison of ground constants
+  '@<',
   // Equality (fundamental)
   '=?=',
   // Univ operations (fundamental)
@@ -101,6 +103,8 @@ const Set<String> builtinProcedures = {
   '>=/2',
   '=:=/2',
   '=\\=/2',
+  // Lexicographic comparison of ground constants
+  '@</2',
   // Structural equality guard
   '=?=/2',
   // Univ operations
