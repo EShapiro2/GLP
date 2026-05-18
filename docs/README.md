@@ -1,68 +1,83 @@
 # GLP Documentation Index
 
-## Quick Start
+**Last updated:** 2026-05-18
 
-- **[SPEC_GUIDE.md](SPEC_GUIDE.md)** - Overview of the GLP execution model
-- **[DEVELOPMENT_DISCIPLINE_v1.0.md](DEVELOPMENT_DISCIPLINE_v1.0.md)** - Required development methodology
+## Start here
 
-## Core Specifications
+- [`DISCIPLINE.md`](DISCIPLINE.md) — development discipline (spec-first, baseline-before-commit, no workarounds)
+- [`typed-glp-manual.md`](typed-glp-manual.md) — typed GLP programming guide
+- [`glp-cheat-sheet.md`](glp-cheat-sheet.md) — patterns and idioms ("GLP is NOT Prolog")
+- [`known-issues.md`](known-issues.md) — outstanding known issues
+- [`Mandatory protocol for debugging the GLP implementation with GLP programs.txt`](./Mandatory%20protocol%20for%20debugging%20the%20GLP%20implementation%20with%20GLP%20programs.txt) — debugging protocol
 
-| Document | Description |
-|----------|-------------|
-| [glp-bytecode-v216-complete.md](glp-bytecode-v216-complete.md) | Complete instruction set specification (v2.16) |
-| [glp-runtime-spec.txt](glp-runtime-spec.txt) | Dart runtime architecture |
-| [glp-compiler-spec.md](glp-compiler-spec.md) | Compiler design and implementation |
-| [glp-arithmetic-spec.md](glp-arithmetic-spec.md) | Arithmetic operations via `:=` operator |
-| [glp-io-spec.md](glp-io-spec.md) | I/O operations |
-| [glp-module-system-v1-spec.md](glp-module-system-v1-spec.md) | Module system specification |
-| [parser-spec.md](parser-spec.md) | Parser specification |
-
-## Type System (`type system/`)
-
-Moded type system specifications and implementation plans:
+## Core specifications
 
 | Document | Description |
 |----------|-------------|
-| [mode.md](type%20system/mode.md) | Mode (input/output) definitions |
-| [type-environment.md](type%20system/type-environment.md) | Type and procedure declarations |
-| [type-dfa.md](type%20system/type-dfa.md) | DFA construction for types |
-| [moded-term.md](type%20system/moded-term.md) | Moded term representation |
-| [moded-head.md](type%20system/moded-head.md) | Moded head construction |
-| [well-typed-term.md](type%20system/well-typed-term.md) | Path consistency checking |
-| [well-typed-clause.md](type%20system/well-typed-clause.md) | Clause well-typing |
-| [well-typed-program.md](type%20system/well-typed-program.md) | Program well-typing |
-| [SPEC_IMPLEMENTATION_GAPS.md](type%20system/SPEC_IMPLEMENTATION_GAPS.md) | Gap analysis (11 issues) |
-| [COMPLETION_PLAN.md](type%20system/COMPLETION_PLAN.md) | Implementation plan |
-| [testing.md](type%20system/testing.md) | Test infrastructure (69 tests) |
+| [`glp-bytecode-v216-complete.md`](glp-bytecode-v216-complete.md) | Instruction set (v2.16) |
+| [`glp-runtime-spec.txt`](glp-runtime-spec.txt) | Dart runtime architecture |
+| [`glp-compiler-spec.md`](glp-compiler-spec.md) | Compiler design |
+| [`glp-arithmetic-spec.md`](glp-arithmetic-spec.md) | Arithmetic via `:=` |
+| [`glp-io-spec.md`](glp-io-spec.md) | I/O |
+| [`parser-spec.md`](parser-spec.md) | Parser |
+| [`mutual-ref-spec.md`](mutual-ref-spec.md) | Mutual references |
+| [`heap/heap-pointer-architecture-spec.md`](heap/heap-pointer-architecture-spec.md) | Heap pointer architecture (FCP-style) |
+| [`modules/glp-module-system-spec.md`](modules/glp-module-system-spec.md) | Module system |
+| [`modules/glp-project-compilation-spec.md`](modules/glp-project-compilation-spec.md) | Project compilation |
+| [`ma/madGLP-spec.md`](ma/madGLP-spec.md) | Multi-agent GLP |
+| [`ma/agent-runtime-spec.md`](ma/agent-runtime-spec.md) | Agent runtime |
+| [`ma/isolate-boot-spec.md`](ma/isolate-boot-spec.md) | Multi-isolate boot |
+| [`ma/multi-agent-trace-spec.md`](ma/multi-agent-trace-spec.md) | Trace format |
+| [`ma/ui-io-spec.md`](ma/ui-io-spec.md) | UI I/O |
 
-## Reference Documents
-
-| Document | Description |
-|----------|-------------|
-| [guards-reference.md](guards-reference.md) | Guard predicates reference |
-| [glp-predicate-taxonomy.md](glp-predicate-taxonomy.md) | Classification of predicates |
-| [naming-conventions.md](naming-conventions.md) | System primitive naming (`'_name'`) |
-| [equators-spec.md](equators-spec.md) | Equator extension for many-to-one signaling |
-| [mutual-ref-spec.md](mutual-ref-spec.md) | Mutual reference specification |
-| [grassroots-testing-framework.md](grassroots-testing-framework.md) | Testing framework documentation |
-
-## Future Work (`future/`)
+## Type system (`type system/`)
 
 | Document | Description |
 |----------|-------------|
-| [glp-modules-spec.md](future/glp-modules-spec.md) | Module system design |
-| [module-implementation-plan.md](future/module-implementation-plan.md) | Module implementation plan |
-| [FCP_NESTED_STRUCTURE_ANALYSIS.md](future/FCP_NESTED_STRUCTURE_ANALYSIS.md) | FCP nested structure analysis |
+| [`STATUS.md`](type%20system/STATUS.md) | Type system implementation status |
+| [`moded-term.md`](type%20system/moded-term.md) | Moded term representation |
+| [`moded-head.md`](type%20system/moded-head.md) | Moded head construction |
+| [`well-typed-term.md`](type%20system/well-typed-term.md) | Path consistency checking |
+| [`well-typed-clause.md`](type%20system/well-typed-clause.md) | Clause well-typing |
+| [`well-typed-program.md`](type%20system/well-typed-program.md) | Program well-typing |
+| [`typed-program.md`](type%20system/typed-program.md) | Typed program structure |
+| [`type-automaton.md`](type%20system/type-automaton.md) | Type automaton |
+| [`subtyping.md`](type%20system/subtyping.md) | Subtyping |
+| [`parameterized-types-plan.md`](type%20system/parameterized-types-plan.md) | Parameterized types |
+| [`dynamic-module-dispatch.md`](type%20system/dynamic-module-dispatch.md) | Dynamic dispatch |
+| [`friends-list-moding-pattern.md`](type%20system/friends-list-moding-pattern.md) | Friends-list moding |
 
-## Session Logs (`diary/`)
+## References
 
-Recent session handovers and status reports.
+| Document | Description |
+|----------|-------------|
+| [`guards-reference.md`](guards-reference.md) | Guard predicates (success/suspend/fail) |
+| [`body-kernels-reference.md`](body-kernels-reference.md) | Body kernels |
+| [`glp-predicate-taxonomy.md`](glp-predicate-taxonomy.md) | Predicate classification |
+| [`naming-conventions.md`](naming-conventions.md) | Naming (`'_name'` for system) |
+| [`grassroots-testing-framework.md`](grassroots-testing-framework.md) | Theatre-style play tests |
+| [`village-market-scenario.md`](village-market-scenario.md) | Village-market reference scenario |
 
-## Archive (`archive/`)
+## Subdirectories
 
-Historical documents and completed work.
+| Path | Purpose |
+|------|---------|
+| `bugs/` | Active bug reports |
+| `analysis/` | Code/test analysis (currently empty) |
+| `archive/` | Historical documents and completed work |
+| `diary/` | Accumulated programming knowledge |
+| `future/` | Designs not yet implemented |
+| `handover/` | (empty after 2026-05 cleanup; will collect future handovers) |
+| `heap/` | Heap architecture |
+| `infra/` | Infrastructure rules and module boundary |
+| `ma/` | Multi-agent (madGLP) |
+| `modules/` | Module system |
+| `projects/` | Sub-project overviews |
+| `type system/` | Type system specs |
 
-## External References
+## External references
 
-- **Moded Types Paper**: `/Users/udi/Moded-Types/`
-- **GLP Language Spec**: `GLP_2025.pdf` in project knowledge
+- CSSN GLP implementation spec: `/Users/udi/Grassroots/CSSN/docs/cssn-glp-implementation-spec.md`
+- FCP reference (GitHub): https://github.com/EShapiro2/FCP
+- GLP arXiv paper: `/Users/udi/Grassroots/GLP-arXiv/`
+- ICLP 2026 camera-ready: `/Users/udi/Grassroots/GLP-ICLP-2026/`
