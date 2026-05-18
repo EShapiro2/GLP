@@ -33,14 +33,14 @@ FriendOnlyContent ::= response(Response)
 
 %% Friend messages (after connection established)
 FriendContent ::= FriendOnlyContent ; GroupNotifyContent.
-FriendMsg     ::= msg(Constant, Constant, FriendContent).
+FriendMsg     ::= msg(Constant, Constant, FriendContent) ; canonical.
 
 Response ::= accept(Channel(Stream(FriendMsg), Stream(FriendMsg))) ; no.
 Decision ::= yes ; no.
 Handshake ::= ack(Constant) ; nack.
 
 %% Intro content (handshake protocol)
-IntroContent ::= ack(Constant) ; nack.
+IntroContent ::= ack(Constant) ; nack ; canonical.
 
 %% Group identifier
 GroupId   ::= group_id(Constant, Constant).
@@ -412,3 +412,75 @@ close_output(Key, [output(K, Out?)|Rest], [output(K?, Out)|Rest1?]) :-
 close_output(Key, [group_entry(K, Out?)|Rest], [group_entry(K?, Out)|Rest1?]) :-
     otherwise |
     close_output(Key?, Rest?, Rest1).
+
+%% =============================================================================
+%% IDEMPOTENT BEFRIEND COMMIT WITH SMALLER-NAME TIE-BREAK
+%% =============================================================================
+%% Enforces the not-yet-friends precondition (Definition 1 / Definition 3 in
+%% CSSN paper) at commit time: add_output(friend(...)) is realized as set union,
+%% and concurrent bilateral offers converge to a single channel via lex order
+%% on the two befriended people's ids.
+%%
+%% See docs/cssn-glp-implementation-spec.md §"Idempotent Befriend Commit with
+%% Smaller-Name Tie-Break".
+
+%% Walk Outs threading it through, binding Decision to yes if friend(Other) is
+%% already present, no otherwise.
+procedure already_friend(Constant?, Stream(OutputEntry)?, Stream(OutputEntry), Decision).
+already_friend(Other, [output(friend(O), Out?)|Rest], [output(friend(O?), Out)|Rest?], yes) :-
+    Other? =?= O? | true.
+already_friend(Other, [output(K, Out?)|Rest], [output(K?, Out)|Rest1?], Decision?) :-
+    otherwise | already_friend(Other?, Rest?, Rest1, Decision).
+already_friend(Other, [group_entry(K, Out?)|Rest], [group_entry(K?, Out)|Rest1?], Decision?) :-
+    otherwise | already_friend(Other?, Rest?, Rest1, Decision).
+already_friend(_, [], [], no).
+
+%% Top-level befriend commit dispatch.  Parametric over channel content X
+%% (X = IntroContent for intro_result; X = FriendMsg for cold-call response).
+procedure befriend_commit(Constant?, Constant?, Channel(Stream(X), Stream(X))?,
+                          Stream(OutputEntry)?, Stream(OutputEntry),
+                          Stream(NetInMsg)?, Stream(NetInMsg)).
+
+%% Smaller-name side: I decide.  Test already_friend then dispatch.
+befriend_commit(Id, Other, Ch, Outs, Outs1?, NetIn, NetIn1?) :-
+    Id? @< Other? |
+    already_friend(Other?, Outs?, Outs2, Decision),
+    smaller_dispatch(Decision?, Other?, Ch?, Outs2?, Outs1, NetIn?, NetIn1).
+
+%% Larger-name side: I follow the smaller-name side's choice via canonical/[] signal.
+befriend_commit(_, Other, Ch, Outs, Outs1?, NetIn, NetIn1?) :-
+    otherwise |
+    await_canonical(Other?, Ch?, Outs?, Outs1, NetIn?, NetIn1).
+
+%% Smaller-name dispatch on whether friend(Other) is already present.
+procedure smaller_dispatch(Decision?, Constant?, Channel(Stream(X), Stream(X))?,
+                           Stream(OutputEntry)?, Stream(OutputEntry),
+                           Stream(NetInMsg)?, Stream(NetInMsg)).
+
+%% Already friend: suppress.  Close FOut to [].  Drop FIn (anonymous, no merge).
+smaller_dispatch(yes, _, ch(_, []), Outs, Outs?, NetIn, NetIn?).
+
+%% Not yet friend: install + send canonical on FOut + merge FIn into NetIn.
+smaller_dispatch(no, Other, ch(FIn, [canonical|FOut1?]), Outs, Outs2?, NetIn, NetIn1?) :-
+    ground(Other?) |
+    add_output(friend(Other?), FOut1, Outs?, Outs1),
+    lookup_send('_user', msg(agent, '_user', connected(Other?)), Outs1?, Outs2),
+    merge(NetIn?, FIn?, NetIn1).
+
+%% Larger-name side: read first message on FIn.
+procedure await_canonical(Constant?, Channel(Stream(X), Stream(X))?,
+                          Stream(OutputEntry)?, Stream(OutputEntry),
+                          Stream(NetInMsg)?, Stream(NetInMsg)).
+
+%% Canonical received: install friend(Other), merge post-canonical stream.
+%% close_output handles the rare case where an earlier await_canonical for a
+%% different channel already installed friend(Other); it's a no-op if absent.
+await_canonical(Other, ch([canonical|FIn], FOut?), Outs, Outs3?, NetIn, NetIn1?) :-
+    ground(Other?) |
+    close_output(friend(Other?), Outs?, Outs1),
+    add_output(friend(Other?), FOut, Outs1?, Outs2),
+    lookup_send('_user', msg(agent, '_user', connected(Other?)), Outs2?, Outs3),
+    merge(NetIn?, FIn?, NetIn1).
+
+%% Empty FIn: smaller-name side suppressed this channel.  Drop it.
+await_canonical(_, ch([], []), Outs, Outs?, NetIn, NetIn?).
