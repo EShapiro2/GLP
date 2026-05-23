@@ -1,0 +1,336 @@
+%% gsg/self.glp -- Grassroots Social Graph: CVA implementation types
+%%
+%% Implements paper §6 (sections/gsg-cva.tex): platform state, cargo,
+%% person volitions, queries.  Clauses live in gsg/agent.glp and
+%% gsg/platform.glp.
+%%
+%% Phase 1: clean social graph only.  Identity records, checkpoint,
+%% Restore, Replace cascade are added by /SPM/secure_gsg/.
+%% Application-data field (paper §6.7 Set data / Get data) omitted; can
+%% be added later as a fourth field of fme/N without disturbing this layer.
+%%
+%% Architecture: /Users/udi/Grassroots/GLP/programs/SPM/docs/glp-architecture.md
+
+-module(gsg).
+
+%% =============================================================================
+%% TERMINOLOGY ALIASES (paper notation → GLP types)
+%%   Agent : paper's Π-membership (also defined in cva/self.glp; redefined
+%%           here because sibling-directory types aren't transitively
+%%           visible to the type checker).
+%%
+%% Paper notation "epoch" maps to `Integer` directly throughout — the alias
+%% `Epoch ::= Integer` was tried but fails SRSW's constant-type relaxation
+%% (aliases don't inherit relaxation; see typed-glp-manual §3.5).  Using
+%% Integer directly preserves multi-reader use for body-bound epoch values.
+%% =============================================================================
+
+Agent ::= Constant.
+
+%% CVA substrate types redefined here.  Sibling-directory types from
+%% cva/self.glp are not transitively visible to the type checker when
+%% loading individual files; either redefine locally (as done here) or
+%% use a parent self.glp at programs/SPM/.  Structural identity (typed
+%% manual §20.3) makes the two definitions interoperable.
+NetMsg(C) ::= msg(Agent, Agent, C).
+InMsg(C) ::= msg(Agent, C).
+UserEvent(V, Q, A) ::= will(V) ; unwill(V) ; tick ; crash ; shutdown ; query(Q, A).
+IdentityRecord ::= ir(Stream(Agent), Integer).
+
+%% =============================================================================
+%% CARGO (paper §6.2 Messages)
+%%
+%% Bare positional, matching paper §6.2 / §6.5 notation.
+%% =============================================================================
+
+GsgCargo ::= friend_request(Integer)         %% paper §6.2: friend_request(x), x odd
+           ; accept(Integer)                  %% paper §6.2: accept(x)
+           ; unfriend(Integer)                %% paper §6.2: unfriend(x), x even
+           ; stream_update(Agent, Integer).   %% paper §6.2: stream_update(f, x)
+                                            %% sender records friendship with f at epoch x
+
+%% =============================================================================
+%% PERSON VOLITIONS
+%%
+%%   discover(q)         -- paper §5.2 Discover, brings q into Known
+%%   offer_friendship(q) -- paper §6.3 Offer friendship
+%%   accept_offer(p)     -- paper §6.3 Accept offer (consents to any pending
+%%                          friend_request from p)
+%%   end_friendship(q)   -- paper §6.4 End friendship
+%% =============================================================================
+
+GsgVolition ::= discover(Agent)
+              ; offer_friendship(Agent)
+              ; accept_offer(Agent)
+              ; end_friendship(Agent).
+
+%% =============================================================================
+%% READ-ONLY QUERIES (architecture §2.5)
+%%
+%% Pure observers used by test plays.  The person sends `query(Q, A)` on
+%% UserIn; the agent binds A to the answer and recurses.
+%% =============================================================================
+
+GsgQuery ::= q_epoch(Agent)              %% paper notation: epoch_p(q)
+           ; q_fof_epoch(Agent, Agent)   %% paper notation: epoch_p(q, f)
+           ; q_known(Agent)              %% q ∈ known_p ?
+           ; q_fmap_dom.                 %% dom(FMap_p)
+
+GsgAnswer ::= a_epoch(Integer)
+            ; a_bool(Constant)           %% 'true' or 'false'
+            ; a_keys(Stream(Agent)).
+
+%% =============================================================================
+%% PLATFORM STATE (paper §6.1)
+%%
+%%   gsg(Known, Volitions, Inbox, FMap, FoFMap)
+%%
+%% Known     -- set of discovered peers (paper §5.1, arch §2.4)
+%% Volitions -- pending volitions (arch §2.5, §3.3)
+%% Inbox     -- received messages, monotone non-decreasing (paper §5.1)
+%% FMap      -- direct friendship record FMap_p (paper §6.1)
+%% FoFMap    -- friend-of-friend record FoFMap_p (paper §6.1)
+%%
+%% Initial state: gsg([], [], [], [], []).
+%% =============================================================================
+
+%% Paper §6.1: FMap_p[q] = (epoch, data).  Data omitted in Phase 1.
+FMapEntry ::= fme(Agent, Integer).
+FMap ::= [] ; [FMapEntry | FMap].
+
+%% Paper §6.1: FoFMap_p[q][f] = e.  Nested assoc-list.
+FoFInnerEntry ::= fofe(Agent, Integer).
+FoFInner ::= [] ; [FoFInnerEntry | FoFInner].
+FoFEntry ::= fofb(Agent, FoFInner).
+FoFMap ::= [] ; [FoFEntry | FoFMap].
+
+GsgPlatform ::= gsg(Stream(Agent),               %% Known
+                    Stream(GsgVolition),         %% Volitions
+                    Stream(InMsg(GsgCargo)),     %% Inbox
+                    FMap,
+                    FoFMap).
+
+%% TODO Phase 1+: Resolve simultaneous offer (paper §6.3) requires tracking
+%% outgoing friend_requests in a PendingOut field, plus a clause that detects
+%% friend_request from P when (P, X) is in PendingOut, comparing Self vs P
+%% via @</@> for name-order resolution.  Not implemented; test plays so far
+%% don't trigger the simultaneous-offer case.
+%%
+%% TODO Phase 1+: Reply-variable sync pattern.  Each `will(V)` includes a
+%% Reply reader the agent binds when V's transaction has completed.  Test
+%% plays use `ground(Reply?)` guards in subsequent events to synchronise.
+%% Architecture §3.3.  Without this, queries fire before the corresponding
+%% NetIn round-trips complete, so tests verify via :trace mode.
+
+%% =============================================================================
+%% HELPERS (visible to sibling modules via ancestor scoping per spec §3.1).
+%% agent/7 lives in agent.glp (module gsg_agent) and calls these via the
+%% implicit ancestor self.glp scope.
+%% =============================================================================
+
+%% =============================================================================
+%% EPOCH LOOKUP (paper §6.1)
+%%
+%%   epoch_p(q) = FMap_p[q].epoch  when q ∈ dom(FMap_p)
+%%   epoch_p(q) = 0                otherwise
+%% =============================================================================
+
+exported procedure epoch_of(Agent?, FMap?, Integer).
+
+%% Match: return E.
+epoch_of(Q, [fme(Q1, E) | _], E?) :-
+    Q? =?= Q1? | true.
+
+%% No match this entry: recurse on tail.
+epoch_of(Q, [_ | Rest], E?) :-
+    otherwise | epoch_of(Q?, Rest?, E).
+
+%% Empty: paper convention epoch_p(q) := 0 when q ∉ dom(FMap_p).
+epoch_of(_, [], 0).
+
+%% =============================================================================
+%% FMAP UPDATE: paper §6.3/§6.4 "Set FMap_p[q] := x".
+%% Updates in place if q already in dom(FMap_p); appends otherwise.
+%% =============================================================================
+
+exported procedure set_epoch(Agent?, Integer?, FMap?, FMap).
+
+%% Match existing entry: replace its epoch.
+set_epoch(Q, X, [fme(Q1, _) | Rest], [fme(Q1?, X?) | Rest?]) :-
+    Q? =?= Q1? | true.
+
+%% No match this entry: keep it, recurse.
+set_epoch(Q, X, [Entry | Rest], [Entry? | Rest1?]) :-
+    otherwise | set_epoch(Q?, X?, Rest?, Rest1).
+
+%% Reached end without finding Q: append new entry.
+set_epoch(Q, X, [], [fme(Q?, X?)]).
+
+%% =============================================================================
+%% BUMP_EPOCH: combined walk -- find Q's entry, bump epoch by 1, return both
+%% the new FMap and the new epoch.  Single walk avoids epoch_of + set_epoch
+%% (which would double-read FMap).  If Q absent, insert with epoch 1.
+%% =============================================================================
+
+exported procedure bump_epoch(Agent?, FMap?, FMap, Integer).
+
+bump_epoch(Q, [fme(Q1, E) | Rest], [fme(Q1?, X?) | Rest?], X?) :-
+    Q? =?= Q1?, X := E? + 1 | true.
+
+bump_epoch(Q, [Entry | Rest], [Entry? | Rest1?], X?) :-
+    otherwise | bump_epoch(Q?, Rest?, Rest1, X).
+
+bump_epoch(Q, [], [fme(Q?, 1)], 1).
+
+%% =============================================================================
+%% KNOWN SET (paper §5.2 Discover).  Known_p represented as a list.
+%% =============================================================================
+
+%% is_known(Q, Known, Bool): Bool = 'true' if Q ∈ Known, 'false' otherwise.
+%% Bool is a Constant atom ('true' or 'false').
+exported procedure is_known(Agent?, Stream(Agent)?, Constant).
+
+is_known(Q, [Q1 | _], true) :- Q? =?= Q1? | true.
+is_known(Q, [_ | Rest], B?) :- otherwise | is_known(Q?, Rest?, B).
+is_known(_, [], false).
+
+%% add_known(Q, Known, Known1): idempotent add by single walk.
+%% Known1 = Known if Q ∈ Known; otherwise Known1 has Q appended.
+exported procedure add_known(Agent?, Stream(Agent)?, Stream(Agent)).
+
+%% Match: return list unchanged.
+add_known(Q, [Q1 | Rest], [Q1? | Rest?]) :-
+    Q? =?= Q1? | true.
+
+%% No match this entry: keep Q1, recurse.
+add_known(Q, [Q1 | Rest], [Q1? | Rest1?]) :-
+    otherwise | add_known(Q?, Rest?, Rest1).
+
+%% Reached end without finding Q: append Q.
+add_known(Q, [], [Q?]).
+
+%% =============================================================================
+%% VOLITIONS (arch §3.3): take_volition finds V and removes it.
+%% =============================================================================
+
+exported procedure take_volition(GsgVolition?, Stream(GsgVolition)?, Stream(GsgVolition)).
+
+%% Match: skip this entry (volition consumed).
+take_volition(V, [V1 | Rest], Rest?) :-
+    V? =?= V1? | true.
+
+%% No match: keep, recurse.
+take_volition(V, [V1 | Rest], [V1? | Rest1?]) :-
+    otherwise | take_volition(V?, Rest?, Rest1).
+
+%% Empty: no V to find; return [].
+take_volition(_, [], []).
+
+%% =============================================================================
+%% BROADCAST stream_update(F, X) to every recipient in FMap (paper §6.5).
+%%
+%% Stream-threading: arg 5 is the incoming NetOut writer the caller hands
+%% over; arg 6 is the continuation writer after this procedure has emitted
+%% its messages.  Caller threads this through subsequent stream-emitting
+%% calls and finally passes the last continuation to the recursive `agent`.
+%% =============================================================================
+
+%% arg 5 (NetOut) at ↑ : caller's writer to fill with this chunk of messages.
+%% arg 6 (Cont)   at ↓ : reader of the continuation writer the caller binds next.
+%% Threading: this procedure's arg 6 reader is paired with caller's writer for
+%% the next stream-extending procedure call.  Empty case aliases arg 5 to arg 6.
+exported procedure broadcast_update(Agent?, Agent?, Integer?, FMap?,
+                                     Stream(NetMsg(GsgCargo)),
+                                     Stream(NetMsg(GsgCargo))?).
+
+broadcast_update(From, F, X, [fme(R, _) | Rest],
+                 [msg(From?, R?, stream_update(F?, X?)) | NewTail?],
+                 Cont) :-
+    ground(From?), ground(F?), ground(X?) |
+    broadcast_update(From?, F?, X?, Rest?, NewTail, Cont?).
+
+%% Empty FMap: nothing to write.  Alias arg 5 writer to read from arg 6.
+broadcast_update(_, _, _, [], Cont?, Cont).
+
+%% =============================================================================
+%% SEND SNAPSHOT to a new friend (paper §6.5): emit stream_update(F, E) for
+%% every existing friend F ≠ NewFriend in FMap_p.
+%% =============================================================================
+
+exported procedure send_snapshot(Agent?, Agent?, FMap?,
+                                  Stream(NetMsg(GsgCargo)),
+                                  Stream(NetMsg(GsgCargo))?).
+
+%% Skip self: don't send the new friend a snapshot entry about themselves.
+send_snapshot(From, NewFriend, [fme(F, _) | Rest], NetOut?, Cont) :-
+    F? =?= NewFriend? |
+    send_snapshot(From?, NewFriend?, Rest?, NetOut, Cont?).
+
+%% Other friend: emit snapshot entry.
+send_snapshot(From, NewFriend, [fme(F, E) | Rest],
+              [msg(From?, NewFriend?, stream_update(F?, E?)) | NewTail?],
+              Cont) :-
+    ground(From?), ground(NewFriend?), ground(F?), ground(E?), otherwise |
+    send_snapshot(From?, NewFriend?, Rest?, NewTail, Cont?).
+
+%% Empty: alias.
+send_snapshot(_, _, [], Cont?, Cont).
+
+%% =============================================================================
+%% PARITY GUARDS (paper §6.1 "odd = active, even = inactive").
+%% =============================================================================
+
+exported procedure is_even(Integer?).
+is_even(E) :- E? mod 2 =:= 0 | true.
+
+exported procedure is_odd(Integer?).
+is_odd(E) :- E? mod 2 =:= 1 | true.
+
+%% =============================================================================
+%% FOFMAP LOOKUP (paper §6.5): epoch_p(q, f) = FoFMap_p[q][f] or 0.
+%% =============================================================================
+
+exported procedure fof_epoch_of(Agent?, Agent?, FoFMap?, Integer).
+
+%% Outer match: descend into inner map.
+fof_epoch_of(Q, F, [fofb(Q1, Inner) | _], E?) :-
+    Q? =?= Q1? | fof_inner_lookup(F?, Inner?, E).
+
+%% No outer match: recurse on rest.
+fof_epoch_of(Q, F, [_ | Rest], E?) :-
+    otherwise | fof_epoch_of(Q?, F?, Rest?, E).
+
+%% Outer empty: paper convention 0.
+fof_epoch_of(_, _, [], 0).
+
+exported procedure fof_inner_lookup(Agent?, FoFInner?, Integer).
+fof_inner_lookup(F, [fofe(F1, E) | _], E?) :-
+    F? =?= F1? | true.
+fof_inner_lookup(F, [_ | Rest], E?) :-
+    otherwise | fof_inner_lookup(F?, Rest?, E).
+fof_inner_lookup(_, [], 0).
+
+%% =============================================================================
+%% FOFMAP UPDATE (paper §6.5): set FoFMap_p[q][f] := x.
+%% =============================================================================
+
+exported procedure set_fof_epoch(Agent?, Agent?, Integer?, FoFMap?, FoFMap).
+
+%% Outer match: update inner.
+set_fof_epoch(Q, F, X, [fofb(Q1, Inner) | Rest], [fofb(Q1?, Inner1?) | Rest?]) :-
+    Q? =?= Q1? | fof_inner_set(F?, X?, Inner?, Inner1).
+
+%% No outer match: keep, recurse.
+set_fof_epoch(Q, F, X, [Entry | Rest], [Entry? | Rest1?]) :-
+    otherwise | set_fof_epoch(Q?, F?, X?, Rest?, Rest1).
+
+%% Outer empty: create new outer entry with a single-element inner.
+set_fof_epoch(Q, F, X, [], [fofb(Q?, [fofe(F?, X?)])]).
+
+exported procedure fof_inner_set(Agent?, Integer?, FoFInner?, FoFInner).
+
+fof_inner_set(F, X, [fofe(F1, _) | Rest], [fofe(F1?, X?) | Rest?]) :-
+    F? =?= F1? | true.
+fof_inner_set(F, X, [Entry | Rest], [Entry? | Rest1?]) :-
+    otherwise | fof_inner_set(F?, X?, Rest?, Rest1).
+fof_inner_set(F, X, [], [fofe(F?, X?)]).

@@ -1,0 +1,132 @@
+%% secure_gsg/self.glp -- Secure Grassroots Social Graph: CVA types.
+%%
+%% Implements paper §8 (sections/secure-gsg-cva.tex): identity records
+%% transported on Befriend and stored in FMap; periodic re-broadcast via
+%% checkpoint cargo; Restore protocol (passive, carried entirely by
+%% Integrate checkpoint, §8.6); Replace cascade (vouch / new_identity /
+%% rebind, §8.7).
+%%
+%% Spec resolutions used: D (LastBroadcastDate), E (skeleton vs stub),
+%% F (S_p known out-of-band on Replace), O (Integrate checkpoint promotes
+%% stubs using carried IR).
+%%
+%% Sibling-directory types from gsg/self.glp are not transitively visible;
+%% redefining the essentials locally (Agent, NetMsg, InMsg, UserEvent,
+%% IdentityRecord).  Will be cleaned up with a parent programs/SPM/self.glp
+%% once that's introduced.
+
+-module(secure_gsg).
+
+%% =============================================================================
+%% SUBSTRATE ALIASES (redefined; see gsg/self.glp comment on visibility)
+%% =============================================================================
+
+Agent ::= Constant.
+
+NetMsg(C) ::= msg(Agent, Agent, C).
+InMsg(C) ::= msg(Agent, C).
+UserEvent(V, Q, A) ::= will(V) ; unwill(V) ; tick ; crash ; shutdown ; query(Q, A).
+IdentityRecord ::= ir(Stream(Agent), Integer).
+                %%   ^K (custodian set) ^σ (supermajority %, 51..100)
+
+%% =============================================================================
+%% CARGO (paper §8.2 + §8.5 + §8.7)
+%%
+%% Befriend cargos extended with sender's identity record.  Periodic
+%% checkpoint carries the snapshot of sender's friendships (paper §8.5).
+%% Replace cargos: vouch, new_identity, rebind (paper §8.7).
+%% =============================================================================
+
+%% FriendEpoch: (friend, epoch) pair carried in checkpoints and Replace L lists.
+FriendEpoch ::= fe(Agent, Integer).
+FriendList ::= [] ; [FriendEpoch | FriendList].
+
+SecureGsgCargo ::= friend_request(Integer, IdentityRecord)        %% paper §8.2
+                 ; accept(Integer, IdentityRecord)                 %% paper §8.2
+                 ; unfriend(Integer)                                %% paper §6.4
+                 ; stream_update(Agent, Integer)                   %% paper §6.5
+                 ; checkpoint(Integer, IdentityRecord, FriendList) %% paper §8.5
+                 %% Replace cargos (paper §8.7):
+                 ; vouch(Agent, Agent, FriendList)                 %% vouch(p, p', L_c)
+                 ; new_identity(Agent, Agent,                       %% paper §8.7
+                                Stream(Agent), IdentityRecord)
+                                %% ^old ^new   ^V (vouching set) ^IR_{p'}
+                 ; rebind(Integer, IdentityRecord,                  %% paper §8.7
+                          FriendList, FriendList).
+                          %% ^epoch ^IR_q     ^L_q (q's friends)  ^L_q^p (q's view of p's friends)
+
+%% =============================================================================
+%% PERSON VOLITIONS (paper §6.3 + §6.4 + §8.7)
+%% =============================================================================
+
+SecureGsgVolition ::= discover(Agent)
+                    ; offer_friendship(Agent)
+                    ; accept_offer(Agent)
+                    ; end_friendship(Agent)
+                    ; vouch(Agent, Agent)              %% paper §8.7 Vouch
+                    ; announce_new_identity(Agent).    %% paper §8.7 Announce
+
+%% =============================================================================
+%% READ-ONLY QUERIES (extend GSG queries with secure-state observers)
+%% =============================================================================
+
+SecureGsgQuery ::= q_epoch(Agent)                  %% paper notation: epoch_p(q)
+                 ; q_fof_epoch(Agent, Agent)        %% epoch_p(q, f)
+                 ; q_known(Agent)
+                 ; q_ir(Agent)                      %% IR_p[q]: (K, σ) stored for q
+                 ; q_fmap_dom.
+
+SecureGsgAnswer ::= a_epoch(Integer)
+                  ; a_bool(Constant)
+                  ; a_ir(IdentityRecord)
+                  ; a_keys(Stream(Agent)).
+
+%% =============================================================================
+%% PLATFORM STATE (paper §8.1)
+%%
+%% Extends GSG's FMap with identity-record fields (K, σ) per entry.
+%% FMap entries are tagged so skeleton/stub/full status is explicit
+%% (spec-issue E resolution).
+%%
+%% Adds LastBroadcastDate to enforce "at most one re-broadcast per date"
+%% (spec-issue D resolution).
+%% =============================================================================
+
+%% Three FMap-entry kinds (paper §8.5 + §8.7):
+%%   full     -- (epoch, K, σ): live friendship record
+%%   skeleton -- (0, K, σ): installed by Integrate checkpoint from a sender
+%%               we don't yet record; identity record IS present (paper §8.5)
+%%   stub     -- (epoch, ⊥, ⊥): installed by Integrate rebind from a third
+%%               party's L_p; identity record absent until later rebind or
+%%               Integrate checkpoint promotion (spec-issue O)
+SecureFMapEntry ::= full(Agent, Integer, Stream(Agent), Integer)
+                    %%     ^q      ^epoch ^K              ^σ
+                  ; skeleton(Agent, Stream(Agent), Integer)
+                    %%        ^q     ^K              ^σ  (epoch implicit = 0)
+                  ; stub(Agent, Integer).
+                    %%   ^q     ^epoch  (K, σ both ⊥)
+
+SecureFMap ::= [] ; [SecureFMapEntry | SecureFMap].
+
+%% FoFMap unchanged from GSG (no IR carried at stream_update level, paper §8.4).
+FoFInnerEntry ::= fofe(Agent, Integer).
+FoFInner ::= [] ; [FoFInnerEntry | FoFInner].
+FoFEntry ::= fofb(Agent, FoFInner).
+FoFMap ::= [] ; [FoFEntry | FoFMap].
+
+%% Platform state extends GSG's with LastBroadcastDate.
+%%
+%%   secure_gsg(Known, Volitions, Inbox, FMap, FoFMap, LastBroadcastDate)
+SecureGsgPlatform ::= secure_gsg(Stream(Agent),                   %% Known
+                                  Stream(SecureGsgVolition),      %% Volitions
+                                  Stream(InMsg(SecureGsgCargo)),  %% Inbox
+                                  SecureFMap,
+                                  FoFMap,
+                                  Integer).                       %% LastBroadcastDate
+
+%% =============================================================================
+%% PROCEDURE DECLARATIONS — co-located with clauses in:
+%%   secure_gsg/platform.glp -- helpers (lookup, update, promote, ...)
+%%   secure_gsg/agent.glp    -- agent/7 with secure clauses
+%%   secure_gsg/checkpoint.glp -- periodic re-broadcast emission
+%% =============================================================================

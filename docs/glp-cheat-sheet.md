@@ -76,10 +76,18 @@ The same `?` in the type definition flips differently depending on which directi
 
 ## 3. SRSW (Single Reader Single Writer)
 
-Each reader `X?` can appear at most ONCE in a clause (one read).
 Each writer `X` can appear at most ONCE in a clause (one write).
+Each reader `X?` can appear at most once in the head+body (one read).
 
-Exception: if `ground(X?)` is in the guard, `X?` can appear multiple times.
+**Guard occurrences don't count:** A reader `X?` may appear in a guard AND additionally once in the head+body.  (Its paired writer `X` must still occur in the head.)  For example:
+
+```prolog
+foo(X, Y?) :- known(X?) | bar(X?, Y).
+```
+
+`X?` appears twice — once in the guard (`known(X?)`) and once in the body (`bar(X?, Y)`) — but the guard occurrence doesn't count toward the single-reader limit, so this is valid.
+
+**Groundness relaxation:** If `ground(X?)` or another groundness-implying guard (`integer`, `number`, `string`, `constant`, arithmetic comparisons, `=?=`) is present, `X?` can appear multiple times anywhere in the clause.
 
 ## 3b. Receiving a Variable and Passing It On
 
@@ -134,6 +142,72 @@ The `?` in the type does NOT force the clause variable to be a reader. When you
 write a clause head that matches `escrow_offer(Time, BenResult)`, `BenResult`
 (writer, no `?`) is perfectly valid — it receives/captures the value from the
 structure. The type's `?` is about the data, not about your clause variable.
+
+## 3d. Forwarding a Writer Through a Structure
+
+Dual of §3b.  To forward a WRITER through an output structure (so the
+downstream can bind it), the type definition must carry `?` at the position:
+
+```prolog
+OutputEntry ::= output(OutputKey, Stream?).   %% ? enables writer-forwarding
+
+procedure add_output(OutputKey?, Stream, OutputsList?, OutputsList).
+add_output(Key, Out?, Outs, [output(Key?, Out) | Outs?]).
+%%              ^^^^                       ^^^
+%%              reader in input head       writer forwarded in output head
+```
+
+- `Out?` in arg 2 head = reader (captures from caller).
+- `Out` in arg 4 head, inside the `?`-typed `Stream?` field = writer (forwarded).
+- 1 reader + 1 writer = SRSW pair across head args, OK.
+
+The downstream receives the OutputsList and WRITES to the stream by binding the
+variable in its own head pattern, exactly as `lookup_send_step` does:
+
+```prolog
+lookup_send_step(Key, Msg, [output(K, [Msg?|Out1?])|Rest], ...) :- ...
+```
+
+**Without `?` in the type, the output position carries a reader, not a writer.**
+If the downstream needs to write, add `?` to the type.  Do NOT redesign around it.
+
+| Forwarding direction | Type carries `?` | Input head form | Output head form |
+|---|---|---|---|
+| Reader (§3b) | no | writer `X` | reader `X?` |
+| Writer (§3d, this section) | yes | reader `X?` | writer `X` |
+
+See typed-glp-manual §15 (reader-forwarding) and §15B (writer-forwarding).
+
+## 3e. Threading a Stream Across Multiple Producers
+
+When a procedure writes N messages to a stream and leaves a continuation
+for the caller to use, the two stream args must have **asymmetric modes**:
+
+```prolog
+%% arg 5 (NetOut) at ↑ : caller-provides-writer; callee fills with messages.
+%% arg 6 (Cont)   at ↓ : caller-provides-reader of the next-writer it will use.
+exported procedure write_msgs(..., Stream(X), Stream(X)?).
+
+write_msgs(..., [m1?, m2? | NewTail?], Cont) :-
+    ... | write_msgs(..., NewTail, Cont?).
+
+write_msgs(..., [], Cont?, Cont).  %% empty: alias arg 5 to arg 6.
+```
+
+The ↑/↓ asymmetry is what satisfies SRSW for the empty/alias clause:
+writer (`Cont` at ↓) pairs with reader (`Cont?` at ↑).  Symmetric ↑/↑ fails
+the type checker with "reader requires ↓ (consume), got ↑ (produce)".
+
+Caller threads multiple stream-extending calls together:
+
+```prolog
+write_msgs(...,  NetOut,  NetOut1?),
+write_more(..., NetOut1, NetOut2?),
+agent(...,       NetOut2, ...).
+```
+
+Each call's arg 5 is the previous call's arg 6's paired writer.  When the
+chain ends with `agent(..., NetOut2, ...)`, agent's clause head writes more.
 
 ## 4. The Bind Pattern
 
@@ -360,3 +434,40 @@ C ::= A ; B.          %% INVALID: msg/1 in both A and B
 ```
 
 Type identity is structural — two types with the same alternatives are compatible regardless of name or module.
+
+## 14. Type Aliases of Primitive Types
+
+You can alias primitives for self-documenting positions:
+
+```prolog
+Agent ::= Constant.
+Epoch ::= Integer.
+
+GsgCargo ::= friend_request(Epoch)
+           ; stream_update(Agent, Epoch).
+```
+
+`stream_update(Agent, Epoch)` reads much better than `stream_update(Constant, Integer)`.  Structural identity (§13) makes the alias interoperable with the underlying primitive.
+
+**Caveat — SRSW relaxation does NOT transfer through the alias.**  The §3.3-style relaxation that permits multiple readers of `Constant`/`Integer`/etc. does not auto-apply to `Agent` or `Epoch`.  If you forward an aliased variable to two places, the type checker reports:
+
+> Reader variable X? occurs 2 times without ground guard or constant type
+
+Workaround: explicit `ground/1` guard.
+
+```prolog
+broadcast(Agent, ...) :-
+    ground(Agent?) | use(Agent?), use_again(Agent?).
+```
+
+## 15. Troubleshooting Common Type-Checker Errors
+
+| Error | Likely cause | Fix |
+|---|---|---|
+| `Variable mode mismatch: reader requires ↓, got ↑` | Symmetric ↑/↑ args trying to pair writer + reader | Declare one arg with `?` so it's at ↓; pair across asymmetric modes (see §3e) |
+| `Reader variable X? occurs 2 times without ground guard or constant type` | Multi-reader without relaxation; type-alias caveat (§14) | Add `ground(X?)` guard |
+| `Cannot resolve type expression: foo(...)` | Compound list element used inline | Extract as named typedef: `FooEntry ::= foo(...).` then `List ::= [] ; [FooEntry \| List].` |
+| `SRSW violation: Reader variable X? occurs N times` | Variable used in multiple non-guard occurrences without relaxation | Add `ground(X?)` if appropriate, or restructure to single-walk |
+| `Spawn could not find procedure label X/N` (runtime) | **Runtime bug** triggered by `-module(...)` declared + private (`procedure`) helper called from a body in the same module.  See `docs/bugs/local-procedure-not-found-with-module-directive.md`.  Workaround: declare the helper `exported procedure` until fixed |
+| `Procedure declaration for "X" has no clauses` | `procedure` in a `self.glp` without clauses | Co-locate clauses with the declaration; `self.glp` holds types only |
+| `UnknownTypeError: Foo` when loading a sibling-directory file | Types from `cva/self.glp` not visible in `gsg/` | Redefine the needed types in `gsg/self.glp` (structural identity, §13), OR move shared types to a parent `programs/SPM/self.glp` |

@@ -1,0 +1,108 @@
+%% cva/self.glp -- CVA substrate types and procedure declarations
+%%
+%% Implements the substrate of the SPM paper's CVA model (sections/cva.tex,
+%% Definition 5.2): the message-cargo wrapper, user-event vocabulary, identity
+%% record, and network-mediator endpoint.  Platform-specific Cargo, Volition,
+%% Query, Answer, and Platform types are defined in per-platform self.glp
+%% (gsg/, secure_gsg/, secure_bonds/).
+%%
+%% Architecture: /Users/udi/Grassroots/GLP/programs/SPM/docs/glp-architecture.md
+%% Status: types + procedure declarations only; clauses in network.glp,
+%% actor.glp, supervisor.glp.
+
+-module(cva).
+
+%% =============================================================================
+%% TERMINOLOGY ALIASES (paper notation → GLP primitive types)
+%% Agent: a member of Π (paper §2 et seq.), here a Constant.
+%% =============================================================================
+
+Agent ::= Constant.
+
+%% =============================================================================
+%% MESSAGES (paper §5.1: outbox and inbox messages are sender/recipient/cargo
+%% triples; the network mediator strips the recipient on delivery).
+%% =============================================================================
+
+%% Full message as it appears in an agent's outbox (NetOut) and in transit.
+NetMsg(C) ::= msg(Agent, Agent, C).
+            %%  ^sender    ^recipient ^cargo
+
+%% Message as it appears in an agent's inbox (NetIn), with recipient elided
+%% (the inbox owner is the recipient).
+InMsg(C) ::= msg(Agent, C).
+           %%  ^sender   ^cargo
+
+%% =============================================================================
+%% USER EVENTS (person-to-agent events on UserIn; platform-agnostic).
+%%   will(V) / unwill(V) -- paper §2.4 change-volition transactions
+%%   tick                -- paper §5.2 Advance-date
+%%   crash               -- fault harness (architecture §4.1)
+%%   query(Q, A)         -- read-only inspection (architecture §2.5)
+%% =============================================================================
+
+UserEvent(V, Q, A) ::= will(V)
+                     ; unwill(V)
+                     ; tick
+                     ; crash
+                     ; query(Q, A).
+
+%% =============================================================================
+%% IDENTITY RECORD (paper §4.2 secure social graph; §8.1 CVA realisation).
+%% IR_p = (K_p, σ_p) is intrinsic and immutable per agent; survives crash.
+%%   First arg: K, list of identity-custodian agent ids (K ⊆ F_p per §4.2).
+%%   Second arg: σ, supermajority threshold encoded as integer percentage in
+%%               51..100 (paper σ ∈ (1/2, 1]).
+%% =============================================================================
+
+IdentityRecord ::= ir(Stream(Agent), Integer).
+                  %%   ^K, custodian set  ^σ, supermajority threshold (51..100)
+
+%% =============================================================================
+%% NETWORK MEDIATOR (paper §5.2 Communicate, realised as one GLP process).
+%% Per-agent endpoint at the mediator:
+%%   net_end(AgentId, AgentNetOut_reader, AgentNetIn_writer)
+%% The mediator reads from each agent's NetOut and writes to the recipient's
+%% NetIn.  Streams are parameterised in the play's cargo type C.
+%% =============================================================================
+
+%% NetEnd field-mode rationale (typed-glp-manual §15B):
+%%
+%%   net_end(AgentId, Stream(NetMsg(C)), Stream(InMsg(C))?)
+%%                    ^^^^^^^^^^^^^^^^^  ^^^^^^^^^^^^^^^^^^
+%%                    NetOut             NetIn (writer-forwarded)
+%%
+%% Each stream-field's `?` is chosen so the SAME variable flips between
+%% reader and writer form at extract's input head vs its output heads,
+%% giving a 1-reader + 1-writer pair across head args (SRSW pair).
+%% - Out (NetOut): no `?` -> arg 1 captures writer, arg 2 forwards reader
+%% - In  (NetIn) : `?`    -> arg 1 captures reader, arg 3 forwards writer
+NetEnd(C) ::= net_end(Agent, Stream(NetMsg(C)), Stream(InMsg(C))?).
+NetEndList(C) ::= [] ; [NetEnd(C) | NetEndList(C)].
+
+%% Routing table: id_in(AgentId, AgentNetIn_writer).  The `?` on the
+%% stream field lets `extract` forward the writer into the output
+%% structure (writer-forwarding per typed-glp-manual §15B).
+IdIn(C) ::= id_in(Agent, Stream(InMsg(C))?).
+IdInList(C) ::= [] ; [IdIn(C) | IdInList(C)].
+
+%% Intermediate list of NetOut readers, threaded between `extract` and
+%% `merge_all`.  The element has NO `?` (Stream(NetMsg(C)), not
+%% Stream(NetMsg(C))?) so merge_all's head can capture writer form `Out`
+%% at ↓ and use `Out?` in the body for `merge`, satisfying SRSW.
+ReaderList(C) ::= [] ; [Stream(NetMsg(C)) | ReaderList(C)].
+
+%% =============================================================================
+%% PROCEDURE DECLARATIONS
+%%
+%% Procedure declarations live with their clauses (the GLP parser requires
+%% them to be co-located).  See cva/network.glp for the network mediator
+%% procedures: network/1, extract/3, merge_all/2, dispatch/2, route/4,
+%% close_all_routes/1.
+%%
+%% Per-platform agent/7 and supervisor/N are declared and defined in the
+%% platform's own files (gsg/, secure_gsg/, secure_bonds/).
+%%
+%% Static-script plays pass UserIn as a fully-ground list literal; no
+%% actor/2 process is required.
+%% =============================================================================

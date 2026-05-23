@@ -1,7 +1,7 @@
 # Typed GLP Manual
 
-**Version**: 2.10
-**Date**: 2026-03-14
+**Version**: 2.12
+**Date**: 2026-05-23
 **Status**: ACTIVE
 
 This manual captures essential programming principles and advice for writing correct Typed GLP programs. It covers the SRSW (Single-Reader Single-Writer) constraint, type declarations, moding, modules, parameterized types, and common pitfalls.
@@ -286,6 +286,8 @@ The rule composes recursively: at any depth within a structure in the head, the 
 | ↓ (consume) | writer `X` | captures incoming value |
 | ↑ (produce) | reader `X?` | hole to be filled |
 
+This is the default for ordinary captures and constructions.  For forwarding a reader or writer through an output structure, the head form is determined by the forwarding direction; see §15 (reader-forwarding) and §15B (writer-forwarding) for the conventions and the role of `?` in the type definition.
+
 ---
 
 ## 3. SRSW Relaxation for Constant Types
@@ -319,6 +321,51 @@ broadcast(Msg, Out1, Out2, Out3) :- ground(Msg?) |
 ```
 
 Guards that imply groundness include: `ground/1`, `integer/1`, `number/1`, `string/1`, `constant/1`, and arithmetic comparisons (`</2`, `>/2`, etc.).
+
+---
+
+### 3.4 Guard Occurrences and SRSW Counting
+
+A reader `X?` appearing in a guard does **not** count toward the single-reader limit in the head+body.  Specifically, if `X?` occurs in a guard, its paired writer `X` must occur in the head, and `X?` may additionally occur once in the head+body.
+
+This rule is stated in the Moded-Types paper (Remark on Guards and SRSW):
+
+> Guard occurrences count toward SRSW satisfaction: if X? occurs in a guard, its paired writer X must occur in the head and X? may additionally occur once in the body.
+
+**Example:**
+
+```prolog
+foo(X, Y?) :- known(X?) | bar(X?, Y).
+```
+
+Here `X?` appears twice in the clause — once in the guard (`known(X?)`) and once in the body (`bar(X?, Y)`).  The guard occurrence does not consume the single-reader allowance, so the single body occurrence is valid.  Note that `known/1` does not imply groundness, so this is not the ground-guard relaxation of Section 3.3 — it is the guard-occurrence rule.
+
+Combined with Section 3.3: if a groundness-implying guard like `ground(X?)` is present, `X?` may appear multiple times in both guard and head+body positions.
+
+---
+
+### 3.5 Type Aliases Do Not Inherit Constant-Type Relaxation
+
+A type alias of a primitive type, such as
+
+```prolog
+Agent ::= Constant.
+Epoch ::= Integer.
+```
+
+is structurally equivalent to the primitive (Section 20.3 type identity is structural).  Aliases improve documentation: `stream_update(Agent, Epoch)` is clearer than `stream_update(Constant, Integer)`.
+
+However, the SRSW relaxation of Section 3.1 (which permits multiple readers of `Constant`, `Integer`, `Number`, `String`, `Real`) does **not** automatically transfer through the alias.  A variable typed as `Agent` is treated by the SRSW checker as a non-constant-type variable; multi-reader use without a ground guard is rejected with:
+
+> Reader variable X? occurs 2 times without ground guard or constant type
+
+The workaround is an explicit ground guard (Section 3.3):
+
+```prolog
+broadcast(A, Out1, Out2) :- ground(A?) | send(A?, Out1), send(A?, Out2).
+```
+
+When designing aliases, either expect the explicit guard at use sites, or refer to the underlying primitive type directly in procedure declarations where multi-reader use is needed without a guard.
 
 ---
 
@@ -721,6 +768,58 @@ The escrow case is notable because the receiver calls `inject` directly rather t
 
 ---
 
+## 15B. Forwarding a Writer Through a Structure (dual of §15)
+
+### 15B.1 The Convention
+
+When a clause receives a structure carrying a stream variable and needs to forward the **writer** (not the reader) to a downstream consumer through an output structure, the convention is:
+
+- the position in the type definition MUST carry `?`;
+- the head form at the input arg is reader `X?`;
+- the head form inside the output structure is writer `X` (no `?`).
+
+This gives 1 reader + 1 writer across head args — SRSW-compliant.  The `?` on the type definition is what enables this: at an output (↑) position, the `?` flips the structural mode to ↓ inside, and the head form there is writer.  Without `?` the output structure conveys a reader, and the downstream consumer can only read.
+
+### 15B.2 Worked Example: add_output
+
+```prolog
+OutputEntry ::= output(OutputKey, Stream?).
+OutputsList ::= [] ; [OutputEntry | OutputsList].
+
+procedure add_output(OutputKey?, Stream, OutputsList?, OutputsList).
+add_output(Key, Out?, Outs, [output(Key?, Out) | Outs?]).
+```
+
+- Arg 2 (`Stream` at ↑): head form `Out?` (reader, captures from caller).
+- Output arg 4, inside `output(...)`: position 2 is `Stream?` (type has `?`); at ↑ + `?` flip → ↓ → writer form.  Head form `Out` (no `?`), forwarding the writer.
+
+The downstream consumer receives the OutputsList and binds the variable at position 2 by head pattern, writing to the stream:
+
+```prolog
+lookup_send_step(Key, Msg, [output(K, [Msg?|Out1?])|Rest],
+                            [output(K?, Out1)|Rest?]) :-
+    Key? =?= K? | true.
+```
+
+Here `lookup_send_step` writes the message and a fresh tail-writer at the head of the stream, exactly because the structure carried the writer forwarded by `add_output`.
+
+### 15B.3 Reader-Forwarding vs Writer-Forwarding
+
+| Forwarding | Type carries `?` | Input head form | Output head form |
+|---|---|---|---|
+| Reader (§15) | no | writer `X` | reader `X?` |
+| Writer (§15B, this section) | yes | reader `X?` | writer `X` |
+
+Both compose into SRSW pairs across head args.  The `?` in the type definition selects between them.
+
+### 15B.4 Common Misconception
+
+SRSW does not prevent writer-forwarding through a structure.  If a writer must be forwarded but the type lacks `?` at that position, add the `?`.  Do not redesign the architecture around the absence — the `?` is what enables the forwarding.
+
+A practical sign of the misconception: arriving at a design where "the play does the wiring by hand" because "the substrate cannot forward writers through a list".  Re-examine the type definition first; the fix is almost always one `?`.
+
+---
+
 ## 16. `?` in Type Definitions vs `?` on Clause Variables
 
 ### 16.1 The Distinction
@@ -1022,6 +1121,8 @@ Type identity is structural. Two independently defined types with the same alter
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 2.12 | 2026-05-23 | Added Section 15B: Forwarding a Writer Through a Structure (dual of §15, role of `?` in type definitions at output positions); added cross-reference at end of §2A.4 summary |
+| 2.11 | 2026-04-12 | Added Section 3.4: Guard Occurrences and SRSW Counting (guard reader occurrences don't count toward single-reader limit) |
 | 2.10 | 2026-03-14 | Added Section 20: Type Union (type names as alternatives, disjoint functor requirement, structural identity) |
 | 2.9 | 2026-03-12 | Added Section 19: Modules (declarations, exports/imports, `#` syntax, self.glp chain, REPL workflow) |
 | 2.8 | 2026-03-11 | Added Section 18: Tight Typing Discipline; corrected send/receive Channel arity to 2-arg form |

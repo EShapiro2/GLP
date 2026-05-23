@@ -1,0 +1,112 @@
+%% cva/network.glp -- CVA message router (Communicate built-in, paper §5.2).
+%%
+%% Top-level: `network(NetEndList)` takes the per-agent endpoint list and
+%% does three things in parallel:
+%%   1. extract  -- split each net_end into (NetOut reader, IdIn entry)
+%%   2. merge_all -- chained merge of the NetOut readers into one stream
+%%   3. dispatch -- route each msg(S, R, Cargo) to recipient R's NetIn
+%%
+%% FIFO per (sender, recipient) is preserved: merge preserves per-input
+%% order, route handles one message at a time in arrival order
+%% (architecture §2.2).
+
+-module(cva).
+
+%% =============================================================================
+%% NETWORK: top-level wiring.
+%% =============================================================================
+
+exported procedure network(NetEndList(C)?).
+
+network(Endpoints) :-
+    extract(Endpoints?, Outs, IdIns),
+    merge_all(Outs?, AllOut),
+    dispatch(AllOut?, IdIns?).
+
+%% =============================================================================
+%% EXTRACT: split NetEndList into ReaderList + IdInList.
+%%
+%% For each net_end(Id, NetOut?_reader, NetIn_writer):
+%%   - put NetOut reader into the outputs list (for merge_all);
+%%   - put id_in(Id, NetIn) into the routing table (for dispatch),
+%%     forwarding the writer via the structure (Stream(InMsg(C))? in IdIn
+%%     puts a writer at the ↑ output position after the `?` flip).
+%% =============================================================================
+
+exported procedure extract(NetEndList(C)?, ReaderList(C), IdInList(C)).
+
+extract([net_end(Id, Out, In?) | Rest],
+        [Out? | Outs?],
+        [id_in(Id?, In) | Ins?]) :-
+    extract(Rest?, Outs, Ins).
+extract([], [], []).
+
+%% =============================================================================
+%% MERGE: classic two-stream merge.  Defined locally because no `merge` is
+%% loaded by root self.glp.
+%% =============================================================================
+
+exported procedure merge(Stream(X)?, Stream(X)?, Stream(X)).
+
+merge([X|Xs], Ys, [X?|Zs?]) :- merge(Ys?, Xs?, Zs).
+merge(Xs, [Y|Ys], [Y?|Zs?]) :- merge(Xs?, Ys?, Zs).
+merge([], Ys, Ys?).
+merge(Xs, [], Xs?).
+
+%% =============================================================================
+%% MERGE_ALL: chained binary merges over a list of stream readers.
+%% =============================================================================
+
+exported procedure merge_all(ReaderList(C)?, Stream(NetMsg(C))).
+
+merge_all([Out | Rest], Merged?) :-
+    merge_all(Rest?, RestMerged),
+    merge(Out?, RestMerged?, Merged).
+merge_all([], []).
+
+%% =============================================================================
+%% DISPATCH: read merged stream, route each message.
+%% =============================================================================
+
+exported procedure dispatch(Stream(NetMsg(C))?, IdInList(C)?).
+
+dispatch([msg(S, R, Cargo) | Rest], Routes) :-
+    route(R?, msg(S?, Cargo?), Routes?, Routes1),
+    dispatch(Rest?, Routes1?).
+
+%% Merged stream closed: shut down all NetIn writers so agents see []
+%% on their NetIn streams and can terminate.
+dispatch([], Routes) :- close_all_routes(Routes?).
+
+%% =============================================================================
+%% ROUTE: find recipient in IdInList, deliver one message.
+%% =============================================================================
+%%
+%% Match: recipient found.  The NetIn writer (forwarded via id_in's `?`)
+%% is bound to [Msg | NewIn?], delivering Msg as the head of the recipient's
+%% NetIn stream and creating a fresh tail-writer NewIn for the next message.
+%% The updated entry in the output routing table carries NewIn.
+
+exported procedure route(Agent?, InMsg(C)?, IdInList(C)?, IdInList(C)).
+
+route(R, Msg, [id_in(R1, [Msg?|NewIn?]) | Rest],
+              [id_in(R1?, NewIn) | Rest?]) :-
+    R? =?= R1? | true.
+
+%% No match: passthrough this entry, recurse on the rest.
+route(R, Msg, [Entry | Rest], [Entry? | Rest1?]) :-
+    otherwise | route(R?, Msg?, Rest?, Rest1).
+
+%% Recipient unknown: drop message silently.  (Sound for GSG by monotone
+%% semantics + checkpoint redelivery; bonds runs under reliable delivery
+%% so unknown recipients shouldn't occur.)
+route(_, _, [], []).
+
+%% =============================================================================
+%% CLOSE_ALL_ROUTES: bind each NetIn writer to [] when dispatch ends.
+%% =============================================================================
+
+exported procedure close_all_routes(IdInList(C)?).
+
+close_all_routes([id_in(_, []) | Rest]) :- close_all_routes(Rest?).
+close_all_routes([]).

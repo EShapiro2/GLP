@@ -1,0 +1,174 @@
+%% gsg/agent.glp -- GSG agent process: input absorption + CVA transactions.
+%%
+%% Phase 1 minimal scope: enough to run a 2-agent offer/accept handshake
+%% end-to-end.  Currently implements:
+%%
+%%   UserIn events:  will(discover(Q)), will(offer_friendship(Q)),
+%%                   will(end_friendship(Q)), tick, query(q_epoch(Q), A).
+%%   NetIn messages: msg(P, friend_request(X)), msg(P, accept(X)),
+%%                   msg(P, unfriend(X)), msg(P, stream_update(F, X)).
+%%   Termination:    agent(_, _, [], [], [], _, _).
+%%
+%% Simplifications (to revisit):
+%%   - Offer/Accept don't verify Q ∈ Known (paper §6.3); test plays
+%%     responsibility to discover before offering.
+%%   - Integer parity not checked at the agent level; accepted as-is.
+%%   - Volitions fire-or-drop at the will event (not stateful per
+%%     architecture §3.3 yet).
+%%   - No Resolve simultaneous offer clause yet.
+%%   - No stream_update broadcast on activation yet (no FoFMap dissemination
+%%     beyond the direct integration).
+
+-module(gsg_agent).
+
+%% Helpers from gsg/self.glp (ancestor scoping, spec §3.1): epoch_of,
+%% set_epoch, bump_epoch, add_known, set_fof_epoch, is_even, is_odd, etc.
+
+%% =============================================================================
+%% AGENT (paper §5: CVA agent process)
+%% =============================================================================
+
+exported procedure agent(Agent?, IdentityRecord?,
+                          Stream(UserEvent(GsgVolition, GsgQuery, GsgAnswer))?,
+                          Stream(InMsg(GsgCargo))?,
+                          Stream(NetMsg(GsgCargo)),
+                          Integer?,
+                          GsgPlatform?).
+
+%% Termination: configuration is final when both input streams are closed.
+agent(_, _, [], [], [], _, _).
+
+%% Shutdown (Phase 1 test-harness event): closes NetOut immediately.  Network
+%% mediator detects the closure and propagates to NetIns of other agents,
+%% which terminate via the empty-streams clause.  Not a paper transaction —
+%% an implementation hack to break the agent ↔ network mutual-wait deadlock
+%% in plays where no other shutdown signal exists.
+agent(_, _, [shutdown | _], _, [], _, _).
+
+%% =============================================================================
+%% USERIN ABSORPTION
+%% =============================================================================
+
+%% Discover (paper §5.2): add Q to Known.  Pass-through NetOut: head reader
+%% form NetOut? aliased to body writer form NetOut (SRSW pair across head+body).
+agent(Id, IRec, [will(discover(Q)) | UserIn], NetIn, NetOut?, Date,
+      gsg(Known, Vols, Inbox, FMap, FoFMap)) :-
+    ground(Q?) |
+    add_known(Q?, Known?, Known1),
+    agent(Id?, IRec?, UserIn?, NetIn?, NetOut, Date?,
+          gsg(Known1?, Vols?, Inbox?, FMap?, FoFMap?)).
+
+%% Offer friendship (paper §6.3): emit friend_request(epoch_p(Q) + 1) to Q.
+%% Naive: no Known check, no parity assertion.  Phase 1 simplification.
+%% ground(FMap?) needed because FMap is read in epoch_of body call AND in the
+%% recursive agent call's gsg(...) structure (§3.3 relaxation).
+agent(Id, IRec, [will(offer_friendship(Q)) | UserIn], NetIn,
+      [msg(Id?, Q?, friend_request(X?)) | NetOut1?], Date,
+      gsg(Known, Vols, Inbox, FMap, FoFMap)) :-
+    ground(Q?), ground(Id?), ground(FMap?) |
+    epoch_of(Q?, FMap?, E),
+    X := E? + 1,
+    agent(Id?, IRec?, UserIn?, NetIn?, NetOut1, Date?,
+          gsg(Known?, Vols?, Inbox?, FMap?, FoFMap?)).
+
+%% End friendship (paper §6.4): bump epoch to next even, emit unfriend.
+%% Uses bump_epoch (combined walk) to avoid X being read in head + body.
+agent(Id, IRec, [will(end_friendship(Q)) | UserIn], NetIn,
+      [msg(Id?, Q?, unfriend(X?)) | NetOut1?], Date,
+      gsg(Known, Vols, Inbox, FMap, FoFMap)) :-
+    ground(Q?), ground(Id?) |
+    bump_epoch(Q?, FMap?, FMap1, X),
+    agent(Id?, IRec?, UserIn?, NetIn?, NetOut1, Date?,
+          gsg(Known?, Vols?, Inbox?, FMap1?, FoFMap?)).
+
+%% Tick (architecture §2.3): advance local date.  Pass-through NetOut.
+agent(Id, IRec, [tick | UserIn], NetIn, NetOut?, Date, Platform) :-
+    Date1 := Date? + 1 |
+    agent(Id?, IRec?, UserIn?, NetIn?, NetOut, Date1?, Platform?).
+
+%% Query: q_epoch(Q) — answer with epoch_p(Q).
+agent(Id, IRec, [query(q_epoch(Q), a_epoch(E)) | UserIn], NetIn, NetOut?, Date,
+      gsg(Known, Vols, Inbox, FMap, FoFMap)) :-
+    ground(Q?), ground(FMap?) |
+    epoch_of(Q?, FMap?, E),
+    agent(Id?, IRec?, UserIn?, NetIn?, NetOut, Date?,
+          gsg(Known?, Vols?, Inbox?, FMap?, FoFMap?)).
+
+%% Catch-all for unmatched UserIn events: drop and continue.
+agent(Id, IRec, [_ | UserIn], NetIn, NetOut?, Date, Platform) :-
+    otherwise | agent(Id?, IRec?, UserIn?, NetIn?, NetOut, Date?, Platform?).
+
+%% =============================================================================
+%% NETIN ABSORPTION
+%% =============================================================================
+
+%% Friend request received (paper §6.3 Accept offer reactive part): emit
+%% accept(X), record FMap[P]:=X, broadcast stream_update to existing
+%% friends, send snapshot to new friend.  Simultaneous-offer resolution
+%% deferred (would check if Id has a pending friend_request to P).
+agent(Id, IRec, UserIn, [msg(P, friend_request(X)) | NetIn],
+      [msg(Id?, P?, accept(X?)) | NetOut1?], Date,
+      gsg(Known, Vols, Inbox, FMap, FoFMap)) :-
+    ground(P?), ground(X?), ground(Id?) |
+    set_epoch(P?, X?, FMap?, FMap1),
+    activate(Id?, IRec?, P?, X?, UserIn?, NetIn?,
+             NetOut1, Date?, Known?, Vols?, Inbox?, FMap1?, FoFMap?).
+
+%% Accept received: record FMap[P] := X.
+%% Accept received (paper §6.3 Integrate accept): record FMap[P]:=X,
+%% broadcast stream_update to existing friends, send snapshot to new friend.
+agent(Id, IRec, UserIn, [msg(P, accept(X)) | NetIn], NetOut?, Date,
+      gsg(Known, Vols, Inbox, FMap, FoFMap)) :-
+    ground(P?), ground(X?), ground(Id?) |
+    set_epoch(P?, X?, FMap?, FMap1),
+    activate(Id?, IRec?, P?, X?, UserIn?, NetIn?,
+             NetOut, Date?, Known?, Vols?, Inbox?, FMap1?, FoFMap?).
+
+%% Unfriend received (paper §6.4): record FMap[P] := X.
+agent(Id, IRec, UserIn, [msg(P, unfriend(X)) | NetIn], NetOut?, Date,
+      gsg(Known, Vols, Inbox, FMap, FoFMap)) :-
+    ground(P?), ground(X?) |
+    set_epoch(P?, X?, FMap?, FMap1),
+    agent(Id?, IRec?, UserIn?, NetIn?, NetOut, Date?,
+          gsg(Known?, Vols?, Inbox?, FMap1?, FoFMap?)).
+
+%% Stream update received (paper §6.5): record FoFMap[P][F] := X
+%% (and the symmetric mirror FoFMap[F][P] := X).
+agent(Id, IRec, UserIn, [msg(P, stream_update(F, X)) | NetIn], NetOut?, Date,
+      gsg(Known, Vols, Inbox, FMap, FoFMap)) :-
+    ground(P?), ground(F?), ground(X?) |
+    set_fof_epoch(P?, F?, X?, FoFMap?, FoFMap1),
+    set_fof_epoch(F?, P?, X?, FoFMap1?, FoFMap2),
+    agent(Id?, IRec?, UserIn?, NetIn?, NetOut, Date?,
+          gsg(Known?, Vols?, Inbox?, FMap?, FoFMap2?)).
+
+%% Catch-all for unmatched NetIn messages: drop and continue.
+agent(Id, IRec, UserIn, [_ | NetIn], NetOut?, Date, Platform) :-
+    otherwise | agent(Id?, IRec?, UserIn?, NetIn?, NetOut, Date?, Platform?).
+
+%% =============================================================================
+%% ACTIVATE: helper run on each Befriend activation (Accept offer, Resolve
+%% simultaneous offer, Integrate accept).  Broadcasts stream_update(P, X) to
+%% all existing friends and sends a snapshot to the new friend P, then
+%% recurses into agent/7 with the threaded NetOut continuation.
+%%
+%% ground(FMap?) guard enables the FMap reader to be used in broadcast +
+%% snapshot + agent recursive-call gsg structure (§3.3 relaxation).
+%% =============================================================================
+
+exported procedure activate(Agent?, IdentityRecord?, Agent?, Integer?,
+                             Stream(UserEvent(GsgVolition, GsgQuery, GsgAnswer))?,
+                             Stream(InMsg(GsgCargo))?,
+                             Stream(NetMsg(GsgCargo)),
+                             Integer?,
+                             Stream(Agent)?, Stream(GsgVolition)?,
+                             Stream(InMsg(GsgCargo))?,
+                             FMap?, FoFMap?).
+
+activate(Id, IRec, P, X, UserIn, NetIn, NetOut?, Date,
+         Known, Vols, Inbox, FMap, FoFMap) :-
+    ground(FMap?) |
+    broadcast_update(Id?, P?, X?, FMap?, NetOut, NetOut1?),
+    send_snapshot(Id?, P?, FMap?, NetOut1, NetOut2?),
+    agent(Id?, IRec?, UserIn?, NetIn?, NetOut2, Date?,
+          gsg(Known?, Vols?, Inbox?, FMap?, FoFMap?)).
