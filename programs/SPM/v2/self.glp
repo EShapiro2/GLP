@@ -455,6 +455,29 @@ send_all_friends(Id, Content, [O|Rest], [O?|Rest1?]) :-
 send_all_friends(_, _, [], []).
 
 %% =============================================================================
+%% SEND_SNAPSHOT (paper §6.5: tell new friend about all my other friendships)
+%% =============================================================================
+%%
+%% Walk FMap; for each fme(F, E) with F ≠ NewFriend, send stream_update(F, E)
+%% to NewFriend's output channel.  Skips the new friend's own entry.
+
+procedure send_snapshot(Constant?, Constant?, FMap?, Stream(OutputEntry)?, Stream(OutputEntry)).
+
+%% Skip the new friend's own entry
+send_snapshot(Id, NewFriend, [fme(F, _) | Rest], Outs, Outs1?) :-
+    F? =?= NewFriend? |
+    send_snapshot(Id?, NewFriend?, Rest?, Outs?, Outs1).
+
+%% Other friend: send stream_update(F, E) to NewFriend
+send_snapshot(Id, NewFriend, [fme(F, E) | Rest], Outs, Outs1?) :-
+    ground(Id?), ground(NewFriend?), ground(F?), ground(E?), otherwise |
+    lookup_send(friend(NewFriend?), msg(Id?, NewFriend?, stream_update(F?, E?)), Outs?, OutsA),
+    send_snapshot(Id?, NewFriend?, Rest?, OutsA?, Outs1).
+
+%% Empty FMap
+send_snapshot(_, _, [], Outs, Outs?).
+
+%% =============================================================================
 %% FMAP HELPERS (paper §6.1)
 %% =============================================================================
 %%

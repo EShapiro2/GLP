@@ -135,10 +135,11 @@ child_agent(Id, ParentId, [msg('_user', Id1, unfriend_child(Target))|UserIn], Ne
 
 %% Intro result: peer acked — idempotent befriend commit with smaller-name tie-break.
 child_agent(Id, ParentId, [intro_result(Other, Ch)|UserIn], NetIn, Outs, FMap, FoFMap) :-
-    ground(Id?), ground(Other?) |
+    ground(Id?), ground(Other?), ground(FMap?) |
     bump_epoch(Other?, FMap?, FMap1, Epoch),
     befriend_commit(Id?, Other?, Ch?, Outs?, OutsA, NetIn?, NetIn1),
-    send_all_friends(Id?, stream_update(Other?, Epoch?), OutsA?, Outs1),
+    send_all_friends(Id?, stream_update(Other?, Epoch?), OutsA?, OutsB),
+    send_snapshot(Id?, Other?, FMap?, OutsB?, Outs1),
     child_agent(Id?, ParentId?, UserIn?, NetIn1?, Outs1?, FMap1?, FoFMap?).
 
 %% Intro result: peer nacked — notify rejected
