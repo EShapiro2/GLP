@@ -358,3 +358,66 @@ fof_inner_set(F, X, [fofe(F1, _) | Rest], [fofe(F1?, X?) | Rest?]) :-
 fof_inner_set(F, X, [Entry | Rest], [Entry? | Rest1?]) :-
     otherwise | fof_inner_set(F?, X?, Rest?, Rest1).
 fof_inner_set(F, X, [], [fofe(F?, X?)]).
+
+%% =============================================================================
+%% PASS B (paper §8.5 Periodic re-broadcast): build_friend_list,
+%% broadcast_checkpoint, absorb_fof_pairs.  PASS B-minimal scope: plumbing
+%% only (no skeleton install, no stub promotion, no direct heal -- those
+%% need fault scenarios and are deferred to the harness session).
+%% =============================================================================
+
+%% build_friend_list(SecureFMap?, FriendList): produce L = {(f, epoch_p(f))
+%% : f ∈ Rec_p} from FMap entries (paper §8.5).
+exported procedure build_friend_list(SecureFMap?, FriendList).
+build_friend_list([full(F, E, _, _) | Rest], [fe(F?, E?) | Rest1?]) :-
+    build_friend_list(Rest?, Rest1).
+build_friend_list([skeleton(F, _, _) | Rest], [fe(F?, 0) | Rest1?]) :-
+    build_friend_list(Rest?, Rest1).
+build_friend_list([stub(F, E) | Rest], [fe(F?, E?) | Rest1?]) :-
+    build_friend_list(Rest?, Rest1).
+build_friend_list([], []).
+
+%% broadcast_checkpoint(Id?, Date?, IR?, L?, SecureFMap?, NetOut, Cont):
+%% emit msg(Id, R, checkpoint(Date, IR, L)) to each recipient in FMap.
+%% Same stream-threading convention as secure_broadcast_update.
+exported procedure broadcast_checkpoint(Agent?, Integer?, IdentityRecord?,
+                                          FriendList?, SecureFMap?,
+                                          Stream(NetMsg(SecureGsgCargo)),
+                                          Stream(NetMsg(SecureGsgCargo))?).
+
+broadcast_checkpoint(Id, Date, IR, L, [full(R, _, _, _) | Rest],
+                     [msg(Id?, R?, checkpoint(Date?, IR?, L?)) | NewTail?], Cont) :-
+    ground(Id?), ground(Date?), ground(IR?), ground(L?) |
+    broadcast_checkpoint(Id?, Date?, IR?, L?, Rest?, NewTail, Cont?).
+broadcast_checkpoint(Id, Date, IR, L, [skeleton(R, _, _) | Rest],
+                     [msg(Id?, R?, checkpoint(Date?, IR?, L?)) | NewTail?], Cont) :-
+    ground(Id?), ground(Date?), ground(IR?), ground(L?) |
+    broadcast_checkpoint(Id?, Date?, IR?, L?, Rest?, NewTail, Cont?).
+broadcast_checkpoint(Id, Date, IR, L, [stub(R, _) | Rest],
+                     [msg(Id?, R?, checkpoint(Date?, IR?, L?)) | NewTail?], Cont) :-
+    ground(Id?), ground(Date?), ground(IR?), ground(L?) |
+    broadcast_checkpoint(Id?, Date?, IR?, L?, Rest?, NewTail, Cont?).
+broadcast_checkpoint(_, _, _, _, [], Cont?, Cont).
+
+%% absorb_fof_pairs(Self?, P?, L?, FoFMapIn?, FoFMapOut): per paper §8.5,
+%% for each (f, e) in L with f ≠ Self, set FoFMap[P][f] := e and
+%% FoFMap[f][P] := e (preserving FoFMap Symmetry).  PASS B-minimal: no
+%% epoch-comparison guard yet -- always writes, which is monotone if e is
+%% greater (later: add per-pair < check).
+exported procedure absorb_fof_pairs(Agent?, Agent?, FriendList?,
+                                      FoFMap?, FoFMap).
+
+%% Skip self-pair (paper: "for each (f, e) ∈ L with f ≠ r").
+absorb_fof_pairs(Self, P, [fe(F, _) | Rest], FoFMap, FoFMap1?) :-
+    Self? =?= F? |
+    absorb_fof_pairs(Self?, P?, Rest?, FoFMap?, FoFMap1).
+
+%% Non-self pair: update FoFMap[P][F] and symmetric FoFMap[F][P].
+absorb_fof_pairs(Self, P, [fe(F, E) | Rest], FoFMap, FoFMap2?) :-
+    otherwise |
+    set_fof_epoch(P?, F?, E?, FoFMap?, FoFMap1),
+    set_fof_epoch(F?, P?, E?, FoFMap1?, FoFMapMid),
+    absorb_fof_pairs(Self?, P?, Rest?, FoFMapMid?, FoFMap2).
+
+%% Empty: pass through (alias arg 4 writer to arg 5 reader).
+absorb_fof_pairs(_, _, [], FoFMap, FoFMap?).

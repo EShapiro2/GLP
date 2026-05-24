@@ -76,10 +76,16 @@ agent(Id, IRec, [will(accept_offer(P, R)) | UserIn], NetIn, NetOut?, Date,
                       UserIn?, NetIn?, NetOut, Date?, Known?, Vols?,
                       Inbox1?, FMap?, FoFMap?, Pending?, LBD?).
 
-%% Tick (architecture §2.3): advance local date.
-agent(Id, IRec, [tick | UserIn], NetIn, NetOut?, Date, Platform) :-
-    Date1 := Date? + 1 |
-    agent(Id?, IRec?, UserIn?, NetIn?, NetOut, Date1?, Platform?).
+%% Tick (architecture §2.3 + paper §8.5 Re-broadcast): advance Date.
+%% If LBD < new Date AND there are recipients (Rec ≠ ∅), emit a checkpoint
+%% to each.  Otherwise just advance Date.  Dispatched in body via
+%% tick_step on whether re-broadcast should fire.
+agent(Id, IRec, [tick | UserIn], NetIn, NetOut?, Date,
+      secure_gsg(Known, Vols, Inbox, FMap, FoFMap, Pending, LBD)) :-
+    ground(Id?), ground(IRec?), ground(FMap?) |
+    Date1 := Date? + 1,
+    tick_step(LBD?, Date1?, Id?, IRec?, UserIn?, NetIn?, NetOut, Date1?,
+              Known?, Vols?, Inbox?, FMap?, FoFMap?, Pending?).
 
 %% Query: q_epoch(Q) -- answer with secure_epoch_of(Q).
 agent(Id, IRec, [query(q_epoch(Q), a_epoch(E)) | UserIn], NetIn, NetOut?, Date,
@@ -118,6 +124,17 @@ agent(Id, IRec, UserIn, [msg(P, accept(X, ir(K, S))) | NetIn], NetOut?, Date,
     set_full_entry(P?, X?, K?, S?, FMap?, FMap1),
     activate(Id?, IRec?, P?, X?, UserIn?, NetIn?,
              NetOut, Date?, Known?, Vols?, Inbox?, FMap1?, FoFMap?, Pending1?, LBD?).
+
+%% Checkpoint received (paper §8.5 Integrate checkpoint, PASS B-minimal):
+%% only the FoF-absorption case; skeleton install / stub promotion /
+%% direct-heal deferred to fault-harness session.  P's pair (Self, _) is
+%% skipped inside absorb_fof_pairs.
+agent(Id, IRec, UserIn, [msg(P, checkpoint(_, _, L)) | NetIn], NetOut?, Date,
+      secure_gsg(Known, Vols, Inbox, FMap, FoFMap, Pending, LBD)) :-
+    ground(P?), ground(L?), ground(Id?) |
+    absorb_fof_pairs(Id?, P?, L?, FoFMap?, FoFMap1),
+    agent(Id?, IRec?, UserIn?, NetIn?, NetOut, Date?,
+          secure_gsg(Known?, Vols?, Inbox?, FMap?, FoFMap1?, Pending?, LBD?)).
 
 %% Stream update received (paper §6.5): FoFMap update.
 agent(Id, IRec, UserIn, [msg(P, stream_update(F, X)) | NetIn], NetOut?, Date,
@@ -256,3 +273,35 @@ friend_request_dispatch(pm_none, Id, IRec, P, X, K, S, UserIn, NetIn, NetOut?, D
     friend_request_step(Matched?, Id?, IRec?, P?, X?, K?, S?, UserIn?, NetIn?,
                         NetOut, Date?, Known?, Vols1?, Inbox?, FMap?, FoFMap?,
                         Pending?, LBD?).
+
+%% =============================================================================
+%% PASS B: tick_step -- dispatch on whether re-broadcast should fire
+%% (paper §8.5 Re-broadcast guard: d_p < t_p).
+%% =============================================================================
+
+exported procedure tick_step(Integer?, Integer?, Agent?, IdentityRecord?,
+                              Stream(UserEvent(SecureGsgVolition, SecureGsgQuery, SecureGsgAnswer))?,
+                              Stream(InMsg(SecureGsgCargo))?,
+                              Stream(NetMsg(SecureGsgCargo)),
+                              Integer?,
+                              Stream(Agent)?, Stream(SecureGsgVolition)?,
+                              Stream(InMsg(SecureGsgCargo))?,
+                              SecureFMap?, FoFMap?, PendingList?).
+
+%% LBD < Date: re-broadcast.  Build L, emit checkpoint to each Rec, set
+%% LBD := Date.  No guard on Rec ≠ ∅ -- broadcast_checkpoint emits zero
+%% messages on empty FMap, which is the same as `Rec_p = ∅`.
+tick_step(LBD, Date, Id, IRec, UserIn, NetIn, NetOut?, Date1,
+          Known, Vols, Inbox, FMap, FoFMap, Pending) :-
+    LBD? < Date? |
+    build_friend_list(FMap?, L),
+    broadcast_checkpoint(Id?, Date?, IRec?, L?, FMap?, NetOut, NetOut1?),
+    agent(Id?, IRec?, UserIn?, NetIn?, NetOut1, Date1?,
+          secure_gsg(Known?, Vols?, Inbox?, FMap?, FoFMap?, Pending?, Date?)).
+
+%% LBD >= Date: already broadcast at or beyond this date; skip.
+tick_step(LBD, Date, Id, IRec, UserIn, NetIn, NetOut?, Date1,
+          Known, Vols, Inbox, FMap, FoFMap, Pending) :-
+    otherwise |
+    agent(Id?, IRec?, UserIn?, NetIn?, NetOut, Date1?,
+          secure_gsg(Known?, Vols?, Inbox?, FMap?, FoFMap?, Pending?, LBD?)).

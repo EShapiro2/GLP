@@ -1,0 +1,62 @@
+%% secure_gsg/plays/play_secure_rebroadcast.glp -- Re-broadcast plumbing
+%% (paper §8.5 Periodic re-broadcast).
+%%
+%% After alice and bob befriend (secure), alice issues a `tick`.  Tick
+%% advances Date to 1; since LBD=0 < Date=1 and bob ∈ Rec_alice, alice
+%% emits checkpoint(1, IR_alice, [fe(bob, 1)]) to bob.  Bob's NetIn
+%% absorbs the checkpoint and absorb_fof_pairs processes L: the only
+%% pair is (bob, 1) which is bob's self-pair and is skipped, so FoFMap
+%% is unchanged.  The test verifies the wiring fires (trace) and the
+%% play still terminates cleanly (succeeds).
+%%
+%% Expected outcome:
+%%   A = 1, B = 1, → suspended (NOT → succeeds; see note below).
+%%   Trace shows: build_friend_list and broadcast_checkpoint at alice,
+%%   and absorb_fof_pairs at bob with (bob, 1) self-pair skipped.
+%%
+%% Why → suspended: bob's UserIn omits `shutdown` so that he remains
+%% alive long enough to receive and integrate alice's checkpoint after
+%% the befriend round-trip.  Alice's shutdown closes only her own NetOut;
+%% the network mediator closes all NetIns only when ALL NetOuts close.
+%% Hence bob's NetIn stays open and bob suspends after his query.
+%%
+%% PASS B-minimal scope: skeleton install, stub promotion, direct heal
+%% deferred to fault-harness session.  PASS B-full would require crash
+%% scenarios to exercise those branches.
+
+-module(play_secure_rebroadcast).
+
+imported procedure secure_gsg_agent # agent(Agent?, IdentityRecord?,
+                                             Stream(UserEvent(SecureGsgVolition, SecureGsgQuery, SecureGsgAnswer))?,
+                                             Stream(InMsg(SecureGsgCargo))?,
+                                             Stream(NetMsg(SecureGsgCargo)),
+                                             Integer?,
+                                             SecureGsgPlatform?).
+
+imported procedure cva # network(NetEndList(SecureGsgCargo)?).
+
+NetEnd(C) ::= net_end(Agent, Stream(NetMsg(C)), Stream(InMsg(C))?).
+NetEndList(C) ::= [] ; [NetEnd(C) | NetEndList(C)].
+
+exported procedure play_secure_rebroadcast(Integer, Integer).
+
+play_secure_rebroadcast(AliceFinalEpoch?, BobFinalEpoch?) :-
+    secure_gsg_agent # agent(alice, ir([cust_a1, cust_a2], 67),
+          [will(discover(bob, R0a?)), await(R0a?),
+           will(offer_friendship(bob, RA?)), await(RA?),
+           tick,                                              %% triggers re-broadcast at alice
+           query(q_epoch(bob), a_epoch(AliceFinalEpoch?)),
+           shutdown],
+          AliceIn?, AliceOut, 0,
+          secure_gsg([], [], [], [], [], [], 0)),
+    %% Bob: no shutdown -- when alice shutdown closes her NetOut, the
+    %% mediator cascades the close to all NetIns, terminating bob via the
+    %% empty-streams clause.  Without shutdown, bob keeps consuming NetIn
+    %% (including alice's checkpoint).
+    secure_gsg_agent # agent(bob, ir([cust_b1, cust_b2], 67),
+          [will(accept_offer(alice, RB?)), await(RB?),
+           query(q_epoch(alice), a_epoch(BobFinalEpoch?))],
+          BobIn?, BobOut, 0,
+          secure_gsg([], [], [], [], [], [], 0)),
+    cva # network([net_end(alice, AliceOut?, AliceIn),
+                   net_end(bob,   BobOut?,   BobIn)]).
