@@ -1,0 +1,1641 @@
+%% actors.glp — CSSN simulated UI actors module
+%%
+%% Exports: alice1..alice12, bob1..bob12, charlie1..charlie12,
+%%          carol4..carol11, dave4..dave12, eve11..eve12
+%% Types: from self.glp (ancestor scoping)
+%% No cross-module imports — all helpers are local.
+
+-module(actors).
+-mode(system).
+
+%% =============================================================================
+%% PLAY 1 — Both accept introduction
+%% =============================================================================
+
+exported procedure alice1(Channel(Stream(UserNotify), Stream(UserCmd))?).
+alice1(ch(In, [connect(bob)|Out?])) :-
+    alice1_wait_connected(In?, Out).
+
+procedure alice1_wait_connected(Stream(UserNotify)?, Stream(UserCmd)).
+alice1_wait_connected([connected(bob)|In],
+                      [send(bob, hello)|Out?]) :-
+    alice1_wait_intro(In?, Out).
+alice1_wait_connected([_|In], Out?) :-
+    otherwise | alice1_wait_connected(In?, Out).
+alice1_wait_connected([], []).
+
+procedure alice1_wait_intro(Stream(UserNotify)?, Stream(UserCmd)).
+alice1_wait_intro([befriend_intro(bob, charlie, ReqId)|In],
+                  [accept_intro(charlie, ReqId?)|Out?]) :-
+    ground(ReqId?) |
+    alice1_wait_charlie(In?, Out).
+alice1_wait_intro([_|In], Out?) :-
+    otherwise | alice1_wait_intro(In?, Out).
+alice1_wait_intro([], []).
+
+procedure alice1_wait_charlie(Stream(UserNotify)?, Stream(UserCmd)).
+alice1_wait_charlie([connected(charlie)|In],
+                    [send(charlie, 'Hi Charlie')|Out?]) :-
+    alice1_wait_reply(In?, Out).
+alice1_wait_charlie([_|In], Out?) :-
+    otherwise | alice1_wait_charlie(In?, Out).
+alice1_wait_charlie([], []).
+
+procedure alice1_wait_reply(Stream(UserNotify)?, Stream(UserCmd)).
+alice1_wait_reply([received(charlie, _)|_], []).
+alice1_wait_reply([_|In], Out?) :-
+    otherwise | alice1_wait_reply(In?, Out).
+alice1_wait_reply([], []).
+
+exported procedure bob1(Channel(Stream(UserNotify), Stream(UserCmd))?).
+bob1(ch([befriend(alice, ReqId)|In],
+        [decision(yes, alice, ReqId?)|Out?])) :-
+    ground(ReqId?) |
+    bob1_wait_alice_msg(In?, Out).
+bob1(ch([_|In], Out?)) :-
+    otherwise | bob1(ch(In?, Out)).
+
+procedure bob1_wait_alice_msg(Stream(UserNotify)?, Stream(UserCmd)).
+bob1_wait_alice_msg([connected(_)|In], Out?) :-
+    bob1_wait_alice_msg(In?, Out).
+bob1_wait_alice_msg([received(alice, _)|In],
+                    [connect(charlie)|Out?]) :-
+    bob1_wait_charlie_connected(In?, Out).
+bob1_wait_alice_msg([_|In], Out?) :-
+    otherwise | bob1_wait_alice_msg(In?, Out).
+bob1_wait_alice_msg([], []).
+
+procedure bob1_wait_charlie_connected(Stream(UserNotify)?, Stream(UserCmd)).
+bob1_wait_charlie_connected([connected(charlie)|In], Out?) :-
+    bob1_wait_charlie_msg(In?, Out).
+bob1_wait_charlie_connected([_|In], Out?) :-
+    otherwise | bob1_wait_charlie_connected(In?, Out).
+bob1_wait_charlie_connected([], []).
+
+procedure bob1_wait_charlie_msg(Stream(UserNotify)?, Stream(UserCmd)).
+bob1_wait_charlie_msg([received(charlie, _)|_],
+                      [introduce(alice, charlie)]).
+bob1_wait_charlie_msg([_|In], Out?) :-
+    otherwise | bob1_wait_charlie_msg(In?, Out).
+bob1_wait_charlie_msg([], []).
+
+exported procedure charlie1(Channel(Stream(UserNotify), Stream(UserCmd))?).
+charlie1(ch([befriend(bob, ReqId)|In],
+            [decision(yes, bob, ReqId?),
+             send(bob, hello)|Out?])) :-
+    ground(ReqId?) |
+    charlie1_wait_intro(In?, Out).
+charlie1(ch([_|In], Out?)) :-
+    otherwise | charlie1(ch(In?, Out)).
+
+procedure charlie1_wait_intro(Stream(UserNotify)?, Stream(UserCmd)).
+charlie1_wait_intro([befriend_intro(bob, alice, ReqId)|In],
+                    [accept_intro(alice, ReqId?)|Out?]) :-
+    ground(ReqId?) |
+    charlie1_wait_alice_msg(In?, Out).
+charlie1_wait_intro([_|In], Out?) :-
+    otherwise | charlie1_wait_intro(In?, Out).
+charlie1_wait_intro([], []).
+
+procedure charlie1_wait_alice_msg(Stream(UserNotify)?, Stream(UserCmd)).
+charlie1_wait_alice_msg([received(alice, _)|_],
+                        [send(alice, 'Hi Alice')]).
+charlie1_wait_alice_msg([_|In], Out?) :-
+    otherwise | charlie1_wait_alice_msg(In?, Out).
+charlie1_wait_alice_msg([], []).
+
+%% =============================================================================
+%% PLAY 2 — Alice accepts, Charlie rejects
+%% =============================================================================
+
+exported procedure alice2(Channel(Stream(UserNotify), Stream(UserCmd))?).
+alice2(ch(In, [connect(bob)|Out?])) :-
+    alice2_wait_connected(In?, Out).
+
+procedure alice2_wait_connected(Stream(UserNotify)?, Stream(UserCmd)).
+alice2_wait_connected([connected(bob)|In],
+                      [send(bob, hello)|Out?]) :-
+    alice2_wait_intro(In?, Out).
+alice2_wait_connected([_|In], Out?) :-
+    otherwise | alice2_wait_connected(In?, Out).
+alice2_wait_connected([], []).
+
+procedure alice2_wait_intro(Stream(UserNotify)?, Stream(UserCmd)).
+alice2_wait_intro([befriend_intro(bob, charlie, ReqId)|In],
+                  [accept_intro(charlie, ReqId?)|Out?]) :-
+    ground(ReqId?) |
+    alice2_wait_rejected(In?, Out).
+alice2_wait_intro([_|In], Out?) :-
+    otherwise | alice2_wait_intro(In?, Out).
+alice2_wait_intro([], []).
+
+procedure alice2_wait_rejected(Stream(UserNotify)?, Stream(UserCmd)).
+alice2_wait_rejected([rejected(charlie)|_], []).
+alice2_wait_rejected([_|In], Out?) :-
+    otherwise | alice2_wait_rejected(In?, Out).
+alice2_wait_rejected([], []).
+
+exported procedure bob2(Channel(Stream(UserNotify), Stream(UserCmd))?).
+bob2(ch([befriend(alice, ReqId)|In],
+        [decision(yes, alice, ReqId?)|Out?])) :-
+    ground(ReqId?) |
+    bob2_wait_alice_msg(In?, Out).
+bob2(ch([_|In], Out?)) :-
+    otherwise | bob2(ch(In?, Out)).
+
+procedure bob2_wait_alice_msg(Stream(UserNotify)?, Stream(UserCmd)).
+bob2_wait_alice_msg([connected(_)|In], Out?) :-
+    bob2_wait_alice_msg(In?, Out).
+bob2_wait_alice_msg([received(alice, _)|In],
+                    [connect(charlie)|Out?]) :-
+    bob2_wait_charlie_connected(In?, Out).
+bob2_wait_alice_msg([_|In], Out?) :-
+    otherwise | bob2_wait_alice_msg(In?, Out).
+bob2_wait_alice_msg([], []).
+
+procedure bob2_wait_charlie_connected(Stream(UserNotify)?, Stream(UserCmd)).
+bob2_wait_charlie_connected([connected(charlie)|In], Out?) :-
+    bob2_wait_charlie_msg(In?, Out).
+bob2_wait_charlie_connected([_|In], Out?) :-
+    otherwise | bob2_wait_charlie_connected(In?, Out).
+bob2_wait_charlie_connected([], []).
+
+procedure bob2_wait_charlie_msg(Stream(UserNotify)?, Stream(UserCmd)).
+bob2_wait_charlie_msg([received(charlie, _)|_],
+                      [introduce(alice, charlie)]).
+bob2_wait_charlie_msg([_|In], Out?) :-
+    otherwise | bob2_wait_charlie_msg(In?, Out).
+bob2_wait_charlie_msg([], []).
+
+exported procedure charlie2(Channel(Stream(UserNotify), Stream(UserCmd))?).
+charlie2(ch([befriend(bob, ReqId)|In],
+            [decision(yes, bob, ReqId?),
+             send(bob, hello)|Out?])) :-
+    ground(ReqId?) |
+    charlie2_wait_intro(In?, Out).
+charlie2(ch([_|In], Out?)) :-
+    otherwise | charlie2(ch(In?, Out)).
+
+procedure charlie2_wait_intro(Stream(UserNotify)?, Stream(UserCmd)).
+charlie2_wait_intro([befriend_intro(bob, alice, ReqId)|_],
+                    [reject_intro(alice, ReqId?)]) :-
+    ground(ReqId?) | true.
+charlie2_wait_intro([_|In], Out?) :-
+    otherwise | charlie2_wait_intro(In?, Out).
+charlie2_wait_intro([], []).
+
+%% =============================================================================
+%% PLAY 3 — Both reject introduction
+%% =============================================================================
+
+exported procedure alice3(Channel(Stream(UserNotify), Stream(UserCmd))?).
+alice3(ch(In, [connect(bob)|Out?])) :-
+    alice3_wait_connected(In?, Out).
+
+procedure alice3_wait_connected(Stream(UserNotify)?, Stream(UserCmd)).
+alice3_wait_connected([connected(bob)|In],
+                      [send(bob, hello)|Out?]) :-
+    alice3_wait_intro(In?, Out).
+alice3_wait_connected([_|In], Out?) :-
+    otherwise | alice3_wait_connected(In?, Out).
+alice3_wait_connected([], []).
+
+procedure alice3_wait_intro(Stream(UserNotify)?, Stream(UserCmd)).
+alice3_wait_intro([befriend_intro(bob, charlie, ReqId)|_],
+                  [reject_intro(charlie, ReqId?)]) :-
+    ground(ReqId?) | true.
+alice3_wait_intro([_|In], Out?) :-
+    otherwise | alice3_wait_intro(In?, Out).
+alice3_wait_intro([], []).
+
+exported procedure bob3(Channel(Stream(UserNotify), Stream(UserCmd))?).
+bob3(ch([befriend(alice, ReqId)|In],
+        [decision(yes, alice, ReqId?)|Out?])) :-
+    ground(ReqId?) |
+    bob3_wait_alice_msg(In?, Out).
+bob3(ch([_|In], Out?)) :-
+    otherwise | bob3(ch(In?, Out)).
+
+procedure bob3_wait_alice_msg(Stream(UserNotify)?, Stream(UserCmd)).
+bob3_wait_alice_msg([connected(_)|In], Out?) :-
+    bob3_wait_alice_msg(In?, Out).
+bob3_wait_alice_msg([received(alice, _)|In],
+                    [connect(charlie)|Out?]) :-
+    bob3_wait_charlie_connected(In?, Out).
+bob3_wait_alice_msg([_|In], Out?) :-
+    otherwise | bob3_wait_alice_msg(In?, Out).
+bob3_wait_alice_msg([], []).
+
+procedure bob3_wait_charlie_connected(Stream(UserNotify)?, Stream(UserCmd)).
+bob3_wait_charlie_connected([connected(charlie)|In], Out?) :-
+    bob3_wait_charlie_msg(In?, Out).
+bob3_wait_charlie_connected([_|In], Out?) :-
+    otherwise | bob3_wait_charlie_connected(In?, Out).
+bob3_wait_charlie_connected([], []).
+
+procedure bob3_wait_charlie_msg(Stream(UserNotify)?, Stream(UserCmd)).
+bob3_wait_charlie_msg([received(charlie, _)|_],
+                      [introduce(alice, charlie)]).
+bob3_wait_charlie_msg([_|In], Out?) :-
+    otherwise | bob3_wait_charlie_msg(In?, Out).
+bob3_wait_charlie_msg([], []).
+
+exported procedure charlie3(Channel(Stream(UserNotify), Stream(UserCmd))?).
+charlie3(ch([befriend(bob, ReqId)|In],
+            [decision(yes, bob, ReqId?),
+             send(bob, hello)|Out?])) :-
+    ground(ReqId?) |
+    charlie3_wait_intro(In?, Out).
+charlie3(ch([_|In], Out?)) :-
+    otherwise | charlie3(ch(In?, Out)).
+
+procedure charlie3_wait_intro(Stream(UserNotify)?, Stream(UserCmd)).
+charlie3_wait_intro([befriend_intro(bob, alice, ReqId)|_],
+                    [reject_intro(alice, ReqId?)]) :-
+    ground(ReqId?) | true.
+charlie3_wait_intro([_|In], Out?) :-
+    otherwise | charlie3_wait_intro(In?, Out).
+charlie3_wait_intro([], []).
+
+%% =============================================================================
+%% PLAY 4 — CSSG: All four accept child introduction
+%% =============================================================================
+
+exported procedure alice4(Channel(Stream(UserNotify), Stream(UserCmd))?).
+alice4(ch(In, [connect(bob)|Out?])) :-
+    alice4_wait_connected(In?, Out).
+
+procedure alice4_wait_connected(Stream(UserNotify)?, Stream(UserCmd)).
+alice4_wait_connected([connected(bob)|_],
+                      [child_introduce(carol, bob, dave)]).
+alice4_wait_connected([_|In], Out?) :-
+    otherwise | alice4_wait_connected(In?, Out).
+alice4_wait_connected([], []).
+
+exported procedure bob4(Channel(Stream(UserNotify), Stream(UserCmd))?).
+bob4(ch([befriend(alice, ReqId)|In],
+        [decision(yes, alice, ReqId?)|Out?])) :-
+    ground(ReqId?) |
+    bob4_wait_child_intro(In?, Out).
+bob4(ch([_|In], Out?)) :-
+    otherwise | bob4(ch(In?, Out)).
+
+procedure bob4_wait_child_intro(Stream(UserNotify)?, Stream(UserCmd)).
+bob4_wait_child_intro([child_befriend(alice, carol, ReqId)|_],
+                      [approve_child_intro(carol, dave, ReqId?)]) :-
+    ground(ReqId?) | true.
+bob4_wait_child_intro([_|In], Out?) :-
+    otherwise | bob4_wait_child_intro(In?, Out).
+bob4_wait_child_intro([], []).
+
+exported procedure carol4(Channel(Stream(UserNotify), Stream(UserCmd))?).
+carol4(ch([child_befriend(alice, dave, ReqId)|In],
+          [accept_child_intro(dave, ReqId?)|Out?])) :-
+    ground(ReqId?) |
+    carol4_wait_connected(In?, Out).
+carol4(ch([_|In], Out?)) :-
+    otherwise | carol4(ch(In?, Out)).
+
+procedure carol4_wait_connected(Stream(UserNotify)?, Stream(UserCmd)).
+carol4_wait_connected([connected(dave)|In],
+                      [send(dave, 'Hi Dave')|Out?]) :-
+    carol4_wait_reply(In?, Out).
+carol4_wait_connected([_|In], Out?) :-
+    otherwise | carol4_wait_connected(In?, Out).
+carol4_wait_connected([], []).
+
+procedure carol4_wait_reply(Stream(UserNotify)?, Stream(UserCmd)).
+carol4_wait_reply([received(dave, _)|_], []).
+carol4_wait_reply([_|In], Out?) :-
+    otherwise | carol4_wait_reply(In?, Out).
+carol4_wait_reply([], []).
+
+exported procedure dave4(Channel(Stream(UserNotify), Stream(UserCmd))?).
+dave4(ch([child_befriend(bob, carol, ReqId)|In],
+         [accept_child_intro(carol, ReqId?)|Out?])) :-
+    ground(ReqId?) |
+    dave4_wait_msg(In?, Out).
+dave4(ch([_|In], Out?)) :-
+    otherwise | dave4(ch(In?, Out)).
+
+procedure dave4_wait_msg(Stream(UserNotify)?, Stream(UserCmd)).
+dave4_wait_msg([connected(_)|In], Out?) :-
+    dave4_wait_msg(In?, Out).
+dave4_wait_msg([received(carol, _)|_],
+               [send(carol, 'Hi Carol')]).
+dave4_wait_msg([_|In], Out?) :-
+    otherwise | dave4_wait_msg(In?, Out).
+dave4_wait_msg([], []).
+
+%% =============================================================================
+%% PLAY 5 — CSSG: Bob (p2) rejects
+%% =============================================================================
+
+exported procedure alice5(Channel(Stream(UserNotify), Stream(UserCmd))?).
+alice5(ch(In, [connect(bob)|Out?])) :-
+    alice5_wait_connected(In?, Out).
+
+procedure alice5_wait_connected(Stream(UserNotify)?, Stream(UserCmd)).
+alice5_wait_connected([connected(bob)|_],
+                      [child_introduce(carol, bob, dave)]).
+alice5_wait_connected([_|In], Out?) :-
+    otherwise | alice5_wait_connected(In?, Out).
+alice5_wait_connected([], []).
+
+exported procedure bob5(Channel(Stream(UserNotify), Stream(UserCmd))?).
+bob5(ch([befriend(alice, ReqId)|In],
+        [decision(yes, alice, ReqId?)|Out?])) :-
+    ground(ReqId?) |
+    bob5_wait_child_intro(In?, Out).
+bob5(ch([_|In], Out?)) :-
+    otherwise | bob5(ch(In?, Out)).
+
+procedure bob5_wait_child_intro(Stream(UserNotify)?, Stream(UserCmd)).
+bob5_wait_child_intro([child_befriend(alice, carol, ReqId)|_],
+                      [reject_child_intro(carol, ReqId?)]) :-
+    ground(ReqId?) | true.
+bob5_wait_child_intro([_|In], Out?) :-
+    otherwise | bob5_wait_child_intro(In?, Out).
+bob5_wait_child_intro([], []).
+
+exported procedure carol5(Channel(Stream(UserNotify), Stream(UserCmd))?).
+carol5(ch([child_befriend(alice, dave, ReqId)|In],
+          [accept_child_intro(dave, ReqId?)|Out?])) :-
+    ground(ReqId?) |
+    carol5_wait_rejected(In?, Out).
+carol5(ch([_|In], Out?)) :-
+    otherwise | carol5(ch(In?, Out)).
+
+procedure carol5_wait_rejected(Stream(UserNotify)?, Stream(UserCmd)).
+carol5_wait_rejected([rejected(dave)|_], []).
+carol5_wait_rejected([_|In], Out?) :-
+    otherwise | carol5_wait_rejected(In?, Out).
+carol5_wait_rejected([], []).
+
+exported procedure dave5(Channel(Stream(UserNotify), Stream(UserCmd))?).
+dave5(ch(_, [])).
+
+%% =============================================================================
+%% PLAY 6 — CSSG: Carol (c1) rejects
+%% =============================================================================
+
+exported procedure alice6(Channel(Stream(UserNotify), Stream(UserCmd))?).
+alice6(ch(In, [connect(bob)|Out?])) :-
+    alice6_wait_connected(In?, Out).
+
+procedure alice6_wait_connected(Stream(UserNotify)?, Stream(UserCmd)).
+alice6_wait_connected([connected(bob)|_],
+                      [child_introduce(carol, bob, dave)]).
+alice6_wait_connected([_|In], Out?) :-
+    otherwise | alice6_wait_connected(In?, Out).
+alice6_wait_connected([], []).
+
+exported procedure bob6(Channel(Stream(UserNotify), Stream(UserCmd))?).
+bob6(ch([befriend(alice, ReqId)|In],
+        [decision(yes, alice, ReqId?)|Out?])) :-
+    ground(ReqId?) |
+    bob6_wait_child_intro(In?, Out).
+bob6(ch([_|In], Out?)) :-
+    otherwise | bob6(ch(In?, Out)).
+
+procedure bob6_wait_child_intro(Stream(UserNotify)?, Stream(UserCmd)).
+bob6_wait_child_intro([child_befriend(alice, carol, ReqId)|_],
+                      [approve_child_intro(carol, dave, ReqId?)]) :-
+    ground(ReqId?) | true.
+bob6_wait_child_intro([_|In], Out?) :-
+    otherwise | bob6_wait_child_intro(In?, Out).
+bob6_wait_child_intro([], []).
+
+exported procedure carol6(Channel(Stream(UserNotify), Stream(UserCmd))?).
+carol6(ch([child_befriend(alice, dave, ReqId)|_],
+          [reject_child_intro(dave, ReqId?)])) :-
+    ground(ReqId?) | true.
+carol6(ch([_|In], Out?)) :-
+    otherwise | carol6(ch(In?, Out)).
+
+exported procedure dave6(Channel(Stream(UserNotify), Stream(UserCmd))?).
+dave6(ch([child_befriend(bob, carol, ReqId)|In],
+         [accept_child_intro(carol, ReqId?)|Out?])) :-
+    ground(ReqId?) |
+    dave6_wait_rejected(In?, Out).
+dave6(ch([_|In], Out?)) :-
+    otherwise | dave6(ch(In?, Out)).
+
+procedure dave6_wait_rejected(Stream(UserNotify)?, Stream(UserCmd)).
+dave6_wait_rejected([rejected(carol)|_], []).
+dave6_wait_rejected([_|In], Out?) :-
+    otherwise | dave6_wait_rejected(In?, Out).
+dave6_wait_rejected([], []).
+
+%% =============================================================================
+%% PLAY 7 — CSSG: Dave (c2) rejects
+%% =============================================================================
+
+exported procedure alice7(Channel(Stream(UserNotify), Stream(UserCmd))?).
+alice7(ch(In, [connect(bob)|Out?])) :-
+    alice7_wait_connected(In?, Out).
+
+procedure alice7_wait_connected(Stream(UserNotify)?, Stream(UserCmd)).
+alice7_wait_connected([connected(bob)|_],
+                      [child_introduce(carol, bob, dave)]).
+alice7_wait_connected([_|In], Out?) :-
+    otherwise | alice7_wait_connected(In?, Out).
+alice7_wait_connected([], []).
+
+exported procedure bob7(Channel(Stream(UserNotify), Stream(UserCmd))?).
+bob7(ch([befriend(alice, ReqId)|In],
+        [decision(yes, alice, ReqId?)|Out?])) :-
+    ground(ReqId?) |
+    bob7_wait_child_intro(In?, Out).
+bob7(ch([_|In], Out?)) :-
+    otherwise | bob7(ch(In?, Out)).
+
+procedure bob7_wait_child_intro(Stream(UserNotify)?, Stream(UserCmd)).
+bob7_wait_child_intro([child_befriend(alice, carol, ReqId)|_],
+                      [approve_child_intro(carol, dave, ReqId?)]) :-
+    ground(ReqId?) | true.
+bob7_wait_child_intro([_|In], Out?) :-
+    otherwise | bob7_wait_child_intro(In?, Out).
+bob7_wait_child_intro([], []).
+
+exported procedure carol7(Channel(Stream(UserNotify), Stream(UserCmd))?).
+carol7(ch([child_befriend(alice, dave, ReqId)|In],
+          [accept_child_intro(dave, ReqId?)|Out?])) :-
+    ground(ReqId?) |
+    carol7_wait_rejected(In?, Out).
+carol7(ch([_|In], Out?)) :-
+    otherwise | carol7(ch(In?, Out)).
+
+procedure carol7_wait_rejected(Stream(UserNotify)?, Stream(UserCmd)).
+carol7_wait_rejected([rejected(dave)|_], []).
+carol7_wait_rejected([_|In], Out?) :-
+    otherwise | carol7_wait_rejected(In?, Out).
+carol7_wait_rejected([], []).
+
+exported procedure dave7(Channel(Stream(UserNotify), Stream(UserCmd))?).
+dave7(ch([child_befriend(bob, carol, ReqId)|_],
+         [reject_child_intro(carol, ReqId?)])) :-
+    ground(ReqId?) | true.
+dave7(ch([_|In], Out?)) :-
+    otherwise | dave7(ch(In?, Out)).
+
+%% =============================================================================
+%% PLAY 8 — CSSN: Group join (Alice creates group, invites Bob, Bob accepts)
+%% =============================================================================
+
+exported procedure alice8(Channel(Stream(UserNotify), Stream(UserCmd))?).
+alice8(ch(In, [connect(bob)|Out?])) :-
+    alice8_wait_connected(In?, Out).
+
+procedure alice8_wait_connected(Stream(UserNotify)?, Stream(UserCmd)).
+alice8_wait_connected([connected(bob)|In],
+                      [create_group(book_club)|Out?]) :-
+    alice8_wait_group_joined(In?, Out).
+alice8_wait_connected([_|In], Out?) :-
+    otherwise | alice8_wait_connected(In?, Out).
+alice8_wait_connected([], []).
+
+procedure alice8_wait_group_joined(Stream(UserNotify)?, Stream(UserCmd)).
+alice8_wait_group_joined(
+        [group_joined(group_id(alice, book_club))|In],
+        [invite_group(group_id(alice, book_club), bob)|Out?]) :-
+    alice8_wait_member_joined(In?, Out).
+alice8_wait_group_joined([_|In], Out?) :-
+    otherwise | alice8_wait_group_joined(In?, Out).
+alice8_wait_group_joined([], []).
+
+procedure alice8_wait_member_joined(Stream(UserNotify)?, Stream(UserCmd)).
+alice8_wait_member_joined(
+        [group_joined_member(group_id(alice, book_club), bob)|In],
+        Out?) :-
+    alice8_wait_bob_msg(In?, Out).
+alice8_wait_member_joined([_|In], Out?) :-
+    otherwise | alice8_wait_member_joined(In?, Out).
+alice8_wait_member_joined([], []).
+
+procedure alice8_wait_bob_msg(Stream(UserNotify)?, Stream(UserCmd)).
+alice8_wait_bob_msg(
+        [group_received(group_id(alice, book_club), bob, 'Hello everyone')|_],
+        [send_group(group_id(alice, book_club), 'Hi Bob')]).
+alice8_wait_bob_msg([_|In], Out?) :-
+    otherwise | alice8_wait_bob_msg(In?, Out).
+alice8_wait_bob_msg([], []).
+
+exported procedure bob8(Channel(Stream(UserNotify), Stream(UserCmd))?).
+bob8(ch([befriend(alice, ReqId)|In],
+        [decision(yes, alice, ReqId?)|Out?])) :-
+    ground(ReqId?) |
+    bob8_wait_connected(In?, Out).
+bob8(ch([_|In], Out?)) :-
+    otherwise | bob8(ch(In?, Out)).
+
+procedure bob8_wait_connected(Stream(UserNotify)?, Stream(UserCmd)).
+bob8_wait_connected([connected(alice)|In], Out?) :-
+    bob8_wait_group_invite(In?, Out).
+bob8_wait_connected([_|In], Out?) :-
+    otherwise | bob8_wait_connected(In?, Out).
+bob8_wait_connected([], []).
+
+procedure bob8_wait_group_invite(Stream(UserNotify)?, Stream(UserCmd)).
+bob8_wait_group_invite(
+        [group_invite(group_id(alice, book_club), ReqId)|In],
+        [accept_group(group_id(alice, book_club), ReqId?)|Out?]) :-
+    ground(ReqId?) |
+    bob8_wait_group_joined(In?, Out).
+bob8_wait_group_invite([_|In], Out?) :-
+    otherwise | bob8_wait_group_invite(In?, Out).
+bob8_wait_group_invite([], []).
+
+procedure bob8_wait_group_joined(Stream(UserNotify)?, Stream(UserCmd)).
+bob8_wait_group_joined(
+        [group_joined(group_id(alice, book_club))|In],
+        [send_group(group_id(alice, book_club), 'Hello everyone')|Out?]) :-
+    bob8_wait_alice_reply(In?, Out).
+bob8_wait_group_joined([_|In], Out?) :-
+    otherwise | bob8_wait_group_joined(In?, Out).
+bob8_wait_group_joined([], []).
+
+procedure bob8_wait_alice_reply(Stream(UserNotify)?, Stream(UserCmd)).
+bob8_wait_alice_reply(
+        [group_received(group_id(alice, book_club), alice, 'Hi Bob')|_], []).
+bob8_wait_alice_reply([_|In], Out?) :-
+    otherwise | bob8_wait_alice_reply(In?, Out).
+bob8_wait_alice_reply([], []).
+
+%% =============================================================================
+%% PLAY 9 — CSSN: Child joins adult-managed group with parental consent
+%% =============================================================================
+
+exported procedure alice9(Channel(Stream(UserNotify), Stream(UserCmd))?).
+alice9(ch(In, [connect(bob)|Out?])) :-
+    alice9_wait_connected(In?, Out).
+
+procedure alice9_wait_connected(Stream(UserNotify)?, Stream(UserCmd)).
+alice9_wait_connected([connected(bob)|In],
+                      [create_group(study)|Out?]) :-
+    alice9_wait_group_joined(In?, Out).
+alice9_wait_connected([_|In], Out?) :-
+    otherwise | alice9_wait_connected(In?, Out).
+alice9_wait_connected([], []).
+
+procedure alice9_wait_group_joined(Stream(UserNotify)?, Stream(UserCmd)).
+alice9_wait_group_joined(
+        [group_joined(group_id(alice, study))|In],
+        [invite_group(group_id(alice, study), bob)|Out?]) :-
+    alice9_wait_bob_joined(In?, Out).
+alice9_wait_group_joined([_|In], Out?) :-
+    otherwise | alice9_wait_group_joined(In?, Out).
+alice9_wait_group_joined([], []).
+
+procedure alice9_wait_bob_joined(Stream(UserNotify)?, Stream(UserCmd)).
+alice9_wait_bob_joined(
+        [group_joined_member(group_id(alice, study), bob)|In],
+        [invite_group(group_id(alice, study), dave, bob)|Out?]) :-
+    alice9_wait_dave_joined(In?, Out).
+alice9_wait_bob_joined([_|In], Out?) :-
+    otherwise | alice9_wait_bob_joined(In?, Out).
+alice9_wait_bob_joined([], []).
+
+procedure alice9_wait_dave_joined(Stream(UserNotify)?, Stream(UserCmd)).
+alice9_wait_dave_joined(
+        [group_joined_member(group_id(alice, study), dave)|In],
+        Out?) :-
+    alice9_wait_bob_msg(In?, Out).
+alice9_wait_dave_joined([_|In], Out?) :-
+    otherwise | alice9_wait_dave_joined(In?, Out).
+alice9_wait_dave_joined([], []).
+
+procedure alice9_wait_bob_msg(Stream(UserNotify)?, Stream(UserCmd)).
+alice9_wait_bob_msg(
+        [group_received(group_id(alice, study), bob, 'Hello from Bob')|_],
+        [send_group(group_id(alice, study), 'Hi all from Alice')]).
+alice9_wait_bob_msg([_|In], Out?) :-
+    otherwise | alice9_wait_bob_msg(In?, Out).
+alice9_wait_bob_msg([], []).
+
+exported procedure bob9(Channel(Stream(UserNotify), Stream(UserCmd))?).
+bob9(ch([befriend(alice, ReqId)|In],
+        [decision(yes, alice, ReqId?)|Out?])) :-
+    ground(ReqId?) |
+    bob9_wait_connected(In?, Out).
+bob9(ch([_|In], Out?)) :-
+    otherwise | bob9(ch(In?, Out)).
+
+procedure bob9_wait_connected(Stream(UserNotify)?, Stream(UserCmd)).
+bob9_wait_connected([connected(alice)|In], Out?) :-
+    bob9_wait_group_invite(In?, Out).
+bob9_wait_connected([_|In], Out?) :-
+    otherwise | bob9_wait_connected(In?, Out).
+bob9_wait_connected([], []).
+
+procedure bob9_wait_group_invite(Stream(UserNotify)?, Stream(UserCmd)).
+bob9_wait_group_invite(
+        [group_invite(group_id(alice, study), ReqId)|In],
+        [accept_group(group_id(alice, study), ReqId?)|Out?]) :-
+    ground(ReqId?) |
+    bob9_wait_group_joined(In?, Out).
+bob9_wait_group_invite([_|In], Out?) :-
+    otherwise | bob9_wait_group_invite(In?, Out).
+bob9_wait_group_invite([], []).
+
+procedure bob9_wait_group_joined(Stream(UserNotify)?, Stream(UserCmd)).
+bob9_wait_group_joined(
+        [group_joined(group_id(alice, study))|In], Out?) :-
+    bob9_wait_child_invite(In?, Out).
+bob9_wait_group_joined([_|In], Out?) :-
+    otherwise | bob9_wait_group_joined(In?, Out).
+bob9_wait_group_joined([], []).
+
+procedure bob9_wait_child_invite(Stream(UserNotify)?, Stream(UserCmd)).
+bob9_wait_child_invite(
+        [group_invite_child(group_id(alice, study), dave, ReqId)|In],
+        [approve_group(dave, group_id(alice, study), ReqId?)|Out?]) :-
+    ground(ReqId?) |
+    bob9_wait_dave_joined(In?, Out).
+bob9_wait_child_invite([_|In], Out?) :-
+    otherwise | bob9_wait_child_invite(In?, Out).
+bob9_wait_child_invite([], []).
+
+procedure bob9_wait_dave_joined(Stream(UserNotify)?, Stream(UserCmd)).
+bob9_wait_dave_joined(
+        [group_joined_member(group_id(alice, study), dave)|In],
+        [send_group(group_id(alice, study), 'Hello from Bob')|Out?]) :-
+    bob9_wait_alice_reply(In?, Out).
+bob9_wait_dave_joined([_|In], Out?) :-
+    otherwise | bob9_wait_dave_joined(In?, Out).
+bob9_wait_dave_joined([], []).
+
+procedure bob9_wait_alice_reply(Stream(UserNotify)?, Stream(UserCmd)).
+bob9_wait_alice_reply(
+        [group_received(group_id(alice, study), alice, 'Hi all from Alice')|_], []).
+bob9_wait_alice_reply([_|In], Out?) :-
+    otherwise | bob9_wait_alice_reply(In?, Out).
+bob9_wait_alice_reply([], []).
+
+exported procedure dave9(Channel(Stream(UserNotify), Stream(UserCmd))?).
+dave9(ch([group_invite(group_id(alice, study), ReqId)|In],
+         [accept_group(group_id(alice, study), ReqId?)|Out?])) :-
+    ground(ReqId?) |
+    dave9_wait_group_joined(In?, Out).
+dave9(ch([_|In], Out?)) :-
+    otherwise | dave9(ch(In?, Out)).
+
+procedure dave9_wait_group_joined(Stream(UserNotify)?, Stream(UserCmd)).
+dave9_wait_group_joined(
+        [group_joined(group_id(alice, study))|In], Out?) :-
+    dave9_wait_bob_msg(In?, Out).
+dave9_wait_group_joined([_|In], Out?) :-
+    otherwise | dave9_wait_group_joined(In?, Out).
+dave9_wait_group_joined([], []).
+
+procedure dave9_wait_bob_msg(Stream(UserNotify)?, Stream(UserCmd)).
+dave9_wait_bob_msg(
+        [group_received(group_id(alice, study), bob, 'Hello from Bob')|In],
+        Out?) :-
+    dave9_wait_alice_msg(In?, Out).
+dave9_wait_bob_msg([_|In], Out?) :-
+    otherwise | dave9_wait_bob_msg(In?, Out).
+dave9_wait_bob_msg([], []).
+
+procedure dave9_wait_alice_msg(Stream(UserNotify)?, Stream(UserCmd)).
+dave9_wait_alice_msg(
+        [group_received(group_id(alice, study), alice, 'Hi all from Alice')|_], []).
+dave9_wait_alice_msg([_|In], Out?) :-
+    otherwise | dave9_wait_alice_msg(In?, Out).
+dave9_wait_alice_msg([], []).
+
+%% =============================================================================
+%% PLAY 10 — CSSN: Parent rejects child's group invite
+%% =============================================================================
+
+exported procedure alice10(Channel(Stream(UserNotify), Stream(UserCmd))?).
+alice10(ch(In, [connect(bob)|Out?])) :-
+    alice10_wait_connected(In?, Out).
+
+procedure alice10_wait_connected(Stream(UserNotify)?, Stream(UserCmd)).
+alice10_wait_connected([connected(bob)|In],
+                       [create_group(study)|Out?]) :-
+    alice10_wait_group_joined(In?, Out).
+alice10_wait_connected([_|In], Out?) :-
+    otherwise | alice10_wait_connected(In?, Out).
+alice10_wait_connected([], []).
+
+procedure alice10_wait_group_joined(Stream(UserNotify)?, Stream(UserCmd)).
+alice10_wait_group_joined(
+        [group_joined(group_id(alice, study))|In],
+        [invite_group(group_id(alice, study), bob)|Out?]) :-
+    alice10_wait_bob_joined(In?, Out).
+alice10_wait_group_joined([_|In], Out?) :-
+    otherwise | alice10_wait_group_joined(In?, Out).
+alice10_wait_group_joined([], []).
+
+procedure alice10_wait_bob_joined(Stream(UserNotify)?, Stream(UserCmd)).
+alice10_wait_bob_joined(
+        [group_joined_member(group_id(alice, study), bob)|In],
+        [invite_group(group_id(alice, study), dave, bob),
+         send_group(group_id(alice, study), 'Hello Bob')|Out?]) :-
+    alice10_wait_bob_reply(In?, Out).
+alice10_wait_bob_joined([_|In], Out?) :-
+    otherwise | alice10_wait_bob_joined(In?, Out).
+alice10_wait_bob_joined([], []).
+
+procedure alice10_wait_bob_reply(Stream(UserNotify)?, Stream(UserCmd)).
+alice10_wait_bob_reply(
+        [group_received(group_id(alice, study), bob, 'Hi Alice')|_], []).
+alice10_wait_bob_reply([_|In], Out?) :-
+    otherwise | alice10_wait_bob_reply(In?, Out).
+alice10_wait_bob_reply([], []).
+
+exported procedure bob10(Channel(Stream(UserNotify), Stream(UserCmd))?).
+bob10(ch([befriend(alice, ReqId)|In],
+         [decision(yes, alice, ReqId?)|Out?])) :-
+    ground(ReqId?) |
+    bob10_wait_connected(In?, Out).
+bob10(ch([_|In], Out?)) :-
+    otherwise | bob10(ch(In?, Out)).
+
+procedure bob10_wait_connected(Stream(UserNotify)?, Stream(UserCmd)).
+bob10_wait_connected([connected(alice)|In], Out?) :-
+    bob10_wait_group_invite(In?, Out).
+bob10_wait_connected([_|In], Out?) :-
+    otherwise | bob10_wait_connected(In?, Out).
+bob10_wait_connected([], []).
+
+procedure bob10_wait_group_invite(Stream(UserNotify)?, Stream(UserCmd)).
+bob10_wait_group_invite(
+        [group_invite(group_id(alice, study), ReqId)|In],
+        [accept_group(group_id(alice, study), ReqId?)|Out?]) :-
+    ground(ReqId?) |
+    bob10_wait_group_joined(In?, Out).
+bob10_wait_group_invite([_|In], Out?) :-
+    otherwise | bob10_wait_group_invite(In?, Out).
+bob10_wait_group_invite([], []).
+
+procedure bob10_wait_group_joined(Stream(UserNotify)?, Stream(UserCmd)).
+bob10_wait_group_joined(
+        [group_joined(group_id(alice, study))|In], Out?) :-
+    bob10_wait_child_invite(In?, Out).
+bob10_wait_group_joined([_|In], Out?) :-
+    otherwise | bob10_wait_group_joined(In?, Out).
+bob10_wait_group_joined([], []).
+
+procedure bob10_wait_child_invite(Stream(UserNotify)?, Stream(UserCmd)).
+bob10_wait_child_invite(
+        [group_invite_child(group_id(alice, study), dave, ReqId)|In],
+        [reject_group(group_id(alice, study), ReqId?)|Out?]) :-
+    ground(ReqId?) |
+    bob10_wait_alice_msg(In?, Out).
+bob10_wait_child_invite([_|In], Out?) :-
+    otherwise | bob10_wait_child_invite(In?, Out).
+bob10_wait_child_invite([], []).
+
+procedure bob10_wait_alice_msg(Stream(UserNotify)?, Stream(UserCmd)).
+bob10_wait_alice_msg(
+        [group_received(group_id(alice, study), alice, 'Hello Bob')|_],
+        [send_group(group_id(alice, study), 'Hi Alice')]).
+bob10_wait_alice_msg([_|In], Out?) :-
+    otherwise | bob10_wait_alice_msg(In?, Out).
+bob10_wait_alice_msg([], []).
+
+exported procedure dave10(Channel(Stream(UserNotify), Stream(UserCmd))?).
+dave10(ch(_, [])).
+
+%% =============================================================================
+%% PLAY 11 — CSSN: Child-Safe Social Groups (6 agents)
+%% =============================================================================
+
+exported procedure alice11(Channel(Stream(UserNotify), Stream(UserCmd))?).
+alice11(ch(In, [connect(bob)|Out?])) :-
+    alice11_wait_bob(In?, Out).
+
+procedure alice11_wait_bob(Stream(UserNotify)?, Stream(UserCmd)).
+alice11_wait_bob([connected(bob)|In],
+                 [connect(charlie)|Out?]) :-
+    alice11_wait_charlie(In?, Out).
+alice11_wait_bob([_|In], Out?) :-
+    otherwise | alice11_wait_bob(In?, Out).
+alice11_wait_bob([], []).
+
+procedure alice11_wait_charlie(Stream(UserNotify)?, Stream(UserCmd)).
+alice11_wait_charlie([connected(charlie)|_],
+                     [child_introduce(carol, bob, dave),
+                      child_introduce(carol, charlie, eve)]).
+alice11_wait_charlie([_|In], Out?) :-
+    otherwise | alice11_wait_charlie(In?, Out).
+alice11_wait_charlie([], []).
+
+exported procedure bob11(Channel(Stream(UserNotify), Stream(UserCmd))?).
+bob11(ch([befriend(alice, ReqId)|In],
+         [decision(yes, alice, ReqId?)|Out?])) :-
+    ground(ReqId?) |
+    bob11_wait_alice_connected(In?, Out).
+bob11(ch([_|In], Out?)) :-
+    otherwise | bob11(ch(In?, Out)).
+
+procedure bob11_wait_alice_connected(Stream(UserNotify)?, Stream(UserCmd)).
+bob11_wait_alice_connected([connected(alice)|In],
+                           [connect(charlie)|Out?]) :-
+    bob11_wait_charlie_connected(In?, Out).
+bob11_wait_alice_connected([_|In], Out?) :-
+    otherwise | bob11_wait_alice_connected(In?, Out).
+bob11_wait_alice_connected([], []).
+
+procedure bob11_wait_charlie_connected(Stream(UserNotify)?, Stream(UserCmd)).
+bob11_wait_charlie_connected([connected(charlie)|In], Out?) :-
+    bob11_wait_child_intro(In?, Out).
+bob11_wait_charlie_connected([_|In], Out?) :-
+    otherwise | bob11_wait_charlie_connected(In?, Out).
+bob11_wait_charlie_connected([], []).
+
+procedure bob11_wait_child_intro(Stream(UserNotify)?, Stream(UserCmd)).
+bob11_wait_child_intro([child_befriend(alice, carol, ReqId)|In],
+                       [approve_child_intro(carol, dave, ReqId?),
+                        child_introduce(dave, charlie, eve)|Out?]) :-
+    ground(ReqId?) |
+    bob11_wait_group_consent(In?, Out).
+bob11_wait_child_intro([_|In], Out?) :-
+    otherwise | bob11_wait_child_intro(In?, Out).
+bob11_wait_child_intro([], []).
+
+procedure bob11_wait_group_consent(Stream(UserNotify)?, Stream(UserCmd)).
+bob11_wait_group_consent(
+    [child_group_consent(dave, group_id(carol, kids_chat), ReqId)|_],
+    [approve_child_group(dave, group_id(carol, kids_chat), ReqId?)]) :-
+    ground(ReqId?) | true.
+bob11_wait_group_consent([_|In], Out?) :-
+    otherwise | bob11_wait_group_consent(In?, Out).
+bob11_wait_group_consent([], []).
+
+exported procedure charlie11(Channel(Stream(UserNotify), Stream(UserCmd))?).
+charlie11(ch([befriend(alice, ReqId)|In],
+             [decision(yes, alice, ReqId?)|Out?])) :-
+    ground(ReqId?) |
+    charlie11_wait_bob(In?, Out).
+charlie11(ch([befriend(bob, ReqId)|In],
+             [decision(yes, bob, ReqId?)|Out?])) :-
+    ground(ReqId?) |
+    charlie11_wait_alice(In?, Out).
+charlie11(ch([_|In], Out?)) :-
+    otherwise | charlie11(ch(In?, Out)).
+
+procedure charlie11_wait_bob(Stream(UserNotify)?, Stream(UserCmd)).
+charlie11_wait_bob([befriend(bob, ReqId)|In],
+                   [decision(yes, bob, ReqId?)|Out?]) :-
+    ground(ReqId?) |
+    charlie11_wait_child_intros(In?, Out).
+charlie11_wait_bob([_|In], Out?) :-
+    otherwise | charlie11_wait_bob(In?, Out).
+charlie11_wait_bob([], []).
+
+procedure charlie11_wait_alice(Stream(UserNotify)?, Stream(UserCmd)).
+charlie11_wait_alice([befriend(alice, ReqId)|In],
+                     [decision(yes, alice, ReqId?)|Out?]) :-
+    ground(ReqId?) |
+    charlie11_wait_child_intros(In?, Out).
+charlie11_wait_alice([_|In], Out?) :-
+    otherwise | charlie11_wait_alice(In?, Out).
+charlie11_wait_alice([], []).
+
+procedure charlie11_wait_child_intros(Stream(UserNotify)?, Stream(UserCmd)).
+charlie11_wait_child_intros([child_befriend(alice, carol, ReqId)|In],
+    [approve_child_intro(carol, eve, ReqId?)|Out?]) :-
+    ground(ReqId?) |
+    charlie11_wait_dave_intro(In?, Out).
+charlie11_wait_child_intros([child_befriend(bob, dave, ReqId)|In],
+    [approve_child_intro(dave, eve, ReqId?)|Out?]) :-
+    ground(ReqId?) |
+    charlie11_wait_carol_intro(In?, Out).
+charlie11_wait_child_intros([_|In], Out?) :-
+    otherwise | charlie11_wait_child_intros(In?, Out).
+charlie11_wait_child_intros([], []).
+
+procedure charlie11_wait_dave_intro(Stream(UserNotify)?, Stream(UserCmd)).
+charlie11_wait_dave_intro([child_befriend(bob, dave, ReqId)|In],
+    [approve_child_intro(dave, eve, ReqId?)|Out?]) :-
+    ground(ReqId?) |
+    charlie11_wait_group_consent(In?, Out).
+charlie11_wait_dave_intro([_|In], Out?) :-
+    otherwise | charlie11_wait_dave_intro(In?, Out).
+charlie11_wait_dave_intro([], []).
+
+procedure charlie11_wait_carol_intro(Stream(UserNotify)?, Stream(UserCmd)).
+charlie11_wait_carol_intro([child_befriend(alice, carol, ReqId)|In],
+    [approve_child_intro(carol, eve, ReqId?)|Out?]) :-
+    ground(ReqId?) |
+    charlie11_wait_group_consent(In?, Out).
+charlie11_wait_carol_intro([_|In], Out?) :-
+    otherwise | charlie11_wait_carol_intro(In?, Out).
+charlie11_wait_carol_intro([], []).
+
+procedure charlie11_wait_group_consent(Stream(UserNotify)?, Stream(UserCmd)).
+charlie11_wait_group_consent(
+    [child_group_consent(eve, group_id(carol, kids_chat), ReqId)|_],
+    [approve_child_group(eve, group_id(carol, kids_chat), ReqId?)]) :-
+    ground(ReqId?) | true.
+charlie11_wait_group_consent([_|In], Out?) :-
+    otherwise | charlie11_wait_group_consent(In?, Out).
+charlie11_wait_group_consent([], []).
+
+exported procedure carol11(Channel(Stream(UserNotify), Stream(UserCmd))?).
+carol11(ch([child_befriend(alice, dave, ReqId)|In],
+           [accept_child_intro(dave, ReqId?)|Out?])) :-
+    ground(ReqId?) |
+    carol11_got_dave(In?, Out).
+carol11(ch([child_befriend(alice, eve, ReqId)|In],
+           [accept_child_intro(eve, ReqId?)|Out?])) :-
+    ground(ReqId?) |
+    carol11_got_eve(In?, Out).
+carol11(ch([_|In], Out?)) :-
+    otherwise | carol11(ch(In?, Out)).
+
+procedure carol11_got_dave(Stream(UserNotify)?, Stream(UserCmd)).
+carol11_got_dave([child_befriend(alice, eve, ReqId)|In],
+    [accept_child_intro(eve, ReqId?)|Out?]) :-
+    ground(ReqId?) |
+    carol11_both_accepted(In?, Out).
+carol11_got_dave([connected(dave)|In], Out?) :-
+    carol11_dave_connected_wait_eve(In?, Out).
+carol11_got_dave([_|In], Out?) :-
+    otherwise | carol11_got_dave(In?, Out).
+carol11_got_dave([], []).
+
+procedure carol11_got_eve(Stream(UserNotify)?, Stream(UserCmd)).
+carol11_got_eve([child_befriend(alice, dave, ReqId)|In],
+    [accept_child_intro(dave, ReqId?)|Out?]) :-
+    ground(ReqId?) |
+    carol11_both_accepted(In?, Out).
+carol11_got_eve([connected(eve)|In], Out?) :-
+    carol11_eve_connected_wait_dave(In?, Out).
+carol11_got_eve([_|In], Out?) :-
+    otherwise | carol11_got_eve(In?, Out).
+carol11_got_eve([], []).
+
+procedure carol11_dave_connected_wait_eve(Stream(UserNotify)?, Stream(UserCmd)).
+carol11_dave_connected_wait_eve([child_befriend(alice, eve, ReqId)|In],
+    [accept_child_intro(eve, ReqId?)|Out?]) :-
+    ground(ReqId?) |
+    carol11_wait_eve_connected(In?, Out).
+carol11_dave_connected_wait_eve([_|In], Out?) :-
+    otherwise | carol11_dave_connected_wait_eve(In?, Out).
+carol11_dave_connected_wait_eve([], []).
+
+procedure carol11_eve_connected_wait_dave(Stream(UserNotify)?, Stream(UserCmd)).
+carol11_eve_connected_wait_dave([child_befriend(alice, dave, ReqId)|In],
+    [accept_child_intro(dave, ReqId?)|Out?]) :-
+    ground(ReqId?) |
+    carol11_wait_dave_connected(In?, Out).
+carol11_eve_connected_wait_dave([_|In], Out?) :-
+    otherwise | carol11_eve_connected_wait_dave(In?, Out).
+carol11_eve_connected_wait_dave([], []).
+
+procedure carol11_both_accepted(Stream(UserNotify)?, Stream(UserCmd)).
+carol11_both_accepted([connected(dave)|In], Out?) :-
+    carol11_wait_eve_connected(In?, Out).
+carol11_both_accepted([connected(eve)|In], Out?) :-
+    carol11_wait_dave_connected(In?, Out).
+carol11_both_accepted([_|In], Out?) :-
+    otherwise | carol11_both_accepted(In?, Out).
+carol11_both_accepted([], []).
+
+procedure carol11_wait_dave_connected(Stream(UserNotify)?, Stream(UserCmd)).
+carol11_wait_dave_connected([connected(dave)|In], Out?) :-
+    carol11_create_group(In?, Out).
+carol11_wait_dave_connected([_|In], Out?) :-
+    otherwise | carol11_wait_dave_connected(In?, Out).
+carol11_wait_dave_connected([], []).
+
+procedure carol11_wait_eve_connected(Stream(UserNotify)?, Stream(UserCmd)).
+carol11_wait_eve_connected([connected(eve)|In], Out?) :-
+    carol11_create_group(In?, Out).
+carol11_wait_eve_connected([_|In], Out?) :-
+    otherwise | carol11_wait_eve_connected(In?, Out).
+carol11_wait_eve_connected([], []).
+
+procedure carol11_create_group(Stream(UserNotify)?, Stream(UserCmd)).
+carol11_create_group(In,
+    [create_group(kids_chat)|Out?]) :-
+    carol11_wait_group_joined(In?, Out).
+
+procedure carol11_wait_group_joined(Stream(UserNotify)?, Stream(UserCmd)).
+carol11_wait_group_joined(
+    [group_joined(group_id(carol, kids_chat))|In],
+    [invite_group(group_id(carol, kids_chat), dave)|Out?]) :-
+    carol11_wait_dave_joined(In?, Out).
+carol11_wait_group_joined([_|In], Out?) :-
+    otherwise | carol11_wait_group_joined(In?, Out).
+carol11_wait_group_joined([], []).
+
+procedure carol11_wait_dave_joined(Stream(UserNotify)?, Stream(UserCmd)).
+carol11_wait_dave_joined(
+    [group_joined_member(group_id(carol, kids_chat), dave)|In],
+    [invite_group(group_id(carol, kids_chat), eve)|Out?]) :-
+    carol11_wait_eve_joined(In?, Out).
+carol11_wait_dave_joined([_|In], Out?) :-
+    otherwise | carol11_wait_dave_joined(In?, Out).
+carol11_wait_dave_joined([], []).
+
+procedure carol11_wait_eve_joined(Stream(UserNotify)?, Stream(UserCmd)).
+carol11_wait_eve_joined(
+    [group_joined_member(group_id(carol, kids_chat), eve)|In],
+    [send_group(group_id(carol, kids_chat), 'Just had the best ice cream ever!')|Out?]) :-
+    carol11_wait_replies(In?, Out).
+carol11_wait_eve_joined([_|In], Out?) :-
+    otherwise | carol11_wait_eve_joined(In?, Out).
+carol11_wait_eve_joined([], []).
+
+procedure carol11_wait_replies(Stream(UserNotify)?, Stream(UserCmd)).
+carol11_wait_replies(
+    [group_received(group_id(carol, kids_chat), dave, 'Just had the best ice cream ever!')|In],
+    Out?) :-
+    carol11_wait_eve_reply(In?, Out).
+carol11_wait_replies(
+    [group_received(group_id(carol, kids_chat), eve, 'Anyone want to play soccer after school?')|In],
+    Out?) :-
+    carol11_wait_dave_reply(In?, Out).
+carol11_wait_replies([_|In], Out?) :-
+    otherwise | carol11_wait_replies(In?, Out).
+carol11_wait_replies([], []).
+
+procedure carol11_wait_eve_reply(Stream(UserNotify)?, Stream(UserCmd)).
+carol11_wait_eve_reply(
+    [group_received(group_id(carol, kids_chat), eve, 'Anyone want to play soccer after school?')|In],
+    [send_group(group_id(carol, kids_chat), 'Count me in! Chocolate or vanilla Dave?')|Out?]) :-
+    carol11_wait_echo(In?, Out).
+carol11_wait_eve_reply([_|In], Out?) :-
+    otherwise | carol11_wait_eve_reply(In?, Out).
+carol11_wait_eve_reply([], []).
+
+procedure carol11_wait_dave_reply(Stream(UserNotify)?, Stream(UserCmd)).
+carol11_wait_dave_reply(
+    [group_received(group_id(carol, kids_chat), dave, 'Just had the best ice cream ever!')|In],
+    [send_group(group_id(carol, kids_chat), 'Count me in! Chocolate or vanilla Dave?')|Out?]) :-
+    carol11_wait_echo(In?, Out).
+carol11_wait_dave_reply([_|In], Out?) :-
+    otherwise | carol11_wait_dave_reply(In?, Out).
+carol11_wait_dave_reply([], []).
+
+procedure carol11_wait_echo(Stream(UserNotify)?, Stream(UserCmd)).
+carol11_wait_echo(
+    [group_received(group_id(carol, kids_chat), carol, 'Count me in! Chocolate or vanilla Dave?')|_], []).
+carol11_wait_echo([_|In], Out?) :-
+    otherwise | carol11_wait_echo(In?, Out).
+carol11_wait_echo([], []).
+
+exported procedure dave11(Channel(Stream(UserNotify), Stream(UserCmd))?).
+dave11(ch([child_befriend(bob, carol, ReqId)|In],
+          [accept_child_intro(carol, ReqId?)|Out?])) :-
+    ground(ReqId?) |
+    dave11_got_carol(In?, Out).
+dave11(ch([child_befriend(bob, eve, ReqId)|In],
+          [accept_child_intro(eve, ReqId?)|Out?])) :-
+    ground(ReqId?) |
+    dave11_got_eve(In?, Out).
+dave11(ch([_|In], Out?)) :-
+    otherwise | dave11(ch(In?, Out)).
+
+procedure dave11_got_carol(Stream(UserNotify)?, Stream(UserCmd)).
+dave11_got_carol([child_befriend(bob, eve, ReqId)|In],
+    [accept_child_intro(eve, ReqId?)|Out?]) :-
+    ground(ReqId?) |
+    dave11_both_accepted(In?, Out).
+dave11_got_carol([connected(carol)|In], Out?) :-
+    dave11_carol_connected_wait_eve(In?, Out).
+dave11_got_carol([_|In], Out?) :-
+    otherwise | dave11_got_carol(In?, Out).
+dave11_got_carol([], []).
+
+procedure dave11_got_eve(Stream(UserNotify)?, Stream(UserCmd)).
+dave11_got_eve([child_befriend(bob, carol, ReqId)|In],
+    [accept_child_intro(carol, ReqId?)|Out?]) :-
+    ground(ReqId?) |
+    dave11_both_accepted(In?, Out).
+dave11_got_eve([connected(eve)|In], Out?) :-
+    dave11_eve_connected_wait_carol(In?, Out).
+dave11_got_eve([_|In], Out?) :-
+    otherwise | dave11_got_eve(In?, Out).
+dave11_got_eve([], []).
+
+procedure dave11_carol_connected_wait_eve(Stream(UserNotify)?, Stream(UserCmd)).
+dave11_carol_connected_wait_eve([child_befriend(bob, eve, ReqId)|In],
+    [accept_child_intro(eve, ReqId?)|Out?]) :-
+    ground(ReqId?) |
+    dave11_wait_eve_connected(In?, Out).
+dave11_carol_connected_wait_eve([_|In], Out?) :-
+    otherwise | dave11_carol_connected_wait_eve(In?, Out).
+dave11_carol_connected_wait_eve([], []).
+
+procedure dave11_eve_connected_wait_carol(Stream(UserNotify)?, Stream(UserCmd)).
+dave11_eve_connected_wait_carol([child_befriend(bob, carol, ReqId)|In],
+    [accept_child_intro(carol, ReqId?)|Out?]) :-
+    ground(ReqId?) |
+    dave11_wait_carol_connected(In?, Out).
+dave11_eve_connected_wait_carol([_|In], Out?) :-
+    otherwise | dave11_eve_connected_wait_carol(In?, Out).
+dave11_eve_connected_wait_carol([], []).
+
+procedure dave11_both_accepted(Stream(UserNotify)?, Stream(UserCmd)).
+dave11_both_accepted([connected(carol)|In], Out?) :-
+    dave11_wait_eve_connected(In?, Out).
+dave11_both_accepted([connected(eve)|In], Out?) :-
+    dave11_wait_carol_connected(In?, Out).
+dave11_both_accepted([_|In], Out?) :-
+    otherwise | dave11_both_accepted(In?, Out).
+dave11_both_accepted([], []).
+
+procedure dave11_wait_carol_connected(Stream(UserNotify)?, Stream(UserCmd)).
+dave11_wait_carol_connected([connected(carol)|In], Out?) :-
+    dave11_wait_group_invite(In?, Out).
+dave11_wait_carol_connected([_|In], Out?) :-
+    otherwise | dave11_wait_carol_connected(In?, Out).
+dave11_wait_carol_connected([], []).
+
+procedure dave11_wait_eve_connected(Stream(UserNotify)?, Stream(UserCmd)).
+dave11_wait_eve_connected([connected(eve)|In], Out?) :-
+    dave11_wait_group_invite(In?, Out).
+dave11_wait_eve_connected([_|In], Out?) :-
+    otherwise | dave11_wait_eve_connected(In?, Out).
+dave11_wait_eve_connected([], []).
+
+procedure dave11_wait_group_invite(Stream(UserNotify)?, Stream(UserCmd)).
+dave11_wait_group_invite(
+    [group_invite(group_id(carol, kids_chat), ReqId)|In],
+    [accept_group(group_id(carol, kids_chat), ReqId?)|Out?]) :-
+    ground(ReqId?) |
+    dave11_wait_group_joined(In?, Out).
+dave11_wait_group_invite([_|In], Out?) :-
+    otherwise | dave11_wait_group_invite(In?, Out).
+dave11_wait_group_invite([], []).
+
+procedure dave11_wait_group_joined(Stream(UserNotify)?, Stream(UserCmd)).
+dave11_wait_group_joined(
+    [group_joined(group_id(carol, kids_chat))|In],
+    Out?) :-
+    dave11_wait_carol_msg(In?, Out).
+dave11_wait_group_joined([_|In], Out?) :-
+    otherwise | dave11_wait_group_joined(In?, Out).
+dave11_wait_group_joined([], []).
+
+procedure dave11_wait_carol_msg(Stream(UserNotify)?, Stream(UserCmd)).
+dave11_wait_carol_msg(
+    [group_received(group_id(carol, kids_chat), carol, 'Just had the best ice cream ever!')|In],
+    [send_group(group_id(carol, kids_chat), 'Just had the best ice cream ever!')|Out?]) :-
+    dave11_wait_carol_final(In?, Out).
+dave11_wait_carol_msg([_|In], Out?) :-
+    otherwise | dave11_wait_carol_msg(In?, Out).
+dave11_wait_carol_msg([], []).
+
+procedure dave11_wait_carol_final(Stream(UserNotify)?, Stream(UserCmd)).
+dave11_wait_carol_final(
+    [group_received(group_id(carol, kids_chat), carol, 'Count me in! Chocolate or vanilla Dave?')|_], []).
+dave11_wait_carol_final([_|In], Out?) :-
+    otherwise | dave11_wait_carol_final(In?, Out).
+dave11_wait_carol_final([], []).
+
+exported procedure eve11(Channel(Stream(UserNotify), Stream(UserCmd))?).
+eve11(ch([child_befriend(charlie, carol, ReqId)|In],
+         [accept_child_intro(carol, ReqId?)|Out?])) :-
+    ground(ReqId?) |
+    eve11_got_carol(In?, Out).
+eve11(ch([child_befriend(charlie, dave, ReqId)|In],
+         [accept_child_intro(dave, ReqId?)|Out?])) :-
+    ground(ReqId?) |
+    eve11_got_dave(In?, Out).
+eve11(ch([_|In], Out?)) :-
+    otherwise | eve11(ch(In?, Out)).
+
+procedure eve11_got_carol(Stream(UserNotify)?, Stream(UserCmd)).
+eve11_got_carol([child_befriend(charlie, dave, ReqId)|In],
+    [accept_child_intro(dave, ReqId?)|Out?]) :-
+    ground(ReqId?) |
+    eve11_both_accepted(In?, Out).
+eve11_got_carol([connected(carol)|In], Out?) :-
+    eve11_carol_connected_wait_dave(In?, Out).
+eve11_got_carol([_|In], Out?) :-
+    otherwise | eve11_got_carol(In?, Out).
+eve11_got_carol([], []).
+
+procedure eve11_got_dave(Stream(UserNotify)?, Stream(UserCmd)).
+eve11_got_dave([child_befriend(charlie, carol, ReqId)|In],
+    [accept_child_intro(carol, ReqId?)|Out?]) :-
+    ground(ReqId?) |
+    eve11_both_accepted(In?, Out).
+eve11_got_dave([connected(dave)|In], Out?) :-
+    eve11_dave_connected_wait_carol(In?, Out).
+eve11_got_dave([_|In], Out?) :-
+    otherwise | eve11_got_dave(In?, Out).
+eve11_got_dave([], []).
+
+procedure eve11_carol_connected_wait_dave(Stream(UserNotify)?, Stream(UserCmd)).
+eve11_carol_connected_wait_dave([child_befriend(charlie, dave, ReqId)|In],
+    [accept_child_intro(dave, ReqId?)|Out?]) :-
+    ground(ReqId?) |
+    eve11_wait_dave_connected(In?, Out).
+eve11_carol_connected_wait_dave([_|In], Out?) :-
+    otherwise | eve11_carol_connected_wait_dave(In?, Out).
+eve11_carol_connected_wait_dave([], []).
+
+procedure eve11_dave_connected_wait_carol(Stream(UserNotify)?, Stream(UserCmd)).
+eve11_dave_connected_wait_carol([child_befriend(charlie, carol, ReqId)|In],
+    [accept_child_intro(carol, ReqId?)|Out?]) :-
+    ground(ReqId?) |
+    eve11_wait_carol_connected(In?, Out).
+eve11_dave_connected_wait_carol([_|In], Out?) :-
+    otherwise | eve11_dave_connected_wait_carol(In?, Out).
+eve11_dave_connected_wait_carol([], []).
+
+procedure eve11_both_accepted(Stream(UserNotify)?, Stream(UserCmd)).
+eve11_both_accepted([connected(carol)|In], Out?) :-
+    eve11_wait_dave_connected(In?, Out).
+eve11_both_accepted([connected(dave)|In], Out?) :-
+    eve11_wait_carol_connected(In?, Out).
+eve11_both_accepted([_|In], Out?) :-
+    otherwise | eve11_both_accepted(In?, Out).
+eve11_both_accepted([], []).
+
+procedure eve11_wait_carol_connected(Stream(UserNotify)?, Stream(UserCmd)).
+eve11_wait_carol_connected([connected(carol)|In], Out?) :-
+    eve11_wait_group_invite(In?, Out).
+eve11_wait_carol_connected([_|In], Out?) :-
+    otherwise | eve11_wait_carol_connected(In?, Out).
+eve11_wait_carol_connected([], []).
+
+procedure eve11_wait_dave_connected(Stream(UserNotify)?, Stream(UserCmd)).
+eve11_wait_dave_connected([connected(dave)|In], Out?) :-
+    eve11_wait_group_invite(In?, Out).
+eve11_wait_dave_connected([_|In], Out?) :-
+    otherwise | eve11_wait_dave_connected(In?, Out).
+eve11_wait_dave_connected([], []).
+
+procedure eve11_wait_group_invite(Stream(UserNotify)?, Stream(UserCmd)).
+eve11_wait_group_invite(
+    [group_invite(group_id(carol, kids_chat), ReqId)|In],
+    [accept_group(group_id(carol, kids_chat), ReqId?)|Out?]) :-
+    ground(ReqId?) |
+    eve11_wait_group_joined(In?, Out).
+eve11_wait_group_invite([_|In], Out?) :-
+    otherwise | eve11_wait_group_invite(In?, Out).
+eve11_wait_group_invite([], []).
+
+procedure eve11_wait_group_joined(Stream(UserNotify)?, Stream(UserCmd)).
+eve11_wait_group_joined(
+    [group_joined(group_id(carol, kids_chat))|In],
+    Out?) :-
+    eve11_wait_carol_msg(In?, Out).
+eve11_wait_group_joined([_|In], Out?) :-
+    otherwise | eve11_wait_group_joined(In?, Out).
+eve11_wait_group_joined([], []).
+
+procedure eve11_wait_carol_msg(Stream(UserNotify)?, Stream(UserCmd)).
+eve11_wait_carol_msg(
+    [group_received(group_id(carol, kids_chat), carol, 'Just had the best ice cream ever!')|In],
+    [send_group(group_id(carol, kids_chat), 'Anyone want to play soccer after school?')|Out?]) :-
+    eve11_wait_carol_final(In?, Out).
+eve11_wait_carol_msg([_|In], Out?) :-
+    otherwise | eve11_wait_carol_msg(In?, Out).
+eve11_wait_carol_msg([], []).
+
+procedure eve11_wait_carol_final(Stream(UserNotify)?, Stream(UserCmd)).
+eve11_wait_carol_final(
+    [group_received(group_id(carol, kids_chat), carol, 'Count me in! Chocolate or vanilla Dave?')|_], []).
+eve11_wait_carol_final([_|In], Out?) :-
+    otherwise | eve11_wait_carol_final(In?, Out).
+eve11_wait_carol_final([], []).
+
+%% =============================================================================
+%% PLAY 12 — CSSN: Parental Consent for Groups (5 agents)
+%% =============================================================================
+
+exported procedure alice12(Channel(Stream(UserNotify), Stream(UserCmd))?).
+alice12(ch(In, [connect(bob), connect(charlie)|Out?])) :-
+    alice12_wait_connected(In?, Out).
+
+procedure alice12_wait_connected(Stream(UserNotify)?, Stream(UserCmd)).
+alice12_wait_connected([connected(bob)|In], Out?) :-
+    alice12_wait_connected_charlie(In?, Out).
+alice12_wait_connected([connected(charlie)|In], Out?) :-
+    alice12_wait_connected_bob(In?, Out).
+alice12_wait_connected([_|In], Out?) :-
+    otherwise | alice12_wait_connected(In?, Out).
+alice12_wait_connected([], []).
+
+procedure alice12_wait_connected_charlie(Stream(UserNotify)?, Stream(UserCmd)).
+alice12_wait_connected_charlie([connected(charlie)|In],
+                               [create_group(study)|Out?]) :-
+    alice12_wait_group_joined(In?, Out).
+alice12_wait_connected_charlie([_|In], Out?) :-
+    otherwise | alice12_wait_connected_charlie(In?, Out).
+alice12_wait_connected_charlie([], []).
+
+procedure alice12_wait_connected_bob(Stream(UserNotify)?, Stream(UserCmd)).
+alice12_wait_connected_bob([connected(bob)|In],
+                           [create_group(study)|Out?]) :-
+    alice12_wait_group_joined(In?, Out).
+alice12_wait_connected_bob([_|In], Out?) :-
+    otherwise | alice12_wait_connected_bob(In?, Out).
+alice12_wait_connected_bob([], []).
+
+procedure alice12_wait_group_joined(Stream(UserNotify)?, Stream(UserCmd)).
+alice12_wait_group_joined(
+        [group_joined(group_id(alice, study))|In],
+        [invite_group(group_id(alice, study), dave, bob)|Out?]) :-
+    alice12_wait_dave_joined(In?, Out).
+alice12_wait_group_joined([_|In], Out?) :-
+    otherwise | alice12_wait_group_joined(In?, Out).
+alice12_wait_group_joined([], []).
+
+procedure alice12_wait_dave_joined(Stream(UserNotify)?, Stream(UserCmd)).
+alice12_wait_dave_joined(
+        [group_joined_member(group_id(alice, study), dave)|In],
+        [invite_group(group_id(alice, study), eve, charlie)|Out?]) :-
+    alice12_wait_eve_joined(In?, Out).
+alice12_wait_dave_joined([_|In], Out?) :-
+    otherwise | alice12_wait_dave_joined(In?, Out).
+alice12_wait_dave_joined([], []).
+
+procedure alice12_wait_eve_joined(Stream(UserNotify)?, Stream(UserCmd)).
+alice12_wait_eve_joined(
+        [group_joined_member(group_id(alice, study), eve)|In],
+        [send_group(group_id(alice, study), 'Welcome to the study group!')|Out?]) :-
+    alice12_wait_replies(In?, Out).
+alice12_wait_eve_joined([_|In], Out?) :-
+    otherwise | alice12_wait_eve_joined(In?, Out).
+alice12_wait_eve_joined([], []).
+
+procedure alice12_wait_replies(Stream(UserNotify)?, Stream(UserCmd)).
+alice12_wait_replies(
+        [group_received(group_id(alice, study), dave, 'Thanks Alice!')|In],
+        Out?) :-
+    alice12_wait_eve_reply(In?, Out).
+alice12_wait_replies(
+        [group_received(group_id(alice, study), eve, 'Excited to learn!')|In],
+        Out?) :-
+    alice12_wait_dave_reply(In?, Out).
+alice12_wait_replies([_|In], Out?) :-
+    otherwise | alice12_wait_replies(In?, Out).
+alice12_wait_replies([], []).
+
+procedure alice12_wait_eve_reply(Stream(UserNotify)?, Stream(UserCmd)).
+alice12_wait_eve_reply(
+        [group_received(group_id(alice, study), eve, 'Excited to learn!')|_], []).
+alice12_wait_eve_reply([_|In], Out?) :-
+    otherwise | alice12_wait_eve_reply(In?, Out).
+alice12_wait_eve_reply([], []).
+
+procedure alice12_wait_dave_reply(Stream(UserNotify)?, Stream(UserCmd)).
+alice12_wait_dave_reply(
+        [group_received(group_id(alice, study), dave, 'Thanks Alice!')|_], []).
+alice12_wait_dave_reply([_|In], Out?) :-
+    otherwise | alice12_wait_dave_reply(In?, Out).
+alice12_wait_dave_reply([], []).
+
+exported procedure bob12(Channel(Stream(UserNotify), Stream(UserCmd))?).
+bob12(ch([befriend(alice, ReqId)|In],
+         [decision(yes, alice, ReqId?)|Out?])) :-
+    ground(ReqId?) |
+    bob12_wait_connected(In?, Out).
+bob12(ch([_|In], Out?)) :-
+    otherwise | bob12(ch(In?, Out)).
+
+procedure bob12_wait_connected(Stream(UserNotify)?, Stream(UserCmd)).
+bob12_wait_connected([connected(alice)|In], Out?) :-
+    bob12_wait_child_invite(In?, Out).
+bob12_wait_connected([_|In], Out?) :-
+    otherwise | bob12_wait_connected(In?, Out).
+bob12_wait_connected([], []).
+
+procedure bob12_wait_child_invite(Stream(UserNotify)?, Stream(UserCmd)).
+bob12_wait_child_invite(
+        [group_invite_child(group_id(alice, study), dave, ReqId)|_],
+        [approve_group(dave, group_id(alice, study), ReqId?)]) :-
+    ground(ReqId?) | true.
+bob12_wait_child_invite([_|In], Out?) :-
+    otherwise | bob12_wait_child_invite(In?, Out).
+bob12_wait_child_invite([], []).
+
+exported procedure charlie12(Channel(Stream(UserNotify), Stream(UserCmd))?).
+charlie12(ch([befriend(alice, ReqId)|In],
+             [decision(yes, alice, ReqId?)|Out?])) :-
+    ground(ReqId?) |
+    charlie12_wait_connected(In?, Out).
+charlie12(ch([_|In], Out?)) :-
+    otherwise | charlie12(ch(In?, Out)).
+
+procedure charlie12_wait_connected(Stream(UserNotify)?, Stream(UserCmd)).
+charlie12_wait_connected([connected(alice)|In], Out?) :-
+    charlie12_wait_child_invite(In?, Out).
+charlie12_wait_connected([_|In], Out?) :-
+    otherwise | charlie12_wait_connected(In?, Out).
+charlie12_wait_connected([], []).
+
+procedure charlie12_wait_child_invite(Stream(UserNotify)?, Stream(UserCmd)).
+charlie12_wait_child_invite(
+        [group_invite_child(group_id(alice, study), eve, ReqId)|_],
+        [approve_group(eve, group_id(alice, study), ReqId?)]) :-
+    ground(ReqId?) | true.
+charlie12_wait_child_invite([_|In], Out?) :-
+    otherwise | charlie12_wait_child_invite(In?, Out).
+charlie12_wait_child_invite([], []).
+
+exported procedure dave12(Channel(Stream(UserNotify), Stream(UserCmd))?).
+dave12(ch([group_invite(group_id(alice, study), ReqId)|In],
+          [accept_group(group_id(alice, study), ReqId?)|Out?])) :-
+    ground(ReqId?) |
+    dave12_wait_group_joined(In?, Out).
+dave12(ch([_|In], Out?)) :-
+    otherwise | dave12(ch(In?, Out)).
+
+procedure dave12_wait_group_joined(Stream(UserNotify)?, Stream(UserCmd)).
+dave12_wait_group_joined(
+        [group_joined(group_id(alice, study))|In], Out?) :-
+    dave12_wait_alice_msg(In?, Out).
+dave12_wait_group_joined([_|In], Out?) :-
+    otherwise | dave12_wait_group_joined(In?, Out).
+dave12_wait_group_joined([], []).
+
+procedure dave12_wait_alice_msg(Stream(UserNotify)?, Stream(UserCmd)).
+dave12_wait_alice_msg(
+        [group_received(group_id(alice, study), alice, 'Welcome to the study group!')|In],
+        [send_group(group_id(alice, study), 'Thanks Alice!')|Out?]) :-
+    dave12_wait_eve_msg(In?, Out).
+dave12_wait_alice_msg([_|In], Out?) :-
+    otherwise | dave12_wait_alice_msg(In?, Out).
+dave12_wait_alice_msg([], []).
+
+procedure dave12_wait_eve_msg(Stream(UserNotify)?, Stream(UserCmd)).
+dave12_wait_eve_msg(
+        [group_received(group_id(alice, study), eve, 'Excited to learn!')|_], []).
+dave12_wait_eve_msg([_|In], Out?) :-
+    otherwise | dave12_wait_eve_msg(In?, Out).
+dave12_wait_eve_msg([], []).
+
+exported procedure eve12(Channel(Stream(UserNotify), Stream(UserCmd))?).
+eve12(ch([group_invite(group_id(alice, study), ReqId)|In],
+         [accept_group(group_id(alice, study), ReqId?)|Out?])) :-
+    ground(ReqId?) |
+    eve12_wait_group_joined(In?, Out).
+eve12(ch([_|In], Out?)) :-
+    otherwise | eve12(ch(In?, Out)).
+
+procedure eve12_wait_group_joined(Stream(UserNotify)?, Stream(UserCmd)).
+eve12_wait_group_joined(
+        [group_joined(group_id(alice, study))|In], Out?) :-
+    eve12_wait_alice_msg(In?, Out).
+eve12_wait_group_joined([_|In], Out?) :-
+    otherwise | eve12_wait_group_joined(In?, Out).
+eve12_wait_group_joined([], []).
+
+procedure eve12_wait_alice_msg(Stream(UserNotify)?, Stream(UserCmd)).
+eve12_wait_alice_msg(
+        [group_received(group_id(alice, study), alice, 'Welcome to the study group!')|In],
+        [send_group(group_id(alice, study), 'Excited to learn!')|Out?]) :-
+    eve12_wait_dave_msg(In?, Out).
+eve12_wait_alice_msg([_|In], Out?) :-
+    otherwise | eve12_wait_alice_msg(In?, Out).
+eve12_wait_alice_msg([], []).
+
+procedure eve12_wait_dave_msg(Stream(UserNotify)?, Stream(UserCmd)).
+eve12_wait_dave_msg(
+        [group_received(group_id(alice, study), dave, 'Thanks Alice!')|_], []).
+eve12_wait_dave_msg([_|In], Out?) :-
+    otherwise | eve12_wait_dave_msg(In?, Out).
+eve12_wait_dave_msg([], []).
+
+%% =============================================================================
+%% PLAY 14 — Idempotent befriend commit: redundant child_introduce
+%% Alice issues child_introduce(carol, bob, dave) TWICE.  Each child accepts
+%% both child_befriend notifications.  Idempotent commit suppresses the second.
+%% Expect exactly one `connected(dave)` on carol's side (smaller-name installs
+%% once; second commit suppressed) and exactly one `connected(carol)` on dave's
+%% side (larger-name installs via await_canonical once; second drops on [].
+%% =============================================================================
+
+exported procedure alice14(Channel(Stream(UserNotify), Stream(UserCmd))?).
+alice14(ch(In, [connect(bob)|Out?])) :-
+    alice14_wait_connected(In?, Out).
+
+procedure alice14_wait_connected(Stream(UserNotify)?, Stream(UserCmd)).
+alice14_wait_connected([connected(bob)|_],
+                       [child_introduce(carol, bob, dave),
+                        child_introduce(carol, bob, dave)]).
+alice14_wait_connected([_|In], Out?) :-
+    otherwise | alice14_wait_connected(In?, Out).
+alice14_wait_connected([], []).
+
+exported procedure bob14(Channel(Stream(UserNotify), Stream(UserCmd))?).
+bob14(ch([befriend(alice, ReqId)|In],
+         [decision(yes, alice, ReqId?)|Out?])) :-
+    ground(ReqId?) |
+    bob14_first(In?, Out).
+bob14(ch([_|In], Out?)) :-
+    otherwise | bob14(ch(In?, Out)).
+
+procedure bob14_first(Stream(UserNotify)?, Stream(UserCmd)).
+bob14_first([child_befriend(alice, carol, ReqId)|In],
+            [approve_child_intro(carol, dave, ReqId?)|Out?]) :-
+    ground(ReqId?) |
+    bob14_second(In?, Out).
+bob14_first([_|In], Out?) :-
+    otherwise | bob14_first(In?, Out).
+bob14_first([], []).
+
+procedure bob14_second(Stream(UserNotify)?, Stream(UserCmd)).
+bob14_second([child_befriend(alice, carol, ReqId)|In],
+             [approve_child_intro(carol, dave, ReqId?)|Out?]) :-
+    ground(ReqId?) |
+    bob14_done(In?, Out).
+bob14_second([_|In], Out?) :-
+    otherwise | bob14_second(In?, Out).
+bob14_second([], []).
+
+procedure bob14_done(Stream(UserNotify)?, Stream(UserCmd)).
+bob14_done([_|In], Out?) :-
+    otherwise | bob14_done(In?, Out).
+bob14_done([], []).
+
+exported procedure carol14(Channel(Stream(UserNotify), Stream(UserCmd))?).
+carol14(ch([child_befriend(alice, dave, ReqId)|In],
+           [accept_child_intro(dave, ReqId?)|Out?])) :-
+    ground(ReqId?) |
+    carol14_second(In?, Out).
+carol14(ch([_|In], Out?)) :-
+    otherwise | carol14(ch(In?, Out)).
+
+procedure carol14_second(Stream(UserNotify)?, Stream(UserCmd)).
+carol14_second([child_befriend(alice, dave, ReqId)|In],
+               [accept_child_intro(dave, ReqId?)|Out?]) :-
+    ground(ReqId?) |
+    carol14_done(In?, Out).
+carol14_second([_|In], Out?) :-
+    otherwise | carol14_second(In?, Out).
+carol14_second([], []).
+
+procedure carol14_done(Stream(UserNotify)?, Stream(UserCmd)).
+carol14_done([_|In], Out?) :-
+    otherwise | carol14_done(In?, Out).
+carol14_done([], []).
+
+exported procedure dave14(Channel(Stream(UserNotify), Stream(UserCmd))?).
+dave14(ch([child_befriend(bob, carol, ReqId)|In],
+          [accept_child_intro(carol, ReqId?)|Out?])) :-
+    ground(ReqId?) |
+    dave14_second(In?, Out).
+dave14(ch([_|In], Out?)) :-
+    otherwise | dave14(ch(In?, Out)).
+
+procedure dave14_second(Stream(UserNotify)?, Stream(UserCmd)).
+dave14_second([child_befriend(bob, carol, ReqId)|In],
+              [accept_child_intro(carol, ReqId?)|Out?]) :-
+    ground(ReqId?) |
+    dave14_done(In?, Out).
+dave14_second([_|In], Out?) :-
+    otherwise | dave14_second(In?, Out).
+dave14_second([], []).
+
+procedure dave14_done(Stream(UserNotify)?, Stream(UserCmd)).
+dave14_done([_|In], Out?) :-
+    otherwise | dave14_done(In?, Out).
+dave14_done([], []).
+
+%% =============================================================================
+%% PLAY 15 — Idempotent befriend commit: simultaneous bilateral cold-call
+%% Both alice and bob cold-call each other.  Both UIs accept the resulting
+%% befriend prompts.  The smaller-name tie-break (`@<`) selects one canonical
+%% channel; the other commit is suppressed.  Each side emits exactly one
+%% connected/2 notification.
+%% =============================================================================
+
+exported procedure alice15(Channel(Stream(UserNotify), Stream(UserCmd))?).
+alice15(ch(In, [connect(bob)|Out?])) :-
+    alice15_listen(In?, Out).
+
+procedure alice15_listen(Stream(UserNotify)?, Stream(UserCmd)).
+alice15_listen([befriend(bob, ReqId)|In],
+               [decision(yes, bob, ReqId?)|Out?]) :-
+    ground(ReqId?) |
+    alice15_done(In?, Out).
+alice15_listen([_|In], Out?) :-
+    otherwise | alice15_listen(In?, Out).
+alice15_listen([], []).
+
+procedure alice15_done(Stream(UserNotify)?, Stream(UserCmd)).
+alice15_done([_|In], Out?) :-
+    otherwise | alice15_done(In?, Out).
+alice15_done([], []).
+
+exported procedure bob15(Channel(Stream(UserNotify), Stream(UserCmd))?).
+bob15(ch(In, [connect(alice)|Out?])) :-
+    bob15_listen(In?, Out).
+
+procedure bob15_listen(Stream(UserNotify)?, Stream(UserCmd)).
+bob15_listen([befriend(alice, ReqId)|In],
+             [decision(yes, alice, ReqId?)|Out?]) :-
+    ground(ReqId?) |
+    bob15_done(In?, Out).
+bob15_listen([_|In], Out?) :-
+    otherwise | bob15_listen(In?, Out).
+bob15_listen([], []).
+
+procedure bob15_done(Stream(UserNotify)?, Stream(UserCmd)).
+bob15_done([_|In], Out?) :-
+    otherwise | bob15_done(In?, Out).
+bob15_done([], []).
