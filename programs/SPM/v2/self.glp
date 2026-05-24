@@ -158,6 +158,27 @@ OutputEntry ::= output(OutputKey, Stream(OutputMsg)?)
 OutputsList ::= [] ; [OutputEntry|OutputsList].
 
 %% =============================================================================
+%% AGENT PLATFORM STATE (paper §6.1, §6.5)
+%% =============================================================================
+%%
+%% FMap_p[q] = epoch (paper §6.1).  Epoch parity encodes friendship status:
+%%   even = inactive (not currently friends; 0 = never befriended),
+%%   odd  = active (currently friends).
+%% Befriend bumps the epoch to the next odd value; Unfriend bumps to the next
+%% even value (paper §6.3, §6.4).
+FMapEntry ::= fme(Constant, Integer).
+FMap ::= [] ; [FMapEntry | FMap].
+
+%% FoFMap_p[q][f] = epoch (paper §6.5).
+%% Records p's view of q's epoch_q(f), maintained from incoming
+%% update_befriend(q, f, x) / update_unfriend(q, f, x) messages.  Nested
+%% assoc-list: outer keyed by q, inner keyed by f.
+FoFInnerEntry ::= fofe(Constant, Integer).
+FoFInner ::= [] ; [FoFInnerEntry | FoFInner].
+FoFEntry ::= fofb(Constant, FoFInner).
+FoFMap ::= [] ; [FoFEntry | FoFMap].
+
+%% =============================================================================
 %% MEDIATOR <-> USER (UI) INTERFACE
 %% =============================================================================
 
@@ -412,6 +433,72 @@ close_output(Key, [output(K, Out?)|Rest], [output(K?, Out)|Rest1?]) :-
 close_output(Key, [group_entry(K, Out?)|Rest], [group_entry(K?, Out)|Rest1?]) :-
     otherwise |
     close_output(Key?, Rest?, Rest1).
+
+%% =============================================================================
+%% FMAP HELPERS (paper §6.1)
+%% =============================================================================
+%%
+%% Adapted from programs/SPM/gsg/self.glp (previous wrong-substrate session).
+%% Conventions:
+%%   - epoch_p(q) = 0 if q ∉ dom(FMap_p)
+%%   - set_epoch overwrites if q ∈ dom; appends otherwise
+%%   - bump_epoch: single-walk lookup-and-bump for befriend/unfriend
+
+procedure epoch_of(Constant?, FMap?, Integer).
+epoch_of(Q, [fme(Q1, E) | _], E?) :-
+    Q? =?= Q1? | true.
+epoch_of(Q, [_ | Rest], E?) :-
+    otherwise | epoch_of(Q?, Rest?, E).
+epoch_of(_, [], 0).
+
+procedure set_epoch(Constant?, Integer?, FMap?, FMap).
+set_epoch(Q, X, [fme(Q1, _) | Rest], [fme(Q1?, X?) | Rest?]) :-
+    Q? =?= Q1? | true.
+set_epoch(Q, X, [Entry | Rest], [Entry? | Rest1?]) :-
+    otherwise | set_epoch(Q?, X?, Rest?, Rest1).
+set_epoch(Q, X, [], [fme(Q?, X?)]).
+
+%% bump_epoch(Q?, FMap?, FMap, Integer): single-walk find+increment.
+%% If Q present: increment its epoch by 1 in place, return new epoch.
+%% If Q absent: insert fme(Q, 1) (first-time befriend → odd epoch), return 1.
+procedure bump_epoch(Constant?, FMap?, FMap, Integer).
+bump_epoch(Q, [fme(Q1, E) | Rest], [fme(Q1?, X?) | Rest?], X?) :-
+    Q? =?= Q1?, X := E? + 1 | true.
+bump_epoch(Q, [Entry | Rest], [Entry? | Rest1?], X?) :-
+    otherwise | bump_epoch(Q?, Rest?, Rest1, X).
+bump_epoch(Q, [], [fme(Q?, 1)], 1).
+
+%% =============================================================================
+%% FOFMAP HELPERS (paper §6.5)
+%% =============================================================================
+
+procedure fof_epoch_of(Constant?, Constant?, FoFMap?, Integer).
+fof_epoch_of(Q, F, [fofb(Q1, Inner) | _], E?) :-
+    Q? =?= Q1? | fof_inner_lookup(F?, Inner?, E).
+fof_epoch_of(Q, F, [_ | Rest], E?) :-
+    otherwise | fof_epoch_of(Q?, F?, Rest?, E).
+fof_epoch_of(_, _, [], 0).
+
+procedure fof_inner_lookup(Constant?, FoFInner?, Integer).
+fof_inner_lookup(F, [fofe(F1, E) | _], E?) :-
+    F? =?= F1? | true.
+fof_inner_lookup(F, [_ | Rest], E?) :-
+    otherwise | fof_inner_lookup(F?, Rest?, E).
+fof_inner_lookup(_, [], 0).
+
+procedure set_fof_epoch(Constant?, Constant?, Integer?, FoFMap?, FoFMap).
+set_fof_epoch(Q, F, X, [fofb(Q1, Inner) | Rest], [fofb(Q1?, Inner1?) | Rest?]) :-
+    Q? =?= Q1? | fof_inner_set(F?, X?, Inner?, Inner1).
+set_fof_epoch(Q, F, X, [Entry | Rest], [Entry? | Rest1?]) :-
+    otherwise | set_fof_epoch(Q?, F?, X?, Rest?, Rest1).
+set_fof_epoch(Q, F, X, [], [fofb(Q?, [fofe(F?, X?)])]).
+
+procedure fof_inner_set(Constant?, Integer?, FoFInner?, FoFInner).
+fof_inner_set(F, X, [fofe(F1, _) | Rest], [fofe(F1?, X?) | Rest?]) :-
+    F? =?= F1? | true.
+fof_inner_set(F, X, [Entry | Rest], [Entry? | Rest1?]) :-
+    otherwise | fof_inner_set(F?, X?, Rest?, Rest1).
+fof_inner_set(F, X, [], [fofe(F?, X?)]).
 
 %% =============================================================================
 %% IDEMPOTENT BEFRIEND COMMIT WITH SMALLER-NAME TIE-BREAK
