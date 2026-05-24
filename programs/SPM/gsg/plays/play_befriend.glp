@@ -6,16 +6,18 @@
 %% via the matching pending_offer in Pending).  Subsequent query then
 %% sees the post-protocol epoch.
 %%
-%% Bob is reactive (PASS 1): no volition; friend_request triggers Accept
-%% offer on NetIn head.  Bob's BobFinalEpoch is left as `0` because
-%% bob has no Reply to await on -- PASS 2 makes accept_offer volitional
-%% and gives bob the same sync mechanism.
+%% Bob's person wills accept_offer(alice, RB) (paper §6.3: Accept offer is
+%% volitional, guarded by {q}).  Bob absorbs the volition; if alice's
+%% friend_request hasn't arrived yet, the volition is stashed in Vols and
+%% Bob continues; when the friend_request arrives via NetIn absorption,
+%% the body-dispatch in the friend_request handler matches Vols and fires
+%% Accept offer, binding RB.  Subsequent await(RB?) releases the query.
 %%
 %% Expected at quiescence:
 %%   alice's FMap has fme(bob, 1)
 %%   bob's FMap has fme(alice, 1)
-%%   AliceFinalEpoch = 1   (post-Integrate-accept observation)
-%%   BobFinalEpoch  = 0    (no await; query fires immediately, PASS 2 fixes)
+%%   AliceFinalEpoch = 1
+%%   BobFinalEpoch  = 1
 
 -module(play_befriend).
 
@@ -42,7 +44,9 @@ play_befriend(AliceFinalEpoch?, BobFinalEpoch?) :-
           AliceIn?, AliceOut, 0,
           gsg([], [], [], [], [], [])),
     gsg_agent # agent(bob, ir([], 51),
-          [query(q_epoch(alice), a_epoch(BobFinalEpoch?))],
+          [will(accept_offer(alice, RB?)), await(RB?),
+           query(q_epoch(alice), a_epoch(BobFinalEpoch?)),
+           shutdown],
           BobIn?, BobOut, 0,
           gsg([], [], [], [], [], [])),
     cva # network([net_end(alice, AliceOut?, AliceIn),

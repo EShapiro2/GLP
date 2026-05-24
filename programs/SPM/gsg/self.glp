@@ -390,12 +390,63 @@ take_pending_offer(Q, X, [Entry | Rest], [Entry? | Rest1?]) :-
 %% fire in practice -- callers gate on has_pending_offer in their guard.
 take_pending_offer(_, _, [], []).
 
-%% has_pending_offer(Q?, X?, Pending?, Constant): binds the result to
-%% 'true' if Pending contains a pending_offer(Q, X, _), 'false' otherwise.
-%% Used in firing-clause guards (combined with =?= true) to gate take.
+%% has_pending_offer(Q?, X?, Pending?, Constant): binds result to 'true' if
+%% Pending contains pending_offer(Q, X, _), else 'false'.  Body-call only --
+%% per typed-glp-manual §8.1, multi-clause procedures cannot appear in
+%% guards.  Useful for body dispatch via a 2-clause step procedure.
 exported procedure has_pending_offer(Agent?, Integer?, PendingList?, Constant).
 has_pending_offer(Q, X, [pending_offer(Q1, X1, _) | _], true) :-
     Q? =?= Q1?, X? =?= X1? | true.
 has_pending_offer(Q, X, [_ | Rest], B?) :-
     otherwise | has_pending_offer(Q?, X?, Rest?, B).
 has_pending_offer(_, _, [], false).
+
+%% =============================================================================
+%% PASS 2: combined try-take helpers for volitional Accept offer (paper §6.3).
+%%
+%% Each `try_take_X` does existence-check + extraction + reply-binding in a
+%% SINGLE recursion -- because the Vols/Inbox argument can only be read once
+%% per clause (SRSW for non-constant Stream types).  A `Matched` Constant
+%% (`true`/`false`) is returned so the caller's 2-clause step procedure can
+%% branch on whether the transaction can fire now.
+%% =============================================================================
+
+%% try_take_accept_offer_vol(P?, VolsIn?, VolsOut, Matched):
+%% If VolsIn contains `accept_offer(P, R)`, remove that entry, return VolsOut
+%% without it, bind R := ok via bind_ok, and bind Matched := true.  If not,
+%% return VolsIn structurally unchanged and bind Matched := false.
+exported procedure try_take_accept_offer_vol(Agent?, Stream(GsgVolition)?,
+                                              Stream(GsgVolition), Constant).
+
+%% Match: bind the entry's R to ok, drop entry.
+try_take_accept_offer_vol(P, [accept_offer(P1, R) | Rest], Rest?, true) :-
+    P? =?= P1? | bind_ok(R).
+
+%% No match this entry: keep, recurse.
+try_take_accept_offer_vol(P, [V | Rest], [V? | Rest1?], M?) :-
+    otherwise | try_take_accept_offer_vol(P?, Rest?, Rest1, M).
+
+%% Empty: no match found.
+try_take_accept_offer_vol(_, [], [], false).
+
+%% try_take_friend_request_from(P?, InboxIn?, InboxOut, Matched, X):
+%% If InboxIn contains msg(P, friend_request(X)), remove that entry, return
+%% InboxOut without it, bind X to the extracted epoch, and bind Matched :=
+%% true.  If not, return InboxIn structurally unchanged, Matched := false,
+%% X := 0 (a placeholder; caller branches on Matched and ignores X).
+exported procedure try_take_friend_request_from(Agent?,
+                                                  Stream(InMsg(GsgCargo))?,
+                                                  Stream(InMsg(GsgCargo)),
+                                                  Constant, Integer).
+
+%% Match: extract X, drop entry.
+try_take_friend_request_from(P, [msg(P1, friend_request(X)) | Rest],
+                             Rest?, true, X?) :-
+    P? =?= P1? | true.
+
+%% No match this entry: keep, recurse.
+try_take_friend_request_from(P, [Other | Rest], [Other? | Rest1?], M?, X?) :-
+    otherwise | try_take_friend_request_from(P?, Rest?, Rest1, M, X).
+
+%% Empty: no match found.
+try_take_friend_request_from(_, [], [], false, 0).

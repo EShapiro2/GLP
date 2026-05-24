@@ -94,6 +94,19 @@ agent(Id, IRec, [will(end_friendship(Q, R)) | UserIn], NetIn,
     agent(Id?, IRec?, UserIn?, NetIn?, NetOut1, Date?,
           gsg(Known?, Vols?, Inbox?, FMap1?, FoFMap?, Pending?)).
 
+%% Accept offer (paper §6.3, volitional): body-dispatch on whether Inbox
+%% already has a matching friend_request from P.  If yes: fire (bind R via
+%% bind_ok in the step's `true` branch).  If no: store accept_offer(P, R)
+%% in Vols; will fire later when the matching friend_request arrives via
+%% NetIn absorption.  R is the writer the person will see bound on
+%% completion (via subsequent `await(R?)`).
+agent(Id, IRec, [will(accept_offer(P, R)) | UserIn], NetIn, NetOut?, Date,
+      gsg(Known, Vols, Inbox, FMap, FoFMap, Pending)) :-
+    ground(P?), ground(Id?) |
+    try_take_friend_request_from(P?, Inbox?, Inbox1, Matched, X),
+    accept_offer_step(Matched?, Id?, IRec?, P?, R, X?, UserIn?, NetIn?,
+                      NetOut, Date?, Known?, Vols?, Inbox1?, FMap?, FoFMap?, Pending?).
+
 %% Tick (architecture §2.3): advance local date.
 agent(Id, IRec, [tick | UserIn], NetIn, NetOut?, Date, Platform) :-
     Date1 := Date? + 1 |
@@ -115,16 +128,17 @@ agent(Id, IRec, [_ | UserIn], NetIn, NetOut?, Date, Platform) :-
 %% NETIN ABSORPTION (reactive Phase 1; PASS 2 moves to Inbox absorb-then-fire)
 %% =============================================================================
 
-%% Friend request received (paper §6.3 Accept offer, reactive in PASS 1):
-%% set_epoch, activate (broadcast + snapshot), continue.
-%% PASS 2 will make this volitional (require accept_offer volition + msg).
-agent(Id, IRec, UserIn, [msg(P, friend_request(X)) | NetIn],
-      [msg(Id?, P?, accept(X?)) | NetOut1?], Date,
+%% Friend request received (paper §6.3 Accept offer, PASS 2 -- volitional):
+%% body-dispatch on whether Vols already has matching accept_offer(P, R).
+%% If yes: fire Accept offer (set_epoch, emit accept, broadcast, snapshot,
+%% bind R via bind_ok inside try_take_accept_offer_vol).  If no: stash msg
+%% in Inbox; will fire later when the person wills accept_offer(P, _).
+agent(Id, IRec, UserIn, [msg(P, friend_request(X)) | NetIn], NetOut?, Date,
       gsg(Known, Vols, Inbox, FMap, FoFMap, Pending)) :-
     ground(P?), ground(X?), ground(Id?) |
-    set_epoch(P?, X?, FMap?, FMap1),
-    activate(Id?, IRec?, P?, X?, UserIn?, NetIn?,
-             NetOut1, Date?, Known?, Vols?, Inbox?, FMap1?, FoFMap?, Pending?).
+    try_take_accept_offer_vol(P?, Vols?, Vols1, Matched),
+    friend_request_step(Matched?, Id?, IRec?, P?, X?, UserIn?, NetIn?,
+                        NetOut, Date?, Known?, Vols1?, Inbox?, FMap?, FoFMap?, Pending?).
 
 %% Accept received (paper §6.3 Integrate accept): set_epoch + broadcast +
 %% snapshot.  take_pending_offer binds the matching pending offer's Reply
@@ -189,3 +203,70 @@ activate(Id, IRec, P, X, UserIn, NetIn, NetOut?, Date,
     send_snapshot(Id?, P?, FMap?, NetOut1, NetOut2?),
     agent(Id?, IRec?, UserIn?, NetIn?, NetOut2, Date?,
           gsg(Known?, Vols?, Inbox?, FMap?, FoFMap?, Pending?)).
+
+%% =============================================================================
+%% PASS 2 step procedures: 2-clause dispatchers on Matched (true/false).
+%%
+%% friend_request_step: called from NetIn friend_request absorption.
+%%   true  -> fire Accept offer (volition already in Vols, bound by
+%%            try_take_accept_offer_vol; here we emit accept(X), set_epoch,
+%%            broadcast, snapshot).
+%%   false -> stash msg in Inbox; wait for person to will accept_offer.
+%% =============================================================================
+
+exported procedure friend_request_step(Constant?, Agent?, IdentityRecord?,
+                                         Agent?, Integer?,
+                                         Stream(UserEvent(GsgVolition, GsgQuery, GsgAnswer))?,
+                                         Stream(InMsg(GsgCargo))?,
+                                         Stream(NetMsg(GsgCargo)),
+                                         Integer?,
+                                         Stream(Agent)?, Stream(GsgVolition)?,
+                                         Stream(InMsg(GsgCargo))?,
+                                         FMap?, FoFMap?, PendingList?).
+
+friend_request_step(true, Id, IRec, P, X, UserIn, NetIn,
+                    [msg(Id?, P?, accept(X?)) | NetOut1?], Date,
+                    Known, Vols, Inbox, FMap, FoFMap, Pending) :-
+    ground(X?) |
+    set_epoch(P?, X?, FMap?, FMap1),
+    activate(Id?, IRec?, P?, X?, UserIn?, NetIn?,
+             NetOut1, Date?, Known?, Vols?, Inbox?, FMap1?, FoFMap?, Pending?).
+
+friend_request_step(false, Id, IRec, P, X, UserIn, NetIn, NetOut?, Date,
+                    Known, Vols, Inbox, FMap, FoFMap, Pending) :-
+    otherwise |
+    agent(Id?, IRec?, UserIn?, NetIn?, NetOut, Date?,
+          gsg(Known?, Vols?, [msg(P?, friend_request(X?)) | Inbox?],
+              FMap?, FoFMap?, Pending?)).
+
+%% accept_offer_step: called from will(accept_offer) absorption.
+%%   true  -> fire (R bound here via bind_ok; X is the extracted epoch from
+%%            the matched friend_request).
+%%   false -> store volition; wait for friend_request to arrive via NetIn.
+%% =============================================================================
+
+exported procedure accept_offer_step(Constant?, Agent?, IdentityRecord?,
+                                       Agent?, Constant, Integer?,
+                                       Stream(UserEvent(GsgVolition, GsgQuery, GsgAnswer))?,
+                                       Stream(InMsg(GsgCargo))?,
+                                       Stream(NetMsg(GsgCargo)),
+                                       Integer?,
+                                       Stream(Agent)?, Stream(GsgVolition)?,
+                                       Stream(InMsg(GsgCargo))?,
+                                       FMap?, FoFMap?, PendingList?).
+
+accept_offer_step(true, Id, IRec, P, R?, X, UserIn, NetIn,
+                  [msg(Id?, P?, accept(X?)) | NetOut1?], Date,
+                  Known, Vols, Inbox, FMap, FoFMap, Pending) :-
+    ground(X?) |
+    set_epoch(P?, X?, FMap?, FMap1),
+    bind_ok(R),
+    activate(Id?, IRec?, P?, X?, UserIn?, NetIn?,
+             NetOut1, Date?, Known?, Vols?, Inbox?, FMap1?, FoFMap?, Pending?).
+
+accept_offer_step(false, Id, IRec, P, R?, _, UserIn, NetIn, NetOut?, Date,
+                  Known, Vols, Inbox, FMap, FoFMap, Pending) :-
+    otherwise |
+    agent(Id?, IRec?, UserIn?, NetIn?, NetOut, Date?,
+          gsg(Known?, [accept_offer(P?, R?) | Vols?], Inbox?,
+              FMap?, FoFMap?, Pending?)).
