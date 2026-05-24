@@ -124,18 +124,20 @@ child_agent(Id, ParentId, [msg('_user', Id1, leave_group(GroupId))|UserIn], NetI
 %% Child initiates unfriend
 child_agent(Id, ParentId, [msg('_user', Id1, unfriend_child(Target))|UserIn], NetIn, Outs, FMap, FoFMap) :-
     Id? =?= Id1?, ground(Target?) |
+    bump_epoch(Target?, FMap?, FMap1, _),
     lookup_send(friend(Target?), msg(Id?, Target?, unfriend), Outs?, Outs1),
     close_output(friend(Target?), Outs1?, Outs2),
     lookup_send('_user', msg(agent, '_user', unfriended(Target?)), Outs2?, Outs3),
-    child_agent(Id?, ParentId?, UserIn?, NetIn?, Outs3?, FMap?, FoFMap?).
+    child_agent(Id?, ParentId?, UserIn?, NetIn?, Outs3?, FMap1?, FoFMap?).
 
 %% --- Injected intro results ---
 
 %% Intro result: peer acked — idempotent befriend commit with smaller-name tie-break.
 child_agent(Id, ParentId, [intro_result(Other, Ch)|UserIn], NetIn, Outs, FMap, FoFMap) :-
     ground(Id?), ground(Other?) |
+    bump_epoch(Other?, FMap?, FMap1, _),
     befriend_commit(Id?, Other?, Ch?, Outs?, Outs1, NetIn?, NetIn1),
-    child_agent(Id?, ParentId?, UserIn?, NetIn1?, Outs1?, FMap?, FoFMap?).
+    child_agent(Id?, ParentId?, UserIn?, NetIn1?, Outs1?, FMap1?, FoFMap?).
 
 %% Intro result: peer nacked — notify rejected
 child_agent(Id, ParentId, [intro_rejected(Other)|UserIn], NetIn, Outs, FMap, FoFMap) :-
@@ -185,10 +187,11 @@ child_agent(Id, ParentId, UserIn, [msg(From, Id1, leave_group(GroupId))|NetIn], 
 %% Parent tells child to unfriend
 child_agent(Id, ParentId, UserIn, [msg(From, Id1, unfriend_child(Target))|NetIn], Outs, FMap, FoFMap) :-
     Id? =?= Id1?, From? =?= ParentId?, ground(Target?) |
+    bump_epoch(Target?, FMap?, FMap1, _),
     lookup_send(friend(Target?), msg(Id?, Target?, unfriend), Outs?, Outs1),
     close_output(friend(Target?), Outs1?, Outs2),
     lookup_send('_user', msg(agent, '_user', unfriended(Target?)), Outs2?, Outs3),
-    child_agent(Id?, ParentId?, UserIn?, NetIn?, Outs3?, FMap?, FoFMap?).
+    child_agent(Id?, ParentId?, UserIn?, NetIn?, Outs3?, FMap1?, FoFMap?).
 
 %% --- Network messages from friends (otherwise) ---
 
@@ -229,12 +232,13 @@ child_agent(Id, ParentId, UserIn, [msg(Member, _, group_leave(GroupId, Member1))
     close_output(group_member(GroupId?, Member?), Outs?, Outs1),
     child_agent(Id?, ParentId?, UserIn?, NetIn?, Outs1?, FMap?, FoFMap?).
 
-%% Receive unfriend from friend — close friend channel, notify UI
+%% Receive unfriend from friend — bump epoch, close friend channel, notify UI
 child_agent(Id, ParentId, UserIn, [msg(From, Id1, unfriend)|NetIn], Outs, FMap, FoFMap) :-
     Id? =?= Id1?, ground(From?) |
+    bump_epoch(From?, FMap?, FMap1, _),
     close_output(friend(From?), Outs?, Outs1),
     lookup_send('_user', msg(agent, '_user', unfriended(From?)), Outs1?, Outs2),
-    child_agent(Id?, ParentId?, UserIn?, NetIn?, Outs2?, FMap?, FoFMap?).
+    child_agent(Id?, ParentId?, UserIn?, NetIn?, Outs2?, FMap1?, FoFMap?).
 
 %% --- Termination ---
 
