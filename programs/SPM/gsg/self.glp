@@ -450,3 +450,46 @@ try_take_friend_request_from(P, [Other | Rest], [Other? | Rest1?], M?, X?) :-
 
 %% Empty: no match found.
 try_take_friend_request_from(_, [], [], false, 0).
+
+%% =============================================================================
+%% PASS 3: classify a Pending lookup for incoming friend_request (paper §6.3
+%% Resolve simultaneous offer).
+%%
+%% PendingMatch enum:
+%%   pm_resolve -- Pending had pending_offer(P, _, R_own) AND Self @> P:
+%%                 the larger-name side fires Resolve.  R_own is bound to ok
+%%                 inside classify_pending (Resolve discharges Self's own
+%%                 offer volition since the friendship is now established).
+%%                 PendingOut has the entry removed.
+%%   pm_ignore  -- Pending had pending_offer(P, _, _) but Self @< P:
+%%                 the smaller-name side is silent; the larger-name side's
+%%                 Resolve will emit accept which Self's Integrate accept
+%%                 will absorb later (binding R_own then).  PendingOut is
+%%                 unchanged.
+%%   pm_none    -- No matching pending_offer; caller falls through to the
+%%                 PASS 2 Accept offer / stash logic.  PendingOut unchanged.
+%% =============================================================================
+
+PendingMatch ::= pm_resolve ; pm_ignore ; pm_none.
+
+exported procedure classify_pending(Agent?, Agent?, PendingList?,
+                                     PendingList, PendingMatch).
+
+%% Match P, P @< Self (i.e. Self has the larger name): Resolve case,
+%% extract entry, bind R.  GLP defines `@<` but not `@>`, so we write
+%% `P @< Self` instead of the paper's `Self > P`.
+classify_pending(Self, P, [pending_offer(P1, _, R) | Rest], Rest?, pm_resolve) :-
+    P? =?= P1?, P? @< Self? | bind_ok(R).
+
+%% Match P, Self @< P (smaller-name side): ignore case, keep entry, don't
+%% bind R (Integrate accept will do so when the other side's accept arrives).
+classify_pending(Self, P, [pending_offer(P1, X, R) | Rest],
+                 [pending_offer(P1?, X?, R?) | Rest?], pm_ignore) :-
+    P? =?= P1?, Self? @< P? | true.
+
+%% No match at this entry: keep, recurse.
+classify_pending(Self, P, [Entry | Rest], [Entry? | Rest1?], M?) :-
+    otherwise | classify_pending(Self?, P?, Rest?, Rest1, M).
+
+%% Empty: no matching pending_offer; caller falls through to Accept offer.
+classify_pending(_, _, [], [], pm_none).

@@ -1,0 +1,58 @@
+%% gsg/plays/play_befriend_simultaneous.glp -- simultaneous-offer handshake
+%% (paper §6.3 Resolve simultaneous offer).
+%%
+%% Both alice and bob will discover each other and offer_friendship at
+%% the same logical time.  Neither wills accept_offer.  Outcome:
+%%
+%% - alice (smaller name): offer_friendship(bob) emits friend_request(1)
+%%   and installs pending_offer(bob, 1, RA).  Bob's incoming friend_request
+%%   arrives; classify_pending finds matching pending_offer (alice @< bob),
+%%   returns pm_ignore -- msg dropped, RA stays pending.
+%% - bob (larger name): offer_friendship(alice) emits friend_request(1)
+%%   and installs pending_offer(alice, 1, RB).  Alice's incoming
+%%   friend_request arrives; classify_pending finds matching pending_offer
+%%   (bob @> alice), returns pm_resolve -- entry extracted, RB bound via
+%%   bind_ok.  friend_request_dispatch(pm_resolve, ...) emits accept(1)
+%%   to alice, sets FMap_bob[alice]:=1, broadcasts.
+%% - Bob's accept(1) reaches alice.  Integrate accept fires:
+%%   take_pending_offer(bob, 1, ...) binds RA, set FMap_alice[bob]:=1.
+%%
+%% Expected at quiescence:
+%%   alice's FMap has fme(bob, 1)
+%%   bob's FMap has fme(alice, 1)
+%%   AliceFinalEpoch = 1
+%%   BobFinalEpoch  = 1
+
+-module(play_befriend_simultaneous).
+
+imported procedure gsg_agent # agent(Agent?, IdentityRecord?,
+                                      Stream(UserEvent(GsgVolition, GsgQuery, GsgAnswer))?,
+                                      Stream(InMsg(GsgCargo))?,
+                                      Stream(NetMsg(GsgCargo)),
+                                      Integer?,
+                                      GsgPlatform?).
+
+imported procedure cva # network(NetEndList(GsgCargo)?).
+
+NetEnd(C) ::= net_end(Agent, Stream(NetMsg(C)), Stream(InMsg(C))?).
+NetEndList(C) ::= [] ; [NetEnd(C) | NetEndList(C)].
+
+exported procedure play_befriend_simultaneous(Integer, Integer).
+
+play_befriend_simultaneous(AliceFinalEpoch?, BobFinalEpoch?) :-
+    gsg_agent # agent(alice, ir([], 51),
+          [will(discover(bob, RA1?)), await(RA1?),
+           will(offer_friendship(bob, RA2?)), await(RA2?),
+           query(q_epoch(bob), a_epoch(AliceFinalEpoch?)),
+           shutdown],
+          AliceIn?, AliceOut, 0,
+          gsg([], [], [], [], [], [])),
+    gsg_agent # agent(bob, ir([], 51),
+          [will(discover(alice, RB1?)), await(RB1?),
+           will(offer_friendship(alice, RB2?)), await(RB2?),
+           query(q_epoch(alice), a_epoch(BobFinalEpoch?)),
+           shutdown],
+          BobIn?, BobOut, 0,
+          gsg([], [], [], [], [], [])),
+    cva # network([net_end(alice, AliceOut?, AliceIn),
+                   net_end(bob,   BobOut?,   BobIn)]).

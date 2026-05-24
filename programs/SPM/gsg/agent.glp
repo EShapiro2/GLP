@@ -128,17 +128,19 @@ agent(Id, IRec, [_ | UserIn], NetIn, NetOut?, Date, Platform) :-
 %% NETIN ABSORPTION (reactive Phase 1; PASS 2 moves to Inbox absorb-then-fire)
 %% =============================================================================
 
-%% Friend request received (paper §6.3 Accept offer, PASS 2 -- volitional):
-%% body-dispatch on whether Vols already has matching accept_offer(P, R).
-%% If yes: fire Accept offer (set_epoch, emit accept, broadcast, snapshot,
-%% bind R via bind_ok inside try_take_accept_offer_vol).  If no: stash msg
-%% in Inbox; will fire later when the person wills accept_offer(P, _).
+%% Friend request received (paper §6.3, PASS 3 -- three-way dispatch):
+%%   pm_resolve: Resolve simultaneous offer fires (Self is larger name; own
+%%               pending_offer was extracted + R bound by classify_pending).
+%%   pm_ignore : Smaller name; drop msg silently (other side's Resolve will
+%%               emit accept which Integrate accept absorbs later).
+%%   pm_none   : Fall through to PASS 2 Accept offer / stash logic.
 agent(Id, IRec, UserIn, [msg(P, friend_request(X)) | NetIn], NetOut?, Date,
       gsg(Known, Vols, Inbox, FMap, FoFMap, Pending)) :-
     ground(P?), ground(X?), ground(Id?) |
-    try_take_accept_offer_vol(P?, Vols?, Vols1, Matched),
-    friend_request_step(Matched?, Id?, IRec?, P?, X?, UserIn?, NetIn?,
-                        NetOut, Date?, Known?, Vols1?, Inbox?, FMap?, FoFMap?, Pending?).
+    classify_pending(Id?, P?, Pending?, Pending1, PendingMatch),
+    friend_request_dispatch(PendingMatch?, Id?, IRec?, P?, X?, UserIn?, NetIn?,
+                            NetOut, Date?, Known?, Vols?, Inbox?,
+                            FMap?, FoFMap?, Pending1?).
 
 %% Accept received (paper §6.3 Integrate accept): set_epoch + broadcast +
 %% snapshot.  take_pending_offer binds the matching pending offer's Reply
@@ -270,3 +272,47 @@ accept_offer_step(false, Id, IRec, P, R?, _, UserIn, NetIn, NetOut?, Date,
     agent(Id?, IRec?, UserIn?, NetIn?, NetOut, Date?,
           gsg(Known?, [accept_offer(P?, R?) | Vols?], Inbox?,
               FMap?, FoFMap?, Pending?)).
+
+%% =============================================================================
+%% PASS 3 dispatch on PendingMatch (Resolve simultaneous offer, paper §6.3).
+%% =============================================================================
+
+exported procedure friend_request_dispatch(PendingMatch?, Agent?,
+                                             IdentityRecord?, Agent?, Integer?,
+                                             Stream(UserEvent(GsgVolition, GsgQuery, GsgAnswer))?,
+                                             Stream(InMsg(GsgCargo))?,
+                                             Stream(NetMsg(GsgCargo)),
+                                             Integer?,
+                                             Stream(Agent)?, Stream(GsgVolition)?,
+                                             Stream(InMsg(GsgCargo))?,
+                                             FMap?, FoFMap?, PendingList?).
+
+%% pm_resolve: fire Resolve simultaneous offer.  Self has the larger name;
+%% classify_pending already extracted Self's pending_offer to P and bound
+%% its R.  Also try to discharge any accept_offer volition for P that the
+%% person may have willed (the friendship is now established, so the
+%% volition is satisfied -- avoids stranded `await(R?)` on it).
+friend_request_dispatch(pm_resolve, Id, IRec, P, X, UserIn, NetIn,
+                        [msg(Id?, P?, accept(X?)) | NetOut1?], Date,
+                        Known, Vols, Inbox, FMap, FoFMap, Pending) :-
+    ground(X?) |
+    try_take_accept_offer_vol(P?, Vols?, Vols1, _),
+    set_epoch(P?, X?, FMap?, FMap1),
+    activate(Id?, IRec?, P?, X?, UserIn?, NetIn?,
+             NetOut1, Date?, Known?, Vols1?, Inbox?, FMap1?, FoFMap?, Pending?).
+
+%% pm_ignore: smaller-name side; drop the msg.  R_own stays in Pending;
+%% Integrate accept will bind it when the larger-name side's accept arrives.
+friend_request_dispatch(pm_ignore, Id, IRec, P, _, UserIn, NetIn, NetOut?, Date,
+                        Known, Vols, Inbox, FMap, FoFMap, Pending) :-
+    ground(P?) |
+    agent(Id?, IRec?, UserIn?, NetIn?, NetOut, Date?,
+          gsg(Known?, Vols?, Inbox?, FMap?, FoFMap?, Pending?)).
+
+%% pm_none: fall through to PASS 2 Accept offer logic.
+friend_request_dispatch(pm_none, Id, IRec, P, X, UserIn, NetIn, NetOut?, Date,
+                        Known, Vols, Inbox, FMap, FoFMap, Pending) :-
+    otherwise |
+    try_take_accept_offer_vol(P?, Vols?, Vols1, Matched),
+    friend_request_step(Matched?, Id?, IRec?, P?, X?, UserIn?, NetIn?,
+                        NetOut, Date?, Known?, Vols1?, Inbox?, FMap?, FoFMap?, Pending?).
