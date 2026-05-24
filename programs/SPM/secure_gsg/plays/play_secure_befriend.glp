@@ -1,0 +1,44 @@
+%% secure_gsg/plays/play_secure_befriend.glp -- IR-transporting Befriend
+%% (paper §8.2 Befriend extension).
+%%
+%% Alice IR: ir([cust_a1, cust_a2], 67).  Bob IR: ir([cust_b1, cust_b2], 67).
+%% After successful befriend:
+%%   alice's SecureFMap has full(bob, 1, [cust_b1, cust_b2], 67)
+%%   bob's   SecureFMap has full(alice, 1, [cust_a1, cust_a2], 67)
+%%
+%% Queries observe epochs (1 on both sides).  The IR storage is verified
+%% by trace inspection: look for `set_full_entry(bob, 1, [cust_b1, cust_b2],
+%% 67, ...)` at alice and the symmetric at bob.
+
+-module(play_secure_befriend).
+
+imported procedure secure_gsg_agent # agent(Agent?, IdentityRecord?,
+                                             Stream(UserEvent(SecureGsgVolition, SecureGsgQuery, SecureGsgAnswer))?,
+                                             Stream(InMsg(SecureGsgCargo))?,
+                                             Stream(NetMsg(SecureGsgCargo)),
+                                             Integer?,
+                                             SecureGsgPlatform?).
+
+imported procedure cva # network(NetEndList(SecureGsgCargo)?).
+
+NetEnd(C) ::= net_end(Agent, Stream(NetMsg(C)), Stream(InMsg(C))?).
+NetEndList(C) ::= [] ; [NetEnd(C) | NetEndList(C)].
+
+exported procedure play_secure_befriend(Integer, Integer).
+
+play_secure_befriend(AliceFinalEpoch?, BobFinalEpoch?) :-
+    secure_gsg_agent # agent(alice, ir([cust_a1, cust_a2], 67),
+          [will(discover(bob, R0a?)), await(R0a?),
+           will(offer_friendship(bob, RA?)), await(RA?),
+           query(q_epoch(bob), a_epoch(AliceFinalEpoch?)),
+           shutdown],
+          AliceIn?, AliceOut, 0,
+          secure_gsg([], [], [], [], [], [], 0)),
+    secure_gsg_agent # agent(bob, ir([cust_b1, cust_b2], 67),
+          [will(accept_offer(alice, RB?)), await(RB?),
+           query(q_epoch(alice), a_epoch(BobFinalEpoch?)),
+           shutdown],
+          BobIn?, BobOut, 0,
+          secure_gsg([], [], [], [], [], [], 0)),
+    cva # network([net_end(alice, AliceOut?, AliceIn),
+                   net_end(bob,   BobOut?,   BobIn)]).

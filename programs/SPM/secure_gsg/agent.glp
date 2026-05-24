@@ -1,0 +1,258 @@
+%% secure_gsg/agent.glp -- Secure GSG agent process.
+%%
+%% PASS A scope: IR-transporting Befriend (paper §8.2 Befriend extension).
+%%   - friend_request carries sender's IR; accept carries acceptor's IR.
+%%   - FMap stores `full(Q, E, K, σ)` entries for befriended peers.
+%%   - Three PASSes from gsg/agent.glp carried over:
+%%       PASS 1: pending_offer + Integrate accept reply-binding.
+%%       PASS 2: volitional accept_offer with Inbox.
+%%       PASS 3: classify_pending + Resolve simultaneous offer.
+%%
+%% Deferred to later PASSes:
+%%   - Periodic re-broadcast / Integrate checkpoint (paper §8.5).
+%%   - Replace cascade (paper §8.7).
+%%   - End friendship / Integrate unfriend on secure FMap.
+%%   - Vouch / Announce new identity / Integrate new identity / Integrate rebind.
+%%   - Stub promotion via Integrate checkpoint (spec-issue O).
+
+-module(secure_gsg_agent).
+
+%% =============================================================================
+%% AGENT (paper §5 + §8: CVA agent process with identity record)
+%% =============================================================================
+
+exported procedure agent(Agent?, IdentityRecord?,
+                          Stream(UserEvent(SecureGsgVolition, SecureGsgQuery, SecureGsgAnswer))?,
+                          Stream(InMsg(SecureGsgCargo))?,
+                          Stream(NetMsg(SecureGsgCargo)),
+                          Integer?,
+                          SecureGsgPlatform?).
+
+%% Termination.
+agent(_, _, [], [], [], _, _).
+
+%% Shutdown.
+agent(_, _, [shutdown | _], _, [], _, _).
+
+%% =============================================================================
+%% USERIN ABSORPTION
+%% =============================================================================
+
+%% await(R): suspend UserIn until R is bound.
+agent(Id, IRec, [await(R) | UserIn], NetIn, NetOut?, Date, Platform) :-
+    ground(R?) |
+    agent(Id?, IRec?, UserIn?, NetIn?, NetOut, Date?, Platform?).
+
+%% Discover (paper §5.2): add Q to Known, bind Reply.
+agent(Id, IRec, [will(discover(Q, R)) | UserIn], NetIn, NetOut?, Date,
+      secure_gsg(Known, Vols, Inbox, FMap, FoFMap, Pending, LBD)) :-
+    ground(Q?) |
+    add_known(Q?, Known?, Known1),
+    bind_ok(R),
+    agent(Id?, IRec?, UserIn?, NetIn?, NetOut, Date?,
+          secure_gsg(Known1?, Vols?, Inbox?, FMap?, FoFMap?, Pending?, LBD?)).
+
+%% Offer friendship (paper §8.2 Offer friendship + §6.3): emit
+%% friend_request(X, IRec_self).  IRec passed as a whole into the cargo;
+%% `ground(IRec?)` enables multi-reader use (§3.3 relaxation) across the
+%% output message and the recursive agent call.
+agent(Id, IRec, [will(offer_friendship(Q, R)) | UserIn], NetIn,
+      [msg(Id?, Q?, friend_request(X?, IRec?)) | NetOut1?], Date,
+      secure_gsg(Known, Vols, Inbox, FMap, FoFMap, Pending, LBD)) :-
+    ground(Q?), ground(Id?), ground(FMap?), ground(IRec?) |
+    secure_epoch_of(Q?, FMap?, E),
+    X := E? + 1,
+    agent(Id?, IRec?, UserIn?, NetIn?, NetOut1, Date?,
+          secure_gsg(Known?, Vols?, Inbox?, FMap?, FoFMap?,
+                     [pending_offer(Q?, X?, R?) | Pending?], LBD?)).
+
+%% Accept offer (paper §8.2 Accept offer + §6.3, volitional): body-dispatch
+%% on whether matching friend_request is already in Inbox.
+agent(Id, IRec, [will(accept_offer(P, R)) | UserIn], NetIn, NetOut?, Date,
+      secure_gsg(Known, Vols, Inbox, FMap, FoFMap, Pending, LBD)) :-
+    ground(P?), ground(Id?) |
+    try_take_friend_request_from(P?, Inbox?, Inbox1, Matched, X, K, S),
+    accept_offer_step(Matched?, Id?, IRec?, P?, R, X?, K?, S?,
+                      UserIn?, NetIn?, NetOut, Date?, Known?, Vols?,
+                      Inbox1?, FMap?, FoFMap?, Pending?, LBD?).
+
+%% Tick (architecture §2.3): advance local date.
+agent(Id, IRec, [tick | UserIn], NetIn, NetOut?, Date, Platform) :-
+    Date1 := Date? + 1 |
+    agent(Id?, IRec?, UserIn?, NetIn?, NetOut, Date1?, Platform?).
+
+%% Query: q_epoch(Q) -- answer with secure_epoch_of(Q).
+agent(Id, IRec, [query(q_epoch(Q), a_epoch(E)) | UserIn], NetIn, NetOut?, Date,
+      secure_gsg(Known, Vols, Inbox, FMap, FoFMap, Pending, LBD)) :-
+    ground(Q?), ground(FMap?) |
+    secure_epoch_of(Q?, FMap?, E),
+    agent(Id?, IRec?, UserIn?, NetIn?, NetOut, Date?,
+          secure_gsg(Known?, Vols?, Inbox?, FMap?, FoFMap?, Pending?, LBD?)).
+
+%% Catch-all for unmatched UserIn events.
+agent(Id, IRec, [_ | UserIn], NetIn, NetOut?, Date, Platform) :-
+    otherwise | agent(Id?, IRec?, UserIn?, NetIn?, NetOut, Date?, Platform?).
+
+%% =============================================================================
+%% NETIN ABSORPTION
+%% =============================================================================
+
+%% Friend request received (paper §8.2 + §6.3, PASS 3 dispatch): 3-way on
+%% Pending, then fall through to PASS 2 logic for pm_none.
+agent(Id, IRec, UserIn, [msg(P, friend_request(X, ir(K, S))) | NetIn],
+      NetOut?, Date,
+      secure_gsg(Known, Vols, Inbox, FMap, FoFMap, Pending, LBD)) :-
+    ground(P?), ground(X?), ground(Id?) |
+    classify_pending(Id?, P?, Pending?, Pending1, PendingMatch),
+    friend_request_dispatch(PendingMatch?, Id?, IRec?, P?, X?, K?, S?,
+                            UserIn?, NetIn?, NetOut, Date?, Known?, Vols?,
+                            Inbox?, FMap?, FoFMap?, Pending1?, LBD?).
+
+%% Accept received (paper §8.2 Integrate accept + §6.3): install full entry
+%% with carried IR, bind matching pending_offer via take_pending_offer,
+%% broadcast + snapshot.
+agent(Id, IRec, UserIn, [msg(P, accept(X, ir(K, S))) | NetIn], NetOut?, Date,
+      secure_gsg(Known, Vols, Inbox, FMap, FoFMap, Pending, LBD)) :-
+    ground(P?), ground(X?), ground(Id?), ground(K?), ground(S?) |
+    take_pending_offer(P?, X?, Pending?, Pending1),
+    set_full_entry(P?, X?, K?, S?, FMap?, FMap1),
+    activate(Id?, IRec?, P?, X?, UserIn?, NetIn?,
+             NetOut, Date?, Known?, Vols?, Inbox?, FMap1?, FoFMap?, Pending1?, LBD?).
+
+%% Stream update received (paper §6.5): FoFMap update.
+agent(Id, IRec, UserIn, [msg(P, stream_update(F, X)) | NetIn], NetOut?, Date,
+      secure_gsg(Known, Vols, Inbox, FMap, FoFMap, Pending, LBD)) :-
+    ground(P?), ground(F?), ground(X?) |
+    set_fof_epoch(P?, F?, X?, FoFMap?, FoFMap1),
+    set_fof_epoch(F?, P?, X?, FoFMap1?, FoFMap2),
+    agent(Id?, IRec?, UserIn?, NetIn?, NetOut, Date?,
+          secure_gsg(Known?, Vols?, Inbox?, FMap?, FoFMap2?, Pending?, LBD?)).
+
+%% Catch-all for unmatched NetIn messages.
+agent(Id, IRec, UserIn, [_ | NetIn], NetOut?, Date, Platform) :-
+    otherwise | agent(Id?, IRec?, UserIn?, NetIn?, NetOut, Date?, Platform?).
+
+%% =============================================================================
+%% ACTIVATE: Befriend activation -- broadcast + snapshot, then recurse.
+%% =============================================================================
+
+exported procedure activate(Agent?, IdentityRecord?, Agent?, Integer?,
+                             Stream(UserEvent(SecureGsgVolition, SecureGsgQuery, SecureGsgAnswer))?,
+                             Stream(InMsg(SecureGsgCargo))?,
+                             Stream(NetMsg(SecureGsgCargo)),
+                             Integer?,
+                             Stream(Agent)?, Stream(SecureGsgVolition)?,
+                             Stream(InMsg(SecureGsgCargo))?,
+                             SecureFMap?, FoFMap?, PendingList?, Integer?).
+
+activate(Id, IRec, P, X, UserIn, NetIn, NetOut?, Date,
+         Known, Vols, Inbox, FMap, FoFMap, Pending, LBD) :-
+    ground(FMap?) |
+    secure_broadcast_update(Id?, P?, X?, FMap?, NetOut, NetOut1?),
+    secure_send_snapshot(Id?, P?, FMap?, NetOut1, NetOut2?),
+    agent(Id?, IRec?, UserIn?, NetIn?, NetOut2, Date?,
+          secure_gsg(Known?, Vols?, Inbox?, FMap?, FoFMap?, Pending?, LBD?)).
+
+%% =============================================================================
+%% STEP procedures: dispatch on the Matched / PendingMatch result.
+%% =============================================================================
+
+%% friend_request_step: for pm_none case (no pending), dispatch on whether
+%% Vols had matching accept_offer.
+exported procedure friend_request_step(Constant?, Agent?, IdentityRecord?,
+                                         Agent?, Integer?,
+                                         Stream(Agent)?, Integer?,
+                                         Stream(UserEvent(SecureGsgVolition, SecureGsgQuery, SecureGsgAnswer))?,
+                                         Stream(InMsg(SecureGsgCargo))?,
+                                         Stream(NetMsg(SecureGsgCargo)),
+                                         Integer?,
+                                         Stream(Agent)?, Stream(SecureGsgVolition)?,
+                                         Stream(InMsg(SecureGsgCargo))?,
+                                         SecureFMap?, FoFMap?, PendingList?, Integer?).
+
+%% accept_offer volition present: fire Accept offer (install full entry,
+%% emit accept(X, IR_self), broadcast, snapshot).
+friend_request_step(true, Id, IRec, P, X, K, S, UserIn, NetIn,
+                    [msg(Id?, P?, accept(X?, IRec?)) | NetOut1?], Date,
+                    Known, Vols, Inbox, FMap, FoFMap, Pending, LBD) :-
+    ground(X?), ground(IRec?) |
+    set_full_entry(P?, X?, K?, S?, FMap?, FMap1),
+    activate(Id?, IRec?, P?, X?, UserIn?, NetIn?,
+             NetOut1, Date?, Known?, Vols?, Inbox?, FMap1?, FoFMap?, Pending?, LBD?).
+
+%% No matching volition: stash friend_request msg in Inbox.
+friend_request_step(false, Id, IRec, P, X, K, S, UserIn, NetIn, NetOut?, Date,
+                    Known, Vols, Inbox, FMap, FoFMap, Pending, LBD) :-
+    otherwise |
+    agent(Id?, IRec?, UserIn?, NetIn?, NetOut, Date?,
+          secure_gsg(Known?, Vols?,
+                     [msg(P?, friend_request(X?, ir(K?, S?))) | Inbox?],
+                     FMap?, FoFMap?, Pending?, LBD?)).
+
+%% accept_offer_step: dispatched from will(accept_offer) absorption.
+exported procedure accept_offer_step(Constant?, Agent?, IdentityRecord?,
+                                       Agent?, Constant, Integer?,
+                                       Stream(Agent)?, Integer?,
+                                       Stream(UserEvent(SecureGsgVolition, SecureGsgQuery, SecureGsgAnswer))?,
+                                       Stream(InMsg(SecureGsgCargo))?,
+                                       Stream(NetMsg(SecureGsgCargo)),
+                                       Integer?,
+                                       Stream(Agent)?, Stream(SecureGsgVolition)?,
+                                       Stream(InMsg(SecureGsgCargo))?,
+                                       SecureFMap?, FoFMap?, PendingList?, Integer?).
+
+%% Match found: fire (install full entry, emit accept(X, IR_self), bind R).
+accept_offer_step(true, Id, IRec, P, R?, X, K, S, UserIn, NetIn,
+                  [msg(Id?, P?, accept(X?, IRec?)) | NetOut1?], Date,
+                  Known, Vols, Inbox, FMap, FoFMap, Pending, LBD) :-
+    ground(X?), ground(IRec?) |
+    set_full_entry(P?, X?, K?, S?, FMap?, FMap1),
+    bind_ok(R),
+    activate(Id?, IRec?, P?, X?, UserIn?, NetIn?,
+             NetOut1, Date?, Known?, Vols?, Inbox?, FMap1?, FoFMap?, Pending?, LBD?).
+
+%% No match: store accept_offer volition in Vols.
+accept_offer_step(false, Id, IRec, P, R?, _, _, _, UserIn, NetIn, NetOut?, Date,
+                  Known, Vols, Inbox, FMap, FoFMap, Pending, LBD) :-
+    otherwise |
+    agent(Id?, IRec?, UserIn?, NetIn?, NetOut, Date?,
+          secure_gsg(Known?, [accept_offer(P?, R?) | Vols?],
+                     Inbox?, FMap?, FoFMap?, Pending?, LBD?)).
+
+%% friend_request_dispatch: PASS 3 dispatch on classify_pending result.
+exported procedure friend_request_dispatch(PendingMatch?, Agent?,
+                                             IdentityRecord?, Agent?, Integer?,
+                                             Stream(Agent)?, Integer?,
+                                             Stream(UserEvent(SecureGsgVolition, SecureGsgQuery, SecureGsgAnswer))?,
+                                             Stream(InMsg(SecureGsgCargo))?,
+                                             Stream(NetMsg(SecureGsgCargo)),
+                                             Integer?,
+                                             Stream(Agent)?, Stream(SecureGsgVolition)?,
+                                             Stream(InMsg(SecureGsgCargo))?,
+                                             SecureFMap?, FoFMap?, PendingList?, Integer?).
+
+%% pm_resolve: fire Resolve simultaneous offer.
+friend_request_dispatch(pm_resolve, Id, IRec, P, X, K, S, UserIn, NetIn,
+                        [msg(Id?, P?, accept(X?, IRec?)) | NetOut1?], Date,
+                        Known, Vols, Inbox, FMap, FoFMap, Pending, LBD) :-
+    ground(X?), ground(IRec?) |
+    try_take_accept_offer_vol(P?, Vols?, Vols1, _),
+    set_full_entry(P?, X?, K?, S?, FMap?, FMap1),
+    activate(Id?, IRec?, P?, X?, UserIn?, NetIn?,
+             NetOut1, Date?, Known?, Vols1?, Inbox?, FMap1?, FoFMap?, Pending?, LBD?).
+
+%% pm_ignore: smaller-name side, drop msg.
+friend_request_dispatch(pm_ignore, Id, IRec, P, _, _, _, UserIn, NetIn, NetOut?, Date,
+                        Known, Vols, Inbox, FMap, FoFMap, Pending, LBD) :-
+    ground(P?) |
+    agent(Id?, IRec?, UserIn?, NetIn?, NetOut, Date?,
+          secure_gsg(Known?, Vols?, Inbox?, FMap?, FoFMap?, Pending?, LBD?)).
+
+%% pm_none: fall through to friend_request_step (PASS 2 Accept offer logic).
+friend_request_dispatch(pm_none, Id, IRec, P, X, K, S, UserIn, NetIn, NetOut?, Date,
+                        Known, Vols, Inbox, FMap, FoFMap, Pending, LBD) :-
+    otherwise |
+    try_take_accept_offer_vol(P?, Vols?, Vols1, Matched),
+    friend_request_step(Matched?, Id?, IRec?, P?, X?, K?, S?, UserIn?, NetIn?,
+                        NetOut, Date?, Known?, Vols1?, Inbox?, FMap?, FoFMap?,
+                        Pending?, LBD?).

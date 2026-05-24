@@ -25,7 +25,10 @@ Agent ::= Constant.
 
 NetMsg(C) ::= msg(Agent, Agent, C).
 InMsg(C) ::= msg(Agent, C).
-UserEvent(V, Q, A) ::= will(V) ; unwill(V) ; tick ; crash ; shutdown ; query(Q, A).
+%% UserEvent extended with `await(Constant)` synchroniser (architecture
+%% §3.3 reply-variable sync); same pattern as gsg/self.glp.
+UserEvent(V, Q, A) ::= will(V) ; unwill(V) ; tick ; crash ; shutdown
+                     ; query(Q, A) ; await(Constant).
 IdentityRecord ::= ir(Stream(Agent), Integer).
                 %%   ^K (custodian set) ^σ (supermajority %, 51..100)
 
@@ -59,12 +62,14 @@ SecureGsgCargo ::= friend_request(Integer, IdentityRecord)        %% paper §8.2
 %% PERSON VOLITIONS (paper §6.3 + §6.4 + §8.7)
 %% =============================================================================
 
-SecureGsgVolition ::= discover(Agent)
-                    ; offer_friendship(Agent)
-                    ; accept_offer(Agent)
-                    ; end_friendship(Agent)
-                    ; vouch(Agent, Agent)              %% paper §8.7 Vouch
-                    ; announce_new_identity(Agent).    %% paper §8.7 Announce
+%% Each volition carries a Reply Constant (architecture §3.3) the agent
+%% binds to `ok` on protocol completion.  Same pattern as GsgVolition.
+SecureGsgVolition ::= discover(Agent, Constant)
+                    ; offer_friendship(Agent, Constant)
+                    ; accept_offer(Agent, Constant)
+                    ; end_friendship(Agent, Constant)
+                    ; vouch(Agent, Agent, Constant)              %% paper §8.7 Vouch
+                    ; announce_new_identity(Agent, Constant).    %% paper §8.7 Announce
 
 %% =============================================================================
 %% READ-ONLY QUERIES (extend GSG queries with secure-state observers)
@@ -114,19 +119,242 @@ FoFInner ::= [] ; [FoFInnerEntry | FoFInner].
 FoFEntry ::= fofb(Agent, FoFInner).
 FoFMap ::= [] ; [FoFEntry | FoFMap].
 
-%% Platform state extends GSG's with LastBroadcastDate.
+%% Pending offers (architecture §3.3): same shape as gsg's, redefined here
+%% (sibling-directory types aren't transitively visible to the type checker).
+PendingOffer ::= pending_offer(Agent, Integer, Constant).
+PendingList ::= [] ; [PendingOffer | PendingList].
+
+%% Platform state: GSG's six fields + LastBroadcastDate (paper §8.5 spec
+%% issue D).  Pending threads offer round-trips like in gsg.
 %%
-%%   secure_gsg(Known, Volitions, Inbox, FMap, FoFMap, LastBroadcastDate)
+%%   secure_gsg(Known, Volitions, Inbox, FMap, FoFMap, Pending, LastBroadcastDate)
 SecureGsgPlatform ::= secure_gsg(Stream(Agent),                   %% Known
                                   Stream(SecureGsgVolition),      %% Volitions
                                   Stream(InMsg(SecureGsgCargo)),  %% Inbox
                                   SecureFMap,
                                   FoFMap,
+                                  PendingList,                    %% Pending offers
                                   Integer).                       %% LastBroadcastDate
 
 %% =============================================================================
-%% PROCEDURE DECLARATIONS — co-located with clauses in:
-%%   secure_gsg/platform.glp -- helpers (lookup, update, promote, ...)
-%%   secure_gsg/agent.glp    -- agent/7 with secure clauses
-%%   secure_gsg/checkpoint.glp -- periodic re-broadcast emission
+%% HELPERS (visible to sibling modules via ancestor scoping per spec §3.1).
+%% Mirrors gsg/self.glp structure, adapted for SecureFMap (full/skeleton/
+%% stub entries) and SecureGsgCargo (friend_request and accept carrying IR).
 %% =============================================================================
+
+%% bind_ok(R): bind a Constant writer to `ok` via head construction.
+exported procedure bind_ok(Constant).
+bind_ok(ok).
+
+%% =============================================================================
+%% KNOWN SET (paper §5.2 Discover).
+%% =============================================================================
+
+exported procedure is_known(Agent?, Stream(Agent)?, Constant).
+is_known(Q, [Q1 | _], true) :- Q? =?= Q1? | true.
+is_known(Q, [_ | Rest], B?) :- otherwise | is_known(Q?, Rest?, B).
+is_known(_, [], false).
+
+exported procedure add_known(Agent?, Stream(Agent)?, Stream(Agent)).
+add_known(Q, [Q1 | Rest], [Q1? | Rest?]) :- Q? =?= Q1? | true.
+add_known(Q, [Q1 | Rest], [Q1? | Rest1?]) :- otherwise | add_known(Q?, Rest?, Rest1).
+add_known(Q, [], [Q?]).
+
+%% =============================================================================
+%% SECURE EPOCH LOOKUP (paper §8.1).
+%% Returns epoch from any FMap entry kind; 0 if Q absent.
+%%   full(Q, E, K, σ)    -> E
+%%   skeleton(Q, K, σ)   -> 0 (paper: "skeleton at the inactive epoch 0")
+%%   stub(Q, E)          -> E
+%% =============================================================================
+
+exported procedure secure_epoch_of(Agent?, SecureFMap?, Integer).
+secure_epoch_of(Q, [full(Q1, E, _, _) | _], E?) :- Q? =?= Q1? | true.
+secure_epoch_of(Q, [skeleton(Q1, _, _) | _], 0) :- Q? =?= Q1? | true.
+secure_epoch_of(Q, [stub(Q1, E) | _], E?) :- Q? =?= Q1? | true.
+secure_epoch_of(Q, [_ | Rest], E?) :- otherwise | secure_epoch_of(Q?, Rest?, E).
+secure_epoch_of(_, [], 0).
+
+%% =============================================================================
+%% SECURE FMAP UPDATE (paper §8.2 Befriend extension): set FMap[Q] := full
+%% entry (E, K, σ).  Replaces existing entry of any kind, or appends new.
+%% =============================================================================
+
+exported procedure set_full_entry(Agent?, Integer?, Stream(Agent)?, Integer?,
+                                    SecureFMap?, SecureFMap).
+
+%% Match an existing full entry: replace.
+set_full_entry(Q, E, K, S, [full(Q1, _, _, _) | Rest],
+               [full(Q?, E?, K?, S?) | Rest?]) :-
+    Q? =?= Q1? | true.
+
+%% Match an existing skeleton entry: replace (promote to full).
+set_full_entry(Q, E, K, S, [skeleton(Q1, _, _) | Rest],
+               [full(Q?, E?, K?, S?) | Rest?]) :-
+    Q? =?= Q1? | true.
+
+%% Match an existing stub entry: replace (promote stub to full, spec-issue O).
+set_full_entry(Q, E, K, S, [stub(Q1, _) | Rest],
+               [full(Q?, E?, K?, S?) | Rest?]) :-
+    Q? =?= Q1? | true.
+
+%% No match at this entry: keep, recurse.
+set_full_entry(Q, E, K, S, [Other | Rest], [Other? | Rest1?]) :-
+    otherwise | set_full_entry(Q?, E?, K?, S?, Rest?, Rest1).
+
+%% End of list: append new full entry.
+set_full_entry(Q, E, K, S, [], [full(Q?, E?, K?, S?)]).
+
+%% =============================================================================
+%% SECURE BROADCAST stream_update(F, X) to every recipient in SecureFMap
+%% (paper §6.5 / §8.4 -- stream_update doesn't carry IR even in secure GSG).
+%% Same stream-threading convention as gsg/self.glp broadcast_update.
+%% =============================================================================
+
+exported procedure secure_broadcast_update(Agent?, Agent?, Integer?, SecureFMap?,
+                                            Stream(NetMsg(SecureGsgCargo)),
+                                            Stream(NetMsg(SecureGsgCargo))?).
+
+%% Recipient via full entry.
+secure_broadcast_update(From, F, X, [full(R, _, _, _) | Rest],
+                        [msg(From?, R?, stream_update(F?, X?)) | NewTail?],
+                        Cont) :-
+    ground(From?), ground(F?), ground(X?) |
+    secure_broadcast_update(From?, F?, X?, Rest?, NewTail, Cont?).
+
+%% Recipient via skeleton entry (still in Rec).
+secure_broadcast_update(From, F, X, [skeleton(R, _, _) | Rest],
+                        [msg(From?, R?, stream_update(F?, X?)) | NewTail?],
+                        Cont) :-
+    ground(From?), ground(F?), ground(X?) |
+    secure_broadcast_update(From?, F?, X?, Rest?, NewTail, Cont?).
+
+%% Recipient via stub entry (still in Rec).
+secure_broadcast_update(From, F, X, [stub(R, _) | Rest],
+                        [msg(From?, R?, stream_update(F?, X?)) | NewTail?],
+                        Cont) :-
+    ground(From?), ground(F?), ground(X?) |
+    secure_broadcast_update(From?, F?, X?, Rest?, NewTail, Cont?).
+
+%% Empty: alias arg 5 writer to arg 6 reader.
+secure_broadcast_update(_, _, _, [], Cont?, Cont).
+
+%% =============================================================================
+%% SECURE SEND SNAPSHOT to a new friend (paper §6.5 / §8.4): emit
+%% stream_update(F, E) for every F ≠ NewFriend in SecureFMap.
+%% =============================================================================
+
+exported procedure secure_send_snapshot(Agent?, Agent?, SecureFMap?,
+                                          Stream(NetMsg(SecureGsgCargo)),
+                                          Stream(NetMsg(SecureGsgCargo))?).
+
+%% Skip self (new friend's own entry).
+secure_send_snapshot(From, NewFriend, [full(F, _, _, _) | Rest], NetOut?, Cont) :-
+    F? =?= NewFriend? |
+    secure_send_snapshot(From?, NewFriend?, Rest?, NetOut, Cont?).
+secure_send_snapshot(From, NewFriend, [skeleton(F, _, _) | Rest], NetOut?, Cont) :-
+    F? =?= NewFriend? |
+    secure_send_snapshot(From?, NewFriend?, Rest?, NetOut, Cont?).
+secure_send_snapshot(From, NewFriend, [stub(F, _) | Rest], NetOut?, Cont) :-
+    F? =?= NewFriend? |
+    secure_send_snapshot(From?, NewFriend?, Rest?, NetOut, Cont?).
+
+%% Other friend via full: emit snapshot entry.
+secure_send_snapshot(From, NewFriend, [full(F, E, _, _) | Rest],
+                     [msg(From?, NewFriend?, stream_update(F?, E?)) | NewTail?],
+                     Cont) :-
+    ground(From?), ground(NewFriend?), ground(F?), ground(E?), otherwise |
+    secure_send_snapshot(From?, NewFriend?, Rest?, NewTail, Cont?).
+
+%% Other friend via skeleton: epoch is 0; emit stream_update(F, 0) (benign).
+secure_send_snapshot(From, NewFriend, [skeleton(F, _, _) | Rest],
+                     [msg(From?, NewFriend?, stream_update(F?, 0)) | NewTail?],
+                     Cont) :-
+    ground(From?), ground(NewFriend?), ground(F?), otherwise |
+    secure_send_snapshot(From?, NewFriend?, Rest?, NewTail, Cont?).
+
+%% Other friend via stub: emit with stored epoch.
+secure_send_snapshot(From, NewFriend, [stub(F, E) | Rest],
+                     [msg(From?, NewFriend?, stream_update(F?, E?)) | NewTail?],
+                     Cont) :-
+    ground(From?), ground(NewFriend?), ground(F?), ground(E?), otherwise |
+    secure_send_snapshot(From?, NewFriend?, Rest?, NewTail, Cont?).
+
+%% Empty: alias.
+secure_send_snapshot(_, _, [], Cont?, Cont).
+
+%% =============================================================================
+%% PENDING OFFERS + PASS 1-3 dispatch helpers (mirror gsg/self.glp).
+%% Friend_request now carries IR -- try_take_friend_request_from extracts
+%% both X and the carried IR (as KSet + Sigma).
+%% =============================================================================
+
+%% take_pending_offer: Integrate accept's helper.  Bind R via body
+%% `bind_ok(R)` rather than head literal (literal-vs-unbound-reader
+%% suspends per three-valued unification).
+exported procedure take_pending_offer(Agent?, Integer?, PendingList?, PendingList).
+take_pending_offer(Q, X, [pending_offer(Q1, X1, R) | Rest], Rest?) :-
+    Q? =?= Q1?, X? =?= X1? | bind_ok(R).
+take_pending_offer(Q, X, [Entry | Rest], [Entry? | Rest1?]) :-
+    otherwise | take_pending_offer(Q?, X?, Rest?, Rest1).
+take_pending_offer(_, _, [], []).
+
+%% try_take_accept_offer_vol: same as gsg's.
+exported procedure try_take_accept_offer_vol(Agent?, Stream(SecureGsgVolition)?,
+                                              Stream(SecureGsgVolition), Constant).
+try_take_accept_offer_vol(P, [accept_offer(P1, R) | Rest], Rest?, true) :-
+    P? =?= P1? | bind_ok(R).
+try_take_accept_offer_vol(P, [V | Rest], [V? | Rest1?], M?) :-
+    otherwise | try_take_accept_offer_vol(P?, Rest?, Rest1, M).
+try_take_accept_offer_vol(_, [], [], false).
+
+%% try_take_friend_request_from: extracts secure friend_request from Inbox.
+%% Returns the carried IR (KSet + Sigma) too so caller can install full entry.
+exported procedure try_take_friend_request_from(Agent?,
+                                                  Stream(InMsg(SecureGsgCargo))?,
+                                                  Stream(InMsg(SecureGsgCargo)),
+                                                  Constant, Integer,
+                                                  Stream(Agent), Integer).
+
+try_take_friend_request_from(P, [msg(P1, friend_request(X, ir(K, S))) | Rest],
+                             Rest?, true, X?, K?, S?) :-
+    P? =?= P1? | true.
+
+try_take_friend_request_from(P, [Other | Rest], [Other? | Rest1?],
+                             M?, X?, K?, S?) :-
+    otherwise | try_take_friend_request_from(P?, Rest?, Rest1, M, X, K, S).
+
+try_take_friend_request_from(_, [], [], false, 0, [], 0).
+
+%% classify_pending: PASS 3 -- 3-way dispatch for Resolve simultaneous
+%% offer (paper §6.3).
+PendingMatch ::= pm_resolve ; pm_ignore ; pm_none.
+
+exported procedure classify_pending(Agent?, Agent?, PendingList?,
+                                     PendingList, PendingMatch).
+classify_pending(Self, P, [pending_offer(P1, _, R) | Rest], Rest?, pm_resolve) :-
+    P? =?= P1?, P? @< Self? | bind_ok(R).
+classify_pending(Self, P, [pending_offer(P1, X, R) | Rest],
+                 [pending_offer(P1?, X?, R?) | Rest?], pm_ignore) :-
+    P? =?= P1?, Self? @< P? | true.
+classify_pending(Self, P, [Entry | Rest], [Entry? | Rest1?], M?) :-
+    otherwise | classify_pending(Self?, P?, Rest?, Rest1, M).
+classify_pending(_, _, [], [], pm_none).
+
+%% =============================================================================
+%% FOFMAP UPDATE (paper §6.5): set FoFMap[Q][F] := X.  Same shape as gsg.
+%% =============================================================================
+
+exported procedure set_fof_epoch(Agent?, Agent?, Integer?, FoFMap?, FoFMap).
+set_fof_epoch(Q, F, X, [fofb(Q1, Inner) | Rest], [fofb(Q1?, Inner1?) | Rest?]) :-
+    Q? =?= Q1? | fof_inner_set(F?, X?, Inner?, Inner1).
+set_fof_epoch(Q, F, X, [Entry | Rest], [Entry? | Rest1?]) :-
+    otherwise | set_fof_epoch(Q?, F?, X?, Rest?, Rest1).
+set_fof_epoch(Q, F, X, [], [fofb(Q?, [fofe(F?, X?)])]).
+
+exported procedure fof_inner_set(Agent?, Integer?, FoFInner?, FoFInner).
+fof_inner_set(F, X, [fofe(F1, _) | Rest], [fofe(F1?, X?) | Rest?]) :-
+    F? =?= F1? | true.
+fof_inner_set(F, X, [Entry | Rest], [Entry? | Rest1?]) :-
+    otherwise | fof_inner_set(F?, X?, Rest?, Rest1).
+fof_inner_set(F, X, [], [fofe(F?, X?)]).
