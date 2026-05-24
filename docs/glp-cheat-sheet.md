@@ -319,6 +319,8 @@ Common guards: `ground(X?)`, `known(X?)`, `X? =?= Y?`, `X? > Y?`, `wait_until(T?
 
 `otherwise` succeeds when all previous clauses FAILED (not suspended).
 
+**Only compile-time-unfoldable calls may appear in a guard.**  Built-ins above (and arithmetic comparisons, type tests, `otherwise`) are the always-safe set.  User-defined procedures may also appear iff the partial evaluator can fully unfold them — in practice this means **single-unit-clause** procedures (one clause, no body).  **Recursive procedures cannot be unfolded and are rejected in guards** (`[WARN] Unknown guard predicate` at load time).  List-search preconditions like "Inbox contains `msg(P, friend_request(_))`" are inherently recursive — put them in the clause body via dispatch (helper with `otherwise` fallthrough), not in the guard.  Full statement of the rule: typed-glp-manual §8.1.
+
 ## 9. Spawning Concurrent Processes
 
 Body goals run concurrently. To spawn a process, just call it in the body:
@@ -468,6 +470,7 @@ broadcast(Agent, ...) :-
 | `Reader variable X? occurs 2 times without ground guard or constant type` | Multi-reader without relaxation; type-alias caveat (§14) | Add `ground(X?)` guard |
 | `Cannot resolve type expression: foo(...)` | Compound list element used inline | Extract as named typedef: `FooEntry ::= foo(...).` then `List ::= [] ; [FooEntry \| List].` |
 | `SRSW violation: Reader variable X? occurs N times` | Variable used in multiple non-guard occurrences without relaxation | Add `ground(X?)` if appropriate, or restructure to single-walk |
+| `[WARN] Unknown guard predicate: foo` (load time) | `foo` is recursive or multi-clause, so the PE cannot unfold it as a guard (§8) | Move the test to the clause body via a dispatch helper (multi-clause with `otherwise` fallthrough), or restate the precondition as a single-unit-clause check the PE *can* unfold |
 | `Spawn could not find procedure label X/N` (runtime) | **Runtime bug** triggered by `-module(...)` declared + private (`procedure`) helper called from a body in the same module.  See `docs/bugs/local-procedure-not-found-with-module-directive.md`.  Workaround: declare the helper `exported procedure` until fixed |
 | `Procedure declaration for "X" has no clauses` | `procedure` in a `self.glp` without clauses | Co-locate clauses with the declaration; `self.glp` holds types only |
 | `UnknownTypeError: Foo` when loading a sibling-directory file | Types from `cva/self.glp` not visible in `gsg/` | Redefine the needed types in `gsg/self.glp` (structural identity, §13), OR move shared types to a parent `programs/SPM/self.glp` |

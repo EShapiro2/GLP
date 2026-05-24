@@ -1,7 +1,7 @@
 # Typed GLP Manual
 
-**Version**: 2.12
-**Date**: 2026-05-23
+**Version**: 2.13
+**Date**: 2026-05-24
 **Status**: ACTIVE
 
 This manual captures essential programming principles and advice for writing correct Typed GLP programs. It covers the SRSW (Single-Reader Single-Writer) constraint, type declarations, moding, modules, parameterized types, and common pitfalls.
@@ -482,13 +482,25 @@ When consuming `Channel?` with pattern `ch(In, Out?)`:
 
 ---
 
-## 8. Single-Unit-Clause Procedures (Defined Guards)
+## 8. Guards: What May Appear in a Guard
 
-### 8.1 What They Are
+### 8.1 The Guard Rule
 
-A **single-unit-clause procedure** is a regular procedure defined by exactly one clause with no guards and no body. These procedures serve as defined guards: when called in guard position, the partial evaluator unfolds them at compile time. In general, they are NOT expected to work as body predicates.
+A guard expression must be **compile-time unfoldable**.  After partial evaluation, only the built-in three-valued operations may remain — `ground/1`, `known/1`, `=?=/2`, the arithmetic comparisons (`</2`, `>/2`, `=:=/2`, `=\=/2`, `=</2`, `>=/2`), the type tests (`integer/1`, `number/1`, `string/1`, `constant/1`, `compound/1`, `list/1`), and `otherwise`.  Anything else, the runtime cannot evaluate at guard time, and the guard is rejected at load with `Unknown guard predicate`.
 
-The root self.glp defines several single-unit-clause procedures. The PE automatically includes them when processing any program, so user programs do not need to redefine them. User programs may override a root self.glp unit clause by defining a procedure with the same name/arity.
+The partial evaluator unfolds a call by substituting its body for the call site.  **A call is unfoldable iff its full call graph terminates at the built-ins above.**  In particular:
+
+- **Recursive procedures are NOT unfoldable.**  Direct recursion (a procedure calling itself) or mutual recursion produces either an infinite expansion or a residual call — neither is admissible in a guard.  **No recursive procedure may appear in a guard.**
+- **Single-unit-clause procedures (one clause, no body) are always unfoldable** — substitution is a one-step identity.  This is the *safe special case* the PE is guaranteed to handle (§8.2); it is convenience, not a separate language construct.
+- **Multi-clause non-recursive procedures** are in principle unfoldable (enumerate clauses, substitute each), but the current PE accepts only the single-unit-clause case.  Until extended, treat any procedure with more than one clause as off-limits in guards.
+
+**Practical implication.**  A precondition of the form "**∃ x ∈ list such that P(x)**" cannot be a guard, because list traversal is recursive.  Put such tests in the clause body via dispatch (a helper procedure with `otherwise` fallthrough), or restructure so the precondition is decided by head pattern matching against a known position.
+
+### 8.2 Single-Unit-Clause Procedures: the Safe Special Case
+
+A **single-unit-clause procedure** is a regular procedure defined by exactly one clause with no guards and no body.  These are the always-unfoldable case of §8.1 and the standard idiom for user-defined guards.  In general they are NOT expected to work as body predicates.
+
+The root self.glp defines several single-unit-clause procedures.  The PE automatically includes them when processing any program, so user programs do not need to redefine them.  User programs may override a root self.glp unit clause by defining a procedure with the same name/arity.
 
 Examples from root self.glp:
 
@@ -508,9 +520,9 @@ receive(X?, ch([X|In], Out?), ch(In?, Out)).
 
 The `=` predicate performs assignment: the call `X = T` assigns the value `T` on the right to the writer `X` on the left.  Using `=` in clause bodies should be avoided where head construction suffices (Section 6).
 
-### 8.2 Guard Position Usage
+### 8.3 Guard-Position Unfolding
 
-When called in guard position, the partial evaluator unfolds the call at compile time:
+When a single-unit-clause procedure is called in guard position, the partial evaluator substitutes its body in line:
 
 ```prolog
 %% Original
@@ -519,6 +531,8 @@ play :- new_channel(AliceCh, BobCh) | alice(AliceCh?), bob(BobCh?).
 %% After partial evaluation
 play :- alice(ch(Xs?, Ys)?), bob(ch(Ys?, Xs)?).
 ```
+
+The substitution leaves only built-ins (here: the implicit channel-creation bindings) and so satisfies the §8.1 rule.
 
 ---
 
@@ -1121,6 +1135,7 @@ Type identity is structural. Two independently defined types with the same alter
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 2.13 | 2026-05-24 | Rewrote Section 8 (Guards: What May Appear in a Guard): added §8.1 explicit guard rule (compile-time unfoldability; no recursion; multi-clause off-limits until PE extended), renumbered single-unit-clause material to §8.2/§8.3 as the safe special case rather than a separate construct |
 | 2.12 | 2026-05-23 | Added Section 15B: Forwarding a Writer Through a Structure (dual of §15, role of `?` in type definitions at output positions); added cross-reference at end of §2A.4 summary |
 | 2.11 | 2026-04-12 | Added Section 3.4: Guard Occurrences and SRSW Counting (guard reader occurrences don't count toward single-reader limit) |
 | 2.10 | 2026-03-14 | Added Section 20: Type Union (type names as alternatives, disjoint functor requirement, structural identity) |
