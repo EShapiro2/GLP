@@ -40,8 +40,9 @@ bind_response(_, no, _, no, Outs, Outs1?, In, In?, FMap, FMap?, FoFMap, FoFMap?)
 procedure handle_response(Constant?, Response?, Constant?, Stream(OutputEntry)?, Stream(OutputEntry), Stream(NetInMsg)?, Stream(NetInMsg), FMap?, FMap, FoFMap?, FoFMap).
 handle_response(Id, accept(Ch), From, Outs, Outs1?, In, In1?, FMap, FMap1?, FoFMap, FoFMap?) :-
     ground(From?) |
-    bump_epoch(From?, FMap?, FMap1, _),
-    befriend_commit(Id?, From?, Ch?, Outs?, Outs1, In?, In1).
+    bump_epoch(From?, FMap?, FMap1, Epoch),
+    befriend_commit(Id?, From?, Ch?, Outs?, OutsA, In?, In1),
+    send_all_friends(Id?, stream_update(From?, Epoch?), OutsA?, Outs1).
 handle_response(_, no, From, Outs, Outs1?, In, In?, FMap, FMap?, FoFMap, FoFMap?) :-
     ground(From?) |
     lookup_send('_user', msg(agent, '_user', rejected(From?)), Outs?, Outs1).
@@ -96,8 +97,9 @@ agent(Id, [msg('_user', Id1, reject_intro(_, channel(ch(_, [nack|[]]))))|UserIn]
 %% Intro result: peer acked — idempotent befriend commit with smaller-name tie-break.
 agent(Id, [intro_result(Other, Ch)|UserIn], NetIn, Outs, FMap, FoFMap) :-
     ground(Id?), ground(Other?) |
-    bump_epoch(Other?, FMap?, FMap1, _),
-    befriend_commit(Id?, Other?, Ch?, Outs?, Outs1, NetIn?, NetIn1),
+    bump_epoch(Other?, FMap?, FMap1, Epoch),
+    befriend_commit(Id?, Other?, Ch?, Outs?, OutsA, NetIn?, NetIn1),
+    send_all_friends(Id?, stream_update(Other?, Epoch?), OutsA?, Outs1),
     agent(Id?, UserIn?, NetIn1?, Outs1?, FMap1?, FoFMap?).
 
 %% Intro result: peer nacked — notify rejected
@@ -346,6 +348,12 @@ agent(Id, UserIn, [msg(_, Id1, group_removed(GroupId))|NetIn], Outs, FMap, FoFMa
     close_output(group(GroupId?), Outs?, Outs1),
     lookup_send('_user', msg(agent, '_user', group_removed(GroupId?)), Outs1?, Outs2),
     agent(Id?, UserIn?, NetIn?, Outs2?, FMap?, FoFMap?).
+
+%% Receive stream_update from friend (paper §6.5): record FoFMap[From][Who] := Epoch.
+agent(Id, UserIn, [msg(From, Id1, stream_update(Who, Epoch))|NetIn], Outs, FMap, FoFMap) :-
+    Id? =?= Id1?, ground(From?), ground(Who?), ground(Epoch?) |
+    set_fof_epoch(From?, Who?, Epoch?, FoFMap?, FoFMap1),
+    agent(Id?, UserIn?, NetIn?, Outs?, FMap?, FoFMap1?).
 
 %% Receive unfriend from friend — bump epoch (now inactive), close friend channel, notify UI
 agent(Id, UserIn, [msg(From, Id1, unfriend)|NetIn], Outs, FMap, FoFMap) :-

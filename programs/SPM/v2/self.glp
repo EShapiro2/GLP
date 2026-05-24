@@ -20,6 +20,8 @@ GroupNotifyContent ::= group_invite(GroupId, Channel(Stream(GroupSetupResponse),
                      ; group_removed(GroupId).
 
 %% Friend-only message content (excludes shared GroupNotifyContent)
+%% stream_update(Q, Epoch) - paper §6.5: tell friend about my new epoch with Q.
+%%   Epoch parity encodes status (odd = active, even = inactive).
 FriendOnlyContent ::= response(Response)
                     ; text(Constant)
                     ; intro(Constant, Channel(Stream(IntroContent), Stream(IntroContent)))
@@ -29,7 +31,8 @@ FriendOnlyContent ::= response(Response)
                     ; group_leave(GroupId, Constant)
                     ; leave_group(GroupId)
                     ; unfriend
-                    ; unfriend_child(Constant).
+                    ; unfriend_child(Constant)
+                    ; stream_update(Constant, Integer).
 
 %% Friend messages (after connection established)
 FriendContent ::= FriendOnlyContent ; GroupNotifyContent.
@@ -433,6 +436,23 @@ close_output(Key, [output(K, Out?)|Rest], [output(K?, Out)|Rest1?]) :-
 close_output(Key, [group_entry(K, Out?)|Rest], [group_entry(K?, Out)|Rest1?]) :-
     otherwise |
     close_output(Key?, Rest?, Rest1).
+
+%% =============================================================================
+%% SEND_ALL_FRIENDS (paper §6.5 broadcast)
+%% =============================================================================
+%%
+%% For each output(friend(K), ...) entry in Outs, write msg(Id, K, Content) to
+%% that friend's stream.  Skips non-friend entries (_user, _net, child(...),
+%% group(...) etc.).  Content is a FriendContent value (e.g. stream_update(Q, E)).
+
+procedure send_all_friends(Constant?, OutputContent?, Stream(OutputEntry)?, Stream(OutputEntry)).
+send_all_friends(Id, Content, [output(friend(K), [msg(Id?, K?, Content?)|Out1?])|Rest], [output(friend(K?), Out1)|Rest1?]) :-
+    ground(K?), ground(Content?) |
+    send_all_friends(Id?, Content?, Rest?, Rest1).
+send_all_friends(Id, Content, [O|Rest], [O?|Rest1?]) :-
+    otherwise |
+    send_all_friends(Id?, Content?, Rest?, Rest1).
+send_all_friends(_, _, [], []).
 
 %% =============================================================================
 %% FMAP HELPERS (paper §6.1)
