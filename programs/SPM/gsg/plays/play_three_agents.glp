@@ -1,14 +1,11 @@
 %% gsg/plays/play_three_agents.glp -- 3-agent befriend with broadcast.
 %%
 %% Alice befriends bob, then alice befriends charlie.  On alice's second
-%% befriend activation, broadcast emits a stream_update(charlie, 1) to bob
-%% (alice's existing friend).  Bob then records FoFMap[alice][charlie]=1.
+%% activation, broadcast emits stream_update(charlie, 1) to bob; bob
+%% then records FoFMap[alice][charlie]=1.
 %%
-%% Phase 1 verification: via `:trace`, look for:
-%%   set_epoch(charlie, 1, [fme(bob, 1)], [fme(bob, 1), fme(charlie, 1)])  (alice)
-%%   broadcast_update(alice, charlie, 1, [fme(bob, 1), fme(charlie, 1)], ...)
-%%   msg(alice, bob, stream_update(charlie, 1))   (the gossip)
-%%   set_fof_epoch(alice, charlie, 1, [], ...)    (bob's FoFMap update)
+%% Each offer_friendship carries a Reply; await suspends alice's UserIn
+%% until the matching Integrate accept fires.
 
 -module(play_three_agents).
 
@@ -28,18 +25,21 @@ exported procedure play_three_agents.
 
 play_three_agents :-
     gsg_agent # agent(alice, ir([], 51),
-          [will(discover(bob)),     will(offer_friendship(bob)),
-           will(discover(charlie)), will(offer_friendship(charlie))],
+          [will(discover(bob, R0a?)),     await(R0a?),
+           will(offer_friendship(bob, R1?)),     await(R1?),
+           will(discover(charlie, R0b?)), await(R0b?),
+           will(offer_friendship(charlie, R2?)), await(R2?),
+           shutdown],
           AliceIn?, AliceOut, 0,
-          gsg([], [], [], [], [])),
+          gsg([], [], [], [], [], [])),
     gsg_agent # agent(bob, ir([], 51),
           [],
           BobIn?, BobOut, 0,
-          gsg([], [], [], [], [])),
+          gsg([], [], [], [], [], [])),
     gsg_agent # agent(charlie, ir([], 51),
           [],
           CharlieIn?, CharlieOut, 0,
-          gsg([], [], [], [], [])),
+          gsg([], [], [], [], [], [])),
     cva # network([net_end(alice,   AliceOut?,   AliceIn),
                    net_end(bob,     BobOut?,     BobIn),
                    net_end(charlie, CharlieOut?, CharlieIn)]).

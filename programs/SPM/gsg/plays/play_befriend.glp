@@ -1,15 +1,23 @@
 %% gsg/plays/play_befriend.glp -- two-agent offer/accept handshake.
 %%
-%% Alice wills: discover bob, then offer_friendship(bob).
-%% Bob does no volitional action; he reactively accepts the friend_request.
+%% Alice wills: discover bob, then offer_friendship(bob).  The
+%% offer_friendship volition carries Reply R; the await(R?) suspends
+%% UserIn consumption until alice's Integrate accept fires (binding R
+%% via the matching pending_offer in Pending).  Subsequent query then
+%% sees the post-protocol epoch.
+%%
+%% Bob is reactive (PASS 1): no volition; friend_request triggers Accept
+%% offer on NetIn head.  Bob's BobFinalEpoch is left as `0` because
+%% bob has no Reply to await on -- PASS 2 makes accept_offer volitional
+%% and gives bob the same sync mechanism.
 %%
 %% Expected at quiescence:
 %%   alice's FMap has fme(bob, 1)
 %%   bob's FMap has fme(alice, 1)
+%%   AliceFinalEpoch = 1   (post-Integrate-accept observation)
+%%   BobFinalEpoch  = 0    (no await; query fires immediately, PASS 2 fixes)
 
 -module(play_befriend).
-
-%% Cross-module calls.  Types from gsg/self.glp visible via ancestor scoping.
 
 imported procedure gsg_agent # agent(Agent?, IdentityRecord?,
                                       Stream(UserEvent(GsgVolition, GsgQuery, GsgAnswer))?,
@@ -20,27 +28,22 @@ imported procedure gsg_agent # agent(Agent?, IdentityRecord?,
 
 imported procedure cva # network(NetEndList(GsgCargo)?).
 
-%% NetEndList for GsgCargo — redefined locally since cva/'s types aren't
-%% visible across sibling directories.
 NetEnd(C) ::= net_end(Agent, Stream(NetMsg(C)), Stream(InMsg(C))?).
 NetEndList(C) ::= [] ; [NetEnd(C) | NetEndList(C)].
 
 exported procedure play_befriend(Integer, Integer).
 
 play_befriend(AliceFinalEpoch?, BobFinalEpoch?) :-
-    %% Phase 1 limitation: queries fire before NetIn round-trip, so AliceFinalEpoch
-    %% and BobFinalEpoch will be 0 (the pre-protocol value).  Verify protocol
-    %% success via REPL `:trace` mode: look for set_epoch(alice, 1, [], ...) at
-    %% bob and set_epoch(bob, 1, [], ...) at alice in the trace output.
-    %% Final outcome: → suspended (no clean termination signal).
     gsg_agent # agent(alice, ir([], 51),
-          [will(discover(bob)), will(offer_friendship(bob)),
-           query(q_epoch(bob), a_epoch(AliceFinalEpoch?))],
+          [will(discover(bob, R0?)), await(R0?),
+           will(offer_friendship(bob, R?)), await(R?),
+           query(q_epoch(bob), a_epoch(AliceFinalEpoch?)),
+           shutdown],
           AliceIn?, AliceOut, 0,
-          gsg([], [], [], [], [])),
+          gsg([], [], [], [], [], [])),
     gsg_agent # agent(bob, ir([], 51),
           [query(q_epoch(alice), a_epoch(BobFinalEpoch?))],
           BobIn?, BobOut, 0,
-          gsg([], [], [], [], [])),
+          gsg([], [], [], [], [], [])),
     cva # network([net_end(alice, AliceOut?, AliceIn),
                    net_end(bob,   BobOut?,   BobIn)]).

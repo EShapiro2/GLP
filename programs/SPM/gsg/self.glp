@@ -34,7 +34,13 @@ Agent ::= Constant.
 %% manual §20.3) makes the two definitions interoperable.
 NetMsg(C) ::= msg(Agent, Agent, C).
 InMsg(C) ::= msg(Agent, C).
-UserEvent(V, Q, A) ::= will(V) ; unwill(V) ; tick ; crash ; shutdown ; query(Q, A).
+%% UserEvent extended with `await(Constant)`: a pure synchroniser that
+%% suspends UserIn consumption until the carried Constant is ground
+%% (architecture §3.3 reply-variable sync).  Same `Constant` type as the
+%% volition Reply slots, so the same reply variable can flow through
+%% both (SRSW constant-type relaxation permits multi-occurrence).
+UserEvent(V, Q, A) ::= will(V) ; unwill(V) ; tick ; crash ; shutdown
+                     ; query(Q, A) ; await(Constant).
 IdentityRecord ::= ir(Stream(Agent), Integer).
 
 %% =============================================================================
@@ -59,10 +65,19 @@ GsgCargo ::= friend_request(Integer)         %% paper §6.2: friend_request(x), 
 %%   end_friendship(q)   -- paper §6.4 End friendship
 %% =============================================================================
 
-GsgVolition ::= discover(Agent)
-              ; offer_friendship(Agent)
-              ; accept_offer(Agent)
-              ; end_friendship(Agent).
+%% Reply: a one-shot writer the agent binds to `ok` when a volition's
+%% protocol round-trip has completed.  Type is `Constant` (a primitive
+%% constant type) so SRSW relaxation (§3.1) permits the multi-occurrence
+%% pattern that arises when the same reply variable appears in both
+%% `will(V, R)` (writer) and `await(R)` (reader/writer) in the play body.
+%%
+%% Binding the writer to `ok` is done by `bind_ok/1` (head-literal at the
+%% ↑ output position; rv_agent.glp complete_rendezvous pattern), called
+%% from the agent's clause body.
+GsgVolition ::= discover(Agent, Constant)
+              ; offer_friendship(Agent, Constant)
+              ; accept_offer(Agent, Constant)
+              ; end_friendship(Agent, Constant).
 
 %% =============================================================================
 %% READ-ONLY QUERIES (architecture §2.5)
@@ -104,11 +119,21 @@ FoFInner ::= [] ; [FoFInnerEntry | FoFInner].
 FoFEntry ::= fofb(Agent, FoFInner).
 FoFMap ::= [] ; [FoFEntry | FoFMap].
 
+%% Pending offers (architecture §3.3 reply-variable sync): when Offer
+%% friendship fires at p, the volition is consumed, the `friend_request(X)`
+%% is emitted to q, and `pending_offer(q, X, R)` is installed in
+%% PendingList until Integrate accept fires (matching accept(X) from q
+%% arrives), at which point R is bound to `ok` and the pending entry is
+%% removed.
+PendingOffer ::= pending_offer(Agent, Integer, Constant).
+PendingList ::= [] ; [PendingOffer | PendingList].
+
 GsgPlatform ::= gsg(Stream(Agent),               %% Known
                     Stream(GsgVolition),         %% Volitions
                     Stream(InMsg(GsgCargo)),     %% Inbox
                     FMap,
-                    FoFMap).
+                    FoFMap,
+                    PendingList).                %% Pending offers (§3.3)
 
 %% TODO Phase 1+: Resolve simultaneous offer (paper §6.3) requires tracking
 %% outgoing friend_requests in a PendingOut field, plus a clause that detects
@@ -334,3 +359,43 @@ fof_inner_set(F, X, [fofe(F1, _) | Rest], [fofe(F1?, X?) | Rest?]) :-
 fof_inner_set(F, X, [Entry | Rest], [Entry? | Rest1?]) :-
     otherwise | fof_inner_set(F?, X?, Rest?, Rest1).
 fof_inner_set(F, X, [], [fofe(F?, X?)]).
+
+%% =============================================================================
+%% PENDING OFFERS (architecture §3.3): record/lookup/remove a pending offer
+%% installed by Offer friendship and discharged by Integrate accept.
+%% =============================================================================
+
+%% bind_ok(R): unit clause helper that binds a Constant writer R to `ok`
+%% via head construction at the ↑ output position (rv_agent.glp
+%% complete_rendezvous pattern).  Called from agent body with R as writer
+%% when a transaction completes.
+exported procedure bind_ok(Constant).
+bind_ok(ok).
+
+%% take_pending_offer(Q?, X?, PendingIn?, PendingOut): finds a matching
+%% `pending_offer(Q, X, R)` entry, binds its Reply writer R to `ok` via a
+%% body call to `send_ok`, and returns PendingIn without the entry.
+%% Callers must verify a match exists (via has_pending_offer in guard).
+exported procedure take_pending_offer(Agent?, Integer?, PendingList?, PendingList).
+
+%% Match: bind Reply writer R to `ok` via bind_ok helper; drop entry.
+take_pending_offer(Q, X, [pending_offer(Q1, X1, R) | Rest], Rest?) :-
+    Q? =?= Q1?, X? =?= X1? | bind_ok(R).
+
+%% No match: keep entry, recurse.
+take_pending_offer(Q, X, [Entry | Rest], [Entry? | Rest1?]) :-
+    otherwise | take_pending_offer(Q?, X?, Rest?, Rest1).
+
+%% Empty Pending: no-op safety (PendingList type coverage).  Should never
+%% fire in practice -- callers gate on has_pending_offer in their guard.
+take_pending_offer(_, _, [], []).
+
+%% has_pending_offer(Q?, X?, Pending?, Constant): binds the result to
+%% 'true' if Pending contains a pending_offer(Q, X, _), 'false' otherwise.
+%% Used in firing-clause guards (combined with =?= true) to gate take.
+exported procedure has_pending_offer(Agent?, Integer?, PendingList?, Constant).
+has_pending_offer(Q, X, [pending_offer(Q1, X1, _) | _], true) :-
+    Q? =?= Q1?, X? =?= X1? | true.
+has_pending_offer(Q, X, [_ | Rest], B?) :-
+    otherwise | has_pending_offer(Q?, X?, Rest?, B).
+has_pending_offer(_, _, [], false).
