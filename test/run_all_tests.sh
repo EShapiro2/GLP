@@ -1857,6 +1857,18 @@ check "private_proc fails or not found" "not found\|failed\|Error" "$output"
 
 echo ""
 
+echo "--- Module-local private helper called from exported body ---"
+output=$($DART run "$REPL" <<HEREDOC
+$TYPED/module_local_private.glp
+caller(5, Y).
+:quit
+HEREDOC
+2>&1)
+check "exported caller can reach private helper (Y=6)" "Y = 6" "$output"
+check_not "no spawn-label error" "Spawn could not find" "$output"
+
+echo ""
+
 # =============================================================================
 # Section J: SecureBonds (project-directory loading)
 # =============================================================================

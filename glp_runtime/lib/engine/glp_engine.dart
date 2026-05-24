@@ -411,47 +411,47 @@ class GlpEngine {
 
   /// Get the combined bytecode program from all loaded sources.
   ///
-  /// Enforces module boundaries (spec §19.3): REPL goals can only resolve
-  /// procedures that are exported, or defined in root self.glp / project.
-  /// All bytecode is included (internal procedures still execute when called
-  /// by exported procedures), but only exported labels are addressable as
-  /// entry points.
+  /// Returns the unfiltered merged program: every loaded label is present in
+  /// `labels`. The runtime relies on this for intra-module body-call
+  /// resolution — `Spawn(name/arity)` opcodes emitted by the compiler for
+  /// same-module body calls (including calls to private helpers, spec §4.1)
+  /// must resolve here.
+  ///
+  /// Module export boundaries (spec §4.1: private procedures visible only
+  /// within their module and descendants) are enforced separately, at REPL
+  /// entry-point lookup sites, via [_replEntryPointLabels]. Cross-module
+  /// calls go through `Distribute`/`Transmit`, not `prog.labels`, so the
+  /// boundary is not weakened by leaving `labels` unfiltered.
   BytecodeProgram get combinedProgram {
     final allOps = <dynamic>[];
     for (final loaded in _loadedPrograms.values) {
       allOps.addAll(loaded.ops);
     }
-    final combined = BytecodeProgram(allOps);
+    return BytecodeProgram(allOps);
+  }
 
-    // Build the set of allowed labels: root self.glp + project + exported procedures
-    final allowedLabels = <String>{};
-
-    // Root self.glp: all labels are visible everywhere (ancestor scoping §19.6)
+  /// Labels addressable as REPL entry points, per spec §4.1.
+  ///
+  /// The REPL is outside any module, so it can only invoke:
+  ///   - All labels in root self.glp (ancestor scoping)
+  ///   - All labels in a linked project (the linker has already encoded
+  ///     export boundaries via name mangling and alias clauses)
+  ///   - All labels of top-level programs (no `-module` directive)
+  ///   - Only `exportedLabels` of explicitly declared modules
+  Set<String> _replEntryPointLabels() {
+    final labels = <String>{};
     final rootSelf = _loadedPrograms['__root_self__'];
-    if (rootSelf != null) {
-      allowedLabels.addAll(rootSelf.labels.keys);
-    }
-
-    // Project: all labels are visible (static linking already handles exports)
+    if (rootSelf != null) labels.addAll(rootSelf.labels.keys);
     final project = _loadedPrograms['__project__'];
-    if (project != null) {
-      allowedLabels.addAll(project.labels.keys);
-    }
-
-    // Per-module: top-level programs (no -module directive) have all labels visible;
-    // explicitly declared modules only expose exported labels.
+    if (project != null) labels.addAll(project.labels.keys);
     for (final moduleInfo in _loadedModules.values) {
       if (moduleInfo.isTopLevel) {
-        allowedLabels.addAll(moduleInfo.program.labels.keys);
+        labels.addAll(moduleInfo.program.labels.keys);
       } else {
-        allowedLabels.addAll(moduleInfo.exportedLabels);
+        labels.addAll(moduleInfo.exportedLabels);
       }
     }
-
-    // Filter combined labels to only allowed ones
-    combined.labels.removeWhere((label, _) => !allowedLabels.contains(label));
-
-    return combined;
+    return labels;
   }
 
   // ============ Private Methods ============
@@ -488,7 +488,7 @@ class GlpEngine {
     final procedureLabel = '$functor/$arity';
     final entryPC = program.labels[procedureLabel];
 
-    if (entryPC == null) {
+    if (entryPC == null || !_replEntryPointLabels().contains(procedureLabel)) {
       return ExecutionResult(
         status: ExecutionStatus.failed,
         error: 'Predicate $procedureLabel not found',
@@ -592,7 +592,7 @@ class GlpEngine {
 
       final procedureLabel = '$functor/$arity';
       final entryPC = program.labels[procedureLabel];
-      if (entryPC == null) {
+      if (entryPC == null || !_replEntryPointLabels().contains(procedureLabel)) {
         return ExecutionResult(
           status: ExecutionStatus.failed,
           error: 'Predicate $procedureLabel not found',

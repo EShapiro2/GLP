@@ -1,0 +1,7 @@
+-module(module_local_private).
+
+exported procedure caller(Integer?, Integer).
+caller(X, Y?) :- helper(X?, Y).
+
+procedure helper(Integer?, Integer).
+helper(X, Y?) :- Y := X? + 1.
