@@ -36,15 +36,18 @@ exported procedure ui_mediator(Constant?, Channel(Stream(AgentToUserMsg), Stream
 
 %% --- Agent-to-user: non-ground (replace variable with req ID) ---
 
-%% befriend: Resp? reader in receive, Resp writer in body
+%% befriend (paper §8.2): cargo carries the offerer's IR alongside the
+%% response reply variable.  Mediator stashes response_secure(Resp, IRThem)
+%% in pending; the IR flows back to the agent on user decision.  The
+%% user-facing notification keeps the 2-arg shape (befriend(From, ReqId)).
 ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
-    receive(msg(agent, '_user', befriend(From, Resp?)),
+    receive(msg(agent, '_user', befriend(From, IRThem, Resp?)),
             AgentCh?, AgentCh1),
     ground(From?) |
     send(befriend(From?, req(N?)), UserCh?, UserCh1),
     N1 := N? + 1,
     ui_mediator(Id?, AgentCh1?, UserCh1?,
-        [pending(req(N?), response(Resp)) | Ps?], N1?).
+        [pending(req(N?), response_secure(Resp, IRThem?)) | Ps?], N1?).
 
 %% Introduction befriend_intro: agent sends befriend_intro(From, Other, Ch)
 ui_mediator(Id, AgentCh, UserCh, Ps, N) :-

@@ -30,17 +30,22 @@ await_group_channel(_, _, [], _, _, _, _, _, _) :- true.
 %% RESPONSE HANDLING — local (calls merge)
 %% =============================================================================
 
-procedure bind_response(Constant?, Decision?, Constant?, Response, Stream(OutputEntry)?, Stream(OutputEntry), Stream(NetInMsg)?, Stream(NetInMsg), FMap?, FMap, FoFMap?, FoFMap).
-bind_response(Id, yes, From, accept(RetCh?), Outs, Outs1?, In, In1?, FMap, FMap1?, FoFMap, FoFMap1?) :-
+%% bind_response now takes own IR (IRSelf) for building the accept response
+%% and peer IR (IRThem) to forward via the local-side accept(LocalCh, IRThem)
+%% into handle_response, which extracts ir(K, S) for FMap storage.
+procedure bind_response(Constant?, Decision?, Constant?, IdentityRecord?, IdentityRecord?, Response, Stream(OutputEntry)?, Stream(OutputEntry), Stream(NetInMsg)?, Stream(NetInMsg), FMap?, FMap, FoFMap?, FoFMap).
+bind_response(Id, yes, From, IRSelf, IRThem, accept(RetCh?, IRSelf?), Outs, Outs1?, In, In1?, FMap, FMap1?, FoFMap, FoFMap1?) :-
     new_channel(RetCh, LocalCh) |
-    handle_response(Id?, accept(LocalCh?), From?, Outs?, Outs1, In?, In1, FMap?, FMap1, FoFMap?, FoFMap1).
-bind_response(_, no, _, no, Outs, Outs1?, In, In?, FMap, FMap?, FoFMap, FoFMap?) :-
+    handle_response(Id?, accept(LocalCh?, IRThem?), From?, Outs?, Outs1, In?, In1, FMap?, FMap1, FoFMap?, FoFMap1).
+bind_response(_, no, _, _, _, no, Outs, Outs1?, In, In?, FMap, FMap?, FoFMap, FoFMap?) :-
     lookup_send('_user', msg(agent, '_user', rejected), Outs?, Outs1).
 
+%% handle_response decomposes accept(Ch, ir(K, S)) in head; yes branch uses
+%% install_full to store full(From, NewEpoch, K, S) in FMap.
 procedure handle_response(Constant?, Response?, Constant?, Stream(OutputEntry)?, Stream(OutputEntry), Stream(NetInMsg)?, Stream(NetInMsg), FMap?, FMap, FoFMap?, FoFMap).
-handle_response(Id, accept(Ch), From, Outs, Outs1?, In, In1?, FMap, FMap1?, FoFMap, FoFMap?) :-
-    ground(From?), ground(FMap?) |
-    bump_epoch(From?, FMap?, FMap1, Epoch),
+handle_response(Id, accept(Ch, ir(K, S)), From, Outs, Outs1?, In, In1?, FMap, FMap1?, FoFMap, FoFMap?) :-
+    ground(From?), ground(K?), ground(S?), ground(FMap?) |
+    install_full(From?, K?, S?, FMap?, FMap1, Epoch),
     befriend_commit(Id?, From?, Ch?, Outs?, OutsA, In?, In1),
     send_all_friends(Id?, stream_update(From?, Epoch?), OutsA?, OutsB),
     send_snapshot(Id?, From?, FMap?, OutsB?, Outs1).
@@ -56,17 +61,19 @@ exported procedure agent(Constant?, Stream(UserInMsg)?, Stream(NetInMsg)?, Strea
 
 %% --- User messages ---
 
-%% User initiates cold call
+%% User initiates cold call (paper §8.2): carries own IR alongside the
+%% response reply variable.
 agent(Id, [msg('_user', Id1, connect(Target))|UserIn], NetIn, Outs, FMap, FoFMap, IR) :-
-    Id? =?= Id1?, ground(Target?) |
-    lookup_send('_net', msg(Target?, intro(Id?, Resp)), Outs?, Outs1),
+    Id? =?= Id1?, ground(Target?), ground(IR?) |
+    lookup_send('_net', msg(Target?, intro(Id?, IR?, Resp)), Outs?, Outs1),
     inject_msg(Resp?, Target?, Id?, UserIn?, UserIn1),
     agent(Id?, UserIn1?, NetIn?, Outs1?, FMap?, FoFMap?, IR?).
 
-%% User decision on cold-call
-agent(Id, [msg('_user', Id1, decision(Dec, From, response(Resp?)))|UserIn], NetIn, Outs, FMap, FoFMap, IR) :-
-    Id? =?= Id1? |
-    bind_response(Id?, Dec?, From?, Resp, Outs?, Outs1, NetIn?, NetIn1, FMap?, FMap1, FoFMap?, FoFMap1),
+%% User decision on cold-call (paper §8.2): PendingValue is response_secure,
+%% carrying both the response writer and the peer's IR captured at intro time.
+agent(Id, [msg('_user', Id1, decision(Dec, From, response_secure(Resp?, IRThem)))|UserIn], NetIn, Outs, FMap, FoFMap, IR) :-
+    Id? =?= Id1?, ground(IR?) |
+    bind_response(Id?, Dec?, From?, IR?, IRThem?, Resp, Outs?, Outs1, NetIn?, NetIn1, FMap?, FMap1, FoFMap?, FoFMap1),
     agent(Id?, UserIn?, NetIn1?, Outs1?, FMap1?, FoFMap1?, IR?).
 
 %% User sends text message to friend
@@ -110,7 +117,8 @@ agent(Id, [intro_rejected(Other)|UserIn], NetIn, Outs, FMap, FoFMap, IR) :-
     lookup_send('_user', msg(agent, '_user', rejected(Other?)), Outs?, Outs1),
     agent(Id?, UserIn?, NetIn?, Outs1?, FMap?, FoFMap?, IR?).
 
-%% Response to cold-call (injected by inject_msg)
+%% Response to cold-call (injected by inject_msg).  Peer's IR rides inside
+%% the accept(Ch, IR) variant of Response; handle_response decomposes it.
 agent(Id, [msg(From, Id1, response(Resp))|UserIn], NetIn, Outs, FMap, FoFMap, IR) :-
     Id? =?= Id1? |
     handle_response(Id?, Resp?, From?, Outs?, Outs1, NetIn?, NetIn1, FMap?, FMap1, FoFMap?, FoFMap1),
@@ -284,13 +292,13 @@ agent(Id, [msg('_user', Id1, unfriend_child_of(MyChild, Target))|UserIn], NetIn,
 
 %% --- Network messages ---
 
-%% Cold-call from network
-agent(Id, UserIn, [msg(Id1, intro(From, Resp?))|NetIn], Outs, FMap, FoFMap, IR) :-
+%% Cold-call from network (paper §8.2): cargo carries offerer's IR.
+agent(Id, UserIn, [msg(Id1, intro(From, IRThem, Resp?))|NetIn], Outs, FMap, FoFMap, IR) :-
     Id? =?= Id1? |
-    lookup_send('_user', msg(agent, '_user', befriend(From?, Resp)), Outs?, Outs1),
+    lookup_send('_user', msg(agent, '_user', befriend(From?, IRThem?, Resp)), Outs?, Outs1),
     agent(Id?, UserIn?, NetIn?, Outs1?, FMap?, FoFMap?, IR?).
 
-%% Response to cold-call from network
+%% Response to cold-call from network: handle_response decomposes accept(Ch, IR).
 agent(Id, UserIn, [msg(From, Id1, response(Resp))|NetIn], Outs, FMap, FoFMap, IR) :-
     Id? =?= Id1? |
     handle_response(Id?, Resp?, From?, Outs?, Outs1, NetIn?, NetIn1, FMap?, FMap1, FoFMap?, FoFMap1),

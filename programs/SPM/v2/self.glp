@@ -38,7 +38,8 @@ FriendOnlyContent ::= response(Response)
 FriendContent ::= FriendOnlyContent ; GroupNotifyContent.
 FriendMsg     ::= msg(Constant, Constant, FriendContent) ; canonical.
 
-Response ::= accept(Channel(Stream(FriendMsg), Stream(FriendMsg))) ; no.
+%% Response carries the responder's IR (paper §8.2 Befriend extension).
+Response ::= accept(Channel(Stream(FriendMsg), Stream(FriendMsg)), IdentityRecord) ; no.
 Decision ::= yes ; no.
 Handshake ::= ack(Constant) ; nack.
 
@@ -48,10 +49,13 @@ IntroContent ::= ack(Constant) ; nack ; canonical.
 %% Group identifier
 GroupId   ::= group_id(Constant, Constant).
 
-%% Pending values — opaque values stored by mediator, forwarded to agent
+%% Pending values — opaque values stored by mediator, forwarded to agent.
+%% response_secure(Resp, IR) stashes the peer's IR alongside the response
+%% writer so it can be carried back to the agent on user decision (§8.2).
 PendingValue ::= response(Response?) ; channel(Channel(Stream(IntroContent), Stream(IntroContent)))
                ; group_channel(Channel(Stream(GroupSetupResponse), Stream(IntroContent)))
-               ; consent(Decision?) ; error.
+               ; consent(Decision?) ; error
+               ; response_secure(Response?, IdentityRecord).
 
 %% =============================================================================
 %% AGENT <-> MEDIATOR INTERFACE
@@ -87,7 +91,9 @@ UserContent ::= connect(Constant)
 
 %% Content carried inside agent-to-user messages (msg(agent, '_user', Content))
 %% Agent-only message content (excludes shared GroupNotifyContent)
-AgentOnlyContent ::= befriend(Constant, Response?)
+%% befriend now carries the offerer's IR alongside the reply variable
+%% (paper §8.2 Befriend extension).
+AgentOnlyContent ::= befriend(Constant, IdentityRecord, Response?)
                    ; befriend_intro(Constant, Constant, Channel(Stream(IntroContent), Stream(IntroContent)))
                    ; child_befriend(Constant, Constant, Channel(Stream(IntroContent), Stream(IntroContent)))
                    ; connected(Constant)
@@ -113,8 +119,9 @@ MediatorToAgentMsg    ::= msg(Constant, Constant, UserContent).
 %% AGENT INPUT TYPES
 %% =============================================================================
 
-%% Network content (2-arg cold-call: msg(Dest, Content))
-NetColdCall ::= intro(Constant, Response?).
+%% Network content (2-arg cold-call: msg(Dest, Content)).
+%% intro now carries the offerer's IR (paper §8.2 Befriend extension).
+NetColdCall ::= intro(Constant, IdentityRecord, Response?).
 
 %% Network input message (cold calls + friend messages)
 NetInMsg    ::= msg(Constant, NetColdCall)
@@ -567,6 +574,29 @@ bump_epoch(Q, [stub(Q1, E) | Rest], [stub(Q1?, X?) | Rest?], X?) :-
 bump_epoch(Q, [Entry | Rest], [Entry? | Rest1?], X?) :-
     otherwise | bump_epoch(Q?, Rest?, Rest1, X).
 bump_epoch(Q, [], [full(Q?, 1, [], 0)], 1).
+
+%% =============================================================================
+%% INSTALL_FULL (paper §8.2): single-walk find + bump + install IR
+%% =============================================================================
+%%
+%% install_full(Q, K, Sigma, FMap, FMap1, NewEpoch): like bump_epoch but also
+%% writes the friend's IR (K, σ).  Used by Integrate accept (paper §8.2) when
+%% the cargo carried the IR.  Behavior by entry kind:
+%%   full      → full with new (bumped) epoch and new IR
+%%   skeleton  → promoted to full at epoch 1, new IR overwrites skeleton's
+%%   stub      → promoted to full with bumped epoch and new IR (spec-issue O)
+%%   absent    → append full(Q, 1, K, Sigma)
+
+procedure install_full(Constant?, Stream(Constant)?, Integer?, FMap?, FMap, Integer).
+install_full(Q, K, S, [full(Q1, E, _, _) | Rest], [full(Q1?, X?, K?, S?) | Rest?], X?) :-
+    Q? =?= Q1?, X := E? + 1 | true.
+install_full(Q, K, S, [skeleton(Q1, _, _) | Rest], [full(Q1?, 1, K?, S?) | Rest?], 1) :-
+    Q? =?= Q1? | true.
+install_full(Q, K, S, [stub(Q1, E) | Rest], [full(Q1?, X?, K?, S?) | Rest?], X?) :-
+    Q? =?= Q1?, X := E? + 1 | true.
+install_full(Q, K, S, [Entry | Rest], [Entry? | Rest1?], X?) :-
+    otherwise | install_full(Q?, K?, S?, Rest?, Rest1, X).
+install_full(Q, K, S, [], [full(Q?, 1, K?, S?)], 1).
 
 %% =============================================================================
 %% FOFMAP HELPERS (paper §6.5)
