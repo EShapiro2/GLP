@@ -82,7 +82,8 @@ UserContent ::= connect(Constant)
               ; approve_child_group(Constant, GroupId, PendingValue)
               ; reject_child_group(Constant, GroupId, PendingValue)
               ; unfriend_child(Constant)
-              ; unfriend_child_of(Constant, Constant).
+              ; unfriend_child_of(Constant, Constant)
+              ; q_fof(Constant, Constant).
 
 %% Content carried inside agent-to-user messages (msg(agent, '_user', Content))
 %% Agent-only message content (excludes shared GroupNotifyContent)
@@ -98,7 +99,8 @@ AgentOnlyContent ::= befriend(Constant, Response?)
                    ; group_left(GroupId)
                    ; group_received(GroupId, Constant, Constant)
                    ; child_group_consent(Constant, GroupId, Decision?)
-                   ; unfriended(Constant).
+                   ; unfriended(Constant)
+                   ; fof_result(Constant, Constant, Integer).
 
 %% Content carried inside agent-to-user messages (msg(agent, '_user', Content))
 AgentContent ::= AgentOnlyContent ; GroupNotifyContent.
@@ -211,7 +213,8 @@ UserCmd ::= decision(Decision, Constant, ReqId)
           ; approve_child_group(Constant, GroupId, ReqId)
           ; reject_child_group(Constant, GroupId, ReqId)
           ; unfriend_child(Constant)
-          ; unfriend_child_of(Constant, Constant).
+          ; unfriend_child_of(Constant, Constant)
+          ; q_fof(Constant, Constant).
 
 %% Mediator -> User notifications
 UserNotify ::= befriend(Constant, ReqId)
@@ -229,7 +232,8 @@ UserNotify ::= befriend(Constant, ReqId)
              ; group_removed(GroupId)
              ; group_received(GroupId, Constant, Constant)
              ; child_group_consent(Constant, GroupId, ReqId)
-             ; unfriended(Constant).
+             ; unfriended(Constant)
+             ; fof_result(Constant, Constant, Integer).
 
 
 %% =============================================================================

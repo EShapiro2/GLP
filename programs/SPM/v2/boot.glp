@@ -1087,3 +1087,46 @@ fplay15 :-
                 ch(BobMedIn?, BobMedOut), [], 1),
     tee(BobMedOut?, BobActorIn, BobDispNotify),
     send_to_user_tagged(bob, BobDispCmd?, BobDispNotify?).
+
+%% =============================================================================
+%% FPLAY_FOF — paper §6.5 stream_update + FoFMap absorption test
+%% =============================================================================
+%%
+%% alice befriends bob, then alice befriends charlie.  The second befriend
+%% broadcasts stream_update(charlie, 1) to alice's existing friends (bob);
+%% bob's agent absorbs into FoFMap_bob[alice][charlie] := 1.  Alice then
+%% sends bob a text msg "fof_check" (FIFO ordering guarantees the broadcast
+%% arrives first).  Bob receives the text, queries q_fof(alice, charlie),
+%% and expects fof_result(alice, charlie, 1) in the trace.
+
+fplay_fof :-
+    network3(ch(AliceNetOut?, AliceNetIn),
+             ch(BobNetOut?, BobNetIn),
+             ch(CharlieNetOut?, CharlieNetIn)),
+
+    actors # alice_fof(ch(AliceActorIn?, AliceActorOut)),
+    tee(AliceActorOut?, AliceMedIn, AliceDispCmd),
+    agent # agent(alice, AliceAgentIn?, AliceNetIn?,
+          [output('_user', AliceAgentToUser), output('_net', AliceNetOut)], [], []),
+    mediator # ui_mediator(alice, ch(AliceAgentToUser?, AliceAgentIn),
+                ch(AliceMedIn?, AliceMedOut), [], 1),
+    tee(AliceMedOut?, AliceActorIn, AliceDispNotify),
+    send_to_user_tagged(alice, AliceDispCmd?, AliceDispNotify?),
+
+    actors # bob_fof(ch(BobActorIn?, BobActorOut)),
+    tee(BobActorOut?, BobMedIn, BobDispCmd),
+    agent # agent(bob, BobAgentIn?, BobNetIn?,
+          [output('_user', BobAgentToUser), output('_net', BobNetOut)], [], []),
+    mediator # ui_mediator(bob, ch(BobAgentToUser?, BobAgentIn),
+                ch(BobMedIn?, BobMedOut), [], 1),
+    tee(BobMedOut?, BobActorIn, BobDispNotify),
+    send_to_user_tagged(bob, BobDispCmd?, BobDispNotify?),
+
+    actors # charlie_fof(ch(CharlieActorIn?, CharlieActorOut)),
+    tee(CharlieActorOut?, CharlieMedIn, CharlieDispCmd),
+    agent # agent(charlie, CharlieAgentIn?, CharlieNetIn?,
+          [output('_user', CharlieAgentToUser), output('_net', CharlieNetOut)], [], []),
+    mediator # ui_mediator(charlie, ch(CharlieAgentToUser?, CharlieAgentIn),
+                ch(CharlieMedIn?, CharlieMedOut), [], 1),
+    tee(CharlieMedOut?, CharlieActorIn, CharlieDispNotify),
+    send_to_user_tagged(charlie, CharlieDispCmd?, CharlieDispNotify?).

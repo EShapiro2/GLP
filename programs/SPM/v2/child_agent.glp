@@ -131,6 +131,13 @@ child_agent(Id, ParentId, [msg('_user', Id1, unfriend_child(Target))|UserIn], Ne
     lookup_send('_user', msg(agent, '_user', unfriended(Target?)), Outs3?, Outs4),
     child_agent(Id?, ParentId?, UserIn?, NetIn?, Outs4?, FMap1?, FoFMap?).
 
+%% Query FoFMap[P][F] (paper §6.5, read-only).
+child_agent(Id, ParentId, [msg('_user', Id1, q_fof(P, F))|UserIn], NetIn, Outs, FMap, FoFMap) :-
+    Id? =?= Id1?, ground(P?), ground(F?), ground(FoFMap?) |
+    fof_epoch_of(P?, F?, FoFMap?, E),
+    lookup_send('_user', msg(agent, '_user', fof_result(P?, F?, E?)), Outs?, Outs1),
+    child_agent(Id?, ParentId?, UserIn?, NetIn?, Outs1?, FMap?, FoFMap?).
+
 %% --- Injected intro results ---
 
 %% Intro result: peer acked — idempotent befriend commit with smaller-name tie-break.

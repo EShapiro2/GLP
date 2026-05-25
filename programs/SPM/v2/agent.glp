@@ -116,6 +116,14 @@ agent(Id, [msg(From, Id1, response(Resp))|UserIn], NetIn, Outs, FMap, FoFMap) :-
     handle_response(Id?, Resp?, From?, Outs?, Outs1, NetIn?, NetIn1, FMap?, FMap1, FoFMap?, FoFMap1),
     agent(Id?, UserIn?, NetIn1?, Outs1?, FMap1?, FoFMap1?).
 
+%% Query FoFMap[P][F] (paper §6.5, read-only): look up p's view of F's
+%% epoch in P's friend list and emit fof_result back to user via mediator.
+agent(Id, [msg('_user', Id1, q_fof(P, F))|UserIn], NetIn, Outs, FMap, FoFMap) :-
+    Id? =?= Id1?, ground(P?), ground(F?), ground(FoFMap?) |
+    fof_epoch_of(P?, F?, FoFMap?, E),
+    lookup_send('_user', msg(agent, '_user', fof_result(P?, F?, E?)), Outs?, Outs1),
+    agent(Id?, UserIn?, NetIn?, Outs1?, FMap?, FoFMap?).
+
 %% --- CSSG: Child-safe social graph ---
 
 %% Sibling case: parent introduces own children to each other (Friend =?= Id)
