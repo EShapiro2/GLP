@@ -163,21 +163,34 @@ OutputEntry ::= output(OutputKey, Stream(OutputMsg)?)
 OutputsList ::= [] ; [OutputEntry|OutputsList].
 
 %% =============================================================================
-%% AGENT PLATFORM STATE (paper §6.1, §6.5)
+%% AGENT PLATFORM STATE (paper §6.1, §6.5, §8.1, §8.5, §8.7)
 %% =============================================================================
 %%
-%% FMap_p[q] = epoch (paper §6.1).  Epoch parity encodes friendship status:
-%%   even = inactive (not currently friends; 0 = never befriended),
-%%   odd  = active (currently friends).
-%% Befriend bumps the epoch to the next odd value; Unfriend bumps to the next
-%% even value (paper §6.3, §6.4).
-FMapEntry ::= fme(Constant, Integer).
+%% Identity record (paper §8.1): IR_p = (K_p, σ_p) where K_p ⊆ F_p is the
+%% set of identity custodians and σ_p ∈ (1/2, 1] is the supermajority
+%% threshold (encoded here as integer percentage 51..100).  Intrinsic and
+%% immutable per agent; transported on Befriend (§8.2) and Checkpoint (§8.5).
+IdentityRecord ::= ir(Stream(Constant), Integer).
+
+%% FMap entries — three kinds (paper §6.1 + §8.5 + §8.7):
+%%   full(Q, Epoch, KSet, Sigma)   active friendship record + peer's IR (§6, §8.2)
+%%   skeleton(Q, KSet, Sigma)      IR present, epoch implicit 0;
+%%                                 installed by Integrate checkpoint when the
+%%                                 sender is not yet in dom(FMap_p) (§8.5)
+%%   stub(Q, Epoch)                epoch present, IR absent;
+%%                                 installed by Integrate rebind from a third
+%%                                 party's L_q list (§8.7)
+%% Epoch parity encodes friendship status: even = inactive, odd = active.
+%% Befriend bumps to next odd (§6.3); Unfriend bumps to next even (§6.4).
+%% Initial epoch_p(q) = 0 for q ∉ dom(FMap_p).
+FMapEntry ::= full(Constant, Integer, Stream(Constant), Integer)
+            ; skeleton(Constant, Stream(Constant), Integer)
+            ; stub(Constant, Integer).
 FMap ::= [] ; [FMapEntry | FMap].
 
 %% FoFMap_p[q][f] = epoch (paper §6.5).
 %% Records p's view of q's epoch_q(f), maintained from incoming
-%% update_befriend(q, f, x) / update_unfriend(q, f, x) messages.  Nested
-%% assoc-list: outer keyed by q, inner keyed by f.
+%% stream_update messages.  Nested assoc-list: outer keyed by q, inner by f.
 FoFInnerEntry ::= fofe(Constant, Integer).
 FoFInner ::= [] ; [FoFInnerEntry | FoFInner].
 FoFEntry ::= fofb(Constant, FoFInner).
@@ -467,13 +480,31 @@ send_all_friends(_, _, [], []).
 
 procedure send_snapshot(Constant?, Constant?, FMap?, Stream(OutputEntry)?, Stream(OutputEntry)).
 
-%% Skip the new friend's own entry
-send_snapshot(Id, NewFriend, [fme(F, _) | Rest], Outs, Outs1?) :-
+%% Skip the new friend's own entry (any kind)
+send_snapshot(Id, NewFriend, [full(F, _, _, _) | Rest], Outs, Outs1?) :-
+    F? =?= NewFriend? |
+    send_snapshot(Id?, NewFriend?, Rest?, Outs?, Outs1).
+send_snapshot(Id, NewFriend, [skeleton(F, _, _) | Rest], Outs, Outs1?) :-
+    F? =?= NewFriend? |
+    send_snapshot(Id?, NewFriend?, Rest?, Outs?, Outs1).
+send_snapshot(Id, NewFriend, [stub(F, _) | Rest], Outs, Outs1?) :-
     F? =?= NewFriend? |
     send_snapshot(Id?, NewFriend?, Rest?, Outs?, Outs1).
 
-%% Other friend: send stream_update(F, E) to NewFriend
-send_snapshot(Id, NewFriend, [fme(F, E) | Rest], Outs, Outs1?) :-
+%% Other friend, full entry: emit stream_update(F, E)
+send_snapshot(Id, NewFriend, [full(F, E, _, _) | Rest], Outs, Outs1?) :-
+    ground(Id?), ground(NewFriend?), ground(F?), ground(E?), otherwise |
+    lookup_send(friend(NewFriend?), msg(Id?, NewFriend?, stream_update(F?, E?)), Outs?, OutsA),
+    send_snapshot(Id?, NewFriend?, Rest?, OutsA?, Outs1).
+
+%% Other friend, skeleton entry: epoch is 0 (benign — recipient may already have higher)
+send_snapshot(Id, NewFriend, [skeleton(F, _, _) | Rest], Outs, Outs1?) :-
+    ground(Id?), ground(NewFriend?), ground(F?), otherwise |
+    lookup_send(friend(NewFriend?), msg(Id?, NewFriend?, stream_update(F?, 0)), Outs?, OutsA),
+    send_snapshot(Id?, NewFriend?, Rest?, OutsA?, Outs1).
+
+%% Other friend, stub entry: emit with stored epoch
+send_snapshot(Id, NewFriend, [stub(F, E) | Rest], Outs, Outs1?) :-
     ground(Id?), ground(NewFriend?), ground(F?), ground(E?), otherwise |
     lookup_send(friend(NewFriend?), msg(Id?, NewFriend?, stream_update(F?, E?)), Outs?, OutsA),
     send_snapshot(Id?, NewFriend?, Rest?, OutsA?, Outs1).
@@ -491,29 +522,51 @@ send_snapshot(_, _, [], Outs, Outs?).
 %%   - set_epoch overwrites if q ∈ dom; appends otherwise
 %%   - bump_epoch: single-walk lookup-and-bump for befriend/unfriend
 
+%% epoch_of(Q, FMap, E): returns 0 for absent or skeleton (epoch 0 implicit);
+%% returns stored epoch for full and stub entries.
 procedure epoch_of(Constant?, FMap?, Integer).
-epoch_of(Q, [fme(Q1, E) | _], E?) :-
+epoch_of(Q, [full(Q1, E, _, _) | _], E?) :-
+    Q? =?= Q1? | true.
+epoch_of(Q, [skeleton(Q1, _, _) | _], 0) :-
+    Q? =?= Q1? | true.
+epoch_of(Q, [stub(Q1, E) | _], E?) :-
     Q? =?= Q1? | true.
 epoch_of(Q, [_ | Rest], E?) :-
     otherwise | epoch_of(Q?, Rest?, E).
 epoch_of(_, [], 0).
 
+%% set_epoch(Q, X, FMap, FMap1): replaces epoch in existing entry.
+%%   full      → full with new epoch (IR preserved)
+%%   skeleton  → full with new epoch (IR promoted from skeleton; spec-issue O)
+%%   stub      → stub with new epoch
+%%   absent    → append full(Q, X, [], 0) with placeholder IR
+%% Used by §6.3 befriend and §6.4 unfriend.
 procedure set_epoch(Constant?, Integer?, FMap?, FMap).
-set_epoch(Q, X, [fme(Q1, _) | Rest], [fme(Q1?, X?) | Rest?]) :-
+set_epoch(Q, X, [full(Q1, _, K, S) | Rest], [full(Q1?, X?, K?, S?) | Rest?]) :-
+    Q? =?= Q1? | true.
+set_epoch(Q, X, [skeleton(Q1, K, S) | Rest], [full(Q1?, X?, K?, S?) | Rest?]) :-
+    Q? =?= Q1? | true.
+set_epoch(Q, X, [stub(Q1, _) | Rest], [stub(Q1?, X?) | Rest?]) :-
     Q? =?= Q1? | true.
 set_epoch(Q, X, [Entry | Rest], [Entry? | Rest1?]) :-
     otherwise | set_epoch(Q?, X?, Rest?, Rest1).
-set_epoch(Q, X, [], [fme(Q?, X?)]).
+set_epoch(Q, X, [], [full(Q?, X?, [], 0)]).
 
-%% bump_epoch(Q?, FMap?, FMap, Integer): single-walk find+increment.
-%% If Q present: increment its epoch by 1 in place, return new epoch.
-%% If Q absent: insert fme(Q, 1) (first-time befriend → odd epoch), return 1.
+%% bump_epoch(Q, FMap, FMap1, X): single-walk find+increment+return new epoch.
+%%   full      → increment epoch by 1, return new
+%%   skeleton  → promote to full at epoch 1 (first activation)
+%%   stub      → increment epoch by 1, return new
+%%   absent    → append full(Q, 1, [], 0) with placeholder IR, return 1
 procedure bump_epoch(Constant?, FMap?, FMap, Integer).
-bump_epoch(Q, [fme(Q1, E) | Rest], [fme(Q1?, X?) | Rest?], X?) :-
+bump_epoch(Q, [full(Q1, E, K, S) | Rest], [full(Q1?, X?, K?, S?) | Rest?], X?) :-
+    Q? =?= Q1?, X := E? + 1 | true.
+bump_epoch(Q, [skeleton(Q1, K, S) | Rest], [full(Q1?, 1, K?, S?) | Rest?], 1) :-
+    Q? =?= Q1? | true.
+bump_epoch(Q, [stub(Q1, E) | Rest], [stub(Q1?, X?) | Rest?], X?) :-
     Q? =?= Q1?, X := E? + 1 | true.
 bump_epoch(Q, [Entry | Rest], [Entry? | Rest1?], X?) :-
     otherwise | bump_epoch(Q?, Rest?, Rest1, X).
-bump_epoch(Q, [], [fme(Q?, 1)], 1).
+bump_epoch(Q, [], [full(Q?, 1, [], 0)], 1).
 
 %% =============================================================================
 %% FOFMAP HELPERS (paper §6.5)
