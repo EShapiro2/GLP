@@ -138,6 +138,13 @@ child_agent(Id, ParentId, [msg('_user', Id1, q_fof(P, F))|UserIn], NetIn, Outs, 
     lookup_send('_user', msg(agent, '_user', fof_result(P?, F?, E?)), Outs?, Outs1),
     child_agent(Id?, ParentId?, UserIn?, NetIn?, Outs1?, FMap?, FoFMap?, IR?).
 
+%% Query stored IR of friend P (paper §8.2, read-only).
+child_agent(Id, ParentId, [msg('_user', Id1, q_ir(P))|UserIn], NetIn, Outs, FMap, FoFMap, IR) :-
+    Id? =?= Id1?, ground(P?), ground(FMap?) |
+    ir_of(P?, FMap?, IRThem),
+    lookup_send('_user', msg(agent, '_user', ir_result(P?, IRThem?)), Outs?, Outs1),
+    child_agent(Id?, ParentId?, UserIn?, NetIn?, Outs1?, FMap?, FoFMap?, IR?).
+
 %% --- Injected intro results ---
 
 %% Intro result: peer acked — idempotent befriend commit with smaller-name tie-break.

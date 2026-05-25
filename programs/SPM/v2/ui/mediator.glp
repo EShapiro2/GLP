@@ -166,12 +166,30 @@ ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
     send(fof_result(P?, F?, E?), UserCh?, UserCh1),
     ui_mediator(Id?, AgentCh1?, UserCh1?, Ps?, N?).
 
+%% --- Agent-to-user: ir_result (paper §8.2 query result, ground — pass through) ---
+
+ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
+    receive(msg(agent, '_user', ir_result(P, IRThem)),
+            AgentCh?, AgentCh1),
+    ground(P?), ground(IRThem?) |
+    send(ir_result(P?, IRThem?), UserCh?, UserCh1),
+    ui_mediator(Id?, AgentCh1?, UserCh1?, Ps?, N?).
+
 %% --- User-to-agent: q_fof query (pass-through) ---
 
 ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
     receive(q_fof(P, F), UserCh?, UserCh1),
     ground(Id?), ground(P?), ground(F?) |
     send(msg('_user', Id?, q_fof(P?, F?)),
+         AgentCh?, AgentCh1),
+    ui_mediator(Id?, AgentCh1?, UserCh1?, Ps?, N?).
+
+%% --- User-to-agent: q_ir query (pass-through) ---
+
+ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
+    receive(q_ir(P), UserCh?, UserCh1),
+    ground(Id?), ground(P?) |
+    send(msg('_user', Id?, q_ir(P?)),
          AgentCh?, AgentCh1),
     ui_mediator(Id?, AgentCh1?, UserCh1?, Ps?, N?).
 

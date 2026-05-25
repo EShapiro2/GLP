@@ -132,6 +132,14 @@ agent(Id, [msg('_user', Id1, q_fof(P, F))|UserIn], NetIn, Outs, FMap, FoFMap, IR
     lookup_send('_user', msg(agent, '_user', fof_result(P?, F?, E?)), Outs?, Outs1),
     agent(Id?, UserIn?, NetIn?, Outs1?, FMap?, FoFMap?, IR?).
 
+%% Query stored IR of friend P (paper §8.2, read-only): look up the IR
+%% stored in FMap full/skeleton entry and emit ir_result back to user.
+agent(Id, [msg('_user', Id1, q_ir(P))|UserIn], NetIn, Outs, FMap, FoFMap, IR) :-
+    Id? =?= Id1?, ground(P?), ground(FMap?) |
+    ir_of(P?, FMap?, IRThem),
+    lookup_send('_user', msg(agent, '_user', ir_result(P?, IRThem?)), Outs?, Outs1),
+    agent(Id?, UserIn?, NetIn?, Outs1?, FMap?, FoFMap?, IR?).
+
 %% --- CSSG: Child-safe social graph ---
 
 %% Sibling case: parent introduces own children to each other (Friend =?= Id)

@@ -87,7 +87,8 @@ UserContent ::= connect(Constant)
               ; reject_child_group(Constant, GroupId, PendingValue)
               ; unfriend_child(Constant)
               ; unfriend_child_of(Constant, Constant)
-              ; q_fof(Constant, Constant).
+              ; q_fof(Constant, Constant)
+              ; q_ir(Constant).
 
 %% Content carried inside agent-to-user messages (msg(agent, '_user', Content))
 %% Agent-only message content (excludes shared GroupNotifyContent)
@@ -106,7 +107,8 @@ AgentOnlyContent ::= befriend(Constant, IdentityRecord, Response?)
                    ; group_received(GroupId, Constant, Constant)
                    ; child_group_consent(Constant, GroupId, Decision?)
                    ; unfriended(Constant)
-                   ; fof_result(Constant, Constant, Integer).
+                   ; fof_result(Constant, Constant, Integer)
+                   ; ir_result(Constant, IdentityRecord).
 
 %% Content carried inside agent-to-user messages (msg(agent, '_user', Content))
 AgentContent ::= AgentOnlyContent ; GroupNotifyContent.
@@ -234,7 +236,8 @@ UserCmd ::= decision(Decision, Constant, ReqId)
           ; reject_child_group(Constant, GroupId, ReqId)
           ; unfriend_child(Constant)
           ; unfriend_child_of(Constant, Constant)
-          ; q_fof(Constant, Constant).
+          ; q_fof(Constant, Constant)
+          ; q_ir(Constant).
 
 %% Mediator -> User notifications
 UserNotify ::= befriend(Constant, ReqId)
@@ -253,7 +256,8 @@ UserNotify ::= befriend(Constant, ReqId)
              ; group_received(GroupId, Constant, Constant)
              ; child_group_consent(Constant, GroupId, ReqId)
              ; unfriended(Constant)
-             ; fof_result(Constant, Constant, Integer).
+             ; fof_result(Constant, Constant, Integer)
+             ; ir_result(Constant, IdentityRecord).
 
 
 %% =============================================================================
@@ -597,6 +601,24 @@ install_full(Q, K, S, [stub(Q1, E) | Rest], [full(Q1?, X?, K?, S?) | Rest?], X?)
 install_full(Q, K, S, [Entry | Rest], [Entry? | Rest1?], X?) :-
     otherwise | install_full(Q?, K?, S?, Rest?, Rest1, X).
 install_full(Q, K, S, [], [full(Q?, 1, K?, S?)], 1).
+
+%% =============================================================================
+%% IR_OF — look up the IR stored in FMap for friend Q (paper §8.2 query)
+%% =============================================================================
+%%
+%% Returns ir(K, σ) for full and skeleton entries.  Stub entries and absent
+%% Q return ir([], 0) as a "no IR known" placeholder.
+
+procedure ir_of(Constant?, FMap?, IdentityRecord).
+ir_of(Q, [full(Q1, _, K, S) | _], ir(K?, S?)) :-
+    Q? =?= Q1? | true.
+ir_of(Q, [skeleton(Q1, K, S) | _], ir(K?, S?)) :-
+    Q? =?= Q1? | true.
+ir_of(Q, [stub(Q1, _) | _], ir([], 0)) :-
+    Q? =?= Q1? | true.
+ir_of(Q, [_ | Rest], IR?) :-
+    otherwise | ir_of(Q?, Rest?, IR).
+ir_of(_, [], ir([], 0)).
 
 %% =============================================================================
 %% FOFMAP HELPERS (paper §6.5)

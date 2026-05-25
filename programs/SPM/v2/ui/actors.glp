@@ -1686,10 +1686,17 @@ bob_fof_wait_msg([_|In], Out?) :-
 bob_fof_wait_msg([], []).
 
 procedure bob_fof_wait_result(Stream(UserNotify)?, Stream(UserCmd)).
-bob_fof_wait_result([fof_result(_, _, _)|_], []).
+bob_fof_wait_result([fof_result(_, _, _)|In], [q_ir(alice)|Out?]) :-
+    bob_fof_wait_ir(In?, Out).
 bob_fof_wait_result([_|In], Out?) :-
     otherwise | bob_fof_wait_result(In?, Out).
 bob_fof_wait_result([], []).
+
+procedure bob_fof_wait_ir(Stream(UserNotify)?, Stream(UserCmd)).
+bob_fof_wait_ir([ir_result(_, _)|_], []).
+bob_fof_wait_ir([_|In], Out?) :-
+    otherwise | bob_fof_wait_ir(In?, Out).
+bob_fof_wait_ir([], []).
 
 exported procedure charlie_fof(Channel(Stream(UserNotify), Stream(UserCmd))?).
 charlie_fof(ch([befriend(alice, ReqId)|In],
