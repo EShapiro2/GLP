@@ -46,7 +46,7 @@ Every procedure in every `.glp` file (including `self.glp` files) is prefixed wi
 
 `self.glp` procedures are renamed like any other module's procedures.  This prevents collisions when multiple ancestor scopes define procedures with the same name and arity.  If an inner `self.glp` defines a procedure with the same name and arity as an outer `self.glp`, both receive distinct prefixes based on their module path.
 
-Ancestor `self.glp` files above the project root are prefixed by their directory name under the same rule; the root `programs/self.glp` receives the prefix `programs:`.
+Intermediate ancestor `self.glp` files above the project root are prefixed by their directory name under the same rule. The internal representation of the root scope (`programs/self.glp`) is an implementation choice; whatever the mechanism, resolution and shadowing must behave per the module-system specification §3.1–3.2.
 
 The prefix is the module name (from `-module(name)` or filename), not the full path. If two modules at different levels have the same name, the full relative path is used (e.g., `ui/mediator:proc`).
 
@@ -60,7 +60,7 @@ Every goal in every clause body is resolved:
 
 **Ancestor self.glp calls** — if no local procedure matches, the linker walks the ancestor `self.glp` chain, which extends beyond the project root up to `programs/`.  A call matching a procedure in an ancestor `self.glp` is resolved to its renamed form.
 
-**Root `self.glp` calls** — the root `programs/self.glp` is the last scope on the ancestor chain and resolves like any other; nothing is loaded outside the project linker. Partial-evaluation unfolding of its single-unit-clause procedures (`=`, `send`, `receive`, `new_channel`) remains as an optimisation; it is not the resolution mechanism.
+**Root `self.glp` calls** — definitions in the root `programs/self.glp`, single- or multi-clause, resolve for every module per the ancestor scope chain (module-system spec §3.1), subject to innermost-first shadowing. Partial-evaluation unfolding of its single-unit-clause procedures (`=`, `send`, `receive`, `new_channel`) remains an optimisation; it is not the resolution mechanism.
 
 ### 3.4 Entry Points
 

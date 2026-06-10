@@ -86,6 +86,8 @@ A child module may redefine any type or procedure name defined in an ancestor. T
 
 Whether a shadowed type is compatible with its ancestor is not checked at the point of definition. Compatibility is checked structurally at each point of use, via subtyping.
 
+Resolution is innermost-first: a name resolves to the nearest enclosing scope that defines it — a module's own definition takes precedence over ancestor definitions, an inner `self.glp` over an outer one, with `programs/self.glp` outermost.
+
 ### 3.3 Cross-Hierarchy References
 
 To reference a definition from a sibling, cousin, or other non-ancestor module, use the `#` operator:
