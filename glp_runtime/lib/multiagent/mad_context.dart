@@ -48,6 +48,16 @@ class MadContext {
   /// When set, MAD debug output goes through this callback instead of print().
   void Function(String)? traceSink;
 
+  /// Hold table for early `_r(p, i)` assignments (Issue 7 / madGLP-spec §8.3,
+  /// Early Messages). An assignment `_r(p, i) := T` arriving before its
+  /// `LocalizeEntry` exists — possible under any non-FIFO transport — is stored
+  /// here keyed by (remoteAgent, remoteIndex) and delivered when `localize()`
+  /// creates the matching entry. Only the `_r` case needs holding: `_w(p, i)`
+  /// entries exist before the global name leaves the agent, and the serializer
+  /// entry at index 0 is permanent.
+  final Map<(String, int), ({Term value, String fromAgent})>
+      _heldReaderAssignments = {};
+
   /// Send MAD trace output to traceSink if set, otherwise silent.
   void _trace(String msg) {
     if (traceSink != null) {
@@ -289,6 +299,9 @@ class MadContext {
       // Register spawned goals from localization (_r cases)
       registerGlobalSendSpawns(localizeResult.spawns);
 
+      // Issue 7: deliver any `_r` assignment that arrived before these entries.
+      _deliverHeldReaderAssignments(globalNames);
+
       // Replace global names with local variables in content
       content = localizeTermWithResult(content, globalNames, localizeResult);
       _trace('[MAD $agentId] _handleSerializerAssignment: localized content = $content');
@@ -347,6 +360,7 @@ class MadContext {
         freshAddrAllocator: () => runtime.heap.allocateVariable(),
       );
       registerGlobalSendSpawns(localizeResult.spawns);
+      _deliverHeldReaderAssignments(globalNames);
       localizedValue = localizeTermWithResult(value, globalNames, localizeResult);
       _trace('[MAD $agentId] _handleWriterAssignment: localized value = $localizedValue');
     }
@@ -373,10 +387,15 @@ class MadContext {
   void _handleReaderAssignment(GlobalName globalName, Term value, String fromAgent) {
     final entry = wp.findByRemote(globalName.agent, globalName.index);
     if (entry == null) {
-      throw StateError(
-        'No LocalizeEntry for $globalName: expected entry with '
-        '(remoteAgent=${globalName.agent}, remoteIndex=${globalName.index})',
-      );
+      // Issue 7 / spec §8.3 (Early Messages): the assignment arrived before its
+      // LocalizeEntry exists (possible under any non-FIFO transport). Hold it,
+      // keyed by (remoteAgent, remoteIndex); localize() delivers it when it
+      // creates the matching entry. Do not throw — the message is not dropped.
+      _heldReaderAssignments[(globalName.agent, globalName.index)] =
+          (value: value, fromAgent: fromAgent);
+      _trace('[MAD $agentId] _handleReaderAssignment: no entry for $globalName '
+          'yet — held pending localize');
+      return;
     }
 
     _trace('[MAD $agentId] _handleReaderAssignment: localize-reader entry, writerAddr=${entry.writerAddr}');
@@ -394,6 +413,7 @@ class MadContext {
         freshAddrAllocator: () => runtime.heap.allocateVariable(),
       );
       registerGlobalSendSpawns(localizeResult.spawns);
+      _deliverHeldReaderAssignments(globalNames);
       localizedValue = localizeTermWithResult(value, globalNames, localizeResult);
       _trace('[MAD $agentId] _handleReaderAssignment: localized value = $localizedValue');
     }
@@ -410,6 +430,25 @@ class MadContext {
     // Remove the entry
     wp.removeLocalizeEntry(globalName.agent, globalName.index);
     _trace('[MAD $agentId] _handleReaderAssignment: entry removed');
+  }
+
+  /// Deliver any held `_r` assignments whose `LocalizeEntry` was just created.
+  ///
+  /// Issue 7 / spec §8.3: after `localize()` creates LocalizeEntries for the
+  /// given global names, check the hold table for each `_r(p, i)` name and
+  /// process any assignment that arrived before the entry existed. Delivering
+  /// re-enters `_handleReaderAssignment`, which now finds the entry; nested
+  /// held assignments terminate because each delivery removes its hold-table
+  /// entry.
+  void _deliverHeldReaderAssignments(List<GlobalName> globalNames) {
+    for (final gn in globalNames) {
+      if (gn.isWriter) continue; // only `_r` names create LocalizeEntries
+      final held = _heldReaderAssignments.remove((gn.agent, gn.index));
+      if (held == null) continue;
+      _trace('[MAD $agentId] delivering held assignment for $gn from '
+          '${held.fromAgent}');
+      _handleReaderAssignment(gn, held.value, held.fromAgent);
+    }
   }
 
   /// Handle madGLP assignment with nested global names
@@ -434,6 +473,9 @@ class MadContext {
 
     // Register spawned goals from localization
     registerGlobalSendSpawns(localizeResult.spawns);
+
+    // Issue 7: deliver any `_r` assignment that arrived before these entries.
+    _deliverHeldReaderAssignments(nestedGlobalNames);
 
     // Now handle the main assignment
     handleMadAssignment(

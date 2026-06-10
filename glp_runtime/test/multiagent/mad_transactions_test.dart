@@ -119,19 +119,54 @@ void main() {
       );
     });
 
-    test('receive for non-existent LocalizeEntry throws', () {
+    test('early _r assignment is held, then delivered when localize creates the entry', () {
+      // Issue 7 / spec §8.3 (Early Messages): a `_r(p, i) := T` arriving before
+      // its LocalizeEntry exists is HELD, not dropped or thrown, and delivered
+      // when localize() creates the entry. This overrides the prior behavior
+      // (throw StateError). Only the `_w` case still throws on a missing
+      // GlobalizeEntry (see the test above) — `_w` entries always exist first.
       final runtime = GlpRuntime();
       final ctx = MadContext(agentId: 'q', runtime: runtime);
 
-      // No entry exists for _r(p, 5)
+      // Network-input serializer entry at index 0 (boot step).
+      final (netW, _) = runtime.heap.allocateVariable();
+      ctx.wp.initializeSerializerEntry(netW);
+
+      // 1) Early assignment for (p, 5) arrives before any entry: must not throw,
+      //    must create no entry, and must bind nothing yet (held).
       expect(
         () => ctx.handleMadAssignment(
           globalName: GlobalName.reader('p', 5),
           value: ConstTerm(42),
           fromAgent: 'p',
         ),
-        throwsStateError,
+        returnsNormally,
       );
+      expect(ctx.wp.findByRemote('p', 5), isNull);
+
+      // 2) Carrier cold-call (serializer, index 0) whose content is _r(p, 5):
+      //    localize() creates LocalizeEntry (Z_q, p, 5) and immediately delivers
+      //    the held assignment, binding Z_q to 42.
+      final content = StructTerm('_r', [ConstTerm('p'), ConstTerm(5)]);
+      final carrier = StructTerm('.', [content, ConstTerm('#serializer:q:0')]);
+      ctx.handleMadAssignment(
+        globalName: GlobalName.writer('q', 0),
+        value: carrier,
+        fromAgent: 'p',
+      );
+
+      // The held value reached the localized reader on the network-input stream:
+      // netW := [ Z_q? | N'_q? ] with Z_q bound to 42.
+      final cell = runtime.heap.derefAddr(netW);
+      expect(cell, isA<StructTerm>());
+      final head = (cell as StructTerm).args[0];
+      expect(head, isA<VarRef>());
+      final delivered = runtime.heap.derefAddr((head as VarRef).addr);
+      expect(delivered, isA<ConstTerm>());
+      expect((delivered as ConstTerm).value, 42);
+
+      // Entry was created by localize then removed by delivery.
+      expect(ctx.wp.findByRemote('p', 5), isNull);
     });
   });
 
