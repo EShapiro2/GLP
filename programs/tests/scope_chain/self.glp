@@ -1,0 +1,11 @@
+%% scope_chain/self.glp — A3 scope-chain test fixtures (Part 3).
+%%
+%% A multi-clause, parameterised utility defined once in this intermediate
+%% ancestor self.glp.  Modules in descendant directories (leaf/, shadow/)
+%% resolve it via ancestor scoping — exercising A3 Part 2's extended chain.
+
+procedure pmerge(Stream(X)?, Stream(X)?, Stream(X)).
+pmerge([X|Xs], Ys, [X?|Zs?]) :- pmerge(Ys?, Xs?, Zs).
+pmerge(Xs, [Y|Ys], [Y?|Zs?]) :- pmerge(Xs?, Ys?, Zs).
+pmerge([], Ys, Ys?).
+pmerge(Xs, [], Xs?).

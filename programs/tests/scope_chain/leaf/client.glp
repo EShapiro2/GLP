@@ -1,0 +1,13 @@
+-module(client).
+
+%% S2: project load of a leaf whose utility (pmerge) lives in an ancestor
+%% self.glp ABOVE the load point (scope_chain/self.glp).
+procedure test_merge(Stream(Integer)).
+test_merge(Z?) :- pmerge([1, 2, 3], [4, 5, 6], Z).
+
+%% S3: two distinct instantiations of the parameterised utility in one module
+%% (X = Integer and X = Constant).
+procedure test_both(Stream(Integer), Stream(Constant)).
+test_both(Zi?, Zc?) :-
+    pmerge([1, 2, 3], [4, 5, 6], Zi),
+    pmerge(["a", "b"], ["c", "d"], Zc).

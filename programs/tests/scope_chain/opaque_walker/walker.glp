@@ -1,0 +1,20 @@
+%% S5: opaque pass-through walker.
+%% The second clause captures a whole entry E (writer) at a consume position and
+%% re-emits E? (reader) at a produce position whose type carries an internal ?
+%% (Stream(Constant)? inside output/2), WITHOUT decomposing it.
+
+Entry ::= output(Constant, Stream(Constant)?) ; extra(Constant).
+
+procedure put(Constant?, Constant?, Stream(Entry)?, Stream(Entry)).
+put(Key, Msg, [output(K, [Msg?|Out1?])|Rest], [output(K?, Out1)|Rest?]) :-
+    Key? =?= K? | true.
+put(Key, Msg, [E|Rest], [E?|Rest1?]) :-
+    otherwise |
+    put(Key?, Msg?, Rest?, Rest1).
+put(_, _, [], []).
+
+%% Driver: mixed list, target key "k" is the second entry; extra("x") passes
+%% through opaquely, output("k", S) gets "hello" appended.
+procedure run(Stream(Entry), Stream(Constant)).
+run(Result?, S?) :-
+    put("k", "hello", [extra("x"), output("k", S)], Result).

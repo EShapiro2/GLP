@@ -1,0 +1,9 @@
+-module(param_client).
+
+%% S6: extended entry union; call put (defined in this dir's self.glp,
+%% parameterised over the entry type) instantiated at Stream(MyEntry).
+MyEntry ::= output(Constant, Stream(Constant)?) ; extra(Constant) ; more(Integer).
+
+procedure run(Stream(MyEntry), Stream(Constant)).
+run(Result?, S?) :-
+    put("k", "hello", [extra("x"), more(7), output("k", S)], Result).

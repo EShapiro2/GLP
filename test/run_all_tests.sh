@@ -1913,6 +1913,93 @@ check "SecureBonds play_recover succeeds" "succeeds" "$sb_recover"
 echo ""
 
 # =============================================================================
+# Section S: Ancestor self.glp Scope Chain (A3 module-system amendment)
+# =============================================================================
+echo "=== Section S: Ancestor self.glp Scope Chain ==="
+echo ""
+
+SCOPE_CHAIN="$GLP_DIR/programs/tests/scope_chain"
+
+# --- S1: file load resolves a multi-clause root self.glp procedure (:=/2) ---
+echo "--- S1: file load resolves a multi-clause root self.glp procedure ---"
+s1=$($DART run "$REPL" <<HEREDOC
+$SCOPE_CHAIN/s1_file/use_root_multiclause.glp
+compute(R).
+:quit
+HEREDOC
+2>&1)
+check "S1 file loads" "Loaded:" "$s1"
+check "S1 root multi-clause (:=) resolves" "R = 14" "$s1"
+
+# --- S2: project load resolves a utility in an ancestor self.glp above the root ---
+echo "--- S2: ancestor self.glp reach (intermediate ancestor above load point) ---"
+s2=$($DART run "$REPL" <<HEREDOC
+$SCOPE_CHAIN/leaf
+test_merge(Z).
+:quit
+HEREDOC
+2>&1)
+check "S2 leaf loads" "Loaded project" "$s2"
+check "S2 ancestor pmerge resolves" "Z = \[1, 4, 2, 5, 3, 6\]" "$s2"
+
+# --- S3: two distinct instantiations of the parameterised utility in one module ---
+echo "--- S3: two instantiations of the parameterised utility ---"
+s3=$($DART run "$REPL" <<HEREDOC
+$SCOPE_CHAIN/leaf
+test_both(Zi, Zc).
+:quit
+HEREDOC
+2>&1)
+check "S3 integer instantiation" "Zi = \[1, 4, 2, 5, 3, 6\]" "$s3"
+check "S3 constant instantiation" "Zc = \[\"a\", \"c\", \"b\", \"d\"\]" "$s3"
+
+# --- S4: regression — bonds_v2/play12 loads standalone (inventory I-1) ---
+echo "--- S4: bonds_v2/play12 standalone load (regression) ---"
+s4=$($DART run "$REPL" <<HEREDOC
+$GLP_DIR/programs/bonds_v2/play12
+:quit
+HEREDOC
+2>&1)
+check "S4 play12 loads standalone" "Loaded project" "$s4"
+check_not "S4 no unknown type error" "UnknownType" "$s4"
+
+# --- S5: opaque pass-through walker ---
+echo "--- S5: opaque pass-through walker ---"
+s5=$($DART run "$REPL" <<HEREDOC
+$SCOPE_CHAIN/opaque_walker
+run(Result, S).
+:quit
+HEREDOC
+2>&1)
+check "S5 walker loads" "Loaded project" "$s5"
+check "S5 opaque pass-through + append" "S = \[\"hello\"" "$s5"
+
+# --- S6: walker parameterised over the entry type ---
+echo "--- S6: parameterised walker (functor decomposition of type param) ---"
+s6=$($DART run "$REPL" <<HEREDOC
+$SCOPE_CHAIN/param_walker
+run(Result, S).
+:quit
+HEREDOC
+2>&1)
+check "S6 param walker loads" "Loaded project" "$s6"
+check "S6 functor decomposition" "more(7)" "$s6"
+check "S6 append via parameterised walker" "S = \[\"hello\"" "$s6"
+
+# --- S7: shadowing — local definition wins over ancestor ---
+echo "--- S7: shadowing (local pmerge shadows ancestor) ---"
+s7=$($DART run "$REPL" <<HEREDOC
+$SCOPE_CHAIN/shadow
+test_shadow(Z).
+:quit
+HEREDOC
+2>&1)
+check "S7 shadow loads" "Loaded project" "$s7"
+check "S7 local pmerge resolves (not ancestor interleave)" "Z = \[1, 2, 3\]" "$s7"
+
+echo ""
+
+# =============================================================================
 # SUMMARY
 # =============================================================================
 TOTAL=$((PASS + FAIL))

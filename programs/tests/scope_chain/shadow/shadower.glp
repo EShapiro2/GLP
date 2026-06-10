@@ -1,0 +1,13 @@
+-module(shadower).
+
+%% S7: shadowing.  This module defines its OWN pmerge/3, shadowing the ancestor
+%% scope_chain/self.glp pmerge.  The local definition ignores the second list
+%% (returns the first unchanged), so its result is distinguishable from the
+%% ancestor's interleave: resolving to the local definition yields [1, 2, 3],
+%% whereas the ancestor would yield [1, 4, 2, 5, 3, 6].
+
+procedure pmerge(Stream(X)?, Stream(X)?, Stream(X)).
+pmerge(Xs, _, Xs?).
+
+procedure test_shadow(Stream(Integer)).
+test_shadow(Z?) :- pmerge([1, 2, 3], [4, 5, 6], Z).

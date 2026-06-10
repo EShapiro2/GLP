@@ -1,0 +1,11 @@
+%% S1: file load resolving a MULTI-CLAUSE root self.glp procedure.
+%%
+%% `:=`/2 is defined by many clauses in the root programs/self.glp.  Resolving it
+%% in a single-file load proves that file loads reach root multi-clause
+%% definitions (not only PE-unfolded single-unit-clause procedures).
+%%
+%% Part 4 lifts merge/3 to the root; an assertion calling root merge/3 from a
+%% file load is added here at that point.
+
+procedure compute(Integer).
+compute(R?) :- R := 2 + 3 * 4.
