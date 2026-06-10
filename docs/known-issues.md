@@ -230,3 +230,7 @@ In `mad_context.dart`: when `_handleReaderAssignment` finds no entry, store the 
 ### Test
 
 A harness that delivers two messages of a pair in reverse order (the `_r(p, i) := T` assignment before its carrier) and verifies the run completes with the same outcome.
+
+### Related Check
+
+Verify the plays do not rely on per-sender cold-call order. Established channels are unaffected — each message carries its continuation, so they are dataflow-ordered under any delivery order — but two cold-calls from the same sender may now arrive in either order.
