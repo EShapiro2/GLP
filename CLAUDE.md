@@ -58,6 +58,8 @@ cd glp_runtime && dart test > /private/tmp/glp-dart.txt 2>&1
 
 Then `Read` the file.  Do not use `/tmp/` (not in allowed directories).
 
+🔴 **Never run `run_all_tests.sh` and `dart test` concurrently** — `run_all_tests.sh` itself invokes `dart test` (Sections M/O), so a parallel `dart test` contends on the Dart build lock and silently aborts the run mid-suite.  Always run them sequentially.
+
 **If the REPL snapshot seems stale** (tests fail after editing `lib/` or `bin/glp_repl.dart`): `rm glp_runtime/.dart_tool/repl.dill`.
 
 ### Baseline-before-commit (mandatory)
