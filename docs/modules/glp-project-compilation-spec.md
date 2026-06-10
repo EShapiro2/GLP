@@ -29,7 +29,7 @@ Walk the project directory tree. Collect every `.glp` file. Additionally collect
 
 `self.glp` files contribute both type definitions and procedure definitions to the ancestor scope.  Their procedures are compiled to bytecode and available to all modules in the subtree without qualification (in source), just like their types.  This holds equally for ancestor `self.glp` files above the project root.
 
-**`-expose` directives.**  If a collected `self.glp` contains an `-expose(M).` directive (`M` a module path, e.g. `lib#streams`), additionally collect module `M` — and, transitively, any modules `M` itself exposes — even when `M` lies outside the loaded subtree.  Only `M`'s **exported** procedures (and the types their signatures carry) join the exposing directory's scope; `M`'s non-exported procedures and its sibling modules are not collected.
+**`-expose` directives.**  If a collected `self.glp` contains an `-expose(M).` directive, additionally collect module `M` — and, transitively, any modules `M` itself exposes.  `M` names a module **file**, resolved relative to the directory of the exposing `self.glp`, within that directory's subtree (`a#b#c` → `<self.glp dir>/a/b/c.glp`).  This subtree may lie outside the *loaded project* subtree — e.g. when the exposing `self.glp` is an ancestor above the load point — so discovery must collect the file by path, not rely on it being among the project's modules.  Only `M`'s **exported** procedures (and the types their signatures carry) join the exposing directory's scope; `M`'s non-exported procedures and its sibling modules are not collected.
 
 ### 3.2 Procedure Renaming
 
