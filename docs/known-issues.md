@@ -1,6 +1,6 @@
 # GLP Known Issues
 
-**Last updated:** 2026-05-18
+**Last updated:** 2026-06-10
 
 ## Issue 0a: Parser does not support `=..` as a goal in clause bodies
 
@@ -206,3 +206,27 @@ Changed `globalize()` to pass `v.writerAddr` (the actual writer) to `addGlobaliz
 ### Note on onBind
 
 A previous fix also added an onBind callback in `send()` for globalize-reader entries, using `_sendWriteBack`. This was incorrect — for `_r(p, i)`, agent p creates an entry and WAITS. The `global_send` is spawned at q by `localize`, not at p. Agent p does not send anything for `_r` entries. The onBind and write-back have been removed.
+
+---
+
+## Issue 7: Receive drops early messages; hold mechanism required
+
+**Status**: Open — fix required before any non-FIFO transport
+**Discovered**: 2026-06-10
+**Affects**: madGLP over any channel that does not deliver per-pair FIFO (BLE/IP, multi-media routing). Masked in-process: Dart isolate ports happen to deliver in order.
+
+### Summary
+
+madGLP-spec v5.6 (Section 8.3, Early Messages) requires: a message `_r(p, i) := T↑` arriving before its entry `(X_q, p, i)` exists is held and processed when localization creates the entry. The code instead processes every message on arrival: `_handleReaderAssignment` in `mad_context.dart` throws `StateError('No LocalizeEntry...')` when the entry is absent, the isolate loop catches and prints it, and the message is dropped.
+
+### Why it has not bitten
+
+The entry for `_r(p, i)` is created when localizing the earlier p→q message that carried `_r(p, i)`. Dart isolate ports deliver per-pair in order, so in-process the carrier always arrives first. Real transports give no such guarantee, and the GLP-Networking-API paper states Unordered delivery: the layer need not provide ordering.
+
+### Fix
+
+In `mad_context.dart`: when `_handleReaderAssignment` finds no entry, store the assignment in a hold table keyed by `(remoteAgent, remoteIndex)`. When `localize()` creates a LocalizeEntry, check the hold table and deliver any held assignment for that key. Only the `_r` case needs holding: `_w(p, i)` entries exist before the global name leaves the agent, and the serializer entry at index 0 is permanent.
+
+### Test
+
+A harness that delivers two messages of a pair in reverse order (the `_r(p, i) := T` assignment before its carrier) and verifies the run completes with the same outcome.

@@ -248,7 +248,7 @@ agent_init(Id, NetIn) :-
 | Network routing | `network3` switch in GLP | `IsolateManager` in Dart |
 | NetIn stream | Created by `network3` | Provided by madGLP serializer |
 | Entry point | `play.` | `boot :- ...@agent` |
-| Completion detection | Process terminates | Idle-tick detection (2 consecutive empty ticks) |
+| Completion detection | Process terminates | External shutdown by the caller |
 
 ---
 
