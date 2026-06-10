@@ -13,16 +13,16 @@ The `@` operator enables GLP programs to declaratively spawn agents across Dart 
 ```prolog
 procedure boot.
 boot :-
-    agent_init(alice, ch(_?,_), ch(_?,_))@alice,
-    agent_init(bob, ch(_?,_), ch(_?,_))@bob,
-    agent_init(charlie, ch(_?,_), ch(_?,_))@charlie.
+    agent_init(alice, _)@alice,
+    agent_init(bob, _)@bob,
+    agent_init(charlie, _)@charlie.
 
-%% ... rest of program (agent_init/3, agent/3, etc.)
+%% ... rest of program (agent_init/2, agent/4, etc.)
 ```
 
 Instructs the Dart runtime to:
 1. Create three isolates named `alice`, `bob`, `charlie`
-2. In each isolate, run the specified goal with properly wired channels
+2. In each isolate, create the serializer entry at index 0 and spawn the specified goal with `(agentId, netInReader)`
 3. Route madGLP messages between isolates
 
 **Key design principle**: The Dart runtime handles all inter-isolate routing. There is no GLP-level network switch — messages are routed by Dart based on the destination agent ID.
@@ -38,12 +38,14 @@ BootDecl   ::= 'procedure' 'boot' '.'
 BootClause ::= 'boot' ':-' SpawnGoal (',' SpawnGoal)* '.'
 SpawnGoal  ::= Goal '@' AgentId
 AgentId    ::= Atom
-Goal       ::= Functor '(' AgentId ',' Channel ',' Channel ')'
+Goal       ::= Functor '(' AgentId (',' ConstArg)* ',' '_' ')'
 Functor    ::= Atom
-Channel    ::= 'ch' '(' '_?' ',' '_' ')'
+ConstArg   ::= Atom | Integer
 ```
 
-### 2.2 Restrictions (v0.5)
+The last argument is always `_` (network input placeholder). Middle arguments between the agent ID and `_` are optional constants passed through to the isolate.
+
+### 2.2 Restrictions (v0.6)
 
 1. **Boot-time only**: The `@` operator is only valid in the `boot/0` clause. It cannot appear elsewhere in the program.
 
@@ -53,13 +55,16 @@ Channel    ::= 'ch' '(' '_?' ',' '_' ')'
 
 4. **Ground agent identifiers**: The `AgentId` in both the goal and after `@` must be ground atoms, and must match (e.g., `agent_init(alice, ...)@alice`).
 
-5. **Goal structure**: The spawned goal must be a 3-arity procedure `p(AgentId, UICh, NetCh)` where:
+5. **Goal structure**: The spawned goal must have arity 2 or more with the following convention:
    - First argument is the agent's identifier (must match the `@AgentId`)
-   - Second argument is the UI channel (user interaction)
-   - Third argument is the network channel (inter-agent cold-calls)
-   - The procedure name `p` can be any atom (e.g., `agent_init`, `alice_agent`, `test_agent`)
+   - Last argument receives the network input reader (provided by Dart as `_`)
+   - Middle arguments (if any) are additional constants passed through from the boot clause
+   - The procedure name can be any atom (e.g., `agent_init`, `parent_init`)
+   - Examples: `agent_init(alice, _)@alice` (arity 2), `child_init(carol, alice, 4, _)@carol` (arity 4)
 
-6. **Anonymous channel variables**: Channel arguments must use the pattern `ch(_?,_)` — the Dart runtime creates and wires the actual variables.
+6. **Anonymous last argument**: The last argument must be `_` — the Dart runtime creates and provides the actual network input reader.
+
+7. **No Dart-provided channels**: The Dart runtime does NOT create or pass UI channels. The GLP boot goal is responsible for creating any channels it needs internally.
 
 ---
 
@@ -79,18 +84,25 @@ The Dart runtime is initialized with a GLP file path. It:
 class BootLoader {
   /// Load a GLP file and extract boot configuration
   /// Throws if first procedure is not boot/0
-  BootConfig load(String filePath);
+  BootConfig load(String source);
 }
 
 class BootConfig {
   final List<SpawnDirective> directives;
-  final Program program;  // Compiled GLP program
+  final String source;           // Source with boot clause stripped
+  List<String>? sharedSources;   // Optional shared code files
+  String? projectDir;            // Optional project directory for static linking
+  String rootSelfGlpPath;        // Absolute path to programs/self.glp
 }
 
 class SpawnDirective {
-  final String agentId;      // e.g., 'alice'
-  final String goalFunctor;  // e.g., 'agent_init', 'alice_agent'
-  // Channels created by Dart
+  final String agentId;          // e.g., 'alice'
+  final String goalFunctor;      // e.g., 'agent_init', 'parent_init'
+  final int goalArity;           // e.g., 2, 3, 4
+  final List<String> constantArgs; // Constants between agentId and netIn
+  // e.g., for parent_init(alice, carol, 4, _)@alice:
+  //   agentId='alice', goalFunctor='parent_init', goalArity=4,
+  //   constantArgs=['carol', '4']
 }
 ```
 
@@ -124,37 +136,57 @@ Each isolate runs the specified goal with the following setup:
 ```dart
 void agentIsolateEntry(AgentConfig config) async {
   // 1. Create runtime and madGLP context
-  final runtime = GlpRuntime();
-  final ctx = MadContext(agentId: config.agentId, runtime: runtime);
+  final engine = GlpEngine(rootSelfGlpPath: config.rootSelfGlpPath);
+  engine.enableMadGLP(agentId: config.agentId);
 
-  // 2. Create UI channel pair (second argument)
-  final (uiInWriter, uiInReader) = runtime.heap.allocateVariable();
-  final (uiOutWriter, uiOutReader) = runtime.heap.allocateVariable();
-  final uiCh = StructTerm('ch', [VarRef(uiInReader), VarRef(uiOutWriter)]);
+  // 2. Load program code
+  if (config.projectDir != null) {
+    engine.loadProject(config.projectDir!);
+    engine.loadSource(config.programSource, filename: 'program');
+  } else {
+    if (config.sharedSources != null) {
+      for (var i = 0; i < config.sharedSources!.length; i++) {
+        engine.loadSource(config.sharedSources![i], filename: 'shared_$i');
+      }
+    }
+    engine.loadSource(config.programSource, filename: 'program');
+  }
 
-  // 3. Create network channel pair (third argument)
-  // In madGLP, network communication happens via global_send goals,
-  // not via explicit network streams. Channel is for cold-call initiation.
+  final ctx = engine.madContext!;
+  final runtime = engine.runtime;
+
+  // 3. Initialize serializer entry at index 0 for network input
   final (netInWriter, netInReader) = runtime.heap.allocateVariable();
-  final (netOutWriter, netOutReader) = runtime.heap.allocateVariable();
-  final netCh = StructTerm('ch', [VarRef(netInReader), VarRef(netOutWriter)]);
+  ctx.wp.initializeSerializerEntry(netInWriter);
 
   // 4. Set up message delivery callback
   ctx.onMessageReady = (dest, msg) {
     config.mainPort.send(NetworkMsg(config.agentId, dest, msg.payload, msg.type));
   };
 
-  // 5. Spawn the goal (e.g., agent_init/3)
-  spawnGoal(runtime, config.program, '${config.goalFunctor}/3', [
-    ConstTerm(config.agentId),  // Agent's identity
-    uiCh,                        // UI channel (second arg)
-    netCh,                       // Network channel (third arg)
-  ]);
+  // 5. Build goal arguments:
+  //    arg 0 = agent ID (constant)
+  //    args 1..n-2 = additional constants from boot directive
+  //    arg n-1 = network input reader
+  final args = <int, Term>{};
+  // Arg 0: agent ID
+  args[0] = boundConstant(runtime, config.agentId);
+  // Middle args: constants
+  for (var i = 0; i < config.goalConstantArgs.length; i++) {
+    args[i + 1] = boundConstant(runtime, config.goalConstantArgs[i]);
+  }
+  // Last arg: network input reader
+  args[config.goalArity - 1] = VarRef(netInReader);
 
-  // 6. Enter message loop
+  // 6. Spawn the goal (e.g., agent_init/2)
+  spawnGoal(runtime, program, config.goalFunctor, config.goalArity, args);
+
+  // 7. Enter event-driven message loop
   runMessageLoop(runtime, ctx, config);
 }
 ```
+
+Note: The Dart runtime does NOT create UI channels. Only the network input is provided via the serializer entry at index 0. The GLP boot goal (e.g., `agent_init`) is responsible for creating any channels it needs internally.
 
 ---
 
@@ -165,6 +197,8 @@ void agentIsolateEntry(AgentConfig config) async {
 A channel is a pair `ch(In?, Out)` where:
 - `In?` is a reader — the agent reads messages from this stream
 - `Out` is a writer — the agent writes messages to this stream
+
+The Dart runtime provides only the **network input reader** (via the index-0 serializer entry at boot time). All other channels (UI, friend channels, etc.) are created internally by the GLP boot goal.
 
 ### 4.2 UI Agent Layer
 
@@ -236,36 +270,37 @@ The `no_readers(Msg?)` guard ensures output to the user contains no reader varia
 
 #### 4.2.5 Boot Examples
 
-The boot clause remains simple and BootLoader-compatible. The difference between actor and window mode is in which `agent_init` is used (in separate GLP files):
+The boot clause is the same for both actor and window modes:
 
 **Boot clause (same for both modes):**
 ```prolog
 procedure boot.
 boot :-
-    agent_init(alice, ch(_?,_), ch(_?,_))@alice,
-    agent_init(bob, ch(_?,_), ch(_?,_))@bob,
-    agent_init(charlie, ch(_?,_), ch(_?,_))@charlie.
+    agent_init(alice, _)@alice,
+    agent_init(bob, _)@bob,
+    agent_init(charlie, _)@charlie.
 ```
 
 **Actor mode `agent_init` (headless testing):**
 ```prolog
-agent_init(Id, _DartUserCh, ch(NetIn, NetOut?)) :-
-    new_channel(AgentCh, ActorCh) |
-    ui_agent_actor(Id?, ActorCh?),
-    merge(AgentCh?, NetIn?, In),
-    agent(Id?, In?, [friend(user, AgentCh), friend(net, NetOut)]).
+agent_init(Id, NetIn) :-
+    ground(Id?) |
+    send_to_net(NetOut?),
+    agent(Id?, UserOut?, NetIn?, [output('_user', UserIn), output('_net', NetOut)]),
+    actor(Id?, ch(UserIn?, UserOut)).
 ```
 
 **Window mode `agent_init` (visual UI):**
 ```prolog
-agent_init(Id, ch(DartIn, DartOut?), ch(NetIn, NetOut?)) :-
-    new_channel(AgentCh, WindowCh) |
-    ui_agent_window(Id?, WindowCh?, ch(DartIn?, DartOut)),
-    merge(AgentCh?, NetIn?, In),
-    agent(Id?, In?, [friend(user, AgentCh), friend(net, NetOut)]).
+agent_init(Id, NetIn) :-
+    ground(Id?) |
+    send_to_net(NetOut?),
+    '_spawn_window'(Id?, DartCh) |
+    agent(Id?, WindowOut?, NetIn?, [output('_user', UserIn), output('_net', NetOut)]),
+    ui_relay(ch(UserIn?, WindowOut), DartCh?).
 ```
 
-This design keeps the boot clause BootLoader-compatible while allowing different UI implementations.
+Both modes receive only `(agentId, netIn)` from Dart. The difference is in how the UI channel is wired: actor mode creates a GLP actor procedure, window mode spawns a Flutter window.
 
 #### 4.2.6 Message Formats
 
@@ -276,14 +311,16 @@ This design keeps the boot clause BootLoader-compatible while allowing different
 
 Writer variables in output (like `X35` in `befriend(alice, X35)`) allow interactive queries — the user binds them to provide responses.
 
-### 4.3 Network Channel (NetCh) — Third Argument
+### 4.3 Network Channel (NetIn) — Last Argument
 
-Connects the agent to the inter-isolate message router (Dart).
+The network input is provided by the Dart runtime as the last argument to the boot goal.
 
-| Direction | Variable | Dart Wiring |
-|-----------|----------|-------------|
-| Agent reads | `NetIn?` | Cold-call messages delivered here |
-| Agent writes | `NetOut` | Cold-call messages routed by IsolateManager |
+| Direction | Variable | Source |
+|-----------|----------|--------|
+| Agent reads | `NetIn?` | Serializer entry at index 0; cold-call messages delivered here |
+| Agent writes | `NetOut` | Created by GLP boot goal; processed by `send_to_net` |
+
+The Dart runtime creates the serializer entry `(N_p, *)` at index 0 and passes `N_p?` (the reader) as the last argument to the boot goal. Network output is handled by the GLP `send_to_net` predicate, which uses `global_send` to send cold-call messages via the index-0 serializer mechanism.
 
 **Message format**: `msg(Target, Content)` where `Target` is the destination agent's identifier.
 
@@ -358,10 +395,16 @@ Passed to isolate entry point:
 ```dart
 class AgentConfig {
   final String agentId;
-  final String goalFunctor;   // e.g., 'agent_init', 'alice_agent'
-  final Program program;
-  final SendPort mainPort;    // For routing messages
-  final SendPort? uiPort;     // For UI events (null if headless)
+  final String goalFunctor;       // e.g., 'agent_init', 'parent_init'
+  final int goalArity;            // e.g., 2, 3, 4
+  final List<String> goalConstantArgs; // Constants between agentId and netIn
+  final String programSource;
+  final List<String>? sharedSources;  // Optional shared code files
+  final String? projectDir;          // Optional project dir for static linking
+  final String rootSelfGlpPath;      // Absolute path to programs/self.glp
+  final SendPort mainPort;           // For routing messages
+  final SendPort? uiPort;            // For UI events (null if headless)
+  final TraceConfig traceConfig;     // Trace configuration
 }
 ```
 
@@ -464,19 +507,21 @@ test('three agent cold-call protocol', () async {
 
 procedure boot.
 boot :-
-    agent_init(alice, ch(_?,_), ch(_?,_))@alice,
-    agent_init(bob, ch(_?,_), ch(_?,_))@bob,
-    agent_init(charlie, ch(_?,_), ch(_?,_))@charlie.
+    agent_init(alice, _)@alice,
+    agent_init(bob, _)@bob,
+    agent_init(charlie, _)@charlie.
 
-%% Agent initialization - wires channels and starts agent loop
-procedure agent_init(_?, Channel?, Channel?).
-agent_init(Id, ch(UserIn, UserOut?), ch(NetIn, NetOut?)) :-
-    merge(UserIn?, NetIn?, In),
-    agent(Id?, In?, [friend(user, UserOut), friend(net, NetOut)]).
+%% Agent initialization - creates channels internally, starts agent loop
+procedure agent_init(_?, Stream(X)?).
+agent_init(Id, NetIn) :-
+    ground(Id?) |
+    send_to_net(NetOut?),
+    agent(Id?, UserOut?, NetIn?, [output('_user', UserIn), output('_net', NetOut)]),
+    actor(Id?, ch(UserIn?, UserOut)).
 
 %% Agent main loop
-procedure agent(_?, Stream?, FriendsList?).
-agent(Id, [Msg|In], Fs) :-
+procedure agent(_?, Stream(X)?, OutputsList?).
+agent(Id, [Msg|In], Outs) :-
     %% Handle messages from user and network
     ...
 agent(_, [], _).
@@ -485,11 +530,11 @@ agent(_, [], _).
 ...
 ```
 
-**Note**: The `network3` procedure (GLP-level network switch) is not needed — Dart handles all inter-isolate routing via cold-calls.
+**Note**: The Dart runtime provides only the network input reader (`NetIn?`) via the serializer. The `agent_init` procedure creates user channels and network output internally.
 
 ---
 
-## 11. Future Extensions (Out of Scope for v0.5)
+## 11. Future Extensions (Out of Scope for v0.6)
 
 The following are explicitly **not supported** in this version:
 
@@ -497,7 +542,6 @@ The following are explicitly **not supported** in this version:
 2. **Variable agent IDs**: `agent_init(Id?, ...)@Id?` with runtime evaluation
 3. **Isolate pools**: Multiple agents per isolate
 4. **Remote isolates**: Network-distributed agents
-5. **Non-3-arity goals**: Only 3-argument procedures are supported
 
 These may be added in future versions as needed.
 
@@ -513,3 +557,4 @@ These may be added in future versions as needed.
 | 0.4 | 2026-01-28 | Fixed channel order (UICh second, NetCh third); added `procedure boot.` requirement; clarified users are actors; updated example to match actual GLP code |
 | 0.5 | 2026-01-31 | Updated for madGLP: replaced IRMA terminology with madGLP, removed deprecated APIs (registerNetworkInput/Output, handleNetworkMessage), updated message flow to use push-based model with global_send and handleMadAssignment |
 | 0.6 | 2026-02-01 | Redesigned Section 4.2: UI Agent Layer with two implementations (window vs actor). Added `ui_agent_window/2`, `ui_agent_actor/2`, `ui_relay/2` with `no_readers` validation. Added `'_spawn_window'/2` builtin. Boot examples for both modes. |
+| 0.7 | 2026-04-04 | Harmonized with implementation: variable-arity goals (not 3-only), Dart provides only network input (not UI channels), updated syntax, AgentConfig, entry point, and channel wiring. |

@@ -165,6 +165,8 @@ serve(_, []) :-
 
 This is a system predicate — it uses the `'_activate'` body kernel and is not written by the programmer.  The `ground(Module?)` guard is required by SRSW: `Module` is read twice in the body (by `'_activate'` and the recursive `serve` call), so a grounding guard must establish that it is a constant value.  The core pattern is: read, dispatch, recurse.
 
+**Infrastructure goal classification.** The `serve` goal spawned at module activation is an infrastructure goal — it is part of the module dispatch machinery, not a user computation. Its normal steady state is suspended: it waits on the module's input channel for incoming goals. When no cross-module calls are pending, the serve goal has nothing to read and remains suspended indefinitely. This is correct behavior, not an error. The scheduler must distinguish infrastructure goals from user goals when determining execution status: a suspended serve goal does not make the overall computation "suspended." Only user goals (those spawned by the REPL or by user program clauses) contribute to the reported status.
+
 ### 3.5 Module Activation
 
 When a module is loaded, the runtime activates it by:
@@ -178,6 +180,8 @@ When a module is loaded, the runtime activates it by:
 4. **Registering the channel.** The module's channel is registered in the domain's service directory, keyed by the module's path. Subsequent remote procedure calls to this module are routed to this channel.
 
 For monitor modules (those with a `-monitor(Name)` declaration), step 3 differs: the runtime calls the programmer-written monitor procedure instead of the generic `serve` loop.
+
+**Serve goal identity.** The runtime must tag serve goals at spawn time so the scheduler can identify them as infrastructure goals. The tagging mechanism is implementation-defined (e.g., a flag on the goal context, a set of infrastructure goal IDs maintained by the runtime, or identification by program key). The requirement is: any goal spawned by `activateModule` for the purpose of running a service loop must be excludable from the scheduler's status determination.
 
 ### 3.6 Remote Procedure Call Routing
 
@@ -333,6 +337,7 @@ Load-time type verification uses the subtyping relation defined in `subtyping.md
 
 ---
 
-*Version 1.2 — 2026-02-25*  
+*Version 1.3 — 2026-03-14*  
 *v1.1: Revised from `_select/2` to `_select/1`, removed FCP's Controls argument.*  
-*v1.2: Module is a constant type (not string). `_select` uses pure head matching (no guards). `serve/2` uses `ground(Module?)` guard for SRSW.*
+*v1.2: Module is a constant type (not string). `_select` uses pure head matching (no guards). `serve/2` uses `ground(Module?)` guard for SRSW.*  
+*v1.3: Added infrastructure goal classification (§3.4) and serve goal identity requirement (§3.5). Serve goals are infrastructure — their suspension does not affect reported execution status.*

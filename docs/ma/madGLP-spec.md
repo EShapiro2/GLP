@@ -1,9 +1,9 @@
 # madGLP Specification
 
-**Version**: 5.3
-**Date**: 2026-02-10
+**Version**: 5.5
+**Date**: 2026-04-05
 **Status**: DRAFT  
-**Source**: CGLP Paper (`~/Grassroots/CGLP`), Section 7 "Multiagent Deterministic GLP (madGLP)"
+**Source**: CGLP Paper (`~/Grassroots/CGLP`), Sections 5–6 "Multiagent GLP and Its Implementation" and "madGLP Specification"
 
 ---
 
@@ -119,15 +119,7 @@ At boot time, each agent p creates a permanent entry at index 0 mapping `_r(p, 0
 
 **Remark [Serializer as Merge]**: The index-0 serializer implements a many-to-one merge pattern, combining cold-call messages from multiple senders into a single network input stream. The order of messages from different senders is non-deterministic, while messages from the same sender preserve FIFO order.
 
-**Remark [Network Output Processing]**: Each agent spawns a `send_to_net` goal to process its network output stream:
-
-```prolog
-send_to_net([msg(Q, T) | In]) :-
-    global_send(T?, _w(Q,0), Q?), send_to_net(In?).
-send_to_net([]).
-```
-
-This reads cold-call messages `msg(Q, T)` from the output stream and uses `global_send` with the well-known serializer address `_w(Q,0)` to send them.
+**Remark [Network Output Processing]**: Each agent spawns a `send_to_net` goal to process its network output stream. See Section 12.2 for the full definition.
 
 ---
 
@@ -215,9 +207,11 @@ The madGLP transition system over agents P ⊂ Π and GLP program M is the multi
 
 - **C** is the set of configurations where each c_p is a madGLP local state
 - **c₀** is the initial configuration where for each p ∈ P:
-  - A_p = [agent(p, ch(_?, _), ch(_?, _))]
-  - S_p = ∅, F_p = ∅, M_p = ∅
-  - W_p = {(N_p, *) at index 0} where N_p is the local writer for p's network input stream (serializer entry)
+  - The Dart runtime creates the serializer entry `(N_p, *)` at index 0 in W_p, where N_p is a fresh local writer for p's network input stream
+  - The Dart runtime spawns the boot goal specified in the boot clause (e.g., `agent_init(p, N_p?)`) with the agent's identifier as the first argument and the network input reader N_p? as the last argument
+  - A_p = [boot_goal], S_p = ∅, F_p = ∅, M_p = ∅
+  - W_p = {(N_p, *) at index 0}
+  - Additional constant arguments (if any) are placed between the agent ID and the network input reader
 - **T** consists of the Reduce, Send, and Receive transactions defined below
 
 ---
@@ -305,59 +299,60 @@ Messages use global names to enable routing:
 
 ### 10.1 Direct Communication (Client-Monitor)
 
-Consider the initial goal `client(Xs)@p, monitor(Xs?)@q`, establishing a shared pair with writer Xs at p and reader Xs? at q.
+Consider agents `p` and `q` with the boot clause:
 
-**Stage 0: Boot-Time Setup**
+```prolog
+procedure boot.
+boot :- client_init(p, _)@p, monitor_init(q, _)@q.
+```
 
-At boot time, each agent has its serializer entry created:
-- p: entry `(N_p, *)` at index 0 for network input
-- q: entry `(N_q, *)` at index 0 for network input
+where `client_init` and `monitor_init` establish a shared pair via cold-call:
 
-The initial shared pair `(Xs, Xs?)` is established via cold-call: p sends `global_send(msg(q, Xs?), _w(q,0), q)` through `send_to_net`. The term sent contains reader Xs?, so globalize processes a reader:
+```prolog
+client_init(_, NetIn) :- send_to_net([msg(q, client_hello(Xs))]), ...
+monitor_init(_, [msg(_, client_hello(Xs?))|NetIn]) :- monitor(Xs?), ...
+```
 
-- p: globalize Xs? (reader) → spawns `global_send(Xs?, _r(p,1), q)`, global name `_r(p,1)`
-- Cold-call message `_w(q,0) := [msg(q, _r(p,1)) | _w(q,0)]` sent to q
-- q localizes `_r(p,1)`: creates pair `(Xs_q, Xs_q?)`, entry `(Xs_q, p, 1)`, puts Xs_q? (reader) in term
-- q's resolvent contains Xs_q?
+The Dart runtime creates the serializer entry at index 0 for each agent and spawns their boot goals with `(agentId, netInReader)`. The shared pair `(Xs, Xs?)` is then established via the cold-call mechanism.
 
 **Stage 1: p Assigns Xs**
 
-p assigns Xs := [add|Xs1]:
+p assigns Xs := [add|Xs1?] (the clause head contains reader Xs1? as the stream continuation):
 
-1. Xs? becomes known (= [add|Xs1])
+1. Xs? becomes known (= [add|Xs1?])
 2. `global_send(Xs?, _r(p,1), q)` fires
-3. The term [add|Xs1] is globalized for q: Xs1 is a writer, so entry `(Xs1, q)` at index 2 in W_p, becomes `_w(p,2)`
-4. Message `_r(p,1) := [add|_w(p,2)]` sent to q
+3. The term [add|Xs1?] is globalized for q: Xs1? is a reader, so spawns `global_send(Xs1?, _r(p,2), q)`, becomes `_r(p,2)`
+4. Message `_r(p,1) := [add|_r(p,2)]` sent to q
 
 **Stage 2: q Receives**
 
-q receives `_r(p,1) := [add|_w(p,2)]`:
+q receives `_r(p,1) := [add|_r(p,2)]`:
 
 1. Find entry `(Xs_q, p, 1)` by searching for `(p, 1)`
-2. Localize `_w(p,2)`: create pair `(Xs1_q, Xs1_q?)`, spawn `global_send(Xs1_q?, _w(p,2), p)`, put Xs1_q (writer) in term
-3. Assign Xs_q := [add|Xs1_q]
+2. Localize `_r(p,2)`: create pair `(Xs1_q, Xs1_q?)`, entry `(Xs1_q, p, 2)`, put Xs1_q? (reader) in term
+3. Assign Xs_q := [add|Xs1_q?]
 4. Remove entry `(Xs_q, p, 1)`
 
 ### 10.2 Return Value Scenario
 
-p assigns Xs1 := [value(V?)|Xs2], exporting reader V? and writer Xs2:
+p assigns Xs1 := [value(V)|Xs2?], exporting writer V (the monitor will write the value back) and reader Xs2? (the stream continuation):
 
-1. Globalize V? (reader): spawns `global_send(V?, _r(p,3), q)`, becomes `_r(p,3)`
-2. Globalize Xs2 (writer): entry `(Xs2, q)` at index 4 in W_p, becomes `_w(p,4)`
-3. Message `_w(p,2) := [value(_r(p,3))|_w(p,4)]` sent to q
+1. Globalize V (writer): entry `(V, q)` at index 3 in W_p, becomes `_w(p,3)`
+2. Globalize Xs2? (reader): spawns `global_send(Xs2?, _r(p,4), q)`, becomes `_r(p,4)`
+3. Message `_r(p,2) := [value(_w(p,3))|_r(p,4)]` sent to q
 
 q receives and localizes:
 
-1. For `_r(p,3)`: create pair `(V_q, V_q?)`, entry `(V_q, p, 3)`, put V_q? (reader) in term
-2. For `_w(p,4)`: create pair `(Xs2_q, Xs2_q?)`, spawn `global_send(Xs2_q?, _w(p,4), p)`, put Xs2_q (writer) in term
+1. For `_w(p,3)`: create pair `(V_q, V_q?)`, spawn `global_send(V_q?, _w(p,3), p)`, put V_q (writer) in term
+2. For `_r(p,4)`: create pair `(Xs2_q, Xs2_q?)`, entry `(Xs2_q, p, 4)`, put Xs2_q? (reader) in term
 
-When p assigns V := Sum (the client computes the return value):
+When q assigns V_q := Sum (the monitor computes the return value):
 
-1. V? becomes known at p (= Sum)
-2. `global_send(V?, _r(p,3), q)` fires
-3. Message `_r(p,3) := Sum↑` sent to q
-4. q receives, finds entry `(V_q, p, 3)`, assigns V_q := Sum↓
-5. V_q? becomes known in q's resolvent
+1. V_q? becomes known at q (= Sum)
+2. `global_send(V_q?, _w(p,3), p)` fires
+3. Message `_w(p,3) := Sum↑` sent to p
+4. p receives, finds entry `(V, q)` at index 3, assigns V := Sum↓
+5. V? becomes known in p's resolvent
 
 ### 10.3 Friend-Mediated Introduction
 
@@ -622,14 +617,17 @@ The GLP semantics remain unchanged—only the UI rendering differs.
 In an agent's initialization:
 
 ```prolog
-agent_init(Id, ch(UserIn, UserOut?), ch(NetIn, NetOut?)) :-
-    %% Start UI output processor
-    send_to_ui(UserOut?),
-    %% Start network output processor (Q is established by Network transaction)
-    %% ... handle messages from UserIn? and NetIn? ...
+agent_init(Id, NetIn) :-
+    ground(Id?) |
+    %% Start network output processor
+    send_to_net(NetOut?),
+    %% Start agent main loop with merged input
+    agent(Id?, UserOut?, NetIn?, [output('_user', UserIn), output('_net', NetOut)]),
+    %% Start actor (or UI window) connected to agent via user channel
+    actor(Id?, ch(UserIn?, UserOut)).
 ```
 
-The `send_to_ui` goal consumes terms written to UserOut and delivers them to the Flutter window. Network output is handled by `global_send` goals spawned during globalization, not by an explicit `send_to_net` call in user code.
+The `send_to_net` goal consumes cold-call messages written to `NetOut` and delivers them via the index-0 serializer mechanism. Network input arrives via `NetIn?`, the serializer reader provided by the Dart runtime. The user channel is created internally and connected to the actor (or UI window).
 
 ---
 
@@ -690,6 +688,8 @@ The GLP compiler rejects underscore-prefixed constants in user mode (default). S
 
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
+| 5.5 | 2026-04-05 | Claude | Fixed examples 10.1-10.2 to use correct variable polarity from clause heads: bindings contain mixed writer/reader terms (e.g., `[value(V)|Xs2?]` not `[value(V?)|Xs2]`). Fixed 10.1 Xs1 from writer/_w to reader/_r. Fixed 10.2 V from reader/_r to writer/_w, Xs2 from writer/_w to reader/_r, corrected message names and dataflow direction. Aligns with paper, figure, and code. |
+| 5.4 | 2026-04-04 | Claude | Harmonized with implementation and paper: fixed source reference to Sections 5–6; updated initial configuration to match actual boot protocol (variable-arity goals, Dart provides only network input reader, not UI channels); removed send_to_net duplication (Section 4.1 now references Section 12.2); updated example 10.1 boot setup to match actual code. |
 | 5.3 | 2026-02-10 | Claude | **Corrected Globalize/Localize direction**: Swapped gs/entry placement in Sections 5.1-5.4, 8.3, 9.3-9.4, 10.1-10.3, 11.2, 11.5, 12.2. Writer → entry at globalizer (receiver gets writer, sends back). Reader → gs at globalizer (globalizer keeps writer, sends to receiver). Updated all examples and remarks to match. Aligns with corrected paper appendix. |
 | 5.2 | 2026-02-09 | Claude | Fixed cold-call polarity error in Receive serializer case (Section 8.3): changed `N_q := [T_q↓? \| N'_q]` to `N_q := [T_q↓ \| N'_q]`. Removed duplicate definition in Section 12.3, replaced with reference to 8.3. |
 | 5.1 | 2026-02-02 | Claude | Added Section 15: Reserved Constants. Documents `'_user'`, `'_net'`, `'_w(p,i)'`, `'_r(p,i)'` as system-reserved. Describes `-mode(system).` directive for system code. Renumbered References→16, Document History→17. |
