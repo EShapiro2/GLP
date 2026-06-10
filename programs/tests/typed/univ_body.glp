@@ -1,0 +1,6 @@
+%% Issue 0a regression: `=..` (univ) as a goal in a clause BODY.
+%% Compose a compound term from a list via the body goal `T =.. L?`.
+%% (The head form `X? =.. [Y|Ys] :- ...` always parsed; this checks the body.)
+
+procedure comp(_?, _).
+comp(L, T?) :- list(L?) | T =.. L?.

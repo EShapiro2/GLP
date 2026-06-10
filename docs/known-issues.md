@@ -4,23 +4,27 @@
 
 ## Issue 0a: Parser does not support `=..` as a goal in clause bodies
 
-**Status:** Open
+**Status:** Fixed (the parser has supported body `=..` since `e803730f`, 2026-01-17; verified and regression-tested 2026-06-10).
+
+Original (pre-fix) symptom:
 
 ```glp
-%% This FAILS:
+%% Reported as FAILING (no longer):
 compose(List, Tuple) :- Tuple? =.. List?.
 %% Error: "Expected predicate name or comparison" at =..
 
-%% This WORKS (in clause head):
+%% Always worked (in clause head):
 X? =.. [Y|Ys] :- list(Ys?) | list_to_tuple([Y|Ys], X).
 ```
 
-Parser needs to recognise `=..` as a valid goal in bodies.
+**Resolution:** `=..` as a body goal is specified by the language docs (`docs/glp-predicate-taxonomy.md` "Usage": `Term =.. [Functor | Args]` in a body; `docs/guards-reference.md`: `X? =.. [F|Args], ...` in a body). The parser's body-goal path (`lib/compiler/parser.dart` `_parseGoalOrGuard`, reader/variable + `TokenType.UNIV` case) handles it for reader-, writer-, and compound-led forms. Verified: `comp(L, T?) :- list(L?) | T =.. L?.` with `comp([foo, a, b], T).` yields `T = foo(a, b)`. Regression test: `programs/tests/typed/univ_body.glp` + `test/run_all_tests.sh` Section A30.
+
+**Aside (separate, out of scope):** the dual operator `..=` is declared in `programs/self.glp` (`procedure ..=(Stream(_), _?).`) but has no clause, so `List ..= Compound?` parses and type-checks yet fails at runtime with "Spawn could not find procedure label: ..=/2". Not part of this issue; flagged for a future fix.
 
 ## Issue 0b: REPL cannot parse compound terms inside lists in goal arguments
 
-**Status:** Open
-**Location:** `glp_runtime/bin/glp_repl.dart` — functions `_buildListTermForConj` and `_buildListTerm` handle `ConstTerm`, `VarTerm`, `ListTerm` but not `StructTerm`.
+**Status:** Fixed (resolved by the GlpEngine refactor `997eed0e`, 2026-02-01; verified and regression-tested 2026-06-10).
+**Resolution:** The goal-term builders moved into `glp_runtime/lib/engine/glp_engine.dart` (`_buildListTerm` and `_buildListTermForConj`), where the list-head dispatch now includes a `StructTerm` case (→ `_buildStructTerm` / `_buildStructTermForConj`). The original pointer to `bin/glp_repl.dart` is stale. Verified: `distribute_indexed([send(1,a), send(2,b), send(1,c), send(2,d)], Y, Z).` yields `Y = [a, c]`, `Z = [b, d]`. Regression test: `test/run_all_tests.sh` Section A29.
 
 ```glp
 %% This FAILS in REPL goal:
@@ -39,7 +43,7 @@ Impact: can't test predicates that take lists of structures from REPL goals.  Wo
 
 ## Issue 1: Localize uses writer address where reader address is needed
 
-**Status**: Open
+**Status**: Fixed — functional defect resolved (verified by trace 2026-06-10); see Investigation Result. The N+1 audit it names found latent reliance on the allocation convention that remains open as a separate, deferred concern (core-heap change, needs approval) — see N+1 Audit Result.
 **Discovered**: 2026-02-10
 **Affects**: Multi-agent (madGLP) programs where a term with unbound variables is sent between agents
 
@@ -96,6 +100,32 @@ The heap-pointer architecture spec states that writer and reader cells point to 
 
 After fixing all issues, `three_agent_pipeline_boot.glp` should show agent3's `consumer_init` suspending on `ground(Ys?)`, then waking when the full list `[got(1), got(2), got(3)]` arrives, then completing via `wrap` and `consume`.
 
+### Investigation Result (2026-06-10): functional defect resolved
+
+Ran `three_agent_pipeline_boot.glp` via `multiagent_glp_test.dart` with `traceGlp`+`traceMad`. agent3 exhibits exactly the correct behavior the Test section requires — it **suspends** (does not fail) while the list tail is unbound, and **wakes** as each piece arrives:
+
+```
+[agent3] consumer_init(agent3, X1?) → suspended
+[agent3] consumer_init(agent3, [msg(agent3, data([got(1), got(2) | X2?])) | X3?]) → suspended   % ground(Ys?) suspends
+[agent3] consumer_init(agent3, [msg(agent3, data([got(1), got(2) | [got(3) | X5?]])) | X3?]) → suspended
+[agent3] consumer_init(agent3, [... data([got(1), got(2) | [got(3) | []]]) ...]) :- wrap(...), consume(...)   % wakes when ground
+[agent3] wrap([got(1), got(2), got(3)], done([...])) :- true
+[agent3] consume(done([got(1), got(2), got(3)])) :- true
+```
+
+The localized tail variables behave as readers (suspend `ground`, wake on binding), not as definitively-failing unbound writers. The defect described in Summary/Consequence is gone, closed by Issue 1's partial fix together with Issues 2, 5, 6. No definitive failure.
+
+### N+1 Audit Result (2026-06-10): latent reliance found; core fix deferred (needs approval)
+
+The "Broader Concern: N+1 Arithmetic" audit was performed. Code **does** rely on the N/N+1 allocation convention, in violation of the explicit rule in `lib/runtime/terms.dart` ("MUST NOT: Code must not assume reader_addr == writer_addr + 1"):
+
+- `heap_fcp.dart` `pairedReaderAddr()` — fallback `return writerAddr + 1`. Reached when `readerForWriter()` returns null, which it does for a **bound** writer (the bidirectional pointer is consumed on binding). There is no cross-pointer way to recover the reader of a bound writer under the current cell design, so this fallback is structurally necessary, not merely defensive.
+- `lib/bytecode/runner.dart` — direct `writerAddr + 1` reader derivation at lines 2346, 2574, 2580, 2716.
+
+These are **currently correct** because `allocateVariable()` always allocates `(HP, HP+1)`, so the convention holds in practice; hence no active failure and the pipeline passes. But they are latent fragility: any change to allocation (e.g. interleaved/relocating allocation, GC compaction) would break them.
+
+Removing the reliance requires a core-heap change — either retaining the reader pointer on bound writers, or threading the reader address through the call sites instead of deriving it. Per `GLP/CLAUDE.md`, modifying core GLP files (`runner.dart`, `heap_fcp.dart`) requires explicit discussion and approval. **Deferred pending that decision** — not fixed unilaterally. Recommend a dedicated task with approval.
+
 ---
 
 ## Issue 2: TermVar.pairedReaderAddr returns wrong address
@@ -137,7 +167,7 @@ Removed `_registerWriteBackCallbacks()`, `_sendWriteBack()`, and all call sites 
 
 ## Issue 4: Type checker rejects well-typed `=` with reader argument
 
-**Status**: Open
+**Status**: Not a bug — the type checker is correct (verified 2026-06-10). The clause in the report is genuinely ill-moded; see Resolution. (Title is a misnomer: `=` with a *reader* at arg0 type-checks fine; what is rejected is a *writer* at arg0.)
 **Discovered**: 2026-02-10
 **Affects**: Any typed program using `=` (unification) with a reader variable
 
@@ -170,6 +200,23 @@ Use `done(Done)` instead of `Done = done` to avoid `=` entirely.
 ### Files Involved
 
 - `glp_runtime/lib/analysis/type_checker/` — type checker implementation
+
+### Resolution (2026-06-10): the checker is correct; do not change it
+
+The Analysis above is mistaken about the mode of `Done` in the body. Apply the manual's rules (typed-glp-manual §2A; §11 variable-flow table):
+
+- `procedure bind_later(_)` — arg0 has no `?`, so it is **↑ produce** (an output the procedure fills).
+- In the head `bind_later(Done?)`, a ↑-produce position takes a **reader** hole — hence `Done?` (reader) in the head is correct (§2A: ↑ → reader).
+- By SRSW, the paired occurrence in the body is the **writer** `Done` — this is the §11 case "output constructed by body: head reader `X?`, body writer `X`". So in the body, `Done` is a **writer**, not a reader (the Analysis's claim that it is "the reader of the writer passed by the caller" is wrong — the caller passes a writer because arg0 is an output).
+- `=` is declared `=(_?, _)` (clause `X? = X.`): arg0 is **↓ consume** (a reader). Placing the body writer `Done` at `=`'s arg0 puts a writer at a consume position → "writer requires ↑ (produce), got ↓ (consume)". The rejection is correct.
+
+Empirical confirmation (2026-06-10):
+
+- `Done = done` in `bind_later(Done?) :- wait(1000) | Done = done.` → rejected (writer at arg0). Correct.
+- `In? = Out` in `copy_val(In, Out?) :- In? = Out.` → type-checks (a **reader** at arg0 is accepted). So the checker does not reject "`=` with a reader argument" — it rejects a writer there.
+- The report's own workaround (produce via a helper head: `result(done).` then `... | result(Out)`) type-checks and runs (`bind_helper(Y)` → `Y = done`). This is the GLP-correct idiom: construct outputs in a head, do not bind a writer to a constant via `=` in the body (manual §6, cheat-sheet §1 / §10).
+
+No type-checker change. (Unrelated note: a runtime `=`-aliasing quirk — `copy_val(hello, X)` type-checks but yields `X = <unbound>` — is a separate matter from this type-checking issue and from the `=` clause-ordering note in MEMORY; not addressed here.)
 
 ---
 

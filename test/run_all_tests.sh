@@ -728,6 +728,29 @@ HEREDOC
 2>&1)
 check "module guard ~module(42)" "Rm1 = not_module" "$a28"
 
+# --- A29: Struct terms inside lists in goal arguments (Issue 0b regression) ---
+echo "--- A29: Structs in list goal args ---"
+a29=$($DART run "$REPL" <<HEREDOC
+$BOOK/streams/producers_consumers/distribute_indexed.glp
+distribute_indexed([send(1,a), send(2,b), send(1,c), send(2,d)], Y, Z).
+:quit
+HEREDOC
+2>&1)
+check "Struct-in-list goal arg: route Y" "Y = \[a, c\]" "$a29"
+check "Struct-in-list goal arg: route Z" "Z = \[b, d\]" "$a29"
+
+# --- A30: =.. (univ) as a goal in a clause body (Issue 0a regression) ---
+echo "--- A30: =.. as a body goal ---"
+a30=$($DART run "$REPL" <<HEREDOC
+$TYPED/univ_body.glp
+comp([foo, a, b], T).
+comp([greet, hello, world], G).
+:quit
+HEREDOC
+2>&1)
+check "Body =.. compose foo" "T = foo(a, b)" "$a30"
+check "Body =.. compose greet" "G = greet(hello, world)" "$a30"
+
 SECTION_A_PASS=$PASS
 SECTION_A_FAIL=$FAIL
 
