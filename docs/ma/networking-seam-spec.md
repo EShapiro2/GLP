@@ -2,7 +2,7 @@
 
 **Version**: 0.4
 **Date**: 2026-06-10
-**Status**: IMPLEMENTED (isolate stack, §4 kernels); pending: Issue 8 app path
+**Status**: IMPLEMENTED (isolate stack, §4 kernels, app path / Issue 8)
 **Source**: GLP Networking API Specification paper (`~/Grassroots/GLP-Networking-API`), Sections 2–3 and the Simulation Realization appendix; `madGLP-spec.md` v5.6; `known-issues.md` Issue 7.
 
 ---
@@ -162,15 +162,17 @@ Implemented 2026-06-10 in a GLP Code session, on `main`.
 | `6aea4c64` | Runtime adapter: isolate stack routed through the seam (`isolate_manager.dart`) |
 | `308d556b` | Reverse-order delivery test (`reverse_order_delivery_test.dart`, 2 tests) |
 | `0b8354a6` | §4 kernels `sign/2`, `verify_attestation/4` (`body_kernels.dart`, madPredicates, `self.glp`; `sign_verify_test.dart`, 6 tests) |
+| `8e951bf0` | Issue 8: `agent_runtime.dart` migrated to `GlpNetwork`; connectivity forwarding (`agent_runtime_test.dart`, 2 tests) |
 
 **Test counts (2026-06-10):**
 
-- `dart test` (full): `+376 ~5 -0`.
-- REPL suite (`bash test/run_all_tests.sh`): 511/511 passed, 0 failed.
+- `dart test` (full): `+378 ~5 -0`.
+- REPL suite (`bash test/run_all_tests.sh`): 511/511 at `0b8354a6`; at `8e951bf0` red (490/511) **due to another session's uncommitted `-expose` compiler WIP**, not this work — all 21 failures are module-system/project-load tests; push held until the combined tree is REPL-green.
+- Flutter (`glp_multiagent`): `flutter analyze` clean (2 pre-existing); `flutter build macos` success.
 
 **Dependency:** removed `cryptography` (async-only), added `ed25519_edwards 0.3.1` (synchronous), backing the synchronous `sign`/`verify` of §2.
 
-**Deferred (Issue 8):** `agent_runtime.dart` and cross-isolate connectivity-callback forwarding — the live Flutter-app path; verification by Claude Code (manual app check waived 2026-06-10).
+**Issue 8 (app path):** **implemented** (`8e951bf0`) — `agent_runtime.dart` migrated to `GlpNetwork` (mirrors `isolate_manager.dart`); connectivity events forwarded to client callbacks via `onConnectivityEvent`. Verified by headless `agent_runtime_test.dart` (characterization test green across the migration) + `flutter analyze`/`flutter build macos`; manual app check waived.
 
 **Body kernels** `sign/2`, `verify_attestation/4`: **implemented** (`0b8354a6`) as GLP wrappers (ground-guard → suspend-until-ground) over Dart kernels `'_sign'/2`, `'_verify_attestation'/4` in `body_kernels.dart`, backed by `GlpNetwork.sign`/`verify` (real Ed25519). Canonical bytes = the madGLP payload serialization of the ground term (`MadContext.canonicalSerialize` → `serializeAgentMessage`, which throws on any `VarRef` — confirmed address-free and agentId-independent for ground terms). Keys/signatures are lowercase-hex string constants. §7 test 6 in `sign_verify_test.dart`.
 

@@ -281,7 +281,7 @@ Verify the plays do not rely on per-sender cold-call order. Established channels
 
 ## Issue 8: Live app path not on the networking seam
 
-**Status**: Open — ready; verification by Claude Code (manual app check waived 2026-06-10)
+**Status**: Fixed (2026-06-10, commit `8e951bf0`). See Resolution.
 **Discovered**: 2026-06-10
 **Affects**: The Flutter `glp_multiagent` app and `agent_runtime.dart`
 
@@ -317,6 +317,40 @@ message path written first and kept green across the migration, plus
 `flutter analyze` and a `flutter build` if the SDK is available. Residual
 UI-wiring risk accepted. Until merged, the isolate test stack is the seam's
 reference path.
+
+### Resolution (2026-06-10, commit `8e951bf0`)
+
+1. **`agent_runtime.dart` migrated to `GlpNetwork`** (mirrors `isolate_manager.dart`).
+   It constructs a `SimulationNetworkClient` whose `sendToRouter` forwards to the
+   existing `onSendMadMessage(to, payload)` callback; outgoing is
+   `ctx.onMessageReady(destId, msg) → network.send(directory.pkOf(destId), msg.payload)`;
+   incoming is `onMadMessageReceived(from, payload) → network.onMessageReceived →
+   deserialize → handleMadAssignment`. `MessageType` is off the wire (the legacy
+   `agentMessage` branch removed). `ctx.network` is set, so the `sign/2` and
+   `verify_attestation/4` kernels (§4) work on the app path too. The external
+   (to/from + opaque payload) contract is unchanged, so `isolate_protocol.dart`
+   needs no change. Routing keys are the directory's; when no directory is
+   supplied a deterministic id→key is derived (`_pkFor`), real keys go via the
+   keyPair for signing.
+2. **Connectivity forwarding**: `AgentRuntime` exposes `onPeerConnected`/
+   `onPeerDisconnected`/`onPeerDiscovered` and an `onConnectivityEvent(pk, t,
+   event)` entry the coordinator calls to forward router events to the client.
+
+**Verification (Claude Code; manual app check waived):**
+- Headless characterization test `test/multiagent/agent_runtime_test.dart`
+  ("a cold-calls b; b receives and surfaces the value") written first and kept
+  **green across the migration**; plus a connectivity-forwarding test.
+- `dart test` (full): `+378 ~5 -0`.
+- `flutter analyze` (glp_multiagent): clean except 2 pre-existing issues
+  (`mad_router.dart` unnecessary import, `main.dart` unused element).
+- `flutter build macos`: success (built `glp_multiagent.app`, 40.2 MB).
+
+**Note on the REPL gate:** at commit time the REPL suite was red (490/511) due
+to another session's *uncommitted* `-expose` compiler work (`ast.dart`,
+`parser.dart`, `project_linker.dart`; build `8c14e233`) — all 21 failures are
+module-system/project-load tests in that domain. Task A's REPL was 511/511
+before those changes; this migration touches only `agent_runtime.dart`, not the
+REPL path. Push is held until the combined tree is REPL-green.
 
 ---
 
