@@ -23,8 +23,9 @@ import 'package:glp_runtime/runtime/scheduler.dart';
 import 'package:glp_runtime/runtime/terms.dart' as rt;
 import 'package:glp_runtime/runtime/external_io.dart';
 import 'package:glp_runtime/multiagent/mad_context.dart';
-import 'package:glp_runtime/multiagent/message_queue.dart';
 import 'package:glp_runtime/multiagent/payload_serializer.dart';
+import 'package:glp_runtime/multiagent/glp_network.dart';
+import 'package:glp_runtime/multiagent/simulation_network.dart';
 
 /// Agent runtime encapsulating GLP execution, madGLP context, and I/O.
 ///
@@ -58,7 +59,24 @@ class AgentRuntime {
   void Function(String tag, String message)? onLog;
   Future<void> Function(String destination, Uint8List payload)? onSendMadMessage;
 
+  /// Connectivity callbacks surfaced from the networking seam (spec §2/§3). The
+  /// coordinator forwards router events via [onConnectivityEvent].
+  void Function(PubKey pk, Transport t)? onPeerConnected;
+  void Function(PubKey pk, Transport t)? onPeerDisconnected;
+  void Function(DiscoveredPeer p)? onPeerDiscovered;
+
+  /// This agent's Ed25519 key pair. Provided by the coordinator, or generated.
+  final ({PubKey pub, Uint8List priv})? keyPair;
+
+  /// The shared identifier–key directory. Provided by the coordinator, or built
+  /// lazily (deterministic routing keys) when absent.
+  final NetworkDirectory directory;
+
   // Runtime state
+  /// The agent's networking layer (seam spec §3-4): outgoing via [send],
+  /// incoming via [GlpNetwork.onMessageReceived]. In simulation it forwards to
+  /// the coordinator through [onSendMadMessage].
+  SimulationNetworkClient? _network;
   GlpRuntime? _runtime;
   MadContext? _ctx;
   Scheduler? _scheduler;
@@ -83,7 +101,37 @@ class AgentRuntime {
     this.goalLabel = 'agent_init/3',
     this.extraArgs = const [],
     this.projectDir,
-  });
+    this.keyPair,
+    NetworkDirectory? directory,
+  }) : directory = directory ?? NetworkDirectory();
+
+  /// Deterministic routing key for [id]: returns the directory entry if present,
+  /// otherwise derives a stable 32-byte key and registers it. Routing-only — the
+  /// signing identity is the agent's real [keyPair].
+  PubKey _pkFor(String id) {
+    final existing = directory.pkOf(id);
+    if (existing != null) return existing;
+    final src = id.codeUnits;
+    final bytes = Uint8List(32);
+    for (var i = 0; i < 32; i++) {
+      bytes[i] = src.isEmpty ? 0 : (src[i % src.length] + i * 7) & 0xff;
+    }
+    final pk = PubKey(bytes);
+    directory.register(id, pk);
+    return pk;
+  }
+
+  /// Forward a router connectivity event to this client's callbacks (seam §3).
+  void onConnectivityEvent(PubKey peer, Transport t, ConnectivityEvent event) {
+    switch (event) {
+      case ConnectivityEvent.connected:
+        onPeerConnected?.call(peer, t);
+      case ConnectivityEvent.disconnected:
+        onPeerDisconnected?.call(peer, t);
+      case ConnectivityEvent.discovered:
+        onPeerDiscovered?.call(DiscoveredPeer(peer, t));
+    }
+  }
 
   bool get initialized => _initialized;
   GlpRuntime? get runtime => _runtime;
@@ -156,11 +204,43 @@ class AgentRuntime {
       _output('< $text');
     };
 
-    // Wire outbound madGLP messages
+    // Networking seam (spec §3-4): route outgoing/incoming through a
+    // SimulationNetworkClient instead of serializing OutboundMessages directly.
+    // The wire carries the opaque payload bytes only (no MessageType).
+    final kp = keyPair ?? generateKeyPair();
+    directory.register(agentIdLower, kp.pub); // self identity (for sign/verify)
+    final network = SimulationNetworkClient(
+      selfId: agentIdLower,
+      directory: directory,
+      sendToRouter: (toId, payload) =>
+          _sendMadPayload(toId, Uint8List.fromList(payload)),
+    );
+    network.putIdentity(kp.pub, kp.priv);
+    _network = network;
+    _ctx!.network = network; // backs sign/2 and verify_attestation/4 (§4)
+
+    // Outgoing (spec §4): ctx.onMessageReady(destId, msg) → network.send.
     _ctx!.onMessageReady = (destination, msg) async {
-      final serializer = PayloadSerializer(agentIdLower);
-      final payload = serializer.serializeMessage(msg);
-      await _sendMadPayload(destination, payload);
+      network.send(_pkFor(destination), Uint8List.fromList(msg.payload));
+    };
+
+    // Incoming (spec §4): deserialize (globalName, value) and handleMadAssignment.
+    network.onMessageReceived = (senderPk, payload, messageId, transport) {
+      try {
+        final (globalName, value) =
+            PayloadSerializer(agentIdLower).deserializeGlobalSendPayload(
+          payload,
+          (isReader) {
+            final (w, r) = _runtime!.heap.allocateVariable();
+            return isReader ? r : w;
+          },
+        );
+        final fromId = directory.idOf(senderPk) ?? '?';
+        _ctx!.handleMadAssignment(
+            globalName: globalName, value: value, fromAgent: fromId);
+      } catch (e) {
+        _log('MAD_ERROR: $e');
+      }
     };
 
     // Initialize serializer entry for network input (index 0)
@@ -286,58 +366,19 @@ class AgentRuntime {
   // NETWORK MESSAGES
   // =========================================================================
 
-  /// Handle incoming madGLP binary message.
+  /// Handle an incoming madGLP message (seam §4): the opaque payload bytes are
+  /// surfaced to the networking layer, which deserializes and dispatches them.
   Future<void> onMadMessageReceived(String from, Uint8List payload) async {
     _log('MAD_RECV from $from (${payload.length} bytes)');
 
-    if (_runtime == null || _ctx == null || _netInput == null) {
-      _log('MAD_RECV: ERROR - runtime/ctx/netInput is null');
+    final network = _network;
+    if (_runtime == null || _ctx == null || network == null) {
+      _log('MAD_RECV: ERROR - runtime/ctx/network is null');
       return;
     }
 
-    final serializer = PayloadSerializer(agentId.toLowerCase());
-    final msg = serializer.deserializeMessage(payload);
-    _log('MAD_RECV: type=${msg.type}, dest=${msg.destination}');
-
-    if (msg.type == MessageType.assignment) {
-      try {
-        final (globalName, value) = serializer.deserializeGlobalSendPayload(
-          msg.payload,
-          (isReader) {
-            final (w, r) = _runtime!.heap.allocateVariable();
-            return isReader ? r : w;
-          },
-        );
-        _log('MAD_ASSIGN: $globalName := ${formatTerm(value)}');
-        _ctx!.handleMadAssignment(
-          globalName: globalName,
-          value: value,
-          fromAgent: from.toLowerCase(),
-        );
-        // Reactivation handled by bindVariable() inside MadContext.handleMadAssignment
-      } catch (e) {
-        _log('MAD_ERROR: $e');
-      }
-    } else if (msg.type == MessageType.agentMessage) {
-      final term = serializer.deserializeAgentMessagePayload(
-        msg.payload,
-        (isReader) {
-          final (w, r) = _runtime!.heap.allocateVariable();
-          return isReader ? r : w;
-        },
-      );
-      final formatted = formatTerm(term);
-      _log('AGENT_MSG: $formatted');
-
-      _log('INJECT into netInput');
-      final activations = _netInput!.inject(term);
-      _log('INJECT: ${activations.length} activations');
-      for (final goal in activations) {
-        _runtime!.gq.enqueue(goal);
-      }
-    } else {
-      _log('MAD_RECV: Unknown message type ${msg.type}');
-    }
+    network.onMessageReceived
+        ?.call(_pkFor(from.toLowerCase()), payload, '', Transport.ble);
 
     updateStats();
     await _runUntilQuiescent();
