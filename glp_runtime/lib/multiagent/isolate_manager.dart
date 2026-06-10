@@ -10,15 +10,17 @@
 
 import 'dart:async';
 import 'dart:isolate';
+import 'dart:typed_data';
 
 import 'package:glp_runtime/engine/glp_engine.dart';
 import 'package:glp_runtime/bytecode/runner.dart';
 import 'package:glp_runtime/runtime/terms.dart';
 import 'package:glp_runtime/runtime/scheduler.dart';
 import 'package:glp_runtime/runtime/machine_state.dart';
-import 'package:glp_runtime/multiagent/message_queue.dart';
 import 'package:glp_runtime/multiagent/payload_serializer.dart';
 import 'package:glp_runtime/multiagent/boot_loader.dart';
+import 'package:glp_runtime/multiagent/glp_network.dart';
+import 'package:glp_runtime/multiagent/simulation_network.dart';
 
 /// Message types for inter-isolate communication
 sealed class IsolateMessage {}
@@ -33,26 +35,30 @@ class Ready extends IsolateMessage {
 /// Signal to start execution
 class Start extends IsolateMessage {}
 
-/// Network message to route between agents (madGLP assignment)
-class NetworkMsg extends IsolateMessage {
-  final String from;
-  final String to;
+/// Agent → router: an outbound send. Per seam spec v0.2 §4/§6 the wire carries
+/// opaque payload bytes only — no MessageType.
+class RouterSend extends IsolateMessage {
+  final String fromId;
+  final String toId;
   final List<int> payload;
-  final MessageType type;
 
-  /// Global name for routing (madGLP)
-  final String? globalNameAgent;
-  final int? globalNameIndex;
-  final bool? globalNameIsWriter;
-
-  NetworkMsg(this.from, this.to, this.payload, this.type, {
-    this.globalNameAgent,
-    this.globalNameIndex,
-    this.globalNameIsWriter,
-  });
+  RouterSend(this.fromId, this.toId, this.payload);
 
   @override
-  String toString() => 'NetworkMsg($from->$to, $type)';
+  String toString() => 'RouterSend($fromId->$toId, ${payload.length}B)';
+}
+
+/// Router → agent: a delivered message, with the authenticated sender id and the
+/// router-assigned messageId.
+class Deliver extends IsolateMessage {
+  final String fromId;
+  final List<int> payload;
+  final String messageId;
+
+  Deliver(this.fromId, this.payload, this.messageId);
+
+  @override
+  String toString() => 'Deliver(from=$fromId, id=$messageId, ${payload.length}B)';
 }
 
 /// UI event from window to agent
@@ -89,6 +95,13 @@ class AgentConfig {
   final SendPort? uiPort; // null for headless
   final TraceConfig traceConfig;
 
+  /// This agent's Ed25519 key pair (seam spec §4). The agent installs it on its
+  /// GlpNetwork via putIdentity.
+  final ({PubKey pub, Uint8List priv}) keyPair;
+
+  /// The shared identifier–key directory, published to every adapter (§4).
+  final NetworkDirectory directory;
+
   AgentConfig({
     required this.agentId,
     required this.goalFunctor,
@@ -99,6 +112,8 @@ class AgentConfig {
     this.projectDir,
     required this.rootSelfGlpPath,
     required this.mainPort,
+    required this.keyPair,
+    required this.directory,
     this.uiPort,
     this.traceConfig = const TraceConfig(),
   });
@@ -111,6 +126,10 @@ class AgentConfig {
 class IsolateManager {
   final Map<String, SendPort> _agentPorts = {};
   final ReceivePort _mainPort = ReceivePort();
+
+  /// The simulation router: owns the directory, adjacency, trust, queues, and
+  /// messageId assignment, and routes all inter-agent traffic (seam spec §3).
+  final SimulationRouter _router = SimulationRouter();
 
   /// Trace configuration (set via boot)
   TraceConfig _traceConfig = TraceConfig.off;
@@ -132,6 +151,28 @@ class IsolateManager {
     var readyCount = 0;
     final expectedCount = config.directives.length;
 
+    // 1. Generate an Ed25519 key pair per agent and populate the directory
+    //    (seam spec §3 Boot). The boot harness sets trust Open for the plays.
+    final keyPairs = <String, ({PubKey pub, Uint8List priv})>{};
+    for (final directive in config.directives) {
+      final kp = generateKeyPair();
+      keyPairs[directive.agentId] = kp;
+      _router.register(directive.agentId, kp.pub);
+      _router.setTrustLevel(directive.agentId, TrustLevel.open);
+    }
+
+    // 2. The router delivers to the destination agent's isolate port — the
+    //    seam's simulation transport.
+    _router.onDeliver = (toId, fromPk, payload, messageId, t) {
+      final port = _agentPorts[toId];
+      if (port == null) {
+        print('[IsolateManager] WARNING: Unknown destination $toId');
+        return;
+      }
+      final fromId = _router.directory.idOf(fromPk) ?? '?';
+      port.send(Deliver(fromId, payload, messageId));
+    };
+
     // Single listener for all messages
     _mainPort.listen((msg) {
       // Handle Ready messages for boot completion
@@ -146,7 +187,7 @@ class IsolateManager {
       _handleMessage(msg);
     });
 
-    // Spawn isolates
+    // 3. Spawn isolates with the key pair and the complete directory.
     for (final directive in config.directives) {
       final agentConfig = AgentConfig(
         agentId: directive.agentId,
@@ -158,6 +199,8 @@ class IsolateManager {
         projectDir: config.projectDir,
         rootSelfGlpPath: config.rootSelfGlpPath,
         mainPort: _mainPort.sendPort,
+        keyPair: keyPairs[directive.agentId]!,
+        directory: _router.directory,
         traceConfig: traceConfig,
       );
 
@@ -167,6 +210,18 @@ class IsolateManager {
     // Wait for all agents to be ready
     await readyCompleter.future;
   }
+
+  /// Harness control: visible disconnection of a pair (seam spec §3, §7.2).
+  void cut(String a, String b) => _router.cut(a, b);
+
+  /// Harness control: reverse a [cut], flushing queued messages in order.
+  void restore(String a, String b) => _router.restore(a, b);
+
+  /// Harness control: invisible delay of a pair's delivery (seam spec §3).
+  void holdDelivery(String a, String b) => _router.holdDelivery(a, b);
+
+  /// Harness control: release a [holdDelivery], flushing in reverse order.
+  void releaseDelivery(String a, String b) => _router.releaseDelivery(a, b);
 
   /// Start all agents.
   void start() {
@@ -201,30 +256,12 @@ class IsolateManager {
       _log('${msg.agentId} ready');
       _agentPorts[msg.agentId] = msg.sendPort;
 
-    } else if (msg is NetworkMsg) {
-      _routeNetworkMessage(msg);
-    }
-  }
-
-  /// Route a network message to its destination.
-  void _routeNetworkMessage(NetworkMsg msg) {
-    // Trace message events
-    if (_traceConfig.glp) {
-      if (_isTracingAgent(msg.from)) {
-        print('[${msg.from}] → msg to ${msg.to}: ${msg.type}');
+    } else if (msg is RouterSend) {
+      if (_traceConfig.glp && _isTracingAgent(msg.fromId)) {
+        print('[${msg.fromId}] → send to ${msg.toId}');
       }
-      if (_isTracingAgent(msg.to)) {
-        print('[${msg.to}] ← msg from ${msg.from}: ${msg.type}');
-      }
+      _router.routeSend(msg.fromId, msg.toId, Uint8List.fromList(msg.payload));
     }
-
-    final targetPort = _agentPorts[msg.to];
-    if (targetPort == null) {
-      print('[IsolateManager] WARNING: Unknown destination ${msg.to}');
-      return;
-    }
-
-    targetPort.send(msg);
   }
 
   /// Check if an agent should be traced.
@@ -289,10 +326,50 @@ void _agentIsolateEntry(AgentConfig config) async {
   ctx.wp.initializeSerializerEntry(netInWriter);
   log('Serializer entry initialized at index 0, netIn=($netInWriter,$netInReader)');
 
-  // Message routing to main isolate (madGLP: push-based via onMessageReady)
-  ctx.onMessageReady = (dest, msg) {
-    log('Sending ${msg.type} to $dest');
-    config.mainPort.send(NetworkMsg(agentId, dest, msg.payload, msg.type));
+  // Networking seam (spec §3–4): the agent talks to a GlpNetwork, not the
+  // mainPort directly. In simulation the client forwards sends to the router
+  // (main isolate) over the existing port; deliveries arrive as Deliver
+  // messages and fire onMessageReceived.
+  final network = SimulationNetworkClient(
+    selfId: agentId,
+    directory: config.directory,
+    sendToRouter: (toId, payload) =>
+        config.mainPort.send(RouterSend(agentId, toId, payload)),
+  );
+  network.putIdentity(config.keyPair.pub, config.keyPair.priv);
+
+  // Outgoing (spec §4): ctx.onMessageReady(destId, msg) → network.send.
+  ctx.onMessageReady = (destId, msg) {
+    final pk = config.directory.pkOf(destId);
+    if (pk == null) {
+      print('[$agentId] ERROR: unknown destination $destId');  // Always print errors
+      return;
+    }
+    log('Sending to $destId (${msg.payload.length}B)');
+    network.send(pk, Uint8List.fromList(msg.payload));
+  };
+
+  // Incoming (spec §4): deserialize (globalName, value) and handleMadAssignment.
+  network.onMessageReceived = (senderPk, payload, messageId, transport) {
+    final serializer = PayloadSerializer(agentId);
+    try {
+      final (globalName, value) = serializer.deserializeGlobalSendPayload(
+        payload,
+        (isReader) {
+          final (w, r) = runtime.heap.allocateVariable();
+          return isReader ? r : w;
+        },
+      );
+      final fromId = config.directory.idOf(senderPk) ?? '?';
+      log('Assignment: $globalName := $value (from $fromId)');
+      ctx.handleMadAssignment(
+        globalName: globalName,
+        value: value,
+        fromAgent: fromId,
+      );
+    } catch (e) {
+      print('[$agentId] ERROR handling delivery: $e');  // Always print errors
+    }
   };
 
   log('Network input ready: writer=$netInWriter, reader=$netInReader');
@@ -371,34 +448,18 @@ void _agentIsolateEntry(AgentConfig config) async {
       scheduler.drainWithStatus(debug: engine.debugTrace);
       ctx.flushMessages();
 
-    } else if (msg is NetworkMsg) {
-      log('Received ${msg.type} from ${msg.from}');
-
-      if (msg.type == MessageType.assignment) {
-        // madGLP: Handle assignment message
-        final serializer = PayloadSerializer(agentId);
-
-        try {
-          final (globalName, value) = serializer.deserializeGlobalSendPayload(
-            msg.payload,
-            (isReader) {
-              final (w, r) = runtime.heap.allocateVariable();
-              return isReader ? r : w;
-            },
-          );
-
-          log('Assignment: $globalName := $value');
-
-          ctx.handleMadAssignment(
-            globalName: globalName,
-            value: value,
-            fromAgent: msg.from,
-          );
-        } catch (e) {
-          print('[$agentId] ERROR handling assignment: $e');  // Always print errors
-        }
-      } else if (msg.type == MessageType.agentMessage) {
-        log('Received agent message from ${msg.from}');
+    } else if (msg is Deliver) {
+      log('Received delivery from ${msg.fromId} (id=${msg.messageId})');
+      final senderPk = config.directory.pkOf(msg.fromId);
+      if (senderPk != null) {
+        network.onMessageReceived?.call(
+          senderPk,
+          Uint8List.fromList(msg.payload),
+          msg.messageId,
+          Transport.ble,
+        );
+      } else {
+        print('[$agentId] ERROR: delivery from unknown ${msg.fromId}');  // Always print errors
       }
 
       // Drain activated goals and flush any response messages
