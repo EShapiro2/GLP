@@ -1925,11 +1925,13 @@ echo "--- S1: file load resolves a multi-clause root self.glp procedure ---"
 s1=$($DART run "$REPL" <<HEREDOC
 $SCOPE_CHAIN/s1_file/use_root_multiclause.glp
 compute(R).
+mtest(Z).
 :quit
 HEREDOC
 2>&1)
 check "S1 file loads" "Loaded:" "$s1"
 check "S1 root multi-clause (:=) resolves" "R = 14" "$s1"
+check "S1 root merge/3 resolves (file load)" "Z = \[1, 3, 2, 4\]" "$s1"
 
 # --- S2: project load resolves a utility in an ancestor self.glp above the root ---
 echo "--- S2: ancestor self.glp reach (intermediate ancestor above load point) ---"

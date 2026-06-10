@@ -9,3 +9,8 @@
 
 procedure compute(Integer).
 compute(R?) :- R := 2 + 3 * 4.
+
+%% After Part 4, merge/3 lives in the root programs/self.glp; a single-file load
+%% resolves this multi-clause root procedure just like := (both via root scope).
+procedure mtest(Stream(Integer)).
+mtest(Z?) :- merge([1, 2], [3, 4], Z).
