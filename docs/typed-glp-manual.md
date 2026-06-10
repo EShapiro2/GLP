@@ -1,7 +1,7 @@
 # Typed GLP Manual
 
-**Version**: 2.13
-**Date**: 2026-05-24
+**Version**: 2.14
+**Date**: 2026-06-10
 **Status**: ACTIVE
 
 This manual captures essential programming principles and advice for writing correct Typed GLP programs. It covers the SRSW (Single-Reader Single-Writer) constraint, type declarations, moding, modules, parameterized types, and common pitfalls.
@@ -500,7 +500,7 @@ The partial evaluator unfolds a call by substituting its body for the call site.
 
 A **single-unit-clause procedure** is a regular procedure defined by exactly one clause with no guards and no body.  These are the always-unfoldable case of §8.1 and the standard idiom for user-defined guards.  In general they are NOT expected to work as body predicates.
 
-The root self.glp defines several single-unit-clause procedures.  The PE automatically includes them when processing any program, so user programs do not need to redefine them.  User programs may override a root self.glp unit clause by defining a procedure with the same name/arity.
+The root self.glp defines several single-unit-clause procedures.  The PE automatically includes them when processing any program, so user programs do not need to redefine them.  Multi-clause procedures defined in the root `self.glp` (e.g. `merge/3`) resolve through the ancestor scope chain at link time like any ancestor `self.glp` definition; unfolding applies only to single-unit-clause procedures, as an optimisation.  User programs may override a root self.glp unit clause by defining a procedure with the same name/arity.
 
 Examples from root self.glp:
 
@@ -1135,6 +1135,7 @@ Type identity is structural. Two independently defined types with the same alter
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 2.14 | 2026-06-10 | §8.2: multi-clause root `self.glp` procedures (e.g. `merge/3`) resolve through the ancestor scope chain at link time; unfolding is a single-unit-clause optimisation, not the resolution mechanism (A3 module-system amendment) |
 | 2.13 | 2026-05-24 | Rewrote Section 8 (Guards: What May Appear in a Guard): added §8.1 explicit guard rule (compile-time unfoldability; no recursion; multi-clause off-limits until PE extended), renumbered single-unit-clause material to §8.2/§8.3 as the safe special case rather than a separate construct |
 | 2.12 | 2026-05-23 | Added Section 15B: Forwarding a Writer Through a Structure (dual of §15, role of `?` in type definitions at output positions); added cross-reference at end of §2A.4 summary |
 | 2.11 | 2026-04-12 | Added Section 3.4: Guard Occurrences and SRSW Counting (guard reader occurrences don't count toward single-reader limit) |

@@ -62,7 +62,7 @@ Then `Read` the file.  Do not use `/tmp/` (not in allowed directories).
 
 ### Baseline-before-commit (mandatory)
 
-Before changing GLP runtime, types, prelude, or any cross-cutting code:
+Before changing GLP runtime, types, root self.glp, or any cross-cutting code:
 
 1. Run `bash test/run_all_tests.sh > /private/tmp/glp-baseline.txt 2>&1`.  Confirm it ends with `ALL TESTS PASSED!`.
 2. Make the change.
@@ -208,7 +208,7 @@ Always offer to fetch / merge / push.
 |---|---|
 | GLP root | `/Users/udi/Grassroots/GLP` |
 | REPL source | `/Users/udi/Grassroots/GLP/glp_runtime/bin/glp_repl.dart` |
-| Root prelude | `/Users/udi/Grassroots/GLP/programs/self.glp` |
+| Root self.glp | `/Users/udi/Grassroots/GLP/programs/self.glp` |
 | Programs | `/Users/udi/Grassroots/GLP/programs/` |
 | Test scripts | `/Users/udi/Grassroots/GLP/test/` |
 | Dart binary | `/opt/homebrew/bin/dart` |

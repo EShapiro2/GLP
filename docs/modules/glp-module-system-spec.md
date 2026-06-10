@@ -57,9 +57,9 @@ Module names follow directory paths, using `#` as separator (same as the call op
 
 Paths are relative to the current module's position in the hierarchy. The path resolution follows the directory structure.
 
-### 2.4 Prelude
+### 2.4 The Root Scope
 
-The prelude is the root ancestor of all modules. It defines global types (`Stream`, `Channel`, `Constant`, `Integer`, etc.) and global procedures (`send`, `receive`, `new_channel`, `merge`, etc.). All modules see prelude definitions without qualification.
+The root ancestor of all modules is `programs/self.glp`. It defines the global types (`Stream`, `Channel`, `Constant`, `Integer`, etc.) and the global procedures (`send`, `receive`, `new_channel`, `merge`, etc.). Its definitions are visible to every module by ordinary ancestor scoping (Section 3.1); the root scope is not otherwise special.
 
 ---
 
@@ -67,7 +67,7 @@ The prelude is the root ancestor of all modules. It defines global types (`Strea
 
 ### 3.1 Implicit Ancestor Scoping
 
-A module implicitly sees all definitions from every ancestor scope, from its parent directory up through the root. No import declaration is required for ancestor definitions.
+A module implicitly sees all definitions from every ancestor scope, from its parent directory up through the root. No import declaration is required for ancestor definitions. At project load the chain runs from the loaded directory up to `programs/`, independent of where the project root lies (see the project compilation specification).
 
 Given:
 ```

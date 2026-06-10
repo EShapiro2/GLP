@@ -25,9 +25,9 @@ A project root directory containing:
 
 ### 3.1 Discovery
 
-Walk the project directory tree. Collect every `.glp` file. Parse each into a Module AST. Build the ancestor scope chain for each module (per `glp-module-system-spec.md` Section 3).
+Walk the project directory tree. Collect every `.glp` file. Additionally collect the `self.glp` of every ancestor directory of the project root, up to and including `programs/`; ancestor directories contribute only their `self.glp`, never their other modules. Parse each into a Module AST. Build the ancestor scope chain for each module (per `glp-module-system-spec.md` Section 3).
 
-`self.glp` files contribute both type definitions and procedure definitions to the ancestor scope.  Their procedures are compiled to bytecode and available to all modules in the subtree without qualification (in source), just like their types.
+`self.glp` files contribute both type definitions and procedure definitions to the ancestor scope.  Their procedures are compiled to bytecode and available to all modules in the subtree without qualification (in source), just like their types.  This holds equally for ancestor `self.glp` files above the project root.
 
 ### 3.2 Procedure Renaming
 
@@ -46,6 +46,8 @@ Every procedure in every `.glp` file (including `self.glp` files) is prefixed wi
 
 `self.glp` procedures are renamed like any other module's procedures.  This prevents collisions when multiple ancestor scopes define procedures with the same name and arity.  If an inner `self.glp` defines a procedure with the same name and arity as an outer `self.glp`, both receive distinct prefixes based on their module path.
 
+Ancestor `self.glp` files above the project root are prefixed by their directory name under the same rule; the root `programs/self.glp` receives the prefix `programs:`.
+
 The prefix is the module name (from `-module(name)` or filename), not the full path. If two modules at different levels have the same name, the full relative path is used (e.g., `ui/mediator:proc`).
 
 ### 3.3 Call Resolution
@@ -56,9 +58,9 @@ Every goal in every clause body is resolved:
 
 **Cross-module calls** — a call to `agent # agent(alice, ...)` inside `boot.glp` becomes `agent:agent(alice, ...)`.
 
-**Ancestor self.glp calls** — if no local procedure matches, the linker walks the ancestor `self.glp` chain.  A call matching a procedure in an ancestor `self.glp` is resolved to its renamed form.
+**Ancestor self.glp calls** — if no local procedure matches, the linker walks the ancestor `self.glp` chain, which extends beyond the project root up to `programs/`.  A call matching a procedure in an ancestor `self.glp` is resolved to its renamed form.
 
-**Root prelude calls** — calls to root prelude procedures (`send`, `receive`, `new_channel`, etc.) are left unprefixed.  The root prelude is loaded separately, outside the project linker.
+**Root `self.glp` calls** — the root `programs/self.glp` is the last scope on the ancestor chain and resolves like any other; nothing is loaded outside the project linker. Partial-evaluation unfolding of its single-unit-clause procedures (`=`, `send`, `receive`, `new_channel`) remains as an optimisation; it is not the resolution mechanism.
 
 ### 3.4 Entry Points
 
@@ -67,6 +69,8 @@ Every exported procedure in every module receives an unprefixed alias.  If `agen
 This is necessary because code loaded on top of a linked project (e.g., madGLP boot procedures, REPL goals) must be able to call any exported procedure by its original name, not only the top module's exports.
 
 If two modules export procedures with the same name and arity, a conflict is reported.  If no module has exported procedures, all top-level module procedures get unprefixed aliases (backwards compatibility).
+
+Code loaded on top of a linked project (REPL goals, madGLP boot procedures) is resolved in the scope of the project root, with the same ancestor `self.glp` chain.
 
 ### 3.5 Type Checking
 
@@ -156,3 +160,5 @@ play2 :- boot:play2.
 ## 5. Scope
 
 This spec covers whole-project compilation only. Separate compilation with runtime inter-module calls is a separate concern, not specified here.
+
+A single-module file load is the degenerate case of project compilation: a project of one module, with the same ancestor `self.glp` chain from the file's directory up to `programs/`.
