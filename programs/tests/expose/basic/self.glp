@@ -1,0 +1,3 @@
+%% Exposes two utility modules into this subtree.
+-expose(util#strutil).
+-expose(util#plist).

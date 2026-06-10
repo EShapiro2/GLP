@@ -2025,6 +2025,78 @@ check "S7 local pmerge resolves (not ancestor interleave)" "Z = \[1, 2, 3\]" "$s
 echo ""
 
 # =============================================================================
+# Section X: The -expose directive
+# =============================================================================
+echo "=== Section X: The -expose directive ==="
+echo ""
+
+EXPOSE="$GLP_DIR/programs/tests/expose"
+
+# --- X1: a self.glp exposes a module; a leaf calls it unqualified ---
+echo "--- X1: exposed procedure called unqualified ---"
+x1=$($DART run "$REPL" <<HEREDOC
+$EXPOSE/basic/leaf
+run(R).
+:quit
+HEREDOC
+2>&1)
+check "X1 leaf loads" "Loaded project" "$x1"
+check "X1 exposed twice resolves unqualified" "R = 42" "$x1"
+
+# --- X2: the exposing directory's own subtree sees the exposed procedure ---
+echo "--- X2: exposing dir subtree sees exposed ---"
+x2=$($DART run "$REPL" <<HEREDOC
+$EXPOSE/basic
+use_exposed(R).
+:quit
+HEREDOC
+2>&1)
+check "X2 subtree sees exposed" "R = 100" "$x2"
+
+# --- X3: shadowing — a local definition beats an exposed one ---
+echo "--- X3: local definition shadows exposed ---"
+x3=$($DART run "$REPL" <<HEREDOC
+$EXPOSE/shadow
+run(R).
+:quit
+HEREDOC
+2>&1)
+check "X3 loads" "Loaded project" "$x3"
+check "X3 local twice (N+1) beats exposed (N*2)" "R = 11" "$x3"
+
+# --- X4: collision — two exposed modules, same name/arity → error ---
+echo "--- X4: collision error names both modules ---"
+x4=$($DART run "$REPL" <<HEREDOC
+$EXPOSE/collide
+:quit
+HEREDOC
+2>&1)
+check "X4 collision rejected" "collision" "$x4"
+check_not "X4 not loaded" "Loaded project" "$x4"
+check "X4 names module one" "\"one\"" "$x4"
+check "X4 names module two" "\"two\"" "$x4"
+
+# --- X5: exposed module lies outside the loaded subtree — still resolves ---
+# basic/util/strutil.glp is a sibling of basic/leaf/ (outside leaf/'s subtree),
+# yet X1's load resolved `twice`. Re-assert that resolution as X5.
+echo "--- X5: exposed module outside the loaded subtree ---"
+check "X5 strutil is outside leaf subtree" "outside" "$([ -e $EXPOSE/basic/leaf/strutil.glp ] && echo inside || echo outside)"
+check "X5 resolves from outside subtree" "R = 42" "$x1"
+
+# --- X6: a parameterised exposed utility instantiated at two types ---
+echo "--- X6: parameterised exposed utility at two types ---"
+x6=$($DART run "$REPL" <<HEREDOC
+$EXPOSE/basic/leaf
+two_inst(Zi, Zc).
+:quit
+HEREDOC
+2>&1)
+check "X6 integer instantiation" "Zi = \[1, 3, 2, 4\]" "$x6"
+check "X6 constant instantiation" "Zc = \[\"a\", \"b\"\]" "$x6"
+
+echo ""
+
+# =============================================================================
 # SUMMARY
 # =============================================================================
 TOTAL=$((PASS + FAIL))

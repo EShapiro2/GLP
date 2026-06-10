@@ -59,6 +59,7 @@ class Parser {
   Module parseModule() {
     ModuleDeclaration? moduleDecl;
     CompileMode compileMode = CompileMode.user;  // default: user mode
+    final exposes = <String>[];  // `-expose(M).` module paths
 
     // Parse declarations at the start of the file
     while (!_isAtEnd() && _check(TokenType.MINUS)) {
@@ -115,6 +116,28 @@ class Parser {
           }
           _consume(TokenType.RPAREN, 'Expected ")" after mode');
           _consume(TokenType.DOT, 'Expected "." after mode declaration');
+          break;
+
+        case 'expose':
+          // -expose(a#b#c). — lift module file <self.glp dir>/a/b/c.glp's
+          // exported procedures into this directory's scope.
+          _consume(TokenType.LPAREN, 'Expected "(" after expose');
+          if (!_check(TokenType.ATOM)) {
+            throw CompileError('Expected a module path in -expose(...)',
+                _peek().line, _peek().column, phase: 'parser');
+          }
+          final exposeParts = <String>[_advance().lexeme];
+          while (_match(TokenType.HASH)) {
+            if (!_check(TokenType.ATOM)) {
+              throw CompileError(
+                  'Expected module path component after "#" in -expose(...)',
+                  _peek().line, _peek().column, phase: 'parser');
+            }
+            exposeParts.add(_advance().lexeme);
+          }
+          _consume(TokenType.RPAREN, 'Expected ")" after expose path');
+          _consume(TokenType.DOT, 'Expected "." after expose declaration');
+          exposes.add(exposeParts.join('#'));
           break;
 
         case 'export':
@@ -320,6 +343,7 @@ class Parser {
       procDeclarations: procDeclarations,
       procedures: procedures,
       compileMode: compileMode,
+      exposes: exposes,
       line: 1,
       column: 1,
     );
@@ -338,7 +362,7 @@ class Parser {
 
       final keyword = _peek().lexeme;
 
-      if (['module', 'stdlib', 'mode'].contains(keyword)) {
+      if (['module', 'stdlib', 'mode', 'expose'].contains(keyword)) {
         // Skip to the next DOT
         while (!_isAtEnd() && !_check(TokenType.DOT)) {
           _advance();

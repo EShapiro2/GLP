@@ -25,8 +25,14 @@ class DiscoveredModule {
   final String filePath;
   final String moduleName;
   final Module ast;
-  final TypeEnvironment ancestorScope;
+  TypeEnvironment ancestorScope;
   final bool isSelfGlp;
+
+  /// If this module was collected because an ancestor `self.glp` `-expose`d it,
+  /// the normalized directory of that exposing `self.glp`. Its EXPORTED
+  /// procedures lift into that directory's subtree scope. Null for ordinary
+  /// modules.
+  final String? exposingDir;
 
   DiscoveredModule({
     required this.filePath,
@@ -34,6 +40,7 @@ class DiscoveredModule {
     required this.ast,
     required this.ancestorScope,
     this.isSelfGlp = false,
+    this.exposingDir,
   });
 }
 
@@ -156,7 +163,134 @@ List<DiscoveredModule> discoverProject(String rootDir,
     }
   }
 
+  // Resolve `-expose(M).` directives: collect the named module files (tagged
+  // with their exposing directory), check collisions, and lift their EXPORTED
+  // declarations/types into the exposing subtree's scope.
+  _resolveExposes(modules, programsDir, rootSelfGlpPath);
+
   return modules;
+}
+
+/// Normalize a path: absolute, `..`/`.` resolved, no trailing slash.
+String _normPath(String p) {
+  var n = ppath.normalize(Directory(p).absolute.path);
+  if (n.length > 1 && n.endsWith(Platform.pathSeparator)) {
+    n = n.substring(0, n.length - 1);
+  }
+  return n;
+}
+
+/// True if [childDir] is [ancestorDir] or below it.
+bool _dirUnder(String childDir, String ancestorDir) =>
+    childDir == ancestorDir ||
+    childDir.startsWith('$ancestorDir${Platform.pathSeparator}');
+
+/// Resolve `-expose` directives among [modules] (mutates the list).
+///
+/// For each exposing module, each `-expose(a#b#c).` names the module file
+/// `<exposing self.glp dir>/a/b/c.glp`. That file is parsed, added as a linkable
+/// module tagged with the exposing directory, and its `-expose` directives are
+/// followed transitively. Two modules exposed at one level that share an
+/// exported name/arity is a compile-time error. Finally, each exposed module's
+/// EXPORTED declarations and the types it defines are merged into the
+/// ancestorScope of every module in the exposing directory's subtree.
+void _resolveExposes(List<DiscoveredModule> modules, String? programsDir,
+    String? rootSelfGlpPath) {
+  final pending = <DiscoveredModule>[
+    ...modules.where((m) => m.ast.exposes.isNotEmpty)
+  ];
+  final collectedFiles = <String>{};
+  // exposingDir(norm) -> exported sig -> exposed module name (collision check)
+  final perDirSig = <String, Map<String, String>>{};
+
+  while (pending.isNotEmpty) {
+    final exposer = pending.removeLast();
+    final exposerDir = File(exposer.filePath).parent.path;
+    final exposingDirNorm = _normPath(exposerDir);
+    final sigMap = perDirSig.putIfAbsent(exposingDirNorm, () => {});
+
+    for (final path in exposer.ast.exposes) {
+      final rel = path.split('#').join(Platform.pathSeparator);
+      final file = File('$exposerDir${Platform.pathSeparator}$rel.glp');
+      if (!file.existsSync()) {
+        throw Exception('-expose: module file not found: ${file.path}\n'
+            '  from -expose($path) in ${exposer.filePath}');
+      }
+
+      final exposedAst =
+          Parser(Lexer(file.readAsStringSync()).tokenize()).parseModule();
+      final exposedName = exposedAst.name ??
+          _moduleNameFromFilename(file.path.split(Platform.pathSeparator).last);
+
+      // Collision: exported sigs unique among modules exposed at this level.
+      for (final d in exposedAst.procDeclarations) {
+        if (!d.exported) continue;
+        final sig = '${d.name}/${d.arity}';
+        final prev = sigMap[sig];
+        if (prev != null && prev != exposedName) {
+          throw Exception(
+              '-expose collision at $exposingDirNorm: procedure $sig is '
+              'exposed by both "$prev" and "$exposedName".');
+        }
+        sigMap[sig] = exposedName;
+      }
+
+      if (collectedFiles.contains(_normPath(file.path))) continue;
+      collectedFiles.add(_normPath(file.path));
+
+      final chain = discoverSelfChain(
+        targetFile: file.absolute.path,
+        rootDir: file.parent.path,
+        programsDir: programsDir,
+      );
+      final exposedDM = DiscoveredModule(
+        filePath: file.path,
+        moduleName: exposedName,
+        ast: exposedAst,
+        ancestorScope:
+            _buildAncestorScope(chain, rootSelfGlpPath: rootSelfGlpPath),
+        isSelfGlp: false,
+        exposingDir: exposingDirNorm,
+      );
+      modules.add(exposedDM);
+      if (exposedAst.exposes.isNotEmpty) pending.add(exposedDM);
+    }
+  }
+
+  // Type-env lift: merge exposed EXPORTED declarations/types into the scope of
+  // every module in the exposing subtree.
+  final exposed = modules.where((m) => m.exposingDir != null).toList();
+  if (exposed.isEmpty) return;
+  for (final m in modules) {
+    if (m.exposingDir != null) continue;
+    final modDir = _normPath(File(m.filePath).parent.path);
+    for (final e in exposed) {
+      if (!_dirUnder(modDir, e.exposingDir!)) continue;
+      m.ancestorScope =
+          m.ancestorScope.merge(_exposedExportScope(e.ast, m.ancestorScope));
+    }
+  }
+}
+
+/// A TypeEnvironment of a module's EXPORTED procedure declarations plus the
+/// types it defines, for type-checking exposed signatures in the subtree.
+///
+/// [base] supplies the exposing subtree's known type names and parameterised
+/// templates (`Stream`, `Channel`, …), so the exposed signatures' parameterised
+/// types are recognised and routed to `paramProcDecls` (exactly as an ordinary
+/// ancestor `self.glp` would be processed).
+TypeEnvironment _exposedExportScope(Module m, TypeEnvironment base) {
+  final exported = m.procDeclarations.where((d) => d.exported).toList();
+  final synthetic = Module(
+    typeDefs: m.typeDefs,
+    procDeclarations: exported,
+    line: m.line,
+    column: m.column,
+  );
+  final expanded = expandParameterizedTypes(synthetic,
+      knownTypeNames: base.types.keys.toSet(),
+      externalTemplates: base.typeTemplates);
+  return buildScopeFromModule(expanded);
 }
 
 /// Collect `self.glp` files in ancestor directories ABOVE [rootDir], walking up
@@ -264,6 +398,21 @@ LinkResult linkProject(List<DiscoveredModule> modules, String topModuleName) {
       for (final proc in selfMod.ast.procedures) {
         final sig = '${proc.name}/${proc.arity}';
         procs.putIfAbsent(sig, () => selfMod.moduleName);
+      }
+    }
+
+    // Exposed procedures: a `self.glp` that `-expose`s a module lifts that
+    // module's EXPORTED procedures into its subtree. Real ancestor `self.glp`
+    // definitions (added above) and local definitions (checked first in
+    // `_resolveGoal`) take precedence over exposed ones.
+    final modDirNorm = _normPath(File(mod.filePath).parent.path);
+    for (final em in modules) {
+      if (em.exposingDir == null) continue;
+      if (identical(em, mod)) continue;
+      if (!_dirUnder(modDirNorm, em.exposingDir!)) continue;
+      for (final d in em.ast.procDeclarations) {
+        if (!d.exported) continue;
+        procs.putIfAbsent('${d.name}/${d.arity}', () => em.moduleName);
       }
     }
 

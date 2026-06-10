@@ -1,0 +1,7 @@
+-module(client).
+%% X1/X5: calls exposed `twice` unqualified (util/ is outside leaf/'s subtree).
+procedure run(Integer).
+run(R?) :- twice(21, R).
+%% X6: parameterised exposed pmerge at two distinct types in one module.
+procedure two_inst(Stream(Integer), Stream(Constant)).
+two_inst(Zi?, Zc?) :- pmerge([1,2], [3,4], Zi), pmerge(["a"], ["b"], Zc).

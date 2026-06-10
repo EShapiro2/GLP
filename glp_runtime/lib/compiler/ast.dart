@@ -254,6 +254,7 @@ class Module extends AstNode {
   final List<ProcDecl> paramProcDecls;       // Parameterized proc decl templates (for call-site inference)
   final List<Procedure> procedures;
   final CompileMode compileMode;  // user (default) or system
+  final List<String> exposes;     // `-expose(M).` module paths (e.g. "lib#streams")
 
   Module({
     this.declaration,
@@ -262,6 +263,7 @@ class Module extends AstNode {
     this.paramProcDecls = const [],
     this.procedures = const [],
     this.compileMode = CompileMode.user,
+    this.exposes = const [],
     required int line,
     required int column,
   }) : super(line, column);

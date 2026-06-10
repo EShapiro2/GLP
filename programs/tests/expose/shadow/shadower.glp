@@ -1,0 +1,7 @@
+-module(shadower).
+%% Local twice/2 SHADOWS the exposed base#twice (which would give N*2).
+%% Local returns N+1, so the result distinguishes which one resolved.
+procedure twice(Integer?, Integer).
+twice(N, R?) :- R := N? + 1.
+exported procedure run(Integer).
+run(R?) :- twice(10, R).
