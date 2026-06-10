@@ -8,35 +8,35 @@ import 'ast.dart';
 import 'error.dart';
 import 'lexer.dart';
 import 'parser.dart';
-import '../analysis/type_checker/prelude.dart' show builtinProcedures;
+import '../analysis/type_checker/root_scope.dart' show builtinProcedures;
 
 // ============================================================================
-// PRELUDE UNIT CLAUSES
+// ROOT SCOPE UNIT CLAUSES
 // ============================================================================
 
-/// Source for prelude unit clauses (set by engine from programs/self.glp).
-String? _preludeUnitClauseSource;
+/// Source for root scope unit clauses (set by engine from programs/self.glp).
+String? _rootScopeUnitClauseSource;
 
-/// Set the source from which prelude unit clauses are extracted.
+/// Set the source from which root scope unit clauses are extracted.
 /// Call this once during engine initialization with the content of programs/self.glp.
-void setPreludeUnitClauseSource(String source) {
-  _preludeUnitClauseSource = source;
-  _cachedPreludeUnitClauses = null; // invalidate cache
+void setRootScopeUnitClauseSource(String source) {
+  _rootScopeUnitClauseSource = source;
+  _cachedRootScopeUnitClauses = null; // invalidate cache
 }
 
-/// Cached prelude unit clauses (parsed once per process lifetime).
-Map<String, List<Term>>? _cachedPreludeUnitClauses;
+/// Cached root scope unit clauses (parsed once per process lifetime).
+Map<String, List<Term>>? _cachedRootScopeUnitClauses;
 
-/// Parse the prelude source and extract unit clauses (defined guards).
+/// Parse the root scope source and extract unit clauses (defined guards).
 /// Result is cached — parsing happens only on first call.
 /// Returns a map from "name/arity" to the head arguments of the unit clause.
-Map<String, List<Term>> getPreludeUnitClauses() {
-  if (_cachedPreludeUnitClauses != null) return _cachedPreludeUnitClauses!;
+Map<String, List<Term>> getRootScopeUnitClauses() {
+  if (_cachedRootScopeUnitClauses != null) return _cachedRootScopeUnitClauses!;
 
-  final source = _preludeUnitClauseSource ?? '';
+  final source = _rootScopeUnitClauseSource ?? '';
   if (source.isEmpty) {
-    _cachedPreludeUnitClauses = {};
-    return _cachedPreludeUnitClauses!;
+    _cachedRootScopeUnitClauses = {};
+    return _cachedRootScopeUnitClauses!;
   }
 
   final lexer = Lexer(source);
@@ -61,8 +61,8 @@ Map<String, List<Term>> getPreludeUnitClauses() {
     unitClauses['${proc.name}/${proc.arity}'] = clause.head.args;
   }
 
-  _cachedPreludeUnitClauses = unitClauses;
-  return _cachedPreludeUnitClauses!;
+  _cachedRootScopeUnitClauses = unitClauses;
+  return _cachedRootScopeUnitClauses!;
 }
 
 // ============================================================================
@@ -98,9 +98,9 @@ class PartialEvaluator {
   /// Stage 1: Transform all defined guards in a program.
   /// Call this before SRSW analysis.
   Program transformDefinedGuards(Program program) {
-    // Merge prelude unit clauses with user unit clauses.
-    // User definitions override prelude (spread order: prelude first, user second).
-    final unitClauses = {...getPreludeUnitClauses(), ..._collectUnitClauses(program)};
+    // Merge root scope unit clauses with user unit clauses.
+    // User definitions override root scope (spread order: root scope first, user second).
+    final unitClauses = {...getRootScopeUnitClauses(), ..._collectUnitClauses(program)};
     final allProcedures = _collectAllProcedures(program);
 
     List<Procedure> transformedProcedures = [];

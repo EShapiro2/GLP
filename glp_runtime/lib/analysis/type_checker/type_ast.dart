@@ -279,7 +279,7 @@ class TypeEnvironment {
   /// Parameterized procedure declaration templates, keyed by "name/arity".
   /// Used for call-site type parameter inference (Case B).
   final Map<String, ProcDecl> paramProcDecls;
-  /// Parameterized type templates from prelude/ancestors.
+  /// Parameterized type templates from root scope/ancestors.
   /// Passed to downstream expansions so they can expand references
   /// to templates defined in ancestor scopes.
   final Map<String, TypeDef> typeTemplates;

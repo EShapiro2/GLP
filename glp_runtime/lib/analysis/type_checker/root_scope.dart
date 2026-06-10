@@ -1,16 +1,16 @@
-// lib/analysis/type_checker/prelude.dart
+// lib/analysis/type_checker/root_scope.dart
 //
 // Predefined type and procedure definitions for GLP.
 // These are prepended to every module before parsing.
 // Redefinition of predefined types/procedures is an error.
 //
 // Specification: docs/modules/type-environment.md
-// Paper Reference: Section 8 (Prelude)
+// Paper Reference: Section 8 (Root scope)
 
-/// The prelude source — now empty.
+/// The root scope source — now empty.
 /// All type definitions, procedure declarations, and unit clauses
 /// live in programs/self.glp and are loaded via the scope chain.
-const String typePrelude = '';
+const String rootScopeTypes = '';
 
 /// Names of predefined types that cannot be redefined by user modules
 /// Note: Only fundamental primitive types are protected.
@@ -77,7 +77,7 @@ const Set<String> builtinGoals = {
 
 /// True builtins: procedures implemented in Dart runtime with NO GLP clauses.
 /// These are distinct from predefinedProcedureNames which includes procedures
-/// with prelude clauses (like new_channel).
+/// with root scope clauses (like new_channel).
 /// Keyed by "name/arity" for precise matching.
 const Set<String> builtinProcedures = {
   // Type guards

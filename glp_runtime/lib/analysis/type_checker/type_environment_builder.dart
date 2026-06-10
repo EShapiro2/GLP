@@ -1,13 +1,13 @@
 // lib/analysis/type_checker/type_environment_builder.dart
 //
 // Builds TypeEnvironment from a parsed Module.
-// Loads prelude, merges with user definitions, validates.
+// Loads root scope, merges with user definitions, validates.
 // Resolves type aliases at preprocessing time.
 //
 // Specification: docs/modules/type-environment.md v0.8
 
 import 'type_ast.dart';
-import 'prelude.dart';
+import 'root_scope.dart';
 import 'param_expansion.dart';
 import '../../compiler/ast.dart' as ast;
 import '../../compiler/lexer.dart';
@@ -61,18 +61,18 @@ class AliasExpansionError implements Exception {
   String toString() => '$message at line $line, column $column';
 }
 
-/// Source for the prelude environment (set by engine from programs/self.glp).
-String? _preludeEnvironmentSource;
+/// Source for the root scope environment (set by engine from programs/self.glp).
+String? _rootScopeEnvironmentSource;
 
-/// Set the source from which the prelude environment is built.
+/// Set the source from which the root scope environment is built.
 /// Call this once during engine initialization with the content of programs/self.glp.
-void setPreludeEnvironmentSource(String source) {
-  _preludeEnvironmentSource = source;
+void setRootScopeEnvironmentSource(String source) {
+  _rootScopeEnvironmentSource = source;
 }
 
-/// Build TypeEnvironment from prelude
-TypeEnvironment buildPreludeEnvironment() {
-  final source = _preludeEnvironmentSource ?? typePrelude;
+/// Build TypeEnvironment from root scope
+TypeEnvironment buildRootScopeEnvironment() {
+  final source = _rootScopeEnvironmentSource ?? rootScopeTypes;
   if (source.isEmpty) {
     return TypeEnvironment({}, {});
   }
@@ -84,11 +84,11 @@ TypeEnvironment buildPreludeEnvironment() {
 
   // Extract templates before expansion removes them.
   // These are passed to downstream modules so they can expand references
-  // to prelude-defined parameterized types (e.g., Stream(X), Channel(X,Y)).
-  final preludeTemplates = <String, TypeDef>{};
+  // to root scope-defined parameterized types (e.g., Stream(X), Channel(X,Y)).
+  final rootScopeTemplates = <String, TypeDef>{};
   for (final td in module.typeDefs) {
     if (td.isParameterized) {
-      preludeTemplates[td.name] = td;
+      rootScopeTemplates[td.name] = td;
     }
   }
 
@@ -99,22 +99,22 @@ TypeEnvironment buildPreludeEnvironment() {
   final env = _buildEnvironmentFromModule(expandedModule, checkRedefinitions: false, resolveAliasesNow: true);
   return TypeEnvironment(env.types, env.procedures,
       paramProcDecls: env.paramProcDecls,
-      typeTemplates: preludeTemplates);
+      typeTemplates: rootScopeTemplates);
 }
 
 /// Build TypeEnvironment from a parsed Module
 ///
-/// Loads prelude first, then merges user definitions.
+/// Loads root scope first, then merges user definitions.
 /// Throws RedefinitionError if user redefines predefined types/procedures.
 ///
 /// If [ancestorScope] is provided, it is used as the base environment
-/// instead of just the prelude. The ancestor scope should already include
-/// the prelude and all ancestor self.glp definitions (built by
+/// instead of just the root scope. The ancestor scope should already include
+/// the root scope and all ancestor self.glp definitions (built by
 /// assembleTypeScope in module_hierarchy.dart). The module's own
 /// definitions are then merged on top (shadowing ancestors).
 TypeEnvironment buildTypeEnvironment(ast.Module module, {TypeEnvironment? ancestorScope}) {
-  // Base environment: ancestor scope if provided, otherwise just prelude
-  final baseEnv = ancestorScope ?? buildPreludeEnvironment();
+  // Base environment: ancestor scope if provided, otherwise just root scope
+  final baseEnv = ancestorScope ?? buildRootScopeEnvironment();
 
   // Build user environment WITHOUT resolving aliases yet
   final userEnv = _buildEnvironmentFromModule(module, checkRedefinitions: ancestorScope == null, resolveAliasesNow: false);
@@ -122,7 +122,7 @@ TypeEnvironment buildTypeEnvironment(ast.Module module, {TypeEnvironment? ancest
   // Merge: base first, then user (user can shadow non-predefined)
   final merged = baseEnv.merge(userEnv);
 
-  // Now resolve aliases on the merged environment (so user aliases can reference prelude types)
+  // Now resolve aliases on the merged environment (so user aliases can reference root scope types)
   final types = Map<String, TypeDef>.from(merged.types);
   final procedures = Map<String, ProcDecl>.from(merged.procedures);
   _resolveAliases(types, procedures);

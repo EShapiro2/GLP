@@ -287,6 +287,6 @@ Old/obsolete files should be moved to:
 | 2026-01-18 | Initial creation by Overview GLP |
 | 2026-01-18 | Created consolidated DISCIPLINE.md; archived old v1.0/v1.1 discipline docs; updated test/README.md |
 | 2026-01-18 | Added compilation-pipeline.md to Paper-Spec-Code alignment table (from Typed GLP update) |
-| 2026-01-18 | Created prelude-stdlib-consolidation.md instructions for Typed GLP |
-| 2026-01-18 | Prelude/stdlib consolidation COMPLETED: procedure declarations added to prelude.dart and all stdlib files |
+| 2026-01-18 | Created the root-scope/stdlib consolidation instructions for Typed GLP |
+| 2026-01-18 | Root self.glp/stdlib consolidation COMPLETED: procedure declarations added to root_scope.dart and all stdlib files |
 

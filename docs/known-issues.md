@@ -154,7 +154,7 @@ Error: "Variable mode mismatch: writer requires ↑ (produce), got ↓ (consume)
 
 ### Analysis
 
-The prelude declares `=` as:
+The root self.glp declares `=` as:
 
 ```prolog
 procedure =(_?, _).
@@ -241,7 +241,7 @@ Verify the plays do not rely on per-sender cold-call order. Established channels
 
 ## Issue 8: Live app path not on the networking seam
 
-**Status**: Open — deferral approved (2026-06-10)
+**Status**: Open — ready; verification by Claude Code (manual app check waived 2026-06-10)
 **Discovered**: 2026-06-10
 **Affects**: The Flutter `glp_multiagent` app and `agent_runtime.dart`
 
@@ -271,6 +271,9 @@ callbacks have no consumer in any current play.
 
 Migrate `agent_runtime.dart` to construct a `GlpNetwork` (a `SimulationNetworkClient`
 or the real BLE/IP layer) and route outgoing/incoming traffic through it, and add
-router→client connectivity-event forwarding, **when the Flutter app can be manually
-verified** (see `GLP/CLAUDE.md` Flutter build/run steps). Until then the isolate
-test stack is the seam's reference path.
+router→client connectivity-event forwarding. Verification by Claude Code (manual
+app check waived by Udi, 2026-06-10): headless tests driving `AgentRuntime`'s
+message path written first and kept green across the migration, plus
+`flutter analyze` and a `flutter build` if the SDK is available. Residual
+UI-wiring risk accepted. Until merged, the isolate test stack is the seam's
+reference path.

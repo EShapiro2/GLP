@@ -1,4 +1,4 @@
 %% dl_append.glp - REMOVED
-%% This file duplicates prelude definitions (DiffList, dl_append, dl_to_list).
-%% The prelude already provides these definitions, so this file is now empty.
+%% This file duplicates root self.glp definitions (DiffList, dl_append, dl_to_list).
+%% The root self.glp already provides these definitions, so this file is now empty.
 %% Original content preserved in dl_append.glp.REMOVED for reference.

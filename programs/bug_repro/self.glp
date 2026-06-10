@@ -1,4 +1,4 @@
-%% Minimal self.glp — references Constant (a prelude type)
+%% Minimal self.glp — references Constant (a root self.glp type)
 Msg ::= text(Constant).
 
 procedure echo(Constant?, Constant).

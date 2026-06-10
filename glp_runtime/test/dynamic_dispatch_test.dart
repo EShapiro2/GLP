@@ -9,9 +9,9 @@ import 'dart:io';
 import 'package:test/test.dart';
 import 'package:glp_runtime/compiler/compiler.dart';
 import 'package:glp_runtime/compiler/partial_evaluator.dart'
-    show setPreludeUnitClauseSource;
+    show setRootScopeUnitClauseSource;
 import 'package:glp_runtime/analysis/type_checker/type_environment_builder.dart'
-    show setPreludeEnvironmentSource;
+    show setRootScopeEnvironmentSource;
 import 'package:glp_runtime/engine/glp_engine.dart';
 import 'package:glp_runtime/runtime/runtime.dart';
 import 'package:glp_runtime/runtime/machine_state.dart';
@@ -25,8 +25,8 @@ void main() {
   final rootSelfGlp = File('../programs/self.glp');
   if (rootSelfGlp.existsSync()) {
     final source = rootSelfGlp.readAsStringSync();
-    setPreludeUnitClauseSource(source);
-    setPreludeEnvironmentSource(source);
+    setRootScopeUnitClauseSource(source);
+    setRootScopeEnvironmentSource(source);
   }
 
   final ddDir = '../programs/tests/dynamic_dispatch';

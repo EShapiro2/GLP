@@ -390,7 +390,7 @@ LinkResult linkProject(List<DiscoveredModule> modules, String topModuleName) {
 
 /// Resolve a single goal in a clause body.
 ///
-/// Resolution order: local procedure → ancestor self.glp chain → prelude/stdlib.
+/// Resolution order: local procedure → ancestor self.glp chain → root scope/stdlib.
 Goal _resolveGoal(Goal goal, String moduleName, Set<String> localSigs,
     Map<String, String> ancestorSelfProcs) {
   // RemoteGoal: M' # p(...) → M':p(...)
@@ -441,7 +441,7 @@ Goal _resolveGoal(Goal goal, String moduleName, Set<String> localSigs,
     );
   }
 
-  // Prelude/stdlib/body kernel — leave unchanged
+  // Root scope/stdlib/body kernel — leave unchanged
   return goal;
 }
 
@@ -514,12 +514,12 @@ String _moduleNameFromDirPath(String dirPath) {
 /// are tracked for downstream modules.
 TypeEnvironment _buildAncestorScope(List<String> chain,
     {String? rootSelfGlpPath}) {
-  // Start from prelude (which includes root self.glp), matching
+  // Start from root scope (which includes root self.glp), matching
   // the individual-load path in assembleTypeScope.
-  var env = buildPreludeEnvironment();
+  var env = buildRootScopeEnvironment();
 
   // Chain contains only project-local self.glp files.
-  // Root self.glp is already included in the prelude environment.
+  // Root self.glp is already included in the root scope environment.
   for (final selfGlpPath in chain) {
     final source = File(selfGlpPath).readAsStringSync();
     final lexer = Lexer(source);

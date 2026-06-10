@@ -18,7 +18,7 @@ import 'well_typed_term.dart';
 import 'program_dfa.dart';
 import 'subtyping.dart';
 import 'type_ast.dart';
-import 'prelude.dart';
+import 'root_scope.dart';
 import '../../compiler/ast.dart' as ast;
 
 // =============================================================================

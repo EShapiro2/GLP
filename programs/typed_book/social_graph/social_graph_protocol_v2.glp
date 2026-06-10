@@ -205,7 +205,7 @@ tag_stream(Name, [M|In], [tagged(Name?, M?)|Out?]) :-
 tag_stream(_, [], []).
 
 %% =============================================================================
-%% NEW_CHANNEL: Create paired channels (from prelude)
+%% NEW_CHANNEL: Create paired channels (from root self.glp)
 %% =============================================================================
 
 procedure new_channel(Channel(X, Y), Channel(X, Y)).

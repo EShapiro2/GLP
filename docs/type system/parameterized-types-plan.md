@@ -112,7 +112,7 @@ Run full test suite after conversion. All tests must pass.
 
 ### 2.4 Parameterize `self.glp` procedure declarations
 
-Before removing renamed copies, the prelude's generic procedures must be parameterized. Otherwise there's nothing to replace the renamed copies with — the generic `send(_?, Channel?, Channel)` can't serve as a replacement for `send_agent(MediatorToAgentMsg?, AgentChannel?, AgentChannel)` because `AgentChannel ≠ Channel`.
+Before removing renamed copies, the root self.glp's generic procedures must be parameterized. Otherwise there's nothing to replace the renamed copies with — the generic `send(_?, Channel?, Channel)` can't serve as a replacement for `send_agent(MediatorToAgentMsg?, AgentChannel?, AgentChannel)` because `AgentChannel ≠ Channel`.
 
 Parameterize procedure declarations in `self.glp`:
 

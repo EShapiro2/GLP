@@ -22,8 +22,8 @@ void main() {
   final rootSelfGlp = File('../programs/self.glp');
   if (rootSelfGlp.existsSync()) {
     final source = rootSelfGlp.readAsStringSync();
-    setPreludeUnitClauseSource(source);
-    setPreludeEnvironmentSource(source);
+    setRootScopeUnitClauseSource(source);
+    setRootScopeEnvironmentSource(source);
   }
 
   // Locate cssg_modules relative to glp_runtime/
@@ -56,7 +56,7 @@ void main() {
     );
 
     // Start with prelude
-    var env = buildPreludeEnvironment();
+    var env = buildRootScopeEnvironment();
 
     // Layer each self.glp in chain order (root first)
     for (final selfGlpPath in chain) {

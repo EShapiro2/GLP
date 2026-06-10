@@ -1,5 +1,5 @@
 % test_channel_guards.glp - Channel operations as defined guards
-% Uses prelude-defined send, receive, new_channel
+% Uses root self.glp-defined send, receive, new_channel
 
 exported procedure make_pair(Channel(X, Y), Channel(Y, X)).
 make_pair(C1?, C2?) :- new_channel(C1, C2) | true.

@@ -3,7 +3,7 @@ import 'ast.dart';
 import 'error.dart';
 import '../analysis/type_checker/type_ast.dart';
 import '../analysis/type_checker/type_conversion.dart';
-import '../analysis/type_checker/prelude.dart' show builtinProcedures;
+import '../analysis/type_checker/root_scope.dart' show builtinProcedures;
 
 /// Parser for GLP source code
 class Parser {

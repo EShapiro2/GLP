@@ -627,15 +627,15 @@ class TypeChecker {
 /// This allows running partial evaluation (defined guard expansion) before type checking.
 ///
 /// If [ancestorScope] is provided, it is used as the base type environment
-/// (prelude + ancestor self.glp definitions) instead of just the prelude.
+/// (root scope + ancestor self.glp definitions) instead of just the root scope.
 /// See module_hierarchy.dart for how ancestor scopes are assembled.
 TypeCheckResult checkModule(ast.Module module, {List<ast.Procedure>? transformedProcedures, TypeEnvironment? ancestorScope}) {
   // Build base environment first so we know all type names for expansion.
-  // This avoids mistaking prelude type names for type parameters.
-  final baseEnv = ancestorScope ?? buildPreludeEnvironment();
+  // This avoids mistaking root scope type names for type parameters.
+  final baseEnv = ancestorScope ?? buildRootScopeEnvironment();
 
   // Expand parameterized types to monomorphic equivalents before type checking.
-  // Pass prelude/ancestor templates so downstream modules can expand references
+  // Pass root scope/ancestor templates so downstream modules can expand references
   // to parameterized types defined in ancestor scopes.
   final expandedModule = expandParameterizedTypes(module,
       knownTypeNames: baseEnv.types.keys.toSet(),

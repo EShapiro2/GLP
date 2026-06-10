@@ -11,7 +11,7 @@ void main() {
   // Set prelude sources from programs/self.glp (same as GlpEngine constructor)
   final rootSelfGlp = File('../programs/self.glp');
   if (rootSelfGlp.existsSync()) {
-    setPreludeEnvironmentSource(rootSelfGlp.readAsStringSync());
+    setRootScopeEnvironmentSource(rootSelfGlp.readAsStringSync());
   }
   // Helper: parse source into Module AST
   Module parseModule(String source) {

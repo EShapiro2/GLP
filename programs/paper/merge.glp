@@ -1,7 +1,7 @@
 % Test: Stream Merge
 % Paper: Appendix A.1
 % Description: Classic fair merge of two streams into one
-% Uses predefined Stream type from prelude
+% Uses predefined Stream type from root self.glp
 
 procedure merge(Stream(X)?, Stream(X)?, Stream(X)).
 

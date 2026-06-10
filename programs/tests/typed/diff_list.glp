@@ -1,5 +1,5 @@
 % diff_list.glp - Difference list operations with H\T syntax
-% Note: dl_append and dl_to_list are already in the prelude.
+% Note: dl_append and dl_to_list are already in the root self.glp.
 % This file tests using them from user code.
 
 exported procedure test_dl_append(DiffList(X)?, DiffList(X)?, DiffList(X)).

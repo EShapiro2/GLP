@@ -11,7 +11,7 @@ Updated: 2026-03-14
 
 ## Remaining — Two tasks in order
 
-### Task 1: Fix project loader bug (trailing slash + buildPreludeEnvironment)
+### Task 1: Fix project loader bug (trailing slash + buildRootScopeEnvironment)
 
 Read `docs/bugs/project-loader-fix-instructions.md` for context. Two changes needed:
 
@@ -20,12 +20,12 @@ Normalize trailing slashes when comparing paths. The bug: `currentNorm` has no t
 
 **Change B** — `glp_runtime/lib/compiler/project_linker.dart`, function `_buildAncestorScope`:
 1. Add `import '../analysis/type_checker/type_environment_builder.dart';` at the top
-2. Change `var env = TypeEnvironment({}, {});` to `var env = buildPreludeEnvironment();`  
-3. Remove `rootSelfGlpPath` from the `fullChain` list (prelude already handles root self.glp). The loop should just iterate over `chain`, not `fullChain`.
+2. Change `var env = TypeEnvironment({}, {});` to `var env = buildRootScopeEnvironment();`  
+3. Remove `rootSelfGlpPath` from the `fullChain` list (root self.glp already handles root self.glp). The loop should just iterate over `chain`, not `fullChain`.
 
 **Verify**: `echo -e '../programs/bonds_v2/\n:quit' | dart run bin/glp_repl.dart` should load without `UnknownTypeError`. Then run both test suites.
 
-**Commit**: Stage only `module_hierarchy.dart` and `project_linker.dart`. Message: "Fix project loader: normalize paths + use buildPreludeEnvironment"
+**Commit**: Stage only `module_hierarchy.dart` and `project_linker.dart`. Message: "Fix project loader: normalize paths + use buildRootScopeEnvironment"
 
 ### Task 2: Phase 2 module boundary enforcement
 

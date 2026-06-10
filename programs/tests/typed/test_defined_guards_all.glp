@@ -1,5 +1,5 @@
 % test_defined_guards_all.glp - Comprehensive defined guards test suite
-% Uses prelude-defined send, receive, new_channel
+% Uses root self.glp-defined send, receive, new_channel
 
 % User-defined guards (single unit clause, no body)
 exported procedure channel_guard(_?).

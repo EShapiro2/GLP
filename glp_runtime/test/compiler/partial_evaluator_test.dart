@@ -21,7 +21,7 @@ void main() {
   // Set prelude unit clause source from programs/self.glp
   final rootSelfGlp = File('../programs/self.glp');
   if (rootSelfGlp.existsSync()) {
-    setPreludeUnitClauseSource(rootSelfGlp.readAsStringSync());
+    setRootScopeUnitClauseSource(rootSelfGlp.readAsStringSync());
   }
   group('PartialEvaluator guard validation', () {
     late PartialEvaluator pe;

@@ -51,7 +51,7 @@ When multiple files need the same local fix, the problem is in the infrastructur
 2. Fix the infrastructure so the repeated fix becomes unnecessary
 3. Never add boilerplate declarations, imports, or workarounds to individual files to compensate for missing shared infrastructure
 
-**Example:** If the type checker doesn't see stdlib procedure declarations (like `now/1`, `:=/2`), the fix is to include stdlib declarations in the prelude environment — not to add `procedure now(Constant).` to every file that calls `now`.
+**Example:** If the type checker doesn't see stdlib procedure declarations (like `now/1`, `:=/2`), the fix is to include stdlib declarations in the root self.glp environment — not to add `procedure now(Constant).` to every file that calls `now`.
 
 ### 1.4 Traceability
 
@@ -281,7 +281,7 @@ The GLP language definition — its primitives, guards, system predicates, body 
 **Incorrect behavior:**
 - Adding a new guard because it seems useful
 - Implementing a new concurrency primitive because it solves a problem
-- Extending the prelude with new declarations without discussion
+- Extending the root self.glp with new declarations without discussion
 
 ### 1.15 Disagreement Protocol: Discuss Before Overriding
 

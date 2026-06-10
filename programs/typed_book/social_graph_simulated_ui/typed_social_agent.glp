@@ -1,7 +1,7 @@
 %% typed_social_agent.glp - Fully typed social agent (ack/nack intro variant)
 %%
 %% Typed version of social_agent.glp with precise message types.
-%% Channel operations use prelude Channel ::= ch(Stream, Stream?).
+%% Channel operations use root self.glp Channel ::= ch(Stream, Stream?).
 %%
 %% Friend-mediated introductions follow the original SG design:
 %% the channel is passed to the user via the mediator and returned
@@ -18,7 +18,7 @@
 %% TYPE DEFINITIONS
 %% =============================================================================
 
-%% Stream and Channel are predefined in prelude:
+%% Stream and Channel are predefined in root self.glp:
 %%   Stream ::= [] ; [_|Stream].
 %%   Channel ::= ch(Stream, Stream?).
 

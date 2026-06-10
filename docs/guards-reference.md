@@ -558,7 +558,7 @@ A **single-unit-clause procedure** is a regular procedure that happens to be def
 
 When such a procedure is called in guard position, the partial evaluator unfolds it at compile time.
 
-**Example from prelude:**
+**Example from root self.glp:**
 ```prolog
 procedure new_channel(Channel, Channel).
 new_channel(ch(Xs?, Ys), ch(Ys?, Xs)).
@@ -658,7 +658,7 @@ befriend_commit(Id, Other, ...) :- otherwise | ...        % larger-named side
 **Negation**: Non-negatable (same rationale as arithmetic comparisons — `~(X @< Y)` would conflate "X is not lex-smaller" with "type error", so negation is forbidden).
 
 **Implementation in tables**:
-- `prelude.dart`'s `predefinedProcedureNames` and `builtinProcedures` sets include `@<` and `@</2`.
+- `root_scope.dart`'s `predefinedProcedureNames` and `builtinProcedures` sets include `@<` and `@</2`.
 - `analyzer.dart`'s `_nonNegatableGuards` includes `@<`.
 - `analyzer.dart`'s `comparisonOps` (groundness inference) includes `@<`.
 - `runner.dart`'s guard switch implements the lex comparison via the local `evalConst` helper.

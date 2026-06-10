@@ -1,5 +1,5 @@
 % bb_diff.glp - Bounded buffer with difference lists
-% Tests DiffList type usage and dl_append from prelude
+% Tests DiffList type usage and dl_append from root self.glp
 
 exported procedure test_dl(DiffList(X)?, DiffList(X)?, Stream(X)).
 test_dl(D1, D2, L?) :-

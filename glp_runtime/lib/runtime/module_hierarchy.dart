@@ -107,7 +107,7 @@ List<String> discoverSelfChain({
 /// Assemble the type scope for a module by layering ancestor definitions.
 ///
 /// Builds a TypeEnvironment by:
-/// 1. Starting with the prelude (root of all type chains)
+/// 1. Starting with the root scope (root of all type chains)
 /// 2. Merging each self.glp in the chain (root-first, so children shadow parents)
 /// 3. Merging the target module's own types and declarations (shadows all ancestors)
 ///
@@ -119,8 +119,8 @@ TypeEnvironment assembleTypeScope({
   required List<String> chain,
   required ast.Module module,
 }) {
-  // Start with prelude
-  var env = buildPreludeEnvironment();
+  // Start with root scope
+  var env = buildRootScopeEnvironment();
 
   // Layer each self.glp in order (root first, children shadow parents)
   for (final selfGlpPath in chain) {
@@ -141,12 +141,12 @@ TypeEnvironment assembleTypeScope({
 
     // Expand parameterized types before building scope
     // Pass accumulated env type names so earlier types aren't mistaken for type params.
-    // Pass ancestor templates so this self.glp can expand references to prelude templates.
+    // Pass ancestor templates so this self.glp can expand references to root scope templates.
     final expandedSelfModule = expandParameterizedTypes(selfModule,
         knownTypeNames: env.types.keys.toSet(),
         externalTemplates: env.typeTemplates);
 
-    // Build environment from this self.glp (without prelude check — ancestors
+    // Build environment from this self.glp (without root scope check — ancestors
     // can define types with same names, shadowing is allowed)
     final selfEnv = buildScopeFromModule(expandedSelfModule);
 

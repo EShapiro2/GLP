@@ -30,14 +30,14 @@ ast.Module expandParameterizedTypes(ast.Module module, {
     }
   }
 
-  // Merge external templates (from prelude/ancestor scopes).
+  // Merge external templates (from root scope/ancestor scopes).
   // Local templates take precedence over external ones.
   for (final entry in externalTemplates.entries) {
     templates.putIfAbsent(entry.key, () => entry.value);
   }
 
   // Note: don't return early if templates is empty — proc decls may reference
-  // prelude templates (e.g., Stream(X)) and still need type param detection.
+  // root scope templates (e.g., Stream(X)) and still need type param detection.
 
   // Known monomorphic type names: used to collapse all-wildcard expansions
   // (e.g., Stream(_) → Stream) when a monomorphic version exists.

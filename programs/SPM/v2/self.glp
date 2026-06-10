@@ -10,7 +10,7 @@
 %% CORE PROTOCOL TYPES
 %% =============================================================================
 
-%% Stream(X) and Channel(In, Out) are predefined in prelude:
+%% Stream(X) and Channel(In, Out) are predefined in root self.glp:
 %%   Stream(X) ::= [] ; [X | Stream(X)].
 %%   Channel(In, Out) ::= ch(In, Out?).
 

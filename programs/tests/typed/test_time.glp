@@ -1,4 +1,4 @@
-% test_time.glp - Time-related tests using prelude-declared wait
+% test_time.glp - Time-related tests using root self.glp-declared wait
 
 exported procedure wait_test(Constant).
 wait_test(done) :- wait(1) | true.

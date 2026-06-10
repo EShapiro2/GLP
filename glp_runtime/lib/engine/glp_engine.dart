@@ -156,12 +156,12 @@ class GlpEngine {
   GlpEngine({required String rootSelfGlpPath}) {
     _rootSelfGlpPath = rootSelfGlpPath;
 
-    // Set prelude sources from programs/self.glp for PE and type checker
+    // Set root scope sources from programs/self.glp for PE and type checker
     final rootSelfFile = File(_rootSelfGlpPath);
     if (rootSelfFile.existsSync()) {
       final rootSource = rootSelfFile.readAsStringSync();
-      setPreludeUnitClauseSource(rootSource);
-      setPreludeEnvironmentSource(rootSource);
+      setRootScopeUnitClauseSource(rootSource);
+      setRootScopeEnvironmentSource(rootSource);
     }
 
     registerStandardPredicates(_runtime.systemPredicates);
@@ -742,10 +742,10 @@ class GlpEngine {
     return root;
   }
 
-  /// Build prelude + chain scope (WITHOUT the target module — checkModule
+  /// Build root scope + chain scope (WITHOUT the target module — checkModule
   /// adds that via buildTypeEnvironment).
   TypeEnvironment _buildAncestorScope(List<String> chain) {
-    var env = buildPreludeEnvironment();
+    var env = buildRootScopeEnvironment();
 
     // Include root self.glp (programs/self.glp) as first scope layer
     final rootSelfGlp = File(_rootSelfGlpPath);
@@ -780,7 +780,7 @@ class GlpEngine {
     }
 
     // Expand parameterized types (strips templates, keeps monomorphic defs)
-    // Pass existing env type names so prelude types aren't mistaken for type params.
+    // Pass existing env type names so root scope types aren't mistaken for type params.
     // Pass ancestor templates so this module can expand references to them.
     final expandedModule = expandParameterizedTypes(selfModule,
         knownTypeNames: env.types.keys.toSet(),
