@@ -1,0 +1,50 @@
+-module(interlace).
+
+%% interlace.glp — Interlaced streams (typed version of paper code)
+%%
+%% From Secure-GLP §Interlaced Streams are a Blocklace.
+%% Each agent produces a stream of blocks, where each block contains
+%% a payload and a list of tips — references to the latest blocks
+%% in other agents' streams. The tips create the blocklace DAG.
+%%
+%% collect_tips reads the current head of each other stream:
+%%   - If the stream's next block is not yet available (unknown),
+%%     the current block is taken as a tip.
+%%   - If the stream has advanced (otherwise), skip and pass on.
+%%
+%% Specialized for sovereign/custodian: payloads are SovPayload,
+%% other streams are ack streams (Stream(AckMsg)).
+
+%% =============================================================================
+%% COLLECT_TIPS
+%% =============================================================================
+
+exported procedure collect_tips(AckStreams?, TipList, AckStreams).
+
+%% Stream hasn't advanced — take current block as tip
+collect_tips([[Block|Bs]|Others], [Block?|Tips?], [Bs?|Others1?]) :-
+    unknown(Bs?) |
+    collect_tips(Others?, Tips, Others1).
+
+%% Stream has advanced — skip, pass remaining stream on
+collect_tips([[_|Bs]|Others], Tips?, [Bs?|Others1?]) :-
+    otherwise |
+    collect_tips(Others?, Tips, Others1).
+
+%% No more streams to check
+collect_tips([], [], []).
+
+%% =============================================================================
+%% INTERLACE (generic, for reference and reuse)
+%% =============================================================================
+%%
+%% Produces a stream of SovBlocks from a payload stream,
+%% interlaced with tips collected from AckStreams.
+
+exported procedure interlace(Stream(SovPayload)?, Stream(SovBlock), AckStreams?).
+
+interlace([Payload|Payloads], [block(Payload?, Tips?)|Stream?], Others) :-
+    collect_tips(Others?, Tips, Others1),
+    interlace(Payloads?, Stream, Others1?).
+
+interlace([], [], _).

@@ -1,0 +1,56 @@
+-module(securebonds).
+
+%% SecureBonds/self.glp — Shared types for secure bonds
+%%
+%% Types for the sovereign transaction log with custodian finality,
+%% using interlaced streams as the core data structure.
+
+%% =============================================================================
+%% DOMAIN TYPES
+%% =============================================================================
+
+%% Bond: bond(Issuer, Maturity, Serial)
+Bond     ::= bond(Constant, Constant, Constant).
+BondList ::= [] ; [Bond | BondList].
+
+%% Transaction records in the sovereign's log
+TxRecord ::= tx_mint(Constant, Constant)             %% tx_mint(K, Maturity)
+            ; tx_pay(Constant, Constant, Bond).       %% tx_pay(From, To, Coin)
+
+%% Sovereign payload: numbered transaction
+SovPayload ::= tx(Constant, TxRecord).               %% tx(Counter, TxRecord)
+
+%% Finality signal — bound by sovereign when custodian acknowledges
+Finality ::= finalized.
+
+%% Custodian acknowledgment
+AckMsg ::= ack(Constant).                            %% ack(BlockId)
+
+%% =============================================================================
+%% INTERLACED STREAMS TYPES
+%% =============================================================================
+
+%% Tip list: ack messages observed from custodian streams
+TipList ::= [] ; [AckMsg | TipList].
+
+%% Sovereign block in the interlaced stream: payload + tips
+SovBlock ::= block(SovPayload, TipList).
+
+%% List of ack streams being tracked for interlacing
+%% (one per custodian; currently one custodian)
+AckStreams ::= [] ; [Stream(AckMsg) | AckStreams].
+
+%% =============================================================================
+%% APPROVAL AND PENDING TYPES
+%% =============================================================================
+
+%% Approval request from trader to sovereign.
+%% Finality? positions carry reply variable references (unbound writers
+%% held by the requester; the sovereign binds them upon custodian ack).
+ApprovalReq ::= approve_mint(Constant, Constant, Finality?)
+              ; approve_pay(Constant, Constant, Bond, Finality?, Finality?).
+
+%% Pending finality: counter + reply variable references stripped from
+%% approval requests, awaiting custodian acknowledgment.
+PendingFinality ::= pending_mint(Constant, Finality?)
+                  ; pending_pay(Constant, Finality?, Finality?).
