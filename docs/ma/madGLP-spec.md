@@ -1,7 +1,7 @@
 # madGLP Specification
 
-**Version**: 5.5
-**Date**: 2026-04-05
+**Version**: 5.6
+**Date**: 2026-06-10
 **Status**: DRAFT  
 **Source**: CGLP Paper (`~/Grassroots/CGLP`), Sections 5–6 "Multiagent GLP and Its Implementation" and "madGLP Specification"
 
@@ -117,7 +117,7 @@ At boot time, each agent p creates a permanent entry at index 0 mapping `_r(p, 0
 - **Single use**: Entry removed after assignment
 - **Direct assignment**: Message contains T directly, not wrapped in list
 
-**Remark [Serializer as Merge]**: The index-0 serializer implements a many-to-one merge pattern, combining cold-call messages from multiple senders into a single network input stream. The order of messages from different senders is non-deterministic, while messages from the same sender preserve FIFO order.
+**Remark [Serializer as Merge]**: The index-0 serializer implements a many-to-one merge, combining cold-call messages from multiple senders into a single network input stream, in an arbitrary order determined by message arrival.
 
 **Remark [Network Output Processing]**: Each agent spawns a `send_to_net` goal to process its network output stream. See Section 12.2 for the full definition.
 
@@ -261,6 +261,8 @@ The unary Receive transaction processes a message m from the communication chann
 **Case `m = (_w(q, 0) := [T↑ | _w(q,0)])` (Serializer)**: Cold-call message to agent q's network input. Agent q finds the permanent entry `(N_q, *)` at index 0. Localize T↑ by q to get T_q↓. Assign N_q := [T_q↓ | N'_q] where N'_q is a fresh writer. Update the entry to `(N'_q, *)` at index 0 (extending the stream). Reactivate any goals suspended on N_q?. The entry is NOT removed—it is updated with the fresh writer for the next message.
 
 **Case `m = (_r(p, i) := T↑)`**: The message is destined for the agent that localized `_r(p,i)` (by localizing a reader global name). Agent q searches its global writers table for an entry `(X_q, p, i)` matching the remote agent p and remote index i. The entry provides the remote agent identity p, which is used when localizing T↑: any variables in T↑ get their global links pointing to p. Localize T↑ by q from p to get T_q↓, assign X_q := T_q↓, apply {X_q? := T_q↓} to goals containing X_q?, reactivate suspended goals, and remove the entry from W'_q.
+
+**Early Messages**: A message `_r(p, i) := T↑` may arrive before the entry `(X_q, p, i)` exists, since the message that carried `_r(p, i)` may still be in transit. The receiver holds such a message and processes it when localization creates the entry. No other message can arrive early: for `_w(p, i)` the entry is created before the global name leaves the agent, and the serializer entry at index 0 is permanent.
 
 **Remote Agent Identity in Entries**: The entry stores the remote agent identity (q in `(X, q)` or p in `(X_q, p, i)`), which serves two purposes:
 1. For `(X_q, p, i)` entries: enables lookup by matching the message's global name `_r(p, i)` to the entry's `(p, i)` pair
@@ -643,7 +645,7 @@ The following invariants are maintained by madGLP:
 
 **Index Uniqueness**: Each (agent, index) pair uniquely identifies a global name. Indices are allocated sequentially and never reused, even after entry removal.
 
-**Message Ordering**: Messages between any pair of agents are delivered in FIFO order. This ensures that if agent p sends two messages to agent q, q receives them in the order sent.
+**Fair Delivery, No Ordering**: The only channel assumption is fair delivery: every message sent is eventually delivered. Delivery order is arbitrary; a message arriving before its entry exists is held (Section 8.3).
 
 ---
 
@@ -688,6 +690,7 @@ The GLP compiler rejects underscore-prefixed constants in user mode (default). S
 
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
+| 5.6 | 2026-06-10 | Claude | Removed the FIFO delivery invariant (the paper assumes only fair delivery; FIFO came from the in-process channel). Aligned the serializer remark with arbitrary arrival order. Added Early Messages rule to Receive: a message arriving before its entry exists is held until localization creates the entry. |
 | 5.5 | 2026-04-05 | Claude | Fixed examples 10.1-10.2 to use correct variable polarity from clause heads: bindings contain mixed writer/reader terms (e.g., `[value(V)|Xs2?]` not `[value(V?)|Xs2]`). Fixed 10.1 Xs1 from writer/_w to reader/_r. Fixed 10.2 V from reader/_r to writer/_w, Xs2 from writer/_w to reader/_r, corrected message names and dataflow direction. Aligns with paper, figure, and code. |
 | 5.4 | 2026-04-04 | Claude | Harmonized with implementation and paper: fixed source reference to Sections 5–6; updated initial configuration to match actual boot protocol (variable-arity goals, Dart provides only network input reader, not UI channels); removed send_to_net duplication (Section 4.1 now references Section 12.2); updated example 10.1 boot setup to match actual code. |
 | 5.3 | 2026-02-10 | Claude | **Corrected Globalize/Localize direction**: Swapped gs/entry placement in Sections 5.1-5.4, 8.3, 9.3-9.4, 10.1-10.3, 11.2, 11.5, 12.2. Writer → entry at globalizer (receiver gets writer, sends back). Reader → gs at globalizer (globalizer keeps writer, sends to receiver). Updated all examples and remarks to match. Aligns with corrected paper appendix. |
