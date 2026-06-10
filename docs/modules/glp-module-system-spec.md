@@ -270,6 +270,16 @@ The `imported` declaration records the caller's expectations. The `exported` dec
 
 For dynamic loading, type automata (or their serialized representation) must be available at runtime — not just at compile time. A compiled module carries its type automata alongside its code, enabling the load-time compatibility check.
 
+### 7.4 Runtime Boundary Checking
+
+The type-soundness guarantee holds for a well-typed program **and** a well-typed initial goal. Static linking (Section 6) establishes both at compile time, since every producer is part of the checked program. The load-time check of dynamic linking (Section 7.2) establishes that *declared interfaces* are compatible — it compares declarations, not the terms actually sent. When a producer is not itself type-checked (foreign bytecode, network input, REPL/boot terms), the conformance of the consumer's inputs is therefore not established. Runtime boundary checking closes this gap.
+
+**The forwarder.** For a type `T`, a type-specific *forwarding process* `forward(A?, In?, Out, Err)` — where `A` is `T`'s type automaton (Section 7.3) — copies stream `In` to stream `Out`, checking each instantiated part of every consumed term against `A`. Checking is **incremental**: conforming parts are forwarded immediately; the process **suspends** at uninstantiated positions and resumes as they are instantiated (so partial terms produce no false errors). On the **first violation** it emits `type_error(Culprit, Expected)` on `Err` and stops forwarding. The forwarder is an ordinary GLP process — the check is itself written in GLP.
+
+**Placement.** A guard is placed on the **consumer side** of each boundary stream of a dynamically activated module, in each **direction whose producer is not type-checked**. Every term a guard forwards conforms to the stream's declared type, so a well-typed module all of whose boundary streams are guarded satisfies the well-typed-input hypothesis at runtime, and its outputs conform.
+
+**Activation mode.** Dynamic activation (the `serve`/`activate` machinery of Section 7.1) takes a **guarded** or **unguarded** mode: in guarded mode the runtime interposes a forwarder on each consumed boundary stream of the activated module; in unguarded mode it does not. This is a mechanism — *which* peers are trusted, and hence whether a given activation is guarded, is the caller's policy. On well-typed traffic the two modes behave identically (the forwarder is transparent); they differ only when an ill-typed term arrives.
+
 ---
 
 ## 8. Module Declaration
