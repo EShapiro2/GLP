@@ -88,7 +88,15 @@ Whether a shadowed type is compatible with its ancestor is not checked at the po
 
 Resolution is innermost-first: a name resolves to the nearest enclosing scope that defines it — a module's own definition takes precedence over ancestor definitions, an inner `self.glp` over an outer one, with `programs/self.glp` outermost.
 
-### 3.3 Cross-Hierarchy References
+### 3.3 The `-expose` Directive
+
+A `self.glp` may contain an `-expose(M).` directive, where `M` is a module path (e.g. `lib#streams`). It lifts `M`'s **exported** procedures — and the types their signatures carry — into that directory's scope: they become visible to the whole subtree, unqualified, exactly as if defined in that `self.glp`.
+
+Exposure participates in the ancestor chain at the exposing directory's level: an exposed name resolves at the depth of the `self.glp` that exposes it. Innermost-first shadowing (Section 3.2) therefore applies to exposed names like any other — a definition nearer the use site shadows an exposed one, and an exposed name shadows outer scopes.
+
+If two modules exposed at one level contribute the same name/arity, that is a compile-time error.
+
+### 3.4 Cross-Hierarchy References
 
 To reference a definition from a sibling, cousin, or other non-ancestor module, use the `#` operator:
 

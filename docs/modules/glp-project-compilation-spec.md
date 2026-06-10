@@ -29,6 +29,8 @@ Walk the project directory tree. Collect every `.glp` file. Additionally collect
 
 `self.glp` files contribute both type definitions and procedure definitions to the ancestor scope.  Their procedures are compiled to bytecode and available to all modules in the subtree without qualification (in source), just like their types.  This holds equally for ancestor `self.glp` files above the project root.
 
+**`-expose` directives.**  If a collected `self.glp` contains an `-expose(M).` directive (`M` a module path, e.g. `lib#streams`), additionally collect module `M` — and, transitively, any modules `M` itself exposes — even when `M` lies outside the loaded subtree.  Only `M`'s **exported** procedures (and the types their signatures carry) join the exposing directory's scope; `M`'s non-exported procedures and its sibling modules are not collected.
+
 ### 3.2 Procedure Renaming
 
 Every procedure in every `.glp` file (including `self.glp` files) is prefixed with its module path:
@@ -60,6 +62,8 @@ Every goal in every clause body is resolved:
 
 **Ancestor self.glp calls** — if no local procedure matches, the linker walks the ancestor `self.glp` chain, which extends beyond the project root up to `programs/`.  A call matching a procedure in an ancestor `self.glp` is resolved to its renamed form.
 
+**Exposed procedure calls** — a call matching a procedure exposed (via `-expose`) into an enclosing `self.glp`'s scope resolves to that procedure's renamed form in its defining module, exactly as if it were defined in the exposing `self.glp` (the paper's Static Linking sentence).  Exposed names sit at the depth of the exposing `self.glp` in the ancestor chain, so innermost-first shadowing (module-system spec §3.2) applies: a local or nearer-ancestor definition takes precedence over an exposed one.
+
 **Root `self.glp` calls** — definitions in the root `programs/self.glp`, single- or multi-clause, resolve for every module per the ancestor scope chain (module-system spec §3.1), subject to innermost-first shadowing. Partial-evaluation unfolding of its single-unit-clause procedures (`=`, `send`, `receive`, `new_channel`) remains an optimisation; it is not the resolution mechanism.
 
 ### 3.4 Entry Points
@@ -75,6 +79,8 @@ Code loaded on top of a linked project (REPL goals, madGLP boot procedures) is r
 ### 3.5 Type Checking
 
 Each module is type-checked independently with its ancestor scope, exactly as today. The renaming step happens after type checking — it is a purely syntactic transformation on well-typed modules.
+
+The exported signatures of `-expose`d modules — and the types those signatures carry — are merged into the exposing directory's type scope, so modules in the subtree type-check against the exposed procedures as if they were declared in the exposing `self.glp`.  **Collision:** if two modules exposed at one level contribute the same name/arity, the linker reports a compile-time error naming both modules.
 
 ### 3.6 Imported/Exported Declarations After Linking
 

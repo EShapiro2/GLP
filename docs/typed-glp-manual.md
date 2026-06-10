@@ -1,6 +1,6 @@
 # Typed GLP Manual
 
-**Version**: 2.14
+**Version**: 2.15
 **Date**: 2026-06-10
 **Status**: ACTIVE
 
@@ -1100,6 +1100,20 @@ GLP> :activate math_service
 
 4. **Matching modes matter.** The `imported procedure` declaration's argument modes must match the `exported procedure` declaration's modes. If the export says `double(Integer?, Integer)`, the import must say the same.
 
+### 19.10 The `-expose` Directive
+
+A `self.glp` may **expose** another module, lifting that module's `exported` procedures (and the types their signatures carry) into the directory's scope — visible unqualified to the whole subtree, as if defined in the `self.glp`:
+
+```glp
+%% programs/social/self.glp
+-expose(lib#streams).      %% tag_stream/3, broadcast/3, … now visible below
+
+%% programs/social/graph/agent.glp — calls them unqualified, no import needed:
+agent(Id, In, Outs) :- broadcast(Msg?, Outs?, Outs1), ...
+```
+
+Exposure sits at the exposing directory's level in the ancestor chain, so innermost-first shadowing applies: a module's own definition (or a nearer `self.glp`) beats an exposed one, and an exposed name beats outer scopes. Exposing two modules that contribute the same name/arity at one level is a compile-time error. Unlike `#`/`imported procedure` (which qualify each call site), `-expose` makes the names ambient for the subtree — use it for shared utility modules, not for ordinary cross-module calls.
+
 ---
 
 ## 20. Type Union
@@ -1135,6 +1149,7 @@ Type identity is structural. Two independently defined types with the same alter
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 2.15 | 2026-06-10 | Added §19.10: the `-expose` directive (lift another module's exports into a `self.glp`'s subtree scope; innermost-first shadowing; collision is an error) |
 | 2.14 | 2026-06-10 | §8.2: multi-clause root `self.glp` procedures (e.g. `merge/3`) resolve through the ancestor scope chain, subject to innermost-first shadowing; unfolding is a single-unit-clause optimisation, not the resolution mechanism (A3 module-system amendment) |
 | 2.13 | 2026-05-24 | Rewrote Section 8 (Guards: What May Appear in a Guard): added §8.1 explicit guard rule (compile-time unfoldability; no recursion; multi-clause off-limits until PE extended), renumbered single-unit-clause material to §8.2/§8.3 as the safe special case rather than a separate construct |
 | 2.12 | 2026-05-23 | Added Section 15B: Forwarding a Writer Through a Structure (dual of §15, role of `?` in type definitions at output positions); added cross-reference at end of §2A.4 summary |
