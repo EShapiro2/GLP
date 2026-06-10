@@ -117,6 +117,9 @@ const Set<String> builtinProcedures = {
   '_close_mutual_reference/1',
   // madGLP network primitives
   '_send/3',
+  // madGLP attestation kernels (seam spec §4)
+  '_sign/2',
+  '_verify_attestation/4',
   // Output (system predicate)
   '_output/1',
 };

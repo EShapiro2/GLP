@@ -14,6 +14,7 @@ import 'package:glp_runtime/multiagent/payload_serializer.dart';
 import 'package:glp_runtime/multiagent/global_send.dart';
 import 'package:glp_runtime/multiagent/global_writers_table.dart';
 import 'package:glp_runtime/multiagent/mad_helpers.dart';
+import 'package:glp_runtime/multiagent/glp_network.dart';
 
 /// Callback for delivering messages to other agents
 typedef MessageDeliveryCallback = void Function(String destination, OutboundMessage message);
@@ -43,6 +44,19 @@ class MadContext {
 
   /// Optional callback for message delivery (set by coordinator)
   MessageDeliveryCallback? onMessageReady;
+
+  /// The agent's networking layer (set at boot). Backs the `sign/2` and
+  /// `verify_attestation/4` body kernels (seam spec §4): the layer holds the
+  /// private key and provides real Ed25519 `sign`/`verify`.
+  GlpNetwork? network;
+
+  /// Canonical serialization of a ground term for signing/verifying (seam spec
+  /// §4): the madGLP payload serialization. Address-free and deterministic for
+  /// ground terms — `serializeAgentMessage` throws if any `VarRef` is present,
+  /// and the encoding is agentId-independent, so canonical bytes match across
+  /// agents.
+  List<int> canonicalSerialize(Term groundTerm) =>
+      _serializer.serializeAgentMessage(groundTerm);
 
   /// Optional trace sink for MAD infrastructure output.
   /// When set, MAD debug output goes through this callback instead of print().

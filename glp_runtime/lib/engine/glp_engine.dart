@@ -110,6 +110,19 @@ global_send(T, G, Q) :- known(T?) | '_send'(T?, G?, Q?).
 procedure send_to_user(Stream(_)?).
 send_to_user([T | In]) :- ground(T?) | '_output'(T?), send_to_user(In?).
 send_to_user([]).
+
+%% sign/2 - bind Sig to the hex Ed25519 signature over the canonical
+%% serialization of ground term T, under this agent's key (seam spec §4).
+%% The ground/1 guard suspends until T is ground and resumes on binding.
+procedure sign(_?, _).
+sign(T, Sig?) :- ground(T?) | '_sign'(T?, Sig).
+
+%% verify_attestation/4 - bind Ok to true iff Sig is Signer's valid Ed25519
+%% signature over attest(Signer, Subject); false otherwise (seam spec §4).
+procedure verify_attestation(_?, _?, _?, _).
+verify_attestation(Signer, Subject, Sig, Ok?) :-
+    ground(Signer?), ground(Subject?), ground(Sig?) |
+    '_verify_attestation'(Signer?, Subject?, Sig?, Ok).
 ''';
 
 /// GLP Engine - the embeddable core for running GLP programs

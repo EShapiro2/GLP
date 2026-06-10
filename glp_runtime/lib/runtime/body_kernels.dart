@@ -11,12 +11,14 @@
 /// - Use heap.isWriter/isReader to check cell type
 
 import 'dart:math' as math;
+import 'dart:typed_data';
 
 import 'runtime.dart';
 import 'terms.dart';
 import 'machine_state.dart' show GoalRef;
 import 'package:glp_runtime/bytecode/runner.dart' show BytecodeRunner, BytecodeProgram, CallEnv;
 import 'package:glp_runtime/multiagent/mad_context.dart';
+import 'package:glp_runtime/multiagent/glp_network.dart' show PubKey;
 
 /// Result of executing a body kernel
 enum BodyKernelResult {
@@ -97,6 +99,8 @@ void registerStandardBodyKernels(BodyKernelRegistry registry) {
 
   // madGLP kernels
   registry.register('_send', 3, sendKernel);
+  registry.register('_sign', 2, signKernel);
+  registry.register('_verify_attestation', 4, verifyAttestationKernel);
 
   // I/O kernels
   registry.register('_output', 1, outputKernel);
@@ -742,6 +746,115 @@ BodyKernelResult sendKernel(GlpRuntime rt, List<Object?> args) {
   ctx.send(termArg, isWriter, gnAgent, gnIndex, destAgent);
 
   return BodyKernelResult.success;
+}
+
+// =============================================================================
+// SYSTEM PREDICATE KERNELS — sign/2 and verify_attestation/4 (seam spec §4)
+// =============================================================================
+//
+// Backed by GlpNetwork.sign/verify (real Ed25519). The GLP wrappers gate on
+// ground/1 (suspend-until-ground), so inputs are ground when these run. Keys
+// and signatures are lowercase-hex string constants — no new GLP value type.
+
+String _bytesToHex(List<int> bytes) {
+  final sb = StringBuffer();
+  for (final b in bytes) {
+    sb.write((b & 0xff).toRadixString(16).padLeft(2, '0'));
+  }
+  return sb.toString();
+}
+
+Uint8List? _hexToBytes(String hex) {
+  if (hex.isEmpty || hex.length.isOdd) return null;
+  final out = Uint8List(hex.length ~/ 2);
+  for (var i = 0; i < out.length; i++) {
+    final byte = int.tryParse(hex.substring(i * 2, i * 2 + 2), radix: 16);
+    if (byte == null) return null;
+    out[i] = byte;
+  }
+  return out;
+}
+
+String? _atomString(GlpRuntime rt, Object? arg) {
+  final t = _deref(rt, arg);
+  if (t is ConstTerm && t.value is String) return t.value as String;
+  if (t is String) return t;
+  return null;
+}
+
+/// '_sign'(T?, Sig) — bind Sig to the 128-character lowercase-hex Ed25519
+/// signature (under this agent's key) over the canonical serialization of the
+/// ground term T. The GLP wrapper gates on `ground(T?)`, so T is ground here.
+BodyKernelResult signKernel(GlpRuntime rt, List<Object?> args) {
+  if (args.length != 2) {
+    print('[ABORT] _sign/2: expected 2 arguments, got ${args.length}');
+    return BodyKernelResult.abort;
+  }
+  final ctx = rt.madContext;
+  if (ctx is! MadContext) {
+    print('[ABORT] _sign/2: not in madGLP mode (no MadContext)');
+    return BodyKernelResult.abort;
+  }
+  final network = ctx.network;
+  if (network == null) {
+    print('[ABORT] _sign/2: no GlpNetwork bound to this agent');
+    return BodyKernelResult.abort;
+  }
+  final term = _deepDeref(rt, args[0] as Term);
+  final List<int> canonical;
+  try {
+    canonical = ctx.canonicalSerialize(term);
+  } catch (e) {
+    print('[ABORT] _sign/2: term is not ground: $e');
+    return BodyKernelResult.abort;
+  }
+  final sig = network.sign(Uint8List.fromList(canonical));
+  return _bindResult(rt, args[1], ConstTerm(_bytesToHex(sig)));
+}
+
+/// '_verify_attestation'(Signer?, Subject?, Sig?, Ok) — bind Ok to the atom
+/// `true` iff Sig is Signer's valid Ed25519 signature over the canonical
+/// serialization of attest(Signer, Subject), else `false` (including malformed
+/// hex). Verification failure is data, never goal failure.
+BodyKernelResult verifyAttestationKernel(GlpRuntime rt, List<Object?> args) {
+  if (args.length != 4) {
+    print('[ABORT] _verify_attestation/4: expected 4 arguments, got ${args.length}');
+    return BodyKernelResult.abort;
+  }
+  final ctx = rt.madContext;
+  if (ctx is! MadContext) {
+    print('[ABORT] _verify_attestation/4: not in madGLP mode (no MadContext)');
+    return BodyKernelResult.abort;
+  }
+  final network = ctx.network;
+  if (network == null) {
+    print('[ABORT] _verify_attestation/4: no GlpNetwork bound to this agent');
+    return BodyKernelResult.abort;
+  }
+
+  bool ok = false;
+  final signerHex = _atomString(rt, args[0]);
+  final subjectHex = _atomString(rt, args[1]);
+  final sigHex = _atomString(rt, args[2]);
+  if (signerHex != null && subjectHex != null && sigHex != null) {
+    try {
+      final signerBytes = _hexToBytes(signerHex);
+      final sigBytes = _hexToBytes(sigHex);
+      if (signerBytes != null &&
+          signerBytes.length == 32 &&
+          sigBytes != null &&
+          sigBytes.length == 64) {
+        final attest =
+            StructTerm('attest', [ConstTerm(signerHex), ConstTerm(subjectHex)]);
+        final canonical = ctx.canonicalSerialize(attest);
+        ok = network.verify(
+            PubKey(signerBytes), Uint8List.fromList(canonical), sigBytes);
+      }
+    } catch (_) {
+      ok = false; // malformed input → false, never goal failure
+    }
+  }
+  return _bindResult(rt, args[3], ConstTerm(ok ? 'true' : 'false'));
 }
 
 // =============================================================================
