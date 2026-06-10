@@ -1,21 +1,34 @@
-# Current Plan: Module Boundary Enforcement
+# Current Plan: Project Loader Fix + Module Boundary Enforcement Phase 2
 
-Started: 2026-03-14
+Updated: 2026-03-14
 
-## Goal
+## Completed
 
-Enforce the spec (typed-glp-manual.md §19.3): `procedure` is module-local, only `exported procedure` is callable from outside. The REPL currently bypasses this via `combinedProgram`.
+- [x] Phase 0: Baseline
+- [x] Phase 1: Add `exported` to REPL-callable procedures (commit 696cc259)
+- [x] Infrastructure goal fix (commit b262e28e). Serve goals excluded from scheduler status.
+- [x] Infrastructure goal propagation in Spawn + Dart test expectations (commit 53da7a42). 354/0/5 Dart, 461/461 REPL.
 
-## Phases
+## Remaining — Two tasks in order
 
-Work in phases. **Read only the current phase file — do not read ahead.**
+### Task 1: Fix project loader bug (trailing slash + buildPreludeEnvironment)
 
-- [ ] **Phase 0: Baseline** — Run `bash test/run_all_tests.sh` (428/428) and `dart test` (0 failures). Commit.
-- [ ] **Phase 1** — Read `docs/infra/module-boundary-phase1.md`. Add `exported` to all REPL-callable procedures. Commit.
-- [ ] **Phase 2** — Read `docs/infra/module-boundary-phase2.md`. Enforce boundaries in `combinedProgram`. Add negative test. Commit.
-- [ ] **Final** — Both test suites green. Push.
+Read `docs/bugs/project-loader-fix-instructions.md` for context. Two changes needed:
 
-## Constraints
+**Change A** — `glp_runtime/lib/runtime/module_hierarchy.dart`, function `discoverSelfChain`:
+Normalize trailing slashes when comparing paths. The bug: `currentNorm` has no trailing slash but `rootNorm` does, so `startsWith` fails and the chain is always empty for top-level modules. Fix: strip trailing slashes from both `currentNorm` and `rootNorm` before comparing.
 
-- Do NOT modify runtime/compiler logic in Phase 1 — declaration changes only
-- Phase 1 must pass all tests before starting Phase 2
+**Change B** — `glp_runtime/lib/compiler/project_linker.dart`, function `_buildAncestorScope`:
+1. Add `import '../analysis/type_checker/type_environment_builder.dart';` at the top
+2. Change `var env = TypeEnvironment({}, {});` to `var env = buildPreludeEnvironment();`  
+3. Remove `rootSelfGlpPath` from the `fullChain` list (prelude already handles root self.glp). The loop should just iterate over `chain`, not `fullChain`.
+
+**Verify**: `echo -e '../programs/bonds_v2/\n:quit' | dart run bin/glp_repl.dart` should load without `UnknownTypeError`. Then run both test suites.
+
+**Commit**: Stage only `module_hierarchy.dart` and `project_linker.dart`. Message: "Fix project loader: normalize paths + use buildPreludeEnvironment"
+
+### Task 2: Phase 2 module boundary enforcement
+
+Read `docs/infra/module-boundary-phase2.md`. Implement, add negative test, verify both suites pass.
+
+REPL target: 461/461. Dart target: 354 pass, 0 failures, 5 skipped.
