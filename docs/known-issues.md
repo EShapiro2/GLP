@@ -19,7 +19,7 @@ X? =.. [Y|Ys] :- list(Ys?) | list_to_tuple([Y|Ys], X).
 
 **Resolution:** `=..` as a body goal is specified by the language docs (`docs/glp-predicate-taxonomy.md` "Usage": `Term =.. [Functor | Args]` in a body; `docs/guards-reference.md`: `X? =.. [F|Args], ...` in a body). The parser's body-goal path (`lib/compiler/parser.dart` `_parseGoalOrGuard`, reader/variable + `TokenType.UNIV` case) handles it for reader-, writer-, and compound-led forms. Verified: `comp(L, T?) :- list(L?) | T =.. L?.` with `comp([foo, a, b], T).` yields `T = foo(a, b)`. Regression test: `programs/tests/typed/univ_body.glp` + `test/run_all_tests.sh` Section A30.
 
-**Aside (separate, out of scope):** the dual operator `..=` is declared in `programs/self.glp` (`procedure ..=(Stream(_), _?).`) but has no clause, so `List ..= Compound?` parses and type-checks yet fails at runtime with "Spawn could not find procedure label: ..=/2". Not part of this issue; flagged for a future fix.
+**Aside (separate, out of scope):** the dual operator `..=` is declared in `programs/self.glp` (`procedure ..=(Stream(_), _?).`) but has no clause, so `List ..= Compound?` parses and type-checks yet fails at runtime with "Spawn could not find procedure label: ..=/2". Not part of this issue; recorded as Issue 10.
 
 ## Issue 0b: REPL cannot parse compound terms inside lists in goal arguments
 
@@ -43,7 +43,7 @@ Impact: can't test predicates that take lists of structures from REPL goals.  Wo
 
 ## Issue 1: Localize uses writer address where reader address is needed
 
-**Status**: Fixed — functional defect resolved (verified by trace 2026-06-10); see Investigation Result. The N+1 audit it names found latent reliance on the allocation convention that remains open as a separate, deferred concern (core-heap change, needs approval) — see N+1 Audit Result.
+**Status**: Fixed — functional defect resolved (verified by trace 2026-06-10); see Investigation Result. The N+1 audit it requested found latent reliance on the allocation convention, recorded separately as Issue 9.
 **Discovered**: 2026-02-10
 **Affects**: Multi-agent (madGLP) programs where a term with unbound variables is sent between agents
 
@@ -115,16 +115,9 @@ Ran `three_agent_pipeline_boot.glp` via `multiagent_glp_test.dart` with `traceGl
 
 The localized tail variables behave as readers (suspend `ground`, wake on binding), not as definitively-failing unbound writers. The defect described in Summary/Consequence is gone, closed by Issue 1's partial fix together with Issues 2, 5, 6. No definitive failure.
 
-### N+1 Audit Result (2026-06-10): latent reliance found; core fix deferred (needs approval)
+### N+1 Audit Result (2026-06-10)
 
-The "Broader Concern: N+1 Arithmetic" audit was performed. Code **does** rely on the N/N+1 allocation convention, in violation of the explicit rule in `lib/runtime/terms.dart` ("MUST NOT: Code must not assume reader_addr == writer_addr + 1"):
-
-- `heap_fcp.dart` `pairedReaderAddr()` — fallback `return writerAddr + 1`. Reached when `readerForWriter()` returns null, which it does for a **bound** writer (the bidirectional pointer is consumed on binding). There is no cross-pointer way to recover the reader of a bound writer under the current cell design, so this fallback is structurally necessary, not merely defensive.
-- `lib/bytecode/runner.dart` — direct `writerAddr + 1` reader derivation at lines 2346, 2574, 2580, 2716.
-
-These are **currently correct** because `allocateVariable()` always allocates `(HP, HP+1)`, so the convention holds in practice; hence no active failure and the pipeline passes. But they are latent fragility: any change to allocation (e.g. interleaved/relocating allocation, GC compaction) would break them.
-
-Removing the reliance requires a core-heap change — either retaining the reader pointer on bound writers, or threading the reader address through the call sites instead of deriving it. Per `GLP/CLAUDE.md`, modifying core GLP files (`runner.dart`, `heap_fcp.dart`) requires explicit discussion and approval. **Deferred pending that decision** — not fixed unilaterally. Recommend a dedicated task with approval.
+Performed; latent reliance found. Findings and the deferred core fix are recorded as Issue 9.
 
 ---
 
@@ -324,3 +317,40 @@ message path written first and kept green across the migration, plus
 `flutter analyze` and a `flutter build` if the SDK is available. Residual
 UI-wiring risk accepted. Until merged, the isolate test stack is the seam's
 reference path.
+
+---
+
+## Issue 9: Latent reliance on the reader = writer+1 allocation convention
+
+**Status**: Open — core-heap change (`runner.dart`, `heap_fcp.dart`); needs Udi's approval before any fix
+**Discovered**: 2026-06-10 (audit requested by Issue 1)
+**Affects**: Latent only — no active failure. Any change to allocation (interleaved or relocating allocation, GC compaction) would turn it into one.
+
+### Findings
+
+Code relies on the N/N+1 allocation convention, in violation of the explicit rule in `lib/runtime/terms.dart` ("MUST NOT: Code must not assume reader_addr == writer_addr + 1"):
+
+- `heap_fcp.dart` `pairedReaderAddr()` — fallback `return writerAddr + 1`. Reached when `readerForWriter()` returns null, which it does for a **bound** writer (the bidirectional pointer is consumed on binding). There is no cross-pointer way to recover the reader of a bound writer under the current cell design, so this fallback is structurally necessary, not merely defensive.
+- `lib/bytecode/runner.dart` — direct `writerAddr + 1` reader derivation at lines 2346, 2574, 2580, 2716.
+
+These are currently correct because `allocateVariable()` always allocates `(HP, HP+1)`, so the convention holds in practice.
+
+### Fix
+
+Remove the reliance by a core-heap change: either retain the reader pointer on bound writers, or thread the reader address through the call sites instead of deriving it. Per `GLP/CLAUDE.md`, modifying core GLP files requires explicit discussion and approval — a dedicated task once approved.
+
+---
+
+## Issue 10: `..=/2` declared but has no clause
+
+**Status**: Open
+**Discovered**: 2026-06-10 (while testing Issue 0a)
+**Affects**: Any program using the decomposition operator `..=`
+
+### Summary
+
+`..=` is declared in `programs/self.glp` (`procedure ..=(Stream(_), _?).`) and parses and type-checks as a body goal, but has no clause: `List ..= Compound?` fails at runtime with "Spawn could not find procedure label: ..=/2". Its dual `=..` (compose) is declared, implemented, and regression-tested (Issue 0a, Section A30).
+
+### Fix
+
+Implement `..=/2` (decompose a compound into `[Functor | Args]`) per its declaration in `self.glp` — clause or kernel, matching how `=..` is realized — with a Section A regression test.

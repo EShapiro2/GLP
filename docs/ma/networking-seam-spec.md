@@ -1,8 +1,8 @@
 # madGLP Networking Seam Spec
 
-**Version**: 0.3
+**Version**: 0.4
 **Date**: 2026-06-10
-**Status**: IMPLEMENTED (isolate stack); live app path deferred (Issue 8)
+**Status**: IMPLEMENTED (isolate stack); pending: §4 kernels, Issue 8 app path
 **Source**: GLP Networking API Specification paper (`~/Grassroots/GLP-Networking-API`), Sections 2–3 and the Simulation Realization appendix; `madGLP-spec.md` v5.6; `known-issues.md` Issue 7.
 
 ---
@@ -97,7 +97,12 @@ The isolate entry and `MadContext` talk to `GlpNetwork` instead of `mainPort`:
 
 `AgentConfig` gains `keyPair` and `directory` fields. Global names and GLP programs keep symbolic agent identifiers; identifiers are resolved to keys only at the seam. Over a real network the agent identifier in global names will be the public key — deferred, per the paper appendix.
 
-The body kernels `sign/2` and `verify_attestation/4` will call `network.sign` / `network.verify`; their term encoding is not yet specified, so their wiring is deferred — `GlpNetwork.sign`/`verify` are implemented now, the kernels follow once specified.
+**System predicate kernels.** `sign/2` and `verify_attestation/4` are body kernels backed by `GlpNetwork.sign`/`verify`:
+
+- `sign(T?, Sig)` — suspends until `T?` is ground (the `ground/1` machinery; resumes on binding). Then binds `Sig` to the 128-character lowercase-hex string constant of the 64-byte Ed25519 signature, under the agent's key, over the canonical serialization of `T`.
+- `verify_attestation(Signer?, Subject?, Sig?, Ok)` — suspends until all three inputs are ground. `Signer` and `Subject` are 64-character hex public keys, `Sig` a 128-character hex signature. Binds `Ok` to `true` iff `Sig` is `Signer`'s valid Ed25519 signature over the canonical serialization of the term `attest(Signer, Subject)`, and to `false` otherwise — including malformed hex. Verification failure is data, never goal failure.
+
+Keys and signatures are hex string constants — no new GLP value type. Canonical serialization in this realization is the madGLP payload serialization of the ground term (address-free for ground terms; the implementation verifies this). It is realization-shared: before a second realization signs or verifies, the canonical serialization must be lifted to the paper.
 
 `MessageType` disappears from the seam: the wire carries payload bytes only (Section 6). `MessageType.agentMessage` was already legacy and ignored.
 
@@ -122,6 +127,7 @@ Unchanged: a payload is the serialized `(globalName, value)` assignment of `madG
 3. **Reverse-order delivery**: hold a pair, send carrier and `_r` assignment, release in reverse order; the run completes with the same outcome (Issue 7 test).
 4. **Trust level**: under Closed, a cold-call from an unknown agent is not delivered; under Open it is.
 5. **Plays check**: the plays do not rely on per-sender cold-call order (Issue 7 Related Check).
+6. **Sign/verify round-trip**: an agent signs `attest(PkA, PkB)`; `verify_attestation` binds `true`; a tampered signature binds `false`; `sign` suspends until its input is ground and resumes on binding; a signature produced by one agent verifies at another agent in the same run.
 
 ---
 
@@ -137,7 +143,7 @@ Spec first (this document), then implementation in a GLP Claude Code session und
 
 New files: `glp_network.dart`, `simulation_network.dart`. Changed: `isolate_manager.dart`, `mad_context.dart`, tests.
 
-`boot_loader.dart` needed **no** change (it only parses boot clauses into spawn directives; key pairs are generated at boot by `IsolateManager`, not carried in `BootConfig`). `agent_runtime.dart` (the Flutter-app path) is **deferred** — see Issue 8: it is not exercised by `test/multiagent/`, so migrating it blind would risk the app; migrate when the app can be manually verified.
+`boot_loader.dart` needed **no** change (it only parses boot clauses into spawn directives; key pairs are generated at boot by `IsolateManager`, not carried in `BootConfig`). `agent_runtime.dart` (the Flutter-app path) is **deferred** — see Issue 8: it is not exercised by `test/multiagent/`, so migrating it blind would risk the app; verification by Claude Code per Issue 8 (manual app check waived 2026-06-10).
 
 §7.5 (plays do not rely on per-sender cold-call order) is satisfied by **inspection** (recorded in `known-issues.md` Issue 7 Related Check) plus the order-independent seam: every test-exercised play's per-sender cold-calls go to distinct recipients, and the full play suite passes over the reverse-capable router. A dedicated full-isolate reorder-a-play test was not added (timing-flaky); §7.3 covers the mechanism deterministically in-process.
 
@@ -164,9 +170,9 @@ Implemented 2026-06-10 in a GLP Code session, on `main`.
 
 **Dependency:** removed `cryptography` (async-only), added `ed25519_edwards 0.3.1` (synchronous), backing the synchronous `sign`/`verify` of §2.
 
-**Deferred (Issue 8):** `agent_runtime.dart` and cross-isolate connectivity-callback forwarding — the live Flutter-app path, to be migrated when the app can be manually verified.
+**Deferred (Issue 8):** `agent_runtime.dart` and cross-isolate connectivity-callback forwarding — the live Flutter-app path; verification by Claude Code (manual app check waived 2026-06-10).
 
-**Body kernels** `sign/2`, `verify_attestation/4`: deferred until their term encoding is specified (§4); `GlpNetwork.sign`/`verify` are implemented now.
+**Body kernels** `sign/2`, `verify_attestation/4`: encoding specified in §4 (v0.4); implementation pending — `GlpNetwork.sign`/`verify` are implemented now.
 
 ---
 
@@ -174,6 +180,7 @@ Implemented 2026-06-10 in a GLP Code session, on `main`.
 
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
+| 0.4 | 2026-06-10 | Claude | §4: system predicate kernels specified — sign/2 suspends until ground, signs the canonical (payload) serialization; verify_attestation/4 checks attest(Signer, Subject); keys/signatures as hex string constants; verification failure binds false, never fails the goal. §7 test 6 added. Issue 8 gate: verification by Claude Code (manual check waived). |
 | 0.3 | 2026-06-10 | Claude | Implemented on the isolate stack. Added §10 Implementation Status (commits, suite counts). Corrected §9: `boot_loader.dart` unchanged; `agent_runtime.dart` deferred (Issue 8); §7.5 satisfied by inspection + order-independent seam. Status → IMPLEMENTED. |
 | 0.2 | 2026-06-10 | Claude | Ed25519 package corrected to the synchronous `ed25519_edwards` (`cryptography` is async-only; `sign`/`verify` stay synchronous per Section 2). Body kernels `sign/2`, `verify_attestation/4` deferred until their term encoding is specified. |
 | 0.1 | 2026-06-10 | Claude | Initial draft: GlpNetwork interface transcribing the paper API; SimulationNetwork (router + client) wrapping IsolateManager; runtime adapter with identifier–key directory; Issue 7 hold mechanism mandatory; tests. |
