@@ -211,7 +211,7 @@ A previous fix also added an onBind callback in `send()` for globalize-reader en
 
 ## Issue 7: Receive drops early messages; hold mechanism required
 
-**Status**: Open — fix required before any non-FIFO transport
+**Status**: Fixed (2026-06-10, commit ae327fe8). Unit test: `mad_transactions_test.dart` ("early _r assignment is held, then delivered when localize creates the entry"). Integration test: `test/multiagent/reverse_order_delivery_test.dart` (reverse-order cold-call reaches the same outcome).
 **Discovered**: 2026-06-10
 **Affects**: madGLP over any channel that does not deliver per-pair FIFO (BLE/IP, multi-media routing). Masked in-process: Dart isolate ports happen to deliver in order.
 
@@ -234,3 +234,43 @@ A harness that delivers two messages of a pair in reverse order (the `_r(p, i) :
 ### Related Check
 
 Verify the plays do not rely on per-sender cold-call order. Established channels are unaffected — each message carries its continuation, so they are dataflow-ordered under any delivery order — but two cold-calls from the same sender may now arrive in either order.
+
+**Inspection result (2026-06-10):** All test-exercised plays were inspected (cssn_modules_v2 3-adult and 6-agent village; bonds_v2 actors p2–p11 and play12; social_graph typed_actors / typed_ui_actors). No play relies on per-sender cold-call arrival order: in each play every sender's cold-calls go to *distinct* recipients (a recipient may receive cold-calls from several *different* senders, which were always unordered). The only repeated `connect(X)` occurrences are comments or alternative committed-choice clauses (one fires). No agent issues two order-dependent cold-calls to the same recipient. Plays pass over the reverse-capable simulation router.
+
+---
+
+## Issue 8: Live app path not on the networking seam
+
+**Status**: Open — deferral approved (2026-06-10)
+**Discovered**: 2026-06-10
+**Affects**: The Flutter `glp_multiagent` app and `agent_runtime.dart`
+
+### Summary
+
+The networking seam (seam spec v0.2/v0.3) was implemented for the isolate test
+stack: `isolate_manager.dart` routes through `SimulationNetwork`/`SimulationRouter`
+behind the `GlpNetwork` interface. Two parts of the live app path were left on
+the old transport:
+
+1. **`agent_runtime.dart`** (the Flutter-app runtime) still uses its
+   `onMessageReady` → `onSendMadMessage` / `onMadMessageReceived` path, not a
+   `GlpNetwork`.
+2. **Connectivity callbacks** (`onPeerConnected`, `onPeerDisconnected`,
+   `onPeerDiscovered`) are not forwarded cross-isolate to agents in the live
+   stack. They fire and are tested at the router level in-process; no GLP play
+   currently consumes them.
+
+### Why deferred
+
+Blind migration of an untested live path is the wrong fix. `agent_runtime.dart`
+drives the Flutter app, which is not covered by `dart test`; migrating it without
+the ability to manually verify the app would risk silent breakage. Connectivity
+callbacks have no consumer in any current play.
+
+### Fix
+
+Migrate `agent_runtime.dart` to construct a `GlpNetwork` (a `SimulationNetworkClient`
+or the real BLE/IP layer) and route outgoing/incoming traffic through it, and add
+router→client connectivity-event forwarding, **when the Flutter app can be manually
+verified** (see `GLP/CLAUDE.md` Flutter build/run steps). Until then the isolate
+test stack is the seam's reference path.

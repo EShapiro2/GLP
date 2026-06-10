@@ -18,14 +18,16 @@ void main() {
       // If entry doesn't exist, this is an error condition
     }, skip: 'Not yet implemented');
 
-    test('receive for non-existent LocalizeEntry throws', () {
-      // Given: no entry matching (p, 3) in table
-      // When: receive message _w(p, 3) := T
-      // Then: throws StateError
+    test('early _r assignment with no LocalizeEntry is held until the entry exists', () {
+      // Issue 7 / spec §8.3 (Early Messages): a `_r(p, i) := T` arriving before
+      // its LocalizeEntry exists is HELD (keyed by (p, i)) and delivered when
+      // localize() creates the entry — it is NOT dropped or thrown. This
+      // overrides the earlier "throws StateError" contract.
       //
-      // Spec Section 8.3: "Agent q searches its global writers table for
-      // an entry (X_q, p, i) matching the remote agent p and remote index i"
-    }, skip: 'Not yet implemented');
+      // Implemented and tested elsewhere: mad_transactions_test.dart (unit:
+      // held → delivered) and reverse_order_delivery_test.dart (integration:
+      // reverse-order cold-call reaches the same outcome).
+    }, skip: 'Covered by mad_transactions_test.dart and reverse_order_delivery_test.dart');
 
     test('duplicate LocalizeEntry rejected', () {
       // Given: entry (X, p, 5) already exists

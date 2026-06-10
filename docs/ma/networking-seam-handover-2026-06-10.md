@@ -68,42 +68,46 @@ The multiagent baseline stayed green throughout; final suite `+115 ~5 -0`.
 
 | Suite | Result |
 |-------|--------|
-| `dart test test/multiagent/` | `+115 ~5 -0` (All tests passed) |
+| `dart test test/multiagent/` | `+115 ~5 -0` (baseline `+98 ~5 -0`; +17 new tests) |
+| `dart test` (full) | `+370 ~5 -0` |
+| REPL (`bash test/run_all_tests.sh`) | 491/491 passed, 0 failed |
 
-Baseline before work: `+98 ~5 -0` (the formerly pre-existing
-`mad_cold_call_isolate_test` failure was already passing). +17 new tests.
+The formerly pre-existing `mad_cold_call_isolate_test` failure was already
+passing at baseline.
 
 Commits on `main`: Issue 7 `ae327fe8`; interface+SimulationNetwork (step 2);
 adapter `6aea4c64`; reverse-order test (step 5). **Not pushed** — awaiting Udi.
 
 ---
 
-## Follow-ups / deviations from v0.2 (for spec harmonisation)
+## Follow-ups / deviations from spec (resolved as of v0.3)
 
-1. **`agent_runtime.dart` not migrated to `GlpNetwork`.** §4/§9 list it as
-   changed; it is the Flutter-app path, not exercised by `test/multiagent/`. Left
-   on the existing `onMessageReady`/`onMadMessageReceived` path to avoid risking
-   the app outside test coverage. Migrate when the app is in scope.
-2. **Connectivity callbacks not plumbed cross-isolate in the live stack.**
-   `onPeerConnected`/`onPeerDiscovered` fire and are tested at the router level
-   in-process; the live isolate stack does not forward them to agents because no
-   GLP play consumes them. Add router→client event plumbing if a play needs it.
-3. **Body kernels `sign/2`, `verify_attestation/4` deferred** (already noted in
-   v0.2): `GlpNetwork.sign`/`verify` are implemented; kernel wiring waits on
-   their term encoding being specified.
-4. **§7.5 plays reorder check**: no dedicated full-isolate test (timing-flaky).
-   Covered by the order-independent seam (§7.3) + the full play suite passing
-   over the reverse-capable router. A deterministic per-sender cold-call reorder
-   play test is a recommended follow-up.
-5. **Stale skipped placeholder**: `mad_error_handling_test.dart` "receive for
-   non-existent LocalizeEntry throws" describes pre-Issue-7 behavior; left
-   untouched (skipped, no assertion). Update its text when convenient.
+1. **`agent_runtime.dart` + cross-isolate connectivity callbacks deferred** —
+   now tracked as `known-issues.md` **Issue 8** (deferral approved). The live
+   Flutter-app path stays on the old transport; migrate when the app can be
+   manually verified.
+2. **Body kernels `sign/2`, `verify_attestation/4` deferred** (per v0.2/v0.3):
+   `GlpNetwork.sign`/`verify` are implemented; kernel wiring waits on their term
+   encoding being specified.
+3. **§7.5 plays cold-call-order check: DONE by inspection — pass.** All
+   test-exercised plays were inspected; no play relies on per-sender cold-call
+   arrival order (each sender's cold-calls go to distinct recipients; repeated
+   `connect` occurrences are comments or alternative committed-choice clauses).
+   Recorded in `known-issues.md` Issue 7 Related Check. No dedicated full-isolate
+   reorder test (timing-flaky); §7.3 covers the mechanism deterministically.
+4. **Stale skipped placeholder reworded**: `mad_error_handling_test.dart`
+   "...LocalizeEntry throws" → "early _r assignment ... is held until the entry
+   exists" (kept skipped; the live behavior is tested in `mad_transactions_test`
+   and `reverse_order_delivery_test`).
+5. **Spec updated to v0.3**: §10 Implementation Status added; §9 corrected
+   (`boot_loader.dart` unchanged, `agent_runtime.dart` deferred per Issue 8,
+   §7.5 by inspection).
 
 ---
 
 ## Next Steps
 
-1. Udi: decide on push (the change is on `main`, unpushed).
-2. Fold the follow-ups above back into the spec or into `known-issues.md`.
-3. When the body-kernel term encoding is specified, wire `sign/2` /
+1. Issue 8: migrate `agent_runtime.dart` + connectivity callbacks when the
+   Flutter app can be manually verified.
+2. When the body-kernel term encoding is specified, wire `sign/2` /
    `verify_attestation/4` to `network.sign`/`verify`.
