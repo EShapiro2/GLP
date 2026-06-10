@@ -9,6 +9,7 @@
 /// Specification: docs/modules/glp-module-system-spec.md Sections 2-3
 
 import 'dart:io';
+import 'package:path/path.dart' as ppath;
 import 'package:glp_runtime/compiler/lexer.dart';
 import 'package:glp_runtime/compiler/parser.dart';
 import 'package:glp_runtime/compiler/ast.dart' as ast;
@@ -27,11 +28,18 @@ import 'package:glp_runtime/analysis/type_checker/type_environment_builder.dart'
 ///
 /// [targetFile]: absolute path to the .glp file being compiled
 /// [rootDir]: absolute path to the project root directory
+/// [programsDir]: absolute path to the root `programs/` directory. When given,
+///   the chain extends ABOVE the project root up to (but excluding) this
+///   directory — so intermediate ancestor `self.glp` files between the load
+///   point and `programs/` are included. The root `programs/self.glp` itself is
+///   NOT collected here (it is realised by the root-scope mechanism). When null,
+///   the legacy bound applies: the walk stops at `rootDir` (inclusive).
 ///
 /// Returns: list of absolute paths to self.glp files, root-first order
 List<String> discoverSelfChain({
   required String targetFile,
   required String rootDir,
+  String? programsDir,
 }) {
   // Normalize paths
   final root = Directory(rootDir).absolute.path;
@@ -50,20 +58,33 @@ List<String> discoverSelfChain({
     startDir = File(target).parent.path;
   }
 
-  // Walk from startDir up to root, collecting self.glp files
+  // Normalize a path for comparison: make absolute, resolve `..`/`.` segments
+  // lexically (callers may pass paths containing `..`, e.g. `GLP/test/..`), and
+  // strip any trailing slash.
+  String norm(String p) {
+    var n = ppath.normalize(Directory(p).absolute.path);
+    if (n.endsWith('/')) n = n.substring(0, n.length - 1);
+    return n;
+  }
+
+  final rootNorm = norm(root);
+  final programsNorm = programsDir != null ? norm(programsDir) : null;
+
+  // Walk from startDir upward, collecting self.glp files at each level.
   final chain = <String>[];
   var currentDir = startDir;
 
   while (true) {
-    // Normalize for comparison, stripping trailing slashes for consistency
-    var currentNorm = Directory(currentDir).absolute.path;
-    var rootNorm = Directory(root).absolute.path;
-    if (currentNorm.endsWith('/')) currentNorm = currentNorm.substring(0, currentNorm.length - 1);
-    if (rootNorm.endsWith('/')) rootNorm = rootNorm.substring(0, rootNorm.length - 1);
+    final currentNorm = norm(currentDir);
 
-    // Check if we've gone above the root
-    if (!currentNorm.startsWith(rootNorm)) {
-      break;
+    if (programsNorm != null) {
+      // Extended bound: stop at programsDir WITHOUT collecting its self.glp,
+      // and never walk above it.
+      if (currentNorm == programsNorm) break;
+      if (!currentNorm.startsWith(programsNorm)) break;
+    } else {
+      // Legacy bound: stop once we have gone above rootDir.
+      if (!currentNorm.startsWith(rootNorm)) break;
     }
 
     final selfGlp = File('$currentDir${Platform.pathSeparator}self.glp');
@@ -71,16 +92,15 @@ List<String> discoverSelfChain({
       chain.add(selfGlp.absolute.path);
     }
 
-    // If we've reached the root, stop
-    if (currentNorm == rootNorm) {
-      break;
-    }
+    // Legacy inclusive stop at rootDir (only when not extending to programsDir).
+    if (programsNorm == null && currentNorm == rootNorm) break;
 
-    // Walk up
-    currentDir = Directory(currentDir).parent.path;
+    final parent = Directory(currentDir).parent.path;
+    if (parent == currentDir) break; // filesystem root safety
+    currentDir = parent;
   }
 
-  // Reverse: we collected from target-to-root, but want root-first
+  // Reverse: collected target-to-outermost, but callers want outermost-first.
   return chain.reversed.toList();
 }
 

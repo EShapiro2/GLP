@@ -9,6 +9,7 @@
 library;
 
 import 'dart:io';
+import 'package:path/path.dart' as ppath;
 import 'ast.dart';
 import 'lexer.dart';
 import 'parser.dart';
@@ -63,6 +64,12 @@ List<DiscoveredModule> discoverProject(String rootDir,
 
   final modules = <DiscoveredModule>[];
 
+  // The root `programs/` directory bounds the ancestor scope chain. When known,
+  // discovery extends above the project root up to (excluding) this directory.
+  final programsDir = rootSelfGlpPath != null
+      ? File(rootSelfGlpPath).parent.absolute.path
+      : null;
+
   // Recursively find all .glp files
   final glpFiles = root
       .listSync(recursive: true)
@@ -95,10 +102,11 @@ List<DiscoveredModule> discoverProject(String rootDir,
             ? _moduleNameFromDirPath(file.parent.path)
             : _moduleNameFromFilename(filename));
 
-    // Build ancestor scope chain
+    // Build ancestor scope chain (extends up to programs/ when known)
     final chain = discoverSelfChain(
       targetFile: file.absolute.path,
       rootDir: root.absolute.path,
+      programsDir: programsDir,
     );
     final ancestorScope =
         _buildAncestorScope(chain, rootSelfGlpPath: rootSelfGlpPath);
@@ -112,7 +120,72 @@ List<DiscoveredModule> discoverProject(String rootDir,
     ));
   }
 
+  // Discover ancestor `self.glp` files ABOVE the project root, up to (but not
+  // including) `programs/`. Ancestor directories contribute only their
+  // `self.glp`, never their other modules (project-compilation spec §3.1). The
+  // root `programs/self.glp` is excluded — it is realised by the root-scope
+  // mechanism. These ancestor self.glp modules are linked like any other, so
+  // their (multi-clause, parameterised) procedures resolve for descendants.
+  if (programsDir != null) {
+    for (final selfPath
+        in _ancestorSelfGlpFiles(root.absolute.path, programsDir)) {
+      final source = File(selfPath).readAsStringSync();
+      final lexer = Lexer(source);
+      final tokens = lexer.tokenize();
+      final parser = Parser(tokens);
+      final selfModule = parser.parseModule();
+
+      final moduleName = selfModule.name ??
+          _moduleNameFromDirPath(File(selfPath).parent.path);
+
+      final chain = discoverSelfChain(
+        targetFile: selfPath,
+        rootDir: File(selfPath).parent.path,
+        programsDir: programsDir,
+      );
+      final ancestorScope =
+          _buildAncestorScope(chain, rootSelfGlpPath: rootSelfGlpPath);
+
+      modules.add(DiscoveredModule(
+        filePath: selfPath,
+        moduleName: moduleName,
+        ast: selfModule,
+        ancestorScope: ancestorScope,
+        isSelfGlp: true,
+      ));
+    }
+  }
+
   return modules;
+}
+
+/// Collect `self.glp` files in ancestor directories ABOVE [rootDir], walking up
+/// to but NOT including [programsDir]. Returns absolute paths, innermost-first.
+List<String> _ancestorSelfGlpFiles(String rootDir, String programsDir) {
+  // Normalize for comparison: absolute + resolve `..`/`.` (callers may pass
+  // paths containing `..`) + strip trailing slash.
+  String norm(String p) {
+    var n = ppath.normalize(Directory(p).absolute.path);
+    if (n.endsWith('/')) n = n.substring(0, n.length - 1);
+    return n;
+  }
+
+  final programsNorm = norm(programsDir);
+  final result = <String>[];
+  var dir = Directory(rootDir).parent.absolute.path;
+
+  while (true) {
+    final dn = norm(dir);
+    if (dn == programsNorm) break; // exclude programs/self.glp
+    if (!dn.startsWith(programsNorm)) break; // above programs/ — stop
+    final selfGlp = File('$dir${Platform.pathSeparator}self.glp');
+    if (selfGlp.existsSync()) result.add(selfGlp.absolute.path);
+    final parent = Directory(dir).parent.path;
+    if (parent == dir) break; // filesystem root safety
+    dir = parent;
+  }
+
+  return result;
 }
 
 /// Type-check each module independently against its ancestor scope.
