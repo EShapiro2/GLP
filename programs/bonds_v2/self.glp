@@ -115,27 +115,7 @@ UserInMsg ::= msg(Constant, Constant, UserContent)
 %% =============================================================================
 
 %% Union of all content the agent sends on output streams
-OutputContent ::= minted(Constant, Constant)
-                ; balance_report(Stream(Bond))
-                ; befriend(Constant, Response?)
-                ; connected(Constant)
-                ; rejected
-                ; rejected(Constant)
-                ; response(Response)
-                ; trade_propose(Stream(Lot), Stream(Bond), TradeResponse?)
-                ; trade_proposed(Constant, Stream(Lot), TradeResponse?, Stream(Bond))
-                ; trade_completed(Constant)
-                ; trade_failed(Constant)
-                ; trade_returned(Constant)
-                ; escrow_offer(Constant, EscrowBenResult)
-                ; escrow_deposited(Constant, Constant, EscrowCancel?)
-                ; escrow_received(Constant, Constant)
-                ; escrow_released(Constant)
-                ; escrow_cancelled(Constant)
-                ; escrow_expired(Constant)
-                ; escrow_returned(Constant)
-                ; escrow_failed(Constant)
-                ; trade_returned_menu(Constant, Stream(Bond)).
+OutputContent ::= AgentContent ; FriendContent.
 OutputMsg ::= msg(Constant, Constant, OutputContent)
             ; msg(Constant, NetColdCall).
 
