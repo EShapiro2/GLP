@@ -81,6 +81,123 @@ serve(_, []) :-
     true.
 ''';
 
+/// forward/4 runtime boundary type-checker (embedded).
+///
+/// Implements §7.4 of the module-system spec: a generic forwarding process
+/// `forward(A?, In?, Out, Err)` that copies stream In to Out, checking each
+/// instantiated part of every consumed term against the type automaton term A
+/// (`automaton(StartId, States)`). Incremental: conforming parts forwarded
+/// immediately, suspends at uninstantiated positions, emits
+/// `type_error(Culprit, Expected)` on Err and stops on first violation.
+///
+/// Meta-interpreter over arbitrary message terms → loose (_/_?) typing under
+/// the deferred meta-typing exception (typed-GLP manual §18.3); compiled (not
+/// type-checked), like serve. Decompose/compose use `=..`, resolved by merging
+/// this program with root self.glp at spawn time. Helpers are `fwd_`-prefixed
+/// to avoid collision with user predicates in the combined label table.
+const String _forwardSource = r'''
+-mode(system).
+
+procedure forward(_?, _?, _, _).
+forward(automaton(Start, States), [X | In], OutS?, Err?) :-
+    ground(States?), ground(Start?) |
+    fwd_run(States?, Start?, dn, X?, X1, V),
+    fwd_cont(V?, States?, Start?, X1?, In?, OutS, Err).
+forward(_, [], [], []).
+
+procedure fwd_cont(_?, _?, _?, _?, _?, _, _).
+fwd_cont(ok, States, Start, X1, In, [X1? | OutS?], Err?) :-
+    ground(States?) |
+    forward(automaton(Start?, States?), In?, OutS, Err).
+fwd_cont(err(C, E), _, _, _, _, [], [type_error(C?, E?)]).
+
+%% fwd_run(States?, StateId?, Mode?, In?, Out, Verdict)   Verdict = ok ; err(C, E)
+procedure fwd_run(_?, _?, _?, _?, _, _).
+%% up position: forward the subterm untouched (no second writer; back-channel kept).
+fwd_run(_, _, up, In, In?, ok).
+%% dn position: look up the state, dispatch on its body.
+fwd_run(States, Sid, dn, In, Out?, V?) :-
+    ground(States?) |
+    fwd_lookup(Sid?, States?, Body),
+    fwd_dispatch(Body?, States?, In?, Out, V).
+
+procedure fwd_lookup(_?, _?, _).
+fwd_lookup(Sid, [st(Sid1, Body) | _], Out?) :- Sid? =?= Sid1? | Out = Body?.
+fwd_lookup(Sid, [st(_, _) | Rest], Out?) :- otherwise | fwd_lookup(Sid?, Rest?, Out).
+
+procedure fwd_dispatch(_?, _?, _?, _, _).
+fwd_dispatch(prim(integer), _, In, In?, ok) :- integer(In?) | true.
+fwd_dispatch(prim(integer), _, In, _, err(In?, integer)) :- otherwise | true.
+fwd_dispatch(prim(number), _, In, In?, ok) :- number(In?) | true.
+fwd_dispatch(prim(number), _, In, _, err(In?, number)) :- otherwise | true.
+fwd_dispatch(prim(string), _, In, In?, ok) :- string(In?) | true.
+fwd_dispatch(prim(string), _, In, _, err(In?, string)) :- otherwise | true.
+fwd_dispatch(final, _, In, In?, ok).
+fwd_dispatch(wild, _, In, In?, ok).
+fwd_dispatch(user(_, Fns, _, _), States, In, Out?, V?) :-
+    compound(In?) |
+    fwd_walk(Fns?, States?, In?, Out, V).
+fwd_dispatch(user(Name, _, Consts, Prims), _, In, Out?, V?) :-
+    constant(In?) |
+    fwd_check_const(In?, Consts?, Prims?, Name?, Out, V).
+
+procedure fwd_check_const(_?, _?, _?, _?, _, _).
+fwd_check_const(In, [c(Val, _) | _], _, _, In?, ok) :- In? =?= Val? | true.
+fwd_check_const(In, [c(_, _) | Rest], Prims, Name, Out?, V?) :-
+    otherwise | fwd_check_const(In?, Rest?, Prims?, Name?, Out, V).
+fwd_check_const(In, [], Prims, Name, Out?, V?) :- fwd_check_prims(In?, Prims?, Name?, Out, V).
+
+procedure fwd_check_prims(_?, _?, _?, _, _).
+fwd_check_prims(In, [integer | _], _, In?, ok) :- integer(In?) | true.
+fwd_check_prims(In, [number | _], _, In?, ok) :- number(In?) | true.
+fwd_check_prims(In, [string | _], _, In?, ok) :- string(In?) | true.
+fwd_check_prims(In, [_ | Rest], Name, Out?, V?) :- otherwise | fwd_check_prims(In?, Rest?, Name?, Out, V).
+fwd_check_prims(In, [], Name, _, err(In?, Name?)).
+
+procedure fwd_walk(_?, _?, _?, _, _).
+fwd_walk(Fns, States, In, Out?, V?) :-
+    ground(Fns?) |
+    In? =.. L,
+    fwd_ws(L?, Fns?, States?, OutL, V1),
+    fwd_finish(V1?, OutL?, Out, V).
+
+procedure fwd_finish(_?, _?, _, _).
+fwd_finish(ok, OutL, Out?, ok) :- Out =.. OutL?.
+fwd_finish(err(C, E), _, _, err(C?, E?)).
+
+procedure fwd_ws(_?, _?, _?, _, _).
+fwd_ws([F | Args], Fns, States, [F? | OutArgs?], V?) :-
+    ground(F?), ground(Fns?) |
+    fwd_ws_args(F?, 1, Args?, Fns?, States?, OutArgs, V).
+
+procedure fwd_ws_args(_?, _?, _?, _?, _?, _, _).
+fwd_ws_args(_, _, [], _, _, [], ok).
+fwd_ws_args(F, I, [A | As], Fns, States, OutArgs?, V?) :-
+    ground(F?), ground(Fns?), ground(I?) |
+    fwd_find_fn(F?, I?, Fns?, R),
+    fwd_ws_arg(R?, F?, I?, A?, As?, Fns?, States?, OutArgs, V).
+
+procedure fwd_find_fn(_?, _?, _?, _).
+fwd_find_fn(F, I, [fn(F1, _, I1, Mode, Target) | _], r(Mode?, Target?)) :-
+    F? =?= F1?, I? =:= I1? | true.
+fwd_find_fn(F, I, [_ | Rest], R?) :- otherwise | fwd_find_fn(F?, I?, Rest?, R).
+fwd_find_fn(_, _, [], none).
+
+procedure fwd_ws_arg(_?, _?, _?, _?, _?, _?, _?, _, _).
+fwd_ws_arg(r(Mode, Target), F, I, A, As, Fns, States, OutArgs?, V?) :-
+    ground(Fns?), ground(States?) |
+    fwd_run(States?, Target?, Mode?, A?, OA, V1),
+    fwd_cont_args(V1?, OA?, F?, I?, As?, Fns?, States?, OutArgs, V).
+fwd_ws_arg(none, _, _, A, _, _, _, _, err(A?, bad_functor)).
+
+procedure fwd_cont_args(_?, _?, _?, _?, _?, _?, _?, _, _).
+fwd_cont_args(ok, OA, F, I, As, Fns, States, [OA? | OutArgs?], V?) :-
+    ground(Fns?) |
+    I1 := I? + 1,
+    fwd_ws_args(F?, I1?, As?, Fns?, States?, OutArgs, V).
+fwd_cont_args(err(C, E), _, _, _, _, _, _, [], err(C?, E?)).
+''';
+
 /// madGLP system predicates (embedded).
 ///
 /// Provides send_to_net/1, send_to_remote/2, global_send/3, send_to_user/1.
@@ -135,6 +252,9 @@ class GlpEngine {
   /// Compiled serve/2 bytecode for dynamic module dispatch.
   late final BytecodeProgram _serveBytecode;
 
+  /// Compiled forward/4 bytecode for runtime boundary checking (§7.4).
+  late final BytecodeProgram _forwardBytecode;
+
   int _goalId = 1;
 
   /// Max execution cycles (default 10000)
@@ -180,10 +300,21 @@ class GlpEngine {
     registerStandardPredicates(_runtime.systemPredicates);
     _loadRootSelf();
     _serveBytecode = _compiler.compile(_serveSource);
+    // forward/4 (§7.4): merged with root self so `=..` resolves; registered as
+    // a loaded program so its labels join combinedProgram (REPL-callable, and
+    // body calls from loaded test programs resolve).
+    final rootSelf = _loadedPrograms['__root_self__'];
+    _forwardBytecode = rootSelf != null
+        ? _compiler.compile(_forwardSource).merge(rootSelf)
+        : _compiler.compile(_forwardSource);
+    _loadedPrograms['__forward__'] = _compiler.compile(_forwardSource);
   }
 
   /// Compiled serve/2 bytecode for activateModule().
   BytecodeProgram get serveBytecode => _serveBytecode;
+
+  /// Compiled forward/4 bytecode (§7.4), merged with root self for `=..`.
+  BytecodeProgram get forwardBytecode => _forwardBytecode;
 
   /// Clear all loaded programs except root self.glp.
   ///

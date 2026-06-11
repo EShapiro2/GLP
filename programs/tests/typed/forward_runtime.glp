@@ -1,0 +1,46 @@
+%% forward_runtime.glp — exercises the engine-embedded forward/4 (§7.4).
+%% The forwarder itself lives in the engine (_forwardSource); this file only
+%% builds an automaton term A and a stream, then calls forward/4.
+%% Load with :strict off (loose meta-typing of the harness; manual §18.3).
+-mode(system).
+
+%% Type modelled:
+%%   Reply ::= ack ; nack.
+%%   Msg   ::= req(Integer, Reply?) ; ping.
+%% A = automaton(StartId, States) — the serialised reachable sub-graph.
+procedure msg_auto(_).
+msg_auto(automaton(s_msg, States?)) :-
+    States = [ st(s_msg, user('Msg',
+                      [fn(req, 2, 1, dn, s_int), fn(req, 2, 2, up, s_reply)],
+                      [c(ping, s_final)],
+                      [])),
+               st(s_int, prim(integer)),
+               st(s_reply, user('Reply', [], [c(ack, s_final), c(nack, s_final)], [])),
+               st(s_final, final) ].
+
+%% F1: well-typed stream passes unchanged (Out mirrors In; Err=[])
+procedure test_f1(_, _).
+test_f1(Out?, Err?) :-
+    msg_auto(A),
+    In = [req(5, _), ping],
+    forward(A?, In?, Out, Err).
+
+%% F2: first ill-typed known term caught, error term correct, forwarding stops
+procedure test_f2(_, _).
+test_f2(Out?, Err?) :-
+    msg_auto(A),
+    In = [req(hello, _), ping],
+    forward(A?, In?, Out, Err).
+
+%% ↑ round-trip: producer leaves a reply hole, forwarder passes it untouched,
+%% producer fills it after forwarding; a reader on Out observes the value.
+procedure test_reply(_, _).
+test_reply(Got?, Err?) :-
+    msg_auto(A),
+    In = [req(5, R?)],
+    forward(A?, In?, Out, Err),
+    observe(Out?, Got),
+    R = ack.
+
+procedure observe(_?, _).
+observe([req(_, ack) | _], done).

@@ -1,0 +1,188 @@
+%% forward_proto.glp — PROTOTYPE (scratch) for the §7.4 runtime boundary forwarder.
+%% Validates: generic ↓ conformance check via univ; ↑ forward-untouched preserving
+%% the back-channel; suspend-on-unknown; type_error + stop-on-first-violation.
+%% Meta-interpreter over arbitrary message terms → loose (_) typing (manual §18.3).
+%% Load with strict typing OFF (:strict) — mode discipline is deferred for meta-code.
+-mode(system).
+
+%% ---------------------------------------------------------------------------
+%% Automaton term grammar (proposed):
+%%   States = list of  st(Id, Body)
+%%   Body   = prim(integer) ; prim(number) ; prim(string)
+%%          ; final ; wild
+%%          ; user(Name, Fns, Consts, Prims)
+%%       Fns    = list of fn(Sym, Arity, ArgIdx, Mode, TargetId)   Mode = up ; dn
+%%       Consts = list of c(Value, TargetId)
+%%       Prims  = list of accepted primitive names (integer/number/string)
+%% Output args produced in the body appear as readers in the head; multiply-read
+%% plumbing vars (States, Fns, F, I) carry ground/1 guards (SRSW exception).
+%% ---------------------------------------------------------------------------
+
+%% forward(States?, StartId?, In?, Out, Err)
+procedure forward(_?, _?, _?, _, _).
+forward(States, Start, [X|In], OutS?, Err?) :-
+    ground(States?), ground(Start?) |
+    fwd(States?, Start?, dn, X?, X1, V),
+    fwd_cont(V?, States?, Start?, X1?, In?, OutS, Err).
+forward(_, _, [], [], []).
+
+procedure fwd_cont(_?, _?, _?, _?, _?, _, _).
+fwd_cont(ok, States, Start, X1, In, [X1?|OutS?], Err?) :-
+    ground(States?) |
+    forward(States?, Start?, In?, OutS, Err).
+fwd_cont(err(C, E), _, _, _, _, [], [type_error(C?, E?)]).
+
+%% ---------------------------------------------------------------------------
+%% fwd(States?, StateId?, Mode?, In?, Out, Verdict)   Verdict = ok ; err(C, E)
+%% ---------------------------------------------------------------------------
+procedure fwd(_?, _?, _?, _?, _, _).
+
+%% ↑ position: forward the subterm untouched (rider a — no second writer).
+fwd(_, _, up, In, In?, ok).
+
+%% ↓ position: look up the state, dispatch on its body.
+fwd(States, Sid, dn, In, Out?, V?) :-
+    ground(States?) |
+    lookup(Sid?, States?, Body),
+    dispatch(Body?, States?, In?, Out, V).
+
+procedure lookup(_?, _?, _).
+lookup(Sid, [st(Sid1, Body)|_], Out?) :- Sid? =?= Sid1? | Out = Body?.
+lookup(Sid, [st(_, _)|Rest], Out?) :- otherwise | lookup(Sid?, Rest?, Out).
+
+%% ---------------------------------------------------------------------------
+%% dispatch on state body
+%% ---------------------------------------------------------------------------
+procedure dispatch(_?, _?, _?, _, _).
+
+%% primitive integer
+dispatch(prim(integer), _, In, In?, ok) :- integer(In?) | true.
+dispatch(prim(integer), _, In, _, err(In?, integer)) :- otherwise | true.
+%% primitive number
+dispatch(prim(number), _, In, In?, ok) :- number(In?) | true.
+dispatch(prim(number), _, In, _, err(In?, number)) :- otherwise | true.
+%% primitive string
+dispatch(prim(string), _, In, In?, ok) :- string(In?) | true.
+dispatch(prim(string), _, In, _, err(In?, string)) :- otherwise | true.
+
+%% final / wildcard — accept the produced value as-is.
+dispatch(final, _, In, In?, ok).
+dispatch(wild, _, In, In?, ok).
+
+%% user type — compound matches Fns; constant matches Consts then Prims.
+dispatch(user(_, Fns, _, _), States, In, Out?, V?) :-
+    compound(In?) |
+    walk_struct(Fns?, States?, In?, Out, V).
+dispatch(user(Name, _, Consts, Prims), _, In, Out?, V?) :-
+    constant(In?) |
+    check_const(In?, Consts?, Prims?, Name?, Out, V).
+
+%% ---------------------------------------------------------------------------
+%% constant checking
+%% ---------------------------------------------------------------------------
+procedure check_const(_?, _?, _?, _?, _, _).
+check_const(In, [c(Val, _)|_], _, _, In?, ok) :- In? =?= Val? | true.
+check_const(In, [c(_, _)|Rest], Prims, Name, Out?, V?) :-
+    otherwise | check_const(In?, Rest?, Prims?, Name?, Out, V).
+check_const(In, [], Prims, Name, Out?, V?) :- check_prims(In?, Prims?, Name?, Out, V).
+
+procedure check_prims(_?, _?, _?, _, _).
+check_prims(In, [integer|_], _, In?, ok) :- integer(In?) | true.
+check_prims(In, [number|_], _, In?, ok) :- number(In?) | true.
+check_prims(In, [string|_], _, In?, ok) :- string(In?) | true.
+check_prims(In, [_|Rest], Name, Out?, V?) :- otherwise | check_prims(In?, Rest?, Name?, Out, V).
+check_prims(In, [], Name, _, err(In?, Name?)).
+
+%% ---------------------------------------------------------------------------
+%% compound checking: decompose, verify functor/args against Fns, recompose
+%% ---------------------------------------------------------------------------
+procedure walk_struct(_?, _?, _?, _, _).
+walk_struct(Fns, States, In, Out?, V?) :-
+    ground(Fns?) |
+    In? =.. L,
+    ws(L?, Fns?, States?, OutL, V1),
+    finish(V1?, OutL?, Out, V).
+
+procedure finish(_?, _?, _, _).
+finish(ok, OutL, Out?, ok) :- Out =.. OutL?.
+finish(err(C, E), _, _, err(C?, E?)).
+
+%% ws([Functor|Args], Fns, States, OutL, V)
+procedure ws(_?, _?, _?, _, _).
+ws([F|Args], Fns, States, [F?|OutArgs?], V?) :-
+    ground(F?), ground(Fns?) |
+    ws_args(F?, 1, Args?, Fns?, States?, OutArgs, V).
+
+procedure ws_args(_?, _?, _?, _?, _?, _, _).
+ws_args(_, _, [], _, _, [], ok).
+ws_args(F, I, [A|As], Fns, States, OutArgs?, V?) :-
+    ground(F?), ground(Fns?), ground(I?) |
+    find_fn(F?, I?, Fns?, R),
+    ws_arg(R?, F?, I?, A?, As?, Fns?, States?, OutArgs, V).
+
+procedure find_fn(_?, _?, _?, _).
+find_fn(F, I, [fn(F1, _, I1, Mode, Target)|_], r(Mode?, Target?)) :-
+    F? =?= F1?, I? =:= I1? | true.
+find_fn(F, I, [_|Rest], R?) :- otherwise | find_fn(F?, I?, Rest?, R).
+find_fn(_, _, [], none).
+
+procedure ws_arg(_?, _?, _?, _?, _?, _?, _?, _, _).
+%% accepted arg position: walk it, then continue with the rest
+ws_arg(r(Mode, Target), F, I, A, As, Fns, States, OutArgs?, V?) :-
+    ground(Fns?), ground(States?) |
+    fwd(States?, Target?, Mode?, A?, OA, V1),
+    cont_args(V1?, OA?, F?, I?, As?, Fns?, States?, OutArgs, V).
+%% functor/arity not accepted by this state
+ws_arg(none, _, _, A, _, _, _, _, err(A?, bad_functor)).
+
+procedure cont_args(_?, _?, _?, _?, _?, _?, _?, _, _).
+cont_args(ok, OA, F, I, As, Fns, States, [OA?|OutArgs?], V?) :-
+    ground(Fns?) |
+    I1 := I? + 1,
+    ws_args(F?, I1?, As?, Fns?, States?, OutArgs, V).
+cont_args(err(C, E), _, _, _, _, _, _, [], err(C?, E?)).
+
+%% ===========================================================================
+%% TEST HARNESS
+%% ===========================================================================
+%% Type modelled:
+%%   Reply ::= ack ; nack.
+%%   Msg   ::= req(Integer, Reply?) ; ping.
+%% Automaton (Msg consumed, ↓):
+procedure msg_auto(_, _).
+msg_auto(States?, s_msg) :-
+    States = [ st(s_msg, user('Msg',
+                      [fn(req, 2, 1, dn, s_int), fn(req, 2, 2, up, s_reply)],
+                      [c(ping, s_final)],
+                      [])),
+               st(s_int, prim(integer)),
+               st(s_reply, user('Reply', [], [c(ack, s_final), c(nack, s_final)], [])),
+               st(s_final, final) ].
+
+%% F1: well-typed stream passes unchanged (Out should mirror In; Err=[])
+procedure test_f1(_, _).
+test_f1(Out?, Err?) :-
+    msg_auto(States, Start),
+    In = [req(5, _), ping],
+    forward(States?, Start?, In?, Out, Err).
+
+%% F2: first ill-typed known term caught, error term correct, forwarding stops
+procedure test_f2(_, _).
+test_f2(Out?, Err?) :-
+    msg_auto(States, Start),
+    In = [req(hello, _), ping],
+    forward(States?, Start?, In?, Out, Err).
+
+%% ↑ round-trip: producer leaves a reply hole, forwarder passes it untouched,
+%% producer fills it after forwarding; a reader on Out must observe the value.
+procedure test_reply(_, _).
+test_reply(Got?, Err?) :-
+    msg_auto(States, Start),
+    In = [req(5, R?)],
+    forward(States?, Start?, In?, Out, Err),
+    observe(Out?, Got),
+    R = ack.
+
+%% reader on the forwarded stream: sees the reply once it grounds
+procedure observe(_?, _).
+observe([req(_, ack)|_], done).
