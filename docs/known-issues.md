@@ -388,7 +388,3 @@ Remove the reliance by a core-heap change: either retain the reader pointer on b
 ### Fix
 
 Implement `..=/2` (decompose a compound into `[Functor | Args]`) per its declaration in `self.glp` — clause or kernel, matching how `=..` is realized — with a Section A regression test.
-
-### Re-encountered (2026-06-11, TGLP Phase 3)
-
-The runtime boundary forwarder (§7.4) decomposes consumed terms; an initial `List ..= Compound?` failed at runtime as above. Not worked around silently: the forwarder uses the implemented, compound-guarded decompose form `Compound? =.. List` (self.glp `X =.. Y? :- compound(X?)`, the same clause exercised by Issue 0a) in place of `..=`. The decompose `..=` operator remains unimplemented and open here.

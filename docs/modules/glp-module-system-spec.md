@@ -280,23 +280,6 @@ The type-soundness guarantee holds for a well-typed program **and** a well-typed
 
 **Activation mode.** Dynamic activation (the `serve`/`activate` machinery of Section 7.1) takes a **guarded** or **unguarded** mode: in guarded mode the runtime interposes a forwarder on each consumed boundary stream of the activated module; in unguarded mode it does not. This is a mechanism — *which* peers are trusted, and hence whether a given activation is guarded, is the caller's policy. On well-typed traffic the two modes behave identically (the forwarder is transparent); they differ only when an ill-typed term arrives.
 
-**Automaton term.** The forwarder consumes `A` as a ground GLP term: the sub-graph of `T`'s automaton (Section 7.3) reachable from its start state, serialised as an Id-keyed adjacency list so that recursive (cyclic) types are finite terms.
-
-```
-A      = automaton(StartId, States)
-States = [ st(Id, Body), ... ]
-Body   = prim(integer) | prim(number) | prim(string)
-       | final | wild
-       | user(Name, Fns, Consts, Prims)
-  Fns    = [ fn(Sym, Arity, ArgIdx, Mode, TargetId), ... ]    Mode = dn | up
-  Consts = [ c(Value, TargetId), ... ]
-  Prims  = [ accepted-primitive-name, ... ]
-```
-
-Each `st(Id, Body)` is a state. A `prim(_)` state checks a primitive leaf; `final` and `wild` accept the produced value as-is. A `user(...)` state checks a user-typed term: a **compound** is matched against `Fns` by functor `Sym`/`Arity`, descending each argument position `ArgIdx` into state `TargetId` with structural mode `Mode` (`dn` checks the argument against `TargetId`; `up` forwards it untouched, preserving consumer-produced positions such as a reply channel); a **constant** is matched against `Consts`, then against the state's accepted primitives `Prims`. A part matching nothing yields `type_error(Culprit, Expected)`.
-
-**Implementation note (meta-typing).** The forwarder traverses arbitrary message terms, so it is itself written as a meta-interpreter under the deferred meta-typing exception (typed-GLP manual §18.3): it carries loose (`_`/`_?`) declarations and is not covered by the static type guarantee. It is trusted code — a recorded deviation, on the same footing as the system builtins that realise the check. Decomposition and composition use the implemented, compound-guarded `=..` in both directions (the declared-but-unimplemented `..=` is tracked as `known-issues.md` Issue 10).
-
 ---
 
 ## 8. Module Declaration
