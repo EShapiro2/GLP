@@ -1,6 +1,6 @@
 /// Social Graph (Simulated UI) — Modular integration test.
 ///
-/// Tests the social_graph_simulated_ui_modules/ project using both:
+/// Tests the social/graph/ project using both:
 ///   1. Static linking (project linker: discover → link → compile as flat program)
 ///   2. Dynamic linking (GLP dispatch: compile each module, activateModule, # dispatch)
 ///
@@ -49,10 +49,10 @@ void main() {
     setPreludeEnvironmentSource(source);
   }
 
-  final projectRoot = '../programs/social_graph_simulated_ui_modules';
+  final projectRoot = '../programs/social/graph';
 
   if (!Directory(projectRoot).existsSync()) {
-    print('social_graph_simulated_ui_modules not found at $projectRoot, '
+    print('social/graph not found at $projectRoot, '
         'skipping tests');
     return;
   }

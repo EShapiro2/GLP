@@ -1156,7 +1156,7 @@ echo ""
 echo "=== Section G: Social Graph Simulated UI Modules ==="
 echo ""
 
-SGSIM="$GLP_DIR/programs/social_graph_simulated_ui_modules"
+SGSIM="$GLP_DIR/programs/social/graph"
 
 # Loading
 g_load=$($DART run "$REPL" <<HEREDOC
@@ -1412,7 +1412,7 @@ echo ""
 echo "=== Section J: CSSG v2 Modules ==="
 echo ""
 
-CSSG_V2="$GLP_DIR/programs/cssg_modules_v2"
+CSSG_V2="$GLP_DIR/programs/social/child_safe"
 
 # Loading
 j_load=$($DART run "$REPL" <<HEREDOC
@@ -1455,7 +1455,7 @@ echo ""
 echo "=== Section K: CSSN v2 Modules ==="
 echo ""
 
-CSSN_V2="$GLP_DIR/programs/cssn_modules_v2"
+CSSN_V2="$GLP_DIR/programs/social/network"
 
 # Loading
 k_load=$($DART run "$REPL" <<HEREDOC
