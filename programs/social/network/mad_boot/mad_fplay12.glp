@@ -1,6 +1,6 @@
 %% mad_fplay12.glp — madGLP boot for fplay12 (5 isolates: alice, bob, charlie, dave, eve)
 %%
-%% Derived from: cssn_modules_v2/boot.glp fplay12 clause
+%% Derived from: network/boot.glp fplay12 clause
 %% CSSN: Parental consent for groups (5 agents)
 %% One isolate per agent — parent-child streams cross isolate boundaries.
 

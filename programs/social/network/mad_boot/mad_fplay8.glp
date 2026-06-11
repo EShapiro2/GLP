@@ -1,6 +1,6 @@
 %% mad_fplay8.glp — madGLP boot for fplay8 (2 adults: alice, bob)
 %%
-%% Derived from: cssn_modules_v2/boot.glp fplay8 clause
+%% Derived from: network/boot.glp fplay8 clause
 %% CSSN: Group join
 
 -mode(system).

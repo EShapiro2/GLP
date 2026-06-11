@@ -2,6 +2,6 @@
 %%
 %% All CSSN protocol types (UserCmd, UserNotify, ActorChannel, etc.)
 %% and NarrativeStream types are inherited from the parent
-%% cssn_modules_v2/self.glp via ancestor scoping.
+%% network/self.glp via ancestor scoping.
 
 -module(village).

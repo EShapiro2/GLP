@@ -1,6 +1,6 @@
 %% mad_fplay3.glp — madGLP boot for fplay3 (3 adults: alice, bob, charlie)
 %%
-%% Derived from: cssn_modules_v2/boot.glp fplay3 clause
+%% Derived from: network/boot.glp fplay3 clause
 %% Both reject introduction
 
 -mode(system).

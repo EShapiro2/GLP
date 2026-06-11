@@ -1,6 +1,6 @@
 %% mad_fplay13.glp — madGLP boot for fplay13 (6 isolates: alice, bob, frank, carol, dave, eve)
 %%
-%% Derived from: cssn_modules_v2/boot.glp fplay13 clause
+%% Derived from: network/boot.glp fplay13 clause
 %% Village scenario: 3 adults, 3 children, narrative streams
 %% One isolate per agent — parent-child streams cross isolate boundaries.
 

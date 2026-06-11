@@ -1,6 +1,6 @@
 %% mad_fplay10.glp — madGLP boot for fplay10 (3 isolates: alice, bob, dave)
 %%
-%% Derived from: cssn_modules_v2/boot.glp fplay10 clause
+%% Derived from: network/boot.glp fplay10 clause
 %% CSSN: Parent rejects child group invite
 %% One isolate per agent — parent-child streams cross isolate boundaries.
 

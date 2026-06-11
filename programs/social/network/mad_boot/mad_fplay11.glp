@@ -1,6 +1,6 @@
 %% mad_fplay11.glp — madGLP boot for fplay11 (6 isolates: alice, bob, charlie, carol, dave, eve)
 %%
-%% Derived from: cssn_modules_v2/boot.glp fplay11 clause
+%% Derived from: network/boot.glp fplay11 clause
 %% CSSN: Child-safe social groups (6 agents)
 %% One isolate per agent — parent-child streams cross isolate boundaries.
 

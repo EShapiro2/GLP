@@ -1,6 +1,6 @@
 %% mad_fplay9.glp — madGLP boot for fplay9 (3 isolates: alice, bob, dave)
 %%
-%% Derived from: cssn_modules_v2/boot.glp fplay9 clause
+%% Derived from: network/boot.glp fplay9 clause
 %% CSSN: Child joins adult-managed group
 %% One isolate per agent — parent-child streams cross isolate boundaries.
 

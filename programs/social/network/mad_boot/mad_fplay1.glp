@@ -1,10 +1,10 @@
 %% mad_fplay1.glp — madGLP boot for fplay1 (3 adults: alice, bob, charlie)
 %%
 %% Each agent runs in its own isolate. IsolateManager routes network messages.
-%% Project-directory loading makes all cssn_modules_v2 exports available
+%% Project-directory loading makes all network exports available
 %% as aliases (agent/4, ui_mediator/5, alice1/1, etc.).
 %%
-%% Derived from: cssn_modules_v2/boot.glp fplay1 clause
+%% Derived from: network/boot.glp fplay1 clause
 
 -mode(system).
 
