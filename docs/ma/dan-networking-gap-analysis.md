@@ -1,6 +1,6 @@
 # Dan's Networking Layer vs GlpNetwork — Gap Analysis
 
-**Version**: 0.2
+**Version**: 0.3
 **Date**: 2026-06-11
 **Source**: https://github.com/danbachar/grassroots-networking (read 2026-06-11); GLP Networking API paper; `networking-seam-spec.md` v0.4.
 
@@ -35,7 +35,7 @@ His `GrassrootsNetwork` ≈ one-to-one under our `GlpNetwork`: a `RealNetworkAda
 
 ## Open paper questions, answered by the code
 
-1. Noise XX over BLE — yes (XX, 25519, ChaChaPoly, SHA256).
+1. Noise XX over BLE — yes (XX, 25519, ChaChaPoly, SHA256); confirmed by Dan in the paper thread: one handshake per medium per pair, up to two concurrent sessions per pair (now stated in the paper's Session Establishment section). Closed.
 2. Rotating suffix — not implemented; static SHA-256(pk) suffix.
 3. Shared static UUID for background BLE — not used; per-key UUID advertising.
 
