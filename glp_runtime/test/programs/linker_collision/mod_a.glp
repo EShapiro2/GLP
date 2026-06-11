@@ -1,0 +1,11 @@
+%% Linker name-collision fixture, module A.
+%%
+%% PURPOSE: sole coverage of the project linker's module-local name-collision
+%% handling. Two sibling modules (mod_a, mod_b) each define dup/1; after
+%% linking they must become distinct prefixed procedures (mod_a:dup, mod_b:dup)
+%% with no bare collision. The production social projects no longer exercise
+%% this because shared helpers (e.g. merge/3) were lifted to the root self.glp,
+%% leaving no module-local duplicates — hence this minimal dedicated fixture.
+-module(mod_a).
+
+dup(a).

@@ -1,6 +1,6 @@
 /// CSSN (Child-Safe Social Network) — Modular integration test.
 ///
-/// Tests the cssn_modules/ project using both:
+/// Tests the social/network project using both:
 ///   1. Static linking (project linker: discover → link → compile as flat program)
 ///   2. Dynamic linking (GLP dispatch: compile each module, activateModule, # dispatch)
 ///
@@ -50,10 +50,10 @@ void main() {
     setPreludeEnvironmentSource(source);
   }
 
-  final projectRoot = '../programs/cssn_modules';
+  final projectRoot = '../programs/social/network';
 
   if (!Directory(projectRoot).existsSync()) {
-    print('cssn_modules not found at $projectRoot, skipping tests');
+    print('social/network not found at $projectRoot, skipping tests');
     return;
   }
 

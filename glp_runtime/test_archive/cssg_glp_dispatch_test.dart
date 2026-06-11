@@ -43,11 +43,11 @@ void main() {
     setPreludeEnvironmentSource(source);
   }
 
-  final cssgRoot = '../programs/cssg_modules';
+  final cssgRoot = '../programs/social/child_safe';
 
   // Verify the project directory exists
   if (!Directory(cssgRoot).existsSync()) {
-    print('cssg_modules directory not found at $cssgRoot, skipping tests');
+    print('child_safe directory not found at $cssgRoot, skipping tests');
     return;
   }
 
@@ -193,7 +193,7 @@ void main() {
           reason:
               'fplay1 should produce tagged output via _output body kernel');
 
-      // Verify expected tagged output patterns (matching cssg_modules_test.sh)
+      // Verify expected tagged output patterns (CSSG child-safe project plays)
       final outputStr = output.join('\n');
       expect(outputStr, contains('tagged(alice'),
           reason: 'Output should contain tagged messages for alice');

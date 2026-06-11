@@ -1,10 +1,10 @@
 /// GLP Child-Safe Social Graph — Modules + Multi-Isolate
 ///
 /// Same as main_cssg_mad.dart but uses project-compiled modules from
-/// cssg_modules/ instead of loading monolithic source files.
+/// social/child_safe/ instead of loading monolithic source files.
 ///
 /// Each agent isolate:
-///   1. Loads the linked project via engine.loadProject(cssg_modules/)
+///   1. Loads the linked project via engine.loadProject(social/child_safe/)
 ///   2. Loads mad_boot.glp on top (parent_init, child_init, tee, ui_actor, ...)
 ///   3. Runs parent_init/4 or child_init/3 — which call agent(), ui_mediator(),
 ///      merge(), etc. via entry-point aliases from the linked project.
@@ -24,7 +24,7 @@ import 'mad_router.dart';
 // =============================================================================
 
 /// Project directory for static linking (repo-relative from glp_multiagent/).
-const _projectDir = '../programs/cssg_modules';
+const _projectDir = '../programs/social/child_safe';
 
 /// madGLP boot source — loaded on top of the linked project.
 const _bootFileName = 'mad_boot.glp';
@@ -168,7 +168,7 @@ class _CssgMadModulesScreenState extends State<CssgMadModulesScreen> {
     super.initState();
     _replySubscription = _replyPort.listen(_handleAgentMessage);
     _log.add('Ready. Click a Play button to run a scenario.');
-    _log.add('Using project-compiled modules from cssg_modules/.');
+    _log.add('Using project-compiled modules from social/child_safe/.');
   }
 
   @override

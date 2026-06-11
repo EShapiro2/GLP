@@ -18,7 +18,7 @@ cd /Users/udi/Grassroots/GLP/glp_runtime
 dart run bin/glp_repl.dart
 ```
 
-In the REPL: enter a `.glp` filename to load it (the REPL runs the full pipeline — SRSW → PE → type-check → compile → execute), then enter a goal.  Or enter a directory (e.g. `../programs/cssn_modules_v2/`) to load a multi-module project.
+In the REPL: enter a `.glp` filename to load it (the REPL runs the full pipeline — SRSW → PE → type-check → compile → execute), then enter a goal.  Or enter a directory (e.g. `../programs/social/network/`) to load a multi-module project.
 
 Non-interactive:
 
@@ -52,8 +52,10 @@ GLP/
 │   ├── self.glp              # root prelude (types, primitives)
 │   ├── book/                 # Art of GLP book examples
 │   ├── typed_book/           # typed version of book examples
-│   ├── cssg_modules_v2/      # child-safe social graph
-│   ├── cssn_modules_v2/      # child-safe social networking
+│   ├── social/               # social platforms (modular projects)
+│   │   ├── graph/            # plain social graph
+│   │   ├── child_safe/       # child-safe social graph
+│   │   └── network/          # child-safe social networking
 │   ├── bonds_v2/             # grassroots bonds
 │   └── tests/                # REPL test programs
 ├── docs/                     # specifications and references

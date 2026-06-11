@@ -1,7 +1,10 @@
 /// Project linker tests: static linking of multi-module GLP projects.
 ///
 /// Tests discovery, type checking, renaming, call resolution, and
-/// end-to-end compilation of the cssg_modules project.
+/// end-to-end compilation of the social/child_safe project. Module-local
+/// name-collision handling is covered separately by the dedicated
+/// test/programs/linker_collision fixture (child_safe no longer has
+/// module-local duplicate procedures — merge/3 was lifted to root self.glp).
 library;
 
 import 'dart:io';
@@ -24,26 +27,30 @@ void main() {
     setRootScopeUnitClauseSource(source);
     setRootScopeEnvironmentSource(source);
   }
-  final cssgRoot = '../programs/cssg_modules';
+  final cssgRoot = '../programs/social/child_safe';
+  // Dedicated minimal fixture: sole coverage of module-local name-collision
+  // handling (two sibling modules each defining dup/1).
+  final collisionRoot = 'test/programs/linker_collision';
   final rootSelfPath = rootSelfGlp.existsSync() ? rootSelfGlp.absolute.path : null;
 
   if (!Directory(cssgRoot).existsSync()) {
-    print('cssg_modules directory not found at $cssgRoot, skipping tests');
+    print('child_safe directory not found at $cssgRoot, skipping tests');
     return;
   }
 
   group('Project discovery', () {
-    test('discovers all modules in cssg_modules', () {
+    test('discovers all modules in child_safe', () {
       final modules = discoverProject(cssgRoot, rootSelfGlpPath: rootSelfPath);
 
-      // Should find 5 modules: agent, mediator, actors, boot, cssg
+      // Should find 6 modules: agent, child_agent, mediator, actors, boot, cssg
       final names = modules.map((m) => m.moduleName).toSet();
       expect(names, contains('agent'));
+      expect(names, contains('child_agent'));
       expect(names, contains('mediator'));
       expect(names, contains('actors'));
       expect(names, contains('boot'));
       expect(names, contains('cssg'));
-      expect(names.length, equals(5));
+      expect(names.length, equals(6));
     });
 
     test('excludes self.glp from modules', () {
@@ -94,7 +101,6 @@ void main() {
 
       // agent.glp procedures should have agent: prefix
       expect(procNames, contains('agent:agent'));
-      expect(procNames, contains('agent:merge'));
 
       // boot.glp procedures should have boot: prefix
       expect(procNames, contains('boot:tee'));
@@ -107,33 +113,6 @@ void main() {
       // actors.glp procedures should have actors: prefix
       expect(procNames, contains('actors:alice1'));
       expect(procNames, contains('actors:bob1'));
-    });
-
-    test('bare procedure names do not exist (except aliases)', () {
-      // Find non-alias procedures (those with module prefix)
-      final prefixedProcs = linked.procedures
-          .where((p) => p.name.contains(':'))
-          .map((p) => p.name)
-          .toSet();
-
-      // There should be no bare 'merge' as a prefixed procedure
-      expect(prefixedProcs.contains('merge'), isFalse);
-      // But agent:merge and boot:merge should exist
-      expect(prefixedProcs, contains('agent:merge'));
-      expect(prefixedProcs, contains('boot:merge'));
-    });
-
-    test('no name conflicts between modules', () {
-      // Both agent.glp and boot.glp define merge — after linking, they are distinct
-      final mergeProcs = linked.procedures
-          .where((p) => p.name.endsWith(':merge'))
-          .toList();
-      expect(mergeProcs.length, greaterThanOrEqualTo(2),
-          reason: 'agent:merge and boot:merge should both exist');
-
-      final mergeNames = mergeProcs.map((p) => p.name).toSet();
-      expect(mergeNames, contains('agent:merge'));
-      expect(mergeNames, contains('boot:merge'));
     });
 
     test('cross-module calls are resolved', () {
@@ -230,6 +209,45 @@ void main() {
       expect(body, isNotNull);
       expect(body!.length, equals(1));
       expect(body.first.functor, equals('boot:play1'));
+    });
+  });
+
+  group('Module name-collision (dedicated fixture)', () {
+    // Sole coverage of module-local name-collision handling: mod_a and mod_b
+    // each define dup/1; linking must disambiguate into mod_a:dup and mod_b:dup
+    // with no bare collision. See test/programs/linker_collision/.
+    late Program linked;
+
+    setUp(() {
+      final modules = discoverProject(collisionRoot, rootSelfGlpPath: rootSelfPath);
+      linked = linkProject(modules, 'mod_a').program;
+    });
+
+    test('colliding procedures are disambiguated by module prefix', () {
+      final procNames = linked.procedures.map((p) => p.name).toSet();
+      expect(procNames, contains('mod_a:dup'));
+      expect(procNames, contains('mod_b:dup'));
+    });
+
+    test('no bare collision; both prefixed names exist', () {
+      final prefixedProcs = linked.procedures
+          .where((p) => p.name.contains(':'))
+          .map((p) => p.name)
+          .toSet();
+      // No bare 'dup' among prefixed procedures.
+      expect(prefixedProcs.contains('dup'), isFalse);
+      expect(prefixedProcs, contains('mod_a:dup'));
+      expect(prefixedProcs, contains('mod_b:dup'));
+    });
+
+    test('both colliding definitions survive as distinct procedures', () {
+      final dupProcs =
+          linked.procedures.where((p) => p.name.endsWith(':dup')).toList();
+      expect(dupProcs.length, greaterThanOrEqualTo(2),
+          reason: 'mod_a:dup and mod_b:dup should both exist');
+      final dupNames = dupProcs.map((p) => p.name).toSet();
+      expect(dupNames, contains('mod_a:dup'));
+      expect(dupNames, contains('mod_b:dup'));
     });
   });
 
