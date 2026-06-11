@@ -1,6 +1,6 @@
 # Dan's Networking Layer vs GlpNetwork — Gap Analysis
 
-**Version**: 0.3
+**Version**: 0.5
 **Date**: 2026-06-11
 **Source**: https://github.com/danbachar/grassroots-networking (read 2026-06-11); GLP Networking API paper; `networking-seam-spec.md` v0.4.
 
@@ -17,7 +17,7 @@ A Flutter app + library (`lib/src/`): `GrassrootsNetwork` facade over two transp
 
 ## Gaps — architectural, need decisions
 
-1. **No queuing — fair delivery unrealized at his layer.** His core principle: a send to an unreachable peer fails immediately; the caller owns persistence and retry. The paper's assumption: the layer queues and delivers when connectivity is restored. Resolution that respects both documents: our `GlpNetwork` adapter wraps his layer with the queue and retry (resend on `onPeerConnected`/address update), so his layer + our adapter together realize the paper's API. His code unchanged; paper unchanged.
+1. **No queuing — fair delivery unrealized at his layer.** His core principle: a send to an unreachable peer fails immediately; the caller owns persistence and retry. The paper's assumption: the layer queues and delivers when connectivity is restored. Decision (Udi, 2026-06-11): deferred until real-network integration coding — in the multi-isolate simulation the router already queues, so nothing is affected today. The candidate resolution on file: the `GlpNetwork` adapter adds the queue and retry above his layer, leaving his code and the paper unchanged.
 2. **Rendezvous by well-connected friends, not a dedicated server.** Decision (Udi, 2026-06-11): the paper stands. Friends are on smartphones and never have a stable public address, so friend-signaling is not viable; Dan's layer is to be revised to the paper's dedicated rendezvous server. His existing configured-servers support (settings, backoff) is the basis; friend-only signaling is dropped.
 3. **Static BLE suffix.** Suffix = first 8 bytes of SHA-256(pubkey) — trackable, exactly what the paper's rotating time-slotted suffix (15-min slots) prevents. His code answers open paper question 2: not implemented. Needs his confirmation of the rotating scheme or a counterproposal.
 
@@ -41,4 +41,4 @@ His `GrassrootsNetwork` ≈ one-to-one under our `GlpNetwork`: a `RealNetworkAda
 
 ## Found during this analysis (ours, not Dan's)
 
-The paper's `verify_attestation(Signer, PkA, PkB, Signature)` succeeds-or-fails over "the statement binding PkA and PkB"; the seam spec v0.4 and the shipped kernel have `verify_attestation(Signer?, Subject?, Sig?, Ok)` binding `Ok` to true/false over `attest(Signer, Subject)`. The mismatch entered with seam spec v0.4 (specified from the summary table, not the System Predicates section). Harmonisation ruling pending: align the paper to the implemented form, or the spec+code to the paper's.
+The shipped `verify_attestation/4` body kernel (two keys, `Ok` output) mismatched the paper's four-input succeed/fail form — introduced in seam spec v0.4. Resolved (Udi, 2026-06-11): it becomes a *guard*, renamed `valid_attestation/4`, keeping the paper's four-input succeed/fail form — guard failure deselects the clause, so no dead agent and no `Ok` output; the statement is the term `attest(PkA, PkB)`, serialized canonically as for `sign/2`. Paper renamed (System Predicates, summary, simulation appendix); seam spec v0.5; kernel rework queued for a Code session.

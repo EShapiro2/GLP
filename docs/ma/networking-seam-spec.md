@@ -1,8 +1,8 @@
 # madGLP Networking Seam Spec
 
-**Version**: 0.4
-**Date**: 2026-06-10
-**Status**: IMPLEMENTED (isolate stack, §4 kernels, app path / Issue 8)
+**Version**: 0.5
+**Date**: 2026-06-11
+**Status**: IMPLEMENTED, except the valid_attestation guard rework (§4)
 **Source**: GLP Networking API Specification paper (`~/Grassroots/GLP-Networking-API`), Sections 2–3 and the Simulation Realization appendix; `madGLP-spec.md` v5.6; `known-issues.md` Issue 7.
 
 ---
@@ -64,7 +64,7 @@ abstract class GlpNetwork {
 }
 ```
 
-Session establishment (paper Section 2.3) does not appear in the interface: it is internal to a realization. The GLP body kernels `sign/2` and `verify_attestation/4` are built on `sign`/`verify`; `peer_address/2` and `punch_udp/1` are IP-only and out of scope here.
+Session establishment (paper Section 2.3) does not appear in the interface: it is internal to a realization. The GLP body kernel `sign/2` and the guard `valid_attestation/4` are built on `sign`/`verify`; `peer_address/2` and `punch_udp/1` are IP-only and out of scope here.
 
 ---
 
@@ -97,12 +97,14 @@ The isolate entry and `MadContext` talk to `GlpNetwork` instead of `mainPort`:
 
 `AgentConfig` gains `keyPair` and `directory` fields. Global names and GLP programs keep symbolic agent identifiers; identifiers are resolved to keys only at the seam. Over a real network the agent identifier in global names will be the public key — deferred, per the paper appendix.
 
-**System predicate kernels.** `sign/2` and `verify_attestation/4` are body kernels backed by `GlpNetwork.sign`/`verify`:
+**System predicates.** `sign/2` is a body kernel; `valid_attestation/4` is a guard (Udi, 2026-06-11). Both are backed by `GlpNetwork.sign`/`verify`:
 
-- `sign(T?, Sig)` — suspends until `T?` is ground (the `ground/1` machinery; resumes on binding). Then binds `Sig` to the 128-character lowercase-hex string constant of the 64-byte Ed25519 signature, under the agent's key, over the canonical serialization of `T`.
-- `verify_attestation(Signer?, Subject?, Sig?, Ok)` — suspends until all three inputs are ground. `Signer` and `Subject` are 64-character hex public keys, `Sig` a 128-character hex signature. Binds `Ok` to `true` iff `Sig` is `Signer`'s valid Ed25519 signature over the canonical serialization of the term `attest(Signer, Subject)`, and to `false` otherwise — including malformed hex. Verification failure is data, never goal failure.
+- `sign(T?, Sig)` — body kernel; suspends until `T?` is ground (the `ground/1` machinery; resumes on binding). Then binds `Sig` to the 128-character lowercase-hex string constant of the 64-byte Ed25519 signature, under the agent's key, over the canonical serialization of `T`.
+- `valid_attestation(Signer?, PkA?, PkB?, Sig?)` — guard; suspends while any input is unbound, like other guards. Holds iff `Sig` is `Signer`'s valid Ed25519 signature over the canonical serialization of the term `attest(PkA, PkB)`. An invalid or malformed signature is guard failure — the clause is deselected and `otherwise` handles it; no `Ok` output. Keys are 64-character, signatures 128-character lowercase-hex string constants.
 
-Keys and signatures are hex string constants — no new GLP value type. Canonical serialization in this realization is the madGLP payload serialization of the ground term (address-free for ground terms; the implementation verifies this). It is realization-shared: before a second realization signs or verifies, the canonical serialization must be lifted to the paper.
+Keys and signatures are hex string constants — no new GLP value type. Canonical serialization is the madGLP payload serialization of the ground term (address-free for ground terms; the implementation verifies this), pinned in the paper (sign/2 row, 2026-06-11).
+
+**Rework note (2026-06-11):** the shipped body kernel `verify_attestation(Signer, Subject, Sig, Ok)` (commit `0b8354a6`) is superseded by the `valid_attestation/4` guard above — remove the body kernel and wrapper, implement the guard at the runtime's guard extension point, redo §7 test 6. Queued for a GLP Code session.
 
 `MessageType` disappears from the seam: the wire carries payload bytes only (Section 6). `MessageType.agentMessage` was already legacy and ignored.
 
@@ -127,7 +129,7 @@ Unchanged: a payload is the serialized `(globalName, value)` assignment of `madG
 3. **Reverse-order delivery**: hold a pair, send carrier and `_r` assignment, release in reverse order; the run completes with the same outcome (Issue 7 test).
 4. **Trust level**: under Closed, a cold-call from an unknown agent is not delivered; under Open it is.
 5. **Plays check**: the plays do not rely on per-sender cold-call order (Issue 7 Related Check).
-6. **Sign/verify round-trip**: an agent signs `attest(PkA, PkB)`; `verify_attestation` binds `true`; a tampered signature binds `false`; `sign` suspends until its input is ground and resumes on binding; a signature produced by one agent verifies at another agent in the same run.
+6. **Sign/verify round-trip**: an agent signs `attest(PkA, PkB)`; a clause guarded by `valid_attestation` is selected on the valid signature; on a tampered or malformed signature the guard fails and the `otherwise` clause is selected; `sign` suspends until its input is ground and resumes on binding; a signature produced by one agent verifies at another agent in the same run.
 
 ---
 
@@ -176,12 +178,15 @@ Implemented 2026-06-10 in a GLP Code session, on `main`.
 
 **Body kernels** `sign/2`, `verify_attestation/4`: **implemented** (`0b8354a6`) as GLP wrappers (ground-guard → suspend-until-ground) over Dart kernels `'_sign'/2`, `'_verify_attestation'/4` in `body_kernels.dart`, backed by `GlpNetwork.sign`/`verify` (real Ed25519). Canonical bytes = the madGLP payload serialization of the ground term (`MadContext.canonicalSerialize` → `serializeAgentMessage`, which throws on any `VarRef` — confirmed address-free and agentId-independent for ground terms). Keys/signatures are lowercase-hex string constants. §7 test 6 in `sign_verify_test.dart`.
 
+**Superseded (2026-06-11):** `verify_attestation/4` becomes the guard `valid_attestation/4` (§4 rework note); `sign/2` stands.
+
 ---
 
 ## Document History
 
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
+| 0.5 | 2026-06-11 | Claude | verify_attestation/4 (body kernel, Ok output, two keys) replaced by the guard valid_attestation/4, keeping the paper's four-input succeed/fail form; statement = attest(PkA, PkB); guard failure deselects the clause. sign/2 unchanged. §7 test 6 rewritten; code rework queued. |
 | 0.4 | 2026-06-10 | Claude | §4: system predicate kernels specified — sign/2 suspends until ground, signs the canonical (payload) serialization; verify_attestation/4 checks attest(Signer, Subject); keys/signatures as hex string constants; verification failure binds false, never fails the goal. §7 test 6 added. Issue 8 gate: verification by Claude Code (manual check waived). |
 | 0.3 | 2026-06-10 | Claude | Implemented on the isolate stack. Added §10 Implementation Status (commits, suite counts). Corrected §9: `boot_loader.dart` unchanged; `agent_runtime.dart` deferred (Issue 8); §7.5 satisfied by inspection + order-independent seam. Status → IMPLEMENTED. |
 | 0.2 | 2026-06-10 | Claude | Ed25519 package corrected to the synchronous `ed25519_edwards` (`cryptography` is async-only; `sign`/`verify` stay synchronous per Section 2). Body kernels `sign/2`, `verify_attestation/4` deferred until their term encoding is specified. |
