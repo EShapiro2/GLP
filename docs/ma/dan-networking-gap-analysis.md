@@ -1,7 +1,7 @@
 # Dan's Networking Layer vs GlpNetwork — Gap Analysis
 
-**Version**: 0.6
-**Date**: 2026-06-11
+**Version**: 0.7
+**Date**: 2026-06-12
 **Source**: https://github.com/danbachar/grassroots-networking (read 2026-06-11); GLP Networking API paper; `networking-seam-spec.md` v0.4.
 
 ## What it is
@@ -17,7 +17,7 @@ A Flutter app + library (`lib/src/`): `GrassrootsNetwork` facade over two transp
 
 ## Gaps — architectural, need decisions
 
-1. **No queuing — fair delivery unrealized at his layer.** His core principle: a send to an unreachable peer fails immediately; the caller owns persistence and retry. The paper's assumption: the layer queues and delivers when connectivity is restored. Decision (Udi, 2026-06-11): deferred until real-network integration coding — in the multi-isolate simulation the router already queues, so nothing is affected today. The candidate resolution on file: the `GlpNetwork` adapter adds the queue and retry above his layer, leaving his code and the paper unchanged.
+1. **No queuing — fair delivery unrealized at his layer.** Closed (2026-06-12): Dan's new ANNOUNCE-and-Liveness section commits the layer to heartbeat-driven replay of queued messages to revived peers — fair delivery at the layer, as the paper assumes. The adapter no longer needs a queue. (Earlier record: his send failed on unreachable peers; deferred decision was an adapter-side queue.)
 2. **Rendezvous by well-connected friends, not a dedicated server.** Decision (Udi, 2026-06-11): the paper stands. Friends are on smartphones and never have a stable public address, so friend-signaling is not viable; Dan's layer is to be revised to the paper's dedicated rendezvous server. His existing configured-servers support (settings, backoff) is the basis; friend-only signaling is dropped.
 3. **Static BLE suffix.** Suffix = first 8 bytes of SHA-256(pubkey) — trackable, exactly what the paper's rotating time-slotted suffix (15-min slots) prevents. His code answers open paper question 2: not implemented. Needs his confirmation of the rotating scheme or a counterproposal.
 
@@ -28,11 +28,11 @@ A Flutter app + library (`lib/src/`): `GrassrootsNetwork` facade over two transp
 6. **No peer links**: `generatePeerLink`/`consumePeerLink` absent (no invite/link code anywhere). His friendship protocol may be the intended substitute — reconcile with the paper's peer-link section.
 7. **No exposed sign/verify primitives** — packets are signed internally; the adapter builds GLP's `sign`/`verify` from the installed identity directly. Note: he uses libsodium FFI for Ed25519 because the `cryptography` package costs 150–200 ms per verify on Android — relevant to our kernels on phone later (our `ed25519_edwards` is pure Dart; interop unaffected, performance to revisit).
 8. **Extras beyond the paper**: `broadcast`, ACK/read-receipts, fragmentation (BLE MTU), `onPeerUpdated` — harmless; adapter ignores or uses.
-9. **ANNOUNCE carries UDP address candidates** (wire layout: candidateCount + candidates) — missed in v0.1. The paper's ANNOUNCE is the public key only; sharing the agent's address is GLP-level (IP section, Connectivity and Address). Pending the conversation with Dan — his proposed liveness section bundles address distribution into ANNOUNCE.
+9. **ANNOUNCE carries UDP address candidates** (wire layout: candidateCount + candidates) — missed in v0.1. Ruled (Udi, 2026-06-12, design B): address distribution is GLP-level; ANNOUNCE sheds its candidates; the new API call `putPeerAddress(pk, address)` (paper, IP Connectivity + summary) is how GLP feeds the layer's dial book. Dan asked in-thread to revise his ANNOUNCE section accordingly (liveness content stands).
 
 ## Integration shape
 
-His `GrassrootsNetwork` ≈ one-to-one under our `GlpNetwork`: a `RealNetworkAdapter implements GlpNetwork` that constructs `GrassrootsIdentity` from `putIdentity`, maps callbacks, adds the fair-delivery queue (gap 1), and exposes sign/verify. Blockers before coding: gap 1 decision, and the canonical serialization — pinned in the paper 2026-06-11 (the sign/2 row of the System Predicates section names the madGLP payload serialization as the realization-shared canonical bytes). pk-identifiers in global names (parked) become live at the same moment.
+His `GrassrootsNetwork` ≈ one-to-one under our `GlpNetwork`: a `RealNetworkAdapter implements GlpNetwork` that constructs `GrassrootsIdentity` from `putIdentity`, maps callbacks, and exposes sign/verify; the fair-delivery queue now lives in his layer (gap 1, closed). Blockers before coding: none architectural — the canonical serialization is pinned in the paper (sign/2 row), and `putPeerAddress` plus per-transport reachability events are agreed in-thread. pk-identifiers in global names (parked) become live at integration.
 
 ## Open paper questions, answered by the code
 
