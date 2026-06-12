@@ -1,7 +1,7 @@
 %% self.glp -- Play 12 module declaration
 %%
 %% All types (Bond, Lot, UserCmd, UserNotify, ActorChannel, NarrativeItem, etc.)
-%% are inherited from the parent bonds_v2/self.glp via ancestor scoping.
+%% are inherited from the parent bonds/self.glp via ancestor scoping.
 
 -module(play12).
 -mode(system).

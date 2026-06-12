@@ -1,6 +1,6 @@
-%% mad_fplay10.glp — madGLP boot for bonds_v2 fplay10 (2 isolates: alice, bob)
+%% mad_fplay10.glp — madGLP boot for bonds fplay10 (2 isolates: alice, bob)
 %%
-%% Derived from: bonds_v2/boot.glp fplay10 clause
+%% Derived from: bonds/boot.glp fplay10 clause
 %% Bonds: Escrow — Time Release (2 agents)
 %% Alice computes T = now() + 500 locally. Bob has no time arg.
 
@@ -20,7 +20,7 @@ alice_init_10(Id, NetIn) :-
     alice_p10(T?, ch(ActorIn?, ActorOut)),
     tee(ActorOut?, MedIn, DispCmd),
     agent(Id?, AgentIn?, NetIn?,
-          [output('_user', AgentToUser), output('_net', NetOut)],
+          [user_output(AgentToUser), net_output(NetOut)],
           [], 1),
     send_to_net(NetOut?),
     ui_mediator(Id?, ch(AgentToUser?, AgentIn),
@@ -35,7 +35,7 @@ agent_init(Id, PlayNum, NetIn) :-
     actor_dispatch(Id?, PlayNum?, ch(ActorIn?, ActorOut)),
     tee(ActorOut?, MedIn, DispCmd),
     agent(Id?, AgentIn?, NetIn?,
-          [output('_user', AgentToUser), output('_net', NetOut)],
+          [user_output(AgentToUser), net_output(NetOut)],
           [], 1),
     send_to_net(NetOut?),
     ui_mediator(Id?, ch(AgentToUser?, AgentIn),

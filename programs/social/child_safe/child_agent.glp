@@ -20,7 +20,7 @@ exported procedure child_agent(Constant?, Constant?, Stream(UserInMsg)?, Stream(
 %% Send text to friend
 child_agent(Id, ParentId, [msg('_user', Id1, send(Target, Text))|UserIn], NetIn, Outs) :-
     Id? =?= Id1?, ground(Target?) |
-    lookup_send(friend(Target?), msg(Id?, Target?, text(Text?)), Outs?, Outs1),
+    send_friend(Target?, msg(Id?, Target?, text(Text?)), Outs?, Outs1),
     child_agent(Id?, ParentId?, UserIn?, NetIn?, Outs1?).
 
 %% Accept child intro — send ack, await peer
@@ -41,15 +41,15 @@ child_agent(Id, ParentId, [msg('_user', Id1, reject_child_intro(_, channel(ch(_,
 %% Intro result: peer acked — add friend
 child_agent(Id, ParentId, [intro_result(Other, ch(FIn, FOut?))|UserIn], NetIn, Outs) :-
     ground(Id?), ground(Other?) |
-    add_output(friend(Other?), FOut, Outs?, Outs1),
-    lookup_send('_user', msg(agent, '_user', connected(Other?)), Outs1?, Outs2),
+    add_friend_output(Other?, FOut, Outs?, Outs1),
+    send_user(msg(agent, '_user', connected(Other?)), Outs1?, Outs2),
     merge(NetIn?, FIn?, NetIn1),
     child_agent(Id?, ParentId?, UserIn?, NetIn1?, Outs2?).
 
 %% Intro result: peer nacked — notify rejected
 child_agent(Id, ParentId, [intro_rejected(Other)|UserIn], NetIn, Outs) :-
     ground(Id?) |
-    lookup_send('_user', msg(agent, '_user', rejected(Other?)), Outs?, Outs1),
+    send_user(msg(agent, '_user', rejected(Other?)), Outs?, Outs1),
     child_agent(Id?, ParentId?, UserIn?, NetIn?, Outs1?).
 
 %% --- Network messages ---
@@ -57,13 +57,13 @@ child_agent(Id, ParentId, [intro_rejected(Other)|UserIn], NetIn, Outs) :-
 %% Parent sends child_intro — present to UI
 child_agent(Id, ParentId, UserIn, [msg(From, Id1, child_intro(Other, Ch))|NetIn], Outs) :-
     Id? =?= Id1?, ground(Other?) |
-    lookup_send('_user', msg(agent, '_user', child_befriend(From?, Other?, Ch?)), Outs?, Outs1),
+    send_user(msg(agent, '_user', child_befriend(From?, Other?, Ch?)), Outs?, Outs1),
     child_agent(Id?, ParentId?, UserIn?, NetIn?, Outs1?).
 
 %% Friend sends text — notify UI
 child_agent(Id, ParentId, UserIn, [msg(From, Id1, text(Text))|NetIn], Outs) :-
     Id? =?= Id1? |
-    lookup_send('_user', msg(agent, '_user', received(From?, Text?)), Outs?, Outs1),
+    send_user(msg(agent, '_user', received(From?, Text?)), Outs?, Outs1),
     child_agent(Id?, ParentId?, UserIn?, NetIn?, Outs1?).
 
 %% --- Termination ---

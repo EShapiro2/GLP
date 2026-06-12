@@ -8,7 +8,7 @@
 %% Deposits escrow with Frank (dock construction).
 %%
 %% Takes T (escrow release time) as parameter.
-%% Types: from bonds_v2/self.glp (ancestor scoping)
+%% Types: from bonds/self.glp (ancestor scoping)
 
 -module(charlie).
 -mode(system).

@@ -19,7 +19,7 @@
 %% merge/3 is now defined once in the root programs/self.glp (A3 amendment).
 
 %% =============================================================================
-%% RESPONSE HANDLING — local (calls merge and add_output)
+%% RESPONSE HANDLING — local (calls merge and add_friend_output)
 %% =============================================================================
 
 procedure bind_response(Decision?, Constant?, Response, Stream(OutputEntry)?, Stream(OutputEntry), Stream(NetInMsg)?, Stream(NetInMsg)).
@@ -27,17 +27,17 @@ bind_response(yes, From, accept(RetCh?), Outs, Outs1?, In, In1?) :-
     new_channel(RetCh, LocalCh) |
     handle_response(accept(LocalCh?), From?, Outs?, Outs1, In?, In1).
 bind_response(no, _, no, Outs, Outs1?, In, In?) :-
-    lookup_send('_user', msg(agent, '_user', rejected), Outs?, Outs1).
+    send_user( msg(agent, '_user', rejected), Outs?, Outs1).
 
 procedure handle_response(Response?, Constant?, Stream(OutputEntry)?, Stream(OutputEntry), Stream(NetInMsg)?, Stream(NetInMsg)).
 handle_response(accept(ch(FIn, FOut?)), From, Outs, Outs2?, In, In1?) :-
     ground(From?) |
-    add_output(friend(From?), FOut, Outs?, Outs1),
-    lookup_send('_user', msg(agent, '_user', connected(From?)), Outs1?, Outs2),
+    add_friend_output(From?, FOut, Outs?, Outs1),
+    send_user( msg(agent, '_user', connected(From?)), Outs1?, Outs2),
     merge(In?, FIn?, In1).
 handle_response(no, From, Outs, Outs1?, In, In?) :-
     ground(From?) |
-    lookup_send('_user', msg(agent, '_user', rejected(From?)), Outs?, Outs1).
+    send_user( msg(agent, '_user', rejected(From?)), Outs?, Outs1).
 
 %% =============================================================================
 %% DO_TRADE — Select bonds matching GiveSpec, then send or fail
@@ -50,14 +50,14 @@ do_trade(Id, Target, GiveSpec, WantSpec, Holdings, UserIn, NetIn, Outs, NextSeri
 
 procedure do_trade_result(Constant?, Constant?, Constant?, Stream(Lot)?, Stream(Bond)?, Stream(Bond)?, Stream(UserInMsg)?, Stream(NetInMsg)?, Stream(OutputEntry)?, Constant?).
 do_trade_result(ok, Id, Target, WantSpec, Selected, Remaining, UserIn, NetIn, Outs, NextSerial) :-
-    lookup_send(friend(Target?),
+    send_friend(Target?,
         msg(Id?, Target?, trade_propose(WantSpec?, Selected?, TradeResp)),
         Outs?, Outs1),
     inject_trade_result(TradeResp?, Target?, UserIn?, UserIn1),
     agent(Id?, UserIn1?, NetIn?, Outs1?, Remaining?, NextSerial?).
 do_trade_result(fail, Id, Target, _, Selected, Remaining, UserIn, NetIn, Outs, NextSerial) :-
     append(Selected?, Remaining?, OrigHoldings),
-    lookup_send('_user', msg(agent, '_user', trade_failed(Target?)), Outs?, Outs1),
+    send_user( msg(agent, '_user', trade_failed(Target?)), Outs?, Outs1),
     agent(Id?, UserIn?, NetIn?, Outs1?, OrigHoldings?, NextSerial?).
 
 %% =============================================================================
@@ -68,12 +68,12 @@ procedure handle_trade_fill(Constant?, Constant?, Constant?, TradeResponse, Stre
 %% Can fill: bind accept(our bonds), take offered bonds, notify user
 handle_trade_fill(ok, Id, From, trade_accept(Selected?), OfferedBonds, Selected, Remaining, UserIn, NetIn, Outs, NextSerial) :-
     append(Remaining?, OfferedBonds?, NewHoldings),
-    lookup_send('_user', msg(agent, '_user', trade_completed(From?)), Outs?, Outs1),
+    send_user( msg(agent, '_user', trade_completed(From?)), Outs?, Outs1),
     agent(Id?, UserIn?, NetIn?, Outs1?, NewHoldings?, NextSerial?).
 %% Can't fill: bind decline(offered bonds back), reconstruct own holdings
 handle_trade_fill(fail, Id, From, trade_decline(OfferedBonds?), OfferedBonds, Selected, Remaining, UserIn, NetIn, Outs, NextSerial) :-
     append(Selected?, Remaining?, OrigHoldings),
-    lookup_send('_user', msg(agent, '_user', trade_failed(From?)), Outs?, Outs1),
+    send_user( msg(agent, '_user', trade_failed(From?)), Outs?, Outs1),
     agent(Id?, UserIn?, NetIn?, Outs1?, OrigHoldings?, NextSerial?).
 
 %% =============================================================================
@@ -87,7 +87,7 @@ procedure trade_dispatch(Constant?, Constant?, Constant?, Stream(Lot)?, Stream(B
 trade_dispatch(payment, Id, From, _, OfferedBonds, trade_accept([]),
     Holdings, UserIn, NetIn, Outs, NextSerial) :-
     append(Holdings?, OfferedBonds?, NewHoldings),
-    lookup_send('_user', msg(agent, '_user', trade_completed(From?)), Outs?, Outs1),
+    send_user( msg(agent, '_user', trade_completed(From?)), Outs?, Outs1),
     agent(Id?, UserIn?, NetIn?, Outs1?, NewHoldings?, NextSerial?).
 
 %% Redemption — auto-accept with requested bond, or reject with menu
@@ -101,7 +101,7 @@ trade_dispatch(redemption, Id, From, WantSpec, OfferedBonds, TradeResp?,
 %% Normal trade — present to user
 trade_dispatch(normal, Id, From, WantSpec, OfferedBonds, TradeResp?,
     Holdings, UserIn, NetIn, Outs, NextSerial) :-
-    lookup_send('_user',
+    send_user(
         msg(agent, '_user', trade_proposed(From?, WantSpec?, TradeResp, OfferedBonds?)),
         Outs?, Outs1),
     agent(Id?, UserIn?, NetIn?, Outs1?, Holdings?, NextSerial?).
@@ -119,7 +119,7 @@ redemption_result(ok, Id, From, trade_accept(Selected?), OfferedBonds,
     Selected, Remaining,
     UserIn, NetIn, Outs, NextSerial) :-
     append(Remaining?, OfferedBonds?, NewHoldings),
-    lookup_send('_user', msg(agent, '_user', trade_completed(From?)), Outs?, Outs1),
+    send_user( msg(agent, '_user', trade_completed(From?)), Outs?, Outs1),
     agent(Id?, UserIn?, NetIn?, Outs1?, NewHoldings?, NextSerial?).
 
 %% Can't fill — reject with menu
@@ -135,7 +135,7 @@ procedure redemption_reject(Constant?, Constant?, Stream(Bond)?, Stream(Bond),
 redemption_reject(Id, From, OrigHoldings, Menu?, UserIn, NetIn, Outs, NextSerial) :-
     ground(OrigHoldings?) |
     build_menu(Id?, OrigHoldings?, Menu),
-    lookup_send('_user', msg(agent, '_user', trade_failed(From?)), Outs?, Outs1),
+    send_user( msg(agent, '_user', trade_failed(From?)), Outs?, Outs1),
     agent(Id?, UserIn?, NetIn?, Outs1?, OrigHoldings?, NextSerial?).
 
 %% =============================================================================
@@ -152,16 +152,16 @@ do_deposit_escrow_result(ok, Id, Target, ReleaseTime, Selected, Remaining, UserI
     ground(Selected?) |
     escrow(ReleaseTime?, Selected?, CancelSignal?, BenResult, DepResult),
     inject_escrow_dep_result(DepResult?, Target?, UserIn?, UserIn1),
-    lookup_send(friend(Target?),
+    send_friend(Target?,
         msg(Id?, Target?, escrow_offer(ReleaseTime?, BenResult?)),
         Outs?, Outs1),
-    lookup_send('_user',
+    send_user(
         msg(agent, '_user', escrow_deposited(Target?, ReleaseTime?, CancelSignal)),
         Outs1?, Outs2),
     agent(Id?, UserIn1?, NetIn?, Outs2?, Remaining?, NextSerial?).
 do_deposit_escrow_result(fail, Id, Target, _, Selected, Remaining, UserIn, NetIn, Outs, NextSerial) :-
     append(Selected?, Remaining?, OrigHoldings),
-    lookup_send('_user', msg(agent, '_user', escrow_failed(Target?)), Outs?, Outs1),
+    send_user( msg(agent, '_user', escrow_failed(Target?)), Outs?, Outs1),
     agent(Id?, UserIn?, NetIn?, Outs1?, OrigHoldings?, NextSerial?).
 
 %% =============================================================================
@@ -186,13 +186,13 @@ agent(Id, [msg('_user', Id1, mint(K, Maturity))|UserIn], NetIn, Outs, Holdings, 
     NewNextSerial := NextSerial? + K?,
     create_bonds(Id?, Maturity?, K?, NextSerial?, NewBonds),
     append(Holdings?, NewBonds?, NewHoldings),
-    lookup_send('_user', msg(agent, '_user', minted(K?, Maturity?)), Outs?, Outs1),
+    send_user( msg(agent, '_user', minted(K?, Maturity?)), Outs?, Outs1),
     agent(Id?, UserIn?, NetIn?, Outs1?, NewHoldings?, NewNextSerial?).
 
 %% User requests balance: report current holdings
 agent(Id, [msg('_user', Id1, balance)|UserIn], NetIn, Outs, Holdings, NextSerial) :-
     Id? =?= Id1?, ground(Holdings?) |
-    lookup_send('_user', msg(agent, '_user', balance_report(Holdings?)), Outs?, Outs1),
+    send_user( msg(agent, '_user', balance_report(Holdings?)), Outs?, Outs1),
     agent(Id?, UserIn?, NetIn?, Outs1?, Holdings?, NextSerial?).
 
 %% User sends done: terminate agent
@@ -205,7 +205,7 @@ agent(Id, [msg('_user', Id1, done)|_], _, Outs, _, _) :-
 %% User initiates cold call
 agent(Id, [msg('_user', Id1, connect(Target))|UserIn], NetIn, Outs, Holdings, NextSerial) :-
     Id? =?= Id1?, ground(Target?) |
-    lookup_send('_net', msg(Target?, intro(Id?, Resp)), Outs?, Outs1),
+    send_net( msg(Target?, intro(Id?, Resp)), Outs?, Outs1),
     inject_msg(Resp?, Target?, Id?, UserIn?, UserIn1),
     agent(Id?, UserIn1?, NetIn?, Outs1?, Holdings?, NextSerial?).
 
@@ -224,7 +224,7 @@ agent(Id, [msg(From, Id1, response(Resp))|UserIn], NetIn, Outs, Holdings, NextSe
 %% Cold-call from network
 agent(Id, UserIn, [msg(Id1, intro(From, Resp?))|NetIn], Outs, Holdings, NextSerial) :-
     Id? =?= Id1? |
-    lookup_send('_user', msg(agent, '_user', befriend(From?, Resp)), Outs?, Outs1),
+    send_user( msg(agent, '_user', befriend(From?, Resp)), Outs?, Outs1),
     agent(Id?, UserIn?, NetIn?, Outs1?, Holdings?, NextSerial?).
 
 %% --- Phase 7: Trade ---
@@ -239,21 +239,21 @@ agent(Id, [msg('_user', Id1, trade(Target, GiveSpec, WantSpec))|UserIn],
 agent(Id, [trade_complete(From, TheirBonds)|UserIn], NetIn, Outs, Holdings, NextSerial) :-
     ground(Id?), ground(From?), ground(TheirBonds?) |
     append(Holdings?, TheirBonds?, NewHoldings),
-    lookup_send('_user', msg(agent, '_user', trade_completed(From?)), Outs?, Outs1),
+    send_user( msg(agent, '_user', trade_completed(From?)), Outs?, Outs1),
     agent(Id?, UserIn?, NetIn?, Outs1?, NewHoldings?, NextSerial?).
 
 %% Proposer: trade_returned_bonds (injected — decline)
 agent(Id, [trade_returned_bonds(From, OurBonds)|UserIn], NetIn, Outs, Holdings, NextSerial) :-
     ground(Id?), ground(From?), ground(OurBonds?) |
     append(Holdings?, OurBonds?, NewHoldings),
-    lookup_send('_user', msg(agent, '_user', trade_returned(From?)), Outs?, Outs1),
+    send_user( msg(agent, '_user', trade_returned(From?)), Outs?, Outs1),
     agent(Id?, UserIn?, NetIn?, Outs1?, NewHoldings?, NextSerial?).
 
 %% Proposer: trade returned with menu (redemption rejected — menu of available bonds)
 agent(Id, [trade_returned_bonds_menu(From, OurBonds, Menu)|UserIn], NetIn, Outs, Holdings, NextSerial) :-
     ground(Id?), ground(From?), ground(OurBonds?), ground(Menu?) |
     append(Holdings?, OurBonds?, NewHoldings),
-    lookup_send('_user', msg(agent, '_user', trade_returned_menu(From?, Menu?)), Outs?, Outs1),
+    send_user( msg(agent, '_user', trade_returned_menu(From?, Menu?)), Outs?, Outs1),
     agent(Id?, UserIn?, NetIn?, Outs1?, NewHoldings?, NextSerial?).
 
 %% Responder: incoming trade_propose (auto-accept if offered bonds include own)
@@ -291,14 +291,14 @@ agent(Id, [msg('_user', Id1, deposit_escrow(Target, GiveSpec, ReleaseTime))|User
 %% Depositor: escrow expired (injected — time passed, bonds went to beneficiary)
 agent(Id, [escrow_dep_expired(Target)|UserIn], NetIn, Outs, Holdings, NextSerial) :-
     ground(Id?) |
-    lookup_send('_user', msg(agent, '_user', escrow_expired(Target?)), Outs?, Outs1),
+    send_user( msg(agent, '_user', escrow_expired(Target?)), Outs?, Outs1),
     agent(Id?, UserIn?, NetIn?, Outs1?, Holdings?, NextSerial?).
 
 %% Depositor: escrow returned (injected — cancel succeeded, bonds back)
 agent(Id, [escrow_dep_returned(Target, OurBonds)|UserIn], NetIn, Outs, Holdings, NextSerial) :-
     ground(Id?), ground(Target?), ground(OurBonds?) |
     append(Holdings?, OurBonds?, NewHoldings),
-    lookup_send('_user', msg(agent, '_user', escrow_returned(Target?)), Outs?, Outs1),
+    send_user( msg(agent, '_user', escrow_returned(Target?)), Outs?, Outs1),
     agent(Id?, UserIn?, NetIn?, Outs1?, NewHoldings?, NextSerial?).
 
 %% Depositor: cancel_escrow — bind CancelSignal to cancel
@@ -314,20 +314,20 @@ agent(Id, UserIn, [msg(From, Id1, escrow_offer(ReleaseTime, BenResult))|NetIn],
       Outs, Holdings, NextSerial) :-
     Id? =?= Id1?, ground(From?), ground(ReleaseTime?) |
     inject_escrow_ben_result(BenResult?, From?, UserIn?, UserIn1),
-    lookup_send('_user', msg(agent, '_user', escrow_received(From?, ReleaseTime?)), Outs?, Outs1),
+    send_user( msg(agent, '_user', escrow_received(From?, ReleaseTime?)), Outs?, Outs1),
     agent(Id?, UserIn1?, NetIn?, Outs1?, Holdings?, NextSerial?).
 
 %% Beneficiary: escrow released (injected — time passed, bonds received)
 agent(Id, [escrow_ben_released(From, Bonds)|UserIn], NetIn, Outs, Holdings, NextSerial) :-
     ground(Id?), ground(From?), ground(Bonds?) |
     append(Holdings?, Bonds?, NewHoldings),
-    lookup_send('_user', msg(agent, '_user', escrow_released(From?)), Outs?, Outs1),
+    send_user( msg(agent, '_user', escrow_released(From?)), Outs?, Outs1),
     agent(Id?, UserIn?, NetIn?, Outs1?, NewHoldings?, NextSerial?).
 
 %% Beneficiary: escrow cancelled (injected — depositor cancelled)
 agent(Id, [escrow_ben_cancelled(From)|UserIn], NetIn, Outs, Holdings, NextSerial) :-
     ground(Id?) |
-    lookup_send('_user', msg(agent, '_user', escrow_cancelled(From?)), Outs?, Outs1),
+    send_user( msg(agent, '_user', escrow_cancelled(From?)), Outs?, Outs1),
     agent(Id?, UserIn?, NetIn?, Outs1?, Holdings?, NextSerial?).
 
 %% --- Termination ---

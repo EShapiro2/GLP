@@ -5,7 +5,7 @@
 %% Receives payments from Bob (bread) and Eve (bread).
 %% Act 7: sells bob-debt to Eve (final deal, no negotiation).
 %%
-%% Types: from bonds_v2/self.glp (ancestor scoping)
+%% Types: from bonds/self.glp (ancestor scoping)
 
 -module(alice).
 -mode(system).

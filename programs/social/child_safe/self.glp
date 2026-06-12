@@ -86,14 +86,19 @@ UserInMsg    ::= msg(Constant, Constant, UserContent)
 %% AGENT OUTPUT TYPES
 %% =============================================================================
 
-%% Union of all content the agent sends on output streams
-OutputContent ::= AgentContent ; FriendContent.
-OutputMsg     ::= msg(Constant, Constant, OutputContent)
-                ; msg(Constant, NetColdCall).
+%% Network output stream — cold calls the agent emits on its net entry.
+NetOutMsg    ::= msg(Constant, NetColdCall).
+NetOutStream ::= [] ; [NetOutMsg | NetOutStream].
 
-%% Output list — keys distinguish system channels, friends, children, and parent
-OutputKey   ::= '_user' ; '_net' ; friend(Constant) ; child(Constant) ; parent(Constant).
-OutputEntry ::= output(OutputKey, Stream(OutputMsg)?).
+%% Output list — one constructor per output kind, each carrying its own stream
+%% type. Replaces the former output(OutputKey, Stream(OutputMsg)?) whose union
+%% OutputMsg typed every entry at the join of all kinds and so broke duality
+%% against narrower readers (mediator AgentToUserStream, peer NetInStream).
+OutputEntry ::= user_output(Stream(AgentToUserMsg)?)
+              ; net_output(NetOutStream?)
+              ; friend_output(Constant, Stream(FriendMsg)?)
+              ; child_output(Constant, Stream(FriendMsg)?)
+              ; parent_output(Constant, Stream(FriendMsg)?).
 OutputsList ::= [] ; [OutputEntry | OutputsList].
 
 %% =============================================================================
@@ -148,18 +153,38 @@ PendingEntry ::= pending(ReqId, PendingValue).
 %% LOOKUP_SEND
 %% =============================================================================
 
-procedure lookup_send(OutputKey?, OutputMsg?, Stream(OutputEntry)?, Stream(OutputEntry)).
-lookup_send(Key, Msg, Outs, Outs1?) :-
-    ground(Key?) |
-    lookup_send_step(Key?, Msg?, Outs?, Outs1).
+%% Per-kind output routing — one procedure per output constructor, each typed
+%% at exactly what its stream carries.
 
-procedure lookup_send_step(OutputKey?, OutputMsg?, Stream(OutputEntry)?, Stream(OutputEntry)).
-lookup_send_step(Key, Msg, [output(K, [Msg?|Out1?])|Rest], [output(K?, Out1)|Rest?]) :-
-    Key? =?= K? | true.
-lookup_send_step(Key, Msg, [output(K, Out?)|Rest], [output(K?, Out)|Rest1?]) :-
+procedure send_user(AgentToUserMsg?, Stream(OutputEntry)?, Stream(OutputEntry)).
+send_user(Msg, [user_output([Msg?|Out1?])|Rest], [user_output(Out1)|Rest?]).
+send_user(Msg, [E|Rest], [E?|Rest1?]) :-
     otherwise |
-    lookup_send_step(Key?, Msg?, Rest?, Rest1).
-lookup_send_step(_, _, [], []).
+    send_user(Msg?, Rest?, Rest1).
+send_user(_, [], []).
+
+procedure send_net(NetOutMsg?, Stream(OutputEntry)?, Stream(OutputEntry)).
+send_net(Msg, [net_output([Msg?|Out1?])|Rest], [net_output(Out1)|Rest?]).
+send_net(Msg, [E|Rest], [E?|Rest1?]) :-
+    otherwise |
+    send_net(Msg?, Rest?, Rest1).
+send_net(_, [], []).
+
+procedure send_friend(Constant?, FriendMsg?, Stream(OutputEntry)?, Stream(OutputEntry)).
+send_friend(Name, Msg, [friend_output(K, [Msg?|Out1?])|Rest], [friend_output(K?, Out1)|Rest?]) :-
+    Name? =?= K? | true.
+send_friend(Name, Msg, [E|Rest], [E?|Rest1?]) :-
+    otherwise |
+    send_friend(Name?, Msg?, Rest?, Rest1).
+send_friend(_, _, [], []).
+
+procedure send_child(Constant?, FriendMsg?, Stream(OutputEntry)?, Stream(OutputEntry)).
+send_child(Name, Msg, [child_output(K, [Msg?|Out1?])|Rest], [child_output(K?, Out1)|Rest?]) :-
+    Name? =?= K? | true.
+send_child(Name, Msg, [E|Rest], [E?|Rest1?]) :-
+    otherwise |
+    send_child(Name?, Msg?, Rest?, Rest1).
+send_child(_, _, [], []).
 
 %% =============================================================================
 %% INJECT_MSG
@@ -175,11 +200,15 @@ inject_msg(Resp, Target, Id, [Y|Ys], [Y?|Ys1?]) :-
 %% ADD_OUTPUT / CLOSE_OUTPUTS
 %% =============================================================================
 
-procedure add_output(OutputKey?, Stream(OutputMsg), Stream(OutputEntry)?, Stream(OutputEntry)).
-add_output(Key, Out?, Outs, [output(Key?, Out)|Outs?]).
+procedure add_friend_output(Constant?, Stream(FriendMsg), Stream(OutputEntry)?, Stream(OutputEntry)).
+add_friend_output(Name, Out?, Outs, [friend_output(Name?, Out)|Outs?]).
 
 procedure close_outputs(Stream(OutputEntry)?).
-close_outputs([output(_, [])|Outs]) :- close_outputs(Outs?).
+close_outputs([user_output([])|Outs]) :- close_outputs(Outs?).
+close_outputs([net_output([])|Outs]) :- close_outputs(Outs?).
+close_outputs([friend_output(_, [])|Outs]) :- close_outputs(Outs?).
+close_outputs([child_output(_, [])|Outs]) :- close_outputs(Outs?).
+close_outputs([parent_output(_, [])|Outs]) :- close_outputs(Outs?).
 close_outputs([]).
 
 %% =============================================================================

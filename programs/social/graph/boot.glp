@@ -8,6 +8,10 @@
 -module(boot).
 -mode(system).
 
+%% Exported entry points (project-compilation spec §3.4: only exported
+%% root-level procedures alias). Each `exported procedure` declaration sits
+%% immediately above its clause, as the parser requires.
+
 %% =============================================================================
 %% IMPORTED PROCEDURES — Cross-module dependencies
 %% =============================================================================
@@ -41,7 +45,9 @@ procedure sink(Stream(X)?).
 sink([_|Xs]) :- sink(Xs?).
 sink([]).
 
-%% Untyped: _output/1 is a kernel predicate with no procedure declaration.
+%% _output/1 is a kernel predicate (untyped). send_to_user_tagged itself is
+%% declared so the play bodies that call it type-check.
+procedure send_to_user_tagged(Constant?, UserCmdStream?, UserNotifyStream?).
 send_to_user_tagged(Id, [T|Cmds], Notifies) :-
     ground(Id?), ground(T?) |
     '_output'(tagged(Id?, cmd(T?))),
@@ -59,6 +65,12 @@ send_to_user_tagged(_, Cmds, []) :- sink(Cmds?).
 
 %% --- Cold-call routing (2-arg msg) ---
 
+%% The simulated network switch carries the full transport union NetInStream
+%% (cold calls + friend messages). This wiring exercises only the 2-arg
+%% subset; the switch stays general. Writer NetOutStream ⊆ reader NetInStream.
+procedure network3(Channel(NetInStream, NetInStream)?,
+                   Channel(NetInStream, NetInStream)?,
+                   Channel(NetInStream, NetInStream)?).
 network3(ch([msg(bob, X)|AliceIn], AliceOut?),
          ch(BobIn, [msg(bob, X?)|BobOut?]),
          ch(CharlieIn, CharlieOut?)) :-
@@ -128,6 +140,7 @@ network3(ch([], []), ch([], []), ch([], [])).
 %% PLAY1 — Both accept introduction (with tee + sink display)
 %% =============================================================================
 
+exported procedure play1.
 play1 :-
     network3(ch(AliceNetOut?, AliceNetIn),
              ch(BobNetOut?, BobNetIn),
@@ -137,7 +150,7 @@ play1 :-
     actors # alice1(ch(AliceActorIn?, AliceActorOut)),
     tee(AliceActorOut?, AliceMedIn, AliceDispCmd),
     agent # agent(alice, AliceAgentIn?, AliceNetIn?,
-          [output('_user', AliceAgentToUser), output('_net', AliceNetOut)]),
+          [user_output(AliceAgentToUser), net_output(AliceNetOut)]),
     mediator # ui_mediator(alice, ch(AliceAgentToUser?, AliceAgentIn),
                 ch(AliceMedIn?, AliceMedOut), [], 1),
     tee(AliceMedOut?, AliceActorIn, AliceDispNotify),
@@ -147,7 +160,7 @@ play1 :-
     actors # bob1(ch(BobActorIn?, BobActorOut)),
     tee(BobActorOut?, BobMedIn, BobDispCmd),
     agent # agent(bob, BobAgentIn?, BobNetIn?,
-          [output('_user', BobAgentToUser), output('_net', BobNetOut)]),
+          [user_output(BobAgentToUser), net_output(BobNetOut)]),
     mediator # ui_mediator(bob, ch(BobAgentToUser?, BobAgentIn),
                 ch(BobMedIn?, BobMedOut), [], 1),
     tee(BobMedOut?, BobActorIn, BobDispNotify),
@@ -157,7 +170,7 @@ play1 :-
     actors # charlie1(ch(CharlieActorIn?, CharlieActorOut)),
     tee(CharlieActorOut?, CharlieMedIn, CharlieDispCmd),
     agent # agent(charlie, CharlieAgentIn?, CharlieNetIn?,
-          [output('_user', CharlieAgentToUser), output('_net', CharlieNetOut)]),
+          [user_output(CharlieAgentToUser), net_output(CharlieNetOut)]),
     mediator # ui_mediator(charlie, ch(CharlieAgentToUser?, CharlieAgentIn),
                 ch(CharlieMedIn?, CharlieMedOut), [], 1),
     tee(CharlieMedOut?, CharlieActorIn, CharlieDispNotify),
@@ -167,6 +180,7 @@ play1 :-
 %% PLAY2 — Alice accepts, Charlie rejects
 %% =============================================================================
 
+exported procedure play2.
 play2 :-
     network3(ch(AliceNetOut?, AliceNetIn),
              ch(BobNetOut?, BobNetIn),
@@ -176,7 +190,7 @@ play2 :-
     actors # alice2(ch(AliceActorIn?, AliceActorOut)),
     tee(AliceActorOut?, AliceMedIn, AliceDispCmd),
     agent # agent(alice, AliceAgentIn?, AliceNetIn?,
-          [output('_user', AliceAgentToUser), output('_net', AliceNetOut)]),
+          [user_output(AliceAgentToUser), net_output(AliceNetOut)]),
     mediator # ui_mediator(alice, ch(AliceAgentToUser?, AliceAgentIn),
                 ch(AliceMedIn?, AliceMedOut), [], 1),
     tee(AliceMedOut?, AliceActorIn, AliceDispNotify),
@@ -186,7 +200,7 @@ play2 :-
     actors # bob2(ch(BobActorIn?, BobActorOut)),
     tee(BobActorOut?, BobMedIn, BobDispCmd),
     agent # agent(bob, BobAgentIn?, BobNetIn?,
-          [output('_user', BobAgentToUser), output('_net', BobNetOut)]),
+          [user_output(BobAgentToUser), net_output(BobNetOut)]),
     mediator # ui_mediator(bob, ch(BobAgentToUser?, BobAgentIn),
                 ch(BobMedIn?, BobMedOut), [], 1),
     tee(BobMedOut?, BobActorIn, BobDispNotify),
@@ -196,7 +210,7 @@ play2 :-
     actors # charlie2(ch(CharlieActorIn?, CharlieActorOut)),
     tee(CharlieActorOut?, CharlieMedIn, CharlieDispCmd),
     agent # agent(charlie, CharlieAgentIn?, CharlieNetIn?,
-          [output('_user', CharlieAgentToUser), output('_net', CharlieNetOut)]),
+          [user_output(CharlieAgentToUser), net_output(CharlieNetOut)]),
     mediator # ui_mediator(charlie, ch(CharlieAgentToUser?, CharlieAgentIn),
                 ch(CharlieMedIn?, CharlieMedOut), [], 1),
     tee(CharlieMedOut?, CharlieActorIn, CharlieDispNotify),
@@ -206,6 +220,7 @@ play2 :-
 %% PLAY3 — Both reject introduction
 %% =============================================================================
 
+exported procedure play3.
 play3 :-
     network3(ch(AliceNetOut?, AliceNetIn),
              ch(BobNetOut?, BobNetIn),
@@ -215,7 +230,7 @@ play3 :-
     actors # alice3(ch(AliceActorIn?, AliceActorOut)),
     tee(AliceActorOut?, AliceMedIn, AliceDispCmd),
     agent # agent(alice, AliceAgentIn?, AliceNetIn?,
-          [output('_user', AliceAgentToUser), output('_net', AliceNetOut)]),
+          [user_output(AliceAgentToUser), net_output(AliceNetOut)]),
     mediator # ui_mediator(alice, ch(AliceAgentToUser?, AliceAgentIn),
                 ch(AliceMedIn?, AliceMedOut), [], 1),
     tee(AliceMedOut?, AliceActorIn, AliceDispNotify),
@@ -225,7 +240,7 @@ play3 :-
     actors # bob3(ch(BobActorIn?, BobActorOut)),
     tee(BobActorOut?, BobMedIn, BobDispCmd),
     agent # agent(bob, BobAgentIn?, BobNetIn?,
-          [output('_user', BobAgentToUser), output('_net', BobNetOut)]),
+          [user_output(BobAgentToUser), net_output(BobNetOut)]),
     mediator # ui_mediator(bob, ch(BobAgentToUser?, BobAgentIn),
                 ch(BobMedIn?, BobMedOut), [], 1),
     tee(BobMedOut?, BobActorIn, BobDispNotify),
@@ -235,7 +250,7 @@ play3 :-
     actors # charlie3(ch(CharlieActorIn?, CharlieActorOut)),
     tee(CharlieActorOut?, CharlieMedIn, CharlieDispCmd),
     agent # agent(charlie, CharlieAgentIn?, CharlieNetIn?,
-          [output('_user', CharlieAgentToUser), output('_net', CharlieNetOut)]),
+          [user_output(CharlieAgentToUser), net_output(CharlieNetOut)]),
     mediator # ui_mediator(charlie, ch(CharlieAgentToUser?, CharlieAgentIn),
                 ch(CharlieMedIn?, CharlieMedOut), [], 1),
     tee(CharlieMedOut?, CharlieActorIn, CharlieDispNotify),
@@ -245,6 +260,7 @@ play3 :-
 %% FLUTTER PLAYS — Same scenarios with tagged output for per-agent windows
 %% =============================================================================
 
+exported procedure fplay1.
 fplay1 :-
     network3(ch(AliceNetOut?, AliceNetIn),
              ch(BobNetOut?, BobNetIn),
@@ -254,7 +270,7 @@ fplay1 :-
     actors # alice1(ch(AliceActorIn?, AliceActorOut)),
     tee(AliceActorOut?, AliceMedIn, AliceDispCmd),
     agent # agent(alice, AliceAgentIn?, AliceNetIn?,
-          [output('_user', AliceAgentToUser), output('_net', AliceNetOut)]),
+          [user_output(AliceAgentToUser), net_output(AliceNetOut)]),
     mediator # ui_mediator(alice, ch(AliceAgentToUser?, AliceAgentIn),
                 ch(AliceMedIn?, AliceMedOut), [], 1),
     tee(AliceMedOut?, AliceActorIn, AliceDispNotify),
@@ -264,7 +280,7 @@ fplay1 :-
     actors # bob1(ch(BobActorIn?, BobActorOut)),
     tee(BobActorOut?, BobMedIn, BobDispCmd),
     agent # agent(bob, BobAgentIn?, BobNetIn?,
-          [output('_user', BobAgentToUser), output('_net', BobNetOut)]),
+          [user_output(BobAgentToUser), net_output(BobNetOut)]),
     mediator # ui_mediator(bob, ch(BobAgentToUser?, BobAgentIn),
                 ch(BobMedIn?, BobMedOut), [], 1),
     tee(BobMedOut?, BobActorIn, BobDispNotify),
@@ -274,12 +290,13 @@ fplay1 :-
     actors # charlie1(ch(CharlieActorIn?, CharlieActorOut)),
     tee(CharlieActorOut?, CharlieMedIn, CharlieDispCmd),
     agent # agent(charlie, CharlieAgentIn?, CharlieNetIn?,
-          [output('_user', CharlieAgentToUser), output('_net', CharlieNetOut)]),
+          [user_output(CharlieAgentToUser), net_output(CharlieNetOut)]),
     mediator # ui_mediator(charlie, ch(CharlieAgentToUser?, CharlieAgentIn),
                 ch(CharlieMedIn?, CharlieMedOut), [], 1),
     tee(CharlieMedOut?, CharlieActorIn, CharlieDispNotify),
     send_to_user_tagged(charlie, CharlieDispCmd?, CharlieDispNotify?).
 
+exported procedure fplay2.
 fplay2 :-
     network3(ch(AliceNetOut?, AliceNetIn),
              ch(BobNetOut?, BobNetIn),
@@ -289,7 +306,7 @@ fplay2 :-
     actors # alice2(ch(AliceActorIn?, AliceActorOut)),
     tee(AliceActorOut?, AliceMedIn, AliceDispCmd),
     agent # agent(alice, AliceAgentIn?, AliceNetIn?,
-          [output('_user', AliceAgentToUser), output('_net', AliceNetOut)]),
+          [user_output(AliceAgentToUser), net_output(AliceNetOut)]),
     mediator # ui_mediator(alice, ch(AliceAgentToUser?, AliceAgentIn),
                 ch(AliceMedIn?, AliceMedOut), [], 1),
     tee(AliceMedOut?, AliceActorIn, AliceDispNotify),
@@ -299,7 +316,7 @@ fplay2 :-
     actors # bob2(ch(BobActorIn?, BobActorOut)),
     tee(BobActorOut?, BobMedIn, BobDispCmd),
     agent # agent(bob, BobAgentIn?, BobNetIn?,
-          [output('_user', BobAgentToUser), output('_net', BobNetOut)]),
+          [user_output(BobAgentToUser), net_output(BobNetOut)]),
     mediator # ui_mediator(bob, ch(BobAgentToUser?, BobAgentIn),
                 ch(BobMedIn?, BobMedOut), [], 1),
     tee(BobMedOut?, BobActorIn, BobDispNotify),
@@ -309,12 +326,13 @@ fplay2 :-
     actors # charlie2(ch(CharlieActorIn?, CharlieActorOut)),
     tee(CharlieActorOut?, CharlieMedIn, CharlieDispCmd),
     agent # agent(charlie, CharlieAgentIn?, CharlieNetIn?,
-          [output('_user', CharlieAgentToUser), output('_net', CharlieNetOut)]),
+          [user_output(CharlieAgentToUser), net_output(CharlieNetOut)]),
     mediator # ui_mediator(charlie, ch(CharlieAgentToUser?, CharlieAgentIn),
                 ch(CharlieMedIn?, CharlieMedOut), [], 1),
     tee(CharlieMedOut?, CharlieActorIn, CharlieDispNotify),
     send_to_user_tagged(charlie, CharlieDispCmd?, CharlieDispNotify?).
 
+exported procedure fplay3.
 fplay3 :-
     network3(ch(AliceNetOut?, AliceNetIn),
              ch(BobNetOut?, BobNetIn),
@@ -324,7 +342,7 @@ fplay3 :-
     actors # alice3(ch(AliceActorIn?, AliceActorOut)),
     tee(AliceActorOut?, AliceMedIn, AliceDispCmd),
     agent # agent(alice, AliceAgentIn?, AliceNetIn?,
-          [output('_user', AliceAgentToUser), output('_net', AliceNetOut)]),
+          [user_output(AliceAgentToUser), net_output(AliceNetOut)]),
     mediator # ui_mediator(alice, ch(AliceAgentToUser?, AliceAgentIn),
                 ch(AliceMedIn?, AliceMedOut), [], 1),
     tee(AliceMedOut?, AliceActorIn, AliceDispNotify),
@@ -334,7 +352,7 @@ fplay3 :-
     actors # bob3(ch(BobActorIn?, BobActorOut)),
     tee(BobActorOut?, BobMedIn, BobDispCmd),
     agent # agent(bob, BobAgentIn?, BobNetIn?,
-          [output('_user', BobAgentToUser), output('_net', BobNetOut)]),
+          [user_output(BobAgentToUser), net_output(BobNetOut)]),
     mediator # ui_mediator(bob, ch(BobAgentToUser?, BobAgentIn),
                 ch(BobMedIn?, BobMedOut), [], 1),
     tee(BobMedOut?, BobActorIn, BobDispNotify),
@@ -344,7 +362,7 @@ fplay3 :-
     actors # charlie3(ch(CharlieActorIn?, CharlieActorOut)),
     tee(CharlieActorOut?, CharlieMedIn, CharlieDispCmd),
     agent # agent(charlie, CharlieAgentIn?, CharlieNetIn?,
-          [output('_user', CharlieAgentToUser), output('_net', CharlieNetOut)]),
+          [user_output(CharlieAgentToUser), net_output(CharlieNetOut)]),
     mediator # ui_mediator(charlie, ch(CharlieAgentToUser?, CharlieAgentIn),
                 ch(CharlieMedIn?, CharlieMedOut), [], 1),
     tee(CharlieMedOut?, CharlieActorIn, CharlieDispNotify),

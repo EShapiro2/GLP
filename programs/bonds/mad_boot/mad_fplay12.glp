@@ -1,6 +1,6 @@
-%% mad_fplay12.glp — madGLP boot for bonds_v2 fplay12 (6 isolates: alice, bob, charlie, diana, eve, frank)
+%% mad_fplay12.glp — madGLP boot for bonds fplay12 (6 isolates: alice, bob, charlie, diana, eve, frank)
 %%
-%% Derived from: bonds_v2/boot.glp fplay12 clause
+%% Derived from: bonds/boot.glp fplay12 clause
 %% Bonds: Village Market Month (6 agents + narrative)
 %% One isolate per agent. Charlie computes T = now() + 700.
 %% Each agent has its own init procedure to avoid SRSW on Narr.
@@ -24,7 +24,7 @@ alice_init(Id, NetIn) :-
     send_to_user_narrate(Id?, Narr?),
     tee(ActorOut?, MedIn, DispCmd),
     agent(Id?, AgentIn?, NetIn?,
-          [output('_user', AgentToUser), output('_net', NetOut)],
+          [user_output(AgentToUser), net_output(NetOut)],
           [], 1),
     send_to_net(NetOut?),
     ui_mediator(Id?, ch(AgentToUser?, AgentIn),
@@ -40,7 +40,7 @@ bob_init(Id, NetIn) :-
     send_to_user_narrate(Id?, Narr?),
     tee(ActorOut?, MedIn, DispCmd),
     agent(Id?, AgentIn?, NetIn?,
-          [output('_user', AgentToUser), output('_net', NetOut)],
+          [user_output(AgentToUser), net_output(NetOut)],
           [], 1),
     send_to_net(NetOut?),
     ui_mediator(Id?, ch(AgentToUser?, AgentIn),
@@ -58,7 +58,7 @@ charlie_init(Id, NetIn) :-
     send_to_user_narrate(Id?, Narr?),
     tee(ActorOut?, MedIn, DispCmd),
     agent(Id?, AgentIn?, NetIn?,
-          [output('_user', AgentToUser), output('_net', NetOut)],
+          [user_output(AgentToUser), net_output(NetOut)],
           [], 1),
     send_to_net(NetOut?),
     ui_mediator(Id?, ch(AgentToUser?, AgentIn),
@@ -74,7 +74,7 @@ diana_init(Id, NetIn) :-
     send_to_user_narrate(Id?, Narr?),
     tee(ActorOut?, MedIn, DispCmd),
     agent(Id?, AgentIn?, NetIn?,
-          [output('_user', AgentToUser), output('_net', NetOut)],
+          [user_output(AgentToUser), net_output(NetOut)],
           [], 1),
     send_to_net(NetOut?),
     ui_mediator(Id?, ch(AgentToUser?, AgentIn),
@@ -90,7 +90,7 @@ eve_init(Id, NetIn) :-
     send_to_user_narrate(Id?, Narr?),
     tee(ActorOut?, MedIn, DispCmd),
     agent(Id?, AgentIn?, NetIn?,
-          [output('_user', AgentToUser), output('_net', NetOut)],
+          [user_output(AgentToUser), net_output(NetOut)],
           [], 1),
     send_to_net(NetOut?),
     ui_mediator(Id?, ch(AgentToUser?, AgentIn),
@@ -106,7 +106,7 @@ frank_init(Id, NetIn) :-
     send_to_user_narrate(Id?, Narr?),
     tee(ActorOut?, MedIn, DispCmd),
     agent(Id?, AgentIn?, NetIn?,
-          [output('_user', AgentToUser), output('_net', NetOut)],
+          [user_output(AgentToUser), net_output(NetOut)],
           [], 1),
     send_to_net(NetOut?),
     ui_mediator(Id?, ch(AgentToUser?, AgentIn),

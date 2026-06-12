@@ -1,6 +1,6 @@
-%% mad_fplay2.glp — madGLP boot for bonds_v2 fplay2 (2 isolates: alice, bob)
+%% mad_fplay2.glp — madGLP boot for bonds fplay2 (2 isolates: alice, bob)
 %%
-%% Derived from: bonds_v2/boot.glp fplay2 clause
+%% Derived from: bonds/boot.glp fplay2 clause
 %% Bonds: Befriend + credit line (2 agents)
 %% One isolate per agent.
 
@@ -18,7 +18,7 @@ agent_init(Id, PlayNum, NetIn) :-
     actor_dispatch(Id?, PlayNum?, ch(ActorIn?, ActorOut)),
     tee(ActorOut?, MedIn, DispCmd),
     agent(Id?, AgentIn?, NetIn?,
-          [output('_user', AgentToUser), output('_net', NetOut)],
+          [user_output(AgentToUser), net_output(NetOut)],
           [], 1),
     send_to_net(NetOut?),
     ui_mediator(Id?, ch(AgentToUser?, AgentIn),

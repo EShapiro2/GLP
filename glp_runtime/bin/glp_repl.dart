@@ -136,15 +136,13 @@ void main() async {
     }
 
     // Check if input is a project directory to load.
-    // Supports: <dir> or <dir> <top_module>
     {
       final parts = trimmed.split(' ');
       final dirCandidate = parts[0];
       if (!dirCandidate.endsWith('.glp') &&
           Directory(dirCandidate).existsSync()) {
-        final topModule = parts.length > 1 ? parts[1] : null;
         try {
-          engine.loadProject(dirCandidate, topModuleName: topModule);
+          engine.loadProject(dirCandidate);
           print('✓ Loaded project: $dirCandidate');
         } catch (e) {
           print('Error loading project $dirCandidate: $e');

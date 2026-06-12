@@ -57,26 +57,21 @@ FriendMsg     ::= msg(Constant, Constant, FriendContent).
 FriendStream  ::= [] ; [FriendMsg | FriendStream].
 FriendChannel ::= ch(FriendStream, FriendStream?).
 
-%% Output types
-OutputContent ::= befriend(Constant, Response?)
-                ; befriend_intro(Constant, Constant, IntroChannel)
-                ; connected(Constant)
-                ; rejected
-                ; rejected(Constant)
-                ; received(Constant, Constant)
-                ; response(Response)
-                ; text(Constant)
-                ; intro(Constant, IntroChannel).
-OutputMsg     ::= msg(Constant, Constant, OutputContent)
-                ; msg(Constant, NetColdCall).
-OutputStream  ::= [] ; [OutputMsg | OutputStream].
+%% Network output stream — cold calls the agent emits on its '_net' entry.
+NetOutMsg    ::= msg(Constant, NetColdCall).
+NetOutStream ::= [] ; [NetOutMsg | NetOutStream].
 
 %% Intro result — written by intro_await_peer, injected into UserIn
 IntroResult ::= intro_result(Constant, IntroChannel) ; intro_rejected(Constant).
 
-%% Output list
-OutputEntry ::= output(Constant, OutputStream?).
-OutputsList ::= [] ; [OutputEntry|OutputsList].
+%% Output list — one constructor per output kind, each typed at exactly what it
+%% carries. Replaces the former output(Constant, OutputStream?) whose union
+%% OutputMsg joined the user/net/friend message types and so broke duality
+%% against the mediator's AgentToUserStream channel.
+OutputEntry ::= user_output(AgentToUserStream?)
+              ; net_output(NetOutStream?)
+              ; friend_output(Constant, FriendStream?).
+OutputsList ::= [] ; [OutputEntry | OutputsList].
 
 %% =============================================================================
 %% MEDIATOR TYPES

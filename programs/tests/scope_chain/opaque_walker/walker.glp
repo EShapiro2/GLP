@@ -15,6 +15,6 @@ put(_, _, [], []).
 
 %% Driver: mixed list, target key "k" is the second entry; extra("x") passes
 %% through opaquely, output("k", S) gets "hello" appended.
-procedure run(Stream(Entry), Stream(Constant)).
+exported procedure run(Stream(Entry), Stream(Constant)).
 run(Result?, S?) :-
     put("k", "hello", [extra("x"), output("k", S)], Result).

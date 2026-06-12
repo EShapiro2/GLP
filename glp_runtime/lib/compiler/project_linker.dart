@@ -358,11 +358,14 @@ void typeCheckProject(List<DiscoveredModule> modules) {
 /// Link all modules into a single flat Program.
 ///
 /// Renames procedures (`p/n` → `M:p/n`), resolves all calls, and generates
-/// entry point aliases for the top module's procedures.
+/// entry-point aliases for the exported procedures of root-level modules
+/// (project-compilation spec §3.4). [rootDir] is the loaded project root: a
+/// module is "root-level" when its nearest enclosing `self.glp` directory is
+/// that root, i.e. it is not contained in any descendant `self.glp` subtree.
 ///
 /// Returns a [LinkResult] with the linked program and renamed proc declarations
 /// (needed for SRSW type-based relaxation during compilation).
-LinkResult linkProject(List<DiscoveredModule> modules, String topModuleName) {
+LinkResult linkProject(List<DiscoveredModule> modules, {required String rootDir}) {
   // Build procedure registry: module name → set of procedure signatures
   final registry = <String, Set<String>>{};
   for (final mod in modules) {
@@ -476,32 +479,51 @@ LinkResult linkProject(List<DiscoveredModule> modules, String topModuleName) {
     }
   }
 
-  // Generate entry point aliases.
-  // Top module: ALL procedures get aliases (for REPL invocation).
-  // Other modules: only EXPORTED procedures get aliases (for cross-module calls
-  // from code loaded on top, e.g., madGLP boot source calling agent/4).
-  final aliasedSigs = <String, String>{}; // sig → owning module (for conflict detection)
+  // Generate entry-point aliases (project-compilation spec §3.4).
+  // Only EXPORTED procedures of ROOT-LEVEL modules receive unprefixed aliases.
+  // A module is root-level when its nearest enclosing self.glp directory is the
+  // loaded root itself — i.e. it is not contained in any descendant self.glp
+  // subtree (a nested sub-project, e.g. secure/, village/). Nested-subtree
+  // modules keep prefixed names only. There is no "top module".
+  final rootNorm = _normPath(rootDir);
+  final descendantSelfDirs = <String>{};
+  for (final s in selfGlpModules) {
+    final sDir = _normPath(File(s.filePath).parent.path);
+    if (sDir != rootNorm && _dirUnder(sDir, rootNorm)) {
+      descendantSelfDirs.add(sDir);
+    }
+  }
+  bool isRootLevel(DiscoveredModule mod) {
+    if (mod.exposingDir != null) return false; // exposed, not part of root surface
+    final modDir = _normPath(File(mod.filePath).parent.path);
+    if (!_dirUnder(modDir, rootNorm)) return false; // ancestor self.glp above root
+    for (final s in descendantSelfDirs) {
+      if (_dirUnder(modDir, s)) return false; // inside a nested sub-project
+    }
+    return true;
+  }
+
+  final aliasedSigs = <String, String>{}; // sig → owning module (conflict check)
   for (final mod in modules) {
-    final isTop = mod.moduleName == topModuleName;
+    if (!isRootLevel(mod)) continue;
     for (final proc in mod.ast.procedures) {
+      final isExported = mod.ast.procDeclarations.any(
+          (d) => d.exported && d.name == proc.name && d.arity == proc.arity);
+      if (!isExported) continue;
+
       final sig = '${proc.name}/${proc.arity}';
-
-      // Top module: alias all. Others: only exported.
-      if (!isTop) {
-        final isExported = mod.ast.procDeclarations
-            .any((d) => d.exported && d.name == proc.name && d.arity == proc.arity);
-        if (!isExported) continue;
+      final owner = aliasedSigs[sig];
+      if (owner != null && owner != mod.moduleName) {
+        throw Exception(
+            'Entry-point conflict: procedure $sig is exported by both '
+            'root-level modules "$owner" and "${mod.moduleName}".');
       }
-
-      // Skip if an alias already exists (top module wins)
-      if (aliasedSigs.containsKey(sig)) continue;
-
+      if (owner != null) continue;
       aliasedSigs[sig] = mod.moduleName;
 
       // Look up ProcDecl for mode-aware alias generation.
       // First check the owning module, then the project-wide index.
-      final decl = _findProcDecl(mod, proc.name, proc.arity)
-          ?? declIndex[sig];
+      final decl = _findProcDecl(mod, proc.name, proc.arity) ?? declIndex[sig];
 
       final aliasClause = _makeAliasClause(
         proc.name,
@@ -509,13 +531,7 @@ LinkResult linkProject(List<DiscoveredModule> modules, String topModuleName) {
         '${mod.moduleName}:${proc.name}',
         declaration: decl,
       );
-      allProcedures.add(Procedure(
-        proc.name,
-        proc.arity,
-        [aliasClause],
-        0,
-        0,
-      ));
+      allProcedures.add(Procedure(proc.name, proc.arity, [aliasClause], 0, 0));
     }
   }
 

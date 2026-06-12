@@ -1567,7 +1567,7 @@ echo ""
 echo "=== Section N: Bonds V2 Modules ==="
 echo ""
 
-BONDS_V2="$GLP_DIR/programs/bonds_v2"
+BONDS_V2="$GLP_DIR/programs/bonds"
 
 # Loading
 n_load=$($DART run "$REPL" <<HEREDOC
@@ -1749,7 +1749,7 @@ echo ""
 echo "=== Section J: SecureBonds ==="
 echo ""
 
-SECUREBONDS="$GLP_DIR/programs/Bonds/SecureBonds"
+SECUREBONDS="$GLP_DIR/programs/bonds/secure"
 
 # Loading
 sb_load=$($DART run "$REPL" <<HEREDOC
@@ -1829,10 +1829,10 @@ HEREDOC
 check "S3 integer instantiation" "Zi = \[1, 4, 2, 5, 3, 6\]" "$s3"
 check "S3 constant instantiation" "Zc = \[\"a\", \"c\", \"b\", \"d\"\]" "$s3"
 
-# --- S4: regression — bonds_v2/play12 loads standalone (inventory I-1) ---
-echo "--- S4: bonds_v2/play12 standalone load (regression) ---"
+# --- S4: regression — bonds/play12 loads standalone (inventory I-1) ---
+echo "--- S4: bonds/play12 standalone load (regression) ---"
 s4=$($DART run "$REPL" <<HEREDOC
-$GLP_DIR/programs/bonds_v2/play12
+$GLP_DIR/programs/bonds/play12
 :quit
 HEREDOC
 2>&1)

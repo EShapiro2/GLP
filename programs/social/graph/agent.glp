@@ -22,21 +22,33 @@ new_channel(ch(Xs?, Ys), ch(Ys?, Xs)).
 %% merge/3 is now defined once in the root programs/self.glp (A3 amendment).
 
 %% =============================================================================
-%% LOOKUP_SEND
+%% OUTPUT ROUTING — one procedure per output kind, dispatching on constructor
 %% =============================================================================
 
-procedure lookup_send(Constant?, OutputMsg?, OutputsList?, OutputsList).
-lookup_send(Key, Msg, Outs, Outs1?) :-
-    ground(Key?) |
-    lookup_send_step(Key?, Msg?, Outs?, Outs1).
-
-procedure lookup_send_step(Constant?, OutputMsg?, OutputsList?, OutputsList).
-lookup_send_step(Key, Msg, [output(K, [Msg?|Out1?])|Rest], [output(K?, Out1)|Rest?]) :-
-    Key? =?= K? | true.
-lookup_send_step(Key, Msg, [output(K, Out?)|Rest], [output(K?, Out)|Rest1?]) :-
+%% Append an agent-to-user message onto the user_output entry.
+procedure send_user(AgentToUserMsg?, OutputsList?, OutputsList).
+send_user(Msg, [user_output([Msg?|Out1?])|Rest], [user_output(Out1)|Rest?]).
+send_user(Msg, [E|Rest], [E?|Rest1?]) :-
     otherwise |
-    lookup_send_step(Key?, Msg?, Rest?, Rest1).
-lookup_send_step(_, _, [], []).
+    send_user(Msg?, Rest?, Rest1).
+send_user(_, [], []).
+
+%% Append a cold-call message onto the net_output entry.
+procedure send_net(NetOutMsg?, OutputsList?, OutputsList).
+send_net(Msg, [net_output([Msg?|Out1?])|Rest], [net_output(Out1)|Rest?]).
+send_net(Msg, [E|Rest], [E?|Rest1?]) :-
+    otherwise |
+    send_net(Msg?, Rest?, Rest1).
+send_net(_, [], []).
+
+%% Append a friend message onto the friend_output entry named Name.
+procedure send_friend(Constant?, FriendMsg?, OutputsList?, OutputsList).
+send_friend(Name, Msg, [friend_output(K, [Msg?|Out1?])|Rest], [friend_output(K?, Out1)|Rest?]) :-
+    Name? =?= K? | true.
+send_friend(Name, Msg, [E|Rest], [E?|Rest1?]) :-
+    otherwise |
+    send_friend(Name?, Msg?, Rest?, Rest1).
+send_friend(_, _, [], []).
 
 %% =============================================================================
 %% INJECT_MSG
@@ -52,15 +64,17 @@ inject_msg(Resp, Target, Id, [Y|Ys], [Y?|Ys1?]) :-
 %% ADD_OUTPUT
 %% =============================================================================
 
-procedure add_output(Constant?, OutputStream, OutputsList?, OutputsList).
-add_output(Name, Out?, Outs, [output(Name?, Out)|Outs?]).
+procedure add_friend_output(Constant?, FriendStream, OutputsList?, OutputsList).
+add_friend_output(Name, Out?, Outs, [friend_output(Name?, Out)|Outs?]).
 
 %% =============================================================================
 %% CLOSE_OUTPUTS
 %% =============================================================================
 
 procedure close_outputs(OutputsList?).
-close_outputs([output(_, [])|Outs]) :- close_outputs(Outs?).
+close_outputs([user_output([])|Outs]) :- close_outputs(Outs?).
+close_outputs([net_output([])|Outs]) :- close_outputs(Outs?).
+close_outputs([friend_output(_, [])|Outs]) :- close_outputs(Outs?).
 close_outputs([]).
 
 %% =============================================================================
@@ -96,17 +110,17 @@ bind_response(yes, From, accept(RetCh?), Outs, Outs1?, In, In1?) :-
     new_channel(RetCh, LocalCh) |
     handle_response(accept(LocalCh?), From?, Outs?, Outs1, In?, In1).
 bind_response(no, _, no, Outs, Outs1?, In, In?) :-
-    lookup_send('_user', msg(agent, '_user', rejected), Outs?, Outs1).
+    send_user(msg(agent, '_user', rejected), Outs?, Outs1).
 
 procedure handle_response(Response?, Constant?, OutputsList?, OutputsList, NetInStream?, NetInStream).
 handle_response(accept(ch(FIn, FOut?)), From, Outs, Outs2?, In, In1?) :-
     ground(From?) |
-    add_output(From?, FOut, Outs?, Outs1),
-    lookup_send('_user', msg(agent, '_user', connected(From?)), Outs1?, Outs2),
+    add_friend_output(From?, FOut, Outs?, Outs1),
+    send_user(msg(agent, '_user', connected(From?)), Outs1?, Outs2),
     merge(In?, FIn?, In1).
 handle_response(no, From, Outs, Outs1?, In, In?) :-
     ground(From?) |
-    lookup_send('_user', msg(agent, '_user', rejected(From?)), Outs?, Outs1).
+    send_user(msg(agent, '_user', rejected(From?)), Outs?, Outs1).
 
 %% =============================================================================
 %% AGENT/4
@@ -119,7 +133,7 @@ exported procedure agent(Constant?, UserInStream?, NetInStream?, OutputsList?).
 %% User initiates cold call
 agent(Id, [msg('_user', Id1, connect(Target))|UserIn], NetIn, Outs) :-
     Id? =?= Id1?, ground(Target?) |
-    lookup_send('_net', msg(Target?, intro(Id?, Resp)), Outs?, Outs1),
+    send_net(msg(Target?, intro(Id?, Resp)), Outs?, Outs1),
     inject_msg(Resp?, Target?, Id?, UserIn?, UserIn1),
     agent(Id?, UserIn1?, NetIn?, Outs1?).
 
@@ -132,14 +146,14 @@ agent(Id, [msg('_user', Id1, decision(Dec, From, response(Resp?)))|UserIn], NetI
 %% User sends text message
 agent(Id, [msg('_user', Id1, send(Target, Text))|UserIn], NetIn, Outs) :-
     Id? =?= Id1?, ground(Target?) |
-    lookup_send(Target?, msg(Id?, Target?, text(Text?)), Outs?, Outs1),
+    send_friend(Target?, msg(Id?, Target?, text(Text?)), Outs?, Outs1),
     agent(Id?, UserIn?, NetIn?, Outs1?).
 
 %% User introduces P to Q
 agent(Id, [msg('_user', Id1, introduce(P, Q))|UserIn], NetIn, Outs) :-
     Id? =?= Id1?, ground(P?), ground(Q?), new_channel(PQCh, QPCh) |
-    lookup_send(P?, msg(Id?, P?, intro(Q?, QPCh?)), Outs?, Outs1),
-    lookup_send(Q?, msg(Id?, Q?, intro(P?, PQCh?)), Outs1?, Outs2),
+    send_friend(P?, msg(Id?, P?, intro(Q?, QPCh?)), Outs?, Outs1),
+    send_friend(Q?, msg(Id?, Q?, intro(P?, PQCh?)), Outs1?, Outs2),
     agent(Id?, UserIn?, NetIn?, Outs2?).
 
 %% User accepts intro — send ack, spawn peer-wait, inject result
@@ -158,15 +172,15 @@ agent(Id, [msg('_user', Id1, reject_intro(_, channel(ch(_, [nack|[]]))))|UserIn]
 %% Intro result: peer acked — add friend
 agent(Id, [intro_result(Other, ch(FIn, FOut?))|UserIn], NetIn, Outs) :-
     ground(Id?), ground(Other?) |
-    add_output(Other?, FOut, Outs?, Outs1),
-    lookup_send('_user', msg(agent, '_user', connected(Other?)), Outs1?, Outs2),
+    add_friend_output(Other?, FOut, Outs?, Outs1),
+    send_user(msg(agent, '_user', connected(Other?)), Outs1?, Outs2),
     merge(NetIn?, FIn?, NetIn1),
     agent(Id?, UserIn?, NetIn1?, Outs2?).
 
 %% Intro result: peer nacked — notify rejected
 agent(Id, [intro_rejected(Other)|UserIn], NetIn, Outs) :-
     ground(Id?) |
-    lookup_send('_user', msg(agent, '_user', rejected(Other?)), Outs?, Outs1),
+    send_user(msg(agent, '_user', rejected(Other?)), Outs?, Outs1),
     agent(Id?, UserIn?, NetIn?, Outs1?).
 
 %% Response to cold-call (injected by inject_msg)
@@ -185,7 +199,7 @@ agent(Id, [_|UserIn], NetIn, Outs) :-
 %% Cold-call from network
 agent(Id, UserIn, [msg(Id1, intro(From, Resp?))|NetIn], Outs) :-
     Id? =?= Id1? |
-    lookup_send('_user', msg(agent, '_user', befriend(From?, Resp)), Outs?, Outs1),
+    send_user(msg(agent, '_user', befriend(From?, Resp)), Outs?, Outs1),
     agent(Id?, UserIn?, NetIn?, Outs1?).
 
 %% Response to cold-call from network
@@ -197,13 +211,13 @@ agent(Id, UserIn, [msg(From, Id1, response(Resp))|NetIn], Outs) :-
 %% Text from friend
 agent(Id, UserIn, [msg(From, Id1, text(Text))|NetIn], Outs) :-
     Id? =?= Id1? |
-    lookup_send('_user', msg(agent, '_user', received(From?, Text?)), Outs?, Outs1),
+    send_user(msg(agent, '_user', received(From?, Text?)), Outs?, Outs1),
     agent(Id?, UserIn?, NetIn?, Outs1?).
 
 %% Introduction from friend — pass channel to user via mediator
 agent(Id, UserIn, [msg(From, Id1, intro(Other, Ch))|NetIn], Outs) :-
     Id? =?= Id1?, ground(Other?) |
-    lookup_send('_user', msg(agent, '_user', befriend_intro(From?, Other?, Ch?)), Outs?, Outs1),
+    send_user(msg(agent, '_user', befriend_intro(From?, Other?, Ch?)), Outs?, Outs1),
     agent(Id?, UserIn?, NetIn?, Outs1?).
 
 %% Network catch-all

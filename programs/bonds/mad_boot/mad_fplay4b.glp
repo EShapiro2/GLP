@@ -1,6 +1,6 @@
-%% mad_fplay4b.glp — madGLP boot for bonds_v2 fplay4b (2 isolates: alice, bob)
+%% mad_fplay4b.glp — madGLP boot for bonds fplay4b (2 isolates: alice, bob)
 %%
-%% Derived from: bonds_v2/boot.glp fplay4b clause
+%% Derived from: bonds/boot.glp fplay4b clause
 %% Bonds: Time-dependent redemption (2 agents)
 %% Each isolate computes its own T = now() + 500.
 
@@ -20,7 +20,7 @@ agent_init_4b(Id, NetIn) :-
     actor_dispatch_4b(Id?, T?, ch(ActorIn?, ActorOut)),
     tee(ActorOut?, MedIn, DispCmd),
     agent(Id?, AgentIn?, NetIn?,
-          [output('_user', AgentToUser), output('_net', NetOut)],
+          [user_output(AgentToUser), net_output(NetOut)],
           [], 1),
     send_to_net(NetOut?),
     ui_mediator(Id?, ch(AgentToUser?, AgentIn),

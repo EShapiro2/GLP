@@ -8,7 +8,7 @@
 %% pays Alice (bread).
 %% Act 7: accepts Alice's debt-sale proposal.
 %%
-%% Types: from bonds_v2/self.glp (ancestor scoping)
+%% Types: from bonds/self.glp (ancestor scoping)
 
 -module(eve).
 -mode(system).

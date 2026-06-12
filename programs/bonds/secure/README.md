@@ -84,7 +84,7 @@ if not (unknown tail), the current ack is referenced.
 Load as a project in the GLP REPL:
 
 ```
-GLP> programs/Bonds/SecureBonds/
+GLP> programs/bonds/secure/
 GLP> play.
 ```
 

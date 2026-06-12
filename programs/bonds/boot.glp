@@ -12,6 +12,10 @@
 -module(boot).
 -mode(system).
 
+%% Exported entry points (project-compilation spec §3.4: only exported
+%% root-level procedures alias). Each `exported procedure` declaration sits
+%% immediately above its clause, as the parser requires.
+
 %% =============================================================================
 %% IMPORTED PROCEDURES
 %% =============================================================================
@@ -73,6 +77,7 @@ sink([]).
 %% SEND_TO_USER_TAGGED — Merge display streams, tag with agent ID
 %% =============================================================================
 
+procedure send_to_user_tagged(Constant?, Stream(UserCmd)?, Stream(UserNotify)?).
 send_to_user_tagged(Id, [T|Cmds], Notifies) :-
     ground(Id?), ground(T?) |
     '_output'(tagged(Id?, cmd(T?))),
@@ -113,6 +118,10 @@ send_to_user_narrate(_, []).
 %% =============================================================================
 
 %% Cold-call routing (2-arg msg)
+%% Simulated network switch carries the transport union NetInStream
+%% (writer ⊆ reader: producers emit the narrower NetOutStream).
+procedure network2(Channel(NetInStream, NetInStream)?,
+                   Channel(NetInStream, NetInStream)?).
 network2(ch([msg(bob, X)|AliceIn], AliceOut?),
          ch(BobIn, [msg(bob, X?)|BobOut?])) :-
     network2(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut)).
@@ -137,11 +146,12 @@ network2(ch([], []), ch([], [])).
 %% PLAY 1 — Solo mint + balance (with tee + sink display)
 %% =============================================================================
 
+exported procedure play1.
 play1 :-
     actors # alice_p1(ch(AliceActorIn?, AliceActorOut)),
     tee(AliceActorOut?, AliceMedIn, AliceDispCmd),
-    agent # agent(alice, AliceAgentIn?, _,
-          [output('_user', AliceAgentToUser)], [], 1),
+    agent # agent(alice, AliceAgentIn?, [],
+          [user_output(AliceAgentToUser)], [], 1),
     mediator # ui_mediator(alice, ch(AliceAgentToUser?, AliceAgentIn),
                 ch(AliceMedIn?, AliceMedOut), [], 1),
     tee(AliceMedOut?, AliceActorIn, AliceDispNotify),
@@ -151,11 +161,12 @@ play1 :-
 %% FLUTTER PLAY 1 — Solo mint + balance (with tagged output for UI)
 %% =============================================================================
 
+exported procedure fplay1.
 fplay1 :-
     actors # alice_p1(ch(AliceActorIn?, AliceActorOut)),
     tee(AliceActorOut?, AliceMedIn, AliceDispCmd),
-    agent # agent(alice, AliceAgentIn?, _,
-          [output('_user', AliceAgentToUser)], [], 1),
+    agent # agent(alice, AliceAgentIn?, [],
+          [user_output(AliceAgentToUser)], [], 1),
     mediator # ui_mediator(alice, ch(AliceAgentToUser?, AliceAgentIn),
                 ch(AliceMedIn?, AliceMedOut), [], 1),
     tee(AliceMedOut?, AliceActorIn, AliceDispNotify),
@@ -165,6 +176,7 @@ fplay1 :-
 %% PLAY 2 — Befriend + credit line (with tee + sink display)
 %% =============================================================================
 
+exported procedure play2.
 play2 :-
     network2(ch(AliceNetOut?, AliceNetIn),
              ch(BobNetOut?, BobNetIn)),
@@ -173,7 +185,7 @@ play2 :-
     actors # alice_p2(ch(AliceActorIn?, AliceActorOut)),
     tee(AliceActorOut?, AliceMedIn, AliceDispCmd),
     agent # agent(alice, AliceAgentIn?, AliceNetIn?,
-          [output('_user', AliceAgentToUser), output('_net', AliceNetOut)],
+          [user_output(AliceAgentToUser), net_output(AliceNetOut)],
           [], 1),
     mediator # ui_mediator(alice, ch(AliceAgentToUser?, AliceAgentIn),
                 ch(AliceMedIn?, AliceMedOut), [], 1),
@@ -184,7 +196,7 @@ play2 :-
     actors # bob_p2(ch(BobActorIn?, BobActorOut)),
     tee(BobActorOut?, BobMedIn, BobDispCmd),
     agent # agent(bob, BobAgentIn?, BobNetIn?,
-          [output('_user', BobAgentToUser), output('_net', BobNetOut)],
+          [user_output(BobAgentToUser), net_output(BobNetOut)],
           [], 1),
     mediator # ui_mediator(bob, ch(BobAgentToUser?, BobAgentIn),
                 ch(BobMedIn?, BobMedOut), [], 1),
@@ -195,6 +207,7 @@ play2 :-
 %% FLUTTER PLAY 2 — Befriend + credit line (with tagged output for UI)
 %% =============================================================================
 
+exported procedure fplay2.
 fplay2 :-
     network2(ch(AliceNetOut?, AliceNetIn),
              ch(BobNetOut?, BobNetIn)),
@@ -203,7 +216,7 @@ fplay2 :-
     actors # alice_p2(ch(AliceActorIn?, AliceActorOut)),
     tee(AliceActorOut?, AliceMedIn, AliceDispCmd),
     agent # agent(alice, AliceAgentIn?, AliceNetIn?,
-          [output('_user', AliceAgentToUser), output('_net', AliceNetOut)],
+          [user_output(AliceAgentToUser), net_output(AliceNetOut)],
           [], 1),
     mediator # ui_mediator(alice, ch(AliceAgentToUser?, AliceAgentIn),
                 ch(AliceMedIn?, AliceMedOut), [], 1),
@@ -214,7 +227,7 @@ fplay2 :-
     actors # bob_p2(ch(BobActorIn?, BobActorOut)),
     tee(BobActorOut?, BobMedIn, BobDispCmd),
     agent # agent(bob, BobAgentIn?, BobNetIn?,
-          [output('_user', BobAgentToUser), output('_net', BobNetOut)],
+          [user_output(BobAgentToUser), net_output(BobNetOut)],
           [], 1),
     mediator # ui_mediator(bob, ch(BobAgentToUser?, BobAgentIn),
                 ch(BobMedIn?, BobMedOut), [], 1),
@@ -225,6 +238,7 @@ fplay2 :-
 %% PLAY 3 — Credit + payment (with tee + sink display)
 %% =============================================================================
 
+exported procedure play3.
 play3 :-
     network2(ch(AliceNetOut?, AliceNetIn),
              ch(BobNetOut?, BobNetIn)),
@@ -233,7 +247,7 @@ play3 :-
     actors # alice_p3(ch(AliceActorIn?, AliceActorOut)),
     tee(AliceActorOut?, AliceMedIn, AliceDispCmd),
     agent # agent(alice, AliceAgentIn?, AliceNetIn?,
-          [output('_user', AliceAgentToUser), output('_net', AliceNetOut)],
+          [user_output(AliceAgentToUser), net_output(AliceNetOut)],
           [], 1),
     mediator # ui_mediator(alice, ch(AliceAgentToUser?, AliceAgentIn),
                 ch(AliceMedIn?, AliceMedOut), [], 1),
@@ -244,7 +258,7 @@ play3 :-
     actors # bob_p3(ch(BobActorIn?, BobActorOut)),
     tee(BobActorOut?, BobMedIn, BobDispCmd),
     agent # agent(bob, BobAgentIn?, BobNetIn?,
-          [output('_user', BobAgentToUser), output('_net', BobNetOut)],
+          [user_output(BobAgentToUser), net_output(BobNetOut)],
           [], 1),
     mediator # ui_mediator(bob, ch(BobAgentToUser?, BobAgentIn),
                 ch(BobMedIn?, BobMedOut), [], 1),
@@ -255,6 +269,7 @@ play3 :-
 %% FLUTTER PLAY 3 — Credit + payment (with tagged output for UI)
 %% =============================================================================
 
+exported procedure fplay3.
 fplay3 :-
     network2(ch(AliceNetOut?, AliceNetIn),
              ch(BobNetOut?, BobNetIn)),
@@ -263,7 +278,7 @@ fplay3 :-
     actors # alice_p3(ch(AliceActorIn?, AliceActorOut)),
     tee(AliceActorOut?, AliceMedIn, AliceDispCmd),
     agent # agent(alice, AliceAgentIn?, AliceNetIn?,
-          [output('_user', AliceAgentToUser), output('_net', AliceNetOut)],
+          [user_output(AliceAgentToUser), net_output(AliceNetOut)],
           [], 1),
     mediator # ui_mediator(alice, ch(AliceAgentToUser?, AliceAgentIn),
                 ch(AliceMedIn?, AliceMedOut), [], 1),
@@ -274,7 +289,7 @@ fplay3 :-
     actors # bob_p3(ch(BobActorIn?, BobActorOut)),
     tee(BobActorOut?, BobMedIn, BobDispCmd),
     agent # agent(bob, BobAgentIn?, BobNetIn?,
-          [output('_user', BobAgentToUser), output('_net', BobNetOut)],
+          [user_output(BobAgentToUser), net_output(BobNetOut)],
           [], 1),
     mediator # ui_mediator(bob, ch(BobAgentToUser?, BobAgentIn),
                 ch(BobMedIn?, BobMedOut), [], 1),
@@ -285,6 +300,7 @@ fplay3 :-
 %% PLAY 4 — Credit + redemption (with tee + sink display)
 %% =============================================================================
 
+exported procedure play4.
 play4 :-
     network2(ch(AliceNetOut?, AliceNetIn),
              ch(BobNetOut?, BobNetIn)),
@@ -293,7 +309,7 @@ play4 :-
     actors # alice_p4(ch(AliceActorIn?, AliceActorOut)),
     tee(AliceActorOut?, AliceMedIn, AliceDispCmd),
     agent # agent(alice, AliceAgentIn?, AliceNetIn?,
-          [output('_user', AliceAgentToUser), output('_net', AliceNetOut)],
+          [user_output(AliceAgentToUser), net_output(AliceNetOut)],
           [], 1),
     mediator # ui_mediator(alice, ch(AliceAgentToUser?, AliceAgentIn),
                 ch(AliceMedIn?, AliceMedOut), [], 1),
@@ -304,7 +320,7 @@ play4 :-
     actors # bob_p4(ch(BobActorIn?, BobActorOut)),
     tee(BobActorOut?, BobMedIn, BobDispCmd),
     agent # agent(bob, BobAgentIn?, BobNetIn?,
-          [output('_user', BobAgentToUser), output('_net', BobNetOut)],
+          [user_output(BobAgentToUser), net_output(BobNetOut)],
           [], 1),
     mediator # ui_mediator(bob, ch(BobAgentToUser?, BobAgentIn),
                 ch(BobMedIn?, BobMedOut), [], 1),
@@ -315,6 +331,7 @@ play4 :-
 %% FLUTTER PLAY 4 — Credit + redemption (with tagged output for UI)
 %% =============================================================================
 
+exported procedure fplay4.
 fplay4 :-
     network2(ch(AliceNetOut?, AliceNetIn),
              ch(BobNetOut?, BobNetIn)),
@@ -323,7 +340,7 @@ fplay4 :-
     actors # alice_p4(ch(AliceActorIn?, AliceActorOut)),
     tee(AliceActorOut?, AliceMedIn, AliceDispCmd),
     agent # agent(alice, AliceAgentIn?, AliceNetIn?,
-          [output('_user', AliceAgentToUser), output('_net', AliceNetOut)],
+          [user_output(AliceAgentToUser), net_output(AliceNetOut)],
           [], 1),
     mediator # ui_mediator(alice, ch(AliceAgentToUser?, AliceAgentIn),
                 ch(AliceMedIn?, AliceMedOut), [], 1),
@@ -334,7 +351,7 @@ fplay4 :-
     actors # bob_p4(ch(BobActorIn?, BobActorOut)),
     tee(BobActorOut?, BobMedIn, BobDispCmd),
     agent # agent(bob, BobAgentIn?, BobNetIn?,
-          [output('_user', BobAgentToUser), output('_net', BobNetOut)],
+          [user_output(BobAgentToUser), net_output(BobNetOut)],
           [], 1),
     mediator # ui_mediator(bob, ch(BobAgentToUser?, BobAgentIn),
                 ch(BobMedIn?, BobMedOut), [], 1),
@@ -345,11 +362,13 @@ fplay4 :-
 %% PLAY 4b — Time-dependent redemption (with tee + sink display)
 %% =============================================================================
 
+exported procedure play4b.
 play4b :-
     now(Now),
     T := Now? + 500,
     play4b_run(T?).
 
+procedure play4b_run(Constant?).
 play4b_run(T) :-
     ground(T?) |
     network2(ch(AliceNetOut?, AliceNetIn),
@@ -359,7 +378,7 @@ play4b_run(T) :-
     actors # alice_p4b(ch(AliceActorIn?, AliceActorOut), T?),
     tee(AliceActorOut?, AliceMedIn, AliceDispCmd),
     agent # agent(alice, AliceAgentIn?, AliceNetIn?,
-          [output('_user', AliceAgentToUser), output('_net', AliceNetOut)],
+          [user_output(AliceAgentToUser), net_output(AliceNetOut)],
           [], 1),
     mediator # ui_mediator(alice, ch(AliceAgentToUser?, AliceAgentIn),
                 ch(AliceMedIn?, AliceMedOut), [], 1),
@@ -370,7 +389,7 @@ play4b_run(T) :-
     actors # bob_p4b(ch(BobActorIn?, BobActorOut), T?),
     tee(BobActorOut?, BobMedIn, BobDispCmd),
     agent # agent(bob, BobAgentIn?, BobNetIn?,
-          [output('_user', BobAgentToUser), output('_net', BobNetOut)],
+          [user_output(BobAgentToUser), net_output(BobNetOut)],
           [], 1),
     mediator # ui_mediator(bob, ch(BobAgentToUser?, BobAgentIn),
                 ch(BobMedIn?, BobMedOut), [], 1),
@@ -381,11 +400,13 @@ play4b_run(T) :-
 %% FLUTTER PLAY 4b — Time-dependent redemption (with tagged output for UI)
 %% =============================================================================
 
+exported procedure fplay4b.
 fplay4b :-
     now(Now),
     T := Now? + 500,
     fplay4b_run(T?).
 
+procedure fplay4b_run(Constant?).
 fplay4b_run(T) :-
     ground(T?) |
     network2(ch(AliceNetOut?, AliceNetIn),
@@ -395,7 +416,7 @@ fplay4b_run(T) :-
     actors # alice_p4b(ch(AliceActorIn?, AliceActorOut), T?),
     tee(AliceActorOut?, AliceMedIn, AliceDispCmd),
     agent # agent(alice, AliceAgentIn?, AliceNetIn?,
-          [output('_user', AliceAgentToUser), output('_net', AliceNetOut)],
+          [user_output(AliceAgentToUser), net_output(AliceNetOut)],
           [], 1),
     mediator # ui_mediator(alice, ch(AliceAgentToUser?, AliceAgentIn),
                 ch(AliceMedIn?, AliceMedOut), [], 1),
@@ -406,7 +427,7 @@ fplay4b_run(T) :-
     actors # bob_p4b(ch(BobActorIn?, BobActorOut), T?),
     tee(BobActorOut?, BobMedIn, BobDispCmd),
     agent # agent(bob, BobAgentIn?, BobNetIn?,
-          [output('_user', BobAgentToUser), output('_net', BobNetOut)],
+          [user_output(BobAgentToUser), net_output(BobNetOut)],
           [], 1),
     mediator # ui_mediator(bob, ch(BobAgentToUser?, BobAgentIn),
                 ch(BobMedIn?, BobMedOut), [], 1),
@@ -417,6 +438,7 @@ fplay4b_run(T) :-
 %% PLAY 5 — Zero-coupon loan (with tee + sink display)
 %% =============================================================================
 
+exported procedure play5.
 play5 :-
     network2(ch(AliceNetOut?, AliceNetIn),
              ch(BobNetOut?, BobNetIn)),
@@ -425,7 +447,7 @@ play5 :-
     actors # alice_p5(ch(AliceActorIn?, AliceActorOut)),
     tee(AliceActorOut?, AliceMedIn, AliceDispCmd),
     agent # agent(alice, AliceAgentIn?, AliceNetIn?,
-          [output('_user', AliceAgentToUser), output('_net', AliceNetOut)],
+          [user_output(AliceAgentToUser), net_output(AliceNetOut)],
           [], 1),
     mediator # ui_mediator(alice, ch(AliceAgentToUser?, AliceAgentIn),
                 ch(AliceMedIn?, AliceMedOut), [], 1),
@@ -436,7 +458,7 @@ play5 :-
     actors # bob_p5(ch(BobActorIn?, BobActorOut)),
     tee(BobActorOut?, BobMedIn, BobDispCmd),
     agent # agent(bob, BobAgentIn?, BobNetIn?,
-          [output('_user', BobAgentToUser), output('_net', BobNetOut)],
+          [user_output(BobAgentToUser), net_output(BobNetOut)],
           [], 1),
     mediator # ui_mediator(bob, ch(BobAgentToUser?, BobAgentIn),
                 ch(BobMedIn?, BobMedOut), [], 1),
@@ -447,6 +469,7 @@ play5 :-
 %% FLUTTER PLAY 5 — Zero-coupon loan (with tagged output for UI)
 %% =============================================================================
 
+exported procedure fplay5.
 fplay5 :-
     network2(ch(AliceNetOut?, AliceNetIn),
              ch(BobNetOut?, BobNetIn)),
@@ -455,7 +478,7 @@ fplay5 :-
     actors # alice_p5(ch(AliceActorIn?, AliceActorOut)),
     tee(AliceActorOut?, AliceMedIn, AliceDispCmd),
     agent # agent(alice, AliceAgentIn?, AliceNetIn?,
-          [output('_user', AliceAgentToUser), output('_net', AliceNetOut)],
+          [user_output(AliceAgentToUser), net_output(AliceNetOut)],
           [], 1),
     mediator # ui_mediator(alice, ch(AliceAgentToUser?, AliceAgentIn),
                 ch(AliceMedIn?, AliceMedOut), [], 1),
@@ -466,7 +489,7 @@ fplay5 :-
     actors # bob_p5(ch(BobActorIn?, BobActorOut)),
     tee(BobActorOut?, BobMedIn, BobDispCmd),
     agent # agent(bob, BobAgentIn?, BobNetIn?,
-          [output('_user', BobAgentToUser), output('_net', BobNetOut)],
+          [user_output(BobAgentToUser), net_output(BobNetOut)],
           [], 1),
     mediator # ui_mediator(bob, ch(BobAgentToUser?, BobAgentIn),
                 ch(BobMedIn?, BobMedOut), [], 1),
@@ -477,6 +500,7 @@ fplay5 :-
 %% PLAY 6 — Balloon loan (with tee + sink display)
 %% =============================================================================
 
+exported procedure play6.
 play6 :-
     network2(ch(AliceNetOut?, AliceNetIn),
              ch(BobNetOut?, BobNetIn)),
@@ -485,7 +509,7 @@ play6 :-
     actors # alice_p6(ch(AliceActorIn?, AliceActorOut)),
     tee(AliceActorOut?, AliceMedIn, AliceDispCmd),
     agent # agent(alice, AliceAgentIn?, AliceNetIn?,
-          [output('_user', AliceAgentToUser), output('_net', AliceNetOut)],
+          [user_output(AliceAgentToUser), net_output(AliceNetOut)],
           [], 1),
     mediator # ui_mediator(alice, ch(AliceAgentToUser?, AliceAgentIn),
                 ch(AliceMedIn?, AliceMedOut), [], 1),
@@ -496,7 +520,7 @@ play6 :-
     actors # bob_p6(ch(BobActorIn?, BobActorOut)),
     tee(BobActorOut?, BobMedIn, BobDispCmd),
     agent # agent(bob, BobAgentIn?, BobNetIn?,
-          [output('_user', BobAgentToUser), output('_net', BobNetOut)],
+          [user_output(BobAgentToUser), net_output(BobNetOut)],
           [], 1),
     mediator # ui_mediator(bob, ch(BobAgentToUser?, BobAgentIn),
                 ch(BobMedIn?, BobMedOut), [], 1),
@@ -507,6 +531,7 @@ play6 :-
 %% FLUTTER PLAY 6 — Balloon loan (with tagged output for UI)
 %% =============================================================================
 
+exported procedure fplay6.
 fplay6 :-
     network2(ch(AliceNetOut?, AliceNetIn),
              ch(BobNetOut?, BobNetIn)),
@@ -515,7 +540,7 @@ fplay6 :-
     actors # alice_p6(ch(AliceActorIn?, AliceActorOut)),
     tee(AliceActorOut?, AliceMedIn, AliceDispCmd),
     agent # agent(alice, AliceAgentIn?, AliceNetIn?,
-          [output('_user', AliceAgentToUser), output('_net', AliceNetOut)],
+          [user_output(AliceAgentToUser), net_output(AliceNetOut)],
           [], 1),
     mediator # ui_mediator(alice, ch(AliceAgentToUser?, AliceAgentIn),
                 ch(AliceMedIn?, AliceMedOut), [], 1),
@@ -526,7 +551,7 @@ fplay6 :-
     actors # bob_p6(ch(BobActorIn?, BobActorOut)),
     tee(BobActorOut?, BobMedIn, BobDispCmd),
     agent # agent(bob, BobAgentIn?, BobNetIn?,
-          [output('_user', BobAgentToUser), output('_net', BobNetOut)],
+          [user_output(BobAgentToUser), net_output(BobNetOut)],
           [], 1),
     mediator # ui_mediator(bob, ch(BobAgentToUser?, BobAgentIn),
                 ch(BobMedIn?, BobMedOut), [], 1),
@@ -537,6 +562,7 @@ fplay6 :-
 %% PLAY 8 — Sale of Debt (with tee + sink display)
 %% =============================================================================
 
+exported procedure play8.
 play8 :-
     network2(ch(AliceNetOut?, AliceNetIn),
              ch(BobNetOut?, BobNetIn)),
@@ -545,7 +571,7 @@ play8 :-
     actors # alice_p8(ch(AliceActorIn?, AliceActorOut)),
     tee(AliceActorOut?, AliceMedIn, AliceDispCmd),
     agent # agent(alice, AliceAgentIn?, AliceNetIn?,
-          [output('_user', AliceAgentToUser), output('_net', AliceNetOut)],
+          [user_output(AliceAgentToUser), net_output(AliceNetOut)],
           [], 1),
     mediator # ui_mediator(alice, ch(AliceAgentToUser?, AliceAgentIn),
                 ch(AliceMedIn?, AliceMedOut), [], 1),
@@ -556,7 +582,7 @@ play8 :-
     actors # bob_p8(ch(BobActorIn?, BobActorOut)),
     tee(BobActorOut?, BobMedIn, BobDispCmd),
     agent # agent(bob, BobAgentIn?, BobNetIn?,
-          [output('_user', BobAgentToUser), output('_net', BobNetOut)],
+          [user_output(BobAgentToUser), net_output(BobNetOut)],
           [], 1),
     mediator # ui_mediator(bob, ch(BobAgentToUser?, BobAgentIn),
                 ch(BobMedIn?, BobMedOut), [], 1),
@@ -567,6 +593,7 @@ play8 :-
 %% FLUTTER PLAY 8 — Sale of Debt (with tagged output for UI)
 %% =============================================================================
 
+exported procedure fplay8.
 fplay8 :-
     network2(ch(AliceNetOut?, AliceNetIn),
              ch(BobNetOut?, BobNetIn)),
@@ -575,7 +602,7 @@ fplay8 :-
     actors # alice_p8(ch(AliceActorIn?, AliceActorOut)),
     tee(AliceActorOut?, AliceMedIn, AliceDispCmd),
     agent # agent(alice, AliceAgentIn?, AliceNetIn?,
-          [output('_user', AliceAgentToUser), output('_net', AliceNetOut)],
+          [user_output(AliceAgentToUser), net_output(AliceNetOut)],
           [], 1),
     mediator # ui_mediator(alice, ch(AliceAgentToUser?, AliceAgentIn),
                 ch(AliceMedIn?, AliceMedOut), [], 1),
@@ -586,7 +613,7 @@ fplay8 :-
     actors # bob_p8(ch(BobActorIn?, BobActorOut)),
     tee(BobActorOut?, BobMedIn, BobDispCmd),
     agent # agent(bob, BobAgentIn?, BobNetIn?,
-          [output('_user', BobAgentToUser), output('_net', BobNetOut)],
+          [user_output(BobAgentToUser), net_output(BobNetOut)],
           [], 1),
     mediator # ui_mediator(bob, ch(BobAgentToUser?, BobAgentIn),
                 ch(BobMedIn?, BobMedOut), [], 1),
@@ -597,6 +624,7 @@ fplay8 :-
 %% PLAY 9 — Forward Contract (with tee + sink display)
 %% =============================================================================
 
+exported procedure play9.
 play9 :-
     network2(ch(AliceNetOut?, AliceNetIn),
              ch(BobNetOut?, BobNetIn)),
@@ -605,7 +633,7 @@ play9 :-
     actors # alice_p9(ch(AliceActorIn?, AliceActorOut)),
     tee(AliceActorOut?, AliceMedIn, AliceDispCmd),
     agent # agent(alice, AliceAgentIn?, AliceNetIn?,
-          [output('_user', AliceAgentToUser), output('_net', AliceNetOut)],
+          [user_output(AliceAgentToUser), net_output(AliceNetOut)],
           [], 1),
     mediator # ui_mediator(alice, ch(AliceAgentToUser?, AliceAgentIn),
                 ch(AliceMedIn?, AliceMedOut), [], 1),
@@ -616,7 +644,7 @@ play9 :-
     actors # bob_p9(ch(BobActorIn?, BobActorOut)),
     tee(BobActorOut?, BobMedIn, BobDispCmd),
     agent # agent(bob, BobAgentIn?, BobNetIn?,
-          [output('_user', BobAgentToUser), output('_net', BobNetOut)],
+          [user_output(BobAgentToUser), net_output(BobNetOut)],
           [], 1),
     mediator # ui_mediator(bob, ch(BobAgentToUser?, BobAgentIn),
                 ch(BobMedIn?, BobMedOut), [], 1),
@@ -627,6 +655,7 @@ play9 :-
 %% FLUTTER PLAY 9 — Forward Contract (with tagged output for UI)
 %% =============================================================================
 
+exported procedure fplay9.
 fplay9 :-
     network2(ch(AliceNetOut?, AliceNetIn),
              ch(BobNetOut?, BobNetIn)),
@@ -635,7 +664,7 @@ fplay9 :-
     actors # alice_p9(ch(AliceActorIn?, AliceActorOut)),
     tee(AliceActorOut?, AliceMedIn, AliceDispCmd),
     agent # agent(alice, AliceAgentIn?, AliceNetIn?,
-          [output('_user', AliceAgentToUser), output('_net', AliceNetOut)],
+          [user_output(AliceAgentToUser), net_output(AliceNetOut)],
           [], 1),
     mediator # ui_mediator(alice, ch(AliceAgentToUser?, AliceAgentIn),
                 ch(AliceMedIn?, AliceMedOut), [], 1),
@@ -646,7 +675,7 @@ fplay9 :-
     actors # bob_p9(ch(BobActorIn?, BobActorOut)),
     tee(BobActorOut?, BobMedIn, BobDispCmd),
     agent # agent(bob, BobAgentIn?, BobNetIn?,
-          [output('_user', BobAgentToUser), output('_net', BobNetOut)],
+          [user_output(BobAgentToUser), net_output(BobNetOut)],
           [], 1),
     mediator # ui_mediator(bob, ch(BobAgentToUser?, BobAgentIn),
                 ch(BobMedIn?, BobMedOut), [], 1),
@@ -660,6 +689,7 @@ fplay9 :-
 %% T = now + 500 ms. Alice deposits 3 bob-coins for Bob.
 %% Timer expires. Bob gets bonds. Alice gets escrow_expired.
 
+exported procedure play10.
 play10 :-
     now(Now),
     T := Now? + 500,
@@ -670,7 +700,7 @@ play10 :-
     actors # alice_p10(T?, ch(AliceActorIn?, AliceActorOut)),
     tee(AliceActorOut?, AliceMedIn, AliceDispCmd),
     agent # agent(alice, AliceAgentIn?, AliceNetIn?,
-          [output('_user', AliceAgentToUser), output('_net', AliceNetOut)],
+          [user_output(AliceAgentToUser), net_output(AliceNetOut)],
           [], 1),
     mediator # ui_mediator(alice, ch(AliceAgentToUser?, AliceAgentIn),
                 ch(AliceMedIn?, AliceMedOut), [], 1),
@@ -681,7 +711,7 @@ play10 :-
     actors # bob_p10(ch(BobActorIn?, BobActorOut)),
     tee(BobActorOut?, BobMedIn, BobDispCmd),
     agent # agent(bob, BobAgentIn?, BobNetIn?,
-          [output('_user', BobAgentToUser), output('_net', BobNetOut)],
+          [user_output(BobAgentToUser), net_output(BobNetOut)],
           [], 1),
     mediator # ui_mediator(bob, ch(BobAgentToUser?, BobAgentIn),
                 ch(BobMedIn?, BobMedOut), [], 1),
@@ -692,6 +722,7 @@ play10 :-
 %% FLUTTER PLAY 10 — Escrow: Time Release (with tagged output for UI)
 %% =============================================================================
 
+exported procedure fplay10.
 fplay10 :-
     now(Now),
     T := Now? + 500,
@@ -702,7 +733,7 @@ fplay10 :-
     actors # alice_p10(T?, ch(AliceActorIn?, AliceActorOut)),
     tee(AliceActorOut?, AliceMedIn, AliceDispCmd),
     agent # agent(alice, AliceAgentIn?, AliceNetIn?,
-          [output('_user', AliceAgentToUser), output('_net', AliceNetOut)],
+          [user_output(AliceAgentToUser), net_output(AliceNetOut)],
           [], 1),
     mediator # ui_mediator(alice, ch(AliceAgentToUser?, AliceAgentIn),
                 ch(AliceMedIn?, AliceMedOut), [], 1),
@@ -713,7 +744,7 @@ fplay10 :-
     actors # bob_p10(ch(BobActorIn?, BobActorOut)),
     tee(BobActorOut?, BobMedIn, BobDispCmd),
     agent # agent(bob, BobAgentIn?, BobNetIn?,
-          [output('_user', BobAgentToUser), output('_net', BobNetOut)],
+          [user_output(BobAgentToUser), net_output(BobNetOut)],
           [], 1),
     mediator # ui_mediator(bob, ch(BobAgentToUser?, BobAgentIn),
                 ch(BobMedIn?, BobMedOut), [], 1),
@@ -727,6 +758,7 @@ fplay10 :-
 %% T = now + 5000 ms (far future). Alice deposits 3 bob-coins for Bob.
 %% Alice cancels immediately. Alice gets bonds back. Bob gets escrow_cancelled.
 
+exported procedure play11.
 play11 :-
     now(Now),
     T := Now? + 5000,
@@ -737,7 +769,7 @@ play11 :-
     actors # alice_p11(T?, ch(AliceActorIn?, AliceActorOut)),
     tee(AliceActorOut?, AliceMedIn, AliceDispCmd),
     agent # agent(alice, AliceAgentIn?, AliceNetIn?,
-          [output('_user', AliceAgentToUser), output('_net', AliceNetOut)],
+          [user_output(AliceAgentToUser), net_output(AliceNetOut)],
           [], 1),
     mediator # ui_mediator(alice, ch(AliceAgentToUser?, AliceAgentIn),
                 ch(AliceMedIn?, AliceMedOut), [], 1),
@@ -748,7 +780,7 @@ play11 :-
     actors # bob_p11(ch(BobActorIn?, BobActorOut)),
     tee(BobActorOut?, BobMedIn, BobDispCmd),
     agent # agent(bob, BobAgentIn?, BobNetIn?,
-          [output('_user', BobAgentToUser), output('_net', BobNetOut)],
+          [user_output(BobAgentToUser), net_output(BobNetOut)],
           [], 1),
     mediator # ui_mediator(bob, ch(BobAgentToUser?, BobAgentIn),
                 ch(BobMedIn?, BobMedOut), [], 1),
@@ -759,6 +791,7 @@ play11 :-
 %% FLUTTER PLAY 11 — Escrow: Cancel (with tagged output for UI)
 %% =============================================================================
 
+exported procedure fplay11.
 fplay11 :-
     now(Now),
     T := Now? + 5000,
@@ -769,7 +802,7 @@ fplay11 :-
     actors # alice_p11(T?, ch(AliceActorIn?, AliceActorOut)),
     tee(AliceActorOut?, AliceMedIn, AliceDispCmd),
     agent # agent(alice, AliceAgentIn?, AliceNetIn?,
-          [output('_user', AliceAgentToUser), output('_net', AliceNetOut)],
+          [user_output(AliceAgentToUser), net_output(AliceNetOut)],
           [], 1),
     mediator # ui_mediator(alice, ch(AliceAgentToUser?, AliceAgentIn),
                 ch(AliceMedIn?, AliceMedOut), [], 1),
@@ -780,7 +813,7 @@ fplay11 :-
     actors # bob_p11(ch(BobActorIn?, BobActorOut)),
     tee(BobActorOut?, BobMedIn, BobDispCmd),
     agent # agent(bob, BobAgentIn?, BobNetIn?,
-          [output('_user', BobAgentToUser), output('_net', BobNetOut)],
+          [user_output(BobAgentToUser), net_output(BobNetOut)],
           [], 1),
     mediator # ui_mediator(bob, ch(BobAgentToUser?, BobAgentIn),
                 ch(BobMedIn?, BobMedOut), [], 1),
@@ -791,6 +824,7 @@ fplay11 :-
 %% FLUTTER PLAY 12 — Village Market Month (6 agents + narrative)
 %% =============================================================================
 
+exported procedure fplay12.
 fplay12 :-
     now(Now),
     T := Now? + 700,
@@ -806,7 +840,7 @@ fplay12 :-
     send_to_user_narrate(alice, AliceNarr?),
     tee(AliceActorOut?, AliceMedIn, AliceDispCmd),
     agent # agent(alice, AliceAgentIn?, AliceNetIn?,
-          [output('_user', AliceAgentToUser), output('_net', AliceNetOut)], [], 1),
+          [user_output(AliceAgentToUser), net_output(AliceNetOut)], [], 1),
     mediator # ui_mediator(alice, ch(AliceAgentToUser?, AliceAgentIn),
                 ch(AliceMedIn?, AliceMedOut), [], 1),
     tee(AliceMedOut?, AliceActorIn, AliceDispNotify),
@@ -817,7 +851,7 @@ fplay12 :-
     send_to_user_narrate(bob, BobNarr?),
     tee(BobActorOut?, BobMedIn, BobDispCmd),
     agent # agent(bob, BobAgentIn?, BobNetIn?,
-          [output('_user', BobAgentToUser), output('_net', BobNetOut)], [], 1),
+          [user_output(BobAgentToUser), net_output(BobNetOut)], [], 1),
     mediator # ui_mediator(bob, ch(BobAgentToUser?, BobAgentIn),
                 ch(BobMedIn?, BobMedOut), [], 1),
     tee(BobMedOut?, BobActorIn, BobDispNotify),
@@ -828,7 +862,7 @@ fplay12 :-
     send_to_user_narrate(charlie, CharlieNarr?),
     tee(CharlieActorOut?, CharlieMedIn, CharlieDispCmd),
     agent # agent(charlie, CharlieAgentIn?, CharlieNetIn?,
-          [output('_user', CharlieAgentToUser), output('_net', CharlieNetOut)], [], 1),
+          [user_output(CharlieAgentToUser), net_output(CharlieNetOut)], [], 1),
     mediator # ui_mediator(charlie, ch(CharlieAgentToUser?, CharlieAgentIn),
                 ch(CharlieMedIn?, CharlieMedOut), [], 1),
     tee(CharlieMedOut?, CharlieActorIn, CharlieDispNotify),
@@ -839,7 +873,7 @@ fplay12 :-
     send_to_user_narrate(diana, DianaNarr?),
     tee(DianaActorOut?, DianaMedIn, DianaDispCmd),
     agent # agent(diana, DianaAgentIn?, DianaNetIn?,
-          [output('_user', DianaAgentToUser), output('_net', DianaNetOut)], [], 1),
+          [user_output(DianaAgentToUser), net_output(DianaNetOut)], [], 1),
     mediator # ui_mediator(diana, ch(DianaAgentToUser?, DianaAgentIn),
                 ch(DianaMedIn?, DianaMedOut), [], 1),
     tee(DianaMedOut?, DianaActorIn, DianaDispNotify),
@@ -850,7 +884,7 @@ fplay12 :-
     send_to_user_narrate(eve, EveNarr?),
     tee(EveActorOut?, EveMedIn, EveDispCmd),
     agent # agent(eve, EveAgentIn?, EveNetIn?,
-          [output('_user', EveAgentToUser), output('_net', EveNetOut)], [], 1),
+          [user_output(EveAgentToUser), net_output(EveNetOut)], [], 1),
     mediator # ui_mediator(eve, ch(EveAgentToUser?, EveAgentIn),
                 ch(EveMedIn?, EveMedOut), [], 1),
     tee(EveMedOut?, EveActorIn, EveDispNotify),
@@ -861,7 +895,7 @@ fplay12 :-
     send_to_user_narrate(frank, FrankNarr?),
     tee(FrankActorOut?, FrankMedIn, FrankDispCmd),
     agent # agent(frank, FrankAgentIn?, FrankNetIn?,
-          [output('_user', FrankAgentToUser), output('_net', FrankNetOut)], [], 1),
+          [user_output(FrankAgentToUser), net_output(FrankNetOut)], [], 1),
     mediator # ui_mediator(frank, ch(FrankAgentToUser?, FrankAgentIn),
                 ch(FrankMedIn?, FrankMedOut), [], 1),
     tee(FrankMedOut?, FrankActorIn, FrankDispNotify),
@@ -873,6 +907,12 @@ fplay12 :-
 
 %% --- Cold-call routing (2-arg msg) ---
 
+procedure network6(Channel(NetInStream, NetInStream)?,
+                   Channel(NetInStream, NetInStream)?,
+                   Channel(NetInStream, NetInStream)?,
+                   Channel(NetInStream, NetInStream)?,
+                   Channel(NetInStream, NetInStream)?,
+                   Channel(NetInStream, NetInStream)?).
 network6(ch([msg(bob, X)|AliceIn], AliceOut?),
          ch(BobIn, [msg(bob, X?)|BobOut?]),
          ch(CharlieIn, CharlieOut?),

@@ -115,6 +115,10 @@ NetColdCall ::= intro(Constant, Response?).
 NetInMsg    ::= msg(Constant, NetColdCall)
               ; msg(Constant, Constant, FriendContent).
 
+%% Transport union carried by the simulated network switches (network3/network2).
+%% Producers write the narrower NetOutStream; NetOutStream ⊆ NetInStream is sound.
+NetInStream ::= [] ; [NetInMsg | NetInStream].
+
 %% Intro result — written by intro_await_peer, injected into UserIn
 IntroResult ::= intro_result(Constant, Channel(Stream(IntroContent), Stream(IntroContent)))
               ; intro_rejected(Constant).
@@ -144,16 +148,22 @@ GroupMsg     ::= msg(Constant, Constant, GroupContent).
 %% Creator→Invitee stream carries the group channel after handshake
 GroupSetupResponse ::= group_channel(Channel(Stream(GroupMsg), Stream(GroupMsg))).
 
-%% Union of all content the agent sends on output streams
-OutputContent ::= AgentOnlyContent ; FriendOnlyContent ; GroupNotifyContent.
-OutputMsg ::= msg(Constant, Constant, OutputContent)
-            ; msg(Constant, NetColdCall).
+%% Network output stream — cold calls the agent emits on its net entry.
+NetOutMsg    ::= msg(Constant, NetColdCall).
+NetOutStream ::= [] ; [NetOutMsg | NetOutStream].
 
-%% Output list — keys distinguish system channels, friends, children, and groups
-OutputKey   ::= '_user' ; '_net' ; friend(Constant) ; child(Constant)
-              ; parent(Constant)
-              ; group(GroupId) ; group_member(GroupId, Constant).
-OutputEntry ::= output(OutputKey, Stream(OutputMsg)?)
+%% Output list — one constructor per output kind, each carrying its own stream
+%% type.  Replaces the former output(OutputKey, Stream(OutputMsg)?) whose union
+%% OutputMsg typed every entry at the join of all kinds and so broke duality
+%% against narrower readers (mediator AgentToUserMsg, peer NetInStream).
+%% group_entry keeps an OutputKey: group routing is genuinely keyed (dynamic
+%% groups and members) and its GroupMsg stream is already precise.
+OutputKey   ::= group(GroupId) ; group_member(GroupId, Constant).
+OutputEntry ::= user_output(Stream(AgentToUserMsg)?)
+              ; net_output(NetOutStream?)
+              ; friend_output(Constant, Stream(FriendMsg)?)
+              ; child_output(Constant, Stream(FriendMsg)?)
+              ; parent_output(Constant, Stream(FriendMsg)?)
               ; group_entry(OutputKey, Stream(GroupMsg)?).
 OutputsList ::= [] ; [OutputEntry|OutputsList].
 
@@ -260,24 +270,47 @@ setup_group_creator(GroupId, Outs, Outs1?, NetIn, NetIn1?) :-
     merge(NetIn?, MemberToHub?, NetIn1).
 
 %% =============================================================================
-%% LOOKUP_SEND
+%% PER-KIND OUTPUT ROUTING — one procedure per output constructor, each typed
+%% at exactly what its stream carries.  Replaces key-based lookup_send.
 %% =============================================================================
 
-procedure lookup_send(OutputKey?, OutputMsg?, Stream(OutputEntry)?, Stream(OutputEntry)).
-lookup_send(Key, Msg, Outs, Outs1?) :-
-    ground(Key?) |
-    lookup_send_step(Key?, Msg?, Outs?, Outs1).
+procedure send_user(AgentToUserMsg?, Stream(OutputEntry)?, Stream(OutputEntry)).
+send_user(Msg, [user_output([Msg?|Out1?])|Rest], [user_output(Out1)|Rest?]).
+send_user(Msg, [E|Rest], [E?|Rest1?]) :-
+    otherwise |
+    send_user(Msg?, Rest?, Rest1).
+send_user(_, [], []).
 
-procedure lookup_send_step(OutputKey?, OutputMsg?, Stream(OutputEntry)?, Stream(OutputEntry)).
-lookup_send_step(Key, Msg, [output(K, [Msg?|Out1?])|Rest], [output(K?, Out1)|Rest?]) :-
-    Key? =?= K? | true.
-lookup_send_step(Key, Msg, [output(K, Out?)|Rest], [output(K?, Out)|Rest1?]) :-
+procedure send_net(NetOutMsg?, Stream(OutputEntry)?, Stream(OutputEntry)).
+send_net(Msg, [net_output([Msg?|Out1?])|Rest], [net_output(Out1)|Rest?]).
+send_net(Msg, [E|Rest], [E?|Rest1?]) :-
     otherwise |
-    lookup_send_step(Key?, Msg?, Rest?, Rest1).
-lookup_send_step(Key, Msg, [group_entry(K, Out?)|Rest], [group_entry(K?, Out)|Rest1?]) :-
+    send_net(Msg?, Rest?, Rest1).
+send_net(_, [], []).
+
+procedure send_friend(Constant?, FriendMsg?, Stream(OutputEntry)?, Stream(OutputEntry)).
+send_friend(Name, Msg, [friend_output(K, [Msg?|Out1?])|Rest], [friend_output(K?, Out1)|Rest?]) :-
+    Name? =?= K? | true.
+send_friend(Name, Msg, [E|Rest], [E?|Rest1?]) :-
     otherwise |
-    lookup_send_step(Key?, Msg?, Rest?, Rest1).
-lookup_send_step(_, _, [], []).
+    send_friend(Name?, Msg?, Rest?, Rest1).
+send_friend(_, _, [], []).
+
+procedure send_child(Constant?, FriendMsg?, Stream(OutputEntry)?, Stream(OutputEntry)).
+send_child(Name, Msg, [child_output(K, [Msg?|Out1?])|Rest], [child_output(K?, Out1)|Rest?]) :-
+    Name? =?= K? | true.
+send_child(Name, Msg, [E|Rest], [E?|Rest1?]) :-
+    otherwise |
+    send_child(Name?, Msg?, Rest?, Rest1).
+send_child(_, _, [], []).
+
+procedure send_parent(Constant?, FriendMsg?, Stream(OutputEntry)?, Stream(OutputEntry)).
+send_parent(Name, Msg, [parent_output(K, [Msg?|Out1?])|Rest], [parent_output(K?, Out1)|Rest?]) :-
+    Name? =?= K? | true.
+send_parent(Name, Msg, [E|Rest], [E?|Rest1?]) :-
+    otherwise |
+    send_parent(Name?, Msg?, Rest?, Rest1).
+send_parent(_, _, [], []).
 
 %% =============================================================================
 %% LOOKUP_SEND_GROUP
@@ -291,10 +324,7 @@ lookup_send_group(Key, Msg, Outs, Outs1?) :-
 procedure lookup_send_group_step(OutputKey?, GroupMsg?, Stream(OutputEntry)?, Stream(OutputEntry)).
 lookup_send_group_step(Key, Msg, [group_entry(K, [Msg?|Out1?])|Rest], [group_entry(K?, Out1)|Rest?]) :-
     Key? =?= K? | true.
-lookup_send_group_step(Key, Msg, [output(K, Out?)|Rest], [output(K?, Out)|Rest1?]) :-
-    otherwise |
-    lookup_send_group_step(Key?, Msg?, Rest?, Rest1).
-lookup_send_group_step(Key, Msg, [group_entry(K, Out?)|Rest], [group_entry(K?, Out)|Rest1?]) :-
+lookup_send_group_step(Key, Msg, [E|Rest], [E?|Rest1?]) :-
     otherwise |
     lookup_send_group_step(Key?, Msg?, Rest?, Rest1).
 lookup_send_group_step(_, _, [], []).
@@ -309,10 +339,7 @@ distribute_group_msg(GroupId, Msg,
     [group_entry(group_member(GId?, M?), Out1)|Rest1?]) :-
     GroupId? =?= GId?, ground(Msg?) |
     distribute_group_msg(GroupId?, Msg?, Rest?, Rest1).
-distribute_group_msg(GroupId, Msg, [output(K, Out?)|Rest], [output(K?, Out)|Rest1?]) :-
-    otherwise |
-    distribute_group_msg(GroupId?, Msg?, Rest?, Rest1).
-distribute_group_msg(GroupId, Msg, [group_entry(K, Out?)|Rest], [group_entry(K?, Out)|Rest1?]) :-
+distribute_group_msg(GroupId, Msg, [E|Rest], [E?|Rest1?]) :-
     otherwise |
     distribute_group_msg(GroupId?, Msg?, Rest?, Rest1).
 distribute_group_msg(_, _, [], []).
@@ -331,14 +358,18 @@ inject_msg(Resp, Target, Id, [Y|Ys], [Y?|Ys1?]) :-
 %% ADD_OUTPUT / ADD_GROUP_OUTPUT / CLOSE_OUTPUTS
 %% =============================================================================
 
-procedure add_output(OutputKey?, Stream(OutputMsg), Stream(OutputEntry)?, Stream(OutputEntry)).
-add_output(Key, Out?, Outs, [output(Key?, Out)|Outs?]).
+procedure add_friend_output(Constant?, Stream(FriendMsg), Stream(OutputEntry)?, Stream(OutputEntry)).
+add_friend_output(Name, Out?, Outs, [friend_output(Name?, Out)|Outs?]).
 
 procedure add_group_output(OutputKey?, Stream(GroupMsg), Stream(OutputEntry)?, Stream(OutputEntry)).
 add_group_output(Key, Out?, Outs, [group_entry(Key?, Out)|Outs?]).
 
 procedure close_outputs(Stream(OutputEntry)?).
-close_outputs([output(_, [])|Outs]) :- close_outputs(Outs?).
+close_outputs([user_output([])|Outs]) :- close_outputs(Outs?).
+close_outputs([net_output([])|Outs]) :- close_outputs(Outs?).
+close_outputs([friend_output(_, [])|Outs]) :- close_outputs(Outs?).
+close_outputs([child_output(_, [])|Outs]) :- close_outputs(Outs?).
+close_outputs([parent_output(_, [])|Outs]) :- close_outputs(Outs?).
 close_outputs([group_entry(_, [])|Outs]) :- close_outputs(Outs?).
 close_outputs([]).
 
@@ -396,18 +427,23 @@ inject_group_result(Res, [Y|Ys], [Y?|Ys1?]) :-
 %% CLOSE_OUTPUT — close a stream and remove its entry from the outputs list
 %% =============================================================================
 
+%% close_output removes a group_entry by its (group / group_member) key.
 procedure close_output(OutputKey?, Stream(OutputEntry)?, Stream(OutputEntry)).
 close_output(_, [], []).
-close_output(Key, [output(K, [])|Rest], Rest?) :-
-    Key? =?= K? | true.
 close_output(Key, [group_entry(K, [])|Rest], Rest?) :-
     Key? =?= K? | true.
-close_output(Key, [output(K, Out?)|Rest], [output(K?, Out)|Rest1?]) :-
+close_output(Key, [E|Rest], [E?|Rest1?]) :-
     otherwise |
     close_output(Key?, Rest?, Rest1).
-close_output(Key, [group_entry(K, Out?)|Rest], [group_entry(K?, Out)|Rest1?]) :-
+
+%% close_friend removes a friend_output by friend id.
+procedure close_friend(Constant?, Stream(OutputEntry)?, Stream(OutputEntry)).
+close_friend(_, [], []).
+close_friend(Name, [friend_output(K, [])|Rest], Rest?) :-
+    Name? =?= K? | true.
+close_friend(Name, [E|Rest], [E?|Rest1?]) :-
     otherwise |
-    close_output(Key?, Rest?, Rest1).
+    close_friend(Name?, Rest?, Rest1).
 
 %% =============================================================================
 %% IDEMPOTENT BEFRIEND COMMIT WITH SMALLER-NAME TIE-BREAK
@@ -423,11 +459,9 @@ close_output(Key, [group_entry(K, Out?)|Rest], [group_entry(K?, Out)|Rest1?]) :-
 %% Walk Outs threading it through, binding Decision to yes if friend(Other) is
 %% already present, no otherwise.
 procedure already_friend(Constant?, Stream(OutputEntry)?, Stream(OutputEntry), Decision).
-already_friend(Other, [output(friend(O), Out?)|Rest], [output(friend(O?), Out)|Rest?], yes) :-
+already_friend(Other, [friend_output(O, Out?)|Rest], [friend_output(O?, Out)|Rest?], yes) :-
     Other? =?= O? | true.
-already_friend(Other, [output(K, Out?)|Rest], [output(K?, Out)|Rest1?], Decision?) :-
-    otherwise | already_friend(Other?, Rest?, Rest1, Decision).
-already_friend(Other, [group_entry(K, Out?)|Rest], [group_entry(K?, Out)|Rest1?], Decision?) :-
+already_friend(Other, [E|Rest], [E?|Rest1?], Decision?) :-
     otherwise | already_friend(Other?, Rest?, Rest1, Decision).
 already_friend(_, [], [], no).
 
@@ -459,8 +493,8 @@ smaller_dispatch(yes, _, ch(_, []), Outs, Outs?, NetIn, NetIn?).
 %% Not yet friend: install + send canonical on FOut + merge FIn into NetIn.
 smaller_dispatch(no, Other, ch(FIn, [canonical|FOut1?]), Outs, Outs2?, NetIn, NetIn1?) :-
     ground(Other?) |
-    add_output(friend(Other?), FOut1, Outs?, Outs1),
-    lookup_send('_user', msg(agent, '_user', connected(Other?)), Outs1?, Outs2),
+    add_friend_output(Other?, FOut1, Outs?, Outs1),
+    send_user(msg(agent, '_user', connected(Other?)), Outs1?, Outs2),
     merge(NetIn?, FIn?, NetIn1).
 
 %% Larger-name side: read first message on FIn.
@@ -473,9 +507,9 @@ procedure await_canonical(Constant?, Channel(Stream(X), Stream(X))?,
 %% different channel already installed friend(Other); it's a no-op if absent.
 await_canonical(Other, ch([canonical|FIn], FOut?), Outs, Outs3?, NetIn, NetIn1?) :-
     ground(Other?) |
-    close_output(friend(Other?), Outs?, Outs1),
-    add_output(friend(Other?), FOut, Outs1?, Outs2),
-    lookup_send('_user', msg(agent, '_user', connected(Other?)), Outs2?, Outs3),
+    close_friend(Other?, Outs?, Outs1),
+    add_friend_output(Other?, FOut, Outs1?, Outs2),
+    send_user(msg(agent, '_user', connected(Other?)), Outs2?, Outs3),
     merge(NetIn?, FIn?, NetIn1).
 
 %% Empty FIn: smaller-name side suppressed this channel.  Drop it.

@@ -56,7 +56,7 @@ GLP/
 │   │   ├── graph/            # plain social graph
 │   │   ├── child_safe/       # child-safe social graph
 │   │   └── network/          # child-safe social networking
-│   ├── bonds_v2/             # grassroots bonds
+│   ├── bonds/                # grassroots bonds (secure/ = SecureBonds)
 │   └── tests/                # REPL test programs
 ├── docs/                     # specifications and references
 ├── test/                     # test scripts

@@ -7,7 +7,7 @@
 %% Receives escrow from Charlie, waits for release (dock done).
 %% Redeems from Diana.
 %%
-%% Types: from bonds_v2/self.glp (ancestor scoping)
+%% Types: from bonds/self.glp (ancestor scoping)
 
 -module(frank).
 -mode(system).

@@ -1,0 +1,9 @@
+%% Nested-subproject fixture — root self.glp.
+%%
+%% PURPOSE: sole coverage of the project linker's nested-subproject entry-alias
+%% rule (project-compilation spec §3.4). The parent project (this directory)
+%% contains a root-level module (boot) and a nested sub-project (child/) that has
+%% its OWN self.glp. When the parent is the loaded root, only root-level exports
+%% are aliased; the nested module keeps prefixed names only. When child/ is the
+%% loaded root, its own exports are aliased. No production project exercises both
+%% halves of this rule in one tree — hence this minimal dedicated fixture.

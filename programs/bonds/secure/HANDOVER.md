@@ -12,7 +12,7 @@ Load and test the SecureBonds GLP code. The code implements secure coins (mint +
 
 ## Files
 
-All in `/Users/udi/Grassroots/GLP/programs/Bonds/SecureBonds/`:
+All in `/Users/udi/Grassroots/GLP/programs/bonds/secure/`:
 
 | File | Purpose |
 |------|---------|
@@ -28,12 +28,12 @@ All in `/Users/udi/Grassroots/GLP/programs/Bonds/SecureBonds/`:
 
 ```bash
 cd /Users/udi/Grassroots/GLP/glp_runtime
-echo -e 'programs/Bonds/SecureBonds/\nplay.\n:quit' | dart run bin/glp_repl.dart
+echo -e 'programs/bonds/secure/\nplay.\n:quit' | dart run bin/glp_repl.dart
 ```
 
 ```bash
 cd /Users/udi/Grassroots/GLP/glp_runtime
-echo -e 'programs/Bonds/SecureBonds/\nplay_recover.\n:quit' | dart run bin/glp_repl.dart
+echo -e 'programs/bonds/secure/\nplay_recover.\n:quit' | dart run bin/glp_repl.dart
 ```
 
 ### Step 2: Expected results
@@ -50,7 +50,7 @@ Try loading files individually:
 
 ```bash
 cd /Users/udi/Grassroots/GLP/glp_runtime
-echo -e 'load programs/Bonds/SecureBonds/self.glp\nload programs/Bonds/SecureBonds/interlace.glp\nload programs/Bonds/SecureBonds/custodian.glp\nload programs/Bonds/SecureBonds/sovereign.glp\nload programs/Bonds/SecureBonds/play_sovereign.glp\nplay.\nplay_recover.\n:quit' | dart run bin/glp_repl.dart
+echo -e 'load programs/bonds/secure/self.glp\nload programs/bonds/secure/interlace.glp\nload programs/bonds/secure/custodian.glp\nload programs/bonds/secure/sovereign.glp\nload programs/bonds/secure/play_sovereign.glp\nplay.\nplay_recover.\n:quit' | dart run bin/glp_repl.dart
 ```
 
 ### Step 4: Add tests to run_all_tests.sh

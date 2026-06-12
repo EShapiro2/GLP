@@ -1,0 +1,3 @@
+%% Nested sub-project self.glp. Its mere presence makes child/ a descendant
+%% self.glp root: leaf's exports are NOT aliased when the parent is loaded, only
+%% when child/ is itself the loaded root.

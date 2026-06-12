@@ -5,7 +5,7 @@
 %% Negotiated loan from Diana (24 bob-bonds for 20 diana-coins, skip rejection).
 %% Pays Alice for bread.
 %%
-%% Types: from bonds_v2/self.glp (ancestor scoping)
+%% Types: from bonds/self.glp (ancestor scoping)
 
 -module(bob).
 -mode(system).

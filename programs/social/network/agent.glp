@@ -21,7 +21,7 @@ await_group_channel(Id, GroupId, [group_channel(ch(FromHub, ToHub?))|_],
     ground(Id?), ground(GroupId?) |
     add_group_output(group(GroupId?), ToHub, Outs?, Outs1),
     merge(NetIn?, FromHub?, NetIn1),
-    lookup_send('_user', msg(agent, '_user', group_joined(GroupId?)),
+    send_user( msg(agent, '_user', group_joined(GroupId?)),
         Outs1?, Outs2),
     agent(Id?, UserIn?, NetIn1?, Outs2?).
 await_group_channel(_, _, [], _, _, _) :- true.
@@ -35,7 +35,7 @@ bind_response(Id, yes, From, accept(RetCh?), Outs, Outs1?, In, In1?) :-
     new_channel(RetCh, LocalCh) |
     handle_response(Id?, accept(LocalCh?), From?, Outs?, Outs1, In?, In1).
 bind_response(_, no, _, no, Outs, Outs1?, In, In?) :-
-    lookup_send('_user', msg(agent, '_user', rejected), Outs?, Outs1).
+    send_user( msg(agent, '_user', rejected), Outs?, Outs1).
 
 procedure handle_response(Constant?, Response?, Constant?, Stream(OutputEntry)?, Stream(OutputEntry), Stream(NetInMsg)?, Stream(NetInMsg)).
 handle_response(Id, accept(Ch), From, Outs, Outs1?, In, In1?) :-
@@ -43,7 +43,7 @@ handle_response(Id, accept(Ch), From, Outs, Outs1?, In, In1?) :-
     befriend_commit(Id?, From?, Ch?, Outs?, Outs1, In?, In1).
 handle_response(_, no, From, Outs, Outs1?, In, In?) :-
     ground(From?) |
-    lookup_send('_user', msg(agent, '_user', rejected(From?)), Outs?, Outs1).
+    send_user( msg(agent, '_user', rejected(From?)), Outs?, Outs1).
 
 %% =============================================================================
 %% AGENT/4
@@ -56,7 +56,7 @@ exported procedure agent(Constant?, Stream(UserInMsg)?, Stream(NetInMsg)?, Strea
 %% User initiates cold call
 agent(Id, [msg('_user', Id1, connect(Target))|UserIn], NetIn, Outs) :-
     Id? =?= Id1?, ground(Target?) |
-    lookup_send('_net', msg(Target?, intro(Id?, Resp)), Outs?, Outs1),
+    send_net( msg(Target?, intro(Id?, Resp)), Outs?, Outs1),
     inject_msg(Resp?, Target?, Id?, UserIn?, UserIn1),
     agent(Id?, UserIn1?, NetIn?, Outs1?).
 
@@ -69,14 +69,14 @@ agent(Id, [msg('_user', Id1, decision(Dec, From, response(Resp?)))|UserIn], NetI
 %% User sends text message to friend
 agent(Id, [msg('_user', Id1, send(Target, Text))|UserIn], NetIn, Outs) :-
     Id? =?= Id1?, ground(Target?) |
-    lookup_send(friend(Target?), msg(Id?, Target?, text(Text?)), Outs?, Outs1),
+    send_friend(Target?, msg(Id?, Target?, text(Text?)), Outs?, Outs1),
     agent(Id?, UserIn?, NetIn?, Outs1?).
 
 %% User introduces friend P to friend Q
 agent(Id, [msg('_user', Id1, introduce(P, Q))|UserIn], NetIn, Outs) :-
     Id? =?= Id1?, ground(P?), ground(Q?), new_channel(PQCh, QPCh) |
-    lookup_send(friend(P?), msg(Id?, P?, intro(Q?, QPCh?)), Outs?, Outs1),
-    lookup_send(friend(Q?), msg(Id?, Q?, intro(P?, PQCh?)), Outs1?, Outs2),
+    send_friend(P?, msg(Id?, P?, intro(Q?, QPCh?)), Outs?, Outs1),
+    send_friend(Q?, msg(Id?, Q?, intro(P?, PQCh?)), Outs1?, Outs2),
     agent(Id?, UserIn?, NetIn?, Outs2?).
 
 %% User accepts intro — send ack, spawn peer-wait, inject result
@@ -101,7 +101,7 @@ agent(Id, [intro_result(Other, Ch)|UserIn], NetIn, Outs) :-
 %% Intro result: peer nacked — notify rejected
 agent(Id, [intro_rejected(Other)|UserIn], NetIn, Outs) :-
     ground(Id?) |
-    lookup_send('_user', msg(agent, '_user', rejected(Other?)), Outs?, Outs1),
+    send_user( msg(agent, '_user', rejected(Other?)), Outs?, Outs1),
     agent(Id?, UserIn?, NetIn?, Outs1?).
 
 %% Response to cold-call (injected by inject_msg)
@@ -117,8 +117,8 @@ agent(Id, [msg('_user', Id1, child_introduce(Child1, Friend, Child2))|UserIn], N
     Id? =?= Id1?, Friend? =?= Id?,
     ground(Child1?), ground(Child2?),
     new_channel(C1Ch, C2Ch) |
-    lookup_send(child(Child1?), msg(Id?, Child1?, child_intro(Child2?, C1Ch?)), Outs?, Outs1),
-    lookup_send(child(Child2?), msg(Id?, Child2?, child_intro(Child1?, C2Ch?)), Outs1?, Outs2),
+    send_child(Child1?, msg(Id?, Child1?, child_intro(Child2?, C1Ch?)), Outs?, Outs1),
+    send_child(Child2?, msg(Id?, Child2?, child_intro(Child1?, C2Ch?)), Outs1?, Outs2),
     agent(Id?, UserIn?, NetIn?, Outs2?).
 
 %% Non-sibling case: parent introduces own child to friend's child (otherwise)
@@ -126,8 +126,8 @@ agent(Id, [msg('_user', Id1, child_introduce(MyChild, Friend, FriendChild))|User
     Id? =?= Id1?, ground(MyChild?), ground(Friend?), ground(FriendChild?),
     otherwise,
     new_channel(C1Ch, C2Ch) |
-    lookup_send(child(MyChild?), msg(Id?, MyChild?, child_intro(FriendChild?, C1Ch?)), Outs?, Outs1),
-    lookup_send(friend(Friend?), msg(Id?, Friend?, child_intro(MyChild?, C2Ch?)), Outs1?, Outs2),
+    send_child(MyChild?, msg(Id?, MyChild?, child_intro(FriendChild?, C1Ch?)), Outs?, Outs1),
+    send_friend(Friend?, msg(Id?, Friend?, child_intro(MyChild?, C2Ch?)), Outs1?, Outs2),
     agent(Id?, UserIn?, NetIn?, Outs2?).
 
 %% Child (or parent) accepts child_intro — send ack, spawn peer-wait, inject result
@@ -146,7 +146,7 @@ agent(Id, [msg('_user', Id1, reject_child_intro(_, channel(ch(_, [nack|[]]))))|U
 %% Parent approves child_intro — forward to own child
 agent(Id, [msg('_user', Id1, approve_child_intro(OtherChild, MyChild, channel(Ch)))|UserIn], NetIn, Outs) :-
     Id? =?= Id1?, ground(OtherChild?), ground(MyChild?) |
-    lookup_send(child(MyChild?), msg(Id?, MyChild?, child_intro(OtherChild?, Ch?)), Outs?, Outs1),
+    send_child(MyChild?, msg(Id?, MyChild?, child_intro(OtherChild?, Ch?)), Outs?, Outs1),
     agent(Id?, UserIn?, NetIn?, Outs1?).
 
 %% --- CSSN: Child-safe social networking (groups) ---
@@ -156,7 +156,7 @@ agent(Id, [msg('_user', Id1, create_group(Name))|UserIn], NetIn, Outs) :-
     Id? =?= Id1?, ground(Name?) |
     setup_group_creator(group_id(Id?, Name?),
         Outs?, Outs1, NetIn?, NetIn1),
-    lookup_send('_user', msg(agent, '_user', group_joined(group_id(Id?, Name?))),
+    send_user( msg(agent, '_user', group_joined(group_id(Id?, Name?))),
         Outs1?, Outs2),
     agent(Id?, UserIn?, NetIn1?, Outs2?).
 
@@ -164,7 +164,7 @@ agent(Id, [msg('_user', Id1, create_group(Name))|UserIn], NetIn, Outs) :-
 agent(Id, [msg('_user', Id1, invite_group(GroupId, Invitee))|UserIn], NetIn, Outs) :-
     Id? =?= Id1?, ground(GroupId?), ground(Invitee?),
     new_channel(InviteeCh, CreatorCh) |
-    lookup_send(friend(Invitee?),
+    send_friend(Invitee?,
         msg(Id?, Invitee?, group_invite(GroupId?, InviteeCh?)), Outs?, Outs1),
     group_await_join(GroupId?, Invitee?, CreatorCh?, Result),
     inject_group_result(Result?, UserIn?, UserIn1),
@@ -174,7 +174,7 @@ agent(Id, [msg('_user', Id1, invite_group(GroupId, Invitee))|UserIn], NetIn, Out
 agent(Id, [msg('_user', Id1, invite_group(GroupId, Child, Parent))|UserIn], NetIn, Outs) :-
     Id? =?= Id1?, ground(GroupId?), ground(Child?), ground(Parent?),
     new_channel(InviteeCh, CreatorCh) |
-    lookup_send(friend(Parent?),
+    send_friend(Parent?,
         msg(Id?, Parent?, group_invite_child(GroupId?, Child?, InviteeCh?)), Outs?, Outs1),
     group_await_join(GroupId?, Child?, CreatorCh?, Result),
     inject_group_result(Result?, UserIn?, UserIn1),
@@ -198,7 +198,7 @@ agent(Id, [group_join_ack(GroupId, Invitee, ch(_, [group_channel(MemberEnd?)|[]]
         NetIn, Outs) :-
     ground(Id?), ground(GroupId?), ground(Invitee?) |
     setup_group_hub_side(GroupId?, Invitee?, Outs?, Outs1, NetIn?, NetIn1, MemberEnd),
-    lookup_send('_user', msg(agent, '_user', group_joined_member(GroupId?, Invitee?)),
+    send_user( msg(agent, '_user', group_joined_member(GroupId?, Invitee?)),
         Outs1?, Outs2),
     agent(Id?, UserIn?, NetIn1?, Outs2?).
 
@@ -218,7 +218,7 @@ agent(Id, [msg('_user', Id1, send_group(GroupId, Text))|UserIn], NetIn, Outs) :-
 agent(Id, [msg('_user', Id1, approve_group(Child, GroupId, group_channel(Ch)))|UserIn],
         NetIn, Outs) :-
     Id? =?= Id1?, ground(GroupId?), ground(Child?) |
-    lookup_send(child(Child?), msg(Id?, Child?, group_invite(GroupId?, Ch?)), Outs?, Outs1),
+    send_child(Child?, msg(Id?, Child?, group_invite(GroupId?, Ch?)), Outs?, Outs1),
     agent(Id?, UserIn?, NetIn?, Outs1?).
 
 %% --- Leave group (v3) ---
@@ -229,13 +229,13 @@ agent(Id, [msg('_user', Id1, leave_group(GroupId))|UserIn], NetIn, Outs) :-
     lookup_send_group(group(GroupId?),
         msg(Id?, Id?, group_leave(GroupId?, Id?)), Outs?, Outs1),
     close_output(group(GroupId?), Outs1?, Outs2),
-    lookup_send('_user', msg(agent, '_user', group_left(GroupId?)), Outs2?, Outs3),
+    send_user( msg(agent, '_user', group_left(GroupId?)), Outs2?, Outs3),
     agent(Id?, UserIn?, NetIn?, Outs3?).
 
 %% Parent tells child to leave group
 agent(Id, [msg('_user', Id1, leave_child_group(Child, GroupId))|UserIn], NetIn, Outs) :-
     Id? =?= Id1?, ground(Child?), ground(GroupId?) |
-    lookup_send(child(Child?), msg(Id?, Child?, leave_group(GroupId?)), Outs?, Outs1),
+    send_child(Child?, msg(Id?, Child?, leave_group(GroupId?)), Outs?, Outs1),
     agent(Id?, UserIn?, NetIn?, Outs1?).
 
 %% Creator removes member from group
@@ -265,7 +265,7 @@ agent(Id, [msg('_user', Id1, reject_child_group(_, _, consent(no)))|UserIn],
 %% Parent initiates unfriend on behalf of child
 agent(Id, [msg('_user', Id1, unfriend_child_of(MyChild, Target))|UserIn], NetIn, Outs) :-
     Id? =?= Id1?, ground(MyChild?), ground(Target?) |
-    lookup_send(child(MyChild?), msg(Id?, MyChild?, unfriend_child(Target?)), Outs?, Outs1),
+    send_child(MyChild?, msg(Id?, MyChild?, unfriend_child(Target?)), Outs?, Outs1),
     agent(Id?, UserIn?, NetIn?, Outs1?).
 
 %% --- Network messages ---
@@ -273,7 +273,7 @@ agent(Id, [msg('_user', Id1, unfriend_child_of(MyChild, Target))|UserIn], NetIn,
 %% Cold-call from network
 agent(Id, UserIn, [msg(Id1, intro(From, Resp?))|NetIn], Outs) :-
     Id? =?= Id1? |
-    lookup_send('_user', msg(agent, '_user', befriend(From?, Resp)), Outs?, Outs1),
+    send_user( msg(agent, '_user', befriend(From?, Resp)), Outs?, Outs1),
     agent(Id?, UserIn?, NetIn?, Outs1?).
 
 %% Response to cold-call from network
@@ -285,13 +285,13 @@ agent(Id, UserIn, [msg(From, Id1, response(Resp))|NetIn], Outs) :-
 %% Text from friend
 agent(Id, UserIn, [msg(From, Id1, text(Text))|NetIn], Outs) :-
     Id? =?= Id1? |
-    lookup_send('_user', msg(agent, '_user', received(From?, Text?)), Outs?, Outs1),
+    send_user( msg(agent, '_user', received(From?, Text?)), Outs?, Outs1),
     agent(Id?, UserIn?, NetIn?, Outs1?).
 
 %% Introduction from friend — pass channel to user via mediator
 agent(Id, UserIn, [msg(From, Id1, intro(Other, Ch))|NetIn], Outs) :-
     Id? =?= Id1?, ground(Other?) |
-    lookup_send('_user', msg(agent, '_user', befriend_intro(From?, Other?, Ch?)), Outs?, Outs1),
+    send_user( msg(agent, '_user', befriend_intro(From?, Other?, Ch?)), Outs?, Outs1),
     agent(Id?, UserIn?, NetIn?, Outs1?).
 
 %% --- CSSG network messages ---
@@ -299,7 +299,7 @@ agent(Id, UserIn, [msg(From, Id1, intro(Other, Ch))|NetIn], Outs) :-
 %% Child receives child_intro from parent (or parent forwards from friend)
 agent(Id, UserIn, [msg(From, Id1, child_intro(Other, Ch))|NetIn], Outs) :-
     Id? =?= Id1?, ground(Other?) |
-    lookup_send('_user', msg(agent, '_user', child_befriend(From?, Other?, Ch?)), Outs?, Outs1),
+    send_user( msg(agent, '_user', child_befriend(From?, Other?, Ch?)), Outs?, Outs1),
     agent(Id?, UserIn?, NetIn?, Outs1?).
 
 %% --- CSSN network messages ---
@@ -307,19 +307,19 @@ agent(Id, UserIn, [msg(From, Id1, child_intro(Other, Ch))|NetIn], Outs) :-
 %% Group invite from friend — forward to user via mediator
 agent(Id, UserIn, [msg(_, Id1, group_invite(GroupId, Ch))|NetIn], Outs) :-
     Id? =?= Id1?, ground(GroupId?) |
-    lookup_send('_user', msg(agent, '_user', group_invite(GroupId?, Ch?)), Outs?, Outs1),
+    send_user( msg(agent, '_user', group_invite(GroupId?, Ch?)), Outs?, Outs1),
     agent(Id?, UserIn?, NetIn?, Outs1?).
 
 %% Group invite for child from friend — forward to parent user via mediator
 agent(Id, UserIn, [msg(_, Id1, group_invite_child(GroupId, Child, Ch))|NetIn], Outs) :-
     Id? =?= Id1?, ground(GroupId?), ground(Child?) |
-    lookup_send('_user', msg(agent, '_user', group_invite_child(GroupId?, Child?, Ch?)), Outs?, Outs1),
+    send_user( msg(agent, '_user', group_invite_child(GroupId?, Child?, Ch?)), Outs?, Outs1),
     agent(Id?, UserIn?, NetIn?, Outs1?).
 
 %% Consent request from child — forward to parent user via mediator (v2)
 agent(Id, UserIn, [msg(Child, Id1, group_consent_req(GroupId, Consent?))|NetIn], Outs) :-
     Id? =?= Id1?, ground(Child?), ground(GroupId?) |
-    lookup_send('_user', msg(agent, '_user',
+    send_user( msg(agent, '_user',
         child_group_consent(Child?, GroupId?, Consent)), Outs?, Outs1),
     agent(Id?, UserIn?, NetIn?, Outs1?).
 
@@ -328,7 +328,7 @@ agent(Id, UserIn, [msg(_, _, group_msg(GroupId, Author, Text))|NetIn], Outs) :-
     ground(Id?), ground(GroupId?), ground(Author?), ground(Text?) |
     distribute_group_msg(GroupId?,
         msg(Author?, Author?, group_msg(GroupId?, Author?, Text?)), Outs?, Outs1),
-    lookup_send('_user', msg(agent, '_user', group_received(GroupId?, Author?, Text?)),
+    send_user( msg(agent, '_user', group_received(GroupId?, Author?, Text?)),
         Outs1?, Outs2),
     agent(Id?, UserIn?, NetIn?, Outs2?).
 
@@ -342,14 +342,14 @@ agent(Id, UserIn, [msg(Member, _, group_leave(GroupId, Member1))|NetIn], Outs) :
 agent(Id, UserIn, [msg(_, Id1, group_removed(GroupId))|NetIn], Outs) :-
     Id? =?= Id1?, ground(GroupId?) |
     close_output(group(GroupId?), Outs?, Outs1),
-    lookup_send('_user', msg(agent, '_user', group_removed(GroupId?)), Outs1?, Outs2),
+    send_user( msg(agent, '_user', group_removed(GroupId?)), Outs1?, Outs2),
     agent(Id?, UserIn?, NetIn?, Outs2?).
 
 %% Receive unfriend from friend — close friend channel, notify UI
 agent(Id, UserIn, [msg(From, Id1, unfriend)|NetIn], Outs) :-
     Id? =?= Id1?, ground(From?) |
-    close_output(friend(From?), Outs?, Outs1),
-    lookup_send('_user', msg(agent, '_user', unfriended(From?)), Outs1?, Outs2),
+    close_friend(From?, Outs?, Outs1),
+    send_user( msg(agent, '_user', unfriended(From?)), Outs1?, Outs2),
     agent(Id?, UserIn?, NetIn?, Outs2?).
 
 %% --- Termination ---

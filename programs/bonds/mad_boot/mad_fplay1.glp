@@ -1,6 +1,6 @@
-%% mad_fplay1.glp — madGLP boot for bonds_v2 fplay1 (1 isolate: alice)
+%% mad_fplay1.glp — madGLP boot for bonds fplay1 (1 isolate: alice)
 %%
-%% Derived from: bonds_v2/boot.glp fplay1 clause
+%% Derived from: bonds/boot.glp fplay1 clause
 %% Bonds: Solo mint + balance (1 agent, no network)
 %% Single isolate.
 
@@ -17,7 +17,7 @@ agent_init(Id, PlayNum, NetIn) :-
     actor_dispatch(Id?, PlayNum?, ch(ActorIn?, ActorOut)),
     tee(ActorOut?, MedIn, DispCmd),
     agent(Id?, AgentIn?, NetIn?,
-          [output('_user', AgentToUser)],
+          [user_output(AgentToUser)],
           [], 1),
     ui_mediator(Id?, ch(AgentToUser?, AgentIn),
                 ch(MedIn?, MedOut), [], 1),

@@ -23,7 +23,7 @@ Normalize trailing slashes when comparing paths. The bug: `currentNorm` has no t
 2. Change `var env = TypeEnvironment({}, {});` to `var env = buildRootScopeEnvironment();`  
 3. Remove `rootSelfGlpPath` from the `fullChain` list (root self.glp already handles root self.glp). The loop should just iterate over `chain`, not `fullChain`.
 
-**Verify**: `echo -e '../programs/bonds_v2/\n:quit' | dart run bin/glp_repl.dart` should load without `UnknownTypeError`. Then run both test suites.
+**Verify**: `echo -e '../programs/bonds/\n:quit' | dart run bin/glp_repl.dart` should load without `UnknownTypeError`. Then run both test suites.
 
 **Commit**: Stage only `module_hierarchy.dart` and `project_linker.dart`. Message: "Fix project loader: normalize paths + use buildRootScopeEnvironment"
 

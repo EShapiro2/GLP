@@ -1,0 +1,8 @@
+%% Module inside the nested sub-project. Its exported `greet` is callable by the
+%% prefixed name `leaf:greet` from the parent, but is bare-aliased only when
+%% child/ is the loaded root.
+-module(leaf).
+-mode(system).
+
+exported procedure greet.
+greet :- '_output'(leaf_ran).

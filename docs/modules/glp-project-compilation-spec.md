@@ -68,11 +68,15 @@ Every goal in every clause body is resolved:
 
 ### 3.4 Entry Points
 
-Every exported procedure in every module receives an unprefixed alias.  If `agent.glp` exports `agent/4`, the output contains both `agent:agent/4` (the renamed procedure) and `agent/4` (an alias that calls it).  If `boot.glp` exports `play1/0`, the output contains both `boot:play1/0` and `play1/0`.
+A procedure of a project is externally accessible only if it is exported at the project's root (TGLP manual, Modules; the paper's Static Linking step five generates unprefixed aliases for the root's exported procedures only).
 
-This is necessary because code loaded on top of a linked project (e.g., madGLP boot procedures, REPL goals) must be able to call any exported procedure by its original name, not only the top module's exports.
+Accordingly, an unprefixed alias is generated for each **exported** procedure of a **root-level** module — a module whose nearest enclosing `self.glp` directory is the loaded project root itself, equivalently a module not contained in any descendant `self.glp` subtree below the root.  If root-level `agent.glp` exports `agent/6`, the output contains both `agent:agent/6` (the renamed procedure) and `agent/6` (an alias that calls it).  If root-level `boot.glp` exports `fplay1/0`, the output contains both `boot:fplay1/0` and `fplay1/0`.
 
-If two modules export procedures with the same name and arity, a conflict is reported.  If no module has exported procedures, all top-level module procedures get unprefixed aliases (backwards compatibility).
+Modules under a **descendant** `self.glp` root — a nested sub-project (e.g. `secure/`, `village/`) — are not part of the loaded root's public surface.  Their procedures keep prefixed names only and receive **no** unprefixed alias, even when exported; they become entry points only when that nested directory is itself the loaded root.  (Same-name modules at different levels are disambiguated by relative path per §3.2, e.g. `boot:` vs `secure/boot:`.)
+
+This is necessary because code loaded on top of a linked project (madGLP boot procedures, REPL goals) calls exported procedures by their original name: it must reach the loaded root's public procedures, but not a nested sub-project's internals.
+
+If two root-level modules export procedures with the same name and arity, a conflict is reported.  The same-name-export conflict rule applies within the aliased (root-level exported) set only.  There is no "top module" and no backwards-compatibility rule that aliases unexported procedures: a project that wants its plays callable by name declares them `exported` in its root-level module.
 
 Code loaded on top of a linked project (REPL goals, madGLP boot procedures) is resolved in the scope of the project root, with the same ancestor `self.glp` chain.
 
@@ -91,7 +95,7 @@ After linking, `imported` and `exported` declarations are no longer needed — t
 A single Module AST containing:
 - All type definitions from all `self.glp` files and all modules (deduplicated by name, inner scopes shadow outer)
 - All procedures from all `.glp` files (including `self.glp`), all renamed
-- Entry point aliases for all modules' exported procedures
+- Entry point aliases for the exported procedures of root-level modules only (§3.4)
 
 This AST is fed into the existing compilation pipeline (partial evaluation → codegen).
 
@@ -150,7 +154,8 @@ boot:play1 :-
     mediator:ui_mediator(alice, ...),
     boot:sink(...), ...
 
-%% Entry point aliases (all exported procedures)
+%% Entry point aliases (exported procedures of root-level modules only; §3.4).
+%% Here boot.glp declares `exported procedure play1.` etc. so its plays alias.
 agent :- agent:agent.      %% from agent.glp
 ui_mediator :- mediator:ui_mediator.  %% from ui/mediator.glp
 alice1 :- actors:alice1.   %% from ui/actors.glp

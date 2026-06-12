@@ -6,7 +6,7 @@
 %% Receives trade-payment from Frank (medical checkup).
 %% Receives trade-redemption from Frank.
 %%
-%% Types: from bonds_v2/self.glp (ancestor scoping)
+%% Types: from bonds/self.glp (ancestor scoping)
 
 -module(diana).
 -mode(system).

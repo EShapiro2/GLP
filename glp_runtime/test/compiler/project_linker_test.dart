@@ -1,10 +1,10 @@
 /// Project linker tests: static linking of multi-module GLP projects.
 ///
-/// Tests discovery, type checking, renaming, call resolution, and
-/// end-to-end compilation of the social/child_safe project. Module-local
-/// name-collision handling is covered separately by the dedicated
-/// test/programs/linker_collision fixture (child_safe no longer has
-/// module-local duplicate procedures — merge/3 was lifted to root self.glp).
+/// Tests discovery, type checking, renaming, call resolution, entry-point
+/// aliasing (§3.4: exported root-level procedures only), and end-to-end
+/// compilation of the social/child_safe project. Module-local name-collision
+/// handling is covered by the dedicated test/programs/linker_collision fixture;
+/// the nested-subproject entry-alias rule by test/programs/linker_nested.
 library;
 
 import 'dart:io';
@@ -92,7 +92,7 @@ void main() {
 
     setUp(() {
       modules = discoverProject(cssgRoot, rootSelfGlpPath: rootSelfPath);
-      linkResult = linkProject(modules, 'boot');
+      linkResult = linkProject(modules, rootDir: cssgRoot);
       linked = linkResult.program;
     });
 
@@ -184,19 +184,30 @@ void main() {
           reason: '_output body kernel should remain unprefixed');
     });
 
-    test('entry point aliases exist for top module', () {
-      // boot is the top module — all its procedures should have unprefixed aliases
+    test('entry-point aliases exist for exported root-level procedures only', () {
+      // §3.4: only EXPORTED procedures of root-level modules get bare aliases.
       final bootModule = modules.firstWhere((m) => m.moduleName == 'boot');
-      final bootProcNames = bootModule.ast.procedures.map((p) => p.name).toSet();
+      final exported = bootModule.ast.procDeclarations
+          .where((d) => d.exported)
+          .map((d) => d.name)
+          .toSet();
+      expect(exported, contains('play1'));
+      expect(exported, contains('fplay1'));
 
-      // Check that aliases exist
-      for (final name in bootProcNames) {
+      for (final name in exported) {
         final aliases = linked.procedures
             .where((p) => p.name == name && !p.name.contains(':'))
             .toList();
         expect(aliases, isNotEmpty,
-            reason: 'Entry point alias should exist for $name');
+            reason: 'Entry point alias should exist for exported $name');
       }
+
+      // A non-exported boot helper (tee) must NOT receive a bare alias.
+      final teeAlias = linked.procedures
+          .where((p) => p.name == 'tee' && !p.name.contains(':'))
+          .toList();
+      expect(teeAlias, isEmpty,
+          reason: 'non-exported boot:tee must not be bare-aliased');
     });
 
     test('entry point alias calls renamed procedure', () {
@@ -220,7 +231,7 @@ void main() {
 
     setUp(() {
       final modules = discoverProject(collisionRoot, rootSelfGlpPath: rootSelfPath);
-      linked = linkProject(modules, 'mod_a').program;
+      linked = linkProject(modules, rootDir: collisionRoot).program;
     });
 
     test('colliding procedures are disambiguated by module prefix', () {
@@ -251,10 +262,59 @@ void main() {
     });
   });
 
+  group('Nested sub-project entry aliases (dedicated fixture)', () {
+    // Sole coverage of the §3.4 nested-subproject rule. Parent has root-level
+    // `boot` (exported `play`) and nested `child/` (own self.glp) with `leaf`
+    // (exported `greet`). See test/programs/linker_nested/.
+    const nestedRoot = 'test/programs/linker_nested';
+    const nestedChild = 'test/programs/linker_nested/child';
+
+    test('whole subtree links; nested module present by prefixed name', () {
+      final modules =
+          discoverProject(nestedRoot, rootSelfGlpPath: rootSelfPath);
+      final names = modules.map((m) => m.moduleName).toSet();
+      expect(names, contains('boot'));
+      expect(names, contains('leaf'));
+
+      final linked = linkProject(modules, rootDir: nestedRoot).program;
+      final procNames = linked.procedures.map((p) => p.name).toSet();
+      // Both modules' procedures are renamed and present.
+      expect(procNames, contains('boot:play'));
+      expect(procNames, contains('leaf:greet'));
+    });
+
+    test("root's exported play is aliased; nested export is not", () {
+      final modules =
+          discoverProject(nestedRoot, rootSelfGlpPath: rootSelfPath);
+      final linked = linkProject(modules, rootDir: nestedRoot).program;
+      final bare = linked.procedures
+          .where((p) => !p.name.contains(':'))
+          .map((p) => p.name)
+          .toSet();
+      // Root-level export aliased; nested export NOT aliased from the parent.
+      expect(bare, contains('play'));
+      expect(bare, isNot(contains('greet')));
+    });
+
+    test('nested dir loads standalone with its own aliases', () {
+      final modules =
+          discoverProject(nestedChild, rootSelfGlpPath: rootSelfPath);
+      final linked = linkProject(modules, rootDir: nestedChild).program;
+      final procNames = linked.procedures.map((p) => p.name).toSet();
+      final bare = linked.procedures
+          .where((p) => !p.name.contains(':'))
+          .map((p) => p.name)
+          .toSet();
+      // When child/ is the loaded root, leaf is root-level: greet is aliased.
+      expect(procNames, contains('leaf:greet'));
+      expect(bare, contains('greet'));
+    });
+  });
+
   group('End-to-end compilation', () {
     test('linked program compiles to bytecode', () {
       final modules = discoverProject(cssgRoot, rootSelfGlpPath: rootSelfPath);
-      final result = linkProject(modules, 'boot');
+      final result = linkProject(modules, rootDir: cssgRoot);
 
       final compiler = GlpCompiler();
       final bytecode = compiler.compileProgram(
@@ -274,7 +334,7 @@ void main() {
 
     test('fplay1 produces correct output', () {
       final modules = discoverProject(cssgRoot, rootSelfGlpPath: rootSelfPath);
-      final result = linkProject(modules, 'boot');
+      final result = linkProject(modules, rootDir: cssgRoot);
       final compiler = GlpCompiler();
       final bytecode = compiler.compileProgram(
         result.program,
