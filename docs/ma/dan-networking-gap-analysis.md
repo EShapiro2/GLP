@@ -1,6 +1,6 @@
 # Dan's Networking Layer vs GlpNetwork — Gap Analysis
 
-**Version**: 0.5
+**Version**: 0.6
 **Date**: 2026-06-11
 **Source**: https://github.com/danbachar/grassroots-networking (read 2026-06-11); GLP Networking API paper; `networking-seam-spec.md` v0.4.
 
@@ -23,11 +23,12 @@ A Flutter app + library (`lib/src/`): `GrassrootsNetwork` facade over two transp
 
 ## Gaps — small, wire/API level
 
-4. **ANNOUNCE carries nickname**; the paper moved nickname to GLP. Wire-format change on his side, or paper reverts. (Open paper comment 5 territory.)
-5. **Trust default is Open** in his settings; paper says Closed default.
+4. **ANNOUNCE carries nickname**; the paper moved nickname to GLP. Fixed on branch `glp-api-alignment` (2026-06-11): nickname removed from the ANNOUNCE wire and the transport identity exchange; display names stay app-level, falling back to the key fingerprint.
+5. **Trust default is Open** in his settings; paper says Closed default. Fixed on branch `glp-api-alignment` (2026-06-11): constructor default and persistence fallback now closed.
 6. **No peer links**: `generatePeerLink`/`consumePeerLink` absent (no invite/link code anywhere). His friendship protocol may be the intended substitute — reconcile with the paper's peer-link section.
 7. **No exposed sign/verify primitives** — packets are signed internally; the adapter builds GLP's `sign`/`verify` from the installed identity directly. Note: he uses libsodium FFI for Ed25519 because the `cryptography` package costs 150–200 ms per verify on Android — relevant to our kernels on phone later (our `ed25519_edwards` is pure Dart; interop unaffected, performance to revisit).
 8. **Extras beyond the paper**: `broadcast`, ACK/read-receipts, fragmentation (BLE MTU), `onPeerUpdated` — harmless; adapter ignores or uses.
+9. **ANNOUNCE carries UDP address candidates** (wire layout: candidateCount + candidates) — missed in v0.1. The paper's ANNOUNCE is the public key only; sharing the agent's address is GLP-level (IP section, Connectivity and Address). Pending the conversation with Dan — his proposed liveness section bundles address distribution into ANNOUNCE.
 
 ## Integration shape
 
