@@ -1,8 +1,8 @@
 # madGLP Networking Seam Spec
 
-**Version**: 0.5
-**Date**: 2026-06-11
-**Status**: IMPLEMENTED, except the valid_attestation guard rework (§4)
+**Version**: 0.6
+**Date**: 2026-06-12
+**Status**: IMPLEMENTED
 **Source**: GLP Networking API Specification paper (`~/Grassroots/GLP-Networking-API`), Sections 2–3 and the Simulation Realization appendix; `madGLP-spec.md` v5.6; `known-issues.md` Issue 7.
 
 ---
@@ -104,7 +104,7 @@ The isolate entry and `MadContext` talk to `GlpNetwork` instead of `mainPort`:
 
 Keys and signatures are hex string constants — no new GLP value type. Canonical serialization is the madGLP payload serialization of the ground term (address-free for ground terms; the implementation verifies this), pinned in the paper (sign/2 row, 2026-06-11).
 
-**Rework note (2026-06-11):** the shipped body kernel `verify_attestation(Signer, Subject, Sig, Ok)` (commit `0b8354a6`) is superseded by the `valid_attestation/4` guard above — remove the body kernel and wrapper, implement the guard at the runtime's guard extension point, redo §7 test 6. Queued for a GLP Code session.
+**Rework note (2026-06-11):** the shipped body kernel `verify_attestation(Signer, Subject, Sig, Ok)` (commit `0b8354a6`) is superseded by the `valid_attestation/4` guard above — remove the body kernel and wrapper, implement the guard at the runtime's guard extension point, redo §7 test 6. **Done (2026-06-12, commit `7cf64ecb`).**
 
 `MessageType` disappears from the seam: the wire carries payload bytes only (Section 6). `MessageType.agentMessage` was already legacy and ignored.
 
@@ -165,20 +165,21 @@ Implemented 2026-06-10 in a GLP Code session, on `main`.
 | `308d556b` | Reverse-order delivery test (`reverse_order_delivery_test.dart`, 2 tests) |
 | `0b8354a6` | §4 kernels `sign/2`, `verify_attestation/4` (`body_kernels.dart`, madPredicates, `self.glp`; `sign_verify_test.dart`, 6 tests) |
 | `8e951bf0` | Issue 8: `agent_runtime.dart` migrated to `GlpNetwork`; connectivity forwarding (`agent_runtime_test.dart`, 2 tests) |
+| `7cf64ecb` | §4 rework: `verify_attestation/4` body kernel removed; `valid_attestation/4` guard implemented at the guard extension point (`runner.dart`, `root_scope.dart`, `analyzer.dart`); `sign/2` stands; `sign_verify_test.dart` rewritten to guard semantics, 6 tests |
 
-**Test counts (2026-06-10):**
+**Test counts (2026-06-12, at `7cf64ecb`):**
 
-- `dart test` (full): `+378 ~5 -0`.
-- REPL suite (`bash test/run_all_tests.sh`): 511/511 at `0b8354a6`; at `8e951bf0` red (490/511) **due to another session's uncommitted `-expose` compiler WIP**, not this work — all 21 failures are module-system/project-load tests; push held until the combined tree is REPL-green.
-- Flutter (`glp_multiagent`): `flutter analyze` clean (2 pre-existing); `flutter build macos` success.
+- `dart test` (full): `+373 ~5 -0`.
+- REPL suite (`bash test/run_all_tests.sh`): 462/480; the 18 failures are all `Bonds v2 fplay*` from another session's uncommitted WIP, not this work — identical before and after the rework.
+- Flutter (`glp_multiagent`): `flutter build macos` success; `flutter analyze` 3 pre-existing app-side issues (none in this work's files).
 
 **Dependency:** removed `cryptography` (async-only), added `ed25519_edwards 0.3.1` (synchronous), backing the synchronous `sign`/`verify` of §2.
 
 **Issue 8 (app path):** **implemented** (`8e951bf0`) — `agent_runtime.dart` migrated to `GlpNetwork` (mirrors `isolate_manager.dart`); connectivity events forwarded to client callbacks via `onConnectivityEvent`. Verified by headless `agent_runtime_test.dart` (characterization test green across the migration) + `flutter analyze`/`flutter build macos`; manual app check waived.
 
-**Body kernels** `sign/2`, `verify_attestation/4`: **implemented** (`0b8354a6`) as GLP wrappers (ground-guard → suspend-until-ground) over Dart kernels `'_sign'/2`, `'_verify_attestation'/4` in `body_kernels.dart`, backed by `GlpNetwork.sign`/`verify` (real Ed25519). Canonical bytes = the madGLP payload serialization of the ground term (`MadContext.canonicalSerialize` → `serializeAgentMessage`, which throws on any `VarRef` — confirmed address-free and agentId-independent for ground terms). Keys/signatures are lowercase-hex string constants. §7 test 6 in `sign_verify_test.dart`.
+**System predicates** `sign/2` (body kernel) and `valid_attestation/4` (guard): **implemented**. `sign/2` (`0b8354a6`) is a GLP wrapper (ground-guard → suspend-until-ground) over the Dart kernel `'_sign'/2` in `body_kernels.dart`. `valid_attestation/4` (`7cf64ecb`) is a runtime guard at the guard extension point (`runner.dart::_evaluateGuard`), whitelisted in `root_scope.dart` and grounding-marked in `analyzer.dart`; it suspends until all inputs are ground (the generic guard machinery), then holds iff `Sig` is `Signer`'s valid Ed25519 signature over `attest(PkA, PkB)`, else fails (clause deselected) — never aborts; absence of a `MadContext`/network is guard failure. Both are backed by `GlpNetwork.sign`/`verify` (real Ed25519). Canonical bytes = the madGLP payload serialization of the ground term (`MadContext.canonicalSerialize` → `serializeAgentMessage`, which throws on any `VarRef` — confirmed address-free and agentId-independent for ground terms). Keys/signatures are lowercase-hex string constants. §7 test 6 in `sign_verify_test.dart`.
 
-**Superseded (2026-06-11):** `verify_attestation/4` becomes the guard `valid_attestation/4` (§4 rework note); `sign/2` stands.
+**Superseded (done 2026-06-12, `7cf64ecb`):** the `verify_attestation/4` body kernel is removed; `valid_attestation/4` is the guard form (§4 rework note); `sign/2` stands.
 
 ---
 
@@ -186,6 +187,7 @@ Implemented 2026-06-10 in a GLP Code session, on `main`.
 
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
+| 0.6 | 2026-06-12 | Claude | §4 rework implemented (`7cf64ecb`): `verify_attestation/4` body kernel removed; `valid_attestation/4` implemented as a runtime guard (suspend-until-ground, guard failure on invalid/malformed/no-network, never aborts); `sign/2` unchanged; §7 test 6 rewritten to guard semantics. §10 updated; status → IMPLEMENTED. |
 | 0.5 | 2026-06-11 | Claude | verify_attestation/4 (body kernel, Ok output, two keys) replaced by the guard valid_attestation/4, keeping the paper's four-input succeed/fail form; statement = attest(PkA, PkB); guard failure deselects the clause. sign/2 unchanged. §7 test 6 rewritten; code rework queued. |
 | 0.4 | 2026-06-10 | Claude | §4: system predicate kernels specified — sign/2 suspends until ground, signs the canonical (payload) serialization; verify_attestation/4 checks attest(Signer, Subject); keys/signatures as hex string constants; verification failure binds false, never fails the goal. §7 test 6 added. Issue 8 gate: verification by Claude Code (manual check waived). |
 | 0.3 | 2026-06-10 | Claude | Implemented on the isolate stack. Added §10 Implementation Status (commits, suite counts). Corrected §9: `boot_loader.dart` unchanged; `agent_runtime.dart` deferred (Issue 8); §7.5 satisfied by inspection + order-independent seam. Status → IMPLEMENTED. |
