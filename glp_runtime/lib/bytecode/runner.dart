@@ -1,5 +1,8 @@
 import 'dart:async' show Timer;
+import 'dart:typed_data' show Uint8List;
 
+import 'package:glp_runtime/multiagent/mad_context.dart' show MadContext;
+import 'package:glp_runtime/multiagent/glp_network.dart' show PubKey;
 import 'package:glp_runtime/runtime/runtime.dart';
 import 'package:glp_runtime/runtime/machine_state.dart';
 import 'package:glp_runtime/runtime/terms.dart';
@@ -4709,6 +4712,70 @@ class BytecodeRunner {
         // Both ground - check structural equality
         final result = _termsEqual(left, right, cx);
         return result ? GuardResult.success : GuardResult.failure;
+
+      // Attestation guard (madGLP, seam spec §4).
+      // valid_attestation(Signer?, PkA?, PkB?, Sig?) holds iff Sig is Signer's
+      // valid Ed25519 signature over the canonical serialization of attest(PkA,
+      // PkB). Inputs are lowercase-hex string constants (keys 64 chars, signature
+      // 128 chars). Any invalid/malformed input, or absence of a network on the
+      // context, is guard failure — the guard never aborts. Unbound readers were
+      // already suspended by the caller.
+      case 'valid_attestation':
+        if (args.length != 4) return GuardResult.failure;
+        final ctx = cx.rt.madContext;
+        if (ctx is! MadContext) return GuardResult.failure;
+        final network = ctx.network;
+        if (network == null) return GuardResult.failure;
+
+        String? hexConst(dynamic v) {
+          if (v is ConstTerm) {
+            final cv = v.value;
+            return cv is String ? cv : null;
+          }
+          if (v is String) return v;
+          if (v is VarRef) {
+            if (cx.rt.heap.isReader(v.addr)) {
+              if (!cx.rt.heap.isReaderBound(v.addr)) return null;
+              return hexConst(cx.rt.heap.getReaderValue(v.addr));
+            }
+            final deref = cx.rt.heap.getValue(v.addr);
+            return deref == null ? null : hexConst(deref);
+          }
+          return null;
+        }
+
+        Uint8List? hexToBytes(String? hex, int expectedBytes) {
+          if (hex == null || hex.length != expectedBytes * 2) return null;
+          final out = Uint8List(expectedBytes);
+          for (var i = 0; i < expectedBytes; i++) {
+            final b = int.tryParse(hex.substring(i * 2, i * 2 + 2), radix: 16);
+            if (b == null) return null;
+            out[i] = b;
+          }
+          return out;
+        }
+
+        final signerBytes = hexToBytes(hexConst(args[0]), 32);
+        final pkAHex = hexConst(args[1]);
+        final pkBHex = hexConst(args[2]);
+        final sigBytes = hexToBytes(hexConst(args[3]), 64);
+        if (signerBytes == null ||
+            pkAHex == null ||
+            pkBHex == null ||
+            sigBytes == null) {
+          return GuardResult.failure;
+        }
+
+        try {
+          final attest =
+              StructTerm('attest', [ConstTerm(pkAHex), ConstTerm(pkBHex)]);
+          final canonical = ctx.canonicalSerialize(attest);
+          final ok = network.verify(
+              PubKey(signerBytes), Uint8List.fromList(canonical), sigBytes);
+          return ok ? GuardResult.success : GuardResult.failure;
+        } catch (_) {
+          return GuardResult.failure;
+        }
 
       default:
         print('[WARN] Unknown guard predicate: $predicateName');

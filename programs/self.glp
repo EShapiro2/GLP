@@ -69,10 +69,10 @@ procedure _close_mutual_reference(_?).
 % madGLP network primitives
 procedure _send(_?, _?, _?).
 
-% madGLP attestation kernels (sign/2, verify_attestation/4 wrappers live in
-% madPredicates; backed by GlpNetwork.sign/verify — seam spec §4)
+% madGLP attestation kernel (sign/2 wrapper lives in madPredicates; backed by
+% GlpNetwork.sign — seam spec §4). valid_attestation/4 is a runtime guard, not a
+% kernel; it needs no _-prefixed declaration here (seam spec §4 rework note).
 procedure _sign(_?, _).
-procedure _verify_attestation(_?, _?, _?, _).
 
 % Output (system predicate)
 procedure _output(_?).

@@ -44,6 +44,8 @@ const Set<String> predefinedProcedureNames = {
   'known',
   'unknown',
   'no_readers',
+  // Attestation guard (madGLP, seam spec §4)
+  'valid_attestation',
   // Time guards (fundamental - implemented by runtime)
   'wait',
   'wait_until',
@@ -93,6 +95,8 @@ const Set<String> builtinProcedures = {
   'known/1',
   'unknown/1',
   'no_readers/1',
+  // Attestation guard (madGLP, seam spec §4)
+  'valid_attestation/4',
   // Time guards
   'wait/1',
   'wait_until/1',
@@ -117,9 +121,8 @@ const Set<String> builtinProcedures = {
   '_close_mutual_reference/1',
   // madGLP network primitives
   '_send/3',
-  // madGLP attestation kernels (seam spec §4)
+  // madGLP attestation kernel (seam spec §4)
   '_sign/2',
-  '_verify_attestation/4',
   // Output (system predicate)
   '_output/1',
 };

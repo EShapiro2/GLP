@@ -217,7 +217,7 @@ class AgentRuntime {
     );
     network.putIdentity(kp.pub, kp.priv);
     _network = network;
-    _ctx!.network = network; // backs sign/2 and verify_attestation/4 (§4)
+    _ctx!.network = network; // backs sign/2 and the valid_attestation/4 guard (§4)
 
     // Outgoing (spec §4): ctx.onMessageReady(destId, msg) → network.send.
     _ctx!.onMessageReady = (destination, msg) async {

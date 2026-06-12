@@ -622,6 +622,8 @@ class Analyzer {
     'otherwise',
     // Time
     'wait', 'wait_until',
+    // Attestation guard (succeed/fail only; negation unspecified — seam spec §4)
+    'valid_attestation',
   };
 
   // Body-only constructs that are NOT valid guards
@@ -736,6 +738,17 @@ class Analyzer {
     // Ground equality guard marks both arguments as grounded
     // =?= succeeds only if both arguments are ground and equal
     if (guard.predicate == '=?=' && guard.args.length == 2) {
+      for (final arg in guard.args) {
+        if (arg is VarTerm) {
+          varTable.markGrounded(arg.name);
+        }
+      }
+    }
+
+    // valid_attestation/4 guard marks all four inputs as grounded: it suspends
+    // until every input is ground, so a holding clause has them all ground
+    // (seam spec §4). Allows multiple reader occurrences of the key/sig inputs.
+    if (guard.predicate == 'valid_attestation' && guard.args.length == 4) {
       for (final arg in guard.args) {
         if (arg is VarTerm) {
           varTable.markGrounded(arg.name);

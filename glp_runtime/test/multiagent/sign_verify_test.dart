@@ -1,9 +1,11 @@
-/// Tests for the sign/2 and verify_attestation/4 system-predicate kernels.
+/// Tests for the sign/2 body kernel and the valid_attestation/4 guard.
 ///
-/// Covers networking-seam-spec.md v0.4 §4 and §7 test 6: an agent signs
-/// attest(PkA, PkB); verify_attestation binds true; a tampered/invalid
-/// signature binds false; sign suspends until its input is ground and resumes
-/// on binding; a signature produced by one agent verifies at another agent.
+/// Covers networking-seam-spec.md §4 and §7 test 6: an agent signs
+/// attest(PkA, PkB); a clause guarded by valid_attestation/4 is selected on the
+/// valid signature; on a tampered or malformed signature the guard fails and the
+/// `otherwise` clause is selected; sign suspends until its input is ground and
+/// resumes on binding; a signature produced by one agent verifies at another
+/// agent.
 ///
 /// sign/verify are real Ed25519 (ed25519_edwards) via GlpNetwork; keys and
 /// signatures are lowercase-hex string constants.
@@ -38,26 +40,25 @@ GlpEngine _agent(
 }
 
 void main() {
-  group('sign/2 + verify_attestation/4 (§4, §7.6)', () {
-    test('round-trip: sign attest(PkA,PkB) then verify → true', () async {
+  group('sign/2 + valid_attestation/4 guard (§4, §7.6)', () {
+    test('round-trip: valid signature selects the guarded clause', () async {
       final out = <String>[];
       final a = generateKeyPair();
       final b = generateKeyPair();
       final engine = _agent('alice', a, out);
       engine.loadSource('''
 -mode(system).
-procedure ev(_?).
-ev(Ok) :- ground(Ok?) | '_output'(verified(Ok?)).
-procedure verify_step(_?).
-verify_step(Sig) :- ground(Sig?) |
-    verify_attestation('${a.pub.hex}', '${b.pub.hex}', Sig?, Ok),
-    ev(Ok?).
+procedure check(_?).
+check(Sig) :-
+    valid_attestation('${a.pub.hex}', '${a.pub.hex}', '${b.pub.hex}', Sig?) |
+    '_output'(verified).
+check(_) :- otherwise | '_output'(rejected).
 procedure round_trip.
-round_trip :- sign(attest('${a.pub.hex}', '${b.pub.hex}'), Sig), verify_step(Sig?).
+round_trip :- sign(attest('${a.pub.hex}', '${b.pub.hex}'), Sig), check(Sig?).
 ''');
       final result = await engine.runGoal('round_trip');
       expect(result.succeeded, isTrue);
-      expect(out, ['verified(true)']);
+      expect(out, ['verified']);
     });
 
     test('sign emits a 128-char lowercase-hex signature', () async {
@@ -78,8 +79,7 @@ do_sign :- sign(attest('${a.pub.hex}', '${b.pub.hex}'), Sig), emit(Sig?).
       expect(out[0], matches(RegExp(r'^[0-9a-f]{128}$')));
     });
 
-    test('cross-agent: alice signs, bob verifies in a separate run → true',
-        () async {
+    test('cross-agent: alice signs, bob\'s guard verifies → selected', () async {
       final a = generateKeyPair();
       final b = generateKeyPair();
 
@@ -96,22 +96,24 @@ do_sign :- sign(attest('${a.pub.hex}', '${b.pub.hex}'), Sig), emit(Sig?).
       await alice.runGoal('do_sign');
       final sig = aliceOut.single;
 
-      // bob (different key) verifies alice's signature.
+      // bob (different key) verifies alice's signature via the guard.
       final bobOut = <String>[];
       final bob = _agent('bob', b, bobOut);
       bob.loadSource('''
 -mode(system).
-procedure ev(_?).
-ev(Ok) :- ground(Ok?) | '_output'(verified(Ok?)).
-procedure do_verify.
-do_verify :- verify_attestation('${a.pub.hex}', '${b.pub.hex}', '$sig', Ok), ev(Ok?).
+procedure check.
+check :-
+    valid_attestation('${a.pub.hex}', '${a.pub.hex}', '${b.pub.hex}', '$sig') |
+    '_output'(verified).
+check :- otherwise | '_output'(rejected).
 ''');
-      final result = await bob.runGoal('do_verify');
+      final result = await bob.runGoal('check');
       expect(result.succeeded, isTrue);
-      expect(bobOut, ['verified(true)']);
+      expect(bobOut, ['verified']);
     });
 
-    test('tampered/invalid signature → false (never goal failure)', () async {
+    test('tampered signature → guard fails, otherwise clause selected',
+        () async {
       final out = <String>[];
       final a = generateKeyPair();
       final b = generateKeyPair();
@@ -119,31 +121,34 @@ do_verify :- verify_attestation('${a.pub.hex}', '${b.pub.hex}', '$sig', Ok), ev(
       final zeros = '0' * 128; // well-formed hex, not a valid signature
       engine.loadSource('''
 -mode(system).
-procedure ev(_?).
-ev(Ok) :- ground(Ok?) | '_output'(verified(Ok?)).
-procedure do_verify.
-do_verify :- verify_attestation('${a.pub.hex}', '${b.pub.hex}', '$zeros', Ok), ev(Ok?).
+procedure check.
+check :-
+    valid_attestation('${a.pub.hex}', '${a.pub.hex}', '${b.pub.hex}', '$zeros') |
+    '_output'(verified).
+check :- otherwise | '_output'(rejected).
 ''');
-      final result = await engine.runGoal('do_verify');
-      expect(result.succeeded, isTrue); // data, not failure
-      expect(out, ['verified(false)']);
+      final result = await engine.runGoal('check');
+      expect(result.succeeded, isTrue);
+      expect(out, ['rejected']);
     });
 
-    test('malformed hex signature → false', () async {
+    test('malformed hex signature → guard fails, otherwise clause selected',
+        () async {
       final out = <String>[];
       final a = generateKeyPair();
       final b = generateKeyPair();
       final engine = _agent('alice', a, out);
       engine.loadSource('''
 -mode(system).
-procedure ev(_?).
-ev(Ok) :- ground(Ok?) | '_output'(verified(Ok?)).
-procedure do_verify.
-do_verify :- verify_attestation('${a.pub.hex}', '${b.pub.hex}', 'not_valid_hex', Ok), ev(Ok?).
+procedure check.
+check :-
+    valid_attestation('${a.pub.hex}', '${a.pub.hex}', '${b.pub.hex}', 'not_valid_hex') |
+    '_output'(verified).
+check :- otherwise | '_output'(rejected).
 ''');
-      final result = await engine.runGoal('do_verify');
+      final result = await engine.runGoal('check');
       expect(result.succeeded, isTrue);
-      expect(out, ['verified(false)']);
+      expect(out, ['rejected']);
     });
 
     test('sign suspends until its input is ground, then resumes', () async {

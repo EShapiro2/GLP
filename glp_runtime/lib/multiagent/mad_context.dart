@@ -45,8 +45,8 @@ class MadContext {
   /// Optional callback for message delivery (set by coordinator)
   MessageDeliveryCallback? onMessageReady;
 
-  /// The agent's networking layer (set at boot). Backs the `sign/2` and
-  /// `verify_attestation/4` body kernels (seam spec §4): the layer holds the
+  /// The agent's networking layer (set at boot). Backs the `sign/2` body kernel
+  /// and the `valid_attestation/4` guard (seam spec §4): the layer holds the
   /// private key and provides real Ed25519 `sign`/`verify`.
   GlpNetwork? network;
 

@@ -337,7 +337,7 @@ void _agentIsolateEntry(AgentConfig config) async {
         config.mainPort.send(RouterSend(agentId, toId, payload)),
   );
   network.putIdentity(config.keyPair.pub, config.keyPair.priv);
-  // Back the sign/2 and verify_attestation/4 kernels (seam spec §4).
+  // Back the sign/2 kernel and the valid_attestation/4 guard (seam spec §4).
   ctx.network = network;
 
   // Outgoing (spec §4): ctx.onMessageReady(destId, msg) → network.send.

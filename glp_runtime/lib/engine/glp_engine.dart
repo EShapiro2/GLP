@@ -117,12 +117,8 @@ send_to_user([]).
 procedure sign(_?, _).
 sign(T, Sig?) :- ground(T?) | '_sign'(T?, Sig).
 
-%% verify_attestation/4 - bind Ok to true iff Sig is Signer's valid Ed25519
-%% signature over attest(Signer, Subject); false otherwise (seam spec §4).
-procedure verify_attestation(_?, _?, _?, _).
-verify_attestation(Signer, Subject, Sig, Ok?) :-
-    ground(Signer?), ground(Subject?), ground(Sig?) |
-    '_verify_attestation'(Signer?, Subject?, Sig?, Ok).
+%% valid_attestation/4 is a guard, not a wrapped body kernel — it is built into
+%% the runtime guard machinery (seam spec §4 rework note); no GLP wrapper here.
 ''';
 
 /// GLP Engine - the embeddable core for running GLP programs
