@@ -1,3 +1,4 @@
+%% Provenance: salvaged from programs/misc/ — A5 Stage A slice 5 (2026-06-13). Regression seed; not in any suite.
 % Minimal test case for structures-in-lists bug
 
 % Works: atom in list

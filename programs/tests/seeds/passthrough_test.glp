@@ -1,0 +1,5 @@
+%% Provenance: salvaged from programs/misc/ — A5 Stage A slice 5 (2026-06-13). Regression seed; not in any suite.
+%% passthrough_test.glp - Test WxW scenario
+%% passthrough(X, X?) - X is writer, X? is reader
+
+passthrough(X, X?).

@@ -1,3 +1,4 @@
+%% Provenance: salvaged from programs/misc/ — A5 Stage A slice 5 (2026-06-13). Regression seed; not in any suite.
 %% wxw_test.glp - Test writer vs writer unification
 %% According to spec, WxW should FAIL, not suspend
 

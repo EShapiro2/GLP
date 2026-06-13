@@ -1,3 +1,4 @@
+%% Provenance: salvaged from programs/misc/ — A5 Stage A slice 5 (2026-06-13). Regression seed; not in any suite.
 %% Test # as pattern in head
 extract_module(M # _, M?).
 extract_goal(_ # G, G?).
