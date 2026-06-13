@@ -55,37 +55,37 @@ class ReplPlayRunner {
 
   /// CSSG GLP files (child-safe social graph, plays 1–7).
   static const cssgFiles = [
-    '../programs/typed_book/cssg/typed_social_agent.glp',
-    '../programs/typed_book/cssg/typed_ui_mediator.glp',
-    '../programs/typed_book/cssg/typed_ui_actors.glp',
-    '../programs/typed_book/cssg/play_ui_sim_boot.glp',
+    '../programs/book/cssg/typed_social_agent.glp',
+    '../programs/book/cssg/typed_ui_mediator.glp',
+    '../programs/book/cssg/typed_ui_actors.glp',
+    '../programs/book/cssg/play_ui_sim_boot.glp',
   ];
 
   /// Bonds GLP files (grassroots bonds, plays 1–11).
   static const bondsFiles = [
-    '../programs/typed_book/bonds/agent.glp',
-    '../programs/typed_book/bonds/mediator.glp',
-    '../programs/typed_book/bonds/actors.glp',
-    '../programs/typed_book/bonds/boot.glp',
+    '../programs/book/bonds/agent.glp',
+    '../programs/book/bonds/mediator.glp',
+    '../programs/book/bonds/actors.glp',
+    '../programs/book/bonds/boot.glp',
   ];
 
   /// Bonds GLP files for play 12 (adds play12 actor files).
   static const bondsPlay12Files = [
     ...bondsFiles,
-    '../programs/typed_book/bonds/play12/alice.glp',
-    '../programs/typed_book/bonds/play12/bob.glp',
-    '../programs/typed_book/bonds/play12/charlie.glp',
-    '../programs/typed_book/bonds/play12/diana.glp',
-    '../programs/typed_book/bonds/play12/eve.glp',
-    '../programs/typed_book/bonds/play12/frank.glp',
+    '../programs/book/bonds/play12/alice.glp',
+    '../programs/book/bonds/play12/bob.glp',
+    '../programs/book/bonds/play12/charlie.glp',
+    '../programs/book/bonds/play12/diana.glp',
+    '../programs/book/bonds/play12/eve.glp',
+    '../programs/book/bonds/play12/frank.glp',
   ];
 
   /// CSSN GLP files (child-safe social networking, plays 1–10).
   static const cssnFiles = [
-    '../programs/typed_book/cssn/typed_social_agent.glp',
-    '../programs/typed_book/cssn/typed_ui_mediator.glp',
-    '../programs/typed_book/cssn/typed_ui_actors.glp',
-    '../programs/typed_book/cssn/play_ui_sim_boot.glp',
+    '../programs/book/cssn/typed_social_agent.glp',
+    '../programs/book/cssn/typed_ui_mediator.glp',
+    '../programs/book/cssn/typed_ui_actors.glp',
+    '../programs/book/cssn/play_ui_sim_boot.glp',
   ];
 
   /// CSSN v2 modules project (village scenario, fplay13).

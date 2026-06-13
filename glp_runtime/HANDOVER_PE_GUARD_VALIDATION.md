@@ -67,7 +67,7 @@ Any other user-defined procedure called in guard position is a compile-time erro
 
 4. **Test with actual GLP program** that uses guards:
    ```bash
-   echo "../programs/typed_book/social_graph/play_alice_bob_carol.glp" | dart run bin/glp_repl.dart 2>&1 | head -20
+   echo "../programs/book/social_graph/play_alice_bob_carol.glp" | dart run bin/glp_repl.dart 2>&1 | head -20
    ```
 
 ---

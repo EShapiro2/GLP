@@ -4,7 +4,7 @@ import 'package:glp_runtime/multiagent/boot_loader.dart';
 import 'package:glp_runtime/multiagent/isolate_manager.dart';
 
 /// Base directory for GLP source files (repo-relative from glp_runtime/).
-const _socialGraphDir = '../programs/typed_book/social_graph';
+const _socialGraphDir = '../programs/book/social_graph';
 
 /// Read a GLP file from the social_graph directory, or skip the test.
 String? _readGlpFile(String filename) {

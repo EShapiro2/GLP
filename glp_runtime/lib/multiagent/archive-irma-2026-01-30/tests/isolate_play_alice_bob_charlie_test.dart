@@ -259,8 +259,8 @@ void main() {
 
     setUpAll(() {
       final paths = [
-        '/home/user/GLP/programs/typed_book/social_graph/play_alice_bob_charlie.glp',
-        '/Users/udi/Grassroots/GLP/programs/typed_book/social_graph/play_alice_bob_charlie.glp',
+        '/home/user/GLP/programs/book/social_graph/play_alice_bob_charlie.glp',
+        '/Users/udi/Grassroots/GLP/programs/book/social_graph/play_alice_bob_charlie.glp',
       ];
       for (final path in paths) {
         final file = File(path);

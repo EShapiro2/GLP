@@ -86,7 +86,7 @@ cd /Users/udi/Grassroots/GLP/glp_multiagent && flutter build macos
 | Unit tests | `glp_runtime/test/` |
 | Unified test script | `test/run_all_tests.sh` |
 | Typed test programs | `programs/tests/typed/` |
-| Typed book programs | `programs/typed_book/` |
+| Typed book programs | `programs/book/` |
 | Type checker test files | `glp_runtime/test/programs/typechecker/` |
 | Moded type test files | `glp_runtime/test/programs/moded_types/` |
 | Multiagent tests | `glp_runtime/test/multiagent/` |

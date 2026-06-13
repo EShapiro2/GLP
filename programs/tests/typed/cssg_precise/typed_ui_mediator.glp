@@ -1,6 +1,6 @@
 %% typed_ui_mediator.glp - Precisely typed mediator between agent/4 and Dart UI
 %%
-%% Copy of typed_book/cssg/typed_ui_mediator.glp with precise types.
+%% Copy of book/cssg/typed_ui_mediator.glp with precise types.
 %%
 %% Changes from original:
 %%   - FriendChannel in Response (instead of generic Channel)

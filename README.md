@@ -51,7 +51,7 @@ GLP/
 ├── programs/                 # all GLP source files
 │   ├── self.glp              # root prelude (types, primitives)
 │   ├── book/                 # Art of GLP book examples
-│   ├── typed_book/           # typed version of book examples
+│   ├── book/           # typed version of book examples
 │   ├── social/               # social platforms (modular projects)
 │   │   ├── graph/            # plain social graph
 │   │   ├── child_safe/       # child-safe social graph

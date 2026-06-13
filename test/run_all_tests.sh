@@ -28,7 +28,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 GLP_DIR="$SCRIPT_DIR/.."
 GLP_RUNTIME="$GLP_DIR/glp_runtime"
 TYPED="$GLP_DIR/programs/tests/typed"
-BOOK="$GLP_DIR/programs/typed_book"
+BOOK="$GLP_DIR/programs/book"
 TC_DIR="$GLP_RUNTIME/test/programs/typechecker"
 MODED="$GLP_RUNTIME/test/programs/moded_types"
 
@@ -807,12 +807,12 @@ POSITIVE_FILES=(
     "$MODED/valid/universal/any_constant_at_input.glp"
     "$MODED/valid/universal/any_empty_list.glp"
 
-    # --- typed_book/constants ---
+    # --- book/constants ---
     "$BOOK/constants/circuits.glp"
     "$BOOK/constants/gates.glp"
     "$BOOK/constants/gates_simple.glp"
 
-    # --- typed_book/recursive/arithmetic_trees ---
+    # --- book/recursive/arithmetic_trees ---
     "$BOOK/recursive/arithmetic_trees/ackermann.glp"
     "$BOOK/recursive/arithmetic_trees/exp.glp"
     "$BOOK/recursive/arithmetic_trees/factorial.glp"
@@ -825,7 +825,7 @@ POSITIVE_FILES=(
     "$BOOK/recursive/arithmetic_trees/primes.glp"
     "$BOOK/recursive/arithmetic_trees/times.glp"
 
-    # --- typed_book/recursive/list_processing ---
+    # --- book/recursive/list_processing ---
     "$BOOK/recursive/list_processing/append.glp"
     "$BOOK/recursive/list_processing/copy.glp"
     "$BOOK/recursive/list_processing/delete.glp"
@@ -848,27 +848,27 @@ POSITIVE_FILES=(
     "$BOOK/recursive/list_processing/translate.glp"
     "$BOOK/recursive/list_processing/variants/quicksort_original.glp"
 
-    # --- typed_book/recursive/structure_processing ---
+    # --- book/recursive/structure_processing ---
     "$BOOK/recursive/structure_processing/binary_tree.glp"
     "$BOOK/recursive/structure_processing/list_to_bst.glp"
     "$BOOK/recursive/structure_processing/substitute.glp"
     "$BOOK/recursive/structure_processing/traversals.glp"
     "$BOOK/recursive/structure_processing/tree_sum.glp"
 
-    # --- typed_book/social_graph ---
+    # --- book/social_graph ---
     "$BOOK/social_graph/channel.glp"
     "$BOOK/social_graph/typed_social_agent.glp"
 
-    # --- typed_book/social_networks ---
+    # --- book/social_networks ---
     "$BOOK/social_networks/broadcast.glp"
     "$BOOK/social_networks/replicate.glp"
     "$BOOK/social_networks/replicate2.glp"
     "$BOOK/social_networks/replicate3.glp"
 
-    # --- typed_book/streams/buffered_communication ---
+    # --- book/streams/buffered_communication ---
     "$BOOK/streams/buffered_communication/hollow_integers.glp"
 
-    # --- typed_book/streams/producers_consumers ---
+    # --- book/streams/producers_consumers ---
     "$BOOK/streams/producers_consumers/biased_merge.glp"
     "$BOOK/streams/producers_consumers/cooperative.glp"
     "$BOOK/streams/producers_consumers/distribute.glp"
@@ -883,7 +883,7 @@ POSITIVE_FILES=(
     "$BOOK/streams/producers_consumers/producer_consumer.glp"
     "$BOOK/streams/producers_consumers/producer_consumer_countdown.glp"
 
-    # --- typed_book/misc ---
+    # --- book/misc ---
     "$BOOK/test_bug.glp"
     "$BOOK/test_friend.glp"
     "$BOOK/test_lookup2.glp"

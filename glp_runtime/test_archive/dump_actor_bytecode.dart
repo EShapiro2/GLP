@@ -2,7 +2,7 @@ import 'dart:io';
 import 'package:glp_runtime/compiler/compiler.dart';
 
 void main() {
-  final source = File('/Users/udi/Grassroots/GLP/programs/typed_book/social_graph/play_alice_bob_charlie_actor_boot.glp').readAsStringSync();
+  final source = File('/Users/udi/Grassroots/GLP/programs/book/social_graph/play_alice_bob_charlie_actor_boot.glp').readAsStringSync();
 
   // Strip boot clause
   var strippedSource = source.replaceFirst(

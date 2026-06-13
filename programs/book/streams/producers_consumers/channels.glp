@@ -6,7 +6,7 @@
 %% Implemented using "multistream" - a polymorphic stream with branch elements.
 %%
 %% NOTE: This program uses partial functions that are incompatible with strict typing.
-%% It remains untyped for now - move to typed_book when coverage semantics are resolved.
+%% It remains untyped for now - move to book when coverage semantics are resolved.
 
 %% Type definitions
 List ::= [] ; [_ | List].

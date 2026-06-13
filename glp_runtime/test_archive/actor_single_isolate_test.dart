@@ -16,8 +16,8 @@ void main() {
     /// Load the actor boot file source
     String loadActorBootSource() {
       final paths = [
-        '/Users/udi/Grassroots/GLP/programs/typed_book/social_graph/play_alice_bob_charlie_actor_boot.glp',
-        'programs/typed_book/social_graph/play_alice_bob_charlie_actor_boot.glp',
+        '/Users/udi/Grassroots/GLP/programs/book/social_graph/play_alice_bob_charlie_actor_boot.glp',
+        'programs/book/social_graph/play_alice_bob_charlie_actor_boot.glp',
       ];
 
       for (final path in paths) {

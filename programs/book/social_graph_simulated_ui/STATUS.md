@@ -31,7 +31,7 @@ Dart/Flutter integration is implemented and working.
 
 ```bash
 cd /Users/udi/Grassroots/GLP/glp_runtime
-echo -e '../programs/typed_book/social_graph_simulated_ui/typed_social_agent.glp\n../programs/typed_book/social_graph_simulated_ui/typed_ui_mediator.glp\n../programs/typed_book/social_graph_simulated_ui/typed_ui_actors.glp\n../programs/typed_book/social_graph_simulated_ui/play_ui_sim_boot.glp\nplay1.\n:quit' | dart run bin/glp_repl.dart
+echo -e '../programs/book/social_graph_simulated_ui/typed_social_agent.glp\n../programs/book/social_graph_simulated_ui/typed_ui_mediator.glp\n../programs/book/social_graph_simulated_ui/typed_ui_actors.glp\n../programs/book/social_graph_simulated_ui/play_ui_sim_boot.glp\nplay1.\n:quit' | dart run bin/glp_repl.dart
 ```
 
 Replace `play1.` with `play2.` or `play3.` for other scenarios.
@@ -40,7 +40,7 @@ Replace `play1.` with `play2.` or `play3.` for other scenarios.
 
 ```bash
 cd /Users/udi/Grassroots/GLP/glp_runtime
-echo -e '../programs/typed_book/social_graph_simulated_ui/typed_social_agent.glp\n../programs/typed_book/social_graph_simulated_ui/typed_ui_mediator.glp\n../programs/typed_book/social_graph_simulated_ui/typed_ui_actors.glp\n../programs/typed_book/social_graph_simulated_ui/play_ui_sim_boot.glp\nfplay1.\n:quit' | dart run bin/glp_repl.dart
+echo -e '../programs/book/social_graph_simulated_ui/typed_social_agent.glp\n../programs/book/social_graph_simulated_ui/typed_ui_mediator.glp\n../programs/book/social_graph_simulated_ui/typed_ui_actors.glp\n../programs/book/social_graph_simulated_ui/play_ui_sim_boot.glp\nfplay1.\n:quit' | dart run bin/glp_repl.dart
 ```
 
 ### Flutter app

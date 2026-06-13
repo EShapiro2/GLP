@@ -55,10 +55,10 @@ dart run bin/glp_repl.dart
 At the `GLP>` prompt, load the four files:
 
 ```
-../programs/typed_book/cssg/typed_social_agent.glp
-../programs/typed_book/cssg/typed_ui_mediator.glp
-../programs/typed_book/cssg/typed_ui_actors.glp
-../programs/typed_book/cssg/play_ui_sim_boot.glp
+../programs/book/cssg/typed_social_agent.glp
+../programs/book/cssg/typed_ui_mediator.glp
+../programs/book/cssg/typed_ui_actors.glp
+../programs/book/cssg/play_ui_sim_boot.glp
 ```
 
 Then run any play:

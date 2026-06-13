@@ -1,6 +1,6 @@
 %% typed_ui_actors.glp - Precisely typed ground-term actors for the UI mediator
 %%
-%% Copy of typed_book/cssg/typed_ui_actors.glp with precise types.
+%% Copy of book/cssg/typed_ui_actors.glp with precise types.
 %%
 %% Changes from original:
 %%   - ActorChannel replaces generic Channel for actor procedures

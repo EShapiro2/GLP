@@ -16,7 +16,7 @@ Each test includes a goal, expected behavior, and actual execution results.
 Load the program and execute goals:
 ```bash
 cd /Users/udi/Grassroots/GLP/glp_runtime
-echo -e "../programs/typed_book/social_graph/social_graph_protocol.glp\n<GOAL>" | dart run bin/glp_repl.dart --typecheck
+echo -e "../programs/book/social_graph/social_graph_protocol.glp\n<GOAL>" | dart run bin/glp_repl.dart --typecheck
 ```
 
 ---

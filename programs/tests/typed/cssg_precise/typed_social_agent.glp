@@ -1,6 +1,6 @@
 %% typed_social_agent.glp - Precisely typed social agent (ack/nack intro variant)
 %%
-%% Copy of typed_book/cssg/typed_social_agent.glp with precise types.
+%% Copy of book/cssg/typed_social_agent.glp with precise types.
 %% Uses subtyping to allow precisely-typed streams to flow through
 %% generic Stream positions (e.g., OutputsList).
 %%

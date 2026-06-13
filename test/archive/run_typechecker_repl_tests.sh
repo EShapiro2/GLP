@@ -1,7 +1,7 @@
 #!/bin/bash
 # GLP Type Checker Test Suite - v2.2
 # Runs all tests in a single REPL session
-# Updated: 2026-01-13 - Added ALL typed_book programs
+# Updated: 2026-01-13 - Added ALL book programs
 
 set -e
 
@@ -9,7 +9,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 RUNTIME_DIR="$SCRIPT_DIR/../glp_runtime"
 TEST_DIR="$RUNTIME_DIR/test/programs/typechecker"
 MODED_DIR="$RUNTIME_DIR/test/programs/moded_types"
-BOOK_DIR="$SCRIPT_DIR/../programs/typed_book"
+BOOK_DIR="$SCRIPT_DIR/../programs/book"
 REPL="bin/glp_repl.dart"
 
 cd "$RUNTIME_DIR"
@@ -66,7 +66,7 @@ POSITIVE_FILES=(
     # TYPED BOOK PROGRAMS
     # =========================================================================
     
-    # === typed_book/recursive/arithmetic_trees ===
+    # === book/recursive/arithmetic_trees ===
     "$BOOK_DIR/recursive/arithmetic_trees/natural_numbers.glp"
     "$BOOK_DIR/recursive/arithmetic_trees/plus.glp"
     "$BOOK_DIR/recursive/arithmetic_trees/lesseq.glp"
@@ -81,7 +81,7 @@ POSITIVE_FILES=(
     "$BOOK_DIR/recursive/arithmetic_trees/primes.glp"
     "$BOOK_DIR/recursive/arithmetic_trees/sum_list.glp"
     
-    # === typed_book/recursive/list_processing ===
+    # === book/recursive/list_processing ===
     "$BOOK_DIR/recursive/list_processing/append.glp"
     "$BOOK_DIR/recursive/list_processing/bubble_sort.glp"
     "$BOOK_DIR/recursive/list_processing/copy.glp"
@@ -109,7 +109,7 @@ POSITIVE_FILES=(
     "$BOOK_DIR/recursive/list_processing/variants/flatten_original.glp"
     "$BOOK_DIR/recursive/list_processing/variants/quicksort_original.glp"
     
-    # === typed_book/recursive/structure_processing ===
+    # === book/recursive/structure_processing ===
     # "$BOOK_DIR/recursive/structure_processing/ancestor.glp"  # File is .disabled
     "$BOOK_DIR/recursive/structure_processing/binary_tree.glp"
     "$BOOK_DIR/recursive/structure_processing/distribute_nonground.glp"
@@ -122,7 +122,7 @@ POSITIVE_FILES=(
     "$BOOK_DIR/recursive/structure_processing/traversals.glp"
     "$BOOK_DIR/recursive/structure_processing/tree_sum.glp"
     
-    # === typed_book/streams/producers_consumers ===
+    # === book/streams/producers_consumers ===
     "$BOOK_DIR/streams/producers_consumers/biased_merge.glp"
     "$BOOK_DIR/streams/producers_consumers/channels.glp"
     "$BOOK_DIR/streams/producers_consumers/cooperative.glp"
@@ -143,12 +143,12 @@ POSITIVE_FILES=(
     "$BOOK_DIR/streams/producers_consumers/producer_consumer.glp"
     "$BOOK_DIR/streams/producers_consumers/producer_consumer_countdown.glp"
     
-    # === typed_book/streams/buffered_communication ===
+    # === book/streams/buffered_communication ===
     "$BOOK_DIR/streams/buffered_communication/bounded_buffer.glp"
     "$BOOK_DIR/streams/buffered_communication/bounded_buffer_original.glp"
     "$BOOK_DIR/streams/buffered_communication/switch2x2.glp"
     
-    # === typed_book/streams/objects_monitors ===
+    # === book/streams/objects_monitors ===
     "$BOOK_DIR/streams/objects_monitors/counter.glp"
     "$BOOK_DIR/streams/objects_monitors/many_counters.glp"
     "$BOOK_DIR/streams/objects_monitors/monitor.glp"
@@ -160,17 +160,17 @@ POSITIVE_FILES=(
     "$BOOK_DIR/streams/objects_monitors/plus_constraint.glp"
     "$BOOK_DIR/streams/objects_monitors/queue_manager.glp"
     
-    # === typed_book/constants ===
+    # === book/constants ===
     "$BOOK_DIR/constants/circuits.glp"
     "$BOOK_DIR/constants/gates.glp"
     "$BOOK_DIR/constants/gates_simple.glp"
     
-    # === typed_book/meta/plain ===
+    # === book/meta/plain ===
     "$BOOK_DIR/meta/plain/certainty_meta.glp"
     "$BOOK_DIR/meta/plain/failsafe_meta.glp"
     "$BOOK_DIR/meta/plain/plain_meta.glp"
     
-    # === typed_book/meta/enhanced ===
+    # === book/meta/enhanced ===
     "$BOOK_DIR/meta/enhanced/abortable_meta.glp"
     "$BOOK_DIR/meta/enhanced/control_meta.glp"
     "$BOOK_DIR/meta/enhanced/snapshot_meta.glp"
@@ -180,14 +180,14 @@ POSITIVE_FILES=(
     "$BOOK_DIR/meta/enhanced/timestamped_tree_meta.glp"
     "$BOOK_DIR/meta/enhanced/tracing_meta.glp"
     
-    # === typed_book/meta/debugging ===
+    # === book/meta/debugging ===
     "$BOOK_DIR/meta/debugging/runtime_control_meta.glp"
     
-    # === typed_book/modules ===
+    # === book/modules ===
     "$BOOK_DIR/modules/main_module.glp"
     "$BOOK_DIR/modules/math_module.glp"
     
-    # === typed_book/social_graph ===
+    # === book/social_graph ===
     "$BOOK_DIR/social_graph/agent.glp"
     "$BOOK_DIR/social_graph/agent_full.glp"
     "$BOOK_DIR/social_graph/agent_simple.glp"
@@ -213,7 +213,7 @@ POSITIVE_FILES=(
     "$BOOK_DIR/social_graph/streams.glp"
     "$BOOK_DIR/social_graph/test_4player.glp"
     
-    # === typed_book/social_networks ===
+    # === book/social_networks ===
     "$BOOK_DIR/social_networks/broadcast.glp"
     "$BOOK_DIR/social_networks/direct_messaging.glp"
     "$BOOK_DIR/social_networks/dm_simple.glp"
@@ -232,7 +232,7 @@ POSITIVE_FILES=(
     "$BOOK_DIR/social_networks/replicate2.glp"
     "$BOOK_DIR/social_networks/replicate3.glp"
     
-    # === typed_book/constitutional_consensus ===
+    # === book/constitutional_consensus ===
     "$BOOK_DIR/constitutional_consensus/consensus.glp"
     "$BOOK_DIR/constitutional_consensus/play_agents.glp"
     "$BOOK_DIR/constitutional_consensus/play_high_throughput.glp"
@@ -240,7 +240,7 @@ POSITIVE_FILES=(
     "$BOOK_DIR/constitutional_consensus/test_blocklace.glp"
     "$BOOK_DIR/constitutional_consensus/test_waves.glp"
     
-    # === typed_book/cryptocurrencies ===
+    # === book/cryptocurrencies ===
     "$BOOK_DIR/cryptocurrencies/gc.glp"
     "$BOOK_DIR/cryptocurrencies/play_mutual_credit.glp"
     "$BOOK_DIR/cryptocurrencies/play_payment.glp"
