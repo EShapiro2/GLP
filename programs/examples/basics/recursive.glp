@@ -1,3 +1,4 @@
+%% Provenance: salvaged from programs/misc/ — A5 Stage A slice 6 (2026-06-13). Recursion demo (concurrent process spawning).
 %% recursive.glp - Recursive programming examples
 %% True recursion: multiple recursive calls spawn concurrent processes
 

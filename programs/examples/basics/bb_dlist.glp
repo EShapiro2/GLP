@@ -1,3 +1,4 @@
+%% Provenance: salvaged from programs/misc/ — A5 Stage A slice 6 (2026-06-13). Bounded-buffer demo (difference-list version).
 % Create a difference list with N empty slots
 create_dl(0, H?, H).
 create_dl(N, [_|H?], T) :- N? > 0 | N1 := N? - 1, create_dl(N1?, H, T?).

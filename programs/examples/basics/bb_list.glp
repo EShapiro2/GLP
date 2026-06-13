@@ -1,3 +1,4 @@
+%% Provenance: salvaged from programs/misc/ — A5 Stage A slice 6 (2026-06-13). Bounded-buffer demo (list version).
 % List-based bounded buffer (for comparison with dlist version)
 
 % Producer: generates integers from N down to 1
