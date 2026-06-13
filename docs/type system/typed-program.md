@@ -149,6 +149,8 @@ procedure merge(Stream(X)?, Stream(X)?, Stream(X)).
 
 The parameter `X` is implicitly universally quantified. When the procedure is called, the type checker infers the instantiation from the call context by structural matching: each parameterized type in the declaration is matched against the corresponding concrete type at the call site, and each type parameter is bound to the concrete type that occupies its position. If different argument positions yield conflicting bindings for the same parameter, the type checker reports an error.
 
+A parameterized procedure declaration is a **clause template**. For each instantiation inferred from a call site, its clauses are checked by Well-Typed Clause (Definition 5.7) against the monomorphic declaration that instantiation produces. A clause may destructure a parameter: at an argument position whose type is a parameter, the clause is checked against the constructors the instantiation supplies, and an instantiation whose argument lacks a destructured constructor is rejected at that instantiation. Procedures that pass a parameter opaquely (`merge`, `send`) check identically at every instantiation; a procedure that destructures a parameter — e.g., a `lib/` router whose clause matches `user_output(...)` — requires this per-instantiation reading.
+
 Multiple parameters are supported:
 
 ```
@@ -179,7 +181,7 @@ where `T<S₁,...,Sₖ>` is a fresh type name and `Aᵢ[Sⱼ/Xⱼ]` denotes simu
 
 5. **Remove templates.** Remove parameterized type definitions from the type environment. Only the expanded monomorphic definitions remain.
 
-After this step, the program contains only monomorphic type definitions and procedure declarations. Type automaton construction, well-typing analysis, and subtype checking proceed without modification.
+After this step, the program contains only monomorphic type definitions. A parameterized procedure declaration with a free parameter is not expanded here; it is monomorphized per inferred instantiation during well-typing (see Parameterized Procedure Declarations). Type automaton construction, well-typing analysis, and subtype checking proceed without modification.
 
 ### Expansion Example
 
