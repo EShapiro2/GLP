@@ -204,11 +204,16 @@ ast.Module expandParameterizedTypes(ast.Module module, {
 }
 
 /// Detect type parameters in a procedure declaration.
-/// A type parameter is a name that:
-///  1. Appears as a bare typeArg inside a TypeRef with typeArgs (e.g., X in Stream(X))
-///  2. Is not a known defined type
-/// Bare top-level unknown types (e.g., MyUndefinedType) are NOT type params —
-/// they are only type params if the same name also appears inside a typeArg.
+/// A type parameter is a name that is not a known defined type and either:
+///  1. Appears as a bare typeArg inside a TypeRef with typeArgs (e.g., X in Stream(X)), or
+///  2. Appears as a bare top-level argument type (e.g., M in `p(M?, Stream(Ent)?, ...)`).
+/// Case 2 is the spec's "an argument position whose type is a parameter"
+/// (typed-program.md, clause-template paragraph); a carried-message type that
+/// has no constructor wrapper and no common supertype — e.g. a `lib/` router's
+/// message argument — can only appear here. A name defined as a type stays
+/// concrete, so monomorphic declarations are unaffected; inference and
+/// substitution already handle a top-level parameter
+/// (_matchTypeForInference / _substituteTypeParams).
 List<String> _detectProcTypeParams(ProcDecl pd, Map<String, TypeDef> templates,
     List<TypeDef> monoTypeDefs, Set<String> externalKnownTypes) {
   final knownTypes = <String>{
@@ -218,13 +223,18 @@ List<String> _detectProcTypeParams(ProcDecl pd, Map<String, TypeDef> templates,
     ...externalKnownTypes,
     'Constant', // also a known type
   };
-  // Pass 1: collect names that appear as typeArgs of any TypeRef with typeArgs.
-  // These are the "inner" type parameter candidates.
-  final innerCandidates = <String>{};
+  final candidates = <String>{};
+  // Names appearing as typeArgs of any TypeRef with typeArgs (inner positions).
   for (final arg in pd.argTypes) {
-    _collectInnerTypeParamCandidates(arg, knownTypes, innerCandidates);
+    _collectInnerTypeParamCandidates(arg, knownTypes, candidates);
   }
-  return innerCandidates.toList();
+  // Bare top-level argument names that are not known types (case 2).
+  for (final arg in pd.argTypes) {
+    if (arg is TypeRef && arg.typeArgs.isEmpty && !knownTypes.contains(arg.name)) {
+      candidates.add(arg.name);
+    }
+  }
+  return candidates.toList();
 }
 
 /// Collect type parameter names from inside parameterized type refs.

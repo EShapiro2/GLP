@@ -1,0 +1,16 @@
+-module(routing_inject).
+
+%% Response-injection router (A5 Stage B), lifted verbatim from the platform
+%% self.glp files (social/network, social/child_safe, social/graph, bonds — all
+%% identical).  Generalised over the injected value type R and the agent input
+%% stream type S, both inferred at each call.  The clause constructs
+%% msg(_, _, response(_)) into the S stream, so per-instantiation checking
+%% verifies that S carries that shape at each instantiation.
+%%
+%% Body is unchanged from the platform sources.
+
+exported procedure inject_msg(R?, Constant?, Constant?, Stream(S)?, Stream(S)).
+inject_msg(Resp, Target, Id, Ys, [msg(Target?, Id?, response(Resp?))|Ys?]) :-
+    known(Resp?) | true.
+inject_msg(Resp, Target, Id, [Y|Ys], [Y?|Ys1?]) :-
+    inject_msg(Resp?, Target?, Id?, Ys?, Ys1).

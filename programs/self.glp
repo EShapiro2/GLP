@@ -2,6 +2,14 @@
 % This is the outermost ancestor in the scope chain, visible to every project.
 -mode(system).
 
+% Shared output/injection/introduction routers (A5 Stage B).  Exposed from the
+% root because it is the only common ancestor of social/* and the sibling
+% bonds/.  Each platform instantiates the parameterised routers at its own
+% entry-union and message types; per-instantiation checking validates each.
+-expose(lib#routing#output).
+-expose(lib#routing#inject).
+-expose(lib#routing#intro).
+
 % =============================================================================
 % TYPE DEFINITIONS
 % =============================================================================

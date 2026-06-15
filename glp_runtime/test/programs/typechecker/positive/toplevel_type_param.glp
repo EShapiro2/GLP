@@ -1,0 +1,26 @@
+% Test: top-level type parameter in a procedure declaration
+% EXPECT: well-typed (positive)
+%
+% Supersedes negative/type_def/merge_undefined_type.glp.
+%
+% Under the top-level-parameter rule (typed-program.md, clause-template
+% paragraph: "an argument position whose type is a parameter"), a bare name at
+% a top-level argument position that is not a defined type is a type parameter.
+% A carried value with no constructor wrapper and no common supertype — e.g. a
+% lib/ router's message argument — can only appear this way.  So a declaration
+% like keep(M?, M) is a valid parameterised procedure, NOT an undefined-type
+% error (the behaviour merge_undefined_type.glp used to assert).
+%
+% This pins two things:
+%   1. the top-level parameter M is accepted — the declaration loads;
+%   2. a caller instantiating M at a concrete type type-checks — call-site
+%      instantiation binds M = Stream(Integer).
+% A known type at a top-level position stays concrete, so monomorphic
+% declarations are unaffected.  Per-instantiation defining-clause checking
+% (Phase 2, project mode) is pinned by the negative routing fixture.
+
+procedure keep(M?, M).
+keep(X, X?).
+
+procedure use_keep(Stream(Integer)?, Stream(Integer)).
+use_keep(A, B?) :- keep(A?, B).

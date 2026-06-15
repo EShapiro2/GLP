@@ -127,7 +127,21 @@ TypeEnvironment buildTypeEnvironment(ast.Module module, {TypeEnvironment? ancest
   final procedures = Map<String, ProcDecl>.from(merged.procedures);
   _resolveAliases(types, procedures);
 
-  return TypeEnvironment(types, procedures, paramProcDecls: merged.paramProcDecls);
+  // Innermost-first shadowing (spec §3.2/§3.3): a module-local MONOMORPHIC
+  // procedure shadows an inherited parameterized template of the same key — so
+  // the template must not survive in paramProcDecls (else call-site inference,
+  // Case B, would fire for calls the local definition resolves).  A module's
+  // OWN parameterized procedure keeps its template (it is in userEnv's
+  // paramProcDecls).  This is the defining-module dual of the exposed-scope
+  // shadowing in the project linker.
+  final paramProcDecls = Map<String, ProcDecl>.from(merged.paramProcDecls);
+  for (final key in userEnv.procedures.keys) {
+    if (!userEnv.paramProcDecls.containsKey(key)) {
+      paramProcDecls.remove(key);
+    }
+  }
+
+  return TypeEnvironment(types, procedures, paramProcDecls: paramProcDecls);
 }
 
 /// Build TypeEnvironment from Module's type definitions and procedure declarations

@@ -1,0 +1,11 @@
+-module(a5_neg).
+
+% Entry union WITHOUT user_output (only net_output).
+Note ::= note(Constant).
+OutEntry ::= net_output(Stream(Note)?).
+
+% Routes a Note to the user via the lib send_user (resolved through the root
+% -expose).  OutEntry has no user_output, so send_user's user_output-destructuring
+% clause must fail type-checking at this instantiation (Ent = OutEntry).  RED.
+exported procedure go(Note?, Stream(OutEntry)?, Stream(OutEntry)).
+go(X, Outs, Outs1?) :- send_user(X?, Outs?, Outs1).

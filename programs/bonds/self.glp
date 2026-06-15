@@ -205,55 +205,19 @@ NarrativeItem ::= friend(Constant)
 
 %% merge/3 is now defined once in the root programs/self.glp (A3 amendment).
 
-%% =============================================================================
-%% PER-KIND OUTPUT ROUTING — one procedure per output constructor, each typed
-%% at exactly what its stream carries.  Replaces key-based lookup_send.
-%% =============================================================================
-
-procedure send_user(AgentToUserMsg?, Stream(OutputEntry)?, Stream(OutputEntry)).
-send_user(Msg, [user_output([Msg?|Out1?])|Rest], [user_output(Out1)|Rest?]).
-send_user(Msg, [E|Rest], [E?|Rest1?]) :-
-    otherwise |
-    send_user(Msg?, Rest?, Rest1).
-send_user(_, [], []).
-
-procedure send_net(NetOutMsg?, Stream(OutputEntry)?, Stream(OutputEntry)).
-send_net(Msg, [net_output([Msg?|Out1?])|Rest], [net_output(Out1)|Rest?]).
-send_net(Msg, [E|Rest], [E?|Rest1?]) :-
-    otherwise |
-    send_net(Msg?, Rest?, Rest1).
-send_net(_, [], []).
-
-procedure send_friend(Constant?, FriendMsg?, Stream(OutputEntry)?, Stream(OutputEntry)).
-send_friend(Name, Msg, [friend_output(K, [Msg?|Out1?])|Rest], [friend_output(K?, Out1)|Rest?]) :-
-    Name? =?= K? | true.
-send_friend(Name, Msg, [E|Rest], [E?|Rest1?]) :-
-    otherwise |
-    send_friend(Name?, Msg?, Rest?, Rest1).
-send_friend(_, _, [], []).
+%% Output routers send_user/send_net/send_friend, add_friend_output and
+%% inject_msg are now provided by lib/routing/, exposed from the root self.glp
+%% (A5 Stage B); resolved here unqualified.
 
 %% =============================================================================
-%% ADD_OUTPUT / CLOSE_OUTPUTS
+%% CLOSE_OUTPUTS
 %% =============================================================================
-
-procedure add_friend_output(Constant?, Stream(FriendMsg), Stream(OutputEntry)?, Stream(OutputEntry)).
-add_friend_output(Name, Out?, Outs, [friend_output(Name?, Out)|Outs?]).
 
 procedure close_outputs(Stream(OutputEntry)?).
 close_outputs([user_output([])|Outs]) :- close_outputs(Outs?).
 close_outputs([net_output([])|Outs]) :- close_outputs(Outs?).
 close_outputs([friend_output(_, [])|Outs]) :- close_outputs(Outs?).
 close_outputs([]).
-
-%% =============================================================================
-%% INJECT_MSG — Inject cold-call response into UserIn
-%% =============================================================================
-
-procedure inject_msg(Response?, Constant?, Constant?, Stream(UserInMsg)?, Stream(UserInMsg)).
-inject_msg(Resp, Target, Id, Ys, [msg(Target?, Id?, response(Resp?))|Ys?]) :-
-    known(Resp?) | true.
-inject_msg(Resp, Target, Id, [Y|Ys], [Y?|Ys1?]) :-
-    inject_msg(Resp?, Target?, Id?, Ys?, Ys1).
 
 %% =============================================================================
 %% CREATE_BONDS — Create K bonds with given issuer and maturity

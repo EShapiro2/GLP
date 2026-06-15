@@ -22,6 +22,42 @@ import 'root_scope.dart';
 import '../../compiler/ast.dart' as ast;
 
 // =============================================================================
+// Per-instantiation collection (clause-template rule)
+// =============================================================================
+
+/// A concrete instantiation of a parameterized procedure, inferred at a call
+/// site (Case B). Carries the monomorphic declaration the instantiation
+/// produces plus the scope (env/dfa) in which it was inferred — that scope
+/// already holds the concrete types, so the parameterized procedure's defining
+/// clauses can be re-checked against this instantiation without any merged env.
+/// See docs/type system/typed-program.md (Parameterized Procedure Declarations)
+/// and docs/glp-a5-stage-b-plan.md Step 1.
+class CollectedInstantiation {
+  final String procKey;        // "name/arity" of the parameterized procedure
+  final ProcDecl monoDecl;     // concrete declaration this instantiation produces
+  final TypeEnvironment env;   // caller scope where inferred (holds concrete types)
+  final ProgramDFA dfa;        // caller DFA (built from env)
+
+  CollectedInstantiation(this.procKey, this.monoDecl, this.env, this.dfa);
+
+  /// Concrete-argument signature, for deduplication of identical instantiations.
+  String get signature => monoDecl.argTypes.map(getFullTypeName).join(',');
+}
+
+/// Accumulates the distinct call-site instantiations of parameterized
+/// procedures across a project's modules. Deduplicated by (procKey, signature)
+/// so each distinct instantiation is checked once in Phase 2.
+class InstantiationCollector {
+  final Map<String, CollectedInstantiation> _byKeySig = {};
+
+  void record(CollectedInstantiation inst) {
+    _byKeySig.putIfAbsent('${inst.procKey}#${inst.signature}', () => inst);
+  }
+
+  Iterable<CollectedInstantiation> get all => _byKeySig.values;
+}
+
+// =============================================================================
 // Result Types
 // =============================================================================
 
@@ -228,8 +264,9 @@ class TypedClause {
 ClauseCheckResult checkClause(
   TypedClause clause,
   ProgramDFA dfa,
-  TypeEnvironment env,
-) {
+  TypeEnvironment env, {
+  InstantiationCollector? collector,
+}) {
   final errors = <ClauseError>[];
   final allVariableTypes = <String, VariableTypeInfo>{};
   final variableLocations = <String, String>{};
@@ -266,7 +303,7 @@ ClauseCheckResult checkClause(
   for (int i = 0; i < clause.bodyAtoms.length; i++) {
     final atom = clause.bodyAtoms[i];
     final (atomResult, modedAtomTerm) = _checkBodyAtomWithTerm(atom, i, dfa, env,
-        callerVarTypes: allVariableTypes);
+        callerVarTypes: allVariableTypes, collector: collector);
 
     if (modedAtomTerm != null) {
       constructedModedBodyAtoms.add(modedAtomTerm);
@@ -320,8 +357,9 @@ ClauseCheckResult checkClause(
 ClauseCheckResult checkClauseFromAst(
   ast.Clause clause,
   ProgramDFA dfa,
-  TypeEnvironment env,
-) {
+  TypeEnvironment env, {
+  InstantiationCollector? collector,
+}) {
   // Convert ast.Clause to TypedClause
   // Note: ast.Clause.head is Atom, but Goal has same structure
   final head = ast.Goal(clause.head.functor, clause.head.args, clause.line, clause.column);
@@ -352,7 +390,7 @@ ClauseCheckResult checkClauseFromAst(
     throw UndeclaredProcedureError(typedClause.headFunctor, typedClause.headArity);
   }
 
-  return checkClause(typedClause, dfa, env);
+  return checkClause(typedClause, dfa, env, collector: collector);
 }
 
 /// Get the set of labels (functor/arity or constant) that a clause accepts
@@ -466,9 +504,10 @@ WellTypedResult _checkBodyAtom(
   ProgramDFA dfa,
   TypeEnvironment env, {
   Map<String, VariableTypeInfo>? callerVarTypes,
+  InstantiationCollector? collector,
 }) {
   final (result, _) = _checkBodyAtomWithTerm(atom, atomIndex, dfa, env,
-      callerVarTypes: callerVarTypes);
+      callerVarTypes: callerVarTypes, collector: collector);
   return result;
 }
 
@@ -480,12 +519,13 @@ WellTypedResult _checkBodyAtom(
   ProgramDFA dfa,
   TypeEnvironment env, {
   Map<String, VariableTypeInfo>? callerVarTypes,
+  InstantiationCollector? collector,
 }) {
   // Handle SpawnGoal (Goal@Agent) - type-check the inner goal
   if (atom is ast.SpawnGoal) {
     // Recursively type-check the inner goal
     return _checkBodyAtomWithTerm(atom.innerGoal, atomIndex, dfa, env,
-        callerVarTypes: callerVarTypes);
+        callerVarTypes: callerVarTypes, collector: collector);
   }
 
   // Handle RemoteGoal (M # proc(...)) - type-check against imported declaration
@@ -521,6 +561,10 @@ WellTypedResult _checkBodyAtom(
     if (callerVarTypes != null && callerVarTypes.isNotEmpty) {
       final inferredDecl = _inferConcreteDecl(paramTemplate, atom, callerVarTypes, dfa, env);
       if (inferredDecl != null) {
+        // Clause-template rule: record this instantiation so the parameterized
+        // procedure's defining clauses are re-checked against it (Phase 2).
+        collector?.record(
+            CollectedInstantiation(inferredDecl.key, inferredDecl, env, dfa));
         procDecl = inferredDecl;
       } else {
         // Inference failed (e.g., caller uses monomorphic types like NetInStream
@@ -936,6 +980,19 @@ ProcDecl? _inferConcreteDecl(
   // Check all type params are bound
   for (final tp in paramTemplate.typeParams) {
     if (!bindings.containsKey(tp)) return null;
+  }
+
+  // A parameter bound to the wildcard `_`/`_?` is NOT a concrete instantiation:
+  // it arises when the call sits inside an enclosing parameterized procedure
+  // whose own type parameter is, during that procedure's wildcard self-check,
+  // `_` (e.g. a router called from a parametric befriend helper).  Treat it as
+  // not concretely inferable — like inference failure — so it neither drives a
+  // call-site check against `_` nor is recorded for per-instantiation checking.
+  // The call is still checked concretely when the enclosing procedure is
+  // instantiated at a real type, and the router's own clauses are covered by
+  // the zero-instantiation wildcard fallback.
+  for (final v in bindings.values) {
+    if (v == '_' || v == '_?') return null;
   }
 
   // Create concrete arg types by substituting bindings

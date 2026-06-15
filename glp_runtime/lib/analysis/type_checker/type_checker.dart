@@ -106,12 +106,37 @@ class CoverageError {
 // Main Type Checker
 // =============================================================================
 
+/// A parameterized procedure whose wildcard self-check was deferred during a
+/// project-mode pass. If no concrete instantiation is collected for it across
+/// the project, its clauses are checked once under the wildcard declaration as
+/// a fallback (Step 1, second fix part). Carries the scope it was deferred in.
+class DeferredParamProc {
+  final String procKey;
+  final ProcDecl wildcardDecl;        // wildcard-instantiated declaration
+  final List<ast.Clause> clauses;     // the procedure's defining clauses
+  final TypeEnvironment env;          // defining-module scope
+  final ProgramDFA dfa;
+
+  DeferredParamProc(
+      this.procKey, this.wildcardDecl, this.clauses, this.env, this.dfa);
+}
+
 /// The main type checker implementing Definition 4.10
 class TypeChecker {
   final TypeEnvironment typeEnv;
   final ProgramDFA dfa;
 
-  TypeChecker(this.typeEnv) : dfa = buildProgramDFA(typeEnv);
+  /// When non-null (project mode), parameterized procedures' defining clauses
+  /// are NOT given a verdict here under wildcard; instead their call-site
+  /// instantiations are collected for per-instantiation checking (Phase 2), and
+  /// the procedures are recorded in [deferredParamProcs] for the
+  /// zero-instantiation fallback.
+  final wtc.InstantiationCollector? collector;
+
+  /// Parameterized procedures deferred in this pass (project mode only).
+  final List<DeferredParamProc> deferredParamProcs = [];
+
+  TypeChecker(this.typeEnv, {this.collector}) : dfa = buildProgramDFA(typeEnv);
 
   /// Check a program (list of clauses) against declared types
   ///
@@ -187,8 +212,20 @@ class TypeChecker {
         continue;
       }
 
-      // Check this procedure
+      // Check this procedure. (In project mode this still traverses bodies so
+      // the collector records any instantiations the procedure's own calls make.)
       final procResult = _checkProcedure(procDecl, procClauses);
+
+      // Project mode: a parameterized procedure's wildcard self-check is not
+      // given a verdict here — its defining clauses are checked per inferred
+      // instantiation in Phase 2 (or under wildcard as a zero-instantiation
+      // fallback). Defer it and discard the wildcard verdict.
+      if (collector != null && typeEnv.paramProcDecls.containsKey(key)) {
+        deferredParamProcs.add(
+            DeferredParamProc(key, procDecl, procClauses, typeEnv, dfa));
+        continue;
+      }
+
       errors.addAll(procResult.errors);
       warnings.addAll(procResult.warnings);
     }
@@ -206,6 +243,19 @@ class TypeChecker {
     }
 
     return TypeCheckResult(errors, warnings);
+  }
+
+  /// Check one procedure's clauses against a specific declaration, in this
+  /// checker's environment. Used by the project-level Phase 2 to check a
+  /// parameterized procedure's defining clauses against a concrete instantiation
+  /// (the env is the instantiation's caller scope, with [decl] overriding the
+  /// procedure entry), and by the zero-instantiation wildcard fallback.
+  ///
+  /// Covariance resolves the declaration through the environment, so the
+  /// environment passed to the constructor must already bind this procedure to
+  /// [decl]; contravariance uses [decl] directly.
+  TypeCheckResult checkSingleProcedure(ProcDecl decl, List<ast.Clause> clauses) {
+    return _checkProcedure(decl, clauses);
   }
 
   /// Check a single procedure against its declared type
@@ -243,7 +293,7 @@ class TypeChecker {
     final errors = <TypeError>[];
 
     try {
-      final result = wtc.checkClauseFromAst(clause, dfa, typeEnv);
+      final result = wtc.checkClauseFromAst(clause, dfa, typeEnv, collector: collector);
 
       if (!result.isWellTyped) {
         // Convert ClauseErrors to TypeErrors
@@ -629,7 +679,12 @@ class TypeChecker {
 /// If [ancestorScope] is provided, it is used as the base type environment
 /// (root scope + ancestor self.glp definitions) instead of just the root scope.
 /// See module_hierarchy.dart for how ancestor scopes are assembled.
-TypeCheckResult checkModule(ast.Module module, {List<ast.Procedure>? transformedProcedures, TypeEnvironment? ancestorScope}) {
+/// If [collector] is provided (project mode), call-site instantiations of
+/// parameterized procedures are recorded into it, and parameterized procedures
+/// deferred in this module are appended to [deferredSink] for the project-level
+/// Phase 2 / fallback. With no [collector] (single-file/REPL), parameterized
+/// procedures keep their inline wildcard self-check.
+TypeCheckResult checkModule(ast.Module module, {List<ast.Procedure>? transformedProcedures, TypeEnvironment? ancestorScope, wtc.InstantiationCollector? collector, List<DeferredParamProc>? deferredSink}) {
   // Build base environment first so we know all type names for expansion.
   // This avoids mistaking root scope type names for type parameters.
   final baseEnv = ancestorScope ?? buildRootScopeEnvironment();
@@ -652,8 +707,10 @@ TypeCheckResult checkModule(ast.Module module, {List<ast.Procedure>? transformed
   }
 
   // Run type checker
-  final checker = TypeChecker(typeEnv);
-  return checker.check(clauses);
+  final checker = TypeChecker(typeEnv, collector: collector);
+  final result = checker.check(clauses);
+  if (deferredSink != null) deferredSink.addAll(checker.deferredParamProcs);
+  return result;
 }
 
 /// Parse and type-check GLP source code

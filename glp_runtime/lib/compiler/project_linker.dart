@@ -17,6 +17,7 @@ import 'partial_evaluator.dart';
 import '../analysis/type_checker/type_ast.dart';
 import '../analysis/type_checker/param_expansion.dart';
 import '../analysis/type_checker/type_checker.dart';
+import '../analysis/type_checker/well_typed_clause.dart' show InstantiationCollector;
 import '../runtime/module_hierarchy.dart';
 import '../analysis/type_checker/type_environment_builder.dart';
 
@@ -163,10 +164,32 @@ List<DiscoveredModule> discoverProject(String rootDir,
     }
   }
 
+  // Root programs/self.glp is excluded from the linkable module list above, but
+  // it is still a self.glp and may carry -expose directives (module-system spec
+  // §3.3). Parse it as an exposer-only seed so its exposures are resolved like
+  // any other self.glp's — its exposing directory is programs/, whose subtree is
+  // every discovered module.
+  final extraExposers = <DiscoveredModule>[];
+  if (rootSelfGlpPath != null && File(rootSelfGlpPath).existsSync()) {
+    final rootModule =
+        Parser(Lexer(File(rootSelfGlpPath).readAsStringSync()).tokenize())
+            .parseModule();
+    if (rootModule.exposes.isNotEmpty) {
+      extraExposers.add(DiscoveredModule(
+        filePath: rootSelfGlpPath,
+        moduleName: _moduleNameFromDirPath(File(rootSelfGlpPath).parent.path),
+        ast: rootModule,
+        ancestorScope: buildRootScopeEnvironment(),
+        isSelfGlp: true,
+      ));
+    }
+  }
+
   // Resolve `-expose(M).` directives: collect the named module files (tagged
   // with their exposing directory), check collisions, and lift their EXPORTED
   // declarations/types into the exposing subtree's scope.
-  _resolveExposes(modules, programsDir, rootSelfGlpPath);
+  _resolveExposes(modules, programsDir, rootSelfGlpPath,
+      extraExposers: extraExposers);
 
   return modules;
 }
@@ -195,9 +218,16 @@ bool _dirUnder(String childDir, String ancestorDir) =>
 /// EXPORTED declarations and the types it defines are merged into the
 /// ancestorScope of every module in the exposing directory's subtree.
 void _resolveExposes(List<DiscoveredModule> modules, String? programsDir,
-    String? rootSelfGlpPath) {
+    String? rootSelfGlpPath,
+    {List<DiscoveredModule> extraExposers = const []}) {
+  // [extraExposers] are self.glp files that carry -expose directives but are not
+  // themselves linkable modules — specifically root programs/self.glp, which is
+  // excluded from [modules] (realised by the root-scope mechanism) yet may
+  // expose like any other self.glp (module-system spec §3.3; root "is not
+  // otherwise special"). They seed the worklist but are never linked.
   final pending = <DiscoveredModule>[
-    ...modules.where((m) => m.ast.exposes.isNotEmpty)
+    ...modules.where((m) => m.ast.exposes.isNotEmpty),
+    ...extraExposers.where((m) => m.ast.exposes.isNotEmpty),
   ];
   final collectedFiles = <String>{};
   // exposingDir(norm) -> exported sig -> exposed module name (collision check)
@@ -267,9 +297,39 @@ void _resolveExposes(List<DiscoveredModule> modules, String? programsDir,
     for (final e in exposed) {
       if (!_dirUnder(modDir, e.exposingDir!)) continue;
       m.ancestorScope =
-          m.ancestorScope.merge(_exposedExportScope(e.ast, m.ancestorScope));
+          _mergeExposed(m.ancestorScope, _exposedExportScope(e.ast, m.ancestorScope));
     }
   }
+}
+
+/// Merge an exposed module's [exposed] scope into [base] WITHOUT overriding any
+/// name already present nearer the use site.  Innermost-first shadowing (spec
+/// §3.2/§3.3: "a definition nearer the use site shadows an exposed one"):
+/// exposed names only fill gaps.  A name defined nearer — whether as an ordinary
+/// procedure or as a parameterized template — shadows an exposed entry of the
+/// same key in BOTH maps, so a shadowed parameterized template is dropped
+/// entirely and never drives call-site instantiation (Case B).  This is the
+/// behaviour the platform routers rely on before the per-platform copies are
+/// removed: the local monomorphic router shadows the exposed parameterised one.
+TypeEnvironment _mergeExposed(TypeEnvironment base, TypeEnvironment exposed) {
+  bool definedNearer(String key) =>
+      base.procedures.containsKey(key) || base.paramProcDecls.containsKey(key);
+
+  final procedures = <String, ProcDecl>{...base.procedures};
+  for (final e in exposed.procedures.entries) {
+    if (!definedNearer(e.key)) procedures[e.key] = e.value;
+  }
+  final paramProcDecls = <String, ProcDecl>{...base.paramProcDecls};
+  for (final e in exposed.paramProcDecls.entries) {
+    if (!definedNearer(e.key)) paramProcDecls[e.key] = e.value;
+  }
+  final types = <String, TypeDef>{...base.types};
+  for (final e in exposed.types.entries) {
+    types.putIfAbsent(e.key, () => e.value);
+  }
+  return TypeEnvironment(types, procedures,
+      paramProcDecls: paramProcDecls,
+      typeTemplates: {...base.typeTemplates, ...exposed.typeTemplates});
 }
 
 /// A TypeEnvironment of a module's EXPORTED procedure declarations plus the
@@ -322,10 +382,31 @@ List<String> _ancestorSelfGlpFiles(String rootDir, String programsDir) {
   return result;
 }
 
-/// Type-check each module independently against its ancestor scope.
+/// Type-check a project.
+///
+/// Each module is checked against its own ancestor scope (scoping-correct,
+/// collision-free — there is no merged environment). A parameterized procedure
+/// is the one cross-module case: its declaration is a clause template, and per
+/// the clause-template rule (docs/type system/typed-program.md; plan Step 1) its
+/// defining clauses must be well-typed against each instantiation inferred from
+/// a call site. Because that instantiation's monomorphic declaration carries its
+/// concrete types from the caller's scope, the defining clauses are re-checked
+/// there — never by flattening all modules into one environment.
+///
+/// Pass 1: per-module checks (verdicts for the non-parameterized case), while a
+/// shared collector records every call-site instantiation and parameterized
+/// procedures defer their wildcard self-check.
+/// Phase 2: each distinct instantiation's defining clauses are checked against
+/// its monomorphic declaration in the scope it was inferred in.
+/// Fallback: a parameterized procedure with zero collected instantiations is
+/// checked once under its wildcard declaration.
 ///
 /// Throws on type errors with module name and error details.
 void typeCheckProject(List<DiscoveredModule> modules) {
+  final collector = InstantiationCollector();
+  final deferred = <DeferredParamProc>[];
+
+  // Pass 1: per-module checks + instantiation collection.
   for (final mod in modules) {
     // Skip modules with no procedure declarations (untyped orchestration)
     if (mod.ast.procDeclarations.isEmpty) continue;
@@ -343,6 +424,8 @@ void typeCheckProject(List<DiscoveredModule> modules) {
       mod.ast,
       transformedProcedures: transformed.procedures,
       ancestorScope: mod.ancestorScope,
+      collector: collector,
+      deferredSink: deferred,
     );
 
     if (!result.isWellTyped) {
@@ -353,6 +436,75 @@ void typeCheckProject(List<DiscoveredModule> modules) {
           'Type checking failed for ${mod.moduleName} (${mod.filePath}):\n$errors');
     }
   }
+
+  // Phase 2: per-instantiation defining-clause checking.
+  final instantiatedKeys = <String>{};
+  for (final inst in collector.all) {
+    instantiatedKeys.add(inst.procKey);
+    final clauses = _definingClausesForKey(modules, inst.procKey);
+    if (clauses == null) continue; // defined outside the project (e.g. root scope)
+
+    // Focused env: the caller scope where the instantiation was inferred (it
+    // already holds the concrete types), with the procedure rebound to the
+    // monomorphic declaration this instantiation produces.
+    final focusedEnv = TypeEnvironment(
+      inst.env.types,
+      {...inst.env.procedures, inst.monoDecl.key: inst.monoDecl},
+      paramProcDecls: inst.env.paramProcDecls,
+      typeTemplates: inst.env.typeTemplates,
+    );
+
+    final res = TypeChecker(focusedEnv).checkSingleProcedure(inst.monoDecl, clauses);
+    if (!res.isWellTyped) {
+      final errors =
+          res.errors.map((e) => '  ${e.message} at line ${e.line}').join('\n');
+      throw Exception(
+          'Type checking failed for ${inst.procKey} at instantiation '
+          '${inst.monoDecl.argTypes.join(', ')}:\n$errors');
+    }
+  }
+
+  // Fallback: parameterized procedures with no collected instantiation are
+  // checked once under their wildcard declaration.
+  final seenFallback = <String>{};
+  for (final d in deferred) {
+    if (instantiatedKeys.contains(d.procKey)) continue;
+    if (!seenFallback.add(d.procKey)) continue;
+
+    final focusedEnv = TypeEnvironment(
+      d.env.types,
+      {...d.env.procedures, d.wildcardDecl.key: d.wildcardDecl},
+      paramProcDecls: d.env.paramProcDecls,
+      typeTemplates: d.env.typeTemplates,
+    );
+
+    final res =
+        TypeChecker(focusedEnv).checkSingleProcedure(d.wildcardDecl, d.clauses);
+    if (!res.isWellTyped) {
+      final errors =
+          res.errors.map((e) => '  ${e.message} at line ${e.line}').join('\n');
+      throw Exception(
+          'Type checking failed for parameterized procedure ${d.procKey} '
+          '(no in-scope instantiation; wildcard fallback):\n$errors');
+    }
+  }
+}
+
+/// Find the defining clauses for a procedure "name/arity" among the project's
+/// modules. Returns null if the procedure is defined outside the project (e.g.
+/// in the root scope), in which case it is not the project's responsibility to
+/// check. If more than one module defines it, the clauses are concatenated.
+List<Clause>? _definingClausesForKey(
+    List<DiscoveredModule> modules, String procKey) {
+  List<Clause>? found;
+  for (final mod in modules) {
+    for (final proc in mod.ast.procedures) {
+      if ('${proc.name}/${proc.arity}' == procKey) {
+        (found ??= <Clause>[]).addAll(proc.clauses);
+      }
+    }
+  }
+  return found;
 }
 
 /// Link all modules into a single flat Program.

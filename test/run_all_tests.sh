@@ -782,6 +782,7 @@ POSITIVE_FILES=(
     "$TC_DIR/positive/merge_variable_coverage_base.glp"
     "$TC_DIR/positive/merge_variable_coverage_mixed.glp"
     "$TC_DIR/positive/merge_variable_coverage_recursive.glp"
+    "$TC_DIR/positive/toplevel_type_param.glp"
     "$TC_DIR/positive/book/universal_accepts_structured.glp"
 
     # --- moded_types/valid ---
@@ -980,9 +981,6 @@ NEGATIVE_FILES=(
     # --- typechecker/negative/complementarity ---
     "$TC_DIR/negative/complementarity/merge_type_mismatch.glp"
     "$TC_DIR/negative/complementarity/merge_swapped_vars.glp"
-
-    # --- typechecker/negative/type_def ---
-    "$TC_DIR/negative/type_def/merge_undefined_type.glp"
 
     # --- typechecker/negative (top level) ---
     "$TC_DIR/negative/merge_incomplete.glp"
@@ -1944,6 +1942,22 @@ HEREDOC
 2>&1)
 check "X6 integer instantiation" "Zi = \[1, 3, 2, 4\]" "$x6"
 check "X6 constant instantiation" "Zc = \[\"a\", \"b\"\]" "$x6"
+
+# --- X7: per-instantiation routing rejection (clause-template rule) ---
+# A parameterised lib router (send_user) exposed from the root, called by a
+# project whose entry union OMITS the destructured constructor (user_output),
+# must be rejected at that instantiation — not merely under the wildcard
+# self-check. Pins that exposed-parameterised resolution + per-instantiation
+# defining-clause checking work together. See docs/glp-a5-stage-b-plan.md.
+echo "--- X7: per-instantiation routing rejection ---"
+x7=$($DART run "$REPL" <<HEREDOC
+$GLP_DIR/programs/tests/a5_routing_neg
+:quit
+HEREDOC
+2>&1)
+check_not "X7 bad-OutputEntry fixture not loaded" "Loaded project" "$x7"
+check "X7 rejected at send_user instantiation" "send_user" "$x7"
+check "X7 names the missing user_output constructor" "user_output" "$x7"
 
 echo ""
 

@@ -269,48 +269,9 @@ setup_group_creator(GroupId, Outs, Outs1?, NetIn, NetIn1?) :-
     add_group_output(group(GroupId?), MemberToHub, Outs?, Outs1),
     merge(NetIn?, MemberToHub?, NetIn1).
 
-%% =============================================================================
-%% PER-KIND OUTPUT ROUTING — one procedure per output constructor, each typed
-%% at exactly what its stream carries.  Replaces key-based lookup_send.
-%% =============================================================================
-
-procedure send_user(AgentToUserMsg?, Stream(OutputEntry)?, Stream(OutputEntry)).
-send_user(Msg, [user_output([Msg?|Out1?])|Rest], [user_output(Out1)|Rest?]).
-send_user(Msg, [E|Rest], [E?|Rest1?]) :-
-    otherwise |
-    send_user(Msg?, Rest?, Rest1).
-send_user(_, [], []).
-
-procedure send_net(NetOutMsg?, Stream(OutputEntry)?, Stream(OutputEntry)).
-send_net(Msg, [net_output([Msg?|Out1?])|Rest], [net_output(Out1)|Rest?]).
-send_net(Msg, [E|Rest], [E?|Rest1?]) :-
-    otherwise |
-    send_net(Msg?, Rest?, Rest1).
-send_net(_, [], []).
-
-procedure send_friend(Constant?, FriendMsg?, Stream(OutputEntry)?, Stream(OutputEntry)).
-send_friend(Name, Msg, [friend_output(K, [Msg?|Out1?])|Rest], [friend_output(K?, Out1)|Rest?]) :-
-    Name? =?= K? | true.
-send_friend(Name, Msg, [E|Rest], [E?|Rest1?]) :-
-    otherwise |
-    send_friend(Name?, Msg?, Rest?, Rest1).
-send_friend(_, _, [], []).
-
-procedure send_child(Constant?, FriendMsg?, Stream(OutputEntry)?, Stream(OutputEntry)).
-send_child(Name, Msg, [child_output(K, [Msg?|Out1?])|Rest], [child_output(K?, Out1)|Rest?]) :-
-    Name? =?= K? | true.
-send_child(Name, Msg, [E|Rest], [E?|Rest1?]) :-
-    otherwise |
-    send_child(Name?, Msg?, Rest?, Rest1).
-send_child(_, _, [], []).
-
-procedure send_parent(Constant?, FriendMsg?, Stream(OutputEntry)?, Stream(OutputEntry)).
-send_parent(Name, Msg, [parent_output(K, [Msg?|Out1?])|Rest], [parent_output(K?, Out1)|Rest?]) :-
-    Name? =?= K? | true.
-send_parent(Name, Msg, [E|Rest], [E?|Rest1?]) :-
-    otherwise |
-    send_parent(Name?, Msg?, Rest?, Rest1).
-send_parent(_, _, [], []).
+%% Per-kind output routers send_user/send_net/send_friend/send_child/send_parent
+%% are now provided by lib/routing/, exposed from the root self.glp (A5 Stage B);
+%% resolved here unqualified.
 
 %% =============================================================================
 %% LOOKUP_SEND_GROUP
@@ -344,22 +305,12 @@ distribute_group_msg(GroupId, Msg, [E|Rest], [E?|Rest1?]) :-
     distribute_group_msg(GroupId?, Msg?, Rest?, Rest1).
 distribute_group_msg(_, _, [], []).
 
-%% =============================================================================
-%% INJECT_MSG
-%% =============================================================================
-
-procedure inject_msg(Response?, Constant?, Constant?, Stream(UserInMsg)?, Stream(UserInMsg)).
-inject_msg(Resp, Target, Id, Ys, [msg(Target?, Id?, response(Resp?))|Ys?]) :-
-    known(Resp?) | true.
-inject_msg(Resp, Target, Id, [Y|Ys], [Y?|Ys1?]) :-
-    inject_msg(Resp?, Target?, Id?, Ys?, Ys1).
+%% inject_msg and add_friend_output are now provided by lib/routing/, exposed
+%% from the root self.glp (A5 Stage B); resolved here unqualified.
 
 %% =============================================================================
-%% ADD_OUTPUT / ADD_GROUP_OUTPUT / CLOSE_OUTPUTS
+%% ADD_GROUP_OUTPUT / CLOSE_OUTPUTS
 %% =============================================================================
-
-procedure add_friend_output(Constant?, Stream(FriendMsg), Stream(OutputEntry)?, Stream(OutputEntry)).
-add_friend_output(Name, Out?, Outs, [friend_output(Name?, Out)|Outs?]).
 
 procedure add_group_output(OutputKey?, Stream(GroupMsg), Stream(OutputEntry)?, Stream(OutputEntry)).
 add_group_output(Key, Out?, Outs, [group_entry(Key?, Out)|Outs?]).
@@ -373,29 +324,8 @@ close_outputs([parent_output(_, [])|Outs]) :- close_outputs(Outs?).
 close_outputs([group_entry(_, [])|Outs]) :- close_outputs(Outs?).
 close_outputs([]).
 
-%% =============================================================================
-%% INTRO_AWAIT_PEER
-%% =============================================================================
-
-procedure intro_await_peer(Constant?, Channel(Stream(IntroContent), Stream(IntroContent))?, IntroResult).
-
-intro_await_peer(Other, ch([ack(_)|ChIn], ChOut?),
-                 intro_result(Other?, ch(ChIn?, ChOut))).
-
-intro_await_peer(Other, ch([nack|_], []),
-                 intro_rejected(Other?)).
-
-%% =============================================================================
-%% INJECT_INTRO_RESULT
-%% =============================================================================
-
-procedure inject_intro_result(IntroResult?, Stream(UserInMsg)?, Stream(UserInMsg)).
-inject_intro_result(intro_result(Other, Ch), Ys, [intro_result(Other?, Ch?)|Ys?]) :-
-    ground(Other?) | true.
-inject_intro_result(intro_rejected(Other), Ys, [intro_rejected(Other?)|Ys?]) :-
-    ground(Other?) | true.
-inject_intro_result(Res, [Y|Ys], [Y?|Ys1?]) :-
-    inject_intro_result(Res?, Ys?, Ys1).
+%% intro_await_peer and inject_intro_result are now provided by lib/routing/,
+%% exposed from the root self.glp (A5 Stage B); resolved here unqualified.
 
 %% =============================================================================
 %% GROUP_AWAIT_JOIN
