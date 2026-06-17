@@ -119,6 +119,14 @@ class ExtendThread extends Effect {
   const ExtendThread(this.thread, this.keyField, this.valueField);
 }
 
+/// Ensure a conversation exists in [thread] for the peer in [peerField] (an
+/// empty thread). Used so becoming friends opens a chat even before any message.
+class OpenChat extends Effect {
+  final String thread;
+  final String peerField;
+  const OpenChat(this.thread, this.peerField);
+}
+
 /// Append a directional chat message to the conversation [thread] keyed by the
 /// peer in [peerField], text in [textField]. [outgoing] marks the person's own
 /// message (right bubble) vs a received one (left bubble); [tickField] optionally

@@ -138,6 +138,10 @@ class UiRuntime {
           final t = store.threads.putIfAbsent(thread, () => <String, List<GTerm>>{});
           final k = formatTerm(fields[keyField]!);
           t.putIfAbsent(k, () => <GTerm>[]).add(fields[valueField]!);
+        case OpenChat(:final thread, :final peerField):
+          store.threads
+              .putIfAbsent(thread, () => <String, List<GTerm>>{})
+              .putIfAbsent(formatTerm(fields[peerField]!), () => <GTerm>[]);
         case PushChat(
             :final thread,
             :final peerField,

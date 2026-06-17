@@ -14,10 +14,9 @@ import '../ui_runtime/term.dart';
 final Manifest socialManifest = Manifest(
   title: 'Grassroots',
 
-  // The chats thread is the messaging surface (GrassApp view).
+  // Two surfaces: Chats (the friends you can talk to) and Requests (the inbox).
   chat: const ChatView(threadKey: 'chats', label: 'Chats', sendCtor: 'send'),
   state: const [
-    StateView('friends', 'Friends', StateKind.list),
     StateView('chats', 'Chats', StateKind.thread),
   ],
 
@@ -53,11 +52,11 @@ final Manifest socialManifest = Manifest(
 
   // Activity rules land in their target surface.
   activity: const [
-    // Becoming friends adds the friend to the Friends list.
+    // Becoming friends opens a conversation — the friend appears in Chats.
     ActivityDesc(
       notifyCtor: 'connected',
       args: ['who'],
-      effect: AppendTo('friends', 'who'),
+      effect: OpenChat('chats', 'who'),
     ),
     // A message from a friend extends that conversation.
     ActivityDesc(

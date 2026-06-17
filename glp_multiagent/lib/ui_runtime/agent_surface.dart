@@ -21,17 +21,7 @@ import 'term.dart';
 class AgentSurface extends StatefulWidget {
   final String agentId;
   final UiRuntime runtime;
-
-  /// Which state surface to render: 'friends' (the Social Graph view) or 'chats'
-  /// (the GrassApp view). Both share one inbox; only this differs.
-  final String view;
-
-  const AgentSurface({
-    super.key,
-    required this.agentId,
-    required this.runtime,
-    this.view = 'friends',
-  });
+  const AgentSurface({super.key, required this.agentId, required this.runtime});
 
   @override
   State<AgentSurface> createState() => _AgentSurfaceState();
@@ -51,7 +41,7 @@ class _AgentSurfaceState extends State<AgentSurface> {
 
   static const MaterialColor _accent = Colors.orange;
 
-  bool get _chats => widget.view == 'chats' && _m.chat != null;
+  bool get _chats => _m.chat != null;
 
   @override
   Widget build(BuildContext context) {
@@ -63,14 +53,13 @@ class _AgentSurfaceState extends State<AgentSurface> {
     final requests = _r.inbox.length;
     final onState = _tab == 0;
     final stateLabel = _chats ? 'Chats' : 'Friends';
-    final stateTitle = _chats ? 'GrassApp' : 'Social Graph';
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
         backgroundColor: _accent,
         foregroundColor: Colors.white,
         elevation: 0,
-        title: Text(onState ? stateTitle : 'Requests',
+        title: Text(onState ? _m.title : 'Requests',
             style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
         actions: [
           Padding(

@@ -143,10 +143,6 @@ class AgentState {
   final List<String> outputLog = [];
   /// Manifest-driven two-surface UI runtime (null for read-only play panels).
   UiRuntime? ui;
-
-  /// One world, many views: this agent's notify stream feeds several UI
-  /// manifests (GSG, GrassApp) at once. Keyed by app mode.
-  final Map<String, UiRuntime> uis = {};
   int goalCount = 0;
   int heapVars = 0;
   int wpSize = 0;
@@ -184,12 +180,7 @@ class _CoordinatorScreenState extends State<CoordinatorScreen> {
   List<String>? _cachedGlpSources;
   List<String> _cachedGlpPaths = const [];
 
-  /// Which live scenario the phone shows: 'gsg' or 'grassapp' — same mediator
-  /// and interpreter, different boot (actor messages) and UI manifest.
-  String _appMode = 'gsg';
-
-  /// The live scenario isolate, killed on switch so the old scenario stops
-  /// emitting into the new phone.
+  /// The live scenario isolate (kept so it can be disposed cleanly).
   Isolate? _scenarioIsolate;
 
   final ReceivePort _replyPort = ReceivePort();
@@ -647,38 +638,11 @@ class _CoordinatorScreenState extends State<CoordinatorScreen> {
     // same interpreter — switching re-spawns the selected scenario.
     final bob = _agents['Bob'];
     final surface = (bob != null && bob.ui != null)
-        ? AgentSurface(
-            agentId: bob.agentId,
-            runtime: bob.ui!,
-            view: _appMode == 'grassapp' ? 'chats' : 'friends',
-          )
+        ? AgentSurface(agentId: bob.agentId, runtime: bob.ui!)
         : const _Booting();
     return Scaffold(
       backgroundColor: const Color(0xFF2B2B33),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            // Minimal app picker (the only chrome) — same interpreter, two manifests.
-            Padding(
-              padding: const EdgeInsets.only(bottom: 12),
-              child: SegmentedButton<String>(
-                segments: const [
-                  ButtonSegment(value: 'gsg', label: Text('Social Graph')),
-                  ButtonSegment(value: 'grassapp', label: Text('GrassApp')),
-                ],
-                selected: {_appMode},
-                // One world; switching only swaps the view (no re-spawn).
-                onSelectionChanged: (s) => setState(() => _appMode = s.first),
-                style: ButtonStyle(
-                  foregroundColor: WidgetStateProperty.all(Colors.white),
-                ),
-              ),
-            ),
-            Flexible(child: _PhoneFrame(child: surface)),
-          ],
-        ),
-      ),
+      body: Center(child: _PhoneFrame(child: surface)),
     );
   }
 
