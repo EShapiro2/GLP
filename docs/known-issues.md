@@ -356,22 +356,27 @@ REPL path. Push is held until the combined tree is REPL-green.
 
 ## Issue 9: Latent reliance on the reader = writer+1 allocation convention
 
-**Status**: Open — core-heap change (`runner.dart`, `heap_fcp.dart`); needs Udi's approval before any fix
+**Status**: Mostly resolved; one residual reliance remains (verified against code 2026-06-17). Core-heap change to finish; needs Udi's approval.
 **Discovered**: 2026-06-10 (audit requested by Issue 1)
-**Affects**: Latent only — no active failure. Any change to allocation (interleaved or relocating allocation, GC compaction) would turn it into one.
+**Affects**: Latent only — no active failure. Any change to allocation (interleaved or relocating allocation, GC compaction) would turn the residual into one.
 
-### Findings
+### Findings (updated 2026-06-17 — earlier list was stale)
 
-Code relies on the N/N+1 allocation convention, in violation of the explicit rule in `lib/runtime/terms.dart` ("MUST NOT: Code must not assume reader_addr == writer_addr + 1"):
+The bulk of the reliance is **gone**: all the direct `writerAddr + 1` reader derivations formerly in `lib/bytecode/runner.dart` (the cited lines 2346/2574/2580/2716 no longer exist) have been replaced with `readerForWriter()` ("Per spec v3.2: use readerForWriter() instead of +1 arithmetic"). The original Findings list above those lines was stale.
 
-- `heap_fcp.dart` `pairedReaderAddr()` — fallback `return writerAddr + 1`. Reached when `readerForWriter()` returns null, which it does for a **bound** writer (the bidirectional pointer is consumed on binding). There is no cross-pointer way to recover the reader of a bound writer under the current cell design, so this fallback is structurally necessary, not merely defensive.
-- `lib/bytecode/runner.dart` — direct `writerAddr + 1` reader derivation at lines 2346, 2574, 2580, 2716.
+**One residual reliance remains**: `heap_fcp.dart` `pairedReaderAddr()` — fallback `return writerAddr + 1` (line ~242). It is reached when `readerForWriter()` returns null, i.e. for a **bound** writer: a writer cell has a single content slot, and binding overwrites the pointer-to-reader with the bound value, so the cross-pointer is destroyed and there is no pointer way to recover the reader. Still live — called by `glp_engine.dart` (query-variable binding / answer extraction, ~8 sites) and `mad_context.dart`. Correct today because `allocateVariable()` always allocates `(HP, HP+1)`.
 
-These are currently correct because `allocateVariable()` always allocates `(HP, HP+1)`, so the convention holds in practice.
+### Why it is still here
 
-### Fix
+Not necessity of the arithmetic — risk/benefit. Removing it requires a core cell-design change (widen the writer cell to keep a reader field that survives binding, or thread the reader address through callers). It is correct under the current contiguous allocator and there is no active bug, so the change has been deferred. The cost of keeping it is that it silently encodes the very assumption `terms.dart` forbids ("MUST NOT assume reader_addr == writer_addr + 1") — a landmine for any future GC compaction / relocating allocator.
 
-Remove the reliance by a core-heap change: either retain the reader pointer on bound writers, or thread the reader address through the call sites instead of deriving it. Per `GLP/CLAUDE.md`, modifying core GLP files requires explicit discussion and approval — a dedicated task once approved.
+### Fail-loud probe result (2026-06-17) — the fallback is LOAD-BEARING
+
+Replaced the `return writerAddr + 1` with a `throw` and ran the full suite. Result: **65 failures** across core programs (merge, reverse, quicksort, fibonacci, inner product) and the CSSN plays — ordinary code routinely asks for the reader of a *bound* writer. (No `StateError` text surfaced: the engine catches the throw and turns it into silent goal failure, which is itself worth noting.) So the fallback is not dead and cannot be deleted; option 1 below ("delete if dead") is ruled out. Reverted to the `+1` fallback; suite green again.
+
+### Fix (only one real option remains)
+
+**Core cell-design change** — make a writer retain its reader address through binding (e.g. a reader field on the writer cell that survives the value overwrite), or thread the reader address through the ~8 `glp_engine.dart` callers and the `mad_context.dart` caller so `pairedReaderAddr` is never asked to recover a bound writer's reader. Either is a core-heap change needing explicit approval and its own baseline per `GLP/CLAUDE.md`. Until then the `+1` fallback stays and is correct as long as `allocateVariable()` keeps allocating contiguous `(N, N+1)` pairs — so any future GC compaction / relocating allocator must land together with this fix.
 
 ---
 

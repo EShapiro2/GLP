@@ -227,18 +227,23 @@ class HeapFCP {
 
   /// Get the paired reader address for a writer (works for bound and unbound).
   ///
-  /// Per allocation pattern, the reader is always at writerAddr + 1.
-  /// This method should be used when you need the reader address regardless
-  /// of whether the writer is currently bound.
+  /// For an unbound writer the reader is recovered via the bidirectional
+  /// pointer.  For a BOUND writer that pointer is gone (binding overwrites the
+  /// slot), so we fall back to the allocation convention reader = writerAddr+1.
   ///
-  /// Note: For checking if a writer is unbound and getting its reader via
-  /// the bidirectional pointer pattern, use readerForWriter() instead.
+  /// This fallback is LOAD-BEARING, not defensive: a fail-loud probe (2026-06-17)
+  /// that threw instead of returning writerAddr+1 broke 65 suite tests across
+  /// core programs (merge, reverse, quicksort, fibonacci, inner product, CSSN
+  /// plays) — ordinary code routinely asks for the reader of a bound writer.
+  /// It contradicts the `terms.dart` rule ("MUST NOT assume reader==writer+1");
+  /// removing it requires the core cell-design change in known-issues Issue 9
+  /// (retain the reader pointer through binding, or thread the reader address
+  /// through callers), NOT deletion.
   int pairedReaderAddr(int writerAddr) {
-    // Try the FCP pattern first (works for unbound writers)
     final reader = readerForWriter(writerAddr);
     if (reader != null) return reader;
 
-    // Fallback: by allocation, reader is at writerAddr + 1
+    // Fallback: by allocation, reader is at writerAddr + 1 (see note above).
     return writerAddr + 1;
   }
 
