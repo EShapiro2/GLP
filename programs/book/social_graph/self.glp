@@ -1,0 +1,55 @@
+%% self.glp — shared agent<->mediator protocol types (single source of truth).
+%%
+%% Imported (as ancestor type scope) by every module in this directory:
+%% typed_social_agent.glp and typed_ui_mediator.glp both refer to these types
+%% without redefining them. This is what makes §7's "the mediator's types are
+%% the boundary, and the boundary is type-safe" claim hold: there is exactly one
+%% definition of each shared type, so producer and consumer cannot drift.
+%%
+%% Polarity convention (typed-glp-manual §15B): a position that FORWARDS a
+%% writer through a structure carries `?` in the type. The cold-call response
+%% variable's writer flows agent -> mediator (escrow) -> agent (bind_response),
+%% so every type position that carries it is `?`-typed.
+
+-mode(system).
+
+Decision ::= yes ; no.
+Response ::= accept(FriendChannel) ; no.
+
+%% Friend-to-friend channel (the opaque value escrowed on accept).
+FriendContent ::= response(Response) ; text(Constant) ; intro(Constant, FriendChannel?).
+FriendMsg     ::= msg(Constant, Constant, FriendContent).
+FriendStream  ::= [] ; [FriendMsg | FriendStream].
+FriendChannel ::= ch(FriendStream, FriendStream?).
+
+%% Escrowed opaque values held in the mediator's pending table. `?` inside the
+%% constructor: the table forwards the writer back to the agent on response.
+PendingValue ::= response(Response?) ; channel(FriendChannel?) ; error.
+
+%% agent -> mediator  (carried on the agent's '_user' output stream).
+%% befriend/befriend_intro forward the response writer / channel: `?`-typed.
+AgentContent ::= befriend(Constant, Response?)
+               ; befriend_intro(Constant, Constant, FriendChannel?)
+               ; connected(Constant)
+               ; rejected
+               ; rejected(Constant)
+               ; received(Constant, Constant).
+
+%% mediator -> agent  (mediator's reply to a user action).
+%% decision/accept_intro forward the escrowed writer back: PendingValue carries it.
+UserContent ::= connect(Constant)
+              ; decision(Decision, Constant, PendingValue)
+              ; send(Constant, Constant)
+              ; introduce(Constant, Constant)
+              ; accept_intro(Constant, PendingValue)
+              ; reject_intro(Constant)
+              ; response(Response).
+
+%% agent <-> network cold-call (2-arg msg(Dest, Content)): forwards the writer.
+NetColdCall ::= intro(Constant, Response?).
+
+%% Wrappers for the agent<->mediator channel (gives ui_mediator's agent-facing
+%% channel a CONCRETE element type instead of polymorphic Channel(X,Y), so the
+%% checker enforces the agent/mediator polarity duality — §5(1)).
+AgentMsg ::= msg(Constant, Constant, AgentContent).   %% agent -> mediator
+UserMsg  ::= msg(Constant, Constant, UserContent).    %% mediator -> agent

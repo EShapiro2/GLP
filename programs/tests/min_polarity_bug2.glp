@@ -1,0 +1,34 @@
+%% min_polarity_bug2.glp — does routing through a POLYMORPHIC parameter launder
+%% the polarity mismatch that min_polarity_bug.glp catches?
+%%
+%% Identical to min_polarity_bug.glp EXCEPT the consumer is declared with a
+%% polymorphic element type Stream(X)? instead of the concrete Stream(ConsMsg)?.
+%% Its body still matches befriend(From, Resp?) (reader polarity).
+%%
+%% go wires producer (Stream(ProdMsg), writer-polarity befriend) to pconsumer
+%% through the SAME stream S, instantiating X := ProdMsg at the call.
+%%
+%% Question: does the checker push X := ProdMsg back into pconsumer's body and
+%% flag the reader/writer clash (like bug1), or does the polymorphic parameter
+%% let it pass unchecked?
+
+-mode(system).
+
+Response ::= accept ; no.
+
+ProdMsg ::= befriend(Constant, Response).    %% slot 2 = writer
+ConsMsg ::= befriend(Constant, Response?).   %% slot 2 = reader
+
+procedure producer(Stream(ProdMsg)).
+producer([befriend(alice, _R)]).
+
+%% Polymorphic element type — message type is the variable X, never pinned here.
+procedure pconsumer(Stream(X)?).
+pconsumer([befriend(From, Resp?)|Rest]) :- known(From?) | bind(Resp), pconsumer(Rest?).
+pconsumer([]).
+
+procedure bind(Response).
+bind(accept).
+
+procedure go(Stream(Response)).
+go([]) :- producer(S), pconsumer(S?).

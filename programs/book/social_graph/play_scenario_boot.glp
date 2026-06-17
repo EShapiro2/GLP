@@ -1,0 +1,85 @@
+%% play_scenario_boot.glp — single-isolate UI scenario (no MAD).
+%%
+%% ONE heap, the REAL agent/4 + ui_mediator/5 clauses for all three agents.
+%% Only the transport is in-heap (a crossbar) instead of MAD, which sidesteps
+%% the receive/3 `_w` runtime bug. Bob is the live-UI agent: its user channel is
+%% the goal's UserIn (injected from Dart) and its notifies go to send_to_user
+%% (_output -> Dart). Alice and Charlie are the SAME real agent/4, driven by a
+%% fixed declared scenario:
+%%   - alice cold-calls bob          -> bob gets befriend(alice, req(1))
+%%   - charlie introduces alice, bob  -> bob gets befriend_intro(charlie, alice, ..)
+%%
+%% Entry: agent_init(bob, UserIn, _NetIn). The MAD NetIn arg is ignored; all
+%% networking is the in-heap crossbar.
+%%
+%% Requires: self.glp, typed_social_agent.glp, typed_ui_mediator.glp
+
+-mode(system).
+
+%% --- In-heap crossbar: route each agent's `_net` output to the addressed
+%% agent's `_net` input. Merge all outputs, then filter per recipient. ---
+
+procedure crossbar(Stream(M)?, Stream(M)?, Stream(M)?,
+                   Stream(M), Stream(M), Stream(M)).
+crossbar(AOut, BOut, COut, AIn?, BIn?, CIn?) :-
+    merge(AOut?, BOut?, AB),
+    merge(AB?, COut?, All),
+    route(All?, AIn, BIn, CIn).
+
+%% route: demux the merged stream — each msg(R, _) goes to exactly R's output;
+%% the two non-target outputs are pure holes (?) filled by the recursion.
+procedure route(Stream(M)?, Stream(M), Stream(M), Stream(M)).
+route([msg(alice, C) | Rest], [msg(alice, C?) | A?], B?, Ch?) :-
+    route(Rest?, A, B, Ch).
+route([msg(bob, C) | Rest], A?, [msg(bob, C?) | B?], Ch?) :-
+    route(Rest?, A, B, Ch).
+route([msg(charlie, C) | Rest], A?, B?, [msg(charlie, C?) | Ch?]) :-
+    route(Rest?, A, B, Ch).
+route([], [], [], []).
+
+%% --- Actors driving the non-live peers (real agent/4 underneath). An actor
+%% emits a seed command list, then reacts to its mediator's notifies. ---
+
+%% Both alice and charlie cold-call bob on start (each gives bob a befriend
+%% card), then auto-accept anything addressed to them. The friend-channel intro
+%% path is avoided — it stalls on the NetIn wake-up bug
+%% (docs/agent-netin-wakeup-stall-bug.md); cold-calls work cleanly single-isolate.
+
+%% alice actor: seed connect(bob), then auto-accept.
+procedure alice_actor(Stream(UserNotify)?, Stream(UserCmd)).
+alice_actor(Ns, [connect(bob) | Cs?]) :- auto_accept(Ns?, Cs).
+
+%% charlie actor: seed connect(bob), then auto-accept.
+procedure charlie_actor(Stream(UserNotify)?, Stream(UserCmd)).
+charlie_actor(Ns, [connect(bob) | Cs?]) :- auto_accept(Ns?, Cs).
+
+%% Generic: accept every cold-call and intro; ignore other notifies.
+procedure auto_accept(Stream(UserNotify)?, Stream(UserCmd)).
+auto_accept([befriend(Who, Req) | Ns], [decision(yes, Who?, Req?) | Cs?]) :-
+    ground(Who?), ground(Req?) | auto_accept(Ns?, Cs).
+auto_accept([befriend_intro(_, Other, Req) | Ns], [accept_intro(Other?, Req?) | Cs?]) :-
+    ground(Other?), ground(Req?) | auto_accept(Ns?, Cs).
+auto_accept([_ | Ns], Cmds?) :- otherwise | auto_accept(Ns?, Cmds).
+auto_accept([], []).
+
+%% --- Scenario boot (entered as bob's agent_init) ---
+
+agent_init(bob, UserIn, _) :-
+    %% Bob: live-UI agent. UserIn is injected from Dart; notifies -> _output.
+    agent(bob, BAgentIn?, BNetIn?,
+          [output('_user', BA2U) | [output('_net', BNetOut)]]),
+    ui_mediator(bob, ch(BA2U?, BAgentIn), ch(UserIn?, BUserOut), [], 1),
+    send_to_user(BUserOut?),
+    %% Alice: real agent, driven by an auto-accepting actor.
+    agent(alice, AAgentIn?, ANetIn?,
+          [output('_user', AA2U) | [output('_net', ANetOut)]]),
+    ui_mediator(alice, ch(AA2U?, AAgentIn), ch(ACmds?, AUserOut), [], 1),
+    alice_actor(AUserOut?, ACmds),
+    %% Charlie: real agent, driven by an actor that cold-calls alice+bob and,
+    %% once friends with bob, introduces alice and bob.
+    agent(charlie, CAgentIn?, CNetIn?,
+          [output('_user', CA2U) | [output('_net', CNetOut)]]),
+    ui_mediator(charlie, ch(CA2U?, CAgentIn), ch(CCmds?, CUserOut), [], 1),
+    charlie_actor(CUserOut?, CCmds),
+    %% In-heap transport.
+    crossbar(ANetOut?, BNetOut?, CNetOut?, ANetIn, BNetIn, CNetIn).

@@ -15,45 +15,16 @@
 %%   Stream ::= [] ; [_|Stream].
 %%   Channel ::= ch(Stream, Stream?).
 
-Response ::= accept(FriendChannel) ; no.
-Decision ::= yes ; no.
-PendingValue ::= response(Response) ; channel(FriendChannel) ; error.
+%% Shared protocol types (Response, Decision, PendingValue, UserContent,
+%% AgentContent, NetColdCall, Friend* and FriendChannel) live in this
+%% directory's self.glp and are imported as ancestor type scope. Only the
+%% agent-internal Output* union is defined here.
 
-%% --- Content types for messages ---
-
-%% Content carried inside user-to-agent messages (msg('_user', Id, Content))
-UserContent ::= connect(Constant)
-              ; decision(Decision, Constant, PendingValue)
-              ; send(Constant, Constant)
-              ; introduce(Constant, Constant)
-              ; accept_intro(Constant, PendingValue)
-              ; reject_intro(Constant)
-              ; response(Response).
-
-%% Content carried inside agent-to-user messages (msg(agent, '_user', Content))
-AgentContent ::= befriend(Constant, Response?)
-               ; befriend_intro(Constant, Constant, FriendChannel)
-               ; connected(Constant)
-               ; rejected
-               ; rejected(Constant)
-               ; received(Constant, Constant).
-
-%% Network content (2-arg cold-call: msg(Dest, Content))
-NetColdCall ::= intro(Constant, Response?).
-
-%% Friend-to-friend content (3-arg: msg(From, To, Content))
-FriendContent ::= response(Response)
-                ; text(Constant)
-                ; intro(Constant, FriendChannel).
-
-%% Friend messages and channels
-FriendMsg     ::= msg(Constant, Constant, FriendContent).
-FriendStream  ::= [] ; [FriendMsg | FriendStream].
-FriendChannel ::= ch(FriendStream, FriendStream?).
-
-%% Output content (union of AgentContent and FriendContent)
-OutputContent ::= befriend(Constant, Response)
-                ; befriend_intro(Constant, Constant, FriendChannel)
+%% Output content (union of AgentContent and FriendContent). befriend forwards
+%% the response writer, so its Response slot is `?`-typed (manual §15B), matching
+%% AgentContent in self.glp.
+OutputContent ::= befriend(Constant, Response?)
+                ; befriend_intro(Constant, Constant, FriendChannel?)
                 ; connected(Constant)
                 ; rejected
                 ; rejected(Constant)
@@ -211,9 +182,9 @@ agent(Id, [_|UserIn], NetIn, Outs) :-
 %% --- Network messages ---
 
 %% Cold-call from network
-agent(Id, UserIn, [msg(Id1, intro(From, Resp))|NetIn], Outs) :-
+agent(Id, UserIn, [msg(Id1, intro(From, Resp?))|NetIn], Outs) :-
     Id? =?= Id1? |
-    lookup_send('_user', msg(agent, '_user', befriend(From?, Resp?)), Outs?, Outs1),
+    lookup_send('_user', msg(agent, '_user', befriend(From?, Resp)), Outs?, Outs1),
     agent(Id?, UserIn?, NetIn?, Outs1?).
 
 %% Response to cold-call from network
@@ -229,9 +200,9 @@ agent(Id, UserIn, [msg(From, Id1, text(Text))|NetIn], Outs) :-
     agent(Id?, UserIn?, NetIn?, Outs1?).
 
 %% Introduction from friend
-agent(Id, UserIn, [msg(From, Id1, intro(Other, Ch))|NetIn], Outs) :-
+agent(Id, UserIn, [msg(From, Id1, intro(Other, Ch?))|NetIn], Outs) :-
     Id? =?= Id1?, ground(Other?) |
-    lookup_send('_user', msg(agent, '_user', befriend_intro(From?, Other?, Ch?)), Outs?, Outs1),
+    lookup_send('_user', msg(agent, '_user', befriend_intro(From?, Other?, Ch)), Outs?, Outs1),
     agent(Id?, UserIn?, NetIn?, Outs1?).
 
 %% Network catch-all

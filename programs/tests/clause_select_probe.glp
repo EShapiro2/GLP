@@ -1,0 +1,51 @@
+%% clause_select_probe.glp — does a committable later clause fire when an
+%% earlier clause's head suspends on an unbound argument?
+%%
+%% Mirrors agent/4: clauses matching the FIRST stream (UserIn) are tried before
+%% clauses matching the SECOND stream (NetIn). Here UserIn is left unbound (no
+%% producer) and NetIn carries a ready message delivered through a merge (as
+%% bob's NetIn is, after befriending). Question: does the NetIn clause commit?
+%%
+%%   got_net(hello)  => later clause commits; the social-graph stall is a wiring
+%%                      detail, not clause selection.
+%%   (nothing)       => the suspended UserIn-clause head blocks the committable
+%%                      NetIn clause — a clause-selection / scheduling bug.
+%%
+%% Run from glp_runtime/:
+%%   printf '/Users/udi/Grassroots/GLP/programs/tests/clause_select_probe.glp\ngo.\n:quit\n' | dart run bin/glp_repl.dart
+
+-mode(system).
+
+%% Faithful to clause 232: the NetIn message is a 3-field msg whose content is
+%% intro(Other, Ch) with Ch a CHANNEL carrying an unbound writer (as charlie's
+%% new_channel produces). The matching clause captures Ch and guards ground(Other?).
+Chan ::= ch(Stream(Constant), Stream(Constant)?).
+NContent ::= intro(Constant, Chan).
+NMsg ::= m(Constant, Constant, NContent).
+UMsg ::= u(Constant).
+
+procedure p(Stream(UMsg)?, Stream(NMsg)?).
+%% UserIn clauses (tried first) — heads suspend on unbound UserIn.
+p([u(X) | Us], Net) :- ground(X?) | '_output'(got_user(X?)), p(Us?, Net?).
+%% USER CATCH-ALL with otherwise, positioned BEFORE the net clause — exactly as
+%% agent/4 has it. Its head matches UserIn; with UserIn unbound it suspends, and
+%% its otherwise cannot resolve until the prior user clauses fail.
+p([_ | Us], Net) :- ground(other), otherwise | '_output'(got_user_catchall), p(Us?, Net?).
+%% NetIn intro clause AFTER the user catch-all — mirrors agent/4 clause 232.
+p(Us, [m(From, To, intro(Other, Ch)) | Ns]) :-
+    ground(To?), ground(Other?) |
+    '_output'(got_intro(From?, To?, Other?)), use_ch(Ch?), p(Us?, Ns?).
+p([], []).
+
+procedure use_ch(Chan?).
+use_ch(_).
+
+%% Deliver via a merge a 3-field intro whose channel has an UNBOUND write end,
+%% leaving UserIn unbound (never produced).
+procedure go.
+go :- p(U?, Net?),
+      merge([m(charlie, bob, intro(alice, ch([], _)))], [], Net),
+      keep(U).
+
+procedure keep(Stream(UMsg)).
+keep(_).

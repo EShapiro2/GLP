@@ -38,6 +38,14 @@ import 'package:glp_runtime/multiagent/simulation_network.dart';
 class AgentRuntime {
   final String agentId;
   final List<String> glpSources;
+
+  /// Optional real filesystem paths for [glpSources], in the same order. When
+  /// provided, each source is loaded under its real path so the type checker's
+  /// self.glp ancestor-scope discovery resolves shared types defined in a
+  /// project-local self.glp. Without it, sources load under synthetic names
+  /// ('source_$i') and a split self.glp cannot be found.
+  final List<String> glpSourcePaths;
+
   final String rootSelfGlpPath;
   final List<String> friends;
 
@@ -96,6 +104,7 @@ class AgentRuntime {
   AgentRuntime({
     required this.agentId,
     required this.glpSources,
+    this.glpSourcePaths = const [],
     required this.rootSelfGlpPath,
     this.friends = const [],
     this.goalLabel = 'agent_init/3',
@@ -188,9 +197,12 @@ class AgentRuntime {
       }
       _log('INIT: Program loaded via project linking ($projectDir) + ${glpSources.length} boot source(s), ${program.labels.length} labels');
     } else {
-      // Legacy mode: load each source file separately.
+      // Legacy mode: load each source file separately. Use the real path as
+      // the filename when available so self.glp ancestor-scope discovery works.
       for (var i = 0; i < glpSources.length; i++) {
-        engine.loadSource(glpSources[i], filename: 'source_$i');
+        final name =
+            i < glpSourcePaths.length ? glpSourcePaths[i] : 'source_$i';
+        engine.loadSource(glpSources[i], filename: name);
       }
       _log('INIT: Program loaded via GlpEngine (stdlib + madPredicates + ${glpSources.length} source files)');
     }

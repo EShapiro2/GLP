@@ -19,15 +19,12 @@
 %% TYPE DEFINITIONS
 %% =============================================================================
 
-Response ::= accept(FriendChannel) ; no.
-Decision ::= yes ; no.
-ReqId    ::= req(Constant).
+%% Response, Decision, PendingValue, the Friend* types and the agent<->mediator
+%% message wrappers (AgentMsg, UserMsg) are shared — defined once in this
+%% directory's self.glp. Only the ground Dart-facing protocol (ReqId, UserCmd,
+%% UserNotify) and the pending-table structure are mediator-local.
 
-%% Friend channel types (duplicated from typed_social_agent.glp)
-FriendContent ::= response(Response) ; text(Constant) ; intro(Constant, FriendChannel).
-FriendMsg     ::= msg(Constant, Constant, FriendContent).
-FriendStream  ::= [] ; [FriendMsg | FriendStream].
-FriendChannel ::= ch(FriendStream, FriendStream?).
+ReqId ::= req(Constant).
 
 %% --- User channel messages (all ground, mediator-specific) ---
 
@@ -47,8 +44,7 @@ UserNotify  ::= befriend(Constant, ReqId)
               ; rejected(Constant)
               ; received(Constant, Constant).
 
-%% --- Pending entries ---
-PendingValue ::= response(Response?) ; channel(FriendChannel?) ; error.
+%% --- Pending entries (PendingValue is shared, in self.glp) ---
 PendingEntry ::= pending(ReqId, PendingValue).
 PendingList  ::= [] ; [PendingEntry | PendingList].
 
@@ -56,7 +52,12 @@ PendingList  ::= [] ; [PendingEntry | PendingList].
 %% UI MEDIATOR - Main loop
 %% =============================================================================
 
-procedure ui_mediator(Constant?, Channel(X, Y)?, Channel(X, Y)?, PendingList?, Constant?).
+%% Agent-facing channel is now CONCRETE (§5(1)): reads AgentMsg, writes UserMsg.
+%% User-facing channel reads ground UserCmd, writes ground UserNotify.
+procedure ui_mediator(Constant?,
+                      Channel(Stream(AgentMsg), Stream(UserMsg))?,
+                      Channel(Stream(UserCmd), Stream(UserNotify))?,
+                      PendingList?, Constant?).
 
 %% --- Agent-to-user: non-ground (replace variable with req ID) ---
 

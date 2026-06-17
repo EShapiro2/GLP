@@ -1,0 +1,45 @@
+%% mad_w_probe.glp — minimal cross-isolate `_w` writer-match reproducer.
+%%
+%% No agent/4, no mediator, no UI. Alice MAD-sends a bare writer (wrapped in
+%% w/1) to Bob; Bob tries to match the received payload against the nested
+%% READER pattern w(X?) — the same shape as the social-graph clause head
+%% `decision(_, _, response(Resp?))` that fails on a `_w`-backed reader.
+%%
+%%   bob_matched_nested_w  => `_w` reader IS admissible in a nested head;
+%%                            the social-graph bug is elsewhere.
+%%   bob_fell_to_otherwise => `_w` reader is NOT admissible in a nested head;
+%%                            that is the madGLP fault.
+%%
+%% Run via glp_multiagent/test/mad_w_probe_test.dart (two isolates).
+
+-mode(system).
+
+procedure agent_init(Constant?, Stream(X)?, Stream(X)?).
+
+%% Alice: transmit a fresh writer to bob, wrapped in w/1.
+agent_init(alice, _, _) :-
+    send_to_net([msg(bob, w(_))]).
+
+%% Bob: receive w(W) from net; a "producer" process forwards W (writer) onto a
+%% local channel stream; a concurrent "consumer" process pulls it back off with
+%% the real receive/3 channel op into a nested reader pattern wrapped(Y?) — the
+%% exact mechanism the mediator uses (receive(msg(..,befriend(From,Resp?)),..)).
+agent_init(bob, _, NetIn) :-
+    bob_producer(NetIn?, S),
+    bob_consumer(ch(S?, _)).
+
+%% Capture the _w reader, forward it as a writer onto the channel stream S.
+procedure bob_producer(Stream(X)?, Stream(Y)).
+bob_producer([msg(_, w(W?)) | _], [wrapped(W)]) :- '_output'(bob_produced).
+bob_producer([], []) :- '_output'(bob_empty).
+
+%% Pull it back with receive/3 into a nested reader pattern.
+procedure bob_consumer(Channel(Stream(Z), W)?).
+bob_consumer(Ch) :- receive(wrapped(Y?), Ch?, Ch1) | '_output'(bob_ch_matched), fill(Y), drop(Ch1?).
+bob_consumer(_) :- otherwise | '_output'(bob_ch_otherwise).
+
+procedure drop(_?).
+drop(_).
+
+procedure fill(_).
+fill(done).

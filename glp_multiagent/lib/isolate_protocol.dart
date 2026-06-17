@@ -47,6 +47,11 @@ sealed class ToAgentMsg {}
 class InitAgent extends ToAgentMsg {
   final String agentId;
   final List<String> glpSources;
+
+  /// Optional real paths for [glpSources] (same order), so the type checker's
+  /// self.glp ancestor-scope resolves shared types at load time.
+  final List<String> glpSourcePaths;
+
   final String rootSelfGlpPath;
   final List<String> friends;
   final SendPort replyPort;
@@ -70,6 +75,7 @@ class InitAgent extends ToAgentMsg {
   InitAgent({
     required this.agentId,
     required this.glpSources,
+    this.glpSourcePaths = const [],
     required this.rootSelfGlpPath,
     required this.friends,
     required this.replyPort,
@@ -179,6 +185,7 @@ Future<void> _runAgent(InitAgent init) async {
   final agent = AgentRuntime(
     agentId: agentId,
     glpSources: init.glpSources,
+    glpSourcePaths: init.glpSourcePaths,
     rootSelfGlpPath: init.rootSelfGlpPath,
     friends: init.friends,
     goalLabel: init.goalLabel,

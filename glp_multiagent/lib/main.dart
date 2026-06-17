@@ -13,6 +13,9 @@ import 'package:glp_runtime/multiagent/repl_play_runner.dart';
 
 import 'isolate_protocol.dart';
 import 'mad_router.dart';
+import 'manifests/gsg.dart';
+import 'ui_runtime/agent_surface.dart';
+import 'ui_runtime/runtime.dart';
 
 // =============================================================================
 // SHARED FILE LOGGER
@@ -53,8 +56,17 @@ class TraceLogger {
   }
 }
 
-/// Default GLP program directory (repo-relative from glp_multiagent/)
-const _defaultGlpDir = '../programs/typed_book/social_graph';
+/// Resolve the GLP program directory. Relative in dev (cwd = glp_multiagent/),
+/// absolute fallback for the release .app bundle (cwd differs).
+String _resolveGlpDir() {
+  const rel = '../programs/book/social_graph';
+  if (Directory(rel).existsSync()) return Directory(rel).absolute.path;
+  const fallback = '/Users/udi/Grassroots/GLP/programs/book/social_graph';
+  if (Directory(fallback).existsSync()) return fallback;
+  return rel;
+}
+
+final _defaultGlpDir = _resolveGlpDir();
 
 /// Resolve absolute path to programs/self.glp.
 String _resolveRootSelfGlpPath() {
@@ -69,6 +81,7 @@ final _rootSelfGlpPath = _resolveRootSelfGlpPath();
 
 /// GLP files loaded for UI agents (order matters: shared first, then boot)
 const _glpFiles = [
+  'self.glp',
   'typed_social_agent.glp',
   'typed_ui_mediator.glp',
   'play_ui_boot.glp',
@@ -128,6 +141,8 @@ class AgentState {
   bool initialized = false;
   String status = 'Spawning...';
   final List<String> outputLog = [];
+  /// Manifest-driven two-surface UI runtime (null for read-only play panels).
+  UiRuntime? ui;
   int goalCount = 0;
   int heapVars = 0;
   int wpSize = 0;
@@ -163,9 +178,15 @@ class _CoordinatorScreenState extends State<CoordinatorScreen> {
       TextEditingController(text: _defaultGlpDir);
   String _currentGlpDir = _defaultGlpDir;
   List<String>? _cachedGlpSources;
+  List<String> _cachedGlpPaths = const [];
 
   final ReceivePort _replyPort = ReceivePort();
   StreamSubscription? _replySubscription;
+
+  /// Live (interactive) trio orchestration: deferred start until all ports
+  /// are registered, so agent-to-agent routing has no races.
+  int _expectedAgentCount = 0;
+  Completer<void>? _allReadyCompleter;
 
   @override
   void initState() {
@@ -183,6 +204,10 @@ class _CoordinatorScreenState extends State<CoordinatorScreen> {
 
     _log.add('Coordinator started (isolate mode)');
     _log.add('GLP dir: $_currentGlpDir');
+
+    // Clean smartphone UI: auto-launch the single-isolate scenario so Bob's
+    // surface populates on open. No dev controls.
+    WidgetsBinding.instance.addPostFrameCallback((_) => _spawnScenario());
   }
 
   void _handleAgentMessage(dynamic msg) {
@@ -196,10 +221,25 @@ class _CoordinatorScreenState extends State<CoordinatorScreen> {
         TraceLogger.instance.log('COORD', '${msg.agentId} ready');
       }
       setState(() {});
+
+      // Deferred-start trio: once all ports are registered, release GLP init.
+      final readyCount =
+          _agents.values.where((a) => a.commandPort != null).length;
+      if (readyCount >= _expectedAgentCount &&
+          _allReadyCompleter != null &&
+          !_allReadyCompleter!.isCompleted) {
+        _allReadyCompleter!.complete();
+      }
     } else if (msg is AgentOutput) {
       final state = _agents[msg.agentId];
       if (state != null) {
         state.outputLog.add(msg.line);
+        // The maGLP isolate marks genuine _output/1 notifies with a leading
+        // '< '; debug chatter ([INIT]…, > …) has no such marker. Strip the
+        // transport marker so the runtime receives the bare ground term.
+        final boundaryLine =
+            msg.line.startsWith('< ') ? msg.line.substring(2) : msg.line;
+        state.ui?.handleLine(boundaryLine);
         setState(() {});
         _scrollAgentToBottom(state);
       }
@@ -266,6 +306,7 @@ class _CoordinatorScreenState extends State<CoordinatorScreen> {
 
     try {
       final sources = <String>[];
+      final paths = <String>[];
       for (final filename in _glpFiles) {
         final file = File('$newDir/$filename');
         if (!file.existsSync()) {
@@ -275,8 +316,10 @@ class _CoordinatorScreenState extends State<CoordinatorScreen> {
           return;
         }
         sources.add(await file.readAsString());
+        paths.add(file.absolute.path);
       }
       _cachedGlpSources = sources;
+      _cachedGlpPaths = paths;
 
       setState(() {
         _currentGlpDir = newDir;
@@ -319,6 +362,7 @@ class _CoordinatorScreenState extends State<CoordinatorScreen> {
     final initMsg = InitAgent(
       agentId: agentId,
       glpSources: _cachedGlpSources!,
+      glpSourcePaths: _cachedGlpPaths,
       rootSelfGlpPath: _rootSelfGlpPath,
       friends: friends,
       replyPort: _replyPort.sendPort,
@@ -344,6 +388,123 @@ class _CoordinatorScreenState extends State<CoordinatorScreen> {
     await _spawnAgent('Charlie', ['Bob']);
   }
 
+  /// Spawn the interactive trio (Alice/Bob/Charlie), each driven by the GSG
+  /// manifest's two-surface UI.  Deferred start: spawn all, wait for every port
+  /// to register, then release GLP init — so cold-call routing has no races.
+  Future<void> _spawnLiveTrio() async {
+    await _closeAll();
+
+    if (_cachedGlpSources == null) {
+      await _updateGlpPath();
+      if (_cachedGlpSources == null) {
+        _log.add('ERROR: Could not load GLP source');
+        setState(() {});
+        return;
+      }
+    }
+
+    const trio = {
+      'Alice': ['Bob'],
+      'Bob': ['Alice', 'Charlie'],
+      'Charlie': ['Bob'],
+    };
+
+    _expectedAgentCount = trio.length;
+    _allReadyCompleter = Completer<void>();
+
+    for (final entry in trio.entries) {
+      final agentId = entry.key;
+      final friends = entry.value;
+      final agentState = AgentState(agentId, friends);
+      agentState.ui = UiRuntime(
+        manifest: gsgManifest,
+        onSend: (text) => agentState.commandPort?.send(UserInput(text)),
+      );
+      agentState.ui!.onChange = () => setState(() {});
+      _agents[agentId] = agentState;
+
+      final initMsg = InitAgent(
+        agentId: agentId,
+        glpSources: _cachedGlpSources!,
+        glpSourcePaths: _cachedGlpPaths,
+        rootSelfGlpPath: _rootSelfGlpPath,
+        friends: friends,
+        replyPort: _replyPort.sendPort,
+        deferStart: true,
+      );
+
+      try {
+        await Isolate.spawn(agentIsolateEntry, initMsg);
+        _log.add('Spawned $agentId (friends=${friends.join(", ")})');
+      } catch (e) {
+        _log.add('ERROR spawning $agentId: $e');
+      }
+    }
+    setState(() {});
+
+    await _allReadyCompleter!.future;
+
+    for (final agent in _agents.values) {
+      agent.commandPort?.send(StartAgent());
+    }
+    _log.add('Live trio started (manifest UI)');
+    setState(() {});
+  }
+
+  /// Single-isolate scenario: ONE heap runs the real agent/4 + ui_mediator/5 for
+  /// bob (live UI) plus alice/charlie (scenario actors) wired through an in-heap
+  /// crossbar — no MAD, so it sidesteps the receive/3 `_w` bug. alice and charlie
+  /// cold-call bob on launch, so bob's inbox shows two befriend cards; accepting
+  /// each forms the friendship (connected both sides). Only bob has a surface.
+  Future<void> _spawnScenario() async {
+    await _closeAll();
+
+    const scenarioFiles = [
+      'self.glp',
+      'typed_social_agent.glp',
+      'typed_ui_mediator.glp',
+      'play_scenario_boot.glp',
+    ];
+    final paths = [for (final f in scenarioFiles) '$_currentGlpDir/$f'];
+    final sources = <String>[];
+    for (final p in paths) {
+      final file = File(p);
+      if (!file.existsSync()) {
+        _log.add('ERROR: scenario file not found: $p');
+        setState(() {});
+        return;
+      }
+      sources.add(await file.readAsString());
+    }
+
+    final bob = AgentState('Bob', const ['alice', 'charlie']);
+    bob.ui = UiRuntime(
+      manifest: gsgManifest,
+      onSend: (text) => bob.commandPort?.send(UserInput(text)),
+    );
+    bob.ui!.onChange = () => setState(() {});
+    _agents['Bob'] = bob;
+
+    final initMsg = InitAgent(
+      agentId: 'Bob',
+      glpSources: sources,
+      glpSourcePaths: paths,
+      rootSelfGlpPath: _rootSelfGlpPath,
+      friends: const ['alice', 'charlie'],
+      replyPort: _replyPort.sendPort,
+      // Single agent in the isolate: no inter-isolate routing race, so start now.
+      deferStart: false,
+    );
+
+    try {
+      await Isolate.spawn(agentIsolateEntry, initMsg);
+      _log.add('Scenario started (single isolate; alice & charlie cold-call bob)');
+    } catch (e) {
+      _log.add('ERROR spawning scenario: $e');
+    }
+    setState(() {});
+  }
+
   Future<void> _closeAll() async {
     // Kill REPL subprocess if running
     _playRunner?.kill();
@@ -357,6 +518,8 @@ class _CoordinatorScreenState extends State<CoordinatorScreen> {
       agent.dispose();
     }
     _agents.clear();
+    _expectedAgentCount = 0;
+    _allReadyCompleter = null;
     IsolateRouter.instance.clearLog();
     _log.add('Closed all agents');
     setState(() {});
@@ -455,31 +618,16 @@ class _CoordinatorScreenState extends State<CoordinatorScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Clean §7.4 smartphone presentation: one device, Bob's two-surface UI.
+    final bob = _agents['Bob'];
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Social Graph'),
-      ),
-      body: Column(
-        children: [
-          _buildGlpPathBar(),
-          _buildControlBar(),
-          // Agent panels
-          Expanded(
-            child: _agents.isEmpty
-                ? const Center(
-                    child: Text('Click a Play button above to run a scenario.'))
-                : Row(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: _agents.values
-                        .map((agent) => Expanded(child: _buildAgentPanel(agent)))
-                        .toList(),
-                  ),
-          ),
-          // Routing log
-          _buildRoutingLog(),
-          // Coordinator log
-          _buildCoordinatorLog(),
-        ],
+      backgroundColor: const Color(0xFF2B2B33),
+      body: Center(
+        child: _PhoneFrame(
+          child: (bob != null && bob.ui != null)
+              ? AgentSurface(agentId: bob.agentId, runtime: bob.ui!)
+              : const _Booting(),
+        ),
       ),
     );
   }
@@ -521,6 +669,33 @@ class _CoordinatorScreenState extends State<CoordinatorScreen> {
       child: Row(
         children: [
           ElevatedButton.icon(
+            onPressed: _spawnLiveTrio,
+            icon: const Icon(Icons.people),
+            label: const Text('Live Trio'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.deepOrange,
+            ),
+          ),
+          const SizedBox(width: 8),
+          ElevatedButton.icon(
+            onPressed: _spawnScenario,
+            icon: const Icon(Icons.auto_awesome),
+            label: const Text('Scenario'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.indigo,
+            ),
+          ),
+          const SizedBox(width: 8),
+          ElevatedButton.icon(
+            onPressed: _closeAll,
+            icon: const Icon(Icons.stop),
+            label: const Text('Close All'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.grey,
+            ),
+          ),
+          const SizedBox(width: 16),
+          ElevatedButton.icon(
             onPressed: () => _runPlay(1),
             icon: const Icon(Icons.play_arrow),
             label: const Text('Play 1'),
@@ -552,6 +727,22 @@ class _CoordinatorScreenState extends State<CoordinatorScreen> {
   }
 
   Widget _buildAgentPanel(AgentState agent) {
+    // Manifest-driven agents render the generic two-surface UI.
+    if (agent.ui != null) {
+      return Container(
+        decoration: BoxDecoration(
+          border: Border(right: BorderSide(color: Colors.grey.shade300)),
+        ),
+        child: Column(
+          children: [
+            Expanded(
+              child: AgentSurface(agentId: agent.agentId, runtime: agent.ui!),
+            ),
+            _agentStatusBar(agent),
+          ],
+        ),
+      );
+    }
     return Container(
       decoration: BoxDecoration(
         border: Border(
@@ -679,6 +870,38 @@ class _CoordinatorScreenState extends State<CoordinatorScreen> {
     );
   }
 
+  Widget _agentStatusBar(AgentState agent) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 8.0),
+      color: Colors.orange.shade100,
+      child: Row(
+        children: [
+          Text(
+            'G:${agent.goalCount} H:${agent.heapVars} W:${agent.wpSize} M:${agent.mpSize}',
+            style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 10),
+          ),
+          const SizedBox(width: 8),
+          Container(
+            width: 8,
+            height: 8,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: agent.initialized ? Colors.orange : Colors.grey,
+            ),
+          ),
+          const SizedBox(width: 4),
+          Expanded(
+            child: Text(
+              agent.status,
+              style: const TextStyle(fontSize: 10),
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildRoutingLog() {
     final log = IsolateRouter.instance.routingLog;
     return Container(
@@ -699,7 +922,7 @@ class _CoordinatorScreenState extends State<CoordinatorScreen> {
 
   Widget _buildCoordinatorLog() {
     return Container(
-      height: 80,
+      height: 56,
       color: Colors.orange.shade50,
       child: ListView.builder(
         padding: const EdgeInsets.all(8.0),
@@ -735,4 +958,78 @@ class _CoordinatorScreenState extends State<CoordinatorScreen> {
   bool _outputLineBold(String line) {
     return line.startsWith('[') || line.startsWith('<');
   }
+}
+
+// =============================================================================
+// Clean smartphone presentation (paper §7.4)
+// =============================================================================
+
+/// A phone-shaped bezel that frames the agent's two-surface UI.
+class _PhoneFrame extends StatelessWidget {
+  final Widget child;
+  const _PhoneFrame({required this.child});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 400,
+      height: 860,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.black,
+        borderRadius: BorderRadius.circular(44),
+        boxShadow: const [
+          BoxShadow(color: Colors.black54, blurRadius: 40, spreadRadius: 4),
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(32),
+        child: Container(
+          color: Colors.white,
+          child: Column(
+            children: [
+              _statusBar(),
+              Expanded(child: child),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _statusBar() => Container(
+        height: 28,
+        color: Colors.orange,
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: const [
+            Text('grassroots',
+                style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600)),
+            Row(children: [
+              Icon(Icons.wifi, color: Colors.white, size: 14),
+              SizedBox(width: 6),
+              Icon(Icons.battery_full, color: Colors.white, size: 14),
+            ]),
+          ],
+        ),
+      );
+}
+
+class _Booting extends StatelessWidget {
+  const _Booting();
+  @override
+  Widget build(BuildContext context) => const Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            CircularProgressIndicator(color: Colors.orange),
+            SizedBox(height: 16),
+            Text('Starting…', style: TextStyle(color: Colors.grey)),
+          ],
+        ),
+      );
 }
