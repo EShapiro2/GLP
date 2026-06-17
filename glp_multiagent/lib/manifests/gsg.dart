@@ -82,24 +82,17 @@ final Manifest gsgManifest = Manifest(
     ),
   ],
 
-  // Activity: the all-ground UserNotifies.
+  // Activity rules: all-ground UserNotifies land in their target surface (§7.4).
   activity: const [
+    // connected adds the friend to the Friends list. No separate activity feed.
     ActivityDesc(
       notifyCtor: 'connected',
       args: ['who'],
       effect: AppendTo('friends', 'who'),
-      feed: 'Connected to {who}',
     ),
-    ActivityDesc(
-      notifyCtor: 'rejected',
-      args: ['who'],
-      feed: '{who} declined your request',
-    ),
-    ActivityDesc(
-      notifyCtor: 'rejected',
-      args: [],
-      feed: 'Your request was declined',
-    ),
+    // A refused offer leaves no friend — recognised, nothing to render.
+    ActivityDesc(notifyCtor: 'rejected', args: ['who']),
+    ActivityDesc(notifyCtor: 'rejected', args: []),
   ],
 
   state: const [

@@ -119,18 +119,20 @@ class ExtendThread extends Effect {
   const ExtendThread(this.thread, this.keyField, this.valueField);
 }
 
-/// An activity rule: one all-ground `UserNotify`. [effect] mutates the store;
-/// [feed] (optional) appends a human-readable line to the activity feed.
+/// An activity rule: one all-ground `UserNotify` that lands in its target
+/// surface (paper §7.4). [effect] mutates the rendered state — `connected` adds
+/// a friend, `unfriended` removes one, `received` extends a conversation. There
+/// is no separate "Activity" screen; "activity" is the rule's name. A rule may
+/// have no effect (a recognised notify with nothing to render, e.g. a refused
+/// offer that simply leaves no friend).
 class ActivityDesc {
   final String notifyCtor;
   final List<String> args;
   final Effect? effect;
-  final String? feed;
   const ActivityDesc({
     required this.notifyCtor,
     required this.args,
     this.effect,
-    this.feed,
   });
 }
 

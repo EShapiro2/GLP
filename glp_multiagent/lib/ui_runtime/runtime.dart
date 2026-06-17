@@ -19,12 +19,13 @@ class InboxCard {
   InboxCard(this.id, this.desc, this.fields);
 }
 
-/// Structured activity state built from all-ground notifies.
+/// Structured state built from all-ground notifies — the state the outbox
+/// leaves (friends list, balances, threads). Activity rules land here; there is
+/// no separate activity feed (paper §7.4).
 class ActivityStore {
   final Map<String, List<GTerm>> lists = {};
   final Map<String, GTerm> values = {};
   final Map<String, Map<String, List<GTerm>>> threads = {};
-  final List<String> feed = [];
 }
 
 /// The per-agent UI runtime.
@@ -138,9 +139,6 @@ class UiRuntime {
           final k = formatTerm(fields[keyField]!);
           t.putIfAbsent(k, () => <GTerm>[]).add(fields[valueField]!);
       }
-    }
-    if (desc.feed != null) {
-      store.feed.add(renderTemplate(desc.feed!, fields));
     }
   }
 }

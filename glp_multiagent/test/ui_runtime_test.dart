@@ -60,11 +60,10 @@ void main() {
       expect(sent, ['reject_intro(bob)']);
     });
 
-    test('connected appends to Friends and adds a feed line', () {
+    test('connected adds the friend to the Friends list (no feed)', () {
       r.handleLine('connected(bob)');
       final friends = r.store.lists['friends']!;
       expect(friends.map(formatTerm).toList(), ['bob']);
-      expect(r.store.feed, contains('Connected to bob'));
     });
 
     test('connected is idempotent (no duplicate friend)', () {
@@ -73,18 +72,16 @@ void main() {
       expect(r.store.lists['friends']!.length, 1);
     });
 
-    test('rejected(who) and bare rejected only feed, no friend added', () {
+    test('rejected(who) and bare rejected add no friend', () {
       r.handleLine('rejected(carol)');
       r.handleLine('rejected');
       expect(r.store.lists['friends'], isEmpty);
-      expect(r.store.feed, contains('carol declined your request'));
-      expect(r.store.feed, contains('Your request was declined'));
     });
 
     test('received (messaging) is ignored by the GSG manifest', () {
       r.handleLine('received(bob, hi)');
       expect(r.inbox, isEmpty);
-      expect(r.store.feed, isEmpty);
+      expect(r.store.lists['friends'], isEmpty);
     });
 
     test('submitCommand builds the ground UserCmd from form values', () {

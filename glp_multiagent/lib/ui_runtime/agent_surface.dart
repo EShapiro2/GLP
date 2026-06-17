@@ -1,8 +1,15 @@
-/// Generic two-surface agent UI (paper §7.4): Inbox + Outbox, with declared
-/// activity state (e.g. the Friends list) rendered between them.
+/// Generic two-surface agent UI (paper §7.1 "The Application", §7.4 "A Generic
+/// UI", Figure fig:gsg). The app is exactly two surfaces, shown as two screens
+/// with bottom-tab navigation:
 ///
-/// Renders strictly from a [UiRuntime] and its [Manifest]; no app-specific
-/// constructor name appears here.
+///   • Requests — the inbox: ReqId-bearing notifies, each answered Accept/Decline.
+///   • Friends  — the state the outbox leaves: a wholly-ground activity rule
+///                lands here (`connected` adds a friend, `unfriended` removes
+///                one). There is no separate "Activity" screen.
+///
+/// The "+" on the Friends screen composes outbox requests (offer friendship,
+/// introduce). Renders strictly from a [Manifest]; no app-specific constructor
+/// name appears here.
 library;
 
 import 'package:flutter/material.dart';
@@ -11,147 +18,190 @@ import 'manifest.dart';
 import 'runtime.dart';
 import 'term.dart';
 
-class AgentSurface extends StatelessWidget {
+class AgentSurface extends StatefulWidget {
   final String agentId;
   final UiRuntime runtime;
   const AgentSurface({super.key, required this.agentId, required this.runtime});
 
-  Manifest get _m => runtime.manifest;
+  @override
+  State<AgentSurface> createState() => _AgentSurfaceState();
+}
+
+class _AgentSurfaceState extends State<AgentSurface> {
+  /// 0 = Friends (the outbox state), 1 = Requests (the inbox).
+  int _tab = 0;
+
+  Manifest get _m => widget.runtime.manifest;
+  UiRuntime get _r => widget.runtime;
+
+  static const MaterialColor _accent = Colors.orange;
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        _header(),
-        Expanded(
-          child: ListView(
-            padding: const EdgeInsets.all(8),
-            children: [
-              ..._m.state.map(_stateView),
-              _sectionLabel('Inbox'),
-              if (runtime.inbox.isEmpty) _empty('No requests')
-              else ...runtime.inbox.map((c) => _card(context, c)),
-              if (runtime.store.feed.isNotEmpty) ...[
-                _sectionLabel('Activity'),
-                ...runtime.store.feed.reversed.take(8).map(_feedLine),
-              ],
-            ],
+    final requests = _r.inbox.length;
+    final onFriends = _tab == 0;
+    return Scaffold(
+      backgroundColor: Colors.white,
+      appBar: AppBar(
+        backgroundColor: _accent,
+        foregroundColor: Colors.white,
+        elevation: 0,
+        title: Text(onFriends ? _m.title : 'Requests',
+            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+        actions: [
+          Padding(
+            padding: const EdgeInsets.only(right: 12),
+            child: CircleAvatar(
+              radius: 13,
+              backgroundColor: Colors.white24,
+              child: Text(_initial(widget.agentId),
+                  style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold)),
+            ),
           ),
-        ),
-        _outbox(context),
-      ],
+        ],
+      ),
+      body: onFriends ? _friendsScreen() : _requestsScreen(),
+      floatingActionButton: onFriends
+          ? FloatingActionButton(
+              backgroundColor: _accent,
+              foregroundColor: Colors.white,
+              onPressed: () => _composeSheet(context),
+              child: const Icon(Icons.add),
+            )
+          : null,
+      bottomNavigationBar: NavigationBar(
+        height: 60,
+        selectedIndex: _tab,
+        onDestinationSelected: (i) => setState(() => _tab = i),
+        destinations: [
+          const NavigationDestination(
+              icon: Icon(Icons.people_outline),
+              selectedIcon: Icon(Icons.people),
+              label: 'Friends'),
+          NavigationDestination(
+            icon: _badge(requests, const Icon(Icons.mail_outline)),
+            selectedIcon: _badge(requests, const Icon(Icons.mail)),
+            label: 'Requests',
+          ),
+        ],
+      ),
     );
   }
 
-  Widget _header() => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-        color: Colors.orange,
-        child: Text(
-          agentId,
-          style: const TextStyle(
-              color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14),
-        ),
-      );
+  Widget _badge(int count, Widget child) =>
+      Badge(isLabelVisible: count > 0, label: Text('$count'), child: child);
 
-  Widget _sectionLabel(String text) => Padding(
-        padding: const EdgeInsets.only(top: 12, bottom: 4),
-        child: Text(text.toUpperCase(),
-            style: TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.bold,
-                color: Colors.grey.shade600,
-                letterSpacing: 0.5)),
-      );
+  // === Friends screen — the state the outbox leaves =========================
 
-  Widget _empty(String text) => Padding(
-        padding: const EdgeInsets.symmetric(vertical: 4),
-        child: Text(text,
-            style: TextStyle(
-                fontSize: 12,
-                fontStyle: FontStyle.italic,
-                color: Colors.grey.shade500)),
-      );
-
-  Widget _feedLine(String line) => Padding(
-        padding: const EdgeInsets.symmetric(vertical: 2),
-        child: Text(line, style: const TextStyle(fontSize: 12)),
-      );
-
-  Widget _stateView(StateView v) {
-    switch (v.kind) {
-      case StateKind.list:
-        final items = runtime.store.lists[v.key] ?? const [];
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            _sectionLabel(v.label),
-            if (items.isEmpty)
-              _empty('None')
-            else
-              Wrap(
-                spacing: 6,
-                runSpacing: 6,
-                children: items
-                    .map((t) => Chip(
-                          label: Text(formatTerm(t)),
-                          backgroundColor: Colors.orange.shade50,
-                          visualDensity: VisualDensity.compact,
-                        ))
-                    .toList(),
-              ),
-          ],
-        );
-      case StateKind.value:
-        final v0 = runtime.store.values[v.key];
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            _sectionLabel(v.label),
-            _feedLine(v0 == null ? '—' : formatTerm(v0)),
-          ],
-        );
-      case StateKind.thread:
-        final t = runtime.store.threads[v.key] ?? const {};
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            _sectionLabel(v.label),
-            if (t.isEmpty)
-              _empty('None')
-            else
-              ...t.entries.map((e) => _feedLine(
-                  '${e.key}: ${e.value.map(formatTerm).join(", ")}')),
-          ],
-        );
+  Widget _friendsScreen() {
+    final children = <Widget>[];
+    for (final v in _m.state) {
+      switch (v.kind) {
+        case StateKind.list:
+          final items = _r.store.lists[v.key] ?? const [];
+          if (items.isEmpty) {
+            children.add(_empty('No ${v.label.toLowerCase()} yet'));
+          } else {
+            children.addAll(items.map((t) => _friendTile(formatTerm(t))));
+          }
+        case StateKind.value:
+          final val = _r.store.values[v.key];
+          children.add(ListTile(
+            title: Text(v.label),
+            trailing: Text(val == null ? '—' : formatTerm(val)),
+          ));
+        case StateKind.thread:
+          final t = _r.store.threads[v.key] ?? const {};
+          for (final e in t.entries) {
+            children.add(ListTile(
+              title: Text(e.key),
+              subtitle: Text(e.value.map(formatTerm).join(', ')),
+            ));
+          }
+      }
     }
+    if (children.isEmpty) children.add(_empty('Nothing yet'));
+    return ListView(
+        padding: const EdgeInsets.symmetric(vertical: 4), children: children);
+  }
+
+  Widget _friendTile(String name) {
+    final display =
+        name.isEmpty ? name : name[0].toUpperCase() + name.substring(1);
+    return ListTile(
+      leading: CircleAvatar(
+        backgroundColor: _accent.shade100,
+        child: Text(_initial(name),
+            style: const TextStyle(
+                color: Colors.black87, fontWeight: FontWeight.bold)),
+      ),
+      title: Text(display, style: const TextStyle(fontWeight: FontWeight.w600)),
+    );
+  }
+
+  // === Requests screen — the inbox ==========================================
+
+  Widget _requestsScreen() {
+    if (_r.inbox.isEmpty) return _empty('No requests');
+    return ListView(
+      padding: const EdgeInsets.all(8),
+      children: _r.inbox.map((c) => _card(context, c)).toList(),
+    );
   }
 
   Widget _card(BuildContext context, InboxCard card) {
     return Card(
-      margin: const EdgeInsets.symmetric(vertical: 4),
+      margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 4),
       child: Padding(
-        padding: const EdgeInsets.all(10),
+        padding: const EdgeInsets.all(12),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(renderTemplate(card.desc.title, card.fields),
-                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-            if (card.desc.subtitle != null)
-              Padding(
-                padding: const EdgeInsets.only(top: 2),
-                child: Text(renderTemplate(card.desc.subtitle!, card.fields),
-                    style: const TextStyle(fontSize: 12)),
-              ),
-            const SizedBox(height: 8),
-            Wrap(
-              spacing: 8,
-              children: card.desc.answers
-                  .map((a) => ElevatedButton(
+            Row(
+              children: [
+                CircleAvatar(
+                  radius: 16,
+                  backgroundColor: _accent.shade100,
+                  child: Text(_titleInitial(card),
+                      style: const TextStyle(
+                          color: Colors.black87,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 13)),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(renderTemplate(card.desc.title, card.fields),
+                          style: const TextStyle(
+                              fontWeight: FontWeight.bold, fontSize: 14)),
+                      if (card.desc.subtitle != null)
+                        Text(renderTemplate(card.desc.subtitle!, card.fields),
+                            style: const TextStyle(
+                                fontSize: 12, color: Colors.black54)),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            Row(
+              children: card.desc.answers.map((a) {
+                final primary = a.label.toLowerCase() == 'accept';
+                final btn = primary
+                    ? ElevatedButton(
                         onPressed: () => _answer(context, card, a),
-                        child: Text(a.label),
-                      ))
-                  .toList(),
+                        child: Text(a.label))
+                    : OutlinedButton(
+                        onPressed: () => _answer(context, card, a),
+                        child: Text(a.label));
+                return Padding(
+                    padding: const EdgeInsets.only(right: 8), child: btn);
+              }).toList(),
             ),
           ],
         ),
@@ -160,27 +210,34 @@ class AgentSurface extends StatelessWidget {
   }
 
   void _answer(BuildContext context, InboxCard card, AnswerDesc answer) {
-    if (answer.needsPicker) {
-      // GSG v1 has no picker answers; reserved for child-safe.
-      return;
-    }
-    runtime.answerCard(card, answer);
+    if (answer.needsPicker) return; // reserved for child-safe pickers
+    _r.answerCard(card, answer);
   }
 
-  Widget _outbox(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(8),
-      color: Colors.orange.shade50,
-      child: Wrap(
-        spacing: 8,
-        runSpacing: 8,
-        children: _m.commands
-            .map((c) => ElevatedButton.icon(
-                  icon: const Icon(Icons.add, size: 16),
-                  label: Text(c.label),
-                  onPressed: () => _composeCommand(context, c),
-                ))
-            .toList(),
+  // === Outbox — compose a request ("+") =====================================
+
+  void _composeSheet(BuildContext context) {
+    if (_m.commands.length == 1) {
+      _composeCommand(context, _m.commands.first);
+      return;
+    }
+    showModalBottomSheet<void>(
+      context: context,
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            for (final c in _m.commands)
+              ListTile(
+                leading: const Icon(Icons.edit_outlined),
+                title: Text(c.label),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _composeCommand(context, c);
+                },
+              ),
+          ],
+        ),
       ),
     );
   }
@@ -206,8 +263,12 @@ class AgentSurface extends StatelessWidget {
               .toList(),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
-          ElevatedButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Send')),
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Cancel')),
+          ElevatedButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('Send')),
         ],
       ),
     );
@@ -219,7 +280,7 @@ class AgentSurface extends StatelessWidget {
       if (raw.isEmpty) return;
       values[f.name] = _fieldTerm(f, raw);
     }
-    runtime.submitCommand(cmd, values);
+    _r.submitCommand(cmd, values);
   }
 
   GTerm _fieldTerm(FieldDesc f, String raw) {
@@ -231,5 +292,28 @@ class AgentSurface extends StatelessWidget {
       case FieldType.text:
         return GAtom(raw);
     }
+  }
+
+  // === helpers ==============================================================
+
+  Widget _empty(String text) => Padding(
+        padding: const EdgeInsets.symmetric(vertical: 40, horizontal: 16),
+        child: Center(
+          child: Text(text,
+              style: TextStyle(
+                  fontSize: 14,
+                  fontStyle: FontStyle.italic,
+                  color: Colors.grey.shade500)),
+        ),
+      );
+
+  String _initial(String s) => s.isEmpty ? '?' : s[0].toUpperCase();
+
+  String _titleInitial(InboxCard card) {
+    for (final entry in card.fields.entries) {
+      final t = entry.value;
+      if (t is GAtom && t.name.isNotEmpty) return t.name[0].toUpperCase();
+    }
+    return '?';
   }
 }
