@@ -382,19 +382,24 @@ This closes the reader/writer-address-confusion family root for the single-isola
 
 ---
 
-## Issue 10: `..=/2` declared but has no clause
+## Issue 10: `..=/2` is only half-wired in the toolchain (not just a missing clause)
 
-**Status**: Open
-**Discovered**: 2026-06-10 (while testing Issue 0a)
+**Status**: Parked (2026-06-17) — bigger than a missing clause; needs compiler work. Re-scoped after an attempt.
+**Discovered**: 2026-06-10 (while testing Issue 0a); re-scoped 2026-06-17
 **Affects**: Any program using the decomposition operator `..=`
 
 ### Summary
 
-`..=` is declared in `programs/self.glp` (`procedure ..=(Stream(_), _?).`) and parses and type-checks as a body goal, but has no clause: `List ..= Compound?` fails at runtime with "Spawn could not find procedure label: ..=/2". Its dual `=..` (compose) is declared, implemented, and regression-tested (Issue 0a, Section A30).
+`..=` is declared in `programs/self.glp` (`procedure ..=(Stream(_), _?).`) but is not actually usable: `List ..= Compound?` fails at runtime with "Spawn could not find procedure label: ..=/2". Its dual `=..` works.
 
-### Fix
+### Re-scope (2026-06-17): not a one-line clause
 
-Implement `..=/2` (decompose a compound into `[Functor | Args]`) per its declaration in `self.glp` — clause or kernel, matching how `=..` is realized — with a Section A regression test.
+An attempt to add the obvious self.glp clause — `Y ..= X? :- compound(X?) | '_tuple_to_list'(X?, Y).`, the exact mirror of the `=..` decompose clause — did **not** work: the runtime still reported "Spawn could not find procedure label: ..=/2", i.e. the clause does not compile into a callable procedure. Root cause not pinned. Reverted. Along the way, two more gaps surfaced showing `..=` was scaffolded but never finished:
+
+- **Parser**: compound-led `..=` (`foo(a,b) ..= L`) has no `UNIV_DECOMPOSE` branch where compound-led `=..` is handled (`parser.dart` `_parseGoal` ~888, `_parseAtom` ~792). Only variable-led `..=` parses.
+- **Printer**: `glp_printer.dart` `_isInfixOperator` lists `=..` but omits `..=`.
+
+So completing `..=` is compiler work: pin why a `..=/2` clause does not register to a spawn label, add compound-led parsing, fix the printer, then add a Section A regression test. First trace how `=..` body goals compile to a resolvable spawn target and mirror it for `..=`.
 
 ---
 
@@ -489,3 +494,52 @@ Same root family as Issues 1, 9, 12 (heap-address vs reader/writer-role confusio
 ### Fix
 
 Investigate `receive/3`'s dereferencing / cell-walk of a `_w` remote writer when binding sub-patterns; plain list head-matching of the same value succeeds, so the divergence is inside the `receive/3` kernel. The UI `.glp` is correct and must not change for this bug. Multi-isolate gate stays red until fixed.
+
+---
+
+## Issue 14: Type checker does not re-check reader/writer polarity at polymorphic instantiation
+
+**Status**: Open — owned by the madGLP/IGLP session. Full report: `docs/typechecker-polymorphic-polarity-bug.md` (index: `docs/iglp-bug-reports-index.md` #1).
+**Discovered**: 2026-06-16
+**Affects**: Soundness — accepts programs that deadlock/strand at runtime.
+
+### Summary
+
+When a procedure parameter has a polymorphic element type (`Stream(X)?`, `Channel(X,Y)?`), reader/writer (producer/consumer) polarity obligations inside the body are discharged against the **abstract** type variable and are **not re-discharged** when `X` is instantiated to a concrete type at a call site. A concrete parameter type carries the obligation to the wiring site and the clash is caught; a polymorphic one absorbs it into the variable and it is never enforced.
+
+### Repro (differential)
+
+Identical except the consumer's declared parameter type. `producer` emits `befriend(Constant, Response)` (slot 2 = writer); consumer body matches `befriend(From, Resp?)` (slot 2 = reader); `go` wires them through one stream, so polarities must be dual.
+
+- `programs/tests/min_polarity_bug.glp` — concrete consumer `Stream(ConsMsg)?` → correctly **errors** with `(S, S?) not dual`.
+- `programs/tests/min_polarity_bug2.glp` — only change, polymorphic consumer `Stream(X)?` → **passes** (the duality error is silently dropped). The checker reports both errors in bug1, so this is genuine acceptance, not early-exit.
+
+Real-world: `typed_ui_mediator.glp`'s `Channel(X,Y)` hides the agent↔mediator polarity clash → the befriend round-trip strands.
+
+### Fix
+
+When the per-instantiation clause-template check binds a parameter type variable to a concrete type, re-run the clause's **mode/polarity** discharge under that substitution, not only the structural/shape unification. Fix test: `min_polarity_bug2.glp` must report the `(S, S?) not dual` error.
+
+---
+
+## Issue 15: Suspended agent goal not re-awoken when NetIn is bound after suspension via nested merge
+
+**Status**: Open — owned by the madGLP/IGLP session. Full report: `docs/agent-netin-wakeup-stall-bug.md` (index: `docs/iglp-bug-reports-index.md` #3).
+**Discovered**: 2026-06-17
+**Affects**: Liveness — a ready, committable message is never processed; the transaction stalls silently. Single isolate, no MAD/`_w`.
+
+### Summary
+
+An `agent/4` goal suspends with both `UserIn` and `NetIn` unbound. A later friend-channel `merge` binds `NetIn` to a committable `intro(...)` message, but the goal is **not re-scheduled** and the intro clause never fires — it appears to wait only on `UserIn` (the first-tried clauses), not on the `NetIn` argument a later clause matches.
+
+### Ruled out (isolation probes all pass — `programs/tests/clause_select_probe.glp`)
+
+Clause selection, channel-with-unbound-writer head-matching, and `otherwise` catch-all ordering all commit the later clause when the NetIn message is present at first reduction. So the fault is **timing/wake-up**, not matching.
+
+### What to investigate
+
+Whether a goal that suspends because its first-tried clauses block on one unbound argument (`UserIn`) correctly registers a wake-up dependency on the *other* argument (`NetIn`) that a later clause matches — specifically when that argument is bound after suspension by a (possibly nested) `merge`. A standalone minimal repro that suspends *before* delivering NetIn through a nested merge was not yet achieved (the next thing to force).
+
+### Repro
+
+Full: `glp_multiagent/test/scenario_single_isolate_test.dart` (phase 2 — `befriend_intro` never appears), trace `/private/tmp/scen-log.txt`. Distinct from Issue 13 (single-isolate, local channel, non-wakeup — not a `receive/3` unification failure).
