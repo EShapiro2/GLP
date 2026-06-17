@@ -34,24 +34,17 @@ MODED="$GLP_RUNTIME/test/programs/moded_types"
 
 cd "$GLP_RUNTIME"
 
-# Compile REPL to kernel snapshot for faster startup
-REPL_SNAPSHOT=".dart_tool/repl.dill"
-NEEDS_RECOMPILE=false
-if [ ! -f "$REPL_SNAPSHOT" ]; then
-    NEEDS_RECOMPILE=true
-elif [ -n "$(find lib bin -name '*.dart' -newer "$REPL_SNAPSHOT" 2>/dev/null | head -1)" ]; then
-    NEEDS_RECOMPILE=true
+# Compile the REPL to a native AOT binary for fast startup (Issue 11/12).
+# Each check then starts in ~0.01s instead of ~0.8s for `dart run`. The binary
+# is rebuilt whenever any lib/ or bin/ Dart source is newer than it; self.glp is
+# read at runtime, so .glp edits need no rebuild. A failed compile aborts (set -e)
+# rather than silently running stale code. The slow `dart run` REPL path is retired.
+REPL_EXE="bin/glp_repl_exe"
+if [ ! -f "$REPL_EXE" ] || [ -n "$(find lib bin -name '*.dart' -newer "$REPL_EXE" 2>/dev/null | head -1)" ]; then
+    echo "Compiling REPL AOT binary..."
+    $DART compile exe -o "$REPL_EXE" bin/glp_repl.dart >/dev/null
 fi
-if [ "$NEEDS_RECOMPILE" = true ]; then
-    echo "Compiling REPL snapshot..."
-    mkdir -p .dart_tool
-    $DART compile kernel -o "$REPL_SNAPSHOT" bin/glp_repl.dart 2>/dev/null || true
-fi
-if [ -f "$REPL_SNAPSHOT" ]; then
-    REPL="$REPL_SNAPSHOT"
-else
-    REPL="bin/glp_repl.dart"
-fi
+REPL_RUN="./$REPL_EXE"
 
 echo "======================================"
 echo "   GLP Unified Test Suite v1.0        "
@@ -91,7 +84,7 @@ echo ""
 
 # --- A1: p, merge_simple, merge_standalone, metainterpreter ---
 echo "--- A1: p, merge, metainterpreter ---"
-a1=$($DART run "$REPL" <<HEREDOC
+a1=$("$REPL_RUN" <<HEREDOC
 $TYPED/p.glp
 $BOOK/streams/producers_consumers/merge_simple.glp
 $TYPED/merge_standalone.glp
@@ -117,7 +110,7 @@ check "runA empty merge" "X2 = \[\]" "$a1"
 
 # --- A2: Append, Reverse, Copy ---
 echo "--- A2: Append, Reverse, Copy ---"
-a2=$($DART run "$REPL" <<HEREDOC
+a2=$("$REPL_RUN" <<HEREDOC
 $BOOK/recursive/list_processing/append.glp
 $BOOK/recursive/list_processing/reverse.glp
 $BOOK/recursive/list_processing/copy.glp
@@ -144,7 +137,7 @@ check "Copy empty" "Yc2 = \[\]" "$a2"
 
 # --- A3: Quicksort ---
 echo "--- A3: Quicksort ---"
-a3=$($DART run "$REPL" <<HEREDOC
+a3=$("$REPL_RUN" <<HEREDOC
 $BOOK/recursive/list_processing/quicksort.glp
 quicksort([],Xq1).
 quicksort([1],Xq2).
@@ -167,7 +160,7 @@ check "Quicksort unbound tail" "Xq7 = <unbound>" "$a3"
 
 # --- A4: Insertion Sort ---
 echo "--- A4: Insertion Sort ---"
-a4=$($DART run "$REPL" <<HEREDOC
+a4=$("$REPL_RUN" <<HEREDOC
 $BOOK/recursive/list_processing/insertion_sort.glp
 insertion_sort([],Xi1).
 insertion_sort([3],Xi2).
@@ -186,7 +179,7 @@ check "Insertion sort larger" "Xi4 = \[1, 2, 2, 3, 3, 4, 6\]" "$a4"
 
 # --- A6: Ordered merge ---
 echo "--- A6: Ordered merge ---"
-a6=$($DART run "$REPL" <<HEREDOC
+a6=$("$REPL_RUN" <<HEREDOC
 $BOOK/recursive/list_processing/merge_ordered.glp
 merge([1,3,5], [2,4,6], Zop).
 merge([1,2,3], [2,3,4], Zop2).
@@ -201,7 +194,7 @@ check "Ordered merge empty" "Zop3 = \[1, 2\]" "$a6"
 
 # --- A7: Fair merge ---
 echo "--- A7: Fair merge ---"
-a7=$($DART run "$REPL" <<HEREDOC
+a7=$("$REPL_RUN" <<HEREDOC
 $BOOK/streams/producers_consumers/fair_merge.glp
 merge([a,b,c], [x,y,z], Zfs).
 merge([a,b], [x,y,z], Zfs2).
@@ -214,7 +207,7 @@ check "Fair merge unequal" "Zfs2 = \[a, x, b, y, z\]" "$a7"
 
 # --- A8: Gates ---
 echo "--- A8: Logic gates ---"
-a8=$($DART run "$REPL" <<HEREDOC
+a8=$("$REPL_RUN" <<HEREDOC
 $BOOK/constants/gates.glp
 and([one,zero,one], [one,one,zero], OutA).
 or([one,zero,one], [one,one,zero], OutO).
@@ -231,7 +224,7 @@ check "OR all zeros" "OutO2 = \[zero, zero\]" "$a8"
 
 # --- A9: Arithmetic (sum, fib, factorial, hanoi, primes, inner_product) ---
 echo "--- A9: Arithmetic programs ---"
-a9=$($DART run "$REPL" <<HEREDOC
+a9=$("$REPL_RUN" <<HEREDOC
 $BOOK/recursive/list_processing/inner_product.glp
 $BOOK/recursive/arithmetic_trees/fibonacci.glp
 $BOOK/recursive/arithmetic_trees/factorial.glp
@@ -272,7 +265,7 @@ check "Primes 10" "Ps10 = \[2, 3, 5, 7\]" "$a9"
 
 # --- A10: Multiply ---
 echo "--- A10: Multiply ---"
-a10=$($DART run "$REPL" <<HEREDOC
+a10=$("$REPL_RUN" <<HEREDOC
 $TYPED/multiply.glp
 multiply(3, [1,2,3,4], Ym1).
 multiply(5, [], Ym2).
@@ -285,7 +278,7 @@ check "Multiply empty" "Ym2 = \[\]" "$a10"
 
 # --- A11: Struct demo, depth, paa, guards, misc ---
 echo "--- A11: Structure and pattern tests ---"
-a11=$($DART run "$REPL" <<HEREDOC
+a11=$("$REPL_RUN" <<HEREDOC
 $TYPED/struct_demo.glp
 $TYPED/depth_test.glp
 $TYPED/paa.glp
@@ -330,7 +323,7 @@ check "Assign reader" "Xar = hello" "$a11"
 
 # --- A12: Arithmetic guards, comparisons, otherwise, guard_reader ---
 echo "--- A12: Arithmetic guards and otherwise ---"
-a12=$($DART run "$REPL" <<HEREDOC
+a12=$("$REPL_RUN" <<HEREDOC
 $TYPED/arith_guard_ground.glp
 $TYPED/arith_comparison.glp
 $TYPED/otherwise_guard.glp
@@ -394,7 +387,7 @@ check "guard_known_valid" "Ygr = hello" "$a12"
 
 # --- A13: Ground equal, guard negation ---
 echo "--- A13: Ground equal and guard negation ---"
-a13=$($DART run "$REPL" <<HEREDOC
+a13=$("$REPL_RUN" <<HEREDOC
 $TYPED/test_ground_equal.glp
 $TYPED/test_guard_negation.glp
 test(a, a, R1).
@@ -428,7 +421,7 @@ check "neg eq not equal" "Rn6 = neq" "$a13"
 
 # --- A14: Circular terms ---
 echo "--- A14: Circular term tests ---"
-a14=$($DART run "$REPL" <<HEREDOC
+a14=$("$REPL_RUN" <<HEREDOC
 $TYPED/circular_test.glp
 is_ground(foo, Rc1).
 is_ground(f(a,b), Rc2).
@@ -449,7 +442,7 @@ check "show" "Xshow = hello" "$a14"
 
 # --- A15: Arithmetic fixed (uses :=) ---
 echo "--- A15: Arithmetic with := ---"
-a15=$($DART run "$REPL" <<HEREDOC
+a15=$("$REPL_RUN" <<HEREDOC
 $TYPED/arithmetic_fixed.glp
 add(5, 3, Xadd).
 multiply(4, 7, Ymul).
@@ -466,7 +459,7 @@ check "subtract 10-3" "Xsub = 7" "$a15"
 
 # --- A16: Arithmetic kernels ---
 echo "--- A16: Arithmetic kernels ---"
-a16=$($DART run "$REPL" <<HEREDOC
+a16=$("$REPL_RUN" <<HEREDOC
 $TYPED/test_arithmetic_kernels.glp
 test_idiv(10, 3, Rak1).
 test_abs(-5, Rak2).
@@ -487,7 +480,7 @@ check "ceil" "Rak6 = 4" "$a16"
 
 # --- A17: Guards comprehensive ---
 echo "--- A17: Guards comprehensive ---"
-a17=$($DART run "$REPL" <<HEREDOC
+a17=$("$REPL_RUN" <<HEREDOC
 $TYPED/test_guards_comprehensive.glp
 test_list_ok([1,2,3], Rgc1).
 test_string_ok("hello", Rgc2).
@@ -502,7 +495,7 @@ check "constant guard" "Rgc3 = ok" "$a17"
 
 # --- A18: Constant ground, gethead ---
 echo "--- A18: Constant ground, gethead ---"
-a18=$($DART run "$REPL" <<HEREDOC
+a18=$("$REPL_RUN" <<HEREDOC
 $TYPED/constant_ground_test.glp
 $TYPED/gethead_test.glp
 test_constant(foo, Rcgt1).
@@ -516,7 +509,7 @@ check "gethead" "Rgh1 = a" "$a18"
 
 # --- A18b: Parameterized proc decl with bare type var ---
 echo "--- A18b: Param bare typevar ---"
-a18b=$($DART run "$REPL" <<HEREDOC
+a18b=$("$REPL_RUN" <<HEREDOC
 $TYPED/param_bare_typevar.glp
 test_gethead_param(Rpbt1).
 :quit
@@ -527,7 +520,7 @@ check "param bare typevar" "Rpbt1 = a" "$a18b"
 
 # --- A19: Defined guards ---
 echo "--- A19: Defined guards ---"
-a19=$($DART run "$REPL" <<HEREDOC
+a19=$("$REPL_RUN" <<HEREDOC
 $TYPED/test_defined_guards.glp
 test(ch(Adg?, Bdg), Rdg1).
 test(foo, Rdg2).
@@ -540,10 +533,34 @@ check "defined guard match" "Rdg1 = ok" "$a19"
 check "defined guard fail" "Rdg2 = not_channel" "$a19"
 check "defined guard suspend" "suspended" "$a19"
 
+# --- A19b: Bounded-buffer back-pressure — guard must suspend, not fail (Issue 12) ---
+# Regression for the guard-deref clause-index/heap-addr collision (runner.dart
+# _dereferenceWithTracking): integer(X1?) on an unbound reader must suspend and
+# let the producer fill, regardless of goal order. Before the fix, consumer-first
+# failed instead of suspending; producer-first worked — order-sensitive.
+echo "--- A19b: Bounded-buffer back-pressure (Issue 12) ---"
+a19bb_cons=$("$REPL_RUN" <<HEREDOC
+$GLP_DIR/programs/paper/bounded_buffer.glp
+:limit 50
+consumer([X1?, X2?, X3? | Xs]), producer(1, [X1, X2, X3 | Xs?]).
+:quit
+HEREDOC
+2>&1)
+a19bb_prod=$("$REPL_RUN" <<HEREDOC
+$GLP_DIR/programs/paper/bounded_buffer.glp
+:limit 50
+producer(1, [X1, X2, X3 | Xs?]), consumer([X1?, X2?, X3? | Xs]).
+:quit
+HEREDOC
+2>&1)
+
+check "bounded buffer consumer-first suspends (not fails)" "suspended" "$a19bb_cons"
+check "bounded buffer producer-first suspends" "suspended" "$a19bb_prod"
+
 # --- A20: Channel guards ---
 # new_channel/send/receive are prelude defined guards, unfolded by the PE.
 echo "--- A20: Channel guards ---"
-a20=$($DART run "$REPL" <<HEREDOC
+a20=$("$REPL_RUN" <<HEREDOC
 $TYPED/test_channel_guards.glp
 make_pair(MpC1, MpC2).
 :quit
@@ -554,7 +571,7 @@ check "channel make_pair succeeds" "succeeds" "$a20"
 
 # --- A21: Comprehensive defined guards ---
 echo "--- A21: Comprehensive defined guards ---"
-a21=$($DART run "$REPL" <<HEREDOC
+a21=$("$REPL_RUN" <<HEREDOC
 $TYPED/test_defined_guards_all.glp
 make_pair(Call1, Call2).
 bind_response(yes, RespYes, LocalYes).
@@ -597,7 +614,7 @@ check "DG triple" "TtrR = pair(1, 2)" "$a21"
 
 # --- A22: Wait test ---
 echo "--- A22: Wait test ---"
-a22=$($DART run "$REPL" <<HEREDOC
+a22=$("$REPL_RUN" <<HEREDOC
 $TYPED/test_time.glp
 wait_test(Xwait).
 :quit
@@ -609,7 +626,7 @@ check "wait test" "Xwait = done" "$a22"
 # --- A23: DiffList ---
 # dl_append/dl_to_list are prelude defined guards, unfolded by the PE.
 echo "--- A23: Difference lists ---"
-a23=$($DART run "$REPL" <<HEREDOC
+a23=$("$REPL_RUN" <<HEREDOC
 $TYPED/diff_list.glp
 $TYPED/bb_diff.glp
 Xdl = foo\bar.
@@ -623,7 +640,7 @@ check "DL dl_to_list" 'Ldtl = \[1, 2, 3\]' "$a23"
 
 # --- A24: Suspension tests ---
 echo "--- A24: Suspension tests ---"
-a24=$($DART run "$REPL" <<HEREDOC
+a24=$("$REPL_RUN" <<HEREDOC
 $TYPED/test_bob.glp
 $TYPED/test_nested_suspend.glp
 $TYPED/test_guard_suspend.glp
@@ -644,7 +661,7 @@ check "guard ground suspend" "suspended" "$a24"
 
 # --- A25: Quoted functor and body ---
 echo "--- A25: Quoted functor and body ---"
-a25=$($DART run "$REPL" <<HEREDOC
+a25=$("$REPL_RUN" <<HEREDOC
 $TYPED/quoted_functor_test.glp
 $TYPED/quoted_body_test.glp
 '_test_kernel'(5, Rqf1).
@@ -660,7 +677,7 @@ check "quoted in struct" "_equator" "$a25"
 
 # --- A26: Univ, assignment, MWM (stdlib, no file needed) ---
 echo "--- A26: Univ, assignment, MWM ---"
-a26=$($DART run "$REPL" <<HEREDOC
+a26=$("$REPL_RUN" <<HEREDOC
 T1 =.. [foo].
 T2 =.. [bar, x, y].
 foo(a, b) =.. L1.
@@ -710,7 +727,7 @@ check "MWM two streams" "Xmwm3 = \[a, b, 1, 2\]" "$a26"
 
 # --- A27: Reader-to-reader bug (befriend_intro) ---
 echo "--- A27: Reader-to-reader fail ---"
-a27=$($DART run "$REPL" <<HEREDOC
+a27=$("$REPL_RUN" <<HEREDOC
 $TYPED/test_befriend_intro_bug.glp
 med(charlie, ch([msg(agent, _user, befriend_intro(bob, alice, X?)) | Xs], Y), ch(Us?, Vs), [], 2).
 :quit
@@ -720,7 +737,7 @@ check_not "reader-to-reader no reduction" "req(2)" "$a27"
 
 # --- A28: Module guard ---
 echo "--- A28: Module guard ---"
-a28=$($DART run "$REPL" <<HEREDOC
+a28=$("$REPL_RUN" <<HEREDOC
 $TYPED/module_guard.glp
 test_not_module(42, Rm1).
 :quit
@@ -730,7 +747,7 @@ check "module guard ~module(42)" "Rm1 = not_module" "$a28"
 
 # --- A29: Struct terms inside lists in goal arguments (Issue 0b regression) ---
 echo "--- A29: Structs in list goal args ---"
-a29=$($DART run "$REPL" <<HEREDOC
+a29=$("$REPL_RUN" <<HEREDOC
 $BOOK/streams/producers_consumers/distribute_indexed.glp
 distribute_indexed([send(1,a), send(2,b), send(1,c), send(2,d)], Y, Z).
 :quit
@@ -741,7 +758,7 @@ check "Struct-in-list goal arg: route Z" "Z = \[b, d\]" "$a29"
 
 # --- A30: =.. (univ) as a goal in a clause body (Issue 0a regression) ---
 echo "--- A30: =.. as a body goal ---"
-a30=$($DART run "$REPL" <<HEREDOC
+a30=$("$REPL_RUN" <<HEREDOC
 $TYPED/univ_body.glp
 comp([foo, a, b], T).
 comp([greet, hello, world], G).
@@ -913,7 +930,7 @@ for f in "${POSITIVE_FILES[@]}"; do
 done
 B_INPUT+=":quit"$'\n'
 
-b_output=$(echo "$B_INPUT" | $DART run "$REPL" 2>&1)
+b_output=$(echo "$B_INPUT" | "$REPL_RUN" 2>&1)
 
 B_PASS=0
 B_FAIL=0
@@ -1042,7 +1059,7 @@ for f in "${NEGATIVE_FILES[@]}"; do
 done
 C_INPUT+=":quit"$'\n'
 
-c_output=$(echo "$C_INPUT" | $DART run "$REPL" 2>&1)
+c_output=$(echo "$C_INPUT" | "$REPL_RUN" 2>&1)
 
 C_PASS=0
 C_FAIL=0
@@ -1076,7 +1093,7 @@ SRSW_FILES=(
 
 for f in "${SRSW_FILES[@]}"; do
     name=$(basename "$f" .glp)
-    srsw_out=$(echo -e "$f\n:quit" | $DART run "$REPL" 2>&1)
+    srsw_out=$(echo -e "$f\n:quit" | "$REPL_RUN" 2>&1)
     if echo "$srsw_out" | grep -qi "SRSW violation\|Error loading"; then
         echo "  PASS: $name (rejected)"
         PASS=$((PASS + 1))
@@ -1089,7 +1106,7 @@ done
 # Also test merge_with_reader
 SRSW_MWR="$GLP_DIR/programs/tests/archive/repl/merge_with_reader.glp"
 if [ -f "$SRSW_MWR" ]; then
-    srsw_mwr_out=$(echo -e "$SRSW_MWR\n:quit" | $DART run "$REPL" 2>&1)
+    srsw_mwr_out=$(echo -e "$SRSW_MWR\n:quit" | "$REPL_RUN" 2>&1)
     if echo "$srsw_mwr_out" | grep -qi "SRSW violation"; then
         echo "  PASS: merge_with_reader (SRSW rejected)"
         PASS=$((PASS + 1))
@@ -1114,7 +1131,7 @@ cat > "$TMP_GUARD" << 'TMPEOF'
 bad_guard(X?) :- true | X = done.
 TMPEOF
 
-guard_out=$(echo -e "$TMP_GUARD\n:quit" | $DART run "$REPL" 2>&1)
+guard_out=$(echo -e "$TMP_GUARD\n:quit" | "$REPL_RUN" 2>&1)
 rm -f "$TMP_GUARD"
 
 if echo "$guard_out" | grep -q '"true" is not a guard'; then
@@ -1138,7 +1155,7 @@ echo ""
 SGSIM="$GLP_DIR/programs/social/graph"
 
 # Loading
-g_load=$($DART run "$REPL" <<HEREDOC
+g_load=$("$REPL_RUN" <<HEREDOC
 $SGSIM
 :quit
 HEREDOC
@@ -1151,7 +1168,7 @@ check_not "SG-SIM no load errors" "Error loading" "$g_load"
 # Silent plays (play1-play3)
 echo "--- Silent plays (play1-play3) ---"
 for play_num in 1 2 3; do
-    g_play=$($DART run "$REPL" <<HEREDOC
+    g_play=$("$REPL_RUN" <<HEREDOC
 $SGSIM
 play${play_num}.
 :quit
@@ -1163,7 +1180,7 @@ done
 # Tagged plays (fplay1-fplay3) with output checks
 echo "--- Tagged plays (fplay1-fplay3) ---"
 
-g_fp1=$($DART run "$REPL" <<HEREDOC
+g_fp1=$("$REPL_RUN" <<HEREDOC
 $SGSIM
 fplay1.
 :quit
@@ -1174,7 +1191,7 @@ check "SG fplay1 succeeds" "succeeds\|suspended" "$g_fp1"
 check "SG fplay1 alice connected bob" "tagged(alice.*connected(bob)" "$g_fp1"
 check "SG fplay1 charlie connected alice" "tagged(charlie.*connected(alice)" "$g_fp1"
 
-g_fp2=$($DART run "$REPL" <<HEREDOC
+g_fp2=$("$REPL_RUN" <<HEREDOC
 $SGSIM
 fplay2.
 :quit
@@ -1184,7 +1201,7 @@ HEREDOC
 check "SG fplay2 succeeds" "succeeds\|suspended" "$g_fp2"
 check "SG fplay2 rejected" "tagged(alice.*rejected" "$g_fp2"
 
-g_fp3=$($DART run "$REPL" <<HEREDOC
+g_fp3=$("$REPL_RUN" <<HEREDOC
 $SGSIM
 fplay3.
 :quit
@@ -1207,7 +1224,7 @@ SELFPROC_TESTS="$GLP_DIR/programs/tests"
 
 # --- I1: self.glp shared procedure ---
 echo "--- I1: self.glp shared procedure ---"
-i1=$($DART run "$REPL" <<HEREDOC
+i1=$("$REPL_RUN" <<HEREDOC
 $SELFPROC_TESTS/module_self_procs
 test_self_proc(5, R).
 :quit
@@ -1219,7 +1236,7 @@ check "self.glp shared proc result" "R = 10" "$i1"
 
 # --- I2: self.glp shadowing ---
 echo "--- I2: self.glp shadowing ---"
-i2=$($DART run "$REPL" <<HEREDOC
+i2=$("$REPL_RUN" <<HEREDOC
 $SELFPROC_TESTS/module_self_shadow
 test_shadow(X, Y).
 :quit
@@ -1232,7 +1249,7 @@ check "self.glp shadow inner" "Y = inner" "$i2"
 
 # --- I3: Local shadows self.glp ---
 echo "--- I3: Local shadows self.glp ---"
-i3=$($DART run "$REPL" <<HEREDOC
+i3=$("$REPL_RUN" <<HEREDOC
 $SELFPROC_TESTS/module_self_local_shadow
 test_local_shadow(R).
 :quit
@@ -1244,7 +1261,7 @@ check "local shadow result" "R = from_local" "$i3"
 
 # --- I4: Type error in self.glp (negative) ---
 echo "--- I4: Type error in self.glp (negative) ---"
-i4=$($DART run "$REPL" <<HEREDOC
+i4=$("$REPL_RUN" <<HEREDOC
 $SELFPROC_TESTS/module_self_type_error
 :quit
 HEREDOC
@@ -1264,7 +1281,7 @@ echo ""
 CSSG_V2="$GLP_DIR/programs/social/child_safe"
 
 # Loading
-j_load=$($DART run "$REPL" <<HEREDOC
+j_load=$("$REPL_RUN" <<HEREDOC
 $CSSG_V2
 :quit
 HEREDOC
@@ -1276,7 +1293,7 @@ check_not "CSSG v2 no type errors" "Type checking failed" "$j_load"
 # fplay4-7: child_agent plays
 echo "--- CSSG v2 child_agent plays (fplay4-fplay7) ---"
 
-j_fp4=$($DART run "$REPL" <<HEREDOC
+j_fp4=$("$REPL_RUN" <<HEREDOC
 $CSSG_V2
 fplay4.
 :quit
@@ -1287,7 +1304,7 @@ check "CSSG v2 fplay4 succeeds" "succeeds\|suspended" "$j_fp4"
 check "CSSG v2 fplay4 carol connected dave" "tagged(carol.*connected(dave)" "$j_fp4"
 
 for play_num in 5 6 7; do
-    j_fpN=$($DART run "$REPL" <<HEREDOC
+    j_fpN=$("$REPL_RUN" <<HEREDOC
 $CSSG_V2
 fplay${play_num}.
 :quit
@@ -1307,7 +1324,7 @@ echo ""
 CSSN_V2="$GLP_DIR/programs/social/network"
 
 # Loading
-k_load=$($DART run "$REPL" <<HEREDOC
+k_load=$("$REPL_RUN" <<HEREDOC
 $CSSN_V2
 :quit
 HEREDOC
@@ -1320,7 +1337,7 @@ check_not "CSSN v2 no type errors" "Type checking failed" "$k_load"
 echo "--- CSSN v2 basic social graph (fplay1-fplay3) ---"
 
 for play_num in 1 2 3; do
-    k_fpN=$($DART run "$REPL" <<HEREDOC
+    k_fpN=$("$REPL_RUN" <<HEREDOC
 $CSSN_V2
 fplay${play_num}.
 :quit
@@ -1332,7 +1349,7 @@ done
 # fplay4-7: child_agent befriending
 echo "--- CSSN v2 child_agent befriending (fplay4-fplay7) ---"
 
-k_fp4=$($DART run "$REPL" <<HEREDOC
+k_fp4=$("$REPL_RUN" <<HEREDOC
 $CSSN_V2
 fplay4.
 :quit
@@ -1343,7 +1360,7 @@ check "CSSN v2 fplay4 succeeds" "succeeds\|suspended" "$k_fp4"
 check "CSSN v2 fplay4 carol connected dave" "tagged(carol.*connected(dave)" "$k_fp4"
 
 for play_num in 5 6 7; do
-    k_fpN=$($DART run "$REPL" <<HEREDOC
+    k_fpN=$("$REPL_RUN" <<HEREDOC
 $CSSN_V2
 fplay${play_num}.
 :quit
@@ -1358,7 +1375,7 @@ done
 # `connected(dave)` is emitted exactly once on carol's side and `connected(carol)`
 # exactly once on dave's side.
 echo "--- CSSN v2 idempotent befriend commit (fplay14) ---"
-k_fp14=$($DART run "$REPL" <<HEREDOC
+k_fp14=$("$REPL_RUN" <<HEREDOC
 $CSSN_V2
 fplay14.
 :quit
@@ -1395,7 +1412,7 @@ fi
 # tie-break converges both sides on a single canonical channel; the other commit
 # is suppressed.  Each side emits exactly one connected/2 notification.
 echo "--- CSSN v2 bilateral cold-call (fplay15) ---"
-k_fp15=$($DART run "$REPL" <<HEREDOC
+k_fp15=$("$REPL_RUN" <<HEREDOC
 $CSSN_V2
 fplay15.
 :quit
@@ -1431,7 +1448,7 @@ fi
 # fplay8-10: CSSN groups
 echo "--- CSSN v2 group plays (fplay8-fplay10) ---"
 
-k_fp8=$($DART run "$REPL" <<HEREDOC
+k_fp8=$("$REPL_RUN" <<HEREDOC
 $CSSN_V2
 fplay8.
 :quit
@@ -1442,7 +1459,7 @@ check "CSSN v2 fplay8 succeeds" "succeeds\|suspended" "$k_fp8"
 check "CSSN v2 fplay8 group_joined" "tagged(alice.*group_joined" "$k_fp8"
 
 for play_num in 9 10; do
-    k_fpN=$($DART run "$REPL" <<HEREDOC
+    k_fpN=$("$REPL_RUN" <<HEREDOC
 $CSSN_V2
 fplay${play_num}.
 :quit
@@ -1454,7 +1471,7 @@ done
 # fplay11: child-managed group with blocking consent
 echo "--- CSSN v2 blocking consent play (fplay11) ---"
 
-k_fp11=$($DART run "$REPL" <<HEREDOC
+k_fp11=$("$REPL_RUN" <<HEREDOC
 $CSSN_V2
 fplay11.
 :quit
@@ -1467,7 +1484,7 @@ check "CSSN v2 fplay11 tagged output" "tagged(" "$k_fp11"
 # fplay12: adult-managed group with children
 echo "--- CSSN v2 adult-managed group play (fplay12) ---"
 
-k_fp12=$($DART run "$REPL" <<HEREDOC
+k_fp12=$("$REPL_RUN" <<HEREDOC
 $CSSN_V2
 fplay12.
 :quit
@@ -1489,7 +1506,7 @@ DD="$GLP_DIR/programs/tests/dynamic_dispatch"
 
 # --- L1: Activate module and dispatch double via client ---
 echo "--- L1: Dynamic dispatch double ---"
-l1=$($DART run "$REPL" <<HEREDOC
+l1=$("$REPL_RUN" <<HEREDOC
 $DD/math_service.glp
 :activate math_service
 $DD/dispatch_client.glp
@@ -1503,7 +1520,7 @@ check "test_double(5, X) = 10" "X = 10" "$l1"
 
 # --- L2: Triple dispatch ---
 echo "--- L2: Dynamic dispatch triple ---"
-l2=$($DART run "$REPL" <<HEREDOC
+l2=$("$REPL_RUN" <<HEREDOC
 $DD/math_service.glp
 :activate math_service
 $DD/dispatch_client.glp
@@ -1516,7 +1533,7 @@ check "test_triple(4, X) = 12" "X = 12" "$l2"
 
 # --- L3: Add_ten dispatch ---
 echo "--- L3: Dynamic dispatch add_ten ---"
-l3=$($DART run "$REPL" <<HEREDOC
+l3=$("$REPL_RUN" <<HEREDOC
 $DD/math_service.glp
 :activate math_service
 $DD/dispatch_client.glp
@@ -1568,7 +1585,7 @@ echo ""
 BONDS_V2="$GLP_DIR/programs/bonds"
 
 # Loading
-n_load=$($DART run "$REPL" <<HEREDOC
+n_load=$("$REPL_RUN" <<HEREDOC
 $BONDS_V2
 :quit
 HEREDOC
@@ -1580,7 +1597,7 @@ check_not "Bonds v2 no type errors" "Type checking failed" "$n_load"
 # fplay1: solo mint
 echo "--- Bonds v2 solo mint (fplay1) ---"
 
-n_fp1=$($DART run "$REPL" <<HEREDOC
+n_fp1=$("$REPL_RUN" <<HEREDOC
 $BONDS_V2
 fplay1.
 :quit
@@ -1593,7 +1610,7 @@ check "Bonds v2 fplay1 minted" "tagged(alice.*minted" "$n_fp1"
 # fplay2: befriend + trade
 echo "--- Bonds v2 befriend + trade (fplay2) ---"
 
-n_fp2=$($DART run "$REPL" <<HEREDOC
+n_fp2=$("$REPL_RUN" <<HEREDOC
 $BONDS_V2
 fplay2.
 :quit
@@ -1608,7 +1625,7 @@ check "Bonds v2 fplay2 trade_completed" "trade_completed" "$n_fp2"
 echo "--- Bonds v2 trade plays (fplay3-fplay6) ---"
 
 for play_num in 3 4 5 6; do
-    n_fpN=$($DART run "$REPL" <<HEREDOC
+    n_fpN=$("$REPL_RUN" <<HEREDOC
 $BONDS_V2
 fplay${play_num}.
 :quit
@@ -1620,7 +1637,7 @@ done
 # fplay4b: time-dependent trade
 echo "--- Bonds v2 time-dependent trade (fplay4b) ---"
 
-n_fp4b=$($DART run "$REPL" <<HEREDOC
+n_fp4b=$("$REPL_RUN" <<HEREDOC
 $BONDS_V2
 fplay4b.
 :quit
@@ -1633,7 +1650,7 @@ check "Bonds v2 fplay4b succeeds" "succeeds" "$n_fp4b"
 echo "--- Bonds v2 buyback + symmetric (fplay8-fplay9) ---"
 
 for play_num in 8 9; do
-    n_fpN=$($DART run "$REPL" <<HEREDOC
+    n_fpN=$("$REPL_RUN" <<HEREDOC
 $BONDS_V2
 fplay${play_num}.
 :quit
@@ -1645,7 +1662,7 @@ done
 # fplay10-11: escrow
 echo "--- Bonds v2 escrow plays (fplay10-fplay11) ---"
 
-n_fp10=$($DART run "$REPL" <<HEREDOC
+n_fp10=$("$REPL_RUN" <<HEREDOC
 $BONDS_V2
 fplay10.
 :quit
@@ -1655,7 +1672,7 @@ HEREDOC
 check "Bonds v2 fplay10 succeeds" "succeeds" "$n_fp10"
 check "Bonds v2 fplay10 escrow" "escrow" "$n_fp10"
 
-n_fp11=$($DART run "$REPL" <<HEREDOC
+n_fp11=$("$REPL_RUN" <<HEREDOC
 $BONDS_V2
 fplay11.
 :quit
@@ -1668,7 +1685,7 @@ check "Bonds v2 fplay11 escrow_cancelled" "escrow_cancelled" "$n_fp11"
 # fplay12: village market (6 agents)
 echo "--- Bonds v2 village market (fplay12) ---"
 
-n_fp12=$($DART run "$REPL" <<HEREDOC
+n_fp12=$("$REPL_RUN" <<HEREDOC
 $BONDS_V2
 :limit 5000000
 fplay12.
@@ -1716,7 +1733,7 @@ echo "=== Section P: Module Boundary Enforcement Tests ==="
 echo ""
 
 echo "--- Module boundary: exported vs private ---"
-output=$($DART run "$REPL" <<HEREDOC
+output=$("$REPL_RUN" <<HEREDOC
 $TYPED/test_module_boundary.glp
 public_proc(5, X).
 private_proc(5, X).
@@ -1730,7 +1747,7 @@ check "private_proc fails or not found" "not found\|failed\|Error" "$output"
 echo ""
 
 echo "--- Module-local private helper called from exported body ---"
-output=$($DART run "$REPL" <<HEREDOC
+output=$("$REPL_RUN" <<HEREDOC
 $TYPED/module_local_private.glp
 caller(5, Y).
 :quit
@@ -1750,7 +1767,7 @@ echo ""
 SECUREBONDS="$GLP_DIR/programs/bonds/secure"
 
 # Loading
-sb_load=$($DART run "$REPL" <<HEREDOC
+sb_load=$("$REPL_RUN" <<HEREDOC
 $SECUREBONDS
 :quit
 HEREDOC
@@ -1762,7 +1779,7 @@ check_not "SecureBonds no load errors" "Error loading" "$sb_load"
 
 # Play — sovereign finality with custodian acks
 echo "--- SecureBonds play ---"
-sb_play=$($DART run "$REPL" <<HEREDOC
+sb_play=$("$REPL_RUN" <<HEREDOC
 $SECUREBONDS
 play.
 :quit
@@ -1773,7 +1790,7 @@ check "SecureBonds play succeeds" "succeeds" "$sb_play"
 
 # Play_recover — finality + recovery from log copy
 echo "--- SecureBonds play_recover ---"
-sb_recover=$($DART run "$REPL" <<HEREDOC
+sb_recover=$("$REPL_RUN" <<HEREDOC
 $SECUREBONDS
 play_recover.
 :quit
@@ -1794,7 +1811,7 @@ SCOPE_CHAIN="$GLP_DIR/programs/tests/scope_chain"
 
 # --- S1: file load resolves a multi-clause root self.glp procedure (:=/2) ---
 echo "--- S1: file load resolves a multi-clause root self.glp procedure ---"
-s1=$($DART run "$REPL" <<HEREDOC
+s1=$("$REPL_RUN" <<HEREDOC
 $SCOPE_CHAIN/s1_file/use_root_multiclause.glp
 compute(R).
 mtest(Z).
@@ -1807,7 +1824,7 @@ check "S1 root merge/3 resolves (file load)" "Z = \[1, 3, 2, 4\]" "$s1"
 
 # --- S2: project load resolves a utility in an ancestor self.glp above the root ---
 echo "--- S2: ancestor self.glp reach (intermediate ancestor above load point) ---"
-s2=$($DART run "$REPL" <<HEREDOC
+s2=$("$REPL_RUN" <<HEREDOC
 $SCOPE_CHAIN/leaf
 test_merge(Z).
 :quit
@@ -1818,7 +1835,7 @@ check "S2 ancestor pmerge resolves" "Z = \[1, 4, 2, 5, 3, 6\]" "$s2"
 
 # --- S3: two distinct instantiations of the parameterised utility in one module ---
 echo "--- S3: two instantiations of the parameterised utility ---"
-s3=$($DART run "$REPL" <<HEREDOC
+s3=$("$REPL_RUN" <<HEREDOC
 $SCOPE_CHAIN/leaf
 test_both(Zi, Zc).
 :quit
@@ -1829,7 +1846,7 @@ check "S3 constant instantiation" "Zc = \[\"a\", \"c\", \"b\", \"d\"\]" "$s3"
 
 # --- S4: regression — bonds/play12 loads standalone (inventory I-1) ---
 echo "--- S4: bonds/play12 standalone load (regression) ---"
-s4=$($DART run "$REPL" <<HEREDOC
+s4=$("$REPL_RUN" <<HEREDOC
 $GLP_DIR/programs/bonds/play12
 :quit
 HEREDOC
@@ -1839,7 +1856,7 @@ check_not "S4 no unknown type error" "UnknownType" "$s4"
 
 # --- S5: opaque pass-through walker ---
 echo "--- S5: opaque pass-through walker ---"
-s5=$($DART run "$REPL" <<HEREDOC
+s5=$("$REPL_RUN" <<HEREDOC
 $SCOPE_CHAIN/opaque_walker
 run(Result, S).
 :quit
@@ -1850,7 +1867,7 @@ check "S5 opaque pass-through + append" "S = \[\"hello\"" "$s5"
 
 # --- S6: walker parameterised over the entry type ---
 echo "--- S6: parameterised walker (functor decomposition of type param) ---"
-s6=$($DART run "$REPL" <<HEREDOC
+s6=$("$REPL_RUN" <<HEREDOC
 $SCOPE_CHAIN/param_walker
 run(Result, S).
 :quit
@@ -1862,7 +1879,7 @@ check "S6 append via parameterised walker" "S = \[\"hello\"" "$s6"
 
 # --- S7: shadowing — local definition wins over ancestor ---
 echo "--- S7: shadowing (local pmerge shadows ancestor) ---"
-s7=$($DART run "$REPL" <<HEREDOC
+s7=$("$REPL_RUN" <<HEREDOC
 $SCOPE_CHAIN/shadow
 test_shadow(Z).
 :quit
@@ -1883,7 +1900,7 @@ EXPOSE="$GLP_DIR/programs/tests/expose"
 
 # --- X1: a self.glp exposes a module; a leaf calls it unqualified ---
 echo "--- X1: exposed procedure called unqualified ---"
-x1=$($DART run "$REPL" <<HEREDOC
+x1=$("$REPL_RUN" <<HEREDOC
 $EXPOSE/basic/leaf
 run(R).
 :quit
@@ -1894,7 +1911,7 @@ check "X1 exposed twice resolves unqualified" "R = 42" "$x1"
 
 # --- X2: the exposing directory's own subtree sees the exposed procedure ---
 echo "--- X2: exposing dir subtree sees exposed ---"
-x2=$($DART run "$REPL" <<HEREDOC
+x2=$("$REPL_RUN" <<HEREDOC
 $EXPOSE/basic
 use_exposed(R).
 :quit
@@ -1904,7 +1921,7 @@ check "X2 subtree sees exposed" "R = 100" "$x2"
 
 # --- X3: shadowing — a local definition beats an exposed one ---
 echo "--- X3: local definition shadows exposed ---"
-x3=$($DART run "$REPL" <<HEREDOC
+x3=$("$REPL_RUN" <<HEREDOC
 $EXPOSE/shadow
 run(R).
 :quit
@@ -1915,7 +1932,7 @@ check "X3 local twice (N+1) beats exposed (N*2)" "R = 11" "$x3"
 
 # --- X4: collision — two exposed modules, same name/arity → error ---
 echo "--- X4: collision error names both modules ---"
-x4=$($DART run "$REPL" <<HEREDOC
+x4=$("$REPL_RUN" <<HEREDOC
 $EXPOSE/collide
 :quit
 HEREDOC
@@ -1934,7 +1951,7 @@ check "X5 resolves from outside subtree" "R = 42" "$x1"
 
 # --- X6: a parameterised exposed utility instantiated at two types ---
 echo "--- X6: parameterised exposed utility at two types ---"
-x6=$($DART run "$REPL" <<HEREDOC
+x6=$("$REPL_RUN" <<HEREDOC
 $EXPOSE/basic/leaf
 two_inst(Zi, Zc).
 :quit
@@ -1950,7 +1967,7 @@ check "X6 constant instantiation" "Zc = \[\"a\", \"b\"\]" "$x6"
 # self-check. Pins that exposed-parameterised resolution + per-instantiation
 # defining-clause checking work together. See docs/glp-a5-stage-b-plan.md.
 echo "--- X7: per-instantiation routing rejection ---"
-x7=$($DART run "$REPL" <<HEREDOC
+x7=$("$REPL_RUN" <<HEREDOC
 $GLP_DIR/programs/tests/a5_routing_neg
 :quit
 HEREDOC

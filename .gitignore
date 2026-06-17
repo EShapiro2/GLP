@@ -17,3 +17,4 @@ pubspec.lock
 ## Editor / IDE
 .vscode/
 .idea/
+glp_runtime/bin/glp_repl_exe

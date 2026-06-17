@@ -9,8 +9,13 @@ const _madBootDir = '$_cssnV2Dir/mad_boot';
 const _rootSelfGlp = '../programs/self.glp';
 
 /// Helper: load boot file, configure project dir, boot and run.
+// NOTE: timeoutSec is a blind settle delay — IsolateManager exposes no
+// quiescence signal (termination is external by design), so these tests just
+// run the play for a fixed wall-clock interval and assert only "no crash".
+// Kept short as a stopgap (Issue 11/suite speed); the proper fix is to await a
+// real idle signal once the madGLP isolate layer grows one.
 Future<void> _runPlay(IsolateManager manager, String bootFilename,
-    {int timeoutSec = 10}) async {
+    {int timeoutSec = 3}) async {
   final bootFile = File('$_madBootDir/$bootFilename');
   if (!bootFile.existsSync()) {
     print('Skipping: ${bootFile.path} not found');
@@ -78,7 +83,7 @@ void main() {
 
     // fplay13: village — 6 agents (alice, bob, frank, carol, dave, eve)
     test('fplay13 runs across isolates (village, 6 agents)', () async {
-      await _runPlay(manager, 'mad_fplay13.glp', timeoutSec: 15);
+      await _runPlay(manager, 'mad_fplay13.glp', timeoutSec: 5);
     }, timeout: Timeout(Duration(seconds: 45)));
   });
 }

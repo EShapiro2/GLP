@@ -6,10 +6,10 @@
 CounterCall ::= add ; clear ; read(Integer?).
 
 procedure monitor(Stream(CounterCall)?).
-procedure monitor(Integer?, Stream(CounterCall)?).
-
 monitor(In) :- monitor(0, In?).
+
+procedure monitor(Integer?, Stream(CounterCall)?).
 monitor(N, [add|In]) :- N1 := N? + 1, monitor(N1?, In?).
-monitor(N, [clear|In]) :- monitor(0, In?).
-monitor(N, [read(N?)|In]) :- monitor(N?, In?).
+monitor(_, [clear|In]) :- monitor(0, In?).
+monitor(N, [read(N?)|In]) :- integer(N?) | monitor(N?, In?).
 monitor(_, []).

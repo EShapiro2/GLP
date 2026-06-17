@@ -26,13 +26,15 @@ If asked "did you do X?" after compaction, **verify on disk** before answering �
 
 The REPL is the only tool: loading a `.glp` file in the REPL runs the full pipeline (SRSW → PE → type-check → compile → execute).  There is no separate compiler, type-checker, or runner.  Old standalone tools have been archived to `glp_runtime/bin/archive/` — do not execute them.
 
-**Always invoke**: `dart run bin/glp_repl.dart` from `/Users/udi/Grassroots/GLP/glp_runtime/`.
+**Always invoke**: `bin/glpc` from `/Users/udi/Grassroots/GLP/glp_runtime/`.  `glpc` runs the AOT-compiled REPL (~0.3 s startup) and rebuilds it automatically whenever any `lib/` or `bin/` Dart source changes, so it is always current.  `self.glp` is read at runtime, so `.glp` edits need no rebuild.  It gives verdicts identical to the underlying `dart run bin/glp_repl.dart`, which it wraps.
+
+🔴 **Do NOT use `dart run bin/glp_repl.dart` for routine checks.**  It pays full JIT startup every invocation (~0.8 s warm, several seconds when the `.dill` is cold) and is the slow path we deliberately retired.  Use `glpc`.  Reach for `dart run bin/glp_repl.dart` only to debug `glpc` itself or a suspected AOT/JIT discrepancy.
 
 **Non-interactive use** (no approval prompt needed):
 
 ```bash
 cd /Users/udi/Grassroots/GLP/glp_runtime
-echo -e 'load ../programs/path/to/file.glp\ngoal.\n:quit' | dart run bin/glp_repl.dart
+printf 'load ../programs/path/to/file.glp\ngoal.\n:quit\n' | bin/glpc
 ```
 
 Do not use heredoc (`<<<`) — that requires approval per invocation.
@@ -60,7 +62,7 @@ Then `Read` the file.  Do not use `/tmp/` (not in allowed directories).
 
 🔴 **Never run `run_all_tests.sh` and `dart test` concurrently** — `run_all_tests.sh` itself invokes `dart test` (Sections M/O), so a parallel `dart test` contends on the Dart build lock and silently aborts the run mid-suite.  Always run them sequentially.
 
-**If the REPL snapshot seems stale** (tests fail after editing `lib/` or `bin/glp_repl.dart`): `rm glp_runtime/.dart_tool/repl.dill`.
+**Staleness is handled automatically**: `glpc` rebuilds the AOT binary when `lib/`/`bin/` change, and `run_all_tests.sh` rebuilds its `.dill` the same way.  Only if you bypass both and call `dart run bin/glp_repl.dart` directly after editing `lib/` might you need `rm glp_runtime/.dart_tool/repl.dill` — another reason to use `glpc`.
 
 ### Baseline-before-commit (mandatory)
 
@@ -216,6 +218,8 @@ Always offer to fetch / merge / push.
 | Dart binary | `/opt/homebrew/bin/dart` |
 
 All `.glp` code lives in `/Users/udi/Grassroots/GLP/programs/`.  No `.glp` source files in paper repos (CSSN, GLP-arXiv, GLP-ICLP-2026, etc.) — paper repos may reference paths but must not contain copies.
+
+All papers with example GLP programs must be tested.  Their directory in `programs/` is their paper directory.  E.g. `programs/TGLP/`.
 
 When invoking commands, prefer absolute paths.  Maintain the current working directory across commands; only `cd` when Udi explicitly requests it.
 

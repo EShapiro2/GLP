@@ -4127,17 +4127,15 @@ class BytecodeRunner {
     final unboundReaders = <int>{};
 
     Object? dereference(Object? t) {
-      // Resolve clauseVars first (same pattern as Execute fix)
-      if (t is VarRef && cx.clauseVars.containsKey(t.addr)) {
-        // Resolve clause variable index to actual heap addr
-        final resolved = cx.clauseVars[t.addr];
-        if (resolved is int) {
-          t = VarRef(resolved);
-        } else if (resolved != null) {
-          // Already resolved to a term
-          return dereference(resolved);
-        }
-      }
+      // NOTE: A VarRef carries a HEAP ADDRESS (terms.dart §3.2.1 — varId was
+      // removed). clauseVars is keyed by CLAUSE-VARIABLE INDEX. A former
+      // shortcut here looked up clauseVars[t.addr], which after the varId→addr
+      // migration (commit 57cf5d96) became a category error: it indexed the
+      // clause-index map with a heap address and fired on any numeric
+      // collision, silently swapping a guard argument for whatever clause var
+      // shared that number — e.g. a reader for an unbound writer, making a
+      // patient guard fail instead of suspend (known-issues.md Issue 10).
+      // VarRefs never carry clause indices, so no such resolution is needed.
 
       if (t is VarRef) {
         final addr = t.addr;

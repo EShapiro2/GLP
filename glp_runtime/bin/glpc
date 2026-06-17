@@ -1,0 +1,22 @@
+#!/bin/bash
+# glpc — fast GLP REPL for lightweight checks.
+#
+# Runs the AOT-compiled REPL (~0.01s startup vs ~0.8s for `dart run`), and
+# rebuilds it automatically when any lib/ or bin/ Dart source is newer than the
+# binary, so it never goes stale (Issue 11). self.glp is read at runtime, so
+# .glp edits need no rebuild.
+#
+# Usage (same session protocol as the REPL, fed on stdin):
+#   printf '../programs/paper/merge.glp\nmerge([1|X?],[],Z).\n:quit\n' | bin/glpc
+#
+# The canonical full pipeline remains `dart run bin/glp_repl.dart`; this is a
+# faster front-end giving identical verdicts.
+set -e
+RUNTIME_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$RUNTIME_DIR"
+EXE="bin/glp_repl_exe"
+if [ ! -f "$EXE" ] || [ -n "$(find lib bin -name '*.dart' -newer "$EXE" 2>/dev/null | head -1)" ]; then
+  echo "[glpc] rebuilding $EXE (sources changed)..." >&2
+  dart compile exe bin/glp_repl.dart -o "$EXE" >/dev/null
+fi
+exec "$EXE" "$@"

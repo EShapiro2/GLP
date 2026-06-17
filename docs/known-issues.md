@@ -388,3 +388,75 @@ Remove the reliance by a core-heap change: either retain the reader pointer on b
 ### Fix
 
 Implement `..=/2` (decompose a compound into `[Functor | Args]`) per its declaration in `self.glp` — clause or kernel, matching how `=..` is realized — with a Section A regression test.
+
+---
+
+## Issue 11: Fast REPL binary exists but goes stale and isn't rebuilt
+
+**Status**: Fixed (2026-06-17) — option 1 implemented as `bin/glpc`
+**Discovered**: 2026-06-17
+**Affects**: Developer and agent workflow — iterating on `.glp` files
+
+### Summary
+
+A fast path already exists: commit `015beb13` (Dec 2025) added an AOT-compiled REPL binary `glp_runtime/glp_repl` (`dart compile exe`). Measured startup: **0.01 s** for `./glp_repl` vs **0.77 s** for `dart run bin/glp_repl.dart` with a warm `.dill` (seconds when the `.dill` is cold — which it is after every `lib/` edit, since the protocol requires `rm .dart_tool/repl.dill`).
+
+The fast path effectively regressed, but by **staleness, not code**:
+1. The committed `glp_repl` binary is frozen at its last manual build (Jan 28 2026); months of `lib/` changes are not in it. Running it now tests **old code**, so it cannot be used for current checks.
+2. There is **no rebuild step** — the binary is committed once and never refreshed, so it silently drifts out of sync. The working instruction therefore falls back to the always-current but slow `dart run bin/glp_repl.dart`.
+
+So the canonical workflow pays full `dart run` startup on every one-file typecheck / one-goal run, and the suite (`run_all_tests.sh`, which also invokes `dart test`) costs minutes.
+
+### Fix (options, pick per cost/benefit)
+
+1. **Rebuild-on-staleness**: a tiny wrapper/script that rebuilds `glp_repl` via `dart compile exe` when any `lib/` or `programs/self.glp` source is newer than the binary, then runs it. Keeps the 0.01 s path always current. Likely stop committing the 7.5 MB binary — build on demand, gitignore it.
+2. **Persistent/daemon REPL** kept warm across checks (load root `self.glp` once, accept successive load/goal commands over a socket or stdin loop), so startup is paid once per session.
+3. **Minimal non-REPL check CLI** — a thin wrapper over `checkSource`/the engine for the common "does this file typecheck / run" case, built fresh each time.
+
+Whichever is chosen, keep `dart run` REPL as the canonical full pipeline; the fast path is an addition that must (a) stay current with `lib/` and (b) give identical typecheck/runtime verdicts.
+
+### Resolution (2026-06-17)
+
+Implemented option 1 as `glp_runtime/bin/glpc`: runs an AOT-compiled `bin/glp_repl_exe`, rebuilding it via `dart compile exe` whenever any `lib/` or `bin/` Dart source is newer than the binary. `self.glp` is read at runtime, so `.glp` edits need no rebuild. Startup ~0.33 s (incl. the staleness scan) vs ~0.77 s warm `dart run`. The 7.5 MB binary is gitignored and built on demand; the old committed `glp_repl` (stale Jan 28) is superseded. `dart run bin/glp_repl.dart` remains the canonical full pipeline; `glpc` gives identical verdicts. Options 2 (daemon) and 3 (non-REPL check CLI) remain available if more speed is needed, especially to accelerate `run_all_tests.sh` (still on `dart run` per-invocation).
+
+---
+
+## Issue 12: Guard dereference confuses heap address with clause-variable index (fail instead of suspend)
+
+**Status**: Fixed (2026-06-17) — verified by re-baseline 483/483 + regression test A19b
+**Discovered**: 2026-06-17 (bounded-buffer, consumer-first goal order)
+**Affects**: Every guard evaluated via the generic guard path — `integer`, `number`, `string`, `constant`, `ground`, `known`, `unknown`, `compound`, `list`, `module`, the comparisons (`<`, `>`, `=<`, `>=`, `=:=`, `=\=`, `@<`), and `=?=`. Intermittent: fires only on a heap-address ↔ clause-index numeric collision.
+
+### Summary
+
+`integer(X1?)` on an unbound reader returned **fail** instead of **suspend**, so `consumer` died on its guard unless the slot was already filled. Goal order then decided the outcome: producer-first filled the slots before the guard ran (worked); consumer-first hit the guard on empty slots (failed instead of waiting). Two failure modes: (1) fail-instead-of-suspend (observed), and (2) the more dangerous silent wrong verdict, when the swapped-in variable is bound to a different value.
+
+### Root Cause
+
+`_dereferenceWithTracking` (`lib/bytecode/runner.dart`) began with a shortcut:
+
+```dart
+if (t is VarRef && cx.clauseVars.containsKey(t.addr)) {
+  final resolved = cx.clauseVars[t.addr]; ...
+}
+```
+
+`VarRef.addr` is a **heap address**; `clauseVars` is keyed by **clause-variable index**. When a heap address numerically equals a live clause-variable index, the shortcut silently swaps a guard argument for whatever clause var shares that number — e.g. `X1`'s reader for the unbound writer **tail** `Xs`. The guard then tests the tail (an unbound writer ⇒ fail), not the reader (unbound reader ⇒ suspend).
+
+This is a mechanical-migration error: commit `57cf5d96` ("pointer architecture migration") renamed `t.varId` → `t.addr` here. `varId` was the clause index (correct key); `addr` is the heap address (wrong key). `varId` was removed from `VarRef` (`terms.dart` §3.2.1), so a `VarRef` never carries a clause index — the shortcut is both wrong and unnecessary.
+
+### Why undetected
+
+Foundational in location, narrow in trigger. Collisions need a small goal on a fresh heap (low addresses overlapping low clause indices); real programs have grown heap addresses, run guards on already-bound data, and use producer-first ordering — all of which dodge it. The suite shares those habits, so it was 483/483 green. The appendix's consumer-first, freshly-loaded, tiny bounded-buffer goal is almost the only shape that reliably lands on it.
+
+### Fix
+
+Removed the `clauseVars` shortcut from `_dereferenceWithTracking`. Dereference now resolves the actual heap cell, so an unbound reader is tracked and the guard suspends.
+
+### Test
+
+`test/run_all_tests.sh` Section **A19b**: bounded-buffer consumer-first and producer-first both suspend (consumer-first failed before the fix). Re-baseline 483/483 → 485/485 green.
+
+### Family
+
+Same theme as **Issue 1** (localize put a writer address where a reader was needed — fixed) and **Issue 9** (latent N+1 reliance — open), and a sibling of the madGLP **receive/3 `_w`-dereference** bug (separate report): all are the post-migration confusion between a variable's heap address and its reader/writer role. Distinct site and fix from each — this one is a *wrong* lookup removed; receive/3 is a *missing* `_w` indirection to add; Issue 9 is the deeper cell-design root that would prevent the whole class.
