@@ -474,8 +474,9 @@ void typeCheckProject(List<DiscoveredModule> modules) {
       typeTemplates: d.env.typeTemplates,
     );
 
-    final res =
-        TypeChecker(focusedEnv).checkSingleProcedure(d.wildcardDecl, d.clauses);
+    final res = TypeChecker(focusedEnv).checkSingleProcedure(
+        d.wildcardDecl, d.clauses,
+        activeInstantiations: {d.procKey: d.wildcardDecl});
     if (!res.isWellTyped) {
       final errors =
           res.errors.map((e) => '  ${e.message} at line ${e.line}').join('\n');

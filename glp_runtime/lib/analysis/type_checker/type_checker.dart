@@ -254,12 +254,20 @@ class TypeChecker {
   /// Covariance resolves the declaration through the environment, so the
   /// environment passed to the constructor must already bind this procedure to
   /// [decl]; contravariance uses [decl] directly.
-  TypeCheckResult checkSingleProcedure(ProcDecl decl, List<ast.Clause> clauses) {
-    return _checkProcedure(decl, clauses);
+  TypeCheckResult checkSingleProcedure(ProcDecl decl, List<ast.Clause> clauses,
+      {Map<String, ProcDecl> activeInstantiations = const {}}) {
+    return _checkProcedure(decl, clauses, activeInstantiations);
   }
 
-  /// Check a single procedure against its declared type
-  TypeCheckResult _checkProcedure(ProcDecl decl, List<ast.Clause> clauses) {
+  /// Check a single procedure against its declared type.
+  ///
+  /// [activeInstantiations] maps the key of each parameterized procedure being
+  /// instantiated on the current derivation cycle to its monomorphic
+  /// declaration. A body call to such a procedure is checked at that
+  /// instantiation (monomorphic recursion), not re-inferred. Empty for the
+  /// ordinary (monomorphic-clause) pass.
+  TypeCheckResult _checkProcedure(ProcDecl decl, List<ast.Clause> clauses,
+      [Map<String, ProcDecl> activeInstantiations = const {}]) {
     final errors = <TypeError>[];
     final warnings = <TypeWarning>[];
 
@@ -267,7 +275,8 @@ class TypeChecker {
     // Condition 1: Covariance — check each clause is well-typed
     // =======================================================================
     for (final clause in clauses) {
-      final clauseErrors = _checkClauseCovariance(clause, decl);
+      final clauseErrors =
+          _checkClauseCovariance(clause, decl, activeInstantiations);
       errors.addAll(clauseErrors);
     }
 
@@ -289,11 +298,13 @@ class TypeChecker {
   // ===========================================================================
 
   /// Check covariance for a single clause using well_typed_clause module
-  List<TypeError> _checkClauseCovariance(ast.Clause clause, ProcDecl decl) {
+  List<TypeError> _checkClauseCovariance(ast.Clause clause, ProcDecl decl,
+      [Map<String, ProcDecl> activeInstantiations = const {}]) {
     final errors = <TypeError>[];
 
     try {
-      final result = wtc.checkClauseFromAst(clause, dfa, typeEnv, collector: collector);
+      final result = wtc.checkClauseFromAst(clause, dfa, typeEnv,
+          collector: collector, activeInstantiations: activeInstantiations);
 
       if (!result.isWellTyped) {
         // Convert ClauseErrors to TypeErrors
@@ -697,7 +708,23 @@ TypeCheckResult checkModule(ast.Module module, {List<ast.Procedure>? transformed
       externalTemplates: baseEnv.typeTemplates);
 
   // Build type environment from expanded module (reuses baseEnv)
-  final typeEnv = buildTypeEnvironment(expandedModule, ancestorScope: baseEnv);
+  final builtEnv = buildTypeEnvironment(expandedModule, ancestorScope: baseEnv);
+
+  // Carry the parameterized-type templates (root/ancestor + this module's own,
+  // which expansion removed from the module) into the checking environment, so
+  // the instantiation closure can materialize types that arise only through it
+  // (e.g. Stream<Box<Msg>> from a type-changing procedure).
+  final templates = <String, TypeDef>{
+    ...baseEnv.typeTemplates,
+    for (final td in module.typeDefs)
+      if (td.isParameterized) td.name: td,
+  };
+  final typeEnv = TypeEnvironment(
+    builtEnv.types,
+    builtEnv.procedures,
+    paramProcDecls: builtEnv.paramProcDecls,
+    typeTemplates: templates,
+  );
 
   // Extract clauses - from transformed procedures if provided, otherwise from module
   final clauses = <ast.Clause>[];
@@ -764,8 +791,9 @@ TypeCheckResult checkModule(ast.Module module, {List<ast.Procedure>? transformed
       paramProcDecls: d.env.paramProcDecls,
       typeTemplates: d.env.typeTemplates,
     );
-    final res =
-        TypeChecker(focusedEnv).checkSingleProcedure(d.wildcardDecl, d.clauses);
+    final res = TypeChecker(focusedEnv).checkSingleProcedure(
+        d.wildcardDecl, d.clauses,
+        activeInstantiations: {d.procKey: d.wildcardDecl});
     errors.addAll(res.errors);
     warnings.addAll(res.warnings);
   }
@@ -782,6 +810,15 @@ class InstantiationCheckResult {
   final wtc.CollectedInstantiation inst;
   final TypeCheckResult result;
   InstantiationCheckResult(this.inst, this.result);
+}
+
+/// A queued instantiation plus the active set: the parameterized procedures
+/// being instantiated on the derivation path to it (procKey → monomorphic
+/// declaration), used to enforce monomorphic recursion.
+class _Pending {
+  final wtc.CollectedInstantiation inst;
+  final Map<String, ProcDecl> active;
+  _Pending(this.inst, this.active);
 }
 
 /// Close the parameterized-procedure instantiation set under calls and check
@@ -810,39 +847,99 @@ List<InstantiationCheckResult> checkInstantiationsClosed(
   wtc.InstantiationCollector seed,
   List<ast.Clause>? Function(String procKey) definingClauses,
 ) {
-  final results = <InstantiationCheckResult>[];
-  final processed = <String>{}; // "procKey#signature"
-  final queue = <wtc.CollectedInstantiation>[...seed.all];
+  // Types that arise only through the closure (e.g. Stream<Box<Msg>> from a
+  // type-changing procedure) are not produced by the initial declaration-driven
+  // expansion. They are materialized here and accumulated across rounds. A round
+  // that discovers new such types re-runs the whole closure, so any
+  // instantiation checked before the type existed is re-checked against the
+  // complete DFA. Monomorphic recursion keeps the type set finite, so this
+  // converges (a round adding no new type is the fixpoint).
+  final extraTypes = <String, TypeDef>{};
 
-  while (queue.isNotEmpty) {
-    final inst = queue.removeAt(0);
-    final sigKey = '${inst.procKey}#${inst.signature}';
-    if (!processed.add(sigKey)) continue;
+  while (true) {
+    final results = <InstantiationCheckResult>[];
+    final processed = <String>{}; // "procKey#signature"
+    final needed = <String>{}; // expanded type names referenced but not present
+    Map<String, TypeDef>? templates;
+    Set<String> knownTypes = const {}; // a representative env's type names
+    final queue = <_Pending>[
+      for (final inst in seed.all) _Pending(inst, const {}),
+    ];
 
-    final defining = definingClauses(inst.procKey);
-    if (defining == null) continue; // defined outside the checked unit
-
-    final focusedEnv = TypeEnvironment(
-      inst.env.types,
-      {...inst.env.procedures, inst.monoDecl.key: inst.monoDecl},
-      paramProcDecls: inst.env.paramProcDecls,
-      typeTemplates: inst.env.typeTemplates,
-    );
-
-    final sub = wtc.InstantiationCollector();
-    final res = TypeChecker(focusedEnv, collector: sub)
-        .checkSingleProcedure(inst.monoDecl, defining);
-    results.add(InstantiationCheckResult(inst, res));
-
-    // Enqueue the instantiations this body induces (recorded into [sub]).
-    for (final next in sub.all) {
-      if (!processed.contains('${next.procKey}#${next.signature}')) {
-        queue.add(next);
+    void noteNeeded(ProcDecl decl, TypeEnvironment env) {
+      for (final t in decl.argTypes) {
+        var n = wtc.getFullTypeName(t);
+        if (n.endsWith('?')) n = n.substring(0, n.length - 1);
+        if (n.contains('<') &&
+            !env.types.containsKey(n) &&
+            !extraTypes.containsKey(n)) {
+          needed.add(n);
+        }
       }
     }
-  }
 
-  return results;
+    while (queue.isNotEmpty) {
+      final pending = queue.removeAt(0);
+      final inst = pending.inst;
+      final sigKey = '${inst.procKey}#${inst.signature}';
+      if (!processed.add(sigKey)) continue;
+
+      templates ??= inst.env.typeTemplates;
+      if (knownTypes.isEmpty) knownTypes = inst.env.types.keys.toSet();
+      noteNeeded(inst.monoDecl, inst.env);
+
+      final defining = definingClauses(inst.procKey);
+      if (defining == null) continue; // defined outside the checked unit
+
+      // Defer this instantiation if its own declaration references types not yet
+      // materialized in this round (noted above). Checking it now would fault on
+      // the missing automaton; it is re-induced and checked next round, once the
+      // type has been materialized.
+      final declTypesPresent = inst.monoDecl.argTypes.every((t) {
+        var n = wtc.getFullTypeName(t);
+        if (n.endsWith('?')) n = n.substring(0, n.length - 1);
+        return !n.contains('<') ||
+            inst.env.types.containsKey(n) ||
+            extraTypes.containsKey(n);
+      });
+      if (!declTypesPresent) continue;
+
+      // Focused env augmented with types materialized so far this fixpoint.
+      final focusedEnv = TypeEnvironment(
+        {...inst.env.types, ...extraTypes},
+        {...inst.env.procedures, inst.monoDecl.key: inst.monoDecl},
+        paramProcDecls: inst.env.paramProcDecls,
+        typeTemplates: inst.env.typeTemplates,
+      );
+
+      // This instantiation is on the current cycle: a recursive (self or mutual)
+      // call to it is checked at this instantiation, not re-inferred. Recursion
+      // therefore records no new instantiation into [sub].
+      final active = {...pending.active, inst.procKey: inst.monoDecl};
+      final sub = wtc.InstantiationCollector();
+      final res = TypeChecker(focusedEnv, collector: sub).checkSingleProcedure(
+          inst.monoDecl, defining,
+          activeInstantiations: active);
+      results.add(InstantiationCheckResult(inst, res));
+
+      // Enqueue the instantiations this body induces (recorded into [sub]),
+      // noting any types they reference that still need materializing. They
+      // carry the extended active set so mutual recursion is detected downstream.
+      for (final next in sub.all) {
+        noteNeeded(next.monoDecl, next.env);
+        if (!processed.contains('${next.procKey}#${next.signature}')) {
+          queue.add(_Pending(next, active));
+        }
+      }
+    }
+
+    if (needed.isEmpty || templates == null) return results;
+    final have = {...knownTypes, ...extraTypes.keys};
+    final newDefs = materializeInstantiations(needed, templates, have);
+    if (newDefs.isEmpty) return results; // nothing further can be materialized
+    extraTypes.addAll(newDefs);
+    // loop: re-run the closure with the enlarged type set.
+  }
 }
 
 /// Parse and type-check GLP source code

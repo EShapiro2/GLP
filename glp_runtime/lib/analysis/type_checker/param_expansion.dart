@@ -207,6 +207,116 @@ ast.Module expandParameterizedTypes(ast.Module module, {
   );
 }
 
+/// Materialize the monomorphic type definitions named by [neededNames] — the
+/// expanded names of type instantiations that arise only through the
+/// procedure-instantiation closure (e.g. `Stream<Box<Msg>>`), which the initial
+/// declaration-driven expansion did not produce. Uses [templates]; recurses into
+/// nested arguments; skips names already in [have] or non-parameterized (no `<`).
+/// Returns name → fresh TypeDef for the newly materialized definitions.
+///
+/// The set of such names is finite because recursion among parameterised
+/// procedures is monomorphic (typed-program: Parameterised Procedure
+/// Declarations), so this terminates without any size bound.
+Map<String, TypeDef> materializeInstantiations(
+    Iterable<String> neededNames,
+    Map<String, TypeDef> templates,
+    Set<String> have) {
+  final out = <String, TypeDef>{};
+  final work = <String>[...neededNames];
+  while (work.isNotEmpty) {
+    var name = work.removeLast();
+    if (name.endsWith('?')) name = name.substring(0, name.length - 1);
+    if (have.contains(name) || out.containsKey(name)) continue;
+    final lt = name.indexOf('<');
+    if (lt < 0) continue; // base/monomorphic name — defined elsewhere
+    final templateName = name.substring(0, lt);
+    final template = templates[templateName];
+    if (template == null) continue; // unknown template — leave to the checker
+    final argNames = _splitTopLevelArgs(name.substring(lt + 1, name.length - 1));
+    if (template.typeParams.length != argNames.length) continue;
+    final subst = <String, TypeExpr>{};
+    for (var i = 0; i < argNames.length; i++) {
+      subst[template.typeParams[i]] = TypeRef(argNames[i], 0, 0);
+      work.add(argNames[i]); // materialize nested instantiations too
+    }
+    final alts = template.alternatives
+        .map((a) => _substituteToExpandedNames(a, subst, templates, work))
+        .toList();
+    out[name] = TypeDef(name, alts, template.line, template.column);
+  }
+  return out;
+}
+
+/// Split top-level comma-separated arguments of an expanded-name body, respecting
+/// nested angle brackets: `Box<Msg>,Integer` → [`Box<Msg>`, `Integer`].
+List<String> _splitTopLevelArgs(String s) {
+  final result = <String>[];
+  var depth = 0, start = 0;
+  for (var i = 0; i < s.length; i++) {
+    final c = s[i];
+    if (c == '<') {
+      depth++;
+    } else if (c == '>') {
+      depth--;
+    } else if (c == ',' && depth == 0) {
+      result.add(s.substring(start, i).trim());
+      start = i + 1;
+    }
+  }
+  if (start < s.length) result.add(s.substring(start).trim());
+  return result;
+}
+
+/// Substitute parameters in [expr] with their argument refs, and rewrite every
+/// parameterized template reference to its expanded name, queuing that name (and
+/// nested ones) into [work] for materialization.
+TypeExpr _substituteToExpandedNames(TypeExpr expr, Map<String, TypeExpr> subst,
+    Map<String, TypeDef> templates, List<String> work) {
+  if (expr is TypeRef) {
+    if (expr.typeArgs.isEmpty && subst.containsKey(expr.name)) {
+      final r = subst[expr.name]!;
+      if (expr.isInput && r is TypeRef) {
+        return TypeRef(r.name, r.line, r.column,
+            isInput: true, typeArgs: r.typeArgs);
+      }
+      return r;
+    }
+    if (expr.typeArgs.isNotEmpty && templates.containsKey(expr.name)) {
+      final newArgs = expr.typeArgs
+          .map((a) => _substituteToExpandedNames(a, subst, templates, work))
+          .toList();
+      final expanded = _expandedName(expr.name, newArgs);
+      work.add(expanded);
+      return TypeRef(expanded, expr.line, expr.column, isInput: expr.isInput);
+    }
+    return expr;
+  }
+  if (expr is StructAlt) {
+    return StructAlt(
+        expr.functor,
+        expr.args
+            .map((a) => _substituteToExpandedNames(a, subst, templates, work))
+            .toList(),
+        expr.line,
+        expr.column);
+  }
+  if (expr is ListConsAlt) {
+    return ListConsAlt(
+        _substituteToExpandedNames(expr.head, subst, templates, work),
+        _substituteToExpandedNames(expr.tail, subst, templates, work),
+        expr.line,
+        expr.column);
+  }
+  if (expr is DiffListAlt) {
+    return DiffListAlt(
+        _substituteToExpandedNames(expr.content, subst, templates, work),
+        _substituteToExpandedNames(expr.hole, subst, templates, work),
+        expr.line,
+        expr.column);
+  }
+  return expr;
+}
+
 /// Enforce the finiteness bound on reachable types (typed-program spec / paper
 /// §Parameterised Types): "Where a parameterised type refers to itself, directly
 /// or transitively, no parameter may occur as a proper subterm of an argument."

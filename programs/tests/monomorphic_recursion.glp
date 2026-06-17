@@ -1,0 +1,36 @@
+%% monomorphic_recursion.glp — regression guard: recursion is monomorphic.
+%%
+%% wrap threads Stream(X) -> Stream(Box(X)): the element type goes one Box
+%% deeper from input to output. ploop calls itself on wrap's output, so the
+%% recursive call is at a STRICTLY DIFFERENT instantiation than the enclosing
+%% clause. The typed-program rule (Parameterised Procedure Declarations) makes
+%% recursion monomorphic: the recursive ploop(W?) is checked at the enclosing
+%% instantiation ploop(Stream(Msg)?), and W : Stream(Box(Msg)) is not that — a
+%% type error. This is what keeps the reachable-type set finite for the
+%% procedure closure (no need for any size bound).
+%%
+%% Behaviour:
+%%   - Rejected: "(W, W?) not dual ... Stream<Box<Msg>> is not a subtype of
+%%     Stream<Msg>" — W is produced (by wrap) at Stream(Box(Msg)) but consumed
+%%     (by the recursive ploop, checked monomorphically) at Stream(Msg).
+%%
+%% Run (from /Users/udi/Grassroots/GLP/glp_runtime/):
+%%   printf 'load ../programs/tests/monomorphic_recursion.glp\n:quit\n' | bin/glpc
+
+-mode(system).
+
+Msg ::= m.
+Box(X) ::= box(X).
+
+%% Type-changing: input element X, output element box(X) — one Box deeper.
+procedure wrap(Stream(X)?, Stream(Box(X))).
+wrap([E|In], [box(E?)|Out?]) :- wrap(In?, Out).
+wrap([], []).
+
+%% Recursive driver: ploop@Msg would call ploop@Box(Msg) — polymorphic recursion.
+procedure ploop(Stream(X)?).
+ploop(S) :- wrap(S?, W), ploop(W?).
+ploop([]).
+
+procedure go(Stream(Msg)?).
+go(S) :- ploop(S?).

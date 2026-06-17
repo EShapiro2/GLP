@@ -1064,6 +1064,11 @@ NEGATIVE_FILES=(
     # --- Finiteness rule: recursive parameterized type, param as proper subterm ---
     # Bad(X) ::= node(Bad(Box(X))) — rejected statically at the expansion stage.
     "$GLP_DIR/programs/tests/growing_type_recursion.glp"
+
+    # --- Monomorphic recursion: a recursive call at a different instantiation ---
+    # wrap threads Stream(X) -> Stream(Box(X)); the recursive ploop is checked at
+    # the enclosing instantiation, so the type-changing recursion is rejected.
+    "$GLP_DIR/programs/tests/monomorphic_recursion.glp"
 )
 
 # Build REPL input with :clear between each negative file

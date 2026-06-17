@@ -266,6 +266,7 @@ ClauseCheckResult checkClause(
   ProgramDFA dfa,
   TypeEnvironment env, {
   InstantiationCollector? collector,
+  Map<String, ProcDecl> activeInstantiations = const {},
 }) {
   final errors = <ClauseError>[];
   final allVariableTypes = <String, VariableTypeInfo>{};
@@ -303,7 +304,8 @@ ClauseCheckResult checkClause(
   for (int i = 0; i < clause.bodyAtoms.length; i++) {
     final atom = clause.bodyAtoms[i];
     final (atomResult, modedAtomTerm) = _checkBodyAtomWithTerm(atom, i, dfa, env,
-        callerVarTypes: allVariableTypes, collector: collector);
+        callerVarTypes: allVariableTypes, collector: collector,
+        activeInstantiations: activeInstantiations);
 
     if (modedAtomTerm != null) {
       constructedModedBodyAtoms.add(modedAtomTerm);
@@ -359,6 +361,7 @@ ClauseCheckResult checkClauseFromAst(
   ProgramDFA dfa,
   TypeEnvironment env, {
   InstantiationCollector? collector,
+  Map<String, ProcDecl> activeInstantiations = const {},
 }) {
   // Convert ast.Clause to TypedClause
   // Note: ast.Clause.head is Atom, but Goal has same structure
@@ -390,7 +393,8 @@ ClauseCheckResult checkClauseFromAst(
     throw UndeclaredProcedureError(typedClause.headFunctor, typedClause.headArity);
   }
 
-  return checkClause(typedClause, dfa, env, collector: collector);
+  return checkClause(typedClause, dfa, env, collector: collector,
+      activeInstantiations: activeInstantiations);
 }
 
 /// Get the set of labels (functor/arity or constant) that a clause accepts
@@ -520,12 +524,14 @@ WellTypedResult _checkBodyAtom(
   TypeEnvironment env, {
   Map<String, VariableTypeInfo>? callerVarTypes,
   InstantiationCollector? collector,
+  Map<String, ProcDecl> activeInstantiations = const {},
 }) {
   // Handle SpawnGoal (Goal@Agent) - type-check the inner goal
   if (atom is ast.SpawnGoal) {
     // Recursively type-check the inner goal
     return _checkBodyAtomWithTerm(atom.innerGoal, atomIndex, dfa, env,
-        callerVarTypes: callerVarTypes, collector: collector);
+        callerVarTypes: callerVarTypes, collector: collector,
+        activeInstantiations: activeInstantiations);
   }
 
   // Handle RemoteGoal (M # proc(...)) - type-check against imported declaration
@@ -558,7 +564,18 @@ WellTypedResult _checkBodyAtom(
   // from the caller's variable types and create a concrete proc decl.
   final paramTemplate = env.paramProcDecls[procDecl.key];
   if (paramTemplate != null) {
-    if (callerVarTypes != null && callerVarTypes.isNotEmpty) {
+    final enclosing = activeInstantiations[procDecl.key];
+    if (enclosing != null) {
+      // Recursive call: the callee is already being instantiated on the current
+      // cycle. Recursion is monomorphic (typed-program: Parameterised Procedure
+      // Declarations) — the call is checked at the enclosing instantiation, never
+      // inducing a new one. Falling through with procDecl = enclosing checks the
+      // call's arguments against that instantiation; a call that would require a
+      // different instantiation fails the per-argument / duality check, which is
+      // exactly the rejection of polymorphic recursion. Nothing is recorded, so
+      // recursion induces no instantiation.
+      procDecl = enclosing;
+    } else if (callerVarTypes != null && callerVarTypes.isNotEmpty) {
       final inferredDecl = _inferConcreteDecl(paramTemplate, atom, callerVarTypes, dfa, env);
       if (inferredDecl != null) {
         // Clause-template rule: record this instantiation so the parameterized
@@ -572,6 +589,14 @@ WellTypedResult _checkBodyAtom(
         collector?.record(
             CollectedInstantiation(inferredDecl.key, inferredDecl, env, dfa));
         procDecl = inferredDecl;
+        // The inferred instantiation may reference types that arise only through
+        // the closure (e.g. Stream<Box<Msg>> from a type-changing procedure) and
+        // are not yet materialized in this DFA. Skip the per-argument check this
+        // round; the instantiation has been recorded, so the closure materializes
+        // the types and re-checks against the complete DFA.
+        final present = inferredDecl.argTypes
+            .every((t) => dfa.automata.containsKey(getFullTypeName(t)));
+        if (!present) return (WellTypedResult.success({}), null);
       } else {
         // Inference failed (e.g. caller uses monomorphic types instead of the
         // parameterized form). Skip the body atom check — the proc's own clauses
@@ -1016,11 +1041,23 @@ ProcDecl? _inferConcreteDecl(
     concreteArgTypes.add(_substituteTypeParams(argType, bindings));
   }
 
-  // Verify all referenced types exist in the DFA
+  // A referenced type may legitimately not be in the DFA yet if it arises only
+  // through the procedure-instantiation closure (e.g. Stream<Box<Msg>> from a
+  // type-changing procedure). Such a type is materializable — a parameterized
+  // name whose template is known — and the closure will materialize it. Bail
+  // only when a referenced type is neither present nor materializable (it cannot
+  // be a real type), in which case this is not a usable instantiation.
   for (final argType in concreteArgTypes) {
     final typeName = getFullTypeName(argType);
-    if (!dfa.automata.containsKey(typeName)) {
-      return null; // Type doesn't exist in DFA — can't use this instantiation
+    if (dfa.automata.containsKey(typeName)) continue;
+    var base = typeName.endsWith('?')
+        ? typeName.substring(0, typeName.length - 1)
+        : typeName;
+    final lt = base.indexOf('<');
+    final materializable =
+        lt > 0 && env.typeTemplates.containsKey(base.substring(0, lt));
+    if (!materializable) {
+      return null; // not present and not materializable — unusable instantiation
     }
   }
 
