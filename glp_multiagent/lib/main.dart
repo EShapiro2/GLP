@@ -13,7 +13,7 @@ import 'package:glp_runtime/multiagent/repl_play_runner.dart';
 
 import 'isolate_protocol.dart';
 import 'mad_router.dart';
-import 'manifests/gsg.dart';
+import 'manifests/social.dart';
 import 'ui_runtime/agent_surface.dart';
 import 'ui_runtime/runtime.dart';
 
@@ -143,6 +143,10 @@ class AgentState {
   final List<String> outputLog = [];
   /// Manifest-driven two-surface UI runtime (null for read-only play panels).
   UiRuntime? ui;
+
+  /// One world, many views: this agent's notify stream feeds several UI
+  /// manifests (GSG, GrassApp) at once. Keyed by app mode.
+  final Map<String, UiRuntime> uis = {};
   int goalCount = 0;
   int heapVars = 0;
   int wpSize = 0;
@@ -179,6 +183,14 @@ class _CoordinatorScreenState extends State<CoordinatorScreen> {
   String _currentGlpDir = _defaultGlpDir;
   List<String>? _cachedGlpSources;
   List<String> _cachedGlpPaths = const [];
+
+  /// Which live scenario the phone shows: 'gsg' or 'grassapp' — same mediator
+  /// and interpreter, different boot (actor messages) and UI manifest.
+  String _appMode = 'gsg';
+
+  /// The live scenario isolate, killed on switch so the old scenario stops
+  /// emitting into the new phone.
+  Isolate? _scenarioIsolate;
 
   final ReceivePort _replyPort = ReceivePort();
   StreamSubscription? _replySubscription;
@@ -417,7 +429,7 @@ class _CoordinatorScreenState extends State<CoordinatorScreen> {
       final friends = entry.value;
       final agentState = AgentState(agentId, friends);
       agentState.ui = UiRuntime(
-        manifest: gsgManifest,
+        manifest: socialManifest,
         onSend: (text) => agentState.commandPort?.send(UserInput(text)),
       );
       agentState.ui!.onChange = () => setState(() {});
@@ -456,14 +468,20 @@ class _CoordinatorScreenState extends State<CoordinatorScreen> {
   /// crossbar — no MAD, so it sidesteps the receive/3 `_w` bug. alice and charlie
   /// cold-call bob on launch, so bob's inbox shows two befriend cards; accepting
   /// each forms the friendship (connected both sides). Only bob has a surface.
+  /// Spawn the live single-isolate scenario for [_appMode] — the same mediator
+  /// and actors, the manifest and boot selected per app. GSG and GrassApp differ
+  /// only in their boot (which messages the actors send) and UI manifest.
   Future<void> _spawnScenario() async {
     await _closeAll();
 
+    // ONE world: the actors cold-call Bob and message him once connected, so
+    // both views populate — GSG renders friends, GrassApp renders chats — from
+    // the same notify stream. Switching apps only swaps the view, never the run.
     const scenarioFiles = [
       'self.glp',
       'typed_social_agent.glp',
       'typed_ui_mediator.glp',
-      'play_scenario_boot.glp',
+      'play_grassapp_boot.glp',
     ];
     final paths = [for (final f in scenarioFiles) '$_currentGlpDir/$f'];
     final sources = <String>[];
@@ -478,8 +496,10 @@ class _CoordinatorScreenState extends State<CoordinatorScreen> {
     }
 
     final bob = AgentState('Bob', const ['alice', 'charlie']);
+    // One world, one shared inbox: a single runtime rendered through two views
+    // (Friends / Chats), chosen by the app toggle.
     bob.ui = UiRuntime(
-      manifest: gsgManifest,
+      manifest: socialManifest,
       onSend: (text) => bob.commandPort?.send(UserInput(text)),
     );
     bob.ui!.onChange = () => setState(() {});
@@ -497,8 +517,8 @@ class _CoordinatorScreenState extends State<CoordinatorScreen> {
     );
 
     try {
-      await Isolate.spawn(agentIsolateEntry, initMsg);
-      _log.add('Scenario started (single isolate; alice & charlie cold-call bob)');
+      _scenarioIsolate = await Isolate.spawn(agentIsolateEntry, initMsg);
+      _log.add('Scenario started (single isolate; GSG + GrassApp views)');
     } catch (e) {
       _log.add('ERROR spawning scenario: $e');
     }
@@ -509,6 +529,10 @@ class _CoordinatorScreenState extends State<CoordinatorScreen> {
     // Kill REPL subprocess if running
     _playRunner?.kill();
     _playRunner = null;
+
+    // Kill the live scenario isolate so it stops emitting into the new phone.
+    _scenarioIsolate?.kill(priority: Isolate.immediate);
+    _scenarioIsolate = null;
 
     for (final agent in _agents.values) {
       if (agent.commandPort != null) {
@@ -618,15 +642,41 @@ class _CoordinatorScreenState extends State<CoordinatorScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Clean §7.4 smartphone presentation: one device, Bob's two-surface UI.
+    // Clean §7.4 smartphone presentation: one device, one two-surface UI.
+    // GSG and GrassApp are two live single-isolate scenarios rendered by the
+    // same interpreter — switching re-spawns the selected scenario.
     final bob = _agents['Bob'];
+    final surface = (bob != null && bob.ui != null)
+        ? AgentSurface(
+            agentId: bob.agentId,
+            runtime: bob.ui!,
+            view: _appMode == 'grassapp' ? 'chats' : 'friends',
+          )
+        : const _Booting();
     return Scaffold(
       backgroundColor: const Color(0xFF2B2B33),
       body: Center(
-        child: _PhoneFrame(
-          child: (bob != null && bob.ui != null)
-              ? AgentSurface(agentId: bob.agentId, runtime: bob.ui!)
-              : const _Booting(),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            // Minimal app picker (the only chrome) — same interpreter, two manifests.
+            Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: SegmentedButton<String>(
+                segments: const [
+                  ButtonSegment(value: 'gsg', label: Text('Social Graph')),
+                  ButtonSegment(value: 'grassapp', label: Text('GrassApp')),
+                ],
+                selected: {_appMode},
+                // One world; switching only swaps the view (no re-spawn).
+                onSelectionChanged: (s) => setState(() => _appMode = s.first),
+                style: ButtonStyle(
+                  foregroundColor: WidgetStateProperty.all(Colors.white),
+                ),
+              ),
+            ),
+            Flexible(child: _PhoneFrame(child: surface)),
+          ],
         ),
       ),
     );

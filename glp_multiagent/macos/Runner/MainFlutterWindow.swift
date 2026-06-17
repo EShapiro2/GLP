@@ -9,7 +9,7 @@ class MainFlutterWindow: NSWindow {
     // clips at a short default size, so open larger and centered.
     // Disable saved-frame restoration so the size below always applies.
     self.setFrameAutosaveName("")
-    let targetSize = NSSize(width: 1200, height: 950)
+    let targetSize = NSSize(width: 460, height: 950)
     if let screen = self.screen ?? NSScreen.main {
       let v = screen.visibleFrame
       let origin = NSPoint(x: v.midX - targetSize.width / 2,

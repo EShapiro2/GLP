@@ -1,0 +1,65 @@
+%% play_grassapp_boot.glp — single-isolate GrassApp scenario (no MAD).
+%%
+%% Same real agent/4 + ui_mediator/5 as GSG (the mediator already carries
+%% one-to-one messaging: send out, received in). Bob is the live-UI agent; alice
+%% and charlie are actors that cold-call Bob and, once connected, send him a
+%% message — so Bob's chat list populates with conversations. In-heap crossbar.
+%%
+%% Requires: self.glp, typed_social_agent.glp, typed_ui_mediator.glp
+
+-mode(system).
+
+%% --- In-heap crossbar (route each `_net` output to the addressed agent) ---
+procedure crossbar(Stream(M)?, Stream(M)?, Stream(M)?,
+                   Stream(M), Stream(M), Stream(M)).
+crossbar(AOut, BOut, COut, AIn?, BIn?, CIn?) :-
+    merge(AOut?, BOut?, AB),
+    merge(AB?, COut?, All),
+    route(All?, AIn, BIn, CIn).
+
+procedure route(Stream(M)?, Stream(M), Stream(M), Stream(M)).
+route([msg(alice, C) | Rest], [msg(alice, C?) | A?], B?, Ch?) :-
+    route(Rest?, A, B, Ch).
+route([msg(bob, C) | Rest], A?, [msg(bob, C?) | B?], Ch?) :-
+    route(Rest?, A, B, Ch).
+route([msg(charlie, C) | Rest], A?, B?, [msg(charlie, C?) | Ch?]) :-
+    route(Rest?, A, B, Ch).
+route([], [], [], []).
+
+%% --- Actors: cold-call Bob, message him once connected, auto-accept ---
+
+procedure alice_actor(Stream(UserNotify)?, Stream(UserCmd)).
+alice_actor(Ns, [connect(bob) | Cs?]) :- chat_actor(alice, Ns?, Cs).
+
+procedure charlie_actor(Stream(UserNotify)?, Stream(UserCmd)).
+charlie_actor(Ns, [connect(bob) | Cs?]) :- chat_actor(charlie, Ns?, Cs).
+
+%% chat_actor(Me, NotifyIn, CmdOut): on connected(bob) send Bob a message; accept
+%% any cold-call/intro; ignore the rest.
+procedure chat_actor(Constant?, Stream(UserNotify)?, Stream(UserCmd)).
+%% Message text is a single token: the ground-term boundary does not quote
+%% atoms, so spaces/commas would break the Dart-side parse (a separate fix).
+chat_actor(alice, [connected(bob) | Ns], [send(bob, 'Hello') | Cs?]) :-
+    chat_actor(alice, Ns?, Cs).
+chat_actor(charlie, [connected(bob) | Ns], [send(bob, 'Hey_there') | Cs?]) :-
+    chat_actor(charlie, Ns?, Cs).
+chat_actor(Me, [befriend(Who, Req) | Ns], [decision(yes, Who?, Req?) | Cs?]) :-
+    ground(Me?), ground(Who?), ground(Req?) | chat_actor(Me?, Ns?, Cs).
+chat_actor(Me, [_ | Ns], Cmds?) :- ground(Me?), otherwise | chat_actor(Me?, Ns?, Cmds).
+chat_actor(_, [], []).
+
+%% --- Scenario boot (entered as Bob's agent_init) ---
+agent_init(bob, UserIn, _) :-
+    agent(bob, BAgentIn?, BNetIn?,
+          [output('_user', BA2U) | [output('_net', BNetOut)]]),
+    ui_mediator(bob, ch(BA2U?, BAgentIn), ch(UserIn?, BUserOut), [], 1),
+    send_to_user(BUserOut?),
+    agent(alice, AAgentIn?, ANetIn?,
+          [output('_user', AA2U) | [output('_net', ANetOut)]]),
+    ui_mediator(alice, ch(AA2U?, AAgentIn), ch(ACmds?, AUserOut), [], 1),
+    alice_actor(AUserOut?, ACmds),
+    agent(charlie, CAgentIn?, CNetIn?,
+          [output('_user', CA2U) | [output('_net', CNetOut)]]),
+    ui_mediator(charlie, ch(CA2U?, CAgentIn), ch(CCmds?, CUserOut), [], 1),
+    charlie_actor(CUserOut?, CCmds),
+    crossbar(ANetOut?, BNetOut?, CNetOut?, ANetIn, BNetIn, CNetIn).

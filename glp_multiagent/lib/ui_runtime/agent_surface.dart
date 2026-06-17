@@ -21,7 +21,17 @@ import 'term.dart';
 class AgentSurface extends StatefulWidget {
   final String agentId;
   final UiRuntime runtime;
-  const AgentSurface({super.key, required this.agentId, required this.runtime});
+
+  /// Which state surface to render: 'friends' (the Social Graph view) or 'chats'
+  /// (the GrassApp view). Both share one inbox; only this differs.
+  final String view;
+
+  const AgentSurface({
+    super.key,
+    required this.agentId,
+    required this.runtime,
+    this.view = 'friends',
+  });
 
   @override
   State<AgentSurface> createState() => _AgentSurfaceState();
@@ -41,23 +51,26 @@ class _AgentSurfaceState extends State<AgentSurface> {
 
   static const MaterialColor _accent = Colors.orange;
 
+  bool get _chats => widget.view == 'chats' && _m.chat != null;
+
   @override
   Widget build(BuildContext context) {
-    // Conversation drill-down (chat apps): a full screen with a back button.
-    if (_tab == 0 && _openPeer != null && _m.chat != null) {
+    // Conversation drill-down (chats view): a full screen with a back button.
+    if (_tab == 0 && _openPeer != null && _chats) {
       return _conversation(_m.chat!, _openPeer!);
     }
 
     final requests = _r.inbox.length;
     final onState = _tab == 0;
-    final stateLabel = _m.stateTabLabel;
+    final stateLabel = _chats ? 'Chats' : 'Friends';
+    final stateTitle = _chats ? 'GrassApp' : 'Social Graph';
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
         backgroundColor: _accent,
         foregroundColor: Colors.white,
         elevation: 0,
-        title: Text(onState ? _m.title : 'Requests',
+        title: Text(onState ? stateTitle : 'Requests',
             style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
         actions: [
           Padding(
@@ -89,11 +102,10 @@ class _AgentSurfaceState extends State<AgentSurface> {
         onDestinationSelected: (i) => setState(() => _tab = i),
         destinations: [
           NavigationDestination(
-              icon: Icon(_m.chat != null
+              icon: Icon(_chats
                   ? Icons.chat_bubble_outline
                   : Icons.people_outline),
-              selectedIcon:
-                  Icon(_m.chat != null ? Icons.chat_bubble : Icons.people),
+              selectedIcon: Icon(_chats ? Icons.chat_bubble : Icons.people),
               label: stateLabel),
           NavigationDestination(
             icon: _badge(requests, const Icon(Icons.mail_outline)),
@@ -110,7 +122,7 @@ class _AgentSurfaceState extends State<AgentSurface> {
 
   // === State surface — the state the outbox leaves ==========================
 
-  Widget _stateScreen() => _m.chat != null ? _chatList(_m.chat!) : _friendsList();
+  Widget _stateScreen() => _chats ? _chatList(_m.chat!) : _friendsList();
 
   Widget _friendsList() {
     final children = <Widget>[];
