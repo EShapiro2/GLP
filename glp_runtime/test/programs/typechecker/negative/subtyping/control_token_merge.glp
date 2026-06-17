@@ -1,0 +1,30 @@
+%% TEST: control token on a stream merged into a narrower network-input reader
+%% EXPECT: ill-typed
+%% ERROR: body variable pair not dual — writer Stream(Ctl) is not a subtype of Stream(NetLike)
+%%
+%% Regression guard for CSSN Issue 16: a friend stream whose element type carries
+%% a control token (here `canonical`) must not be merged into a network-input
+%% stream whose alphabet excludes it.  Models the real failure
+%%   merge(NetIn?, FIn?, NetIn1)  with FIn : Stream(FriendMsg-with-canonical),
+%%   NetIn : Stream(NetInMsg).
+%% The fix keeps FriendMsg canonical-free so Stream(FriendMsg) ⊆ Stream(NetInMsg);
+%% re-adding the token here must stay rejected.
+
+-module(neg_control_token_merge).
+
+%% Narrow network-input alphabet.
+NetLike ::= m(Constant).
+
+%% Same envelope plus a control token — a strict supertype of NetLike.
+Ctl ::= m(Constant) ; canonical.
+
+%% Consumer of the network-input alphabet.
+procedure consume(Stream(NetLike)?).
+consume([]).
+consume([m(_)|R]) :- consume(R?).
+
+%% Merge a Stream(Ctl) into the consumer's Stream(NetLike) input.  The merged
+%% stream Both is produced at Stream(Ctl) but consumed at Stream(NetLike);
+%% Ctl is not a subtype of NetLike, so the (Both, Both?) pair is not dual.
+procedure feed(Stream(Ctl)?).
+feed(Friend) :- merge([], Friend?, Both), consume(Both?).

@@ -1044,6 +1044,11 @@ NEGATIVE_FILES=(
     "$TC_DIR/negative/subtyping/disjoint_types.glp"
     "$TC_DIR/negative/subtyping/arg_type_mismatch.glp"
 
+    # --- CSSN Issue 16: control token merged into a narrower network-input reader ---
+    # Stream(Ctl) (carries `canonical`) merged into Stream(NetLike); the (Both,Both?)
+    # pair is not dual.  Guards against re-adding a control token to FriendMsg.
+    "$TC_DIR/negative/subtyping/control_token_merge.glp"
+
     # --- parameterized types negative ---
     "$TYPED/param_arity_mismatch.glp"
 

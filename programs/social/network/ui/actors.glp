@@ -1506,7 +1506,7 @@ eve12_wait_dave_msg([], []).
 %% both child_befriend notifications.  Idempotent commit suppresses the second.
 %% Expect exactly one `connected(dave)` on carol's side (smaller-name installs
 %% once; second commit suppressed) and exactly one `connected(carol)` on dave's
-%% side (larger-name installs via await_canonical once; second drops on [].
+%% side (larger-name adopts the conveyed friend channel once; second drops on [].
 %% =============================================================================
 
 exported procedure alice14(Channel(Stream(UserNotify), Stream(UserCmd))?).
