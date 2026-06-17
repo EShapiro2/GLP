@@ -26,6 +26,10 @@ class ActivityStore {
   final Map<String, List<GTerm>> lists = {};
   final Map<String, GTerm> values = {};
   final Map<String, Map<String, List<GTerm>>> threads = {};
+
+  /// Keyed-balance store: `holdings[storeKey][owner][coin]` is an amount. The
+  /// coins app's wallet — a person and the coins they hold.
+  final Map<String, Map<String, Map<String, GTerm>>> holdings = {};
 }
 
 /// The per-agent UI runtime.
@@ -134,6 +138,16 @@ class UiRuntime {
           store.lists[list]?.removeWhere((e) => formatTerm(e) == formatTerm(v));
         case SetValue(:final key, :final field):
           store.values[key] = fields[field]!;
+        case SetBalance(
+            store: final storeKey,
+            :final ownerField,
+            :final coinField,
+            :final amountField
+          ):
+          final h = store.holdings.putIfAbsent(storeKey, () => {});
+          final owner = formatTerm(fields[ownerField]!);
+          final coin = formatTerm(fields[coinField]!);
+          h.putIfAbsent(owner, () => {})[coin] = fields[amountField]!;
         case ExtendThread(:final thread, :final keyField, :final valueField):
           final t = store.threads.putIfAbsent(thread, () => <String, List<GTerm>>{});
           final k = formatTerm(fields[keyField]!);

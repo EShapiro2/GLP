@@ -42,17 +42,19 @@ class _AgentSurfaceState extends State<AgentSurface> {
   static const MaterialColor _accent = Colors.orange;
 
   bool get _chats => _m.chat != null;
+  bool get _wallet => _m.wallet != null;
 
   @override
   Widget build(BuildContext context) {
-    // Conversation drill-down (chats view): a full screen with a back button.
-    if (_tab == 0 && _openPeer != null && _chats) {
-      return _conversation(_m.chat!, _openPeer!);
+    // Drill-down (chats view: conversation; wallet view: a person's holdings).
+    if (_tab == 0 && _openPeer != null) {
+      if (_chats) return _conversation(_m.chat!, _openPeer!);
+      if (_wallet) return _walletDetail(_m.wallet!, _openPeer!);
     }
 
     final requests = _r.inbox.length;
     final onState = _tab == 0;
-    final stateLabel = _chats ? 'Chats' : 'Friends';
+    final stateLabel = _chats ? 'Chats' : (_wallet ? _m.wallet!.label : 'Friends');
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
@@ -77,7 +79,7 @@ class _AgentSurfaceState extends State<AgentSurface> {
         ],
       ),
       body: onState ? _stateScreen() : _requestsScreen(),
-      floatingActionButton: onState
+      floatingActionButton: onState && !_wallet
           ? FloatingActionButton(
               backgroundColor: _accent,
               foregroundColor: Colors.white,
@@ -93,8 +95,14 @@ class _AgentSurfaceState extends State<AgentSurface> {
           NavigationDestination(
               icon: Icon(_chats
                   ? Icons.chat_bubble_outline
-                  : Icons.people_outline),
-              selectedIcon: Icon(_chats ? Icons.chat_bubble : Icons.people),
+                  : (_wallet
+                      ? Icons.account_balance_wallet_outlined
+                      : Icons.people_outline)),
+              selectedIcon: Icon(_chats
+                  ? Icons.chat_bubble
+                  : (_wallet
+                      ? Icons.account_balance_wallet
+                      : Icons.people)),
               label: stateLabel),
           NavigationDestination(
             icon: _badge(requests, const Icon(Icons.mail_outline)),
@@ -111,7 +119,114 @@ class _AgentSurfaceState extends State<AgentSurface> {
 
   // === State surface — the state the outbox leaves ==========================
 
-  Widget _stateScreen() => _chats ? _chatList(_m.chat!) : _friendsList();
+  Widget _stateScreen() => _chats
+      ? _chatList(_m.chat!)
+      : (_wallet ? _walletList(_m.wallet!) : _friendsList());
+
+  // --- Wallet (coins): person + friends, each drilling into their holdings ---
+  Widget _walletList(WalletView w) {
+    final people = <String>[w.selfKey, ...(_r.store.lists[w.friendsList] ?? const [])
+        .map(formatTerm)];
+    return ListView(
+      padding: const EdgeInsets.symmetric(vertical: 2),
+      children: [
+        for (final p in people)
+          ListTile(
+            leading: CircleAvatar(
+              backgroundColor: _accent.shade100,
+              child: Text(_initial(p),
+                  style: const TextStyle(
+                      color: Colors.black87, fontWeight: FontWeight.bold)),
+            ),
+            title: Text(p == w.selfKey ? 'You' : _cap(p),
+                style: const TextStyle(fontWeight: FontWeight.w600)),
+            subtitle: Text(_holdingsSummary(w, p),
+                maxLines: 1, overflow: TextOverflow.ellipsis),
+            trailing: const Icon(Icons.chevron_right, color: Colors.grey),
+            onTap: () => setState(() => _openPeer = p),
+          ),
+      ],
+    );
+  }
+
+  Widget _walletDetail(WalletView w, String person) {
+    final isSelf = person == w.selfKey;
+    final holds = _r.store.holdings[w.storeKey]?[person] ?? const {};
+    final coins = holds.keys.toList();
+    final actions = isSelf ? w.selfActions : w.friendActions;
+    return Scaffold(
+      backgroundColor: const Color(0xFFF3EFEA),
+      appBar: AppBar(
+        backgroundColor: _accent,
+        foregroundColor: Colors.white,
+        elevation: 0,
+        leading: BackButton(onPressed: () => setState(() => _openPeer = null)),
+        titleSpacing: 0,
+        title: Text(isSelf ? 'Your wallet' : "${_cap(person)}'s coins",
+            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+      ),
+      body: Column(
+        children: [
+          Expanded(
+            child: coins.isEmpty
+                ? _empty('No coins held')
+                : ListView(
+                    padding: const EdgeInsets.symmetric(vertical: 4),
+                    children: [
+                      for (final c in coins)
+                        ListTile(
+                          leading: const Icon(Icons.toll, color: _accent),
+                          title: Text(_coinLabel(c, w),
+                              style: const TextStyle(fontWeight: FontWeight.w600)),
+                          trailing: Text(formatTerm(holds[c]!),
+                              style: const TextStyle(
+                                  fontSize: 16, fontWeight: FontWeight.bold)),
+                        ),
+                    ],
+                  ),
+          ),
+          if (actions.isNotEmpty)
+            Container(
+              width: double.infinity,
+              color: Colors.white,
+              padding: const EdgeInsets.fromLTRB(12, 10, 12, 14),
+              child: Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                alignment: WrapAlignment.center,
+                children: [
+                  for (final a in actions)
+                    ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                          backgroundColor: _accent,
+                          foregroundColor: Colors.white),
+                      onPressed: () => _composeCommand(context, a,
+                          prefill: isSelf
+                              ? const {}
+                              : {w.friendField: GAtom(person)}),
+                      child: Text(a.label),
+                    ),
+                ],
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  String _holdingsSummary(WalletView w, String person) {
+    final holds = _r.store.holdings[w.storeKey]?[person] ?? const {};
+    if (holds.isEmpty) return 'No coins';
+    return holds.entries
+        .map((e) => '${formatTerm(e.value)} ${_coinShort(e.key, w)}')
+        .join(', ');
+  }
+
+  String _coinLabel(String coin, WalletView w) =>
+      coin == w.selfKey ? 'Your coins' : "${_cap(coin)}'s coins";
+
+  String _coinShort(String coin, WalletView w) =>
+      coin == w.selfKey ? 'yours' : "${_cap(coin)}'s";
 
   Widget _friendsList() {
     final children = <Widget>[];
@@ -388,9 +503,13 @@ class _AgentSurfaceState extends State<AgentSurface> {
     );
   }
 
-  Future<void> _composeCommand(BuildContext context, CommandDesc cmd) async {
+  Future<void> _composeCommand(BuildContext context, CommandDesc cmd,
+      {Map<String, GTerm> prefill = const {}}) async {
+    // Fields fixed by context (e.g. the friend whose wallet is open) are not
+    // shown; the rest are entered.
+    final shown = cmd.args.where((f) => !prefill.containsKey(f.name)).toList();
     final controllers = {
-      for (final f in cmd.args) f.name: TextEditingController(),
+      for (final f in shown) f.name: TextEditingController(),
     };
     final ok = await showDialog<bool>(
       context: context,
@@ -398,7 +517,7 @@ class _AgentSurfaceState extends State<AgentSurface> {
         title: Text(cmd.label),
         content: Column(
           mainAxisSize: MainAxisSize.min,
-          children: cmd.args
+          children: shown
               .map((f) => TextField(
                     controller: controllers[f.name],
                     keyboardType: f.type == FieldType.integer
@@ -420,8 +539,8 @@ class _AgentSurfaceState extends State<AgentSurface> {
     );
     if (ok != true) return;
 
-    final values = <String, GTerm>{};
-    for (final f in cmd.args) {
+    final values = <String, GTerm>{...prefill};
+    for (final f in shown) {
       final raw = controllers[f.name]!.text.trim();
       if (raw.isEmpty) return;
       values[f.name] = _fieldTerm(f, raw);

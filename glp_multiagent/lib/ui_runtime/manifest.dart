@@ -142,6 +142,18 @@ class PushChat extends Effect {
       {this.outgoing = false, this.tickField});
 }
 
+/// Set a balance entry in a holdings store: `holdings[store][owner][coin]`
+/// becomes the [amountField] value. This is the keyed-balance view the coins
+/// app needs and the chat/list/value views do not provide — a two-level map
+/// (a person, the coins they hold) updated by a wholly-ground `balance_report`.
+class SetBalance extends Effect {
+  final String store;
+  final String ownerField;
+  final String coinField;
+  final String amountField;
+  const SetBalance(this.store, this.ownerField, this.coinField, this.amountField);
+}
+
 /// An activity rule: one all-ground `UserNotify` that lands in its target
 /// surface (paper §7.4). [effect] mutates the rendered state — `connected` adds
 /// a friend, `unfriended` removes one, `received` extends a conversation. There
@@ -171,6 +183,34 @@ class ChatView {
       {required this.threadKey, required this.label, required this.sendCtor});
 }
 
+/// Optional wallet surface. When set, the state screen lists the person
+/// ([selfKey]) and the friends in [friendsList]; tapping one drills down to that
+/// person's coin holdings (from `store.holdings[storeKey]`) plus the actions
+/// available against them — [selfActions] on the person's own tile (mint),
+/// [friendActions] on a friend's tile (pay, redeem, propose swap). A friend
+/// action's [friendField] is prefilled with the open friend, so the person
+/// points at a friend's actual coins (needed for redeem and swap). This is the
+/// holdings analogue of [ChatView]: a list with drill-down, but to balances and
+/// actions rather than a conversation.
+class WalletView {
+  final String storeKey;
+  final String label;
+  final String selfKey;
+  final String friendsList;
+  final String friendField;
+  final List<CommandDesc> selfActions;
+  final List<CommandDesc> friendActions;
+  const WalletView({
+    required this.storeKey,
+    required this.label,
+    required this.selfKey,
+    required this.friendsList,
+    required this.friendField,
+    required this.selfActions,
+    required this.friendActions,
+  });
+}
+
 /// Display kind for a declared piece of activity state.
 enum StateKind { list, value, thread }
 
@@ -197,6 +237,11 @@ class Manifest {
   /// state screen is a plain list (the GSG Friends surface).
   final ChatView? chat;
 
+  /// Optional wallet surface (coins app). When set, the state screen is the
+  /// wallet — friends list drilling down to holdings and actions. Mutually
+  /// exclusive with [chat] in practice.
+  final WalletView? wallet;
+
   /// Label for the state/outbox screen's bottom-nav tab (e.g. 'Friends',
   /// 'Chats'). Defaults to 'Friends'.
   final String stateTabLabel;
@@ -208,6 +253,7 @@ class Manifest {
     required this.activity,
     this.state = const [],
     this.chat,
+    this.wallet,
     this.stateTabLabel = 'Friends',
   });
 
