@@ -12,6 +12,7 @@ dependencies:
   flutter:
     sdk: flutter
   path: ^1.8.0
+  path_provider: ^2.1.0
 
   # Link to existing GLP runtime
   glp_runtime:
@@ -24,3 +25,9 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+  # GLP scenario sources, bundled for sandboxed platforms (iOS) where the engine
+  # cannot read the repo from disk. Copied from programs/ — keep in sync via
+  # tool/sync_glp_assets.sh. On macOS the repo on disk is used instead.
+  assets:
+    - assets/glp/programs/self.glp
+    - assets/glp/programs/book/coins/

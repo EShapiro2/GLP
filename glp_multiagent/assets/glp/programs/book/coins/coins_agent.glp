@@ -1,0 +1,389 @@
+%% coins_agent.glp — coins-among-friends agent (agent/5).
+%%
+%% The typed social agent (cold-call befriending, friend channels, one-to-one
+%% messaging) extended with a holdings vector and the coin transactions. Self
+%% contained: carries its own copies of the social helpers (merge, lookup_send,
+%% inject_msg, bind_response, handle_response) so the coins scenario loads
+%% without the social-graph modules.
+%%
+%% Stage 1: mint + balance (per-issuer counts emitted as balance_report). The
+%% peer transactions (pay, redeem, swap) are added in later stages.
+
+-mode(system).
+
+%% Output content: union of agent->mediator, friend-channel, and net contents.
+OutputContent ::= befriend(Constant, Response?)
+                ; befriend_intro(Constant, Constant, FriendChannel?)
+                ; connected(Constant)
+                ; rejected
+                ; rejected(Constant)
+                ; received(Constant, Constant)
+                ; response(Response)
+                ; text(Constant)
+                ; intro(Constant, FriendChannel)
+                ; balance_report(Constant, Constant, Integer)
+                ; swap_offer(Constant, Constant, Integer, Constant, Integer, SwapResponse?)
+                ; swap_done(Constant)
+                ; swap_failed(Constant)
+                ; coins(Constant, Integer)
+                ; balances(Stream(Holding))
+                ; swap_propose(Constant, Integer, Constant, Integer, SwapResponse?)
+                ; redeem_coins(Constant, Integer).
+OutputMsg     ::= msg(Constant, Constant, OutputContent)
+                ; msg(Constant, NetColdCall).
+OutputStream  ::= [] ; [OutputMsg | OutputStream].
+
+OutputEntry ::= output(Constant, OutputStream?).
+OutputsList ::= [] ; [OutputEntry|OutputsList].
+
+%% =============================================================================
+%% CHANNEL OPERATIONS / MERGE / ROUTING (copied — holdings-agnostic)
+%% =============================================================================
+
+send(X, ch(In, [X?|Out?]), ch(In?, Out)).
+receive(X?, ch([X|In], Out?), ch(In?, Out)).
+new_channel(ch(Xs?, Ys), ch(Ys?, Xs)).
+
+procedure merge(Stream(X)?, Stream(X)?, Stream(X)).
+merge([X|Xs], Ys, [X?|Zs?]) :- merge(Ys?, Xs?, Zs).
+merge(Xs, [Y|Ys], [Y?|Zs?]) :- merge(Xs?, Ys?, Zs).
+merge([], Ys, Ys?).
+merge(Xs, [], Xs?).
+
+procedure lookup_send(Constant?, OutputMsg?, OutputsList?, OutputsList).
+lookup_send(Key, Msg, Outs, Outs1?) :-
+    ground(Key?) |
+    lookup_send_step(Key?, Msg?, Outs?, Outs1).
+
+procedure lookup_send_step(Constant?, OutputMsg?, OutputsList?, OutputsList).
+lookup_send_step(Key, Msg, [output(K, [Msg?|Out1?])|Rest], [output(K?, Out1)|Rest?]) :-
+    Key? =?= K? | true.
+lookup_send_step(Key, Msg, [output(K, Out?)|Rest], [output(K?, Out)|Rest1?]) :-
+    otherwise |
+    lookup_send_step(Key?, Msg?, Rest?, Rest1).
+lookup_send_step(_, _, [], []).
+
+procedure inject_msg(Response?, Constant?, Constant?, Stream(X)?, Stream(X)).
+inject_msg(Resp, Target, Id, Ys, [msg(Target?, Id?, response(Resp?))|Ys?]) :-
+    known(Resp?) | true.
+inject_msg(Resp, Target, Id, [Y|Ys], [Y?|Ys1?]) :-
+    inject_msg(Resp?, Target?, Id?, Ys?, Ys1).
+
+procedure add_output(Constant?, OutputStream, OutputsList?, OutputsList).
+add_output(Name, Out?, Outs, [output(Name?, Out)|Outs?]).
+
+procedure close_outputs(OutputsList?).
+close_outputs([output(_, [])|Outs]) :- close_outputs(Outs?).
+close_outputs([]).
+
+%% =============================================================================
+%% RESPONSE HANDLING (copied — holdings-agnostic; does not call agent)
+%% =============================================================================
+
+procedure bind_response(Decision?, Constant?, Response, OutputsList?, OutputsList, Stream(X)?, Stream(X)).
+bind_response(yes, From, accept(RetCh?), Outs, Outs1?, In, In1?) :-
+    new_channel(RetCh, LocalCh) |
+    handle_response(accept(LocalCh?), From?, Outs?, Outs1, In?, In1).
+bind_response(no, _, no, Outs, Outs1?, In, In?) :-
+    lookup_send('_user', msg(agent, '_user', rejected), Outs?, Outs1).
+
+procedure handle_response(Response?, Constant?, OutputsList?, OutputsList, Stream(X)?, Stream(X)).
+handle_response(accept(ch(FIn, FOut?)), From, Outs, Outs2?, In, In1?) :-
+    ground(From?) |
+    add_output(From?, FOut, Outs?, Outs1),
+    lookup_send('_user', msg(agent, '_user', connected(From?)), Outs1?, Outs2),
+    merge(In?, FIn?, In1).
+handle_response(no, From, Outs, Outs1?, In, In?) :-
+    ground(From?) |
+    lookup_send('_user', msg(agent, '_user', rejected(From?)), Outs?, Outs1).
+
+%% =============================================================================
+%% HOLDINGS HELPERS
+%% =============================================================================
+
+%% Increment the count of Coin by K (insert if absent).
+procedure add_coin(Constant?, Integer?, Stream(Holding)?, Stream(Holding)).
+add_coin(Coin, K, [holding(C, N)|Rest], [holding(C?, N1?)|Rest?]) :-
+    Coin? =?= C? | N1 := N? + K?.
+add_coin(Coin, K, [holding(C, N)|Rest], [holding(C?, N?)|Rest1?]) :-
+    otherwise |
+    add_coin(Coin?, K?, Rest?, Rest1).
+add_coin(Coin, K, [], [holding(Coin?, K?)]).
+
+%% Take up to Amt of Coin from holdings; Took is how many were actually removed.
+procedure take_up_to(Constant?, Integer?, Stream(Holding)?, Integer, Stream(Holding)).
+take_up_to(Coin, Amt, [holding(C, N)|Rest], Amt?, [holding(C?, N1?)|Rest?]) :-
+    Coin? =?= C?, N? >= Amt? | N1 := N? - Amt?.
+take_up_to(Coin, Amt, [holding(C, N)|Rest], N?, [holding(C?, 0)|Rest?]) :-
+    Coin? =?= C?, N? < Amt? | true.
+take_up_to(Coin, Amt, [holding(C, N)|Rest], Took?, [holding(C?, N?)|Rest1?]) :-
+    otherwise |
+    take_up_to(Coin?, Amt?, Rest?, Took, Rest1).
+take_up_to(_, _, [], 0, []).
+
+%% Subtract Amt of Coin (Status=ok if enough held, fail otherwise).
+procedure sub_coin(Constant?, Integer?, Stream(Holding)?, Constant, Stream(Holding)).
+sub_coin(Coin, Amt, [holding(C, N)|Rest], ok, [holding(C?, N1?)|Rest?]) :-
+    Coin? =?= C?, N? >= Amt? | N1 := N? - Amt?.
+sub_coin(Coin, Amt, [holding(C, N)|Rest], fail, [holding(C?, N?)|Rest?]) :-
+    Coin? =?= C?, N? < Amt? | true.
+sub_coin(Coin, Amt, [holding(C, N)|Rest], Status?, [holding(C?, N?)|Rest1?]) :-
+    otherwise |
+    sub_coin(Coin?, Amt?, Rest?, Status, Rest1).
+sub_coin(_, _, [], fail, []).
+
+%% Emit one balance_report(Self, Coin, Count) per held position.
+procedure emit_balances(Constant?, Stream(Holding)?, OutputsList?, OutputsList).
+emit_balances(Self, [holding(C, N)|Rest], Outs, Outs2?) :-
+    ground(Self?) |
+    lookup_send('_user', msg(agent, '_user', balance_report(Self?, C?, N?)), Outs?, Outs1),
+    emit_balances(Self?, Rest?, Outs1?, Outs2).
+emit_balances(_, [], Outs, Outs?).
+
+%% Publish my holdings to every friend (so their wallet shows my coins).
+%% '_user'/'_net' outputs pass through untouched; any other key is a friend.
+procedure publish_balances(Constant?, Stream(Holding)?, OutputsList?, OutputsList).
+publish_balances(Self, Holdings, [output('_user', S?)|Rest], [output('_user', S)|Rest1?]) :-
+    ground(Self?), ground(Holdings?) |
+    publish_balances(Self?, Holdings?, Rest?, Rest1).
+publish_balances(Self, Holdings, [output('_net', S?)|Rest], [output('_net', S)|Rest1?]) :-
+    ground(Self?), ground(Holdings?) |
+    publish_balances(Self?, Holdings?, Rest?, Rest1).
+publish_balances(Self, Holdings,
+    [output(K, [msg(Self?, K?, balances(Holdings?))|S1?])|Rest],
+    [output(K?, S1)|Rest1?]) :-
+    ground(Self?), ground(Holdings?), ground(K?), otherwise |
+    publish_balances(Self?, Holdings?, Rest?, Rest1).
+publish_balances(_, _, [], []).
+
+%% After a holdings change: report balances to the user, publish to friends,
+%% then continue.
+procedure after_change(Constant?, Stream(Holding)?, Stream(X)?, Stream(X)?, OutputsList?).
+after_change(Id, Holdings, UserIn, NetIn, Outs) :-
+    ground(Id?), ground(Holdings?) |
+    emit_balances(Id?, Holdings?, Outs?, Outs1),
+    publish_balances(Id?, Holdings?, Outs1?, Outs2),
+    agent(Id?, UserIn?, NetIn?, Outs2?, Holdings?).
+
+%% Pay: hand Amt of Coin to Friend over the friend channel; if not enough held,
+%% just re-report (no transfer).
+procedure do_pay(Constant?, Constant?, Constant?, Constant?, Integer?, Stream(Holding)?, Stream(X)?, Stream(X)?, OutputsList?).
+do_pay(ok, Id, Friend, Coin, Amt, Holdings, UserIn, NetIn, Outs) :-
+    ground(Id?), ground(Friend?), ground(Coin?), integer(Amt?) |
+    lookup_send(Friend?, msg(Id?, Friend?, coins(Coin?, Amt?)), Outs?, Outs1),
+    after_change(Id?, Holdings?, UserIn?, NetIn?, Outs1?).
+do_pay(fail, Id, _, _, _, Holdings, UserIn, NetIn, Outs) :-
+    ground(Id?) |
+    after_change(Id?, Holdings?, UserIn?, NetIn?, Outs?).
+
+%% --- Redeem helpers ---
+%% Initiator returned x = Amt of Friend's coins (already subtracted); ask the
+%% issuer to fill.
+procedure do_redeem(Constant?, Constant?, Constant?, Integer?, Stream(Holding)?, Stream(X)?, Stream(X)?, OutputsList?).
+do_redeem(ok, Id, Friend, Amount, Holdings, UserIn, NetIn, Outs) :-
+    ground(Id?), ground(Friend?), integer(Amount?) |
+    lookup_send(Friend?, msg(Id?, Friend?, redeem_coins(Id?, Amount?)), Outs?, Outs1),
+    after_change(Id?, Holdings?, UserIn?, NetIn?, Outs1?).
+do_redeem(fail, Id, Friend, _, Holdings, UserIn, NetIn, Outs) :-
+    ground(Id?), ground(Friend?) |
+    lookup_send('_user', msg(agent, '_user', swap_failed(Friend?)), Outs?, Outs1),
+    after_change(Id?, Holdings?, UserIn?, NetIn?, Outs1?).
+
+%% Issuer fills: send GaveBack of the returner's coins back to them.
+procedure do_redeem_back(Constant?, Constant?, Integer?, Stream(Holding)?, Stream(X)?, Stream(X)?, OutputsList?).
+do_redeem_back(Id, Returner, GaveBack, Holdings, UserIn, NetIn, Outs) :-
+    ground(Id?), ground(Returner?), integer(GaveBack?) |
+    lookup_send(Returner?, msg(Id?, Returner?, coins(Returner?, GaveBack?)), Outs?, Outs1),
+    after_change(Id?, Holdings?, UserIn?, NetIn?, Outs1?).
+
+%% --- Swap helpers ---
+
+%% Bind a swap response writer.
+procedure bind_swap_decline(SwapResponse).
+bind_swap_decline(swap_decline).
+
+%% Watch the proposer's swap-response writer; inject the settlement into UserIn.
+procedure inject_swap_result(SwapResponse?, Constant?, Constant?, Integer?, Constant?, Integer?, Stream(X)?, Stream(X)).
+inject_swap_result(swap_accept, From, WC, WA, _, _, Ys,
+    [swap_accepted(From?, WC?, WA?)|Ys?]) :-
+    ground(From?), ground(WC?), integer(WA?) | true.
+inject_swap_result(swap_decline, From, _, _, GC, GA, Ys,
+    [swap_declined(From?, GC?, GA?)|Ys?]) :-
+    ground(From?), ground(GC?), integer(GA?) | true.
+inject_swap_result(R, From, WC, WA, GC, GA, [Y|Ys], [Y?|Ys1?]) :-
+    inject_swap_result(R?, From?, WC?, WA?, GC?, GA?, Ys?, Ys1).
+
+%% Proposer side: I gave GiveCoin already (subtracted); offer the swap to Friend.
+procedure do_propose_swap(Constant?, Constant?, Constant?, Constant?, Integer?, Constant?, Integer?, Stream(Holding)?, Stream(X)?, Stream(X)?, OutputsList?).
+do_propose_swap(ok, Id, Friend, GiveCoin, GiveAmt, WantCoin, WantAmt, Holdings, UserIn, NetIn, Outs) :-
+    ground(Id?), ground(Friend?), ground(GiveCoin?), integer(GiveAmt?), ground(WantCoin?), integer(WantAmt?) |
+    lookup_send(Friend?,
+        msg(Id?, Friend?, swap_propose(GiveCoin?, GiveAmt?, WantCoin?, WantAmt?, SwapResp)),
+        Outs?, Outs1),
+    inject_swap_result(SwapResp?, Friend?, WantCoin?, WantAmt?, GiveCoin?, GiveAmt?, UserIn?, UserIn1),
+    after_change(Id?, Holdings?, UserIn1?, NetIn?, Outs1?).
+do_propose_swap(fail, Id, Friend, _, _, _, _, Holdings, UserIn, NetIn, Outs) :-
+    ground(Id?), ground(Friend?) |
+    lookup_send('_user', msg(agent, '_user', swap_failed(Friend?)), Outs?, Outs1),
+    after_change(Id?, Holdings?, UserIn?, NetIn?, Outs1?).
+
+%% Responder side: I gave WantCoin (subtracted, Status); on ok also take GiveCoin
+%% and accept; otherwise decline.
+procedure do_accept_swap(Constant?, Constant?, Constant?, Constant?, Integer?, Stream(Holding)?, SwapResponse, Stream(X)?, Stream(X)?, OutputsList?).
+do_accept_swap(ok, Id, From, GiveCoin, GiveAmt, Holdings, swap_accept, UserIn, NetIn, Outs) :-
+    ground(Id?), ground(From?), ground(GiveCoin?), integer(GiveAmt?) |
+    add_coin(GiveCoin?, GiveAmt?, Holdings?, Holdings1),
+    lookup_send('_user', msg(agent, '_user', swap_done(From?)), Outs?, Outs1),
+    after_change(Id?, Holdings1?, UserIn?, NetIn?, Outs1?).
+do_accept_swap(fail, Id, From, _, _, Holdings, swap_decline, UserIn, NetIn, Outs) :-
+    ground(Id?), ground(From?) |
+    lookup_send('_user', msg(agent, '_user', swap_failed(From?)), Outs?, Outs1),
+    after_change(Id?, Holdings?, UserIn?, NetIn?, Outs1?).
+
+%% =============================================================================
+%% AGENT/5
+%% =============================================================================
+
+procedure agent(Constant?, Stream(X)?, Stream(X)?, OutputsList?, Stream(Holding)?).
+
+%% --- Coin transactions ---
+
+%% Mint K of my own coins.
+agent(Id, [msg('_user', Id1, mint(K))|UserIn], NetIn, Outs, Holdings) :-
+    Id? =?= Id1?, integer(K?) |
+    add_coin(Id?, K?, Holdings?, Holdings1),
+    after_change(Id?, Holdings1?, UserIn?, NetIn?, Outs?).
+
+%% Report current balances on demand.
+agent(Id, [msg('_user', Id1, balance)|UserIn], NetIn, Outs, Holdings) :-
+    Id? =?= Id1?, ground(Holdings?) |
+    emit_balances(Id?, Holdings?, Outs?, Outs1),
+    agent(Id?, UserIn?, NetIn?, Outs1?, Holdings?).
+
+%% Pay Amt of Coin to a friend.
+agent(Id, [msg('_user', Id1, pay(Friend, Coin, Amt))|UserIn], NetIn, Outs, Holdings) :-
+    Id? =?= Id1?, ground(Friend?), ground(Coin?), integer(Amt?) |
+    sub_coin(Coin?, Amt?, Holdings?, Status, Holdings1),
+    do_pay(Status?, Id?, Friend?, Coin?, Amt?, Holdings1?, UserIn?, NetIn?, Outs?).
+
+%% Redeem: return Amount of a friend's coins to them; the issuer fills back.
+agent(Id, [msg('_user', Id1, redeem(Friend, Amount))|UserIn], NetIn, Outs, Holdings) :-
+    Id? =?= Id1?, ground(Friend?), integer(Amount?) |
+    sub_coin(Friend?, Amount?, Holdings?, Status, Holdings1),
+    do_redeem(Status?, Id?, Friend?, Amount?, Holdings1?, UserIn?, NetIn?, Outs?).
+
+%% Propose a swap: remove the give-coins, offer the swap to the friend.
+agent(Id, [msg('_user', Id1, propose_swap(Friend, GiveCoin, GiveAmt, WantCoin, WantAmt))|UserIn], NetIn, Outs, Holdings) :-
+    Id? =?= Id1?, ground(Friend?), ground(GiveCoin?), integer(GiveAmt?), ground(WantCoin?), integer(WantAmt?) |
+    sub_coin(GiveCoin?, GiveAmt?, Holdings?, Status, Holdings1),
+    do_propose_swap(Status?, Id?, Friend?, GiveCoin?, GiveAmt?, WantCoin?, WantAmt?, Holdings1?, UserIn?, NetIn?, Outs?).
+
+%% Accept a swap a friend proposed: give the want-coins, take the give-coins.
+agent(Id, [msg('_user', Id1, accept_swap(From, swap_pending(SwapResp?, GiveCoin, GiveAmt, WantCoin, WantAmt)))|UserIn], NetIn, Outs, Holdings) :-
+    Id? =?= Id1?, ground(From?), ground(GiveCoin?), integer(GiveAmt?), ground(WantCoin?), integer(WantAmt?) |
+    sub_coin(WantCoin?, WantAmt?, Holdings?, Status, Holdings1),
+    do_accept_swap(Status?, Id?, From?, GiveCoin?, GiveAmt?, Holdings1?, SwapResp, UserIn?, NetIn?, Outs?).
+
+%% Decline a swap a friend proposed.
+agent(Id, [msg('_user', Id1, decline_swap(From, swap_pending(SwapResp?, _, _, _, _)))|UserIn], NetIn, Outs, Holdings) :-
+    Id? =?= Id1?, ground(From?) |
+    bind_swap_decline(SwapResp),
+    lookup_send('_user', msg(agent, '_user', swap_failed(From?)), Outs?, Outs1),
+    agent(Id?, UserIn?, NetIn?, Outs1?, Holdings?).
+
+%% Proposer: my swap was accepted — take the want-coins.
+agent(Id, [swap_accepted(From, WantCoin, WantAmt)|UserIn], NetIn, Outs, Holdings) :-
+    ground(Id?), ground(From?), ground(WantCoin?), integer(WantAmt?) |
+    add_coin(WantCoin?, WantAmt?, Holdings?, Holdings1),
+    lookup_send('_user', msg(agent, '_user', swap_done(From?)), Outs?, Outs1),
+    after_change(Id?, Holdings1?, UserIn?, NetIn?, Outs1?).
+
+%% Proposer: my swap was declined — refund the give-coins.
+agent(Id, [swap_declined(From, GiveCoin, GiveAmt)|UserIn], NetIn, Outs, Holdings) :-
+    ground(Id?), ground(From?), ground(GiveCoin?), integer(GiveAmt?) |
+    add_coin(GiveCoin?, GiveAmt?, Holdings?, Holdings1),
+    lookup_send('_user', msg(agent, '_user', swap_failed(From?)), Outs?, Outs1),
+    after_change(Id?, Holdings1?, UserIn?, NetIn?, Outs1?).
+
+%% --- Social: user messages ---
+
+agent(Id, [msg('_user', Id1, connect(Target))|UserIn], NetIn, Outs, Holdings) :-
+    Id? =?= Id1?, ground(Target?) |
+    lookup_send('_net', msg(Target?, intro(Id?, Resp)), Outs?, Outs1),
+    inject_msg(Resp?, Target?, Id?, UserIn?, UserIn1),
+    agent(Id?, UserIn1?, NetIn?, Outs1?, Holdings?).
+
+agent(Id, [msg('_user', Id1, decision(Dec, From, response(Resp?)))|UserIn], NetIn, Outs, Holdings) :-
+    Id? =?= Id1? |
+    bind_response(Dec?, From?, Resp, Outs?, Outs1, NetIn?, NetIn1),
+    agent(Id?, UserIn?, NetIn1?, Outs1?, Holdings?).
+
+agent(Id, [msg('_user', Id1, send(Target, Text))|UserIn], NetIn, Outs, Holdings) :-
+    Id? =?= Id1?, ground(Target?) |
+    lookup_send(Target?, msg(Id?, Target?, text(Text?)), Outs?, Outs1),
+    agent(Id?, UserIn?, NetIn?, Outs1?, Holdings?).
+
+agent(Id, [msg(From, Id1, response(Resp))|UserIn], NetIn, Outs, Holdings) :-
+    Id? =?= Id1? |
+    handle_response(Resp?, From?, Outs?, Outs1, NetIn?, NetIn1),
+    agent(Id?, UserIn?, NetIn1?, Outs1?, Holdings?).
+
+%% User catch-all (drop unrecognised user message).
+agent(Id, [_|UserIn], NetIn, Outs, Holdings) :-
+    ground(Id?), otherwise |
+    agent(Id?, UserIn?, NetIn?, Outs?, Holdings?).
+
+%% --- Social: network messages ---
+
+agent(Id, UserIn, [msg(Id1, intro(From, Resp?))|NetIn], Outs, Holdings) :-
+    Id? =?= Id1? |
+    lookup_send('_user', msg(agent, '_user', befriend(From?, Resp)), Outs?, Outs1),
+    agent(Id?, UserIn?, NetIn?, Outs1?, Holdings?).
+
+agent(Id, UserIn, [msg(From, Id1, response(Resp))|NetIn], Outs, Holdings) :-
+    Id? =?= Id1? |
+    handle_response(Resp?, From?, Outs?, Outs1, NetIn?, NetIn1),
+    agent(Id?, UserIn?, NetIn1?, Outs1?, Holdings?).
+
+agent(Id, UserIn, [msg(From, Id1, text(Text))|NetIn], Outs, Holdings) :-
+    Id? =?= Id1? |
+    lookup_send('_user', msg(agent, '_user', received(From?, Text?)), Outs?, Outs1),
+    agent(Id?, UserIn?, NetIn?, Outs1?, Holdings?).
+
+%% A friend pays me: add the coins, re-report.
+agent(Id, UserIn, [msg(_, Id1, coins(Coin, Amt))|NetIn], Outs, Holdings) :-
+    Id? =?= Id1?, ground(Coin?), integer(Amt?) |
+    add_coin(Coin?, Amt?, Holdings?, Holdings1),
+    after_change(Id?, Holdings1?, UserIn?, NetIn?, Outs?).
+
+%% A friend redeems my coins: take back my own (x), fill them with up to Amount
+%% of the returner's coins I hold (y).
+agent(Id, UserIn, [msg(_, Id1, redeem_coins(Returner, Amount))|NetIn], Outs, Holdings) :-
+    Id? =?= Id1?, ground(Returner?), integer(Amount?) |
+    add_coin(Id?, Amount?, Holdings?, Holdings1),
+    take_up_to(Returner?, Amount?, Holdings1?, GaveBack, Holdings2),
+    do_redeem_back(Id?, Returner?, GaveBack?, Holdings2?, UserIn?, NetIn?, Outs?).
+
+%% A friend publishes their holdings: surface them as that friend's balances.
+agent(Id, UserIn, [msg(From, Id1, balances(FH))|NetIn], Outs, Holdings) :-
+    Id? =?= Id1?, ground(From?), ground(FH?) |
+    emit_balances(From?, FH?, Outs?, Outs1),
+    agent(Id?, UserIn?, NetIn?, Outs1?, Holdings?).
+
+%% A friend proposes a swap: surface it as an inbox offer (forwarding the writer).
+agent(Id, UserIn, [msg(From, Id1, swap_propose(GiveCoin, GiveAmt, WantCoin, WantAmt, SwapResp?))|NetIn], Outs, Holdings) :-
+    Id? =?= Id1?, ground(From?), ground(GiveCoin?), integer(GiveAmt?), ground(WantCoin?), integer(WantAmt?) |
+    lookup_send('_user',
+        msg(agent, '_user', swap_offer(From?, GiveCoin?, GiveAmt?, WantCoin?, WantAmt?, SwapResp)),
+        Outs?, Outs1),
+    agent(Id?, UserIn?, NetIn?, Outs1?, Holdings?).
+
+%% Network catch-all (drop unrecognised network message).
+agent(Id, UserIn, [_|NetIn], Outs, Holdings) :-
+    ground(Id?), otherwise |
+    agent(Id?, UserIn?, NetIn?, Outs?, Holdings?).
+
+%% --- Termination ---
+
+agent(_, [], _, Outs, _) :- close_outputs(Outs?).
+agent(_, _, [], Outs, _) :- close_outputs(Outs?).

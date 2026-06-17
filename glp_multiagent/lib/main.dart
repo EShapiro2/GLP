@@ -13,6 +13,7 @@ import 'package:glp_runtime/multiagent/repl_play_runner.dart';
 
 import 'isolate_protocol.dart';
 import 'mad_router.dart';
+import 'glp_sources.dart';
 import 'manifests/grassroots.dart';
 import 'manifests/social.dart';
 import 'ui_runtime/agent_surface.dart';
@@ -68,17 +69,6 @@ String _resolveGlpDir() {
 }
 
 final _defaultGlpDir = _resolveGlpDir();
-
-/// Resolve the coins program directory (the live coins-among-friends scenario).
-String _resolveCoinsDir() {
-  const rel = '../programs/book/coins';
-  if (Directory(rel).existsSync()) return Directory(rel).absolute.path;
-  const fallback = '/Users/udi/Grassroots/GLP/programs/book/coins';
-  if (Directory(fallback).existsSync()) return fallback;
-  return rel;
-}
-
-final _coinsDir = _resolveCoinsDir();
 
 /// Resolve absolute path to programs/self.glp.
 String _resolveRootSelfGlpPath() {
@@ -485,13 +475,16 @@ class _CoordinatorScreenState extends State<CoordinatorScreen> {
     // ONE world: the actors cold-call Bob and message him once connected, so
     // both views populate — GSG renders friends, GrassApp renders chats — from
     // the same notify stream. Switching apps only swaps the view, never the run.
+    // Resolve the GLP source tree — repo on desktop, bundled assets copied into
+    // Documents on iOS (see glp_sources.dart).
+    final glp = await resolveGlpPaths();
     const scenarioFiles = [
       'self.glp',
       'coins_agent.glp',
       'coins_mediator.glp',
       'play_coins_boot.glp',
     ];
-    final paths = [for (final f in scenarioFiles) '$_coinsDir/$f'];
+    final paths = [for (final f in scenarioFiles) '${glp.coinsDir}/$f'];
     final sources = <String>[];
     for (final p in paths) {
       final file = File(p);
@@ -517,7 +510,7 @@ class _CoordinatorScreenState extends State<CoordinatorScreen> {
       agentId: 'Bob',
       glpSources: sources,
       glpSourcePaths: paths,
-      rootSelfGlpPath: _rootSelfGlpPath,
+      rootSelfGlpPath: glp.rootSelfGlp,
       friends: const ['alice', 'charlie'],
       replyPort: _replyPort.sendPort,
       // Single agent in the isolate: no inter-isolate routing race, so start now.
@@ -657,6 +650,11 @@ class _CoordinatorScreenState extends State<CoordinatorScreen> {
     final surface = (bob != null && bob.ui != null)
         ? AgentSurface(agentId: bob.agentId, runtime: bob.ui!)
         : const _Booting();
+    // On a real phone (iOS) the device is the frame: fill the screen and let the
+    // OS draw the status bar. On desktop, draw the simulated phone bezel.
+    if (Platform.isIOS) {
+      return Material(color: Colors.white, child: surface);
+    }
     return Scaffold(
       backgroundColor: const Color(0xFF2B2B33),
       body: Center(child: _PhoneFrame(child: surface)),
@@ -1031,19 +1029,21 @@ class _PhoneFrame extends StatelessWidget {
   Widget _statusBar() => Container(
         height: 28,
         color: Colors.green,
-        padding: const EdgeInsets.symmetric(horizontal: 16),
-        child: Row(
+        padding: const EdgeInsets.symmetric(horizontal: 18),
+        child: const Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: const [
-            Text('grassroots',
+          children: [
+            Text('9:41',
                 style: TextStyle(
                     color: Colors.white,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600)),
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700)),
             Row(children: [
+              Icon(Icons.signal_cellular_alt, color: Colors.white, size: 14),
+              SizedBox(width: 5),
               Icon(Icons.wifi, color: Colors.white, size: 14),
-              SizedBox(width: 6),
-              Icon(Icons.battery_full, color: Colors.white, size: 14),
+              SizedBox(width: 5),
+              Icon(Icons.battery_full, color: Colors.white, size: 16),
             ]),
           ],
         ),
