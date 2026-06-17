@@ -28,8 +28,13 @@ class AgentSurface extends StatefulWidget {
 }
 
 class _AgentSurfaceState extends State<AgentSurface> {
-  /// 0 = Friends (the outbox state), 1 = Requests (the inbox).
+  /// 0 = the state/outbox surface (Friends or Chats), 1 = the inbox (Requests).
   int _tab = 0;
+
+  /// When on a chat app, the open conversation peer (null = the chat list).
+  String? _openPeer;
+
+  final TextEditingController _msg = TextEditingController();
 
   Manifest get _m => widget.runtime.manifest;
   UiRuntime get _r => widget.runtime;
@@ -38,15 +43,21 @@ class _AgentSurfaceState extends State<AgentSurface> {
 
   @override
   Widget build(BuildContext context) {
+    // Conversation drill-down (chat apps): a full screen with a back button.
+    if (_tab == 0 && _openPeer != null && _m.chat != null) {
+      return _conversation(_m.chat!, _openPeer!);
+    }
+
     final requests = _r.inbox.length;
-    final onFriends = _tab == 0;
+    final onState = _tab == 0;
+    final stateLabel = _m.stateTabLabel;
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
         backgroundColor: _accent,
         foregroundColor: Colors.white,
         elevation: 0,
-        title: Text(onFriends ? _m.title : 'Requests',
+        title: Text(onState ? _m.title : 'Requests',
             style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
         actions: [
           Padding(
@@ -63,8 +74,8 @@ class _AgentSurfaceState extends State<AgentSurface> {
           ),
         ],
       ),
-      body: onFriends ? _friendsScreen() : _requestsScreen(),
-      floatingActionButton: onFriends
+      body: onState ? _stateScreen() : _requestsScreen(),
+      floatingActionButton: onState
           ? FloatingActionButton(
               backgroundColor: _accent,
               foregroundColor: Colors.white,
@@ -77,10 +88,13 @@ class _AgentSurfaceState extends State<AgentSurface> {
         selectedIndex: _tab,
         onDestinationSelected: (i) => setState(() => _tab = i),
         destinations: [
-          const NavigationDestination(
-              icon: Icon(Icons.people_outline),
-              selectedIcon: Icon(Icons.people),
-              label: 'Friends'),
+          NavigationDestination(
+              icon: Icon(_m.chat != null
+                  ? Icons.chat_bubble_outline
+                  : Icons.people_outline),
+              selectedIcon:
+                  Icon(_m.chat != null ? Icons.chat_bubble : Icons.people),
+              label: stateLabel),
           NavigationDestination(
             icon: _badge(requests, const Icon(Icons.mail_outline)),
             selectedIcon: _badge(requests, const Icon(Icons.mail)),
@@ -94,9 +108,11 @@ class _AgentSurfaceState extends State<AgentSurface> {
   Widget _badge(int count, Widget child) =>
       Badge(isLabelVisible: count > 0, label: Text('$count'), child: child);
 
-  // === Friends screen — the state the outbox leaves =========================
+  // === State surface — the state the outbox leaves ==========================
 
-  Widget _friendsScreen() {
+  Widget _stateScreen() => _m.chat != null ? _chatList(_m.chat!) : _friendsList();
+
+  Widget _friendsList() {
     final children = <Widget>[];
     for (final v in _m.state) {
       switch (v.kind) {
@@ -114,19 +130,148 @@ class _AgentSurfaceState extends State<AgentSurface> {
             trailing: Text(val == null ? '—' : formatTerm(val)),
           ));
         case StateKind.thread:
-          final t = _r.store.threads[v.key] ?? const {};
-          for (final e in t.entries) {
-            children.add(ListTile(
-              title: Text(e.key),
-              subtitle: Text(e.value.map(formatTerm).join(', ')),
-            ));
-          }
+          break; // chat list handled by _chatList when chat is declared
       }
     }
     if (children.isEmpty) children.add(_empty('Nothing yet'));
     return ListView(
         padding: const EdgeInsets.symmetric(vertical: 4), children: children);
   }
+
+  // --- Chat list (conversations) ---
+  Widget _chatList(ChatView chat) {
+    final convs = _r.store.threads[chat.threadKey] ?? const {};
+    if (convs.isEmpty) return _empty('No chats yet');
+    final peers = convs.keys.toList();
+    return ListView(
+      padding: const EdgeInsets.symmetric(vertical: 2),
+      children: [
+        for (final p in peers)
+          ListTile(
+            leading: CircleAvatar(
+              backgroundColor: _accent.shade100,
+              child: Text(_initial(p),
+                  style: const TextStyle(
+                      color: Colors.black87, fontWeight: FontWeight.bold)),
+            ),
+            title: Text(_cap(p),
+                style: const TextStyle(fontWeight: FontWeight.w600)),
+            subtitle: Text(_lastText(convs[p]!),
+                maxLines: 1, overflow: TextOverflow.ellipsis),
+            onTap: () => setState(() => _openPeer = p),
+          ),
+      ],
+    );
+  }
+
+  // --- Open conversation: bubbles + input ---
+  Widget _conversation(ChatView chat, String peer) {
+    final msgs = _r.store.threads[chat.threadKey]?[peer] ?? const [];
+    return Scaffold(
+      backgroundColor: const Color(0xFFF3EFEA),
+      appBar: AppBar(
+        backgroundColor: _accent,
+        foregroundColor: Colors.white,
+        elevation: 0,
+        leading: BackButton(onPressed: () => setState(() => _openPeer = null)),
+        titleSpacing: 0,
+        title: Text(_cap(peer),
+            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+      ),
+      body: Column(
+        children: [
+          Expanded(
+            child: ListView(
+              padding: const EdgeInsets.all(10),
+              children: msgs.map(_bubble).toList(),
+            ),
+          ),
+          _inputBar(chat, peer),
+        ],
+      ),
+    );
+  }
+
+  Widget _bubble(GTerm m) {
+    // Stored as out(text[,tick]) / in(text).
+    final s = m is GStruct ? m : GStruct('in', [m]);
+    final outgoing = s.functor == 'out';
+    final text = s.args.isNotEmpty ? formatTerm(s.args[0]) : '';
+    final tick = outgoing && s.args.length > 1 ? formatTerm(s.args[1]) : null;
+    return Align(
+      alignment: outgoing ? Alignment.centerRight : Alignment.centerLeft,
+      child: Container(
+        margin: const EdgeInsets.symmetric(vertical: 3),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        constraints: const BoxConstraints(maxWidth: 250),
+        decoration: BoxDecoration(
+          color: outgoing ? const Color(0xFFEAF3DE) : Colors.white,
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            Flexible(child: Text(text, style: const TextStyle(fontSize: 14))),
+            if (tick != null) ...[
+              const SizedBox(width: 6),
+              Icon(
+                tick == 'delivered' ? Icons.done_all : Icons.done,
+                size: 15,
+                color: tick == 'delivered' ? Colors.blue : Colors.grey,
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _inputBar(ChatView chat, String peer) {
+    void send() {
+      final t = _msg.text.trim();
+      if (t.isEmpty) return;
+      _msg.clear();
+      _r.sendChat(chat, peer, t);
+    }
+
+    return Container(
+      padding: const EdgeInsets.fromLTRB(8, 6, 8, 8),
+      color: Colors.white,
+      child: Row(
+        children: [
+          const Icon(Icons.add, color: Colors.grey),
+          const SizedBox(width: 6),
+          Expanded(
+            child: TextField(
+              controller: _msg,
+              onSubmitted: (_) => send(),
+              decoration: InputDecoration(
+                hintText: 'Message',
+                isDense: true,
+                contentPadding:
+                    const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(20),
+                    borderSide: BorderSide(color: Colors.grey.shade300)),
+              ),
+            ),
+          ),
+          IconButton(
+              onPressed: send, icon: const Icon(Icons.send, color: _accent)),
+        ],
+      ),
+    );
+  }
+
+  String _lastText(List<GTerm> msgs) {
+    if (msgs.isEmpty) return '';
+    final m = msgs.last;
+    final s = m is GStruct ? m : GStruct('in', [m]);
+    return s.args.isNotEmpty ? formatTerm(s.args[0]) : '';
+  }
+
+  String _cap(String s) => s.isEmpty ? s : s[0].toUpperCase() + s.substring(1);
 
   Widget _friendTile(String name) {
     final display =

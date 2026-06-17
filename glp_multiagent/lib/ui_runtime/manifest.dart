@@ -119,6 +119,21 @@ class ExtendThread extends Effect {
   const ExtendThread(this.thread, this.keyField, this.valueField);
 }
 
+/// Append a directional chat message to the conversation [thread] keyed by the
+/// peer in [peerField], text in [textField]. [outgoing] marks the person's own
+/// message (right bubble) vs a received one (left bubble); [tickField] optionally
+/// names a delivery-status field (e.g. `sent`/`delivered`) for the tick mark.
+/// This is the messaging realisation of §7.4's "extends a conversation".
+class PushChat extends Effect {
+  final String thread;
+  final String peerField;
+  final String textField;
+  final bool outgoing;
+  final String? tickField;
+  const PushChat(this.thread, this.peerField, this.textField,
+      {this.outgoing = false, this.tickField});
+}
+
 /// An activity rule: one all-ground `UserNotify` that lands in its target
 /// surface (paper §7.4). [effect] mutates the rendered state — `connected` adds
 /// a friend, `unfriended` removes one, `received` extends a conversation. There
@@ -134,6 +149,18 @@ class ActivityDesc {
     required this.args,
     this.effect,
   });
+}
+
+/// Declares that a thread store key is a set of conversations to render as a
+/// chat list + drill-down conversation (the messaging surface). [sendCtor] is
+/// the outbox command that sends a message; the open conversation supplies its
+/// peer, the input its text — so the input builds `sendCtor(peer, text)`.
+class ChatView {
+  final String threadKey;
+  final String label;
+  final String sendCtor;
+  const ChatView(
+      {required this.threadKey, required this.label, required this.sendCtor});
 }
 
 /// Display kind for a declared piece of activity state.
@@ -156,12 +183,24 @@ class Manifest {
   final List<InboxDesc> inbox;
   final List<ActivityDesc> activity;
   final List<StateView> state;
+
+  /// Optional messaging surface. When set, the state screen is a chat list and
+  /// tapping a conversation opens it (the GrassApp surface). When null, the
+  /// state screen is a plain list (the GSG Friends surface).
+  final ChatView? chat;
+
+  /// Label for the state/outbox screen's bottom-nav tab (e.g. 'Friends',
+  /// 'Chats'). Defaults to 'Friends'.
+  final String stateTabLabel;
+
   const Manifest({
     required this.title,
     required this.commands,
     required this.inbox,
     required this.activity,
     this.state = const [],
+    this.chat,
+    this.stateTabLabel = 'Friends',
   });
 
   /// The inbox descriptor matching constructor [ctor] of arity [arity], if any.

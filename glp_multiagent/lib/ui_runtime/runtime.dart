@@ -138,8 +138,36 @@ class UiRuntime {
           final t = store.threads.putIfAbsent(thread, () => <String, List<GTerm>>{});
           final k = formatTerm(fields[keyField]!);
           t.putIfAbsent(k, () => <GTerm>[]).add(fields[valueField]!);
+        case PushChat(
+            :final thread,
+            :final peerField,
+            :final textField,
+            :final outgoing,
+            :final tickField
+          ):
+          final t =
+              store.threads.putIfAbsent(thread, () => <String, List<GTerm>>{});
+          final k = formatTerm(fields[peerField]!);
+          // Encode direction (and optional tick) in the stored term so the
+          // renderer can draw left/right bubbles with delivery marks.
+          final dir = outgoing ? 'out' : 'in';
+          final tick = tickField == null ? null : fields[tickField];
+          final msg = GStruct(dir, [
+            fields[textField]!,
+            if (tick != null) tick,
+          ]);
+          t.putIfAbsent(k, () => <GTerm>[]).add(msg);
       }
     }
+  }
+
+  /// Append the person's own outgoing message to a conversation immediately
+  /// (optimistic echo), then send the command. Used by the chat input.
+  void sendChat(ChatView chat, String peer, String text) {
+    final t = store.threads.putIfAbsent(chat.threadKey, () => <String, List<GTerm>>{});
+    t.putIfAbsent(peer, () => <GTerm>[]).add(GStruct('out', [GAtom(text), GAtom('sent')]));
+    onSend(formatTerm(GStruct(chat.sendCtor, [GAtom(peer), GAtom(text)])));
+    onChange?.call();
   }
 }
 
