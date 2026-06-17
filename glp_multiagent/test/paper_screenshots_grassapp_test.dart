@@ -37,20 +37,23 @@ Widget _phone(Widget surface) => Container(
           child: Column(children: [
             Container(
               height: 26,
-              color: Colors.orange,
-              padding: const EdgeInsets.symmetric(horizontal: 14),
+              color: Colors.green,
+              padding: const EdgeInsets.symmetric(horizontal: 16),
               child: const Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text('grassroots',
+                  Text('9:41',
                       style: TextStyle(
                           color: Colors.white,
-                          fontSize: 11,
-                          fontWeight: FontWeight.w600)),
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700)),
                   Row(children: [
+                    Icon(Icons.signal_cellular_alt,
+                        color: Colors.white, size: 13),
+                    SizedBox(width: 5),
                     Icon(Icons.wifi, color: Colors.white, size: 13),
                     SizedBox(width: 5),
-                    Icon(Icons.battery_full, color: Colors.white, size: 13),
+                    Icon(Icons.battery_full, color: Colors.white, size: 14),
                   ]),
                 ],
               ),
@@ -84,7 +87,7 @@ void main() {
 
     Future<void> pump() => tester.pumpWidget(MaterialApp(
           debugShowCheckedModeBanner: false,
-          theme: ThemeData(fontFamily: 'AppFont', useMaterial3: true),
+          theme: ThemeData(fontFamily: 'AppFont', useMaterial3: true, colorScheme: ColorScheme.fromSeed(seedColor: Colors.green)),
           home: Scaffold(
             backgroundColor: const Color(0xFF2B2B33),
             body: Center(
