@@ -466,4 +466,26 @@ Removed the `clauseVars` shortcut from `_dereferenceWithTracking`. Dereference n
 
 ### Family
 
-Same theme as **Issue 1** (localize put a writer address where a reader was needed — fixed) and **Issue 9** (latent N+1 reliance — open), and a sibling of the madGLP **receive/3 `_w`-dereference** bug (separate report): all are the post-migration confusion between a variable's heap address and its reader/writer role. Distinct site and fix from each — this one is a *wrong* lookup removed; receive/3 is a *missing* `_w` indirection to add; Issue 9 is the deeper cell-design root that would prevent the whole class.
+Same theme as **Issue 1** (localize put a writer address where a reader was needed — fixed), **Issue 9** (reader recovery by `+1` arithmetic — fixed via the allocation-time index), and a sibling of **Issue 13** (madGLP `receive/3 _w`-dereference — open): all are the post-migration confusion between a variable's heap address and its reader/writer role. Distinct site and fix from each — this one is a *wrong* lookup removed; receive/3 is a *missing* `_w` indirection to add; Issue 9 was reader recovery without a stored link.
+
+---
+
+## Issue 13: madGLP `receive/3` drops a nested reader pattern over a `_w` remote writer
+
+**Status**: Open — owned by the madGLP/IGLP session. Full report: `docs/madglp-w-writer-return-bug.md`; reproducer: `programs/tests/mad_w_probe.glp` + `glp_multiagent/test/mad_w_probe_test.dart`.
+**Discovered**: 2026-06-17
+**Affects**: Soundness — a writer that crosses isolates (serialized as `_w(p,i)`) cannot be bound after a round-trip, though the identical clauses work in one heap. Concretely: the cold-call return hop never delivers the decision, so befriending strands.
+
+### Summary
+
+A `_w`-backed reader is admissible in ordinary clause-head unification, survives reader→writer→reader forwarding through a list, and survives escrow across a suspension — but **fails only through the `receive/3` channel kernel**: matching a nested *reader* sub-pattern (`wrapped(Y?)`) against a channel message carrying a `_w` writer does not unify, and the clause falls through to `otherwise`. The probe (`mad_w_probe.glp`) isolates exactly this: three paths against the same `_w` match; the `receive/3` path falls to `otherwise`.
+
+This is the mediator's return hop `receive(msg('_user', Id, decision(Dec, From, response(Resp?))), UserCh?, UserCh1)` — nested reader `response(Resp?)` over a `_w`-backed message — so the agent's `decision` clause never commits and the round-trip strands. Single-heap (local writer) completes; two-isolate (`_w`-backed) strands. Same clauses, only the transport differs.
+
+### Family / relation to the fixed issues
+
+Same root family as Issues 1, 9, 12 (heap-address vs reader/writer-role confusion from the pointer-architecture migration), but a **distinct** site and fix: not the `pairedReaderAddr` arithmetic (Issue 9, fixed) nor the guard-deref lookup (Issue 12, fixed) — it is a *missing* `_w` indirection inside `receive/3`'s unification of a nested reader sub-pattern. The Issue 9 index fix does not address it (the madGLP UI-mediator `dart test` cases for this remained failing with that fix in).
+
+### Fix
+
+Investigate `receive/3`'s dereferencing / cell-walk of a `_w` remote writer when binding sub-patterns; plain list head-matching of the same value succeeds, so the divergence is inside the `receive/3` kernel. The UI `.glp` is correct and must not change for this bug. Multi-isolate gate stays red until fixed.
