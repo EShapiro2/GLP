@@ -36,6 +36,10 @@ ast.Module expandParameterizedTypes(ast.Module module, {
     templates.putIfAbsent(entry.key, () => entry.value);
   }
 
+  // Enforce the bound that keeps the reachable type set finite, so expansion
+  // (and the parameterized-procedure instantiation closure) terminates.
+  _checkNoGrowingTypeRecursion(templates);
+
   // Note: don't return early if templates is empty — proc decls may reference
   // root scope templates (e.g., Stream(X)) and still need type param detection.
 
@@ -202,6 +206,120 @@ ast.Module expandParameterizedTypes(ast.Module module, {
     column: module.column,
   );
 }
+
+/// Enforce the finiteness bound on reachable types (typed-program spec / paper
+/// §Parameterised Types): "Where a parameterised type refers to itself, directly
+/// or transitively, no parameter may occur as a proper subterm of an argument."
+///
+/// `Stream(X) ::= [] ; [X | Stream(X)]` is fine — the self-reference's argument
+/// is the bare parameter `X`. `Bad(X) ::= leaf ; node(Bad(Box(X)))` is rejected
+/// — `X` is a proper subterm of `Box(X)`, so expansion would generate
+/// `Bad<Box<...Box<X>...>>` without bound. Detected statically here, at the
+/// type-parsing/expansion stage, before any expansion runs.
+void _checkNoGrowingTypeRecursion(Map<String, TypeDef> templates) {
+  // Direct template→template reference edges.
+  final refs = <String, Set<String>>{};
+  for (final t in templates.values) {
+    final s = <String>{};
+    for (final alt in t.alternatives) {
+      _collectTemplateRefNames(alt, templates, s);
+    }
+    refs[t.name] = s;
+  }
+
+  // Transitive reachability over the reference graph.
+  Set<String> reachableFrom(String start) {
+    final seen = <String>{};
+    final stack = [...?refs[start]];
+    while (stack.isNotEmpty) {
+      final n = stack.removeLast();
+      if (!seen.add(n)) continue;
+      stack.addAll(refs[n] ?? const <String>{});
+    }
+    return seen;
+  }
+  final reach = {for (final name in templates.keys) name: reachableFrom(name)};
+
+  // For each template T, every parameterised reference U(args) in T's body that
+  // can reach back to T (a reference on a cycle through T) must not carry a
+  // parameter of T as a proper subterm of an argument.
+  for (final t in templates.values) {
+    for (final alt in t.alternatives) {
+      _checkRefArgsOnCycle(alt, t, templates, reach);
+    }
+  }
+}
+
+/// Collect the names of templates referenced anywhere within [expr].
+void _collectTemplateRefNames(
+    TypeExpr expr, Map<String, TypeDef> templates, Set<String> out) {
+  if (expr is TypeRef) {
+    if (templates.containsKey(expr.name)) out.add(expr.name);
+    for (final a in expr.typeArgs) {
+      _collectTemplateRefNames(a, templates, out);
+    }
+    return;
+  }
+  for (final c in _typeExprChildren(expr)) {
+    _collectTemplateRefNames(c, templates, out);
+  }
+}
+
+/// Walk [expr]; for each parameterised reference `U(args)` on a cycle through
+/// [t], reject any argument carrying a parameter of [t] as a proper subterm.
+void _checkRefArgsOnCycle(TypeExpr expr, TypeDef t,
+    Map<String, TypeDef> templates, Map<String, Set<String>> reach) {
+  if (expr is TypeRef) {
+    if (expr.typeArgs.isNotEmpty && templates.containsKey(expr.name)) {
+      final u = expr.name;
+      final onCycle = u == t.name || (reach[u]?.contains(t.name) ?? false);
+      if (onCycle) {
+        for (final arg in expr.typeArgs) {
+          for (final p in t.typeParams) {
+            if (_paramOccursIn(p, arg) && !_isBareParam(arg, p)) {
+              throw Exception(
+                  'Type checking failed: parameterised type "${t.name}" refers '
+                  'to "$u" on a recursive cycle with parameter "$p" occurring as '
+                  'a proper subterm of argument "$arg"; this would make the set '
+                  'of reachable types infinite. In a recursive parameterised '
+                  'type, no parameter may occur as a proper subterm of an '
+                  'argument (typed-program: Parameterised Types).');
+            }
+          }
+        }
+      }
+    }
+    for (final a in expr.typeArgs) {
+      _checkRefArgsOnCycle(a, t, templates, reach);
+    }
+    return;
+  }
+  for (final c in _typeExprChildren(expr)) {
+    _checkRefArgsOnCycle(c, t, templates, reach);
+  }
+}
+
+/// Immediate TypeExpr children of a non-TypeRef node.
+Iterable<TypeExpr> _typeExprChildren(TypeExpr expr) {
+  if (expr is StructAlt) return expr.args;
+  if (expr is ListConsAlt) return [expr.head, expr.tail];
+  if (expr is DiffListAlt) return [expr.content, expr.hole];
+  return const <TypeExpr>[];
+}
+
+/// Does the type parameter named [p] occur anywhere within [expr]?
+bool _paramOccursIn(String p, TypeExpr expr) {
+  if (expr is TypeRef) {
+    if (expr.name == p && expr.typeArgs.isEmpty) return true;
+    return expr.typeArgs.any((a) => _paramOccursIn(p, a));
+  }
+  return _typeExprChildren(expr).any((c) => _paramOccursIn(p, c));
+}
+
+/// Is [arg] exactly the bare parameter named [p] (so [p] is not a *proper*
+/// subterm of it)?
+bool _isBareParam(TypeExpr arg, String p) =>
+    arg is TypeRef && arg.name == p && arg.typeArgs.isEmpty;
 
 /// Detect type parameters in a procedure declaration.
 /// A type parameter is a name that is not a known defined type and either:

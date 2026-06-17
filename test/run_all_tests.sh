@@ -1055,6 +1055,15 @@ NEGATIVE_FILES=(
     # type ProdMsg requires a writer; rejected only after the per-instantiation
     # check re-runs the clause under X := ProdMsg. Accepted before the fix.
     "$GLP_DIR/programs/tests/min_polarity_bug3.glp"
+
+    # --- Parameterized instantiation closure (closed under calls) ---
+    # inner's polarity clash is reachable only through go -> outer -> inner;
+    # caught only when per-instantiation checking is closed under calls.
+    "$GLP_DIR/programs/tests/min_polarity_closure.glp"
+
+    # --- Finiteness rule: recursive parameterized type, param as proper subterm ---
+    # Bad(X) ::= node(Bad(Box(X))) — rejected statically at the expansion stage.
+    "$GLP_DIR/programs/tests/growing_type_recursion.glp"
 )
 
 # Build REPL input with :clear between each negative file

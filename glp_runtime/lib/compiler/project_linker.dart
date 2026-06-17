@@ -437,30 +437,26 @@ void typeCheckProject(List<DiscoveredModule> modules) {
     }
   }
 
-  // Phase 2: per-instantiation defining-clause checking.
+  // Phase 2: per-instantiation defining-clause checking, closed under calls
+  // (calls inside an instantiated parameterized body induce further
+  // instantiations) to a fixpoint, with polymorphic recursion rejected. The
+  // focused env for each instantiation is the caller scope where it was inferred
+  // (it already holds the concrete types), with the procedure rebound to the
+  // monomorphic declaration the instantiation produces — built inside the helper.
+  final instResults = checkInstantiationsClosed(
+    collector,
+    (procKey) => _definingClausesForKey(modules, procKey),
+  );
   final instantiatedKeys = <String>{};
-  for (final inst in collector.all) {
-    instantiatedKeys.add(inst.procKey);
-    final clauses = _definingClausesForKey(modules, inst.procKey);
-    if (clauses == null) continue; // defined outside the project (e.g. root scope)
-
-    // Focused env: the caller scope where the instantiation was inferred (it
-    // already holds the concrete types), with the procedure rebound to the
-    // monomorphic declaration this instantiation produces.
-    final focusedEnv = TypeEnvironment(
-      inst.env.types,
-      {...inst.env.procedures, inst.monoDecl.key: inst.monoDecl},
-      paramProcDecls: inst.env.paramProcDecls,
-      typeTemplates: inst.env.typeTemplates,
-    );
-
-    final res = TypeChecker(focusedEnv).checkSingleProcedure(inst.monoDecl, clauses);
-    if (!res.isWellTyped) {
-      final errors =
-          res.errors.map((e) => '  ${e.message} at line ${e.line}').join('\n');
+  for (final ir in instResults) {
+    instantiatedKeys.add(ir.inst.procKey);
+    if (!ir.result.isWellTyped) {
+      final errors = ir.result.errors
+          .map((e) => '  ${e.message} at line ${e.line}')
+          .join('\n');
       throw Exception(
-          'Type checking failed for ${inst.procKey} at instantiation '
-          '${inst.monoDecl.argTypes.join(', ')}:\n$errors');
+          'Type checking failed for ${ir.inst.procKey} at instantiation '
+          '${ir.inst.monoDecl.argTypes.join(', ')}:\n$errors');
     }
   }
 

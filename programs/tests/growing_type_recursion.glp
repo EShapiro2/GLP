@@ -1,0 +1,30 @@
+%% growing_type_recursion.glp — regression guard for the finiteness rule.
+%%
+%% A parameterised type that refers to itself with a parameter occurring as a
+%% PROPER SUBTERM of an argument generates unboundedly many reachable types
+%% (Bad<Box<Box<...Box<Constant>...>>>), so expansion would not terminate. The
+%% typed-program rule forbids it:
+%%
+%%   "Where a parameterised type refers to itself, directly or transitively, no
+%%    parameter may occur as a proper subterm of an argument."
+%%
+%% This is rejected statically at the type-parsing/expansion stage — before any
+%% expansion runs — not discovered by growing instantiations.
+%%
+%% Contrast: Stream(X) ::= [] ; [X | Stream(X)] is fine — the self-reference's
+%% argument is the bare parameter X, not a proper subterm.
+%%
+%% Run (from /Users/udi/Grassroots/GLP/glp_runtime/):
+%%   printf 'load ../programs/tests/growing_type_recursion.glp\n:quit\n' | bin/glpc
+
+-mode(system).
+
+Box(X) ::= box(X).
+
+%% Bad: the self-reference Bad(Box(X)) carries X as a proper subterm of Box(X).
+Bad(X) ::= leaf ; node(Bad(Box(X))).
+
+%% A procedure declaration so the module is type-checked (the rule fires even
+%% though Bad is not used below — it is a property of the definition).
+procedure go(Constant?).
+go(x).

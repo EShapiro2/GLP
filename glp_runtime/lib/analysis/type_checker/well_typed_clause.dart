@@ -562,21 +562,22 @@ WellTypedResult _checkBodyAtom(
       final inferredDecl = _inferConcreteDecl(paramTemplate, atom, callerVarTypes, dfa, env);
       if (inferredDecl != null) {
         // Clause-template rule: record this instantiation so the parameterized
-        // procedure's defining clauses are re-checked against it (Phase 2) —
-        // this is what closes the polymorphic-polarity gap (Issue 14).
+        // procedure's defining clauses are re-checked against it (Phase 2 /
+        // instantiation closure). Then fall through to type the call site's own
+        // arguments against the inferred concrete declaration: the call site is
+        // itself a clause that must be well-typed (its variable-pair duality is
+        // checked against the concrete element type), and typing the arguments
+        // is also what lets closure infer instantiations through a parameterized
+        // call's output (the output variable receives its concrete type here).
         collector?.record(
             CollectedInstantiation(inferredDecl.key, inferredDecl, env, dfa));
+        procDecl = inferredDecl;
+      } else {
+        // Inference failed (e.g. caller uses monomorphic types instead of the
+        // parameterized form). Skip the body atom check — the proc's own clauses
+        // are checked via Phase 2 / the Case A wildcard fallback.
+        return (WellTypedResult.success({}), null);
       }
-      // Do NOT re-type the call site's own arguments against the inferred
-      // concrete declaration. The polarity obligation lives in the
-      // parameterized procedure's body and is discharged by the Phase 2
-      // re-check above; typing the caller's variables here instead would force
-      // the call site's own duality check (e.g. a friend-channel writer feeding
-      // a NetIn consumer) against the inferred element type and wrongly reject
-      // correct wiring. Skip the body atom check exactly as the inference-failure
-      // path does — the proc's clauses are checked via Phase 2 (or the Case A
-      // wildcard fallback).
-      return (WellTypedResult.success({}), null);
     } else {
       // No caller variable types available — can't infer type params.
       // Skip body atom check; Case A covers the proc's own clauses.

@@ -555,3 +555,29 @@ Whether a goal that suspends because its first-tried clauses block on one unboun
 ### Repro
 
 Full: `glp_multiagent/test/scenario_single_isolate_test.dart` (phase 2 — `befriend_intro` never appears), trace `/private/tmp/scen-log.txt`. Distinct from Issue 13 (single-isolate, local channel, non-wakeup — not a `receive/3` unification failure).
+
+---
+
+## Issue 16: CSSN v2 (`programs/social/network`) is type-incorrect — surfaced by correct parametric typing
+
+**Status**: Open — owned by a separate CSSN session. The type-system correctness work that surfaced it has landed; CSSN v2 is intentionally left failing (Udi: "ignore cssn, another conversation will fix it when the type system is correct"). **Section K (CSSN v2) of `run_all_tests.sh` and `cssn_v2_isolate_test.dart` are expected-failing until CSSN is retyped.**
+**Discovered**: 2026-06-17
+
+### Summary
+
+The parametric-typing closure work (extends Issue 14: closure of parameterized-procedure instantiations under calls; correct call-site argument typing; the finiteness rule on recursive parameterized types) made the checker actually check call-site duality against concrete instantiations. CSSN v2 then fails type-checking — correctly. It is the only project that regressed; `bonds`, `spm/v2` (CSSG), and `child_safe` all load clean.
+
+### Root cause (a real CSSN defect, previously hidden)
+
+`programs/social/network/self.glp` merges a friend-channel stream into NetIn (`merge(NetIn?, FIn?, NetIn1)` in `smaller_dispatch`/`await_canonical`). That stream is typed `Stream<FriendMsg>`, and `FriendMsg ::= msg(Constant, Constant, FriendContent) ; canonical` carries the `canonical` handshake constructor, which is **not** in `NetInMsg ::= msg(Constant, NetColdCall) ; msg(Constant, Constant, FriendContent)`. So `Stream<FriendMsg>` ⊄ `Stream<NetInMsg>`: `(AliceFromCarol, AliceFromCarol?) not dual … Stream<FriendMsg> is not a subtype of Stream<NetInMsg>`. `canonical` is stripped at runtime (`[canonical|FIn]`) but the type of the post-handshake stream still admits `canonical`.
+
+### Fix direction (CSSN-side)
+
+Make the stream merged into NetIn genuinely canonical-free, e.g. carry the `canonical` handshake on a separate signal/path rather than inside the friend-message stream, OR have `NetInMsg` accept `canonical` and the agent ignore it (watch NetIn coverage). This is CSSN structural design, not a type-checker change. **Do not weaken the type checker to re-admit it.**
+
+### What landed (the correct type system)
+
+- `analysis/type_checker/type_checker.dart` — `checkInstantiationsClosed`: per-instantiation clause checking closed under calls (fixpoint); `checkModule` runs it in single-file/REPL mode; project mode via `typeCheckProject`.
+- `analysis/type_checker/well_typed_clause.dart` — `_inferConcreteDecl` resolves a reader argument via its paired writer (base name); call-site arguments are typed against the inferred concrete declaration.
+- `analysis/type_checker/param_expansion.dart` — `_checkNoGrowingTypeRecursion`: the finiteness rule (no parameter as a proper subterm of an argument in a recursive parameterized type), enforced statically at the parsing/expansion stage.
+- Guards: `programs/tests/min_polarity_closure.glp` (closure under calls), `programs/tests/growing_type_recursion.glp` (finiteness rule) — both in `run_all_tests.sh` Section C.

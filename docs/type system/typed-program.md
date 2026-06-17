@@ -126,6 +126,8 @@ Type parameters are identifiers that may appear in place of type names within th
 
 Mode annotations within the template (e.g., `Out?` in `Channel`) are preserved during expansion.
 
+**Finiteness rule.** Where a parameterized type refers to itself, directly or transitively, no parameter may occur as a *proper subterm* of an argument. `Stream(X) ::= [] ; [X | Stream(X)]` is admissible — the self-reference's argument is the bare parameter `X`. `Bad(X) ::= leaf ; node(Bad(Box(X)))` is rejected — `X` occurs as a proper subterm of `Box(X)`, so the reachable types would grow without bound (`Bad(Box(Box(…)))`). This rule bounds the types reachable from a program, so expansion terminates. It is enforced statically, at the parsing/expansion stage, before any expansion runs.
+
 ### Instantiation
 
 An instantiation supplies a concrete type for each parameter:
@@ -149,7 +151,7 @@ procedure merge(Stream(X)?, Stream(X)?, Stream(X)).
 
 The parameter `X` is implicitly universally quantified. When the procedure is called, the type checker infers the instantiation from the call context by structural matching: each parameterized type in the declaration is matched against the corresponding concrete type at the call site, and each type parameter is bound to the concrete type that occupies its position. If different argument positions yield conflicting bindings for the same parameter, the type checker reports an error.
 
-A parameterized procedure declaration is a **clause template**. For each instantiation inferred from a call site, its clauses are checked by Well-Typed Clause (Definition 5.7) against the monomorphic declaration that instantiation produces. A clause may destructure a parameter: at an argument position whose type is a parameter, the clause is checked against the constructors the instantiation supplies, and an instantiation whose argument lacks a destructured constructor is rejected at that instantiation. Procedures that pass a parameter opaquely (`merge`, `send`) check identically at every instantiation; a procedure that destructures a parameter — e.g., a `lib/` router whose clause matches `user_output(...)` — requires this per-instantiation reading.
+A parameterized procedure declaration is a **clause template**. A call in a clause body to a parameterized procedure induces an instantiation of the callee: the caller's bindings make the call's argument types concrete, and matching them against the callee's declaration binds its parameters. The **instantiations** of a program form the least set containing the instantiation of every call in a monomorphic clause and **closed under this induction** — a call inside an instantiated parameterized body induces a further instantiation. Since the types reachable from a program are finite (Finiteness rule above), so is this set. For each instantiation in the set, the instantiated procedure's clauses are checked by Well-Typed Clause (Definition 5.7) against the monomorphic declaration that instantiation produces. A clause may destructure a parameter: at an argument position whose type is a parameter, the clause is checked against the constructors the instantiation supplies, and an instantiation whose argument lacks a destructured constructor is rejected at that instantiation. Procedures that pass a parameter opaquely (`merge`, `send`) check identically at every instantiation; a procedure that destructures a parameter — e.g., a `lib/` router whose clause matches `user_output(...)` — requires this per-instantiation reading.
 
 Multiple parameters are supported:
 
@@ -173,7 +175,7 @@ where `T<S₁,...,Sₖ>` is a fresh type name and `Aᵢ[Sⱼ/Xⱼ]` denotes simu
 
 1. **Collect templates.** Scan all type definitions. A definition whose name is followed by a parenthesized parameter list is a template; all others are monomorphic. Templates are recorded but not added to the type environment.
 
-2. **Collect instantiations.** Scan all type definitions, procedure declarations (including `imported` and `exported` declarations), and type definition bodies for parameterized type references `T(S₁, ..., Sₖ)`. Each distinct instantiation is recorded. A type definition body may reference a different parameterized type; such cross-references are collected here.
+2. **Collect instantiations.** Scan all type definitions, procedure declarations (including `imported` and `exported` declarations), and type definition bodies for parameterized type references `T(S₁, ..., Sₖ)`. Each distinct instantiation is recorded. A type definition body may reference a different parameterized type; such cross-references are collected here. Scan also every clause body for calls to a parameterized procedure; each call, with the enclosing clause's parameters bound, records an instantiation of the callee. An instantiated procedure's body may call further parameterized procedures, so repeat the clause-body scan over each new procedure instantiation until none is added; the types reachable from a program are finite (Finiteness rule), so this terminates.
 
 3. **Expand.** For each recorded instantiation, generate a fresh monomorphic type definition by substituting parameters and renaming. Recursive references within the template body are expanded to the same fresh name. Nested instantiations are expanded inside-out.
 

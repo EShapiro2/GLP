@@ -1,0 +1,53 @@
+%% min_polarity_closure.glp — regression guard for closure-under-calls.
+%%
+%% The polarity clash here is reachable ONLY through a chain of parameterised
+%% calls, so it is caught only when the per-instantiation check is closed under
+%% calls (the fixpoint), not by the single (base) level alone.
+%%
+%%   go/1            (monomorphic) calls outer(S?)        -> outer @ ProdMsg   (base level)
+%%   outer(Stream(X)?) passes X opaquely:   outer(S) :- inner(S?)
+%%                                          -> inner @ ProdMsg   (induced by a call
+%%                                             inside an instantiated body)
+%%   inner(Stream(X)?) DESTRUCTURES the element at reader polarity:
+%%                                          inner([befriend(From, Resp?)|...])
+%%
+%% At inner @ ProdMsg, ProdMsg's befriend slot 2 (Response) is a writer, but the
+%% clause matches Resp? (reader) — a polarity clash in inner's own head.
+%%
+%% Behaviour:
+%%   - WITHOUT closure (base level only): ACCEPTED.  inner @ ProdMsg is induced
+%%     only by outer's instantiated body, never by a monomorphic clause, so it is
+%%     never checked.
+%%   - WITH closure: REJECTED.  re-checking outer @ ProdMsg records inner @ ProdMsg,
+%%     which is enqueued and checked, surfacing the clash in inner's head.
+%%
+%% Run (from /Users/udi/Grassroots/GLP/glp_runtime/):
+%%   printf 'load ../programs/tests/min_polarity_closure.glp\n:quit\n' | bin/glpc
+
+-mode(system).
+
+Response ::= accept ; no.
+
+ProdMsg ::= befriend(Constant, Response).    %% slot 2 = writer
+
+%% Clean producer: emits the empty stream; its head is well-typed.
+%% Its declared output type Stream(ProdMsg) pins X := ProdMsg at go/1.
+procedure producer(Stream(ProdMsg)).
+producer([]).
+
+%% outer passes its element type opaquely to inner — no destructuring here,
+%% so outer @ ProdMsg is itself clean. The call inner(S?) induces inner @ ProdMsg.
+procedure outer(Stream(X)?).
+outer(S) :- inner(S?).
+
+%% inner destructures the element at reader polarity; the clash is visible only
+%% at inner @ ProdMsg, reachable only via outer.
+procedure inner(Stream(X)?).
+inner([befriend(From, Resp?)|Rest]) :- known(From?) | bind(Resp), inner(Rest?).
+inner([]).
+
+procedure bind(Response).
+bind(accept).
+
+procedure go(Stream(Response)).
+go([]) :- producer(S), outer(S?).

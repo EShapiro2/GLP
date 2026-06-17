@@ -736,25 +736,19 @@ TypeCheckResult checkModule(ast.Module module, {List<ast.Procedure>? transformed
         .add(c);
   }
 
-  // Phase 2: re-check each distinct call-site instantiation's defining clauses
-  // against the concrete monomorphic declaration it produces, in the scope it
-  // was inferred in (which already holds the concrete types).
+  // Phase 2: re-check each instantiation's defining clauses against the concrete
+  // monomorphic declaration it produces, closed under calls (calls inside an
+  // instantiated body induce further instantiations) to a fixpoint, rejecting
+  // polymorphic recursion. See checkInstantiationsClosed.
+  final instResults = checkInstantiationsClosed(
+    localCollector,
+    (procKey) => clausesByKey[procKey],
+  );
   final instantiatedKeys = <String>{};
-  for (final inst in localCollector.all) {
-    instantiatedKeys.add(inst.procKey);
-    final defining = clausesByKey[inst.procKey];
-    if (defining == null) continue; // defined outside this module (e.g. root scope)
-
-    final focusedEnv = TypeEnvironment(
-      inst.env.types,
-      {...inst.env.procedures, inst.monoDecl.key: inst.monoDecl},
-      paramProcDecls: inst.env.paramProcDecls,
-      typeTemplates: inst.env.typeTemplates,
-    );
-    final res =
-        TypeChecker(focusedEnv).checkSingleProcedure(inst.monoDecl, defining);
-    errors.addAll(res.errors);
-    warnings.addAll(res.warnings);
+  for (final ir in instResults) {
+    instantiatedKeys.add(ir.inst.procKey);
+    errors.addAll(ir.result.errors);
+    warnings.addAll(ir.result.warnings);
   }
 
   // Fallback: a parameterized procedure with no collected instantiation is
@@ -777,6 +771,78 @@ TypeCheckResult checkModule(ast.Module module, {List<ast.Procedure>? transformed
   }
 
   return TypeCheckResult(errors, warnings);
+}
+
+// =============================================================================
+// Per-instantiation checking, closed under calls (clause-template rule)
+// =============================================================================
+
+/// The check result for one parameterized-procedure instantiation.
+class InstantiationCheckResult {
+  final wtc.CollectedInstantiation inst;
+  final TypeCheckResult result;
+  InstantiationCheckResult(this.inst, this.result);
+}
+
+/// Close the parameterized-procedure instantiation set under calls and check
+/// each instantiation's defining clauses.
+///
+/// Per the typed-program spec (Parameterized Procedure Declarations): the
+/// instantiations of a program form the least set containing the instantiation
+/// of every call in a monomorphic clause and closed under induction — a call in
+/// an instantiated parameterized body induces a further instantiation. This
+/// re-checks each instantiation WITH a fresh collector, so calls in its
+/// instantiated body record their own instantiations, which are enqueued and
+/// checked until the set is closed (a fixpoint).
+///
+/// Termination: the types reachable from a program are finite (enforced at the
+/// type-parsing/expansion stage — a parameterised type referring to itself may
+/// not have a parameter as a proper subterm of an argument; see
+/// expandParameterizedTypes), so the instantiation set is finite. No growth
+/// guard is needed here.
+///
+/// [seed] holds the base instantiations collected over the monomorphic clauses.
+/// [definingClauses] returns the defining clauses for a "name/arity", or null if
+/// the procedure is defined outside the checked unit (e.g. the root scope), in
+/// which case it is not re-checked here. Returns the per-instantiation results
+/// in dequeue order.
+List<InstantiationCheckResult> checkInstantiationsClosed(
+  wtc.InstantiationCollector seed,
+  List<ast.Clause>? Function(String procKey) definingClauses,
+) {
+  final results = <InstantiationCheckResult>[];
+  final processed = <String>{}; // "procKey#signature"
+  final queue = <wtc.CollectedInstantiation>[...seed.all];
+
+  while (queue.isNotEmpty) {
+    final inst = queue.removeAt(0);
+    final sigKey = '${inst.procKey}#${inst.signature}';
+    if (!processed.add(sigKey)) continue;
+
+    final defining = definingClauses(inst.procKey);
+    if (defining == null) continue; // defined outside the checked unit
+
+    final focusedEnv = TypeEnvironment(
+      inst.env.types,
+      {...inst.env.procedures, inst.monoDecl.key: inst.monoDecl},
+      paramProcDecls: inst.env.paramProcDecls,
+      typeTemplates: inst.env.typeTemplates,
+    );
+
+    final sub = wtc.InstantiationCollector();
+    final res = TypeChecker(focusedEnv, collector: sub)
+        .checkSingleProcedure(inst.monoDecl, defining);
+    results.add(InstantiationCheckResult(inst, res));
+
+    // Enqueue the instantiations this body induces (recorded into [sub]).
+    for (final next in sub.all) {
+      if (!processed.contains('${next.procKey}#${next.signature}')) {
+        queue.add(next);
+      }
+    }
+  }
+
+  return results;
 }
 
 /// Parse and type-check GLP source code
