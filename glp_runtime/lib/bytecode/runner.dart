@@ -4134,7 +4134,7 @@ class BytecodeRunner {
       // clause-index map with a heap address and fired on any numeric
       // collision, silently swapping a guard argument for whatever clause var
       // shared that number — e.g. a reader for an unbound writer, making a
-      // patient guard fail instead of suspend (known-issues.md Issue 10).
+      // patient guard fail instead of suspend (known-issues.md Issue 12).
       // VarRefs never carry clause indices, so no such resolution is needed.
 
       if (t is VarRef) {
