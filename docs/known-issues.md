@@ -356,7 +356,7 @@ REPL path. Push is held until the combined tree is REPL-green.
 
 ## Issue 9: Latent reliance on the reader = writer+1 allocation convention
 
-**Status**: Mostly resolved; one residual reliance remains (verified against code 2026-06-17). Core-heap change to finish; needs Udi's approval.
+**Status**: Fixed (2026-06-17) — `pairedReaderAddr` now uses an allocation-time writer→reader index; no `+1` arithmetic remains. `run_all_tests.sh` 485/485 with the fix; `dart test` +372 with 5 pre-existing failures in the other session's madGLP UI-mediator WIP (unrelated).
 **Discovered**: 2026-06-10 (audit requested by Issue 1)
 **Affects**: Latent only — no active failure. Any change to allocation (interleaved or relocating allocation, GC compaction) would turn the residual into one.
 
@@ -374,9 +374,11 @@ Not necessity of the arithmetic — risk/benefit. Removing it requires a core ce
 
 Replaced the `return writerAddr + 1` with a `throw` and ran the full suite. Result: **65 failures** across core programs (merge, reverse, quicksort, fibonacci, inner product) and the CSSN plays — ordinary code routinely asks for the reader of a *bound* writer. (No `StateError` text surfaced: the engine catches the throw and turns it into silent goal failure, which is itself worth noting.) So the fallback is not dead and cannot be deleted; option 1 below ("delete if dead") is ruled out. Reverted to the `+1` fallback; suite green again.
 
-### Fix (only one real option remains)
+### Fix applied (2026-06-17)
 
-**Core cell-design change** — make a writer retain its reader address through binding (e.g. a reader field on the writer cell that survives the value overwrite), or thread the reader address through the ~8 `glp_engine.dart` callers and the `mad_context.dart` caller so `pairedReaderAddr` is never asked to recover a bound writer's reader. Either is a core-heap change needing explicit approval and its own baseline per `GLP/CLAUDE.md`. Until then the `+1` fallback stays and is correct as long as `allocateVariable()` keeps allocating contiguous `(N, N+1)` pairs — so any future GC compaction / relocating allocator must land together with this fix.
+Took the "retain the reader through binding" route, implemented as a side index rather than a wider cell: `HeapFCP._readerForWriterIndex` maps `writerAddr -> readerAddr`, populated in `allocateVariable()`. It survives binding (the cell's pointer does not), so `pairedReaderAddr` returns the recorded reader with no arithmetic. Falls back to the bidirectional pointer for any writer not in the index (still unbound), and throws rather than guessing if neither yields a reader. `run_all_tests.sh` stays 485/485 with zero throws. The index grows with allocation like `cells` (no GC today); a future relocating/compacting GC must update it — noted at the field.
+
+This closes the reader/writer-address-confusion family root for the single-isolate heap: Issue 12 (guard deref), Issue 1 (localize, already fixed), and this all stemmed from deriving reader/writer identity from a bare address; reader recovery is now an explicit recorded link, not arithmetic.
 
 ---
 

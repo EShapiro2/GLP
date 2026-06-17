@@ -71,6 +71,13 @@ class HeapFCP {
   /// Keyed by writerAddr
   final Map<int, void Function(Term)> _bindCallbacks = {};
 
+  /// writerAddr -> readerAddr for every paired variable from allocateVariable().
+  /// The writer cell's pointer to its reader is destroyed when the writer binds
+  /// (single content slot), so this index preserves the link for bound writers
+  /// — replacing the old `reader = writer + 1` arithmetic (known-issues Issue 9).
+  /// Grows with allocation like `cells` (no GC); a relocating GC must update it.
+  final Map<int, int> _readerForWriterIndex = {};
+
   // ==========================================================================
   // Variable Allocation (Section 3 of spec)
   // ==========================================================================
@@ -92,6 +99,9 @@ class HeapFCP {
 
     // Reader cell: points TO writer
     cells.add(HeapCell(Pointer(writerAddr), CellTag.RoTag));
+
+    // Record the pair so the reader is recoverable after the writer binds.
+    _readerForWriterIndex[writerAddr] = readerAddr;
 
     return (writerAddr, readerAddr);
   }
@@ -227,24 +237,25 @@ class HeapFCP {
 
   /// Get the paired reader address for a writer (works for bound and unbound).
   ///
-  /// For an unbound writer the reader is recovered via the bidirectional
-  /// pointer.  For a BOUND writer that pointer is gone (binding overwrites the
-  /// slot), so we fall back to the allocation convention reader = writerAddr+1.
-  ///
-  /// This fallback is LOAD-BEARING, not defensive: a fail-loud probe (2026-06-17)
-  /// that threw instead of returning writerAddr+1 broke 65 suite tests across
-  /// core programs (merge, reverse, quicksort, fibonacci, inner product, CSSN
-  /// plays) — ordinary code routinely asks for the reader of a bound writer.
-  /// It contradicts the `terms.dart` rule ("MUST NOT assume reader==writer+1");
-  /// removing it requires the core cell-design change in known-issues Issue 9
-  /// (retain the reader pointer through binding, or thread the reader address
-  /// through callers), NOT deletion.
+  /// Recovered from `_readerForWriterIndex` (recorded at allocation, survives
+  /// binding) — no `reader = writer + 1` arithmetic (known-issues Issue 9 fix).
+  /// The old `+1` fallback was load-bearing: a 2026-06-17 fail-loud probe that
+  /// threw instead broke 65 suite tests, because the writer's reader pointer is
+  /// destroyed on binding and ordinary code asks for a bound writer's reader.
+  /// The allocation-time index supplies it without arithmetic. Falls back to
+  /// the bidirectional pointer for any writer not in the index (still unbound);
+  /// throws if neither yields a reader, rather than guessing an address.
   int pairedReaderAddr(int writerAddr) {
+    final indexed = _readerForWriterIndex[writerAddr];
+    if (indexed != null) return indexed;
+
     final reader = readerForWriter(writerAddr);
     if (reader != null) return reader;
 
-    // Fallback: by allocation, reader is at writerAddr + 1 (see note above).
-    return writerAddr + 1;
+    throw StateError(
+        'pairedReaderAddr: no recorded reader for writer @$writerAddr '
+        '(not from allocateVariable, or no paired reader). The reader address '
+        'must come from allocation, not arithmetic — see known-issues Issue 9.');
   }
 
   // ==========================================================================
