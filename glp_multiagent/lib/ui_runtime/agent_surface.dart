@@ -36,6 +36,19 @@ class _AgentSurfaceState extends State<AgentSurface> {
 
   final TextEditingController _msg = TextEditingController();
 
+  @override
+  void initState() {
+    super.initState();
+    widget.runtime.onNotice = (message) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(message),
+        duration: const Duration(seconds: 2),
+        behavior: SnackBarBehavior.floating,
+      ));
+    };
+  }
+
   Manifest get _m => widget.runtime.manifest;
   UiRuntime get _r => widget.runtime;
 
@@ -44,17 +57,42 @@ class _AgentSurfaceState extends State<AgentSurface> {
   bool get _chats => _m.chat != null;
   bool get _wallet => _m.wallet != null;
 
+  /// The state surfaces (everything that isn't the Requests inbox), in tab
+  /// order: a chat list and/or a wallet, else a plain friends list. Requests is
+  /// always the final tab.
+  List<_StateTab> get _stateTabs {
+    final tabs = <_StateTab>[];
+    if (_m.chat != null) {
+      tabs.add(_StateTab('chat', _m.chat!.label, Icons.chat_bubble_outline,
+          Icons.chat_bubble));
+    }
+    if (_m.wallet != null) {
+      tabs.add(_StateTab('wallet', _m.wallet!.label,
+          Icons.account_balance_wallet_outlined, Icons.account_balance_wallet));
+    }
+    if (tabs.isEmpty) {
+      tabs.add(
+          _StateTab('friends', 'Friends', Icons.people_outline, Icons.people));
+    }
+    return tabs;
+  }
+
   @override
   Widget build(BuildContext context) {
-    // Drill-down (chats view: conversation; wallet view: a person's holdings).
-    if (_tab == 0 && _openPeer != null) {
-      if (_chats) return _conversation(_m.chat!, _openPeer!);
-      if (_wallet) return _walletDetail(_m.wallet!, _openPeer!);
+    final tabs = _stateTabs;
+    final n = tabs.length; // state tabs; the Requests inbox is index n.
+    if (_tab > n) _tab = n;
+    final onState = _tab < n;
+    final active = onState ? tabs[_tab] : null;
+
+    // Drill-down within the active state surface.
+    if (onState && _openPeer != null) {
+      if (active!.kind == 'chat') return _conversation(_m.chat!, _openPeer!);
+      if (active.kind == 'wallet') return _walletDetail(_m.wallet!, _openPeer!);
     }
 
     final requests = _r.inbox.length;
-    final onState = _tab == 0;
-    final stateLabel = _chats ? 'Chats' : (_wallet ? _m.wallet!.label : 'Friends');
+    final showFab = onState && active!.kind != 'wallet';
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
@@ -78,8 +116,8 @@ class _AgentSurfaceState extends State<AgentSurface> {
           ),
         ],
       ),
-      body: onState ? _stateScreen() : _requestsScreen(),
-      floatingActionButton: onState && !_wallet
+      body: onState ? _stateBody(active!) : _requestsScreen(),
+      floatingActionButton: showFab
           ? FloatingActionButton(
               backgroundColor: _accent,
               foregroundColor: Colors.white,
@@ -90,20 +128,16 @@ class _AgentSurfaceState extends State<AgentSurface> {
       bottomNavigationBar: NavigationBar(
         height: 60,
         selectedIndex: _tab,
-        onDestinationSelected: (i) => setState(() => _tab = i),
+        onDestinationSelected: (i) => setState(() {
+          _tab = i;
+          _openPeer = null;
+        }),
         destinations: [
-          NavigationDestination(
-              icon: Icon(_chats
-                  ? Icons.chat_bubble_outline
-                  : (_wallet
-                      ? Icons.account_balance_wallet_outlined
-                      : Icons.people_outline)),
-              selectedIcon: Icon(_chats
-                  ? Icons.chat_bubble
-                  : (_wallet
-                      ? Icons.account_balance_wallet
-                      : Icons.people)),
-              label: stateLabel),
+          for (final t in tabs)
+            NavigationDestination(
+                icon: Icon(t.icon),
+                selectedIcon: Icon(t.selectedIcon),
+                label: t.label),
           NavigationDestination(
             icon: _badge(requests, const Icon(Icons.mail_outline)),
             selectedIcon: _badge(requests, const Icon(Icons.mail)),
@@ -119,14 +153,28 @@ class _AgentSurfaceState extends State<AgentSurface> {
 
   // === State surface — the state the outbox leaves ==========================
 
-  Widget _stateScreen() => _chats
-      ? _chatList(_m.chat!)
-      : (_wallet ? _walletList(_m.wallet!) : _friendsList());
+  Widget _stateBody(_StateTab t) {
+    switch (t.kind) {
+      case 'chat':
+        return _chatList(_m.chat!);
+      case 'wallet':
+        return _walletList(_m.wallet!);
+      default:
+        return _friendsList();
+    }
+  }
 
   // --- Wallet (coins): person + friends, each drilling into their holdings ---
   Widget _walletList(WalletView w) {
-    final people = <String>[w.selfKey, ...(_r.store.lists[w.friendsList] ?? const [])
-        .map(formatTerm)];
+    // People = self + friends (explicit list, chat peers, holdings owners).
+    final people = <String>{w.selfKey};
+    if (w.friendsList.isNotEmpty) {
+      people.addAll((_r.store.lists[w.friendsList] ?? const []).map(formatTerm));
+    }
+    if (_m.chat != null) {
+      people.addAll((_r.store.threads[_m.chat!.threadKey] ?? const {}).keys);
+    }
+    people.addAll((_r.store.holdings[w.storeKey] ?? const {}).keys);
     return ListView(
       padding: const EdgeInsets.symmetric(vertical: 2),
       children: [
@@ -581,4 +629,13 @@ class _AgentSurfaceState extends State<AgentSurface> {
     }
     return '?';
   }
+}
+
+/// One bottom-nav state surface (a chat list, a wallet, or a friends list).
+class _StateTab {
+  final String kind; // 'chat' | 'wallet' | 'friends'
+  final String label;
+  final IconData icon;
+  final IconData selectedIcon;
+  const _StateTab(this.kind, this.label, this.icon, this.selectedIcon);
 }

@@ -142,6 +142,14 @@ class PushChat extends Effect {
       {this.outgoing = false, this.tickField});
 }
 
+/// Show a transient notice (snackbar) — for acknowledgement notifies that leave
+/// no lasting state, e.g. a completed or failed swap. [template] may reference
+/// the notify's fields, e.g. `Swap with {who} completed`.
+class Toast extends Effect {
+  final String template;
+  const Toast(this.template);
+}
+
 /// Set a balance entry in a holdings store: `holdings[store][owner][coin]`
 /// becomes the [amountField] value. This is the keyed-balance view the coins
 /// app needs and the chat/list/value views do not provide — a two-level map
@@ -196,6 +204,10 @@ class WalletView {
   final String storeKey;
   final String label;
   final String selfKey;
+
+  /// Optional explicit friends list key. When empty, the wallet's people are
+  /// derived from holdings owners and chat peers (so a friend appears as soon
+  /// as a connection forms or a balance is reported).
   final String friendsList;
   final String friendField;
   final List<CommandDesc> selfActions;
@@ -204,10 +216,10 @@ class WalletView {
     required this.storeKey,
     required this.label,
     required this.selfKey,
-    required this.friendsList,
     required this.friendField,
     required this.selfActions,
     required this.friendActions,
+    this.friendsList = '',
   });
 }
 

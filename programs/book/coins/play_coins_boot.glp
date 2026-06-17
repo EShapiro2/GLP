@@ -1,0 +1,94 @@
+%% play_coins_boot.glp — single-isolate coins-among-friends scenario.
+%%
+%% Bob is the live-UI agent (agent/5, empty initial holdings). Alice and Charlie
+%% are actors that cold-call Bob and accept friend offers, so Bob's wallet shows
+%% them as friends. In-heap crossbar routes `_net` output by addressee.
+%%
+%% Requires: self.glp, coins_agent.glp, coins_mediator.glp
+
+-mode(system).
+
+%% --- In-heap crossbar ---
+procedure crossbar(Stream(M)?, Stream(M)?, Stream(M)?,
+                   Stream(M), Stream(M), Stream(M)).
+crossbar(AOut, BOut, COut, AIn?, BIn?, CIn?) :-
+    merge(AOut?, BOut?, AB),
+    merge(AB?, COut?, All),
+    route(All?, AIn, BIn, CIn).
+
+procedure route(Stream(M)?, Stream(M), Stream(M), Stream(M)).
+route([msg(alice, C) | Rest], [msg(alice, C?) | A?], B?, Ch?) :-
+    route(Rest?, A, B, Ch).
+route([msg(bob, C) | Rest], A?, [msg(bob, C?) | B?], Ch?) :-
+    route(Rest?, A, B, Ch).
+route([msg(charlie, C) | Rest], A?, B?, [msg(charlie, C?) | Ch?]) :-
+    route(Rest?, A, B, Ch).
+route([], [], [], []).
+
+%% --- Actors: cold-call Bob; once connected, mint and transact so Bob's wallet
+%% and Requests come alive (he sees their coins, a payment, and a swap offer). ---
+procedure alice_actor(Stream(UserNotify)?, Stream(UserCmd)).
+alice_actor(Ns, [connect(bob) | Cs?]) :- coin_actor(alice, Ns?, Cs).
+
+procedure charlie_actor(Stream(UserNotify)?, Stream(UserCmd)).
+charlie_actor(Ns, [connect(bob) | Cs?]) :- coin_actor(charlie, Ns?, Cs).
+
+procedure coin_actor(Constant?, Stream(UserNotify)?, Stream(UserCmd)).
+%% On becoming Bob's friend: mint, pay Bob some coins, and propose a swap.
+coin_actor(alice, [connected(bob) | Ns],
+    [mint(5) | [pay(bob, alice, 2) | [propose_swap(bob, alice, 1, bob, 1) | Cs?]]]) :-
+    coin_drain(alice, Ns?, Cs).
+coin_actor(charlie, [connected(bob) | Ns],
+    [mint(4) | [pay(bob, charlie, 1) | Cs?]]) :-
+    coin_drain(charlie, Ns?, Cs).
+coin_actor(Me, [befriend(Who, Req) | Ns], [decision(yes, Who?, Req?) | Cs?]) :-
+    ground(Me?), ground(Who?), ground(Req?) | coin_actor(Me?, Ns?, Cs).
+coin_actor(Me, [_ | Ns], Cmds?) :- ground(Me?), otherwise | coin_actor(Me?, Ns?, Cmds).
+coin_actor(_, [], []).
+
+%% After transacting: accept any swap Bob proposes, accept befriend, ignore rest.
+procedure coin_drain(Constant?, Stream(UserNotify)?, Stream(UserCmd)).
+coin_drain(Me, [swap_offer(From, _, _, _, _, Req) | Ns], [accept_swap(From?, Req?) | Cs?]) :-
+    ground(Me?), ground(From?), ground(Req?) | coin_drain(Me?, Ns?, Cs).
+coin_drain(Me, [befriend(Who, Req) | Ns], [decision(yes, Who?, Req?) | Cs?]) :-
+    ground(Me?), ground(Who?), ground(Req?) | coin_drain(Me?, Ns?, Cs).
+coin_drain(Me, [_ | Ns], Cmds?) :- ground(Me?), otherwise | coin_drain(Me?, Ns?, Cmds).
+coin_drain(_, [], []).
+
+%% --- Scenario boot (entered as Bob's agent_init) ---
+agent_init(bob, UserIn, _) :-
+    agent(bob, BAgentIn?, BNetIn?,
+          [output('_user', BA2U) | [output('_net', BNetOut)]], [holding(bob, 10)]),
+    ui_mediator(bob, ch(BA2U?, BAgentIn), ch(UserIn?, BUserOut), [], 1),
+    send_to_user(BUserOut?),
+    agent(alice, AAgentIn?, ANetIn?,
+          [output('_user', AA2U) | [output('_net', ANetOut)]], []),
+    ui_mediator(alice, ch(AA2U?, AAgentIn), ch(ACmds?, AUserOut), [], 1),
+    alice_actor(AUserOut?, ACmds),
+    agent(charlie, CAgentIn?, CNetIn?,
+          [output('_user', CA2U) | [output('_net', CNetOut)]], []),
+    ui_mediator(charlie, ch(CA2U?, CAgentIn), ch(CCmds?, CUserOut), [], 1),
+    charlie_actor(CUserOut?, CCmds),
+    crossbar(ANetOut?, BNetOut?, CNetOut?, ANetIn, BNetIn, CNetIn).
+
+%% --- REPL test helpers: scripted command streams for inline goals. ---
+procedure script_cmds(Stream(UserCmd)).
+script_cmds([mint(3), balance]).
+
+procedure pay_script(Stream(UserCmd)).
+pay_script([pay(bob, alice, 2)]).
+
+%% Alice proposes: give 2 alice-coins, want 1 bob-coin.
+procedure swap_script(Stream(UserCmd)).
+swap_script([propose_swap(bob, alice, 2, bob, 1)]).
+
+%% Alice redeems 2 of bob's coins.
+procedure redeem_script(Stream(UserCmd)).
+redeem_script([redeem(bob, 2)]).
+
+%% Bob auto-accepts any swap offer.
+procedure bob_swap_actor(Stream(UserNotify)?, Stream(UserCmd)).
+bob_swap_actor([swap_offer(From, _, _, _, _, Req)|Ns], [accept_swap(From?, Req?)|Cs?]) :-
+    ground(From?), ground(Req?) | bob_swap_actor(Ns?, Cs).
+bob_swap_actor([_|Ns], Cs?) :- otherwise | bob_swap_actor(Ns?, Cs).
+bob_swap_actor([], []).

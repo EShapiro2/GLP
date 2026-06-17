@@ -42,6 +42,9 @@ class UiRuntime {
   /// Called whenever observable state changes, so the surface can rebuild.
   void Function()? onChange;
 
+  /// Called with a transient notice (snackbar text) from a [Toast] effect.
+  void Function(String message)? onNotice;
+
   final ActivityStore store = ActivityStore();
   final List<InboxCard> inbox = [];
 
@@ -148,6 +151,8 @@ class UiRuntime {
           final owner = formatTerm(fields[ownerField]!);
           final coin = formatTerm(fields[coinField]!);
           h.putIfAbsent(owner, () => {})[coin] = fields[amountField]!;
+        case Toast(:final template):
+          onNotice?.call(renderTemplate(template, fields));
         case ExtendThread(:final thread, :final keyField, :final valueField):
           final t = store.threads.putIfAbsent(thread, () => <String, List<GTerm>>{});
           final k = formatTerm(fields[keyField]!);

@@ -13,6 +13,7 @@ import 'package:glp_runtime/multiagent/repl_play_runner.dart';
 
 import 'isolate_protocol.dart';
 import 'mad_router.dart';
+import 'manifests/grassroots.dart';
 import 'manifests/social.dart';
 import 'ui_runtime/agent_surface.dart';
 import 'ui_runtime/runtime.dart';
@@ -67,6 +68,17 @@ String _resolveGlpDir() {
 }
 
 final _defaultGlpDir = _resolveGlpDir();
+
+/// Resolve the coins program directory (the live coins-among-friends scenario).
+String _resolveCoinsDir() {
+  const rel = '../programs/book/coins';
+  if (Directory(rel).existsSync()) return Directory(rel).absolute.path;
+  const fallback = '/Users/udi/Grassroots/GLP/programs/book/coins';
+  if (Directory(fallback).existsSync()) return fallback;
+  return rel;
+}
+
+final _coinsDir = _resolveCoinsDir();
 
 /// Resolve absolute path to programs/self.glp.
 String _resolveRootSelfGlpPath() {
@@ -222,6 +234,11 @@ class _CoordinatorScreenState extends State<CoordinatorScreen> {
         state.status = 'Ready';
         IsolateRouter.instance.register(msg.agentId, msg.commandPort);
         TraceLogger.instance.log('COORD', '${msg.agentId} ready');
+        // Coins scenario: ask Bob for his opening balance so the Wallet shows
+        // his starting coins immediately.
+        if (msg.agentId == 'Bob') {
+          state.commandPort!.send(UserInput('balance'));
+        }
       }
       setState(() {});
 
@@ -470,11 +487,11 @@ class _CoordinatorScreenState extends State<CoordinatorScreen> {
     // the same notify stream. Switching apps only swaps the view, never the run.
     const scenarioFiles = [
       'self.glp',
-      'typed_social_agent.glp',
-      'typed_ui_mediator.glp',
-      'play_grassapp_boot.glp',
+      'coins_agent.glp',
+      'coins_mediator.glp',
+      'play_coins_boot.glp',
     ];
-    final paths = [for (final f in scenarioFiles) '$_currentGlpDir/$f'];
+    final paths = [for (final f in scenarioFiles) '$_coinsDir/$f'];
     final sources = <String>[];
     for (final p in paths) {
       final file = File(p);
@@ -487,10 +504,10 @@ class _CoordinatorScreenState extends State<CoordinatorScreen> {
     }
 
     final bob = AgentState('Bob', const ['alice', 'charlie']);
-    // One world, one shared inbox: a single runtime rendered through two views
-    // (Friends / Chats), chosen by the app toggle.
+    // One world, one shared inbox: a single runtime rendered as three surfaces
+    // (Chats / Wallet / Requests) by the unified Grassroots manifest.
     bob.ui = UiRuntime(
-      manifest: socialManifest,
+      manifest: grassrootsManifest,
       onSend: (text) => bob.commandPort?.send(UserInput(text)),
     );
     bob.ui!.onChange = () => setState(() {});
