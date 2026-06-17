@@ -562,16 +562,21 @@ WellTypedResult _checkBodyAtom(
       final inferredDecl = _inferConcreteDecl(paramTemplate, atom, callerVarTypes, dfa, env);
       if (inferredDecl != null) {
         // Clause-template rule: record this instantiation so the parameterized
-        // procedure's defining clauses are re-checked against it (Phase 2).
+        // procedure's defining clauses are re-checked against it (Phase 2) —
+        // this is what closes the polymorphic-polarity gap (Issue 14).
         collector?.record(
             CollectedInstantiation(inferredDecl.key, inferredDecl, env, dfa));
-        procDecl = inferredDecl;
-      } else {
-        // Inference failed (e.g., caller uses monomorphic types like NetInStream
-        // instead of parameterized Stream<NetInMsg>). Skip body atom check —
-        // the proc's own clauses are already checked via Case A (wildcard instantiation).
-        return (WellTypedResult.success({}), null);
       }
+      // Do NOT re-type the call site's own arguments against the inferred
+      // concrete declaration. The polarity obligation lives in the
+      // parameterized procedure's body and is discharged by the Phase 2
+      // re-check above; typing the caller's variables here instead would force
+      // the call site's own duality check (e.g. a friend-channel writer feeding
+      // a NetIn consumer) against the inferred element type and wrongly reject
+      // correct wiring. Skip the body atom check exactly as the inference-failure
+      // path does — the proc's clauses are checked via Phase 2 (or the Case A
+      // wildcard fallback).
+      return (WellTypedResult.success({}), null);
     } else {
       // No caller variable types available — can't infer type params.
       // Skip body atom check; Case A covers the proc's own clauses.
@@ -959,11 +964,20 @@ ProcDecl? _inferConcreteDecl(
     final declaredType = paramTemplate.argTypes[i];
     final actualArg = atom.args[i];
 
-    // Get the actual variable's type from callerVarTypes
+    // Get the actual variable's type from callerVarTypes.
+    // The type a call site imposes on a parameter is carried by whichever half
+    // of the SRSW pair was already recorded from the head or a prior body atom.
+    // A reader argument (S?) is fed by its paired writer (S) recorded earlier,
+    // and vice versa, so resolve polarity-agnostically by base name: try the
+    // same-polarity key, then the paired half. Both halves report the same
+    // DFAState.baseName (the dual marker is stripped), so either yields the
+    // element type needed to instantiate the type parameter. Without this the
+    // common case — a polymorphic parameter passed a reader — failed inference
+    // and the body's polarity obligation was never re-checked (Issue 14).
     String? actualTypeName;
     if (actualArg is ast.VarTerm) {
-      final varKey = actualArg.isReader ? '${actualArg.name}?' : actualArg.name;
-      final info = callerVarTypes[varKey];
+      final info =
+          callerVarTypes[actualArg.name] ?? callerVarTypes['${actualArg.name}?'];
       if (info != null) {
         actualTypeName = info.typeState.baseName;
       }

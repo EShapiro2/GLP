@@ -1049,6 +1049,12 @@ NEGATIVE_FILES=(
 
     # --- parameterized proc decl negative (Case A: own clauses checked) ---
     "$TC_DIR/negative/body/param_merge_wrong_mode.glp"
+
+    # --- Issue 14: polymorphic-polarity re-check at instantiation (Case B) ---
+    # pconsumer's Stream(X)? body matches a reader where the inferred element
+    # type ProdMsg requires a writer; rejected only after the per-instantiation
+    # check re-runs the clause under X := ProdMsg. Accepted before the fix.
+    "$GLP_DIR/programs/tests/min_polarity_bug3.glp"
 )
 
 # Build REPL input with :clear between each negative file

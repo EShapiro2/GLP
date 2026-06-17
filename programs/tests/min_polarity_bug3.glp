@@ -1,0 +1,46 @@
+%% min_polarity_bug3.glp — ISOLATING regression guard for Issue 14
+%% (typechecker polymorphic-polarity gap).
+%%
+%% This is min_polarity_bug2.glp with ONE change: the producer emits [] instead
+%% of constructing befriend(alice, _R).  That construction was an unrelated
+%% well-typing failure in the producer's own head (the "error (A)" noise in
+%% bug/bug2), which made those files fail type-checking regardless of the gap —
+%% so they guard nothing.  Emitting [] makes the producer's head well-typed, so
+%% the ONLY remaining defect is the polymorphic-polarity gap itself.
+%%
+%% Behaviour:
+%%   - BEFORE the fix: ACCEPTED.  pconsumer's polymorphic parameter Stream(X)?
+%%     absorbs the polarity obligation; its body is checked only under the
+%%     wildcard self-check (X := _), where befriend(From, Resp?) against a
+%%     wildcard element passes vacuously.  The call site go/1 never re-discharges
+%%     the obligation at X := ProdMsg.
+%%   - AFTER the fix: REJECTED.  go/1 infers X := ProdMsg and the per-instantiation
+%%     check re-runs pconsumer's clauses against Stream(ProdMsg)?.  ProdMsg's
+%%     befriend slot 2 (Response) is a writer at that consume position, but the
+%%     clause matches Resp? (reader) — a polarity clash in pconsumer's own head
+%%     (well-typed-clause condition 1).
+%%
+%% Run (from /Users/udi/Grassroots/GLP/glp_runtime/):
+%%   printf 'load ../programs/tests/min_polarity_bug3.glp\n:quit\n' | bin/glpc
+
+-mode(system).
+
+Response ::= accept ; no.
+
+ProdMsg ::= befriend(Constant, Response).    %% slot 2 = writer
+
+%% Clean producer: emits the empty stream, so its own head is well-typed.
+%% Its declared output type Stream(ProdMsg) is what pins X := ProdMsg at go/1.
+procedure producer(Stream(ProdMsg)).
+producer([]).
+
+%% Polymorphic element type — message type is the variable X, never pinned here.
+procedure pconsumer(Stream(X)?).
+pconsumer([befriend(From, Resp?)|Rest]) :- known(From?) | bind(Resp), pconsumer(Rest?).
+pconsumer([]).
+
+procedure bind(Response).
+bind(accept).
+
+procedure go(Stream(Response)).
+go([]) :- producer(S), pconsumer(S?).

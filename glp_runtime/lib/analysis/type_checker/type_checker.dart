@@ -706,11 +706,77 @@ TypeCheckResult checkModule(ast.Module module, {List<ast.Procedure>? transformed
     clauses.addAll(proc.clauses);
   }
 
-  // Run type checker
-  final checker = TypeChecker(typeEnv, collector: collector);
+  // Project mode: the caller (project linker) supplies a collector and runs the
+  // cross-module Phase 2 itself. Defer parameterized procedures to it.
+  if (collector != null) {
+    final checker = TypeChecker(typeEnv, collector: collector);
+    final result = checker.check(clauses);
+    if (deferredSink != null) deferredSink.addAll(checker.deferredParamProcs);
+    return result;
+  }
+
+  // Single-file / REPL mode: there is no project linker to run Phase 2, so run a
+  // self-contained per-instantiation check over this module's own clauses. This
+  // closes the polymorphic-polarity soundness gap (known-issues Issue 14): a
+  // parameterized procedure's body obligations are discharged against the
+  // abstract type variable under the wildcard self-check and must be
+  // re-discharged at each concrete instantiation inferred from a call site.
+  final localCollector = wtc.InstantiationCollector();
+  final checker = TypeChecker(typeEnv, collector: localCollector);
   final result = checker.check(clauses);
-  if (deferredSink != null) deferredSink.addAll(checker.deferredParamProcs);
-  return result;
+
+  final errors = <TypeError>[...result.errors];
+  final warnings = <TypeWarning>[...result.warnings];
+
+  // Defining clauses for "name/arity" among this module's own clauses.
+  final clausesByKey = <String, List<ast.Clause>>{};
+  for (final c in clauses) {
+    clausesByKey
+        .putIfAbsent('${c.head.functor}/${c.head.arity}', () => [])
+        .add(c);
+  }
+
+  // Phase 2: re-check each distinct call-site instantiation's defining clauses
+  // against the concrete monomorphic declaration it produces, in the scope it
+  // was inferred in (which already holds the concrete types).
+  final instantiatedKeys = <String>{};
+  for (final inst in localCollector.all) {
+    instantiatedKeys.add(inst.procKey);
+    final defining = clausesByKey[inst.procKey];
+    if (defining == null) continue; // defined outside this module (e.g. root scope)
+
+    final focusedEnv = TypeEnvironment(
+      inst.env.types,
+      {...inst.env.procedures, inst.monoDecl.key: inst.monoDecl},
+      paramProcDecls: inst.env.paramProcDecls,
+      typeTemplates: inst.env.typeTemplates,
+    );
+    final res =
+        TypeChecker(focusedEnv).checkSingleProcedure(inst.monoDecl, defining);
+    errors.addAll(res.errors);
+    warnings.addAll(res.warnings);
+  }
+
+  // Fallback: a parameterized procedure with no collected instantiation is
+  // checked once under its wildcard declaration (matches its deferred self-check).
+  final seenFallback = <String>{};
+  for (final d in checker.deferredParamProcs) {
+    if (instantiatedKeys.contains(d.procKey)) continue;
+    if (!seenFallback.add(d.procKey)) continue;
+
+    final focusedEnv = TypeEnvironment(
+      d.env.types,
+      {...d.env.procedures, d.wildcardDecl.key: d.wildcardDecl},
+      paramProcDecls: d.env.paramProcDecls,
+      typeTemplates: d.env.typeTemplates,
+    );
+    final res =
+        TypeChecker(focusedEnv).checkSingleProcedure(d.wildcardDecl, d.clauses);
+    errors.addAll(res.errors);
+    warnings.addAll(res.warnings);
+  }
+
+  return TypeCheckResult(errors, warnings);
 }
 
 /// Parse and type-check GLP source code

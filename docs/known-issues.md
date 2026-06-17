@@ -499,7 +499,7 @@ Investigate `receive/3`'s dereferencing / cell-walk of a `_w` remote writer when
 
 ## Issue 14: Type checker does not re-check reader/writer polarity at polymorphic instantiation
 
-**Status**: Open — owned by the madGLP/IGLP session. Full report: `docs/typechecker-polymorphic-polarity-bug.md` (index: `docs/iglp-bug-reports-index.md` #1).
+**Status**: Fixed (2026-06-17) — isolating repro `programs/tests/min_polarity_bug3.glp` is accepted before the fix and rejected after, with the polarity error in the offending clause; `run_all_tests.sh` 485→486 green; dart test unchanged (the 6 madGLP failures are the pre-existing open Issues 13/15, identical on a clean tree). Full report: `docs/typechecker-polymorphic-polarity-bug.md` (index: `docs/iglp-bug-reports-index.md` #1).
 **Discovered**: 2026-06-16
 **Affects**: Soundness — accepts programs that deadlock/strand at runtime.
 
@@ -518,7 +518,19 @@ Real-world: `typed_ui_mediator.glp`'s `Channel(X,Y)` hides the agent↔mediator 
 
 ### Fix
 
-When the per-instantiation clause-template check binds a parameter type variable to a concrete type, re-run the clause's **mode/polarity** discharge under that substitution, not only the structural/shape unification. Fix test: `min_polarity_bug2.glp` must report the `(S, S?) not dual` error.
+When the per-instantiation clause-template check binds a parameter type variable to a concrete type, re-run the clause's **mode/polarity** discharge under that substitution, not only the structural/shape unification.
+
+### Resolution (2026-06-17)
+
+Two coupled gaps, both fixed:
+
+1. **Call-site inference failed for the common reader case** (`well_typed_clause.dart` `_inferConcreteDecl`). It looked up the argument's type under the same-polarity key — a reader argument `S?` keyed `"S?"` — but in a well-formed clause only the *paired writer* `S` is recorded from a prior atom/head (SRSW). So a polymorphic parameter passed a reader (the usual shape: `pconsumer(S?)`, `ui_mediator(_, Ch?, ...)`) never inferred its type parameter, and **no instantiation was collected** — even in project mode. Fix: resolve the element type polarity-agnostically by base name (`callerVarTypes[name] ?? callerVarTypes['name?']`); both halves report the same `DFAState.baseName`. A successful inference now *only records* the instantiation for the re-check below; it deliberately **no longer re-types the call site's own arguments** against the inferred concrete declaration. Doing so would force the caller's own duality check against the inferred element type and wrongly reject correct wiring (e.g. a friend-channel `Stream<FriendMsg>` writer feeding a `Stream<NetInMsg>` consumer in `programs/social/network/boot.glp`). The polarity obligation belongs to the parameterized procedure's body, discharged by Phase 2.
+
+2. **Single-file/REPL mode never ran Phase 2** (`type_checker.dart` `checkModule`). The per-instantiation clause-template check existed only in the project linker (`typeCheckProject`); a file loaded directly in the REPL got each parameterized procedure checked once under the wildcard self-check (`X := _`), where a body sub-pattern against a wildcard element passes vacuously. Fix: when no external collector is supplied, `checkModule` runs a self-contained per-instantiation Phase 2 + zero-instantiation wildcard fallback over the module's own clauses, mirroring `typeCheckProject`.
+
+**Resulting signal.** At each concrete instantiation the parameterized procedure's clauses are re-checked; a body polarity clash surfaces as a *clause* well-typing failure (well-typed-clause condition 1: head not well-typed) in the offending clause — e.g. `bug3`'s `pconsumer` head at `X := ProdMsg`: `Resp?` (reader) where `ProdMsg`'s `befriend` slot 2 is a writer. The report's predicted `(S, S?) not dual` (condition 3, variable-pair duality) **cannot** fire: once inference binds `X := ProdMsg` both `go` endpoints are `Stream<ProdMsg>` and so are dual; the defect lives in `pconsumer`'s body, where the per-instantiation error correctly points (confirmed with Udi, 2026-06-17).
+
+**Repros.** `min_polarity_bug.glp` (concrete consumer) and `min_polarity_bug2.glp` (polymorphic consumer) are the differential pair from the report, but both also carry an unrelated producer-head error (the `_R?` "error A") and so fail type-checking regardless — they document the gap but guard nothing. `min_polarity_bug3.glp` is `bug2` with the producer emitting `[]` (well-typed head), isolating the gap: accepted before the fix, rejected after with only the `pconsumer` polarity error. It is the Section A regression guard (`NEGATIVE_FILES`).
 
 ---
 
