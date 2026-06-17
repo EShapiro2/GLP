@@ -12,7 +12,7 @@ import '../ui_runtime/manifest.dart';
 import '../ui_runtime/term.dart';
 
 final Manifest grassrootsManifest = Manifest(
-  title: 'Grassroots',
+  title: 'GrassApp',
 
   // Surface 1: Chats (the friends you can talk to).
   chat: const ChatView(threadKey: 'chats', label: 'Chats', sendCtor: 'send'),

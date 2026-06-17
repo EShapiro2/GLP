@@ -52,7 +52,7 @@ class _AgentSurfaceState extends State<AgentSurface> {
   Manifest get _m => widget.runtime.manifest;
   UiRuntime get _r => widget.runtime;
 
-  static const MaterialColor _accent = Colors.orange;
+  static const MaterialColor _accent = Colors.green;
 
   bool get _chats => _m.chat != null;
   bool get _wallet => _m.wallet != null;

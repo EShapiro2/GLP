@@ -120,18 +120,18 @@ class CoordinatorApp extends StatelessWidget {
       title: 'Social Graph',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
-        primarySwatch: Colors.orange,
+        primarySwatch: Colors.green,
         colorScheme: ColorScheme.fromSeed(
-          seedColor: Colors.orange,
+          seedColor: Colors.green,
           brightness: Brightness.light,
         ),
         appBarTheme: const AppBarTheme(
-          backgroundColor: Colors.orange,
+          backgroundColor: Colors.green,
           foregroundColor: Colors.white,
         ),
         elevatedButtonTheme: ElevatedButtonThemeData(
           style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.orange,
+            backgroundColor: Colors.green,
             foregroundColor: Colors.white,
           ),
         ),
@@ -1030,7 +1030,7 @@ class _PhoneFrame extends StatelessWidget {
 
   Widget _statusBar() => Container(
         height: 28,
-        color: Colors.orange,
+        color: Colors.green,
         padding: const EdgeInsets.symmetric(horizontal: 16),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -1057,7 +1057,7 @@ class _Booting extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            CircularProgressIndicator(color: Colors.orange),
+            CircularProgressIndicator(color: Colors.green),
             SizedBox(height: 16),
             Text('Starting…', style: TextStyle(color: Colors.grey)),
           ],
