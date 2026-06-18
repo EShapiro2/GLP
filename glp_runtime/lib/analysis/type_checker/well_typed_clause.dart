@@ -1011,7 +1011,7 @@ ProcDecl? _inferConcreteDecl(
     if (actualTypeName == null) continue;
 
     // Match declared type against actual type to extract bindings
-    _matchTypeForInference(declaredType, actualTypeName, paramTemplate.typeParams, bindings);
+    _matchTypeForInference(declaredType, actualTypeName, paramTemplate.typeParams, bindings, env);
   }
 
   // If no bindings found, can't infer — fall back to wildcard version
@@ -1075,6 +1075,7 @@ void _matchTypeForInference(
   String actualTypeName,
   List<String> typeParams,
   Map<String, String> bindings,
+  TypeEnvironment env,
 ) {
   if (declaredType is TypeRef) {
     if (declaredType.typeArgs.isEmpty && typeParams.contains(declaredType.name)) {
@@ -1086,14 +1087,28 @@ void _matchTypeForInference(
     if (declaredType.typeArgs.isNotEmpty) {
       // Parameterized type ref: Stream(X) vs Stream<AgentMsg>
       // Parse the actual type name to extract template and args
-      final ltIdx = actualTypeName.indexOf('<');
-      if (ltIdx < 0) return; // actual is not parameterized, can't match
+      var resolvedActual = actualTypeName;
+      var ltIdx = resolvedActual.indexOf('<');
+      if (ltIdx < 0) {
+        // Actual is a named type.  Honor structural type identity (typed-program
+        // §20.3): a named recursive list alias `T ::= [] ; [E | T]` IS Stream<E>,
+        // so resolve it to its structural parameterized form before matching.
+        // Without this a named alias binds no parameter and the call silently
+        // falls to a wildcard check — a soundness hole (e.g. graph's OutputsList
+        // cannot route through the shared parametric lib routers).  Resolution is
+        // a single lookup (terminating) and the element type is unique.
+        final structForm = _structuralFormOfNamedType(resolvedActual, env);
+        if (structForm == null) return; // not structurally parameterized
+        resolvedActual = structForm;
+        ltIdx = resolvedActual.indexOf('<');
+        if (ltIdx < 0) return;
+      }
 
-      final actualTemplate = actualTypeName.substring(0, ltIdx);
+      final actualTemplate = resolvedActual.substring(0, ltIdx);
       if (actualTemplate != declaredType.name) return; // template name mismatch
 
       // Extract actual type args from "Stream<AgentMsg>" format
-      final argsStr = actualTypeName.substring(ltIdx + 1, actualTypeName.length - 1);
+      final argsStr = resolvedActual.substring(ltIdx + 1, resolvedActual.length - 1);
       final actualArgs = _splitTypeArgs(argsStr);
 
       if (actualArgs.length != declaredType.typeArgs.length) return;
@@ -1106,6 +1121,38 @@ void _matchTypeForInference(
       }
     }
   }
+}
+
+/// Resolve a named (non-parameterized) type to its structural parameterized
+/// form, honoring structural type identity (typed-program §20.3).  Recognizes
+/// the canonical list shape `T ::= [] ; [E | T]`, whose structural form is
+/// `Stream<E>`; every list-typed alias (OutputsList, NetInStream, UserInStream,
+/// …) takes this shape.  Returns null when [typeName] is unknown, parameterized,
+/// or not structurally a self-recursive list.  A single lookup — no recursion,
+/// so it terminates — and the element type (the cons head) is unique.
+String? _structuralFormOfNamedType(String typeName, TypeEnvironment env) {
+  final def = env.getType(typeName);
+  if (def == null || def.typeParams.isNotEmpty) return null;
+  if (def.alternatives.length != 2) return null;
+  var hasNil = false;
+  ListConsAlt? cons;
+  for (final alt in def.alternatives) {
+    if (alt is ListNilAlt) {
+      hasNil = true;
+    } else if (alt is ListConsAlt) {
+      cons = alt;
+    }
+  }
+  if (!hasNil || cons == null) return null;
+  // Tail must recurse on the type itself (the canonical Stream shape).
+  final tail = cons.tail;
+  if (tail is! TypeRef || tail.name != typeName || tail.typeArgs.isNotEmpty) {
+    return null;
+  }
+  // Element type is the cons head, a simple named/concrete type.
+  final head = cons.head;
+  if (head is! TypeRef || head.typeArgs.isNotEmpty) return null;
+  return 'Stream<${head.name}>';
 }
 
 /// Split comma-separated type args, respecting nested angle brackets.

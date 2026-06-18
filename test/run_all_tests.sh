@@ -1049,6 +1049,12 @@ NEGATIVE_FILES=(
     # pair is not dual.  Guards against re-adding a control token to FriendMsg.
     "$TC_DIR/negative/subtyping/control_token_merge.glp"
 
+    # --- Alias-aware parameter inference (§20.3 structural identity) ---
+    # A named list alias (Outs ::= [] ; [Ent | Outs]) routed through a parameterized
+    # procedure must instantiate it at X=Ent and be checked; the masked error surfaces
+    # only when inference resolves the alias to its structural form Stream<Ent>.
+    "$TC_DIR/negative/subtyping/alias_param_inference.glp"
+
     # --- parameterized types negative ---
     "$TYPED/param_arity_mismatch.glp"
 

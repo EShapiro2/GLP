@@ -1,0 +1,32 @@
+%% TEST: parameter inference must see through named list aliases (§20.3)
+%% EXPECT: ill-typed
+%% ERROR: route instantiated at X=Ent via the Outs alias — Stream<Fixed> not a subtype of Stream<Ent>
+%%
+%% Regression guard for alias-aware parameter inference.  `Outs ::= [] ; [Ent | Outs]`
+%% is a named recursive list alias — structurally Stream<Ent> (§20.3).  `route` is a
+%% parameterized procedure whose body only type-checks at X = Fixed (it merges the
+%% X-stream with a Fixed-stream).  The caller routes an Outs-typed stream, which must
+%% instantiate route at X = Ent and so be rejected.  Before the fix, inference matched
+%% actual types by name; a named alias bound no parameter, the call fell to a wildcard
+%% check, route was never instantiated at Ent, and the error was masked.  After the
+%% fix, the alias resolves to Stream<Ent>, route is checked at X = Ent, and the
+%% Fixed-vs-Ent mismatch is reported.
+
+-module(neg_alias_param_inference).
+
+Ent   ::= e(Constant).
+Fixed ::= f(Constant).
+
+%% Named recursive list alias — structurally Stream<Ent>.
+Outs ::= [] ; [Ent | Outs].
+
+%% Parameterized router whose body only type-checks at X = Fixed.
+procedure route(Stream(X)?, Stream(X)).
+route(A, C) :- produce_fixed(F), merge(A?, F?, C).
+
+procedure produce_fixed(Stream(Fixed)).
+produce_fixed([]).
+
+%% Caller routes an Ent-stream via the Outs alias, instantiating route at X = Ent.
+procedure caller(Outs?, Outs).
+caller(In, Out) :- route(In?, Out).
