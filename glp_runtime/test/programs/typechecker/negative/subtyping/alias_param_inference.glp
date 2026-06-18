@@ -22,11 +22,13 @@ Outs ::= [] ; [Ent | Outs].
 
 %% Parameterized router whose body only type-checks at X = Fixed.
 procedure route(Stream(X)?, Stream(X)).
-route(A, C) :- produce_fixed(F), merge(A?, F?, C).
+route(A, C?) :- produce_fixed(F), merge(A?, F?, C).
 
 procedure produce_fixed(Stream(Fixed)).
 produce_fixed([]).
 
 %% Caller routes an Ent-stream via the Outs alias, instantiating route at X = Ent.
-procedure caller(Outs?, Outs).
-caller(In, Out) :- route(In?, Out).
+%% The output is discarded (anonymous writer) so the only obligation is route's
+%% per-instantiation body check — keeping the rejection cause unambiguous.
+procedure caller(Outs?).
+caller(In) :- route(In?, _).
