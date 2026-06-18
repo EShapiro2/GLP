@@ -17,31 +17,31 @@ import 'package:path_provider/path_provider.dart';
 
 /// Resolved locations of the GLP source tree.
 class GlpPaths {
-  final String coinsDir; // .../programs/book/coins
+  final String grassappDir; // .../programs/book/grassapp
   final String rootSelfGlp; // .../programs/self.glp
-  const GlpPaths(this.coinsDir, this.rootSelfGlp);
+  const GlpPaths(this.grassappDir, this.rootSelfGlp);
 }
 
 /// The bundled assets (relative to `assets/glp/`), in the tree the engine's
 /// ancestor-scope walk expects.
 const _bundledGlp = [
   'programs/self.glp',
-  'programs/book/coins/self.glp',
-  'programs/book/coins/coins_agent.glp',
-  'programs/book/coins/coins_mediator.glp',
-  'programs/book/coins/play_coins_boot.glp',
+  'programs/book/grassapp/self.glp',
+  'programs/book/grassapp/grassapp_agent.glp',
+  'programs/book/grassapp/grassapp_mediator.glp',
+  'programs/book/grassapp/play_grassapp_boot.glp',
 ];
 
 Future<GlpPaths> resolveGlpPaths() async {
   // Desktop dev: the repo is reachable on disk — read it directly.
-  final rel = Directory('../programs/book/coins');
+  final rel = Directory('../programs/book/grassapp');
   if (rel.existsSync()) {
     final base = Directory('../programs').absolute.path;
-    return GlpPaths('$base/book/coins', '$base/self.glp');
+    return GlpPaths('$base/book/grassapp', '$base/self.glp');
   }
   const repo = '/Users/udi/Grassroots/GLP/programs';
-  if (Directory('$repo/book/coins').existsSync()) {
-    return GlpPaths('$repo/book/coins', '$repo/self.glp');
+  if (Directory('$repo/book/grassapp').existsSync()) {
+    return GlpPaths('$repo/book/grassapp', '$repo/self.glp');
   }
 
   // Sandboxed (iOS): copy the bundled assets into Documents and use that tree.
@@ -53,5 +53,5 @@ Future<GlpPaths> resolveGlpPaths() async {
     await out.parent.create(recursive: true);
     await out.writeAsString(source);
   }
-  return GlpPaths('$base/book/coins', '$base/self.glp');
+  return GlpPaths('$base/book/grassapp', '$base/self.glp');
 }

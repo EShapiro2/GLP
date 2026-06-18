@@ -1,4 +1,6 @@
-%% coins_mediator.glp — mediator between the coins agent (agent/5) and Dart UI.
+%% grassapp_mediator.glp — the one mediator between the GrassApp agent (agent/5)
+%% and the Dart UI; one machine for all platforms, parameterised by its message
+%% vocabulary (UserCmd/UserNotify below).
 %%
 %% Same escrow discipline as the social mediator: agent output may carry unbound
 %% variables (the cold-call Response writer, a swap SwapResponse writer); the

@@ -1,10 +1,10 @@
-%% play_coins_boot.glp — single-isolate coins-among-friends scenario.
+%% play_grassapp_boot.glp — single-isolate GrassApp scenario.
 %%
 %% Bob is the live-UI agent (agent/5, empty initial holdings). Alice and Charlie
 %% are actors that cold-call Bob and accept friend offers, so Bob's wallet shows
 %% them as friends. In-heap crossbar routes `_net` output by addressee.
 %%
-%% Requires: self.glp, coins_agent.glp, coins_mediator.glp
+%% Requires: self.glp, grassapp_agent.glp, grassapp_mediator.glp
 
 -mode(system).
 

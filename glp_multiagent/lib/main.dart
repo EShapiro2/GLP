@@ -480,11 +480,11 @@ class _CoordinatorScreenState extends State<CoordinatorScreen> {
     final glp = await resolveGlpPaths();
     const scenarioFiles = [
       'self.glp',
-      'coins_agent.glp',
-      'coins_mediator.glp',
-      'play_coins_boot.glp',
+      'grassapp_agent.glp',
+      'grassapp_mediator.glp',
+      'play_grassapp_boot.glp',
     ];
-    final paths = [for (final f in scenarioFiles) '${glp.coinsDir}/$f'];
+    final paths = [for (final f in scenarioFiles) '${glp.grassappDir}/$f'];
     final sources = <String>[];
     for (final p in paths) {
       final file = File(p);

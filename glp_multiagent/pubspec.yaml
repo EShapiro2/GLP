@@ -30,4 +30,4 @@ flutter:
   # tool/sync_glp_assets.sh. On macOS the repo on disk is used instead.
   assets:
     - assets/glp/programs/self.glp
-    - assets/glp/programs/book/coins/
+    - assets/glp/programs/book/grassapp/

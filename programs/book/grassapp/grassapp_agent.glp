@@ -1,4 +1,5 @@
-%% coins_agent.glp — coins-among-friends agent (agent/5).
+%% grassapp_agent.glp — GrassApp agent (agent/5): coins among friends, with the
+%% social graph (befriend) and one-to-one messaging.
 %%
 %% The typed social agent (cold-call befriending, friend channels, one-to-one
 %% messaging) extended with a holdings vector and the coin transactions. Self
