@@ -11,20 +11,18 @@
 %% RESPONSE HANDLING — local (calls merge and agent)
 %% =============================================================================
 
-procedure bind_response(Decision?, Constant?, Response, Stream(OutputEntry)?, Stream(OutputEntry), Stream(NetInMsg)?, Stream(NetInMsg)).
-bind_response(yes, From, accept(RetCh?), Outs, Outs1?, In, In1?) :-
+procedure bind_response(Constant?, Decision?, Constant?, Response, Stream(OutputEntry)?, Stream(OutputEntry), Stream(NetInMsg)?, Stream(NetInMsg)).
+bind_response(Id, yes, From, accept(RetCh?), Outs, Outs1?, In, In1?) :-
     new_channel(RetCh, LocalCh) |
-    handle_response(accept(LocalCh?), From?, Outs?, Outs1, In?, In1).
-bind_response(no, _, no, Outs, Outs1?, In, In?) :-
+    handle_response(Id?, accept(LocalCh?), From?, Outs?, Outs1, In?, In1).
+bind_response(_, no, _, no, Outs, Outs1?, In, In?) :-
     send_user(msg(agent, '_user', rejected), Outs?, Outs1).
 
-procedure handle_response(Response?, Constant?, Stream(OutputEntry)?, Stream(OutputEntry), Stream(NetInMsg)?, Stream(NetInMsg)).
-handle_response(accept(ch(FIn, FOut?)), From, Outs, Outs2?, In, In1?) :-
+procedure handle_response(Constant?, Response?, Constant?, Stream(OutputEntry)?, Stream(OutputEntry), Stream(NetInMsg)?, Stream(NetInMsg)).
+handle_response(Id, accept(Ch), From, Outs, Outs1?, In, In1?) :-
     ground(From?) |
-    add_friend_output(From?, FOut, Outs?, Outs1),
-    send_user(msg(agent, '_user', connected(From?)), Outs1?, Outs2),
-    merge(In?, FIn?, In1).
-handle_response(no, From, Outs, Outs1?, In, In?) :-
+    befriend_commit(Id?, From?, Ch?, Outs?, Outs1, In?, In1).
+handle_response(_, no, From, Outs, Outs1?, In, In?) :-
     ground(From?) |
     send_user(msg(agent, '_user', rejected(From?)), Outs?, Outs1).
 
@@ -44,7 +42,7 @@ agent(Id, [msg('_user', Id1, connect(Target))|UserIn], NetIn, Outs) :-
 
 agent(Id, [msg('_user', Id1, decision(Dec, From, response(Resp?)))|UserIn], NetIn, Outs) :-
     Id? =?= Id1? |
-    bind_response(Dec?, From?, Resp, Outs?, Outs1, NetIn?, NetIn1),
+    bind_response(Id?, Dec?, From?, Resp, Outs?, Outs1, NetIn?, NetIn1),
     agent(Id?, UserIn?, NetIn1?, Outs1?).
 
 agent(Id, [msg('_user', Id1, send(Target, Text))|UserIn], NetIn, Outs) :-
@@ -70,12 +68,10 @@ agent(Id, [msg('_user', Id1, reject_intro(_, channel(ch(_, [nack|[]]))))|UserIn]
     agent(Id?, UserIn?, NetIn?, Outs?).
 
 %% Intro result: peer acked — add friend
-agent(Id, [intro_result(Other, ch(FIn, FOut?))|UserIn], NetIn, Outs) :-
+agent(Id, [intro_result(Other, Ch)|UserIn], NetIn, Outs) :-
     ground(Id?), ground(Other?) |
-    add_friend_output(Other?, FOut, Outs?, Outs1),
-    send_user(msg(agent, '_user', connected(Other?)), Outs1?, Outs2),
-    merge(NetIn?, FIn?, NetIn1),
-    agent(Id?, UserIn?, NetIn1?, Outs2?).
+    befriend_commit(Id?, Other?, Ch?, Outs?, Outs1, NetIn?, NetIn1),
+    agent(Id?, UserIn?, NetIn1?, Outs1?).
 
 %% Intro result: peer nacked — notify rejected
 agent(Id, [intro_rejected(Other)|UserIn], NetIn, Outs) :-
@@ -86,7 +82,7 @@ agent(Id, [intro_rejected(Other)|UserIn], NetIn, Outs) :-
 %% Response to cold-call (injected by inject_msg)
 agent(Id, [msg(From, Id1, response(Resp))|UserIn], NetIn, Outs) :-
     Id? =?= Id1? |
-    handle_response(Resp?, From?, Outs?, Outs1, NetIn?, NetIn1),
+    handle_response(Id?, Resp?, From?, Outs?, Outs1, NetIn?, NetIn1),
     agent(Id?, UserIn?, NetIn1?, Outs1?).
 
 %% --- CSSG: Child-safe social graph ---
@@ -123,7 +119,7 @@ agent(Id, UserIn, [msg(Id1, intro(From, Resp?))|NetIn], Outs) :-
 
 agent(Id, UserIn, [msg(From, Id1, response(Resp))|NetIn], Outs) :-
     Id? =?= Id1? |
-    handle_response(Resp?, From?, Outs?, Outs1, NetIn?, NetIn1),
+    handle_response(Id?, Resp?, From?, Outs?, Outs1, NetIn?, NetIn1),
     agent(Id?, UserIn?, NetIn1?, Outs1?).
 
 agent(Id, UserIn, [msg(From, Id1, text(Text))|NetIn], Outs) :-

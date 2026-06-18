@@ -43,10 +43,10 @@ void main() {
       final modules = discoverProject(cssgRoot, rootSelfGlpPath: rootSelfPath);
 
       // The project's own 6 modules: agent, child_agent, mediator, actors,
-      // boot, cssg — plus the 3 routing modules exposed from the root self.glp
-      // (lib/routing/{output,inject,intro}), discovered as linkable across the
-      // whole programs/ subtree (module-system spec §3.3).  Any left unreachable
-      // are pruned by DCE at compile time; discovery still lists them.
+      // boot, cssg — plus the 4 routing modules exposed from the root self.glp
+      // (lib/routing/{output,inject,intro,befriend}), discovered as linkable
+      // across the whole programs/ subtree (module-system spec §3.3).  Any left
+      // unreachable are pruned by DCE at compile time; discovery still lists them.
       final names = modules.map((m) => m.moduleName).toSet();
       expect(names, contains('agent'));
       expect(names, contains('child_agent'));
@@ -57,7 +57,8 @@ void main() {
       expect(names, contains('routing_output'));
       expect(names, contains('routing_inject'));
       expect(names, contains('routing_intro'));
-      expect(names.length, equals(9));
+      expect(names, contains('routing_befriend'));
+      expect(names.length, equals(10));
     });
 
     test('excludes self.glp from modules', () {

@@ -23,11 +23,16 @@ FriendContent ::= response(Response)
                 ; child_intro(Constant, Channel(Stream(IntroContent), Stream(IntroContent))).
 FriendMsg     ::= msg(Constant, Constant, FriendContent).
 
-Response ::= accept(Channel(Stream(FriendMsg), Stream(FriendMsg))) ; no.
+%% A cold-call accept conveys a SETUP channel (IntroContent), not the friend
+%% channel directly; the fresh friend channel is conveyed on the setup channel at
+%% commit by the shared lib befriend_commit (CSSN Issue 16).
+Response ::= accept(Channel(Stream(IntroContent), Stream(IntroContent))) ; no.
 Decision ::= yes ; no.
 
-%% Intro content (handshake protocol)
-IntroContent ::= ack(Constant) ; nack.
+%% Setup channel content: ack/nack handshake plus the fresh-friend-channel
+%% conveyance the shared lib befriend_commit uses to install the friend channel.
+IntroContent ::= ack(Constant) ; nack
+               ; friend_channel(Channel(Stream(FriendMsg), Stream(FriendMsg))).
 
 %% Pending values — opaque values stored by mediator, forwarded to agent
 PendingValue ::= response(Response?) ; channel(Channel(Stream(IntroContent), Stream(IntroContent))) ; error.
@@ -150,58 +155,14 @@ PendingEntry ::= pending(ReqId, PendingValue).
 %% merge/3 is now defined once in the root programs/self.glp (A3 amendment).
 
 %% =============================================================================
-%% LOOKUP_SEND
+%% OUTPUT ROUTING, INJECT_MSG, ADD_FRIEND_OUTPUT — provided by lib/routing/
+%% (output.glp, inject.glp), exposed from the root self.glp and resolved
+%% unqualified.  Local copies deleted in the 4-of-4 dedup.
 %% =============================================================================
 
-%% Per-kind output routing — one procedure per output constructor, each typed
-%% at exactly what its stream carries.
-
-procedure send_user(AgentToUserMsg?, Stream(OutputEntry)?, Stream(OutputEntry)).
-send_user(Msg, [user_output([Msg?|Out1?])|Rest], [user_output(Out1)|Rest?]).
-send_user(Msg, [E|Rest], [E?|Rest1?]) :-
-    otherwise |
-    send_user(Msg?, Rest?, Rest1).
-send_user(_, [], []).
-
-procedure send_net(NetOutMsg?, Stream(OutputEntry)?, Stream(OutputEntry)).
-send_net(Msg, [net_output([Msg?|Out1?])|Rest], [net_output(Out1)|Rest?]).
-send_net(Msg, [E|Rest], [E?|Rest1?]) :-
-    otherwise |
-    send_net(Msg?, Rest?, Rest1).
-send_net(_, [], []).
-
-procedure send_friend(Constant?, FriendMsg?, Stream(OutputEntry)?, Stream(OutputEntry)).
-send_friend(Name, Msg, [friend_output(K, [Msg?|Out1?])|Rest], [friend_output(K?, Out1)|Rest?]) :-
-    Name? =?= K? | true.
-send_friend(Name, Msg, [E|Rest], [E?|Rest1?]) :-
-    otherwise |
-    send_friend(Name?, Msg?, Rest?, Rest1).
-send_friend(_, _, [], []).
-
-procedure send_child(Constant?, FriendMsg?, Stream(OutputEntry)?, Stream(OutputEntry)).
-send_child(Name, Msg, [child_output(K, [Msg?|Out1?])|Rest], [child_output(K?, Out1)|Rest?]) :-
-    Name? =?= K? | true.
-send_child(Name, Msg, [E|Rest], [E?|Rest1?]) :-
-    otherwise |
-    send_child(Name?, Msg?, Rest?, Rest1).
-send_child(_, _, [], []).
-
 %% =============================================================================
-%% INJECT_MSG
+%% CLOSE_OUTPUTS
 %% =============================================================================
-
-procedure inject_msg(Response?, Constant?, Constant?, Stream(UserInMsg)?, Stream(UserInMsg)).
-inject_msg(Resp, Target, Id, Ys, [msg(Target?, Id?, response(Resp?))|Ys?]) :-
-    known(Resp?) | true.
-inject_msg(Resp, Target, Id, [Y|Ys], [Y?|Ys1?]) :-
-    inject_msg(Resp?, Target?, Id?, Ys?, Ys1).
-
-%% =============================================================================
-%% ADD_OUTPUT / CLOSE_OUTPUTS
-%% =============================================================================
-
-procedure add_friend_output(Constant?, Stream(FriendMsg), Stream(OutputEntry)?, Stream(OutputEntry)).
-add_friend_output(Name, Out?, Outs, [friend_output(Name?, Out)|Outs?]).
 
 procedure close_outputs(Stream(OutputEntry)?).
 close_outputs([user_output([])|Outs]) :- close_outputs(Outs?).
@@ -212,25 +173,7 @@ close_outputs([parent_output(_, [])|Outs]) :- close_outputs(Outs?).
 close_outputs([]).
 
 %% =============================================================================
-%% INTRO_AWAIT_PEER
+%% INTRO_AWAIT_PEER, INJECT_INTRO_RESULT — provided by lib/routing/intro.glp,
+%% exposed from the root self.glp and resolved unqualified.  Local copies deleted
+%% in the 4-of-4 dedup.
 %% =============================================================================
-
-procedure intro_await_peer(Constant?, Channel(Stream(IntroContent), Stream(IntroContent))?, IntroResult).
-
-intro_await_peer(Other, ch([ack(_)|ChIn], ChOut?),
-                 intro_result(Other?, ch(ChIn?, ChOut))).
-
-intro_await_peer(Other, ch([nack|_], []),
-                 intro_rejected(Other?)).
-
-%% =============================================================================
-%% INJECT_INTRO_RESULT
-%% =============================================================================
-
-procedure inject_intro_result(IntroResult?, Stream(UserInMsg)?, Stream(UserInMsg)).
-inject_intro_result(intro_result(Other, Ch), Ys, [intro_result(Other?, Ch?)|Ys?]) :-
-    ground(Other?) | true.
-inject_intro_result(intro_rejected(Other), Ys, [intro_rejected(Other?)|Ys?]) :-
-    ground(Other?) | true.
-inject_intro_result(Res, [Y|Ys], [Y?|Ys1?]) :-
-    inject_intro_result(Res?, Ys?, Ys1).
