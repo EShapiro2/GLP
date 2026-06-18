@@ -459,12 +459,11 @@ packages:
   grassroots_bluetooth_layer:
     dependency: "direct main"
     description:
-      path: "."
-      ref: main
-      resolved-ref: 5806da3e124281588ff21c12574de8b789825b57
-      url: "git@github.com:danbachar/grassroots-bluetooth-layer.git"
-    source: git
-    version: "0.1.0"
+      name: grassroots_bluetooth_layer
+      sha256: d0ab308335eab7182d2e532225caa2eece31bdae913780c801ef0db7c09d65c5
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.2.0"
   grassroots_dart_udx:
     dependency: "direct main"
     description:
