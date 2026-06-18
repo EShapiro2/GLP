@@ -28,8 +28,8 @@
 ///   // Handle incoming GSG block
 /// };
 /// 
-/// grassroots.onPeerConnected = (peer) {
-///   // New peer available
+/// grassroots.onPeerConnected = (publicKey, transport) {
+///   // peer reachable over `transport` (BLE or UDP)
 /// };
 /// 
 /// // Initialize and start
