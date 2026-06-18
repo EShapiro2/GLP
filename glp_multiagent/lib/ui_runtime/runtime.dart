@@ -11,12 +11,19 @@ library;
 import 'manifest.dart';
 import 'term.dart';
 
-/// A live inbox card: a matched notify descriptor plus its bound field values.
+/// A live inbox card: the panel it belongs to, a matched notify descriptor, and
+/// its bound field values. [itemKey] is the row in the panel's view it pins to
+/// (its alert badges that row).
 class InboxCard {
   final int id;
+  final Panel panel;
   final InboxDesc desc;
   final Map<String, GTerm> fields;
-  InboxCard(this.id, this.desc, this.fields);
+  InboxCard(this.id, this.panel, this.desc, this.fields);
+
+  /// The row key this card alerts on — the formatted value of its [itemKey]
+  /// field (the offering person, the proposing friend, the invited group).
+  String get itemKey => formatTerm(fields[desc.itemKey]!);
 }
 
 /// Structured state built from all-ground notifies — the state the outbox
@@ -74,7 +81,8 @@ class UiRuntime {
 
     final ib = manifest.inboxMatch(ctor, args.length);
     if (ib != null) {
-      inbox.add(InboxCard(_cardSeq++, ib, _bind(ib.args, args)));
+      final (panel, desc) = ib;
+      inbox.add(InboxCard(_cardSeq++, panel, desc, _bind(desc.args, args)));
       onChange?.call();
       return;
     }
@@ -129,8 +137,7 @@ class UiRuntime {
   }
 
   void _applyActivity(ActivityDesc desc, Map<String, GTerm> fields) {
-    final effect = desc.effect;
-    if (effect != null) {
+    for (final effect in desc.effects) {
       switch (effect) {
         case AppendTo(:final list, :final field):
           final l = store.lists.putIfAbsent(list, () => <GTerm>[]);

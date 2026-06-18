@@ -497,8 +497,9 @@ class _CoordinatorScreenState extends State<CoordinatorScreen> {
     }
 
     final bob = AgentState('Bob', const ['alice', 'charlie']);
-    // One world, one shared inbox: a single runtime rendered as three surfaces
-    // (Chats / Wallet / Requests) by the unified Grassroots manifest.
+    // One world, one runtime, rendered as GrassApp's three panels
+    // (Friends / Coins / Chats) by the unified Grassroots manifest, the one
+    // mediator's volitions routed to each panel and item.
     bob.ui = UiRuntime(
       manifest: grassrootsManifest,
       onSend: (text) => bob.commandPort?.send(UserInput(text)),

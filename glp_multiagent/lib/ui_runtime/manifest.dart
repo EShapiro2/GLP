@@ -70,15 +70,23 @@ class AnswerDesc {
 /// An inbox card: one `ReqId`-bearing `UserNotify`. [args] names the notify's
 /// positional arguments so [title]/[subtitle] templates and [answers] can refer
 /// to them by name (e.g. `{from}`).
+///
+/// [itemKey] names the argument that pins the card to a row in its panel's view
+/// — the offering person for a friend offer (`from`), the proposing friend for a
+/// swap (`from`), the group for an invitation. The panel badges that row and
+/// opens the card from it (WhatsApp-style per-item alert), rather than listing
+/// the card in a separate inbox screen.
 class InboxDesc {
   final String notifyCtor;
   final List<String> args;
+  final String itemKey;
   final String title;
   final String? subtitle;
   final List<AnswerDesc> answers;
   const InboxDesc({
     required this.notifyCtor,
     required this.args,
+    required this.itemKey,
     required this.title,
     this.subtitle,
     required this.answers,
@@ -163,19 +171,21 @@ class SetBalance extends Effect {
 }
 
 /// An activity rule: one all-ground `UserNotify` that lands in its target
-/// surface (paper §7.4). [effect] mutates the rendered state — `connected` adds
-/// a friend, `unfriended` removes one, `received` extends a conversation. There
-/// is no separate "Activity" screen; "activity" is the rule's name. A rule may
-/// have no effect (a recognised notify with nothing to render, e.g. a refused
-/// offer that simply leaves no friend).
+/// surface(s) (paper §7.4). [effects] mutate the rendered state — `connected`
+/// both adds a friend to the Friends panel and opens the conversation in the
+/// Chats panel, `unfriended` removes one, `received` extends a conversation.
+/// There is no separate "Activity" screen; "activity" is the rule's name. A rule
+/// may have no effect (a recognised notify with nothing to render, e.g. a
+/// refused offer that simply leaves no friend). A notify lands in more than one
+/// panel by listing one effect per panel it touches.
 class ActivityDesc {
   final String notifyCtor;
   final List<String> args;
-  final Effect? effect;
+  final List<Effect> effects;
   const ActivityDesc({
     required this.notifyCtor,
     required this.args,
-    this.effect,
+    this.effects = const [],
   });
 }
 
@@ -223,6 +233,16 @@ class WalletView {
   });
 }
 
+/// A plain friends-list surface (the social-graph panel): the established
+/// friends in [listKey], each a row. Pending friend offers badge a row for the
+/// offering person even before the friendship is made — first contact is gated
+/// here, so the offer appears as an alerting row in this panel.
+class FriendsView {
+  final String listKey;
+  final String label;
+  const FriendsView({required this.listKey, required this.label});
+}
+
 /// Display kind for a declared piece of activity state.
 enum StateKind { list, value, thread }
 
@@ -236,43 +256,67 @@ class StateView {
   const StateView(this.key, this.label, this.kind);
 }
 
-/// A complete per-app UI contract.
+/// One platform's panel (paper §7.3): a name (app-bar title + bottom-nav tab
+/// label), exactly one state/outbox view — a friends list, a wallet, or a chat
+/// list — its own outbox [commands] composed by the panel's "+", and its own
+/// [inbox] of volitions, each surfaced as a per-item alert on its view's rows.
+/// A new platform is a new panel; the panels stack without touching one another.
+class Panel {
+  /// Stable identity for routing a card to this panel (e.g. 'friends').
+  final String id;
+
+  /// The platform's name — the app-bar title when this panel is active and its
+  /// bottom-nav tab label.
+  final String name;
+
+  // Exactly one of the three views is set; its kind selects the panel's icon.
+  final FriendsView? friends;
+  final WalletView? wallet;
+  final ChatView? chat;
+
+  /// The panel's outbox commands (its "+"); empty when the view composes its own
+  /// actions (the wallet drills down to per-friend actions instead).
+  final List<CommandDesc> commands;
+
+  /// The panel's inbox cards, each pinned to a row by its [InboxDesc.itemKey].
+  final List<InboxDesc> inbox;
+
+  const Panel({
+    required this.id,
+    required this.name,
+    this.friends,
+    this.wallet,
+    this.chat,
+    this.commands = const [],
+    this.inbox = const [],
+  });
+}
+
+/// A complete per-app UI contract: GrassApp is one app of several panels, one
+/// per platform (paper §7.3). The bottom bar is the panels; the active panel's
+/// name heads the app bar. Activity rules and declared state are shared across
+/// panels — one notify may land in more than one panel (e.g. `connected`) — so
+/// they live here and the panels render views over the one activity store.
 class Manifest {
   final String title;
-  final List<CommandDesc> commands;
-  final List<InboxDesc> inbox;
+  final List<Panel> panels;
   final List<ActivityDesc> activity;
   final List<StateView> state;
 
-  /// Optional messaging surface. When set, the state screen is a chat list and
-  /// tapping a conversation opens it (the GrassApp surface). When null, the
-  /// state screen is a plain list (the GSG Friends surface).
-  final ChatView? chat;
-
-  /// Optional wallet surface (coins app). When set, the state screen is the
-  /// wallet — friends list drilling down to holdings and actions. Mutually
-  /// exclusive with [chat] in practice.
-  final WalletView? wallet;
-
-  /// Label for the state/outbox screen's bottom-nav tab (e.g. 'Friends',
-  /// 'Chats'). Defaults to 'Friends'.
-  final String stateTabLabel;
-
   const Manifest({
     required this.title,
-    required this.commands,
-    required this.inbox,
+    required this.panels,
     required this.activity,
     this.state = const [],
-    this.chat,
-    this.wallet,
-    this.stateTabLabel = 'Friends',
   });
 
-  /// The inbox descriptor matching constructor [ctor] of arity [arity], if any.
-  InboxDesc? inboxMatch(String ctor, int arity) {
-    for (final d in inbox) {
-      if (d.notifyCtor == ctor && d.args.length == arity) return d;
+  /// The panel and inbox descriptor whose card matches constructor [ctor] of
+  /// arity [arity], if any.
+  (Panel, InboxDesc)? inboxMatch(String ctor, int arity) {
+    for (final p in panels) {
+      for (final d in p.inbox) {
+        if (d.notifyCtor == ctor && d.args.length == arity) return (p, d);
+      }
     }
     return null;
   }

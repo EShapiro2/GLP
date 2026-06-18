@@ -1,15 +1,16 @@
-/// Generic two-surface agent UI (paper §7.1 "The Application", §7.4 "A Generic
-/// UI", Figure fig:gsg). The app is exactly two surfaces, shown as two screens
-/// with bottom-tab navigation:
+/// GrassApp — one app, one panel per platform (paper §7.3, Figure fig:grassapp).
 ///
-///   • Requests — the inbox: ReqId-bearing notifies, each answered Accept/Decline.
-///   • Friends  — the state the outbox leaves: a wholly-ground activity rule
-///                lands here (`connected` adds a friend, `unfriended` removes
-///                one). There is no separate "Activity" screen.
+/// The bottom bar is the panels — Friends (social graph), Coins, Chats (social
+/// network) — each reached by an icon badged with that panel's pending alerts.
+/// The app bar reads the active panel's name. Each panel is the platform's own
+/// two surfaces: an outbox the person composes (its "+") and an inbox of
+/// volitions, surfaced as WhatsApp-style per-item alerts — a card badges the row
+/// it pins to (a person, a friend, a group) and is answered by tapping that row,
+/// which opens an accept/decline sheet (a confirmed gesture, not inline buttons).
 ///
-/// The "+" on the Friends screen composes outbox requests (offer friendship,
-/// introduce). Renders strictly from a [Manifest]; no app-specific constructor
-/// name appears here.
+/// One mediator feeds one runtime; the runtime tags each card with its owning
+/// panel, so this surface routes alerts by panel and row. Renders strictly from
+/// a [Manifest]; no app-specific constructor name appears here.
 library;
 
 import 'package:flutter/material.dart';
@@ -28,11 +29,12 @@ class AgentSurface extends StatefulWidget {
 }
 
 class _AgentSurfaceState extends State<AgentSurface> {
-  /// 0 = the state/outbox surface (Friends or Chats), 1 = the inbox (Requests).
-  int _tab = 0;
+  /// The active panel (index into the manifest's panels).
+  int _panel = 0;
 
-  /// When on a chat app, the open conversation peer (null = the chat list).
-  String? _openPeer;
+  /// Drill-down within the active panel: an open chat peer or wallet person
+  /// (null = the panel's list).
+  String? _openItem;
 
   final TextEditingController _msg = TextEditingController();
 
@@ -54,52 +56,50 @@ class _AgentSurfaceState extends State<AgentSurface> {
 
   static const MaterialColor _accent = Colors.green;
 
-  bool get _chats => _m.chat != null;
-  bool get _wallet => _m.wallet != null;
+  // === Per-panel card routing ===============================================
 
-  /// The state surfaces (everything that isn't the Requests inbox), in tab
-  /// order: a chat list and/or a wallet, else a plain friends list. Requests is
-  /// always the final tab.
-  List<_StateTab> get _stateTabs {
-    final tabs = <_StateTab>[];
-    if (_m.chat != null) {
-      tabs.add(_StateTab('chat', _m.chat!.label, Icons.chat_bubble_outline,
-          Icons.chat_bubble));
+  /// The pending cards belonging to [panel], keyed by the row they alert on.
+  Map<String, InboxCard> _pendingByItem(Panel panel) {
+    final m = <String, InboxCard>{};
+    for (final c in _r.inbox) {
+      if (c.panel.id == panel.id) m[c.itemKey] = c;
     }
-    if (_m.wallet != null) {
-      tabs.add(_StateTab('wallet', _m.wallet!.label,
-          Icons.account_balance_wallet_outlined, Icons.account_balance_wallet));
+    return m;
+  }
+
+  int _panelAlerts(Panel panel) =>
+      _r.inbox.where((c) => c.panel.id == panel.id).length;
+
+  IconData _panelIcon(Panel p, {required bool selected}) {
+    if (p.wallet != null) {
+      return selected ? Icons.monetization_on : Icons.monetization_on_outlined;
     }
-    if (tabs.isEmpty) {
-      tabs.add(
-          _StateTab('friends', 'Friends', Icons.people_outline, Icons.people));
+    if (p.chat != null) {
+      return selected ? Icons.chat_bubble : Icons.chat_bubble_outline;
     }
-    return tabs;
+    return selected ? Icons.people : Icons.people_outline;
   }
 
   @override
   Widget build(BuildContext context) {
-    final tabs = _stateTabs;
-    final n = tabs.length; // state tabs; the Requests inbox is index n.
-    if (_tab > n) _tab = n;
-    final onState = _tab < n;
-    final active = onState ? tabs[_tab] : null;
+    final panels = _m.panels;
+    if (_panel >= panels.length) _panel = panels.length - 1;
+    final active = panels[_panel];
 
-    // Drill-down within the active state surface.
-    if (onState && _openPeer != null) {
-      if (active!.kind == 'chat') return _conversation(_m.chat!, _openPeer!);
-      if (active.kind == 'wallet') return _walletDetail(_m.wallet!, _openPeer!);
+    // Drill-down within the active panel: a wallet person or a chat peer.
+    if (_openItem != null) {
+      if (active.chat != null) return _conversation(active.chat!, _openItem!);
+      if (active.wallet != null) return _walletDetail(active.wallet!, _openItem!);
     }
 
-    final requests = _r.inbox.length;
-    final showFab = onState && active!.kind != 'wallet';
+    final showFab = active.commands.isNotEmpty;
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
         backgroundColor: _accent,
         foregroundColor: Colors.white,
         elevation: 0,
-        title: Text(onState ? _m.title : 'Requests',
+        title: Text(active.name,
             style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
         actions: [
           Padding(
@@ -116,86 +116,195 @@ class _AgentSurfaceState extends State<AgentSurface> {
           ),
         ],
       ),
-      body: onState ? _stateBody(active!) : _requestsScreen(),
+      body: _panelBody(active),
       floatingActionButton: showFab
           ? FloatingActionButton(
               backgroundColor: _accent,
               foregroundColor: Colors.white,
-              onPressed: () => _composeSheet(context),
+              onPressed: () => _composeSheet(context, active.commands),
               child: const Icon(Icons.add),
             )
           : null,
       bottomNavigationBar: NavigationBar(
         height: 60,
-        selectedIndex: _tab,
+        selectedIndex: _panel,
         onDestinationSelected: (i) => setState(() {
-          _tab = i;
-          _openPeer = null;
+          _panel = i;
+          _openItem = null;
         }),
         destinations: [
-          for (final t in tabs)
+          for (final p in panels)
             NavigationDestination(
-                icon: Icon(t.icon),
-                selectedIcon: Icon(t.selectedIcon),
-                label: t.label),
-          NavigationDestination(
-            icon: _badge(requests, const Icon(Icons.mail_outline)),
-            selectedIcon: _badge(requests, const Icon(Icons.mail)),
-            label: 'Requests',
-          ),
+              icon: _alertBadge(
+                  _panelAlerts(p), Icon(_panelIcon(p, selected: false))),
+              selectedIcon: _alertBadge(
+                  _panelAlerts(p), Icon(_panelIcon(p, selected: true))),
+              label: p.name,
+            ),
         ],
       ),
     );
   }
 
-  Widget _badge(int count, Widget child) =>
+  Widget _alertBadge(int count, Widget child) =>
       Badge(isLabelVisible: count > 0, label: Text('$count'), child: child);
 
-  // === State surface — the state the outbox leaves ==========================
-
-  Widget _stateBody(_StateTab t) {
-    switch (t.kind) {
-      case 'chat':
-        return _chatList(_m.chat!);
-      case 'wallet':
-        return _walletList(_m.wallet!);
-      default:
-        return _friendsList();
-    }
+  Widget _panelBody(Panel p) {
+    if (p.wallet != null) return _walletPanel(p);
+    if (p.chat != null) return _chatPanel(p);
+    return _friendsPanel(p);
   }
 
-  // --- Wallet (coins): person + friends, each drilling into their holdings ---
-  Widget _walletList(WalletView w) {
-    // People = self + friends (explicit list, chat peers, holdings owners).
+  // === The per-item alert: tap a row → accept/decline (confirmed gesture) ====
+
+  void _openCard(BuildContext context, InboxCard card) {
+    showModalBottomSheet<void>(
+      context: context,
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(renderTemplate(card.desc.title, card.fields),
+                  style: const TextStyle(
+                      fontWeight: FontWeight.bold, fontSize: 16)),
+              if (card.desc.subtitle != null) ...[
+                const SizedBox(height: 6),
+                Text(renderTemplate(card.desc.subtitle!, card.fields),
+                    style: const TextStyle(fontSize: 14, color: Colors.black54)),
+              ],
+              const SizedBox(height: 18),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: card.desc.answers.map((a) {
+                  final primary = a.label.toLowerCase() == 'accept';
+                  final onPressed = () {
+                    Navigator.pop(ctx);
+                    _answer(card, a);
+                  };
+                  final btn = primary
+                      ? ElevatedButton(
+                          onPressed: onPressed, child: Text(a.label))
+                      : OutlinedButton(
+                          onPressed: onPressed, child: Text(a.label));
+                  return Padding(
+                      padding: const EdgeInsets.only(left: 8), child: btn);
+                }).toList(),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _answer(InboxCard card, AnswerDesc answer) {
+    if (answer.needsPicker) return; // reserved for child-safe pickers
+    _r.answerCard(card, answer);
+  }
+
+  /// A row's trailing alert affordance: a count badge over a notification dot.
+  Widget _rowAlert() => const Icon(Icons.notifications_active, color: _accent);
+
+  // === Friends panel — the social graph =====================================
+
+  Widget _friendsPanel(Panel p) {
+    final pending = _pendingByItem(p);
+    final friends =
+        (_r.store.lists[p.friends!.listKey] ?? const []).map(formatTerm);
+    // Established friends, then anyone who has offered but isn't a friend yet
+    // (first contact is gated here, so the offer shows as an alerting row).
+    final rows = <String>{...friends, ...pending.keys};
+    if (rows.isEmpty) return _empty('No friends yet');
+    return ListView(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      children: [
+        for (final person in rows)
+          _personTile(person, pending[person], subtitle: null),
+      ],
+    );
+  }
+
+  // === Coins panel — the wallet, organised by friend ========================
+
+  Widget _walletPanel(Panel p) {
+    final w = p.wallet!;
+    final pending = _pendingByItem(p);
     final people = <String>{w.selfKey};
     if (w.friendsList.isNotEmpty) {
       people.addAll((_r.store.lists[w.friendsList] ?? const []).map(formatTerm));
     }
-    if (_m.chat != null) {
-      people.addAll((_r.store.threads[_m.chat!.threadKey] ?? const {}).keys);
-    }
     people.addAll((_r.store.holdings[w.storeKey] ?? const {}).keys);
+    people.addAll(pending.keys);
     return ListView(
       padding: const EdgeInsets.symmetric(vertical: 2),
       children: [
-        for (final p in people)
-          ListTile(
-            leading: CircleAvatar(
-              backgroundColor: _accent.shade100,
-              child: Text(_initial(p),
-                  style: const TextStyle(
-                      color: Colors.black87, fontWeight: FontWeight.bold)),
-            ),
-            title: Text(p == w.selfKey ? 'You' : _cap(p),
-                style: const TextStyle(fontWeight: FontWeight.w600)),
-            subtitle: Text(_holdingsSummary(w, p),
-                maxLines: 1, overflow: TextOverflow.ellipsis),
-            trailing: const Icon(Icons.chevron_right, color: Colors.grey),
-            onTap: () => setState(() => _openPeer = p),
-          ),
+        for (final person in people)
+          _personTile(person, pending[person],
+              titleOverride: person == w.selfKey ? 'You' : null,
+              subtitle: _holdingsSummary(w, person),
+              onOpen: () => setState(() => _openItem = person)),
       ],
     );
   }
+
+  // === Chats panel — the social network =====================================
+
+  Widget _chatPanel(Panel p) {
+    final pending = _pendingByItem(p);
+    final convs = _r.store.threads[p.chat!.threadKey] ?? const {};
+    final rows = <String>{...convs.keys, ...pending.keys};
+    if (rows.isEmpty) return _empty('No chats yet');
+    return ListView(
+      padding: const EdgeInsets.symmetric(vertical: 2),
+      children: [
+        for (final peer in rows)
+          _personTile(peer, pending[peer],
+              subtitle: convs[peer] == null ? null : _lastText(convs[peer]!),
+              onOpen: convs[peer] == null
+                  ? null
+                  : () => setState(() => _openItem = peer)),
+      ],
+    );
+  }
+
+  // === Shared row: a person/friend/peer, badged when it has a pending card ===
+
+  /// One list row. When [card] is non-null the row carries a per-item alert and
+  /// tapping it opens the accept/decline sheet; otherwise tapping runs [onOpen]
+  /// (drill into holdings or a conversation), if any.
+  Widget _personTile(String name, InboxCard? card,
+      {String? titleOverride, String? subtitle, VoidCallback? onOpen}) {
+    final alerting = card != null;
+    return ListTile(
+      leading: CircleAvatar(
+        backgroundColor: _accent.shade100,
+        child: Text(_initial(name),
+            style: const TextStyle(
+                color: Colors.black87, fontWeight: FontWeight.bold)),
+      ),
+      title: Text(titleOverride ?? _cap(name),
+          style: const TextStyle(fontWeight: FontWeight.w600)),
+      subtitle: alerting
+          ? Text(renderTemplate(card.desc.title, card.fields),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(color: _accent, fontWeight: FontWeight.w600))
+          : (subtitle == null
+              ? null
+              : Text(subtitle, maxLines: 1, overflow: TextOverflow.ellipsis)),
+      trailing: alerting
+          ? _rowAlert()
+          : (onOpen == null
+              ? null
+              : const Icon(Icons.chevron_right, color: Colors.grey)),
+      onTap: alerting ? () => _openCard(context, card) : onOpen,
+    );
+  }
+
+  // === Wallet drill-down: a person's coins + the actions against them ========
 
   Widget _walletDetail(WalletView w, String person) {
     final isSelf = person == w.selfKey;
@@ -208,7 +317,7 @@ class _AgentSurfaceState extends State<AgentSurface> {
         backgroundColor: _accent,
         foregroundColor: Colors.white,
         elevation: 0,
-        leading: BackButton(onPressed: () => setState(() => _openPeer = null)),
+        leading: BackButton(onPressed: () => setState(() => _openItem = null)),
         titleSpacing: 0,
         title: Text(isSelf ? 'Your wallet' : "${_cap(person)}'s coins",
             style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
@@ -225,7 +334,8 @@ class _AgentSurfaceState extends State<AgentSurface> {
                         ListTile(
                           leading: const Icon(Icons.toll, color: _accent),
                           title: Text(_coinLabel(c, w),
-                              style: const TextStyle(fontWeight: FontWeight.w600)),
+                              style:
+                                  const TextStyle(fontWeight: FontWeight.w600)),
                           trailing: Text(formatTerm(holds[c]!),
                               style: const TextStyle(
                                   fontSize: 16, fontWeight: FontWeight.bold)),
@@ -276,59 +386,8 @@ class _AgentSurfaceState extends State<AgentSurface> {
   String _coinShort(String coin, WalletView w) =>
       coin == w.selfKey ? 'yours' : "${_cap(coin)}'s";
 
-  Widget _friendsList() {
-    final children = <Widget>[];
-    for (final v in _m.state) {
-      switch (v.kind) {
-        case StateKind.list:
-          final items = _r.store.lists[v.key] ?? const [];
-          if (items.isEmpty) {
-            children.add(_empty('No ${v.label.toLowerCase()} yet'));
-          } else {
-            children.addAll(items.map((t) => _friendTile(formatTerm(t))));
-          }
-        case StateKind.value:
-          final val = _r.store.values[v.key];
-          children.add(ListTile(
-            title: Text(v.label),
-            trailing: Text(val == null ? '—' : formatTerm(val)),
-          ));
-        case StateKind.thread:
-          break; // chat list handled by _chatList when chat is declared
-      }
-    }
-    if (children.isEmpty) children.add(_empty('Nothing yet'));
-    return ListView(
-        padding: const EdgeInsets.symmetric(vertical: 4), children: children);
-  }
+  // === Chat drill-down: bubbles + input =====================================
 
-  // --- Chat list (conversations) ---
-  Widget _chatList(ChatView chat) {
-    final convs = _r.store.threads[chat.threadKey] ?? const {};
-    if (convs.isEmpty) return _empty('No chats yet');
-    final peers = convs.keys.toList();
-    return ListView(
-      padding: const EdgeInsets.symmetric(vertical: 2),
-      children: [
-        for (final p in peers)
-          ListTile(
-            leading: CircleAvatar(
-              backgroundColor: _accent.shade100,
-              child: Text(_initial(p),
-                  style: const TextStyle(
-                      color: Colors.black87, fontWeight: FontWeight.bold)),
-            ),
-            title: Text(_cap(p),
-                style: const TextStyle(fontWeight: FontWeight.w600)),
-            subtitle: Text(_lastText(convs[p]!),
-                maxLines: 1, overflow: TextOverflow.ellipsis),
-            onTap: () => setState(() => _openPeer = p),
-          ),
-      ],
-    );
-  }
-
-  // --- Open conversation: bubbles + input ---
   Widget _conversation(ChatView chat, String peer) {
     final msgs = _r.store.threads[chat.threadKey]?[peer] ?? const [];
     return Scaffold(
@@ -337,7 +396,7 @@ class _AgentSurfaceState extends State<AgentSurface> {
         backgroundColor: _accent,
         foregroundColor: Colors.white,
         elevation: 0,
-        leading: BackButton(onPressed: () => setState(() => _openPeer = null)),
+        leading: BackButton(onPressed: () => setState(() => _openItem = null)),
         titleSpacing: 0,
         title: Text(_cap(peer),
             style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
@@ -435,99 +494,11 @@ class _AgentSurfaceState extends State<AgentSurface> {
     return s.args.isNotEmpty ? formatTerm(s.args[0]) : '';
   }
 
-  String _cap(String s) => s.isEmpty ? s : s[0].toUpperCase() + s.substring(1);
-
-  Widget _friendTile(String name) {
-    final display =
-        name.isEmpty ? name : name[0].toUpperCase() + name.substring(1);
-    return ListTile(
-      leading: CircleAvatar(
-        backgroundColor: _accent.shade100,
-        child: Text(_initial(name),
-            style: const TextStyle(
-                color: Colors.black87, fontWeight: FontWeight.bold)),
-      ),
-      title: Text(display, style: const TextStyle(fontWeight: FontWeight.w600)),
-    );
-  }
-
-  // === Requests screen — the inbox ==========================================
-
-  Widget _requestsScreen() {
-    if (_r.inbox.isEmpty) return _empty('No requests');
-    return ListView(
-      padding: const EdgeInsets.all(8),
-      children: _r.inbox.map((c) => _card(context, c)).toList(),
-    );
-  }
-
-  Widget _card(BuildContext context, InboxCard card) {
-    return Card(
-      margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 4),
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                CircleAvatar(
-                  radius: 16,
-                  backgroundColor: _accent.shade100,
-                  child: Text(_titleInitial(card),
-                      style: const TextStyle(
-                          color: Colors.black87,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 13)),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(renderTemplate(card.desc.title, card.fields),
-                          style: const TextStyle(
-                              fontWeight: FontWeight.bold, fontSize: 14)),
-                      if (card.desc.subtitle != null)
-                        Text(renderTemplate(card.desc.subtitle!, card.fields),
-                            style: const TextStyle(
-                                fontSize: 12, color: Colors.black54)),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 10),
-            Row(
-              children: card.desc.answers.map((a) {
-                final primary = a.label.toLowerCase() == 'accept';
-                final btn = primary
-                    ? ElevatedButton(
-                        onPressed: () => _answer(context, card, a),
-                        child: Text(a.label))
-                    : OutlinedButton(
-                        onPressed: () => _answer(context, card, a),
-                        child: Text(a.label));
-                return Padding(
-                    padding: const EdgeInsets.only(right: 8), child: btn);
-              }).toList(),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  void _answer(BuildContext context, InboxCard card, AnswerDesc answer) {
-    if (answer.needsPicker) return; // reserved for child-safe pickers
-    _r.answerCard(card, answer);
-  }
-
   // === Outbox — compose a request ("+") =====================================
 
-  void _composeSheet(BuildContext context) {
-    if (_m.commands.length == 1) {
-      _composeCommand(context, _m.commands.first);
+  void _composeSheet(BuildContext context, List<CommandDesc> commands) {
+    if (commands.length == 1) {
+      _composeCommand(context, commands.first);
       return;
     }
     showModalBottomSheet<void>(
@@ -536,7 +507,7 @@ class _AgentSurfaceState extends State<AgentSurface> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            for (final c in _m.commands)
+            for (final c in commands)
               ListTile(
                 leading: const Icon(Icons.edit_outlined),
                 title: Text(c.label),
@@ -620,22 +591,7 @@ class _AgentSurfaceState extends State<AgentSurface> {
         ),
       );
 
+  String _cap(String s) => s.isEmpty ? s : s[0].toUpperCase() + s.substring(1);
+
   String _initial(String s) => s.isEmpty ? '?' : s[0].toUpperCase();
-
-  String _titleInitial(InboxCard card) {
-    for (final entry in card.fields.entries) {
-      final t = entry.value;
-      if (t is GAtom && t.name.isNotEmpty) return t.name[0].toUpperCase();
-    }
-    return '?';
-  }
-}
-
-/// One bottom-nav state surface (a chat list, a wallet, or a friends list).
-class _StateTab {
-  final String kind; // 'chat' | 'wallet' | 'friends'
-  final String label;
-  final IconData icon;
-  final IconData selectedIcon;
-  const _StateTab(this.kind, this.label, this.icon, this.selectedIcon);
 }

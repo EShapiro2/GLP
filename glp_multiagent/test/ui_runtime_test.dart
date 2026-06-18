@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:glp_multiagent/manifests/gsg.dart';
+import 'package:glp_multiagent/manifests/grassroots.dart';
 import 'package:glp_multiagent/ui_runtime/manifest.dart';
 import 'package:glp_multiagent/ui_runtime/runtime.dart';
 import 'package:glp_multiagent/ui_runtime/term.dart';
@@ -27,43 +27,50 @@ void main() {
     });
 
     test('format round-trips', () {
-      expect(formatTerm(GStruct('decision', [GAtom('yes'), GAtom('alice'), GStruct('req', [GInt(1)])])),
+      expect(
+          formatTerm(GStruct('decision',
+              [GAtom('yes'), GAtom('alice'), GStruct('req', [GInt(1)])])),
           'decision(yes, alice, req(1))');
     });
   });
 
-  group('GSG runtime via manifest only', () {
+  group('GrassApp runtime via manifest only', () {
     late List<String> sent;
     late UiRuntime r;
 
     setUp(() {
       sent = [];
-      r = UiRuntime(manifest: gsgManifest, onSend: sent.add);
+      r = UiRuntime(manifest: grassrootsManifest, onSend: sent.add);
     });
 
-    test('befriend notify becomes an inbox card; Accept sends decision(yes,..)', () {
+    test('befriend card belongs to the Friends panel, keyed by the offerer', () {
       r.handleLine('befriend(alice, req(1))');
       expect(r.inbox.length, 1);
       final card = r.inbox.first;
       expect(card.desc.notifyCtor, 'befriend');
+      expect(card.panel.id, 'friends');
+      expect(card.itemKey, 'alice');
       final accept = card.desc.answers.firstWhere((a) => a.label == 'Accept');
       r.answerCard(card, accept);
       expect(sent, ['decision(yes, alice, req(1))']);
       expect(r.inbox, isEmpty);
     });
 
-    test('befriend_intro Decline sends reject_intro WITHOUT the req id', () {
-      r.handleLine('befriend_intro(alice, bob, req(2))');
+    test('swap_offer card belongs to the Coins panel, keyed by the proposer',
+        () {
+      r.handleLine('swap_offer(alice, alice, 1, bob, 1, req(3))');
       final card = r.inbox.single;
-      final decline = card.desc.answers.firstWhere((a) => a.label == 'Decline');
-      r.answerCard(card, decline);
-      expect(sent, ['reject_intro(bob)']);
+      expect(card.panel.id, 'coins');
+      expect(card.itemKey, 'alice');
+      final accept = card.desc.answers.firstWhere((a) => a.label == 'Accept');
+      r.answerCard(card, accept);
+      expect(sent, ['accept_swap(alice, req(3))']);
     });
 
-    test('connected adds the friend to the Friends list (no feed)', () {
+    test('connected adds the friend AND opens the conversation', () {
       r.handleLine('connected(bob)');
-      final friends = r.store.lists['friends']!;
-      expect(friends.map(formatTerm).toList(), ['bob']);
+      expect(r.store.lists['friends']!.map(formatTerm).toList(), ['bob']);
+      expect(r.store.threads['chats']!.containsKey('bob'), isTrue);
     });
 
     test('connected is idempotent (no duplicate friend)', () {
@@ -78,20 +85,30 @@ void main() {
       expect(r.store.lists['friends'], isEmpty);
     });
 
-    test('received (messaging) is ignored by the GSG manifest', () {
-      r.handleLine('received(bob, hi)');
+    test('received from a friend extends the Chats conversation', () {
+      r.handleLine("received(alice, 'hi')");
       expect(r.inbox, isEmpty);
-      expect(r.store.lists['friends'], isEmpty);
+      expect(r.store.threads['chats']!['alice']!.length, 1);
     });
 
-    test('submitCommand builds the ground UserCmd from form values', () {
-      final connect = gsgManifest.commands.firstWhere((c) => c.ctor == 'connect');
+    test('balance_report sets a keyed holding', () {
+      r.handleLine('balance_report(bob, alice, 2)');
+      expect(formatTerm(r.store.holdings['holdings']!['bob']!['alice']!), '2');
+    });
+
+    test('submitCommand builds the ground UserCmd from a panel form', () {
+      final friends =
+          grassrootsManifest.panels.firstWhere((p) => p.id == 'friends');
+      final connect = friends.commands.firstWhere((c) => c.ctor == 'connect');
       r.submitCommand(connect, {'target': GAtom('bob')});
       expect(sent, ['connect(bob)']);
     });
 
-    test('Friends state view is declared so the section renders empty first', () {
-      expect(gsgManifest.state.any((v) => v.key == 'friends' && v.kind == StateKind.list), isTrue);
+    test('Friends state view is declared so the panel renders empty first', () {
+      expect(
+          grassrootsManifest.state.any(
+              (v) => v.key == 'friends' && v.kind == StateKind.list),
+          isTrue);
       expect(r.store.lists.containsKey('friends'), isTrue);
     });
   });

@@ -1,8 +1,10 @@
-/// Unified Grassroots manifest for the running demo: ONE platform with three
-/// surfaces over ONE shared inbox — Chats (messaging), Wallet (coins among
-/// friends), and Requests (friend offers + swap proposals). Friends established
-/// by befriending can both talk and transact coins. Rendered by the one generic
-/// interpreter; all specifics are here, none in Dart.
+/// GrassApp manifest (paper §7.3): one app, one panel per platform —
+/// **Friends** (the social graph), **Coins** (coins among friends), and
+/// **Chats** (the social network). The bottom bar is these three panels; each
+/// carries its own outbox and its own per-item alerts. One mediator
+/// (programs/book/coins/coins_mediator.glp) feeds them all; the Dart side routes
+/// each volition to its platform's panel by notify constructor — a friend offer
+/// to Friends, a proposed swap to Coins, a group invitation to Chats.
 ///
 /// Backed live by the GLP coins scenario in programs/book/coins/ (coins_agent +
 /// coins_mediator), whose UserCmd/UserNotify vocabulary this manifest mirrors.
@@ -14,141 +16,177 @@ import '../ui_runtime/term.dart';
 final Manifest grassrootsManifest = Manifest(
   title: 'GrassApp',
 
-  // Surface 1: Chats (the friends you can talk to).
-  chat: const ChatView(threadKey: 'chats', label: 'Chats', sendCtor: 'send'),
+  panels: [
+    // --- Friends: the social graph -----------------------------------------
+    // The friends list; a friend offer alerts the offering person's row (first
+    // contact is gated here). The "+" offers friendship.
+    Panel(
+      id: 'friends',
+      name: 'Friends',
+      friends: const FriendsView(listKey: 'friends', label: 'Friends'),
+      commands: const [
+        CommandDesc(
+          ctor: 'connect',
+          label: 'Add friend',
+          args: [FieldDesc('target', FieldType.person, 'Person to connect')],
+        ),
+      ],
+      inbox: [
+        InboxDesc(
+          notifyCtor: 'befriend',
+          args: const ['from', 'req'],
+          itemKey: 'from',
+          title: '{from} wants to connect',
+          answers: const [
+            AnswerDesc(
+              label: 'Accept',
+              cmdCtor: 'decision',
+              fill: [
+                ConstFill(GAtom('yes')),
+                FromField('from'),
+                FromField('req')
+              ],
+            ),
+            AnswerDesc(
+              label: 'Decline',
+              cmdCtor: 'decision',
+              fill: [
+                ConstFill(GAtom('no')),
+                FromField('from'),
+                FromField('req')
+              ],
+            ),
+          ],
+        ),
+      ],
+    ),
 
-  // Surface 2: Wallet (the coins you and your friends hold). People are derived
-  // from chat peers and holdings owners; self is the live agent, bob.
-  wallet: WalletView(
-    storeKey: 'holdings',
-    label: 'Wallet',
-    selfKey: 'bob',
-    friendField: 'friend',
-    selfActions: const [
-      CommandDesc(
-        ctor: 'mint',
-        label: 'Mint',
-        args: [FieldDesc('amount', FieldType.integer, 'How many to mint')],
-      ),
-    ],
-    friendActions: const [
-      CommandDesc(
-        ctor: 'pay',
-        label: 'Pay',
-        args: [
-          FieldDesc('friend', FieldType.person, 'To'),
-          FieldDesc('coin', FieldType.person, 'Coin (issuer)'),
-          FieldDesc('amount', FieldType.integer, 'Amount'),
+    // --- Coins: the wallet, organised by friend ----------------------------
+    // People = self + friends + holdings owners; tapping one drills into their
+    // coins and the actions against them. A swap a friend proposes alerts that
+    // friend's row. The actions live in the drill-down, so the panel has no "+".
+    Panel(
+      id: 'coins',
+      name: 'Coins',
+      wallet: WalletView(
+        storeKey: 'holdings',
+        label: 'Coins',
+        selfKey: 'bob',
+        friendsList: 'friends',
+        friendField: 'friend',
+        selfActions: const [
+          CommandDesc(
+            ctor: 'mint',
+            label: 'Mint',
+            args: [FieldDesc('amount', FieldType.integer, 'How many to mint')],
+          ),
+        ],
+        friendActions: const [
+          CommandDesc(
+            ctor: 'pay',
+            label: 'Pay',
+            args: [
+              FieldDesc('friend', FieldType.person, 'To'),
+              FieldDesc('coin', FieldType.person, 'Coin (issuer)'),
+              FieldDesc('amount', FieldType.integer, 'Amount'),
+            ],
+          ),
+          CommandDesc(
+            ctor: 'redeem',
+            label: 'Redeem',
+            args: [
+              FieldDesc('friend', FieldType.person, 'From'),
+              FieldDesc('amount', FieldType.integer, 'How many of their coins'),
+            ],
+          ),
+          CommandDesc(
+            ctor: 'propose_swap',
+            label: 'Propose swap',
+            args: [
+              FieldDesc('friend', FieldType.person, 'With'),
+              FieldDesc('give_coin', FieldType.person, 'You give (coin)'),
+              FieldDesc('give_amount', FieldType.integer, 'You give (amount)'),
+              FieldDesc('want_coin', FieldType.person, 'You want (coin)'),
+              FieldDesc('want_amount', FieldType.integer, 'You want (amount)'),
+            ],
+          ),
         ],
       ),
-      CommandDesc(
-        ctor: 'redeem',
-        label: 'Redeem',
-        args: [
-          FieldDesc('friend', FieldType.person, 'From'),
-          FieldDesc('amount', FieldType.integer, 'How many of their coins'),
-        ],
-      ),
-      CommandDesc(
-        ctor: 'propose_swap',
-        label: 'Propose swap',
-        args: [
-          FieldDesc('friend', FieldType.person, 'With'),
-          FieldDesc('give_coin', FieldType.person, 'You give (coin)'),
-          FieldDesc('give_amount', FieldType.integer, 'You give (amount)'),
-          FieldDesc('want_coin', FieldType.person, 'You want (coin)'),
-          FieldDesc('want_amount', FieldType.integer, 'You want (amount)'),
-        ],
-      ),
-    ],
-  ),
+      inbox: [
+        InboxDesc(
+          notifyCtor: 'swap_offer',
+          args: const [
+            'from',
+            'give_coin',
+            'give_amount',
+            'want_coin',
+            'want_amount',
+            'req'
+          ],
+          itemKey: 'from',
+          title: '{from} proposes a swap',
+          subtitle:
+              'Gives {give_amount} {give_coin}-coins for {want_amount} {want_coin}-coins',
+          answers: const [
+            AnswerDesc(
+              label: 'Accept',
+              cmdCtor: 'accept_swap',
+              fill: [FromField('from'), FromField('req')],
+            ),
+            AnswerDesc(
+              label: 'Decline',
+              cmdCtor: 'decline_swap',
+              fill: [FromField('from'), FromField('req')],
+            ),
+          ],
+        ),
+      ],
+    ),
 
+    // --- Chats: the social network -----------------------------------------
+    // The chat list; a conversation opens once the friendship is made. The one
+    // alert is a group invitation (none in this scenario yet). Sending happens
+    // inside the open conversation, so the panel has no "+".
+    const Panel(
+      id: 'chats',
+      name: 'Chats',
+      chat: ChatView(threadKey: 'chats', label: 'Chats', sendCtor: 'send'),
+    ),
+  ],
+
+  // Declared state, shared across panels and rendered as their views.
   state: const [
+    StateView('friends', 'Friends', StateKind.list),
     StateView('chats', 'Chats', StateKind.thread),
   ],
 
-  // The Chats FAB composes the one outbox request: offer friendship.
-  commands: const [
-    CommandDesc(
-      ctor: 'connect',
-      label: 'Add friend',
-      args: [FieldDesc('target', FieldType.person, 'Person to connect')],
-    ),
-  ],
-
-  // Surface 3: Requests — friend offers and swap proposals share one inbox.
-  inbox: [
-    InboxDesc(
-      notifyCtor: 'befriend',
-      args: const ['from', 'req'],
-      title: '{from} wants to connect',
-      answers: const [
-        AnswerDesc(
-          label: 'Accept',
-          cmdCtor: 'decision',
-          fill: [ConstFill(GAtom('yes')), FromField('from'), FromField('req')],
-        ),
-        AnswerDesc(
-          label: 'Decline',
-          cmdCtor: 'decision',
-          fill: [ConstFill(GAtom('no')), FromField('from'), FromField('req')],
-        ),
-      ],
-    ),
-    InboxDesc(
-      notifyCtor: 'swap_offer',
-      args: const [
-        'from',
-        'give_coin',
-        'give_amount',
-        'want_coin',
-        'want_amount',
-        'req'
-      ],
-      title: '{from} proposes a swap',
-      subtitle:
-          'Gives {give_amount} {give_coin}-coins for {want_amount} {want_coin}-coins',
-      answers: const [
-        AnswerDesc(
-          label: 'Accept',
-          cmdCtor: 'accept_swap',
-          fill: [FromField('from'), FromField('req')],
-        ),
-        AnswerDesc(
-          label: 'Decline',
-          cmdCtor: 'decline_swap',
-          fill: [FromField('from'), FromField('req')],
-        ),
-      ],
-    ),
-  ],
-
-  // Activity rules: a friend opens a chat; messages extend it; a balance report
-  // sets a coin's holding. swap_done/swap_failed are acknowledged (no state).
+  // Activity rules: a friendship lands in BOTH Friends (adds the friend) and
+  // Chats (opens the conversation); messages extend it; a balance report sets a
+  // coin's holding. swap_done/swap_failed are acknowledged (no state).
   activity: const [
     ActivityDesc(
       notifyCtor: 'connected',
       args: ['who'],
-      effect: OpenChat('chats', 'who'),
+      effects: [AppendTo('friends', 'who'), OpenChat('chats', 'who')],
     ),
     ActivityDesc(
       notifyCtor: 'received',
       args: ['from', 'text'],
-      effect: PushChat('chats', 'from', 'text', outgoing: false),
+      effects: [PushChat('chats', 'from', 'text', outgoing: false)],
     ),
     ActivityDesc(
       notifyCtor: 'balance_report',
       args: ['owner', 'coin', 'amount'],
-      effect: SetBalance('holdings', 'owner', 'coin', 'amount'),
+      effects: [SetBalance('holdings', 'owner', 'coin', 'amount')],
     ),
     ActivityDesc(
         notifyCtor: 'swap_done',
         args: ['who'],
-        effect: Toast('Swap with {who} completed')),
+        effects: [Toast('Swap with {who} completed')]),
     ActivityDesc(
         notifyCtor: 'swap_failed',
         args: ['who'],
-        effect: Toast('Swap with {who} failed — not enough coins')),
+        effects: [Toast('Swap with {who} failed — not enough coins')]),
     ActivityDesc(notifyCtor: 'rejected', args: ['who']),
     ActivityDesc(notifyCtor: 'rejected', args: []),
   ],

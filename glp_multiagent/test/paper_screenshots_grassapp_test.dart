@@ -1,5 +1,9 @@
-// Generates paper-quality screenshots of the GrassApp three surfaces with real
-// text, phone-framed — for Figure fig:grassapp in the UIVE paper.
+// Paper figure fig:grassapp — the one GrassApp build, its three panels shot
+// from the unified manifest: Friends (the social graph), Coins (the wallet,
+// organised by friend), and Chats (the social network). One interpreter, one
+// runtime; the panels differ only by manifest. Phone-framed with the green
+// chrome and 9:41 status bar to match the live app. Outputs are named for the
+// \includegraphics in sections/ui-primitives.tex.
 import 'dart:io';
 import 'dart:ui' as ui;
 
@@ -7,7 +11,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:glp_multiagent/manifests/grassapp.dart';
+import 'package:glp_multiagent/manifests/grassroots.dart';
 import 'package:glp_multiagent/ui_runtime/agent_surface.dart';
 import 'package:glp_multiagent/ui_runtime/runtime.dart';
 
@@ -76,59 +80,63 @@ Future<void> _shot(WidgetTester tester, String path) async {
 }
 
 void main() {
-  testWidgets('GrassApp screenshots: Requests, Chats, Conversation',
+  testWidgets('fig:grassapp — Friends, Coins, Chats panels of one GrassApp',
       (tester) async {
     await _loadFonts();
-    tester.view.physicalSize = const Size(420, 840);
+    tester.view.physicalSize = const Size(420, 860);
     tester.view.devicePixelRatio = 1.0;
     addTearDown(tester.view.reset);
 
-    final r = UiRuntime(manifest: grassappManifest, onSend: (_) {});
+    final r = UiRuntime(manifest: grassrootsManifest, onSend: (_) {});
+    final chatView =
+        grassrootsManifest.panels.firstWhere((p) => p.id == 'chats').chat!;
 
     Future<void> pump() => tester.pumpWidget(MaterialApp(
           debugShowCheckedModeBanner: false,
-          theme: ThemeData(fontFamily: 'AppFont', useMaterial3: true, colorScheme: ColorScheme.fromSeed(seedColor: Colors.green)),
+          theme: ThemeData(
+              fontFamily: 'AppFont',
+              useMaterial3: true,
+              colorScheme: ColorScheme.fromSeed(seedColor: Colors.green)),
           home: Scaffold(
             backgroundColor: const Color(0xFF2B2B33),
             body: Center(
               child: RepaintBoundary(
-                child: _phone(AgentSurface(agentId: 'You', runtime: r)),
+                child: _phone(AgentSurface(agentId: 'Bob', runtime: r)),
               ),
             ),
           ),
         ));
 
-    // Inbox: a friend offer and a group invitation.
-    r.handleLine("befriend(carol, req(1))");
-    r.handleLine("group_invite('Grassroots Devs', bob, req(2))");
-    // Conversations (chat list + Bob's thread).
-    r.handleLine("received(carol, 'You are connected')");
-    r.handleLine("received(bob, 'Hi - this is Bob')");
-    r.handleLine("sent(bob, 'Hey Bob!', delivered)");
-    r.handleLine("sent(bob, 'See you at six', sent)");
-    r.handleLine("received('Grassroots Devs', 'Alice: pushed the fix')");
-    r.handleLine("received(mom, 'Call me back')");
+    // Bob's opening coins; Alice a friend who messaged and paid him; Charlie a
+    // pending friend offer (alerts the Friends panel); Alice has proposed a swap
+    // (alerts the Coins panel).
+    r.handleLine('balance_report(bob, bob, 9)');
+    r.handleLine('balance_report(bob, alice, 2)');
+    r.handleLine('connected(alice)');
+    r.handleLine("received(alice, 'Thanks_for_the_coins')");
+    r.sendChat(chatView, 'alice', 'Anytime');
+    r.handleLine('balance_report(alice, alice, 3)');
+    r.handleLine('befriend(charlie, req(2))');
+    r.handleLine('swap_offer(alice, alice, 1, bob, 1, req(3))');
     await pump();
 
-    // Screen 1 — Requests (inbox).
-    await tester.tap(find.text('Requests').last);
-    await tester.pumpAndSettle();
-    expect(find.text('carol wants to connect'), findsOneWidget);
-    expect(find.text('Grassroots Devs'), findsWidgets);
-    await _shot(tester, '/private/tmp/fig_grassapp_requests.png');
+    // Panel 1 — Friends: Alice (a friend) and Charlie (an alerting offer).
+    expect(find.text('Alice'), findsOneWidget);
+    expect(find.text('charlie wants to connect'), findsOneWidget);
+    await _shot(tester, '/private/tmp/gsg-app-friends.png');
 
-    // Screen 2 — Chats (chat list).
+    // Panel 2 — Coins: the wallet, organised by friend; Alice's row alerts the
+    // proposed swap.
+    await tester.tap(find.text('Coins').last);
+    await tester.pumpAndSettle();
+    expect(find.text('You'), findsOneWidget);
+    expect(find.text('alice proposes a swap'), findsOneWidget);
+    await _shot(tester, '/private/tmp/coins-wallet.png');
+
+    // Panel 3 — Chats: the conversation Alice's friendship opened.
     await tester.tap(find.text('Chats').last);
     await tester.pumpAndSettle();
-    expect(find.text('Bob'), findsOneWidget);
-    expect(find.text('See you at six'), findsWidgets);
-    await _shot(tester, '/private/tmp/fig_grassapp_chats.png');
-
-    // Screen 3 — Conversation (open Bob).
-    await tester.tap(find.text('Bob'));
-    await tester.pumpAndSettle();
-    expect(find.text('Hi - this is Bob'), findsOneWidget);
-    expect(find.text('Hey Bob!'), findsOneWidget);
-    await _shot(tester, '/private/tmp/fig_grassapp_conversation.png');
+    expect(find.text('Alice'), findsWidgets);
+    await _shot(tester, '/private/tmp/grassapp-chats.png');
   });
 }
