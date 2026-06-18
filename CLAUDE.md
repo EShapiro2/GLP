@@ -7,10 +7,11 @@
 
 Read these files in order before doing anything else, then state which you have read:
 
-1. This file (`CLAUDE.md`)
-2. `docs/DISCIPLINE.md` — development discipline
-3. `docs/typed-glp-manual.md` — typed GLP programming guide
-4. `docs/glp-cheat-sheet.md` — patterns and idioms; "GLP is NOT Prolog"
+1. `/Users/udi/Grassroots/docs/claude.md` — project-wide instructions (these override everything)
+2. This file (`CLAUDE.md`)
+3. `docs/DISCIPLINE.md` — development discipline
+4. `docs/typed-glp-manual.md` — typed GLP programming guide
+5. `docs/glp-cheat-sheet.md` — patterns and idioms; "GLP is NOT Prolog"
 
 Then STOP and wait for Udi's direction.  Do not read any other files until then.
 
