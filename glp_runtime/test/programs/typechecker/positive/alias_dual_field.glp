@@ -1,0 +1,15 @@
+%% Positive regression guard for structural identity in the duality check (§20.3).
+%% AStream is a named list alias = Stream<A>.  `wrap` receives a Stream(A) and stores
+%% it into a Box whose field is typed by the alias AStream.  The head pair (X, X?) is
+%% then Stream<A> (arg 1) vs AStream (the b field); they are structurally identical, so
+%% the duality check must accept.  Before the fix the duality check compared base names
+%% and rejected this (false positive).  Mirrors a router storing a Stream<FriendMsg>
+%% into a FriendStream-aliased friend_output field.
+-module(alias_dual_field).
+
+A ::= a(Constant).
+AStream ::= [] ; [A | AStream].
+Box ::= b(AStream?).
+
+procedure wrap(Stream(A), Box).
+wrap(X?, b(X)).

@@ -784,6 +784,10 @@ echo ""
 
 POSITIVE_FILES=(
     # --- typechecker/positive ---
+    # Structural identity in the duality check (§20.3): a Stream<A> stored into a
+    # field typed by the named alias AStream must type-check (false positive before
+    # the alias-aware same-base fix).
+    "$TC_DIR/positive/alias_dual_field.glp"
     "$TC_DIR/positive/merge_basic.glp"
     "$TC_DIR/positive/append_list.glp"
     "$TC_DIR/positive/copy_stream.glp"

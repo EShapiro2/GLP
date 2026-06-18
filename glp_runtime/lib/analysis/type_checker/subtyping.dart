@@ -19,6 +19,27 @@ bool isSubtype(DFAState stateA, DFAState stateB, ProgramDFA dfa) {
   return _isSubtype(stateA, stateB, dfa, <String>{});
 }
 
+/// Structural type identity (typed-program §20.3): two base type names denote
+/// the same type if they are equal, or if their output automata are mutually
+/// subtypes — e.g. the named list alias `OutputsList` / `FriendStream` and
+/// `Stream<OutputEntry>` / `Stream<FriendMsg>`.  Equality already honours
+/// structural identity; this lets the duality / same-base checks honour it too,
+/// so a named alias is not treated as a distinct type.  The single primitive all
+/// type-identity comparisons go through (DISCIPLINE §1.3), in place of comparing
+/// `baseName` strings.
+bool sameBaseType(String baseA, String baseB, ProgramDFA dfa) {
+  if (baseA == baseB) return true;
+  final DFAState a, b;
+  try {
+    a = dfa.getState(baseA);
+    b = dfa.getState(baseB);
+  } on StateError {
+    return false; // an unknown base name cannot be structurally matched
+  }
+  if (a.isDual || b.isDual) return false; // compare output (non-dual) states
+  return isSubtype(a, b, dfa) && isSubtype(b, a, dfa);
+}
+
 /// Core coinductive subtyping algorithm.
 ///
 /// Spec section 4.1: isSubtype(stateA, stateB, dfa, visited)

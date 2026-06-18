@@ -10,6 +10,7 @@
 import 'mode.dart';
 import 'moded_term.dart';
 import 'program_dfa.dart';
+import 'subtyping.dart';
 
 // =============================================================================
 // Result Types
@@ -208,7 +209,7 @@ WellTypedResult checkModedTerm(ModedTerm term, Automaton automaton, ProgramDFA d
   }
 
   // Step 2: Check variable pair duality
-  final dualityErrors = _checkDuality(variableTypes);
+  final dualityErrors = _checkDuality(variableTypes, dfa);
   errors.addAll(dualityErrors);
 
   return WellTypedResult(
@@ -390,7 +391,7 @@ String _variableKey(PathStep leaf) {
 /// Check duality of variable pairs
 /// Per spec v0.4: uses DFAState.baseName and isDual
 List<NonDualError> _checkDuality(
-    Map<String, VariableTypeInfo> variableTypes) {
+    Map<String, VariableTypeInfo> variableTypes, ProgramDFA dfa) {
   final errors = <NonDualError>[];
 
   // Group by base name (X and X? share base "X")
@@ -452,8 +453,8 @@ List<NonDualError> _checkDuality(
         continue;
       }
 
-      // Check states are duals (same baseName, opposite isDual)
-      if (writerInfo.typeState.baseName != readerInfo.typeState.baseName) {
+      // Check states are duals (structurally the same base type, opposite isDual)
+      if (!sameBaseType(writerInfo.typeState.baseName, readerInfo.typeState.baseName, dfa)) {
         errors.add(NonDualError(baseName, writerInfo, readerInfo,
             'Types must have same base: ${writerInfo.typeState.name} vs ${readerInfo.typeState.name}'));
         continue;

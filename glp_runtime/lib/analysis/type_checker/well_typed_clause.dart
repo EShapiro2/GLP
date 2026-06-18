@@ -758,7 +758,7 @@ WellTypedResult _checkModedTermPerArg(
   }
 
   // Check duality within this term
-  final dualityErrors = _checkTermDuality(variableTypes);
+  final dualityErrors = _checkTermDuality(variableTypes, dfa);
   errors.addAll(dualityErrors);
 
   return WellTypedResult(
@@ -770,7 +770,7 @@ WellTypedResult _checkModedTermPerArg(
 
 /// Check duality within a term (same logic as well_typed_term.dart)
 List<NonDualError> _checkTermDuality(
-    Map<String, VariableTypeInfo> variableTypes) {
+    Map<String, VariableTypeInfo> variableTypes, ProgramDFA dfa) {
   final errors = <NonDualError>[];
 
   // Group by base name (X and X? share base "X")
@@ -800,7 +800,7 @@ List<NonDualError> _checkTermDuality(
       final writerInfo = variants[writerKey]!;
       final readerInfo = variants[readerKey]!;
 
-      if (!_areDualTypes(writerInfo, readerInfo)) {
+      if (!_areDualTypes(writerInfo, readerInfo, dfa)) {
         errors.add(NonDualError(baseName, writerInfo, readerInfo));
       }
     }
@@ -871,7 +871,7 @@ List<ClauseDualityError> _checkClauseDuality(
       if (writerNormLoc == readerNormLoc) {
         if (writerNormLoc == 'head') {
           // Both in head: require exact DUAL types (unchanged)
-          final (isCompat, reason) = _areDualTypesWithReason(writerInfo, readerInfo);
+          final (isCompat, reason) = _areDualTypesWithReason(writerInfo, readerInfo, dfa);
           if (!isCompat) {
             errors.add(ClauseDualityError(
               baseName,
@@ -903,7 +903,7 @@ List<ClauseDualityError> _checkClauseDuality(
         }
       } else {
         // One in head, one in body: require SAME type
-        final (isSame, reason) = _areSameTypeWithReason(writerInfo, readerInfo);
+        final (isSame, reason) = _areSameTypeWithReason(writerInfo, readerInfo, dfa);
         if (!isSame) {
           errors.add(ClauseDualityError(
             baseName,
@@ -923,18 +923,18 @@ List<ClauseDualityError> _checkClauseDuality(
 
 /// Check if writer and reader types are dual
 /// Per spec v0.6: uses DFAState.baseName and isDual
-bool _areDualTypes(VariableTypeInfo writerInfo, VariableTypeInfo readerInfo) {
-  final (isCompat, _) = _areDualTypesWithReason(writerInfo, readerInfo);
+bool _areDualTypes(VariableTypeInfo writerInfo, VariableTypeInfo readerInfo, ProgramDFA dfa) {
+  final (isCompat, _) = _areDualTypesWithReason(writerInfo, readerInfo, dfa);
   return isCompat;
 }
 
 /// Check if two variable types are the SAME type
 /// Per spec v0.9: For head-body pairs, types must have same BASE type
 /// (e.g., _ and _? are same base type, Stream and Stream? are same base type)
-(bool, String?) _areSameTypeWithReason(VariableTypeInfo writerInfo, VariableTypeInfo readerInfo) {
-  // For same-type check, the BASE type names must be identical
-  // Writer at T has baseName T, reader at T? has baseName T
-  if (writerInfo.typeState.baseName != readerInfo.typeState.baseName) {
+(bool, String?) _areSameTypeWithReason(VariableTypeInfo writerInfo, VariableTypeInfo readerInfo, ProgramDFA dfa) {
+  // For same-type check, the BASE types must be the same up to structural
+  // identity (typed-program §20.3): a named alias and its structural form match.
+  if (!sameBaseType(writerInfo.typeState.baseName, readerInfo.typeState.baseName, dfa)) {
     return (false, '${writerInfo.typeState.name} (base: ${writerInfo.typeState.baseName}) != ${readerInfo.typeState.name} (base: ${readerInfo.typeState.baseName})');
   }
   return (true, null);
@@ -945,7 +945,7 @@ bool _areDualTypes(VariableTypeInfo writerInfo, VariableTypeInfo readerInfo) {
 /// Dual types have the same baseName and opposite isDual flag.
 /// Example: Stream is dual to Stream?, _ is dual to _?
 /// Note: Stream is NOT dual to _ (different base names)
-(bool, String?) _areDualTypesWithReason(VariableTypeInfo writerInfo, VariableTypeInfo readerInfo) {
+(bool, String?) _areDualTypesWithReason(VariableTypeInfo writerInfo, VariableTypeInfo readerInfo, ProgramDFA dfa) {
   // Mode check: writer must produce, reader must consume
   if (writerInfo.mode != Mode.produce) {
     return (false, 'Writer must have produce mode');
@@ -954,9 +954,10 @@ bool _areDualTypes(VariableTypeInfo writerInfo, VariableTypeInfo readerInfo) {
     return (false, 'Reader must have consume mode');
   }
 
-  // States must be duals: same baseName, opposite isDual
-  // This applies to ALL types including wildcards: _ is dual to _?, Stream is dual to Stream?
-  if (writerInfo.typeState.baseName != readerInfo.typeState.baseName) {
+  // States must be duals: the same base type (up to structural identity,
+  // typed-program §20.3), opposite isDual.  Applies to all types including
+  // wildcards: _ is dual to _?, Stream is dual to Stream?.
+  if (!sameBaseType(writerInfo.typeState.baseName, readerInfo.typeState.baseName, dfa)) {
     return (false, 'Types must have same base: ${writerInfo.typeState.name} vs ${readerInfo.typeState.name}');
   }
 
