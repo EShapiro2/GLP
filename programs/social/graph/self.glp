@@ -13,7 +13,10 @@
 %%   Stream ::= [] ; [_|Stream].
 %%   Channel ::= ch(Stream, Stream?).
 
-Response ::= accept(FriendChannel) ; no.
+%% A cold-call accept conveys a SETUP channel (IntroChannel), not the friend
+%% channel directly; the fresh friend channel is conveyed on the setup channel at
+%% commit by the shared lib befriend_commit (CSSN Issue 16).
+Response ::= accept(IntroChannel) ; no.
 Decision ::= yes ; no.
 Handshake ::= ack(Constant) ; nack.
 PendingValue ::= response(Response?) ; channel(IntroChannel) ; error.
@@ -45,8 +48,9 @@ FriendContent ::= response(Response)
                 ; text(Constant)
                 ; intro(Constant, IntroChannel).
 
-%% Intro channel content (first message is ack/nack handshake)
-IntroContent ::= ack(Constant) ; nack.
+%% Setup channel content: ack/nack handshake plus the fresh-friend-channel
+%% conveyance the shared lib befriend_commit uses to install the friend channel.
+IntroContent ::= ack(Constant) ; nack ; friend_channel(FriendChannel).
 
 %% Intro channel (handshake protocol)
 IntroStream  ::= [] ; [IntroContent | IntroStream].
