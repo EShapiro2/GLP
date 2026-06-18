@@ -376,86 +376,12 @@ close_output(Key, [E|Rest], [E?|Rest1?]) :-
     otherwise |
     close_output(Key?, Rest?, Rest1).
 
-%% close_friend removes a friend_output by friend id.
-procedure close_friend(Constant?, Stream(OutputEntry)?, Stream(OutputEntry)).
-close_friend(_, [], []).
-close_friend(Name, [friend_output(K, [])|Rest], Rest?) :-
-    Name? =?= K? | true.
-close_friend(Name, [E|Rest], [E?|Rest1?]) :-
-    otherwise |
-    close_friend(Name?, Rest?, Rest1).
-
 %% =============================================================================
-%% IDEMPOTENT BEFRIEND COMMIT WITH SMALLER-NAME TIE-BREAK
+%% BEFRIEND COMMIT + close_friend — provided by lib/routing/befriend.glp, exposed
+%% from the root self.glp and resolved here unqualified (4-of-4 dedup).  The
+%% idempotent commit with smaller-name tie-break and fresh-friend-channel
+%% conveyance (CSSN Issue 16) is shared across all platforms; this platform's
+%% IntroContent supplies the friend_channel alternative and NetInMsg ⊇ FriendMsg.
+%% See docs/cssn-glp-implementation-spec.md §"Befriend Commit: Separate Setup
+%% Channel and Canonical Friend Channel".
 %% =============================================================================
-%% Enforces the not-yet-friends precondition (Definition 1 / Definition 3 in
-%% CSSN paper) at commit time: add_output(friend(...)) is realized as set union,
-%% and concurrent bilateral offers converge to a single channel via lex order
-%% on the two befriended people's ids.
-%%
-%% See docs/cssn-glp-implementation-spec.md §"Idempotent Befriend Commit with
-%% Smaller-Name Tie-Break".
-
-%% Walk Outs threading it through, binding Decision to yes if friend(Other) is
-%% already present, no otherwise.
-procedure already_friend(Constant?, Stream(OutputEntry)?, Stream(OutputEntry), Decision).
-already_friend(Other, [friend_output(O, Out?)|Rest], [friend_output(O?, Out)|Rest?], yes) :-
-    Other? =?= O? | true.
-already_friend(Other, [E|Rest], [E?|Rest1?], Decision?) :-
-    otherwise | already_friend(Other?, Rest?, Rest1, Decision).
-already_friend(_, [], [], no).
-
-%% Top-level befriend commit dispatch.  The channel is the SETUP channel
-%% (IntroContent); the fresh friend channel is allocated inside the commit and
-%% conveyed on the setup channel.  Called from the cold-call response handler
-%% and the intro_result handlers (adult and child).
-procedure befriend_commit(Constant?, Constant?, Channel(Stream(IntroContent), Stream(IntroContent))?,
-                          Stream(OutputEntry)?, Stream(OutputEntry),
-                          Stream(NetInMsg)?, Stream(NetInMsg)).
-
-%% Smaller-name side: I decide.  Test already_friend then dispatch.
-befriend_commit(Id, Other, Ch, Outs, Outs1?, NetIn, NetIn1?) :-
-    Id? @< Other? |
-    already_friend(Other?, Outs?, Outs2, Decision),
-    smaller_dispatch(Decision?, Other?, Ch?, Outs2?, Outs1, NetIn?, NetIn1).
-
-%% Larger-name side: I adopt the friend channel the smaller-name side conveys.
-befriend_commit(_, Other, Ch, Outs, Outs1?, NetIn, NetIn1?) :-
-    otherwise |
-    await_friend_channel(Other?, Ch?, Outs?, Outs1, NetIn?, NetIn1).
-
-%% Smaller-name dispatch on whether friend(Other) is already present.
-procedure smaller_dispatch(Decision?, Constant?, Channel(Stream(IntroContent), Stream(IntroContent))?,
-                           Stream(OutputEntry)?, Stream(OutputEntry),
-                           Stream(NetInMsg)?, Stream(NetInMsg)).
-
-%% Already friend: suppress.  Close the setup write end to []; the larger-name
-%% side reads [] and drops.  Allocate no friend channel, merge nothing.
-smaller_dispatch(yes, _, ch(_, []), Outs, Outs?, NetIn, NetIn?).
-
-%% Not yet friend: allocate a fresh friend channel; convey its peer end on the
-%% setup write end (this conveyance is the smaller-name marker); install the
-%% local end (add_friend_output) and merge its read side into NetIn.
-smaller_dispatch(no, Other, ch(_, [friend_channel(PeerEnd?)|[]]), Outs, Outs2?, NetIn, NetIn1?) :-
-    ground(Other?), new_channel(PeerEnd, ch(FIn, FOut?)) |
-    add_friend_output(Other?, FOut, Outs?, Outs1),
-    send_user(msg(agent, '_user', connected(Other?)), Outs1?, Outs2),
-    merge(NetIn?, FIn?, NetIn1).
-
-%% Larger-name side: read the setup channel's read end.
-procedure await_friend_channel(Constant?, Channel(Stream(IntroContent), Stream(IntroContent))?,
-                          Stream(OutputEntry)?, Stream(OutputEntry),
-                          Stream(NetInMsg)?, Stream(NetInMsg)).
-
-%% Friend channel conveyed: adopt it — install its write end and merge its read
-%% side into NetIn.  close_friend handles the rare case where an earlier adoption
-%% for a different channel already installed friend(Other); a no-op if absent.
-await_friend_channel(Other, ch([friend_channel(ch(FIn, FOut?))|_], []), Outs, Outs3?, NetIn, NetIn1?) :-
-    ground(Other?) |
-    close_friend(Other?, Outs?, Outs1),
-    add_friend_output(Other?, FOut, Outs1?, Outs2),
-    send_user(msg(agent, '_user', connected(Other?)), Outs2?, Outs3),
-    merge(NetIn?, FIn?, NetIn1).
-
-%% Setup closed ([]): smaller-name side suppressed this offer.  Drop it.
-await_friend_channel(_, ch([], []), Outs, Outs?, NetIn, NetIn?).

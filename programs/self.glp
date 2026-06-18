@@ -9,6 +9,7 @@
 -expose(lib#routing#output).
 -expose(lib#routing#inject).
 -expose(lib#routing#intro).
+-expose(lib#routing#befriend).
 
 % =============================================================================
 % TYPE DEFINITIONS
