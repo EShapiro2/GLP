@@ -1,9 +1,0 @@
-%% fair_merge.glp - Fair binary stream merger
-%% Source: GLP Papers (Program: GLP Fair Stream Merger)
-%%
-%% Merges two input streams into one output stream.
-%% Alternates priority between streams for fairness.
-
-merge([X|Xs],Ys,[X?|Zs?]) :- merge(Ys?,Xs?,Zs). % output from first stream
-merge(Xs,[Y|Ys],[Y?|Zs?]) :- merge(Xs?,Ys?,Zs). % output from second stream
-merge([],[],[]).                                % terminate on empty streams

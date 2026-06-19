@@ -1,4 +1,0 @@
-% Goal: dmerge([a, merge([x,y]), b], [1, 2], Out).
-
-% TODO: Trace to be added from GLP REPL.
-% Expected: Out = [a, 1, x, 2, b, y] (or similar interleaving)
