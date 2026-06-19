@@ -18,7 +18,7 @@ cd /Users/udi/Grassroots/GLP/glp_runtime
 dart run bin/glp_repl.dart
 ```
 
-In the REPL: enter a `.glp` filename to load it (the REPL runs the full pipeline — SRSW → PE → type-check → compile → execute), then enter a goal.  Or enter a directory (e.g. `../programs/social/network/`) to load a multi-module project.
+In the REPL: enter a `.glp` filename to load it (the REPL runs the full pipeline — SRSW → PE → type-check → compile → execute), then enter a goal.  Or enter a directory (e.g. `../programs/cssn/`) to load a multi-module project.
 
 Non-interactive:
 

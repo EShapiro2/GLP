@@ -40,7 +40,7 @@ printf 'load ../programs/path/to/file.glp\ngoal.\n:quit\n' | bin/glpc
 
 Do not use heredoc (`<<<`) — that requires approval per invocation.
 
-**Loading a project**: enter the directory path at the prompt (e.g. `/Users/udi/Grassroots/GLP/programs/social/network/`).  This invokes the project linker, which resolves all `M # goal(...)` cross-module calls at compile time.
+**Loading a project**: enter the directory path at the prompt (e.g. `/Users/udi/Grassroots/GLP/programs/cssn/`).  This invokes the project linker, which resolves all `M # goal(...)` cross-module calls at compile time.
 
 **REPL commands**: `:quit`, `:trace`, `:debug`, `:limit N`, `:activate <module>`.
 
