@@ -405,6 +405,9 @@ List<String> _ancestorSelfGlpFiles(String rootDir, String programsDir) {
 /// Throws on type errors with module name and error details.
 void typeCheckProject(List<DiscoveredModule> modules) {
   final collector = InstantiationCollector();
+  // Keys of parametric procedures certified by Phase A (abstract-instance check)
+  // across all modules; the closure suppresses re-reporting these.
+  final certifiedKeys = <String>{};
 
   // Pass 1: per-module checks + instantiation collection.
   for (final mod in modules) {
@@ -425,6 +428,7 @@ void typeCheckProject(List<DiscoveredModule> modules) {
       transformedProcedures: transformed.procedures,
       ancestorScope: mod.ancestorScope,
       collector: collector,
+      certifiedKeys: certifiedKeys,
     );
 
     if (!result.isWellTyped) {
@@ -445,6 +449,7 @@ void typeCheckProject(List<DiscoveredModule> modules) {
   final instResults = checkInstantiationsClosed(
     collector,
     (procKey) => _definingClausesForKey(modules, procKey),
+    certifiedKeys: certifiedKeys,
   );
   for (final ir in instResults) {
     if (!ir.result.isWellTyped) {

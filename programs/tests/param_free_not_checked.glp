@@ -1,19 +1,29 @@
-%% param_free_not_checked.glp — POSITIVE regression guard for the TGLP paper's
-%% "Programs and Modules" rule (parameterized-types.tex sec:programs-and-modules;
-%% spec: docs/type system/typed-program.md "Programs and Modules").
+%% param_free_not_checked.glp — NEGATIVE guard, case (ii) of the abstract-parameter
+%% routing matrix (parameterized-types.tex sec:abstract-parameters; spec:
+%% docs/type system/typed-program.md "Modular Checking via Abstract Parameters").
 %%
-%% pdrop/1 is a parameterized procedure with a COVERAGE GAP: it has no clause for
-%% the empty stream [], so it does not cover the Stream input type.  It is never
-%% instantiated here (no monomorphic caller pins X).  With a free type parameter
-%% pdrop is not a program and is NOT type-checked, so the file loads CLEAN despite
-%% the gap.
+%% (Filename retained for continuity; the behaviour it guards has changed — see
+%% below. A rename to param_abstract_gap.glp is a reasonable follow-up.)
 %%
-%% Behaviour:
-%%   - The removed wildcard self-check WOULD have rejected this: it ran the
-%%     contravariance/coverage check on pdrop(Stream<_>?), and [] is uncovered.
-%%   - Per the paper a free-parameter fragment is not type-checked, so coverage is
-%%     not run at all.  Paired with param_instantiated_coverage_gap.glp, which has
-%%     the SAME pdrop but instantiated — there the gap IS caught.
+%% pdrop/1 is a parameterized procedure that does NOT inspect its parameter (the
+%% element position holds the anonymous variable `_`, not a functor/constant) and
+%% does not use its parameter as a type-definition alternative.  It therefore takes
+%% the ABSTRACT ROUTE: it is checked once against its abstract instance
+%% pdrop(Stream<$abstract_X>?), by def:parametrically-well-typed — clauses
+%% well-typed AND every input path covered.
+%%
+%% pdrop has a COVERAGE GAP: no clause for the empty stream [].  The abstract-route
+%% check runs contravariance against Stream<$abstract_X>? and finds [] uncovered,
+%% so the file is REJECTED — even though pdrop is never instantiated.  This is the
+%% paper-backed consequence (Decision 1) of folding coverage into
+%% def:parametrically-well-typed: a clean parametric procedure is certified once at
+%% its abstract instance, gap and all.
+%%
+%% Contrast with the previous semantics, under which a free-parameter procedure was
+%% "not a program" and went unchecked (the old positive behaviour this file once
+%% guarded).  Paired with param_instantiated_coverage_gap.glp (same pdrop, also
+%% rejected) and with the positive case param_abstract_covered.glp (clean, covered,
+%% certified clean).
 %%
 %% Run (from /Users/udi/Grassroots/GLP/glp_runtime/):
 %%   printf 'load ../programs/tests/param_free_not_checked.glp\n:quit\n' | bin/glpc

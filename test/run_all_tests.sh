@@ -925,12 +925,16 @@ POSITIVE_FILES=(
     "$TYPED/param_channel.glp"
     "$TYPED/param_procedure_inference.glp"
 
-    # --- Programs-and-Modules rule: a parameterized procedure with a free type
-    # parameter is not a program and is not type-checked. pdrop has a coverage
-    # gap (no [] clause) but is never instantiated, so it loads clean. The
-    # removed wildcard self-check would have rejected it. Paired NEGATIVE:
-    # param_instantiated_coverage_gap.glp (same proc, instantiated, rejected).
-    "$GLP_DIR/programs/tests/param_free_not_checked.glp"
+    # --- Abstract-parameter routing matrix (sec:abstract-parameters) ---
+    # Case (i): a clean parametric proc (no parameter inspection) that COVERS the
+    # whole input takes the abstract route and is certified clean against its
+    # abstract instance, even though it is never instantiated.
+    "$GLP_DIR/programs/tests/param_abstract_covered.glp"
+    # Case (iii): a parametric proc that INSPECTS its parameter takes the
+    # per-instantiation route; never instantiated here, so it is never checked and
+    # loads clean. (Case ii is the NEGATIVE param_free_not_checked.glp; case iv is
+    # the NEGATIVE min_polarity_bug3.glp.)
+    "$GLP_DIR/programs/tests/param_inspect_uninstantiated.glp"
 )
 
 # Build REPL input: load each positive file with :clear between
@@ -1095,11 +1099,17 @@ NEGATIVE_FILES=(
     # the enclosing instantiation, so the type-changing recursion is rejected.
     "$GLP_DIR/programs/tests/monomorphic_recursion.glp"
 
-    # --- Programs-and-Modules rule: instantiation makes a parameterized proc a
-    # checked procedure. pdrop has a coverage gap (no [] clause); go/1
-    # instantiates it at X := Msg, so the per-instantiation contravariance check
-    # catches the gap. Paired POSITIVE: param_free_not_checked.glp (same proc,
-    # never instantiated, loads clean).
+    # --- Abstract-parameter routing matrix, case (ii): a clean parametric proc
+    # (no parameter inspection) with a COVERAGE GAP takes the abstract route and is
+    # rejected against its abstract instance pdrop(Stream<$abstract_X>?) — [] is
+    # uncovered — even though it is never instantiated. (Paper Decision 1: coverage
+    # is part of def:parametrically-well-typed.) Filename retained for continuity;
+    # see the file header.
+    "$GLP_DIR/programs/tests/param_free_not_checked.glp"
+
+    # --- Abstract-parameter routing: same clean pdrop gap, also instantiated by
+    # go/1. The abstract route catches the gap whether or not pdrop is instantiated;
+    # the instantiation does not mask it.
     "$GLP_DIR/programs/tests/param_instantiated_coverage_gap.glp"
 )
 

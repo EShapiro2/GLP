@@ -3,13 +3,17 @@
 %% sec:programs-and-modules; spec: docs/type system/typed-program.md).
 %%
 %% Same pdrop/1 as param_free_not_checked.glp (a parameterized procedure with a
-%% coverage gap: no clause for the empty stream []), now INSTANTIATED at X := Msg
-%% by go/1.  The instantiation makes pdrop a checked procedure: the
-%% per-instantiation contravariance check runs on pdrop(Stream<Msg>?) and finds []
-%% uncovered, so the file is REJECTED.
+%% coverage gap: no clause for the empty stream []), here additionally INSTANTIATED
+%% at X := Msg by go/1.  pdrop does not inspect its parameter, so it takes the
+%% ABSTRACT ROUTE: the abstract-instance check (def:parametrically-well-typed) runs
+%% contravariance on pdrop(Stream<$abstract_X>?) and finds [] uncovered, so the
+%% file is REJECTED.  The instantiation by go/1 no longer changes the verdict —
+%% under the abstract route the gap is caught whether or not pdrop is instantiated
+%% (the per-instantiation re-check of pdrop is suppressed once it is certified).
 %%
-%% Paired with param_free_not_checked.glp: the SAME procedure is unchecked while
-%% its parameter is free, and checked (and here rejected) once instantiated.
+%% Paired with param_free_not_checked.glp (same pdrop, never instantiated, also
+%% rejected): this file confirms that an instantiation present alongside the gap
+%% does not mask it.
 %%
 %% Run (from /Users/udi/Grassroots/GLP/glp_runtime/):
 %%   printf 'load ../programs/tests/param_instantiated_coverage_gap.glp\n:quit\n' | bin/glpc

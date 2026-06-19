@@ -1,0 +1,23 @@
+%% param_abstract_covered.glp — POSITIVE guard, case (i) of the abstract-parameter
+%% routing matrix (parameterized-types.tex sec:abstract-parameters; spec:
+%% docs/type system/typed-program.md "Modular Checking via Abstract Parameters").
+%%
+%% pdrain/1 is a parameterized procedure that does NOT inspect its parameter (the
+%% element position holds the anonymous variable `_`) and does not use its parameter
+%% as a type-definition alternative.  It takes the ABSTRACT ROUTE: checked once
+%% against its abstract instance pdrain(Stream<$abstract_X>?).
+%%
+%% Unlike param_free_not_checked.glp, pdrain COVERS the whole Stream input: it has
+%% both the [] clause and the [_|Xs] clause.  Its clauses are well-typed by the
+%% abstract instance (the element variable is consistent with the abstract type;
+%% the tail recurses at the same instance), and every input path is covered.  So by
+%% lem:parametricity pdrain is CERTIFIED clean and the file LOADS — even though it
+%% is never instantiated.  This is the positive counterpart of case (ii): a clean,
+%% fully covered parametric procedure passes the abstract route.
+%%
+%% Run (from /Users/udi/Grassroots/GLP/glp_runtime/):
+%%   printf 'load ../programs/tests/param_abstract_covered.glp\n:quit\n' | bin/glpc
+
+procedure pdrain(Stream(X)?).
+pdrain([]).
+pdrain([_|Xs]) :- pdrain(Xs?).

@@ -1,0 +1,24 @@
+%% param_inspect_uninstantiated.glp — POSITIVE guard, case (iii) of the
+%% abstract-parameter routing matrix (parameterized-types.tex
+%% sec:abstract-parameters; spec: docs/type system/typed-program.md "Modular
+%% Checking via Abstract Parameters").
+%%
+%% pskip/1 INSPECTS its parameter: the element position holds the constant `done`,
+%% a functor/constant at a parameter position.  By the conclusion of
+%% lem:parametricity, an inspecting procedure is NOT parametrically well-typed and
+%% takes the PER-INSTANTIATION route — it is not certified by the abstract route.
+%%
+%% Here pskip is never instantiated (no monomorphic caller pins X), so the
+%% per-instantiation closure never checks it.  With a free type parameter it is not
+%% a program (typed-program.md "Programs and Modules"), so it has no well-typing of
+%% its own and the file LOADS clean despite the inspection.
+%%
+%% Contrast with case (iv), min_polarity_bug3.glp: an inspecting procedure that IS
+%% instantiated, where the per-instantiation check runs and (there) rejects.
+%%
+%% Run (from /Users/udi/Grassroots/GLP/glp_runtime/):
+%%   printf 'load ../programs/tests/param_inspect_uninstantiated.glp\n:quit\n' | bin/glpc
+
+procedure pskip(Stream(X)?).
+pskip([done|Xs]) :- pskip(Xs?).
+pskip([]).

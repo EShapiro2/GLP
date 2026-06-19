@@ -247,6 +247,232 @@ Map<String, TypeDef> materializeInstantiations(
   return out;
 }
 
+// ============================================================================
+// Abstract instance and routing (typed-program: Modular Checking via Abstract
+// Parameters). A parameterised procedure that does not inspect a parameter and
+// uses no parameter as a type-definition alternative is checked once, against an
+// abstract instance, and certified for every instantiation.
+// ============================================================================
+
+/// The abstract instance of a parameterised procedure declaration: each type
+/// parameter is replaced by a distinct *abstract type* — a synthesized
+/// zero-alternative type whose automaton is empty, so a variable at a parameter
+/// position is consistent while a functor or constant is not. [decl] is the
+/// monomorphic declaration; [typeDefs] are the synthesized type definitions (the
+/// abstract types and the expanded types referencing them) to add to the
+/// checking environment; [abstractTypeNames] are the abstract-type names (used to
+/// recognise parametric callee instantiations).
+class AbstractInstance {
+  final ProcDecl decl;
+  final Map<String, TypeDef> typeDefs;
+  final Set<String> abstractTypeNames;
+  AbstractInstance(this.decl, this.typeDefs, this.abstractTypeNames);
+}
+
+/// Build the abstract instance of [paramTemplate] with parameters [typeParams].
+AbstractInstance buildAbstractInstance(
+    ProcDecl paramTemplate, List<String> typeParams, Map<String, TypeDef> templates,
+    {Set<String> knownMonoTypes = const {}}) {
+  final abstractOf = <String, String>{
+    for (final tp in typeParams) tp: '\$abstract_$tp',
+  };
+  final subst = <String, TypeExpr>{
+    for (final e in abstractOf.entries) e.key: TypeRef(e.value, 0, 0),
+  };
+  final instantiations = <String, List<TypeExpr>>{};
+  final argTypes = paramTemplate.argTypes.map((arg) {
+    final s = _substituteTypeExpr(arg, subst, templates, instantiations,
+        monoNames: knownMonoTypes);
+    return _replaceParamRefs(s, templates, monoNames: knownMonoTypes);
+  }).toList();
+  final decl = ProcDecl(paramTemplate.name, argTypes,
+      paramTemplate.line, paramTemplate.column,
+      exported: paramTemplate.exported,
+      imported: paramTemplate.imported,
+      modulePath: paramTemplate.modulePath);
+
+  final typeDefs = <String, TypeDef>{};
+  for (final name in abstractOf.values) {
+    typeDefs[name] = TypeDef(name, const [], 0, 0); // zero alternatives = abstract type
+  }
+  final have = <String>{...knownMonoTypes, ...templates.keys, ...abstractOf.values};
+  typeDefs.addAll(materializeInstantiations(instantiations.keys, templates, have));
+  return AbstractInstance(decl, typeDefs, abstractOf.values.toSet());
+}
+
+/// Does some clause head place a functor or constant at a parameter position?
+/// Such a procedure inspects a parameter and is not parametrically well-typed; it
+/// takes the per-instantiation route.
+bool procInspectsParameter(List<ast.Clause> clauses, ProcDecl paramTemplate,
+    List<String> typeParams, Map<String, TypeDef> templates) {
+  final params = typeParams.toSet();
+  for (final clause in clauses) {
+    final args = clause.head.args;
+    for (var i = 0;
+        i < paramTemplate.argTypes.length && i < args.length;
+        i++) {
+      if (_termInspectsParamAt(
+          args[i], paramTemplate.argTypes[i], params, templates)) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+bool _termInspectsParamAt(ast.Term term, TypeExpr type, Set<String> params,
+    Map<String, TypeDef> templates) {
+  // Bare parameter position: a non-variable term inspects the parameter.
+  if (type is TypeRef && type.typeArgs.isEmpty && params.contains(type.name)) {
+    return !(term is ast.VarTerm || term is ast.UnderscoreTerm);
+  }
+  // A variable covers anything and descends nowhere.
+  if (term is ast.VarTerm || term is ast.UnderscoreTerm) return false;
+  // Parameterised/named type: descend by matching the term's constructor to a
+  // template alternative, substituting the type arguments.
+  if (type is TypeRef) {
+    final template = templates[type.name];
+    if (template == null) return false; // monomorphic/primitive: no parameter reachable
+    if (template.typeParams.length != type.typeArgs.length) return false;
+    final subst = <String, TypeExpr>{
+      for (var i = 0; i < template.typeParams.length; i++)
+        template.typeParams[i]: type.typeArgs[i],
+    };
+    for (final alt in template.alternatives) {
+      final pairs = _matchAltToTerm(alt, term, subst);
+      if (pairs != null) {
+        return pairs
+            .any((p) => _termInspectsParamAt(p.$1, p.$2, params, templates));
+      }
+    }
+    return false; // no alternative matches the term's constructor — not a parameter inspection
+  }
+  return false;
+}
+
+/// If [alt] structurally matches [term]'s top constructor, return the (subterm,
+/// subtype) pairs to recurse on, with the template substitution applied to the
+/// subtypes; otherwise null. Type-valued alternatives (a bare parameter or
+/// another type) are not descended — the parameter-as-alternative case routes to
+/// per-instantiation independently.
+List<(ast.Term, TypeExpr)>? _matchAltToTerm(
+    TypeExpr alt, ast.Term term, Map<String, TypeExpr> subst) {
+  if (alt is ListNilAlt) {
+    return (term is ast.ListTerm && term.isNil) ? const [] : null;
+  }
+  if (alt is ListConsAlt) {
+    if (term is ast.ListTerm &&
+        !term.isNil &&
+        term.head != null &&
+        term.tail != null) {
+      return [
+        (term.head!, _substParam(alt.head, subst)),
+        (term.tail!, _substParam(alt.tail, subst)),
+      ];
+    }
+    return null;
+  }
+  if (alt is StructAlt) {
+    if (term is ast.StructTerm &&
+        term.functor == alt.functor &&
+        term.args.length == alt.args.length) {
+      return [
+        for (var i = 0; i < alt.args.length; i++)
+          (term.args[i], _substParam(alt.args[i], subst)),
+      ];
+    }
+    return null;
+  }
+  if (alt is ConstantAlt) {
+    return (term is ast.ConstTerm) ? const [] : null;
+  }
+  // DiffListAlt, TypeRef, PrimitiveModeAlt: not descended structurally here.
+  return null;
+}
+
+/// Substitute bare template parameters in [e] using [subst].
+TypeExpr _substParam(TypeExpr e, Map<String, TypeExpr> subst) {
+  if (e is TypeRef) {
+    if (e.typeArgs.isEmpty && subst.containsKey(e.name)) {
+      final r = subst[e.name]!;
+      if (e.isInput && r is TypeRef) {
+        return TypeRef(r.name, r.line, r.column,
+            isInput: true, typeArgs: r.typeArgs);
+      }
+      return r;
+    }
+    if (e.typeArgs.isNotEmpty) {
+      return TypeRef(e.name, e.line, e.column,
+          isInput: e.isInput,
+          typeArgs: e.typeArgs.map((a) => _substParam(a, subst)).toList());
+    }
+    return e;
+  }
+  if (e is ListConsAlt) {
+    return ListConsAlt(
+        _substParam(e.head, subst), _substParam(e.tail, subst), e.line, e.column);
+  }
+  if (e is StructAlt) {
+    return StructAlt(e.functor,
+        e.args.map((a) => _substParam(a, subst)).toList(), e.line, e.column);
+  }
+  if (e is DiffListAlt) {
+    return DiffListAlt(_substParam(e.content, subst), _substParam(e.hole, subst),
+        e.line, e.column);
+  }
+  return e;
+}
+
+/// Does any type parameter occur as a top-level alternative of a type definition
+/// reachable from the procedure's argument types? Such a procedure takes the
+/// per-instantiation route (its determinism rests on the instantiation).
+bool paramUsedAsTypeAlternative(
+    ProcDecl paramTemplate, Map<String, TypeDef> templates) {
+  final referenced = <String>{};
+  void collect(TypeExpr e) {
+    if (e is TypeRef) {
+      if (templates.containsKey(e.name)) referenced.add(e.name);
+      for (final a in e.typeArgs) {
+        collect(a);
+      }
+      return;
+    }
+    for (final c in _typeExprChildren(e)) {
+      collect(c);
+    }
+  }
+
+  for (final arg in paramTemplate.argTypes) {
+    collect(arg);
+  }
+  // Transitive closure over template references.
+  final work = [...referenced];
+  while (work.isNotEmpty) {
+    final t = templates[work.removeLast()];
+    if (t == null) continue;
+    for (final alt in t.alternatives) {
+      final names = <String>{};
+      _collectTemplateRefNames(alt, templates, names);
+      for (final n in names) {
+        if (referenced.add(n)) work.add(n);
+      }
+    }
+  }
+  // Does any referenced template carry one of its own parameters as a bare
+  // top-level alternative?
+  for (final name in referenced) {
+    final t = templates[name];
+    if (t == null) continue;
+    final p = t.typeParams.toSet();
+    for (final alt in t.alternatives) {
+      if (alt is TypeRef && alt.typeArgs.isEmpty && p.contains(alt.name)) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
 /// Split top-level comma-separated arguments of an expanded-name body, respecting
 /// nested angle brackets: `Box<Msg>,Integer` → [`Box<Msg>`, `Integer`].
 List<String> _splitTopLevelArgs(String s) {

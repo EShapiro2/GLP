@@ -679,7 +679,7 @@ class TypeChecker {
 /// clauses. A parameterized procedure is never checked under the wildcard `_`
 /// declaration — only per concrete instantiation (typed-program.md "Programs
 /// and Modules"); one never instantiated is not type-checked.
-TypeCheckResult checkModule(ast.Module module, {List<ast.Procedure>? transformedProcedures, TypeEnvironment? ancestorScope, wtc.InstantiationCollector? collector}) {
+TypeCheckResult checkModule(ast.Module module, {List<ast.Procedure>? transformedProcedures, TypeEnvironment? ancestorScope, wtc.InstantiationCollector? collector, Set<String>? certifiedKeys}) {
   // Build base environment first so we know all type names for expansion.
   // This avoids mistaking root scope type names for type parameters.
   final baseEnv = ancestorScope ?? buildRootScopeEnvironment();
@@ -721,7 +721,25 @@ TypeCheckResult checkModule(ast.Module module, {List<ast.Procedure>? transformed
   // cross-module instantiation closure itself.
   if (collector != null) {
     final checker = TypeChecker(typeEnv, collector: collector);
-    return checker.check(clauses);
+    final result = checker.check(clauses);
+
+    // Phase A (modular checking via abstract parameters), per module: certify
+    // each parametric procedure that takes the abstract route, against this
+    // module's own defining clauses. The certified keys accumulate into the
+    // caller-supplied set so the project-level closure suppresses re-reporting.
+    final clausesByKey = <String, List<ast.Clause>>{};
+    for (final c in clauses) {
+      clausesByKey
+          .putIfAbsent('${c.head.functor}/${c.head.arity}', () => [])
+          .add(c);
+    }
+    final cert =
+        certifyParametricProcedures(typeEnv, (procKey) => clausesByKey[procKey]);
+    certifiedKeys?.addAll(cert.certifiedKeys);
+    return TypeCheckResult(
+      [...result.errors, ...cert.errors],
+      [...result.warnings, ...cert.warnings],
+    );
   }
 
   // Single-file / REPL mode: there is no project linker to run the closure, so
@@ -745,13 +763,29 @@ TypeCheckResult checkModule(ast.Module module, {List<ast.Procedure>? transformed
         .add(c);
   }
 
+  // Phase A: modular checking via abstract parameters. Certify each parametric
+  // procedure that takes the abstract route by checking it once against its
+  // abstract instance; the certified keys are then suppressed in the closure.
+  // See certifyParametricProcedures (typed-program.md "Modular Checking via
+  // Abstract Parameters").
+  final cert = certifyParametricProcedures(
+    typeEnv,
+    (procKey) => clausesByKey[procKey],
+  );
+  errors.addAll(cert.errors);
+  warnings.addAll(cert.warnings);
+
   // Phase 2: re-check each instantiation's defining clauses against the concrete
   // monomorphic declaration it produces, closed under calls (calls inside an
   // instantiated body induce further instantiations) to a fixpoint, rejecting
-  // polymorphic recursion. See checkInstantiationsClosed.
+  // polymorphic recursion. A parametric procedure certified by Phase A is not
+  // re-reported here (its abstract verdict already stands by lem:parametricity),
+  // but its instantiations are still traversed for callee discovery. See
+  // checkInstantiationsClosed.
   final instResults = checkInstantiationsClosed(
     localCollector,
     (procKey) => clausesByKey[procKey],
+    certifiedKeys: cert.certifiedKeys,
   );
   for (final ir in instResults) {
     errors.addAll(ir.result.errors);
@@ -786,6 +820,106 @@ class _Pending {
   _Pending(this.inst, this.active);
 }
 
+/// The outcome of Phase A (modular checking via abstract parameters): the
+/// verdict reported for the certified parametric procedures, plus the set of
+/// procedure keys that were certified (so the per-instantiation closure can
+/// suppress re-reporting them — lem:parametricity carries the abstract-instance
+/// verdict to every instantiation).
+class ParametricCertification {
+  final List<TypeError> errors;
+  final List<TypeWarning> warnings;
+  final Set<String> certifiedKeys;
+  ParametricCertification(this.errors, this.warnings, this.certifiedKeys);
+}
+
+/// Phase A — modular checking via abstract parameters
+/// (typed-program.md "Modular Checking via Abstract Parameters",
+/// sec:abstract-parameters / lem:parametricity).
+///
+/// For each parameterized procedure declared in [typeEnv], decide its route
+/// structurally and, when it takes the abstract route, check it once against its
+/// *abstract instance* (each type parameter replaced by a distinct zero-alternative
+/// abstract type):
+///
+///  - inspects a parameter (a functor/constant at a parameter position) OR uses a
+///    parameter as a type-definition top-level alternative → per-instantiation
+///    route: not decided here; the closure checks each concrete instantiation.
+///  - otherwise → abstract route: a FULL check (covariance + input coverage)
+///    against the abstract instance, run by seeding it into the per-instantiation
+///    closure so body-induced types are materialized and monomorphic recursion is
+///    enforced. Only the seeded instantiation's verdict is reported; the callee
+///    instantiations it induces are filtered out (they belong to the program
+///    closure / their own certification). The key is certified whether the check
+///    passes or fails (Decision 1: the abstract route is a commitment), so the
+///    closure does not re-check it at each instantiation (lem:parametricity).
+///
+/// [definingClauses] returns the defining clauses for a "name/arity", or null if
+/// the procedure is defined outside the checked unit (then it is not certified
+/// here).
+ParametricCertification certifyParametricProcedures(
+  TypeEnvironment typeEnv,
+  List<ast.Clause>? Function(String procKey) definingClauses,
+) {
+  final errors = <TypeError>[];
+  final warnings = <TypeWarning>[];
+  final certified = <String>{};
+  final templates = typeEnv.typeTemplates;
+  final knownMono = typeEnv.types.keys.toSet();
+
+  for (final entry in typeEnv.paramProcDecls.entries) {
+    final key = entry.key;
+    final paramDecl = entry.value;
+    final clauses = definingClauses(key);
+    if (clauses == null || clauses.isEmpty) {
+      continue; // defined outside the checked unit (or never defined)
+    }
+
+    // Structural routing: a parameter-inspecting clause or a parameter used as a
+    // type-definition alternative routes to the per-instantiation closure.
+    if (procInspectsParameter(clauses, paramDecl, paramDecl.typeParams, templates) ||
+        paramUsedAsTypeAlternative(paramDecl, templates)) {
+      continue;
+    }
+
+    // Abstract route: build the abstract instance and check it by seeding it
+    // into the per-instantiation closure. The closure materializes any
+    // body-induced types (e.g. a type-changing recursive call producing
+    // Stream<Box<$abstract_X>>) across rounds and applies monomorphic-recursion
+    // checking, so a duality clash that surfaces only against a materialized type
+    // is caught — which a single-shot check would miss. We report ONLY the seeded
+    // instantiation's own verdict; the callee instantiations it induces belong to
+    // the program closure (and to their own certification), so they are filtered
+    // out here. Per Decision 1, the abstract route is a commitment: if the
+    // abstract instance fails, the procedure is rejected regardless of whether it
+    // is ever instantiated. The key is certified either way, so the main closure
+    // never re-reports it (lem:parametricity carries the verdict to every
+    // instantiation).
+    final ai = buildAbstractInstance(paramDecl, paramDecl.typeParams, templates,
+        knownMonoTypes: knownMono);
+    final aiEnv = TypeEnvironment(
+      {...typeEnv.types, ...ai.typeDefs},
+      {...typeEnv.procedures, ai.decl.key: ai.decl},
+      paramProcDecls: typeEnv.paramProcDecls,
+      typeTemplates: typeEnv.typeTemplates,
+    );
+    final inst = wtc.CollectedInstantiation(
+        key, ai.decl, aiEnv, buildProgramDFA(aiEnv));
+    final seed = wtc.InstantiationCollector();
+    seed.record(inst);
+    final results = checkInstantiationsClosed(seed, definingClauses);
+    final seedSigKey = '${inst.procKey}#${inst.signature}';
+    for (final r in results) {
+      if ('${r.inst.procKey}#${r.inst.signature}' == seedSigKey) {
+        errors.addAll(r.result.errors);
+        warnings.addAll(r.result.warnings);
+      }
+    }
+    certified.add(key);
+  }
+
+  return ParametricCertification(errors, warnings, certified);
+}
+
 /// Close the parameterized-procedure instantiation set under calls and check
 /// each instantiation's defining clauses.
 ///
@@ -810,8 +944,9 @@ class _Pending {
 /// in dequeue order.
 List<InstantiationCheckResult> checkInstantiationsClosed(
   wtc.InstantiationCollector seed,
-  List<ast.Clause>? Function(String procKey) definingClauses,
-) {
+  List<ast.Clause>? Function(String procKey) definingClauses, {
+  Set<String> certifiedKeys = const {},
+}) {
   // Types that arise only through the closure (e.g. Stream<Box<Msg>> from a
   // type-changing procedure) are not produced by the initial declaration-driven
   // expansion. They are materialized here and accumulated across rounds. A round
@@ -885,7 +1020,13 @@ List<InstantiationCheckResult> checkInstantiationsClosed(
       final res = TypeChecker(focusedEnv, collector: sub).checkSingleProcedure(
           inst.monoDecl, defining,
           activeInstantiations: active);
-      results.add(InstantiationCheckResult(inst, res));
+      // A parametric procedure certified by Phase A (abstract-instance check) is
+      // well-typed at every instantiation by lem:parametricity, so its concrete
+      // instantiation is not re-reported here; its body is still traversed so the
+      // instantiations its calls induce are discovered and checked below.
+      if (!certifiedKeys.contains(inst.procKey)) {
+        results.add(InstantiationCheckResult(inst, res));
+      }
 
       // Enqueue the instantiations this body induces (recorded into [sub]),
       // noting any types they reference that still need materializing. They
