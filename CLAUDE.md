@@ -95,11 +95,17 @@ If you find yourself making the code work without spec backing → STOP and repo
 
 When quoting a spec: quote exactly.  Don't paraphrase.  If the spec covers the case, say "the spec says X".  If the spec is silent, say "the spec doesn't address Y".  Never say "the spec is clear" then spend ten minutes explaining it.
 
+## GLP code in papers and exposition
+
+🔴 **NEVER program based on ignorance of GLP and its type system.**  Read the manual and cheat sheet; if they do not answer a question, STOP, state the gap, and wait until it is fixed.
+
+🔴 **NEVER include in a paper GLP code that has not been typechecked and runtime tested.**  Every GLP program, clause, or fragment in any paper must first pass the type checker and run in the REPL.  An example that cannot be typechecked or run is fixed or removed — never shipped.
+
+🔴 **A paper includes GLP programs in its body; it has no worked-examples appendix.**  GLP programs belong in the body as exposition.  A debugged paper carries no appendix of worked examples (per-program type automata, moded clauses, type-assignment tables that duplicate tested code).  The complete tested programs live in `/Grassroots/GLP/programs/<Paper>/`, to which the paper points.  Math appendices (proofs, definitions, constructions) stay.  This applies to all papers.
+
 ## Standing principle: do the right thing
 
-When there is a choice between a lighter informal treatment and a more complete formal one, do the more complete one.  Do not deliberate effort-vs-correctness tradeoffs — if something can be done better, do it.  State the plan briefly and proceed.
-
-🔴 **Never do the minimal fix when it isn't the correct one.**  Identify and apply the change the code actually needs; don't stop at the smallest change that addresses the symptom.
+See the Standing Principle in `/Grassroots/docs/claude.md`: do the more complete treatment, and never the minimal fix when it is not the correct one.
 
 ## Working modes
 
@@ -158,16 +164,10 @@ What counts as a workaround: special-casing to dodge the bug; restructuring to r
 
 ## Communication style
 
-- **Brief, direct.**  No long preamble, no apologies, no fluff.  Match Udi's register: terse, often one-line.
-- **Number questions** so Udi can respond by number, even if there is only one.
-- **At most two sentences per question.**
-- **Free-text only** — no boxed multiple-choice (`AskUserQuestion`).
-- **One-liner shell commands** when giving them to Udi.  Never a command that opens an interactive editor or pager (vi, vim, nano, less, `git` without `--no-pager`, `git rebase` without `GIT_EDITOR=true`, `crontab -e`).
-- Never call anything you produce "final" — use "draft", "current version", "revised".
-- Never use the word "pattern" (except in the technical sense of pattern-matching).  Use precise alternatives.
-- 🔴 NEVER leave a discussion before it is finished.  A discussion is finished only when Udi says so, or when you ask "is the discussion finished?" and Udi says yes.
+Conversation style — terseness, plain English, numbered questions (at most two sentences each), alternatives, the vocabulary bans, never "final" — is in `/Grassroots/docs/writing-style-guide.md`, which governs chat as well as papers.  The working protocol (decisions, finishing a discussion, compaction) is in `/Grassroots/docs/claude.md`.
 
-When showing GLP code: always include type declarations, procedure declaration, and full clause.  No intervening text between related code blocks.
+- **One-liner shell commands** when giving them to Udi.  Never a command that opens an interactive editor or pager (vi, vim, nano, less, `git` without `--no-pager`, `git rebase` without `GIT_EDITOR=true`, `crontab -e`).
+- When showing GLP code: always include the type declarations, the procedure declaration, and the full clause, with no intervening text between related code blocks.
 
 ## Git and commit discipline
 
