@@ -15,9 +15,9 @@
 % of many streams efficiently.
 
 %% Type definitions
-ListOfLists ::= [] ; [Stream(_) | ListOfLists].
+ListOfLists(X) ::= [] ; [Stream(X) | ListOfLists(X)].
 
-procedure merge_tree(ListOfLists?, Stream(X)).
+procedure merge_tree(ListOfLists(X)?, Stream(X)).
 % Base case: empty list of streams
 merge_tree([], []).
 
@@ -33,7 +33,7 @@ merge_tree([X,Y|Rest], Out?) :-
 %
 % Processes a list of streams, merging them pairwise:
 %   [S1, S2, S3, S4, ...] -> [merge(S1,S2), merge(S3,S4), ...]
-procedure merge_layer(ListOfLists?, ListOfLists).
+procedure merge_layer(ListOfLists(X)?, ListOfLists(X)).
 merge_layer([], []).
 merge_layer([Xs], [Xs?]).
 merge_layer([Xs,Ys|Rest], [Zs?|Layer?]) :-
