@@ -1383,7 +1383,7 @@ echo ""
 echo "=== Section K: CSSN v2 Modules ==="
 echo ""
 
-CSSN_V2="$GLP_DIR/programs/social/network"
+CSSN_V2="$GLP_DIR/programs/cssn"
 
 # Loading
 k_load=$("$REPL_RUN" <<HEREDOC

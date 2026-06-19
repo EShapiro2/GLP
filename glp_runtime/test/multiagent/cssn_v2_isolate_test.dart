@@ -4,7 +4,7 @@ import 'package:glp_runtime/multiagent/boot_loader.dart';
 import 'package:glp_runtime/multiagent/isolate_manager.dart';
 
 /// Base directories (repo-relative from glp_runtime/).
-const _cssnV2Dir = '../programs/social/network';
+const _cssnV2Dir = '../programs/cssn';
 const _madBootDir = '$_cssnV2Dir/mad_boot';
 const _rootSelfGlp = '../programs/self.glp';
 

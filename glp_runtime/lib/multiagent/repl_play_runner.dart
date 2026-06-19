@@ -91,7 +91,7 @@ class ReplPlayRunner {
   /// CSSN v2 modules project (village scenario, fplay13).
   /// Loaded as a project directory — the REPL treats the path as a project root.
   static const cssnVillageFiles = [
-    '../programs/social/network',
+    '../programs/cssn',
   ];
 
   /// Regex for parsing tagged output lines.
