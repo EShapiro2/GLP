@@ -228,10 +228,10 @@ class TypeChecker {
   }
 
   /// Check one procedure's clauses against a specific declaration, in this
-  /// checker's environment. Used by the project-level Phase 2 to check a
-  /// parameterized procedure's defining clauses against a concrete instantiation
-  /// (the env is the instantiation's caller scope, with [decl] overriding the
-  /// procedure entry), and by the zero-instantiation wildcard fallback.
+  /// checker's environment. Used by the per-instantiation closure
+  /// (checkInstantiationsClosed) to check a parameterized procedure's defining
+  /// clauses against a concrete instantiation — the env is the instantiation's
+  /// caller scope, with [decl] overriding the procedure entry.
   ///
   /// Covariance resolves the declaration through the environment, so the
   /// environment passed to the constructor must already bind this procedure to

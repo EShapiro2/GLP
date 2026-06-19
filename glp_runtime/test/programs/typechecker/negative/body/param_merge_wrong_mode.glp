@@ -1,11 +1,15 @@
-% Test: Parameterized merge - wrong mode in body atom
-% Description: Body error - reader at output position in body
-% This tests Case A (wildcard instantiation): parameterized proc decl
-% clauses are now checked, not silently skipped.
+% Test: Parameterized merge - SRSW violation in a clause body
+% Description: Line 15 uses Zs? as a reader in both head arg 3 and the body,
+% with no writer for Zs (2 readers, 0 writers).
+% This is an SRSW violation, checked at load independent of type instantiation:
+% the parameterized merge is never instantiated here, yet the clause is still
+% rejected because SRSW well-formedness does not depend on the type parameter.
+% (Type checking proper is not run on an uninstantiated parameterized procedure;
+% see typed-program.md "Programs and Modules".)
 
-%% TEST: Parameterized merge wrong mode in body
-%% EXPECT: ill-typed
-%% ERROR: body: mode mismatch
+%% TEST: Parameterized merge SRSW violation in body
+%% EXPECT: rejected (SRSW)
+%% ERROR: Reader variable "Zs?" occurs 2 times; "Zs" has no writer
 
 Stream(X) ::= [] ; [X | Stream(X)].
 

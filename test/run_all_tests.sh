@@ -1069,7 +1069,10 @@ NEGATIVE_FILES=(
     # --- parameterized types negative ---
     "$TYPED/param_arity_mismatch.glp"
 
-    # --- parameterized proc decl negative (Case A: own clauses checked) ---
+    # --- parameterized proc decl negative: SRSW violation in a clause body ---
+    # (Zs? reader in both head arg 3 and body, no writer). SRSW is checked at
+    # load independent of type instantiation, so this is rejected even though the
+    # parameterized proc is never instantiated.
     "$TC_DIR/negative/body/param_merge_wrong_mode.glp"
 
     # --- Issue 14: polymorphic-polarity re-check at instantiation (Case B) ---

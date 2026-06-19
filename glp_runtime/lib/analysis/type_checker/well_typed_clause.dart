@@ -600,12 +600,15 @@ WellTypedResult _checkBodyAtom(
       } else {
         // Inference failed (e.g. caller uses monomorphic types instead of the
         // parameterized form). Skip the body atom check — the proc's own clauses
-        // are checked via Phase 2 / the Case A wildcard fallback.
+        // are checked per concrete instantiation by the closure (and not at all
+        // if the proc is never instantiated; typed-program.md "Programs and
+        // Modules").
         return (WellTypedResult.success({}), null);
       }
     } else {
       // No caller variable types available — can't infer type params.
-      // Skip body atom check; Case A covers the proc's own clauses.
+      // Skip body atom check; the proc's own clauses are checked per concrete
+      // instantiation by the closure (not at all if never instantiated).
       return (WellTypedResult.success({}), null);
     }
   }
@@ -1015,7 +1018,7 @@ ProcDecl? _inferConcreteDecl(
     _matchTypeForInference(declaredType, actualTypeName, paramTemplate.typeParams, bindings, env);
   }
 
-  // If no bindings found, can't infer — fall back to wildcard version
+  // If no bindings found, this call's instantiation can't be inferred.
   if (bindings.isEmpty) return null;
 
   // Check all type params are bound
@@ -1023,15 +1026,12 @@ ProcDecl? _inferConcreteDecl(
     if (!bindings.containsKey(tp)) return null;
   }
 
-  // A parameter bound to the wildcard `_`/`_?` is NOT a concrete instantiation:
-  // it arises when the call sits inside an enclosing parameterized procedure
-  // whose own type parameter is, during that procedure's wildcard self-check,
-  // `_` (e.g. a router called from a parametric befriend helper).  Treat it as
-  // not concretely inferable — like inference failure — so it neither drives a
-  // call-site check against `_` nor is recorded for per-instantiation checking.
-  // The call is still checked concretely when the enclosing procedure is
-  // instantiated at a real type, and the router's own clauses are covered by
-  // the zero-instantiation wildcard fallback.
+  // A parameter bound to the wildcard `_`/`_?` is NOT a concrete instantiation
+  // (it can arise when a concrete type carries a `_` field at the matched
+  // position). Treat it as not inferable — like inference failure — so it
+  // neither drives a call-site check against `_` nor is recorded for
+  // per-instantiation checking. A parameterized procedure is checked only at
+  // concrete instantiations (typed-program.md "Programs and Modules").
   for (final v in bindings.values) {
     if (v == '_' || v == '_?') return null;
   }
@@ -1094,10 +1094,11 @@ void _matchTypeForInference(
         // Actual is a named type.  Honor structural type identity (typed-program
         // §20.3): a named recursive list alias `T ::= [] ; [E | T]` IS Stream<E>,
         // so resolve it to its structural parameterized form before matching.
-        // Without this a named alias binds no parameter and the call silently
-        // falls to a wildcard check — a soundness hole (e.g. graph's OutputsList
-        // cannot route through the shared parametric lib routers).  Resolution is
-        // a single lookup (terminating) and the element type is unique.
+        // Without this a named alias binds no parameter, the call records no
+        // instantiation, and the parametric procedure is never checked at this
+        // element type — a soundness hole (e.g. graph's OutputsList cannot route
+        // through the shared parametric lib routers).  Resolution is a single
+        // lookup (terminating) and the element type is unique.
         final structForm = _structuralFormOfNamedType(resolvedActual, env);
         if (structForm == null) return; // not structurally parameterized
         resolvedActual = structForm;

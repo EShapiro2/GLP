@@ -20,6 +20,12 @@
 %%     clause matches Resp? (reader) — a polarity clash in pconsumer's own head
 %%     (well-typed-clause condition 1).
 %%
+%% Note (2026-06-19): the wildcard self-check (the "BEFORE" path) was since
+%% removed entirely — a parameterized procedure is no longer checked under the
+%% wildcard `_` declaration at all (typed-program.md "Programs and Modules").
+%% This test now relies solely on the AFTER path: go/1 instantiates pconsumer at
+%% X := ProdMsg, and the per-instantiation check rejects the polarity clash.
+%%
 %% Run (from /Users/udi/Grassroots/GLP/glp_runtime/):
 %%   printf 'load ../programs/tests/min_polarity_bug3.glp\n:quit\n' | bin/glpc
 
