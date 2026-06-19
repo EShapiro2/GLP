@@ -106,35 +106,17 @@ class CoverageError {
 // Main Type Checker
 // =============================================================================
 
-/// A parameterized procedure whose wildcard self-check was deferred during a
-/// project-mode pass. If no concrete instantiation is collected for it across
-/// the project, its clauses are checked once under the wildcard declaration as
-/// a fallback (Step 1, second fix part). Carries the scope it was deferred in.
-class DeferredParamProc {
-  final String procKey;
-  final ProcDecl wildcardDecl;        // wildcard-instantiated declaration
-  final List<ast.Clause> clauses;     // the procedure's defining clauses
-  final TypeEnvironment env;          // defining-module scope
-  final ProgramDFA dfa;
-
-  DeferredParamProc(
-      this.procKey, this.wildcardDecl, this.clauses, this.env, this.dfa);
-}
-
 /// The main type checker implementing Definition 4.10
 class TypeChecker {
   final TypeEnvironment typeEnv;
   final ProgramDFA dfa;
 
-  /// When non-null (project mode), parameterized procedures' defining clauses
-  /// are NOT given a verdict here under wildcard; instead their call-site
-  /// instantiations are collected for per-instantiation checking (Phase 2), and
-  /// the procedures are recorded in [deferredParamProcs] for the
-  /// zero-instantiation fallback.
+  /// When non-null, call-site instantiations of parameterized procedures are
+  /// recorded into it (for per-instantiation checking by the closure). A
+  /// parameterized procedure has no well-typing of its own and is never given a
+  /// verdict here under the wildcard `_` declaration — it is checked only per
+  /// concrete instantiation (typed-program.md "Programs and Modules").
   final wtc.InstantiationCollector? collector;
-
-  /// Parameterized procedures deferred in this pass (project mode only).
-  final List<DeferredParamProc> deferredParamProcs = [];
 
   TypeChecker(this.typeEnv, {this.collector}) : dfa = buildProgramDFA(typeEnv);
 
@@ -198,6 +180,19 @@ class TypeChecker {
     // Check each declared procedure
     for (final procDecl in typeEnv.procedures.values) {
       final key = procDecl.key;
+
+      // A parameterized procedure is syntactic sugar with no well-typing of its
+      // own: it is checked only per concrete instantiation (the closure below /
+      // checkInstantiationsClosed), never under the wildcard `_` declaration —
+      // which would accept a parameter-inspecting clause vacuously (unsound;
+      // typed-program.md "Programs and Modules"). Skip its wildcard verdict
+      // here. Its call-site instantiations are collected when the monomorphic
+      // callers' bodies are traversed below; calls inside its own (polymorphic)
+      // body induce instantiations only once it is itself instantiated.
+      if (typeEnv.paramProcDecls.containsKey(key)) {
+        continue;
+      }
+
       final procClauses = procedureClauses[key];
 
       if (procClauses == null || procClauses.isEmpty) {
@@ -212,20 +207,7 @@ class TypeChecker {
         continue;
       }
 
-      // Check this procedure. (In project mode this still traverses bodies so
-      // the collector records any instantiations the procedure's own calls make.)
       final procResult = _checkProcedure(procDecl, procClauses);
-
-      // Project mode: a parameterized procedure's wildcard self-check is not
-      // given a verdict here — its defining clauses are checked per inferred
-      // instantiation in Phase 2 (or under wildcard as a zero-instantiation
-      // fallback). Defer it and discard the wildcard verdict.
-      if (collector != null && typeEnv.paramProcDecls.containsKey(key)) {
-        deferredParamProcs.add(
-            DeferredParamProc(key, procDecl, procClauses, typeEnv, dfa));
-        continue;
-      }
-
       errors.addAll(procResult.errors);
       warnings.addAll(procResult.warnings);
     }
@@ -691,11 +673,13 @@ class TypeChecker {
 /// (root scope + ancestor self.glp definitions) instead of just the root scope.
 /// See module_hierarchy.dart for how ancestor scopes are assembled.
 /// If [collector] is provided (project mode), call-site instantiations of
-/// parameterized procedures are recorded into it, and parameterized procedures
-/// deferred in this module are appended to [deferredSink] for the project-level
-/// Phase 2 / fallback. With no [collector] (single-file/REPL), parameterized
-/// procedures keep their inline wildcard self-check.
-TypeCheckResult checkModule(ast.Module module, {List<ast.Procedure>? transformedProcedures, TypeEnvironment? ancestorScope, wtc.InstantiationCollector? collector, List<DeferredParamProc>? deferredSink}) {
+/// parameterized procedures are recorded into it; the caller (project linker)
+/// runs the cross-module instantiation closure itself. With no [collector]
+/// (single-file/REPL), this function runs the closure over the module's own
+/// clauses. A parameterized procedure is never checked under the wildcard `_`
+/// declaration — only per concrete instantiation (typed-program.md "Programs
+/// and Modules"); one never instantiated is not type-checked.
+TypeCheckResult checkModule(ast.Module module, {List<ast.Procedure>? transformedProcedures, TypeEnvironment? ancestorScope, wtc.InstantiationCollector? collector}) {
   // Build base environment first so we know all type names for expansion.
   // This avoids mistaking root scope type names for type parameters.
   final baseEnv = ancestorScope ?? buildRootScopeEnvironment();
@@ -734,20 +718,18 @@ TypeCheckResult checkModule(ast.Module module, {List<ast.Procedure>? transformed
   }
 
   // Project mode: the caller (project linker) supplies a collector and runs the
-  // cross-module Phase 2 itself. Defer parameterized procedures to it.
+  // cross-module instantiation closure itself.
   if (collector != null) {
     final checker = TypeChecker(typeEnv, collector: collector);
-    final result = checker.check(clauses);
-    if (deferredSink != null) deferredSink.addAll(checker.deferredParamProcs);
-    return result;
+    return checker.check(clauses);
   }
 
-  // Single-file / REPL mode: there is no project linker to run Phase 2, so run a
-  // self-contained per-instantiation check over this module's own clauses. This
-  // closes the polymorphic-polarity soundness gap (known-issues Issue 14): a
-  // parameterized procedure's body obligations are discharged against the
-  // abstract type variable under the wildcard self-check and must be
-  // re-discharged at each concrete instantiation inferred from a call site.
+  // Single-file / REPL mode: there is no project linker to run the closure, so
+  // run a self-contained per-instantiation check over this module's own
+  // clauses. A parameterized procedure's body obligations are discharged at
+  // each concrete instantiation inferred from a call site (closes the
+  // polymorphic-polarity soundness gap, known-issues Issue 14); a procedure
+  // that is never instantiated has no well-typing and is not checked.
   final localCollector = wtc.InstantiationCollector();
   final checker = TypeChecker(typeEnv, collector: localCollector);
   final result = checker.check(clauses);
@@ -771,32 +753,15 @@ TypeCheckResult checkModule(ast.Module module, {List<ast.Procedure>? transformed
     localCollector,
     (procKey) => clausesByKey[procKey],
   );
-  final instantiatedKeys = <String>{};
   for (final ir in instResults) {
-    instantiatedKeys.add(ir.inst.procKey);
     errors.addAll(ir.result.errors);
     warnings.addAll(ir.result.warnings);
   }
 
-  // Fallback: a parameterized procedure with no collected instantiation is
-  // checked once under its wildcard declaration (matches its deferred self-check).
-  final seenFallback = <String>{};
-  for (final d in checker.deferredParamProcs) {
-    if (instantiatedKeys.contains(d.procKey)) continue;
-    if (!seenFallback.add(d.procKey)) continue;
-
-    final focusedEnv = TypeEnvironment(
-      d.env.types,
-      {...d.env.procedures, d.wildcardDecl.key: d.wildcardDecl},
-      paramProcDecls: d.env.paramProcDecls,
-      typeTemplates: d.env.typeTemplates,
-    );
-    final res = TypeChecker(focusedEnv).checkSingleProcedure(
-        d.wildcardDecl, d.clauses,
-        activeInstantiations: {d.procKey: d.wildcardDecl});
-    errors.addAll(res.errors);
-    warnings.addAll(res.warnings);
-  }
+  // A parameterized procedure with no collected instantiation is not checked:
+  // with a free type parameter it is not a program (typed-program.md "Programs
+  // and Modules"). There is no wildcard fallback — checking it under the
+  // wildcard `_` declaration is unsound.
 
   return TypeCheckResult(errors, warnings);
 }

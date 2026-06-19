@@ -159,6 +159,14 @@ Multiple parameters are supported:
 procedure relay(Stream(X)?, Stream(X), Channel(X, X)?).
 ```
 
+### Programs and Modules
+
+Parameterized type definitions and parameterized procedure declarations are syntactic sugar; they have no well-typing of their own. Well-typing (Well-Typed Program, Definition 5.10) is defined only after expansion, on a typed GLP program `(Cs, D)` in which **no free type parameter remains** — every type reached is a concrete user-defined or primitive type. **The unit of type checking is the program**: a checker expands it (collecting the instantiation set above and replacing every parameterized reference by its expanded monomorphic name) and applies Definition 5.10 to the resulting `(Cs, D)`. A fragment that still contains a free type parameter after expansion is **not a program and is not type-checked**.
+
+Checking a parameterized procedure with its parameter left free — equivalently, treating the parameter as the wildcard `_` — is **unsound**, because a clause that inspects the parameter is then accepted vacuously. A parameterized procedure acquires concrete types, and is checked, only within a program that instantiates it; with every type then concrete, the variable-pair conditions of Well-Typed Clause (Definition 5.7) apply, so a writer/reader mode mismatch in an instantiated clause is rejected.
+
+In the modular setting (`../modules/glp-module-system-spec.md`), a **program** is a finite set of modules scoped as a hierarchy with one or more concrete initial goals; its **linked program** is the typed GLP program obtained by parameterized-type expansion, procedure instantiation, and linking, defined only when expansion leaves no free type parameter. A program is **well-typed** if its linked program is well-typed. Soundness (type soundness) is a property of the linked program, hence of the program, and makes no claim about a module checked outside a program.
+
 ### Expansion Algorithm
 
 Expansion runs as a preprocessing step, after parsing and before type automaton construction.

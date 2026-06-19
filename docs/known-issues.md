@@ -532,6 +532,8 @@ Two coupled gaps, both fixed:
 
 **Repros.** `min_polarity_bug.glp` (concrete consumer) and `min_polarity_bug2.glp` (polymorphic consumer) are the differential pair from the report, but both also carry an unrelated producer-head error (the `_R?` "error A") and so fail type-checking regardless — they document the gap but guard nothing. `min_polarity_bug3.glp` is `bug2` with the producer emitting `[]` (well-typed head), isolating the gap: accepted before the fix, rejected after with only the `pconsumer` polarity error. It is the Section A regression guard (`NEGATIVE_FILES`).
 
+**Update (2026-06-19): the wildcard fallback was removed.** Following the TGLP paper revision (`parameterized-types.tex` §"Programs and Modules"; `modules.tex` §"Self-contained type checking"), the unit of type checking is the linked program, and checking a parameterized procedure with its parameter left free — equivalently, under the wildcard `_` declaration — is **unsound** (a parameter-inspecting clause is accepted vacuously). The zero-instantiation wildcard fallback described in item 2 above (and in the Implementation summary below) was therefore deleted from both `checkModule` and `typeCheckProject`: a parameterized procedure is now checked **only** per concrete instantiation, and one that is never instantiated within a program is not type-checked. The `DeferredParamProc` machinery that fed the fallback was removed. Spec: `type system/typed-program.md` "Programs and Modules". Tests unchanged (REPL 492/492; no negative test relied on the fallback).
+
 ---
 
 ## Issue 15: Suspended agent goal not re-awoken when NetIn is bound after suspension via nested merge

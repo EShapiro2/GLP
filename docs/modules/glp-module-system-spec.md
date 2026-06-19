@@ -14,7 +14,7 @@
 
 3. **Implicit lexical scoping.** A module sees all type and procedure definitions from its ancestors automatically.
 
-4. **Self-contained modules.** Every module declares all procedures it uses: its own, exported ones for callers, and imported ones from other modules. Type checking is entirely local — no need to parse other modules.
+4. **Self-contained modules; the linked program is the unit of type checking.** Every module declares all procedures it uses: its own, exported ones for callers, and imported ones from other modules. A module may be checked separately against its own text and its ancestor scope, using its `imported` declarations — no other module need be parsed. Soundness, however, is established on the *linked program* (the typed GLP program obtained by parameterised-type expansion, procedure instantiation, and linking; see §6 and `../type system/typed-program.md`), which is the unit of type checking; it makes no claim about a module checked outside a program. Separate checking is a mode, not the primary framing.
 
 5. **Procedure declarations carry types.** A procedure declaration implicitly carries the transitive closure of all types it depends upon. Types are not exported separately.
 
@@ -194,7 +194,7 @@ When a module calls `M # p(X?, Y)`, the type checker:
 1. Finds the local `imported procedure M#p(...)` declaration in the calling module.
 2. Type-checks the call arguments against the imported declaration's types, using the standard well-typing rules (including subtyping).
 
-The type checker does NOT need to access module `M` — the imported declaration provides all necessary type information locally. This enables fully separate compilation.
+The type checker does NOT need to access module `M` — the imported declaration provides all necessary type information to check the call locally. This supports separate compilation as a mode; soundness, though, is established on the linked program (§1 principle 4, §6.3), not on the module checked in isolation.
 
 At link or load time, the system verifies that `M`'s actual `exported procedure p(...)` declaration is subtype-compatible with the caller's `imported` declaration.
 
@@ -246,7 +246,7 @@ When the compiler sees both sides of a typed channel, it can:
 
 ### 6.3 Separate Compilation
 
-For separate compilation, a module is compiled against its own `imported` procedure declarations. The imported declarations are sufficient for type checking — no access to other modules is needed.
+Separate compilation is a *mode*: a module is compiled against its own `imported` procedure declarations, which suffice to check the module's text locally — no access to other modules is needed. This separate check is not, on its own, a soundness guarantee. Soundness is established on the **linked program** (the unit of type checking; §1 principle 4, `../type system/typed-program.md`): the modules are expanded, their parameterised procedures instantiated, and linked, and the resulting typed GLP program is checked well-typed. A parameterised procedure, in particular, is checked only within a program that instantiates it; checked in isolation with a free type parameter it is not a program and is not type-checked.
 
 The compiled module records its `imported` declarations, enabling compatibility verification at load time.
 
@@ -397,8 +397,8 @@ Key differences:
 | Type sharing | Not addressed | Ancestor scoping, structural compatibility |
 | Exports | `-export([proc/arity, ...])` list | `exported procedure` at declaration site |
 | Imports | `-import([module, ...])` list | `imported procedure path#name(...)` at declaration site |
-| Type checking | Not addressed | Fully local via imported declarations |
-| Separate compilation | Not addressed | Enabled by imported/exported declarations |
+| Type checking | Not addressed | Local per-module check; linked program is the unit of soundness |
+| Separate compilation | Not addressed | Supported as a mode via imported/exported declarations |
 | Dynamic verification | Not addressed | Subtype compatibility: imported vs exported |
 | Compilation scope | Single module | Flexible: file, directory, project |
 

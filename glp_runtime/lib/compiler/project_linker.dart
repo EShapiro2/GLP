@@ -394,17 +394,17 @@ List<String> _ancestorSelfGlpFiles(String rootDir, String programsDir) {
 /// there — never by flattening all modules into one environment.
 ///
 /// Pass 1: per-module checks (verdicts for the non-parameterized case), while a
-/// shared collector records every call-site instantiation and parameterized
-/// procedures defer their wildcard self-check.
+/// shared collector records every call-site instantiation. A parameterized
+/// procedure has no well-typing of its own and is given no verdict here.
 /// Phase 2: each distinct instantiation's defining clauses are checked against
-/// its monomorphic declaration in the scope it was inferred in.
-/// Fallback: a parameterized procedure with zero collected instantiations is
-/// checked once under its wildcard declaration.
+/// its monomorphic declaration in the scope it was inferred in. A parameterized
+/// procedure with zero collected instantiations is not checked — with a free
+/// type parameter it is not a program (typed-program.md "Programs and Modules");
+/// there is no wildcard fallback, which would be unsound.
 ///
 /// Throws on type errors with module name and error details.
 void typeCheckProject(List<DiscoveredModule> modules) {
   final collector = InstantiationCollector();
-  final deferred = <DeferredParamProc>[];
 
   // Pass 1: per-module checks + instantiation collection.
   for (final mod in modules) {
@@ -425,7 +425,6 @@ void typeCheckProject(List<DiscoveredModule> modules) {
       transformedProcedures: transformed.procedures,
       ancestorScope: mod.ancestorScope,
       collector: collector,
-      deferredSink: deferred,
     );
 
     if (!result.isWellTyped) {
@@ -447,9 +446,7 @@ void typeCheckProject(List<DiscoveredModule> modules) {
     collector,
     (procKey) => _definingClausesForKey(modules, procKey),
   );
-  final instantiatedKeys = <String>{};
   for (final ir in instResults) {
-    instantiatedKeys.add(ir.inst.procKey);
     if (!ir.result.isWellTyped) {
       final errors = ir.result.errors
           .map((e) => '  ${e.message} at line ${e.line}')
@@ -460,31 +457,9 @@ void typeCheckProject(List<DiscoveredModule> modules) {
     }
   }
 
-  // Fallback: parameterized procedures with no collected instantiation are
-  // checked once under their wildcard declaration.
-  final seenFallback = <String>{};
-  for (final d in deferred) {
-    if (instantiatedKeys.contains(d.procKey)) continue;
-    if (!seenFallback.add(d.procKey)) continue;
-
-    final focusedEnv = TypeEnvironment(
-      d.env.types,
-      {...d.env.procedures, d.wildcardDecl.key: d.wildcardDecl},
-      paramProcDecls: d.env.paramProcDecls,
-      typeTemplates: d.env.typeTemplates,
-    );
-
-    final res = TypeChecker(focusedEnv).checkSingleProcedure(
-        d.wildcardDecl, d.clauses,
-        activeInstantiations: {d.procKey: d.wildcardDecl});
-    if (!res.isWellTyped) {
-      final errors =
-          res.errors.map((e) => '  ${e.message} at line ${e.line}').join('\n');
-      throw Exception(
-          'Type checking failed for parameterized procedure ${d.procKey} '
-          '(no in-scope instantiation; wildcard fallback):\n$errors');
-    }
-  }
+  // A parameterized procedure with no collected instantiation is not checked:
+  // with a free type parameter it is not a program (typed-program.md "Programs
+  // and Modules"). There is no wildcard fallback — it would be unsound.
 }
 
 /// Find the defining clauses for a procedure "name/arity" among the project's
