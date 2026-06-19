@@ -1,0 +1,23 @@
+%% param_instantiated_coverage_gap.glp — NEGATIVE regression guard for the TGLP
+%% paper's "Programs and Modules" rule (parameterized-types.tex
+%% sec:programs-and-modules; spec: docs/type system/typed-program.md).
+%%
+%% Same pdrop/1 as param_free_not_checked.glp (a parameterized procedure with a
+%% coverage gap: no clause for the empty stream []), now INSTANTIATED at X := Msg
+%% by go/1.  The instantiation makes pdrop a checked procedure: the
+%% per-instantiation contravariance check runs on pdrop(Stream<Msg>?) and finds []
+%% uncovered, so the file is REJECTED.
+%%
+%% Paired with param_free_not_checked.glp: the SAME procedure is unchecked while
+%% its parameter is free, and checked (and here rejected) once instantiated.
+%%
+%% Run (from /Users/udi/Grassroots/GLP/glp_runtime/):
+%%   printf 'load ../programs/tests/param_instantiated_coverage_gap.glp\n:quit\n' | bin/glpc
+
+Msg ::= a ; b.
+
+procedure pdrop(Stream(X)?).
+pdrop([_|Xs]) :- pdrop(Xs?).
+
+procedure go(Stream(Msg)?).
+go(S) :- pdrop(S?).

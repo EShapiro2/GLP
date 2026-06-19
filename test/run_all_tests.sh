@@ -924,6 +924,13 @@ POSITIVE_FILES=(
     "$TYPED/param_stream_integer.glp"
     "$TYPED/param_channel.glp"
     "$TYPED/param_procedure_inference.glp"
+
+    # --- Programs-and-Modules rule: a parameterized procedure with a free type
+    # parameter is not a program and is not type-checked. pdrop has a coverage
+    # gap (no [] clause) but is never instantiated, so it loads clean. The
+    # removed wildcard self-check would have rejected it. Paired NEGATIVE:
+    # param_instantiated_coverage_gap.glp (same proc, instantiated, rejected).
+    "$GLP_DIR/programs/tests/param_free_not_checked.glp"
 )
 
 # Build REPL input: load each positive file with :clear between
@@ -1084,6 +1091,13 @@ NEGATIVE_FILES=(
     # wrap threads Stream(X) -> Stream(Box(X)); the recursive ploop is checked at
     # the enclosing instantiation, so the type-changing recursion is rejected.
     "$GLP_DIR/programs/tests/monomorphic_recursion.glp"
+
+    # --- Programs-and-Modules rule: instantiation makes a parameterized proc a
+    # checked procedure. pdrop has a coverage gap (no [] clause); go/1
+    # instantiates it at X := Msg, so the per-instantiation contravariance check
+    # catches the gap. Paired POSITIVE: param_free_not_checked.glp (same proc,
+    # never instantiated, loads clean).
+    "$GLP_DIR/programs/tests/param_instantiated_coverage_gap.glp"
 )
 
 # Build REPL input with :clear between each negative file

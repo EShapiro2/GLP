@@ -1,0 +1,22 @@
+%% param_free_not_checked.glp — POSITIVE regression guard for the TGLP paper's
+%% "Programs and Modules" rule (parameterized-types.tex sec:programs-and-modules;
+%% spec: docs/type system/typed-program.md "Programs and Modules").
+%%
+%% pdrop/1 is a parameterized procedure with a COVERAGE GAP: it has no clause for
+%% the empty stream [], so it does not cover the Stream input type.  It is never
+%% instantiated here (no monomorphic caller pins X).  With a free type parameter
+%% pdrop is not a program and is NOT type-checked, so the file loads CLEAN despite
+%% the gap.
+%%
+%% Behaviour:
+%%   - The removed wildcard self-check WOULD have rejected this: it ran the
+%%     contravariance/coverage check on pdrop(Stream<_>?), and [] is uncovered.
+%%   - Per the paper a free-parameter fragment is not type-checked, so coverage is
+%%     not run at all.  Paired with param_instantiated_coverage_gap.glp, which has
+%%     the SAME pdrop but instantiated — there the gap IS caught.
+%%
+%% Run (from /Users/udi/Grassroots/GLP/glp_runtime/):
+%%   printf 'load ../programs/tests/param_free_not_checked.glp\n:quit\n' | bin/glpc
+
+procedure pdrop(Stream(X)?).
+pdrop([_|Xs]) :- pdrop(Xs?).
