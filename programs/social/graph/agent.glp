@@ -93,7 +93,7 @@ agent(Id, [msg('_user', Id1, send(Target, Text))|UserIn], NetIn, Outs) :-
 
 %% User introduces P to Q
 agent(Id, [msg('_user', Id1, introduce(P, Q))|UserIn], NetIn, Outs) :-
-    Id? =?= Id1?, ground(P?), ground(Q?), new_channel(PQCh, QPCh) |
+    Id? =?= Id1?, ground(P?), ground(Q?), ~(P? =?= Q?), new_channel(PQCh, QPCh) |
     send_friend(P?, msg(Id?, P?, intro(Q?, QPCh?)), Outs?, Outs1),
     send_friend(Q?, msg(Id?, Q?, intro(P?, PQCh?)), Outs1?, Outs2),
     agent(Id?, UserIn?, NetIn?, Outs2?).
