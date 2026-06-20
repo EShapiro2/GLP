@@ -16,6 +16,7 @@ Read these files in order before doing anything else, then state which you have 
 3. `docs/DISCIPLINE.md` — development discipline
 4. `docs/typed-glp-manual.md` — typed GLP programming guide
 5. `docs/glp-cheat-sheet.md` — patterns and idioms; "GLP is NOT Prolog"
+6. `/Grassroots/docs/writing-style-guide.md` — how to communicate with Udi (governs every message to him)
 
 Then STOP and wait for Udi's direction.  Do not read any other files until then.
 
