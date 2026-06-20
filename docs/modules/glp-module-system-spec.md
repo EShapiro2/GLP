@@ -296,13 +296,9 @@ If omitted, the module name defaults to the filename without the `.glp` extensio
 
 ### 8.2 System Mode
 
-Files using reserved constants must declare:
+`-mode(system)` admits a module to the language-primitive layer — it is what permits naming reserved constants (the `_`-prefixed kernel predicates and reserved functors). The directive is confined to that layer: only the root `programs/self.glp` and the modules under `programs/system/` declare it, and no other module names a reserved constant. An application module declares neither, reaching runtime functionality by calling the system predicates that `programs/system/` exports, like any cross-module procedure. A module that names a reserved constant without `-mode(system)` fails to load.
 
-```glp
--mode(system).
-```
-
-This is orthogonal to the module system and retained as-is.
+This is now specified in the TGLP paper, Appendix "GLP Language Primitives and the Root `self.glp`" ("Admission to the Primitive Layer"), which is the authoritative source.
 
 ---
 
@@ -329,8 +325,6 @@ AgentChannel ::= ch(AgentToUserStream, MediatorToAgentStream?).
 
 **agent.glp:**
 ```glp
--mode(system).
-
 exported procedure agent(Constant?, UserInStream?, NetInStream?, OutputsList?).
 
 %% Import mediator's procedure for cross-module calls
@@ -342,8 +336,6 @@ agent(Id, [msg('_user', Id1, connect(Target))|UserIn], NetIn, Outs) :-
 
 **mediator.glp:**
 ```glp
--mode(system).
-
 exported procedure ui_mediator(Constant?, AgentChannel?, UserChannel?, PendingList?, Constant?).
 
 %% Import merge from ancestor scope (no path needed)
