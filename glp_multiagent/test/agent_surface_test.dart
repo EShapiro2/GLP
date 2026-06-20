@@ -51,6 +51,31 @@ void main() {
     expect(find.text('alice wants to connect'), findsNothing);
   });
 
+  testWidgets('an introduction alerts a Friends row; tapping it accepts',
+      (tester) async {
+    final sent = <String>[];
+    final r = UiRuntime(manifest: grassrootsManifest, onSend: sent.add);
+    await tester.pumpWidget(_wrap(r));
+
+    // The one generic interpreter renders befriend_intro from the manifest as a
+    // per-item alert. (The introduction's protocol is the social-graph
+    // platform's, which the paper cites; here the interpreter only renders it.)
+    r.handleLine('befriend_intro(alice, charlie, req(5))');
+    await tester.pump();
+
+    expect(find.text('Charlie'), findsOneWidget);
+    expect(find.text('alice introduces you to charlie'), findsOneWidget);
+
+    await tester.tap(find.text('alice introduces you to charlie'));
+    await tester.pumpAndSettle();
+    expect(find.widgetWithText(ElevatedButton, 'Accept'), findsOneWidget);
+    expect(find.widgetWithText(OutlinedButton, 'Decline'), findsOneWidget);
+
+    await tester.tap(find.widgetWithText(ElevatedButton, 'Accept'));
+    await tester.pumpAndSettle();
+    expect(sent, ['accept_intro(charlie, req(5))']);
+  });
+
   testWidgets('connected lists the friend on the Friends panel',
       (tester) async {
     final r = UiRuntime(manifest: grassrootsManifest, onSend: (_) {});

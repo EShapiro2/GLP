@@ -59,6 +59,28 @@ final Manifest grassrootsManifest = Manifest(
             ),
           ],
         ),
+        // An introduction from a friend — the same generic interpreter renders
+        // it as a per-item alert, accepted or declined. The introduction itself
+        // is the social-graph platform's (programs/social/graph), which the
+        // paper cites; here the interpreter only renders the volition.
+        InboxDesc(
+          notifyCtor: 'befriend_intro',
+          args: const ['from', 'other', 'req'],
+          itemKey: 'other',
+          title: '{from} introduces you to {other}',
+          answers: const [
+            AnswerDesc(
+              label: 'Accept',
+              cmdCtor: 'accept_intro',
+              fill: [FromField('other'), FromField('req')],
+            ),
+            AnswerDesc(
+              label: 'Decline',
+              cmdCtor: 'reject_intro',
+              fill: [FromField('other'), FromField('req')],
+            ),
+          ],
+        ),
       ],
     ),
 
