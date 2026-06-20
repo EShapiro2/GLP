@@ -3,6 +3,10 @@
 **Last updated:** 2026-05-18
 **Working directory:** `/Users/udi/Grassroots/GLP/`
 
+## Code ownership
+
+Every directory under `programs/` (and the Dart impl: `glp_runtime`, `glp_multiagent`, `test/`) is owned by exactly one paper — its **paper → code authority**.  Confirm you own a directory before editing it; cross-cutting changes (system-mode strip, DCE, wire format) are hub/Overview-coordinated.  Implementation decisions go in the owning paper's arXiv "Implementation Notes" appendix, not a separate spec doc.  **Authoritative per-directory map + policy:** `/Grassroots/docs/glp-paper-code-map.md`.
+
 ## Mandatory reading at session start
 
 Read these files in order before doing anything else, then state which you have read:
