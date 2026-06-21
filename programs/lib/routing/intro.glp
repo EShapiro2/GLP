@@ -1,7 +1,7 @@
 -module(routing_intro).
 
 %% Introduction-handshake routers (A5 Stage B), lifted verbatim from the
-%% platform self.glp files (social/network, social/child_safe, social/graph —
+%% platform self.glp files (social/network, social/graph —
 %% all identical).  Generalised over the handshake content type C, the
 %% intro-result type IR, and the agent input stream type S, all inferred at each
 %% call.  intro_await_peer destructures the handshake stream (ack/nack) and

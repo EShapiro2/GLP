@@ -2,9 +2,10 @@
 ///
 /// Tests discovery, type checking, renaming, call resolution, entry-point
 /// aliasing (§3.4: exported root-level procedures only), and end-to-end
-/// compilation of the social/child_safe project. Module-local name-collision
-/// handling is covered by the dedicated test/programs/linker_collision fixture;
-/// the nested-subproject entry-alias rule by test/programs/linker_nested.
+/// compilation of the cssn project (a live multi-module platform that consumes
+/// the routing modules exposed from the root self.glp). Module-local
+/// name-collision handling is covered by the dedicated test/programs/linker_collision
+/// fixture; the nested-subproject entry-alias rule by test/programs/linker_nested.
 library;
 
 import 'dart:io';
@@ -27,23 +28,23 @@ void main() {
     setRootScopeUnitClauseSource(source);
     setRootScopeEnvironmentSource(source);
   }
-  final cssgRoot = '../programs/social/child_safe';
+  final cssnRoot = '../programs/cssn';
   // Dedicated minimal fixture: sole coverage of module-local name-collision
   // handling (two sibling modules each defining dup/1).
   final collisionRoot = 'test/programs/linker_collision';
   final rootSelfPath = rootSelfGlp.existsSync() ? rootSelfGlp.absolute.path : null;
 
-  if (!Directory(cssgRoot).existsSync()) {
-    print('child_safe directory not found at $cssgRoot, skipping tests');
+  if (!Directory(cssnRoot).existsSync()) {
+    print('cssn directory not found at $cssnRoot, skipping tests');
     return;
   }
 
   group('Project discovery', () {
-    test('discovers all modules in child_safe', () {
-      final modules = discoverProject(cssgRoot, rootSelfGlpPath: rootSelfPath);
+    test('discovers all modules in cssn', () {
+      final modules = discoverProject(cssnRoot, rootSelfGlpPath: rootSelfPath);
 
       // The project's own 6 modules: agent, child_agent, mediator, actors,
-      // boot, cssg — plus the 4 routing modules exposed from the root self.glp
+      // boot, cssn — plus the 4 routing modules exposed from the root self.glp
       // (lib/routing/{output,inject,intro,befriend}), discovered as linkable
       // across the whole programs/ subtree (module-system spec §3.3).  Any left
       // unreachable are pruned by DCE at compile time; discovery still lists them.
@@ -53,29 +54,31 @@ void main() {
       expect(names, contains('mediator'));
       expect(names, contains('actors'));
       expect(names, contains('boot'));
-      expect(names, contains('cssg'));
+      expect(names, contains('cssn'));
       expect(names, contains('routing_output'));
       expect(names, contains('routing_inject'));
       expect(names, contains('routing_intro'));
       expect(names, contains('routing_befriend'));
-      expect(names.length, equals(10));
+      // At least the 6 own modules + 4 exposed routing modules; cssn also carries
+      // a village/ subtree of actor scenarios, so the total is larger.
+      expect(names.length, greaterThanOrEqualTo(10));
     });
 
     test('excludes self.glp from modules', () {
-      final modules = discoverProject(cssgRoot, rootSelfGlpPath: rootSelfPath);
+      final modules = discoverProject(cssnRoot, rootSelfGlpPath: rootSelfPath);
       final names = modules.map((m) => m.moduleName).toSet();
       expect(names, isNot(contains('self')));
     });
 
     test('excludes boot_direct.glp from modules', () {
-      final modules = discoverProject(cssgRoot, rootSelfGlpPath: rootSelfPath);
+      final modules = discoverProject(cssnRoot, rootSelfGlpPath: rootSelfPath);
       final filenames = modules.map((m) => m.filePath).toList();
       expect(filenames.any((f) => f.contains('boot_direct')), isFalse,
           reason: 'boot_direct.glp should be excluded');
     });
 
     test('modules have correct ancestor scopes', () {
-      final modules = discoverProject(cssgRoot, rootSelfGlpPath: rootSelfPath);
+      final modules = discoverProject(cssnRoot, rootSelfGlpPath: rootSelfPath);
 
       // All modules should have ancestor scope with self.glp types
       for (final mod in modules) {
@@ -87,7 +90,7 @@ void main() {
 
   group('Type checking', () {
     test('all modules type-check successfully', () {
-      final modules = discoverProject(cssgRoot, rootSelfGlpPath: rootSelfPath);
+      final modules = discoverProject(cssnRoot, rootSelfGlpPath: rootSelfPath);
       // Should not throw
       expect(() => typeCheckProject(modules), returnsNormally);
     });
@@ -99,8 +102,8 @@ void main() {
     late Program linked;
 
     setUp(() {
-      modules = discoverProject(cssgRoot, rootSelfGlpPath: rootSelfPath);
-      linkResult = linkProject(modules, rootDir: cssgRoot);
+      modules = discoverProject(cssnRoot, rootSelfGlpPath: rootSelfPath);
+      linkResult = linkProject(modules, rootDir: cssnRoot);
       linked = linkResult.program;
     });
 
@@ -112,7 +115,6 @@ void main() {
 
       // boot.glp procedures should have boot: prefix
       expect(procNames, contains('boot:tee'));
-      expect(procNames, contains('boot:play1'));
       expect(procNames, contains('boot:fplay1'));
 
       // mediator.glp procedures should have mediator: prefix
@@ -124,9 +126,9 @@ void main() {
     });
 
     test('cross-module calls are resolved', () {
-      // Find boot:play1 and check that its body has agent:agent, not # dispatch
+      // Find boot:fplay1 and check that its body has agent:agent, not # dispatch
       final bootPlay1 = linked.procedures
-          .firstWhere((p) => p.name == 'boot:play1');
+          .firstWhere((p) => p.name == 'boot:fplay1');
 
       // Collect all goal functors in the body
       final bodyFunctors = <String>{};
@@ -152,9 +154,10 @@ void main() {
     });
 
     test('local calls are resolved', () {
-      // boot:play1 calls tee, which is local to boot — should become boot:tee
+      // boot:fplay1 calls tee/network3/send_to_user_tagged, local to boot —
+      // each should be prefixed boot:.
       final bootPlay1 = linked.procedures
-          .firstWhere((p) => p.name == 'boot:play1');
+          .firstWhere((p) => p.name == 'boot:fplay1');
 
       final bodyFunctors = <String>{};
       for (final clause in bootPlay1.clauses) {
@@ -167,8 +170,8 @@ void main() {
 
       expect(bodyFunctors, contains('boot:tee'),
           reason: 'Local tee call should become boot:tee');
-      expect(bodyFunctors, contains('boot:sink'),
-          reason: 'Local sink call should become boot:sink');
+      expect(bodyFunctors, contains('boot:send_to_user_tagged'),
+          reason: 'Local send_to_user_tagged call should become boot:send_to_user_tagged');
       expect(bodyFunctors, contains('boot:network3'),
           reason: 'Local network3 call should become boot:network3');
     });
@@ -199,8 +202,8 @@ void main() {
           .where((d) => d.exported)
           .map((d) => d.name)
           .toSet();
-      expect(exported, contains('play1'));
       expect(exported, contains('fplay1'));
+      expect(exported, contains('fplay2'));
 
       for (final name in exported) {
         final aliases = linked.procedures
@@ -219,15 +222,15 @@ void main() {
     });
 
     test('entry point alias calls renamed procedure', () {
-      // play1 alias should call boot:play1
+      // fplay1 alias should call boot:fplay1
       final play1Alias = linked.procedures
-          .firstWhere((p) => p.name == 'play1');
+          .firstWhere((p) => p.name == 'fplay1');
       expect(play1Alias.clauses.length, equals(1));
 
       final body = play1Alias.clauses.first.body;
       expect(body, isNotNull);
       expect(body!.length, equals(1));
-      expect(body.first.functor, equals('boot:play1'));
+      expect(body.first.functor, equals('boot:fplay1'));
     });
   });
 
@@ -321,8 +324,8 @@ void main() {
 
   group('End-to-end compilation', () {
     test('linked program compiles to bytecode', () {
-      final modules = discoverProject(cssgRoot, rootSelfGlpPath: rootSelfPath);
-      final result = linkProject(modules, rootDir: cssgRoot);
+      final modules = discoverProject(cssnRoot, rootSelfGlpPath: rootSelfPath);
+      final result = linkProject(modules, rootDir: cssnRoot);
 
       final compiler = GlpCompiler();
       final bytecode = compiler.compileProgram(
@@ -332,17 +335,14 @@ void main() {
 
       // Should have procedure labels
       expect(bytecode.labels, isNotEmpty);
-      expect(bytecode.labels.containsKey('boot:play1/0'), isTrue);
       expect(bytecode.labels.containsKey('boot:fplay1/0'), isTrue);
-      expect(bytecode.labels.containsKey('play1/0'), isTrue,
-          reason: 'Entry point alias should be in bytecode');
       expect(bytecode.labels.containsKey('fplay1/0'), isTrue,
           reason: 'Entry point alias should be in bytecode');
     });
 
     test('fplay1 produces correct output', () {
-      final modules = discoverProject(cssgRoot, rootSelfGlpPath: rootSelfPath);
-      final result = linkProject(modules, rootDir: cssgRoot);
+      final modules = discoverProject(cssnRoot, rootSelfGlpPath: rootSelfPath);
+      final result = linkProject(modules, rootDir: cssnRoot);
       final compiler = GlpCompiler();
       final bytecode = compiler.compileProgram(
         result.program,

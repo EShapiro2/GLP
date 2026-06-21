@@ -1,7 +1,7 @@
 -module(routing_inject).
 
 %% Response-injection router (A5 Stage B), lifted verbatim from the platform
-%% self.glp files (social/network, social/child_safe, social/graph, bonds — all
+%% self.glp files (social/network, social/graph, bonds — all
 %% identical).  Generalised over the injected value type R and the agent input
 %% stream type S, both inferred at each call.  The clause constructs
 %% msg(_, _, response(_)) into the S stream, so per-instantiation checking

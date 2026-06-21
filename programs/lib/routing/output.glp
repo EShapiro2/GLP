@@ -1,7 +1,7 @@
 -module(routing_output).
 
 %% Per-kind output routers (A5 Stage B), lifted verbatim from the platform
-%% self.glp files (social/network, social/child_safe, social/graph, bonds — all
+%% self.glp files (social/network, social/graph, bonds — all
 %% identical).  Declarations are generalised over the entry-union type Ent and
 %% the carried-message type M, both inferred at each call.  Each clause
 %% destructures Ent's per-kind constructor (user_output / net_output /
