@@ -1,0 +1,12 @@
+%% probe13_strict — strict-typed single-process probe for Issue 13.
+%% Shared types. A `?`-carrying nested position (Resp?), exactly the shape of
+%% the mediator's befriend(Constant, Response?): the response writer is forwarded
+%% through the structure, so the position is `?`-typed.
+
+Resp       ::= ok ; no.
+Item       ::= it(Constant, Resp?).
+ItemStream ::= [] ; [Item | ItemStream].
+Closed     ::= closed.
+Marker     ::= g_matched ; g_otherwise ; h_matched ; h_otherwise.
+PendList ::= [] ; [Pend | PendList].
+Pend ::= keep(Resp?).

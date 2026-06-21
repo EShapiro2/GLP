@@ -1,6 +1,6 @@
 # GLP Known Issues
 
-**Last updated:** 2026-06-10
+**Last updated:** 2026-06-21
 
 ## Issue 0a: Parser does not support `=..` as a goal in clause bodies
 
@@ -477,9 +477,9 @@ Same theme as **Issue 1** (localize put a writer address where a reader was need
 
 ## Issue 13: madGLP `receive/3` drops a nested reader pattern over a `_w` remote writer
 
-**Status**: Open — owned by the madGLP/IGLP session. Full report: `docs/madglp-w-writer-return-bug.md`; reproducer: `programs/tests/mad_w_probe.glp` + `glp_multiagent/test/mad_w_probe_test.dart`.
+**Status (updated 2026-06-21)**: The **user-facing symptom is gone** — the cross-isolate befriend round-trip now **completes** (`glp_multiagent/test/roundtrip_isolate_test.dart`, two isolates, `connected` both sides). That test was only red because of an **unrelated test-harness omission**: it passed `glpSources` but not `glpSourcePaths`, so the loader could not do `self.glp` ancestor-scope discovery and every agent died at init with `UnknownTypeError: Response` (NOT a typechecker bug — the checker resolves `Response` whenever `self.glp` scope is established, as `single_heap_roundtrip_test` and a project-load both show). Supplying `glpSourcePaths: _sourceFiles` greens it and the `_w` return hop completes. **A residual soundness defect remains, now latent:** `receive/3` matching a nested reader against an *unbound* `_w` writer still falls to `otherwise` (`mad_w_probe` → `bob_ch_otherwise`), where the **control** `programs/tests/probe13_strict/` shows a plain unbound writer **commits** the same `receive`-as-guard match. The befriend flow works only because its response writer is *bound* by the time `receive` runs; a flow receiving an unbound `_w` writer would still strand. Original report: `docs/madglp-w-writer-return-bug.md`. Repro of the residual: `programs/tests/mad_w_probe.glp` + `glp_multiagent/test/mad_w_probe_test.dart`; control: `programs/tests/probe13_strict/`.
 **Discovered**: 2026-06-17
-**Affects**: Soundness — a writer that crosses isolates (serialized as `_w(p,i)`) cannot be bound after a round-trip, though the identical clauses work in one heap. Concretely: the cold-call return hop never delivers the decision, so befriending strands.
+**Affects**: Soundness (now latent) — `receive/3` mishandles an *unbound* `_w` writer (commits for a plain unbound writer, falls to `otherwise` for `_w`). No live caller currently hits the unbound case, so the befriend round-trip completes.
 
 ### Summary
 
@@ -586,3 +586,28 @@ Make the stream merged into NetIn genuinely canonical-free, e.g. carry the `cano
 - `analysis/type_checker/param_expansion.dart` — `_checkNoGrowingTypeRecursion`: the finiteness rule, scoped to the **self-referential occurrence** (a parameter may not be a proper subterm of an argument *of the self-reference*; sibling elements like `StreamBox(X) ::= [Box(X)|StreamBox(X)]` are fine), enforced statically at the parsing/expansion stage. `materializeInstantiations`: expand closure-induced type names into monomorphic definitions.
 - Guards (all in `run_all_tests.sh` Section C): `min_polarity_closure.glp` (closure under calls), `growing_type_recursion.glp` (type-def finiteness rule), `monomorphic_recursion.glp` (recursion at a different instantiation rejected).
 - Spec `docs/type system/typed-program.md` harmonised with the paper §Parameterised Types: self-referential-occurrence scoping of the finiteness rule, and monomorphic recursion.
+
+---
+
+## Issue 17: `glp_runtime` `dart test` baseline carries 6 reds — 4 stale rot, 2 the live Issue-13 strand
+
+**Status**: Open tracking entry (so the 6-red baseline is not silently normalized). Logged 2026-06-21 during the Issue-13/15 fix task.
+**Discovered**: 2026-06-21 (baseline before touching code).
+
+### The split
+
+A clean `main` `cd glp_runtime && dart test` ends **379 pass / 5 skip / 6 fail**. The 6 reds are NOT all Issues 13/15 — they are three distinct things:
+
+| Red | Cause | Disposition |
+|---|---|---|
+| `isolate_manager_test` ×2 (30 s `TimeoutException`) | befriend round-trip strands on the cross-isolate `_w` writer | **Issue 13** (live) |
+| `ui_mediator_test` ×3 | the test's inline GLP calls `'_output'` directly, now rejected by the primitive-layer enforcement (`Constant '_output' names a language primitive …`) introduced by the TGLP **system-mode strip** | **stale rot** — the test must call a `programs/system/` export instead of `'_output'`; fix-or-retire, owner IGLP (test) |
+| `clause_select_probe_test` ×1 | `programs/tests/clause_select_probe.glp` now fails type-checking (`Variable mode mismatch: reader requires ↓, got ↑`, line 50); `got_intro` still fires but the goal suspends and the "NetIn clause commits" assertion fails | **stale rot** — this is **Issue 15's own isolation probe**; part of 15's scaffolding has already rotted. Fix-or-retire folded into the Issue-15 work |
+
+### Gate consequence
+
+The Issue-13/15 fix gate cannot mean "all 6 glp_runtime reds green": the `ui_mediator` `_output` reds and the `clause_select_probe` type-error are independent of both bugs and will not flip from the `_w`/wakeup fixes. Issue 13's true green gates are `glp_multiagent/test/roundtrip_isolate_test.dart` + the two `isolate_manager_test` timeouts. Issue 15 has **no** red guard (`scenario_single_isolate_test` passes but asserts only befriend→connected, never the phase-2 intro) — a confirmed-red regression must be built first.
+
+### Also
+
+The REPL suite (`bash test/run_all_tests.sh`) is **489/489 green** on the same tree; the rot is confined to `glp_runtime` Dart tests.

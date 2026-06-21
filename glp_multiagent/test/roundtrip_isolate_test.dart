@@ -57,6 +57,7 @@ void main() {
           InitAgent(
             agentId: id,
             glpSources: sources,
+            glpSourcePaths: _sourceFiles, // self.glp ancestor-scope discovery
             rootSelfGlpPath: rootSelf,
             friends: friends,
             replyPort: reply.sendPort,

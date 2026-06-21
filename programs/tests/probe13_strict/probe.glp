@@ -1,0 +1,45 @@
+-module(probe).
+
+%% Producer: emits one it(bob, _) — the `_` is a legal anonymous WRITER at the
+%% produce position (the structurally-unbound response hole), then closes.
+procedure produce(ItemStream).
+produce([it(bob, _)]).
+
+%% The received response writer is forwarded through a `?`-typed structure and
+%% discarded, exactly as the mediator stores `response(Resp)` in its pending
+%% table. This satisfies SRSW (guard reader R? exempt; R written once in keep).
+procedure stash(PendList?).
+stash(_).
+
+%% --- receive/3-as-guard path (as the mediator uses it) ---
+procedure cons_guard(Channel(Stream(Item), Closed)?).
+cons_guard(Ch) :- receive(it(_, R?), Ch?, _) | stash([keep(R)]), send_to_user([g_matched]).
+cons_guard(_)  :- otherwise | send_to_user([g_otherwise]).
+
+%% --- ordinary clause-head match path, same nested reader pattern ---
+procedure cons_head(Stream(Item)?).
+cons_head([it(_, R?) | _]) :- stash([keep(R)]), send_to_user([h_matched]).
+cons_head(_)               :- otherwise | send_to_user([h_otherwise]).
+
+%% --- LATE-DELIVERY channel path: receive suspends on an empty channel, then a
+%% concurrent feeder binds the stream. This is the one thing the present-element
+%% paths above do NOT model — the element arrives AFTER the receive suspends,
+%% as in the real roundtrip. No `_w`, single process, plain writer.
+procedure consumer(Channel(Stream(Item), Closed)?).
+consumer(Ch) :- receive(it(_, R?), Ch?, _) | stash([keep(R)]), send_to_user([late_matched]).
+consumer(_)  :- otherwise | send_to_user([late_otherwise]).
+
+%% feeder produces the stream element only when run (concurrent with consumer).
+procedure feeder(ItemStream).
+feeder([it(bob, _)]).
+
+%% Boots: produce the stream, feed the same value to each consumer.
+exported procedure boot_guard.
+boot_guard :- produce(S), cons_guard(ch(S?, closed)).
+
+exported procedure boot_head.
+boot_head :- produce(S), cons_head(S?).
+
+%% consumer's receive runs first on an unbound stream (suspends), feeder binds it later.
+exported procedure boot_chan_late.
+boot_chan_late :- consumer(ch(S?, closed)), feeder(S).
