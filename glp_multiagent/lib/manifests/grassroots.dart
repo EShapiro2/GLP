@@ -31,6 +31,14 @@ final Manifest grassrootsManifest = Manifest(
           label: 'Add friend',
           args: [FieldDesc('target', FieldType.person, 'Person to connect')],
         ),
+        // End a friendship (paper §5 Request; Table 1 "end a friendship"). A
+        // unilateral outbox command — no one else answers; the other side's
+        // agent integrates it and both lists drop the friend.
+        CommandDesc(
+          ctor: 'unfriend',
+          label: 'End friendship',
+          args: [FieldDesc('friend', FieldType.person, 'Friend to remove')],
+        ),
       ],
       inbox: [
         InboxDesc(
@@ -191,6 +199,14 @@ final Manifest grassrootsManifest = Manifest(
       notifyCtor: 'connected',
       args: ['who'],
       effects: [AppendTo('friends', 'who'), OpenChat('chats', 'who')],
+    ),
+    // A friendship ended (paper §4 Integrate unfriend; §5 "unfriended removes
+    // one"): drop the person from the Friends list (and the wallet, which lists
+    // friends). The chat history is left in place.
+    ActivityDesc(
+      notifyCtor: 'unfriended',
+      args: ['who'],
+      effects: [RemoveFrom('friends', 'who')],
     ),
     ActivityDesc(
       notifyCtor: 'received',

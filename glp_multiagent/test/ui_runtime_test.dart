@@ -79,6 +79,13 @@ void main() {
       expect(r.store.lists['friends']!.length, 1);
     });
 
+    test('unfriended removes the friend from the list (paper §5)', () {
+      r.handleLine('connected(bob)');
+      r.handleLine('connected(carol)');
+      r.handleLine('unfriended(bob)');
+      expect(r.store.lists['friends']!.map(formatTerm).toList(), ['carol']);
+    });
+
     test('rejected(who) and bare rejected add no friend', () {
       r.handleLine('rejected(carol)');
       r.handleLine('rejected');
@@ -102,6 +109,14 @@ void main() {
       final connect = friends.commands.firstWhere((c) => c.ctor == 'connect');
       r.submitCommand(connect, {'target': GAtom('bob')});
       expect(sent, ['connect(bob)']);
+    });
+
+    test('unfriend command builds the ground UserCmd (paper §5 Request)', () {
+      final friends =
+          grassrootsManifest.panels.firstWhere((p) => p.id == 'friends');
+      final unfriend = friends.commands.firstWhere((c) => c.ctor == 'unfriend');
+      r.submitCommand(unfriend, {'friend': GAtom('bob')});
+      expect(sent, ['unfriend(bob)']);
     });
 
     test('Friends state view is declared so the panel renders empty first', () {
