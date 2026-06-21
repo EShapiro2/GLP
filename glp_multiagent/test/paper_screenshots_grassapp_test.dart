@@ -117,17 +117,14 @@ void main() {
     r.sendChat(chatView, 'alice', 'Anytime');
     r.handleLine('balance_report(alice, alice, 3)');
     r.handleLine('befriend(charlie, req(2))');
-    // An introduction the interpreter renders as an alert (the running protocol
-    // is the social graph's; here GrassApp's interpreter only renders it).
-    r.handleLine('befriend_intro(alice, dave, req(4))');
     r.handleLine('swap_offer(alice, alice, 1, bob, 1, req(3))');
     await pump();
 
-    // Panel 1 — Friends: Alice (a friend), Charlie (a friend offer), and Dave
-    // (an introduction) — both inbox alert kinds the Friends panel renders.
+    // Panel 1 — Friends: Alice (a friend) and Charlie (a friend offer) — the
+    // only inbox alert grassapp's Friends panel produces. (No introduction: the
+    // grassapp mediator emits no befriend_intro, so that alert can't occur here.)
     expect(find.text('Alice'), findsOneWidget);
     expect(find.text('charlie wants to connect'), findsOneWidget);
-    expect(find.text('alice introduces you to dave'), findsOneWidget);
     await _shot(tester, '/private/tmp/gsg-app-friends.png');
 
     // Panel 2 — Coins: the wallet, organised by friend; Alice's row alerts the
