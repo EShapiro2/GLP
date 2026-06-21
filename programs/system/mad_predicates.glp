@@ -5,6 +5,11 @@
 %%
 %% See: madGLP-spec.md Section 4 and Section 12
 
+%% Primitive-layer module: it names the '_w'/'_r'/'_send' kernels, so it must
+%% declare -mode(system). Permitted here because it lives under programs/system/
+%% (TGLP appendix, "Admission to the Primitive Layer").
+-mode(system).
+
 %% =============================================================================
 %% TYPE DEFINITIONS
 %% =============================================================================

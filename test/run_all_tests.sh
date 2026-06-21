@@ -1335,50 +1335,11 @@ check_not "self.glp type error not loaded" "Loaded project" "$i4"
 echo ""
 
 # =============================================================================
-# Section J: CSSG v2 Modules (child_agent with parent(X) output keys)
-# =============================================================================
-echo "=== Section J: CSSG v2 Modules ==="
-echo ""
-
-CSSG_V2="$GLP_DIR/programs/social/child_safe"
-
-# Loading
-j_load=$("$REPL_RUN" <<HEREDOC
-$CSSG_V2
-:quit
-HEREDOC
-2>&1)
-
-check "CSSG v2 project loads" "Loaded project" "$j_load"
-check_not "CSSG v2 no type errors" "Type checking failed" "$j_load"
-
-# fplay4-7: child_agent plays
-echo "--- CSSG v2 child_agent plays (fplay4-fplay7) ---"
-
-j_fp4=$("$REPL_RUN" <<HEREDOC
-$CSSG_V2
-fplay4.
-:quit
-HEREDOC
-2>&1)
-
-check "CSSG v2 fplay4 succeeds" "succeeds\|suspended" "$j_fp4"
-check "CSSG v2 fplay4 carol connected dave" "tagged(carol.*connected(dave)" "$j_fp4"
-
-for play_num in 5 6 7; do
-    j_fpN=$("$REPL_RUN" <<HEREDOC
-$CSSG_V2
-fplay${play_num}.
-:quit
-HEREDOC
-2>&1)
-    check "CSSG v2 fplay${play_num} succeeds" "succeeds\|suspended" "$j_fpN"
-done
-
-echo ""
-
-# =============================================================================
 # Section K: CSSN v2 Modules (child_agent with blocking consent)
+#
+# (Former Section J "CSSG v2 Modules" — programs/social/child_safe — was removed
+# 2026-06-21: child_safe is retired in favour of cssn, and this section's
+# child_agent fplay4-7 coverage is a strict subset of Section K below.)
 # =============================================================================
 echo "=== Section K: CSSN v2 Modules ==="
 echo ""
