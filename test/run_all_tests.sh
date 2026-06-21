@@ -1272,6 +1272,35 @@ HEREDOC
 
 check "SG fplay3 succeeds" "succeeds\|suspended" "$g_fp3"
 
+# Unfriend (paper §3a — guarded by either; one-way teardown, recipient complies)
+echo "--- Unfriend (play_unfriend_send/recv/absent) ---"
+
+g_uf_send=$("$REPL_RUN" <<HEREDOC
+$SGSIM
+play_unfriend_send.
+:quit
+HEREDOC
+2>&1)
+check "SG unfriend_send succeeds" "succeeds\|suspended" "$g_uf_send"
+check "SG unfriend_send teardown on friend channel" "msg(alice, bob, unfriend)" "$g_uf_send"
+
+g_uf_recv=$("$REPL_RUN" <<HEREDOC
+$SGSIM
+play_unfriend_recv.
+:quit
+HEREDOC
+2>&1)
+check "SG unfriend_recv succeeds" "succeeds\|suspended" "$g_uf_recv"
+check "SG unfriend_recv notifies user" "unfriended(alice)" "$g_uf_recv"
+
+g_uf_abs=$("$REPL_RUN" <<HEREDOC
+$SGSIM
+play_unfriend_absent.
+:quit
+HEREDOC
+2>&1)
+check "SG unfriend_absent no-op succeeds" "succeeds\|suspended" "$g_uf_abs"
+
 echo ""
 
 # Section H (old-gen CSSN Modules) retired in A5 — CSSN v2 coverage is Section K.

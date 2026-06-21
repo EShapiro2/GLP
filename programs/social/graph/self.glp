@@ -30,6 +30,7 @@ UserContent ::= connect(Constant)
               ; introduce(Constant, Constant)
               ; accept_intro(Constant, PendingValue)
               ; reject_intro(Constant, PendingValue)
+              ; unfriend(Constant)
               ; response(Response).
 
 %% Content carried inside agent-to-user messages (msg(agent, '_user', Content))
@@ -38,6 +39,7 @@ AgentContent ::= befriend(Constant, Response?)
                ; connected(Constant)
                ; rejected
                ; rejected(Constant)
+               ; unfriended(Constant)
                ; received(Constant, Constant).
 
 %% Network content (2-arg cold-call: msg(Dest, Content))
@@ -46,6 +48,7 @@ NetColdCall ::= intro(Constant, Response?).
 %% Friend-to-friend content (3-arg: msg(From, To, Content))
 FriendContent ::= response(Response)
                 ; text(Constant)
+                ; unfriend
                 ; intro(Constant, IntroChannel).
 
 %% Setup channel content: ack/nack handshake plus the fresh-friend-channel

@@ -90,6 +90,15 @@ agent(Id, [msg('_user', Id1, send(Target, Text))|UserIn], NetIn, Outs) :-
     send_friend(Target?, msg(Id?, Target?, text(Text?)), Outs?, Outs1),
     agent(Id?, UserIn?, NetIn?, Outs1?).
 
+%% User unfriends Target — notify the peer on the friend channel, then tear down.
+%% Guarded by either party (paper §3a), so one-way: no ack, no decline.
+%% Idempotent: if Target is not a friend, send_friend and close_friend are no-ops.
+agent(Id, [msg('_user', Id1, unfriend(Target))|UserIn], NetIn, Outs) :-
+    Id? =?= Id1?, ground(Target?) |
+    send_friend(Target?, msg(Id?, Target?, unfriend), Outs?, Outs1),
+    close_friend(Target?, Outs1?, Outs2),
+    agent(Id?, UserIn?, NetIn?, Outs2?).
+
 %% User introduces P to Q
 agent(Id, [msg('_user', Id1, introduce(P, Q))|UserIn], NetIn, Outs) :-
     Id? =?= Id1?, ground(P?), ground(Q?), ~(P? =?= Q?), new_channel(PQCh, QPCh) |
@@ -152,6 +161,15 @@ agent(Id, UserIn, [msg(From, Id1, text(Text))|NetIn], Outs) :-
     Id? =?= Id1? |
     send_user(msg(agent, '_user', received(From?, Text?)), Outs?, Outs1),
     agent(Id?, UserIn?, NetIn?, Outs1?).
+
+%% Unfriended by From — comply (paper §3a, guarded by either): tear down my
+%% side and notify the user.  close_friend is a no-op if From is already gone,
+%% so a simultaneous unfriend from both sides cannot error or double-tear.
+agent(Id, UserIn, [msg(From, Id1, unfriend)|NetIn], Outs) :-
+    Id? =?= Id1?, ground(From?) |
+    close_friend(From?, Outs?, Outs1),
+    send_user(msg(agent, '_user', unfriended(From?)), Outs1?, Outs2),
+    agent(Id?, UserIn?, NetIn?, Outs2?).
 
 %% Introduction from friend — pass channel to user via mediator
 agent(Id, UserIn, [msg(From, Id1, intro(Other, Ch))|NetIn], Outs) :-

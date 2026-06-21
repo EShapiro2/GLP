@@ -366,3 +366,34 @@ fplay3 :-
                 ch(CharlieMedIn?, CharlieMedOut), [], 1),
     tee(CharlieMedOut?, CharlieActorIn, CharlieDispNotify),
     send_to_user_tagged(charlie, CharlieDispCmd?, CharlieDispNotify?).
+
+%% =============================================================================
+%% UNFRIEND — agent-level tests (GSG-only; the mediated UI path is UIVE's)
+%% =============================================================================
+
+%% Initiator: alice (friend of bob) unfriends bob.  Expect the teardown message
+%% msg(alice, bob, unfriend) written to the friend channel, and nothing to alice's
+%% own user output (one-way: the initiator does not notify itself).
+exported procedure play_unfriend_send.
+play_unfriend_send :-
+    agent # agent(alice, [msg('_user', alice, unfriend(bob))], [],
+                  [friend_output(bob, ToBob), user_output(AliceOut)]),
+    send_to_user(ToBob?),
+    send_to_user(AliceOut?).
+
+%% Recipient: bob (friend of alice) receives an unfriend.  Expect bob to tear down
+%% his side and notify the user msg(agent, '_user', unfriended(alice)).
+exported procedure play_unfriend_recv.
+play_unfriend_recv :-
+    agent # agent(bob, [], [msg(alice, bob, unfriend)],
+                  [friend_output(alice, _), user_output(BobOut)]),
+    send_to_user(BobOut?).
+
+%% Idempotent: alice unfriends carol, who is not a friend.  send_friend and
+%% close_friend are no-ops; nothing is written and the friend(bob) entry is
+%% untouched.  Covers simultaneous unfriend (the second arrival finds no edge).
+exported procedure play_unfriend_absent.
+play_unfriend_absent :-
+    agent # agent(alice, [msg('_user', alice, unfriend(carol))], [],
+                  [friend_output(bob, _), user_output(AliceOut)]),
+    send_to_user(AliceOut?).
