@@ -7,7 +7,6 @@
 %%
 %% Requires: self.glp, typed_social_agent.glp, typed_ui_mediator.glp
 
--mode(system).
 
 %% --- In-heap crossbar (route each `_net` output to the addressed agent) ---
 procedure crossbar(Stream(M)?, Stream(M)?, Stream(M)?,

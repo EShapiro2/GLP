@@ -5,7 +5,6 @@
 %% bind_response, handle_response: local (call agent recursively)
 
 -module(agent).
--mode(system).
 
 %% =============================================================================
 %% RESPONSE HANDLING — local (calls merge and agent)

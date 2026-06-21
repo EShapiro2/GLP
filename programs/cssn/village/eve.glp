@@ -5,7 +5,6 @@
 %% Act 3: Joins Carol's kids_chat group, sends reply, then leaves.
 %% Types: from village/self.glp (ancestor scoping)
 
--mode(system).
 
 %% =============================================================================
 %% Act 2: Accept sibling intro to Dave, then intro to Carol

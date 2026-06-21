@@ -13,7 +13,6 @@
 %% Phase 11: alice_p11, bob_p11 — credit + escrow cancel (mint+trade+escrow)
 
 -module(actors).
--mode(system).
 
 %% =============================================================================
 %% PLAY 1 — Solo mint + balance

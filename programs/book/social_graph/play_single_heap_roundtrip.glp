@@ -17,7 +17,6 @@
 %% Run from glp_runtime/:
 %%   printf '/Users/udi/Grassroots/GLP/programs/book/social_graph/\ngo.\n:quit\n' | dart run bin/glp_repl.dart
 
--mode(system).
 
 %% In-heap transport: forward every msg on one agent's `_net` output stream to
 %% the peer's `_net` input stream. (alice only addresses bob and vice versa.)
@@ -31,7 +30,7 @@ pipe([], []).
 procedure bob_user(Stream(UserNotify)?, Stream(UserCmd)).
 bob_user([befriend(Who, Req)|Ns], [decision(yes, Who?, Req?)]) :-
     ground(Who?), ground(Req?) |
-    '_output'(bob_got(befriend(Who?, Req?))),
+    send_to_user([bob_got(befriend(Who?, Req?))]),
     collect(bob, Ns?).
 bob_user([], []).
 
@@ -41,7 +40,7 @@ alice_user(Ns) :- collect(alice, Ns?).
 
 %% Surface every notify on a stream via _output, producing no commands.
 procedure collect(Constant?, Stream(UserNotify)?).
-collect(Who, [N|Ns]) :- ground(Who?) | '_output'(got(Who?, N?)), collect(Who?, Ns?).
+collect(Who, [N|Ns]) :- ground(Who?) | send_to_user([got(Who?, N?)]), collect(Who?, Ns?).
 collect(_, []).
 
 %% Seed alice's command stream with a single cold call.

@@ -174,7 +174,8 @@ void main() {
     });
 
     test('prelude calls are preserved unprefixed', () {
-      // send_to_user_tagged calls '_output' which is a body kernel — should stay unprefixed
+      // send_to_user_tagged calls send_to_user, a root self.glp system predicate
+      // — it must stay unprefixed (linker leaves prelude calls bare).
       final sendTagged = linked.procedures
           .firstWhere((p) => p.name == 'boot:send_to_user_tagged');
 
@@ -187,9 +188,8 @@ void main() {
         }
       }
 
-      // _output is parsed with quotes stripped — functor is just _output
-      expect(bodyFunctors, contains('_output'),
-          reason: '_output body kernel should remain unprefixed');
+      expect(bodyFunctors, contains('send_to_user'),
+          reason: 'send_to_user prelude call should remain unprefixed');
     });
 
     test('entry-point aliases exist for exported root-level procedures only', () {

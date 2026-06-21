@@ -29,7 +29,6 @@
 %% Run (from /Users/udi/Grassroots/GLP/glp_runtime/):
 %%   printf 'load ../programs/tests/min_polarity_bug3.glp\n:quit\n' | bin/glpc
 
--mode(system).
 
 Response ::= accept ; no.
 

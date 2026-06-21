@@ -14,6 +14,7 @@ import 'ast.dart';
 import 'lexer.dart';
 import 'parser.dart';
 import 'partial_evaluator.dart';
+import 'primitive_layer.dart';
 import '../analysis/type_checker/type_ast.dart';
 import '../analysis/type_checker/param_expansion.dart';
 import '../analysis/type_checker/type_checker.dart';
@@ -103,6 +104,9 @@ List<DiscoveredModule> discoverProject(String rootDir,
     final tokens = lexer.tokenize();
     final parser = Parser(tokens);
     final module = parser.parseModule();
+
+    // Enforce "Admission to the Primitive Layer" (Rule A / Rule B) at load time.
+    enforcePrimitiveLayer(file.path, module, rootSelfGlpPath);
 
     // Extract module name: for self.glp without -module(), derive from parent dir
     final moduleName = module.name ??

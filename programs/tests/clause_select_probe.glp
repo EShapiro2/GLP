@@ -14,7 +14,6 @@
 %% Run from glp_runtime/:
 %%   printf '/Users/udi/Grassroots/GLP/programs/tests/clause_select_probe.glp\ngo.\n:quit\n' | dart run bin/glp_repl.dart
 
--mode(system).
 
 %% Faithful to clause 232: the NetIn message is a 3-field msg whose content is
 %% intro(Other, Ch) with Ch a CHANNEL carrying an unbound writer (as charlie's
@@ -26,15 +25,15 @@ UMsg ::= u(Constant).
 
 procedure p(Stream(UMsg)?, Stream(NMsg)?).
 %% UserIn clauses (tried first) — heads suspend on unbound UserIn.
-p([u(X) | Us], Net) :- ground(X?) | '_output'(got_user(X?)), p(Us?, Net?).
+p([u(X) | Us], Net) :- ground(X?) | send_to_user([got_user(X?)]), p(Us?, Net?).
 %% USER CATCH-ALL with otherwise, positioned BEFORE the net clause — exactly as
 %% agent/4 has it. Its head matches UserIn; with UserIn unbound it suspends, and
 %% its otherwise cannot resolve until the prior user clauses fail.
-p([_ | Us], Net) :- ground(other), otherwise | '_output'(got_user_catchall), p(Us?, Net?).
+p([_ | Us], Net) :- ground(other), otherwise | send_to_user([got_user_catchall]), p(Us?, Net?).
 %% NetIn intro clause AFTER the user catch-all — mirrors agent/4 clause 232.
 p(Us, [m(From, To, intro(Other, Ch)) | Ns]) :-
     ground(To?), ground(Other?) |
-    '_output'(got_intro(From?, To?, Other?)), use_ch(Ch?), p(Us?, Ns?).
+    send_to_user([got_intro(From?, To?, Other?)]), use_ch(Ch?), p(Us?, Ns?).
 p([], []).
 
 procedure use_ch(Chan?).

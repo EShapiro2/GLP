@@ -8,7 +8,6 @@
 %%
 %% Types: from self.glp (ancestor scoping)
 
--mode(system).
 
 procedure diana_p12(ActorChannel?, NarrativeStream).
 diana_p12(ch(In, Out?), Narr?) :-

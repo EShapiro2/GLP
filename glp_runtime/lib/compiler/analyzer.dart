@@ -2,6 +2,7 @@ import 'ast.dart';
 import 'error.dart';
 import 'partial_evaluator.dart' show getRootScopeUnitClauses;
 import '../analysis/type_checker/type_ast.dart';
+import '../analysis/type_checker/root_scope.dart' show isReservedConstantName;
 
 /// Variable information for semantic analysis
 class VariableInfo {
@@ -813,12 +814,16 @@ class Analyzer {
         _analyzeTerm(term.tail!, varTable, inHeadOrBody: inHeadOrBody);
       }
     } else if (term is ConstTerm) {
-      // Validate reserved constants in user mode
+      // Validate reserved constants in user mode. A constant is reserved iff it
+      // NAMES a language primitive (kernel predicate / reserved functor); a
+      // '_'-prefixed constant that names none (e.g. '_user', '_net') is not
+      // reserved. Per TGLP appendix "Admission to the Primitive Layer".
       final value = term.value;
-      if (_compileMode == CompileMode.user && value is String && value.startsWith('_')) {
+      if (_compileMode == CompileMode.user && value is String && isReservedConstantName(value)) {
         throw CompileError(
-          "Constants starting with '_' are reserved for system use: '$value'. "
-          "Use -mode(system). directive for system code.",
+          "Constant '$value' names a language primitive and is reserved for "
+          "system use. Reach it by calling a programs/system/ export, or declare "
+          "-mode(system). (permitted only in the root self.glp and programs/system/).",
           term.line,
           term.column,
           phase: 'analyzer'

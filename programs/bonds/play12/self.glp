@@ -4,4 +4,3 @@
 %% are inherited from the parent bonds/self.glp via ancestor scoping.
 
 -module(play12).
--mode(system).

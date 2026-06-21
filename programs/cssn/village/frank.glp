@@ -7,7 +7,6 @@
 %%         Sends group message, receives replies.
 %% Types: from village/self.glp (ancestor scoping)
 
--mode(system).
 
 %% =============================================================================
 %% Act 1: Adult friendships

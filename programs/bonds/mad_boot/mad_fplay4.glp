@@ -4,7 +4,6 @@
 %% Bonds: Full payment cycle (2 agents)
 %% One isolate per agent.
 
--mode(system).
 
 procedure boot.
 boot :-
@@ -33,11 +32,11 @@ tee([], [], []).
 procedure send_to_user_tagged(Constant?, Stream(_)?, Stream(_)?).
 send_to_user_tagged(Id, [T|Cmds], Notifies) :-
     ground(Id?), ground(T?) |
-    '_output'(tagged(Id?, cmd(T?))),
+    send_to_user([tagged(Id?, cmd(T?))]),
     send_to_user_tagged(Id?, Cmds?, Notifies?).
 send_to_user_tagged(Id, Cmds, [T|Notifies]) :-
     ground(Id?), ground(T?) |
-    '_output'(tagged(Id?, notify(T?))),
+    send_to_user([tagged(Id?, notify(T?))]),
     send_to_user_tagged(Id?, Cmds?, Notifies?).
 send_to_user_tagged(_, [], []).
 send_to_user_tagged(_, Cmds, []) :- sink(Cmds?).

@@ -5,7 +5,6 @@
 %% No cross-module imports — actors are self-contained scripts.
 
 -module(actors).
--mode(system).
 
 %% =============================================================================
 %% PLAY 1 — Both accept introduction

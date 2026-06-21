@@ -8,7 +8,6 @@
 %% Types: from bonds/self.glp (ancestor scoping)
 
 -module(bob).
--mode(system).
 
 exported procedure bob_p12(ActorChannel?, Stream(NarrativeItem)).
 bob_p12(ch(In, Out?), Narr?) :-

@@ -14,7 +14,6 @@
 %%
 %% Requires: self.glp, typed_social_agent.glp, typed_ui_mediator.glp
 
--mode(system).
 
 %% --- In-heap crossbar: route each agent's `_net` output to the addressed
 %% agent's `_net` input. Merge all outputs, then filter per recipient. ---

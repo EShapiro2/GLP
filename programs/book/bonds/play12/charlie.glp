@@ -10,7 +10,6 @@
 %% Takes T (escrow release time) as parameter.
 %% Types: from self.glp (ancestor scoping)
 
--mode(system).
 
 procedure charlie_p12(Constant?, ActorChannel?, NarrativeStream).
 charlie_p12(T, ch(In, Out?), Narr?) :-

@@ -7,7 +7,6 @@
 %% No groups, no consent.
 
 -module(child_agent).
--mode(system).
 
 %% =============================================================================
 %% CHILD_AGENT/5 — Main loop

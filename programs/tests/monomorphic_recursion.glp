@@ -17,7 +17,6 @@
 %% Run (from /Users/udi/Grassroots/GLP/glp_runtime/):
 %%   printf 'load ../programs/tests/monomorphic_recursion.glp\n:quit\n' | bin/glpc
 
--mode(system).
 
 Msg ::= m.
 Box(X) ::= box(X).

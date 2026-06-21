@@ -127,6 +127,33 @@ const Set<String> builtinProcedures = {
   '_output/1',
 };
 
+/// Reserved constant base-names: the `_`-prefixed names that denote a language
+/// primitive (kernel predicate or reserved functor). Per TGLP appendix
+/// "Admission to the Primitive Layer": a constant is reserved iff it NAMES a
+/// primitive — a `_`-prefixed constant that names none (e.g. `'_user'`, `'_net'`)
+/// is NOT reserved. Only modules under `-mode(system)` may name these; the
+/// loader rejects any other module that does.
+const Set<String> reservedConstantNames = {
+  // MWM (Mutual Write Merge) runtime kernels
+  '_allocate_mutual_reference',
+  '_stream_append',
+  '_close_mutual_reference',
+  // madGLP network kernels and reserved global-name functors
+  '_send',
+  '_w',
+  '_r',
+  // attestation kernel (seam spec §4)
+  '_sign',
+  // output system predicate
+  '_output',
+  // module-dispatch kernels
+  '_activate',
+  '_select',
+};
+
+/// True if [name] names a language primitive and so is a reserved constant.
+bool isReservedConstantName(String name) => reservedConstantNames.contains(name);
+
 /// Check if a type name is predefined
 bool isPredefinedType(String name) => predefinedTypeNames.contains(name);
 

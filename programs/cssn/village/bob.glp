@@ -9,7 +9,6 @@
 %% Act 5: Removes Dave from study group.
 %% Types: from village/self.glp (ancestor scoping)
 
--mode(system).
 
 %% =============================================================================
 %% Act 1: Accept Alice's befriend, receive text

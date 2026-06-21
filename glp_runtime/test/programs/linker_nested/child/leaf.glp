@@ -2,7 +2,6 @@
 %% prefixed name `leaf:greet` from the parent, but is bare-aliased only when
 %% child/ is the loaded root.
 -module(leaf).
--mode(system).
 
 exported procedure greet.
-greet :- '_output'(leaf_ran).
+greet :- send_to_user([leaf_ran]).

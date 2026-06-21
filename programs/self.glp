@@ -121,6 +121,13 @@ merge(Xs, [Y|Ys], [Y?|Zs?]) :- merge(Xs?, Ys?, Zs).
 merge([], Ys, Ys?).
 merge(Xs, [], Xs?).
 
+% send_to_user/1 — system predicate emitting each ground term of the stream via
+% the _output kernel. Application modules reach user output by calling this (or a
+% local helper that calls it) rather than naming the reserved '_output' kernel.
+procedure send_to_user(Stream(_)?).
+send_to_user([T | In]) :- ground(T?) | '_output'(T?), send_to_user(In?).
+send_to_user([]).
+
 % =============================================================================
 % ARITHMETIC ASSIGNMENT (:=/2)
 % =============================================================================
@@ -431,10 +438,22 @@ close_when_done(done, Ref) :-
     is_mutual_ref(Ref?) |
     close_mutual_reference(Ref?).
 
+% The mwm stream wrappers carry permissive (`_`) system-builtin types so that
+% typed application modules can call them without a local declaration (the mwm/2
+% input type stays undeclared — its compound constructors defeat the DFA builder,
+% per the note above).
+procedure stream_append(_?, _?, _).
 stream_append(Value, RefIn, RefOut?) :-
     is_mutual_ref(RefIn?) |
     '_stream_append'(RefIn?, Value?, RefOut).
 
+procedure close_mutual_reference(_?).
 close_mutual_reference(Ref) :-
     is_mutual_ref(Ref?) |
     '_close_mutual_reference'(Ref?).
+
+% allocate_mutual_reference/2 — system wrapper for the allocation kernel, so
+% application modules can build a mutual reference without naming the reserved
+% '_allocate_mutual_reference' kernel.
+procedure allocate_mutual_reference(_, _).
+allocate_mutual_reference(Ref?, Out?) :- '_allocate_mutual_reference'(Ref, Out).

@@ -4,7 +4,6 @@
 %% Village scenario: 3 adults, 3 children, narrative streams
 %% One isolate per agent — parent-child streams cross isolate boundaries.
 
--mode(system).
 
 procedure boot.
 boot :-
@@ -123,11 +122,11 @@ tee([], [], []).
 procedure send_to_user_tagged(Constant?, Stream(_)?, Stream(_)?).
 send_to_user_tagged(Id, [T|Cmds], Notifies) :-
     ground(Id?), ground(T?) |
-    '_output'(tagged(Id?, cmd(T?))),
+    send_to_user([tagged(Id?, cmd(T?))]),
     send_to_user_tagged(Id?, Cmds?, Notifies?).
 send_to_user_tagged(Id, Cmds, [T|Notifies]) :-
     ground(Id?), ground(T?) |
-    '_output'(tagged(Id?, notify(T?))),
+    send_to_user([tagged(Id?, notify(T?))]),
     send_to_user_tagged(Id?, Cmds?, Notifies?).
 send_to_user_tagged(_, [], []).
 send_to_user_tagged(_, Cmds, []) :- sink(Cmds?).
@@ -135,19 +134,19 @@ send_to_user_tagged(_, Cmds, []) :- sink(Cmds?).
 procedure send_to_user_narrate(Constant?, Stream(_)?).
 send_to_user_narrate(Id, [friend(X)|Ns]) :-
     ground(Id?), ground(X?) |
-    '_output'(tagged(Id?, friend(X?))),
+    send_to_user([tagged(Id?, friend(X?))]),
     send_to_user_narrate(Id?, Ns?).
 send_to_user_narrate(Id, [say(X)|Ns]) :-
     ground(Id?), ground(X?) |
-    '_output'(tagged(Id?, say(X?))),
+    send_to_user([tagged(Id?, say(X?))]),
     send_to_user_narrate(Id?, Ns?).
 send_to_user_narrate(Id, [act(X)|Ns]) :-
     ground(Id?), ground(X?) |
-    '_output'(tagged(Id?, act(X?))),
+    send_to_user([tagged(Id?, act(X?))]),
     send_to_user_narrate(Id?, Ns?).
 send_to_user_narrate(Id, [event(X)|Ns]) :-
     ground(Id?), ground(X?) |
-    '_output'(tagged(Id?, event(X?))),
+    send_to_user([tagged(Id?, event(X?))]),
     send_to_user_narrate(Id?, Ns?).
 send_to_user_narrate(_, []).
 

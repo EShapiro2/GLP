@@ -10,7 +10,6 @@
 %% Stage 1: social befriending + mint + balance + balance_report. The swap
 %% pending path (propose/accept/decline) is added with the swap stage.
 
--mode(system).
 
 ReqId ::= req(Constant).
 

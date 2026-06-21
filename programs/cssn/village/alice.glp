@@ -6,7 +6,6 @@
 %% Act 4: Approves Carol joining Frank's study group.
 %% Types: from village/self.glp (ancestor scoping)
 
--mode(system).
 
 %% =============================================================================
 %% Act 1: Adult friendships

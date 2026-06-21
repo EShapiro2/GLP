@@ -9,7 +9,6 @@
 %% for child-managed group invites (consent flow 3).
 
 -module(child_agent).
--mode(system).
 
 %% =============================================================================
 %% AWAIT_GROUP_CHANNEL — local (calls merge and child_agent)

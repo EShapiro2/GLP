@@ -8,7 +8,6 @@
 %% Act 6: Receives unfriended(carol).
 %% Types: from village/self.glp (ancestor scoping)
 
--mode(system).
 
 %% =============================================================================
 %% Act 2: Accept intros to Carol and Eve

@@ -10,7 +10,6 @@
 %%
 %% Types: from self.glp (ancestor scoping)
 
--mode(system).
 
 procedure eve_p12(ActorChannel?, NarrativeStream).
 eve_p12(ch(In, Out?), Narr?) :-

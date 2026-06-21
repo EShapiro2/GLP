@@ -10,7 +10,6 @@
 %% writer through a structure carries `?` in the type (cold-call Response, swap
 %% SwapResponse).
 
--mode(system).
 
 Decision ::= yes ; no.
 Response ::= accept(FriendChannel) ; no.

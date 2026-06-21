@@ -1,4 +1,3 @@
--mode(system).
 
 send(X, ch(In, [X?|Out?]), ch(In?, Out)).
 receive(X?, ch([X|In], Out?), ch(In?, Out)).

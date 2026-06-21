@@ -24,7 +24,6 @@
 %% Run (from /Users/udi/Grassroots/GLP/glp_runtime/):
 %%   printf 'load ../programs/tests/min_polarity_closure.glp\n:quit\n' | bin/glpc
 
--mode(system).
 
 Response ::= accept ; no.
 

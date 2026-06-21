@@ -10,7 +10,6 @@
 %%   - Module structure with exported procedure
 
 -module(agent).
--mode(system).
 
 %% =============================================================================
 %% MERGE — local copy (Stream(X) subtyping limitation)

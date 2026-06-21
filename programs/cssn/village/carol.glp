@@ -7,7 +7,6 @@
 %% Act 6: Unfriends Dave.
 %% Types: from village/self.glp (ancestor scoping)
 
--mode(system).
 
 %% =============================================================================
 %% Act 2: Child introductions — accept Dave, accept Eve, text Dave

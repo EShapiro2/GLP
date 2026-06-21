@@ -12,7 +12,6 @@
 %% flag the reader/writer clash (like bug1), or does the polymorphic parameter
 %% let it pass unchecked?
 
--mode(system).
 
 Response ::= accept ; no.
 

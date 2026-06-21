@@ -5,7 +5,6 @@
 %% Defined once here, visible to all modules via ancestor scoping.
 
 -module(bonds).
--mode(system).
 
 %% =============================================================================
 %% CORE PROTOCOL TYPES

@@ -5,7 +5,6 @@
 %% No cross-module imports — lookup_pending is local.
 
 -module(mediator).
--mode(system).
 
 %% =============================================================================
 %% CHANNEL OPERATIONS (Defined Guards)

@@ -17,7 +17,6 @@
 %% Run (from /Users/udi/Grassroots/GLP/glp_runtime/):
 %%   echo -e 'load ../programs/tests/min_polarity_bug.glp\n:quit' | dart run bin/glp_repl.dart
 
--mode(system).
 
 Response ::= accept ; no.
 

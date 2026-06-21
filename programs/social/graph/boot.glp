@@ -6,7 +6,6 @@
 %% Cross-module dependencies declared via imported procedures.
 
 -module(boot).
--mode(system).
 
 %% Exported entry points (project-compilation spec §3.4: only exported
 %% root-level procedures alias). Each `exported procedure` declaration sits
@@ -50,11 +49,11 @@ sink([]).
 procedure send_to_user_tagged(Constant?, UserCmdStream?, UserNotifyStream?).
 send_to_user_tagged(Id, [T|Cmds], Notifies) :-
     ground(Id?), ground(T?) |
-    '_output'(tagged(Id?, cmd(T?))),
+    send_to_user([tagged(Id?, cmd(T?))]),
     send_to_user_tagged(Id?, Cmds?, Notifies?).
 send_to_user_tagged(Id, Cmds, [T|Notifies]) :-
     ground(Id?), ground(T?) |
-    '_output'(tagged(Id?, notify(T?))),
+    send_to_user([tagged(Id?, notify(T?))]),
     send_to_user_tagged(Id?, Cmds?, Notifies?).
 send_to_user_tagged(_, [], []).
 send_to_user_tagged(_, Cmds, []) :- sink(Cmds?).

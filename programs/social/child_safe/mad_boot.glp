@@ -17,7 +17,6 @@
 %%
 %% Date: 2026-03-04
 
--mode(system).
 
 %% =============================================================================
 %% TEE — Stream splitter
@@ -33,11 +32,11 @@ tee([], [], []).
 
 send_to_user_tagged(Id, [T|Cmds], Notifies) :-
     ground(Id?), ground(T?) |
-    '_output'(tagged(Id?, cmd(T?))),
+    send_to_user([tagged(Id?, cmd(T?))]),
     send_to_user_tagged(Id?, Cmds?, Notifies?).
 send_to_user_tagged(Id, Cmds, [T|Notifies]) :-
     ground(Id?), ground(T?) |
-    '_output'(tagged(Id?, notify(T?))),
+    send_to_user([tagged(Id?, notify(T?))]),
     send_to_user_tagged(Id?, Cmds?, Notifies?).
 send_to_user_tagged(_, [], []).
 

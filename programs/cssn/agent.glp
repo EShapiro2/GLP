@@ -9,7 +9,6 @@
 %%   - Added parent consent clauses: group_consent_req, approve/reject_child_group
 
 -module(agent).
--mode(system).
 
 %% =============================================================================
 %% AWAIT_GROUP_CHANNEL — local (calls merge and agent)

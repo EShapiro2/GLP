@@ -14,6 +14,7 @@ import 'package:glp_runtime/compiler/compiler.dart';
 import 'package:glp_runtime/compiler/parser.dart';
 import 'package:glp_runtime/compiler/lexer.dart';
 import 'package:glp_runtime/compiler/ast.dart';
+import 'package:glp_runtime/compiler/primitive_layer.dart';
 import 'package:glp_runtime/bytecode/runner.dart';
 import 'package:glp_runtime/runtime/runtime.dart';
 import 'package:glp_runtime/runtime/machine_state.dart';
@@ -106,10 +107,8 @@ send_to_remote(_, []).
 procedure global_send(_?, _?, _?).
 global_send(T, G, Q) :- known(T?) | '_send'(T?, G?, Q?).
 
-%% send_to_user/1 - Process user output stream (ground terms only)
-procedure send_to_user(Stream(_)?).
-send_to_user([T | In]) :- ground(T?) | '_output'(T?), send_to_user(In?).
-send_to_user([]).
+%% send_to_user/1 is defined in the root self.glp (always loaded), so it is not
+%% repeated here.
 
 %% sign/2 - bind Sig to the hex Ed25519 signature over the canonical
 %% serialization of ground term T, under this agent's key (seam spec §4).
@@ -240,6 +239,10 @@ class GlpEngine {
     final tokens = lexer.tokenize();
     final parser = Parser(tokens);
     final module = parser.parseModule();
+
+    // Enforce "Admission to the Primitive Layer" (Rule A / Rule B) at load time.
+    enforcePrimitiveLayer(
+        File(name).existsSync() ? name : null, module, _rootSelfGlpPath);
 
     // Discover ancestor scope from self.glp hierarchy (if loading from a file)
     TypeEnvironment? ancestorScope;

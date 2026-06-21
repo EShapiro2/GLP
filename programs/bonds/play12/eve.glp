@@ -11,7 +11,6 @@
 %% Types: from bonds/self.glp (ancestor scoping)
 
 -module(eve).
--mode(system).
 
 exported procedure eve_p12(ActorChannel?, Stream(NarrativeItem)).
 eve_p12(ch(In, Out?), Narr?) :-

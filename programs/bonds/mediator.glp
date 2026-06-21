@@ -10,7 +10,6 @@
 %%   - Module structure with exported procedure
 
 -module(mediator).
--mode(system).
 
 %% =============================================================================
 %% CHANNEL OPERATIONS — local unit-clause helpers

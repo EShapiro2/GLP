@@ -6,7 +6,6 @@
 %% No cross-module imports — all helpers are local.
 
 -module(actors).
--mode(system).
 
 %% =============================================================================
 %% PLAY 1 — Both accept introduction

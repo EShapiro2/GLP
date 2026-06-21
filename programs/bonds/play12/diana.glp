@@ -9,7 +9,6 @@
 %% Types: from bonds/self.glp (ancestor scoping)
 
 -module(diana).
--mode(system).
 
 exported procedure diana_p12(ActorChannel?, Stream(NarrativeItem)).
 diana_p12(ch(In, Out?), Narr?) :-

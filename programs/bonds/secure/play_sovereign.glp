@@ -1,5 +1,4 @@
 -module(play_sovereign).
--mode(system).
 
 %% play_sovereign.glp — Test plays for secure bonds sovereign
 %%

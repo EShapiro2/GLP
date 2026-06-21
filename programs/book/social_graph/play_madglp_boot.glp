@@ -8,7 +8,6 @@
 %%
 %% Date: 2026-02-13
 
--mode(system).  %% Uses @agent syntax and '_net' constant
 
 %% =============================================================================
 %% BOOT - Spawns agents on separate isolates

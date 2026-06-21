@@ -6,7 +6,6 @@
 %%
 %% Requires: self.glp, grassapp_agent.glp, grassapp_mediator.glp
 
--mode(system).
 
 %% --- In-heap crossbar ---
 procedure crossbar(Stream(M)?, Stream(M)?, Stream(M)?,
