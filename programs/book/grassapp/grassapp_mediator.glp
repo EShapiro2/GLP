@@ -15,6 +15,7 @@ ReqId ::= req(Constant).
 
 %% User -> Mediator (ground commands from Dart).
 UserCmd     ::= connect(Constant)
+              ; unfriend(Constant)
               ; decision(Decision, Constant, ReqId)
               ; send(Constant, Constant)
               ; mint(Integer)
@@ -28,6 +29,7 @@ UserCmd     ::= connect(Constant)
 %% Mediator -> User (ground notifications to Dart).
 UserNotify  ::= befriend(Constant, ReqId)
               ; connected(Constant)
+              ; unfriended(Constant)
               ; rejected
               ; rejected(Constant)
               ; received(Constant, Constant)
@@ -89,6 +91,13 @@ ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
     ui_mediator(Id?, AgentCh1?, UserCh1?, Ps?, N?).
 
 ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
+    receive(msg(agent, '_user', unfriended(Who)),
+            AgentCh?, AgentCh1),
+    ground(Who?) |
+    send(unfriended(Who?), UserCh?, UserCh1),
+    ui_mediator(Id?, AgentCh1?, UserCh1?, Ps?, N?).
+
+ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
     receive(msg(agent, '_user', rejected),
             AgentCh?, AgentCh1) |
     send(rejected, UserCh?, UserCh1),
@@ -131,6 +140,13 @@ ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
     receive(connect(Target), UserCh?, UserCh1),
     ground(Id?), ground(Target?) |
     send(msg('_user', Id?, connect(Target?)),
+         AgentCh?, AgentCh1),
+    ui_mediator(Id?, AgentCh1?, UserCh1?, Ps?, N?).
+
+ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
+    receive(unfriend(Friend), UserCh?, UserCh1),
+    ground(Id?), ground(Friend?) |
+    send(msg('_user', Id?, unfriend(Friend?)),
          AgentCh?, AgentCh1),
     ui_mediator(Id?, AgentCh1?, UserCh1?, Ps?, N?).
 

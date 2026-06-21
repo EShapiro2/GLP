@@ -29,7 +29,8 @@ FriendContent ::= response(Response)
                 ; coins(Constant, Integer)
                 ; balances(Stream(Holding))
                 ; swap_propose(Constant, Integer, Constant, Integer, SwapResponse?)
-                ; redeem_coins(Constant, Integer).
+                ; redeem_coins(Constant, Integer)
+                ; unfriend.
 FriendMsg     ::= msg(Constant, Constant, FriendContent).
 FriendStream  ::= [] ; [FriendMsg | FriendStream].
 FriendChannel ::= ch(FriendStream, FriendStream?).
@@ -45,6 +46,7 @@ PendingValue ::= response(Response?)
 AgentContent ::= befriend(Constant, Response?)
                ; befriend_intro(Constant, Constant, FriendChannel?)
                ; connected(Constant)
+               ; unfriended(Constant)
                ; rejected
                ; rejected(Constant)
                ; received(Constant, Constant)
@@ -55,6 +57,7 @@ AgentContent ::= befriend(Constant, Response?)
 
 %% mediator -> agent (mediator's reply to a user action).
 UserContent ::= connect(Constant)
+              ; unfriend(Constant)
               ; decision(Decision, Constant, PendingValue)
               ; send(Constant, Constant)
               ; introduce(Constant, Constant)
