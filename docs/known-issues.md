@@ -542,6 +542,8 @@ Two coupled gaps, both fixed:
 
 ## Issue 15: Suspended agent goal not re-awoken when NetIn is bound after suspension via nested merge
 
+**Status (RESOLVED — phantom, 2026-06-22)**: Not a runtime wake-up bug. Instrumented `NoMoreClauses` showed the friend-intro goal suspends on **UserIn**, not NetIn — NetIn is already bound with a committable intro, but the legacy clause's head `intro(Other, Ch?)` reads the channel slot with a **reader**, which cannot match the channel structure delivered there (a head reader matches only a writer). Canonical `social/graph` already has the correct polarity (`intro(Other, Ch)` head-writer captures, body forwards `Ch?`) and uses no `merge`-into-NetIn, so the legacy timing isn't even expressible there — i.e. the bug lived only in the stale `book/social_graph` fixtures. It's a **typing/legacy-fixture artifact**. The red gate `probe15_intro_test` (+ `probe15_intro_boot.glp`) was **eliminated**; `clause_select_probe_test` (rotted sibling scaffolding) is retired (skip). No runtime fix; canonical is correct. The pre-resolution status is preserved below.
+
 **Status**: Open — owned by the madGLP/IGLP session. Full report: `docs/agent-netin-wakeup-stall-bug.md` (index: `docs/iglp-bug-reports-index.md` #3).
 **Discovered**: 2026-06-17
 **Affects**: Liveness — a ready, committable message is never processed; the transaction stalls silently. Single isolate, no MAD/`_w`.

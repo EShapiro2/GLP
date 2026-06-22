@@ -24,7 +24,7 @@ void main() {
     expect(gotNet, isTrue,
         reason: 'committable NetIn clause should fire despite unbound UserIn');
   }, skip: 'Retired 2026-06-22: rotted Issue-15 isolation scaffolding — '
-      'clause_select_probe.glp type-errors (and the goal-check now rejects it), '
-      'and the NetIn-vs-UserIn clause-selection question it probed is covered by '
-      'the canonical probe15_intro_test. See known-issues Issues 15/17.');
+      'clause_select_probe.glp type-errors (and the goal-check now rejects it). '
+      'Issue 15 was resolved as a typing/legacy-fixture artifact and its probe '
+      '(probe15) eliminated. See known-issues Issue 15.');
 }
