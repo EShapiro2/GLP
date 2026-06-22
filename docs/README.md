@@ -72,7 +72,6 @@
 | `infra/` | Infrastructure rules and module boundary |
 | `ma/` | Multi-agent (madGLP) |
 | `modules/` | Module system |
-| `projects/` | Sub-project overviews |
 | `type system/` | Type system specs |
 
 ## External references
