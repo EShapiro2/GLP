@@ -5,7 +5,7 @@
 
 ## Code ownership
 
-Every directory under `programs/` (and the Dart impl: `glp_runtime`, `glp_multiagent`, `test/`) is owned by exactly one paper — its **paper → code authority**.  Confirm you own a directory before editing it; cross-cutting changes (system-mode strip, DCE) are hub/Overview-coordinated.  Implementation decisions go in the owning paper's arXiv "Implementation Notes" appendix, not a separate spec doc.  **At session start, before any work, read `/Grassroots/docs/glp-paper-code-map.md` in full and state that you have done so** — it is the authoritative map, ownership policy, project roster, and the procedure for requesting changes to code you do not own.
+Ownership and authority are not restated here — they live in the map, `/Grassroots/docs/glp-paper-code-map.md`, the single source of truth.  One owner per unit of code: every directory under `programs/` and each subsystem of the Dart implementation (`glp_runtime`, `glp_multiagent`, `test/`) is owned by exactly one paper, and a subsystem is owned by the paper that specifies it (the type-checker `lib/analysis` is TGLP's, the engine and multiagent runtime IGLP's, UI UIVE's).  Confirm you own a unit before editing it; cross-cutting changes (system-mode strip, DCE) are Grassroots Overview-coordinated.  **At session start, before any work, read the map in full and state that you have done so** — it is the authoritative map, ownership policy, project roster, and the procedure for requesting changes to code you do not own.  Implementation decisions go in the owning paper's arXiv "Implementation Notes" appendix, not a separate spec doc.
 
 ## Mandatory reading at session start
 
@@ -229,13 +229,9 @@ All papers with example GLP programs must be tested.  Their directory in `progra
 
 When invoking commands, prefer absolute paths.  Maintain the current working directory across commands; only `cd` when Udi explicitly requests it.
 
-## maGLP work — scope restriction
+## maGLP and runtime work
 
-When working on maGLP (multi-agent GLP) code:
-
-- Modify only files in `glp_runtime/lib/multiagent/` and `glp_runtime/test/multiagent/`.
-- Do NOT modify core GLP files (`runner.dart`, `heap_fcp.dart`, `compiler/`, etc.) without explicit discussion and approval.
-- If a bug in core GLP blocks maGLP work, STOP and report — do not work around.
+The Dart runtime — the engine, scheduler (`runner.dart`), heap, compiler, and the multiagent layer — is **IGLP**'s (see the map).  There is no "core" tier off-limits to its owner: IGLP revises any of its own runtime files, `runner.dart` included.  Changes still follow the spec-first and bug-protocol rules above — a change a spec does not cover, or a bug that blocks work, is reported and discussed, not worked around.  The GLP **language definition** (guards, system predicates, body kernels, type-system features, primitive types) is a separate matter and still needs Udi's approval before any change — see "Language design authority".
 
 ## Flutter `glp_multiagent` app
 
