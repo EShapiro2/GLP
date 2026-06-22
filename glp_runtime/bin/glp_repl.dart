@@ -367,7 +367,7 @@ String _formatTerm(rt.Term? term, [GlpEngine? engine, Set<int>? path]) {
 
 Future<String?> _getGitCommit() async {
   try {
-    final result = await Process.run('git', ['log', '-1', '--format=%h %s']);
+    final result = await Process.run('git', ['log', '-1', '--format=%h']);
     if (result.exitCode == 0) {
       return result.stdout.toString().trim();
     }
