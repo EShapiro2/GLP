@@ -477,6 +477,8 @@ Same theme as **Issue 1** (localize put a writer address where a reader was need
 
 ## Issue 13: madGLP `receive/3` drops a nested reader pattern over a `_w` remote writer
 
+**Status (RESOLVED — phantom, 2026-06-22)**: The premise is disproven. `receive/3` does **not** mishandle a `_w` writer: `programs/tests/mad_w_clean.glp` (= `mad_w_probe.glp` with the single change `bob_consumer(ch(S?, _))` → `bob_consumer(ch(S?, closed))`) makes the same cross-isolate `_w` **match through `receive`** (`bob_ch_matched`), two isolates (`glp_multiagent/test/mad_w_clean_test.dart`). The `mad_w_probe`/`probe13_strict` `otherwise` came entirely from the malformed channel `ch(S?, _)` — an anonymous `_` at the Out position (writer with no paired reader): `receive` is a **PE-unfolded defined guard**, and the partial evaluator statically reduces `receive(NestedReader, ch(S?, _), Cont)` to failure → compiled straight to `otherwise`. Compile-time, single-heap, no `_w` (reproduced by `programs/tests/recv2x2/`: `_` Out → otherwise, `closed` Out → matched). The two `isolate_manager_test` timeouts attached to this issue were a **separate** boot-config scope omission (agents crash at init with `UnknownTypeError: Response` because `book/social_graph/self.glp` is not supplied) — now retired via skip (same class as the fixed roundtrip harness omission). No runtime/`receive/3`/`_w` defect exists. Follow-ups ticketed as Issues 18–19. Record corrected in `madglp-w-writer-return-bug.md` and `iglp-bug-reports-index.md` §2. The pre-resolution status is preserved below.
+
 **Status (updated 2026-06-21)**: The **user-facing symptom is gone** — the cross-isolate befriend round-trip now **completes** (`glp_multiagent/test/roundtrip_isolate_test.dart`, two isolates, `connected` both sides). That test was only red because of an **unrelated test-harness omission**: it passed `glpSources` but not `glpSourcePaths`, so the loader could not do `self.glp` ancestor-scope discovery and every agent died at init with `UnknownTypeError: Response` (NOT a typechecker bug — the checker resolves `Response` whenever `self.glp` scope is established, as `single_heap_roundtrip_test` and a project-load both show). Supplying `glpSourcePaths: _sourceFiles` greens it and the `_w` return hop completes. **A residual soundness defect remains, now latent:** `receive/3` matching a nested reader against an *unbound* `_w` writer still falls to `otherwise` (`mad_w_probe` → `bob_ch_otherwise`), where the **control** `programs/tests/probe13_strict/` shows a plain unbound writer **commits** the same `receive`-as-guard match. The befriend flow works only because its response writer is *bound* by the time `receive` runs; a flow receiving an unbound `_w` writer would still strand. Original report: `docs/madglp-w-writer-return-bug.md`. Repro of the residual: `programs/tests/mad_w_probe.glp` + `glp_multiagent/test/mad_w_probe_test.dart`; control: `programs/tests/probe13_strict/`.
 **Discovered**: 2026-06-17
 **Affects**: Soundness (now latent) — `receive/3` mishandles an *unbound* `_w` writer (commits for a plain unbound writer, falls to `otherwise` for `_w`). No live caller currently hits the unbound case, so the befriend round-trip completes.
@@ -591,6 +593,8 @@ Make the stream merged into NetIn genuinely canonical-free, e.g. carry the `cano
 
 ## Issue 17: `glp_runtime` `dart test` baseline carries 6 reds — 4 stale rot, 2 the live Issue-13 strand
 
+**Update (2026-06-22)**: the two `isolate_manager_test` reds are **retired** (skip-with-reason) — they tested legacy `book/social_graph` and timed out on a boot-config scope omission (`UnknownTypeError: Response`), not a runtime/`_w` bug (see Issue 13). The multi-isolate full-play path is covered green by `cssn_v2_isolate_test`/`bonds_v2_isolate_test`. New baseline: **379 pass / 7 skip / 4 fail**. Remaining 4 reds: `ui_mediator_test` ×3 (stale `_output` rot) + `clause_select_probe_test` ×1 (Issue-15 scaffolding rot).
+
 **Status**: Open tracking entry (so the 6-red baseline is not silently normalized). Logged 2026-06-21 during the Issue-13/15 fix task.
 **Discovered**: 2026-06-21 (baseline before touching code).
 
@@ -610,4 +614,22 @@ The Issue-13/15 fix gate cannot mean "all 6 glp_runtime reds green": the `ui_med
 
 ### Also
 
-The REPL suite (`bash test/run_all_tests.sh`) is **489/489 green** on the same tree; the rot is confined to `glp_runtime` Dart tests.
+The REPL suite (`bash test/run_all_tests.sh`) is **496/496 green** on the same tree; the rot is confined to `glp_runtime` Dart tests.
+
+---
+
+## Issue 18: malformed channel `ch(S?, _)` reduces to silent `otherwise` instead of a diagnosable error
+
+**Status**: Open — ticketed 2026-06-22 (spin-off of the Issue-13 disproof). **Not yet fixed.**
+**Layer**: partial evaluator (`partial_evaluator.dart` `transformDefinedGuards`; duplicate in `analyzer.dart`).
+
+`receive`/`send`/`new_channel` are defined guards unfolded by the PE. When a channel literal has an **anonymous `_` at the Out position** (a writer with no paired reader — a malformed/half-open channel), the PE statically reduces `receive(Pattern, ch(S?, _), Cont)` to failure, so the clause silently compiles to its `otherwise` branch. A fully-runtime channel instead yields the load error `Cannot reduce defined guard ... at compile time`; a malformed literal should likewise be a **diagnosable error**, not a silent `otherwise` that masquerades as a clean classification. Repro: `programs/tests/recv2x2/` (`boot_b`/`boot_d` → otherwise; `boot_a`/`boot_c` with a bound Out → matched). This is the trap that produced the phantom Issue 13.
+
+---
+
+## Issue 19: unhandled `UnknownTypeError` kills an agent isolate silently → 30s hang
+
+**Status**: Open — ticketed 2026-06-22 (spin-off of the `isolate_manager` diagnosis). **Not yet fixed.**
+**Layer**: type checker (`program_dfa.dart` `_resolveTypeExpr`) + isolate lifecycle (`isolate_manager.dart` `_agentIsolateEntry`).
+
+When an agent isolate loads a program whose scope is incompletely supplied, `buildProgramDFA` throws an **unhandled** `UnknownTypeError` (e.g. `Response`) that kills the isolate. `IsolateManager` is not notified, so the manager waits on a dead isolate until the test's 30s timeout — a missing-scope condition becomes a silent hang instead of a reported error. The type-checker should surface unresolved types as locatable diagnostics, and/or the isolate entry should catch init failures and report them to the manager. This is what turned the (now-retired) `isolate_manager_test` scope omission into a 30s timeout rather than a clear failure.

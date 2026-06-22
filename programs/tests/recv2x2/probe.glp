@@ -1,0 +1,78 @@
+-module(probe).
+
+procedure feeder(ItemStream).
+feeder([it(bob, _)]).
+
+procedure stash(PendList?).
+stash(_).
+
+procedure dropch(Channel(Stream(Item), W)?).
+dropch(_).
+
+%% A: Out=closed (bound), continuation discarded (_)
+procedure cons_a(Channel(Stream(Item), Closed)?).
+cons_a(Ch) :- receive(it(_, R?), Ch?, _)   | stash([keep(R)]), send_to_user([a_matched]).
+cons_a(_)  :- otherwise | send_to_user([a_otherwise]).
+
+%% B: Out=_ (unbound), continuation discarded (_)
+procedure cons_b(Channel(Stream(Item), W)?).
+cons_b(Ch) :- receive(it(_, R?), Ch?, _)   | stash([keep(R)]), send_to_user([b_matched]).
+cons_b(_)  :- otherwise | send_to_user([b_otherwise]).
+
+%% C: Out=closed (bound), continuation named-and-used (Ch1)
+procedure cons_c(Channel(Stream(Item), Closed)?).
+cons_c(Ch) :- receive(it(_, R?), Ch?, Ch1) | stash([keep(R)]), dropch(Ch1?), send_to_user([c_matched]).
+cons_c(_)  :- otherwise | send_to_user([c_otherwise]).
+
+%% D: Out=_ (unbound), continuation named-and-used (Ch1)  == boot_anon_late
+procedure cons_d(Channel(Stream(Item), W)?).
+cons_d(Ch) :- receive(it(_, R?), Ch?, Ch1) | stash([keep(R)]), dropch(Ch1?), send_to_user([d_matched]).
+cons_d(_)  :- otherwise | send_to_user([d_otherwise]).
+
+exported procedure boot_a.
+boot_a :- cons_a(ch(S?, closed)), feeder(S).
+
+exported procedure boot_b.
+boot_b :- cons_b(ch(S?, _)), feeder(S).
+
+exported procedure boot_c.
+boot_c :- cons_c(ch(S?, closed)), feeder(S).
+
+exported procedure boot_d.
+boot_d :- cons_d(ch(S?, _)), feeder(S).
+
+%% present-element variants: the In stream is fed by a unit producer.
+%% Separates suspend-vs-fail from pure head-unification of the Out field.
+exported procedure boot_a_ready.
+boot_a_ready :- feeder(S), cons_a(ch(S?, closed)).
+
+exported procedure boot_b_ready.
+boot_b_ready :- feeder(S), cons_b(ch(S?, _)).
+
+%% MISSING CONTROL: Out unbound at receive time, element present, but a feeder
+%% assigns the Out continuation afterward.  Distinguishes "bare writer fails
+%% unification" (would still be otherwise) from "Out never written" (matches).
+procedure out_feeder(Closed).
+out_feeder(closed).
+
+%% C1: Out is a reader OutW? whose writer OutW is assigned closed by out_feeder.
+exported procedure boot_b_outfed.
+boot_b_outfed :- feeder(S), out_feeder(OutW), cons_b(ch(S?, OutW?)).
+
+%% C2: same, with the named-and-used continuation (mirrors case D).
+exported procedure boot_d_outfed.
+boot_d_outfed :- feeder(S), out_feeder(OutW), cons_d(ch(S?, OutW?)).
+
+%% REFERENCE: a well-formed channel built by the designed API (new_channel +
+%% send + receive).  The receiving end's Out is a real PAIRED unbound writer.
+%% If this matches, the hand-built ch(S?, _) above is the malformation, not the
+%% engine; if it falls to otherwise, the designed receive genuinely fails.
+procedure feed_chan(Channel(Z, Stream(Item))?).
+feed_chan(Ch) :- send(it(bob, _), Ch?, _).
+
+procedure drain_chan(Channel(Stream(Item), W)?).
+drain_chan(Ch) :- receive(it(_, R?), Ch?, _) | stash([keep(R)]), send_to_user([real_matched]).
+drain_chan(_)  :- otherwise | send_to_user([real_otherwise]).
+
+exported procedure boot_real.
+boot_real :- new_channel(P, C), feed_chan(P?), drain_chan(C?).

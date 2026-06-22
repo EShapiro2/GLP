@@ -1,5 +1,19 @@
 # madGLP bug: cross-isolate `_w` writer does not survive escrow-and-return
 
+## DISPROVEN — phantom bug (2026-06-22)
+
+**The `_w` theory below is wrong.** A controlled experiment refutes it: `programs/tests/mad_w_clean.glp` is `mad_w_probe.glp` with a **single** change — `bob_consumer(ch(S?, _))` → `bob_consumer(ch(S?, closed))` — and the **same** cross-isolate `_w` writer in the message now **matches through `receive`** (`bob_ch_matched`), two isolates, everything else identical (`glp_multiagent/test/mad_w_clean_test.dart`). So `receive/3` does **not** drop a `_w` nested reader.
+
+**Real cause of `mad_w_probe`'s `otherwise`:** the malformed channel `ch(S?, _)` — an anonymous `_` at the Out position, a writer with no paired reader. `receive`/`send`/`new_channel` are **defined guards unfolded by the partial evaluator at compile time**; the PE statically reduces `receive(NestedReader, ch(S?, _), Cont)` to failure, so the clause is compiled straight to the `otherwise` branch. This is **compile-time, single-heap, no `_w` involved** — reproduced with no isolates by `programs/tests/recv2x2/` (case `b`/`d`: `ch(S?, _)` → otherwise; case `a`/`c`: `ch(S?, closed)` → matched). The bug report combined this malformation with a `_w` and blamed the `_w`.
+
+**The red gate this report was attached to** (the two `isolate_manager_test` timeouts) was a *separate* cause — agents crashing at init with `UnknownTypeError: Response`, a boot-config scope omission (`book/social_graph/self.glp` not supplied), now retired. Not a runtime strand, not `_w`.
+
+**Follow-ups (ticketed, not fixed):** malformed-channel `ch(S?, _)` should be a diagnosable load error, not a silent `otherwise`; and the unhandled `UnknownTypeError` that turns a missing scope into a silent isolate death. See `known-issues.md`.
+
+The original (misdiagnosed) report is kept below for history.
+
+---
+
 **Date:** 2026-06-17
 **Component:** madGLP runtime — cross-isolate writer serialization (`_w` mutual refs)
 **Severity:** Soundness — a transmitted writer cannot be bound after a round-trip

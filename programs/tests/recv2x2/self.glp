@@ -1,0 +1,12 @@
+%% recv2x2 — disambiguation probe for Issue 13's receive/3 otherwise-strand.
+%% 2x2: channel Out bound (closed) vs unbound (_); receive continuation
+%% discarded (_) vs named-and-used (Ch1).  Single heap, plain local writer,
+%% late-feed (consumer's receive runs first on an unbound stream, feeder binds
+%% it later) — the shape that mirrors mad_w_probe / boot_anon_late.
+
+Resp       ::= ok ; no.
+Item       ::= it(Constant, Resp?).
+ItemStream ::= [] ; [Item | ItemStream].
+Closed     ::= closed.
+PendList   ::= [] ; [Pend | PendList].
+Pend       ::= keep(Resp?).
