@@ -68,6 +68,15 @@ class UIEvent extends IsolateMessage {
   UIEvent(this.agentId, this.payload);
 }
 
+/// Sent by an agent isolate when initialization fails (e.g. a load/type-check
+/// error or a missing goal label) so the manager fails fast instead of hanging
+/// forever waiting for a `Ready` that will never arrive (known-issues Issue 19).
+class AgentInitFailed extends IsolateMessage {
+  final String agentId;
+  final String error;
+  AgentInitFailed(this.agentId, this.error);
+}
+
 /// Trace configuration for multi-agent tracing
 class TraceConfig {
   /// Enable GLP-level trace (reductions, suspensions, failures)
@@ -182,6 +191,14 @@ class IsolateManager {
         if (readyCount == expectedCount) {
           readyCompleter.complete();
         }
+      }
+      // An isolate that died during init reports it here so boot() fails fast
+      // instead of awaiting a Ready that will never come (Issue 19).
+      if (msg is AgentInitFailed && !readyCompleter.isCompleted) {
+        readyCompleter.completeError(
+          StateError('Agent ${msg.agentId} failed to initialize: ${msg.error}'),
+        );
+        return;
       }
       // Always handle messages via _handleMessage
       _handleMessage(msg);
@@ -298,21 +315,30 @@ void _agentIsolateEntry(AgentConfig config) async {
   engine.enableMadGLP(agentId: agentId);
 
   // Load program code: either via program linking or individual file loading.
-  if (config.programDir != null) {
-    // Program-directory mode: static-link the program, then load boot source on top.
-    engine.loadProgram(config.programDir!);
-    engine.loadSource(config.programSource, filename: 'program');
-    log('Program loaded via program linking (${config.programDir}) + boot source');
-  } else {
-    // Legacy mode: load shared source files and boot program sequentially.
-    // Each file is loaded separately to preserve per-file -mode() directives.
-    if (config.sharedSources != null) {
-      for (var i = 0; i < config.sharedSources!.length; i++) {
-        engine.loadSource(config.sharedSources![i], filename: 'shared_$i');
+  // A load/type-check failure here (e.g. UnknownTypeError) must be reported to
+  // the manager, not left to kill the isolate silently — otherwise boot() hangs
+  // forever waiting for Ready (Issue 19).
+  try {
+    if (config.programDir != null) {
+      // Program-directory mode: static-link the program, then load boot source on top.
+      engine.loadProgram(config.programDir!);
+      engine.loadSource(config.programSource, filename: 'program');
+      log('Program loaded via program linking (${config.programDir}) + boot source');
+    } else {
+      // Legacy mode: load shared source files and boot program sequentially.
+      // Each file is loaded separately to preserve per-file -mode() directives.
+      if (config.sharedSources != null) {
+        for (var i = 0; i < config.sharedSources!.length; i++) {
+          engine.loadSource(config.sharedSources![i], filename: 'shared_$i');
+        }
       }
+      engine.loadSource(config.programSource, filename: 'program');
+      log('Program loaded via GlpEngine (stdlib + madPredicates + user code)');
     }
-    engine.loadSource(config.programSource, filename: 'program');
-    log('Program loaded via GlpEngine (stdlib + madPredicates + user code)');
+  } catch (e, st) {
+    print('[$agentId] ERROR: init failed during load: $e');
+    config.mainPort.send(AgentInitFailed(agentId, '$e\n$st'));
+    return;
   }
   engine.debugTrace = tc.glp;  // Enable GLP trace only when requested
   final ctx = engine.madContext!;
@@ -386,6 +412,7 @@ void _agentIsolateEntry(AgentConfig config) async {
   final goalPC = program.labels[goalLabel];
   if (goalPC == null) {
     print('[$agentId] ERROR: Goal $goalLabel not found');  // Always print errors
+    config.mainPort.send(AgentInitFailed(agentId, 'Goal $goalLabel not found'));
     return;
   }
 
