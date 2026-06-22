@@ -316,9 +316,11 @@ class GlpEngine {
       throw Exception('No modules found in $programDir');
     }
 
-    typeCheckProgram(modules, rootDir: programDir);
-
-    final linked = linkProgram(modules, rootDir: programDir);
+    // Gate (paper: modules §Static Linking — only a well-typed program is
+    // compiled and run): checkedLinkedProgram type-checks the linked program and
+    // returns it for compilation only if well-typed, else throws. There is no
+    // other path to a compiled program.
+    final linked = checkedLinkedProgram(modules, rootDir: programDir);
     final program = _compiler.compileProgram(
       linked.program,
       procDeclarations: linked.procDeclarations,

@@ -400,7 +400,7 @@ List<String> _ancestorSelfGlpFiles(String rootDir, String programsDir) {
 /// rejected (typed-program.md "Programs and Modules").
 ///
 /// Throws on type errors with details.
-void typeCheckProgram(List<DiscoveredModule> modules, {required String rootDir}) {
+LinkResult checkedLinkedProgram(List<DiscoveredModule> modules, {required String rootDir}) {
   // Soundness is established on the LINKED program (paper: modules §Module-System
   // Design "Self-contained type checking", §Static Linking; def:program). We link
   // first — renaming every procedure to `M:p` and resolving every call, including
@@ -462,9 +462,13 @@ void typeCheckProgram(List<DiscoveredModule> modules, {required String rootDir})
   final pe = PartialEvaluator();
   final transformed = pe.transformDefinedGuards(linked.program);
 
-  // rejectUninstantiatedInspecting: false — within a program a callerless
-  // parametric procedure goes unchecked, not rejected (typed-program.md "Programs
-  // and Modules"); the standalone reject is for single-file/REPL loads only.
+  // rejectUninstantiatedInspecting: false — at load time the program's concrete
+  // initial goals (def:program) are not yet known, and they are what instantiate
+  // the parametric entry procedures and routers. A parametric procedure left
+  // uninstantiated here is bound by the goal at run; rejecting it at load would
+  // refuse every program whose routers are instantiated only through its goals.
+  // The free-type-parameter (no-linked-program) check belongs where the goal
+  // completes the program, not here.
   final result = checkModule(
     flat,
     transformedProcedures: transformed.procedures,
@@ -477,6 +481,18 @@ void typeCheckProgram(List<DiscoveredModule> modules, {required String rootDir})
         .join('\n');
     throw Exception('Type checking failed for linked program:\n$errors');
   }
+
+  return linked;
+}
+
+/// Whole-program type-check gate (paper: modules §Static Linking — "the unit of
+/// compilation and execution is a program ... only a well-typed program is
+/// compiled and run"). Throws unless the linked program is well-typed. For
+/// callers that need only the verdict (e.g. a single-file gate that compiles the
+/// source unrenamed); callers that compile the linked program use
+/// [checkedLinkedProgram].
+void typeCheckProgram(List<DiscoveredModule> modules, {required String rootDir}) {
+  checkedLinkedProgram(modules, rootDir: rootDir);
 }
 
 /// Link all modules into a single flat Program.
