@@ -23,7 +23,7 @@
 | [`mutual-ref-spec.md`](mutual-ref-spec.md) | Mutual references |
 | [`heap/heap-pointer-architecture-spec.md`](heap/heap-pointer-architecture-spec.md) | Heap pointer architecture (FCP-style) |
 | [`modules/glp-module-system-spec.md`](modules/glp-module-system-spec.md) | Module system |
-| [`modules/glp-project-compilation-spec.md`](modules/glp-project-compilation-spec.md) | Project compilation |
+| [`modules/glp-program-compilation-spec.md`](modules/glp-program-compilation-spec.md) | Program compilation |
 | [`ma/madGLP-spec.md`](ma/madGLP-spec.md) | Multi-agent GLP |
 | [`ma/agent-runtime-spec.md`](ma/agent-runtime-spec.md) | Agent runtime |
 | [`ma/isolate-boot-spec.md`](ma/isolate-boot-spec.md) | Multi-isolate boot |

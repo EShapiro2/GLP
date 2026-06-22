@@ -1,4 +1,4 @@
-# GLP Project Compilation — Specification
+# GLP Program Compilation — Specification
 
 **Status:** Draft  
 **Date:** 2026-03-11  
@@ -8,13 +8,13 @@
 
 ## 1. Overview
 
-Project compilation transforms a hierarchy of modules into a single flat program. All inter-module calls become local calls. The output is indistinguishable from a hand-written single-file program.
+Program compilation transforms a hierarchy of modules into a single flat program. All inter-module calls become local calls. The output is indistinguishable from a hand-written single-file program.
 
 ---
 
 ## 2. Input
 
-A project root directory containing:
+A program root directory containing:
 - One or more `.glp` module files
 - Zero or more `self.glp` files (defining shared types and procedures for their subtree)
 - Zero or more subdirectories (recursively)
@@ -25,11 +25,11 @@ A project root directory containing:
 
 ### 3.1 Discovery
 
-Walk the project directory tree. Collect every `.glp` file. Additionally collect the `self.glp` of every ancestor directory of the project root, up to and including `programs/`; ancestor directories contribute only their `self.glp`, never their other modules. Parse each into a Module AST. Build the ancestor scope chain for each module (per `glp-module-system-spec.md` Section 3).
+Walk the program directory tree. Collect every `.glp` file. Additionally collect the `self.glp` of every ancestor directory of the program root, up to and including `programs/`; ancestor directories contribute only their `self.glp`, never their other modules. Parse each into a Module AST. Build the ancestor scope chain for each module (per `glp-module-system-spec.md` Section 3).
 
-`self.glp` files contribute both type definitions and procedure definitions to the ancestor scope.  Their procedures are compiled to bytecode and available to all modules in the subtree without qualification (in source), just like their types.  This holds equally for ancestor `self.glp` files above the project root.
+`self.glp` files contribute both type definitions and procedure definitions to the ancestor scope.  Their procedures are compiled to bytecode and available to all modules in the subtree without qualification (in source), just like their types.  This holds equally for ancestor `self.glp` files above the program root.
 
-**`-expose` directives.**  If a collected `self.glp` contains an `-expose(M).` directive, additionally collect module `M` — and, transitively, any modules `M` itself exposes.  `M` names a module **file**, resolved relative to the directory of the exposing `self.glp`, within that directory's subtree (`a#b#c` → `<self.glp dir>/a/b/c.glp`).  This subtree may lie outside the *loaded project* subtree — e.g. when the exposing `self.glp` is an ancestor above the load point — so discovery must collect the file by path, not rely on it being among the project's modules.  Only `M`'s **exported** procedures (and the types their signatures carry) join the exposing directory's scope; `M`'s non-exported procedures and its sibling modules are not collected.
+**`-expose` directives.**  If a collected `self.glp` contains an `-expose(M).` directive, additionally collect module `M` — and, transitively, any modules `M` itself exposes.  `M` names a module **file**, resolved relative to the directory of the exposing `self.glp`, within that directory's subtree (`a#b#c` → `<self.glp dir>/a/b/c.glp`).  This subtree may lie outside the *loaded program* subtree — e.g. when the exposing `self.glp` is an ancestor above the load point — so discovery must collect the file by path, not rely on it being among the program's modules.  Only `M`'s **exported** procedures (and the types their signatures carry) join the exposing directory's scope; `M`'s non-exported procedures and its sibling modules are not collected.
 
 ### 3.2 Procedure Renaming
 
@@ -48,7 +48,7 @@ Every procedure in every `.glp` file (including `self.glp` files) is prefixed wi
 
 `self.glp` procedures are renamed like any other module's procedures.  This prevents collisions when multiple ancestor scopes define procedures with the same name and arity.  If an inner `self.glp` defines a procedure with the same name and arity as an outer `self.glp`, both receive distinct prefixes based on their module path.
 
-Intermediate ancestor `self.glp` files above the project root are prefixed by their directory name under the same rule. The internal representation of the root scope (`programs/self.glp`) is an implementation choice; whatever the mechanism, resolution and shadowing must behave per the module-system specification §3.1–3.2.
+Intermediate ancestor `self.glp` files above the program root are prefixed by their directory name under the same rule. The internal representation of the root scope (`programs/self.glp`) is an implementation choice; whatever the mechanism, resolution and shadowing must behave per the module-system specification §3.1–3.2.
 
 The prefix is the module name (from `-module(name)` or filename), not the full path. If two modules at different levels have the same name, the full relative path is used (e.g., `ui/mediator:proc`).
 
@@ -60,7 +60,7 @@ Every goal in every clause body is resolved:
 
 **Cross-module calls** — a call to `agent # agent(alice, ...)` inside `boot.glp` becomes `agent:agent(alice, ...)`.
 
-**Ancestor self.glp calls** — if no local procedure matches, the linker walks the ancestor `self.glp` chain, which extends beyond the project root up to `programs/`.  A call matching a procedure in an ancestor `self.glp` is resolved to its renamed form.
+**Ancestor self.glp calls** — if no local procedure matches, the linker walks the ancestor `self.glp` chain, which extends beyond the program root up to `programs/`.  A call matching a procedure in an ancestor `self.glp` is resolved to its renamed form.
 
 **Exposed procedure calls** — a call matching a procedure exposed (via `-expose`) into an enclosing `self.glp`'s scope resolves to that procedure's renamed form in its defining module, exactly as if it were defined in the exposing `self.glp` (the paper's Static Linking sentence).  Exposed names sit at the depth of the exposing `self.glp` in the ancestor chain, so innermost-first shadowing (module-system spec §3.2) applies: a local or nearer-ancestor definition takes precedence over an exposed one.
 
@@ -68,17 +68,17 @@ Every goal in every clause body is resolved:
 
 ### 3.4 Entry Points
 
-A procedure of a project is externally accessible only if it is exported at the project's root (TGLP manual, Modules; the paper's Static Linking step five generates unprefixed aliases for the root's exported procedures only).
+A procedure of a program is externally accessible only if it is exported at the program's root (TGLP manual, Modules; the paper's Static Linking step five generates unprefixed aliases for the root's exported procedures only).
 
-Accordingly, an unprefixed alias is generated for each **exported** procedure of a **root-level** module — a module whose nearest enclosing `self.glp` directory is the loaded project root itself, equivalently a module not contained in any descendant `self.glp` subtree below the root.  If root-level `agent.glp` exports `agent/6`, the output contains both `agent:agent/6` (the renamed procedure) and `agent/6` (an alias that calls it).  If root-level `boot.glp` exports `fplay1/0`, the output contains both `boot:fplay1/0` and `fplay1/0`.
+Accordingly, an unprefixed alias is generated for each **exported** procedure of a **root-level** module — a module whose nearest enclosing `self.glp` directory is the loaded program root itself, equivalently a module not contained in any descendant `self.glp` subtree below the root.  If root-level `agent.glp` exports `agent/6`, the output contains both `agent:agent/6` (the renamed procedure) and `agent/6` (an alias that calls it).  If root-level `boot.glp` exports `fplay1/0`, the output contains both `boot:fplay1/0` and `fplay1/0`.
 
-Modules under a **descendant** `self.glp` root — a nested sub-project (e.g. `secure/`, `village/`) — are not part of the loaded root's public surface.  Their procedures keep prefixed names only and receive **no** unprefixed alias, even when exported; they become entry points only when that nested directory is itself the loaded root.  (Same-name modules at different levels are disambiguated by relative path per §3.2, e.g. `boot:` vs `secure/boot:`.)
+Modules under a **descendant** `self.glp` root — a nested sub-program (e.g. `secure/`, `village/`) — are not part of the loaded root's public surface.  Their procedures keep prefixed names only and receive **no** unprefixed alias, even when exported; they become entry points only when that nested directory is itself the loaded root.  (Same-name modules at different levels are disambiguated by relative path per §3.2, e.g. `boot:` vs `secure/boot:`.)
 
-This is necessary because code loaded on top of a linked project (madGLP boot procedures, REPL goals) calls exported procedures by their original name: it must reach the loaded root's public procedures, but not a nested sub-project's internals.
+This is necessary because code loaded on top of a linked program (madGLP boot procedures, REPL goals) calls exported procedures by their original name: it must reach the loaded root's public procedures, but not a nested sub-program's internals.
 
-If two root-level modules export procedures with the same name and arity, a conflict is reported.  The same-name-export conflict rule applies within the aliased (root-level exported) set only.  There is no "top module" and no backwards-compatibility rule that aliases unexported procedures: a project that wants its plays callable by name declares them `exported` in its root-level module.
+If two root-level modules export procedures with the same name and arity, a conflict is reported.  The same-name-export conflict rule applies within the aliased (root-level exported) set only.  There is no "top module" and no backwards-compatibility rule that aliases unexported procedures: a program that wants its plays callable by name declares them `exported` in its root-level module.
 
-Code loaded on top of a linked project (REPL goals, madGLP boot procedures) is resolved in the scope of the project root, with the same ancestor `self.glp` chain.
+Code loaded on top of a linked program (REPL goals, madGLP boot procedures) is resolved in the scope of the program root, with the same ancestor `self.glp` chain.
 
 ### 3.5 Type Checking
 
@@ -170,6 +170,6 @@ play2 :- boot:play2.
 
 ## 5. Scope
 
-This spec covers whole-project compilation only. Separate compilation with runtime inter-module calls is a separate concern, not specified here.
+This spec covers whole-program compilation only. Separate compilation with runtime inter-module calls is a separate concern, not specified here.
 
-A single-module file load is the degenerate case of project compilation: a project of one module, with the same ancestor `self.glp` chain from the file's directory up to `programs/`.
+A single-module file load is the degenerate case of program compilation: a program of one module, with the same ancestor `self.glp` chain from the file's directory up to `programs/`.
