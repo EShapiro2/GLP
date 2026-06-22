@@ -1818,6 +1818,23 @@ check_not "no spawn-label error" "Spawn could not find" "$output"
 
 echo ""
 
+echo "--- Cross-module type error must not leak across the # seam ---"
+# lib#relay (parametric, inserts constant `extra`) is instantiated by cons at
+# Stream(Item), Item = a;b. `extra` is not an Item, so relay is ill-typed at that
+# instantiation. The per-module check verifies only cons's call against the
+# imported declaration; the linked-program check (project_linker:
+# _seedCrossModuleInstantiations) must check lib's clauses at the importer's
+# instantiation and reject. Guards the cross-module soundness hole.
+output=$("$REPL_RUN" <<HEREDOC
+$GLP_DIR/programs/tests/cross_module_inspect_neg/
+:quit
+HEREDOC
+2>&1)
+check "cross-module param-inspect project rejected" "Type checking failed for relay/2" "$output"
+check_not "cross-module project not loaded green" "Loaded project: .*cross_module_inspect_neg" "$output"
+
+echo ""
+
 # =============================================================================
 # Section J: SecureBonds (project-directory loading)
 # =============================================================================

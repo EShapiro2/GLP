@@ -18,7 +18,9 @@ import 'primitive_layer.dart';
 import '../analysis/type_checker/type_ast.dart';
 import '../analysis/type_checker/param_expansion.dart';
 import '../analysis/type_checker/type_checker.dart';
-import '../analysis/type_checker/well_typed_clause.dart' show InstantiationCollector;
+import '../analysis/type_checker/well_typed_clause.dart'
+    show InstantiationCollector, CollectedInstantiation;
+import '../analysis/type_checker/program_dfa.dart' show buildProgramDFA;
 import '../runtime/module_hierarchy.dart';
 import '../analysis/type_checker/type_environment_builder.dart';
 
@@ -444,6 +446,17 @@ void typeCheckProject(List<DiscoveredModule> modules) {
     }
   }
 
+  // (B) Linked-program obligation across the `#` seam (paper: modules §Design
+  // "Self-contained type checking" / §Static Linking — soundness is established
+  // on the linked program). The per-module pass checks a cross-module call only
+  // against the local `imported` declaration (`_checkRemoteGoal`); it never
+  // re-checks the callee's body. A parametric exported procedure instantiated
+  // only across the boundary therefore escapes the per-instantiation check. Seed
+  // each `imported procedure M#p(T...)` — the concrete instantiation of p the
+  // importer commits to — so the closure below checks p's defining clauses at it,
+  // in an environment holding every module's types and declarations.
+  _seedCrossModuleInstantiations(modules, collector);
+
   // Phase 2: per-instantiation defining-clause checking, closed under calls
   // (calls inside an instantiated parameterized body induce further
   // instantiations) to a fixpoint, with polymorphic recursion rejected. The
@@ -469,6 +482,67 @@ void typeCheckProject(List<DiscoveredModule> modules) {
   // A parameterized procedure with no collected instantiation is not checked:
   // with a free type parameter it is not a program (typed-program.md "Programs
   // and Modules"). There is no wildcard fallback — it would be unsound.
+}
+
+/// (B) Seed cross-module instantiations so the linked program is fully checked.
+///
+/// Builds the linked-program type environment — the union of every module's
+/// expanded types, templates, parameterised-procedure declarations, and ordinary
+/// procedure declarations — so that a callee's clauses resolve against its own
+/// scope while an importer's concrete instantiation types are also present. Each
+/// `imported procedure M#p(T...)` declaration is the concrete instantiation of
+/// `p` the importer commits to; it is recorded against `p`'s defining clauses
+/// (resolved across modules by [_definingClausesForKey]). A callee defined
+/// outside the project resolves to no clauses and is skipped by the closure; an
+/// unresolved (free-parameter) instantiation is deferred by the closure's
+/// type-presence guard. Both are correct.
+void _seedCrossModuleInstantiations(
+    List<DiscoveredModule> modules, InstantiationCollector collector) {
+  final linkedTypes = <String, TypeDef>{};
+  final linkedProcs = <String, ProcDecl>{};
+  final linkedTemplates = <String, TypeDef>{};
+  final linkedParamDecls = <String, ProcDecl>{};
+  final imports = <ProcDecl>[];
+
+  for (final mod in modules) {
+    final base = mod.ancestorScope;
+    final expanded = expandParameterizedTypes(mod.ast,
+        knownTypeNames: base.types.keys.toSet(),
+        externalTemplates: base.typeTemplates);
+    final env = buildTypeEnvironment(expanded, ancestorScope: base);
+
+    linkedTypes.addAll(base.types);
+    linkedTypes.addAll(env.types);
+    linkedTemplates.addAll(base.typeTemplates);
+    for (final td in mod.ast.typeDefs) {
+      if (td.isParameterized) linkedTemplates[td.name] = td;
+    }
+    linkedParamDecls.addAll(env.paramProcDecls);
+    base.procedures.forEach((k, v) => linkedProcs.putIfAbsent(k, () => v));
+
+    for (final d in env.procedures.values) {
+      // Every declaration (local under `p/n`, imported under `M#p/n`) joins the
+      // linked env, so a seeded callee's body resolves both its local helpers and
+      // its own cross-module `#` calls against their import declarations.
+      linkedProcs.putIfAbsent(d.qualifiedKey, () => d);
+      if (d.imported) imports.add(d);
+    }
+  }
+
+  if (imports.isEmpty) return;
+
+  final linkedEnv = TypeEnvironment(linkedTypes, linkedProcs,
+      paramProcDecls: linkedParamDecls, typeTemplates: linkedTemplates);
+  final linkedDFA = buildProgramDFA(linkedEnv);
+
+  for (final imp in imports) {
+    // imp.name/imp.key are the callee's bare name/arity; imp.argTypes are the
+    // importer's concrete instantiation types (parameterised-expanded).
+    final monoDecl = ProcDecl(imp.name, imp.argTypes, imp.line, imp.column,
+        exported: imp.exported);
+    collector.record(
+        CollectedInstantiation(imp.key, monoDecl, linkedEnv, linkedDFA));
+  }
 }
 
 /// Find the defining clauses for a procedure "name/arity" among the project's
