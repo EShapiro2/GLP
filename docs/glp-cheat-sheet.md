@@ -399,15 +399,15 @@ GLP> test_double(5, X).        %% Run goal → X = 10
 
 Modules with `exported procedure` declarations are auto-activated on load. Use `:activate <n>` to activate manually if needed.
 
-### Static Linking (Projects)
+### Static Linking (Programs)
 
-For multi-module projects in a directory tree, load the entire directory:
+For multi-module programs in a directory tree, load the entire directory:
 ```
 GLP> social_graph/
-✓ Loaded project: social_graph/
+✓ Loaded program: social_graph/
 ```
 
-The project linker resolves all `M # goal(...)` calls at compile time.
+The program linker resolves all `M # goal(...)` calls at compile time.
 
 ### Module Checklist
 

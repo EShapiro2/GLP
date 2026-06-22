@@ -1,16 +1,16 @@
-/// Project linker tests: static linking of multi-module GLP projects.
+/// Program linker tests: static linking of multi-module GLP programs.
 ///
 /// Tests discovery, type checking, renaming, call resolution, entry-point
 /// aliasing (§3.4: exported root-level procedures only), and end-to-end
-/// compilation of the cssn project (a live multi-module platform that consumes
+/// compilation of the cssn program (a live multi-module platform that consumes
 /// the routing modules exposed from the root self.glp). Module-local
 /// name-collision handling is covered by the dedicated test/programs/linker_collision
-/// fixture; the nested-subproject entry-alias rule by test/programs/linker_nested.
+/// fixture; the nested-subprogram entry-alias rule by test/programs/linker_nested.
 library;
 
 import 'dart:io';
 import 'package:test/test.dart';
-import 'package:glp_runtime/compiler/project_linker.dart';
+import 'package:glp_runtime/compiler/program_linker.dart';
 import 'package:glp_runtime/compiler/compiler.dart';
 import 'package:glp_runtime/compiler/partial_evaluator.dart' show setRootScopeUnitClauseSource;
 import 'package:glp_runtime/analysis/type_checker/type_environment_builder.dart' show setRootScopeEnvironmentSource;
@@ -39,11 +39,11 @@ void main() {
     return;
   }
 
-  group('Project discovery', () {
+  group('Program discovery', () {
     test('discovers all modules in cssn', () {
-      final modules = discoverProject(cssnRoot, rootSelfGlpPath: rootSelfPath);
+      final modules = discoverProgram(cssnRoot, rootSelfGlpPath: rootSelfPath);
 
-      // The project's own 6 modules: agent, child_agent, mediator, actors,
+      // The program's own 6 modules: agent, child_agent, mediator, actors,
       // boot, cssn — plus the 4 routing modules exposed from the root self.glp
       // (lib/routing/{output,inject,intro,befriend}), discovered as linkable
       // across the whole programs/ subtree (module-system spec §3.3).  Any left
@@ -65,20 +65,20 @@ void main() {
     });
 
     test('excludes self.glp from modules', () {
-      final modules = discoverProject(cssnRoot, rootSelfGlpPath: rootSelfPath);
+      final modules = discoverProgram(cssnRoot, rootSelfGlpPath: rootSelfPath);
       final names = modules.map((m) => m.moduleName).toSet();
       expect(names, isNot(contains('self')));
     });
 
     test('excludes boot_direct.glp from modules', () {
-      final modules = discoverProject(cssnRoot, rootSelfGlpPath: rootSelfPath);
+      final modules = discoverProgram(cssnRoot, rootSelfGlpPath: rootSelfPath);
       final filenames = modules.map((m) => m.filePath).toList();
       expect(filenames.any((f) => f.contains('boot_direct')), isFalse,
           reason: 'boot_direct.glp should be excluded');
     });
 
     test('modules have correct ancestor scopes', () {
-      final modules = discoverProject(cssnRoot, rootSelfGlpPath: rootSelfPath);
+      final modules = discoverProgram(cssnRoot, rootSelfGlpPath: rootSelfPath);
 
       // All modules should have ancestor scope with self.glp types
       for (final mod in modules) {
@@ -90,9 +90,9 @@ void main() {
 
   group('Type checking', () {
     test('all modules type-check successfully', () {
-      final modules = discoverProject(cssnRoot, rootSelfGlpPath: rootSelfPath);
+      final modules = discoverProgram(cssnRoot, rootSelfGlpPath: rootSelfPath);
       // Should not throw
-      expect(() => typeCheckProject(modules, rootDir: cssnRoot), returnsNormally);
+      expect(() => typeCheckProgram(modules, rootDir: cssnRoot), returnsNormally);
     });
   });
 
@@ -102,8 +102,8 @@ void main() {
     late Program linked;
 
     setUp(() {
-      modules = discoverProject(cssnRoot, rootSelfGlpPath: rootSelfPath);
-      linkResult = linkProject(modules, rootDir: cssnRoot);
+      modules = discoverProgram(cssnRoot, rootSelfGlpPath: rootSelfPath);
+      linkResult = linkProgram(modules, rootDir: cssnRoot);
       linked = linkResult.program;
     });
 
@@ -241,8 +241,8 @@ void main() {
     late Program linked;
 
     setUp(() {
-      final modules = discoverProject(collisionRoot, rootSelfGlpPath: rootSelfPath);
-      linked = linkProject(modules, rootDir: collisionRoot).program;
+      final modules = discoverProgram(collisionRoot, rootSelfGlpPath: rootSelfPath);
+      linked = linkProgram(modules, rootDir: collisionRoot).program;
     });
 
     test('colliding procedures are disambiguated by module prefix', () {
@@ -273,8 +273,8 @@ void main() {
     });
   });
 
-  group('Nested sub-project entry aliases (dedicated fixture)', () {
-    // Sole coverage of the §3.4 nested-subproject rule. Parent has root-level
+  group('Nested sub-program entry aliases (dedicated fixture)', () {
+    // Sole coverage of the §3.4 nested-subprogram rule. Parent has root-level
     // `boot` (exported `play`) and nested `child/` (own self.glp) with `leaf`
     // (exported `greet`). See test/programs/linker_nested/.
     const nestedRoot = 'test/programs/linker_nested';
@@ -282,12 +282,12 @@ void main() {
 
     test('whole subtree links; nested module present by prefixed name', () {
       final modules =
-          discoverProject(nestedRoot, rootSelfGlpPath: rootSelfPath);
+          discoverProgram(nestedRoot, rootSelfGlpPath: rootSelfPath);
       final names = modules.map((m) => m.moduleName).toSet();
       expect(names, contains('boot'));
       expect(names, contains('leaf'));
 
-      final linked = linkProject(modules, rootDir: nestedRoot).program;
+      final linked = linkProgram(modules, rootDir: nestedRoot).program;
       final procNames = linked.procedures.map((p) => p.name).toSet();
       // Both modules' procedures are renamed and present.
       expect(procNames, contains('boot:play'));
@@ -296,8 +296,8 @@ void main() {
 
     test("root's exported play is aliased; nested export is not", () {
       final modules =
-          discoverProject(nestedRoot, rootSelfGlpPath: rootSelfPath);
-      final linked = linkProject(modules, rootDir: nestedRoot).program;
+          discoverProgram(nestedRoot, rootSelfGlpPath: rootSelfPath);
+      final linked = linkProgram(modules, rootDir: nestedRoot).program;
       final bare = linked.procedures
           .where((p) => !p.name.contains(':'))
           .map((p) => p.name)
@@ -309,8 +309,8 @@ void main() {
 
     test('nested dir loads standalone with its own aliases', () {
       final modules =
-          discoverProject(nestedChild, rootSelfGlpPath: rootSelfPath);
-      final linked = linkProject(modules, rootDir: nestedChild).program;
+          discoverProgram(nestedChild, rootSelfGlpPath: rootSelfPath);
+      final linked = linkProgram(modules, rootDir: nestedChild).program;
       final procNames = linked.procedures.map((p) => p.name).toSet();
       final bare = linked.procedures
           .where((p) => !p.name.contains(':'))
@@ -324,8 +324,8 @@ void main() {
 
   group('End-to-end compilation', () {
     test('linked program compiles to bytecode', () {
-      final modules = discoverProject(cssnRoot, rootSelfGlpPath: rootSelfPath);
-      final result = linkProject(modules, rootDir: cssnRoot);
+      final modules = discoverProgram(cssnRoot, rootSelfGlpPath: rootSelfPath);
+      final result = linkProgram(modules, rootDir: cssnRoot);
 
       final compiler = GlpCompiler();
       final bytecode = compiler.compileProgram(
@@ -341,8 +341,8 @@ void main() {
     });
 
     test('fplay1 produces correct output', () {
-      final modules = discoverProject(cssnRoot, rootSelfGlpPath: rootSelfPath);
-      final result = linkProject(modules, rootDir: cssnRoot);
+      final modules = discoverProgram(cssnRoot, rootSelfGlpPath: rootSelfPath);
+      final result = linkProgram(modules, rootDir: cssnRoot);
       final compiler = GlpCompiler();
       final bytecode = compiler.compileProgram(
         result.program,

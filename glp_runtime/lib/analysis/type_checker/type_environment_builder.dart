@@ -133,7 +133,7 @@ TypeEnvironment buildTypeEnvironment(ast.Module module, {TypeEnvironment? ancest
   // Case B, would fire for calls the local definition resolves).  A module's
   // OWN parameterized procedure keeps its template (it is in userEnv's
   // paramProcDecls).  This is the defining-module dual of the exposed-scope
-  // shadowing in the project linker.
+  // shadowing in the program linker.
   final paramProcDecls = Map<String, ProcDecl>.from(merged.paramProcDecls);
   for (final key in userEnv.procedures.keys) {
     if (!userEnv.paramProcDecls.containsKey(key)) {

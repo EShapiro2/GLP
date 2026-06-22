@@ -1048,13 +1048,13 @@ compute(X, Y?) :- math_service # double(X?, Y).
 Each directory may contain a `self.glp` file that defines types and procedures visible to all modules in that directory and its subdirectories. This follows FCP's `self.cp` convention.
 
 ```
-project/
+program/
   self.glp               — shared types (AgentMsg, Response, etc.)
-  agent.glp              — sees project/self.glp
-  mediator.glp           — sees project/self.glp
+  agent.glp              — sees program/self.glp
+  mediator.glp           — sees program/self.glp
   ui/
     self.glp             — UI-specific types
-    actors.glp           — sees ui/self.glp + project/self.glp
+    actors.glp           — sees ui/self.glp + program/self.glp
 ```
 
 The root `programs/self.glp` defines all predefined types (`Stream(X)`, `Channel(In, Out)`, `DiffList(X)`, `OpenStream(X)`) and all predefined procedure declarations (`merge`, `send`, `receive`, `new_channel`, etc.). Every module sees root self.glp automatically.
@@ -1063,10 +1063,10 @@ The root `programs/self.glp` defines all predefined types (`Stream(X)`, `Channel
 
 GLP supports two compilation modes for multi-module programs:
 
-**Static linking** (for projects): All modules in a directory tree are compiled together. The project linker resolves `M # goal(...)` calls at compile time by renaming and merging procedures into a single flat program. Use the REPL command `<directory>` to load a project:
+**Static linking** (for programs): All modules in a directory tree are compiled together. The program linker resolves `M # goal(...)` calls at compile time by renaming and merging procedures into a single flat program. Use the REPL command `<directory>` to load a program:
 ```
 GLP> social_graph/
-✓ Loaded project: social_graph/
+✓ Loaded program: social_graph/
 ```
 
 **Dynamic dispatch** (for independently loaded modules): Each module is loaded and activated separately. Cross-module calls route through GLP channels at runtime. This is the model described in Sections 19.3–19.5.

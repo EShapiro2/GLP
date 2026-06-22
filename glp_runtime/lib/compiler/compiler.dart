@@ -134,11 +134,11 @@ class GlpCompiler {
 
   /// Compile a Program AST directly to bytecode.
   ///
-  /// Used by the project linker for statically linked programs.
+  /// Used by the program linker for statically linked programs.
   /// Skips lexing, parsing, type checking, and _select generation.
   ///
   /// [procDeclarations] should contain renamed declarations (e.g., from
-  /// [linkProject]) for SRSW type-based relaxation.
+  /// [linkProgram]) for SRSW type-based relaxation.
   BytecodeProgram compileProgram(Program ast, {List<ProcDecl>? procDeclarations}) {
     final analyzer = _createAnalyzer();
     final annotated = analyzer.analyze(

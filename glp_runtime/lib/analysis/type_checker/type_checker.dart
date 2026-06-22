@@ -672,8 +672,8 @@ class TypeChecker {
 /// If [ancestorScope] is provided, it is used as the base type environment
 /// (root scope + ancestor self.glp definitions) instead of just the root scope.
 /// See module_hierarchy.dart for how ancestor scopes are assembled.
-/// If [collector] is provided (project mode), call-site instantiations of
-/// parameterized procedures are recorded into it; the caller (project linker)
+/// If [collector] is provided (program mode), call-site instantiations of
+/// parameterized procedures are recorded into it; the caller (program linker)
 /// runs the cross-module instantiation closure itself. With no [collector]
 /// (single-file/REPL), this function runs the closure over the module's own
 /// clauses. A parameterized procedure is never checked under the wildcard `_`
@@ -717,7 +717,7 @@ TypeCheckResult checkModule(ast.Module module, {List<ast.Procedure>? transformed
     clauses.addAll(proc.clauses);
   }
 
-  // Project mode: the caller (project linker) supplies a collector and runs the
+  // Program mode: the caller (program linker) supplies a collector and runs the
   // cross-module instantiation closure itself.
   if (collector != null) {
     final checker = TypeChecker(typeEnv, collector: collector);
@@ -726,7 +726,7 @@ TypeCheckResult checkModule(ast.Module module, {List<ast.Procedure>? transformed
     // Phase A (modular checking via abstract parameters), per module: certify
     // each parametric procedure that takes the abstract route, against this
     // module's own defining clauses. The certified keys accumulate into the
-    // caller-supplied set so the project-level closure suppresses re-reporting.
+    // caller-supplied set so the program-level closure suppresses re-reporting.
     final clausesByKey = <String, List<ast.Clause>>{};
     for (final c in clauses) {
       clausesByKey
@@ -742,7 +742,7 @@ TypeCheckResult checkModule(ast.Module module, {List<ast.Procedure>? transformed
     );
   }
 
-  // Single-file / REPL mode: there is no project linker to run the closure, so
+  // Single-file / REPL mode: there is no program linker to run the closure, so
   // run a self-contained per-instantiation check over this module's own
   // clauses. A parameterized procedure's body obligations are discharged at
   // each concrete instantiation inferred from a call site (closes the
@@ -801,10 +801,10 @@ TypeCheckResult checkModule(ast.Module module, {List<ast.Procedure>? transformed
   // a parametric procedure outside a program (typed-program.md "Modular Checking
   // via Abstract Parameters", sec:abstract-parameters). There is no wildcard
   // fallback — checking it under the wildcard `_` declaration is unsound. Within
-  // a program (project linker) an instantiation supplies the verdict; a callerless
+  // a program (program linker) an instantiation supplies the verdict; a callerless
   // procedure there goes unchecked, not rejected (typed-program.md "Programs and
   // Modules").
-  // The linked-program check (project linker) passes rejectUninstantiatedInspecting
+  // The linked-program check (program linker) passes rejectUninstantiatedInspecting
   // = false: it checks the whole program as one flattened module, where a
   // callerless parametric procedure goes unchecked, not rejected (typed-program.md
   // "Programs and Modules"). The standalone reject below is for single-file/REPL

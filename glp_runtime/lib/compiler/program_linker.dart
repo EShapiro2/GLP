@@ -1,6 +1,6 @@
-/// Project linker: static linking of multi-module GLP projects.
+/// Program linker: static linking of multi-module GLP programs.
 ///
-/// Given a project root directory, discovers all modules, type-checks each
+/// Given a program root directory, discovers all modules, type-checks each
 /// independently, then produces a single flat Program AST where all
 /// inter-module calls are resolved to renamed local procedures.
 ///
@@ -21,7 +21,7 @@ import '../analysis/type_checker/type_checker.dart';
 import '../runtime/module_hierarchy.dart';
 import '../analysis/type_checker/type_environment_builder.dart';
 
-/// A discovered module in the project tree.
+/// A discovered module in the program tree.
 class DiscoveredModule {
   final String filePath;
   final String moduleName;
@@ -45,7 +45,7 @@ class DiscoveredModule {
   });
 }
 
-/// Result of linking a project.
+/// Result of linking a program.
 class LinkResult {
   final Program program;
   final List<ProcDecl> procDeclarations;
@@ -53,7 +53,7 @@ class LinkResult {
   LinkResult(this.program, this.procDeclarations);
 }
 
-/// Walk the project directory tree and discover all modules.
+/// Walk the program directory tree and discover all modules.
 ///
 /// For each `.glp` file (excluding `boot_direct.glp`):
 /// - Parse into Module AST
@@ -63,17 +63,17 @@ class LinkResult {
 ///
 /// `self.glp` files contribute both types AND procedures to the ancestor scope.
 /// Their procedures are compiled to bytecode and renamed like any other module.
-List<DiscoveredModule> discoverProject(String rootDir,
+List<DiscoveredModule> discoverProgram(String rootDir,
     {String? rootSelfGlpPath}) {
   final root = Directory(rootDir);
   if (!root.existsSync()) {
-    throw ArgumentError('Project root directory not found: $rootDir');
+    throw ArgumentError('Program root directory not found: $rootDir');
   }
 
   final modules = <DiscoveredModule>[];
 
   // The root `programs/` directory bounds the ancestor scope chain. When known,
-  // discovery extends above the project root up to (excluding) this directory.
+  // discovery extends above the program root up to (excluding) this directory.
   final programsDir = rootSelfGlpPath != null
       ? File(rootSelfGlpPath).parent.absolute.path
       : null;
@@ -92,7 +92,7 @@ List<DiscoveredModule> discoverProject(String rootDir,
     if (filename == 'boot_direct.glp') continue;
 
     // Skip mad_boot.glp and files in mad_boot/ directory
-    // (madGLP boot procedures, loaded on top of linked project)
+    // (madGLP boot procedures, loaded on top of linked program)
     if (filename == 'mad_boot.glp') continue;
     if (file.parent.path.endsWith('${Platform.pathSeparator}mad_boot') ||
         file.parent.path.endsWith('/mad_boot')) continue;
@@ -131,7 +131,7 @@ List<DiscoveredModule> discoverProject(String rootDir,
     ));
   }
 
-  // Discover ancestor `self.glp` files ABOVE the project root, up to (but not
+  // Discover ancestor `self.glp` files ABOVE the program root, up to (but not
   // including) `programs/`. Ancestor directories contribute only their
   // `self.glp`, never their other modules (project-compilation spec §3.1). The
   // root `programs/self.glp` is excluded — it is realised by the root-scope
@@ -385,11 +385,11 @@ List<String> _ancestorSelfGlpFiles(String rootDir, String programsDir) {
   return result;
 }
 
-/// Type-check a project on its LINKED program (paper: modules §Module-System
+/// Type-check a program on its LINKED program (paper: modules §Module-System
 /// Design "Self-contained type checking", §Static Linking; def:program —
 /// soundness is established on the linked program). Linking renames every
 /// procedure to `M:p` and resolves every call (a cross-module `M' # p` becomes a
-/// local `M':p`); the whole project is then one program in which a cross-module
+/// local `M':p`); the whole program is then one program in which a cross-module
 /// call is an ordinary local call. The instantiation closure (§Parameterised
 /// Procedure Declarations) therefore induces and checks a parameterised callee's
 /// clauses at every instantiation a call supplies — in both directions and
@@ -400,7 +400,7 @@ List<String> _ancestorSelfGlpFiles(String rootDir, String programsDir) {
 /// rejected (typed-program.md "Programs and Modules").
 ///
 /// Throws on type errors with details.
-void typeCheckProject(List<DiscoveredModule> modules, {required String rootDir}) {
+void typeCheckProgram(List<DiscoveredModule> modules, {required String rootDir}) {
   // Soundness is established on the LINKED program (paper: modules §Module-System
   // Design "Self-contained type checking", §Static Linking; def:program). We link
   // first — renaming every procedure to `M:p` and resolving every call, including
@@ -411,7 +411,7 @@ void typeCheckProject(List<DiscoveredModule> modules, {required String rootDir})
   // directions and through parametric intermediaries. Renaming makes every
   // procedure name unambiguous across modules, and type identity is structural, so
   // no per-module environment juggling is needed.
-  final linked = linkProject(modules, rootDir: rootDir);
+  final linked = linkProgram(modules, rootDir: rootDir);
 
   // The linked program's type definitions: the union of every module's own type
   // definitions, deduplicated by name (structural identity makes duplicates the
@@ -483,13 +483,13 @@ void typeCheckProject(List<DiscoveredModule> modules, {required String rootDir})
 ///
 /// Renames procedures (`p/n` → `M:p/n`), resolves all calls, and generates
 /// entry-point aliases for the exported procedures of root-level modules
-/// (project-compilation spec §3.4). [rootDir] is the loaded project root: a
+/// (project-compilation spec §3.4). [rootDir] is the loaded program root: a
 /// module is "root-level" when its nearest enclosing `self.glp` directory is
 /// that root, i.e. it is not contained in any descendant `self.glp` subtree.
 ///
 /// Returns a [LinkResult] with the linked program and renamed proc declarations
 /// (needed for SRSW type-based relaxation during compilation).
-LinkResult linkProject(List<DiscoveredModule> modules, {required String rootDir}) {
+LinkResult linkProgram(List<DiscoveredModule> modules, {required String rootDir}) {
   // Build procedure registry: module name → set of procedure signatures
   final registry = <String, Set<String>>{};
   for (final mod in modules) {
@@ -591,7 +591,7 @@ LinkResult linkProject(List<DiscoveredModule> modules, {required String rootDir}
     }
   }
 
-  // Build a project-wide procedure declaration index for mode-aware aliases.
+  // Build a program-wide procedure declaration index for mode-aware aliases.
   // Maps 'name/arity' → ProcDecl, collecting from all modules' non-imported decls.
   final declIndex = <String, ProcDecl>{};
   for (final mod in modules) {
@@ -607,7 +607,7 @@ LinkResult linkProject(List<DiscoveredModule> modules, {required String rootDir}
   // Only EXPORTED procedures of ROOT-LEVEL modules receive unprefixed aliases.
   // A module is root-level when its nearest enclosing self.glp directory is the
   // loaded root itself — i.e. it is not contained in any descendant self.glp
-  // subtree (a nested sub-project, e.g. secure/, village/). Nested-subtree
+  // subtree (a nested sub-program, e.g. secure/, village/). Nested-subtree
   // modules keep prefixed names only. There is no "top module".
   final rootNorm = _normPath(rootDir);
   final descendantSelfDirs = <String>{};
@@ -622,7 +622,7 @@ LinkResult linkProject(List<DiscoveredModule> modules, {required String rootDir}
     final modDir = _normPath(File(mod.filePath).parent.path);
     if (!_dirUnder(modDir, rootNorm)) return false; // ancestor self.glp above root
     for (final s in descendantSelfDirs) {
-      if (_dirUnder(modDir, s)) return false; // inside a nested sub-project
+      if (_dirUnder(modDir, s)) return false; // inside a nested sub-program
     }
     return true;
   }
@@ -646,7 +646,7 @@ LinkResult linkProject(List<DiscoveredModule> modules, {required String rootDir}
       aliasedSigs[sig] = mod.moduleName;
 
       // Look up ProcDecl for mode-aware alias generation.
-      // First check the owning module, then the project-wide index.
+      // First check the owning module, then the program-wide index.
       final decl = _findProcDecl(mod, proc.name, proc.arity) ?? declIndex[sig];
 
       final aliasClause = _makeAliasClause(
@@ -807,7 +807,7 @@ TypeEnvironment _buildAncestorScope(List<String> chain,
   // the individual-load path in assembleTypeScope.
   var env = buildRootScopeEnvironment();
 
-  // Chain contains only project-local self.glp files.
+  // Chain contains only program-local self.glp files.
   // Root self.glp is already included in the root scope environment.
   for (final selfGlpPath in chain) {
     final source = File(selfGlpPath).readAsStringSync();

@@ -45,7 +45,7 @@ class CollectedInstantiation {
 }
 
 /// Accumulates the distinct call-site instantiations of parameterized
-/// procedures across a project's modules. Deduplicated by (procKey, signature)
+/// procedures across a program's modules. Deduplicated by (procKey, signature)
 /// so each distinct instantiation is checked once in Phase 2.
 class InstantiationCollector {
   final Map<String, CollectedInstantiation> _byKeySig = {};

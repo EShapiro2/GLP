@@ -29,7 +29,7 @@ import 'package:glp_runtime/analysis/type_checker/type_environment_builder.dart'
 import 'package:glp_runtime/runtime/module_hierarchy.dart';
 import 'package:glp_runtime/runtime/glp_activation.dart';
 import 'package:glp_runtime/multiagent/mad_context.dart';
-import 'package:glp_runtime/compiler/project_linker.dart';
+import 'package:glp_runtime/compiler/program_linker.dart';
 
 /// Result of running a goal
 class ExecutionResult {
@@ -310,15 +310,15 @@ class GlpEngine {
   /// aliases are generated for the exported procedures of root-level modules
   /// only (project-compilation spec §3.4).
   bool loadProgram(String programDir) {
-    final modules = discoverProject(programDir,
+    final modules = discoverProgram(programDir,
         rootSelfGlpPath: _rootSelfGlpPath);
     if (modules.isEmpty) {
       throw Exception('No modules found in $programDir');
     }
 
-    typeCheckProject(modules, rootDir: programDir);
+    typeCheckProgram(modules, rootDir: programDir);
 
-    final linked = linkProject(modules, rootDir: programDir);
+    final linked = linkProgram(modules, rootDir: programDir);
     final program = _compiler.compileProgram(
       linked.program,
       procDeclarations: linked.procDeclarations,
