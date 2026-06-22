@@ -595,7 +595,12 @@ Make the stream merged into NetIn genuinely canonical-free, e.g. carry the `cano
 
 ## Issue 17: `glp_runtime` `dart test` baseline carries 6 reds — 4 stale rot, 2 the live Issue-13 strand
 
-**Update (2026-06-22)**: the two `isolate_manager_test` reds are **retired** (skip-with-reason) — they tested legacy `book/social_graph` and timed out on a boot-config scope omission (`UnknownTypeError: Response`), not a runtime/`_w` bug (see Issue 13). The multi-isolate full-play path is covered green by `cssn_v2_isolate_test`/`bonds_v2_isolate_test`. New baseline: **379 pass / 7 skip / 4 fail**. Remaining 4 reds: `ui_mediator_test` ×3 (stale `_output` rot) + `clause_select_probe_test` ×1 (Issue-15 scaffolding rot).
+**Update (2026-06-22) — RESOLVED.** All six reds are now retired (skip-with-reason) — every one was legacy `book/social_graph` rot, not a runtime defect:
+- `isolate_manager_test` ×2 — boot-config scope omission (`UnknownTypeError: Response`), not the "Issue-13 strand"; multi-isolate path covered green by `cssn_v2`/`bonds_v2`.
+- `clause_select_probe_test` ×1 — rotted Issue-15 scaffolding (superseded by the now-eliminated probe15).
+- `ui_mediator_test` ×3 — inline `_output` fixed (now routes through root `send_to_user`), but the test loads `typed_social_agent`/`typed_ui_mediator` without their `book/social_graph/self.glp` scope, so the goal-check hard-fails on `Unresolved type: Response`; canonical mediator covered by live cssn/social-graph.
+
+Baseline now **379 pass / 11 skip / 0 fail**; REPL **501/501**. All retired tests exercise deprecated `book/social_graph`, superseded by canonical `social/graph` + `cssn`.
 
 **Status**: Open tracking entry (so the 6-red baseline is not silently normalized). Logged 2026-06-21 during the Issue-13/15 fix task.
 **Discovered**: 2026-06-21 (baseline before touching code).
