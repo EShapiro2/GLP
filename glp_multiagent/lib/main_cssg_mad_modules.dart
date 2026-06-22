@@ -1,13 +1,13 @@
 /// GLP Child-Safe Social Graph — Modules + Multi-Isolate
 ///
-/// Same as main_cssg_mad.dart but uses project-compiled modules from
+/// Same as main_cssg_mad.dart but uses program-compiled modules from
 /// social/child_safe/ instead of loading monolithic source files.
 ///
 /// Each agent isolate:
-///   1. Loads the linked project via engine.loadProject(social/child_safe/)
+///   1. Loads the linked program via engine.loadProgram(social/child_safe/)
 ///   2. Loads mad_boot.glp on top (parent_init, child_init, tee, ui_actor, ...)
 ///   3. Runs parent_init/4 or child_init/3 — which call agent(), ui_mediator(),
-///      merge(), etc. via entry-point aliases from the linked project.
+///      merge(), etc. via entry-point aliases from the linked program.
 library;
 
 import 'dart:async';
@@ -23,10 +23,10 @@ import 'mad_router.dart';
 // CONSTANTS
 // =============================================================================
 
-/// Project directory for static linking (repo-relative from glp_multiagent/).
-const _projectDir = '../programs/social/child_safe';
+/// Program directory for static linking (repo-relative from glp_multiagent/).
+const _programDir = '../programs/social/child_safe';
 
-/// madGLP boot source — loaded on top of the linked project.
+/// madGLP boot source — loaded on top of the linked program.
 const _bootFileName = 'mad_boot.glp';
 
 /// Resolve absolute path to programs/self.glp.
@@ -168,7 +168,7 @@ class _CssgMadModulesScreenState extends State<CssgMadModulesScreen> {
     super.initState();
     _replySubscription = _replyPort.listen(_handleAgentMessage);
     _log.add('Ready. Click a Play button to run a scenario.');
-    _log.add('Using project-compiled modules from social/child_safe/.');
+    _log.add('Using program-compiled modules from social/child_safe/.');
   }
 
   @override
@@ -187,9 +187,9 @@ class _CssgMadModulesScreenState extends State<CssgMadModulesScreen> {
     if (_cachedBootSource != null) return _cachedBootSource;
 
     try {
-      final file = File('$_projectDir/$_bootFileName');
+      final file = File('$_programDir/$_bootFileName');
       if (!file.existsSync()) {
-        _log.add('ERROR: Boot file not found: $_projectDir/$_bootFileName');
+        _log.add('ERROR: Boot file not found: $_programDir/$_bootFileName');
         setState(() {});
         return null;
       }
@@ -305,7 +305,7 @@ class _CssgMadModulesScreenState extends State<CssgMadModulesScreen> {
         replyPort: _replyPort.sendPort,
         goalLabel: config.goalLabel,
         extraArgs: config.extraArgs,
-        projectDir: _projectDir,   // Linked project provides agent, mediator, actors
+        programDir: _programDir,   // Linked program provides agent, mediator, actors
         deferStart: true,
       );
 

@@ -25,7 +25,7 @@ Future<void> _runPlay(IsolateManager manager, String bootFilename,
   final bootSource = bootFile.readAsStringSync();
   final loader = BootLoader();
   final config = loader.load(bootSource);
-  config.projectDir = _cssnV2Dir;
+  config.programDir = _cssnV2Dir;
   config.rootSelfGlpPath = _rootSelfGlp;
 
   await manager.boot(config, traceConfig: TraceConfig(glp: false, mad: false));

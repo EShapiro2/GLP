@@ -89,7 +89,7 @@ class AgentConfig {
   final List<String> goalConstantArgs; // Constant args between agentId and netIn
   final String programSource;
   final List<String>? sharedSources; // Optional shared code files (e.g., social_agent.glp)
-  final String? projectDir; // Optional project directory for static linking
+  final String? programDir; // Optional program directory for static linking
   final String rootSelfGlpPath; // Absolute path to programs/self.glp
   final SendPort mainPort;
   final SendPort? uiPort; // null for headless
@@ -109,7 +109,7 @@ class AgentConfig {
     this.goalConstantArgs = const [],
     required this.programSource,
     this.sharedSources,
-    this.projectDir,
+    this.programDir,
     required this.rootSelfGlpPath,
     required this.mainPort,
     required this.keyPair,
@@ -196,7 +196,7 @@ class IsolateManager {
         goalConstantArgs: directive.constantArgs,
         programSource: config.source,
         sharedSources: config.sharedSources,
-        projectDir: config.projectDir,
+        programDir: config.programDir,
         rootSelfGlpPath: config.rootSelfGlpPath,
         mainPort: _mainPort.sendPort,
         keyPair: keyPairs[directive.agentId]!,
@@ -297,12 +297,12 @@ void _agentIsolateEntry(AgentConfig config) async {
   // Enable madGLP mode (loads madPredicates + creates MadContext)
   engine.enableMadGLP(agentId: agentId);
 
-  // Load program code: either via project linking or individual file loading.
-  if (config.projectDir != null) {
-    // Project-directory mode: static-link the project, then load boot source on top.
-    engine.loadProject(config.projectDir!);
+  // Load program code: either via program linking or individual file loading.
+  if (config.programDir != null) {
+    // Program-directory mode: static-link the program, then load boot source on top.
+    engine.loadProgram(config.programDir!);
     engine.loadSource(config.programSource, filename: 'program');
-    log('Program loaded via project linking (${config.projectDir}) + boot source');
+    log('Program loaded via program linking (${config.programDir}) + boot source');
   } else {
     // Legacy mode: load shared source files and boot program sequentially.
     // Each file is loaded separately to preserve per-file -mode() directives.

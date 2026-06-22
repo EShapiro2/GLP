@@ -1231,7 +1231,7 @@ $SGSIM
 HEREDOC
 2>&1)
 
-check "SG-SIM project loads" "Loaded project" "$g_load"
+check "SG-SIM project loads" "Loaded program" "$g_load"
 check_not "SG-SIM no type errors" "Type checking failed" "$g_load"
 check_not "SG-SIM no load errors" "Error loading" "$g_load"
 
@@ -1330,7 +1330,7 @@ test_self_proc(5, R).
 HEREDOC
 2>&1)
 
-check "self.glp shared proc loads" "Loaded project" "$i1"
+check "self.glp shared proc loads" "Loaded program" "$i1"
 check "self.glp shared proc result" "R = 10" "$i1"
 
 # --- I2: self.glp shadowing ---
@@ -1342,7 +1342,7 @@ test_shadow(X, Y).
 HEREDOC
 2>&1)
 
-check "self.glp shadow loads" "Loaded project" "$i2"
+check "self.glp shadow loads" "Loaded program" "$i2"
 check "self.glp shadow outer" "X = outer" "$i2"
 check "self.glp shadow inner" "Y = inner" "$i2"
 
@@ -1355,7 +1355,7 @@ test_local_shadow(R).
 HEREDOC
 2>&1)
 
-check "local shadow loads" "Loaded project" "$i3"
+check "local shadow loads" "Loaded program" "$i3"
 check "local shadow result" "R = from_local" "$i3"
 
 # --- I4: Type error in self.glp (negative) ---
@@ -1367,7 +1367,7 @@ HEREDOC
 2>&1)
 
 check "self.glp type error rejected" "Type checking failed\|type.*error\|Error" "$i4"
-check_not "self.glp type error not loaded" "Loaded project" "$i4"
+check_not "self.glp type error not loaded" "Loaded program" "$i4"
 
 echo ""
 
@@ -1390,7 +1390,7 @@ $CSSN_V2
 HEREDOC
 2>&1)
 
-check "CSSN v2 project loads" "Loaded project" "$k_load"
+check "CSSN v2 project loads" "Loaded program" "$k_load"
 check_not "CSSN v2 no type errors" "Type checking failed" "$k_load"
 
 # fplay1-3: Basic social graph (adult-only, unchanged)
@@ -1651,7 +1651,7 @@ $BONDS_V2
 HEREDOC
 2>&1)
 
-check "Bonds v2 project loads" "Loaded project" "$n_load"
+check "Bonds v2 project loads" "Loaded program" "$n_load"
 check_not "Bonds v2 no type errors" "Type checking failed" "$n_load"
 
 # fplay1: solo mint
@@ -1831,7 +1831,7 @@ $GLP_DIR/programs/tests/cross_module_inspect_neg/
 HEREDOC
 2>&1)
 check "cross-module param-inspect project rejected" "Head of lib:relay" "$output"
-check_not "cross-module project not loaded green" "Loaded project: .*cross_module_inspect_neg" "$output"
+check_not "cross-module project not loaded green" "Loaded program: .*cross_module_inspect_neg" "$output"
 
 echo ""
 
@@ -1850,7 +1850,7 @@ $SECUREBONDS
 HEREDOC
 2>&1)
 
-check "SecureBonds project loads" "Loaded project" "$sb_load"
+check "SecureBonds project loads" "Loaded program" "$sb_load"
 check_not "SecureBonds no type errors" "Type checking failed" "$sb_load"
 check_not "SecureBonds no load errors" "Error loading" "$sb_load"
 
@@ -1907,7 +1907,7 @@ test_merge(Z).
 :quit
 HEREDOC
 2>&1)
-check "S2 leaf loads" "Loaded project" "$s2"
+check "S2 leaf loads" "Loaded program" "$s2"
 check "S2 ancestor pmerge resolves" "Z = \[1, 4, 2, 5, 3, 6\]" "$s2"
 
 # --- S3: two distinct instantiations of the parameterised utility in one module ---
@@ -1928,7 +1928,7 @@ $GLP_DIR/programs/bonds/play12
 :quit
 HEREDOC
 2>&1)
-check "S4 play12 loads standalone" "Loaded project" "$s4"
+check "S4 play12 loads standalone" "Loaded program" "$s4"
 check_not "S4 no unknown type error" "UnknownType" "$s4"
 
 # --- S5: opaque pass-through walker ---
@@ -1939,7 +1939,7 @@ run(Result, S).
 :quit
 HEREDOC
 2>&1)
-check "S5 walker loads" "Loaded project" "$s5"
+check "S5 walker loads" "Loaded program" "$s5"
 check "S5 opaque pass-through + append" "S = \[\"hello\"" "$s5"
 
 # --- S6: walker parameterised over the entry type ---
@@ -1950,7 +1950,7 @@ run(Result, S).
 :quit
 HEREDOC
 2>&1)
-check "S6 param walker loads" "Loaded project" "$s6"
+check "S6 param walker loads" "Loaded program" "$s6"
 check "S6 functor decomposition" "more(7)" "$s6"
 check "S6 append via parameterised walker" "S = \[\"hello\"" "$s6"
 
@@ -1962,7 +1962,7 @@ test_shadow(Z).
 :quit
 HEREDOC
 2>&1)
-check "S7 shadow loads" "Loaded project" "$s7"
+check "S7 shadow loads" "Loaded program" "$s7"
 check "S7 local pmerge resolves (not ancestor interleave)" "Z = \[1, 2, 3\]" "$s7"
 
 echo ""
@@ -1983,7 +1983,7 @@ run(R).
 :quit
 HEREDOC
 2>&1)
-check "X1 leaf loads" "Loaded project" "$x1"
+check "X1 leaf loads" "Loaded program" "$x1"
 check "X1 exposed twice resolves unqualified" "R = 42" "$x1"
 
 # --- X2: the exposing directory's own subtree sees the exposed procedure ---
@@ -2004,7 +2004,7 @@ run(R).
 :quit
 HEREDOC
 2>&1)
-check "X3 loads" "Loaded project" "$x3"
+check "X3 loads" "Loaded program" "$x3"
 check "X3 local twice (N+1) beats exposed (N*2)" "R = 11" "$x3"
 
 # --- X4: collision — two exposed modules, same name/arity → error ---
@@ -2015,7 +2015,7 @@ $EXPOSE/collide
 HEREDOC
 2>&1)
 check "X4 collision rejected" "collision" "$x4"
-check_not "X4 not loaded" "Loaded project" "$x4"
+check_not "X4 not loaded" "Loaded program" "$x4"
 check "X4 names module one" "\"one\"" "$x4"
 check "X4 names module two" "\"two\"" "$x4"
 
@@ -2049,7 +2049,7 @@ $GLP_DIR/programs/tests/a5_routing_neg
 :quit
 HEREDOC
 2>&1)
-check_not "X7 bad-OutputEntry fixture not loaded" "Loaded project" "$x7"
+check_not "X7 bad-OutputEntry fixture not loaded" "Loaded program" "$x7"
 check "X7 rejected at send_user instantiation" "send_user" "$x7"
 check "X7 names the missing user_output constructor" "user_output" "$x7"
 

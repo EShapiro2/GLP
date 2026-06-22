@@ -91,7 +91,7 @@ class BootConfig {
   final List<SpawnDirective> directives;
   final String source;           // Source with boot clause stripped
   List<String>? sharedSources;   // Optional shared code files
-  String? projectDir;            // Optional project directory for static linking
+  String? programDir;            // Optional program directory for static linking
   String rootSelfGlpPath;        // Absolute path to programs/self.glp
 }
 
@@ -140,8 +140,8 @@ void agentIsolateEntry(AgentConfig config) async {
   engine.enableMadGLP(agentId: config.agentId);
 
   // 2. Load program code
-  if (config.projectDir != null) {
-    engine.loadProject(config.projectDir!);
+  if (config.programDir != null) {
+    engine.loadProgram(config.programDir!);
     engine.loadSource(config.programSource, filename: 'program');
   } else {
     if (config.sharedSources != null) {
@@ -400,7 +400,7 @@ class AgentConfig {
   final List<String> goalConstantArgs; // Constants between agentId and netIn
   final String programSource;
   final List<String>? sharedSources;  // Optional shared code files
-  final String? projectDir;          // Optional project dir for static linking
+  final String? programDir;          // Optional program dir for static linking
   final String rootSelfGlpPath;      // Absolute path to programs/self.glp
   final SendPort mainPort;           // For routing messages
   final SendPort? uiPort;            // For UI events (null if headless)

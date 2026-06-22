@@ -42,7 +42,7 @@ class AgentRuntime {
   /// Optional real filesystem paths for [glpSources], in the same order. When
   /// provided, each source is loaded under its real path so the type checker's
   /// self.glp ancestor-scope discovery resolves shared types defined in a
-  /// project-local self.glp. Without it, sources load under synthetic names
+  /// program-local self.glp. Without it, sources load under synthetic names
   /// ('source_$i') and a split self.glp cannot be found.
   final List<String> glpSourcePaths;
 
@@ -57,10 +57,10 @@ class AgentRuntime {
   /// For example, ['carol', '4'] for parent_init(alice, carol, 4, NetIn).
   final List<String> extraArgs;
 
-  /// Optional project directory for static linking.
-  /// When set, the engine calls loadProject(projectDir) first, then loads
+  /// Optional program directory for static linking.
+  /// When set, the engine calls loadProgram(programDir) first, then loads
   /// glpSources on top (typically just the madGLP boot source).
-  final String? projectDir;
+  final String? programDir;
 
   // Callbacks set by UI layer
   void Function(String line)? onOutput;
@@ -109,7 +109,7 @@ class AgentRuntime {
     this.friends = const [],
     this.goalLabel = 'agent_init/3',
     this.extraArgs = const [],
-    this.projectDir,
+    this.programDir,
     this.keyPair,
     NetworkDirectory? directory,
   }) : directory = directory ?? NetworkDirectory();
@@ -179,12 +179,12 @@ class AgentRuntime {
     // Enable madGLP mode (loads madPredicates + creates MadContext)
     engine.enableMadGLP(agentId: agentIdLower);
 
-    // Load program: either project-linked or individual source files.
-    if (projectDir != null) {
-      // Project mode: load linked project, then boot source(s) on top.
-      _log('INIT: Loading project from $projectDir');
-      engine.loadProject(projectDir!);
-      _log('INIT: Project loaded, loading ${glpSources.length} boot source(s)');
+    // Load program: either program-linked or individual source files.
+    if (programDir != null) {
+      // Program mode: load linked program, then boot source(s) on top.
+      _log('INIT: Loading program from $programDir');
+      engine.loadProgram(programDir!);
+      _log('INIT: Program loaded, loading ${glpSources.length} boot source(s)');
       for (var i = 0; i < glpSources.length; i++) {
         engine.loadSource(glpSources[i], filename: 'source_$i');
       }
@@ -195,7 +195,7 @@ class AgentRuntime {
         final pc = program.labels[key];
         _log('INIT: Label $key -> ${pc != null ? "PC=$pc" : "NOT FOUND"}');
       }
-      _log('INIT: Program loaded via project linking ($projectDir) + ${glpSources.length} boot source(s), ${program.labels.length} labels');
+      _log('INIT: Program loaded via program linking ($programDir) + ${glpSources.length} boot source(s), ${program.labels.length} labels');
     } else {
       // Legacy mode: load each source file separately. Use the real path as
       // the filename when available so self.glp ancestor-scope discovery works.

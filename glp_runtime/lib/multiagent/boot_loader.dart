@@ -58,10 +58,10 @@ class BootConfig {
   /// Each entry is loaded separately to preserve per-file -mode() directives.
   List<String>? sharedSources;
 
-  /// Optional project directory for static linking.
-  /// When set, each isolate loads the project via loadProject() instead of
+  /// Optional program directory for static linking.
+  /// When set, each isolate loads the program via loadProgram() instead of
   /// loading individual shared sources. The boot source is loaded on top.
-  String? projectDir;
+  String? programDir;
 
   /// Absolute path to programs/self.glp
   String rootSelfGlpPath;
@@ -71,7 +71,7 @@ class BootConfig {
     required this.fullSource,
     required this.source,
     this.sharedSources,
-    this.projectDir,
+    this.programDir,
     this.rootSelfGlpPath = '',
   });
 }

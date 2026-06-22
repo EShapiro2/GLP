@@ -62,10 +62,10 @@ class InitAgent extends ToAgentMsg {
   /// Extra arguments inserted between Id and NetIn.
   final List<String> extraArgs;
 
-  /// Optional project directory for static linking.
-  /// When set, each isolate loads the project via loadProject() before
+  /// Optional program directory for static linking.
+  /// When set, each isolate loads the program via loadProgram() before
   /// loading glpSources (typically just the madGLP boot source) on top.
-  final String? projectDir;
+  final String? programDir;
 
   /// If true, the isolate waits for a [StartAgent] command before running
   /// GLP initialization.  This allows the main isolate to register all agent
@@ -81,7 +81,7 @@ class InitAgent extends ToAgentMsg {
     required this.replyPort,
     this.goalLabel = 'agent_init/3',
     this.extraArgs = const [],
-    this.projectDir,
+    this.programDir,
     this.deferStart = false,
   });
 }
@@ -190,7 +190,7 @@ Future<void> _runAgent(InitAgent init) async {
     friends: init.friends,
     goalLabel: init.goalLabel,
     extraArgs: init.extraArgs,
-    projectDir: init.projectDir,
+    programDir: init.programDir,
   );
 
   // Wire callbacks to send messages back to the main isolate.

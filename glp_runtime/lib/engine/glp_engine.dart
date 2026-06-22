@@ -249,7 +249,7 @@ class GlpEngine {
     if (name != '_source_' && name != '__mad_predicates__' &&
         name != '__root_self__' &&
         File(name).existsSync()) {
-      final rootDir = _findProjectRoot(name);
+      final rootDir = _findProgramRoot(name);
       if (rootDir != null) {
         final chain = discoverSelfChain(targetFile: name, rootDir: rootDir);
         if (chain.isNotEmpty) {
@@ -300,30 +300,30 @@ class GlpEngine {
     return true;
   }
 
-  /// Load an entire project directory via static linking.
+  /// Load an entire program directory via static linking.
   ///
   /// Discovers all modules, type-checks each independently, links into a
   /// single flat program, and compiles it. The result is loaded as a single
   /// program accessible via `combinedProgram`.
   ///
-  /// [projectDir] is the path to the project root directory. Entry-point
+  /// [programDir] is the path to the program root directory. Entry-point
   /// aliases are generated for the exported procedures of root-level modules
   /// only (project-compilation spec §3.4).
-  bool loadProject(String projectDir) {
-    final modules = discoverProject(projectDir,
+  bool loadProgram(String programDir) {
+    final modules = discoverProject(programDir,
         rootSelfGlpPath: _rootSelfGlpPath);
     if (modules.isEmpty) {
-      throw Exception('No modules found in $projectDir');
+      throw Exception('No modules found in $programDir');
     }
 
-    typeCheckProject(modules, rootDir: projectDir);
+    typeCheckProject(modules, rootDir: programDir);
 
-    final linked = linkProject(modules, rootDir: projectDir);
+    final linked = linkProject(modules, rootDir: programDir);
     final program = _compiler.compileProgram(
       linked.program,
       procDeclarations: linked.procDeclarations,
     );
-    _loadedPrograms['__project__'] = program;
+    _loadedPrograms['__program__'] = program;
 
     return true;
   }
@@ -425,7 +425,7 @@ class GlpEngine {
   ///
   /// The REPL is outside any module, so it can only invoke:
   ///   - All labels in root self.glp (ancestor scoping)
-  ///   - All labels in a linked project (the linker has already encoded
+  ///   - All labels in a linked program (the linker has already encoded
   ///     export boundaries via name mangling and alias clauses)
   ///   - All labels of top-level programs (no `-module` directive)
   ///   - Only `exportedLabels` of explicitly declared modules
@@ -433,8 +433,8 @@ class GlpEngine {
     final labels = <String>{};
     final rootSelf = _loadedPrograms['__root_self__'];
     if (rootSelf != null) labels.addAll(rootSelf.labels.keys);
-    final project = _loadedPrograms['__project__'];
-    if (project != null) labels.addAll(project.labels.keys);
+    final program = _loadedPrograms['__program__'];
+    if (program != null) labels.addAll(program.labels.keys);
     for (final moduleInfo in _loadedModules.values) {
       if (moduleInfo.isTopLevel) {
         labels.addAll(moduleInfo.program.labels.keys);
@@ -718,7 +718,7 @@ class GlpEngine {
 
   /// Walk up from the file's directory to find the topmost directory
   /// containing self.glp.
-  String? _findProjectRoot(String filePath) {
+  String? _findProgramRoot(String filePath) {
     var dir = File(filePath).parent;
     String? root;
     while (true) {

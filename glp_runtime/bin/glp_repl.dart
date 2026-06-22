@@ -142,8 +142,8 @@ void main() async {
       if (!dirCandidate.endsWith('.glp') &&
           Directory(dirCandidate).existsSync()) {
         try {
-          engine.loadProject(dirCandidate);
-          print('✓ Loaded project: $dirCandidate');
+          engine.loadProgram(dirCandidate);
+          print('✓ Loaded program: $dirCandidate');
         } catch (e) {
           print('Error loading project $dirCandidate: $e');
         }
