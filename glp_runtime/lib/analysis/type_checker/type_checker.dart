@@ -680,6 +680,28 @@ class TypeChecker {
 /// declaration — only per concrete instantiation (typed-program.md "Programs
 /// and Modules"); one never instantiated is not type-checked.
 TypeCheckResult checkModule(ast.Module module, {List<ast.Procedure>? transformedProcedures, TypeEnvironment? ancestorScope, wtc.InstantiationCollector? collector, Set<String>? certifiedKeys, bool rejectUninstantiatedInspecting = true}) {
+  // Boundary for Issue 19: a type referenced but not in scope (e.g. an agent
+  // isolate loaded with an incomplete self.glp scope) makes buildProgramDFA
+  // throw UnknownTypeError. Catch it here and surface it as a locatable type
+  // diagnostic, so a missing-scope condition is a reported well-typing failure
+  // rather than an unhandled error that kills the caller. (IGLP's isolate-side
+  // catch is the backstop.)
+  try {
+    return _checkModuleImpl(module,
+        transformedProcedures: transformedProcedures,
+        ancestorScope: ancestorScope,
+        collector: collector,
+        certifiedKeys: certifiedKeys,
+        rejectUninstantiatedInspecting: rejectUninstantiatedInspecting);
+  } on UnknownTypeError catch (e) {
+    return TypeCheckResult(
+      [TypeError('Unresolved type: ${e.typeName}', e.line, e.column)],
+      [],
+    );
+  }
+}
+
+TypeCheckResult _checkModuleImpl(ast.Module module, {List<ast.Procedure>? transformedProcedures, TypeEnvironment? ancestorScope, wtc.InstantiationCollector? collector, Set<String>? certifiedKeys, bool rejectUninstantiatedInspecting = true}) {
   // Build base environment first so we know all type names for expansion.
   // This avoids mistaking root scope type names for type parameters.
   final baseEnv = ancestorScope ?? buildRootScopeEnvironment();

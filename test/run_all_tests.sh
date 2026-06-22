@@ -744,6 +744,21 @@ check "Goal check: well-typed p(a) runs" "succeeds" "$a26c"
 check "Goal check: well-typed merge runs" "Xgc1 = \[1, 3, 2, 4\]" "$a26c"
 check "Goal check: ill-typed p(Xgc2) rejected (writer at input arg)" "(Xgc2, 0, input)" "$a26c"
 
+# --- A26d: Issue 19 — unresolved type is a locatable diagnostic, not a crash ---
+# A type referenced but not in scope (here Response, as when an isolate loads an
+# incomplete self.glp scope) must surface as a located type error, not an
+# unhandled UnknownTypeError that escapes and kills the caller. Checker side of
+# known-issues Issue 19; pairs with IGLP's isolate-side catch.
+echo "--- A26d: Unresolved-type diagnostic (Issue 19) ---"
+a26d=$("$REPL_RUN" <<HEREDOC
+$GLP_DIR/programs/tests/type_errors/unresolved_type_response.glp
+:quit
+HEREDOC
+2>&1)
+
+check "Issue 19: unresolved type is a located diagnostic" "Unresolved type: Response at line 6" "$a26d"
+check "Issue 19: offending source is rejected" "Type checking failed" "$a26d"
+
 # --- A27: Reader-to-reader bug (befriend_intro) ---
 echo "--- A27: Reader-to-reader fail ---"
 a27=$("$REPL_RUN" <<HEREDOC

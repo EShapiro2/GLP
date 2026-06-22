@@ -1,0 +1,8 @@
+% Issue 19 (checker side): a type definition referencing a type that is not in
+% scope (here Response, as when an agent isolate is loaded with an incomplete
+% self.glp scope) must be surfaced as a LOCATABLE type diagnostic
+% ("Unresolved type: Response" with a line/column), not an unhandled
+% UnknownTypeError that escapes and kills the caller.
+GsgCargo ::= friend_request(Response?).
+procedure handle(GsgCargo?, Constant).
+handle(friend_request(_), ok).

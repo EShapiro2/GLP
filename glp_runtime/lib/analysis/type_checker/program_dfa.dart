@@ -196,12 +196,18 @@ class ProgramDFA {
 }
 
 /// Error thrown when a type name is not found in the environment.
+///
+/// Carries the source location of the offending type reference so the checker
+/// boundary (checkModule) can surface it as a locatable diagnostic rather than
+/// letting an unhandled error escape and kill the caller (known-issues Issue 19).
 class UnknownTypeError extends Error {
   final String typeName;
-  UnknownTypeError(this.typeName);
+  final int line;
+  final int column;
+  UnknownTypeError(this.typeName, [this.line = 0, this.column = 0]);
 
   @override
-  String toString() => 'UnknownTypeError: $typeName';
+  String toString() => 'UnknownTypeError: $typeName at line $line, column $column';
 }
 
 /// Build the complete program DFA from the type environment.
@@ -414,7 +420,7 @@ DFAState _resolveTypeExpr(
     final targetName = typeExpr.name;
     final targetState = finalIsComplement ? states['$targetName?'] : states[targetName];
     if (targetState == null) {
-      throw UnknownTypeError(targetName);
+      throw UnknownTypeError(targetName, typeExpr.line, typeExpr.column);
     }
     return targetState;
   }
@@ -452,7 +458,7 @@ Automaton _buildProcedureAutomaton(
     final targetStateName = _getFullTypeName(argType);
     final targetState = states[targetStateName];
     if (targetState == null) {
-      throw UnknownTypeError(targetStateName);
+      throw UnknownTypeError(targetStateName, argType.line, argType.column);
     }
     transitions[(procState, label)] = targetState;
   }
