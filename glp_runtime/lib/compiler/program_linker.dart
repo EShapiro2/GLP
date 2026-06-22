@@ -411,6 +411,8 @@ LinkResult checkedLinkedProgram(List<DiscoveredModule> modules, {required String
   // directions and through parametric intermediaries. Renaming makes every
   // procedure name unambiguous across modules, and type identity is structural, so
   // no per-module environment juggling is needed.
+  // linkProgram applies all five steps, including step-5 DCE, so the program
+  // type-checked and compiled below is restricted to its reachable procedures.
   final linked = linkProgram(modules, rootDir: rootDir);
 
   // The linked program's type definitions: the union of every module's own type
@@ -495,7 +497,20 @@ void typeCheckProgram(List<DiscoveredModule> modules, {required String rootDir})
   checkedLinkedProgram(modules, rootDir: rootDir);
 }
 
-/// Link all modules into a single flat Program.
+/// Static linking of all modules into a single flat Program (modules.tex
+/// sec:static-linking, all five steps).
+///
+/// Steps 1–4 ([linkAndResolveModules]) rename procedures (`p/n` → `M:p/n`),
+/// resolve all calls, and generate entry-point aliases for root-level exports;
+/// step 5 ([eliminateDeadCode]) restricts the result to the reachable
+/// procedures. This is the program of def:program that is type-checked and
+/// compiled.
+LinkResult linkProgram(List<DiscoveredModule> modules,
+        {required String rootDir}) =>
+    eliminateDeadCode(linkAndResolveModules(modules, rootDir: rootDir));
+
+/// Steps 1–4 of static linking: the pure rename-and-resolve transform, without
+/// dead-code elimination.
 ///
 /// Renames procedures (`p/n` → `M:p/n`), resolves all calls, and generates
 /// entry-point aliases for the exported procedures of root-level modules
@@ -503,9 +518,11 @@ void typeCheckProgram(List<DiscoveredModule> modules, {required String rootDir})
 /// module is "root-level" when its nearest enclosing `self.glp` directory is
 /// that root, i.e. it is not contained in any descendant `self.glp` subtree.
 ///
-/// Returns a [LinkResult] with the linked program and renamed proc declarations
-/// (needed for SRSW type-based relaxation during compilation).
-LinkResult linkProgram(List<DiscoveredModule> modules, {required String rootDir}) {
+/// Returns a [LinkResult] with the renamed program and renamed proc declarations
+/// (needed for SRSW type-based relaxation during compilation). This is the stage
+/// to inspect when checking renaming/resolution/aliasing in isolation; the
+/// program actually compiled is [linkProgram] (which also applies step 5).
+LinkResult linkAndResolveModules(List<DiscoveredModule> modules, {required String rootDir}) {
   // Build procedure registry: module name → set of procedure signatures
   final registry = <String, Set<String>>{};
   for (final mod in modules) {
@@ -691,6 +708,88 @@ LinkResult linkProgram(List<DiscoveredModule> modules, {required String rootDir}
   }
 
   return LinkResult(Program(allProcedures, 0, 0), allDecls);
+}
+
+/// Dead-code elimination: the linker's step 5 (modules.tex sec:static-linking).
+///
+/// Returns the linked program restricted to its \emph{reachable} procedures:
+/// the root's exported procedures (the entry-point aliases — the bare,
+/// unprefixed procedures the linker generated — and the renamed procedures they
+/// call) and the transitive closure of procedures called in the body of a
+/// reachable one. Guards are followed too (by base name), since a user-defined
+/// guard procedure survives renaming as `M:g` while its guard call sites are
+/// left unqualified, and the partial evaluator must still find it to unfold the
+/// guard after linking. Restricting the program to its reachable procedures is
+/// semantically equivalent to the whole; everything else is pruned.
+LinkResult eliminateDeadCode(LinkResult linked) {
+  final procedures = linked.program.procedures;
+
+  final byFullName = <String, Procedure>{};
+  for (final p in procedures) {
+    byFullName['${p.name}/${p.arity}'] = p;
+  }
+  // base 'name/arity' → full keys, for resolving unqualified guard call sites.
+  final byBaseName = <String, List<String>>{};
+  for (final fk in byFullName.keys) {
+    final p = byFullName[fk]!;
+    final ci = p.name.lastIndexOf(':');
+    final base = ci < 0 ? p.name : p.name.substring(ci + 1);
+    byBaseName.putIfAbsent('$base/${p.arity}', () => <String>[]).add(fk);
+  }
+
+  final reachable = <String>{};
+  final work = <String>[];
+  void markFull(String key) {
+    if (byFullName.containsKey(key) && reachable.add(key)) work.add(key);
+  }
+  void markBase(String baseKey) {
+    for (final fk in byBaseName[baseKey] ?? const <String>[]) {
+      if (reachable.add(fk)) work.add(fk);
+    }
+  }
+
+  void collectFromGoal(Goal g) {
+    if (g is RemoteGoal) {
+      // A static M' # p was already rewritten to a Goal by _resolveGoal; a
+      // residual RemoteGoal is dynamic — record its target by base name.
+      markBase('${g.goal.functor}/${g.goal.arity}');
+      return;
+    }
+    if (g is SpawnGoal) {
+      collectFromGoal(g.innerGoal);
+      return;
+    }
+    // Body calls carry resolved names: M:p for local/ancestor procedures (exact
+    // match keeps the target), unqualified for root-scope calls (no procedure
+    // here — left to the separately merged root self.glp).
+    markFull('${g.functor}/${g.arity}');
+  }
+
+  // Seed: the root's exported procedures = the bare (unprefixed) entry-point
+  // aliases the linker generated.
+  for (final p in procedures) {
+    if (!p.name.contains(':')) markFull('${p.name}/${p.arity}');
+  }
+  while (work.isNotEmpty) {
+    final proc = byFullName[work.removeLast()]!;
+    for (final clause in proc.clauses) {
+      for (final g in clause.body ?? const <Goal>[]) {
+        collectFromGoal(g);
+      }
+      for (final gd in clause.guards ?? const <Guard>[]) {
+        markBase('${gd.predicate}/${gd.args.length}');
+      }
+    }
+  }
+
+  final keptProcedures = procedures
+      .where((p) => reachable.contains('${p.name}/${p.arity}'))
+      .toList();
+  final keptDecls = linked.procDeclarations
+      .where((d) => reachable.contains('${d.name}/${d.arity}'))
+      .toList();
+
+  return LinkResult(Program(keptProcedures, 0, 0), keptDecls);
 }
 
 /// Resolve a single goal in a clause body.

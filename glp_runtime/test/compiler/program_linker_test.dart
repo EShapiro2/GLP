@@ -103,7 +103,8 @@ void main() {
 
     setUp(() {
       modules = discoverProgram(cssnRoot, rootSelfGlpPath: rootSelfPath);
-      linkResult = linkProgram(modules, rootDir: cssnRoot);
+      // Inspect renaming/resolution on the pure step (pre-DCE).
+      linkResult = linkAndResolveModules(modules, rootDir: cssnRoot);
       linked = linkResult.program;
     });
 
@@ -242,7 +243,10 @@ void main() {
 
     setUp(() {
       final modules = discoverProgram(collisionRoot, rootSelfGlpPath: rootSelfPath);
-      linked = linkProgram(modules, rootDir: collisionRoot).program;
+      // Renaming/disambiguation is a pre-DCE concern: mod_a/mod_b export
+      // nothing and call nothing, so both dups are dead and would be pruned by
+      // linkProgram. Inspect the pure rename step.
+      linked = linkAndResolveModules(modules, rootDir: collisionRoot).program;
     });
 
     test('colliding procedures are disambiguated by module prefix', () {
@@ -273,6 +277,41 @@ void main() {
     });
   });
 
+  group('Dead-code elimination (step 5, dedicated fixture)', () {
+    // boot exports `run`, which calls `helper`; `dead` is never called. The
+    // pure link transform keeps every renamed procedure; eliminateDeadCode
+    // (the step-5 hand-off to the compiler) keeps only the reachable ones.
+    // See test/programs/linker_dce/.
+    const dceRoot = 'test/programs/linker_dce';
+
+    test('pure link (linkAndResolveModules) keeps all renamed procedures, including dead ones', () {
+      final modules = discoverProgram(dceRoot, rootSelfGlpPath: rootSelfPath);
+      final names = linkAndResolveModules(modules, rootDir: dceRoot)
+          .program
+          .procedures
+          .map((p) => p.name)
+          .toSet();
+      expect(names, contains('boot:run'));
+      expect(names, contains('boot:helper'));
+      expect(names, contains('boot:dead'));
+    });
+
+    test('linkProgram (with step-5 DCE) keeps reachable procedures and prunes unreachable ones', () {
+      final modules = discoverProgram(dceRoot, rootSelfGlpPath: rootSelfPath);
+      final pruned = linkProgram(modules, rootDir: dceRoot);
+      final names = pruned.program.procedures.map((p) => p.name).toSet();
+      expect(names, contains('run'), reason: 'entry-point alias kept');
+      expect(names, contains('boot:run'), reason: 'root export kept');
+      expect(names, contains('boot:helper'),
+          reason: 'reachable from run kept');
+      expect(names, isNot(contains('boot:dead')),
+          reason: 'unreachable pruned');
+      // Declarations are pruned in step with their procedures.
+      final declNames = pruned.procDeclarations.map((d) => d.name).toSet();
+      expect(declNames, isNot(contains('boot:dead')));
+    });
+  });
+
   group('Nested sub-program entry aliases (dedicated fixture)', () {
     // Sole coverage of the §3.4 nested-subprogram rule. Parent has root-level
     // `boot` (exported `play`) and nested `child/` (own self.glp) with `leaf`
@@ -287,7 +326,10 @@ void main() {
       expect(names, contains('boot'));
       expect(names, contains('leaf'));
 
-      final linked = linkProgram(modules, rootDir: nestedRoot).program;
+      // Renaming is a pre-DCE concern: the nested leaf:greet is not reached
+      // from the root export boot:play, so linkProgram would prune it. Inspect
+      // the pure rename step.
+      final linked = linkAndResolveModules(modules, rootDir: nestedRoot).program;
       final procNames = linked.procedures.map((p) => p.name).toSet();
       // Both modules' procedures are renamed and present.
       expect(procNames, contains('boot:play'));
