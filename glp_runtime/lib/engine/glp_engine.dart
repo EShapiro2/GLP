@@ -26,6 +26,8 @@ import 'package:glp_runtime/analysis/type_checker/type_checker.dart';
 import 'package:glp_runtime/analysis/type_checker/type_ast.dart';
 import 'package:glp_runtime/analysis/type_checker/param_expansion.dart';
 import 'package:glp_runtime/analysis/type_checker/type_environment_builder.dart';
+import 'package:glp_runtime/analysis/type_checker/program_dfa.dart' as tdfa;
+import 'package:glp_runtime/analysis/type_checker/well_typed_clause.dart' as wtc;
 import 'package:glp_runtime/runtime/module_hierarchy.dart';
 import 'package:glp_runtime/runtime/glp_activation.dart';
 import 'package:glp_runtime/multiagent/mad_context.dart';
@@ -127,6 +129,13 @@ class GlpEngine {
   final Map<String, BytecodeProgram> _loadedPrograms = {};
   final Map<String, ModuleInfo> _loadedModules = {};
 
+  /// Cumulative type environment for checking REPL goals against the body part
+  /// of Definition def:well-typed-clause (TGLP glp-semantics: a goal is
+  /// well-typed iff well-typed as a body). Lazily seeded with the root scope +
+  /// root self.glp, then extended with every loaded module/program. A goal is
+  /// checked against this env before it runs; see [_checkGoalWellTyped].
+  TypeEnvironment? _goalCheckEnv;
+
   /// Compiled serve/2 bytecode for dynamic module dispatch.
   late final BytecodeProgram _serveBytecode;
 
@@ -191,6 +200,8 @@ class GlpEngine {
     // Clear everything
     _loadedPrograms.clear();
     _loadedModules.clear();
+    // Re-seed lazily to root scope + root self.glp on next goal check.
+    _goalCheckEnv = null;
 
     // Restore root self.glp
     if (rootSelf != null) {
@@ -297,6 +308,9 @@ class GlpEngine {
       );
     }
 
+    // Make this module's declarations available to the REPL goal checker.
+    _extendGoalCheckEnv(module);
+
     return true;
   }
 
@@ -327,6 +341,11 @@ class GlpEngine {
     );
     _loadedPrograms['__program__'] = program;
 
+    // Make the program's module declarations available to the REPL goal checker.
+    for (final m in modules) {
+      _extendGoalCheckEnv(m.ast);
+    }
+
     return true;
   }
 
@@ -339,6 +358,17 @@ class GlpEngine {
       var trimmed = goalText.trim();
       if (trimmed.endsWith('.')) {
         trimmed = trimmed.substring(0, trimmed.length - 1).trim();
+      }
+
+      // Reject an ill-typed goal before running it. Soundness of well-typing
+      // (TGLP glp-semantics, Theorem thm:soundness) holds for runs from a
+      // well-typed initial goal; a goal is well-typed iff well-typed as a body.
+      final typeError = _checkGoalWellTyped(trimmed);
+      if (typeError != null) {
+        return ExecutionResult(
+          status: ExecutionStatus.failed,
+          error: typeError,
+        );
       }
 
       // Check if this is a conjunction
@@ -448,6 +478,48 @@ class GlpEngine {
   }
 
   // ============ Private Methods ============
+
+  /// Type-check a REPL goal against the loaded program's declarations.
+  ///
+  /// Returns null if the goal is well-typed (or cannot be parsed/checked here,
+  /// in which case the execution path reports the parse problem). Returns a
+  /// specific error message if the goal is ill-typed.
+  ///
+  /// The goal is parsed as a clause body so single goals and conjunctions are
+  /// handled uniformly; a guard (if the user wrote one) is a body goal for
+  /// type-checking, as in checkClauseFromAst. The check is the body part of
+  /// Definition def:well-typed-clause; see [wtc.checkGoal].
+  String? _checkGoalWellTyped(String trimmed) {
+    final List<Goal> atoms;
+    try {
+      final parseInput = '_glp_query_ :- $trimmed.';
+      final lexer = Lexer(parseInput);
+      final tokens = lexer.tokenize();
+      final parser = Parser(tokens);
+      final parsed = parser.parse();
+      if (parsed.procedures.isEmpty || parsed.procedures[0].clauses.isEmpty) {
+        return null;
+      }
+      final clause = parsed.procedures[0].clauses[0];
+      atoms = [
+        for (final g in clause.guards ?? const <Guard>[])
+          Goal(g.predicate, g.args, g.line, g.column),
+        ...?clause.body,
+      ];
+    } catch (_) {
+      // A parse error surfaces in the execution path with its own message.
+      return null;
+    }
+    if (atoms.isEmpty) return null;
+
+    final env = _ensureGoalCheckBaseEnv();
+    final dfa = tdfa.buildProgramDFA(env);
+    final result = wtc.checkGoal(atoms, dfa, env);
+    if (result.isWellTyped) return null;
+
+    final detail = result.errors.map((e) => '  ${e.message}').join('\n');
+    return 'Goal is not well-typed:\n$detail';
+  }
 
   Future<ExecutionResult> _runSingleGoal(String trimmed) async {
     final parseInput = '$trimmed.';
@@ -762,7 +834,12 @@ class GlpEngine {
     final tokens = lexer.tokenize();
     final parser = Parser(tokens);
     final selfModule = parser.parseModule();
+    return _mergeParsedModuleIntoEnv(env, selfModule);
+  }
 
+  /// Merge an already-parsed module's types/procedures into an environment.
+  TypeEnvironment _mergeParsedModuleIntoEnv(
+      TypeEnvironment env, Module selfModule) {
     // Extract templates before expansion removes them.
     // These chain to downstream modules for expansion of ancestor templates.
     final selfTemplates = <String, TypeDef>{};
@@ -794,6 +871,25 @@ class GlpEngine {
     return env.merge(TypeEnvironment(types, procs,
         paramProcDecls: paramProcs,
         typeTemplates: selfTemplates));
+  }
+
+  /// Seed (once) and return the base goal-check environment: the root scope
+  /// plus root self.glp, matching the start of [_buildAncestorScope].
+  TypeEnvironment _ensureGoalCheckBaseEnv() {
+    if (_goalCheckEnv != null) return _goalCheckEnv!;
+    var env = buildRootScopeEnvironment();
+    final rootSelfGlp = File(_rootSelfGlpPath);
+    if (rootSelfGlp.existsSync()) {
+      env = _mergeModuleIntoEnv(env, rootSelfGlp.readAsStringSync());
+    }
+    _goalCheckEnv = env;
+    return env;
+  }
+
+  /// Extend the goal-check environment with a loaded module's declarations, so
+  /// goals referencing its procedures can be type-checked.
+  void _extendGoalCheckEnv(Module module) {
+    _goalCheckEnv = _mergeParsedModuleIntoEnv(_ensureGoalCheckBaseEnv(), module);
   }
 
   ModuleInfo? _findModuleForProcedure(String procedureLabel) {

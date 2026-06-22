@@ -397,6 +397,77 @@ ClauseCheckResult checkClauseFromAst(
       activeInstantiations: activeInstantiations);
 }
 
+/// Check if a goal is well-typed in the given environment.
+///
+/// Specification: TGLP `sections/glp-semantics.tex` (Well-Typed Outcomes):
+/// "A goal G0 is well-typed by D if it is well-typed as a body." Being
+/// well-typed as a body is Definition~\ref{def:well-typed-clause}
+/// (`sections/well-typing.tex`) restricted to its body part:
+///   - condition 2: for each unit goal A in the goal, the produced moded term A'
+///     is well-typed by D; and
+///   - condition 3: every variable pair X / X? in the goal has dual types
+///     (relaxed to subtyping for body-body pairs per
+///     Definition~\ref{def:well-typed-clause-subtyping}).
+/// There is no head, so condition 1 (head well-typing) does not apply, and every
+/// variable pair is body-body — so [_checkClauseDuality] applies the body-body
+/// rule to all of them.
+///
+/// [goalAtoms] is the conjunction of unit goals (guards included, since a guard
+/// is a body goal for type-checking, as in [checkClauseFromAst]). Returns a
+/// [ClauseCheckResult] whose [ClauseCheckResult.errors] name the offending unit
+/// goal or variable pair; [ClauseCheckResult.modedHead] is null (a goal has no
+/// head).
+ClauseCheckResult checkGoal(
+  List<ast.Goal> goalAtoms,
+  ProgramDFA dfa,
+  TypeEnvironment env, {
+  InstantiationCollector? collector,
+  Map<String, ProcDecl> activeInstantiations = const {},
+}) {
+  final errors = <ClauseError>[];
+  final allVariableTypes = <String, VariableTypeInfo>{};
+  final variableLocations = <String, String>{};
+  final constructedModedBodyAtoms = <ModedTerm>[];
+
+  // Condition 2: each unit goal's produced moded term is well-typed by D.
+  for (int i = 0; i < goalAtoms.length; i++) {
+    final atom = goalAtoms[i];
+    final (atomResult, modedAtomTerm) = _checkBodyAtomWithTerm(atom, i, dfa, env,
+        callerVarTypes: allVariableTypes, collector: collector,
+        activeInstantiations: activeInstantiations);
+
+    if (modedAtomTerm != null) {
+      constructedModedBodyAtoms.add(modedAtomTerm);
+    }
+
+    if (!atomResult.isWellTyped) {
+      errors.add(BodyAtomError(atom.functor, i, atomResult.errors));
+    }
+
+    for (final entry in atomResult.variableTypes.entries) {
+      allVariableTypes.putIfAbsent(entry.key, () => entry.value);
+      variableLocations.putIfAbsent(entry.key, () => 'body atom $i');
+    }
+  }
+
+  // Condition 3: variable-pair duality. A goal is a body, so every pair is
+  // body-body; _checkClauseDuality applies the body-body rule to all pairs.
+  final dualityErrors = _checkClauseDuality(
+    allVariableTypes,
+    variableLocations,
+    dfa,
+  );
+  errors.addAll(dualityErrors);
+
+  return ClauseCheckResult(
+    isWellTyped: errors.isEmpty,
+    variableTypes: allVariableTypes,
+    errors: errors,
+    modedHead: null,
+    modedBodyAtoms: constructedModedBodyAtoms,
+  );
+}
+
 /// Get the set of labels (functor/arity or constant) that a clause accepts
 /// at a given argument position (1-indexed).
 ///

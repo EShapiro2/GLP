@@ -101,7 +101,7 @@ run2(Xr2).
 HEREDOC
 2>&1)
 
-check "p(X) unification" "X = a" "$a1"
+check "p(X) ill-typed: writer at input arg of p(Constant?)" "(p) is not well-typed" "$a1"
 check "Merge [1,2,3]+[a,b]" "Xs = \[1, a, 2, b, 3\]" "$a1"
 check "Clause lookup" "B = true" "$a1"
 check "run(true)" "succeeds" "$a1"
@@ -155,7 +155,7 @@ check "Quicksort single" "Xq2 = \[1\]" "$a3"
 check "Quicksort two" "Xq3 = \[1, 2\]" "$a3"
 check "Quicksort larger" "Xq4 = \[1, 2, 2, 4, 4, 6, 6, 7\]" "$a3"
 check "Quicksort five" "Xq5 = \[1, 2, 3, 4, 5\]" "$a3"
-check "Quicksort non-number" "Xq6 = <unbound>" "$a3"
+check "Quicksort non-number ill-typed: [a] is not a NumList" "Number type requires numeric literal" "$a3"
 check "Quicksort unbound tail" "Xq7 = <unbound>" "$a3"
 
 # --- A4: Insertion Sort ---
@@ -635,7 +635,7 @@ test_dl_to_list([1,2,3]\\[], Ldtl).
 HEREDOC
 2>&1)
 
-check "DL term parses" 'Xdl = \\(foo, bar)' "$a23"
+check "DL bind via = ill-typed: writer at input arg" "(Xdl, 0, input)" "$a23"
 check "DL dl_to_list" 'Ldtl = \[1, 2, 3\]' "$a23"
 
 # --- A24: Suspension tests ---
@@ -673,7 +673,7 @@ HEREDOC
 
 check "quoted functor" "Rqf1 = 6" "$a25"
 check "double 5" "Rqb1 = 10" "$a25"
-check "quoted in struct" "_equator" "$a25"
+check "struct bind via = ill-typed: writer at input arg" "(X, 0, input)" "$a25"
 
 # --- A26: Univ, assignment, MWM (stdlib, no file needed) ---
 echo "--- A26: Univ, assignment, MWM ---"
@@ -707,12 +707,12 @@ check "Univ compose foo" "T1 = foo()" "$a26"
 check "Univ compose bar" "T2 = bar(x, y)" "$a26"
 check "Univ decompose foo(a,b)" "L1 = \[foo, a, b\]" "$a26"
 check "Univ decompose bar(1,2,3)" "L2 = \[bar, 1, 2, 3\]" "$a26"
-check "Unify atom" "Xu1 = foo" "$a26"
-check "Unify number" "Xu2 = 42" "$a26"
-check "Unify struct" "Xu3 = foo(a, b)" "$a26"
-check "Unify list" "Xu4 = \[1, 2, 3\]" "$a26"
-check "Unify nested" "Xu5 = foo(bar(a))" "$a26"
-check "Unify suspend" "succeeds" "$a26"
+check "Unify atom ill-typed: writer at = input arg" "(Xu1, 0, input)" "$a26"
+check "Unify number ill-typed: writer at = input arg" "(Xu2, 0, input)" "$a26"
+check "Unify struct ill-typed: writer at = input arg" "(Xu3, 0, input)" "$a26"
+check "Unify list ill-typed: writer at = input arg" "(Xu4, 0, input)" "$a26"
+check "Unify nested ill-typed: writer at = input arg" "(Xu5, 0, input)" "$a26"
+check "Unify suspend ill-typed: writer at = input arg" "(Xu6, 0, input)" "$a26"
 check "Assign 3" "Xa1 = 3" "$a26"
 check "Assign add" "Xa2 = 8" "$a26"
 check "Assign sub" "Xa3 = 6" "$a26"
@@ -721,9 +721,28 @@ check "Assign div" "Xa5 = 5" "$a26"
 check "Assign precedence" "Xa6 = 11" "$a26"
 check "Assign parens" "Xa7 = 16" "$a26"
 check "Assign negative" "Xa8 = -5" "$a26"
-check "MWM empty" "Xmwm1 = \[\]" "$a26"
-check "MWM single" "Xmwm2 = \[1, 2, 3\]" "$a26"
-check "MWM two streams" "Xmwm3 = \[a, b, 1, 2\]" "$a26"
+check "MWM empty rejected: mwm/2 undeclared to type checker" "Undefined procedure: mwm/2" "$a26"
+check "MWM single rejected: mwm/2 undeclared to type checker" "Undefined procedure: mwm/2" "$a26"
+check "MWM two streams rejected: mwm/2 undeclared to type checker" "Undefined procedure: mwm/2" "$a26"
+
+# --- A26c: Well-typed-goal check (initial goal type-checked as a body goal) ---
+# The REPL type-checks every initial goal as a body goal (def:well-typed-clause)
+# before execution (TGLP modules.tex sec:runtime-boundary, glp-semantics.tex).
+# A well-typed goal runs; an ill-typed goal is rejected with a specific error
+# and never runs.
+echo "--- A26c: Well-typed-goal check ---"
+a26c=$("$REPL_RUN" <<HEREDOC
+$TYPED/p.glp
+p(a).
+merge([1,2],[3,4],Xgc1).
+p(Xgc2).
+:quit
+HEREDOC
+2>&1)
+
+check "Goal check: well-typed p(a) runs" "succeeds" "$a26c"
+check "Goal check: well-typed merge runs" "Xgc1 = \[1, 3, 2, 4\]" "$a26c"
+check "Goal check: ill-typed p(Xgc2) rejected (writer at input arg)" "(Xgc2, 0, input)" "$a26c"
 
 # --- A27: Reader-to-reader bug (befriend_intro) ---
 echo "--- A27: Reader-to-reader fail ---"

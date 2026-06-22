@@ -75,10 +75,15 @@ charlie_done.
       print('actor(alice, some_channel) succeeded');
     });
 
-    test('fails on unknown predicate', () async {
+    test('rejects unknown predicate as ill-typed (undeclared procedure)', () async {
+      // The initial goal is type-checked as a body goal (def:well-typed-clause)
+      // before execution (TGLP modules.tex sec:runtime-boundary). Calling an
+      // undeclared procedure is a type error, so the goal is rejected before it
+      // can reach the runtime entry-point lookup.
       final result = await engine.runGoal('unknown_predicate(x)');
       expect(result.failed, isTrue);
-      expect(result.error, contains('not found'));
+      expect(result.error, contains('not well-typed'));
+      expect(result.error, contains('Undefined procedure: unknown_predicate/1'));
     });
 
     test('runs conjunction', () async {
