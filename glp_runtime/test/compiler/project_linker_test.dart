@@ -92,7 +92,7 @@ void main() {
     test('all modules type-check successfully', () {
       final modules = discoverProject(cssnRoot, rootSelfGlpPath: rootSelfPath);
       // Should not throw
-      expect(() => typeCheckProject(modules), returnsNormally);
+      expect(() => typeCheckProject(modules, rootDir: cssnRoot), returnsNormally);
     });
   });
 

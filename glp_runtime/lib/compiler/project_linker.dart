@@ -18,9 +18,6 @@ import 'primitive_layer.dart';
 import '../analysis/type_checker/type_ast.dart';
 import '../analysis/type_checker/param_expansion.dart';
 import '../analysis/type_checker/type_checker.dart';
-import '../analysis/type_checker/well_typed_clause.dart'
-    show InstantiationCollector, CollectedInstantiation;
-import '../analysis/type_checker/program_dfa.dart' show buildProgramDFA;
 import '../runtime/module_hierarchy.dart';
 import '../analysis/type_checker/type_environment_builder.dart';
 
@@ -388,178 +385,98 @@ List<String> _ancestorSelfGlpFiles(String rootDir, String programsDir) {
   return result;
 }
 
-/// Type-check a project.
+/// Type-check a project on its LINKED program (paper: modules §Module-System
+/// Design "Self-contained type checking", §Static Linking; def:program —
+/// soundness is established on the linked program). Linking renames every
+/// procedure to `M:p` and resolves every call (a cross-module `M' # p` becomes a
+/// local `M':p`); the whole project is then one program in which a cross-module
+/// call is an ordinary local call. The instantiation closure (§Parameterised
+/// Procedure Declarations) therefore induces and checks a parameterised callee's
+/// clauses at every instantiation a call supplies — in both directions and
+/// through parametric intermediaries — which a per-module check, stopping at the
+/// `#` boundary, does not. Renaming makes procedure names unambiguous across
+/// modules and type identity is structural, so no merged-environment juggling is
+/// needed. A parameterised procedure with no instantiation goes unchecked, not
+/// rejected (typed-program.md "Programs and Modules").
 ///
-/// Each module is checked against its own ancestor scope (scoping-correct,
-/// collision-free — there is no merged environment). A parameterized procedure
-/// is the one cross-module case: its declaration is a clause template, and per
-/// the clause-template rule (docs/type system/typed-program.md; plan Step 1) its
-/// defining clauses must be well-typed against each instantiation inferred from
-/// a call site. Because that instantiation's monomorphic declaration carries its
-/// concrete types from the caller's scope, the defining clauses are re-checked
-/// there — never by flattening all modules into one environment.
-///
-/// Pass 1: per-module checks (verdicts for the non-parameterized case), while a
-/// shared collector records every call-site instantiation. A parameterized
-/// procedure has no well-typing of its own and is given no verdict here.
-/// Phase 2: each distinct instantiation's defining clauses are checked against
-/// its monomorphic declaration in the scope it was inferred in. A parameterized
-/// procedure with zero collected instantiations is not checked — with a free
-/// type parameter it is not a program (typed-program.md "Programs and Modules");
-/// there is no wildcard fallback, which would be unsound.
-///
-/// Throws on type errors with module name and error details.
-void typeCheckProject(List<DiscoveredModule> modules) {
-  final collector = InstantiationCollector();
-  // Keys of parametric procedures certified by Phase A (abstract-instance check)
-  // across all modules; the closure suppresses re-reporting these.
-  final certifiedKeys = <String>{};
+/// Throws on type errors with details.
+void typeCheckProject(List<DiscoveredModule> modules, {required String rootDir}) {
+  // Soundness is established on the LINKED program (paper: modules §Module-System
+  // Design "Self-contained type checking", §Static Linking; def:program). We link
+  // first — renaming every procedure to `M:p` and resolving every call, including
+  // each cross-module `M' # p` to a local `M':p` — then type-check the single
+  // linked program. In it a cross-module call is an ordinary local call, so the
+  // instantiation closure (§Parameterised Procedure Declarations) induces and
+  // checks the callee's clauses at every instantiation the call supplies — in both
+  // directions and through parametric intermediaries. Renaming makes every
+  // procedure name unambiguous across modules, and type identity is structural, so
+  // no per-module environment juggling is needed.
+  final linked = linkProject(modules, rootDir: rootDir);
 
-  // Pass 1: per-module checks + instantiation collection.
+  // The linked program's type definitions: the union of every module's own type
+  // definitions, deduplicated by name (structural identity makes duplicates the
+  // same type). Root-scope types are supplied by checkModule's root scope.
+  final typeDefs = <String, TypeDef>{};
   for (final mod in modules) {
-    // Skip modules with no procedure declarations (untyped orchestration)
-    if (mod.ast.procDeclarations.isEmpty) continue;
-
-    // Only type-check modules that have non-imported declarations
-    final hasOwnDecls = mod.ast.procDeclarations.any((d) => !d.imported);
-    if (!hasOwnDecls) continue;
-
-    // Run partial evaluation before type checking (same pipeline as compiler)
-    final program = Program(mod.ast.procedures, mod.ast.line, mod.ast.column);
-    final pe = PartialEvaluator();
-    final transformed = pe.transformDefinedGuards(program);
-
-    final result = checkModule(
-      mod.ast,
-      transformedProcedures: transformed.procedures,
-      ancestorScope: mod.ancestorScope,
-      collector: collector,
-      certifiedKeys: certifiedKeys,
-    );
-
-    if (!result.isWellTyped) {
-      final errors = result.errors
-          .map((e) => '  ${e.message} at line ${e.line}')
-          .join('\n');
-      throw Exception(
-          'Type checking failed for ${mod.moduleName} (${mod.filePath}):\n$errors');
-    }
-  }
-
-  // (B) Linked-program obligation across the `#` seam (paper: modules §Design
-  // "Self-contained type checking" / §Static Linking — soundness is established
-  // on the linked program). The per-module pass checks a cross-module call only
-  // against the local `imported` declaration (`_checkRemoteGoal`); it never
-  // re-checks the callee's body. A parametric exported procedure instantiated
-  // only across the boundary therefore escapes the per-instantiation check. Seed
-  // each `imported procedure M#p(T...)` — the concrete instantiation of p the
-  // importer commits to — so the closure below checks p's defining clauses at it,
-  // in an environment holding every module's types and declarations.
-  _seedCrossModuleInstantiations(modules, collector);
-
-  // Phase 2: per-instantiation defining-clause checking, closed under calls
-  // (calls inside an instantiated parameterized body induce further
-  // instantiations) to a fixpoint, with polymorphic recursion rejected. The
-  // focused env for each instantiation is the caller scope where it was inferred
-  // (it already holds the concrete types), with the procedure rebound to the
-  // monomorphic declaration the instantiation produces — built inside the helper.
-  final instResults = checkInstantiationsClosed(
-    collector,
-    (procKey) => _definingClausesForKey(modules, procKey),
-    certifiedKeys: certifiedKeys,
-  );
-  for (final ir in instResults) {
-    if (!ir.result.isWellTyped) {
-      final errors = ir.result.errors
-          .map((e) => '  ${e.message} at line ${e.line}')
-          .join('\n');
-      throw Exception(
-          'Type checking failed for ${ir.inst.procKey} at instantiation '
-          '${ir.inst.monoDecl.argTypes.join(', ')}:\n$errors');
-    }
-  }
-
-  // A parameterized procedure with no collected instantiation is not checked:
-  // with a free type parameter it is not a program (typed-program.md "Programs
-  // and Modules"). There is no wildcard fallback — it would be unsound.
-}
-
-/// (B) Seed cross-module instantiations so the linked program is fully checked.
-///
-/// Builds the linked-program type environment — the union of every module's
-/// expanded types, templates, parameterised-procedure declarations, and ordinary
-/// procedure declarations — so that a callee's clauses resolve against its own
-/// scope while an importer's concrete instantiation types are also present. Each
-/// `imported procedure M#p(T...)` declaration is the concrete instantiation of
-/// `p` the importer commits to; it is recorded against `p`'s defining clauses
-/// (resolved across modules by [_definingClausesForKey]). A callee defined
-/// outside the project resolves to no clauses and is skipped by the closure; an
-/// unresolved (free-parameter) instantiation is deferred by the closure's
-/// type-presence guard. Both are correct.
-void _seedCrossModuleInstantiations(
-    List<DiscoveredModule> modules, InstantiationCollector collector) {
-  final linkedTypes = <String, TypeDef>{};
-  final linkedProcs = <String, ProcDecl>{};
-  final linkedTemplates = <String, TypeDef>{};
-  final linkedParamDecls = <String, ProcDecl>{};
-  final imports = <ProcDecl>[];
-
-  for (final mod in modules) {
-    final base = mod.ancestorScope;
-    final expanded = expandParameterizedTypes(mod.ast,
-        knownTypeNames: base.types.keys.toSet(),
-        externalTemplates: base.typeTemplates);
-    final env = buildTypeEnvironment(expanded, ancestorScope: base);
-
-    linkedTypes.addAll(base.types);
-    linkedTypes.addAll(env.types);
-    linkedTemplates.addAll(base.typeTemplates);
     for (final td in mod.ast.typeDefs) {
-      if (td.isParameterized) linkedTemplates[td.name] = td;
-    }
-    linkedParamDecls.addAll(env.paramProcDecls);
-    base.procedures.forEach((k, v) => linkedProcs.putIfAbsent(k, () => v));
-
-    for (final d in env.procedures.values) {
-      // Every declaration (local under `p/n`, imported under `M#p/n`) joins the
-      // linked env, so a seeded callee's body resolves both its local helpers and
-      // its own cross-module `#` calls against their import declarations.
-      linkedProcs.putIfAbsent(d.qualifiedKey, () => d);
-      if (d.imported) imports.add(d);
+      typeDefs.putIfAbsent(td.name, () => td);
     }
   }
 
-  if (imports.isEmpty) return;
-
-  final linkedEnv = TypeEnvironment(linkedTypes, linkedProcs,
-      paramProcDecls: linkedParamDecls, typeTemplates: linkedTemplates);
-  final linkedDFA = buildProgramDFA(linkedEnv);
-
-  for (final imp in imports) {
-    // imp.name/imp.key are the callee's bare name/arity; imp.argTypes are the
-    // importer's concrete instantiation types (parameterised-expanded).
-    final monoDecl = ProcDecl(imp.name, imp.argTypes, imp.line, imp.column,
-        exported: imp.exported);
-    collector.record(
-        CollectedInstantiation(imp.key, monoDecl, linkedEnv, linkedDFA));
-  }
-}
-
-/// Find the defining clauses for a procedure "name/arity" among the project's
-/// modules. Returns null if the procedure is defined outside the project (e.g.
-/// in the root scope), in which case it is not the project's responsibility to
-/// check. If more than one module defines it, the clauses are concatenated.
-List<Clause>? _definingClausesForKey(
-    List<DiscoveredModule> modules, String procKey) {
-  List<Clause>? found;
-  for (final mod in modules) {
-    for (final proc in mod.ast.procedures) {
-      if ('${proc.name}/${proc.arity}' == procKey) {
-        (found ??= <Clause>[]).addAll(proc.clauses);
-      }
+  // A module may redefine a root-scope operation (e.g. send/receive/new_channel/
+  // merge) with local clauses but no local declaration, relying on the root
+  // declaration. Linking renames those clauses to `M:p` while the root
+  // declaration stays bare, leaving the renamed procedure undeclared in the
+  // linked program. Supply a renamed declaration from the root scope so the
+  // procedure is checked (entry-point aliases, unqualified, are left undeclared —
+  // they are trivial forwarders).
+  final rootEnv = buildRootScopeEnvironment();
+  final procDecls = [...linked.procDeclarations];
+  final declKeys = {for (final d in procDecls) d.key};
+  for (final p in linked.program.procedures) {
+    final key = '${p.name}/${p.arity}';
+    if (declKeys.contains(key)) continue;
+    final colon = p.name.lastIndexOf(':');
+    if (colon < 0) continue; // unqualified entry-point alias
+    final bareKey = '${p.name.substring(colon + 1)}/${p.arity}';
+    // Prefer the parametric template over the wildcard-instantiated version in
+    // `procedures`: a redefined root op (send/receive/new_channel/merge) is
+    // parametric, and the renamed copy must carry the template so call-site
+    // inference (Case B) concretises it rather than leaving wildcard types.
+    final rd = rootEnv.paramProcDecls[bareKey] ?? rootEnv.procedures[bareKey];
+    if (rd != null) {
+      procDecls.add(ProcDecl(p.name, rd.argTypes, rd.line, rd.column,
+          exported: rd.exported, isBuiltin: rd.isBuiltin));
+      declKeys.add(key);
     }
   }
-  return found;
+
+  final flat = Module(
+    typeDefs: typeDefs.values.toList(),
+    procDeclarations: procDecls,
+    procedures: linked.program.procedures,
+    line: 0,
+    column: 0,
+  );
+
+  final pe = PartialEvaluator();
+  final transformed = pe.transformDefinedGuards(linked.program);
+
+  // rejectUninstantiatedInspecting: false — within a program a callerless
+  // parametric procedure goes unchecked, not rejected (typed-program.md "Programs
+  // and Modules"); the standalone reject is for single-file/REPL loads only.
+  final result = checkModule(
+    flat,
+    transformedProcedures: transformed.procedures,
+    rejectUninstantiatedInspecting: false,
+  );
+
+  if (!result.isWellTyped) {
+    final errors = result.errors
+        .map((e) => '  ${e.message} at line ${e.line}')
+        .join('\n');
+    throw Exception('Type checking failed for linked program:\n$errors');
+  }
 }
 
 /// Link all modules into a single flat Program.

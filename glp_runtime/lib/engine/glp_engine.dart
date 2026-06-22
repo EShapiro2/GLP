@@ -316,7 +316,7 @@ class GlpEngine {
       throw Exception('No modules found in $projectDir');
     }
 
-    typeCheckProject(modules);
+    typeCheckProject(modules, rootDir: projectDir);
 
     final linked = linkProject(modules, rootDir: projectDir);
     final program = _compiler.compileProgram(

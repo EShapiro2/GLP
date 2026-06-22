@@ -679,7 +679,7 @@ class TypeChecker {
 /// clauses. A parameterized procedure is never checked under the wildcard `_`
 /// declaration — only per concrete instantiation (typed-program.md "Programs
 /// and Modules"); one never instantiated is not type-checked.
-TypeCheckResult checkModule(ast.Module module, {List<ast.Procedure>? transformedProcedures, TypeEnvironment? ancestorScope, wtc.InstantiationCollector? collector, Set<String>? certifiedKeys}) {
+TypeCheckResult checkModule(ast.Module module, {List<ast.Procedure>? transformedProcedures, TypeEnvironment? ancestorScope, wtc.InstantiationCollector? collector, Set<String>? certifiedKeys, bool rejectUninstantiatedInspecting = true}) {
   // Build base environment first so we know all type names for expansion.
   // This avoids mistaking root scope type names for type parameters.
   final baseEnv = ancestorScope ?? buildRootScopeEnvironment();
@@ -804,10 +804,17 @@ TypeCheckResult checkModule(ast.Module module, {List<ast.Procedure>? transformed
   // a program (project linker) an instantiation supplies the verdict; a callerless
   // procedure there goes unchecked, not rejected (typed-program.md "Programs and
   // Modules").
+  // The linked-program check (project linker) passes rejectUninstantiatedInspecting
+  // = false: it checks the whole program as one flattened module, where a
+  // callerless parametric procedure goes unchecked, not rejected (typed-program.md
+  // "Programs and Modules"). The standalone reject below is for single-file/REPL
+  // loads only.
   final instantiatedKeys = <String>{
     for (final ir in instResults) ir.inst.procKey,
   };
-  for (final entry in typeEnv.paramProcDecls.entries) {
+  for (final entry in rejectUninstantiatedInspecting
+      ? typeEnv.paramProcDecls.entries
+      : const Iterable<MapEntry<String, ProcDecl>>.empty()) {
     final key = entry.key;
     if (cert.certifiedKeys.contains(key)) continue; // abstract route — verdict already given
     final cls = clausesByKey[key];

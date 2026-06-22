@@ -1830,7 +1830,7 @@ $GLP_DIR/programs/tests/cross_module_inspect_neg/
 :quit
 HEREDOC
 2>&1)
-check "cross-module param-inspect project rejected" "Type checking failed for relay/2" "$output"
+check "cross-module param-inspect project rejected" "Head of lib:relay" "$output"
 check_not "cross-module project not loaded green" "Loaded project: .*cross_module_inspect_neg" "$output"
 
 echo ""
