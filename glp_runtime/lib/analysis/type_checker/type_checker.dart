@@ -792,10 +792,40 @@ TypeCheckResult checkModule(ast.Module module, {List<ast.Procedure>? transformed
     warnings.addAll(ir.result.warnings);
   }
 
-  // A parameterized procedure with no collected instantiation is not checked:
-  // with a free type parameter it is not a program (typed-program.md "Programs
-  // and Modules"). There is no wildcard fallback — checking it under the
-  // wildcard `_` declaration is unsound.
+  // A parameterized procedure that did NOT take the abstract route inspects a
+  // type parameter (a functor/constant at a parameter position) or uses a
+  // parameter as a type-definition alternative, so it has no well-typing of its
+  // own and acquires one only per instantiation. Loaded standalone (single
+  // file/REPL) with no collected instantiation, there is nothing to certify, so
+  // it is rejected: the abstract-parameter route is the sole means of certifying
+  // a parametric procedure outside a program (typed-program.md "Modular Checking
+  // via Abstract Parameters", sec:abstract-parameters). There is no wildcard
+  // fallback — checking it under the wildcard `_` declaration is unsound. Within
+  // a program (project linker) an instantiation supplies the verdict; a callerless
+  // procedure there goes unchecked, not rejected (typed-program.md "Programs and
+  // Modules").
+  final instantiatedKeys = <String>{
+    for (final ir in instResults) ir.inst.procKey,
+  };
+  for (final entry in typeEnv.paramProcDecls.entries) {
+    final key = entry.key;
+    if (cert.certifiedKeys.contains(key)) continue; // abstract route — verdict already given
+    final cls = clausesByKey[key];
+    if (cls == null || cls.isEmpty) continue; // defined outside this unit
+    if (instantiatedKeys.contains(key)) continue; // checked per instantiation
+    final decl = entry.value;
+    errors.add(TypeError(
+      'Parameterized procedure ${decl.name}/${decl.arity} inspects a type '
+      'parameter (or uses a parameter as a type-definition alternative) and has '
+      'no instantiation, so it has no standalone well-typing. Declare a concrete '
+      'element type for the inspected argument, or load it within a program that '
+      'instantiates it (typed-program.md "Modular Checking via Abstract '
+      'Parameters").',
+      decl.line,
+      decl.column,
+      '${decl.name}/${decl.arity}',
+    ));
+  }
 
   return TypeCheckResult(errors, warnings);
 }

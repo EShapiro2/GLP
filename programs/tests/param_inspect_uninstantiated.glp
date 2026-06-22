@@ -1,4 +1,4 @@
-%% param_inspect_uninstantiated.glp — POSITIVE guard, case (iii) of the
+%% param_inspect_uninstantiated.glp — NEGATIVE guard, case (iii) of the
 %% abstract-parameter routing matrix (parameterized-types.tex
 %% sec:abstract-parameters; spec: docs/type system/typed-program.md "Modular
 %% Checking via Abstract Parameters").
@@ -8,10 +8,14 @@
 %% lem:parametricity, an inspecting procedure is NOT parametrically well-typed and
 %% takes the PER-INSTANTIATION route — it is not certified by the abstract route.
 %%
-%% Here pskip is never instantiated (no monomorphic caller pins X), so the
-%% per-instantiation closure never checks it.  With a free type parameter it is not
-%% a program (typed-program.md "Programs and Modules"), so it has no well-typing of
-%% its own and the file LOADS clean despite the inspection.
+%% Here pskip is never instantiated (no monomorphic caller pins X).  The
+%% abstract-parameter route is the sole means of certifying a parametric procedure
+%% outside a program, and an inspecting procedure acquires a well-typing only per
+%% instantiation, so a checker presented with it and no instantiation has nothing
+%% to certify.  Loaded standalone it is therefore REJECTED
+%% (sec:abstract-parameters).  Within a program an instantiation supplies the
+%% verdict; a callerless procedure there goes unchecked (typed-program.md "Programs
+%% and Modules").
 %%
 %% Contrast with case (iv), min_polarity_bug3.glp: an inspecting procedure that IS
 %% instantiated, where the per-instantiation check runs and (there) rejects.

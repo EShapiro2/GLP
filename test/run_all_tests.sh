@@ -877,10 +877,6 @@ POSITIVE_FILES=(
     "$BOOK/recursive/structure_processing/traversals.glp"
     "$BOOK/recursive/structure_processing/tree_sum.glp"
 
-    # --- book/social_graph ---
-    "$BOOK/social_graph/channel.glp"
-    "$BOOK/social_graph/typed_social_agent.glp"
-
     # --- book/social_networks ---
     "$BOOK/social_networks/broadcast.glp"
     "$BOOK/social_networks/replicate.glp"
@@ -892,13 +888,11 @@ POSITIVE_FILES=(
 
     # --- book/streams/producers_consumers ---
     "$BOOK/streams/producers_consumers/biased_merge.glp"
-    "$BOOK/streams/producers_consumers/cooperative.glp"
     "$BOOK/streams/producers_consumers/distribute.glp"
     "$BOOK/streams/producers_consumers/distribute_binary.glp"
     "$BOOK/streams/producers_consumers/distribute_ground.glp"
     "$BOOK/streams/producers_consumers/distribute_indexed.glp"
     "$BOOK/streams/producers_consumers/fair_merge.glp"
-    "$BOOK/streams/producers_consumers/merge_dynamic.glp"
     "$BOOK/streams/producers_consumers/merge_simple.glp"
     "$BOOK/streams/producers_consumers/merge_tree.glp"
     "$BOOK/streams/producers_consumers/mwm.glp"
@@ -930,11 +924,6 @@ POSITIVE_FILES=(
     # whole input takes the abstract route and is certified clean against its
     # abstract instance, even though it is never instantiated.
     "$GLP_DIR/programs/tests/param_abstract_covered.glp"
-    # Case (iii): a parametric proc that INSPECTS its parameter takes the
-    # per-instantiation route; never instantiated here, so it is never checked and
-    # loads clean. (Case ii is the NEGATIVE param_free_not_checked.glp; case iv is
-    # the NEGATIVE min_polarity_bug3.glp.)
-    "$GLP_DIR/programs/tests/param_inspect_uninstantiated.glp"
 )
 
 # Build REPL input: load each positive file with :clear between
@@ -1111,6 +1100,25 @@ NEGATIVE_FILES=(
     # go/1. The abstract route catches the gap whether or not pdrop is instantiated;
     # the instantiation does not mask it.
     "$GLP_DIR/programs/tests/param_instantiated_coverage_gap.glp"
+
+    # --- Abstract-parameter routing matrix, case (iii): a parametric proc that
+    # INSPECTS its parameter (a constant/functor at a parameter position) takes the
+    # per-instantiation route and is NOT certified by the abstract route. Loaded
+    # standalone with no instantiation it has nothing to certify, so it is rejected
+    # (typed-program.md "Modular Checking via Abstract Parameters",
+    # sec:abstract-parameters). Within a program an instantiation supplies the verdict.
+    "$GLP_DIR/programs/tests/param_inspect_uninstantiated.glp"
+
+    # --- book/ examples (owned by GLP-ICLP) mis-declared with a bare type
+    # parameter where a concrete type belongs: a constant/functor sits at the
+    # parameter position, so they inspect the parameter, take the per-instantiation
+    # route, and loaded standalone with no instantiation have nothing to certify —
+    # rejected (sec:abstract-parameters). Listed as expected rejections until
+    # GLP-ICLP re-declares or prunes them.
+    "$BOOK/social_graph/channel.glp"
+    "$BOOK/social_graph/typed_social_agent.glp"
+    "$BOOK/streams/producers_consumers/cooperative.glp"
+    "$BOOK/streams/producers_consumers/merge_dynamic.glp"
 )
 
 # Build REPL input with :clear between each negative file

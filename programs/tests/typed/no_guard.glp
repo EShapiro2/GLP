@@ -1,5 +1,5 @@
 % no_guard.glp - Pattern matching without guard
 
-exported procedure no_guard(Stream(X)?, Stream(X)).
+exported procedure no_guard(Stream(Constant)?, Stream(Constant)).
 no_guard([N|Xs], [N?, a, b|Xs?]).
 no_guard([], []).
