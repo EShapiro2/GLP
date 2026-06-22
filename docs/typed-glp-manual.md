@@ -1,7 +1,7 @@
 # Typed GLP Manual
 
-**Version**: 2.15
-**Date**: 2026-06-10
+**Version**: 2.16
+**Date**: 2026-06-22
 **Status**: ACTIVE
 
 This manual captures essential programming principles and advice for writing correct Typed GLP programs. It covers the SRSW (Single-Reader Single-Writer) constraint, type declarations, moding, modules, parameterized types, and common pitfalls.
@@ -866,6 +866,10 @@ The type's `?` describes what's IN the data structure. The clause variable's `?`
 
 Section 9.4 notes that `_` and `_?` in type definitions are type symbols (meaning "any type"), not anonymous variables. Section 16 generalizes this: ALL `?` annotations in type definitions describe data modes, not clause variable constraints.
 
+### 16.4 Polarity Must Agree Across a Boundary the Checker Cannot Span
+
+The checker compares a writer and its reader only when both occur in one program. When a channel crosses a boundary the checker does not span — two modules typed against different message definitions, or two agents — each side is checked against its own definition and the two are never compared. If the producer's slot carries no `?` (it forwards a reader) while the consumer's slot carries `?` (it expects to write), both sides type-check yet the channel stalls: a reader meets a reader and never commits. Make the slot polarity identical on both sides. This is the runtime boundary of the Moded-Types paper, §Type-Compatible Attestation Between Agents.
+
 ---
 
 ## 17. Parameterized Types
@@ -933,6 +937,16 @@ With parameterized types, the following Section 14 workarounds are no longer nee
 | `new_agent_channel(AgentChannel, ...)` | `new_channel(Channel(X,Y), ...)` |
 
 The generic procedures `merge`, `send`, `new_channel` work directly with precise types through parameter inference.
+
+### 17.7 Per-Instantiation Checking
+
+A parameterized procedure has no type of its own; it is checked once per instantiation, the type checker matching each call's argument types against the declaration and checking the clauses at that instantiation. Three consequences:
+
+- A parameterized procedure with no caller in its program is never instantiated, and so is not certified. If a parameterized export is used only from outside (no internal call), the program has a free type parameter, has no linked program, and is not compiled.
+- A parameter-inspecting module — one that matches a concrete functor at a parameter position — loaded on its own is rejected: with the parameter free there is nothing to check it against. It is checked only when a program instantiates it.
+- A cross-module `#` call instantiates the callee's parameters as a local call does; the whole-program check verifies the callee's clauses at every instantiation any call induces.
+
+Formal account: Moded-Types paper, §Parameterised Procedure Declarations and §Modular Checking via Abstract Parameters.
 
 ---
 
@@ -1071,6 +1085,10 @@ GLP> social_graph/
 
 **Dynamic dispatch** (for independently loaded modules): Each module is loaded and activated separately. Cross-module calls route through GLP channels at runtime. This is the model described in Sections 19.3–19.5.
 
+**The unit of compilation and execution is a program** — a directory hierarchy whose root `self.glp` exports nothing — and only a whole program whose linked program is well-typed carries the soundness guarantee (Moded-Types paper, §Static Linking). A single module, or a subprogram that exports something, may be loaded on its own as a development aid; in composition it is checked in its parent's context, its parameters instantiated by the calls above it.
+
+Static linking is fully type-checked — the goal, every clause, every cross-module instantiation. **Dynamic dispatch is not yet soundly typed**: the load-time check compares declared interfaces, not the terms exchanged, and a parametric dynamically-dispatched import is not checked at each instantiation; per-instantiation checking across dynamic dispatch needs dynamic type-checking, which is future work. **Discipline:** trace a runtime bug by first recompiling the whole program with static linking and re-checking it as one — most mode bugs are whole-program type errors invisible to a single-module or dynamic load.
+
 ### 19.8 REPL Workflow for Dynamic Dispatch
 
 ```
@@ -1145,10 +1163,25 @@ Type identity is structural. Two independently defined types with the same alter
 
 ---
 
+## 21. Initial Goals Are Type-Checked
+
+Every goal posted at the REPL (or at boot) is type-checked before it runs. A goal is checked as a *body goal* — condition 2 of the well-typed-clause definition (each unit goal, as a produced moded term, well-typed by the program's types) plus the body-body variable-pair rule — and an ill-typed goal is rejected with a specific error and never runs. It is checked against one program's types; it may be conjunctive, but every unit goal is checked against that one program.
+
+Consequences:
+
+- A query variable is a body variable and obeys §2A. At an output (produce) position it is a writer the run fills and you then read — the normal way to obtain a result. At an input (consume) position a bare query variable is a writer where a reader is wanted, and is rejected.
+- `X = foo` does not type-check: `=` is declared `=(_?, _)`, so the left argument is consumed and `X` there is a writer at a consume position. Write `foo = X` — the value is consumed, `X` is produced — which binds `X`.
+- A goal calling an undeclared procedure is rejected as undeclared, not run and failed.
+
+Formal definition: Moded-Types paper, §Type-Compatible Attestation Between Agents, and the well-typed-goal definition in the semantics section.
+
+---
+
 ## Version History
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 2.16 | 2026-06-22 | Type/module updates: §17.7 (per-instantiation checking; uninstantiated parametric exports not certified); §19.7 (program is the unit of compilation and execution; dynamic dispatch not yet soundly typed; recompile-whole-program-first discipline); §21 (initial goals type-checked as body goals; `foo = X` not `X = foo`); §16.4 (polarity must agree across boundaries the checker cannot span) |
 | 2.15 | 2026-06-10 | Added §19.10: the `-expose` directive (lift another module's exports into a `self.glp`'s subtree scope; innermost-first shadowing; collision is an error) |
 | 2.14 | 2026-06-10 | §8.2: multi-clause root `self.glp` procedures (e.g. `merge/3`) resolve through the ancestor scope chain, subject to innermost-first shadowing; unfolding is a single-unit-clause optimisation, not the resolution mechanism (A3 module-system amendment) |
 | 2.13 | 2026-05-24 | Rewrote Section 8 (Guards: What May Appear in a Guard): added §8.1 explicit guard rule (compile-time unfoldability; no recursion; multi-clause off-limits until PE extended), renumbered single-unit-clause material to §8.2/§8.3 as the safe special case rather than a separate construct |
