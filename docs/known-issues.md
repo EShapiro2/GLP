@@ -620,12 +620,9 @@ The REPL suite (`bash test/run_all_tests.sh`) is **496/496 green** on the same t
 
 ---
 
-## Issue 18: malformed channel `ch(S?, _)` reduces to silent `otherwise` instead of a diagnosable error
+## Issue 18: malformed channel `ch(S?, _)` diagnostic — DROPPED (2026-06-22)
 
-**Status**: Open — ticketed 2026-06-22 (spin-off of the Issue-13 disproof). **Not yet fixed.**
-**Layer**: partial evaluator (`partial_evaluator.dart` `transformDefinedGuards`; duplicate in `analyzer.dart`).
-
-`receive`/`send`/`new_channel` are defined guards unfolded by the PE. When a channel literal has an **anonymous `_` at the Out position** (a writer with no paired reader — a malformed/half-open channel), the PE statically reduces `receive(Pattern, ch(S?, _), Cont)` to failure, so the clause silently compiles to its `otherwise` branch. A fully-runtime channel instead yields the load error `Cannot reduce defined guard ... at compile time`; a malformed literal should likewise be a **diagnosable error**, not a silent `otherwise` that masquerades as a clean classification. Repro: `programs/tests/recv2x2/` (`boot_b`/`boot_d` → otherwise; `boot_a`/`boot_c` with a bound Out → matched). This is the trap that produced the phantom Issue 13.
+Ticketed then **dropped**: a PE diagnostic for an unpaired-Out channel (`ch(S?, _)` silently reducing `receive` to `otherwise`). Not pursued — the only bugs it would have helped *diagnose* (Issues 13 and 15) are resolved phantoms, and distinguishing an unpaired `_` Out from `new_channel`'s legitimate paired-but-unbound Out isn't worth the `lib/compiler` risk for a pure diagnostics gain. (Evidence probe `programs/tests/recv2x2/` retained.)
 
 ---
 
