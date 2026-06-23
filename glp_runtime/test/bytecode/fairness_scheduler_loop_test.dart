@@ -5,24 +5,32 @@ import 'package:glp_runtime/runtime/runtime.dart';
 import 'package:glp_runtime/runtime/machine_state.dart';
 import 'package:glp_runtime/runtime/scheduler.dart';
 
+/// Tail-recursion fairness on the live tail-call op (ISA §9.2).
+///
+/// A goal that tail-loops via `requeue` must not starve its isolate: the
+/// requeue handler applies the 26-step tail-recursion budget, yielding and
+/// re-enqueueing so a ready sibling on the same scheduler progresses. Without
+/// the budget, goal 1 would loop forever inside one run() call and goal 2 would
+/// never run.
 void main() {
-  test('Two goals alternate due to 26-step tail yield', () {
+  test('a tail-recursive requeue loop yields, letting a ready sibling run', () {
     final rt = GlpRuntime();
 
+    // loop :- true | loop.  — a clause whose body tail-calls itself.
     final p = BytecodeProgram([
-      Label('LOOP'),
-      TailStep('LOOP'),
+      Label('loop'),
+      ClauseTry(),
+      Commit(),
+      Requeue('loop', 0),
     ]);
     final runner = BytecodeRunner(p);
     final sched = Scheduler(rt: rt, runner: runner);
 
-    rt.gq.enqueue(GoalRef(1, p.labels['LOOP']!));
-    rt.gq.enqueue(GoalRef(2, p.labels['LOOP']!));
+    rt.gq.enqueue(GoalRef(1, p.labels['loop']!));
+    rt.gq.enqueue(GoalRef(2, p.labels['loop']!));
 
-    final ran1 = sched.drain(maxCycles: 2);
-    expect(ran1, [1, 2], reason: 'each goal runs until its first yield');
-
-    final ran2 = sched.drain(maxCycles: 2);
-    expect(ran2, [1, 2], reason: 'after re-enqueue, order remains FIFO');
+    final ran = sched.drain(maxCycles: 2);
+    expect(ran, [1, 2],
+        reason: 'goal 1 yields after its tail budget, then goal 2 runs');
   });
 }

@@ -270,15 +270,14 @@ class BytecodeRunner {
   void run(RunnerContext cx) { runWithStatus(cx); }
 
   /// Helper: find next ClauseTry instruction after current PC
-  /// If no more ClauseTry, look for SuspendEnd/NoMoreClauses to check for suspension/failure
+  /// If no more ClauseTry, look for NoMoreClauses to check for suspension/failure
   int _findNextClauseTry(int fromPc) {
     for (var i = fromPc + 1; i < prog.ops.length; i++) {
       if (prog.ops[i] is ClauseNext) return i; // Find ClauseNext first (unions Si to U)
       if (prog.ops[i] is ClauseTry) return i;
-      if (prog.ops[i] is SuspendEnd) return i; // Jump to SUSP to check U
       if (prog.ops[i] is NoMoreClauses) return i; // Jump to NoMoreClauses to check U
     }
-    return prog.ops.length; // End of program if no more clauses or SUSP
+    return prog.ops.length; // End of program if no more clauses
   }
 
   /// Soft-fail to next clause: merge Si into U, clear clause state, jump to next ClauseTry
@@ -448,7 +447,6 @@ class BytecodeRunner {
         cx.clearClause();
         pc++; continue;
       }
-      if (op is GuardFail) { pc++; continue; }
 
       // Otherwise guard: succeeds if Si is empty (all previous clauses failed, not suspended)
       if (op is Otherwise) {
@@ -683,21 +681,6 @@ class BytecodeRunner {
         pc++; continue;
       }
 
-      // Mode selection (Arg)
-      if (op is RequireWriterArg) {
-        final arg = cx.env.arg(op.slot);
-        if (arg == null || (arg is VarRef && cx.rt.heap.isReader(arg.addr))) {
-          pc = prog.labels[op.failLabel]!; continue;
-        }
-        pc++; continue;
-      }
-      if (op is RequireReaderArg) {
-        final arg = cx.env.arg(op.slot);
-        if (arg == null || (arg is VarRef && cx.rt.heap.isWriter(arg.addr))) {
-          pc = prog.labels[op.failLabel]!; continue;
-        }
-        pc++; continue;
-      }
 
       // ===== v2.16 HEAD instructions =====
       if (op is HeadConstant) {
@@ -1096,141 +1079,6 @@ class BytecodeRunner {
         // Per spec v2.16.3: All args should be VarRefs, handled above
         // This is unreachable if assertion in _getArg holds
         throw StateError('HeadStructure: unexpected argument type ${arg.runtimeType}');
-      }
-
-      // ===== Argument loading instructions (GET class) =====
-      if (op is GetVariable) {
-        // Load argument into clause variable (first occurrence)
-        final arg = _getArg(cx, op.argSlot);
-        if (arg == null) {
-          // No argument provided
-          _softFailToNextClause(cx, pc);
-          pc = _findNextClauseTry(pc);
-          continue;
-        }
-
-        // Store argument value in clauseVars
-        // Use abstraction methods that work for both local and imported readers
-        if (arg is VarRef && cx.rt.heap.isWriter(arg.addr)) {
-          cx.clauseVars[op.varIndex] = arg.addr;
-        } else if (arg is VarRef && cx.rt.heap.isReader(arg.addr)) {
-          // Reader VarRef - store directly WITHOUT suspending
-          // GetVariable just captures the reference; only instructions that DEMAND
-          // a specific value (HeadConstant, HeadStructure, etc.) should suspend.
-          // This allows clause patterns like merge(Xs, [Y|Ys], ...) to match when
-          // Xs is an unbound (imported) reader.
-          cx.clauseVars[op.varIndex] = arg;
-        } else if (arg is ConstTerm || arg is StructTerm) {
-          // Ground term - store directly
-          cx.clauseVars[op.varIndex] = arg;
-        } else {
-          _softFailToNextClause(cx, pc);
-          pc = _findNextClauseTry(pc);
-          continue;
-        }
-        pc++; continue;
-      }
-
-      if (op is GetValue) {
-        // Unify argument with clause variable (subsequent occurrence)
-        final arg = _getArg(cx, op.argSlot);
-        if (arg == null) {
-          _softFailToNextClause(cx, pc);
-          pc = _findNextClauseTry(pc);
-          continue;
-        }
-
-        // Get the previously stored value
-        final storedValue = cx.clauseVars[op.varIndex];
-        if (storedValue == null) {
-          // Variable not initialized - error
-          _softFailToNextClause(cx, pc);
-          pc = _findNextClauseTry(pc);
-          continue;
-        }
-
-        // Unify argument with stored value
-        if (arg is VarRef && cx.rt.heap.isWriter(arg.addr)) {
-          // Argument is writer VarRef - bind it to stored value in σ̂w
-          if (storedValue is VarRef && cx.rt.heap.isWriter(storedValue.addr)) {
-            // storedValue is a writer VarRef - check they match
-            if (arg.addr != storedValue.addr) {
-              _softFailToNextClause(cx, pc);
-              pc = _findNextClauseTry(pc);
-              continue;
-            }
-          } else if (storedValue is int) {
-            // Legacy: bare writer addr - check they match
-            if (arg.addr != storedValue) {
-              _softFailToNextClause(cx, pc);
-              pc = _findNextClauseTry(pc);
-              continue;
-            }
-          } else if (storedValue is VarRef && cx.rt.heap.isReader(storedValue.addr)) {
-            // storedValue is a reader (e.g., Xs?) - bind writer to reader's value
-            // Use abstraction methods that work for both local and imported readers
-            final readerAddr = storedValue.addr;
-            if (cx.rt.heap.isReaderBound(readerAddr)) {
-              // Reader is bound - bind arg writer to that value
-              final readerValue = cx.rt.heap.getReaderValue(readerAddr);
-              cx.sigmaHat[arg.addr] = readerValue;
-            } else {
-              // Reader is unbound - add reader to Si (suspend)
-              pc = _suspendAndFail(cx, readerAddr, pc); continue;
-            }
-          } else {
-            // storedValue is a Term - bind writer to it
-            cx.sigmaHat[arg.addr] = storedValue;
-          }
-        } else if (arg is VarRef && cx.rt.heap.isReader(arg.addr)) {
-          // Argument is reader VarRef - verify it matches stored value
-          // Use abstraction methods that work for both local and imported readers
-          if (storedValue is VarRef && cx.rt.heap.isReader(storedValue.addr)) {
-            // storedValue is also a reader - fail definitively
-            _softFailToNextClause(cx, pc);
-            pc = _findNextClauseTry(pc);
-            continue;
-          }
-
-          final bound = cx.rt.heap.isReaderBound(arg.addr);
-          if (bound) {
-            // Reader is bound - check value matches
-            final readerValue = cx.rt.heap.getReaderValue(arg.addr);
-            if (storedValue is Term) {
-              if (readerValue != storedValue) {
-                _softFailToNextClause(cx, pc);
-                pc = _findNextClauseTry(pc);
-                continue;
-              }
-            } else if (storedValue is int) {
-              // storedValue is a writer addr - check if they point to same writer
-              final wid = cx.rt.heap.tryWriterForReader(arg.addr);
-              if (wid == null || wid != storedValue) {
-                _softFailToNextClause(cx, pc);
-                pc = _findNextClauseTry(pc);
-                continue;
-              }
-            }
-          } else if (storedValue is int) {
-            // Reader unbound, storedValue is writer addr - check if they match
-            final wid = cx.rt.heap.tryWriterForReader(arg.addr);
-            if (wid == null || wid != storedValue) {
-              _softFailToNextClause(cx, pc);
-              pc = _findNextClauseTry(pc);
-              continue;
-            }
-          } else {
-            // Reader unbound, storedValue is a Term - add to Si
-            final suspendOnVar = _finalUnboundVar(cx, arg.addr);
-            pc = _suspendAndFail(cx, suspendOnVar, pc); continue;
-          }
-        } else {
-          // Ground term - TODO: handle ConstTerm/StructTerm
-          _softFailToNextClause(cx, pc);
-          pc = _findNextClauseTry(pc);
-          continue;
-        }
-        pc++; continue;
       }
 
       // ===== Structure subterm matching instructions =====
@@ -2240,42 +2088,6 @@ class BytecodeRunner {
         pc++; continue;
       }
 
-      // Legacy HEAD opcodes (for backward compatibility)
-      if (op is HeadBindWriter) {
-        // Mark writer as involved (no value binding for legacy opcode)
-        cx.sigmaHat[op.writerId] = null;
-        pc++; continue;
-      }
-      if (op is HeadBindWriterArg) {
-        final arg = cx.env.arg(op.slot);
-        if (arg is VarRef && cx.rt.heap.isWriter(arg.addr)) {
-          cx.sigmaHat[arg.addr] = null;
-        }
-        pc++; continue;
-      }
-      if (op is GuardNeedReader) {
-        final readerAddr = op.readerId;
-        // Check sigmaHat first for tentative bindings, then use isReaderBound for imported reader support
-        final writerAddr = cx.rt.heap.tryWriterForReader(readerAddr);
-        final bound = cx.sigmaHat.containsKey(readerAddr) ||
-                      (writerAddr != null && cx.sigmaHat.containsKey(writerAddr)) ||
-                      cx.rt.heap.isReaderBound(readerAddr);
-        if (!bound) pc = _suspendAndFail(cx, readerAddr, pc); continue;
-        pc++; continue;
-      }
-      if (op is GuardNeedReaderArg) {
-        final arg = cx.env.arg(op.slot);
-        if (arg is VarRef && cx.rt.heap.isReader(arg.addr)) {
-          // Check sigmaHat first for tentative bindings, then use isReaderBound for imported reader support
-          final writerAddr = cx.rt.heap.tryWriterForReader(arg.addr);
-          final bound = cx.sigmaHat.containsKey(arg.addr) ||
-                        (writerAddr != null && cx.sigmaHat.containsKey(writerAddr)) ||
-                        cx.rt.heap.isReaderBound(arg.addr);
-          if (!bound) pc = _suspendAndFail(cx, arg.addr, pc); continue;
-        }
-        pc++; continue;
-      }
-
       // Commit (apply σ̂w and wake suspended goals) - v2.16 semantics
       if (op is Commit) {
         // Phase 2: Resolve Si against σ̂w (two-phase HEAD unification)
@@ -2439,14 +2251,6 @@ class BytecodeRunner {
         continue;
       }
 
-      // try_next_clause: Soft-fail to next clause (spec 2.4)
-      // When HEAD/GUARD fails, discard σ̂w, union Si to U, jump to next ClauseTry
-      if (op is TryNextClause) {
-        _softFailToNextClause(cx, pc);
-        pc = _findNextClauseTry(pc);
-        continue;
-      }
-
       // no_more_clauses: All clauses exhausted (spec 2.5)
       // If U non-empty: suspend; otherwise: fail definitively
       if (op is NoMoreClauses) {
@@ -2469,77 +2273,6 @@ class BytecodeRunner {
         // According to spec, failed goals should be added to F set
         // For now, just terminate - the goal is done (failed)
         return RunResult.terminated;
-      }
-
-      // Legacy instructions (deprecated, use ClauseNext instead)
-      if (op is UnionSiAndGoto) {
-        // Si removed - U updated directly by HEAD/GUARD opcodes
-        cx.clearClause();
-        pc = prog.labels[op.label]!;
-        continue;
-      }
-      if (op is ResetAndGoto) { cx.clearClause(); pc = prog.labels[op.label]!; continue; }
-
-      // Legacy SuspendEnd (use NoMoreClauses instead)
-      if (op is SuspendEnd) {
-        if (cx.U.isNotEmpty) {
-          if (debug) {
-//             print('>>> SUSPENSION: Goal ${cx.goalId} suspended on readers: ${cx.U}');
-          }
-          cx.rt.suspendGoalFCP(goalId: cx.goalId, kappa: cx.kappa, readerVarIds: cx.U);
-          cx.U.clear();
-          cx.inBody = false;
-          return RunResult.suspended;
-        }
-        // U is empty - all clauses failed definitively (no suspension)
-        if (debug) {
-//           print('>>> FAIL: Goal ${cx.goalId} (all clauses exhausted, U empty)');
-        }
-        cx.inBody = false;
-        // According to spec, failed goals should be added to F set
-        // For now, just terminate - the goal is done (failed)
-        return RunResult.terminated;
-      }
-
-      // Body (bind then wake + log)
-      if (op is BodySetConst) {
-        if (cx.inBody) {
-          // bindWriterConst now returns activations (FCP: all bindings wake goals)
-          final acts = cx.rt.heap.bindWriterConst(op.writerId, op.value);
-          for (final a in acts) {
-            cx.rt.gq.enqueue(a);
-            if (cx.onActivation != null) cx.onActivation!(a);
-          }
-        }
-        pc++; continue;
-      }
-      if (op is BodySetStructConstArgs) {
-        if (cx.inBody) {
-          final args = <Term>[
-            for (final v in op.constArgs)
-              v is Term ? v : ConstTerm(v)
-          ];
-          // bindWriterStruct now returns activations (FCP: all bindings wake goals)
-          final acts = cx.rt.heap.bindWriterStruct(op.writerId, op.functor, args);
-          for (final a in acts) {
-            cx.rt.gq.enqueue(a);
-            if (cx.onActivation != null) cx.onActivation!(a);
-          }
-        }
-        pc++; continue;
-      }
-      if (op is BodySetConstArg) {
-        final arg = cx.env.arg(op.slot);
-        final writerAddr = (arg is VarRef && cx.rt.heap.isWriter(arg.addr)) ? arg.addr : null;
-        if (cx.inBody && writerAddr != null) {
-          // bindWriterConst now returns activations (FCP: all bindings wake goals)
-          final acts = cx.rt.heap.bindWriterConst(writerAddr, op.value);
-          for (final a in acts) {
-            cx.rt.gq.enqueue(a);
-            if (cx.onActivation != null) cx.onActivation!(a);
-          }
-        }
-        pc++; continue;
       }
 
       // ===== BODY argument setup instructions =====
@@ -2781,17 +2514,6 @@ class BytecodeRunner {
         pc++; continue;
       }
 
-      // Fairness
-      if (op is TailStep) {
-        final shouldYield = cx.rt.tailReduce(cx.goalId);
-        if (shouldYield) {
-          cx.rt.gq.enqueue(GoalRef(cx.goalId, cx.kappa));
-          return RunResult.yielded;
-        } else {
-          pc = prog.labels[op.label]!;
-          continue;
-        }
-      }
 
       // ===== Goal spawning and control flow =====
       if (op is Spawn) {
@@ -2938,7 +2660,16 @@ class BytecodeRunner {
           // This ensures suspension/reactivation uses the correct procedure
           cx.kappa = entryPc;
 
-          // Jump to procedure entry
+          // Tail-recursion fairness (ISA §9.2): decrement this goal's tail
+          // budget; when it reaches 0, reset it and yield — re-enqueue this
+          // goal at the new entry so other goals on this isolate progress
+          // before it continues. Without this a tail loop starves the isolate.
+          if (cx.rt.tailReduce(cx.goalId)) {
+            cx.rt.gq.enqueue(GoalRef(cx.goalId, entryPc));
+            return RunResult.yielded;
+          }
+
+          // Budget remains: continue the tail call within this run.
           pc = entryPc;
           continue;
         }

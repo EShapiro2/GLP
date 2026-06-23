@@ -22,9 +22,6 @@ void main() {
       BC.nop(),              // Do nothing
       BC.nop(),              // Do nothing
       BC.PROCEED(),
-
-      BC.L('p/0_end'),
-      BC.SUSP(),
     ]);
 
     final runner = BytecodeRunner(prog);
@@ -55,9 +52,6 @@ void main() {
       BC.TRY(),
       BC.COMMIT(),
       BC.halt(),             // Terminate immediately
-
-      BC.L('p/0_end'),
-      BC.SUSP(),
     ]);
 
     final runner = BytecodeRunner(prog);

@@ -9,52 +9,21 @@ class Label implements Op {
 }
 
 class ClauseTry implements Op {}
-class GuardFail implements Op {}
 class Commit implements Op {}
 
 /// clause_next: Unified instruction for clause failure/suspension
-/// Combines the behavior of UnionSiAndGoto (when Si non-empty) and ResetAndGoto (when Si empty)
+/// Unions Si into U as needed, then discards σ̂w and jumps to the next clause.
 /// From spec 2.2: "discard σ̂w; jump to label of Cj"
 class ClauseNext implements Op {
   final LabelName label;
   ClauseNext(this.label);
 }
 
-/// try_next_clause: Attempt next clause if current fails during selection phase (spec 2.4)
-/// Behavior: If current clause head fails to unify or guard fails, discard σ̂w and try next clause
-class TryNextClause implements Op {}
-
 /// no_more_clauses: All clauses exhausted without success (spec 2.5)
 /// Behavior: If suspension set non-empty, suspend goal; otherwise mark as permanently failed
 class NoMoreClauses implements Op {}
 
-// Legacy instructions (to be replaced by ClauseNext)
-@deprecated
-class UnionSiAndGoto implements Op {
-  final LabelName label;
-  UnionSiAndGoto(this.label);
-}
-@deprecated
-class ResetAndGoto implements Op {
-  final LabelName label;
-  ResetAndGoto(this.label);
-}
-
-class SuspendEnd implements Op {}
 class Proceed implements Op {}
-
-// Body ops (post-commit heap mutation)
-class BodySetConst implements Op {
-  final int writerId;
-  final Object? value;
-  BodySetConst(this.writerId, this.value);
-}
-class BodySetStructConstArgs implements Op {
-  final int writerId;
-  final String functor;
-  final List<Object?> constArgs;
-  BodySetStructConstArgs(this.writerId, this.functor, this.constArgs);
-}
 
 /// Place constant value into argument register (BODY phase)
 class PutConstant implements Op {
@@ -152,22 +121,6 @@ class HeadList implements Op {
 class UnifyVoid implements Op {
   final int count; // number of void positions to skip/create
   UnifyVoid({this.count = 1});
-}
-
-/// Load argument into clause variable (first occurrence)
-/// Records tentative association in σ̂w during HEAD phase
-class GetVariable implements Op {
-  final int varIndex;  // clause variable index
-  final int argSlot;   // argument register
-  GetVariable(this.varIndex, this.argSlot);
-}
-
-/// Unify argument with clause variable (subsequent occurrence)
-/// Performs writer MGU, updates σ̂w during HEAD phase
-class GetValue implements Op {
-  final int varIndex;  // clause variable index
-  final int argSlot;   // argument register
-  GetValue(this.varIndex, this.argSlot);
 }
 
 // ===== GUARD instructions (pure tests during HEAD/GUARDS phase) =====
@@ -269,47 +222,6 @@ class GroundEqual implements Op {
   String toString() => negated 
       ? '~(X$leftVarIndex =?= X$rightVarIndex)' 
       : 'X$leftVarIndex =?= X$rightVarIndex';
-}
-
-// Legacy opcodes (for backward compatibility with existing tests)
-class HeadBindWriter implements Op {
-  final int writerId;
-  HeadBindWriter(this.writerId);
-}
-class GuardNeedReader implements Op {
-  final int readerId;
-  GuardNeedReader(this.readerId);
-}
-
-// ===== Argument-slot variants (program fixed; ids supplied at runtime) =====
-class RequireWriterArg implements Op {
-  final int slot;            // argument index (0 for p/1)
-  final LabelName failLabel; // jump if not a writer call
-  RequireWriterArg(this.slot, this.failLabel);
-}
-class RequireReaderArg implements Op {
-  final int slot;            // argument index (0 for p/1)
-  final LabelName failLabel; // jump if not a reader call
-  RequireReaderArg(this.slot, this.failLabel);
-}
-class HeadBindWriterArg implements Op {
-  final int slot;            // add writer(slot) to σ̂w
-  HeadBindWriterArg(this.slot);
-}
-class GuardNeedReaderArg implements Op {
-  final int slot;            // add reader(slot) to Sᵢ iff unbound
-  GuardNeedReaderArg(this.slot);
-}
-class BodySetConstArg implements Op {
-  final int slot;            // bind writer(slot) := value (post-commit only)
-  final Object? value;
-  BodySetConstArg(this.slot, this.value);
-}
-
-// Scheduler / fairness
-class TailStep implements Op {
-  final LabelName label;
-  TailStep(this.label);
 }
 
 /// Spawn new goal for procedure P with arguments in A1-An

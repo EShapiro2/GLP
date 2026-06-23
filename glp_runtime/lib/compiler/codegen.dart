@@ -299,9 +299,14 @@ class CodeGenerator {
       // FIX: For structures as direct HEAD arguments, extract first then match
       // This avoids overlapping HeadStructure operations
 
-      // Step 1: Extract the argument into a temp register
+      // Step 1: Extract the argument into a temp register.
+      // tempReg is freshly allocated (first occurrence), so the v2 get_variable
+      // captures the argument into clauseVars without sigmaHat binding — the
+      // same capture the legacy opcodes.dart GetVariable performed. Unified on
+      // the polarity-carrying v2 instruction so the emitted set matches §4.2
+      // get_variable (D3 wire format).
       final tempReg = ctx.allocateTemp();
-      ctx.emit(bc.GetVariable(tempReg, argSlot));  // Load argument into temp
+      ctx.emit(bcv2.GetVariable(tempReg, argSlot, isReader: false));
 
       // Step 2: Match the structure at the temp register (not argSlot!)
       ctx.emit(bc.HeadStructure(term.functor, term.arity, tempReg));
