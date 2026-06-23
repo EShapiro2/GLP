@@ -8,17 +8,19 @@
 /// Operand kinds (§4.1):
 ///  - polarity: u8 (0 writer, 1 reader)
 ///  - negated:  u8 (0 plain, 1 negated guard)
-///  - varIndex/argSlot/arity/count/slots/regIndex/importIndex: clen
+///  - varIndex/argSlot/arity/count/slots/regIndex: clen
 ///  - constant: the §3.1 constant payload (u8 tag + payload)
 ///  - functor:  string
-///  - proc:     clen index into the artefact's procedure table
+///  - proc:     clen index into the artefact's symbol table (a compiled
+///              procedure, or a codeless kernel/builtin-guard bound by name)
 ///  - ctarget:  clen instruction index within the current procedure
 ///
-/// Procedure references on the wire are table indices, never names; clause
-/// targets are procedure-relative instruction indices. Assembly `Label`s do not
-/// exist on the wire — [encodeCode] strips them and resolves the indices. The
-/// caller supplies the name<->index maps (the artefact's procedure table in S4;
-/// bijective stubs in tests).
+/// Symbol references on the wire are table indices, never names; clause targets
+/// are procedure-relative instruction indices. Assembly `Label`s do not exist on
+/// the wire — [encodeCode] strips them and resolves the indices. The caller
+/// supplies the name<->index maps (the artefact's symbol table in S4; bijective
+/// stubs in tests). The retired dynamic-RPC opcodes distribute/transmit
+/// (0x52–0x53) are not part of the wire ISA.
 library;
 
 import 'dart:typed_data';
@@ -68,8 +70,10 @@ class Opcode {
   static const int otherwise = 0x46;
   static const int spawn = 0x50;
   static const int requeue = 0x51;
-  static const int distribute = 0x52;
-  static const int transmit = 0x53;
+  // 0x52–0x53 reserved: the retired dynamic-RPC opcodes (distribute/transmit).
+  // Dynamic dispatch is retired in favour of static linking until attestations
+  // exist; flattened artefacts never contain them, so they are not part of the
+  // wire ISA. The runtime classes remain (retired-but-kept). Held, not reused.
 }
 
 /// Resolvers an encoder needs: a procedure label -> proc-table index, and a
@@ -201,7 +205,9 @@ void encodeInstruction(
     w.clen(op.argSlot);
   } else if (op is Guard) {
     w.u8(Opcode.guard);
-    w.clen(procIndexOf(op.procedureLabel));
+    // Guard labels are bare predicate names; the symbol table is keyed by
+    // name/arity, so build the signature from the guard's name and arity.
+    w.clen(procIndexOf('${op.procedureLabel}/${op.arity}'));
     w.clen(op.arity);
     neg(op.negated);
   } else if (op is Ground) {
@@ -234,19 +240,12 @@ void encodeInstruction(
     w.u8(Opcode.requeue);
     w.clen(procIndexOf(op.procedureLabel));
     w.clen(op.arity);
-  } else if (op is Distribute) {
-    w.u8(Opcode.distribute);
-    w.clen(op.importIndex);
-    w.string(op.functor);
-    w.clen(op.arity);
-  } else if (op is Transmit) {
-    w.u8(Opcode.transmit);
-    w.clen(op.moduleVarIndex);
-    w.string(op.functor);
-    w.clen(op.arity);
   } else {
+    // Distribute/Transmit (retired dynamic RPC) are not in the wire ISA; a
+    // flattened artefact never contains them. Reaching here on one signals a
+    // stale codegen path, to be reported (not silently encoded).
     throw WireFormatException(
-        'instruction not in the §4.2 wire ISA: ${op.runtimeType}');
+        'instruction not in the wire ISA: ${op.runtimeType}');
   }
 }
 
@@ -351,9 +350,11 @@ Object decodeInstruction(
     case Opcode.putBoundNil:
       return PutBoundNil(r.clen());
     case Opcode.guard:
-      final label = procNameOf(r.clen());
+      final sig = procNameOf(r.clen());
       final arity = r.clen();
-      return Guard(label, arity, negated: neg());
+      // Strip the /arity the symbol table carries back to the bare guard name.
+      final name = sig.substring(0, sig.lastIndexOf('/'));
+      return Guard(name, arity, negated: neg());
     case Opcode.ground:
       final varIndex = r.clen();
       return Ground(varIndex, negated: neg());
@@ -377,14 +378,6 @@ Object decodeInstruction(
     case Opcode.requeue:
       final label = procNameOf(r.clen());
       return Requeue(label, r.clen());
-    case Opcode.distribute:
-      final importIndex = r.clen();
-      final f = r.string();
-      return Distribute(importIndex, f, r.clen());
-    case Opcode.transmit:
-      final varIndex = r.clen();
-      final f = r.string();
-      return Transmit(varIndex, f, r.clen());
     default:
       throw WireFormatException(
           'unknown opcode: 0x${opcode.toRadixString(16)}');
