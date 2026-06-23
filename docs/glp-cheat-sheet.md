@@ -376,7 +376,7 @@ Use the `#` operator to call an exported procedure in another module:
 test(X, Y?) :- math_service # double(X?, Y).
 ```
 
-The call is routed through a GLP channel to the target module's service loop at runtime.
+Under static linking the call resolves at compile time to a local call, entering the target directory through its `self.glp`. The qualifier is a single child directory or module file; multi-segment paths are future work.
 
 ### Imports Must Match Exports
 
@@ -384,21 +384,11 @@ The `imported procedure` declaration's types and modes must match the target mod
 
 ### The self.glp Scope Chain
 
-Each directory may have a `self.glp` defining types visible to all modules in that subtree. The root `programs/self.glp` defines all predefined types and procedures — visible everywhere.
+Each directory may have a `self.glp` defining types visible to all modules in that subtree, and it is the directory's interface — a call into the directory resolves only to what its `self.glp` exports. The root `programs/self.glp` defines all predefined types and procedures — visible everywhere.
 
-### REPL Workflow
+### Loading a Program
 
-```
-GLP> math_service.glp          %% Load and auto-activate (has exports)
-GLP> dispatch_client.glp       %% Load client (has imported procedures)
-GLP> test_double(5, X).        %% Run goal → X = 10
-```
-
-Modules with `exported procedure` declarations are auto-activated on load. Use `:activate <n>` to activate manually if needed.
-
-### Static Linking (Programs)
-
-For multi-module programs in a directory tree, load the entire directory:
+For a multi-module program, load its directory:
 ```
 GLP> social_graph/
 ✓ Loaded program: social_graph/
@@ -406,7 +396,7 @@ GLP> social_graph/
 
 The program linker resolves all `M # goal(...)` calls at compile time.
 
-**Program entry points.** A program's entry points are the root `self.glp`'s exported procedures. To make plays callable by name, the root `self.glp` exports each — either define it there, or forward it: `exported procedure play1.` with `play1 :- boot#play1.` (See manual §19, paper §Static Linking.) REPL goals are themselves type-checked before they run (manual §21); dynamic dispatch is not yet soundly typed (manual §19.7).
+**Program entry points.** A program's entry points are the root `self.glp`'s exported procedures. To make plays callable by name, the root `self.glp` exports each — either define it there, or forward it: `exported procedure play1.` with `play1 :- boot#play1.` (See manual §19, paper §Static Linking.) REPL goals are themselves type-checked before they run (manual §21); dynamic linking is retired (manual §19.7).
 
 ### Module Checklist
 
