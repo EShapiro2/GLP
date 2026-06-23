@@ -11,6 +11,8 @@ import 'dart:typed_data';
 import 'package:glp_runtime/runtime/terms.dart';
 import 'package:glp_runtime/multiagent/message_queue.dart';
 import 'package:glp_runtime/multiagent/mad_helpers.dart';
+import 'package:glp_runtime/wire/wire_flags.dart';
+import 'package:glp_runtime/wire/payload_codec.dart';
 
 /// Global Variable ID encoding
 class GlobalVarId {
@@ -199,6 +201,10 @@ class PayloadSerializer {
     bool Function(int addr) isReader,
     {({String creator, int creatorLocalId, bool isReader}) Function(int addr)? lookupVariable}
   ) {
+    // D3 sandbox switch: route through the canonical wire codec when enabled.
+    if (WireFlags.canonical) {
+      return PayloadCodec.createGlobalSendPayload(globalName, value);
+    }
     final builder = BytesBuilder();
 
     // GlobalName type (0=writer, 1=reader)
@@ -240,6 +246,11 @@ class PayloadSerializer {
   ) {
     assert(serializerName.isWriter && serializerName.index == 0,
            'Serializer payload requires _w(agent, 0) global name');
+
+    // D3 sandbox switch: route through the canonical wire codec when enabled.
+    if (WireFlags.canonical) {
+      return PayloadCodec.createSerializerPayload(serializerName, content);
+    }
 
     final builder = BytesBuilder();
 
@@ -284,6 +295,10 @@ class PayloadSerializer {
     int Function(bool isReader) allocateImportedVar,
     {void Function(int localAddr, bool isReader, GlobalVarId globalId, int? pairedReaderCreatorLocalId)? onVariableImported}
   ) {
+    // D3 sandbox switch: route through the canonical wire codec when enabled.
+    if (WireFlags.canonical) {
+      return PayloadCodec.deserializeGlobalSendPayload(payload);
+    }
     int offset = 0;
 
     // GlobalName type
@@ -510,6 +525,12 @@ class PayloadSerializer {
   /// Use this for UI event injection where the term contains no VarRefs.
   /// Throws if the term contains VarRefs.
   List<int> serializeAgentMessage(Term term) {
+    // D3 sandbox switch: route through the canonical wire codec when enabled.
+    // Ground-term bytes are identical either way; the switch keeps the path
+    // uniform.
+    if (WireFlags.canonical) {
+      return PayloadCodec.serializeAgentMessage(term);
+    }
     return serializeTermWithCallbacks(
       term,
       agentId,
