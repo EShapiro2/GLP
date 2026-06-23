@@ -159,6 +159,80 @@ class Artefact {
     return w.toBytes();
   }
 
+  /// Build an artefact from a flattened (statically-linked) program's
+  /// instruction stream. Procedure entries are `Label`s of the form `name/arity`
+  /// (internal clause/end labels `_cN`/`_end` are not entries). Each procedure
+  /// becomes a compiled symbol; every `Spawn`/`Requeue`/`Guard` target that is
+  /// not a compiled procedure becomes a codeless symbol (a runtime kernel or
+  /// builtin guard, bound by name at load). Symbol order — compiled in program
+  /// order, then codeless sorted — is deterministic, so equal programs yield
+  /// equal artefacts.
+  static Artefact fromCompiled({
+    required List<Object> ops,
+    required Uint8List hM,
+    required String moduleName,
+    required String isaVersion,
+    String typeDefsText = '',
+    List<ArtefactExport> exports = const [],
+  }) {
+    // Procedure-entry labels: a `name/arity` signature, not an internal label.
+    final internalSuffix = RegExp(r'_c\d+$');
+    bool isEntry(String n) =>
+        n.contains('/') && !n.endsWith('_end') && !internalSuffix.hasMatch(n);
+
+    ({String name, int arity}) splitSig(String sig) {
+      final slash = sig.lastIndexOf('/');
+      return (name: sig.substring(0, slash), arity: int.parse(sig.substring(slash + 1)));
+    }
+
+    // Segment into procedures by consecutive entry labels.
+    final entryStarts = <int>[];
+    final entrySigs = <String>[];
+    for (var i = 0; i < ops.length; i++) {
+      final op = ops[i];
+      if (op is Label && isEntry(op.name)) {
+        entryStarts.add(i);
+        entrySigs.add(op.name);
+      }
+    }
+    final compiledSigs = entrySigs.toSet();
+    final compiled = <ArtefactSymbol>[];
+    for (var e = 0; e < entryStarts.length; e++) {
+      final start = entryStarts[e];
+      final end = e + 1 < entryStarts.length ? entryStarts[e + 1] : ops.length;
+      final body = ops.sublist(start + 1, end); // exclude the entry label
+      final s = splitSig(entrySigs[e]);
+      compiled.add(ArtefactSymbol.compiled(s.name, s.arity, body));
+    }
+
+    // Codeless targets: Spawn/Requeue (name/arity) and Guard (name + arity)
+    // not satisfied by a compiled procedure.
+    final codelessSigs = <String>{};
+    for (final op in ops) {
+      if (op is Spawn && !compiledSigs.contains(op.procedureLabel)) {
+        codelessSigs.add(op.procedureLabel);
+      } else if (op is Requeue && !compiledSigs.contains(op.procedureLabel)) {
+        codelessSigs.add(op.procedureLabel);
+      } else if (op is Guard) {
+        final sig = '${op.procedureLabel}/${op.arity}';
+        if (!compiledSigs.contains(sig)) codelessSigs.add(sig);
+      }
+    }
+    final codeless = (codelessSigs.toList()..sort()).map((sig) {
+      final s = splitSig(sig);
+      return ArtefactSymbol.codeless(s.name, s.arity);
+    }).toList();
+
+    return Artefact(
+      isaVersion: isaVersion,
+      hM: hM,
+      moduleName: moduleName,
+      typeDefsText: typeDefsText,
+      exports: exports,
+      symbols: [...compiled, ...codeless],
+    );
+  }
+
   /// The artefact identity: SHA-256 of the entire artefact byte string.
   static Uint8List identityOf(List<int> artefactBytes) =>
       Uint8List.fromList(crypto.sha256.convert(artefactBytes).bytes);
