@@ -1,7 +1,7 @@
 # Typed GLP Manual
 
-**Version**: 2.16
-**Date**: 2026-06-22
+**Version**: 2.17
+**Date**: 2026-06-23
 **Status**: ACTIVE
 
 This manual captures essential programming principles and advice for writing correct Typed GLP programs. It covers the SRSW (Single-Reader Single-Writer) constraint, type declarations, moding, modules, parameterized types, and common pitfalls.
@@ -990,15 +990,9 @@ The `-mode(system)` directive permits calling kernel predicates and using reserv
 
 GLP programs are organized into modules. Each `.glp` file is a module. A module controls which procedures are visible to other modules through `exported procedure` and `imported procedure` declarations. Cross-module calls use the `M # goal(...)` syntax, following FCP conventions.
 
-### 19.2 Module Declaration
+### 19.2 Module Name
 
-A module declares its name with the `-module` directive:
-
-```prolog
--module(math_service).
-```
-
-The module name should match the filename (without `.glp`). If no `-module` directive is present, the module name is derived from the filename.
+A module's name is its filename without the `.glp` extension. To rename a module, rename the file.
 
 ### 19.3 Procedure Visibility
 
@@ -1037,8 +1031,6 @@ This sends the goal `double(X?, Y)` to the `math_service` module for execution. 
 
 **Service module** (`math_service.glp`):
 ```prolog
--module(math_service).
-
 exported procedure double(Integer?, Integer).
 double(X, Y?) :- Y := X? * 2.
 
@@ -1048,8 +1040,6 @@ triple(X, Y?) :- Y := X? * 3.
 
 **Client module** (`client.glp`):
 ```prolog
--module(client).
-
 imported procedure math_service#double(Integer?, Integer).
 imported procedure math_service#triple(Integer?, Integer).
 
@@ -1181,6 +1171,7 @@ Formal definition: Moded-Types paper, §Type-Compatible Attestation Between Agen
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 2.17 | 2026-06-23 | Removed the `-module` directive: a module's name is its filename (§19.2, §19.5). |
 | 2.16 | 2026-06-22 | Type/module updates: §17.7 (per-instantiation checking; uninstantiated parametric exports not certified); §19.7 (program is the unit of compilation and execution; dynamic dispatch not yet soundly typed; recompile-whole-program-first discipline); §21 (initial goals type-checked as body goals; `foo = X` not `X = foo`); §16.4 (polarity must agree across boundaries the checker cannot span) |
 | 2.15 | 2026-06-10 | Added §19.10: the `-expose` directive (lift another module's exports into a `self.glp`'s subtree scope; innermost-first shadowing; collision is an error) |
 | 2.14 | 2026-06-10 | §8.2: multi-clause root `self.glp` procedures (e.g. `merge/3`) resolve through the ancestor scope chain, subject to innermost-first shadowing; unfolding is a single-unit-clause optimisation, not the resolution mechanism (A3 module-system amendment) |
