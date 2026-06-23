@@ -633,7 +633,7 @@ Ticketed then **dropped**: a PE diagnostic for an unpaired-Out channel (`ch(S?, 
 
 ## Issue 19: unhandled `UnknownTypeError` kills an agent isolate silently → 30s hang
 
-**Status**: Open — ticketed 2026-06-22 (spin-off of the `isolate_manager` diagnosis). **Not yet fixed.**
+**Status**: Resolved (2026-06-22) — both halves landed. Checker side (TGLP, commit `c1d565eb`): `program_dfa.dart` `_resolveTypeExpr` surfaces an unresolved type as a located `TypeError` ("Unresolved type: …") instead of an unhandled `UnknownTypeError`. Isolate side (IGLP): `_agentIsolateEntry` catches init failure and reports `AgentInitFailed` to the manager. A missing-scope load now fails with a clear error, not a 30s hang.
 **Layer**: type checker (`program_dfa.dart` `_resolveTypeExpr`) + isolate lifecycle (`isolate_manager.dart` `_agentIsolateEntry`).
 
 When an agent isolate loads a program whose scope is incompletely supplied, `buildProgramDFA` throws an **unhandled** `UnknownTypeError` (e.g. `Response`) that kills the isolate. `IsolateManager` is not notified, so the manager waits on a dead isolate until the test's 30s timeout — a missing-scope condition becomes a silent hang instead of a reported error. The type-checker should surface unresolved types as locatable diagnostics, and/or the isolate entry should catch init failures and report them to the manager. This is what turned the (now-retired) `isolate_manager_test` scope omission into a 30s timeout rather than a clear failure.
