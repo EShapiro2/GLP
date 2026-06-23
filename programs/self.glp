@@ -311,7 +311,10 @@ Result? := asin(X) :-
   number(X?), X? >= -1, X? =< 1 |
   '_asin'(X?, Result).
 _ := asin(X) :-
-  number(X?), (X? < -1 ; X? > 1) |
+  number(X?), X? < -1 |
+  abort("Arc sine domain error: argument must be in [-1, 1]").
+_ := asin(X) :-
+  number(X?), X? > 1 |
   abort("Arc sine domain error: argument must be in [-1, 1]").
 Result? := asin(X) :-
   otherwise |
@@ -323,7 +326,10 @@ Result? := acos(X) :-
   number(X?), X? >= -1, X? =< 1 |
   '_acos'(X?, Result).
 _ := acos(X) :-
-  number(X?), (X? < -1 ; X? > 1) |
+  number(X?), X? < -1 |
+  abort("Arc cosine domain error: argument must be in [-1, 1]").
+_ := acos(X) :-
+  number(X?), X? > 1 |
   abort("Arc cosine domain error: argument must be in [-1, 1]").
 Result? := acos(X) :-
   otherwise |
