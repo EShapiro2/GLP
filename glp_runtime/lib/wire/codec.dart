@@ -388,6 +388,38 @@ void encodeConstantPayload(WireWriter w, WireConst c) {
   }
 }
 
+/// Map a runtime constant value (the `Object?` an instruction or ConstTerm
+/// carries) to a [WireConst]. The runtime represents the empty list as the
+/// atom `'nil'`.
+WireConst wireConstFromValue(Object? v) {
+  if (v == 'nil') return const WNil();
+  if (v is int) return WInt(v);
+  if (v is double) return WFloat(v);
+  if (v is String) return WString(v);
+  if (v is bool) return WBool(v);
+  if (v is Uint8List) return WBlob(v);
+  if (v is List<int>) return WBlob(Uint8List.fromList(v));
+  throw WireFormatException('cannot encode constant of type ${v.runtimeType}');
+}
+
+/// Inverse of [wireConstFromValue].
+Object? valueOfWireConst(WireConst c) {
+  switch (c) {
+    case WNil():
+      return 'nil';
+    case WInt(:final value):
+      return value;
+    case WFloat(:final value):
+      return value;
+    case WString(:final value):
+      return value;
+    case WBool(:final value):
+      return value;
+    case WBlob(:final value):
+      return value;
+  }
+}
+
 WireConst decodeConstantPayload(WireReader r) {
   final tag = r.u8();
   switch (tag) {
