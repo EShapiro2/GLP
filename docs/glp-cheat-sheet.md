@@ -409,6 +409,8 @@ GLP> social_graph/
 
 The program linker resolves all `M # goal(...)` calls at compile time.
 
+**Program entry points.** A program's entry points are the root `self.glp`'s exported procedures. To make plays callable by name, the root `self.glp` exports each — either define it there, or forward it: `exported procedure play1.` with `play1 :- boot#play1.` (See manual §19, paper §Static Linking.) REPL goals are themselves type-checked before they run (manual §21); dynamic dispatch is not yet soundly typed (manual §19.7).
+
 ### Module Checklist
 
 1. Every cross-module call needs a matching `imported procedure` declaration
@@ -472,5 +474,5 @@ broadcast(Agent, ...) :-
 | `SRSW violation: Reader variable X? occurs N times` | Variable used in multiple non-guard occurrences without relaxation | Add `ground(X?)` if appropriate, or restructure to single-walk |
 | `[WARN] Unknown guard predicate: foo` (load time) | `foo` is recursive or multi-clause, so the PE cannot unfold it as a guard (§8) | Move the test to the clause body via a dispatch helper (multi-clause with `otherwise` fallthrough), or restate the precondition as a single-unit-clause check the PE *can* unfold |
 | `Spawn could not find procedure label X/N` (runtime) | **Runtime bug** triggered by `-module(...)` declared + private (`procedure`) helper called from a body in the same module.  See `docs/bugs/local-procedure-not-found-with-module-directive.md`.  Workaround: declare the helper `exported procedure` until fixed |
-| `Procedure declaration for "X" has no clauses` | `procedure` in a `self.glp` without clauses | Co-locate clauses with the declaration; `self.glp` holds types only |
+| `Procedure declaration for "X" has no clauses` | `procedure` in a `self.glp` without clauses | Co-locate clauses with the declaration; `self.glp` may hold the directory's shared procedures and its exported entries (defined or forwarded), not types alone |
 | `UnknownTypeError: Foo` when loading a sibling-directory file | Types from `cva/self.glp` not visible in `gsg/` | Redefine the needed types in `gsg/self.glp` (structural identity, §13), OR move shared types to a parent `programs/SPM/self.glp` |
