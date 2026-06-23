@@ -1,4 +1,3 @@
--module(routing_intro).
 
 %% Introduction-handshake routers (A5 Stage B), lifted verbatim from the
 %% platform self.glp files (social/network, social/graph —

@@ -20,7 +20,6 @@
 %%     of test play to discover before offering).
 %%   - Integer parity not asserted at agent level; accepted as-is.
 
--module(gsg_agent).
 
 %% =============================================================================
 %% AGENT (paper §5: CVA agent process)

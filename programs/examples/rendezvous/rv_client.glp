@@ -31,7 +31,6 @@
 %% System predicates assumed:
 %%   punch_udp(Addr?) — body predicate, initiates UDP hole-punch to Addr
 
--module(rv_client).
 
 %% =============================================================================
 %% TYPE DEFINITIONS (must match rv_agent for cross-module calls)

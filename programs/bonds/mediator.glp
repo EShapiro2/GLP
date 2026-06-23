@@ -9,7 +9,6 @@
 %%   - Standalone stream types eliminated (use Stream(X))
 %%   - Module structure with exported procedure
 
--module(mediator).
 
 %% =============================================================================
 %% CHANNEL OPERATIONS — local unit-clause helpers

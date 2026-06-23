@@ -15,7 +15,6 @@
 %%   - Vouch / Announce new identity / Integrate new identity / Integrate rebind.
 %%   - Stub promotion via Integrate checkpoint (spec-issue O).
 
--module(secure_gsg_agent).
 
 %% =============================================================================
 %% AGENT (paper §5 + §8: CVA agent process with identity record)

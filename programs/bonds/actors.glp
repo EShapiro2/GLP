@@ -12,7 +12,6 @@
 %% Phase 10: alice_p10, bob_p10 — credit + escrow time-release (mint+trade+escrow)
 %% Phase 11: alice_p11, bob_p11 — credit + escrow cancel (mint+trade+escrow)
 
--module(actors).
 
 %% =============================================================================
 %% PLAY 1 — Solo mint + balance

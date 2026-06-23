@@ -3,4 +3,3 @@
 %% All types (Bond, Lot, UserCmd, UserNotify, ActorChannel, NarrativeItem, etc.)
 %% are inherited from the parent bonds/self.glp via ancestor scoping.
 
--module(play12).

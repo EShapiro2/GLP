@@ -1,7 +1,6 @@
 %% Root-level module of the nested-subproject fixture.
 %% Its exported `play` is an entry point of the parent project and must receive
 %% a bare alias when this directory is the loaded root.
--module(boot).
 
 exported procedure play.
 play :- send_to_user([root_ran]).

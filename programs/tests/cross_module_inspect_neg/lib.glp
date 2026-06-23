@@ -1,7 +1,6 @@
 %% lib.glp — a parametric exported procedure that INSPECTS its parameter: it
 %% inserts the constant `extra` into a Stream(X). Standalone this is rejected;
 %% here it is exported and instantiated only across the module boundary by cons.
--module(lib).
 exported procedure relay(Stream(X)?, Stream(X)).
 relay([A|As], [A?, extra|As?]).
 relay([], []).

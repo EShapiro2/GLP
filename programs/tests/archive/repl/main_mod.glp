@@ -1,3 +1,2 @@
--module(main).
 -import([mod_a]).
 test(R?) :- mod_a # double(5, R).

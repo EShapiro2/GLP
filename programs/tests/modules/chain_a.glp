@@ -1,4 +1,3 @@
--module(chain_a).
 -import([chain_b]).
 -export([run/2]).
 

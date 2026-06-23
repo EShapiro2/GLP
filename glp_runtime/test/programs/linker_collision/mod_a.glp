@@ -6,6 +6,5 @@
 %% with no bare collision. The production social projects no longer exercise
 %% this because shared helpers (e.g. merge/3) were lifted to the root self.glp,
 %% leaving no module-local duplicates — hence this minimal dedicated fixture.
--module(mod_a).
 
 dup(a).

@@ -1,4 +1,3 @@
--module(sovereign).
 
 %% sovereign.glp — Sovereign setup with custodian finality and recovery
 %%

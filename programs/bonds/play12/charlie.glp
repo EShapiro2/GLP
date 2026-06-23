@@ -10,7 +10,6 @@
 %% Takes T (escrow release time) as parameter.
 %% Types: from bonds/self.glp (ancestor scoping)
 
--module(charlie).
 
 exported procedure charlie_p12(Constant?, ActorChannel?, Stream(NarrativeItem)).
 charlie_p12(T, ch(In, Out?), Narr?) :-

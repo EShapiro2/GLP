@@ -23,7 +23,6 @@
 %%   peer_address(Pk?, Addr) — body predicate, reads the observed
 %%     source address for peer Pk from the networking layer.
 
--module(rv_agent).
 
 %% =============================================================================
 %% TYPE DEFINITIONS

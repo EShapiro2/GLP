@@ -1,3 +1,2 @@
--module(in_subtree).
 exported procedure use_exposed(Integer).
 use_exposed(R?) :- twice(50, R).

@@ -1,4 +1,3 @@
--module(interlace).
 
 %% interlace.glp — Interlaced streams (typed version of paper code)
 %%

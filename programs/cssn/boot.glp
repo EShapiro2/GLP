@@ -5,7 +5,6 @@
 %%
 %% Cross-module dependencies declared via imported procedures.
 
--module(boot).
 
 %% Exported entry points (project-compilation spec §3.4: only exported
 %% root-level procedures alias). Each `exported procedure` declaration sits

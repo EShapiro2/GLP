@@ -1,4 +1,3 @@
--module(param_client).
 
 %% S6: extended entry union; call put (defined in this dir's self.glp,
 %% parameterised over the entry type) instantiated at Stream(MyEntry).

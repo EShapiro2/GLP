@@ -1,4 +1,3 @@
--module(localshadow).
 
 Result ::= from_self ; from_local.
 

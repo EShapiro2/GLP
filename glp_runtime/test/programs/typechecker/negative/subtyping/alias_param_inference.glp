@@ -12,7 +12,6 @@
 %% fix, the alias resolves to Stream<Ent>, route is checked at X = Ent, and the
 %% Fixed-vs-Ent mismatch is reported.
 
--module(neg_alias_param_inference).
 
 Ent   ::= e(Constant).
 Fixed ::= f(Constant).

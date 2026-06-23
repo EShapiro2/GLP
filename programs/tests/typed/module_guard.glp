@@ -6,7 +6,6 @@
 %% Since ModuleTerm is created by the runtime's module activation infrastructure,
 %% we test the negative case here: ~module/1 on non-module values.
 
--module(module_guard).
 
 exported procedure test_not_module(Integer?, Constant).
 test_not_module(X, not_module) :- ~module(X?) | true.

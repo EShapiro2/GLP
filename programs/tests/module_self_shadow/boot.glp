@@ -1,4 +1,3 @@
--module(boot).
 
 imported procedure inner#inner_tag(Tag).
 

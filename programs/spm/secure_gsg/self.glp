@@ -15,7 +15,6 @@
 %% IdentityRecord).  Will be cleaned up with a parent programs/SPM/self.glp
 %% once that's introduced.
 
--module(secure_gsg).
 
 %% =============================================================================
 %% SUBSTRATE ALIASES (redefined; see gsg/self.glp comment on visibility)

@@ -1,4 +1,3 @@
--module(shadower).
 
 %% S7: shadowing.  This module defines its OWN pmerge/3, shadowing the ancestor
 %% scope_chain/self.glp pmerge.  The local definition ignores the second list

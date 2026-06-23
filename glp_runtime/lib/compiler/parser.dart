@@ -57,7 +57,6 @@ class Parser {
 
   /// Parse tokens into a Module AST (includes declarations)
   Module parseModule() {
-    ModuleDeclaration? moduleDecl;
     CompileMode compileMode = CompileMode.user;  // default: user mode
     final exposes = <String>[];  // `-expose(M).` module paths
 
@@ -77,12 +76,13 @@ class Parser {
 
       switch (keyword.lexeme) {
         case 'module':
-          _consume(TokenType.LPAREN, 'Expected "(" after module');
-          final name = _parseModuleName();
-          _consume(TokenType.RPAREN, 'Expected ")" after module name');
-          _consume(TokenType.DOT, 'Expected "." after module declaration');
-          moduleDecl = ModuleDeclaration(name, startLine, startCol);
-          break;
+          throw CompileError(
+            'The -module() declaration is no longer supported. A module\'s name '
+            'is its file or directory path from the program root.',
+            startLine,
+            startCol,
+            phase: 'parser'
+          );
 
         case 'stdlib':
           // -stdlib. is deprecated — treated as -mode(system).
@@ -338,7 +338,6 @@ class Parser {
     }
 
     return Module(
-      declaration: moduleDecl,
       typeDefs: typeDefs,
       procDeclarations: procDeclarations,
       procedures: procedures,
@@ -379,22 +378,8 @@ class Parser {
   }
 
   /// Parse hierarchical module name (e.g., utils.list)
-  String _parseModuleName() {
-    final parts = <String>[];
-    parts.add(_consume(TokenType.ATOM, 'Expected module name').lexeme);
-
-    while (_match(TokenType.DOT) && _check(TokenType.ATOM)) {
-      parts.add(_consume(TokenType.ATOM, 'Expected module name part').lexeme);
-    }
-
-    // Back up if we consumed a DOT but the next token wasn't ATOM
-    // (This handles -module(foo). where DOT ends the declaration)
-    if (_previous().type == TokenType.DOT && !_check(TokenType.ATOM)) {
-      _current--;
-    }
-
-    return parts.join('.');
-  }
+  // _parseModuleName removed: the -module directive is no longer supported
+  // (a module's name is its file/directory path from the program root).
 
   // _parseProcRefList, _parseProcRef, _parseAtomList removed in Phase 1.
   // These were only used for -export([...]) and -import([...]) syntax.

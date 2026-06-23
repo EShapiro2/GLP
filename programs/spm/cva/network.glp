@@ -10,7 +10,6 @@
 %% order, route handles one message at a time in arrival order
 %% (architecture §2.2).
 
--module(cva).
 
 %% =============================================================================
 %% NETWORK: top-level wiring.

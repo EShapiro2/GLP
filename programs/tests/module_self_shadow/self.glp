@@ -1,4 +1,3 @@
--module(shadow_root).
 
 Tag ::= outer ; inner.
 

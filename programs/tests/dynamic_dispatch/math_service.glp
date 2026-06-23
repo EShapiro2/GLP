@@ -1,6 +1,5 @@
 %% Test module with 3 exported procedures.
 %% Used to verify _select/1 dispatch table generation.
--module(math_service).
 
 exported procedure double(Integer?, Integer).
 double(X, Y?) :- Y := X? * 2.

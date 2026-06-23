@@ -5,7 +5,6 @@
 %% the duality check must accept.  Before the fix the duality check compared base names
 %% and rejected this (false positive).  Mirrors a router storing a Stream<FriendMsg>
 %% into a FriendStream-aliased friend_output field.
--module(alias_dual_field).
 
 A ::= a(Constant).
 AStream ::= [] ; [A | AStream].

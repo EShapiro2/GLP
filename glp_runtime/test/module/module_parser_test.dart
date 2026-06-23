@@ -46,30 +46,11 @@ void main() {
   });
 
   group('Module Parser - Module Declaration', () {
-    test('parser parses module declaration', () {
-      final source = '''
--module(math).
-factorial(0, 1).
-''';
-      final lexer = Lexer(source);
-      final tokens = lexer.tokenize();
-      final parser = Parser(tokens);
-      final module = parser.parseModule();
-
-      expect(module.declaration, isNotNull);
-      expect(module.declaration!.name, 'math');
-      expect(module.procedures.length, 1);
-      expect(module.procedures[0].name, 'factorial');
-    });
-
-    test('parser parses hierarchical module name', () {
-      final source = '-module(math).\nfoo.';
-      final lexer = Lexer(source);
-      final tokens = lexer.tokenize();
-      final parser = Parser(tokens);
-      final module = parser.parseModule();
-
-      expect(module.declaration!.name, 'math');
+    // -module is no longer supported: a module's name is its file/directory
+    // path from the program root (modules.tex sec:static-linking).
+    test('-module declaration is rejected', () {
+      final parser = Parser(Lexer('-module(math).\nfactorial(0, 1).').tokenize());
+      expect(() => parser.parseModule(), throwsA(anything));
     });
   });
 
@@ -168,8 +149,6 @@ boot :- true | foo(x) # bar.
   group('Module Parser - Complete Module', () {
     test('parser parses complete module file with exported procedure', () {
       final source = '''
--module(math).
-
 exported procedure factorial(Integer?, Integer).
 factorial(0, 1).
 factorial(N, F) :-
@@ -190,7 +169,6 @@ gcd(A, B, G) :-
       final parser = Parser(tokens);
       final module = parser.parseModule();
 
-      expect(module.name, 'math');
       expect(module.exportedSignatures, {'factorial/2', 'gcd/3'});
       expect(module.procedures.length, 2);
       expect(module.procedures[0].name, 'factorial');
@@ -207,8 +185,8 @@ bar(X) :- baz(X?).
       final parser = Parser(tokens);
       final module = parser.parseModule();
 
-      expect(module.declaration, isNull);
-      expect(module.name, isNull);
+      // A module has no in-source name (-module removed); the loader/linker
+      // assigns it from the file/directory path.
       expect(module.procDeclarations, isEmpty);
       expect(module.procedures.length, 2);
     });
@@ -279,8 +257,6 @@ double(N, R) :- true | R := N? * 2.
   group('Module Parser - Remote Goal in Module', () {
     test('parser parses module with remote goals', () {
       final source = '''
--module(main).
-
 exported procedure boot(_).
 boot(_Args) :-
     true |
@@ -292,7 +268,6 @@ boot(_Args) :-
       final parser = Parser(tokens);
       final module = parser.parseModule();
 
-      expect(module.name, 'main');
       expect(module.exportedSignatures, {'boot/1'});
 
       final bootClause = module.procedures[0].clauses[0];

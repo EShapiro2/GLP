@@ -24,7 +24,6 @@
 %% System predicates assumed:
 %%   punch_udp(Addr?) — body predicate, initiates UDP hole-punch to Addr
 
--module(fmrv).
 
 %% =============================================================================
 %% TYPE DEFINITIONS

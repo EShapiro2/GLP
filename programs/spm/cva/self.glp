@@ -10,7 +10,6 @@
 %% Status: types + procedure declarations only; clauses in network.glp,
 %% actor.glp, supervisor.glp.
 
--module(cva).
 
 %% =============================================================================
 %% TERMINOLOGY ALIASES (paper notation → GLP primitive types)
@@ -106,3 +105,13 @@ ReaderList(C) ::= [] ; [Stream(NetMsg(C)) | ReaderList(C)].
 %% Static-script plays pass UserIn as a fully-ground list literal; no
 %% actor/2 process is required.
 %% =============================================================================
+
+%% =============================================================================
+%% Directory interface (modules.tex sec:static-linking step 4: a directory is
+%% entered through its self.glp). The cva/ directory's procedures live in
+%% network.glp; this self.glp forwards `network` so a caller's `cva # network`
+%% resolves by entering cva/ through its self.glp. network.glp is unchanged.
+%% =============================================================================
+imported procedure network#network(NetEndList(C)?).
+exported procedure network(NetEndList(C)?).
+network(N) :- network # network(N?).

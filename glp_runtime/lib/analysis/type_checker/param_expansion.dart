@@ -196,7 +196,6 @@ ast.Module expandParameterizedTypes(ast.Module module, {
   }
 
   return ast.Module(
-    declaration: module.declaration,
     typeDefs: [...replacedTypeDefs, ...expandedDefs],
     procDeclarations: replacedProcDecls,
     paramProcDecls: paramProcDeclTemplates,

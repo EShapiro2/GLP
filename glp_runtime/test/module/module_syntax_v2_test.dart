@@ -78,7 +78,6 @@ helper(N, R) :- true | R := N? * 2.
   group('Phase 1 - 2b: imported procedure parsing', () {
     test('imported procedure with module path', () {
       final source = '''
--module(main).
 imported procedure social#agent(Constant?, AgentChannel?).
 boot :- true | social # agent(id, Ch).
 ''';
@@ -95,7 +94,6 @@ boot :- true | social # agent(id, Ch).
 
     test('imported procedure with deep path', () {
       final source = '''
--module(main).
 imported procedure ui#actors#render(Widget?, Screen).
 boot :- true | true.
 ''';
@@ -111,7 +109,6 @@ boot :- true | true.
 
     test('imported procedure from ancestor scope (no path)', () {
       final source = '''
--module(main).
 imported procedure merge(Stream?, Stream?, Stream).
 boot :- true | true.
 ''';
@@ -127,7 +124,6 @@ boot :- true | true.
 
     test('imported procedure with qualified types using #', () {
       final source = '''
--module(boot).
 imported procedure social#agent(Constant?, social#AgentChannel?).
 boot :- true | true.
 ''';
@@ -148,7 +144,6 @@ boot :- true | true.
     test('imported procedure has no clauses (declaration only)', () {
       // Imported procedures are pure declarations — no clauses follow
       final source = '''
--module(main).
 imported procedure math#factorial(Integer?, Integer).
 exported procedure compute(Integer?, Integer).
 compute(N, R?) :- true | math # factorial(N?, R).
@@ -198,17 +193,12 @@ boot.
     });
   });
 
-  group('Phase 1 - 2d: -module(name) still works', () {
-    test('-module(name) still parses', () {
-      final source = '''
--module(math).
-procedure factorial(Integer?, Integer).
-factorial(0, 1).
-''';
-      final module = parseModule(source);
-
-      expect(module.declaration, isNotNull);
-      expect(module.declaration!.name, 'math');
+  group('Phase 1 - 2d: -module(name) is rejected', () {
+    // -module is no longer supported: a module's name is its file/directory
+    // path from the program root (modules.tex sec:static-linking).
+    test('-module(name) is no longer supported', () {
+      final source = '-module(math).\nprocedure factorial(Integer?, Integer).\nfactorial(0, 1).';
+      expect(() => parseModule(source), throwsA(anything));
     });
   });
 

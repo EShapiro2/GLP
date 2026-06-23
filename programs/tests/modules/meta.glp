@@ -1,4 +1,3 @@
--module(meta).
 -export([run/2]).
 
 run(true, _Module).

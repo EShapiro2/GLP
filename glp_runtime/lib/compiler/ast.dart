@@ -177,15 +177,8 @@ class UnderscoreTerm extends Term {
 // Module System AST Nodes
 // ============================================================================
 
-/// Module declaration: -module(name).
-class ModuleDeclaration extends AstNode {
-  final String name;
-
-  ModuleDeclaration(this.name, int line, int column) : super(line, column);
-
-  @override
-  String toString() => '-module($name).';
-}
+// ModuleDeclaration removed: the -module(name) directive is no longer
+// supported. A module's name is its file/directory path from the program root.
 
 // ExportDeclaration, ImportDeclaration, and ProcRef removed in Phase 1.
 // Visibility is now declared per-procedure via 'exported procedure'.
@@ -248,7 +241,8 @@ class SpawnGoal extends Goal {
 
 /// Complete module structure
 class Module extends AstNode {
-  final ModuleDeclaration? declaration;
+  // A module has no name in its source: its name is its file/directory path
+  // from the program root, assigned by the loader/linker (-module removed).
   final List<TypeDef> typeDefs;              // Type definitions: Name ::= alt ; alt.
   final List<ProcDecl> procDeclarations;     // Procedure declarations (each with exported flag)
   final List<ProcDecl> paramProcDecls;       // Parameterized proc decl templates (for call-site inference)
@@ -257,7 +251,6 @@ class Module extends AstNode {
   final List<String> exposes;     // `-expose(M).` module paths (e.g. "lib#streams")
 
   Module({
-    this.declaration,
     this.typeDefs = const [],
     this.procDeclarations = const [],
     this.paramProcDecls = const [],
@@ -267,9 +260,6 @@ class Module extends AstNode {
     required int line,
     required int column,
   }) : super(line, column);
-
-  /// Get module name, or null if anonymous
-  String? get name => declaration?.name;
 
   /// Get all exported procedure signatures (from procedure declarations with exported=true)
   Set<String> get exportedSignatures {
@@ -283,5 +273,5 @@ class Module extends AstNode {
   }
 
   @override
-  String toString() => 'Module(${name ?? "_anonymous"}, ${procedures.length} procedures)';
+  String toString() => 'Module(${procedures.length} procedures)';
 }

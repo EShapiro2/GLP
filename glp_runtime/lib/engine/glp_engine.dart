@@ -741,16 +741,18 @@ class GlpEngine {
 
   ModuleInfo _extractModuleInfo(
       String source, BytecodeProgram program, String filename) {
-    String name;
-    bool isTopLevel;
-    final moduleMatch = RegExp(r'-module\((\w+)\)\.').firstMatch(source);
-    if (moduleMatch != null) {
-      name = moduleMatch.group(1)!;
-      isTopLevel = false;
+    // -module removed: a module's name is its file (or, for self.glp, its
+    // directory). Every loaded module is top-level — a single-module program
+    // exports all its procedures (modules.tex sec:static-linking).
+    final baseName = filename.split('/').last;
+    final String name;
+    if (baseName == 'self.glp') {
+      final segs = filename.split('/');
+      name = segs.length >= 2 ? segs[segs.length - 2] : 'self';
     } else {
       name = _moduleNameFromFilename(filename);
-      isTopLevel = true;
     }
+    const isTopLevel = true;
 
     // Extract imported module names from `imported procedure Module#Proc(...)` declarations.
     // The order of unique module names determines the import index (1-based),

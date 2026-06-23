@@ -4,7 +4,6 @@
 %% Extends CSSG types with group support (GroupId, group messaging).
 %% Defined once here, visible to all modules via ancestor scoping.
 
--module(cssn).
 
 %% =============================================================================
 %% CORE PROTOCOL TYPES

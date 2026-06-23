@@ -4,7 +4,6 @@
 %% Extracted from bond_actors.glp type definitions.
 %% Defined once here, visible to all actor modules via ancestor scoping.
 
--module(play12).
 
 %% =============================================================================
 %% CORE TYPES

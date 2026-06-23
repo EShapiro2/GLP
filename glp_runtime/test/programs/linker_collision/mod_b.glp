@@ -3,6 +3,5 @@
 %% PURPOSE: sole coverage of the project linker's module-local name-collision
 %% handling. Sibling of mod_a; both define dup/1 so linking must disambiguate
 %% them into mod_a:dup and mod_b:dup. See mod_a.glp for the full rationale.
--module(mod_b).
 
 dup(b).

@@ -1835,8 +1835,12 @@ private_proc(5, X).
 HEREDOC
 2>&1)
 check "public_proc(5,X) returns X=6" "X = 6" "$output"
-check_not "private_proc not callable from REPL" "X = 7" "$output"
-check "private_proc fails or not found" "not found\|failed\|Error" "$output"
+# A single-module program (loaded file, no self.glp) exports ALL its procedures,
+# so every one is an entry point — modules.tex sec:static-linking. With -module
+# removed there is no module-private REPL boundary on a single loaded file;
+# private_proc is now callable. (Cross-module privacy still holds: a module
+# resolves only what another's self.glp / exported declarations expose.)
+check "private_proc(5,X) now callable (single module exports all): X=7" "X = 7" "$output"
 
 echo ""
 

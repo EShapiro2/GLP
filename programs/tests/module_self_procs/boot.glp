@@ -1,4 +1,3 @@
--module(boot).
 
 imported procedure worker#do_work(Integer?, Integer).
 

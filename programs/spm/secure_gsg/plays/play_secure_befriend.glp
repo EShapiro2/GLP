@@ -10,7 +10,6 @@
 %% by trace inspection: look for `set_full_entry(bob, 1, [cust_b1, cust_b2],
 %% 67, ...)` at alice and the symmetric at bob.
 
--module(play_secure_befriend).
 
 imported procedure secure_gsg_agent # agent(Agent?, IdentityRecord?,
                                              Stream(UserEvent(SecureGsgVolition, SecureGsgQuery, SecureGsgAnswer))?,

@@ -1,4 +1,3 @@
--module(probe).
 
 %% Producer: emits one it(bob, _) — the `_` is a legal anonymous WRITER at the
 %% produce position (the structurally-unbound response hole), then closes.
@@ -43,3 +42,17 @@ boot_head :- produce(S), cons_head(S?).
 %% consumer's receive runs first on an unbound stream (suspends), feeder binds it later.
 exported procedure boot_chan_late.
 boot_chan_late :- consumer(ch(S?, closed)), feeder(S).
+
+%% Mirror mad_w_probe EXACTLY: channel with an UNBOUND (`_`) Out, polymorphic,
+%% named continuation used in the body. Same late-feed. If this fires otherwise
+%% (anon_otherwise) where boot_chan_late suspends+matches, the unbound Out is the
+%% trigger for receive-guard failing instead of suspending.
+procedure consumer_anon(Channel(Stream(Item), W)?).
+consumer_anon(Ch) :- receive(it(_, R?), Ch?, Ch1) | stash([keep(R)]), dropch(Ch1?), send_to_user([anon_matched]).
+consumer_anon(_)  :- otherwise | send_to_user([anon_otherwise]).
+
+procedure dropch(Channel(Stream(Item), W)?).
+dropch(_).
+
+exported procedure boot_anon_late.
+boot_anon_late :- consumer_anon(ch(S?, _)), feeder(S).

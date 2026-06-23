@@ -1,4 +1,3 @@
--module(custodian).
 
 %% custodian.glp — Custodian mirror
 %%

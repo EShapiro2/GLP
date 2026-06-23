@@ -1,4 +1,3 @@
--module(typeerr).
 
 procedure bad_proc(Integer?, Integer).
 bad_proc(X, hello).

@@ -1,4 +1,3 @@
--module(module_local_private).
 
 exported procedure caller(Integer?, Integer).
 caller(X, Y?) :- helper(X?, Y).

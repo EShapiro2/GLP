@@ -1,4 +1,3 @@
--module(play_sovereign).
 
 %% play_sovereign.glp — Test plays for secure bonds sovereign
 %%

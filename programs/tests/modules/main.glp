@@ -1,4 +1,3 @@
--module(main).
 -import([math]).
 -export([test_double/1, test_factorial/1]).
 

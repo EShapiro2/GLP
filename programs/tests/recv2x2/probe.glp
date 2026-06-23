@@ -1,4 +1,3 @@
--module(probe).
 
 procedure feeder(ItemStream).
 feeder([it(bob, _)]).

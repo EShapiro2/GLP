@@ -7,7 +7,6 @@
 %%
 %% Types: from bonds/self.glp (ancestor scoping)
 
--module(alice).
 
 exported procedure alice_p12(Constant?, ActorChannel?, Stream(NarrativeItem)).
 alice_p12(_, ch(In, [connect(bob)|Out?]), Narr?) :-

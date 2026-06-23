@@ -1,4 +1,3 @@
--module(chain_b).
 -import([utils]).
 -export([process/2]).
 

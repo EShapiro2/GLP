@@ -1,6 +1,5 @@
 %% Client module that calls math_service dynamically via M # goal(...)
 %% Used to test dynamic dispatch from the REPL.
--module(dispatch_client).
 
 imported procedure math_service#double(Integer?, Integer).
 imported procedure math_service#triple(Integer?, Integer).

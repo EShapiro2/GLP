@@ -11,7 +11,6 @@
 %%
 %% Architecture: /Users/udi/Grassroots/GLP/programs/SPM/docs/glp-architecture.md
 
--module(gsg).
 
 %% =============================================================================
 %% TERMINOLOGY ALIASES (paper notation → GLP types)

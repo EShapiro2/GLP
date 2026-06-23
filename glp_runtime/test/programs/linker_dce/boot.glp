@@ -2,7 +2,6 @@
 %% Root export `run` calls `helper`; `dead` is never called. After linking, DCE
 %% keeps the reachable run/helper (and the bare `run` entry alias) and prunes the
 %% unreachable `dead`.
--module(boot).
 
 exported procedure run.
 run :- helper.

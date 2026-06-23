@@ -5,7 +5,6 @@
 %% _seedCrossModuleInstantiations) must check lib's clauses at this instantiation
 %% and reject — otherwise the type error leaks across the `#` seam (the bug this
 %% guards against). Loading the project must FAIL type checking.
--module(cons).
 Item ::= a ; b.
 imported procedure lib#relay(Stream(Item)?, Stream(Item)).
 exported procedure go(Stream(Item)?, Stream(Item)).

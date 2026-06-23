@@ -1,4 +1,3 @@
--module(test_module_boundary).
 
 exported procedure public_proc(Integer?, Integer).
 public_proc(X, Y?) :- Y := X? + 1.

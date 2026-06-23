@@ -1,4 +1,3 @@
--module(shadow_sub).
 
 procedure get_tag(Tag).
 get_tag(inner).

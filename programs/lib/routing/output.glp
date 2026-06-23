@@ -1,4 +1,3 @@
--module(routing_output).
 
 %% Per-kind output routers (A5 Stage B), lifted verbatim from the platform
 %% self.glp files (social/network, social/graph, bonds — all

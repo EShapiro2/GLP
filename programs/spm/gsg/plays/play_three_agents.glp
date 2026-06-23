@@ -7,7 +7,6 @@
 %% Each offer_friendship carries a Reply; await suspends alice's UserIn
 %% until the matching Integrate accept fires.
 
--module(play_three_agents).
 
 imported procedure gsg_agent # agent(Agent?, IdentityRecord?,
                                       Stream(UserEvent(GsgVolition, GsgQuery, GsgAnswer))?,

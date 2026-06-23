@@ -8,7 +8,6 @@
 %% group creation/inviting/joining/messaging, and blocking parental consent
 %% for child-managed group invites (consent flow 3).
 
--module(child_agent).
 
 %% =============================================================================
 %% AWAIT_GROUP_CHANNEL — local (calls merge and child_agent)

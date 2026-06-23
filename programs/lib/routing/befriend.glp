@@ -1,9 +1,8 @@
--module(routing_befriend).
 
 %% Cross-lib dependency: the output routers (exposed at the root for platforms,
 %% but a sibling lib module is reached by explicit import + qualified call).
-imported procedure routing_output#send_user(M?, Stream(Ent)?, Stream(Ent)).
-imported procedure routing_output#add_friend_output(Constant?, Stream(M), Stream(Ent)?, Stream(Ent)).
+imported procedure output#send_user(M?, Stream(Ent)?, Stream(Ent)).
+imported procedure output#add_friend_output(Constant?, Stream(M), Stream(Ent)?, Stream(Ent)).
 
 %% Idempotent befriend commit with smaller-name tie-break and fresh-friend-channel
 %% conveyance (CSSN Issue 16), lifted from social/network and generalised so all
@@ -69,8 +68,8 @@ smaller_dispatch(yes, _, ch(_, []), Outs, Outs?, NetIn, NetIn?).
 %% local end (add_friend_output) and merge its read side into NetIn.
 smaller_dispatch(no, Other, ch(_, [friend_channel(PeerEnd?)|[]]), Outs, Outs2?, NetIn, NetIn1?) :-
     ground(Other?), new_channel(PeerEnd, ch(FIn, FOut?)) |
-    routing_output # add_friend_output(Other?, FOut, Outs?, Outs1),
-    routing_output # send_user(msg(agent, '_user', connected(Other?)), Outs1?, Outs2),
+    output # add_friend_output(Other?, FOut, Outs?, Outs1),
+    output # send_user(msg(agent, '_user', connected(Other?)), Outs1?, Outs2),
     merge(NetIn?, FIn?, NetIn1).
 
 %% Larger-name side: read the setup channel's read end.
@@ -83,8 +82,8 @@ procedure await_friend_channel(Constant?, Channel(Stream(C), Stream(C))?,
 await_friend_channel(Other, ch([friend_channel(ch(FIn, FOut?))|_], []), Outs, Outs3?, NetIn, NetIn1?) :-
     ground(Other?) |
     close_friend(Other?, Outs?, Outs1),
-    routing_output # add_friend_output(Other?, FOut, Outs1?, Outs2),
-    routing_output # send_user(msg(agent, '_user', connected(Other?)), Outs2?, Outs3),
+    output # add_friend_output(Other?, FOut, Outs1?, Outs2),
+    output # send_user(msg(agent, '_user', connected(Other?)), Outs2?, Outs3),
     merge(NetIn?, FIn?, NetIn1).
 
 %% Setup closed ([]): smaller-name side suppressed this offer.  Drop it.

@@ -1,3 +1,2 @@
--module(m).
 exported procedure noop(Integer?, Integer).
 noop(N, N?).

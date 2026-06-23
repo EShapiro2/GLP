@@ -4,4 +4,3 @@
 %% and NarrativeStream types are inherited from the parent
 %% network/self.glp via ancestor scoping.
 
--module(village).

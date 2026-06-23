@@ -1,4 +1,3 @@
--module(securebonds).
 
 %% SecureBonds/self.glp — Shared types for secure bonds
 %%

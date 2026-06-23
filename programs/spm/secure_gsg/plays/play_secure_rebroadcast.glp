@@ -24,7 +24,6 @@
 %% deferred to fault-harness session.  PASS B-full would require crash
 %% scenarios to exercise those branches.
 
--module(play_secure_rebroadcast).
 
 imported procedure secure_gsg_agent # agent(Agent?, IdentityRecord?,
                                              Stream(UserEvent(SecureGsgVolition, SecureGsgQuery, SecureGsgAnswer))?,

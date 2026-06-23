@@ -1,4 +1,3 @@
--module(a5_neg).
 
 % Entry union WITHOUT user_output (only net_output).
 Note ::= note(Constant).

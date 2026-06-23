@@ -55,10 +55,12 @@ void main() {
       expect(names, contains('actors'));
       expect(names, contains('boot'));
       expect(names, contains('cssn'));
-      expect(names, contains('routing_output'));
-      expect(names, contains('routing_inject'));
-      expect(names, contains('routing_intro'));
-      expect(names, contains('routing_befriend'));
+      // -module removed: module names derive from the filename, so the routing
+      // modules are output/inject/intro/befriend (lib/routing/<name>.glp).
+      expect(names, contains('output'));
+      expect(names, contains('inject'));
+      expect(names, contains('intro'));
+      expect(names, contains('befriend'));
       // At least the 6 own modules + 4 exposed routing modules; cssn also carries
       // a village/ subtree of actor scenarios, so the total is larger.
       expect(names.length, greaterThanOrEqualTo(10));

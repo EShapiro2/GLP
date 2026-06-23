@@ -23,7 +23,6 @@
 %%   AliceFinalEpoch = 1
 %%   BobFinalEpoch  = 1
 
--module(play_befriend_simultaneous).
 
 imported procedure gsg_agent # agent(Agent?, IdentityRecord?,
                                       Stream(UserEvent(GsgVolition, GsgQuery, GsgAnswer))?,

@@ -1,4 +1,3 @@
--module(shadower).
 %% Local twice/2 SHADOWS the exposed base#twice (which would give N*2).
 %% Local returns N+1, so the result distinguishes which one resolved.
 procedure twice(Integer?, Integer).

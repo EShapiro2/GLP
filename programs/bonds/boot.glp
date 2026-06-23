@@ -9,7 +9,6 @@
 %% Phase 3: Credit + payment (two-agent).
 %% Phase 4: Credit + redemption (two-agent).
 
--module(boot).
 
 %% Exported entry points (project-compilation spec §3.4: only exported
 %% root-level procedures alias). Each `exported procedure` declaration sits

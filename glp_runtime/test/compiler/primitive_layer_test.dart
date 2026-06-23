@@ -76,7 +76,7 @@ void main() {
       final proj = Directory('${tmp.path}${Platform.pathSeparator}proj')
         ..createSync();
       File('${proj.path}${Platform.pathSeparator}bad.glp').writeAsStringSync(
-          '-module(bad).\n-mode(system).\nexported procedure b.\nb.\n');
+          '-mode(system).\nexported procedure b.\nb.\n');
       expect(() => discoverProgram(proj.path, rootSelfGlpPath: rootSelf),
           throwsContaining('confined to the primitive layer'));
     });

@@ -1,4 +1,3 @@
--module(client).
 
 %% S2: project load of a leaf whose utility (pmerge) lives in an ancestor
 %% self.glp ABOVE the load point (scope_chain/self.glp).

@@ -4,7 +4,6 @@
 %% Extends the social graph agent (agent/4) to agent/6 with bonds/trade/escrow.
 %% Defined once here, visible to all modules via ancestor scoping.
 
--module(bonds).
 
 %% =============================================================================
 %% CORE PROTOCOL TYPES

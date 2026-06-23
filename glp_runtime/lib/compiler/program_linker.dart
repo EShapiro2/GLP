@@ -107,11 +107,11 @@ List<DiscoveredModule> discoverProgram(String rootDir,
     // Enforce "Admission to the Primitive Layer" (Rule A / Rule B) at load time.
     enforcePrimitiveLayer(file.path, module, rootSelfGlpPath);
 
-    // Extract module name: for self.glp without -module(), derive from parent dir
-    final moduleName = module.name ??
-        (filename == 'self.glp'
-            ? _moduleNameFromDirPath(file.parent.path)
-            : _moduleNameFromFilename(filename));
+    // Module name is derived from the path: a self.glp takes its parent dir's
+    // name, any other module its file name (-module removed).
+    final moduleName = filename == 'self.glp'
+        ? _moduleNameFromDirPath(file.parent.path)
+        : _moduleNameFromFilename(filename);
 
     // Build ancestor scope chain (extends up to programs/ when known)
     final chain = discoverSelfChain(
@@ -146,8 +146,7 @@ List<DiscoveredModule> discoverProgram(String rootDir,
       final parser = Parser(tokens);
       final selfModule = parser.parseModule();
 
-      final moduleName = selfModule.name ??
-          _moduleNameFromDirPath(File(selfPath).parent.path);
+      final moduleName = _moduleNameFromDirPath(File(selfPath).parent.path);
 
       final chain = discoverSelfChain(
         targetFile: selfPath,
@@ -252,7 +251,7 @@ void _resolveExposes(List<DiscoveredModule> modules, String? programsDir,
 
       final exposedAst =
           Parser(Lexer(file.readAsStringSync()).tokenize()).parseModule();
-      final exposedName = exposedAst.name ??
+      final exposedName =
           _moduleNameFromFilename(file.path.split(Platform.pathSeparator).last);
 
       // Collision: exported sigs unique among modules exposed at this level.

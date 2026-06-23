@@ -10,7 +10,6 @@
 %% The fix keeps FriendMsg canonical-free so Stream(FriendMsg) ⊆ Stream(NetInMsg);
 %% re-adding the token here must stay rejected.
 
--module(neg_control_token_merge).
 
 %% Narrow network-input alphabet.
 NetLike ::= m(Constant).

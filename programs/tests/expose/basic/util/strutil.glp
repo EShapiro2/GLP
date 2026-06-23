@@ -1,3 +1,2 @@
--module(strutil).
 exported procedure twice(Integer?, Integer).
 twice(N, R?) :- R := N? * 2.

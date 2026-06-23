@@ -1,3 +1,2 @@
--module(one).
 exported procedure clash(Integer?, Integer).
 clash(N, R?) :- R := N? * 2.

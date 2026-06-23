@@ -4,7 +4,6 @@
 %% Types: from self.glp (ancestor scoping)
 %% No cross-module imports — all helpers are local.
 
--module(mediator).
 
 %% =============================================================================
 %% CHANNEL OPERATIONS (Defined Guards)

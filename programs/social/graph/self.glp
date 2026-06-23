@@ -3,7 +3,6 @@
 %% All protocol types for the Social Graph application with UI mediator.
 %% Defined once here, visible to all modules via ancestor scoping.
 
--module(social_graph).
 
 %% =============================================================================
 %% CORE PROTOCOL TYPES

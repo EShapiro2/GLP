@@ -1,4 +1,3 @@
--module(client).
 %% X1/X5: calls exposed `twice` unqualified (util/ is outside leaf/'s subtree).
 exported procedure run(Integer).
 run(R?) :- twice(21, R).

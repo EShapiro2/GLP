@@ -8,7 +8,6 @@
 %%   - Helpers moved to self.glp (except merge-dependent ones)
 %%   - Added parent consent clauses: group_consent_req, approve/reject_child_group
 
--module(agent).
 
 %% =============================================================================
 %% AWAIT_GROUP_CHANNEL — local (calls merge and agent)
