@@ -130,3 +130,44 @@ NetInStream  ::= [] ; [NetInMsg | NetInStream].
 %% Pending entries
 PendingEntry ::= pending(ReqId, PendingValue).
 PendingList  ::= [] ; [PendingEntry | PendingList].
+
+%% =============================================================================
+%% ENTRY POINTS (modules.tex sec:static-linking step 5, §External access)
+%% The root self.glp exports each program entry by forwarding to boot, so an
+%% external goal calls it by plain name. boot.glp is unchanged.
+%% =============================================================================
+imported procedure boot#play1.
+exported procedure play1.
+play1 :- boot # play1.
+
+imported procedure boot#play2.
+exported procedure play2.
+play2 :- boot # play2.
+
+imported procedure boot#play3.
+exported procedure play3.
+play3 :- boot # play3.
+
+imported procedure boot#fplay1.
+exported procedure fplay1.
+fplay1 :- boot # fplay1.
+
+imported procedure boot#fplay2.
+exported procedure fplay2.
+fplay2 :- boot # fplay2.
+
+imported procedure boot#fplay3.
+exported procedure fplay3.
+fplay3 :- boot # fplay3.
+
+imported procedure boot#play_unfriend_send.
+exported procedure play_unfriend_send.
+play_unfriend_send :- boot # play_unfriend_send.
+
+imported procedure boot#play_unfriend_recv.
+exported procedure play_unfriend_recv.
+play_unfriend_recv :- boot # play_unfriend_recv.
+
+imported procedure boot#play_unfriend_absent.
+exported procedure play_unfriend_absent.
+play_unfriend_absent :- boot # play_unfriend_absent.

@@ -1,3 +1,8 @@
 %% Exposes two utility modules into this subtree.
 -expose(util#strutil).
 -expose(util#plist).
+
+%% Entry point (modules.tex sec:static-linking step 5): root self.glp forwards.
+imported procedure in_subtree#use_exposed(Integer).
+exported procedure use_exposed(Integer).
+use_exposed(R?) :- in_subtree # use_exposed(R).

@@ -2,3 +2,8 @@
 
 procedure shared_double(Integer?, Integer).
 shared_double(X, Y?) :- Y := X? * 2.
+
+%% Entry point (modules.tex sec:static-linking step 5): root self.glp forwards.
+imported procedure boot#test_self_proc(Integer?, Integer).
+exported procedure test_self_proc(Integer?, Integer).
+test_self_proc(X, Y?) :- boot # test_self_proc(X?, Y).

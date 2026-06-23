@@ -636,33 +636,49 @@ LinkResult linkAndResolveModules(List<DiscoveredModule> modules, {required Strin
     }
   }
 
-  // Generate entry-point aliases (project-compilation spec §3.4).
-  // Only EXPORTED procedures of ROOT-LEVEL modules receive unprefixed aliases.
-  // A module is root-level when its nearest enclosing self.glp directory is the
-  // loaded root itself — i.e. it is not contained in any descendant self.glp
-  // subtree (a nested sub-program, e.g. secure/, village/). Nested-subtree
-  // modules keep prefixed names only. There is no "top module".
+  // Generate entry-point aliases (modules.tex sec:static-linking step 5,
+  // §External access). The program's entry points are the EXPORTED procedures
+  // of the ROOT self.glp — the self.glp at the loaded program root. Each
+  // receives an unqualified alias, so an external goal calls it by plain name.
+  // The root self.glp exports an entry by defining it directly or by a
+  // forwarding clause to the module that implements it.
+  //
+  // A program that is a single module — or a directory with no root self.glp —
+  // has no such interface file; there its root-level modules' own exported
+  // procedures are the entry points (§External access, single-module case). A
+  // module is root-level when its nearest enclosing self.glp directory is the
+  // loaded root, i.e. it is not inside a descendant self.glp subtree.
   final rootNorm = _normPath(rootDir);
-  final descendantSelfDirs = <String>{};
-  for (final s in selfGlpModules) {
-    final sDir = _normPath(File(s.filePath).parent.path);
-    if (sDir != rootNorm && _dirUnder(sDir, rootNorm)) {
-      descendantSelfDirs.add(sDir);
+  final rootSelfMods = modules
+      .where((m) =>
+          m.isSelfGlp && _normPath(File(m.filePath).parent.path) == rootNorm)
+      .toList();
+
+  Iterable<DiscoveredModule> aliasSourceModules;
+  if (rootSelfMods.isNotEmpty) {
+    aliasSourceModules = rootSelfMods;
+  } else {
+    final descendantSelfDirs = <String>{};
+    for (final s in selfGlpModules) {
+      final sDir = _normPath(File(s.filePath).parent.path);
+      if (sDir != rootNorm && _dirUnder(sDir, rootNorm)) {
+        descendantSelfDirs.add(sDir);
+      }
     }
-  }
-  bool isRootLevel(DiscoveredModule mod) {
-    if (mod.exposingDir != null) return false; // exposed, not part of root surface
-    final modDir = _normPath(File(mod.filePath).parent.path);
-    if (!_dirUnder(modDir, rootNorm)) return false; // ancestor self.glp above root
-    for (final s in descendantSelfDirs) {
-      if (_dirUnder(modDir, s)) return false; // inside a nested sub-program
+    bool isRootLevel(DiscoveredModule mod) {
+      if (mod.exposingDir != null) return false; // exposed, not root surface
+      final modDir = _normPath(File(mod.filePath).parent.path);
+      if (!_dirUnder(modDir, rootNorm)) return false; // ancestor above root
+      for (final s in descendantSelfDirs) {
+        if (_dirUnder(modDir, s)) return false; // inside a nested sub-program
+      }
+      return true;
     }
-    return true;
+    aliasSourceModules = modules.where(isRootLevel);
   }
 
   final aliasedSigs = <String, String>{}; // sig → owning module (conflict check)
-  for (final mod in modules) {
-    if (!isRootLevel(mod)) continue;
+  for (final mod in aliasSourceModules) {
     for (final proc in mod.ast.procedures) {
       final isExported = mod.ast.procDeclarations.any(
           (d) => d.exported && d.name == proc.name && d.arity == proc.arity);
@@ -673,7 +689,7 @@ LinkResult linkAndResolveModules(List<DiscoveredModule> modules, {required Strin
       if (owner != null && owner != mod.moduleName) {
         throw Exception(
             'Entry-point conflict: procedure $sig is exported by both '
-            'root-level modules "$owner" and "${mod.moduleName}".');
+            '"$owner" and "${mod.moduleName}".');
       }
       if (owner != null) continue;
       aliasedSigs[sig] = mod.moduleName;

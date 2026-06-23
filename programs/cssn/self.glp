@@ -385,3 +385,68 @@ close_output(Key, [E|Rest], [E?|Rest1?]) :-
 %% See docs/cssn-glp-implementation-spec.md §"Befriend Commit: Separate Setup
 %% Channel and Canonical Friend Channel".
 %% =============================================================================
+
+%% =============================================================================
+%% ENTRY POINTS (modules.tex sec:static-linking step 5, §External access)
+%% The root self.glp exports each program entry by forwarding to boot, so an
+%% external goal calls it by plain name. boot.glp is unchanged.
+%% =============================================================================
+imported procedure boot#fplay1.
+exported procedure fplay1.
+fplay1 :- boot # fplay1.
+
+imported procedure boot#fplay2.
+exported procedure fplay2.
+fplay2 :- boot # fplay2.
+
+imported procedure boot#fplay3.
+exported procedure fplay3.
+fplay3 :- boot # fplay3.
+
+imported procedure boot#fplay4.
+exported procedure fplay4.
+fplay4 :- boot # fplay4.
+
+imported procedure boot#fplay5.
+exported procedure fplay5.
+fplay5 :- boot # fplay5.
+
+imported procedure boot#fplay6.
+exported procedure fplay6.
+fplay6 :- boot # fplay6.
+
+imported procedure boot#fplay7.
+exported procedure fplay7.
+fplay7 :- boot # fplay7.
+
+imported procedure boot#fplay8.
+exported procedure fplay8.
+fplay8 :- boot # fplay8.
+
+imported procedure boot#fplay9.
+exported procedure fplay9.
+fplay9 :- boot # fplay9.
+
+imported procedure boot#fplay10.
+exported procedure fplay10.
+fplay10 :- boot # fplay10.
+
+imported procedure boot#fplay11.
+exported procedure fplay11.
+fplay11 :- boot # fplay11.
+
+imported procedure boot#fplay12.
+exported procedure fplay12.
+fplay12 :- boot # fplay12.
+
+imported procedure boot#fplay13.
+exported procedure fplay13.
+fplay13 :- boot # fplay13.
+
+imported procedure boot#fplay14.
+exported procedure fplay14.
+fplay14 :- boot # fplay14.
+
+imported procedure boot#fplay15.
+exported procedure fplay15.
+fplay15 :- boot # fplay15.

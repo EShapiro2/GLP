@@ -54,3 +54,16 @@ ApprovalReq ::= approve_mint(Constant, Constant, Finality?)
 %% approval requests, awaiting custodian acknowledgment.
 PendingFinality ::= pending_mint(Constant, Finality?)
                   ; pending_pay(Constant, Finality?, Finality?).
+
+%% =============================================================================
+%% ENTRY POINTS (modules.tex sec:static-linking step 5, §External access)
+%% The root self.glp exports each program entry by forwarding, so an external
+%% goal calls it by plain name. play_sovereign.glp is unchanged.
+%% =============================================================================
+imported procedure play_sovereign#play.
+exported procedure play.
+play :- play_sovereign # play.
+
+imported procedure play_sovereign#play_recover.
+exported procedure play_recover.
+play_recover :- play_sovereign # play_recover.

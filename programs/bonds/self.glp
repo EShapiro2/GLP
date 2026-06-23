@@ -397,3 +397,56 @@ lookup_pending(ReqId, Val?, [P | Rest], [P? | Rest1?]) :-
     otherwise |
     lookup_pending(ReqId?, Val, Rest?, Rest1).
 lookup_pending(_, error, [], []).
+
+%% =============================================================================
+%% ENTRY POINTS (modules.tex sec:static-linking step 5, §External access)
+%% The root self.glp exports each program entry by forwarding to boot, so an
+%% external goal calls it by plain name. boot.glp is unchanged.
+%% =============================================================================
+imported procedure boot#fplay1.
+exported procedure fplay1.
+fplay1 :- boot # fplay1.
+
+imported procedure boot#fplay2.
+exported procedure fplay2.
+fplay2 :- boot # fplay2.
+
+imported procedure boot#fplay3.
+exported procedure fplay3.
+fplay3 :- boot # fplay3.
+
+imported procedure boot#fplay4.
+exported procedure fplay4.
+fplay4 :- boot # fplay4.
+
+imported procedure boot#fplay4b.
+exported procedure fplay4b.
+fplay4b :- boot # fplay4b.
+
+imported procedure boot#fplay5.
+exported procedure fplay5.
+fplay5 :- boot # fplay5.
+
+imported procedure boot#fplay6.
+exported procedure fplay6.
+fplay6 :- boot # fplay6.
+
+imported procedure boot#fplay8.
+exported procedure fplay8.
+fplay8 :- boot # fplay8.
+
+imported procedure boot#fplay9.
+exported procedure fplay9.
+fplay9 :- boot # fplay9.
+
+imported procedure boot#fplay10.
+exported procedure fplay10.
+fplay10 :- boot # fplay10.
+
+imported procedure boot#fplay11.
+exported procedure fplay11.
+fplay11 :- boot # fplay11.
+
+imported procedure boot#fplay12.
+exported procedure fplay12.
+fplay12 :- boot # fplay12.

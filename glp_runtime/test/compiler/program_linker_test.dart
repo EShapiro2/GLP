@@ -196,8 +196,10 @@ void main() {
           reason: 'send_to_user prelude call should remain unprefixed');
     });
 
-    test('entry-point aliases exist for exported root-level procedures only', () {
-      // §3.4: only EXPORTED procedures of root-level modules get bare aliases.
+    test('entry-point aliases exist for the root self.glp forwarded entries', () {
+      // modules.tex sec:static-linking step 5: the entry points are the root
+      // self.glp's exports, here forwarders for each boot play, so every boot
+      // play has a bare alias (and the non-exported helper tee has none).
       final bootModule = modules.firstWhere((m) => m.moduleName == 'boot');
       final exported = bootModule.ast.procDeclarations
           .where((d) => d.exported)
@@ -223,7 +225,9 @@ void main() {
     });
 
     test('entry point alias calls renamed procedure', () {
-      // fplay1 alias should call boot:fplay1
+      // The entry point is the root self.glp's exported fplay1, so the bare
+      // alias calls cssn:fplay1 (the root self.glp's forwarder, which in turn
+      // calls boot:fplay1). modules.tex sec:static-linking step 5.
       final play1Alias = linked.procedures
           .firstWhere((p) => p.name == 'fplay1');
       expect(play1Alias.clauses.length, equals(1));
@@ -231,7 +235,7 @@ void main() {
       final body = play1Alias.clauses.first.body;
       expect(body, isNotNull);
       expect(body!.length, equals(1));
-      expect(body.first.functor, equals('boot:fplay1'));
+      expect(body.first.functor, equals('cssn:fplay1'));
     });
   });
 

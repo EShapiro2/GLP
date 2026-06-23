@@ -1,1 +1,6 @@
 -expose(sutil#base).
+
+%% Entry point (modules.tex sec:static-linking step 5): root self.glp forwards.
+imported procedure shadower#run(Integer).
+exported procedure run(Integer).
+run(R?) :- shadower # run(R).

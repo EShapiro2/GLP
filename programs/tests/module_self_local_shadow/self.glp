@@ -4,3 +4,8 @@ Result ::= from_self ; from_local.
 
 procedure helper(Result).
 helper(from_self).
+
+%% Entry point (modules.tex sec:static-linking step 5): root self.glp forwards.
+imported procedure boot#test_local_shadow(Result).
+exported procedure test_local_shadow(Result).
+test_local_shadow(R?) :- boot # test_local_shadow(R).

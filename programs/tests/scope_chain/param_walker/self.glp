@@ -10,3 +10,10 @@ put(Key, Msg, [Ent|Rest], [Ent?|Rest1?]) :-
     otherwise |
     put(Key?, Msg?, Rest?, Rest1).
 put(_, _, [], []).
+
+%% Entry point (modules.tex sec:static-linking step 5): root self.glp forwards.
+%% MyEntry is lifted here so the entry signature is visible at the forwarder.
+MyEntry ::= output(Constant, Stream(Constant)?) ; extra(Constant) ; more(Integer).
+imported procedure param_client#run(Stream(MyEntry), Stream(Constant)).
+exported procedure run(Stream(MyEntry), Stream(Constant)).
+run(R?, S?) :- param_client # run(R, S).

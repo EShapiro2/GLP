@@ -1,3 +1,7 @@
-%% Nested sub-project self.glp. Its mere presence makes child/ a descendant
-%% self.glp root: leaf's exports are NOT aliased when the parent is loaded, only
-%% when child/ is itself the loaded root.
+%% Nested sub-project self.glp. As a descendant self.glp root, `greet` is an
+%% entry point only when child/ is itself the loaded root — then this self.glp's
+%% forwarded export of `greet` is aliased. When the parent is the loaded root,
+%% this self.glp is not the root self.glp, so `greet` is not an entry point.
+imported procedure leaf#greet.
+exported procedure greet.
+greet :- leaf # greet.

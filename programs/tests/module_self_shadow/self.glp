@@ -4,3 +4,8 @@ Tag ::= outer ; inner.
 
 procedure get_tag(Tag).
 get_tag(outer).
+
+%% Entry point (modules.tex sec:static-linking step 5): root self.glp forwards.
+imported procedure boot#test_shadow(Tag, Tag).
+exported procedure test_shadow(Tag, Tag).
+test_shadow(X?, Y?) :- boot # test_shadow(X, Y).
