@@ -1,6 +1,6 @@
 # Typed GLP Manual
 
-**Version**: 2.17
+**Version**: 2.18
 **Date**: 2026-06-23
 **Status**: ACTIVE
 
@@ -1025,7 +1025,7 @@ To call an exported procedure from another module, use the `#` operator:
 test_double(X, Y?) :- math_service # double(X?, Y).
 ```
 
-This sends the goal `double(X?, Y)` to the `math_service` module for execution. The runtime routes the goal through a GLP channel to the target module's service loop, which dispatches it to the exported procedure.
+Under static linking (§19.7) the linker resolves `math_service # double(X?, Y)` at compile time to a local call to `math_service`'s `double`, entering the target directory through its `self.glp` (Moded-Types paper, §Static Linking). The qualifier is a single child directory or module file; multi-segment paths are future work. Routing the call through a GLP channel at runtime instead — dynamic linking — is retired (§19.7).
 
 ### 19.5 Complete Example
 
@@ -1061,44 +1061,25 @@ program/
     actors.glp           — sees ui/self.glp + program/self.glp
 ```
 
+A directory's `self.glp` is also the directory's interface: it declares which of the directory's procedures are exported, and a cross-module call into the directory resolves only to a procedure its `self.glp` exports — defined there directly, or forwarded to the module that defines it (`p :- m#p`). A program's entry points are the root `self.glp`'s exports (§19.7; Moded-Types paper, §Design, §External access).
+
 The root `programs/self.glp` defines all predefined types (`Stream(X)`, `Channel(In, Out)`, `DiffList(X)`, `OpenStream(X)`) and all predefined procedure declarations (`merge`, `send`, `receive`, `new_channel`, etc.). Every module sees root self.glp automatically.
 
-### 19.7 Compilation Modes
+### 19.7 Static Linking
 
-GLP supports two compilation modes for multi-module programs:
-
-**Static linking** (for programs): All modules in a directory tree are compiled together. The program linker resolves `M # goal(...)` calls at compile time by renaming and merging procedures into a single flat program. Use the REPL command `<directory>` to load a program:
+A multi-module program is compiled by static linking: all modules in the directory tree are compiled together, and the linker resolves every `M # goal(...)` call at compile time to a local call, flattening the modules into one program. Load a program by its directory:
 ```
 GLP> social_graph/
 ✓ Loaded program: social_graph/
 ```
 
-**Dynamic dispatch** (for independently loaded modules): Each module is loaded and activated separately. Cross-module calls route through GLP channels at runtime. This is the model described in Sections 19.3–19.5.
+A program's entry points are the root `self.glp`'s exported procedures — each defined there or forwarded to the module that defines it (§19.4). A single-module program exports all its procedures, so every one is an entry point. The unit of compilation and execution is the whole program, and only a well-typed program carries the soundness guarantee (Moded-Types paper, §Static Linking, §External access). A single module or a subprogram may be type-checked on its own as a development aid; in composition it is checked in its parent's context, its parameters instantiated by the calls above it.
 
-**The unit of compilation and execution is a program** — a directory hierarchy whose root `self.glp` exports nothing — and only a whole program whose linked program is well-typed carries the soundness guarantee (Moded-Types paper, §Static Linking). A single module, or a subprogram that exports something, may be loaded on its own as a development aid; in composition it is checked in its parent's context, its parameters instantiated by the calls above it.
+Static linking is fully type-checked — the goal, every clause, every cross-module instantiation. **Discipline:** trace a runtime bug by first recompiling the whole program and re-checking it as one; most mode bugs are whole-program type errors invisible to a single-module check.
 
-Static linking is fully type-checked — the goal, every clause, every cross-module instantiation. **Dynamic dispatch is not yet soundly typed**: the load-time check compares declared interfaces, not the terms exchanged, and a parametric dynamically-dispatched import is not checked at each instantiation; per-instantiation checking across dynamic dispatch needs dynamic type-checking, which is future work. **Discipline:** trace a runtime bug by first recompiling the whole program with static linking and re-checking it as one — most mode bugs are whole-program type errors invisible to a single-module or dynamic load.
+**Dynamic linking is retired.** A runtime dynamic-dispatch mechanism — routing cross-module calls through GLP channels at runtime — is present in the implementation but retired: it cannot be typed without runtime type-checking, which GLP avoids. Static linking is the model in force. Dynamic activation will return through attestation among validated modules, needing no runtime type-checking (Moded-Types paper, §Type-Compatible Attestation Between Agents), and the present mechanism will be removed once that lands.
 
-### 19.8 REPL Workflow for Dynamic Dispatch
-
-```
-GLP> programs/tests/dynamic_dispatch/math_service.glp
-✓ Loaded and activated: math_service
-
-GLP> programs/tests/dynamic_dispatch/dispatch_client.glp
-✓ Loaded and activated: dispatch_client
-
-GLP> test_double(5, X).
-X = 10
-```
-
-Modules with `exported procedure` declarations are automatically activated when loaded — a GLP channel is created, and a service loop is spawned to dispatch incoming goals. The `:activate` REPL command can also be used explicitly:
-```
-GLP> :activate math_service
-✓ Activated module: math_service
-```
-
-### 19.9 Module Design Guidelines
+### 19.8 Module Design Guidelines
 
 1. **Declare all dependencies.** Every cross-module call must have a corresponding `imported procedure` declaration. This makes the module self-contained for type checking.
 
@@ -1108,7 +1089,7 @@ GLP> :activate math_service
 
 4. **Matching modes matter.** The `imported procedure` declaration's argument modes must match the `exported procedure` declaration's modes. If the export says `double(Integer?, Integer)`, the import must say the same.
 
-### 19.10 The `-expose` Directive
+### 19.9 The `-expose` Directive
 
 A `self.glp` may **expose** another module, lifting that module's `exported` procedures (and the types their signatures carry) into the directory's scope — visible unqualified to the whole subtree, as if defined in the `self.glp`:
 
@@ -1171,6 +1152,7 @@ Formal definition: Moded-Types paper, §Type-Compatible Attestation Between Agen
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 2.18 | 2026-06-23 | §19 aligned to the paper: cross-module calls resolve at link time to local calls (§19.4); `self.glp` is the directory interface and entry points are the root `self.glp`'s exports (§19.6); §19.7 retitled Static Linking, single-module exports all; dynamic linking retired (present but unsupported, to return via attestation); removed the dynamic-dispatch REPL workflow, renumbering §19.9/§19.10 to §19.8/§19.9. |
 | 2.17 | 2026-06-23 | Removed the `-module` directive: a module's name is its filename (§19.2, §19.5). |
 | 2.16 | 2026-06-22 | Type/module updates: §17.7 (per-instantiation checking; uninstantiated parametric exports not certified); §19.7 (program is the unit of compilation and execution; dynamic dispatch not yet soundly typed; recompile-whole-program-first discipline); §21 (initial goals type-checked as body goals; `foo = X` not `X = foo`); §16.4 (polarity must agree across boundaries the checker cannot span) |
 | 2.15 | 2026-06-10 | Added §19.10: the `-expose` directive (lift another module's exports into a `self.glp`'s subtree scope; innermost-first shadowing; collision is an error) |
