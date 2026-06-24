@@ -131,46 +131,86 @@ List<DiscoveredModule> discoverProgram(String rootDir,
     ));
   }
 
-  // Discover ancestor `self.glp` files ABOVE the program root, up to (but not
-  // including) `programs/`. Ancestor directories contribute only their
-  // `self.glp`, never their other modules (project-compilation spec §3.1). The
-  // root `programs/self.glp` is excluded — it is realised by the root-scope
-  // mechanism. These ancestor self.glp modules are linked like any other, so
-  // their (multi-clause, parameterised) procedures resolve for descendants.
+  // Add the program's filesystem context (ancestor self.glp above the root) and
+  // resolve -expose directives.
+  _addAncestorContextAndExposes(
+      modules, root.absolute.path, programsDir, rootSelfGlpPath);
+  return modules;
+}
+
+/// Discover a single self-contained module as a one-module program (modules.tex
+/// §Design: "A Typed GLP program is either a self-contained module or a
+/// directory with a self.glp module"). The module is the program's only own
+/// module — it has no self.glp of its own, so every one of its procedures is an
+/// entry point (§Static Linking). Its filesystem context (ancestor self.glp
+/// above its directory, up to programs/) is added, so it links and runs through
+/// the same pipeline as a directory program.
+List<DiscoveredModule> discoverSingleModule(String filePath,
+    {String? rootSelfGlpPath}) {
+  final file = File(filePath);
+  if (!file.existsSync()) {
+    throw ArgumentError('Module file not found: $filePath');
+  }
+  final programsDir = rootSelfGlpPath != null
+      ? File(rootSelfGlpPath).parent.absolute.path
+      : null;
+
+  final module =
+      Parser(Lexer(file.readAsStringSync()).tokenize()).parseModule();
+  enforcePrimitiveLayer(file.path, module, rootSelfGlpPath);
+
+  final dir = file.parent.absolute.path;
+  final chain = discoverSelfChain(
+      targetFile: file.absolute.path, rootDir: dir, programsDir: programsDir);
+
+  final modules = <DiscoveredModule>[
+    DiscoveredModule(
+      filePath: file.path,
+      moduleName: _moduleNameFromFilename(
+          file.path.split(Platform.pathSeparator).last),
+      ast: module,
+      ancestorScope:
+          _buildAncestorScope(chain, rootSelfGlpPath: rootSelfGlpPath),
+      isSelfGlp: false,
+    ),
+  ];
+  _addAncestorContextAndExposes(modules, dir, programsDir, rootSelfGlpPath);
+  return modules;
+}
+
+/// Add a program's filesystem context to [modules]: the ancestor `self.glp`
+/// files ABOVE [rootAbsPath] (up to but excluding `programs/`), linked like any
+/// other module so their (multi-clause, parameterised) procedures resolve for
+/// descendants; then resolve `-expose` directives (including the root
+/// `programs/self.glp`'s, which is itself realised by the root-scope mechanism).
+void _addAncestorContextAndExposes(List<DiscoveredModule> modules,
+    String rootAbsPath, String? programsDir, String? rootSelfGlpPath) {
   if (programsDir != null) {
-    for (final selfPath
-        in _ancestorSelfGlpFiles(root.absolute.path, programsDir)) {
-      final source = File(selfPath).readAsStringSync();
-      final lexer = Lexer(source);
-      final tokens = lexer.tokenize();
-      final parser = Parser(tokens);
-      final selfModule = parser.parseModule();
-
-      final moduleName = _moduleNameFromDirPath(File(selfPath).parent.path);
-
+    for (final selfPath in _ancestorSelfGlpFiles(rootAbsPath, programsDir)) {
+      final selfModule =
+          Parser(Lexer(File(selfPath).readAsStringSync()).tokenize())
+              .parseModule();
       final chain = discoverSelfChain(
         targetFile: selfPath,
         rootDir: File(selfPath).parent.path,
         programsDir: programsDir,
       );
-      final ancestorScope =
-          _buildAncestorScope(chain, rootSelfGlpPath: rootSelfGlpPath);
-
       modules.add(DiscoveredModule(
         filePath: selfPath,
-        moduleName: moduleName,
+        moduleName: _moduleNameFromDirPath(File(selfPath).parent.path),
         ast: selfModule,
-        ancestorScope: ancestorScope,
+        ancestorScope:
+            _buildAncestorScope(chain, rootSelfGlpPath: rootSelfGlpPath),
         isSelfGlp: true,
       ));
     }
   }
 
-  // Root programs/self.glp is excluded from the linkable module list above, but
-  // it is still a self.glp and may carry -expose directives (module-system spec
-  // §3.3). Parse it as an exposer-only seed so its exposures are resolved like
-  // any other self.glp's — its exposing directory is programs/, whose subtree is
-  // every discovered module.
+  // Root programs/self.glp is excluded from the linkable module list, but it is
+  // still a self.glp and may carry -expose directives (module-system spec §3.3).
+  // Parse it as an exposer-only seed so its exposures resolve like any other
+  // self.glp's — its exposing directory is programs/, whose subtree is every
+  // discovered module.
   final extraExposers = <DiscoveredModule>[];
   if (rootSelfGlpPath != null && File(rootSelfGlpPath).existsSync()) {
     final rootModule =
@@ -187,13 +227,8 @@ List<DiscoveredModule> discoverProgram(String rootDir,
     }
   }
 
-  // Resolve `-expose(M).` directives: collect the named module files (tagged
-  // with their exposing directory), check collisions, and lift their EXPORTED
-  // declarations/types into the exposing subtree's scope.
   _resolveExposes(modules, programsDir, rootSelfGlpPath,
       extraExposers: extraExposers);
-
-  return modules;
 }
 
 /// Normalize a path: absolute, `..`/`.` resolved, no trailing slash.
@@ -399,7 +434,10 @@ List<String> _ancestorSelfGlpFiles(String rootDir, String programsDir) {
 /// rejected (typed-program.md "Programs and Modules").
 ///
 /// Throws on type errors with details.
-LinkResult checkedLinkedProgram(List<DiscoveredModule> modules, {required String rootDir}) {
+LinkResult checkedLinkedProgram(List<DiscoveredModule> modules,
+    {required String rootDir,
+    bool noRename = false,
+    bool rejectUninstantiated = false}) {
   // Soundness is established on the LINKED program (paper: modules §Module-System
   // Design "Self-contained type checking", §Static Linking; def:program). We link
   // first — renaming every procedure to `M:p` and resolving every call, including
@@ -412,7 +450,7 @@ LinkResult checkedLinkedProgram(List<DiscoveredModule> modules, {required String
   // no per-module environment juggling is needed.
   // linkProgram applies all five steps, including step-5 DCE, so the program
   // type-checked and compiled below is restricted to its reachable procedures.
-  final linked = linkProgram(modules, rootDir: rootDir);
+  final linked = linkProgram(modules, rootDir: rootDir, noRename: noRename);
 
   // The linked program's type definitions: the union of every module's own type
   // definitions, deduplicated by name (structural identity makes duplicates the
@@ -473,7 +511,7 @@ LinkResult checkedLinkedProgram(List<DiscoveredModule> modules, {required String
   final result = checkModule(
     flat,
     transformedProcedures: transformed.procedures,
-    rejectUninstantiatedInspecting: false,
+    rejectUninstantiatedInspecting: rejectUninstantiated,
   );
 
   if (!result.isWellTyped) {
@@ -505,8 +543,9 @@ void typeCheckProgram(List<DiscoveredModule> modules, {required String rootDir})
 /// procedures. This is the program of def:program that is type-checked and
 /// compiled.
 LinkResult linkProgram(List<DiscoveredModule> modules,
-        {required String rootDir}) =>
-    eliminateDeadCode(linkAndResolveModules(modules, rootDir: rootDir));
+        {required String rootDir, bool noRename = false}) =>
+    eliminateDeadCode(
+        linkAndResolveModules(modules, rootDir: rootDir, noRename: noRename));
 
 /// Steps 1–4 of static linking: the pure rename-and-resolve transform, without
 /// dead-code elimination.
@@ -521,7 +560,8 @@ LinkResult linkProgram(List<DiscoveredModule> modules,
 /// (needed for SRSW type-based relaxation during compilation). This is the stage
 /// to inspect when checking renaming/resolution/aliasing in isolation; the
 /// program actually compiled is [linkProgram] (which also applies step 5).
-LinkResult linkAndResolveModules(List<DiscoveredModule> modules, {required String rootDir}) {
+LinkResult linkAndResolveModules(List<DiscoveredModule> modules,
+    {required String rootDir, bool noRename = false}) {
   // Build procedure registry: module name → set of procedure signatures
   final registry = <String, Set<String>>{};
   for (final mod in modules) {
@@ -586,23 +626,27 @@ LinkResult linkAndResolveModules(List<DiscoveredModule> modules, {required Strin
     final modAncestorProcs = ancestorSelfProcs[mod.moduleName] ?? {};
 
     for (final proc in mod.ast.procedures) {
-      final renamedName = '${mod.moduleName}:${proc.name}';
+      // noRename: a single-module program keeps bare names — its only collision
+      // is with the root self.glp it links against, resolved by runtime
+      // precedence (the module shadows the root), not by renaming (modules.tex
+      // §Static Linking step 3 renames "to eliminate name collisions"; the
+      // cross-module collisions renaming avoids do not exist in one module).
+      final renamedName = noRename ? proc.name : '${mod.moduleName}:${proc.name}';
       final renamedClauses = <Clause>[];
 
       for (final clause in proc.clauses) {
-        // Rename clause head
-        final renamedHead = Atom(
-          '${mod.moduleName}:${clause.head.functor}',
-          clause.head.args,
-          clause.head.line,
-          clause.head.column,
-        );
+        final renamedHead = noRename
+            ? clause.head
+            : Atom('${mod.moduleName}:${clause.head.functor}',
+                clause.head.args, clause.head.line, clause.head.column);
 
-        // Resolve calls in body
-        final resolvedBody = clause.body
-            ?.map((g) =>
-                _resolveGoal(g, mod.moduleName, localSigs, modAncestorProcs))
-            .toList();
+        // Resolve calls in body (identity under noRename: bare stays bare).
+        final resolvedBody = noRename
+            ? clause.body
+            : clause.body
+                ?.map((g) =>
+                    _resolveGoal(g, mod.moduleName, localSigs, modAncestorProcs))
+                .toList();
 
         renamedClauses.add(Clause(
           renamedHead,
@@ -676,8 +720,10 @@ LinkResult linkAndResolveModules(List<DiscoveredModule> modules, {required Strin
     aliasSourceModules = modules.where(isRootLevel);
   }
 
+  // noRename (single-module program): bare names are themselves the entry
+  // points — no aliases are generated, and DCE keeps everything.
   final aliasedSigs = <String, String>{}; // sig → owning module (conflict check)
-  for (final mod in aliasSourceModules) {
+  if (!noRename) for (final mod in aliasSourceModules) {
     for (final proc in mod.ast.procedures) {
       final isExported = mod.ast.procDeclarations.any(
           (d) => d.exported && d.name == proc.name && d.arity == proc.arity);
@@ -713,7 +759,7 @@ LinkResult linkAndResolveModules(List<DiscoveredModule> modules, {required Strin
     for (final decl in mod.ast.procDeclarations) {
       if (decl.imported) continue; // Skip imported — they're in other modules
       allDecls.add(ProcDecl(
-        '${mod.moduleName}:${decl.name}',
+        noRename ? decl.name : '${mod.moduleName}:${decl.name}',
         decl.argTypes,
         decl.line,
         decl.column,
@@ -890,17 +936,22 @@ Clause _makeAliasClause(String name, int arity, String targetName,
     return Clause(head, body: body, line: 0, column: 0);
   }
 
-  // Generate variable names (V prefix — underscore prefix causes issues in codegen)
-  final headArgs = List.generate(
-      arity, (i) => VarTerm('V$i', false, 0, 0) as Term);
+  bool isInputArg(int i) => declaration != null && i < declaration.argTypes.length
+      ? declaration.isInputArg(i)
+      : true; // Fallback: assume input when no declaration
 
-  // Body args: use mode from declaration if available.
-  // Input args (T?) → isReader: true  (forward the value as reader)
-  // Output args (T) → isReader: false (forward the writer so callee can write)
+  // Head args (V prefix — underscore prefix causes issues in codegen).
+  // Input arg (T?): the head captures the caller's value as a writer.
+  // Output arg (T): the head is a reader hole that the body's writer fills.
+  // (For arity>0 procedures with output args, a head writer there would pair
+  // with a body writer — an SRSW violation; the head must be the reader.)
+  final headArgs = List.generate(
+      arity, (i) => VarTerm('V$i', !isInputArg(i), 0, 0) as Term);
+
+  // Body args: input → reader (forward the value), output → writer (so the
+  // callee fills it).
   final bodyArgs = List.generate(arity, (i) {
-    final isInput = declaration != null && i < declaration.argTypes.length
-        ? declaration.isInputArg(i)
-        : true; // Fallback: assume input (reader) when no declaration
+    final isInput = isInputArg(i);
     return VarTerm('V$i', isInput, 0, 0) as Term;
   });
 

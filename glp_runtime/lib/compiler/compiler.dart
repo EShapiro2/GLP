@@ -139,14 +139,18 @@ class GlpCompiler {
   ///
   /// [procDeclarations] should contain renamed declarations (e.g., from
   /// [linkProgram]) for SRSW type-based relaxation.
-  BytecodeProgram compileProgram(Program ast, {List<ProcDecl>? procDeclarations}) {
+  BytecodeProgram compileProgram(Program ast,
+      {List<ProcDecl>? procDeclarations, bool skipGlobalSRSW = true}) {
     final analyzer = _createAnalyzer();
     final annotated = analyzer.analyze(
       ast,
       generateReduce: true,
       compileMode: CompileMode.system,
       procDeclarations: procDeclarations ?? [],
-      skipGlobalSRSW: true,  // Linked programs: modules already type-checked individually
+      // Directory programs: each module is SRSW-checked at discovery, so the
+      // linked whole skips the global pass. A single-module program has no such
+      // per-module pass, so it runs SRSW here.
+      skipGlobalSRSW: skipGlobalSRSW,
     );
 
     final codegen = _createCodegen();

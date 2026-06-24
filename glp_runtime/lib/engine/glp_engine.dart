@@ -255,11 +255,22 @@ class GlpEngine {
     enforcePrimitiveLayer(
         File(name).existsSync() ? name : null, module, _rootSelfGlpPath);
 
+    // A self-contained module (no cross-module call `M#p`, no `imported`
+    // declaration) loaded from a real file IS a program (modules.tex §Design):
+    // it is compiled through the SAME pipeline as a directory program. It keeps
+    // bare names (its only collision is with the root self.glp, resolved by
+    // runtime precedence — the module shadows the root, see combinedProgram —
+    // not by renaming), every procedure is an entry point (§Static Linking),
+    // and there is no dynamic-dispatch activation (that path is retired).
+    final isRealFile = name != '_source_' &&
+        name != '__mad_predicates__' &&
+        name != '__root_self__' &&
+        File(name).existsSync();
+    final selfContained = isRealFile && _isSelfContained(module);
+
     // Discover ancestor scope from self.glp hierarchy (if loading from a file)
     TypeEnvironment? ancestorScope;
-    if (name != '_source_' && name != '__mad_predicates__' &&
-        name != '__root_self__' &&
-        File(name).existsSync()) {
+    if (isRealFile) {
       final rootDir = _findProgramRoot(name);
       if (rootDir != null) {
         final chain = discoverSelfChain(targetFile: name, rootDir: rootDir);
@@ -269,7 +280,9 @@ class GlpEngine {
       }
     }
 
-    // Type check if program has procedure declarations
+    // Type check if program has procedure declarations. (Single-file/REPL
+    // semantics: a parametric procedure inspecting its parameter with no
+    // instantiation is rejected — checkModule's default.)
     if (module.procDeclarations.isNotEmpty) {
       final ast = Program(module.procedures, module.line, module.column);
       final partialEvaluator = PartialEvaluator();
@@ -288,16 +301,29 @@ class GlpEngine {
       }
     }
 
-    // Compile
-    final program = _compiler.compile(source);
+    // Compile. A self-contained module goes through the linker (no inter-module
+    // rename) and compileProgram — the same compiler entry as a directory
+    // program — running the global SRSW pass it has no separate per-module pass
+    // for. Other sources keep the direct compile path.
+    final BytecodeProgram program;
+    if (selfContained) {
+      final modules =
+          discoverSingleModule(name, rootSelfGlpPath: _rootSelfGlpPath);
+      final linked =
+          linkProgram(modules, rootDir: File(name).parent.path, noRename: true);
+      program = _compiler.compileProgram(linked.program,
+          procDeclarations: linked.procDeclarations, skipGlobalSRSW: false);
+    } else {
+      program = _compiler.compile(source);
+    }
     _loadedPrograms[name] = program;
 
     final moduleInfo = _extractModuleInfo(source, program, name);
     _loadedModules[moduleInfo.name] = moduleInfo;
 
-    // Auto-activate modules with exports for dynamic dispatch.
-    // Merge with root self.glp so dispatched procedures can find :=/2 etc.
-    if (moduleInfo.hasExports) {
+    // Auto-activate modules with exports for dynamic dispatch (retired path).
+    // Never for a self-contained module — it is run by direct goal execution.
+    if (!selfContained && moduleInfo.hasExports) {
       final rootSelf = _loadedPrograms['__root_self__'];
       final moduleBytecode = rootSelf != null ? program.merge(rootSelf) : program;
       activateModule(
@@ -446,10 +472,18 @@ class GlpEngine {
   /// calls go through `Distribute`/`Transmit`, not `prog.labels`, so the
   /// boundary is not weakened by leaving `labels` unfiltered.
   BytecodeProgram get combinedProgram {
+    // Root self.glp goes LAST so its primitives are the FALLBACK: label
+    // indexing keeps the first occurrence, so a loaded module's own definition
+    // (e.g. its merge/3) shadows the root's primitive of the same name (manual
+    // §19.6: a module's definition shadows every ancestor's; modules.tex
+    // §Static Linking step 3). Other loaded programs keep their insertion order.
     final allOps = <dynamic>[];
-    for (final loaded in _loadedPrograms.values) {
-      allOps.addAll(loaded.ops);
+    for (final entry in _loadedPrograms.entries) {
+      if (entry.key == '__root_self__') continue;
+      allOps.addAll(entry.value.ops);
     }
+    final rootSelf = _loadedPrograms['__root_self__'];
+    if (rootSelf != null) allOps.addAll(rootSelf.ops);
     return BytecodeProgram(allOps);
   }
 
@@ -478,6 +512,27 @@ class GlpEngine {
   }
 
   // ============ Private Methods ============
+
+  /// A module is self-contained (modules.tex §Design) if it makes no
+  /// cross-module call `M#p` and declares no `imported procedure`. Such a module
+  /// is a program in its own right and is linked/compiled like a directory.
+  bool _isSelfContained(Module module) {
+    if (module.procDeclarations.any((d) => d.imported)) return false;
+    for (final proc in module.procedures) {
+      for (final clause in proc.clauses) {
+        for (final g in clause.body ?? const <Goal>[]) {
+          if (_containsRemoteGoal(g)) return false;
+        }
+      }
+    }
+    return true;
+  }
+
+  bool _containsRemoteGoal(Goal g) {
+    if (g is RemoteGoal) return true;
+    if (g is SpawnGoal) return _containsRemoteGoal(g.innerGoal);
+    return false;
+  }
 
   /// Type-check a REPL goal against the loaded program's declarations.
   ///
