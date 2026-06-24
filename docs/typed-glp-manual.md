@@ -1,6 +1,6 @@
 # Typed GLP Manual
 
-**Version**: 2.19
+**Version**: 2.20
 **Date**: 2026-06-24
 **Status**: ACTIVE
 
@@ -1069,13 +1069,13 @@ The root `programs/self.glp` defines all predefined types (`Stream(X)`, `Channel
 
 ### 19.7 Static Linking
 
-A multi-module program is compiled by static linking: all modules in the directory tree are compiled together, and the linker resolves every `M # goal(...)` call at compile time to a local call, flattening the modules into one program. Load a program by its directory:
+A Typed GLP module is **self-contained** if it has no cross-module `M#p` call and no uninstantiated type parameter. A Typed GLP program is either a self-contained module or a directory with a `self.glp`. Every program is compiled by static linking, one module or many: linked within its filesystem context, type-checked, compiled if it passes type checking, and run. The linker resolves every `M # goal(...)` call at compile time to a local call, flattening the modules into one program. Load a program by its directory:
 ```
 GLP> social_graph/
 ✓ Loaded program: social_graph/
 ```
 
-A program's entry points are the root `self.glp`'s exported procedures — each defined there or forwarded to the module that defines it (§19.4). A single-module program exports all its procedures, so every one is an entry point. The unit of compilation and execution is the whole program, and only a well-typed program carries the soundness guarantee (Moded-Types paper, §Static Linking, §External access). A single module or a subprogram may be type-checked on its own as a development aid; in composition it is checked in its parent's context, its parameters instantiated by the calls above it.
+A program's entry points are the root `self.glp`'s exported procedures — each defined there or forwarded to the module that defines it (§19.4). A single-module program exports all its procedures, so every one is an entry point. The unit of compilation and execution is the whole program, and only a well-typed program carries the soundness guarantee (Moded-Types paper, §Static Linking, §External access).
 
 Static linking is fully type-checked — the goal, every clause, every cross-module instantiation. **Discipline:** trace a runtime bug by first recompiling the whole program and re-checking it as one; most mode bugs are whole-program type errors invisible to a single-module check.
 
@@ -1154,6 +1154,7 @@ Formal definition: Moded-Types paper, §Type-Compatible Attestation Between Agen
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 2.20 | 2026-06-24 | §19.7: defined self-contained module (no `M#p`, no uninstantiated type parameter) and program (self-contained module or directory with `self.glp`); uniform pipeline (link, typecheck, compile if it passes, run) for one module or many; removed the multi-module-only framing and the development-aid note. |
 | 2.19 | 2026-06-24 | §19.6: stated the general scope-chain shadowing rule (nearer definition shadows farther, module's own shadows all ancestors', for types and procedures), previously only in §8.2 and §19.9. |
 | 2.18 | 2026-06-23 | §19 aligned to the paper: cross-module calls resolve at link time to local calls (§19.4); `self.glp` is the directory interface and entry points are the root `self.glp`'s exports (§19.6); §19.7 retitled Static Linking, single-module exports all; dynamic linking retired (present but unsupported, to return via attestation); removed the dynamic-dispatch REPL workflow, renumbering §19.9/§19.10 to §19.8/§19.9. |
 | 2.17 | 2026-06-23 | Removed the `-module` directive: a module's name is its filename (§19.2, §19.5). |
