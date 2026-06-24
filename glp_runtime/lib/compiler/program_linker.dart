@@ -174,6 +174,27 @@ List<DiscoveredModule> discoverSingleModule(String filePath,
       isSelfGlp: false,
     ),
   ];
+
+  // The module's own-directory self.glp is its nearest scope: it is in scope for
+  // type checking, so it must also be linked, or its procedures are unresolved
+  // at runtime. (The ancestor self.glp ABOVE the directory are added below.)
+  final ownSelf = File('$dir${Platform.pathSeparator}self.glp');
+  if (file.path.split(Platform.pathSeparator).last != 'self.glp' &&
+      ownSelf.existsSync()) {
+    final selfModule =
+        Parser(Lexer(ownSelf.readAsStringSync()).tokenize()).parseModule();
+    final selfChain = discoverSelfChain(
+        targetFile: ownSelf.absolute.path, rootDir: dir, programsDir: programsDir);
+    modules.add(DiscoveredModule(
+      filePath: ownSelf.path,
+      moduleName: _moduleNameFromDirPath(dir),
+      ast: selfModule,
+      ancestorScope:
+          _buildAncestorScope(selfChain, rootSelfGlpPath: rootSelfGlpPath),
+      isSelfGlp: true,
+    ));
+  }
+
   _addAncestorContextAndExposes(modules, dir, programsDir, rootSelfGlpPath);
   return modules;
 }

@@ -1,0 +1,6 @@
+procedure run_where(Tag).
+run_where(W?) :- where(W).
+procedure run_deep(Tag).
+run_deep(D?) :- deep_only(D).
+procedure run_mid(Tag).
+run_mid(M?) :- mid_only(M).

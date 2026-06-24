@@ -759,6 +759,36 @@ HEREDOC
 check "Issue 19: unresolved type is a located diagnostic" "Unresolved type: Response at line 6" "$a26d"
 check "Issue 19: offending source is rejected" "Type checking failed" "$a26d"
 
+# --- A26e: Hierarchical single-module load (nested self.glp levels) ---
+# A self-contained module loaded standalone links in EVERY ancestor self.glp
+# level with nearer-shadows-farther precedence, includes its own-directory
+# self.glp, and its own definitions shadow all of them (modules.tex §Design;
+# manual §19.6). See programs/tests/nested_probe/ (root self.glp + app/self.glp
+# + app/sub/leaf.glp + app/worker.glp).
+echo "--- A26e: Hierarchical single-module load ---"
+NP="$GLP_DIR/programs/tests/nested_probe"
+np_leaf=$("$REPL_RUN" <<HEREDOC
+$NP/app/sub/leaf.glp
+run_where(W).
+run_deep(D).
+run_mid(M).
+:quit
+HEREDOC
+2>&1)
+check "nested: nearer self.glp shadows farther (where=mid)" "W = mid" "$np_leaf"
+check "nested: farther self.glp proc reached (deep_only=outer)" "D = outer" "$np_leaf"
+check "nested: nearer self.glp proc reached (mid_only=mid)" "M = mid" "$np_leaf"
+
+np_worker=$("$REPL_RUN" <<HEREDOC
+$NP/app/worker.glp
+run_local(W).
+run_own(M).
+:quit
+HEREDOC
+2>&1)
+check "nested: own-dir self.glp linked (mid_only=mid)" "M = mid" "$np_worker"
+check "nested: module def shadows all self.glp (where=leaf_tag)" "W = leaf_tag" "$np_worker"
+
 # --- A27: Reader-to-reader bug (befriend_intro) ---
 echo "--- A27: Reader-to-reader fail ---"
 a27=$("$REPL_RUN" <<HEREDOC

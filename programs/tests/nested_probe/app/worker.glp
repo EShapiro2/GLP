@@ -1,0 +1,6 @@
+procedure where(Tag).
+where(leaf_tag).
+procedure run_local(Tag).
+run_local(W?) :- where(W).
+procedure run_own(Tag).
+run_own(M?) :- mid_only(M).

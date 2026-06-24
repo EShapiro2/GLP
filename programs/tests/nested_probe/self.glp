@@ -1,0 +1,5 @@
+Tag ::= outer ; mid ; leaf_tag.
+procedure where(Tag).
+where(outer).
+procedure deep_only(Tag).
+deep_only(outer).
