@@ -1,7 +1,7 @@
 # Typed GLP Manual
 
-**Version**: 2.18
-**Date**: 2026-06-23
+**Version**: 2.19
+**Date**: 2026-06-24
 **Status**: ACTIVE
 
 This manual captures essential programming principles and advice for writing correct Typed GLP programs. It covers the SRSW (Single-Reader Single-Writer) constraint, type declarations, moding, modules, parameterized types, and common pitfalls.
@@ -1061,6 +1061,8 @@ program/
     actors.glp           — sees ui/self.glp + program/self.glp
 ```
 
+A module sees every type and procedure of every ancestor scope. When a name is defined at more than one level, the nearer definition shadows the farther one, and a module's own definition shadows every ancestor's, for types and procedures alike.
+
 A directory's `self.glp` is also the directory's interface: it declares which of the directory's procedures are exported, and a cross-module call into the directory resolves only to a procedure its `self.glp` exports — defined there directly, or forwarded to the module that defines it (`p :- m#p`). A program's entry points are the root `self.glp`'s exports (§19.7; Moded-Types paper, §Design, §External access).
 
 The root `programs/self.glp` defines all predefined types (`Stream(X)`, `Channel(In, Out)`, `DiffList(X)`, `OpenStream(X)`) and all predefined procedure declarations (`merge`, `send`, `receive`, `new_channel`, etc.). Every module sees root self.glp automatically.
@@ -1152,6 +1154,7 @@ Formal definition: Moded-Types paper, §Type-Compatible Attestation Between Agen
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 2.19 | 2026-06-24 | §19.6: stated the general scope-chain shadowing rule (nearer definition shadows farther, module's own shadows all ancestors', for types and procedures), previously only in §8.2 and §19.9. |
 | 2.18 | 2026-06-23 | §19 aligned to the paper: cross-module calls resolve at link time to local calls (§19.4); `self.glp` is the directory interface and entry points are the root `self.glp`'s exports (§19.6); §19.7 retitled Static Linking, single-module exports all; dynamic linking retired (present but unsupported, to return via attestation); removed the dynamic-dispatch REPL workflow, renumbering §19.9/§19.10 to §19.8/§19.9. |
 | 2.17 | 2026-06-23 | Removed the `-module` directive: a module's name is its filename (§19.2, §19.5). |
 | 2.16 | 2026-06-22 | Type/module updates: §17.7 (per-instantiation checking; uninstantiated parametric exports not certified); §19.7 (program is the unit of compilation and execution; dynamic dispatch not yet soundly typed; recompile-whole-program-first discipline); §21 (initial goals type-checked as body goals; `foo = X` not `X = foo`); §16.4 (polarity must agree across boundaries the checker cannot span) |
