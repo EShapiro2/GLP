@@ -661,9 +661,13 @@ LinkResult linkAndResolveModules(List<DiscoveredModule> modules,
             : Atom('${mod.moduleName}:${clause.head.functor}',
                 clause.head.args, clause.head.line, clause.head.column);
 
-        // Resolve calls in body (identity under noRename: bare stays bare).
+        // Resolve calls in body. Under noRename names are bare, but a static
+        // cross-module call `M' # p` (e.g. inside an -exposed lib module) must
+        // still resolve to the bare local `p` so it compiles to a local Spawn,
+        // not a Distribute (manual §19.7: static linking resolves every M#goal;
+        // dynamic dispatch is retired). Local/ancestor calls are already bare.
         final resolvedBody = noRename
-            ? clause.body
+            ? clause.body?.map(_resolveRemoteToBare).toList()
             : clause.body
                 ?.map((g) =>
                     _resolveGoal(g, mod.moduleName, localSigs, modAncestorProcs))
@@ -872,6 +876,26 @@ LinkResult eliminateDeadCode(LinkResult linked) {
       .toList();
 
   return LinkResult(Program(keptProcedures, 0, 0), keptDecls);
+}
+
+/// noRename resolution: rewrite a static cross-module call `M' # p` to the bare
+/// local call `p` (every procedure is bare under noRename), so it compiles to a
+/// local Spawn rather than a Distribute. Local/ancestor/root calls are already
+/// bare and pass through. A dynamic `Var # p` (no static module) is left as-is.
+Goal _resolveRemoteToBare(Goal goal) {
+  if (goal is RemoteGoal) {
+    if (goal.staticModuleName != null) {
+      return Goal(goal.goal.functor, goal.goal.args, goal.line, goal.column);
+    }
+    return goal;
+  }
+  if (goal is SpawnGoal) {
+    final inner = _resolveRemoteToBare(goal.innerGoal);
+    return identical(inner, goal.innerGoal)
+        ? goal
+        : SpawnGoal(inner, goal.agentId, goal.line, goal.column);
+  }
+  return goal;
 }
 
 /// Resolve a single goal in a clause body.
