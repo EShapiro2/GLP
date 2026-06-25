@@ -318,6 +318,32 @@ void main() {
     });
   });
 
+  group('Exposed procedures are not entry points (modules.tex §Design)', () {
+    // An -exposed procedure is callable by name in the subtree but is NOT an
+    // entry point unless the root self.glp exports it in its own right; entry
+    // points are the reachability roots (§Static Linking step 5). expose/basic
+    // exposes util#strutil (twice) and util#plist (pmerge) and exports its own
+    // use_exposed (a forwarder that calls twice).
+    const exposeRoot = '../programs/tests/expose/basic';
+
+    test('only the root self.glp export is a bare entry point; exposed are not', () {
+      final modules = discoverProgram(exposeRoot, rootSelfGlpPath: rootSelfPath);
+      final linked = linkProgram(modules, rootDir: exposeRoot).program;
+      final bare = linked.procedures
+          .where((p) => !p.name.contains(':'))
+          .map((p) => p.name)
+          .toSet();
+      expect(bare, contains('use_exposed'),
+          reason: 'root self.glp own export is an entry point');
+      expect(bare, isNot(contains('twice')),
+          reason: 'an exposed procedure is not an entry point');
+      expect(bare, isNot(contains('pmerge')));
+      // The used exposed procedure is still present — reachable via use_exposed.
+      final all = linked.procedures.map((p) => p.name).toSet();
+      expect(all.any((n) => n.endsWith('twice')), isTrue);
+    });
+  });
+
   group('Nested sub-program entry aliases (dedicated fixture)', () {
     // Sole coverage of the §3.4 nested-subprogram rule. Parent has root-level
     // `boot` (exported `play`) and nested `child/` (own self.glp) with `leaf`
