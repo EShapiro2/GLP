@@ -789,6 +789,33 @@ HEREDOC
 check "nested: own-dir self.glp linked (mid_only=mid)" "M = mid" "$np_worker"
 check "nested: module def shadows all self.glp (where=leaf_tag)" "W = leaf_tag" "$np_worker"
 
+# --- A26f: single-module scope renaming (no ancestor-call hijack; collision) ---
+# Static linking renames every SCOPE module (ancestor/own-dir self.glp, exposed)
+# to M:p and resolves each module's calls in its own scope, while the loaded
+# module keeps its bare names as plain-name entry points (modules.tex §Static
+# Linking step 3 + §3.4). So an ancestor self.glp's internal call resolves to
+# its OWN renamed procedure, never to the loaded module's same-named bare proc.
+# shadow_internal/: ancestor self.glp defines helper(anc_a) + anc(R):-helper(R);
+# the loaded m.glp redefines helper(mod_b) and run(R):-anc(R). run must yield
+# anc_a — anc keeps its own helper. (Regression for the noRename bare-name hijack.)
+echo "--- A26f: single-module scope renaming ---"
+a26f=$("$REPL_RUN" <<HEREDOC
+$GLP_DIR/programs/tests/shadow_internal/m.glp
+run(R).
+:quit
+HEREDOC
+2>&1)
+check "single-module: ancestor keeps own helper (run=anc_a, not hijacked)" "R = anc_a" "$a26f"
+
+# Two modules exposed at one level sharing an exported name/arity is an error,
+# raised at link time on the single-module path too (modules.tex §-expose).
+a26f_col=$("$REPL_RUN" <<HEREDOC
+$GLP_DIR/programs/tests/expose_collide/leaf.glp
+:quit
+HEREDOC
+2>&1)
+check "single-module: -expose collision rejected at link time" "expose collision" "$a26f_col"
+
 # --- A27: Reader-to-reader bug (befriend_intro) ---
 echo "--- A27: Reader-to-reader fail ---"
 a27=$("$REPL_RUN" <<HEREDOC

@@ -1,0 +1,2 @@
+exported procedure dup(Constant).
+dup(a).

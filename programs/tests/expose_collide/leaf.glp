@@ -1,0 +1,2 @@
+procedure go(Constant).
+go(ok).

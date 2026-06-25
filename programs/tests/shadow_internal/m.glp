@@ -1,0 +1,4 @@
+procedure helper(Constant).
+helper(mod_b).
+procedure run(Constant).
+run(R?) :- anc(R).

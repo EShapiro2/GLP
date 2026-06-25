@@ -1,0 +1,4 @@
+procedure helper(Constant).
+helper(anc_a).
+exported procedure anc(Constant).
+anc(R?) :- helper(R).

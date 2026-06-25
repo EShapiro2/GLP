@@ -257,11 +257,13 @@ class GlpEngine {
 
     // A self-contained module (no cross-module call `M#p`, no `imported`
     // declaration) loaded from a real file IS a program (modules.tex §Design):
-    // it is compiled through the SAME pipeline as a directory program. It keeps
-    // bare names (its only collision is with the root self.glp, resolved by
-    // runtime precedence — the module shadows the root, see combinedProgram —
-    // not by renaming), every procedure is an entry point (§Static Linking),
-    // and there is no dynamic-dispatch activation (that path is retired).
+    // it is compiled through the SAME pipeline as a directory program — step-3
+    // renaming included (every procedure becomes M:p), so each module's calls
+    // resolve in its own scope and the loaded module never hijacks an ancestor
+    // self.glp's internal call to a same-named procedure. Every procedure of the
+    // module is an entry point (§Static Linking), reached by an unqualified
+    // alias that shadows the root self.glp for a posted goal (see
+    // combinedProgram). There is no dynamic-dispatch activation (path retired).
     final isRealFile = name != '_source_' &&
         name != '__mad_predicates__' &&
         name != '__root_self__' &&
@@ -301,8 +303,9 @@ class GlpEngine {
       }
     }
 
-    // Compile. A self-contained module goes through the linker (no inter-module
-    // rename) and compileProgram — the same compiler entry as a directory
+    // Compile. A self-contained module goes through the linker (step-3 renaming,
+    // singleModulePath marks the loaded module so all its procedures are entry
+    // points) and compileProgram — the same compiler entry as a directory
     // program — running the global SRSW pass it has no separate per-module pass
     // for. Other sources keep the direct compile path.
     final BytecodeProgram program;
@@ -310,7 +313,8 @@ class GlpEngine {
       final modules =
           discoverSingleModule(name, rootSelfGlpPath: _rootSelfGlpPath);
       final linked =
-          linkProgram(modules, rootDir: File(name).parent.path, noRename: true);
+          linkProgram(modules,
+              rootDir: File(name).parent.path, singleModulePath: name);
       program = _compiler.compileProgram(linked.program,
           procDeclarations: linked.procDeclarations, skipGlobalSRSW: false);
     } else {

@@ -456,9 +456,7 @@ List<String> _ancestorSelfGlpFiles(String rootDir, String programsDir) {
 ///
 /// Throws on type errors with details.
 LinkResult checkedLinkedProgram(List<DiscoveredModule> modules,
-    {required String rootDir,
-    bool noRename = false,
-    bool rejectUninstantiated = false}) {
+    {required String rootDir, bool rejectUninstantiated = false}) {
   // Soundness is established on the LINKED program (paper: modules §Module-System
   // Design "Self-contained type checking", §Static Linking; def:program). We link
   // first — renaming every procedure to `M:p` and resolving every call, including
@@ -471,7 +469,7 @@ LinkResult checkedLinkedProgram(List<DiscoveredModule> modules,
   // no per-module environment juggling is needed.
   // linkProgram applies all five steps, including step-5 DCE, so the program
   // type-checked and compiled below is restricted to its reachable procedures.
-  final linked = linkProgram(modules, rootDir: rootDir, noRename: noRename);
+  final linked = linkProgram(modules, rootDir: rootDir);
 
   // The linked program's type definitions: the union of every module's own type
   // definitions, deduplicated by name (structural identity makes duplicates the
@@ -564,23 +562,10 @@ void typeCheckProgram(List<DiscoveredModule> modules, {required String rootDir})
 /// procedures. This is the program of def:program that is type-checked and
 /// compiled.
 LinkResult linkProgram(List<DiscoveredModule> modules,
-    {required String rootDir, bool noRename = false}) {
-  final linked =
-      linkAndResolveModules(modules, rootDir: rootDir, noRename: noRename);
-  if (!noRename) return eliminateDeadCode(linked);
-  // Single-module program: the entry points are the loaded module's OWN
-  // procedures (modules.tex §Static Linking: "exports all its procedures"), NOT
-  // every bare name. Seeding DCE from them prunes the ancestor/-exposed modules
-  // pulled in for scope but not actually called.
-  final rootNorm = _normPath(rootDir);
-  final entrySigs = modules
-      .where((m) =>
-          !m.isSelfGlp &&
-          m.exposingDir == null &&
-          _normPath(File(m.filePath).parent.path) == rootNorm)
-      .expand((m) => m.ast.procedures.map((p) => '${p.name}/${p.arity}'))
-      .toSet();
-  return eliminateDeadCode(linked, entrySigs: entrySigs);
+    {required String rootDir, String? singleModulePath}) {
+  final linked = linkAndResolveModules(modules,
+      rootDir: rootDir, singleModulePath: singleModulePath);
+  return eliminateDeadCode(linked);
 }
 
 /// Steps 1–4 of static linking: the pure rename-and-resolve transform, without
@@ -597,7 +582,7 @@ LinkResult linkProgram(List<DiscoveredModule> modules,
 /// to inspect when checking renaming/resolution/aliasing in isolation; the
 /// program actually compiled is [linkProgram] (which also applies step 5).
 LinkResult linkAndResolveModules(List<DiscoveredModule> modules,
-    {required String rootDir, bool noRename = false}) {
+    {required String rootDir, String? singleModulePath}) {
   // Build procedure registry: module name → set of procedure signatures
   final registry = <String, Set<String>>{};
   for (final mod in modules) {
@@ -656,41 +641,61 @@ LinkResult linkAndResolveModules(List<DiscoveredModule> modules,
 
   final allProcedures = <Procedure>[];
 
+  // The loaded module of a single-module program keeps its procedures under
+  // their bare names: they are the program's entry points, "called by plain
+  // name by a goal posted at the root" (modules.tex §Static Linking), so the
+  // bare name is a plain-name handle on the real head — no forwarder clause,
+  // whose flat arguments cannot carry a structured-mode term's nested holes.
+  // Every SCOPE module (ancestor self.glp, own-dir self.glp, exposed module) is
+  // still renamed to M:p, so its internal calls resolve to its OWN procedures
+  // and the bare loaded module never hijacks an ancestor's same-named call.
+  final singleNorm =
+      singleModulePath != null ? _normPath(singleModulePath) : null;
+
   // Process each module
   for (final mod in modules) {
     final localSigs = registry[mod.moduleName]!;
     final modAncestorProcs = ancestorSelfProcs[mod.moduleName] ?? {};
+    final keepBare =
+        singleNorm != null && _normPath(mod.filePath) == singleNorm;
 
     for (final proc in mod.ast.procedures) {
-      // noRename: a single-module program keeps bare names — its only collision
-      // is with the root self.glp it links against, resolved by runtime
-      // precedence (the module shadows the root), not by renaming (modules.tex
-      // §Static Linking step 3 renames "to eliminate name collisions"; the
-      // cross-module collisions renaming avoids do not exist in one module).
-      final renamedName = noRename ? proc.name : '${mod.moduleName}:${proc.name}';
+      // Step 3 (modules.tex §Static Linking): rename every procedure p/n to
+      // M:p/n, eliminating name collisions — except the loaded module's own
+      // procedures, kept bare as the program's plain-name entry points.
+      final renamedName = keepBare ? proc.name : '${mod.moduleName}:${proc.name}';
       final renamedClauses = <Clause>[];
 
       for (final clause in proc.clauses) {
-        final renamedHead = noRename
+        final renamedHead = keepBare
             ? clause.head
             : Atom('${mod.moduleName}:${clause.head.functor}',
                 clause.head.args, clause.head.line, clause.head.column);
 
-        // Resolve calls in body. Under noRename names are bare, but a static
-        // cross-module call `M' # p` (e.g. inside an -exposed lib module) must
-        // still resolve to the bare local `p` so it compiles to a local Spawn,
-        // not a Distribute (manual §19.7: static linking resolves every M#goal;
-        // dynamic dispatch is retired). Local/ancestor calls are already bare.
-        final resolvedBody = noRename
-            ? clause.body?.map(_resolveRemoteToBare).toList()
-            : clause.body
-                ?.map((g) =>
-                    _resolveGoal(g, mod.moduleName, localSigs, modAncestorProcs))
-                .toList();
+        // Step 4: resolve every body call in this module's scope — local → p
+        // becomes M:p (bare in the loaded module), ancestor self.glp →
+        // ancestor:p, static cross-module M' # p → M':p (a local Spawn, not a
+        // Distribute; manual §19.7).
+        final resolvedBody = clause.body
+            ?.map((g) => _resolveGoal(
+                g, mod.moduleName, localSigs, modAncestorProcs,
+                keepLocalBare: keepBare))
+            .toList();
+
+        // A defined guard calls a user unit-clause procedure, which step 3
+        // renames to M:g. Resolve the guard call in the same scope so it points
+        // at the renamed unit clause; the partial evaluator unfolds it by that
+        // name. Builtin guards and root-scope guards match no module procedure
+        // and stay bare (root unit clauses are collected unrenamed).
+        final resolvedGuards = clause.guards
+            ?.map((g) => _resolveGuard(
+                g, mod.moduleName, localSigs, modAncestorProcs,
+                keepLocalBare: keepBare))
+            .toList();
 
         renamedClauses.add(Clause(
           renamedHead,
-          guards: clause.guards,
+          guards: resolvedGuards,
           body: resolvedBody,
           line: clause.line,
           column: clause.column,
@@ -720,86 +725,89 @@ LinkResult linkAndResolveModules(List<DiscoveredModule> modules,
   }
 
   // Generate entry-point aliases (modules.tex sec:static-linking step 5,
-  // §External access). The program's entry points are the EXPORTED procedures
-  // of the ROOT self.glp — the self.glp at the loaded program root. Each
-  // receives an unqualified alias, so an external goal calls it by plain name.
-  // The root self.glp exports an entry by defining it directly or by a
-  // forwarding clause to the module that implements it.
+  // §External access). For a DIRECTORY program, the entry points are the
+  // EXPORTED procedures of the ROOT self.glp — the self.glp at the loaded
+  // program root — each given an unqualified forwarding alias so an external
+  // goal calls it by plain name. (A directory with no root self.glp falls back
+  // to its root-level modules' exported procedures.)
   //
-  // A program that is a single module — or a directory with no root self.glp —
-  // has no such interface file; there its root-level modules' own exported
-  // procedures are the entry points (§External access, single-module case). A
-  // module is root-level when its nearest enclosing self.glp directory is the
-  // loaded root, i.e. it is not inside a descendant self.glp subtree.
-  final rootNorm = _normPath(rootDir);
-  final rootSelfMods = modules
-      .where((m) =>
-          m.isSelfGlp && _normPath(File(m.filePath).parent.path) == rootNorm)
-      .toList();
+  // A SINGLE-MODULE program generates NO aliases: its own procedures are kept
+  // bare above (keepBare), and those bare names ARE the entry points, a
+  // plain-name handle directly on each real head. A forwarding alias is avoided
+  // on purpose — its flat arguments cannot carry a structured-mode term's nested
+  // reader/writer holes.
+  if (singleNorm == null) {
+    final rootNorm = _normPath(rootDir);
+    final rootSelfMods = modules
+        .where((m) =>
+            m.isSelfGlp && _normPath(File(m.filePath).parent.path) == rootNorm)
+        .toList();
 
-  Iterable<DiscoveredModule> aliasSourceModules;
-  if (rootSelfMods.isNotEmpty) {
-    aliasSourceModules = rootSelfMods;
-  } else {
-    final descendantSelfDirs = <String>{};
-    for (final s in selfGlpModules) {
-      final sDir = _normPath(File(s.filePath).parent.path);
-      if (sDir != rootNorm && _dirUnder(sDir, rootNorm)) {
-        descendantSelfDirs.add(sDir);
+    Iterable<DiscoveredModule> aliasSourceModules;
+    if (rootSelfMods.isNotEmpty) {
+      aliasSourceModules = rootSelfMods;
+    } else {
+      final descendantSelfDirs = <String>{};
+      for (final s in selfGlpModules) {
+        final sDir = _normPath(File(s.filePath).parent.path);
+        if (sDir != rootNorm && _dirUnder(sDir, rootNorm)) {
+          descendantSelfDirs.add(sDir);
+        }
+      }
+      bool isRootLevel(DiscoveredModule mod) {
+        if (mod.exposingDir != null) return false; // exposed, not root surface
+        final modDir = _normPath(File(mod.filePath).parent.path);
+        if (!_dirUnder(modDir, rootNorm)) return false; // ancestor above root
+        for (final s in descendantSelfDirs) {
+          if (_dirUnder(modDir, s)) return false; // inside a nested sub-program
+        }
+        return true;
+      }
+      aliasSourceModules = modules.where(isRootLevel);
+    }
+
+    final aliasedSigs = <String, String>{}; // sig → owning module (conflict check)
+    for (final mod in aliasSourceModules) {
+      for (final proc in mod.ast.procedures) {
+        final isExported = mod.ast.procDeclarations.any(
+            (d) => d.exported && d.name == proc.name && d.arity == proc.arity);
+        if (!isExported) continue;
+
+        final sig = '${proc.name}/${proc.arity}';
+        final owner = aliasedSigs[sig];
+        if (owner != null && owner != mod.moduleName) {
+          throw Exception(
+              'Entry-point conflict: procedure $sig is exported by both '
+              '"$owner" and "${mod.moduleName}".');
+        }
+        if (owner != null) continue;
+        aliasedSigs[sig] = mod.moduleName;
+
+        // Look up ProcDecl for mode-aware alias generation.
+        // First check the owning module, then the program-wide index.
+        final decl = _findProcDecl(mod, proc.name, proc.arity) ?? declIndex[sig];
+
+        final aliasClause = _makeAliasClause(
+          proc.name,
+          proc.arity,
+          '${mod.moduleName}:${proc.name}',
+          declaration: decl,
+        );
+        allProcedures.add(Procedure(proc.name, proc.arity, [aliasClause], 0, 0));
       }
     }
-    bool isRootLevel(DiscoveredModule mod) {
-      if (mod.exposingDir != null) return false; // exposed, not root surface
-      final modDir = _normPath(File(mod.filePath).parent.path);
-      if (!_dirUnder(modDir, rootNorm)) return false; // ancestor above root
-      for (final s in descendantSelfDirs) {
-        if (_dirUnder(modDir, s)) return false; // inside a nested sub-program
-      }
-      return true;
-    }
-    aliasSourceModules = modules.where(isRootLevel);
   }
 
-  // noRename (single-module program): bare names are themselves the entry
-  // points — no aliases are generated, and DCE keeps everything.
-  final aliasedSigs = <String, String>{}; // sig → owning module (conflict check)
-  if (!noRename) for (final mod in aliasSourceModules) {
-    for (final proc in mod.ast.procedures) {
-      final isExported = mod.ast.procDeclarations.any(
-          (d) => d.exported && d.name == proc.name && d.arity == proc.arity);
-      if (!isExported) continue;
-
-      final sig = '${proc.name}/${proc.arity}';
-      final owner = aliasedSigs[sig];
-      if (owner != null && owner != mod.moduleName) {
-        throw Exception(
-            'Entry-point conflict: procedure $sig is exported by both '
-            '"$owner" and "${mod.moduleName}".');
-      }
-      if (owner != null) continue;
-      aliasedSigs[sig] = mod.moduleName;
-
-      // Look up ProcDecl for mode-aware alias generation.
-      // First check the owning module, then the program-wide index.
-      final decl = _findProcDecl(mod, proc.name, proc.arity) ?? declIndex[sig];
-
-      final aliasClause = _makeAliasClause(
-        proc.name,
-        proc.arity,
-        '${mod.moduleName}:${proc.name}',
-        declaration: decl,
-      );
-      allProcedures.add(Procedure(proc.name, proc.arity, [aliasClause], 0, 0));
-    }
-  }
-
-  // Collect and rename proc declarations for SRSW relaxation
+  // Collect and rename proc declarations for SRSW relaxation. The loaded
+  // module's declarations stay bare, matching its bare procedures.
   final allDecls = <ProcDecl>[];
   for (final mod in modules) {
+    final keepBare =
+        singleNorm != null && _normPath(mod.filePath) == singleNorm;
     for (final decl in mod.ast.procDeclarations) {
       if (decl.imported) continue; // Skip imported — they're in other modules
       allDecls.add(ProcDecl(
-        noRename ? decl.name : '${mod.moduleName}:${decl.name}',
+        keepBare ? decl.name : '${mod.moduleName}:${decl.name}',
         decl.argTypes,
         decl.line,
         decl.column,
@@ -817,18 +825,17 @@ LinkResult linkAndResolveModules(List<DiscoveredModule> modules,
 /// the root's exported procedures (the entry-point aliases — the bare,
 /// unprefixed procedures the linker generated — and the renamed procedures they
 /// call) and the transitive closure of procedures called in the body of a
-/// reachable one. Guards are followed too (by base name), since a user-defined
-/// guard procedure survives renaming as `M:g` while its guard call sites are
-/// left unqualified, and the partial evaluator must still find it to unfold the
-/// guard after linking. Restricting the program to its reachable procedures is
+/// reachable one. Guards are followed too: a defined guard's call site is
+/// renamed to `M:g` in step with its procedure (so the partial evaluator unfolds
+/// it after linking), and a guard left bare is also followed by base name as a
+/// safeguard. Restricting the program to its reachable procedures is
 /// semantically equivalent to the whole; everything else is pruned.
-/// [entrySigs], when given, are the program's entry-point 'name/arity'
-/// signatures to seed reachability from (the single-module case, where every
-/// procedure is bare so the default bare-name seed cannot distinguish the
-/// loaded module's own procedures from the ancestor/-exposed ones pulled in for
-/// scope). When null, the seed is the bare (unprefixed) entry-point aliases the
-/// linker generated (the directory case).
-LinkResult eliminateDeadCode(LinkResult linked, {Set<String>? entrySigs}) {
+/// The reachability seed is the bare (unprefixed) entry-point aliases the linker
+/// generated: a directory's are the root self.glp's exported procedures, a
+/// single module's are every one of its own procedures. Every other procedure
+/// carries a renamed `M:p` name, so the unprefixed aliases are exactly the
+/// entry points.
+LinkResult eliminateDeadCode(LinkResult linked) {
   final procedures = linked.program.procedures;
 
   final byFullName = <String, Procedure>{};
@@ -872,14 +879,9 @@ LinkResult eliminateDeadCode(LinkResult linked, {Set<String>? entrySigs}) {
     markFull('${g.functor}/${g.arity}');
   }
 
-  // Seed: the explicit entry signatures if given (single-module case), else the
-  // bare (unprefixed) entry-point aliases the linker generated (directory case).
-  if (entrySigs != null) {
-    for (final sig in entrySigs) markFull(sig);
-  } else {
-    for (final p in procedures) {
-      if (!p.name.contains(':')) markFull('${p.name}/${p.arity}');
-    }
+  // Seed: the bare (unprefixed) entry-point aliases the linker generated.
+  for (final p in procedures) {
+    if (!p.name.contains(':')) markFull('${p.name}/${p.arity}');
   }
   while (work.isNotEmpty) {
     final proc = byFullName[work.removeLast()]!;
@@ -888,6 +890,10 @@ LinkResult eliminateDeadCode(LinkResult linked, {Set<String>? entrySigs}) {
         collectFromGoal(g);
       }
       for (final gd in clause.guards ?? const <Guard>[]) {
+        // A defined guard now carries its resolved name (M:g) — keep it exactly;
+        // markBase additionally covers any guard left bare that names a renamed
+        // procedure by base name (defensive; never under-keeps).
+        markFull('${gd.predicate}/${gd.args.length}');
         markBase('${gd.predicate}/${gd.args.length}');
       }
     }
@@ -903,31 +909,38 @@ LinkResult eliminateDeadCode(LinkResult linked, {Set<String>? entrySigs}) {
   return LinkResult(Program(keptProcedures, 0, 0), keptDecls);
 }
 
-/// noRename resolution: rewrite a static cross-module call `M' # p` to the bare
-/// local call `p` (every procedure is bare under noRename), so it compiles to a
-/// local Spawn rather than a Distribute. Local/ancestor/root calls are already
-/// bare and pass through. A dynamic `Var # p` (no static module) is left as-is.
-Goal _resolveRemoteToBare(Goal goal) {
-  if (goal is RemoteGoal) {
-    if (goal.staticModuleName != null) {
-      return Goal(goal.goal.functor, goal.goal.args, goal.line, goal.column);
-    }
-    return goal;
+/// Resolve a defined-guard call in a clause's guard list, mirroring
+/// [_resolveGoal]'s scope order: a guard `g/n` that names a local or ancestor
+/// `self.glp` unit-clause procedure is renamed to `M:g/n` so it matches the
+/// renamed procedure; a builtin guard or a root-scope guard (no matching module
+/// procedure) is left bare. Guards never cross module boundaries (no `M' # g`),
+/// so there is no remote case.
+Guard _resolveGuard(Guard guard, String moduleName, Set<String> localSigs,
+    Map<String, String> ancestorSelfProcs,
+    {bool keepLocalBare = false}) {
+  final sig = '${guard.predicate}/${guard.args.length}';
+  if (localSigs.contains(sig)) {
+    // Loaded module keeps bare names: a local guard stays bare.
+    if (keepLocalBare) return guard;
+    return Guard('$moduleName:${guard.predicate}', guard.args,
+        guard.line, guard.column,
+        negated: guard.negated);
   }
-  if (goal is SpawnGoal) {
-    final inner = _resolveRemoteToBare(goal.innerGoal);
-    return identical(inner, goal.innerGoal)
-        ? goal
-        : SpawnGoal(inner, goal.agentId, goal.line, goal.column);
+  final ancestorModule = ancestorSelfProcs[sig];
+  if (ancestorModule != null) {
+    return Guard('$ancestorModule:${guard.predicate}', guard.args,
+        guard.line, guard.column,
+        negated: guard.negated);
   }
-  return goal;
+  return guard;
 }
 
 /// Resolve a single goal in a clause body.
 ///
 /// Resolution order: local procedure → ancestor self.glp chain → root scope/stdlib.
 Goal _resolveGoal(Goal goal, String moduleName, Set<String> localSigs,
-    Map<String, String> ancestorSelfProcs) {
+    Map<String, String> ancestorSelfProcs,
+    {bool keepLocalBare = false}) {
   // RemoteGoal: M' # p(...) → M':p(...)
   if (goal is RemoteGoal) {
     final targetModule = goal.staticModuleName;
@@ -946,8 +959,9 @@ Goal _resolveGoal(Goal goal, String moduleName, Set<String> localSigs,
 
   // SpawnGoal: resolve inner goal, keep wrapper
   if (goal is SpawnGoal) {
-    final resolvedInner =
-        _resolveGoal(goal.innerGoal, moduleName, localSigs, ancestorSelfProcs);
+    final resolvedInner = _resolveGoal(
+        goal.innerGoal, moduleName, localSigs, ancestorSelfProcs,
+        keepLocalBare: keepLocalBare);
     if (!identical(resolvedInner, goal.innerGoal)) {
       return SpawnGoal(resolvedInner, goal.agentId, goal.line, goal.column);
     }
@@ -957,6 +971,8 @@ Goal _resolveGoal(Goal goal, String moduleName, Set<String> localSigs,
   // Regular goal: check if it matches a local procedure
   final sig = '${goal.functor}/${goal.arity}';
   if (localSigs.contains(sig)) {
+    // Loaded module keeps bare names: a local call stays bare.
+    if (keepLocalBare) return goal;
     return Goal(
       '$moduleName:${goal.functor}',
       goal.args,
