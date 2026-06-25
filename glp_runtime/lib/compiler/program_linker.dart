@@ -564,9 +564,24 @@ void typeCheckProgram(List<DiscoveredModule> modules, {required String rootDir})
 /// procedures. This is the program of def:program that is type-checked and
 /// compiled.
 LinkResult linkProgram(List<DiscoveredModule> modules,
-        {required String rootDir, bool noRename = false}) =>
-    eliminateDeadCode(
-        linkAndResolveModules(modules, rootDir: rootDir, noRename: noRename));
+    {required String rootDir, bool noRename = false}) {
+  final linked =
+      linkAndResolveModules(modules, rootDir: rootDir, noRename: noRename);
+  if (!noRename) return eliminateDeadCode(linked);
+  // Single-module program: the entry points are the loaded module's OWN
+  // procedures (modules.tex §Static Linking: "exports all its procedures"), NOT
+  // every bare name. Seeding DCE from them prunes the ancestor/-exposed modules
+  // pulled in for scope but not actually called.
+  final rootNorm = _normPath(rootDir);
+  final entrySigs = modules
+      .where((m) =>
+          !m.isSelfGlp &&
+          m.exposingDir == null &&
+          _normPath(File(m.filePath).parent.path) == rootNorm)
+      .expand((m) => m.ast.procedures.map((p) => '${p.name}/${p.arity}'))
+      .toSet();
+  return eliminateDeadCode(linked, entrySigs: entrySigs);
+}
 
 /// Steps 1–4 of static linking: the pure rename-and-resolve transform, without
 /// dead-code elimination.
@@ -807,7 +822,13 @@ LinkResult linkAndResolveModules(List<DiscoveredModule> modules,
 /// left unqualified, and the partial evaluator must still find it to unfold the
 /// guard after linking. Restricting the program to its reachable procedures is
 /// semantically equivalent to the whole; everything else is pruned.
-LinkResult eliminateDeadCode(LinkResult linked) {
+/// [entrySigs], when given, are the program's entry-point 'name/arity'
+/// signatures to seed reachability from (the single-module case, where every
+/// procedure is bare so the default bare-name seed cannot distinguish the
+/// loaded module's own procedures from the ancestor/-exposed ones pulled in for
+/// scope). When null, the seed is the bare (unprefixed) entry-point aliases the
+/// linker generated (the directory case).
+LinkResult eliminateDeadCode(LinkResult linked, {Set<String>? entrySigs}) {
   final procedures = linked.program.procedures;
 
   final byFullName = <String, Procedure>{};
@@ -851,10 +872,14 @@ LinkResult eliminateDeadCode(LinkResult linked) {
     markFull('${g.functor}/${g.arity}');
   }
 
-  // Seed: the root's exported procedures = the bare (unprefixed) entry-point
-  // aliases the linker generated.
-  for (final p in procedures) {
-    if (!p.name.contains(':')) markFull('${p.name}/${p.arity}');
+  // Seed: the explicit entry signatures if given (single-module case), else the
+  // bare (unprefixed) entry-point aliases the linker generated (directory case).
+  if (entrySigs != null) {
+    for (final sig in entrySigs) markFull(sig);
+  } else {
+    for (final p in procedures) {
+      if (!p.name.contains(':')) markFull('${p.name}/${p.arity}');
+    }
   }
   while (work.isNotEmpty) {
     final proc = byFullName[work.removeLast()]!;
