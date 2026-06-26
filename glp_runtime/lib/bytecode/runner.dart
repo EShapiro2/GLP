@@ -19,9 +19,8 @@ enum RunResult { terminated, suspended, yielded, outOfReductions }
 
 /// A runner that executes one goal's [RunnerContext] to a [RunResult]. The
 /// scheduler holds runners behind this interface so a goal can be driven by the
-/// object loop ([BytecodeRunner]) or the direct byte loop (`ByteRunner` in
-/// `engine_v2/interp.dart`) interchangeably — same per-goal contract, the PC in
-/// `cx.kappa` interpreted as an instruction index or a byte offset respectively.
+/// direct byte loop (`ByteRunner` in `engine_v2/interp.dart`) — the PC in
+/// `cx.kappa` interpreted as a byte offset into the code section.
 abstract interface class GoalRunner {
   void run(RunnerContext cx);
   RunResult runWithStatus(RunnerContext cx);
@@ -279,1537 +278,748 @@ class RunnerContext {
   }
 }
 
-class BytecodeRunner with OpExecutors implements GoalRunner {
-  final BytecodeProgram prog;
-  BytecodeRunner(this.prog);
 
-  void run(RunnerContext cx) { runWithStatus(cx); }
+// Pure helpers relocated from the former BytecodeRunner class (object loop,
+// removed). They operate only on RunnerContext and are shared by OpExecutors.
 
-  @override
-  String? procNameForPc(int pc) {
-    for (final e in prog.labels.entries) {
-      if (e.value == pc) return e.key;
+int _finalUnboundVar(RunnerContext cx, int addr) {
+  // derefAddr follows the entire chain automatically
+  final derefResult = cx.rt.heap.derefAddr(addr);
+
+  if (cx.debugOutput) print('[DEBUG _finalUnboundVar] @$addr -> derefResult=$derefResult');
+
+  if (derefResult is VarRef) {
+    // derefAddr returned the final unbound variable in the chain
+    final finalAddr = derefResult.addr;
+    final isWriter = cx.rt.heap.isWriter(finalAddr);
+
+    // Per GLP semantics: goals suspend on READERS, not writers
+    // If the final unbound var is a writer, return its paired reader
+    // Per spec v3.2: use readerForWriter() instead of +1 arithmetic
+    final readerAddr = isWriter ? cx.rt.heap.pairedReaderAddr(finalAddr) : finalAddr;
+    if (cx.debugOutput) print('[DEBUG _finalUnboundVar] Final var: $finalAddr (${isWriter ? "writer" : "reader"}), returning reader: $readerAddr');
+    return readerAddr;
+  }
+
+  // Writer is bound to a ground term, reader is effectively bound
+  if (cx.debugOutput) print('[DEBUG _finalUnboundVar] Bound to ground term, returning original: $addr');
+  return addr;
+}
+
+Term? _getArg(RunnerContext cx, int slot) {
+  final arg = cx.env.arg(slot);
+  // Per spec v2.16.3 Section 1.1: CallEnv arguments must be VarRefs
+  assert(arg == null || arg is VarRef,
+         'CallEnv arguments must be VarRefs, got ${arg.runtimeType}');
+  return arg;
+}
+
+(Object?, Set<int>) _dereferenceWithTracking(Object? term, RunnerContext cx) {
+  final unboundReaders = <int>{};
+
+  Object? dereference(Object? t) {
+    // NOTE: A VarRef carries a HEAP ADDRESS (terms.dart §3.2.1 — varId was
+    // removed). clauseVars is keyed by CLAUSE-VARIABLE INDEX. A former
+    // shortcut here looked up clauseVars[t.addr], which after the varId→addr
+    // migration (commit 57cf5d96) became a category error: it indexed the
+    // clause-index map with a heap address and fired on any numeric
+    // collision, silently swapping a guard argument for whatever clause var
+    // shared that number — e.g. a reader for an unbound writer, making a
+    // patient guard fail instead of suspend (known-issues.md Issue 12).
+    // VarRefs never carry clause indices, so no such resolution is needed.
+
+    if (t is VarRef) {
+      final addr = t.addr;
+      if (cx.rt.heap.isReader(addr)) {
+        // Reader - check if bound using abstraction methods for imported reader support
+        final readerAddr = addr;
+
+        // Check sigma-hat first for tentative bindings (before commit)
+        final writerAddr = cx.rt.heap.tryWriterForReader(readerAddr);
+        if (writerAddr != null && cx.sigmaHat.containsKey(writerAddr)) {
+          return dereference(cx.sigmaHat[writerAddr]);
+        }
+
+        if (cx.rt.heap.isReaderBound(readerAddr)) {
+          final boundValue = cx.rt.heap.getReaderValue(readerAddr);
+          // CRITICAL FIX: Recursively dereference the bound value
+          return dereference(boundValue);
+        } else {
+          // Unbound reader - track it
+          unboundReaders.add(readerAddr);
+          return t;
+        }
+      } else {
+        // Writer variable
+        final writerAddr = addr;
+
+        // Check sigma-hat first (tentative bindings)
+        if (cx.sigmaHat.containsKey(writerAddr)) {
+          return dereference(cx.sigmaHat[writerAddr]);
+        }
+
+        // Check heap
+        if (cx.rt.heap.isFullyBound(writerAddr)) {
+          final boundValue = cx.rt.heap.getValue(writerAddr);
+          // CRITICAL FIX: Recursively dereference the bound value
+          return dereference(boundValue);
+        } else {
+          // Unbound writer - can't evaluate
+          return t;
+        }
+      }
+    } else if (t is StructTerm) {
+      // Return structure as-is (don't evaluate arithmetic here)
+      // Guards like =:= will evaluate explicitly using evaluateNumeric
+      return t;
+    } else if (t is ConstTerm) {
+      // CRITICAL FIX: Unwrap ConstTerm to get primitive value
+      return t.value;
+    } else if (t is int) {
+      // Bare int represents a variable addr - check sigmaHat first, then heap
+      if (cx.sigmaHat.containsKey(t)) {
+        return dereference(cx.sigmaHat[t]);
+      } else if (cx.rt.heap.isFullyBound(t)) {
+        final boundValue = cx.rt.heap.getValue(t);
+        // Recursively dereference the bound value
+        return dereference(boundValue);
+      } else {
+        // Unbound variable - return as VarRef for proper handling
+        return VarRef(t);
+      }
+    } else {
+      return t;
+    }
+  }
+
+  final result = dereference(term);
+  return (result, unboundReaders);
+}
+
+GuardResult _evaluateGuard(String predicateName, List<Object?> args, RunnerContext cx) {
+  // Extract values from any remaining ConstTerms
+  Object? getValue(Object? v) {
+    if (v is ConstTerm) return v.value;
+    return v;
+  }
+
+  // Evaluate arithmetic expressions to numeric values
+  // Supports: X, X + Y, X - Y, X * Y, X / Y, X // Y, X mod Y, -X
+  num? evaluateNumeric(Object? v) {
+    if (v is num) return v;
+    if (v is ConstTerm && v.value is num) return v.value as num;
+    // Handle VarRef - dereference to get actual value
+    if (v is VarRef) {
+      if (cx.rt.heap.isReader(v.addr)) {
+        // Use isReaderBound/getReaderValue for imported reader support
+        if (!cx.rt.heap.isReaderBound(v.addr)) return null; // Unbound
+        final deref = cx.rt.heap.getReaderValue(v.addr);
+        return evaluateNumeric(deref);
+      } else {
+        final deref = cx.rt.heap.getValue(v.addr);
+        if (deref == null) return null; // Unbound
+        return evaluateNumeric(deref);
+      }
+    }
+    if (v is StructTerm) {
+      // Evaluate arithmetic expression
+      switch (v.functor) {
+        case '+':
+          if (v.args.length != 2) return null;
+          final a = evaluateNumeric(v.args[0]);
+          final b = evaluateNumeric(v.args[1]);
+          if (a == null || b == null) return null;
+          return a + b;
+        case '-':
+          if (v.args.length == 1) {
+            // Unary minus
+            final a = evaluateNumeric(v.args[0]);
+            return a == null ? null : -a;
+          } else if (v.args.length == 2) {
+            final a = evaluateNumeric(v.args[0]);
+            final b = evaluateNumeric(v.args[1]);
+            if (a == null || b == null) return null;
+            return a - b;
+          }
+          return null;
+        case '*':
+          if (v.args.length != 2) return null;
+          final a = evaluateNumeric(v.args[0]);
+          final b = evaluateNumeric(v.args[1]);
+          if (a == null || b == null) return null;
+          return a * b;
+        case '/':
+          if (v.args.length != 2) return null;
+          final a = evaluateNumeric(v.args[0]);
+          final b = evaluateNumeric(v.args[1]);
+          if (a == null || b == null || b == 0) return null;
+          return a / b;
+        case '//':
+          if (v.args.length != 2) return null;
+          final a = evaluateNumeric(v.args[0]);
+          final b = evaluateNumeric(v.args[1]);
+          if (a == null || b == null || b == 0) return null;
+          return a ~/ b;
+        case 'mod':
+          if (v.args.length != 2) return null;
+          final a = evaluateNumeric(v.args[0]);
+          final b = evaluateNumeric(v.args[1]);
+          if (a == null || b == null || b == 0) return null;
+          return a.toInt() % b.toInt();
+        case 'neg':
+          if (v.args.length != 1) return null;
+          final a = evaluateNumeric(v.args[0]);
+          return a == null ? null : -a;
+        default:
+          return null; // Not an arithmetic functor
+      }
     }
     return null;
   }
 
-  /// Helper: find next ClauseTry instruction after current PC
-  /// If no more ClauseTry, look for NoMoreClauses to check for suspension/failure
-  int _findNextClauseTry(int fromPc) {
-    for (var i = fromPc + 1; i < prog.ops.length; i++) {
-      if (prog.ops[i] is ClauseNext) return i; // Find ClauseNext first (unions Si to U)
-      if (prog.ops[i] is ClauseTry) return i;
-      if (prog.ops[i] is NoMoreClauses) return i; // Jump to NoMoreClauses to check U
-    }
-    return prog.ops.length; // End of program if no more clauses
-  }
+  switch (predicateName) {
+    // Comparison guards (with arithmetic expression support)
+    case '<':
+      if (args.length < 2) return GuardResult.failure;
+      final a = evaluateNumeric(args[0]);
+      final b = evaluateNumeric(args[1]);
 
-  /// Object-loop routing for a `StepOutcome.nextClause`: soft-fail the current
-  /// clause and return the PC of the next clause try. (The byte loop maps the
-  /// same outcome to a byte-offset scan.)
-  int _applyNextClause(RunnerContext cx, int pc) {
-    _softFailToNextClause(cx, pc);
-    return _findNextClauseTry(pc);
-  }
+      // Debug output
+      // print('[EVAL_GUARD] < comparison:');
+      // print('[EVAL_GUARD]   args[0] = ${args[0]} (${args[0].runtimeType})');
+      // print('[EVAL_GUARD]   args[1] = ${args[1]} (${args[1].runtimeType})');
+      // print('[EVAL_GUARD]   a = $a (${a.runtimeType})');
+      // print('[EVAL_GUARD]   b = $b (${b.runtimeType})');
+      // print('[EVAL_GUARD]   a is num = ${a is num}');
+      // print('[EVAL_GUARD]   b is num = ${b is num}');
 
-  /// Soft-fail to next clause: merge Si into U, clear clause state, jump to next ClauseTry
-  void _softFailToNextClause(RunnerContext cx, int currentPc) {
-    // Merge Si into U before clearing clause state.
-    // Si contains readers that made the HEAD matching indeterminate (two-phase).
-    // These must be preserved in U so that NoMoreClauses can decide to suspend
-    // (rather than fail) when all clauses have been exhausted.
-    cx.U.addAll(cx.Si);
-    // Clear clause-local state (σ̂w, Si, etc.)
-    // Note: U is not cleared - it accumulates across clause attempts
-    cx.clearClause();
-    // Jump to next clause (will be handled by returning new PC)
-  }
-
-  /// Find the final unbound variable in a chain (FCP: follow var→var bindings)
-  /// If addr's writer is bound to another unbound variable, return that variable's addr
-  /// Otherwise return the original addr
-  /// derefAddr already follows the FULL chain, so we just use it once
-  // Static so the OpExecutors mixin can reach it (uses only cx).
-  static int _finalUnboundVar(RunnerContext cx, int addr) {
-    // derefAddr follows the entire chain automatically
-    final derefResult = cx.rt.heap.derefAddr(addr);
-
-    if (cx.debugOutput) print('[DEBUG _finalUnboundVar] @$addr -> derefResult=$derefResult');
-
-    if (derefResult is VarRef) {
-      // derefAddr returned the final unbound variable in the chain
-      final finalAddr = derefResult.addr;
-      final isWriter = cx.rt.heap.isWriter(finalAddr);
-
-      // Per GLP semantics: goals suspend on READERS, not writers
-      // If the final unbound var is a writer, return its paired reader
-      // Per spec v3.2: use readerForWriter() instead of +1 arithmetic
-      final readerAddr = isWriter ? cx.rt.heap.pairedReaderAddr(finalAddr) : finalAddr;
-      if (cx.debugOutput) print('[DEBUG _finalUnboundVar] Final var: $finalAddr (${isWriter ? "writer" : "reader"}), returning reader: $readerAddr');
-      return readerAddr;
-    }
-
-    // Writer is bound to a ground term, reader is effectively bound
-    if (cx.debugOutput) print('[DEBUG _finalUnboundVar] Bound to ground term, returning original: $addr');
-    return addr;
-  }
-
-  /// Suspend on unbound reader: add to U and fail to next clause atomically
-  /// Per spec: "add reader to U and immediately fail to next clause" is ONE operation
-  int _suspendAndFail(RunnerContext cx, int readerId, int currentPc) {
-    cx.U.add(readerId);
-    // Note: _softFailToNextClause merges Si into U before clearing
-    _softFailToNextClause(cx, currentPc);
-    final nextPc = _findNextClauseTry(currentPc);
-    return nextPc;
-  }
-
-  /// Suspend on multiple unbound readers: add all to U and fail to next clause
-  int _suspendAndFailMulti(RunnerContext cx, Set<int> readerIds, int currentPc) {
-    cx.U.addAll(readerIds);
-    // Note: _softFailToNextClause merges Si into U before clearing
-    _softFailToNextClause(cx, currentPc);
-    return _findNextClauseTry(currentPc);
-  }
-
-  /// Format a term for display
-  static String _formatTerm(GlpRuntime rt, Term term, {bool markReaders = true}) {
-    if (term is ConstTerm) {
-      if (term.value == 'nil') return '[]';
-      if (term.value == null) return '<null>';
-      return term.value.toString();
-    } else if (term is VarRef && rt.heap.isWriter(term.addr)) {
-      final wid = term.addr;
-      if (rt.heap.isWriterBound(wid)) {
-        final value = rt.heap.valueOfWriter(wid);
-        if (value != null) return _formatTerm(rt, value, markReaders: markReaders);
+      if (a != null && b != null) {
+        return a < b ? GuardResult.success : GuardResult.failure;
       }
-      final displayId = wid >= 1000 ? wid - 1000 : wid;
-      return 'X$displayId';
-    } else if (term is VarRef && rt.heap.isReader(term.addr)) {
-      final rid = term.addr;
-      if (rt.heap.isReaderBound(rid)) {
-        final value = rt.heap.getReaderValue(rid);
-        if (value != null) {
-          // Bound reader - just return the formatted value without ?
-          return _formatTerm(rt, value, markReaders: markReaders);
+      return GuardResult.failure;
+
+    case '>':
+      if (args.length < 2) return GuardResult.failure;
+      final a = evaluateNumeric(args[0]);
+      final b = evaluateNumeric(args[1]);
+      if (a != null && b != null) {
+        return a > b ? GuardResult.success : GuardResult.failure;
+      }
+      return GuardResult.failure;
+
+    case '=<':
+      if (args.length < 2) return GuardResult.failure;
+      final a = evaluateNumeric(args[0]);
+      final b = evaluateNumeric(args[1]);
+      if (a != null && b != null) {
+        return a <= b ? GuardResult.success : GuardResult.failure;
+      }
+      return GuardResult.failure;
+
+    case '>=':
+      if (args.length < 2) return GuardResult.failure;
+      final a = evaluateNumeric(args[0]);
+      final b = evaluateNumeric(args[1]);
+      if (a != null && b != null) {
+        return a >= b ? GuardResult.success : GuardResult.failure;
+      }
+      return GuardResult.failure;
+
+    case '=:=':
+      if (args.length < 2) return GuardResult.failure;
+      final a = evaluateNumeric(args[0]);
+      final b = evaluateNumeric(args[1]);
+      if (a != null && b != null) {
+        return a == b ? GuardResult.success : GuardResult.failure;
+      }
+      return GuardResult.failure;
+
+    case '=\\=':
+      if (args.length < 2) return GuardResult.failure;
+      final a = evaluateNumeric(args[0]);
+      final b = evaluateNumeric(args[1]);
+      if (a != null && b != null) {
+        return a != b ? GuardResult.success : GuardResult.failure;
+      }
+      return GuardResult.failure;
+
+    // Lexicographic comparison of ground constants (atoms/strings/numbers)
+    case '@<':
+      if (args.length < 2) return GuardResult.failure;
+      String? evalConst(dynamic v) {
+        if (v is ConstTerm) {
+          final cv = v.value;
+          return cv?.toString();
         }
-      }
-      // Unbound reader - show with ?
-      final displayId = rid >= 1000 ? rid - 1000 : rid;
-      return markReaders ? 'X$displayId?' : 'X$displayId';
-    } else if (term is StructTerm) {
-      // Special formatting for list structures
-      if (term.functor == '.' && term.args.length == 2) {
-        final elements = <String>[];
-        var listTerm = term;
-        final visited = <int>{};
-
-        while (true) {
-          if (listTerm is! StructTerm || listTerm.functor != '.') break;
-
-          final head = listTerm.args[0];
-          final tail = listTerm.args[1];
-
-          // Format head element
-          String headStr = _formatTerm(rt, head, markReaders: markReaders);
-
-          // Check for circular reference in head (if VarRef)
-          if (head is VarRef && visited.contains(head.addr)) {
-            headStr = '<circular>';
-          } else if (head is VarRef) {
-            visited.add(head.addr);
+        if (v is String || v is num) return v.toString();
+        if (v is VarRef) {
+          if (cx.rt.heap.isReader(v.addr)) {
+            if (!cx.rt.heap.isReaderBound(v.addr)) return null;
+            return evalConst(cx.rt.heap.getReaderValue(v.addr));
           }
-
-          elements.add(headStr);
-
-          // Process tail
-          if (tail is ConstTerm && (tail.value == 'nil' || tail.value == null)) {
-            break; // Proper list ending
-          } else if (tail is StructTerm && tail.functor == '.') {
-            listTerm = tail;
-          } else if (tail is VarRef) {
-            // Unbound tail - improper list
-            if (visited.contains(tail.addr)) {
-              return '[${elements.join(', ')} | <circular>]';
-            }
-            visited.add(tail.addr);
-            final tailStr = _formatTerm(rt, tail, markReaders: markReaders);
-            return '[${elements.join(', ')} | $tailStr]';
-          } else {
-            // Non-list tail
-            final tailStr = _formatTerm(rt, tail, markReaders: markReaders);
-            return '[${elements.join(', ')} | $tailStr]';
-          }
-        }
-
-        return '[${elements.join(', ')}]';
-      }
-
-      // General structure formatting
-      final args = term.args.map((a) => _formatTerm(rt, a, markReaders: markReaders)).join(',');
-      return '${term.functor}($args)';
-    }
-    return term.toString();
-  }
-
-  RunResult runWithStatus(RunnerContext cx) {
-    var pc = cx.kappa;  // Start at goal's entry point (not 0!)
-    final debug = false; // Set to true to enable trace
-
-    // Print try start
-    if (debug) {
-//       print('>>> TRY: Goal ${cx.goalId} at PC ${cx.kappa}');
-    }
-
-    while (pc < prog.ops.length) {
-      // Check reduction budget
-      if (cx.reductionBudget != null && cx.reductionsUsed >= cx.reductionBudget!) {
-        return RunResult.outOfReductions;
-      }
-      cx.reductionsUsed++;
-
-      final op = prog.ops[pc];
-
-      if (debug && (cx.goalId >= 4000 || cx.goalId == 100)) {
-        print('  [G${cx.goalId}] PC=$pc ${op.runtimeType} | U=${cx.U} inBody=${cx.inBody}');
-      }
-      if (op is Label) { pc++; continue; }
-      if (op is ClauseTry) {
-        if (cx.debugOutput) print('[DEBUG] PC $pc: ClauseTry - Starting new clause');
-        execClauseTry(cx); // StepOutcome.advance
-        pc++; continue;
-      }
-
-      // Otherwise guard: succeeds if Si is empty (all previous clauses failed, not suspended)
-      if (op is Otherwise) {
-        if (execOtherwise(cx).kind == StepKind.nextClause) {
-          pc = _applyNextClause(cx, pc);
-          continue;
-        }
-        pc++;
-        continue;
-      }
-
-      // Push: Save structure processing state
-      if (op is Push) {
-        execPush(cx, op.regIndex); // StepOutcome.advance
-        pc++;
-        continue;
-      }
-
-      // Pop: Restore structure processing state (FCP AM semantics)
-      if (op is Pop) {
-        execPop(cx, op.regIndex); // StepOutcome.advance
-        pc++;
-        continue;
-      }
-
-      // UnifyStructure: Process nested structure at S position
-      if (op is UnifyStructure) {
-        final o = execUnifyStructure(cx, op.functor, op.arity);
-        if (o.kind == StepKind.nextClause) { pc = _applyNextClause(cx, pc); continue; }
-        pc++;
-        continue;
-      }
-
-      // ===== v2 UNIFIED INSTRUCTIONS =====
-
-      // Unknown: test if variable is unbound (value unknown)
-      if (op is opv2.Unknown) {
-        final o = execUnknown(cx, op.varIndex);
-        if (o.kind == StepKind.nextClause) { pc = _applyNextClause(cx, pc); continue; }
-        pc++; continue;
-      }
-
-      // HeadVariable: unified writer/reader structure variable (at S position)
-      if (op is opv2.HeadVariable) {
-        final o = execHeadVariable(cx, op.varIndex, op.isReader);
-        if (o.kind == StepKind.nextClause) { pc = _applyNextClause(cx, pc); continue; }
-        pc++;
-        continue;
-      }
-
-
-      // ===== v2.16 HEAD instructions =====
-      if (op is HeadConstant) {
-        final o = execHeadConstant(cx, op.value, op.argSlot);
-        if (o.kind == StepKind.nextClause) { pc = _applyNextClause(cx, pc); continue; }
-        pc++;
-        continue;
-      }
-
-      if (op is HeadStructure) {
-        final o = execHeadStructure(cx, op.functor, op.arity, op.argSlot);
-        if (o.kind == StepKind.nextClause) { pc = _applyNextClause(cx, pc); continue; }
-        pc++;
-        continue;
-      }
-
-      // ===== Structure subterm matching instructions =====
-      if (op is UnifyConstant) {
-        final o = execUnifyConstant(cx, op.value);
-        if (o.kind == StepKind.nextClause) { pc = _applyNextClause(cx, pc); continue; }
-        pc++;
-        continue;
-      }
-
-      if (op is UnifyVoid) {
-        execUnifyVoid(cx, op.count); // StepOutcome.advance
-        pc++; continue;
-      }
-
-      // UnifyVariable: unified writer/reader structure traversal (native V2 handler)
-      if (op is opv2.UnifyVariable) {
-        final o = execUnifyVariable(cx, op.varIndex, op.isReader);
-        if (o.kind == StepKind.nextClause) { pc = _applyNextClause(cx, pc); continue; }
-        pc++;
-        continue;
-      }
-
-      // GetVariable: unified first-occurrence argument loading (native V2 handler)
-      if (op is opv2.GetVariable) {
-        final o = execGetVariable(cx, op.varIndex, op.argSlot, op.isReader);
-        if (o.kind == StepKind.nextClause) { pc = _applyNextClause(cx, pc); continue; }
-        pc++;
-        continue;
-      }
-
-      // GetValue: unified subsequent-occurrence argument unification (native V2 handler)
-      if (op is opv2.GetValue) {
-        final o = execGetValue(cx, op.varIndex, op.argSlot, op.isReader);
-        if (o.kind == StepKind.nextClause) { pc = _applyNextClause(cx, pc); continue; }
-        pc++;
-        continue;
-      }
-
-      // SetVariable: unified structure building in BODY (native V2 handler)
-      if (op is opv2.SetVariable) {
-        final o = execSetVariable(cx, op.varIndex, op.isReader);
-        if (o.kind == StepKind.nextClause) { pc = _applyNextClause(cx, pc); continue; }
-        pc++;
-        continue;
-      }
-
-      // Commit (apply σ̂w and wake suspended goals) - v2.16 semantics
-      if (op is Commit) {
-        final o = execCommit(cx);
-        if (o.kind == StepKind.nextClause) {
-          pc = _applyNextClause(cx, pc);
-          continue;
-        }
-        pc++; continue;
-      }
-
-      // Clause control / suspend
-
-      // clause_next: Unified instruction for moving to next clause (spec 2.2)
-      // Discard σ̂w, union Si into U, clear clause state, jump to next clause
-      if (op is ClauseNext) {
-        cx.U.addAll(cx.Si);
-        cx.clearClause();
-        pc = prog.labels[op.label]!;
-        continue;
-      }
-
-      // no_more_clauses: All clauses exhausted (spec 2.5)
-      // If U non-empty: suspend; otherwise: fail definitively
-      if (op is NoMoreClauses) {
-        final o = execNoMoreClauses(cx);
-        return o.kind == StepKind.suspended
-            ? RunResult.suspended
-            : RunResult.terminated;
-      }
-
-      // ===== BODY argument setup instructions =====
-
-      // PutVariable: unified writer/reader argument placement (native V2 handler)
-      if (op is opv2.PutVariable) {
-        execPutVariable(cx, op.varIndex, op.argSlot, op.isReader); // advance
-        pc++;
-        continue;
-      }
-
-      if (op is PutConstant) {
-        execPutConstant(cx, op.value, op.argSlot); // StepOutcome.advance
-        pc++; continue;
-      }
-
-      // ===== WAM-style structure creation =====
-      if (op is PutStructure) {
-        execPutStructure(cx, op.functor, op.arity, op.argSlot); // advance
-        pc++; continue;
-      }
-
-      if (op is SetConstant) {
-        execSetConstant(cx, op.value); // advance
-        pc++;
-        continue;
-      }
-
-
-      // ===== Goal spawning and control flow =====
-      if (op is Spawn) {
-        if (cx.inBody) {
-          // Get entry point for procedure
-          final entryPc = prog.labels[op.procedureLabel];
-
-          // If procedure not found in program, check if it's a body kernel
-          if (entryPc == null) {
-            // Extract procedure name from label (may be "name" or "name/arity")
-            final labelParts = op.procedureLabel.split('/');
-            final procName = labelParts[0];
-
-            // Look up body kernel
-            final kernel = cx.rt.bodyKernels.lookup(procName, op.arity);
-            if (kernel != null) {
-              // Execute body kernel inline
-              // Collect arguments from argSlots
-              final args = <Object?>[];
-              for (int i = 0; i < op.arity; i++) {
-                args.add(cx.argSlots[i]);
-              }
-
-              // Execute kernel
-              final result = kernel(cx.rt, args);
-
-              if (result == BodyKernelResult.abort) {
-                print('ERROR: Body kernel ${procName}/${op.arity} aborted');
-                return RunResult.terminated;
-              }
-
-              // Success - clear args and continue (no goal spawned)
-              cx.argSlots.clear();
-              pc++; continue;
-            }
-
-            // Not a body kernel either - error
-            print('ERROR: Spawn could not find procedure label: ${op.procedureLabel}');
-            return RunResult.terminated;
-          }
-
-          // Spawn a new goal with heterogeneous argument Terms
-          // Per spec v2.16 section 1.1: Create CallEnv from argSlots
-          final newEnv = CallEnv(
-            args: Map<int, Term>.from(cx.argSlots),
-          );
-
-          // Create and enqueue new goal with unique ID
-          final newGoalId = cx.rt.nextGoalId++;
-          final newGoalRef = GoalRef(newGoalId, entryPc);
-
-          // Format spawned goal as GLP predicate with arguments
-          final args = <String>[];
-          for (int i = 0; i < 10; i++) {
-            final term = newEnv.arg(i);
-            if (term != null) {
-              // Use custom formatter if provided, otherwise fall back to static formatter
-              args.add(cx.termFormatter != null
-                  ? cx.termFormatter!(term)
-                  : _formatTerm(cx.rt, term));
-            } else {
-              break;
-            }
-          }
-          final goalStr = args.isEmpty ? op.procedureLabel : '${op.procedureLabel}(${args.join(', ')})';
-          cx.spawnedGoals.add(goalStr);
-
-          // Register environment with the runtime
-          cx.rt.setGoalEnv(newGoalId, newEnv);
-
-          // Inherit program from parent goal
-          final parentProgram = cx.rt.getGoalProgram(cx.goalId);
-          if (parentProgram != null) {
-            cx.rt.setGoalProgram(newGoalId, parentProgram);
-          }
-
-          // Enqueue the goal
-          cx.rt.gq.enqueue(newGoalRef);
-
-          // Propagate infrastructure goal status to child goals
-          if (cx.rt.infrastructureGoalIds.contains(cx.goalId)) {
-            cx.rt.infrastructureGoalIds.add(newGoalId);
-          }
-
-          // Clear argument registers for next spawn
-          cx.argSlots.clear();
-        }
-        pc++; continue;
-      }
-
-      if (op is Requeue) {
-        if (cx.inBody) {
-          // Tail call - reuse current goal, jump to procedure entry
-          // Get entry point for procedure
-          final entryPc = prog.labels[op.procedureLabel];
-          if (entryPc == null) {
-            print('ERROR: Requeue could not find procedure label: ${op.procedureLabel}');
-            return RunResult.terminated;
-          }
-
-          // Format requeued goal as GLP predicate with arguments
-          final args = <String>[];
-          for (int i = 0; i < 10; i++) {
-            final term = cx.argSlots[i];
-            if (term != null) {
-              // Use custom formatter if provided, otherwise fall back to static formatter
-              args.add(cx.termFormatter != null
-                  ? cx.termFormatter!(term)
-                  : _formatTerm(cx.rt, term));
-            } else {
-              break;
-            }
-          }
-          final newHeadGoalStr = args.isEmpty ? op.procedureLabel : '${op.procedureLabel}(${args.join(', ')})';
-          cx.spawnedGoals.add(newHeadGoalStr);
-
-          // Print reduction trace before tail call
-          if (cx.onReduction != null && cx.goalHead != null) {
-            final body = cx.spawnedGoals.join(', ');
-            cx.onReduction!(cx.goalId, cx.reformatHead(), body);
-          }
-
-          // Update environment with new heterogeneous arguments
-          cx.env.update(Map<int, Term>.from(cx.argSlots));
-
-          // Clear argument registers
-          cx.argSlots.clear();
-
-          // Clear spawned goals and update head for next reduction
-          cx.spawnedGoals.clear();
-          cx.goalHead = newHeadGoalStr;  // New head for next iteration
-
-          // Reset clause state for new procedure
-          cx.sigmaHat.clear();
-          // Si removed - U persists across clause attempts
-          cx.U.clear();
-          cx.clauseVars.clear();
-          cx.inBody = false;
-          cx.mode = UnifyMode.read;
-          cx.S = 0;
-          cx.currentStructure = null;
-
-          // Update kappa to new procedure's entry point
-          // This ensures suspension/reactivation uses the correct procedure
-          cx.kappa = entryPc;
-
-          // Tail-recursion fairness (ISA §9.2): decrement this goal's tail
-          // budget; when it reaches 0, reset it and yield — re-enqueue this
-          // goal at the new entry so other goals on this isolate progress
-          // before it continues. Without this a tail loop starves the isolate.
-          if (cx.rt.tailReduce(cx.goalId)) {
-            cx.rt.gq.enqueue(GoalRef(cx.goalId, entryPc));
-            return RunResult.yielded;
-          }
-
-          // Budget remains: continue the tail call within this run.
-          pc = entryPc;
-          continue;
-        }
-        pc++; continue;
-      }
-
-      // ===== MODULE SYSTEM INSTRUCTIONS =====
-      // Phase 2 module system: distribute and transmit opcodes
-      // These handle cross-module RPC following FCP design
-
-      if (op is Distribute) {
-        // Static RPC to imported module at known index
-        // Following FCP: distribute # {Index, Goal}
-        //
-        // Routes RPC via GLP channels or REPL module context.
-        if (cx.inBody) {
-          // Collect arguments from argSlots
-          final args = <Term>[];
-          for (int i = 0; i < op.arity; i++) {
-            final arg = cx.argSlots[i];
-            if (arg != null) args.add(arg);
-          }
-
-          // Check if module context is available
-          if (cx.moduleContext is ReplModuleContext) {
-            // REPL mode: directly spawn goal in target module
-            final replCtx = cx.moduleContext as ReplModuleContext;
-            final target = replCtx.imports[op.importIndex];
-
-            if (target != null) {
-              // Check GLP channel first (Phase 5: RPC routing via GLP channels)
-              final glpChannel = cx.rt.glpChannels[target.name];
-              if (glpChannel != null) {
-                // Route via GLP channel — build goal term, send on channel
-                final goalTerm = StructTerm(op.functor, args);
-                final activations = glpChannel.send(goalTerm);
-                for (final act in activations) {
-                  cx.rt.enqueueReactivatedGoal(act);
-                }
-                if (cx.debugOutput) {
-                  print('[MODULE] Distribute (GLP channel): ${replCtx.moduleName} -> ${target.name} # ${op.functor}/${op.arity}');
-                }
-              } else {
-                // Module not activated — no GLP channel available
-                print('ERROR: Distribute: module ${target.name} not activated (no GLP channel for ${op.functor}/${op.arity})');
-                return RunResult.terminated;
-              }
-            } else {
-              print('ERROR: Distribute: no target for import index ${op.importIndex} (${op.functor}/${op.arity})');
-              return RunResult.terminated;
-            }
-          } else {
-            // No module context
-            print('ERROR: Distribute: no module context for import[${op.importIndex}] # ${op.functor}/${op.arity}');
-            return RunResult.terminated;
-          }
-          cx.argSlots.clear();
-        }
-        pc++; continue;
-      }
-
-      if (op is Transmit) {
-        // Dynamic RPC to module resolved at runtime
-        // Following FCP: transmit # {ModuleVar, Goal}
-        //
-        // Resolves module name from variable, looks up in registry,
-        // Routes via GLP channels to target module.
-        if (cx.inBody) {
-          // Collect arguments from argSlots
-          final args = <Term>[];
-          for (int i = 0; i < op.arity; i++) {
-            final arg = cx.argSlots[i];
-            if (arg != null) args.add(arg);
-          }
-
-          // Get module name from clause variable
-          final moduleVar = cx.clauseVars[op.moduleVarIndex];
-
-          // Resolve module name from variable
-          String? moduleName;
-          if (moduleVar is ConstTerm) {
-            moduleName = moduleVar.value?.toString();
-          } else if (moduleVar is VarRef) {
-            // Dereference variable to get bound value
-            final deref = cx.rt.heap.dereference(moduleVar);
-            if (deref is ConstTerm) {
-              moduleName = deref.value?.toString();
-            }
-          }
-
-          if (moduleName != null) {
-            // Check GLP channel first (Phase 5: RPC routing via GLP channels)
-            final glpChannel = cx.rt.glpChannels[moduleName];
-            if (glpChannel != null) {
-              // Route via GLP channel — build goal term, send on channel
-              final goalTerm = StructTerm(op.functor, args);
-              final activations = glpChannel.send(goalTerm);
-              for (final act in activations) {
-                cx.rt.enqueueReactivatedGoal(act);
-              }
-              if (cx.debugOutput) {
-                print('[MODULE] Transmit (GLP channel): -> $moduleName # ${op.functor}/${op.arity}');
-              }
-            } else {
-              print('ERROR: Transmit: module $moduleName not activated (no GLP channel for ${op.functor}/${op.arity})');
-              return RunResult.terminated;
-            }
-          } else {
-            print('ERROR: Transmit: could not resolve module name from X${op.moduleVarIndex} (${op.functor}/${op.arity})');
-            return RunResult.terminated;
-          }
-          cx.argSlots.clear();
-        }
-        pc++; continue;
-      }
-
-      // ===== VARIABLE INSTRUCTIONS =====
-
-      // REMOVED: Duplicate GetVariable handler
-      // The correct GetVariable handler is at line 690 and stores VarRef objects
-      // This duplicate handler was storing bare IDs which caused guard comparison bugs
-
-      // ===== BODY INSTRUCTIONS =====
-      // These execute after COMMIT
-
-      // REMOVED: Duplicate incorrect PutWriter implementation (was lines 1826-1844)
-      // The correct PutWriter handler is at line 1396 and writes to cx.argWriters
-
-      // REMOVED: Duplicate dead code PutReader implementation (was lines 1847-1863)
-      // The actual PutReader handler is at line 1434 and always executes first
-
-      // REMOVED: Duplicate incorrect PutConstant implementation (was lines 1850-1853)  
-      // The correct PutConstant handler is at line 1502 and writes to cx.argReaders
-
-      // Note: PutStructure, Spawn, and Requeue handlers are earlier in the file (lines 1162, 1324, 1303)
-      // Removed duplicate dead code that was unreachable
-
-      // ===== GUARD INSTRUCTIONS =====
-      if (op is Guard) {
-        final o = execGuard(cx, op.procedureLabel, op.arity, op.negated);
-        if (o.kind == StepKind.nextClause) { pc = _applyNextClause(cx, pc); continue; }
-        pc++; continue;
-      }
-
-      if (op is Ground) {
-        final o = execGround(cx, op.varIndex, op.negated);
-        if (o.kind == StepKind.nextClause) { pc = _applyNextClause(cx, pc); continue; }
-        pc++; continue;
-      }
-
-      if (op is Known) {
-        final o = execKnown(cx, op.varIndex, op.negated);
-        if (o.kind == StepKind.nextClause) { pc = _applyNextClause(cx, pc); continue; }
-        pc++; continue;
-      }
-
-      if (op is NoReaders) {
-        final o = execNoReaders(cx, op.varIndex, op.negated);
-        if (o.kind == StepKind.nextClause) { pc = _applyNextClause(cx, pc); continue; }
-        pc++; continue;
-      }
-
-      if (op is GroundEqual) {
-        final o = execGroundEqual(cx, op.leftVarIndex, op.rightVarIndex, op.negated);
-        if (o.kind == StepKind.nextClause) { pc = _applyNextClause(cx, pc); continue; }
-        pc++; continue;
-      }
-
-      // ===== LIST-SPECIFIC HEAD INSTRUCTIONS =====
-      if (op is HeadNil) {
-        final o = execHeadNil(cx, op.argSlot);
-        if (o.kind == StepKind.nextClause) { pc = _applyNextClause(cx, pc); continue; }
-        pc++;
-        continue;
-      }
-
-      if (op is HeadList) {
-        final o = execHeadList(cx, op.argSlot);
-        if (o.kind == StepKind.nextClause) { pc = _applyNextClause(cx, pc); continue; }
-        pc++;
-        continue;
-      }
-
-      // ===== LIST-SPECIFIC BODY INSTRUCTIONS =====
-      if (op is PutNil) {
-        execPutNil(cx, op.argSlot); // StepOutcome.advance
-        pc++;
-        continue;
-      }
-
-      if (op is PutBoundConst) {
-        execPutBoundConst(cx, op.value, op.argSlot); // StepOutcome.advance
-        pc++;
-        continue;
-      }
-
-      if (op is PutBoundNil) {
-        execPutBoundNil(cx, op.argSlot); // StepOutcome.advance
-        pc++;
-        continue;
-      }
-
-      if (op is PutList) {
-        execPutList(cx, op.argSlot); // StepOutcome.advance
-        pc++;
-        continue;
-      }
-
-      // ===== ENVIRONMENT FRAME INSTRUCTIONS =====
-      if (op is Allocate) {
-        execAllocate(cx, op.slots, pc + 1); // continuation = next instruction
-        pc++;
-        continue;
-      }
-
-      if (op is Deallocate) {
-        execDeallocate(cx); // StepOutcome.advance
-        pc++;
-        continue;
-      }
-
-      // ===== UTILITY INSTRUCTIONS =====
-      if (op is Nop) {
-        execNop(); // StepOutcome.advance
-        pc++;
-        continue;
-      }
-
-      if (op is Halt) {
-        execHalt(); // StepOutcome.halt
-        return RunResult.terminated;
-      }
-
-      if (op is Proceed) {
-        execProceed(cx); // StepOutcome.proceed (fires the reduction callback)
-        return RunResult.terminated;
-      }
-
-      pc++; // default progress
-    }
-    return RunResult.terminated;
-  }
-
-  /// Helper to get argument term from call environment
-  /// Per spec v2.16 section 1.1: arguments are heterogeneous Terms
-  // Static so the OpExecutors mixin can reach it (uses only cx).
-  static Term? _getArg(RunnerContext cx, int slot) {
-    final arg = cx.env.arg(slot);
-    // Per spec v2.16.3 Section 1.1: CallEnv arguments must be VarRefs
-    assert(arg == null || arg is VarRef,
-           'CallEnv arguments must be VarRefs, got ${arg.runtimeType}');
-    return arg;
-  }
-
-  /// Dereference a term and track any unbound readers encountered
-  /// Used by guard evaluation to detect suspension conditions
-  static (Object?, Set<int>) _dereferenceWithTracking(Object? term, RunnerContext cx) {
-    final unboundReaders = <int>{};
-
-    Object? dereference(Object? t) {
-      // NOTE: A VarRef carries a HEAP ADDRESS (terms.dart §3.2.1 — varId was
-      // removed). clauseVars is keyed by CLAUSE-VARIABLE INDEX. A former
-      // shortcut here looked up clauseVars[t.addr], which after the varId→addr
-      // migration (commit 57cf5d96) became a category error: it indexed the
-      // clause-index map with a heap address and fired on any numeric
-      // collision, silently swapping a guard argument for whatever clause var
-      // shared that number — e.g. a reader for an unbound writer, making a
-      // patient guard fail instead of suspend (known-issues.md Issue 12).
-      // VarRefs never carry clause indices, so no such resolution is needed.
-
-      if (t is VarRef) {
-        final addr = t.addr;
-        if (cx.rt.heap.isReader(addr)) {
-          // Reader - check if bound using abstraction methods for imported reader support
-          final readerAddr = addr;
-
-          // Check sigma-hat first for tentative bindings (before commit)
-          final writerAddr = cx.rt.heap.tryWriterForReader(readerAddr);
-          if (writerAddr != null && cx.sigmaHat.containsKey(writerAddr)) {
-            return dereference(cx.sigmaHat[writerAddr]);
-          }
-
-          if (cx.rt.heap.isReaderBound(readerAddr)) {
-            final boundValue = cx.rt.heap.getReaderValue(readerAddr);
-            // CRITICAL FIX: Recursively dereference the bound value
-            return dereference(boundValue);
-          } else {
-            // Unbound reader - track it
-            unboundReaders.add(readerAddr);
-            return t;
-          }
-        } else {
-          // Writer variable
-          final writerAddr = addr;
-
-          // Check sigma-hat first (tentative bindings)
-          if (cx.sigmaHat.containsKey(writerAddr)) {
-            return dereference(cx.sigmaHat[writerAddr]);
-          }
-
-          // Check heap
-          if (cx.rt.heap.isFullyBound(writerAddr)) {
-            final boundValue = cx.rt.heap.getValue(writerAddr);
-            // CRITICAL FIX: Recursively dereference the bound value
-            return dereference(boundValue);
-          } else {
-            // Unbound writer - can't evaluate
-            return t;
-          }
-        }
-      } else if (t is StructTerm) {
-        // Return structure as-is (don't evaluate arithmetic here)
-        // Guards like =:= will evaluate explicitly using evaluateNumeric
-        return t;
-      } else if (t is ConstTerm) {
-        // CRITICAL FIX: Unwrap ConstTerm to get primitive value
-        return t.value;
-      } else if (t is int) {
-        // Bare int represents a variable addr - check sigmaHat first, then heap
-        if (cx.sigmaHat.containsKey(t)) {
-          return dereference(cx.sigmaHat[t]);
-        } else if (cx.rt.heap.isFullyBound(t)) {
-          final boundValue = cx.rt.heap.getValue(t);
-          // Recursively dereference the bound value
-          return dereference(boundValue);
-        } else {
-          // Unbound variable - return as VarRef for proper handling
-          return VarRef(t);
-        }
-      } else {
-        return t;
-      }
-    }
-
-    final result = dereference(term);
-    return (result, unboundReaders);
-  }
-
-  /// Check if a functor is an arithmetic operator
-  static bool _isArithmeticOp(String functor) {
-    return const {'+', '-', '*', '/', 'mod', 'neg'}.contains(functor);
-  }
-
-  /// Evaluate arithmetic expression (already ground)
-  static num _evaluateArithmetic(String op, List<Object?> args) {
-    // Extract numeric values
-    num getNum(Object? v) {
-      if (v is num) return v;
-      if (v is ConstTerm && v.value is num) return v.value as num;
-      throw StateError('Non-numeric value in arithmetic: $v');
-    }
-
-    if (args.isEmpty) {
-      throw StateError('Arithmetic operator $op requires arguments');
-    }
-
-    final a = getNum(args[0]);
-
-    // Unary operators
-    if (op == 'neg' || (op == '-' && args.length == 1)) {
-      return -a;
-    }
-
-    // Binary operators
-    if (args.length < 2) {
-      throw StateError('Binary operator $op requires two arguments');
-    }
-    final b = getNum(args[1]);
-
-    switch (op) {
-      case '+': return a + b;
-      case '-': return a - b;
-      case '*': return a * b;
-      case '/': return a / b;
-      case 'mod': return a.toInt() % b.toInt();
-      default: throw StateError('Unknown arithmetic operator: $op');
-    }
-  }
-
-  /// Evaluate a guard predicate with ground arguments
-  static GuardResult _evaluateGuard(String predicateName, List<Object?> args, RunnerContext cx) {
-    // Extract values from any remaining ConstTerms
-    Object? getValue(Object? v) {
-      if (v is ConstTerm) return v.value;
-      return v;
-    }
-
-    // Evaluate arithmetic expressions to numeric values
-    // Supports: X, X + Y, X - Y, X * Y, X / Y, X // Y, X mod Y, -X
-    num? evaluateNumeric(Object? v) {
-      if (v is num) return v;
-      if (v is ConstTerm && v.value is num) return v.value as num;
-      // Handle VarRef - dereference to get actual value
-      if (v is VarRef) {
-        if (cx.rt.heap.isReader(v.addr)) {
-          // Use isReaderBound/getReaderValue for imported reader support
-          if (!cx.rt.heap.isReaderBound(v.addr)) return null; // Unbound
-          final deref = cx.rt.heap.getReaderValue(v.addr);
-          return evaluateNumeric(deref);
-        } else {
           final deref = cx.rt.heap.getValue(v.addr);
-          if (deref == null) return null; // Unbound
-          return evaluateNumeric(deref);
+          return deref == null ? null : evalConst(deref);
         }
+        return null;
       }
-      if (v is StructTerm) {
-        // Evaluate arithmetic expression
-        switch (v.functor) {
-          case '+':
-            if (v.args.length != 2) return null;
-            final a = evaluateNumeric(v.args[0]);
-            final b = evaluateNumeric(v.args[1]);
-            if (a == null || b == null) return null;
-            return a + b;
-          case '-':
-            if (v.args.length == 1) {
-              // Unary minus
-              final a = evaluateNumeric(v.args[0]);
-              return a == null ? null : -a;
-            } else if (v.args.length == 2) {
-              final a = evaluateNumeric(v.args[0]);
-              final b = evaluateNumeric(v.args[1]);
-              if (a == null || b == null) return null;
-              return a - b;
-            }
-            return null;
-          case '*':
-            if (v.args.length != 2) return null;
-            final a = evaluateNumeric(v.args[0]);
-            final b = evaluateNumeric(v.args[1]);
-            if (a == null || b == null) return null;
-            return a * b;
-          case '/':
-            if (v.args.length != 2) return null;
-            final a = evaluateNumeric(v.args[0]);
-            final b = evaluateNumeric(v.args[1]);
-            if (a == null || b == null || b == 0) return null;
-            return a / b;
-          case '//':
-            if (v.args.length != 2) return null;
-            final a = evaluateNumeric(v.args[0]);
-            final b = evaluateNumeric(v.args[1]);
-            if (a == null || b == null || b == 0) return null;
-            return a ~/ b;
-          case 'mod':
-            if (v.args.length != 2) return null;
-            final a = evaluateNumeric(v.args[0]);
-            final b = evaluateNumeric(v.args[1]);
-            if (a == null || b == null || b == 0) return null;
-            return a.toInt() % b.toInt();
-          case 'neg':
-            if (v.args.length != 1) return null;
-            final a = evaluateNumeric(v.args[0]);
-            return a == null ? null : -a;
-          default:
-            return null; // Not an arithmetic functor
-        }
+      final lc = evalConst(args[0]);
+      final rc = evalConst(args[1]);
+      if (lc != null && rc != null) {
+        return lc.compareTo(rc) < 0 ? GuardResult.success : GuardResult.failure;
       }
-      return null;
-    }
+      return GuardResult.failure;
 
-    switch (predicateName) {
-      // Comparison guards (with arithmetic expression support)
-      case '<':
-        if (args.length < 2) return GuardResult.failure;
-        final a = evaluateNumeric(args[0]);
-        final b = evaluateNumeric(args[1]);
+    // Type guards
+    case 'ground':
+      // Already checked for unbound readers in caller
+      return GuardResult.success;
 
-        // Debug output
-        // print('[EVAL_GUARD] < comparison:');
-        // print('[EVAL_GUARD]   args[0] = ${args[0]} (${args[0].runtimeType})');
-        // print('[EVAL_GUARD]   args[1] = ${args[1]} (${args[1].runtimeType})');
-        // print('[EVAL_GUARD]   a = $a (${a.runtimeType})');
-        // print('[EVAL_GUARD]   b = $b (${b.runtimeType})');
-        // print('[EVAL_GUARD]   a is num = ${a is num}');
-        // print('[EVAL_GUARD]   b is num = ${b is num}');
-
-        if (a != null && b != null) {
-          return a < b ? GuardResult.success : GuardResult.failure;
-        }
+    case 'known':
+      // Check if argument is not a variable
+      if (args.isEmpty) return GuardResult.failure;
+      final arg = args[0];
+      if (arg is VarRef) {
         return GuardResult.failure;
+      }
+      return GuardResult.success;
 
-      case '>':
-        if (args.length < 2) return GuardResult.failure;
-        final a = evaluateNumeric(args[0]);
-        final b = evaluateNumeric(args[1]);
-        if (a != null && b != null) {
-          return a > b ? GuardResult.success : GuardResult.failure;
-        }
-        return GuardResult.failure;
+    case 'integer':
+      // Per spec 19.4.3: Test if Xi is an integer
+      if (args.isEmpty) return GuardResult.failure;
+      final val = getValue(args[0]);
+      return (val is int) ? GuardResult.success : GuardResult.failure;
 
-      case '=<':
-        if (args.length < 2) return GuardResult.failure;
-        final a = evaluateNumeric(args[0]);
-        final b = evaluateNumeric(args[1]);
-        if (a != null && b != null) {
-          return a <= b ? GuardResult.success : GuardResult.failure;
-        }
-        return GuardResult.failure;
-
-      case '>=':
-        if (args.length < 2) return GuardResult.failure;
-        final a = evaluateNumeric(args[0]);
-        final b = evaluateNumeric(args[1]);
-        if (a != null && b != null) {
-          return a >= b ? GuardResult.success : GuardResult.failure;
-        }
-        return GuardResult.failure;
-
-      case '=:=':
-        if (args.length < 2) return GuardResult.failure;
-        final a = evaluateNumeric(args[0]);
-        final b = evaluateNumeric(args[1]);
-        if (a != null && b != null) {
-          return a == b ? GuardResult.success : GuardResult.failure;
-        }
-        return GuardResult.failure;
-
-      case '=\\=':
-        if (args.length < 2) return GuardResult.failure;
-        final a = evaluateNumeric(args[0]);
-        final b = evaluateNumeric(args[1]);
-        if (a != null && b != null) {
-          return a != b ? GuardResult.success : GuardResult.failure;
-        }
-        return GuardResult.failure;
-
-      // Lexicographic comparison of ground constants (atoms/strings/numbers)
-      case '@<':
-        if (args.length < 2) return GuardResult.failure;
-        String? evalConst(dynamic v) {
-          if (v is ConstTerm) {
-            final cv = v.value;
-            return cv?.toString();
-          }
-          if (v is String || v is num) return v.toString();
-          if (v is VarRef) {
-            if (cx.rt.heap.isReader(v.addr)) {
-              if (!cx.rt.heap.isReaderBound(v.addr)) return null;
-              return evalConst(cx.rt.heap.getReaderValue(v.addr));
-            }
-            final deref = cx.rt.heap.getValue(v.addr);
-            return deref == null ? null : evalConst(deref);
-          }
-          return null;
-        }
-        final lc = evalConst(args[0]);
-        final rc = evalConst(args[1]);
-        if (lc != null && rc != null) {
-          return lc.compareTo(rc) < 0 ? GuardResult.success : GuardResult.failure;
-        }
-        return GuardResult.failure;
-
-      // Type guards
-      case 'ground':
-        // Already checked for unbound readers in caller
+    case 'string':
+      // Succeeds if X is a string (lowercase identifier or quoted string)
+      if (args.isEmpty) return GuardResult.failure;
+      final val = getValue(args[0]);
+      // String: ConstTerm with String value (not 'nil' which represents [])
+      if (val is ConstTerm && val.value is String && val.value != 'nil') {
         return GuardResult.success;
+      }
+      if (val is String && val != 'nil') {
+        return GuardResult.success;
+      }
+      return GuardResult.failure;
 
-      case 'known':
-        // Check if argument is not a variable
-        if (args.isEmpty) return GuardResult.failure;
-        final arg = args[0];
-        if (arg is VarRef) {
+    case 'constant':
+      // Succeeds if X is a constant (a string, a number, or [])
+      if (args.isEmpty) return GuardResult.failure;
+      final val = getValue(args[0]);
+      // String or nil (which represents [])
+      if (val is ConstTerm && val.value is String) {
+        return GuardResult.success;
+      }
+      if (val is String) {
+        return GuardResult.success;
+      }
+      // Number
+      if (val is num) {
+        return GuardResult.success;
+      }
+      if (val is ConstTerm && val.value is num) {
+        return GuardResult.success;
+      }
+      return GuardResult.failure;
+
+    case 'number':
+      // Succeeds if X is a number
+      if (args.isEmpty) return GuardResult.failure;
+      final val = getValue(args[0]);
+      if (val is num) return GuardResult.success;
+      if (val is ConstTerm && val.value is num) return GuardResult.success;
+      return GuardResult.failure;
+
+    case 'list':
+      // Succeeds if X is a list ([] or [H|T])
+      if (args.isEmpty) return GuardResult.failure;
+      final val = getValue(args[0]);
+      // Empty list: ConstTerm('nil') or raw String 'nil'
+      if (val is ConstTerm && val.value == 'nil') {
+        return GuardResult.success;
+      }
+      if (val is String && val == 'nil') {
+        return GuardResult.success;
+      }
+      // Non-empty list: StructTerm('.', [head, tail])
+      if (val is StructTerm && val.functor == '.' && val.args.length == 2) {
+        return GuardResult.success;
+      }
+      return GuardResult.failure;
+
+    case 'compound':
+      // Succeeds if X is a compound term (structure with functor and arity > 0)
+      // Per guards-reference.md: "Test for compound term"
+      // Lists are compound since [X|Xs] = '.'(X, Xs)
+      // Does NOT imply groundness - may contain unbound subterms
+      if (args.isEmpty) return GuardResult.failure;
+      final val = getValue(args[0]);
+      if (val is StructTerm && val.args.isNotEmpty) {
+        return GuardResult.success;
+      }
+      return GuardResult.failure;
+
+    case 'list':
+      // Succeeds if X is a list ([] or [H|T])
+      // Per spec: list(X?) - Succeeds if X is a list
+      if (args.isEmpty) return GuardResult.failure;
+      final val = getValue(args[0]);
+      // Empty list: ConstTerm with 'nil' or null
+      if (val is ConstTerm && (val.value == 'nil' || val.value == null)) {
+        return GuardResult.success;
+      }
+      // Cons cell: StructTerm with functor '.'
+      if (val is StructTerm && val.functor == '.') {
+        return GuardResult.success;
+      }
+      return GuardResult.failure;
+
+    case 'module':
+      // Succeeds if X is a ModuleTerm (ground module reference)
+      if (args.isEmpty) return GuardResult.failure;
+      final mval = getValue(args[0]);
+      if (mval is ModuleTerm) {
+        return GuardResult.success;
+      }
+      return GuardResult.failure;
+
+    case 'is_mutual_ref':
+      // Succeeds if X is a MutualRefTerm (enables SRSW multiple reads)
+      if (args.isEmpty) return GuardResult.failure;
+      final val = getValue(args[0]);
+      if (val is MutualRefTerm) {
+        return GuardResult.success;
+      }
+      return GuardResult.failure;
+
+    case 'unknown':
+      // Test if dereferencing leads to an unbound variable
+      // Per spec: "Succeeds if X is bound to an unbound variable"
+      // This means we follow the binding chain to its end
+      if (args.isEmpty) return GuardResult.failure;
+      Object? value = args[0];
+
+      // Follow binding chain to end
+      while (value is VarRef) {
+        final addr = value.addr;
+        if (cx.rt.heap.isReader(addr)) {
+          // Use abstraction methods for imported reader support
+          final writerAddr = cx.rt.heap.tryWriterForReader(addr);
+          if (writerAddr != null && cx.sigmaHat.containsKey(writerAddr)) {
+            value = cx.sigmaHat[writerAddr];
+            continue;
+          }
+          // Check heap using isReaderBound/getReaderValue
+          if (cx.rt.heap.isReaderBound(addr)) {
+            value = cx.rt.heap.getReaderValue(addr);
+            continue;
+          }
+          // Reached an unbound reader → SUCCESS
+          return GuardResult.success;
+        } else {
+          // Writer - check σ̂w first, then heap
+          if (cx.sigmaHat.containsKey(addr)) {
+            value = cx.sigmaHat[addr];
+            continue;
+          }
+          if (cx.rt.heap.isFullyBound(addr)) {
+            value = cx.rt.heap.getValue(addr);
+            continue;
+          }
+          // Reached an unbound writer → SUCCESS
+          return GuardResult.success;
+        }
+      }
+      // Dereferenced to a non-variable (ground term) → FAILURE
+      return GuardResult.failure;
+
+    // Note: duplicate 'unknown' case removed - the first one handles it
+
+    // Control guards
+    case 'otherwise':
+      // This is handled by the compiler - should not reach runtime
+      return GuardResult.success;
+
+    // Time guards
+    case 'wait':
+      // wait(Duration) - Wait for Duration milliseconds using GLP suspension
+      // Semantics:
+      // - Unbound Duration: handled by caller (suspend on reader)
+      // - Non-number: fail
+      // - Duration <= 0: succeed immediately
+      // - Duration > 0: create reader/writer pair, start timer, suspend on reader
+      //   Timer fires → binds writer → ROQ reactivates goal
+      // IMPORTANT: On resume, check if timer has already fired (avoid infinite loop)
+      if (args.isEmpty) return GuardResult.failure;
+      final duration = evaluateNumeric(args[0]);
+      if (duration == null) return GuardResult.failure;
+      if (duration <= 0) return GuardResult.success;
+
+      // Check if this goal already has a pending wait
+      final existingReader = cx.rt.getWaitReader(cx.goalId);
+      if (existingReader != null) {
+        // Goal resumed after suspension - check if timer fired
+        if (cx.rt.heap.isFullyBound(existingReader)) {
+          // Timer fired, reader is bound - clear state and succeed
+          cx.rt.clearWaitState(cx.goalId);
+          return GuardResult.success;
+        } else {
+          // Timer hasn't fired yet - keep suspending on same reader
+          cx.U.add(existingReader);
           return GuardResult.failure;
         }
-        return GuardResult.success;
+      }
 
-      case 'integer':
-        // Per spec 19.4.3: Test if Xi is an integer
-        if (args.isEmpty) return GuardResult.failure;
-        final val = getValue(args[0]);
-        return (val is int) ? GuardResult.success : GuardResult.failure;
+      // First call - create fresh reader/writer pair for timer notification
+      final (writerAddr, readerAddr) = cx.rt.heap.allocateVariable();
 
-      case 'string':
-        // Succeeds if X is a string (lowercase identifier or quoted string)
-        if (args.isEmpty) return GuardResult.failure;
-        final val = getValue(args[0]);
-        // String: ConstTerm with String value (not 'nil' which represents [])
-        if (val is ConstTerm && val.value is String && val.value != 'nil') {
+      // Store wait state for this goal
+      cx.rt.setWaitReader(cx.goalId, readerAddr);
+
+      // Track pending timer
+      cx.rt.incrementPendingTimers();
+
+      // Start timer that binds writer when it fires
+      Timer(Duration(milliseconds: duration.toInt()), () {
+        // Bind writer to 0 (any value works)
+        final reactivated = cx.rt.heap.bindWriterConst(writerAddr, 0);
+        // Enqueue reactivated goals and clean up suspended map
+        for (final goalRef in reactivated) {
+          cx.rt.enqueueReactivatedGoal(goalRef);
+        }
+        // Decrement pending timer count
+        cx.rt.decrementPendingTimers();
+      });
+
+      // Add reader to suspension set U and fail → triggers normal suspension
+      cx.U.add(readerAddr);
+      return GuardResult.failure;
+
+    case 'wait_until':
+      // wait_until(Timestamp) - Suspend until absolute time has passed
+      // Semantics:
+      // - Unbound Timestamp: handled by caller (suspend on reader)
+      // - Non-number: fail
+      // - current time >= Timestamp: succeed
+      // - current time < Timestamp: suspend until time passes (timer-based)
+      if (args.isEmpty) return GuardResult.failure;
+      final timestamp = evaluateNumeric(args[0]);
+      if (timestamp == null) return GuardResult.failure;
+      final now = DateTime.now().millisecondsSinceEpoch;
+      if (now >= timestamp) return GuardResult.success;
+
+      // Time hasn't arrived yet — use timer-based suspension (same as wait)
+      final remaining = timestamp.toInt() - now;
+
+      // Check if this goal already has a pending wait_until
+      final existingReaderWU = cx.rt.getWaitReader(cx.goalId);
+      if (existingReaderWU != null) {
+        if (cx.rt.heap.isFullyBound(existingReaderWU)) {
+          cx.rt.clearWaitState(cx.goalId);
           return GuardResult.success;
-        }
-        if (val is String && val != 'nil') {
-          return GuardResult.success;
-        }
-        return GuardResult.failure;
-
-      case 'constant':
-        // Succeeds if X is a constant (a string, a number, or [])
-        if (args.isEmpty) return GuardResult.failure;
-        final val = getValue(args[0]);
-        // String or nil (which represents [])
-        if (val is ConstTerm && val.value is String) {
-          return GuardResult.success;
-        }
-        if (val is String) {
-          return GuardResult.success;
-        }
-        // Number
-        if (val is num) {
-          return GuardResult.success;
-        }
-        if (val is ConstTerm && val.value is num) {
-          return GuardResult.success;
-        }
-        return GuardResult.failure;
-
-      case 'number':
-        // Succeeds if X is a number
-        if (args.isEmpty) return GuardResult.failure;
-        final val = getValue(args[0]);
-        if (val is num) return GuardResult.success;
-        if (val is ConstTerm && val.value is num) return GuardResult.success;
-        return GuardResult.failure;
-
-      case 'list':
-        // Succeeds if X is a list ([] or [H|T])
-        if (args.isEmpty) return GuardResult.failure;
-        final val = getValue(args[0]);
-        // Empty list: ConstTerm('nil') or raw String 'nil'
-        if (val is ConstTerm && val.value == 'nil') {
-          return GuardResult.success;
-        }
-        if (val is String && val == 'nil') {
-          return GuardResult.success;
-        }
-        // Non-empty list: StructTerm('.', [head, tail])
-        if (val is StructTerm && val.functor == '.' && val.args.length == 2) {
-          return GuardResult.success;
-        }
-        return GuardResult.failure;
-
-      case 'compound':
-        // Succeeds if X is a compound term (structure with functor and arity > 0)
-        // Per guards-reference.md: "Test for compound term"
-        // Lists are compound since [X|Xs] = '.'(X, Xs)
-        // Does NOT imply groundness - may contain unbound subterms
-        if (args.isEmpty) return GuardResult.failure;
-        final val = getValue(args[0]);
-        if (val is StructTerm && val.args.isNotEmpty) {
-          return GuardResult.success;
-        }
-        return GuardResult.failure;
-
-      case 'list':
-        // Succeeds if X is a list ([] or [H|T])
-        // Per spec: list(X?) - Succeeds if X is a list
-        if (args.isEmpty) return GuardResult.failure;
-        final val = getValue(args[0]);
-        // Empty list: ConstTerm with 'nil' or null
-        if (val is ConstTerm && (val.value == 'nil' || val.value == null)) {
-          return GuardResult.success;
-        }
-        // Cons cell: StructTerm with functor '.'
-        if (val is StructTerm && val.functor == '.') {
-          return GuardResult.success;
-        }
-        return GuardResult.failure;
-
-      case 'module':
-        // Succeeds if X is a ModuleTerm (ground module reference)
-        if (args.isEmpty) return GuardResult.failure;
-        final mval = getValue(args[0]);
-        if (mval is ModuleTerm) {
-          return GuardResult.success;
-        }
-        return GuardResult.failure;
-
-      case 'is_mutual_ref':
-        // Succeeds if X is a MutualRefTerm (enables SRSW multiple reads)
-        if (args.isEmpty) return GuardResult.failure;
-        final val = getValue(args[0]);
-        if (val is MutualRefTerm) {
-          return GuardResult.success;
-        }
-        return GuardResult.failure;
-
-      case 'unknown':
-        // Test if dereferencing leads to an unbound variable
-        // Per spec: "Succeeds if X is bound to an unbound variable"
-        // This means we follow the binding chain to its end
-        if (args.isEmpty) return GuardResult.failure;
-        Object? value = args[0];
-
-        // Follow binding chain to end
-        while (value is VarRef) {
-          final addr = value.addr;
-          if (cx.rt.heap.isReader(addr)) {
-            // Use abstraction methods for imported reader support
-            final writerAddr = cx.rt.heap.tryWriterForReader(addr);
-            if (writerAddr != null && cx.sigmaHat.containsKey(writerAddr)) {
-              value = cx.sigmaHat[writerAddr];
-              continue;
-            }
-            // Check heap using isReaderBound/getReaderValue
-            if (cx.rt.heap.isReaderBound(addr)) {
-              value = cx.rt.heap.getReaderValue(addr);
-              continue;
-            }
-            // Reached an unbound reader → SUCCESS
-            return GuardResult.success;
-          } else {
-            // Writer - check σ̂w first, then heap
-            if (cx.sigmaHat.containsKey(addr)) {
-              value = cx.sigmaHat[addr];
-              continue;
-            }
-            if (cx.rt.heap.isFullyBound(addr)) {
-              value = cx.rt.heap.getValue(addr);
-              continue;
-            }
-            // Reached an unbound writer → SUCCESS
-            return GuardResult.success;
-          }
-        }
-        // Dereferenced to a non-variable (ground term) → FAILURE
-        return GuardResult.failure;
-
-      // Note: duplicate 'unknown' case removed - the first one handles it
-
-      // Control guards
-      case 'otherwise':
-        // This is handled by the compiler - should not reach runtime
-        return GuardResult.success;
-
-      // Time guards
-      case 'wait':
-        // wait(Duration) - Wait for Duration milliseconds using GLP suspension
-        // Semantics:
-        // - Unbound Duration: handled by caller (suspend on reader)
-        // - Non-number: fail
-        // - Duration <= 0: succeed immediately
-        // - Duration > 0: create reader/writer pair, start timer, suspend on reader
-        //   Timer fires → binds writer → ROQ reactivates goal
-        // IMPORTANT: On resume, check if timer has already fired (avoid infinite loop)
-        if (args.isEmpty) return GuardResult.failure;
-        final duration = evaluateNumeric(args[0]);
-        if (duration == null) return GuardResult.failure;
-        if (duration <= 0) return GuardResult.success;
-
-        // Check if this goal already has a pending wait
-        final existingReader = cx.rt.getWaitReader(cx.goalId);
-        if (existingReader != null) {
-          // Goal resumed after suspension - check if timer fired
-          if (cx.rt.heap.isFullyBound(existingReader)) {
-            // Timer fired, reader is bound - clear state and succeed
-            cx.rt.clearWaitState(cx.goalId);
-            return GuardResult.success;
-          } else {
-            // Timer hasn't fired yet - keep suspending on same reader
-            cx.U.add(existingReader);
-            return GuardResult.failure;
-          }
-        }
-
-        // First call - create fresh reader/writer pair for timer notification
-        final (writerAddr, readerAddr) = cx.rt.heap.allocateVariable();
-
-        // Store wait state for this goal
-        cx.rt.setWaitReader(cx.goalId, readerAddr);
-
-        // Track pending timer
-        cx.rt.incrementPendingTimers();
-
-        // Start timer that binds writer when it fires
-        Timer(Duration(milliseconds: duration.toInt()), () {
-          // Bind writer to 0 (any value works)
-          final reactivated = cx.rt.heap.bindWriterConst(writerAddr, 0);
-          // Enqueue reactivated goals and clean up suspended map
-          for (final goalRef in reactivated) {
-            cx.rt.enqueueReactivatedGoal(goalRef);
-          }
-          // Decrement pending timer count
-          cx.rt.decrementPendingTimers();
-        });
-
-        // Add reader to suspension set U and fail → triggers normal suspension
-        cx.U.add(readerAddr);
-        return GuardResult.failure;
-
-      case 'wait_until':
-        // wait_until(Timestamp) - Suspend until absolute time has passed
-        // Semantics:
-        // - Unbound Timestamp: handled by caller (suspend on reader)
-        // - Non-number: fail
-        // - current time >= Timestamp: succeed
-        // - current time < Timestamp: suspend until time passes (timer-based)
-        if (args.isEmpty) return GuardResult.failure;
-        final timestamp = evaluateNumeric(args[0]);
-        if (timestamp == null) return GuardResult.failure;
-        final now = DateTime.now().millisecondsSinceEpoch;
-        if (now >= timestamp) return GuardResult.success;
-
-        // Time hasn't arrived yet — use timer-based suspension (same as wait)
-        final remaining = timestamp.toInt() - now;
-
-        // Check if this goal already has a pending wait_until
-        final existingReaderWU = cx.rt.getWaitReader(cx.goalId);
-        if (existingReaderWU != null) {
-          if (cx.rt.heap.isFullyBound(existingReaderWU)) {
-            cx.rt.clearWaitState(cx.goalId);
-            return GuardResult.success;
-          } else {
-            cx.U.add(existingReaderWU);
-            return GuardResult.failure;
-          }
-        }
-
-        // First call — create fresh reader/writer pair for timer notification
-        final (writerAddrWU, readerAddrWU) = cx.rt.heap.allocateVariable();
-        cx.rt.setWaitReader(cx.goalId, readerAddrWU);
-        cx.rt.incrementPendingTimers();
-
-        Timer(Duration(milliseconds: remaining), () {
-          final reactivated = cx.rt.heap.bindWriterConst(writerAddrWU, 0);
-          for (final goalRef in reactivated) {
-            cx.rt.enqueueReactivatedGoal(goalRef);
-          }
-          cx.rt.decrementPendingTimers();
-        });
-
-        cx.U.add(readerAddrWU);
-        return GuardResult.failure;
-
-      case '=?=':
-        // Ground equality test
-        // Semantics:
-        // - Unbound reader: suspend (handled by caller via _dereferenceWithTracking)
-        // - Unbound writer: fail
-        // - Both ground and equal: succeed
-        // - Both ground and not equal: fail
-        if (args.length < 2) return GuardResult.failure;
-        final left = args[0];
-        final right = args[1];
-
-        // Check for unbound writers (VarRef that reached here is unbound writer)
-        // Unbound readers would have caused suspension in caller
-        if (left is VarRef || right is VarRef) {
-          return GuardResult.failure;  // Unbound writer → fail
-        }
-
-        // Both ground - check structural equality
-        final result = _termsEqual(left, right, cx);
-        return result ? GuardResult.success : GuardResult.failure;
-
-      // Attestation guard (madGLP, seam spec §4).
-      // valid_attestation(Signer?, PkA?, PkB?, Sig?) holds iff Sig is Signer's
-      // valid Ed25519 signature over the canonical serialization of attest(PkA,
-      // PkB). Inputs are lowercase-hex string constants (keys 64 chars, signature
-      // 128 chars). Any invalid/malformed input, or absence of a network on the
-      // context, is guard failure — the guard never aborts. Unbound readers were
-      // already suspended by the caller.
-      case 'valid_attestation':
-        if (args.length != 4) return GuardResult.failure;
-        final ctx = cx.rt.madContext;
-        if (ctx is! MadContext) return GuardResult.failure;
-        final network = ctx.network;
-        if (network == null) return GuardResult.failure;
-
-        String? hexConst(dynamic v) {
-          if (v is ConstTerm) {
-            final cv = v.value;
-            return cv is String ? cv : null;
-          }
-          if (v is String) return v;
-          if (v is VarRef) {
-            if (cx.rt.heap.isReader(v.addr)) {
-              if (!cx.rt.heap.isReaderBound(v.addr)) return null;
-              return hexConst(cx.rt.heap.getReaderValue(v.addr));
-            }
-            final deref = cx.rt.heap.getValue(v.addr);
-            return deref == null ? null : hexConst(deref);
-          }
-          return null;
-        }
-
-        Uint8List? hexToBytes(String? hex, int expectedBytes) {
-          if (hex == null || hex.length != expectedBytes * 2) return null;
-          final out = Uint8List(expectedBytes);
-          for (var i = 0; i < expectedBytes; i++) {
-            final b = int.tryParse(hex.substring(i * 2, i * 2 + 2), radix: 16);
-            if (b == null) return null;
-            out[i] = b;
-          }
-          return out;
-        }
-
-        final signerBytes = hexToBytes(hexConst(args[0]), 32);
-        final pkAHex = hexConst(args[1]);
-        final pkBHex = hexConst(args[2]);
-        final sigBytes = hexToBytes(hexConst(args[3]), 64);
-        if (signerBytes == null ||
-            pkAHex == null ||
-            pkBHex == null ||
-            sigBytes == null) {
+        } else {
+          cx.U.add(existingReaderWU);
           return GuardResult.failure;
         }
+      }
 
-        try {
-          final attest =
-              StructTerm('attest', [ConstTerm(pkAHex), ConstTerm(pkBHex)]);
-          final canonical = ctx.canonicalSerialize(attest);
-          final ok = network.verify(
-              PubKey(signerBytes), Uint8List.fromList(canonical), sigBytes);
-          return ok ? GuardResult.success : GuardResult.failure;
-        } catch (_) {
-          return GuardResult.failure;
+      // First call — create fresh reader/writer pair for timer notification
+      final (writerAddrWU, readerAddrWU) = cx.rt.heap.allocateVariable();
+      cx.rt.setWaitReader(cx.goalId, readerAddrWU);
+      cx.rt.incrementPendingTimers();
+
+      Timer(Duration(milliseconds: remaining), () {
+        final reactivated = cx.rt.heap.bindWriterConst(writerAddrWU, 0);
+        for (final goalRef in reactivated) {
+          cx.rt.enqueueReactivatedGoal(goalRef);
         }
+        cx.rt.decrementPendingTimers();
+      });
 
-      default:
-        print('[WARN] Unknown guard predicate: $predicateName');
+      cx.U.add(readerAddrWU);
+      return GuardResult.failure;
+
+    case '=?=':
+      // Ground equality test
+      // Semantics:
+      // - Unbound reader: suspend (handled by caller via _dereferenceWithTracking)
+      // - Unbound writer: fail
+      // - Both ground and equal: succeed
+      // - Both ground and not equal: fail
+      if (args.length < 2) return GuardResult.failure;
+      final left = args[0];
+      final right = args[1];
+
+      // Check for unbound writers (VarRef that reached here is unbound writer)
+      // Unbound readers would have caused suspension in caller
+      if (left is VarRef || right is VarRef) {
+        return GuardResult.failure;  // Unbound writer → fail
+      }
+
+      // Both ground - check structural equality
+      final result = _termsEqual(left, right, cx);
+      return result ? GuardResult.success : GuardResult.failure;
+
+    // Attestation guard (madGLP, seam spec §4).
+    // valid_attestation(Signer?, PkA?, PkB?, Sig?) holds iff Sig is Signer's
+    // valid Ed25519 signature over the canonical serialization of attest(PkA,
+    // PkB). Inputs are lowercase-hex string constants (keys 64 chars, signature
+    // 128 chars). Any invalid/malformed input, or absence of a network on the
+    // context, is guard failure — the guard never aborts. Unbound readers were
+    // already suspended by the caller.
+    case 'valid_attestation':
+      if (args.length != 4) return GuardResult.failure;
+      final ctx = cx.rt.madContext;
+      if (ctx is! MadContext) return GuardResult.failure;
+      final network = ctx.network;
+      if (network == null) return GuardResult.failure;
+
+      String? hexConst(dynamic v) {
+        if (v is ConstTerm) {
+          final cv = v.value;
+          return cv is String ? cv : null;
+        }
+        if (v is String) return v;
+        if (v is VarRef) {
+          if (cx.rt.heap.isReader(v.addr)) {
+            if (!cx.rt.heap.isReaderBound(v.addr)) return null;
+            return hexConst(cx.rt.heap.getReaderValue(v.addr));
+          }
+          final deref = cx.rt.heap.getValue(v.addr);
+          return deref == null ? null : hexConst(deref);
+        }
+        return null;
+      }
+
+      Uint8List? hexToBytes(String? hex, int expectedBytes) {
+        if (hex == null || hex.length != expectedBytes * 2) return null;
+        final out = Uint8List(expectedBytes);
+        for (var i = 0; i < expectedBytes; i++) {
+          final b = int.tryParse(hex.substring(i * 2, i * 2 + 2), radix: 16);
+          if (b == null) return null;
+          out[i] = b;
+        }
+        return out;
+      }
+
+      final signerBytes = hexToBytes(hexConst(args[0]), 32);
+      final pkAHex = hexConst(args[1]);
+      final pkBHex = hexConst(args[2]);
+      final sigBytes = hexToBytes(hexConst(args[3]), 64);
+      if (signerBytes == null ||
+          pkAHex == null ||
+          pkBHex == null ||
+          sigBytes == null) {
         return GuardResult.failure;
-    }
-  }
-
-  /// Check structural equality of two ground terms
-  /// cx is needed to dereference VarRefs inside structures
-  /// CYCLE DETECTION: Uses visited pairs set to handle circular terms
-  static bool _termsEqual(Object? a, Object? b, RunnerContext cx, [Set<(int, int)>? visited]) {
-    visited ??= <(int, int)>{};
-
-    // Handle null
-    if (a == null && b == null) return true;
-    if (a == null || b == null) return false;
-
-    // Unwrap ConstTerm
-    if (a is ConstTerm) a = a.value;
-    if (b is ConstTerm) b = b.value;
-
-    // Dereference VarRefs with cycle detection
-    if (a is VarRef) {
-      final aAddr = a.addr;
-      Object? aDeref;
-      if (cx.rt.heap.isReader(aAddr)) {
-        // Use abstraction methods for imported reader support
-        final writerAddr = cx.rt.heap.tryWriterForReader(aAddr);
-        if (writerAddr != null && cx.sigmaHat.containsKey(writerAddr)) {
-          aDeref = cx.sigmaHat[writerAddr];
-        } else if (cx.rt.heap.isReaderBound(aAddr)) {
-          aDeref = cx.rt.heap.getReaderValue(aAddr);
-        } else {
-          return false; // Unbound - can't compare
-        }
-      } else {
-        if (cx.sigmaHat.containsKey(aAddr)) {
-          aDeref = cx.sigmaHat[aAddr];
-        } else if (cx.rt.heap.isFullyBound(aAddr)) {
-          aDeref = cx.rt.heap.getValue(aAddr);
-        } else {
-          return false; // Unbound writer
-        }
       }
 
-      // If b is also a VarRef, check for cycle
-      if (b is VarRef) {
-        final bAddr = b.addr;
-        final pair = (aAddr, bAddr);
-        if (visited.contains(pair)) {
-          return true; // Cycle detected at corresponding positions - equal
-        }
-        visited.add(pair);
+      try {
+        final attest =
+            StructTerm('attest', [ConstTerm(pkAHex), ConstTerm(pkBHex)]);
+        final canonical = ctx.canonicalSerialize(attest);
+        final ok = network.verify(
+            PubKey(signerBytes), Uint8List.fromList(canonical), sigBytes);
+        return ok ? GuardResult.success : GuardResult.failure;
+      } catch (_) {
+        return GuardResult.failure;
       }
 
-      return _termsEqual(aDeref, b, cx, visited);
-    }
-    if (b is VarRef) {
-      final bAddr = b.addr;
-      Object? bDeref;
-      if (cx.rt.heap.isReader(bAddr)) {
-        // Use abstraction methods for imported reader support
-        final writerAddr = cx.rt.heap.tryWriterForReader(bAddr);
-        if (writerAddr != null && cx.sigmaHat.containsKey(writerAddr)) {
-          bDeref = cx.sigmaHat[writerAddr];
-        } else if (cx.rt.heap.isReaderBound(bAddr)) {
-          bDeref = cx.rt.heap.getReaderValue(bAddr);
-        } else {
-          return false;
-        }
-      } else {
-        if (cx.sigmaHat.containsKey(bAddr)) {
-          bDeref = cx.sigmaHat[bAddr];
-        } else if (cx.rt.heap.isFullyBound(bAddr)) {
-          bDeref = cx.rt.heap.getValue(bAddr);
-        } else {
-          return false;
-        }
-      }
-      return _termsEqual(a, bDeref, cx, visited);
-    }
-
-    // Simple values (numbers, strings)
-    if (a is num && b is num) return a == b;
-    if (a is String && b is String) return a == b;
-
-    // Structures
-    if (a is StructTerm && b is StructTerm) {
-      if (a.functor != b.functor) return false;
-      if (a.args.length != b.args.length) return false;
-      for (int i = 0; i < a.args.length; i++) {
-        if (!_termsEqual(a.args[i], b.args[i], cx, visited)) return false;
-      }
-      return true;
-    }
-
-    // Default: use Dart equality
-    return a == b;
+    default:
+      print('[WARN] Unknown guard predicate: $predicateName');
+      return GuardResult.failure;
   }
 }
+
+bool _termsEqual(Object? a, Object? b, RunnerContext cx, [Set<(int, int)>? visited]) {
+  visited ??= <(int, int)>{};
+
+  // Handle null
+  if (a == null && b == null) return true;
+  if (a == null || b == null) return false;
+
+  // Unwrap ConstTerm
+  if (a is ConstTerm) a = a.value;
+  if (b is ConstTerm) b = b.value;
+
+  // Dereference VarRefs with cycle detection
+  if (a is VarRef) {
+    final aAddr = a.addr;
+    Object? aDeref;
+    if (cx.rt.heap.isReader(aAddr)) {
+      // Use abstraction methods for imported reader support
+      final writerAddr = cx.rt.heap.tryWriterForReader(aAddr);
+      if (writerAddr != null && cx.sigmaHat.containsKey(writerAddr)) {
+        aDeref = cx.sigmaHat[writerAddr];
+      } else if (cx.rt.heap.isReaderBound(aAddr)) {
+        aDeref = cx.rt.heap.getReaderValue(aAddr);
+      } else {
+        return false; // Unbound - can't compare
+      }
+    } else {
+      if (cx.sigmaHat.containsKey(aAddr)) {
+        aDeref = cx.sigmaHat[aAddr];
+      } else if (cx.rt.heap.isFullyBound(aAddr)) {
+        aDeref = cx.rt.heap.getValue(aAddr);
+      } else {
+        return false; // Unbound writer
+      }
+    }
+
+    // If b is also a VarRef, check for cycle
+    if (b is VarRef) {
+      final bAddr = b.addr;
+      final pair = (aAddr, bAddr);
+      if (visited.contains(pair)) {
+        return true; // Cycle detected at corresponding positions - equal
+      }
+      visited.add(pair);
+    }
+
+    return _termsEqual(aDeref, b, cx, visited);
+  }
+  if (b is VarRef) {
+    final bAddr = b.addr;
+    Object? bDeref;
+    if (cx.rt.heap.isReader(bAddr)) {
+      // Use abstraction methods for imported reader support
+      final writerAddr = cx.rt.heap.tryWriterForReader(bAddr);
+      if (writerAddr != null && cx.sigmaHat.containsKey(writerAddr)) {
+        bDeref = cx.sigmaHat[writerAddr];
+      } else if (cx.rt.heap.isReaderBound(bAddr)) {
+        bDeref = cx.rt.heap.getReaderValue(bAddr);
+      } else {
+        return false;
+      }
+    } else {
+      if (cx.sigmaHat.containsKey(bAddr)) {
+        bDeref = cx.sigmaHat[bAddr];
+      } else if (cx.rt.heap.isFullyBound(bAddr)) {
+        bDeref = cx.rt.heap.getValue(bAddr);
+      } else {
+        return false;
+      }
+    }
+    return _termsEqual(a, bDeref, cx, visited);
+  }
+
+  // Simple values (numbers, strings)
+  if (a is num && b is num) return a == b;
+  if (a is String && b is String) return a == b;
+
+  // Structures
+  if (a is StructTerm && b is StructTerm) {
+    if (a.functor != b.functor) return false;
+    if (a.args.length != b.args.length) return false;
+    for (int i = 0; i < a.args.length; i++) {
+      if (!_termsEqual(a.args[i], b.args[i], cx, visited)) return false;
+    }
+    return true;
+  }
+
+  // Default: use Dart equality
+  return a == b;
+}
+
 
 /// Helper class to represent argument information
 class _ArgInfo {
@@ -2501,10 +1711,10 @@ mixin OpExecutors {
       cx.U.addAll(unboundReaders);
       return StepOutcome.nextClause; // suspend
     }
-    final (leftDeref, _) = BytecodeRunner._dereferenceWithTracking(leftValue, cx);
+    final (leftDeref, _) = _dereferenceWithTracking(leftValue, cx);
     final (rightDeref, _) =
-        BytecodeRunner._dereferenceWithTracking(rightValue, cx);
-    final areEqual = BytecodeRunner._termsEqual(leftDeref, rightDeref, cx);
+        _dereferenceWithTracking(rightValue, cx);
+    final areEqual = _termsEqual(leftDeref, rightDeref, cx);
     final success = negated ? !areEqual : areEqual;
     return success ? StepOutcome.advance : StepOutcome.nextClause;
   }
@@ -2542,7 +1752,7 @@ mixin OpExecutors {
       }
       if (argValue != null) {
         final (derefValue, readers) =
-            BytecodeRunner._dereferenceWithTracking(argValue, cx);
+            _dereferenceWithTracking(argValue, cx);
         args.add(derefValue);
         unboundReaders.addAll(readers);
       } else {
@@ -2555,7 +1765,7 @@ mixin OpExecutors {
       return StepOutcome.nextClause; // suspend
     }
 
-    var result = BytecodeRunner._evaluateGuard(predicateName, args, cx);
+    var result = _evaluateGuard(predicateName, args, cx);
     if (negated) {
       if (result == GuardResult.success) {
         result = GuardResult.failure;
@@ -2574,7 +1784,7 @@ mixin OpExecutors {
   /// commit); a bound non-nil / structure mismatches (nextClause).
   StepOutcome execHeadNil(RunnerContext cx, int argSlot) {
     final bool isClauseVar = argSlot >= 10;
-    final arg = isClauseVar ? null : BytecodeRunner._getArg(cx, argSlot);
+    final arg = isClauseVar ? null : _getArg(cx, argSlot);
 
     if (isClauseVar) {
       final clauseVarValue = cx.clauseVars[argSlot];
@@ -2604,7 +1814,7 @@ mixin OpExecutors {
                 ? StepOutcome.advance
                 : StepOutcome.nextClause;
           } else {
-            cx.Si.add(BytecodeRunner._finalUnboundVar(cx, addr));
+            cx.Si.add(_finalUnboundVar(cx, addr));
             return StepOutcome.advance;
           }
         }
@@ -2646,7 +1856,7 @@ mixin OpExecutors {
       final bound = cx.rt.heap.isReaderBound(arg.addr);
       final value = bound ? cx.rt.heap.getReaderValue(arg.addr) : null;
       if (!bound) {
-        cx.Si.add(BytecodeRunner._finalUnboundVar(cx, arg.addr));
+        cx.Si.add(_finalUnboundVar(cx, arg.addr));
         return StepOutcome.advance;
       } else {
         if (value is ConstTerm && value.value == 'nil') {
@@ -2712,7 +1922,7 @@ mixin OpExecutors {
   /// in σ̂w if unbound (else compare deref); reader: suspend (Si) if unbound,
   /// else compare; mismatch → next clause.
   StepOutcome execHeadConstant(RunnerContext cx, Object? opValue, int argSlot) {
-    final arg = BytecodeRunner._getArg(cx, argSlot);
+    final arg = _getArg(cx, argSlot);
     if (arg == null) return StepOutcome.advance;
 
     if (arg is VarRef && cx.rt.heap.isWriter(arg.addr)) {
@@ -2757,7 +1967,7 @@ mixin OpExecutors {
     } else if (arg is VarRef && cx.rt.heap.isReader(arg.addr)) {
       final deref = cx.rt.heap.derefAddr(arg.addr);
       if (deref is VariableEntry || deref is VarRef) {
-        cx.Si.add(BytecodeRunner._finalUnboundVar(cx, arg.addr));
+        cx.Si.add(_finalUnboundVar(cx, arg.addr));
         return StepOutcome.advance;
       } else if (deref is Term) {
         final value = deref;
@@ -2780,7 +1990,7 @@ mixin OpExecutors {
   StepOutcome execHeadStructure(
       RunnerContext cx, String functor, int arity, int argSlot) {
     final bool isClauseVar = argSlot >= 10;
-    final arg = isClauseVar ? null : BytecodeRunner._getArg(cx, argSlot);
+    final arg = isClauseVar ? null : _getArg(cx, argSlot);
 
     if (!isClauseVar && arg == null) {
       return StepOutcome.nextClause;
@@ -2936,7 +2146,7 @@ mixin OpExecutors {
 
     if (arg is VarRef && cx.rt.heap.isReader(arg.addr)) {
       if (!cx.rt.heap.isReaderBound(arg.addr)) {
-        cx.Si.add(BytecodeRunner._finalUnboundVar(cx, arg.addr));
+        cx.Si.add(_finalUnboundVar(cx, arg.addr));
         return StepOutcome.advance;
       }
 
@@ -3526,7 +2736,7 @@ mixin OpExecutors {
   /// failing on reader×reader. Null arg or reader×reader → next clause.
   StepOutcome execGetVariable(
       RunnerContext cx, int varIndex, int argSlot, bool isReaderMode) {
-    final arg = BytecodeRunner._getArg(cx, argSlot);
+    final arg = _getArg(cx, argSlot);
     if (arg == null) {
       return StepOutcome.nextClause;
     }
@@ -3669,7 +2879,7 @@ mixin OpExecutors {
   StepOutcome execGetValue(
       RunnerContext cx, int varIndex, int argSlot, bool isReaderMode) {
 
-        final arg = BytecodeRunner._getArg(cx, argSlot);
+        final arg = _getArg(cx, argSlot);
         if (arg == null) {
           return StepOutcome.nextClause;
         }
@@ -4133,7 +3343,7 @@ mixin OpExecutors {
   StepOutcome execHeadList(RunnerContext cx, int argSlot) {
         // Match list structure [H|T] with argument
         // Equivalent to HeadStructure('[|]', 2, op.argSlot)
-        final arg = BytecodeRunner._getArg(cx, argSlot);
+        final arg = _getArg(cx, argSlot);
         if (arg == null) return StepOutcome.advance;
 
         // Per spec v2.16.3 Section 12.0.1: Handle VarRef pointing to ValueTag cell
@@ -4179,7 +3389,7 @@ mixin OpExecutors {
 
           if (!bound) {
             // Unbound reader - add to Si and continue (two-phase)
-            final suspendOnVar = BytecodeRunner._finalUnboundVar(cx, arg.addr);
+            final suspendOnVar = _finalUnboundVar(cx, arg.addr);
             cx.Si.add(suspendOnVar);
             return StepOutcome.advance;
           } else {

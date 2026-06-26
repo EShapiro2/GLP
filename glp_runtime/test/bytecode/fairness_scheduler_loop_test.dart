@@ -1,6 +1,7 @@
 import 'package:test/test.dart';
 import 'package:glp_runtime/bytecode/opcodes.dart';
 import 'package:glp_runtime/bytecode/runner.dart';
+import 'package:glp_runtime/engine_v2/interp.dart';
 import 'package:glp_runtime/runtime/runtime.dart';
 import 'package:glp_runtime/runtime/machine_state.dart';
 import 'package:glp_runtime/runtime/scheduler.dart';
@@ -18,16 +19,17 @@ void main() {
 
     // loop :- true | loop.  — a clause whose body tail-calls itself.
     final p = BytecodeProgram([
-      Label('loop'),
+      Label('loop/0'),
       ClauseTry(),
       Commit(),
-      Requeue('loop', 0),
+      Requeue('loop/0', 0),
     ]);
-    final runner = BytecodeRunner(p);
+    final image = codeImageFromProgram(p);
+    final runner = ByteRunner(image);
     final sched = Scheduler(rt: rt, runner: runner);
 
-    rt.gq.enqueue(GoalRef(1, p.labels['loop']!));
-    rt.gq.enqueue(GoalRef(2, p.labels['loop']!));
+    rt.gq.enqueue(GoalRef(1, image.entryOffsetOf('loop/0')!));
+    rt.gq.enqueue(GoalRef(2, image.entryOffsetOf('loop/0')!));
 
     final ran = sched.drain(maxCycles: 2);
     expect(ran, [1, 2],

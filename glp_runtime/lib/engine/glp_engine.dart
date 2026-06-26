@@ -506,18 +506,19 @@ class GlpEngine {
     return 'Goal is not well-typed:\n$detail';
   }
 
-  /// Build the runner and entry PC for a query, honouring the byte-interp
-  /// sandbox flag (B4). With the flag set and the entry resolvable, returns a
-  /// [ByteRunner] over a [CodeImage] of the same program and the entry BYTE
-  /// OFFSET; otherwise the object [BytecodeRunner] and the instruction index.
+  /// Build the [ByteRunner] and entry BYTE OFFSET for a query over a
+  /// [CodeImage] of the program. The caller has already verified the entry
+  /// exists (the REPL entry-point guard), so an unresolved offset here is an
+  /// internal invariant violation between the object labels and the image
+  /// symbols, not a user error.
   (GoalRunner, int) _runnerForQuery(
-      BytecodeProgram program, String procedureLabel, int objectEntryPc) {
-    if (byteInterpEnabled) {
-      final image = codeImageFromProgram(program);
-      final off = image.entryOffsetOf(procedureLabel);
-      if (off != null) return (ByteRunner(image), off);
+      BytecodeProgram program, String procedureLabel) {
+    final image = codeImageFromProgram(program);
+    final off = image.entryOffsetOf(procedureLabel);
+    if (off == null) {
+      throw StateError('no compiled byte entry for $procedureLabel');
     }
-    return (BytecodeRunner(program), objectEntryPc);
+    return (ByteRunner(image), off);
   }
 
   Future<ExecutionResult> _runSingleGoal(String trimmed) async {
@@ -581,7 +582,7 @@ class GlpEngine {
     }
 
     final (runner, goalEntry) =
-        _runnerForQuery(program, procedureLabel, entryPC);
+        _runnerForQuery(program, procedureLabel);
     final scheduler = Scheduler(rt: _runtime, runners: {'main': runner});
     scheduler.resetDisplayNumbering();
     scheduler.setQueryVarNames(queryVarWriters);
@@ -643,11 +644,10 @@ class GlpEngine {
     final queryVarWriters = <String, int>{};
     final varNameToId = <String, int>{};
 
-    // B4 byte-interp flag: build one CodeImage + ByteRunner for the whole
-    // conjunction; per-goal entry PCs become byte offsets below.
-    final image = byteInterpEnabled ? codeImageFromProgram(program) : null;
-    final GoalRunner runner =
-        image != null ? ByteRunner(image) : BytecodeRunner(program);
+    // Build one CodeImage + ByteRunner for the whole conjunction; per-goal
+    // entry PCs are byte offsets resolved below.
+    final image = codeImageFromProgram(program);
+    final GoalRunner runner = ByteRunner(image);
     final scheduler = Scheduler(rt: _runtime, runners: {'main': runner});
     scheduler.resetDisplayNumbering();
 
@@ -687,8 +687,7 @@ class GlpEngine {
       }
 
       scheduler.setQueryVarNames(queryVarWriters);
-      final goalEntry =
-          image != null ? image.entryOffsetOf(procedureLabel)! : entryPC;
+      final goalEntry = image.entryOffsetOf(procedureLabel)!;
       _runtime.gq.enqueue(GoalRef(_goalId, goalEntry));
       _goalId++;
 

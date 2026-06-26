@@ -271,14 +271,11 @@ class AgentRuntime {
 
     _output('[INIT] Loaded GLP program');
 
-    // Get combined program and create scheduler. Honour the byte-interp sandbox
-    // flag (B6): with it set, run the agent on the byte interpreter over a
-    // CodeImage of the same program, entry as a byte offset; else the object
-    // runner and instruction index. Mirrors GlpEngine._runnerForQuery.
+    // Get combined program and create scheduler. Run the agent on the byte
+    // interpreter over a CodeImage of the program, entry as a byte offset.
     final program = engine.combinedProgram;
-    final image = byteInterpEnabled ? codeImageFromProgram(program) : null;
-    final GoalRunner runner =
-        image != null ? ByteRunner(image) : BytecodeRunner(program);
+    final image = codeImageFromProgram(program);
+    final GoalRunner runner = ByteRunner(image);
     _scheduler = Scheduler(rt: _runtime!, runners: {'main': runner},
       traceSink: (line) => _log('GLP: $line'));
     _scheduler!.resetDisplayNumbering();

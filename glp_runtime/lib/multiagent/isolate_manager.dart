@@ -410,12 +410,10 @@ void _agentIsolateEntry(AgentConfig config) async {
   final program = engine.combinedProgram;
   final arity = config.goalArity;
   final goalLabel = '${config.goalFunctor}/$arity';
-  // Honour the byte-interp sandbox flag (B6): run the isolate's agent on the
-  // byte interpreter over a CodeImage, entry as a byte offset; else object
-  // runner + instruction index. Mirrors GlpEngine._runnerForQuery.
-  final image = byteInterpEnabled ? codeImageFromProgram(program) : null;
-  final goalPC =
-      image != null ? image.entryOffsetOf(goalLabel) : program.labels[goalLabel];
+  // Run the isolate's agent on the byte interpreter over a CodeImage of the
+  // program, entry as a byte offset.
+  final image = codeImageFromProgram(program);
+  final goalPC = image.entryOffsetOf(goalLabel);
   if (goalPC == null) {
     print('[$agentId] ERROR: Goal $goalLabel not found');  // Always print errors
     config.mainPort.send(AgentInitFailed(agentId, 'Goal $goalLabel not found'));
@@ -456,8 +454,7 @@ void _agentIsolateEntry(AgentConfig config) async {
   log('Spawned ${config.goalFunctor}/$arity');
 
   // Create scheduler for this engine
-  final GoalRunner runner =
-      image != null ? ByteRunner(image) : BytecodeRunner(program);
+  final GoalRunner runner = ByteRunner(image);
   final scheduler = Scheduler(rt: runtime, runners: {'main': runner});
 
   // Set up tracing: lines print directly (no buffering needed without ticks)

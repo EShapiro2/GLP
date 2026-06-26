@@ -3,8 +3,8 @@
 /// Goal (IGLP `app:code-format`): execute the §cf code-format byte string
 /// DIRECTLY. [ByteRunner] is the FCP-style fetch/decode/dispatch loop over a
 /// [CodeImage]'s `code` section — `switch (code[pc])`, operands read inline from
-/// the byte stream, a byte-offset program counter — calling the SAME per-opcode
-/// executors as the object runner (`OpExecutors` in `runner.dart`). There is no
+/// the byte stream, a byte-offset program counter — calling the per-opcode
+/// executors (`OpExecutors` in `runner.dart`). There is no
 /// second in-memory instruction form: the executed bytes are the shipped, hashed
 /// bytes.
 ///
@@ -18,13 +18,11 @@
 /// here, resolving `proc` indices to entry byte offsets via the [CodeImage]
 /// symbol table.
 ///
-/// Contract parity with `BytecodeRunner`: `runWithStatus(RunnerContext) →
-/// RunResult`, with `cx.kappa` the goal's entry — a BYTE OFFSET here (an
-/// instruction index in the object runner). The scheduler/engine drives goals
-/// identically; only the per-goal run entry differs.
+/// Run contract: `runWithStatus(RunnerContext) → RunResult`, with `cx.kappa`
+/// the goal's entry as a BYTE OFFSET into the code section. The scheduler/engine
+/// drives every goal through this runner.
 library;
 
-import 'dart:io' show Platform;
 import 'dart:typed_data';
 
 import 'package:glp_runtime/bytecode/runner.dart';
@@ -36,11 +34,6 @@ import 'package:glp_runtime/runtime/body_kernels.dart';
 import 'package:glp_runtime/wire/artefact.dart';
 import 'package:glp_runtime/wire/codec.dart';
 import 'package:glp_runtime/wire/instruction_codec.dart';
-
-/// Sandbox flag (B4): when the environment sets `GLP_BYTE_INTERP=1`, the engine
-/// drives goals through the byte interpreter ([ByteRunner]) instead of the
-/// object loop ([BytecodeRunner]). Off by default → no behaviour change.
-bool get byteInterpEnabled => Platform.environment['GLP_BYTE_INTERP'] == '1';
 
 /// Flatten an object [BytecodeProgram] to a §cf artefact and reload it as a
 /// [CodeImage] for direct byte execution — the bridge that lets the engine run
@@ -95,7 +88,7 @@ class ByteRunner with OpExecutors implements GoalRunner {
   }
 
   /// First clause-control opcode strictly after [fromStart], or the code end if
-  /// none — the byte analogue of `BytecodeRunner._findNextClauseTry`.
+  /// none — scans the next clause boundary in the code section.
   int _nextClauseByte(int fromStart) {
     for (final co in _controlOffsets) {
       if (co > fromStart) return co;

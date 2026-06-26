@@ -6,6 +6,7 @@ import 'package:glp_runtime/runtime/external_io.dart';
 import 'package:glp_runtime/runtime/machine_state.dart';
 import 'package:glp_runtime/runtime/scheduler.dart';
 import 'package:glp_runtime/bytecode/runner.dart';
+import 'package:glp_runtime/engine_v2/interp.dart';
 import 'package:glp_runtime/compiler/compiler.dart';
 
 void main() async {
@@ -20,9 +21,10 @@ void main() async {
 
   // Combine with empty stdlib (simplified test)
   final combinedProgram = userProgram;
+  final image = codeImageFromProgram(combinedProgram);
 
   // Check entry point
-  final entryPC = combinedProgram.labels['agent_init/3'];
+  final entryPC = image.entryOffsetOf('agent_init/3');
   print('Entry PC for agent_init/3: $entryPC');
   if (entryPC == null) {
     print('ERROR: agent_init/3 not found!');
@@ -97,7 +99,7 @@ void main() async {
   rt.setGoalProgram(100, 'main');
 
   // Create scheduler
-  final runner = BytecodeRunner(combinedProgram);
+  final runner = ByteRunner(image);
   final scheduler = Scheduler(rt: rt, runners: {'main': runner});
 
   // Enqueue goal

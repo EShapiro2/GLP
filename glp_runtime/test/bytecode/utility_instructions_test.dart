@@ -4,6 +4,7 @@ import 'package:glp_runtime/runtime/cells.dart';
 import 'package:glp_runtime/runtime/machine_state.dart';
 import 'package:glp_runtime/runtime/scheduler.dart';
 import 'package:glp_runtime/bytecode/runner.dart';
+import 'package:glp_runtime/engine_v2/interp.dart';
 import 'package:glp_runtime/bytecode/opcodes.dart';
 import 'package:glp_runtime/bytecode/asm.dart';
 
@@ -24,14 +25,15 @@ void main() {
       BC.PROCEED(),
     ]);
 
-    final runner = BytecodeRunner(prog);
+    final image = codeImageFromProgram(prog);
+    final runner = ByteRunner(image);
     final sched = Scheduler(rt: rt, runner: runner);
 
     // Call p
     const goalId = 100;
     final env = CallEnv();
     rt.setGoalEnv(goalId, env);
-    rt.gq.enqueue(GoalRef(goalId, prog.labels['p/0']!));
+    rt.gq.enqueue(GoalRef(goalId, image.entryOffsetOf('p/0')!));
 
     print('Starting p with 3 nops');
     final ran = sched.drain(maxCycles: 10);
@@ -54,14 +56,15 @@ void main() {
       BC.halt(),             // Terminate immediately
     ]);
 
-    final runner = BytecodeRunner(prog);
+    final image = codeImageFromProgram(prog);
+    final runner = ByteRunner(image);
     final sched = Scheduler(rt: rt, runner: runner);
 
     // Call p
     const goalId = 100;
     final env = CallEnv();
     rt.setGoalEnv(goalId, env);
-    rt.gq.enqueue(GoalRef(goalId, prog.labels['p/0']!));
+    rt.gq.enqueue(GoalRef(goalId, image.entryOffsetOf('p/0')!));
 
     print('Starting p with halt');
     final ran = sched.drain(maxCycles: 10);
@@ -91,15 +94,17 @@ void main() {
       BC.PROCEED(),
     ]);
 
-    final runnerHalt = BytecodeRunner(progHalt);
-    final runnerProceed = BytecodeRunner(progProceed);
+    final imageHalt = codeImageFromProgram(progHalt);
+    final imageProceed = codeImageFromProgram(progProceed);
+    final runnerHalt = ByteRunner(imageHalt);
+    final runnerProceed = ByteRunner(imageProceed);
 
     // Test with halt
     final schedHalt = Scheduler(rt: rt, runner: runnerHalt);
     const goalId1 = 100;
     final env1 = CallEnv();
     rt.setGoalEnv(goalId1, env1);
-    rt.gq.enqueue(GoalRef(goalId1, progHalt.labels['p/0']!));
+    rt.gq.enqueue(GoalRef(goalId1, imageHalt.entryOffsetOf('p/0')!));
 
     print('Testing halt...');
     final ranHalt = schedHalt.drain(maxCycles: 10);
@@ -112,7 +117,7 @@ void main() {
     const goalId2 = 200;
     final env2 = CallEnv();
     rt2.setGoalEnv(goalId2, env2);
-    rt2.gq.enqueue(GoalRef(goalId2, progProceed.labels['p/0']!));
+    rt2.gq.enqueue(GoalRef(goalId2, imageProceed.entryOffsetOf('p/0')!));
 
     print('Testing proceed...');
     final ranProceed = schedProceed.drain(maxCycles: 10);

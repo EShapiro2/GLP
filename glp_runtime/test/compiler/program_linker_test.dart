@@ -19,6 +19,7 @@ import 'package:glp_runtime/runtime/runtime.dart';
 import 'package:glp_runtime/runtime/machine_state.dart';
 import 'package:glp_runtime/runtime/scheduler.dart';
 import 'package:glp_runtime/bytecode/runner.dart';
+import 'package:glp_runtime/engine_v2/interp.dart';
 
 void main() {
   // Set prelude sources from programs/self.glp (same as GlpEngine constructor)
@@ -434,7 +435,8 @@ void main() {
       rt.outputCallback = (s) => output.add(s);
 
       // Register runner
-      rt.runners[program] = BytecodeRunner(program);
+      final image = codeImageFromProgram(program);
+      rt.runners[program] = ByteRunner(image);
 
       // Create scheduler
       final scheduler = Scheduler(rt: rt);
@@ -446,7 +448,7 @@ void main() {
       rt.setGoalProgram(goalId, program);
 
       // Enqueue via entry point alias
-      final fplayPc = program.labels['fplay1/0']!;
+      final fplayPc = image.entryOffsetOf('fplay1/0')!;
       rt.gq.enqueue(GoalRef(goalId, fplayPc));
 
       // Run

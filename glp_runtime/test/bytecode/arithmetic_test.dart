@@ -1,6 +1,7 @@
 import 'package:test/test.dart';
 import 'package:glp_runtime/compiler/compiler.dart';
 import 'package:glp_runtime/bytecode/runner.dart';
+import 'package:glp_runtime/engine_v2/interp.dart';
 import 'package:glp_runtime/runtime/runtime.dart';
 import 'package:glp_runtime/runtime/machine_state.dart';
 import 'package:glp_runtime/runtime/terms.dart';
@@ -286,7 +287,8 @@ void main() {
       print('Allocated result variable: W$resultWriter, R$resultReader');
 
       // Create runner and scheduler
-      final runner = BytecodeRunner(mergedProg);
+      final image = codeImageFromProgram(mergedProg);
+      final runner = ByteRunner(image);
       final sched = Scheduler(rt: rt, runner: runner);
 
       // Create environment with the result variable as argument
@@ -300,7 +302,7 @@ void main() {
       rt.setGoalEnv(goalId, env);
 
       // Get entry point for compute_sum/1
-      final entryPc = mergedProg.labels['compute_sum/1'];
+      final entryPc = image.entryOffsetOf('compute_sum/1');
       expect(entryPc, isNotNull, reason: 'compute_sum/1 should exist');
       print('compute_sum/1 entry at PC $entryPc');
 
