@@ -22,13 +22,13 @@ class DrainResult {
 
 class Scheduler {
   final GlpRuntime rt;
-  final Map<Object?, BytecodeRunner> runners;
+  final Map<Object?, GoalRunner> runners;
 
   /// Optional trace sink. When set, trace output (reductions, suspensions,
   /// failures) goes through this callback instead of print().
   void Function(String)? traceSink;
 
-  Scheduler({required this.rt, BytecodeRunner? runner, Map<Object?, BytecodeRunner>? runners, this.traceSink})
+  Scheduler({required this.rt, GoalRunner? runner, Map<Object?, GoalRunner>? runners, this.traceSink})
       : runners = runners ?? (runner != null ? {null: runner} : {});
 
   /// Query variable names: maps writerAddr to original name from query (e.g., "X", "Xs")
@@ -227,19 +227,13 @@ class Scheduler {
       final env = rt.getGoalEnv(act.id);
       final program = rt.getGoalProgram(act.id);
       var runner = runners[program];
-      // Fall back to rt.runners (e.g., runners registered by _activate kernel)
+      // Fall back to rt.runners (runtime-registered runners, if any)
       runner ??= rt.runners[program];
       if (runner == null) {
         throw StateError('No runner found for program $program for goal ${act.id}');
       }
       // Find procedure name from PC for trace
-      String procName = '?';
-      for (final entry in runner.prog.labels.entries) {
-        if (entry.value == act.pc) {
-          procName = entry.key;
-          break;
-        }
-      }
+      final procName = runner.procNameForPc(act.pc) ?? '?';
       final goalStr = _formatGoal(act.id, procName, env);
 
       // Check if this is a query wrapper goal (skip display)

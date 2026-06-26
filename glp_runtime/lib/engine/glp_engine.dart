@@ -16,6 +16,7 @@ import 'package:glp_runtime/compiler/lexer.dart';
 import 'package:glp_runtime/compiler/ast.dart';
 import 'package:glp_runtime/compiler/primitive_layer.dart';
 import 'package:glp_runtime/bytecode/runner.dart';
+import 'package:glp_runtime/engine_v2/interp.dart';
 import 'package:glp_runtime/runtime/runtime.dart';
 import 'package:glp_runtime/runtime/machine_state.dart';
 import 'package:glp_runtime/runtime/scheduler.dart';
@@ -29,7 +30,6 @@ import 'package:glp_runtime/analysis/type_checker/type_environment_builder.dart'
 import 'package:glp_runtime/analysis/type_checker/program_dfa.dart' as tdfa;
 import 'package:glp_runtime/analysis/type_checker/well_typed_clause.dart' as wtc;
 import 'package:glp_runtime/runtime/module_hierarchy.dart';
-import 'package:glp_runtime/runtime/glp_activation.dart';
 import 'package:glp_runtime/multiagent/mad_context.dart';
 import 'package:glp_runtime/compiler/program_linker.dart';
 
@@ -65,24 +65,6 @@ class ModuleInfo {
 
   ModuleInfo({required this.name, required this.program, required this.imports, required this.hasExports, this.exportedLabels = const {}, this.isTopLevel = false});
 }
-
-/// serve/2 system predicate (embedded).
-///
-/// Service loop for dynamic module dispatch: reads goals from a GLP channel
-/// and dispatches each via '_activate' against the module's _select/1 table.
-/// Compiled once at engine init; passed to activateModule() as serveBytecode.
-const String _serveSource = r'''
--mode(system).
-
-procedure serve(_?, Stream(_)?).
-serve(Module, [Goal | In]) :-
-    ground(Module?) |
-    '_activate'(Module?, Goal?),
-    serve(Module?, In?).
-serve(_, []) :-
-    otherwise |
-    true.
-''';
 
 /// madGLP system predicates (embedded).
 ///
@@ -136,9 +118,6 @@ class GlpEngine {
   /// checked against this env before it runs; see [_checkGoalWellTyped].
   TypeEnvironment? _goalCheckEnv;
 
-  /// Compiled serve/2 bytecode for dynamic module dispatch.
-  late final BytecodeProgram _serveBytecode;
-
   int _goalId = 1;
 
   /// Max execution cycles (default 10000)
@@ -183,11 +162,7 @@ class GlpEngine {
 
     registerStandardPredicates(_runtime.systemPredicates);
     _loadRootSelf();
-    _serveBytecode = _compiler.compile(_serveSource);
   }
-
-  /// Compiled serve/2 bytecode for activateModule().
-  BytecodeProgram get serveBytecode => _serveBytecode;
 
   /// Clear all loaded programs except root self.glp.
   ///
@@ -325,19 +300,6 @@ class GlpEngine {
     final moduleInfo = _extractModuleInfo(source, program, name);
     _loadedModules[moduleInfo.name] = moduleInfo;
 
-    // Auto-activate modules with exports for dynamic dispatch (retired path).
-    // Never for a self-contained module — it is run by direct goal execution.
-    if (!selfContained && moduleInfo.hasExports) {
-      final rootSelf = _loadedPrograms['__root_self__'];
-      final moduleBytecode = rootSelf != null ? program.merge(rootSelf) : program;
-      activateModule(
-        rt: _runtime,
-        serveBytecode: _serveBytecode,
-        moduleBytecode: moduleBytecode,
-        moduleName: moduleInfo.name,
-      );
-    }
-
     // Make this module's declarations available to the REPL goal checker.
     _extendGoalCheckEnv(module);
 
@@ -413,42 +375,6 @@ class GlpEngine {
         error: e.toString(),
       );
     }
-  }
-
-  /// Activate a loaded module for dynamic dispatch.
-  ///
-  /// Creates a GLP channel, spawns serve(Module, ChannelReader?),
-  /// and registers the channel in rt.glpChannels.
-  /// The module must have been loaded via loadFile() or loadSource() first.
-  /// The module must have exported procedures.
-  ///
-  /// After activation, cross-module calls via Distribute/Transmit opcodes
-  /// route goals through the module's channel.
-  void activateDynamicModule(String moduleName) {
-    // Skip if already activated (loadSource auto-activates modules with exports)
-    if (_runtime.glpChannels.containsKey(moduleName)) {
-      return;
-    }
-
-    final moduleInfo = _loadedModules[moduleName];
-    if (moduleInfo == null) {
-      throw Exception('Module "$moduleName" not loaded');
-    }
-    final moduleProg = moduleInfo.program;
-
-    if (!moduleInfo.hasExports) {
-      throw Exception('Module "$moduleName" has no exported procedures');
-    }
-
-    // Merge with root self.glp so dispatched procedures can find :=/2 etc.
-    final rootSelf = _loadedPrograms['__root_self__'];
-    final moduleBytecode = rootSelf != null ? moduleProg.merge(rootSelf) : moduleProg;
-    activateModule(
-      rt: _runtime,
-      serveBytecode: _serveBytecode,
-      moduleBytecode: moduleBytecode,
-      moduleName: moduleName,
-    );
   }
 
   /// Enable madGLP mode for this engine.
@@ -580,6 +506,20 @@ class GlpEngine {
     return 'Goal is not well-typed:\n$detail';
   }
 
+  /// Build the runner and entry PC for a query, honouring the byte-interp
+  /// sandbox flag (B4). With the flag set and the entry resolvable, returns a
+  /// [ByteRunner] over a [CodeImage] of the same program and the entry BYTE
+  /// OFFSET; otherwise the object [BytecodeRunner] and the instruction index.
+  (GoalRunner, int) _runnerForQuery(
+      BytecodeProgram program, String procedureLabel, int objectEntryPc) {
+    if (byteInterpEnabled) {
+      final image = codeImageFromProgram(program);
+      final off = image.entryOffsetOf(procedureLabel);
+      if (off != null) return (ByteRunner(image), off);
+    }
+    return (BytecodeRunner(program), objectEntryPc);
+  }
+
   Future<ExecutionResult> _runSingleGoal(String trimmed) async {
     final parseInput = '$trimmed.';
     final lexer = Lexer(parseInput);
@@ -640,12 +580,13 @@ class GlpEngine {
       }
     }
 
-    final runner = BytecodeRunner(program);
+    final (runner, goalEntry) =
+        _runnerForQuery(program, procedureLabel, entryPC);
     final scheduler = Scheduler(rt: _runtime, runners: {'main': runner});
     scheduler.resetDisplayNumbering();
     scheduler.setQueryVarNames(queryVarWriters);
 
-    _runtime.gq.enqueue(GoalRef(_goalId, entryPC));
+    _runtime.gq.enqueue(GoalRef(_goalId, goalEntry));
     _goalId++;
 
     final result = await scheduler.drainAsyncWithStatus(
@@ -702,7 +643,11 @@ class GlpEngine {
     final queryVarWriters = <String, int>{};
     final varNameToId = <String, int>{};
 
-    final runner = BytecodeRunner(program);
+    // B4 byte-interp flag: build one CodeImage + ByteRunner for the whole
+    // conjunction; per-goal entry PCs become byte offsets below.
+    final image = byteInterpEnabled ? codeImageFromProgram(program) : null;
+    final GoalRunner runner =
+        image != null ? ByteRunner(image) : BytecodeRunner(program);
     final scheduler = Scheduler(rt: _runtime, runners: {'main': runner});
     scheduler.resetDisplayNumbering();
 
@@ -742,7 +687,9 @@ class GlpEngine {
       }
 
       scheduler.setQueryVarNames(queryVarWriters);
-      _runtime.gq.enqueue(GoalRef(_goalId, entryPC));
+      final goalEntry =
+          image != null ? image.entryOffsetOf(procedureLabel)! : entryPC;
+      _runtime.gq.enqueue(GoalRef(_goalId, goalEntry));
       _goalId++;
 
       final result = await scheduler.drainAsyncWithStatus(

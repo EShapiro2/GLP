@@ -1,8 +1,6 @@
 import 'package:glp_runtime/bytecode/opcodes.dart' as bc;
 import 'package:glp_runtime/bytecode/opcodes_v2.dart' as bcv2;
-import 'package:glp_runtime/bytecode/asm.dart';
 import 'package:glp_runtime/bytecode/runner.dart' show BytecodeProgram;
-import 'package:glp_runtime/runtime/terms.dart' as rt;
 import 'ast.dart';
 import 'analyzer.dart';
 import 'error.dart';
@@ -579,41 +577,6 @@ class CodeGenerator {
     }
   }
 
-  // Check if a term is fully ground (contains no variables)
-  bool _isGroundTerm(Term term) {
-    if (term is VarTerm) return false;
-    if (term is ConstTerm) return true;
-    if (term is ListTerm) {
-      if (term.isNil) return true;
-      return (term.head == null || _isGroundTerm(term.head!)) &&
-             (term.tail == null || _isGroundTerm(term.tail!));
-    }
-    if (term is StructTerm) {
-      return term.args.every((arg) => _isGroundTerm(arg));
-    }
-    return false;
-  }
-
-  // Convert a ground term to a Dart value (for constants)
-  Object? _groundTermToValue(Term term) {
-    if (term is ConstTerm) return term.value;
-    if (term is ListTerm) {
-      if (term.isNil) return 'nil';  // Empty list as 'nil'
-      // Build list as nested cons cells: [H|T]
-      final head = term.head != null ? _groundTermToValue(term.head!) : null;
-      final tail = term.tail != null ? _groundTermToValue(term.tail!) : null;
-      return [head, tail];  // Represent as 2-element list for cons cell
-    }
-    if (term is StructTerm) {
-      // Return structure as map with functor and args
-      return {
-        'functor': term.functor,
-        'args': term.args.map((arg) => _groundTermToValue(arg)).toList(),
-      };
-    }
-    return null;
-  }
-
   // Helper for building structure elements INSIDE argument structures
   // This is different from _generateStructureElement which is for HEAD/GUARD unification
   void _generateArgumentStructureElement(Term term, VariableTable varTable, CodeGenContext ctx) {
@@ -634,49 +597,29 @@ class CodeGenerator {
       if (term.isNil) {
         ctx.emit(bc.UnifyConstant('nil'));  // Empty list
       } else {
-        // Non-empty list: check if ground or contains variables
-        if (_isGroundTerm(term)) {
-          // Ground list: convert to runtime StructTerm and emit as constant
-          rt.Term convertListToStructTerm(ListTerm l) {
-            if (l.isNil) return rt.ConstTerm('nil');
+        // Non-empty list: build structurally as a './2' cons cell, ground or
+        // not. FCP builds compound terms with allocate_list_cell and never
+        // folds them into a constant — constants are primitive only
+        // (§cf-primitives). Building structurally keeps every *Constant operand
+        // atomic so the code-format artefact can encode it. Pattern: [H|T]
+        // becomes '.'(H, T).
+        ctx.emit(bc.PutStructure('.', 2, ctx.allocateTemp())); // nested: temp register (FCP-style), not the unencodable -1 sentinel
 
-            rt.Term convertTerm(Term t) {
-              if (t is ConstTerm) return rt.ConstTerm(t.value);
-              if (t is ListTerm) return convertListToStructTerm(t);
-              if (t is StructTerm) {
-                final rtArgs = t.args.map(convertTerm).toList();
-                return rt.StructTerm(t.functor, rtArgs);
-              }
-              return rt.ConstTerm(null);  // Fallback for unexpected cases
-            }
+        // Process head element
+        if (term.head != null) {
+          _generateStructureElementInBody(term.head!, varTable, ctx);
+        }
 
-            final head = l.head != null ? convertTerm(l.head!) : rt.ConstTerm('nil');
-            final tail = l.tail != null ? convertTerm(l.tail!) : rt.ConstTerm('nil');
-            return rt.StructTerm('.', [head, tail]);
-          }
-          final listStructTerm = convertListToStructTerm(term);
-          ctx.emit(bc.UnifyConstant(listStructTerm));
-        } else {
-          // Non-ground list (contains variables): build as structure './2'
-          // Pattern: [H|T] becomes '.'(H, T)
-          ctx.emit(bc.PutStructure('.', 2, -1)); // -1 = building inside parent structure
-
-          // Process head element
-          if (term.head != null) {
-            _generateStructureElementInBody(term.head!, varTable, ctx);
-          }
-
-          // Process tail element - may be another list or a variable
-          if (term.tail != null) {
-            _generateListTailInBody(term.tail!, varTable, ctx);
-          }
+        // Process tail element - may be another list or a variable
+        if (term.tail != null) {
+          _generateListTailInBody(term.tail!, varTable, ctx);
         }
       }
 
     } else if (term is StructTerm) {
       // Nested structure in BODY - need to handle both ground and non-ground
       // Start building the nested structure
-      ctx.emit(bc.PutStructure(term.functor, term.arity, -1)); // -1 = building inside parent structure
+      ctx.emit(bc.PutStructure(term.functor, term.arity, ctx.allocateTemp())); // nested: temp register (FCP-style), not the unencodable -1 sentinel
 
       // Process each argument using SetWriter/SetReader for variables
       for (final arg in term.args) {
@@ -712,7 +655,7 @@ class CodeGenerator {
         ctx.emit(bc.SetConstant('nil'));
       } else {
         // Non-empty nested list: build as cons cell '.'(head, tail)
-        ctx.emit(bc.PutStructure('.', 2, -1)); // -1 = building inside parent structure
+        ctx.emit(bc.PutStructure('.', 2, ctx.allocateTemp())); // nested: temp register (FCP-style), not the unencodable -1 sentinel
 
         // Process head element
         if (term.head != null) {
@@ -727,7 +670,7 @@ class CodeGenerator {
 
     } else if (term is StructTerm) {
       // Nested structure - build recursively
-      ctx.emit(bc.PutStructure(term.functor, term.arity, -1)); // -1 = building inside parent structure
+      ctx.emit(bc.PutStructure(term.functor, term.arity, ctx.allocateTemp())); // nested: temp register (FCP-style), not the unencodable -1 sentinel
 
       // Process each argument recursively
       for (final arg in term.args) {
@@ -750,7 +693,7 @@ class CodeGenerator {
         ctx.emit(bc.SetConstant('nil'));
       } else {
         // Tail is another list: build nested cons cell
-        ctx.emit(bc.PutStructure('.', 2, -1)); // -1 = building inside parent structure
+        ctx.emit(bc.PutStructure('.', 2, ctx.allocateTemp())); // nested: temp register (FCP-style), not the unencodable -1 sentinel
 
         // Process head of nested list
         if (term.head != null) {

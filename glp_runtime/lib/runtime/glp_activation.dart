@@ -1,16 +1,15 @@
-/// GLP-level module activation.
+/// GLP channel handle.
 ///
-/// Creates a GLP channel, spawns serve(Module, ChannelReader?), and
-/// returns a handle for sending goals on the channel.
-///
-/// Phase 4 of dynamic module dispatch (docs/modules/dynamic-dispatch-implementation-plan.md).
+/// Writer end of a GLP channel: sending a goal extends the stream
+/// [goal | newTail]. Part of the channel-routing surface used by the
+/// Distribute/Transmit opcodes (currently inert for statically linked
+/// programs). The serve/_activate dynamic-dispatch path that constructed
+/// these handles has been retired.
 library;
 
-import 'package:glp_runtime/runtime/runtime.dart';
 import 'package:glp_runtime/runtime/terms.dart';
 import 'package:glp_runtime/runtime/heap_fcp.dart';
-import 'package:glp_runtime/runtime/machine_state.dart';
-import 'package:glp_runtime/bytecode/runner.dart';
+import 'package:glp_runtime/runtime/machine_state.dart' show GoalRef;
 
 /// Handle for a GLP module channel.
 ///
@@ -45,47 +44,3 @@ class GlpChannelHandle {
   }
 }
 
-/// Activate a module at the GLP level.
-///
-/// Creates a GLP channel, constructs a ModuleTerm from compiled bytecode,
-/// spawns serve(ModuleTerm, ChannelReader?), and returns the channel handle.
-///
-/// The serve runner is registered in rt.runners so the scheduler can find it.
-/// The caller must drain the scheduler to execute the spawned serve goal.
-GlpChannelHandle activateModule({
-  required GlpRuntime rt,
-  required BytecodeProgram serveBytecode,
-  required BytecodeProgram moduleBytecode,
-  required String moduleName,
-}) {
-  // 1. Create GLP channel (writer/reader pair)
-  final (writerAddr, readerAddr) = rt.heap.allocateVariable();
-
-  // 2. Construct ModuleTerm and store on heap
-  final moduleTerm = ModuleTerm(moduleBytecode, name: moduleName);
-  final moduleAddr = rt.heap.storeTermOnHeap(moduleTerm);
-
-  // 3. Spawn serve(Module, ChannelReader?)
-  final goalId = rt.nextGoalId++;
-  final env = CallEnv(args: {0: VarRef(moduleAddr), 1: VarRef(readerAddr)});
-  rt.setGoalEnv(goalId, env);
-  rt.setGoalProgram(goalId, serveBytecode);
-
-  final servePc = serveBytecode.labels['serve/2']!;
-  rt.gq.enqueue(GoalRef(goalId, servePc));
-
-  // 4. Tag as infrastructure goal (spec §3.4, §3.5)
-  rt.infrastructureGoalIds.add(goalId);
-
-  // 5. Register serve runner if not already present
-  if (!rt.runners.containsKey(serveBytecode)) {
-    rt.runners[serveBytecode] = BytecodeRunner(serveBytecode);
-  }
-
-  // 6. Register channel handle in rt.glpChannels for RPC routing (Phase 5)
-  final channel = GlpChannelHandle(rt.heap, writerAddr);
-  rt.glpChannels[moduleName] = channel;
-
-  // 7. Return channel handle (writer end)
-  return channel;
-}

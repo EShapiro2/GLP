@@ -1,0 +1,11 @@
+%% Service module with 3 exported procedures.
+%% Linked statically into the program rooted at this directory's self.glp.
+
+exported procedure double(Integer?, Integer).
+double(X, Y?) :- Y := X? * 2.
+
+exported procedure triple(Integer?, Integer).
+triple(X, Y?) :- Y := X? * 3.
+
+exported procedure add_ten(Integer?, Integer).
+add_ten(X, Y?) :- Y := X? + 10.

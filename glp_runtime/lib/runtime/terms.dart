@@ -85,9 +85,9 @@ class MutualRefTerm implements Term {
 
 /// Module reference term — wraps a compiled BytecodeProgram.
 ///
-/// Used by the '_activate' body kernel to resolve goals against a module's
-/// _select/1 dispatch table. The module binary is represented as a ground
-/// term on the heap, following FCP's convention.
+/// Part of the Distribute/Transmit channel-routing surface (currently inert
+/// for statically linked programs). The module binary is represented as a
+/// ground term on the heap, following FCP's convention.
 class ModuleTerm implements Term {
   /// The compiled bytecode program for this module
   final Object bytecode;  // BytecodeProgram (untyped to avoid circular import)

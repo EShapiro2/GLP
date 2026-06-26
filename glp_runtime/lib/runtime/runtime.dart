@@ -9,7 +9,8 @@ import 'abandon.dart';
 import 'fairness.dart';
 import 'system_predicates.dart';
 import 'body_kernels.dart';
-import 'package:glp_runtime/bytecode/runner.dart' show CallEnv, BytecodeRunner;
+import 'package:glp_runtime/bytecode/runner.dart'
+    show CallEnv, GoalRunner;
 import 'package:glp_runtime/runtime/glp_activation.dart' show GlpChannelHandle;
 
 class GlpRuntime {
@@ -18,15 +19,15 @@ class GlpRuntime {
   final SystemPredicateRegistry systemPredicates;
   final BodyKernelRegistry bodyKernels;
 
-  /// Shared runners map: program key → BytecodeRunner.
+  /// Shared runners map: program key → GoalRunner (object or byte loop).
   /// Used by the Scheduler to find the runner for a goal's program.
-  /// Body kernels (e.g., _activate) can register new runners here.
-  final Map<Object?, BytecodeRunner> runners = {};
+  /// Runtime-registered runners (extension point; currently unused since the
+  /// serve/_activate dynamic-dispatch path was retired).
+  final Map<Object?, GoalRunner> runners = {};
 
-  /// GLP channel handles: module name → GlpChannelHandle.
-  /// Registered by activateModule() (Phase 4). Used by the runner's
-  /// Distribute/Transmit opcodes to route RPCs via GLP channels
-  /// instead of Dart-level dispatch.
+  /// GLP channel handles: module name → GlpChannelHandle. Read by the runner's
+  /// Distribute/Transmit opcodes to route RPCs via GLP channels. Currently
+  /// unpopulated — the serve/_activate path that registered handles was retired.
   final Map<String, GlpChannelHandle> glpChannels = {};
 
   final Map<GoalId, int> _budgets = <GoalId, int>{};

@@ -1648,33 +1648,29 @@ check "CSSN v2 fplay12 tagged output" "tagged(" "$k_fp12"
 echo ""
 
 # =============================================================================
-# Section L: Dynamic Module Dispatch Tests
+# Section L: Static Cross-Module Call Tests
 # =============================================================================
-echo "=== Section L: Dynamic Module Dispatch Tests ==="
+echo "=== Section L: Static Cross-Module Call Tests ==="
 echo ""
 
-DD="$GLP_DIR/programs/tests/dynamic_dispatch"
+SCM="$GLP_DIR/programs/tests/static_cross_module/"
 
-# --- L1: Activate module and dispatch double via client ---
-echo "--- L1: Dynamic dispatch double ---"
+# --- L1: Static cross-module double (linked program; # resolved at link time) ---
+echo "--- L1: Static cross-module double ---"
 l1=$("$REPL_RUN" <<HEREDOC
-$DD/math_service.glp
-:activate math_service
-$DD/dispatch_client.glp
+$SCM
 test_double(5, X).
 :quit
 HEREDOC
 2>&1)
 
-check "math_service activated" "Activated module" "$l1"
+check "static cross-module program loaded" "Loaded program" "$l1"
 check "test_double(5, X) = 10" "X = 10" "$l1"
 
-# --- L2: Triple dispatch ---
-echo "--- L2: Dynamic dispatch triple ---"
+# --- L2: Static cross-module triple ---
+echo "--- L2: Static cross-module triple ---"
 l2=$("$REPL_RUN" <<HEREDOC
-$DD/math_service.glp
-:activate math_service
-$DD/dispatch_client.glp
+$SCM
 test_triple(4, X).
 :quit
 HEREDOC
@@ -1682,12 +1678,10 @@ HEREDOC
 
 check "test_triple(4, X) = 12" "X = 12" "$l2"
 
-# --- L3: Add_ten dispatch ---
-echo "--- L3: Dynamic dispatch add_ten ---"
+# --- L3: Static cross-module add_ten ---
+echo "--- L3: Static cross-module add_ten ---"
 l3=$("$REPL_RUN" <<HEREDOC
-$DD/math_service.glp
-:activate math_service
-$DD/dispatch_client.glp
+$SCM
 test_add_ten(7, X).
 :quit
 HEREDOC

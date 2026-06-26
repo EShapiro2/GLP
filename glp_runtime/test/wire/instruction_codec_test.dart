@@ -59,9 +59,9 @@ void main() {
     });
 
     test('head_constant: tag, constant payload, argSlot', () {
-      // int 7 -> constant tag 1 + i64; argSlot 2.
+      // int 7 -> constant tag 1 + i64 (little-endian, §cf-primitives); argSlot 2.
       expect(_enc(HeadConstant(7, 2)),
-          [0x10, 0x01, 0, 0, 0, 0, 0, 0, 0, 7, 0x02]);
+          [0x10, 0x01, 7, 0, 0, 0, 0, 0, 0, 0, 0x02]);
     });
 
     test('unify_constant nil -> constant tag 0', () {

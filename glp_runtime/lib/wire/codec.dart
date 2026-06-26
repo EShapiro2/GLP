@@ -209,13 +209,13 @@ class WireWriter {
 
   void i64(int v) {
     final d = ByteData(8);
-    d.setInt64(0, v, Endian.big);
+    d.setInt64(0, v, Endian.little);
     _b.add(d.buffer.asUint8List());
   }
 
   void f64(double v) {
     final d = ByteData(8);
-    d.setFloat64(0, v, Endian.big);
+    d.setFloat64(0, v, Endian.little);
     _b.add(d.buffer.asUint8List());
   }
 
@@ -287,7 +287,8 @@ class WireReader {
 
   int i64() {
     _need(8);
-    final v = ByteData.sublistView(data, _off, _off + 8).getInt64(0, Endian.big);
+    final v =
+        ByteData.sublistView(data, _off, _off + 8).getInt64(0, Endian.little);
     _off += 8;
     return v;
   }
@@ -295,7 +296,7 @@ class WireReader {
   double f64() {
     _need(8);
     final v =
-        ByteData.sublistView(data, _off, _off + 8).getFloat64(0, Endian.big);
+        ByteData.sublistView(data, _off, _off + 8).getFloat64(0, Endian.little);
     _off += 8;
     return v;
   }

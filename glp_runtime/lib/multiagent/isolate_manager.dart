@@ -14,6 +14,7 @@ import 'dart:typed_data';
 
 import 'package:glp_runtime/engine/glp_engine.dart';
 import 'package:glp_runtime/bytecode/runner.dart';
+import 'package:glp_runtime/engine_v2/interp.dart';
 import 'package:glp_runtime/runtime/terms.dart';
 import 'package:glp_runtime/runtime/scheduler.dart';
 import 'package:glp_runtime/runtime/machine_state.dart';
@@ -409,7 +410,12 @@ void _agentIsolateEntry(AgentConfig config) async {
   final program = engine.combinedProgram;
   final arity = config.goalArity;
   final goalLabel = '${config.goalFunctor}/$arity';
-  final goalPC = program.labels[goalLabel];
+  // Honour the byte-interp sandbox flag (B6): run the isolate's agent on the
+  // byte interpreter over a CodeImage, entry as a byte offset; else object
+  // runner + instruction index. Mirrors GlpEngine._runnerForQuery.
+  final image = byteInterpEnabled ? codeImageFromProgram(program) : null;
+  final goalPC =
+      image != null ? image.entryOffsetOf(goalLabel) : program.labels[goalLabel];
   if (goalPC == null) {
     print('[$agentId] ERROR: Goal $goalLabel not found');  // Always print errors
     config.mainPort.send(AgentInitFailed(agentId, 'Goal $goalLabel not found'));
@@ -450,7 +456,8 @@ void _agentIsolateEntry(AgentConfig config) async {
   log('Spawned ${config.goalFunctor}/$arity');
 
   // Create scheduler for this engine
-  final runner = BytecodeRunner(program);
+  final GoalRunner runner =
+      image != null ? ByteRunner(image) : BytecodeRunner(program);
   final scheduler = Scheduler(rt: runtime, runners: {'main': runner});
 
   // Set up tracing: lines print directly (no buffering needed without ticks)

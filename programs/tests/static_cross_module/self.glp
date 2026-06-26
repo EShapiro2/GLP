@@ -1,5 +1,7 @@
-%% Client module that calls math_service dynamically via M # goal(...)
-%% Used to test dynamic dispatch from the REPL.
+%% Directory interface + client. Calls math_service via static M # goal(...),
+%% which the linker resolves to a local call at compile time (manual §19.7) —
+%% no dynamic dispatch. The static counterpart of the retired :activate workflow.
+%% These exported procedures are the program's entry points (manual §19.6).
 
 imported procedure math_service#double(Integer?, Integer).
 imported procedure math_service#triple(Integer?, Integer).

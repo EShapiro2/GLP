@@ -16,6 +16,7 @@ import 'package:glp_runtime/compiler/parser.dart';
 import 'package:glp_runtime/compiler/lexer.dart';
 import 'package:glp_runtime/compiler/ast.dart' as ast;
 import 'package:glp_runtime/bytecode/runner.dart';
+import 'package:glp_runtime/engine_v2/interp.dart';
 import 'package:glp_runtime/engine/glp_engine.dart';
 import 'package:glp_runtime/runtime/runtime.dart';
 import 'package:glp_runtime/runtime/machine_state.dart';
@@ -270,9 +271,14 @@ class AgentRuntime {
 
     _output('[INIT] Loaded GLP program');
 
-    // Get combined program and create scheduler
+    // Get combined program and create scheduler. Honour the byte-interp sandbox
+    // flag (B6): with it set, run the agent on the byte interpreter over a
+    // CodeImage of the same program, entry as a byte offset; else the object
+    // runner and instruction index. Mirrors GlpEngine._runnerForQuery.
     final program = engine.combinedProgram;
-    final runner = BytecodeRunner(program);
+    final image = byteInterpEnabled ? codeImageFromProgram(program) : null;
+    final GoalRunner runner =
+        image != null ? ByteRunner(image) : BytecodeRunner(program);
     _scheduler = Scheduler(rt: _runtime!, runners: {'main': runner},
       traceSink: (line) => _log('GLP: $line'));
     _scheduler!.resetDisplayNumbering();
@@ -280,7 +286,8 @@ class AgentRuntime {
     // Start goal using configurable goalLabel and extraArgs.
     // Args are always: [Id, ...extraArgs, NetIn].
     // For backward compatibility, agent_init/3 also gets UserIn before NetIn.
-    final entryPC = program.labels[goalLabel];
+    final entryPC =
+        image != null ? image.entryOffsetOf(goalLabel) : program.labels[goalLabel];
     _log('INIT: $goalLabel entryPC=$entryPC');
     if (entryPC == null) {
       _output('[ERROR] Predicate $goalLabel not found');

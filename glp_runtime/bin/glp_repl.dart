@@ -103,22 +103,6 @@ void main() async {
       continue;
     }
 
-    if (trimmed.startsWith(':activate')) {
-      final parts = trimmed.split(RegExp(r'\s+'));
-      if (parts.length != 2) {
-        print('Usage: :activate <module_name>');
-        continue;
-      }
-      final moduleName = parts[1];
-      try {
-        engine.activateDynamicModule(moduleName);
-        print('Activated module: $moduleName');
-      } catch (e) {
-        print('Error activating $moduleName: $e');
-      }
-      continue;
-    }
-
     if (trimmed.startsWith(':bytecode') || trimmed.startsWith(':bc')) {
       if (engine.loadedPrograms.isEmpty) {
         print('No programs loaded');
@@ -243,7 +227,6 @@ void _printHelp() {
   print('  :debug, :d             Toggle DEBUG output');
   print('  :strict, :s            Toggle strict type checking (default: on)');
   print('  :limit <n>             Set goal reduction limit to <n>');
-  print('  :activate <module>     Activate module for dynamic dispatch');
   print('  :bytecode, :bc         Show loaded bytecode');
   print('');
   print('Type Checking:');
