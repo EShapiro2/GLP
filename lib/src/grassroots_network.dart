@@ -665,6 +665,28 @@ class GrassrootsNetwork {
   /// Address changes are surfaced via [onConnectivityStatusChanged].
   String? getPublicAddress() => store.state.transports.publicAddress;
 
+  /// Feed the networking layer a peer's current public `ip:port`, learned at
+  /// the GLP level (from a rendezvous agent or a BLE-adjacent friend). The
+  /// layer records it in its dial book for [send] and reconnection, creating a
+  /// dial-book entry even for a peer it has not yet met. Spec
+  /// `docs/GLP_Networking_API/sections/ip.tex` §Connectivity and Address.
+  ///
+  /// [address] must be a non-empty `ip:port` (IPv4, or bracketed IPv6 as
+  /// `[ip]:port`); it is canonicalized before storage. An unparseable address
+  /// is rejected with an [ArgumentError]. This call only ever *supplies* an
+  /// address — it never clears one; stored addresses are cleared only when the
+  /// peer itself reports it no longer has one.
+  void putPeerAddress(Uint8List pubkey, String address) {
+    final parsed = parseAddressString(address);
+    if (parsed == null) {
+      throw ArgumentError.value(address, 'address', 'not a valid ip:port');
+    }
+    store.dispatch(AssociateUdpAddressAction(
+      publicKey: pubkey,
+      address: parsed.toAddressString(),
+    ));
+  }
+
   /// Get peer by public key - from Redux store
   PeerState? getPeer(Uint8List pubkey) => _peersState.getPeerByPubkey(pubkey);
 

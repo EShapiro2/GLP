@@ -1046,11 +1046,35 @@ void main() {
       expect(peer.udpAddress, isNull);
     });
 
-    test('is a no-op for unknown peer', () {
+    test('creates a minimal dial-book entry for an unknown peer', () {
+      // putPeerAddress seam: GLP can feed an address for a peer never seen,
+      // and the layer materializes a dial-book entry for send/reconnection.
+      final pubkey = _testPubkey(99);
+      final hex = _pubkeyHex(pubkey);
+      final action = AssociateUdpAddressAction(
+        publicKey: pubkey,
+        address: '[2001:db8::1]:4001',
+      );
+
+      final result = peersReducer(PeersState.initial, action);
+
+      final created = result.peers[hex];
+      expect(created, isNotNull);
+      expect(created!.udpAddress, '[2001:db8::1]:4001');
+      expect(created.udpAddressCandidates, contains('[2001:db8::1]:4001'));
+      expect(created.hasKnownAddress, isTrue);
+      // A GLP-fed address is a dial-book hint only, never a live session.
+      expect(created.isReachable, isFalse);
+      expect(created.hasLiveUdpConnection, isFalse);
+      expect(created.isFriend, isFalse);
+      expect(created.connectionState, PeerConnectionState.disconnected);
+    });
+
+    test('is a no-op for an unknown peer with an empty address', () {
       const state = PeersState.initial;
       final action = AssociateUdpAddressAction(
-        publicKey: _testPubkey(99),
-        address: '[2001:db8::1]:4001',
+        publicKey: _testPubkey(98),
+        address: '',
       );
 
       final result = peersReducer(state, action);

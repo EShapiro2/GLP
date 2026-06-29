@@ -80,6 +80,8 @@ The primary public address is discovered via an external service (e.g. seeip.org
 
 Never unilaterally clear a peer's stored UDP address. Update it when a new valid address arrives (from ANNOUNCE, signaling, or observation), and clear it only when the peer explicitly tells us they no longer have one. Stale peer cleanup, our-side disconnects, and transport restarts must not null out `udpAddress` — it is the last known location and the only way to attempt reconnection. This applies to friends and non-friends alike.
 
+GLP feeds peer addresses into the layer's dial book via `putPeerAddress(pk, address)` (spec `GLP_Networking_API` §Connectivity and Address): it validates the `ip:port`, **creates a dial-book entry even for a peer never seen before**, and is supply-only — it never clears an address (an unparseable address throws). The address is GLP-learned (from a rendezvous agent or a BLE-adjacent friend), so the layer stays friendship-agnostic: a `putPeerAddress`-created peer carries the address but `isFriend = false` and is not `isReachable` until a session authenticates.
+
 ## Transport Independence
 
 BLE and UDP are independent transports. Disabling or losing one must have **zero effect** on the other's connection state, peer reachability, or online status. A peer connected via UDP remains online regardless of BLE state. The stale peer logic, the UI, and the reducer must all respect this: never let a BLE disconnection degrade UDP-derived state.

@@ -493,7 +493,22 @@ PeersState peersReducer(PeersState state, dynamic action) {
         peers: Map.from(state.peers)..[pubkeyHex] = updated,
       );
     }
-    return state;
+    // Unknown peer: GLP fed an address (via putPeerAddress) for a peer we have
+    // not yet met. Materialize a minimal dial-book entry so send and
+    // reconnection can reach it. An empty address has nothing to store.
+    final newAddress = action.address.isEmpty ? null : action.address;
+    if (newAddress == null) return state;
+    final created = PeerState(
+      publicKey: action.publicKey,
+      nickname: '',
+      connectionState: PeerConnectionState.disconnected,
+      transport: PeerTransport.udp,
+      udpAddress: newAddress,
+      udpAddressCandidates: normalizeAddressStrings([newAddress]),
+    );
+    return state.copyWith(
+      peers: Map.from(state.peers)..[pubkeyHex] = created,
+    );
   }
 
   if (action is PeerFriendListUpdatedAction) {
