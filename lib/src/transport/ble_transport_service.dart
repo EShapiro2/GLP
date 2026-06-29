@@ -11,6 +11,15 @@ import '../models/packet.dart';
 import '../store/store.dart';
 import 'transport_service.dart';
 
+// Re-export the iOS local-name marker from the BLE plugin — the single source
+// of truth (the plugin owns this constant as of grassroots_bluetooth_layer
+// 0.2.0). iOS devices advertise this fixed local name; the iOS-central →
+// non-iOS second link is measurably broken (see CLAUDE.md, "Dual-Role BLE Is
+// Mandatory"), so peers that see the marker yield the pair's first dial to the
+// iOS device and open the reverse leg themselves.
+export 'package:grassroots_bluetooth_layer/grassroots_bluetooth_layer.dart'
+    show grassrootsIosLocalName;
+
 /// Default display info for BLE transport
 const _defaultBleDisplayInfo = TransportDisplayInfo(
   icon: Icons.bluetooth,
@@ -23,12 +32,6 @@ const _defaultBleDisplayInfo = TransportDisplayInfo(
 /// service UUID is derived from the advertiser's public key.
 const String _grassrootsCharacteristicUuid =
     '0000ff01-0000-1000-8000-00805f9b34fb';
-
-/// Fixed local name advertised by iOS devices. The iOS-central → non-iOS
-/// second link is measurably broken (see CLAUDE.md, "Dual-Role BLE Is
-/// Mandatory"), so peers that see this marker in an advertisement yield the
-/// pair's first dial to the iOS device and open the reverse leg themselves.
-const String grassrootsIosLocalName = 'grs-ios';
 
 /// MTU we request from the peer on every central connect. ANNOUNCE alone is
 /// ~200 bytes, far over the default ATT MTU of 23 (20-byte payload). 247 is
@@ -990,8 +993,8 @@ class BleTransportService extends TransportService {
   /// Absence proves nothing (backgrounded iOS drops the name), which is why
   /// every marker-dependent branch in [_shouldOpenCentralLeg] has a fallback.
   bool _advertisementCarriesIosMarker(ble.BleAdvertisement adv) {
-    return adv.advertisedName == grassrootsIosLocalName ||
-        adv.platformName == grassrootsIosLocalName;
+    return adv.advertisedName == ble.grassrootsIosLocalName ||
+        adv.platformName == ble.grassrootsIosLocalName;
   }
 
   /// Cold-start tie-breaker between same-platform peers: the one whose
