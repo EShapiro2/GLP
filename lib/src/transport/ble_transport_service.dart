@@ -33,6 +33,13 @@ const _defaultBleDisplayInfo = TransportDisplayInfo(
 const String _grassrootsCharacteristicUuid =
     '0000ff01-0000-1000-8000-00805f9b34fb';
 
+// TEMP (rotation exerciser): fixed GATT data-plane service UUID, identical on
+// every Grassroots device. The advertised service UUID rotates (discovery
+// hint); this stays stable so re-advertising never rebuilds the GATT service or
+// drops peripheral links. Remove together with the exerciser timer below.
+const String _exerciserFixedGattServiceUuid =
+    '84c40316-0871-e5ad-0000-0000000000da';
+
 /// MTU we request from the peer on every central connect. ANNOUNCE alone is
 /// ~200 bytes, far over the default ATT MTU of 23 (20-byte payload). 247 is
 /// the largest most Android stacks negotiate; the actual value is whatever
@@ -123,6 +130,12 @@ class BleTransportService extends TransportService {
   /// mode stops scanning.
   Timer? _scanWatchdog;
   DateTime _lastAdvertisementAt = DateTime.now();
+
+  // TEMP (rotation exerciser): flips the advertised beacon every 15s while
+  // keeping [_exerciserFixedGattServiceUuid] stable, to validate that the
+  // plugin's non-destructive re-advertise preserves live peripheral links.
+  Timer? _exerciserRotateTimer;
+  int _exerciserBeaconCounter = 0;
   static const Duration _scanWatchdogInterval = Duration(seconds: 10);
 
   /// True after [stop] is called. Drops in-flight payloads and prevents
@@ -281,10 +294,14 @@ class BleTransportService extends TransportService {
           await _ble.startAdvertising(
             serviceUuid: identity.bleServiceUuid,
             characteristicUuid: _grassrootsCharacteristicUuid,
+            // TEMP (exerciser): register the GATT service under a stable UUID so
+            // beacon rotation never rebuilds it.
+            gattServiceUuid: _exerciserFixedGattServiceUuid,
             localName: localName,
             bondless: true,
           );
           anyStarted = true;
+          _startExerciserRotation(localName); // TEMP (exerciser)
         } catch (e) {
           debugPrint('Failed to start advertising: $e');
         }
@@ -390,11 +407,45 @@ class BleTransportService extends TransportService {
     await start();
   }
 
+  /// TEMP (rotation exerciser): every 15s re-advertise a mutated beacon UUID
+  /// (Grassroots prefix + rotating suffix) while keeping
+  /// [_exerciserFixedGattServiceUuid] and the characteristic fixed — exercising
+  /// the plugin's non-destructive re-advertise. A live peripheral leg should NOT
+  /// drop when this fires. Remove together with the rest of the exerciser.
+  void _startExerciserRotation(String? localName) {
+    _exerciserRotateTimer?.cancel();
+    _exerciserRotateTimer =
+        Timer.periodic(const Duration(seconds: 15), (_) async {
+      if (_stopped) return;
+      _exerciserBeaconCounter++;
+      final suffix = _exerciserBeaconCounter.toRadixString(16).padLeft(16, '0');
+      const prefix = GrassrootsIdentity.grassrootsUuidPrefix; // 16 hex
+      final beacon = '${prefix.substring(0, 8)}-${prefix.substring(8, 12)}-'
+          '${prefix.substring(12, 16)}-${suffix.substring(0, 4)}-'
+          '${suffix.substring(4, 16)}';
+      try {
+        await _ble.startAdvertising(
+          serviceUuid: beacon,
+          characteristicUuid: _grassrootsCharacteristicUuid,
+          gattServiceUuid: _exerciserFixedGattServiceUuid,
+          localName: localName,
+          bondless: true,
+        );
+        debugPrint('[exerciser] rotated advertised beacon -> $beacon '
+            '(gattService stays $_exerciserFixedGattServiceUuid)');
+      } catch (e) {
+        debugPrint('[exerciser] re-advertise failed: $e');
+      }
+    });
+  }
+
   @override
   Future<void> stop() async {
     _stopped = true;
     _scanWatchdog?.cancel();
     _scanWatchdog = null;
+    _exerciserRotateTimer?.cancel(); // TEMP (exerciser)
+    _exerciserRotateTimer = null;
     try {
       await _ble.stopScan();
     } catch (_) {}
@@ -650,7 +701,10 @@ class BleTransportService extends TransportService {
     try {
       await _ble.connect(
         remoteId: remoteId,
-        serviceUuid: serviceUuid,
+        // TEMP (exerciser): discovery still keys off the rotating advertised
+        // `serviceUuid`, but the GATT data service to discover post-connect is
+        // the stable fixed UUID both peers register under.
+        serviceUuid: _exerciserFixedGattServiceUuid,
         characteristicUuid: _grassrootsCharacteristicUuid,
         androidMtu: _requestedAndroidMtu,
         // Apple's docs say CoreBluetooth's connect can legitimately take

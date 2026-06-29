@@ -59,6 +59,13 @@ dependencies:
   # macOS / Windows / Linux.
   sodium_libs: ^3.4.4+1
 
+# TEMP (rotation exerciser / non-destructive re-advertise validation):
+# point the BLE plugin at the local feat/decouple-advertised-uuid working tree.
+# Keep that repo checked out on the branch. Revert before merging.
+dependency_overrides:
+  grassroots_bluetooth_layer:
+    path: ../grassroots-bluetooth-layer
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
