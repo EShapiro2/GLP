@@ -641,6 +641,11 @@ class GrassrootsNetwork {
   bool get _udpAvailable =>
       _udpService != null && store.state.transports.udpState.isUsable;
 
+  /// The agent's own public key — its globally unique identity. Spec
+  /// `docs/GLP_Networking_API/sections/api.tex` §Identity: `getIdentity() ->
+  /// PubKey`. The private key is held internally and never returned here.
+  Uint8List getIdentity() => identity.publicKey;
+
   /// Currently reachable peers — spec `docs/GLP_Networking_API/sections/api.tex`
   /// §getPeers: "Discover currently reachable peers." Returns only peers
   /// where `isReachable` is true (i.e. at least one transport is live).
@@ -1879,7 +1884,10 @@ class GrassrootsNetwork {
     await _bleService?.applyRoleModeChange();
   }
 
-  Future<void> setColdCallTrustLevel(ColdCallTrustLevel level) async {
+  /// Set the BLE cold-call trust level (Open/Closed). Spec
+  /// `docs/GLP_Networking_API/sections/ble.tex` §Cold-Call Trust Levels:
+  /// `setTrustLevel(level)`. Until set, the level is Closed.
+  Future<void> setTrustLevel(ColdCallTrustLevel level) async {
     if (store.state.settings.coldCallTrustLevel == level) return;
     store.dispatch(SetColdCallTrustLevelAction(level));
   }
