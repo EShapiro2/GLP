@@ -1,24 +1,25 @@
 %% termination_meta.glp - Termination-detecting GLP metainterpreter
-%% Source: GLP Papers (Program: GLP termination-detecting metainterpreter)
+%% Owner: GLP-ICLP (Program: GLP termination-detecting metainterpreter)
 %%
-%% Uses short-circuit technique: chain of paired variables extends
-%% while goals fork, contracts when goals terminate, closes when
-%% all goals have terminated.
+%% Uses the short-circuit technique: a chain of paired variables extends
+%% while goals fork, contracts when goals terminate, and closes when all
+%% goals have terminated.
 %%
-%% Call with: run(Goal, done, R)
-%% R? will be bound to done iff the run terminates.
-%%
-%% Short-circuit: L--R pair where L is left endpoint, R is right endpoint
-%% When goal terminates, it closes its segment by unifying L with R
-
-%% External procedure declarations (no clauses in this file)
-procedure reduce(_?, _).
+%% Called with run(Goal, done, R): the reader R? is assigned done iff the
+%% run terminates.
 
 procedure run(_?, _?, _).
-run(true, L, L?).  % halt - close the circuit
-run((A,B), L, R?) :-  % fork - split the chain
-    run(A?, L?, M),
-    run(B?, M?, R).
-run(A, L, R?) :- known(A?) |  % reduce
-    reduce(A?, B),
-    run(B?, L?, R).
+run(true, L, L?).                                              % halt - close the circuit
+run((A, B), L, R?) :-                                          % fork - split the chain
+    run(A?, L?, M), run(B?, M?, R).
+run(A, L, R?) :- known(A?) |                                   % reduce
+    reduce(A?, B), run(B?, L?, R).
+
+%% Object program: merge
+procedure reduce(_?, _).
+reduce(merge([X|Xs], Ys, [X?|Zs?]), merge(Xs?, Ys?, Zs)).
+reduce(merge(Xs, [Y|Ys], [Y?|Zs?]), merge(Xs?, Ys?, Zs)).
+reduce(merge([], [], []), true).
+
+%% Example initial goal:
+%% run((merge([1,2],[a],Xs), merge([],[],Ys)), done, R).   %% R = done on termination

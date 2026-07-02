@@ -1,39 +1,78 @@
 %% network_switch_3way.glp - 3-Way Network Switch
-%% Source: GLP Papers (Program: 3-Way Network Switch)
+%% Owner: GLP-ICLP (Program: 3-Way Network Switch)
 %%
-%% For three agents p, q, r and three channels Chp, Chq, Chr.
-%% Initialize with: network((p,Chp?),(q,Chq?),(r,Chr?))
+%% For three agents p, q, r holding channel ends PEnd, QEnd, REnd created by
+%% new_channel(ChP, PEnd), ..., the switch is initialized with
+%% network((p,ChP?), (q,ChQ?), (r,ChR?)). Each agent sends msg(Dest, Content)
+%% on its channel; the switch forwards Content to the channel registered
+%% under Dest.
 
-procedure network(_, _, _).
-% P to Q forwarding
+NetMsg ::= msg(Constant, Constant).
+
+procedure network(_?, _?, _?).
+
+%% P to Q forwarding
 network((P,ChP),(Q,ChQ),(R,ChR)) :-
-    ground(Q?), receive(ChP?,msg(Q?,X),ChP1), send(ChQ?,X?,ChQ1) |
+    receive(msg(Dest,X), ChP?, ChP1), Dest? =?= Q? |
+    send(X?, ChQ?, ChQ1),
     network((P?,ChP1?),(Q?,ChQ1?),(R?,ChR?)).
 
-% P to R forwarding
+%% P to R forwarding
 network((P,ChP),(Q,ChQ),(R,ChR)) :-
-    ground(R?), receive(ChP?,msg(R?,X),ChP1), send(ChR?,X?,ChR1) |
+    receive(msg(Dest,X), ChP?, ChP1), Dest? =?= R? |
+    send(X?, ChR?, ChR1),
     network((P?,ChP1?),(Q?,ChQ?),(R?,ChR1?)).
 
-% Q to P forwarding
+%% Q to P forwarding
 network((P,ChP),(Q,ChQ),(R,ChR)) :-
-    ground(P?), receive(ChQ?,msg(P?,X),ChQ1), send(ChP?,X?,ChP1) |
+    receive(msg(Dest,X), ChQ?, ChQ1), Dest? =?= P? |
+    send(X?, ChP?, ChP1),
     network((P?,ChP1?),(Q?,ChQ1?),(R?,ChR?)).
 
-% Q to R forwarding
+%% Q to R forwarding
 network((P,ChP),(Q,ChQ),(R,ChR)) :-
-    ground(R?), receive(ChQ?,msg(R?,X),ChQ1), send(ChR?,X?,ChR1) |
+    receive(msg(Dest,X), ChQ?, ChQ1), Dest? =?= R? |
+    send(X?, ChR?, ChR1),
     network((P?,ChP?),(Q?,ChQ1?),(R?,ChR1?)).
 
-% R to P forwarding
+%% R to P forwarding
 network((P,ChP),(Q,ChQ),(R,ChR)) :-
-    ground(P?), receive(ChR?,msg(P?,X),ChR1), send(ChP?,X?,ChP1) |
+    receive(msg(Dest,X), ChR?, ChR1), Dest? =?= P? |
+    send(X?, ChP?, ChP1),
     network((P?,ChP1?),(Q?,ChQ?),(R?,ChR1?)).
 
-% R to Q forwarding
+%% R to Q forwarding
 network((P,ChP),(Q,ChQ),(R,ChR)) :-
-    ground(Q?), receive(ChR?,msg(Q?,X),ChR1), send(ChQ?,X?,ChQ1) |
+    receive(msg(Dest,X), ChR?, ChR1), Dest? =?= Q? |
+    send(X?, ChQ?, ChQ1),
     network((P?,ChP?),(Q?,ChQ1?),(R?,ChR1?)).
 
-procedure send(_, _, _).
-procedure receive(_, _, _).
+%% Termination: all incoming streams closed - close all outgoing streams.
+network((_, ch([], [])), (_, ch([], [])), (_, ch([], []))).
+
+%% Play: p sends hello to q and bye to r; q and r receive.
+procedure sender_p(Channel(Stream(Constant), Stream(NetMsg))?).
+sender_p(Ch) :-
+    send(msg(q, hello), Ch?, Ch1), send(msg(r, bye), Ch1?, Ch2) |
+    sender_close(Ch2?).
+
+procedure sender_close(Channel(Stream(Constant), Stream(NetMsg))?).
+sender_close(ch(_, [])).
+
+procedure receiver(Channel(Stream(Constant), Stream(NetMsg))?, Stream(Constant)).
+receiver(ch(In, []), Got?) :- copy_stream(In?, Got).
+
+procedure copy_stream(Stream(Constant)?, Stream(Constant)).
+copy_stream([X|Xs], [X?|Ys?]) :- ground(X?) | copy_stream(Xs?, Ys).
+copy_stream([], []).
+
+procedure switch_play(Stream(Constant), Stream(Constant)).
+switch_play(GotQ?, GotR?) :-
+    new_channel(ChP, PEnd), new_channel(ChQ, QEnd), new_channel(ChR, REnd),
+    network((p, ChP?), (q, ChQ?), (r, ChR?)),
+    sender_p(PEnd?),
+    receiver(QEnd?, GotQ),
+    receiver(REnd?, GotR).
+
+%% Example initial goal:
+%% switch_play(GotQ, GotR).   %% GotQ = [hello|_], GotR = [bye|_] (switch stays live)

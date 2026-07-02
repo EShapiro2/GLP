@@ -1,7 +1,8 @@
-% Test: Counter Monitor
-% Paper: Appendix A.2
-% Description: Message-driven counter with add/clear/read operations
-% Tests embedded output type (Integer? in read message)
+%% counter_monitor.glp - Counter Monitor
+%% Owner: GLP-ICLP (Moded-Types paper, Appendix A.2)
+%%
+%% Message-driven counter with add/clear/read operations.
+%% Demonstrates an embedded output type (Integer? in the read message).
 
 CounterCall ::= add ; clear ; read(Integer?).
 

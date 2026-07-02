@@ -1,33 +1,26 @@
 %% failsafe_meta.glp - Fail-safe GLP metainterpreter
-%% Source: GLP Papers (Program: GLP fail-safe metainterpreter)
+%% Owner: GLP-ICLP (Program: GLP fail-safe metainterpreter)
 %%
-%% TYPE CHECKER NOTE: This program requires parameterized types and a typed
-%% module system (cross-module calls via #). Will be supported in a future version.
-%%
-%% Reports failures via short-circuit instead of aborting.
-%% L--R threads through computation for failure collection.
+%% A run is normally aborted once a goal fails. This metainterpreter instead
+%% reports failures on a stream: the object program's reduce encoding ends
+%% with the catch-all clause
+%%     reduce(A, failed(A?)) :- otherwise | true.
+%% which returns the failed goal as the term failed(A) for further processing.
+%% Each fork merges the failure streams of its two branches.
 
-%% Type definitions
-FailList ::= [] ; [_ | FailList].
+procedure run(_?, Stream(_)).
+run(true, []).                                                 % halt
+run((A, B), Zs?) :-                                            % fork
+    run(A?, Xs), run(B?, Ys), merge(Xs?, Ys?, Zs).
+run(failed(A), [failed(A?)]).                                  % report failure
+run(A, Xs?) :- known(A?) | reduce(A?, B), run(B?, Xs).         % reduce
 
-%% External procedure declarations (no clauses in this file)
+%% Object program: merge, with the fail-safe catch-all
 procedure reduce(_?, _).
+reduce(merge([X|Xs], Ys, [X?|Zs?]), merge(Xs?, Ys?, Zs)).
+reduce(merge(Xs, [Y|Ys], [Y?|Zs?]), merge(Xs?, Ys?, Zs)).
+reduce(merge([], [], []), true).
+reduce(A, failed(A?)) :- otherwise | true.
 
-procedure run(_?, _?, FailList?, FailList).
-run(_, true, L, L?).                             % halt - close circuit
-run(M, (A, B), L, R?) :-                         % fork - chain
-    ground(M?) |
-    run(M?, A?, L?, Mid),
-    run(M?, B?, Mid?, R).
-run(_, M1 # G, L, R?) :- run(M1?, G?, L?, R).    % cross-module
-run(_, failed(A), L, [failed(A?)|L?]).           % report failure
-run(M, A, L, R?) :-                              % reduce
-    compound(A?), ground(M?) |
-    M? # reduce(A?, B),
-    run(M?, B?, L?, R).
-
-%% Object program must include catch-all:
-%% reduce(A, failed(A?)) :- otherwise | true.
-
-%% Example usage:
-%% ?- run(merge_module, merge([1,2], [3], Zs), done, Failures).
+%% Example initial goal (nogood fails; the run reports it and completes):
+%% run((merge([1],[],Xs), nogood), Fs).

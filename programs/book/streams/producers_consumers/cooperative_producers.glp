@@ -1,33 +1,61 @@
 %% cooperative_producers.glp - Cooperative stream production
-%% Source: GLP Papers (Program: Cooperative Producers)
+%% Owner: GLP-ICLP (Program: Cooperative Producers)
 %%
-%% While single-writer constraint prevents competitive concurrent updates,
-%% GLP enables sophisticated cooperative techniques where multiple producers
-%% coordinate through explicit handover.
+%% The single-writer constraint prevents competitive concurrent updates, but
+%% multiple producers can cooperate through explicit handover: the control
+%% token control(Xs, Next) carries the stream-tail writer Xs and the writer
+%% Next of the next control token, enabling round-robin production,
+%% priority-based handover, or dynamic producer pools.
 %%
-%% control(Xs,Next) encapsulates both stream tail writer and continuation
-%% for transferring control, enabling round-robin production, priority-based
-%% handover, or dynamic producer pools.
+%% A producer consumes a token, appends its batch to the stream, and binds
+%% the token's Next writer to a fresh token carrying the new tail; the reader
+%% of the fresh token's own Next slot is returned to the caller, which hands
+%% it to the next consumer of the chain. The closed alternative terminates
+%% the token chain.
 
-%% Type definitions
+%% Type definitions. Both token slots carry writers, so both are ?-typed.
 Done ::= done.
-Control ::= control(Stream(_), Control).
+Control(X) ::= control(Stream(X)?, Control(X)?) ; closed.
 
-procedure producer_a(Control).
-producer_a(control(Xs,Next?)) :-
-    produce_batch_a(Xs,Xs1,Done),
-    handover(Done?,Xs1?,Next).
+procedure producer_a(Control(Constant)?, Control(Constant)).
+producer_a(control(Xs?, Next?), NextTok?) :-
+    produce_batch_a(Xs, Xs1?, Done),
+    bind_token(Done?, Xs1, NextTok, Next).
+producer_a(closed, closed).
 
-procedure producer_b(Control).
-producer_b(control(Xs,Next?)) :-
-    produce_batch_b(Xs,Xs1,Done),
-    handover(Done?,Xs1?,Next).
+procedure producer_b(Control(Constant)?, Control(Constant)).
+producer_b(control(Xs?, Next?), NextTok?) :-
+    produce_batch_b(Xs, Xs1?, Done),
+    bind_token(Done?, Xs1, NextTok, Next).
+producer_b(closed, closed).
 
-procedure handover(Done?, Stream(X)?, Control).
-handover(done,Xs,control(Xs?,Next?)).
+%% bind_token(Done?, Tail, NextTok, Token): once the batch is done, binds
+%% Token to control(Tail, NA) with NA a fresh next-token writer, and conveys
+%% the reader NA? out through NextTok.
+procedure bind_token(Done?, Stream(Constant), Control(Constant), Control(Constant)).
+bind_token(done, Xs?, NA?, control(Xs, NA)).
 
-procedure produce_batch_a(Stream(X), Stream(X), Done).
-produce_batch_a([a,b,c|Xs],Xs?,done).
+procedure produce_batch_a(Stream(Constant), Stream(Constant)?, Done).
+produce_batch_a([a,b,c|Xs?], Xs, done).
 
-procedure produce_batch_b(Stream(X), Stream(X), Done).
-produce_batch_b([d,e,f|Xs],Xs?,done).
+procedure produce_batch_b(Stream(Constant), Stream(Constant)?, Done).
+produce_batch_b([d,e,f|Xs?], Xs, done).
+
+%% Closer: consumes the final token, closes the stream and the token chain.
+procedure closer(Control(Constant)?).
+closer(control([], U?)) :- close_token(U).
+closer(closed).
+
+procedure close_token(Control(Constant)).
+close_token(closed).
+
+%% Play: a produces its batch and hands the stream over to b; the closer
+%% consumes the token after b and closes the stream.
+procedure coop_play(Stream(Constant)).
+coop_play(S?) :-
+    producer_a(control(S, T), NxtA),
+    producer_b(T?, _),
+    closer(NxtA?).
+
+%% Example initial goal:
+%% coop_play(S).   %% S = [a, b, c, d, e, f]

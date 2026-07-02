@@ -1,43 +1,24 @@
 %% tracing_meta.glp - Tracing GLP metainterpreter
-%% Source: GLP Papers (Program: GLP tracing metainterpreter)
+%% Owner: GLP-ICLP (Program: GLP tracing metainterpreter)
 %%
-%% TYPE CHECKER NOTE: This program requires parameterized types and a typed
-%% module system (cross-module calls via #). Will be supported in a future version.
-%%
-%% Builds execution tree capturing each reduction.
-%% Uses observe/3 to capture goal state at each step.
+%% Produces a trace of the run, which a retracing metainterpreter can use to
+%% single-step through the very same run, repeating its nondeterministic
+%% scheduling choices. Each program clause A :- G | B is represented by a unit
+%% clause reduce(A, B, I) :- G | true, with I the serial number of the clause
+%% in the program. Each reduction is recorded as the trace node
+%% t(I, Time, SubTrace).
 
-%% Type definitions
-ExecTree ::= true ; fork(ExecTree, ExecTree) ; reduction(_, _?, ExecTree).
+procedure run(_?, _).
+run(true, true).                                               % halt
+run((A, B), (TA?, TB?)) :- run(A?, TA), run(B?, TB).           % fork
+run(A, t(I?, Time?, TB?)) :- known(A?) |                       % reduce
+    now(Time), reduce(A?, B, I), run(B?, TB).
 
-%% External procedure declarations (no clauses in this file)
-procedure reduce(_?, _, _).
-procedure reduce_by_index(_?, _, _).
-procedure observe(_?, _, _).
+%% Object program: merge, with clause serial numbers
+procedure reduce(_?, _, Integer).
+reduce(merge([X|Xs], Ys, [X?|Zs?]), merge(Xs?, Ys?, Zs), 1).
+reduce(merge(Xs, [Y|Ys], [Y?|Zs?]), merge(Xs?, Ys?, Zs), 2).
+reduce(merge([], [], []), true, 3).
 
-procedure run(_?, _?, ExecTree).
-run(_, true, true).                              % halt
-run(M, (A, B), fork(TA?, TB?)) :-                % fork
-    ground(M?) |
-    run(M?, A?, TA),
-    run(M?, B?, TB).
-run(_, M1 # G, Tree?) :- run(M1?, G?, Tree).     % cross-module
-run(M, A, reduction(A_obs?, I?, TB?)) :-         % reduce
-    compound(A?), ground(M?) |
-    observe(A?, A_exec, A_obs),
-    M? # reduce(A_exec?, B, I),
-    run(M?, B?, TB).
-
-%% Object program must provide reduce/3 with clause index:
-%% reduce(merge([X|Xs], Ys, [X?|Zs?]), merge(Xs?, Ys?, Zs), 1).
-
-procedure replay(_?, ExecTree?, _).
-replay(_, true, true).
-replay(M, fork(T1, T2), (A?, B?)) :-
-    ground(M?) |
-    replay(M?, T1?, A),
-    replay(M?, T2?, B).
-replay(M, reduction(_, I, SubTree), Goal?) :-
-    ground(M?) |
-    M? # reduce_by_index(I?, Goal, Body),
-    replay(M?, SubTree?, Body?).
+%% Example initial goal:
+%% run(merge([1],[],Xs), T).   %% T = t(1, T1, t(3, T2, true)), T1/T2 timestamps

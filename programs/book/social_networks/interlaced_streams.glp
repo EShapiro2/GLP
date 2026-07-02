@@ -1,30 +1,43 @@
 %% interlaced_streams.glp - Interlaced Streams as Distributed Blocklace
+%% Owner: GLP-ICLP (Program: Interlaced Streams (Blocklace))
 %%
-%% Blocklace: DAG where each block references multiple predecessors.
-%% Enables concurrent block creation without consensus.
+%% A blocklace is a partially-ordered generalization of the blockchain: each
+%% block references multiple preceding blocks, forming a DAG, enabling
+%% concurrent block creation without consensus. Each agent runs interlace on
+%% its own payload stream while reading the block streams of the other
+%% agents; the unknown guard identifies the current tip of each observed
+%% stream by detecting its unbound tail.
 
 %% Type definitions
-PayloadList ::= [] ; [_ | PayloadList].
+Payloads ::= [] ; [Constant | Payloads].
+Block ::= block(Constant, Tips).
+Tips ::= [] ; [Block | Tips].
+BlockStream ::= [] ; [Block | BlockStream].
+OtherStreams ::= [] ; [BlockStream | OtherStreams].
 
-procedure streams(_, _).
-streams(stream(S?), Others) :-
-    produce_payloads(Payloads),
-    interlace(Payloads?, S, Others?).
-
-procedure produce_payloads(PayloadList).
-produce_payloads([r1, r2]).
-
-procedure interlace(PayloadList, _, _).
+procedure interlace(Payloads?, BlockStream, OtherStreams?).
 interlace([Payload|Payloads], [block(Payload?, Tips?)|Stream?], Others) :-
     collect_tips(Others?, Tips, Others1),
     interlace(Payloads?, Stream, Others1?).
 interlace([], [], _).
 
-procedure collect_tips(_, _, _).
+procedure collect_tips(OtherStreams?, Tips, OtherStreams).
 collect_tips([[Block|Bs]|Others], [Block?|Tips?], [Bs?|Others1?]) :-
-    unknown(Bs?) |
+    unknown(Bs?) |  % Bs unbound: Block is the current tip
     collect_tips(Others?, Tips, Others1).
 collect_tips([[_|Bs]|Others], Tips?, [Bs?|Others1?]) :-
-    otherwise |
+    otherwise |     % Block already incorporated: advance
+    collect_tips(Others?, Tips, Others1).
+collect_tips([[]|Others], Tips?, [[]|Others1?]) :-
     collect_tips(Others?, Tips, Others1).
 collect_tips([], [], []).
+
+%% Play: agent b produces blocks referencing nobody; agent a produces blocks
+%% referencing b's current tips.
+procedure interlace_play(BlockStream).
+interlace_play(SA?) :-
+    interlace([b1, b2], SB, []),
+    interlace([a1, a2], SA, [SB?]).
+
+%% Example initial goal:
+%% interlace_play(SA).   %% SA = [block(a1, TipsB1), block(a2, TipsB2)]

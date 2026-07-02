@@ -540,14 +540,14 @@ check "defined guard suspend" "suspended" "$a19"
 # failed instead of suspending; producer-first worked — order-sensitive.
 echo "--- A19b: Bounded-buffer back-pressure (Issue 12) ---"
 a19bb_cons=$("$REPL_RUN" <<HEREDOC
-$GLP_DIR/programs/paper/bounded_buffer.glp
+$GLP_DIR/programs/book/streams/buffered_communication/hollow_integers.glp
 :limit 50
 consumer([X1?, X2?, X3? | Xs]), producer(1, [X1, X2, X3 | Xs?]).
 :quit
 HEREDOC
 2>&1)
 a19bb_prod=$("$REPL_RUN" <<HEREDOC
-$GLP_DIR/programs/paper/bounded_buffer.glp
+$GLP_DIR/programs/book/streams/buffered_communication/hollow_integers.glp
 :limit 50
 producer(1, [X1, X2, X3 | Xs?]), consumer([X1?, X2?, X3? | Xs]).
 :quit
@@ -942,7 +942,6 @@ POSITIVE_FILES=(
     "$BOOK/recursive/list_processing/append.glp"
     "$BOOK/recursive/list_processing/copy.glp"
     "$BOOK/recursive/list_processing/delete.glp"
-    "$BOOK/recursive/list_processing/dl_append.glp"
     "$BOOK/recursive/list_processing/filter_even.glp"
     "$BOOK/recursive/list_processing/inner_product.glp"
     "$BOOK/recursive/list_processing/inner_product_iter.glp"
@@ -964,6 +963,7 @@ POSITIVE_FILES=(
     # --- book/recursive/structure_processing ---
     "$BOOK/recursive/structure_processing/binary_tree.glp"
     "$BOOK/recursive/structure_processing/list_to_bst.glp"
+    "$BOOK/recursive/structure_processing/observe.glp"
     "$BOOK/recursive/structure_processing/substitute.glp"
     "$BOOK/recursive/structure_processing/traversals.glp"
     "$BOOK/recursive/structure_processing/tree_sum.glp"
@@ -971,17 +971,17 @@ POSITIVE_FILES=(
     # --- book/social_networks ---
     "$BOOK/social_networks/broadcast.glp"
     "$BOOK/social_networks/replicate.glp"
-    "$BOOK/social_networks/replicate2.glp"
-    "$BOOK/social_networks/replicate3.glp"
+    "$BOOK/social_networks/interlaced_streams.glp"
 
     # --- book/streams/buffered_communication ---
     "$BOOK/streams/buffered_communication/hollow_integers.glp"
 
     # --- book/streams/producers_consumers ---
     "$BOOK/streams/producers_consumers/biased_merge.glp"
+    "$BOOK/streams/producers_consumers/coop_stream.glp"
+    "$BOOK/streams/producers_consumers/cooperative_producers.glp"
     "$BOOK/streams/producers_consumers/distribute.glp"
     "$BOOK/streams/producers_consumers/distribute_binary.glp"
-    "$BOOK/streams/producers_consumers/distribute_ground.glp"
     "$BOOK/streams/producers_consumers/distribute_indexed.glp"
     "$BOOK/streams/producers_consumers/fair_merge.glp"
     "$BOOK/streams/producers_consumers/merge_simple.glp"
@@ -989,6 +989,23 @@ POSITIVE_FILES=(
     "$BOOK/streams/producers_consumers/mwm.glp"
     "$BOOK/streams/producers_consumers/producer_consumer.glp"
     "$BOOK/streams/producers_consumers/producer_consumer_countdown.glp"
+
+    # --- book/streams/objects_monitors ---
+    "$BOOK/streams/objects_monitors/counter_monitor.glp"
+    "$BOOK/streams/objects_monitors/network_switch_3way.glp"
+
+    # --- book/meta (GLP-ICLP paper metainterpreters) ---
+    "$BOOK/meta/plain/plain_meta.glp"
+    "$BOOK/meta/plain/failsafe_meta.glp"
+    "$BOOK/meta/enhanced/control_meta.glp"
+    "$BOOK/meta/enhanced/termination_meta.glp"
+    "$BOOK/meta/enhanced/snapshot_meta.glp"
+    "$BOOK/meta/enhanced/tracing_meta.glp"
+    "$BOOK/meta/debugging/runtime_control_meta.glp"
+
+    # --- lib (GLP-ICLP paper techniques) ---
+    "$GLP_DIR/programs/lib/lookup/lookup.glp"
+    "$GLP_DIR/programs/lib/streams/tag_stream.glp"
 
     # --- book/misc ---
     "$BOOK/test_bug.glp"
@@ -2141,6 +2158,83 @@ HEREDOC
 check_not "X7 bad-OutputEntry fixture not loaded" "Loaded program" "$x7"
 check "X7 rejected at send_user instantiation" "send_user" "$x7"
 check "X7 names the missing user_output constructor" "user_output" "$x7"
+
+echo ""
+
+# =============================================================================
+# SECTION Y: GLP-ICLP PAPER PROGRAMS (techniques + metainterpreters)
+# =============================================================================
+# Runtime tests for the programs the GLP-ICLP-2026 paper presents
+# (appendix-additional-techniques): each loads its canonical copy and runs
+# the example goal from the file header.
+echo "=== Section Y: GLP-ICLP Paper Programs ==="
+echo ""
+
+echo "--- Y1: techniques ---"
+y1=$("$REPL_RUN" <<HEREDOC
+$GLP_DIR/programs/lib/lookup/lookup.glp
+lookup(b, [(a,1),(b,2),(c,3)], V).
+:clear
+$GLP_DIR/programs/lib/streams/tag_stream.glp
+tag_stream(alice, [hi, bye], Tagged).
+:clear
+$BOOK/recursive/structure_processing/observe.glp
+observe([m(1,[x]), m(2,[y])], Copy, Log).
+:clear
+$BOOK/streams/producers_consumers/cooperative_producers.glp
+coop_play(S).
+:clear
+$BOOK/streams/objects_monitors/network_switch_3way.glp
+switch_play(GotQ, GotR).
+:clear
+$BOOK/social_networks/interlaced_streams.glp
+interlace_play(SA).
+:quit
+HEREDOC
+2>&1)
+
+check "Y1 lookup finds value" "V = 2" "$y1"
+check "Y1 tag_stream tags" "Tagged = \[msg(alice, hi), msg(alice, bye)\]" "$y1"
+check "Y1 observe copies" "Copy = \[m(1, \[x\]), m(2, \[y\])\]" "$y1"
+check "Y1 observe logs" "Log = \[m(1, \[x\]), m(2, \[y\])\]" "$y1"
+check "Y1 cooperative producers hand over" "S = \[a, b, c, d, e, f\]" "$y1"
+check "Y1 switch routes to q" "GotQ = \[hello\]" "$y1"
+check "Y1 switch routes to r" "GotR = \[bye\]" "$y1"
+check "Y1 interlace produces blocks" "SA = \[block(a1" "$y1"
+
+echo "--- Y2: metainterpreters ---"
+y2=$("$REPL_RUN" <<HEREDOC
+$BOOK/meta/plain/plain_meta.glp
+run((merge([1,2,3],[4,5],Xs), merge([a,b],[c,d,e],Ys), merge(Xs?,Ys?,Zs))).
+:clear
+$BOOK/meta/plain/failsafe_meta.glp
+run((merge([1],[],Xf), nogood), Fs).
+:clear
+$BOOK/meta/enhanced/control_meta.glp
+run(merge([1,2],[3],Xc), [suspend,resume]).
+:clear
+$BOOK/meta/enhanced/termination_meta.glp
+run((merge([1,2],[a],Xt), merge([],[],Yt)), done, R).
+:clear
+$BOOK/meta/enhanced/snapshot_meta.glp
+run(merge([1,2],[3],Xa), [suspend,abort], [], Ra).
+:clear
+$BOOK/meta/enhanced/tracing_meta.glp
+run(merge([1],[],Xr), T).
+:clear
+$BOOK/meta/debugging/runtime_control_meta.glp
+run(merge([1,2],[3],Xd), [abort], [], Rd).
+:quit
+HEREDOC
+2>&1)
+
+check "Y2 plain meta merges" "Zs = \[1, 2, 3, 4, 5, a, b, c, d, e\]" "$y2"
+check "Y2 failsafe meta reports failure" "Fs = \[failed(nogood)\]" "$y2"
+check "Y2 control meta suspends and resumes" "Xc = \[1, 2, 3\]" "$y2"
+check "Y2 termination meta detects termination" "R = done" "$y2"
+check "Y2 snapshot meta dumps resolvent on abort" "Ra = \[merge(\[1, 2\], \[3\]" "$y2"
+check "Y2 tracing meta builds trace" "T = t(1, " "$y2"
+check "Y2 runtime-control meta dumps on abort" "Rd = \[merge(\[1, 2\], \[3\]" "$y2"
 
 echo ""
 

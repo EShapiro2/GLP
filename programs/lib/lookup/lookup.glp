@@ -1,22 +1,13 @@
-%% lookup.glp - List Lookup Utilities
-%% Source: GLP Papers (referenced in social graph protocols)
+%% lookup.glp - Lookup in Association List
+%% Owner: GLP-ICLP (Program: Lookup in Association List)
 %%
-%% Lookup and lookup_send for friends list operations.
+%% Finds the value associated with a key in a list of (Key, Value) pairs.
+%% The =?= guard tests ground equality; otherwise succeeds when no prior
+%% clause applies.
 
-%% lookup(Key, List, Value) - find value associated with key
+procedure lookup(_?, _?, _).
 lookup(Key, [(K, Value)|_], Value?) :- Key? =?= K? | true.
-lookup(Key, [_|Rest], Value?) :-
-    otherwise | lookup(Key?, Rest?, Value).
+lookup(Key, [_|Rest], Value?) :- otherwise | lookup(Key?, Rest?, Value).
 
-%% lookup_send(Key, Msg, Fs, Fs1) - send message through channel, update list
-%% Single-pass version that traverses list once (SRSW compliant)
-lookup_send(Key, Msg, Fs, Fs1?) :-
-    ground(Key?) |
-    lookup_send_step(Key?, Msg?, Fs?, Fs1).
-
-lookup_send_step(Key, Msg, [(K, Out)|Rest], [(K?, Out1?)|Rest?]) :-
-    Key? =?= K? |
-    Out? = [Msg?|Out1].
-lookup_send_step(Key, Msg, [Pair|Rest], [Pair?|Rest1?]) :-
-    otherwise |
-    lookup_send_step(Key?, Msg?, Rest?, Rest1).
+%% Example initial goal:
+%% lookup(b, [(a,1),(b,2),(c,3)], V).   %% V = 2

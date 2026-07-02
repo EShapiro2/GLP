@@ -1,44 +1,43 @@
-%% snapshot_meta.glp - GLP metainterpreter with snapshot collection
-%% Source: GLP Papers (Program: GLP metainterpreter with run control and snapshot)
+%% snapshot_meta.glp - GLP metainterpreter with run control and snapshot collection
+%% Owner: GLP-ICLP (Program: GLP metainterpreter with run control and snapshot collection)
 %%
-%% TYPE CHECKER NOTE: This program requires parameterized types and a typed
-%% module system (cross-module calls via #). Will be supported in a future version.
+%% Extends the run-control metainterpreter with the short-circuit technique to
+%% collect a snapshot of the run if aborted before termination. Upon abort, the
+%% resolvent is passed from left to right in the short circuit, each
+%% metainterpreter instance adding its interpreted goal to the growing resolvent.
 %%
-%% Collects snapshot of running processes when aborted.
-%% Uses short-circuit technique: upon abort, resolvent is passed
-%% from left to right, with each metainterpreter instance adding
-%% their interpreted goal to the growing resolvent.
-%%
-%% Call with: run(A, Cs?, [], R)
-%% If Cs is bound to [suspend, abort], R? will be bound to
-%% the current resolvent of the run.
+%% Called with run(A, Cs, [], R): if Cs carries suspend then abort, the reader
+%% R? is assigned the current resolvent of the run (empty if the run had
+%% already terminated).
 
-%% Type definitions
-ControlCmd ::= suspend ; resume ; abort.
-ControlList ::= [] ; [ControlCmd | ControlList].
-ResolvList ::= [] ; [_ | ResolvList].
-
-%% External procedure declarations (no clauses in this file)
-procedure reduce(_?, _).
-
-procedure run(_?, ControlList?, ResolvList?, ResolvList).
-run(true, _, L, L?).                              % halt
-run((A, B), Cs, L, R?) :-                         % fork
-    ground(Cs?) |
-    run(A?, Cs?, L?, Mid),
-    run(B?, Cs?, Mid?, R).
-run(A, [suspend|Cs], L, R?) :-                    % suspend
-    compound(A?) |
+procedure run(_?, Stream(Constant)?, _?, _).
+run(true, _, L, L?).                                           % halt
+run((A, B), Cs, L, R?) :-                                      % fork
+    distribute(Cs?, Cs1, Cs2),
+    run(A?, Cs1?, L?, M), run(B?, Cs2?, M?, R).
+run(A, [suspend|Cs], L, R?) :-                                 % suspend
     suspended_run(A?, Cs?, L?, R).
-run(A, Cs, L, R?) :-                              % reduce
-    compound(A?) |
-    reduce(A?, B),
-    run(B?, Cs?, L?, R).
+run(A, Cs, L, R?) :- known(A?), unknown(Cs?) |                 % reduce
+    reduce(A?, B), run(B?, Cs?, L?, R).
+run(A, [], L, R?) :- known(A?) |                               % control closed: run freely
+    reduce(A?, B), run(B?, [], L?, R).
 
-procedure suspended_run(_?, ControlList?, ResolvList?, ResolvList).
-suspended_run(A, [resume|Cs], L, R?) :- run(A?, Cs?, L?, R).
-suspended_run(A, [abort|_], L, [A?|L?]).
+procedure suspended_run(_?, Stream(Constant)?, _?, _).
+suspended_run(A, [resume|Cs], L, R?) :- run(A?, Cs?, L?, R).   % resume
+suspended_run(A, [abort|_], L, [A?|L?]).                       % abort: add goal to snapshot
+suspended_run(_, [], L, L?).                                   % control closed: drop goal, close circuit
 
-%% Note: Taking a snapshot of a suspended run and then resuming it
-%% requires extra effort, as two copies of the goal are needed:
-%% a 'frozen' one for the snapshot, and a 'live' one to continue the run.
+%% Ground-stream distribution (control messages are ground)
+procedure distribute(Stream(Constant)?, Stream(Constant), Stream(Constant)).
+distribute([X|Xs], [X?|Ys1?], [X?|Ys2?]) :- ground(X?) | distribute(Xs?, Ys1, Ys2).
+distribute([], [], []).
+
+%% Object program: merge
+procedure reduce(_?, _).
+reduce(merge([X|Xs], Ys, [X?|Zs?]), merge(Xs?, Ys?, Zs)).
+reduce(merge(Xs, [Y|Ys], [Y?|Zs?]), merge(Xs?, Ys?, Zs)).
+reduce(merge([], [], []), true).
+
+%% Example initial goals:
+%% run(merge([1,2],[3],Xs), [suspend,abort], [], R).    %% R = the aborted resolvent
+%% run(merge([1,2],[3],Xs), [suspend,resume], [], R).   %% R = [] after termination

@@ -1,19 +1,17 @@
 %% plain_meta.glp - Plain GLP metainterpreter
-%% Source: GLP Papers (Program: GLP plain metainterpreter)
+%% Owner: GLP-ICLP (Program: GLP plain metainterpreter)
 %%
-%% Basic metainterpreter using reduce/2 to encode program clauses.
-%% If a goal unifies with reduce's first argument, the body is
-%% returned in the second argument.
-
-%% External procedure declarations (no clauses in this file)
-procedure merge(Stream(X)?, Stream(X)?, Stream(X)).
+%% Standard granularity of logic-programming metainterpreters: the predicate
+%% reduce/2 encodes each program clause. If a goal matches reduce's first
+%% argument, the clause body is returned in its second argument.
+%% Shown with a reduce encoding of merge as the object program.
 
 procedure run(_?).
-run(true).  % halt
-run((A,B)) :- run(A?), run(B?). % fork
-run(A) :- compound(A?) | reduce(A?, B), run(B?). % reduce
+run(true).                                       % halt
+run((A, B)) :- run(A?), run(B?).                 % fork
+run(A) :- known(A?) | reduce(A?, B), run(B?).    % reduce
 
-%% Example: reduce encoding of merge
+%% Object program: merge
 procedure reduce(_?, _).
 reduce(merge([X|Xs], Ys, [X?|Zs?]), merge(Xs?, Ys?, Zs)).
 reduce(merge(Xs, [Y|Ys], [Y?|Zs?]), merge(Xs?, Ys?, Zs)).

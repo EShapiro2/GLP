@@ -1,37 +1,23 @@
-%% observe.glp - General term observer
-%% Observes bidirectional communication between two endpoints
-%% Generalizes stream observer to arbitrary term structures
-
-%% observe(A, B, Log) - observe communication between A and B
+%% observe.glp - Concurrent stream observer
+%% Owner: GLP-ICLP (Program: Concurrent Observer)
+%%
+%% Observes a stream of incrementally-constructed data without consuming it:
+%% forwards each element and produces a replicable audit log. Ground values
+%% are shared; a list is observed elementwise, suspending on an unbound head
+%% or tail and resuming as the producer binds it.
+%%
+%% Note: a single observe process is one-directional (values flow from the
+%% observed argument to the copy and the log). Observing bidirectional
+%% communication takes one observer per direction, one on each stream of the
+%% channel.
 
 procedure observe(_?, _, _).
-%% A→B: value available at A (position 1)
-observe(A, A?, A?) :- atom(A?) | true.
-observe(A, A?, A?) :- number(A?) | true.
-observe(A, B?, Log?) :- compound(A?) |
-    ListA ..= A?,
-    observe_list(ListA?, ListB, Logs),
-    B =.. ListB?,
-    Log =.. Logs?.
+%% Ground value: forward and log (ground terms can be shared)
+observe(X, X?, X?) :- ground(X?) | true.
+%% List: observe elementwise
+observe([X|Xs], [Y?|Ys?], [L?|Ls?]) :-
+    observe(X?, Y, L),
+    observe(Xs?, Ys, Ls).
 
-%% B→A: value available at B (position 2)
-observe(A?, A, A?) :- atom(A?) | true.
-observe(A?, A, A?) :- number(A?) | true.
-observe(A?, B, Log?) :- compound(B?) |
-    ListB ..= B?,
-    observe_list(ListB?, ListA, Logs),
-    A =.. ListA?,
-    Log =.. Logs?.
-
-procedure observe_list(Stream(X)?, Stream(X), Stream(X)).
-observe_list([], [], []).
-observe_list([H|T], [I?|Is?], [L?|Ls?]) :-
-    observe(H?, I, L),
-    observe_list(T?, Is, Ls).
-
-%% Test: bidirectional - Query flows forward, Response flows backward
-procedure test_observe(_, _).
-test_observe(Out?, Log?) :-
-    In = request(hello, Response?),
-    observe(In?, Out, Log),
-    Response = goodbye.
+%% Example initial goal:
+%% observe([m(1,[x]), m(2,[y])], Copy, Log).

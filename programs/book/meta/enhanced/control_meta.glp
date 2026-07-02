@@ -1,39 +1,37 @@
 %% control_meta.glp - GLP metainterpreter with run control
-%% Source: GLP Papers (Program: GLP metainterpreter with run control)
+%% Owner: GLP-ICLP (Program: GLP metainterpreter with run control)
 %%
-%% TYPE CHECKER NOTE: This program requires parameterized types and a typed
-%% module system (cross-module calls via #). Will be supported in a future version.
-%%
-%% Supports suspend, resume, and abort via control stream.
-%% Uses short-circuit L--R for state dump on abort.
+%% A run can be suspended, resumed, and aborted via a control stream.
+%% Control messages are ground, so the control stream is distributed to all
+%% metainterpreter instances that participate in the run.
 
-%% Type definitions
-ControlCmd ::= suspend ; resume ; abort.
-ControlList ::= [] ; [ControlCmd | ControlList].
-DumpList ::= [] ; [_ | DumpList].
+procedure run(_?, Stream(Constant)?).
+run(true, _).                                                  % halt
+run((A, B), Cs) :-                                             % fork
+    distribute(Cs?, Cs1, Cs2),
+    run(A?, Cs1?), run(B?, Cs2?).
+run(A, [suspend|Cs]) :- suspended_run(A?, Cs?).                % suspend
+run(A, Cs) :- known(A?), unknown(Cs?) |                        % reduce
+    reduce(A?, B), run(B?, Cs?).
+run(A, []) :- known(A?) |                                      % control closed: run freely
+    reduce(A?, B), run(B?, []).
 
-%% External procedure declarations (no clauses in this file)
+procedure suspended_run(_?, Stream(Constant)?).
+suspended_run(A, [resume|Cs]) :- run(A?, Cs?).                 % resume
+suspended_run(_, [abort|_]).                                   % abort
+suspended_run(_, []).                                          % control closed: drop goal
+
+%% Ground-stream distribution (control messages are ground)
+procedure distribute(Stream(Constant)?, Stream(Constant), Stream(Constant)).
+distribute([X|Xs], [X?|Ys1?], [X?|Ys2?]) :- ground(X?) | distribute(Xs?, Ys1, Ys2).
+distribute([], [], []).
+
+%% Object program: merge
 procedure reduce(_?, _).
+reduce(merge([X|Xs], Ys, [X?|Zs?]), merge(Xs?, Ys?, Zs)).
+reduce(merge(Xs, [Y|Ys], [Y?|Zs?]), merge(Xs?, Ys?, Zs)).
+reduce(merge([], [], []), true).
 
-procedure run(_?, _?, ControlList?, DumpList?, DumpList).
-run(_, true, _, L, L?).                          % halt
-run(M, (A, B), Cs, L, R?) :-                     % fork
-    ground(M?), ground(Cs?) |
-    run(M?, A?, Cs?, L?, Mid),
-    run(M?, B?, Cs?, Mid?, R).
-run(_, M1 # G, Cs, L, R?) :-                     % cross-module
-    run(M1?, G?, Cs?, L?, R).
-run(M, A, [suspend|Cs], L, R?) :-                % suspend
-    suspended_run(M?, A?, Cs?, L?, R).
-run(M, A, Cs, L, R?) :-                          % reduce
-    compound(A?), ground(M?) |
-    M? # reduce(A?, B),
-    run(M?, B?, Cs?, L?, R).
-
-procedure suspended_run(_?, _?, ControlList?, DumpList?, DumpList).
-suspended_run(M, A, [resume|Cs], L, R?) :-       % resume
-    run(M?, A?, Cs?, L?, R).
-suspended_run(_, A, [abort|_], L, [A?|L?]).      % abort + dump
-
-%% Example usage:
-%% ?- run(merge_module, Goal, [suspend, resume, abort|_], done, Dump).
+%% Example initial goals:
+%% run(merge([1,2],[3],Xs), [suspend,resume]).   %% suspends, resumes, completes
+%% run(merge([1,2],[3],Xs), [suspend,abort]).    %% suspends, aborts (Xs left unbound)

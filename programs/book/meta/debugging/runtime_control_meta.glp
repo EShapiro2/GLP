@@ -1,41 +1,46 @@
 %% runtime_control_meta.glp - GLP metainterpreter with runtime control
-%% Source: GLP Papers (Program: GLP metainterpreter with runtime control)
+%% Owner: GLP-ICLP (Program: GLP metainterpreter with runtime control)
 %%
 %% Can suspend, resume, and abort a GLP run and produce a dump of the
-%% processes of the aborted run.
+%% processes of the aborted run. The reduce clause is guarded by otherwise,
+%% which succeeds iff all previous clauses fail (as opposed to suspend),
+%% and by unknown on the control stream, so pending control takes effect
+%% before further reductions.
 %%
-%% Uses otherwise guard which succeeds iff all previous clauses fail
-%% (as opposed to suspend). Enables default case handling.
-%%
-%% First argument: process (goal) to be executed
-%% Second argument Cs: observed interrupt stream
-%% Last two arguments: difference-list for distributed accumulation
+%% First argument: the process (goal) to be executed; second argument: the
+%% observed control stream; last two arguments: a difference-list on which
+%% the dump is accumulated in a distributed way.
 
-%% Type definitions
-ControlCmd ::= abort ; suspend ; resume ; _.
-ControlList ::= [] ; [ControlCmd | ControlList].
-DumpList ::= [] ; [_ | DumpList].
+procedure run(_?, Stream(Constant)?, _?, _).
+run(true, _, L, L?).                                           % halt and close the dump
+run((A, B), Cs, L, R?) :-                                      % fork
+    distribute(Cs?, Cs1, Cs2),
+    run(A?, Cs1?, L?, M), run(B?, Cs2?, M?, R).
+run(A, Cs, L, R?) :- otherwise, unknown(Cs?) |                 % reduce
+    reduce(A?, B), run(B?, Cs?, L?, R).
+run(A, [abort|_], L, [A?|L?]).                                 % abort and dump
+run(A, [suspend|Cs], L, R?) :-                                 % suspend
+    suspended_run(A?, Cs?, L?, R).
+run(A, [], L, R?) :- known(A?) |                               % control closed: run freely
+    reduce(A?, B), run(B?, [], L?, R).
 
-%% External procedure declarations (no clauses in this file)
-procedure merge(Stream(X)?, Stream(X)?, Stream(X)).
+procedure suspended_run(_?, Stream(Constant)?, _?, _).
+suspended_run(A, [resume|Cs], L, R?) :- run(A?, Cs?, L?, R).   % resume
+suspended_run(A, [C|Cs], L, R?) :- otherwise |                 % forward other commands
+    run(A?, [C?|Cs?], L?, R).
+suspended_run(_, [], L, L?).                                   % control closed: drop goal, close dump
 
-procedure run(_?, ControlList?, DumpList, DumpList?).
-run(true, _, L, L?).   % halt and close the dump
-run((A,B), Cs, L, R?) :-
-    ground(Cs?) |  % control stream is ground, can be shared
-    run(A?, Cs?, L?, M), run(B?, Cs?, M?, R). % fork
-run(A, Cs, L, R?) :- otherwise, unknown(Cs?) | reduce(A?, B), run(B?, Cs?, L?, R). %  reduce
-run(A, [abort|_], [A?|R?], R). % abort and dump
-run(A, [suspend|Cs], L, R?) :- suspended_run(A?, Cs?, L?, R). % suspend
-
-procedure suspended_run(_?, ControlList?, DumpList, DumpList?).
-suspended_run(A, [resume|Cs], L, R?) :-  run(A?, Cs?, L?, R).  % resume
-suspended_run(A, [C|Cs], L, R?) :- otherwise | run(A?, [C?|Cs?], L?, R).
-
-%% The program is not fail-stop resilient; it can be extended to be so.
+%% Ground-stream distribution (control messages are ground)
+procedure distribute(Stream(Constant)?, Stream(Constant), Stream(Constant)).
+distribute([X|Xs], [X?|Ys1?], [X?|Ys2?]) :- ground(X?) | distribute(Xs?, Ys1, Ys2).
+distribute([], [], []).
 
 %% Object program: merge
 procedure reduce(_?, _).
 reduce(merge([X|Xs], Ys, [X?|Zs?]), merge(Xs?, Ys?, Zs)).
 reduce(merge(Xs, [Y|Ys], [Y?|Zs?]), merge(Xs?, Ys?, Zs)).
 reduce(merge([], [], []), true).
+
+%% Example initial goals:
+%% run(merge([1,2],[3],Xs), [abort], [], R).            %% R = dump of the aborted run
+%% run(merge([1,2],[3],Ys), [suspend,resume], [], R2).  %% suspends, resumes, R2 = [] on halt
