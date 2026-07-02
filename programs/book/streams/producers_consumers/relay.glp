@@ -1,0 +1,34 @@
+%% relay.glp - Stream-Channel Relay
+%% Owner: GLP-ICLP (Program: Stream-Channel Relay)
+%%
+%% Bridges a stream pair and a channel: elements of the input stream are sent
+%% on the channel, and messages received from the channel are written to the
+%% output stream. The channel state threads through the recursive calls,
+%% maintaining the bidirectional communication link.
+
+procedure relay(Stream(Constant)?, Stream(Constant), Channel(Stream(Constant), Stream(Constant))?).
+relay([X|In1], Out?, Ch) :-
+    send(X?, Ch?, Ch1) |
+    relay(In1?, Out, Ch1?).
+relay(In, [X?|Out1?], Ch) :-
+    receive(X, Ch?, Ch1) |
+    relay(In?, Out1, Ch1?).
+relay([], [], ch([], [])).      %% input and channel closed: close output and channel
+
+%% Play: the relay forwards a to the peer; the peer replies x, y and closes.
+procedure relay_play(Stream(Constant)).
+relay_play(Out?) :-
+    new_channel(Ch, Peer),
+    relay([a], Out, Ch?),
+    peer_echo(Peer?).
+
+procedure peer_echo(Channel(Stream(Constant), Stream(Constant))?).
+peer_echo(Pch) :-
+    receive(A, Pch?, P1), send(x, P1?, P2), send(y, P2?, P3) |
+    peer_done(A?, P3?).
+
+procedure peer_done(Constant?, Channel(Stream(Constant), Stream(Constant))?).
+peer_done(a, ch(_, [])).
+
+%% Example initial goal:
+%% relay_play(Out).   %% Out = [x, y]

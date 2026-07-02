@@ -989,6 +989,7 @@ POSITIVE_FILES=(
     "$BOOK/streams/producers_consumers/mwm.glp"
     "$BOOK/streams/producers_consumers/producer_consumer.glp"
     "$BOOK/streams/producers_consumers/producer_consumer_countdown.glp"
+    "$BOOK/streams/producers_consumers/relay.glp"
 
     # --- book/streams/objects_monitors ---
     "$BOOK/streams/objects_monitors/counter_monitor.glp"
@@ -2189,6 +2190,9 @@ switch_play(GotQ, GotR).
 :clear
 $BOOK/social_networks/interlaced_streams.glp
 interlace_play(SA).
+:clear
+$BOOK/streams/producers_consumers/relay.glp
+relay_play(Out).
 :quit
 HEREDOC
 2>&1)
@@ -2201,6 +2205,7 @@ check "Y1 cooperative producers hand over" "S = \[a, b, c, d, e, f\]" "$y1"
 check "Y1 switch routes to q" "GotQ = \[hello\]" "$y1"
 check "Y1 switch routes to r" "GotR = \[bye\]" "$y1"
 check "Y1 interlace produces blocks" "SA = \[block(a1" "$y1"
+check "Y1 relay bridges stream and channel" "Out = \[x, y\]" "$y1"
 
 echo "--- Y2: metainterpreters ---"
 y2=$("$REPL_RUN" <<HEREDOC
