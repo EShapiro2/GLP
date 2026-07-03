@@ -1,0 +1,438 @@
+%% agent.vglp — the CSSN social-network agent as a vGLP program.
+%%
+%% vGLP source of the tested GLP program agent.glp + ui/mediator.glp (this
+%% directory): the agent authored with volition-guarded clauses, the mediator
+%% and its UserCmd/UserNotify vocabulary absent — they belong to the
+%% implementation, which maps the volition-guarded clauses into concrete UI
+%% constructs.  Exhibit for the paper "Volition Elicitation: Operational
+%% Semantics for People with Volitions and Their Machines", which defines vGLP.
+%% This is the adult agent; the child agent (child_agent.glp) is a separate
+%% program, not part of this exhibit.
+%%
+%% NOTATION (defined in the paper):
+%%   *                          marks a volition-guarded clause: reducing a goal with
+%%                              it requires, besides its guards, the person willing
+%%                              this reduction. Among volition-guarded clauses for
+%%                              the same goal, the person's answer selects the clause.
+%%   *(X1,...,Xk)               a volition-guarded clause with person-supplied inputs:
+%%                              the person's answer binds the writers X1..Xk; the clause
+%%                              carries their readers Xi?.
+%%
+%% Correspondence to the implementation (clause for clause):
+%%   - a *(X1..Xk) clause  ->  a UserCmd constructor over X1..Xk, a mediator
+%%     pass-through, and the agent clause matching msg('_user', Id, cmd(X1..Xk)):
+%%     connect/1, send/2, introduce/2, child_introduce/3, create_group/1,
+%%     invite_group/2, invite_group/3, send_group/2, leave_group/1,
+%%     leave_child_group/2, remove_from_group/2, unfriend_child_of/2;
+%%   - a pending volition-guarded reduction  ->  a pending-table entry req(N) in
+%%     the mediator, rendered as an inbox card;
+%%   - the person's choice among sibling * clauses  ->  the UserCmds
+%%     decision/3 (cold call), accept_intro/2 and reject_intro/2
+%%     (introduction), accept_child_intro/2, reject_child_intro/2 and
+%%     approve_child_intro/3 (child introduction), accept_group/2 and
+%%     reject_group/2 (group invite), approve_group/3 and reject_group/2
+%%     (child's group invite), approve_child_group/3 and reject_child_group/3
+%%     (child's consent request), routing the escrowed writer or channel back
+%%     to the agent.
+%% The escrow vocabulary — befriend/2, befriend_intro/3, child_befriend/3,
+%% the agent-to-user group_invite/2 and group_invite_child/3,
+%% child_group_consent/3, and the pending table — does not appear here: the
+%% machine's question to the person is not a message but a pending
+%% volition-guarded reduction.
+%%
+%% This file is vGLP, not GLP: the REPL does not load it (hence .vglp).  Its
+%% correctness argument is the clause-for-clause correspondence to the tested,
+%% deployed implementation in this directory.
+%%
+%% Shared types (Response, Decision, Handshake, IntroContent, FriendContent,
+%% FriendMsg, GroupId, GroupContent, GroupMsg, GroupSetupResponse, OutputKey,
+%% NetColdCall, NetInMsg, NetInStream, NetOutMsg, NetOutStream, IntroResult,
+%% GroupJoinResult) are those of self.glp.  Helper procedures — channel ops,
+%% merge, the lib/routing routers (send_user, send_net, send_friend,
+%% send_child), inject_msg, intro_await_peer, inject_intro_result,
+%% befriend_commit, close_friend, the self.glp group helpers
+%% (setup_group_creator, setup_group_hub_side, lookup_send_group,
+%% distribute_group_msg, add_group_output, group_await_join,
+%% inject_group_result, close_output, close_outputs), and the local
+%% await_group_channel, bind_response, handle_response — are those of
+%% agent.glp, self.glp, and lib/routing/, unchanged; this file gives the agent
+%% procedure itself.
+%%
+%% Note: the deployed child_introduce dispatch selects its sibling/non-sibling
+%% clause by `otherwise`; here the two clauses are sibling volition-guarded
+%% clauses of the same goal, so the second carries the explicit negation
+%% ~(Friend? =?= Id?) instead — under vGLP a suspended volition-guarded clause
+%% blocks `otherwise`.
+
+
+%% Screen vocabulary — self.glp's AgentContent minus the ask vocabulary
+%% (of AgentOnlyContent: befriend/2, befriend_intro/3, child_befriend/3,
+%% child_group_consent/3; of GroupNotifyContent: group_invite/2,
+%% group_invite_child/3 — group_removed/1 stays): under vGLP the machine asks
+%% the person by a pending reduction, not by a message.
+AgentContent ::= connected(Constant)
+               ; rejected
+               ; rejected(Constant)
+               ; received(Constant, Constant)
+               ; group_joined(GroupId)
+               ; group_joined_member(GroupId, Constant)
+               ; group_left(GroupId)
+               ; group_received(GroupId, Constant, Constant)
+               ; group_removed(GroupId)
+               ; unfriended(Constant).
+AgentToUserMsg ::= msg(Constant, Constant, AgentContent).
+
+%% UserIn — under vGLP the person's commands are grants, not messages; UserIn
+%% carries only the results injected by inject_msg, inject_intro_result, and
+%% inject_group_result.
+UserContent ::= response(Response).
+UserInMsg   ::= msg(Constant, Constant, UserContent)
+              ; intro_result(Constant, Channel(Stream(IntroContent), Stream(IntroContent)))
+              ; intro_rejected(Constant)
+              ; group_join_ack(GroupId, Constant, Channel(Stream(IntroContent), Stream(GroupSetupResponse)))
+              ; group_join_nack(GroupId, Constant).
+
+OutputEntry ::= user_output(Stream(AgentToUserMsg)?)
+              ; net_output(NetOutStream?)
+              ; friend_output(Constant, Stream(FriendMsg)?)
+              ; child_output(Constant, Stream(FriendMsg)?)
+              ; parent_output(Constant, Stream(FriendMsg)?)
+              ; group_entry(OutputKey, Stream(GroupMsg)?).
+
+%% =============================================================================
+%% AGENT/4
+%% =============================================================================
+
+procedure agent(Constant?, Stream(UserInMsg)?, Stream(NetInMsg)?, Stream(OutputEntry)?).
+
+%% --- Volitional: social transactions the person originates ---
+%% Perpetually pending; each grant supplies the parameters.
+%% Compiled form: UserCmds connect/1, send/2, introduce/2, child_introduce/3,
+%% unfriend_child_of/2.
+
+%% Offer friendship by cold call.
+*(Target)
+agent(Id, UserIn, NetIn, Outs) :-
+    ground(Id?), ground(Target?) |
+    send_net(msg(Target?, intro(Id?, Resp)), Outs?, Outs1),
+    inject_msg(Resp?, Target?, Id?, UserIn?, UserIn1),
+    agent(Id?, UserIn1?, NetIn?, Outs1?).
+
+%% Message a friend.
+*(Target, Text)
+agent(Id, UserIn, NetIn, Outs) :-
+    ground(Id?), ground(Target?) |
+    send_friend(Target?, msg(Id?, Target?, text(Text?)), Outs?, Outs1),
+    agent(Id?, UserIn?, NetIn?, Outs1?).
+
+%% Offer an introduction of friend P to friend Q: a fresh setup-channel pair,
+%% one half to each.
+*(P, Q)
+agent(Id, UserIn, NetIn, Outs) :-
+    ground(Id?), ground(P?), ground(Q?), new_channel(PQCh, QPCh) |
+    send_friend(P?, msg(Id?, P?, intro(Q?, QPCh?)), Outs?, Outs1),
+    send_friend(Q?, msg(Id?, Q?, intro(P?, PQCh?)), Outs1?, Outs2),
+    agent(Id?, UserIn?, NetIn?, Outs2?).
+
+%% Introduce own children to each other (sibling case: Friend is myself).
+*(Child1, Friend, Child2)
+agent(Id, UserIn, NetIn, Outs) :-
+    ground(Id?), Friend? =?= Id?, ground(Child1?), ground(Child2?),
+    new_channel(C1Ch, C2Ch) |
+    send_child(Child1?, msg(Id?, Child1?, child_intro(Child2?, C1Ch?)), Outs?, Outs1),
+    send_child(Child2?, msg(Id?, Child2?, child_intro(Child1?, C2Ch?)), Outs1?, Outs2),
+    agent(Id?, UserIn?, NetIn?, Outs2?).
+
+%% Introduce own child to a friend's child (non-sibling case; the deployed
+%% dispatch uses `otherwise`, here the explicit negation — see header note).
+*(MyChild, Friend, FriendChild)
+agent(Id, UserIn, NetIn, Outs) :-
+    ground(Id?), ground(MyChild?), ground(Friend?), ground(FriendChild?),
+    ~(Friend? =?= Id?), new_channel(C1Ch, C2Ch) |
+    send_child(MyChild?, msg(Id?, MyChild?, child_intro(FriendChild?, C1Ch?)), Outs?, Outs1),
+    send_friend(Friend?, msg(Id?, Friend?, child_intro(MyChild?, C2Ch?)), Outs1?, Outs2),
+    agent(Id?, UserIn?, NetIn?, Outs2?).
+
+%% Unfriend on behalf of own child: tell the child to unfriend Target.
+*(MyChild, Target)
+agent(Id, UserIn, NetIn, Outs) :-
+    ground(Id?), ground(MyChild?), ground(Target?) |
+    send_child(MyChild?, msg(Id?, MyChild?, unfriend_child(Target?)), Outs?, Outs1),
+    agent(Id?, UserIn?, NetIn?, Outs1?).
+
+%% --- Volitional: group transactions the person originates ---
+%% Compiled form: UserCmds create_group/1, invite_group/2, invite_group/3,
+%% send_group/2, leave_group/1, leave_child_group/2, remove_from_group/2.
+
+%% Create a group — creator sets up the member-side write (no hub self-loop).
+*(Name)
+agent(Id, UserIn, NetIn, Outs) :-
+    ground(Id?), ground(Name?) |
+    setup_group_creator(group_id(Id?, Name?),
+        Outs?, Outs1, NetIn?, NetIn1),
+    send_user(msg(agent, '_user', group_joined(group_id(Id?, Name?))),
+        Outs1?, Outs2),
+    agent(Id?, UserIn?, NetIn1?, Outs2?).
+
+%% Offer group membership to a friend.
+*(GroupId, Invitee)
+agent(Id, UserIn, NetIn, Outs) :-
+    ground(Id?), ground(GroupId?), ground(Invitee?),
+    new_channel(InviteeCh, CreatorCh) |
+    send_friend(Invitee?,
+        msg(Id?, Invitee?, group_invite(GroupId?, InviteeCh?)), Outs?, Outs1),
+    group_await_join(GroupId?, Invitee?, CreatorCh?, Result),
+    inject_group_result(Result?, UserIn?, UserIn1),
+    agent(Id?, UserIn1?, NetIn?, Outs1?).
+
+%% Offer group membership to a friend's child, via the parent.
+*(GroupId, Child, Parent)
+agent(Id, UserIn, NetIn, Outs) :-
+    ground(Id?), ground(GroupId?), ground(Child?), ground(Parent?),
+    new_channel(InviteeCh, CreatorCh) |
+    send_friend(Parent?,
+        msg(Id?, Parent?, group_invite_child(GroupId?, Child?, InviteeCh?)), Outs?, Outs1),
+    group_await_join(GroupId?, Child?, CreatorCh?, Result),
+    inject_group_result(Result?, UserIn?, UserIn1),
+    agent(Id?, UserIn1?, NetIn?, Outs1?).
+
+%% Post to a group — send on the member-to-hub channel.
+*(GroupId, Text)
+agent(Id, UserIn, NetIn, Outs) :-
+    ground(Id?), ground(GroupId?), ground(Text?) |
+    lookup_send_group(group(GroupId?),
+        msg(Id?, Id?, group_msg(GroupId?, Id?, Text?)), Outs?, Outs1),
+    agent(Id?, UserIn?, NetIn?, Outs1?).
+
+%% Leave a group (member's own choice).
+*(GroupId)
+agent(Id, UserIn, NetIn, Outs) :-
+    ground(Id?), ground(GroupId?) |
+    lookup_send_group(group(GroupId?),
+        msg(Id?, Id?, group_leave(GroupId?, Id?)), Outs?, Outs1),
+    close_output(group(GroupId?), Outs1?, Outs2),
+    send_user(msg(agent, '_user', group_left(GroupId?)), Outs2?, Outs3),
+    agent(Id?, UserIn?, NetIn?, Outs3?).
+
+%% Tell own child to leave a group.
+*(Child, GroupId)
+agent(Id, UserIn, NetIn, Outs) :-
+    ground(Id?), ground(Child?), ground(GroupId?) |
+    send_child(Child?, msg(Id?, Child?, leave_group(GroupId?)), Outs?, Outs1),
+    agent(Id?, UserIn?, NetIn?, Outs1?).
+
+%% Remove a member from an owned group.
+*(GroupId, Member)
+agent(Id, UserIn, NetIn, Outs) :-
+    ground(Id?), ground(GroupId?), ground(Member?) |
+    lookup_send_group(group_member(GroupId?, Member?),
+        msg(Id?, Member?, group_removed(GroupId?)), Outs?, Outs1),
+    close_output(group_member(GroupId?, Member?), Outs1?, Outs2),
+    agent(Id?, UserIn?, NetIn?, Outs2?).
+
+%% --- Volitional: answering a friend offer (cold call) ---
+%% The arrived cold call makes both clauses pending; the person's grant selects
+%% accept or decline and binds Resp through bind_response.
+%% Compiled form: the befriend/2 forward to '_user', the mediator escrow
+%% req(N), and the agent clause for UserCmd decision/3.
+
+%% Accept.
+*
+agent(Id, UserIn, [msg(Id1, intro(From, Resp?))|NetIn], Outs) :-
+    Id? =?= Id1? |
+    bind_response(Id?, yes, From?, Resp, Outs?, Outs1, NetIn?, NetIn1),
+    agent(Id?, UserIn?, NetIn1?, Outs1?).
+
+%% Decline.
+*
+agent(Id, UserIn, [msg(Id1, intro(From, Resp?))|NetIn], Outs) :-
+    Id? =?= Id1? |
+    bind_response(Id?, no, From?, Resp, Outs?, Outs1, NetIn?, NetIn1),
+    agent(Id?, UserIn?, NetIn1?, Outs1?).
+
+%% --- Volitional: answering an introduction offered by a common friend ---
+%% Compiled form: the befriend_intro/3 forward to '_user', the mediator escrow,
+%% and the agent clauses for UserCmds accept_intro/2, reject_intro/2.
+
+%% Accept: ack on the setup channel, await the peer, inject the result.
+*
+agent(Id, UserIn, [msg(_From, Id1, intro(Other, Ch))|NetIn], Outs) :-
+    Id? =?= Id1?, ground(Other?),
+    send(ack(Id?), Ch?, Ch1) |
+    intro_await_peer(Other?, Ch1?, Result),
+    inject_intro_result(Result?, UserIn?, UserIn1),
+    agent(Id?, UserIn1?, NetIn?, Outs?).
+
+%% Reject: nack on the setup channel, closing it.
+*
+agent(Id, UserIn, [msg(_From, Id1, intro(_Other, ch(_ChIn, [nack|[]])))|NetIn], Outs) :-
+    Id? =?= Id1? |
+    agent(Id?, UserIn?, NetIn?, Outs?).
+
+%% --- Volitional: answering a child introduction ---
+%% The arrived child_intro makes the three clauses pending; the person accepts
+%% for themselves (as the introduced child's counterpart), rejects, or — as a
+%% parent — approves by forwarding it to their own child, naming the child.
+%% Compiled form: the child_befriend/3 forward to '_user', the mediator escrow,
+%% and the agent clauses for UserCmds accept_child_intro/2,
+%% reject_child_intro/2, approve_child_intro/3.
+
+%% Accept: ack on the setup channel, await the peer, inject the result.
+*
+agent(Id, UserIn, [msg(_From, Id1, child_intro(Other, Ch))|NetIn], Outs) :-
+    Id? =?= Id1?, ground(Other?),
+    send(ack(Id?), Ch?, Ch1) |
+    intro_await_peer(Other?, Ch1?, Result),
+    inject_intro_result(Result?, UserIn?, UserIn1),
+    agent(Id?, UserIn1?, NetIn?, Outs?).
+
+%% Reject: nack on the setup channel, closing it.
+*
+agent(Id, UserIn, [msg(_From, Id1, child_intro(_Other, ch(_ChIn, [nack|[]])))|NetIn], Outs) :-
+    Id? =?= Id1? |
+    agent(Id?, UserIn?, NetIn?, Outs?).
+
+%% Approve: forward the introduction to the named own child.
+*(MyChild)
+agent(Id, UserIn, [msg(_From, Id1, child_intro(OtherChild, Ch))|NetIn], Outs) :-
+    Id? =?= Id1?, ground(OtherChild?), ground(MyChild?) |
+    send_child(MyChild?, msg(Id?, MyChild?, child_intro(OtherChild?, Ch?)), Outs?, Outs1),
+    agent(Id?, UserIn?, NetIn?, Outs1?).
+
+%% --- Volitional: answering a group invite ---
+%% Compiled form: the group_invite/2 forward to '_user', the mediator escrow,
+%% and the agent clauses for UserCmds accept_group/2, reject_group/2.
+
+%% Accept: ack on the setup channel, await the group channel from the hub.
+*
+agent(Id, UserIn, [msg(_From, Id1, group_invite(GroupId, ch(ChRead, [ack(Id?)|[]])))|NetIn], Outs) :-
+    Id? =?= Id1?, ground(GroupId?) |
+    await_group_channel(Id?, GroupId?, ChRead?, UserIn?, NetIn?, Outs?).
+
+%% Reject: nack on the setup channel, closing it.
+*
+agent(Id, UserIn, [msg(_From, Id1, group_invite(_GroupId, ch(_ChRead, [nack|[]])))|NetIn], Outs) :-
+    Id? =?= Id1? |
+    agent(Id?, UserIn?, NetIn?, Outs?).
+
+%% --- Volitional: answering a group invite for own child ---
+%% Compiled form: the group_invite_child/3 forward to '_user', the mediator
+%% escrow, and the agent clauses for UserCmds approve_group/3, reject_group/2.
+
+%% Approve: forward the invite to the child.
+*
+agent(Id, UserIn, [msg(_From, Id1, group_invite_child(GroupId, Child, Ch))|NetIn], Outs) :-
+    Id? =?= Id1?, ground(GroupId?), ground(Child?) |
+    send_child(Child?, msg(Id?, Child?, group_invite(GroupId?, Ch?)), Outs?, Outs1),
+    agent(Id?, UserIn?, NetIn?, Outs1?).
+
+%% Reject: nack on the setup channel, closing it.
+*
+agent(Id, UserIn, [msg(_From, Id1, group_invite_child(_GroupId, _Child, ch(_ChRead, [nack|[]])))|NetIn], Outs) :-
+    Id? =?= Id1? |
+    agent(Id?, UserIn?, NetIn?, Outs?).
+
+%% --- Volitional: answering a child's consent request ---
+%% The arrived group_consent_req makes both clauses pending; the person's grant
+%% binds the consent writer to yes or no by head construction.
+%% Compiled form: the child_group_consent/3 forward to '_user', the mediator
+%% escrow, and the agent clauses for UserCmds approve_child_group/3,
+%% reject_child_group/3.
+
+%% Grant.
+*
+agent(Id, UserIn, [msg(_Child, Id1, group_consent_req(_GroupId, yes))|NetIn], Outs) :-
+    Id? =?= Id1? |
+    agent(Id?, UserIn?, NetIn?, Outs?).
+
+%% Refuse.
+*
+agent(Id, UserIn, [msg(_Child, Id1, group_consent_req(_GroupId, no))|NetIn], Outs) :-
+    Id? =?= Id1? |
+    agent(Id?, UserIn?, NetIn?, Outs?).
+
+%% --- Reactive: network messages (unchanged from agent.glp) ---
+
+%% A peer answered my cold call.
+agent(Id, UserIn, [msg(From, Id1, response(Resp))|NetIn], Outs) :-
+    Id? =?= Id1? |
+    handle_response(Id?, Resp?, From?, Outs?, Outs1, NetIn?, NetIn1),
+    agent(Id?, UserIn?, NetIn1?, Outs1?).
+
+%% A friend messages me.
+agent(Id, UserIn, [msg(From, Id1, text(Text))|NetIn], Outs) :-
+    Id? =?= Id1? |
+    send_user(msg(agent, '_user', received(From?, Text?)), Outs?, Outs1),
+    agent(Id?, UserIn?, NetIn?, Outs1?).
+
+%% A group message arrives on a group channel — distribute to all members
+%% (hub side) and show it to the person.
+agent(Id, UserIn, [msg(_, _, group_msg(GroupId, Author, Text))|NetIn], Outs) :-
+    ground(Id?), ground(GroupId?), ground(Author?), ground(Text?) |
+    distribute_group_msg(GroupId?,
+        msg(Author?, Author?, group_msg(GroupId?, Author?, Text?)), Outs?, Outs1),
+    send_user(msg(agent, '_user', group_received(GroupId?, Author?, Text?)),
+        Outs1?, Outs2),
+    agent(Id?, UserIn?, NetIn?, Outs2?).
+
+%% A member left my group — close their hub-side entry.
+agent(Id, UserIn, [msg(Member, _, group_leave(GroupId, Member1))|NetIn], Outs) :-
+    ground(Id?), ground(GroupId?), ground(Member?), Member? =?= Member1? |
+    close_output(group_member(GroupId?, Member?), Outs?, Outs1),
+    agent(Id?, UserIn?, NetIn?, Outs1?).
+
+%% The creator removed me from a group — close my member entry, tell the person.
+agent(Id, UserIn, [msg(_, Id1, group_removed(GroupId))|NetIn], Outs) :-
+    Id? =?= Id1?, ground(GroupId?) |
+    close_output(group(GroupId?), Outs?, Outs1),
+    send_user(msg(agent, '_user', group_removed(GroupId?)), Outs1?, Outs2),
+    agent(Id?, UserIn?, NetIn?, Outs2?).
+
+%% A friend unfriended me (Integrate unfriend): comply — tear down my side and
+%% tell the person the friend is gone.
+agent(Id, UserIn, [msg(From, Id1, unfriend)|NetIn], Outs) :-
+    Id? =?= Id1?, ground(From?) |
+    close_friend(From?, Outs?, Outs1),
+    send_user(msg(agent, '_user', unfriended(From?)), Outs1?, Outs2),
+    agent(Id?, UserIn?, NetIn?, Outs2?).
+
+%% --- Reactive: injected results on UserIn (unchanged from agent.glp; UserIn
+%% no longer carries the person's commands — those are grants — only the
+%% results injected by inject_msg, inject_intro_result, inject_group_result) ---
+
+%% My cold call was answered (injected by inject_msg).
+agent(Id, [msg(From, Id1, response(Resp))|UserIn], NetIn, Outs) :-
+    Id? =?= Id1? |
+    handle_response(Id?, Resp?, From?, Outs?, Outs1, NetIn?, NetIn1),
+    agent(Id?, UserIn?, NetIn1?, Outs1?).
+
+%% Intro result: peer acked — idempotent befriend commit (shared lib).
+agent(Id, [intro_result(Other, Ch)|UserIn], NetIn, Outs) :-
+    ground(Id?), ground(Other?) |
+    befriend_commit(Id?, Other?, Ch?, Outs?, Outs1, NetIn?, NetIn1),
+    agent(Id?, UserIn?, NetIn1?, Outs1?).
+
+%% Intro result: peer nacked — notify rejected.
+agent(Id, [intro_rejected(Other)|UserIn], NetIn, Outs) :-
+    ground(Id?) |
+    send_user(msg(agent, '_user', rejected(Other?)), Outs?, Outs1),
+    agent(Id?, UserIn?, NetIn?, Outs1?).
+
+%% Injected group_join_ack — creator wires the hub side, tells the person.
+agent(Id, [group_join_ack(GroupId, Invitee, ch(_, [group_channel(MemberEnd?)|[]]))|UserIn],
+        NetIn, Outs) :-
+    ground(Id?), ground(GroupId?), ground(Invitee?) |
+    setup_group_hub_side(GroupId?, Invitee?, Outs?, Outs1, NetIn?, NetIn1, MemberEnd),
+    send_user(msg(agent, '_user', group_joined_member(GroupId?, Invitee?)),
+        Outs1?, Outs2),
+    agent(Id?, UserIn?, NetIn1?, Outs2?).
+
+%% Injected group_join_nack — nothing to clean up.
+agent(Id, [group_join_nack(_, _)|UserIn], NetIn, Outs) :-
+    ground(Id?) |
+    agent(Id?, UserIn?, NetIn?, Outs?).
+
+%% --- Termination ---
+
+agent(_, [], _, Outs) :- close_outputs(Outs?).
+agent(_, _, [], Outs) :- close_outputs(Outs?).

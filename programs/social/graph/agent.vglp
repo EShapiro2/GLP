@@ -1,0 +1,217 @@
+%% agent.vglp — the social-graph agent as a vGLP program.
+%%
+%% vGLP source of the tested GLP program agent.glp + ui/mediator.glp (this
+%% directory): the agent authored with volition-guarded clauses, the mediator
+%% and its UserCmd/UserNotify vocabulary absent — they belong to the
+%% implementation, which maps the volition-guarded clauses into concrete UI
+%% constructs.  Exhibit for the paper "Volition Elicitation: Operational
+%% Semantics for People with Volitions and Their Machines", which defines vGLP.
+%%
+%% NOTATION (defined in the paper):
+%%   *                          marks a volition-guarded clause: reducing a goal with
+%%                              it requires, besides its guards, the person willing
+%%                              this reduction. Among volition-guarded clauses for
+%%                              the same goal, the person's answer selects the clause.
+%%   *(X1,...,Xk)               a volition-guarded clause with person-supplied inputs:
+%%                              the person's answer binds the writers X1..Xk; the clause
+%%                              carries their readers Xi?.
+%%
+%% Correspondence to the implementation (clause for clause):
+%%   - a *(X1..Xk) clause  ->  a UserCmd constructor over X1..Xk, a mediator
+%%     pass-through, and the agent clause matching msg('_user', Id, cmd(X1..Xk)):
+%%     connect/1, unfriend/1, send/2, introduce/2;
+%%   - a pending volition-guarded reduction  ->  a pending-table entry req(N) in
+%%     the mediator, rendered as an inbox card;
+%%   - the person's choice between sibling * clauses  ->  the UserCmds
+%%     decision/3 (cold call: accept/decline) and accept_intro/2, reject_intro/2
+%%     (introduction) routing the escrowed writer or channel back to the agent.
+%% The escrow vocabulary — befriend/2, befriend_intro/3, and the pending table —
+%% does not appear here: the machine's question to the person is not a message
+%% but a pending volition-guarded reduction.
+%%
+%% This file is vGLP, not GLP: the REPL does not load it (hence .vglp).  Its
+%% correctness argument is the clause-for-clause correspondence to the tested,
+%% deployed implementation in this directory.
+%%
+%% Shared types (Response, Decision, Handshake, IntroContent, IntroStream,
+%% IntroChannel, FriendContent, FriendMsg, FriendStream, FriendChannel,
+%% NetColdCall, NetOutMsg, NetOutStream, NetInMsg, NetInStream, IntroResult)
+%% are those of self.glp.  Helper procedures — channel ops, merge, the
+%% lib/routing routers (send_user, send_net, send_friend), inject_msg,
+%% intro_await_peer, inject_intro_result, befriend_commit, close_friend, and
+%% the local bind_response, handle_response, close_outputs — are those of
+%% agent.glp and lib/routing/, unchanged; this file gives the agent procedure
+%% itself.
+%%
+%% Note: the deployed mediator vocabulary (self.glp UserCmd/UserNotify) has no
+%% unfriend command and no unfriended notification; the unfriend clause below
+%% corresponds to the agent clause for msg('_user', Id, unfriend(Target)),
+%% today reachable from a play but not from the UI.
+
+
+%% Screen vocabulary — self.glp's AgentContent minus the escrow vocabulary
+%% (befriend/2, befriend_intro/3): under vGLP the machine asks the person by a
+%% pending reduction, not by a message.
+AgentContent ::= connected(Constant)
+               ; rejected
+               ; rejected(Constant)
+               ; unfriended(Constant)
+               ; received(Constant, Constant).
+AgentToUserMsg    ::= msg(Constant, Constant, AgentContent).
+AgentToUserStream ::= [] ; [AgentToUserMsg | AgentToUserStream].
+
+OutputEntry ::= user_output(AgentToUserStream?)
+              ; net_output(NetOutStream?)
+              ; friend_output(Constant, FriendStream?).
+OutputsList ::= [] ; [OutputEntry | OutputsList].
+
+%% UserIn — under vGLP the person's commands are grants, not messages; UserIn
+%% carries only the results injected by inject_msg and inject_intro_result.
+UserContent  ::= response(Response).
+UserInMsg    ::= msg(Constant, Constant, UserContent)
+               ; intro_result(Constant, IntroChannel)
+               ; intro_rejected(Constant).
+UserInStream ::= [] ; [UserInMsg | UserInStream].
+
+%% =============================================================================
+%% AGENT/4
+%% =============================================================================
+
+procedure agent(Constant?, UserInStream?, NetInStream?, OutputsList?).
+
+%% --- Volitional: social transactions the person originates ---
+%% Perpetually pending; each grant supplies the parameters.
+%% Compiled form: UserCmds connect/1, unfriend/1, send/2, introduce/2.
+
+%% Offer friendship by cold call.
+*(Target)
+agent(Id, UserIn, NetIn, Outs) :-
+    ground(Id?), ground(Target?) |
+    send_net(msg(Target?, intro(Id?, Resp)), Outs?, Outs1),
+    inject_msg(Resp?, Target?, Id?, UserIn?, UserIn1),
+    agent(Id?, UserIn1?, NetIn?, Outs1?).
+
+%% Unfriend (End friend): notify the peer on the friend channel, then tear
+%% down.  Guarded by either party, so one-way: no ack, no decline.
+%% Idempotent: if Target is not a friend, send_friend and close_friend are
+%% no-ops.
+*(Target)
+agent(Id, UserIn, NetIn, Outs) :-
+    ground(Id?), ground(Target?) |
+    send_friend(Target?, msg(Id?, Target?, unfriend), Outs?, Outs1),
+    close_friend(Target?, Outs1?, Outs2),
+    agent(Id?, UserIn?, NetIn?, Outs2?).
+
+%% Message a friend.
+*(Target, Text)
+agent(Id, UserIn, NetIn, Outs) :-
+    ground(Id?), ground(Target?) |
+    send_friend(Target?, msg(Id?, Target?, text(Text?)), Outs?, Outs1),
+    agent(Id?, UserIn?, NetIn?, Outs1?).
+
+%% Offer an introduction of friend P to friend Q: a fresh setup-channel pair,
+%% one half to each.
+*(P, Q)
+agent(Id, UserIn, NetIn, Outs) :-
+    ground(Id?), ground(P?), ground(Q?), ~(P? =?= Q?), new_channel(PQCh, QPCh) |
+    send_friend(P?, msg(Id?, P?, intro(Q?, QPCh?)), Outs?, Outs1),
+    send_friend(Q?, msg(Id?, Q?, intro(P?, PQCh?)), Outs1?, Outs2),
+    agent(Id?, UserIn?, NetIn?, Outs2?).
+
+%% --- Volitional: answering a friend offer (cold call) ---
+%% The arrived cold call makes both clauses pending; the person's grant selects
+%% accept or decline and binds Resp through bind_response.
+%% Compiled form: the befriend/2 forward to '_user', the mediator escrow
+%% req(N), and the agent clause for UserCmd decision/3.
+
+%% Accept.
+*
+agent(Id, UserIn, [msg(Id1, intro(From, Resp?))|NetIn], Outs) :-
+    Id? =?= Id1? |
+    bind_response(Id?, yes, From?, Resp, Outs?, Outs1, NetIn?, NetIn1),
+    agent(Id?, UserIn?, NetIn1?, Outs1?).
+
+%% Decline.
+*
+agent(Id, UserIn, [msg(Id1, intro(From, Resp?))|NetIn], Outs) :-
+    Id? =?= Id1? |
+    bind_response(Id?, no, From?, Resp, Outs?, Outs1, NetIn?, NetIn1),
+    agent(Id?, UserIn?, NetIn1?, Outs1?).
+
+%% --- Volitional: answering an introduction offered by a common friend ---
+%% Compiled form: the befriend_intro/3 forward to '_user', the mediator escrow,
+%% and the agent clauses for UserCmds accept_intro/2, reject_intro/2.
+
+%% Accept: ack on the setup channel, await the peer, inject the result.
+*
+agent(Id, UserIn, [msg(_From, Id1, intro(Other, Ch))|NetIn], Outs) :-
+    Id? =?= Id1?, ground(Other?),
+    send(ack(Id?), Ch?, Ch1) |
+    intro_await_peer(Other?, Ch1?, Result),
+    inject_intro_result(Result?, UserIn?, UserIn1),
+    agent(Id?, UserIn1?, NetIn?, Outs?).
+
+%% Reject: nack on the setup channel, closing it.
+*
+agent(Id, UserIn, [msg(_From, Id1, intro(_Other, ch(_ChIn, [nack|[]])))|NetIn], Outs) :-
+    Id? =?= Id1? |
+    agent(Id?, UserIn?, NetIn?, Outs?).
+
+%% --- Reactive: network messages (unchanged from agent.glp) ---
+
+%% A peer answered my cold call.
+agent(Id, UserIn, [msg(From, Id1, response(Resp))|NetIn], Outs) :-
+    Id? =?= Id1? |
+    handle_response(Id?, Resp?, From?, Outs?, Outs1, NetIn?, NetIn1),
+    agent(Id?, UserIn?, NetIn1?, Outs1?).
+
+%% A friend messages me.
+agent(Id, UserIn, [msg(From, Id1, text(Text))|NetIn], Outs) :-
+    Id? =?= Id1? |
+    send_user(msg(agent, '_user', received(From?, Text?)), Outs?, Outs1),
+    agent(Id?, UserIn?, NetIn?, Outs1?).
+
+%% A friend unfriended me (Integrate unfriend): comply — tear down my side and
+%% tell the person the friend is gone.
+agent(Id, UserIn, [msg(From, Id1, unfriend)|NetIn], Outs) :-
+    Id? =?= Id1?, ground(From?) |
+    close_friend(From?, Outs?, Outs1),
+    send_user(msg(agent, '_user', unfriended(From?)), Outs1?, Outs2),
+    agent(Id?, UserIn?, NetIn?, Outs2?).
+
+%% Network catch-all (drop unrecognised network message).
+agent(Id, UserIn, [_|NetIn], Outs) :-
+    ground(Id?), otherwise |
+    agent(Id?, UserIn?, NetIn?, Outs?).
+
+%% --- Reactive: injected results on UserIn (unchanged from agent.glp; UserIn
+%% no longer carries the person's commands — those are grants — only the
+%% results injected by inject_msg and inject_intro_result) ---
+
+%% My cold call was answered (injected by inject_msg).
+agent(Id, [msg(From, Id1, response(Resp))|UserIn], NetIn, Outs) :-
+    Id? =?= Id1? |
+    handle_response(Id?, Resp?, From?, Outs?, Outs1, NetIn?, NetIn1),
+    agent(Id?, UserIn?, NetIn1?, Outs1?).
+
+%% Intro result: peer acked — idempotent befriend commit (shared lib).
+agent(Id, [intro_result(Other, Ch)|UserIn], NetIn, Outs) :-
+    ground(Id?), ground(Other?) |
+    befriend_commit(Id?, Other?, Ch?, Outs?, Outs1, NetIn?, NetIn1),
+    agent(Id?, UserIn?, NetIn1?, Outs1?).
+
+%% Intro result: peer nacked — notify rejected.
+agent(Id, [intro_rejected(Other)|UserIn], NetIn, Outs) :-
+    ground(Id?) |
+    send_user(msg(agent, '_user', rejected(Other?)), Outs?, Outs1),
+    agent(Id?, UserIn?, NetIn?, Outs1?).
+
+%% Injection catch-all (drop unrecognised injected message).
+agent(Id, [_|UserIn], NetIn, Outs) :-
+    ground(Id?), otherwise |
+    agent(Id?, UserIn?, NetIn?, Outs?).
+
+%% --- Termination ---
+
+agent(_, [], _, Outs) :- close_outputs(Outs?).
+agent(_, _, [], Outs) :- close_outputs(Outs?).
