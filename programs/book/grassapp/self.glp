@@ -35,10 +35,10 @@ FriendMsg     ::= msg(Constant, Constant, FriendContent).
 FriendStream  ::= [] ; [FriendMsg | FriendStream].
 FriendChannel ::= ch(FriendStream, FriendStream?).
 
-%% Escrowed opaque values in the mediator's pending table. `?` inside the
-%% constructor: the table forwards the writer back to the agent on response.
+%% Escrowed opaque values in the mediator's pending table — one constructor per
+%% ask.  `?` inside the constructor: the table forwards the writer back to the
+%% agent on response.
 PendingValue ::= response(Response?)
-               ; channel(FriendChannel?)
                ; swap_pending(SwapResponse?, Constant, Integer, Constant, Integer)
                ; error.
 
@@ -55,14 +55,13 @@ AgentContent ::= befriend(Constant, Response?)
                ; swap_done(Constant)
                ; swap_failed(Constant).
 
-%% mediator -> agent (mediator's reply to a user action).
+%% mediator -> agent (mediator's reply to a user action): the compose commands
+%% and the sibling choices, plus response(Response) — the injected-result
+%% vocabulary (inject_msg), which the mediator itself never sends.
 UserContent ::= connect(Constant)
               ; unfriend(Constant)
               ; decision(Decision, Constant, PendingValue)
               ; send(Constant, Constant)
-              ; introduce(Constant, Constant)
-              ; accept_intro(Constant, PendingValue)
-              ; reject_intro(Constant)
               ; response(Response)
               ; balance
               ; mint(Integer)

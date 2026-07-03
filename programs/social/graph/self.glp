@@ -91,7 +91,8 @@ UserCmd ::= decision(Decision, Constant, ReqId)
           ; reject_intro(Constant, ReqId)
           ; connect(Constant)
           ; send(Constant, Constant)
-          ; introduce(Constant, Constant).
+          ; introduce(Constant, Constant)
+          ; unfriend(Constant).
 
 %% Mediator -> User
 UserNotify ::= befriend(Constant, ReqId)
@@ -99,7 +100,8 @@ UserNotify ::= befriend(Constant, ReqId)
              ; connected(Constant)
              ; rejected
              ; rejected(Constant)
-             ; received(Constant, Constant).
+             ; received(Constant, Constant)
+             ; unfriended(Constant).
 
 %% User ↔ mediator streams and channels
 UserCmdStream    ::= [] ; [UserCmd | UserCmdStream].

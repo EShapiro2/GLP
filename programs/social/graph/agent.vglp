@@ -29,6 +29,11 @@
 %% does not appear here: the machine's question to the person is not a message
 %% but a pending volition-guarded reduction.
 %%
+%% Clause order follows the paper's remark "Ordering with otherwise":
+%% Request-shaped clauses follow every otherwise clause of the procedure — the
+%% perpetually-pending compose clauses come last, after the catch-alls — and
+%% between volition-guarded siblings otherwise is not used.
+%%
 %% This file is vGLP, not GLP: the REPL does not load it (hence .vglp).  Its
 %% correctness argument is the clause-for-clause correspondence to the tested,
 %% deployed implementation in this directory.
@@ -42,11 +47,6 @@
 %% the local bind_response, handle_response, close_outputs — are those of
 %% agent.glp and lib/routing/, unchanged; this file gives the agent procedure
 %% itself.
-%%
-%% Note: the deployed mediator vocabulary (self.glp UserCmd/UserNotify) has no
-%% unfriend command and no unfriended notification; the unfriend clause below
-%% corresponds to the agent clause for msg('_user', Id, unfriend(Target)),
-%% today reachable from a play but not from the UI.
 
 
 %% Screen vocabulary — self.glp's AgentContent minus the escrow vocabulary
@@ -78,45 +78,6 @@ UserInStream ::= [] ; [UserInMsg | UserInStream].
 %% =============================================================================
 
 procedure agent(Constant?, UserInStream?, NetInStream?, OutputsList?).
-
-%% --- Volitional: social transactions the person originates ---
-%% Perpetually pending; each grant supplies the parameters.
-%% Compiled form: UserCmds connect/1, unfriend/1, send/2, introduce/2.
-
-%% Offer friendship by cold call.
-*(Target)
-agent(Id, UserIn, NetIn, Outs) :-
-    ground(Id?), ground(Target?) |
-    send_net(msg(Target?, intro(Id?, Resp)), Outs?, Outs1),
-    inject_msg(Resp?, Target?, Id?, UserIn?, UserIn1),
-    agent(Id?, UserIn1?, NetIn?, Outs1?).
-
-%% Unfriend (End friend): notify the peer on the friend channel, then tear
-%% down.  Guarded by either party, so one-way: no ack, no decline.
-%% Idempotent: if Target is not a friend, send_friend and close_friend are
-%% no-ops.
-*(Target)
-agent(Id, UserIn, NetIn, Outs) :-
-    ground(Id?), ground(Target?) |
-    send_friend(Target?, msg(Id?, Target?, unfriend), Outs?, Outs1),
-    close_friend(Target?, Outs1?, Outs2),
-    agent(Id?, UserIn?, NetIn?, Outs2?).
-
-%% Message a friend.
-*(Target, Text)
-agent(Id, UserIn, NetIn, Outs) :-
-    ground(Id?), ground(Target?) |
-    send_friend(Target?, msg(Id?, Target?, text(Text?)), Outs?, Outs1),
-    agent(Id?, UserIn?, NetIn?, Outs1?).
-
-%% Offer an introduction of friend P to friend Q: a fresh setup-channel pair,
-%% one half to each.
-*(P, Q)
-agent(Id, UserIn, NetIn, Outs) :-
-    ground(Id?), ground(P?), ground(Q?), ~(P? =?= Q?), new_channel(PQCh, QPCh) |
-    send_friend(P?, msg(Id?, P?, intro(Q?, QPCh?)), Outs?, Outs1),
-    send_friend(Q?, msg(Id?, Q?, intro(P?, PQCh?)), Outs1?, Outs2),
-    agent(Id?, UserIn?, NetIn?, Outs2?).
 
 %% --- Volitional: answering a friend offer (cold call) ---
 %% The arrived cold call makes both clauses pending; the person's grant selects
@@ -210,6 +171,46 @@ agent(Id, [intro_rejected(Other)|UserIn], NetIn, Outs) :-
 agent(Id, [_|UserIn], NetIn, Outs) :-
     ground(Id?), otherwise |
     agent(Id?, UserIn?, NetIn?, Outs?).
+
+%% --- Volitional: social transactions the person originates ---
+%% Request-shaped, hence perpetually pending, and placed after every otherwise
+%% clause (remark "Ordering with otherwise"); each grant supplies the parameters.
+%% Compiled form: UserCmds connect/1, unfriend/1, send/2, introduce/2.
+
+%% Offer friendship by cold call.
+*(Target)
+agent(Id, UserIn, NetIn, Outs) :-
+    ground(Id?), ground(Target?) |
+    send_net(msg(Target?, intro(Id?, Resp)), Outs?, Outs1),
+    inject_msg(Resp?, Target?, Id?, UserIn?, UserIn1),
+    agent(Id?, UserIn1?, NetIn?, Outs1?).
+
+%% Unfriend (End friend): notify the peer on the friend channel, then tear
+%% down.  Guarded by either party, so one-way: no ack, no decline.
+%% Idempotent: if Target is not a friend, send_friend and close_friend are
+%% no-ops.
+*(Target)
+agent(Id, UserIn, NetIn, Outs) :-
+    ground(Id?), ground(Target?) |
+    send_friend(Target?, msg(Id?, Target?, unfriend), Outs?, Outs1),
+    close_friend(Target?, Outs1?, Outs2),
+    agent(Id?, UserIn?, NetIn?, Outs2?).
+
+%% Message a friend.
+*(Target, Text)
+agent(Id, UserIn, NetIn, Outs) :-
+    ground(Id?), ground(Target?) |
+    send_friend(Target?, msg(Id?, Target?, text(Text?)), Outs?, Outs1),
+    agent(Id?, UserIn?, NetIn?, Outs1?).
+
+%% Offer an introduction of friend P to friend Q: a fresh setup-channel pair,
+%% one half to each.
+*(P, Q)
+agent(Id, UserIn, NetIn, Outs) :-
+    ground(Id?), ground(P?), ground(Q?), ~(P? =?= Q?), new_channel(PQCh, QPCh) |
+    send_friend(P?, msg(Id?, P?, intro(Q?, QPCh?)), Outs?, Outs1),
+    send_friend(Q?, msg(Id?, Q?, intro(P?, PQCh?)), Outs1?, Outs2),
+    agent(Id?, UserIn?, NetIn?, Outs2?).
 
 %% --- Termination ---
 
