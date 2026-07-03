@@ -1,0 +1,108 @@
+%% play_ui_boot.glp — single-isolate social-graph scenario (live UI).
+%%
+%% Bob is the live-UI agent: his UserCmd stream comes from the person through
+%% the Dart bridge (agent_init/3's UserIn) and his UserNotify stream returns to
+%% the person through send_to_user.  Alice and Charlie are actors: each
+%% cold-calls Bob and, once he accepts, messages him; Charlie then unfriends
+%% him, so Bob's screen shows the Integrate-unfriend path.  An in-heap crossbar
+%% routes '_net' cold calls by addressee; friend channels are in-heap.
+%%
+%% The play wires the canonical compiled pair of this platform — agent.glp and
+%% ui/mediator.glp — to the Dart bridge: the code that runs under the live UI
+%% is the code the fplays test.
+
+%% =============================================================================
+%% IMPORTED PROCEDURES — Cross-module dependencies
+%% =============================================================================
+
+%% From agent.glp (sibling)
+imported procedure agent#agent(Constant?, UserInStream?, NetInStream?, OutputsList?).
+
+%% From ui/mediator.glp
+imported procedure mediator#ui_mediator(Constant?, AgentChannel?, UserChannel?, PendingList?, Constant?).
+
+%% =============================================================================
+%% IN-HEAP CROSSBAR — route '_net' cold calls by addressee
+%% =============================================================================
+
+procedure crossbar(NetOutStream?, NetOutStream?, NetOutStream?,
+                   NetInStream, NetInStream, NetInStream).
+crossbar(AOut, BOut, COut, AIn?, BIn?, CIn?) :-
+    merge(AOut?, BOut?, AB),
+    merge(AB?, COut?, All),
+    route(All?, AIn, BIn, CIn).
+
+procedure route(NetOutStream?, NetInStream, NetInStream, NetInStream).
+route([msg(alice, C) | Rest], [msg(alice, C?) | A?], B?, Ch?) :-
+    route(Rest?, A, B, Ch).
+route([msg(bob, C) | Rest], A?, [msg(bob, C?) | B?], Ch?) :-
+    route(Rest?, A, B, Ch).
+route([msg(charlie, C) | Rest], A?, B?, [msg(charlie, C?) | Ch?]) :-
+    route(Rest?, A, B, Ch).
+route([], [], [], []).
+
+%% =============================================================================
+%% ACTORS — cold-call Bob; accept offers and introductions
+%% =============================================================================
+
+%% Alice: cold-call Bob; once connected, message him.
+procedure ui_alice(UserNotifyStream?, UserCmdStream).
+ui_alice(Ns, [connect(bob) | Cs?]) :- ui_alice_run(Ns?, Cs).
+
+procedure ui_alice_run(UserNotifyStream?, UserCmdStream).
+ui_alice_run([connected(bob) | Ns], [send(bob, hello) | Cs?]) :-
+    ui_drain(alice, Ns?, Cs).
+ui_alice_run([befriend(Who, Req) | Ns], [decision(yes, Who?, Req?) | Cs?]) :-
+    ground(Who?), ground(Req?) | ui_alice_run(Ns?, Cs).
+ui_alice_run([befriend_intro(_, Other, Req) | Ns], [accept_intro(Other?, Req?) | Cs?]) :-
+    ground(Other?), ground(Req?) | ui_alice_run(Ns?, Cs).
+ui_alice_run([_ | Ns], Cs?) :- otherwise | ui_alice_run(Ns?, Cs).
+ui_alice_run([], []).
+
+%% Charlie: cold-call Bob; once connected, message him and then unfriend him
+%% (End friend at the peer; Bob's screen shows unfriended(charlie) via the
+%% Integrate-unfriend path).
+procedure ui_charlie(UserNotifyStream?, UserCmdStream).
+ui_charlie(Ns, [connect(bob) | Cs?]) :- ui_charlie_run(Ns?, Cs).
+
+procedure ui_charlie_run(UserNotifyStream?, UserCmdStream).
+ui_charlie_run([connected(bob) | Ns], [send(bob, hi) | [unfriend(bob) | Cs?]]) :-
+    ui_drain(charlie, Ns?, Cs).
+ui_charlie_run([befriend(Who, Req) | Ns], [decision(yes, Who?, Req?) | Cs?]) :-
+    ground(Who?), ground(Req?) | ui_charlie_run(Ns?, Cs).
+ui_charlie_run([befriend_intro(_, Other, Req) | Ns], [accept_intro(Other?, Req?) | Cs?]) :-
+    ground(Other?), ground(Req?) | ui_charlie_run(Ns?, Cs).
+ui_charlie_run([_ | Ns], Cs?) :- otherwise | ui_charlie_run(Ns?, Cs).
+ui_charlie_run([], []).
+
+%% Steady state: accept friend offers and introductions, ignore the rest.
+procedure ui_drain(Constant?, UserNotifyStream?, UserCmdStream).
+ui_drain(Me, [befriend(Who, Req) | Ns], [decision(yes, Who?, Req?) | Cs?]) :-
+    ground(Me?), ground(Who?), ground(Req?) | ui_drain(Me?, Ns?, Cs).
+ui_drain(Me, [befriend_intro(_, Other, Req) | Ns], [accept_intro(Other?, Req?) | Cs?]) :-
+    ground(Me?), ground(Other?), ground(Req?) | ui_drain(Me?, Ns?, Cs).
+ui_drain(Me, [_ | Ns], Cs?) :- ground(Me?), otherwise | ui_drain(Me?, Ns?, Cs).
+ui_drain(_, [], []).
+
+%% =============================================================================
+%% SCENARIO BOOT (entered as Bob's agent_init)
+%% =============================================================================
+
+procedure agent_init(Constant?, UserCmdStream?, NetInStream?).
+agent_init(bob, UserIn, _) :-
+    agent # agent(bob, BAgentIn?, BNetIn?,
+          [user_output(BA2U), net_output(BNetOut)]),
+    mediator # ui_mediator(bob, ch(BA2U?, BAgentIn),
+                ch(UserIn?, BUserOut), [], 1),
+    send_to_user(BUserOut?),
+    agent # agent(alice, AAgentIn?, ANetIn?,
+          [user_output(AA2U), net_output(ANetOut)]),
+    mediator # ui_mediator(alice, ch(AA2U?, AAgentIn),
+                ch(ACmds?, AUserOut), [], 1),
+    ui_alice(AUserOut?, ACmds),
+    agent # agent(charlie, CAgentIn?, CNetIn?,
+          [user_output(CA2U), net_output(CNetOut)]),
+    mediator # ui_mediator(charlie, ch(CA2U?, CAgentIn),
+                ch(CCmds?, CUserOut), [], 1),
+    ui_charlie(CUserOut?, CCmds),
+    crossbar(ANetOut?, BNetOut?, CNetOut?, ANetIn, BNetIn, CNetIn).

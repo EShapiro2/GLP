@@ -1,11 +1,12 @@
-/// Generic UI runtime (paper §7.4).
+/// Generic UI runtime (paper §6): the two constructs and the screen over one
+/// mediator boundary.
 ///
 /// Holds the transport (send a ground `UserCmd`, receive ground `UserNotify`),
-/// an inbox of cards, and an activity store. It renders nothing itself; it
-/// turns notify text into structured state and turns user actions into ground
-/// command text. It names no app-specific constructor — everything specific
-/// comes from the [Manifest]. If a constructor name ever needs special-casing
-/// here, that logic belongs in the schema instead.
+/// an inbox of cards, and an activity store — the screen. It renders nothing
+/// itself; it turns notify text into structured state and turns the person's
+/// taps into ground command text. It names no app-specific constructor —
+/// everything specific comes from the [Manifest]. If a constructor name ever
+/// needs special-casing here, that logic belongs in the schema instead.
 library;
 
 import 'manifest.dart';
@@ -26,9 +27,9 @@ class InboxCard {
   String get itemKey => formatTerm(fields[desc.itemKey]!);
 }
 
-/// Structured state built from all-ground notifies — the state the outbox
-/// leaves (friends list, balances, threads). Activity rules land here; there is
-/// no separate activity feed (paper §7.4).
+/// Structured state built from all-ground notifies — the screen (friends
+/// list, balances, threads). Activity rules land here; there is no separate
+/// activity feed.
 class ActivityStore {
   final Map<String, List<GTerm>> lists = {};
   final Map<String, GTerm> values = {};
@@ -96,7 +97,8 @@ class UiRuntime {
     // Not a notify this manifest knows — ignore (e.g. a command echoed in help).
   }
 
-  /// Submit a composed outbox command.
+  /// Submit a compose form — the person's tap grants the Request-shaped
+  /// clause, the field values its person inputs.
   void submitCommand(CommandDesc cmd, Map<String, GTerm> values) {
     final term = cmd.args.isEmpty
         ? GAtom(cmd.ctor)
@@ -105,8 +107,10 @@ class UiRuntime {
     onChange?.call();
   }
 
-  /// Answer an inbox card with one of its answers. [picks] supplies any
-  /// `PickerFill` values (unused by GSG v1). The card is consumed.
+  /// Answer an inbox card with one of its answers — the person's tap grants
+  /// the chosen sibling clause; the volition is consumed by the reduction it
+  /// authorises, so the card is consumed. [picks] supplies any `PickerFill`
+  /// values (unused by GSG v1).
   void answerCard(InboxCard card, AnswerDesc answer,
       {Map<String, GTerm> picks = const {}}) {
     final filled = <GTerm>[];

@@ -1,18 +1,21 @@
-/// Per-app UI manifest schema (paper §7.4).
+/// Per-app UI manifest schema (paper §6, the two constructs and the screen).
 ///
 /// A manifest is declarative data — no Dart logic. It maps a mediator's
-/// `UserCmd`/`UserNotify` constructors to the three generic surfaces: outbox
-/// forms, inbox cards, and activity rules. The generic runtime in this package
-/// renders strictly from a manifest and names no app-specific constructor; all
-/// app specifics (GSG, bonds, child-safe) live in manifest instances elsewhere.
+/// `UserCmd`/`UserNotify` constructors to the two constructs and the screen:
+/// compose forms (the Request-shaped volition-guarded clauses), inbox cards
+/// (the Respond-shaped pending reductions), and activity rules (the screen —
+/// platform state flowing on the notify stream). The generic runtime in this
+/// package renders strictly from a manifest and names no app-specific
+/// constructor; all app specifics (GSG, bonds, child-safe) live in manifest
+/// instances elsewhere.
 library;
 
 import 'term.dart';
 
-/// Input widget kind for an outbox form field.
+/// Input widget kind for a compose-form field.
 enum FieldType { person, text, integer }
 
-/// One argument of an outbox command form.
+/// One field of a compose form — one person input of the clause.
 class FieldDesc {
   final String name;
   final FieldType type;
@@ -20,7 +23,8 @@ class FieldDesc {
   const FieldDesc(this.name, this.type, this.label);
 }
 
-/// An outbox form: a free `UserCmd` (no escrowed `ReqId`) the user composes.
+/// A compose form: a Request-shaped volition-guarded clause, its fields the
+/// clause's person inputs — a free `UserCmd` (no escrowed `ReqId`).
 /// Submitting builds the ground term `ctor(arg, ...)` from the field values.
 class CommandDesc {
   final String ctor;
@@ -67,9 +71,10 @@ class AnswerDesc {
   bool get needsPicker => fill.any((f) => f is PickerFill);
 }
 
-/// An inbox card: one `ReqId`-bearing `UserNotify`. [args] names the notify's
-/// positional arguments so [title]/[subtitle] templates and [answers] can refer
-/// to them by name (e.g. `{from}`).
+/// An inbox card: a Respond-shaped pending volition-guarded reduction — one
+/// `ReqId`-bearing `UserNotify`, its [answers] the sibling clauses. [args]
+/// names the notify's positional arguments so [title]/[subtitle] templates
+/// and [answers] can refer to them by name (e.g. `{from}`).
 ///
 /// [itemKey] names the argument that pins the card to a row in its panel's view
 /// — the offering person for a friend offer (`from`), the proposing friend for a
@@ -171,7 +176,8 @@ class SetBalance extends Effect {
 }
 
 /// An activity rule: one all-ground `UserNotify` that lands in its target
-/// surface(s) (paper §7.4). [effects] mutate the rendered state — `connected`
+/// surface(s) — the screen, the classic stream I/O of concurrent logic
+/// programming (paper §6). [effects] mutate the rendered state — `connected`
 /// both adds a friend to the Friends panel and opens the conversation in the
 /// Chats panel, `unfriended` removes one, `received` extends a conversation.
 /// There is no separate "Activity" screen; "activity" is the rule's name. A rule
@@ -191,8 +197,8 @@ class ActivityDesc {
 
 /// Declares that a thread store key is a set of conversations to render as a
 /// chat list + drill-down conversation (the messaging surface). [sendCtor] is
-/// the outbox command that sends a message; the open conversation supplies its
-/// peer, the input its text — so the input builds `sendCtor(peer, text)`.
+/// the compose command that sends a message; the open conversation supplies
+/// its peer, the input its text — so the input builds `sendCtor(peer, text)`.
 class ChatView {
   final String threadKey;
   final String label;
@@ -256,10 +262,10 @@ class StateView {
   const StateView(this.key, this.label, this.kind);
 }
 
-/// One platform's panel (paper §7.3): a name (app-bar title + bottom-nav tab
-/// label), exactly one state/outbox view — a friends list, a wallet, or a chat
-/// list — its own outbox [commands] composed by the panel's "+", and its own
-/// [inbox] of volitions, each surfaced as a per-item alert on its view's rows.
+/// One platform's panel (paper §7): a name (app-bar title + bottom-nav tab
+/// label), exactly one state view — a friends list, a wallet, or a chat
+/// list — its own compose [commands] (the panel's "+"), and its own [inbox]
+/// of asks, each surfaced as a per-item alert on its view's rows.
 /// A new platform is a new panel; the panels stack without touching one another.
 class Panel {
   /// Stable identity for routing a card to this panel (e.g. 'friends').
@@ -274,8 +280,8 @@ class Panel {
   final WalletView? wallet;
   final ChatView? chat;
 
-  /// The panel's outbox commands (its "+"); empty when the view composes its own
-  /// actions (the wallet drills down to per-friend actions instead).
+  /// The panel's compose commands (its "+"); empty when the view composes its
+  /// own actions (the wallet drills down to per-friend actions instead).
   final List<CommandDesc> commands;
 
   /// The panel's inbox cards, each pinned to a row by its [InboxDesc.itemKey].
@@ -293,7 +299,7 @@ class Panel {
 }
 
 /// A complete per-app UI contract: GrassApp is one app of several panels, one
-/// per platform (paper §7.3). The bottom bar is the panels; the active panel's
+/// per platform (paper §7). The bottom bar is the panels; the active panel's
 /// name heads the app bar. Activity rules and declared state are shared across
 /// panels — one notify may land in more than one panel (e.g. `connected`) — so
 /// they live here and the panels render views over the one activity store.

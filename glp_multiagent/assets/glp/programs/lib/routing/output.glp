@@ -1,0 +1,51 @@
+
+%% Per-kind output routers (A5 Stage B), lifted verbatim from the platform
+%% self.glp files (social/network, social/graph, bonds — all
+%% identical).  Declarations are generalised over the entry-union type Ent and
+%% the carried-message type M, both inferred at each call.  Each clause
+%% destructures Ent's per-kind constructor (user_output / net_output /
+%% friend_output / child_output / parent_output), so per-instantiation checking
+%% rejects an instantiation whose Ent lacks that constructor.
+%%
+%% Bodies are unchanged from the platform sources.
+
+exported procedure send_user(M?, Stream(Ent)?, Stream(Ent)).
+send_user(Msg, [user_output([Msg?|Out1?])|Rest], [user_output(Out1)|Rest?]).
+send_user(Msg, [E|Rest], [E?|Rest1?]) :-
+    otherwise |
+    send_user(Msg?, Rest?, Rest1).
+send_user(_, [], []).
+
+exported procedure send_net(M?, Stream(Ent)?, Stream(Ent)).
+send_net(Msg, [net_output([Msg?|Out1?])|Rest], [net_output(Out1)|Rest?]).
+send_net(Msg, [E|Rest], [E?|Rest1?]) :-
+    otherwise |
+    send_net(Msg?, Rest?, Rest1).
+send_net(_, [], []).
+
+exported procedure send_friend(Constant?, M?, Stream(Ent)?, Stream(Ent)).
+send_friend(Name, Msg, [friend_output(K, [Msg?|Out1?])|Rest], [friend_output(K?, Out1)|Rest?]) :-
+    Name? =?= K? | true.
+send_friend(Name, Msg, [E|Rest], [E?|Rest1?]) :-
+    otherwise |
+    send_friend(Name?, Msg?, Rest?, Rest1).
+send_friend(_, _, [], []).
+
+exported procedure send_child(Constant?, M?, Stream(Ent)?, Stream(Ent)).
+send_child(Name, Msg, [child_output(K, [Msg?|Out1?])|Rest], [child_output(K?, Out1)|Rest?]) :-
+    Name? =?= K? | true.
+send_child(Name, Msg, [E|Rest], [E?|Rest1?]) :-
+    otherwise |
+    send_child(Name?, Msg?, Rest?, Rest1).
+send_child(_, _, [], []).
+
+exported procedure send_parent(Constant?, M?, Stream(Ent)?, Stream(Ent)).
+send_parent(Name, Msg, [parent_output(K, [Msg?|Out1?])|Rest], [parent_output(K?, Out1)|Rest?]) :-
+    Name? =?= K? | true.
+send_parent(Name, Msg, [E|Rest], [E?|Rest1?]) :-
+    otherwise |
+    send_parent(Name?, Msg?, Rest?, Rest1).
+send_parent(_, _, [], []).
+
+exported procedure add_friend_output(Constant?, Stream(M), Stream(Ent)?, Stream(Ent)).
+add_friend_output(Name, Out?, Outs, [friend_output(Name?, Out)|Outs?]).

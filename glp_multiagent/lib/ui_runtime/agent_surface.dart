@@ -1,12 +1,14 @@
-/// GrassApp — one app, one panel per platform (paper §7.3, Figure fig:grassapp).
+/// GrassApp — one app, one panel per platform (paper §7, Figure fig:grassapp).
 ///
 /// The bottom bar is the panels — Friends (social graph), Coins, Chats (social
 /// network) — each reached by an icon badged with that panel's pending alerts.
-/// The app bar reads the active panel's name. Each panel is the platform's own
-/// two surfaces: an outbox the person composes (its "+") and an inbox of
-/// volitions, surfaced as WhatsApp-style per-item alerts — a card badges the row
-/// it pins to (a person, a friend, a group) and is answered by tapping that row,
-/// which opens an accept/decline sheet (a confirmed gesture, not inline buttons).
+/// The app bar reads the active panel's name. Each panel renders the two
+/// constructs and the screen (paper §6): compose forms (its "+", the
+/// Request-shaped clauses) and inbox cards (the Respond-shaped pending
+/// reductions), surfaced as WhatsApp-style per-item alerts — a card badges the
+/// row it pins to (a person, a friend, a group) and is answered by tapping
+/// that row, which opens a sheet whose buttons are the sibling clauses (tap
+/// grants, dismiss cancels — a confirmed gesture, not inline buttons).
 ///
 /// One mediator feeds one runtime; the runtime tags each card with its owning
 /// panel, so this surface routes alerts by panel and row. Renders strictly from
@@ -494,7 +496,7 @@ class _AgentSurfaceState extends State<AgentSurface> {
     return s.args.isNotEmpty ? formatTerm(s.args[0]) : '';
   }
 
-  // === Outbox — compose a request ("+") =====================================
+  // === Compose forms — the "+" (Request-shaped clauses) =====================
 
   void _composeSheet(BuildContext context, List<CommandDesc> commands) {
     if (commands.length == 1) {

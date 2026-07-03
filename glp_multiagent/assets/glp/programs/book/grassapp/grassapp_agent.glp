@@ -10,12 +10,12 @@
 %% Stage 1: mint + balance (per-issuer counts emitted as balance_report). The
 %% peer transactions (pay, redeem, swap) are added in later stages.
 
--mode(system).
 
 %% Output content: union of agent->mediator, friend-channel, and net contents.
 OutputContent ::= befriend(Constant, Response?)
                 ; befriend_intro(Constant, Constant, FriendChannel?)
                 ; connected(Constant)
+                ; unfriended(Constant)
                 ; rejected
                 ; rejected(Constant)
                 ; received(Constant, Constant)
@@ -29,7 +29,8 @@ OutputContent ::= befriend(Constant, Response?)
                 ; coins(Constant, Integer)
                 ; balances(Stream(Holding))
                 ; swap_propose(Constant, Integer, Constant, Integer, SwapResponse?)
-                ; redeem_coins(Constant, Integer).
+                ; redeem_coins(Constant, Integer)
+                ; unfriend.
 OutputMsg     ::= msg(Constant, Constant, OutputContent)
                 ; msg(Constant, NetColdCall).
 OutputStream  ::= [] ; [OutputMsg | OutputStream].
@@ -97,6 +98,30 @@ handle_response(accept(ch(FIn, FOut?)), From, Outs, Outs2?, In, In1?) :-
 handle_response(no, From, Outs, Outs1?, In, In?) :-
     ground(From?) |
     lookup_send('_user', msg(agent, '_user', rejected(From?)), Outs?, Outs1).
+
+%% =============================================================================
+%% UNFRIEND (paper §4: End friend / Integrate unfriend)
+%% =============================================================================
+
+%% End friend (initiator, guard {p}): place a final `unfriend` on the friend's
+%% channel, closing it, and drop the friend's output entry (c_p := c_p \ {q}).
+procedure end_friend(Constant?, Constant?, OutputsList?, OutputsList).
+end_friend(Key, Id, [output(K, [msg(Id?, Key?, unfriend)])|Rest], Rest?) :-
+    Key? =?= K? | true.
+end_friend(Key, Id, [output(K, Out?)|Rest], [output(K?, Out)|Rest1?]) :-
+    otherwise |
+    end_friend(Key?, Id?, Rest?, Rest1).
+end_friend(_, _, [], []).
+
+%% Integrate unfriend (receiver, unguarded): close the friend's channel and drop
+%% the entry (c_q := c_q \ {p}); no message is sent back.
+procedure drop_friend(Constant?, OutputsList?, OutputsList).
+drop_friend(Key, [output(K, [])|Rest], Rest?) :-
+    Key? =?= K? | true.
+drop_friend(Key, [output(K, Out?)|Rest], [output(K?, Out)|Rest1?]) :-
+    otherwise |
+    drop_friend(Key?, Rest?, Rest1).
+drop_friend(_, [], []).
 
 %% =============================================================================
 %% HOLDINGS HELPERS
@@ -314,6 +339,14 @@ agent(Id, [msg('_user', Id1, connect(Target))|UserIn], NetIn, Outs, Holdings) :-
     inject_msg(Resp?, Target?, Id?, UserIn?, UserIn1),
     agent(Id?, UserIn1?, NetIn?, Outs1?, Holdings?).
 
+%% Unfriend (paper §4 End friend): tear down the friend channel, sending a final
+%% `unfriend` over it, and tell the user the friend is gone.
+agent(Id, [msg('_user', Id1, unfriend(Friend))|UserIn], NetIn, Outs, Holdings) :-
+    Id? =?= Id1?, ground(Friend?) |
+    end_friend(Friend?, Id?, Outs?, Outs1),
+    lookup_send('_user', msg(agent, '_user', unfriended(Friend?)), Outs1?, Outs2),
+    agent(Id?, UserIn?, NetIn?, Outs2?, Holdings?).
+
 agent(Id, [msg('_user', Id1, decision(Dec, From, response(Resp?)))|UserIn], NetIn, Outs, Holdings) :-
     Id? =?= Id1? |
     bind_response(Dec?, From?, Resp, Outs?, Outs1, NetIn?, NetIn1),
@@ -364,6 +397,14 @@ agent(Id, UserIn, [msg(_, Id1, redeem_coins(Returner, Amount))|NetIn], Outs, Hol
     add_coin(Id?, Amount?, Holdings?, Holdings1),
     take_up_to(Returner?, Amount?, Holdings1?, GaveBack, Holdings2),
     do_redeem_back(Id?, Returner?, GaveBack?, Holdings2?, UserIn?, NetIn?, Outs?).
+
+%% A friend unfriended me (paper §4 Integrate unfriend): drop the channel and
+%% tell the user the friend is gone.
+agent(Id, UserIn, [msg(From, Id1, unfriend)|NetIn], Outs, Holdings) :-
+    Id? =?= Id1?, ground(From?) |
+    drop_friend(From?, Outs?, Outs1),
+    lookup_send('_user', msg(agent, '_user', unfriended(From?)), Outs1?, Outs2),
+    agent(Id?, UserIn?, NetIn?, Outs2?, Holdings?).
 
 %% A friend publishes their holdings: surface them as that friend's balances.
 agent(Id, UserIn, [msg(From, Id1, balances(FH))|NetIn], Outs, Holdings) :-

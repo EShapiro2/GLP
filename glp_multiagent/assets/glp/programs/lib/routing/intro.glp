@@ -1,0 +1,25 @@
+
+%% Introduction-handshake routers (A5 Stage B), lifted verbatim from the
+%% platform self.glp files (social/network, social/graph —
+%% all identical).  Generalised over the handshake content type C, the
+%% intro-result type IR, and the agent input stream type S, all inferred at each
+%% call.  intro_await_peer destructures the handshake stream (ack/nack) and
+%% constructs IR's constructors; inject_intro_result destructures IR and injects
+%% into the S stream — so per-instantiation checking validates C, IR and S at
+%% each instantiation.
+%%
+%% Bodies are unchanged from the platform sources.
+
+exported procedure intro_await_peer(Constant?, Channel(Stream(C), Stream(C))?, IR).
+intro_await_peer(Other, ch([ack(_)|ChIn], ChOut?),
+                 intro_result(Other?, ch(ChIn?, ChOut))).
+intro_await_peer(Other, ch([nack|_], []),
+                 intro_rejected(Other?)).
+
+exported procedure inject_intro_result(IR?, Stream(S)?, Stream(S)).
+inject_intro_result(intro_result(Other, Ch), Ys, [intro_result(Other?, Ch?)|Ys?]) :-
+    ground(Other?) | true.
+inject_intro_result(intro_rejected(Other), Ys, [intro_rejected(Other?)|Ys?]) :-
+    ground(Other?) | true.
+inject_intro_result(Res, [Y|Ys], [Y?|Ys1?]) :-
+    inject_intro_result(Res?, Ys?, Ys1).

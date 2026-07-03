@@ -1,9 +1,9 @@
-/// GrassApp manifest (paper §7.3): one app, one panel per platform —
+/// GrassApp manifest (paper §7): one app, one panel per platform —
 /// **Friends** (the social graph), **Coins** (coins among friends), and
 /// **Chats** (the social network). The bottom bar is these three panels; each
-/// carries its own outbox and its own per-item alerts. One mediator
+/// carries its own compose forms and its own per-item alerts. One mediator
 /// (programs/book/grassapp/grassapp_mediator.glp) feeds them all; the Dart side
-/// routes each volition to its platform's panel by notify constructor — a friend
+/// routes each ask to its platform's panel by notify constructor — a friend
 /// offer to Friends, a proposed swap to Coins, a group invitation to Chats.
 ///
 /// Backed live by the GLP GrassApp scenario in programs/book/grassapp/
@@ -32,7 +32,7 @@ final Manifest grassrootsManifest = Manifest(
           args: [FieldDesc('target', FieldType.person, 'Person to connect')],
         ),
         // End a friendship (paper §5 Request; Table 1 "end a friendship"). A
-        // unilateral outbox command — no one else answers; the other side's
+        // unilateral compose command — no one else answers; the other side's
         // agent integrates it and both lists drop the friend.
         CommandDesc(
           ctor: 'unfriend',
@@ -67,28 +67,9 @@ final Manifest grassrootsManifest = Manifest(
             ),
           ],
         ),
-        // An introduction from a friend — the same generic interpreter renders
-        // it as a per-item alert, accepted or declined. The introduction itself
-        // is the social-graph platform's (programs/social/graph), which the
-        // paper cites; here the interpreter only renders the volition.
-        InboxDesc(
-          notifyCtor: 'befriend_intro',
-          args: const ['from', 'other', 'req'],
-          itemKey: 'other',
-          title: '{from} introduces you to {other}',
-          answers: const [
-            AnswerDesc(
-              label: 'Accept',
-              cmdCtor: 'accept_intro',
-              fill: [FromField('other'), FromField('req')],
-            ),
-            AnswerDesc(
-              label: 'Decline',
-              cmdCtor: 'reject_intro',
-              fill: [FromField('other'), FromField('req')],
-            ),
-          ],
-        ),
+        // Introductions are the social-graph platform's
+        // (programs/social/graph, rendered by the social manifest); the
+        // grassapp mediator's vocabulary carries no befriend_intro ask.
       ],
     ),
 

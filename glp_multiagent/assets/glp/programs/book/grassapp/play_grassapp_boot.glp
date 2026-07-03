@@ -6,7 +6,6 @@
 %%
 %% Requires: self.glp, grassapp_agent.glp, grassapp_mediator.glp
 
--mode(system).
 
 %% --- In-heap crossbar ---
 procedure crossbar(Stream(M)?, Stream(M)?, Stream(M)?,
@@ -38,8 +37,10 @@ procedure coin_actor(Constant?, Stream(UserNotify)?, Stream(UserCmd)).
 coin_actor(alice, [connected(bob) | Ns],
     [mint(5) | [pay(bob, alice, 2) | [propose_swap(bob, alice, 1, bob, 1) | Cs?]]]) :-
     coin_drain(alice, Ns?, Cs).
+%% Charlie also exercises End friend (paper §4): after paying Bob he unfriends
+%% him, so Bob's UI surfaces unfriended(charlie) (the Integrate-unfriend path).
 coin_actor(charlie, [connected(bob) | Ns],
-    [mint(4) | [pay(bob, charlie, 1) | Cs?]]) :-
+    [mint(4) | [pay(bob, charlie, 1) | [unfriend(bob) | Cs?]]]) :-
     coin_drain(charlie, Ns?, Cs).
 coin_actor(Me, [befriend(Who, Req) | Ns], [decision(yes, Who?, Req?) | Cs?]) :-
     ground(Me?), ground(Who?), ground(Req?) | coin_actor(Me?, Ns?, Cs).

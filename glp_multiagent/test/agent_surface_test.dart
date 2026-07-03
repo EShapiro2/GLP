@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:glp_multiagent/manifests/grassroots.dart';
+import 'package:glp_multiagent/manifests/social.dart';
 import 'package:glp_multiagent/ui_runtime/agent_surface.dart';
 import 'package:glp_multiagent/ui_runtime/runtime.dart';
 
@@ -54,12 +55,12 @@ void main() {
   testWidgets('an introduction alerts a Friends row; tapping it accepts',
       (tester) async {
     final sent = <String>[];
-    final r = UiRuntime(manifest: grassrootsManifest, onSend: sent.add);
+    // The introduction ask is the social-graph platform's (its mediator emits
+    // befriend_intro and takes accept_intro/reject_intro), so it renders from
+    // the social manifest; the grassapp mediator carries no such ask.
+    final r = UiRuntime(manifest: socialManifest, onSend: sent.add);
     await tester.pumpWidget(_wrap(r));
 
-    // The one generic interpreter renders befriend_intro from the manifest as a
-    // per-item alert. (The introduction's protocol is the social-graph
-    // platform's, which the paper cites; here the interpreter only renders it.)
     r.handleLine('befriend_intro(alice, charlie, req(5))');
     await tester.pump();
 
