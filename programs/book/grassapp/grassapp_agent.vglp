@@ -1,0 +1,260 @@
+%% grassapp_agent.vglp — the GrassApp agent as a vGLP program.
+%%
+%% vGLP source of the tested GLP program grassapp_agent.glp + grassapp_mediator.glp
+%% (this directory): the agent authored with volitional clauses, the mediator and
+%% its UserCmd/UserNotify vocabulary absent — they are what the vGLP-to-GLP
+%% translation generates. Exhibit for the paper "Volition Elicitation: Operational
+%% Semantics for People and their Machines", which defines vGLP.
+%%
+%% NOTATION (defined in the paper):
+%%   *                          marks a volitional clause: reducing a goal with it
+%%                              requires, besides its guards, the person's grant of
+%%                              this reduction. Among volitional clauses for the
+%%                              same goal, the person's grant selects the clause.
+%%   *(X1,...,Xk)               a volitional clause with person-supplied inputs:
+%%                              the grant binds the writers X1..Xk; the clause
+%%                              carries their readers Xi?.
+%%
+%% Correspondence to the compiled form (the translation, clause for clause):
+%%   - a *(X1..Xk) clause  ->  a UserCmd constructor over X1..Xk, a mediator
+%%     pass-through, and the agent clause matching msg('_user', Id, cmd(X1..Xk));
+%%   - a pending volitional reduction  ->  a pending-table entry req(N) in the
+%%     mediator, rendered as an inbox card;
+%%   - the person's choice between sibling * clauses (accept/decline)  ->  the
+%%     UserCmds decision/3, accept_swap/2, decline_swap/2 routing the escrowed
+%%     writer back to the agent.
+%% The escrow vocabulary — befriend/2, swap_offer/6, and the pending table — does
+%% not appear here: the machine's question to the person is not a message but a
+%% pending volitional reduction.
+%%
+%% This file is vGLP, not GLP: the REPL does not load it (hence .vglp). Its
+%% correctness argument is the clause-for-clause correspondence to the tested,
+%% deployed compiled form in this directory.
+%%
+%% Shared types (Response, FriendContent, Holding, SwapResponse, NetColdCall) are
+%% those of self.glp. Helper procedures — channel ops, merge, lookup_send,
+%% inject_msg, bind_response, handle_response, end_friend, drop_friend, the
+%% holdings helpers, do_pay, do_redeem, do_redeem_back, bind_swap_decline,
+%% inject_swap_result, do_propose_swap, do_accept_swap, add_output,
+%% close_outputs, after_change — are those of grassapp_agent.glp, unchanged;
+%% this file gives the agent procedure itself.
+
+
+%% Output content — grassapp_agent.glp's union minus the escrow vocabulary
+%% (befriend/2, swap_offer/6, befriend_intro/3): under vGLP the machine asks the
+%% person by a pending reduction, not by a message.
+OutputContent ::= connected(Constant)
+                ; unfriended(Constant)
+                ; rejected
+                ; rejected(Constant)
+                ; received(Constant, Constant)
+                ; response(Response)
+                ; text(Constant)
+                ; intro(Constant, FriendChannel)
+                ; balance_report(Constant, Constant, Integer)
+                ; swap_done(Constant)
+                ; swap_failed(Constant)
+                ; coins(Constant, Integer)
+                ; balances(Stream(Holding))
+                ; swap_propose(Constant, Integer, Constant, Integer, SwapResponse?)
+                ; redeem_coins(Constant, Integer)
+                ; unfriend.
+OutputMsg     ::= msg(Constant, Constant, OutputContent)
+                ; msg(Constant, NetColdCall).
+OutputStream  ::= [] ; [OutputMsg | OutputStream].
+
+OutputEntry ::= output(Constant, OutputStream?).
+OutputsList ::= [] ; [OutputEntry|OutputsList].
+
+%% =============================================================================
+%% AGENT/5
+%% =============================================================================
+
+procedure agent(Constant?, Stream(X)?, Stream(X)?, OutputsList?, Stream(Holding)?).
+
+%% --- Volitional: coin transactions the person originates ---
+%% Perpetually pending; each grant supplies the parameters.
+%% Compiled form: UserCmds mint/1, balance/0, pay/3, redeem/2, propose_swap/5.
+
+%% Mint K of my own coins.
+*(K)
+agent(Id, UserIn, NetIn, Outs, Holdings) :-
+    ground(Id?), integer(K?) |
+    add_coin(Id?, K?, Holdings?, Holdings1),
+    after_change(Id?, Holdings1?, UserIn?, NetIn?, Outs?).
+
+%% Report current balances on demand.
+*
+agent(Id, UserIn, NetIn, Outs, Holdings) :-
+    ground(Id?), ground(Holdings?) |
+    emit_balances(Id?, Holdings?, Outs?, Outs1),
+    agent(Id?, UserIn?, NetIn?, Outs1?, Holdings?).
+
+%% Pay Amt of Coin to a friend.
+*(Friend, Coin, Amt)
+agent(Id, UserIn, NetIn, Outs, Holdings) :-
+    ground(Friend?), ground(Coin?), integer(Amt?) |
+    sub_coin(Coin?, Amt?, Holdings?, Status, Holdings1),
+    do_pay(Status?, Id?, Friend?, Coin?, Amt?, Holdings1?, UserIn?, NetIn?, Outs?).
+
+%% Redeem: return Amount of a friend's coins to them; the issuer fills back.
+*(Friend, Amount)
+agent(Id, UserIn, NetIn, Outs, Holdings) :-
+    ground(Friend?), integer(Amount?) |
+    sub_coin(Friend?, Amount?, Holdings?, Status, Holdings1),
+    do_redeem(Status?, Id?, Friend?, Amount?, Holdings1?, UserIn?, NetIn?, Outs?).
+
+%% Propose a swap: remove the give-coins, offer the swap to the friend.
+*(Friend, GiveCoin, GiveAmt, WantCoin, WantAmt)
+agent(Id, UserIn, NetIn, Outs, Holdings) :-
+    ground(Friend?), ground(GiveCoin?), integer(GiveAmt?), ground(WantCoin?), integer(WantAmt?) |
+    sub_coin(GiveCoin?, GiveAmt?, Holdings?, Status, Holdings1),
+    do_propose_swap(Status?, Id?, Friend?, GiveCoin?, GiveAmt?, WantCoin?, WantAmt?, Holdings1?, UserIn?, NetIn?, Outs?).
+
+%% --- Volitional: social transactions the person originates ---
+%% Compiled form: UserCmds connect/1, unfriend/1, send/2.
+
+%% Offer friendship by cold call.
+*(Target)
+agent(Id, UserIn, NetIn, Outs, Holdings) :-
+    ground(Id?), ground(Target?) |
+    lookup_send('_net', msg(Target?, intro(Id?, Resp)), Outs?, Outs1),
+    inject_msg(Resp?, Target?, Id?, UserIn?, UserIn1),
+    agent(Id?, UserIn1?, NetIn?, Outs1?, Holdings?).
+
+%% Unfriend (End friend): tear down the friend channel, sending a final
+%% `unfriend` over it, and tell the person the friend is gone.
+*(Friend)
+agent(Id, UserIn, NetIn, Outs, Holdings) :-
+    ground(Id?), ground(Friend?) |
+    end_friend(Friend?, Id?, Outs?, Outs1),
+    lookup_send('_user', msg(agent, '_user', unfriended(Friend?)), Outs1?, Outs2),
+    agent(Id?, UserIn?, NetIn?, Outs2?, Holdings?).
+
+%% Message a friend.
+*(Target, Text)
+agent(Id, UserIn, NetIn, Outs, Holdings) :-
+    ground(Id?), ground(Target?) |
+    lookup_send(Target?, msg(Id?, Target?, text(Text?)), Outs?, Outs1),
+    agent(Id?, UserIn?, NetIn?, Outs1?, Holdings?).
+
+%% --- Volitional: answering a friend offer ---
+%% The arrived cold call makes both clauses pending; the person's grant selects
+%% accept or decline and binds Resp through bind_response.
+%% Compiled form: the befriend/2 forward to '_user', the mediator escrow req(N),
+%% and the agent clause for UserCmd decision/3.
+
+%% Accept.
+*
+agent(Id, UserIn, [msg(Id1, intro(From, Resp?))|NetIn], Outs, Holdings) :-
+    Id? =?= Id1? |
+    bind_response(yes, From?, Resp, Outs?, Outs1, NetIn?, NetIn1),
+    agent(Id?, UserIn?, NetIn1?, Outs1?, Holdings?).
+
+%% Decline.
+*
+agent(Id, UserIn, [msg(Id1, intro(From, Resp?))|NetIn], Outs, Holdings) :-
+    Id? =?= Id1? |
+    bind_response(no, From?, Resp, Outs?, Outs1, NetIn?, NetIn1),
+    agent(Id?, UserIn?, NetIn1?, Outs1?, Holdings?).
+
+%% --- Volitional: answering a swap offer ---
+%% Compiled form: the swap_offer/6 forward to '_user', the mediator escrow, and
+%% the agent clauses for UserCmds accept_swap/2, decline_swap/2.
+
+%% Accept: give the want-coins, take the give-coins (declines itself if the
+%% want-coins are not held — do_accept_swap on Status).
+*
+agent(Id, UserIn, [msg(From, Id1, swap_propose(GiveCoin, GiveAmt, WantCoin, WantAmt, SwapResp?))|NetIn], Outs, Holdings) :-
+    Id? =?= Id1?, ground(From?), ground(GiveCoin?), integer(GiveAmt?), ground(WantCoin?), integer(WantAmt?) |
+    sub_coin(WantCoin?, WantAmt?, Holdings?, Status, Holdings1),
+    do_accept_swap(Status?, Id?, From?, GiveCoin?, GiveAmt?, Holdings1?, SwapResp, UserIn?, NetIn?, Outs?).
+
+%% Decline.
+*
+agent(Id, UserIn, [msg(From, Id1, swap_propose(_GiveCoin, _GiveAmt, _WantCoin, _WantAmt, SwapResp?))|NetIn], Outs, Holdings) :-
+    Id? =?= Id1?, ground(From?) |
+    bind_swap_decline(SwapResp),
+    lookup_send('_user', msg(agent, '_user', swap_failed(From?)), Outs?, Outs1),
+    agent(Id?, UserIn?, NetIn?, Outs1?, Holdings?).
+
+%% --- Reactive: network messages (unchanged from grassapp_agent.glp) ---
+
+%% A peer answered my cold call.
+agent(Id, UserIn, [msg(From, Id1, response(Resp))|NetIn], Outs, Holdings) :-
+    Id? =?= Id1? |
+    handle_response(Resp?, From?, Outs?, Outs1, NetIn?, NetIn1),
+    agent(Id?, UserIn?, NetIn1?, Outs1?, Holdings?).
+
+%% A friend messages me.
+agent(Id, UserIn, [msg(From, Id1, text(Text))|NetIn], Outs, Holdings) :-
+    Id? =?= Id1? |
+    lookup_send('_user', msg(agent, '_user', received(From?, Text?)), Outs?, Outs1),
+    agent(Id?, UserIn?, NetIn?, Outs1?, Holdings?).
+
+%% A friend pays me: add the coins, re-report.
+agent(Id, UserIn, [msg(_, Id1, coins(Coin, Amt))|NetIn], Outs, Holdings) :-
+    Id? =?= Id1?, ground(Coin?), integer(Amt?) |
+    add_coin(Coin?, Amt?, Holdings?, Holdings1),
+    after_change(Id?, Holdings1?, UserIn?, NetIn?, Outs?).
+
+%% A friend redeems my coins: take back my own (x), fill them with up to Amount
+%% of the returner's coins I hold (y).
+agent(Id, UserIn, [msg(_, Id1, redeem_coins(Returner, Amount))|NetIn], Outs, Holdings) :-
+    Id? =?= Id1?, ground(Returner?), integer(Amount?) |
+    add_coin(Id?, Amount?, Holdings?, Holdings1),
+    take_up_to(Returner?, Amount?, Holdings1?, GaveBack, Holdings2),
+    do_redeem_back(Id?, Returner?, GaveBack?, Holdings2?, UserIn?, NetIn?, Outs?).
+
+%% A friend unfriended me (Integrate unfriend): drop the channel and tell the
+%% person the friend is gone.
+agent(Id, UserIn, [msg(From, Id1, unfriend)|NetIn], Outs, Holdings) :-
+    Id? =?= Id1?, ground(From?) |
+    drop_friend(From?, Outs?, Outs1),
+    lookup_send('_user', msg(agent, '_user', unfriended(From?)), Outs1?, Outs2),
+    agent(Id?, UserIn?, NetIn?, Outs2?, Holdings?).
+
+%% A friend publishes their holdings: report them as that friend's balances.
+agent(Id, UserIn, [msg(From, Id1, balances(FH))|NetIn], Outs, Holdings) :-
+    Id? =?= Id1?, ground(From?), ground(FH?) |
+    emit_balances(From?, FH?, Outs?, Outs1),
+    agent(Id?, UserIn?, NetIn?, Outs1?, Holdings?).
+
+%% Network catch-all (drop unrecognised network message).
+agent(Id, UserIn, [_|NetIn], Outs, Holdings) :-
+    ground(Id?), otherwise |
+    agent(Id?, UserIn?, NetIn?, Outs?, Holdings?).
+
+%% --- Reactive: injected results on UserIn (unchanged from grassapp_agent.glp;
+%% UserIn no longer carries the person's commands — those are grants — only the
+%% results injected by inject_msg and inject_swap_result) ---
+
+%% My cold call was answered (injected by inject_msg).
+agent(Id, [msg(From, Id1, response(Resp))|UserIn], NetIn, Outs, Holdings) :-
+    Id? =?= Id1? |
+    handle_response(Resp?, From?, Outs?, Outs1, NetIn?, NetIn1),
+    agent(Id?, UserIn?, NetIn1?, Outs1?, Holdings?).
+
+%% Proposer: my swap was accepted — take the want-coins.
+agent(Id, [swap_accepted(From, WantCoin, WantAmt)|UserIn], NetIn, Outs, Holdings) :-
+    ground(Id?), ground(From?), ground(WantCoin?), integer(WantAmt?) |
+    add_coin(WantCoin?, WantAmt?, Holdings?, Holdings1),
+    lookup_send('_user', msg(agent, '_user', swap_done(From?)), Outs?, Outs1),
+    after_change(Id?, Holdings1?, UserIn?, NetIn?, Outs1?).
+
+%% Proposer: my swap was declined — refund the give-coins.
+agent(Id, [swap_declined(From, GiveCoin, GiveAmt)|UserIn], NetIn, Outs, Holdings) :-
+    ground(Id?), ground(From?), ground(GiveCoin?), integer(GiveAmt?) |
+    add_coin(GiveCoin?, GiveAmt?, Holdings?, Holdings1),
+    lookup_send('_user', msg(agent, '_user', swap_failed(From?)), Outs?, Outs1),
+    after_change(Id?, Holdings1?, UserIn?, NetIn?, Outs1?).
+
+%% Injection catch-all (drop unrecognised injected message).
+agent(Id, [_|UserIn], NetIn, Outs, Holdings) :-
+    ground(Id?), otherwise |
+    agent(Id?, UserIn?, NetIn?, Outs?, Holdings?).
+
+%% --- Termination ---
+
+agent(_, [], _, Outs, _) :- close_outputs(Outs?).
+agent(_, _, [], Outs, _) :- close_outputs(Outs?).
