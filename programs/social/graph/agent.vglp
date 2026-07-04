@@ -30,8 +30,8 @@
 %% but a pending volition-guarded reduction.
 %%
 %% Clause order follows the paper's remark "Ordering with otherwise":
-%% Request-shaped clauses follow every otherwise clause of the procedure — the
-%% perpetually-pending compose clauses come last, after the catch-alls — and
+%% Request clauses (perpetually pending) follow every otherwise clause of the
+%% procedure — the compose clauses come last, after the catch-alls — and
 %% between volition-guarded siblings otherwise is not used.
 %%
 %% This file is vGLP, not GLP: the REPL does not load it (hence .vglp).  Its
@@ -80,7 +80,7 @@ UserInStream ::= [] ; [UserInMsg | UserInStream].
 procedure agent(Constant?, UserInStream?, NetInStream?, OutputsList?).
 
 %% --- Volitional: answering a friend offer (cold call) ---
-%% The arrived cold call makes both clauses pending; the person's grant selects
+%% The arrived cold call makes both clauses pending; the person's answer selects
 %% accept or decline and binds Resp through bind_response.
 %% Compiled form: the befriend/2 forward to '_user', the mediator escrow
 %% req(N), and the agent clause for UserCmd decision/3.
@@ -173,8 +173,8 @@ agent(Id, [_|UserIn], NetIn, Outs) :-
     agent(Id?, UserIn?, NetIn?, Outs?).
 
 %% --- Volitional: social transactions the person originates ---
-%% Request-shaped, hence perpetually pending, and placed after every otherwise
-%% clause (remark "Ordering with otherwise"); each grant supplies the parameters.
+%% Request clauses, perpetually pending, placed after every otherwise clause
+%% (remark "Ordering with otherwise"); each willing supplies the parameters.
 %% Compiled form: UserCmds connect/1, unfriend/1, send/2, introduce/2.
 
 %% Offer friendship by cold call.
