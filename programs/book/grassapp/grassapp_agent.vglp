@@ -5,7 +5,7 @@
 %% its UserCmd/UserNotify vocabulary absent — they belong to the implementation,
 %% which maps the volition-guarded clauses into concrete UI constructs.
 %% Exhibit for the paper "Volition Elicitation: Operational
-%% Semantics for People with Volitions and Their Machines", which defines vGLP.
+%% Semantics for People and Their Machines", which defines vGLP.
 %%
 %% NOTATION (defined in the paper):
 %%   *                          marks a volition-guarded clause: reducing a goal with
@@ -16,14 +16,24 @@
 %%                              the person's answer binds the writers X1..Xk; the clause
 %%                              carries their readers Xi?.
 %%
+%% RESPONDERS. An arriving offer spawns a responder goal — respond_coldcall,
+%% respond_swap — one goal per offer, so offers pend concurrently and are
+%% answered in any order. The responder carries the offer and the response
+%% writer; its volition-guarded sibling clauses (accept/decline) are the
+%% person's choice, and the chosen clause injects its answer, through a merge,
+%% into the agent's UserIn, where an ordinary agent clause carries it out on
+%% the agent's current state.
+%%
 %% Correspondence to the implementation (clause for clause):
-%%   - a *(X1..Xk) clause  ->  a UserCmd constructor over X1..Xk, a mediator
+%%   - a *(X1..Xk) Request clause  ->  a UserCmd constructor over X1..Xk, a mediator
 %%     pass-through, and the agent clause matching msg('_user', Id, cmd(X1..Xk));
-%%   - a pending volition-guarded reduction  ->  a pending-table entry req(N) in the
-%%     mediator, rendered as an inbox card;
-%%   - the person's choice between sibling * clauses (accept/decline)  ->  the
-%%     UserCmds decision/3, accept_swap/2, decline_swap/2 routing the escrowed
-%%     writer back to the agent.
+%%   - a responder goal, spawned per arriving offer  ->  a pending-table entry
+%%     req(N) in the mediator, rendered as an inbox card;
+%%   - a responder's volition-guarded clause, injecting its answer through the
+%%     merge into UserIn  ->  the UserCmds decision/3, accept_swap/2,
+%%     decline_swap/2 routing the escrowed writer back to the agent; the agent's
+%%     answer clauses below match the deployed ones modulo the msg('_user', Id,
+%%     ...) wrapper and the mediator's swap_pending packing of the escrowed fields.
 %% The escrow vocabulary — befriend/2, swap_offer/6, and the pending table — does
 %% not appear here: the machine's question to the person is not a message but a
 %% pending volition-guarded reduction.
@@ -43,7 +53,7 @@
 %% holdings helpers, do_pay, do_redeem, do_redeem_back, bind_swap_decline,
 %% inject_swap_result, do_propose_swap, do_accept_swap, add_output,
 %% close_outputs, after_change — are those of grassapp_agent.glp, unchanged;
-%% this file gives the agent procedure itself.
+%% this file gives the agent procedure and its responders.
 
 
 %% Output content — grassapp_agent.glp's union minus the escrow vocabulary
@@ -72,53 +82,64 @@ OutputStream  ::= [] ; [OutputMsg | OutputStream].
 OutputEntry ::= output(Constant, OutputStream?).
 OutputsList ::= [] ; [OutputEntry|OutputsList].
 
+%% The offers the responders carry: the question the pending reduction poses.
+ColdCallOffer ::= offer(Constant).
+SwapOffer  ::= offer(Constant, Constant, Integer, Constant, Integer).
+
+%% =============================================================================
+%% RESPONDERS — one goal per arriving offer; the volition-guarded clauses live
+%% here, so offers pend concurrently and are answered in any order.
+%% =============================================================================
+
+procedure respond_coldcall(ColdCallOffer?, Response, Stream(X)).
+
+%% Accept a friend offer.
+*
+respond_coldcall(offer(From), Resp?, [decision(yes, From?, response(Resp))]) :-
+    ground(From?) | true.
+
+%% Decline.
+*
+respond_coldcall(offer(From), Resp?, [decision(no, From?, response(Resp))]) :-
+    ground(From?) | true.
+
+procedure respond_swap(SwapOffer?, SwapResponse, Stream(X)).
+
+%% Accept a swap offer: the agent's answer clause gives the want-coins and
+%% takes the give-coins (declining itself if the want-coins are not held).
+*
+respond_swap(offer(From, GiveCoin, GiveAmt, WantCoin, WantAmt), SwapResp?,
+    [accept_swap(From?, GiveCoin?, GiveAmt?, WantCoin?, WantAmt?, SwapResp)]) :-
+    ground(From?), ground(GiveCoin?), integer(GiveAmt?), ground(WantCoin?), integer(WantAmt?) | true.
+
+%% Decline.
+*
+respond_swap(offer(From, _GiveCoin, _GiveAmt, _WantCoin, _WantAmt), SwapResp?,
+    [decline_swap(From?, SwapResp)]) :-
+    ground(From?) | true.
+
 %% =============================================================================
 %% AGENT/5
 %% =============================================================================
 
 procedure agent(Constant?, Stream(X)?, Stream(X)?, OutputsList?, Stream(Holding)?).
 
-%% --- Volitional: answering a friend offer ---
-%% The arrived cold call makes both clauses pending; the person's answer selects
-%% accept or decline and binds Resp through bind_response.
-%% Compiled form: the befriend/2 forward to '_user', the mediator escrow req(N),
-%% and the agent clause for UserCmd decision/3.
+%% --- Reactive: network messages ---
 
-%% Accept.
-*
+%% A peer cold-calls me: spawn a responder — the offer pends until the person
+%% answers; the answer is merged into UserIn.
 agent(Id, UserIn, [msg(Id1, intro(From, Resp?))|NetIn], Outs, Holdings) :-
     Id? =?= Id1? |
-    bind_response(yes, From?, Resp, Outs?, Outs1, NetIn?, NetIn1),
-    agent(Id?, UserIn?, NetIn1?, Outs1?, Holdings?).
+    respond_coldcall(offer(From?), Resp, Ans),
+    merge(Ans?, UserIn?, UserIn1),
+    agent(Id?, UserIn1?, NetIn?, Outs?, Holdings?).
 
-%% Decline.
-*
-agent(Id, UserIn, [msg(Id1, intro(From, Resp?))|NetIn], Outs, Holdings) :-
-    Id? =?= Id1? |
-    bind_response(no, From?, Resp, Outs?, Outs1, NetIn?, NetIn1),
-    agent(Id?, UserIn?, NetIn1?, Outs1?, Holdings?).
-
-%% --- Volitional: answering a swap offer ---
-%% Compiled form: the swap_offer/6 forward to '_user', the mediator escrow, and
-%% the agent clauses for UserCmds accept_swap/2, decline_swap/2.
-
-%% Accept: give the want-coins, take the give-coins (declines itself if the
-%% want-coins are not held — do_accept_swap on Status).
-*
+%% A friend proposes a swap: spawn a responder likewise.
 agent(Id, UserIn, [msg(From, Id1, swap_propose(GiveCoin, GiveAmt, WantCoin, WantAmt, SwapResp?))|NetIn], Outs, Holdings) :-
     Id? =?= Id1?, ground(From?), ground(GiveCoin?), integer(GiveAmt?), ground(WantCoin?), integer(WantAmt?) |
-    sub_coin(WantCoin?, WantAmt?, Holdings?, Status, Holdings1),
-    do_accept_swap(Status?, Id?, From?, GiveCoin?, GiveAmt?, Holdings1?, SwapResp, UserIn?, NetIn?, Outs?).
-
-%% Decline.
-*
-agent(Id, UserIn, [msg(From, Id1, swap_propose(_GiveCoin, _GiveAmt, _WantCoin, _WantAmt, SwapResp?))|NetIn], Outs, Holdings) :-
-    Id? =?= Id1?, ground(From?) |
-    bind_swap_decline(SwapResp),
-    lookup_send('_user', msg(agent, '_user', swap_failed(From?)), Outs?, Outs1),
-    agent(Id?, UserIn?, NetIn?, Outs1?, Holdings?).
-
-%% --- Reactive: network messages (unchanged from grassapp_agent.glp) ---
+    respond_swap(offer(From?, GiveCoin?, GiveAmt?, WantCoin?, WantAmt?), SwapResp, Ans),
+    merge(Ans?, UserIn?, UserIn1),
+    agent(Id?, UserIn1?, NetIn?, Outs?, Holdings?).
 
 %% A peer answered my cold call.
 agent(Id, UserIn, [msg(From, Id1, response(Resp))|NetIn], Outs, Holdings) :-
@@ -165,9 +186,29 @@ agent(Id, UserIn, [_|NetIn], Outs, Holdings) :-
     ground(Id?), otherwise |
     agent(Id?, UserIn?, NetIn?, Outs?, Holdings?).
 
-%% --- Reactive: injected results on UserIn (unchanged from grassapp_agent.glp;
-%% UserIn no longer carries the person's commands — those are grants — only the
-%% results injected by inject_msg and inject_swap_result) ---
+%% --- Reactive: responder answers and injected results on UserIn (UserIn does
+%% not carry the person's commands — those are grants; it carries the answers
+%% the responders inject and the results injected by inject_msg and
+%% inject_swap_result) ---
+
+%% The person answered a friend offer (injected by respond_coldcall).
+agent(Id, [decision(Dec, From, response(Resp?))|UserIn], NetIn, Outs, Holdings) :-
+    bind_response(Dec?, From?, Resp, Outs?, Outs1, NetIn?, NetIn1),
+    agent(Id?, UserIn?, NetIn1?, Outs1?, Holdings?).
+
+%% The person accepted a swap offer (injected by respond_swap): give the
+%% want-coins, take the give-coins.
+agent(Id, [accept_swap(From, GiveCoin, GiveAmt, WantCoin, WantAmt, SwapResp?)|UserIn], NetIn, Outs, Holdings) :-
+    ground(From?), ground(GiveCoin?), integer(GiveAmt?), ground(WantCoin?), integer(WantAmt?) |
+    sub_coin(WantCoin?, WantAmt?, Holdings?, Status, Holdings1),
+    do_accept_swap(Status?, Id?, From?, GiveCoin?, GiveAmt?, Holdings1?, SwapResp, UserIn?, NetIn?, Outs?).
+
+%% The person declined a swap offer.
+agent(Id, [decline_swap(From, SwapResp?)|UserIn], NetIn, Outs, Holdings) :-
+    ground(From?) |
+    bind_swap_decline(SwapResp),
+    lookup_send('_user', msg(agent, '_user', swap_failed(From?)), Outs?, Outs1),
+    agent(Id?, UserIn?, NetIn?, Outs1?, Holdings?).
 
 %% My cold call was answered (injected by inject_msg).
 agent(Id, [msg(From, Id1, response(Resp))|UserIn], NetIn, Outs, Holdings) :-
