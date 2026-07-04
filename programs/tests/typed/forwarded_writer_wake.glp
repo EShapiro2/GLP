@@ -1,0 +1,42 @@
+%% Regression test: binding a forwarded writer must reactivate the suspended
+%% reader (bug of 2026-07-04, IGLP/docs/bug-forwarded-writer-reactivation-2026-07-04.md).
+%%
+%% The escrow-lookup idiom: a recursive list traversal forwards a
+%% produce-position writer down the recursion until a unit clause binds it.
+%% The consumer suspends on the paired reader; the binding lands through a
+%% writer-to-reader chain whose end is already bound, and the wake must follow.
+%% Before the fix, depth >= 2 left the consumer suspended forever.
+
+Val   ::= v(Constant).
+Entry ::= pending(Integer, Val).
+EList ::= [] ; [Entry | EList].
+
+procedure lookup(Integer?, Val, EList?, EList).
+lookup(K, V?, [pending(I, V) | Rest], Rest?) :-
+    K? =?= I? | true.
+lookup(K, V?, [P | Rest], [P? | Rest1?]) :-
+    otherwise |
+    lookup(K?, V, Rest?, Rest1).
+lookup(_, v(none), [], []).
+
+procedure consume(Val?, Constant).
+consume(v(X), X?).
+
+procedure sink(EList?).
+sink([_|Xs]) :- sink(Xs?).
+sink([]).
+
+procedure test_d1(Constant).
+test_d1(Out?) :-
+    lookup(1, R, [pending(1, v(a))], Rest), sink(Rest?),
+    consume(R?, Out).
+
+procedure test_d2(Constant).
+test_d2(Out?) :-
+    lookup(1, R, [pending(2, v(b)), pending(1, v(a))], Rest), sink(Rest?),
+    consume(R?, Out).
+
+procedure test_d4(Constant).
+test_d4(Out?) :-
+    lookup(1, R, [pending(4, v(d)), pending(3, v(c)), pending(2, v(b)), pending(1, v(a))], Rest), sink(Rest?),
+    consume(R?, Out).

@@ -859,6 +859,22 @@ HEREDOC
 check "Body =.. compose foo" "T = foo(a, b)" "$a30"
 check "Body =.. compose greet" "G = greet(hello, world)" "$a30"
 
+# --- A31: Forwarded-writer reactivation (bug of 2026-07-04) ---
+# A consumer suspended on a reader must wake when its writer, forwarded down a
+# recursive lookup, is bound through a chain ending in an already-bound value.
+echo "--- A31: Forwarded-writer reactivation ---"
+a31=$("$REPL_RUN" <<HEREDOC
+$TYPED/forwarded_writer_wake.glp
+test_d1(O1).
+test_d2(O2).
+test_d4(O4).
+:quit
+HEREDOC
+2>&1)
+check "Forwarded-writer wake depth 1" "O1 = a" "$a31"
+check "Forwarded-writer wake depth 2" "O2 = a" "$a31"
+check "Forwarded-writer wake depth 4" "O4 = a" "$a31"
+
 SECTION_A_PASS=$PASS
 SECTION_A_FAIL=$FAIL
 

@@ -145,6 +145,52 @@ void main() {
       expect(activations.first.id, equals(99));
     });
 
+    test('Binding to a reader whose writer is already bound activates', () {
+      // Regression: bug of 2026-07-04 (forwarded-writer reactivation).
+      // The escrow-lookup idiom commits W1 := R2 where W2 already holds the
+      // stored value; the suspension on W1 must activate, not be dropped.
+      final rt = GlpRuntime();
+      final heap = rt.heap as HeapFCP;
+
+      final (w1, r1) = heap.allocateVariable();
+      final (w2, r2) = heap.allocateVariable();
+
+      final record = SuspensionRecord(42, 500);
+      heap.suspendOnReader(r1, record);
+
+      // Target writer is bound BEFORE the variable-to-variable binding
+      heap.bindWriter(w2, ConstTerm('stored'));
+
+      final acts = heap.bindWriterToReader(w1, r2);
+
+      expect(acts, hasLength(1));
+      expect(acts.first.id, equals(42));
+      expect(acts.first.pc, equals(500));
+    });
+
+    test('Forwarding targets the end of the chain, not the one-hop writer', () {
+      // W2 is already chain-bound to R3 when W1 is bound to R2; W1's
+      // suspension must land on W3 (the chain's end), so binding W3 wakes it.
+      final rt = GlpRuntime();
+      final heap = rt.heap as HeapFCP;
+
+      final (w1, r1) = heap.allocateVariable();
+      final (w2, r2) = heap.allocateVariable();
+      final (w3, r3) = heap.allocateVariable();
+
+      heap.bindWriterToReader(w2, r3);
+
+      final record = SuspensionRecord(7, 70);
+      heap.suspendOnReader(r1, record);
+
+      final acts1 = heap.bindWriterToReader(w1, r2);
+      expect(acts1, isEmpty);
+
+      final acts2 = heap.bindWriter(w3, ConstTerm('end'));
+      expect(acts2, hasLength(1));
+      expect(acts2.first.id, equals(7));
+    });
+
     test('suspendOnWriter adds directly to writer cell', () {
       final rt = GlpRuntime();
       final heap = rt.heap as HeapFCP;

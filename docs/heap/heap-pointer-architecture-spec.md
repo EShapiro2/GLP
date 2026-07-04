@@ -1,7 +1,7 @@
 # GLP Heap Storage Specification - Pointer Architecture
 
-**Version**: 3.4
-**Date**: 2026-01-31
+**Version**: 3.5
+**Date**: 2026-07-04
 **Status**: DRAFT - FCP bidirectional pointers
 **Branch**: pointer-architecture
 
@@ -292,23 +292,46 @@ if (value is VarRef && isWriter(value.addr)) {
 
 When a writer W is bound to a reader R:
 1. W's content becomes `Pointer(R.addr)`
-2. Any suspensions on W are forwarded to R's writer
+2. W's suspensions go where dereferencing R leads (v3.5):
+   - **R's chain ends at an unbound writer W'** (possibly several hops away):
+     forward W's suspensions to W'.  Forwarding targets the END of the chain,
+     found by dereferencing — never the one-hop writer, which may itself be
+     bound into a further chain.
+   - **R's chain ends at a bound value**: the binding determines W's value
+     now, so this is Section 5.1 binding-to-a-value as far as the suspended
+     goals are concerned — activate W's suspensions and return them.
+   - **R's chain ends at an unbound imported writer** (`VariableEntry`):
+     append W's suspensions to the entry's suspension list, as in
+     Section 6.1 for imported readers.
+
+Rationale: a suspension must be activated when its variable becomes
+determined.  The escrow-lookup idiom binds a forwarded writer to a reader
+whose writer already holds the stored value; without the bound-value case the
+suspension is silently dropped and the consumer sleeps forever
+(bug of 2026-07-04, fixed in v3.5).
 
 ```dart
 List<GoalRef> bindWriterToReader(int writerAddr, int readerAddr) {
   final writerCell = cells[writerAddr];
   final activations = <GoalRef>[];
-  
-  // Forward suspensions to target writer
-  if (writerCell.content is SuspensionListNode) {
-    final targetWriter = findWriter(readerAddr);  // Follow reader's pointer
-    _forwardSuspensions(writerCell.content, targetWriter);
+
+  // Route this writer's suspensions to wherever the reader's chain leads
+  if (writerCell.content is WriterContent) {
+    final wc = writerCell.content as WriterContent;
+    final target = derefAddr(readerAddr);
+    if (target is VarRef) {
+      _forwardSuspensions(wc.suspensions, target.addr);   // unbound writer
+    } else if (target is VariableEntry) {
+      _appendToEntry(wc.suspensions, target);             // imported unbound
+    } else {
+      _walkAndActivate(wc.suspensions, activations);      // bound value
+    }
   }
-  
+
   // Update writer to point to reader
   writerCell.content = Pointer(readerAddr);
-  
-  return activations;  // No activations yet - goals wait for target
+
+  return activations;  // Non-empty iff the chain already ended in a value
 }
 ```
 
@@ -394,7 +417,7 @@ void _walkAndActivate(SuspensionListNode? list, List<GoalRef> activations) {
 
 ### 6.4 Forwarding Suspensions
 
-When a writer W1 is bound to another variable (via reader R2), forward W1's suspensions to R2's writer W2:
+When a writer W1 is bound to another variable (via reader R2), forward W1's suspensions to the writer at the END of R2's dereference chain (Section 5.3 determines the target: an unbound writer receives the suspensions; a bound value activates them instead; an imported entry stores them). The target writer passed here is always unbound:
 
 ```dart
 void _forwardSuspensions(SuspensionListNode? list, int targetWriterAddr) {
@@ -618,3 +641,4 @@ When `derefAddr` encounters an imported reader (cell content is VariableEntry), 
 | 3.2 | 2026-01-31 | FCP bidirectional pointers: writer points to reader (Sections 1.2, 2.3, 3.1, 7.2, 8.x, 9.2). Eliminates all `+1` arithmetic. |
 | 3.3 | 2026-01-31 | Section 7.1: Added tryWriterForReader() for imported readers; clarified usage guidance. |
 | 3.4 | 2026-01-31 | Section 4.5: Clarified WxW detection during deref is mandatory (not debug-only). Added note about production optimization. |
+| 3.5 | 2026-07-04 | Sections 5.3, 6.4: suspensions on a writer bound to a reader go where the reader's dereference chain leads — forwarded to the final unbound writer, activated when the chain already ends in a bound value, stored in the entry for an imported unbound writer. Fixes the silent non-wake of a consumer suspended on a forwarded writer bound through a chain ending in a value. |

@@ -419,13 +419,17 @@ class HeapFCP {
   }
 
   /// Bind a writer to another variable (via its reader)
-  /// 
-  /// Per spec Section 5.3:
+  ///
+  /// Per spec Section 5.3 (v3.5):
   /// - Stores Pointer(readerAddr) in writer cell
-  /// - Forwards suspensions to target writer
+  /// - Suspensions go where dereferencing the reader leads: forwarded to the
+  ///   final unbound writer of the chain; activated when the chain already
+  ///   ends in a bound value (the binding determines the value now); stored
+  ///   in the VariableEntry for an imported unbound writer
   /// - Tag remains WrtTag (not bound to ground)
-  /// 
-  /// Returns list of goals to reactivate (empty if target unbound)
+  ///
+  /// Returns list of goals to reactivate (non-empty iff the chain already
+  /// ends in a bound value)
   List<GoalRef> bindWriterToReader(int writerAddr, int readerAddr) {
     final writerCell = cells[writerAddr];
     if (writerCell.tag != CellTag.WrtTag) {
@@ -446,20 +450,52 @@ class HeapFCP {
 
     final activations = <GoalRef>[];
 
-    // Forward suspensions to target writer (FCP pattern: check WriterContent)
+    // Where the reader's dereference chain ends: an unbound local writer
+    // (VarRef), an unbound imported writer (VariableEntry), or a bound value.
+    final chainEnd = derefAddr(readerAddr);
+
+    // Route this writer's suspensions to wherever the chain leads
+    // (spec Section 5.3 v3.5). One-hop forwarding is wrong on both ends: the
+    // one-hop writer may itself be chain-bound onward, and a chain that
+    // already ends in a value must activate, not forward.
     if (writerCell.content is WriterContent) {
       final wc = writerCell.content as WriterContent;
-      _forwardSuspensions(wc.suspensions, targetWriterAddr);
+      if (chainEnd is VarRef) {
+        // Chain ends at an unbound local writer — move suspensions there
+        _forwardSuspensions(wc.suspensions, chainEnd.addr);
+      } else if (chainEnd is VariableEntry) {
+        // Chain ends at an unbound imported writer — suspensions wait in its
+        // entry (as in suspendOnReader for imported readers)
+        var current = wc.suspensions;
+        while (current != null) {
+          if (current.armed) {
+            final newNode = SuspensionListNode(current.record);
+            newNode.next = chainEnd.suspensions;
+            chainEnd.suspensions = newNode;
+          }
+          current = current.next;
+        }
+      } else {
+        // Chain already ends in a bound value — this binding determines the
+        // suspended goals' variable; activate them
+        _walkAndActivate(wc.suspensions, activations);
+      }
     }
 
     // Store pointer to reader (creates variable chain)
     writerCell.content = Pointer(readerAddr);
     // Tag remains WrtTag
 
-    // Forward external callback if registered
+    // An external callback follows the chain like the suspensions do
     final callback = _bindCallbacks.remove(writerAddr);
     if (callback != null) {
-      _bindCallbacks[targetWriterAddr] = callback;
+      if (chainEnd is VarRef) {
+        _bindCallbacks[chainEnd.addr] = callback;
+      } else if (chainEnd is VariableEntry) {
+        _bindCallbacks[targetWriterAddr] = callback;
+      } else {
+        callback(chainEnd as Term);
+      }
     }
 
     return activations;
