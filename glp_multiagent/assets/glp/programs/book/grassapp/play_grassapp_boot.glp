@@ -1,36 +1,63 @@
 %% play_grassapp_boot.glp — single-isolate GrassApp scenario.
 %%
-%% Bob is the live-UI agent (agent/5, empty initial holdings). Alice and Charlie
-%% are actors that cold-call Bob and accept friend offers, so Bob's wallet shows
-%% them as friends. In-heap crossbar routes `_net` output by addressee.
+%% Bob is the live-UI agent (agent/5, holding(bob, 10)). Alice, Charlie, Dana,
+%% and Eve are actors that cold-call Bob and, once he accepts, transact with
+%% him — so his wallet, chats, and inbox come alive:
+%%   - Alice mints, pays Bob, and proposes a swap;
+%%   - Charlie mints, pays Bob, and then unfriends him (Integrate unfriend);
+%%   - Dana mints, pays Bob, proposes a swap, and — once Bob accepts it —
+%%     redeems one of his coins (the issuer fills back);
+%%   - Eve greets Bob in chat, mints, and pays him.
+%% Every actor answers Bob's chat messages (reply_of) and accepts any friend
+%% offer or swap Bob composes. In-heap crossbar routes `_net` output by
+%% addressee.
 %%
 %% Requires: self.glp, grassapp_agent.glp, grassapp_mediator.glp
 
 
 %% --- In-heap crossbar ---
-procedure crossbar(Stream(M)?, Stream(M)?, Stream(M)?,
-                   Stream(M), Stream(M), Stream(M)).
-crossbar(AOut, BOut, COut, AIn?, BIn?, CIn?) :-
+procedure crossbar(Stream(M)?, Stream(M)?, Stream(M)?, Stream(M)?, Stream(M)?,
+                   Stream(M), Stream(M), Stream(M), Stream(M), Stream(M)).
+crossbar(AOut, BOut, COut, DOut, EOut, AIn?, BIn?, CIn?, DIn?, EIn?) :-
     merge(AOut?, BOut?, AB),
-    merge(AB?, COut?, All),
-    route(All?, AIn, BIn, CIn).
+    merge(COut?, DOut?, CD),
+    merge(AB?, CD?, ABCD),
+    merge(ABCD?, EOut?, All),
+    route(All?, AIn, BIn, CIn, DIn, EIn).
 
-procedure route(Stream(M)?, Stream(M), Stream(M), Stream(M)).
-route([msg(alice, C) | Rest], [msg(alice, C?) | A?], B?, Ch?) :-
-    route(Rest?, A, B, Ch).
-route([msg(bob, C) | Rest], A?, [msg(bob, C?) | B?], Ch?) :-
-    route(Rest?, A, B, Ch).
-route([msg(charlie, C) | Rest], A?, B?, [msg(charlie, C?) | Ch?]) :-
-    route(Rest?, A, B, Ch).
-route([], [], [], []).
+procedure route(Stream(M)?, Stream(M), Stream(M), Stream(M), Stream(M), Stream(M)).
+route([msg(alice, C) | Rest], [msg(alice, C?) | A?], B?, Ch?, D?, E?) :-
+    route(Rest?, A, B, Ch, D, E).
+route([msg(bob, C) | Rest], A?, [msg(bob, C?) | B?], Ch?, D?, E?) :-
+    route(Rest?, A, B, Ch, D, E).
+route([msg(charlie, C) | Rest], A?, B?, [msg(charlie, C?) | Ch?], D?, E?) :-
+    route(Rest?, A, B, Ch, D, E).
+route([msg(dana, C) | Rest], A?, B?, Ch?, [msg(dana, C?) | D?], E?) :-
+    route(Rest?, A, B, Ch, D, E).
+route([msg(eve, C) | Rest], A?, B?, Ch?, D?, [msg(eve, C?) | E?]) :-
+    route(Rest?, A, B, Ch, D, E).
+route([], [], [], [], [], []).
 
-%% --- Actors: cold-call Bob; once connected, mint and transact so Bob's wallet
-%% and Requests come alive (he sees their coins, a payment, and a swap offer). ---
+%% --- Actors: cold-call Bob; once connected, mint and transact so Bob's wallet,
+%% chats, and Requests come alive. ---
 procedure alice_actor(Stream(UserNotify)?, Stream(UserCmd)).
 alice_actor(Ns, [connect(bob) | Cs?]) :- coin_actor(alice, Ns?, Cs).
 
 procedure charlie_actor(Stream(UserNotify)?, Stream(UserCmd)).
 charlie_actor(Ns, [connect(bob) | Cs?]) :- coin_actor(charlie, Ns?, Cs).
+
+procedure dana_actor(Stream(UserNotify)?, Stream(UserCmd)).
+dana_actor(Ns, [connect(bob) | Cs?]) :- coin_actor(dana, Ns?, Cs).
+
+procedure eve_actor(Stream(UserNotify)?, Stream(UserCmd)).
+eve_actor(Ns, [connect(bob) | Cs?]) :- coin_actor(eve, Ns?, Cs).
+
+%% Each actor's chat reply to Bob.
+procedure reply_of(Constant?, Constant).
+reply_of(alice, so_nice_to_hear_from_you_bob).
+reply_of(charlie, cheers_bob).
+reply_of(dana, happy_to_trade_anytime).
+reply_of(eve, lovely_day_isnt_it).
 
 procedure coin_actor(Constant?, Stream(UserNotify)?, Stream(UserCmd)).
 %% On becoming Bob's friend: mint, pay Bob some coins, and propose a swap.
@@ -42,13 +69,41 @@ coin_actor(alice, [connected(bob) | Ns],
 coin_actor(charlie, [connected(bob) | Ns],
     [mint(4) | [pay(bob, charlie, 1) | [unfriend(bob) | Cs?]]]) :-
     coin_drain(charlie, Ns?, Cs).
+%% Dana mints, pays, and proposes a swap; once Bob accepts it she holds a
+%% bob-coin, and redeems it — Bob's agent fills back automatically.
+coin_actor(dana, [connected(bob) | Ns],
+    [mint(6) | [pay(bob, dana, 2) | [propose_swap(bob, dana, 2, bob, 1) | Cs?]]]) :-
+    dana_await_swap(Ns?, Cs).
+%% Eve greets Bob in chat, then mints and pays him.
+coin_actor(eve, [connected(bob) | Ns],
+    [send(bob, welcome_to_grassroots_bob) | [mint(3) | [pay(bob, eve, 1) | Cs?]]]) :-
+    coin_drain(eve, Ns?, Cs).
 coin_actor(Me, [befriend(Who, Req) | Ns], [decision(yes, Who?, Req?) | Cs?]) :-
     ground(Me?), ground(Who?), ground(Req?) | coin_actor(Me?, Ns?, Cs).
 coin_actor(Me, [_ | Ns], Cmds?) :- ground(Me?), otherwise | coin_actor(Me?, Ns?, Cmds).
 coin_actor(_, [], []).
 
-%% After transacting: accept any swap Bob proposes, accept befriend, ignore rest.
+%% Dana between the swap offer and its acceptance: answer chat, accept offers;
+%% on swap_done, redeem one bob-coin.
+procedure dana_await_swap(Stream(UserNotify)?, Stream(UserCmd)).
+dana_await_swap([swap_done(bob) | Ns], [redeem(bob, 1) | Cs?]) :-
+    coin_drain(dana, Ns?, Cs).
+dana_await_swap([befriend(Who, Req) | Ns], [decision(yes, Who?, Req?) | Cs?]) :-
+    ground(Who?), ground(Req?) | dana_await_swap(Ns?, Cs).
+dana_await_swap([received(From, _) | Ns], [send(From?, R?) | Cs?]) :-
+    ground(From?) |
+    reply_of(dana, R),
+    dana_await_swap(Ns?, Cs).
+dana_await_swap([_ | Ns], Cs?) :- otherwise | dana_await_swap(Ns?, Cs).
+dana_await_swap([], []).
+
+%% After transacting: answer Bob's chat messages, accept any swap he proposes,
+%% accept befriend, ignore the rest.
 procedure coin_drain(Constant?, Stream(UserNotify)?, Stream(UserCmd)).
+coin_drain(Me, [received(From, _) | Ns], [send(From?, R?) | Cs?]) :-
+    ground(Me?), ground(From?) |
+    reply_of(Me?, R),
+    coin_drain(Me?, Ns?, Cs).
 coin_drain(Me, [swap_offer(From, _, _, _, _, Req) | Ns], [accept_swap(From?, Req?) | Cs?]) :-
     ground(Me?), ground(From?), ground(Req?) | coin_drain(Me?, Ns?, Cs).
 coin_drain(Me, [befriend(Who, Req) | Ns], [decision(yes, Who?, Req?) | Cs?]) :-
@@ -70,7 +125,16 @@ agent_init(bob, UserIn, _) :-
           [output('_user', CA2U) | [output('_net', CNetOut)]], []),
     ui_mediator(charlie, ch(CA2U?, CAgentIn), ch(CCmds?, CUserOut), [], 1),
     charlie_actor(CUserOut?, CCmds),
-    crossbar(ANetOut?, BNetOut?, CNetOut?, ANetIn, BNetIn, CNetIn).
+    agent(dana, DAgentIn?, DNetIn?,
+          [output('_user', DA2U) | [output('_net', DNetOut)]], []),
+    ui_mediator(dana, ch(DA2U?, DAgentIn), ch(DCmds?, DUserOut), [], 1),
+    dana_actor(DUserOut?, DCmds),
+    agent(eve, EAgentIn?, ENetIn?,
+          [output('_user', EA2U) | [output('_net', ENetOut)]], []),
+    ui_mediator(eve, ch(EA2U?, EAgentIn), ch(ECmds?, EUserOut), [], 1),
+    eve_actor(EUserOut?, ECmds),
+    crossbar(ANetOut?, BNetOut?, CNetOut?, DNetOut?, ENetOut?,
+             ANetIn, BNetIn, CNetIn, DNetIn, ENetIn).
 
 %% --- REPL test helpers: scripted command streams for inline goals. ---
 procedure script_cmds(Stream(UserCmd)).

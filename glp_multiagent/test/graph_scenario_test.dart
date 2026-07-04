@@ -52,6 +52,11 @@ void main() {
     expect(lines.join('\n'), contains('connected(alice)'));
     expect(lines.join('\n'), contains('received(alice, hello)'));
 
+    // Bob messages Alice; she answers.
+    await agent.injectUserInput('send(alice, thanks)');
+    expect(lines.join('\n'),
+        contains('received(alice, so_nice_to_hear_from_you_bob)'));
+
     // Accept Charlie: friendship forms, Charlie messages Bob and then
     // unfriends him — the Integrate-unfriend path reaches the screen.
     await agent.injectUserInput('decision(yes, charlie, $charlieReq)');

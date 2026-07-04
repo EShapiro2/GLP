@@ -418,10 +418,12 @@ class _AgentSurfaceState extends State<AgentSurface> {
   }
 
   Widget _bubble(GTerm m) {
-    // Stored as out(text[,tick]) / in(text).
+    // Stored as out(text[,tick]) / in(text). Chat texts are plain atoms with
+    // `_` for spaces (see chatAtom); render them as prose.
     final s = m is GStruct ? m : GStruct('in', [m]);
     final outgoing = s.functor == 'out';
-    final text = s.args.isNotEmpty ? formatTerm(s.args[0]) : '';
+    final text =
+        s.args.isNotEmpty ? formatTerm(s.args[0]).replaceAll('_', ' ') : '';
     final tick = outgoing && s.args.length > 1 ? formatTerm(s.args[1]) : null;
     return Align(
       alignment: outgoing ? Alignment.centerRight : Alignment.centerLeft,
@@ -493,7 +495,9 @@ class _AgentSurfaceState extends State<AgentSurface> {
     if (msgs.isEmpty) return '';
     final m = msgs.last;
     final s = m is GStruct ? m : GStruct('in', [m]);
-    return s.args.isNotEmpty ? formatTerm(s.args[0]) : '';
+    return s.args.isNotEmpty
+        ? formatTerm(s.args[0]).replaceAll('_', ' ')
+        : '';
   }
 
   // === Compose forms — the "+" (Request-shaped clauses) =====================
@@ -576,7 +580,7 @@ class _AgentSurfaceState extends State<AgentSurface> {
       case FieldType.person:
         return GAtom(raw.toLowerCase());
       case FieldType.text:
-        return GAtom(raw);
+        return GAtom(chatAtom(raw));
     }
   }
 

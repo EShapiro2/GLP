@@ -198,11 +198,24 @@ class UiRuntime {
   /// Append the person's own outgoing message to a conversation immediately
   /// (optimistic echo), then send the command. Used by the chat input.
   void sendChat(ChatView chat, String peer, String text) {
+    final atom = chatAtom(text);
     final t = store.threads.putIfAbsent(chat.threadKey, () => <String, List<GTerm>>{});
-    t.putIfAbsent(peer, () => <GTerm>[]).add(GStruct('out', [GAtom(text), GAtom('sent')]));
-    onSend(formatTerm(GStruct(chat.sendCtor, [GAtom(peer), GAtom(text)])));
+    t.putIfAbsent(peer, () => <GTerm>[]).add(GStruct('out', [GAtom(atom), GAtom('sent')]));
+    onSend(formatTerm(GStruct(chat.sendCtor, [GAtom(peer), GAtom(atom)])));
     onChange?.call();
   }
+}
+
+/// Free text as a GLP constant the boundary round-trips: the `_output` kernel
+/// prints atoms unquoted, so a chat text must be a plain lowercase atom —
+/// lowercase, word characters joined by `_`, never variable-shaped. The chat
+/// renderer shows `_` as a space.
+String chatAtom(String raw) {
+  var s = raw.trim().toLowerCase().replaceAll(RegExp(r'[^a-z0-9]+'), '_');
+  s = s.replaceAll(RegExp(r'^_+|_+$'), '');
+  if (s.isEmpty) return 'msg';
+  if (!RegExp(r'^[a-z]').hasMatch(s)) return 'm_$s';
+  return s;
 }
 
 /// Substitute `{name}` placeholders in a template with formatted field values.

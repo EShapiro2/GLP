@@ -75,8 +75,18 @@ ui_charlie_run([befriend_intro(_, Other, Req) | Ns], [accept_intro(Other?, Req?)
 ui_charlie_run([_ | Ns], Cs?) :- otherwise | ui_charlie_run(Ns?, Cs).
 ui_charlie_run([], []).
 
-%% Steady state: accept friend offers and introductions, ignore the rest.
+%% Each actor's chat reply to Bob.
+procedure reply_of(Constant?, Constant).
+reply_of(alice, so_nice_to_hear_from_you_bob).
+reply_of(charlie, cheers_bob).
+
+%% Steady state: answer Bob's chat messages, accept friend offers and
+%% introductions, ignore the rest.
 procedure ui_drain(Constant?, UserNotifyStream?, UserCmdStream).
+ui_drain(Me, [received(From, _) | Ns], [send(From?, R?) | Cs?]) :-
+    ground(Me?), ground(From?) |
+    reply_of(Me?, R),
+    ui_drain(Me?, Ns?, Cs).
 ui_drain(Me, [befriend(Who, Req) | Ns], [decision(yes, Who?, Req?) | Cs?]) :-
     ground(Me?), ground(Who?), ground(Req?) | ui_drain(Me?, Ns?, Cs).
 ui_drain(Me, [befriend_intro(_, Other, Req) | Ns], [accept_intro(Other?, Req?) | Cs?]) :-
