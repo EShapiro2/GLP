@@ -13,7 +13,6 @@
 
 %% Output content: union of agent->mediator, friend-channel, and net contents.
 OutputContent ::= befriend(Constant, Response?)
-                ; befriend_intro(Constant, Constant, FriendChannel?)
                 ; connected(Constant)
                 ; unfriended(Constant)
                 ; rejected

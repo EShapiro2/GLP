@@ -44,7 +44,6 @@ PendingValue ::= response(Response?)
 
 %% agent -> mediator (carried on the agent's '_user' output stream).
 AgentContent ::= befriend(Constant, Response?)
-               ; befriend_intro(Constant, Constant, FriendChannel?)
                ; connected(Constant)
                ; unfriended(Constant)
                ; rejected
