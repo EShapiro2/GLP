@@ -1,8 +1,11 @@
 // Paper figure fig:grassapp — the one GrassApp build, its three panels shot
-// from the unified manifest: Friends (the social graph), Coins (the wallet,
-// organised by friend), and Chats (the social network). One interpreter, one
-// runtime; the panels differ only by manifest. Phone-framed with the green
-// chrome and 9:41 status bar to match the live app. Outputs are named for the
+// from the LIVE scenario: the real agent + mediator + actors run headlessly
+// (AgentRuntime, the same path the app uses), the person's taps are injected
+// UserCmds, and the surface renders the notify stream the run actually
+// produces. Friends (the social graph), Coins (the wallet, organised by
+// friend), and Chats (the social network) — one interpreter, one runtime; the
+// panels differ only by manifest. Phone-framed with the green chrome and 9:41
+// status bar to match the live app. Outputs are named for the
 // \includegraphics in sections/ui-primitives.tex.
 import 'dart:io';
 import 'dart:ui' as ui;
@@ -14,6 +17,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:glp_multiagent/manifests/grassroots.dart';
 import 'package:glp_multiagent/ui_runtime/agent_surface.dart';
 import 'package:glp_multiagent/ui_runtime/runtime.dart';
+import 'package:glp_runtime/multiagent/agent_runtime.dart';
 
 Future<void> _loadFonts() async {
   Future<void> add(FontLoader l, String p) async =>
@@ -87,9 +91,77 @@ void main() {
     tester.view.devicePixelRatio = 1.0;
     addTearDown(tester.view.reset);
 
-    final r = UiRuntime(manifest: grassrootsManifest, onSend: (_) {});
+    // The live scenario, headless: the same sources the app loads.
+    final repo = Directory('../programs').existsSync()
+        ? Directory('../programs').absolute.path
+        : '/Users/udi/Grassroots/GLP/programs';
+    const files = [
+      'self.glp',
+      'grassapp_agent.glp',
+      'grassapp_mediator.glp',
+      'play_grassapp_boot.glp',
+    ];
+    final paths = [for (final f in files) '$repo/book/grassapp/$f'];
+    final lines = <String>[];
+    final agent = AgentRuntime(
+      agentId: 'Bob',
+      glpSources: [for (final p in paths) File(p).readAsStringSync()],
+      glpSourcePaths: paths,
+      rootSelfGlpPath: '$repo/self.glp',
+      friends: const ['alice', 'charlie', 'dana', 'eve'],
+    );
+    agent.onOutput = lines.add;
+    agent.onLog = (_, __) {};
+    agent.onSendMadMessage = (_, __) async {};
+
+    // The surface over the run's own notify stream; the person's commands go
+    // back into the run (as main.dart wires them, minus the isolate).
+    final sends = <String>[];
+    final r = UiRuntime(manifest: grassrootsManifest, onSend: sends.add);
     final chatView =
         grassrootsManifest.panels.firstWhere((p) => p.id == 'chats').chat!;
+
+    var fed = 0;
+    void replay() {
+      for (; fed < lines.length; fed++) {
+        final l = lines[fed];
+        if (l.startsWith('< ')) r.handleLine(l.substring(2));
+      }
+    }
+
+    Future<void> flushSends() async {
+      while (sends.isNotEmpty) {
+        await tester.runAsync(() => agent.injectUserInput(sends.removeAt(0)));
+      }
+      replay();
+    }
+
+    await tester.runAsync(() => agent.initialize());
+    replay();
+
+    // The person's tap: answer a card on the surface (consuming it) and let
+    // the granted command flow into the run.
+    Future<void> tapAnswer(String notifyCtor, String itemKey, String label) async {
+      final card = r.inbox.firstWhere(
+          (c) => c.desc.notifyCtor == notifyCtor && c.itemKey == itemKey,
+          orElse: () => fail('no $notifyCtor card for $itemKey'));
+      final answer = card.desc.answers.firstWhere((a) => a.label == label);
+      r.answerCard(card, answer);
+      await flushSends();
+    }
+
+    // The person accepts Eve, Dana, and Alice; Charlie's offer stays pending.
+    // Eve greets Bob in chat and pays him; Dana pays and proposes a swap,
+    // which Bob accepts, and Dana then redeems a bob-coin; Alice pays and
+    // proposes a swap that stays pending on her Coins row.
+    await tapAnswer('befriend', 'eve', 'Accept');
+    await tapAnswer('befriend', 'dana', 'Accept');
+    await tapAnswer('swap_offer', 'dana', 'Accept');
+    await tapAnswer('befriend', 'alice', 'Accept');
+
+    // Bob answers Eve's greeting; she replies.
+    r.sendChat(chatView, 'eve', 'thanks eve');
+    await flushSends();
 
     Future<void> pump() => tester.pumpWidget(MaterialApp(
           debugShowCheckedModeBanner: false,
@@ -106,39 +178,29 @@ void main() {
             ),
           ),
         ));
-
-    // Bob's opening coins; Alice a friend who messaged and paid him; Charlie a
-    // pending friend offer (alerts the Friends panel); Alice has proposed a swap
-    // (alerts the Coins panel).
-    r.handleLine('balance_report(bob, bob, 9)');
-    r.handleLine('balance_report(bob, alice, 2)');
-    r.handleLine('connected(alice)');
-    r.handleLine("received(alice, 'Thanks_for_the_coins')");
-    r.sendChat(chatView, 'alice', 'Anytime');
-    r.handleLine('balance_report(alice, alice, 3)');
-    r.handleLine('befriend(charlie, req(2))');
-    r.handleLine('swap_offer(alice, alice, 1, bob, 1, req(3))');
     await pump();
 
-    // Panel 1 — Friends: Alice (a friend) and Charlie (a friend offer) — the
-    // only inbox alert grassapp's Friends panel produces. (No introduction: the
-    // grassapp mediator emits no befriend_intro, so that alert can't occur here.)
+    // Panel 1 — Friends: Eve, Dana, Alice (friends) and Charlie (the pending
+    // friend offer, alerting his row).
+    expect(find.text('Eve'), findsOneWidget);
+    expect(find.text('Dana'), findsOneWidget);
     expect(find.text('Alice'), findsOneWidget);
     expect(find.text('charlie wants to connect'), findsOneWidget);
     await _shot(tester, '/private/tmp/gsg-app-friends.png');
 
-    // Panel 2 — Coins: the wallet, organised by friend; Alice's row alerts the
-    // proposed swap.
+    // Panel 2 — Coins: the wallet, organised by friend; Alice's row alerts her
+    // proposed swap; Dana's redeem has settled.
     await tester.tap(find.text('Coins').last);
     await tester.pumpAndSettle();
     expect(find.text('You'), findsOneWidget);
     expect(find.text('alice proposes a swap'), findsOneWidget);
     await _shot(tester, '/private/tmp/coins-wallet.png');
 
-    // Panel 3 — Chats: the conversation Alice's friendship opened.
+    // Panel 3 — Chats: the conversations friendship opened; Eve's carries the
+    // greeting, Bob's answer, and her reply.
     await tester.tap(find.text('Chats').last);
     await tester.pumpAndSettle();
-    expect(find.text('Alice'), findsWidgets);
+    expect(find.text('Eve'), findsWidgets);
     await _shot(tester, '/private/tmp/grassapp-chats.png');
   });
 }
