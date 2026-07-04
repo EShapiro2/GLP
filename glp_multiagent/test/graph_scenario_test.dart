@@ -60,8 +60,9 @@ void main() {
     expect(lines.join('\n'), contains('unfriended(charlie)'));
 
     // End friend from the compose form: the mediator passes unfriend/1
-    // through; the run stays sound (no error output).
+    // through, and the initiator's own screen drops the friend.
     await agent.injectUserInput('unfriend(alice)');
+    expect(lines.join('\n'), contains('unfriended(alice)'));
     expect(lines.where((l) => l.contains('[ERROR]')), isEmpty);
   });
 }

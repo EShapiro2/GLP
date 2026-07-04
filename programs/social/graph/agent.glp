@@ -89,14 +89,16 @@ agent(Id, [msg('_user', Id1, send(Target, Text))|UserIn], NetIn, Outs) :-
     send_friend(Target?, msg(Id?, Target?, text(Text?)), Outs?, Outs1),
     agent(Id?, UserIn?, NetIn?, Outs1?).
 
-%% User unfriends Target — notify the peer on the friend channel, then tear down.
+%% User unfriends Target — notify the peer on the friend channel, tear down,
+%% and tell the person the friend is gone.
 %% Guarded by either party (paper §3a), so one-way: no ack, no decline.
 %% Idempotent: if Target is not a friend, send_friend and close_friend are no-ops.
 agent(Id, [msg('_user', Id1, unfriend(Target))|UserIn], NetIn, Outs) :-
     Id? =?= Id1?, ground(Target?) |
     send_friend(Target?, msg(Id?, Target?, unfriend), Outs?, Outs1),
     close_friend(Target?, Outs1?, Outs2),
-    agent(Id?, UserIn?, NetIn?, Outs2?).
+    send_user(msg(agent, '_user', unfriended(Target?)), Outs2?, Outs3),
+    agent(Id?, UserIn?, NetIn?, Outs3?).
 
 %% User introduces P to Q
 agent(Id, [msg('_user', Id1, introduce(P, Q))|UserIn], NetIn, Outs) :-

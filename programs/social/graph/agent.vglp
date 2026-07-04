@@ -185,8 +185,9 @@ agent(Id, UserIn, NetIn, Outs) :-
     inject_msg(Resp?, Target?, Id?, UserIn?, UserIn1),
     agent(Id?, UserIn1?, NetIn?, Outs1?).
 
-%% Unfriend (End friend): notify the peer on the friend channel, then tear
-%% down.  Guarded by either party, so one-way: no ack, no decline.
+%% Unfriend (End friend): notify the peer on the friend channel, tear down,
+%% and tell the person the friend is gone.  Guarded by either party, so
+%% one-way: no ack, no decline.
 %% Idempotent: if Target is not a friend, send_friend and close_friend are
 %% no-ops.
 *(Target)
@@ -194,7 +195,8 @@ agent(Id, UserIn, NetIn, Outs) :-
     ground(Id?), ground(Target?) |
     send_friend(Target?, msg(Id?, Target?, unfriend), Outs?, Outs1),
     close_friend(Target?, Outs1?, Outs2),
-    agent(Id?, UserIn?, NetIn?, Outs2?).
+    send_user(msg(agent, '_user', unfriended(Target?)), Outs2?, Outs3),
+    agent(Id?, UserIn?, NetIn?, Outs3?).
 
 %% Message a friend.
 *(Target, Text)
