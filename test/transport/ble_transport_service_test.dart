@@ -99,27 +99,48 @@ Future<GrassrootsIdentity> _makeIdentity(String nickname) async {
   return GrassrootsIdentity.create(keyPair: keyPair, nickname: nickname);
 }
 
-/// The first-mover tie-break compares derived service UUIDs (lower = initiator).
-/// All fixed peer UUIDs in these tests sort at or above this threshold, so an
-/// identity below it is deterministically the initiator and one above it is the
-/// non-initiator (waiter).
+/// The first-mover tie-break compares PUBLIC KEYS when the advertised beacon
+/// resolves to an identified peer (lower pubkey = initiator, same rule as over
+/// IP), and falls back to comparing our current-slot service UUID against the
+/// observed beacon for unknown peers. The helpers below therefore pick
+/// identities that sort consistently low/high in BOTH spaces, so a test's
+/// initiator expectation holds whichever comparison path fires.
+///
+/// All fixed literal peer UUIDs in these tests sort at or above
+/// [_serviceUuidThreshold], so an identity whose current-slot UUID is below it
+/// is deterministically the fallback-initiator against them.
 const _serviceUuidThreshold = '84c40316-0871-e5ad-1000-000000000000';
 
-/// An identity whose derived service UUID sorts BELOW [_serviceUuidThreshold] —
-/// the deterministic initiator, which dials on discovery.
+/// Pubkey-hex midpoint: identities below it are pubkey-low (initiator against
+/// a pubkey-high peer), at-or-above are pubkey-high (waiter).
+const _pubkeyHexThreshold =
+    '8000000000000000000000000000000000000000000000000000000000000000';
+
+String _pubkeyHex(GrassrootsIdentity id) =>
+    id.publicKey.map((b) => b.toRadixString(16).padLeft(2, '0')).join();
+
+/// An identity that sorts LOW in both tie-break spaces — deterministic
+/// initiator whether the peer is identified (pubkey rule) or unknown
+/// (current-slot-UUID fallback against the fixed literal peer UUIDs).
 Future<GrassrootsIdentity> _makeLowIdentity(String nickname) async {
   while (true) {
     final id = await _makeIdentity(nickname);
-    if (id.bleServiceUuid.compareTo(_serviceUuidThreshold) < 0) return id;
+    if (id.bleServiceUuid.compareTo(_serviceUuidThreshold) < 0 &&
+        _pubkeyHex(id).compareTo(_pubkeyHexThreshold) < 0) {
+      return id;
+    }
   }
 }
 
-/// An identity whose derived service UUID sorts ABOVE [_serviceUuidThreshold] —
-/// the non-initiator (waiter), which holds off the first-mover dial.
+/// An identity that sorts HIGH in both tie-break spaces — the non-initiator
+/// (waiter), which holds off the first-mover dial.
 Future<GrassrootsIdentity> _makeHighIdentity(String nickname) async {
   while (true) {
     final id = await _makeIdentity(nickname);
-    if (id.bleServiceUuid.compareTo(_serviceUuidThreshold) >= 0) return id;
+    if (id.bleServiceUuid.compareTo(_serviceUuidThreshold) >= 0 &&
+        _pubkeyHex(id).compareTo(_pubkeyHexThreshold) >= 0) {
+      return id;
+    }
   }
 }
 

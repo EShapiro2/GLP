@@ -28,16 +28,19 @@ const _defaultBleDisplayInfo = TransportDisplayInfo(
   color: Colors.blue,
 );
 
-/// Grassroots characteristic UUID, fixed across all peers. The containing
-/// service UUID is derived from the advertiser's public key.
+/// Grassroots characteristic UUID, fixed across all peers. Registered under
+/// the fixed [_grassrootsGattServiceUuid] data-plane service (the advertised
+/// service UUID is a separate, per-slot rotating discovery beacon).
 const String _grassrootsCharacteristicUuid =
     '0000ff01-0000-1000-8000-00805f9b34fb';
 
-// TEMP (rotation exerciser): fixed GATT data-plane service UUID, identical on
-// every Grassroots device. The advertised service UUID rotates (discovery
-// hint); this stays stable so re-advertising never rebuilds the GATT service or
-// drops peripheral links. Remove together with the exerciser timer below.
-const String _exerciserFixedGattServiceUuid =
+/// Fixed GATT data-plane service UUID, identical on every Grassroots device:
+/// the Grassroots prefix plus a reserved constant suffix. The *advertised*
+/// service UUID rotates per slot (a discovery/recognition hint only); the data
+/// characteristic lives under this stable service, so re-advertising a new
+/// beacon never rebuilds the GATT service or drops live peripheral links
+/// (plugin `gattServiceUuid` decoupling, grassroots_bluetooth_layer ≥ 0.3.0).
+const String _grassrootsGattServiceUuid =
     '84c40316-0871-e5ad-0000-0000000000da';
 
 /// MTU we request from the peer on every central connect. ANNOUNCE alone is
@@ -103,8 +106,8 @@ class BleTransportService extends TransportService {
   /// This is a strict cache of plugin facts, not consumer state.
   final Map<String, ble.BlePath> _paths = {};
 
-  /// Derived service UUIDs (lowercase) whose advertisements have carried the
-  /// iOS platform marker ([grassrootsIosLocalName]) this session. Like
+  /// Advertised service UUIDs (lowercase) whose advertisements have carried
+  /// the iOS platform marker ([grassrootsIosLocalName]) this session. Like
   /// [_paths] this is a cache of transport facts, not consumer state: a
   /// peer's platform never changes, but the marker is only present while the
   /// iOS app is foregrounded, so we remember every sighting. Used to scope
@@ -112,7 +115,22 @@ class BleTransportService extends TransportService {
   /// non-iOS second link is broken) without extrapolating it to iOS peers —
   /// dual-role is mandatory wherever hardware allows it (see CLAUDE.md,
   /// "Dual-Role BLE Is Mandatory").
-  final Set<String> _iosMarkedServiceUuids = {};
+  ///
+  /// The advertised UUID rotates every slot, so a UUID-keyed sighting expires
+  /// with its slot; once the beacon is resolvable to an identified peer the
+  /// sighting is promoted to the rotation-stable [_iosMarkedPubkeyHexes].
+  /// Values are the sighting slot: entries older than the previous slot can
+  /// never match again (candidate matching spans ±1 slot) and are pruned on
+  /// write, keeping the map bounded instead of accreting one dead UUID per
+  /// marked peer per slot forever.
+  final Map<String, int> _iosMarkedServiceUuids = {};
+
+  /// Pubkeys (lowercase hex) of peers known to be iOS devices — the
+  /// rotation-stable home of platform-marker sightings. Populated by
+  /// promotion from [_iosMarkedServiceUuids] whenever a marked beacon is
+  /// resolvable to an identified peer (at sighting time or lazily at query
+  /// time in [_isIosPeerPubkey]).
+  final Set<String> _iosMarkedPubkeyHexes = {};
 
   /// Central pathIds we are tearing down for a wrong-order mixed-pair reform
   /// (see `_onAdvertisement`). Advertisements arrive far faster than the
@@ -131,12 +149,21 @@ class BleTransportService extends TransportService {
   Timer? _scanWatchdog;
   DateTime _lastAdvertisementAt = DateTime.now();
 
-  // TEMP (rotation exerciser): flips the advertised beacon every 15s while
-  // keeping [_exerciserFixedGattServiceUuid] stable, to validate that the
-  // plugin's non-destructive re-advertise preserves live peripheral links.
-  Timer? _exerciserRotateTimer;
-  int _exerciserBeaconCounter = 0;
+  /// Slot-rotation timer: checks periodically whether the 15-minute BLE slot
+  /// advanced and, if so, re-advertises the new current-slot beacon via the
+  /// plugin's non-destructive refresh (the fixed [_grassrootsGattServiceUuid]
+  /// keeps the GATT server and live peripheral links intact). A coarse
+  /// periodic check rather than an exact boundary alarm: it self-heals after
+  /// app sleep / clock adjustments, and adjacent-slot matching on the
+  /// recognition side absorbs the up-to-one-check-interval lateness.
+  Timer? _slotRotationTimer;
+
+  /// The slot whose beacon we most recently advertised, or null when not
+  /// advertising. Compared against [GrassrootsIdentity.currentBleSlot] by the
+  /// rotation timer to detect boundaries.
+  int? _advertisedSlot;
   static const Duration _scanWatchdogInterval = Duration(seconds: 10);
+  static const Duration _slotRotationCheckInterval = Duration(seconds: 30);
 
   /// True after [stop] is called. Drops in-flight payloads and prevents
   /// adapter-on auto-restart.
@@ -291,23 +318,33 @@ class BleTransportService extends TransportService {
     try {
       if (shouldAdvertise) {
         try {
+          final slot = GrassrootsIdentity.currentBleSlot();
           await _ble.startAdvertising(
-            serviceUuid: identity.bleServiceUuid,
+            // The rotating current-slot beacon — a discovery/recognition hint.
+            serviceUuid:
+                GrassrootsIdentity.deriveServiceUuidForSlot(
+                    identity.publicKey, slot),
             characteristicUuid: _grassrootsCharacteristicUuid,
-            // TEMP (exerciser): register the GATT service under a stable UUID so
-            // beacon rotation never rebuilds it.
-            gattServiceUuid: _exerciserFixedGattServiceUuid,
+            // The stable data plane: beacon rotation never rebuilds the GATT
+            // service or drops live peripheral links.
+            gattServiceUuid: _grassrootsGattServiceUuid,
             localName: localName,
             bondless: true,
           );
+          _advertisedSlot = slot;
           anyStarted = true;
-          _startExerciserRotation(localName); // TEMP (exerciser)
+          _armSlotRotation(localName);
         } catch (e) {
           debugPrint('Failed to start advertising: $e');
         }
       } else {
         // Make sure we aren't lingering as an advertiser from a previous
-        // mode — explicitly tear down.
+        // mode — explicitly tear down, including the slot-rotation timer,
+        // which would otherwise resurrect advertising at the next 15-min
+        // boundary (mirrors the scan-watchdog cancel in the scan branch).
+        _slotRotationTimer?.cancel();
+        _slotRotationTimer = null;
+        _advertisedSlot = null;
         try {
           await _ble.stopAdvertising();
         } catch (_) {}
@@ -407,34 +444,37 @@ class BleTransportService extends TransportService {
     await start();
   }
 
-  /// TEMP (rotation exerciser): every 15s re-advertise a mutated beacon UUID
-  /// (Grassroots prefix + rotating suffix) while keeping
-  /// [_exerciserFixedGattServiceUuid] and the characteristic fixed — exercising
-  /// the plugin's non-destructive re-advertise. A live peripheral leg should NOT
-  /// drop when this fires. Remove together with the rest of the exerciser.
-  void _startExerciserRotation(String? localName) {
-    _exerciserRotateTimer?.cancel();
-    _exerciserRotateTimer =
-        Timer.periodic(const Duration(seconds: 15), (_) async {
+  /// Arm the slot-rotation check: every [_slotRotationCheckInterval], if the
+  /// 15-minute BLE slot advanced past [_advertisedSlot], re-advertise the new
+  /// current-slot beacon. The GATT service UUID and characteristic stay fixed,
+  /// so the plugin refreshes only the advertisement — live peripheral links
+  /// survive the rotation (validated on Android + iOS hardware).
+  void _armSlotRotation(String? localName) {
+    _slotRotationTimer?.cancel();
+    _slotRotationTimer =
+        Timer.periodic(_slotRotationCheckInterval, (_) async {
       if (_stopped) return;
-      _exerciserBeaconCounter++;
-      final suffix = _exerciserBeaconCounter.toRadixString(16).padLeft(16, '0');
-      const prefix = GrassrootsIdentity.grassrootsUuidPrefix; // 16 hex
-      final beacon = '${prefix.substring(0, 8)}-${prefix.substring(8, 12)}-'
-          '${prefix.substring(12, 16)}-${suffix.substring(0, 4)}-'
-          '${suffix.substring(4, 16)}';
+      // Never advertise in a role mode that doesn't (centralOnly): the timer
+      // is cancelled on mode change, but guard here too so a stray tick can
+      // never violate the "a central-only device never advertises" invariant.
+      if (store.state.settings.bleRoleMode == BleRoleMode.centralOnly) return;
+      final slot = GrassrootsIdentity.currentBleSlot();
+      if (slot == _advertisedSlot) return;
+      final beacon =
+          GrassrootsIdentity.deriveServiceUuidForSlot(identity.publicKey, slot);
       try {
         await _ble.startAdvertising(
           serviceUuid: beacon,
           characteristicUuid: _grassrootsCharacteristicUuid,
-          gattServiceUuid: _exerciserFixedGattServiceUuid,
+          gattServiceUuid: _grassrootsGattServiceUuid,
           localName: localName,
           bondless: true,
         );
-        debugPrint('[exerciser] rotated advertised beacon -> $beacon '
-            '(gattService stays $_exerciserFixedGattServiceUuid)');
+        _advertisedSlot = slot;
+        debugPrint('[ble] slot rotated to $slot — advertising $beacon');
       } catch (e) {
-        debugPrint('[exerciser] re-advertise failed: $e');
+        // Leave _advertisedSlot unchanged so the next tick retries.
+        debugPrint('[ble] slot re-advertise failed (will retry): $e');
       }
     });
   }
@@ -444,8 +484,9 @@ class BleTransportService extends TransportService {
     _stopped = true;
     _scanWatchdog?.cancel();
     _scanWatchdog = null;
-    _exerciserRotateTimer?.cancel(); // TEMP (exerciser)
-    _exerciserRotateTimer = null;
+    _slotRotationTimer?.cancel();
+    _slotRotationTimer = null;
+    _advertisedSlot = null;
     try {
       await _ble.stopScan();
     } catch (_) {}
@@ -539,9 +580,7 @@ class BleTransportService extends TransportService {
     // we know the peer's pubkey, so we can derive their service UUID and
     // correlate it with discovery state.
     if (role == BleRole.peripheral) {
-      final peerIsIos = _isIosPeerServiceUuid(
-        GrassrootsIdentity.deriveServiceUuid(pubkey),
-      );
+      final peerIsIos = _isIosPeerPubkey(pubkey);
       if (defaultTargetPlatform == TargetPlatform.iOS && !peerIsIos) {
         // The reverse leg toward a non-iOS peer is the pair's SECOND link,
         // which an iOS central cannot open (hardware-measured; see
@@ -564,13 +603,15 @@ class BleTransportService extends TransportService {
   /// doomed second link (it can never reach `didConnect`) and would hold a
   /// dial slot for the full connect timeout.
   void _cancelDoomedCentralDialsForPubkey(Uint8List pubkey) {
-    final serviceUuid =
-        GrassrootsIdentity.deriveServiceUuid(pubkey).toLowerCase();
+    final candidates = _candidateUuidsForPubkey(pubkey);
     for (final p in _paths.values.toList(growable: false)) {
       if (p.role != ble.BleRole.central) continue;
       if (p.state != ble.BlePathState.connecting) continue;
       final discovered = _peersState.getDiscoveredBlePeer(p.pathId);
-      if (discovered?.serviceUuid?.toLowerCase() != serviceUuid) continue;
+      final discoveredUuid = discovered?.serviceUuid?.toLowerCase();
+      if (discoveredUuid == null || !candidates.contains(discoveredUuid)) {
+        continue;
+      }
       debugPrint(
         '[ble] aborting central dial ${p.pathId}: peer just authenticated an '
         'inbound peripheral leg, and an iOS central cannot open a second '
@@ -701,10 +742,10 @@ class BleTransportService extends TransportService {
     try {
       await _ble.connect(
         remoteId: remoteId,
-        // TEMP (exerciser): discovery still keys off the rotating advertised
-        // `serviceUuid`, but the GATT data service to discover post-connect is
-        // the stable fixed UUID both peers register under.
-        serviceUuid: _exerciserFixedGattServiceUuid,
+        // Discovery keys off the rotating advertised beacon, but the GATT data
+        // service to discover post-connect is the fixed UUID every Grassroots
+        // device registers under.
+        serviceUuid: _grassrootsGattServiceUuid,
         characteristicUuid: _grassrootsCharacteristicUuid,
         androidMtu: _requestedAndroidMtu,
         // Apple's docs say CoreBluetooth's connect can legitimately take
@@ -803,11 +844,29 @@ class BleTransportService extends TransportService {
       return;
     }
 
+    // Resolve the advertised (rotating) beacon back to an already-identified
+    // peer by matching current+adjacent-slot candidates. Null pre-ANNOUNCE.
+    final resolvedPubkey = _pubkeyForAdvertisedUuid(serviceUuid);
+    // Every UUID this logical peer may currently be advertising under. For an
+    // unresolved (unknown) peer only the observed beacon itself is usable.
+    final uuidAliases = resolvedPubkey != null
+        ? _candidateUuidsForPubkey(resolvedPubkey)
+        : {serviceUuid.toLowerCase()};
+
     // Record platform-marker sightings before any early return: the marker
     // identifies the peer as iOS for the rest of the session, including for
     // decisions made while this identity is connected (and thus not dialed).
     if (_advertisementCarriesIosMarker(adv)) {
-      _iosMarkedServiceUuids.add(serviceUuid.toLowerCase());
+      final markerSlot = GrassrootsIdentity.currentBleSlot();
+      _iosMarkedServiceUuids[serviceUuid.toLowerCase()] = markerSlot;
+      // Rotated-away beacons can never match again; drop them so the map
+      // stays bounded by the number of currently-marked peers.
+      _iosMarkedServiceUuids.removeWhere((_, slot) => slot < markerSlot - 1);
+      // Promote to the rotation-stable pubkey key when the peer is known —
+      // the UUID-keyed sighting expires with the slot, the pubkey never does.
+      if (resolvedPubkey != null) {
+        _iosMarkedPubkeyHexes.add(_pubkeyHexOf(resolvedPubkey));
+      }
 
       // Wrong-order mixed-pair reform (dual-role mandate, CLAUDE.md). We are
       // non-iOS, hold ONLY a central leg to this iOS identity, and its
@@ -838,14 +897,16 @@ class BleTransportService extends TransportService {
 
     // Drop advertisements from a rotated radio MAC when we already have a
     // live or in-flight path to the same logical peer on a different MAC.
-    // The service UUID is derived from the peer's pubkey and is stable
-    // across rotations, so a different pathId with the same serviceUuid is
-    // the same peer with a freshly-rotated address. Recording it as a new
-    // DiscoveredPeerState (and dialing it) would create a duplicate central
-    // path racing the existing one — that's exactly the failure mode behind
-    // the GATT-status-133 storm we see when iOS rotates rapidly.
-    final activeOnOtherMac = _peersState
-        .getDiscoveredBlePeersByServiceUuid(serviceUuid)
+    // The advertised UUID and the radio MAC both rotate ~every 15 minutes
+    // (deliberately co-timed), so the same logical peer is matched via
+    // [uuidAliases]: within a slot the UUID is a stable per-peer key, and for
+    // an identified peer the candidate set also bridges slot boundaries.
+    // Recording a rotated MAC as a new DiscoveredPeerState (and dialing it)
+    // would create a duplicate central path racing the existing one — that's
+    // exactly the failure mode behind the GATT-status-133 storm we see when
+    // iOS rotates rapidly.
+    final activeOnOtherMac = uuidAliases
+        .expand(_peersState.getDiscoveredBlePeersByServiceUuid)
         .where((p) => p.transportId != pathId)
         .any((p) => p.isConnected || p.isConnecting);
     if (activeOnOtherMac) {
@@ -927,12 +988,12 @@ class BleTransportService extends TransportService {
       _liveCentralPathIdForServiceUuid(serviceUuid) != null;
 
   /// The live central pathId attached to the identified peer whose pubkey
-  /// derives [serviceUuid], or null when none is connected.
+  /// derives [serviceUuid] (in any current-window slot), or null when none is
+  /// connected.
   String? _liveCentralPathIdForServiceUuid(String serviceUuid) {
     final normalized = serviceUuid.toLowerCase();
     for (final peer in _peersState.peersList) {
-      if (GrassrootsIdentity.deriveServiceUuid(peer.publicKey).toLowerCase() !=
-          normalized) {
+      if (!_candidateUuidsForPubkey(peer.publicKey).contains(normalized)) {
         continue;
       }
       final centralId = peer.bleCentralDeviceId;
@@ -980,8 +1041,8 @@ class BleTransportService extends TransportService {
   /// So for mixed pairs iOS must own the first link and the non-iOS side the
   /// reverse leg. iOS peers are recognized by the fixed `grs-ios` local name
   /// their advertisements carry (see [grassrootsIosLocalName]); among
-  /// same-platform peers the deterministic service-UUID tiebreaker (mirroring
-  /// the UDP "smaller pubkey initiates" convention) avoids the mutual-dial
+  /// same-platform peers the deterministic smaller-pubkey tiebreaker (same
+  /// rule as over IP; see [_isBleDialInitiator]) avoids the mutual-dial
   /// collision. Every waiting branch is backstopped by [firstMoverFallback]
   /// so a peer whose expected initiator never shows (backgrounded iOS,
   /// peripheral-only device, marker lost from the scan response) still gets a
@@ -1033,12 +1094,73 @@ class BleTransportService extends TransportService {
         _firstMoverFallbackElapsed(existing);
   }
 
+  /// Lowercase hex of [pubkey], the rotation-stable peer key.
+  String _pubkeyHexOf(Uint8List pubkey) =>
+      pubkey.map((b) => b.toRadixString(16).padLeft(2, '0')).join();
+
+  /// Memoized per-slot candidate sets: pubkeyHex → (slot, lowercase UUIDs).
+  /// One entry per identified peer, refreshed when the slot advances. Avoids
+  /// recomputing 3 SHA-256 digests per peer on every advertisement
+  /// ([_pubkeyForAdvertisedUuid] runs on the scan hot path).
+  final Map<String, (int, Set<String>)> _candidateUuidCache = {};
+
+  /// The service UUIDs (lowercase) under which [pubkey] may currently be
+  /// advertising: previous, current, and next slot. Recognition always
+  /// matches against this set — never a single derived UUID — so
+  /// unsynchronized clocks and slot boundaries can't break it.
+  Set<String> _candidateUuidsForPubkey(Uint8List pubkey) {
+    final hex = _pubkeyHexOf(pubkey);
+    final slot = GrassrootsIdentity.currentBleSlot();
+    final cached = _candidateUuidCache[hex];
+    if (cached != null && cached.$1 == slot) return cached.$2;
+    final uuids = GrassrootsIdentity.candidateServiceUuids(pubkey)
+        .map((u) => u.toLowerCase())
+        .toSet();
+    _candidateUuidCache[hex] = (slot, uuids);
+    return uuids;
+  }
+
+  /// Resolve an advertised (rotating) service UUID to the pubkey of an
+  /// already-identified peer via candidate matching, or null when the beacon
+  /// doesn't correspond to any peer we know (pre-ANNOUNCE stranger).
+  Uint8List? _pubkeyForAdvertisedUuid(String serviceUuid) {
+    final normalized = serviceUuid.toLowerCase();
+    for (final peer in _peersState.peersList) {
+      if (_candidateUuidsForPubkey(peer.publicKey).contains(normalized)) {
+        return peer.publicKey;
+      }
+    }
+    return null;
+  }
+
+  /// Whether the identified peer [pubkey] is known to be an iOS device: a
+  /// platform-marker sighting recorded under its pubkey, or under any of its
+  /// current-window slot UUIDs (promoted to the pubkey key on hit, since a
+  /// peer's platform never changes but its beacon rotates away).
+  bool _isIosPeerPubkey(Uint8List pubkey) {
+    final hex = _pubkeyHexOf(pubkey);
+    if (_iosMarkedPubkeyHexes.contains(hex)) return true;
+    if (_candidateUuidsForPubkey(pubkey)
+        .any(_iosMarkedServiceUuids.containsKey)) {
+      _iosMarkedPubkeyHexes.add(hex);
+      return true;
+    }
+    return false;
+  }
+
   /// Whether the peer behind [serviceUuid] has been seen advertising the iOS
   /// platform marker this session. Sightings are recorded in
   /// [_onAdvertisement]; membership is sticky because a peer's platform never
   /// changes, while the marker itself comes and goes with iOS foregrounding.
-  bool _isIosPeerServiceUuid(String serviceUuid) =>
-      _iosMarkedServiceUuids.contains(serviceUuid.toLowerCase());
+  /// Checks the raw UUID sighting first, then — for beacons resolvable to an
+  /// identified peer — the rotation-stable pubkey record.
+  bool _isIosPeerServiceUuid(String serviceUuid) {
+    if (_iosMarkedServiceUuids.containsKey(serviceUuid.toLowerCase())) {
+      return true;
+    }
+    final pubkey = _pubkeyForAdvertisedUuid(serviceUuid);
+    return pubkey != null && _isIosPeerPubkey(pubkey);
+  }
 
   /// Whether [adv] carries the fixed iOS platform marker
   /// ([grassrootsIosLocalName]) in its local name. iOS surfaces a scanned
@@ -1051,15 +1173,31 @@ class BleTransportService extends TransportService {
         adv.platformName == ble.grassrootsIosLocalName;
   }
 
-  /// Cold-start tie-breaker between same-platform peers: the one whose
-  /// derived service UUID sorts lower is the initiator and opens the first
-  /// (central) leg; the higher one waits for that inbound leg and then opens
-  /// its reverse central leg via [_maybeDialReverseCentralForPubkey]. Mirrors
-  /// the UDP "smaller pubkey initiates" convention, adapted to what we have at
-  /// advertisement time: the service UUID is a stable, deterministic function
-  /// of the pubkey, so both peers compute the same comparison and reach
-  /// opposite verdicts. Without it, both peers dial on discovery and collide.
+  /// Cold-start tie-breaker between same-platform peers: the endpoint with
+  /// the lexicographically smaller PUBLIC KEY is the initiator and opens the
+  /// first (central) leg; the other waits for that inbound leg and then opens
+  /// its reverse central leg via [_maybeDialReverseCentralForPubkey]. Same
+  /// rule as over IP (spec `GLP_Networking_API` §BLE Discovery) — and it must
+  /// be the pubkey, not the service UUID: the rotating suffix flips UUID
+  /// order between slots, so a UUID comparison would no longer give both
+  /// peers opposite verdicts.
+  ///
+  /// When the beacon isn't resolvable to a known pubkey (open-mode cold call,
+  /// pre-ANNOUNCE), fall back to comparing our own current-slot UUID against
+  /// the observed one. Both sides compare the same two strings, so verdicts
+  /// stay complementary except transiently across a slot boundary — a
+  /// collision or stall there is recovered by the connect timeout and
+  /// [firstMoverFallback], exactly like any other cold-call race. The same
+  /// backstops cover asymmetric knowledge (we know the peer's pubkey but they
+  /// don't know ours, e.g. after their reinstall): the two sides then apply
+  /// different predicates and may briefly both dial or both wait.
   bool _isBleDialInitiator(String peerServiceUuid) {
+    final peerPubkey = _pubkeyForAdvertisedUuid(peerServiceUuid);
+    if (peerPubkey != null) {
+      return _pubkeyHexOf(identity.publicKey)
+              .compareTo(_pubkeyHexOf(peerPubkey)) <
+          0;
+    }
     return identity.bleServiceUuid.toLowerCase().compareTo(
               peerServiceUuid.toLowerCase(),
             ) <
@@ -1084,8 +1222,7 @@ class BleTransportService extends TransportService {
   bool _hasLivePeripheralPathForServiceUuid(String serviceUuid) {
     final normalized = serviceUuid.toLowerCase();
     for (final peer in _peersState.peersList) {
-      if (GrassrootsIdentity.deriveServiceUuid(peer.publicKey).toLowerCase() !=
-          normalized) {
+      if (!_candidateUuidsForPubkey(peer.publicKey).contains(normalized)) {
         continue;
       }
       final peripheralId = peer.blePeripheralDeviceId;
@@ -1170,7 +1307,7 @@ class BleTransportService extends TransportService {
     // [_shouldOpenCentralLeg]). Toward iOS peers we attempt it — dual-role
     // mandate.
     if (defaultTargetPlatform == TargetPlatform.iOS &&
-        !_isIosPeerServiceUuid(GrassrootsIdentity.deriveServiceUuid(pubkey))) {
+        !_isIosPeerPubkey(pubkey)) {
       return;
     }
 
@@ -1182,11 +1319,11 @@ class BleTransportService extends TransportService {
     if (peer.bleCentralDeviceId != null) return;
     if (peer.blePeripheralDeviceId == null) return; // not actually peripheral-attached
 
-    final serviceUuid =
-        GrassrootsIdentity.deriveServiceUuid(pubkey).toLowerCase();
+    final candidateUuids = _candidateUuidsForPubkey(pubkey);
 
-    // Skip if any central pathId for this service UUID is mid-handshake.
-    // (Across-MAC, since the discovery map can hold multiple rotated MACs.)
+    // Skip if any central pathId for this identity's current-window UUIDs is
+    // mid-handshake. (Across-MAC, since the discovery map can hold multiple
+    // rotated MACs.)
     final alreadyDialing = _paths.values.any((p) {
       if (p.role != ble.BleRole.central) return false;
       if (p.state != ble.BlePathState.connecting &&
@@ -1195,19 +1332,20 @@ class BleTransportService extends TransportService {
           p.state != ble.BlePathState.ready) {
         return false;
       }
-      final discovered = _peersState.getDiscoveredBlePeer(p.pathId);
-      return discovered?.serviceUuid?.toLowerCase() == serviceUuid;
+      final discoveredUuid =
+          _peersState.getDiscoveredBlePeer(p.pathId)?.serviceUuid?.toLowerCase();
+      return discoveredUuid != null && candidateUuids.contains(discoveredUuid);
     });
     if (alreadyDialing) return;
 
     if (_inFlightCentralDials() >= _maxInFlightCentralDials) return;
 
-    // Pick any discovered advertising MAC that hashes to this peer's
-    // identity and isn't itself in a connecting/connected state. If none
-    // exist yet we bail — the next advertisement that lands for this peer
-    // will re-trigger us (`_onAdvertisement` calls back into here).
-    final candidate = _peersState
-        .getDiscoveredBlePeersByServiceUuid(serviceUuid)
+    // Pick any discovered advertising MAC whose beacon matches this peer's
+    // current-window slot UUIDs and isn't itself in a connecting/connected
+    // state. If none exist yet we bail — the next advertisement that lands
+    // for this peer will re-trigger us (`_onAdvertisement` calls back here).
+    final candidate = candidateUuids
+        .expand(_peersState.getDiscoveredBlePeersByServiceUuid)
         .firstWhere(
           (dp) => !dp.isConnected && !dp.isConnecting,
           orElse: () => _noCandidate,
@@ -1358,11 +1496,13 @@ class BleTransportService extends TransportService {
 
   Iterable<ble.BlePath> get _readyPaths => _paths.values.where(_isReady);
 
+  /// Closed-mode recognition: resolve an advertised (rotating) beacon to an
+  /// accepted friend's pubkey by matching the friend's current+adjacent-slot
+  /// UUIDs, or null when no friend matches.
   Uint8List? _friendPubkeyForDerivedServiceUuid(String serviceUuid) {
     final normalized = serviceUuid.toLowerCase();
     for (final peer in _peersState.friends) {
-      if (GrassrootsIdentity.deriveServiceUuid(peer.publicKey).toLowerCase() ==
-          normalized) {
+      if (_candidateUuidsForPubkey(peer.publicKey).contains(normalized)) {
         return peer.publicKey;
       }
     }

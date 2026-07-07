@@ -502,11 +502,13 @@ class PeersState {
   DiscoveredPeerState? getDiscoveredBlePeer(String deviceId) =>
       discoveredBlePeers[deviceId];
 
-  /// Find every discovered BLE peer advertising the given derived service
-  /// UUID, regardless of radio MAC / CBPeripheral identifier. The service
-  /// UUID is `Grassroots-prefix + SHA-256(pubkey)[0..8]` and is stable across
-  /// MAC rotations, so this is how we recognise the same logical peer when
-  /// its radio identifier changes (frequent on iOS without bonding).
+  /// Find every discovered BLE peer advertising the given service UUID,
+  /// regardless of radio MAC / CBPeripheral identifier. The advertised UUID
+  /// is the rotating per-slot beacon (Grassroots prefix + SHA-256("glp ble
+  /// suffix" | pubkey | slot)[0..8]): stable within a slot — which is how we
+  /// recognise the same logical peer when its radio identifier changes
+  /// mid-slot — but different each slot, so slot-spanning recognition must
+  /// query once per candidate UUID (the transport's `candidateServiceUuids`).
   ///
   /// Returns an empty iterable when `serviceUuid` is null/empty so callers
   /// don't have to null-check.

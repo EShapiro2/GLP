@@ -1,3 +1,4 @@
+import 'dart:convert' show utf8;
 import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
@@ -65,15 +66,22 @@ void main() {
       });
 
       test(
-          'UUID starts with Grassroots prefix and ends with SHA-256 pubkey suffix',
-          () {
-        final uuid = identity.bleServiceUuid;
+          'UUID starts with Grassroots prefix and ends with the rotating '
+          'SHA-256("glp ble suffix" | pubkey | slot) suffix', () {
+        final slot = GrassrootsIdentity.currentBleSlot();
+        final uuid =
+            GrassrootsIdentity.deriveServiceUuidForSlot(identity.publicKey, slot);
         final hexOnly = uuid.replaceAll('-', '');
 
         expect(hexOnly.substring(0, 16),
             equals(GrassrootsIdentity.grassrootsUuidPrefix));
 
-        final digest = const DartSha256().hashSync(identity.publicKey).bytes;
+        final input = <int>[
+          ...utf8.encode(GrassrootsIdentity.bleSuffixLabel),
+          ...identity.publicKey,
+          for (var i = 7; i >= 0; i--) (slot >> (8 * i)) & 0xff,
+        ];
+        final digest = const DartSha256().hashSync(input).bytes;
         final expectedSuffix = digest
             .sublist(0, 8)
             .map((b) => b.toRadixString(16).padLeft(2, '0'))
@@ -81,9 +89,66 @@ void main() {
         expect(hexOnly.substring(16), equals(expectedSuffix));
       });
 
-      test('deriveServiceUuid static method matches bleServiceUuid getter', () {
-        expect(GrassrootsIdentity.deriveServiceUuid(identity.publicKey),
-            equals(identity.bleServiceUuid));
+      test('bleServiceUuid getter is the current-slot derivation', () {
+        // Derive for the slot before and after the getter call; the getter's
+        // value must match one of them (guards the once-per-15-min race
+        // without pinning the clock).
+        final before = GrassrootsIdentity.currentBleSlot();
+        final uuid = identity.bleServiceUuid;
+        final after = GrassrootsIdentity.currentBleSlot();
+        expect(
+          {
+            for (var s = before; s <= after; s++)
+              GrassrootsIdentity.deriveServiceUuidForSlot(identity.publicKey, s),
+          },
+          contains(uuid),
+        );
+      });
+
+      test('the suffix rotates: different slots produce different UUIDs', () {
+        final a =
+            GrassrootsIdentity.deriveServiceUuidForSlot(identity.publicKey, 100);
+        final b =
+            GrassrootsIdentity.deriveServiceUuidForSlot(identity.publicKey, 101);
+        expect(a, isNot(equals(b)));
+        // Same prefix, different suffix — only the agent part rotates.
+        expect(a.substring(0, 19), equals(b.substring(0, 19)));
+      });
+
+      test('derivation is deterministic per (pubkey, slot)', () {
+        expect(
+          GrassrootsIdentity.deriveServiceUuidForSlot(identity.publicKey, 42),
+          equals(
+              GrassrootsIdentity.deriveServiceUuidForSlot(identity.publicKey, 42)),
+        );
+      });
+
+      test('candidateServiceUuids covers previous, current, and next slot', () {
+        final now = DateTime.fromMillisecondsSinceEpoch(
+            1000 * GrassrootsIdentity.bleSlotDuration.inSeconds * 7000);
+        final slot = GrassrootsIdentity.currentBleSlot(now: now);
+        final candidates = GrassrootsIdentity.candidateServiceUuids(
+            identity.publicKey,
+            now: now);
+        expect(candidates, hasLength(3));
+        for (var d = -1; d <= 1; d++) {
+          expect(
+            candidates,
+            contains(GrassrootsIdentity.deriveServiceUuidForSlot(
+                identity.publicKey, slot + d)),
+          );
+        }
+      });
+
+      test('slot length is 15 minutes, matching BLE address randomization', () {
+        expect(GrassrootsIdentity.bleSlotDuration, const Duration(minutes: 15));
+        final t0 = DateTime.fromMillisecondsSinceEpoch(0);
+        final t1 = t0.add(const Duration(minutes: 14, seconds: 59));
+        final t2 = t0.add(const Duration(minutes: 15));
+        expect(GrassrootsIdentity.currentBleSlot(now: t0),
+            equals(GrassrootsIdentity.currentBleSlot(now: t1)));
+        expect(GrassrootsIdentity.currentBleSlot(now: t2),
+            equals(GrassrootsIdentity.currentBleSlot(now: t0) + 1));
       });
 
       test('different identities produce different UUIDs', () async {

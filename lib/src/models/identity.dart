@@ -1,3 +1,4 @@
+import 'dart:convert' show utf8;
 import 'dart:typed_data';
 
 import 'package:cryptography/cryptography.dart';
@@ -10,7 +11,8 @@ import 'package:cryptography/dart.dart' show DartSha256;
 /// - Passing it to Grassroots at initialization
 ///
 /// Grassroots uses this for:
-/// - Deriving BLE Service UUID (Grassroots prefix + first 64 bits of SHA-256(pubkey))
+/// - Deriving the rotating BLE service UUID (Grassroots prefix + first 8 bytes
+///   of SHA-256("glp ble suffix" | pubkey | slot))
 /// - Signing packets
 /// - Peer identification via ANNOUNCE
 class GrassrootsIdentity {
@@ -79,16 +81,46 @@ class GrassrootsIdentity {
   /// First 8 bytes of SHA-256("grassroots").
   static const String grassrootsUuidPrefix = '84c403160871e5ad';
 
-  /// Derive a per-peer BLE Service UUID from a public key.
-  /// Format: Grassroots prefix (8 bytes) + first 8 bytes of SHA-256(public key).
+  /// Domain-separation label for the rotating BLE suffix
+  /// (spec `GLP_Networking_API` §BLE Identity and Advertising).
+  static const String bleSuffixLabel = 'glp ble suffix';
+
+  /// Length of one BLE advertising time slot. Matches the ~15-minute period
+  /// of BLE address randomization, so the advertised UUID and the radio MAC
+  /// rotate together and neither outlives the other as a tracking handle.
+  static const Duration bleSlotDuration = Duration(minutes: 15);
+
+  /// The current BLE time slot: wall-clock milliseconds since epoch divided
+  /// by [bleSlotDuration]. Local and unsynchronized across devices — which is
+  /// why recognition always matches the current AND adjacent slots
+  /// ([candidateServiceUuids]); adjacent-slot coverage absorbs clock skew and
+  /// slot-boundary races.
+  static int currentBleSlot({DateTime? now}) =>
+      (now ?? DateTime.now()).millisecondsSinceEpoch ~/
+      bleSlotDuration.inMilliseconds;
+
+  /// Derive a peer's BLE service UUID for a specific time [slot]:
+  /// Grassroots prefix (8 bytes) + first 8 bytes of
+  /// SHA-256("glp ble suffix" | pubkey | slot), slot encoded as 8-byte
+  /// big-endian (spec `GLP_Networking_API` §BLE Identity and Advertising).
   ///
-  /// This UUID is a discovery hint, not an authorization proof. The full
-  /// public key is authenticated only after a signed ANNOUNCE is received.
-  static String deriveServiceUuid(Uint8List pubkey) {
+  /// The rotating suffix lets anyone who knows the public key recognize this
+  /// agent before connecting (compute the suffix for the current and adjacent
+  /// slots and match), while a third party that does not know the key sees a
+  /// suffix that changes every slot and cannot use it to track the device.
+  /// The UUID is a discovery hint, not an authorization proof: the full
+  /// public key is authenticated only by the signed ANNOUNCE.
+  static String deriveServiceUuidForSlot(Uint8List pubkey, int slot) {
     if (pubkey.length < 32) {
       throw ArgumentError('Public key must be at least 32 bytes');
     }
-    final suffixBytes = const DartSha256().hashSync(pubkey).bytes.sublist(0, 8);
+    final input = <int>[
+      ...utf8.encode(bleSuffixLabel),
+      ...pubkey,
+      for (var i = 7; i >= 0; i--) (slot >> (8 * i)) & 0xff,
+    ];
+    final suffixBytes =
+        const DartSha256().hashSync(input).bytes.sublist(0, 8);
     final suffix =
         suffixBytes.map((b) => b.toRadixString(16).padLeft(2, '0')).join();
     final hex = '$grassrootsUuidPrefix$suffix';
@@ -99,8 +131,24 @@ class GrassrootsIdentity {
         '${hex.substring(20, 32)}';
   }
 
-  /// Per-peer BLE Service UUID derived from this identity's public key.
-  String get bleServiceUuid => deriveServiceUuid(publicKey);
+  /// The service UUIDs by which [pubkey] may currently be advertising:
+  /// previous, current, and next slot (lowercase). Recognition matches
+  /// against this set rather than a single UUID so unsynchronized clocks and
+  /// slot-boundary races never break friend recognition (spec: "late rotation
+  /// in the background is absorbed by the adjacent-slot match").
+  static Set<String> candidateServiceUuids(Uint8List pubkey, {DateTime? now}) {
+    final slot = currentBleSlot(now: now);
+    return {
+      for (var delta = -1; delta <= 1; delta++)
+        deriveServiceUuidForSlot(pubkey, slot + delta),
+    };
+  }
+
+  /// The BLE service UUID this identity advertises *right now* — the
+  /// current-slot derivation. Time-dependent: callers that cache it must
+  /// refresh on slot boundaries (the BLE transport re-advertises each slot).
+  String get bleServiceUuid =>
+      deriveServiceUuidForSlot(publicKey, currentBleSlot());
 
   /// Short display fingerprint from the first 8 bytes of the public key.
   /// Full verification uses the complete public key.

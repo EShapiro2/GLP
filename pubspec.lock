@@ -462,7 +462,7 @@ packages:
       path: "../grassroots-bluetooth-layer"
       relative: true
     source: path
-    version: "0.2.0"
+    version: "0.3.0"
   grassroots_dart_udx:
     dependency: "direct main"
     description:

@@ -11,8 +11,10 @@ dependencies:
   flutter:
     sdk: flutter
   
-  # Unified BLE transport (central + peripheral, bondless)
-  grassroots_bluetooth_layer: ^0.2.0
+  # Unified BLE transport (central + peripheral, bondless). Requires >= 0.3.0
+  # for the advertised/GATT service-UUID decoupling (gattServiceUuid) that the
+  # rotating per-slot beacon depends on.
+  grassroots_bluetooth_layer: ^0.3.0
   
   # Cryptography (Ed25519 signing, SHA-256 hashing)
   cryptography: ^2.9.0
@@ -59,9 +61,11 @@ dependencies:
   # macOS / Windows / Linux.
   sodium_libs: ^3.4.4+1
 
-# TEMP (rotation exerciser / non-destructive re-advertise validation):
-# point the BLE plugin at the local feat/decouple-advertised-uuid working tree.
-# Keep that repo checked out on the branch. Revert before merging.
+# The BLE rotation depends on grassroots_bluetooth_layer 0.3.0
+# (gattServiceUuid decoupling), which is not yet published to pub.dev — until
+# it is, resolve it from the local clone (branch feat/decouple-advertised-uuid,
+# or main once merged). MACHINE-SPECIFIC path. Once 0.3.0 is published, delete
+# this override; the ^0.3.0 constraint above then resolves from pub.dev.
 dependency_overrides:
   grassroots_bluetooth_layer:
     path: ../grassroots-bluetooth-layer

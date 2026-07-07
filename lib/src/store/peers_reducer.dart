@@ -35,13 +35,16 @@ PeersState peersReducer(PeersState state, dynamic action) {
       );
     }
 
-    // Dedupe MAC-rotation ghost entries. A derived service UUID identifies the
-    // logical peer (Grassroots-prefix + SHA-256(pubkey)[0..8]) and is stable
-    // across BLE address rotations, while the deviceId / pathId is tied to
-    // the radio MAC (Android) or CBPeripheral identifier (iOS without
-    // bonding) and rotates ~every 15 min. Without this cleanup the map
-    // accumulates one dead entry per rotation, each one keeps getting
-    // re-dialed by `_onAdvertisement`, and we end up in a status-133 storm.
+    // Dedupe MAC-rotation ghost entries. Within one 15-minute slot the
+    // advertised service UUID (Grassroots prefix + rotating per-slot suffix)
+    // identifies the logical peer, while the deviceId / pathId is tied to the
+    // radio MAC (Android) or CBPeripheral identifier (iOS without bonding),
+    // which can rotate mid-slot. Without this cleanup the map accumulates one
+    // dead entry per rotation, each one keeps getting re-dialed by
+    // `_onAdvertisement`, and we end up in a status-133 storm. Across slot
+    // boundaries the UUID itself rotates too, so this exact-match dedup no
+    // longer fires — cross-slot ghosts are handled by the transport's
+    // slot-candidate matching and swept by StaleDiscoveredBlePeersRemovedAction.
     //
     // Only prune entries that are NOT currently connected or in-flight: if
     // we still have a live or pending path on the old MAC, leave it alone —
