@@ -97,20 +97,20 @@ IntroOffer    ::= offer(Constant).
 procedure respond_coldcall(ColdCallOffer?, Response, UserInStream).
 
 %% Accept a friend offer.
-*
-respond_coldcall(offer(From), Resp?, [decision(yes, From?, response(Resp))]) :-
+*(Answer=yes)
+respond_coldcall(offer(From), Resp?, [decision(Answer?, From?, response(Resp))]) :-
     ground(From?) | true.
 
 %% Decline.
-*
-respond_coldcall(offer(From), Resp?, [decision(no, From?, response(Resp))]) :-
+*(Answer=no)
+respond_coldcall(offer(From), Resp?, [decision(Answer?, From?, response(Resp))]) :-
     ground(From?) | true.
 
 procedure respond_intro(Constant?, IntroOffer?, IntroChannel?, UserInStream).
 
 %% Accept an introduction: ack on the setup channel, await the peer, inject
 %% the result.
-*
+*(Answer=yes)
 respond_intro(Id, offer(Other), Ch, Ans?) :-
     ground(Id?), ground(Other?),
     send(ack(Id?), Ch?, Ch1) |
@@ -118,7 +118,7 @@ respond_intro(Id, offer(Other), Ch, Ans?) :-
     inject_intro_result(Result?, [], Ans).
 
 %% Reject: nack on the setup channel, closing it.
-*
+*(Answer=no)
 respond_intro(_, offer(Other), ch(_ChIn, [nack|[]]), []) :-
     ground(Other?) | true.
 

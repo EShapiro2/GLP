@@ -94,26 +94,26 @@ SwapOffer  ::= offer(Constant, Constant, Integer, Constant, Integer).
 procedure respond_coldcall(ColdCallOffer?, Response, Stream(X)).
 
 %% Accept a friend offer.
-*
-respond_coldcall(offer(From), Resp?, [decision(yes, From?, response(Resp))]) :-
+*(Answer=yes)
+respond_coldcall(offer(From), Resp?, [decision(Answer?, From?, response(Resp))]) :-
     ground(From?) | true.
 
 %% Decline.
-*
-respond_coldcall(offer(From), Resp?, [decision(no, From?, response(Resp))]) :-
+*(Answer=no)
+respond_coldcall(offer(From), Resp?, [decision(Answer?, From?, response(Resp))]) :-
     ground(From?) | true.
 
 procedure respond_swap(SwapOffer?, SwapResponse, Stream(X)).
 
 %% Accept a swap offer: the agent's answer clause gives the want-coins and
 %% takes the give-coins (declining itself if the want-coins are not held).
-*
+*(Answer=yes)
 respond_swap(offer(From, GiveCoin, GiveAmt, WantCoin, WantAmt), SwapResp?,
     [accept_swap(From?, GiveCoin?, GiveAmt?, WantCoin?, WantAmt?, SwapResp)]) :-
     ground(From?), ground(GiveCoin?), integer(GiveAmt?), ground(WantCoin?), integer(WantAmt?) | true.
 
 %% Decline.
-*
+*(Answer=no)
 respond_swap(offer(From, _GiveCoin, _GiveAmt, _WantCoin, _WantAmt), SwapResp?,
     [decline_swap(From?, SwapResp)]) :-
     ground(From?) | true.
