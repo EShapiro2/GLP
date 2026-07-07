@@ -61,15 +61,6 @@ dependencies:
   # macOS / Windows / Linux.
   sodium_libs: ^3.4.4+1
 
-# The BLE rotation depends on grassroots_bluetooth_layer 0.3.0
-# (gattServiceUuid decoupling), which is not yet published to pub.dev — until
-# it is, resolve it from the local clone (branch feat/decouple-advertised-uuid,
-# or main once merged). MACHINE-SPECIFIC path. Once 0.3.0 is published, delete
-# this override; the ^0.3.0 constraint above then resolves from pub.dev.
-dependency_overrides:
-  grassroots_bluetooth_layer:
-    path: ../grassroots-bluetooth-layer
-
 dev_dependencies:
   flutter_test:
     sdk: flutter

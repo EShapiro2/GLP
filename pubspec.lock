@@ -459,9 +459,10 @@ packages:
   grassroots_bluetooth_layer:
     dependency: "direct main"
     description:
-      path: "../grassroots-bluetooth-layer"
-      relative: true
-    source: path
+      name: grassroots_bluetooth_layer
+      sha256: b0074131f8ac89dab448b27e27cc371802a6370297e8bfcd1282fe162c2c1a03
+      url: "https://pub.dev"
+    source: hosted
     version: "0.3.0"
   grassroots_dart_udx:
     dependency: "direct main"
