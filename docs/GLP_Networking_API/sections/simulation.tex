@@ -1,0 +1,23 @@
+%==============================================================================
+\section{Simulation Realization}
+\label{sec:simulation}
+%==============================================================================
+The simulation realization is a third realization of the API of Section~\ref{sec:api}, for integration and testing: all agents run as Dart isolates in a single process, and an in-process router---the existing \code{IsolateManager} of madGLP~\cite{shapiro2026implementing}---carries messages between them.  madGLP issues the same calls as over BLE and IP; only the realization is degenerate.
+
+\paragraph{Identity.}
+At boot, the harness generates an Ed25519 key pair for each agent and installs it via \func{putIdentity}.  \code{sign/2} and the guard \code{valid\_attestation/4} sign and verify for real, so GLP-level protocols that use attestations run unchanged.  Session establishment (Section~\ref{sec:session}) is omitted: in-process, the router delivers payloads uncorrupted and knows the identity of each isolate, so the Integrity and Authentication assumptions (Section~\ref{sec:assumptions}) hold by construction; fair, unordered, atomic delivery is provided by the router and its queues.
+
+\paragraph{Naming.}
+madGLP global names and GLP programs use symbolic agent identifiers (e.g., \code{alice}); the API names peers by public key.  The boot harness publishes an identifier--key directory to the runtime adapter, which resolves identifiers to keys at \func{send} and keys to identifiers on delivery.  Over a real network the agent identifier in global names will be the public key, with nicknames at the social level; this change is deferred past the simulation phase.
+
+\paragraph{Reachability.}
+The harness maintains an adjacency relation over the agents, total by default: every agent is BLE-adjacent to every other.  Once all agents have booted, the router fires \func{onPeerConnected} with transport \code{BLE} for every ordered pair; \func{peerTransports} returns \code{[BLE]} for adjacent peers and \code{[]} otherwise.  The harness can cut and restore adjacency, so \func{onPeerDisconnected}, message queuing, and redelivery are testable.
+
+\paragraph{Discovery and trust.}
+\func{getPeers} returns the adjacent agents; \func{onPeerDiscovered} fires when adjacency is created.  ANNOUNCE is subsumed: the router supplies the authenticated sender key on every delivery.  \func{setTrustLevel} is enforced as specified: under Closed, first contact from an unknown agent is not answered.
+
+\paragraph{Not provided.}
+The IP medium and the rendezvous server are absent: \func{generatePeerLink}, \func{consumePeerLink}, \func{onConnectivityStatusChanged}, \func{getPublicAddress}, \code{peer\_address/2}, and \code{punch\_udp/1} are not provided.  The reported transport is \code{BLE} throughout.
+
+\paragraph{Correspondence.}
+The realization wraps the existing \code{IsolateManager} behind the API; Section~\ref{sec:summary} maps each \code{IsolateManager} responsibility to its API call.

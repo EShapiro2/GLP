@@ -2,29 +2,112 @@
 \section{IP Medium}
 \label{sec:ip}
 %==============================================================================
-This section specifies how the networking API (Section~\ref{sec:api}) is realized over the Internet.  Communication uses UDP with UDX (reliable multiplexed streams over UDP) for data transport.  NAT traversal is handled by the rendezvous protocol (Section~\ref{sec:rendezvous}).
+This section specifies how the networking API (Section~\ref{sec:api}) is realized over the Internet.  Communication uses UDP with UDX (reliable, multiplexed streams over UDP) for data transport.  NAT traversal is coordinated through rendezvous servers (Section~\ref{sec:rendezvous}); the orchestration that decides when and with whom to traverse is GLP agent code and is out of scope here.
 
 %------------------------------------------------------------------------------
 \subsection{IP Connection}
 \label{sec:ip-connection}
 %------------------------------------------------------------------------------
-Once a UDP path is established (either directly or via hole-punching), agents open a UDX stream over it. UDX provides reliable, ordered, congestion-controlled delivery over UDP, satisfying the networking assumptions (Section~\ref{sec:assumptions}).
+Once a UDP path is established (directly or by hole-punching), the peers open a UDX stream over it.  UDX provides reliable, congestion-controlled delivery and per-stream FIFO ordering---stronger than the networking layer is required to provide, since madGLP assumes no delivery order (Section~\ref{sec:assumptions}): a single stream delivers its own bytes in order, but order is not guaranteed across a queue-and-replay or across two transports serving the same pair.  To avoid simultaneous-open ambiguity, the networking layer designates a deterministic initiator---the endpoint with the lexicographically smaller public key---which opens the stream while the other accepts.
 
-Upon establishing the UDX stream, the peers perform a mutual authentication handshake using their Ed25519 keys via the Noise protocol XX pattern (Curve25519 for key exchange, ChaCha20-Poly1305 for encryption, SHA-256 for hashing).  The XX pattern transmits each peer's static public key during the handshake, bound to a proof of possession, and derives forward-secret session keys.  Each peer then verifies the delivered key against an expected key: the friend's known public key from the social graph for reconnection, or---for an IP cold-call---the inviter's public key from the invite (for the link holder) and the redeemer's public key from the RV-forwarded claim (for the inviter).  A mismatch aborts the connection.  The X25519 static key carried by Noise is the birational image of the agent's Ed25519 identity key (the standard Ed25519$\to$Curve25519 map), so the expected static is computable from the peer's known Ed25519 public key alone; no separate key distribution is required.  \dan{Implemented via libsodium's \code{crypto\_sign\_ed25519\_pk\_to\_curve25519} / \code{sk\_to\_curve25519}: each side recomputes the expected static from the verified sender Ed25519 key and aborts the handshake on mismatch (\code{NoiseSessionManager.\_verifyRemoteStatic}).  Defence-in-depth: every ANNOUNCE and handshake packet is also Ed25519-signed and verified against its claimed sender, and the Noise session is keyed by that verified identity.}
+The peers then establish the session of Section~\ref{sec:session} over the stream.
+\dan{There is ordered delivery in the system, per the paper and the implementation.}\udi{Per stream, yes---one UDX stream, one GATT leg, bytes in order. madGLP relies only on the weaker guarantee: no order across a queue-and-replay or across two transports for one pair, which the queued/replayed path can violate. The stream's FIFO is a free bonus, not an assumption.}
 
-\func{onPeerConnected(cb)} fires when the UDX stream is established and authenticated. \func{onPeerDisconnected(cb)} fires when the stream drops.
+%------------------------------------------------------------------------------
+\subsection{Connectivity and Address}
+\label{sec:ip-connectivity}
+%------------------------------------------------------------------------------
+Mobile agents typically run behind NAT without static IP addresses, and an agent behind NAT cannot directly observe its own public address.  When its address changes (e.g., due to roaming), all its UDP paths break.  The networking layer reports address changes to the runtime, and exposes the agent's current public address once known (an agent learns it from a rendezvous server, which observes the source address of the agent's packets; see Section~\ref{sec:rendezvous}).  GLP code uses these to share the agent's address with its peers and to trigger reconnection.  The address is GLP data and travels over any medium: GLP can hand a fresh address to a BLE-adjacent friend, which can relay it to remote friends and coordinate their reconnection via the system predicates (Section~\ref{sec:system-predicates}), serving as an edge rendezvous point without a globally-routable address.
+\dan{Section~\ref{sec:announce} has the networking layer itself carrying address candidates in ANNOUNCE and dialing by them --- the same BLE-adjacent-friend bridge this paragraph assigns to GLP. Which layer owns address distribution? Either way the layer must hold a peer-to-address mapping to realize \func{send(pubKey, payload)}.}\udi{GLP owns distribution---who learns an agent's address is a trust decision and lives with the social graph; the layer owns only its dial book. Your question exposes the real gap: the API lacked the call by which GLP feeds that book. Added: \func{putPeerAddress(pk, address)} (table above); ANNOUNCE sheds its candidates accordingly---please revise Section~\ref{sec:announce}, whose liveness content stands.}\udi{Revised Section~\ref{sec:announce} ourselves per the above---review the diff; liveness and heartbeat untouched.}
+\begin{longtable}{L{4cm} L{5cm} L{5cm}}
+\toprule
+\rowcolor{headerblue}
+\textcolor{white}{\textbf{Function}} &
+\textcolor{white}{\textbf{Signature}} &
+\textcolor{white}{\textbf{Description}} \\
+\midrule
+\endhead
+Connectivity changed & \func{onConnectivityStatusChanged(cb)} & Callback when the networking layer detects a change in the agent's public IP address.  Receives \code{(oldAddress?, newAddress?)} as \code{ip:port} strings, either of which may be \code{null} when no public address is available (startup or gain: \code{old=null}; loss: \code{new=null}; update: both present and different).  Fired on startup and on every address change. \\
+\rowcolor{rowgray}
+Public address & \func{getPublicAddress()} $\to$ \code{Address?} & The agent's current public \code{ip:port}, or \code{null} if not yet known. \\
+Feed peer address & \func{putPeerAddress(pk, address)} & Inform the networking layer of a peer's current public \code{ip:port}, learned at the GLP level (from a rendezvous agent or a BLE-adjacent friend); the layer adds it to its dial book for \func{send} and reconnection. \\
+\bottomrule
+\end{longtable}
 
 %------------------------------------------------------------------------------
 \subsection{IP Cold-Call}
 \label{sec:ip-cold-call}
 %------------------------------------------------------------------------------
+Over IP, a cold call is bootstrapped by a deep-link sent out-of-band from an inviting agent~$A$ to a holder~$B$.  The link is a signed bearer invitation: at creation time $A$ need not know~$B$'s public key, and possession of a valid unused link authorizes exactly one first-contact attempt.  The link is redeemed through a rendezvous server.
+\begin{longtable}{L{4cm} L{5cm} L{5cm}}
+\toprule
+\rowcolor{headerblue}
+\textcolor{white}{\textbf{Function}} &
+\textcolor{white}{\textbf{Signature}} &
+\textcolor{white}{\textbf{Description}} \\
+\midrule
+\endhead
+Generate peer link & \func{generatePeerLink()} $\to$ \code{URI} & Produce a signed, one-time, RV-mediated invite link, and register the invite with a chosen rendezvous server. \\
+\rowcolor{rowgray}
+Consume peer link & \func{consumePeerLink(uri)} $\to$ \code{PubKey} & Verify the inviter's signature, register the inviter's identity locally, and submit a redemption claim to the rendezvous server named in the link.  Return the inviter's public key. \\
+\bottomrule
+\end{longtable}
 
-Over IP, a cold call is bootstrapped by a deep-link sent out-of-band from inviting agent~$A$ to some holder~$B$.  The link is a signed bearer invitation: at creation time $A$ need not know~$B$'s public key, and possession of a valid unused link authorizes exactly one first-contact attempt.
+\paragraph{Invite construction.}
+The link is base64url-encoded for compact URI transport and carries the signed record:
+\begin{verbatim}
+Invite ::= invite(
+    A_pk,
+    RvServer,        %% RV address and public key
+    Nonce256,
+    ExpiresAt,
+    SignatureA
+).
+\end{verbatim}
+\noindent \code{Nonce256} is 256 uniformly random bits.  \code{ExpiresAt} is one hour after creation.  \code{RvServer} contains a rendezvous server's public address and key.  \code{SignatureA} is an Ed25519 signature by~$A$ over all preceding fields.  Possession of a valid unused link authorizes a single first-contact attempt; the protocol relies on the out-of-band channel to deliver the link to the intended recipient, and on the 256-bit nonce, one-hour expiration, and $A$'s signature to prevent guessing, replay, and tampering.
 
-\func{generatePeerLink()} produces the link and registers the invite with a chosen rendezvous (RV) server. \func{consumePeerLink(uri)} verifies $A$'s signature, registers~$A$'s identity, and submits a cold-call claim to the RV server named in the link.  The RV server validates the claim and forwards $B$'s identity to~$A$; if $A$ accepts the friendship request, the standard rendezvous protocol (Section~\ref{sec:rv-protocol}) ensues with the RV server as the signaling agent.  Once the UDP path is open, the peers run UDX and Noise~XX (Section~\ref{sec:ip-connection}), after which the madGLP cold-call payload is delivered to $A$'s index-0 serializer.  Full invite mechanics are specified in Appendix~\ref{appendix:ip-cold-call-invites}.
+Both $A$ and any holder of the link derive an opaque invite identifier and proof key from the nonce:
+\[
+\begin{aligned}
+\mathit{InviteId}  &= H(\text{``glp invite id''} \mid \mathit{Nonce256}),\\
+\mathit{InviteKey} &= \mathit{HKDF}(\mathit{Nonce256},
+    \text{``glp invite proof''} \mid A_{\mathit{pk}} \mid
+    \mathit{RvServer} \mid \mathit{ExpiresAt}).
+\end{aligned}
+\]
+The raw nonce is never sent over the IP network.  Redemption traffic uses \code{InviteId} together with MACs under \code{InviteKey}, so passive observers and off-path attackers cannot learn or guess the nonce from it.
+
+\paragraph{Redemption.}
+\func{generatePeerLink()} picks the fresh nonce, derives \code{InviteId} and \code{InviteKey}, assembles and signs the link, records the invite locally as unused, and---over $A$'s existing authenticated connection to the rendezvous server---registers $A$'s public key, \code{InviteId}, \code{InviteKey}, and the expiration, which the server stores marked unused.  \func{consumePeerLink(uri)} verifies $A$'s signature and the expiration, registers $A$'s public key locally, re-derives \code{InviteId} and \code{InviteKey} from the nonce, and submits a redemption claim to the named server: \code{InviteId}, $B$'s public key, and a MAC under \code{InviteKey} over $A$'s and $B$'s public keys, \code{InviteId}, and a fresh nonce of $B$'s own.
+
+The rendezvous server accepts the claim only if the invite identifier is registered for~$A$, the expiration is still in the future, the invite is still marked unused, and the MAC verifies against the stored proof key; a successful redemption flips the invite to used \emph{atomically}, enforcing single use.  The server then forwards $B$'s identity to~$A$.  Everything beyond this point---$A$'s acceptance (the friendship decision), the signaling that follows, and the resulting NAT traversal---is GLP agent code over the system predicates of Section~\ref{sec:system-predicates}; the peers ultimately connect via UDX and Noise~XX (Sections~\ref{sec:ip-connection} and~\ref{sec:session}), and only then does $B$ send the madGLP cold-call payload to $A$'s index-0 serializer.
+
+%------------------------------------------------------------------------------
+\subsection{System Predicates}
+\label{sec:system-predicates}
+%------------------------------------------------------------------------------
+The networking layer exposes a small set of GLP system predicates---three body predicates and one guard---the seam through which GLP agent code drives NAT traversal and cryptographic verification.  GLP code decides \emph{who} should act, \emph{when}, and \emph{whether}; each predicate performs only the mechanism, which GLP cannot reach by itself.
+\begin{longtable}{L{4.2cm} L{9.3cm}}
+\toprule
+\rowcolor{headerblue}
+\textcolor{white}{\textbf{Predicate}} &
+\textcolor{white}{\textbf{Meaning}} \\
+\midrule
+\endhead
+\code{peer\_address/2} & \code{peer\_address(Peer, Address)} unifies \code{Address} with the public \code{ip:port} the networking layer has observed for the connected \code{Peer}.  This is the address-discovery (STUN) mechanism; it requires no external infrastructure. \\
+\rowcolor{rowgray}
+\code{punch\_udp/1} & \code{punch\_udp(Address)} instructs the networking layer to send a short burst of UDP packets toward \code{Address}, opening the corresponding NAT mapping. \\
+\code{sign/2} & \code{sign(Message, Signature)} unifies \code{Signature} with the Ed25519 signature, under the agent's identity key, over the canonical serialization of the ground term \code{Message}---the madGLP payload serialization (\code{payload\_serializer.dart} in the GLP runtime).  All realizations must serialize a ground term to identical bytes, so a signature produced on one realization verifies on any other. \\
+\rowcolor{rowgray}
+\code{valid\_attestation/4} & A guard: \code{valid\_attestation(Signer, PkA, PkB, Signature)} holds iff \code{Signature} is a valid Ed25519 signature by \code{Signer} over the statement binding the public keys \code{PkA} and \code{PkB}---the term \code{attest(PkA, PkB)}, serialized canonically as for \code{sign/2}.  An invalid signature deselects the clause; \code{otherwise} handles it.  The networking layer verifies the signature without interpreting what the binding means. \\
+\bottomrule
+\end{longtable}
+If the transport changes---for example, UDX replaced by QUIC, or hole-punching by another traversal mechanism---only the networking-layer implementation of these predicates changes; the GLP code that uses them is unaffected.
 
 %------------------------------------------------------------------------------
 \subsection{IP Communication}
 \label{sec:ip-comm}
 %------------------------------------------------------------------------------
-\func{send(pubKey, payload)} transmits the byte payload over the authenticated UDX stream. Each message is length-prefixed (4-byte big-endian length followed by payload bytes) to provide message framing. \func{onReceive(cb)} delivers complete, deframed messages to the runtime.
+\func{send(pubKey, payload)} transmits the byte payload over the authenticated UDX stream.  Each message is length-prefixed (4-byte big-endian length followed by payload bytes) for framing.  \func{onMessageReceived} delivers complete, deframed messages to the runtime.
+\dan{The 4-byte big-endian length is real but sits \emph{inside} the frame: the implementation writes whole Grassroots packets to the UDX stream, each with a fixed 154-byte header (type, TTL, timestamp, sender and recipient keys, payload length, packet id, Ed25519 signature); the receiver buffers until header+length bytes arrive. The same packet format rides BLE. The spec should describe the shared packet header rather than a bare length prefix.}\udi{Inside an authenticated session the spec's target is minimal framing---per-packet keys and a per-packet Ed25519 signature duplicate what Noise provides, and cost a signature per packet on phone hardware. Is the header load-bearing after Noise, or bitchat legacy? If legacy, plan its removal and the spec stands; if load-bearing, say what for and we spec the header.}
+\bigskip

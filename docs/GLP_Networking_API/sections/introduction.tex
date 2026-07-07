@@ -1,11 +1,19 @@
 %==============================================================================
 \section{Introduction}
+\label{sec:introduction}
 %==============================================================================
-Multiagent deterministic GLP (madGLP)~\cite{shapiro2026implementing} is a distributed runtime for Grassroots Logic Programs (GLP)~\cite{shapiro2025glp} in which autonomous agents communicate via message passing. The current implementation runs agents as Dart isolates on a single workstation, with an \code{IsolateManager} routing messages between them~\cite{shapiro2026implementing}. This document specifies the networking API required to replace the \code{IsolateManager}, enabling madGLP agents to run on separate devices communicating peer-to-peer.
-The networking API is medium-agnostic: the same interface is used regardless of the underlying communication medium. Two media are specified:
+Multiagent deterministic GLP (madGLP)~\cite{shapiro2026implementing} is a distributed runtime for Grassroots Logic Programs (GLP)~\cite{shapiro2025glp} in which autonomous agents communicate solely by message passing.  The current implementation runs agents as Dart isolates on a single workstation, with an \code{IsolateManager} routing messages between them~\cite{shapiro2026implementing}.  This document specifies the networking API that replaces the \code{IsolateManager}, enabling madGLP agents to run on separate devices communicating peer-to-peer.
+
+\paragraph{Layering.}
+The guiding principle is that anything that \emph{can} be done in GLP is done in GLP: the networking layer provides only what GLP cannot reach by itself---the network stack (UDP/UDX, BLE GATT, NAT traversal, raw addresses) and cryptographic primitives (Ed25519 signing and verification, the Noise handshake, the Ed25519$\to$Curve25519 map).  Everything above this line is GLP agent code.  In particular, the social graph~\cite{shapiro2025atomic}, friendship, introduction, reconnection orchestration, and the rendezvous \emph{protocol} are implemented entirely in GLP and are \emph{not} part of this specification; to the networking layer, all madGLP messages are opaque payloads.  The interface between the two consists of the API defined here together with a small set of system predicates (Section~\ref{sec:system-predicates}).
+
+\paragraph{Two media.}
+The API is medium-agnostic at its core: madGLP issues the same calls regardless of how a message travels.  Two media realize the core:
 \begin{itemize}
-\item \textbf{BLE} (Bluetooth Low Energy): for communication between physically proximate devices, enabling offline, infrastructure-free operation.
-\item \textbf{IP} (Internet Protocol): for communication between devices at arbitrary distance, using UDX streams over UDP with rendezvous agents for signaling and NAT traversal.
+\item \textbf{BLE} (Bluetooth Low Energy, Section~\ref{sec:ble}): communication between physically proximate devices, enabling offline, infrastructure-free operation.  BLE is the bootstrap medium where agents first meet face-to-face.
+\item \textbf{IP} (Internet Protocol, Section~\ref{sec:ip}): communication between devices at arbitrary distance, using UDX streams over UDP, with rendezvous servers for signaling and NAT traversal.
 \end{itemize}
-BLE serves as the bootstrap medium where agents first meet face-to-face and establish trust. IP extends that connectivity beyond physical proximity. The networking layer selects the available medium transparently; the madGLP runtime is unaware of which medium carries a given message.
-The application-level protocols---the social graph~\cite{shapiro2025atomic}, friendship, introduction---are implemented entirely in GLP agent code and are not part of this networking specification. To the networking layer, all madGLP messages are opaque payloads.
+Some control operations are inherently medium-specific---proximity scanning is BLE-only, observing the agent's own public address is IP-only ---and are specified with their medium rather than in the agnostic core.
+
+\paragraph{Outline.}
+Section~\ref{sec:api} specifies the medium-agnostic API exposed to the madGLP runtime.  Sections~\ref{sec:ble} and~\ref{sec:ip} specify the BLE and IP realizations.  Section~\ref{sec:rendezvous} specifies the rendezvous server as a separate process, by its networking requirements only.  Section~\ref{sec:summary} summarizes the complete API.  Appendix~\ref{sec:simulation} specifies the simulation realization, in which agents run as Dart isolates in a single process.

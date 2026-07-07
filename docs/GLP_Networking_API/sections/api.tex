@@ -2,12 +2,15 @@
 \section{Networking API}
 \label{sec:api}
 %==============================================================================
-This section specifies the interface between the madGLP runtime and the networking layer. The interface is independent of the underlying communication medium.
+This section specifies the medium-agnostic interface between the madGLP runtime and the networking layer.  The madGLP runtime issues these calls without regard to how a message travels; the BLE (Section~\ref{sec:ble}) and IP (Section~\ref{sec:ip}) realizations carry them.  Calls that are inherently tied to one medium are specified in that medium's section.
+
+Throughout, a peer is named by its public key.  A \code{Transport} is one of \code{BLE} or \code{IP}; a peer may be reachable over more than one transport at a time.
+
 %------------------------------------------------------------------------------
 \subsection{Identity}
 \label{sec:identity}
 %------------------------------------------------------------------------------
-Each agent has an Ed25519 key pair. The 32-byte public key serves as the agent's globally unique identity, used for addressing, authentication, and signing. Identity is persistent across sessions.
+Each agent has an Ed25519 key pair.  The 32-byte public key is the agent's globally unique identity, used for addressing, authentication, and signing, and is persistent across sessions.
 \begin{longtable}{L{4cm} L{4.5cm} L{5.5cm}}
 \toprule
 \rowcolor{headerblue}
@@ -16,18 +19,17 @@ Each agent has an Ed25519 key pair. The 32-byte public key serves as the agent's
 \textcolor{white}{\textbf{Description}} \\
 \midrule
 \endhead
-Generate identity & \func{putIdentity()} & Generate and persist an Ed25519 key pair. \\
+Install identity & \func{putIdentity(PubKey, PrivateKey)} & Persist an Ed25519 key pair generated above the networking layer, and install it as the agent's identity. \\
 \rowcolor{rowgray}
 Retrieve identity & \func{getIdentity()} $\to$ \code{PubKey} & Return the agent's public key. \\
 \bottomrule
 \end{longtable}
-%------------------------------------------------------------------------------
-\subsection{Peer Discovery and Connection}
-\label{sec:discovery}
-%------------------------------------------------------------------------------
-The networking layer notifies the runtime when peers become reachable or unreachable, regardless of the underlying medium.
 
-When two agents cannot discover each other via BLE proximity, they may exchange identities out-of-band using \func{generatePeerLink()} and \func{consumePeerLink(uri)}.  A peer link is a signed, time-limited bearer invitation: possession of a valid unused link authorizes one first-contact attempt by the holder.
+%------------------------------------------------------------------------------
+\subsection{Connection and Reachability}
+\label{sec:reachability}
+%------------------------------------------------------------------------------
+The networking layer notifies the runtime when peers become reachable or unreachable, over any medium, and reports the transport(s) by which a peer is currently reachable.  Exposing the transport lets GLP make proximity-aware decisions---for example, GLP computes which of its friends are physically nearby by intersecting its friends list with the peers currently reachable over \code{BLE}.  Which medium carries a given message, and which path or rendezvous server is used, remain the networking layer's choice.
 \begin{longtable}{L{4cm} L{5cm} L{5cm}}
 \toprule
 \rowcolor{headerblue}
@@ -36,41 +38,58 @@ When two agents cannot discover each other via BLE proximity, they may exchange 
 \textcolor{white}{\textbf{Description}} \\
 \midrule
 \endhead
-Scan for peers & \func{getPeers()} $\to$ \code{List<Peer>} & Discover currently reachable peers. \\
+Peer connected & \func{onPeerConnected(cb)} & Callback when a peer becomes reachable for communication.  Receives the peer's public key and the \code{Transport} over which it connected. \\
 \rowcolor{rowgray}
-Peer discovered & \func{onPeerDiscovered(cb)} & Callback when a new peer is detected. The callback receives the peer's public key and nickname. \dan{Discovery precedes connection. A peer's public key and nickname are learned from the signed ANNOUNCE, which is sent in the clear (authenticated by an Ed25519 signature, not encrypted) and bootstraps the identity that the encrypted session is keyed on --- so it necessarily arrives \emph{before} the Noise handshake completes. Since \func{onPeerConnected} is gated on an authenticated Noise session (Section~\ref{sec:ip-connection}), there is a real ``discovered but not yet connected'' window spanning the handshake. The Dart implementation therefore fires \func{onPeerDiscovered} on first ANNOUNCE receipt (once per identity, registering the agent$\leftrightarrow$pubkey mapping) and \func{onPeerConnected} only once the session authenticates. A peer that leaves and re-enters range re-fires \func{onPeerConnected}, not \func{onPeerDiscovered}: its identity is already known. (BLE scanning surfaces a device by its derived service UUID even earlier, but that carries neither public key nor nickname, so it cannot drive this callback.)} \\
-Peer connected & \func{onPeerConnected(cb)} & Callback when a peer becomes reachable for communication. \\
-\rowcolor{rowgray}
-Peer disconnected & \func{onPeerDisconnected(cb)} & Callback when a peer is no longer reachable. \\
+Peer disconnected & \func{onPeerDisconnected(cb)} & Callback when a peer is no longer reachable over a given \code{Transport}.  Receives the peer's public key and that transport. \\
 Check reachability & \func{isPeerReachable(pk)} $\to$ \code{bool} & Whether the given peer is currently reachable via any medium. \\
 \rowcolor{rowgray}
-Connectivity status & \func{onConnectivityStatus(cb)} & Callback when the networking layer detects a change in the agent's public IP address.  Triggers the rendezvous protocol (Section~\ref{sec:rendezvous}).  Fired on startup and on address change. \dan{The Dart implementation names this \func{onConnectivityStatusChanged} --- the spec name reads like a status getter, but this is a change-event callback. It receives \code{(oldAddress, newAddress)} as \code{ip:port} strings, either of which may be \code{null} when no public address is available; the kind of change is derived from null comparisons (startup or gain: \code{old=null, new!=null}; loss: \code{old!=null, new=null}; update: both non-null and different). Consider adopting this name and signature in the spec.} \\
-Generate peer link & \func{generatePeerLink()} $\to$ \code{URI} & Generate a signed, one-time, RV-mediated peer-link invitation for out-of-band sharing.  Full semantics are specified in Appendix~\ref{appendix:ip-cold-call-invites}. \\
-\rowcolor{rowgray}
-Consume peer link & \func{consumePeerLink(uri)} $\to$ \code{PubKey} & Verify and redeem an incoming peer-link invitation through a listed rendezvous server, register the inviter's identity, and attempt first contact.  Returns the inviter's public key; see Appendix~\ref{appendix:ip-cold-call-invites}. \\
+Reachable transports & \func{peerTransports(pk)} $\to$ \code{List<Transport>} & The transports by which the given peer is currently reachable (empty if unreachable). \\
 \bottomrule
 \end{longtable}
-%------------------------------------------------------------------------------
-\subsection{Cold Calls and Trusted Environment Levels}
-\label{sec:cold-call-trust}
-%------------------------------------------------------------------------------
-A \emph{cold call} is a first-contact connection attempt between two agents that do not already share an active grassroots networking communication channel. Cold calls may be initiated by a nearby BLE encounter or by an explicit deep-link shared out-of-band, requiring IP connectivity (Section~\ref{sec:ip-cold-call}).  In the IP case, the inviting agent need not know the redeemer's public key before the link is opened.  A cold call is implicitly a friendship request: accepting the cold call establishes friendship.
 
-Agents may enforce one of two cold-call trust levels, affecting BLE encounters:
+%------------------------------------------------------------------------------
+\subsection{ANNOUNCE and Liveness}
+\label{sec:announce}
+%------------------------------------------------------------------------------
+ANNOUNCE is the protocol's identity beacon and heartbeat.  It is an Ed25519-signed packet whose payload carries:
 \begin{itemize}
-\item \textbf{Open:} The agent surfaces unsolicited cold calls from nearby BLE peers as friendship requests for the user to accept or decline.
-\item \textbf{Closed:} The agent ignores unsolicited cold calls from nearby BLE encounters without surfacing them.
+\item the sender's full 32-byte public key;
+\item the protocol version (2 bytes).
 \end{itemize}
-Explicit cold-calls through deep-links shared out-of-band are not affected by the different trust levels: the link is itself an explicit invitation by its creator, so the resulting friendship request is always surfaced for the user to accept or decline regardless of the configured trust level.  The invite link includes authorization: it contains a temporary, one-time 256-bit token generated by its creator that is consumed upon usage; see Appendix~\ref{appendix:ip-cold-call-invites} for the whole invite flow.
+The signature is verified against the claimed sender key before the packet is accepted, and repeated ANNOUNCEs from the same key are idempotent.
 
-In the \textbf{Open} trust level, an agent responds to any nearby Grassroots BLE encounter by completing the ANNOUNCE exchange, thereby revealing its full public key and allowing first contact. In the \textbf{Closed} trust level, an agent does not complete ANNOUNCE with an unknown nearby device: it uses the derived UUID
-to recognize already-known peers, and ignores unmatched BLE encounters. 
+\paragraph{Role per medium.}
+ANNOUNCE serves a different mix of purposes on each transport:
+\begin{itemize}
+\item \textbf{Over BLE} it is, first, the \emph{identity bootstrap}: a scan match carries no public key (Section~\ref{sec:ble-discovery}), so ANNOUNCE is the only step that turns a radio contact into a peer --- it binds the GATT connection to an identity and supplies the expected static key for the Noise handshake that follows (Section~\ref{sec:session}).  Second, it is a \emph{liveness backstop only}: link death is normally reported by the link layer itself (the GATT supervision timeout surfaces a disconnect event), and the announce-driven sweep covers the measured cases where no disconnect is ever surfaced, which would otherwise leave the peer attached indefinitely.  The staleness clock counts any authenticated traffic, and even advertisement sightings of an already-identified peer; ANNOUNCE guarantees a floor of traffic on an idle link so an idle healthy pair is never mistaken for a dead one.  When the backstop fires, the agent severs both GATT legs before synthesizing the disconnect --- a quiet link is often still alive at the radio level, and re-dialing a device one is still linked with would open a doomed second link.
+\item \textbf{Over IP} it is the \emph{primary liveness signal}: a UDP path has no link-layer presence indication, so a quiet session is indistinguishable from a dead one; a session silent for two consecutive intervals is torn down, feeding \func{onPeerDisconnected} (Section~\ref{sec:reachability}).  Identity plays no bootstrap role here: an IP connection is dialed by address with the peer's key already expected (Section~\ref{sec:session}), and any signed packet suffices to identify an inbound connection.
+\end{itemize}
+
+\paragraph{Heartbeat.}
+ANNOUNCE is exchanged upon connection establishment and then repeats periodically (every 10\,s in the implementation) on every live connection: to each connected BLE device and to all connected IP peers.  A peer silent for two consecutive intervals is stale \emph{on that transport}, independently per medium, with the per-medium consequences above.  The same heartbeat tick drives reconnection attempts toward unreachable friends and the replay of queued messages once a recipient is live again (fair delivery, Section~\ref{sec:assumptions}).
+\udi{The heartbeat-driven replay commits the layer to fair delivery (Section~\ref{sec:assumptions})---good; this closes the queuing gap on record. The payload spec here must shed nickname (already removed on your branch glp-api-alignment) and, per the Section~\ref{sec:ip-connectivity} thread, the address candidates; the liveness and heartbeat content stands.}
+
+\paragraph{Trust gating.}
+Over BLE, under Closed trust (Section~\ref{sec:ble-trust}), no ANNOUNCE is sent to an unknown device, and an unsolicited ANNOUNCE arriving from a non-friend is rejected and its connection dropped.  Address distribution is not ANNOUNCE's role: peer addresses reach the layer via \func{putPeerAddress} (Section~\ref{sec:ip-connectivity}), fed by GLP.  Over IP every connected peer is already authenticated.
+\dan{ANNOUNCE should differ not between BLE and IP but between friend and stranger, and should carry IP addresses to friends only, so two friends can bootstrap an IP channel via BLE---BLE as the signaling channel for hole punching.}\udi{The capability is right; the layer is not the place to know ``friend.'' In this API neither transport reads a friends list---peers are public keys, and BLE Closed mode recognizes a known key GLP supplied, never a friendship record. So the friend's IP address travels as a GLP-level message over the authenticated session and enters the layer via \func{putPeerAddress}: same friend-gating, since GLP holds the social graph; same BLE-coordinated hole punch. Putting addresses in the ANNOUNCE beacon would force the transport to learn friendships it is designed not to know.}
+
+%------------------------------------------------------------------------------
+\subsection{Session Establishment}
+\label{sec:session}
+%------------------------------------------------------------------------------
+Once a transport-level connection to a peer exists---a BLE GATT connection (Section~\ref{sec:ble}) or a UDX stream (Section~\ref{sec:ip})---the peers perform a mutual authentication handshake using their Ed25519 keys via Noise~XX (Curve25519 for key exchange, ChaCha20-Poly1305 for encryption, SHA-256 for hashing).  The handshake transmits each peer's static public key, bound to a proof of possession, and derives forward-secret session keys.  Each peer then verifies the delivered static key against an \emph{expected peer public key}; a mismatch aborts the connection.  The expected key is supplied by the runtime---a known peer for reconnection, an invite for an IP cold call (Section~\ref{sec:ip-cold-call})---or claimed in ANNOUNCE for a BLE first contact (Section~\ref{sec:ble-discovery}); which key the runtime supplies is a GLP-level concern.  The Curve25519 static key carried by Noise is the birational image of the agent's Ed25519 identity key (the standard Ed25519$\to$Curve25519 map), so the expected static is computable from the peer's Ed25519 public key alone; no separate key distribution is required.  Sessions are per medium: one handshake per medium per pair, so a pair reachable over both BLE and IP holds up to two concurrent sessions.  A peer becomes reachable (Section~\ref{sec:reachability}) when its session is established and authenticated.
+
+%------------------------------------------------------------------------------
+\subsection{Cold Calls}
+\label{sec:cold-call}
+%------------------------------------------------------------------------------
+A \emph{cold call} is a first-contact connection attempt between two agents that do not already share an active communication channel.  A cold call is realized in one of two ways: by a nearby BLE encounter (Section~\ref{sec:ble-discovery}), or by an explicit deep-link shared out-of-band and redeemed over IP (Section~\ref{sec:ip-cold-call}).  Once first contact succeeds, the madGLP cold-call payload is delivered to the recipient's index-0 serializer like any other message.  What a cold call \emph{means}---that it constitutes a friendship request, whether to surface it, and whether accepting it establishes friendship---is a GLP-level interpretation and is not part of the networking layer.
 
 %------------------------------------------------------------------------------
 \subsection{Point-to-Point Communication}
 \label{sec:p2p}
 %------------------------------------------------------------------------------
-The networking layer provides reliable delivery of arbitrary byte payloads between peers.
+The networking layer provides reliable delivery of arbitrary byte payloads between peers, identified by public key.
 \begin{longtable}{L{4cm} L{5.5cm} L{4.5cm}}
 \toprule
 \rowcolor{headerblue}
@@ -81,15 +100,24 @@ The networking layer provides reliable delivery of arbitrary byte payloads betwe
 \endhead
 Send payload & \func{send(pubKey, payload)} & Send a byte payload to the peer identified by \code{pubKey}. \\
 \rowcolor{rowgray}
-Receive payload & \func{onReceive(cb)} & Register callback for incoming payloads. The callback receives the sender's public key and the byte payload. \dan{The Dart implementation additionally exposes a richer \func{onMessageReceived} callback with two extra arguments: \code{messageId} (a transport-assigned id, useful for dedup and ACK correlation; also dispatched via the Redux \code{MessageReceivedAction}) and \code{transport} (the peer's currently preferred transport at delivery time, for logging only --- not authoritative for the arrival transport). Both \func{onReceive} and \func{onMessageReceived} fire for every accepted message.} \\
+Receive payload & \func{onMessageReceived(cb)} & Register a callback for incoming payloads.  Receives the sender's public key, the byte payload, a transport-assigned \code{messageId} (for de-duplication and ACK correlation), and the \code{Transport} over which the message was delivered. \\
 \bottomrule
 \end{longtable}
+
 %------------------------------------------------------------------------------
 \subsection{Networking Assumptions}
 \label{sec:assumptions}
 %------------------------------------------------------------------------------
 The networking layer must satisfy the following assumptions for madGLP correctness:
-\textbf{Fair message delivery:} Every message passed to \func{send()} is eventually delivered to the recipient, assuming the recipient eventually becomes reachable. Messages to temporarily-unreachable peers are queued and delivered when connectivity is restored.
-\textbf{Atomic message delivery:} Each message is delivered as a complete unit. If a message is fragmented across multiple packets, the networking layer reassembles them before delivery.
-\textbf{Integrity:} Messages are not corrupted in transit. The networking layer provides encryption and integrity checks.
-\textbf{Authentication:} The sender's identity (public key) is authenticated. A received message from public key $pk$ was indeed sent by the agent holding the corresponding private key.
+
+\noindent\textbf{Fair message delivery:} Every message passed to \func{send()} is eventually delivered to the recipient, assuming the recipient eventually becomes reachable.  Messages to temporarily-unreachable peers are queued and delivered when connectivity is restored.
+
+\noindent\textbf{Unordered delivery:} No delivery-order assumption is made: messages between two agents may be delivered in any order, and the madGLP runtime tolerates arbitrary delivery order.  The networking layer is free to route concurrent messages to the same peer over different media.
+
+\noindent\textbf{Atomic message delivery:} Each message is delivered as a complete unit.  If a message is fragmented across multiple packets, the networking layer reassembles them before delivery.
+
+\noindent\textbf{Integrity:} Messages are not corrupted in transit.  The networking layer provides encryption and integrity checks.
+
+\noindent\textbf{Authentication:} The sender's identity (public key) is authenticated.  A received message from public key $pk$ was indeed sent by the agent holding the corresponding private key.
+
+\bigskip

@@ -2,22 +2,53 @@
 \section{BLE Medium}
 \label{sec:ble}
 %==============================================================================
-This section specifies how the networking API (Section~\ref{sec:api}) is realized over Bluetooth Low Energy.
+This section specifies how the networking API (Section~\ref{sec:api}) is realized over Bluetooth Low Energy, the bootstrap medium for physically proximate devices.
+
 %------------------------------------------------------------------------------
-\subsection{BLE Identity and Advertising}
+\subsection{Identity and Advertising}
 \label{sec:ble-identity}
 %------------------------------------------------------------------------------
-Each agent advertises a BLE GATT service whose 128-bit (16-byte) UUID has two parts: a fixed 8-byte \emph{Grassroots prefix} common to all Grassroots agents, and an 8-byte \emph{agent suffix} derived from the agent's public key (e.g., the first 8 bytes of its SHA-256 hash). The prefix enables general discovery of any nearby Grassroots agent; the suffix enables recognition of a specific agent before connection, by anyone who knows that agent's public key.
+Each agent advertises a BLE GATT service whose 128-bit (16-byte) UUID has two parts: a fixed 8-byte \emph{Grassroots prefix} common to all Grassroots agents, and a rotating 8-byte \emph{agent suffix}---the first 8 bytes of $H(\text{``glp ble suffix''} \mid pk \mid T)$, where $H$ is SHA-256, $pk$ the agent's public key, and $T$ the current time slot (15 minutes, matching the period of BLE address randomization).  The prefix enables general discovery of any nearby Grassroots agent.  The suffix enables recognition of a specific agent before connection by anyone who knows that agent's public key, who computes the suffix for the current and adjacent slots and matches it against scanned devices.  A third party that does not know the public key sees a suffix that changes every slot, and cannot use it to track the device.  Rotation is supported by both platforms: Android re-advertises freely; iOS likewise in the foreground, while in the background iOS places the advertised service UUID in a hashed overflow area---visible only to an iOS device scanning for that exact UUID and invisible to non-iOS scanners, with or without rotation.  Friend recognition survives the background case, since a friend computes the current-slot UUID and scans for it exactly; discovery by strangers requires a foreground app; late rotation in the background is absorbed by the adjacent-slot match.
+
+\dan{Point for future: using a static grassroots key for everyone -- the same one -- will allow apps to also run in the background and send/receive messages then, due to BLE background advertisements restrictions. For now not worth a change, but let's remember this in the future.}\udi{With one shared UUID an agent cannot tell who is nearby before connecting, and Closed mode (Section~\ref{sec:ble-trust}) breaks; viable only if recognition moves to another carrier, e.g.\ the advertisement payload. Separately, the suffix now rotates (revised text above), so it no longer serves as a tracking identifier---Dan: please confirm implementability.}
+\dan{Yes, this is the tradeoff. That means the agents will need to connect via BLE first, exchange the ANNOUNCE payload, and disconnect if they are strangers.}\udi{Agreed on the shared-UUID tradeoff; parked for the future. Still open: the rotating suffix of the revised text above---implementable on both platforms?}\udi{Withdrawn---answered from the platform documentation; see the revised end of this subsection. Resolved.}
+\dan{Confirmed on the radio side. Three implementation notes: recognizing a \emph{backgrounded} iOS friend requires scanning for that friend's exact current-slot UUID --- today the implementation runs a single OS-unfiltered scan with user-space prefix matching, so a per-friend, per-slot filter set (refreshed each slot) must be added alongside it; state keyed by the static derived UUID (recognition checks, platform-marker cache) must be re-keyed by public key or made slot-aware; and the deterministic first-dial rule (currently ``lower service UUID dials first'') must be re-based on public keys, since UUID order flips between slots.}\udi{Confirmed; your three notes are the implementation roadmap and are recorded. The first-dial rule re-based on public keys is now stated in the text, as over IP. Resolved.}
 %------------------------------------------------------------------------------
-\subsection{BLE Discovery}
+\subsection{Discovery}
 \label{sec:ble-discovery}
 %------------------------------------------------------------------------------
-The BLE layer maintains a continuous scan for devices whose service UUID matches the Grassroots prefix. A scan match is only a discovery hint: the advertisement carries neither the agent's public key nor its nickname, so it does not by itself constitute peer discovery.
-Upon successful BLE connection, an ANNOUNCE packet is exchanged containing the agent's full 32-byte public key and a human-readable nickname. \func{onPeerDiscovered(cb)} fires upon first receipt of a peer's signed ANNOUNCE --- not on a scan match --- once per identity (Section~\ref{sec:discovery}); \func{getPeers()} reports the currently reachable peers among those so identified. No Bluetooth bonding or pairing confirmation is required; application-level encryption (using the Ed25519 keys) is used instead.
+Proximity discovery is a BLE-specific operation: an agent scans for nearby devices advertising the Grassroots prefix.
+\begin{longtable}{L{4cm} L{4.5cm} L{5.5cm}}
+\toprule
+\rowcolor{headerblue}
+\textcolor{white}{\textbf{Function}} &
+\textcolor{white}{\textbf{Signature}} &
+\textcolor{white}{\textbf{Description}} \\
+\midrule
+\endhead
+Scan for peers & \func{getPeers()} $\to$ \code{List<Peer>} & Perform a BLE scan for devices whose service UUID matches the Grassroots prefix. \\
+\rowcolor{rowgray}
+Peer discovered & \func{onPeerDiscovered(cb)} & Callback for each matching nearby device found. \\
+\bottomrule
+\end{longtable}
+Upon BLE connection, an ANNOUNCE packet is exchanged containing the agent's full 32-byte public key, which surfaces to the runtime via \func{onPeerConnected} (Section~\ref{sec:reachability}).  No Bluetooth bonding or pairing confirmation is required; upon ANNOUNCE the peers establish the session of Section~\ref{sec:session} over the GATT connection.  Where both endpoints may dial---both run central and peripheral---the deterministic initiator is the endpoint with the lexicographically smaller public key, as over IP (Section~\ref{sec:ip-connection}).
 
-A BLE encounter with an unknown nearby agent is a local cold-call opportunity. Whether the agent accepts new BLE connections or not is governed by the environmental trust levels in Section~\ref{sec:cold-call-trust}.
 %------------------------------------------------------------------------------
-\subsection{BLE Communication}
+\subsection{Cold-Call Trust Levels}
+\label{sec:ble-trust}
+%------------------------------------------------------------------------------
+A BLE encounter with an unknown nearby agent is a cold-call opportunity.  Whether the networking layer answers such an encounter is governed by a trust level set by GLP and enforced by the networking layer:
+\begin{itemize}
+\item \textbf{Open:} The agent completes the ANNOUNCE exchange with any nearby Grassroots device, thereby revealing its full public key and allowing first contact.
+\item \textbf{Closed:} The agent does not complete ANNOUNCE with an unknown nearby device; it uses the advertised suffix only to recognize already-known peers and ignores unmatched encounters.
+\end{itemize}
+
+The trust level governs only whether an unsolicited BLE encounter is answered at the networking layer.  Any further decision---whether a completed cold call is presented to the user, accepted, or treated as a friendship request---is GLP-level (Section~\ref{sec:cold-call}).  Explicit IP deep-link cold-calls (Section~\ref{sec:ip-cold-call}) carry their own authorization and are unaffected by the BLE trust level.  GLP sets the level with \func{setTrustLevel(level)}; until set, the level is Closed.
+
+%------------------------------------------------------------------------------
+\subsection{Communication}
 \label{sec:ble-comm}
 %------------------------------------------------------------------------------
-\func{send(pubKey, payload)} transmits the byte payload over the established BLE GATT connection. The BLE networking layer handles fragmentation and reassembly for payloads exceeding the BLE MTU. \func{onReceive(cb)} delivers reassembled payloads to the runtime.
+\func{send(pubKey, payload)} transmits the byte payload over the established BLE GATT connection.  The BLE networking layer handles fragmentation and reassembly for payloads exceeding the BLE MTU, satisfying atomic delivery (Section~\ref{sec:assumptions}).  \func{onMessageReceived} delivers reassembled payloads to the runtime.
+
+\bigskip

@@ -2,52 +2,67 @@
 \section{Complete API Summary}
 \label{sec:summary}
 %==============================================================================
-The following table summarizes the complete networking API.  This is the interface that replaces the Dart \code{IsolateManager}.  All functions in Section~\ref{sec:api} are medium-agnostic.  The system predicates in Section~\ref{sec:rv-predicates} support the rendezvous protocol (Section~\ref{sec:rendezvous}).
-\begin{longtable}{L{2.2cm} L{4.5cm} L{3cm} L{4cm}}
+The following table summarizes the complete networking API.  The first three groups are medium-agnostic; the BLE and IP groups are medium-specific; the system predicates are the GLP body seam (Section~\ref{sec:system-predicates}).
+\begin{longtable}{L{2.2cm} L{5cm} L{3cm} L{3.5cm}}
 \toprule
 \rowcolor{headerblue}
 \textcolor{white}{\textbf{Category}} &
-\textcolor{white}{\textbf{Function}} &
+\textcolor{white}{\textbf{Function / Predicate}} &
 \textcolor{white}{\textbf{Direction}} &
 \textcolor{white}{\textbf{madGLP Role}} \\
 \midrule
 \endhead
-\multicolumn{4}{l}{\textbf{Identity}} \\
+\multicolumn{4}{l}{\textbf{Identity (agnostic)}} \\
 \midrule
-Setup & \func{putIdentity()} & Runtime $\to$ Network & Generate agent key pair \\
+Setup & \func{putIdentity()} & Runtime $\to$ Network & Install agent key pair \\
 \rowcolor{rowgray}
 Query & \func{getIdentity()} & Runtime $\leftarrow$ Network & Retrieve agent public key \\
 \midrule
-\multicolumn{4}{l}{\textbf{Discovery}} \\
+\multicolumn{4}{l}{\textbf{Connection \& Reachability (agnostic)}} \\
 \midrule
-Scan & \func{getPeers()} & Runtime $\to$ Network & Find reachable agents \\
+Connect & \func{onPeerConnected(cb)} & Runtime $\leftarrow$ Network & Peer reachable; pk, transport \\
 \rowcolor{rowgray}
-Notify & \func{onPeerDiscovered(cb)} & Runtime $\leftarrow$ Network & Register agent-to-pubkey mapping \\
-Connect & \func{onPeerConnected(cb)} & Runtime $\leftarrow$ Network & Agent is now reachable \\
-\rowcolor{rowgray}
-Disconnect & \func{onPeerDisconnected(cb)} & Runtime $\leftarrow$ Network & Agent no longer reachable; queue messages \\
+Disconnect & \func{onPeerDisconnected(cb)} & Runtime $\leftarrow$ Network & Peer unreachable on a transport; queue messages \\
 Reachable & \func{isPeerReachable(pk)} & Runtime $\to$ Network & Check before send \\
 \rowcolor{rowgray}
-Connectivity & \func{onConnectivityStatus(cb)} & Runtime $\leftarrow$ Network & Report IP address changes \\
-Gen link & \func{generatePeerLink()} & Runtime $\to$ Network & Create signed RV-mediated invite URI \\
-\rowcolor{rowgray}
-Use link & \func{consumePeerLink(uri)} & Runtime $\to$ Network & Redeem invite through RV and import inviter \\
+Transports & \func{peerTransports(pk)} & Runtime $\to$ Network & Media now reaching pk (proximity) \\
 \midrule
-\multicolumn{4}{l}{\textbf{Communication}} \\
+\multicolumn{4}{l}{\textbf{Communication (agnostic)}} \\
 \midrule
-\rowcolor{rowgray}
 Send & \func{send(pubKey, payload)} & Runtime $\to$ Network & Implements madGLP Send transaction \\
-Receive & \func{onReceive(cb)} & Runtime $\leftarrow$ Network & Feeds madGLP Receive transaction \\
+\rowcolor{rowgray}
+Receive & \func{onMessageReceived(cb)} & Runtime $\leftarrow$ Network & Feeds madGLP Receive transaction \\
 \midrule
-\multicolumn{4}{l}{\textbf{System Predicates (Section~\ref{sec:rv-predicates})}} \\
+\multicolumn{4}{l}{\textbf{BLE}} \\
 \midrule
 \rowcolor{rowgray}
-Peer address & \code{peer\_address(PubKey, Addr)} & GLP $\leftarrow$ Network & Observe connected peer's public address \\
-UDP punch & \code{punch\_udp(Addr)} & GLP $\to$ Network & Open NAT mapping for hole-punching \\
+Scan & \func{getPeers()} & Runtime $\to$ Network & Find nearby agents (proximity) \\
+Notify & \func{onPeerDiscovered(cb)} & Runtime $\leftarrow$ Network & Nearby device matching Grassroots prefix \\
 \rowcolor{rowgray}
-Verify & \code{verify\_friendship(Proof, A, B, Result)} & GLP $\leftarrow$ Network & Verify friendship attestation \\
+Policy & \func{setTrustLevel(level)} & Runtime $\to$ Network & Set BLE cold-call trust level \\
+\midrule
+\multicolumn{4}{l}{\textbf{IP}} \\
+\midrule
+\rowcolor{rowgray}
+Connectivity & \func{onConnectivityStatusChanged(cb)} & Runtime $\leftarrow$ Network & Public IP change; (old?, new?) \\
+Own address & \func{getPublicAddress()} & Runtime $\leftarrow$ Network & Current public ip:port, share with peers \\
+\rowcolor{rowgray}
+Gen link & \func{generatePeerLink()} & Runtime $\to$ Network & Create signed RV-mediated invite URI \\
+Use link & \func{consumePeerLink(uri)} & Runtime $\to$ Network & Redeem invite through RV and import inviter \\
+\rowcolor{rowgray}
+Feed address & \func{putPeerAddress(pk, address)} & Runtime $\to$ Network & Hand the layer a GLP-learned peer address \\
+\midrule
+\multicolumn{4}{l}{\textbf{System predicates (GLP body seam)}} \\
+\midrule
+\rowcolor{rowgray}
+Address & \code{peer\_address/2} & GLP $\leftarrow$ Network & Observed public address of a connected peer \\
+Punch & \code{punch\_udp/1} & GLP $\to$ Network & Initiate UDP hole-punch toward an address \\
+\rowcolor{rowgray}
+Sign & \code{sign/2} & GLP $\leftrightarrow$ Network & Ed25519 signature under the agent's key \\
+Verify & \code{valid\_attestation/4} & GLP $\to$ Network & Guard: a signature validly binds two public keys \\
 \bottomrule
 \end{longtable}
+
 \subsection{Correspondence to IsolateManager}
 The following table shows how each \code{IsolateManager} responsibility maps to networking calls:
 \begin{longtable}{L{5cm} L{4cm} L{4.5cm}}
@@ -60,10 +75,10 @@ The following table shows how each \code{IsolateManager} responsibility maps to 
 \endhead
 Route message to target isolate & \func{send(pubKey, payload)} & Resolve agent name to pubkey, serialize, transmit \\
 \rowcolor{rowgray}
-Deliver to isolate's incoming stream & \func{onReceive(cb)} & Deserialize, dispatch to Receive transaction \\
+Deliver to isolate's incoming stream & \func{onMessageReceived(cb)} & Deserialize, dispatch to Receive transaction \\
 Register isolate for agent & \func{onPeerConnected(cb)} & BLE/UDX connection replaces isolate spawn \\
 \rowcolor{rowgray}
-Cold-call to index-0 serializer & \func{send(pubKey, payload)} & Same primitive; \code{msg\_type} field distinguishes regular from cold-call \\
-Global link assignment delivery & \func{send(pubKey, payload)} & Same primitive; \code{msg\_type} field distinguishes \\
+Cold-call to index-0 serializer & \func{send(pubKey, payload)} & Same primitive; a cold-call is an assignment to the index-0 serializer \\
+Global link assignment delivery & \func{send(pubKey, payload)} & Same primitive; distinguished by the global name \\
 \bottomrule
 \end{longtable}

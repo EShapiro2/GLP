@@ -11,6 +11,8 @@
 \usepackage{enumitem}
 \usepackage{verbatim}
 \usepackage{amsmath,amssymb}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta}
 \geometry{margin=2.5cm}
 % Column types
 \newcolumntype{L}[1]{>{\raggedright\arraybackslash}p{#1}}
@@ -33,21 +35,17 @@
 
 \input{sections/api}
 
-\input{sections/madglp-comm}
-
-\input{sections/mapping}
-
 \input{sections/ble}
 
 \input{sections/ip}
 
 \input{sections/rendezvous}
 
-\input{sections/public-identity}
-
 \input{sections/summary}
 
-\input{sections/appendix-rv-agent}
+\appendix
+
+\input{sections/simulation}
 
 \bibliographystyle{plain}
 \bibliography{bib}
