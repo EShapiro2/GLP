@@ -670,6 +670,13 @@ class GrassrootsNetwork {
   /// Address changes are surfaced via [onConnectivityStatusChanged].
   String? getPublicAddress() => store.state.transports.publicAddress;
 
+  /// The last known public `ip:port` for [pubkey], or null if unknown.
+  ///
+  /// This is the observed/stored peer address (dial-book entry), not our own
+  /// address. For the local agent's address use [getPublicAddress].
+  String? peerAddress(Uint8List pubkey) =>
+      _peersState.getPeerByPubkey(pubkey)?.udpAddress;
+
   /// Feed the networking layer a peer's current public `ip:port`, learned at
   /// the GLP level (from a rendezvous agent or a BLE-adjacent friend). The
   /// layer records it in its dial book for [send] and reconnection, creating a
