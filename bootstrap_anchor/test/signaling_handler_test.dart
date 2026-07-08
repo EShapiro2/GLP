@@ -1,8 +1,11 @@
 import 'dart:io';
 import 'dart:typed_data';
 
+import 'package:cryptography/cryptography.dart' show Hmac, SecretKey;
+
 import 'package:bootstrap_anchor/src/address_table.dart';
 import 'package:bootstrap_anchor/src/identity.dart';
+import 'package:bootstrap_anchor/src/invite_table.dart';
 import 'package:bootstrap_anchor/src/peer_table.dart';
 import 'package:bootstrap_anchor/src/protocol.dart';
 import 'package:bootstrap_anchor/src/signaling_codec.dart';
@@ -76,6 +79,7 @@ void main() {
   group('SignalingHandler', () {
     late AddressTable addressTable;
     late PeerTable peerTable;
+    late InviteTable inviteTable;
     late SignalingCodec codec;
     late SignalingHandler handler;
     late List<_SentSignal> sentSignals;
@@ -85,6 +89,7 @@ void main() {
     setUp(() async {
       addressTable = AddressTable();
       peerTable = PeerTable();
+      inviteTable = InviteTable();
       codec = const SignalingCodec();
       aPubkey = _pubkey(1);
       bPubkey = _pubkey(2);
@@ -92,6 +97,7 @@ void main() {
         protocol: await _createProtocol(),
         peerTable: peerTable,
         addressTable: addressTable,
+        inviteTable: inviteTable,
         codec: codec,
       );
       sentSignals = <_SentSignal>[];
@@ -295,6 +301,274 @@ void main() {
         observedPort: 7001,
       );
       expect(sentSignals, isEmpty);
+    });
+  });
+
+  group('Invite registration and redemption', () {
+    late InviteTable inviteTable;
+    late SignalingCodec codec;
+    late SignalingHandler handler;
+    late List<_SentSignal> sentSignals;
+    late Uint8List aPubkey; // inviter
+    late Uint8List bPubkey; // redeemer
+    late Uint8List inviteId;
+    late Uint8List inviteKey;
+    late Uint8List redeemerNonce;
+
+    /// Pump the event loop so the handler's unawaited async redemption
+    /// (HMAC verification) completes.
+    Future<void> settle() =>
+        Future<void>.delayed(const Duration(milliseconds: 20));
+
+    Future<Uint8List> claimMac({
+      Uint8List? inviter,
+      Uint8List? redeemer,
+      Uint8List? key,
+    }) async {
+      final mac = await Hmac.sha256().calculateMac(
+        <int>[
+          ...(inviter ?? aPubkey),
+          ...(redeemer ?? bPubkey),
+          ...inviteId,
+          ...redeemerNonce,
+        ],
+        secretKey: SecretKey(key ?? inviteKey),
+      );
+      return Uint8List.fromList(mac.bytes);
+    }
+
+    int futureExpiry() =>
+        DateTime.now().add(const Duration(hours: 1)).millisecondsSinceEpoch;
+
+    void register({int? expiresAtMs}) {
+      handler.processSignaling(
+        aPubkey,
+        codec.encode(RegisterInviteMessage(
+          inviteId: inviteId,
+          inviteKey: inviteKey,
+          expiresAtMs: expiresAtMs ?? futureExpiry(),
+        )),
+      );
+    }
+
+    Future<void> redeem({Uint8List? mac, Uint8List? sender}) async {
+      handler.processSignaling(
+        sender ?? bPubkey,
+        codec.encode(RedeemInviteMessage(
+          inviteId: inviteId,
+          redeemerNonce: redeemerNonce,
+          mac: mac ?? await claimMac(),
+        )),
+      );
+      await settle();
+    }
+
+    setUp(() async {
+      inviteTable = InviteTable();
+      codec = const SignalingCodec();
+      aPubkey = _pubkey(1);
+      bPubkey = _pubkey(2);
+      inviteId = _pubkey(0xA0);
+      inviteKey = _pubkey(0xB0);
+      redeemerNonce = _pubkey(0xC0);
+      handler = SignalingHandler(
+        protocol: await _createProtocol(),
+        peerTable: PeerTable(),
+        addressTable: AddressTable(),
+        inviteTable: inviteTable,
+        codec: codec,
+      );
+      sentSignals = <_SentSignal>[];
+      handler.sendSignaling = (recipientPubkey, payload) async {
+        sentSignals.add(_SentSignal(recipientPubkey, codec.decode(payload)));
+        return true;
+      };
+    });
+
+    test('valid redemption flips the invite and notifies the inviter', () async {
+      register();
+      expect(inviteTable.lookup(_hex(inviteId)), isNotNull);
+
+      await redeem();
+
+      final entry = inviteTable.lookup(_hex(inviteId))!;
+      expect(entry.used, isTrue);
+      expect(sentSignals, hasLength(1));
+      expect(sentSignals.single.recipient, equals(aPubkey));
+      final notif = sentSignals.single.message as InviteRedeemedMessage;
+      expect(notif.inviteId, equals(inviteId));
+      expect(notif.redeemerPubkey, equals(bPubkey));
+    });
+
+    test('second redemption of the same invite is rejected (single use)',
+        () async {
+      register();
+      await redeem();
+      await redeem(sender: _pubkey(3), mac: await claimMac(redeemer: _pubkey(3)));
+
+      expect(sentSignals, hasLength(1)); // only the first notification
+    });
+
+    test('redemption with a bad MAC is rejected and the invite stays unused',
+        () async {
+      register();
+      await redeem(mac: await claimMac(key: _pubkey(0xEE)));
+
+      expect(inviteTable.lookup(_hex(inviteId))!.used, isFalse);
+      expect(sentSignals, isEmpty);
+    });
+
+    test('MAC binds the redeemer: replay by another sender is rejected',
+        () async {
+      register();
+      // Valid MAC computed for B, but submitted by C.
+      await redeem(sender: _pubkey(3), mac: await claimMac(redeemer: bPubkey));
+
+      expect(inviteTable.lookup(_hex(inviteId))!.used, isFalse);
+      expect(sentSignals, isEmpty);
+    });
+
+    test('unknown and expired invites are rejected', () async {
+      // Never registered.
+      await redeem();
+      expect(sentSignals, isEmpty);
+
+      // Registered with an already-past expiry: dropped at registration.
+      register(
+          expiresAtMs:
+              DateTime.now().millisecondsSinceEpoch - 1000);
+      expect(inviteTable.lookup(_hex(inviteId)), isNull);
+    });
+
+    test('registration of an existing id by a different sender is rejected',
+        () {
+      register();
+      handler.processSignaling(
+        bPubkey,
+        codec.encode(RegisterInviteMessage(
+          inviteId: inviteId,
+          inviteKey: _pubkey(0xDD),
+          expiresAtMs: futureExpiry(),
+        )),
+      );
+
+      final entry = inviteTable.lookup(_hex(inviteId))!;
+      expect(entry.inviterPubkey, equals(aPubkey));
+      expect(entry.inviteKey, equals(inviteKey));
+    });
+
+    test('inviter cannot redeem its own invite', () async {
+      register();
+      await redeem(sender: aPubkey, mac: await claimMac(redeemer: aPubkey));
+
+      expect(inviteTable.lookup(_hex(inviteId))!.used, isFalse);
+      expect(sentSignals, isEmpty);
+    });
+
+    test('notification is retained until acked, resent on retry, then stops',
+        () async {
+      register();
+      handler.sendSignaling = (recipientPubkey, payload) async => false;
+      await redeem();
+
+      final entry = inviteTable.lookup(_hex(inviteId))!;
+      expect(entry.used, isTrue);
+      expect(entry.undeliveredRedeemer, equals(bPubkey));
+
+      // Inviter comes back online; a cleanup sweep resends the notification.
+      handler.sendSignaling = (recipientPubkey, payload) async {
+        sentSignals.add(_SentSignal(recipientPubkey, codec.decode(payload)));
+        return true;
+      };
+      await handler.retryUndeliveredInviteNotifications();
+      // A successful write is NOT proof of receipt — still retained.
+      expect(entry.undeliveredRedeemer, equals(bPubkey));
+      expect(sentSignals, hasLength(1));
+
+      // Inviter acks: the notification is cleared and no longer resent.
+      handler.processSignaling(
+        aPubkey,
+        codec.encode(InviteRedeemedAckMessage(inviteId: inviteId)),
+      );
+      expect(entry.undeliveredRedeemer, isNull);
+      await handler.retryUndeliveredInviteNotifications();
+      expect(sentSignals, hasLength(1)); // no further resend
+    });
+
+    test('only the inviter can ack a redeemed notification', () async {
+      register();
+      handler.sendSignaling = (recipientPubkey, payload) async => false;
+      await redeem();
+      final entry = inviteTable.lookup(_hex(inviteId))!;
+
+      // A stranger's ack is ignored.
+      handler.processSignaling(
+        _pubkey(9),
+        codec.encode(InviteRedeemedAckMessage(inviteId: inviteId)),
+      );
+      expect(entry.undeliveredRedeemer, equals(bPubkey));
+    });
+
+    test('per-inviter registration cap rejects a flood', () {
+      // Distinct 32-byte ids (the _pubkey helper only yields 256 values).
+      String idHex(int n) {
+        final b = Uint8List(32);
+        b[0] = (n >> 8) & 0xff;
+        b[1] = n & 0xff;
+        return _hex(b);
+      }
+
+      for (var i = 0; i < InviteTable.maxInvitesPerInviter; i++) {
+        expect(
+          inviteTable.register(
+            inviteIdHex: idHex(i),
+            inviterPubkey: aPubkey,
+            inviteKey: _pubkey(0xB0),
+            expiresAtMs: futureExpiry(),
+          ),
+          isTrue,
+        );
+      }
+      // One more from A is rejected...
+      expect(
+        inviteTable.register(
+          inviteIdHex: idHex(9000),
+          inviterPubkey: aPubkey,
+          inviteKey: _pubkey(0xB0),
+          expiresAtMs: futureExpiry(),
+        ),
+        isFalse,
+      );
+      // ...while a different inviter is unaffected.
+      expect(
+        inviteTable.register(
+          inviteIdHex: idHex(9001),
+          inviterPubkey: bPubkey,
+          inviteKey: _pubkey(0xB0),
+          expiresAtMs: futureExpiry(),
+        ),
+        isTrue,
+      );
+    });
+
+    test('expired invites are pruned and free per-inviter capacity', () {
+      register(
+          expiresAtMs:
+              DateTime.now().millisecondsSinceEpoch + 50);
+      expect(inviteTable.count, equals(1));
+      inviteTable.removeExpired(
+          now: DateTime.now().add(const Duration(seconds: 1)));
+      expect(inviteTable.count, equals(0));
+      // Capacity freed: A can register again.
+      expect(
+        inviteTable.register(
+          inviteIdHex: _hex(_pubkey(0xAB)),
+          inviterPubkey: aPubkey,
+          inviteKey: _pubkey(0xB0),
+          expiresAtMs: futureExpiry(),
+        ),
+        isTrue,
+      );
     });
   });
 }

@@ -514,6 +514,23 @@ PeersState peersReducer(PeersState state, dynamic action) {
     );
   }
 
+  if (action is PeerIdentityRegisteredAction) {
+    final pubkeyHex = _pubkeyToHex(action.publicKey);
+    if (state.peers.containsKey(pubkeyHex)) return state;
+    // Identity learned out-of-band (cold-call invite): a minimal disconnected
+    // entry with no address — reachability and addresses arrive later via
+    // sessions, ANNOUNCE, or putPeerAddress.
+    final created = PeerState(
+      publicKey: action.publicKey,
+      nickname: '',
+      connectionState: PeerConnectionState.disconnected,
+      transport: PeerTransport.udp,
+    );
+    return state.copyWith(
+      peers: Map.from(state.peers)..[pubkeyHex] = created,
+    );
+  }
+
   if (action is PeerFriendListUpdatedAction) {
     final pubkeyHex = _pubkeyToHex(action.publicKey);
     final existing = state.peers[pubkeyHex];

@@ -220,6 +220,22 @@ class ProtocolHandler {
     }
   }
 
+  /// Detached Ed25519 signature over arbitrary [message] bytes under the
+  /// identity key. Used for non-packet records — e.g. the canonical bytes of
+  /// a cold-call invite (spec §IP Cold-Call). Same native libsodium path as
+  /// [signPacket].
+  Uint8List signBytes(Uint8List message) {
+    final secretKey = SecureKey.fromList(_sodium, identity.privateKey);
+    try {
+      return _sodium.crypto.sign.detached(
+        message: message,
+        secretKey: secretKey,
+      );
+    } finally {
+      secretKey.dispose();
+    }
+  }
+
   /// Verify a packet's Ed25519 signature against the sender's public key.
   ///
   /// Native libsodium verify (~5-10ms on Android) is fast enough that we run

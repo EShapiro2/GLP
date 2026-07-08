@@ -11,7 +11,12 @@ enum SignalingType {
   addrReflect(0x07),
   reconnect(0x08),
   available(0x09),
-  rvList(0x0a);
+  rvList(0x0a),
+  // 0x0b (friendList) is agent↔friend only and never reaches the anchor.
+  registerInvite(0x0c),
+  redeemInvite(0x0d),
+  inviteRedeemed(0x0e),
+  inviteRedeemedAck(0x0f);
 
   final int value;
   const SignalingType(this.value);
@@ -87,6 +92,78 @@ class RvListMessage extends SignalingMessage {
   RvListMessage({required this.entries});
 }
 
+/// Inviter A registers a cold-call invite (spec §IP Cold-Call). A's identity
+/// is the authenticated outer packet sender.
+class RegisterInviteMessage extends SignalingMessage {
+  @override
+  SignalingType get type => SignalingType.registerInvite;
+  final Uint8List inviteId;
+  final Uint8List inviteKey;
+  final int expiresAtMs;
+  RegisterInviteMessage({
+    required this.inviteId,
+    required this.inviteKey,
+    required this.expiresAtMs,
+  }) {
+    if (inviteId.length != 32) throw ArgumentError('inviteId must be 32 bytes');
+    if (inviteKey.length != 32) {
+      throw ArgumentError('inviteKey must be 32 bytes');
+    }
+  }
+}
+
+/// Holder B's redemption claim. B's identity is the authenticated outer
+/// packet sender; the MAC is HMAC-SHA256 under the registered InviteKey over
+/// (A_pk | B_pk | InviteId | redeemerNonce).
+class RedeemInviteMessage extends SignalingMessage {
+  @override
+  SignalingType get type => SignalingType.redeemInvite;
+  final Uint8List inviteId;
+  final Uint8List redeemerNonce;
+  final Uint8List mac;
+  RedeemInviteMessage({
+    required this.inviteId,
+    required this.redeemerNonce,
+    required this.mac,
+  }) {
+    if (inviteId.length != 32) throw ArgumentError('inviteId must be 32 bytes');
+    if (redeemerNonce.length != 32) {
+      throw ArgumentError('redeemerNonce must be 32 bytes');
+    }
+    if (mac.length != 32) throw ArgumentError('mac must be 32 bytes');
+  }
+}
+
+/// Anchor forwards the redeemer's identity to the inviter after the invite
+/// is atomically flipped to used.
+class InviteRedeemedMessage extends SignalingMessage {
+  @override
+  SignalingType get type => SignalingType.inviteRedeemed;
+  final Uint8List inviteId;
+  final Uint8List redeemerPubkey;
+  InviteRedeemedMessage({
+    required this.inviteId,
+    required this.redeemerPubkey,
+  }) {
+    if (inviteId.length != 32) throw ArgumentError('inviteId must be 32 bytes');
+    if (redeemerPubkey.length != 32) {
+      throw ArgumentError('redeemerPubkey must be 32 bytes');
+    }
+  }
+}
+
+/// Inviter A acknowledges receipt of an INVITE_REDEEMED notification so the
+/// anchor stops retrying it — makes the redeemer-forwarding an ack'd delivery
+/// rather than fire-and-forget around the single-use flip.
+class InviteRedeemedAckMessage extends SignalingMessage {
+  @override
+  SignalingType get type => SignalingType.inviteRedeemedAck;
+  final Uint8List inviteId;
+  InviteRedeemedAckMessage({required this.inviteId}) {
+    if (inviteId.length != 32) throw ArgumentError('inviteId must be 32 bytes');
+  }
+}
+
 // ===== Codec =====
 
 /// Binary encoder/decoder for signaling messages.
@@ -101,6 +178,10 @@ class SignalingCodec {
       ReconnectMessage() => _encodeReconnect(msg),
       AvailableMessage() => _encodeAvailable(msg),
       RvListMessage() => _encodeRvList(msg),
+      RegisterInviteMessage() => _encodeRegisterInvite(msg),
+      RedeemInviteMessage() => _encodeRedeemInvite(msg),
+      InviteRedeemedMessage() => _encodeInviteRedeemed(msg),
+      InviteRedeemedAckMessage() => _encodeInviteRedeemedAck(msg),
     };
   }
 
@@ -118,6 +199,10 @@ class SignalingCodec {
       SignalingType.reconnect => _decodeReconnect(payload),
       SignalingType.available => _decodeAvailable(payload),
       SignalingType.rvList => _decodeRvList(payload),
+      SignalingType.registerInvite => _decodeRegisterInvite(payload),
+      SignalingType.redeemInvite => _decodeRedeemInvite(payload),
+      SignalingType.inviteRedeemed => _decodeInviteRedeemed(payload),
+      SignalingType.inviteRedeemedAck => _decodeInviteRedeemedAck(payload),
     };
   }
 
@@ -176,6 +261,39 @@ class SignalingCodec {
       _writeUint16(buffer, addrBytes.length);
       buffer.add(addrBytes);
     }
+    return buffer.toBytes();
+  }
+
+  Uint8List _encodeRegisterInvite(RegisterInviteMessage msg) {
+    final buffer = BytesBuilder();
+    buffer.addByte(SignalingType.registerInvite.value);
+    buffer.add(msg.inviteId);
+    buffer.add(msg.inviteKey);
+    _writeUint64(buffer, msg.expiresAtMs);
+    return buffer.toBytes();
+  }
+
+  Uint8List _encodeRedeemInvite(RedeemInviteMessage msg) {
+    final buffer = BytesBuilder();
+    buffer.addByte(SignalingType.redeemInvite.value);
+    buffer.add(msg.inviteId);
+    buffer.add(msg.redeemerNonce);
+    buffer.add(msg.mac);
+    return buffer.toBytes();
+  }
+
+  Uint8List _encodeInviteRedeemed(InviteRedeemedMessage msg) {
+    final buffer = BytesBuilder();
+    buffer.addByte(SignalingType.inviteRedeemed.value);
+    buffer.add(msg.inviteId);
+    buffer.add(msg.redeemerPubkey);
+    return buffer.toBytes();
+  }
+
+  Uint8List _encodeInviteRedeemedAck(InviteRedeemedAckMessage msg) {
+    final buffer = BytesBuilder();
+    buffer.addByte(SignalingType.inviteRedeemedAck.value);
+    buffer.add(msg.inviteId);
     return buffer.toBytes();
   }
 
@@ -253,6 +371,47 @@ class SignalingCodec {
     return RvListMessage(entries: entries);
   }
 
+  RegisterInviteMessage _decodeRegisterInvite(Uint8List data) {
+    if (data.length != 72) {
+      throw const FormatException('RegisterInvite payload must be 72 bytes');
+    }
+    return RegisterInviteMessage(
+      inviteId: Uint8List.fromList(data.sublist(0, 32)),
+      inviteKey: Uint8List.fromList(data.sublist(32, 64)),
+      expiresAtMs: _readUint64(data, 64),
+    );
+  }
+
+  RedeemInviteMessage _decodeRedeemInvite(Uint8List data) {
+    if (data.length != 96) {
+      throw const FormatException('RedeemInvite payload must be 96 bytes');
+    }
+    return RedeemInviteMessage(
+      inviteId: Uint8List.fromList(data.sublist(0, 32)),
+      redeemerNonce: Uint8List.fromList(data.sublist(32, 64)),
+      mac: Uint8List.fromList(data.sublist(64, 96)),
+    );
+  }
+
+  InviteRedeemedMessage _decodeInviteRedeemed(Uint8List data) {
+    if (data.length != 64) {
+      throw const FormatException('InviteRedeemed payload must be 64 bytes');
+    }
+    return InviteRedeemedMessage(
+      inviteId: Uint8List.fromList(data.sublist(0, 32)),
+      redeemerPubkey: Uint8List.fromList(data.sublist(32, 64)),
+    );
+  }
+
+  InviteRedeemedAckMessage _decodeInviteRedeemedAck(Uint8List data) {
+    if (data.length != 32) {
+      throw const FormatException('InviteRedeemedAck payload must be 32 bytes');
+    }
+    return InviteRedeemedAckMessage(
+      inviteId: Uint8List.fromList(data.sublist(0, 32)),
+    );
+  }
+
   // ===== Helpers =====
 
   void _writeUint16(BytesBuilder buffer, int value) {
@@ -262,5 +421,19 @@ class SignalingCodec {
 
   int _readUint16(Uint8List data, int offset) {
     return (data[offset] << 8) | data[offset + 1];
+  }
+
+  void _writeUint64(BytesBuilder buffer, int value) {
+    for (var i = 7; i >= 0; i--) {
+      buffer.addByte((value >> (8 * i)) & 0xFF);
+    }
+  }
+
+  int _readUint64(Uint8List data, int offset) {
+    var value = 0;
+    for (var i = 0; i < 8; i++) {
+      value = (value << 8) | data[offset + i];
+    }
+    return value;
   }
 }

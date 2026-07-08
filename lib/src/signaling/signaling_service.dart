@@ -110,6 +110,17 @@ class SignalingService {
   /// registration round-trip (the GLP spec response to a client ANNOUNCE).
   void Function(Uint8List senderPubkey, String ip, int port)? onAddrReflected;
 
+  /// Fired when a rendezvous server forwards a redeemed cold-call invite
+  /// (spec §IP Cold-Call): one of our outstanding peer links was redeemed.
+  /// Receives the RV's pubkey (the authenticated sender), the InviteId, and
+  /// the redeemer's public key. The coordinator validates the InviteId
+  /// against its locally-recorded invites.
+  void Function(
+    Uint8List rvPubkey,
+    Uint8List inviteId,
+    Uint8List redeemerPubkey,
+  )? onInviteRedeemed;
+
   SignalingService({required this.store, this.codec = const SignalingCodec()}) {
     // Clean up stale address table entries every 60 seconds.
     _staleCleanupTimer = Timer.periodic(
@@ -439,6 +450,16 @@ class SignalingService {
         _handleRvList(senderPubkey, msg);
       case FriendListMessage():
         _handleFriendList(senderPubkey, msg);
+      case InviteRedeemedMessage():
+        onInviteRedeemed?.call(senderPubkey, msg.inviteId, msg.redeemerPubkey);
+      case RegisterInviteMessage():
+      case RedeemInviteMessage():
+      case InviteRedeemedAckMessage():
+        // Server-bound messages; an agent never legitimately receives them.
+        debugPrint(
+          'Ignoring ${msg.runtimeType} from $senderLabel '
+          '(rendezvous-server-bound message)',
+        );
     }
   }
 

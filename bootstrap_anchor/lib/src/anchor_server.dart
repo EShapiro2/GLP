@@ -6,6 +6,7 @@ import 'package:sodium/sodium_sumo.dart' as libsodium;
 
 import 'address_table.dart';
 import 'identity.dart';
+import 'invite_table.dart';
 import 'libsodium_loader.dart';
 import 'noise_session_manager.dart';
 import 'packet.dart';
@@ -40,6 +41,7 @@ class AnchorServer {
   late Protocol _protocol;
   late PeerTable _peerTable;
   late AddressTable _addressTable;
+  late InviteTable _inviteTable;
   late SignalingHandler _signalingHandler;
   late SignalingCodec _codec;
   late NoiseSessionManager _noiseSessions;
@@ -82,6 +84,7 @@ class AnchorServer {
     _protocol = Protocol(identity: _identity);
     _peerTable = PeerTable();
     _addressTable = AddressTable();
+    _inviteTable = InviteTable();
     _codec = const SignalingCodec();
 
     final sodium = await libsodium.SodiumSumoInit.init(loadLibsodium);
@@ -94,6 +97,7 @@ class AnchorServer {
       protocol: _protocol,
       peerTable: _peerTable,
       addressTable: _addressTable,
+      inviteTable: _inviteTable,
       codec: _codec,
     );
     _signalingHandler.sendSignaling = _sendSignaling;
@@ -132,6 +136,8 @@ class AnchorServer {
           protectedPubkeys: _peerConnections.keys.toSet(),
         );
         _peerTable.removeStale(const Duration(minutes: 30));
+        _inviteTable.removeExpired();
+        unawaited(_signalingHandler.retryUndeliveredInviteNotifications());
       },
     );
 
@@ -897,6 +903,15 @@ class AnchorServer {
         AvailableMessage() =>
           'available peer=${_shortHex(_pubkeyToHex(message.peerPubkey))}',
         RvListMessage() => 'rvList count=${message.entries.length}',
+        RegisterInviteMessage() =>
+          'registerInvite id=${_shortHex(_pubkeyToHex(message.inviteId))}',
+        RedeemInviteMessage() =>
+          'redeemInvite id=${_shortHex(_pubkeyToHex(message.inviteId))}',
+        InviteRedeemedMessage() =>
+          'inviteRedeemed id=${_shortHex(_pubkeyToHex(message.inviteId))} '
+              'redeemer=${_shortHex(_pubkeyToHex(message.redeemerPubkey))}',
+        InviteRedeemedAckMessage() =>
+          'inviteRedeemedAck id=${_shortHex(_pubkeyToHex(message.inviteId))}',
       };
     } catch (e) {
       return 'signaling-decode-failed payload=${signalingPayload.length}B error=$e';

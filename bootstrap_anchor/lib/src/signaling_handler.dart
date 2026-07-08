@@ -1,6 +1,10 @@
+import 'dart:async' show unawaited;
 import 'dart:typed_data';
 
+import 'package:cryptography/cryptography.dart' show Hmac, SecretKey;
+
 import 'address_table.dart';
+import 'invite_table.dart';
 import 'peer_table.dart';
 import 'protocol.dart';
 import 'signaling_codec.dart';
@@ -28,6 +32,7 @@ class SignalingHandler {
   final Protocol protocol;
   final PeerTable peerTable;
   final AddressTable addressTable;
+  final InviteTable inviteTable;
   final SignalingCodec codec;
 
   /// Pending RECONNECT/AVAILABLE requests, keyed by `senderHex|targetHex`.
@@ -64,6 +69,7 @@ class SignalingHandler {
     required this.protocol,
     required this.peerTable,
     required this.addressTable,
+    required this.inviteTable,
     this.codec = const SignalingCodec(),
   });
 
@@ -153,8 +159,164 @@ class SignalingHandler {
         _log('Ignoring AddrReflect (server knows its own address)');
       case RvListMessage():
         _log('Ignoring RvList (server is not part of the social graph)');
+      case RegisterInviteMessage():
+        _handleRegisterInvite(senderPubkey, senderHex, msg);
+      case RedeemInviteMessage():
+        unawaited(_handleRedeemInvite(senderPubkey, senderHex, msg));
+      case InviteRedeemedAckMessage():
+        _handleInviteRedeemedAck(senderPubkey, msg);
+      case InviteRedeemedMessage():
+        _log('Ignoring InviteRedeemed (server-originated message)');
     }
   }
+
+  /// Store an invite registered by inviter A over its authenticated
+  /// connection (spec §IP Cold-Call, Redemption). The inviter's identity is
+  /// the signed outer sender; the server stores the entry marked unused.
+  void _handleRegisterInvite(
+    Uint8List senderPubkey,
+    String senderHex,
+    RegisterInviteMessage msg,
+  ) {
+    if (msg.expiresAtMs <= DateTime.now().millisecondsSinceEpoch) {
+      _log('Dropping RegisterInvite from ${senderHex.substring(0, 8)}...: '
+          'already expired');
+      return;
+    }
+    final registered = inviteTable.register(
+      inviteIdHex: _pubkeyToHex(msg.inviteId),
+      inviterPubkey: senderPubkey,
+      inviteKey: msg.inviteKey,
+      expiresAtMs: msg.expiresAtMs,
+    );
+    _log(registered
+        ? 'Registered invite ${_pubkeyToHex(msg.inviteId).substring(0, 8)}... '
+            'for ${senderHex.substring(0, 8)}...'
+        : 'Rejected invite registration from ${senderHex.substring(0, 8)}... '
+            '(id already registered to another inviter or used)');
+  }
+
+  /// Redeem an invite: accept only if the id is registered, unexpired, still
+  /// unused, and the MAC verifies against the stored proof key; then flip to
+  /// used atomically and forward the redeemer's identity to the inviter
+  /// (spec §IP Cold-Call, Redemption).
+  Future<void> _handleRedeemInvite(
+    Uint8List senderPubkey,
+    String senderHex,
+    RedeemInviteMessage msg,
+  ) async {
+    final inviteIdHex = _pubkeyToHex(msg.inviteId);
+    final shortId = inviteIdHex.substring(0, 8);
+    final entry = inviteTable.lookup(inviteIdHex);
+    if (entry == null) {
+      _log('Dropping RedeemInvite $shortId...: unknown invite');
+      return;
+    }
+    if (entry.isExpired(DateTime.now())) {
+      _log('Dropping RedeemInvite $shortId...: invite expired');
+      return;
+    }
+    if (entry.used) {
+      _log('Dropping RedeemInvite $shortId...: invite already used');
+      return;
+    }
+    // A→B first contact: the inviter redeeming its own link would only burn
+    // the single use. Matches the client's self-redemption guard.
+    if (_pubkeysEqual(senderPubkey, entry.inviterPubkey)) {
+      _log('Dropping RedeemInvite $shortId...: inviter cannot redeem its own '
+          'invite');
+      return;
+    }
+
+    // MAC under InviteKey over (A_pk | B_pk | InviteId | redeemerNonce); B's
+    // key is the authenticated outer sender.
+    final expected = await Hmac.sha256().calculateMac(
+      <int>[
+        ...entry.inviterPubkey,
+        ...senderPubkey,
+        ...msg.inviteId,
+        ...msg.redeemerNonce,
+      ],
+      secretKey: SecretKey(entry.inviteKey),
+    );
+    // Constant-time: the MAC is the sole possession proof, so never leak
+    // where it first diverges.
+    if (!_constantTimeEquals(Uint8List.fromList(expected.bytes), msg.mac)) {
+      _log('Dropping RedeemInvite $shortId...: MAC verification failed');
+      return;
+    }
+
+    // Atomic single-use flip: the MAC computation awaited above, so re-check
+    // and flip in one synchronous block — on Dart's single-threaded event
+    // loop no other claim can interleave between the check and the flip.
+    if (entry.used) {
+      _log('Dropping RedeemInvite $shortId...: lost redemption race');
+      return;
+    }
+    entry.used = true;
+
+    _log('Invite $shortId... redeemed by ${senderHex.substring(0, 8)}...; '
+        'forwarding redeemer identity to inviter');
+    await _notifyInviter(inviteIdHex, entry, senderPubkey);
+  }
+
+  /// Forward INVITE_REDEEMED to the inviter. The redeemer is parked on the
+  /// entry and cleared only by the inviter's INVITE_REDEEMED_ACK
+  /// ([_handleInviteRedeemedAck]) — accepting the send-path write is NOT proof
+  /// A received it, so the notification is resent by
+  /// [retryUndeliveredInviteNotifications] on each cleanup sweep until the ack
+  /// arrives or the invite expires. A duplicate notification is harmless: A's
+  /// client acks it again and ignores the already-processed redemption.
+  Future<void> _notifyInviter(
+    String inviteIdHex,
+    InviteEntry entry,
+    Uint8List redeemerPubkey,
+  ) async {
+    entry.undeliveredRedeemer = redeemerPubkey;
+    final notification = InviteRedeemedMessage(
+      inviteId: _inviteIdBytes(inviteIdHex),
+      redeemerPubkey: redeemerPubkey,
+    );
+    final written = await sendSignaling?.call(
+          entry.inviterPubkey,
+          codec.encode(notification),
+        ) ??
+        false;
+    if (!written) {
+      _log('Inviter offline for invite ${inviteIdHex.substring(0, 8)}...; '
+          'will retry the redeemed notification');
+    }
+  }
+
+  /// Inviter A acknowledged the redeemed notification: stop retrying it. Only
+  /// the invite's own inviter can clear its pending notification.
+  void _handleInviteRedeemedAck(
+    Uint8List senderPubkey,
+    InviteRedeemedAckMessage msg,
+  ) {
+    final inviteIdHex = _pubkeyToHex(msg.inviteId);
+    final entry = inviteTable.lookup(inviteIdHex);
+    if (entry == null) return;
+    if (!_pubkeysEqual(senderPubkey, entry.inviterPubkey)) return;
+    entry.undeliveredRedeemer = null;
+    _log('Invite ${inviteIdHex.substring(0, 8)}... redeemed notification '
+        'acknowledged by inviter');
+  }
+
+  /// Resend INVITE_REDEEMED notifications not yet acknowledged by their
+  /// inviter. Invoked from the anchor's periodic cleanup sweep.
+  Future<void> retryUndeliveredInviteNotifications() async {
+    for (final pending in inviteTable.undelivered.toList()) {
+      final redeemer = pending.value.undeliveredRedeemer;
+      if (redeemer == null) continue;
+      await _notifyInviter(pending.key, pending.value, redeemer);
+    }
+  }
+
+  static Uint8List _inviteIdBytes(String inviteIdHex) => Uint8List.fromList([
+        for (var i = 0; i < inviteIdHex.length; i += 2)
+          int.parse(inviteIdHex.substring(i, i + 2), radix: 16)
+      ]);
 
   void _handleRendezvous({
     required Uint8List senderPubkey,
@@ -280,6 +442,19 @@ class SignalingHandler {
       if (a[i] != b[i]) return false;
     }
     return true;
+  }
+
+  /// Constant-time byte comparison for secrets (the redemption MAC). Runs in
+  /// time dependent only on the length, never short-circuiting on the first
+  /// differing byte, so it leaks no information about where a forged MAC
+  /// diverges from the expected one.
+  static bool _constantTimeEquals(Uint8List a, Uint8List b) {
+    if (a.length != b.length) return false;
+    var diff = 0;
+    for (var i = 0; i < a.length; i++) {
+      diff |= a[i] ^ b[i];
+    }
+    return diff == 0;
   }
 
   void _pruneExpiredPending(DateTime now) {

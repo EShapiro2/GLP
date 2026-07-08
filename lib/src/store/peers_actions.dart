@@ -227,6 +227,16 @@ class AssociateUdpAddressAction extends PeerAction {
   AssociateUdpAddressAction({required this.publicKey, required this.address});
 }
 
+/// Register a peer identity learned out-of-band, without any address or live
+/// connection — e.g. the inviter named in a cold-call peer link, or the
+/// redeemer forwarded by a rendezvous server (spec §IP Cold-Call). Creates a
+/// minimal disconnected entry for an unknown peer; a no-op for a known one.
+class PeerIdentityRegisteredAction extends PeerAction {
+  final Uint8List publicKey;
+
+  PeerIdentityRegisteredAction({required this.publicKey});
+}
+
 /// Update the friends-of-friends set advertised by a direct friend.
 ///
 /// [friendPubkeyHexes] are lowercase public-key hex strings for the sender's

@@ -7,6 +7,7 @@ library;
 
 export 'src/anchor_server.dart';
 export 'src/identity.dart';
+export 'src/invite_table.dart';
 export 'src/packet.dart';
 export 'src/protocol.dart';
 export 'src/signaling_codec.dart';
