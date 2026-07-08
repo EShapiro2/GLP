@@ -126,12 +126,12 @@ ConsentOffer          ::= offer(Constant, GroupId).
 procedure respond_coldcall(ColdCallOffer?, Response, Stream(UserInMsg)).
 
 %% Accept a friend offer.
-*(Answer=yes)
+*(Answer=yes, From?)
 respond_coldcall(offer(From), Resp?, [decision(Answer?, From?, response(Resp))]) :-
     ground(From?) | true.
 
 %% Decline.
-*(Answer=no)
+*(Answer=no, From?)
 respond_coldcall(offer(From), Resp?, [decision(Answer?, From?, response(Resp))]) :-
     ground(From?) | true.
 
@@ -139,7 +139,7 @@ procedure respond_intro(Constant?, IntroOffer?, Channel(Stream(IntroContent), St
 
 %% Accept an introduction: ack on the setup channel, await the peer, inject
 %% the result.
-*(Answer=yes)
+*(Answer=yes, Other?)
 respond_intro(Id, offer(Other), Ch, Ans?) :-
     ground(Id?), ground(Other?),
     send(ack(Id?), Ch?, Ch1) |
@@ -147,7 +147,7 @@ respond_intro(Id, offer(Other), Ch, Ans?) :-
     inject_intro_result(Result?, [], Ans).
 
 %% Reject: nack on the setup channel, closing it.
-*(Answer=no)
+*(Answer=no, Other?)
 respond_intro(_, offer(Other), ch(_ChIn, [nack|[]]), []) :-
     ground(Other?) | true.
 
@@ -155,7 +155,7 @@ procedure respond_child_intro(Constant?, ChildIntroOffer?, Channel(Stream(IntroC
 
 %% Accept (as the introduced child's counterpart): ack on the setup channel,
 %% await the peer, inject the result.
-*(Answer=yes)
+*(Answer=yes, Other?)
 respond_child_intro(Id, offer(Other), Ch, Ans?) :-
     ground(Id?), ground(Other?),
     send(ack(Id?), Ch?, Ch1) |
@@ -163,12 +163,12 @@ respond_child_intro(Id, offer(Other), Ch, Ans?) :-
     inject_intro_result(Result?, [], Ans).
 
 %% Reject: nack on the setup channel, closing it.
-*(Answer=no)
+*(Answer=no, Other?)
 respond_child_intro(_, offer(Other), ch(_ChIn, [nack|[]]), []) :-
     ground(Other?) | true.
 
 %% Approve (as a parent): forward the introduction to the named own child.
-*(MyChild)
+*(MyChild, OtherChild?)
 respond_child_intro(_, offer(OtherChild), Ch,
     [approve_child_intro(OtherChild?, MyChild?, Ch?)]) :-
     ground(OtherChild?), ground(MyChild?) | true.
@@ -177,38 +177,38 @@ procedure respond_group_invite(Constant?, GroupInviteOffer?, Channel(Stream(Grou
 
 %% Accept: ack on the setup channel, hand the read side to the agent to await
 %% the group channel from the hub.
-*(Answer=yes)
+*(Answer=yes, GroupId?)
 respond_group_invite(Id, offer(GroupId), ch(ChRead, [ack(Id?)|[]]),
     [accept_group(GroupId?, ChRead?)]) :-
     ground(Id?), ground(GroupId?) | true.
 
 %% Reject: nack on the setup channel, closing it.
-*(Answer=no)
+*(Answer=no, GroupId?)
 respond_group_invite(_, offer(GroupId), ch(_ChRead, [nack|[]]), []) :-
     ground(GroupId?) | true.
 
 procedure respond_group_invite_child(GroupInviteChildOffer?, Channel(Stream(IntroContent), Stream(GroupSetupResponse))?, Stream(UserInMsg)).
 
 %% Approve: forward the invite to the child.
-*(Answer=yes)
+*(Answer=yes, GroupId?, Child?)
 respond_group_invite_child(offer(GroupId, Child), Ch,
     [approve_group(Child?, GroupId?, Ch?)]) :-
     ground(GroupId?), ground(Child?) | true.
 
 %% Reject: nack on the setup channel, closing it.
-*(Answer=no)
-respond_group_invite_child(offer(GroupId, _Child), ch(_ChRead, [nack|[]]), []) :-
+*(Answer=no, GroupId?, Child?)
+respond_group_invite_child(offer(GroupId, Child), ch(_ChRead, [nack|[]]), []) :-
     ground(GroupId?) | true.
 
 procedure respond_child_consent(ConsentOffer?, Decision).
 
 %% Grant the child's consent request.
-*(Answer=yes)
+*(Answer=yes, Child?, GroupId?)
 respond_child_consent(offer(Child, GroupId), Answer?) :-
     ground(Child?), ground(GroupId?) | true.
 
 %% Refuse.
-*(Answer=no)
+*(Answer=no, Child?, GroupId?)
 respond_child_consent(offer(Child, GroupId), Answer?) :-
     ground(Child?), ground(GroupId?) | true.
 
