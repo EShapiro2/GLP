@@ -1,5 +1,4 @@
 import 'dart:typed_data';
-import 'package:uuid/uuid.dart';
 
 /// Packet types matching Grassroots protocol
 enum PacketType {
@@ -187,171 +186,64 @@ extension PacketTypeSessionSecurity on PacketType {
   }
 }
 
-/// A Grassroots packet ready for BLE transmission.
+/// A Grassroots packet — the wire frame shared by both transports.
 ///
-/// Binary format (Grassroots-compatible):
+/// Binary format:
 /// ```
 /// [0]       : Packet type (1 byte)
-/// [1]       : TTL (1 byte)
-/// [2-5]     : Timestamp (4 bytes, seconds since epoch, big-endian)
-/// [6-37]    : Sender public key (32 bytes)
-/// [38-69]   : Recipient public key (32 bytes, zeros for broadcast)
-/// [70-73]   : Payload length (4 bytes, big-endian)
-/// [74-89]   : Packet ID (16 bytes, UUID)
-/// [90-153]  : Signature (64 bytes, Ed25519)
-/// [154-N]   : Payload (variable length)
+/// [1-4]     : Payload length (4 bytes, big-endian)
+/// [5-N]     : Payload (variable length)
 /// ```
 ///
-/// Total header size: 154 bytes. The 4-byte payload length is the on-wire
+/// Total header size: 5 bytes. The 4-byte payload length is the on-wire
 /// framer: stream transports (UDP/UDX) accumulate bytes until
 /// `headerSize + payloadLength` are available before treating a buffer as
 /// one packet.
+///
+/// The frame carries no identity, authentication, or identifiers of its
+/// own. Sender identity and integrity come from the layer the payload rides
+/// in: session-encrypted types are authenticated by the Noise session's
+/// AEAD, ANNOUNCE payloads are self-signed identity records, and Noise
+/// handshake payloads carry (and authenticate) the peer's identity claim.
+/// Message identity (delivery dedup, ACK correlation) is payload content:
+/// MESSAGE payloads open with their messageId, as fragment payloads
+/// always have.
 class GrassrootsPacket {
-  static const int headerSize = 154;
-  static const int payloadLengthOffset = 70; // byte index of length field
-  static const int signatureOffset = 90; // byte index of signature start
-  static const int signatureLength = 64;
+  static const int headerSize = 5;
+  static const int payloadLengthOffset = 1; // byte index of length field
 
   /// Soft target for fragmented payloads — chosen to keep a single
-  /// encrypted+signed packet under ~500 byte MTU on BLE.
-  static const int maxPayloadSize = 346; // 500 - 154
-  static const int defaultTtl = 7;
-
-  static const _uuid = Uuid();
-
-  /// Unique packet identifier for deduplication
-  final String packetId;
+  /// encrypted packet under ~500 byte MTU on BLE.
+  static const int maxPayloadSize = 495; // 500 - 5
 
   /// Packet type
   final PacketType type;
 
-  /// Time-to-live: decremented at each hop, dropped when 0
-  int ttl;
-
-  /// Creation timestamp (Unix seconds)
-  final int timestamp;
-
-  /// Sender's Ed25519 public key
-  final Uint8List senderPubkey;
-
-  /// Recipient's public key (null/zeros for broadcast)
-  final Uint8List? recipientPubkey;
-
   /// Payload data (type-specific)
   final Uint8List payload;
 
-  /// Ed25519 signature over packet contents
-  Uint8List signature;
-
   GrassrootsPacket({
-    String? packetId,
     required this.type,
-    this.ttl = defaultTtl,
-    int? timestamp,
-    required this.senderPubkey,
-    this.recipientPubkey,
     required this.payload,
-    required this.signature,
-  })  : packetId = packetId ?? _uuid.v4(),
-        timestamp = timestamp ?? DateTime.now().millisecondsSinceEpoch ~/ 1000 {
-    if (senderPubkey.length != 32) {
-      throw ArgumentError('Sender public key must be 32 bytes');
-    }
-    if (recipientPubkey != null && recipientPubkey!.length != 32) {
-      throw ArgumentError('Recipient public key must be 32 bytes');
-    }
-    if (signature.length != 64) {
-      throw ArgumentError('Signature must be 64 bytes');
-    }
-  }
-
-  /// Whether this is a broadcast packet (no specific recipient)
-  bool get isBroadcast =>
-      recipientPubkey == null || recipientPubkey!.every((b) => b == 0);
-
-  /// Create a copy with decremented TTL for relaying
-  GrassrootsPacket decrementTtl() {
-    if (ttl <= 0) {
-      throw StateError('Cannot decrement TTL below 0');
-    }
-    return GrassrootsPacket(
-      packetId: packetId,
-      type: type,
-      ttl: ttl - 1,
-      timestamp: timestamp,
-      senderPubkey: senderPubkey,
-      recipientPubkey: recipientPubkey,
-      payload: payload,
-      signature: signature,
-    );
-  }
+  });
 
   GrassrootsPacket copyWith({
-    String? packetId,
     PacketType? type,
-    int? ttl,
-    int? timestamp,
-    Uint8List? senderPubkey,
-    Uint8List? recipientPubkey,
     Uint8List? payload,
-    Uint8List? signature,
   }) {
     return GrassrootsPacket(
-      packetId: packetId ?? this.packetId,
       type: type ?? this.type,
-      ttl: ttl ?? this.ttl,
-      timestamp: timestamp ?? this.timestamp,
-      senderPubkey: senderPubkey ?? this.senderPubkey,
-      recipientPubkey: recipientPubkey ?? this.recipientPubkey,
       payload: payload ?? this.payload,
-      signature: signature ?? this.signature,
     );
   }
 
-  /// Serialize to binary format for BLE transmission
+  /// Serialize to binary format for transmission
   Uint8List serialize() {
     final buffer = ByteData(headerSize + payload.length);
-    var offset = 0;
-
-    // Type (1 byte)
-    buffer.setUint8(offset++, type.value);
-
-    // TTL (1 byte)
-    buffer.setUint8(offset++, ttl);
-
-    // Timestamp (4 bytes, big-endian)
-    buffer.setUint32(offset, timestamp, Endian.big);
-    offset += 4;
-
-    // Sender pubkey (32 bytes)
+    buffer.setUint8(0, type.value);
+    buffer.setUint32(1, payload.length, Endian.big);
     final bytes = buffer.buffer.asUint8List();
-    bytes.setRange(offset, offset + 32, senderPubkey);
-    offset += 32;
-
-    // Recipient pubkey (32 bytes, zeros if broadcast)
-    if (recipientPubkey != null) {
-      bytes.setRange(offset, offset + 32, recipientPubkey!);
-    } else {
-      bytes.fillRange(offset, offset + 32, 0);
-    }
-    offset += 32;
-
-    // Payload length (4 bytes, big-endian)
-    buffer.setUint32(offset, payload.length, Endian.big);
-    offset += 4;
-
-    // Packet ID (16 bytes - UUID as bytes)
-    final idBytes = _uuidToBytes(packetId);
-    bytes.setRange(offset, offset + 16, idBytes);
-    offset += 16;
-
-    // Signature (64 bytes)
-    bytes.setRange(offset, offset + 64, signature);
-    offset += 64;
-
-    // Payload
-    bytes.setRange(offset, offset + payload.length, payload);
-
+    bytes.setRange(headerSize, headerSize + payload.length, payload);
     return bytes;
   }
 
@@ -362,71 +254,17 @@ class GrassrootsPacket {
     }
 
     final buffer = ByteData.view(data.buffer, data.offsetInBytes, data.length);
-    var offset = 0;
+    final type = PacketType.fromValue(buffer.getUint8(0));
+    final payloadLength = buffer.getUint32(1, Endian.big);
 
-    // Type
-    final type = PacketType.fromValue(buffer.getUint8(offset++));
-
-    // TTL
-    final ttl = buffer.getUint8(offset++);
-
-    // Timestamp
-    final timestamp = buffer.getUint32(offset, Endian.big);
-    offset += 4;
-
-    // Sender pubkey
-    final senderPubkey = Uint8List.fromList(data.sublist(offset, offset + 32));
-    offset += 32;
-
-    // Recipient pubkey
-    final recipientBytes = data.sublist(offset, offset + 32);
-    final recipientPubkey = recipientBytes.every((b) => b == 0)
-        ? null
-        : Uint8List.fromList(recipientBytes);
-    offset += 32;
-
-    // Payload length
-    final payloadLength = buffer.getUint32(offset, Endian.big);
-    offset += 4;
-
-    // Packet ID
-    final idBytes = data.sublist(offset, offset + 16);
-    final packetId = _bytesToUuid(idBytes);
-    offset += 16;
-
-    // Signature
-    final sigBytes = data.sublist(offset, offset + 64);
-    final signature = Uint8List.fromList(sigBytes);
-    offset += 64;
-
-    // Payload
-    if (data.length < offset + payloadLength) {
+    if (data.length < headerSize + payloadLength) {
       throw FormatException(
           'Incomplete payload: expected $payloadLength bytes');
     }
-    final payload =
-        Uint8List.fromList(data.sublist(offset, offset + payloadLength));
+    final payload = Uint8List.fromList(
+        data.sublist(headerSize, headerSize + payloadLength));
 
-    // debugPrint("Serialized packet of type $type with payload length $payloadLength");
-    return GrassrootsPacket(
-      packetId: packetId,
-      type: type,
-      ttl: ttl,
-      timestamp: timestamp,
-      senderPubkey: senderPubkey,
-      recipientPubkey: recipientPubkey,
-      payload: payload,
-      signature: signature,
-    );
-  }
-
-  /// Get bytes that should be signed (everything except signature)
-  Uint8List getSignableBytes() {
-    final serialized = serialize();
-    // Zero out the signature portion.
-    final signable = Uint8List.fromList(serialized);
-    signable.fillRange(signatureOffset, signatureOffset + signatureLength, 0);
-    return signable;
+    return GrassrootsPacket(type: type, payload: payload);
   }
 
   /// Peek the payload length from a serialized buffer without parsing the
@@ -440,28 +278,7 @@ class GrassrootsPacket {
     return view.getUint32(payloadLengthOffset, Endian.big);
   }
 
-  /// Convert UUID string to 16 bytes
-  static Uint8List _uuidToBytes(String uuid) {
-    final hex = uuid.replaceAll('-', '');
-    final bytes = Uint8List(16);
-    for (var i = 0; i < 16; i++) {
-      bytes[i] = int.parse(hex.substring(i * 2, i * 2 + 2), radix: 16);
-    }
-    return bytes;
-  }
-
-  /// Convert 16 bytes to UUID string
-  static String _bytesToUuid(Uint8List bytes) {
-    if (bytes.length != 16) throw ArgumentError('UUID must be 16 bytes');
-    final hex = bytes.map((b) => b.toRadixString(16).padLeft(2, '0')).join();
-    return '${hex.substring(0, 8)}-'
-        '${hex.substring(8, 12)}-'
-        '${hex.substring(12, 16)}-'
-        '${hex.substring(16, 20)}-'
-        '${hex.substring(20, 32)}';
-  }
-
   @override
   String toString() =>
-      'GrassrootsPacket($type, ttl=$ttl, payload=${payload.length}b)';
+      'GrassrootsPacket($type, payload=${payload.length}b)';
 }

@@ -6,39 +6,43 @@ import 'packet.dart';
 
 /// Protocol handler for the bootstrap anchor.
 ///
-/// Handles packet signing, verification, and ANNOUNCE encoding/decoding.
-/// Wire-compatible with the Flutter client's ProtocolHandler.
+/// Handles the self-signed ANNOUNCE record and record-level Ed25519
+/// signing/verification. Wire-compatible with the Flutter client's
+/// ProtocolHandler.
 class Protocol {
   final AnchorIdentity identity;
-  static const int protocolVersion = 1;
+  static const int protocolVersion = 2;
+
+  /// Length of the trailing Ed25519 signature on an ANNOUNCE payload.
+  static const int announceSignatureLength = 64;
 
   const Protocol({required this.identity});
 
   // ===== Signing & Verification =====
 
-  /// Sign a packet with our Ed25519 private key.
-  Future<void> signPacket(GrassrootsPacket packet) async {
-    final algorithm = Ed25519();
-    final signableBytes = packet.getSignableBytes();
+  /// Detached Ed25519 signature over arbitrary [message] bytes under the
+  /// anchor identity. Used for self-contained signed records (ANNOUNCE).
+  Future<Uint8List> signBytes(Uint8List message) async {
     final signature =
-        await algorithm.sign(signableBytes, keyPair: identity.keyPair);
-    packet.signature = Uint8List.fromList(signature.bytes);
+        await Ed25519().sign(message, keyPair: identity.keyPair);
+    return Uint8List.fromList(signature.bytes);
   }
 
-  /// Verify a packet's Ed25519 signature against the sender's public key.
-  Future<bool> verifyPacket(GrassrootsPacket packet) async {
+  /// Verify a detached Ed25519 [signature] over [message] against
+  /// [publicKey]. Returns false on any error.
+  Future<bool> verifyBytes({
+    required Uint8List signature,
+    required Uint8List message,
+    required Uint8List publicKey,
+  }) async {
     try {
-      final algorithm = Ed25519();
-      final signableBytes = packet.getSignableBytes();
-      final publicKey = SimplePublicKey(
-        packet.senderPubkey,
-        type: KeyPairType.ed25519,
+      return await Ed25519().verify(
+        message,
+        signature: Signature(
+          signature,
+          publicKey: SimplePublicKey(publicKey, type: KeyPairType.ed25519),
+        ),
       );
-      final signature = Signature(
-        packet.signature,
-        publicKey: publicKey,
-      );
-      return await algorithm.verify(signableBytes, signature: signature);
     } catch (e) {
       return false;
     }
@@ -46,15 +50,16 @@ class Protocol {
 
   // ===== ANNOUNCE =====
 
-  /// Create ANNOUNCE payload.
+  /// Create a self-signed ANNOUNCE payload. Must match the client's format:
   ///
   /// Format: pubkey(32) + version(2) + nickLen(1) + nick
   /// + candidateCount(2) + repeated(candidateLen(2) + candidate)
-  Uint8List createAnnouncePayload({
+  /// + signature(64) over all preceding bytes
+  Future<Uint8List> createAnnouncePayload({
     String? address,
     String? linkLocalAddress,
     Iterable<String> addressCandidates = const [],
-  }) {
+  }) async {
     final nicknameBytes = Uint8List.fromList(identity.nickname.codeUnits);
     final candidates = <String>{
       if (address != null && address.isNotEmpty) address,
@@ -87,11 +92,13 @@ class Protocol {
       buffer.add(candidateBytes);
     }
 
+    buffer.add(await signBytes(buffer.toBytes()));
     return buffer.toBytes();
   }
 
-  /// Decode ANNOUNCE payload.
-  AnnounceData decodeAnnounce(Uint8List data) {
+  /// Decode and verify a self-signed ANNOUNCE payload. Throws
+  /// [FormatException] on malformed input or a bad signature.
+  Future<AnnounceData> decodeAnnounce(Uint8List data) async {
     var offset = 0;
 
     final pubkey = data.sublist(offset, offset + 32);
@@ -135,6 +142,19 @@ class Protocol {
       offset += candidateLength;
     }
 
+    if (data.length != offset + announceSignatureLength) {
+      throw const FormatException('ANNOUNCE signature missing or malformed');
+    }
+    final signature = data.sublist(offset, offset + announceSignatureLength);
+    final signedBytes = data.sublist(0, offset);
+    if (!await verifyBytes(
+      signature: signature,
+      message: signedBytes,
+      publicKey: Uint8List.fromList(pubkey),
+    )) {
+      throw const FormatException('ANNOUNCE signature verification failed');
+    }
+
     final address = _firstNonLinkLocalCandidate(addressCandidates);
     final linkLocalAddress = _firstLinkLocalCandidate(addressCandidates);
 
@@ -174,44 +194,29 @@ class Protocol {
     return host.startsWith('169.254.');
   }
 
-  /// Create an ANNOUNCE packet (broadcast).
-  GrassrootsPacket createAnnouncePacket({String? address}) {
-    final payload = createAnnouncePayload(address: address);
+  /// Create an ANNOUNCE packet (self-signed payload).
+  Future<GrassrootsPacket> createAnnouncePacket({String? address}) async {
     return GrassrootsPacket(
       type: PacketType.announce,
-      senderPubkey: identity.publicKey,
-      recipientPubkey: null, // broadcast
-      payload: payload,
-      signature: Uint8List(64), // must sign before sending
+      payload: await createAnnouncePayload(address: address),
     );
   }
 
   /// Create ACK packet.
-  GrassrootsPacket createAckPacket({
-    required String messageId,
-    Uint8List? recipientPubkey,
-  }) {
-    final payload = Uint8List.fromList(messageId.codeUnits);
+  GrassrootsPacket createAckPacket({required String messageId}) {
     return GrassrootsPacket(
       type: PacketType.ack,
-      senderPubkey: identity.publicKey,
-      recipientPubkey: recipientPubkey,
-      payload: payload,
-      signature: Uint8List(64),
+      payload: Uint8List.fromList(messageId.codeUnits),
     );
   }
 
-  /// Create a signaling packet targeting a specific peer.
+  /// Create a signaling packet.
   GrassrootsPacket createSignalingPacket({
-    required Uint8List recipientPubkey,
     required Uint8List signalingPayload,
   }) {
     return GrassrootsPacket(
       type: PacketType.signaling,
-      senderPubkey: identity.publicKey,
-      recipientPubkey: recipientPubkey,
       payload: signalingPayload,
-      signature: Uint8List(64),
     );
   }
 }

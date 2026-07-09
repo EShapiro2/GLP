@@ -36,9 +36,15 @@ void main() {
       test('encodes public key, version, and nickname correctly', () {
         final payload = handler.createAnnouncePayload();
 
-        // Verify payload structure
-        expect(payload.length,
-            greaterThanOrEqualTo(32 + 2 + 1 + 'TestUser'.length + 2));
+        // Verify payload structure (record + trailing signature)
+        expect(
+            payload.length,
+            greaterThanOrEqualTo(32 +
+                2 +
+                1 +
+                'TestUser'.length +
+                2 +
+                ProtocolHandler.announceSignatureLength));
 
         // Public key (first 32 bytes)
         final pubkeyFromPayload = payload.sublist(0, 32);
@@ -48,7 +54,7 @@ void main() {
         final versionData =
             ByteData.view(payload.buffer, payload.offsetInBytes + 32, 2);
         final version = versionData.getUint16(0, Endian.big);
-        expect(version, equals(1)); // Protocol version 1
+        expect(version, equals(ProtocolHandler.protocolVersion));
 
         // Nickname length and nickname
         final nickLen = payload[34];
@@ -91,8 +97,11 @@ void main() {
         final payload = emptyHandler.createAnnouncePayload();
 
         // Should have valid structure with 0-length nickname.
-        // pubkey + version + nickLen(0) + candidateCount(0)
-        expect(payload.length, equals(32 + 2 + 1 + 2));
+        // pubkey + version + nickLen(0) + candidateCount(0) + signature
+        expect(
+            payload.length,
+            equals(
+                32 + 2 + 1 + 2 + ProtocolHandler.announceSignatureLength));
         expect(payload[34], equals(0)); // nickname length = 0
       });
 
@@ -141,7 +150,8 @@ void main() {
 
         expect(decoded.publicKey, equals(testIdentity.publicKey));
         expect(decoded.nickname, equals('TestUser'));
-        expect(decoded.protocolVersion, equals(1));
+        expect(decoded.protocolVersion,
+            equals(ProtocolHandler.protocolVersion));
         expect(decoded.udpAddress, isNull);
         expect(decoded.addressCandidates, isEmpty);
       });
@@ -153,7 +163,8 @@ void main() {
 
         expect(decoded.publicKey, equals(testIdentity.publicKey));
         expect(decoded.nickname, equals('TestUser'));
-        expect(decoded.protocolVersion, equals(1));
+        expect(decoded.protocolVersion,
+            equals(ProtocolHandler.protocolVersion));
         expect(decoded.udpAddress, equals(testAddress));
         expect(decoded.addressCandidates, contains(testAddress));
       });
@@ -168,7 +179,7 @@ void main() {
             .setRange(offset, offset + 32, testIdentity.publicKey);
         offset += 32;
 
-        buffer.setUint16(offset, 1, Endian.big);
+        buffer.setUint16(offset, ProtocolHandler.protocolVersion, Endian.big);
         offset += 2;
 
         buffer.setUint8(offset++, nicknameBytes.length);
@@ -195,7 +206,7 @@ void main() {
         offset += 32;
 
         // Version
-        buffer.setUint16(offset, 1, Endian.big);
+        buffer.setUint16(offset, ProtocolHandler.protocolVersion, Endian.big);
         offset += 2;
 
         // Nickname length = 0
@@ -204,85 +215,131 @@ void main() {
         // Candidate count = 0
         buffer.setUint16(offset, 0, Endian.big);
 
-        final payload = buffer.buffer.asUint8List();
+        // Self-sign the record so it verifies against the carried pubkey.
+        final record = buffer.buffer.asUint8List();
+        final payload =
+            Uint8List.fromList([...record, ...handler.signBytes(record)]);
         final decoded = handler.decodeAnnounce(payload);
 
         expect(decoded.nickname, equals(''));
         expect(decoded.udpAddress, isNull);
         expect(decoded.addressCandidates, isEmpty);
       });
+
+      test('throws when a signed payload byte is tampered', () {
+        final payload = handler.createAnnouncePayload(
+          address: '[2001:db8::7]:4001',
+        );
+
+        // Flip a bit inside the nickname — structure still parses, but the
+        // trailing signature no longer covers the bytes.
+        payload[36] ^= 0xFF;
+
+        expect(
+          () => handler.decodeAnnounce(payload),
+          throwsA(isA<FormatException>()),
+        );
+      });
+
+      test('throws when the signature is truncated', () {
+        final payload = handler.createAnnouncePayload();
+        final truncated = payload.sublist(0, payload.length - 1);
+
+        expect(
+          () => handler.decodeAnnounce(truncated),
+          throwsA(isA<FormatException>()),
+        );
+      });
+
+      test('throws when the signature is tampered', () {
+        final payload = handler.createAnnouncePayload();
+        payload[payload.length - 1] ^= 0xFF;
+
+        expect(
+          () => handler.decodeAnnounce(payload),
+          throwsA(isA<FormatException>()),
+        );
+      });
     });
 
     group('createMessagePacket', () {
-      test('creates packet with correct type and sender', () {
-        final testPayload = utf8.encode('Hello, World!');
-        final packet = handler.createMessagePacket(payload: testPayload);
+      const messageId = '550e8400-e29b-41d4-a716-446655440000';
 
-        expect(packet.type, equals(PacketType.message));
-        expect(packet.senderPubkey, equals(testIdentity.publicKey));
-        expect(packet.payload, equals(testPayload));
-        expect(packet.recipientPubkey, isNull); // Broadcast
-      });
-
-      test('creates packet with specific recipient', () {
-        final testPayload = utf8.encode('Private message');
-        final recipientPubkey =
-            Uint8List.fromList(List.generate(32, (i) => 100 + i));
+      test('prefixes the body with the 36-char messageId', () {
+        final body = utf8.encode('Hello, World!');
         final packet = handler.createMessagePacket(
-          payload: testPayload,
-          recipientPubkey: recipientPubkey,
+          payload: body,
+          messageId: messageId,
         );
 
         expect(packet.type, equals(PacketType.message));
-        expect(packet.senderPubkey, equals(testIdentity.publicKey));
-        expect(packet.payload, equals(testPayload));
-        expect(packet.recipientPubkey, equals(recipientPubkey));
-        expect(packet.isBroadcast, isFalse);
+        expect(packet.payload.length,
+            equals(ProtocolHandler.messageIdLength + body.length));
+        expect(
+          utf8.decode(
+              packet.payload.sublist(0, ProtocolHandler.messageIdLength)),
+          equals(messageId),
+        );
+        expect(
+          packet.payload.sublist(ProtocolHandler.messageIdLength),
+          equals(body),
+        );
       });
 
-      test('creates packet with empty payload', () {
-        final packet = handler.createMessagePacket(payload: Uint8List(0));
+      test('throws for a messageId that is not 36 characters', () {
+        expect(
+          () => handler.createMessagePacket(
+            payload: utf8.encode('Hello'),
+            messageId: 'short-id',
+          ),
+          throwsArgumentError,
+        );
+      });
 
-        expect(packet.payload.length, equals(0));
+      test('creates packet with empty body', () {
+        final packet = handler.createMessagePacket(
+          payload: Uint8List(0),
+          messageId: messageId,
+        );
+
         expect(packet.type, equals(PacketType.message));
+        expect(
+            packet.payload.length, equals(ProtocolHandler.messageIdLength));
+        expect(utf8.decode(packet.payload), equals(messageId));
       });
 
-      test('creates packet with large payload', () {
-        final largePayload = Uint8List(1000);
+      test('creates packet with large body', () {
+        final largeBody = Uint8List(1000);
         for (var i = 0; i < 1000; i++) {
-          largePayload[i] = i % 256;
+          largeBody[i] = i % 256;
         }
 
-        final packet = handler.createMessagePacket(payload: largePayload);
+        final packet = handler.createMessagePacket(
+          payload: largeBody,
+          messageId: messageId,
+        );
 
-        expect(packet.payload.length, equals(1000));
-        expect(packet.payload, equals(largePayload));
+        expect(packet.payload.length,
+            equals(ProtocolHandler.messageIdLength + 1000));
+        expect(
+          packet.payload.sublist(ProtocolHandler.messageIdLength),
+          equals(largeBody),
+        );
       });
     });
 
     group('createReadReceiptPacket', () {
       test('creates read receipt with message ID', () {
         const messageId = 'test-message-id-12345';
-        final recipientPubkey =
-            Uint8List.fromList(List.generate(32, (i) => 50 + i));
-        final packet = handler.createReadReceiptPacket(
-          messageId: messageId,
-          recipientPubkey: recipientPubkey,
-        );
+        final packet = handler.createReadReceiptPacket(messageId: messageId);
 
         expect(packet.type, equals(PacketType.readReceipt));
-        expect(packet.senderPubkey, equals(testIdentity.publicKey));
-        expect(packet.recipientPubkey, equals(recipientPubkey));
         expect(utf8.decode(packet.payload), equals(messageId));
       });
 
       test('handles UUID message IDs', () {
         const messageId = '550e8400-e29b-41d4-a716-446655440000';
-        final recipientPubkey = Uint8List.fromList(List.generate(32, (i) => i));
-        final packet = handler.createReadReceiptPacket(
-          messageId: messageId,
-          recipientPubkey: recipientPubkey,
-        );
+        final packet = handler.createReadReceiptPacket(messageId: messageId);
 
         final decodedId = utf8.decode(packet.payload);
         expect(decodedId, equals(messageId));
@@ -309,83 +366,62 @@ void main() {
     group('createAckPacket', () {
       test('creates ACK with message ID', () {
         const messageId = 'ack-msg-1';
-        final recipientPubkey =
-            Uint8List.fromList(List.generate(32, (i) => 50 + i));
-        final packet = handler.createAckPacket(
-          messageId: messageId,
-          recipientPubkey: recipientPubkey,
-        );
+        final packet = handler.createAckPacket(messageId: messageId);
 
         expect(packet.type, equals(PacketType.ack));
-        expect(packet.senderPubkey, equals(testIdentity.publicKey));
-        expect(packet.recipientPubkey, equals(recipientPubkey));
         expect(utf8.decode(packet.payload), equals(messageId));
-      });
-
-      test('creates broadcast ACK when no recipient', () {
-        final packet = handler.createAckPacket(messageId: 'ack-bcast');
-
-        expect(packet.type, equals(PacketType.ack));
-        expect(packet.isBroadcast, isTrue);
       });
     });
 
-    group('signPacket and verifyPacket', () {
-      test('signed packet verifies successfully', () async {
-        final packet = handler.createMessagePacket(
-          payload: utf8.encode('Hello'),
-          recipientPubkey: Uint8List(32),
+    group('signBytes and verifyBytes', () {
+      test('signed message verifies successfully', () {
+        final message = utf8.encode('Hello');
+        final signature = handler.signBytes(message);
+
+        expect(signature.length, equals(64));
+        expect(
+          handler.verifyBytes(
+            signature: signature,
+            message: message,
+            publicKey: testIdentity.publicKey,
+          ),
+          isTrue,
         );
-
-        await handler.signPacket(packet);
-        final isValid = await handler.verifyPacket(packet);
-
-        expect(isValid, isTrue);
       });
 
-      test('unsigned packet (all-zero signature) fails verification', () async {
-        final packet = handler.createMessagePacket(
-          payload: utf8.encode('Hello'),
+      test('tampered message fails verification', () {
+        final message = utf8.encode('Original');
+        final signature = handler.signBytes(message);
+
+        message[0] = message[0] ^ 0xFF;
+
+        expect(
+          handler.verifyBytes(
+            signature: signature,
+            message: message,
+            publicKey: testIdentity.publicKey,
+          ),
+          isFalse,
         );
-        // signature is Uint8List(64) — all zeros
-
-        final isValid = await handler.verifyPacket(packet);
-
-        expect(isValid, isFalse);
       });
 
-      test('tampered payload fails verification', () async {
-        final packet = handler.createMessagePacket(
-          payload: utf8.encode('Original'),
-          recipientPubkey: Uint8List(32),
+      test('tampered signature fails verification', () {
+        final message = utf8.encode('Data');
+        final signature = handler.signBytes(message);
+
+        signature[0] = signature[0] ^ 0xFF;
+
+        expect(
+          handler.verifyBytes(
+            signature: signature,
+            message: message,
+            publicKey: testIdentity.publicKey,
+          ),
+          isFalse,
         );
-
-        await handler.signPacket(packet);
-
-        // Tamper with payload after signing
-        packet.payload[0] = packet.payload[0] ^ 0xFF;
-
-        final isValid = await handler.verifyPacket(packet);
-        expect(isValid, isFalse);
       });
 
-      test('tampered signature fails verification', () async {
-        final packet = handler.createMessagePacket(
-          payload: utf8.encode('Data'),
-          recipientPubkey: Uint8List(32),
-        );
-
-        await handler.signPacket(packet);
-
-        // Tamper with signature
-        packet.signature[0] = packet.signature[0] ^ 0xFF;
-
-        final isValid = await handler.verifyPacket(packet);
-        expect(isValid, isFalse);
-      });
-
-      test('packet signed by different identity fails verification', () async {
-        // Create a different identity
+      test('signature from a different identity fails verification', () async {
         final otherKeyPair = await Ed25519().newKeyPair();
         final otherIdentity = await GrassrootsIdentity.create(
           keyPair: otherKeyPair,
@@ -394,56 +430,19 @@ void main() {
         final otherHandler =
             ProtocolHandler(identity: otherIdentity, sodium: sodium);
 
-        // Create packet claiming to be from testIdentity
-        final packet = handler.createMessagePacket(
-          payload: utf8.encode('Forged'),
-        );
+        final message = utf8.encode('Forged');
+        final signature = otherHandler.signBytes(message);
 
-        // Sign with otherIdentity's key (but senderPubkey is testIdentity's)
-        await otherHandler.signPacket(packet);
-
-        // Verification should fail: signature doesn't match senderPubkey
-        final isValid = await handler.verifyPacket(packet);
-        expect(isValid, isFalse);
-      });
-
-      test('sign and verify works for all packet types', () async {
-        final packets = [
-          handler.createMessagePacket(payload: utf8.encode('msg')),
-          handler.createReadReceiptPacket(
-            messageId: 'rcpt-1',
-            recipientPubkey: Uint8List(32),
+        // Verification against testIdentity's key must fail: the signature
+        // was produced by otherIdentity.
+        expect(
+          handler.verifyBytes(
+            signature: signature,
+            message: message,
+            publicKey: testIdentity.publicKey,
           ),
-          handler.createAckPacket(messageId: 'ack-1'),
-          GrassrootsPacket(
-            type: PacketType.announce,
-            senderPubkey: testIdentity.publicKey,
-            payload: handler.createAnnouncePayload(),
-            signature: Uint8List(64),
-          ),
-        ];
-
-        for (final packet in packets) {
-          await handler.signPacket(packet);
-          final isValid = await handler.verifyPacket(packet);
-          expect(isValid, isTrue, reason: 'Failed for ${packet.type}');
-        }
-      });
-
-      test('sign and verify survives serialization round-trip', () async {
-        final packet = handler.createMessagePacket(
-          payload: utf8.encode('Round trip test'),
-          recipientPubkey: Uint8List.fromList(List.generate(32, (i) => i)),
+          isFalse,
         );
-
-        await handler.signPacket(packet);
-
-        // Serialize and deserialize
-        final bytes = packet.serialize();
-        final restored = GrassrootsPacket.deserialize(bytes);
-
-        final isValid = await handler.verifyPacket(restored);
-        expect(isValid, isTrue);
       });
     });
 

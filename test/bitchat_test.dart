@@ -6,90 +6,23 @@ import 'package:grassroots_networking/src/protocol/fragment_handler.dart';
 
 void main() {
   group('GrassrootsPacket', () {
-    late Uint8List testPubkey;
     late Uint8List testPayload;
 
     setUp(() {
-      testPubkey = Uint8List.fromList(List.generate(32, (i) => i));
       testPayload = Uint8List.fromList([1, 2, 3, 4, 5]);
     });
 
     test('serializes and deserializes correctly', () {
       final packet = GrassrootsPacket(
         type: PacketType.message,
-        ttl: 5,
-        senderPubkey: testPubkey,
         payload: testPayload,
-        signature: Uint8List(64),
       );
 
       final serialized = packet.serialize();
       final deserialized = GrassrootsPacket.deserialize(serialized);
 
       expect(deserialized.type, equals(packet.type));
-      expect(deserialized.ttl, equals(packet.ttl));
-      expect(deserialized.packetId, equals(packet.packetId));
-      expect(deserialized.senderPubkey, equals(packet.senderPubkey));
       expect(deserialized.payload, equals(packet.payload));
-      expect(deserialized.isBroadcast, isTrue);
-    });
-
-    test('serializes with recipient pubkey', () {
-      final recipientPubkey =
-          Uint8List.fromList(List.generate(32, (i) => 32 + i));
-
-      final packet = GrassrootsPacket(
-        type: PacketType.message,
-        ttl: 7,
-        senderPubkey: testPubkey,
-        recipientPubkey: recipientPubkey,
-        payload: testPayload,
-        signature: Uint8List(64),
-      );
-
-      final serialized = packet.serialize();
-      final deserialized = GrassrootsPacket.deserialize(serialized);
-
-      expect(deserialized.isBroadcast, isFalse);
-      expect(deserialized.recipientPubkey, equals(recipientPubkey));
-    });
-
-    test('decrements TTL correctly', () {
-      final packet = GrassrootsPacket(
-        type: PacketType.message,
-        ttl: 5,
-        senderPubkey: testPubkey,
-        payload: testPayload,
-        signature: Uint8List(64),
-      );
-
-      final decremented = packet.decrementTtl();
-      expect(decremented.ttl, equals(4));
-      expect(decremented.packetId, equals(packet.packetId));
-    });
-
-    test('throws on TTL below zero', () {
-      final packet = GrassrootsPacket(
-        type: PacketType.message,
-        ttl: 0,
-        senderPubkey: testPubkey,
-        payload: testPayload,
-        signature: Uint8List(64),
-      );
-
-      expect(() => packet.decrementTtl(), throwsStateError);
-    });
-
-    test('throws on invalid pubkey length', () {
-      expect(
-        () => GrassrootsPacket(
-          type: PacketType.message,
-          senderPubkey: Uint8List(16), // Wrong length
-          payload: testPayload,
-          signature: Uint8List(64),
-        ),
-        throwsArgumentError,
-      );
     });
   });
 
@@ -155,11 +88,9 @@ void main() {
 
   group('FragmentHandler', () {
     late FragmentHandler handler;
-    late Uint8List testPubkey;
 
     setUp(() {
       handler = FragmentHandler();
-      testPubkey = Uint8List.fromList(List.generate(32, (i) => i));
     });
 
     tearDown(() {
@@ -179,10 +110,7 @@ void main() {
     test('fragments and reassembles correctly', () {
       final payload = Uint8List.fromList(List.generate(1500, (i) => i % 256));
 
-      final fragmented = handler.fragment(
-        payload: payload,
-        senderPubkey: testPubkey,
-      );
+      final fragmented = handler.fragment(payload: payload);
 
       expect(fragmented.fragments.length, greaterThan(1));
       expect(fragmented.fragments.first.type, equals(PacketType.fragmentStart));
@@ -202,10 +130,7 @@ void main() {
     test('returns null for incomplete fragments', () {
       final payload = Uint8List.fromList(List.generate(1500, (i) => i % 256));
 
-      final fragmented = handler.fragment(
-        payload: payload,
-        senderPubkey: testPubkey,
-      );
+      final fragmented = handler.fragment(payload: payload);
 
       // Process only first fragment
       final result = handler.processFragment(fragmented.fragments.first);

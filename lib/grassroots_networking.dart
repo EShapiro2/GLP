@@ -4,9 +4,8 @@
 /// It handles:
 /// - BLE Central/Peripheral dual-mode operation
 /// - Packet fragmentation and reassembly
-/// - Mesh routing with TTL-based relay
 /// - Duplicate detection via Bloom filter
-/// - Store-and-forward for offline peers
+/// - Local queueing of our own outbound messages for offline peers
 /// 
 /// ## Usage
 /// 

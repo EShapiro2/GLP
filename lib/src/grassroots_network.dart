@@ -619,7 +619,6 @@ class GrassrootsNetwork {
     _fragmentHandler = FragmentHandler();
     _noiseSessions = NoiseSessionManager(identity: identity, sodium: sodium);
     _messageRouter = MessageRouter(
-      identity: identity,
       store: store,
       protocolHandler: _protocolHandler,
       fragmentHandler: _fragmentHandler,
@@ -2096,9 +2095,8 @@ class GrassrootsNetwork {
       return null;
     }
 
-    // Use provided message ID or generate one. Full UUID required —
-    // packet.packetId is wire-encoded as 16 bytes, so a short prefix would
-    // be corrupted on serialization.
+    // Use provided message ID or generate one. Full UUID required — the
+    // MESSAGE payload carries it as a fixed 36-character prefix.
     messageId ??= _uuid.v4();
 
     // Dispatch sending action (clock icon)
@@ -2138,16 +2136,13 @@ class GrassrootsNetwork {
       return false;
     }
 
-    // Create the message packet. It is signed after optional session
-    // encryption because the signature covers the final wire payload.
-    // packetId == messageId so the recipient's ACK (which echoes the
-    // packetId back) matches the entry we just stored under `messageId`
-    // in `MessageSendingAction`. Otherwise `MessageDeliveredAction` would
-    // look up an unrelated UUID and never flip ✓ → ✓✓.
+    // Create the message packet. The payload's messageId prefix is the id
+    // the recipient's ACK echoes back, matching the entry we just stored
+    // under `messageId` in `MessageSendingAction` so
+    // `MessageDeliveredAction` can flip ✓ → ✓✓.
     final packet = _protocolHandler.createMessagePacket(
       payload: payload,
-      recipientPubkey: recipientPubkey,
-      packetId: messageId,
+      messageId: messageId,
     );
 
     // --- Try BLE first (preferred for nearby peers) ---
@@ -2167,7 +2162,7 @@ class GrassrootsNetwork {
           messageId: messageId,
         );
       } else {
-        final bytes = await _signedPacketBytesForTransport(
+        final bytes = await _packetBytesForTransport(
           packet: packet,
           transport: PeerTransport.bleDirect,
           recipientPubkey: recipientPubkey,
@@ -2201,7 +2196,7 @@ class GrassrootsNetwork {
 
       // Try existing UDX connection first
       if (_udpService!.getPeerIdForPubkey(recipientPubkey) != null) {
-        final bytes = await _signedPacketBytesForTransport(
+        final bytes = await _packetBytesForTransport(
           packet: packet,
           transport: PeerTransport.udp,
           recipientPubkey: recipientPubkey,
@@ -2577,14 +2572,13 @@ class GrassrootsNetwork {
     // session encryption, if available.
     final packet = _protocolHandler.createReadReceiptPacket(
       messageId: messageId,
-      recipientPubkey: senderPubkey,
     );
 
     // Try BLE first
     if (_isBleEnabledInSettings && _bleAvailable && _bleService != null) {
       final bleDeviceId = _connectedBleDeviceIdForPeer(peer);
       if (peer != null && bleDeviceId != null) {
-        final bytes = await _signedPacketBytesForTransport(
+        final bytes = await _packetBytesForTransport(
           packet: packet,
           transport: PeerTransport.bleDirect,
           recipientPubkey: senderPubkey,
@@ -2635,9 +2629,9 @@ class GrassrootsNetwork {
           } else {
             final packet = _protocolHandler.createMessagePacket(
               payload: payload,
-              recipientPubkey: pubkey,
+              messageId: _uuid.v4(),
             );
-            final bytes = await _signedPacketBytesForTransport(
+            final bytes = await _packetBytesForTransport(
               packet: packet,
               transport: PeerTransport.bleDirect,
               recipientPubkey: pubkey,
@@ -2661,9 +2655,9 @@ class GrassrootsNetwork {
           }
           final packet = _protocolHandler.createMessagePacket(
             payload: payload,
-            recipientPubkey: peer.publicKey,
+            messageId: _uuid.v4(),
           );
-          final bytes = await _signedPacketBytesForTransport(
+          final bytes = await _packetBytesForTransport(
             packet: packet,
             transport: PeerTransport.udp,
             recipientPubkey: peer.publicKey,
@@ -2966,13 +2960,8 @@ class GrassrootsNetwork {
   }) async {
     final packet = GrassrootsPacket(
       type: PacketType.noiseHandshake,
-      ttl: 0,
-      senderPubkey: identity.publicKey,
-      recipientPubkey: recipientPubkey,
       payload: payload,
-      signature: Uint8List(64),
     );
-    await _protocolHandler.signPacket(packet);
     final bytes = packet.serialize();
 
     if (transport == PeerTransport.bleDirect) {
@@ -2993,7 +2982,7 @@ class GrassrootsNetwork {
     return false;
   }
 
-  Future<Uint8List?> _signedPacketBytesForTransport({
+  Future<Uint8List?> _packetBytesForTransport({
     required GrassrootsPacket packet,
     required PeerTransport transport,
     required Uint8List recipientPubkey,
@@ -3013,7 +3002,6 @@ class GrassrootsNetwork {
         remotePubkey: recipientPubkey,
       );
     }
-    await _protocolHandler.signPacket(outgoing);
     return outgoing.serialize();
   }
 
@@ -3073,16 +3061,10 @@ class GrassrootsNetwork {
     return pair;
   }
 
-  GrassrootsPacket _createSignalingPacket(
-    Uint8List recipientPubkey,
-    Uint8List signalingPayload,
-  ) {
+  GrassrootsPacket _createSignalingPacket(Uint8List signalingPayload) {
     return GrassrootsPacket(
       type: PacketType.signaling,
-      senderPubkey: identity.publicKey,
-      recipientPubkey: recipientPubkey,
       payload: signalingPayload,
-      signature: Uint8List(64),
     );
   }
 
@@ -3102,8 +3084,8 @@ class GrassrootsNetwork {
       return false;
     }
 
-    final packet = _createSignalingPacket(recipientPubkey, signalingPayload);
-    final bytes = await _signedPacketBytesForTransport(
+    final packet = _createSignalingPacket(signalingPayload);
+    final bytes = await _packetBytesForTransport(
       packet: packet,
       transport: PeerTransport.bleDirect,
       recipientPubkey: recipientPubkey,
@@ -3297,7 +3279,7 @@ class GrassrootsNetwork {
             );
     if (!connected) return false;
 
-    final bytes = await _signedPacketBytesForTransport(
+    final bytes = await _packetBytesForTransport(
       packet: packet,
       transport: PeerTransport.udp,
       recipientPubkey: recipientPubkey,
@@ -4010,18 +3992,27 @@ class GrassrootsNetwork {
         final result = await _noiseSessions.handleHandshakePacket(
           packet,
           transport: transport,
+          peerId: peerId,
         );
         final response = result.responsePayload;
         if (response != null) {
           await _sendNoiseHandshakePacket(
             transport: transport,
-            recipientPubkey: packet.senderPubkey,
+            recipientPubkey: result.remotePubkey,
             peerId: peerId,
             payload: response,
           );
         }
         if (result.sessionEstablished) {
-          _onNoiseSessionEstablished(transport, packet.senderPubkey);
+          // The handshake authenticated the connection's identity — map any
+          // still-anonymous inbound UDP connection to the peer's pubkey.
+          if (transport == PeerTransport.udp && peerId != null) {
+            _udpService?.mapIncomingConnectionToPubkey(
+              peerId,
+              _pubkeyToHex(result.remotePubkey),
+            );
+          }
+          _onNoiseSessionEstablished(transport, result.remotePubkey);
         }
       } catch (e) {
         debugPrint('[noise] Dropping handshake packet: $e');
@@ -4031,9 +4022,25 @@ class GrassrootsNetwork {
     _messageRouter.decryptSessionPacket =
         (packet, transport, {String? peerId}) async {
       try {
+        // Resolve the connection's identity when the transport already knows
+        // it (BLE deviceId→pubkey from ANNOUNCE identification; UDP peerId is
+        // the pubkey hex once the connection is mapped). The session manager
+        // falls back to its own connection→identity map from the handshake.
+        Uint8List? remotePubkey;
+        if (peerId != null) {
+          if (transport == PeerTransport.bleDirect) {
+            remotePubkey = _bleService?.getPubkeyForPeerId(peerId);
+          } else if (transport == PeerTransport.udp &&
+              !peerId.contains(':') &&
+              peerId.length == 64) {
+            remotePubkey = _hexToBytes(peerId);
+          }
+        }
         return await _noiseSessions.decryptPacket(
           packet,
           transport: transport,
+          peerId: peerId,
+          remotePubkey: remotePubkey,
         );
       } catch (e) {
         debugPrint('[noise] Failed to decrypt session packet: $e');
@@ -4199,9 +4206,8 @@ class GrassrootsNetwork {
 
       final ackPacket = _protocolHandler.createAckPacket(
         messageId: messageId,
-        recipientPubkey: recipientPubkey,
       );
-      final bytes = await _signedPacketBytesForTransport(
+      final bytes = await _packetBytesForTransport(
         packet: ackPacket,
         transport: transport,
         recipientPubkey: recipientPubkey,
@@ -4233,10 +4239,7 @@ class GrassrootsNetwork {
     // SignalingService sends signaling payloads through us (wrapped in GrassrootsPacket)
     _signalingService.sendSignaling =
         (recipientPubkey, signalingPayload) async {
-      final packet = _createSignalingPacket(
-        recipientPubkey,
-        signalingPayload,
-      );
+      final packet = _createSignalingPacket(signalingPayload);
 
       final pubkeyHex = _pubkeyToHex(recipientPubkey);
       final isRendezvous = _isRendezvousPubkeyHex(pubkeyHex);
@@ -4270,7 +4273,7 @@ class GrassrootsNetwork {
       if (_bleService != null && _bleAvailable) {
         final peerId = _bleService!.getPeerIdForPubkey(recipientPubkey);
         if (peerId != null) {
-          final bytes = await _signedPacketBytesForTransport(
+          final bytes = await _packetBytesForTransport(
             packet: packet,
             transport: PeerTransport.bleDirect,
             recipientPubkey: recipientPubkey,
@@ -4285,7 +4288,7 @@ class GrassrootsNetwork {
       // Fall back to UDP
       if (_udpService != null && _udpAvailable) {
         if (_udpService!.getPeerIdForPubkey(recipientPubkey) != null) {
-          final bytes = await _signedPacketBytesForTransport(
+          final bytes = await _packetBytesForTransport(
             packet: packet,
             transport: PeerTransport.udp,
             recipientPubkey: recipientPubkey,
@@ -4329,10 +4332,7 @@ class GrassrootsNetwork {
     _signalingService.sendSignalingToAddress =
         (recipientPubkey, address, signalingPayload) async {
       if (_udpService == null || !_udpAvailable) return false;
-      final packet = _createSignalingPacket(
-        recipientPubkey,
-        signalingPayload,
-      );
+      final packet = _createSignalingPacket(signalingPayload);
       final pubkeyHex = _pubkeyToHex(recipientPubkey);
       return _sendPacketViaUdp(
         pubkeyHex: pubkeyHex,
@@ -5127,15 +5127,12 @@ class GrassrootsNetwork {
       linkLocalAddress: normalizedLinkLocal,
       addressCandidates: normalizedCandidates,
     );
-    final packet = GrassrootsPacket(
+    // The ANNOUNCE payload is a self-signed identity record; the frame needs
+    // no further authentication.
+    return GrassrootsPacket(
       type: PacketType.announce,
-      ttl: 0,
-      senderPubkey: identity.publicKey,
       payload: payload,
-      signature: Uint8List(64),
-    );
-    await _protocolHandler.signPacket(packet);
-    return packet.serialize();
+    ).serialize();
   }
 
   /// Send ANNOUNCE with address to a specific friend.
@@ -5161,16 +5158,10 @@ class GrassrootsNetwork {
       address: normalizedAddress,
       addressCandidates: _candidateAddresses(),
     );
-    final packet = GrassrootsPacket(
+    final bytes = GrassrootsPacket(
       type: PacketType.announce,
-      ttl: 0,
-      senderPubkey: identity.publicKey,
-      recipientPubkey: friendPubkey,
       payload: payload,
-      signature: Uint8List(64),
-    );
-    await _protocolHandler.signPacket(packet);
-    final bytes = packet.serialize();
+    ).serialize();
 
     // Try BLE first if available
     if (_bleService != null && _bleAvailable) {
@@ -5298,13 +5289,11 @@ class GrassrootsNetwork {
   }) async {
     final fragmented = _fragmentHandler.fragment(
       payload: payload,
-      senderPubkey: identity.publicKey,
-      recipientPubkey: recipientPubkey,
       messageId: messageId,
     );
 
     for (final fragment in fragmented.fragments) {
-      final bytes = await _signedPacketBytesForTransport(
+      final bytes = await _packetBytesForTransport(
         packet: fragment,
         transport: PeerTransport.bleDirect,
         recipientPubkey: recipientPubkey,

@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'dart:typed_data';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:redux/redux.dart';
@@ -14,10 +13,16 @@ import 'package:grassroots_networking/src/store/store.dart';
 
 import '../helpers/sodium_test_bootstrap.dart';
 
-/// Helper to create an ANNOUNCE payload:
-/// [pubkey(32) + version(2) + nickLen(1) + nick + candidateCount(2) + candidates]
+/// Helper to create a self-signed ANNOUNCE payload:
+/// [pubkey(32) + version(2) + nickLen(1) + nick + candidateCount(2)
+///  + candidates + signature(64)]
+///
+/// The trailing Ed25519 signature covers every preceding byte and must be
+/// produced by [signer], whose identity key matches [pubkey] — this is what
+/// `ProtocolHandler.decodeAnnounce` verifies.
 Uint8List buildAnnouncePayload({
   required Uint8List pubkey,
+  required ProtocolHandler signer,
   String nickname = 'OtherPeer',
   String? address,
   Set<String> addressCandidates = const {},
@@ -49,6 +54,8 @@ Uint8List buildAnnouncePayload({
     buffer.add(candidateBytes);
   }
 
+  final record = buffer.toBytes();
+  buffer.add(signer.signBytes(record));
   return buffer.toBytes();
 }
 
@@ -95,7 +102,6 @@ void main() {
       fragmentHandler = FragmentHandler();
 
       router = MessageRouter(
-        identity: identity,
         store: store,
         protocolHandler: protocolHandler,
         fragmentHandler: fragmentHandler,
@@ -108,49 +114,86 @@ void main() {
       router.dispose();
     });
 
-    /// Create a signed packet from the other peer's perspective.
-    /// Must be awaited since signing is async.
-    Future<GrassrootsPacket> signedPacket({
-      required PacketType type,
-      Uint8List? senderPubkey,
-      Uint8List? recipientPubkey,
-      Uint8List? payload,
-      String? packetId,
-      ProtocolHandler? signer,
-    }) async {
-      final p = GrassrootsPacket(
-        packetId: packetId,
-        type: type,
-        senderPubkey: senderPubkey ?? otherPubkey,
-        recipientPubkey: recipientPubkey,
-        payload: payload ?? Uint8List(0),
-        signature: Uint8List(64),
+    /// Self-signed ANNOUNCE payload from the other peer's perspective.
+    Uint8List otherAnnouncePayload({
+      String nickname = 'OtherPeer',
+      String? address,
+      Set<String> addressCandidates = const {},
+    }) {
+      return buildAnnouncePayload(
+        pubkey: otherPubkey,
+        signer: otherProtocolHandler,
+        nickname: nickname,
+        address: address,
+        addressCandidates: addressCandidates,
       );
-      await (signer ?? otherProtocolHandler).signPacket(p);
-      return p;
+    }
+
+    /// The ANNOUNCE wire frame is just the payload in a packet — the frame
+    /// itself carries no identity or signature.
+    GrassrootsPacket announcePacket(Uint8List payload) {
+      return GrassrootsPacket(
+        type: PacketType.announce,
+        payload: payload,
+      );
+    }
+
+    /// Stub the Noise session layer: every session-encrypted packet
+    /// "decrypts" back to its clear variant with [sender] (default: the
+    /// other peer) as the session-authenticated sender identity.
+    void stubSession({Uint8List? sender}) {
+      final senderPubkey = sender ?? otherPubkey;
+      router.decryptSessionPacket =
+          (packet, transport, {String? peerId}) async {
+        return (packet.copyWith(type: packet.type.clearVariant), senderPubkey);
+      };
+    }
+
+    /// Build a session-encrypted packet as it would arrive off the wire.
+    /// [type] is the CLEAR type; the packet carries its secure variant.
+    GrassrootsPacket securePacket({
+      required PacketType type,
+      Uint8List? payload,
+    }) {
+      return GrassrootsPacket(
+        type: type.secureVariant,
+        payload: payload ?? Uint8List(0),
+      );
+    }
+
+    /// Build a session-encrypted MESSAGE whose payload opens with the
+    /// 36-char [messageId] (the delivery identity, stable across retries)
+    /// followed by [body] — the format `createMessagePacket` produces.
+    GrassrootsPacket secureMessagePacket({
+      required String messageId,
+      Uint8List? body,
+    }) {
+      final clear = otherProtocolHandler.createMessagePacket(
+        payload: body ?? Uint8List(0),
+        messageId: messageId,
+      );
+      return clear.copyWith(type: PacketType.secureMessage);
     }
 
     // =========================================================================
-    // Signature Verification
+    // Receive-Path Hardening
     // =========================================================================
 
-    group('signature verification', () {
-      test('drops packet with zero signature (unsigned)', () async {
+    group('receive-path hardening', () {
+      test('drops clear MESSAGE packets unconditionally', () async {
         bool anyCalled = false;
+        bool decryptCalled = false;
         router.onMessageReceived = (_, __, ___, ____) => anyCalled = true;
-        router.onAckReceived = (_) => anyCalled = true;
-        router.onReadReceiptReceived = (_) => anyCalled = true;
-        router.onPeerAnnounced = (_, __,
-                {bool isNew = false, String? udpPeerId}) =>
-            anyCalled = true;
+        router.onAckRequested = (_, __, ___) => anyCalled = true;
+        router.decryptSessionPacket =
+            (packet, transport, {String? peerId}) async {
+          decryptCalled = true;
+          return (packet, otherPubkey);
+        };
 
-        // Create packet without signing (zero signature)
         final p = GrassrootsPacket(
           type: PacketType.message,
-          senderPubkey: otherPubkey,
-          recipientPubkey: identity.publicKey,
           payload: Uint8List.fromList([1, 2, 3]),
-          signature: Uint8List(64),
         );
 
         await router.processPacket(
@@ -160,29 +203,51 @@ void main() {
         );
 
         expect(anyCalled, isFalse);
+        expect(decryptCalled, isFalse,
+            reason: 'Clear application-data packets must never reach the '
+                'session layer — they are dropped outright.');
       });
 
-      test('drops packet with tampered payload', () async {
-        bool anyCalled = false;
-        router.onMessageReceived = (_, __, ___, ____) => anyCalled = true;
+      test('drops ANNOUNCE with a tampered payload byte', () async {
+        bool announced = false;
+        router.onPeerAnnounced =
+            (_, __, {bool isNew = false, String? udpPeerId}) =>
+                announced = true;
 
-        // Create and sign a valid packet
-        final p = await signedPacket(
-          type: PacketType.message,
-          recipientPubkey: identity.publicKey,
-          payload: Uint8List.fromList([1, 2, 3]),
-        );
-
-        // Tamper with the payload after signing
-        p.payload[0] = 99;
+        final payload = otherAnnouncePayload(nickname: 'Alice');
+        // Flip a nickname byte (offset 35 = pubkey 32 + version 2 + nickLen
+        // 1). The record stays well-formed but its self-signature no longer
+        // verifies.
+        payload[35] ^= 0xFF;
 
         await router.processPacket(
-          p,
+          announcePacket(payload),
           transport: PeerTransport.bleDirect,
           rssi: -60,
         );
 
-        expect(anyCalled, isFalse);
+        expect(announced, isFalse);
+        expect(store.state.peers.getPeerByPubkey(otherPubkey), isNull);
+      });
+
+      test('drops session-encrypted packets when no session covers them',
+          () async {
+        bool messageReceived = false;
+        router.onMessageReceived =
+            (_, __, ___, ____) => messageReceived = true;
+        router.decryptSessionPacket =
+            (packet, transport, {String? peerId}) async => null;
+
+        await router.processPacket(
+          securePacket(
+            type: PacketType.message,
+            payload: Uint8List.fromList([1]),
+          ),
+          transport: PeerTransport.bleDirect,
+          rssi: -60,
+        );
+
+        expect(messageReceived, isFalse);
       });
     });
 
@@ -200,12 +265,7 @@ void main() {
           rejectedDeviceId = bleDeviceId;
         };
 
-        final payload =
-            buildAnnouncePayload(pubkey: otherPubkey, nickname: 'Alice');
-        final p = await signedPacket(
-          type: PacketType.announce,
-          payload: payload,
-        );
+        final p = announcePacket(otherAnnouncePayload(nickname: 'Alice'));
 
         await router.processPacket(
           p,
@@ -220,12 +280,7 @@ void main() {
 
       test('decodes ANNOUNCE and dispatches PeerAnnounceReceivedAction',
           () async {
-        final payload =
-            buildAnnouncePayload(pubkey: otherPubkey, nickname: 'Alice');
-        final p = await signedPacket(
-          type: PacketType.announce,
-          payload: payload,
-        );
+        final p = announcePacket(otherAnnouncePayload(nickname: 'Alice'));
 
         await router.processPacket(
           p,
@@ -241,11 +296,7 @@ void main() {
       });
 
       test('includes bleDeviceId in dispatch', () async {
-        final payload = buildAnnouncePayload(pubkey: otherPubkey);
-        final p = await signedPacket(
-          type: PacketType.announce,
-          payload: payload,
-        );
+        final p = announcePacket(otherAnnouncePayload());
 
         await router.processPacket(
           p,
@@ -267,11 +318,7 @@ void main() {
           rssi: -42,
         ));
 
-        final payload = buildAnnouncePayload(pubkey: otherPubkey);
-        final p = await signedPacket(
-          type: PacketType.announce,
-          payload: payload,
-        );
+        final p = announcePacket(otherAnnouncePayload());
 
         await router.processPacket(
           p,
@@ -288,11 +335,7 @@ void main() {
       });
 
       test('keeps peripheral-only RSSI as null', () async {
-        final payload = buildAnnouncePayload(pubkey: otherPubkey);
-        final p = await signedPacket(
-          type: PacketType.announce,
-          payload: payload,
-        );
+        final p = announcePacket(otherAnnouncePayload());
 
         await router.processPacket(
           p,
@@ -310,14 +353,9 @@ void main() {
       });
 
       test('includes udpAddress from ANNOUNCE payload', () async {
-        final payload = buildAnnouncePayload(
-          pubkey: otherPubkey,
+        final p = announcePacket(otherAnnouncePayload(
           address: '[2001:db8::a]:4001',
-        );
-        final p = await signedPacket(
-          type: PacketType.announce,
-          payload: payload,
-        );
+        ));
 
         await router.processPacket(
           p,
@@ -334,14 +372,9 @@ void main() {
       });
 
       test('preserves IPv4 udpAddress from ANNOUNCE payload', () async {
-        final payload = buildAnnouncePayload(
-          pubkey: otherPubkey,
+        final p = announcePacket(otherAnnouncePayload(
           address: '203.0.113.5:4001',
-        );
-        final p = await signedPacket(
-          type: PacketType.announce,
-          payload: payload,
-        );
+        ));
 
         await router.processPacket(
           p,
@@ -355,18 +388,13 @@ void main() {
       });
 
       test('preserves UDP address candidates from ANNOUNCE payload', () async {
-        final payload = buildAnnouncePayload(
-          pubkey: otherPubkey,
+        final p = announcePacket(otherAnnouncePayload(
           address: '[2606:4700::1]:4001',
           addressCandidates: const {
             '[2606:4700::1]:4001',
             '198.51.100.5:4002',
           },
-        );
-        final p = await signedPacket(
-          type: PacketType.announce,
-          payload: payload,
-        );
+        ));
 
         await router.processPacket(
           p,
@@ -394,12 +422,7 @@ void main() {
           receivedTransport = transport;
         };
 
-        final payload =
-            buildAnnouncePayload(pubkey: otherPubkey, nickname: 'Bob');
-        final p = await signedPacket(
-          type: PacketType.announce,
-          payload: payload,
-        );
+        final p = announcePacket(otherAnnouncePayload(nickname: 'Bob'));
 
         await router.processPacket(
           p,
@@ -414,13 +437,7 @@ void main() {
 
       test('always processes ANNOUNCE even if seen before (no dedup)',
           () async {
-        final payload =
-            buildAnnouncePayload(pubkey: otherPubkey, nickname: 'Charlie');
-        final p = await signedPacket(
-          type: PacketType.announce,
-          payload: payload,
-          packetId: '11111111-1111-1111-1111-111111111111',
-        );
+        final p = announcePacket(otherAnnouncePayload(nickname: 'Charlie'));
 
         int announceCount = 0;
         router.onPeerAnnounced =
@@ -446,7 +463,10 @@ void main() {
     // =========================================================================
 
     group('processPacket (BLE) - MESSAGE', () {
-      test('delivers message addressed to us', () async {
+      test('delivers session-decrypted message with the session sender',
+          () async {
+        stubSession();
+
         String? receivedId;
         Uint8List? receivedPubkey;
         Uint8List? receivedPayload;
@@ -458,12 +478,9 @@ void main() {
           receivedTransport = transport;
         };
 
-        final msgPayload = Uint8List.fromList([1, 2, 3, 4, 5]);
-        final p = await signedPacket(
-          type: PacketType.message,
-          recipientPubkey: identity.publicKey,
-          payload: msgPayload,
-        );
+        const messageId = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
+        final body = Uint8List.fromList([1, 2, 3, 4, 5]);
+        final p = secureMessagePacket(messageId: messageId, body: body);
 
         await router.processPacket(
           p,
@@ -471,22 +488,23 @@ void main() {
           rssi: -60,
         );
 
-        expect(receivedId, isNotNull);
+        expect(receivedId, equals(messageId));
         expect(receivedPubkey, equals(otherPubkey));
-        expect(receivedPayload, equals(msgPayload));
+        expect(receivedPayload, equals(body));
         expect(receivedTransport, equals(PeerTransport.bleDirect));
       });
 
       test('reports the authoritative arrival transport (UDP)', () async {
+        stubSession();
+
         PeerTransport? receivedTransport;
         router.onMessageReceived = (_, __, ___, transport) {
           receivedTransport = transport;
         };
 
-        final p = await signedPacket(
-          type: PacketType.message,
-          recipientPubkey: identity.publicKey,
-          payload: Uint8List.fromList([9, 9, 9]),
+        final p = secureMessagePacket(
+          messageId: 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
+          body: Uint8List.fromList([9, 9, 9]),
         );
 
         await router.processPacket(
@@ -497,14 +515,17 @@ void main() {
         expect(receivedTransport, equals(PeerTransport.udp));
       });
 
-      test('delivers broadcast message (no recipient)', () async {
-        bool messageReceived = false;
-        router.onMessageReceived = (_, __, ___, ____) => messageReceived = true;
+      test('drops MESSAGE whose payload lacks a messageId prefix', () async {
+        stubSession();
 
-        final p = await signedPacket(
+        bool anyCalled = false;
+        router.onMessageReceived = (_, __, ___, ____) => anyCalled = true;
+        router.onAckRequested = (_, __, ___) => anyCalled = true;
+
+        // Shorter than ProtocolHandler.messageIdLength (36 bytes).
+        final p = securePacket(
           type: PacketType.message,
-          recipientPubkey: null,
-          payload: Uint8List.fromList([42]),
+          payload: Uint8List.fromList([1, 2, 3]),
         );
 
         await router.processPacket(
@@ -513,10 +534,12 @@ void main() {
           rssi: -60,
         );
 
-        expect(messageReceived, isTrue);
+        expect(anyCalled, isFalse);
       });
 
       test('does not overwrite known RSSI when payload RSSI is null', () async {
+        stubSession();
+
         store.dispatch(PeerAnnounceReceivedAction(
           publicKey: otherPubkey,
           nickname: 'Alice',
@@ -525,10 +548,9 @@ void main() {
           bleCentralDeviceId: 'central:peer-1',
         ));
 
-        final p = await signedPacket(
-          type: PacketType.message,
-          recipientPubkey: identity.publicKey,
-          payload: Uint8List.fromList([42]),
+        final p = secureMessagePacket(
+          messageId: 'cccccccc-cccc-cccc-cccc-cccccccccccc',
+          body: Uint8List.fromList([42]),
         );
 
         await router.processPacket(
@@ -541,33 +563,6 @@ void main() {
         expect(peer, isNotNull);
         expect(peer!.rssi, equals(-44));
       });
-
-      test('drops message addressed to someone else', () async {
-        bool messageReceived = false;
-        router.onMessageReceived = (_, __, ___, ____) => messageReceived = true;
-
-        // Create a third identity for the intended recipient
-        final algorithm = Ed25519();
-        final thirdKeyPair = await algorithm.newKeyPair();
-        final thirdIdentity = await GrassrootsIdentity.create(
-          keyPair: thirdKeyPair,
-          nickname: 'ThirdParty',
-        );
-
-        final p = await signedPacket(
-          type: PacketType.message,
-          recipientPubkey: thirdIdentity.publicKey,
-          payload: Uint8List.fromList([42]),
-        );
-
-        await router.processPacket(
-          p,
-          transport: PeerTransport.bleDirect,
-          rssi: -60,
-        );
-
-        expect(messageReceived, isFalse);
-      });
     });
 
     // =========================================================================
@@ -575,15 +570,16 @@ void main() {
     // =========================================================================
 
     group('processPacket - deduplication', () {
-      test('drops duplicate non-ANNOUNCE packets', () async {
+      test('delivers a re-sent MESSAGE only once (dedup by messageId)',
+          () async {
+        stubSession();
+
         int messageCount = 0;
         router.onMessageReceived = (_, __, ___, ____) => messageCount++;
 
-        final p = await signedPacket(
-          type: PacketType.message,
-          packetId: '22222222-2222-2222-2222-222222222222',
-          recipientPubkey: identity.publicKey,
-          payload: Uint8List.fromList([1]),
+        final p = secureMessagePacket(
+          messageId: '22222222-2222-2222-2222-222222222222',
+          body: Uint8List.fromList([1]),
         );
 
         await router.processPacket(
@@ -605,17 +601,18 @@ void main() {
         expect(messageCount, equals(1));
       });
 
-      test('markSeen prevents processing of pre-marked packet', () async {
+      test('markSeen prevents delivery of a pre-marked messageId', () async {
+        stubSession();
+
         int messageCount = 0;
         router.onMessageReceived = (_, __, ___, ____) => messageCount++;
 
-        router.markSeen('33333333-3333-3333-3333-333333333333');
+        const messageId = '33333333-3333-3333-3333-333333333333';
+        router.markSeen(messageId);
 
-        final p = await signedPacket(
-          type: PacketType.message,
-          packetId: '33333333-3333-3333-3333-333333333333',
-          recipientPubkey: identity.publicKey,
-          payload: Uint8List.fromList([1]),
+        final p = secureMessagePacket(
+          messageId: messageId,
+          body: Uint8List.fromList([1]),
         );
 
         await router.processPacket(
@@ -638,16 +635,18 @@ void main() {
           'duplicate MESSAGE re-ACKs without re-firing onMessageReceived. '
           'This is what stops the sender\'s watchdog from looping forever '
           'when its original ACK was lost.', () async {
+        stubSession();
+
         int deliveries = 0;
         final ackRequests = <String>[];
         router.onMessageReceived = (_, __, ___, ____) => deliveries++;
-        router.onAckRequested = (_, __, packetId) => ackRequests.add(packetId);
+        router.onAckRequested =
+            (_, __, messageId) => ackRequests.add(messageId);
 
-        final p = await signedPacket(
-          type: PacketType.message,
-          packetId: '44444444-4444-4444-4444-444444444444',
-          recipientPubkey: identity.publicKey,
-          payload: Uint8List.fromList([1]),
+        const messageId = '44444444-4444-4444-4444-444444444444';
+        final p = secureMessagePacket(
+          messageId: messageId,
+          body: Uint8List.fromList([1]),
         );
 
         await router.processPacket(p,
@@ -663,31 +662,7 @@ void main() {
             reason:
                 'Recipient must re-ACK every duplicate so the sender can stop '
                 'retrying.');
-        expect(ackRequests, everyElement(p.packetId));
-      });
-
-      test(
-          'duplicate non-MESSAGE packets (e.g. ACK, signaling) are still '
-          'dropped at the wire level — no re-fire of their callbacks.',
-          () async {
-        int ackReceived = 0;
-        router.onAckReceived = (_) => ackReceived++;
-
-        final ackPayload = utf8.encode('mid-1234');
-        final p = await signedPacket(
-          type: PacketType.ack,
-          packetId: '55555555-5555-5555-5555-555555555555',
-          payload: Uint8List.fromList(ackPayload),
-        );
-
-        await router.processPacket(p,
-            transport: PeerTransport.bleDirect, rssi: -60);
-        await router.processPacket(p,
-            transport: PeerTransport.bleDirect, rssi: -60);
-
-        expect(ackReceived, equals(1),
-            reason: 'ACK packets keep the existing wire-level dedup so a '
-                'spurious double-ACK isn\'t processed twice.');
+        expect(ackRequests, everyElement(messageId));
       });
     });
 
@@ -697,8 +672,12 @@ void main() {
 
     group('processPacket - fragments', () {
       test('reassembles fragmented message and delivers', () async {
+        stubSession();
+
         Uint8List? reassembledPayload;
-        router.onMessageReceived = (_, __, payload, ___) {
+        Uint8List? reassembledSender;
+        router.onMessageReceived = (_, sender, payload, ___) {
+          reassembledSender = sender;
           reassembledPayload = payload;
         };
 
@@ -707,16 +686,12 @@ void main() {
           payload[i] = i % 256;
         }
 
-        final fragmented = fragmentHandler.fragment(
-          payload: payload,
-          senderPubkey: otherPubkey,
-        );
+        final fragmented = fragmentHandler.fragment(payload: payload);
 
         for (final fragment in fragmented.fragments) {
-          // Sign each fragment with the other peer's key
-          await otherProtocolHandler.signPacket(fragment);
+          // On the wire each fragment travels session-encrypted.
           await router.processPacket(
-            fragment,
+            fragment.copyWith(type: fragment.type.secureVariant),
             transport: PeerTransport.bleDirect,
             rssi: -60,
           );
@@ -724,6 +699,7 @@ void main() {
 
         expect(reassembledPayload, isNotNull);
         expect(reassembledPayload, equals(payload));
+        expect(reassembledSender, equals(otherPubkey));
       });
     });
 
@@ -733,11 +709,13 @@ void main() {
 
     group('processPacket - ACK/NACK', () {
       test('routes ACK to onAckReceived callback', () async {
+        stubSession();
+
         String? receivedMessageId;
         router.onAckReceived = (messageId) => receivedMessageId = messageId;
 
         const messageId = 'acked-message-id';
-        final p = await signedPacket(
+        final p = securePacket(
           type: PacketType.ack,
           payload: Uint8List.fromList(messageId.codeUnits),
         );
@@ -752,12 +730,14 @@ void main() {
       });
 
       test('NACK is silently ignored', () async {
+        stubSession();
+
         bool anyCalled = false;
         router.onMessageReceived = (_, __, ___, ____) => anyCalled = true;
         router.onAckReceived = (_) => anyCalled = true;
         router.onReadReceiptReceived = (_) => anyCalled = true;
 
-        final p = await signedPacket(
+        final p = securePacket(
           type: PacketType.nack,
           payload: Uint8List(0),
         );
@@ -778,11 +758,13 @@ void main() {
 
     group('processPacket - readReceipt', () {
       test('routes read receipt to onReadReceiptReceived callback', () async {
+        stubSession();
+
         String? receivedMessageId;
         router.onReadReceiptReceived = (id) => receivedMessageId = id;
 
         const messageId = 'msg-to-read';
-        final p = await signedPacket(
+        final p = securePacket(
           type: PacketType.readReceipt,
           payload: Uint8List.fromList(messageId.codeUnits),
         );
@@ -797,10 +779,12 @@ void main() {
       });
 
       test('ignores read receipt with empty payload', () async {
+        stubSession();
+
         String? receivedMessageId;
         router.onReadReceiptReceived = (id) => receivedMessageId = id;
 
-        final p = await signedPacket(
+        final p = securePacket(
           type: PacketType.readReceipt,
           payload: Uint8List(0),
         );
@@ -821,15 +805,10 @@ void main() {
 
     group('processPacket (UDP) - ANNOUNCE', () {
       test('decodes ANNOUNCE and dispatches to Redux', () async {
-        final payload = buildAnnouncePayload(
-          pubkey: otherPubkey,
+        final p = announcePacket(otherAnnouncePayload(
           nickname: 'UdpPeer',
           address: '[2001:db8::1]:4001',
-        );
-        final p = await signedPacket(
-          type: PacketType.announce,
-          payload: payload,
-        );
+        ));
 
         await router.processPacket(
           p,
@@ -847,21 +826,37 @@ void main() {
         );
       });
 
+      test('identifies UDP connection with the verified announce pubkey',
+          () async {
+        Uint8List? identifiedPubkey;
+        String? identifiedPeerId;
+        router.onUdpPeerIdentified = (pubkey, udpPeerId) {
+          identifiedPubkey = pubkey;
+          identifiedPeerId = udpPeerId;
+        };
+
+        final p = announcePacket(otherAnnouncePayload(nickname: 'UdpPeer'));
+
+        await router.processPacket(
+          p,
+          transport: PeerTransport.udp,
+          udpPeerId: 'temp-key-1',
+        );
+
+        expect(identifiedPubkey, equals(otherPubkey));
+        expect(identifiedPeerId, equals('temp-key-1'));
+      });
+
       test('does not attach scan-discovered BLE ID to UDP ANNOUNCE', () async {
         store.dispatch(BleDeviceDiscoveredAction(
           deviceId: 'scan-device-1',
           rssi: -42,
         ));
 
-        final payload = buildAnnouncePayload(
-          pubkey: otherPubkey,
+        final p = announcePacket(otherAnnouncePayload(
           nickname: 'UdpPeer',
           address: '[2001:db8::1]:4001',
-        );
-        final p = await signedPacket(
-          type: PacketType.announce,
-          payload: payload,
-        );
+        ));
 
         await router.processPacket(
           p,
@@ -882,14 +877,7 @@ void main() {
           () async {
         // udpPeerId is a hex pubkey, not an ip:port address — it must not
         // be stored as udpAddress.
-        final payload = buildAnnouncePayload(
-          pubkey: otherPubkey,
-          nickname: 'NoPeer',
-        );
-        final p = await signedPacket(
-          type: PacketType.announce,
-          payload: payload,
-        );
+        final p = announcePacket(otherAnnouncePayload(nickname: 'NoPeer'));
 
         await router.processPacket(
           p,
@@ -909,11 +897,7 @@ void main() {
           receivedTransport = transport;
         };
 
-        final payload = buildAnnouncePayload(pubkey: otherPubkey);
-        final p = await signedPacket(
-          type: PacketType.announce,
-          payload: payload,
-        );
+        final p = announcePacket(otherAnnouncePayload());
 
         await router.processPacket(
           p,
@@ -931,6 +915,8 @@ void main() {
 
     group('processPacket (UDP) - MESSAGE', () {
       test('delivers message via onMessageReceived', () async {
+        stubSession();
+
         String? receivedId;
         Uint8List? receivedPubkey;
         Uint8List? receivedPayload;
@@ -940,12 +926,9 @@ void main() {
           receivedPayload = payload;
         };
 
-        final msgPayload = Uint8List.fromList([10, 20, 30]);
-        final p = await signedPacket(
-          type: PacketType.message,
-          recipientPubkey: identity.publicKey,
-          payload: msgPayload,
-        );
+        const messageId = 'dddddddd-dddd-dddd-dddd-dddddddddddd';
+        final body = Uint8List.fromList([10, 20, 30]);
+        final p = secureMessagePacket(messageId: messageId, body: body);
 
         await router.processPacket(
           p,
@@ -953,18 +936,19 @@ void main() {
           udpPeerId: 'peer-789',
         );
 
-        expect(receivedId, isNotNull);
+        expect(receivedId, equals(messageId));
         expect(receivedPubkey, equals(otherPubkey));
-        expect(receivedPayload, equals(msgPayload));
+        expect(receivedPayload, equals(body));
       });
 
       test('marks existing peer as seen over UDP', () async {
+        stubSession();
+
         store.dispatch(FriendEstablishedAction(publicKey: otherPubkey));
 
-        final p = await signedPacket(
-          type: PacketType.message,
-          recipientPubkey: identity.publicKey,
-          payload: Uint8List.fromList([9, 8, 7]),
+        final p = secureMessagePacket(
+          messageId: 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee',
+          body: Uint8List.fromList([9, 8, 7]),
         );
 
         await router.processPacket(
@@ -980,6 +964,8 @@ void main() {
       });
 
       test('triggers onAckRequested with canonical UDP peer id', () async {
+        stubSession();
+
         PeerTransport? ackTransport;
         String? ackPeerId;
         String? ackMessageId;
@@ -990,10 +976,10 @@ void main() {
           ackMessageId = messageId;
         };
 
-        final p = await signedPacket(
-          type: PacketType.message,
-          recipientPubkey: identity.publicKey,
-          payload: Uint8List.fromList([1, 2, 3]),
+        const messageId = 'ffffffff-ffff-ffff-ffff-ffffffffffff';
+        final p = secureMessagePacket(
+          messageId: messageId,
+          body: Uint8List.fromList([1, 2, 3]),
         );
 
         await router.processPacket(
@@ -1009,10 +995,12 @@ void main() {
             otherPubkey.map((b) => b.toRadixString(16).padLeft(2, '0')).join(),
           ),
         );
-        expect(ackMessageId, equals(p.packetId));
+        expect(ackMessageId, equals(messageId));
       });
 
       test('triggers onAckRequested for BLE messages too', () async {
+        stubSession();
+
         PeerTransport? ackTransport;
         String? ackPeerId;
         String? ackMessageId;
@@ -1023,10 +1011,10 @@ void main() {
           ackMessageId = messageId;
         };
 
-        final p = await signedPacket(
-          type: PacketType.message,
-          recipientPubkey: identity.publicKey,
-          payload: Uint8List.fromList([1, 2, 3]),
+        const messageId = '99999999-9999-9999-9999-999999999999';
+        final p = secureMessagePacket(
+          messageId: messageId,
+          body: Uint8List.fromList([1, 2, 3]),
         );
 
         await router.processPacket(
@@ -1037,7 +1025,7 @@ void main() {
 
         expect(ackTransport, equals(PeerTransport.bleDirect));
         expect(ackPeerId, isNull);
-        expect(ackMessageId, equals(p.packetId));
+        expect(ackMessageId, equals(messageId));
       });
     });
 
@@ -1047,11 +1035,13 @@ void main() {
 
     group('processPacket (UDP) - ACK', () {
       test('delivers ACK via onAckReceived', () async {
+        stubSession();
+
         String? receivedId;
         router.onAckReceived = (id) => receivedId = id;
 
         const messageId = 'ack-msg1';
-        final p = await signedPacket(
+        final p = securePacket(
           type: PacketType.ack,
           payload: Uint8List.fromList(messageId.codeUnits),
         );
@@ -1072,11 +1062,13 @@ void main() {
 
     group('processPacket (UDP) - ReadReceipt', () {
       test('delivers read receipt via onReadReceiptReceived', () async {
+        stubSession();
+
         String? receivedId;
         router.onReadReceiptReceived = (id) => receivedId = id;
 
         const messageId = 'rr-msg-1';
-        final p = await signedPacket(
+        final p = securePacket(
           type: PacketType.readReceipt,
           payload: Uint8List.fromList(messageId.codeUnits),
         );
@@ -1096,39 +1088,11 @@ void main() {
     // =========================================================================
 
     group('processPacket - invalid/malformed packets', () {
-      test('drops packet with wrong sender pubkey length via construction',
-          () async {
-        // GrassrootsPacket constructor enforces 32-byte pubkey,
-        // so we verify that invalid construction throws
-        expect(
-          () => GrassrootsPacket(
-            type: PacketType.message,
-            senderPubkey: Uint8List(16), // too short
-            recipientPubkey: identity.publicKey,
-            payload: Uint8List.fromList([1]),
-            signature: Uint8List(64),
-          ),
-          throwsA(isA<ArgumentError>()),
-        );
-      });
-
-      test('drops packet with wrong signature length via construction',
-          () async {
-        expect(
-          () => GrassrootsPacket(
-            type: PacketType.message,
-            senderPubkey: otherPubkey,
-            recipientPubkey: identity.publicKey,
-            payload: Uint8List.fromList([1]),
-            signature: Uint8List(32), // too short, must be 64
-          ),
-          throwsA(isA<ArgumentError>()),
-        );
-      });
-
       test('deserialize rejects data shorter than header size', () {
         expect(
-          () => GrassrootsPacket.deserialize(Uint8List(40)),
+          () => GrassrootsPacket.deserialize(
+            Uint8List(GrassrootsPacket.headerSize - 1),
+          ),
           throwsA(isA<FormatException>()),
         );
       });

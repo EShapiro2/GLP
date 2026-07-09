@@ -1,6 +1,5 @@
 import 'package:redux/redux.dart';
 import '../mesh/bloom_filter.dart';
-import '../models/identity.dart';
 import '../models/packet.dart';
 import '../models/peer.dart';
 import '../protocol/fragment_handler.dart';
@@ -13,17 +12,22 @@ import 'package:flutter/foundation.dart';
 
 /// Routes incoming packets from all transports to the appropriate handlers.
 ///
+/// The wire frame carries no identity or signature, so sender identity comes
+/// from the payload layer: ANNOUNCE payloads are self-signed identity records
+/// (verified by [ProtocolHandler.decodeAnnounce]), Noise handshake envelopes
+/// carry an authenticated identity claim (handled by the session manager),
+/// and session-encrypted packets are authenticated by the Noise session that
+/// decrypts them. Clear application-data packets carry no authentication and
+/// are dropped.
+///
 /// Responsibilities:
-/// - Signature verification (drops invalid packets)
-/// - Packet deduplication (via BloomFilter)
+/// - Message delivery deduplication (via BloomFilter, keyed by messageId)
 /// - ANNOUNCE decoding and Redux dispatch
-/// - MESSAGE targeting (is-for-us check)
 /// - Fragment reassembly delegation
 /// - Callback dispatch to application layer
 ///
 /// All transports feed into [processPacket] — one entry point, one format.
 class MessageRouter {
-  final GrassrootsIdentity identity;
   final Store<AppState> store;
   final ProtocolHandler protocolHandler;
   final FragmentHandler fragmentHandler;
@@ -62,8 +66,8 @@ class MessageRouter {
     int? observedPort,
   })? onSignalingReceived;
 
-  /// Called after signature verification and before a BLE ANNOUNCE is applied.
-  /// Return false to reject first contact from that sender.
+  /// Called after payload-signature verification and before a BLE ANNOUNCE is
+  /// applied. Return false to reject first contact from that sender.
   bool Function(
     Uint8List senderPubkey, {
     String? bleDeviceId,
@@ -74,21 +78,24 @@ class MessageRouter {
   void Function(Uint8List senderPubkey, String? bleDeviceId)?
       onBleAnnounceRejected;
 
-  /// Called when a verified packet arrives over UDP, providing the sender's
-  /// pubkey so the coordinator can map the connection (replacing tempKey-based
-  /// identification that previously required ANNOUNCE as the first message).
+  /// Called when a packet with an authenticated sender identity (verified
+  /// ANNOUNCE or session-decrypted packet) arrives over UDP, so the
+  /// coordinator can map the connection to the peer's pubkey.
   void Function(Uint8List senderPubkey, String udpPeerId)? onUdpPeerIdentified;
 
-  /// Called when a signed Noise handshake packet arrives. The coordinator owns
-  /// session state and sends any handshake response over the same medium.
+  /// Called when a Noise handshake packet arrives. The coordinator owns
+  /// session state and sends any handshake response over the same medium;
+  /// the handshake envelope carries the peer's identity claim.
   Future<void> Function(
     GrassrootsPacket packet,
     PeerTransport transport, {
     String? peerId,
   })? onNoiseHandshakeReceived;
 
-  /// Decrypts a signed session-encrypted packet before normal routing.
-  Future<GrassrootsPacket?> Function(
+  /// Decrypts a session-encrypted packet before normal routing. Returns the
+  /// clear packet together with the session-authenticated sender identity,
+  /// or null when no session covers the packet.
+  Future<(GrassrootsPacket, Uint8List)?> Function(
     GrassrootsPacket packet,
     PeerTransport transport, {
     String? peerId,
@@ -98,7 +105,6 @@ class MessageRouter {
   PeersState get _peersState => store.state.peers;
 
   MessageRouter({
-    required this.identity,
     required this.store,
     required this.protocolHandler,
     required this.fragmentHandler,
@@ -108,9 +114,11 @@ class MessageRouter {
 
   /// Process an incoming packet from any transport.
   ///
-  /// All packets are signature-verified before processing.
-  /// Invalid signatures are dropped immediately.
-  /// ANNOUNCE packets bypass deduplication (always processed).
+  /// Only three packet classes are accepted off the wire: self-signed
+  /// ANNOUNCE records, Noise handshake packets (identity-claimed and
+  /// self-authenticating), and session-encrypted packets (authenticated by
+  /// the session AEAD on decrypt). Clear application-data packets carry no
+  /// authentication and are dropped.
   Future<void> processPacket(
     GrassrootsPacket packet, {
     required PeerTransport transport,
@@ -121,84 +129,28 @@ class MessageRouter {
     String? observedIp,
     int? observedPort,
   }) async {
-    // Verify signature — drop invalid packets.
-    // Ed25519 verify is CPU-bound on the main isolate (cryptography package
-    // pure-Dart implementation). For fragmented payloads (~315 fragments per
-    // 100 KB picture), this dominates receive latency. Log per-packet timing
-    // so the cost is visible.
-    final verifyStart = DateTime.now();
-    final isValid = await protocolHandler.verifyPacket(packet);
-    final verifyMs = DateTime.now().difference(verifyStart).inMilliseconds;
-    if (verifyMs > 50) {
-      debugPrint(
-          '[verify] ${packet.type.name} from ${_pubkeyToHex(packet.senderPubkey).substring(0, 8)} took ${verifyMs}ms');
-    }
-    if (!isValid) {
-      debugPrint(
-          'Dropping packet with invalid signature (type: ${packet.type})');
-      return;
-    }
-
-    String? effectiveUdpPeerId = udpPeerId;
-
-    // Map incoming UDP connections from any verified packet's senderPubkey.
-    // Previously required ANNOUNCE as the first message on a stream; now any
-    // verified packet identifies the sender.
-    if (transport == PeerTransport.udp && udpPeerId != null) {
-      onUdpPeerIdentified?.call(packet.senderPubkey, udpPeerId);
-      effectiveUdpPeerId = _pubkeyToHex(packet.senderPubkey);
-    }
-
     if (packet.type == PacketType.noiseHandshake) {
       await onNoiseHandshakeReceived?.call(
         packet,
         transport,
-        peerId: effectiveUdpPeerId ?? bleDeviceId,
+        peerId: udpPeerId ?? bleDeviceId,
       );
       return;
     }
 
-    if (packet.type.isSessionEncrypted) {
-      final decrypted = await decryptSessionPacket?.call(
-        packet,
-        transport,
-        peerId: effectiveUdpPeerId ?? bleDeviceId,
-      );
-      if (decrypted == null) {
-        debugPrint('Dropping encrypted packet without session');
+    // ANNOUNCE always processed (peer may have updated info). Decoding
+    // verifies the payload's own signature; a forged record throws.
+    if (packet.type == PacketType.announce) {
+      final AnnounceData data;
+      try {
+        data = protocolHandler.decodeAnnounce(packet.payload);
+      } catch (e) {
+        debugPrint('Dropping unverifiable ANNOUNCE: $e');
         return;
       }
-      packet = decrypted;
-    }
-
-    // Any verified non-ANNOUNCE packet over UDP counts as liveness traffic
-    // for that peer, even if it is an ACK, read receipt, or retransmission.
-    if (transport == PeerTransport.udp && packet.type != PacketType.announce) {
-      store.dispatch(PeerUdpSeenAction(packet.senderPubkey));
-    }
-
-    // Refresh per-packet RSSI on every verified BLE packet from a known peer.
-    // The plugin emits `payload.rssi` as null when the OS doesn't expose a
-    // remote-RSSI measurement (peripheral-role writes on both platforms,
-    // central paths before the first poll). For ANNOUNCE packets,
-    // _handleAnnounce covers the RSSI update via PeerAnnounceReceivedAction.
-    if (transport == PeerTransport.bleDirect &&
-        rssi != null &&
-        packet.type != PacketType.announce) {
-      final peer = _peersState.getPeerByPubkey(packet.senderPubkey);
-      if (peer != null) {
-        store.dispatch(PeerRssiUpdatedAction(
-          publicKey: packet.senderPubkey,
-          rssi: rssi,
-        ));
-      }
-    }
-
-    // ANNOUNCE always processed (peer may have updated info)
-    if (packet.type == PacketType.announce) {
       if (transport == PeerTransport.bleDirect) {
         final accepted = shouldAcceptBleAnnounce?.call(
-              packet.senderPubkey,
+              data.publicKey,
               bleDeviceId: bleDeviceId,
               bleRole: bleRole,
             ) ??
@@ -206,14 +158,19 @@ class MessageRouter {
         if (!accepted) {
           debugPrint(
             '[trust] Dropping BLE ANNOUNCE from '
-            '${_pubkeyToHex(packet.senderPubkey).substring(0, 8)}',
+            '${_pubkeyToHex(data.publicKey).substring(0, 8)}',
           );
-          onBleAnnounceRejected?.call(packet.senderPubkey, bleDeviceId);
+          onBleAnnounceRejected?.call(data.publicKey, bleDeviceId);
           return;
         }
       }
+      String? effectiveUdpPeerId = udpPeerId;
+      if (transport == PeerTransport.udp && udpPeerId != null) {
+        onUdpPeerIdentified?.call(data.publicKey, udpPeerId);
+        effectiveUdpPeerId = _pubkeyToHex(data.publicKey);
+      }
       _handleAnnounce(
-        packet,
+        data,
         transport: transport,
         bleDeviceId: bleDeviceId,
         bleRole: bleRole,
@@ -223,28 +180,55 @@ class MessageRouter {
       return;
     }
 
-    // Dedup for non-ANNOUNCE, non-MESSAGE/FRAGMENT packets at the wire
-    // level. MESSAGE packets and fragmented messages are deduped inside
-    // `_handleMessage` (keyed by messageId after reassembly) so we can
-    // RE-ACK a duplicate — otherwise the sender's watchdog and BLE-disconnect
-    // re-queue would retry forever, because the original ACK was lost and
-    // the recipient would silently drop every subsequent attempt.
-    final isMessageOrFragment = packet.type == PacketType.message ||
-        packet.type == PacketType.fragmentStart ||
-        packet.type == PacketType.fragmentContinue ||
-        packet.type == PacketType.fragmentEnd;
-    if (!isMessageOrFragment &&
-        _seenPackets.checkAndAdd(packet.packetId)) {
+    if (!packet.type.isSessionEncrypted) {
+      debugPrint(
+          'Dropping unauthenticated clear ${packet.type.name} packet');
       return;
     }
 
+    final decrypted = await decryptSessionPacket?.call(
+      packet,
+      transport,
+      peerId: udpPeerId ?? bleDeviceId,
+    );
+    if (decrypted == null) {
+      debugPrint('Dropping encrypted packet without session');
+      return;
+    }
+    final (clearPacket, senderPubkey) = decrypted;
+    packet = clearPacket;
+
+    String? effectiveUdpPeerId = udpPeerId;
+    if (transport == PeerTransport.udp) {
+      if (udpPeerId != null) {
+        onUdpPeerIdentified?.call(senderPubkey, udpPeerId);
+        effectiveUdpPeerId = _pubkeyToHex(senderPubkey);
+      }
+      // Any session-authenticated packet over UDP counts as liveness traffic
+      // for that peer, even if it is an ACK, read receipt, or retransmission.
+      store.dispatch(PeerUdpSeenAction(senderPubkey));
+    }
+
+    // Refresh per-packet RSSI on every BLE packet from a known peer.
+    // The plugin emits `payload.rssi` as null when the OS doesn't expose a
+    // remote-RSSI measurement (peripheral-role writes on both platforms,
+    // central paths before the first poll). For ANNOUNCE packets,
+    // _handleAnnounce covers the RSSI update via PeerAnnounceReceivedAction.
+    if (transport == PeerTransport.bleDirect && rssi != null) {
+      final peer = _peersState.getPeerByPubkey(senderPubkey);
+      if (peer != null) {
+        store.dispatch(PeerRssiUpdatedAction(
+          publicKey: senderPubkey,
+          rssi: rssi,
+        ));
+      }
+    }
+
     switch (packet.type) {
-      case PacketType.announce:
-        return; // Already handled above
       case PacketType.message:
-        // TODO: why do messages have different types than packets?
         _handleMessage(
           packet,
+          senderPubkey: senderPubkey,
           transport: transport,
           peerId: effectiveUdpPeerId ?? bleDeviceId,
         );
@@ -253,6 +237,7 @@ class MessageRouter {
       case PacketType.fragmentEnd:
         _handleFragment(
           packet,
+          senderPubkey: senderPubkey,
           transport: transport,
           peerId: effectiveUdpPeerId ?? bleDeviceId,
         );
@@ -266,9 +251,11 @@ class MessageRouter {
       case PacketType.signaling:
         _handleSignaling(
           packet,
+          senderPubkey: senderPubkey,
           observedIp: observedIp,
           observedPort: observedPort,
         );
+      case PacketType.announce:
       case PacketType.noiseHandshake:
       case PacketType.secureMessage:
       case PacketType.secureFragmentStart:
@@ -285,14 +272,13 @@ class MessageRouter {
   // ===== Handlers =====
 
   void _handleAnnounce(
-    GrassrootsPacket packet, {
+    AnnounceData data, {
     required PeerTransport transport,
     String? bleDeviceId,
     BleRole? bleRole,
     String? udpPeerId,
     int? rssi,
   }) {
-    final data = protocolHandler.decodeAnnounce(packet.payload);
     final pubkey = data.publicKey;
 
     // Resolve BLE metadata only for packets that actually arrived over BLE.
@@ -380,23 +366,69 @@ class MessageRouter {
 
   void _handleMessage(
     GrassrootsPacket packet, {
+    required Uint8List senderPubkey,
     required PeerTransport transport,
     String? peerId,
   }) {
-    if (!_isForUs(packet)) return;
+    // The MESSAGE payload opens with its messageId (the delivery identity,
+    // stable across retries and media), followed by the body — mirroring
+    // fragment payloads.
+    if (packet.payload.length < ProtocolHandler.messageIdLength) {
+      debugPrint('Dropping MESSAGE without a messageId prefix');
+      return;
+    }
+    final messageId = String.fromCharCodes(
+        packet.payload.sublist(0, ProtocolHandler.messageIdLength));
+    final body = Uint8List.fromList(
+        packet.payload.sublist(ProtocolHandler.messageIdLength));
+    _deliverMessage(
+      messageId,
+      body,
+      senderPubkey: senderPubkey,
+      transport: transport,
+      peerId: peerId,
+    );
+  }
 
-    // Dedup by messageId. For single-packet messages `packet.packetId` is
-    // the messageId; for messages that arrived fragmented, `_handleFragment`
-    // synthesizes a packet whose `packetId` is the reassembled messageId.
-    // Either way: only deliver to the app once, but ACK every time so the
-    // sender's watchdog stops retrying when its ACK got lost.
-    final firstSeen = !_seenPackets.checkAndAdd(packet.packetId);
+  void _handleFragment(
+    GrassrootsPacket packet, {
+    required Uint8List senderPubkey,
+    required PeerTransport transport,
+    String? peerId,
+  }) {
+    final reassembled = fragmentHandler.processFragment(packet);
+    if (reassembled == null) return;
+
+    // Reassembly produced the original message's payload bytes; the
+    // messageId travelled in the fragment payloads. Route through the same
+    // delivery pipeline as single-packet messages.
+    _deliverMessage(
+      reassembled.messageId,
+      reassembled.payload,
+      senderPubkey: senderPubkey,
+      transport: transport,
+      peerId: peerId,
+    );
+  }
+
+  void _deliverMessage(
+    String messageId,
+    Uint8List body, {
+    required Uint8List senderPubkey,
+    required PeerTransport transport,
+    String? peerId,
+  }) {
+    // Dedup by messageId: only deliver to the app once, but ACK every time
+    // so the sender's watchdog and BLE-disconnect re-queue stop retrying
+    // when the original ACK got lost. Retries are fresh encryptions
+    // (possibly over a different medium), so the session's replay window
+    // cannot catch them — this id is what makes redelivery detectable.
+    final firstSeen = !_seenPackets.checkAndAdd(messageId);
     if (firstSeen) {
-      onMessageReceived?.call(
-          packet.packetId, packet.senderPubkey, packet.payload, transport);
+      onMessageReceived?.call(messageId, senderPubkey, body, transport);
     } else {
       debugPrint(
-        'Duplicate message ${packet.packetId.length >= 8 ? packet.packetId.substring(0, 8) : packet.packetId}; '
+        'Duplicate message ${messageId.length >= 8 ? messageId.substring(0, 8) : messageId}; '
         're-ACKing without re-delivering.',
       );
     }
@@ -404,38 +436,7 @@ class MessageRouter {
     // Send ACK back to confirm delivery. The sender waits for this to
     // mark the message as "delivered" (2 checkmarks). Works over both
     // BLE (peerId = bleDeviceId) and UDP (peerId = udpPeerId).
-    onAckRequested?.call(transport, peerId, packet.packetId);
-  }
-
-  void _handleFragment(
-    GrassrootsPacket packet, {
-    required PeerTransport transport,
-    String? peerId,
-  }) {
-    final reassembled = fragmentHandler.processFragment(packet);
-    if (reassembled == null) return;
-
-    // Reassembly produced the original message's payload bytes. Synthesize
-    // a logical MESSAGE packet and route it through `_handleMessage` so the
-    // single-packet and fragmented paths share one delivery pipeline:
-    //   - `_isForUs` recipient check
-    //   - `onMessageReceived` dispatch
-    //   - `onAckRequested` round-trip
-    //
-    // The signature field is zeroed because per-fragment signatures have
-    // already been verified upstream in `processPacket`; nothing downstream
-    // re-checks the synthetic packet's signature.
-    final logical = GrassrootsPacket(
-      type: PacketType.message,
-      ttl: packet.ttl,
-      timestamp: packet.timestamp,
-      senderPubkey: packet.senderPubkey,
-      recipientPubkey: packet.recipientPubkey,
-      payload: reassembled.payload,
-      signature: Uint8List(64),
-      packetId: reassembled.messageId,
-    );
-    _handleMessage(logical, transport: transport, peerId: peerId);
+    onAckRequested?.call(transport, peerId, messageId);
   }
 
   void _handleAck(GrassrootsPacket packet) {
@@ -456,11 +457,12 @@ class MessageRouter {
 
   void _handleSignaling(
     GrassrootsPacket packet, {
+    required Uint8List senderPubkey,
     String? observedIp,
     int? observedPort,
   }) {
     onSignalingReceived?.call(
-      packet.senderPubkey,
+      senderPubkey,
       packet.payload,
       observedIp: observedIp,
       observedPort: observedPort,
@@ -483,19 +485,6 @@ class MessageRouter {
   }
 
   // ===== Helpers =====
-
-  bool _isForUs(GrassrootsPacket packet) {
-    if (packet.isBroadcast) return true;
-    return _pubkeysEqual(packet.recipientPubkey!, identity.publicKey);
-  }
-
-  static bool _pubkeysEqual(Uint8List a, Uint8List b) {
-    if (a.length != b.length) return false;
-    for (var i = 0; i < a.length; i++) {
-      if (a[i] != b[i]) return false;
-    }
-    return true;
-  }
 
   static String _pubkeyToHex(Uint8List pubkey) =>
       pubkey.map((b) => b.toRadixString(16).padLeft(2, '0')).join();
@@ -538,14 +527,14 @@ class MessageRouter {
 
   // ===== Deduplication API =====
 
-  /// Mark a packet ID as seen (e.g., for outgoing packets)
-  void markSeen(String packetId) {
-    _seenPackets.add(packetId);
+  /// Mark a message ID as delivered (e.g., for locally-originated messages)
+  void markSeen(String messageId) {
+    _seenPackets.add(messageId);
   }
 
-  /// Check if a packet ID has been seen before
-  bool isDuplicate(String packetId) {
-    return _seenPackets.mightContain(packetId);
+  /// Check if a message ID has been delivered before
+  bool isDuplicate(String messageId) {
+    return _seenPackets.mightContain(messageId);
   }
 
   // ===== Lifecycle =====

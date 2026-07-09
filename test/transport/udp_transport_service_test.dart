@@ -422,9 +422,8 @@ void main() {
         final testPayload = Uint8List.fromList(List.generate(100, (i) => i));
         final packet = aliceProto.createMessagePacket(
           payload: testPayload,
-          recipientPubkey: bobIdentity.publicKey,
+          messageId: '550e8400-e29b-41d4-a716-446655440000',
         );
-        await aliceProto.signPacket(packet);
         final testData = packet.serialize();
         final sent = await alice.sendToPeer(bobPubkeyHex, testData);
         expect(sent, isTrue);
@@ -491,9 +490,8 @@ void main() {
         // payload-length field).
         final packet = aliceProto.createMessagePacket(
           payload: Uint8List.fromList([4, 3, 2, 1]),
-          recipientPubkey: bobIdentity.publicKey,
+          messageId: '6f9619ff-8b86-4d01-b42d-00cf4fc964ff',
         );
-        await aliceProto.signPacket(packet);
         final testData = packet.serialize();
         expect(await alice.sendToPeer(bobPubkeyHex, testData), isTrue);
         expect(
@@ -633,9 +631,8 @@ void main() {
         // emit it cleanly.
         final packet = aliceProto.createMessagePacket(
           payload: Uint8List.fromList([1, 2, 3, 4, 5]),
-          recipientPubkey: bobIdentity.publicKey,
+          messageId: '7c9e6679-7425-40de-944b-e07fc1f90ae7',
         );
-        await aliceProto.signPacket(packet);
         final testData = packet.serialize();
         await alice.sendToPeer(bobPubkeyHex, testData);
 

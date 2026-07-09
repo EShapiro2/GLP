@@ -12,7 +12,14 @@ import 'package:sodium_libs/sodium_libs.dart';
 class ProtocolHandler {
   final GrassrootsIdentity identity;
   final Sodium _sodium;
-  static const int protocolVersion = 1;
+  static const int protocolVersion = 2;
+
+  /// Length of the trailing Ed25519 signature on an ANNOUNCE payload.
+  static const int announceSignatureLength = 64;
+
+  /// Length of the messageId prefix on a MESSAGE payload (a UUID string,
+  /// matching the id fragments carry in FRAGMENT_START).
+  static const int messageIdLength = 36;
 
   ProtocolHandler({
     required this.identity,
@@ -21,11 +28,17 @@ class ProtocolHandler {
 
   // ===== Encoding =====
 
-  /// Create ANNOUNCE payload
+  /// Create a self-signed ANNOUNCE payload.
+  ///
+  /// The wire frame carries no identity or signature, so ANNOUNCE is a
+  /// self-contained signed identity record: the trailing Ed25519 signature
+  /// covers every preceding byte and is verified against the pubkey the
+  /// record itself carries.
   ///
   /// Format:
   /// [pubkey(32) + version(2) + nickLen(1) + nick
-  ///  + candidateCount(2) + repeated(candidateLen(2) + candidate)]
+  ///  + candidateCount(2) + repeated(candidateLen(2) + candidate)
+  ///  + signature(64)]
   Uint8List createAnnouncePayload({
     String? address,
     String? linkLocalAddress,
@@ -64,52 +77,48 @@ class ProtocolHandler {
       buffer.add(candidateBytes);
     }
 
+    buffer.add(signBytes(buffer.toBytes()));
     return buffer.toBytes();
   }
 
   /// Create MESSAGE packet.
   ///
-  /// [packetId] is used as the wire-level identifier the recipient echoes
-  /// back in its ACK. Pass the same id you stored in `MessageSendingAction`
-  /// so `MessageDeliveredAction` (dispatched on ACK receipt) can match the
-  /// outgoing message in the Redux store and flip ✓ → ✓✓.
+  /// The payload opens with the 36-character [messageId] — the delivery
+  /// identity, stable across retries and media — followed by the message
+  /// body, mirroring how fragment payloads carry it. The recipient
+  /// deduplicates by it and echoes it back in its ACK; pass the same id you
+  /// stored in `MessageSendingAction` so `MessageDeliveredAction`
+  /// (dispatched on ACK receipt) can match the outgoing message in the
+  /// Redux store and flip ✓ → ✓✓.
   GrassrootsPacket createMessagePacket({
     required Uint8List payload,
-    Uint8List? recipientPubkey,
-    String? packetId,
+    required String messageId,
   }) {
+    if (messageId.length != messageIdLength) {
+      throw ArgumentError(
+          'messageId must be a $messageIdLength-character UUID: $messageId');
+    }
     return GrassrootsPacket(
       type: PacketType.message,
-      senderPubkey: identity.publicKey,
-      recipientPubkey: recipientPubkey,
-      payload: payload,
-      signature: Uint8List(64), // Caller must sign before sending
-      packetId: packetId,
+      payload: Uint8List.fromList([...utf8.encode(messageId), ...payload]),
     );
   }
 
   /// Create READ_RECEIPT packet
-  GrassrootsPacket createReadReceiptPacket({
-    required String messageId,
-    required Uint8List recipientPubkey,
-  }) {
-    final payload = utf8.encode(messageId);
+  GrassrootsPacket createReadReceiptPacket({required String messageId}) {
     return GrassrootsPacket(
       type: PacketType.readReceipt,
-      senderPubkey: identity.publicKey,
-      recipientPubkey: recipientPubkey,
-      payload: payload,
-      signature: Uint8List(64), // Caller must sign before sending
+      payload: utf8.encode(messageId),
     );
   }
 
   // ===== Decoding =====
 
-  /// Decode ANNOUNCE payload
+  /// Decode and verify a self-signed ANNOUNCE payload.
   ///
-  /// Format:
-  /// [pubkey(32) + version(2) + nickLen(1) + nick
-  ///  + candidateCount(2) + repeated(candidateLen(2) + candidate)]
+  /// Throws [FormatException] on malformed input or a bad signature — an
+  /// ANNOUNCE whose trailing signature does not verify against the pubkey it
+  /// carries is forged or corrupted and must not identify anyone.
   AnnounceData decodeAnnounce(Uint8List data) {
     var offset = 0;
 
@@ -161,6 +170,19 @@ class ProtocolHandler {
       offset += candidateLength;
     }
 
+    if (data.length != offset + announceSignatureLength) {
+      throw const FormatException('ANNOUNCE signature missing or malformed');
+    }
+    final signature = data.sublist(offset, offset + announceSignatureLength);
+    final signedBytes = data.sublist(0, offset);
+    if (!verifyBytes(
+      signature: signature,
+      message: signedBytes,
+      publicKey: Uint8List.fromList(pubkey),
+    )) {
+      throw const FormatException('ANNOUNCE signature verification failed');
+    }
+
     final address = _firstNonLinkLocalCandidate(addressCandidates);
     final linkLocalAddress = _firstLinkLocalCandidate(addressCandidates);
 
@@ -180,51 +202,24 @@ class ProtocolHandler {
   }
 
   /// Create ACK packet (for delivery confirmation)
-  GrassrootsPacket createAckPacket({
-    required String messageId,
-    Uint8List? recipientPubkey,
-  }) {
-    final payload = utf8.encode(messageId);
+  GrassrootsPacket createAckPacket({required String messageId}) {
     return GrassrootsPacket(
       type: PacketType.ack,
-      senderPubkey: identity.publicKey,
-      recipientPubkey: recipientPubkey,
-      payload: payload,
-      signature: Uint8List(64), // Caller must sign before sending
+      payload: utf8.encode(messageId),
     );
   }
 
   // ===== Signing & Verification =====
 
-  /// Sign a packet with the identity's Ed25519 private key.
-  ///
-  /// Mutates [packet.signature] in place. Uses libsodium's native Ed25519
-  /// (~5-10ms on Android, ~1-3ms on iOS) instead of the pure-Dart
-  /// `cryptography` implementation (~150-200ms on Android) — relevant when
-  /// signing fragmented payloads where the sender signs every fragment in
-  /// a tight loop.
-  Future<void> signPacket(GrassrootsPacket packet) async {
-    final signableBytes = packet.getSignableBytes();
+  /// Detached Ed25519 signature over arbitrary [message] bytes under the
+  /// identity key. Used for the self-contained signed records that carry
+  /// identity now that the wire frame does not: ANNOUNCE payloads, Noise
+  /// handshake identity claims, and cold-call invites (spec §IP Cold-Call).
+  /// Native libsodium (~5-10ms on Android, ~1-3ms on iOS).
+  Uint8List signBytes(Uint8List message) {
     // The identity's `privateKey` is the standard 64-byte Ed25519 secret
     // key (32-byte seed concatenated with the 32-byte public key) — exactly
     // what libsodium's `crypto_sign_detached` expects.
-    final secretKey = SecureKey.fromList(_sodium, identity.privateKey);
-    try {
-      final signature = _sodium.crypto.sign.detached(
-        message: signableBytes,
-        secretKey: secretKey,
-      );
-      packet.signature = signature;
-    } finally {
-      secretKey.dispose();
-    }
-  }
-
-  /// Detached Ed25519 signature over arbitrary [message] bytes under the
-  /// identity key. Used for non-packet records — e.g. the canonical bytes of
-  /// a cold-call invite (spec §IP Cold-Call). Same native libsodium path as
-  /// [signPacket].
-  Uint8List signBytes(Uint8List message) {
     final secretKey = SecureKey.fromList(_sodium, identity.privateKey);
     try {
       return _sodium.crypto.sign.detached(
@@ -236,21 +231,18 @@ class ProtocolHandler {
     }
   }
 
-  /// Verify a packet's Ed25519 signature against the sender's public key.
-  ///
-  /// Native libsodium verify (~5-10ms on Android) is fast enough that we run
-  /// on the main isolate — even a fully fragmented 100 KB picture (~315
-  /// individually signed BitchatPackets) totals ~2-3s of CPU spread across
-  /// the BLE arrival window, comfortably interleaved with the event loop's
-  /// other work.
-  ///
-  /// Returns true if the signature is valid; false on any error.
-  Future<bool> verifyPacket(GrassrootsPacket packet) async {
+  /// Verify a detached Ed25519 [signature] over [message] against
+  /// [publicKey]. Returns false on any error.
+  bool verifyBytes({
+    required Uint8List signature,
+    required Uint8List message,
+    required Uint8List publicKey,
+  }) {
     try {
       return _sodium.crypto.sign.verifyDetached(
-        signature: packet.signature,
-        message: packet.getSignableBytes(),
-        publicKey: packet.senderPubkey,
+        signature: signature,
+        message: message,
+        publicKey: publicKey,
       );
     } catch (_) {
       return false;

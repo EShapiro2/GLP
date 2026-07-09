@@ -466,47 +466,32 @@ class AnchorServer {
       return;
     }
 
-    // Verify signature
-    final isValid = await _protocol.verifyPacket(packet);
-    if (!isValid) {
-      _log('Dropping packet with invalid signature from $peerId');
-      return;
-    }
-
-    final senderHex = _pubkeyToHex(packet.senderPubkey);
-
-    // Map incoming connection to pubkey. Always rebind a freshly-arrived
-    // tempKey so that a reconnecting peer (new NAT-mapped source port)
-    // replaces its stale `_peerConnections` entry. `_trackPeerConnection`
-    // handles closing the prior stream when addr/port differ.
-    if (peerId.contains(':') && _pendingIncoming.containsKey(peerId)) {
-      _tempKeyToPubkey[peerId] = senderHex;
-      _mapIncomingConnectionToPubkey(peerId, senderHex);
-    }
-
+    // The wire frame carries no identity or signature. Sender identity comes
+    // from the payload layer: ANNOUNCE is a self-signed record, the Noise
+    // handshake envelope carries an authenticated claim, and secureSignaling
+    // is authenticated by the Noise session of the connection it arrived on.
     switch (packet.type) {
       case PacketType.announce:
-        _handleAnnounce(packet,
+        await _handleAnnounce(packet, peerId,
             observedIp: observedIp,
             observedPort: observedPort,
             localPublicAddress: localPublicAddress);
       case PacketType.noiseHandshake:
-        await _handleNoiseHandshake(packet);
+        await _handleNoiseHandshake(packet, peerId);
       case PacketType.secureSignaling:
-        await _handleSecureSignaling(packet,
+        await _handleSecureSignaling(packet, peerId,
             observedIp: observedIp, observedPort: observedPort);
       case PacketType.signaling:
         // Plaintext signaling is no longer accepted — clients must wrap
         // signaling in Noise (secureSignaling). Dropping silently is the
         // intended behaviour after the legacy cutover.
-        _log('Dropping plaintext signaling from '
-            '${senderHex.substring(0, 8)}... '
+        _log('Dropping plaintext signaling from $peerId '
             '(anchor requires Noise-encrypted secureSignaling)');
       case PacketType.message:
       case PacketType.fragmentStart:
       case PacketType.fragmentContinue:
       case PacketType.fragmentEnd:
-        _log('Dropping ${packet.type} from ${senderHex.substring(0, 8)}... '
+        _log('Dropping ${packet.type} from $peerId '
             '(rendezvous server does not relay messages)');
       case PacketType.ack:
       case PacketType.nack:
@@ -527,50 +512,70 @@ class AnchorServer {
   /// completes (message 3), we send a fresh addrReflect over the freshly
   /// established session so the peer learns its public address without having
   /// to wait for another ANNOUNCE cycle.
-  Future<void> _handleNoiseHandshake(GrassrootsPacket packet) async {
-    final senderHex = _pubkeyToHex(packet.senderPubkey);
+  Future<void> _handleNoiseHandshake(GrassrootsPacket packet, String peerId) async {
     try {
       final result = await _noiseSessions.handleHandshakePacket(packet);
+      final senderHex = _pubkeyToHex(result.remotePubkey);
+
+      // Map the connection to the claimed identity only when the session
+      // manager accepted the message (verified message-1 claim or completed
+      // message 3) — an unexpected/garbage handshake must not rebind a
+      // connection. Rebinding a freshly-arrived tempKey lets a reconnecting
+      // peer (new NAT-mapped source port) replace its stale
+      // `_peerConnections` entry.
+      final accepted =
+          result.responsePayload != null || result.sessionEstablished;
+      if (accepted &&
+          peerId != senderHex &&
+          _pendingIncoming.containsKey(peerId)) {
+        _tempKeyToPubkey[peerId] = senderHex;
+        _mapIncomingConnectionToPubkey(peerId, senderHex);
+      }
+
       final responsePayload = result.responsePayload;
       if (responsePayload != null) {
-        final responsePacket = GrassrootsPacket(
-          type: PacketType.noiseHandshake,
-          senderPubkey: _identity.publicKey,
-          recipientPubkey: packet.senderPubkey,
-          payload: responsePayload,
-          signature: Uint8List(64),
+        _sendPacket(
+          senderHex,
+          GrassrootsPacket(
+            type: PacketType.noiseHandshake,
+            payload: responsePayload,
+          ),
         );
-        await _protocol.signPacket(responsePacket);
-        _sendPacket(senderHex, responsePacket);
       }
       if (result.sessionEstablished) {
         _log('Noise session established with ${senderHex.substring(0, 8)}...');
         _sendAddrReflectFor(senderHex);
       }
     } catch (e) {
-      _log('Failed to process Noise handshake from '
-          '${senderHex.substring(0, 8)}...: $e');
-      _noiseSessions.reset(senderHex);
+      // Identity is unknown when decoding/verification fails, so there is no
+      // session entry to reset; a retrying peer starts over with a fresh
+      // message 1, which replaces any half-open responder state.
+      _log('Failed to process Noise handshake from $peerId: $e');
     }
   }
 
   /// Decrypt an inbound `secureSignaling` packet and feed the plaintext into
-  /// the signaling handler. Drops the packet if no session exists.
+  /// the signaling handler. The sender identity is the connection's mapped
+  /// pubkey (established by the Noise handshake); an unmapped connection
+  /// cannot have a session, so its packets are dropped.
   Future<void> _handleSecureSignaling(
-    GrassrootsPacket packet, {
+    GrassrootsPacket packet,
+    String peerId, {
     String? observedIp,
     int? observedPort,
   }) async {
-    final senderHex = _pubkeyToHex(packet.senderPubkey);
+    final senderHex = peerId;
     if (!_noiseSessions.hasSession(senderHex)) {
-      _log('Dropping secureSignaling from ${senderHex.substring(0, 8)}... '
-          '(no Noise session)');
+      _log('Dropping secureSignaling from $peerId (no Noise session)');
       return;
     }
     try {
-      final clear = await _noiseSessions.decryptPacket(packet);
+      final clear = await _noiseSessions.decryptPacket(
+        packet,
+        remotePubkeyHex: senderHex,
+      );
       _signalingHandler.processSignaling(
-        clear.senderPubkey,
+        _hexToBytes(senderHex),
         clear.payload,
         observedIp: observedIp,
         observedPort: observedPort,
@@ -601,14 +606,30 @@ class AnchorServer {
     );
   }
 
-  void _handleAnnounce(
-    GrassrootsPacket packet, {
+  Future<void> _handleAnnounce(
+    GrassrootsPacket packet,
+    String peerId, {
     String? observedIp,
     int? observedPort,
     String? localPublicAddress,
-  }) {
-    final data = _protocol.decodeAnnounce(packet.payload);
+  }) async {
+    final AnnounceData data;
+    try {
+      // Decoding verifies the record's own trailing signature.
+      data = await _protocol.decodeAnnounce(packet.payload);
+    } catch (e) {
+      _log('Dropping unverifiable ANNOUNCE from $peerId: $e');
+      return;
+    }
     final senderHex = data.pubkeyHex;
+
+    // Map the connection to the verified identity. Always rebind a
+    // freshly-arrived tempKey so that a reconnecting peer (new NAT-mapped
+    // source port) replaces its stale `_peerConnections` entry.
+    if (peerId != senderHex && _pendingIncoming.containsKey(peerId)) {
+      _tempKeyToPubkey[peerId] = senderHex;
+      _mapIncomingConnectionToPubkey(peerId, senderHex);
+    }
 
     _refreshTrackedAddressFromAnnounce(
       senderHex,
@@ -624,8 +645,8 @@ class AnchorServer {
 
     _log('ANNOUNCE: ${data.nickname} (${senderHex.substring(0, 8)}...)');
     // Send our ANNOUNCE back so they know who we are
-    _sendAnnounceTo(
-      packet.senderPubkey,
+    await _sendAnnounceTo(
+      data.publicKey,
       address: localPublicAddress,
     );
   }
@@ -693,7 +714,6 @@ class AnchorServer {
         '(payload=${signalingPayload.length}B)');
 
     final clearPacket = _protocol.createSignalingPacket(
-      recipientPubkey: recipientPubkey,
       signalingPayload: signalingPayload,
     );
 
@@ -708,9 +728,8 @@ class AnchorServer {
           '${recipientHex.substring(0, 8)}...: $e');
       return false;
     }
-    await _protocol.signPacket(securePacket);
     final serializedLength = securePacket.serialize().length;
-    _log('Signed signaling reply $signalingSummary from '
+    _log('Encrypted signaling reply $signalingSummary from '
         '${senderHex.substring(0, 8)}... to ${recipientHex.substring(0, 8)}... '
         '(wire=$serializedLength B)');
 
@@ -725,8 +744,7 @@ class AnchorServer {
     Uint8List recipientPubkey, {
     String? address,
   }) async {
-    final packet = _protocol.createAnnouncePacket(address: address);
-    await _protocol.signPacket(packet);
+    final packet = await _protocol.createAnnouncePacket(address: address);
     _sendPacket(_pubkeyToHex(recipientPubkey), packet);
   }
 
@@ -735,10 +753,9 @@ class AnchorServer {
 
     for (final entry in _peerConnections.entries) {
       try {
-        final packet = _protocol.createAnnouncePacket(
+        final packet = await _protocol.createAnnouncePacket(
           address: entry.value.advertisedLocalAddress,
         );
-        await _protocol.signPacket(packet);
         await entry.value.stream?.add(packet.serialize());
       } catch (e) {
         _log('Failed to send ANNOUNCE to ${entry.key.substring(0, 8)}...: $e');
@@ -926,6 +943,11 @@ class AnchorServer {
 
   static String _pubkeyToHex(Uint8List pubkey) =>
       pubkey.map((b) => b.toRadixString(16).padLeft(2, '0')).join();
+
+  static Uint8List _hexToBytes(String hex) => Uint8List.fromList([
+        for (var i = 0; i < hex.length; i += 2)
+          int.parse(hex.substring(i, i + 2), radix: 16),
+      ]);
 
   void _log(String message) {
     final ts = DateTime.now().toIso8601String().substring(11, 23);
