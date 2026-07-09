@@ -69,6 +69,8 @@ lookup_send(Key, Msg, Outs, Outs1?) :-
 procedure lookup_send_step(Constant?, OutputMsg?, OutputsList?, OutputsList).
 lookup_send_step(Key, Msg, [output(K, [Msg?|Out1?])|Rest], [output(K?, Out1)|Rest?]) :-
     Key? =?= K? | true.
+lookup_send_step(Key, Msg, [group_entry(GK, Out?)|Rest], [group_entry(GK?, Out)|Rest1?]) :-
+    lookup_send_step(Key?, Msg?, Rest?, Rest1).
 lookup_send_step(Key, Msg, [output(K, Out?)|Rest], [output(K?, Out)|Rest1?]) :-
     otherwise |
     lookup_send_step(Key?, Msg?, Rest?, Rest1).
@@ -118,6 +120,8 @@ handle_response(no, From, Outs, Outs1?, In, In?) :-
 procedure end_friend(Constant?, Constant?, OutputsList?, OutputsList).
 end_friend(Key, Id, [output(K, [msg(Id?, Key?, unfriend)])|Rest], Rest?) :-
     Key? =?= K? | true.
+end_friend(Key, Id, [group_entry(GK, Out?)|Rest], [group_entry(GK?, Out)|Rest1?]) :-
+    end_friend(Key?, Id?, Rest?, Rest1).
 end_friend(Key, Id, [output(K, Out?)|Rest], [output(K?, Out)|Rest1?]) :-
     otherwise |
     end_friend(Key?, Id?, Rest?, Rest1).
@@ -128,6 +132,8 @@ end_friend(_, _, [], []).
 procedure drop_friend(Constant?, OutputsList?, OutputsList).
 drop_friend(Key, [output(K, [])|Rest], Rest?) :-
     Key? =?= K? | true.
+drop_friend(Key, [group_entry(GK, Out?)|Rest], [group_entry(GK?, Out)|Rest1?]) :-
+    drop_friend(Key?, Rest?, Rest1).
 drop_friend(Key, [output(K, Out?)|Rest], [output(K?, Out)|Rest1?]) :-
     otherwise |
     drop_friend(Key?, Rest?, Rest1).
@@ -183,6 +189,9 @@ publish_balances(Self, Holdings, [output('_user', S?)|Rest], [output('_user', S)
     ground(Self?), ground(Holdings?) |
     publish_balances(Self?, Holdings?, Rest?, Rest1).
 publish_balances(Self, Holdings, [output('_net', S?)|Rest], [output('_net', S)|Rest1?]) :-
+    ground(Self?), ground(Holdings?) |
+    publish_balances(Self?, Holdings?, Rest?, Rest1).
+publish_balances(Self, Holdings, [group_entry(GK, S?)|Rest], [group_entry(GK?, S)|Rest1?]) :-
     ground(Self?), ground(Holdings?) |
     publish_balances(Self?, Holdings?, Rest?, Rest1).
 publish_balances(Self, Holdings,
