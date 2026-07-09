@@ -66,7 +66,16 @@ class AnswerDesc {
   final String label;
   final String cmdCtor;
   final List<Fill> fill;
-  const AnswerDesc({required this.label, required this.cmdCtor, required this.fill});
+
+  /// After this answer, open the card's [InboxDesc.itemKey] item (drill into its
+  /// conversation). Set on a group invitation's Accept so joining opens the
+  /// group; left false for answers that leave no item to open.
+  final bool opensItem;
+  const AnswerDesc(
+      {required this.label,
+      required this.cmdCtor,
+      required this.fill,
+      this.opensItem = false});
 
   bool get needsPicker => fill.any((f) => f is PickerFill);
 }

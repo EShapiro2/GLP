@@ -1,16 +1,17 @@
-/// CSSN social-network manifest (paper §7.2): the child-safe social network's
-/// UI contract, mirroring the UserCmd/UserNotify vocabulary of
+/// CSSN social-network manifest (paper §7.2, §8): the child-safe social
+/// network's UI contract, mirroring the UserCmd/UserNotify vocabulary of
 /// programs/cssn/ui/mediator.glp — the manual compilation of the platform's
-/// volition-guarded clauses. As panels: **Friends** (the social graph), **Groups**
-/// (the social network's groups), and **Chats** (one-to-one conversations), over
-/// one shared activity store.
+/// volition-guarded clauses. As panels (paper §8): **Friends** (the social
+/// graph) and **Chats** (the social network — one-to-one AND group messaging),
+/// over one shared activity store.
 ///
-/// Groups are the new surface: a group is a `GroupId`-keyed multi-party
-/// conversation. Create-group is the Groups panel's "+"; a group invitation is
-/// an inbox card (the Respond-shaped ask); opening a group shows its
-/// author-labeled messages, an input that posts (`send_group`), and per-group
-/// actions (invite a friend, leave). Backed live by programs/cssn/ (agent.glp +
-/// ui/mediator.glp), booted by play_ui_boot.glp.
+/// Groups live in Chats, not a panel of their own (paper §8, "Chats"): a group
+/// invitation is a card, accepted before the group joins the chat list; a group
+/// is then a row in the same chat list as one-to-one conversations, opening to
+/// its author-labeled thread. Create-group is the panel's "+"; add/remove a
+/// member and leave are the open group's actions (Table~1's group request
+/// forms). Backed live by programs/cssn/ (agent.glp + ui/mediator.glp), booted
+/// by play_ui_boot.glp.
 library;
 
 import '../ui_runtime/manifest.dart';
@@ -80,25 +81,35 @@ final Manifest cssnGroupsManifest = Manifest(
       ],
     ),
 
-    // --- Groups: the social network's groups -------------------------------
-    // The "+" creates a group; a group invitation alerts as a row; opening a
-    // group shows its messages, the input posts, and the app-bar actions invite
-    // a friend or leave.
+    // --- Chats: the social network — one-to-one AND group messaging ---------
+    // One chat list holds both one-to-one conversations and groups. The "+"
+    // creates a group; a group invitation is a card (accepted before the group
+    // joins the list); opening a group shows its author-labeled thread, its
+    // input posts, and its actions invite / remove a member / leave.
     Panel(
-      id: 'groups',
-      name: 'Groups',
+      id: 'chats',
+      name: 'Chats',
+      chat: const ChatView(threadKey: 'chats', label: 'Chats', sendCtor: 'send'),
       groups: const GroupChatView(
         threadKey: 'groups',
-        label: 'Groups',
+        label: 'Chats',
         sendCtor: 'send_group',
         groupField: 'group',
         actions: [
           CommandDesc(
             ctor: 'invite_group',
-            label: 'Invite',
+            label: 'Add member',
             args: [
               FieldDesc('group', FieldType.text, 'Group'),
-              FieldDesc('invitee', FieldType.person, 'Friend to invite'),
+              FieldDesc('invitee', FieldType.person, 'Friend to add'),
+            ],
+          ),
+          CommandDesc(
+            ctor: 'remove_from_group',
+            label: 'Remove member',
+            args: [
+              FieldDesc('group', FieldType.text, 'Group'),
+              FieldDesc('member', FieldType.person, 'Member to remove'),
             ],
           ),
           CommandDesc(
@@ -111,7 +122,7 @@ final Manifest cssnGroupsManifest = Manifest(
       commands: const [
         CommandDesc(
           ctor: 'create_group',
-          label: 'Create group',
+          label: 'New group',
           args: [FieldDesc('name', FieldType.text, 'Group name')],
         ),
       ],
@@ -126,6 +137,7 @@ final Manifest cssnGroupsManifest = Manifest(
               label: 'Accept',
               cmdCtor: 'accept_group',
               fill: [FromField('group'), FromField('req')],
+              opensItem: true,
             ),
             AnswerDesc(
               label: 'Decline',
@@ -136,19 +148,12 @@ final Manifest cssnGroupsManifest = Manifest(
         ),
       ],
     ),
-
-    // --- Chats: one-to-one conversations -----------------------------------
-    const Panel(
-      id: 'chats',
-      name: 'Chats',
-      chat: ChatView(threadKey: 'chats', label: 'Chats', sendCtor: 'send'),
-    ),
   ],
 
   state: const [
     StateView('friends', 'Friends', StateKind.list),
-    StateView('groups', 'Groups', StateKind.thread),
     StateView('chats', 'Chats', StateKind.thread),
+    StateView('groups', 'Groups', StateKind.thread),
   ],
 
   activity: const [
@@ -167,7 +172,7 @@ final Manifest cssnGroupsManifest = Manifest(
       args: ['from', 'text'],
       effects: [PushChat('chats', 'from', 'text', outgoing: false)],
     ),
-    // Groups.
+    // Groups (in the Chats panel).
     ActivityDesc(
       notifyCtor: 'group_joined',
       args: ['group'],

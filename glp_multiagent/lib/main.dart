@@ -363,7 +363,7 @@ class _CoordinatorScreenState extends State<CoordinatorScreen> {
                       value: Scenario.grassapp, label: Text('GrassApp')),
                   ButtonSegment(
                       value: Scenario.socialGraph, label: Text('Social Graph')),
-                  ButtonSegment(value: Scenario.cssn, label: Text('Groups')),
+                  ButtonSegment(value: Scenario.cssn, label: Text('Network')),
                 ],
                 selected: {_scenario},
                 onSelectionChanged: (s) => _selectScenario(s.first),

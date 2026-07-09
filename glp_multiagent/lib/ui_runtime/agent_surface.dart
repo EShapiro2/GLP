@@ -93,7 +93,14 @@ class _AgentSurfaceState extends State<AgentSurface> {
 
     // Drill-down within the active panel: a wallet person or a chat peer.
     if (_openItem != null) {
-      if (active.chat != null) return _conversation(active.chat!, _openItem!);
+      if (active.chat != null) {
+        // The social-network panel holds both one-to-one chats and groups;
+        // a group key (a group_id term) opens the group conversation.
+        if (active.groups != null && _isGroupKey(_openItem!)) {
+          return _groupConversation(active.groups!, _openItem!);
+        }
+        return _conversation(active.chat!, _openItem!);
+      }
       if (active.wallet != null) return _walletDetail(active.wallet!, _openItem!);
       if (active.groups != null) {
         return _groupConversation(active.groups!, _openItem!);
@@ -160,7 +167,6 @@ class _AgentSurfaceState extends State<AgentSurface> {
   Widget _panelBody(Panel p) {
     if (p.wallet != null) return _walletPanel(p);
     if (p.chat != null) return _chatPanel(p);
-    if (p.groups != null) return _groupsPanel(p);
     return _friendsPanel(p);
   }
 
@@ -211,7 +217,11 @@ class _AgentSurfaceState extends State<AgentSurface> {
 
   void _answer(InboxCard card, AnswerDesc answer) {
     if (answer.needsPicker) return; // reserved for child-safe pickers
+    final item = card.itemKey;
     _r.answerCard(card, answer);
+    // Accepting a group invitation joins the group; open it (paper §8: the
+    // group joins the chat list — drill straight into its conversation).
+    if (answer.opensItem) setState(() => _openItem = item);
   }
 
   /// A row's trailing alert affordance: a count badge over a notification dot.
@@ -264,19 +274,34 @@ class _AgentSurfaceState extends State<AgentSurface> {
   Widget _chatPanel(Panel p) {
     final pending = _pendingByItem(p);
     final convs = _r.store.threads[p.chat!.threadKey] ?? const {};
-    final rows = <String>{...convs.keys, ...pending.keys};
+    // Groups share the chat list (paper §8): a joined group is a row here, a
+    // group invitation a pending card, both alongside one-to-one conversations.
+    final groups = p.groups != null
+        ? (_r.store.threads[p.groups!.threadKey] ?? const {})
+        : const <String, List<GTerm>>{};
+    final rows = <String>{...convs.keys, ...groups.keys, ...pending.keys};
     if (rows.isEmpty) return _empty('No chats yet');
     return ListView(
       padding: const EdgeInsets.symmetric(vertical: 2),
       children: [
-        for (final peer in rows)
-          _personTile(peer, pending[peer],
-              subtitle: convs[peer] == null ? null : _lastText(convs[peer]!),
-              onOpen: convs[peer] == null
-                  ? null
-                  : () => setState(() => _openItem = peer)),
+        for (final key in rows)
+          if (_isGroupKey(key))
+            _groupTile(p.groups!, key, pending[key], groups[key])
+          else
+            _personTile(key, pending[key],
+                subtitle: convs[key] == null ? null : _lastText(convs[key]!),
+                onOpen: convs[key] == null
+                    ? null
+                    : () => setState(() => _openItem = key)),
       ],
     );
+  }
+
+  /// A chat-list key is a group when it is a `group_id(...)` term (groups share
+  /// the chat list with one-to-one peers, which are plain atoms).
+  bool _isGroupKey(String key) {
+    final t = tryParseTerm(key);
+    return t is GStruct && t.functor == 'group_id';
   }
 
   // === Shared row: a person/friend/peer, badged when it has a pending card ===
@@ -507,22 +532,7 @@ class _AgentSurfaceState extends State<AgentSurface> {
         : '';
   }
 
-  // === Groups panel — the social network's groups ===========================
-
-  Widget _groupsPanel(Panel p) {
-    final v = p.groups!;
-    final pending = _pendingByItem(p);
-    final groups = _r.store.threads[v.threadKey] ?? const {};
-    final rows = <String>{...groups.keys, ...pending.keys};
-    if (rows.isEmpty) return _empty('No groups yet');
-    return ListView(
-      padding: const EdgeInsets.symmetric(vertical: 2),
-      children: [
-        for (final key in rows)
-          _groupTile(v, key, pending[key], groups[key]),
-      ],
-    );
-  }
+  // === Groups within the Chats panel (paper §8) =============================
 
   Widget _groupTile(
       GroupChatView v, String key, InboxCard? card, List<GTerm>? msgs) {
