@@ -20,8 +20,10 @@ import 'package:path_provider/path_provider.dart';
 class GlpPaths {
   final String grassappDir; // .../programs/book/grassapp
   final String graphDir; // .../programs/social/graph
+  final String cssnDir; // .../programs/cssn
   final String rootSelfGlp; // .../programs/self.glp
-  const GlpPaths(this.grassappDir, this.graphDir, this.rootSelfGlp);
+  const GlpPaths(
+      this.grassappDir, this.graphDir, this.cssnDir, this.rootSelfGlp);
 }
 
 /// The bundled assets (relative to `assets/glp/`), in the tree the engine's
@@ -46,6 +48,15 @@ const _bundledGlp = [
   'programs/social/graph/play_ui_boot.glp',
   'programs/social/graph/ui/mediator.glp',
   'programs/social/graph/ui/actors.glp',
+  // CSSN social network (groups): the whole program is statically linked, so
+  // every module the root self.glp reaches must be bundled.
+  'programs/cssn/self.glp',
+  'programs/cssn/agent.glp',
+  'programs/cssn/child_agent.glp',
+  'programs/cssn/boot.glp',
+  'programs/cssn/play_ui_boot.glp',
+  'programs/cssn/ui/mediator.glp',
+  'programs/cssn/ui/actors.glp',
 ];
 
 Future<GlpPaths> resolveGlpPaths() async {
@@ -53,13 +64,13 @@ Future<GlpPaths> resolveGlpPaths() async {
   final rel = Directory('../programs/book/grassapp');
   if (rel.existsSync()) {
     final base = Directory('../programs').absolute.path;
-    return GlpPaths(
-        '$base/book/grassapp', '$base/social/graph', '$base/self.glp');
+    return GlpPaths('$base/book/grassapp', '$base/social/graph', '$base/cssn',
+        '$base/self.glp');
   }
   const repo = '/Users/udi/Grassroots/GLP/programs';
   if (Directory('$repo/book/grassapp').existsSync()) {
-    return GlpPaths(
-        '$repo/book/grassapp', '$repo/social/graph', '$repo/self.glp');
+    return GlpPaths('$repo/book/grassapp', '$repo/social/graph', '$repo/cssn',
+        '$repo/self.glp');
   }
 
   // Sandboxed (iOS): copy the bundled assets into Documents and use that tree.
@@ -71,5 +82,6 @@ Future<GlpPaths> resolveGlpPaths() async {
     await out.parent.create(recursive: true);
     await out.writeAsString(source);
   }
-  return GlpPaths('$base/book/grassapp', '$base/social/graph', '$base/self.glp');
+  return GlpPaths('$base/book/grassapp', '$base/social/graph', '$base/cssn',
+      '$base/self.glp');
 }

@@ -23,6 +23,7 @@ import 'isolate_protocol.dart';
 import 'glp_sources.dart';
 import 'manifests/grassroots.dart';
 import 'manifests/social.dart';
+import 'manifests/cssn_groups.dart';
 import 'ui_runtime/agent_surface.dart';
 import 'ui_runtime/runtime.dart';
 
@@ -109,7 +110,7 @@ class CoordinatorApp extends StatelessWidget {
 
 /// A live single-isolate scenario: one platform's compiled pair plus its
 /// scripted peers, rendered by that platform's manifest.
-enum Scenario { grassapp, socialGraph }
+enum Scenario { grassapp, socialGraph, cssn }
 
 // =============================================================================
 // PER-AGENT UI STATE
@@ -263,7 +264,7 @@ class _CoordinatorScreenState extends State<CoordinatorScreen> {
         replyPort: _replyPort.sendPort,
         deferStart: false,
       );
-    } else {
+    } else if (_scenario == Scenario.socialGraph) {
       // Social graph: the canonical program directory, statically linked; the
       // root self.glp of the program exports agent_init/3 (play_ui_boot.glp).
       bob.ui = UiRuntime(
@@ -277,6 +278,22 @@ class _CoordinatorScreenState extends State<CoordinatorScreen> {
         friends: const ['alice', 'charlie'],
         replyPort: _replyPort.sendPort,
         programDir: glp.graphDir,
+        deferStart: false,
+      );
+    } else {
+      // CSSN social network (groups): the cssn program directory, statically
+      // linked; its root self.glp exports agent_init/3 (play_ui_boot.glp).
+      bob.ui = UiRuntime(
+        manifest: cssnGroupsManifest,
+        onSend: (text) => bob.commandPort?.send(UserInput(text)),
+      );
+      initMsg = InitAgent(
+        agentId: 'Bob',
+        glpSources: const [],
+        rootSelfGlpPath: glp.rootSelfGlp,
+        friends: const ['alice', 'charlie'],
+        replyPort: _replyPort.sendPort,
+        programDir: glp.cssnDir,
         deferStart: false,
       );
     }
@@ -346,6 +363,7 @@ class _CoordinatorScreenState extends State<CoordinatorScreen> {
                       value: Scenario.grassapp, label: Text('GrassApp')),
                   ButtonSegment(
                       value: Scenario.socialGraph, label: Text('Social Graph')),
+                  ButtonSegment(value: Scenario.cssn, label: Text('Groups')),
                 ],
                 selected: {_scenario},
                 onSelectionChanged: (s) => _selectScenario(s.first),

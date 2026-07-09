@@ -9,7 +9,7 @@ cd "$(dirname "$0")/.."           # glp_multiagent/
 SRC=../programs
 DST=assets/glp/programs
 rm -rf "$DST"
-mkdir -p "$DST/lib/routing" "$DST/book/grassapp" "$DST/social/graph/ui"
+mkdir -p "$DST/lib/routing" "$DST/book/grassapp" "$DST/social/graph/ui" "$DST/cssn/ui"
 cp "$SRC/self.glp" "$DST/self.glp"
 for f in output inject intro befriend; do
   cp "$SRC/lib/routing/$f.glp" "$DST/lib/routing/$f.glp"
@@ -22,5 +22,11 @@ for f in self agent boot play_ui_boot; do
 done
 for f in mediator actors; do
   cp "$SRC/social/graph/ui/$f.glp" "$DST/social/graph/ui/$f.glp"
+done
+for f in self agent child_agent boot play_ui_boot; do
+  cp "$SRC/cssn/$f.glp" "$DST/cssn/$f.glp"
+done
+for f in mediator actors; do
+  cp "$SRC/cssn/ui/$f.glp" "$DST/cssn/ui/$f.glp"
 done
 echo "Synced GLP assets from $SRC -> $DST"

@@ -34,3 +34,5 @@ flutter:
     - assets/glp/programs/book/grassapp/
     - assets/glp/programs/social/graph/
     - assets/glp/programs/social/graph/ui/
+    - assets/glp/programs/cssn/
+    - assets/glp/programs/cssn/ui/

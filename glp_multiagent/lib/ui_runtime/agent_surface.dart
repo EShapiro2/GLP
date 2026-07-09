@@ -79,6 +79,9 @@ class _AgentSurfaceState extends State<AgentSurface> {
     if (p.chat != null) {
       return selected ? Icons.chat_bubble : Icons.chat_bubble_outline;
     }
+    if (p.groups != null) {
+      return selected ? Icons.groups : Icons.groups_outlined;
+    }
     return selected ? Icons.people : Icons.people_outline;
   }
 
@@ -92,6 +95,9 @@ class _AgentSurfaceState extends State<AgentSurface> {
     if (_openItem != null) {
       if (active.chat != null) return _conversation(active.chat!, _openItem!);
       if (active.wallet != null) return _walletDetail(active.wallet!, _openItem!);
+      if (active.groups != null) {
+        return _groupConversation(active.groups!, _openItem!);
+      }
     }
 
     final showFab = active.commands.isNotEmpty;
@@ -154,6 +160,7 @@ class _AgentSurfaceState extends State<AgentSurface> {
   Widget _panelBody(Panel p) {
     if (p.wallet != null) return _walletPanel(p);
     if (p.chat != null) return _chatPanel(p);
+    if (p.groups != null) return _groupsPanel(p);
     return _friendsPanel(p);
   }
 
@@ -498,6 +505,183 @@ class _AgentSurfaceState extends State<AgentSurface> {
     return s.args.isNotEmpty
         ? formatTerm(s.args[0]).replaceAll('_', ' ')
         : '';
+  }
+
+  // === Groups panel — the social network's groups ===========================
+
+  Widget _groupsPanel(Panel p) {
+    final v = p.groups!;
+    final pending = _pendingByItem(p);
+    final groups = _r.store.threads[v.threadKey] ?? const {};
+    final rows = <String>{...groups.keys, ...pending.keys};
+    if (rows.isEmpty) return _empty('No groups yet');
+    return ListView(
+      padding: const EdgeInsets.symmetric(vertical: 2),
+      children: [
+        for (final key in rows)
+          _groupTile(v, key, pending[key], groups[key]),
+      ],
+    );
+  }
+
+  Widget _groupTile(
+      GroupChatView v, String key, InboxCard? card, List<GTerm>? msgs) {
+    final alerting = card != null;
+    return ListTile(
+      leading: CircleAvatar(
+        backgroundColor: _accent.shade100,
+        child: const Icon(Icons.groups, color: Colors.black87),
+      ),
+      title: Text(_groupName(key),
+          style: const TextStyle(fontWeight: FontWeight.w600)),
+      subtitle: alerting
+          ? Text(renderTemplate(card.desc.title, card.fields),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(color: _accent, fontWeight: FontWeight.w600))
+          : ((msgs == null || msgs.isEmpty)
+              ? const Text('No messages yet',
+                  style: TextStyle(color: Colors.grey))
+              : Text(_lastGroupText(msgs),
+                  maxLines: 1, overflow: TextOverflow.ellipsis)),
+      trailing: alerting
+          ? _rowAlert()
+          : const Icon(Icons.chevron_right, color: Colors.grey),
+      onTap: alerting
+          ? () => _openCard(context, card)
+          : () => setState(() => _openItem = key),
+    );
+  }
+
+  Widget _groupConversation(GroupChatView v, String key) {
+    final gid = tryParseTerm(key) ?? GAtom(key);
+    final msgs = _r.store.threads[v.threadKey]?[key] ?? const [];
+    return Scaffold(
+      backgroundColor: const Color(0xFFF3EFEA),
+      appBar: AppBar(
+        backgroundColor: _accent,
+        foregroundColor: Colors.white,
+        elevation: 0,
+        leading: BackButton(onPressed: () => setState(() => _openItem = null)),
+        titleSpacing: 0,
+        title: Text(_groupName(key),
+            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+        actions: [
+          for (final a in v.actions)
+            TextButton(
+              onPressed: () =>
+                  _composeCommand(context, a, prefill: {v.groupField: gid}),
+              child: Text(a.label,
+                  style: const TextStyle(color: Colors.white)),
+            ),
+        ],
+      ),
+      body: Column(
+        children: [
+          Expanded(
+            child: ListView(
+              padding: const EdgeInsets.all(10),
+              children: msgs.map(_groupBubble).toList(),
+            ),
+          ),
+          _groupInputBar(v, gid),
+        ],
+      ),
+    );
+  }
+
+  Widget _groupBubble(GTerm m) {
+    // Stored as grp(author, text); render the person's own posts on the right,
+    // others' on the left labeled with the author.
+    final s =
+        (m is GStruct && m.functor == 'grp' && m.args.length == 2) ? m : null;
+    final author = s != null ? formatTerm(s.args[0]) : '';
+    final text = s != null
+        ? formatTerm(s.args[1]).replaceAll('_', ' ')
+        : formatTerm(m).replaceAll('_', ' ');
+    final outgoing = author == widget.agentId.toLowerCase();
+    return Align(
+      alignment: outgoing ? Alignment.centerRight : Alignment.centerLeft,
+      child: Container(
+        margin: const EdgeInsets.symmetric(vertical: 3),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        constraints: const BoxConstraints(maxWidth: 250),
+        decoration: BoxDecoration(
+          color: outgoing ? const Color(0xFFEAF3DE) : Colors.white,
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Column(
+          crossAxisAlignment:
+              outgoing ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (!outgoing)
+              Text(_cap(author),
+                  style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                      color: _accent)),
+            Text(text, style: const TextStyle(fontSize: 14)),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _groupInputBar(GroupChatView v, GTerm groupId) {
+    void send() {
+      final t = _msg.text.trim();
+      if (t.isEmpty) return;
+      _msg.clear();
+      _r.sendGroup(v, groupId, t);
+    }
+
+    return Container(
+      padding: const EdgeInsets.fromLTRB(8, 6, 8, 8),
+      color: Colors.white,
+      child: Row(
+        children: [
+          const Icon(Icons.add, color: Colors.grey),
+          const SizedBox(width: 6),
+          Expanded(
+            child: TextField(
+              controller: _msg,
+              onSubmitted: (_) => send(),
+              decoration: InputDecoration(
+                hintText: 'Message the group',
+                isDense: true,
+                contentPadding:
+                    const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(20),
+                    borderSide: BorderSide(color: Colors.grey.shade300)),
+              ),
+            ),
+          ),
+          IconButton(
+              onPressed: send, icon: const Icon(Icons.send, color: _accent)),
+        ],
+      ),
+    );
+  }
+
+  /// A group's display name: `group_id(creator, name)` → the name; else the key.
+  String _groupName(String key) {
+    final t = tryParseTerm(key);
+    if (t is GStruct && t.functor == 'group_id' && t.args.length == 2) {
+      return _cap(formatTerm(t.args[1]));
+    }
+    return key;
+  }
+
+  String _lastGroupText(List<GTerm> msgs) {
+    final m = msgs.last;
+    if (m is GStruct && m.functor == 'grp' && m.args.length == 2) {
+      final who = _cap(formatTerm(m.args[0]));
+      final text = formatTerm(m.args[1]).replaceAll('_', ' ');
+      return '$who: $text';
+    }
+    return formatTerm(m).replaceAll('_', ' ');
   }
 
   // === Compose forms — the "+" (Request-shaped clauses) =====================

@@ -163,6 +163,38 @@ class Toast extends Effect {
   const Toast(this.template);
 }
 
+/// Open (create, empty) a group conversation keyed by the group in [keyField]
+/// — the compound `GroupId` term. The group's chat is keyed by that term (its
+/// formatted string), so a group joined shows an empty conversation before any
+/// message. The group analogue of [OpenChat].
+class OpenGroup extends Effect {
+  final String thread;
+  final String keyField;
+  const OpenGroup(this.thread, this.keyField);
+}
+
+/// Append an author-labeled message to the group conversation [thread] keyed by
+/// the group in [keyField] (a compound `GroupId`), the author in [authorField],
+/// text in [textField]. Unlike [PushChat] (one-to-one, direction only), a group
+/// message carries its author; the renderer draws the person's own posts on the
+/// right and others' on the left with the author's name.
+class PushGroupChat extends Effect {
+  final String thread;
+  final String keyField;
+  final String authorField;
+  final String textField;
+  const PushGroupChat(
+      this.thread, this.keyField, this.authorField, this.textField);
+}
+
+/// Remove the group conversation keyed by the group in [keyField] — a member
+/// left it or was removed. The group analogue of [RemoveFrom] for a thread.
+class CloseGroup extends Effect {
+  final String thread;
+  final String keyField;
+  const CloseGroup(this.thread, this.keyField);
+}
+
 /// Set a balance entry in a holdings store: `holdings[store][owner][coin]`
 /// becomes the [amountField] value. This is the keyed-balance view the coins
 /// app needs and the chat/list/value views do not provide — a two-level map
@@ -205,6 +237,33 @@ class ChatView {
   final String sendCtor;
   const ChatView(
       {required this.threadKey, required this.label, required this.sendCtor});
+}
+
+/// A group-chat surface (paper §7.2 Social Network): the groups the person
+/// belongs to, each a `GroupId`-keyed multi-party conversation. Its rows are the
+/// person's groups (thread keys under [threadKey]) plus any pending group
+/// invitation (a card alerting on the group). Opening a group shows its
+/// author-labeled messages, an input that posts via [sendCtor]
+/// (`send_group(GroupId, text)`), and its per-group [actions] (invite a friend,
+/// leave) whose group argument is prefilled with the open group. Unlike
+/// [ChatView] this is keyed by a compound term and its bubbles name their
+/// author, which the one-to-one chat surface does not carry.
+class GroupChatView {
+  final String threadKey;
+  final String label;
+  final String sendCtor;
+
+  /// The `GroupId`-typed field the [sendCtor] and each action expects first,
+  /// prefilled from the open group (its argument, not typed by the person).
+  final String groupField;
+  final List<CommandDesc> actions;
+  const GroupChatView({
+    required this.threadKey,
+    required this.label,
+    required this.sendCtor,
+    required this.groupField,
+    this.actions = const [],
+  });
 }
 
 /// Optional wallet surface. When set, the state screen lists the person
@@ -275,10 +334,11 @@ class Panel {
   /// bottom-nav tab label.
   final String name;
 
-  // Exactly one of the three views is set; its kind selects the panel's icon.
+  // Exactly one of the four views is set; its kind selects the panel's icon.
   final FriendsView? friends;
   final WalletView? wallet;
   final ChatView? chat;
+  final GroupChatView? groups;
 
   /// The panel's compose commands (its "+"); empty when the view composes its
   /// own actions (the wallet drills down to per-friend actions instead).
@@ -293,6 +353,7 @@ class Panel {
     this.friends,
     this.wallet,
     this.chat,
+    this.groups,
     this.commands = const [],
     this.inbox = const [],
   });

@@ -191,8 +191,37 @@ class UiRuntime {
             if (tick != null) tick,
           ]);
           t.putIfAbsent(k, () => <GTerm>[]).add(msg);
+        case OpenGroup(:final thread, :final keyField):
+          store.threads
+              .putIfAbsent(thread, () => <String, List<GTerm>>{})
+              .putIfAbsent(formatTerm(fields[keyField]!), () => <GTerm>[]);
+        case PushGroupChat(
+            :final thread,
+            :final keyField,
+            :final authorField,
+            :final textField
+          ):
+          final t =
+              store.threads.putIfAbsent(thread, () => <String, List<GTerm>>{});
+          final k = formatTerm(fields[keyField]!);
+          // Store author + text; the renderer draws the person's own posts on
+          // the right (author == self) and others' on the left, labeled.
+          final msg = GStruct('grp', [fields[authorField]!, fields[textField]!]);
+          t.putIfAbsent(k, () => <GTerm>[]).add(msg);
+        case CloseGroup(:final thread, :final keyField):
+          store.threads[thread]?.remove(formatTerm(fields[keyField]!));
       }
     }
+  }
+
+  /// Post to a group: build `sendCtor(GroupId, text)` from the open group's
+  /// `GroupId` term (recovered from its thread key) and the input text. No
+  /// optimistic echo — the message appears when its `group_received` round-trips
+  /// through the hub, so the person's own post and others' arrive by one path.
+  void sendGroup(GroupChatView view, GTerm groupId, String text) {
+    final atom = chatAtom(text);
+    onSend(formatTerm(GStruct(view.sendCtor, [groupId, GAtom(atom)])));
+    onChange?.call();
   }
 
   /// Append the person's own outgoing message to a conversation immediately

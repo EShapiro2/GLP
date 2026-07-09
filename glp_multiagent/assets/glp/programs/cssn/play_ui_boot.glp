@@ -1,0 +1,125 @@
+%% play_ui_boot.glp — single-isolate CSSN social-network scenario (live UI).
+%%
+%% Bob is the live-UI agent: his UserCmd stream comes from the person through
+%% the Dart bridge (agent_init/3's UserIn) and his UserNotify stream returns to
+%% the person through send_to_user.  Alice and Charlie are actors: each
+%% cold-calls Bob and, once he accepts, transacts so his screen comes alive:
+%%   - Alice, once Bob is her friend, creates a group (chess) and invites Bob —
+%%     so Bob's Groups panel shows a group-invitation card; on accepting, Bob
+%%     joins and both can post.  Alice posts a greeting when Bob joins.
+%%   - Charlie befriends Bob and waits; if Bob creates a group and invites him,
+%%     Charlie accepts and greets the group.
+%% Both actors accept any friend offer or group invite Bob composes and reply to
+%% his chat messages.  An in-heap crossbar routes '_net' cold calls by
+%% addressee; friend channels are in-heap.
+%%
+%% The play wires the deployed compiled pair of this platform — agent.glp and
+%% ui/mediator.glp — to the Dart bridge: the code under the live UI is the code
+%% the fplays test.  UIVE app wiring (UI); added under the 2026-07-09 waiver.
+
+%% =============================================================================
+%% IMPORTED PROCEDURES — cross-module dependencies
+%% =============================================================================
+
+imported procedure agent#agent(Constant?, Stream(UserInMsg)?, Stream(NetInMsg)?, Stream(OutputEntry)?).
+
+imported procedure mediator#ui_mediator(Constant?, Channel(Stream(AgentToUserMsg), Stream(MediatorToAgentMsg))?, Channel(Stream(UserCmd), Stream(UserNotify))?, Stream(PendingEntry)?, Constant?).
+
+%% =============================================================================
+%% IN-HEAP CROSSBAR — route '_net' cold calls by addressee
+%% =============================================================================
+
+procedure crossbar(NetOutStream?, NetOutStream?, NetOutStream?,
+                   NetInStream, NetInStream, NetInStream).
+crossbar(AOut, BOut, COut, AIn?, BIn?, CIn?) :-
+    merge(AOut?, BOut?, AB),
+    merge(AB?, COut?, All),
+    route(All?, AIn, BIn, CIn).
+
+procedure route(NetOutStream?, NetInStream, NetInStream, NetInStream).
+route([msg(alice, C) | Rest], [msg(alice, C?) | A?], B?, Ch?) :-
+    route(Rest?, A, B, Ch).
+route([msg(bob, C) | Rest], A?, [msg(bob, C?) | B?], Ch?) :-
+    route(Rest?, A, B, Ch).
+route([msg(charlie, C) | Rest], A?, B?, [msg(charlie, C?) | Ch?]) :-
+    route(Rest?, A, B, Ch).
+route([], [], [], []).
+
+%% =============================================================================
+%% ACTORS
+%% =============================================================================
+
+%% Alice: cold-call Bob; once his friend, create a group and invite him.
+procedure alice_actor(Stream(UserNotify)?, Stream(UserCmd)).
+alice_actor(Ns, [connect(bob) | Cs?]) :- alice_run(Ns?, Cs).
+
+procedure alice_run(Stream(UserNotify)?, Stream(UserCmd)).
+alice_run([connected(bob) | Ns],
+    [create_group(chess) | [invite_group(group_id(alice, chess), bob) | Cs?]]) :-
+    ui_drain(alice, Ns?, Cs).
+alice_run([befriend(Who, Req) | Ns], [decision(yes, Who?, Req?) | Cs?]) :-
+    ground(Who?), ground(Req?) | alice_run(Ns?, Cs).
+alice_run([_ | Ns], Cs?) :- otherwise | alice_run(Ns?, Cs).
+alice_run([], []).
+
+%% Charlie: cold-call Bob; then steady-state (accept invites, reply).
+procedure charlie_actor(Stream(UserNotify)?, Stream(UserCmd)).
+charlie_actor(Ns, [connect(bob) | Cs?]) :- charlie_run(Ns?, Cs).
+
+procedure charlie_run(Stream(UserNotify)?, Stream(UserCmd)).
+charlie_run([connected(bob) | Ns], Cs?) :- ui_drain(charlie, Ns?, Cs).
+charlie_run([befriend(Who, Req) | Ns], [decision(yes, Who?, Req?) | Cs?]) :-
+    ground(Who?), ground(Req?) | charlie_run(Ns?, Cs).
+charlie_run([_ | Ns], Cs?) :- otherwise | charlie_run(Ns?, Cs).
+charlie_run([], []).
+
+%% Each actor's canned message (chat reply and group greeting).
+procedure reply_of(Constant?, Constant).
+reply_of(alice, hello_from_alice).
+reply_of(charlie, hi_from_charlie).
+
+%% Steady state: reply to chats, accept friend offers and group invites, greet a
+%% group on joining (member) or on a member joining (creator), ignore the rest.
+%% Group greetings fire on the one-shot membership events, so no reply loop.
+procedure ui_drain(Constant?, Stream(UserNotify)?, Stream(UserCmd)).
+ui_drain(Me, [received(From, _) | Ns], [send(From?, R?) | Cs?]) :-
+    ground(Me?), ground(From?) |
+    reply_of(Me?, R),
+    ui_drain(Me?, Ns?, Cs).
+ui_drain(Me, [befriend(Who, Req) | Ns], [decision(yes, Who?, Req?) | Cs?]) :-
+    ground(Me?), ground(Who?), ground(Req?) | ui_drain(Me?, Ns?, Cs).
+ui_drain(Me, [group_invite(G, Req) | Ns], [accept_group(G?, Req?) | Cs?]) :-
+    ground(Me?), ground(G?), ground(Req?) | ui_drain(Me?, Ns?, Cs).
+ui_drain(Me, [group_joined(G) | Ns], [send_group(G?, R?) | Cs?]) :-
+    ground(Me?), ground(G?) |
+    reply_of(Me?, R),
+    ui_drain(Me?, Ns?, Cs).
+ui_drain(Me, [group_joined_member(G, _) | Ns], [send_group(G?, R?) | Cs?]) :-
+    ground(Me?), ground(G?) |
+    reply_of(Me?, R),
+    ui_drain(Me?, Ns?, Cs).
+ui_drain(Me, [_ | Ns], Cs?) :- ground(Me?), otherwise | ui_drain(Me?, Ns?, Cs).
+ui_drain(_, [], []).
+
+%% =============================================================================
+%% SCENARIO BOOT (entered as Bob's agent_init)
+%% =============================================================================
+
+procedure agent_init(Constant?, Stream(UserCmd)?, Stream(NetInMsg)?).
+agent_init(bob, UserIn, _) :-
+    agent # agent(bob, BAgentIn?, BNetIn?,
+          [user_output(BA2U), net_output(BNetOut)]),
+    mediator # ui_mediator(bob, ch(BA2U?, BAgentIn),
+                ch(UserIn?, BUserOut), [], 1),
+    send_to_user(BUserOut?),
+    agent # agent(alice, AAgentIn?, ANetIn?,
+          [user_output(AA2U), net_output(ANetOut)]),
+    mediator # ui_mediator(alice, ch(AA2U?, AAgentIn),
+                ch(ACmds?, AUserOut), [], 1),
+    alice_actor(AUserOut?, ACmds),
+    agent # agent(charlie, CAgentIn?, CNetIn?,
+          [user_output(CA2U), net_output(CNetOut)]),
+    mediator # ui_mediator(charlie, ch(CA2U?, CAgentIn),
+                ch(CCmds?, CUserOut), [], 1),
+    charlie_actor(CUserOut?, CCmds),
+    crossbar(ANetOut?, BNetOut?, CNetOut?, ANetIn, BNetIn, CNetIn).
