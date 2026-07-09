@@ -155,14 +155,72 @@ final Manifest grassrootsManifest = Manifest(
       ],
     ),
 
-    // --- Chats: the social network -----------------------------------------
-    // The chat list; a conversation opens once the friendship is made. The one
-    // alert is a group invitation (none in this scenario yet). Sending happens
-    // inside the open conversation, so the panel has no "+".
-    const Panel(
+    // --- Chats: the social network — one-to-one AND groups (paper §8) -------
+    // One chat list holds one-to-one conversations and groups. The "+" creates a
+    // group; a group invitation is a card (accepted before the group joins the
+    // list); opening a group shows its author-labeled thread, its input posts,
+    // and its actions add / remove a member / leave.
+    Panel(
       id: 'chats',
       name: 'Chats',
-      chat: ChatView(threadKey: 'chats', label: 'Chats', sendCtor: 'send'),
+      chat: const ChatView(threadKey: 'chats', label: 'Chats', sendCtor: 'send'),
+      groups: const GroupChatView(
+        threadKey: 'groups',
+        label: 'Chats',
+        sendCtor: 'send_group',
+        groupField: 'group',
+        actions: [
+          CommandDesc(
+            ctor: 'invite_group',
+            label: 'Add member',
+            args: [
+              FieldDesc('group', FieldType.text, 'Group'),
+              FieldDesc('invitee', FieldType.person, 'Friend to add'),
+            ],
+          ),
+          CommandDesc(
+            ctor: 'remove_from_group',
+            label: 'Remove member',
+            args: [
+              FieldDesc('group', FieldType.text, 'Group'),
+              FieldDesc('member', FieldType.person, 'Member to remove'),
+            ],
+          ),
+          CommandDesc(
+            ctor: 'leave_group',
+            label: 'Leave',
+            args: [FieldDesc('group', FieldType.text, 'Group')],
+          ),
+        ],
+      ),
+      commands: const [
+        CommandDesc(
+          ctor: 'create_group',
+          label: 'New group',
+          args: [FieldDesc('name', FieldType.text, 'Group name')],
+        ),
+      ],
+      inbox: [
+        InboxDesc(
+          notifyCtor: 'group_invite',
+          args: const ['group', 'req'],
+          itemKey: 'group',
+          title: 'Invitation to join a group',
+          answers: const [
+            AnswerDesc(
+              label: 'Accept',
+              cmdCtor: 'accept_group',
+              fill: [FromField('group'), FromField('req')],
+              opensItem: true,
+            ),
+            AnswerDesc(
+              label: 'Decline',
+              cmdCtor: 'reject_group',
+              fill: [FromField('group'), FromField('req')],
+            ),
+          ],
+        ),
+      ],
     ),
   ],
 
@@ -170,6 +228,7 @@ final Manifest grassrootsManifest = Manifest(
   state: const [
     StateView('friends', 'Friends', StateKind.list),
     StateView('chats', 'Chats', StateKind.thread),
+    StateView('groups', 'Groups', StateKind.thread),
   ],
 
   // Activity rules: a friendship lands in BOTH Friends (adds the friend) and
@@ -207,6 +266,32 @@ final Manifest grassrootsManifest = Manifest(
         notifyCtor: 'swap_failed',
         args: ['who'],
         effects: [Toast('Swap with {who} failed — not enough coins')]),
+    // Groups (in the Chats panel).
+    ActivityDesc(
+      notifyCtor: 'group_joined',
+      args: ['group'],
+      effects: [OpenGroup('groups', 'group')],
+    ),
+    ActivityDesc(
+      notifyCtor: 'group_joined_member',
+      args: ['group', 'member'],
+      effects: [Toast('{member} joined the group')],
+    ),
+    ActivityDesc(
+      notifyCtor: 'group_received',
+      args: ['group', 'author', 'text'],
+      effects: [PushGroupChat('groups', 'group', 'author', 'text')],
+    ),
+    ActivityDesc(
+      notifyCtor: 'group_left',
+      args: ['group'],
+      effects: [CloseGroup('groups', 'group')],
+    ),
+    ActivityDesc(
+      notifyCtor: 'group_removed',
+      args: ['group'],
+      effects: [CloseGroup('groups', 'group')],
+    ),
     ActivityDesc(notifyCtor: 'rejected', args: ['who']),
     ActivityDesc(notifyCtor: 'rejected', args: []),
   ],

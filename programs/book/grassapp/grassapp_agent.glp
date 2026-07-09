@@ -29,12 +29,22 @@ OutputContent ::= befriend(Constant, Response?)
                 ; balances(Stream(Holding))
                 ; swap_propose(Constant, Integer, Constant, Integer, SwapResponse?)
                 ; redeem_coins(Constant, Integer)
+                ; group_invite(GroupId, Channel(Stream(GroupSetupResponse), Stream(Handshake)))
+                ; group_joined(GroupId)
+                ; group_joined_member(GroupId, Constant)
+                ; group_left(GroupId)
+                ; group_removed(GroupId)
+                ; group_received(GroupId, Constant, Constant)
                 ; unfriend.
 OutputMsg     ::= msg(Constant, Constant, OutputContent)
                 ; msg(Constant, NetColdCall).
 OutputStream  ::= [] ; [OutputMsg | OutputStream].
 
-OutputEntry ::= output(Constant, OutputStream?).
+%% Output entries: the keyed one-to-one/friend/user/net streams, plus group
+%% channels keyed by GroupKey (the member's own hub link, or a member entry the
+%% creator distributes to), carrying GroupMsg.
+OutputEntry ::= output(Constant, OutputStream?)
+              ; group_entry(GroupKey, Stream(GroupMsg)?).
 OutputsList ::= [] ; [OutputEntry|OutputsList].
 
 %% =============================================================================
@@ -75,6 +85,7 @@ add_output(Name, Out?, Outs, [output(Name?, Out)|Outs?]).
 
 procedure close_outputs(OutputsList?).
 close_outputs([output(_, [])|Outs]) :- close_outputs(Outs?).
+close_outputs([group_entry(_, [])|Outs]) :- close_outputs(Outs?).
 close_outputs([]).
 
 %% =============================================================================
@@ -266,6 +277,89 @@ do_accept_swap(fail, Id, From, _, _, Holdings, swap_decline, UserIn, NetIn, Outs
     after_change(Id?, Holdings?, UserIn?, NetIn?, Outs1?).
 
 %% =============================================================================
+%% GROUP HELPERS (paper §7.2 Social Network) — grassapp output model
+%% =============================================================================
+
+procedure add_group_output(GroupKey?, Stream(GroupMsg), OutputsList?, OutputsList).
+add_group_output(Key, Out?, Outs, [group_entry(Key?, Out)|Outs?]).
+
+%% Creator sets up its own hub-side member link (its posts loop through NetIn).
+procedure setup_group_creator(GroupId?, OutputsList?, OutputsList, Stream(X)?, Stream(X)).
+setup_group_creator(GroupId, Outs, Outs1?, NetIn, NetIn1?) :-
+    ground(GroupId?) |
+    add_group_output(group(GroupId?), MemberToHub, Outs?, Outs1),
+    merge(NetIn?, MemberToHub?, NetIn1).
+
+%% Creator wires a hub->member channel for a joining member; hands it its end.
+procedure setup_group_hub_side(GroupId?, Constant?, OutputsList?, OutputsList, Stream(X)?, Stream(X), Channel(Stream(GroupMsg), Stream(GroupMsg))).
+setup_group_hub_side(GroupId, Member, Outs, Outs1?, NetIn, NetIn1?,
+        ch(HubToMember?, MemberToHub)) :-
+    ground(GroupId?), ground(Member?) |
+    add_group_output(group_member(GroupId?, Member?), HubToMember, Outs?, Outs1),
+    merge(NetIn?, MemberToHub?, NetIn1).
+
+procedure lookup_send_group(GroupKey?, GroupMsg?, OutputsList?, OutputsList).
+lookup_send_group(Key, Msg, Outs, Outs1?) :-
+    ground(Key?) |
+    lookup_send_group_step(Key?, Msg?, Outs?, Outs1).
+
+procedure lookup_send_group_step(GroupKey?, GroupMsg?, OutputsList?, OutputsList).
+lookup_send_group_step(Key, Msg, [group_entry(K, [Msg?|Out1?])|Rest], [group_entry(K?, Out1)|Rest?]) :-
+    Key? =?= K? | true.
+lookup_send_group_step(Key, Msg, [E|Rest], [E?|Rest1?]) :-
+    otherwise |
+    lookup_send_group_step(Key?, Msg?, Rest?, Rest1).
+lookup_send_group_step(_, _, [], []).
+
+procedure distribute_group_msg(GroupId?, GroupMsg?, OutputsList?, OutputsList).
+distribute_group_msg(GroupId, Msg,
+    [group_entry(group_member(GId, M), [Msg?|Out1?])|Rest],
+    [group_entry(group_member(GId?, M?), Out1)|Rest1?]) :-
+    GroupId? =?= GId?, ground(Msg?) |
+    distribute_group_msg(GroupId?, Msg?, Rest?, Rest1).
+distribute_group_msg(GroupId, Msg, [E|Rest], [E?|Rest1?]) :-
+    otherwise |
+    distribute_group_msg(GroupId?, Msg?, Rest?, Rest1).
+distribute_group_msg(_, _, [], []).
+
+procedure close_output(GroupKey?, OutputsList?, OutputsList).
+close_output(_, [], []).
+close_output(Key, [group_entry(K, [])|Rest], Rest?) :-
+    Key? =?= K? | true.
+close_output(Key, [E|Rest], [E?|Rest1?]) :-
+    otherwise |
+    close_output(Key?, Rest?, Rest1).
+
+%% Creator waits on the setup channel for the member's ack/nack.
+procedure group_await_join(GroupId?, Constant?, Channel(Stream(Handshake), Stream(GroupSetupResponse))?, GroupJoinResult).
+group_await_join(GroupId, Invitee, ch([ack(_)|ChIn], ChOut?),
+                 group_join_ack(GroupId?, Invitee?, ch(ChIn?, ChOut))).
+group_await_join(GroupId, Invitee, ch([nack|_], []),
+                 group_join_nack(GroupId?, Invitee?)).
+
+procedure inject_group_result(GroupJoinResult?, Stream(X)?, Stream(X)).
+inject_group_result(group_join_ack(G, I, Ch), Ys,
+    [group_join_ack(G?, I?, Ch?)|Ys?]) :-
+    ground(I?) | true.
+inject_group_result(group_join_nack(G, I), Ys,
+    [group_join_nack(G?, I?)|Ys?]) :-
+    ground(I?) | true.
+inject_group_result(Res, [Y|Ys], [Y?|Ys1?]) :-
+    inject_group_result(Res?, Ys?, Ys1).
+
+%% Member: the group channel arrived — wire the member-side output, merge the hub
+%% stream into NetIn, announce the join.
+procedure await_group_channel(Constant?, GroupId?, Stream(GroupSetupResponse)?, Stream(X)?, Stream(X)?, OutputsList?, Stream(Holding)?).
+await_group_channel(Id, GroupId, [group_channel(ch(FromHub, ToHub?))|_],
+        UserIn, NetIn, Outs, Holdings) :-
+    ground(Id?), ground(GroupId?) |
+    add_group_output(group(GroupId?), ToHub, Outs?, Outs1),
+    merge(NetIn?, FromHub?, NetIn1),
+    lookup_send('_user', msg(agent, '_user', group_joined(GroupId?)), Outs1?, Outs2),
+    agent(Id?, UserIn?, NetIn1?, Outs2?, Holdings?).
+await_group_channel(_, _, [], _, _, _, _) :- true.
+
+%% =============================================================================
 %% AGENT/5
 %% =============================================================================
 
@@ -361,6 +455,67 @@ agent(Id, [msg(From, Id1, response(Resp))|UserIn], NetIn, Outs, Holdings) :-
     handle_response(Resp?, From?, Outs?, Outs1, NetIn?, NetIn1),
     agent(Id?, UserIn?, NetIn1?, Outs1?, Holdings?).
 
+%% --- Groups: user-originated (paper §7.2) ---
+
+%% Create a group — set up the creator's hub-side link.
+agent(Id, [msg('_user', Id1, create_group(Name))|UserIn], NetIn, Outs, Holdings) :-
+    Id? =?= Id1?, ground(Name?) |
+    setup_group_creator(group_id(Id?, Name?), Outs?, Outs1, NetIn?, NetIn1),
+    lookup_send('_user', msg(agent, '_user', group_joined(group_id(Id?, Name?))), Outs1?, Outs2),
+    agent(Id?, UserIn?, NetIn1?, Outs2?, Holdings?).
+
+%% Invite a friend to a group.
+agent(Id, [msg('_user', Id1, invite_group(GroupId, Invitee))|UserIn], NetIn, Outs, Holdings) :-
+    Id? =?= Id1?, ground(GroupId?), ground(Invitee?), new_channel(InviteeCh, CreatorCh) |
+    lookup_send(Invitee?, msg(Id?, Invitee?, group_invite(GroupId?, InviteeCh?)), Outs?, Outs1),
+    group_await_join(GroupId?, Invitee?, CreatorCh?, Result),
+    inject_group_result(Result?, UserIn?, UserIn1),
+    agent(Id?, UserIn1?, NetIn?, Outs1?, Holdings?).
+
+%% Accept a group invitation — ack on the setup channel, await the group channel.
+agent(Id, [msg('_user', Id1, accept_group(GroupId, group_channel(ch(ChRead, [ack(Id?)|[]]))))|UserIn], NetIn, Outs, Holdings) :-
+    Id? =?= Id1?, ground(GroupId?) |
+    await_group_channel(Id?, GroupId?, ChRead?, UserIn?, NetIn?, Outs?, Holdings?).
+
+%% Reject a group invitation — nack, closing the setup channel.
+agent(Id, [msg('_user', Id1, reject_group(_, group_channel(ch(_, [nack|[]]))))|UserIn], NetIn, Outs, Holdings) :-
+    Id? =?= Id1? |
+    agent(Id?, UserIn?, NetIn?, Outs?, Holdings?).
+
+%% Injected group_join_ack — creator wires the member's hub side, hands over the
+%% member's group channel.
+agent(Id, [group_join_ack(GroupId, Invitee, ch(_, [group_channel(MemberEnd?)|[]]))|UserIn], NetIn, Outs, Holdings) :-
+    ground(Id?), ground(GroupId?), ground(Invitee?) |
+    setup_group_hub_side(GroupId?, Invitee?, Outs?, Outs1, NetIn?, NetIn1, MemberEnd),
+    lookup_send('_user', msg(agent, '_user', group_joined_member(GroupId?, Invitee?)), Outs1?, Outs2),
+    agent(Id?, UserIn?, NetIn1?, Outs2?, Holdings?).
+
+%% Injected group_join_nack — nothing to do.
+agent(Id, [group_join_nack(_, _)|UserIn], NetIn, Outs, Holdings) :-
+    ground(Id?) |
+    agent(Id?, UserIn?, NetIn?, Outs?, Holdings?).
+
+%% Post to a group — send on the member-to-hub channel.
+agent(Id, [msg('_user', Id1, send_group(GroupId, Text))|UserIn], NetIn, Outs, Holdings) :-
+    Id? =?= Id1?, ground(GroupId?), ground(Text?) |
+    lookup_send_group(group(GroupId?), msg(Id?, Id?, group_msg(GroupId?, Id?, Text?)), Outs?, Outs1),
+    agent(Id?, UserIn?, NetIn?, Outs1?, Holdings?).
+
+%% Leave a group.
+agent(Id, [msg('_user', Id1, leave_group(GroupId))|UserIn], NetIn, Outs, Holdings) :-
+    Id? =?= Id1?, ground(GroupId?) |
+    lookup_send_group(group(GroupId?), msg(Id?, Id?, group_leave(GroupId?, Id?)), Outs?, Outs1),
+    close_output(group(GroupId?), Outs1?, Outs2),
+    lookup_send('_user', msg(agent, '_user', group_left(GroupId?)), Outs2?, Outs3),
+    agent(Id?, UserIn?, NetIn?, Outs3?, Holdings?).
+
+%% Remove a member from an owned group.
+agent(Id, [msg('_user', Id1, remove_from_group(GroupId, Member))|UserIn], NetIn, Outs, Holdings) :-
+    Id? =?= Id1?, ground(GroupId?), ground(Member?) |
+    lookup_send_group(group_member(GroupId?, Member?), msg(Id?, Member?, group_removed(GroupId?)), Outs?, Outs1),
+    close_output(group_member(GroupId?, Member?), Outs1?, Outs2),
+    agent(Id?, UserIn?, NetIn?, Outs2?, Holdings?).
+
 %% User catch-all (drop unrecognised user message).
 agent(Id, [_|UserIn], NetIn, Outs, Holdings) :-
     ground(Id?), otherwise |
@@ -418,6 +573,36 @@ agent(Id, UserIn, [msg(From, Id1, swap_propose(GiveCoin, GiveAmt, WantCoin, Want
         msg(agent, '_user', swap_offer(From?, GiveCoin?, GiveAmt?, WantCoin?, WantAmt?, SwapResp)),
         Outs?, Outs1),
     agent(Id?, UserIn?, NetIn?, Outs1?, Holdings?).
+
+%% --- Groups: network-arriving (paper §7.2) ---
+
+%% A group invitation arrives on a friend channel — forward to the user (the
+%% mediator escrows the setup channel).
+agent(Id, UserIn, [msg(_, Id1, group_invite(GroupId, Ch))|NetIn], Outs, Holdings) :-
+    Id? =?= Id1?, ground(GroupId?) |
+    lookup_send('_user', msg(agent, '_user', group_invite(GroupId?, Ch?)), Outs?, Outs1),
+    agent(Id?, UserIn?, NetIn?, Outs1?, Holdings?).
+
+%% A group message arrives on a group channel — distribute to members (hub side)
+%% and show it to the user.
+agent(Id, UserIn, [msg(_, _, group_msg(GroupId, Author, Text))|NetIn], Outs, Holdings) :-
+    ground(Id?), ground(GroupId?), ground(Author?), ground(Text?) |
+    distribute_group_msg(GroupId?, msg(Author?, Author?, group_msg(GroupId?, Author?, Text?)), Outs?, Outs1),
+    lookup_send('_user', msg(agent, '_user', group_received(GroupId?, Author?, Text?)), Outs1?, Outs2),
+    agent(Id?, UserIn?, NetIn?, Outs2?, Holdings?).
+
+%% A member left my group — close their hub-side entry.
+agent(Id, UserIn, [msg(Member, _, group_leave(GroupId, Member1))|NetIn], Outs, Holdings) :-
+    ground(Id?), ground(GroupId?), ground(Member?), Member? =?= Member1? |
+    close_output(group_member(GroupId?, Member?), Outs?, Outs1),
+    agent(Id?, UserIn?, NetIn?, Outs1?, Holdings?).
+
+%% The creator removed me from a group — close my member entry, tell the user.
+agent(Id, UserIn, [msg(_, _, group_removed(GroupId))|NetIn], Outs, Holdings) :-
+    ground(Id?), ground(GroupId?) |
+    close_output(group(GroupId?), Outs?, Outs1),
+    lookup_send('_user', msg(agent, '_user', group_removed(GroupId?)), Outs1?, Outs2),
+    agent(Id?, UserIn?, NetIn?, Outs2?, Holdings?).
 
 %% Network catch-all (drop unrecognised network message).
 agent(Id, UserIn, [_|NetIn], Outs, Holdings) :-

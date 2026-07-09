@@ -24,7 +24,14 @@ UserCmd     ::= connect(Constant)
               ; redeem(Constant, Integer)
               ; propose_swap(Constant, Constant, Integer, Constant, Integer)
               ; accept_swap(Constant, ReqId)
-              ; decline_swap(Constant, ReqId).
+              ; decline_swap(Constant, ReqId)
+              ; create_group(Constant)
+              ; invite_group(GroupId, Constant)
+              ; accept_group(GroupId, ReqId)
+              ; reject_group(GroupId, ReqId)
+              ; send_group(GroupId, Constant)
+              ; leave_group(GroupId)
+              ; remove_from_group(GroupId, Constant).
 
 %% Mediator -> User (ground notifications to Dart).
 UserNotify  ::= befriend(Constant, ReqId)
@@ -36,7 +43,13 @@ UserNotify  ::= befriend(Constant, ReqId)
               ; balance_report(Constant, Constant, Integer)
               ; swap_offer(Constant, Constant, Integer, Constant, Integer, ReqId)
               ; swap_done(Constant)
-              ; swap_failed(Constant).
+              ; swap_failed(Constant)
+              ; group_invite(GroupId, ReqId)
+              ; group_joined(GroupId)
+              ; group_joined_member(GroupId, Constant)
+              ; group_left(GroupId)
+              ; group_removed(GroupId)
+              ; group_received(GroupId, Constant, Constant).
 
 PendingEntry ::= pending(ReqId, PendingValue).
 PendingList  ::= [] ; [PendingEntry | PendingList].
@@ -124,6 +137,51 @@ ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
     send(balance_report(Owner?, Coin?, Amount?), UserCh?, UserCh1),
     ui_mediator(Id?, AgentCh1?, UserCh1?, Ps?, N?).
 
+%% --- Agent-to-user: group invitation (escrow the setup channel as req(N)) ---
+
+ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
+    receive(msg(agent, '_user', group_invite(GroupId, Ch)),
+            AgentCh?, AgentCh1),
+    ground(GroupId?) |
+    send(group_invite(GroupId?, req(N?)), UserCh?, UserCh1),
+    N1 := N? + 1,
+    ui_mediator(Id?, AgentCh1?, UserCh1?,
+        [pending(req(N?), group_channel(Ch?)) | Ps?], N1?).
+
+%% --- Agent-to-user: group notifications (ground pass-through) ---
+
+ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
+    receive(msg(agent, '_user', group_joined(GroupId)), AgentCh?, AgentCh1),
+    ground(GroupId?) |
+    send(group_joined(GroupId?), UserCh?, UserCh1),
+    ui_mediator(Id?, AgentCh1?, UserCh1?, Ps?, N?).
+
+ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
+    receive(msg(agent, '_user', group_joined_member(GroupId, Member)),
+            AgentCh?, AgentCh1),
+    ground(GroupId?), ground(Member?) |
+    send(group_joined_member(GroupId?, Member?), UserCh?, UserCh1),
+    ui_mediator(Id?, AgentCh1?, UserCh1?, Ps?, N?).
+
+ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
+    receive(msg(agent, '_user', group_left(GroupId)), AgentCh?, AgentCh1),
+    ground(GroupId?) |
+    send(group_left(GroupId?), UserCh?, UserCh1),
+    ui_mediator(Id?, AgentCh1?, UserCh1?, Ps?, N?).
+
+ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
+    receive(msg(agent, '_user', group_removed(GroupId)), AgentCh?, AgentCh1),
+    ground(GroupId?) |
+    send(group_removed(GroupId?), UserCh?, UserCh1),
+    ui_mediator(Id?, AgentCh1?, UserCh1?, Ps?, N?).
+
+ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
+    receive(msg(agent, '_user', group_received(GroupId, Author, Text)),
+            AgentCh?, AgentCh1),
+    ground(GroupId?), ground(Author?), ground(Text?) |
+    send(group_received(GroupId?, Author?, Text?), UserCh?, UserCh1),
+    ui_mediator(Id?, AgentCh1?, UserCh1?, Ps?, N?).
+
 %% --- User-to-agent: decision (cold-call response) ---
 
 ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
@@ -206,6 +264,52 @@ ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
     lookup_pending(ReqId?, Pv, Ps?, Ps1),
     send(msg('_user', Id?, decline_swap(From?, Pv?)),
          AgentCh?, AgentCh1),
+    ui_mediator(Id?, AgentCh1?, UserCh1?, Ps1?, N?).
+
+%% --- User-to-agent: group commands ---
+
+ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
+    receive(create_group(Name), UserCh?, UserCh1),
+    ground(Id?), ground(Name?) |
+    send(msg('_user', Id?, create_group(Name?)), AgentCh?, AgentCh1),
+    ui_mediator(Id?, AgentCh1?, UserCh1?, Ps?, N?).
+
+ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
+    receive(invite_group(GroupId, Invitee), UserCh?, UserCh1),
+    ground(Id?), ground(GroupId?), ground(Invitee?) |
+    send(msg('_user', Id?, invite_group(GroupId?, Invitee?)), AgentCh?, AgentCh1),
+    ui_mediator(Id?, AgentCh1?, UserCh1?, Ps?, N?).
+
+ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
+    receive(send_group(GroupId, Text), UserCh?, UserCh1),
+    ground(Id?), ground(GroupId?), ground(Text?) |
+    send(msg('_user', Id?, send_group(GroupId?, Text?)), AgentCh?, AgentCh1),
+    ui_mediator(Id?, AgentCh1?, UserCh1?, Ps?, N?).
+
+ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
+    receive(leave_group(GroupId), UserCh?, UserCh1),
+    ground(Id?), ground(GroupId?) |
+    send(msg('_user', Id?, leave_group(GroupId?)), AgentCh?, AgentCh1),
+    ui_mediator(Id?, AgentCh1?, UserCh1?, Ps?, N?).
+
+ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
+    receive(remove_from_group(GroupId, Member), UserCh?, UserCh1),
+    ground(Id?), ground(GroupId?), ground(Member?) |
+    send(msg('_user', Id?, remove_from_group(GroupId?, Member?)), AgentCh?, AgentCh1),
+    ui_mediator(Id?, AgentCh1?, UserCh1?, Ps?, N?).
+
+ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
+    receive(accept_group(GroupId, ReqId), UserCh?, UserCh1),
+    ground(Id?), ground(GroupId?), ground(ReqId?) |
+    lookup_pending(ReqId?, Pv, Ps?, Ps1),
+    send(msg('_user', Id?, accept_group(GroupId?, Pv?)), AgentCh?, AgentCh1),
+    ui_mediator(Id?, AgentCh1?, UserCh1?, Ps1?, N?).
+
+ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
+    receive(reject_group(GroupId, ReqId), UserCh?, UserCh1),
+    ground(Id?), ground(GroupId?), ground(ReqId?) |
+    lookup_pending(ReqId?, Pv, Ps?, Ps1),
+    send(msg('_user', Id?, reject_group(GroupId?, Pv?)), AgentCh?, AgentCh1),
     ui_mediator(Id?, AgentCh1?, UserCh1?, Ps1?, N?).
 
 %% --- Termination ---

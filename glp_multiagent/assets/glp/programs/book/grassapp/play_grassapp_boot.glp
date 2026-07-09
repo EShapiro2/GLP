@@ -62,7 +62,7 @@ reply_of(eve, lovely_day_isnt_it).
 procedure coin_actor(Constant?, Stream(UserNotify)?, Stream(UserCmd)).
 %% On becoming Bob's friend: mint, pay Bob some coins, and propose a swap.
 coin_actor(alice, [connected(bob) | Ns],
-    [mint(5) | [pay(bob, alice, 2) | [propose_swap(bob, alice, 1, bob, 1) | Cs?]]]) :-
+    [mint(5) | [pay(bob, alice, 2) | [create_group(chess) | [invite_group(group_id(alice, chess), bob) | [propose_swap(bob, alice, 1, bob, 1) | Cs?]]]]]) :-
     coin_drain(alice, Ns?, Cs).
 %% Charlie also exercises End friend (paper §4): after paying Bob he unfriends
 %% him, so Bob's UI surfaces unfriended(charlie) (the Integrate-unfriend path).
@@ -108,6 +108,14 @@ coin_drain(Me, [swap_offer(From, _, _, _, _, Req) | Ns], [accept_swap(From?, Req
     ground(Me?), ground(From?), ground(Req?) | coin_drain(Me?, Ns?, Cs).
 coin_drain(Me, [befriend(Who, Req) | Ns], [decision(yes, Who?, Req?) | Cs?]) :-
     ground(Me?), ground(Who?), ground(Req?) | coin_drain(Me?, Ns?, Cs).
+%% Groups: accept invitations, greet the group on joining (member) or on a
+%% member joining (creator) — one-shot membership events, so no reply loop.
+coin_drain(Me, [group_invite(G, Req) | Ns], [accept_group(G?, Req?) | Cs?]) :-
+    ground(Me?), ground(G?), ground(Req?) | coin_drain(Me?, Ns?, Cs).
+coin_drain(Me, [group_joined(G) | Ns], [send_group(G?, R?) | Cs?]) :-
+    ground(Me?), ground(G?) | reply_of(Me?, R), coin_drain(Me?, Ns?, Cs).
+coin_drain(Me, [group_joined_member(G, _) | Ns], [send_group(G?, R?) | Cs?]) :-
+    ground(Me?), ground(G?) | reply_of(Me?, R), coin_drain(Me?, Ns?, Cs).
 coin_drain(Me, [_ | Ns], Cmds?) :- ground(Me?), otherwise | coin_drain(Me?, Ns?, Cmds).
 coin_drain(_, [], []).
 

@@ -30,16 +30,45 @@ FriendContent ::= response(Response)
                 ; balances(Stream(Holding))
                 ; swap_propose(Constant, Integer, Constant, Integer, SwapResponse?)
                 ; redeem_coins(Constant, Integer)
+                ; group_invite(GroupId, Channel(Stream(GroupSetupResponse), Stream(Handshake)))
+                ; group_msg(GroupId, Constant, Constant)
+                ; group_leave(GroupId, Constant)
+                ; group_removed(GroupId)
                 ; unfriend.
 FriendMsg     ::= msg(Constant, Constant, FriendContent).
 FriendStream  ::= [] ; [FriendMsg | FriendStream].
 FriendChannel ::= ch(FriendStream, FriendStream?).
+
+%% --- Groups (paper §7.2 Social Network) -------------------------------------
+%% A group is hosted by its creator; a group identifier is (creator, name).  The
+%% invite conveys a fresh setup channel; the invitee acks and receives the group
+%% channel on it (the same handshake shape as befriending).
+GroupId   ::= group_id(Constant, Constant).
+Handshake ::= ack(Constant) ; nack.
+
+%% Group channel content — messages, a member leaving, a member removed.
+GroupContent ::= group_msg(GroupId, Constant, Constant)
+               ; group_leave(GroupId, Constant)
+               ; group_removed(GroupId).
+GroupMsg     ::= msg(Constant, Constant, GroupContent).
+
+%% The setup channel conveys the group channel to a joining member.
+GroupSetupResponse ::= group_channel(Channel(Stream(GroupMsg), Stream(GroupMsg))).
+
+%% Group join result — written by group_await_join, injected into UserIn.
+GroupJoinResult ::= group_join_ack(GroupId, Constant, Channel(Stream(Handshake), Stream(GroupSetupResponse)))
+                  ; group_join_nack(GroupId, Constant).
+
+%% Group output routing key: the member's own hub channel, or a member entry the
+%% creator keeps to distribute to.
+GroupKey ::= group(GroupId) ; group_member(GroupId, Constant).
 
 %% Escrowed opaque values in the mediator's pending table — one constructor per
 %% ask.  `?` inside the constructor: the table forwards the writer back to the
 %% agent on response.
 PendingValue ::= response(Response?)
                ; swap_pending(SwapResponse?, Constant, Integer, Constant, Integer)
+               ; group_channel(Channel(Stream(GroupSetupResponse), Stream(Handshake)))
                ; error.
 
 %% agent -> mediator (carried on the agent's '_user' output stream).
@@ -52,7 +81,13 @@ AgentContent ::= befriend(Constant, Response?)
                ; balance_report(Constant, Constant, Integer)
                ; swap_offer(Constant, Constant, Integer, Constant, Integer, SwapResponse?)
                ; swap_done(Constant)
-               ; swap_failed(Constant).
+               ; swap_failed(Constant)
+               ; group_invite(GroupId, Channel(Stream(GroupSetupResponse), Stream(Handshake)))
+               ; group_joined(GroupId)
+               ; group_joined_member(GroupId, Constant)
+               ; group_left(GroupId)
+               ; group_removed(GroupId)
+               ; group_received(GroupId, Constant, Constant).
 
 %% mediator -> agent (mediator's reply to a user action): the compose commands
 %% and the sibling choices, plus response(Response) — the injected-result
@@ -68,7 +103,14 @@ UserContent ::= connect(Constant)
               ; redeem(Constant, Integer)
               ; propose_swap(Constant, Constant, Integer, Constant, Integer)
               ; accept_swap(Constant, PendingValue)
-              ; decline_swap(Constant, PendingValue).
+              ; decline_swap(Constant, PendingValue)
+              ; create_group(Constant)
+              ; invite_group(GroupId, Constant)
+              ; accept_group(GroupId, PendingValue)
+              ; reject_group(GroupId, PendingValue)
+              ; send_group(GroupId, Constant)
+              ; leave_group(GroupId)
+              ; remove_from_group(GroupId, Constant).
 
 %% agent <-> network cold-call (2-arg msg(Dest, Content)): forwards the writer.
 NetColdCall ::= intro(Constant, Response?).
