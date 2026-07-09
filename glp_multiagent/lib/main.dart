@@ -22,8 +22,6 @@ import 'package:flutter/material.dart';
 import 'isolate_protocol.dart';
 import 'glp_sources.dart';
 import 'manifests/grassroots.dart';
-import 'manifests/social.dart';
-import 'manifests/cssn_groups.dart';
 import 'ui_runtime/agent_surface.dart';
 import 'ui_runtime/runtime.dart';
 
@@ -105,14 +103,6 @@ class CoordinatorApp extends StatelessWidget {
 }
 
 // =============================================================================
-// SCENARIOS
-// =============================================================================
-
-/// A live single-isolate scenario: one platform's compiled pair plus its
-/// scripted peers, rendered by that platform's manifest.
-enum Scenario { grassapp, socialGraph, cssn }
-
-// =============================================================================
 // PER-AGENT UI STATE
 // =============================================================================
 
@@ -141,7 +131,6 @@ class CoordinatorScreen extends StatefulWidget {
 
 class _CoordinatorScreenState extends State<CoordinatorScreen> {
   final Map<String, AgentState> _agents = {};
-  Scenario _scenario = Scenario.grassapp;
 
   /// The live scenario isolate (kept so it can be disposed cleanly).
   Isolate? _scenarioIsolate;
@@ -174,7 +163,7 @@ class _CoordinatorScreenState extends State<CoordinatorScreen> {
         TraceLogger.instance.log('COORD', '${msg.agentId} ready');
         // Coins scenario: ask Bob for his opening balance so the Wallet shows
         // his starting coins immediately. (The graph agent has no balance.)
-        if (_scenario == Scenario.grassapp && msg.agentId == 'Bob') {
+        if (msg.agentId == 'Bob') {
           state.commandPort!.send(UserInput('balance'));
         }
       }
@@ -232,78 +221,45 @@ class _CoordinatorScreenState extends State<CoordinatorScreen> {
     final bob = AgentState('Bob');
     late final InitAgent initMsg;
 
-    if (_scenario == Scenario.grassapp) {
-      // GrassApp: one directory of sources, loaded in order.
-      const scenarioFiles = [
-        'self.glp',
-        'grassapp_agent.glp',
-        'grassapp_mediator.glp',
-        'play_grassapp_boot.glp',
-      ];
-      final paths = [for (final f in scenarioFiles) '${glp.grassappDir}/$f'];
-      final sources = <String>[];
-      for (final p in paths) {
-        final file = File(p);
-        if (!file.existsSync()) {
-          TraceLogger.instance.log('COORD', 'scenario file not found: $p');
-          setState(() {});
-          return;
-        }
-        sources.add(await file.readAsString());
+    // The GrassApp: the one integrated program (social graph + one-to-one and
+    // group messaging + coins), loaded in order.
+    const scenarioFiles = [
+      'self.glp',
+      'grassapp_agent.glp',
+      'grassapp_mediator.glp',
+      'play_grassapp_boot.glp',
+    ];
+    final paths = [for (final f in scenarioFiles) '${glp.grassappDir}/$f'];
+    final sources = <String>[];
+    for (final p in paths) {
+      final file = File(p);
+      if (!file.existsSync()) {
+        TraceLogger.instance.log('COORD', 'scenario file not found: $p');
+        setState(() {});
+        return;
       }
-      bob.ui = UiRuntime(
-        manifest: grassrootsManifest,
-        onSend: (text) => bob.commandPort?.send(UserInput(text)),
-      );
-      initMsg = InitAgent(
-        agentId: 'Bob',
-        glpSources: sources,
-        glpSourcePaths: paths,
-        rootSelfGlpPath: glp.rootSelfGlp,
-        friends: const ['alice', 'charlie'],
-        replyPort: _replyPort.sendPort,
-        deferStart: false,
-      );
-    } else if (_scenario == Scenario.socialGraph) {
-      // Social graph: the canonical program directory, statically linked; the
-      // root self.glp of the program exports agent_init/3 (play_ui_boot.glp).
-      bob.ui = UiRuntime(
-        manifest: socialManifest,
-        onSend: (text) => bob.commandPort?.send(UserInput(text)),
-      );
-      initMsg = InitAgent(
-        agentId: 'Bob',
-        glpSources: const [],
-        rootSelfGlpPath: glp.rootSelfGlp,
-        friends: const ['alice', 'charlie'],
-        replyPort: _replyPort.sendPort,
-        programDir: glp.graphDir,
-        deferStart: false,
-      );
-    } else {
-      // CSSN social network (groups): the cssn program directory, statically
-      // linked; its root self.glp exports agent_init/3 (play_ui_boot.glp).
-      bob.ui = UiRuntime(
-        manifest: cssnGroupsManifest,
-        onSend: (text) => bob.commandPort?.send(UserInput(text)),
-      );
-      initMsg = InitAgent(
-        agentId: 'Bob',
-        glpSources: const [],
-        rootSelfGlpPath: glp.rootSelfGlp,
-        friends: const ['alice', 'charlie'],
-        replyPort: _replyPort.sendPort,
-        programDir: glp.cssnDir,
-        deferStart: false,
-      );
+      sources.add(await file.readAsString());
     }
+    bob.ui = UiRuntime(
+      manifest: grassrootsManifest,
+      onSend: (text) => bob.commandPort?.send(UserInput(text)),
+    );
+    initMsg = InitAgent(
+      agentId: 'Bob',
+      glpSources: sources,
+      glpSourcePaths: paths,
+      rootSelfGlpPath: glp.rootSelfGlp,
+      friends: const ['alice', 'charlie'],
+      replyPort: _replyPort.sendPort,
+      deferStart: false,
+    );
 
     bob.ui!.onChange = () => setState(() {});
     _agents['Bob'] = bob;
 
     try {
       _scenarioIsolate = await Isolate.spawn(agentIsolateEntry, initMsg);
-      TraceLogger.instance.log('COORD', 'Scenario started: $_scenario');
+      TraceLogger.instance.log('COORD', 'GrassApp started');
     } catch (e) {
       TraceLogger.instance.log('COORD', 'ERROR spawning scenario: $e');
     }
@@ -320,12 +276,6 @@ class _CoordinatorScreenState extends State<CoordinatorScreen> {
     setState(() {});
   }
 
-  void _selectScenario(Scenario s) {
-    if (s == _scenario) return;
-    setState(() => _scenario = s);
-    _spawnScenario();
-  }
-
   // ===========================================================================
   // BUILD
   // ===========================================================================
@@ -337,41 +287,13 @@ class _CoordinatorScreenState extends State<CoordinatorScreen> {
         ? AgentSurface(agentId: bob.agentId, runtime: bob.ui!)
         : const _Booting();
     // On a real phone (iOS) the device is the frame: fill the screen and let
-    // the OS draw the status bar. On desktop, draw the simulated phone bezel
-    // with the scenario switch beside it.
+    // the OS draw the status bar. On desktop, draw the simulated phone bezel.
     if (Platform.isIOS) {
       return Material(color: Colors.white, child: surface);
     }
     return Scaffold(
       backgroundColor: const Color(0xFF2B2B33),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Expanded(child: Center(child: _PhoneFrame(child: surface))),
-            Padding(
-              padding: const EdgeInsets.only(bottom: 16),
-              child: SegmentedButton<Scenario>(
-                style: SegmentedButton.styleFrom(
-                  backgroundColor: const Color(0xFF3A3A44),
-                  foregroundColor: Colors.white70,
-                  selectedBackgroundColor: Colors.green,
-                  selectedForegroundColor: Colors.white,
-                ),
-                segments: const [
-                  ButtonSegment(
-                      value: Scenario.grassapp, label: Text('GrassApp')),
-                  ButtonSegment(
-                      value: Scenario.socialGraph, label: Text('Social Graph')),
-                  ButtonSegment(value: Scenario.cssn, label: Text('Network')),
-                ],
-                selected: {_scenario},
-                onSelectionChanged: (s) => _selectScenario(s.first),
-              ),
-            ),
-          ],
-        ),
-      ),
+      body: Center(child: _PhoneFrame(child: surface)),
     );
   }
 }
