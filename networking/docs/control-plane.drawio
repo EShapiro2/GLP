@@ -1,0 +1,283 @@
+<mxfile host="app.diagrams.net">
+  <diagram name="Page-1" id="4fhSqrimDdxOvB9SQMgX">
+    <mxGraphModel dx="1495" dy="955" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="hjp4LQvTgmp0-qR2TWWz-1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;" value="User A" vertex="1">
+          <mxGeometry height="60" width="120" x="40" y="40" as="geometry" />
+        </mxCell>
+        <mxCell id="hjp4LQvTgmp0-qR2TWWz-2" parent="1" style="rounded=0;whiteSpace=wrap;html=1;" value="User B" vertex="1">
+          <mxGeometry height="60" width="120" x="320" y="40" as="geometry" />
+        </mxCell>
+        <mxCell id="hjp4LQvTgmp0-qR2TWWz-5" edge="1" parent="1" style="endArrow=none;dashed=1;html=1;rounded=0;entryX=0.5;entryY=1;entryDx=0;entryDy=0;" target="hjp4LQvTgmp0-qR2TWWz-1" value="">
+          <mxGeometry height="50" relative="1" width="50" as="geometry">
+            <mxPoint x="100" y="860" as="sourcePoint" />
+            <mxPoint x="440" y="410" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="hjp4LQvTgmp0-qR2TWWz-6" edge="1" parent="1" style="endArrow=none;dashed=1;html=1;rounded=0;entryX=0.5;entryY=1;entryDx=0;entryDy=0;" value="">
+          <mxGeometry height="50" relative="1" width="50" as="geometry">
+            <mxPoint x="380" y="860" as="sourcePoint" />
+            <mxPoint x="379.5" y="100" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="hjp4LQvTgmp0-qR2TWWz-8" edge="1" parent="1" style="endArrow=none;html=1;rounded=0;" value="">
+          <mxGeometry height="50" relative="1" width="50" as="geometry">
+            <mxPoint x="100" y="120" as="sourcePoint" />
+            <mxPoint x="160" y="120" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="hjp4LQvTgmp0-qR2TWWz-9" edge="1" parent="1" style="endArrow=none;html=1;rounded=0;" value="">
+          <mxGeometry height="50" relative="1" width="50" as="geometry">
+            <mxPoint x="160" y="160" as="sourcePoint" />
+            <mxPoint x="160" y="120" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="hjp4LQvTgmp0-qR2TWWz-10" edge="1" parent="1" style="endArrow=classic;html=1;rounded=0;" value="">
+          <mxGeometry height="50" relative="1" width="50" as="geometry">
+            <mxPoint x="160" y="160" as="sourcePoint" />
+            <mxPoint x="100" y="160" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="hjp4LQvTgmp0-qR2TWWz-11" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;" value="BLE Scan" vertex="1">
+          <mxGeometry height="30" width="60" x="160" y="120" as="geometry" />
+        </mxCell>
+        <mxCell id="hjp4LQvTgmp0-qR2TWWz-12" edge="1" parent="1" style="endArrow=none;html=1;rounded=0;" value="">
+          <mxGeometry height="50" relative="1" width="50" as="geometry">
+            <mxPoint x="380" y="120" as="sourcePoint" />
+            <mxPoint x="340" y="120" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="hjp4LQvTgmp0-qR2TWWz-13" edge="1" parent="1" style="endArrow=none;html=1;rounded=0;" value="">
+          <mxGeometry height="50" relative="1" width="50" as="geometry">
+            <mxPoint x="340" y="160" as="sourcePoint" />
+            <mxPoint x="340" y="120" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="hjp4LQvTgmp0-qR2TWWz-14" edge="1" parent="1" style="endArrow=classic;html=1;rounded=0;" value="">
+          <mxGeometry height="50" relative="1" width="50" as="geometry">
+            <mxPoint x="340" y="160" as="sourcePoint" />
+            <mxPoint x="380" y="160" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="hjp4LQvTgmp0-qR2TWWz-15" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;" value="Advertise BLE" vertex="1">
+          <mxGeometry height="30" width="60" x="280" y="120" as="geometry" />
+        </mxCell>
+        <mxCell id="hjp4LQvTgmp0-qR2TWWz-16" edge="1" parent="1" style="endArrow=classic;html=1;rounded=0;" value="">
+          <mxGeometry height="50" relative="1" width="50" as="geometry">
+            <mxPoint x="100" y="200" as="sourcePoint" />
+            <mxPoint x="380" y="200" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="hjp4LQvTgmp0-qR2TWWz-17" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;" value="Study-specific service ID recognized, attempt connection" vertex="1">
+          <mxGeometry height="30" width="130" x="180" y="160" as="geometry" />
+        </mxCell>
+        <mxCell id="hjp4LQvTgmp0-qR2TWWz-18" edge="1" parent="1" style="endArrow=classic;html=1;rounded=0;" value="">
+          <mxGeometry height="50" relative="1" width="50" as="geometry">
+            <mxPoint x="379" y="240" as="sourcePoint" />
+            <mxPoint x="99" y="240" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="hjp4LQvTgmp0-qR2TWWz-19" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;" value="Connection established" vertex="1">
+          <mxGeometry height="30" width="130" x="180" y="210" as="geometry" />
+        </mxCell>
+        <mxCell id="hjp4LQvTgmp0-qR2TWWz-20" edge="1" parent="1" style="endArrow=classic;html=1;rounded=0;" value="">
+          <mxGeometry height="50" relative="1" width="50" as="geometry">
+            <mxPoint x="100" y="280" as="sourcePoint" />
+            <mxPoint x="380" y="320" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="hjp4LQvTgmp0-qR2TWWz-21" edge="1" parent="1" style="endArrow=classic;html=1;rounded=0;" value="">
+          <mxGeometry height="50" relative="1" width="50" as="geometry">
+            <mxPoint x="380" y="280" as="sourcePoint" />
+            <mxPoint x="100" y="320" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="hjp4LQvTgmp0-qR2TWWz-22" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;" value="Announce cycle: exchange identity metadata" vertex="1">
+          <mxGeometry height="30" width="130" x="180" y="260" as="geometry" />
+        </mxCell>
+        <mxCell id="hjp4LQvTgmp0-qR2TWWz-23" edge="1" parent="1" style="endArrow=classic;html=1;rounded=0;" value="">
+          <mxGeometry height="50" relative="1" width="50" as="geometry">
+            <mxPoint x="100" y="360" as="sourcePoint" />
+            <mxPoint x="380" y="360" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="hjp4LQvTgmp0-qR2TWWz-24" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;" value="Send ephemeral key (e)" vertex="1">
+          <mxGeometry height="30" width="140" x="165" y="330" as="geometry" />
+        </mxCell>
+        <mxCell id="hjp4LQvTgmp0-qR2TWWz-25" edge="1" parent="1" style="endArrow=classic;html=1;rounded=0;" value="">
+          <mxGeometry height="50" relative="1" width="50" as="geometry">
+            <mxPoint x="380" y="380" as="sourcePoint" />
+            <mxPoint x="100" y="380" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="hjp4LQvTgmp0-qR2TWWz-26" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;" value="Send encrypted ephemeral key (e), static key (es)" vertex="1">
+          <mxGeometry height="30" width="150" x="160" y="380" as="geometry" />
+        </mxCell>
+        <mxCell id="hjp4LQvTgmp0-qR2TWWz-28" edge="1" parent="1" style="endArrow=classic;html=1;rounded=0;" value="">
+          <mxGeometry height="50" relative="1" width="50" as="geometry">
+            <mxPoint x="100" y="440" as="sourcePoint" />
+            <mxPoint x="380" y="440" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="hjp4LQvTgmp0-qR2TWWz-29" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;" value="Send encrypted static key (e)" vertex="1">
+          <mxGeometry height="30" width="165" x="165" y="410" as="geometry" />
+        </mxCell>
+        <mxCell id="hjp4LQvTgmp0-qR2TWWz-33" edge="1" parent="1" style="endArrow=none;dashed=1;html=1;rounded=0;" value="">
+          <mxGeometry height="50" relative="1" width="50" as="geometry">
+            <mxPoint x="40" y="247" as="sourcePoint" />
+            <mxPoint x="440" y="247" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="hjp4LQvTgmp0-qR2TWWz-34" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;" value="BLE channel establishment" vertex="1">
+          <mxGeometry height="30" width="60" x="460" y="237" as="geometry" />
+        </mxCell>
+        <mxCell id="hjp4LQvTgmp0-qR2TWWz-35" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;" value="Identity exchange" vertex="1">
+          <mxGeometry height="30" width="140" x="420" y="310" as="geometry" />
+        </mxCell>
+        <mxCell id="hjp4LQvTgmp0-qR2TWWz-36" edge="1" parent="1" style="endArrow=none;dashed=1;html=1;rounded=0;" value="">
+          <mxGeometry height="50" relative="1" width="50" as="geometry">
+            <mxPoint x="35" y="324.5" as="sourcePoint" />
+            <mxPoint x="435" y="324.5" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="hjp4LQvTgmp0-qR2TWWz-39" edge="1" parent="1" style="endArrow=none;dashed=1;html=1;rounded=0;" value="">
+          <mxGeometry height="50" relative="1" width="50" as="geometry">
+            <mxPoint x="35" y="445" as="sourcePoint" />
+            <mxPoint x="435" y="445" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="hjp4LQvTgmp0-qR2TWWz-40" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;" value="Encrypted BLE channel establishment" vertex="1">
+          <mxGeometry height="30" width="140" x="430" y="435" as="geometry" />
+        </mxCell>
+        <mxCell id="hjp4LQvTgmp0-qR2TWWz-41" edge="1" parent="1" style="endArrow=classic;startArrow=classic;html=1;rounded=0;" value="">
+          <mxGeometry height="50" relative="1" width="50" as="geometry">
+            <mxPoint x="100" y="480" as="sourcePoint" />
+            <mxPoint x="380" y="480" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="hjp4LQvTgmp0-qR2TWWz-42" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;" value="Encrypted chatting" vertex="1">
+          <mxGeometry height="30" width="60" x="205" y="450" as="geometry" />
+        </mxCell>
+        <mxCell id="hjp4LQvTgmp0-qR2TWWz-43" edge="1" parent="1" style="endArrow=classic;html=1;rounded=0;" value="">
+          <mxGeometry height="50" relative="1" width="50" as="geometry">
+            <mxPoint x="100" y="520" as="sourcePoint" />
+            <mxPoint x="380" y="520" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="hjp4LQvTgmp0-qR2TWWz-44" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;" value="Offer friendship" vertex="1">
+          <mxGeometry height="30" width="95" x="187.5" y="490" as="geometry" />
+        </mxCell>
+        <mxCell id="hjp4LQvTgmp0-qR2TWWz-49" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;" value="Accept friendship" vertex="1">
+          <mxGeometry height="30" width="95" x="187.5" y="530" as="geometry" />
+        </mxCell>
+        <mxCell id="hjp4LQvTgmp0-qR2TWWz-50" edge="1" parent="1" style="endArrow=classic;html=1;rounded=0;" value="">
+          <mxGeometry height="50" relative="1" width="50" as="geometry">
+            <mxPoint x="380" y="555" as="sourcePoint" />
+            <mxPoint x="100" y="555" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="hjp4LQvTgmp0-qR2TWWz-52" edge="1" parent="1" style="endArrow=classic;html=1;rounded=0;" value="">
+          <mxGeometry height="50" relative="1" width="50" as="geometry">
+            <mxPoint x="101" y="600" as="sourcePoint" />
+            <mxPoint x="381" y="640" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="hjp4LQvTgmp0-qR2TWWz-53" edge="1" parent="1" style="endArrow=classic;html=1;rounded=0;" value="">
+          <mxGeometry height="50" relative="1" width="50" as="geometry">
+            <mxPoint x="379" y="600" as="sourcePoint" />
+            <mxPoint x="99" y="640" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="hjp4LQvTgmp0-qR2TWWz-54" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;" value="Friend announce cycle: exchange IP addresses" vertex="1">
+          <mxGeometry height="30" width="130" x="185" y="580" as="geometry" />
+        </mxCell>
+        <mxCell id="hjp4LQvTgmp0-qR2TWWz-55" edge="1" parent="1" style="endArrow=classic;html=1;rounded=0;" value="">
+          <mxGeometry height="50" relative="1" width="50" as="geometry">
+            <mxPoint x="102.5" y="691" as="sourcePoint" />
+            <mxPoint x="382.5" y="691" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="hjp4LQvTgmp0-qR2TWWz-56" edge="1" parent="1" style="endArrow=classic;html=1;rounded=0;" value="">
+          <mxGeometry height="50" relative="1" width="50" as="geometry">
+            <mxPoint x="380.5" y="724" as="sourcePoint" />
+            <mxPoint x="100.5" y="724" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="hjp4LQvTgmp0-qR2TWWz-57" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;" value="Connection established" vertex="1">
+          <mxGeometry height="30" width="130" x="180" y="704" as="geometry" />
+        </mxCell>
+        <mxCell id="hjp4LQvTgmp0-qR2TWWz-58" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;" value="IP channel establishment attempt" vertex="1">
+          <mxGeometry height="30" width="130" x="182.5" y="661" as="geometry" />
+        </mxCell>
+        <mxCell id="hjp4LQvTgmp0-qR2TWWz-59" edge="1" parent="1" style="endArrow=classic;startArrow=classic;html=1;rounded=0;" value="">
+          <mxGeometry height="50" relative="1" width="50" as="geometry">
+            <mxPoint x="100" y="660" as="sourcePoint" />
+            <mxPoint x="380" y="660" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="hjp4LQvTgmp0-qR2TWWz-60" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;" value="UDP hole-punching" vertex="1">
+          <mxGeometry height="30" width="110" x="190" y="631" as="geometry" />
+        </mxCell>
+        <mxCell id="hjp4LQvTgmp0-qR2TWWz-61" edge="1" parent="1" style="endArrow=none;dashed=1;html=1;rounded=0;" value="">
+          <mxGeometry height="50" relative="1" width="50" as="geometry">
+            <mxPoint x="40" y="570" as="sourcePoint" />
+            <mxPoint x="440" y="570" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="hjp4LQvTgmp0-qR2TWWz-62" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;" value="Friendship established" vertex="1">
+          <mxGeometry height="30" width="140" x="440" y="555" as="geometry" />
+        </mxCell>
+        <mxCell id="hjp4LQvTgmp0-qR2TWWz-63" edge="1" parent="1" style="endArrow=none;dashed=1;html=1;rounded=0;" value="">
+          <mxGeometry height="50" relative="1" width="50" as="geometry">
+            <mxPoint x="40" y="734" as="sourcePoint" />
+            <mxPoint x="440" y="734" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="hjp4LQvTgmp0-qR2TWWz-64" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;" value="UDX channel established" vertex="1">
+          <mxGeometry height="30" width="140" x="440" y="719" as="geometry" />
+        </mxCell>
+        <mxCell id="hjp4LQvTgmp0-qR2TWWz-68" parent="1" style="ellipse;shape=cloud;whiteSpace=wrap;html=1;" value="Noise XX Handshake" vertex="1">
+          <mxGeometry height="90" width="180" x="380" y="340" as="geometry" />
+        </mxCell>
+        <mxCell id="hjp4LQvTgmp0-qR2TWWz-71" edge="1" parent="1" style="endArrow=classic;html=1;rounded=0;" value="">
+          <mxGeometry height="50" relative="1" width="50" as="geometry">
+            <mxPoint x="100" y="764" as="sourcePoint" />
+            <mxPoint x="380" y="764" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="hjp4LQvTgmp0-qR2TWWz-72" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;" value="Noise XX handshake begin" vertex="1">
+          <mxGeometry height="30" width="95" x="187.5" y="734" as="geometry" />
+        </mxCell>
+        <mxCell id="hjp4LQvTgmp0-qR2TWWz-73" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;" value="Noise XX handshake end" vertex="1">
+          <mxGeometry height="30" width="95" x="187.5" y="774" as="geometry" />
+        </mxCell>
+        <mxCell id="hjp4LQvTgmp0-qR2TWWz-74" edge="1" parent="1" style="endArrow=classic;html=1;rounded=0;" value="">
+          <mxGeometry height="50" relative="1" width="50" as="geometry">
+            <mxPoint x="380" y="799" as="sourcePoint" />
+            <mxPoint x="100" y="799" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="hjp4LQvTgmp0-qR2TWWz-76" edge="1" parent="1" style="endArrow=none;dashed=1;html=1;rounded=0;" value="">
+          <mxGeometry height="50" relative="1" width="50" as="geometry">
+            <mxPoint x="35" y="807" as="sourcePoint" />
+            <mxPoint x="435" y="807" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="hjp4LQvTgmp0-qR2TWWz-77" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;" value="Encrypted UDX channel establishment" vertex="1">
+          <mxGeometry height="30" width="140" x="430" y="797" as="geometry" />
+        </mxCell>
+        <mxCell id="hjp4LQvTgmp0-qR2TWWz-78" edge="1" parent="1" style="endArrow=classic;startArrow=classic;html=1;rounded=0;" value="">
+          <mxGeometry height="50" relative="1" width="50" as="geometry">
+            <mxPoint x="100" y="842" as="sourcePoint" />
+            <mxPoint x="380" y="842" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="hjp4LQvTgmp0-qR2TWWz-79" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;" value="Encrypted chatting" vertex="1">
+          <mxGeometry height="30" width="60" x="205" y="812" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

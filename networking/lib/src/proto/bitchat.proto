@@ -1,0 +1,80 @@
+syntax = "proto3";
+
+package bitchat;
+
+option java_package = "com.gsg.bitchat";
+option java_multiple_files = true;
+
+// Packet types matching Bitchat protocol
+enum PacketType {
+  PACKET_TYPE_UNSPECIFIED = 0;
+  ANNOUNCE = 1;           // Peer identity announcement
+  MESSAGE = 2;            // Application message (GSG blocks)
+  FRAGMENT_START = 3;     // Start of fragmented message
+  FRAGMENT_CONTINUE = 4;  // Continuation fragment
+  FRAGMENT_END = 5;       // Final fragment
+  ACK = 6;                // Delivery acknowledgment
+  NACK = 7;               // Request for missing data (GSG-level)
+}
+
+// Main packet wrapper - all BLE transmissions use this
+message BitchatPacket {
+  // Packet metadata
+  string packet_id = 1;           // UUID for deduplication
+  PacketType type = 2;
+  uint32 ttl = 3;                 // Time-to-live, max 7 hops
+  uint64 timestamp = 4;           // Unix milliseconds
+  
+  // Routing
+  bytes sender_pubkey = 5;        // Ed25519 public key (32 bytes)
+  bytes recipient_pubkey = 6;     // Empty for broadcast
+  
+  // Payload - type depends on PacketType
+  bytes payload = 7;
+  
+  // Signature over (packet_id, type, ttl, timestamp, sender_pubkey, recipient_pubkey, payload)
+  bytes signature = 8;            // Ed25519 signature (64 bytes)
+}
+
+// Announce packet payload - sent on connection to exchange identity
+message AnnouncePayload {
+  bytes pubkey = 1;               // Ed25519 public key
+  string nickname = 2;            // Optional human-readable name
+  uint32 protocol_version = 3;    // For compatibility checking
+}
+
+// Fragment metadata - in FRAGMENT_START payload
+message FragmentStart {
+  string message_id = 1;          // ID of the complete message
+  uint32 total_fragments = 2;
+  uint32 total_size = 3;          // Total payload size in bytes
+  bytes first_chunk = 4;          // First data chunk
+}
+
+// Fragment continuation - in FRAGMENT_CONTINUE payload
+message FragmentContinue {
+  string message_id = 1;
+  uint32 fragment_index = 2;      // 1-indexed (0 is START)
+  bytes chunk = 3;
+}
+
+// Fragment end - in FRAGMENT_END payload  
+message FragmentEnd {
+  string message_id = 1;
+  uint32 fragment_index = 2;
+  bytes final_chunk = 3;
+}
+
+// Acknowledgment payload
+message AckPayload {
+  string acked_packet_id = 1;
+  uint64 received_at = 2;
+}
+
+// Store-and-forward cache entry (internal use)
+message CachedMessage {
+  BitchatPacket packet = 1;
+  uint64 cached_at = 2;
+  uint32 relay_count = 3;
+  bool is_priority = 4;           // For "favorite" peers
+}

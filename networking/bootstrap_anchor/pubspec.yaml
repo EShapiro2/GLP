@@ -1,0 +1,29 @@
+name: bootstrap_anchor
+description: Always-on bootstrap anchor server for Grassroots P2P network. Acts as a well-connected friend for signaling, address reflection, and hole-punch coordination.
+version: 0.1.0
+publish_to: none
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  # Ed25519 signing & verification (same as grassroots_networking)
+  cryptography: ^2.9.0
+
+  # Native libsodium FFI bindings (sumo variant). Provides the Ed25519↔X25519
+  # birational map used to derive/verify Noise static keys — must match the
+  # client, which uses sodium_libs (this is its pure-Dart core). Requires a
+  # native libsodium at runtime (see Dockerfile / libsodium_loader.dart).
+  sodium: ^3.4.6
+
+  # UUID generation for packet IDs
+  uuid: ^4.2.0
+
+  # UDX reliable streams over UDP — fork of dart_udx, published on pub.dev.
+  grassroots_dart_udx: ^2.1.0
+
+  # CLI argument parsing
+  args: ^2.4.0
+
+dev_dependencies:
+  test: ^1.25.8
