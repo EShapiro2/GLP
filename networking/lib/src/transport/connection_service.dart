@@ -1,6 +1,6 @@
 import 'dart:io';
 
-import 'address_utils.dart';
+import 'package:grassroots_networking_core/src/transport/address_utils.dart';
 
 /// A selected local/remote UDP address pair.
 class AddressCandidatePair {

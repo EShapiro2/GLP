@@ -4,8 +4,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:redux/redux.dart';
 import 'package:grassroots_networking/src/signaling/signaling_service.dart';
 import 'package:grassroots_networking/src/signaling/signaling_codec.dart';
-import 'package:grassroots_networking/src/models/peer.dart';
-import 'package:grassroots_networking/src/store/store.dart';
+import 'package:grassroots_networking_core/src/models/peer.dart';
+import 'package:grassroots_networking_core/src/store/store.dart';
 
 // ===== Helpers =====
 

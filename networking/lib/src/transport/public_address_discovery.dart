@@ -3,7 +3,7 @@ import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 
-import 'address_utils.dart';
+import 'package:grassroots_networking_core/src/transport/address_utils.dart';
 
 /// Discovers our public-facing UDP address and combines it with the local
 /// UDP port to form the address we advertise to friends.

@@ -1,8 +1,8 @@
 import 'dart:typed_data';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:grassroots_networking/grassroots_networking.dart';
-import 'package:grassroots_networking/src/mesh/bloom_filter.dart';
-import 'package:grassroots_networking/src/protocol/fragment_handler.dart';
+import 'package:grassroots_networking_core/src/mesh/bloom_filter.dart';
+import 'package:grassroots_networking_core/src/protocol/fragment_handler.dart';
 
 void main() {
   group('GrassrootsPacket', () {

@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 import 'dart:typed_data';
-import 'package:flutter/material.dart';
+import '../platform/compat.dart';
 import 'package:redux/redux.dart';
 import 'package:grassroots_dart_udx/grassroots_dart_udx.dart';
 
@@ -17,14 +17,6 @@ enum UdpConnectFailureKind {
   handshakeTimeout,
   other,
 }
-
-/// Display info for UDP transport
-const _defaultUdpDisplayInfo = TransportDisplayInfo(
-  icon: Icons.public,
-  name: 'Internet',
-  description: 'Direct UDP peer-to-peer transport',
-  color: Colors.green,
-);
 
 /// UDP transport service using grassroots_dart_udx for reliable streams over UDP.
 ///
@@ -124,10 +116,15 @@ class UdpTransportService extends TransportService {
 
   UdpConnectFailureKind? _lastConnectFailureKind;
 
+  /// Fixed UDP listen port for both address families; 0 (default) binds an
+  /// ephemeral port per family. Server profiles bind their published port.
+  final int listenPort;
+
   UdpTransportService({
     required this.identity,
     required this.store,
     required this.protocolHandler,
+    this.listenPort = 0,
     this.connectHandshakeTimeout = _defaultHandshakeTimeout,
   });
 
@@ -174,8 +171,6 @@ class UdpTransportService extends TransportService {
 
   @override
   TransportType get type => TransportType.udp;
-  @override
-  TransportDisplayInfo get displayInfo => _defaultUdpDisplayInfo;
 
   @override
   TransportState get state => _state;
@@ -1011,7 +1006,7 @@ class UdpTransportService extends TransportService {
         ? InternetAddress.anyIPv6
         : InternetAddress.anyIPv4;
     try {
-      final socket = await RawDatagramSocket.bind(bindAddress, 0);
+      final socket = await RawDatagramSocket.bind(bindAddress, listenPort);
       _rawSockets[type] = socket;
       _localPorts[type] = socket.port;
     } catch (e) {

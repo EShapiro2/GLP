@@ -10,6 +10,11 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+
+  # Pure-Dart core of the layer (identity, wire format, Noise sessions,
+  # routing, Redux state, UDP transport). Shared with headless embeddings.
+  grassroots_networking_core:
+    path: core
   
   # Unified BLE transport (central + peripheral, bondless). Requires >= 0.3.0
   # for the advertised/GATT service-UUID decoupling (gattServiceUuid) that the

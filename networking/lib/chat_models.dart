@@ -1,8 +1,8 @@
 import 'package:flutter/foundation.dart';
-import 'package:grassroots_networking/src/store/messages_state.dart';
+import 'package:grassroots_networking_core/src/store/messages_state.dart';
 
 // Re-export ChatMessageType from messages_state for backwards compatibility
-export 'package:grassroots_networking/src/store/messages_state.dart' show ChatMessageType;
+export 'package:grassroots_networking_core/src/store/messages_state.dart' show ChatMessageType;
 
 /// A chat message model for the demo app
 class ChatMessage {

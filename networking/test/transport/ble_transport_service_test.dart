@@ -4,18 +4,18 @@ library;
 import 'dart:typed_data';
 
 import 'package:grassroots_bluetooth_layer/grassroots_bluetooth_layer_testing.dart';
-import 'package:grassroots_networking/src/models/identity.dart';
-import 'package:grassroots_networking/src/store/app_state.dart';
-import 'package:grassroots_networking/src/store/peers_actions.dart'
+import 'package:grassroots_networking_core/src/models/identity.dart';
+import 'package:grassroots_networking_core/src/store/app_state.dart';
+import 'package:grassroots_networking_core/src/store/peers_actions.dart'
     show BleDeviceRemovedAction, PeerAnnounceReceivedAction;
-import 'package:grassroots_networking/src/store/known_peers_actions.dart'
+import 'package:grassroots_networking_core/src/store/known_peers_actions.dart'
     show KnownPeerPutAction;
-import 'package:grassroots_networking/src/models/peer.dart' show PeerTransport;
-import 'package:grassroots_networking/src/store/reducers.dart';
-import 'package:grassroots_networking/src/store/settings_actions.dart';
-import 'package:grassroots_networking/src/store/settings_state.dart';
+import 'package:grassroots_networking_core/src/models/peer.dart' show PeerTransport;
+import 'package:grassroots_networking_core/src/store/reducers.dart';
+import 'package:grassroots_networking_core/src/store/settings_actions.dart';
+import 'package:grassroots_networking_core/src/store/settings_state.dart';
 import 'package:grassroots_networking/src/transport/ble_transport_service.dart';
-import 'package:grassroots_networking/src/transport/transport_service.dart'
+import 'package:grassroots_networking_core/src/transport/transport_service.dart'
     show TransportState;
 import 'package:cryptography/cryptography.dart';
 import 'package:flutter/foundation.dart'

@@ -6,10 +6,10 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:redux/redux.dart';
 
-import '../models/identity.dart';
-import '../models/packet.dart';
-import '../store/store.dart';
-import 'transport_service.dart';
+import 'package:grassroots_networking_core/src/models/identity.dart';
+import 'package:grassroots_networking_core/src/models/packet.dart';
+import 'package:grassroots_networking_core/src/store/store.dart';
+import 'package:grassroots_networking_core/src/transport/transport_service.dart';
 
 // Re-export the iOS local-name marker from the BLE plugin — the single source
 // of truth (the plugin owns this constant as of grassroots_bluetooth_layer
@@ -19,14 +19,6 @@ import 'transport_service.dart';
 // iOS device and open the reverse leg themselves.
 export 'package:grassroots_bluetooth_layer/grassroots_bluetooth_layer.dart'
     show grassrootsIosLocalName;
-
-/// Default display info for BLE transport
-const _defaultBleDisplayInfo = TransportDisplayInfo(
-  icon: Icons.bluetooth,
-  name: 'Bluetooth',
-  description: 'Bluetooth Low Energy direct P2P transport',
-  color: Colors.blue,
-);
 
 /// Grassroots characteristic UUID, fixed across all peers. Registered under
 /// the fixed [_grassrootsGattServiceUuid] data-plane service (the advertised
@@ -206,9 +198,6 @@ class BleTransportService extends TransportService {
 
   @override
   TransportType get type => TransportType.ble;
-
-  @override
-  TransportDisplayInfo get displayInfo => _defaultBleDisplayInfo;
 
   @override
   TransportState get state => store.state.transports.bleState;

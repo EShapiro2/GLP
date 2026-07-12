@@ -5,8 +5,8 @@ import 'package:redux/redux.dart';
 import 'package:sodium_libs/sodium_libs_sumo.dart';
 
 import 'package:grassroots_networking/src/grassroots_network.dart';
-import 'package:grassroots_networking/src/models/identity.dart';
-import 'package:grassroots_networking/src/store/store.dart';
+import 'package:grassroots_networking_core/src/models/identity.dart';
+import 'package:grassroots_networking_core/src/store/store.dart';
 
 import 'helpers/sodium_test_bootstrap.dart';
 

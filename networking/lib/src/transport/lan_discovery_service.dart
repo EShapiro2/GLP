@@ -3,7 +3,7 @@ import 'dart:async';
 import 'package:bonsoir/bonsoir.dart';
 import 'package:flutter/foundation.dart';
 
-import '../models/identity.dart';
+import 'package:grassroots_networking_core/src/models/identity.dart';
 
 /// LAN discovery per spec `GLP_Networking_API` §LAN Discovery.
 ///

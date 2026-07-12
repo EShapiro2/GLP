@@ -6,11 +6,11 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:cryptography/cryptography.dart';
 import 'package:redux/redux.dart';
 import 'package:sodium_libs/sodium_libs.dart';
-import 'package:grassroots_networking/src/transport/udp_transport_service.dart';
-import 'package:grassroots_networking/src/transport/transport_service.dart';
-import 'package:grassroots_networking/src/models/identity.dart';
-import 'package:grassroots_networking/src/protocol/protocol_handler.dart';
-import 'package:grassroots_networking/src/store/store.dart';
+import 'package:grassroots_networking_core/src/transport/udp_transport_service.dart';
+import 'package:grassroots_networking_core/src/transport/transport_service.dart';
+import 'package:grassroots_networking_core/src/models/identity.dart';
+import 'package:grassroots_networking_core/src/protocol/protocol_handler.dart';
+import 'package:grassroots_networking_core/src/store/store.dart';
 
 import '../helpers/sodium_test_bootstrap.dart';
 

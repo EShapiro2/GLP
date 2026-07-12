@@ -1,0 +1,37 @@
+name: grassroots_networking_core
+description: >-
+  Pure-Dart core of the Grassroots networking layer: identity, wire format,
+  Noise sessions, message routing, Redux state, and the UDP/UDX transport.
+  No Flutter dependencies — embeddable in headless servers (dart compile exe)
+  and re-exported by the grassroots_networking Flutter package.
+version: 1.0.0
+publish_to: none
+
+environment:
+  sdk: ^3.5.0
+
+dependencies:
+  # Ed25519 signing & verification
+  cryptography: ^2.9.0
+
+  # libsodium bindings (types shared with sodium_libs, which re-exports this
+  # package). Instances are injected: Flutter passes SodiumSumoInit.init()'s,
+  # headless servers load the native library via FFI.
+  sodium: ^3.4.6
+
+  # UUID generation for message and packet IDs
+  uuid: ^4.2.0
+
+  # Redux store for layer state
+  redux: ^5.0.0
+
+  # UDX reliable streams over UDP
+  grassroots_dart_udx: ^2.1.0
+
+  args: ^2.4.0
+  meta: ^1.11.0
+  collection: ^1.18.0
+
+dev_dependencies:
+  test: ^1.25.8
+  lints: ^4.0.0

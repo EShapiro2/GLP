@@ -1,10 +1,10 @@
 import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:grassroots_networking/src/models/peer.dart';
-import 'package:grassroots_networking/src/store/peers_actions.dart';
-import 'package:grassroots_networking/src/store/peers_reducer.dart';
-import 'package:grassroots_networking/src/store/peers_state.dart';
+import 'package:grassroots_networking_core/src/models/peer.dart';
+import 'package:grassroots_networking_core/src/store/peers_actions.dart';
+import 'package:grassroots_networking_core/src/store/peers_reducer.dart';
+import 'package:grassroots_networking_core/src/store/peers_state.dart';
 
 /// These tests pin down the user's "symmetric connect" requirement:
 /// the Redux projection of the BLE transport must reach the same final state

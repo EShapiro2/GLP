@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:grassroots_networking/src/store/settings_state.dart';
-import 'package:grassroots_networking/src/store/settings_actions.dart';
-import 'package:grassroots_networking/src/store/settings_reducer.dart';
+import 'package:grassroots_networking_core/src/store/settings_state.dart';
+import 'package:grassroots_networking_core/src/store/settings_actions.dart';
+import 'package:grassroots_networking_core/src/store/settings_reducer.dart';
 
 /// A non-settings action used to verify the reducer ignores unknown actions.
 class _UnknownAction extends SettingsAction {}

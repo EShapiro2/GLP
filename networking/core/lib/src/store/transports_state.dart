@@ -1,4 +1,4 @@
-import 'package:flutter/foundation.dart';
+import '../platform/compat.dart';
 import '../transport/transport_service.dart';
 import '../transport/address_utils.dart';
 

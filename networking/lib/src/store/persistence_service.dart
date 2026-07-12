@@ -3,10 +3,10 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import 'app_state.dart';
-import 'known_peers_state.dart';
-import 'settings_state.dart';
-import 'messages_state.dart';
+import 'package:grassroots_networking_core/src/store/app_state.dart';
+import 'package:grassroots_networking_core/src/store/known_peers_state.dart';
+import 'package:grassroots_networking_core/src/store/settings_state.dart';
+import 'package:grassroots_networking_core/src/store/messages_state.dart';
 
 /// Service for persisting Redux state to SharedPreferences
 class PersistenceService {

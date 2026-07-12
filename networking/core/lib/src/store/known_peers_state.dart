@@ -1,4 +1,4 @@
-import 'package:flutter/foundation.dart';
+import '../platform/compat.dart';
 
 /// Keys supplied to the layer through its API, with each peer's last-known
 /// dial address.

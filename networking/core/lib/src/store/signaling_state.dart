@@ -1,4 +1,4 @@
-import 'package:flutter/foundation.dart';
+import '../platform/compat.dart';
 
 /// Status of a hole-punch attempt.
 enum HolePunchStatus {

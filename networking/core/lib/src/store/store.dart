@@ -22,4 +22,3 @@ export 'signaling_reducer.dart';
 export 'transports_state.dart';
 export 'transports_actions.dart';
 export 'transports_reducer.dart';
-export 'persistence_service.dart';

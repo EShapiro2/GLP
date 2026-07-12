@@ -1,7 +1,7 @@
 import 'package:redux/redux.dart';
 import 'package:flutter/foundation.dart';
 
-import '../store/app_state.dart';
+import 'package:grassroots_networking_core/src/store/app_state.dart';
 import 'signaling_codec.dart';
 
 /// Orchestrates signaling between this agent and rendezvous servers.

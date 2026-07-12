@@ -1,4 +1,3 @@
-import 'package:flutter/material.dart';
 import '../transport/transport_service.dart';
 
 /// Connection state of a peer
@@ -29,20 +28,8 @@ enum PeerTransport {
 }
 
 /// Extension to get display info for peer transport
+/// (the UI icon lives in the Flutter package: `transport_display.dart`)
 extension PeerTransportDisplay on PeerTransport {
-  /// Get the icon for this transport type
-  Icon get icon {
-    switch (this) {
-      case PeerTransport.bleDirect:
-        return const Icon(Icons.bluetooth_connected,
-            size: 16, color: Colors.blue);
-      case PeerTransport.webrtc:
-        return const Icon(Icons.public, size: 16, color: Colors.blue);
-      case PeerTransport.udp:
-        return const Icon(Icons.public, size: 16, color: Colors.green);
-    }
-  }
-
   /// Get the display name for this transport
   String get displayName {
     switch (this) {

@@ -10,22 +10,22 @@ import 'platform/transport_foreground_service.dart';
 import 'signaling/peer_link.dart';
 import 'signaling/signaling_codec.dart';
 import 'signaling/signaling_service.dart';
-import 'transport/address_utils.dart';
+import 'package:grassroots_networking_core/src/transport/address_utils.dart';
 import 'transport/ble_transport_service.dart';
 import 'transport/connection_service.dart';
 import 'transport/hole_punch_service.dart';
 import 'transport/lan_discovery_service.dart';
 import 'transport/public_address_discovery.dart';
-import 'transport/udp_transport_service.dart';
-import 'models/identity.dart';
-import 'models/peer.dart';
-import 'models/packet.dart';
-import 'protocol/protocol_handler.dart';
-import 'protocol/fragment_handler.dart';
-import 'routing/message_router.dart';
-import 'session/noise_session_manager.dart';
-import 'store/store.dart';
-import 'transport/transport_service.dart';
+import 'package:grassroots_networking_core/src/transport/udp_transport_service.dart';
+import 'package:grassroots_networking_core/src/models/identity.dart';
+import 'package:grassroots_networking_core/src/models/peer.dart';
+import 'package:grassroots_networking_core/src/models/packet.dart';
+import 'package:grassroots_networking_core/src/protocol/protocol_handler.dart';
+import 'package:grassroots_networking_core/src/protocol/fragment_handler.dart';
+import 'package:grassroots_networking_core/src/routing/message_router.dart';
+import 'package:grassroots_networking_core/src/session/noise_session_manager.dart';
+import 'package:grassroots_networking_core/src/store/store.dart';
+import 'package:grassroots_networking_core/src/transport/transport_service.dart';
 
 /// Configuration for Grassroots transport
 class GrassrootsNetworkConfig {
@@ -385,6 +385,32 @@ class GrassrootsNetwork {
   /// UDP transport service (null if UDP is disabled)
   UdpTransportService? _udpService;
   LanDiscoveryService? _lanDiscovery;
+
+  /// Keys authorized by an explicit deep-link cold call (spec §Cold Calls:
+  /// deep links carry their own authorization and are unaffected by the
+  /// trust level): the redeemer, recorded when the rendezvous server's
+  /// redeemed notification arrives, and the inviter, recorded at
+  /// redemption.
+  final Set<String> _inviteAuthorizedPubkeys = {};
+
+  /// Per-connection receive chains (spec §Session Establishment: a receiver
+  /// processes each connection's inbound bytes in arrival order). Without
+  /// this, a handshake packet's async handler can suspend while the
+  /// connection's next packet — its first session-encrypted message — is
+  /// processed, and decryption fails because the session is not yet
+  /// registered.
+  final Map<String, Future<void>> _rxChains = {};
+
+  void _enqueueRx(String connectionKey, Future<void> Function() task) {
+    final chain = (_rxChains[connectionKey] ?? Future<void>.value())
+        .then((_) => task());
+    _rxChains[connectionKey] = chain;
+    chain.whenComplete(() {
+      if (identical(_rxChains[connectionKey], chain)) {
+        _rxChains.remove(connectionKey);
+      }
+    });
+  }
 
   /// Hole-punch services for NAT traversal, keyed by IP family.
   final Map<InternetAddressType, HolePunchService> _holePunchServices = {};
@@ -838,7 +864,10 @@ class GrassrootsNetwork {
     }
 
     // Register the inviter's identity locally (spec) — reachability and
-    // addresses follow later through the GLP-driven connection flow.
+    // addresses follow later through the GLP-driven connection flow. The
+    // link authorizes the inviter's first contact regardless of trust
+    // level (spec §Cold Calls).
+    _inviteAuthorizedPubkeys.add(_pubkeyToHex(invite.inviterPubkey));
     store.dispatch(
       PeerIdentityRegisteredAction(publicKey: invite.inviterPubkey),
     );
@@ -896,6 +925,27 @@ class GrassrootsNetwork {
 
   ColdCallTrustLevel get coldCallTrustLevel =>
       store.state.settings.coldCallTrustLevel;
+
+  /// Whether IP contact from [senderPubkey] is answered (spec §Cold Calls,
+  /// Trust levels): Open answers anyone; Closed answers the known-peer set.
+  /// Independent of the level: configured rendezvous servers
+  /// (infrastructure this agent itself dials), keys authorized by an
+  /// explicit deep-link cold call, and solicited contact — an ANNOUNCE
+  /// arriving on a connection this agent dialed, which is keyed by the
+  /// dialed key (unsolicited inbound carries a temp connection id until
+  /// identified).
+  bool _acceptsUdpContactFrom(Uint8List senderPubkey, {String? udpPeerId}) {
+    if (coldCallTrustLevel == ColdCallTrustLevel.open) return true;
+    if (_isKnownPeerPubkey(senderPubkey)) return true;
+    final hex = _pubkeyToHex(senderPubkey);
+    if (_isRendezvousPubkeyHex(hex)) return true;
+    if (_inviteAuthorizedPubkeys.contains(hex)) return true;
+    if (udpPeerId == hex &&
+        _udpService?.getPeerIdForPubkey(senderPubkey) != null) {
+      return true;
+    }
+    return false;
+  }
 
   List<RendezvousServerSettings> get configuredRendezvousServers =>
       store.state.settings.configuredRendezvousServers;
@@ -3992,15 +4042,40 @@ class GrassrootsNetwork {
           packet,
           transport: transport,
           peerId: peerId,
+          // The manager transmits the response before releasing session
+          // waiters, so a queued sender cannot race its first encrypted
+          // packet ahead of handshake message 3.
+          sendResponse: (payload, remotePubkey) async {
+            // Trust gate (spec §Cold Calls, Trust levels): under Closed no
+            // handshake response goes to an unanswerable key — the
+            // handshake cannot complete.
+            if (transport == PeerTransport.udp &&
+                !_acceptsUdpContactFrom(remotePubkey, udpPeerId: peerId)) {
+              throw StateError(
+                'unsolicited handshake from unknown key '
+                '${_pubkeyToHex(remotePubkey).substring(0, 8)} under Closed '
+                'trust',
+              );
+            }
+            await _sendNoiseHandshakePacket(
+              transport: transport,
+              recipientPubkey: remotePubkey,
+              peerId: peerId,
+              payload: payload,
+            );
+          },
         );
-        final response = result.responsePayload;
-        if (response != null) {
-          await _sendNoiseHandshakePacket(
-            transport: transport,
-            recipientPubkey: result.remotePubkey,
-            peerId: peerId,
-            payload: response,
+        if (transport == PeerTransport.udp &&
+            !_acceptsUdpContactFrom(result.remotePubkey, udpPeerId: peerId)) {
+          debugPrint(
+            '[trust] Rejecting Noise handshake from unknown '
+            '${_pubkeyToHex(result.remotePubkey).substring(0, 8)}',
           );
+          _noiseSessions.reset(transport, result.remotePubkey);
+          unawaited(
+            _udpService?.disconnectFromPeer(_pubkeyToHex(result.remotePubkey)),
+          );
+          return;
         }
         if (result.sessionEstablished) {
           // The handshake authenticated the connection's identity — map any
@@ -4292,6 +4367,9 @@ class GrassrootsNetwork {
       // signed ExpiresAt) — we do not second-guess it against our own clock,
       // which could differ.
       _outstandingInvites.remove(inviteIdHex);
+      // The redeemed link authorizes the redeemer's first contact
+      // regardless of trust level (spec §Cold Calls).
+      _inviteAuthorizedPubkeys.add(_pubkeyToHex(redeemerPubkey));
       store.dispatch(
         PeerIdentityRegisteredAction(publicKey: redeemerPubkey),
       );
@@ -4398,16 +4476,20 @@ class GrassrootsNetwork {
   void _setupBleServiceCallbacks() {
     if (_bleService == null) return;
 
-    // Forward BLE packets to the MessageRouter for processing
+    // Forward BLE packets to the MessageRouter, preserving each device
+    // connection's arrival order through async processing (spec §Session
+    // Establishment).
     _bleService!.onBlePacketReceived =
         (packet, {String? bleDeviceId, int? rssi, BleRole? bleRole}) {
-      _messageRouter.processPacket(
-        packet,
-        transport: PeerTransport.bleDirect,
-        bleDeviceId: bleDeviceId,
-        bleRole: bleRole,
-        rssi: rssi,
-      );
+      _enqueueRx('ble:${bleDeviceId ?? "?"}', () async {
+        await _messageRouter.processPacket(
+          packet,
+          transport: PeerTransport.bleDirect,
+          bleDeviceId: bleDeviceId,
+          bleRole: bleRole,
+          rssi: rssi,
+        );
+      });
     };
 
     _messageRouter.shouldAcceptBleAnnounce =
@@ -4454,23 +4536,40 @@ class GrassrootsNetwork {
   void _setupUdpServiceCallbacks() {
     if (_udpService == null) return;
 
-    // Forward UDP data to the MessageRouter for processing
+    // Forward UDP data to the MessageRouter, preserving each connection's
+    // arrival order through async processing (spec §Session Establishment).
     _udpService!.onUdpDataReceived = (peerId, data) {
-      try {
-        final packet = GrassrootsPacket.deserialize(data);
-        // Observed source address: the UDX remote, if known. Used by the
-        // signaling matcher to learn cold-call senders' public addresses.
-        final remote = _udpService!.getRemoteAddress(peerId);
-        _messageRouter.processPacket(
-          packet,
-          transport: PeerTransport.udp,
-          udpPeerId: peerId,
-          observedIp: remote?.ip.address,
-          observedPort: remote?.port,
-        );
-      } catch (e) {
-        debugPrint('Failed to deserialize UDP packet from $peerId: $e');
-      }
+      _enqueueRx('udp:$peerId', () async {
+        try {
+          final packet = GrassrootsPacket.deserialize(data);
+          // Observed source address: the UDX remote, if known. Used by the
+          // signaling matcher to learn cold-call senders' public addresses.
+          final remote = _udpService?.getRemoteAddress(peerId);
+          await _messageRouter.processPacket(
+            packet,
+            transport: PeerTransport.udp,
+            udpPeerId: peerId,
+            observedIp: remote?.ip.address,
+            observedPort: remote?.port,
+          );
+        } catch (e) {
+          debugPrint('Failed to process UDP packet from $peerId: $e');
+        }
+      });
+    };
+
+    // Trust gate for unsolicited IP contact (spec §Cold Calls, Trust
+    // levels — uniform across media): under Closed an unknown key's
+    // ANNOUNCE is dropped. Solicited contact (a connection this agent
+    // dialed), configured rendezvous servers, and deep-link-authorized
+    // keys pass.
+    _messageRouter.shouldAcceptUdpAnnounce = (senderPubkey, {udpPeerId}) =>
+        _acceptsUdpContactFrom(senderPubkey, udpPeerId: udpPeerId);
+
+    _messageRouter.onUdpAnnounceRejected = (senderPubkey, udpPeerId) {
+      unawaited(
+        _udpService?.disconnectFromPeer(_pubkeyToHex(senderPubkey)),
+      );
     };
 
     // Listen to connection events — update Redux state and log

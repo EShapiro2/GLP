@@ -11,11 +11,11 @@
 /// The application layer (GSG) handles any forwarding needs.
 library;
 
-export 'transport_service.dart';
+export 'package:grassroots_networking_core/src/transport/transport_service.dart';
 export 'ble_transport_service.dart';
-export 'udp_transport_service.dart';
+export 'package:grassroots_networking_core/src/transport/udp_transport_service.dart';
 export 'hole_punch_service.dart';
 export 'lan_discovery_service.dart';
 export 'public_address_discovery.dart';
-export 'address_utils.dart';
+export 'package:grassroots_networking_core/src/transport/address_utils.dart';
 export 'connection_service.dart';

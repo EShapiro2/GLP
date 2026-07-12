@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:typed_data';
-import 'package:flutter/widgets.dart';
 
 /// Transport type identifier
 enum TransportType {
@@ -12,31 +11,6 @@ enum TransportType {
 
   /// UDP-based transport (grassroots_dart_udx)
   udp,
-}
-
-/// Display metadata for a transport service.
-///
-/// Used by UI components to show appropriate icons and labels
-/// for each transport type.
-class TransportDisplayInfo {
-  /// Icon to display for this transport (e.g., Bluetooth, WiFi, Globe)
-  final IconData icon;
-
-  /// Human-readable name of the transport
-  final String name;
-
-  /// Short description of the transport
-  final String description;
-
-  /// Color associated with this transport (optional)
-  final Color? color;
-
-  const TransportDisplayInfo({
-    required this.icon,
-    required this.name,
-    required this.description,
-    this.color,
-  });
 }
 
 /// Transport connection state
@@ -133,10 +107,6 @@ class TransportConnectionEvent {
 abstract class TransportService {
   /// The type of transport this service provides
   TransportType get type;
-
-  /// Display information for this transport (icon, name, description)
-  /// Used by UI to show transport indicators next to peers
-  TransportDisplayInfo get displayInfo;
 
   /// Current state of the transport
   TransportState get state;

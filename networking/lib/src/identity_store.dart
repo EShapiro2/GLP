@@ -2,7 +2,7 @@ import 'dart:convert';
 
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
-import 'models/identity.dart';
+import 'package:grassroots_networking_core/src/models/identity.dart';
 
 /// Persists the device's [GrassrootsIdentity] across sessions.
 ///

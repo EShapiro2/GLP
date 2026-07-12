@@ -1,8 +1,8 @@
 import 'dart:convert';
 import 'dart:typed_data';
-import 'package:grassroots_networking/src/models/identity.dart';
-import 'package:grassroots_networking/src/models/packet.dart';
-import 'package:sodium_libs/sodium_libs.dart';
+import '../models/identity.dart';
+import '../models/packet.dart';
+import 'package:sodium/sodium.dart';
 
 /// Exact length of an ANNOUNCE payload: pubkey(32) + version(2) + sig(64).
 const int announcePayloadLength = 98;

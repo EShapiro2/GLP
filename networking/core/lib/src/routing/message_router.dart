@@ -7,7 +7,8 @@ import '../protocol/protocol_handler.dart';
 import '../store/app_state.dart';
 import '../store/peers_actions.dart';
 import '../store/peers_state.dart';
-import 'package:flutter/foundation.dart';
+import 'dart:typed_data';
+import '../platform/compat.dart';
 
 /// Routes incoming packets from all transports to the appropriate handlers.
 ///
@@ -76,6 +77,17 @@ class MessageRouter {
   /// Called when [shouldAcceptBleAnnounce] rejects a verified BLE ANNOUNCE.
   void Function(Uint8List senderPubkey, String? bleDeviceId)?
       onBleAnnounceRejected;
+
+  /// Called after payload-signature verification and before a UDP ANNOUNCE
+  /// is applied. Return false to reject contact from that sender — the
+  /// server profile's Closed-trust gate (spec answer: "unregistered keys
+  /// cannot complete a session").
+  bool Function(Uint8List senderPubkey, {String? udpPeerId})?
+      shouldAcceptUdpAnnounce;
+
+  /// Called when [shouldAcceptUdpAnnounce] rejects a verified UDP ANNOUNCE.
+  void Function(Uint8List senderPubkey, String? udpPeerId)?
+      onUdpAnnounceRejected;
 
   /// Called when a packet with an authenticated sender identity (verified
   /// ANNOUNCE or session-decrypted packet) arrives over UDP, so the
@@ -160,6 +172,21 @@ class MessageRouter {
             '${_pubkeyToHex(data.publicKey).substring(0, 8)}',
           );
           onBleAnnounceRejected?.call(data.publicKey, bleDeviceId);
+          return;
+        }
+      }
+      if (transport == PeerTransport.udp) {
+        final accepted = shouldAcceptUdpAnnounce?.call(
+              data.publicKey,
+              udpPeerId: udpPeerId,
+            ) ??
+            true;
+        if (!accepted) {
+          debugPrint(
+            '[trust] Dropping UDP ANNOUNCE from '
+            '${_pubkeyToHex(data.publicKey).substring(0, 8)}',
+          );
+          onUdpAnnounceRejected?.call(data.publicKey, udpPeerId);
           return;
         }
       }

@@ -1,10 +1,10 @@
 import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:grassroots_networking/src/store/peers_state.dart';
-import 'package:grassroots_networking/src/store/peers_actions.dart';
-import 'package:grassroots_networking/src/store/peers_reducer.dart';
-import 'package:grassroots_networking/src/models/peer.dart';
+import 'package:grassroots_networking_core/src/store/peers_state.dart';
+import 'package:grassroots_networking_core/src/store/peers_actions.dart';
+import 'package:grassroots_networking_core/src/store/peers_reducer.dart';
+import 'package:grassroots_networking_core/src/models/peer.dart';
 
 /// Generate a deterministic 32-byte public key from a seed value.
 Uint8List _testPubkey(int seed) {

@@ -1,7 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:grassroots_networking/src/transport/address_utils.dart';
+import 'package:grassroots_networking_core/src/transport/address_utils.dart';
 
 void main() {
   // =========================================================================

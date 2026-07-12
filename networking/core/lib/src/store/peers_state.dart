@@ -1,4 +1,5 @@
-import 'package:flutter/foundation.dart';
+import 'dart:typed_data';
+import '../platform/compat.dart';
 import '../models/peer.dart';
 import '../transport/address_utils.dart';
 import 'messages_actions.dart';

@@ -4,11 +4,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:redux/redux.dart';
 import 'debug_log_screen.dart';
-import 'src/store/app_state.dart';
-import 'src/store/settings_actions.dart';
-import 'src/store/settings_state.dart';
-import 'src/store/transports_state.dart';
-import 'src/transport/transport_service.dart';
+import 'package:grassroots_networking_core/src/store/app_state.dart';
+import 'package:grassroots_networking_core/src/store/settings_actions.dart';
+import 'package:grassroots_networking_core/src/store/settings_state.dart';
+import 'package:grassroots_networking_core/src/store/transports_state.dart';
+import 'package:grassroots_networking_core/src/transport/transport_service.dart';
 
 /// Settings screen for configuring transport protocols
 class SettingsScreen extends StatefulWidget {

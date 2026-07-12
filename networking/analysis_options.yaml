@@ -1,1 +1,8 @@
 include: package:flutter_lints/flutter.yaml
+
+linter:
+  rules:
+    # grassroots_networking_core is this repo's own sub-package (core/); the
+    # Flutter package composes its internals directly, so src-imports across
+    # that boundary are intentional, not a reach into a foreign package.
+    implementation_imports: false

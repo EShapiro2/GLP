@@ -1,9 +1,9 @@
 import 'dart:convert';
 import 'dart:typed_data';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:grassroots_networking/src/protocol/protocol_handler.dart';
-import 'package:grassroots_networking/src/models/identity.dart';
-import 'package:grassroots_networking/src/models/packet.dart';
+import 'package:grassroots_networking_core/src/protocol/protocol_handler.dart';
+import 'package:grassroots_networking_core/src/models/identity.dart';
+import 'package:grassroots_networking_core/src/models/packet.dart';
 import 'package:cryptography/cryptography.dart';
 import 'package:sodium_libs/sodium_libs.dart';
 

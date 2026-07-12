@@ -1,8 +1,8 @@
 import 'dart:typed_data';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:grassroots_networking/src/store/messages_state.dart';
-import 'package:grassroots_networking/src/store/messages_actions.dart';
-import 'package:grassroots_networking/src/store/messages_reducer.dart';
+import 'package:grassroots_networking_core/src/store/messages_state.dart';
+import 'package:grassroots_networking_core/src/store/messages_actions.dart';
+import 'package:grassroots_networking_core/src/store/messages_reducer.dart';
 
 void main() {
   // Shared test helpers

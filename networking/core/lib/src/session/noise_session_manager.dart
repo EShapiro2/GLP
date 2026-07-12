@@ -3,7 +3,7 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:cryptography/cryptography.dart';
-import 'package:sodium_libs/sodium_libs_sumo.dart' as libsodium;
+import 'package:sodium/sodium_sumo.dart' as libsodium;
 
 import '../models/identity.dart';
 import '../models/packet.dart';
@@ -117,7 +117,9 @@ class NoiseSessionManager {
     entry
       ..session = null
       ..handshake = handshake
-      ..completer = Completer<bool>();
+      // Keep a pending waiter: the dialer may already be awaiting the
+      // session (waitForSession registers before the handshake starts).
+      ..completer ??= Completer<bool>();
     return _encodeHandshakePayload(
       _NoiseHandshakeMessage.message1,
       identity.publicKey,
@@ -126,16 +128,19 @@ class NoiseSessionManager {
     );
   }
 
+  /// Wait for a session with [remotePubkey] to establish. When no handshake
+  /// is in flight yet, registers a waiter anyway — the IP dial sequence
+  /// (spec Implementation Notes) has the dialer send ANNOUNCE and await the
+  /// handshake the accepting endpoint initiates.
   Future<bool> waitForSession(
     PeerTransport transport,
     Uint8List remotePubkey,
   ) async {
     final key = _SessionKey(transport, _hex(remotePubkey));
-    final entry = _entries[key];
-    if (entry?.session != null) return true;
+    final entry = _entries.putIfAbsent(key, _SessionEntry.new);
+    if (entry.session != null) return true;
 
-    final completer = entry?.completer;
-    if (completer == null) return false;
+    final completer = entry.completer ??= Completer<bool>();
 
     try {
       return await completer.future.timeout(
@@ -150,10 +155,22 @@ class NoiseSessionManager {
     }
   }
 
+  /// Process an inbound handshake packet.
+  ///
+  /// When [sendResponse] is provided, the manager transmits any response
+  /// payload through it BEFORE releasing [waitForSession] waiters, and
+  /// returns a result whose [NoiseHandshakeResult.responsePayload] is null.
+  /// The ordering matters: on receiving message 2 the initiator's session
+  /// becomes usable, and a released waiter can push an encrypted packet
+  /// onto the wire ahead of message 3 — which the responder cannot yet
+  /// decrypt. A caller that passes no [sendResponse] must transmit the
+  /// returned payload itself and accepts that race.
   Future<NoiseHandshakeResult> handleHandshakePacket(
     GrassrootsPacket packet, {
     required PeerTransport transport,
     String? peerId,
+    Future<void> Function(Uint8List responsePayload, Uint8List remotePubkey)?
+        sendResponse,
   }) async {
     final (message, remotePubkey, signature, body) =
         _decodeHandshakePayload(packet.payload);
@@ -165,16 +182,28 @@ class NoiseSessionManager {
     final key = _SessionKey(transport, _hex(remotePubkey));
     final entry = _entries.putIfAbsent(key, _SessionEntry.new);
 
-    switch (message) {
-      case _NoiseHandshakeMessage.message1:
-        return _handleMessage1(entry, key, remotePubkey, body);
-      case _NoiseHandshakeMessage.message2:
-        return _handleMessage2(
-            entry, key, remotePubkey, body, transport, peerId);
-      case _NoiseHandshakeMessage.message3:
-        return _handleMessage3(
-            entry, key, remotePubkey, body, transport, peerId);
+    var result = switch (message) {
+      _NoiseHandshakeMessage.message1 =>
+        await _handleMessage1(entry, key, remotePubkey, body),
+      _NoiseHandshakeMessage.message2 => await _handleMessage2(
+          entry, key, remotePubkey, body, transport, peerId),
+      _NoiseHandshakeMessage.message3 => await _handleMessage3(
+          entry, key, remotePubkey, body, transport, peerId),
+    };
+
+    final response = result.responsePayload;
+    if (sendResponse != null && response != null) {
+      await sendResponse(response, result.remotePubkey);
+      result = NoiseHandshakeResult(
+        remotePubkey: result.remotePubkey,
+        sessionEstablished: result.sessionEstablished,
+      );
     }
+    // Release waiters only after any response is on the wire.
+    if (result.sessionEstablished) {
+      _entries[key]?.complete(true);
+    }
+    return result;
   }
 
   Future<GrassrootsPacket> encryptPacket(
@@ -290,7 +319,9 @@ class NoiseSessionManager {
     entry
       ..session = null
       ..handshake = handshake
-      ..completer = Completer<bool>();
+      // Keep a pending waiter: the dialer may already be awaiting the
+      // session (waitForSession registers before the handshake starts).
+      ..completer ??= Completer<bool>();
     return NoiseHandshakeResult(
       remotePubkey: remotePubkey,
       responsePayload: _encodeHandshakePayload(
@@ -327,7 +358,7 @@ class NoiseSessionManager {
     entry
       ..session = session
       ..handshake = null;
-    entry.complete(true);
+    // Waiters are released by handleHandshakePacket, after message 3 is sent.
     _recordConnectionPeer(transport, peerId, remotePubkey);
     return NoiseHandshakeResult(
       remotePubkey: remotePubkey,
@@ -365,7 +396,7 @@ class NoiseSessionManager {
     entry
       ..session = session
       ..handshake = null;
-    entry.complete(true);
+    // Waiters are released by handleHandshakePacket.
     _recordConnectionPeer(transport, peerId, remotePubkey);
     return NoiseHandshakeResult(
       remotePubkey: remotePubkey,

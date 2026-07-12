@@ -4,7 +4,7 @@ import 'dart:typed_data';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:cryptography/cryptography.dart';
 import 'package:cryptography/dart.dart' show DartSha256;
-import 'package:grassroots_networking/src/models/identity.dart';
+import 'package:grassroots_networking_core/src/models/identity.dart';
 
 void main() {
   group('GrassrootsIdentity', () {

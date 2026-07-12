@@ -2,10 +2,10 @@ import 'dart:typed_data';
 
 import 'package:cryptography/cryptography.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:grassroots_networking/src/models/identity.dart';
-import 'package:grassroots_networking/src/models/packet.dart';
-import 'package:grassroots_networking/src/models/peer.dart';
-import 'package:grassroots_networking/src/session/noise_session_manager.dart';
+import 'package:grassroots_networking_core/src/models/identity.dart';
+import 'package:grassroots_networking_core/src/models/packet.dart';
+import 'package:grassroots_networking_core/src/models/peer.dart';
+import 'package:grassroots_networking_core/src/session/noise_session_manager.dart';
 import 'package:sodium_libs/sodium_libs_sumo.dart';
 
 import '../helpers/sodium_test_bootstrap.dart';

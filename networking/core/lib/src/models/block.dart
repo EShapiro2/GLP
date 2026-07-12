@@ -1,5 +1,6 @@
 import 'dart:convert';
-import 'package:flutter/foundation.dart';
+import 'dart:typed_data';
+import '../platform/compat.dart';
 
 /// Block types for the Grassroots protocol
 enum BlockType {

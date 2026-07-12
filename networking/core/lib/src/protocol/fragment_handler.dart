@@ -1,6 +1,6 @@
 import 'dart:async';
 import 'dart:typed_data';
-import 'package:flutter/foundation.dart';
+import '../platform/compat.dart';
 import 'package:uuid/uuid.dart';
 import '../models/packet.dart';
 

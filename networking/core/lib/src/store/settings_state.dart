@@ -1,4 +1,4 @@
-import 'package:flutter/foundation.dart';
+import '../platform/compat.dart';
 
 /// Available transport protocols
 enum TransportProtocol {

@@ -70,14 +70,18 @@ export 'src/grassroots_network.dart';
 export 'src/transport/transport.dart';
 
 // Models
-export 'src/models/identity.dart';
+export 'package:grassroots_networking_core/src/models/identity.dart';
 export 'src/identity_store.dart';
-export 'src/models/peer.dart';
-export 'src/models/packet.dart';
-export 'src/models/block.dart';
+export 'package:grassroots_networking_core/src/models/peer.dart';
+export 'package:grassroots_networking_core/src/models/packet.dart';
+export 'package:grassroots_networking_core/src/models/block.dart';
 
-// Redux Store (includes friendships_state, settings_state, persistence_service)
-export 'src/store/store.dart';
+// Redux Store (core states/actions/reducers; persistence is Flutter-side)
+export 'package:grassroots_networking_core/src/store/store.dart';
+export 'src/store/persistence_service.dart';
+
+// UI adornments for core types (icons)
+export 'src/transport/transport_display.dart';
 
 // BLE (for advanced usage)
 export 'src/ble/permission_handler.dart' show PermissionHandler, PermissionResult;

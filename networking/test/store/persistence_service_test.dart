@@ -4,10 +4,10 @@ import 'package:fake_async/fake_async.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:grassroots_networking/src/store/persistence_service.dart';
-import 'package:grassroots_networking/src/store/known_peers_state.dart';
-import 'package:grassroots_networking/src/store/settings_state.dart';
-import 'package:grassroots_networking/src/store/messages_state.dart';
-import 'package:grassroots_networking/src/store/app_state.dart';
+import 'package:grassroots_networking_core/src/store/known_peers_state.dart';
+import 'package:grassroots_networking_core/src/store/settings_state.dart';
+import 'package:grassroots_networking_core/src/store/messages_state.dart';
+import 'package:grassroots_networking_core/src/store/app_state.dart';
 
 // ===== Helper builders (top-level to avoid underscore lint warnings) =====
 

@@ -3,13 +3,13 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:redux/redux.dart';
 import 'package:cryptography/cryptography.dart';
 import 'package:sodium_libs/sodium_libs.dart';
-import 'package:grassroots_networking/src/routing/message_router.dart';
-import 'package:grassroots_networking/src/protocol/protocol_handler.dart';
-import 'package:grassroots_networking/src/protocol/fragment_handler.dart';
-import 'package:grassroots_networking/src/models/identity.dart';
-import 'package:grassroots_networking/src/models/packet.dart';
-import 'package:grassroots_networking/src/models/peer.dart';
-import 'package:grassroots_networking/src/store/store.dart';
+import 'package:grassroots_networking_core/src/routing/message_router.dart';
+import 'package:grassroots_networking_core/src/protocol/protocol_handler.dart';
+import 'package:grassroots_networking_core/src/protocol/fragment_handler.dart';
+import 'package:grassroots_networking_core/src/models/identity.dart';
+import 'package:grassroots_networking_core/src/models/packet.dart';
+import 'package:grassroots_networking_core/src/models/peer.dart';
+import 'package:grassroots_networking_core/src/store/store.dart';
 
 import '../helpers/sodium_test_bootstrap.dart';
 

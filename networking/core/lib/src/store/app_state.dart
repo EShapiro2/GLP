@@ -1,4 +1,4 @@
-import 'package:flutter/foundation.dart';
+import '../platform/compat.dart';
 import 'peers_state.dart';
 import 'messages_state.dart';
 import 'known_peers_state.dart';
