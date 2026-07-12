@@ -3268,6 +3268,18 @@ class GrassrootsNetwork {
             fallbackAddress: udpAddress,
           )
         : normalizeAddressStrings([udpAddress]);
+    // First dials can race public-address discovery: with no local
+    // candidates no compatible pair exists and the dial fails spuriously —
+    // this is how a rendezvous probe or an invite redemption issued right
+    // after initialize() used to fail. Wait for the in-flight discovery
+    // before giving up on candidate selection.
+    if (_connectionLocalCandidates().isEmpty) {
+      debugPrint(
+        '[udp-send] No local candidates yet for $peerShort — waiting for '
+        'public-address discovery',
+      );
+      await _waitForPublicUdpAddress(timeout: const Duration(seconds: 20));
+    }
     final pair = _selectUdpCandidatePair(
       remoteCandidates,
       context: 'udp-send',
