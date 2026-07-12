@@ -15,11 +15,19 @@
 ///   gpw_client area-sign --key <keyfile> --dir <area-dir> --address <web-address>
 ///              --epoch <n>
 ///   gpw_client area-verify --mirror-url <base> (--pubkey <b64url> | --ns-url <base> --name <label>)
+///   gpw_client push --key <keyfile> --dir <signed-area-dir> --address <web-address>
+///              (--service-pk <b64url> --service-addr <ip:port> | --ns-url <base>)
+///              [--timeout <seconds>]
 library;
 
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 
+import 'package:cryptography/cryptography.dart' show Ed25519;
+import 'package:grassroots_networking_core/grassroots_networking_core.dart'
+    show GrassrootsIdentity, HeadlessGrassrootsNetwork, initHeadlessSodium;
 import 'package:gpw_name_service/gpw_name_service.dart';
 
 Future<void> main(List<String> args) async {
@@ -44,6 +52,8 @@ Future<void> main(List<String> args) async {
       await _areaSign(_Opts(rest));
     case 'area-verify':
       await _areaVerify(_Opts(rest));
+    case 'push':
+      await _push(_Opts(rest));
     default:
       stderr.writeln('gpw_client: unknown command "$cmd"');
       exit(2);
@@ -184,6 +194,79 @@ Future<void> _areaVerify(_Opts o) async {
   } finally {
     client.close();
   }
+}
+
+/// The phone side of the push channel, per the GLP-Networking-API answer:
+/// `putPeerAddress(servicePk, address)` then `send(servicePk, payload)`,
+/// the payload being the gpw/area-push/1 snapshot of a signed area.  Waits
+/// for the service's gpw/push-ack/1.
+Future<void> _push(_Opts o) async {
+  final keyJson =
+      jsonDecode(File(o.req('key')).readAsStringSync()) as Map;
+  final seed = unb64url(keyJson['seed'] as String);
+  final payload = buildAreaPush(Directory(o.req('dir')), o.req('address'));
+
+  // Service coordinates: given directly, or from the name service.
+  String? servicePk = o['service-pk'];
+  String? serviceAddr = o['service-addr'];
+  if (servicePk == null || serviceAddr == null) {
+    final ns = o.req('ns-url');
+    final client = HttpClient();
+    try {
+      final req = await client.getUrl(Uri.parse('$ns/gpw/v1/push-info'));
+      final res = await req.close();
+      final text = await res.transform(utf8.decoder).join();
+      if (res.statusCode != 200) {
+        stderr.writeln('push-info: ${res.statusCode} $text');
+        exit(1);
+      }
+      final info = jsonDecode(text) as Map;
+      servicePk = info['publicKey'] as String;
+      serviceAddr = info['address'] as String;
+    } finally {
+      client.close();
+    }
+  }
+
+  final sodium = await initHeadlessSodium();
+  final identity = await GrassrootsIdentity.create(
+    keyPair: await Ed25519().newKeyPairFromSeed(seed),
+    nickname: 'gpw-push',
+  );
+  final network = HeadlessGrassrootsNetwork(
+    identity: identity,
+    sodium: sodium,
+  );
+  final ack = Completer<Map>();
+  network.onMessageReceived = (messageId, senderPk, bytes, transport) {
+    try {
+      final m = jsonDecode(utf8.decode(bytes)) as Map;
+      if (m['format'] == 'gpw/push-ack/1' && !ack.isCompleted) {
+        ack.complete(m);
+      }
+    } catch (_) {}
+  };
+  if (!await network.start()) {
+    stderr.writeln('push: failed to bind a UDP socket');
+    exit(1);
+  }
+  network.putPeerAddress(unb64url(servicePk), serviceAddr);
+  await network.send(
+      unb64url(servicePk), Uint8List.fromList(payload));
+
+  final timeout = Duration(seconds: int.parse(o['timeout'] ?? '20'));
+  try {
+    final result = await ack.future.timeout(timeout);
+    stdout.writeln(jsonEncode(result));
+    if (result['accepted'] != true) exitCode = 1;
+  } on TimeoutException {
+    stderr.writeln('push: no ack within ${timeout.inSeconds}s '
+        '(service down, wrong address, or key not registered)');
+    exitCode = 1;
+  } finally {
+    await network.dispose();
+  }
+  exit(exitCode);
 }
 
 Future<void> _send(

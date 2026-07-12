@@ -247,6 +247,14 @@ class NameService {
 
   Outcome serverKeyInfo() => Outcome(200, {'serverKey': serverKey.publicKeyB64});
 
+  /// The push channel's coordinates — the mirroring agent's public key and
+  /// `ip:port` — set at startup when the push service runs.
+  Map<String, Object?>? pushInfo;
+
+  Outcome pushInfoOutcome() => pushInfo == null
+      ? Outcome.error(404, 'push channel not running')
+      : Outcome(200, pushInfo!);
+
   /// Caddy's on-demand-TLS authorization hook: 200 exactly when [domain] is
   /// `<label>.<zone>` with the label a bound, unretired web-name, so
   /// certificates track bound web-names.

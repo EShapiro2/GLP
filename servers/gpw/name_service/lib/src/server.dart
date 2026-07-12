@@ -43,6 +43,9 @@ Future<Outcome> _route(NameService service, HttpRequest req) async {
   if (rest.length == 1 && rest[0] == 'mirror-ask' && req.method == 'GET') {
     return service.mirrorAsk(req.uri.queryParameters['domain']);
   }
+  if (rest.length == 1 && rest[0] == 'push-info' && req.method == 'GET') {
+    return service.pushInfoOutcome();
+  }
   if (rest.isNotEmpty && rest[0] == 'names') {
     if (rest.length == 2 && req.method == 'GET') {
       return service.get(rest[1]);

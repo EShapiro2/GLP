@@ -8,8 +8,12 @@ description: >-
 version: 0.1.0
 publish_to: none
 environment:
-  sdk: ^3.4.0
+  sdk: ^3.5.0
 dependencies:
   cryptography: ^2.9.0
+  # GLP-Networking-API's headless server profile (cross-project answer,
+  # GPW/docs/cross-project-request-glp-networking-api-2026-07-12.md).
+  grassroots_networking_core:
+    path: ../../../networking/core
 dev_dependencies:
   test: ^1.25.0

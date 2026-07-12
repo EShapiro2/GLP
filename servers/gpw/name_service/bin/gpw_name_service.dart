@@ -1,9 +1,16 @@
 /// Entry point.  Usage:
 ///   gpw_name_service --state-dir /var/lib/gpw [--zone peoplesweb.org]
 ///                    [--host 127.0.0.1] [--port 8053] [--knotc knotc]
+///                    [--push-port 9517] [--public-address ip:port]
+///                    [--mirrors-dir /var/lib/gpw/mirrors]
 ///
 /// The server's Ed25519 counter-signing key lives at
 /// `<state-dir>/server_key.json` (created on first run, mode 0600).
+///
+/// With --push-port and --public-address, the push channel starts: the
+/// mirroring agent's identity at `<state-dir>/push-identity.json`, Closed
+/// trust, known peers driven by the bindings (registration rule), verified
+/// pushes written into --mirrors-dir.
 library;
 
 import 'dart:convert';
@@ -25,16 +32,49 @@ Future<void> main(List<String> args) async {
 
   Directory(stateDir).createSync(recursive: true);
   final key = await _loadOrCreateKey('$stateDir/server_key.json');
+  final store = NameStore(stateDir);
+
+  // The push channel, when configured (Stage 4).
+  PushService? push;
+  PushRegistrar registrar = NoopRegistrar();
+  final pushPort = opts['push-port'];
+  final publicAddress = opts['public-address'];
+  if (pushPort != null && publicAddress != null) {
+    push = await PushService.start(
+      identityPath: '$stateDir/push-identity.json',
+      port: int.parse(pushPort),
+      publicAddress: publicAddress,
+      writer: MirrorWriter(
+        zone: zone,
+        store: store,
+        mirrorsDir:
+            Directory(opts['mirrors-dir'] ?? '$stateDir/mirrors'),
+      ),
+      knownPeersPath: '$stateDir/known-peers.json',
+    );
+    registrar = LayerRegistrar(push.network);
+  }
+
   final service = NameService(
     zone: zone,
-    store: NameStore(stateDir),
+    store: store,
     zoneWriter: KnotcZoneWriter(zone, knotc: opts['knotc'] ?? 'knotc'),
     serverKey: key,
+    registrar: registrar,
   );
+  if (push != null) {
+    service.syncRegistrar();
+    service.pushInfo = {
+      'publicKey': push.publicKeyB64,
+      'address': publicAddress,
+    };
+  }
   await serve(service, host, port);
   stdout.writeln('gpw_name_service: zone $zone, state $stateDir, '
       'listening on ${host.address}:$port, '
-      'server key ${key.publicKeyB64}');
+      'server key ${key.publicKeyB64}'
+      '${push == null ? '' : ', push agent ${push.publicKeyB64} '
+          'at $publicAddress'}');
 }
 
 Future<SigningKey> _loadOrCreateKey(String path) async {
