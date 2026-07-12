@@ -1,0 +1,21 @@
+; peoplesweb.org apex zone (GPW).  Deployed to
+; /var/lib/knot/zones/peoplesweb.org.zone on vps3492120.
+; TTL discipline per GPW Section 6 and the design notes' DNS mechanics:
+; delegations and infrastructure records carry long expiries (86400 s);
+; address records (web-name -> mirroring server) carry minutes (300 s),
+; so repoints take effect fast.  The apex A record is the address record
+; of the federation's own web presence, hence 300 s.
+$ORIGIN peoplesweb.org.
+$TTL 86400
+@       SOA     ns1.peoplesweb.org. hostmaster.peoplesweb.org. (
+                2026071201      ; serial (YYYYMMDDnn)
+                3600            ; refresh
+                900             ; retry
+                1209600         ; expire (14 days)
+                300             ; negative-answer TTL
+                )
+@       NS      ns1.peoplesweb.org.
+@       NS      ns2.peoplesweb.org.
+@       300     A       162.35.180.99
+ns1             A       162.35.180.99
+ns2             A       162.35.180.99
