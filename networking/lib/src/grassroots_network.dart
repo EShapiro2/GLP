@@ -412,15 +412,62 @@ class GrassrootsNetwork {
     });
   }
 
+  /// Per-pair handshake serialization (spec §Session Establishment: one
+  /// handshake per medium per pair). The announce-triggered initiation and
+  /// the inbound handshake handler both mutate the pair's handshake state
+  /// across awaits; run concurrently they can each observe no handshake in
+  /// flight and create one, clobbering the pair's single state machine —
+  /// glare then stalls instead of resolving by the deterministic rule.
+  /// Keyed per medium and pair; waiting for the session happens outside
+  /// the chain.
+  final Map<String, Future<void>> _handshakeChains = {};
+
+  Future<T> _serializedHandshake<T>(
+    String pairKey,
+    Future<T> Function() task,
+  ) {
+    final previous = _handshakeChains[pairKey] ?? Future<void>.value();
+    final result = previous.then((_) => task());
+    final chain = result.then((_) {}, onError: (_) {});
+    _handshakeChains[pairKey] = chain;
+    chain.whenComplete(() {
+      if (identical(_handshakeChains[pairKey], chain)) {
+        _handshakeChains.remove(pairKey);
+      }
+    });
+    return result;
+  }
+
+  String _handshakePairKey(PeerTransport transport, Uint8List remotePubkey) =>
+      '${transport.name}:${_pubkeyToHex(remotePubkey)}';
+
+  /// Pair key for an inbound handshake packet: the payload's claimed sender
+  /// (verified inside handleHandshakePacket); falls back to the connection
+  /// id for an undecodable payload, which the handler then rejects anyway.
+  String _peekHandshakePairKey(
+    GrassrootsPacket packet,
+    PeerTransport transport,
+    String? peerId,
+  ) {
+    try {
+      return _handshakePairKey(
+        transport,
+        _noiseSessions.claimedHandshakeSender(packet.payload),
+      );
+    } catch (_) {
+      return '${transport.name}:${peerId ?? "?"}';
+    }
+  }
+
   /// Hole-punch services for NAT traversal, keyed by IP family.
   final Map<InternetAddressType, HolePunchService> _holePunchServices = {};
 
   /// Signaling service for address registration, queries, and hole-punch coordination
   late final SignalingService _signalingService;
 
-  /// Public address discovery for finding our public ip:port
-  final PublicAddressDiscovery _publicAddressDiscovery =
-      PublicAddressDiscovery();
+  /// Public address discovery for finding our public ip:port. Injectable so
+  /// tests can substitute a stub (the default queries an external service).
+  final PublicAddressDiscovery _publicAddressDiscovery;
 
   /// Our discovered public address (ip:port), shared with friends
   String? _publicAddress;
@@ -632,7 +679,9 @@ class GrassrootsNetwork {
     this.config = const GrassrootsNetworkConfig(),
     required this.store,
     required this.sodium,
-  }) {
+    PublicAddressDiscovery? publicAddressDiscovery,
+  }) : _publicAddressDiscovery =
+            publicAddressDiscovery ?? PublicAddressDiscovery() {
     _protocolHandler = ProtocolHandler(identity: identity, sodium: sodium);
     _fragmentHandler = FragmentHandler();
     _noiseSessions = NoiseSessionManager(identity: identity, sodium: sodium);
@@ -3055,11 +3104,15 @@ class GrassrootsNetwork {
   }) async {
     if (_noiseSessions.hasSession(transport, recipientPubkey)) return true;
 
-    final payload = await _noiseSessions.startHandshake(
-      transport,
-      recipientPubkey,
-    );
-    if (payload != null) {
+    // Initiation is serialized with inbound handshake processing for the
+    // same pair; the wait happens outside the pair's chain.
+    final sent = await _serializedHandshake(
+        _handshakePairKey(transport, recipientPubkey), () async {
+      final payload = await _noiseSessions.startHandshake(
+        transport,
+        recipientPubkey,
+      );
+      if (payload == null) return true;
       final sent = await _sendNoiseHandshakePacket(
         transport: transport,
         recipientPubkey: recipientPubkey,
@@ -3070,7 +3123,9 @@ class GrassrootsNetwork {
         _noiseSessions.reset(transport, recipientPubkey);
         return false;
       }
-    }
+      return true;
+    });
+    if (!sent) return false;
 
     return _noiseSessions.waitForSession(transport, recipientPubkey);
   }
@@ -4038,32 +4093,37 @@ class GrassrootsNetwork {
     _messageRouter.onNoiseHandshakeReceived =
         (packet, transport, {String? peerId}) async {
       try {
-        final result = await _noiseSessions.handleHandshakePacket(
-          packet,
-          transport: transport,
-          peerId: peerId,
-          // The manager transmits the response before releasing session
-          // waiters, so a queued sender cannot race its first encrypted
-          // packet ahead of handshake message 3.
-          sendResponse: (payload, remotePubkey) async {
-            // Trust gate (spec §Cold Calls, Trust levels): under Closed no
-            // handshake response goes to an unanswerable key — the
-            // handshake cannot complete.
-            if (transport == PeerTransport.udp &&
-                !_acceptsUdpContactFrom(remotePubkey, udpPeerId: peerId)) {
-              throw StateError(
-                'unsolicited handshake from unknown key '
-                '${_pubkeyToHex(remotePubkey).substring(0, 8)} under Closed '
-                'trust',
+        // Serialized with any in-flight announce-triggered initiation for
+        // the same pair (spec §Session: one handshake per medium per pair).
+        final result = await _serializedHandshake(
+          _peekHandshakePairKey(packet, transport, peerId),
+          () => _noiseSessions.handleHandshakePacket(
+            packet,
+            transport: transport,
+            peerId: peerId,
+            // The manager transmits the response before releasing session
+            // waiters, so a queued sender cannot race its first encrypted
+            // packet ahead of handshake message 3.
+            sendResponse: (payload, remotePubkey) async {
+              // Trust gate (spec §Cold Calls, Trust levels): under Closed no
+              // handshake response goes to an unanswerable key — the
+              // handshake cannot complete.
+              if (transport == PeerTransport.udp &&
+                  !_acceptsUdpContactFrom(remotePubkey, udpPeerId: peerId)) {
+                throw StateError(
+                  'unsolicited handshake from unknown key '
+                  '${_pubkeyToHex(remotePubkey).substring(0, 8)} under Closed '
+                  'trust',
+                );
+              }
+              await _sendNoiseHandshakePacket(
+                transport: transport,
+                recipientPubkey: remotePubkey,
+                peerId: peerId,
+                payload: payload,
               );
-            }
-            await _sendNoiseHandshakePacket(
-              transport: transport,
-              recipientPubkey: remotePubkey,
-              peerId: peerId,
-              payload: payload,
-            );
-          },
+            },
+          ),
         );
         if (transport == PeerTransport.udp &&
             !_acceptsUdpContactFrom(result.remotePubkey, udpPeerId: peerId)) {
