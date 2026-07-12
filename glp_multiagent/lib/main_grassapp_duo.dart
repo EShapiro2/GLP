@@ -203,6 +203,11 @@ class _DuoScreenState extends State<DuoScreen> {
 
       final ok = await network.initialize();
       TraceLog.log('NET', 'network initialize: $ok');
+      // Supply the other phone's key immediately: LAN discovery and BLE
+      // recognition need it, and neither waits for a public address.
+      network.putKnownPeer(otherPk);
+      _network = network;
+      setState(() => _netStatus = 'pairing…');
       // Dialing the rendezvous server needs our local address candidates —
       // wait for public-address discovery before configuring it.
       final discoveryDeadline =
@@ -223,11 +228,6 @@ class _DuoScreenState extends State<DuoScreen> {
           if (!rv) await Future.delayed(const Duration(seconds: 3));
         }
       }
-      // Supply the other phone's key: recognition + automatic pairing via the
-      // rendezvous AVAILABLE/RECONNECT match.
-      network.putKnownPeer(otherPk);
-      _network = network;
-      setState(() => _netStatus = 'pairing…');
     } catch (e) {
       setState(() => _netStatus = 'network error: $e');
       TraceLog.log('NET', 'ERROR: $e');

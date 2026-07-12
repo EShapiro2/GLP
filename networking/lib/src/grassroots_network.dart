@@ -719,6 +719,7 @@ class GrassrootsNetwork {
       pubkeyHex: _pubkeyToHex(pubkey),
       udpAddress: parsed.toAddressString(),
     ));
+    _rematchLanInstances();
   }
 
   /// Supply a peer's public key to the layer without an address. The key
@@ -729,6 +730,7 @@ class GrassrootsNetwork {
   void putKnownPeer(Uint8List pubkey) {
     store.dispatch(KnownPeerPutAction(_pubkeyToHex(pubkey)));
     store.dispatch(PeerIdentityRegisteredAction(publicKey: pubkey));
+    _rematchLanInstances();
   }
 
   /// Withdraw a peer's key from the known set. The layer stops recognizing
@@ -1923,6 +1925,7 @@ class GrassrootsNetwork {
   }
 
   Future<void> _stopLanDiscovery() async {
+    _lanResolvedInstances.clear();
     final lan = _lanDiscovery;
     _lanDiscovery = null;
     if (lan == null) return;
@@ -1933,20 +1936,49 @@ class GrassrootsNetwork {
     }
   }
 
+  /// LAN instances resolved this session, token → (address, seen-at).
+  /// A token outlives its resolution by at most one adjacent slot, so
+  /// entries older than two slots are pruned. Kept so a key supplied
+  /// *after* its instance resolved (GLP calling [putKnownPeer] while mDNS
+  /// is already up) is still recognized — [_rematchLanInstances] replays
+  /// the cache whenever the known set grows.
+  final Map<String, ({String address, DateTime at})> _lanResolvedInstances =
+      {};
+
   /// A browsed LAN instance resolved (spec §Proximity: recognition before
-  /// contact). A token matching a known peer's key feeds the observed
-  /// address into dialing directly — never into distribution — and the
-  /// deterministic initiator (lexicographically smaller public key, as
-  /// everywhere) dials; the other side waits for the inbound connection.
-  /// The recognized key is the expected static: [_connectToPeerViaUdp]
-  /// dials that key, and the session aborts on a key mismatch.
+  /// contact). Cache it for late-arriving keys, then try contact.
+  void _onLanInstanceResolved(String token, String address) {
+    final cutoff = DateTime.now()
+        .subtract(GrassrootsIdentity.bleSlotDuration * 2);
+    _lanResolvedInstances
+      ..removeWhere((_, entry) => entry.at.isBefore(cutoff))
+      ..[token] = (address: address, at: DateTime.now());
+    _tryLanContact(token, address);
+  }
+
+  /// Replay cached LAN instances against the (grown) known set. Called by
+  /// [putKnownPeer] and [putPeerAddress]; already-connected peers short out
+  /// in [_tryLanContact].
+  void _rematchLanInstances() {
+    if (_lanResolvedInstances.isEmpty) return;
+    for (final entry in _lanResolvedInstances.entries.toList()) {
+      _tryLanContact(entry.key, entry.value.address);
+    }
+  }
+
+  /// A token matching a known peer's key feeds the observed address into
+  /// dialing directly — never into distribution — and the deterministic
+  /// initiator (lexicographically smaller public key, as everywhere) dials;
+  /// the other side waits for the inbound connection. The recognized key is
+  /// the expected static: [_connectToPeerViaUdp] dials that key, and the
+  /// session aborts on a key mismatch.
   ///
   /// An unmatched instance is a cold-call opportunity under Open trust, but
   /// outbound UDX connections are keyed by the peer's public key, so the
   /// Open-trust answer over LAN is inbound-only for now: an unmatched peer
   /// who recognizes us dials, and we accept (inbound unknown peers are
   /// identified by ANNOUNCE). Two mutual strangers on a LAN do not connect.
-  void _onLanInstanceResolved(String token, String address) {
+  void _tryLanContact(String token, String address) {
     final matched = matchLanToken(
       token,
       store.state.knownPeers.known.keys.map(_hexToBytes),
