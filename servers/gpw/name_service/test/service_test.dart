@@ -230,6 +230,44 @@ void main() {
         200);
   });
 
+  test('the identity record is immutable within an identity', () async {
+    final c1 = await SigningKey.generate();
+    await service.deposit('me',
+        await signed(person, manifestBody(person, custodians: [c1.publicKeyB64])));
+    // Same key, higher epoch, different custodians — the thief attack.
+    final c2 = await SigningKey.generate();
+    final out = await service.deposit(
+        'me',
+        await signed(person,
+            manifestBody(person, epoch: 2, custodians: [c2.publicKeyB64])));
+    expect(out.status, 409);
+    // Same record at a higher epoch still updates fine.
+    expect(
+        (await service.deposit(
+                'me',
+                await signed(person,
+                    manifestBody(person, epoch: 2, custodians: [c1.publicKeyB64]))))
+            .status,
+        200);
+  });
+
+  test('the threshold must be a supermajority of the custodians', () async {
+    final c = [for (var i = 0; i < 4; i++) await SigningKey.generate()];
+    final keys = c.map((k) => k.publicKeyB64).toList();
+    Future<int> status(List<String> custodians, int threshold) async =>
+        (await service.deposit(
+                'me',
+                await signed(
+                    person,
+                    manifestBody(person,
+                        custodians: custodians, threshold: threshold))))
+            .status;
+    expect(await status(keys.sublist(0, 3), 1), 400); // 1 of 3
+    expect(await status(keys, 2), 400); // 2 of 4
+    expect(await status(keys, 5), 400); // above the count
+    expect(await status(keys.sublist(0, 3), 2), 201); // 2 of 3 binds
+  });
+
   test('mirror-ask tracks bound web-names', () async {
     expect(service.mirrorAsk('me.peoplesweb.org').status, 404); // unbound
     await service.deposit('me', await signed(person, manifestBody(person)));

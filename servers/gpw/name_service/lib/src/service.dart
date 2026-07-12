@@ -131,6 +131,14 @@ class NameService {
         if (manifest.common.epoch < state.manifestEpoch) {
           return Outcome.error(409, 'epoch below the bound manifest');
         }
+        // Per SPM, the identity record is immutable within an identity: only
+        // Replace installs a fresh record, so a thief holding the key cannot
+        // swap the custodians.
+        if (jcsString(env.body['identityRecord']) !=
+            jcsString(state.manifestBody['identityRecord'])) {
+          return Outcome.error(
+              409, 'identity record is immutable within an identity');
+        }
         if (manifest.common.epoch == state.manifestEpoch) {
           if (jcsString(env.body) == jcsString(state.manifestBody)) {
             return Outcome(200, state.served()); // idempotent redeposit

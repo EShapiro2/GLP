@@ -121,10 +121,13 @@ class NameManifest {
     if (custodians is! List || custodians.any((c) => c is! String)) {
       throw WireError('missing or invalid "identityRecord.custodians"');
     }
+    // Per SPM (Implementation Notes appendix): the threshold is a
+    // supermajority — an integer exceeding half the custodian count.
     if (threshold is! int ||
-        threshold < 1 ||
-        threshold > custodians.length) {
-      throw WireError('missing or invalid "identityRecord.threshold"');
+        threshold > custodians.length ||
+        threshold * 2 <= custodians.length) {
+      throw WireError(
+          '"identityRecord.threshold" is not a supermajority of the custodians');
     }
     ReplaceBlock? replaces;
     final rep = body['replaces'];
