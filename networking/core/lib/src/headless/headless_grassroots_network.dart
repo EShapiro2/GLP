@@ -324,11 +324,13 @@ class HeadlessGrassrootsNetwork {
     if (!packet.type.usesSessionSecurity) return packet.serialize();
     if (!_noiseSessions.hasSession(PeerTransport.udp, recipientPubkey)) {
       if (!_dialedPeers.contains(_hex(recipientPubkey))) {
-        final payload = await _noiseSessions.startHandshake(
-          PeerTransport.udp,
-          recipientPubkey,
-        );
-        if (payload != null) {
+        final sent =
+            await _serializedHandshake(_hex(recipientPubkey), () async {
+          final payload = await _noiseSessions.startHandshake(
+            PeerTransport.udp,
+            recipientPubkey,
+          );
+          if (payload == null) return true;
           final handshakeBytes = GrassrootsPacket(
             type: PacketType.noiseHandshake,
             payload: payload,
@@ -339,9 +341,11 @@ class HeadlessGrassrootsNetwork {
                   ) ??
                   Future.value(false))) {
             _noiseSessions.reset(PeerTransport.udp, recipientPubkey);
-            return null;
+            return false;
           }
-        }
+          return true;
+        });
+        if (!sent) return null;
       }
       if (!await _noiseSessions.waitForSession(
         PeerTransport.udp,
@@ -424,29 +428,36 @@ class HeadlessGrassrootsNetwork {
     _messageRouter.onNoiseHandshakeReceived =
         (packet, transport, {String? peerId}) async {
       try {
-        final result = await _noiseSessions.handleHandshakePacket(
-          packet,
-          transport: transport,
-          peerId: peerId,
-          // The manager sends the response itself, before releasing
-          // session waiters — and the trust gate runs first: no handshake
-          // response ever goes to an unregistered key under Closed trust.
-          sendResponse: (payload, remotePubkey) async {
-            if (!_acceptsContactFrom(remotePubkey)) {
-              throw StateError(
-                'unregistered key under Closed trust: '
-                '${_hex(remotePubkey).substring(0, 8)}…',
+        // Serialized with any in-flight announce-triggered initiation for
+        // the same pair; the pair key is the claimed sender, which
+        // handleHandshakePacket verifies.
+        final claimed = _peekHandshakeSender(packet, peerId);
+        final result = await _serializedHandshake(
+          claimed,
+          () => _noiseSessions.handleHandshakePacket(
+            packet,
+            transport: transport,
+            peerId: peerId,
+            // The manager sends the response itself, before releasing
+            // session waiters — and the trust gate runs first: no handshake
+            // response ever goes to an unregistered key under Closed trust.
+            sendResponse: (payload, remotePubkey) async {
+              if (!_acceptsContactFrom(remotePubkey)) {
+                throw StateError(
+                  'unregistered key under Closed trust: '
+                  '${_hex(remotePubkey).substring(0, 8)}…',
+                );
+              }
+              final bytes = GrassrootsPacket(
+                type: PacketType.noiseHandshake,
+                payload: payload,
+              ).serialize();
+              await _udpService?.sendToPeer(
+                peerId ?? _hex(remotePubkey),
+                bytes,
               );
-            }
-            final bytes = GrassrootsPacket(
-              type: PacketType.noiseHandshake,
-              payload: payload,
-            ).serialize();
-            await _udpService?.sendToPeer(
-              peerId ?? _hex(remotePubkey),
-              bytes,
-            );
-          },
+            },
+          ),
         );
         // Trust gate at the session layer: refuse to complete a session
         // with an unregistered key under Closed trust.
@@ -528,6 +539,30 @@ class HeadlessGrassrootsNetwork {
     });
   }
 
+  /// Per-pair handshake serialization (spec §Session Establishment: one
+  /// handshake per medium per pair). The announce-triggered initiation and
+  /// the inbound handshake handler both mutate the pair's handshake state
+  /// across awaits; run concurrently they can each observe no handshake in
+  /// flight and create one, clobbering the pair's single state machine —
+  /// glare then stalls instead of resolving by the deterministic rule.
+  final Map<String, Future<void>> _handshakeChains = {};
+
+  Future<T> _serializedHandshake<T>(
+    String pairKey,
+    Future<T> Function() task,
+  ) {
+    final previous = _handshakeChains[pairKey] ?? Future<void>.value();
+    final result = previous.then((_) => task());
+    final chain = result.then((_) {}, onError: (_) {});
+    _handshakeChains[pairKey] = chain;
+    chain.whenComplete(() {
+      if (identical(_handshakeChains[pairKey], chain)) {
+        _handshakeChains.remove(pairKey);
+      }
+    });
+    return result;
+  }
+
   void _setupUdpCallbacks(UdpTransportService udp) {
     udp.onUdpDataReceived = (peerId, data) {
       _enqueueRx(peerId, () async {
@@ -563,22 +598,39 @@ class HeadlessGrassrootsNetwork {
   Future<void> _ensureSessionWith(Uint8List pubkey) async {
     if (_udpService?.getPeerIdForPubkey(pubkey) == null) return;
     if (_noiseSessions.hasSession(PeerTransport.udp, pubkey)) return;
-    final payload = await _noiseSessions.startHandshake(
-      PeerTransport.udp,
-      pubkey,
-    );
-    if (payload == null) return;
-    final bytes = GrassrootsPacket(
-      type: PacketType.noiseHandshake,
-      payload: payload,
-    ).serialize();
-    if (!await (_udpService?.sendToPeer(_hex(pubkey), bytes) ??
-        Future.value(false))) {
-      _noiseSessions.reset(PeerTransport.udp, pubkey);
-      return;
-    }
+    // The initiation is serialized with inbound handshake processing for
+    // the same pair; the wait happens outside the pair's chain.
+    final sent = await _serializedHandshake(_hex(pubkey), () async {
+      final payload = await _noiseSessions.startHandshake(
+        PeerTransport.udp,
+        pubkey,
+      );
+      if (payload == null) return true;
+      final bytes = GrassrootsPacket(
+        type: PacketType.noiseHandshake,
+        payload: payload,
+      ).serialize();
+      if (!await (_udpService?.sendToPeer(_hex(pubkey), bytes) ??
+          Future.value(false))) {
+        _noiseSessions.reset(PeerTransport.udp, pubkey);
+        return false;
+      }
+      return true;
+    });
+    if (!sent) return;
     if (await _noiseSessions.waitForSession(PeerTransport.udp, pubkey)) {
       _onSessionEstablished(pubkey);
+    }
+  }
+
+  /// Pair key for handshake serialization: the payload's claimed sender
+  /// (verified inside handleHandshakePacket); falls back to the connection
+  /// id for an undecodable payload, which the handler then rejects anyway.
+  String _peekHandshakeSender(GrassrootsPacket packet, String? peerId) {
+    try {
+      return _hex(_noiseSessions.claimedHandshakeSender(packet.payload));
+    } catch (_) {
+      return peerId ?? '?';
     }
   }
 

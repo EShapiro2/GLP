@@ -155,6 +155,14 @@ class NoiseSessionManager {
     }
   }
 
+  /// The sender identity a handshake payload claims (envelope field, public
+  /// on the wire; verified during [handleHandshakePacket] — message 1 by its
+  /// signature, messages 2/3 against the Noise-authenticated static).
+  /// Exposed so a coordinator can serialize handshake processing per pair
+  /// (spec §Session Establishment: one handshake per medium per pair).
+  Uint8List claimedHandshakeSender(Uint8List payload) =>
+      _decodeHandshakePayload(payload).$2;
+
   /// Process an inbound handshake packet.
   ///
   /// When [sendResponse] is provided, the manager transmits any response
