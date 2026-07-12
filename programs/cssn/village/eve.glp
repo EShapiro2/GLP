@@ -19,6 +19,10 @@ eve13(_, ch([child_befriend(bob, dave, ReqId)|In],
       Narr?) :-
     ground(ReqId?) |
     eve13_wait_dave_or_carol(In?, Out, Narr).
+%% Skip any message arriving before the expected intro, and close on channel end.
+eve13(Id, ch([_|In], Out?), Narr?) :-
+    otherwise | eve13(Id?, ch(In?, Out), Narr).
+eve13(_, ch([], []), []).
 
 %% After accepting Dave intro, either connected(dave) or child_befriend(carol) first
 procedure eve13_wait_dave_or_carol(Stream(UserNotify)?, Stream(UserCmd), Stream(NarrativeItem)).

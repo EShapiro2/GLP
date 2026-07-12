@@ -348,6 +348,15 @@ group_await_join(GroupId, Invitee, ch([ack(_)|ChIn], ChOut?),
 group_await_join(GroupId, Invitee, ch([nack|_], []),
                  group_join_nack(GroupId?, Invitee?)).
 
+%% Skip any other message while awaiting the ack/nack response.
+group_await_join(GroupId, Invitee, ch([_|ChIn], ChOut?), Result?) :-
+    otherwise |
+    group_await_join(GroupId?, Invitee?, ch(ChIn?, ChOut), Result).
+
+%% Channel closed before a response arrives: treat as a failed (nack) join.
+group_await_join(GroupId, Invitee, ch([], []),
+                 group_join_nack(GroupId?, Invitee?)).
+
 %% =============================================================================
 %% INJECT_GROUP_RESULT
 %% =============================================================================

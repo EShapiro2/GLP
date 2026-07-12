@@ -20,6 +20,10 @@ bob13(_, ch([befriend(alice, ReqId)|In],
       Narr?) :-
     ground(ReqId?) |
     bob13_wait_alice_connected(In?, Out, Narr).
+%% Skip any message arriving before the expected befriend, and close on channel end.
+bob13(Id, ch([_|In], Out?), Narr?) :-
+    otherwise | bob13(Id?, ch(In?, Out), Narr).
+bob13(_, ch([], []), []).
 
 %% Wait for connected(alice)
 procedure bob13_wait_alice_connected(Stream(UserNotify)?, Stream(UserCmd), Stream(NarrativeItem)).

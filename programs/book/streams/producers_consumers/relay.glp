@@ -26,6 +26,7 @@ procedure peer_echo(Channel(Stream(Constant), Stream(Constant))?).
 peer_echo(Pch) :-
     receive(A, Pch?, P1), send(x, P1?, P2), send(y, P2?, P3) |
     peer_done(A?, P3?).
+peer_echo(Pch) :- close(Pch?) | true.
 
 procedure peer_done(Constant?, Channel(Stream(Constant), Stream(Constant))?).
 peer_done(a, ch(_, [])).

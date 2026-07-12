@@ -107,6 +107,7 @@ bob_p2(ch([befriend(alice, ReqId)|In],
     bob_p2_wait_connected(In?, Out).
 bob_p2(ch([_|In], Out?)) :-
     otherwise | bob_p2(ch(In?, Out)).
+bob_p2(ch([], [])).
 
 procedure bob_p2_wait_connected(Stream(UserNotify)?, Stream(UserCmd)).
 bob_p2_wait_connected([connected(alice)|In], Out?) :-
@@ -221,6 +222,7 @@ bob_p3(ch([befriend(alice, ReqId)|In],
     bob_p3_wait_connected(In?, Out).
 bob_p3(ch([_|In], Out?)) :-
     otherwise | bob_p3(ch(In?, Out)).
+bob_p3(ch([], [])).
 
 procedure bob_p3_wait_connected(Stream(UserNotify)?, Stream(UserCmd)).
 bob_p3_wait_connected([connected(alice)|In], Out?) :-
@@ -335,6 +337,7 @@ bob_p4(ch([befriend(alice, ReqId)|In],
     bob_p4_wait_connected(In?, Out).
 bob_p4(ch([_|In], Out?)) :-
     otherwise | bob_p4(ch(In?, Out)).
+bob_p4(ch([], [])).
 
 procedure bob_p4_wait_connected(Stream(UserNotify)?, Stream(UserCmd)).
 bob_p4_wait_connected([connected(alice)|In], Out?) :-
@@ -496,6 +499,7 @@ bob_p4b(ch([befriend(alice, ReqId)|In],
     bob_p4b_wait_connected(T?, In?, Out).
 bob_p4b(ch([_|In], Out?), T) :-
     otherwise | bob_p4b(ch(In?, Out), T?).
+bob_p4b(ch([], []), _).
 
 procedure bob_p4b_wait_connected(Constant?, Stream(UserNotify)?, Stream(UserCmd)).
 bob_p4b_wait_connected(T, [connected(alice)|In], Out?) :-
@@ -641,6 +645,7 @@ bob_p5(ch([befriend(alice, ReqId)|In],
     bob_p5_wait_connected(In?, Out).
 bob_p5(ch([_|In], Out?)) :-
     otherwise | bob_p5(ch(In?, Out)).
+bob_p5(ch([], [])).
 
 procedure bob_p5_wait_connected(Stream(UserNotify)?, Stream(UserCmd)).
 bob_p5_wait_connected([connected(alice)|In], Out?) :-
@@ -732,6 +737,7 @@ bob_p6(ch([befriend(alice, ReqId)|In],
     bob_p6_wait_connected(In?, Out).
 bob_p6(ch([_|In], Out?)) :-
     otherwise | bob_p6(ch(In?, Out)).
+bob_p6(ch([], [])).
 
 procedure bob_p6_wait_connected(Stream(UserNotify)?, Stream(UserCmd)).
 bob_p6_wait_connected([connected(alice)|In], Out?) :-
@@ -859,6 +865,7 @@ bob_p8(ch([befriend(alice, ReqId)|In],
     bob_p8_wait_connected(In?, Out).
 bob_p8(ch([_|In], Out?)) :-
     otherwise | bob_p8(ch(In?, Out)).
+bob_p8(ch([], [])).
 
 procedure bob_p8_wait_connected(Stream(UserNotify)?, Stream(UserCmd)).
 bob_p8_wait_connected([connected(alice)|In], Out?) :-
@@ -967,6 +974,7 @@ bob_p9(ch([befriend(alice, ReqId)|In],
     bob_p9_wait_connected(In?, Out).
 bob_p9(ch([_|In], Out?)) :-
     otherwise | bob_p9(ch(In?, Out)).
+bob_p9(ch([], [])).
 
 procedure bob_p9_wait_connected(Stream(UserNotify)?, Stream(UserCmd)).
 bob_p9_wait_connected([connected(alice)|In], [mint(3, 50)|Out?]) :-
@@ -1068,6 +1076,7 @@ bob_p10(ch([befriend(alice, ReqId)|In],
     bob_p10_wait_connected(In?, Out).
 bob_p10(ch([_|In], Out?)) :-
     otherwise | bob_p10(ch(In?, Out)).
+bob_p10(ch([], [])).
 
 procedure bob_p10_wait_connected(Stream(UserNotify)?, Stream(UserCmd)).
 bob_p10_wait_connected([connected(alice)|In], Out?) :-
@@ -1193,6 +1202,7 @@ bob_p11(ch([befriend(alice, ReqId)|In],
     bob_p11_wait_connected(In?, Out).
 bob_p11(ch([_|In], Out?)) :-
     otherwise | bob_p11(ch(In?, Out)).
+bob_p11(ch([], [])).
 
 procedure bob_p11_wait_connected(Stream(UserNotify)?, Stream(UserCmd)).
 bob_p11_wait_connected([connected(alice)|In], Out?) :-

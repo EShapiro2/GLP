@@ -52,6 +52,7 @@ bob1(ch([befriend(alice, ReqId)|In],
     bob1_wait_alice_msg(In?, Out).
 bob1(ch([_|In], Out?)) :-
     otherwise | bob1(ch(In?, Out)).
+bob1(ch([], [])).
 
 procedure bob1_wait_alice_msg(Stream(UserNotify)?, Stream(UserCmd)).
 bob1_wait_alice_msg([connected(_)|In], Out?) :-
@@ -85,6 +86,7 @@ charlie1(ch([befriend(bob, ReqId)|In],
     charlie1_wait_intro(In?, Out).
 charlie1(ch([_|In], Out?)) :-
     otherwise | charlie1(ch(In?, Out)).
+charlie1(ch([], [])).
 
 procedure charlie1_wait_intro(Stream(UserNotify)?, Stream(UserCmd)).
 charlie1_wait_intro([befriend_intro(bob, alice, ReqId)|In],
@@ -140,6 +142,7 @@ bob2(ch([befriend(alice, ReqId)|In],
     bob2_wait_alice_msg(In?, Out).
 bob2(ch([_|In], Out?)) :-
     otherwise | bob2(ch(In?, Out)).
+bob2(ch([], [])).
 
 procedure bob2_wait_alice_msg(Stream(UserNotify)?, Stream(UserCmd)).
 bob2_wait_alice_msg([connected(_)|In], Out?) :-
@@ -173,6 +176,7 @@ charlie2(ch([befriend(bob, ReqId)|In],
     charlie2_wait_intro(In?, Out).
 charlie2(ch([_|In], Out?)) :-
     otherwise | charlie2(ch(In?, Out)).
+charlie2(ch([], [])).
 
 procedure charlie2_wait_intro(Stream(UserNotify)?, Stream(UserCmd)).
 charlie2_wait_intro([befriend_intro(bob, alice, ReqId)|_],
@@ -213,6 +217,7 @@ bob3(ch([befriend(alice, ReqId)|In],
     bob3_wait_alice_msg(In?, Out).
 bob3(ch([_|In], Out?)) :-
     otherwise | bob3(ch(In?, Out)).
+bob3(ch([], [])).
 
 procedure bob3_wait_alice_msg(Stream(UserNotify)?, Stream(UserCmd)).
 bob3_wait_alice_msg([connected(_)|In], Out?) :-
@@ -246,6 +251,7 @@ charlie3(ch([befriend(bob, ReqId)|In],
     charlie3_wait_intro(In?, Out).
 charlie3(ch([_|In], Out?)) :-
     otherwise | charlie3(ch(In?, Out)).
+charlie3(ch([], [])).
 
 procedure charlie3_wait_intro(Stream(UserNotify)?, Stream(UserCmd)).
 charlie3_wait_intro([befriend_intro(bob, alice, ReqId)|_],
@@ -277,6 +283,7 @@ bob4(ch([befriend(alice, ReqId)|In],
     bob4_wait_child_intro(In?, Out).
 bob4(ch([_|In], Out?)) :-
     otherwise | bob4(ch(In?, Out)).
+bob4(ch([], [])).
 
 procedure bob4_wait_child_intro(Stream(UserNotify)?, Stream(UserCmd)).
 bob4_wait_child_intro([child_befriend(alice, carol, ReqId)|_],
@@ -293,6 +300,7 @@ carol4(ch([child_befriend(alice, dave, ReqId)|In],
     carol4_wait_connected(In?, Out).
 carol4(ch([_|In], Out?)) :-
     otherwise | carol4(ch(In?, Out)).
+carol4(ch([], [])).
 
 procedure carol4_wait_connected(Stream(UserNotify)?, Stream(UserCmd)).
 carol4_wait_connected([connected(dave)|In],
@@ -315,6 +323,7 @@ dave4(ch([child_befriend(bob, carol, ReqId)|In],
     dave4_wait_msg(In?, Out).
 dave4(ch([_|In], Out?)) :-
     otherwise | dave4(ch(In?, Out)).
+dave4(ch([], [])).
 
 procedure dave4_wait_msg(Stream(UserNotify)?, Stream(UserCmd)).
 dave4_wait_msg([connected(_)|In], Out?) :-
@@ -347,6 +356,7 @@ bob5(ch([befriend(alice, ReqId)|In],
     bob5_wait_child_intro(In?, Out).
 bob5(ch([_|In], Out?)) :-
     otherwise | bob5(ch(In?, Out)).
+bob5(ch([], [])).
 
 procedure bob5_wait_child_intro(Stream(UserNotify)?, Stream(UserCmd)).
 bob5_wait_child_intro([child_befriend(alice, carol, ReqId)|_],
@@ -363,6 +373,7 @@ carol5(ch([child_befriend(alice, dave, ReqId)|In],
     carol5_wait_rejected(In?, Out).
 carol5(ch([_|In], Out?)) :-
     otherwise | carol5(ch(In?, Out)).
+carol5(ch([], [])).
 
 procedure carol5_wait_rejected(Stream(UserNotify)?, Stream(UserCmd)).
 carol5_wait_rejected([rejected(dave)|_], []).
@@ -395,6 +406,7 @@ bob6(ch([befriend(alice, ReqId)|In],
     bob6_wait_child_intro(In?, Out).
 bob6(ch([_|In], Out?)) :-
     otherwise | bob6(ch(In?, Out)).
+bob6(ch([], [])).
 
 procedure bob6_wait_child_intro(Stream(UserNotify)?, Stream(UserCmd)).
 bob6_wait_child_intro([child_befriend(alice, carol, ReqId)|_],
@@ -410,6 +422,7 @@ carol6(ch([child_befriend(alice, dave, ReqId)|_],
     ground(ReqId?) | true.
 carol6(ch([_|In], Out?)) :-
     otherwise | carol6(ch(In?, Out)).
+carol6(ch([], [])).
 
 exported procedure dave6(Channel(Stream(UserNotify), Stream(UserCmd))?).
 dave6(ch([child_befriend(bob, carol, ReqId)|In],
@@ -418,6 +431,7 @@ dave6(ch([child_befriend(bob, carol, ReqId)|In],
     dave6_wait_rejected(In?, Out).
 dave6(ch([_|In], Out?)) :-
     otherwise | dave6(ch(In?, Out)).
+dave6(ch([], [])).
 
 procedure dave6_wait_rejected(Stream(UserNotify)?, Stream(UserCmd)).
 dave6_wait_rejected([rejected(carol)|_], []).
@@ -447,6 +461,7 @@ bob7(ch([befriend(alice, ReqId)|In],
     bob7_wait_child_intro(In?, Out).
 bob7(ch([_|In], Out?)) :-
     otherwise | bob7(ch(In?, Out)).
+bob7(ch([], [])).
 
 procedure bob7_wait_child_intro(Stream(UserNotify)?, Stream(UserCmd)).
 bob7_wait_child_intro([child_befriend(alice, carol, ReqId)|_],
@@ -463,6 +478,7 @@ carol7(ch([child_befriend(alice, dave, ReqId)|In],
     carol7_wait_rejected(In?, Out).
 carol7(ch([_|In], Out?)) :-
     otherwise | carol7(ch(In?, Out)).
+carol7(ch([], [])).
 
 procedure carol7_wait_rejected(Stream(UserNotify)?, Stream(UserCmd)).
 carol7_wait_rejected([rejected(dave)|_], []).
@@ -476,6 +492,7 @@ dave7(ch([child_befriend(bob, carol, ReqId)|_],
     ground(ReqId?) | true.
 dave7(ch([_|In], Out?)) :-
     otherwise | dave7(ch(In?, Out)).
+dave7(ch([], [])).
 
 %% =============================================================================
 %% PLAY 8 — CSSN: Group join (Alice creates group, invites Bob, Bob accepts)
@@ -526,6 +543,7 @@ bob8(ch([befriend(alice, ReqId)|In],
     bob8_wait_connected(In?, Out).
 bob8(ch([_|In], Out?)) :-
     otherwise | bob8(ch(In?, Out)).
+bob8(ch([], [])).
 
 procedure bob8_wait_connected(Stream(UserNotify)?, Stream(UserCmd)).
 bob8_wait_connected([connected(alice)|In], Out?) :-
@@ -618,6 +636,7 @@ bob9(ch([befriend(alice, ReqId)|In],
     bob9_wait_connected(In?, Out).
 bob9(ch([_|In], Out?)) :-
     otherwise | bob9(ch(In?, Out)).
+bob9(ch([], [])).
 
 procedure bob9_wait_connected(Stream(UserNotify)?, Stream(UserCmd)).
 bob9_wait_connected([connected(alice)|In], Out?) :-
@@ -677,6 +696,7 @@ dave9(ch([group_invite(group_id(alice, study), ReqId)|In],
     dave9_wait_group_joined(In?, Out).
 dave9(ch([_|In], Out?)) :-
     otherwise | dave9(ch(In?, Out)).
+dave9(ch([], [])).
 
 procedure dave9_wait_group_joined(Stream(UserNotify)?, Stream(UserCmd)).
 dave9_wait_group_joined(
@@ -751,6 +771,7 @@ bob10(ch([befriend(alice, ReqId)|In],
     bob10_wait_connected(In?, Out).
 bob10(ch([_|In], Out?)) :-
     otherwise | bob10(ch(In?, Out)).
+bob10(ch([], [])).
 
 procedure bob10_wait_connected(Stream(UserNotify)?, Stream(UserCmd)).
 bob10_wait_connected([connected(alice)|In], Out?) :-
@@ -829,6 +850,7 @@ bob11(ch([befriend(alice, ReqId)|In],
     bob11_wait_alice_connected(In?, Out).
 bob11(ch([_|In], Out?)) :-
     otherwise | bob11(ch(In?, Out)).
+bob11(ch([], [])).
 
 procedure bob11_wait_alice_connected(Stream(UserNotify)?, Stream(UserCmd)).
 bob11_wait_alice_connected([connected(alice)|In],
@@ -875,6 +897,7 @@ charlie11(ch([befriend(bob, ReqId)|In],
     charlie11_wait_alice(In?, Out).
 charlie11(ch([_|In], Out?)) :-
     otherwise | charlie11(ch(In?, Out)).
+charlie11(ch([], [])).
 
 procedure charlie11_wait_bob(Stream(UserNotify)?, Stream(UserCmd)).
 charlie11_wait_bob([befriend(bob, ReqId)|In],
@@ -945,6 +968,7 @@ carol11(ch([child_befriend(alice, eve, ReqId)|In],
     carol11_got_eve(In?, Out).
 carol11(ch([_|In], Out?)) :-
     otherwise | carol11(ch(In?, Out)).
+carol11(ch([], [])).
 
 procedure carol11_got_dave(Stream(UserNotify)?, Stream(UserCmd)).
 carol11_got_dave([child_befriend(alice, eve, ReqId)|In],
@@ -1090,6 +1114,7 @@ dave11(ch([child_befriend(bob, eve, ReqId)|In],
     dave11_got_eve(In?, Out).
 dave11(ch([_|In], Out?)) :-
     otherwise | dave11(ch(In?, Out)).
+dave11(ch([], [])).
 
 procedure dave11_got_carol(Stream(UserNotify)?, Stream(UserCmd)).
 dave11_got_carol([child_befriend(bob, eve, ReqId)|In],
@@ -1200,6 +1225,7 @@ eve11(ch([child_befriend(charlie, dave, ReqId)|In],
     eve11_got_dave(In?, Out).
 eve11(ch([_|In], Out?)) :-
     otherwise | eve11(ch(In?, Out)).
+eve11(ch([], [])).
 
 procedure eve11_got_carol(Stream(UserNotify)?, Stream(UserCmd)).
 eve11_got_carol([child_befriend(charlie, dave, ReqId)|In],
@@ -1393,6 +1419,7 @@ bob12(ch([befriend(alice, ReqId)|In],
     bob12_wait_connected(In?, Out).
 bob12(ch([_|In], Out?)) :-
     otherwise | bob12(ch(In?, Out)).
+bob12(ch([], [])).
 
 procedure bob12_wait_connected(Stream(UserNotify)?, Stream(UserCmd)).
 bob12_wait_connected([connected(alice)|In], Out?) :-
@@ -1417,6 +1444,7 @@ charlie12(ch([befriend(alice, ReqId)|In],
     charlie12_wait_connected(In?, Out).
 charlie12(ch([_|In], Out?)) :-
     otherwise | charlie12(ch(In?, Out)).
+charlie12(ch([], [])).
 
 procedure charlie12_wait_connected(Stream(UserNotify)?, Stream(UserCmd)).
 charlie12_wait_connected([connected(alice)|In], Out?) :-
@@ -1441,6 +1469,7 @@ dave12(ch([group_invite(group_id(alice, study), ReqId)|In],
     dave12_wait_group_joined(In?, Out).
 dave12(ch([_|In], Out?)) :-
     otherwise | dave12(ch(In?, Out)).
+dave12(ch([], [])).
 
 procedure dave12_wait_group_joined(Stream(UserNotify)?, Stream(UserCmd)).
 dave12_wait_group_joined(
@@ -1473,6 +1502,7 @@ eve12(ch([group_invite(group_id(alice, study), ReqId)|In],
     eve12_wait_group_joined(In?, Out).
 eve12(ch([_|In], Out?)) :-
     otherwise | eve12(ch(In?, Out)).
+eve12(ch([], [])).
 
 procedure eve12_wait_group_joined(Stream(UserNotify)?, Stream(UserCmd)).
 eve12_wait_group_joined(
@@ -1526,6 +1556,7 @@ bob14(ch([befriend(alice, ReqId)|In],
     bob14_first(In?, Out).
 bob14(ch([_|In], Out?)) :-
     otherwise | bob14(ch(In?, Out)).
+bob14(ch([], [])).
 
 procedure bob14_first(Stream(UserNotify)?, Stream(UserCmd)).
 bob14_first([child_befriend(alice, carol, ReqId)|In],
@@ -1557,6 +1588,7 @@ carol14(ch([child_befriend(alice, dave, ReqId)|In],
     carol14_second(In?, Out).
 carol14(ch([_|In], Out?)) :-
     otherwise | carol14(ch(In?, Out)).
+carol14(ch([], [])).
 
 procedure carol14_second(Stream(UserNotify)?, Stream(UserCmd)).
 carol14_second([child_befriend(alice, dave, ReqId)|In],
@@ -1579,6 +1611,7 @@ dave14(ch([child_befriend(bob, carol, ReqId)|In],
     dave14_second(In?, Out).
 dave14(ch([_|In], Out?)) :-
     otherwise | dave14(ch(In?, Out)).
+dave14(ch([], [])).
 
 procedure dave14_second(Stream(UserNotify)?, Stream(UserCmd)).
 dave14_second([child_befriend(bob, carol, ReqId)|In],

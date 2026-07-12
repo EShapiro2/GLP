@@ -30,6 +30,10 @@ collect_tips([[_|Bs]|Others], Tips?, [Bs?|Others1?]) :-
     otherwise |
     collect_tips(Others?, Tips, Others1).
 
+%% Stream is empty (peer has no block yet) — take no tip, keep the empty stream
+collect_tips([[]|Others], Tips?, [[]|Others1?]) :-
+    collect_tips(Others?, Tips, Others1).
+
 %% No more streams to check
 collect_tips([], [], []).
 

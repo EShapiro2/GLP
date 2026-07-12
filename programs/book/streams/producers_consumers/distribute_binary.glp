@@ -22,4 +22,8 @@ distribute_binary([req([0|Addr],C)|In], [req(Addr?,C?)|Out1?], Out2?) :-
     distribute_binary(In?, Out1, Out2).
 distribute_binary([req([1|Addr],C)|In], Out1?, [req(Addr?,C?)|Out2?]) :-
     distribute_binary(In?, Out1, Out2).
+%% Empty address: the request has arrived at its destination, so it is not
+%% routed further (this router has only left/right outputs, no local delivery).
+distribute_binary([req([],_)|In], Out1?, Out2?) :-
+    distribute_binary(In?, Out1, Out2).
 distribute_binary([], [], []).

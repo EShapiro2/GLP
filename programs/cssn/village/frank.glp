@@ -19,6 +19,10 @@ frank13(_, ch([befriend(alice, ReqId)|In],
          Narr?) :-
     ground(ReqId?) |
     frank13_wait_alice_connected(In?, Out, Narr).
+%% Skip any message arriving before the expected befriend, and close on channel end.
+frank13(Id, ch([_|In], Out?), Narr?) :-
+    otherwise | frank13(Id?, ch(In?, Out), Narr).
+frank13(_, ch([], []), []).
 
 %% Wait for connected(alice), then wait for Bob's befriend
 procedure frank13_wait_alice_connected(Stream(UserNotify)?, Stream(UserCmd), Stream(NarrativeItem)).
