@@ -22,6 +22,7 @@ import 'dart:io';
 
 import 'package:cryptography/cryptography.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:redux/redux.dart';
@@ -70,10 +71,15 @@ Future<String> bbWait(String key, {int timeoutSeconds = 900}) async {
 final _journal = <String>[];
 final _startedAt = DateTime.now();
 
+/// Live feed rendered on the device screen so the run is watchable in
+/// Simulator.app.
+final _feed = ValueNotifier<List<String>>(const []);
+
 void note(String line) {
   final t = DateTime.now().difference(_startedAt);
   final stamped = '[+${t.inSeconds}.${(t.inMilliseconds % 1000) ~/ 100}s] $line';
   _journal.add(stamped);
+  _feed.value = [..._feed.value, stamped];
   debugPrint('[e2e:$role] $stamped');
 }
 
@@ -301,6 +307,10 @@ Future<void> runA() async {
 Future<void> runB() async {
   final agent = await Agent.spawn('B');
   final myHex = hexOf(agent.identity.publicKey);
+  // Redemption dials the rendezvous server named in the link, which needs
+  // our local address candidates — wait for address discovery first.
+  await agent.loopbackAddress();
+  note('address discovery done');
   await bbPut('pk_B', myHex);
   final aHex = await bbWait('pk_A');
 
@@ -435,13 +445,83 @@ Future<void> runB2() async {
   await Future.delayed(const Duration(minutes: 10)); // frozen long before
 }
 
+/// Full-screen live journal so the agent's steps are observable on the
+/// simulator screen while the protocol runs underneath.
+Widget _viewer() {
+  return MaterialApp(
+    debugShowCheckedModeBanner: false,
+    home: Scaffold(
+      backgroundColor: Colors.black,
+      body: SafeArea(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+              child: Text(
+                'GLP e2e — agent $role',
+                style: const TextStyle(
+                  color: Color(0xFF7CFC8A),
+                  fontSize: 26,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+            const Divider(color: Colors.white24, height: 8),
+            Expanded(
+              child: ValueListenableBuilder<List<String>>(
+                valueListenable: _feed,
+                builder: (context, lines, _) => ListView.builder(
+                  reverse: true,
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 12, vertical: 8),
+                  itemCount: lines.length,
+                  itemBuilder: (context, i) {
+                    final line = lines[lines.length - 1 - i];
+                    final milestone = line.contains('item') ||
+                        line.contains('onPeer') ||
+                        line.contains('onMessage') ||
+                        line.contains('Redeemed') ||
+                        line.contains('minted');
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 3),
+                      child: Text(
+                        line,
+                        style: TextStyle(
+                          fontFamily: 'Menlo',
+                          fontSize: 14,
+                          height: 1.25,
+                          color: milestone
+                              ? const Color(0xFF7CFC8A)
+                              : Colors.white70,
+                          fontWeight: milestone
+                              ? FontWeight.bold
+                              : FontWeight.normal,
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    ),
+  );
+}
+
 void main() {
-  IntegrationTestWidgetsFlutterBinding.ensureInitialized();
+  final binding = IntegrationTestWidgetsFlutterBinding.ensureInitialized();
+  binding.framePolicy = LiveTestWidgetsFlutterBindingFramePolicy.fullyLive;
 
   testWidgets('e2e agent $role', (tester) async {
     expect(role, isNotEmpty, reason: 'pass --dart-define=E2E_ROLE=...');
     expect(anchorPk, isNotEmpty,
         reason: 'pass --dart-define=E2E_ANCHOR_PK=<hex>');
+    await tester.pumpWidget(_viewer());
+    await tester.pump();
+    note('agent $role starting');
     try {
       switch (role) {
         case 'A':
