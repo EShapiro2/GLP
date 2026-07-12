@@ -1,0 +1,30 @@
+# Caddy configuration for the GPW mirroring server (vps3492120).
+# Deployed to /etc/caddy/Caddyfile.
+# TLS decision (GPW Implementation Notes, 2026-07-12): on-demand TLS, with
+# issuance authorized by the name service's mirror-ask endpoint, so
+# certificates track bound web-names.  Mirrors live at
+# /var/lib/gpw/mirrors/<full-hostname>/ — page bytes at their paths, the
+# signed area manifest at /.gpw/area-manifest.json, page signatures at
+# /.gpw/pages/<path>.sig.json.
+
+{
+	email hostmaster@peoplesweb.org
+	on_demand_tls {
+		ask http://127.0.0.1:8053/gpw/v1/mirror-ask
+	}
+}
+
+# The federation's own site at the apex (not a web-name; ordinary certificate).
+peoplesweb.org {
+	root * /var/lib/gpw/mirrors/peoplesweb.org
+	file_server
+}
+
+# Every bound web-name, at any hostname the ask endpoint authorizes.
+https:// {
+	tls {
+		on_demand
+	}
+	root * /var/lib/gpw/mirrors/{host}
+	file_server
+}

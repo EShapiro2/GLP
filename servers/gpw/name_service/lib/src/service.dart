@@ -211,4 +211,23 @@ class NameService {
   }
 
   Outcome serverKeyInfo() => Outcome(200, {'serverKey': serverKey.publicKeyB64});
+
+  /// Caddy's on-demand-TLS authorization hook: 200 exactly when [domain] is
+  /// `<label>.<zone>` with the label a bound, unretired web-name, so
+  /// certificates track bound web-names.
+  Outcome mirrorAsk(String? domain) {
+    if (domain == null || !domain.toLowerCase().endsWith('.$zone')) {
+      return Outcome.error(404, 'not a name in this zone');
+    }
+    final label =
+        domain.toLowerCase().substring(0, domain.length - zone.length - 1);
+    if (!validLabel(label)) {
+      return Outcome.error(404, 'not a single label in this zone');
+    }
+    final state = store.load(label);
+    if (state == null || state.retired) {
+      return Outcome.error(404, 'web-name not bound');
+    }
+    return Outcome(200, {'domain': domain, 'webName': label});
+  }
 }

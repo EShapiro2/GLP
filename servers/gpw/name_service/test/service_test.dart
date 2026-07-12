@@ -230,6 +230,21 @@ void main() {
         200);
   });
 
+  test('mirror-ask tracks bound web-names', () async {
+    expect(service.mirrorAsk('me.peoplesweb.org').status, 404); // unbound
+    await service.deposit('me', await signed(person, manifestBody(person)));
+    expect(service.mirrorAsk('me.peoplesweb.org').status, 200);
+    expect(service.mirrorAsk('Me.PeoplesWeb.Org').status, 200); // case-blind
+    expect(service.mirrorAsk('other.peoplesweb.org').status, 404);
+    expect(service.mirrorAsk('a.me.peoplesweb.org').status, 404); // two labels
+    expect(service.mirrorAsk('peoplesweb.org').status, 404); // the apex
+    expect(service.mirrorAsk('me.example.org').status, 404); // foreign zone
+    expect(service.mirrorAsk(null).status, 404);
+    await service.retire(
+        'me', await signed(person, retirementBody(epoch: 2)));
+    expect(service.mirrorAsk('me.peoplesweb.org').status, 404); // retired
+  });
+
   test('malformed objects are 400', () async {
     expect((await service.deposit('me', null)).status, 400);
     expect((await service.deposit('me', {'body': {}, 'signature': 'x'})).status,

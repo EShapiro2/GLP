@@ -12,6 +12,9 @@
 ///   gpw_client retire --key <keyfile> --url <base> --name <label> --epoch <n>
 ///              [--redirect <host>] [--zone ...]
 ///   gpw_client get --url <base> --name <label>
+///   gpw_client area-sign --key <keyfile> --dir <area-dir> --address <web-address>
+///              --epoch <n>
+///   gpw_client area-verify --mirror-url <base> (--pubkey <b64url> | --ns-url <base> --name <label>)
 library;
 
 import 'dart:convert';
@@ -37,6 +40,10 @@ Future<void> main(List<String> args) async {
       await _retire(_Opts(rest));
     case 'get':
       await _get(_Opts(rest));
+    case 'area-sign':
+      await _areaSign(_Opts(rest));
+    case 'area-verify':
+      await _areaVerify(_Opts(rest));
     default:
       stderr.writeln('gpw_client: unknown command "$cmd"');
       exit(2);
@@ -122,6 +129,61 @@ Future<void> _retire(_Opts o) async {
 
 Future<void> _get(_Opts o) async {
   await _send(o, 'GET', 'names/${o.req('name')}', null);
+}
+
+Future<void> _areaSign(_Opts o) async {
+  final key = await _load(o.req('key'));
+  final manifest = await signArea(Directory(o.req('dir')), key,
+      o.req('address'), int.parse(o.req('epoch')));
+  stdout.writeln('signed: ${(manifest['body'] as Map)['pages']}');
+}
+
+Future<void> _areaVerify(_Opts o) async {
+  final mirror = o.req('mirror-url');
+  String? pubkey = o['pubkey'];
+  final client = HttpClient();
+  try {
+    Future<List<int>?> fetch(String path) async {
+      final req = await client.getUrl(Uri.parse('$mirror$path'));
+      final res = await req.close();
+      if (res.statusCode != 200) {
+        await res.drain<void>();
+        return null;
+      }
+      return [for (final chunk in await res.toList()) ...chunk];
+    }
+
+    if (pubkey == null) {
+      // The bound key comes from the name server's counter-signed manifest.
+      final ns = o.req('ns-url');
+      final req = await client
+          .getUrl(Uri.parse('$ns/gpw/v1/names/${o.req('name')}'));
+      final res = await req.close();
+      final text = await res.transform(utf8.decoder).join();
+      if (res.statusCode != 200) {
+        stderr.writeln('name server: ${res.statusCode} $text');
+        exit(1);
+      }
+      final manifest = jsonDecode(text) as Map;
+      final body = manifest['body'] as Map;
+      pubkey = body['publicKey'] as String;
+      if (!await verifyJson(
+          body, manifest['signature'] as String, pubkey)) {
+        stderr.writeln('name manifest signature does not verify');
+        exit(1);
+      }
+    }
+
+    final problems = await verifyArea(fetch, pubkey);
+    if (problems.isEmpty) {
+      stdout.writeln('area verifies: nothing withheld, nothing forged');
+    } else {
+      problems.forEach(stderr.writeln);
+      exitCode = 1;
+    }
+  } finally {
+    client.close();
+  }
 }
 
 Future<void> _send(
