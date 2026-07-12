@@ -200,6 +200,54 @@ void main() {
         expect(store.state.peers.getPeerByPubkey(otherPubkey), isNull);
       });
 
+      test('drops every clear application-data packet type', () async {
+        // Spec: only three packet classes are accepted off the wire —
+        // self-signed ANNOUNCE, Noise handshake, and session-encrypted
+        // packets. Every clear application-data type is dropped without
+        // reaching the session layer or any handler.
+        const clearAppTypes = [
+          PacketType.message,
+          PacketType.fragmentStart,
+          PacketType.fragmentContinue,
+          PacketType.fragmentEnd,
+          PacketType.ack,
+          PacketType.nack,
+          PacketType.readReceipt,
+          PacketType.signaling,
+        ];
+
+        for (final type in clearAppTypes) {
+          bool anyCalled = false;
+          bool decryptCalled = false;
+          router.onMessageReceived = (_, __, ___, ____) => anyCalled = true;
+          router.onAckReceived = (_) => anyCalled = true;
+          router.onReadReceiptReceived = (_) => anyCalled = true;
+          router.onAckRequested = (_, __, ___) => anyCalled = true;
+          router.onSignalingReceived =
+              (_, __, {String? observedIp, int? observedPort}) =>
+                  anyCalled = true;
+          router.decryptSessionPacket =
+              (packet, transport, {String? peerId}) async {
+            decryptCalled = true;
+            return (packet, otherPubkey);
+          };
+
+          await router.processPacket(
+            GrassrootsPacket(
+              type: type,
+              payload: Uint8List.fromList([1, 2, 3]),
+            ),
+            transport: PeerTransport.bleDirect,
+            rssi: -60,
+          );
+
+          expect(anyCalled, isFalse,
+              reason: 'clear ${type.name} must not reach any handler');
+          expect(decryptCalled, isFalse,
+              reason: 'clear ${type.name} must not reach the session layer');
+        }
+      });
+
       test('drops session-encrypted packets when no session covers them',
           () async {
         bool messageReceived = false;

@@ -118,6 +118,36 @@ void main() {
           throwsA(isA<FormatException>()),
         );
       });
+
+      test('verifies the signature against the CARRIED key: a record '
+          'claiming one identity but signed by another is rejected', () async {
+        final otherKeyPair = await Ed25519().newKeyPair();
+        final otherIdentity = await GrassrootsIdentity.create(
+          keyPair: otherKeyPair,
+          nickname: 'Other',
+        );
+        final otherHandler =
+            ProtocolHandler(identity: otherIdentity, sodium: sodium);
+
+        // Well-formed record carrying testIdentity's key + version...
+        final record = BytesBuilder()..add(testIdentity.publicKey);
+        final versionBytes = ByteData(2)
+          ..setUint16(0, ProtocolHandler.protocolVersion, Endian.big);
+        record.add(versionBytes.buffer.asUint8List());
+        final recordBytes = record.toBytes();
+
+        // ...but signed under a different identity. Forged: an ANNOUNCE whose
+        // trailing signature does not verify against the pubkey it carries
+        // must not identify anyone.
+        final forged = Uint8List.fromList(
+            [...recordBytes, ...otherHandler.signBytes(recordBytes)]);
+        expect(forged.length, equals(announcePayloadLength));
+
+        expect(
+          () => handler.decodeAnnounce(forged),
+          throwsA(isA<FormatException>()),
+        );
+      });
     });
 
     group('createMessagePacket', () {
