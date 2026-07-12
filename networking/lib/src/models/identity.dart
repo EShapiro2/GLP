@@ -131,6 +131,51 @@ class GrassrootsIdentity {
         '${hex.substring(20, 32)}';
   }
 
+  /// Label for the rotating LAN discovery token (spec `GLP_Networking_API`
+  /// §LAN Discovery — DNS-SD instance names on `_grassroots._udp`).
+  static const String lanSuffixLabel = 'glp lan suffix';
+
+  /// Derive a peer's LAN DNS-SD instance token for a specific time [slot]:
+  /// the first 8 bytes, hex-encoded, of
+  /// SHA-256("glp lan suffix" | pubkey | slot), slot encoded as 8-byte
+  /// big-endian — H, pk, and the 15-minute slot exactly as on BLE.
+  ///
+  /// As on BLE, the rotating token lets anyone who knows the public key
+  /// recognize this agent before contact (compute the token for the current
+  /// and adjacent slots and match against browsed instances), while to anyone
+  /// else it is an identifier that changes every slot. The advertisement
+  /// carries no key and no other identifying payload.
+  static String deriveLanTokenForSlot(Uint8List pubkey, int slot) {
+    if (pubkey.length < 32) {
+      throw ArgumentError('Public key must be at least 32 bytes');
+    }
+    final input = <int>[
+      ...utf8.encode(lanSuffixLabel),
+      ...pubkey,
+      for (var i = 7; i >= 0; i--) (slot >> (8 * i)) & 0xff,
+    ];
+    final suffixBytes =
+        const DartSha256().hashSync(input).bytes.sublist(0, 8);
+    return suffixBytes.map((b) => b.toRadixString(16).padLeft(2, '0')).join();
+  }
+
+  /// The LAN tokens by which [pubkey] may currently be advertising:
+  /// previous, current, and next slot (lowercase), mirroring
+  /// [candidateServiceUuids] — adjacent-slot coverage absorbs clock skew and
+  /// slot-boundary races.
+  static Set<String> candidateLanTokens(Uint8List pubkey, {DateTime? now}) {
+    final slot = currentBleSlot(now: now);
+    return {
+      for (var delta = -1; delta <= 1; delta++)
+        deriveLanTokenForSlot(pubkey, slot + delta),
+    };
+  }
+
+  /// The LAN DNS-SD instance token this identity advertises *right now*.
+  /// Time-dependent: the LAN discovery service re-advertises each slot.
+  String get lanToken =>
+      deriveLanTokenForSlot(publicKey, currentBleSlot());
+
   /// The service UUIDs by which [pubkey] may currently be advertising:
   /// previous, current, and next slot (lowercase). Recognition matches
   /// against this set rather than a single UUID so unsynchronized clocks and

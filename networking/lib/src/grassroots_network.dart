@@ -14,6 +14,7 @@ import 'transport/address_utils.dart';
 import 'transport/ble_transport_service.dart';
 import 'transport/connection_service.dart';
 import 'transport/hole_punch_service.dart';
+import 'transport/lan_discovery_service.dart';
 import 'transport/public_address_discovery.dart';
 import 'transport/udp_transport_service.dart';
 import 'models/identity.dart';
@@ -383,6 +384,7 @@ class GrassrootsNetwork {
 
   /// UDP transport service (null if UDP is disabled)
   UdpTransportService? _udpService;
+  LanDiscoveryService? _lanDiscovery;
 
   /// Hole-punch services for NAT traversal, keyed by IP family.
   final Map<InternetAddressType, HolePunchService> _holePunchServices = {};
@@ -1156,6 +1158,7 @@ class GrassrootsNetwork {
       try {
         await _udpService!.start();
         debugPrint('UDP transport started');
+        await _startLanDiscovery();
       } catch (e) {
         debugPrint('Failed to start UDP: $e');
       }
@@ -1196,6 +1199,7 @@ class GrassrootsNetwork {
     }
 
     if (_udpService != null) {
+      await _stopLanDiscovery();
       try {
         await _udpService!.stop();
       } catch (e) {
@@ -1800,6 +1804,7 @@ class GrassrootsNetwork {
     }
     _holePunchServices.clear();
 
+    await _stopLanDiscovery();
     if (_udpService != null) {
       _noiseSessions.resetTransport(PeerTransport.udp);
       await _udpService!.dispose();
@@ -1827,6 +1832,7 @@ class GrassrootsNetwork {
 
     if (_udpAvailable) {
       await _udpService!.start();
+      await _startLanDiscovery();
     }
 
     await _waitForPublicUdpAddress();
@@ -1885,6 +1891,94 @@ class GrassrootsNetwork {
     final next = previous.then((_) => _reconnectKnownPeers(reason: reason));
     _transportUpdateLock = next;
     return next;
+  }
+
+  // ===== LAN Discovery (spec §Proximity-Based Discovery, §LAN) =====
+
+  /// Start DNS-SD advertising and browsing once UDP is up. The advertised
+  /// SRV record carries the bound UDP port (spec §LAN: "the instance's SRV
+  /// record carries the agent's LAN address and bound UDP port"); mDNS
+  /// supplies the LAN address. Idempotent; a start failure (e.g. missing
+  /// local-network permission on iOS) is logged and leaves the IP transport
+  /// untouched.
+  Future<void> _startLanDiscovery() async {
+    if (_lanDiscovery?.isRunning ?? false) return;
+    final udp = _udpService;
+    if (udp == null) return;
+    final port = udp.localPortForAddressType(InternetAddressType.IPv4) ??
+        udp.localPortForAddressType(InternetAddressType.IPv6);
+    if (port == null) {
+      debugPrint('[lan] no bound UDP port; LAN discovery not started');
+      return;
+    }
+    final lan = LanDiscoveryService(identity: identity)
+      ..onInstanceResolved = _onLanInstanceResolved;
+    _lanDiscovery = lan;
+    try {
+      await lan.start(port: port);
+    } catch (e) {
+      debugPrint('[lan] failed to start LAN discovery: $e');
+      _lanDiscovery = null;
+    }
+  }
+
+  Future<void> _stopLanDiscovery() async {
+    final lan = _lanDiscovery;
+    _lanDiscovery = null;
+    if (lan == null) return;
+    try {
+      await lan.stop();
+    } catch (e) {
+      debugPrint('[lan] error stopping LAN discovery: $e');
+    }
+  }
+
+  /// A browsed LAN instance resolved (spec §Proximity: recognition before
+  /// contact). A token matching a known peer's key feeds the observed
+  /// address into dialing directly — never into distribution — and the
+  /// deterministic initiator (lexicographically smaller public key, as
+  /// everywhere) dials; the other side waits for the inbound connection.
+  /// The recognized key is the expected static: [_connectToPeerViaUdp]
+  /// dials that key, and the session aborts on a key mismatch.
+  ///
+  /// An unmatched instance is a cold-call opportunity under Open trust, but
+  /// outbound UDX connections are keyed by the peer's public key, so the
+  /// Open-trust answer over LAN is inbound-only for now: an unmatched peer
+  /// who recognizes us dials, and we accept (inbound unknown peers are
+  /// identified by ANNOUNCE). Two mutual strangers on a LAN do not connect.
+  void _onLanInstanceResolved(String token, String address) {
+    final matched = matchLanToken(
+      token,
+      store.state.knownPeers.known.keys.map(_hexToBytes),
+    );
+    if (matched == null) {
+      debugPrint(
+        '[lan] unmatched instance $token '
+        '(trust=${coldCallTrustLevel.name}); no outbound cold-call path',
+      );
+      return;
+    }
+    final pubkeyHex = _pubkeyToHex(matched);
+    final peerShort = pubkeyHex.substring(0, 8);
+    final parsed = parseAddressString(address);
+    if (parsed == null) {
+      debugPrint('[lan] unusable address $address for $peerShort');
+      return;
+    }
+    final canonical = parsed.toAddressString();
+    debugPrint('[lan] recognized known peer $peerShort at $canonical');
+    store.dispatch(
+      AssociateUdpAddressAction(publicKey: matched, address: canonical),
+    );
+    if (_udpService?.getPeerIdForPubkey(matched) != null) return;
+    final myHex = _pubkeyToHex(identity.publicKey);
+    if (myHex.compareTo(pubkeyHex) < 0) {
+      unawaited(_connectToPeerViaUdp(pubkeyHex, canonical));
+    } else {
+      debugPrint(
+        '[lan] deterministic initiator is $peerShort; waiting for its dial',
+      );
+    }
   }
 
   /// Check if two connectivity result lists are equivalent.
@@ -1958,11 +2052,13 @@ class GrassrootsNetwork {
       await _initializeUdp();
       if (wasStarted && _udpAvailable) {
         await _udpService!.start();
+        await _startLanDiscovery();
         await _reconnectKnownPeers(reason: 'settings-enabled');
       }
     } else if (!_isUdpEnabledInSettings && _udpAvailable) {
       // UDP was disabled, dispose service and clean up
       debugPrint('UDP disabled from settings, cleaning up...');
+      await _stopLanDiscovery();
 
       for (final service in _holePunchServices.values) {
         service.dispose();

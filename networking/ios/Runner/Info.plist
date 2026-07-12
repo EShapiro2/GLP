@@ -32,6 +32,10 @@
 	<string>This app needs Bluetooth to advertise and accept connections from nearby devices</string>
 	<key>NSLocalNetworkUsageDescription</key>
 	<string>This app needs local network access for peer-to-peer communication</string>
+	<key>NSBonjourServices</key>
+	<array>
+		<string>_grassroots._udp</string>
+	</array>
 	<key>NSCameraUsageDescription</key>
 	<string>Take photos to send to peers in your mesh</string>
 	<key>NSPhotoLibraryUsageDescription</key>

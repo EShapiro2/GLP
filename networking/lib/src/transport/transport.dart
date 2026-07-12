@@ -15,6 +15,7 @@ export 'transport_service.dart';
 export 'ble_transport_service.dart';
 export 'udp_transport_service.dart';
 export 'hole_punch_service.dart';
+export 'lan_discovery_service.dart';
 export 'public_address_discovery.dart';
 export 'address_utils.dart';
 export 'connection_service.dart';

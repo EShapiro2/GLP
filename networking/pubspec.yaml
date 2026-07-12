@@ -60,6 +60,7 @@ dependencies:
   # runs the same op in ~5-10ms. Bundles native binaries for iOS / Android /
   # macOS / Windows / Linux.
   sodium_libs: ^3.4.4+1
+  bonsoir: ^7.1.4
 
 dev_dependencies:
   flutter_test:
