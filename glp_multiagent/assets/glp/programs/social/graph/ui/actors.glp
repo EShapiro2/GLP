@@ -55,6 +55,7 @@ bob1(ch([befriend(alice, ReqId)|In],
     bob1_wait_alice_msg(In?, Out).
 bob1(ch([_|In], Out?)) :-
     otherwise | bob1(ch(In?, Out)).
+bob1(ch([], [])).
 
 procedure bob1_wait_alice_msg(UserNotifyStream?, UserCmdStream).
 bob1_wait_alice_msg([connected(_)|In], Out?) :-
@@ -90,6 +91,7 @@ charlie1(ch([befriend(bob, ReqId)|In],
     charlie1_wait_intro(In?, Out).
 charlie1(ch([_|In], Out?)) :-
     otherwise | charlie1(ch(In?, Out)).
+charlie1(ch([], [])).
 
 procedure charlie1_wait_intro(UserNotifyStream?, UserCmdStream).
 charlie1_wait_intro([befriend_intro(bob, alice, ReqId)|In],
@@ -149,6 +151,7 @@ bob2(ch([befriend(alice, ReqId)|In],
     bob2_wait_alice_msg(In?, Out).
 bob2(ch([_|In], Out?)) :-
     otherwise | bob2(ch(In?, Out)).
+bob2(ch([], [])).
 
 procedure bob2_wait_alice_msg(UserNotifyStream?, UserCmdStream).
 bob2_wait_alice_msg([connected(_)|In], Out?) :-
@@ -184,6 +187,7 @@ charlie2(ch([befriend(bob, ReqId)|In],
     charlie2_wait_intro(In?, Out).
 charlie2(ch([_|In], Out?)) :-
     otherwise | charlie2(ch(In?, Out)).
+charlie2(ch([], [])).
 
 procedure charlie2_wait_intro(UserNotifyStream?, UserCmdStream).
 charlie2_wait_intro([befriend_intro(bob, alice, ReqId)|_],
@@ -228,6 +232,7 @@ bob3(ch([befriend(alice, ReqId)|In],
     bob3_wait_alice_msg(In?, Out).
 bob3(ch([_|In], Out?)) :-
     otherwise | bob3(ch(In?, Out)).
+bob3(ch([], [])).
 
 procedure bob3_wait_alice_msg(UserNotifyStream?, UserCmdStream).
 bob3_wait_alice_msg([connected(_)|In], Out?) :-
@@ -263,6 +268,7 @@ charlie3(ch([befriend(bob, ReqId)|In],
     charlie3_wait_intro(In?, Out).
 charlie3(ch([_|In], Out?)) :-
     otherwise | charlie3(ch(In?, Out)).
+charlie3(ch([], [])).
 
 procedure charlie3_wait_intro(UserNotifyStream?, UserCmdStream).
 charlie3_wait_intro([befriend_intro(bob, alice, ReqId)|_],

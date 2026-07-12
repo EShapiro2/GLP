@@ -18,6 +18,13 @@ dependencies:
   glp_runtime:
     path: ../glp_runtime
 
+  # GrassApp Duo: cross-phone madGLP routing over the Grassroots transport.
+  grassroots_networking:
+    path: ../networking
+  redux: ^5.0.0
+  cryptography: ^2.7.0
+  sodium_libs: ^3.4.0
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

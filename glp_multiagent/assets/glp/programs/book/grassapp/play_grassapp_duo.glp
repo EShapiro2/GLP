@@ -1,0 +1,83 @@
+%% play_grassapp_duo.glp — two-phone GrassApp scenario (madGLP, one isolate
+%% per agent; cross-phone routing by the app's network router).
+%%
+%% Cast: phone 1 runs Bob (live UI) + Eve (actor); phone 2 runs Alice (live
+%% UI) + Dana (actor). Each actor cold-calls its local human, greets, mints,
+%% and pays — so each phone's wallet, chats, and inbox come alive; Bob and
+%% Alice befriend, chat, and transact with each other across the phones.
+%% `_net` output goes through send_to_net (madGLP); the app routes local
+%% names between isolates and remote names over the network.
+%%
+%% Boot goals (entered per isolate by the app):
+%%   agent_init/3  — interactive agent: (Id, UserIn, NetIn)
+%%   actor_init/3  — scripted actor:    (Id, Target, NetIn)
+%%
+%% Requires: self.glp, grassapp_agent.glp, grassapp_mediator.glp
+
+%% --- Interactive agent: live phone UI via send_to_user -----------------------
+procedure agent_init(Constant?, Stream(UserCmd)?, Stream(X)?).
+agent_init(Id, UserIn, NetIn) :-
+    ground(Id?) |
+    send_to_net(NetOut?),
+    agent(Id?, AgentIn?, NetIn?,
+          [output('_user', A2U) | [output('_net', NetOut)]],
+          [holding(Id?, 10)]),
+    ui_mediator(Id?, ch(A2U?, AgentIn), ch(UserIn?, UserOut), [], 1),
+    send_to_user(UserOut?).
+
+%% --- Scripted actor: same agent, a script instead of a live user -------------
+procedure actor_init(Constant?, Constant?, Stream(X)?).
+actor_init(Id, Target, NetIn) :-
+    ground(Id?), ground(Target?) |
+    send_to_net(NetOut?),
+    agent(Id?, AgentIn?, NetIn?,
+          [output('_user', A2U) | [output('_net', NetOut)]], []),
+    ui_mediator(Id?, ch(A2U?, AgentIn), ch(Cmds?, Notifies), [], 1),
+    duo_actor(Id?, Target?, Notifies?, Cmds).
+
+%% --- Actor script -------------------------------------------------------------
+
+%% Cold-call the local human, then court them.
+procedure duo_actor(Constant?, Constant?, Stream(UserNotify)?, Stream(UserCmd)).
+duo_actor(Me, Target, Ns, [connect(Target?) | Cs?]) :-
+    ground(Me?), ground(Target?) |
+    duo_courter(Me?, Target?, Ns?, Cs).
+
+%% On becoming the human's friend: greet, mint, and pay them 2 coins.
+procedure duo_courter(Constant?, Constant?, Stream(UserNotify)?, Stream(UserCmd)).
+duo_courter(Me, Target, [connected(Who) | Ns],
+    [send(Target?, Greeting?) | [mint(5) | [pay(Target?, Me?, 2) | Cs?]]]) :-
+    ground(Me?), ground(Target?), Who? =?= Target? |
+    greeting_of(Me?, Greeting),
+    duo_drain(Me?, Ns?, Cs).
+duo_courter(Me, Target, [_ | Ns], Cs?) :-
+    ground(Me?), ground(Target?), otherwise |
+    duo_courter(Me?, Target?, Ns?, Cs).
+duo_courter(_, _, [], []).
+
+%% Each actor's opening line and chat reply.
+procedure greeting_of(Constant?, Constant).
+greeting_of(eve, welcome_to_grassroots).
+greeting_of(dana, hello_from_your_local_actor).
+
+procedure reply_of(Constant?, Constant).
+reply_of(eve, lovely_day_isnt_it).
+reply_of(dana, happy_to_trade_anytime).
+
+%% After courting: answer chat messages, accept any friend offer, swap, or
+%% group invitation, greet a joined group, ignore the rest.
+procedure duo_drain(Constant?, Stream(UserNotify)?, Stream(UserCmd)).
+duo_drain(Me, [received(From, _) | Ns], [send(From?, R?) | Cs?]) :-
+    ground(Me?), ground(From?) |
+    reply_of(Me?, R),
+    duo_drain(Me?, Ns?, Cs).
+duo_drain(Me, [befriend(Who, Req) | Ns], [decision(yes, Who?, Req?) | Cs?]) :-
+    ground(Me?), ground(Who?), ground(Req?) | duo_drain(Me?, Ns?, Cs).
+duo_drain(Me, [swap_offer(From, _, _, _, _, Req) | Ns], [accept_swap(From?, Req?) | Cs?]) :-
+    ground(Me?), ground(From?), ground(Req?) | duo_drain(Me?, Ns?, Cs).
+duo_drain(Me, [group_invite(G, Req) | Ns], [accept_group(G?, Req?) | Cs?]) :-
+    ground(Me?), ground(G?), ground(Req?) | duo_drain(Me?, Ns?, Cs).
+duo_drain(Me, [group_joined(G) | Ns], [send_group(G?, R?) | Cs?]) :-
+    ground(Me?), ground(G?) | reply_of(Me?, R), duo_drain(Me?, Ns?, Cs).
+duo_drain(Me, [_ | Ns], Cs?) :- ground(Me?), otherwise | duo_drain(Me?, Ns?, Cs).
+duo_drain(_, [], []).
