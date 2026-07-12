@@ -1,0 +1,15 @@
+name: gpw_name_service
+description: >-
+  The thin name-server service of the peoplesweb.org apex zone (GPW):
+  verifies signed name-manifest deposits, repoints, and retirements;
+  counter-signs and serves name manifests; writes address records into
+  the Knot zone.  Spec: the GPW paper (Section 6 and the Implementation
+  Notes appendix) and GPW/docs/data-types-and-servers.md.
+version: 0.1.0
+publish_to: none
+environment:
+  sdk: ^3.4.0
+dependencies:
+  cryptography: ^2.9.0
+dev_dependencies:
+  test: ^1.25.0

@@ -1,0 +1,21 @@
+# systemd unit for the GPW name-server service (vps3492120).
+# Deployed to /etc/systemd/system/gpw-name-service.service.
+# Runs as the system user `gpw` with supplementary group `knot` so knotc can
+# reach the Knot control socket; state (bindings, server key) in /var/lib/gpw.
+[Unit]
+Description=GPW name-server service (peoplesweb.org)
+After=network.target knot.service
+Wants=knot.service
+
+[Service]
+User=gpw
+Group=gpw
+SupplementaryGroups=knot
+ExecStart=/usr/local/bin/gpw_name_service --state-dir /var/lib/gpw --zone peoplesweb.org --host 127.0.0.1 --port 8053 --knotc /usr/sbin/knotc
+Restart=on-failure
+NoNewPrivileges=yes
+ProtectSystem=full
+ReadWritePaths=/var/lib/gpw
+
+[Install]
+WantedBy=multi-user.target
