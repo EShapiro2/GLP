@@ -921,6 +921,10 @@ POSITIVE_FILES=(
     "$MODED/valid/union_alias_basic.glp"
     "$MODED/valid/union_alias_simple.glp"
     "$MODED/valid/union_alias_three.glp"
+    # Two-clause channel consumer: receive (non-empty read stream) + close (closed
+    # read stream). Unfolding the guards places ch([X|In],Out?) and ch([],[]) in
+    # the two heads, which together cover the channel's read stream (cond. 2).
+    "$MODED/valid/channel_consumer_closed.glp"
 
     # --- moded_types/valid/embedded ---
     "$MODED/valid/embedded/counter_show.glp"
@@ -1131,6 +1135,15 @@ NEGATIVE_FILES=(
     # --- typechecker/negative (top level) ---
     "$TC_DIR/negative/merge_incomplete.glp"
     "$TC_DIR/negative/missing_coverage.glp"
+    # Nested-union coverage gap at a list head: CounterMsg declares up/down but
+    # no clause handles them (CounterStream -> [|] -> up/down uncovered). Requires
+    # descending into the union nested under the list constructor. Positive twin:
+    # moded_types/valid/embedded/counter_show.glp.
+    "$TC_DIR/negative/counter_missing_updown.glp"
+    # Channel consumer missing the close clause: unfolding `receive` leaves the
+    # closed read stream ch([], _) uncovered. Positive twin:
+    # moded_types/valid/channel_consumer_closed.glp.
+    "$TC_DIR/negative/channel_missing_close.glp"
     "$TC_DIR/negative/non_complementary_types.glp"
     "$TC_DIR/negative/append_bad_type.glp"
     "$TC_DIR/negative/constant_at_wrong_type.glp"

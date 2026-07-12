@@ -1,0 +1,17 @@
+%% Negative: nested-union coverage gap at a list head.
+%%
+%% CounterMsg declares `up` and `down`, but no clause handles them, so the input
+%% paths CounterStream -> [|] -> up and CounterStream -> [|] -> down are uncovered
+%% (Well-Typed GLP Program cond. 2). Detecting this requires descending into the
+%% CounterMsg union nested under the list constructor, not just checking the
+%% top-level CounterStream alternatives. The checker must reject this program.
+%%
+%% Positive twin: moded_types/valid/embedded/counter_show.glp (adds up/down).
+CounterMsg ::= clear ; up ; down ; show(Number?).
+CounterStream ::= [] ; [CounterMsg | CounterStream].
+
+procedure counter(CounterStream?, Number?).
+
+counter([show(State?)|S], State) :- number(State?) | counter(S?, State?).
+counter([clear|S], _) :- counter(S?, 0).
+counter([], _).

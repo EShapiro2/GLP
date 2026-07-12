@@ -12,6 +12,7 @@
 import 'type_ast.dart';
 import 'param_expansion.dart';
 import 'program_dfa.dart';
+import 'mode.dart';
 import 'type_environment_builder.dart';
 import 'well_typed_clause.dart' as wtc;
 import 'clause_validation.dart';
@@ -265,6 +266,11 @@ class TypeChecker {
     // =======================================================================
     // Condition 2: Contravariance — check input coverage
     // =======================================================================
+    // Defined guards (receive/close/...) are unfolded into the clause head by
+    // partial evaluation before type checking, so the (transformed) clauses are
+    // the ones cond. 2 quantifies over: coverage runs on the guard-unfolded
+    // heads. A channel consumer that unfolds only `receive` leaves ch([]) —
+    // the closed read stream — uncovered, and must add a `close` clause.
     for (int argIndex = 1; argIndex <= decl.arity; argIndex++) {
       if (decl.isInputArg(argIndex - 1)) {
         final coverageErrors = _checkInputCoverage(clauses, decl, argIndex);
@@ -406,11 +412,18 @@ class TypeChecker {
   }) {
     final errors = <CoverageError>[];
 
-    // Prevent infinite recursion on recursive types
-    if (visited.contains(state.name)) {
+    // Prevent infinite recursion on cyclic types. Key on (state, structPath):
+    // a type may be reached at several structural positions (e.g. a list head
+    // vs. a nested field), and coverage at a state depends on which clause
+    // subterms sit at that path, so each (state, path) is a distinct check.
+    // Termination holds because structPath only grows by descending into a
+    // constructor argument, and descent stops once clauses run out of depth or
+    // a clause variable covers the position (finite clause terms bound depth).
+    final visitKey = '${state.name}@$structPath';
+    if (visited.contains(visitKey)) {
       return errors;
     }
-    visited.add(state.name);
+    visited.add(visitKey);
 
     // Leaf states (primitives) don't need structural coverage
     // They're covered by variables matching the appropriate mode
@@ -430,12 +443,34 @@ class TypeChecker {
       return errors;  // Variable covers everything
     }
 
-    // Get all transitions (alternatives) from this state
-    final transitions = _getTransitionsFromState(state, automaton);
+    // Enumerate this state's alternatives from the automaton that OWNS it.
+    // The type DFA is modular: each named type has its own automaton holding
+    // only its one-level transitions, and a nested type reference resolves to
+    // the referenced type's start state, whose alternatives live in that
+    // type's automaton (not the caller's). Re-resolving per state is what
+    // lets coverage cross type-reference boundaries into nested unions.
+    Automaton stateAutomaton;
+    try {
+      stateAutomaton = dfa.getAutomaton(state.name);
+    } catch (_) {
+      stateAutomaton = automaton;
+    }
 
-    for (final entry in transitions.entries) {
-      final label = entry.key;
-      final targetState = entry.value;
+    // Get all transitions (alternatives) from this state
+    final transitions = _getLabeledTransitionsFromState(state, stateAutomaton);
+
+    for (final (transLabel, targetState) in transitions) {
+      // Coverage is an input-only (contravariant) property: it ranges over the
+      // consumed portion of D. A produce-mode (↑) edge marks a mode inversion —
+      // the subtree below it is an output the clause *produces*, not an input it
+      // must *accept* — so coverage does not descend past it (Prop Input
+      // Coverage; input paths traverse the consumed arguments). Constant edges
+      // carry no mode and terminate at a leaf, so they are kept.
+      if (transLabel.mode == Mode.produce) {
+        continue;
+      }
+
+      final label = transLabel.toString();
 
       // Check if some clause accepts this transition at the current path
       if (_clauseAcceptsLabelAtPath(clauses, argIndex, structPath, label)) {
@@ -550,10 +585,13 @@ class TypeChecker {
 
   /// Extract argument index from a path element symbol
   ///
-  /// Symbols like "f(2,1)" or "\(2,1)" or "[|](2,1)" have format functor(arity,argIndex)
+  /// Symbols have format functor(arity,argIndex) optionally followed by a mode
+  /// suffix ":↓"/":↑" — e.g. "f(2,1)", "\(2,1)", "[|](2,1)", "[|](2,1):↓".
+  /// Type-internal transition labels carry the mode suffix (procedure labels do
+  /// not), so the (arity,argIndex) group is not anchored to end-of-string.
   int? _extractArgIndex(String symbol) {
-    // Try pattern like "name(arity,argIndex)"
-    final match = RegExp(r'\((\d+),(\d+)\)$').firstMatch(symbol);
+    // Match "(arity,argIndex)" allowing an optional trailing mode annotation.
+    final match = RegExp(r'\((\d+),(\d+)\)(?::.*)?$').firstMatch(symbol);
     if (match != null) {
       return int.tryParse(match.group(2)!);
     }
@@ -561,15 +599,17 @@ class TypeChecker {
     return null;
   }
 
-  /// Get all transitions from a state
-  Map<String, DFAState> _getTransitionsFromState(DFAState state, Automaton automaton) {
-    final result = <String, DFAState>{};
+  /// Get all transitions from a state, keeping the TransitionLabel objects so
+  /// callers can inspect the edge mode (coverage must not descend past a
+  /// produce-mode mode inversion).
+  List<(TransitionLabel, DFAState)> _getLabeledTransitionsFromState(
+      DFAState state, Automaton automaton) {
+    final result = <(TransitionLabel, DFAState)>[];
 
     for (final entry in automaton.transitions.entries) {
       final (fromState, label) = entry.key;
       if (fromState == state) {
-        // Convert TransitionLabel to string for label matching
-        result[label.toString()] = entry.value;
+        result.add((label, entry.value));
       }
     }
 
@@ -630,8 +670,13 @@ class TypeChecker {
       }
     }
 
-    // Handle functor labels: f(2,1) should match f/2
-    final match = RegExp(r'(\w+)\((\d+),').firstMatch(labelStr);
+    // Handle functor labels: <functor>(<arity>,<argIndex>)[:mode] should match
+    // <functor>/<arity>. The functor may be any symbol, including operator
+    // functors like the tuple constructor "," (e.g. ",(2,1):↓" matches ",/2"),
+    // so it is not restricted to word characters, and an optional trailing
+    // mode annotation (":↓"/":↑") on type-internal labels is tolerated.
+    final match =
+        RegExp(r'^(.+)\((\d+),(\d+)\)(?::.*)?$').firstMatch(labelStr);
     if (match != null) {
       final functor = match.group(1)!;
       final arity = match.group(2)!;

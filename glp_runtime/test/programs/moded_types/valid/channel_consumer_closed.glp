@@ -1,0 +1,10 @@
+%% Positive: a channel consumer covers its read-stream type with the two-clause
+%% idiom (TGLP appendix "GLP Language Primitives and the Root self.glp").
+%%
+%% Defined guards unfold into the head before type checking: the `receive` clause
+%% becomes ch([X|In], Out?) (the non-empty read stream) and the `close` clause
+%% becomes ch([], []) (the closed read stream). Together the two heads accept
+%% every input path of the channel (Well-Typed GLP Program cond. 2).
+procedure drain(Channel(Stream(Constant), Stream(Constant))?).
+drain(Ch) :- receive(_, Ch?, Ch1) | drain(Ch1?).
+drain(Ch) :- close(Ch?) | true.

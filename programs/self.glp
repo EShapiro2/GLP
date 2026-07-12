@@ -23,6 +23,10 @@ DiffList(X) ::= Stream(X) \ Stream(X)?.
 % Communication (parameterized)
 Channel(In, Out) ::= ch(In, Out?).
 
+% A closed stream: the empty stream, with no further elements.  Used to type the
+% close/1 defined guard, which consumes a closed read stream (see below).
+Closed ::= [].
+
 % Primitive types
 Constant ::= Number ; String.
 
@@ -108,8 +112,17 @@ new_channel(ch(Xs?, Ys), ch(Ys?, Xs)).
 procedure send(X?, Channel(Y, Stream(X))?, Channel(Y, Stream(X))).
 send(X, ch(In, [X?|Out?]), ch(In?, Out)).
 
-procedure receive(X, Channel(Stream(X), Y)?, Channel(Stream(X), Y)).
+% receive consumes a message from a non-empty read stream (OpenStream(X));
+% its continuation's read stream may be empty (Stream(X)).  A channel consumer
+% covers the closed read stream with the close guard below.
+procedure receive(X, Channel(OpenStream(X), Y)?, Channel(Stream(X), Y)).
 receive(X?, ch([X|In], Out?), ch(In?, Out)).
+
+% close consumes a closed read stream and closes the write stream.  Together with
+% receive it lets a channel consumer's two guarded clauses accept every input
+% path of the channel.
+procedure close(Channel(Closed, Closed)?).
+close(ch([], [])).
 
 % =============================================================================
 % STREAM UTILITIES (multi-clause)

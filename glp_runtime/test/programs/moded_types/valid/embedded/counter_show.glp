@@ -9,5 +9,7 @@ CounterStream ::= [] ; [CounterMsg | CounterStream].
 procedure counter(CounterStream?, Number?).
 
 counter([show(State?)|S], State) :- number(State?) | counter(S?, State?).
+counter([up|S], State) :- number(State?) | Next := State? + 1, counter(S?, Next?).
+counter([down|S], State) :- number(State?) | Next := State? - 1, counter(S?, Next?).
 counter([clear|S], _) :- counter(S?, 0).
 counter([], _).

@@ -1,0 +1,11 @@
+%% Negative: a channel consumer that unfolds only `receive` leaves the closed
+%% read stream ch([], _) uncovered and must add a `close`-guarded clause.
+%%
+%% `receive` is typed over Channel(OpenStream(X), Y)? (a non-empty read stream),
+%% so unfolding it in guard position specializes the head to ch([X|In], Out?);
+%% the empty read stream [] is then an uncovered input path (Well-Typed GLP
+%% Program cond. 2). The checker must reject this program.
+%%
+%% Positive twin: moded_types/valid/channel_consumer_closed.glp (adds close).
+procedure drain(Channel(Stream(Constant), Stream(Constant))?).
+drain(Ch) :- receive(_, Ch?, Ch1) | drain(Ch1?).
