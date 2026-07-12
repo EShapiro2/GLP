@@ -89,7 +89,6 @@ class ClearDiscoveredBlePeersAction extends PeerAction {}
 /// per action, based on which BLE role our device played.
 class PeerAnnounceReceivedAction extends PeerAction {
   final Uint8List publicKey;
-  final String nickname;
   final int protocolVersion;
 
   /// BLE signal strength in dBm. Non-null only when the ANNOUNCE arrived over
@@ -105,21 +104,13 @@ class PeerAnnounceReceivedAction extends PeerAction {
   /// BLE device ID from our peripheral role (they connected to us)
   final String? blePeripheralDeviceId;
 
-  final String? udpAddress;
-  final String? linkLocalAddress;
-  final Set<String> udpAddressCandidates;
-
   PeerAnnounceReceivedAction({
     required this.publicKey,
-    required this.nickname,
     required this.protocolVersion,
     this.rssi,
     this.transport = PeerTransport.bleDirect,
     this.bleCentralDeviceId,
     this.blePeripheralDeviceId,
-    this.udpAddress,
-    this.linkLocalAddress,
-    this.udpAddressCandidates = const {},
   });
 }
 
@@ -194,11 +185,19 @@ class PeerRemovedAction extends PeerAction {
   PeerRemovedAction(this.publicKey);
 }
 
-/// Remove stale peers that haven't been seen
+/// Remove stale peers that haven't been seen.
+///
+/// [protectedPubkeyHexes] are never removed — the coordinator passes the
+/// known-peer set (GLP-supplied keys) so dial-book entries survive memory
+/// pressure and reconnection stays possible.
 class StalePeersRemovedAction extends PeerAction {
   final Duration staleThreshold;
+  final Set<String> protectedPubkeyHexes;
 
-  StalePeersRemovedAction(this.staleThreshold);
+  StalePeersRemovedAction(
+    this.staleThreshold, {
+    this.protectedPubkeyHexes = const {},
+  });
 }
 
 /// Clear all peers
@@ -235,37 +234,6 @@ class PeerIdentityRegisteredAction extends PeerAction {
   final Uint8List publicKey;
 
   PeerIdentityRegisteredAction({required this.publicKey});
-}
-
-/// Update the friends-of-friends set advertised by a direct friend.
-///
-/// [friendPubkeyHexes] are lowercase public-key hex strings for the sender's
-/// currently accepted friends.
-class PeerFriendListUpdatedAction extends PeerAction {
-  final Uint8List publicKey;
-  final Set<String> friendPubkeyHexes;
-
-  PeerFriendListUpdatedAction({
-    required this.publicKey,
-    required this.friendPubkeyHexes,
-  });
-}
-
-// ===== Friendship Actions =====
-
-/// A friendship has been established - mark peer as friend
-class FriendEstablishedAction extends PeerAction {
-  final Uint8List publicKey;
-  final String? nickname;
-
-  FriendEstablishedAction({required this.publicKey, this.nickname});
-}
-
-/// A friendship has been removed
-class FriendRemovedAction extends PeerAction {
-  final Uint8List publicKey;
-
-  FriendRemovedAction(this.publicKey);
 }
 
 // ===== Reachability Verification Actions =====

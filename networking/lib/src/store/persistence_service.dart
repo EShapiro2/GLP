@@ -4,13 +4,13 @@ import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'app_state.dart';
-import 'friendships_state.dart';
+import 'known_peers_state.dart';
 import 'settings_state.dart';
 import 'messages_state.dart';
 
 /// Service for persisting Redux state to SharedPreferences
 class PersistenceService {
-  static const String _friendshipsKey = 'grassroots_friendships_v2';
+  static const String _knownPeersKey = 'grassroots_known_peers_v1';
   static const String _settingsKey = 'grassroots_settings_v2';
   static const String _conversationsKey = 'grassroots_conversations_v2';
   static const String _unreadCountsKey = 'grassroots_unread_counts_v2';
@@ -23,7 +23,7 @@ class PersistenceService {
   AppState? _lastPersistedState;
 
   /// Pending persistence flags
-  bool _pendingFriendships = false;
+  bool _pendingKnownPeers = false;
   bool _pendingSettings = false;
   bool _pendingConversations = false;
 
@@ -36,18 +36,18 @@ class PersistenceService {
 
   // ===== Load Methods =====
 
-  /// Load friendships from storage
-  Future<FriendshipsState> loadFriendships() async {
+  /// Load known peers (API-supplied keys + dial addresses) from storage
+  Future<KnownPeersState> loadKnownPeers() async {
     final prefs = await _preferences;
-    final data = prefs.getString(_friendshipsKey);
+    final data = prefs.getString(_knownPeersKey);
 
-    if (data == null) return const FriendshipsState();
+    if (data == null) return const KnownPeersState();
 
     try {
-      return FriendshipsState.fromJson(jsonDecode(data) as Map<String, dynamic>);
+      return KnownPeersState.fromJson(jsonDecode(data) as Map<String, dynamic>);
     } catch (e) {
-      debugPrint('Failed to load friendships: $e');
-      return const FriendshipsState();
+      debugPrint('Failed to load known peers: $e');
+      return const KnownPeersState();
     }
   }
 
@@ -111,8 +111,8 @@ class PersistenceService {
   void onStateChanged(AppState state) {
     // Check what changed
     if (_lastPersistedState == null ||
-        state.friendships != _lastPersistedState!.friendships) {
-      _pendingFriendships = true;
+        state.knownPeers != _lastPersistedState!.knownPeers) {
+      _pendingKnownPeers = true;
     }
     if (_lastPersistedState == null ||
         state.settings != _lastPersistedState!.settings) {
@@ -125,7 +125,7 @@ class PersistenceService {
     }
 
     // Schedule debounced write
-    if (_pendingFriendships || _pendingSettings || _pendingConversations) {
+    if (_pendingKnownPeers || _pendingSettings || _pendingConversations) {
       _debounceTimer?.cancel();
       _debounceTimer = Timer(_debounceDelay, () => _persistState(state));
     }
@@ -135,16 +135,16 @@ class PersistenceService {
   Future<void> _persistState(AppState state) async {
     final prefs = await _preferences;
 
-    if (_pendingFriendships) {
+    if (_pendingKnownPeers) {
       try {
         await prefs.setString(
-          _friendshipsKey,
-          jsonEncode(state.friendships.toJson()),
+          _knownPeersKey,
+          jsonEncode(state.knownPeers.toJson()),
         );
-        _pendingFriendships = false;
-        debugPrint('Persisted ${state.friendships.friendships.length} friendships');
+        _pendingKnownPeers = false;
+        debugPrint('Persisted ${state.knownPeers.known.length} known peers');
       } catch (e) {
-        debugPrint('Failed to persist friendships: $e');
+        debugPrint('Failed to persist known peers: $e');
       }
     }
 
@@ -188,7 +188,7 @@ class PersistenceService {
   /// Force immediate persistence (call on app exit)
   Future<void> flush(AppState state) async {
     _debounceTimer?.cancel();
-    _pendingFriendships = true;
+    _pendingKnownPeers = true;
     _pendingSettings = true;
     _pendingConversations = true;
     await _persistState(state);

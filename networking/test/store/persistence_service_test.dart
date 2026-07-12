@@ -4,33 +4,12 @@ import 'package:fake_async/fake_async.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:grassroots_networking/src/store/persistence_service.dart';
-import 'package:grassroots_networking/src/store/friendships_state.dart';
+import 'package:grassroots_networking/src/store/known_peers_state.dart';
 import 'package:grassroots_networking/src/store/settings_state.dart';
 import 'package:grassroots_networking/src/store/messages_state.dart';
 import 'package:grassroots_networking/src/store/app_state.dart';
 
 // ===== Helper builders (top-level to avoid underscore lint warnings) =====
-
-FriendshipState makeFriendship({
-  required String pubkey,
-  FriendshipStatus status = FriendshipStatus.accepted,
-  String? nickname,
-  String? udpAddress,
-  String? message,
-  DateTime? createdAt,
-  DateTime? updatedAt,
-}) {
-  final now = DateTime.utc(2025, 1, 15, 12, 0, 0);
-  return FriendshipState(
-    peerPubkeyHex: pubkey,
-    nickname: nickname,
-    status: status,
-    udpAddress: udpAddress,
-    message: message,
-    createdAt: createdAt ?? now,
-    updatedAt: updatedAt ?? now,
-  );
-}
 
 ChatMessageState makeMessage({
   required String sender,
@@ -55,12 +34,12 @@ ChatMessageState makeMessage({
 }
 
 AppState makeAppState({
-  FriendshipsState? friendships,
+  KnownPeersState? knownPeers,
   SettingsState? settings,
   MessagesState? messages,
 }) {
   return AppState(
-    friendships: friendships ?? const FriendshipsState(),
+    knownPeers: knownPeers ?? const KnownPeersState(),
     settings: settings ?? const SettingsState(),
     messages: messages ?? const MessagesState(),
   );
@@ -96,80 +75,58 @@ void main() {
   });
 
   // ===================================================================
-  // loadFriendships
+  // loadKnownPeers
   // ===================================================================
-  group('loadFriendships', () {
-    test('returns empty FriendshipsState when no data stored', () async {
-      final result = await service.loadFriendships();
+  group('loadKnownPeers', () {
+    test('returns empty KnownPeersState when no data stored', () async {
+      final result = await service.loadKnownPeers();
 
-      expect(result.friendships, isEmpty);
+      expect(result.known, isEmpty);
     });
 
-    test('loads friendships from v2 key', () async {
-      final friendship = makeFriendship(
-        pubkey: peerA,
-        nickname: 'Alice',
-        status: FriendshipStatus.accepted,
-        udpAddress: '1.2.3.4:4001',
-        message: 'Hi!',
-      );
-      final state = FriendshipsState(friendships: {peerA: friendship});
+    test('loads known peers from v1 key', () async {
+      final state = KnownPeersState(known: {peerA: '1.2.3.4:4001'});
 
       SharedPreferences.setMockInitialValues({
-        'grassroots_friendships_v2': jsonEncode(state.toJson()),
+        'grassroots_known_peers_v1': jsonEncode(state.toJson()),
       });
       service = PersistenceService();
 
-      final result = await service.loadFriendships();
+      final result = await service.loadKnownPeers();
 
-      expect(result.friendships.length, equals(1));
-      expect(result.friendships.containsKey(peerA), isTrue);
-      final loaded = result.friendships[peerA]!;
-      expect(loaded.peerPubkeyHex, equals(peerA));
-      expect(loaded.nickname, equals('Alice'));
-      expect(loaded.status, equals(FriendshipStatus.accepted));
-      expect(loaded.udpAddress, equals('1.2.3.4:4001'));
-      expect(loaded.message, equals('Hi!'));
+      expect(result.known.length, equals(1));
+      expect(result.isKnown(peerA), isTrue);
+      expect(result.addressOf(peerA), equals('1.2.3.4:4001'));
     });
 
-    test('loads multiple friendships from v2 key', () async {
-      final friendshipA = makeFriendship(
-        pubkey: peerA,
-        nickname: 'Alice',
-        status: FriendshipStatus.accepted,
-      );
-      final friendshipB = makeFriendship(
-        pubkey: peerB,
-        nickname: 'Bob',
-        status: FriendshipStatus.pending,
-      );
-      final state = FriendshipsState(
-        friendships: {peerA: friendshipA, peerB: friendshipB},
+    test('loads multiple known peers, with and without addresses', () async {
+      final state = KnownPeersState(
+        known: {peerA: '1.2.3.4:4001', peerB: null},
       );
 
       SharedPreferences.setMockInitialValues({
-        'grassroots_friendships_v2': jsonEncode(state.toJson()),
+        'grassroots_known_peers_v1': jsonEncode(state.toJson()),
       });
       service = PersistenceService();
 
-      final result = await service.loadFriendships();
+      final result = await service.loadKnownPeers();
 
-      expect(result.friendships.length, equals(2));
-      expect(result.friendships[peerA]!.nickname, equals('Alice'));
-      expect(result.friendships[peerB]!.nickname, equals('Bob'));
-      expect(
-          result.friendships[peerB]!.status, equals(FriendshipStatus.pending));
+      expect(result.known.length, equals(2));
+      expect(result.addressOf(peerA), equals('1.2.3.4:4001'));
+      expect(result.isKnown(peerB), isTrue);
+      expect(result.addressOf(peerB), isNull);
+      expect(result.dialBook.keys, equals({peerA}));
     });
 
-    test('returns empty FriendshipsState on corrupt data', () async {
+    test('returns empty KnownPeersState on corrupt data', () async {
       SharedPreferences.setMockInitialValues({
-        'grassroots_friendships_v2': 'this is not json{{{',
+        'grassroots_known_peers_v1': 'this is not json{{{',
       });
       service = PersistenceService();
 
-      final result = await service.loadFriendships();
+      final result = await service.loadKnownPeers();
 
-      expect(result.friendships, isEmpty);
+      expect(result.known, isEmpty);
     });
   });
 
@@ -459,12 +416,7 @@ void main() {
   // ===================================================================
   group('flush', () {
     test('persists all state sections immediately', () async {
-      final friendship = makeFriendship(
-        pubkey: peerA,
-        nickname: 'Alice',
-      );
-      final friendshipsState =
-          FriendshipsState(friendships: {peerA: friendship});
+      final knownPeersState = KnownPeersState(known: {peerA: '1.2.3.4:4001'});
       const settingsState = SettingsState(
         bluetoothEnabled: false,
         udpEnabled: true,
@@ -483,7 +435,7 @@ void main() {
       );
 
       final state = makeAppState(
-        friendships: friendshipsState,
+        knownPeers: knownPeersState,
         settings: settingsState,
         messages: messagesState,
       );
@@ -491,40 +443,26 @@ void main() {
       await service.flush(state);
 
       final prefs = await SharedPreferences.getInstance();
-      expect(prefs.getString('grassroots_friendships_v2'), isNotNull);
+      expect(prefs.getString('grassroots_known_peers_v1'), isNotNull);
       expect(prefs.getString('grassroots_settings_v2'), isNotNull);
       expect(prefs.getString('grassroots_conversations_v2'), isNotNull);
       expect(prefs.getString('grassroots_unread_counts_v2'), isNotNull);
     });
 
-    test('round-trip: flush then load returns same friendships', () async {
-      final friendship = makeFriendship(
-        pubkey: peerA,
-        nickname: 'RoundTripAlice',
-        status: FriendshipStatus.received,
-        udpAddress: '[2001:db8::1]:4001',
-        message: 'round trip message',
+    test('round-trip: flush then load returns same known peers', () async {
+      final knownPeersState = KnownPeersState(
+        known: {peerA: '[2001:db8::1]:4001', peerB: null},
       );
-      final friendshipsState =
-          FriendshipsState(friendships: {peerA: friendship});
 
-      final state = makeAppState(friendships: friendshipsState);
+      final state = makeAppState(knownPeers: knownPeersState);
       await service.flush(state);
 
       // Create new service to load from SharedPreferences
       final loadService = PersistenceService();
-      final loaded = await loadService.loadFriendships();
+      final loaded = await loadService.loadKnownPeers();
       loadService.dispose();
 
-      expect(loaded.friendships.length, equals(1));
-      final loadedFriendship = loaded.friendships[peerA]!;
-      expect(loadedFriendship.peerPubkeyHex, equals(peerA));
-      expect(loadedFriendship.nickname, equals('RoundTripAlice'));
-      expect(loadedFriendship.status, equals(FriendshipStatus.received));
-      expect(loadedFriendship.udpAddress, equals('[2001:db8::1]:4001'));
-      expect(loadedFriendship.message, equals('round trip message'));
-      expect(loadedFriendship.createdAt, equals(friendship.createdAt));
-      expect(loadedFriendship.updatedAt, equals(friendship.updatedAt));
+      expect(loaded, equals(knownPeersState));
     });
 
     test('round-trip: flush then load returns same settings', () async {
@@ -623,20 +561,20 @@ void main() {
       await service.flush(state);
 
       final prefs = await SharedPreferences.getInstance();
-      final friendshipsData = prefs.getString('grassroots_friendships_v2');
+      final knownPeersData = prefs.getString('grassroots_known_peers_v1');
       final settingsData = prefs.getString('grassroots_settings_v2');
       final conversationsData = prefs.getString('grassroots_conversations_v2');
       final unreadData = prefs.getString('grassroots_unread_counts_v2');
 
-      expect(friendshipsData, isNotNull);
+      expect(knownPeersData, isNotNull);
       expect(settingsData, isNotNull);
       expect(conversationsData, isNotNull);
       expect(unreadData, isNotNull);
 
       // Verify the stored data decodes to empty/default states
-      final friendshipsJson =
-          jsonDecode(friendshipsData!) as Map<String, dynamic>;
-      expect(friendshipsJson['friendships'], isEmpty);
+      final knownPeersJson =
+          jsonDecode(knownPeersData!) as Map<String, dynamic>;
+      expect(knownPeersJson['known'], isEmpty);
 
       final settingsJson = jsonDecode(settingsData!) as Map<String, dynamic>;
       expect(settingsJson['bluetoothEnabled'], isTrue);
@@ -657,24 +595,20 @@ void main() {
   group('onStateChanged', () {
     test('debounces writes - does not persist immediately', () async {
       final state = makeAppState(
-        friendships: FriendshipsState(friendships: {
-          peerA: makeFriendship(pubkey: peerA, nickname: 'Alice'),
-        }),
+        knownPeers: KnownPeersState(known: {peerA: null}),
       );
 
       service.onStateChanged(state);
 
       // Immediately after calling onStateChanged, nothing persisted yet
       final prefs = await SharedPreferences.getInstance();
-      expect(prefs.getString('grassroots_friendships_v2'), isNull);
+      expect(prefs.getString('grassroots_known_peers_v1'), isNull);
     });
 
     test('persists after debounce delay elapses', () {
       fakeAsync((async) {
         final state = makeAppState(
-          friendships: FriendshipsState(friendships: {
-            peerA: makeFriendship(pubkey: peerA, nickname: 'Debounced'),
-          }),
+          knownPeers: KnownPeersState(known: {peerA: null}),
         );
 
         service.onStateChanged(state);
@@ -693,14 +627,10 @@ void main() {
     test('resets debounce timer on rapid state changes', () {
       fakeAsync((async) {
         final state1 = makeAppState(
-          friendships: FriendshipsState(friendships: {
-            peerA: makeFriendship(pubkey: peerA, nickname: 'First'),
-          }),
+          knownPeers: KnownPeersState(known: {peerA: null}),
         );
         final state2 = makeAppState(
-          friendships: FriendshipsState(friendships: {
-            peerA: makeFriendship(pubkey: peerA, nickname: 'Second'),
-          }),
+          knownPeers: KnownPeersState(known: {peerA: '9.9.9.9:4001'}),
         );
 
         service.onStateChanged(state1);
@@ -719,24 +649,22 @@ void main() {
       });
     });
 
-    test('only persists sections that changed - friendships only', () async {
+    test('only persists sections that changed - known peers only', () async {
       // Establish _lastPersistedState by flushing initial state
       const initialState = AppState();
       await service.flush(initialState);
 
-      // Remove non-friendships keys so we can detect if they get re-written
+      // Remove non-known-peers keys so we can detect if they get re-written
       final prefs = await SharedPreferences.getInstance();
       await prefs.remove('grassroots_settings_v2');
       await prefs.remove('grassroots_conversations_v2');
       await prefs.remove('grassroots_unread_counts_v2');
 
-      // Now change only friendships via onStateChanged (flush already set
+      // Now change only known peers via onStateChanged (flush already set
       // _lastPersistedState, so only the diff is marked pending)
       fakeAsync((async) {
         final newState = makeAppState(
-          friendships: FriendshipsState(friendships: {
-            peerA: makeFriendship(pubkey: peerA, nickname: 'Changed'),
-          }),
+          knownPeers: KnownPeersState(known: {peerA: null}),
         );
         service.onStateChanged(newState);
 
@@ -745,8 +673,8 @@ void main() {
       });
 
       final prefsAfter = await SharedPreferences.getInstance();
-      // Friendships should have been persisted
-      expect(prefsAfter.getString('grassroots_friendships_v2'), isNotNull);
+      // Known peers should have been persisted
+      expect(prefsAfter.getString('grassroots_known_peers_v1'), isNotNull);
       // Settings and conversations should NOT have been re-persisted
       expect(prefsAfter.getString('grassroots_settings_v2'), isNull);
       expect(prefsAfter.getString('grassroots_conversations_v2'), isNull);
@@ -758,7 +686,7 @@ void main() {
       await service.flush(initialState);
 
       final prefs = await SharedPreferences.getInstance();
-      await prefs.remove('grassroots_friendships_v2');
+      await prefs.remove('grassroots_known_peers_v1');
       await prefs.remove('grassroots_conversations_v2');
       await prefs.remove('grassroots_unread_counts_v2');
 
@@ -774,7 +702,7 @@ void main() {
 
       final prefsAfter = await SharedPreferences.getInstance();
       expect(prefsAfter.getString('grassroots_settings_v2'), isNotNull);
-      expect(prefsAfter.getString('grassroots_friendships_v2'), isNull);
+      expect(prefsAfter.getString('grassroots_known_peers_v1'), isNull);
       expect(prefsAfter.getString('grassroots_conversations_v2'), isNull);
     });
 
@@ -795,7 +723,7 @@ void main() {
 
       // Should complete without error; verify data is correct
       final prefs = await SharedPreferences.getInstance();
-      final data = prefs.getString('grassroots_friendships_v2');
+      final data = prefs.getString('grassroots_known_peers_v1');
       expect(data, isNotNull);
     });
   });
@@ -806,9 +734,7 @@ void main() {
   group('dispose', () {
     test('cancels pending debounce timer', () async {
       final state = makeAppState(
-        friendships: FriendshipsState(friendships: {
-          peerA: makeFriendship(pubkey: peerA, nickname: 'DisposedAlice'),
-        }),
+        knownPeers: KnownPeersState(known: {peerA: null}),
       );
 
       service.onStateChanged(state);
@@ -820,7 +746,7 @@ void main() {
 
       final prefs = await SharedPreferences.getInstance();
       // Nothing should have been persisted since we disposed before the timer
-      expect(prefs.getString('grassroots_friendships_v2'), isNull);
+      expect(prefs.getString('grassroots_known_peers_v1'), isNull);
     });
   });
 
@@ -830,9 +756,7 @@ void main() {
   group('flush interaction with debounce', () {
     test('flush cancels pending debounce and persists immediately', () async {
       final state = makeAppState(
-        friendships: FriendshipsState(friendships: {
-          peerA: makeFriendship(pubkey: peerA, nickname: 'FlushAlice'),
-        }),
+        knownPeers: KnownPeersState(known: {peerA: '5.6.7.8:4001'}),
       );
 
       // Schedule a debounced write
@@ -843,19 +767,17 @@ void main() {
 
       // Data should be persisted immediately
       final prefs = await SharedPreferences.getInstance();
-      final data = prefs.getString('grassroots_friendships_v2');
+      final data = prefs.getString('grassroots_known_peers_v1');
       expect(data, isNotNull);
       final loaded =
-          FriendshipsState.fromJson(jsonDecode(data!) as Map<String, dynamic>);
-      expect(loaded.friendships[peerA]!.nickname, equals('FlushAlice'));
+          KnownPeersState.fromJson(jsonDecode(data!) as Map<String, dynamic>);
+      expect(loaded.addressOf(peerA), equals('5.6.7.8:4001'));
     });
 
     test('flush persists all sections regardless of what changed', () async {
       // Create state with data in all sections
       final state = makeAppState(
-        friendships: FriendshipsState(friendships: {
-          peerA: makeFriendship(pubkey: peerA, nickname: 'FlushAll'),
-        }),
+        knownPeers: KnownPeersState(known: {peerA: null}),
         settings: const SettingsState(bluetoothEnabled: false),
         messages: MessagesState(
           conversations: {
@@ -874,7 +796,7 @@ void main() {
       await service.flush(state);
 
       final prefs = await SharedPreferences.getInstance();
-      expect(prefs.getString('grassroots_friendships_v2'), isNotNull);
+      expect(prefs.getString('grassroots_known_peers_v1'), isNotNull);
       expect(prefs.getString('grassroots_settings_v2'), isNotNull);
       expect(prefs.getString('grassroots_conversations_v2'), isNotNull);
       expect(prefs.getString('grassroots_unread_counts_v2'), isNotNull);
@@ -895,27 +817,19 @@ void main() {
   // Edge cases
   // ===================================================================
   group('edge cases', () {
-    test('friendship with null optional fields round-trips correctly',
-        () async {
-      final friendship = makeFriendship(
-        pubkey: peerA,
-        status: FriendshipStatus.pending,
-      );
+    test('known peer without an address round-trips correctly', () async {
       final state = makeAppState(
-        friendships: FriendshipsState(friendships: {peerA: friendship}),
+        knownPeers: KnownPeersState(known: {peerA: null}),
       );
 
       await service.flush(state);
 
       final loadService = PersistenceService();
-      final loaded = await loadService.loadFriendships();
+      final loaded = await loadService.loadKnownPeers();
       loadService.dispose();
 
-      final f = loaded.friendships[peerA]!;
-      expect(f.udpAddress, isNull);
-      expect(f.nickname, isNull);
-      expect(f.message, isNull);
-      expect(f.status, equals(FriendshipStatus.pending));
+      expect(loaded.isKnown(peerA), isTrue);
+      expect(loaded.addressOf(peerA), isNull);
     });
 
     test('multiple conversations round-trip correctly', () async {

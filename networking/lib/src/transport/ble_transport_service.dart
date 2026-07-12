@@ -651,24 +651,25 @@ class BleTransportService extends TransportService {
     return null;
   }
 
-  /// Accepted-friend hint for a BLE path.
+  /// Known-peer hint for a BLE path.
   ///
-  /// For already authenticated paths this returns the mapped friend pubkey.
-  /// For pre-ANNOUNCE central paths it may return a friend whose derived
+  /// For already authenticated paths this returns the mapped pubkey when it
+  /// belongs to a known peer (a key GLP supplied via the API). For
+  /// pre-ANNOUNCE central paths it may return a known peer whose derived
   /// service UUID matches the advertisement. That second case is only a hint:
-  /// callers must not send friend-only metadata until a signed ANNOUNCE maps
-  /// the path to the same public key.
-  Uint8List? getFriendPubkeyHintForPeerId(String peerId) {
+  /// a spoofed derived UUID must not pass for an authenticated identity —
+  /// identity is established only by the signed ANNOUNCE that follows.
+  Uint8List? getKnownPeerPubkeyHintForPeerId(String peerId) {
     final mappedPubkey = getPubkeyForPeerId(peerId);
-    if (mappedPubkey != null) {
-      final peer = _peersState.getPeerByPubkey(mappedPubkey);
-      if (peer?.isFriend == true) return mappedPubkey;
+    if (mappedPubkey != null &&
+        store.state.knownPeers.isKnown(_pubkeyToHex(mappedPubkey))) {
+      return mappedPubkey;
     }
 
     final discovered = _peersState.getDiscoveredBlePeer(peerId);
     final serviceUuid = discovered?.serviceUuid;
     if (serviceUuid == null) return null;
-    return _friendPubkeyForDerivedServiceUuid(serviceUuid);
+    return _knownPeerPubkeyForDerivedServiceUuid(serviceUuid);
   }
 
   @override
@@ -733,7 +734,7 @@ class BleTransportService extends TransportService {
       return false;
     }
     if (store.state.settings.coldCallTrustLevel == ColdCallTrustLevel.closed &&
-        _friendPubkeyForDerivedServiceUuid(serviceUuid) == null) {
+        _knownPeerPubkeyForDerivedServiceUuid(serviceUuid) == null) {
       debugPrint('Skipping $pathId: closed trust and unknown service UUID');
       return false;
     }
@@ -962,7 +963,7 @@ class BleTransportService extends TransportService {
       return;
     }
     if (store.state.settings.coldCallTrustLevel == ColdCallTrustLevel.closed &&
-        _friendPubkeyForDerivedServiceUuid(serviceUuid) == null) {
+        _knownPeerPubkeyForDerivedServiceUuid(serviceUuid) == null) {
       return;
     }
     // BLE address rotation produces a fresh pathId every ~30s for the same
@@ -1496,18 +1497,36 @@ class BleTransportService extends TransportService {
 
   Iterable<ble.BlePath> get _readyPaths => _paths.values.where(_isReady);
 
-  /// Closed-mode recognition: resolve an advertised (rotating) beacon to an
-  /// accepted friend's pubkey by matching the friend's current+adjacent-slot
-  /// UUIDs, or null when no friend matches.
-  Uint8List? _friendPubkeyForDerivedServiceUuid(String serviceUuid) {
+  /// Closed-mode recognition: resolve an advertised (rotating) beacon to a
+  /// known peer's pubkey (a key GLP supplied via the API) by matching that
+  /// peer's current+adjacent-slot UUIDs, or null when no known peer matches
+  /// (spec §Cold-Call Trust Levels: the advertised suffix is used only to
+  /// recognize already-known peers).
+  Uint8List? _knownPeerPubkeyForDerivedServiceUuid(String serviceUuid) {
     final normalized = serviceUuid.toLowerCase();
-    for (final peer in _peersState.friends) {
-      if (_candidateUuidsForPubkey(peer.publicKey).contains(normalized)) {
-        return peer.publicKey;
+    for (final pubkeyHex in store.state.knownPeers.knownPubkeyHexes) {
+      final pubkey = _hexToPubkeyBytes(pubkeyHex);
+      if (pubkey == null) continue;
+      if (_candidateUuidsForPubkey(pubkey).contains(normalized)) {
+        return pubkey;
       }
     }
     return null;
   }
+
+  static Uint8List? _hexToPubkeyBytes(String hex) {
+    if (hex.length != 64) return null;
+    final bytes = Uint8List(32);
+    for (var i = 0; i < 32; i++) {
+      final parsed = int.tryParse(hex.substring(i * 2, i * 2 + 2), radix: 16);
+      if (parsed == null) return null;
+      bytes[i] = parsed;
+    }
+    return bytes;
+  }
+
+  static String _pubkeyToHex(Uint8List pubkey) =>
+      pubkey.map((b) => b.toRadixString(16).padLeft(2, '0')).join();
 
   BleRole? _roleFromPathId(String pathId) {
     if (pathId.startsWith('central:')) return BleRole.central;

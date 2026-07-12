@@ -26,12 +26,11 @@ class PeerTable {
   final Map<String, PeerEntry> _unverified = {};
 
   /// Register a verified peer (one that has presented a valid friendship proof).
-  void addVerified(String pubkeyHex, {String? nickname}) {
+  void addVerified(String pubkeyHex) {
     _verified.putIfAbsent(
       pubkeyHex,
       () => PeerEntry(
         publicKey: _hexDecode(pubkeyHex),
-        nickname: nickname ?? pubkeyHex.substring(0, 8),
         pubkeyHex: pubkeyHex,
         lastSeen: DateTime.now(),
         firstSeen: DateTime.now(),
@@ -44,29 +43,23 @@ class PeerTable {
   /// Whether a pubkey hex belongs to a verified peer.
   bool isVerified(String pubkeyHex) => _verified.containsKey(pubkeyHex);
 
-  /// Update a peer's info from an ANNOUNCE.
+  /// Refresh a peer's last-seen time from an ANNOUNCE.
   void upsert({
     required Uint8List publicKey,
-    required String nickname,
     required String pubkeyHex,
-    String? udpAddress,
   }) {
     if (isVerified(pubkeyHex)) {
       final existing = _verified[pubkeyHex];
       _verified[pubkeyHex] = PeerEntry(
         publicKey: publicKey,
-        nickname: nickname,
         pubkeyHex: pubkeyHex,
-        udpAddress: udpAddress ?? existing?.udpAddress,
         lastSeen: DateTime.now(),
         firstSeen: existing?.firstSeen ?? DateTime.now(),
       );
     } else {
       _unverified[pubkeyHex] = PeerEntry(
         publicKey: publicKey,
-        nickname: nickname,
         pubkeyHex: pubkeyHex,
-        udpAddress: udpAddress,
         lastSeen: DateTime.now(),
         firstSeen: DateTime.now(),
       );
@@ -99,22 +92,17 @@ class PeerTable {
 
 class PeerEntry {
   final Uint8List publicKey;
-  final String nickname;
   final String pubkeyHex;
-  final String? udpAddress;
   final DateTime lastSeen;
   final DateTime firstSeen;
 
   const PeerEntry({
     required this.publicKey,
-    required this.nickname,
     required this.pubkeyHex,
-    this.udpAddress,
     required this.lastSeen,
     required this.firstSeen,
   });
 
   @override
-  String toString() => 'PeerEntry($nickname, $pubkeyHex'
-      '${udpAddress != null ? ", addr: $udpAddress" : ""})';
+  String toString() => 'PeerEntry($pubkeyHex)';
 }

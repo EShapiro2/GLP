@@ -14,8 +14,7 @@ import 'package:grassroots_networking/src/store/store.dart';
 import '../helpers/sodium_test_bootstrap.dart';
 
 /// Helper to create a self-signed ANNOUNCE payload:
-/// [pubkey(32) + version(2) + nickLen(1) + nick + candidateCount(2)
-///  + candidates + signature(64)]
+/// [pubkey(32) + version(2) + signature(64)]
 ///
 /// The trailing Ed25519 signature covers every preceding byte and must be
 /// produced by [signer], whose identity key matches [pubkey] — this is what
@@ -23,15 +22,7 @@ import '../helpers/sodium_test_bootstrap.dart';
 Uint8List buildAnnouncePayload({
   required Uint8List pubkey,
   required ProtocolHandler signer,
-  String nickname = 'OtherPeer',
-  String? address,
-  Set<String> addressCandidates = const {},
 }) {
-  final nicknameBytes = Uint8List.fromList(nickname.codeUnits);
-  final candidates = <String>{
-    if (address != null && address.isNotEmpty) address,
-    ...addressCandidates,
-  };
   final buffer = BytesBuilder();
 
   buffer.add(pubkey);
@@ -39,20 +30,6 @@ Uint8List buildAnnouncePayload({
   final versionBytes = ByteData(2);
   versionBytes.setUint16(0, 1, Endian.big);
   buffer.add(versionBytes.buffer.asUint8List());
-
-  buffer.addByte(nicknameBytes.length);
-  buffer.add(nicknameBytes);
-
-  final candidateCountBytes = ByteData(2);
-  candidateCountBytes.setUint16(0, candidates.length, Endian.big);
-  buffer.add(candidateCountBytes.buffer.asUint8List());
-  for (final candidate in candidates) {
-    final candidateBytes = Uint8List.fromList(candidate.codeUnits);
-    final lenBytes = ByteData(2);
-    lenBytes.setUint16(0, candidateBytes.length, Endian.big);
-    buffer.add(lenBytes.buffer.asUint8List());
-    buffer.add(candidateBytes);
-  }
 
   final record = buffer.toBytes();
   buffer.add(signer.signBytes(record));
@@ -115,17 +92,10 @@ void main() {
     });
 
     /// Self-signed ANNOUNCE payload from the other peer's perspective.
-    Uint8List otherAnnouncePayload({
-      String nickname = 'OtherPeer',
-      String? address,
-      Set<String> addressCandidates = const {},
-    }) {
+    Uint8List otherAnnouncePayload() {
       return buildAnnouncePayload(
         pubkey: otherPubkey,
         signer: otherProtocolHandler,
-        nickname: nickname,
-        address: address,
-        addressCandidates: addressCandidates,
       );
     }
 
@@ -214,11 +184,11 @@ void main() {
             (_, __, {bool isNew = false, String? udpPeerId}) =>
                 announced = true;
 
-        final payload = otherAnnouncePayload(nickname: 'Alice');
-        // Flip a nickname byte (offset 35 = pubkey 32 + version 2 + nickLen
-        // 1). The record stays well-formed but its self-signature no longer
+        final payload = otherAnnouncePayload();
+        // Flip a version byte (offset 33 = inside pubkey 32 + version 2).
+        // The record stays well-formed but its self-signature no longer
         // verifies.
-        payload[35] ^= 0xFF;
+        payload[33] ^= 0xFF;
 
         await router.processPacket(
           announcePacket(payload),
@@ -265,7 +235,7 @@ void main() {
           rejectedDeviceId = bleDeviceId;
         };
 
-        final p = announcePacket(otherAnnouncePayload(nickname: 'Alice'));
+        final p = announcePacket(otherAnnouncePayload());
 
         await router.processPacket(
           p,
@@ -280,7 +250,7 @@ void main() {
 
       test('decodes ANNOUNCE and dispatches PeerAnnounceReceivedAction',
           () async {
-        final p = announcePacket(otherAnnouncePayload(nickname: 'Alice'));
+        final p = announcePacket(otherAnnouncePayload());
 
         await router.processPacket(
           p,
@@ -290,8 +260,7 @@ void main() {
 
         final peer = store.state.peers.getPeerByPubkey(otherPubkey);
         expect(peer, isNotNull);
-        expect(peer!.nickname, equals('Alice'));
-        expect(peer.rssi, equals(-55));
+        expect(peer!.rssi, equals(-55));
         expect(peer.transport, equals(PeerTransport.bleDirect));
       });
 
@@ -352,10 +321,9 @@ void main() {
         expect(peer.rssi, isNull);
       });
 
-      test('includes udpAddress from ANNOUNCE payload', () async {
-        final p = announcePacket(otherAnnouncePayload(
-          address: '[2001:db8::a]:4001',
-        ));
+      test('never stores an address from ANNOUNCE (identity beacon only)',
+          () async {
+        final p = announcePacket(otherAnnouncePayload());
 
         await router.processPacket(
           p,
@@ -363,54 +331,11 @@ void main() {
           rssi: -50,
         );
 
+        // Spec §ANNOUNCE and Liveness: address distribution is not
+        // ANNOUNCE's role — addresses reach the layer via putPeerAddress.
         final peer = store.state.peers.getPeerByPubkey(otherPubkey);
         expect(peer, isNotNull);
-        expect(
-          peer!.udpAddress,
-          equals('[2001:db8::a]:4001'),
-        );
-      });
-
-      test('preserves IPv4 udpAddress from ANNOUNCE payload', () async {
-        final p = announcePacket(otherAnnouncePayload(
-          address: '203.0.113.5:4001',
-        ));
-
-        await router.processPacket(
-          p,
-          transport: PeerTransport.bleDirect,
-          rssi: -50,
-        );
-
-        final peer = store.state.peers.getPeerByPubkey(otherPubkey);
-        expect(peer, isNotNull);
-        expect(peer!.udpAddress, equals('203.0.113.5:4001'));
-      });
-
-      test('preserves UDP address candidates from ANNOUNCE payload', () async {
-        final p = announcePacket(otherAnnouncePayload(
-          address: '[2606:4700::1]:4001',
-          addressCandidates: const {
-            '[2606:4700::1]:4001',
-            '198.51.100.5:4002',
-          },
-        ));
-
-        await router.processPacket(
-          p,
-          transport: PeerTransport.bleDirect,
-          rssi: -50,
-        );
-
-        final peer = store.state.peers.getPeerByPubkey(otherPubkey);
-        expect(peer, isNotNull);
-        expect(
-          peer!.udpAddressCandidates,
-          containsAll(const {
-            '[2606:4700::1]:4001',
-            '198.51.100.5:4002',
-          }),
-        );
+        expect(peer!.udpAddress, isNull);
       });
 
       test('fires onPeerAnnounced callback', () async {
@@ -422,7 +347,7 @@ void main() {
           receivedTransport = transport;
         };
 
-        final p = announcePacket(otherAnnouncePayload(nickname: 'Bob'));
+        final p = announcePacket(otherAnnouncePayload());
 
         await router.processPacket(
           p,
@@ -431,13 +356,13 @@ void main() {
         );
 
         expect(receivedData, isNotNull);
-        expect(receivedData!.nickname, equals('Bob'));
+        expect(receivedData!.publicKey, equals(otherPubkey));
         expect(receivedTransport, equals(PeerTransport.bleDirect));
       });
 
       test('always processes ANNOUNCE even if seen before (no dedup)',
           () async {
-        final p = announcePacket(otherAnnouncePayload(nickname: 'Charlie'));
+        final p = announcePacket(otherAnnouncePayload());
 
         int announceCount = 0;
         router.onPeerAnnounced =
@@ -542,7 +467,6 @@ void main() {
 
         store.dispatch(PeerAnnounceReceivedAction(
           publicKey: otherPubkey,
-          nickname: 'Alice',
           protocolVersion: 1,
           rssi: -44,
           bleCentralDeviceId: 'central:peer-1',
@@ -805,10 +729,7 @@ void main() {
 
     group('processPacket (UDP) - ANNOUNCE', () {
       test('decodes ANNOUNCE and dispatches to Redux', () async {
-        final p = announcePacket(otherAnnouncePayload(
-          nickname: 'UdpPeer',
-          address: '[2001:db8::1]:4001',
-        ));
+        final p = announcePacket(otherAnnouncePayload());
 
         await router.processPacket(
           p,
@@ -818,12 +739,7 @@ void main() {
 
         final peer = store.state.peers.getPeerByPubkey(otherPubkey);
         expect(peer, isNotNull);
-        expect(peer!.nickname, equals('UdpPeer'));
-        expect(peer.transport, equals(PeerTransport.udp));
-        expect(
-          peer.udpAddress,
-          equals('[2001:db8::1]:4001'),
-        );
+        expect(peer!.transport, equals(PeerTransport.udp));
       });
 
       test('identifies UDP connection with the verified announce pubkey',
@@ -835,7 +751,7 @@ void main() {
           identifiedPeerId = udpPeerId;
         };
 
-        final p = announcePacket(otherAnnouncePayload(nickname: 'UdpPeer'));
+        final p = announcePacket(otherAnnouncePayload());
 
         await router.processPacket(
           p,
@@ -853,10 +769,7 @@ void main() {
           rssi: -42,
         ));
 
-        final p = announcePacket(otherAnnouncePayload(
-          nickname: 'UdpPeer',
-          address: '[2001:db8::1]:4001',
-        ));
+        final p = announcePacket(otherAnnouncePayload());
 
         await router.processPacket(
           p,
@@ -877,7 +790,7 @@ void main() {
           () async {
         // udpPeerId is a hex pubkey, not an ip:port address — it must not
         // be stored as udpAddress.
-        final p = announcePacket(otherAnnouncePayload(nickname: 'NoPeer'));
+        final p = announcePacket(otherAnnouncePayload());
 
         await router.processPacket(
           p,
@@ -944,7 +857,7 @@ void main() {
       test('marks existing peer as seen over UDP', () async {
         stubSession();
 
-        store.dispatch(FriendEstablishedAction(publicKey: otherPubkey));
+        store.dispatch(PeerIdentityRegisteredAction(publicKey: otherPubkey));
 
         final p = secureMessagePacket(
           messageId: 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee',

@@ -3,8 +3,8 @@ import 'peers_actions.dart';
 import 'peers_reducer.dart';
 import 'messages_actions.dart';
 import 'messages_reducer.dart';
-import 'friendships_actions.dart';
-import 'friendships_reducer.dart';
+import 'known_peers_actions.dart';
+import 'known_peers_reducer.dart';
 import 'settings_actions.dart';
 import 'settings_reducer.dart';
 import 'signaling_actions.dart';
@@ -28,10 +28,10 @@ AppState appReducer(AppState state, dynamic action) {
     );
   }
 
-  // Handle friendship actions via friendshipsReducer
-  if (action is FriendshipAction) {
+  // Handle known-peer actions via knownPeersReducer
+  if (action is KnownPeerAction) {
     return state.copyWith(
-      friendships: friendshipsReducer(state.friendships, action),
+      knownPeers: knownPeersReducer(state.knownPeers, action),
     );
   }
 

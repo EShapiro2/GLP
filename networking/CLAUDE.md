@@ -28,7 +28,7 @@ The boundary: the queue lives on the sender, holds only the sender's own message
 
 ## BLE Discovery & Identity
 
-Every device advertises a public-key-derived Grassroots service UUID: a fixed Grassroots prefix plus the first 8 bytes of SHA-256(public key). The UUID is only a discovery hint, never an authorization proof. Identity is established by the signed ANNOUNCE handshake, which carries the full public key, nickname, and signature. In open cold-call mode, nearby unknown BLE peers may complete ANNOUNCE; in closed mode, unknown nearby peers do not get ANNOUNCE, and friend-only metadata is sent only after signed ANNOUNCE authenticates an accepted friend.
+Every device advertises a public-key-derived Grassroots service UUID: a fixed Grassroots prefix plus a rotating per-slot suffix derived from the public key and the current 15-minute time slot. The UUID is only a discovery hint, never an authorization proof. Identity is established by the signed ANNOUNCE record — exactly the peer's full public key, the protocol version, and a trailing Ed25519 signature over the preceding bytes (spec §ANNOUNCE and Liveness; nothing else travels in ANNOUNCE: no nickname, no addresses). In Open cold-call mode, nearby unknown BLE peers may complete ANNOUNCE; in Closed mode, the advertised suffix is used only to recognize already-known peers — keys GLP supplied via the API — and unmatched encounters are ignored.
 
 ## Dual-Role BLE Is Mandatory
 
@@ -38,24 +38,23 @@ Platform asymmetries are solved by choosing **who initiates each leg** — order
 
 When a platform behavior is **unknown** (e.g. whether an iOS↔iOS reverse leg works), attempt it and let hardware decide — do not suppress it on extrapolation. A single-link pair is acceptable only as a *transient* state that the transport keeps trying to upgrade, or where hardware has *measurably* refused the second leg and the only remaining lever is initiator order.
 
-## Well-Connected Friends & Hole-Punching
+## No Social Graph in the Layer
 
-Most mobile devices sit behind NAT and cannot accept incoming UDP connections from the public Internet. A **well-connected** device is one that has a globally routable public address — it can be reached directly by anyone.
+**The transport has no concept of friend — GLP holds the social graph** (spec §Trust Gating). The layer recognizes only keys GLP supplies through its API (`putKnownPeer`, `putPeerAddress`); it holds no friendship records, exchanges no friend or rendezvous lists, and never mediates between peers. Who learns an agent's address is a trust decision that lives with the social graph, so address distribution is GLP's: addresses travel as GLP-level messages over authenticated sessions and enter the layer via `putPeerAddress`.
 
-Well-connected friends play a special role: they act as **signaling relays** to help two NAT'd peers find each other. The flow is:
+## Rendezvous Servers & Hole-Punching
 
-1. Each device registers its current address with its well-connected friends.
-2. When peer A wants to reach peer B, A asks a mutual well-connected friend for B's address.
-3. The friend coordinates a simultaneous hole-punch: it tells both A and B to send packets to each other at the same time, punching holes in both NATs.
-4. Once the holes are open, A and B communicate directly — the well-connected friend is no longer in the path.
+Most mobile devices sit behind NAT and cannot accept incoming UDP connections from the public Internet. **Rendezvous servers** (spec §Rendezvous Server; implemented in `bootstrap_anchor/`) give NAT-bound agents a fixed point they can always reach outbound. The reconnection flow:
 
-**Important:** Well-connected friends relay *signaling metadata* (addresses, punch timing), never message content. This preserves the direct-delivery principle.
+1. Agent A (whose IP changed) sends RECONNECT(peer=B) to the configured rendezvous servers; each server observes A's source address.
+2. Agent B, on detecting A went silent, sends AVAILABLE(peer=A) to the same servers.
+3. A server matches the pair and sends each side a PUNCH_INITIATE carrying the other side's observed address; both sides punch their NATs and the deterministic initiator connects.
 
-**Signaling is friend-only.** A well-connected device only coordinates hole-punches between peers that are both its friends. It only registers friends' addresses in its address table, only responds to address queries for friends, and only sends PUNCH_INITIATE to friends. This is a trust boundary — we don't relay for arbitrary peers.
+A rendezvous server relays *signaling metadata* (addresses, punch timing), never message content — it is not a TURN relay. It has no friends list and accepts connections from any agent. A direct peer-to-peer PUNCH_INITIATE over an existing control path (usually BLE) covers the BLE-adjacent case without any third party.
 
 ## Redux Architecture
 
-All peer and transport state lives in an immutable Redux store (`AppState`). Key slices: `PeersState` (discovered BLE devices + identified peers), `TransportsState` (per-transport lifecycle + public address), `MessagesState`, `FriendshipsState`, `SettingsState`. UI reads from the store and subscribes to changes. Actions describe events; reducers produce the next state. No mutable singletons.
+All peer and transport state lives in an immutable Redux store (`AppState`). Key slices: `PeersState` (discovered BLE devices + identified peers), `TransportsState` (per-transport lifecycle + public address), `MessagesState`, `KnownPeersState` (API-supplied keys + persisted dial book), `SettingsState`. UI reads from the store and subscribes to changes. Actions describe events; reducers produce the next state. No mutable singletons.
 
 The Redux state is a strict projection of facts emitted by the transport layers — never an inference. Reducers must not synthesize state from "I haven't heard from X in N seconds" heuristics; that's the transport layer's job to surface as an explicit event (path failed, UDX session torn down, etc.).
 
@@ -70,17 +69,17 @@ The `TransportState` lifecycle for each transport is: `uninitialized → initial
 
 User-facing UI strings should say "Internet", not "UDP" or internal protocol names.
 
-## One Address Per Connection, Multiple Candidates Per Peer
+## One Address Per Peer
 
-Per **connection**, exactly one address pair is in use — there is no per-message address selection or mid-stream address switching. But a device MAY advertise multiple address **candidates** in ANNOUNCE (e.g. public IPv4, public IPv6, link-local IPv6 for the same LAN), and each peer pair selects the candidate that actually works between them: link-local on the same LAN, public IPv6 across the Internet, IPv4 as a fallback. Once a connection is established on a candidate, the pair sticks to that candidate until the path breaks.
+Per **connection**, exactly one address pair is in use — there is no per-message address selection or mid-stream address switching. Each peer has a single dial-book address, supplied by GLP via `putPeerAddress` or observed on a live session; ANNOUNCE carries no addresses (spec §ANNOUNCE and Liveness — address distribution is not its role). The agent's own local candidates (per IP family) are still used to pick a compatible local endpoint when dialing.
 
-The primary public address is discovered via an external service (e.g. seeip.org). Link-local candidates are scoped to the local network and never reach the public Internet; they exist so two devices on the same LAN can connect directly without traversing NAT.
+The primary public address is discovered via an external service (e.g. seeip.org) and corrected by rendezvous-server address reflection (ADDR_REFLECT).
 
 ## Peer Address Persistence
 
-Never unilaterally clear a peer's stored UDP address. Update it when a new valid address arrives (from ANNOUNCE, signaling, or observation), and clear it only when the peer explicitly tells us they no longer have one. Stale peer cleanup, our-side disconnects, and transport restarts must not null out `udpAddress` — it is the last known location and the only way to attempt reconnection. This applies to friends and non-friends alike.
+Never unilaterally clear a peer's stored UDP address. Update it when a new valid address arrives (from `putPeerAddress`, signaling, or observation), and clear it only when the peer explicitly tells us they no longer have one. Stale peer cleanup, our-side disconnects, and transport restarts must not null out `udpAddress` — it is the last known location and the only way to attempt reconnection.
 
-GLP feeds peer addresses into the layer's dial book via `putPeerAddress(pk, address)` (spec `GLP_Networking_API` §Connectivity and Address): it validates the `ip:port`, **creates a dial-book entry even for a peer never seen before**, and is supply-only — it never clears an address (an unparseable address throws). The address is GLP-learned (from a rendezvous agent or a BLE-adjacent friend), so the layer stays friendship-agnostic: a `putPeerAddress`-created peer carries the address but `isFriend = false` and is not `isReachable` until a session authenticates.
+GLP feeds peer addresses into the layer's dial book via `putPeerAddress(pk, address)` (spec `GLP_Networking_API` §Connectivity and Address): it validates the `ip:port`, **creates a dial-book entry even for a peer never seen before**, and is supply-only — it never clears an address (an unparseable address throws). Supplying an address also supplies the key: the peer joins the known set (`KnownPeersState`, persisted), which is what Closed-mode recognition, per-slot scan filters, and the reconnection sweeps range over. A `putPeerAddress`-created peer is not `isReachable` until a session authenticates.
 
 ## Transport Independence
 

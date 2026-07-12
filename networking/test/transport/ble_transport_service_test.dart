@@ -7,10 +7,9 @@ import 'package:grassroots_bluetooth_layer/grassroots_bluetooth_layer_testing.da
 import 'package:grassroots_networking/src/models/identity.dart';
 import 'package:grassroots_networking/src/store/app_state.dart';
 import 'package:grassroots_networking/src/store/peers_actions.dart'
-    show
-        BleDeviceRemovedAction,
-        FriendEstablishedAction,
-        PeerAnnounceReceivedAction;
+    show BleDeviceRemovedAction, PeerAnnounceReceivedAction;
+import 'package:grassroots_networking/src/store/known_peers_actions.dart'
+    show KnownPeerPutAction;
 import 'package:grassroots_networking/src/models/peer.dart' show PeerTransport;
 import 'package:grassroots_networking/src/store/reducers.dart';
 import 'package:grassroots_networking/src/store/settings_actions.dart';
@@ -611,7 +610,6 @@ void main() {
       // old MAC's path.
       store.dispatch(PeerAnnounceReceivedAction(
         publicKey: peerIdentity.publicKey,
-        nickname: 'Rotator',
         protocolVersion: 1,
         transport: PeerTransport.bleDirect,
         bleCentralDeviceId: oldPathId,
@@ -668,7 +666,6 @@ void main() {
       ));
       store.dispatch(PeerAnnounceReceivedAction(
         publicKey: peerIdentity.publicKey,
-        nickname: 'DualRole',
         protocolVersion: 1,
         transport: PeerTransport.bleDirect,
         blePeripheralDeviceId: 'peripheral:$connectionMac',
@@ -791,7 +788,6 @@ void main() {
       // leg against an advertising MAC we already know works.
       store.dispatch(PeerAnnounceReceivedAction(
         publicKey: peerIdentity.publicKey,
-        nickname: 'Remote',
         protocolVersion: 1,
         transport: PeerTransport.bleDirect,
         blePeripheralDeviceId: 'peripheral:$connectionMac',
@@ -935,7 +931,11 @@ void main() {
       // actually dials the friend — isolating the closed-trust gate from the
       // first-mover gate.
       final friend = await _makeHighIdentity('Friend');
-      store.dispatch(FriendEstablishedAction(publicKey: friend.publicKey));
+      store.dispatch(KnownPeerPutAction(
+        friend.publicKey
+            .map((b) => b.toRadixString(16).padLeft(2, '0'))
+            .join(),
+      ));
 
       const friendRemoteId = 'FRIEND';
       callbacks.pushAdvertisement(BleAdvertisement(
@@ -1094,7 +1094,6 @@ void main() {
       ));
       store.dispatch(PeerAnnounceReceivedAction(
         publicKey: peer.publicKey,
-        nickname: 'Peer',
         protocolVersion: 1,
         transport: PeerTransport.bleDirect,
         blePeripheralDeviceId: 'peripheral:$connectionMac',
@@ -1244,7 +1243,6 @@ void main() {
       ));
       store.dispatch(PeerAnnounceReceivedAction(
         publicKey: iosPeer.publicKey,
-        nickname: 'iPhone',
         protocolVersion: 1,
         transport: PeerTransport.bleDirect,
         blePeripheralDeviceId: 'peripheral:IPHONE_CONN',
@@ -1369,7 +1367,6 @@ void main() {
       await Future<void>.delayed(Duration.zero);
       store.dispatch(PeerAnnounceReceivedAction(
         publicKey: androidPeer.publicKey,
-        nickname: 'Pixel',
         protocolVersion: 1,
         transport: PeerTransport.bleDirect,
         blePeripheralDeviceId: 'peripheral:PIXEL_CONN',
@@ -1474,7 +1471,6 @@ void main() {
       await Future<void>.delayed(Duration.zero);
       store.dispatch(PeerAnnounceReceivedAction(
         publicKey: iosPeer.publicKey,
-        nickname: 'OtherIphone',
         protocolVersion: 1,
         transport: PeerTransport.bleDirect,
         blePeripheralDeviceId: 'peripheral:IOS_PEER_CONN',
@@ -1538,7 +1534,6 @@ void main() {
       await Future<void>.delayed(Duration.zero);
       store.dispatch(PeerAnnounceReceivedAction(
         publicKey: iosPeer.publicKey,
-        nickname: 'OtherIphone',
         protocolVersion: 1,
         transport: PeerTransport.bleDirect,
         blePeripheralDeviceId: 'peripheral:IOS_PEER_CONN',
@@ -1615,7 +1610,6 @@ void main() {
       await Future<void>.delayed(Duration.zero);
       store.dispatch(PeerAnnounceReceivedAction(
         publicKey: iosPeer.publicKey,
-        nickname: 'iPhone',
         protocolVersion: 1,
         transport: PeerTransport.bleDirect,
         bleCentralDeviceId: 'central:IPHONE_ADV',
@@ -1686,7 +1680,6 @@ void main() {
       await Future<void>.delayed(Duration.zero);
       store.dispatch(PeerAnnounceReceivedAction(
         publicKey: iosPeer.publicKey,
-        nickname: 'iPhone',
         protocolVersion: 1,
         transport: PeerTransport.bleDirect,
         bleCentralDeviceId: 'central:IPHONE_ADV',

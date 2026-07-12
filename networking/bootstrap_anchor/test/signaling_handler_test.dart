@@ -106,16 +106,14 @@ void main() {
         return true;
       };
 
-      peerTable.addVerified(_hex(aPubkey), nickname: 'A');
-      peerTable.addVerified(_hex(bPubkey), nickname: 'B');
+      peerTable.addVerified(_hex(aPubkey));
+      peerTable.addVerified(_hex(bPubkey));
     });
 
     test('processAnnounce reflects the observed address back', () {
       final announce = AnnounceData(
         publicKey: aPubkey,
-        nickname: 'A',
         protocolVersion: 1,
-        udpAddress: '[2001:db8::99]:7000',
       );
 
       handler.processAnnounce(

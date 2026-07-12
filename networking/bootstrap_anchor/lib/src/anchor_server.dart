@@ -338,7 +338,6 @@ class AnchorServer {
             stream: stream,
             addr: socket.remoteAddress,
             port: socket.remotePort,
-            advertisedLocalAddress: listener.publicAddress,
             listenerFamily: listener.family,
           ),
         );
@@ -369,7 +368,6 @@ class AnchorServer {
       stream: stream,
       addr: socket.remoteAddress,
       port: socket.remotePort,
-      advertisedLocalAddress: listener.publicAddress,
       listenerFamily: listener.family,
     );
 
@@ -380,8 +378,7 @@ class AnchorServer {
         _processIncomingData(effectiveId, data,
             observedIp: socket.remoteAddress.address,
             observedPort: socket.remotePort,
-            observedFamily: socket.remoteAddress.type,
-            localPublicAddress: listener.publicAddress);
+            observedFamily: socket.remoteAddress.type);
       },
       onError: (e) {
         _log('UDX stream error from $tempKey: $e');
@@ -408,8 +405,7 @@ class AnchorServer {
         _processIncomingData(pubkeyHex, data,
             observedIp: conn?.addr.address,
             observedPort: conn?.port,
-            observedFamily: conn?.addr.type,
-            localPublicAddress: conn?.advertisedLocalAddress);
+            observedFamily: conn?.addr.type);
       },
       onError: (e) {
         _log('UDX stream error from $pubkeyHex: $e');
@@ -444,8 +440,7 @@ class AnchorServer {
     _processIncomingData('${address.address}:$port', data,
         observedIp: address.address,
         observedPort: port,
-        observedFamily: address.type,
-        localPublicAddress: listener.publicAddress);
+        observedFamily: address.type);
   }
 
   // ===== Packet Processing =====
@@ -456,7 +451,6 @@ class AnchorServer {
     String? observedIp,
     int? observedPort,
     InternetAddressType? observedFamily,
-    String? localPublicAddress,
   }) async {
     GrassrootsPacket packet;
     try {
@@ -473,9 +467,7 @@ class AnchorServer {
     switch (packet.type) {
       case PacketType.announce:
         await _handleAnnounce(packet, peerId,
-            observedIp: observedIp,
-            observedPort: observedPort,
-            localPublicAddress: localPublicAddress);
+            observedIp: observedIp, observedPort: observedPort);
       case PacketType.noiseHandshake:
         await _handleNoiseHandshake(packet, peerId);
       case PacketType.secureSignaling:
@@ -611,7 +603,6 @@ class AnchorServer {
     String peerId, {
     String? observedIp,
     int? observedPort,
-    String? localPublicAddress,
   }) async {
     final AnnounceData data;
     try {
@@ -643,12 +634,9 @@ class AnchorServer {
       observedPort: observedPort,
     );
 
-    _log('ANNOUNCE: ${data.nickname} (${senderHex.substring(0, 8)}...)');
+    _log('ANNOUNCE: ${senderHex.substring(0, 8)}...');
     // Send our ANNOUNCE back so they know who we are
-    await _sendAnnounceTo(
-      data.publicKey,
-      address: localPublicAddress,
-    );
+    await _sendAnnounceTo(data.publicKey);
   }
 
   void _refreshTrackedAddressFromAnnounce(
@@ -682,7 +670,6 @@ class AnchorServer {
           stream: pending.stream,
           addr: pending.addr,
           port: pending.port,
-          advertisedLocalAddress: pending.advertisedLocalAddress,
           listenerFamily: pending.listenerFamily,
         ),
       );
@@ -740,22 +727,17 @@ class AnchorServer {
     return sent;
   }
 
-  Future<void> _sendAnnounceTo(
-    Uint8List recipientPubkey, {
-    String? address,
-  }) async {
-    final packet = await _protocol.createAnnouncePacket(address: address);
+  Future<void> _sendAnnounceTo(Uint8List recipientPubkey) async {
+    final packet = await _protocol.createAnnouncePacket();
     _sendPacket(_pubkeyToHex(recipientPubkey), packet);
   }
 
   Future<void> _broadcastAnnounce() async {
     if (_peerConnections.isEmpty) return;
 
+    final packet = await _protocol.createAnnouncePacket();
     for (final entry in _peerConnections.entries) {
       try {
-        final packet = await _protocol.createAnnouncePacket(
-          address: entry.value.advertisedLocalAddress,
-        );
         await entry.value.stream?.add(packet.serialize());
       } catch (e) {
         _log('Failed to send ANNOUNCE to ${entry.key.substring(0, 8)}...: $e');
@@ -860,9 +842,7 @@ class AnchorServer {
       connection.addr.address,
       connection.port,
     );
-    final nickname = _peerTable.lookupVerified(pubkeyHex)?.nickname ??
-        pubkeyHex.substring(0, 8);
-    _log('Address registered: $nickname (${pubkeyHex.substring(0, 8)}...) → '
+    _log('Address registered: ${pubkeyHex.substring(0, 8)}... → '
         '${connection.addr.address}:${connection.port} '
         '(${_familyLabel(connection.listenerFamily)})');
   }
@@ -895,7 +875,7 @@ class AnchorServer {
     for (final peer in _peerTable.verifiedPeers) {
       final addresses = _addressTable.lookupAll(peer.pubkeyHex);
       final connected = _peerConnections.containsKey(peer.pubkeyHex);
-      _log('  ${peer.nickname} (${peer.pubkeyHex.substring(0, 8)}...) '
+      _log('  ${peer.pubkeyHex.substring(0, 8)}... '
           '${connected ? "LIVE" : "offline"}'
           '${addresses.isNotEmpty ? " addr=${addresses.map((entry) => "${entry.ip}:${entry.port}").join(",")}" : ""}');
     }
@@ -919,7 +899,6 @@ class AnchorServer {
               'peer=${_shortHex(_pubkeyToHex(message.peerPubkey))}',
         AvailableMessage() =>
           'available peer=${_shortHex(_pubkeyToHex(message.peerPubkey))}',
-        RvListMessage() => 'rvList count=${message.entries.length}',
         RegisterInviteMessage() =>
           'registerInvite id=${_shortHex(_pubkeyToHex(message.inviteId))}',
         RedeemInviteMessage() =>
@@ -961,7 +940,6 @@ class _PeerConnection {
   final UDXStream? stream;
   final InternetAddress addr;
   final int port;
-  final String? advertisedLocalAddress;
   final InternetAddressType listenerFamily;
 
   _PeerConnection({
@@ -970,7 +948,6 @@ class _PeerConnection {
     this.stream,
     required this.addr,
     required this.port,
-    required this.advertisedLocalAddress,
     required this.listenerFamily,
   });
 }

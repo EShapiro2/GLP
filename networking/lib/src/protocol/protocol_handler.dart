@@ -4,6 +4,9 @@ import 'package:grassroots_networking/src/models/identity.dart';
 import 'package:grassroots_networking/src/models/packet.dart';
 import 'package:sodium_libs/sodium_libs.dart';
 
+/// Exact length of an ANNOUNCE payload: pubkey(32) + version(2) + sig(64).
+const int announcePayloadLength = 98;
+
 /// Handles Grassroots protocol logic: packet encoding/decoding,
 /// ANNOUNCE parsing, MESSAGE handling, etc.
 ///
@@ -33,24 +36,13 @@ class ProtocolHandler {
   /// The wire frame carries no identity or signature, so ANNOUNCE is a
   /// self-contained signed identity record: the trailing Ed25519 signature
   /// covers every preceding byte and is verified against the pubkey the
-  /// record itself carries.
+  /// record itself carries. The payload is the irreducible record of spec
+  /// §ANNOUNCE and Liveness — identity beacon and heartbeat only; address
+  /// distribution is not ANNOUNCE's role (addresses reach the layer via
+  /// `putPeerAddress`, fed by GLP).
   ///
-  /// Format:
-  /// [pubkey(32) + version(2) + nickLen(1) + nick
-  ///  + candidateCount(2) + repeated(candidateLen(2) + candidate)
-  ///  + signature(64)]
-  Uint8List createAnnouncePayload({
-    String? address,
-    String? linkLocalAddress,
-    Iterable<String> addressCandidates = const [],
-  }) {
-    final nicknameBytes = _encodeNickname(identity.nickname);
-    final candidates = <String>{
-      if (address != null && address.isNotEmpty) address,
-      if (linkLocalAddress != null && linkLocalAddress.isNotEmpty)
-        linkLocalAddress,
-      ...addressCandidates.where((candidate) => candidate.isNotEmpty),
-    };
+  /// Format: [pubkey(32) + version(2) + signature(64)]
+  Uint8List createAnnouncePayload() {
     final buffer = BytesBuilder();
 
     // Pubkey (32 bytes)
@@ -60,22 +52,6 @@ class ProtocolHandler {
     final versionBytes = ByteData(2);
     versionBytes.setUint16(0, protocolVersion, Endian.big);
     buffer.add(versionBytes.buffer.asUint8List());
-
-    // Nickname length (1 byte) + nickname
-    buffer.addByte(nicknameBytes.length);
-    buffer.add(nicknameBytes);
-
-    // Candidate address set.
-    final candidateCountBytes = ByteData(2);
-    candidateCountBytes.setUint16(0, candidates.length, Endian.big);
-    buffer.add(candidateCountBytes.buffer.asUint8List());
-    for (final candidate in candidates) {
-      final candidateBytes = Uint8List.fromList(candidate.codeUnits);
-      final candidateLenBytes = ByteData(2);
-      candidateLenBytes.setUint16(0, candidateBytes.length, Endian.big);
-      buffer.add(candidateLenBytes.buffer.asUint8List());
-      buffer.add(candidateBytes);
-    }
 
     buffer.add(signBytes(buffer.toBytes()));
     return buffer.toBytes();
@@ -120,6 +96,11 @@ class ProtocolHandler {
   /// ANNOUNCE whose trailing signature does not verify against the pubkey it
   /// carries is forged or corrupted and must not identify anyone.
   AnnounceData decodeAnnounce(Uint8List data) {
+    if (data.length != announcePayloadLength) {
+      throw const FormatException(
+          'ANNOUNCE payload must be exactly pubkey(32) + version(2) + '
+          'signature(64) bytes');
+    }
     var offset = 0;
 
     // Pubkey (32 bytes)
@@ -131,48 +112,6 @@ class ProtocolHandler {
         .getUint16(0, Endian.big);
     offset += 2;
 
-    // Nickname length (1 byte) + nickname
-    final nicknameLength = data[offset];
-    offset += 1;
-    final nickname = utf8.decode(
-      data.sublist(offset, offset + nicknameLength),
-      allowMalformed: true,
-    );
-    offset += nicknameLength;
-
-    if (offset + 2 > data.length) {
-      throw const FormatException('ANNOUNCE payload missing candidates');
-    }
-
-    final addressCandidates = <String>{};
-    final candidateCount =
-        ByteData.view(data.buffer, data.offsetInBytes + offset, 2)
-            .getUint16(0, Endian.big);
-    offset += 2;
-    for (var i = 0; i < candidateCount; i++) {
-      if (offset + 2 > data.length) {
-        throw const FormatException('ANNOUNCE candidate length missing');
-      }
-      final candidateLength =
-          ByteData.view(data.buffer, data.offsetInBytes + offset, 2)
-              .getUint16(0, Endian.big);
-      offset += 2;
-      if (offset + candidateLength > data.length) {
-        throw const FormatException('ANNOUNCE candidate truncated');
-      }
-      if (candidateLength > 0) {
-        addressCandidates.add(
-          String.fromCharCodes(
-            data.sublist(offset, offset + candidateLength),
-          ),
-        );
-      }
-      offset += candidateLength;
-    }
-
-    if (data.length != offset + announceSignatureLength) {
-      throw const FormatException('ANNOUNCE signature missing or malformed');
-    }
     final signature = data.sublist(offset, offset + announceSignatureLength);
     final signedBytes = data.sublist(0, offset);
     if (!verifyBytes(
@@ -183,16 +122,9 @@ class ProtocolHandler {
       throw const FormatException('ANNOUNCE signature verification failed');
     }
 
-    final address = _firstNonLinkLocalCandidate(addressCandidates);
-    final linkLocalAddress = _firstLinkLocalCandidate(addressCandidates);
-
     return AnnounceData(
       publicKey: Uint8List.fromList(pubkey),
-      nickname: nickname,
       protocolVersion: version,
-      udpAddress: address,
-      linkLocalAddress: linkLocalAddress,
-      addressCandidates: addressCandidates,
     );
   }
 
@@ -249,70 +181,22 @@ class ProtocolHandler {
     }
   }
 
-  /// Encode a nickname as UTF-8 for the ANNOUNCE payload, truncated to fit the
-  /// 1-byte length prefix (max 255 bytes) on a code-point boundary so
-  /// multi-byte characters (emoji, non-ASCII names) survive the round-trip.
-  /// The matching decode is `utf8.decode(...)` in [decodeAnnounce].
-  static Uint8List _encodeNickname(String nickname) {
-    final encoded = utf8.encode(nickname);
-    if (encoded.length <= 255) return Uint8List.fromList(encoded);
-    final truncated = <int>[];
-    for (final rune in nickname.runes) {
-      final runeBytes = utf8.encode(String.fromCharCode(rune));
-      if (truncated.length + runeBytes.length > 255) break;
-      truncated.addAll(runeBytes);
-    }
-    return Uint8List.fromList(truncated);
-  }
-
-  String? _firstNonLinkLocalCandidate(Iterable<String> candidates) {
-    for (final candidate in candidates) {
-      if (!_isLinkLocalCandidate(candidate)) return candidate;
-    }
-    return null;
-  }
-
-  String? _firstLinkLocalCandidate(Iterable<String> candidates) {
-    for (final candidate in candidates) {
-      if (_isLinkLocalCandidate(candidate)) return candidate;
-    }
-    return null;
-  }
-
-  bool _isLinkLocalCandidate(String candidate) {
-    final lower = candidate.toLowerCase();
-    if (lower.startsWith('[')) {
-      final end = lower.indexOf(']');
-      final host = end == -1 ? lower.substring(1) : lower.substring(1, end);
-      return host.startsWith('fe80:');
-    }
-    final colon = lower.lastIndexOf(':');
-    final host = colon == -1 ? lower : lower.substring(0, colon);
-    return host.startsWith('169.254.');
-  }
 }
 
 /// Decoded ANNOUNCE data
 class AnnounceData {
   final Uint8List publicKey;
-  final String nickname;
   final int protocolVersion;
-  final String? udpAddress;
-  final String? linkLocalAddress;
-  final Set<String> addressCandidates;
 
   const AnnounceData({
     required this.publicKey,
-    required this.nickname,
     required this.protocolVersion,
-    this.udpAddress,
-    this.linkLocalAddress,
-    this.addressCandidates = const {},
   });
 
+  String get pubkeyHex =>
+      publicKey.map((b) => b.toRadixString(16).padLeft(2, '0')).join();
+
   @override
-  String toString() => 'AnnounceData($nickname, v$protocolVersion'
-      '${udpAddress != null ? ", addr: $udpAddress" : ""}'
-      '${linkLocalAddress != null ? ", ll: $linkLocalAddress" : ""}'
-      '${addressCandidates.isNotEmpty ? ", candidates: $addressCandidates" : ""})';
+  String toString() =>
+      'AnnounceData(${pubkeyHex.substring(0, 8)}..., v$protocolVersion)';
 }

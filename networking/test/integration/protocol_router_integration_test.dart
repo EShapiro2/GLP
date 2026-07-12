@@ -118,7 +118,6 @@ void main() {
       // Verify Bob decoded (and signature-verified) Alice's announce
       expect(receivedAnnounce, isNotNull);
       expect(receivedAnnounce!.publicKey, equals(aliceIdentity.publicKey));
-      expect(receivedAnnounce!.nickname, equals('Alice'));
       expect(
         receivedAnnounce!.protocolVersion,
         equals(ProtocolHandler.protocolVersion),
@@ -129,41 +128,8 @@ void main() {
       final peerState =
           bobStore.state.peers.getPeerByPubkey(aliceIdentity.publicKey);
       expect(peerState, isNotNull);
-      expect(peerState!.nickname, equals('Alice'));
-      expect(peerState.transport, equals(PeerTransport.bleDirect));
+      expect(peerState!.transport, equals(PeerTransport.bleDirect));
       expect(peerState.rssi, equals(-50));
-    });
-
-    test('ANNOUNCE with UDP address roundtrips correctly', () async {
-      const address = '[2001:db8::1]:4001';
-      final announcePayload =
-          aliceProtocol.createAnnouncePayload(address: address);
-
-      final packet = GrassrootsPacket(
-        type: PacketType.announce,
-        payload: announcePayload,
-      );
-
-      AnnounceData? receivedAnnounce;
-      bobRouter.onPeerAnnounced =
-          (data, transport, {bool isNew = false, String? udpPeerId}) {
-        receivedAnnounce = data;
-      };
-
-      await bobRouter.processPacket(
-        packet,
-        transport: PeerTransport.bleDirect,
-        bleDeviceId: 'device-alice',
-        rssi: -60,
-      );
-
-      expect(receivedAnnounce, isNotNull);
-      expect(receivedAnnounce!.udpAddress, equals(address));
-
-      // Verify UDP address stored in Redux
-      final peerState =
-          bobStore.state.peers.getPeerByPubkey(aliceIdentity.publicKey);
-      expect(peerState!.udpAddress, equals(address));
     });
 
     test('ANNOUNCE with a tampered payload byte is dropped', () async {
@@ -304,7 +270,6 @@ void main() {
 
       expect(receivedAnnounce, isNotNull);
       expect(receivedAnnounce!.publicKey, equals(aliceIdentity.publicKey));
-      expect(receivedAnnounce!.nickname, equals('Alice'));
       expect(
         receivedAnnounce!.protocolVersion,
         equals(ProtocolHandler.protocolVersion),
@@ -315,38 +280,9 @@ void main() {
       final peerState =
           bobStore.state.peers.getPeerByPubkey(aliceIdentity.publicKey);
       expect(peerState, isNotNull);
-      expect(peerState!.nickname, equals('Alice'));
-      expect(peerState.transport, equals(PeerTransport.udp));
+      expect(peerState!.transport, equals(PeerTransport.udp));
     });
 
-    test('UDP ANNOUNCE with address roundtrips correctly', () async {
-      const address = '203.0.113.5:4001';
-      final announcePayload =
-          aliceProtocol.createAnnouncePayload(address: address);
-
-      final packet = GrassrootsPacket(
-        type: PacketType.announce,
-        payload: announcePayload,
-      );
-
-      AnnounceData? receivedAnnounce;
-      bobRouter.onPeerAnnounced =
-          (data, transport, {bool isNew = false, String? udpPeerId}) {
-        receivedAnnounce = data;
-      };
-
-      await bobRouter.processPacket(
-        packet,
-        transport: PeerTransport.udp,
-        udpPeerId: 'peer-alice-id',
-      );
-
-      expect(receivedAnnounce!.udpAddress, equals(address));
-
-      final peerState =
-          bobStore.state.peers.getPeerByPubkey(aliceIdentity.publicKey);
-      expect(peerState!.udpAddress, equals(address));
-    });
   });
 
   group('UDP MESSAGE roundtrip', () {
@@ -501,10 +437,8 @@ void main() {
       expect(peer!.transport, equals(PeerTransport.bleDirect));
       expect(peer.bleDeviceId, equals('device-alice'));
 
-      // Then: Alice announces via UDP with address
-      const udpAddr = '[2001:db8::a]:4001';
-      final udpAnnouncePayload =
-          aliceProtocol.createAnnouncePayload(address: udpAddr);
+      // Then: Alice announces via UDP
+      final udpAnnouncePayload = aliceProtocol.createAnnouncePayload();
       final udpPacket = GrassrootsPacket(
         type: PacketType.announce,
         payload: udpAnnouncePayload,
@@ -516,10 +450,12 @@ void main() {
         udpPeerId: 'peer-alice-udp',
       );
 
-      // Peer should now have UDP address too
+      // Peer is now seen over UDP too; ANNOUNCE carries no address, so the
+      // dial book stays empty until putPeerAddress supplies one.
       peer = bobStore.state.peers.getPeerByPubkey(aliceIdentity.publicKey);
       expect(peer, isNotNull);
-      expect(peer!.udpAddress, equals(udpAddr));
+      expect(peer!.lastUdpSeen, isNotNull);
+      expect(peer.udpAddress, isNull);
     });
   });
 
@@ -560,8 +496,6 @@ void main() {
           bobStore.state.peers.getPeerByPubkey(aliceIdentity.publicKey);
       expect(bobInAliceStore, isNotNull);
       expect(aliceInBobStore, isNotNull);
-      expect(bobInAliceStore!.nickname, equals('Bob'));
-      expect(aliceInBobStore!.nickname, equals('Alice'));
 
       // Alice sends message to Bob
       final helloPayload = Uint8List.fromList('hello bob'.codeUnits);

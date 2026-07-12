@@ -5,7 +5,7 @@ import 'package:grassroots_networking/src/store/app_state.dart';
 import 'package:grassroots_networking/src/store/reducers.dart';
 import 'package:grassroots_networking/src/store/peers_actions.dart';
 import 'package:grassroots_networking/src/store/messages_actions.dart';
-import 'package:grassroots_networking/src/store/friendships_actions.dart';
+import 'package:grassroots_networking/src/store/known_peers_actions.dart';
 import 'package:grassroots_networking/src/store/settings_actions.dart';
 import 'package:grassroots_networking/src/store/transports_actions.dart';
 import 'package:grassroots_networking/src/store/transports_state.dart';
@@ -36,7 +36,7 @@ void main() {
 
         // Other state sections remain unchanged
         expect(result.messages, equals(initial.messages));
-        expect(result.friendships, equals(initial.friendships));
+        expect(result.knownPeers, equals(initial.knownPeers));
         expect(result.settings, equals(initial.settings));
         expect(result.transports, equals(initial.transports));
       });
@@ -61,23 +61,20 @@ void main() {
 
         // Other state sections remain unchanged
         expect(result.peers, equals(initial.peers));
-        expect(result.friendships, equals(initial.friendships));
+        expect(result.knownPeers, equals(initial.knownPeers));
         expect(result.settings, equals(initial.settings));
         expect(result.transports, equals(initial.transports));
       });
 
-      test('FriendshipAction routes to friendshipsReducer', () {
+      test('KnownPeerAction routes to knownPeersReducer', () {
         const initial = AppState.initial;
-        final action = CreateFriendRequestAction(
-          peerPubkeyHex: 'abc123',
-          message: 'hi',
-        );
+        final action = KnownPeerPutAction('abc123');
 
         final result = appReducer(initial, action);
 
-        // The friendships state should have changed (pending request added)
-        expect(result.friendships, isNot(equals(initial.friendships)));
-        expect(result.friendships.friendships.containsKey('abc123'), isTrue);
+        // The known-peers state should have changed (key added)
+        expect(result.knownPeers, isNot(equals(initial.knownPeers)));
+        expect(result.knownPeers.isKnown('abc123'), isTrue);
 
         // Other state sections remain unchanged
         expect(result.peers, equals(initial.peers));
@@ -100,7 +97,7 @@ void main() {
         // Other state sections remain unchanged
         expect(result.peers, equals(initial.peers));
         expect(result.messages, equals(initial.messages));
-        expect(result.friendships, equals(initial.friendships));
+        expect(result.knownPeers, equals(initial.knownPeers));
         expect(result.transports, equals(initial.transports));
       });
 
@@ -118,7 +115,7 @@ void main() {
         // Other state sections remain unchanged
         expect(result.peers, equals(initial.peers));
         expect(result.messages, equals(initial.messages));
-        expect(result.friendships, equals(initial.friendships));
+        expect(result.knownPeers, equals(initial.knownPeers));
         expect(result.settings, equals(initial.settings));
       });
     });
@@ -314,7 +311,7 @@ void main() {
     // =========================================================
     group('actions preserve unrelated state sections', () {
       test(
-        'BleTransportStateChangedAction preserves peers, messages, friendships, settings',
+        'BleTransportStateChangedAction preserves peers, messages, known peers, settings',
         () {
           final now = DateTime.now();
           final stateWithData = AppState(
@@ -342,9 +339,9 @@ void main() {
           expect(result.peers, equals(stateWithData.peers));
           expect(result.peers.discoveredBlePeers.containsKey('dev1'), isTrue);
 
-          // Messages, friendships, settings preserved
+          // Messages, known peers, settings preserved
           expect(result.messages, equals(stateWithData.messages));
-          expect(result.friendships, equals(stateWithData.friendships));
+          expect(result.knownPeers, equals(stateWithData.knownPeers));
           expect(result.settings, equals(stateWithData.settings));
         },
       );
@@ -363,7 +360,7 @@ void main() {
         // Everything else preserved
         expect(result.transports, equals(state.transports));
         expect(result.messages, equals(state.messages));
-        expect(result.friendships, equals(state.friendships));
+        expect(result.knownPeers, equals(state.knownPeers));
         expect(result.settings, equals(state.settings));
       });
     });

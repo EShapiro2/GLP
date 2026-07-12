@@ -33,7 +33,6 @@ void main() {
       state = peersReducer(state, BleDeviceConnectedAction(pathId));
       state = peersReducer(state, PeerAnnounceReceivedAction(
         publicKey: pk,
-        nickname: 'Alice',
         protocolVersion: 1,
         rssi: -55,
         bleCentralDeviceId: pathId,
@@ -55,7 +54,6 @@ void main() {
       var state = PeersState.initial;
       state = peersReducer(state, PeerAnnounceReceivedAction(
         publicKey: pk,
-        nickname: 'Bob',
         protocolVersion: 1,
         rssi: -50,
         blePeripheralDeviceId: pathId,
@@ -79,7 +77,6 @@ void main() {
       aView = peersReducer(aView, BleDeviceConnectedAction(aPath));
       aView = peersReducer(aView, PeerAnnounceReceivedAction(
         publicKey: pubkey(20),
-        nickname: 'B',
         protocolVersion: 1,
         rssi: -55,
         bleCentralDeviceId: aPath,
@@ -90,7 +87,6 @@ void main() {
       const bPath = 'peripheral:A-MAC';
       bView = peersReducer(bView, PeerAnnounceReceivedAction(
         publicKey: pubkey(10),
-        nickname: 'A',
         protocolVersion: 1,
         rssi: -55,
         blePeripheralDeviceId: bPath,
@@ -111,7 +107,6 @@ void main() {
       // Establish a peer with both a central and peripheral path.
       state = peersReducer(state, PeerAnnounceReceivedAction(
         publicKey: pk,
-        nickname: 'Carol',
         protocolVersion: 1,
         rssi: -50,
         bleCentralDeviceId: 'central:cmac',
@@ -138,7 +133,6 @@ void main() {
       var state = PeersState.initial;
       state = peersReducer(state, PeerAnnounceReceivedAction(
         publicKey: pk,
-        nickname: 'Dave',
         protocolVersion: 1,
         rssi: -50,
         bleCentralDeviceId: 'central:dmac',
@@ -153,23 +147,24 @@ void main() {
       expect(peer.connectionState, PeerConnectionState.disconnected);
     });
 
-    test('StalePeersRemovedAction does NOT mutate connectionState of friends',
-        () {
+    test(
+        'StalePeersRemovedAction does NOT mutate connectionState of '
+        'protected peers', () {
       final pk = pubkey(5);
       final ancient = DateTime.now().subtract(const Duration(hours: 1));
       var state = PeersState(peers: {
         pubkeyHex(pk): PeerState(
           publicKey: pk,
-          nickname: 'Eve',
           connectionState: PeerConnectionState.connected,
-          isFriend: true,
           lastSeen: ancient,
           bleCentralDeviceId: 'central:emac',
         ),
       });
 
-      state = peersReducer(state,
-          StalePeersRemovedAction(const Duration(seconds: 30)));
+      state = peersReducer(
+          state,
+          StalePeersRemovedAction(const Duration(seconds: 30),
+              protectedPubkeyHexes: {pubkeyHex(pk)}));
 
       final peer = state.peers[pubkeyHex(pk)]!;
       // connectionState is unchanged — only plugin events / UDP events
@@ -179,16 +174,14 @@ void main() {
     });
 
     test(
-        'StalePeersRemovedAction removes non-friend peers when stale, but '
+        'StalePeersRemovedAction removes unprotected peers when stale, but '
         'never mutates their connectionState (avoids confusing UI)', () {
       final pk = pubkey(6);
       final ancient = DateTime.now().subtract(const Duration(hours: 1));
       var state = PeersState(peers: {
         pubkeyHex(pk): PeerState(
           publicKey: pk,
-          nickname: 'Frank',
           connectionState: PeerConnectionState.connected,
-          isFriend: false,
           lastSeen: ancient,
         ),
       });

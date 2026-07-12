@@ -7,7 +7,6 @@ import '../protocol/protocol_handler.dart';
 import '../store/app_state.dart';
 import '../store/peers_actions.dart';
 import '../store/peers_state.dart';
-import '../transport/address_utils.dart';
 import 'package:flutter/foundation.dart';
 
 /// Routes incoming packets from all transports to the appropriate handlers.
@@ -311,17 +310,9 @@ class MessageRouter {
 
     final isNew = _peersState.getPeerByPubkey(pubkey) == null;
 
-    // Use the address from the ANNOUNCE payload only.
-    // udpPeerId is the sender's hex pubkey, NOT an ip:port address —
-    // using it as a fallback would corrupt the peer's stored udpAddress
-    // and clear their well-connected status.
-    final udpAddress = _normalizeUdpAddress(data.udpAddress);
-    final linkLocalAddress = _normalizeLinkLocalAddress(data.linkLocalAddress);
-    final udpAddressCandidates = _normalizeUdpAddressCandidates([
-      ...data.addressCandidates,
-      udpAddress,
-      linkLocalAddress,
-    ]);
+    // ANNOUNCE is identity beacon and heartbeat only (spec §ANNOUNCE and
+    // Liveness): it carries no addresses. Peer addresses reach the layer via
+    // putPeerAddress, fed by GLP.
 
     // Set the correct BLE device ID field based on role
     String? centralId;
@@ -336,15 +327,11 @@ class MessageRouter {
 
     store.dispatch(PeerAnnounceReceivedAction(
       publicKey: pubkey,
-      nickname: data.nickname,
       protocolVersion: data.protocolVersion,
       rssi: effectiveRssi,
       transport: transport,
       bleCentralDeviceId: centralId,
       blePeripheralDeviceId: peripheralId,
-      udpAddress: udpAddress,
-      linkLocalAddress: linkLocalAddress,
-      udpAddressCandidates: udpAddressCandidates,
     ));
 
     if (resolvedBleDeviceId != null && resolvedBleRole != null) {
@@ -356,10 +343,8 @@ class MessageRouter {
     }
 
     debugPrint(
-        'Peer ${isNew ? "connected" : "updated"}: ${data.nickname} via ${transport.name}'
-        '${data.udpAddress != null ? " addr=${data.udpAddress}" : ""}');
-
-    // debugPrint('Peer announced!');
+        'Peer ${isNew ? "connected" : "updated"}: '
+        '${data.pubkeyHex.substring(0, 8)}... via ${transport.name}');
 
     onPeerAnnounced?.call(data, transport, isNew: isNew, udpPeerId: udpPeerId);
   }
@@ -488,42 +473,6 @@ class MessageRouter {
 
   static String _pubkeyToHex(Uint8List pubkey) =>
       pubkey.map((b) => b.toRadixString(16).padLeft(2, '0')).join();
-
-  String? _normalizeUdpAddress(String? udpAddress) {
-    if (udpAddress == null || udpAddress.isEmpty) return null;
-
-    final parsed = parseAddressString(udpAddress);
-    if (parsed != null) return parsed.toAddressString();
-
-    debugPrint('Ignoring malformed UDP address from ANNOUNCE: $udpAddress');
-    return null;
-  }
-
-  Set<String> _normalizeUdpAddressCandidates(Iterable<String?> addresses) {
-    final normalized = <String>{};
-    for (final address in addresses) {
-      final parsed = _normalizeUdpAddress(address);
-      if (parsed != null) {
-        normalized.add(parsed);
-      }
-    }
-    return normalized;
-  }
-
-  String? _normalizeLinkLocalAddress(String? udpAddress) {
-    final normalized = _normalizeUdpAddress(udpAddress);
-    if (normalized == null) return null;
-
-    final parsed = parseIpv6AddressString(normalized);
-    if (parsed == null) return null;
-    if (!parsed.ip.isLinkLocal) {
-      debugPrint(
-          'Ignoring non-link-local address in ANNOUNCE link-local field: '
-          '$udpAddress');
-      return null;
-    }
-    return parsed.toAddressString();
-  }
 
   // ===== Deduplication API =====
 

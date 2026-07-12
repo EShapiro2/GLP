@@ -88,14 +88,12 @@ class SignalingHandler {
     final senderHex = data.pubkeyHex;
 
     // Register the peer as verified (they sent a valid signed ANNOUNCE)
-    peerTable.addVerified(senderHex, nickname: data.nickname);
+    peerTable.addVerified(senderHex);
 
-    // Update peer table with ANNOUNCE data
+    // Refresh the peer's last-seen time
     peerTable.upsert(
       publicKey: data.publicKey,
-      nickname: data.nickname,
       pubkeyHex: senderHex,
-      udpAddress: data.udpAddress,
     );
 
     // Reflect observed address back to the peer
@@ -123,8 +121,7 @@ class SignalingHandler {
       return;
     }
 
-    final senderName = peerTable.lookupVerified(senderHex)?.nickname ??
-        senderHex.substring(0, 8);
+    final senderName = senderHex.substring(0, 8);
     _log('Signaling from $senderName: ${msg.runtimeType}');
 
     switch (msg) {
@@ -157,8 +154,6 @@ class SignalingHandler {
         _log('Ignoring PunchInitiate (server is well-connected)');
       case AddrReflectMessage():
         _log('Ignoring AddrReflect (server knows its own address)');
-      case RvListMessage():
-        _log('Ignoring RvList (server is not part of the social graph)');
       case RegisterInviteMessage():
         _handleRegisterInvite(senderPubkey, senderHex, msg);
       case RedeemInviteMessage():
@@ -348,10 +343,8 @@ class SignalingHandler {
     _pruneExpiredPending(now);
     _pruneRecentPunchCoordinations(now);
 
-    final senderName = peerTable.lookupVerified(senderHex)?.nickname ??
-        senderHex.substring(0, 8);
-    final targetName = peerTable.lookupVerified(targetHex)?.nickname ??
-        targetHex.substring(0, 8);
+    final senderName = senderHex.substring(0, 8);
+    final targetName = targetHex.substring(0, 8);
 
     // Drop duplicate coordination attempts inside the cooldown window —
     // both sides may keep retrying while the punch is still in flight.

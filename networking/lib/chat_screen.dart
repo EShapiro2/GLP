@@ -71,11 +71,30 @@ class _ChatScreenState extends State<ChatScreen> {
   String get _peerHex => ChatMessage.pubkeyToHex(widget.peer.publicKey);
   String get _myHex => ChatMessage.pubkeyToHex(widget.myPubkey);
 
-  FriendshipState? get _friendship =>
-      widget.store.state.friendships.getFriendship(_peerHex);
-  bool get _isFriend => _friendship?.isAccepted ?? false;
-  bool get _hasPendingIncoming => _friendship?.isPendingIncoming ?? false;
-  bool get _hasPendingOutgoing => _friendship?.isPendingOutgoing ?? false;
+  /// Whether the peer is a contact — a key the app supplied to the layer's
+  /// known set. Request state is derived from the message log plus the known
+  /// set; no friendship records exist anywhere.
+  bool get _isFriend => widget.store.state.knownPeers.isKnown(_peerHex);
+
+  ChatMessageState? get _lastRequestStatusMessage {
+    final messages = widget.store.state.messages.getConversation(_peerHex);
+    for (final m in messages.reversed) {
+      if (m.isFriendshipMessage ||
+          m.messageType == ChatMessageType.friendRequestDeclined) {
+        return m;
+      }
+    }
+    return null;
+  }
+
+  bool get _hasPendingIncoming =>
+      !_isFriend &&
+      _lastRequestStatusMessage?.messageType ==
+          ChatMessageType.friendRequestReceived;
+  bool get _hasPendingOutgoing =>
+      !_isFriend &&
+      _lastRequestStatusMessage?.messageType ==
+          ChatMessageType.friendRequestSent;
 
   @override
   void initState() {
@@ -538,9 +557,7 @@ class _ChatScreenState extends State<ChatScreen> {
           children: [
             Expanded(
               child: Text(
-                widget.peer.nickname.isNotEmpty
-                    ? widget.peer.nickname
-                    : 'Peer ${_peerHex.substring(0, 8)}...',
+                'Peer ${_peerHex.substring(0, 8)}...',
                 overflow: TextOverflow.ellipsis,
               ),
             ),
@@ -716,8 +733,15 @@ class _ChatScreenState extends State<ChatScreen> {
           ),
           TextButton(
             onPressed: () {
-              // Decline
-              widget.store.dispatch(DeclineFriendRequestAction(_peerHex));
+              // Decline: a local marker message supersedes the pending
+              // request in the derived state; nothing is sent to the peer.
+              widget.store.dispatch(SaveChatMessageAction(
+                senderPubkeyHex: _myHex,
+                recipientPubkeyHex: _peerHex,
+                content: 'You declined the friend request',
+                isOutgoing: true,
+                messageType: ChatMessageType.friendRequestDeclined.index,
+              ));
             },
             child: const Text('Decline'),
           ),
@@ -800,14 +824,8 @@ class _ChatScreenState extends State<ChatScreen> {
   void _showPeerInfo() {
     // Refresh from store so the dialog reflects the latest udpAddress /
     // connection state, not just the snapshot widget.peer was built with.
-    // RV-list lives on the friendship record (persisted, friendship-scoped).
     final peer =
         widget.store.state.peers.getPeerByPubkeyHex(_peerHex) ?? widget.peer;
-    final friendship = widget.store.state.friendships.getFriendship(_peerHex);
-    final knownRvServers =
-        friendship?.knownRvServers ?? const <String, String>{};
-    final rvEntries = knownRvServers.entries.toList()
-      ..sort((a, b) => a.key.compareTo(b.key));
 
     showDialog(
       context: context,
@@ -832,22 +850,6 @@ class _ChatScreenState extends State<ChatScreen> {
                 const SizedBox(height: 8),
                 _buildInfoRow('Friendship', 'Friends ✓'),
               ],
-              const SizedBox(height: 16),
-              Text(
-                'Rendezvous Servers',
-                style: Theme.of(context).textTheme.titleSmall,
-              ),
-              const SizedBox(height: 4),
-              if (rvEntries.isEmpty)
-                const Text(
-                  'None advertised by this peer yet.',
-                  style: TextStyle(color: Colors.grey, fontSize: 12),
-                )
-              else
-                ...rvEntries.map((entry) => _buildRvServerRow(
-                      address: entry.value,
-                      pubkeyHex: entry.key,
-                    )),
             ],
           ),
         ),
@@ -864,77 +866,6 @@ class _ChatScreenState extends State<ChatScreen> {
               );
             },
             child: const Text('Copy Key'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildRvServerRow({
-    required String address,
-    required String pubkeyHex,
-  }) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              const SizedBox(
-                width: 80,
-                child: Text('Address:',
-                    style: TextStyle(color: Colors.grey, fontSize: 12)),
-              ),
-              Expanded(
-                child: Text(
-                  address,
-                  style: const TextStyle(fontFamily: 'monospace', fontSize: 12),
-                ),
-              ),
-              IconButton(
-                icon: const Icon(Icons.copy, size: 16),
-                tooltip: 'Copy address',
-                visualDensity: VisualDensity.compact,
-                padding: EdgeInsets.zero,
-                constraints: const BoxConstraints(),
-                onPressed: () {
-                  Clipboard.setData(ClipboardData(text: address));
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Address copied: $address')),
-                  );
-                },
-              ),
-            ],
-          ),
-          Row(
-            children: [
-              const SizedBox(
-                width: 80,
-                child: Text('Pubkey:',
-                    style: TextStyle(color: Colors.grey, fontSize: 12)),
-              ),
-              Expanded(
-                child: Text(
-                  pubkeyHex,
-                  style: const TextStyle(fontFamily: 'monospace', fontSize: 11),
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-              IconButton(
-                icon: const Icon(Icons.copy, size: 16),
-                tooltip: 'Copy pubkey',
-                visualDensity: VisualDensity.compact,
-                padding: EdgeInsets.zero,
-                constraints: const BoxConstraints(),
-                onPressed: () {
-                  Clipboard.setData(ClipboardData(text: pubkeyHex));
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Rendezvous pubkey copied')),
-                  );
-                },
-              ),
-            ],
           ),
         ],
       ),

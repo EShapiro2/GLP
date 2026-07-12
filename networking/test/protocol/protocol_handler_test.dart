@@ -33,18 +33,12 @@ void main() {
     });
 
     group('createAnnouncePayload', () {
-      test('encodes public key, version, and nickname correctly', () {
+      test('encodes exactly pubkey + version + signature', () {
         final payload = handler.createAnnouncePayload();
 
-        // Verify payload structure (record + trailing signature)
-        expect(
-            payload.length,
-            greaterThanOrEqualTo(32 +
-                2 +
-                1 +
-                'TestUser'.length +
-                2 +
-                ProtocolHandler.announceSignatureLength));
+        // The irreducible record (spec §ANNOUNCE and Liveness):
+        // pubkey(32) + version(2) + signature(64).
+        expect(payload.length, equals(announcePayloadLength));
 
         // Public key (first 32 bytes)
         final pubkeyFromPayload = payload.sublist(0, 32);
@@ -55,91 +49,20 @@ void main() {
             ByteData.view(payload.buffer, payload.offsetInBytes + 32, 2);
         final version = versionData.getUint16(0, Endian.big);
         expect(version, equals(ProtocolHandler.protocolVersion));
-
-        // Nickname length and nickname
-        final nickLen = payload[34];
-        expect(nickLen, equals('TestUser'.length));
-        final nickname =
-            String.fromCharCodes(payload.sublist(35, 35 + nickLen));
-        expect(nickname, equals('TestUser'));
       });
 
-      test('creates payload without candidates when not provided', () {
-        final payload = handler.createAnnouncePayload();
-
-        // Candidate count should be 0 after the nickname.
-        const offset = 32 + 2 + 1 + 'TestUser'.length;
-        final candidateCountData =
-            ByteData.view(payload.buffer, payload.offsetInBytes + offset, 2);
-        final candidateCount = candidateCountData.getUint16(0, Endian.big);
-        expect(candidateCount, equals(0));
-      });
-
-      test('includes UDP address as a candidate when provided', () {
-        const testAddress = '[::1]:4001';
-        final payload = handler.createAnnouncePayload(address: testAddress);
-        final decoded = handler.decodeAnnounce(payload);
-
-        expect(decoded.udpAddress, equals(testAddress));
-        expect(decoded.addressCandidates, equals({testAddress}));
-      });
-
-      test('handles empty nickname', () async {
+      test('carries no nickname regardless of the identity nickname', () async {
         final algorithm = Ed25519();
         final keyPair = await algorithm.newKeyPair();
-        final emptyNickIdentity = await GrassrootsIdentity.create(
+        final namedIdentity = await GrassrootsIdentity.create(
           keyPair: keyPair,
-          nickname: '',
+          nickname: 'Zoë 🌱🚀 名字',
         );
-        final emptyHandler =
-            ProtocolHandler(identity: emptyNickIdentity, sodium: sodium);
+        final namedHandler =
+            ProtocolHandler(identity: namedIdentity, sodium: sodium);
 
-        final payload = emptyHandler.createAnnouncePayload();
-
-        // Should have valid structure with 0-length nickname.
-        // pubkey + version + nickLen(0) + candidateCount(0) + signature
-        expect(
-            payload.length,
-            equals(
-                32 + 2 + 1 + 2 + ProtocolHandler.announceSignatureLength));
-        expect(payload[34], equals(0)); // nickname length = 0
-      });
-
-      test('includes UDP address candidates when provided', () {
-        final payload = handler.createAnnouncePayload(
-          address: '[2606:4700::1]:5000',
-          addressCandidates: const {
-            '[2606:4700::1]:5000',
-            '198.51.100.7:5001',
-          },
-        );
-        final decoded = handler.decodeAnnounce(payload);
-
-        expect(
-          decoded.addressCandidates,
-          containsAll(const {
-            '[2606:4700::1]:5000',
-            '198.51.100.7:5001',
-          }),
-        );
-      });
-
-      test('round-trips a non-ASCII / emoji nickname as UTF-8', () async {
-        final keyPair = await Ed25519().newKeyPair();
-        const fancyNick = 'Zoë 🌱🚀 名字';
-        final fancyIdentity = await GrassrootsIdentity.create(
-          keyPair: keyPair,
-          nickname: fancyNick,
-        );
-        final fancyHandler =
-            ProtocolHandler(identity: fancyIdentity, sodium: sodium);
-
-        final payload = fancyHandler.createAnnouncePayload();
-        final decoded = fancyHandler.decodeAnnounce(payload);
-
-        expect(decoded.nickname, equals(fancyNick));
-        // The 1-byte length prefix counts UTF-8 bytes, not characters.
-        expect(payload[34], equals(utf8.encode(fancyNick).length));
+        final payload = namedHandler.createAnnouncePayload();
+        expect(payload.length, equals(announcePayloadLength));
       });
     });
 
@@ -149,91 +72,26 @@ void main() {
         final decoded = handler.decodeAnnounce(payload);
 
         expect(decoded.publicKey, equals(testIdentity.publicKey));
-        expect(decoded.nickname, equals('TestUser'));
         expect(decoded.protocolVersion,
             equals(ProtocolHandler.protocolVersion));
-        expect(decoded.udpAddress, isNull);
-        expect(decoded.addressCandidates, isEmpty);
       });
 
-      test('decodes announce with UDP address', () {
-        const testAddress = '[2001:db8::64]:5000';
-        final payload = handler.createAnnouncePayload(address: testAddress);
-        final decoded = handler.decodeAnnounce(payload);
+      test('throws on a payload longer than the fixed record', () {
+        final payload = handler.createAnnouncePayload();
+        final extended = Uint8List.fromList([...payload, 0x00]);
 
-        expect(decoded.publicKey, equals(testIdentity.publicKey));
-        expect(decoded.nickname, equals('TestUser'));
-        expect(decoded.protocolVersion,
-            equals(ProtocolHandler.protocolVersion));
-        expect(decoded.udpAddress, equals(testAddress));
-        expect(decoded.addressCandidates, contains(testAddress));
-      });
-
-      test('throws when candidate set is missing', () {
-        final nicknameBytes = utf8.encode('MalformedPeer');
-        final buffer = ByteData(32 + 2 + 1 + nicknameBytes.length);
-        var offset = 0;
-
-        buffer.buffer
-            .asUint8List()
-            .setRange(offset, offset + 32, testIdentity.publicKey);
-        offset += 32;
-
-        buffer.setUint16(offset, ProtocolHandler.protocolVersion, Endian.big);
-        offset += 2;
-
-        buffer.setUint8(offset++, nicknameBytes.length);
-        buffer.buffer
-            .asUint8List()
-            .setRange(offset, offset + nicknameBytes.length, nicknameBytes);
-
-        final payload = buffer.buffer.asUint8List();
         expect(
-          () => handler.decodeAnnounce(payload),
+          () => handler.decodeAnnounce(extended),
           throwsA(isA<FormatException>()),
         );
       });
 
-      test('handles empty nickname in payload', () {
-        // pubkey(32) + version(2) + nickLen(1) + candidateCount(2)
-        final buffer = ByteData(32 + 2 + 1 + 2);
-        var offset = 0;
-
-        // Public key
-        buffer.buffer
-            .asUint8List()
-            .setRange(offset, offset + 32, testIdentity.publicKey);
-        offset += 32;
-
-        // Version
-        buffer.setUint16(offset, ProtocolHandler.protocolVersion, Endian.big);
-        offset += 2;
-
-        // Nickname length = 0
-        buffer.setUint8(offset++, 0);
-
-        // Candidate count = 0
-        buffer.setUint16(offset, 0, Endian.big);
-
-        // Self-sign the record so it verifies against the carried pubkey.
-        final record = buffer.buffer.asUint8List();
-        final payload =
-            Uint8List.fromList([...record, ...handler.signBytes(record)]);
-        final decoded = handler.decodeAnnounce(payload);
-
-        expect(decoded.nickname, equals(''));
-        expect(decoded.udpAddress, isNull);
-        expect(decoded.addressCandidates, isEmpty);
-      });
-
       test('throws when a signed payload byte is tampered', () {
-        final payload = handler.createAnnouncePayload(
-          address: '[2001:db8::7]:4001',
-        );
+        final payload = handler.createAnnouncePayload();
 
-        // Flip a bit inside the nickname — structure still parses, but the
-        // trailing signature no longer covers the bytes.
-        payload[36] ^= 0xFF;
+        // Flip a bit inside the version field — structure still parses, but
+        // the trailing signature no longer covers the bytes.
+        payload[33] ^= 0xFF;
 
         expect(
           () => handler.decodeAnnounce(payload),
@@ -448,22 +306,18 @@ void main() {
 
     group('round-trip encoding/decoding', () {
       test('announce payload round-trip', () {
-        final originalPayload = handler.createAnnouncePayload(
-          address: '[2001:db8::a]:8000',
-        );
+        final originalPayload = handler.createAnnouncePayload();
         final decoded = handler.decodeAnnounce(originalPayload);
 
         // Re-encode with decoded data
         final reEncodedIdentity = GrassrootsIdentity.fromMap({
           'publicKey': decoded.publicKey,
           'privateKey': testIdentity.privateKey,
-          'nickname': decoded.nickname,
+          'nickname': 'TestUser',
         });
         final reEncodedHandler =
             ProtocolHandler(identity: reEncodedIdentity, sodium: sodium);
-        final reEncodedPayload = reEncodedHandler.createAnnouncePayload(
-          address: decoded.udpAddress,
-        );
+        final reEncodedPayload = reEncodedHandler.createAnnouncePayload();
 
         expect(reEncodedPayload, equals(originalPayload));
       });

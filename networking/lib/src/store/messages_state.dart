@@ -22,6 +22,9 @@ enum ChatMessageType {
   /// "1-time view" picture if `viewOnce` is true; the recipient deletes
   /// the file after viewing, the sender deletes when delivery confirms.
   picture,
+
+  /// Friend request declined by us (local marker, never sent).
+  friendRequestDeclined,
 }
 
 /// Record of an outgoing message with delivery status

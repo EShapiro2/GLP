@@ -156,19 +156,16 @@ void main() {
         peers: [
           PeerState(
             publicKey: stalePubkey,
-            nickname: 'Stale',
             lastSeen: now,
             lastUdpSeen: now.subtract(const Duration(seconds: 31)),
           ),
           PeerState(
             publicKey: freshPubkey,
-            nickname: 'Fresh',
             lastSeen: now,
             lastUdpSeen: now.subtract(const Duration(seconds: 5)),
           ),
           PeerState(
             publicKey: bleOnlyPubkey,
-            nickname: 'NearbyOnly',
             lastSeen: now,
           ),
         ],
@@ -206,26 +203,21 @@ void main() {
         peers: [
           PeerState(
             publicKey: staleFriend,
-            nickname: 'StaleFriend',
-            isFriend: true,
             bleCentralDeviceId: 'central:friend',
             lastBleSeen: now.subtract(const Duration(seconds: 31)),
           ),
           PeerState(
             publicKey: staleStranger,
-            nickname: 'StaleStranger',
             blePeripheralDeviceId: 'peripheral:stranger',
             lastBleSeen: now.subtract(const Duration(seconds: 60)),
           ),
           PeerState(
             publicKey: freshPeer,
-            nickname: 'Fresh',
             bleCentralDeviceId: 'central:fresh',
             lastBleSeen: now.subtract(const Duration(seconds: 5)),
           ),
           PeerState(
             publicKey: udpOnly,
-            nickname: 'UdpOnly',
             udpAddress: '[2001:db8::1]:4001',
             // No BLE attachment, no lastBleSeen — must not be flagged.
           ),
@@ -247,7 +239,6 @@ void main() {
         peers: [
           PeerState(
             publicKey: neverSeenButAttached,
-            nickname: 'NewAttachment',
             bleCentralDeviceId: 'central:new',
             // lastBleSeen left null — the very next ANNOUNCE/RSSI tick
             // populates it. Sweeping this would prematurely clear a path

@@ -223,29 +223,28 @@ bool shouldColdStartAfterSettingsChange({
 }) =>
     autoStart && !wasStarted && !startedNow && (bleAvailable || udpAvailable);
 
-/// Actions that mirror an accepted friend's live UDP address (peers slice,
-/// which is not persisted) into the friendship record (which is), so the
-/// last-known address survives an app restart and can seed reconnection —
-/// the hydration path in `main.dart` re-associates it on startup.
+/// Actions that mirror a known peer's live UDP address (peers slice, which
+/// is not persisted) into the known-peers slice (which is), so the last-known
+/// address survives an app restart and can seed reconnection — the hydration
+/// path re-associates it on startup.
 ///
-/// One action per friend whose live address differs from the stored one.
-/// A friend with no live address produces nothing: the stored address is the
-/// peer's last known location and is never cleared unilaterally (CLAUDE.md
-/// "Peer Address Persistence" — only an explicit peer report may clear it).
+/// One action per known peer whose live address differs from the stored one.
+/// A peer with no live address produces nothing: the stored address is the
+/// peer's last known location and is never cleared unilaterally (only an
+/// explicit peer report may clear it).
 @visibleForTesting
-List<UpdateFriendshipUdpAddressAction> computeFriendUdpAddressMirrorActions({
-  required FriendshipsState friendships,
+List<KnownPeerAddressUpdatedAction> computeKnownPeerAddressMirrorActions({
+  required KnownPeersState knownPeers,
   required PeersState peers,
 }) {
-  final actions = <UpdateFriendshipUdpAddressAction>[];
-  for (final friendship in friendships.friends) {
-    final peer =
-        peers.getPeerByPubkeyHex(friendship.peerPubkeyHex.toLowerCase());
+  final actions = <KnownPeerAddressUpdatedAction>[];
+  for (final entry in knownPeers.known.entries) {
+    final peer = peers.getPeerByPubkeyHex(entry.key);
     final address = peer?.udpAddress;
     if (address == null || address.isEmpty) continue;
-    if (address == friendship.udpAddress) continue;
-    actions.add(UpdateFriendshipUdpAddressAction(
-      peerPubkeyHex: friendship.peerPubkeyHex,
+    if (address == entry.value) continue;
+    actions.add(KnownPeerAddressUpdatedAction(
+      pubkeyHex: entry.key,
       udpAddress: address,
     ));
   }
@@ -361,9 +360,6 @@ class GrassrootsNetwork {
   /// Last known settings state for detecting changes
   SettingsState? _lastSettingsState;
 
-  /// Last accepted friend set broadcast through FRIEND_LIST.
-  Set<String> _lastFriendPubkeyHexes = const {};
-
   /// Per-peer set of reachable transports from the previous store tick. Used
   /// by the reachability subscriber to detect, per medium, transports that
   /// came up (fire onPeerConnected) or went down (fire onPeerDisconnected). A
@@ -374,8 +370,8 @@ class GrassrootsNetwork {
 
   /// Pubkeys (hex) already surfaced via [onPeerDiscovered] this session.
   /// Discovery is the identity-learned event — the first accepted ANNOUNCE
-  /// carrying a peer's public key + nickname — which precedes the Noise session
-  /// and therefore [onPeerConnected]. Fired once per identity; a peer going out
+  /// carrying a peer's public key — which precedes the Noise session and
+  /// therefore [onPeerConnected]. Fired once per identity; a peer going out
   /// of range and returning is a re-*connect*, not a re-discover.
   final Set<String> _discoveredPubkeyHexes = {};
 
@@ -493,11 +489,6 @@ class GrassrootsNetwork {
   static const _autoUdpRetryBackoff = Duration(seconds: 15);
   static const _holePunchKeepAliveDuration = Duration(seconds: 3);
 
-  /// BLE device IDs that have already received a directed friend ANNOUNCE on
-  /// the current connection. Cleared on disconnect so reconnects get a fresh
-  /// addressed ANNOUNCE as soon as we know who is on the other side.
-  final Set<String> _bleFriendAnnounceSent = {};
-
   /// FIFO outbound message queues keyed by recipient public-key hex.
   ///
   /// These hold application payloads that could not be sent because no live
@@ -549,9 +540,8 @@ class GrassrootsNetwork {
 
   /// Spec: `docs/GLP_Networking_API/sections/api.tex` §onPeerDiscovered.
   /// Fires when a new peer's identity becomes known to us for the first
-  /// time (the first ANNOUNCE arrives carrying their pubkey and nickname).
-  /// Receives the peer's public key and nickname per the spec.
-  void Function(Uint8List publicKey, String nickname)? onPeerDiscovered;
+  /// time (the first ANNOUNCE arrives carrying their pubkey).
+  void Function(Uint8List publicKey)? onPeerDiscovered;
 
   /// Called when a peer becomes reachable over a given transport. Fires once
   /// per medium: a peer reachable over both BLE and IP fires twice (one BLE,
@@ -633,28 +623,22 @@ class GrassrootsNetwork {
         );
     _seedConnectivityState();
 
-    // Listen to Redux store changes for settings and friendship updates
+    // Listen to Redux store changes for settings updates
     _lastSettingsState = store.state.settings;
-    _lastFriendPubkeyHexes = store.state.peers.friendPubkeyHexes;
     _storeSubscription = store.onChange.listen((state) {
       final previousSettings = _lastSettingsState;
       if (previousSettings != null && state.settings != previousSettings) {
         _lastSettingsState = state.settings;
         _onTransportSettingsChanged(previousSettings, state.settings);
       }
-      final friendPubkeyHexes = state.peers.friendPubkeyHexes;
-      if (!setEquals(friendPubkeyHexes, _lastFriendPubkeyHexes)) {
-        _lastFriendPubkeyHexes = friendPubkeyHexes;
-        _broadcastFriendListToFriends(reason: 'friendship changed');
-      }
-      // Mirror friends' live UDP addresses into the persisted friendship
-      // records so the last-known address survives restart. Converges in one
-      // extra change notification: the mirror dispatch updates the friendship,
+      // Mirror known peers' live UDP addresses into the persisted known-peers
+      // slice so the last-known address survives restart. Converges in one
+      // extra change notification: the mirror dispatch updates the slice,
       // after which the addresses compare equal and no further action is
       // produced. (onChange is an async broadcast stream, so dispatching here
       // is not reentrant.)
-      for (final action in computeFriendUdpAddressMirrorActions(
-        friendships: state.friendships,
+      for (final action in computeKnownPeerAddressMirrorActions(
+        knownPeers: state.knownPeers,
         peers: state.peers,
       )) {
         store.dispatch(action);
@@ -727,6 +711,29 @@ class GrassrootsNetwork {
       publicKey: pubkey,
       address: parsed.toAddressString(),
     ));
+    // Supplying an address also supplies the key: the peer joins the known
+    // set (recognition + persisted dial book).
+    store.dispatch(KnownPeerAddressUpdatedAction(
+      pubkeyHex: _pubkeyToHex(pubkey),
+      udpAddress: parsed.toAddressString(),
+    ));
+  }
+
+  /// Supply a peer's public key to the layer without an address. The key
+  /// joins the known set: BLE Closed mode recognizes it (spec §Cold-Call
+  /// Trust Levels — the layer recognizes only keys GLP supplies, never a
+  /// friendship record), per-slot BLE scan filters cover it, and reconnection
+  /// sweeps include it once an address is known.
+  void putKnownPeer(Uint8List pubkey) {
+    store.dispatch(KnownPeerPutAction(_pubkeyToHex(pubkey)));
+    store.dispatch(PeerIdentityRegisteredAction(publicKey: pubkey));
+  }
+
+  /// Withdraw a peer's key from the known set. The layer stops recognizing
+  /// it in Closed mode, drops its scan filters and dial-book entry, and no
+  /// longer reconnects to it.
+  void removeKnownPeer(Uint8List pubkey) {
+    store.dispatch(KnownPeerRemovedAction(_pubkeyToHex(pubkey)));
   }
 
   /// Produce a signed, one-time, rendezvous-mediated invite link and register
@@ -895,11 +902,6 @@ class GrassrootsNetwork {
   /// Never returns a private LAN address. Returns null if public address
   /// discovery failed and we therefore have nothing to advertise.
   String? get udpAddress => _publicAddress;
-
-  /// UDP address candidates to share with trusted peers.
-  Set<String> get udpAddressCandidates => Set.unmodifiable(
-        _candidateAddresses(includeLinkLocal: _linkLocalAddress != null),
-      );
 
   /// Whether currently scanning for BLE devices
   bool get isScanning => _bleService?.isScanning ?? false;
@@ -1183,7 +1185,6 @@ class GrassrootsNetwork {
     _announceTimer = null;
     _scanTimer?.cancel();
     _scanTimer = null;
-    _bleFriendAnnounceSent.clear();
 
     if (_bleService != null) {
       try {
@@ -1526,7 +1527,7 @@ class GrassrootsNetwork {
 
         _lastRendezvousSuppressionLogKey.remove(configKey);
 
-        final announce = await _createSignedAnnounce(address: udpAddress);
+        final announce = await _createSignedAnnounce();
         if (await _udpService!.sendToPeer(rendezvous.pubkeyHex, announce)) {
           _resetRendezvousBackoff(configKey);
           debugPrint(
@@ -1662,11 +1663,6 @@ class GrassrootsNetwork {
     if (added.isNotEmpty && _udpService != null && _udpAvailable) {
       await _syncConfiguredRendezvous(configs: added, reason: 'settings-saved');
     }
-
-    // Friends rely on us to tell them which RV agents to contact when we
-    // disappear. Re-broadcast whenever the list changes.
-    debugPrint("Broadcasting RV list to friends");
-    _broadcastRvListToFriends();
   }
 
   void _seedConnectivityState() {
@@ -1735,11 +1731,8 @@ class GrassrootsNetwork {
   /// 1. Tear down the old UDP service (dead socket, dead connections)
   /// 2. Re-initialize with a new socket on the new interface
   /// 3. Re-discover public address (new IP from new network)
-  /// 4. Re-register with well-connected friends
+  /// 4. Re-register with the configured rendezvous servers
   /// 5. Re-connect to known peers
-  ///
-  /// Well-connected friends are reachable directly (public IP, no NAT),
-  /// so we can always reconnect to them without a third party.
   void _onConnectivityChanged(List<ConnectivityResult> results) {
     // Filter out irrelevant connection types like bluetooth
     // which just indicate a BLE device connected/disconnected, not an IP network change.
@@ -1820,7 +1813,7 @@ class GrassrootsNetwork {
 
     // Mark UDP peers as disconnected (connections are dead)
     for (final peer in _peersState.peersList) {
-      if (_udpCandidatesForPeer(peer).isNotEmpty) {
+      if (peer.udpAddress != null) {
         store.dispatch(PeerUdpDisconnectedAction(peer.publicKey));
       }
     }
@@ -1838,67 +1831,58 @@ class GrassrootsNetwork {
 
     await _waitForPublicUdpAddress();
 
-    await _reconnectUdpFriends(reason: 'connectivity-changed');
+    await _reconnectKnownPeers(reason: 'connectivity-changed');
   }
 
-  /// Walk every UDP-eligible friend and bring them back online.
-  /// Direct-dial known addresses; fan out RECONNECT to facilitators for
-  /// friends we couldn't reach directly. Idempotent — already-connected
-  /// friends are skipped by [_connectToFriendViaUdp] and by the second-pass
-  /// [getPeerIdForPubkey] guard.
-  Future<void> _reconnectUdpFriends({required String reason}) async {
+  /// Walk every known peer with a dial-book address and bring it back online.
+  /// Direct-dial known addresses; fan out RECONNECT to the configured
+  /// rendezvous servers for peers we couldn't reach directly. Idempotent —
+  /// already-connected peers are skipped by [_connectToPeerViaUdp] and by the
+  /// second-pass [getPeerIdForPubkey] guard. (Spec §Heartbeat: the heartbeat
+  /// tick drives reconnection attempts toward unreachable peers the layer has
+  /// addresses for; who those peers are is GLP's supply.)
+  Future<void> _reconnectKnownPeers({required String reason}) async {
     if (!_udpAvailable) return;
 
-    final udpFriends = _peersState.friends
-        .where((peer) => _udpCandidatesForPeer(peer).isNotEmpty)
-        .toList()
-      ..sort((a, b) {
-        if (a.isWellConnected == b.isWellConnected) return 0;
-        return a.isWellConnected ? -1 : 1;
-      });
-    if (udpFriends.isEmpty) return;
+    final dialBook = store.state.knownPeers.dialBook;
+    if (dialBook.isEmpty) return;
 
     debugPrint(
-      '[reconnect] Sweeping ${udpFriends.length} UDP friends ($reason)',
+      '[reconnect] Sweeping ${dialBook.length} known UDP peers ($reason)',
     );
 
-    for (final friend in udpFriends) {
-      final candidates = _udpCandidatesForPeer(friend);
-      final friendAddress = friend.udpAddress ??
-          (candidates.isNotEmpty ? candidates.first : null);
-      if (friendAddress == null) continue;
-      await _connectToFriendViaUdp(friend.pubkeyHex, friendAddress);
+    for (final entry in dialBook.entries) {
+      final peerAddress =
+          _peersState.getPeerByPubkeyHex(entry.key)?.udpAddress ?? entry.value;
+      await _connectToPeerViaUdp(entry.key, peerAddress);
     }
 
-    // Fan out RECONNECT for friends still unreachable. Rendezvous servers pair
-    // this with the friend's AVAILABLE; eligible friend mediators are selected
-    // through the friends-of-friends map and coordinate directly.
-    final facilitatorCount = store.state.peers.wellConnectedFriends.length +
-        _configuredRendezvousServers().length +
-        store.state.friendships.friendRvServers.length;
-    if (facilitatorCount == 0) return;
+    // Fan out RECONNECT for known peers still unreachable. Rendezvous servers
+    // pair this with the peer's AVAILABLE.
+    if (_configuredRendezvousServers().isEmpty) return;
 
-    for (final friend in udpFriends) {
-      if (_udpService?.getPeerIdForPubkey(friend.publicKey) != null) continue;
+    for (final pubkeyHex in dialBook.keys) {
+      final pubkey = _hexToBytes(pubkeyHex);
+      if (_udpService?.getPeerIdForPubkey(pubkey) != null) continue;
       debugPrint(
-        '[reconnect] Fanning out RECONNECT for ${friend.displayName} '
-        'after IP change',
+        '[reconnect] Fanning out RECONNECT for '
+        '${pubkeyHex.substring(0, 8)}... after IP change',
       );
       unawaited(
         _signalingService.fanOutReconnect(
-          friend.publicKey,
+          pubkey,
           initiatorPubkey: identity.publicKey,
         ),
       );
     }
   }
 
-  /// Public entry point for triggering a UDP friend-reconnection sweep.
+  /// Public entry point for triggering a known-peer UDP reconnection sweep.
   /// Chains on the transport update lock so it cannot overlap with a
   /// connectivity-driven or settings-driven restart.
-  Future<void> reconnectUdpFriends({required String reason}) {
+  Future<void> reconnectKnownPeers({required String reason}) {
     final previous = _transportUpdateLock ?? Future.value();
-    final next = previous.then((_) => _reconnectUdpFriends(reason: reason));
+    final next = previous.then((_) => _reconnectKnownPeers(reason: reason));
     _transportUpdateLock = next;
     return next;
   }
@@ -1974,7 +1958,7 @@ class GrassrootsNetwork {
       await _initializeUdp();
       if (wasStarted && _udpAvailable) {
         await _udpService!.start();
-        await _reconnectUdpFriends(reason: 'settings-enabled');
+        await _reconnectKnownPeers(reason: 'settings-enabled');
       }
     } else if (!_isUdpEnabledInSettings && _udpAvailable) {
       // UDP was disabled, dispose service and clean up
@@ -2028,7 +2012,7 @@ class GrassrootsNetwork {
       );
       await start();
       if (_udpAvailable) {
-        await _reconnectUdpFriends(reason: 'settings-enabled-cold-start');
+        await _reconnectKnownPeers(reason: 'settings-enabled-cold-start');
       }
     }
 
@@ -2036,19 +2020,6 @@ class GrassrootsNetwork {
       previousSettings: previousSettings,
       currentSettings: currentSettings,
     );
-  }
-
-  // ===== Identity =====
-
-  /// Update the user's nickname and broadcast to all peers
-  Future<void> updateNickname(String newNickname) async {
-    if (newNickname.isEmpty) return;
-
-    debugPrint('Updating nickname to: $newNickname');
-    identity.nickname = newNickname;
-
-    // Broadcast ANNOUNCE with new nickname to all connected peers
-    await _broadcastAnnounce();
   }
 
   /// Apply a debug change to which BLE roles this device runs.
@@ -2242,13 +2213,13 @@ class GrassrootsNetwork {
         }
       }
 
-      // No address — try discovery via well-connected friends
-      if (resolvedPeer.isFriend) {
+      // No address — try rendezvous-coordinated discovery
+      if (_isKnownPeerPubkey(recipientPubkey)) {
         debugPrint(
           '[send] No direct path to ${resolvedPeer.displayName}, '
-          'attempting discovery via well-connected friends...',
+          'attempting discovery via rendezvous servers...',
         );
-        final discovered = await _discoverPeerViaFriends(resolvedPeer);
+        final discovered = await _discoverPeerViaRendezvous(resolvedPeer);
         if (discovered) {
           // Re-read peer — discovery updated the address
           final freshPeer = _peersState.getPeerByPubkey(recipientPubkey);
@@ -2814,32 +2785,6 @@ class GrassrootsNetwork {
     return parsed?.toAddressString();
   }
 
-  String? _normalizeAnnouncedLinkLocalAddress(
-    String? udpAddress, {
-    required String context,
-  }) {
-    if (udpAddress == null || udpAddress.isEmpty) return null;
-
-    final parsed = parseIpv6AddressString(udpAddress);
-    if (parsed == null) {
-      debugPrint(
-        '[$context] Ignoring non-link-local IPv6 address in link-local '
-        'ANNOUNCE field: $udpAddress',
-      );
-      return null;
-    }
-
-    if (!parsed.ip.isLinkLocal) {
-      debugPrint(
-        '[$context] Ignoring non-link-local address in link-local '
-        'ANNOUNCE field: $udpAddress',
-      );
-      return null;
-    }
-
-    return parsed.toAddressString();
-  }
-
   String? _connectedBleDeviceIdForPeer(PeerState? peer) {
     if (peer == null || _bleService == null || !_bleAvailable) {
       return null;
@@ -2870,12 +2815,12 @@ class GrassrootsNetwork {
   static String _pubkeyToHex(Uint8List pubkey) =>
       pubkey.map((b) => b.toRadixString(16).padLeft(2, '0')).join();
 
-  bool _isAcceptedFriendPubkey(Uint8List pubkey) {
-    final hex = _pubkeyToHex(pubkey);
-    final peer = _peersState.getPeerByPubkeyHex(hex);
-    if (peer?.isFriend == true) return true;
-    return store.state.friendships.isFriend(hex);
-  }
+  /// Whether [pubkey] is in the known set — a key GLP supplied via the API
+  /// (putKnownPeer / putPeerAddress). This is the Closed-mode recognition
+  /// predicate (spec §Cold-Call Trust Levels: the layer recognizes only
+  /// already-known peers, never a friendship record).
+  bool _isKnownPeerPubkey(Uint8List pubkey) =>
+      store.state.knownPeers.isKnown(_pubkeyToHex(pubkey));
 
   /// Fired when a Noise XX session for [transport] with [pubkey] completes
   /// authentication. Consolidated reachability — and therefore
@@ -3028,14 +2973,16 @@ class GrassrootsNetwork {
     );
   }
 
+  /// The peer's dialable addresses: the single dial-book address (supplied
+  /// via putPeerAddress or observed on a live session), plus an optional
+  /// caller-provided fallback. ANNOUNCE carries no addresses (spec §ANNOUNCE
+  /// and Liveness), so there is no advertised candidate set.
   Set<String> _udpCandidatesForPeer(
     PeerState? peer, {
     String? fallbackAddress,
   }) =>
       normalizeAddressStrings([
-        peer?.linkLocalAddress,
         peer?.udpAddress,
-        if (peer != null) ...peer.udpAddressCandidates,
         fallbackAddress,
       ]);
 
@@ -3203,7 +3150,7 @@ class GrassrootsNetwork {
       _sustainHolePunchTraffic(peerHex, target, phase: 'initiator-connect'),
     );
 
-    final announce = await _createSignedAnnounce(address: udpAddress);
+    final announce = await _createSignedAnnounce();
     final connected = await _sendViaUdp(
       peerHex,
       target.toAddressString(),
@@ -3399,7 +3346,7 @@ class GrassrootsNetwork {
     if (allowBleAssistedFallback &&
         !isRendezvous &&
         peer != null &&
-        peer.isFriend &&
+        _isKnownPeerPubkey(peer.publicKey) &&
         _hasLiveBlePath(peer)) {
       debugPrint(
         '[udp-send] Trying direct BLE-assisted hole-punch to $peerShort...',
@@ -3410,15 +3357,13 @@ class GrassrootsNetwork {
     return false;
   }
 
-  /// Proactively establish a UDP connection to a friend.
-  ///
-  /// Called (fire-and-forget) when a friend's ANNOUNCE carries a UDP address
-  /// and we don't yet have a live UDP connection to them. This keeps both
-  /// transports active so disabling one doesn't lose the peer.
+  /// Proactively establish a UDP connection to a known peer at its dial-book
+  /// address. Called by the reconnection sweeps (heartbeat tick, connectivity
+  /// change, settings enable).
   ///
   /// Sends our own ANNOUNCE as the first message so the remote side learns
-  /// our identity and address on the new UDP connection.
-  Future<void> _connectToFriendViaUdp(
+  /// our identity on the new UDP connection.
+  Future<void> _connectToPeerViaUdp(
     String pubkeyHex,
     String udpAddress,
   ) async {
@@ -3453,28 +3398,7 @@ class GrassrootsNetwork {
     late final Future<void> task;
     task = () async {
       try {
-        final announce = await _createSignedAnnounce(address: this.udpAddress);
-
-        // Try link-local first when peer is BLE-nearby (same LAN).
-        // Link-local avoids AP client isolation and NAT issues.
-        final peer = _peersState.getPeerByPubkeyHex(pubkeyHex);
-        final llAddr = peer?.linkLocalAddress;
-        if (llAddr != null && _hasLiveBlePath(peer)) {
-          debugPrint(
-            '[auto-udp] Trying link-local $llAddr for '
-            '${pubkeyHex.substring(0, 8)}...',
-          );
-          final llSuccess = await _sendViaUdp(pubkeyHex, llAddr, announce);
-          if (llSuccess) {
-            debugPrint(
-              '[auto-udp] Connected via link-local to '
-              '${pubkeyHex.substring(0, 8)}',
-            );
-            _autoUdpRetryAfter.remove(pubkeyHex);
-            return;
-          }
-          debugPrint('[auto-udp] Link-local failed, trying global address...');
-        }
+        final announce = await _createSignedAnnounce();
 
         final success = await _sendViaUdp(
           pubkeyHex,
@@ -3488,10 +3412,11 @@ class GrassrootsNetwork {
           );
           _autoUdpRetryAfter.remove(pubkeyHex);
         } else {
-          // Direct connection failed (likely NAT/firewall). Try coordinated
-          // hole-punch via a well-connected friend if one is reachable.
+          // Direct connection failed (likely NAT/firewall). Try a direct
+          // BLE-assisted punch when a live control path exists, then
+          // rendezvous-coordinated discovery.
           final peer = _peersState.getPeerByPubkeyHex(pubkeyHex);
-          if (peer != null && peer.isFriend) {
+          if (peer != null && _isKnownPeerPubkey(peer.publicKey)) {
             if (_hasLiveBlePath(peer)) {
               final pair = _selectUdpCandidatePair(
                 _udpCandidatesForPeer(
@@ -3515,9 +3440,9 @@ class GrassrootsNetwork {
 
             debugPrint(
               '[auto-udp] Direct connect to '
-              '${pubkeyHex.substring(0, 8)} failed, trying hole-punch via friends...',
+              '${pubkeyHex.substring(0, 8)} failed, trying rendezvous discovery...',
             );
-            if (await _discoverPeerViaFriends(peer)) {
+            if (await _discoverPeerViaRendezvous(peer)) {
               _autoUdpRetryAfter.remove(pubkeyHex);
               return;
             }
@@ -3552,11 +3477,11 @@ class GrassrootsNetwork {
     }
   }
 
-  /// Ask a BLE-connected friend to start punching toward us, then punch locally.
+  /// Ask a BLE-connected peer to start punching toward us, then punch locally.
   ///
-  /// This is a direct friend-to-friend fallback for the case where we already
+  /// This is a direct peer-to-peer fallback for the case where we already
   /// have a control channel (usually BLE) to the target, but direct UDX to
-  /// their advertised UDP address timed out.
+  /// their dial-book UDP address timed out.
   Future<bool> _attemptDirectPunchWithPeer(
     PeerState peer,
     AddressCandidatePair candidatePair,
@@ -3760,58 +3685,32 @@ class GrassrootsNetwork {
     }
   }
 
-  /// Try to reach a peer through available rendezvous and FoF facilitators.
+  /// Try to reach a peer through the configured rendezvous servers.
   ///
-  /// Reconnected common friends receive explicit mediation requests. Public
-  /// rendezvous servers receive RECONNECT and match it against the peer's
-  /// AVAILABLE. We then wait for the coordinated punch to complete.
+  /// The servers receive RECONNECT and match it against the peer's AVAILABLE
+  /// (spec §Rendezvous Server). We then wait for the coordinated punch to
+  /// complete.
   ///
   /// Returns true if a UDP path to the peer was established.
-  Future<bool> _discoverPeerViaFriends(PeerState peer) async {
+  Future<bool> _discoverPeerViaRendezvous(PeerState peer) async {
     final pubkeyBytes = peer.publicKey;
     final pubkeyHex = peer.pubkeyHex;
     final name = peer.displayName;
-    final mediators = store.state.peers.mediatorsForFriend(pubkeyHex);
-    final directMediatorCount =
-        mediators.where((mediator) => !mediator.isWellConnected).length;
-    final trustedFriendCount = store.state.peers.wellConnectedFriends
-        .where(
-          (friend) =>
-              store.state.peers.friendsOfFriends[friend.pubkeyHex]?.contains(
-                pubkeyHex,
-              ) ==
-              true,
-        )
-        .length;
-    final rendezvousCount = _configuredRendezvousServers().length;
-    final facilitatorCount =
-        directMediatorCount + trustedFriendCount + rendezvousCount;
 
-    if (facilitatorCount == 0) {
-      debugPrint('[discover] No signaling facilitators available');
+    if (_configuredRendezvousServers().isEmpty) {
+      debugPrint('[discover] No rendezvous servers configured');
       return false;
     }
 
     _beginHolePunchAttempt(pubkeyHex);
 
-    var directMediatorSent = 0;
-    for (final mediator in mediators) {
-      if (mediator.isWellConnected) continue;
-      final ok = await _signalingService.requestFriendMediation(
-        mediatorPubkey: mediator.publicKey,
-        targetPubkey: pubkeyBytes,
-        initiatorPubkey: identity.publicKey,
-      );
-      if (ok) directMediatorSent++;
-    }
-
     final sent = await _signalingService.fanOutReconnect(
       pubkeyBytes,
       initiatorPubkey: identity.publicKey,
     );
-    if (sent == 0 && directMediatorSent == 0) {
-      debugPrint('[discover] Could not reach any facilitator for $name');
-      _failHolePunchAttempt(pubkeyHex, 'Could not reach any facilitator');
+    if (sent == 0) {
+      debugPrint('[discover] Could not reach any rendezvous server for $name');
+      _failHolePunchAttempt(pubkeyHex, 'Could not reach any rendezvous server');
       return false;
     }
 
@@ -3822,8 +3721,7 @@ class GrassrootsNetwork {
     }
 
     debugPrint(
-      '[discover] Mediation requested for $name '
-      '(${directMediatorSent + sent} facilitator(s)); '
+      '[discover] RECONNECT sent for $name ($sent server(s)); '
       'waiting for PUNCH_INITIATE (timeout: 15s)...',
     );
 
@@ -3847,93 +3745,54 @@ class GrassrootsNetwork {
 
   // ===== Internal setup =====
 
-  /// Periodically try to discover unreachable friends via rendezvous/FoF
-  /// facilitators.
+  /// Periodically try to discover unreachable known peers via the configured
+  /// rendezvous servers.
   ///
-  /// On each announce tick, find friends that we know about but can't currently
-  /// reach via any transport. Common reconnected friends are asked to mediate
-  /// directly. Configured rendezvous servers still use the bootstrap
-  /// RECONNECT/AVAILABLE match.
+  /// On each announce tick, find known peers that we can't currently reach
+  /// via any transport and send RECONNECT to the configured rendezvous
+  /// servers (the bootstrap RECONNECT/AVAILABLE match).
   ///
   /// Throttled: each peer is attempted at most once per [_discoveryRetryInterval].
-  void _discoverUnreachableFriends() {
-    // debugPrint("Discovering unreachable friends");
+  void _discoverUnreachableKnownPeers() {
     if (!_udpAvailable) {
-      // debugPrint("No UDP");
       return; // Need UDP to establish the connection
     }
 
-    final rendezvousCount = _configuredRendezvousServers().length;
+    if (_configuredRendezvousServers().isEmpty) return;
 
     final now = DateTime.now();
-    final friends = _peersState.friends;
 
-    // var len = friends.length;
-    // debugPrint("Have $len friends");
-
-    for (final friend in friends) {
-      // Skip friends we can already reach
-      if (_hasLiveBlePath(friend)) {
-        // debugPrint("Have live BLE path to friend");
-        continue;
-      }
-      if (_udpService?.getPeerIdForPubkey(friend.publicKey) != null) {
-        // debugPrint("Have peer Id for public key in udp service");
-        continue;
-      }
+    for (final pubkeyHex in store.state.knownPeers.knownPubkeyHexes) {
+      final peer = _peersState.getPeerByPubkeyHex(pubkeyHex);
+      if (peer == null) continue;
+      // Skip peers we can already reach
+      if (_hasLiveBlePath(peer)) continue;
+      if (_udpService?.getPeerIdForPubkey(peer.publicKey) != null) continue;
 
       // Skip if we attempted discovery recently
-      final lastAttempt = _lastDiscoveryAttempt[friend.pubkeyHex];
+      final lastAttempt = _lastDiscoveryAttempt[pubkeyHex];
       if (lastAttempt != null &&
           now.difference(lastAttempt) < _discoveryRetryInterval) {
-        // debugPrint("Skip because tried recently");
         continue;
       }
-
-      final mediators =
-          store.state.peers.mediatorsForFriend(friend.pubkeyHex).toList();
-      final directMediatorCount =
-          mediators.where((mediator) => !mediator.isWellConnected).length;
-      final wellConnectedCount = store.state.peers.wellConnectedFriends
-          .where(
-            (wc) =>
-                store.state.peers.friendsOfFriends[wc.pubkeyHex]?.contains(
-                  friend.pubkeyHex,
-                ) ==
-                true,
-          )
-          .length;
-      if (directMediatorCount == 0 &&
-          wellConnectedCount == 0 &&
-          rendezvousCount == 0) {
-        continue;
-      }
-
-      // Skip if this friend IS one of our well-connected friends (they're
-      // reachable — that's how we'd signal through them)
-      // if (wellConnected.any((wc) => wc.pubkeyHex == friend.pubkeyHex)) {
-      //   debugPrint("Skip because it's well connected");
-      //   continue;
-      // }
 
       debugPrint(
-        '[discover] Friend ${friend.displayName} is unreachable, '
-        'trying discovery via '
-        '${directMediatorCount + wellConnectedCount + rendezvousCount} '
-        'facilitator(s)...',
+        '[discover] Known peer ${peer.displayName} is unreachable, '
+        'trying rendezvous discovery...',
       );
-      _lastDiscoveryAttempt[friend.pubkeyHex] = now;
+      _lastDiscoveryAttempt[pubkeyHex] = now;
 
       // Fire-and-forget — don't block the announce tick
-      _discoverPeerViaFriends(friend).then((success) {
+      _discoverPeerViaRendezvous(peer).then((success) {
         if (success) {
           debugPrint(
-            '[discover] Successfully reached ${friend.displayName} via friends',
+            '[discover] Successfully reached ${peer.displayName} '
+            'via rendezvous',
           );
-          _lastDiscoveryAttempt.remove(friend.pubkeyHex);
+          _lastDiscoveryAttempt.remove(pubkeyHex);
         } else {
           debugPrint(
-            '[discover] Discovery failed for ${friend.displayName}, '
+            '[discover] Discovery failed for ${peer.displayName}, '
             'will retry in ${_discoveryRetryInterval.inSeconds}s',
           );
         }
@@ -4058,55 +3917,11 @@ class GrassrootsNetwork {
         _completeRendezvousResponseWaiters(pubkeyHex);
       }
 
-      // When we are well-connected and receive an ANNOUNCE from a friend
-      // with a UDP address, register it in our address table. This is used
-      // by the direct-punch path ([requestDirectPunch]) when we want a
-      // friend already reachable over BLE to start punching toward us.
-      //
-      // Only friends are registered.
-      //
-      // UDP: use the observed address (NAT-translated, most reliable).
-      // BLE: use the claimed address from the ANNOUNCE payload (no observed
-      //      address available over BLE, but it's the only option — and for
-      //      peers with public UDP reachability, the claimed address is correct).
-      final announcedCandidates = normalizeAddressStrings([
-        ...data.addressCandidates,
-        data.udpAddress,
-        data.linkLocalAddress,
-      ]);
-      if (store.state.transports.isWellConnected &&
-          announcedCandidates.isNotEmpty) {
-        final senderPeer = store.state.peers.getPeerByPubkeyHex(pubkeyHex);
-        if (senderPeer != null && senderPeer.isFriend) {
-          if (transport == PeerTransport.udp && _udpService != null) {
-            final remote = _udpService!.getRemoteAddress(pubkeyHex);
-            _signalingService.processAnnounceFromFriend(
-              data.publicKey,
-              claimedAddress: data.udpAddress,
-              claimedAddresses: announcedCandidates,
-              observedIp: remote?.ip.address,
-              observedPort: remote?.port,
-            );
-          } else if (transport == PeerTransport.bleDirect) {
-            _signalingService.processAnnounceFromFriend(
-              data.publicKey,
-              claimedAddress: data.udpAddress,
-              claimedAddresses: announcedCandidates,
-              // No observed address over BLE — claimed address only.
-            );
-          }
-        }
-      } else {
-        // debugPrint(
-        //     'Either we are not well connected, or peer has null udpAddress, this is expected');
-      }
-
-      if (transport == PeerTransport.bleDirect) {
-        final senderPeer = store.state.peers.getPeerByPubkeyHex(pubkeyHex);
-        if (senderPeer != null && senderPeer.isFriend) {
-          _sendFriendAnnounceToConnectedBlePaths(senderPeer);
-        }
-      }
+      // ANNOUNCE is identity beacon and heartbeat only (spec §ANNOUNCE and
+      // Liveness): it carries no addresses, so nothing is registered from it.
+      // Peer addresses reach the layer via putPeerAddress, fed by GLP;
+      // reconnection toward known peers is driven by the heartbeat tick over
+      // the dial book, not by announce contents.
 
       final announcedPeer = store.state.peers.getPeerByPubkeyHex(pubkeyHex);
       if (announcedPeer != null && !_isRendezvousPubkeyHex(pubkeyHex)) {
@@ -4117,54 +3932,8 @@ class GrassrootsNetwork {
         ));
       }
 
-      // Proactive UDP connect: when a friend's ANNOUNCE arrives with a UDP
-      // address (from any transport, including BLE), establish a UDP connection
-      // so both transports are active simultaneously. This ensures disabling
-      // BLE doesn't kill the peer — UDP keeps it alive.
-      //
-      // IMPORTANT: Only ONE side should initiate the connection to avoid
-      // simultaneous-open issues in UDX (two independent socket pairs that
-      // don't share streams, causing one-directional data flow). The device
-      // with the lexicographically smaller pubkey initiates.
-      if (announcedCandidates.isNotEmpty &&
-          _udpService != null &&
-          _udpAvailable) {
-        debugPrint('[auto-udp] proactive UDP connect to $pubkeyHex');
-        final senderPeer = store.state.peers.getPeerByPubkeyHex(pubkeyHex);
-        if (senderPeer != null &&
-            senderPeer.isFriend &&
-            _udpService!.getPeerIdForPubkey(data.publicKey) == null) {
-          debugPrint(
-            '[auto-udp] proactive UDP connect to $pubkeyHex who is actually ${senderPeer.nickname}',
-          );
-          // Deterministic initiator: the peer with the smaller pubkey hex
-          // initiates the connection. The other side waits for the incoming
-          // connection to arrive via the multiplexer.
-          final myPubkeyHex = identity.publicKey
-              .map((b) => b.toRadixString(16).padLeft(2, '0'))
-              .join();
-          final iAmInitiator = myPubkeyHex.compareTo(pubkeyHex) < 0;
-
-          if (iAmInitiator) {
-            debugPrint(
-              '[auto-udp] Friend ${data.nickname} has UDP address '
-              '$announcedCandidates, connecting proactively (I am initiator)...',
-            );
-            _connectToFriendViaUdp(
-              pubkeyHex,
-              data.udpAddress ?? announcedCandidates.first,
-            );
-          } else {
-            debugPrint(
-              '[auto-udp] Friend ${data.nickname} has UDP address '
-              '$announcedCandidates, waiting for them to connect (they are initiator)',
-            );
-          }
-        }
-      }
-
-      // onPeerDiscovered is the identity-learned event: a peer's public key and
-      // nickname arrive in the signed ANNOUNCE, which is sent in the clear and
+      // onPeerDiscovered is the identity-learned event: a peer's public key
+      // arrives in the signed ANNOUNCE, which is sent in the clear and
       // precedes the Noise session. Because onPeerConnected is gated on an
       // authenticated Noise session (see processReachabilityTransitions),
       // discovery strictly precedes connection — so we surface it here, once per
@@ -4172,7 +3941,7 @@ class GrassrootsNetwork {
       // rendezvous server is infrastructure, not a discoverable peer.
       if (!_isRendezvousPubkeyHex(pubkeyHex) &&
           _discoveredPubkeyHexes.add(pubkeyHex)) {
-        onPeerDiscovered?.call(data.publicKey, data.nickname);
+        onPeerDiscovered?.call(data.publicKey);
       }
 
       // onPeerConnected is driven by the reachability subscriber (it fires once
@@ -4506,7 +4275,9 @@ class GrassrootsNetwork {
       if (store.state.settings.coldCallTrustLevel == ColdCallTrustLevel.open) {
         return true;
       }
-      return _isAcceptedFriendPubkey(senderPubkey);
+      // Closed: recognize only already-known peers — keys GLP supplied via
+      // the API, never a friendship record (spec §Cold-Call Trust Levels).
+      return _isKnownPeerPubkey(senderPubkey);
     };
 
     _messageRouter.onBleAnnounceRejected = (senderPubkey, bleDeviceId) {
@@ -4534,7 +4305,6 @@ class GrassrootsNetwork {
         unawaited(_sendAnnounceToDevice(event.peerId));
       } else {
         debugPrint('BLE device disconnected: ${event.peerId}');
-        _bleFriendAnnounceSent.remove(event.peerId);
         _requeueMessagesOnBleDisconnect(event.peerId);
       }
     });
@@ -4568,13 +4338,10 @@ class GrassrootsNetwork {
       if (event.connected) {
         debugPrint('UDP peer connected: ${event.peerId}');
         store.dispatch(PeerUdpSeenAction(_hexToBytes(event.peerId)));
-        // The friend is reachable again — reset the AVAILABLE re-fire clock so
+        // The peer is reachable again — reset the AVAILABLE re-fire clock so
         // the next disconnect triggers a fresh fan-out immediately rather than
         // waiting out the previous-cycle backoff.
         _availableFanOutLastFiredAt.remove(event.peerId);
-        _sendRvListToFriendIfEligible(event.peerId);
-        _sendFriendListToFriendIfEligible(event.peerId);
-        _mediateCommonFriendsFor(event.peerId);
 
         final wasPunching = _holePunchTargets.containsKey(event.peerId) ||
             _holePunchLocalReady.contains(event.peerId) ||
@@ -4719,126 +4486,20 @@ class GrassrootsNetwork {
 
   /// Fired when a UDP stream ended or the ANNOUNCE keepalive timed out.
   ///
-  /// Per the rendezvous reconnection algorithm, when we detect a friend went
-  /// silent we should fan out AVAILABLE to our trusted facilitators. The peer
-  /// (which presumably had its IP change) will send RECONNECT, the facilitator
-  /// will match the pair, and a coordinated hole-punch follows.
-  /// Send RV_LIST to a friend right after a UDP connection establishes,
-  /// so they can target AVAILABLE at our exact rendezvous servers when our
-  /// IP changes.
-  void _sendRvListToFriendIfEligible(String pubkeyHex) {
-    final peer = _peersState.getPeerByPubkeyHex(pubkeyHex);
-    if (peer == null || !peer.isFriend) return;
-
-    final rvServers = _ownRvServerEntries();
-    if (rvServers.isEmpty) return;
-
-    debugPrint(
-      '[rv-list] Sending ${rvServers.length} rendezvous server entr(y/ies) to '
-      '${peer.displayName}',
-    );
-    unawaited(_signalingService.sendRvList(peer.publicKey, rvServers));
-  }
-
-  /// Broadcast our current RV list to every UDP-reachable friend. Called
-  /// when the local rendezvous server settings change.
-  void _broadcastRvListToFriends() {
-    final rvServers = _ownRvServerEntries();
-    if (rvServers.isEmpty || _udpService == null) return;
-    for (final friend in _peersState.friends) {
-      if (_udpService!.getPeerIdForPubkey(friend.publicKey) == null) continue;
-      debugPrint(
-        '[rv-list] Re-broadcasting RV list to ${friend.displayName} '
-        '(settings changed)',
-      );
-      unawaited(_signalingService.sendRvList(friend.publicKey, rvServers));
-    }
-  }
-
-  /// Send our current accepted friend set to a friend after a live connection
-  /// establishes so they can maintain their friends-of-friends map.
-  void _sendFriendListToFriendIfEligible(String pubkeyHex) {
-    final peer = _peersState.getPeerByPubkeyHex(pubkeyHex);
-    if (peer == null || !peer.isFriend) return;
-
-    final friendPubkeys = _ownFriendListEntries();
-    debugPrint(
-      '[fof] Sending ${friendPubkeys.length} accepted friend(s) to '
-      '${peer.displayName}',
-    );
-    unawaited(_signalingService.sendFriendList(peer.publicKey, friendPubkeys));
-  }
-
-  /// Broadcast our current accepted friend set to every live friend.
-  void _broadcastFriendListToFriends({required String reason}) {
-    final friendPubkeys = _ownFriendListEntries();
-    for (final friend in _peersState.friends) {
-      if (!friend.isReachable) continue;
-      debugPrint(
-        '[fof] Broadcasting friend list to ${friend.displayName} ($reason)',
-      );
-      unawaited(
-        _signalingService.sendFriendList(friend.publicKey, friendPubkeys),
-      );
-    }
-  }
-
-  List<Uint8List> _ownFriendListEntries() {
-    final friends = _peersState.friendPubkeyHexes.toList()..sort();
-    return [for (final hex in friends) _hexToBytes(hex)];
-  }
-
-  /// Proactively mediate between a reconnected friend and all common friends.
-  ///
-  /// This implements the bootstrap-friend step from the GLP friends-based
-  /// rendezvous algorithm: when B reconnects to A, B consults its
-  /// friends-of-friends map for A and immediately mediates for every common
-  /// friend C that is currently live with B.
-  void _mediateCommonFriendsFor(String reconnectedFriendHex) {
-    final requester = _peersState.getPeerByPubkeyHex(reconnectedFriendHex);
-    if (requester == null || !requester.isFriend) return;
-
-    final commonFriendHexes = _peersState
-        .commonFriendHexesWith(reconnectedFriendHex)
-        .toList()
-      ..sort();
-    for (final commonHex in commonFriendHexes) {
-      if (commonHex == reconnectedFriendHex) continue;
-      final common = _peersState.getPeerByPubkeyHex(commonHex);
-      if (common == null || !common.isFriend || !common.isReachable) {
-        continue;
-      }
-      debugPrint(
-        '[fof] Proactively mediating ${requester.displayName} <-> '
-        '${common.displayName}',
-      );
-      _signalingService.mediateFriends(
-        requesterPubkey: requester.publicKey,
-        targetPubkey: common.publicKey,
-      );
-    }
-  }
-
-  List<RvServerEntry> _ownRvServerEntries() {
-    return [
-      for (final config in _configuredRendezvousServers())
-        RvServerEntry(pubkey: config.pubkey, address: config.address),
-    ];
-  }
-
+  /// Per the rendezvous reconnection algorithm, when we detect a known peer
+  /// went silent we fan out AVAILABLE to the configured rendezvous servers.
+  /// The peer (which presumably had its IP change) will send RECONNECT, the
+  /// server will match the pair, and a coordinated hole-punch follows.
   void _onUdpPeerDisconnected(PeerState peer) {
     _noiseSessions.reset(PeerTransport.udp, peer.publicKey);
-    if (!peer.isFriend) return;
+    if (!_isKnownPeerPubkey(peer.publicKey)) return;
 
     // Overall reachability is tracked by the reachability subscriber on the
     // store, which fires the consolidated onPeerDisconnected when the last
     // live transport drops. This handler only owns UDP-specific recovery —
-    // fanning out AVAILABLE so signaling mediators can help re-establish.
+    // fanning out AVAILABLE so the rendezvous servers can help re-establish.
 
-    final facilitatorCount = store.state.peers.wellConnectedFriends.length +
-        _configuredRendezvousServers().length +
-        store.state.friendships.friendRvServers.length;
-    if (facilitatorCount == 0) return;
+    if (_configuredRendezvousServers().isEmpty) return;
 
     debugPrint(
       '[reconnect] UDP path to ${peer.displayName} dropped — fanning out AVAILABLE',
@@ -4847,33 +4508,35 @@ class GrassrootsNetwork {
     unawaited(_signalingService.fanOutAvailable(peer.publicKey));
   }
 
-  /// Periodically re-fire AVAILABLE for friends that remain UDP-unreachable.
+  /// Periodically re-fire AVAILABLE for known peers that remain
+  /// UDP-unreachable.
   ///
-  /// The friend's RV holds AVAILABLE entries for a finite expiry window
-  /// (~5 minutes). If the friend takes longer than that window to deliver
-  /// their matching RECONNECT (e.g. their client is stalled on a stale-cache
-  /// false-positive direct dial), the RV will have dropped our AVAILABLE and
-  /// no pairing can complete. Re-firing every cycle keeps the pairing window
-  /// open until the friend is reachable or we give up the path.
-  void _refireAvailableForUnreachableFriends({bool force = false}) {
+  /// The RV holds AVAILABLE entries for a finite expiry window (~5 minutes).
+  /// If the peer takes longer than that window to deliver its matching
+  /// RECONNECT (e.g. its client is stalled on a stale-cache false-positive
+  /// direct dial), the RV will have dropped our AVAILABLE and no pairing can
+  /// complete. Re-firing every cycle keeps the pairing window open until the
+  /// peer is reachable or we give up the path.
+  void _refireAvailableForUnreachableKnownPeers({bool force = false}) {
     if (_udpService == null || !_udpAvailable) return;
     final now = DateTime.now();
-    for (final friend in _peersState.friends) {
-      // Skip friends we already have a live UDP connection to.
-      if (_udpService!.getPeerIdForPubkey(friend.publicKey) != null) continue;
+    for (final pubkeyHex in store.state.knownPeers.knownPubkeyHexes) {
+      final pubkey = _hexToBytes(pubkeyHex);
+      // Skip peers we already have a live UDP connection to.
+      if (_udpService!.getPeerIdForPubkey(pubkey) != null) continue;
 
-      final last = _availableFanOutLastFiredAt[friend.pubkeyHex];
+      final last = _availableFanOutLastFiredAt[pubkeyHex];
       if (!force &&
           last != null &&
           now.difference(last) < _availableRefireInterval) {
         continue;
       }
       debugPrint(
-        '[reconnect] Re-firing AVAILABLE for ${friend.displayName} '
+        '[reconnect] Re-firing AVAILABLE for ${pubkeyHex.substring(0, 8)}... '
         '(UDP-unreachable for ${last == null ? "unknown" : "${now.difference(last).inSeconds}s"}${force ? ", forced" : ""})',
       );
-      _availableFanOutLastFiredAt[friend.pubkeyHex] = now;
-      unawaited(_signalingService.fanOutAvailable(friend.publicKey));
+      _availableFanOutLastFiredAt[pubkeyHex] = now;
+      unawaited(_signalingService.fanOutAvailable(pubkey));
     }
   }
 
@@ -4899,7 +4562,7 @@ class GrassrootsNetwork {
       }
     }
     unawaited(_syncConfiguredRendezvous(reason: 'app-resumed'));
-    _refireAvailableForUnreachableFriends(force: true);
+    _refireAvailableForUnreachableKnownPeers(force: true);
     _drainQueuedMessagesForLivePeers();
   }
 
@@ -4963,8 +4626,8 @@ class GrassrootsNetwork {
       _broadcastAnnounce();
       _broadcastAnnounceViaUdp();
       _removeStalePeers();
-      _discoverUnreachableFriends();
-      _refireAvailableForUnreachableFriends();
+      _discoverUnreachableKnownPeers();
+      _refireAvailableForUnreachableKnownPeers();
       _drainQueuedMessagesForLivePeers();
     });
   }
@@ -5014,41 +4677,35 @@ class GrassrootsNetwork {
   }
 
   /// Broadcast ANNOUNCE via UDP to all connected peers.
-  ///
-  /// Always includes our address — all UDP peers are known (no strangers).
   Future<void> _broadcastAnnounceViaUdp() async {
     if (_udpService == null || !_udpAvailable) return;
 
-    final announce = await _createSignedAnnounce(
-      address: udpAddress,
-      addressCandidates: _candidateAddresses(),
-    );
+    final announce = await _createSignedAnnounce();
     await _udpService!.broadcast(announce);
   }
 
   /// Send ANNOUNCE directly to a specific BLE device ID.
   ///
-  /// Called from the periodic [_broadcastAnnounce] loop and from
-  /// [_sendFriendAnnounceToConnectedBlePaths] (which fires when we receive
-  /// an ANNOUNCE from a freshly-identified friend, to close the privacy
-  /// gap where the previous periodic broadcast had to omit our address
-  /// because we hadn't yet linked the device ID to a pubkey).
+  /// Called from the periodic [_broadcastAnnounce] loop, and fired
+  /// immediately when a BLE path becomes connected (per spec §BLE Discovery:
+  /// ANNOUNCE is exchanged upon successful BLE connection). Receivers treat
+  /// repeated ANNOUNCEs from the same pubkey as idempotent, so racing with
+  /// the periodic broadcast is harmless.
   ///
-  /// Also fired immediately when a BLE path becomes connected (per spec
-  /// §BLE Discovery: ANNOUNCE is exchanged upon successful BLE connection).
-  /// Receivers treat repeated ANNOUNCEs from the same pubkey as idempotent,
-  /// so racing with the periodic broadcast is harmless.
+  /// Trust gating (spec §Cold-Call Trust Levels): under Closed trust, no
+  /// ANNOUNCE is sent to an unknown device — only to devices mapped to a
+  /// known key, or matching a known peer's derived per-slot UUID.
   Future<bool> _sendAnnounceToDevice(String deviceId) async {
     if (_bleService == null || !_bleAvailable) return false;
 
-    // Check if this device ID already belongs to an authenticated friend.
+    // Check if this device ID already belongs to an authenticated known peer.
     final pubkey = _bleService!.getPubkeyForPeerId(deviceId);
-    final isFriend = pubkey != null && _isAcceptedFriendPubkey(pubkey);
+    final isKnown = pubkey != null && _isKnownPeerPubkey(pubkey);
 
-    final friendHint = _bleService!.getFriendPubkeyHintForPeerId(deviceId);
+    final knownHint = _bleService!.getKnownPeerPubkeyHintForPeerId(deviceId);
     final allowsColdCall =
         store.state.settings.coldCallTrustLevel == ColdCallTrustLevel.open;
-    if (!isFriend && !allowsColdCall && friendHint == null) {
+    if (!isKnown && !allowsColdCall && knownHint == null) {
       debugPrint(
         '[ble-announce] Suppressed ANNOUNCE to $deviceId '
         '(closed trust, unknown peer)',
@@ -5056,144 +4713,24 @@ class GrassrootsNetwork {
       return false;
     }
 
-    // Authenticated friends get our address + link-local. Non-friends, and
-    // derived-UUID friend hints that have not yet sent a signed ANNOUNCE, get
-    // only identity. A spoofed derived UUID must not unlock friend metadata.
-    final announce = isFriend
-        ? await _createSignedAnnounce(
-            address: udpAddress,
-            linkLocalAddress: _linkLocalAddress,
-          )
-        : await _createSignedAnnounce();
-
+    final announce = await _createSignedAnnounce();
     final sent = await _bleService!.sendToPeer(deviceId, announce);
-    if (sent) {
-      if (isFriend) {
-        _bleFriendAnnounceSent.add(deviceId);
-      } else {
-        _bleFriendAnnounceSent.remove(deviceId);
-      }
-    } else {
+    if (!sent) {
       debugPrint('[ble-announce] Failed to send ANNOUNCE to $deviceId');
     }
     return sent;
   }
 
-  /// Once a BLE peer identifies itself, send them a directed friend ANNOUNCE
-  /// on every live BLE path we have for them. This closes the window where the
-  /// connection-time ANNOUNCE had to omit our address because the device ID had
-  /// not been mapped to a pubkey yet.
-  void _sendFriendAnnounceToConnectedBlePaths(PeerState peer) {
-    if (_bleService == null || !_bleAvailable) return;
-
-    final candidateIds = <String>{
-      if (peer.bleCentralDeviceId != null) peer.bleCentralDeviceId!,
-      if (peer.blePeripheralDeviceId != null) peer.blePeripheralDeviceId!,
-    };
-
-    for (final deviceId in candidateIds) {
-      if (_bleFriendAnnounceSent.contains(deviceId)) continue;
-      if (!_bleService!.isDeviceConnected(deviceId)) continue;
-      _sendAnnounceToDevice(deviceId);
-    }
-  }
-
-  /// Create a signed ANNOUNCE packet, optionally with address.
-  Future<Uint8List> _createSignedAnnounce({
-    String? address,
-    String? linkLocalAddress,
-    Iterable<String> addressCandidates = const [],
-  }) async {
-    final normalizedAddress = _normalizeAnnouncedUdpAddress(
-      address,
-      context: 'announce',
-    );
-    final normalizedLinkLocal = _normalizeAnnouncedLinkLocalAddress(
-      linkLocalAddress,
-      context: 'announce',
-    );
-    final includeKnownCandidates = normalizedAddress != null ||
-        normalizedLinkLocal != null ||
-        addressCandidates.isNotEmpty;
-    final normalizedCandidates = normalizeAddressStrings([
-      if (includeKnownCandidates)
-        ..._candidateAddresses(includeLinkLocal: normalizedLinkLocal != null),
-      ...addressCandidates,
-      normalizedAddress,
-      normalizedLinkLocal,
-    ]);
-    final payload = _protocolHandler.createAnnouncePayload(
-      address: normalizedAddress,
-      linkLocalAddress: normalizedLinkLocal,
-      addressCandidates: normalizedCandidates,
-    );
+  /// Create a signed ANNOUNCE packet — the irreducible identity record
+  /// (spec §ANNOUNCE and Liveness): key + version + trailing signature.
+  Future<Uint8List> _createSignedAnnounce() async {
+    final payload = _protocolHandler.createAnnouncePayload();
     // The ANNOUNCE payload is a self-signed identity record; the frame needs
     // no further authentication.
     return GrassrootsPacket(
       type: PacketType.announce,
       payload: payload,
     ).serialize();
-  }
-
-  /// Send ANNOUNCE with address to a specific friend.
-  ///
-  /// This is the unified presence mechanism — friends receive our UDP address
-  /// in the ANNOUNCE so they can connect to us over the internet.
-  ///
-  /// Works over both BLE and UDP transports.
-  Future<bool> sendAnnounceToFriend({
-    required Uint8List friendPubkey,
-    String? myAddress,
-  }) async {
-    var sent = false;
-    final friendPubkeyHex =
-        friendPubkey.map((b) => b.toRadixString(16).padLeft(2, '0')).join();
-
-    // Create signed ANNOUNCE packet with our address
-    final normalizedAddress = _normalizeAnnouncedUdpAddress(
-      myAddress,
-      context: 'direct-announce',
-    );
-    final payload = _protocolHandler.createAnnouncePayload(
-      address: normalizedAddress,
-      addressCandidates: _candidateAddresses(),
-    );
-    final bytes = GrassrootsPacket(
-      type: PacketType.announce,
-      payload: payload,
-    ).serialize();
-
-    // Try BLE first if available
-    if (_bleService != null && _bleAvailable) {
-      final peerId = _bleService!.getPeerIdForPubkey(friendPubkey);
-      if (peerId != null) {
-        sent = await _bleService!.sendToPeer(peerId, bytes);
-      }
-    }
-
-    // Also try UDP if available
-    if (_udpService != null && _udpAvailable) {
-      final peerId = _udpService!.getPeerIdForPubkey(friendPubkey);
-      if (peerId != null) {
-        final udpSent = await _udpService!.sendToPeer(peerId, bytes);
-        sent = sent || udpSent;
-      } else {
-        final peer = _peersState.getPeerByPubkeyHex(friendPubkeyHex);
-        final candidates = _udpCandidatesForPeer(peer);
-        final friendAddress = peer?.udpAddress ??
-            (candidates.isNotEmpty ? candidates.first : null);
-        if (friendAddress != null && friendAddress.isNotEmpty) {
-          final udpSent = await _sendViaUdp(
-            friendPubkeyHex,
-            friendAddress,
-            bytes,
-          );
-          sent = sent || udpSent;
-        }
-      }
-    }
-
-    return sent;
   }
 
   /// Remove peers that haven't sent an ANNOUNCE within the interval.

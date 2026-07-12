@@ -11,8 +11,8 @@ enum SignalingType {
   addrReflect(0x07),
   reconnect(0x08),
   available(0x09),
-  rvList(0x0a),
-  // 0x0b (friendList) is agent↔friend only and never reaches the anchor.
+  // 0x0a (rvList) and 0x0b (friendList) were removed with friend-driven
+  // signaling — the layer holds no social graph.
   registerInvite(0x0c),
   redeemInvite(0x0d),
   inviteRedeemed(0x0e),
@@ -77,19 +77,6 @@ class AvailableMessage extends SignalingMessage {
   SignalingType get type => SignalingType.available;
   final Uint8List peerPubkey;
   AvailableMessage({required this.peerPubkey});
-}
-
-class RvServerEntry {
-  final Uint8List pubkey;
-  final String address;
-  const RvServerEntry({required this.pubkey, required this.address});
-}
-
-class RvListMessage extends SignalingMessage {
-  @override
-  SignalingType get type => SignalingType.rvList;
-  final List<RvServerEntry> entries;
-  RvListMessage({required this.entries});
 }
 
 /// Inviter A registers a cold-call invite (spec §IP Cold-Call). A's identity
@@ -177,7 +164,6 @@ class SignalingCodec {
       AddrReflectMessage() => _encodeAddrReflect(msg),
       ReconnectMessage() => _encodeReconnect(msg),
       AvailableMessage() => _encodeAvailable(msg),
-      RvListMessage() => _encodeRvList(msg),
       RegisterInviteMessage() => _encodeRegisterInvite(msg),
       RedeemInviteMessage() => _encodeRedeemInvite(msg),
       InviteRedeemedMessage() => _encodeInviteRedeemed(msg),
@@ -198,7 +184,6 @@ class SignalingCodec {
       SignalingType.addrReflect => _decodeAddrReflect(payload),
       SignalingType.reconnect => _decodeReconnect(payload),
       SignalingType.available => _decodeAvailable(payload),
-      SignalingType.rvList => _decodeRvList(payload),
       SignalingType.registerInvite => _decodeRegisterInvite(payload),
       SignalingType.redeemInvite => _decodeRedeemInvite(payload),
       SignalingType.inviteRedeemed => _decodeInviteRedeemed(payload),
@@ -248,19 +233,6 @@ class SignalingCodec {
     final buffer = BytesBuilder();
     buffer.addByte(SignalingType.available.value);
     buffer.add(msg.peerPubkey);
-    return buffer.toBytes();
-  }
-
-  Uint8List _encodeRvList(RvListMessage msg) {
-    final buffer = BytesBuilder();
-    buffer.addByte(SignalingType.rvList.value);
-    _writeUint16(buffer, msg.entries.length);
-    for (final entry in msg.entries) {
-      buffer.add(entry.pubkey);
-      final addrBytes = Uint8List.fromList(entry.address.codeUnits);
-      _writeUint16(buffer, addrBytes.length);
-      buffer.add(addrBytes);
-    }
     return buffer.toBytes();
   }
 
@@ -346,29 +318,6 @@ class SignalingCodec {
     }
     return AvailableMessage(
         peerPubkey: Uint8List.fromList(data.sublist(0, 32)));
-  }
-
-  RvListMessage _decodeRvList(Uint8List data) {
-    final count = _readUint16(data, 0);
-    var offset = 2;
-    final entries = <RvServerEntry>[];
-    for (var i = 0; i < count; i++) {
-      if (offset + 34 > data.length) {
-        throw const FormatException('RvList entry truncated');
-      }
-      final pubkey = Uint8List.fromList(data.sublist(offset, offset + 32));
-      offset += 32;
-      final addrLen = _readUint16(data, offset);
-      offset += 2;
-      if (offset + addrLen > data.length) {
-        throw const FormatException('RvList address truncated');
-      }
-      final address =
-          String.fromCharCodes(data.sublist(offset, offset + addrLen));
-      offset += addrLen;
-      entries.add(RvServerEntry(pubkey: pubkey, address: address));
-    }
-    return RvListMessage(entries: entries);
   }
 
   RegisterInviteMessage _decodeRegisterInvite(Uint8List data) {

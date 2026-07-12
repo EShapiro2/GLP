@@ -3,7 +3,7 @@ import 'package:grassroots_networking/grassroots_networking.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
-import 'package:logger/logger.dart' show Logger, Level;
+import 'package:logger/logger.dart' show Level;
 import 'src/debug/log_buffer.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:redux/redux.dart';
@@ -21,8 +21,6 @@ final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
 
 // Global key for navigation from notification
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
-
-final Logger _log = Logger();
 
 // Pending chat to open from notification
 String? _pendingChatPeerHex;
@@ -58,55 +56,6 @@ Future<GrassrootsIdentity> _initIdentity() async {
   debugPrint('Public Key Bytes: ${identity.publicKey.length} bytes');
   debugPrint('Nickname: ${identity.nickname}');
   return identity;
-}
-
-Map<String, dynamic> _serializeAppState(AppState state) {
-  return {
-    'bleTransportState': state.transports.bleState.name,
-    'udpTransportState': state.transports.udpState.name,
-    'peers': {
-      'discoveredBlePeers': {
-        for (final e in state.peers.discoveredBlePeers.entries)
-          e.key: {
-            'transportId': e.value.transportId,
-            'displayName': e.value.displayName,
-            'rssi': e.value.rssi,
-            'isConnecting': e.value.isConnecting,
-            'isConnected': e.value.isConnected,
-            'lastSeen': e.value.lastSeen.toIso8601String(),
-          },
-      },
-      'peers': {
-        for (final e in state.peers.peers.entries)
-          e.key: {
-            'nickname': e.value.nickname,
-            'connectionState': e.value.connectionState.name,
-            'transport': e.value.transport.name,
-            'activeTransport': e.value.activeTransport.name,
-            'rssi': e.value.rssi,
-            'bleDeviceId': e.value.bleDeviceId,
-            'udpAddress': e.value.udpAddress,
-            'isFriend': e.value.isFriend,
-            'lastSeen': e.value.lastSeen?.toIso8601String(),
-          },
-      },
-    },
-    'messages': {
-      'conversationCount': state.messages.conversations.length,
-      'unreadCounts': state.messages.unreadCounts,
-      'outgoingCount': state.messages.outgoingMessages.length,
-      'incomingCount': state.messages.incomingMessages.length,
-    },
-    'friendships': {
-      for (final e in state.friendships.friendships.entries)
-        e.key: {
-          'nickname': e.value.nickname,
-          'status': e.value.status.name,
-          'udpAddress': e.value.udpAddress,
-        },
-    },
-    'settings': state.settings.toJson(),
-  };
 }
 
 /// Set up debug log capture by intercepting debugPrint.
@@ -260,7 +209,7 @@ void main() async {
 
   // Create persistence service and load persisted state
   persistenceService = PersistenceService();
-  final friendships = await persistenceService.loadFriendships();
+  final knownPeers = await persistenceService.loadKnownPeers();
   final settings = await persistenceService.loadSettings();
   final (conversations, unreadCounts) =
       await persistenceService.loadConversations();
@@ -269,7 +218,7 @@ void main() async {
   appStore = Store<AppState>(
     appReducer,
     initialState: AppState(
-      friendships: friendships,
+      knownPeers: knownPeers,
       settings: settings,
       messages: MessagesState(
         conversations: conversations,
@@ -342,9 +291,6 @@ class _GrassrootsHomeState extends State<GrassrootsHome>
   Timer? _refreshTimer;
   StreamSubscription<List<ConnectivityResult>>? _connectivitySubscription;
   int _currentIndex = 1; // Start on "Around" tab (center)
-
-  // Track nickname changes for animation
-  final Map<String, _NicknameChange> _nicknameChanges = {};
 
   // Transport availability derived from Redux store
   bool get _bleAvailable => appStore.state.transports.bleState.isUsable;
@@ -488,36 +434,77 @@ class _GrassrootsHomeState extends State<GrassrootsHome>
         return;
       }
 
-      // Hydrate Redux store with existing friends from FriendshipStore
-      await _hydrateFriendsFromStore();
+      // Re-supply the persisted known peers to the layer (the GLP role:
+      // the app holds the social graph and supplies keys + addresses).
+      _hydrateKnownPeers(grassroots);
     } catch (e) {
       debugPrint('Initialization error: $e');
     }
   }
 
-  /// Hydrate Redux store with friends from persistent FriendshipStore
-  Future<void> _hydrateFriendsFromStore() async {
-    for (final friendship in appStore.state.friendships.friends) {
-      final pubkey = ChatMessage.hexToPubkey(friendship.peerPubkeyHex);
-
-      // Establish friendship in Redux
-      appStore.dispatch(FriendEstablishedAction(
-        publicKey: pubkey,
-        nickname: friendship.nickname,
-      ));
-
-      // If friend has UDP info, associate it
-      if (friendship.udpAddress != null && friendship.udpAddress!.isNotEmpty) {
-        appStore.dispatch(AssociateUdpAddressAction(
-          publicKey: pubkey,
-          address: friendship.udpAddress!,
-        ));
+  /// Re-supply persisted known peers (contacts) to the layer via its API:
+  /// putPeerAddress for peers with a stored dial address, putKnownPeer for
+  /// the rest. This is the app playing GLP's role — the social graph lives
+  /// above the layer, which recognizes only the keys supplied here.
+  void _hydrateKnownPeers(GrassrootsNetwork grassroots) {
+    for (final entry in appStore.state.knownPeers.known.entries) {
+      final pubkey = ChatMessage.hexToPubkey(entry.key);
+      final address = entry.value;
+      if (address != null && address.isNotEmpty) {
+        try {
+          grassroots.putPeerAddress(pubkey, address);
+        } on ArgumentError {
+          grassroots.putKnownPeer(pubkey);
+        }
+      } else {
+        grassroots.putKnownPeer(pubkey);
       }
     }
   }
 
-  // Friend presence is handled at the transport layer via unified ANNOUNCE
-  // messages. BLE and UDP broadcasts include address for friends automatically.
+  /// Whether [peerHex] is a contact — a key this app (the GLP stand-in)
+  /// supplied to the layer's known set.
+  bool _isContact(String peerHex) =>
+      appStore.state.knownPeers.isKnown(peerHex);
+
+  /// The last friendship-status message in the conversation with [peerHex],
+  /// or null. The app derives its request state machine from the message log
+  /// plus the known set, so no separate friendship records exist anywhere.
+  ChatMessageState? _lastRequestStatusMessage(String peerHex) {
+    final messages = appStore.state.messages.getConversation(peerHex);
+    for (final m in messages.reversed) {
+      if (m.isFriendshipMessage ||
+          m.messageType == ChatMessageType.friendRequestDeclined) {
+        return m;
+      }
+    }
+    return null;
+  }
+
+  /// Incoming request pending user action: the conversation's last
+  /// friendship-status message is a received request and the peer is not a
+  /// contact yet.
+  bool _hasPendingIncomingRequest(String peerHex) {
+    if (_isContact(peerHex)) return false;
+    return _lastRequestStatusMessage(peerHex)?.messageType ==
+        ChatMessageType.friendRequestReceived;
+  }
+
+  /// Outgoing request awaiting the peer's answer.
+  bool _hasPendingOutgoingRequest(String peerHex) {
+    if (_isContact(peerHex)) return false;
+    return _lastRequestStatusMessage(peerHex)?.messageType ==
+        ChatMessageType.friendRequestSent;
+  }
+
+  /// Pubkey hexes with a pending incoming request, newest first.
+  List<String> _pendingIncomingRequestHexes() {
+    final result = <String>[];
+    for (final peerHex in appStore.state.messages.conversationPeers) {
+      if (_hasPendingIncomingRequest(peerHex)) result.add(peerHex);
+    }
+    return result;
+  }
 
   Future<void> _handleIncomingMessage(String messageId, Uint8List senderPubkey,
       Uint8List payload, MessageTransport transport) async {
@@ -643,26 +630,26 @@ class _GrassrootsHomeState extends State<GrassrootsHome>
     FriendshipOfferBlock block,
     String senderName,
   ) async {
-    // Record the friend request
-    appStore.dispatch(ReceiveFriendRequestAction(
-      peerPubkeyHex: senderHex,
-      nickname: senderName,
-      message: block.message,
-    ));
-
-    // Get the updated friendship state
-    final friendship = appStore.state.friendships.getFriendship(senderHex);
     final pubkey = ChatMessage.hexToPubkey(senderHex);
+    final alreadyContact = _isContact(senderHex);
+    final mutual = _hasPendingOutgoingRequest(senderHex);
 
-    // If auto-accepted (mutual friend requests), establish friendship in Redux
-    if (friendship != null && friendship.isAccepted) {
-      appStore.dispatch(FriendEstablishedAction(
-        publicKey: pubkey,
-        nickname: senderName,
+    if (mutual && !alreadyContact) {
+      // Mutual requests auto-accept: they asked while our request was
+      // pending. Supply the key to the layer (the app's social-graph
+      // decision) and record the acceptance.
+      _grassroots?.putKnownPeer(pubkey);
+      appStore.dispatch(SaveChatMessageAction(
+        senderPubkeyHex: senderHex,
+        recipientPubkeyHex: myHex,
+        content: 'Wants to be friends too — you are now friends',
+        isOutgoing: false,
+        messageType: ChatMessageType.friendRequestAccepted.index,
       ));
+      return;
     }
 
-    // Save as a chat message
+    // Save as a chat message (this is what makes the request pending)
     appStore.dispatch(SaveChatMessageAction(
       senderPubkeyHex: senderHex,
       recipientPubkeyHex: myHex,
@@ -671,12 +658,9 @@ class _GrassrootsHomeState extends State<GrassrootsHome>
       messageType: ChatMessageType.friendRequestReceived.index,
     ));
 
-    // Show notification if friendship is new
-    if (friendship?.status == FriendshipStatus.received) {
+    if (!alreadyContact) {
       await _showFriendRequestNotification(senderHex, senderName);
     }
-
-    // UDP connection will be established when ANNOUNCE is received
   }
 
   Future<void> _handleFriendshipAccept(
@@ -687,19 +671,10 @@ class _GrassrootsHomeState extends State<GrassrootsHome>
   ) async {
     debugPrint('🤝 _handleFriendshipAccept from $senderName ($senderHex)');
 
-    // Update friendship status
-    appStore.dispatch(ProcessFriendshipAcceptAction(
-      peerPubkeyHex: senderHex,
-      nickname: senderName,
-    ));
-    debugPrint('🤝 Friendship status updated');
-
-    // Establish friendship in Redux store
+    // They accepted: supply their key to the layer (the app's social-graph
+    // decision — the layer recognizes only keys supplied via the API).
     final pubkey = ChatMessage.hexToPubkey(senderHex);
-    appStore.dispatch(FriendEstablishedAction(
-      publicKey: pubkey,
-      nickname: senderName,
-    ));
+    _grassroots?.putKnownPeer(pubkey);
 
     // Save as a chat message
     appStore.dispatch(SaveChatMessageAction(
@@ -716,10 +691,9 @@ class _GrassrootsHomeState extends State<GrassrootsHome>
 
   /// Handle being unfriended by someone
   Future<void> _handleFriendshipRevoke(String senderHex) async {
-    // Silently remove them from our friend list (Redux handles both friendships and peers)
-    appStore.dispatch(HandleUnfriendedByAction(senderHex));
+    // Silently withdraw their key from the layer's known set.
     final pubkey = ChatMessage.hexToPubkey(senderHex);
-    appStore.dispatch(FriendRemovedAction(pubkey));
+    _grassroots?.removeKnownPeer(pubkey);
 
     // We don't show any notification to the user - they will just
     // notice the person is no longer in their friends list
@@ -735,9 +709,8 @@ class _GrassrootsHomeState extends State<GrassrootsHome>
     final block = FriendshipRevokeBlock();
     await _grassroots!.send(pubkey, block.serialize());
 
-    // Remove from our friend list (Redux handles both friendships and peers)
-    appStore.dispatch(RemoveFriendshipAction(peerHex));
-    appStore.dispatch(FriendRemovedAction(pubkey));
+    // Withdraw their key from the layer's known set
+    _grassroots!.removeKnownPeer(pubkey);
 
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -862,13 +835,8 @@ class _GrassrootsHomeState extends State<GrassrootsHome>
       return;
     }
 
-    // Create and record the friend request in Redux
-    appStore.dispatch(CreateFriendRequestAction(
-      peerPubkeyHex: peerHex,
-      nickname: peer.displayName,
-    ));
-
-    // Save as a chat message in Redux
+    // Save as a chat message in Redux — this is what marks the request
+    // as pending-outgoing (the app derives request state from the log).
     appStore.dispatch(SaveChatMessageAction(
       senderPubkeyHex: myHex,
       recipientPubkeyHex: peerHex,
@@ -904,14 +872,9 @@ class _GrassrootsHomeState extends State<GrassrootsHome>
     final peerHex = peer.pubkeyHex;
     final myHex = ChatMessage.pubkeyToHex(_identity!.publicKey);
 
-    // Accept the friend request in Redux
-    appStore.dispatch(AcceptFriendRequestAction(peerHex));
-
-    // Establish friendship in Redux
-    appStore.dispatch(FriendEstablishedAction(
-      publicKey: peer.publicKey,
-      nickname: peer.displayName,
-    ));
+    // Accept: supply their key to the layer's known set (the app's
+    // social-graph decision — Closed mode recognizes exactly these keys).
+    _grassroots!.putKnownPeer(peer.publicKey);
 
     // Create the friendship accept block
     final block = FriendshipAcceptBlock();
@@ -936,7 +899,16 @@ class _GrassrootsHomeState extends State<GrassrootsHome>
   }
 
   Future<void> _declineFriendRequest(String peerHex) async {
-    appStore.dispatch(DeclineFriendRequestAction(peerHex));
+    if (_identity == null) return;
+    // Local marker message — supersedes the pending received request in the
+    // derived request state; nothing is sent to the peer.
+    appStore.dispatch(SaveChatMessageAction(
+      senderPubkeyHex: ChatMessage.pubkeyToHex(_identity!.publicKey),
+      recipientPubkeyHex: peerHex,
+      content: 'You declined the friend request',
+      isOutgoing: true,
+      messageType: ChatMessageType.friendRequestDeclined.index,
+    ));
 
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -1114,7 +1086,7 @@ class _GrassrootsHomeState extends State<GrassrootsHome>
   // ===== CHATS TAB =====
   Widget _buildChatsTab() {
     final chatsWithMessages = _getChatsWithMessages();
-    final pendingRequests = appStore.state.friendships.pendingIncoming;
+    final pendingRequests = _pendingIncomingRequestHexes();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1154,8 +1126,7 @@ class _GrassrootsHomeState extends State<GrassrootsHome>
               padding: const EdgeInsets.symmetric(horizontal: 12),
               itemCount: pendingRequests.length,
               itemBuilder: (context, index) {
-                final request = pendingRequests[index];
-                return _buildFriendRequestCard(request);
+                return _buildFriendRequestCard(pendingRequests[index]);
               },
             ),
           ),
@@ -1195,7 +1166,8 @@ class _GrassrootsHomeState extends State<GrassrootsHome>
     );
   }
 
-  Widget _buildFriendRequestCard(FriendshipState request) {
+  Widget _buildFriendRequestCard(String requestPeerHex) {
+    final displayName = '${requestPeerHex.substring(0, 8)}...';
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 4),
       color: const Color(0xFF1B3D2F),
@@ -1211,16 +1183,14 @@ class _GrassrootsHomeState extends State<GrassrootsHome>
                   radius: 16,
                   backgroundColor: Colors.blueGrey,
                   child: Text(
-                    request.displayName.isNotEmpty
-                        ? request.displayName[0].toUpperCase()
-                        : '?',
+                    displayName[0].toUpperCase(),
                     style: const TextStyle(color: Colors.white, fontSize: 14),
                   ),
                 ),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    request.displayName,
+                    displayName,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(fontWeight: FontWeight.bold),
                   ),
@@ -1232,7 +1202,7 @@ class _GrassrootsHomeState extends State<GrassrootsHome>
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
                 TextButton(
-                  onPressed: () => _declineFriendRequest(request.peerPubkeyHex),
+                  onPressed: () => _declineFriendRequest(requestPeerHex),
                   style: TextButton.styleFrom(
                     padding: const EdgeInsets.symmetric(horizontal: 8),
                     minimumSize: Size.zero,
@@ -1242,16 +1212,14 @@ class _GrassrootsHomeState extends State<GrassrootsHome>
                 ),
                 ElevatedButton(
                   onPressed: () async {
-                    // Find peer to accept
-                    var peer = _peers.values
-                        .where((p) =>
-                            ChatMessage.pubkeyToHex(p.publicKey) ==
-                            request.peerPubkeyHex)
-                        .firstOrNull;
-
-                    if (peer != null) {
-                      await _acceptFriendRequest(peer);
-                    }
+                    // Find peer to accept — fall back to a stub built from
+                    // the pubkey so accepting works without a live record.
+                    final peer =
+                        appStore.state.peers.peers[requestPeerHex] ??
+                            PeerState(
+                              publicKey: _hexStringToBytes(requestPeerHex),
+                            );
+                    await _acceptFriendRequest(peer);
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFFE8A33C),
@@ -1278,23 +1246,17 @@ class _GrassrootsHomeState extends State<GrassrootsHome>
     // appears once.
     final messagesState = appStore.state.messages;
     final peersMap = appStore.state.peers.peers;
-    final friendshipsState = appStore.state.friendships;
+    final knownPeers = appStore.state.knownPeers;
 
     for (final peerHex in messagesState.conversationPeers) {
       final messages = messagesState.getConversation(peerHex);
       if (messages.isEmpty) continue;
 
       final lastMessage = messages.last;
-      // Prefer the full peer record (carries connection state + nickname),
-      // fall back to the friendship record for offline friends so the chat
-      // list shows the right name even when the peer isn't currently seen.
-      final peer = peersMap[peerHex];
-      final friendship = friendshipsState.getFriendship(peerHex);
-
       chats.add(_ChatPreview(
         peerHex: peerHex,
-        peer: peer,
-        friendship: friendship,
+        peer: peersMap[peerHex],
+        isContact: knownPeers.isKnown(peerHex),
         lastMessage: lastMessage,
         unreadCount: messagesState.getUnreadCount(peerHex),
       ));
@@ -1455,17 +1417,13 @@ class _GrassrootsHomeState extends State<GrassrootsHome>
   }
 
   /// Build a synthetic [PeerState] for opening a chat from the chat list when
-  /// no live peer record exists (e.g. an offline friend on app startup).
-  /// Returns null only when neither a peer record nor a friendship is on file
-  /// — in that case there's nothing to talk to.
+  /// no live peer record exists (e.g. an offline contact on app startup).
+  /// Returns null when the peer is not a contact — nothing to talk to.
   PeerState? _stubPeerFromChatPreview(_ChatPreview chat) {
-    final friendship = chat.friendship;
-    if (friendship == null) return null;
+    if (!chat.isContact) return null;
     return PeerState(
       publicKey: _hexStringToBytes(chat.peerHex),
-      nickname: friendship.nickname ?? '',
-      isFriend: friendship.isAccepted,
-      udpAddress: friendship.udpAddress,
+      udpAddress: appStore.state.knownPeers.addressOf(chat.peerHex),
     );
   }
 
@@ -1502,7 +1460,12 @@ class _GrassrootsHomeState extends State<GrassrootsHome>
 
   // ===== AROUND TAB =====
   Widget _buildAroundTab() {
-    final onlineFriends = appStore.state.peers.onlineFriends;
+    // Contacts (known peers) with a live UDP connection.
+    final onlineFriends = appStore.state.peers.peersList
+        .where((p) =>
+            p.hasLiveUdpConnection &&
+            appStore.state.knownPeers.isKnown(p.pubkeyHex))
+        .toList();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1722,10 +1685,9 @@ class _GrassrootsHomeState extends State<GrassrootsHome>
   Widget _buildPeerListItem(PeerState peer) {
     final peerHex = peer.pubkeyHex;
     final unreadCount = appStore.state.messages.getUnreadCount(peerHex);
-    final friendship = appStore.state.friendships.getFriendship(peerHex);
-    final isFriend = friendship?.isAccepted ?? false;
-    final hasPendingRequest =
-        appStore.state.friendships.hasPendingRequest(peerHex);
+    final isFriend = _isContact(peerHex);
+    final hasPendingRequest = _hasPendingIncomingRequest(peerHex) ||
+        _hasPendingOutgoingRequest(peerHex);
 
     // RSSI is unavailable for some peripheral-role BLE links because the OS
     // does not expose remote signal strength to the GATT server side.
@@ -1746,19 +1708,12 @@ class _GrassrootsHomeState extends State<GrassrootsHome>
       signalColor = Colors.green;
     }
 
-    // Check if this peer has a recent nickname change
-    final nicknameChange = _nicknameChanges[peerHex];
-    final isChanging = nicknameChange != null;
-
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 300),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(12),
-          border: isChanging
-              ? Border.all(color: const Color(0xFFE8A33C), width: 2)
-              : null,
         ),
         child: ListTile(
           leading: Stack(
@@ -1837,12 +1792,6 @@ class _GrassrootsHomeState extends State<GrassrootsHome>
                       Flexible(
                         child: Text(
                           peer.displayName,
-                          style: TextStyle(
-                            color: isChanging ? const Color(0xFFE8A33C) : null,
-                            fontWeight: isChanging
-                                ? FontWeight.bold
-                                : FontWeight.normal,
-                          ),
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
@@ -2356,10 +2305,11 @@ class _GrassrootsHomeState extends State<GrassrootsHome>
   }
 
   Future<void> _updateNickname(String newNickname) async {
-    if (_grassroots == null || _identity == null) return;
+    if (_identity == null) return;
 
-    // Update nickname via Grassroots (broadcasts ANNOUNCE)
-    await _grassroots!.updateNickname(newNickname);
+    // Nickname is a local label only — it never travels on the wire
+    // (ANNOUNCE is key + version + signature; nicknames are GLP-level).
+    _identity!.nickname = newNickname;
 
     // Persist to secure storage
     await IdentityStore.putIdentity(_identity!);
@@ -2464,88 +2414,20 @@ class _GrassrootsHomeState extends State<GrassrootsHome>
     );
   }
 
-  void _showNicknameChangeAnimation(
-      String oldName, String newName, String peerId) {
-    // Store the nickname change for UI animation
-    _nicknameChanges[peerId] = _NicknameChange(
-      oldName: oldName,
-      newName: newName,
-      timestamp: DateTime.now(),
-    );
-
-    // Show a snackbar notification
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Row(
-          children: [
-            const Icon(Icons.person, color: Colors.white),
-            const SizedBox(width: 12),
-            Expanded(
-              child: RichText(
-                text: TextSpan(
-                  style: const TextStyle(color: Colors.white),
-                  children: [
-                    TextSpan(
-                      text: oldName.isEmpty ? 'Unknown' : oldName,
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        decoration: TextDecoration.lineThrough,
-                        color: Colors.white70,
-                      ),
-                    ),
-                    const TextSpan(text: ' → '),
-                    TextSpan(
-                      text: newName,
-                      style: const TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ),
-        duration: const Duration(seconds: 3),
-        behavior: SnackBarBehavior.floating,
-        backgroundColor: const Color(0xFF1B3D2F),
-      ),
-    );
-
-    // Clear the animation after a delay
-    Future.delayed(const Duration(seconds: 3), () {
-      if (mounted) {
-        setState(() {
-          _nicknameChanges.remove(peerId);
-        });
-      }
-    });
-  }
-}
-
-/// Helper class for tracking nickname changes
-class _NicknameChange {
-  final String oldName;
-  final String newName;
-  final DateTime timestamp;
-
-  _NicknameChange({
-    required this.oldName,
-    required this.newName,
-    required this.timestamp,
-  });
 }
 
 /// Helper class for chat list preview
 class _ChatPreview {
   final String peerHex;
 
-  /// Full peer record, when one exists. Null for an offline friend whose
+  /// Full peer record, when one exists. Null for an offline contact whose
   /// `PeerState` hasn't been re-hydrated yet (e.g. fresh app start, no live
   /// connection, but the conversation history is loaded from disk).
   final PeerState? peer;
 
-  /// Friendship record, when this peer is on our friends list. Used as the
-  /// nickname source when [peer] is null.
-  final FriendshipState? friendship;
+  /// Whether this peer is a contact (a key the app supplied to the layer's
+  /// known set).
+  final bool isContact;
 
   final ChatMessageState lastMessage;
   final int unreadCount;
@@ -2553,19 +2435,14 @@ class _ChatPreview {
   _ChatPreview({
     required this.peerHex,
     required this.peer,
-    required this.friendship,
+    required this.isContact,
     required this.lastMessage,
     required this.unreadCount,
   });
 
-  /// Display name from peer (live), then friendship (offline friend),
-  /// then a truncated pubkey as last resort.
-  String get displayName {
-    if (peer != null && peer!.displayName.isNotEmpty) return peer!.displayName;
-    final fNick = friendship?.nickname;
-    if (fNick != null && fNick.isNotEmpty) return fNick;
-    return 'Peer ${peerHex.substring(0, 8)}...';
-  }
+  /// Display name — a truncated pubkey (nicknames are cosmetic and
+  /// GLP-level; the layer identifies peers by key only).
+  String get displayName => '${peerHex.substring(0, 8)}...';
 
-  bool get isFriend => friendship?.isAccepted ?? false;
+  bool get isFriend => isContact;
 }

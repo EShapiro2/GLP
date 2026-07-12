@@ -32,7 +32,6 @@ void main() {
 
   PeerState peerOnBle(int seed) => PeerState(
         publicKey: pubkey(seed),
-        nickname: 'P$seed',
         connectionState: PeerConnectionState.connected,
         transport: PeerTransport.bleDirect,
         bleCentralDeviceId: 'ble-$seed',
@@ -42,7 +41,6 @@ void main() {
 
   PeerState peerOnUdp(int seed) => PeerState(
         publicKey: pubkey(seed),
-        nickname: 'P$seed',
         connectionState: PeerConnectionState.connected,
         transport: PeerTransport.udp,
         udpAddress: '10.0.0.$seed:9514',
@@ -51,7 +49,6 @@ void main() {
 
   PeerState peerOnBoth(int seed) => PeerState(
         publicKey: pubkey(seed),
-        nickname: 'P$seed',
         connectionState: PeerConnectionState.connected,
         transport: PeerTransport.bleDirect,
         bleCentralDeviceId: 'ble-$seed',
@@ -62,7 +59,6 @@ void main() {
 
   PeerState peerOffline(int seed) => PeerState(
         publicKey: pubkey(seed),
-        nickname: 'P$seed',
         connectionState: PeerConnectionState.disconnected,
         transport: PeerTransport.bleDirect,
       );

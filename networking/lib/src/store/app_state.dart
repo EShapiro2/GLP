@@ -1,7 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'peers_state.dart';
 import 'messages_state.dart';
-import 'friendships_state.dart';
+import 'known_peers_state.dart';
 import 'settings_state.dart';
 import 'signaling_state.dart';
 import 'transports_state.dart';
@@ -18,8 +18,8 @@ class AppState {
   /// Messages state (sent and received messages, conversations)
   final MessagesState messages;
 
-  /// Friendships state (friends, pending requests)
-  final FriendshipsState friendships;
+  /// Known peers (API-supplied keys + dial addresses)
+  final KnownPeersState knownPeers;
 
   /// Settings state (transport settings)
   final SettingsState settings;
@@ -31,7 +31,7 @@ class AppState {
     this.transports = const TransportsState(),
     this.peers = const PeersState(),
     this.messages = const MessagesState(),
-    this.friendships = const FriendshipsState(),
+    this.knownPeers = const KnownPeersState(),
     this.settings = const SettingsState(),
     this.signaling = const SignalingState(),
   });
@@ -47,9 +47,6 @@ class AppState {
   /// Number of connected peers (after ANNOUNCE)
   int get connectedPeerCount => peers.connectedCount;
 
-  /// Number of online friends (friends connected via UDP only)
-  int get onlineFriendsCount => peers.onlineFriends.length;
-
   // ===== Convenience getters derived from transports state =====
 
   /// Get display string for connection status
@@ -63,7 +60,7 @@ class AppState {
     TransportsState? transports,
     PeersState? peers,
     MessagesState? messages,
-    FriendshipsState? friendships,
+    KnownPeersState? knownPeers,
     SettingsState? settings,
     SignalingState? signaling,
   }) {
@@ -71,7 +68,7 @@ class AppState {
       transports: transports ?? this.transports,
       peers: peers ?? this.peers,
       messages: messages ?? this.messages,
-      friendships: friendships ?? this.friendships,
+      knownPeers: knownPeers ?? this.knownPeers,
       settings: settings ?? this.settings,
       signaling: signaling ?? this.signaling,
     );
@@ -85,7 +82,7 @@ class AppState {
           transports == other.transports &&
           peers == other.peers &&
           messages == other.messages &&
-          friendships == other.friendships &&
+          knownPeers == other.knownPeers &&
           settings == other.settings &&
           signaling == other.signaling;
 
@@ -94,7 +91,7 @@ class AppState {
         transports,
         peers,
         messages,
-        friendships,
+        knownPeers,
         settings,
         signaling,
       );
