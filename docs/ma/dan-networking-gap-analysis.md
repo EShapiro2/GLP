@@ -1,8 +1,26 @@
 # Dan's Networking Layer vs GlpNetwork — Gap Analysis
 
-**Version**: 0.7
-**Date**: 2026-06-12
-**Source**: https://github.com/danbachar/grassroots-networking (read 2026-06-11); GLP Networking API paper; `networking-seam-spec.md` v0.4.
+**Version**: 0.8
+**Date**: 2026-07-12
+**Source**: https://github.com/danbachar/grassroots-networking, branch `wip/per-transport-reachability` (read 2026-07-12; the branch matching Dan's latest paper threads — `main` and `glp-api-alignment` are behind it); GLP Networking API paper; `networking-seam-spec.md` v0.5.
+
+## v0.8 — comparison against `wip/per-transport-reachability` (2026-07-12)
+
+Closed since v0.7:
+
+- **Wire frame** is the paper's minimal framing plus one type byte: type(1) + length(4), 5 bytes, shared by both media. TTL, timestamp, per-packet keys, per-packet Ed25519 signature, and the clear packet id are gone; the messageId opens the MESSAGE payload (36-char UUID prefix, as fragments always carried); receivers drop clear application-data packets (`message_router.dart`: only self-signed ANNOUNCE, Noise handshake, and session-encrypted types are accepted off the wire). Matches Dan's IP-section thread exactly.
+- **ANNOUNCE is a self-contained signed record**: trailing Ed25519 signature over all preceding bytes, verified against the carried key before acceptance (`protocol_handler.dart`, protocolVersion 2). Matches the paper's relocated signed-ANNOUNCE property.
+- **Gap 3 / open question 2 closed**: the rotating 15-minute slot suffix is implemented — `deriveServiceUuidForSlot`, a slot-rotation timer re-advertising each slot, ±1-slot matching, per-friend per-slot scan filters, and the first-dial rule re-based on lexicographically smaller public key (same rule as IP), per Dan's three implementation notes in the BLE thread.
+- **Gap 6 closed**: `generatePeerLink`/`consumePeerLink` implemented (`signaling/peer_link.dart`), matching the paper's invite construction: 256-bit nonce, one-hour expiry, base64url URI `grassroots://invite/...`, Ed25519 signature over the canonical preceding bytes, InviteId = SHA-256("glp invite id" | Nonce256), InviteKey = HKDF(Nonce256, "glp invite proof" | A_pk | RvServer | ExpiresAt), raw nonce never on the IP network, invite recorded locally as unused.
+- **Gap 5 closed on this branch too**: trust default Closed; Closed mode gates both the central dial and inbound BLE ANNOUNCE acceptance.
+- **`putPeerAddress(pk, address)` implemented** (design B's API call).
+- **Noise session details match**: `Noise_XX_25519_ChaChaPoly_SHA256`; the expected static key is recomputed from the peer's Ed25519 key via the standard map (`pkToCurve25519`); mismatch aborts; AAD binds ciphertext to its clear packet type.
+
+Open on this branch:
+
+1. **ANNOUNCE still carries nickname and address candidates** (format: pubkey + version + nickLen + nick + candidates + signature). The gap-4 nickname removal and gap-9 candidate shedding done on `glp-api-alignment` did not carry over to this branch; the paper's ANNOUNCE payload is key + version only. Receivers still register a friend's announced candidates in the layer's address table — ANNOUNCE still performs address distribution, contra design B.
+2. **The layer still holds friendships** — persisted `FriendshipsState`, FRIEND_LIST broadcast to friends, RV-list broadcast to friends, per-friend AVAILABLE fan-out and friend-based peer discovery, friend-address mirroring, and BLE Closed mode keyed off friendship records rather than GLP-supplied known keys. Contra the paper ("the transport has no concept of friend"; GLP holds the social graph) and the gap-2 ruling that friend-signaling is dropped in favour of the dedicated rendezvous server. This is the main outstanding architectural gap.
+3. **`putIdentity` absent as a call** — identity is installed at construction, as v0.7 noted; interface shape only, not a blocker.
 
 ## What it is
 
