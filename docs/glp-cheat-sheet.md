@@ -321,6 +321,22 @@ Common guards: `ground(X?)`, `known(X?)`, `X? =?= Y?`, `X? > Y?`, `wait_until(T?
 
 **Only compile-time-unfoldable calls may appear in a guard.**  Built-ins above (and arithmetic comparisons, type tests, `otherwise`) are the always-safe set.  User-defined procedures may also appear iff the partial evaluator can fully unfold them — in practice this means **single-unit-clause** procedures (one clause, no body).  **Recursive procedures cannot be unfolded and are rejected in guards** (`[WARN] Unknown guard predicate` at load time).  List-search preconditions like "Inbox contains `msg(P, friend_request(_))`" are inherently recursive — put them in the clause body via dispatch (helper with `otherwise` fallthrough), not in the guard.  Full statement of the rule: typed-glp-manual §8.1.
 
+## 8b. Channels: receive, close, and the two-clause closure idiom
+
+`Channel(In, Out) ::= ch(In, Out?)` — read stream `In`, write stream `Out?`.  Two channel-consumption guards read a channel; the PE unfolds them into the head **before** type checking, so coverage is checked on the unfolded head:
+
+- `receive(M, Ch?, Ch1)` — next message `M` off a **non-empty** read stream (`receive` is typed over `OpenStream(X) ::= [X | Stream(X)]`); yields continuation `Ch1`.  Unfolds the head to `ch([M|In], Out?)`.
+- `close(Ch?)` — the **closed** read stream (`close` is typed over `Closed ::= []`); closes the write stream.  Unfolds the head to `ch([], [])`.
+
+A read stream is a full `Stream(X) = OpenStream(X) ∪ Closed`, so a channel consumer needs **two clauses** to be well-typed:
+
+```prolog
+consume(Ch) :- receive(M, Ch?, Ch1) | handle(M?), consume(Ch1?).   %% non-empty -> ch([M|In], Out?)
+consume(Ch) :- close(Ch?) | done.                                  %% closed    -> ch([], [])
+```
+
+🔴 A consumer with **only** the `receive` clause is rejected — `ch([], _)` (the closed channel) is an uncovered input path.  Same rule when destructuring in the head: pair one `ch([Msg|In], ...)` clause with one `ch([], ...)` clause; when the message clause matches a *specific* message, add an `otherwise`-guarded skip clause `consume(ch([_|In], Out?)) :- otherwise | consume(ch(In?, Out))` for the rest.  Full statement: typed-glp-manual §4.4, §8.4.
+
 ## 9. Spawning Concurrent Processes
 
 Body goals run concurrently. To spawn a process, just call it in the body:

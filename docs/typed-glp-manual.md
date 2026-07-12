@@ -400,6 +400,15 @@ agent(Id, ch(In, Out?)) :-
 
 The agent receives `Channel?` (inverted view), reads from position 1 (`In?`), and writes to position 2 (`Out`).
 
+### 4.4 Reading a Channel: receive, close, and closure
+
+The read stream of a consumed channel is a full `Stream(X)` — it may be non-empty or closed (`[]`).  Two channel-consumption guards read it:
+
+- `receive(M, Ch?, Ch1)` — takes the next message `M` off a **non-empty** read stream (declared over `OpenStream(X) ::= [X | Stream(X)]`), yielding the continuation channel `Ch1`.
+- `close(Ch?)` — matches the **closed** read stream `ch([], [])` and closes the write stream (declared over `Closed ::= []`).
+
+Because `Stream(X) = OpenStream(X) ∪ Closed`, a well-typed consumer must provide **both** — the two-clause closure idiom (§8.4).  The §4.3 example passes the whole read stream to `process_input`; a consumer that instead takes messages off the stream — via `receive`, or by destructuring `ch([Msg|In], ...)` in the head — must also handle the closed stream `ch([], ...)`.
+
 ---
 
 ## 5. New Channel Creation
@@ -514,11 +523,19 @@ new_channel(ch(Xs?, Ys), ch(Ys?, Xs)).
 procedure send(X?, Channel(Y, Stream(X))?, Channel(Y, Stream(X))).
 send(X, ch(In, [X?|Out?]), ch(In?, Out)).
 
-procedure receive(X, Channel(Stream(X), Y)?, Channel(Stream(X), Y)).
+%% receive is typed over a non-empty read stream OpenStream(X) ::= [X | Stream(X)],
+%% so its single clause is exhaustive; its continuation's read stream may be empty.
+procedure receive(X, Channel(OpenStream(X), Y)?, Channel(Stream(X), Y)).
 receive(X?, ch([X|In], Out?), ch(In?, Out)).
+
+%% close consumes the closed read stream Closed ::= [] and closes the write stream.
+procedure close(Channel(Closed, Closed)?).
+close(ch([], [])).
 ```
 
 The `=` predicate performs assignment: the call `X = T` assigns the value `T` on the right to the writer `X` on the left.  Using `=` in clause bodies should be avoided where head construction suffices (Section 6).
+
+`receive` and `close` are the channel-consumption guards.  `receive` is declared over `Channel(OpenStream(X), Y)?` — a *non-empty* read stream (`OpenStream(X) ::= [X | Stream(X)]`) — so its one clause covers everything it can be called on; `close` is declared over `Channel(Closed, Closed)?` where `Closed ::= []`, the empty read stream.  Because a full read stream `Stream(X) = OpenStream(X) ∪ Closed`, a channel consumer must cover **both** cases — see the two-clause closure idiom (§8.4).
 
 ### 8.3 Guard-Position Unfolding
 
@@ -533,6 +550,20 @@ play :- alice(ch(Xs?, Ys)?), bob(ch(Ys?, Xs)?).
 ```
 
 The substitution leaves only built-ins (here: the implicit channel-creation bindings) and so satisfies the §8.1 rule.
+
+**Guard unfolding precedes type checking.**  The partial evaluator unfolds guard-position calls to single-unit-clause procedures (`receive`, `close`, `send`, `new_channel`, and user-defined guards) *before* the type checker runs.  Unfolding a channel guard places the guard clause's channel structure into the consumer's head: `... :- receive(M, Ch?, Ch1) | ...` yields a head matching `ch([M|In], Out?)`, and `... :- close(Ch?) | ...` yields a head matching `ch([], [])`.  Input coverage (contravariance) is therefore checked on these *unfolded* heads, not on the source variable head.
+
+### 8.4 Channel Closure: the Two-Clause Idiom
+
+A procedure that consumes a channel reads a full stream `Stream(X) = OpenStream(X) ∪ Closed`, so — to be well-typed — it must accept both a non-empty read stream and the closed one.  The idiom is two guarded clauses, one calling `receive` and one calling `close`:
+
+```prolog
+procedure consume(Channel(Stream(Msg), Stream(Cmd))?).
+consume(Ch) :- receive(M, Ch?, Ch1) | handle(M?), consume(Ch1?).  %% non-empty: unfolds to ch([M|In], Out?)
+consume(Ch) :- close(Ch?) | done.                                 %% closed:    unfolds to ch([], [])
+```
+
+After guard unfolding the two heads are `ch([M|In], Out?)` and `ch([], [])`, which together cover every input path of the channel (input coverage / contravariance).  A consumer that unfolds only `receive` leaves the closed read stream `ch([], _)` uncovered and is **rejected**.  Equivalently, a consumer may destructure the channel directly in the head — one clause matching `ch([Msg|In], Out?)` and one matching `ch([], ...)` — the same two-way split; when the non-empty clause matches only a *specific* message, an `otherwise`-guarded skip clause covers the remaining messages.
 
 ---
 
@@ -884,6 +915,7 @@ Type parameters are uppercase identifiers in parentheses after the type name:
 
 ```prolog
 Stream(X) ::= [] ; [X | Stream(X)].
+OpenStream(X) ::= [X | Stream(X)].
 Pair(A, B) ::= pair(A, B).
 Channel(In, Out) ::= ch(In, Out?).
 ```
@@ -897,9 +929,11 @@ Use type parameters in procedure declarations to express uniform behaviour:
 ```prolog
 procedure merge(Stream(X)?, Stream(X)?, Stream(X)).
 procedure send(X?, Channel(Y, Stream(X))?, Channel(Y, Stream(X))).
-procedure receive(X, Channel(Stream(X), Y)?, Channel(Stream(X), Y)).
+procedure receive(X, Channel(OpenStream(X), Y)?, Channel(Stream(X), Y)).
 procedure new_channel(Channel(X, Y), Channel(Y, X)).
 ```
+
+(`receive` consumes a non-empty read stream `OpenStream(X)`; the closed stream is handled by the monomorphic `close(Channel(Closed, Closed)?)` guard — see §8.4.)
 
 The type parameter `X` is implicitly universally quantified. The type checker infers its binding from the call context by structural matching.
 
