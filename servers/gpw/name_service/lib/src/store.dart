@@ -94,6 +94,21 @@ class NameStore {
     tmp.renameSync(f.path);
   }
 
+  /// The public keys of all currently bound (unretired) web-names.
+  Set<String> boundKeys() {
+    final keys = <String>{};
+    for (final f in _names.listSync().whereType<File>()) {
+      final name = f.uri.pathSegments.last;
+      if (!name.endsWith('.json') || name.contains('.retired.')) continue;
+      final state = NameState.fromJson(
+          (jsonDecode(f.readAsStringSync()) as Map).cast<String, Object?>());
+      if (!state.retired) {
+        keys.add(state.manifestBody['publicKey'] as String);
+      }
+    }
+    return keys;
+  }
+
   /// Archive a retired name's final state (tombstone) aside, freeing the
   /// file for a fresh binding.  Called when a retired label is re-allocated;
   /// until then the tombstone stays in place so the retirement epoch guards

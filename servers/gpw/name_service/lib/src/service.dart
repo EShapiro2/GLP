@@ -11,6 +11,7 @@ library;
 import 'jcs.dart';
 import 'crypto.dart';
 import 'objects.dart';
+import 'push.dart';
 import 'store.dart';
 import 'zone_writer.dart';
 
@@ -30,14 +31,35 @@ class NameService {
     required this.store,
     required this.zoneWriter,
     required this.serverKey,
+    PushRegistrar? registrar,
     DateTime Function()? clock,
-  }) : _now = clock ?? (() => DateTime.now().toUtc());
+  })  : registrar = registrar ?? NoopRegistrar(),
+        _now = clock ?? (() => DateTime.now().toUtc());
 
   final String zone;
   final NameStore store;
   final ZoneWriter zoneWriter;
   final SigningKey serverKey;
+
+  /// The bindings drive the push channel's known-peer registry: a deposit
+  /// binding a web-name registers that key, retirement removes it, Replace
+  /// swaps old for new (registration rule, Udi 2026-07-12).
+  final PushRegistrar registrar;
   final DateTime Function() _now;
+
+  /// Re-register every bound key (process start: the transport's known-peer
+  /// set is rebuilt from the bindings).
+  void syncRegistrar() {
+    for (final key in store.boundKeys()) {
+      registrar.register(key);
+    }
+  }
+
+  /// A key may bind several web-names; it leaves the known-peer registry
+  /// only when its last binding goes.
+  void _unregisterIfUnbound(String key) {
+    if (!store.boundKeys().contains(key)) registrar.unregister(key);
+  }
 
   Future<Outcome> deposit(String webName, Object? json) async {
     final Envelope env;
@@ -133,6 +155,10 @@ class NameService {
       mirror: state?.mirror,
     );
     store.save(webName, next);
+    if (state != null && manifest.replaces != null) {
+      _unregisterIfUnbound(manifest.replaces!.oldKey);
+    }
+    registrar.register(manifest.publicKey);
     return Outcome(newlyBound ? 201 : 200, next.served());
   }
 
@@ -207,6 +233,7 @@ class NameService {
     state.retirement = {'body': env.body, 'signature': env.signature};
     state.mirror = null;
     store.save(webName, state);
+    _unregisterIfUnbound(boundKey);
     return Outcome(200, {'status': 'retired', 'webName': webName});
   }
 
