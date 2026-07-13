@@ -28,7 +28,7 @@ Uint8List buildAnnouncePayload({
   buffer.add(pubkey);
 
   final versionBytes = ByteData(2);
-  versionBytes.setUint16(0, 1, Endian.big);
+  versionBytes.setUint16(0, ProtocolHandler.protocolVersion, Endian.big);
   buffer.add(versionBytes.buffer.asUint8List());
 
   final record = buffer.toBytes();
@@ -207,11 +207,9 @@ void main() {
         // reaching the session layer or any handler.
         const clearAppTypes = [
           PacketType.message,
-          PacketType.fragmentStart,
-          PacketType.fragmentContinue,
-          PacketType.fragmentEnd,
+          PacketType.fragment,
+          PacketType.fragmentAck,
           PacketType.ack,
-          PacketType.nack,
           PacketType.readReceipt,
           PacketType.signaling,
         ];
@@ -515,7 +513,7 @@ void main() {
 
         store.dispatch(PeerAnnounceReceivedAction(
           publicKey: otherPubkey,
-          protocolVersion: 1,
+          protocolVersion: ProtocolHandler.protocolVersion,
           rssi: -44,
           bleCentralDeviceId: 'central:peer-1',
         ));
@@ -658,7 +656,18 @@ void main() {
           payload[i] = i % 256;
         }
 
-        final fragmented = fragmentHandler.fragment(payload: payload);
+        const messageId = '00000000-0000-4000-8000-000000000009';
+        final fragmented = fragmentHandler.fragment(
+          payload: payload,
+          messageId: messageId,
+          maxChunk: 270,
+        );
+
+        final ackedIndices = <int>[];
+        router.onFragmentAckRequested = (_, __, id, index) {
+          expect(id, messageId);
+          ackedIndices.add(index);
+        };
 
         for (final fragment in fragmented.fragments) {
           // On the wire each fragment travels session-encrypted.
@@ -672,6 +681,8 @@ void main() {
         expect(reassembledPayload, isNotNull);
         expect(reassembledPayload, equals(payload));
         expect(reassembledSender, equals(otherPubkey));
+        // Every fragment was acknowledged (spec §Message Transport).
+        expect(ackedIndices, hasLength(fragmented.fragments.length));
       });
     });
 
@@ -701,17 +712,21 @@ void main() {
         expect(receivedMessageId, equals(messageId));
       });
 
-      test('NACK is silently ignored', () async {
+      test('routes a fragment ACK to onFragmentAckReceived', () async {
         stubSession();
 
-        bool anyCalled = false;
-        router.onMessageReceived = (_, __, ___, ____) => anyCalled = true;
-        router.onAckReceived = (_) => anyCalled = true;
-        router.onReadReceiptReceived = (_) => anyCalled = true;
+        String? ackedId;
+        int? ackedIndex;
+        router.onFragmentAckReceived = (_, id, index, __) {
+          ackedId = id;
+          ackedIndex = index;
+        };
 
+        const messageId = '00000000-0000-4000-8000-00000000000a';
         final p = securePacket(
-          type: PacketType.nack,
-          payload: Uint8List(0),
+          type: PacketType.fragmentAck,
+          payload: FragmentHandler.encodeFragmentAck(
+              messageId: messageId, index: 3),
         );
 
         await router.processPacket(
@@ -720,7 +735,8 @@ void main() {
           rssi: -60,
         );
 
-        expect(anyCalled, isFalse);
+        expect(ackedId, equals(messageId));
+        expect(ackedIndex, equals(3));
       });
     });
 

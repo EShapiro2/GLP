@@ -11,6 +11,7 @@ import '../models/packet.dart';
 import '../models/peer.dart';
 import '../platform/compat.dart';
 import '../protocol/fragment_handler.dart';
+import '../protocol/message_transport.dart';
 import '../protocol/protocol_handler.dart';
 import '../routing/message_router.dart';
 import '../session/noise_session_manager.dart';
@@ -89,6 +90,18 @@ class HeadlessGrassrootsNetwork {
   late final NoiseSessionManager _noiseSessions;
   late final MessageRouter _messageRouter;
   UdpTransportService? _udpService;
+
+  /// The IP carrier of the shared message transport (spec §Message
+  /// Transport): fragments sized to a datagram, per-fragment ACK,
+  /// retransmit with backoff under a bounded per-peer window.
+  late final MessageTransportSender _udpMessageSender = MessageTransportSender(
+    maxChunk: FragmentHandler.udpMaxChunk,
+    sendPacket: (peerHex, packet) async {
+      final bytes = await _sessionPacketBytes(packet, _bytes(peerHex));
+      if (bytes == null) return false;
+      return await _udpService?.sendToPeer(peerHex, bytes) ?? false;
+    },
+  );
   StreamSubscription<AppState>? _storeSubscription;
   StreamSubscription<dynamic>? _connectionSub;
   Timer? _heartbeatTimer;
@@ -162,6 +175,7 @@ class HeadlessGrassrootsNetwork {
     final hex = _hex(pubkey);
     store.dispatch(KnownPeerRemovedAction(hex));
     _noiseSessions.reset(PeerTransport.udp, pubkey);
+    _udpMessageSender.abandonPeer(hex);
     unawaited(_udpService?.disconnectFromPeer(hex));
     if (_reachablePeers.remove(hex)) {
       onPeerDisconnected?.call(pubkey, MessageTransport.udp);
@@ -213,7 +227,6 @@ class HeadlessGrassrootsNetwork {
     }
     _udpService = udp;
     _setupUdpCallbacks(udp);
-    udp.startMultiplexer();
     await udp.start();
     _heartbeatTimer = Timer.periodic(heartbeatInterval, (_) {
       for (final hex in _outboundQueue.keys.toList()) {
@@ -303,13 +316,28 @@ class HeadlessGrassrootsNetwork {
       await udp.sendToPeer(hex, _signedAnnounceBytes());
     }
 
-    final packet = _protocolHandler.createMessagePacket(
-      payload: payload,
-      messageId: messageId,
+    // Establish the session up front (dialer waits for the acceptor's
+    // handshake per the dial sequence) so the transport engine's fragments
+    // all ride an existing session.
+    if (!_noiseSessions.hasSession(PeerTransport.udp, recipientPubkey)) {
+      final probe = await _sessionPacketBytes(
+        _protocolHandler.createAckPacket(messageId: messageId),
+        recipientPubkey,
+      );
+      if (probe == null) return false;
+    }
+
+    unawaited(
+      _udpMessageSender.sendMessage(hex, messageId, payload).then((ok) {
+        if (!ok && _udpService != null) {
+          _outboundQueue
+              .putIfAbsent(hex, () => [])
+              .add((messageId: messageId, payload: payload));
+          debugPrint('[headless] Transport gave up on $messageId; re-queued');
+        }
+      }),
     );
-    final bytes = await _sessionPacketBytes(packet, recipientPubkey);
-    if (bytes == null) return false;
-    return udp.sendToPeer(hex, bytes);
+    return true;
   }
 
   /// Encrypt a session-secured packet, establishing the Noise session first
@@ -478,6 +506,11 @@ class HeadlessGrassrootsNetwork {
             );
           }
           _onSessionEstablished(result.remotePubkey);
+        } else if (_noiseSessions.handshakeRetransmitPayload(
+                transport, result.remotePubkey) !=
+            null) {
+          // We just sent message 2 (or 1): retransmit it until its reply.
+          _scheduleHandshakeRetransmit(result.remotePubkey, peerId: peerId);
         }
       } catch (e) {
         debugPrint('[headless][noise] Dropping handshake packet: $e');
@@ -517,6 +550,29 @@ class HeadlessGrassrootsNetwork {
 
     _messageRouter.onAckReceived = (messageId) {
       debugPrint('[headless] ACK received for $messageId');
+      _udpMessageSender.handleMessageAck(messageId);
+    };
+
+    _messageRouter.onFragmentAckReceived =
+        (senderPubkey, messageId, index, transport) {
+      _udpMessageSender.handleFragmentAck(
+          _hex(senderPubkey), messageId, index);
+    };
+
+    _messageRouter.onFragmentAckRequested =
+        (transport, peerId, messageId, index) async {
+      if (peerId == null) return;
+      final bytes = await _sessionPacketBytes(
+        GrassrootsPacket(
+          type: PacketType.fragmentAck,
+          payload: FragmentHandler.encodeFragmentAck(
+              messageId: messageId, index: index),
+        ),
+        _bytes(peerId),
+      );
+      if (bytes != null) {
+        await _udpService?.sendToPeer(peerId, bytes);
+      }
     };
   }
 
@@ -632,6 +688,29 @@ class HeadlessGrassrootsNetwork {
     } catch (_) {
       return peerId ?? '?';
     }
+  }
+
+  /// Retransmit the in-flight handshake message with backoff until its
+  /// reply arrives (spec §Session Establishment: the handshake is
+  /// self-ordering over a lossy carrier).
+  void _scheduleHandshakeRetransmit(Uint8List pubkey, {String? peerId}) {
+    var attempt = 0;
+    void tick() {
+      final payload = _noiseSessions.handshakeRetransmitPayload(
+          PeerTransport.udp, pubkey);
+      if (payload == null || attempt >= 5 || _udpService == null) return;
+      attempt++;
+      debugPrint('[headless][noise] Retransmitting handshake to '
+          '${_hex(pubkey).substring(0, 8)} (attempt $attempt)');
+      unawaited(_udpService?.sendToPeer(
+        peerId ?? _hex(pubkey),
+        GrassrootsPacket(type: PacketType.noiseHandshake, payload: payload)
+            .serialize(),
+      ));
+      Timer(Duration(milliseconds: 600 * (1 << attempt)), tick);
+    }
+
+    Timer(const Duration(milliseconds: 800), tick);
   }
 
   void _onSessionEstablished(Uint8List pubkey) {

@@ -5,23 +5,21 @@ enum PacketType {
   /// Peer identity announcement (sent periodically)
   announce(0x01),
 
-  /// Application message (GSG blocks go here)
+  /// Application message that fits one carrier packet (a one-fragment
+  /// message in the sense of spec §Message Transport)
   message(0x02),
 
-  /// Start of fragmented message
-  fragmentStart(0x03),
+  /// Message fragment. Every fragment is self-contained: it carries the
+  /// messageId, its index, the fragment count, and its chunk (spec
+  /// §Message Transport), so any subset arriving in any order reassembles.
+  fragment(0x03),
 
-  /// Continuation fragment
-  fragmentContinue(0x04),
+  /// Per-fragment acknowledgment: messageId + fragment index. Drives the
+  /// sender's retransmit-with-backoff.
+  fragmentAck(0x04),
 
-  /// Final fragment
-  fragmentEnd(0x05),
-
-  /// Delivery acknowledgment (for UDP transport)
+  /// Whole-message delivery acknowledgment (dedup re-ACKed)
   ack(0x06),
-
-  /// Negative acknowledgment / request for data
-  nack(0x07),
 
   /// Read receipt (recipient has read the message)
   readReceipt(0x08),
@@ -35,20 +33,14 @@ enum PacketType {
   /// Session-encrypted application message.
   secureMessage(0x0B),
 
-  /// Session-encrypted start of fragmented message.
-  secureFragmentStart(0x0C),
+  /// Session-encrypted message fragment.
+  secureFragment(0x0C),
 
-  /// Session-encrypted continuation fragment.
-  secureFragmentContinue(0x0D),
-
-  /// Session-encrypted final fragment.
-  secureFragmentEnd(0x0E),
+  /// Session-encrypted per-fragment acknowledgment.
+  secureFragmentAck(0x0D),
 
   /// Session-encrypted delivery acknowledgment.
   secureAck(0x0F),
-
-  /// Session-encrypted negative acknowledgment.
-  secureNack(0x10),
 
   /// Session-encrypted read receipt.
   secureReadReceipt(0x11),
@@ -74,22 +66,18 @@ extension PacketTypeSessionSecurity on PacketType {
   bool get usesSessionSecurity {
     switch (this) {
       case PacketType.message:
-      case PacketType.fragmentStart:
-      case PacketType.fragmentContinue:
-      case PacketType.fragmentEnd:
+      case PacketType.fragment:
+      case PacketType.fragmentAck:
       case PacketType.ack:
-      case PacketType.nack:
       case PacketType.readReceipt:
       case PacketType.signaling:
         return true;
       case PacketType.announce:
       case PacketType.noiseHandshake:
       case PacketType.secureMessage:
-      case PacketType.secureFragmentStart:
-      case PacketType.secureFragmentContinue:
-      case PacketType.secureFragmentEnd:
+      case PacketType.secureFragment:
+      case PacketType.secureFragmentAck:
       case PacketType.secureAck:
-      case PacketType.secureNack:
       case PacketType.secureReadReceipt:
       case PacketType.secureSignaling:
         return false;
@@ -99,21 +87,17 @@ extension PacketTypeSessionSecurity on PacketType {
   bool get isSessionEncrypted {
     switch (this) {
       case PacketType.secureMessage:
-      case PacketType.secureFragmentStart:
-      case PacketType.secureFragmentContinue:
-      case PacketType.secureFragmentEnd:
+      case PacketType.secureFragment:
+      case PacketType.secureFragmentAck:
       case PacketType.secureAck:
-      case PacketType.secureNack:
       case PacketType.secureReadReceipt:
       case PacketType.secureSignaling:
         return true;
       case PacketType.announce:
       case PacketType.message:
-      case PacketType.fragmentStart:
-      case PacketType.fragmentContinue:
-      case PacketType.fragmentEnd:
+      case PacketType.fragment:
+      case PacketType.fragmentAck:
       case PacketType.ack:
-      case PacketType.nack:
       case PacketType.readReceipt:
       case PacketType.signaling:
       case PacketType.noiseHandshake:
@@ -125,16 +109,12 @@ extension PacketTypeSessionSecurity on PacketType {
     switch (this) {
       case PacketType.message:
         return PacketType.secureMessage;
-      case PacketType.fragmentStart:
-        return PacketType.secureFragmentStart;
-      case PacketType.fragmentContinue:
-        return PacketType.secureFragmentContinue;
-      case PacketType.fragmentEnd:
-        return PacketType.secureFragmentEnd;
+      case PacketType.fragment:
+        return PacketType.secureFragment;
+      case PacketType.fragmentAck:
+        return PacketType.secureFragmentAck;
       case PacketType.ack:
         return PacketType.secureAck;
-      case PacketType.nack:
-        return PacketType.secureNack;
       case PacketType.readReceipt:
         return PacketType.secureReadReceipt;
       case PacketType.signaling:
@@ -142,11 +122,9 @@ extension PacketTypeSessionSecurity on PacketType {
       case PacketType.announce:
       case PacketType.noiseHandshake:
       case PacketType.secureMessage:
-      case PacketType.secureFragmentStart:
-      case PacketType.secureFragmentContinue:
-      case PacketType.secureFragmentEnd:
+      case PacketType.secureFragment:
+      case PacketType.secureFragmentAck:
       case PacketType.secureAck:
-      case PacketType.secureNack:
       case PacketType.secureReadReceipt:
       case PacketType.secureSignaling:
         throw StateError('Packet type $this has no secure variant');
@@ -157,27 +135,21 @@ extension PacketTypeSessionSecurity on PacketType {
     switch (this) {
       case PacketType.secureMessage:
         return PacketType.message;
-      case PacketType.secureFragmentStart:
-        return PacketType.fragmentStart;
-      case PacketType.secureFragmentContinue:
-        return PacketType.fragmentContinue;
-      case PacketType.secureFragmentEnd:
-        return PacketType.fragmentEnd;
+      case PacketType.secureFragment:
+        return PacketType.fragment;
+      case PacketType.secureFragmentAck:
+        return PacketType.fragmentAck;
       case PacketType.secureAck:
         return PacketType.ack;
-      case PacketType.secureNack:
-        return PacketType.nack;
       case PacketType.secureReadReceipt:
         return PacketType.readReceipt;
       case PacketType.secureSignaling:
         return PacketType.signaling;
       case PacketType.announce:
       case PacketType.message:
-      case PacketType.fragmentStart:
-      case PacketType.fragmentContinue:
-      case PacketType.fragmentEnd:
+      case PacketType.fragment:
+      case PacketType.fragmentAck:
       case PacketType.ack:
-      case PacketType.nack:
       case PacketType.readReceipt:
       case PacketType.signaling:
       case PacketType.noiseHandshake:
@@ -195,10 +167,9 @@ extension PacketTypeSessionSecurity on PacketType {
 /// [5-N]     : Payload (variable length)
 /// ```
 ///
-/// Total header size: 5 bytes. The 4-byte payload length is the on-wire
-/// framer: stream transports (UDP/UDX) accumulate bytes until
-/// `headerSize + payloadLength` are available before treating a buffer as
-/// one packet.
+/// Total header size: 5 bytes. Over IP one packet rides one UDP datagram
+/// (the length is validated against the datagram); over BLE the length is
+/// the framer across GATT writes.
 ///
 /// The frame carries no identity, authentication, or identifiers of its
 /// own. Sender identity and integrity come from the layer the payload rides

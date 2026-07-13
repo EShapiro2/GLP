@@ -11,7 +11,9 @@ import 'packet.dart';
 /// ProtocolHandler.
 class Protocol {
   final AnchorIdentity identity;
-  static const int protocolVersion = 2;
+  /// Version 3: the shared message transport — datagram carrier, no UDX.
+  /// Must match grassroots_networking_core; mixed versions are refused.
+  static const int protocolVersion = 3;
 
   /// Length of the trailing Ed25519 signature on an ANNOUNCE payload.
   static const int announceSignatureLength = 64;
@@ -97,6 +99,10 @@ class Protocol {
       publicKey: Uint8List.fromList(pubkey),
     )) {
       throw const FormatException('ANNOUNCE signature verification failed');
+    }
+    if (version != protocolVersion) {
+      throw FormatException(
+          'ANNOUNCE protocol version $version != $protocolVersion; refused');
     }
 
     return AnnounceData(

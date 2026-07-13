@@ -97,32 +97,36 @@ void main() {
       handler.dispose();
     });
 
+    const maxChunk = 270;
+    const messageId = '00000000-0000-4000-8000-000000000abc';
+
     test('does not fragment small payloads', () {
-      final smallPayload = Uint8List(100);
-      expect(handler.needsFragmentation(smallPayload), isFalse);
+      expect(handler.needsFragmentation(Uint8List(100), maxChunk: maxChunk),
+          isFalse);
     });
 
     test('fragments large payloads', () {
-      final largePayload = Uint8List(1000);
-      expect(handler.needsFragmentation(largePayload), isTrue);
+      expect(handler.needsFragmentation(Uint8List(1000), maxChunk: maxChunk),
+          isTrue);
     });
 
     test('fragments and reassembles correctly', () {
       final payload = Uint8List.fromList(List.generate(1500, (i) => i % 256));
 
-      final fragmented = handler.fragment(payload: payload);
+      final fragmented = handler.fragment(
+          payload: payload, messageId: messageId, maxChunk: maxChunk);
 
       expect(fragmented.fragments.length, greaterThan(1));
-      expect(fragmented.fragments.first.type, equals(PacketType.fragmentStart));
-      expect(fragmented.fragments.last.type, equals(PacketType.fragmentEnd));
-
-      // Process all fragments
-      ReassembledMessage? result;
-      for (final fragment in fragmented.fragments) {
-        result = handler.processFragment(fragment);
+      for (final f in fragmented.fragments) {
+        expect(f.type, equals(PacketType.fragment));
       }
 
-      // Last fragment should trigger reassembly
+      ReassembledMessage? result;
+      for (final fragment in fragmented.fragments) {
+        result =
+            handler.addFragment(FragmentHandler.decodeFragment(fragment.payload));
+      }
+
       expect(result, isNotNull);
       expect(result!.payload, equals(payload));
     });
@@ -130,10 +134,11 @@ void main() {
     test('returns null for incomplete fragments', () {
       final payload = Uint8List.fromList(List.generate(1500, (i) => i % 256));
 
-      final fragmented = handler.fragment(payload: payload);
+      final fragmented = handler.fragment(
+          payload: payload, messageId: messageId, maxChunk: maxChunk);
 
-      // Process only first fragment
-      final result = handler.processFragment(fragmented.fragments.first);
+      final result = handler.addFragment(
+          FragmentHandler.decodeFragment(fragmented.fragments.first.payload));
       expect(result, isNull);
     });
   });

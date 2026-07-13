@@ -174,6 +174,19 @@ class NoiseSessionManager {
     Uint8List remotePubkey,
     Uint8List body,
   ) async {
+    // A retransmitted message 1 (our message 2 was lost): resend the same
+    // message 2 — a fresh responder state would break the initiator's
+    // in-flight handshake (spec §Session Establishment: self-ordering
+    // handshake over a lossy carrier).
+    if (entry.handshake?.role == NoiseHandshakeRole.responder &&
+        entry.lastInboundBody != null &&
+        _bytesEqual(entry.lastInboundBody!, body)) {
+      return NoiseHandshakeResult(
+        remotePubkey: remotePubkey,
+        responsePayload: entry.lastSentEncoded,
+      );
+    }
+
     final handshake = await _NoiseHandshakeState.create(
       role: NoiseHandshakeRole.responder,
       localStaticKeyPair: await _staticKeyPair(),
@@ -182,14 +195,17 @@ class NoiseSessionManager {
     final responseBody = await handshake.writeMessage2();
     entry
       ..session = null
-      ..handshake = handshake;
+      ..handshake = handshake
+      ..lastInboundBody = body;
+    final encoded = _encodeHandshakePayload(
+      _NoiseHandshakeMessage.message2,
+      identity.publicKey,
+      responseBody,
+    );
+    entry.lastSentEncoded = encoded;
     return NoiseHandshakeResult(
       remotePubkey: remotePubkey,
-      responsePayload: _encodeHandshakePayload(
-        _NoiseHandshakeMessage.message2,
-        identity.publicKey,
-        responseBody,
-      ),
+      responsePayload: encoded,
     );
   }
 
@@ -301,6 +317,8 @@ class NoiseSessionManager {
 }
 
 class _SessionEntry {
+  Uint8List? lastSentEncoded;
+  Uint8List? lastInboundBody;
   _NoiseTransportSession? session;
   _NoiseHandshakeState? handshake;
 }

@@ -42,6 +42,16 @@ class MessageRouter {
   /// Called when an ACK is received (delivery confirmation)
   void Function(String messageId)? onAckReceived;
 
+  /// Called when a per-fragment acknowledgment arrives (spec §Message
+  /// Transport) — the coordinator settles the sender-side retransmit slot.
+  void Function(Uint8List senderPubkey, String messageId, int index,
+      PeerTransport transport)? onFragmentAckReceived;
+
+  /// Called when an inbound fragment needs its per-fragment acknowledgment
+  /// sent back.
+  void Function(PeerTransport transport, String? peerId, String messageId,
+      int index)? onFragmentAckRequested;
+
   /// Called when a read receipt is received
   void Function(String messageId)? onReadReceiptReceived;
 
@@ -258,20 +268,17 @@ class MessageRouter {
           transport: transport,
           peerId: effectiveUdpPeerId ?? bleDeviceId,
         );
-      case PacketType.fragmentStart:
-      case PacketType.fragmentContinue:
-      case PacketType.fragmentEnd:
+      case PacketType.fragment:
         _handleFragment(
           packet,
           senderPubkey: senderPubkey,
           transport: transport,
           peerId: effectiveUdpPeerId ?? bleDeviceId,
         );
+      case PacketType.fragmentAck:
+        _handleFragmentAck(packet, senderPubkey, transport);
       case PacketType.ack:
         _handleAck(packet);
-      case PacketType.nack:
-        // TODO: handle this
-        break;
       case PacketType.readReceipt:
         _handleReadReceipt(packet);
       case PacketType.signaling:
@@ -284,11 +291,9 @@ class MessageRouter {
       case PacketType.announce:
       case PacketType.noiseHandshake:
       case PacketType.secureMessage:
-      case PacketType.secureFragmentStart:
-      case PacketType.secureFragmentContinue:
-      case PacketType.secureFragmentEnd:
+      case PacketType.secureFragment:
+      case PacketType.secureFragmentAck:
       case PacketType.secureAck:
-      case PacketType.secureNack:
       case PacketType.secureReadReceipt:
       case PacketType.secureSignaling:
         return;
@@ -408,7 +413,31 @@ class MessageRouter {
     required PeerTransport transport,
     String? peerId,
   }) {
-    final reassembled = fragmentHandler.processFragment(packet);
+    final Fragment fragment;
+    try {
+      fragment = FragmentHandler.decodeFragment(packet.payload);
+    } catch (e) {
+      debugPrint('Dropping malformed fragment: $e');
+      return;
+    }
+
+    // Acknowledge every fragment, duplicates included — the sender's
+    // retransmit stops only on the ACK (spec §Message Transport).
+    onFragmentAckRequested?.call(
+      transport,
+      peerId,
+      fragment.messageId,
+      fragment.index,
+    );
+
+    // A fragment of an already-delivered message: the sender missed the
+    // delivery ACK — re-issue it rather than rebuffering.
+    if (_seenPackets.mightContain(fragment.messageId)) {
+      onAckRequested?.call(transport, peerId, fragment.messageId);
+      return;
+    }
+
+    final reassembled = fragmentHandler.addFragment(fragment);
     if (reassembled == null) return;
 
     // Reassembly produced the original message's payload bytes; the
@@ -421,6 +450,22 @@ class MessageRouter {
       transport: transport,
       peerId: peerId,
     );
+  }
+
+  void _handleFragmentAck(
+    GrassrootsPacket packet,
+    Uint8List senderPubkey,
+    PeerTransport transport,
+  ) {
+    final String messageId;
+    final int index;
+    try {
+      (messageId, index) = FragmentHandler.decodeFragmentAck(packet.payload);
+    } catch (e) {
+      debugPrint('Dropping malformed fragment ACK: $e');
+      return;
+    }
+    onFragmentAckReceived?.call(senderPubkey, messageId, index, transport);
   }
 
   void _deliverMessage(

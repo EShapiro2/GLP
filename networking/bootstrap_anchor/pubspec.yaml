@@ -19,8 +19,6 @@ dependencies:
   # UUID generation for packet IDs
   uuid: ^4.2.0
 
-  # UDX reliable streams over UDP — fork of dart_udx, published on pub.dev.
-  grassroots_dart_udx: ^2.1.0
 
   # CLI argument parsing
   args: ^2.4.0

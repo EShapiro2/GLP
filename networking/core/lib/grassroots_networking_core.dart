@@ -13,6 +13,7 @@ export 'src/models/peer.dart';
 export 'src/models/block.dart';
 export 'src/protocol/protocol_handler.dart';
 export 'src/protocol/fragment_handler.dart';
+export 'src/protocol/message_transport.dart';
 export 'src/session/noise_session_manager.dart';
 export 'src/routing/message_router.dart';
 export 'src/store/store.dart';

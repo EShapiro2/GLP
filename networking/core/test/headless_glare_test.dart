@@ -219,7 +219,6 @@ class _PhoneStyleDialer {
         } catch (_) {}
       });
     };
-    service.startMultiplexer();
     await service.start();
     udp = service;
   }

@@ -1,24 +1,19 @@
 import 'dart:async';
 import 'dart:typed_data';
 import '../platform/compat.dart';
-import 'package:uuid/uuid.dart';
 import '../models/packet.dart';
 
-/// Result of fragmenting a large message
+/// A message split for transmission per spec §Message Transport.
 class FragmentedMessage {
   final String messageId;
   final List<GrassrootsPacket> fragments;
 
-  FragmentedMessage({
-    required this.messageId,
-    required this.fragments,
-  });
+  FragmentedMessage({required this.messageId, required this.fragments});
+
+  int get totalFragments => fragments.length;
 }
 
-/// Result of reassembling a fragmented message: the final payload bytes plus
-/// the originating message id (carried in `FRAGMENT_START` and matching the
-/// sender's `MessageSendingAction.messageId`, so the receiver's ACK can be
-/// addressed to the same id the sender is tracking).
+/// A fully reassembled message ready for delivery.
 class ReassembledMessage {
   final String messageId;
   final Uint8List payload;
@@ -26,349 +21,207 @@ class ReassembledMessage {
   ReassembledMessage({required this.messageId, required this.payload});
 }
 
-/// State of a message being reassembled
-class _ReassemblyState {
+/// One decoded fragment (spec §Message Transport: every fragment carries
+/// the messageId, its index, and the fragment count, so any subset arriving
+/// in any order — over a lossy carrier — reassembles without a
+/// distinguished first fragment).
+class Fragment {
   final String messageId;
-  final int totalFragments;
-  final int totalSize;
+  final int index;
+  final int count;
+  final Uint8List chunk;
+
+  Fragment({
+    required this.messageId,
+    required this.index,
+    required this.count,
+    required this.chunk,
+  });
+}
+
+class _ReassemblyState {
+  final int count;
   final Map<int, Uint8List> receivedChunks = {};
   final DateTime startedAt = DateTime.now();
 
-  _ReassemblyState({
-    required this.messageId,
-    required this.totalFragments,
-    required this.totalSize,
-  });
+  _ReassemblyState({required this.count});
 
-  bool get isComplete => receivedChunks.length == totalFragments;
+  bool get isComplete => receivedChunks.length == count;
 
-  void addChunk(int index, Uint8List data) {
-    receivedChunks[index] = data;
-  }
-
-  Uint8List? reassemble() {
-    if (!isComplete) return null;
-
-    // Concatenate chunks in order
-    final result = BytesBuilder();
-    for (var i = 0; i < totalFragments; i++) {
-      final chunk = receivedChunks[i];
-      if (chunk == null) return null;
-      result.add(chunk);
+  Uint8List assemble() {
+    final builder = BytesBuilder(copy: false);
+    for (var i = 0; i < count; i++) {
+      builder.add(receivedChunks[i]!);
     }
-    return result.toBytes();
+    return builder.toBytes();
   }
 }
 
-/// Handles fragmentation and reassembly of messages larger than BLE MTU.
-///
-/// Grassroots fragments payloads larger than [fragmentThreshold] bytes:
-/// - fragmentStart: contains metadata + first chunk
-/// - fragmentContinue: intermediate chunks
-/// - fragmentEnd: final chunk, triggers reassembly
-///
-/// Inter-fragment delay: 20ms (to avoid overwhelming BLE buffer)
+/// Fragmentation and reassembly for the shared message transport (spec
+/// §Message Transport): a message is assigned its messageId and split into
+/// fragments sized to the carrier; each fragment is self-contained; the
+/// receiver reassembles when all fragments have arrived and delivers the
+/// message whole (atomic delivery).
 class FragmentHandler {
-  static const _uuid = Uuid();
+  /// The messageId is a full 36-character UUID.
+  static const int messageIdLength = 36;
 
-  /// Maximum chunk size per fragment.
-  ///
-  /// Session security adds 25 bytes of payload overhead (version + nonce +
-  /// AEAD tag), so keep fragments below the BLE target after encryption.
-  static const int maxFragmentPayload = 270;
+  /// Per-fragment payload overhead: messageId + index(u32) + count(u32).
+  static const int fragmentHeaderLength = messageIdLength + 8;
 
-  /// Threshold for fragmenting: max payload that fits in a single encrypted
-  /// BLE packet.
-  static const int fragmentThreshold = 320;
+  /// Fragment chunk size for the BLE carrier: sized to the negotiated GATT
+  /// MTU with room for the 5-byte frame and the session AEAD overhead
+  /// (version + nonce + tag = 25 bytes).
+  static const int bleMaxChunk = 270;
 
-  /// Inter-fragment delay
-  static const Duration fragmentDelay = Duration(milliseconds: 20);
+  /// Fragment chunk size for the IP carrier: one fragment rides one UDP
+  /// datagram sized within the path MTU (spec §Message Transport). A
+  /// conservative 1200-byte datagram budget minus the frame (5), the
+  /// fragment header (44) and the session overhead (25) leaves ~1126;
+  /// rounded down.
+  static const int udpMaxChunk = 1100;
 
-  /// Timeout for incomplete reassembly. Sized to cover slow Android receivers
-  /// where Ed25519 verification of every fragment runs in series on a worker
-  /// isolate at ~150-200ms each — a 100 KB picture (~315 fragments) needs
-  /// roughly a minute end-to-end. The worker keeps the main isolate
-  /// responsive; this timeout just has to outlast the verify queue draining.
+  /// Timeout for incomplete reassembly. Over a lossy carrier fragments
+  /// retransmit with backoff, so this must outlast the sender giving up.
   static const Duration reassemblyTimeout = Duration(minutes: 2);
 
-  /// Messages currently being reassembled, keyed by messageId
+  /// Messages currently being reassembled, keyed by messageId.
   final Map<String, _ReassemblyState> _reassemblyBuffer = {};
 
-  /// Timer for cleaning up stale reassembly attempts
   Timer? _cleanupTimer;
 
   FragmentHandler() {
     _startCleanupTimer();
   }
 
-  /// Check if a payload needs fragmentation
-  bool needsFragmentation(Uint8List payload) =>
-      payload.length > fragmentThreshold;
+  /// Whether [payload] exceeds one [maxChunk]-sized carrier packet.
+  bool needsFragmentation(Uint8List payload, {required int maxChunk}) =>
+      payload.length > maxChunk;
 
-  /// Fragment a large payload into multiple packets.
-  ///
-  /// Returns a [FragmentedMessage] containing all the packets to send.
-  /// Caller should send them with [fragmentDelay] between each.
-  ///
-  /// [messageId] is the application-level id under which the sender tracks
-  /// delivery (`MessageSendingAction.messageId`). It travels in the
-  /// `FRAGMENT_START` payload and is echoed back in the receiver's ACK so
-  /// `MessageDeliveredAction` can find the right outgoing-message slot.
+  /// Split [payload] into self-contained fragments of at most [maxChunk]
+  /// chunk bytes each.
   FragmentedMessage fragment({
     required Uint8List payload,
-    String? messageId,
+    required String messageId,
+    required int maxChunk,
   }) {
-    if (!needsFragmentation(payload)) {
-      throw ArgumentError('Payload does not need fragmentation');
+    if (messageId.length != messageIdLength) {
+      throw ArgumentError.value(
+          messageId, 'messageId', 'must be a 36-character UUID');
     }
-
-    final id = messageId ?? _uuid.v4();
+    final count = payload.isEmpty ? 1 : (payload.length / maxChunk).ceil();
     final fragments = <GrassrootsPacket>[];
-
-    // Calculate number of fragments needed
-    final totalFragments = (payload.length / maxFragmentPayload).ceil();
-
-    for (var i = 0; i < totalFragments; i++) {
-      final start = i * maxFragmentPayload;
-      final end = (start + maxFragmentPayload).clamp(0, payload.length);
-      final chunk = payload.sublist(start, end);
-
-      final PacketType type;
-      final Uint8List fragmentPayload;
-
-      if (i == 0) {
-        // First fragment: include metadata
-        type = PacketType.fragmentStart;
-        fragmentPayload = _encodeFragmentStart(
-          messageId: id,
-          totalFragments: totalFragments,
-          totalSize: payload.length,
-          chunk: chunk,
-        );
-      } else if (i == totalFragments - 1) {
-        // Last fragment
-        type = PacketType.fragmentEnd;
-        fragmentPayload = _encodeFragmentEnd(
-          messageId: id,
-          fragmentIndex: i,
-          chunk: chunk,
-        );
-      } else {
-        // Middle fragments
-        type = PacketType.fragmentContinue;
-        fragmentPayload = _encodeFragmentContinue(
-          messageId: id,
-          fragmentIndex: i,
-          chunk: chunk,
-        );
-      }
-
+    for (var i = 0; i < count; i++) {
+      final start = i * maxChunk;
+      final end = (start + maxChunk).clamp(0, payload.length);
       fragments.add(GrassrootsPacket(
-        type: type,
-        payload: fragmentPayload,
+        type: PacketType.fragment,
+        payload: encodeFragment(
+          messageId: messageId,
+          index: i,
+          count: count,
+          chunk: payload.sublist(start, end),
+        ),
       ));
     }
-
-    return FragmentedMessage(messageId: id, fragments: fragments);
+    return FragmentedMessage(messageId: messageId, fragments: fragments);
   }
 
-  /// Process an incoming fragment packet.
-  ///
-  /// Returns the reassembled message (payload + originating messageId) if
-  /// this was the final fragment and all fragments have been received.
-  /// Otherwise returns null.
-  ReassembledMessage? processFragment(GrassrootsPacket packet) {
-    switch (packet.type) {
-      case PacketType.fragmentStart:
-        return _processFragmentStart(packet);
-      case PacketType.fragmentContinue:
-        return _processFragmentContinue(packet);
-      case PacketType.fragmentEnd:
-        return _processFragmentEnd(packet);
-      default:
-        throw ArgumentError('Not a fragment packet: ${packet.type}');
+  /// Payload layout: `[messageId(36)][index u32][count u32][chunk]`.
+  static Uint8List encodeFragment({
+    required String messageId,
+    required int index,
+    required int count,
+    required Uint8List chunk,
+  }) {
+    final bytes = Uint8List(fragmentHeaderLength + chunk.length);
+    bytes.setRange(0, messageIdLength, messageId.codeUnits);
+    final view = ByteData.view(bytes.buffer);
+    view.setUint32(messageIdLength, index, Endian.big);
+    view.setUint32(messageIdLength + 4, count, Endian.big);
+    bytes.setRange(fragmentHeaderLength, bytes.length, chunk);
+    return bytes;
+  }
+
+  static Fragment decodeFragment(Uint8List payload) {
+    if (payload.length < fragmentHeaderLength) {
+      throw const FormatException('Fragment payload is truncated');
     }
-  }
-
-  ReassembledMessage? _processFragmentStart(GrassrootsPacket packet) {
-    final (messageId, totalFragments, totalSize, chunk) =
-        _decodeFragmentStart(packet.payload);
-
-    debugPrint('[fragment] START msgId=${messageId.substring(0, 8)} '
-        'totalFragments=$totalFragments totalSize=${totalSize}B '
-        'firstChunk=${chunk.length}B');
-
-    // Create reassembly state
-    _reassemblyBuffer[messageId] = _ReassemblyState(
+    final messageId =
+        String.fromCharCodes(payload.sublist(0, messageIdLength));
+    final view =
+        ByteData.view(payload.buffer, payload.offsetInBytes, payload.length);
+    final index = view.getUint32(messageIdLength, Endian.big);
+    final count = view.getUint32(messageIdLength + 4, Endian.big);
+    if (count == 0 || index >= count) {
+      throw FormatException('Fragment index $index out of range for $count');
+    }
+    return Fragment(
       messageId: messageId,
-      totalFragments: totalFragments,
-      totalSize: totalSize,
-    )..addChunk(0, chunk);
-
-    // Check if single-fragment message
-    if (totalFragments == 1) {
-      final state = _reassemblyBuffer.remove(messageId)!;
-      debugPrint(
-          '[fragment] reassembled single-fragment msgId=${messageId.substring(0, 8)}');
-      final payload = state.reassemble();
-      if (payload == null) return null;
-      return ReassembledMessage(messageId: messageId, payload: payload);
-    }
-
-    return null;
-  }
-
-  ReassembledMessage? _processFragmentContinue(GrassrootsPacket packet) {
-    final (messageId, fragmentIndex, chunk) =
-        _decodeFragmentContinue(packet.payload);
-
-    final state = _reassemblyBuffer[messageId];
-    if (state == null) {
-      // Missing start fragment (or buffer was GC'd by reassembly timeout
-      // before this fragment landed). Drop with a log so the gap is visible.
-      debugPrint('[fragment] CONTINUE msgId=${messageId.substring(0, 8)} '
-          'index=$fragmentIndex DROPPED — no reassembly buffer '
-          '(timeout or missing start)');
-      return null;
-    }
-
-    state.addChunk(fragmentIndex, chunk);
-    // Log every 25th to avoid spamming for big payloads.
-    if (fragmentIndex % 25 == 0) {
-      debugPrint('[fragment] CONTINUE msgId=${messageId.substring(0, 8)} '
-          'index=$fragmentIndex received=${state.receivedChunks.length}/${state.totalFragments}');
-    }
-    return null;
-  }
-
-  ReassembledMessage? _processFragmentEnd(GrassrootsPacket packet) {
-    final (messageId, fragmentIndex, chunk) =
-        _decodeFragmentEnd(packet.payload);
-
-    final state = _reassemblyBuffer[messageId];
-    if (state == null) {
-      debugPrint('[fragment] END msgId=${messageId.substring(0, 8)} '
-          'index=$fragmentIndex DROPPED — no reassembly buffer '
-          '(timeout or missing start)');
-      return null;
-    }
-
-    state.addChunk(fragmentIndex, chunk);
-
-    // Attempt reassembly
-    final result = state.reassemble();
-    if (result != null) {
-      _reassemblyBuffer.remove(messageId);
-      debugPrint(
-          '[fragment] END msgId=${messageId.substring(0, 8)} reassembled '
-          '${result.length}B from ${state.totalFragments} fragments');
-      return ReassembledMessage(messageId: messageId, payload: result);
-    }
-
-    debugPrint('[fragment] END msgId=${messageId.substring(0, 8)} INCOMPLETE: '
-        'have ${state.receivedChunks.length}/${state.totalFragments} fragments — '
-        'missing fragments will never arrive, dropping at next cleanup');
-    return null;
-  }
-
-  // ===== Encoding helpers =====
-
-  Uint8List _encodeFragmentStart({
-    required String messageId,
-    required int totalFragments,
-    required int totalSize,
-    required Uint8List chunk,
-  }) {
-    // Format: [messageId:36][totalFragments:2][totalSize:4][chunk:...]
-    final buffer = BytesBuilder();
-    buffer.add(Uint8List.fromList(messageId.codeUnits));
-
-    final header = ByteData(6);
-    header.setUint16(0, totalFragments, Endian.big);
-    header.setUint32(2, totalSize, Endian.big);
-    buffer.add(header.buffer.asUint8List());
-
-    buffer.add(chunk);
-    return buffer.toBytes();
-  }
-
-  Uint8List _encodeFragmentContinue({
-    required String messageId,
-    required int fragmentIndex,
-    required Uint8List chunk,
-  }) {
-    // Format: [messageId:36][fragmentIndex:2][chunk:...]
-    final buffer = BytesBuilder();
-    buffer.add(Uint8List.fromList(messageId.codeUnits));
-
-    final header = ByteData(2);
-    header.setUint16(0, fragmentIndex, Endian.big);
-    buffer.add(header.buffer.asUint8List());
-
-    buffer.add(chunk);
-    return buffer.toBytes();
-  }
-
-  Uint8List _encodeFragmentEnd({
-    required String messageId,
-    required int fragmentIndex,
-    required Uint8List chunk,
-  }) {
-    // Same format as continue
-    return _encodeFragmentContinue(
-      messageId: messageId,
-      fragmentIndex: fragmentIndex,
-      chunk: chunk,
+      index: index,
+      count: count,
+      chunk: Uint8List.fromList(payload.sublist(fragmentHeaderLength)),
     );
   }
 
-  // ===== Decoding helpers =====
-
-  (String, int, int, Uint8List) _decodeFragmentStart(Uint8List data) {
-    final messageId = String.fromCharCodes(data.sublist(0, 36));
-    final header = ByteData.view(data.buffer, data.offsetInBytes + 36, 6);
-    final totalFragments = header.getUint16(0, Endian.big);
-    final totalSize = header.getUint32(2, Endian.big);
-    final chunk = data.sublist(42);
-    return (messageId, totalFragments, totalSize, chunk);
+  /// Per-fragment acknowledgment payload: `[messageId(36)][index u32]`.
+  static Uint8List encodeFragmentAck({
+    required String messageId,
+    required int index,
+  }) {
+    final bytes = Uint8List(messageIdLength + 4);
+    bytes.setRange(0, messageIdLength, messageId.codeUnits);
+    ByteData.view(bytes.buffer).setUint32(messageIdLength, index, Endian.big);
+    return bytes;
   }
 
-  (String, int, Uint8List) _decodeFragmentContinue(Uint8List data) {
-    final messageId = String.fromCharCodes(data.sublist(0, 36));
-    final header = ByteData.view(data.buffer, data.offsetInBytes + 36, 2);
-    final fragmentIndex = header.getUint16(0, Endian.big);
-    final chunk = data.sublist(38);
-    return (messageId, fragmentIndex, chunk);
+  static (String, int) decodeFragmentAck(Uint8List payload) {
+    if (payload.length < messageIdLength + 4) {
+      throw const FormatException('Fragment ACK payload is truncated');
+    }
+    final messageId =
+        String.fromCharCodes(payload.sublist(0, messageIdLength));
+    final index =
+        ByteData.view(payload.buffer, payload.offsetInBytes, payload.length)
+            .getUint32(messageIdLength, Endian.big);
+    return (messageId, index);
   }
 
-  (String, int, Uint8List) _decodeFragmentEnd(Uint8List data) {
-    return _decodeFragmentContinue(data);
+  /// Store an incoming [fragment]. Returns the reassembled message when
+  /// this fragment completes it, null otherwise (including duplicates).
+  ReassembledMessage? addFragment(Fragment fragment) {
+    final state = _reassemblyBuffer.putIfAbsent(
+      fragment.messageId,
+      () => _ReassemblyState(count: fragment.count),
+    );
+    if (state.count != fragment.count) {
+      debugPrint('[fragment] Count mismatch for ${fragment.messageId}: '
+          '${state.count} vs ${fragment.count}; dropping fragment');
+      return null;
+    }
+    state.receivedChunks[fragment.index] = fragment.chunk;
+    if (!state.isComplete) return null;
+    _reassemblyBuffer.remove(fragment.messageId);
+    return ReassembledMessage(
+      messageId: fragment.messageId,
+      payload: state.assemble(),
+    );
   }
-
-  // ===== Cleanup =====
 
   void _startCleanupTimer() {
-    _cleanupTimer = Timer.periodic(const Duration(seconds: 10), (_) {
-      _cleanupStaleReassemblies();
+    _cleanupTimer = Timer.periodic(const Duration(seconds: 30), (_) {
+      final now = DateTime.now();
+      _reassemblyBuffer.removeWhere((messageId, state) {
+        final stale = now.difference(state.startedAt) > reassemblyTimeout;
+        if (stale) {
+          debugPrint('[fragment] Reassembly timed out for $messageId '
+              '(${state.receivedChunks.length}/${state.count})');
+        }
+        return stale;
+      });
     });
   }
 
-  void _cleanupStaleReassemblies() {
-    final now = DateTime.now();
-    _reassemblyBuffer.removeWhere((id, state) {
-      final age = now.difference(state.startedAt);
-      if (age > reassemblyTimeout) {
-        debugPrint(
-            '[fragment] DROPPING stale reassembly msgId=${id.substring(0, 8)} '
-            'received=${state.receivedChunks.length}/${state.totalFragments} '
-            'age=${age.inSeconds}s — fragments arrived too slowly to reassemble');
-        return true;
-      }
-      return false;
-    });
-  }
-
-  /// Clean up resources
   void dispose() {
     _cleanupTimer?.cancel();
     _reassemblyBuffer.clear();

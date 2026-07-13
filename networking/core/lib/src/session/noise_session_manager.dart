@@ -120,12 +120,14 @@ class NoiseSessionManager {
       // Keep a pending waiter: the dialer may already be awaiting the
       // session (waitForSession registers before the handshake starts).
       ..completer ??= Completer<bool>();
-    return _encodeHandshakePayload(
+    final encoded = _encodeHandshakePayload(
       _NoiseHandshakeMessage.message1,
       identity.publicKey,
       body,
       signature: _signIdentityClaim(body),
     );
+    entry.lastSentEncoded = encoded;
+    return encoded;
   }
 
   /// Wait for a session with [remotePubkey] to establish. When no handshake
@@ -162,6 +164,22 @@ class NoiseSessionManager {
   /// (spec §Session Establishment: one handshake per medium per pair).
   Uint8List claimedHandshakeSender(Uint8List payload) =>
       _decodeHandshakePayload(payload).$2;
+
+  /// The handshake payload this side last sent for a still-in-flight
+  /// handshake with [remotePubkey] — retransmitted on a timer over a lossy
+  /// carrier (spec §Session Establishment: each handshake message is
+  /// retransmitted until its reply arrives). Null once the session is
+  /// established or no handshake is in flight.
+  Uint8List? handshakeRetransmitPayload(
+    PeerTransport transport,
+    Uint8List remotePubkey,
+  ) {
+    final entry = _entries[_SessionKey(transport, _hex(remotePubkey))];
+    if (entry == null || entry.session != null || entry.handshake == null) {
+      return null;
+    }
+    return entry.lastSentEncoded;
+  }
 
   /// Process an inbound handshake packet.
   ///
@@ -309,6 +327,18 @@ class NoiseSessionManager {
     Uint8List remotePubkey,
     Uint8List body,
   ) async {
+    // A retransmitted message 1 (our message 2 was lost): resend the same
+    // message 2 — a fresh responder state would break the initiator's
+    // in-flight handshake.
+    if (entry.handshake?.role == NoiseHandshakeRole.responder &&
+        entry.lastInboundBody != null &&
+        _bytesEqual(entry.lastInboundBody!, body)) {
+      return NoiseHandshakeResult(
+        remotePubkey: remotePubkey,
+        responsePayload: entry.lastSentEncoded,
+      );
+    }
+
     final existingHandshake = entry.handshake;
     if (existingHandshake?.role == NoiseHandshakeRole.initiator) {
       final localHex = _hex(identity.publicKey);
@@ -327,16 +357,19 @@ class NoiseSessionManager {
     entry
       ..session = null
       ..handshake = handshake
+      ..lastInboundBody = body
       // Keep a pending waiter: the dialer may already be awaiting the
       // session (waitForSession registers before the handshake starts).
       ..completer ??= Completer<bool>();
+    final encoded = _encodeHandshakePayload(
+      _NoiseHandshakeMessage.message2,
+      identity.publicKey,
+      responseBody,
+    );
+    entry.lastSentEncoded = encoded;
     return NoiseHandshakeResult(
       remotePubkey: remotePubkey,
-      responsePayload: _encodeHandshakePayload(
-        _NoiseHandshakeMessage.message2,
-        identity.publicKey,
-        responseBody,
-      ),
+      responsePayload: encoded,
     );
   }
 
@@ -352,8 +385,21 @@ class NoiseSessionManager {
     if (handshake == null ||
         handshake.role != NoiseHandshakeRole.initiator ||
         entry.session != null) {
+      // A retransmitted message 2 after we completed (our message 3 was
+      // lost): resend the same message 3.
+      if (entry.session != null &&
+          entry.lastSentEncoded != null &&
+          entry.lastInboundBody != null &&
+          _bytesEqual(entry.lastInboundBody!, body)) {
+        return NoiseHandshakeResult(
+          remotePubkey: remotePubkey,
+          responsePayload: entry.lastSentEncoded,
+          sessionEstablished: true,
+        );
+      }
       return NoiseHandshakeResult(remotePubkey: remotePubkey);
     }
+    entry.lastInboundBody = body;
 
     await handshake.readMessage2(body);
     if (!_verifyRemoteStatic(handshake, remotePubkey)) {
@@ -368,13 +414,15 @@ class NoiseSessionManager {
       ..handshake = null;
     // Waiters are released by handleHandshakePacket, after message 3 is sent.
     _recordConnectionPeer(transport, peerId, remotePubkey);
+    final encoded = _encodeHandshakePayload(
+      _NoiseHandshakeMessage.message3,
+      identity.publicKey,
+      responseBody,
+    );
+    entry.lastSentEncoded = encoded;
     return NoiseHandshakeResult(
       remotePubkey: remotePubkey,
-      responsePayload: _encodeHandshakePayload(
-        _NoiseHandshakeMessage.message3,
-        identity.publicKey,
-        responseBody,
-      ),
+      responsePayload: encoded,
       sessionEstablished: true,
     );
   }
@@ -515,6 +563,16 @@ class _SessionEntry {
   _NoiseTransportSession? session;
   _NoiseHandshakeState? handshake;
   Completer<bool>? completer;
+
+  /// The last handshake payload this side put on the wire (encoded m1, m2
+  /// or m3) — retransmitted on a timer over a lossy carrier, and resent
+  /// when the peer's retransmitted previous message shows the reply was
+  /// lost (spec §Session Establishment: the handshake is self-ordering).
+  Uint8List? lastSentEncoded;
+
+  /// The last inbound handshake body, to tell a retransmitted duplicate
+  /// (resend the stored reply) from a genuinely new handshake attempt.
+  Uint8List? lastInboundBody;
 
   void complete(bool value) {
     final pending = completer;

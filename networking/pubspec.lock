@@ -522,14 +522,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "0.3.0"
-  grassroots_dart_udx:
-    dependency: "direct main"
-    description:
-      name: grassroots_dart_udx
-      sha256: e655ebd82460b777cd0546615b09a570123a9a9eda602dcd0fb65de96bc639a2
-      url: "https://pub.dev"
-    source: hosted
-    version: "2.1.0"
   grassroots_networking_core:
     dependency: "direct main"
     description:

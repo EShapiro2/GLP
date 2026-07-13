@@ -15,7 +15,11 @@ const int announcePayloadLength = 98;
 class ProtocolHandler {
   final GrassrootsIdentity identity;
   final Sodium _sodium;
-  static const int protocolVersion = 2;
+  /// Version 3: the shared message transport (spec §Message Transport) —
+  /// UDX streams removed, session-encrypted fragments ride UDP datagrams
+  /// with per-fragment ACK; self-contained fragment format; self-ordering
+  /// handshake. Mixed versions are refused at ANNOUNCE.
+  static const int protocolVersion = 3;
 
   /// Length of the trailing Ed25519 signature on an ANNOUNCE payload.
   static const int announceSignatureLength = 64;
@@ -111,6 +115,14 @@ class ProtocolHandler {
     final version = ByteData.view(data.buffer, data.offsetInBytes + offset, 2)
         .getUint16(0, Endian.big);
     offset += 2;
+
+    // Refuse mixed protocol versions: the wire protocol changed
+    // incompatibly (spec §Message Transport); a peer speaking another
+    // version cannot interoperate and its contact is refused here.
+    if (version != protocolVersion) {
+      throw FormatException(
+          'ANNOUNCE protocol version $version != $protocolVersion; refused');
+    }
 
     final signature = data.sublist(offset, offset + announceSignatureLength);
     final signedBytes = data.sublist(0, offset);

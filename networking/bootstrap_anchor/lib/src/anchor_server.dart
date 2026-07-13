@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'dart:io';
 import 'dart:typed_data';
-import 'package:grassroots_dart_udx/grassroots_dart_udx.dart';
 import 'package:sodium/sodium_sumo.dart' as libsodium;
 
 import 'address_table.dart';
@@ -109,15 +108,14 @@ class AnchorServer {
       throw StateError('Failed to bind any UDP listener');
     }
     for (final listener in _listeners) {
-      listener.multiplexer = UDXMultiplexer(listener.rawSocket);
-      listener.multiplexer!.onRawPacket = (data, address, port) =>
-          _handleRawPacket(listener, data, address, port);
-      listener.connectionsSub = listener.multiplexer!.connections.listen(
-        (socket) => _handleIncomingConnection(listener, socket),
-      );
-      _log('UDP socket bound on port ${listener.port} '
-          '(${_familyLabel(listener.family)})');
-      _log('UDX multiplexer started on port ${listener.port} '
+      listener.socketSub = listener.rawSocket.listen((event) {
+        if (event != RawSocketEvent.read) return;
+        Datagram? datagram;
+        while ((datagram = listener.rawSocket.receive()) != null) {
+          _handleDatagram(listener, datagram!);
+        }
+      });
+      _log('UDP datagram listener on port ${listener.port} '
           '(${_familyLabel(listener.family)})');
     }
 
@@ -131,6 +129,15 @@ class AnchorServer {
     _staleCleanupTimer = Timer.periodic(
       const Duration(seconds: 60),
       (_) {
+        // Datagrams emit no close events (spec §IP Connection: the UDP path
+        // with its session is the connection in the liveness sense); expire
+        // connections whose packets went silent.
+        final silentSince = DateTime.now().subtract(const Duration(minutes: 5));
+        for (final entry in _peerConnections.entries.toList()) {
+          if (entry.value.lastSeen.isBefore(silentSince)) {
+            _forgetPeerConnection(entry.key, entry.value);
+          }
+        }
         _addressTable.removeStale(
           const Duration(minutes: 5),
           protectedPubkeys: _peerConnections.keys.toSet(),
@@ -161,19 +168,13 @@ class AnchorServer {
     _staleCleanupTimer?.cancel();
     _statsTimer?.cancel();
     for (final listener in _listeners) {
-      await listener.connectionsSub?.cancel();
+      await listener.socketSub?.cancel();
     }
 
-    for (final conn in _peerConnections.values) {
-      try {
-        await conn.stream?.close();
-      } catch (_) {}
-    }
     _peerConnections.clear();
 
     for (final listener in _listeners) {
       listener.rawSocket.close();
-      listener.multiplexer = null;
     }
     _listeners.clear();
     _log('Rendezvous server stopped');
@@ -317,116 +318,11 @@ class AnchorServer {
     return null;
   }
 
-  // ===== Connection Handling =====
+  // ===== Datagram Handling =====
 
-  void _handleIncomingConnection(_AnchorListener listener, UDPSocket socket) {
-    final remoteAddr = '${socket.remoteAddress.address}:${socket.remotePort}';
-    _log('Incoming UDX connection from $remoteAddr '
-        'via ${listener.family == InternetAddressType.IPv6 ? "IPv6" : "IPv4"} '
-        'listener ${listener.port}');
-
-    final knownPubkey = _addressToPubkey[remoteAddr];
-    if (knownPubkey != null) {
-      _log('Known peer $knownPubkey at $remoteAddr');
-      socket.on('stream').listen((UDXEvent event) {
-        final stream = event.data as UDXStream;
-        _trackPeerConnection(
-          pubkeyHex: knownPubkey,
-          connection: _PeerConnection(
-            pubkeyHex: knownPubkey,
-            udpSocket: socket,
-            stream: stream,
-            addr: socket.remoteAddress,
-            port: socket.remotePort,
-            listenerFamily: listener.family,
-          ),
-        );
-        _listenToStream(knownPubkey, stream);
-      });
-      socket.flushStreamBuffer();
-      return;
-    }
-
-    // Unknown — use tempKey until ANNOUNCE reveals identity
-    socket.on('stream').listen((UDXEvent event) {
-      final stream = event.data as UDXStream;
-      _handleIncomingStream(listener, socket, stream);
-    });
-    socket.flushStreamBuffer();
-  }
-
-  void _handleIncomingStream(
-    _AnchorListener listener,
-    UDPSocket socket,
-    UDXStream stream,
-  ) {
-    final tempKey = '${socket.remoteAddress}:${socket.remotePort}:${stream.id}';
-
-    _pendingIncoming[tempKey] = _PeerConnection(
-      pubkeyHex: '',
-      udpSocket: socket,
-      stream: stream,
-      addr: socket.remoteAddress,
-      port: socket.remotePort,
-      listenerFamily: listener.family,
-    );
-
-    stream.data.listen(
-      (Uint8List data) {
-        if (data.isEmpty) return;
-        final effectiveId = _tempKeyToPubkey[tempKey] ?? tempKey;
-        _processIncomingData(effectiveId, data,
-            observedIp: socket.remoteAddress.address,
-            observedPort: socket.remotePort,
-            observedFamily: socket.remoteAddress.type);
-      },
-      onError: (e) {
-        _log('UDX stream error from $tempKey: $e');
-      },
-      onDone: () {
-        _log('UDX stream closed from $tempKey');
-        final pubkeyHex = _tempKeyToPubkey.remove(tempKey);
-        if (pubkeyHex != null) {
-          final existing = _peerConnections[pubkeyHex];
-          if (existing?.stream == stream) {
-            _forgetPeerConnection(pubkeyHex, existing!);
-          }
-        }
-        _pendingIncoming.remove(tempKey);
-      },
-    );
-  }
-
-  void _listenToStream(String pubkeyHex, UDXStream stream) {
-    final conn = _peerConnections[pubkeyHex];
-    stream.data.listen(
-      (Uint8List data) {
-        if (data.isEmpty) return;
-        _processIncomingData(pubkeyHex, data,
-            observedIp: conn?.addr.address,
-            observedPort: conn?.port,
-            observedFamily: conn?.addr.type);
-      },
-      onError: (e) {
-        _log('UDX stream error from $pubkeyHex: $e');
-      },
-      onDone: () {
-        _log('UDX stream closed from ${pubkeyHex.substring(0, 8)}...');
-        final existing = _peerConnections[pubkeyHex];
-        if (existing?.stream == stream) {
-          _forgetPeerConnection(pubkeyHex, existing!);
-        }
-      },
-    );
-  }
-
-  void _handleRawPacket(
-    _AnchorListener listener,
-    Uint8List data,
-    InternetAddress address,
-    int port,
-  ) {
-    // Skip punch packets
+  void _handleDatagram(_AnchorListener listener, Datagram datagram) {
+    final data = datagram.data;
+    // Skip punch packets (36 bytes, magic "BCPU")
     if (data.length == 36 &&
         data[0] == 0x42 &&
         data[1] == 0x43 &&
@@ -434,13 +330,30 @@ class AnchorServer {
         data[3] == 0x55) {
       return;
     }
-    if (data.length < 50) return;
+    if (data.length < 5) return;
 
-    _log('Raw UDP packet: ${data.length} bytes from ${address.address}:$port');
-    _processIncomingData('${address.address}:$port', data,
-        observedIp: address.address,
-        observedPort: port,
-        observedFamily: address.type);
+    final addrKey = '${datagram.address.address}:${datagram.port}';
+    var peerId = _addressToPubkey[addrKey];
+    if (peerId == null) {
+      peerId = addrKey;
+      _pendingIncoming.putIfAbsent(
+        addrKey,
+        () => _PeerConnection(
+          pubkeyHex: '',
+          addr: datagram.address,
+          port: datagram.port,
+          listenerFamily: listener.family,
+        ),
+      );
+    } else {
+      _peerConnections[peerId]?.lastSeen = DateTime.now();
+      _pendingIncoming[peerId]?.lastSeen = DateTime.now();
+    }
+
+    unawaited(_processIncomingData(peerId, data,
+        observedIp: datagram.address.address,
+        observedPort: datagram.port,
+        observedFamily: datagram.address.type));
   }
 
   // ===== Packet Processing =====
@@ -666,8 +579,6 @@ class AnchorServer {
         pubkeyHex: pubkeyHex,
         connection: _PeerConnection(
           pubkeyHex: pubkeyHex,
-          udpSocket: pending.udpSocket,
-          stream: pending.stream,
           addr: pending.addr,
           port: pending.port,
           listenerFamily: pending.listenerFamily,
@@ -736,83 +647,39 @@ class AnchorServer {
     if (_peerConnections.isEmpty) return;
 
     final packet = await _protocol.createAnnouncePacket();
-    for (final entry in _peerConnections.entries) {
-      try {
-        await entry.value.stream?.add(packet.serialize());
-      } catch (e) {
-        _log('Failed to send ANNOUNCE to ${entry.key.substring(0, 8)}...: $e');
-      }
+    for (final pubkeyHex in _peerConnections.keys.toList()) {
+      _sendPacket(pubkeyHex, packet);
     }
   }
 
   bool _sendPacket(String pubkeyHex, GrassrootsPacket packet) {
     final conn = _peerConnections[pubkeyHex];
-    final packetLabel = packet.type.name;
-    // `secureSignaling` carries an encrypted payload, so we only have a useful
-    // summary while the packet is still in its clear form. The encrypted
-    // branch falls back to a generic label.
-    final isSignaling = packet.type == PacketType.signaling;
-    final signalingSummary =
-        isSignaling ? _describeSignalingPayload(packet.payload) : null;
-
     if (conn == null) {
-      if (isSignaling) {
-        _log('Cannot send $packetLabel to ${pubkeyHex.substring(0, 8)}...: '
-            'no peer connection entry ($signalingSummary)');
-      } else {
-        _log('Cannot send to ${pubkeyHex.substring(0, 8)}...: not connected');
-      }
+      _log('Cannot send ${packet.type.name} to '
+          '${_shortHex(pubkeyHex)}: not connected');
       return false;
     }
-
-    if (conn.stream == null) {
-      if (isSignaling) {
-        _log('Cannot send $packetLabel to ${pubkeyHex.substring(0, 8)}...: '
-            'connection has no UDX stream '
-            '(remote=${conn.addr.address}:${conn.port}, '
-            'listener=${_familyLabel(conn.listenerFamily)}, '
-            '$signalingSummary)');
-      } else {
-        _log('Cannot send to ${pubkeyHex.substring(0, 8)}...: not connected');
-      }
+    final listener = _listenerForFamily(conn.listenerFamily);
+    if (listener == null) {
+      _log('Cannot send ${packet.type.name} to ${_shortHex(pubkeyHex)}: '
+          'no ${_familyLabel(conn.listenerFamily)} listener');
       return false;
     }
-
     try {
       final data = packet.serialize();
-      if (isSignaling) {
-        _log('Sending $packetLabel to ${pubkeyHex.substring(0, 8)}... via '
-            '${conn.addr.address}:${conn.port} '
-            '(listener=${_familyLabel(conn.listenerFamily)}, '
-            'streamId=${conn.stream!.id}, bytes=${data.length}, '
-            '$signalingSummary)');
-      }
-
-      final addFuture = conn.stream!.add(data);
-      if (isSignaling) {
-        _log('stream.add returned cleanly for ${pubkeyHex.substring(0, 8)}... '
-            '($packetLabel, future=${addFuture.runtimeType})');
-        unawaited(
-          addFuture.then((_) {
-            _log('stream.add completed for ${pubkeyHex.substring(0, 8)}... '
-                '($packetLabel, bytes=${data.length}, $signalingSummary)');
-          }).catchError((Object e, StackTrace _) {
-            _log('stream.add failed asynchronously for '
-                '${pubkeyHex.substring(0, 8)}... '
-                '($packetLabel, $signalingSummary): $e');
-          }),
-        );
-      }
-      return true;
+      final sent = listener.rawSocket.send(data, conn.addr, conn.port);
+      return sent > 0;
     } catch (e) {
-      if (isSignaling) {
-        _log('Failed to send $packetLabel to ${pubkeyHex.substring(0, 8)}... '
-            '($signalingSummary): $e');
-      } else {
-        _log('Failed to send to ${pubkeyHex.substring(0, 8)}...: $e');
-      }
+      _log('Failed to send to ${_shortHex(pubkeyHex)}: $e');
       return false;
     }
+  }
+
+  _AnchorListener? _listenerForFamily(InternetAddressType family) {
+    for (final listener in _listeners) {
+      if (listener.family == family) return listener;
+    }
+    return _listeners.isNotEmpty ? _listeners.first : null;
   }
 
   void _trackPeerConnection({
@@ -825,7 +692,6 @@ class AnchorServer {
             existing.port != connection.port ||
             existing.listenerFamily != connection.listenerFamily)) {
       _addressToPubkey.remove('${existing.addr.address}:${existing.port}');
-      unawaited(existing.stream?.close());
     }
 
     _peerConnections[pubkeyHex] = connection;
@@ -853,12 +719,12 @@ class AnchorServer {
   /// stops being reachable, so we stop advertising it.
   void _forgetPeerConnection(String pubkeyHex, _PeerConnection released) {
     final current = _peerConnections[pubkeyHex];
-    if (current?.stream != released.stream) return;
+    if (!identical(current, released)) return;
     _peerConnections.remove(pubkeyHex);
     _addressToPubkey.remove('${released.addr.address}:${released.port}');
     _addressTable.remove(pubkeyHex);
-    // Once the UDX stream is gone we can't reuse the Noise session — a fresh
-    // session will be negotiated on the next reconnect.
+    // A silent peer's Noise session is torn down; a fresh session is
+    // negotiated on the next reconnect.
     _noiseSessions.reset(pubkeyHex);
     _log('Peer disconnected: ${pubkeyHex.substring(0, 8)}... '
         '(address table entry cleared)');
@@ -936,16 +802,13 @@ class AnchorServer {
 
 class _PeerConnection {
   final String pubkeyHex;
-  final UDPSocket udpSocket;
-  final UDXStream? stream;
   final InternetAddress addr;
   final int port;
   final InternetAddressType listenerFamily;
+  DateTime lastSeen = DateTime.now();
 
   _PeerConnection({
     required this.pubkeyHex,
-    required this.udpSocket,
-    this.stream,
     required this.addr,
     required this.port,
     required this.listenerFamily,
@@ -957,8 +820,7 @@ class _AnchorListener {
   final int port;
   final RawDatagramSocket rawSocket;
   final String publicAddress;
-  UDXMultiplexer? multiplexer;
-  StreamSubscription? connectionsSub;
+  StreamSubscription? socketSub;
 
   _AnchorListener({
     required this.family,

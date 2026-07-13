@@ -22,6 +22,7 @@ import 'package:grassroots_networking_core/src/models/peer.dart';
 import 'package:grassroots_networking_core/src/models/packet.dart';
 import 'package:grassroots_networking_core/src/protocol/protocol_handler.dart';
 import 'package:grassroots_networking_core/src/protocol/fragment_handler.dart';
+import 'package:grassroots_networking_core/src/protocol/message_transport.dart';
 import 'package:grassroots_networking_core/src/routing/message_router.dart';
 import 'package:grassroots_networking_core/src/session/noise_session_manager.dart';
 import 'package:grassroots_networking_core/src/store/store.dart';
@@ -440,6 +441,72 @@ class GrassrootsNetwork {
 
   String _handshakePairKey(PeerTransport transport, Uint8List remotePubkey) =>
       '${transport.name}:${_pubkeyToHex(remotePubkey)}';
+
+  /// The IP carrier of the shared message transport (spec §Message
+  /// Transport): session-encrypted fragments in UDP datagrams, per-fragment
+  /// ACK, retransmit-with-backoff under a bounded per-peer window —
+  /// retransmission is the reliability mechanism.
+  late final MessageTransportSender _udpMessageSender = MessageTransportSender(
+    maxChunk: FragmentHandler.udpMaxChunk,
+    sendPacket: (peerHex, packet) async {
+      final bytes = await _packetBytesForTransport(
+        packet: packet,
+        transport: PeerTransport.udp,
+        recipientPubkey: _hexToBytes(peerHex),
+        peerId: peerHex,
+      );
+      if (bytes == null) return false;
+      return await _udpService?.sendToPeer(peerHex, bytes) ?? false;
+    },
+  );
+
+  /// The BLE carrier of the same transport: fragments ride GATT writes,
+  /// which are link-acknowledged — retransmission is a backstop that rarely
+  /// fires (spec §Message Transport).
+  late final MessageTransportSender _bleMessageSender = MessageTransportSender(
+    maxChunk: FragmentHandler.bleMaxChunk,
+    windowPerPeer: 4,
+    initialBackoff: const Duration(seconds: 2),
+    maxAttempts: 3,
+    sendPacket: (peerHex, packet) async {
+      final service = _bleService;
+      if (service == null) return false;
+      final deviceId = service.getPeerIdForPubkey(_hexToBytes(peerHex));
+      if (deviceId == null) return false;
+      final bytes = await _packetBytesForTransport(
+        packet: packet,
+        transport: PeerTransport.bleDirect,
+        recipientPubkey: _hexToBytes(peerHex),
+        peerId: deviceId,
+      );
+      if (bytes == null) return false;
+      return await service.sendToPeer(deviceId, bytes);
+    },
+  );
+
+  /// Retransmit the in-flight handshake message with backoff until its
+  /// reply arrives (spec §Session Establishment: self-ordering handshake
+  /// over the lossy IP carrier; BLE needs no timer — GATT writes are
+  /// link-acknowledged).
+  void _scheduleHandshakeRetransmit(Uint8List pubkey, {String? peerId}) {
+    var attempt = 0;
+    void tick() {
+      final payload = _noiseSessions.handshakeRetransmitPayload(
+          PeerTransport.udp, pubkey);
+      if (payload == null || attempt >= 5 || _udpService == null) return;
+      attempt++;
+      debugPrint('[noise] Retransmitting handshake to '
+          '${_pubkeyToHex(pubkey).substring(0, 8)} (attempt $attempt)');
+      unawaited(_udpService?.sendToPeer(
+        peerId ?? _pubkeyToHex(pubkey),
+        GrassrootsPacket(type: PacketType.noiseHandshake, payload: payload)
+            .serialize(),
+      ));
+      Timer(Duration(milliseconds: 600 * (1 << attempt)), tick);
+    }
+
+    Timer(const Duration(milliseconds: 800), tick);
+  }
 
   /// Pair key for an inbound handshake packet: the payload's claimed sender
   /// (verified inside handleHandshakePacket); falls back to the connection
@@ -1207,9 +1274,6 @@ class GrassrootsNetwork {
             ),
           ),
         );
-
-      // Start multiplexer immediately (punch packets can still be sent via raw socket)
-      _udpService!.startMultiplexer();
 
       // Discover our public UDP address for the active IP family in the
       // background.
@@ -2334,15 +2398,6 @@ class GrassrootsNetwork {
       return false;
     }
 
-    // Create the message packet. The payload's messageId prefix is the id
-    // the recipient's ACK echoes back, matching the entry we just stored
-    // under `messageId` in `MessageSendingAction` so
-    // `MessageDeliveredAction` can flip ✓ → ✓✓.
-    final packet = _protocolHandler.createMessagePacket(
-      payload: payload,
-      messageId: messageId,
-    );
-
     // --- Try BLE first (preferred for nearby peers) ---
     final bleDeviceId = _connectedBleDeviceIdForPeer(peer);
     if (_isBleEnabledInSettings &&
@@ -2351,27 +2406,11 @@ class GrassrootsNetwork {
         bleDeviceId != null) {
       debugPrint('Sending via BLE to ${peer.displayName}');
 
-      bool success;
-      if (_fragmentHandler.needsFragmentation(payload)) {
-        success = await _sendFragmentedViaBle(
-          payload: payload,
-          recipientPubkey: recipientPubkey,
-          bleDeviceId: bleDeviceId,
-          messageId: messageId,
-        );
-      } else {
-        final bytes = await _packetBytesForTransport(
-          packet: packet,
-          transport: PeerTransport.bleDirect,
-          recipientPubkey: recipientPubkey,
-          peerId: bleDeviceId,
-        );
-        if (bytes == null) {
-          success = false;
-        } else {
-          success = await _bleService!.sendToPeer(bleDeviceId, bytes);
-        }
-      }
+      final success = await _bleMessageSender.sendMessage(
+        _pubkeyToHex(recipientPubkey),
+        messageId,
+        payload,
+      );
 
       if (success) {
         _markSentAndTrackForAck(
@@ -2392,52 +2431,43 @@ class GrassrootsNetwork {
       // Re-read peer — state may have changed during BLE attempt.
       final resolvedPeer = _peersState.getPeerByPubkey(recipientPubkey) ?? peer;
 
-      // Try existing UDX connection first
-      if (_udpService!.getPeerIdForPubkey(recipientPubkey) != null) {
-        final bytes = await _packetBytesForTransport(
-          packet: packet,
-          transport: PeerTransport.udp,
-          recipientPubkey: recipientPubkey,
-          peerId: resolvedPeer.pubkeyHex,
-        );
-        if (bytes != null &&
-            await _udpService!.sendToPeer(resolvedPeer.pubkeyHex, bytes)) {
-          // debugPrint(
-          //   'Sent via existing UDP connection to ${resolvedPeer.displayName}',
-          // );
-          _markSentAndTrackForAck(
-            messageId: messageId,
-            recipientPubkey: recipientPubkey,
-            payload: payload,
-            transport: MessageTransport.udp,
-            bleDeviceId: null,
+      // Ensure a path exists (existing association, or connect-on-demand
+      // from the dial book), then hand the payload to the message
+      // transport: fragments, per-fragment ACK, retransmit with backoff.
+      var havePath = _udpService!.getPeerIdForPubkey(recipientPubkey) != null;
+      if (!havePath) {
+        final udpCandidates = _udpCandidatesForPeer(resolvedPeer);
+        if (udpCandidates.isNotEmpty) {
+          final udpAddr = resolvedPeer.udpAddress ?? udpCandidates.first;
+          debugPrint(
+            'Sending via UDP to ${resolvedPeer.displayName} at $udpCandidates',
           );
-          return true;
+          havePath = await _ensureUdpConnection(
+            resolvedPeer.pubkeyHex,
+            udpAddr,
+          );
+          if (havePath) {
+            // Introduce ourselves so the acceptor can verify and initiate
+            // the session (dial sequence, Implementation Notes).
+            await _udpService!
+                .sendToPeer(resolvedPeer.pubkeyHex, await _createSignedAnnounce());
+          }
         }
       }
-
-      // No existing connection — try connect-on-demand if we have an address
-      final udpCandidates = _udpCandidatesForPeer(resolvedPeer);
-      if (udpCandidates.isNotEmpty) {
-        final udpAddr = resolvedPeer.udpAddress ?? udpCandidates.first;
-        debugPrint(
-          'Sending via UDP to ${resolvedPeer.displayName} at $udpCandidates',
-        );
-        if (await _sendPacketViaUdp(
-          pubkeyHex: resolvedPeer.pubkeyHex,
-          udpAddress: udpAddr,
-          packet: packet,
+      if (havePath &&
+          await _udpMessageSender.sendMessage(
+            resolvedPeer.pubkeyHex,
+            messageId,
+            payload,
+          )) {
+        _markSentAndTrackForAck(
+          messageId: messageId,
           recipientPubkey: recipientPubkey,
-        )) {
-          _markSentAndTrackForAck(
-            messageId: messageId,
-            recipientPubkey: recipientPubkey,
-            payload: payload,
-            transport: MessageTransport.udp,
-            bleDeviceId: null,
-          );
-          return true;
-        }
+          payload: payload,
+          transport: MessageTransport.udp,
+          bleDeviceId: null,
+        );
+        return true;
       }
 
       // No address — try rendezvous-coordinated discovery
@@ -2453,12 +2483,15 @@ class GrassrootsNetwork {
           final freshCandidates = _udpCandidatesForPeer(freshPeer);
           if (freshPeer != null && freshCandidates.isNotEmpty) {
             debugPrint('[send] Discovery succeeded, sending via UDP');
-            if (await _sendPacketViaUdp(
-              pubkeyHex: freshPeer.pubkeyHex,
-              udpAddress: freshPeer.udpAddress ?? freshCandidates.first,
-              packet: packet,
-              recipientPubkey: recipientPubkey,
-            )) {
+            if (await _ensureUdpConnection(
+                  freshPeer.pubkeyHex,
+                  freshPeer.udpAddress ?? freshCandidates.first,
+                ) &&
+                await _udpMessageSender.sendMessage(
+                  freshPeer.pubkeyHex,
+                  messageId,
+                  payload,
+                )) {
               _markSentAndTrackForAck(
                 messageId: messageId,
                 recipientPubkey: recipientPubkey,
@@ -2817,28 +2850,11 @@ class GrassrootsNetwork {
         for (final peerId in _bleService!.connectedPeerIds) {
           final pubkey = _bleService!.getPubkeyForPeerId(peerId);
           if (pubkey == null) continue;
-          if (_fragmentHandler.needsFragmentation(payload)) {
-            await _sendFragmentedViaBle(
-              payload: payload,
-              recipientPubkey: pubkey,
-              bleDeviceId: peerId,
-              messageId: _uuid.v4(),
-            );
-          } else {
-            final packet = _protocolHandler.createMessagePacket(
-              payload: payload,
-              messageId: _uuid.v4(),
-            );
-            final bytes = await _packetBytesForTransport(
-              packet: packet,
-              transport: PeerTransport.bleDirect,
-              recipientPubkey: pubkey,
-              peerId: peerId,
-            );
-            if (bytes != null) {
-              await _bleService!.sendToPeer(peerId, bytes);
-            }
-          }
+          await _bleMessageSender.sendMessage(
+            _pubkeyToHex(pubkey),
+            _uuid.v4(),
+            payload,
+          );
         }
       } catch (e) {
         debugPrint('BLE broadcast failed: $e');
@@ -2851,19 +2867,11 @@ class GrassrootsNetwork {
           if (_udpService!.getPeerIdForPubkey(peer.publicKey) == null) {
             continue;
           }
-          final packet = _protocolHandler.createMessagePacket(
-            payload: payload,
-            messageId: _uuid.v4(),
+          await _udpMessageSender.sendMessage(
+            peer.pubkeyHex,
+            _uuid.v4(),
+            payload,
           );
-          final bytes = await _packetBytesForTransport(
-            packet: packet,
-            transport: PeerTransport.udp,
-            recipientPubkey: peer.publicKey,
-            peerId: peer.pubkeyHex,
-          );
-          if (bytes != null) {
-            await _udpService!.sendToPeer(peer.pubkeyHex, bytes);
-          }
         }
       } catch (e) {
         debugPrint('UDP broadcast failed: $e');
@@ -3122,6 +3130,9 @@ class GrassrootsNetwork {
       if (!sent) {
         _noiseSessions.reset(transport, recipientPubkey);
         return false;
+      }
+      if (transport == PeerTransport.udp) {
+        _scheduleHandshakeRetransmit(recipientPubkey, peerId: peerId);
       }
       return true;
     });
@@ -3482,14 +3493,6 @@ class GrassrootsNetwork {
       return true;
     }
     final peerShort = pubkeyHex.substring(0, 8);
-
-    // Not connected — check if we should initiate or wait.
-    // Only one side should call connectToPeer to avoid UDX simultaneous-open
-    // (two independent socket pairs where data flows in only one direction).
-    final myPubkeyHex = identity.publicKey
-        .map((b) => b.toRadixString(16).padLeft(2, '0'))
-        .join();
-    final iAmInitiator = myPubkeyHex.compareTo(pubkeyHex) < 0;
     final peer = store.state.peers.getPeerByPubkeyHex(pubkeyHex);
 
     // After coordinated hole-punching, both sides punched a specific target.
@@ -3524,35 +3527,19 @@ class GrassrootsNetwork {
     final addr = pair.remote;
     final selectedAddress = addr.toAddressString();
 
-    if (!isRendezvous && !iAmInitiator) {
-      // We're not the initiator — the other side should connect to us.
-      // Wait briefly for their incoming connection to arrive.
-      debugPrint(
-        '[udp-send] Not initiator for $peerShort, waiting for incoming connection...',
-      );
-      for (var i = 0; i < 10; i++) {
-        await Future.delayed(const Duration(milliseconds: 500));
-        if (_udpService!.getPeerIdForPubkey(_hexToBytes(pubkeyHex)) != null) {
-          debugPrint(
-            '[udp-send] Incoming connection arrived for $peerShort',
-          );
-          return true;
-        }
-      }
-      // Timed out waiting — fall through and try connecting ourselves as last resort
-      debugPrint(
-        '[udp-send] Timed out waiting for incoming connection from $peerShort, connecting ourselves...',
-      );
-    }
+    // Datagrams need no stream (spec §IP Connection): associating the path
+    // has no simultaneous-open hazard, so both sides may do it freely; the
+    // deterministic-initiator rule applies to session initiation, where the
+    // glare rule enforces it.
 
     final inFlight = _udpConnectInFlight[pubkeyHex];
     if (inFlight != null) {
-      debugPrint('[udp-send] Reusing in-flight UDX connect to $peerShort...');
+      debugPrint('[udp-send] Reusing in-flight path setup to $peerShort...');
       return inFlight;
     }
 
-    late final Future<bool> udxConnectFuture;
-    udxConnectFuture = () async {
+    late final Future<bool> connectFuture;
+    connectFuture = () async {
       // Hole-punch to open NAT mappings before UDX connection attempt.
       // Skip for peers with publicly routable addresses — punching is wasted
       // when no NAT mapping is needed. If the direct attempt fails, the
@@ -3568,16 +3555,16 @@ class GrassrootsNetwork {
         await _holePunchServiceFor(addr.ip)!.punch(addr.ip, addr.port);
       }
 
-      debugPrint('[udp-send] Connecting to $peerShort at $selectedAddress...');
+      debugPrint('[udp-send] Associating $peerShort at $selectedAddress...');
       return _udpService!.connectToPeer(pubkeyHex, addr.ip, addr.port);
     }();
-    _udpConnectInFlight[pubkeyHex] = udxConnectFuture;
+    _udpConnectInFlight[pubkeyHex] = connectFuture;
 
     bool connected = false;
     try {
-      connected = await udxConnectFuture;
+      connected = await connectFuture;
     } finally {
-      if (identical(_udpConnectInFlight[pubkeyHex], udxConnectFuture)) {
+      if (identical(_udpConnectInFlight[pubkeyHex], connectFuture)) {
         _udpConnectInFlight.remove(pubkeyHex);
       }
     }
@@ -3585,7 +3572,7 @@ class GrassrootsNetwork {
     if (connected) return true;
 
     debugPrint(
-      '[udp-send] UDX connect failed to $peerShort at $selectedAddress',
+      '[udp-send] Path setup failed to $peerShort at $selectedAddress',
     );
 
     if (allowBleAssistedFallback &&
@@ -4068,11 +4055,52 @@ class GrassrootsNetwork {
       onReceive?.call(senderPubkey, payload);
     };
 
-    // ACK received (UDP delivery confirmation)
+    // ACK received (delivery confirmation)
     _messageRouter.onAckReceived = (messageId) {
       debugPrint('ACK received for message $messageId');
       store.dispatch(MessageDeliveredAction(messageId: messageId));
       _clearAckPending(messageId);
+      _udpMessageSender.handleMessageAck(messageId);
+      _bleMessageSender.handleMessageAck(messageId);
+    };
+
+    // Per-fragment ACK: settle the sender-side retransmit slot (spec
+    // §Message Transport).
+    _messageRouter.onFragmentAckReceived =
+        (senderPubkey, messageId, index, transport) {
+      final sender = transport == PeerTransport.udp
+          ? _udpMessageSender
+          : _bleMessageSender;
+      sender.handleFragmentAck(_pubkeyToHex(senderPubkey), messageId, index);
+    };
+
+    // Inbound fragment: acknowledge it on the medium it arrived on.
+    _messageRouter.onFragmentAckRequested =
+        (transport, peerId, messageId, index) async {
+      if (peerId == null) return;
+      Uint8List? recipientPubkey;
+      if (transport == PeerTransport.udp) {
+        recipientPubkey = _hexToBytes(peerId);
+      } else if (transport == PeerTransport.bleDirect) {
+        recipientPubkey = _bleService?.getPubkeyForPeerId(peerId);
+      }
+      if (recipientPubkey == null) return;
+      final bytes = await _packetBytesForTransport(
+        packet: GrassrootsPacket(
+          type: PacketType.fragmentAck,
+          payload: FragmentHandler.encodeFragmentAck(
+              messageId: messageId, index: index),
+        ),
+        transport: transport,
+        recipientPubkey: recipientPubkey,
+        peerId: peerId,
+      );
+      if (bytes == null) return;
+      if (transport == PeerTransport.udp) {
+        await _udpService?.sendToPeer(peerId, bytes);
+      } else {
+        await _bleService?.sendToPeer(peerId, bytes);
+      }
     };
 
     // Read receipt received
@@ -4147,6 +4175,12 @@ class GrassrootsNetwork {
             );
           }
           _onNoiseSessionEstablished(transport, result.remotePubkey);
+        } else if (transport == PeerTransport.udp &&
+            _noiseSessions.handshakeRetransmitPayload(
+                    transport, result.remotePubkey) !=
+                null) {
+          // We just sent message 2 (or 1): retransmit until its reply.
+          _scheduleHandshakeRetransmit(result.remotePubkey, peerId: peerId);
         }
       } catch (e) {
         debugPrint('[noise] Dropping handshake packet: $e');
@@ -5113,35 +5147,6 @@ class GrassrootsNetwork {
     store.dispatch(StalePeersRemovedAction(staleThreshold));
   }
 
-  // ===== BLE Fragmentation Helpers =====
-
-  /// Send a large payload via BLE using fragmentation.
-  /// Each fragment is individually encrypted and signed.
-  Future<bool> _sendFragmentedViaBle({
-    required Uint8List payload,
-    required Uint8List recipientPubkey,
-    required String bleDeviceId,
-    required String messageId,
-  }) async {
-    final fragmented = _fragmentHandler.fragment(
-      payload: payload,
-      messageId: messageId,
-    );
-
-    for (final fragment in fragmented.fragments) {
-      final bytes = await _packetBytesForTransport(
-        packet: fragment,
-        transport: PeerTransport.bleDirect,
-        recipientPubkey: recipientPubkey,
-        peerId: bleDeviceId,
-      );
-      if (bytes == null) return false;
-      final sent = await _bleService!.sendToPeer(bleDeviceId, bytes);
-      if (!sent) return false;
-      await Future.delayed(FragmentHandler.fragmentDelay);
-    }
-    return true;
-  }
 }
 
 /// Diff each peer's set of reachable transports against the previous tick and
