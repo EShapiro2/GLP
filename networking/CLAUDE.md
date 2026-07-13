@@ -22,7 +22,7 @@ This applies to **wire-format decoders too**: when you add a field to a packet, 
 
 ## Local Queueing, No Relaying
 
-Grassroots does NOT relay or forward messages on behalf of other peers — the transport never carries another peer's message through an intermediary. But the sender's own outbound messages MAY be queued locally when the recipient is temporarily unreachable, and re-sent automatically once a transport path opens. This satisfies the madGLP "fair message delivery" assumption (`docs/GLP_Networking_API/sections/api.tex`, §Networking Assumptions).
+Grassroots does NOT relay or forward messages on behalf of other peers — the transport never carries another peer's message through an intermediary. But the sender's own outbound messages MAY be queued locally when the recipient is temporarily unreachable, and re-sent automatically once a transport path opens. This satisfies the madGLP "fair message delivery" assumption (GLP-Networking-API paper, §Networking Assumptions).
 
 The boundary: the queue lives on the sender, holds only the sender's own messages, and replays them directly to the recipient when the recipient becomes reachable. No intermediary ever holds, caches, or rebroadcasts another peer's traffic.
 
@@ -56,14 +56,14 @@ A rendezvous server relays *signaling metadata* (addresses, punch timing), never
 
 All peer and transport state lives in an immutable Redux store (`AppState`). Key slices: `PeersState` (discovered BLE devices + identified peers), `TransportsState` (per-transport lifecycle + public address), `MessagesState`, `KnownPeersState` (API-supplied keys + persisted dial book), `SettingsState`. UI reads from the store and subscribes to changes. Actions describe events; reducers produce the next state. No mutable singletons.
 
-The Redux state is a strict projection of facts emitted by the transport layers — never an inference. Reducers must not synthesize state from "I haven't heard from X in N seconds" heuristics; that's the transport layer's job to surface as an explicit event (path failed, UDX session torn down, etc.).
+The Redux state is a strict projection of facts emitted by the transport layers — never an inference. Reducers must not synthesize state from "I haven't heard from X in N seconds" heuristics; that's the transport layer's job to surface as an explicit event (path failed, session torn down, etc.).
 
 ## Transport Layer
 
 Two transports are available, toggled independently in settings:
 
 - **Bluetooth (BLE)** — local, no Internet required. Preferred when both are available.
-- **Internet (UDP via UDX)** — global reach, requires Internet. Uses hole-punching for NAT traversal.
+- **Internet (UDP)** — global reach, requires Internet. Datagrams carrying the shared message transport (paper §Message Transport); hole-punching for NAT traversal.
 
 The `TransportState` lifecycle for each transport is: `uninitialized → initializing → ready → active` (plus `error` and `disposed`). A transport is "usable" when it is `ready` or `active`.
 
@@ -74,6 +74,28 @@ User-facing UI strings should say "Internet", not "UDP" or internal protocol nam
 Per **connection**, exactly one address pair is in use — there is no per-message address selection or mid-stream address switching. Each peer has a single dial-book address, supplied by GLP via `putPeerAddress` or observed on a live session; ANNOUNCE carries no addresses (spec §ANNOUNCE and Liveness — address distribution is not its role). The agent's own local candidates (per IP family) are still used to pick a compatible local endpoint when dialing.
 
 The primary public address is discovered via an external service (e.g. seeip.org) and corrected by rendezvous-server address reflection (ADDR_REFLECT).
+
+## Duo on Two iPhones — Operational Notes
+
+The on-device test bed is the GrassApp duo (`glp_multiagent/lib/main_grassapp_duo.dart`), one role per phone; success = both status banners reach `linked (…)` and the play's cross-phone messages flow.
+
+| Phone | Role | flutter device id | devicectl UUID |
+|---|---|---|---|
+| iPhone 16 Pro ("iUdi 16pro", iOS 26.5) | `phone1` (bob + eve) | `00008140-001C38C83A12801C` | `2219A3DC-78B5-5721-9E5E-FC2686D6A402` |
+| iPhone 11 Pro Max ("iUdi 11pro", iOS 17.4.1) | `phone2` (alice + dana) | `00008030-000275600A12802E` | `C1F923A2-54D9-54DA-912D-8D033E7E425F` |
+
+Bundle id `com.eshapiro.grassapp`; launch after install with `xcrun devicectl device process launch --device <UUID> com.eshapiro.grassapp`.
+
+Build + install (from `glp_multiagent`; first `bash tool/sync_glp_assets.sh`): `flutter build ios --release -t lib/main_grassapp_duo.dart --dart-define=DUO_ROLE=phone1 --dart-define=DUO_ANCHOR_ADDR=<mac-lan-ip>:9516 --dart-define=DUO_ANCHOR_PK=b83e2276d995c0a9afd74c939bc9390b2d3a3606f9110e5a5c91b9b62601d350`, then `xcrun devicectl device install app --device <UUID> build/ios/iphoneos/Runner.app`; repeat with `DUO_ROLE=phone2` for the other phone.  Anchor (optional fallback): `dart run bootstrap_anchor` in `GLP/networking/bootstrap_anchor` with identity file `{"seed":"7a8e99d6182579f0c8d9b39cca74c1bfd49bcfd796d53d9e47c4b8c92db2812b","nickname":"rendezvous"}`; check the Mac's LAN IP with `ifconfig en0`.
+
+Gotchas, learned the hard way:
+
+- Build and install roles **serially** — concurrent `flutter build`/`flutter run` invocations share the build dir and clobber each other's dart-defines; install phone1's app before building phone2's.
+- iOS shows a **Local Network permission dialog** on first mDNS use — must be allowed on both phones.
+- Udi's WiFi has **client isolation**: outbound to the Mac works, phone↔phone and Mac→phone are blocked, likely mDNS multicast too. Banners stuck at `pairing…` for over a minute after Allow → suspect the network, not the code; use a non-isolated LAN or a hotspot from a third device.
+- Kill stale simulator apps before any anchor-mediated test — dead simulators with the same seeded identities poison the anchor's address table.
+- A `[lan] unmatched instance` line with a plausible token usually means clock skew beyond the ±1-slot match — check both phones' clocks.
+- The 11 Pro's provisioning, developer trust, and Developer Mode are done and should not recur.
 
 ## Peer Address Persistence
 
