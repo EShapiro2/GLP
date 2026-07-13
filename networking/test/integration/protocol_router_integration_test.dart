@@ -18,6 +18,24 @@ import '../helpers/sodium_test_bootstrap.dart';
 GrassrootsPacket seal(GrassrootsPacket clear) =>
     clear.copyWith(type: clear.type.secureVariant);
 
+/// A message as it travels on the wire (spec §Message Transport): a
+/// single self-contained fragment carrying messageId, index 0, count 1,
+/// and the body.
+GrassrootsPacket oneFragmentMessage({
+  required String messageId,
+  required Uint8List body,
+}) {
+  return GrassrootsPacket(
+    type: PacketType.fragment,
+    payload: FragmentHandler.encodeFragment(
+      messageId: messageId,
+      index: 0,
+      count: 1,
+      chunk: body,
+    ),
+  );
+}
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
@@ -172,10 +190,7 @@ void main() {
 
       // Alice creates a clear message packet (payload = messageId + body);
       // her session layer seals it.
-      final packet = aliceProtocol.createMessagePacket(
-        payload: messagePayload,
-        messageId: messageId,
-      );
+      final packet = oneFragmentMessage(messageId: messageId, body: messagePayload);
 
       // Bob's router processes it
       String? receivedId;
@@ -198,10 +213,10 @@ void main() {
       expect(receivedSender, equals(aliceIdentity.publicKey));
     });
 
-    test('clear MESSAGE packet (no session) is dropped', () async {
-      final packet = aliceProtocol.createMessagePacket(
-        payload: Uint8List.fromList([1, 2, 3]),
+    test('clear message fragment (no session) is dropped', () async {
+      final packet = oneFragmentMessage(
         messageId: '22222222-2222-2222-2222-222222222222',
+        body: Uint8List.fromList([1, 2, 3]),
       );
 
       bool messageReceived = false;
@@ -290,10 +305,7 @@ void main() {
       const messageId = '33333333-3333-3333-3333-333333333333';
       final messagePayload = Uint8List.fromList([99, 88, 77]);
 
-      final packet = aliceProtocol.createMessagePacket(
-        payload: messagePayload,
-        messageId: messageId,
-      );
+      final packet = oneFragmentMessage(messageId: messageId, body: messagePayload);
 
       String? receivedId;
       Uint8List? receivedPayload;
@@ -363,10 +375,7 @@ void main() {
   group('BLE dedup across multiple packets', () {
     test('same message sent twice is only delivered once', () async {
       final messagePayload = Uint8List.fromList([1, 2, 3]);
-      final packet = aliceProtocol.createMessagePacket(
-        payload: messagePayload,
-        messageId: '44444444-4444-4444-4444-444444444444',
-      );
+      final packet = oneFragmentMessage(messageId: '44444444-4444-4444-4444-444444444444', body: messagePayload);
 
       int receiveCount = 0;
       bobRouter.onMessageReceived = (_, __, ___, ____) {
@@ -499,10 +508,7 @@ void main() {
 
       // Alice sends message to Bob
       final helloPayload = Uint8List.fromList('hello bob'.codeUnits);
-      final aliceMsg = aliceProtocol.createMessagePacket(
-        payload: helloPayload,
-        messageId: '55555555-5555-5555-5555-555555555555',
-      );
+      final aliceMsg = oneFragmentMessage(messageId: '55555555-5555-5555-5555-555555555555', body: helloPayload);
 
       Uint8List? bobReceived;
       bobRouter.onMessageReceived = (_, __, payload, ___) {
@@ -517,10 +523,7 @@ void main() {
 
       // Bob sends message to Alice
       final replyPayload = Uint8List.fromList('hi alice'.codeUnits);
-      final bobMsg = bobProtocol.createMessagePacket(
-        payload: replyPayload,
-        messageId: '66666666-6666-6666-6666-666666666666',
-      );
+      final bobMsg = oneFragmentMessage(messageId: '66666666-6666-6666-6666-666666666666', body: replyPayload);
 
       Uint8List? aliceReceived;
       aliceRouter.onMessageReceived = (_, __, payload, ___) {

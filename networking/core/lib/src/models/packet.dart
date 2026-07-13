@@ -5,10 +5,6 @@ enum PacketType {
   /// Peer identity announcement (sent periodically)
   announce(0x01),
 
-  /// Application message that fits one carrier packet (a one-fragment
-  /// message in the sense of spec §Message Transport)
-  message(0x02),
-
   /// Message fragment. Every fragment is self-contained: it carries the
   /// messageId, its index, the fragment count, and its chunk (spec
   /// §Message Transport), so any subset arriving in any order reassembles.
@@ -29,9 +25,6 @@ enum PacketType {
 
   /// Noise XX handshake message.
   noiseHandshake(0x0A),
-
-  /// Session-encrypted application message.
-  secureMessage(0x0B),
 
   /// Session-encrypted message fragment.
   secureFragment(0x0C),
@@ -65,7 +58,6 @@ extension PacketTypeSessionSecurity on PacketType {
   /// peers can identify each other and bootstrap the session.
   bool get usesSessionSecurity {
     switch (this) {
-      case PacketType.message:
       case PacketType.fragment:
       case PacketType.fragmentAck:
       case PacketType.ack:
@@ -74,7 +66,6 @@ extension PacketTypeSessionSecurity on PacketType {
         return true;
       case PacketType.announce:
       case PacketType.noiseHandshake:
-      case PacketType.secureMessage:
       case PacketType.secureFragment:
       case PacketType.secureFragmentAck:
       case PacketType.secureAck:
@@ -86,7 +77,6 @@ extension PacketTypeSessionSecurity on PacketType {
 
   bool get isSessionEncrypted {
     switch (this) {
-      case PacketType.secureMessage:
       case PacketType.secureFragment:
       case PacketType.secureFragmentAck:
       case PacketType.secureAck:
@@ -94,7 +84,6 @@ extension PacketTypeSessionSecurity on PacketType {
       case PacketType.secureSignaling:
         return true;
       case PacketType.announce:
-      case PacketType.message:
       case PacketType.fragment:
       case PacketType.fragmentAck:
       case PacketType.ack:
@@ -107,8 +96,6 @@ extension PacketTypeSessionSecurity on PacketType {
 
   PacketType get secureVariant {
     switch (this) {
-      case PacketType.message:
-        return PacketType.secureMessage;
       case PacketType.fragment:
         return PacketType.secureFragment;
       case PacketType.fragmentAck:
@@ -121,7 +108,6 @@ extension PacketTypeSessionSecurity on PacketType {
         return PacketType.secureSignaling;
       case PacketType.announce:
       case PacketType.noiseHandshake:
-      case PacketType.secureMessage:
       case PacketType.secureFragment:
       case PacketType.secureFragmentAck:
       case PacketType.secureAck:
@@ -133,8 +119,6 @@ extension PacketTypeSessionSecurity on PacketType {
 
   PacketType get clearVariant {
     switch (this) {
-      case PacketType.secureMessage:
-        return PacketType.message;
       case PacketType.secureFragment:
         return PacketType.fragment;
       case PacketType.secureFragmentAck:
@@ -146,7 +130,6 @@ extension PacketTypeSessionSecurity on PacketType {
       case PacketType.secureSignaling:
         return PacketType.signaling;
       case PacketType.announce:
-      case PacketType.message:
       case PacketType.fragment:
       case PacketType.fragmentAck:
       case PacketType.ack:

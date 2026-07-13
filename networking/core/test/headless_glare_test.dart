@@ -266,8 +266,18 @@ class _PhoneStyleDialer {
     String messageId,
     Uint8List payload,
   ) async {
+    // A small message travels as a single self-contained fragment (spec
+    // §Message Transport).
     final encrypted = await sessions.encryptPacket(
-      protocol.createMessagePacket(payload: payload, messageId: messageId),
+      GrassrootsPacket(
+        type: PacketType.fragment,
+        payload: FragmentHandler.encodeFragment(
+          messageId: messageId,
+          index: 0,
+          count: 1,
+          chunk: payload,
+        ),
+      ),
       transport: PeerTransport.udp,
       remotePubkey: peerPubkey,
     );

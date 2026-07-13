@@ -59,12 +59,17 @@ class MessageTransportSender {
     Uint8List payload,
   ) {
     if (_disposed) return Future.value(false);
+    final lane = _lanes.putIfAbsent(peerHex, () => _PeerLane(peerHex));
+    // A retry can race the original (e.g. the coordinator's ACK watchdog
+    // re-queues while the engine is still retransmitting): join the
+    // in-flight message instead of transmitting it twice.
+    final existing = lane.messageById(messageId);
+    if (existing != null) return existing.completer.future;
     final fragmented = _fragmenter.fragment(
       payload: payload,
       messageId: messageId,
       maxChunk: maxChunk,
     );
-    final lane = _lanes.putIfAbsent(peerHex, () => _PeerLane(peerHex));
     final message = _OutboundMessage(
       messageId: messageId,
       fragments: fragmented.fragments,
@@ -86,7 +91,6 @@ class MessageTransportSender {
       lane.slotsInUse--;
     }
     message.pending.remove(index);
-    message.acked.add(index);
     _completeIfDone(lane, message);
     _pump(lane);
   }
@@ -155,6 +159,10 @@ class MessageTransportSender {
     _InFlightFragment inFlight,
   ) {
     if (_disposed || message.completer.isCompleted) return;
+    if (inFlight.attempts >= maxAttempts) {
+      _failMessage(lane, message);
+      return;
+    }
     inFlight.attempts++;
     unawaited(() async {
       final ok = await sendPacket(
@@ -170,10 +178,6 @@ class MessageTransportSender {
       }
     }());
     if (message.completer.isCompleted) return;
-    if (inFlight.attempts > maxAttempts) {
-      _failMessage(lane, message);
-      return;
-    }
     final delay = _backoffFor(inFlight.attempts);
     inFlight.timer = Timer(delay, () {
       if (message.completer.isCompleted) return;
@@ -251,7 +255,6 @@ class _OutboundMessage {
   /// Fragment indices transmitted and awaiting acknowledgment.
   final Map<int, _InFlightFragment> inFlight = {};
 
-  final Set<int> acked = {};
   final Completer<bool> completer = Completer<bool>();
 
   void complete(bool value) {

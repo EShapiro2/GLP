@@ -150,69 +150,29 @@ void main() {
       });
     });
 
-    group('createMessagePacket', () {
-      const messageId = '550e8400-e29b-41d4-a716-446655440000';
+    group('protocol version refusal', () {
+      test('an ANNOUNCE carrying a different protocol version is refused',
+          () async {
+        // Build a payload identical to ours but with version+1, re-signed —
+        // structurally valid, wrong protocol (spec: the wire changed
+        // incompatibly; mixed versions are refused at ANNOUNCE).
+        final own = handler.createAnnouncePayload();
+        final tampered = Uint8List.fromList(own.sublist(0, 34));
+        final view = ByteData.view(tampered.buffer);
+        view.setUint16(32, ProtocolHandler.protocolVersion + 1, Endian.big);
+        final resigned = Uint8List.fromList(
+            [...tampered, ...handler.signBytes(tampered)]);
 
-      test('prefixes the body with the 36-char messageId', () {
-        final body = utf8.encode('Hello, World!');
-        final packet = handler.createMessagePacket(
-          payload: body,
-          messageId: messageId,
-        );
-
-        expect(packet.type, equals(PacketType.message));
-        expect(packet.payload.length,
-            equals(ProtocolHandler.messageIdLength + body.length));
         expect(
-          utf8.decode(
-              packet.payload.sublist(0, ProtocolHandler.messageIdLength)),
-          equals(messageId),
-        );
-        expect(
-          packet.payload.sublist(ProtocolHandler.messageIdLength),
-          equals(body),
+          () => handler.decodeAnnounce(resigned),
+          throwsA(isA<FormatException>().having(
+              (e) => e.message, 'message', contains('refused'))),
         );
       });
 
-      test('throws for a messageId that is not 36 characters', () {
-        expect(
-          () => handler.createMessagePacket(
-            payload: utf8.encode('Hello'),
-            messageId: 'short-id',
-          ),
-          throwsArgumentError,
-        );
-      });
-
-      test('creates packet with empty body', () {
-        final packet = handler.createMessagePacket(
-          payload: Uint8List(0),
-          messageId: messageId,
-        );
-
-        expect(packet.type, equals(PacketType.message));
-        expect(
-            packet.payload.length, equals(ProtocolHandler.messageIdLength));
-        expect(utf8.decode(packet.payload), equals(messageId));
-      });
-
-      test('creates packet with large body', () {
-        final largeBody = Uint8List(1000);
-        for (var i = 0; i < 1000; i++) {
-          largeBody[i] = i % 256;
-        }
-
-        final packet = handler.createMessagePacket(
-          payload: largeBody,
-          messageId: messageId,
-        );
-
-        expect(packet.payload.length,
-            equals(ProtocolHandler.messageIdLength + 1000));
-        expect(
-          packet.payload.sublist(ProtocolHandler.messageIdLength),
-          equals(largeBody),
-        );
+      test('an ANNOUNCE carrying our protocol version is accepted', () {
+        final decoded = handler.decodeAnnounce(handler.createAnnouncePayload());
+        expect(decoded.protocolVersion, ProtocolHandler.protocolVersion);
       });
     });
 

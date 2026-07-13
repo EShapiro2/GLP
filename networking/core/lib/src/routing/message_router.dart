@@ -261,13 +261,6 @@ class MessageRouter {
     }
 
     switch (packet.type) {
-      case PacketType.message:
-        _handleMessage(
-          packet,
-          senderPubkey: senderPubkey,
-          transport: transport,
-          peerId: effectiveUdpPeerId ?? bleDeviceId,
-        );
       case PacketType.fragment:
         _handleFragment(
           packet,
@@ -290,7 +283,6 @@ class MessageRouter {
         );
       case PacketType.announce:
       case PacketType.noiseHandshake:
-      case PacketType.secureMessage:
       case PacketType.secureFragment:
       case PacketType.secureFragmentAck:
       case PacketType.secureAck:
@@ -379,32 +371,6 @@ class MessageRouter {
         '${data.pubkeyHex.substring(0, 8)}... via ${transport.name}');
 
     onPeerAnnounced?.call(data, transport, isNew: isNew, udpPeerId: udpPeerId);
-  }
-
-  void _handleMessage(
-    GrassrootsPacket packet, {
-    required Uint8List senderPubkey,
-    required PeerTransport transport,
-    String? peerId,
-  }) {
-    // The MESSAGE payload opens with its messageId (the delivery identity,
-    // stable across retries and media), followed by the body — mirroring
-    // fragment payloads.
-    if (packet.payload.length < ProtocolHandler.messageIdLength) {
-      debugPrint('Dropping MESSAGE without a messageId prefix');
-      return;
-    }
-    final messageId = String.fromCharCodes(
-        packet.payload.sublist(0, ProtocolHandler.messageIdLength));
-    final body = Uint8List.fromList(
-        packet.payload.sublist(ProtocolHandler.messageIdLength));
-    _deliverMessage(
-      messageId,
-      body,
-      senderPubkey: senderPubkey,
-      transport: transport,
-      peerId: peerId,
-    );
   }
 
   void _handleFragment(

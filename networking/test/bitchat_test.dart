@@ -14,7 +14,7 @@ void main() {
 
     test('serializes and deserializes correctly', () {
       final packet = GrassrootsPacket(
-        type: PacketType.message,
+        type: PacketType.fragment,
         payload: testPayload,
       );
 

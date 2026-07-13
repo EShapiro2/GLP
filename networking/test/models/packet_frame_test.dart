@@ -12,7 +12,7 @@ void main() {
     test('header is exactly type(1) + length(4, big-endian)', () {
       final payload = Uint8List.fromList([0xDE, 0xAD, 0xBE, 0xEF, 0x42]);
       final packet = GrassrootsPacket(
-        type: PacketType.message,
+        type: PacketType.fragment,
         payload: payload,
       );
 
@@ -21,7 +21,7 @@ void main() {
       expect(GrassrootsPacket.headerSize, equals(5));
       expect(bytes.length, equals(5 + payload.length));
       // Byte 0: the type byte.
-      expect(bytes[0], equals(PacketType.message.value));
+      expect(bytes[0], equals(PacketType.fragment.value));
       // Bytes 1..4: payload length, big-endian.
       expect(bytes[1], equals(0));
       expect(bytes[2], equals(0));
@@ -79,7 +79,7 @@ void main() {
 
     test('rejects a buffer shorter than header + declared length', () {
       final bytes = GrassrootsPacket(
-        type: PacketType.message,
+        type: PacketType.fragment,
         payload: Uint8List.fromList([1, 2, 3, 4]),
       ).serialize();
       final truncated = Uint8List.sublistView(bytes, 0, bytes.length - 1);
@@ -95,7 +95,7 @@ void main() {
       // packet followed by the next packet's bytes must decode to exactly its
       // declared payload.
       final first = GrassrootsPacket(
-        type: PacketType.message,
+        type: PacketType.fragment,
         payload: Uint8List.fromList([9, 9, 9]),
       ).serialize();
       final buffered = Uint8List.fromList([...first, 0xAA, 0xBB]);
@@ -116,7 +116,7 @@ void main() {
 
     test('peekPayloadLength reads the declared length without parsing', () {
       final bytes = GrassrootsPacket(
-        type: PacketType.message,
+        type: PacketType.fragment,
         payload: Uint8List(300),
       ).serialize();
 

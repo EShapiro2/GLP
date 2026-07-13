@@ -50,9 +50,6 @@ class AnchorServer {
   /// Active UDX connections per peer, keyed by pubkey hex.
   final Map<String, _PeerConnection> _peerConnections = {};
 
-  /// Reverse map: tempKey → pubkey hex.
-  final Map<String, String> _tempKeyToPubkey = {};
-
   /// Reverse map: "ip:port" → pubkey hex.
   final Map<String, String> _addressToPubkey = {};
 
@@ -131,13 +128,17 @@ class AnchorServer {
       (_) {
         // Datagrams emit no close events (spec §IP Connection: the UDP path
         // with its session is the connection in the liveness sense); expire
-        // connections whose packets went silent.
+        // connections whose packets went silent, and pending unidentified
+        // sources that never completed ANNOUNCE — the anchor is public, so
+        // this map must not grow with scanner spray.
         final silentSince = DateTime.now().subtract(const Duration(minutes: 5));
         for (final entry in _peerConnections.entries.toList()) {
           if (entry.value.lastSeen.isBefore(silentSince)) {
             _forgetPeerConnection(entry.key, entry.value);
           }
         }
+        _pendingIncoming.removeWhere(
+            (_, pending) => pending.lastSeen.isBefore(silentSince));
         _addressTable.removeStale(
           const Duration(minutes: 5),
           protectedPubkeys: _peerConnections.keys.toSet(),
@@ -347,7 +348,6 @@ class AnchorServer {
       );
     } else {
       _peerConnections[peerId]?.lastSeen = DateTime.now();
-      _pendingIncoming[peerId]?.lastSeen = DateTime.now();
     }
 
     unawaited(_processIncomingData(peerId, data,
@@ -433,7 +433,6 @@ class AnchorServer {
       if (accepted &&
           peerId != senderHex &&
           _pendingIncoming.containsKey(peerId)) {
-        _tempKeyToPubkey[peerId] = senderHex;
         _mapIncomingConnectionToPubkey(peerId, senderHex);
       }
 
@@ -531,7 +530,6 @@ class AnchorServer {
     // freshly-arrived tempKey so that a reconnecting peer (new NAT-mapped
     // source port) replaces its stale `_peerConnections` entry.
     if (peerId != senderHex && _pendingIncoming.containsKey(peerId)) {
-      _tempKeyToPubkey[peerId] = senderHex;
       _mapIncomingConnectionToPubkey(peerId, senderHex);
     }
 

@@ -61,29 +61,6 @@ class ProtocolHandler {
     return buffer.toBytes();
   }
 
-  /// Create MESSAGE packet.
-  ///
-  /// The payload opens with the 36-character [messageId] — the delivery
-  /// identity, stable across retries and media — followed by the message
-  /// body, mirroring how fragment payloads carry it. The recipient
-  /// deduplicates by it and echoes it back in its ACK; pass the same id you
-  /// stored in `MessageSendingAction` so `MessageDeliveredAction`
-  /// (dispatched on ACK receipt) can match the outgoing message in the
-  /// Redux store and flip ✓ → ✓✓.
-  GrassrootsPacket createMessagePacket({
-    required Uint8List payload,
-    required String messageId,
-  }) {
-    if (messageId.length != messageIdLength) {
-      throw ArgumentError(
-          'messageId must be a $messageIdLength-character UUID: $messageId');
-    }
-    return GrassrootsPacket(
-      type: PacketType.message,
-      payload: Uint8List.fromList([...utf8.encode(messageId), ...payload]),
-    );
-  }
-
   /// Create READ_RECEIPT packet
   GrassrootsPacket createReadReceiptPacket({required String messageId}) {
     return GrassrootsPacket(

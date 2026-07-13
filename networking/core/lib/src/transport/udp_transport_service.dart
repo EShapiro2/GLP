@@ -67,6 +67,19 @@ class UdpTransportService extends TransportService {
   /// Reverse map: `ip:port` → peer id currently associated with it.
   final Map<String, String> _addressToPeerId = {};
 
+  /// Last inbound activity per temp (`ip:port`) path. Datagrams emit no
+  /// close events, so unidentified paths — an ANNOUNCE that never completed,
+  /// a mapped path's leftover alias, garbage from a scanner — are expired by
+  /// [_sweepTempPaths] instead. Identified (pubkey-keyed) paths are the
+  /// coordinator's to manage.
+  final Map<String, DateTime> _tempPathLastSeen = {};
+  Timer? _tempPathSweepTimer;
+
+  /// A temp path unseen for this long is dropped. Long enough for any
+  /// in-flight handler still holding the temp id, and for a slow ANNOUNCE →
+  /// handshake bootstrap.
+  static const Duration tempPathExpiry = Duration(minutes: 2);
+
   TransportState _state = TransportState.uninitialized;
 
   final _dataController = StreamController<TransportDataEvent>.broadcast();
@@ -184,6 +197,10 @@ class UdpTransportService extends TransportService {
         }
       });
     }
+    _tempPathSweepTimer ??= Timer.periodic(
+      const Duration(seconds: 30),
+      (_) => _sweepTempPaths(),
+    );
     _setState(TransportState.active);
     debugPrint(
       'UDP datagram receive started on '
@@ -191,9 +208,29 @@ class UdpTransportService extends TransportService {
     );
   }
 
+  void _sweepTempPaths() {
+    final cutoff = DateTime.now().subtract(tempPathExpiry);
+    for (final tempKey in _peerPaths.keys
+        .where((id) => id.contains(':'))
+        .toList()) {
+      final seen = _tempPathLastSeen[tempKey];
+      if (seen != null && seen.isAfter(cutoff)) continue;
+      final path = _peerPaths.remove(tempKey);
+      _tempPathLastSeen.remove(tempKey);
+      // Drop the reverse entry only if it still points at the temp id (an
+      // identified path re-keyed it to the pubkey).
+      if (path != null &&
+          _addressToPeerId[path.toAddressString()] == tempKey) {
+        _addressToPeerId.remove(path.toAddressString());
+      }
+    }
+  }
+
   @override
   Future<void> stop() async {
     debugPrint('Stopping UDP transport');
+    _tempPathSweepTimer?.cancel();
+    _tempPathSweepTimer = null;
     for (final sub in _socketSubs.values) {
       await sub.cancel();
     }
@@ -202,6 +239,7 @@ class UdpTransportService extends TransportService {
     final peers = _peerPaths.keys.where((id) => !id.contains(':')).toList();
     _peerPaths.clear();
     _addressToPeerId.clear();
+    _tempPathLastSeen.clear();
     for (final peerId in peers) {
       if (!_connectionController.isClosed) {
         _connectionController.add(TransportConnectionEvent(
@@ -467,11 +505,21 @@ class UdpTransportService extends TransportService {
     final addressKey = address.toAddressString();
     var peerId = _addressToPeerId[addressKey];
     if (peerId == null) {
-      // Unsolicited inbound: track under a temp id until a verified
-      // ANNOUNCE or session-authenticated packet identifies the sender.
+      // Unsolicited inbound. Contact bootstraps with ANNOUNCE or a Noise
+      // handshake (spec §Session Establishment); only those earn a temp
+      // path — anything else from an unknown source is undeliverable
+      // upstream anyway (no session) and must not grow per-source state.
+      final int typeByte = data[0];
+      if (typeByte != PacketType.announce.value &&
+          typeByte != PacketType.noiseHandshake.value) {
+        return;
+      }
       peerId = addressKey;
       _setPath(peerId, address);
       debugPrint('Inbound datagram path from $addressKey');
+    }
+    if (peerId.contains(':')) {
+      _tempPathLastSeen[peerId] = DateTime.now();
     }
 
     if (!_dataController.isClosed) {

@@ -131,18 +131,23 @@ void main() {
       );
     }
 
-    /// Build a session-encrypted MESSAGE whose payload opens with the
-    /// 36-char [messageId] (the delivery identity, stable across retries)
-    /// followed by [body] — the format `createMessagePacket` produces.
+    /// Build a session-encrypted one-fragment message (spec §Message
+    /// Transport: every message travels as self-contained fragments; a
+    /// small message is a single fragment carrying the 36-char [messageId],
+    /// index 0, count 1, and [body]).
     GrassrootsPacket secureMessagePacket({
       required String messageId,
       Uint8List? body,
     }) {
-      final clear = otherProtocolHandler.createMessagePacket(
-        payload: body ?? Uint8List(0),
-        messageId: messageId,
+      return GrassrootsPacket(
+        type: PacketType.secureFragment,
+        payload: FragmentHandler.encodeFragment(
+          messageId: messageId,
+          index: 0,
+          count: 1,
+          chunk: body ?? Uint8List(0),
+        ),
       );
-      return clear.copyWith(type: PacketType.secureMessage);
     }
 
     // =========================================================================
@@ -150,7 +155,7 @@ void main() {
     // =========================================================================
 
     group('receive-path hardening', () {
-      test('drops clear MESSAGE packets unconditionally', () async {
+      test('drops clear fragment packets unconditionally', () async {
         bool anyCalled = false;
         bool decryptCalled = false;
         router.onMessageReceived = (_, __, ___, ____) => anyCalled = true;
@@ -162,7 +167,7 @@ void main() {
         };
 
         final p = GrassrootsPacket(
-          type: PacketType.message,
+          type: PacketType.fragment,
           payload: Uint8List.fromList([1, 2, 3]),
         );
 
@@ -206,7 +211,6 @@ void main() {
         // packets. Every clear application-data type is dropped without
         // reaching the session layer or any handler.
         const clearAppTypes = [
-          PacketType.message,
           PacketType.fragment,
           PacketType.fragmentAck,
           PacketType.ack,
@@ -256,7 +260,7 @@ void main() {
 
         await router.processPacket(
           securePacket(
-            type: PacketType.message,
+            type: PacketType.fragment,
             payload: Uint8List.fromList([1]),
           ),
           transport: PeerTransport.bleDirect,
@@ -486,16 +490,17 @@ void main() {
         expect(receivedTransport, equals(PeerTransport.udp));
       });
 
-      test('drops MESSAGE whose payload lacks a messageId prefix', () async {
+      test('drops a fragment whose payload lacks the fragment header',
+          () async {
         stubSession();
 
         bool anyCalled = false;
         router.onMessageReceived = (_, __, ___, ____) => anyCalled = true;
         router.onAckRequested = (_, __, ___) => anyCalled = true;
 
-        // Shorter than ProtocolHandler.messageIdLength (36 bytes).
+        // Shorter than the fragment header (messageId + index + count).
         final p = securePacket(
-          type: PacketType.message,
+          type: PacketType.fragment,
           payload: Uint8List.fromList([1, 2, 3]),
         );
 

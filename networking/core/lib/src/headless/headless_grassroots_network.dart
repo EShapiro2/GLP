@@ -316,16 +316,10 @@ class HeadlessGrassrootsNetwork {
       await udp.sendToPeer(hex, _signedAnnounceBytes());
     }
 
-    // Establish the session up front (dialer waits for the acceptor's
+    // Establish the session up front (the dialer waits for the acceptor's
     // handshake per the dial sequence) so the transport engine's fragments
     // all ride an existing session.
-    if (!_noiseSessions.hasSession(PeerTransport.udp, recipientPubkey)) {
-      final probe = await _sessionPacketBytes(
-        _protocolHandler.createAckPacket(messageId: messageId),
-        recipientPubkey,
-      );
-      if (probe == null) return false;
-    }
+    if (!await _ensureUdpSession(recipientPubkey)) return false;
 
     unawaited(
       _udpMessageSender.sendMessage(hex, messageId, payload).then((ok) {
@@ -350,44 +344,50 @@ class HeadlessGrassrootsNetwork {
     Uint8List recipientPubkey,
   ) async {
     if (!packet.type.usesSessionSecurity) return packet.serialize();
-    if (!_noiseSessions.hasSession(PeerTransport.udp, recipientPubkey)) {
-      if (!_dialedPeers.contains(_hex(recipientPubkey))) {
-        final sent =
-            await _serializedHandshake(_hex(recipientPubkey), () async {
-          final payload = await _noiseSessions.startHandshake(
-            PeerTransport.udp,
-            recipientPubkey,
-          );
-          if (payload == null) return true;
-          final handshakeBytes = GrassrootsPacket(
-            type: PacketType.noiseHandshake,
-            payload: payload,
-          ).serialize();
-          if (!await (_udpService?.sendToPeer(
-                    _hex(recipientPubkey),
-                    handshakeBytes,
-                  ) ??
-                  Future.value(false))) {
-            _noiseSessions.reset(PeerTransport.udp, recipientPubkey);
-            return false;
-          }
-          return true;
-        });
-        if (!sent) return null;
-      }
-      if (!await _noiseSessions.waitForSession(
-        PeerTransport.udp,
-        recipientPubkey,
-      )) {
-        return null;
-      }
-    }
+    if (!await _ensureUdpSession(recipientPubkey)) return null;
     final encrypted = await _noiseSessions.encryptPacket(
       packet,
       transport: PeerTransport.udp,
       remotePubkey: recipientPubkey,
     );
     return encrypted.serialize();
+  }
+
+  /// Establish the Noise session with [recipientPubkey] if none exists.
+  /// Per the dial sequence (spec Implementation Notes) the handshake
+  /// initiator is the ACCEPTING endpoint: toward a peer this endpoint
+  /// dialed, it only waits for the acceptor's handshake; otherwise it
+  /// initiates (serialized per pair) and retransmits until the reply.
+  Future<bool> _ensureUdpSession(Uint8List recipientPubkey) async {
+    if (_noiseSessions.hasSession(PeerTransport.udp, recipientPubkey)) {
+      return true;
+    }
+    if (!_dialedPeers.contains(_hex(recipientPubkey))) {
+      final sent =
+          await _serializedHandshake(_hex(recipientPubkey), () async {
+        final payload = await _noiseSessions.startHandshake(
+          PeerTransport.udp,
+          recipientPubkey,
+        );
+        if (payload == null) return true;
+        final handshakeBytes = GrassrootsPacket(
+          type: PacketType.noiseHandshake,
+          payload: payload,
+        ).serialize();
+        if (!await (_udpService?.sendToPeer(
+                  _hex(recipientPubkey),
+                  handshakeBytes,
+                ) ??
+                Future.value(false))) {
+          _noiseSessions.reset(PeerTransport.udp, recipientPubkey);
+          return false;
+        }
+        _scheduleHandshakeRetransmit(recipientPubkey);
+        return true;
+      });
+      if (!sent) return false;
+    }
+    return _noiseSessions.waitForSession(PeerTransport.udp, recipientPubkey);
   }
 
   void _drainQueueFor(Uint8List pubkey) {

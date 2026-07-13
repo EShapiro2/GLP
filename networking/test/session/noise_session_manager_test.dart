@@ -78,7 +78,7 @@ void main() {
     await completeHandshake(PeerTransport.udp);
 
     final clear = GrassrootsPacket(
-      type: PacketType.message,
+      type: PacketType.fragment,
       payload: Uint8List.fromList([1, 2, 3, 4]),
     );
 
@@ -93,8 +93,8 @@ void main() {
       remotePubkey: bob.publicKey,
     );
 
-    expect(bleEncrypted.type, PacketType.secureMessage);
-    expect(udpEncrypted.type, PacketType.secureMessage);
+    expect(bleEncrypted.type, PacketType.secureFragment);
+    expect(udpEncrypted.type, PacketType.secureFragment);
     expect(bleEncrypted.payload, isNot(equals(clear.payload)));
     expect(udpEncrypted.payload, isNot(equals(bleEncrypted.payload)));
 
@@ -111,8 +111,8 @@ void main() {
       remotePubkey: alice.publicKey,
     );
 
-    expect(bleDecrypted.type, PacketType.message);
-    expect(udpDecrypted.type, PacketType.message);
+    expect(bleDecrypted.type, PacketType.fragment);
+    expect(udpDecrypted.type, PacketType.fragment);
     expect(bleDecrypted.payload, clear.payload);
     expect(udpDecrypted.payload, clear.payload);
     expect(bleSender, equals(alice.publicKey));
