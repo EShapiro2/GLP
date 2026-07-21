@@ -1,0 +1,68 @@
+% P46 (and P47): truth tables for logical expressions in two variables.
+% An expression is a typed term over va, vb, t, f and the connectives; the
+% table lists the value under the four assignments.
+% P47 (operator notation) has no separate content in GLP: user-defined
+% operators are a Prolog parser feature; the typed term representation of
+% P46 covers both.
+
+exported procedure table(BExpr?, TTable).
+table(E, [row(t, t, V1?), row(t, f, V2?), row(f, t, V3?), row(f, f, V4?)]) :-
+    ground(E?) |
+    eval(E?, t, t, V1),
+    eval(E?, t, f, V2),
+    eval(E?, f, t, V3),
+    eval(E?, f, f, V4).
+
+% eval(E, A, B, V): value of E with va = A, vb = B.
+procedure eval(BExpr?, Bool?, Bool?, Bool).
+eval(va, A, _, A?).
+eval(vb, _, B, B?).
+eval(t, _, _, t).
+eval(f, _, _, f).
+eval(not(X), A, B, V?) :- eval(X?, A?, B?, V1), bnot(V1?, V).
+eval(and(X, Y), A, B, V?) :- ground(A?), ground(B?) |
+    eval(X?, A?, B?, V1), eval(Y?, A?, B?, V2), band(V1?, V2?, V).
+eval(or(X, Y), A, B, V?) :- ground(A?), ground(B?) |
+    eval(X?, A?, B?, V1), eval(Y?, A?, B?, V2), bor(V1?, V2?, V).
+eval(nand(X, Y), A, B, V?) :- ground(A?), ground(B?) |
+    eval(X?, A?, B?, V1), eval(Y?, A?, B?, V2), bnand(V1?, V2?, V).
+eval(nor(X, Y), A, B, V?) :- ground(A?), ground(B?) |
+    eval(X?, A?, B?, V1), eval(Y?, A?, B?, V2), bnor(V1?, V2?, V).
+eval(xor(X, Y), A, B, V?) :- ground(A?), ground(B?) |
+    eval(X?, A?, B?, V1), eval(Y?, A?, B?, V2), bxor(V1?, V2?, V).
+eval(impl(X, Y), A, B, V?) :- ground(A?), ground(B?) |
+    eval(X?, A?, B?, V1), eval(Y?, A?, B?, V2), bimpl(V1?, V2?, V).
+eval(equ(X, Y), A, B, V?) :- ground(A?), ground(B?) |
+    eval(X?, A?, B?, V1), eval(Y?, A?, B?, V2), bequ(V1?, V2?, V).
+
+procedure bnot(Bool?, Bool).
+bnot(t, f).
+bnot(f, t).
+
+procedure band(Bool?, Bool?, Bool).
+band(t, X, X?).
+band(f, _, f).
+
+procedure bor(Bool?, Bool?, Bool).
+bor(t, _, t).
+bor(f, X, X?).
+
+procedure bnand(Bool?, Bool?, Bool).
+bnand(t, X, R?) :- bnot(X?, R).
+bnand(f, _, t).
+
+procedure bnor(Bool?, Bool?, Bool).
+bnor(t, _, f).
+bnor(f, X, R?) :- bnot(X?, R).
+
+procedure bxor(Bool?, Bool?, Bool).
+bxor(t, X, R?) :- bnot(X?, R).
+bxor(f, X, X?).
+
+procedure bimpl(Bool?, Bool?, Bool).
+bimpl(t, X, X?).
+bimpl(f, _, t).
+
+procedure bequ(Bool?, Bool?, Bool).
+bequ(t, X, X?).
+bequ(f, X, R?) :- bnot(X?, R).

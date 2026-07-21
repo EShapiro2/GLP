@@ -1,0 +1,26 @@
+% P49: N-bit Gray code, as lists of bits.
+% gray(N) = 0-prefixed gray(N-1) followed by 1-prefixed reversed gray(N-1).
+
+exported procedure gray(Integer?, BitsList).
+gray(N, [[]]) :- N? =< 0 | true.
+gray(N, R?) :- N? > 0 | N1 := N? - 1, gray(N1?, G), g2(G?, R).
+
+procedure g2(BitsList?, BitsList).
+g2(G, R?) :- ground(G?) |
+    pre(0, G?, A),
+    grev(G?, [], GR),
+    pre(1, GR?, B),
+    gapp(A?, B?, R).
+
+% Prefix every code with a bit.
+procedure pre(Integer?, BitsList?, BitsList).
+pre(_, [], []).
+pre(B, [C|Cs], [[B?|C?]|R?]) :- integer(B?) | pre(B?, Cs?, R).
+
+procedure grev(BitsList?, BitsList?, BitsList).
+grev([], A, A?).
+grev([C|Cs], A, R?) :- grev(Cs?, [C?|A?], R).
+
+procedure gapp(BitsList?, BitsList?, BitsList).
+gapp([], Ys, Ys?).
+gapp([X|Xs], Ys, [X?|R?]) :- gapp(Xs?, Ys?, R).

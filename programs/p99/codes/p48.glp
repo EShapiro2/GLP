@@ -1,0 +1,78 @@
+% P48: truth tables for expressions in N variables v(1)..v(N).
+
+exported procedure tablen(Integer?, NExpr?, NTable).
+tablen(N, E, T?) :- ground(E?) | asgs(N?, A), evrows(A?, E?, T).
+
+% All 2^N assignments, each a BList of length N.
+procedure asgs(Integer?, BListList).
+asgs(N, [[]]) :- N? =< 0 | true.
+asgs(N, R?) :- N? > 0 | N1 := N? - 1, asgs(N1?, S), extend(S?, R).
+
+procedure extend(BListList?, BListList).
+extend([], []).
+extend([A|As], [[t|A?], [f|A?]|R?]) :- ground(A?) | extend(As?, R).
+
+procedure evrows(BListList?, NExpr?, NTable).
+evrows([], _, []).
+evrows([A|As], E, [row(A?, V?)|R?]) :- ground(A?), ground(E?) |
+    evaln(E?, A?, V), evrows(As?, E?, R).
+
+% evaln(E, A, V): value of E under assignment A (v(K) is the K'th, 1-based).
+procedure evaln(NExpr?, BList?, Bool).
+evaln(v(K), A, V?) :- nth(K?, A?, V).
+evaln(t, _, t).
+evaln(f, _, f).
+evaln(not(X), A, V?) :- evaln(X?, A?, V1), bnot(V1?, V).
+evaln(and(X, Y), A, V?) :- ground(A?) |
+    evaln(X?, A?, V1), evaln(Y?, A?, V2), band(V1?, V2?, V).
+evaln(or(X, Y), A, V?) :- ground(A?) |
+    evaln(X?, A?, V1), evaln(Y?, A?, V2), bor(V1?, V2?, V).
+evaln(nand(X, Y), A, V?) :- ground(A?) |
+    evaln(X?, A?, V1), evaln(Y?, A?, V2), bnand(V1?, V2?, V).
+evaln(nor(X, Y), A, V?) :- ground(A?) |
+    evaln(X?, A?, V1), evaln(Y?, A?, V2), bnor(V1?, V2?, V).
+evaln(xor(X, Y), A, V?) :- ground(A?) |
+    evaln(X?, A?, V1), evaln(Y?, A?, V2), bxor(V1?, V2?, V).
+evaln(impl(X, Y), A, V?) :- ground(A?) |
+    evaln(X?, A?, V1), evaln(Y?, A?, V2), bimpl(V1?, V2?, V).
+evaln(equ(X, Y), A, V?) :- ground(A?) |
+    evaln(X?, A?, V1), evaln(Y?, A?, V2), bequ(V1?, V2?, V).
+
+% nth: 1-based; out of range answers f.
+procedure nth(Integer?, BList?, Bool).
+nth(_, [], f).
+nth(1, [X|_], X?).
+nth(K, [_|Xs], V?) :- K? > 1 | K1 := K? - 1, nth(K1?, Xs?, V).
+nth(K, [_|_], f) :- K? < 1 | true.
+
+procedure bnot(Bool?, Bool).
+bnot(t, f).
+bnot(f, t).
+
+procedure band(Bool?, Bool?, Bool).
+band(t, X, X?).
+band(f, _, f).
+
+procedure bor(Bool?, Bool?, Bool).
+bor(t, _, t).
+bor(f, X, X?).
+
+procedure bnand(Bool?, Bool?, Bool).
+bnand(t, X, R?) :- bnot(X?, R).
+bnand(f, _, t).
+
+procedure bnor(Bool?, Bool?, Bool).
+bnor(t, _, f).
+bnor(f, X, R?) :- bnot(X?, R).
+
+procedure bxor(Bool?, Bool?, Bool).
+bxor(t, X, R?) :- bnot(X?, R).
+bxor(f, X, X?).
+
+procedure bimpl(Bool?, Bool?, Bool).
+bimpl(t, X, X?).
+bimpl(f, _, t).
+
+procedure bequ(Bool?, Bool?, Bool).
+bequ(t, X, X?).
+bequ(f, X, R?) :- bnot(X?, R).

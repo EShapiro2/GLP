@@ -1,0 +1,51 @@
+% P50: Huffman code.  From fr(Symbol, Frequency) terms to hc(Symbol, Bits)
+% terms: build a sorted list of weighted trees, repeatedly combine the two
+% lightest, then read the codes off the tree.  Codes are bit lists, in tree
+% order.
+
+exported procedure huffman(FrList?, HCList).
+huffman([], []).
+huffman([F|Fs], Cs?) :- ground(F?), ground(Fs?) |
+    towt([F?|Fs?], W),
+    wsort(W?, S),
+    combine(S?, T),
+    codes(T?, [], Cs).
+
+procedure towt(FrList?, WTList).
+towt([], []).
+towt([fr(S, F)|Fs], [wt(F?, leaf(S?))|R?]) :- towt(Fs?, R).
+
+% Insertion sort by weight.
+procedure wsort(WTList?, WTList).
+wsort([], []).
+wsort([W|Ws], R?) :- ground(W?) | wsort(Ws?, S), wins(W?, S?, R).
+
+procedure wins(WTItem?, WTList?, WTList).
+wins(W, [], [W?]).
+wins(wt(A, T), [wt(B, U)|Rest], [wt(A?, T?), wt(B?, U?)|Rest?]) :- A? =< B? | true.
+wins(wt(A, T), [wt(B, U)|Rest], [wt(B?, U?)|R?]) :- A? > B? | wins(wt(A?, T?), Rest?, R).
+
+% Combine the two lightest until one tree remains.
+procedure combine(WTList?, HTree).
+combine([], leaf(empty)).
+combine([wt(_, T)], T?).
+combine([wt(W1, T1), wt(W2, T2)|Rest], T?) :-
+    W := W1? + W2?,
+    wins(wt(W?, nd(T1?, T2?)), Rest?, S),
+    combine(S?, T).
+
+% codes(Tree, ReversedPath, Codes): left edge is 0, right edge is 1.
+procedure codes(HTree?, IntList?, HCList).
+codes(leaf(S), Path, [hc(S?, R?)]) :- crev(Path?, [], R).
+codes(nd(L, R), Path, Cs?) :- ground(Path?) |
+    codes(L?, [0|Path?], A),
+    codes(R?, [1|Path?], B),
+    happ(A?, B?, Cs).
+
+procedure crev(IntList?, IntList?, IntList).
+crev([], A, A?).
+crev([X|Xs], A, R?) :- crev(Xs?, [X?|A?], R).
+
+procedure happ(HCList?, HCList?, HCList).
+happ([], Ys, Ys?).
+happ([X|Xs], Ys, [X?|R?]) :- happ(Xs?, Ys?, R).

@@ -1,0 +1,46 @@
+% P99 section: Logic and Codes (P46-P50).  Section-shared types and the
+% section interface.  P47 is covered by P46 (operator notation is a Prolog
+% parser feature; the typed term representation covers both).
+
+Bool ::= t ; f.
+BExpr ::= va ; vb ; t ; f ; not(BExpr)
+        ; and(BExpr, BExpr) ; or(BExpr, BExpr)
+        ; nand(BExpr, BExpr) ; nor(BExpr, BExpr)
+        ; xor(BExpr, BExpr) ; impl(BExpr, BExpr) ; equ(BExpr, BExpr).
+TRow ::= row(Bool, Bool, Bool).
+TTable ::= [] ; [TRow | TTable].
+
+NExpr ::= v(Integer) ; t ; f ; not(NExpr)
+        ; and(NExpr, NExpr) ; or(NExpr, NExpr)
+        ; nand(NExpr, NExpr) ; nor(NExpr, NExpr)
+        ; xor(NExpr, NExpr) ; impl(NExpr, NExpr) ; equ(NExpr, NExpr).
+BList ::= [] ; [Bool | BList].
+BListList ::= [] ; [BList | BListList].
+NRow ::= row(BList, Bool).
+NTable ::= [] ; [NRow | NTable].
+
+BitsList ::= [] ; [IntList | BitsList].
+
+FrItem ::= fr(Constant, Integer).
+FrList ::= [] ; [FrItem | FrList].
+HTree ::= leaf(Constant) ; nd(HTree, HTree).
+WTItem ::= wt(Integer, HTree).
+WTList ::= [] ; [WTItem | WTList].
+HCItem ::= hc(Constant, IntList).
+HCList ::= [] ; [HCItem | HCList].
+
+imported procedure p46#table(BExpr?, TTable).
+exported procedure table(BExpr?, TTable).
+table(E, T?) :- p46 # table(E?, T).
+
+imported procedure p48#tablen(Integer?, NExpr?, NTable).
+exported procedure tablen(Integer?, NExpr?, NTable).
+tablen(N, E, T?) :- p48 # tablen(N?, E?, T).
+
+imported procedure p49#gray(Integer?, BitsList).
+exported procedure gray(Integer?, BitsList).
+gray(N, R?) :- p49 # gray(N?, R).
+
+imported procedure p50#huffman(FrList?, HCList).
+exported procedure huffman(FrList?, HCList).
+huffman(F, R?) :- p50 # huffman(F?, R).
