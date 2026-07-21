@@ -1,0 +1,13 @@
+% P63: construct a complete binary tree with N nodes (heap addressing:
+% node K has children 2K and 2K+1).
+
+exported procedure complete_binary_tree(Integer?, BTree).
+complete_binary_tree(N, T?) :- cbt(1, N?, T).
+
+procedure cbt(Integer?, Integer?, BTree).
+cbt(K, N, nil) :- K? > N? | true.
+cbt(K, N, t(x, L?, R?)) :- K? =< N? |
+    K2 := K? * 2,
+    K3 := K? * 2 + 1,
+    cbt(K2?, N?, L),
+    cbt(K3?, N?, R).

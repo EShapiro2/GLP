@@ -1,0 +1,18 @@
+% P64: layout a binary tree: x is the inorder index, y the depth.
+
+exported procedure layout64(BTree?, PTree).
+layout64(T, P?) :- lay(T?, 1, 1, P, _).
+
+% lay(T, X0, D, PT, X1): X0 the next free inorder index, X1 the index after T.
+procedure lay(BTree?, Integer?, Integer?, PTree, Integer).
+lay(nil, X, _, nil, X?).
+lay(t(V, L, R), X0, D, pt(V?, Xn?, D?, PL?, PR?), X1?) :- integer(D?) |
+    D1 := D? + 1,
+    D2 := D? + 1,
+    lay(L?, X0?, D1?, PL, XL),
+    dup(XL?, Xn, Xa),
+    XR := Xa? + 1,
+    lay(R?, XR?, D2?, PR, X1).
+
+procedure dup(Integer?, Integer, Integer).
+dup(X, A?, B?) :- integer(X?) | A := X? + 0, B := X? + 0.

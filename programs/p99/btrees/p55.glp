@@ -1,0 +1,41 @@
+% P55: construct all completely balanced binary trees with N nodes.
+% Search-all with a shift-reduce state: an agenda of build(N)/make tasks and
+% a stack of completed subtrees.  build(N) branches over the balanced splits
+% of N-1; make combines the top two stack entries under an x node.
+
+exported procedure cbal_tree(Integer?, Stream(BTree)).
+cbal_tree(N, Ts?) :-
+    solve_all(st([build(N?)], []), Reqs, Ts),
+    expand_server(Reqs?).
+
+procedure expand_server(Stream(Req(TState, BTree))?).
+expand_server([]).
+expand_server([expand(St, Items?)|Rs]) :-
+    expand(St?, Items),
+    expand_server(Rs?).
+
+procedure expand(TState?, Items(TState, BTree)).
+expand(st([], [T]), [sol(T?)]).
+expand(st([], []), []).
+expand(st([], [_, _|_]), []).
+expand(st([build(N)|Ag], St), [node(st(Ag?, [nil|St?]))]) :- N? =< 0 | true.
+expand(st([build(N)|Ag], St), Items?) :- N? > 0, ground(Ag?), ground(St?) |
+    M := N? - 1,
+    splits(M?, Sp),
+    mk(Sp?, Ag?, St?, Items).
+expand(st([make|Ag], [R, L|St]), [node(st(Ag?, [t(x, L?, R?)|St?]))]).
+expand(st([make|_], []), []).
+expand(st([make|_], [_]), []).
+
+% Balanced splits of M nodes between two subtrees.
+procedure splits(Integer?, SpList).
+splits(M, [s(H?, H?)]) :- M? mod 2 =:= 0, integer(M?) | H := M? // 2.
+splits(M, [s(H?, H1?), s(H1?, H?)]) :- M? mod 2 =\= 0, integer(M?) |
+    H := M? // 2,
+    H1 := M? // 2 + 1.
+
+procedure mk(SpList?, TaskList?, BTList?, Items(TState, BTree)).
+mk([], _, _, []).
+mk([s(A, B)|Ss], Ag, St, [node(st([build(A?), build(B?), make|Ag?], St?))|R?]) :-
+    ground(Ag?), ground(St?) |
+    mk(Ss?, Ag?, St?, R).

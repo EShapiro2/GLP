@@ -1,0 +1,101 @@
+% P99 section: Binary Trees (P54-P69).  Section-shared types and interface.
+% A binary tree is nil or t(Label, Left, Right).  The shift-reduce search
+% state (agenda of build/make tasks + stack of completed subtrees) drives the
+% search-all problems P55, P58, P59, P60.
+
+BTree ::= nil ; t(Constant, BTree, BTree).
+BTList ::= [] ; [BTree | BTList].
+PTree ::= nil ; pt(Constant, Integer, Integer, PTree, PTree).
+Task ::= build(Integer) ; make.
+TaskList ::= [] ; [Task | TaskList].
+TState ::= st(TaskList, BTList).
+Sp ::= s(Integer, Integer).
+SpList ::= [] ; [Sp | SpList].
+
+imported procedure p54#istree(BTree?, Ans).
+exported procedure istree(BTree?, Ans).
+istree(T, R?) :- p54 # istree(T?, R).
+
+imported procedure p55#cbal_tree(Integer?, Stream(BTree)).
+exported procedure cbal_tree(Integer?, Stream(BTree)).
+cbal_tree(N, Ts?) :- p55 # cbal_tree(N?, Ts).
+
+imported procedure p56#symmetric(BTree?, Ans).
+exported procedure symmetric(BTree?, Ans).
+symmetric(T, R?) :- p56 # symmetric(T?, R).
+
+imported procedure p57#construct(CList?, BTree).
+exported procedure construct(CList?, BTree).
+construct(L, T?) :- p57 # construct(L?, T).
+
+imported procedure p58#sym_cbal_trees(Integer?, Stream(BTree)).
+exported procedure sym_cbal_trees(Integer?, Stream(BTree)).
+sym_cbal_trees(N, Ts?) :- p58 # sym_cbal_trees(N?, Ts).
+
+imported procedure p59#hbal_tree(Integer?, Stream(BTree)).
+exported procedure hbal_tree(Integer?, Stream(BTree)).
+hbal_tree(H, Ts?) :- p59 # hbal_tree(H?, Ts).
+
+imported procedure p60#hbal_tree_nodes(Integer?, Stream(BTree)).
+exported procedure hbal_tree_nodes(Integer?, Stream(BTree)).
+hbal_tree_nodes(N, Ts?) :- p60 # hbal_tree_nodes(N?, Ts).
+
+imported procedure p61#count_leaves(BTree?, Integer).
+exported procedure count_leaves(BTree?, Integer).
+count_leaves(T, N?) :- p61 # count_leaves(T?, N).
+
+imported procedure p61#leaves(BTree?, CList).
+exported procedure leaves(BTree?, CList).
+leaves(T, L?) :- p61 # leaves(T?, L).
+
+imported procedure p62#internals(BTree?, CList).
+exported procedure internals(BTree?, CList).
+internals(T, L?) :- p62 # internals(T?, L).
+
+imported procedure p62#at_level(BTree?, Integer?, CList).
+exported procedure at_level(BTree?, Integer?, CList).
+at_level(T, D, L?) :- p62 # at_level(T?, D?, L).
+
+imported procedure p63#complete_binary_tree(Integer?, BTree).
+exported procedure complete_binary_tree(Integer?, BTree).
+complete_binary_tree(N, T?) :- p63 # complete_binary_tree(N?, T).
+
+imported procedure p64#layout64(BTree?, PTree).
+exported procedure layout64(BTree?, PTree).
+layout64(T, P?) :- p64 # layout64(T?, P).
+
+imported procedure p65#layout65(BTree?, PTree).
+exported procedure layout65(BTree?, PTree).
+layout65(T, P?) :- p65 # layout65(T?, P).
+
+imported procedure p66#layout66(BTree?, PTree).
+exported procedure layout66(BTree?, PTree).
+layout66(T, P?) :- p66 # layout66(T?, P).
+
+imported procedure p67#tree_string(BTree?, CList).
+exported procedure tree_string(BTree?, CList).
+tree_string(T, S?) :- p67 # tree_string(T?, S).
+
+imported procedure p67#string_tree(CList?, BTree).
+exported procedure string_tree(CList?, BTree).
+string_tree(S, T?) :- p67 # string_tree(S?, T).
+
+imported procedure p68#preorder(BTree?, CList).
+exported procedure preorder(BTree?, CList).
+preorder(T, L?) :- p68 # preorder(T?, L).
+
+imported procedure p68#inorder(BTree?, CList).
+exported procedure inorder(BTree?, CList).
+inorder(T, L?) :- p68 # inorder(T?, L).
+
+imported procedure p68#pre_in_tree(CList?, CList?, BTree).
+exported procedure pre_in_tree(CList?, CList?, BTree).
+pre_in_tree(P, I, T?) :- p68 # pre_in_tree(P?, I?, T).
+
+imported procedure p69#tree_dotstring(BTree?, CList).
+exported procedure tree_dotstring(BTree?, CList).
+tree_dotstring(T, S?) :- p69 # tree_dotstring(T?, S).
+
+imported procedure p69#dotstring_tree(CList?, BTree).
+exported procedure dotstring_tree(CList?, BTree).
+dotstring_tree(S, T?) :- p69 # dotstring_tree(S?, T).

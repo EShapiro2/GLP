@@ -1,0 +1,45 @@
+% P59: construct all height-balanced binary trees of a given height:
+% at every node the subtree heights differ by at most one.  Shift-reduce as
+% in P55, with build(H) meaning height H and splits over subtree heights.
+
+Task59 ::= build(Integer) ; make.
+Task59List ::= [] ; [Task59 | Task59List].
+HState ::= st(Task59List, BTList).
+
+exported procedure hbal_tree(Integer?, Stream(BTree)).
+hbal_tree(H, Ts?) :-
+    solve_all(st([build(H?)], []), Reqs, Ts),
+    expand_server(Reqs?).
+
+procedure expand_server(Stream(Req(HState, BTree))?).
+expand_server([]).
+expand_server([expand(St, Items?)|Rs]) :-
+    expand(St?, Items),
+    expand_server(Rs?).
+
+procedure expand(HState?, Items(HState, BTree)).
+expand(st([], [T]), [sol(T?)]).
+expand(st([], []), []).
+expand(st([], [_, _|_]), []).
+expand(st([build(H)|Ag], St), [node(st(Ag?, [nil|St?]))]) :- H? =< 0 | true.
+expand(st([build(H)|Ag], St), Items?) :- H? > 0, ground(Ag?), ground(St?) |
+    H1 := H? - 1,
+    H2 := H? - 2,
+    hsplits(H1?, H2?, Sp),
+    mk(Sp?, Ag?, St?, Items).
+expand(st([make|Ag], [R, L|St]), [node(st(Ag?, [t(x, L?, R?)|St?]))]).
+expand(st([make|_], []), []).
+expand(st([make|_], [_]), []).
+
+% Height pairs for the two subtrees of a height-H tree: (H-1,H-1), (H-1,H-2),
+% (H-2,H-1); pairs with a negative height are dropped (H = 1 leaves (0,0)).
+procedure hsplits(Integer?, Integer?, SpList).
+hsplits(H1, H2, [s(H1?, H1?)]) :- H2? < 0, integer(H1?) | true.
+hsplits(H1, H2, [s(H1?, H1?), s(H1?, H2?), s(H2?, H1?)]) :-
+    H2? >= 0, integer(H1?), integer(H2?) | true.
+
+procedure mk(SpList?, Task59List?, BTList?, Items(HState, BTree)).
+mk([], _, _, []).
+mk([s(A, B)|Ss], Ag, St, [node(st([build(A?), build(B?), make|Ag?], St?))|R?]) :-
+    ground(Ag?), ground(St?) |
+    mk(Ss?, Ag?, St?, R).

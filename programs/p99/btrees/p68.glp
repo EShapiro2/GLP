@@ -1,0 +1,37 @@
+% P68: preorder and inorder sequences of a binary tree, and reconstruction
+% from both (labels assumed distinct).
+
+exported procedure preorder(BTree?, CList).
+preorder(T, S?) :- pre(T?, [], S).
+
+procedure pre(BTree?, CList?, CList).
+pre(nil, A, A?).
+pre(t(V, L, R), A, [V?|S?]) :- pre(R?, A?, S2), pre(L?, S2?, S).
+
+exported procedure inorder(BTree?, CList).
+inorder(T, S?) :- ino(T?, [], S).
+
+procedure ino(BTree?, CList?, CList).
+ino(nil, A, A?).
+ino(t(V, L, R), A, S?) :- ino(R?, A?, S2), ino(L?, [V?|S2?], S).
+
+exported procedure pre_in_tree(CList?, CList?, BTree).
+pre_in_tree([], _, nil).
+pre_in_tree([V|P1], I, t(V?, TL?, TR?)) :- ground(V?), ground(P1?) |
+    splitat(I?, V?, IL, N, IR),
+    takedrop(P1?, N?, PL, PR),
+    pre_in_tree(PL?, IL?, TL),
+    pre_in_tree(PR?, IR?, TR).
+
+% splitat(I, V, IL, N, IR): I = IL ++ [V] ++ IR, N the length of IL.
+procedure splitat(CList?, Constant?, CList, Integer, CList).
+splitat([], _, [], 0, []).
+splitat([X|Xs], V, [], 0, Xs?) :- X? =?= V? | true.
+splitat([X|Xs], V, [X?|IL?], N?, IR?) :- otherwise, ground(X?) |
+    splitat(Xs?, V?, IL, N1, IR),
+    N := N1? + 1.
+
+procedure takedrop(CList?, Integer?, CList, CList).
+takedrop(L, K, [], L?) :- K? =< 0 | true.
+takedrop([], K, [], []) :- K? > 0 | true.
+takedrop([X|Xs], K, [X?|F?], R?) :- K? > 0 | K1 := K? - 1, takedrop(Xs?, K1?, F, R).

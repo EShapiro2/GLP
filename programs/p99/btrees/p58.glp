@@ -1,0 +1,18 @@
+% P58: all symmetric completely balanced binary trees with N nodes:
+% generate (P55) and keep the symmetric ones (P56).
+
+imported procedure p55#cbal_tree(Integer?, Stream(BTree)).
+imported procedure p56#symmetric(BTree?, Ans).
+
+exported procedure sym_cbal_trees(Integer?, Stream(BTree)).
+sym_cbal_trees(N, Ts?) :- p55 # cbal_tree(N?, All), keep(All?, Ts).
+
+procedure keep(Stream(BTree)?, Stream(BTree)).
+keep([], []).
+keep([T|Rest], Out?) :- ground(T?) |
+    p56 # symmetric(T?, A),
+    keep1(A?, T?, Rest?, Out).
+
+procedure keep1(Ans?, BTree?, Stream(BTree)?, Stream(BTree)).
+keep1(yes, T, Rest, [T?|Out?]) :- keep(Rest?, Out).
+keep1(no, _, Rest, Out?) :- keep(Rest?, Out).

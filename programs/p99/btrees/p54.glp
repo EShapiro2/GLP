@@ -1,0 +1,7 @@
+% P54: check whether a term represents a binary tree.
+% In typed GLP the type system answers this at compile time: a BTree-typed
+% argument IS a binary tree, and a non-tree term is rejected before the
+% program runs.  The runtime check is therefore trivially yes.
+
+exported procedure istree(BTree?, Ans).
+istree(T, yes) :- ground(T?) | true.

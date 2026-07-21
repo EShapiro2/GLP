@@ -1,0 +1,27 @@
+% P62: collect the internal nodes of a binary tree.  P62B: collect the
+% nodes at a given level (root is level 1).
+
+exported procedure internals(BTree?, CList).
+internals(T, L?) :- itn(T?, [], L).
+
+procedure itn(BTree?, CList?, CList).
+itn(nil, A, A?).
+itn(t(_, nil, nil), A, A?).
+itn(t(X, t(Y, L1, R1), R), A, [X?|Out?]) :-
+    itn(R?, A?, A1),
+    itn(t(Y?, L1?, R1?), A1?, Out).
+itn(t(X, nil, t(Y, L1, R1)), A, [X?|Out?]) :-
+    itn(t(Y?, L1?, R1?), A?, Out).
+
+exported procedure at_level(BTree?, Integer?, CList).
+at_level(T, D, L?) :- al(T?, D?, [], L).
+
+procedure al(BTree?, Integer?, CList?, CList).
+al(nil, _, A, A?).
+al(t(X, _, _), 1, A, [X?|A?]).
+al(t(_, L, R), D, A, Out?) :- D? > 1 |
+    D1 := D? - 1,
+    D2 := D? - 1,
+    al(R?, D1?, A?, A1),
+    al(L?, D2?, A1?, Out).
+al(t(_, _, _), D, A, A?) :- D? < 1 | true.

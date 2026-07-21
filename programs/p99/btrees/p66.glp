@@ -1,0 +1,96 @@
+% P66: compact layout: each node is equidistant from its two sons, with the
+% smallest distance such that no two nodes on the same level come closer
+% than 2.  Computed by subtree contours: each subtree yields its per-level
+% leftmost and rightmost relative positions; the sons' separation is the
+% smallest that keeps the contours apart.
+
+OTree ::= onil ; ot(Constant, Integer, OTree, OTree).
+
+exported procedure layout66(BTree?, PTree).
+layout66(T, P?) :-
+    lay66(T?, OT, LC, _),
+    minl(LC?, 0, Mn),
+    X0 := 1 - Mn?,
+    abs66(OT?, X0?, 1, P).
+
+% lay66(T, OT, LC, RC): offset tree and left/right contours (per-level
+% extreme x, relative to the root of T).
+procedure lay66(BTree?, OTree, IntList, IntList).
+lay66(nil, onil, [], []).
+lay66(t(V, L, R), OT?, LC?, RC?) :- ground(V?) |
+    lay66(L?, OL, LCL, RCL),
+    lay66(R?, OR, LCR, RCR),
+    asm(V?, OL?, OR?, LCL?, RCL?, LCR?, RCR?, OT, LC, RC).
+
+% Separation: smallest S >= 1 with (right at +S) at least 2 away from
+% (left at -S) on every shared level.
+procedure sep(IntList?, IntList?, Integer).
+sep(RCL, LCR, S?) :-
+    md(RCL?, LCR?, -1000000, MD),
+    T1 := (MD? + 3) // 2,
+    maxi(T1?, 1, S).
+
+% md: maximum of RCL_i - LCR_i over the shared prefix.
+procedure md(IntList?, IntList?, Integer?, Integer).
+md([], _, C, C?).
+md([_|_], [], C, C?).
+md([X|Xs], [Y|Ys], C, R?) :-
+    D := X? - Y?,
+    maxi(D?, C?, C1),
+    md(Xs?, Ys?, C1?, R).
+
+% Assemble node: sons at -S and +S; contours extend by the other side's
+% where one side is shorter.
+procedure asm(Constant?, OTree?, OTree?, IntList?, IntList?, IntList?, IntList?, OTree, IntList, IntList).
+asm(V, OL, OR, LCL, RCL, LCR, RCR, ot(V?, S1?, OL?, OR?), [0|LC?], [0|RC?]) :-
+    ground(LCL?), ground(RCL?), ground(LCR?), ground(RCR?) |
+    sep(RCL?, LCR?, S),
+    dup(S?, S1, T1),
+    dup(T1?, S2, T2),
+    dup(T2?, S3, T3),
+    dup(T3?, S4, S5),
+    N1 := 0 - S2?,
+    shift(LCL?, N1?, LCLs),
+    shift(LCR?, S3?, LCRs),
+    comb(LCLs?, LCRs?, LC),
+    N2 := 0 - S4?,
+    shift(RCL?, N2?, RCLs),
+    shift(RCR?, S5?, RCRs),
+    comb(RCRs?, RCLs?, RC).
+
+procedure dup(Integer?, Integer, Integer).
+dup(X, A?, B?) :- integer(X?) | A := X? + 0, B := X? + 0.
+
+procedure shift(IntList?, Integer?, IntList).
+shift([], _, []).
+shift([X|Xs], D, [Y?|R?]) :- integer(D?) | Y := X? + D?, shift(Xs?, D?, R).
+
+% comb(P, Q, R): P, then the part of Q beyond P's length.
+procedure comb(IntList?, IntList?, IntList).
+comb([], Q, Q?).
+comb([X|Xs], [], [X?|R?]) :- comb(Xs?, [], R).
+comb([X|Xs], [_|Ys], [X?|R?]) :- comb(Xs?, Ys?, R).
+
+procedure abs66(OTree?, Integer?, Integer?, PTree).
+abs66(onil, _, _, nil).
+abs66(ot(V, S, L, R), X, D, pt(V?, Xn?, D?, PL?, PR?)) :-
+    integer(X?), integer(S?), integer(D?) |
+    D1 := D? + 1,
+    D2 := D? + 1,
+    XL := X? - S?,
+    XR := X? + S?,
+    Xn := X? + 0,
+    abs66(L?, XL?, D1?, PL),
+    abs66(R?, XR?, D2?, PR).
+
+procedure minl(IntList?, Integer?, Integer).
+minl([], A, A?).
+minl([X|Xs], A, R?) :- mini(X?, A?, M), minl(Xs?, M?, R).
+
+procedure mini(Integer?, Integer?, Integer).
+mini(A, B, A?) :- A? =< B? | true.
+mini(A, B, B?) :- A? > B? | true.
+
+procedure maxi(Integer?, Integer?, Integer).
+maxi(A, B, A?) :- A? >= B? | true.
+maxi(A, B, B?) :- A? < B? | true.

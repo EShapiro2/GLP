@@ -1,0 +1,41 @@
+% P65: layout a binary tree level by level: the root is at x = 2^(H-1), and
+% the horizontal offset to the children halves at each level.
+
+exported procedure layout65(BTree?, PTree).
+layout65(T, P?) :- ground(T?) |
+    hgt(T?, H),
+    H1 := H? - 1,
+    p2(H1?, W),
+    dup(W?, X0, Wb),
+    Off := Wb? // 2,
+    lay65(T?, X0?, 1, Off?, P).
+
+procedure lay65(BTree?, Integer?, Integer?, Integer?, PTree).
+lay65(nil, _, _, _, nil).
+lay65(t(V, L, R), X, D, Off, pt(V?, Xn?, D?, PL?, PR?)) :-
+    integer(X?), integer(Off?), integer(D?) |
+    D1 := D? + 1,
+    D2 := D? + 1,
+    XL := X? - Off?,
+    XR := X? + Off?,
+    Xn := X? + 0,
+    O1 := Off? // 2,
+    O2 := Off? // 2,
+    lay65(L?, XL?, D1?, O1?, PL),
+    lay65(R?, XR?, D2?, O2?, PR).
+
+procedure hgt(BTree?, Integer).
+hgt(nil, 0).
+hgt(t(_, L, R), H?) :- hgt(L?, A), hgt(R?, B), maxi(A?, B?, M), H := M? + 1.
+
+procedure maxi(Integer?, Integer?, Integer).
+maxi(A, B, A?) :- A? >= B? | true.
+maxi(A, B, B?) :- A? < B? | true.
+
+% 2^N (N >= 0).
+procedure p2(Integer?, Integer).
+p2(N, 1) :- N? =< 0 | true.
+p2(N, R?) :- N? > 0 | N1 := N? - 1, p2(N1?, A), R := A? * 2.
+
+procedure dup(Integer?, Integer, Integer).
+dup(X, A?, B?) :- integer(X?) | A := X? + 0, B := X? + 0.

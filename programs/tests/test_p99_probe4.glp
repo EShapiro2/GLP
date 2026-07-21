@@ -41,3 +41,11 @@ walke(N, D, R?) :- D? * D? =< N?, N? mod D? =\= 0 | bump(D?, R1), add0(R1?, R).
 walke(_, _, 0) :- otherwise | true.
 procedure add0(Integer?, Integer).
 add0(X, R?) :- R := X? + 0.
+
+% Variant F: constant-comparison guard (=?= against a constant) + helper
+% call + consumer.  The p67 pt1 shape.
+procedure self(Constant?, Integer).
+self(C, R?) :- C? =?= a | bump(2, X), addz(X?, R).
+self(_, 0) :- otherwise | true.
+procedure addz(Integer?, Integer).
+addz(X, R?) :- R := X? + 0.

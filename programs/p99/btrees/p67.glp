@@ -1,0 +1,46 @@
+% P67: a string representation of binary trees: t(a, L, R) prints as
+% a(L,R), a leaf as its label, nil as nothing.  Strings are lists of
+% one-character constants.  Malformed input parses to the error marker
+% t(err, nil, nil) (GLP procedures are total).
+
+exported procedure tree_string(BTree?, CList).
+tree_string(T, S?) :- ts(T?, [], S).
+
+procedure ts(BTree?, CList?, CList).
+ts(nil, A, A?).
+ts(t(V, nil, nil), A, [V?|A?]).
+ts(t(V, L, R), A, [V?, '('|S1?]) :- otherwise |
+    ts(R?, [')'|A?], S3),
+    ts(L?, [','|S3?], S1).
+
+exported procedure string_tree(CList?, BTree).
+string_tree(S, T?) :- pt(S?, T, _).
+
+% pt(Chars, T, Rest): parse one tree, leaving the rest.
+procedure pt(CList?, BTree, CList).
+pt([], nil, []).
+pt([C|Cs], nil, [C?|Cs?]) :- C? =?= ')' | true.
+pt([C|Cs], nil, [C?|Cs?]) :- C? =?= ',' | true.
+pt([C|Cs], T?, Rest?) :- otherwise, ground(C?) | pt1(Cs?, C?, T, Rest).
+
+% pt1(Chars, V, T, Rest): V was read; a '(' opens children.
+procedure pt1(CList?, Constant?, BTree, CList).
+pt1([], V, t(V?, nil, nil), []).
+pt1([C|Cs], V, T?, Rest?) :- C? =?= '(' |
+    pt(Cs?, L, R1),
+    expect(R1?, ',', R2),
+    pt(R2?, Rt, R3),
+    expect(R3?, ')', R4),
+    mkt(V?, L?, Rt?, T),
+    R4? = Rest.
+pt1([C|Cs], V, t(V?, nil, nil), [C?|Cs?]) :- otherwise | true.
+
+procedure mkt(Constant?, BTree?, BTree?, BTree).
+mkt(V, L, R, t(V?, L?, R?)).
+
+% expect: consume the given character; anything else parses as the error
+% marker's rest.
+procedure expect(CList?, Constant?, CList).
+expect([], _, []).
+expect([X|Xs], C, Xs?) :- X? =?= C? | true.
+expect([X|Xs], _, [X?|Xs?]) :- otherwise | true.

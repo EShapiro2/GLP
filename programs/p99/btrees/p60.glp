@@ -1,0 +1,146 @@
+% P60: construct all height-balanced binary trees with a given number of
+% nodes.  Shift-reduce over tasks build(N, H) — N nodes, exactly height H —
+% with a root task branching over the feasible heights; splits enumerate the
+% subtree height pairs and the node partitions consistent with them.
+
+Task60 ::= root(Integer) ; build(Integer, Integer) ; make.
+Task60List ::= [] ; [Task60 | Task60List].
+NState ::= st(Task60List, BTList).
+NSp ::= sp(Integer, Integer, Integer, Integer).
+NSpList ::= [] ; [NSp | NSpList].
+
+exported procedure hbal_tree_nodes(Integer?, Stream(BTree)).
+hbal_tree_nodes(N, Ts?) :-
+    solve_all(st([root(N?)], []), Reqs, Ts),
+    expand_server(Reqs?).
+
+procedure expand_server(Stream(Req(NState, BTree))?).
+expand_server([]).
+expand_server([expand(St, Items?)|Rs]) :-
+    expand(St?, Items),
+    expand_server(Rs?).
+
+procedure expand(NState?, Items(NState, BTree)).
+expand(st([], [T]), [sol(T?)]).
+expand(st([], []), []).
+expand(st([], [_, _|_]), []).
+expand(st([root(N)|Ag], St), Items?) :- ground(Ag?), ground(St?), integer(N?) |
+    minh(N?, Hmin),
+    maxh(N?, Hmax),
+    roots(Hmin?, Hmax?, N?, Ag?, St?, Items).
+expand(st([build(N, H)|Ag], St), [node(st(Ag?, [nil|St?]))]) :-
+    N? =< 0, H? =< 0 | true.
+expand(st([build(N, H)|_], _), []) :- N? =< 0, H? > 0 | true.
+expand(st([build(N, H)|_], _), []) :- N? > 0, H? =< 0 | true.
+expand(st([build(N, H)|Ag], St), Items?) :- N? > 0, H? > 0, ground(Ag?), ground(St?) |
+    M := N? - 1,
+    H1 := H? - 1,
+    H2 := H? - 2,
+    nsplits(M?, H1?, H2?, Sp),
+    mk(Sp?, Ag?, St?, Items).
+expand(st([make|Ag], [R, L|St]), [node(st(Ag?, [t(x, L?, R?)|St?]))]).
+expand(st([make|_], []), []).
+expand(st([make|_], [_]), []).
+
+% One root task per feasible height.
+procedure roots(Integer?, Integer?, Integer?, Task60List?, BTList?, Items(NState, BTree)).
+roots(H, Hmax, _, _, _, []) :- H? > Hmax? | true.
+roots(H, Hmax, N, Ag, St, [node(st([build(N?, H?)|Ag?], St?))|R?]) :-
+    H? =< Hmax?, ground(Ag?), ground(St?), integer(H?), integer(N?) |
+    Hn := H? + 1,
+    roots(Hn?, Hmax?, N?, Ag?, St?, R).
+
+% Subtree height pairs (Ha, Hb) in {(H-1,H-1),(H-1,H-2),(H-2,H-1)} and node
+% partitions A + B = M with minn(Ha) <= A <= maxn(Ha) and likewise for B.
+procedure nsplits(Integer?, Integer?, Integer?, NSpList).
+nsplits(M, H1, H2, Sp?) :-
+    integer(M?), integer(H1?), integer(H2?) |
+    pairsplits(M?, H1?, H1?, S1),
+    pairsplits(M?, H1?, H2?, S2),
+    pairsplits(M?, H2?, H1?, S3),
+    appsp(S1?, S2?, T1),
+    appsp(T1?, S3?, Sp).
+
+% All sp(A, Ha, B, Hb) with A + B = M within the node bounds of the heights.
+procedure pairsplits(Integer?, Integer?, Integer?, NSpList).
+pairsplits(M, Ha, Hb, []) :- Ha? < 0 | true.
+pairsplits(M, Ha, Hb, []) :- Ha? >= 0, Hb? < 0 | true.
+pairsplits(M, Ha, Hb, Sp?) :- Ha? >= 0, Hb? >= 0, integer(M?), integer(Ha?), integer(Hb?) |
+    minn(Ha?, MinA),
+    maxn(Ha?, MaxA),
+    minn(Hb?, MinB),
+    maxn(Hb?, MaxB),
+    Lo1 := M? - MaxB?,
+    maxi(MinA?, Lo1?, Lo),
+    Hi1 := M? - MinB?,
+    mini(MaxA?, Hi1?, Hi),
+    penum(Lo?, Hi?, M?, Ha?, Hb?, Sp).
+
+procedure penum(Integer?, Integer?, Integer?, Integer?, Integer?, NSpList).
+penum(A, Hi, _, _, _, []) :- A? > Hi? | true.
+penum(A, Hi, M, Ha, Hb, [sp(A?, Ha?, B?, Hb?)|R?]) :-
+    A? =< Hi?, integer(A?), integer(M?) |
+    B := M? - A?,
+    A1 := A? + 1,
+    penum(A1?, Hi?, M?, Ha?, Hb?, R).
+
+procedure mk(NSpList?, Task60List?, BTList?, Items(NState, BTree)).
+mk([], _, _, []).
+mk([sp(A, Ha, B, Hb)|Ss], Ag, St,
+   [node(st([build(A?, Ha?), build(B?, Hb?), make|Ag?], St?))|R?]) :-
+    ground(Ag?), ground(St?) |
+    mk(Ss?, Ag?, St?, R).
+
+% Minimum node count of a height-balanced tree of height H.
+procedure minn(Integer?, Integer).
+minn(H, 0) :- H? =< 0 | true.
+minn(1, 1).
+minn(H, N?) :- H? > 1, integer(H?) |
+    H1 := H? - 1,
+    H2 := H? - 2,
+    minn(H1?, A),
+    minn(H2?, B),
+    N := A? + B? + 1.
+
+% Maximum node count: 2^H - 1.
+procedure maxn(Integer?, Integer).
+maxn(H, 0) :- H? =< 0 | true.
+maxn(H, N?) :- H? > 0, integer(H?) |
+    H1 := H? - 1,
+    maxn(H1?, A),
+    N := A? * 2 + 1.
+
+% Minimum height for N nodes: ceil(log2(N+1)).
+procedure minh(Integer?, Integer).
+minh(N, 0) :- N? =< 0 | true.
+minh(N, H?) :- N? > 0, integer(N?) |
+    N1 := N? // 2,
+    minh(N1?, H1),
+    H := H1? + 1.
+
+% Maximum height for N nodes: the largest H with minn(H) =< N.
+procedure maxh(Integer?, Integer).
+maxh(N, H?) :- integer(N?) | mh(1, N?, H).
+
+procedure mh(Integer?, Integer?, Integer).
+mh(H, N, R?) :- integer(H?), integer(N?) |
+    minn(H?, M),
+    mh1(M?, H?, N?, R).
+
+procedure mh1(Integer?, Integer?, Integer?, Integer).
+mh1(M, H, N, R?) :- M? =< N?, integer(H?) |
+    H1 := H? + 1,
+    mh(H1?, N?, R).
+mh1(M, H, N, R?) :- M? > N? | R := H? - 1.
+
+procedure appsp(NSpList?, NSpList?, NSpList).
+appsp([], Ys, Ys?).
+appsp([X|Xs], Ys, [X?|R?]) :- appsp(Xs?, Ys?, R).
+
+procedure maxi(Integer?, Integer?, Integer).
+maxi(A, B, A?) :- A? >= B? | true.
+maxi(A, B, B?) :- A? < B? | true.
+
+procedure mini(Integer?, Integer?, Integer).
+mini(A, B, A?) :- A? =< B? | true.
+mini(A, B, B?) :- A? > B? | true.

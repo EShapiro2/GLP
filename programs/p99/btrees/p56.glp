@@ -1,0 +1,17 @@
+% P56: check whether a binary tree is symmetric (the right subtree is the
+% mirror image of the left, comparing structure only).
+
+exported procedure symmetric(BTree?, Ans).
+symmetric(nil, yes).
+symmetric(t(_, L, R), A?) :- mir(L?, R?, A).
+
+procedure mir(BTree?, BTree?, Ans).
+mir(nil, nil, yes).
+mir(nil, t(_, _, _), no).
+mir(t(_, _, _), nil, no).
+mir(t(_, L1, R1), t(_, L2, R2), A?) :-
+    mir(L1?, R2?, A1), mir(R1?, L2?, A2), aand(A1?, A2?, A).
+
+procedure aand(Ans?, Ans?, Ans).
+aand(yes, X, X?).
+aand(no, _, no).

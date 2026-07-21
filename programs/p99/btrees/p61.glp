@@ -1,0 +1,24 @@
+% P61: count the leaves of a binary tree.  P61A: collect them in a list.
+
+exported procedure count_leaves(BTree?, Integer).
+count_leaves(nil, 0).
+count_leaves(t(_, nil, nil), 1).
+count_leaves(t(_, t(X, L1, R1), R), N?) :- otherwise |
+    count_leaves(t(X?, L1?, R1?), A),
+    count_leaves(R?, B),
+    N := A? + B?.
+count_leaves(t(_, nil, t(X, L1, R1)), N?) :-
+    count_leaves(t(X?, L1?, R1?), N).
+
+exported procedure leaves(BTree?, CList).
+leaves(T, L?) :- lv(T?, [], L).
+
+% lv(T, Acc, L): leaves of T followed by Acc.
+procedure lv(BTree?, CList?, CList).
+lv(nil, A, A?).
+lv(t(X, nil, nil), A, [X?|A?]).
+lv(t(_, t(X, L1, R1), R), A, Out?) :- otherwise |
+    lv(R?, A?, A1),
+    lv(t(X?, L1?, R1?), A1?, Out).
+lv(t(_, nil, t(X, L1, R1)), A, Out?) :-
+    lv(t(X?, L1?, R1?), A?, Out).

@@ -1,0 +1,19 @@
+% P69: dotstring representation: preorder with '.' for the empty tree.
+% Malformed input parses to nil (GLP procedures are total).
+
+exported procedure tree_dotstring(BTree?, CList).
+tree_dotstring(T, S?) :- td(T?, [], S).
+
+procedure td(BTree?, CList?, CList).
+td(nil, A, ['.'|A?]).
+td(t(V, L, R), A, [V?|S?]) :- td(R?, A?, S2), td(L?, S2?, S).
+
+exported procedure dotstring_tree(CList?, BTree).
+dotstring_tree(S, T?) :- dt(S?, T, _).
+
+procedure dt(CList?, BTree, CList).
+dt([], nil, []).
+dt([C|Cs], nil, Cs?) :- C? =?= '.' | true.
+dt([C|Cs], t(C?, L?, R?), Rest?) :- otherwise |
+    dt(Cs?, L, R1),
+    dt(R1?, R, Rest).

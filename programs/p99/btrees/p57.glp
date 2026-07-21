@@ -1,0 +1,14 @@
+% P57: binary search tree construction from a list of constants
+% (ordered by the standard order of constants).
+
+exported procedure construct(CList?, BTree).
+construct(L, T?) :- cons(L?, nil, T).
+
+procedure cons(CList?, BTree?, BTree).
+cons([], T, T?).
+cons([X|Xs], T, R?) :- add(X?, T?, T1), cons(Xs?, T1?, R).
+
+procedure add(Constant?, BTree?, BTree).
+add(X, nil, t(X?, nil, nil)).
+add(X, t(Y, L, R), t(Y?, L1?, R?)) :- X? @< Y?, ground(X?) | add(X?, L?, L1).
+add(X, t(Y, L, R), t(Y?, L?, R1?)) :- otherwise, ground(X?) | add(X?, R?, R1).
