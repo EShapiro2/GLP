@@ -1,0 +1,34 @@
+% P73: lisp-like token list of a multiway tree: a leaf is its label, an
+% internal node is ( label subtrees ).  Malformed input parses to the error
+% marker t(err, []).
+
+exported procedure tree_ltl(MTree?, CList).
+tree_ltl(T, S?) :- lt(T?, [], S).
+
+procedure lt(MTree?, CList?, CList).
+lt(t(C, []), A, [C?|A?]).
+lt(t(C, [T|F]), A, ['(', C?|S?]) :-
+    ltf([T?|F?], [')'|A?], S).
+
+procedure ltf(MForest?, CList?, CList).
+ltf([], A, A?).
+ltf([T|F], A, S?) :- ltf(F?, A?, S1), lt(T?, S1?, S).
+
+exported procedure ltl_tree(CList?, MTree).
+ltl_tree(S, T?) :- lp(S?, T, _).
+
+procedure lp(CList?, MTree, CList).
+lp([], t(err, []), []).
+lp([C|Cs], T?, Rest?) :- C? =?= '(' | lph(Cs?, T, Rest).
+lp([C|Cs], t(C?, []), Cs?) :- otherwise | true.
+
+procedure lph(CList?, MTree, CList).
+lph([], t(err, []), []).
+lph([C|Cs], t(C?, F?), Rest?) :- lpf(Cs?, F, Rest).
+
+procedure lpf(CList?, MForest, CList).
+lpf([], [], []).
+lpf([C|Cs], [], Cs?) :- C? =?= ')' | true.
+lpf([C|Cs], [T?|F?], Rest?) :- otherwise, ground(C?), ground(Cs?) |
+    lp([C?|Cs?], T, R1),
+    lpf(R1?, F, Rest).

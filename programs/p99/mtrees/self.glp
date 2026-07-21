@@ -1,0 +1,37 @@
+% P99 section: Multiway Trees (P70-P73).  A multiway tree is a node with a
+% forest of subtrees.
+
+MTree ::= t(Constant, MForest).
+MForest ::= [] ; [MTree | MForest].
+
+imported procedure p70#mtree_ok(MTree?, Ans).
+exported procedure mtree_ok(MTree?, Ans).
+mtree_ok(T, R?) :- p70 # mtree_ok(T?, R).
+
+imported procedure p70#nnodes(MTree?, Integer).
+exported procedure nnodes(MTree?, Integer).
+nnodes(T, N?) :- p70 # nnodes(T?, N).
+
+imported procedure p70#tree_nstring(MTree?, CList).
+exported procedure tree_nstring(MTree?, CList).
+tree_nstring(T, S?) :- p70 # tree_nstring(T?, S).
+
+imported procedure p70#nstring_tree(CList?, MTree).
+exported procedure nstring_tree(CList?, MTree).
+nstring_tree(S, T?) :- p70 # nstring_tree(S?, T).
+
+imported procedure p71#ipl(MTree?, Integer).
+exported procedure ipl(MTree?, Integer).
+ipl(T, N?) :- p71 # ipl(T?, N).
+
+imported procedure p72#bottom_up(MTree?, CList).
+exported procedure bottom_up(MTree?, CList).
+bottom_up(T, S?) :- p72 # bottom_up(T?, S).
+
+imported procedure p73#tree_ltl(MTree?, CList).
+exported procedure tree_ltl(MTree?, CList).
+tree_ltl(T, S?) :- p73 # tree_ltl(T?, S).
+
+imported procedure p73#ltl_tree(CList?, MTree).
+exported procedure ltl_tree(CList?, MTree).
+ltl_tree(S, T?) :- p73 # ltl_tree(S?, T).

@@ -1,0 +1,11 @@
+% P72: the bottom-up (postorder) node sequence of a multiway tree.
+
+exported procedure bottom_up(MTree?, CList).
+bottom_up(T, S?) :- bu(T?, [], S).
+
+procedure bu(MTree?, CList?, CList).
+bu(t(C, F), A, S?) :- buf(F?, [C?|A?], S).
+
+procedure buf(MForest?, CList?, CList).
+buf([], A, A?).
+buf([T|F], A, S?) :- buf(F?, A?, S1), bu(T?, S1?, S).

@@ -1,0 +1,39 @@
+% P70B: check whether a term is a multiway tree — the type system answers
+% this at compile time, so the runtime check is trivially yes.
+% P70C: count the nodes.
+% P70: the node string: each node's label in depth-first order, with ^ on
+% every step back up.  Malformed input parses to the error marker t(err, []).
+
+exported procedure mtree_ok(MTree?, Ans).
+mtree_ok(T, yes) :- ground(T?) | true.
+
+exported procedure nnodes(MTree?, Integer).
+nnodes(t(_, F), N?) :- nnf(F?, 1, N).
+
+procedure nnf(MForest?, Integer?, Integer).
+nnf([], A, A?).
+nnf([T|F], A, N?) :- nnodes(T?, N1), A1 := A? + N1?, nnf(F?, A1?, N).
+
+exported procedure tree_nstring(MTree?, CList).
+tree_nstring(T, S?) :- nts(T?, [], S).
+
+procedure nts(MTree?, CList?, CList).
+nts(t(C, F), A, [C?|S?]) :- ntf(F?, ['^'|A?], S).
+
+procedure ntf(MForest?, CList?, CList).
+ntf([], A, A?).
+ntf([T|F], A, S?) :- ntf(F?, A?, S1), nts(T?, S1?, S).
+
+exported procedure nstring_tree(CList?, MTree).
+nstring_tree(S, T?) :- nt(S?, T, _).
+
+procedure nt(CList?, MTree, CList).
+nt([], t(err, []), []).
+nt([C|Cs], t(C?, F?), Rest?) :- nf(Cs?, F, Rest).
+
+procedure nf(CList?, MForest, CList).
+nf([], [], []).
+nf([C|Cs], [], Cs?) :- C? =?= '^' | true.
+nf([C|Cs], [T?|F?], Rest?) :- otherwise, ground(C?), ground(Cs?) |
+    nt([C?|Cs?], T, R1),
+    nf(R1?, F, Rest).

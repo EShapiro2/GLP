@@ -1,0 +1,19 @@
+% P71: internal path length: the sum over all nodes of their depth (root
+% depth 0).
+
+exported procedure ipl(MTree?, Integer).
+ipl(T, N?) :- ip(T?, 0, N).
+
+% ip(T, D, N): sum of depths within T whose root is at depth D.
+procedure ip(MTree?, Integer?, Integer).
+ip(t(_, F), D, N?) :- integer(D?) |
+    D1 := D? + 1,
+    ipf(F?, D1?, 0, N0),
+    N := N0? + D?.
+
+procedure ipf(MForest?, Integer?, Integer?, Integer).
+ipf([], _, A, A?).
+ipf([T|F], D, A, N?) :- integer(D?) |
+    ip(T?, D?, N1),
+    A1 := A? + N1?,
+    ipf(F?, D?, A1?, N).
