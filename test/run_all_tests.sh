@@ -2101,6 +2101,25 @@ HEREDOC
 check "S7 shadow loads" "Loaded program" "$s7"
 check "S7 local pmerge resolves (not ancestor interleave)" "Z = \[1, 2, 3\]" "$s7"
 
+# --- S8: goal-check env includes intermediate-ancestor types (regression) ---
+# The REPL goal checker builds its environment per modules.tex §Scope
+# construction: root scope, then every self.glp on the path from programs/
+# down to the program root, then the program's modules. Before the fix,
+# loadProgram skipped the intermediate ancestors, so a goal on a procedure
+# whose declaration instantiates an ancestor-defined type (here Wrap(Integer)
+# from scope_chain/self.glp) failed with UnknownTypeError. Original repro:
+# programs/p99/lists, combinations(2, 4, Sols) — UnknownTypeError: Req.
+echo "--- S8: goal-check env includes intermediate-ancestor types ---"
+s8=$("$REPL_RUN" <<HEREDOC
+$SCOPE_CHAIN/leaf
+wrap_all([1, 2, 3], W).
+:quit
+HEREDOC
+2>&1)
+check "S8 leaf loads" "Loaded program" "$s8"
+check_not "S8 no unknown type error" "UnknownTypeError" "$s8"
+check "S8 ancestor-typed goal runs" "W = \[wrap(1), wrap(2), wrap(3)\]" "$s8"
+
 echo ""
 
 # =============================================================================

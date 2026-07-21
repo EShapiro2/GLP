@@ -333,6 +333,26 @@ class GlpEngine {
     );
     _loadedPrograms['__program__'] = program;
 
+    // Goal-check environment per modules.tex §Scope construction — the chain
+    // is anchored at the hierarchy root (programs/), not at the directory
+    // loaded for execution (§Implicit ancestor scoping). The base env carries
+    // the root scope + root self.glp; layer every self.glp on the path from
+    // programs/ down to the program root, later shadowing earlier — the same
+    // chain the linker uses — then the program's own modules (loop below).
+    var goalEnv = _ensureGoalCheckBaseEnv();
+    var programRoot = Directory(programDir).absolute.path;
+    while (programRoot.endsWith(Platform.pathSeparator)) {
+      programRoot = programRoot.substring(0, programRoot.length - 1);
+    }
+    for (final selfGlpPath in discoverSelfChain(
+        targetFile: '$programRoot${Platform.pathSeparator}self.glp',
+        rootDir: programRoot,
+        programsDir: File(_rootSelfGlpPath).parent.absolute.path)) {
+      goalEnv =
+          _mergeModuleIntoEnv(goalEnv, File(selfGlpPath).readAsStringSync());
+    }
+    _goalCheckEnv = goalEnv;
+
     // Make the program's module declarations available to the REPL goal checker.
     for (final m in modules) {
       _extendGoalCheckEnv(m.ast);

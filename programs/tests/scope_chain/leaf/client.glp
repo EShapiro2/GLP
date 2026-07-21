@@ -10,3 +10,10 @@ exported procedure test_both(Stream(Integer), Stream(Constant)).
 test_both(Zi?, Zc?) :-
     pmerge([1, 2, 3], [4, 5, 6], Zi),
     pmerge(["a", "b"], ["c", "d"], Zc).
+
+%% S8: declaration instantiates a parameterised type from the intermediate
+%% ancestor (scope_chain/self.glp) — a goal on wrap_all needs it in the REPL
+%% goal-check environment (modules.tex §Scope construction).
+exported procedure wrap_all(Stream(Integer)?, Stream(Wrap(Integer))).
+wrap_all([], []).
+wrap_all([X|Xs], [wrap(X?)|Ws?]) :- wrap_all(Xs?, Ws).

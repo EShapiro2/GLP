@@ -4,6 +4,11 @@
 %% ancestor self.glp.  Modules in descendant directories (leaf/, shadow/)
 %% resolve it via ancestor scoping — exercising A3 Part 2's extended chain.
 
+%% S8: a parameterised type defined in this intermediate ancestor, instantiated
+%% in a descendant program's declarations and reached by REPL goals against it
+%% (goal-check regression).
+Wrap(X) ::= wrap(X).
+
 procedure pmerge(Stream(X)?, Stream(X)?, Stream(X)).
 pmerge([X|Xs], Ys, [X?|Zs?]) :- pmerge(Ys?, Xs?, Zs).
 pmerge(Xs, [Y|Ys], [Y?|Zs?]) :- pmerge(Xs?, Ys?, Zs).
