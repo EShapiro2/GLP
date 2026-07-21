@@ -1,0 +1,107 @@
+% P93: arithmetic puzzle: insert operators and one equals sign into a
+% number list so the equation holds.  All equations, by enumerating the
+% split point and the expression trees over each side; values are exact
+% rationals, compared by cross-multiplication (division by zero excluded).
+
+AExp ::= num(Integer) ; plus(AExp, AExp) ; minus(AExp, AExp)
+       ; times(AExp, AExp) ; div(AExp, AExp).
+EV ::= ev(AExp, Integer, Integer).
+EVList ::= [] ; [EV | EVList].
+Eq ::= eq(AExp, AExp).
+EqList ::= [] ; [Eq | EqList].
+Split ::= sp(IntList, IntList).
+SplitList ::= [] ; [Split | SplitList].
+
+exported procedure puzzle(IntList?, EqList).
+puzzle(L, Out?) :- ground(L?) |
+    ssplits(L?, Sps),
+    persplit(Sps?, Out).
+
+procedure persplit(SplitList?, EqList).
+persplit([], []).
+persplit([sp(L1, L2)|Sps], Out?) :- ground(L1?), ground(L2?) |
+    exprs(L1?, E1),
+    exprs(L2?, E2),
+    persplit(Sps?, R1),
+    pairs(E1?, E2?, R1?, Out).
+
+% pairs: every equal-valued pair, prepended to the tail.
+procedure pairs(EVList?, EVList?, EqList?, EqList).
+pairs([], _, T, T?).
+pairs([E|Es], E2s, T, Out?) :- ground(E?), ground(E2s?), ground(T?) |
+    pairs(Es?, E2s?, T?, R1),
+    pair1(E2s?, E?, R1?, Out).
+
+procedure pair1(EVList?, EV?, EqList?, EqList).
+pair1([], _, T, T?).
+pair1([ev(F2, N2, D2)|E2s], ev(F1, N1, D1), T, [eq(F1?, F2?)|Out?]) :-
+    N1? * D2? =:= N2? * D1?, ground(F1?), ground(F2?), integer(N1?), integer(D1?) |
+    pair1(E2s?, ev(F1?, N1?, D1?), T?, Out).
+pair1([ev(_, _, _)|E2s], ev(F1, N1, D1), T, Out?) :-
+    otherwise, ground(F1?), integer(N1?), integer(D1?) |
+    pair1(E2s?, ev(F1?, N1?, D1?), T?, Out).
+
+% All expression trees over a nonempty segment, with values.
+procedure exprs(IntList?, EVList).
+exprs([], []).
+exprs([X], [ev(num(X?), X?, 1)]) :- integer(X?) | true.
+exprs([X, Y|L], Out?) :- ground(X?), ground(Y?), ground(L?) |
+    ssplits([X?, Y?|L?], Sps),
+    esplit(Sps?, Out).
+
+procedure esplit(SplitList?, EVList).
+esplit([], []).
+esplit([sp(L1, L2)|Sps], Out?) :- ground(L1?), ground(L2?) |
+    exprs(L1?, E1),
+    exprs(L2?, E2),
+    esplit(Sps?, R1),
+    cross(E1?, E2?, R1?, Out).
+
+procedure cross(EVList?, EVList?, EVList?, EVList).
+cross([], _, T, T?).
+cross([E|Es], E2s, T, Out?) :- ground(E?), ground(E2s?), ground(T?) |
+    cross(Es?, E2s?, T?, R1),
+    cross1(E2s?, E?, R1?, Out).
+
+procedure cross1(EVList?, EV?, EVList?, EVList).
+cross1([], _, T, T?).
+cross1([E2|E2s], E1, T, Out?) :- ground(E1?), ground(E2?), ground(T?) |
+    cross1(E2s?, E1?, T?, R1),
+    ops(E1?, E2?, R1?, Out).
+
+procedure ops(EV?, EV?, EVList?, EVList).
+ops(ev(F1, N1, D1), ev(F2, N2, D2), T,
+    [ev(plus(F1?, F2?), NP?, DP?),
+     ev(minus(F1?, F2?), NM?, DM?),
+     ev(times(F1?, F2?), NT?, DT?) | Rest?]) :-
+    ground(F1?), ground(F2?), integer(N1?), integer(N2?), integer(D1?), integer(D2?), ground(T?) |
+    NP := N1? * D2? + N2? * D1?,
+    DP := D1? * D2?,
+    NM := N1? * D2? - N2? * D1?,
+    DM := D1? * D2?,
+    NT := N1? * N2?,
+    DT := D1? * D2?,
+    divop(N2?, F1?, F2?, N1?, D1?, D2?, T?, Rest).
+
+procedure divop(Integer?, AExp?, AExp?, Integer?, Integer?, Integer?, EVList?, EVList).
+divop(N2, _, _, _, _, _, T, T?) :- N2? =:= 0 | true.
+divop(N2, F1, F2, N1, D1, D2, T, [ev(div(F1?, F2?), ND?, DD?)|T?]) :-
+    N2? =\= 0, integer(N1?), integer(D1?), integer(D2?), integer(N2?) |
+    ND := N1? * D2?,
+    DD := D1? * N2?.
+
+% All splits into two nonempty parts.
+procedure ssplits(IntList?, SplitList).
+ssplits(L, Sps?) :- ground(L?) | ssp(L?, [], Sps).
+
+procedure ssp(IntList?, IntList?, SplitList).
+ssp([], _, []).
+ssp([_], _, []).
+ssp([X, Y|Xs], Pref, [sp(P?, [Y?|Xs?])|Out?]) :-
+    ground(X?), ground(Y?), ground(Xs?), ground(Pref?) |
+    srev([X?|Pref?], [], P),
+    ssp([Y?|Xs?], [X?|Pref?], Out).
+
+procedure srev(IntList?, IntList?, IntList).
+srev([], A, A?).
+srev([X|Xs], A, R?) :- srev(Xs?, [X?|A?], R).

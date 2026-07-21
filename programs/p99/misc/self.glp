@@ -1,0 +1,33 @@
+% P99 section: Miscellaneous (P90-P99).
+
+imported procedure p90#queens(Integer?, Stream(IntList)).
+exported procedure queens(Integer?, Stream(IntList)).
+queens(N, S?) :- p90 # queens(N?, S).
+
+imported procedure p95#full_words(Integer?, CList).
+exported procedure full_words(Integer?, CList).
+full_words(N, W?) :- p95 # full_words(N?, W).
+
+imported procedure p96#identifier(CList?, Ans).
+exported procedure identifier(CList?, Ans).
+identifier(S, R?) :- p96 # identifier(S?, R).
+
+KP ::= k(Integer, Integer).
+KPList ::= [] ; [KP | KPList].
+
+imported procedure p91#knights_tour(Integer?, Integer?, Integer?, Maybe(KPList)).
+exported procedure knights_tour(Integer?, Integer?, Integer?, Maybe(KPList)).
+knights_tour(N, X, Y, R?) :- p91 # knights_tour(N?, X?, Y?, R).
+
+imported procedure p97#sudoku(IntList?, Maybe(IntList)).
+exported procedure sudoku(IntList?, Maybe(IntList)).
+sudoku(P, R?) :- p97 # sudoku(P?, R).
+
+AExp ::= num(Integer) ; plus(AExp, AExp) ; minus(AExp, AExp)
+       ; times(AExp, AExp) ; div(AExp, AExp).
+Eq ::= eq(AExp, AExp).
+EqList ::= [] ; [Eq | EqList].
+
+imported procedure p93#puzzle(IntList?, EqList).
+exported procedure puzzle(IntList?, EqList).
+puzzle(L, R?) :- p93 # puzzle(L?, R).

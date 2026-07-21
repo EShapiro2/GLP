@@ -1,0 +1,31 @@
+% P95: English words for the digits of a number: 175 -> one-seven-five,
+% as a list of word constants separated by '-'.
+
+exported procedure full_words(Integer?, CList).
+full_words(N, W?) :- N? >= 0 | fw(N?, [], W).
+full_words(N, [minus, '-'|W?]) :- N? < 0, integer(N?) |
+    N1 := 0 - N?,
+    fw(N1?, [], W).
+
+procedure fw(Integer?, CList?, CList).
+fw(N, Acc, [W?|Acc?]) :- N? < 10, N? >= 0 | dig(N?, W).
+fw(N, Acc, Out?) :- N? >= 10, integer(N?), ground(Acc?) |
+    D := N? mod 10,
+    N1 := N? // 10,
+    dig(D?, W),
+    fw(N1?, ['-', W?|Acc?], Out).
+fw(N, _, []) :- N? < 0 | true.
+
+procedure dig(Integer?, Constant).
+dig(0, zero).
+dig(1, one).
+dig(2, two).
+dig(3, three).
+dig(4, four).
+dig(5, five).
+dig(6, six).
+dig(7, seven).
+dig(8, eight).
+dig(9, nine).
+dig(N, err) :- N? > 9 | true.
+dig(N, err) :- N? < 0 | true.

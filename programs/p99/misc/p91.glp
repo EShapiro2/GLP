@@ -1,0 +1,92 @@
+% P91: the knight's tour, by Warnsdorf's rule: always jump to the reachable
+% unvisited square with the fewest onward continuations.  Deterministic; on
+% the standard boards it finds a tour, and answers none when the rule gets
+% stuck (no backtracking).
+
+KP ::= k(Integer, Integer).
+KPList ::= [] ; [KP | KPList].
+KBest ::= none ; found(KP).
+
+exported procedure knights_tour(Integer?, Integer?, Integer?, Maybe(KPList)).
+knights_tour(N, X, Y, R?) :- integer(N?), integer(X?), integer(Y?) |
+    Total := N? * N?,
+    kt(Total?, N?, k(X?, Y?), [], 1, R).
+
+% kt(Total, N, Cur, Visited, Count, R).
+procedure kt(Integer?, Integer?, KP?, KPList?, Integer?, Maybe(KPList)).
+kt(Total, N, Cur, Vis, Cnt, found(T?)) :- Cnt? =:= Total?, ground(Cur?), ground(Vis?) |
+    krev([Cur?|Vis?], [], T).
+kt(Total, N, Cur, Vis, Cnt, R?) :- Cnt? < Total?, ground(Cur?), ground(Vis?), integer(N?), integer(Total?), integer(Cnt?) |
+    cand(Cur?, N?, [Cur?|Vis?], Cands),
+    pickmin(Cands?, N?, [Cur?|Vis?], none, 1000, Best),
+    kt1(Best?, Total?, N?, Cur?, Vis?, Cnt?, R).
+kt(Total, _, _, _, Cnt, none) :- Cnt? > Total? | true.
+
+procedure kt1(KBest?, Integer?, Integer?, KP?, KPList?, Integer?, Maybe(KPList)).
+kt1(none, _, _, _, _, _, none).
+kt1(found(Next), Total, N, Cur, Vis, Cnt, R?) :- ground(Next?), ground(Cur?), ground(Vis?) |
+    Cnt1 := Cnt? + 1,
+    kt(Total?, N?, Next?, [Cur?|Vis?], Cnt1?, R).
+
+% Reachable, on-board, unvisited squares from a position.
+procedure cand(KP?, Integer?, KPList?, KPList).
+cand(k(X, Y), N, Vis, Cands?) :- integer(X?), integer(Y?), ground(Vis?), integer(N?) |
+    offs(Os),
+    cad(Os?, X?, Y?, N?, Vis?, Cands).
+
+procedure offs(KPList).
+offs([k(1, 2), k(2, 1), k(2, -1), k(1, -2), k(-1, -2), k(-2, -1), k(-2, 1), k(-1, 2)]).
+
+procedure cad(KPList?, Integer?, Integer?, Integer?, KPList?, KPList).
+cad([], _, _, _, _, []).
+cad([k(DX, DY)|Os], X, Y, N, Vis, Out?) :- integer(X?), integer(Y?), integer(N?), ground(Vis?) |
+    X1 := X? + DX?,
+    Y1 := Y? + DY?,
+    onb(X1?, Y1?, N?, Vis?, Keep),
+    cad1(Keep?, Os?, X?, Y?, N?, Vis?, Out).
+
+KKeep ::= drop ; keep(KP).
+
+procedure cad1(KKeep?, KPList?, Integer?, Integer?, Integer?, KPList?, KPList).
+cad1(drop, Os, X, Y, N, Vis, Out?) :- cad(Os?, X?, Y?, N?, Vis?, Out).
+cad1(keep(P), Os, X, Y, N, Vis, [P?|Out?]) :- cad(Os?, X?, Y?, N?, Vis?, Out).
+
+procedure onb(Integer?, Integer?, Integer?, KPList?, KKeep).
+onb(X, _, _, _, drop) :- X? < 1 | true.
+onb(X, Y, _, _, drop) :- X? >= 1, Y? < 1 | true.
+onb(X, Y, N, _, drop) :- X? >= 1, Y? >= 1, X? > N? | true.
+onb(X, Y, N, _, drop) :- X? >= 1, Y? >= 1, X? =< N?, Y? > N? | true.
+onb(X, Y, N, Vis, R?) :- X? >= 1, Y? >= 1, X? =< N?, Y? =< N?, integer(X?), integer(Y?), ground(Vis?) |
+    kmem(Vis?, k(X?, Y?), In),
+    onb1(In?, X?, Y?, R).
+
+procedure onb1(Ans?, Integer?, Integer?, KKeep).
+onb1(yes, _, _, drop).
+onb1(no, X, Y, keep(k(X?, Y?))).
+
+% The candidate with the fewest onward candidates.
+procedure pickmin(KPList?, Integer?, KPList?, KBest?, Integer?, KBest).
+pickmin([], _, _, B, _, B?).
+pickmin([P|Ps], N, Vis, B, BC, Out?) :- ground(P?), integer(N?), ground(Vis?), ground(B?), integer(BC?) |
+    cand(P?, N?, [P?|Vis?], On),
+    klen(On?, 0, C),
+    pm1(C?, BC?, P?, B?, Ps?, N?, Vis?, Out).
+
+procedure pm1(Integer?, Integer?, KP?, KBest?, KPList?, Integer?, KPList?, KBest).
+pm1(C, BC, P, _, Ps, N, Vis, Out?) :- C? < BC?, ground(P?) |
+    pickmin(Ps?, N?, Vis?, found(P?), C?, Out).
+pm1(C, BC, _, B, Ps, N, Vis, Out?) :- C? >= BC?, ground(B?) |
+    pickmin(Ps?, N?, Vis?, B?, BC?, Out).
+
+procedure kmem(KPList?, KP?, Ans).
+kmem([], _, no).
+kmem([P|_], Q, yes) :- P? =?= Q? | true.
+kmem([_|Ps], Q, R?) :- otherwise | kmem(Ps?, Q?, R).
+
+procedure klen(KPList?, Integer?, Integer).
+klen([], A, A?).
+klen([_|Xs], A, N?) :- A1 := A? + 1, klen(Xs?, A1?, N).
+
+procedure krev(KPList?, KPList?, KPList).
+krev([], A, A?).
+krev([X|Xs], A, R?) :- krev(Xs?, [X?|A?], R).

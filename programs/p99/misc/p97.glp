@@ -1,0 +1,147 @@
+% P97: Sudoku, by first-solution search: a state is the 81-cell list
+% (0 = empty); a node branches over the candidate digits of the cell with
+% the fewest candidates; a cell with none is a dead end.
+
+SuState ::= su(IntList).
+SuBest ::= full ; dead ; at(Integer, IntList).
+
+exported procedure sudoku(IntList?, Maybe(IntList)).
+sudoku(P, R?) :- ground(P?) |
+    solve_first(su(P?), Reqs, R),
+    expand_server(Reqs?).
+
+procedure expand_server(Stream(Req(SuState, IntList))?).
+expand_server([]).
+expand_server([expand(St, Items?)|Rs]) :-
+    expand(St?, Items),
+    expand_server(Rs?).
+
+SuTrack ::= none ; cur(Integer, Integer, IntList).
+
+procedure expand(SuState?, Items(SuState, IntList)).
+expand(su(Cells), Items?) :- ground(Cells?) |
+    scan(0, Cells?, none, Best),
+    ex1(Best?, Cells?, Items).
+
+procedure ex1(
+
+SuBest?, IntList?, Items(SuState, IntList)).
+ex1(full, Cells, [sol(Cells?)]).
+ex1(dead, _, []).
+ex1(at(I, Cands), Cells, Items?) :- integer(I?), ground(Cands?), ground(Cells?) |
+    branch(Cands?, I?, Cells?, Items).
+
+procedure branch(IntList?, Integer?, IntList?, Items(SuState, IntList)).
+branch([], _, _, []).
+branch([V|Vs], I, Cells, [node(su(C1?))|Out?]) :- integer(V?), integer(I?), ground(Cells?) |
+    setn(Cells?, I?, V?, C1),
+    branch(Vs?, I?, Cells?, Out).
+
+% scan(K, Cells, Track, Best): the empty cell with the fewest candidates.
+procedure scan(Integer?, IntList?, SuTrack?, SuBest).
+scan(K, _, none, full) :- K? > 80 | true.
+scan(K, _, cur(I, _, Cands), at(I?, Cands?)) :- K? > 80 | true.
+scan(K, Cells, Track, Best?) :- K? =< 80, integer(K?), ground(Cells?), ground(Track?) |
+    getn(Cells?, K?, V),
+    sc1(V?, K?, Cells?, Track?, Best).
+
+procedure sc1(Integer?, Integer?, IntList?, SuTrack?, SuBest).
+sc1(V, K, Cells, Track, Best?) :- V? =\= 0, integer(K?) |
+    K1 := K? + 1,
+    scan(K1?, Cells?, Track?, Best).
+sc1(V, K, Cells, Track, Best?) :- V? =:= 0, integer(K?), ground(Cells?), ground(Track?) |
+    cands(K?, Cells?, Cs),
+    clen(Cs?, 0, NC),
+    sc2(NC?, Cs?, K?, Cells?, Track?, Best).
+
+procedure sc2(Integer?, IntList?, Integer?, IntList?, SuTrack?, SuBest).
+sc2(NC, _, _, _, _, dead) :- NC? =:= 0 | true.
+sc2(NC, Cs, K, Cells, Track, Best?) :- NC? > 0, ground(Cs?), integer(K?), ground(Cells?), ground(Track?), integer(NC?) |
+    trbetter(Track?, NC?, K?, Cs?, T1),
+    K1 := K? + 1,
+    scan(K1?, Cells?, T1?, Best).
+
+procedure trbetter(SuTrack?, Integer?, Integer?, IntList?, SuTrack).
+trbetter(none, NC, K, Cs, cur(K?, NC?, Cs?)).
+trbetter(cur(I, N0, C0), NC, K, Cs, cur(K?, NC?, Cs?)) :- NC? < N0? | true.
+trbetter(cur(I, N0, C0), NC, K, Cs, cur(I?, N0?, C0?)) :- NC? >= N0? | true.
+
+% Candidate digits for cell K: 1..9 minus the digits in K's row, column,
+% and box.
+procedure cands(Integer?, IntList?, IntList).
+cands(K, Cells, Cs?) :- integer(K?), ground(Cells?) |
+    used(0, K?, Cells?, [], U),
+    cdiff([1, 2, 3, 4, 5, 6, 7, 8, 9], U?, Cs).
+
+procedure used(Integer?, Integer?, IntList?, IntList?, IntList).
+used(J, _, _, Acc, Acc?) :- J? > 80 | true.
+used(J, K, Cells, Acc, U?) :- J? =< 80, integer(J?), integer(K?), ground(Cells?), ground(Acc?) |
+    peers(J?, K?, P),
+    us1(P?, J?, K?, Cells?, Acc?, U).
+
+procedure us1(Ans?, Integer?, Integer?, IntList?, IntList?, IntList).
+us1(no, J, K, Cells, Acc, U?) :- integer(J?) |
+    J1 := J? + 1,
+    used(J1?, K?, Cells?, Acc?, U).
+us1(yes, J, K, Cells, Acc, U?) :- integer(J?), ground(Cells?), ground(Acc?) |
+    getn(Cells?, J?, V),
+    us2(V?, J?, K?, Cells?, Acc?, U).
+
+procedure us2(Integer?, Integer?, Integer?, IntList?, IntList?, IntList).
+us2(V, J, K, Cells, Acc, U?) :- V? =:= 0, integer(J?) |
+    J1 := J? + 1,
+    used(J1?, K?, Cells?, Acc?, U).
+us2(V, J, K, Cells, Acc, U?) :- V? =\= 0, integer(J?), integer(V?) |
+    J1 := J? + 1,
+    used(J1?, K?, Cells?, [V?|Acc?], U).
+
+% peers: same row, column, or 3x3 box (excluding K itself).  Integer
+% division is not a guard expression, so the coordinates are computed in the
+% body and compared by a dispatch helper.
+procedure peers(Integer?, Integer?, Ans).
+peers(J, K, R?) :- integer(J?), integer(K?) |
+    RJ := J? // 9,
+    RK := K? // 9,
+    CJ := J? mod 9,
+    CK := K? mod 9,
+    BJ := (J? // 27) * 3 + (J? mod 9) // 3,
+    BK := (K? // 27) * 3 + (K? mod 9) // 3,
+    peq(J?, K?, RJ?, RK?, CJ?, CK?, BJ?, BK?, R).
+
+procedure peq(Integer?, Integer?, Integer?, Integer?, Integer?, Integer?, Integer?, Integer?, Ans).
+peq(J, K, _, _, _, _, _, _, no) :- J? =:= K? | true.
+peq(J, K, RJ, RK, _, _, _, _, yes) :- J? =\= K?, RJ? =:= RK? | true.
+peq(J, K, RJ, RK, CJ, CK, _, _, yes) :- J? =\= K?, RJ? =\= RK?, CJ? =:= CK? | true.
+peq(J, K, RJ, RK, CJ, CK, BJ, BK, yes) :- J? =\= K?, RJ? =\= RK?, CJ? =\= CK?, BJ? =:= BK? | true.
+peq(_, _, _, _, _, _, _, _, no) :- otherwise | true.
+
+procedure cdiff(IntList?, IntList?, IntList).
+cdiff([], _, []).
+cdiff([X|Xs], U, Out?) :- integer(X?), ground(U?) |
+    cim(U?, X?, In),
+    cd1(In?, X?, Xs?, U?, Out).
+
+procedure cd1(Ans?, Integer?, IntList?, IntList?, IntList).
+cd1(yes, _, Xs, U, Out?) :- cdiff(Xs?, U?, Out).
+cd1(no, X, Xs, U, [X?|Out?]) :- cdiff(Xs?, U?, Out).
+
+procedure cim(IntList?, Integer?, Ans).
+cim([], _, no).
+cim([X|_], Y, yes) :- X? =:= Y? | true.
+cim([_|Xs], Y, R?) :- otherwise | cim(Xs?, Y?, R).
+
+procedure clen(IntList?, Integer?, Integer).
+clen([], A, A?).
+clen([_|Xs], A, N?) :- A1 := A? + 1, clen(Xs?, A1?, N).
+
+procedure getn(IntList?, Integer?, Integer).
+getn([], _, 0).
+getn([X|_], 0, X?).
+getn([_|Xs], K, V?) :- K? > 0 | K1 := K? - 1, getn(Xs?, K1?, V).
+getn([_|_], K, 0) :- K? < 0 | true.
+
+procedure setn(IntList?, Integer?, Integer?, IntList).
+setn([], _, _, []).
+setn([_|Xs], 0, V, [V?|Xs?]).
+setn([X|Xs], K, V, [X?|R?]) :- K? > 0 | K1 := K? - 1, setn(Xs?, K1?, V?, R).
+setn([X|Xs], K, _, [X?|Xs?]) :- K? < 0 | true.

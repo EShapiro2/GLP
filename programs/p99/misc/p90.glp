@@ -1,0 +1,60 @@
+% P90: the N-queens problem, search-all: a state is the list of columns of
+% the queens already placed (row = position in the list); a node branches
+% over the safe columns for the next row.
+
+QState ::= q(IntList, Integer).
+
+exported procedure queens(Integer?, Stream(IntList)).
+queens(N, Sols?) :- integer(N?) |
+    solve_all(q([], N?), Reqs, Sols),
+    expand_server(Reqs?).
+
+procedure expand_server(Stream(Req(QState, IntList))?).
+expand_server([]).
+expand_server([expand(St, Items?)|Rs]) :-
+    expand(St?, Items),
+    expand_server(Rs?).
+
+procedure expand(QState?, Items(QState, IntList)).
+expand(q(Placed, N), Items?) :- ground(Placed?), integer(N?) |
+    qlen(Placed?, 0, L),
+    qexp(L?, N?, Placed?, Items).
+
+procedure qexp(Integer?, Integer?, IntList?, Items(QState, IntList)).
+qexp(L, N, Placed, [sol(S?)]) :- L? =:= N?, ground(Placed?) |
+    qrev(Placed?, [], S).
+qexp(L, N, Placed, Items?) :- L? < N?, ground(Placed?), integer(N?) |
+    qtry(1, N?, Placed?, Items).
+qexp(L, N, _, []) :- L? > N? | true.
+
+procedure qtry(Integer?, Integer?, IntList?, Items(QState, IntList)).
+qtry(C, N, _, []) :- C? > N? | true.
+qtry(C, N, Placed, Out?) :- C? =< N?, ground(Placed?), integer(C?), integer(N?) |
+    safe(Placed?, C?, 1, Ok),
+    qt1(Ok?, C?, N?, Placed?, Out).
+
+procedure qt1(Ans?, Integer?, Integer?, IntList?, Items(QState, IntList)).
+qt1(yes, C, N, Placed, [node(q([C?|Placed?], N?))|Out?]) :-
+    integer(C?), integer(N?), ground(Placed?) |
+    C1 := C? + 1,
+    qtry(C1?, N?, Placed?, Out).
+qt1(no, C, N, Placed, Out?) :- C1 := C? + 1, qtry(C1?, N?, Placed?, Out).
+
+% safe(Placed, C, D, Ok): no placed queen shares column or diagonal with a
+% queen in column C, D rows above the nearest placed row.
+procedure safe(IntList?, Integer?, Integer?, Ans).
+safe([], _, _, yes).
+safe([P|_], C, _, no) :- P? =:= C? | true.
+safe([P|_], C, D, no) :- P? =\= C?, P? - C? =:= D? | true.
+safe([P|_], C, D, no) :- P? =\= C?, C? - P? =:= D? | true.
+safe([_|Ps], C, D, Ok?) :- otherwise, integer(C?), integer(D?) |
+    D1 := D? + 1,
+    safe(Ps?, C?, D1?, Ok).
+
+procedure qlen(IntList?, Integer?, Integer).
+qlen([], A, A?).
+qlen([_|Xs], A, N?) :- A1 := A? + 1, qlen(Xs?, A1?, N).
+
+procedure qrev(IntList?, IntList?, IntList).
+qrev([], A, A?).
+qrev([X|Xs], A, R?) :- qrev(Xs?, [X?|A?], R).

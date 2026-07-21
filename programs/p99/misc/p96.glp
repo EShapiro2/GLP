@@ -1,0 +1,49 @@
+% P96: Ada identifier syntax: letter (underscore? (letter | digit))*,
+% checked by a three-state machine over the character list.
+
+exported procedure identifier(CList?, Ans).
+identifier([], no).
+identifier([C|Cs], R?) :- ground(C?), ground(Cs?) |
+    letter(C?, L),
+    id0(L?, Cs?, R).
+
+procedure id0(Ans?, CList?, Ans).
+id0(no, _, no).
+id0(yes, Cs, R?) :- ids(Cs?, R).
+
+% ids: after a letter or digit; end is accepting.
+procedure ids(CList?, Ans).
+ids([], yes).
+ids([C|Cs], R?) :- ground(C?), ground(Cs?) |
+    alnum(C?, A),
+    ids1(A?, C?, Cs?, R).
+
+procedure ids1(Ans?, Constant?, CList?, Ans).
+ids1(yes, _, Cs, R?) :- ids(Cs?, R).
+ids1(no, C, Cs, R?) :- C? =?= '_' | idu(Cs?, R).
+ids1(no, _, _, no) :- otherwise | true.
+
+% idu: right after an underscore; a letter or digit must follow.
+procedure idu(CList?, Ans).
+idu([], no).
+idu([C|Cs], R?) :- ground(C?) |
+    alnum(C?, A),
+    idu1(A?, Cs?, R).
+
+procedure idu1(Ans?, CList?, Ans).
+idu1(yes, Cs, R?) :- ids(Cs?, R).
+idu1(no, _, no).
+
+procedure letter(Constant?, Ans).
+letter(C, R?) :- ground(C?) |
+    lmem([a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p, q, r, s, t, u, v, w, x, y, z], C?, R).
+
+procedure alnum(Constant?, Ans).
+alnum(C, R?) :- ground(C?) |
+    lmem([a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p, q, r, s, t, u, v, w, x, y, z,
+          '0', '1', '2', '3', '4', '5', '6', '7', '8', '9'], C?, R).
+
+procedure lmem(CList?, Constant?, Ans).
+lmem([], _, no).
+lmem([X|_], Y, yes) :- X? =?= Y? | true.
+lmem([_|Xs], Y, R?) :- otherwise | lmem(Xs?, Y?, R).
