@@ -2134,6 +2134,22 @@ check "S9 file loads" "Loaded:" "$s9"
 check_not "S9 no unknown type error" "UnknownTypeError" "$s9"
 check "S9 ancestor-typed goal runs" "W = \[wrap(1), wrap(2), wrap(3)\]" "$s9"
 
+# --- S10: hierarchy bound — file load outside programs/ has no ancestor scope ---
+# The ancestor chain is anchored at the hierarchy root programs/ (modules.tex
+# §Implicit ancestor scoping); a module file loaded from OUTSIDE the hierarchy
+# gets no ancestor self.glp scope, even from its own directory. Foo is defined
+# only in the fixture's sibling self.glp, so p(Foo) reads as a parametric
+# declaration whose inspected parameter has no instantiation, and the load is
+# rejected. Guards loadSource sharing the linker's programsDir bound (the
+# legacy unbounded walk accepted this load).
+echo "--- S10: no ancestor scope outside the hierarchy ---"
+s10=$("$REPL_RUN" <<HEREDOC
+$GLP_DIR/test/fixtures/outside_hierarchy/m.glp
+:quit
+HEREDOC
+2>&1)
+check "S10 outside-hierarchy file load rejected" "no standalone well-typing" "$s10"
+
 echo ""
 
 # =============================================================================

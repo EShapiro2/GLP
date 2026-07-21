@@ -1,0 +1,6 @@
+%% S10 fixture: Foo is defined only in the sibling self.glp, which is outside
+%% the programs/ hierarchy and hence out of scope for a file load. Foo
+%% therefore reads as a type parameter, p/1 inspects it uninstantiated, and
+%% the load is rejected.
+procedure p(Foo).
+p(foo).

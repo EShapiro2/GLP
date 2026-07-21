@@ -25,7 +25,6 @@ import 'package:glp_runtime/runtime/terms.dart' as rt;
 import 'package:glp_runtime/compiler/partial_evaluator.dart';
 import 'package:glp_runtime/analysis/type_checker/type_checker.dart';
 import 'package:glp_runtime/analysis/type_checker/type_ast.dart';
-import 'package:glp_runtime/analysis/type_checker/param_expansion.dart';
 import 'package:glp_runtime/analysis/type_checker/type_environment_builder.dart';
 import 'package:glp_runtime/analysis/type_checker/program_dfa.dart' as tdfa;
 import 'package:glp_runtime/analysis/type_checker/well_typed_clause.dart' as wtc;
@@ -245,16 +244,20 @@ class GlpEngine {
         File(name).existsSync();
     final selfContained = isRealFile && _isSelfContained(module);
 
-    // Discover ancestor scope from self.glp hierarchy (if loading from a file)
-    TypeEnvironment? ancestorScope;
+    // Ancestor self.glp chain per modules.tex §Scope construction, anchored at
+    // the hierarchy root (programs/) — the same discoverSelfChain bound as the
+    // linker and directory loads. Reused below for the goal-check environment.
+    List<String> chain = const [];
     if (isRealFile) {
-      final rootDir = _findProgramRoot(name);
-      if (rootDir != null) {
-        final chain = discoverSelfChain(targetFile: name, rootDir: rootDir);
-        if (chain.isNotEmpty) {
-          ancestorScope = _buildAncestorScope(chain);
-        }
-      }
+      chain = discoverSelfChain(
+          targetFile: name,
+          rootDir: File(name).parent.path,
+          programsDir: File(_rootSelfGlpPath).parent.absolute.path);
+    }
+    TypeEnvironment? ancestorScope;
+    if (chain.isNotEmpty) {
+      ancestorScope =
+          buildAncestorScope(chain: chain, rootSelfGlpPath: _rootSelfGlpPath);
     }
 
     // Type check if program has procedure declarations. (Single-file/REPL
@@ -303,17 +306,12 @@ class GlpEngine {
     // Goal-check environment per modules.tex §Scope construction — the chain
     // is anchored at the hierarchy root (programs/), not at the file loaded
     // for execution (§Implicit ancestor scoping): layer every self.glp on the
-    // path from programs/ down to the module's directory, later shadowing
-    // earlier — the same chain discoverSingleModule links — before the
-    // module's own definitions (below).
+    // path from programs/ down to the module's directory (the chain computed
+    // above), later shadowing earlier, before the module's own definitions.
     if (isRealFile) {
       var goalEnv = _ensureGoalCheckBaseEnv();
-      for (final selfGlpPath in discoverSelfChain(
-          targetFile: name,
-          rootDir: File(name).parent.path,
-          programsDir: File(_rootSelfGlpPath).parent.absolute.path)) {
-        goalEnv =
-            _mergeModuleIntoEnv(goalEnv, File(selfGlpPath).readAsStringSync());
+      for (final selfGlpPath in chain) {
+        goalEnv = mergeSelfGlpFileIntoScope(goalEnv, selfGlpPath);
       }
       _goalCheckEnv = goalEnv;
     }
@@ -366,8 +364,7 @@ class GlpEngine {
         targetFile: '$programRoot${Platform.pathSeparator}self.glp',
         rootDir: programRoot,
         programsDir: File(_rootSelfGlpPath).parent.absolute.path)) {
-      goalEnv =
-          _mergeModuleIntoEnv(goalEnv, File(selfGlpPath).readAsStringSync());
+      goalEnv = mergeSelfGlpFileIntoScope(goalEnv, selfGlpPath);
     }
     _goalCheckEnv = goalEnv;
 
@@ -835,106 +832,18 @@ class GlpEngine {
     return baseName;
   }
 
-  /// Walk up from the file's directory to find the topmost directory
-  /// containing self.glp.
-  String? _findProgramRoot(String filePath) {
-    var dir = File(filePath).parent;
-    String? root;
-    while (true) {
-      final selfGlp = File('${dir.path}/self.glp');
-      if (selfGlp.existsSync()) {
-        root = dir.path;
-      }
-      final parent = dir.parent;
-      if (parent.path == dir.path) break; // filesystem root
-      dir = parent;
-    }
-    return root;
-  }
-
-  /// Build root scope + chain scope (WITHOUT the target module — checkModule
-  /// adds that via buildTypeEnvironment).
-  TypeEnvironment _buildAncestorScope(List<String> chain) {
-    var env = buildRootScopeEnvironment();
-
-    // Include root self.glp (programs/self.glp) as first scope layer
-    final rootSelfGlp = File(_rootSelfGlpPath);
-    if (rootSelfGlp.existsSync()) {
-      env = _mergeModuleIntoEnv(env, rootSelfGlp.readAsStringSync());
-    }
-
-    for (final selfGlpPath in chain) {
-      // Skip if this chain entry IS the root self.glp (avoid double-merging)
-      if (File(selfGlpPath).absolute.path == rootSelfGlp.absolute.path) {
-        continue;
-      }
-      env = _mergeModuleIntoEnv(env, File(selfGlpPath).readAsStringSync());
-    }
-    return env;
-  }
-
-  /// Parse GLP source and merge its types/procedures into an environment.
-  TypeEnvironment _mergeModuleIntoEnv(TypeEnvironment env, String source) {
-    final lexer = Lexer(source);
-    final tokens = lexer.tokenize();
-    final parser = Parser(tokens);
-    final selfModule = parser.parseModule();
-    return _mergeParsedModuleIntoEnv(env, selfModule);
-  }
-
-  /// Merge an already-parsed module's types/procedures into an environment.
-  TypeEnvironment _mergeParsedModuleIntoEnv(
-      TypeEnvironment env, Module selfModule) {
-    // Extract templates before expansion removes them.
-    // These chain to downstream modules for expansion of ancestor templates.
-    final selfTemplates = <String, TypeDef>{};
-    for (final td in selfModule.typeDefs) {
-      if (td.isParameterized) {
-        selfTemplates[td.name] = td;
-      }
-    }
-
-    // Expand parameterized types (strips templates, keeps monomorphic defs)
-    // Pass existing env type names so root scope types aren't mistaken for type params.
-    // Pass ancestor templates so this module can expand references to them.
-    final expandedModule = expandParameterizedTypes(selfModule,
-        knownTypeNames: env.types.keys.toSet(),
-        externalTemplates: env.typeTemplates);
-
-    final types = <String, TypeDef>{};
-    for (final t in expandedModule.typeDefs) {
-      types[t.name] = t;
-    }
-    final procs = <String, ProcDecl>{};
-    for (final p in expandedModule.procDeclarations) {
-      procs[p.qualifiedKey] = p;
-    }
-    final paramProcs = <String, ProcDecl>{};
-    for (final p in expandedModule.paramProcDecls) {
-      paramProcs[p.qualifiedKey] = p;
-    }
-    return env.merge(TypeEnvironment(types, procs,
-        paramProcDecls: paramProcs,
-        typeTemplates: selfTemplates));
-  }
-
   /// Seed (once) and return the base goal-check environment: the root scope
-  /// plus root self.glp, matching the start of [_buildAncestorScope].
+  /// plus root self.glp (buildAncestorScope with an empty chain).
   TypeEnvironment _ensureGoalCheckBaseEnv() {
-    if (_goalCheckEnv != null) return _goalCheckEnv!;
-    var env = buildRootScopeEnvironment();
-    final rootSelfGlp = File(_rootSelfGlpPath);
-    if (rootSelfGlp.existsSync()) {
-      env = _mergeModuleIntoEnv(env, rootSelfGlp.readAsStringSync());
-    }
-    _goalCheckEnv = env;
-    return env;
+    _goalCheckEnv ??=
+        buildAncestorScope(chain: const [], rootSelfGlpPath: _rootSelfGlpPath);
+    return _goalCheckEnv!;
   }
 
   /// Extend the goal-check environment with a loaded module's declarations, so
   /// goals referencing its procedures can be type-checked.
   void _extendGoalCheckEnv(Module module) {
-    _goalCheckEnv = _mergeParsedModuleIntoEnv(_ensureGoalCheckBaseEnv(), module);
+    _goalCheckEnv = mergeModuleIntoScope(_ensureGoalCheckBaseEnv(), module);
   }
 
   ModuleInfo? _findModuleForProcedure(String procedureLabel) {

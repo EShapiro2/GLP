@@ -1,0 +1,4 @@
+%% S10 fixture: this directory lies OUTSIDE the programs/ hierarchy, so this
+%% self.glp is NOT in scope for a file load of m.glp (the ancestor chain is
+%% anchored at programs/ — modules.tex §Implicit ancestor scoping).
+Foo ::= foo.

@@ -120,7 +120,7 @@ List<DiscoveredModule> discoverProgram(String rootDir,
       programsDir: programsDir,
     );
     final ancestorScope =
-        _buildAncestorScope(chain, rootSelfGlpPath: rootSelfGlpPath);
+        buildAncestorScope(chain: chain, rootSelfGlpPath: rootSelfGlpPath);
 
     modules.add(DiscoveredModule(
       filePath: file.path,
@@ -170,7 +170,7 @@ List<DiscoveredModule> discoverSingleModule(String filePath,
           file.path.split(Platform.pathSeparator).last),
       ast: module,
       ancestorScope:
-          _buildAncestorScope(chain, rootSelfGlpPath: rootSelfGlpPath),
+          buildAncestorScope(chain: chain, rootSelfGlpPath: rootSelfGlpPath),
       isSelfGlp: false,
     ),
   ];
@@ -190,7 +190,7 @@ List<DiscoveredModule> discoverSingleModule(String filePath,
       moduleName: _moduleNameFromDirPath(dir),
       ast: selfModule,
       ancestorScope:
-          _buildAncestorScope(selfChain, rootSelfGlpPath: rootSelfGlpPath),
+          buildAncestorScope(chain: selfChain, rootSelfGlpPath: rootSelfGlpPath),
       isSelfGlp: true,
     ));
   }
@@ -221,7 +221,7 @@ void _addAncestorContextAndExposes(List<DiscoveredModule> modules,
         moduleName: _moduleNameFromDirPath(File(selfPath).parent.path),
         ast: selfModule,
         ancestorScope:
-            _buildAncestorScope(chain, rootSelfGlpPath: rootSelfGlpPath),
+            buildAncestorScope(chain: chain, rootSelfGlpPath: rootSelfGlpPath),
         isSelfGlp: true,
       ));
     }
@@ -336,7 +336,7 @@ void _resolveExposes(List<DiscoveredModule> modules, String? programsDir,
         moduleName: exposedName,
         ast: exposedAst,
         ancestorScope:
-            _buildAncestorScope(chain, rootSelfGlpPath: rootSelfGlpPath),
+            buildAncestorScope(chain: chain, rootSelfGlpPath: rootSelfGlpPath),
         isSelfGlp: false,
         exposingDir: exposingDirNorm,
       );
@@ -1060,50 +1060,5 @@ String _moduleNameFromDirPath(String dirPath) {
   return parts.last;
 }
 
-/// Build ancestor type scope from self.glp chain.
-///
-/// If [rootSelfGlpPath] is provided, it is prepended to the chain as the
-/// outermost ancestor (the root self.glp, e.g. programs/self.glp).
-///
-/// Uses the same expansion pattern as assembleTypeScope in module_hierarchy.dart:
-/// each self.glp's parameterized types are expanded before merging, and templates
-/// are tracked for downstream modules.
-TypeEnvironment _buildAncestorScope(List<String> chain,
-    {String? rootSelfGlpPath}) {
-  // Start from root scope (which includes root self.glp), matching
-  // the individual-load path in assembleTypeScope.
-  var env = buildRootScopeEnvironment();
-
-  // Chain contains only program-local self.glp files.
-  // Root self.glp is already included in the root scope environment.
-  for (final selfGlpPath in chain) {
-    final source = File(selfGlpPath).readAsStringSync();
-    final lexer = Lexer(source);
-    final tokens = lexer.tokenize();
-    final parser = Parser(tokens);
-    final selfModule = parser.parseModule();
-
-    // Extract templates before expansion removes them.
-    final selfTemplates = <String, TypeDef>{};
-    for (final td in selfModule.typeDefs) {
-      if (td.isParameterized) {
-        selfTemplates[td.name] = td;
-      }
-    }
-
-    // Expand parameterized types before building scope.
-    final expandedSelfModule = expandParameterizedTypes(selfModule,
-        knownTypeNames: env.types.keys.toSet(),
-        externalTemplates: env.typeTemplates);
-
-    // Build environment from this self.glp (shadowing allowed).
-    final selfEnv = buildScopeFromModule(expandedSelfModule);
-
-    // Merge: later entries shadow earlier ones. Include templates for descendants.
-    env = env.merge(TypeEnvironment(selfEnv.types, selfEnv.procedures,
-        paramProcDecls: selfEnv.paramProcDecls,
-        typeTemplates: selfTemplates));
-  }
-
-  return env;
-}
+// Ancestor-scope assembly lives in module_hierarchy.dart (buildAncestorScope)
+// — the one shared implementation; no linker-local copy.

@@ -104,6 +104,71 @@ List<String> discoverSelfChain({
   return chain.reversed.toList();
 }
 
+/// Merge a parsed module's types and declarations into a scope environment.
+///
+/// The single scope-merge primitive (modules.tex §Scope construction: later
+/// definitions shadow earlier ones). Extracts the module's parameterized
+/// templates before expansion removes them, so descendant scopes can expand
+/// references to them; expands the module's own parameterized types against
+/// the accumulated environment (known type names are not mistaken for type
+/// parameters); merges with shadowing.
+TypeEnvironment mergeModuleIntoScope(TypeEnvironment env, ast.Module module) {
+  final templates = <String, TypeDef>{};
+  for (final td in module.typeDefs) {
+    if (td.isParameterized) {
+      templates[td.name] = td;
+    }
+  }
+  final expanded = expandParameterizedTypes(module,
+      knownTypeNames: env.types.keys.toSet(),
+      externalTemplates: env.typeTemplates);
+  final moduleEnv = buildScopeFromModule(expanded);
+  return env.merge(TypeEnvironment(moduleEnv.types, moduleEnv.procedures,
+      paramProcDecls: moduleEnv.paramProcDecls, typeTemplates: templates));
+}
+
+/// Merge a self.glp file into a scope environment: parse, then
+/// [mergeModuleIntoScope].
+TypeEnvironment mergeSelfGlpFileIntoScope(TypeEnvironment env, String path) {
+  final source = File(path).readAsStringSync();
+  final module = Parser(Lexer(source).tokenize()).parseModule();
+  return mergeModuleIntoScope(env, module);
+}
+
+/// Build the ancestor scope for a self.glp chain (root-first order).
+///
+/// modules.tex §Scope construction: the scope begins with the GLP language
+/// primitives (root scope); if [rootSelfGlpPath] is given and exists, the root
+/// self.glp (programs/self.glp) is layered next, and chain entries equal to it
+/// are skipped; then each chain self.glp in order, later shadowing earlier.
+/// The target module itself is NOT merged here — [assembleTypeScope] adds it;
+/// on the engine path checkModule adds it.
+///
+/// This is the ONE implementation of ancestor-scope assembly, shared by the
+/// linker, the engine's module check, and the engine's goal-check environment.
+TypeEnvironment buildAncestorScope({
+  required List<String> chain,
+  String? rootSelfGlpPath,
+}) {
+  var env = buildRootScopeEnvironment();
+  File? rootSelf;
+  if (rootSelfGlpPath != null) {
+    final f = File(rootSelfGlpPath);
+    if (f.existsSync()) {
+      rootSelf = f;
+      env = mergeSelfGlpFileIntoScope(env, f.path);
+    }
+  }
+  for (final selfGlpPath in chain) {
+    if (rootSelf != null &&
+        File(selfGlpPath).absolute.path == rootSelf.absolute.path) {
+      continue;
+    }
+    env = mergeSelfGlpFileIntoScope(env, selfGlpPath);
+  }
+  return env;
+}
+
 /// Assemble the type scope for a module by layering ancestor definitions.
 ///
 /// Builds a TypeEnvironment by:
@@ -119,52 +184,7 @@ TypeEnvironment assembleTypeScope({
   required List<String> chain,
   required ast.Module module,
 }) {
-  // Start with root scope
-  var env = buildRootScopeEnvironment();
-
-  // Layer each self.glp in order (root first, children shadow parents)
-  for (final selfGlpPath in chain) {
-    final source = File(selfGlpPath).readAsStringSync();
-    final lexer = Lexer(source);
-    final tokens = lexer.tokenize();
-    final parser = Parser(tokens);
-    final selfModule = parser.parseModule();
-
-    // Extract templates from this self.glp before expansion removes them.
-    // These chain to descendant modules so they can expand references.
-    final selfTemplates = <String, TypeDef>{};
-    for (final td in selfModule.typeDefs) {
-      if (td.isParameterized) {
-        selfTemplates[td.name] = td;
-      }
-    }
-
-    // Expand parameterized types before building scope
-    // Pass accumulated env type names so earlier types aren't mistaken for type params.
-    // Pass ancestor templates so this self.glp can expand references to root scope templates.
-    final expandedSelfModule = expandParameterizedTypes(selfModule,
-        knownTypeNames: env.types.keys.toSet(),
-        externalTemplates: env.typeTemplates);
-
-    // Build environment from this self.glp (without root scope check — ancestors
-    // can define types with same names, shadowing is allowed)
-    final selfEnv = buildScopeFromModule(expandedSelfModule);
-
-    // Merge: later entries overwrite earlier ones (shadowing).
-    // Include this self.glp's templates in the environment for descendants.
-    env = env.merge(TypeEnvironment(selfEnv.types, selfEnv.procedures,
-        paramProcDecls: selfEnv.paramProcDecls,
-        typeTemplates: selfTemplates));
-  }
-
-  // Finally, merge the target module's own definitions (shadows all ancestors)
-  final expandedModule = expandParameterizedTypes(module,
-      knownTypeNames: env.types.keys.toSet(),
-      externalTemplates: env.typeTemplates);
-  final moduleEnv = buildScopeFromModule(expandedModule);
-  env = env.merge(moduleEnv);
-
-  return env;
+  return mergeModuleIntoScope(buildAncestorScope(chain: chain), module);
 }
 
 /// Build a TypeEnvironment from a Module's types and procedure declarations.
