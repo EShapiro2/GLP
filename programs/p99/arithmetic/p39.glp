@@ -1,0 +1,11 @@
+% P39: construct the list of prime numbers in a given range.
+
+imported procedure p31#is_prime(Integer?, Ans).
+
+exported procedure prime_list(Integer?, Integer?, IntList).
+prime_list(L, H, []) :- L? > H? | true.
+prime_list(L, H, R?) :- L? =< H? | p31 # is_prime(L?, A), pl1(A?, L?, H?, R).
+
+procedure pl1(Ans?, Integer?, Integer?, IntList).
+pl1(yes, L, H, [L?|R?]) :- integer(L?) | L1 := L? + 1, prime_list(L1?, H?, R).
+pl1(no, L, H, R?) :- L1 := L? + 1, prime_list(L1?, H?, R).

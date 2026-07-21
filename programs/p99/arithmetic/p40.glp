@@ -1,0 +1,27 @@
+% P40: Goldbach's conjecture: an even number greater than 2 is the sum of
+% two primes.  Total: odd or small arguments answer none.
+
+imported procedure p31#is_prime(Integer?, Ans).
+
+exported procedure goldbach(Integer?, Maybe(GPair)).
+goldbach(N, none) :- N? =< 2 | true.
+goldbach(N, none) :- N? > 2, N? mod 2 =\= 0 | true.
+goldbach(N, R?) :- N? > 2, N? mod 2 =:= 0 | gb(2, N?, R).
+
+% gb(P, N, R): try P as the smaller prime, ascending.
+procedure gb(Integer?, Integer?, Maybe(GPair)).
+gb(P, N, none) :- P? * 2 > N? | true.
+gb(P, N, R?) :- P? * 2 =< N?, integer(P?), integer(N?) |
+    p31 # is_prime(P?, A1),
+    Q := N? - P?,
+    p31 # is_prime(Q?, A2),
+    gb1(A1?, A2?, P?, Q?, N?, R).
+
+procedure gb1(Ans?, Ans?, Integer?, Integer?, Integer?, Maybe(GPair)).
+gb1(yes, yes, P, Q, _, found(g(P?, Q?))).
+gb1(yes, no, P, _, N, R?) :- nx(P?, P1), gb(P1?, N?, R).
+gb1(no, _, P, _, N, R?) :- nx(P?, P1), gb(P1?, N?, R).
+
+procedure nx(Integer?, Integer).
+nx(2, 3).
+nx(P, P1?) :- P? =\= 2 | P1 := P? + 2.

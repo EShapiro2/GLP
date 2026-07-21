@@ -1,0 +1,16 @@
+% P34: calculate Euler's totient function phi(m) by its definition: the
+% number of 1 =< k =< m coprime with m.
+
+imported procedure p32#gcd(Integer?, Integer?, Integer).
+
+exported procedure totient_phi(Integer?, Integer).
+totient_phi(M, 0) :- M? < 1 | true.
+totient_phi(M, Phi?) :- M? >= 1 | tot(1, M?, 0, Phi).
+
+procedure tot(Integer?, Integer?, Integer?, Integer).
+tot(K, M, A, A?) :- K? > M? | true.
+tot(K, M, A, Phi?) :- K? =< M? | p32 # gcd(K?, M?, G), tota(G?, K?, M?, A?, Phi).
+
+procedure tota(Integer?, Integer?, Integer?, Integer?, Integer).
+tota(1, K, M, A, Phi?) :- A1 := A? + 1, K1 := K? + 1, tot(K1?, M?, A1?, Phi).
+tota(G, K, M, A, Phi?) :- G? =\= 1 | K1 := K? + 1, tot(K1?, M?, A?, Phi).

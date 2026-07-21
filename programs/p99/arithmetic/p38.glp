@@ -1,0 +1,9 @@
+% P38: compare the two totient methods (P34 and P37) on the same argument.
+
+imported procedure p34#totient_phi(Integer?, Integer).
+imported procedure p37#totient_phi_2(Integer?, Integer).
+
+exported procedure totient_both(Integer?, Integer, Integer).
+totient_both(M, P1?, P2?) :- integer(M?) |
+    p34 # totient_phi(M?, P1),
+    p37 # totient_phi_2(M?, P2).

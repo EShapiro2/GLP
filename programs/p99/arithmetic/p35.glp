@@ -1,0 +1,19 @@
+% P35: determine the prime factors of a given positive integer, in
+% ascending order with repetition.
+
+exported procedure prime_factors(Integer?, IntList).
+prime_factors(N, []) :- N? < 2 | true.
+prime_factors(N, L?) :- N? >= 2 | pf(N?, 2, L).
+
+% pf(N, D, L): N has no factor below D.
+procedure pf(Integer?, Integer?, IntList).
+pf(1, _, []).
+pf(N, D, [N?]) :- N? > 1, D? * D? > N? | true.
+pf(N, D, [D?|L?]) :- N? > 1, D? * D? =< N?, N? mod D? =:= 0, integer(D?) |
+    N1 := N? // D?, pf(N1?, D?, L).
+pf(N, D, L?) :- N? > 1, D? * D? =< N?, N? mod D? =\= 0 | nxt(D?, D1), pf(N?, D1?, L).
+
+% Next trial divisor: 2 -> 3, then the odd numbers.
+procedure nxt(Integer?, Integer).
+nxt(2, 3).
+nxt(D, D1?) :- D? =\= 2 | D1 := D? + 2.

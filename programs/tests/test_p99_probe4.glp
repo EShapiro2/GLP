@@ -1,0 +1,43 @@
+% P99 probe 4: minimal reproduction attempt for the pf/nxt failure.
+% A two-clause helper (unit clause + guarded clause whose sole body goal is
+% :=) chained into a consumer.
+
+procedure bump(Integer?, Integer).
+bump(2, 3).
+bump(D, D1?) :- D? =\= 2 | D1 := D? + 2.
+
+procedure use(Integer?, Integer).
+use(X, R?) :- bump(X?, Y), bump(Y?, R).
+
+% The pf clause-4 shape: guards with expressions, then helper + recursive call.
+procedure walk(Integer?, Integer?, Integer).
+walk(N, D, D?) :- D? * D? > N? | true.
+walk(N, D, R?) :- D? * D? =< N?, N? mod D? =\= 0 | bump(D?, D1), walk(N?, D1?, R).
+walk(N, D, R?) :- D? * D? =< N?, N? mod D? =:= 0 | D1 := D? + 2, walk(N?, D1?, R).
+
+% Variant A: expression guards, := inline (no helper call) — ipr's shape.
+procedure walka(Integer?, Integer?, Integer).
+walka(N, D, D?) :- D? * D? > N? | true.
+walka(N, D, R?) :- D? * D? =< N? | D1 := D? + 2, walka(N?, D1?, R).
+
+% Variant B: simple comparison guard + helper call.
+procedure walkb(Integer?, Integer?, Integer).
+walkb(N, D, D?) :- D? > N? | true.
+walkb(N, D, R?) :- D? =< N? | bump(D?, D1), walkb(N?, D1?, R).
+
+% Variant C: expression guard + helper call, no recursion after.
+procedure oncec(Integer?, Integer?, Integer).
+oncec(N, D, R?) :- D? * D? =< N? | bump(D?, R1), R1? = R.
+oncec(N, D, 0) :- D? * D? > N? | true.
+
+% Variant D: ONE expression guard conjunct + helper call + recursion.
+procedure walkd(Integer?, Integer?, Integer).
+walkd(N, D, D?) :- D? * D? > N? | true.
+walkd(N, D, R?) :- D? * D? =< N? | bump(D?, D1), walkd(N?, D1?, R).
+
+% Variant E: two conjuncts, second a mod comparison, + helper, non-recursive tail.
+procedure walke(Integer?, Integer?, Integer).
+walke(N, D, R?) :- D? * D? =< N?, N? mod D? =\= 0 | bump(D?, R1), add0(R1?, R).
+walke(_, _, 0) :- otherwise | true.
+procedure add0(Integer?, Integer).
+add0(X, R?) :- R := X? + 0.

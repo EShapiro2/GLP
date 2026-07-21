@@ -1,0 +1,6 @@
+% P32: determine the greatest common divisor of two positive integers
+% (Euclid's algorithm).
+
+exported procedure gcd(Integer?, Integer?, Integer).
+gcd(A, 0, A?).
+gcd(A, B, G?) :- B? =\= 0 | C := A? mod B?, gcd(B?, C?, G).

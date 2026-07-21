@@ -1,0 +1,26 @@
+% P41: the list of Goldbach compositions of the even numbers in a range,
+% and the variant keeping only compositions whose smaller prime exceeds a
+% given bound.
+
+imported procedure p40#goldbach(Integer?, Maybe(GPair)).
+
+exported procedure goldbach_list(Integer?, Integer?, GLList).
+goldbach_list(L, H, R?) :- gll(L?, H?, R).
+
+exported procedure goldbach_list_min(Integer?, Integer?, Integer?, GLList).
+goldbach_list_min(L, H, Min, R?) :- gll(L?, H?, G), flt(G?, Min?, R).
+
+procedure gll(Integer?, Integer?, GLList).
+gll(L, H, []) :- L? > H? | true.
+gll(L, H, R?) :- L? =< H?, L? mod 2 =\= 0 | L1 := L? + 1, gll(L1?, H?, R).
+gll(L, H, R?) :- L? =< H?, L? mod 2 =:= 0 | p40 # goldbach(L?, M), gll1(M?, L?, H?, R).
+
+procedure gll1(Maybe(GPair)?, Integer?, Integer?, GLList).
+gll1(found(g(P, Q)), L, H, [gl(L?, P?, Q?)|R?]) :- integer(L?) |
+    L1 := L? + 2, gll(L1?, H?, R).
+gll1(none, L, H, R?) :- L1 := L? + 2, gll(L1?, H?, R).
+
+procedure flt(GLList?, Integer?, GLList).
+flt([], _, []).
+flt([gl(N, P, Q)|Gs], Min, [gl(N?, P?, Q?)|R?]) :- P? > Min? | flt(Gs?, Min?, R).
+flt([gl(_, P, _)|Gs], Min, R?) :- P? =< Min? | flt(Gs?, Min?, R).

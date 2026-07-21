@@ -1,0 +1,15 @@
+% P36: determine the prime factors with their multiplicity: pairs pf(P, M).
+
+imported procedure p35#prime_factors(Integer?, IntList).
+
+exported procedure prime_factors_mult(Integer?, PFList).
+prime_factors_mult(N, L?) :- p35 # prime_factors(N?, F), rle(F?, L).
+
+procedure rle(IntList?, PFList).
+rle([], []).
+rle([X|Xs], R?) :- rl1(Xs?, X?, 1, R).
+
+procedure rl1(IntList?, Integer?, Integer?, PFList).
+rl1([], C, K, [pf(C?, K?)]).
+rl1([Y|Ys], C, K, R?) :- Y? =:= C? | K1 := K? + 1, rl1(Ys?, C?, K1?, R).
+rl1([Y|Ys], C, K, [pf(C?, K?)|R?]) :- Y? =\= C? | rl1(Ys?, Y?, 1, R).

@@ -1,0 +1,10 @@
+% P33: determine whether two positive integers are coprime (gcd 1).
+
+imported procedure p32#gcd(Integer?, Integer?, Integer).
+
+exported procedure coprime(Integer?, Integer?, Ans).
+coprime(A, B, R?) :- p32 # gcd(A?, B?, G), one(G?, R).
+
+procedure one(Integer?, Ans).
+one(1, yes).
+one(G, no) :- G? =\= 1 | true.

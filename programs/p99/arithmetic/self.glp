@@ -1,0 +1,56 @@
+% P99 section: Arithmetic (P31-P41).  Section-shared types and the section
+% interface, one forwarded entry per problem.
+
+PFItem ::= pf(Integer, Integer).
+PFList ::= [] ; [PFItem | PFList].
+GPair ::= g(Integer, Integer).
+GLItem ::= gl(Integer, Integer, Integer).
+GLList ::= [] ; [GLItem | GLList].
+
+imported procedure p31#is_prime(Integer?, Ans).
+exported procedure is_prime(Integer?, Ans).
+is_prime(N, R?) :- p31 # is_prime(N?, R).
+
+imported procedure p32#gcd(Integer?, Integer?, Integer).
+exported procedure gcd(Integer?, Integer?, Integer).
+gcd(A, B, G?) :- p32 # gcd(A?, B?, G).
+
+imported procedure p33#coprime(Integer?, Integer?, Ans).
+exported procedure coprime(Integer?, Integer?, Ans).
+coprime(A, B, R?) :- p33 # coprime(A?, B?, R).
+
+imported procedure p34#totient_phi(Integer?, Integer).
+exported procedure totient_phi(Integer?, Integer).
+totient_phi(M, R?) :- p34 # totient_phi(M?, R).
+
+imported procedure p35#prime_factors(Integer?, IntList).
+exported procedure prime_factors(Integer?, IntList).
+prime_factors(N, R?) :- p35 # prime_factors(N?, R).
+
+imported procedure p36#prime_factors_mult(Integer?, PFList).
+exported procedure prime_factors_mult(Integer?, PFList).
+prime_factors_mult(N, R?) :- p36 # prime_factors_mult(N?, R).
+
+imported procedure p37#totient_phi_2(Integer?, Integer).
+exported procedure totient_phi_2(Integer?, Integer).
+totient_phi_2(N, R?) :- p37 # totient_phi_2(N?, R).
+
+imported procedure p38#totient_both(Integer?, Integer, Integer).
+exported procedure totient_both(Integer?, Integer, Integer).
+totient_both(M, P1?, P2?) :- p38 # totient_both(M?, P1, P2).
+
+imported procedure p39#prime_list(Integer?, Integer?, IntList).
+exported procedure prime_list(Integer?, Integer?, IntList).
+prime_list(L, H, R?) :- p39 # prime_list(L?, H?, R).
+
+imported procedure p40#goldbach(Integer?, Maybe(GPair)).
+exported procedure goldbach(Integer?, Maybe(GPair)).
+goldbach(N, R?) :- p40 # goldbach(N?, R).
+
+imported procedure p41#goldbach_list(Integer?, Integer?, GLList).
+exported procedure goldbach_list(Integer?, Integer?, GLList).
+goldbach_list(L, H, R?) :- p41 # goldbach_list(L?, H?, R).
+
+imported procedure p41#goldbach_list_min(Integer?, Integer?, Integer?, GLList).
+exported procedure goldbach_list_min(Integer?, Integer?, Integer?, GLList).
+goldbach_list_min(L, H, Min, R?) :- p41 # goldbach_list_min(L?, H?, Min?, R).

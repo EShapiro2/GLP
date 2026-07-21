@@ -1,0 +1,14 @@
+% P31: determine whether a given integer number is prime.
+% Trial division by 2 and the odd numbers up to the square root.
+
+exported procedure is_prime(Integer?, Ans).
+is_prime(N, no) :- N? < 2 | true.
+is_prime(2, yes).
+is_prime(N, no) :- N? > 2, N? mod 2 =:= 0 | true.
+is_prime(N, R?) :- N? > 2, N? mod 2 =\= 0 | ipr(N?, 3, R).
+
+% ipr(N, D, R): no odd divisor below D; try D, D+2, ... up to sqrt(N).
+procedure ipr(Integer?, Integer?, Ans).
+ipr(N, D, yes) :- D? * D? > N? | true.
+ipr(N, D, no) :- D? * D? =< N?, N? mod D? =:= 0 | true.
+ipr(N, D, R?) :- D? * D? =< N?, N? mod D? =\= 0 | D1 := D? + 2, ipr(N?, D1?, R).

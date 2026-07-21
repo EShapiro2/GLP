@@ -1,0 +1,19 @@
+% P37: calculate Euler's totient function via the prime factorization:
+% phi = product over pf(P, M) of (P - 1) * P^(M - 1).
+
+imported procedure p36#prime_factors_mult(Integer?, PFList).
+
+exported procedure totient_phi_2(Integer?, Integer).
+totient_phi_2(N, Phi?) :- p36 # prime_factors_mult(N?, F), tphi(F?, 1, Phi).
+
+procedure tphi(PFList?, Integer?, Integer).
+tphi([], A, A?).
+tphi([pf(P, M)|Fs], A, Phi?) :- integer(P?) |
+    M1 := M? - 1,
+    pow(P?, M1?, Q),
+    A1 := A? * (P? - 1) * Q?,
+    tphi(Fs?, A1?, Phi).
+
+procedure pow(Integer?, Integer?, Integer).
+pow(_, 0, 1).
+pow(P, M, R?) :- M? > 0, integer(P?) | M1 := M? - 1, pow(P?, M1?, R1), R := P? * R1?.
