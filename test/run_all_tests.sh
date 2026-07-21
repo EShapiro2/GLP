@@ -2120,6 +2120,20 @@ check "S8 leaf loads" "Loaded program" "$s8"
 check_not "S8 no unknown type error" "UnknownTypeError" "$s8"
 check "S8 ancestor-typed goal runs" "W = \[wrap(1), wrap(2), wrap(3)\]" "$s8"
 
+# --- S9: same regression on the single-FILE load path ---
+# loadSource had the same gap as loadProgram (S8): the goal-check env merged
+# only the loaded module, never the intermediate ancestor self.glp chain.
+echo "--- S9: goal-check env on single-file load ---"
+s9=$("$REPL_RUN" <<HEREDOC
+$SCOPE_CHAIN/leaf/client.glp
+wrap_all([1, 2, 3], W).
+:quit
+HEREDOC
+2>&1)
+check "S9 file loads" "Loaded:" "$s9"
+check_not "S9 no unknown type error" "UnknownTypeError" "$s9"
+check "S9 ancestor-typed goal runs" "W = \[wrap(1), wrap(2), wrap(3)\]" "$s9"
+
 echo ""
 
 # =============================================================================

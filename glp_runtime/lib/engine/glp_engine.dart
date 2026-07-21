@@ -300,6 +300,24 @@ class GlpEngine {
     final moduleInfo = _extractModuleInfo(source, program, name);
     _loadedModules[moduleInfo.name] = moduleInfo;
 
+    // Goal-check environment per modules.tex §Scope construction — the chain
+    // is anchored at the hierarchy root (programs/), not at the file loaded
+    // for execution (§Implicit ancestor scoping): layer every self.glp on the
+    // path from programs/ down to the module's directory, later shadowing
+    // earlier — the same chain discoverSingleModule links — before the
+    // module's own definitions (below).
+    if (isRealFile) {
+      var goalEnv = _ensureGoalCheckBaseEnv();
+      for (final selfGlpPath in discoverSelfChain(
+          targetFile: name,
+          rootDir: File(name).parent.path,
+          programsDir: File(_rootSelfGlpPath).parent.absolute.path)) {
+        goalEnv =
+            _mergeModuleIntoEnv(goalEnv, File(selfGlpPath).readAsStringSync());
+      }
+      _goalCheckEnv = goalEnv;
+    }
+
     // Make this module's declarations available to the REPL goal checker.
     _extendGoalCheckEnv(module);
 
