@@ -1,0 +1,15 @@
+% P12: decode a modified run-length encoded list (P11's format).
+
+CList ::= [] ; [Constant | CList].
+MItem ::= one(Constant) ; many(Integer, Constant).
+MList ::= [] ; [MItem | MList].
+
+exported procedure decode(MList?, CList).
+decode([], []).
+decode([one(X)|Ms], [X?|R?]) :- decode(Ms?, R).
+decode([many(K, X)|Ms], R?) :- rep(K?, X?, R1?, R), decode(Ms?, R1).
+
+% rep(K, X, T, R): R is K copies of X followed by T.
+procedure rep(Integer?, Constant?, CList?, CList).
+rep(K, _, T, T?) :- K? =< 0 | true.
+rep(K, X, T, [X?|R?]) :- K? > 0, ground(X?) | K1 := K? - 1, rep(K1?, X?, T?, R).

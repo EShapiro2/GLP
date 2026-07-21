@@ -1,0 +1,66 @@
+% P28: (a) lsort — sort a list of lists by ascending length;
+%      (b) lfsort — sort by ascending length frequency.
+% Decorate with the sort key, insertion-sort on the key, undecorate.
+
+CList ::= [] ; [Constant | CList].
+LList ::= [] ; [CList | LList].
+PItem ::= pl(Integer, CList).
+PList ::= [] ; [PItem | PList].
+FItem ::= f(Integer, Integer).
+FList ::= [] ; [FItem | FList].
+
+exported procedure lsort(LList?, LList).
+lsort(Ls, R?) :- dec(Ls?, P), isort(P?, S), undec(S?, R).
+
+exported procedure lfsort(LList?, LList).
+lfsort(Ls, R?) :- dec(Ls?, P), lf(P?, R).
+
+procedure lf(PList?, LList).
+lf(P, R?) :-
+    ground(P?) |
+    freqs(P?, [], F),
+    dec2(P?, F?, Q),
+    isort(Q?, S),
+    undec(S?, R).
+
+% Decorate each list with its length.
+procedure dec(LList?, PList).
+dec([], []).
+dec([L|Ls], [pl(N?, L?)|R?]) :- ground(L?) | llen(L?, 0, N), dec(Ls?, R).
+
+procedure llen(CList?, Integer?, Integer).
+llen([], A, A?).
+llen([_|Xs], A, N?) :- A1 := A? + 1, llen(Xs?, A1?, N).
+
+% Insertion sort on the first component of pl pairs.
+procedure isort(PList?, PList).
+isort([], []).
+isort([P|Ps], R?) :- ground(P?) | isort(Ps?, S), insp(P?, S?, R).
+
+procedure insp(PItem?, PList?, PList).
+insp(P, [], [P?]).
+insp(pl(N, L), [pl(M, L2)|Ps], [pl(N?, L?), pl(M?, L2?)|Ps?]) :- N? =< M? | true.
+insp(pl(N, L), [pl(M, L2)|Ps], [pl(M?, L2?)|R?]) :- N? > M? | insp(pl(N?, L?), Ps?, R).
+
+procedure undec(PList?, LList).
+undec([], []).
+undec([pl(_, L)|Ps], [L?|R?]) :- undec(Ps?, R).
+
+% Length-frequency table and re-decoration by frequency.
+procedure freqs(PList?, FList?, FList).
+freqs([], A, A?).
+freqs([pl(N, _)|Ps], A, F?) :- bump(N?, A?, A1), freqs(Ps?, A1?, F).
+
+procedure bump(Integer?, FList?, FList).
+bump(N, [], [f(N?, 1)]).
+bump(N, [f(M, C)|Fs], [f(M?, C1?)|Fs?]) :- N? =?= M? | C1 := C? + 1.
+bump(N, [f(M, C)|Fs], [f(M?, C?)|R?]) :- otherwise | bump(N?, Fs?, R).
+
+procedure dec2(PList?, FList?, PList).
+dec2([], _, []).
+dec2([pl(N, L)|Ps], F, [pl(C?, L?)|R?]) :- ground(F?) | lookupf(N?, F?, C), dec2(Ps?, F?, R).
+
+procedure lookupf(Integer?, FList?, Integer).
+lookupf(_, [], 0).
+lookupf(N, [f(M, C)|_], C?) :- N? =?= M? | true.
+lookupf(N, [f(_, _)|Fs], R?) :- otherwise | lookupf(N?, Fs?, R).

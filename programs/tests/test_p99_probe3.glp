@@ -1,0 +1,9 @@
+% P99 probe 3: is a partial list procedure (no clause for []) accepted,
+% failing at runtime on [], as in Prolog?  Or does input coverage demand
+% totality outside channel consumption?
+
+CList ::= [] ; [Constant | CList].
+
+exported procedure last(CList?, Constant).
+last([X], X?).
+last([_|Xs], R?) :- otherwise | last(Xs?, R).

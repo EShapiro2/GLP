@@ -1,0 +1,17 @@
+% P09: pack consecutive duplicates of list elements into sublists.
+% The groups are nonempty by construction, and by type.
+
+CList ::= [] ; [Constant | CList].
+OpenCList ::= [Constant | CList].
+GroupList ::= [] ; [OpenCList | GroupList].
+
+exported procedure pack(CList?, GroupList).
+pack([], []).
+pack([X|Xs], [[X?|G?]|R?]) :- ground(X?) | pk(Xs?, X?, G, R).
+
+% pk(Rest, Cur, Group, R): Group is the tail of the current group of Cur;
+% R the remaining groups.
+procedure pk(CList?, Constant?, CList, GroupList).
+pk([], _, [], []).
+pk([Y|Ys], C, [Y?|G?], R?) :- Y? =?= C? | pk(Ys?, C?, G, R).
+pk([Y|Ys], _, [], [[Y?|G?]|R?]) :- otherwise, ground(Y?) | pk(Ys?, Y?, G, R).

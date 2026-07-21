@@ -1,0 +1,49 @@
+% P99 probe: parameterized multiway-merge command types.
+% Question 1: does the type checker accept Cmd(X) with stream(Stream(X))?
+% Question 2: does a caller instantiating X to a concrete type check and run?
+
+Cmd(X) ::= stream(Stream(X)) ; merge(Cmds(X)).
+Cmds(X) ::= [] ; [Cmd(X) | Cmds(X)].
+
+procedure pmwm(Cmds(X)?, Stream(X)).
+pmwm(In, Out?) :-
+    allocate_mutual_reference(Ref, Out),
+    pmwm_main(In?, Ref?).
+
+procedure pmwm_main(Cmds(X)?, _?).
+pmwm_main(In, Ref) :-
+    is_mutual_ref(Ref?) |
+    pmwm1(In?, Ref?, done, Done),
+    pclose_when_done(Done?, Ref?).
+
+Done ::= done.
+
+procedure pmwm1(Cmds(X)?, _?, Done?, Done).
+pmwm1([stream(Xs)|Streams], Ref, L, R?) :-
+    is_mutual_ref(Ref?) |
+    pmwm_copy(Xs?, Ref?, L?, M),
+    pmwm1(Streams?, Ref?, M?, R).
+pmwm1([merge(NewIn)|Streams], Ref, L, R?) :-
+    is_mutual_ref(Ref?) |
+    pmwm1(NewIn?, Ref?, L?, M),
+    pmwm1(Streams?, Ref?, M?, R).
+pmwm1([], _, L, L?).
+
+procedure pmwm_copy(Stream(X)?, _?, Done?, Done).
+pmwm_copy([X|Xs], Ref, L, R?) :-
+    is_mutual_ref(Ref?) |
+    stream_append(X?, Ref?, Ref1),
+    pmwm_copy(Xs?, Ref1?, L?, R).
+pmwm_copy([], _, L, L?).
+
+procedure pclose_when_done(Done?, _?).
+pclose_when_done(done, Ref) :-
+    is_mutual_ref(Ref?) |
+    close_mutual_reference(Ref?).
+
+% Concrete instantiation: X = Sol, a ground solution type.
+Sol ::= s(Integer).
+
+procedure probe(Stream(Sol)).
+probe(Out?) :-
+    pmwm([stream([s(1), s(2)]), merge([stream([s(3)])]), stream([s(4)])], Out).

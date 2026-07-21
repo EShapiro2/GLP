@@ -1,0 +1,123 @@
+% P99 shared scope: the parallel-search library.
+% Design: /Grassroots/P99/docs/search-library-design.md (migrates into the P99 paper).
+%
+% A search problem supplies a determinate expander from a ground state to the
+% list of its successors (solutions and child states), served as a process:
+%
+%   procedure expand(State?, Items(State, Solution)).
+%   procedure expand_server(Stream(Req(State, Solution))?).
+%   expand_server([]).
+%   expand_server([expand(St, Items?)|Rs]) :- expand(St?, Items), expand_server(Rs?).
+%
+% The library runs one searcher process per search-tree node: solutions and
+% expansion requests flow up through constant-delay multiway merges; stop flows
+% down through a distributor tree of stop_fork nodes mirroring the searcher tree.
+
+% ---------------------------------------------------------------------------
+% Types
+% ---------------------------------------------------------------------------
+
+Item(S, R)  ::= sol(R) ; node(S).
+Items(S, R) ::= [] ; [Item(S, R) | Items(S, R)].
+Req(S, R)   ::= expand(S, Items(S, R)?).
+StopMsg     ::= stop.
+Maybe(R)    ::= found(R) ; none.
+
+Cmd(X)  ::= stream(Stream(X)) ; merge(Cmds(X)).
+Cmds(X) ::= [] ; [Cmd(X) | Cmds(X)].
+MergeDone ::= done.
+
+IntList ::= [] ; [Integer | IntList].
+
+% ---------------------------------------------------------------------------
+% Entry points
+% ---------------------------------------------------------------------------
+
+% All solutions: closed stop stream; Sols closes when the search is exhausted.
+procedure solve_all(S?, Stream(Req(S, R)), Stream(R)).
+solve_all(St, Reqs?, Sols?) :-
+    searcher([], St?, SolC, ReqC),
+    mwm(SolC?, Sols),
+    mwm(ReqC?, Reqs).
+
+% First solution: stop is written on the first merged solution.
+procedure solve_first(S?, Stream(Req(S, R)), Maybe(R)).
+solve_first(St, Reqs?, Res?) :-
+    searcher(Stop?, St?, SolC, ReqC),
+    mwm(SolC?, Sols),
+    mwm(ReqC?, Reqs),
+    first(Sols?, Stop, Res).
+
+procedure first(Stream(R)?, Stream(StopMsg), Maybe(R)).
+first([Sol|_], [stop], found(Sol?)).
+first([], [], none).
+
+% ---------------------------------------------------------------------------
+% Searcher tree
+% ---------------------------------------------------------------------------
+
+% searcher(Stop, State, SolCmds, ReqCmds): polls Stop; otherwise emits its
+% expansion request and continues in spawn over the reply.
+procedure searcher(Stream(StopMsg)?, S?, Cmds(R), Cmds(Req(S, R))).
+searcher([stop|_], _, [], []).
+searcher(S, St, SolC?, [stream([expand(St?, Items)])|ReqC?]) :-
+    spawn(Items?, S?, SolC, ReqC).
+
+% spawn walks the expansion reply: solutions subscribe as one-element streams;
+% child states fork a searcher, a merge subscription in each merge, and a
+% stop_fork distributor node.
+procedure spawn(Items(S, R)?, Stream(StopMsg)?, Cmds(R), Cmds(Req(S, R))).
+spawn([], _, [], []).
+spawn([sol(Sol)|Is], Stop, [stream([Sol?])|SolC?], ReqC?) :-
+    spawn(Is?, Stop?, SolC, ReqC).
+spawn([node(St)|Is], Stop, [merge(CSol?)|SolC?], [merge(CReq?)|ReqC?]) :-
+    stop_fork(Stop?, S1, S2),
+    searcher(S1?, St?, CSol, CReq),
+    spawn(Is?, S2?, SolC, ReqC).
+
+% Distributor node: propagates stop (or closure) to both subtrees.
+procedure stop_fork(Stream(StopMsg)?, Stream(StopMsg), Stream(StopMsg)).
+stop_fork([stop|_], [stop], [stop]).
+stop_fork([], [], []).
+
+% ---------------------------------------------------------------------------
+% Typed multiway merge (parameterized; shadows the untyped root mwm/2)
+% ---------------------------------------------------------------------------
+% Cmds elements: stream(Xs) subscribes a stream; merge(Cs) subscribes another
+% command stream.  Constant-delay via mutual references; short-circuit L/R
+% chain detects termination.  Per the book module
+% programs/book/streams/producers_consumers/mwm.glp.
+
+procedure mwm(Cmds(X)?, Stream(X)).
+mwm(In, Out?) :-
+    allocate_mutual_reference(Ref, Out),
+    mm_start(In?, Ref?).
+
+procedure mm_start(Cmds(X)?, _?).
+mm_start(In, Ref) :-
+    is_mutual_ref(Ref?) |
+    mm_subs(In?, Ref?, done, Done),
+    mm_close(Done?, Ref?).
+
+procedure mm_subs(Cmds(X)?, _?, MergeDone?, MergeDone).
+mm_subs([stream(Xs)|Cs], Ref, L, R?) :-
+    is_mutual_ref(Ref?) |
+    mm_copy(Xs?, Ref?, L?, M),
+    mm_subs(Cs?, Ref?, M?, R).
+mm_subs([merge(New)|Cs], Ref, L, R?) :-
+    is_mutual_ref(Ref?) |
+    mm_subs(New?, Ref?, L?, M),
+    mm_subs(Cs?, Ref?, M?, R).
+mm_subs([], _, L, L?).
+
+procedure mm_copy(Stream(X)?, _?, MergeDone?, MergeDone).
+mm_copy([X|Xs], Ref, L, R?) :-
+    is_mutual_ref(Ref?) |
+    stream_append(X?, Ref?, Ref1),
+    mm_copy(Xs?, Ref1?, L?, R).
+mm_copy([], _, L, L?).
+
+procedure mm_close(MergeDone?, _?).
+mm_close(done, Ref) :-
+    is_mutual_ref(Ref?) |
+    close_mutual_reference(Ref?).

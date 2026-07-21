@@ -1,0 +1,12 @@
+% P15: replicate the elements of a list a given number of times.
+
+CList ::= [] ; [Constant | CList].
+
+exported procedure repli(CList?, Integer?, CList).
+repli([], _, []).
+repli([X|Xs], N, R?) :- integer(N?) | rep(N?, X?, R1?, R), repli(Xs?, N?, R1).
+
+% rep(K, X, T, R): R is K copies of X followed by T.
+procedure rep(Integer?, Constant?, CList?, CList).
+rep(K, _, T, T?) :- K? =< 0 | true.
+rep(K, X, T, [X?|R?]) :- K? > 0, ground(X?) | K1 := K? - 1, rep(K1?, X?, T?, R).

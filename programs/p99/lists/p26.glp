@@ -1,0 +1,51 @@
+% P26: generate the combinations of K distinct elements chosen from 1..N.
+% Search-all via the P99 parallel-search library (p99/self.glp).
+%
+% State st(K, From, N, Acc): K elements still to choose, all from From..N,
+% Acc the (reversed) choices so far.  A node with K = 0 yields one solution;
+% otherwise one child per admissible next choice.
+
+CombState ::= st(Integer, Integer, Integer, IntList).
+
+exported procedure combinations(Integer?, Integer?, Stream(IntList)).
+combinations(K, N, Sols?) :-
+    solve_all(st(K?, 1, N?, []), Reqs, Sols),
+    expand_server(Reqs?).
+
+exported procedure combinations_first(Integer?, Integer?, Maybe(IntList)).
+combinations_first(K, N, Res?) :-
+    solve_first(st(K?, 1, N?, []), Reqs, Res),
+    expand_server(Reqs?).
+
+% ---------------------------------------------------------------------------
+% Expander
+% ---------------------------------------------------------------------------
+
+procedure expand_server(Stream(Req(CombState, IntList))?).
+expand_server([]).
+expand_server([expand(St, Items?)|Rs]) :-
+    expand(St?, Items),
+    expand_server(Rs?).
+
+procedure expand(CombState?, Items(CombState, IntList)).
+expand(st(0, _, _, Acc), [sol(R?)]) :-
+    rev(Acc?, [], R).
+expand(st(K, From, N, Acc), Items?) :-
+    K? > 0 |
+    Last := N? - K? + 1,
+    choices(From?, Last?, K?, N?, Acc?, Items).
+
+% One node item per next choice I, From =< I =< Last.
+procedure choices(Integer?, Integer?, Integer?, Integer?, IntList?, Items(CombState, IntList)).
+choices(I, Last, _, _, _, []) :-
+    I? > Last? | true.
+choices(I, Last, K, N, Acc, [node(st(K1?, I1?, N?, [I?|Acc?]))|Items?]) :-
+    I? =< Last?, ground(Acc?) |
+    K1 := K? - 1,
+    I1 := I? + 1,
+    choices(I1?, Last?, K?, N?, Acc?, Items).
+
+procedure rev(IntList?, IntList?, IntList).
+rev([], Acc, Acc?).
+rev([X|Xs], Acc, R?) :-
+    rev(Xs?, [X?|Acc?], R).

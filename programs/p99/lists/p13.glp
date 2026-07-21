@@ -1,0 +1,19 @@
+% P13: run-length encoding, direct (no intermediate packing), P11's format.
+
+CList ::= [] ; [Constant | CList].
+MItem ::= one(Constant) ; many(Integer, Constant).
+MList ::= [] ; [MItem | MList].
+
+exported procedure encode_direct(CList?, MList).
+encode_direct([], []).
+encode_direct([X|Xs], R?) :- encd(Xs?, X?, 1, R).
+
+% encd(Rest, Cur, Count, R).
+procedure encd(CList?, Constant?, Integer?, MList).
+encd([], C, K, R?) :- emit(K?, C?, [], R).
+encd([Y|Ys], C, K, R?) :- Y? =?= C? | K1 := K? + 1, encd(Ys?, C?, K1?, R).
+encd([Y|Ys], C, K, R?) :- otherwise | emit(K?, C?, R1?, R), encd(Ys?, Y?, 1, R1).
+
+procedure emit(Integer?, Constant?, MList?, MList).
+emit(1, C, T, [one(C?)|T?]).
+emit(K, C, T, [many(K?, C?)|T?]) :- K? > 1 | true.

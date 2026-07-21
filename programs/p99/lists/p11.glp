@@ -1,0 +1,33 @@
+% P11: modified run-length encoding, via packing (P09): singles as one(X),
+% runs as many(N, X).
+
+CList ::= [] ; [Constant | CList].
+OpenCList ::= [Constant | CList].
+GroupList ::= [] ; [OpenCList | GroupList].
+MItem ::= one(Constant) ; many(Integer, Constant).
+MList ::= [] ; [MItem | MList].
+
+exported procedure encode_modified(CList?, MList).
+encode_modified(L, R?) :- pack(L?, G), map_m(G?, R).
+
+procedure map_m(GroupList?, MList).
+map_m([], []).
+map_m([[X|G]|Gs], R?) :- glen(G?, 1, N), emit(N?, X?, R1?, R), map_m(Gs?, R1).
+
+procedure emit(Integer?, Constant?, MList?, MList).
+emit(1, C, T, [one(C?)|T?]).
+emit(K, C, T, [many(K?, C?)|T?]) :- K? > 1 | true.
+
+procedure glen(CList?, Integer?, Integer).
+glen([], A, A?).
+glen([_|Xs], A, N?) :- A1 := A? + 1, glen(Xs?, A1?, N).
+
+% pack, per P09.
+procedure pack(CList?, GroupList).
+pack([], []).
+pack([X|Xs], [[X?|G?]|R?]) :- ground(X?) | pk(Xs?, X?, G, R).
+
+procedure pk(CList?, Constant?, CList, GroupList).
+pk([], _, [], []).
+pk([Y|Ys], C, [Y?|G?], R?) :- Y? =?= C? | pk(Ys?, C?, G, R).
+pk([Y|Ys], _, [], [[Y?|G?]|R?]) :- otherwise, ground(Y?) | pk(Ys?, Y?, G, R).

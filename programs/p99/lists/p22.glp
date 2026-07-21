@@ -1,0 +1,7 @@
+% P22: create a list containing all integers within a given range.
+
+IList ::= [] ; [Integer | IList].
+
+exported procedure range(Integer?, Integer?, IList).
+range(I, K, []) :- I? > K? | true.
+range(I, K, [I?|R?]) :- I? =< K? | I1 := I? + 1, range(I1?, K?, R).

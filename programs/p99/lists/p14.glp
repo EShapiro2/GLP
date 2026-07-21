@@ -1,0 +1,7 @@
+% P14: duplicate the elements of a list.
+
+CList ::= [] ; [Constant | CList].
+
+exported procedure dupli(CList?, CList).
+dupli([], []).
+dupli([X|Xs], [X?, X?|R?]) :- ground(X?) | dupli(Xs?, R).

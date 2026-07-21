@@ -1,0 +1,42 @@
+% P99 probe 2: the stop-poll idiom for searchers.
+% A worker counts down, polling its stop stream each step:
+%   clause 1: stop arrived              -> close output
+%   clause 2: work exhausted            -> close output, abandon stop stream
+%   clause 3: work remains, stop unseen -> one work step, recurse
+% With stop unbound, clause 1 suspends and clause 3 commits; once stop is
+% written, clause 1 competes with clause 3.  The probe measures how many
+% steps run after stop is requested.
+
+StopMsg ::= stop.
+
+procedure work(Stream(StopMsg)?, Integer?, Stream(Integer)).
+work([stop|_], _, []).
+work(_, 0, []).
+work(S, N, [N?|Out?]) :- N? > 0 | N1 := N? - 1, work(S?, N1?, Out).
+
+% Duplicate a stream of integers (constant elements may be read twice).
+procedure tap(Stream(Integer)?, Stream(Integer), Stream(Integer)).
+tap([], [], []).
+tap([X|Xs], [X?|As?], [X?|Bs?]) :- integer(X?) | tap(Xs?, As, Bs).
+
+% Stopper: consume K elements, then write stop and abandon the stream.
+procedure stop_after(Integer?, Stream(Integer)?, Stream(StopMsg)).
+stop_after(0, _, [stop]).
+stop_after(K, [_|Xs], S?) :- K? > 0 | K1 := K? - 1, stop_after(K1?, Xs?, S).
+stop_after(_, [], []).
+
+procedure len(Stream(Integer)?, Integer?, Integer).
+len([], N, N?).
+len([_|Xs], N, M?) :- N1 := N? + 1, len(Xs?, N1?, M).
+
+% Closed stop stream: runs to exhaustion, length 5.
+procedure probe_closed(Integer).
+probe_closed(L?) :- work([], 5, Out), len(Out?, 0, L).
+
+% Stop after 3 of 1000: length should be far below 1000.
+procedure probe_stopped(Integer).
+probe_stopped(L?) :-
+    work(S?, 1000, Out),
+    tap(Out?, A, B),
+    stop_after(3, A?, S),
+    len(B?, 0, L).

@@ -1,0 +1,10 @@
+% P99 section: Lists (P01-P28).  Entry points forwarded per problem module.
+
+imported procedure p26#combinations(Integer?, Integer?, Stream(IntList)).
+imported procedure p26#combinations_first(Integer?, Integer?, Maybe(IntList)).
+
+exported procedure combinations(Integer?, Integer?, Stream(IntList)).
+combinations(K, N, Sols?) :- p26 # combinations(K?, N?, Sols).
+
+exported procedure combinations_first(Integer?, Integer?, Maybe(IntList)).
+combinations_first(K, N, Res?) :- p26 # combinations_first(K?, N?, Res).

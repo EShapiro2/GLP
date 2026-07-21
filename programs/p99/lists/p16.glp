@@ -1,0 +1,12 @@
+% P16: drop every N'th element from a list.
+
+CList ::= [] ; [Constant | CList].
+
+exported procedure drop_every(CList?, Integer?, CList).
+drop_every(L, N, R?) :- integer(N?) | dr(L?, N?, N?, R).
+
+% dr(Rest, N, K, R): K counts down to the next dropped position.
+procedure dr(CList?, Integer?, Integer?, CList).
+dr([], _, _, []).
+dr([_|Xs], N, 1, R?) :- integer(N?) | dr(Xs?, N?, N?, R).
+dr([X|Xs], N, K, [X?|R?]) :- K? > 1 | K1 := K? - 1, dr(Xs?, N?, K1?, R).

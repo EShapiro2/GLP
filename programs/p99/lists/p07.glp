@@ -1,0 +1,16 @@
+% P07: flatten a nested list structure.
+% Prolog's heterogeneous nested list becomes a typed tree: an element is
+% e(Constant) or a sublist s(Nest).
+
+CList ::= [] ; [Constant | CList].
+Nest ::= [] ; [NItem | Nest].
+NItem ::= e(Constant) ; s(Nest).
+
+exported procedure flatten(Nest?, CList).
+flatten(N, R?) :- flat(N?, [], R).
+
+% flat(N, Acc, R): R is the flattening of N followed by Acc.
+procedure flat(Nest?, CList?, CList).
+flat([], A, A?).
+flat([e(X)|Ns], A, [X?|R?]) :- flat(Ns?, A?, R).
+flat([s(M)|Ns], A, R?) :- flat(Ns?, A?, R1), flat(M?, R1?, R).

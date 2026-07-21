@@ -1,0 +1,10 @@
+% P05: reverse a list.
+
+CList ::= [] ; [Constant | CList].
+
+exported procedure reverse(CList?, CList).
+reverse(L, R?) :- rev(L?, [], R).
+
+procedure rev(CList?, CList?, CList).
+rev([], A, A?).
+rev([X|Xs], A, R?) :- rev(Xs?, [X?|A?], R).
