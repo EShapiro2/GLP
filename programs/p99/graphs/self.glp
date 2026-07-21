@@ -1,0 +1,65 @@
+% P99 section: Graphs (P80-P89).  Graph-term form graph(Nodes, Edges) is
+% canonical; edges e(X, Y) are undirected.
+
+Edge ::= e(Constant, Constant).
+EList ::= [] ; [Edge | EList].
+Graph ::= graph(CList, EList).
+AdjEntry ::= n(Constant, CList).
+AdjList ::= [] ; [AdjEntry | AdjList].
+WEdge ::= we(Constant, Constant, Integer).
+WEList ::= [] ; [WEdge | WEList].
+WGraph ::= wgraph(CList, WEList).
+NCol ::= c(Constant, Integer).
+NColList ::= [] ; [NCol | NColList].
+EListList ::= [] ; [EList | EListList].
+CListList2 ::= [] ; [CList | CListList2].
+NPair ::= m(Constant, Constant).
+NPairList ::= [] ; [NPair | NPairList].
+
+imported procedure p80#gt_adj(Graph?, AdjList).
+exported procedure gt_adj(Graph?, AdjList).
+gt_adj(G, A?) :- p80 # gt_adj(G?, A).
+
+imported procedure p80#adj_gt(AdjList?, Graph).
+exported procedure adj_gt(AdjList?, Graph).
+adj_gt(A, G?) :- p80 # adj_gt(A?, G).
+
+imported procedure p81#paths(Graph?, Constant?, Constant?, Stream(CList)).
+exported procedure paths(Graph?, Constant?, Constant?, Stream(CList)).
+paths(G, A, B, Ps?) :- p81 # paths(G?, A?, B?, Ps).
+
+imported procedure p82#cycles(Graph?, Constant?, Stream(CList)).
+exported procedure cycles(Graph?, Constant?, Stream(CList)).
+cycles(G, A, Ps?) :- p82 # cycles(G?, A?, Ps).
+
+imported procedure p83#spanning_trees(Graph?, EListList).
+exported procedure spanning_trees(Graph?, EListList).
+spanning_trees(G, Ts?) :- p83 # spanning_trees(G?, Ts).
+
+imported procedure p84#mst(WGraph?, WEList).
+exported procedure mst(WGraph?, WEList).
+mst(G, T?) :- p84 # mst(G?, T).
+
+imported procedure p85#isomorphic(Graph?, Graph?, Maybe(NPairList)).
+exported procedure isomorphic(Graph?, Graph?, Maybe(NPairList)).
+isomorphic(G1, G2, R?) :- p85 # isomorphic(G1?, G2?, R).
+
+imported procedure p86#degree(Graph?, Constant?, Integer).
+exported procedure degree(Graph?, Constant?, Integer).
+degree(G, N, D?) :- p86 # degree(G?, N?, D).
+
+imported procedure p86#paint(Graph?, NColList).
+exported procedure paint(Graph?, NColList).
+paint(G, C?) :- p86 # paint(G?, C).
+
+imported procedure p87#dfs(Graph?, Constant?, CList).
+exported procedure dfs(Graph?, Constant?, CList).
+dfs(G, S, Q?) :- p87 # dfs(G?, S?, Q).
+
+imported procedure p88#components(Graph?, CListList2).
+exported procedure components(Graph?, CListList2).
+components(G, Cs?) :- p88 # components(G?, Cs).
+
+imported procedure p89#bipartite(Graph?, Ans).
+exported procedure bipartite(Graph?, Ans).
+bipartite(G, R?) :- p89 # bipartite(G?, R).

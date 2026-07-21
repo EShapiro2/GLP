@@ -1,0 +1,67 @@
+% P82: all cycles through a given node: acyclic paths from the node back to
+% itself, closed at the end (length at least 3).
+
+CState ::= cs(Constant, CList, Constant, EList).
+
+exported procedure cycles(Graph?, Constant?, Stream(CList)).
+cycles(graph(_, Es), A, Ps?) :- ground(Es?), ground(A?) |
+    solve_all(cs(A?, [], A?, Es?), Reqs, Ps),
+    expand_server(Reqs?).
+
+procedure expand_server(Stream(Req(CState, CList))?).
+expand_server([]).
+expand_server([expand(St, Items?)|Rs]) :-
+    expand(St?, Items),
+    expand_server(Rs?).
+
+procedure expand(CState?, Items(CState, CList)).
+expand(cs(Cur, Vis, Start, Es), Items?) :-
+    ground(Cur?), ground(Vis?), ground(Start?), ground(Es?) |
+    cnbs(Es?, Cur?, Nbs),
+    cch(Nbs?, [Cur?|Vis?], Start?, Es?, Items).
+
+% A neighbour equal to the start closes a cycle when the path already has
+% at least two nodes; an unvisited neighbour extends the path.
+procedure cch(CList?, CList?, Constant?, EList?, Items(CState, CList)).
+cch([], _, _, _, []).
+cch([M|Ms], Path, Start, Es, Out?) :-
+    M? =?= Start?, ground(Path?), ground(Es?), ground(M?) |
+    cclose(Path?, Start?, Es?, Ms?, Out).
+cch([M|Ms], Path, Start, Es, Out?) :- otherwise, ground(M?), ground(Path?), ground(Start?), ground(Es?) |
+    cmem(Path?, M?, In),
+    cc1(In?, M?, Ms?, Path?, Start?, Es?, Out).
+
+% Closing into the start yields a cycle only when the path already has
+% three or more distinct nodes (an edge may not be reused).
+procedure cclose(CList?, Constant?, EList?, CList?, Items(CState, CList)).
+cclose([P], Start, Es, Ms, Out?) :- ground(Start?), ground(Es?), ground(P?) |
+    cch(Ms?, [P?], Start?, Es?, Out).
+cclose([P1, P2], Start, Es, Ms, Out?) :-
+    ground(Start?), ground(Es?), ground(P1?), ground(P2?) |
+    cch(Ms?, [P1?, P2?], Start?, Es?, Out).
+cclose([P1, P2, P3|Path], Start, Es, Ms, [sol(Sol?)|Out?]) :-
+    ground(Start?), ground(Es?), ground(P1?), ground(P2?), ground(P3?), ground(Path?) |
+    crev([P1?, P2?, P3?|Path?], [Start?], Sol),
+    cch(Ms?, [P1?, P2?, P3?|Path?], Start?, Es?, Out).
+cclose([], _, _, _, []).
+
+procedure cc1(Ans?, Constant?, CList?, CList?, Constant?, EList?, Items(CState, CList)).
+cc1(yes, _, Ms, Path, Start, Es, Out?) :- cch(Ms?, Path?, Start?, Es?, Out).
+cc1(no, M, Ms, Path, Start, Es, [node(cs(M?, Path?, Start?, Es?))|Out?]) :-
+    ground(Path?), ground(Start?), ground(Es?) |
+    cch(Ms?, Path?, Start?, Es?, Out).
+
+procedure cnbs(EList?, Constant?, CList).
+cnbs([], _, []).
+cnbs([e(X, Y)|Es], N, [Y?|R?]) :- X? =?= N?, ground(Y?) | cnbs(Es?, N?, R).
+cnbs([e(X, Y)|Es], N, [X?|R?]) :- otherwise, Y? =?= N?, ground(X?) | cnbs(Es?, N?, R).
+cnbs([e(_, _)|Es], N, R?) :- otherwise | cnbs(Es?, N?, R).
+
+procedure cmem(CList?, Constant?, Ans).
+cmem([], _, no).
+cmem([X|_], Y, yes) :- X? =?= Y? | true.
+cmem([_|Xs], Y, R?) :- otherwise | cmem(Xs?, Y?, R).
+
+procedure crev(CList?, CList?, CList).
+crev([], A, A?).
+crev([X|Xs], A, R?) :- crev(Xs?, [X?|A?], R).

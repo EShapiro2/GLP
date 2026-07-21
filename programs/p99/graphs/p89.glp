@@ -1,0 +1,64 @@
+% P89: bipartiteness: two-colour every component; a neighbour with the same
+% colour answers no.
+
+imported procedure p80#gt_adj(Graph?, AdjList).
+
+NColB ::= cb(Constant, Integer).
+NColBList ::= [] ; [NColB | NColBList].
+MaybeI2 ::= found(Integer) ; none.
+
+exported procedure bipartite(Graph?, Ans).
+bipartite(graph(Ns, Es), R?) :- ground(Ns?), ground(Es?) |
+    p80 # gt_adj(graph(Ns?, Es?), Adj),
+    bsweep(Ns?, Adj?, [], R).
+
+procedure bsweep(CList?, AdjList?, NColBList?, Ans).
+bsweep([], _, _, yes).
+bsweep([N|Ns], Adj, Asg, R?) :- ground(N?), ground(Adj?), ground(Asg?) |
+    bcol(Asg?, N?, C),
+    bs1(C?, N?, Ns?, Adj?, Asg?, R).
+
+procedure bs1(MaybeI2?, Constant?, CList?, AdjList?, NColBList?, Ans).
+bs1(found(_), _, Ns, Adj, Asg, R?) :- bsweep(Ns?, Adj?, Asg?, R).
+bs1(none, N, Ns, Adj, Asg, R?) :- ground(N?), ground(Adj?), ground(Asg?) |
+    two(N?, 1, Adj?, Asg?, Asg1, Ok),
+    bs2(Ok?, Ns?, Adj?, Asg1?, R).
+
+procedure bs2(Ans?, CList?, AdjList?, NColBList?, Ans).
+bs2(no, _, _, _, no).
+bs2(yes, Ns, Adj, Asg, R?) :- bsweep(Ns?, Adj?, Asg?, R).
+
+% two(N, C, Adj, AsgIn, AsgOut, Ok): colour N with C and its neighbours
+% with the other colour.
+procedure two(Constant?, Integer?, AdjList?, NColBList?, NColBList, Ans).
+two(N, C, Adj, Asg, AsgOut?, Ok?) :- ground(N?), ground(Adj?), ground(Asg?), integer(C?) |
+    bcol(Asg?, N?, Have),
+    tw1(Have?, N?, C?, Adj?, Asg?, AsgOut, Ok).
+
+procedure tw1(MaybeI2?, Constant?, Integer?, AdjList?, NColBList?, NColBList, Ans).
+tw1(found(K), _, C, _, Asg, Asg?, yes) :- K? =:= C? | true.
+tw1(found(K), _, C, _, Asg, Asg?, no) :- K? =\= C? | true.
+tw1(none, N, C, Adj, Asg, AsgOut?, Ok?) :- ground(N?), ground(Adj?), integer(C?) |
+    blook(Adj?, N?, Nbs),
+    C1 := 3 - C?,
+    twl(Nbs?, C1?, Adj?, [cb(N?, C?)|Asg?], AsgOut, Ok).
+
+procedure twl(CList?, Integer?, AdjList?, NColBList?, NColBList, Ans).
+twl([], _, _, Asg, Asg?, yes).
+twl([M|Ms], C, Adj, Asg, AsgOut?, Ok?) :- ground(Adj?), integer(C?), ground(Asg?) |
+    two(M?, C?, Adj?, Asg?, Asg1, Ok1),
+    twc(Ok1?, Ms?, C?, Adj?, Asg1?, AsgOut, Ok).
+
+procedure twc(Ans?, CList?, Integer?, AdjList?, NColBList?, NColBList, Ans).
+twc(no, _, _, _, Asg, Asg?, no).
+twc(yes, Ms, C, Adj, Asg, AsgOut?, Ok?) :- twl(Ms?, C?, Adj?, Asg?, AsgOut, Ok).
+
+procedure bcol(NColBList?, Constant?, MaybeI2).
+bcol([], _, none).
+bcol([cb(N, K)|_], M, found(K?)) :- N? =?= M? | true.
+bcol([cb(_, _)|Cs], M, R?) :- otherwise | bcol(Cs?, M?, R).
+
+procedure blook(AdjList?, Constant?, CList).
+blook([], _, []).
+blook([n(N, Nbs)|_], M, Nbs?) :- N? =?= M? | true.
+blook([n(_, _)|A], M, R?) :- otherwise | blook(A?, M?, R).

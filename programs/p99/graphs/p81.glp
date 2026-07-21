@@ -1,0 +1,51 @@
+% P81: all acyclic paths from one node to another, by parallel search-all:
+% a state is the current node, the reversed path behind it, the goal, and
+% the edge list.
+
+PState ::= ps(Constant, CList, Constant, EList).
+
+exported procedure paths(Graph?, Constant?, Constant?, Stream(CList)).
+paths(graph(_, Es), A, B, Ps?) :- ground(Es?), ground(A?), ground(B?) |
+    solve_all(ps(A?, [], B?, Es?), Reqs, Ps),
+    expand_server(Reqs?).
+
+procedure expand_server(Stream(Req(PState, CList))?).
+expand_server([]).
+expand_server([expand(St, Items?)|Rs]) :-
+    expand(St?, Items),
+    expand_server(Rs?).
+
+procedure expand(PState?, Items(PState, CList)).
+expand(ps(Cur, Vis, Goal, Es), [sol(P?)]) :- Cur? =?= Goal?, ground(Vis?) |
+    prev([Cur?|Vis?], [], P).
+expand(ps(Cur, Vis, Goal, Es), Items?) :- otherwise, ground(Cur?), ground(Vis?), ground(Es?), ground(Goal?) |
+    pnbs(Es?, Cur?, Nbs),
+    pch(Nbs?, [Cur?|Vis?], Goal?, Es?, Items).
+
+% One child per unvisited neighbour.
+procedure pch(CList?, CList?, Constant?, EList?, Items(PState, CList)).
+pch([], _, _, _, []).
+pch([M|Ms], Path, Goal, Es, Out?) :- ground(M?), ground(Path?), ground(Goal?), ground(Es?) |
+    pmem(Path?, M?, In),
+    pc1(In?, M?, Ms?, Path?, Goal?, Es?, Out).
+
+procedure pc1(Ans?, Constant?, CList?, CList?, Constant?, EList?, Items(PState, CList)).
+pc1(yes, _, Ms, Path, Goal, Es, Out?) :- pch(Ms?, Path?, Goal?, Es?, Out).
+pc1(no, M, Ms, Path, Goal, Es, [node(ps(M?, Path?, Goal?, Es?))|Out?]) :-
+    ground(Path?), ground(Goal?), ground(Es?) |
+    pch(Ms?, Path?, Goal?, Es?, Out).
+
+procedure pnbs(EList?, Constant?, CList).
+pnbs([], _, []).
+pnbs([e(X, Y)|Es], N, [Y?|R?]) :- X? =?= N?, ground(Y?) | pnbs(Es?, N?, R).
+pnbs([e(X, Y)|Es], N, [X?|R?]) :- otherwise, Y? =?= N?, ground(X?) | pnbs(Es?, N?, R).
+pnbs([e(_, _)|Es], N, R?) :- otherwise | pnbs(Es?, N?, R).
+
+procedure pmem(CList?, Constant?, Ans).
+pmem([], _, no).
+pmem([X|_], Y, yes) :- X? =?= Y? | true.
+pmem([_|Xs], Y, R?) :- otherwise | pmem(Xs?, Y?, R).
+
+procedure prev(CList?, CList?, CList).
+prev([], A, A?).
+prev([X|Xs], A, R?) :- prev(Xs?, [X?|A?], R).

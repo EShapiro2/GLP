@@ -1,0 +1,50 @@
+% P84: minimal spanning tree (Prim: repeatedly add the lightest edge from
+% the visited set to a new node).
+
+BestW ::= none ; best(WEdge).
+
+exported procedure mst(WGraph?, WEList).
+mst(wgraph([], _), []).
+mst(wgraph([N|_], Es), T?) :- ground(N?), ground(Es?) |
+    prim(Es?, [N?], [], T).
+
+procedure prim(WEList?, CList?, WEList?, WEList).
+prim(Es, Vis, Acc, T?) :- ground(Es?), ground(Vis?) |
+    fm(Es?, Vis?, none, B),
+    prim1(B?, Es?, Vis?, Acc?, T).
+
+procedure prim1(BestW?, WEList?, CList?, WEList?, WEList).
+prim1(none, _, _, Acc, Acc?).
+prim1(best(we(X, Y, W)), Es, Vis, Acc, T?) :- ground(X?), ground(Y?), ground(Vis?) |
+    mem(Vis?, X?, InX),
+    newnode(InX?, X?, Y?, New),
+    prim(Es?, [New?|Vis?], [we(X?, Y?, W?)|Acc?], T).
+
+procedure newnode(Ans?, Constant?, Constant?, Constant).
+newnode(yes, _, Y, Y?).
+newnode(no, X, _, X?).
+
+% Lightest edge with exactly one visited endpoint.
+procedure fm(WEList?, CList?, BestW?, BestW).
+fm([], _, B, B?).
+fm([we(X, Y, W)|Es], Vis, B, R?) :- ground(Vis?), ground(X?), ground(Y?) |
+    mem(Vis?, X?, Ix),
+    mem(Vis?, Y?, Iy),
+    fr(Ix?, Iy?, we(X?, Y?, W?), B?, B1),
+    fm(Es?, Vis?, B1?, R).
+
+procedure fr(Ans?, Ans?, WEdge?, BestW?, BestW).
+fr(yes, no, E, B, R?) :- better(E?, B?, R).
+fr(no, yes, E, B, R?) :- better(E?, B?, R).
+fr(yes, yes, _, B, B?).
+fr(no, no, _, B, B?).
+
+procedure better(WEdge?, BestW?, BestW).
+better(E, none, best(E?)).
+better(we(X, Y, W), best(we(X2, Y2, W2)), best(we(X?, Y?, W?))) :- W? < W2? | true.
+better(we(_, _, W), best(we(X2, Y2, W2)), best(we(X2?, Y2?, W2?))) :- W? >= W2? | true.
+
+procedure mem(CList?, Constant?, Ans).
+mem([], _, no).
+mem([X|_], Y, yes) :- X? =?= Y? | true.
+mem([_|Xs], Y, R?) :- otherwise | mem(Xs?, Y?, R).

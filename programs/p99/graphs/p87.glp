@@ -1,0 +1,41 @@
+% P87: depth-first order from a given node (neighbours in adjacency order).
+
+imported procedure p80#gt_adj(Graph?, AdjList).
+
+exported procedure dfs(Graph?, Constant?, CList).
+dfs(G, S, Seq?) :- ground(G?), ground(S?) |
+    p80 # gt_adj(G?, Adj),
+    d(S?, Adj?, [], _, [], Rq),
+    drev(Rq?, [], Seq).
+
+% d(N, Adj, VisIn, VisOut, SeqIn, SeqOut): sequences accumulate reversed.
+procedure d(Constant?, AdjList?, CList?, CList, CList?, CList).
+d(N, Adj, Vis, VisOut?, Sq, SqOut?) :- ground(N?), ground(Adj?), ground(Vis?) |
+    dmem(Vis?, N?, In),
+    d1(In?, N?, Adj?, Vis?, VisOut, Sq?, SqOut).
+
+procedure d1(Ans?, Constant?, AdjList?, CList?, CList, CList?, CList).
+d1(yes, _, _, Vis, Vis?, Sq, Sq?).
+d1(no, N, Adj, Vis, VisOut?, Sq, SqOut?) :- ground(N?), ground(Adj?) |
+    dlook(Adj?, N?, Nbs),
+    dl(Nbs?, Adj?, [N?|Vis?], VisOut, [N?|Sq?], SqOut).
+
+procedure dl(CList?, AdjList?, CList?, CList, CList?, CList).
+dl([], _, Vis, Vis?, Sq, Sq?).
+dl([M|Ms], Adj, Vis, VisOut?, Sq, SqOut?) :- ground(Adj?) |
+    d(M?, Adj?, Vis?, V1, Sq?, S1),
+    dl(Ms?, Adj?, V1?, VisOut, S1?, SqOut).
+
+procedure dlook(AdjList?, Constant?, CList).
+dlook([], _, []).
+dlook([n(N, Nbs)|_], M, Nbs?) :- N? =?= M? | true.
+dlook([n(_, _)|A], M, R?) :- otherwise | dlook(A?, M?, R).
+
+procedure dmem(CList?, Constant?, Ans).
+dmem([], _, no).
+dmem([X|_], Y, yes) :- X? =?= Y? | true.
+dmem([_|Xs], Y, R?) :- otherwise | dmem(Xs?, Y?, R).
+
+procedure drev(CList?, CList?, CList).
+drev([], A, A?).
+drev([X|Xs], A, R?) :- drev(Xs?, [X?|A?], R).

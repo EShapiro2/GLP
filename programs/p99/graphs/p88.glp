@@ -1,0 +1,53 @@
+% P88: connected components (repeated depth-first sweeps).
+
+imported procedure p80#gt_adj(Graph?, AdjList).
+
+exported procedure components(Graph?, CListList2).
+components(graph(Ns, Es), Cs?) :- ground(Ns?), ground(Es?) |
+    p80 # gt_adj(graph(Ns?, Es?), Adj),
+    sweep(Ns?, Adj?, [], Cs).
+
+% For each node not yet visited, one component via dfs.
+procedure sweep(CList?, AdjList?, CList?, CListList2).
+sweep([], _, _, []).
+sweep([N|Ns], Adj, Vis, Out?) :- ground(N?), ground(Adj?), ground(Vis?) |
+    cmem(Vis?, N?, In),
+    sw1(In?, N?, Ns?, Adj?, Vis?, Out).
+
+procedure sw1(Ans?, Constant?, CList?, AdjList?, CList?, CListList2).
+sw1(yes, _, Ns, Adj, Vis, Out?) :- sweep(Ns?, Adj?, Vis?, Out).
+sw1(no, N, Ns, Adj, Vis, [Comp?|Out?]) :- ground(N?), ground(Adj?), ground(Vis?) |
+    d(N?, Adj?, Vis?, Vis1, [], CompR),
+    crev(CompR?, [], Comp),
+    sweep(Ns?, Adj?, Vis1?, Out).
+
+procedure d(Constant?, AdjList?, CList?, CList, CList?, CList).
+d(N, Adj, Vis, VisOut?, Sq, SqOut?) :- ground(N?), ground(Adj?), ground(Vis?) |
+    cmem(Vis?, N?, In),
+    d1(In?, N?, Adj?, Vis?, VisOut, Sq?, SqOut).
+
+procedure d1(Ans?, Constant?, AdjList?, CList?, CList, CList?, CList).
+d1(yes, _, _, Vis, Vis?, Sq, Sq?).
+d1(no, N, Adj, Vis, VisOut?, Sq, SqOut?) :- ground(N?), ground(Adj?) |
+    clook(Adj?, N?, Nbs),
+    dl(Nbs?, Adj?, [N?|Vis?], VisOut, [N?|Sq?], SqOut).
+
+procedure dl(CList?, AdjList?, CList?, CList, CList?, CList).
+dl([], _, Vis, Vis?, Sq, Sq?).
+dl([M|Ms], Adj, Vis, VisOut?, Sq, SqOut?) :- ground(Adj?) |
+    d(M?, Adj?, Vis?, V1, Sq?, S1),
+    dl(Ms?, Adj?, V1?, VisOut, S1?, SqOut).
+
+procedure clook(AdjList?, Constant?, CList).
+clook([], _, []).
+clook([n(N, Nbs)|_], M, Nbs?) :- N? =?= M? | true.
+clook([n(_, _)|A], M, R?) :- otherwise | clook(A?, M?, R).
+
+procedure cmem(CList?, Constant?, Ans).
+cmem([], _, no).
+cmem([X|_], Y, yes) :- X? =?= Y? | true.
+cmem([_|Xs], Y, R?) :- otherwise | cmem(Xs?, Y?, R).
+
+procedure crev(CList?, CList?, CList).
+crev([], A, A?).
+crev([X|Xs], A, R?) :- crev(Xs?, [X?|A?], R).

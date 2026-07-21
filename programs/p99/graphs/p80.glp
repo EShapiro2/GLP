@@ -1,0 +1,36 @@
+% P80: conversions between the graph-term form and the adjacency-list form
+% (undirected).
+
+exported procedure gt_adj(Graph?, AdjList).
+gt_adj(graph(Ns, Es), A?) :- ground(Es?) | gta(Ns?, Es?, A).
+
+procedure gta(CList?, EList?, AdjList).
+gta([], _, []).
+gta([N|Ns], Es, [n(N?, Nbs?)|A?]) :- ground(N?), ground(Es?) |
+    nbs(Es?, N?, Nbs),
+    gta(Ns?, Es?, A).
+
+% Neighbors of N in an undirected edge list.
+procedure nbs(EList?, Constant?, CList).
+nbs([], _, []).
+nbs([e(X, Y)|Es], N, [Y?|R?]) :- X? =?= N?, ground(Y?) | nbs(Es?, N?, R).
+nbs([e(X, Y)|Es], N, [X?|R?]) :- otherwise, Y? =?= N?, ground(X?) | nbs(Es?, N?, R).
+nbs([e(_, _)|Es], N, R?) :- otherwise | nbs(Es?, N?, R).
+
+exported procedure adj_gt(AdjList?, Graph).
+adj_gt(A, graph(Ns?, Es?)) :- ground(A?) | anodes(A?, Ns), aedges(A?, Es).
+
+procedure anodes(AdjList?, CList).
+anodes([], []).
+anodes([n(N, _)|A], [N?|R?]) :- anodes(A?, R).
+
+% Each undirected edge once: keep n(N, ...Y...) when N @< Y or N = Y.
+procedure aedges(AdjList?, EList).
+aedges([], []).
+aedges([n(N, Nbs)|A], Es?) :- ground(N?) | aed(Nbs?, N?, E1?, Es), aedges(A?, E1).
+
+procedure aed(CList?, Constant?, EList?, EList).
+aed([], _, T, T?).
+aed([Y|Ys], N, T, [e(N?, Y?)|R?]) :- N? @< Y? | aed(Ys?, N?, T?, R).
+aed([Y|Ys], N, T, [e(N?, Y?)|R?]) :- otherwise, N? =?= Y? | aed(Ys?, N?, T?, R).
+aed([_|Ys], N, T, R?) :- otherwise | aed(Ys?, N?, T?, R).

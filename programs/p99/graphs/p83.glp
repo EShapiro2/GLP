@@ -1,0 +1,96 @@
+% P83: all spanning trees, by search-all: grow the tree one frontier edge at
+% a time (an edge from a visited node to a new one).  Different growth
+% orders rebuild the same tree, so solutions are canonicalised (edges
+% sorted) and deduplicated after collection.
+
+SState ::= ss(CList, EList, CList, EList).
+
+exported procedure spanning_trees(Graph?, EListList).
+spanning_trees(graph([], _), []).
+spanning_trees(graph([N|Ns], Es), Ts?) :- ground(N?), ground(Ns?), ground(Es?) |
+    solve_all(ss([N?], [], Ns?, Es?), Reqs, Sols),
+    expand_server(Reqs?),
+    dedup(Sols?, [], Ts).
+
+procedure expand_server(Stream(Req(SState, EList))?).
+expand_server([]).
+expand_server([expand(St, Items?)|Rs]) :-
+    expand(St?, Items),
+    expand_server(Rs?).
+
+% ss(Visited, TreeEdges, Unvisited, Edges).
+procedure expand(SState?, Items(SState, EList)).
+expand(ss(_, Tree, [], _), [sol(S?)]) :- ground(Tree?) | esort(Tree?, S).
+expand(ss(Vis, Tree, [U|Us], Es), Items?) :-
+    ground(Vis?), ground(Tree?), ground(U?), ground(Us?), ground(Es?) |
+    frontier(Es?, Vis?, Vis?, Tree?, [U?|Us?], Es?, Items).
+
+% One child per frontier edge.
+procedure frontier(EList?, CList?, CList?, EList?, CList?, EList?, Items(SState, EList)).
+frontier([], _, _, _, _, _, []).
+frontier([e(X, Y)|Rest], Vis, Vis2, Tree, Unv, Es, Out?) :-
+    ground(X?), ground(Y?), ground(Vis?), ground(Vis2?), ground(Tree?), ground(Unv?), ground(Es?) |
+    smem(Vis?, X?, Ix),
+    smem(Vis?, Y?, Iy),
+    fr1(Ix?, Iy?, e(X?, Y?), Rest?, Vis2?, Tree?, Unv?, Es?, Out).
+
+procedure fr1(Ans?, Ans?, Edge?, EList?, CList?, EList?, CList?, EList?, Items(SState, EList)).
+fr1(yes, no, e(X, Y), Rest, Vis, Tree, Unv, Es, [node(ss([Y?|Vis?], [e(X?, Y?)|Tree?], Unv1?, Es?))|Out?]) :-
+    ground(X?), ground(Y?), ground(Vis?), ground(Tree?), ground(Unv?), ground(Es?) |
+    sdel(Unv?, Y?, Unv1),
+    frontier(Rest?, Vis?, Vis?, Tree?, Unv?, Es?, Out).
+fr1(no, yes, e(X, Y), Rest, Vis, Tree, Unv, Es, [node(ss([X?|Vis?], [e(X?, Y?)|Tree?], Unv1?, Es?))|Out?]) :-
+    ground(X?), ground(Y?), ground(Vis?), ground(Tree?), ground(Unv?), ground(Es?) |
+    sdel(Unv?, X?, Unv1),
+    frontier(Rest?, Vis?, Vis?, Tree?, Unv?, Es?, Out).
+fr1(yes, yes, _, Rest, Vis, Tree, Unv, Es, Out?) :-
+    frontier(Rest?, Vis?, Vis?, Tree?, Unv?, Es?, Out).
+fr1(no, no, _, Rest, Vis, Tree, Unv, Es, Out?) :-
+    frontier(Rest?, Vis?, Vis?, Tree?, Unv?, Es?, Out).
+
+procedure sdel(CList?, Constant?, CList).
+sdel([], _, []).
+sdel([X|Xs], Y, Xs?) :- X? =?= Y? | true.
+sdel([X|Xs], Y, [X?|R?]) :- otherwise | sdel(Xs?, Y?, R).
+
+procedure smem(CList?, Constant?, Ans).
+smem([], _, no).
+smem([X|_], Y, yes) :- X? =?= Y? | true.
+smem([_|Xs], Y, R?) :- otherwise | smem(Xs?, Y?, R).
+
+% Canonical form: insertion sort of edges, each edge with its ends ordered.
+procedure esort(EList?, EList).
+esort([], []).
+esort([e(X, Y)|Es], R?) :- ground(X?), ground(Y?) |
+    eord(e(X?, Y?), E1),
+    esort(Es?, S),
+    eins(E1?, S?, R).
+
+procedure eord(Edge?, Edge).
+eord(e(X, Y), e(X?, Y?)) :- X? @< Y? | true.
+eord(e(X, Y), e(Y?, X?)) :- otherwise, ground(X?), ground(Y?) | true.
+
+procedure eins(Edge?, EList?, EList).
+eins(E, [], [E?]).
+eins(e(X, Y), [e(X2, Y2)|Rest], [e(X?, Y?), e(X2?, Y2?)|Rest?]) :- X? @< X2? | true.
+eins(e(X, Y), [e(X2, Y2)|Rest], [e(X?, Y?), e(X2?, Y2?)|Rest?]) :-
+    otherwise, X? =?= X2?, Y? @< Y2? | true.
+eins(e(X, Y), [e(X2, Y2)|Rest], [e(X2?, Y2?)|R?]) :-
+    otherwise, ground(X?), ground(Y?) |
+    eins(e(X?, Y?), Rest?, R).
+
+% Deduplicate the collected, canonicalised trees.
+procedure dedup(Stream(EList)?, EListList?, EListList).
+dedup([], _, []).
+dedup([T|Ts], Seen, Out?) :- ground(T?), ground(Seen?) |
+    tmem(Seen?, T?, In),
+    dd1(In?, T?, Ts?, Seen?, Out).
+
+procedure dd1(Ans?, EList?, Stream(EList)?, EListList?, EListList).
+dd1(yes, _, Ts, Seen, Out?) :- dedup(Ts?, Seen?, Out).
+dd1(no, T, Ts, Seen, [T?|Out?]) :- ground(T?) | dedup(Ts?, [T?|Seen?], Out).
+
+procedure tmem(EListList?, EList?, Ans).
+tmem([], _, no).
+tmem([T|_], U, yes) :- T? =?= U? | true.
+tmem([_|Ts], U, R?) :- otherwise | tmem(Ts?, U?, R).

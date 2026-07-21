@@ -1,0 +1,87 @@
+% P86: node degree and Welsh-Powell graph colouring: nodes in decreasing
+% degree order, each given the smallest colour not used by its neighbours.
+
+imported procedure p80#gt_adj(Graph?, AdjList).
+
+exported procedure degree(Graph?, Constant?, Integer).
+degree(G, N, D?) :- ground(G?), ground(N?) |
+    p80 # gt_adj(G?, Adj),
+    lookupn(Adj?, N?, Nbs),
+    clen(Nbs?, 0, D).
+
+exported procedure paint(Graph?, NColList).
+paint(G, Cols?) :- ground(G?) |
+    p80 # gt_adj(G?, Adj),
+    bydeg(Adj?, Dec),
+    dsort(Dec?, Sorted),
+    greedy(Sorted?, [], Cols).
+
+% Decorate entries with their degree, sort descending, greedily colour.
+DAdj ::= d(Integer, Constant, CList).
+DAdjList ::= [] ; [DAdj | DAdjList].
+
+procedure bydeg(AdjList?, DAdjList).
+bydeg([], []).
+bydeg([n(N, Nbs)|A], [d(D?, N?, Nbs?)|R?]) :- ground(Nbs?) |
+    clen(Nbs?, 0, D),
+    bydeg(A?, R).
+
+procedure dsort(DAdjList?, DAdjList).
+dsort([], []).
+dsort([X|Xs], R?) :- ground(X?) | dsort(Xs?, S), dins(X?, S?, R).
+
+procedure dins(DAdj?, DAdjList?, DAdjList).
+dins(X, [], [X?]).
+dins(d(D, N, Nb), [d(D2, N2, Nb2)|Rest], [d(D?, N?, Nb?), d(D2?, N2?, Nb2?)|Rest?]) :-
+    D? >= D2? | true.
+dins(d(D, N, Nb), [d(D2, N2, Nb2)|Rest], [d(D2?, N2?, Nb2?)|R?]) :-
+    D? < D2? | dins(d(D?, N?, Nb?), Rest?, R).
+
+procedure greedy(DAdjList?, NColList?, NColList).
+greedy([], Acc, Acc?).
+greedy([d(_, N, Nbs)|Rest], Acc, Out?) :- ground(Acc?), ground(Nbs?) |
+    usedcols(Nbs?, Acc?, Used),
+    smallfree(1, Used?, K),
+    greedy(Rest?, [c(N?, K?)|Acc?], Out).
+
+% Colours already given to any of the neighbours.
+procedure usedcols(CList?, NColList?, IntList).
+usedcols([], _, []).
+usedcols([N|Ns], Acc, R?) :- ground(Acc?), ground(N?) |
+    colof(Acc?, N?, C),
+    addcol(C?, R1?, R),
+    usedcols(Ns?, Acc?, R1).
+
+MaybeI ::= found(Integer) ; none.
+
+procedure colof(NColList?, Constant?, MaybeI).
+colof([], _, none).
+colof([c(N, K)|_], M, found(K?)) :- N? =?= M? | true.
+colof([c(_, _)|Cs], M, R?) :- otherwise | colof(Cs?, M?, R).
+
+procedure addcol(MaybeI?, IntList?, IntList).
+addcol(none, T, T?).
+addcol(found(K), T, [K?|T?]).
+
+procedure smallfree(Integer?, IntList?, Integer).
+smallfree(K, Used, R?) :- ground(Used?), integer(K?) |
+    imem(Used?, K?, In),
+    sf1(In?, K?, Used?, R).
+
+procedure sf1(Ans?, Integer?, IntList?, Integer).
+sf1(no, K, _, K?).
+sf1(yes, K, Used, R?) :- K1 := K? + 1, smallfree(K1?, Used?, R).
+
+procedure imem(IntList?, Integer?, Ans).
+imem([], _, no).
+imem([X|_], Y, yes) :- X? =:= Y? | true.
+imem([_|Xs], Y, R?) :- otherwise | imem(Xs?, Y?, R).
+
+procedure lookupn(AdjList?, Constant?, CList).
+lookupn([], _, []).
+lookupn([n(N, Nbs)|_], M, Nbs?) :- N? =?= M? | true.
+lookupn([n(_, _)|A], M, R?) :- otherwise | lookupn(A?, M?, R).
+
+procedure clen(CList?, Integer?, Integer).
+clen([], A, A?).
+clen([_|Xs], A, N?) :- A1 := A? + 1, clen(Xs?, A1?, N).
