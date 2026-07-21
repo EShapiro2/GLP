@@ -1,7 +1,5 @@
 % P17: split a list into two parts, the length of the first part is given.
 
-CList ::= [] ; [Constant | CList].
-
 exported procedure split(CList?, Integer?, CList, CList).
 split(L, K, [], L?) :- K? =< 0 | true.
 split([], K, [], []) :- K? > 0 | true.

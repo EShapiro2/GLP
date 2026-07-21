@@ -1,15 +1,10 @@
 % P06: find out whether a list is a palindrome.
 % The Prolog test predicate becomes a total procedure answering yes or no.
 
-CList ::= [] ; [Constant | CList].
-Ans ::= yes ; no.
+imported procedure p05#reverse(CList?, CList).
 
 exported procedure palindrome(CList?, Ans).
-palindrome(L, R?) :- ground(L?) | rev(L?, [], V), eq(L?, V?, R).
-
-procedure rev(CList?, CList?, CList).
-rev([], A, A?).
-rev([X|Xs], A, R?) :- rev(Xs?, [X?|A?], R).
+palindrome(L, R?) :- ground(L?) | p05 # reverse(L?, V), eq(L?, V?, R).
 
 procedure eq(CList?, CList?, Ans).
 eq(A, B, yes) :- A? =?= B? | true.

@@ -1,13 +1,9 @@
 % P10: run-length encoding of a list, via packing (P09).
 
-CList ::= [] ; [Constant | CList].
-OpenCList ::= [Constant | CList].
-GroupList ::= [] ; [OpenCList | GroupList].
-RItem ::= rl(Integer, Constant).
-RList ::= [] ; [RItem | RList].
+imported procedure p09#pack(CList?, GroupList).
 
 exported procedure encode(CList?, RList).
-encode(L, R?) :- pack(L?, G), map_rl(G?, R).
+encode(L, R?) :- p09 # pack(L?, G), map_rl(G?, R).
 
 procedure map_rl(GroupList?, RList).
 map_rl([], []).
@@ -17,12 +13,3 @@ procedure glen(CList?, Integer?, Integer).
 glen([], A, A?).
 glen([_|Xs], A, N?) :- A1 := A? + 1, glen(Xs?, A1?, N).
 
-% pack, per P09.
-procedure pack(CList?, GroupList).
-pack([], []).
-pack([X|Xs], [[X?|G?]|R?]) :- ground(X?) | pk(Xs?, X?, G, R).
-
-procedure pk(CList?, Constant?, CList, GroupList).
-pk([], _, [], []).
-pk([Y|Ys], C, [Y?|G?], R?) :- Y? =?= C? | pk(Ys?, C?, G, R).
-pk([Y|Ys], _, [], [[Y?|G?]|R?]) :- otherwise, ground(Y?) | pk(Ys?, Y?, G, R).

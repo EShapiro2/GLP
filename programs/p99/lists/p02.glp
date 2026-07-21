@@ -1,10 +1,6 @@
 % P02: find the last but one element of a list.
 % The input type is the list of at least two elements.
 
-CList ::= [] ; [Constant | CList].
-OpenCList ::= [Constant | CList].
-Open2CList ::= [Constant | OpenCList].
-
 exported procedure last_but_one(Open2CList?, Constant).
 last_but_one([X, Y|Xs], R?) :- lbo(Xs?, X?, Y?, R).
 

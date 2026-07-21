@@ -1,9 +1,6 @@
 % P01: find the last element of a list.
 % The input type is the nonempty list: Prolog's failure on [] becomes a type.
 
-CList ::= [] ; [Constant | CList].
-OpenCList ::= [Constant | CList].
-
 exported procedure last(OpenCList?, Constant).
 last([X|Xs], R?) :- last1(Xs?, X?, R).
 

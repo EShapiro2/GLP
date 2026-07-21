@@ -1,9 +1,5 @@
 % P12: decode a modified run-length encoded list (P11's format).
 
-CList ::= [] ; [Constant | CList].
-MItem ::= one(Constant) ; many(Integer, Constant).
-MList ::= [] ; [MItem | MList].
-
 exported procedure decode(MList?, CList).
 decode([], []).
 decode([one(X)|Ms], [X?|R?]) :- decode(Ms?, R).

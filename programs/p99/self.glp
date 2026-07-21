@@ -29,6 +29,14 @@ MergeDone ::= done.
 
 IntList ::= [] ; [Integer | IntList].
 
+% Shared problem types: lists of constants, their nonempty forms, groupings,
+% and the yes/no answer type of test predicates.
+CList ::= [] ; [Constant | CList].
+OpenCList ::= [Constant | CList].
+Open2CList ::= [Constant | OpenCList].
+GroupList ::= [] ; [OpenCList | GroupList].
+Ans ::= yes ; no.
+
 % ---------------------------------------------------------------------------
 % Entry points
 % ---------------------------------------------------------------------------

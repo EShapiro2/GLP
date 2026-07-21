@@ -1,10 +1,125 @@
-% P99 section: Lists (P01-P28).  Entry points forwarded per problem module.
+% P99 section: Lists (P01-P28).  Section-shared types and the section
+% interface: every problem's entry point, forwarded to its module.
+% Shared cross-section types (CList, OpenCList, GroupList, IntList, Maybe(R),
+% Ans, the search-library types) are in the parent p99/self.glp.
+
+% Run-length formats (P10-P13).
+RItem ::= rl(Integer, Constant).
+RList ::= [] ; [RItem | RList].
+MItem ::= one(Constant) ; many(Integer, Constant).
+MList ::= [] ; [MItem | MList].
+
+% Nested lists (P07): an element is a constant or a sublist.
+Nest ::= [] ; [NItem | Nest].
+NItem ::= e(Constant) ; s(Nest).
+
+% Lists of lists (P28).
+LList ::= [] ; [CList | LList].
+
+imported procedure p01#last(OpenCList?, Constant).
+exported procedure last(OpenCList?, Constant).
+last(L, R?) :- p01 # last(L?, R).
+
+imported procedure p02#last_but_one(Open2CList?, Constant).
+exported procedure last_but_one(Open2CList?, Constant).
+last_but_one(L, R?) :- p02 # last_but_one(L?, R).
+
+imported procedure p03#element_at(CList?, Integer?, Maybe(Constant)).
+exported procedure element_at(CList?, Integer?, Maybe(Constant)).
+element_at(L, K, R?) :- p03 # element_at(L?, K?, R).
+
+imported procedure p04#len(CList?, Integer).
+exported procedure len(CList?, Integer).
+len(L, N?) :- p04 # len(L?, N).
+
+imported procedure p05#reverse(CList?, CList).
+exported procedure reverse(CList?, CList).
+reverse(L, R?) :- p05 # reverse(L?, R).
+
+imported procedure p06#palindrome(CList?, Ans).
+exported procedure palindrome(CList?, Ans).
+palindrome(L, R?) :- p06 # palindrome(L?, R).
+
+imported procedure p07#flatten(Nest?, CList).
+exported procedure flatten(Nest?, CList).
+flatten(N, R?) :- p07 # flatten(N?, R).
+
+imported procedure p08#compress(CList?, CList).
+exported procedure compress(CList?, CList).
+compress(L, R?) :- p08 # compress(L?, R).
+
+imported procedure p09#pack(CList?, GroupList).
+exported procedure pack(CList?, GroupList).
+pack(L, R?) :- p09 # pack(L?, R).
+
+imported procedure p10#encode(CList?, RList).
+exported procedure encode(CList?, RList).
+encode(L, R?) :- p10 # encode(L?, R).
+
+imported procedure p11#encode_modified(CList?, MList).
+exported procedure encode_modified(CList?, MList).
+encode_modified(L, R?) :- p11 # encode_modified(L?, R).
+
+imported procedure p12#decode(MList?, CList).
+exported procedure decode(MList?, CList).
+decode(L, R?) :- p12 # decode(L?, R).
+
+imported procedure p13#encode_direct(CList?, MList).
+exported procedure encode_direct(CList?, MList).
+encode_direct(L, R?) :- p13 # encode_direct(L?, R).
+
+imported procedure p14#dupli(CList?, CList).
+exported procedure dupli(CList?, CList).
+dupli(L, R?) :- p14 # dupli(L?, R).
+
+imported procedure p15#repli(CList?, Integer?, CList).
+exported procedure repli(CList?, Integer?, CList).
+repli(L, N, R?) :- p15 # repli(L?, N?, R).
+
+imported procedure p16#drop_every(CList?, Integer?, CList).
+exported procedure drop_every(CList?, Integer?, CList).
+drop_every(L, N, R?) :- p16 # drop_every(L?, N?, R).
+
+imported procedure p17#split(CList?, Integer?, CList, CList).
+exported procedure split(CList?, Integer?, CList, CList).
+split(L, K, F?, B?) :- p17 # split(L?, K?, F, B).
+
+imported procedure p18#slice(CList?, Integer?, Integer?, CList).
+exported procedure slice(CList?, Integer?, Integer?, CList).
+slice(L, I, K, R?) :- p18 # slice(L?, I?, K?, R).
+
+imported procedure p19#rotate(CList?, Integer?, CList).
+exported procedure rotate(CList?, Integer?, CList).
+rotate(L, N, R?) :- p19 # rotate(L?, N?, R).
+
+imported procedure p20#remove_at(CList?, Integer?, Maybe(Constant), CList).
+exported procedure remove_at(CList?, Integer?, Maybe(Constant), CList).
+remove_at(L, K, X?, R?) :- p20 # remove_at(L?, K?, X, R).
+
+imported procedure p21#insert_at(Constant?, CList?, Integer?, CList).
+exported procedure insert_at(Constant?, CList?, Integer?, CList).
+insert_at(X, L, K, R?) :- p21 # insert_at(X?, L?, K?, R).
+
+imported procedure p22#range(Integer?, Integer?, IntList).
+exported procedure range(Integer?, Integer?, IntList).
+range(I, K, R?) :- p22 # range(I?, K?, R).
 
 imported procedure p26#combinations(Integer?, Integer?, Stream(IntList)).
-imported procedure p26#combinations_first(Integer?, Integer?, Maybe(IntList)).
-
 exported procedure combinations(Integer?, Integer?, Stream(IntList)).
 combinations(K, N, Sols?) :- p26 # combinations(K?, N?, Sols).
 
+imported procedure p26#combinations_first(Integer?, Integer?, Maybe(IntList)).
 exported procedure combinations_first(Integer?, Integer?, Maybe(IntList)).
 combinations_first(K, N, Res?) :- p26 # combinations_first(K?, N?, Res).
+
+imported procedure p27#group(CList?, IntList?, Stream(LList)).
+exported procedure group(CList?, IntList?, Stream(LList)).
+group(L, Sizes, Sols?) :- p27 # group(L?, Sizes?, Sols).
+
+imported procedure p28#lsort(LList?, LList).
+exported procedure lsort(LList?, LList).
+lsort(L, R?) :- p28 # lsort(L?, R).
+
+imported procedure p28#lfsort(LList?, LList).
+exported procedure lfsort(LList?, LList).
+lfsort(L, R?) :- p28 # lfsort(L?, R).

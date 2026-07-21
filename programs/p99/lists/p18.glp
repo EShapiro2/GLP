@@ -1,8 +1,6 @@
 % P18: extract a slice from a list, from the I'th to the K'th element (1-based,
 % both inclusive).
 
-CList ::= [] ; [Constant | CList].
-
 exported procedure slice(CList?, Integer?, Integer?, CList).
 slice(L, I, K, R?) :- I? =< 1 | take(L?, K?, R).
 slice([], I, _, []) :- I? > 1 | true.

@@ -1,7 +1,5 @@
 % P08: eliminate consecutive duplicates of list elements.
 
-CList ::= [] ; [Constant | CList].
-
 exported procedure compress(CList?, CList).
 compress([], []).
 compress([X|Xs], [X?|R?]) :- ground(X?) | comp(Xs?, X?, R).

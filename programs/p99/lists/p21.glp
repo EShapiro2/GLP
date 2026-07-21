@@ -1,8 +1,6 @@
 % P21: insert an element at the K'th position of a list (1-based).  K below 1
 % inserts at the front; K beyond the end appends.
 
-CList ::= [] ; [Constant | CList].
-
 exported procedure insert_at(Constant?, CList?, Integer?, CList).
 insert_at(X, L, K, [X?|L?]) :- K? =< 1 | true.
 insert_at(X, [], K, [X?]) :- K? > 1 | true.

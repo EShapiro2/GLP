@@ -1,7 +1,5 @@
 % P04: find the number of elements of a list.
 
-CList ::= [] ; [Constant | CList].
-
 exported procedure len(CList?, Integer).
 len([], 0).
 len([_|Xs], N?) :- len(Xs?, M), N := M? + 1.

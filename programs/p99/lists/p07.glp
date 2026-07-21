@@ -2,10 +2,6 @@
 % Prolog's heterogeneous nested list becomes a typed tree: an element is
 % e(Constant) or a sublist s(Nest).
 
-CList ::= [] ; [Constant | CList].
-Nest ::= [] ; [NItem | Nest].
-NItem ::= e(Constant) ; s(Nest).
-
 exported procedure flatten(Nest?, CList).
 flatten(N, R?) :- flat(N?, [], R).
 

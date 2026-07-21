@@ -1,10 +1,7 @@
 % P03: find the K'th element of a list (1-based).
 % Prolog fails out of range; the GLP procedure is total, answering none.
 
-CList ::= [] ; [Constant | CList].
-MaybeC ::= found(Constant) ; none.
-
-exported procedure element_at(CList?, Integer?, MaybeC).
+exported procedure element_at(CList?, Integer?, Maybe(Constant)).
 element_at([], _, none).
 element_at([X|_], 1, found(X?)).
 element_at([_|Xs], K, R?) :- K? > 1 | K1 := K? - 1, element_at(Xs?, K1?, R).

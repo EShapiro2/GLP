@@ -1,7 +1,5 @@
 % P16: drop every N'th element from a list.
 
-CList ::= [] ; [Constant | CList].
-
 exported procedure drop_every(CList?, Integer?, CList).
 drop_every(L, N, R?) :- integer(N?) | dr(L?, N?, N?, R).
 

@@ -1,10 +1,7 @@
 % P20: remove the K'th element from a list (1-based).  Total: out of range
 % removes nothing and answers none.
 
-CList ::= [] ; [Constant | CList].
-MaybeC ::= found(Constant) ; none.
-
-exported procedure remove_at(CList?, Integer?, MaybeC, CList).
+exported procedure remove_at(CList?, Integer?, Maybe(Constant), CList).
 remove_at([], _, none, []).
 remove_at([X|Xs], 1, found(X?), Xs?).
 remove_at([X|Xs], K, M?, [X?|R?]) :- K? > 1 | K1 := K? - 1, remove_at(Xs?, K1?, M, R).

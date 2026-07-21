@@ -2,8 +2,6 @@
 %      (b) lfsort — sort by ascending length frequency.
 % Decorate with the sort key, insertion-sort on the key, undecorate.
 
-CList ::= [] ; [Constant | CList].
-LList ::= [] ; [CList | LList].
 PItem ::= pl(Integer, CList).
 PList ::= [] ; [PItem | PList].
 FItem ::= f(Integer, Integer).

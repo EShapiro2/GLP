@@ -1,0 +1,73 @@
+% P27: group the elements of a set into disjoint subsets of given sizes.
+% Search-all via the P99 parallel-search library.  A state carries the
+% remaining elements, the remaining group sizes, and the groups chosen so far
+% (reversed); a node expands into one child per way of choosing the next group.
+% The sizes must sum to the number of elements; otherwise there are no
+% solutions.
+
+GState ::= st(CList, IntList, LList).
+ChItem ::= ch(CList, CList).
+ChList ::= [] ; [ChItem | ChList].
+
+exported procedure group(CList?, IntList?, Stream(LList)).
+group(L, Sizes, Sols?) :-
+    ground(L?), ground(Sizes?) |
+    solve_all(st(L?, Sizes?, []), Reqs, Sols),
+    expand_server(Reqs?).
+
+% ---------------------------------------------------------------------------
+% Expander
+% ---------------------------------------------------------------------------
+
+procedure expand_server(Stream(Req(GState, LList))?).
+expand_server([]).
+expand_server([expand(St, Items?)|Rs]) :-
+    expand(St?, Items),
+    expand_server(Rs?).
+
+procedure expand(GState?, Items(GState, LList)).
+expand(st([], [], Acc), [sol(R?)]) :- revl(Acc?, [], R).
+expand(st([_|_], [], _), []).
+expand(st(Rem, [K|Ks], Acc), Items?) :-
+    ground(Rem?) |
+    combs(K?, Rem?, Ch),
+    mk_children(Ch?, Ks?, Acc?, Items).
+
+procedure mk_children(ChList?, IntList?, LList?, Items(GState, LList)).
+mk_children([], _, _, []).
+mk_children([ch(C, Rst)|Ps], Ks, Acc, [node(st(Rst?, Ks?, [C?|Acc?]))|R?]) :-
+    ground(Ks?), ground(Acc?) |
+    mk_children(Ps?, Ks?, Acc?, R).
+
+% combs(K, L, Ch): all ways ch(Chosen, Rest) of choosing K elements from L.
+procedure combs(Integer?, CList?, ChList).
+combs(K, L, [ch([], L?)]) :- K? =< 0 | true.
+combs(K, [], []) :- K? > 0 | true.
+combs(K, [X|Xs], R?) :-
+    K? > 0, ground(X?), ground(Xs?) |
+    K1 := K? - 1,
+    combs(K1?, Xs?, With),
+    add_chosen(With?, X?, WithX),
+    combs(K?, Xs?, Without),
+    add_rest(Without?, X?, WoX),
+    app_ch(WithX?, WoX?, R).
+
+procedure add_chosen(ChList?, Constant?, ChList).
+add_chosen([], _, []).
+add_chosen([ch(C, Rst)|Ps], X, [ch([X?|C?], Rst?)|R?]) :-
+    ground(X?) |
+    add_chosen(Ps?, X?, R).
+
+procedure add_rest(ChList?, Constant?, ChList).
+add_rest([], _, []).
+add_rest([ch(C, Rst)|Ps], X, [ch(C?, [X?|Rst?])|R?]) :-
+    ground(X?) |
+    add_rest(Ps?, X?, R).
+
+procedure app_ch(ChList?, ChList?, ChList).
+app_ch([], Ys, Ys?).
+app_ch([P|Ps], Ys, [P?|R?]) :- app_ch(Ps?, Ys?, R).
+
+procedure revl(LList?, LList?, LList).
+revl([], A, A?).
+revl([G|Gs], A, R?) :- revl(Gs?, [G?|A?], R).

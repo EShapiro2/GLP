@@ -1,14 +1,14 @@
 % P19: rotate a list N places to the left; N may be negative or exceed the
 % length (GLP's mod is non-negative for positive modulus).
 
-CList ::= [] ; [Constant | CList].
+imported procedure p17#split(CList?, Integer?, CList, CList).
 
 exported procedure rotate(CList?, Integer?, CList).
 rotate(L, N, R?) :-
     ground(L?) |
     llen(L?, 0, Len),
     norm(N?, Len?, K),
-    splitk(L?, K?, F, B),
+    p17 # split(L?, K?, F, B),
     app(B?, F?, R).
 
 procedure norm(Integer?, Integer?, Integer).
@@ -19,11 +19,6 @@ procedure llen(CList?, Integer?, Integer).
 llen([], A, A?).
 llen([_|Xs], A, N?) :- A1 := A? + 1, llen(Xs?, A1?, N).
 
-% split, per P17.
-procedure splitk(CList?, Integer?, CList, CList).
-splitk(L, K, [], L?) :- K? =< 0 | true.
-splitk([], K, [], []) :- K? > 0 | true.
-splitk([X|Xs], K, [X?|F?], R?) :- K? > 0 | K1 := K? - 1, splitk(Xs?, K1?, F, R).
 
 procedure app(CList?, CList?, CList).
 app([], Ys, Ys?).
