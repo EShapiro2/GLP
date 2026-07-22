@@ -95,7 +95,7 @@ procedure _output(_?).
 % =============================================================================
 
 % Assignment (unification)
-procedure =(_?, _).
+procedure =(X, X?).
 X? = X.
 
 % Difference list operations

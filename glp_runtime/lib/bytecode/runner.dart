@@ -60,7 +60,8 @@ enum UnifyMode { read, write }
 enum GuardResult {
   success,  // Guard succeeded, continue with clause
   failure,  // Guard failed, try next clause
-  suspend,  // Would suspend, but we handle this before evaluation
+  suspend,  // Guard blocked on unbound readers (already added to cx.U);
+            // negation-invariant — execGuard suspends without inverting
 }
 
 typedef LabelName = String;
@@ -403,6 +404,15 @@ GuardResult _evaluateGuard(String predicateName, List<Object?> args, RunnerConte
     return v;
   }
 
+  // Unbound readers that blocked arithmetic/constant evaluation of a guard
+  // operand (readers nested inside expression structures — the top-level
+  // dereference in execGuard does not descend into structures). Per the guards
+  // reference (Comparison Guards), a comparison whose operand is an unbound
+  // reader SUSPENDS; it fails only on bound, non-numeric operands or a false
+  // comparison. When evaluation returns null AND this set is non-empty, the
+  // guard suspends on these readers instead of failing.
+  final blockedReaders = <int>{};
+
   // Evaluate arithmetic expressions to numeric values
   // Supports: X, X + Y, X - Y, X * Y, X / Y, X // Y, X mod Y, -X
   num? evaluateNumeric(Object? v) {
@@ -411,13 +421,25 @@ GuardResult _evaluateGuard(String predicateName, List<Object?> args, RunnerConte
     // Handle VarRef - dereference to get actual value
     if (v is VarRef) {
       if (cx.rt.heap.isReader(v.addr)) {
+        // Tentative σ̂w binding of the paired writer (this clause try) wins
+        // over the heap, mirroring _dereferenceWithTracking.
+        final writerAddr = cx.rt.heap.tryWriterForReader(v.addr);
+        if (writerAddr != null && cx.sigmaHat.containsKey(writerAddr)) {
+          return evaluateNumeric(cx.sigmaHat[writerAddr]);
+        }
         // Use isReaderBound/getReaderValue for imported reader support
-        if (!cx.rt.heap.isReaderBound(v.addr)) return null; // Unbound
+        if (!cx.rt.heap.isReaderBound(v.addr)) {
+          blockedReaders.add(v.addr); // Unbound reader blocks evaluation
+          return null;
+        }
         final deref = cx.rt.heap.getReaderValue(v.addr);
         return evaluateNumeric(deref);
       } else {
+        if (cx.sigmaHat.containsKey(v.addr)) {
+          return evaluateNumeric(cx.sigmaHat[v.addr]);
+        }
         final deref = cx.rt.heap.getValue(v.addr);
-        if (deref == null) return null; // Unbound
+        if (deref == null) return null; // Unbound writer — cannot suspend on it
         return evaluateNumeric(deref);
       }
     }
@@ -477,26 +499,27 @@ GuardResult _evaluateGuard(String predicateName, List<Object?> args, RunnerConte
     return null;
   }
 
+  // A guard operand failed to evaluate: suspend if unbound readers blocked the
+  // evaluation (guards-reference: comparison guards suspend on unbound reader
+  // operands), fail otherwise (bound but non-numeric — a type error).
+  GuardResult blockedOrFail() {
+    if (blockedReaders.isNotEmpty) {
+      cx.U.addAll(blockedReaders);
+      return GuardResult.suspend;
+    }
+    return GuardResult.failure;
+  }
+
   switch (predicateName) {
     // Comparison guards (with arithmetic expression support)
     case '<':
       if (args.length < 2) return GuardResult.failure;
       final a = evaluateNumeric(args[0]);
       final b = evaluateNumeric(args[1]);
-
-      // Debug output
-      // print('[EVAL_GUARD] < comparison:');
-      // print('[EVAL_GUARD]   args[0] = ${args[0]} (${args[0].runtimeType})');
-      // print('[EVAL_GUARD]   args[1] = ${args[1]} (${args[1].runtimeType})');
-      // print('[EVAL_GUARD]   a = $a (${a.runtimeType})');
-      // print('[EVAL_GUARD]   b = $b (${b.runtimeType})');
-      // print('[EVAL_GUARD]   a is num = ${a is num}');
-      // print('[EVAL_GUARD]   b is num = ${b is num}');
-
       if (a != null && b != null) {
         return a < b ? GuardResult.success : GuardResult.failure;
       }
-      return GuardResult.failure;
+      return blockedOrFail();
 
     case '>':
       if (args.length < 2) return GuardResult.failure;
@@ -505,7 +528,7 @@ GuardResult _evaluateGuard(String predicateName, List<Object?> args, RunnerConte
       if (a != null && b != null) {
         return a > b ? GuardResult.success : GuardResult.failure;
       }
-      return GuardResult.failure;
+      return blockedOrFail();
 
     case '=<':
       if (args.length < 2) return GuardResult.failure;
@@ -514,7 +537,7 @@ GuardResult _evaluateGuard(String predicateName, List<Object?> args, RunnerConte
       if (a != null && b != null) {
         return a <= b ? GuardResult.success : GuardResult.failure;
       }
-      return GuardResult.failure;
+      return blockedOrFail();
 
     case '>=':
       if (args.length < 2) return GuardResult.failure;
@@ -523,7 +546,7 @@ GuardResult _evaluateGuard(String predicateName, List<Object?> args, RunnerConte
       if (a != null && b != null) {
         return a >= b ? GuardResult.success : GuardResult.failure;
       }
-      return GuardResult.failure;
+      return blockedOrFail();
 
     case '=:=':
       if (args.length < 2) return GuardResult.failure;
@@ -532,7 +555,7 @@ GuardResult _evaluateGuard(String predicateName, List<Object?> args, RunnerConte
       if (a != null && b != null) {
         return a == b ? GuardResult.success : GuardResult.failure;
       }
-      return GuardResult.failure;
+      return blockedOrFail();
 
     case '=\\=':
       if (args.length < 2) return GuardResult.failure;
@@ -541,7 +564,7 @@ GuardResult _evaluateGuard(String predicateName, List<Object?> args, RunnerConte
       if (a != null && b != null) {
         return a != b ? GuardResult.success : GuardResult.failure;
       }
-      return GuardResult.failure;
+      return blockedOrFail();
 
     // Lexicographic comparison of ground constants (atoms/strings/numbers)
     case '@<':
@@ -554,8 +577,18 @@ GuardResult _evaluateGuard(String predicateName, List<Object?> args, RunnerConte
         if (v is String || v is num) return v.toString();
         if (v is VarRef) {
           if (cx.rt.heap.isReader(v.addr)) {
-            if (!cx.rt.heap.isReaderBound(v.addr)) return null;
+            final writerAddr = cx.rt.heap.tryWriterForReader(v.addr);
+            if (writerAddr != null && cx.sigmaHat.containsKey(writerAddr)) {
+              return evalConst(cx.sigmaHat[writerAddr]);
+            }
+            if (!cx.rt.heap.isReaderBound(v.addr)) {
+              blockedReaders.add(v.addr);
+              return null;
+            }
             return evalConst(cx.rt.heap.getReaderValue(v.addr));
+          }
+          if (cx.sigmaHat.containsKey(v.addr)) {
+            return evalConst(cx.sigmaHat[v.addr]);
           }
           final deref = cx.rt.heap.getValue(v.addr);
           return deref == null ? null : evalConst(deref);
@@ -567,7 +600,7 @@ GuardResult _evaluateGuard(String predicateName, List<Object?> args, RunnerConte
       if (lc != null && rc != null) {
         return lc.compareTo(rc) < 0 ? GuardResult.success : GuardResult.failure;
       }
-      return GuardResult.failure;
+      return blockedOrFail();
 
     // Type guards
     case 'ground':
@@ -752,7 +785,7 @@ GuardResult _evaluateGuard(String predicateName, List<Object?> args, RunnerConte
       // IMPORTANT: On resume, check if timer has already fired (avoid infinite loop)
       if (args.isEmpty) return GuardResult.failure;
       final duration = evaluateNumeric(args[0]);
-      if (duration == null) return GuardResult.failure;
+      if (duration == null) return blockedOrFail();
       if (duration <= 0) return GuardResult.success;
 
       // Check if this goal already has a pending wait
@@ -804,7 +837,7 @@ GuardResult _evaluateGuard(String predicateName, List<Object?> args, RunnerConte
       // - current time < Timestamp: suspend until time passes (timer-based)
       if (args.isEmpty) return GuardResult.failure;
       final timestamp = evaluateNumeric(args[0]);
-      if (timestamp == null) return GuardResult.failure;
+      if (timestamp == null) return blockedOrFail();
       final now = DateTime.now().millisecondsSinceEpoch;
       if (now >= timestamp) return GuardResult.success;
 
@@ -1766,6 +1799,11 @@ mixin OpExecutors {
     }
 
     var result = _evaluateGuard(predicateName, args, cx);
+    if (result == GuardResult.suspend) {
+      // Blocked on unbound readers (already added to cx.U by _evaluateGuard).
+      // Suspension is negation-invariant: ~G on an undecidable G also suspends.
+      return StepOutcome.nextClause;
+    }
     if (negated) {
       if (result == GuardResult.success) {
         result = GuardResult.failure;

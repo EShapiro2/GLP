@@ -635,7 +635,7 @@ test_dl_to_list([1,2,3]\\[], Ldtl).
 HEREDOC
 2>&1)
 
-check "DL bind via = ill-typed: writer at input arg" "(Xdl, 0, input)" "$a23"
+check "DL bind via =" 'Xdl = \\(foo, bar)' "$a23"
 check "DL dl_to_list" 'Ldtl = \[1, 2, 3\]' "$a23"
 
 # --- A24: Suspension tests ---
@@ -673,7 +673,7 @@ HEREDOC
 
 check "quoted functor" "Rqf1 = 6" "$a25"
 check "double 5" "Rqb1 = 10" "$a25"
-check "struct bind via = ill-typed: writer at input arg" "(X, 0, input)" "$a25"
+check "struct bind via =" "X = _equator(" "$a25"
 
 # --- A26: Univ, assignment, MWM (stdlib, no file needed) ---
 echo "--- A26: Univ, assignment, MWM ---"
@@ -707,12 +707,12 @@ check "Univ compose foo" "T1 = foo()" "$a26"
 check "Univ compose bar" "T2 = bar(x, y)" "$a26"
 check "Univ decompose foo(a,b)" "L1 = \[foo, a, b\]" "$a26"
 check "Univ decompose bar(1,2,3)" "L2 = \[bar, 1, 2, 3\]" "$a26"
-check "Unify atom ill-typed: writer at = input arg" "(Xu1, 0, input)" "$a26"
-check "Unify number ill-typed: writer at = input arg" "(Xu2, 0, input)" "$a26"
-check "Unify struct ill-typed: writer at = input arg" "(Xu3, 0, input)" "$a26"
-check "Unify list ill-typed: writer at = input arg" "(Xu4, 0, input)" "$a26"
-check "Unify nested ill-typed: writer at = input arg" "(Xu5, 0, input)" "$a26"
-check "Unify suspend ill-typed: writer at = input arg" "(Xu6, 0, input)" "$a26"
+check "Unify atom" "Xu1 = foo" "$a26"
+check "Unify number" "Xu2 = 42" "$a26"
+check "Unify struct" "Xu3 = foo(a, b)" "$a26"
+check "Unify list" 'Xu4 = \[1, 2, 3\]' "$a26"
+check "Unify nested" "Xu5 = foo(bar(a))" "$a26"
+check "Unify unbound reader aliases" "Xu6 = <unbound>" "$a26"
 check "Assign 3" "Xa1 = 3" "$a26"
 check "Assign add" "Xa2 = 8" "$a26"
 check "Assign sub" "Xa3 = 6" "$a26"
@@ -874,6 +874,26 @@ HEREDOC
 check "Forwarded-writer wake depth 1" "O1 = a" "$a31"
 check "Forwarded-writer wake depth 2" "O2 = a" "$a31"
 check "Forwarded-writer wake depth 4" "O4 = a" "$a31"
+
+# --- A32: Guard suspension on expression readers; =/2 on unbound reader ---
+# Bug of 2026-07-22 (pair-disconnect report): (1) a comparison guard whose
+# operand held an unbound reader inside an arithmetic/constant expression
+# failed instead of suspending; (2) =/2 called before its input reader was
+# bound failed instead of aliasing (root self.glp clause restored to X = X?.).
+echo "--- A32: Guard suspension on expression readers; =/2 aliasing ---"
+a32=$("$REPL_RUN" <<HEREDOC
+$GLP_DIR/programs/tests/test_p99_probe4.glp
+walkd(35, 4, R1).
+oncec(35, 4, R2).
+walk(35, 4, R3).
+gst([a, '(', b, ',', c, ')'], T).
+:quit
+HEREDOC
+2>&1)
+check "Expression-guard suspend (walkd)" "R1 = 6" "$a32"
+check "=/2 on unbound reader (oncec)" "R2 = 6" "$a32"
+check "pf clause-4 shape (walk)" "R3 = 6" "$a32"
+check "p67 pt1 chain (gst)" "T = gt(a, gt(b, gnil, gnil), gt(c, gnil, gnil))" "$a32"
 
 SECTION_A_PASS=$PASS
 SECTION_A_FAIL=$FAIL

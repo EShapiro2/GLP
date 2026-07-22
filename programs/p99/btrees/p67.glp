@@ -32,7 +32,7 @@ pt1([C|Cs], V, T?, Rest?) :- C? =?= '(' |
     pt(R2?, Rt, R3),
     expect(R3?, ')', R4),
     mkt(V?, L?, Rt?, T),
-    R4? = Rest.
+    Rest = R4?.
 pt1([C|Cs], V, t(V?, nil, nil), [C?|Cs?]) :- otherwise | true.
 
 procedure mkt(Constant?, BTree?, BTree?, BTree).

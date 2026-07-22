@@ -27,7 +27,7 @@ walkb(N, D, R?) :- D? =< N? | bump(D?, D1), walkb(N?, D1?, R).
 
 % Variant C: expression guard + helper call, no recursion after.
 procedure oncec(Integer?, Integer?, Integer).
-oncec(N, D, R?) :- D? * D? =< N? | bump(D?, R1), R1? = R.
+oncec(N, D, R?) :- D? * D? =< N? | bump(D?, R1), R = R1?.
 oncec(N, D, 0) :- D? * D? > N? | true.
 
 % Variant D: ONE expression guard conjunct + helper call + recursion.
@@ -49,3 +49,36 @@ self(C, R?) :- C? =?= a | bump(2, X), addz(X?, R).
 self(_, 0) :- otherwise | true.
 procedure addz(Integer?, Integer).
 addz(X, R?) :- R := X? + 0.
+
+% Variant G: the full p67 pt1 shape — five-goal body chain with four local
+% pairs behind a constant-comparison guard (instance 2 of the bug report).
+GCL ::= [] ; [Constant | GCL].
+GBT ::= gnil ; gt(Constant, GBT, GBT).
+
+procedure gst(GCL?, GBT).
+gst(S, T?) :- gpt(S?, T, _).
+
+procedure gpt(GCL?, GBT, GCL).
+gpt([], gnil, []).
+gpt([C|Cs], gnil, [C?|Cs?]) :- C? =?= ')' | true.
+gpt([C|Cs], gnil, [C?|Cs?]) :- C? =?= ',' | true.
+gpt([C|Cs], T?, Rest?) :- otherwise, ground(C?) | gpt1(Cs?, C?, T, Rest).
+
+procedure gpt1(GCL?, Constant?, GBT, GCL).
+gpt1([], V, gt(V?, gnil, gnil), []).
+gpt1([C|Cs], V, T?, Rest?) :- C? =?= '(' |
+    gpt(Cs?, L, R1),
+    gexpect(R1?, ',', R2),
+    gpt(R2?, Rt, R3),
+    gexpect(R3?, ')', R4),
+    gmkt(V?, L?, Rt?, T),
+    Rest = R4?.
+gpt1([C|Cs], V, gt(V?, gnil, gnil), [C?|Cs?]) :- otherwise | true.
+
+procedure gmkt(Constant?, GBT?, GBT?, GBT).
+gmkt(V, L, R, gt(V?, L?, R?)).
+
+procedure gexpect(GCL?, Constant?, GCL).
+gexpect([], _, []).
+gexpect([X|Xs], C, Xs?) :- X? =?= C? | true.
+gexpect([X|Xs], _, [X?|Xs?]) :- otherwise | true.
