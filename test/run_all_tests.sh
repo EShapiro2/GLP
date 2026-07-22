@@ -875,12 +875,14 @@ check "Forwarded-writer wake depth 1" "O1 = a" "$a31"
 check "Forwarded-writer wake depth 2" "O2 = a" "$a31"
 check "Forwarded-writer wake depth 4" "O4 = a" "$a31"
 
-# --- A32: Guard suspension on expression readers; =/2 on unbound reader ---
+# --- A32: Guard suspension on expression readers; =/2 call convention ---
 # Bug of 2026-07-22 (pair-disconnect report): (1) a comparison guard whose
 # operand held an unbound reader inside an arithmetic/constant expression
-# failed instead of suspending; (2) =/2 called before its input reader was
-# bound failed instead of aliasing (root self.glp clause restored to X = X?.).
-echo "--- A32: Guard suspension on expression readers; =/2 aliasing ---"
+# failed instead of suspending (runner.dart); (2) =/2 was declared with reversed
+# modes (=(_?, _)) so the type-checker accepted the backwards call `R4? = Rest`
+# (which deadlocks) and rejected the sanctioned `Rest = R4?`; declaration fixed
+# to =(X, X?), clause X? = X. unchanged, and the P99 call sites corrected.
+echo "--- A32: Guard suspension on expression readers; =/2 call convention ---"
 a32=$("$REPL_RUN" <<HEREDOC
 $GLP_DIR/programs/tests/test_p99_probe4.glp
 walkd(35, 4, R1).
@@ -894,6 +896,23 @@ check "Expression-guard suspend (walkd)" "R1 = 6" "$a32"
 check "=/2 on unbound reader (oncec)" "R2 = 6" "$a32"
 check "pf clause-4 shape (walk)" "R3 = 6" "$a32"
 check "p67 pt1 chain (gst)" "T = gt(a, gt(b, gnil, gnil), gt(c, gnil, gnil))" "$a32"
+
+# --- A33: Seeded random (random/4, GLP-ICLP appendix-guards) ---
+# Value in [1,N]; NextSeed a function of Seed alone; threading reproduces
+# exactly (rthree draws three, threading NextSeed); N < 1 fails at the guard.
+echo "--- A33: Seeded random ---"
+a33=$("$REPL_RUN" <<HEREDOC
+$TYPED/random_test.glp
+random(42, 6, V, NS).
+rthree(1, R).
+random(42, 0, VBad, NSBad).
+:quit
+HEREDOC
+2>&1)
+check "random single draw value" "V = 1" "$a33"
+check "random single draw next seed" "NS = 705894" "$a33"
+check "random threaded triple reproduces" "R = rt(808, 250, 74)" "$a33"
+check "random N<1 fails at guard" "→ failed" "$a33"
 
 SECTION_A_PASS=$PASS
 SECTION_A_FAIL=$FAIL

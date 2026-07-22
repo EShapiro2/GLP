@@ -1,0 +1,12 @@
+% Regression: seeded random system predicate random/4 (GLP-ICLP appendix-guards).
+% random(Seed, N, Value, NextSeed): 1 =< Value =< N; NextSeed a function of Seed
+% alone; threading NextSeed reproduces exactly from an initial seed.
+
+RTriple ::= rt(Integer, Integer, Integer).
+
+% Three draws threading NextSeed from each into the next.
+procedure rthree(Integer?, RTriple).
+rthree(Seed, rt(V1?, V2?, V3?)) :-
+  random(Seed?, 1000, V1, S1),
+  random(S1?, 1000, V2, S2),
+  random(S2?, 1000, V3, _).

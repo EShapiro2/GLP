@@ -89,6 +89,7 @@ void registerStandardBodyKernels(BodyKernelRegistry registry) {
 
   // Time operations
   registry.register('_now', 1, nowKernel);
+  registry.register('_random', 4, randomKernel);
 
   // MutualRef operations (O(1) stream append)
   registry.register('_allocate_mutual_reference', 2, mutualRefKernel);
@@ -543,6 +544,41 @@ BodyKernelResult nowKernel(GlpRuntime rt, List<Object?> args) {
   }
   final currentTime = DateTime.now().millisecondsSinceEpoch;
   return _bindResult(rt, args[0], currentTime);
+}
+
+/// `'_random'(Seed?, N?, Value, NextSeed)` — seeded random integer (GLP-ICLP
+/// appendix-guards §"Seeded random numbers"). Binds Value to a pseudo-random
+/// integer 1 ≤ Value ≤ N and NextSeed to the next draw's seed. NextSeed is a
+/// function of Seed alone, Value of Seed and N, so threading NextSeed from each
+/// draw into the next reproduces exactly from an initial seed. The generator is
+/// the Park–Miller "minimal standard" LCG (MINSTD): NextSeed = (16807 × s) mod
+/// (2³¹−1), with s the seed normalised into [1, 2³¹−2] so no integer seed traps.
+/// The system-predicate guard integer(Seed?), integer(N?), N? >= 1 guarantees
+/// ground integer inputs with N ≥ 1, so the checks below are defensive.
+BodyKernelResult randomKernel(GlpRuntime rt, List<Object?> args) {
+  if (args.length != 4) {
+    print('[ABORT] random/4: expected 4 arguments, got ${args.length}');
+    return BodyKernelResult.abort;
+  }
+  final seed = _getNum(rt, args[0]);
+  final n = _getNum(rt, args[1]);
+  if (seed == null || n == null || seed is! int || n is! int) {
+    print('[ABORT] random/4: Seed and N must be integers');
+    return BodyKernelResult.abort;
+  }
+  if (n < 1) {
+    print('[ABORT] random/4: bound N must be >= 1');
+    return BodyKernelResult.abort;
+  }
+  const int m = 2147483647; // 2^31 - 1
+  const int a = 16807;
+  var s = seed % m;
+  if (s <= 0) s += m; // normalise into [1, m-1]; 0 would trap MINSTD at 0
+  final int nextSeed = (a * s) % m;
+  final int value = 1 + (nextSeed % n);
+  final r1 = _bindResult(rt, args[2], value);
+  if (r1 != BodyKernelResult.success) return r1;
+  return _bindResult(rt, args[3], nextSeed);
 }
 
 // ============================================================================
