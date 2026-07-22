@@ -1,3 +1,7 @@
+%% DEPRECATED 2026-07-22 (Udi): bogus program, archived out of the live tree.
+%% Does not load — line 25 uses `=` in guard position (`Goal? = H?`), which the
+%% PE cannot reduce at compile time; the intended test is `=?=`. Not suite-tested.
+%%
 %% cp_meta.glp - Concurrent Prolog metainterpreter (GLP adaptation)
 %% Source: CP Collected Papers, Ch 25 (Safra & Shapiro)
 %%
