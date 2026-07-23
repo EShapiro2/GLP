@@ -1,9 +1,9 @@
 % test: compound_to_constant
 % expected: fail (even with subtyping)
-% description: Only constants are below Constant in the primitive subtype
-%   order.  Wrap produces a compound term, so Wrap is not a subtype of
-%   Constant.  Positive twin: positive/subtyping/symbolic_constants_to_constant.glp,
-%   where every alternative is a symbolic constant.
+% description: Constant ::= Number ; String ; Module. has no compound
+%   alternative, so Wrap — whose values are compound terms — is not below it.
+%   Positive twin: positive/subtyping/constant_union_to_constant.glp, where
+%   every alternative is a constant.
 
 Wrap ::= wrap(Integer).
 

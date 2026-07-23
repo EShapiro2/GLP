@@ -9,6 +9,7 @@
 import 'type_ast.dart';
 import 'root_scope.dart';
 import 'param_expansion.dart';
+import 'program_dfa.dart' show primitiveClosure;
 import '../../compiler/ast.dart' as ast;
 import '../../compiler/lexer.dart';
 import '../../compiler/parser.dart';
@@ -61,6 +62,12 @@ class AliasExpansionError implements Exception {
   String toString() => '$message at line $line, column $column';
 }
 
+/// The root scope's type definitions, recorded when the root scope is built.
+/// The determinism check consults them so that a module writing
+/// `T ::= Number ; Integer.` is caught even though `Number` is defined in the
+/// root `self.glp` rather than in the module itself.
+Map<String, TypeDef> rootScopeTypeDefs = const {};
+
 /// Source for the root scope environment (set by engine from programs/self.glp).
 String? _rootScopeEnvironmentSource;
 
@@ -97,6 +104,7 @@ TypeEnvironment buildRootScopeEnvironment() {
   final expandedModule = expandParameterizedTypes(module);
 
   final env = _buildEnvironmentFromModule(expandedModule, checkRedefinitions: false, resolveAliasesNow: true);
+  rootScopeTypeDefs = Map<String, TypeDef>.unmodifiable(env.types);
   return TypeEnvironment(env.types, env.procedures,
       paramProcDecls: env.paramProcDecls,
       typeTemplates: rootScopeTemplates);
@@ -165,7 +173,7 @@ TypeEnvironment _buildEnvironmentFromModule(
     }
     // Note: Aliases are allowed (v0.7) - determinism check skipped for them
     if (!_isTypeAlias(typeDef)) {
-      _checkDeterminism(typeDef);
+      _checkDeterminism(typeDef, types);
     }
     types[typeDef.name] = typeDef;
   }
@@ -395,7 +403,7 @@ void _resolveAliases(Map<String, TypeDef> types, Map<String, ProcDecl> procedure
     final expandedDef = TypeDef(name, expandedAlts, def.line, def.column);
     
     // Check determinism of expanded type
-    _checkDeterminism(expandedDef);
+    _checkDeterminism(expandedDef, types);
     
     types[name] = expandedDef;
   }
@@ -556,11 +564,16 @@ TypeExpr _replaceAliasReferences(TypeExpr expr, Map<String, TypeExpr> resolved) 
 /// Throws NonDeterministicTypeError for:
 /// - Two alternatives with same functor/arity
 /// - Two constant alternatives with same value
-/// - Primitive type alternatives that overlap (e.g., _ with anything, Number with Integer/Real)
-void _checkDeterminism(TypeDef def) {
+/// - Bare type-name alternatives that overlap (e.g., _ with anything, or
+///   `Number` with `Integer`, since `Number ::= Integer ; Real.`)
+///
+/// [scope] supplies the type definitions a bare type-name alternative may
+/// refer to, so overlap is decided by what each alternative actually accepts
+/// rather than by a built-in table of type names.
+void _checkDeterminism(TypeDef def, [Map<String, TypeDef> scope = const {}]) {
   final functors = <String>{};      // "functor/arity" keys
   final constants = <String>{};     // constant values
-  final primitives = <String>{};    // primitive type names
+  final primitives = <String>{};    // primitives reached by bare type-name alternatives
   bool hasWildcard = false;
 
   for (final alt in def.alternatives) {
@@ -616,58 +629,43 @@ void _checkDeterminism(TypeDef def) {
       hasWildcard = true;
 
     } else if (alt is TypeRef) {
-      // TypeRef in alternative position = primitive type reference
-      final name = alt.name;
-      if ({'Integer', 'Real', 'Number', 'String', 'Constant'}.contains(name)) {
-        _checkPrimitiveOverlap(name, primitives, hasWildcard, def);
-        primitives.add(name);
+      // A bare type-name alternative stands for everything the named type
+      // accepts.  Two such alternatives clash when the primitives they reach
+      // intersect — `Number` and `Integer` clash because `Number` reaches
+      // `Integer`.
+      final reached = _reachedPrimitives(alt, scope);
+      if (reached.isNotEmpty) {
+        _checkPrimitiveOverlap(alt.name, reached, primitives, hasWildcard, def);
+        primitives.addAll(reached);
       }
     }
   }
 }
 
-void _checkPrimitiveOverlap(String newPrimitive, Set<String> existing, bool hasWildcard, TypeDef def) {
+/// The primitive types a bare type-name alternative accepts, following its
+/// definition transitively.  Empty when the name is not a type reference this
+/// scope can resolve.
+Set<String> _reachedPrimitives(TypeRef alt, Map<String, TypeDef> scope) {
+  if (alt.isParameterized) return const {};
+  if (TypeRef.builtins.contains(alt.name)) return {alt.name};
+  final def = scope[alt.name] ?? rootScopeTypeDefs[alt.name];
+  if (def == null) return const {};
+  return primitiveClosure(def, {...rootScopeTypeDefs, ...scope});
+}
+
+void _checkPrimitiveOverlap(String altName, Set<String> reached,
+    Set<String> existing, bool hasWildcard, TypeDef def) {
   // Wildcard overlaps with everything
   if (hasWildcard) {
     throw NonDeterministicTypeError(
-      'Wildcard _ overlaps with $newPrimitive in ${def.name}',
+      'Wildcard _ overlaps with $altName in ${def.name}',
       def.line, def.column);
   }
 
-  // Number overlaps with Integer and Real
-  if (newPrimitive == 'Number' &&
-      (existing.contains('Integer') || existing.contains('Real'))) {
+  final clash = reached.where(existing.contains);
+  if (clash.isNotEmpty) {
     throw NonDeterministicTypeError(
-      'Number overlaps with Integer/Real in ${def.name}',
-      def.line, def.column);
-  }
-  if ((newPrimitive == 'Integer' || newPrimitive == 'Real') &&
-      existing.contains('Number')) {
-    throw NonDeterministicTypeError(
-      '$newPrimitive overlaps with Number in ${def.name}',
-      def.line, def.column);
-  }
-
-  // Constant overlaps every other primitive: Integer, Real, Number and String
-  // are all below Constant in the primitive subtype order (Definition
-  // "Primitive Subtype Order"), so a constant would select two alternatives.
-  const belowConstant = {'Integer', 'Real', 'Number', 'String'};
-  if (newPrimitive == 'Constant' &&
-      existing.any(belowConstant.contains)) {
-    throw NonDeterministicTypeError(
-      'Constant overlaps with ${existing.where(belowConstant.contains).join('/')} in ${def.name}',
-      def.line, def.column);
-  }
-  if (belowConstant.contains(newPrimitive) && existing.contains('Constant')) {
-    throw NonDeterministicTypeError(
-      '$newPrimitive overlaps with Constant in ${def.name}',
-      def.line, def.column);
-  }
-
-  // Direct duplicate
-  if (existing.contains(newPrimitive)) {
-    throw NonDeterministicTypeError(
-      'Duplicate primitive type $newPrimitive in ${def.name}',
+      '$altName overlaps with an earlier alternative on ${clash.join('/')} in ${def.name}',
       def.line, def.column);
   }
 }

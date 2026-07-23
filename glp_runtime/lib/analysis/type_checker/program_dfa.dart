@@ -51,34 +51,26 @@ class DFAState {
   /// True for `Real` type state (either complement or not)
   bool get isRealType => baseName == 'Real';
 
-  /// True for `Number` type state (either complement or not)
-  bool get isNumberType => baseName == 'Number';
-
   /// True for `String` type state (either complement or not)
   bool get isStringType => baseName == 'String';
 
-  /// True for `Constant` type state (either complement or not).
-  /// `Constant` is a GLP language primitive (TGLP appendix "GLP Language
-  /// Primitives"), the top of the primitive subtype order below `_`: every
-  /// number, string and symbolic constant is a `Constant`.
-  bool get isConstantType => baseName == 'Constant';
+  /// True for `Module` type state (either complement or not).
+  /// A module term is a compiled module reference; `Module` is a primitive
+  /// (TGLP appendix "GLP Language Primitives") and an alternative of the
+  /// root-`self.glp` type `Constant`.
+  bool get isModuleType => baseName == 'Module';
 
   /// True for `_FINAL_` (anonymous final for constant/literal matches)
   bool get isAnonymousFinal => baseName == '_FINAL_';
 
-  // Fix 3.3: Combined property for numeric types
-  /// True for numeric types: Integer, Real, Number
-  bool get isNumericType => isIntegerType || isRealType || isNumberType;
-
   // Fix 3.2: Computed properties for type classification
-  /// True for primitive types: _, Integer, Real, Number, String, Constant
+  /// True for the primitive types: `_`, Integer, Real, String, Module.
+  /// `Number` and `Constant` are NOT primitive — they are unions defined in the
+  /// root `self.glp` (TGLP appendix "GLP Language Primitives"), so they behave
+  /// as ordinary defined types here and their relation to the primitives comes
+  /// out of their definitions.
   bool get isPrimitiveType =>
-      isWildcard ||
-      isIntegerType ||
-      isRealType ||
-      isNumberType ||
-      isStringType ||
-      isConstantType;
+      isWildcard || isIntegerType || isRealType || isStringType || isModuleType;
 
   /// True for user-defined types (not primitive, not procedure, not anonymous final)
   bool get isUserDefinedType =>
@@ -152,8 +144,15 @@ class Automaton {
   final DFAState startState;
   final Map<(DFAState, TransitionLabel), DFAState> _transitions;
   
-  /// Set of primitive type names this type accepts as alternatives
-  /// (e.g., {'Integer', 'String'} for Key ::= Integer ; String.)
+  /// The primitive type names this type accepts, transitively through its bare
+  /// type-name alternatives.  A bare alternative is not a functor and so is not
+  /// a transition; it stands for everything the named type accepts, and the
+  /// type names a path passes through are not themselves path positions (TGLP
+  /// Definition "Moded Paths").  So `Number ::= Integer ; Real.` gives
+  /// {Integer, Real}, and `Constant ::= Number ; String ; Module ; [].` gives
+  /// {Integer, Real, String, Module} — its `[]` alternative is a constant and
+  /// stays a transition.  This is what makes `Integer <: Constant` derive from
+  /// the definitions rather than from a built-in order.
   final Set<String> acceptedPrimitives;
 
   Automaton(this.startState, this._transitions, {this.acceptedPrimitives = const {}});
@@ -235,12 +234,10 @@ ProgramDFA buildProgramDFA(TypeEnvironment env) {
   states['Integer?'] = DFAState('Integer', isDual: true, isFinal: false);
   states['Real'] = DFAState('Real', isDual: false, isFinal: false);
   states['Real?'] = DFAState('Real', isDual: true, isFinal: false);
-  states['Number'] = DFAState('Number', isDual: false, isFinal: false);
-  states['Number?'] = DFAState('Number', isDual: true, isFinal: false);
   states['String'] = DFAState('String', isDual: false, isFinal: false);
   states['String?'] = DFAState('String', isDual: true, isFinal: false);
-  states['Constant'] = DFAState('Constant', isDual: false, isFinal: false);
-  states['Constant?'] = DFAState('Constant', isDual: true, isFinal: false);
+  states['Module'] = DFAState('Module', isDual: false, isFinal: false);
+  states['Module?'] = DFAState('Module', isDual: true, isFinal: false);
   states['_FINAL_'] = DFAState('_FINAL_', isDual: false, isFinal: true);
 
   // Create automata for system types
@@ -250,12 +247,10 @@ ProgramDFA buildProgramDFA(TypeEnvironment env) {
   automata['Integer?'] = _primitiveTypeAutomaton(states['Integer?']!, states['_FINAL_']!);
   automata['Real'] = _primitiveTypeAutomaton(states['Real']!, states['_FINAL_']!);
   automata['Real?'] = _primitiveTypeAutomaton(states['Real?']!, states['_FINAL_']!);
-  automata['Number'] = _primitiveTypeAutomaton(states['Number']!, states['_FINAL_']!);
-  automata['Number?'] = _primitiveTypeAutomaton(states['Number?']!, states['_FINAL_']!);
   automata['String'] = _primitiveTypeAutomaton(states['String']!, states['_FINAL_']!);
   automata['String?'] = _primitiveTypeAutomaton(states['String?']!, states['_FINAL_']!);
-  automata['Constant'] = _primitiveTypeAutomaton(states['Constant']!, states['_FINAL_']!);
-  automata['Constant?'] = _primitiveTypeAutomaton(states['Constant?']!, states['_FINAL_']!);
+  automata['Module'] = _primitiveTypeAutomaton(states['Module']!, states['_FINAL_']!);
+  automata['Module?'] = _primitiveTypeAutomaton(states['Module?']!, states['_FINAL_']!);
 
   // Create states for ALL defined types FIRST
   // (Automata may reference other types, so all states must exist before building automata)
@@ -275,9 +270,9 @@ ProgramDFA buildProgramDFA(TypeEnvironment env) {
     // T automaton: modes as declared
     // T? automaton: all modes flipped, all target states dualized
     automata[typeName] =
-        _buildTypeAutomaton(typeDef, states, isDual: false);
+        _buildTypeAutomaton(typeDef, states, env.types, isDual: false);
     automata['$typeName?'] =
-        _buildTypeAutomaton(typeDef, states, isDual: true);
+        _buildTypeAutomaton(typeDef, states, env.types, isDual: true);
   }
 
   // Create procedure states (no complement)
@@ -314,7 +309,8 @@ Automaton _primitiveTypeAutomaton(DFAState state, DFAState finalState) {
 /// Implements spec algorithm: buildTypeAutomaton
 Automaton _buildTypeAutomaton(
   TypeDef typeDef,
-  Map<String, DFAState> states, {
+  Map<String, DFAState> states,
+  Map<String, TypeDef> types, {
   required bool isDual,
 }) {
   final typeName = typeDef.name;
@@ -322,19 +318,37 @@ Automaton _buildTypeAutomaton(
   final startState = states[startStateName]!;
 
   final transitions = <(DFAState, TransitionLabel), DFAState>{};
-  final acceptedPrimitives = <String>{};
 
   for (final alt in typeDef.alternatives) {
-    // Collect primitive type alternatives (Integer, Real, Number, String)
-    if (alt is TypeRef &&
-        {'Integer', 'Real', 'Number', 'String', 'Constant'}.contains(alt.name)) {
-      acceptedPrimitives.add(alt.name);
-    }
     _addTypeTransitions(
         startState, alt, Mode.produce, states, transitions, isDual);
   }
 
-  return Automaton(startState, transitions, acceptedPrimitives: acceptedPrimitives);
+  return Automaton(startState, transitions,
+      acceptedPrimitives: primitiveClosure(typeDef, types));
+}
+
+/// The primitive type names [typeDef] accepts through its bare type-name
+/// alternatives, transitively.  See [Automaton.acceptedPrimitives].
+Set<String> primitiveClosure(TypeDef typeDef, Map<String, TypeDef> types) {
+  final result = <String>{};
+  final visiting = <String>{};
+
+  void walk(TypeDef def) {
+    if (!visiting.add(def.name)) return; // guard against a definition cycle
+    for (final alt in def.alternatives) {
+      if (alt is! TypeRef || alt.isParameterized) continue;
+      if (TypeRef.builtins.contains(alt.name)) {
+        result.add(alt.name);
+        continue;
+      }
+      final target = types[alt.name];
+      if (target != null) walk(target);
+    }
+  }
+
+  walk(typeDef);
+  return result;
 }
 
 /// Add transitions from a type alternative.
@@ -426,14 +440,11 @@ DFAState _resolveTypeExpr(
     if (typeExpr.name == 'Real') {
       return finalIsComplement ? states['Real?']! : states['Real']!;
     }
-    if (typeExpr.name == 'Number') {
-      return finalIsComplement ? states['Number?']! : states['Number']!;
-    }
     if (typeExpr.name == 'String') {
       return finalIsComplement ? states['String?']! : states['String']!;
     }
-    if (typeExpr.name == 'Constant') {
-      return finalIsComplement ? states['Constant?']! : states['Constant']!;
+    if (typeExpr.name == 'Module') {
+      return finalIsComplement ? states['Module?']! : states['Module']!;
     }
 
     final targetName = typeExpr.name;
@@ -617,13 +628,6 @@ LeafConsistencyResult checkLeafConsistency(
     return LeafConsistencyResult.inconsistent('Real type requires real literal');
   }
 
-  if (state.isNumberType) {
-    if (leaf.isInteger || leaf.isReal) {
-      return LeafConsistencyResult.consistent(dfa.states['_FINAL_']);
-    }
-    return LeafConsistencyResult.inconsistent('Number type requires numeric literal');
-  }
-
   if (state.isStringType) {
     if (leaf.isString) {
       return LeafConsistencyResult.consistent(dfa.states['_FINAL_']);
@@ -631,14 +635,11 @@ LeafConsistencyResult checkLeafConsistency(
     return LeafConsistencyResult.inconsistent('String type requires string literal');
   }
 
-  // Constant accepts every primitive constant: integer, real, string, and
-  // symbolic constant (rows 4-7 of the consistency table, Definition
-  // "Consistent Paths").  Symbolic constants reach here as string leaves.
-  if (state.isConstantType) {
-    if (leaf.isInteger || leaf.isReal || leaf.isString) {
-      return LeafConsistencyResult.consistent(dfa.states['_FINAL_']);
-    }
-    return LeafConsistencyResult.inconsistent('Constant type requires a constant');
+  // Row 8 of the consistency table: a module term matches Module.  A module
+  // term is produced by the runtime, never written as a literal, so no source
+  // leaf reaches here.
+  if (state.isModuleType) {
+    return LeafConsistencyResult.inconsistent('Module type requires a module term');
   }
 
   // Case 2c: At wildcard state
@@ -669,31 +670,24 @@ LeafConsistencyResult checkLeafConsistency(
         return LeafConsistencyResult.consistent(nextState);
       }
       
-      // Second, check if type accepts primitive types that match this constant
-      if (automaton.acceptedPrimitives.isNotEmpty) {
-        // Constant as an alternative accepts every primitive constant
-        // (consistency table rows 4-7).
-        if (automaton.acceptedPrimitives.contains('Constant') &&
-            (leaf.isInteger || leaf.isReal || leaf.isString)) {
-          return LeafConsistencyResult.consistent(dfa.states['_FINAL_']);
-        }
-        if (leaf.isInteger &&
-            (automaton.acceptedPrimitives.contains('Integer') ||
-             automaton.acceptedPrimitives.contains('Number'))) {
-          return LeafConsistencyResult.consistent(dfa.states['_FINAL_']);
-        }
-        if (leaf.isReal &&
-            (automaton.acceptedPrimitives.contains('Real') ||
-             automaton.acceptedPrimitives.contains('Number'))) {
-          return LeafConsistencyResult.consistent(dfa.states['_FINAL_']);
-        }
-        if (leaf.isString && automaton.acceptedPrimitives.contains('String')) {
-          return LeafConsistencyResult.consistent(dfa.states['_FINAL_']);
-        }
+      // Second, descend the type's bare type-name alternatives to the
+      // primitives they stand for, and match the literal against those
+      // (consistency table rows 4-6).  `Number ::= Integer ; Real.` accepts a
+      // numeric literal; `Constant ::= Number ; String ; Module ; [].` accepts
+      // any of them, plus `[]` through the constant transition above.
+      final primitives = automaton.acceptedPrimitives;
+      if (leaf.isInteger && primitives.contains('Integer')) {
+        return LeafConsistencyResult.consistent(dfa.states['_FINAL_']);
+      }
+      if (leaf.isReal && primitives.contains('Real')) {
+        return LeafConsistencyResult.consistent(dfa.states['_FINAL_']);
+      }
+      if (leaf.isString && primitives.contains('String')) {
+        return LeafConsistencyResult.consistent(dfa.states['_FINAL_']);
       }
     }
   }
 
   return LeafConsistencyResult.inconsistent(
-      'Constant does not match any alternative at type position ${state.name}');
+      'No alternative of ${state.name} matches the constant ${leaf.value}');
 }

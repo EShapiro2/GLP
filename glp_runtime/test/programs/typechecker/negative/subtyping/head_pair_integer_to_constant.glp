@@ -6,6 +6,7 @@
 %   rejected even though Integer <: Constant.  The supported route is a direct
 %   body-body connection; positive twin:
 %   positive/subtyping/integer_below_number_and_constant.glp.
+%   Constant is the root self.glp union Number ; String ; Module.
 
 procedure elem(Integer?, Constant).
 elem(X, X?).

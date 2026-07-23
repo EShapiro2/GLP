@@ -67,10 +67,11 @@ class TypeRef extends TypeExpr {
     return isInput ? '$name$argsStr?' : '$name$argsStr';
   }
 
-  /// Primitive types (not defined via ::=, handled specially by compiler).
-  /// TGLP appendix "GLP Language Primitives": Integer, Real, Number, String,
-  /// Constant (Exp is still defined in the root self.glp).
-  static const builtins = {'Integer', 'Real', 'Number', 'String', 'Constant'};
+  /// The primitive types (not defined via ::=, implemented by the runtime).
+  /// TGLP appendix "GLP Language Primitives": Integer, Real, String, Module.
+  /// Number, Constant and Exp are NOT here — they are unions defined in the
+  /// root self.glp.
+  static const builtins = {'Integer', 'Real', 'String', 'Module'};
 
   /// System types (defined via ::= but not redefinable by user)
   static const systemTypes = {'Any', 'List'};

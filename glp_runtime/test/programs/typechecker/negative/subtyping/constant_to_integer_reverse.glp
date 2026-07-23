@@ -1,9 +1,9 @@
 % test: constant_to_integer_reverse
 % expected: fail (even with subtyping)
-% description: Subtyping is directional.  Integer <: Constant, but Constant is
-%   not a subtype of Integer (Definition "Primitive Subtype Order" is the least
-%   partial order, so it relates nothing else).  A Constant writer therefore
-%   cannot fill an Integer reader.  Positive twin:
+% description: Subtyping is directional.  Integer <: Constant because Integer
+%   is among Constant's alternatives; Constant is not below Integer, because
+%   Integer has no alternatives to accept a string or a module term.  A
+%   Constant writer therefore cannot fill an Integer reader.  Positive twin:
 %   positive/subtyping/integer_below_number_and_constant.glp.
 
 procedure constant_source(Constant).

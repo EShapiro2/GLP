@@ -1,0 +1,19 @@
+% test: constant_union_to_constant
+% expected: pass (requires subtyping)
+% description: A union of constants is below Constant.  Every alternative of
+%   Ack is a string, and String is an alternative of
+%   Constant ::= Number ; String ; Module., so Ack <: Constant.
+%   Body-body pair: writer X at Ack, reader X? at Constant?.
+%   The reverse does not hold — an arbitrary String is not an Ack.
+
+Ack ::= ok ; error.
+
+procedure ack_source(Ack).
+ack_source(ok).
+ack_source(error).
+
+procedure constant_sink(Constant?).
+constant_sink(_).
+
+procedure connect.
+connect :- ack_source(X), constant_sink(X?).

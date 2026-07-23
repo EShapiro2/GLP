@@ -27,6 +27,11 @@ Channel(In, Out) ::= ch(In, Out?).
 % close/1 defined guard, which consumes a closed read stream (see below).
 Closed ::= [].
 
+% Derived types.  The primitive types are Integer, Real, String and Module;
+% Number and Constant are defined here (TGLP appendix "GLP Language Primitives").
+Number ::= Integer ; Real.
+Constant ::= Number ; String ; Module.
+
 % Arithmetic expressions
 Exp ::= Number ; +(Exp, Exp) ; -(Exp, Exp) ; *(Exp, Exp) ; /(Exp, Exp) ; //(Exp, Exp) ; mod(Exp, Exp) ; neg(Exp).
 
@@ -41,7 +46,7 @@ procedure string(String?).
 procedure constant(Constant?).
 procedure compound(_?).
 procedure list(_?).
-procedure module(_?).
+procedure module(Module?).
 % Groundness guards
 procedure ground(_?).
 procedure known(_?).

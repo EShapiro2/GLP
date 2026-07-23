@@ -57,32 +57,42 @@ bool _isSubtype(
   assert(!stateA.isDual && !stateB.isDual);
 
   // Wildcard/final handling (spec 4.4)
-  // T <: _ for every output type T (Definition "Primitive Subtype Order"),
-  // and at a prefix endpoint `_` matches only `_` (Definition "Prefix
-  // Acceptance").  _FINAL_ is treated as equivalent to _ for subtyping.
+  // At a prefix endpoint `_` matches only `_` (Definition "Prefix Acceptance"),
+  // so `_` is top: every output type is below it, and it is below nothing else.
+  // _FINAL_ is treated as equivalent to _ for subtyping.
   if (stateB.isWildcard || stateB.isAnonymousFinal) return true;
   if (stateA.isWildcard || stateA.isAnonymousFinal) return false;
 
-  // Primitive subtype order (Definition "Primitive Subtype Order") — the base
-  // case of the relation.
+  // Two primitives are related only when identical (Definition "Prefix
+  // Acceptance": an output type S matches S or `_`).  There is no built-in
+  // order among them — `Integer <: Number` comes from `Number`'s definition,
+  // below.
   if (stateA.isPrimitiveType && stateB.isPrimitiveType) {
-    return _checkPrimitiveSubtype(stateA, stateB);
+    return stateA.baseName == stateB.baseName;
   }
 
-  // c <: Constant for every symbolic constant c, lifted through union: a type
-  // whose alternatives are all symbolic constants, or primitives below
-  // Constant, produces only constants and so is a subtype of Constant.
-  if (stateB.isConstantType) {
-    return _isConstantUnion(stateA, dfa);
+  // A primitive against a defined type: the defined type accepts it when the
+  // primitive is among those its bare type-name alternatives reach.  This is
+  // what makes `Integer <: Number` and `Integer <: Constant` derive from
+  // `Number ::= Integer ; Real.` and `Constant ::= Number ; String ; Module ; [].`
+  if (stateA.isPrimitiveType) {
+    final automB = dfa.automata[stateB.name];
+    return automB != null && automB.acceptedPrimitives.contains(stateA.baseName);
   }
 
-  // A primitive and a user-defined type are unrelated except through the
-  // wildcard and Constant cases above.
-  if (stateA.isPrimitiveType || stateB.isPrimitiveType) return false;
+  // A defined type is never below a primitive: a primitive has no alternatives
+  // to accept it.  This keeps the relation directional — `Constant` is not a
+  // subtype of `Integer`.
+  if (stateB.isPrimitiveType) return false;
 
   // User-defined types: check transitions (spec 4.1)
   final automA = dfa.getAutomaton(stateA.name);
   final automB = dfa.getAutomaton(stateB.name);
+
+  // Everything A's bare type-name alternatives accept, B must accept too.
+  if (!automB.acceptedPrimitives.containsAll(automA.acceptedPrimitives)) {
+    return false;
+  }
 
   // Every transition from A must have a matching transition in B
   for (final entry in automA.transitions.entries) {
@@ -93,8 +103,20 @@ bool _isSubtype(
     final targetA = entry.value;
     final targetB = automB.transition(stateB, label);
 
-    // A has a transition B lacks → not a subtype
-    if (targetB == null) return false;
+    if (targetB == null) {
+      // A constant alternative is a value of a primitive type, so B accepts it
+      // whenever B accepts that primitive: `Ack ::= ok ; error.` is below
+      // `Constant ::= Number ; String ; Module.` because `ok` and `error` are
+      // strings.  This does not run the other way — an arbitrary String is not
+      // an `Ack` — because B's primitives must still be contained in A's, which
+      // is checked above.
+      if (label.arity == 0 &&
+          automB.acceptedPrimitives.contains(_primitiveOfConstant(label.symbol))) {
+        continue;
+      }
+      // A has an alternative B lacks → not a subtype
+      return false;
+    }
 
     // Skip trivially equal targets
     if (targetA == targetB) continue;
@@ -104,6 +126,15 @@ bool _isSubtype(
   }
 
   return true;
+}
+
+/// The primitive type a constant alternative belongs to.  `[]` and every
+/// unquoted constant are strings — GLP has one representation for a quoted
+/// string and an unquoted constant.
+String _primitiveOfConstant(String symbol) {
+  if (int.tryParse(symbol) != null) return 'Integer';
+  if (double.tryParse(symbol) != null) return 'Real';
+  return 'String';
 }
 
 /// Target compatibility check (spec section 4.2).
@@ -127,62 +158,3 @@ bool _checkTargetSubtype(
   return false;
 }
 
-/// The primitive subtype order (Definition "Primitive Subtype Order",
-/// `TGLP/sections/typed-glp.tex`): the least partial order with
-/// `Integer <: Number`, `Real <: Number`, `Number <: Constant`,
-/// `String <: Constant`, `c <: Constant` for every symbolic constant `c`, and
-/// `T <: _` for every output type `T`.  Being least, it is reflexive and
-/// transitive and relates nothing else — in particular `Constant` is not a
-/// subtype of `Integer`, so the order is directional.
-///
-/// The table gives each primitive's supertypes, its own transitive closure.
-/// `_` is handled by the caller (it is the top of the order); the symbolic
-/// constants are not DFA states of their own — a type whose alternatives are
-/// all symbolic constants is handled by [_isConstantUnion].
-const Map<String, Set<String>> _primitiveSupertypes = {
-  'Integer': {'Integer', 'Number', 'Constant'},
-  'Real': {'Real', 'Number', 'Constant'},
-  'Number': {'Number', 'Constant'},
-  'String': {'String', 'Constant'},
-  'Constant': {'Constant'},
-};
-
-/// Check the primitive subtype order between two primitive states.
-bool _checkPrimitiveSubtype(DFAState stateA, DFAState stateB) {
-  // _ is top for output types (handled in caller, but be safe)
-  if (stateB.isWildcard) return true;
-  if (stateA.isWildcard) return false;
-
-  final supertypes = _primitiveSupertypes[stateA.baseName];
-  if (supertypes == null) return stateA.baseName == stateB.baseName;
-  return supertypes.contains(stateB.baseName);
-}
-
-/// True if every value of user-defined type [state] is a constant, so that
-/// `state <: Constant` by the primitive order: each alternative is either a
-/// symbolic constant (a nullary alternative, which in the DFA is a constant
-/// transition) or a primitive below Constant.  A type with no alternative at
-/// all admits no value and is not counted.
-bool _isConstantUnion(DFAState state, ProgramDFA dfa) {
-  final automaton = dfa.automata[state.name];
-  if (automaton == null) return false;
-
-  var hasAlternative = false;
-  for (final entry in automaton.transitions.entries) {
-    final (fromState, label) = entry.key;
-    if (fromState != state) continue;
-    hasAlternative = true;
-    // A constant transition carries arity 0; anything else is a compound
-    // alternative, whose values are not constants.
-    if (label.arity != 0) return false;
-  }
-
-  for (final primitive in automaton.acceptedPrimitives) {
-    hasAlternative = true;
-    if (!(_primitiveSupertypes[primitive]?.contains('Constant') ?? false)) {
-      return false;
-    }
-  }
-
-  return hasAlternative;
-}

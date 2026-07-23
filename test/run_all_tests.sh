@@ -155,7 +155,7 @@ check "Quicksort single" "Xq2 = \[1\]" "$a3"
 check "Quicksort two" "Xq3 = \[1, 2\]" "$a3"
 check "Quicksort larger" "Xq4 = \[1, 2, 2, 4, 4, 6, 6, 7\]" "$a3"
 check "Quicksort five" "Xq5 = \[1, 2, 3, 4, 5\]" "$a3"
-check "Quicksort non-number ill-typed: [a] is not a NumList" "Number type requires numeric literal" "$a3"
+check "Quicksort non-number ill-typed: [a] is not a NumList" "No alternative of Number? matches the constant a" "$a3"
 check "Quicksort unbound tail" "Xq7 = <unbound>" "$a3"
 
 # --- A4: Insertion Sort ---
@@ -1078,14 +1078,14 @@ POSITIVE_FILES=(
     "$TC_DIR/positive/subtyping/contravariant_response_slot.glp"
     "$TC_DIR/positive/subtyping/direct_constant_subtype.glp"
     "$TC_DIR/positive/subtyping/struct_fewer_functors.glp"
-    # Primitive subtype order (Definition "Primitive Subtype Order") and the
-    # consistency table's Constant rows.  Negative twins:
+    # Subtyping through the root self.glp unions Number ::= Integer ; Real. and
+    # Constant ::= Number ; String ; Module.  Negative twins:
     # negative/subtyping/{constant_to_integer_reverse,integer_to_string_disjoint,
     # head_pair_integer_to_constant,compound_to_constant}.glp.
     "$TC_DIR/positive/subtyping/constant_accepts_all_literals.glp"
     "$TC_DIR/positive/subtyping/integer_below_number_and_constant.glp"
     "$TC_DIR/positive/subtyping/int_list_to_constant_list.glp"
-    "$TC_DIR/positive/subtyping/symbolic_constants_to_constant.glp"
+    "$TC_DIR/positive/subtyping/constant_union_to_constant.glp"
 
     # --- module guard test ---
     "$TYPED/module_guard.glp"

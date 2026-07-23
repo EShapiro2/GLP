@@ -369,15 +369,20 @@ LeafTerm _pathStepToLeafTerm(PathStep step) {
       return LeafTerm.realConstant(doubleVal, mode: step.mode);
     }
 
+    // `[]` is a special case of String, represented efficiently rather than as
+    // a separate kind, so it is a string leaf.  It still matches an explicit
+    // `[]` alternative first, through the constant transition in case 2d of
+    // checkLeafConsistency — that is what keeps `Stream(X) ::= [] ; [X|...]`
+    // enumerable for input coverage.
+
     // Check for string (quoted)
     if ((value.startsWith("'") && value.endsWith("'")) ||
         (value.startsWith('"') && value.endsWith('"'))) {
       return LeafTerm.stringConstant(value.substring(1, value.length - 1), mode: step.mode);
     }
 
-    // Fix Bug 1: Atoms (unquoted identifiers) are strings per paper Section 4.1
-    // Paper line 49: "String ::= ... ; a ; b ; ... ; foo ; bar ; ..."
-    // Therefore atoms like 'user', 'net', 'foo' etc. are strings
+    // An unquoted constant is a String: GLP has one representation for a quoted
+    // string and an unquoted constant, and `string/1` succeeds on either.
     return LeafTerm.stringConstant(value, mode: step.mode);
   }
 }

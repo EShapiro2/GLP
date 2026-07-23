@@ -1,8 +1,8 @@
 % test: integer_to_string_disjoint
 % expected: fail (even with subtyping)
-% description: Integer and String are unrelated in the primitive subtype order
-%   — both are below Constant, neither is below the other — so an Integer
-%   writer cannot fill a String reader.
+% description: Integer and String are unrelated: both are alternatives of
+%   Constant, neither is an alternative of the other, so an Integer writer
+%   cannot fill a String reader.
 
 procedure int_source(Integer).
 int_source(1).

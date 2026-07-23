@@ -1,8 +1,9 @@
 % test: integer_below_number_and_constant
 % expected: pass (requires subtyping)
-% description: The primitive subtype order at a leaf (Definition "Primitive
-%   Subtype Order", TGLP sections/typed-glp.tex): Integer <: Number and
-%   Integer <: Constant.  Body-body pair: writer X at Integer (from int_source
+% description: Integer <: Number and Integer <: Constant, derived from the root
+%   self.glp unions Number ::= Integer ; Real. and
+%   Constant ::= Number ; String ; Module. — there is no built-in order among
+%   the primitives.  Body-body pair: writer X at Integer (from int_source
 %   output), reader X? at Number? / Constant? (from the sink's input).
 
 procedure int_source(Integer).

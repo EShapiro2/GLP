@@ -16,12 +16,13 @@ const String rootScopeTypes = '';
 /// Note: Only fundamental primitive types are protected.
 /// Library-level types (DiffList, Channel) can be redefined by user programs.
 const Set<String> predefinedTypeNames = {
-  'Number',   // Primitive builtin
   'Integer',  // Primitive builtin
   'Real',     // Primitive builtin
   'String',   // Primitive builtin
-  'Constant', // Primitive builtin (top of the primitive subtype order below _)
-  'Exp',      // Arithmetic expression type
+  'Module',   // Primitive builtin
+  'Number',   // Root self.glp union: Integer ; Real
+  'Constant', // Root self.glp union: Number ; String ; Module
+  'Exp',      // Root self.glp union: arithmetic expressions
   'Stream',   // Fundamental collection type
   'OpenStream', // Non-empty stream
   // Note: DiffList, Channel are NOT protected - they are library-level
