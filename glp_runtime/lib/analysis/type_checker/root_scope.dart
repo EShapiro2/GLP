@@ -148,7 +148,6 @@ const Set<String> reservedConstantNames = {
   // output system predicate
   '_output',
   // module-dispatch kernels
-  '_activate',
   '_select',
 };
 
