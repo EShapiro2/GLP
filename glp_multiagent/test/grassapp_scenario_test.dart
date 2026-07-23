@@ -18,6 +18,7 @@ void main() {
         : '/Users/udi/Grassroots/GLP/programs';
     const files = [
       'self.glp',
+      'currency_txn.glp',
       'grassapp_agent.glp',
       'grassapp_mediator.glp',
       'play_grassapp_boot.glp',
@@ -58,20 +59,21 @@ void main() {
     await agent.injectUserInput('send(eve, thanks_eve)');
     expect(all(), contains('received(eve, lovely_day_isnt_it)'));
 
-    // Dana: pay arrives, swap offer arrives; Bob accepts; Dana then redeems a
-    // bob-coin and Bob's agent fills back — his dana-holding drops to 3.
+    // Dana: pay arrives, trade offer arrives; Bob accepts; Dana then redeems a
+    // bob-coin and Bob's agent honours it — his dana-holding drops to 3.
+    // Balances are now keyed by (owner, issuer, maturity); coins are maturity 0.
     await agent.injectUserInput('decision(yes, dana, ${reqs['dana']})');
-    final swap = RegExp('swap_offer\\(dana, dana, 2, bob, 1, (req\\(\\d+\\))\\)')
+    final swap = RegExp('trade_proposed\\(dana, .*?(req\\(\\d+\\))\\)')
         .firstMatch(all());
-    expect(swap, isNotNull, reason: 'no swap offer from dana in: $lines');
-    await agent.injectUserInput('accept_swap(dana, ${swap!.group(1)})');
-    expect(all(), contains('swap_done(dana)'));
-    expect(all(), contains('balance_report(bob, dana, 3)'),
-        reason: 'dana redeemed one bob-coin; the fill-back leaves 3 dana-coins');
+    expect(swap, isNotNull, reason: 'no trade offer from dana in: $lines');
+    await agent.injectUserInput('accept_trade(dana, ${swap!.group(1)})');
+    expect(all(), contains('trade_completed(dana)'));
+    expect(all(), contains('balance_report(bob, dana, 0, 3)'),
+        reason: 'dana redeemed one bob-coin; the set-off leaves 3 dana-coins');
 
-    // Alice and Charlie as before: message + swap card; pay + unfriend.
+    // Alice and Charlie as before: message + trade card; pay + unfriend.
     await agent.injectUserInput('decision(yes, alice, ${reqs['alice']})');
-    expect(all(), contains('swap_offer(alice, alice, 1, bob, 1'));
+    expect(all(), contains('trade_proposed(alice, [lot(bob, 0, 1)]'));
     await agent.injectUserInput('decision(yes, charlie, ${reqs['charlie']})');
     expect(all(), contains('unfriended(charlie)'));
 

@@ -16,6 +16,7 @@ void main() {
       () async {
     final paths = [
       '$_ga/self.glp',
+      '$_ga/currency_txn.glp',
       '$_ga/grassapp_agent.glp',
       '$_ga/grassapp_mediator.glp',
       '$_ga/play_grassapp_boot.glp',

@@ -97,6 +97,7 @@ void main() {
         : '/Users/udi/Grassroots/GLP/programs';
     const files = [
       'self.glp',
+      'currency_txn.glp',
       'grassapp_agent.glp',
       'grassapp_mediator.glp',
       'play_grassapp_boot.glp',

@@ -225,6 +225,7 @@ class _CoordinatorScreenState extends State<CoordinatorScreen> {
     // group messaging + coins), loaded in order.
     const scenarioFiles = [
       'self.glp',
+      'currency_txn.glp',
       'grassapp_agent.glp',
       'grassapp_mediator.glp',
       'play_grassapp_boot.glp',

@@ -1,0 +1,181 @@
+%% play_loan_headless.glp — headless two-agent loan -> redemption on local clocks.
+%%
+%% The GrassApp analogue of currencies fplay13, used to verify agent/7 + the
+%% mediator without the Flutter UI.  Both agents are scripted actors; the only
+%% network traffic is the cold call (after befriending, friends have direct
+%% channels).
+%%
+%%   alice (lender)   mints 3 coins (maturity 0)
+%%   bob   (borrower) mints 5 bonds maturing at date 10 (face 5 > 3 lent = interest)
+%%   they swap                         -> the loan
+%%   alice redeems BEFORE advancing    -> refused by her own local-clock gate
+%%   alice advances her date to 11     -> Def. 2 item 2
+%%   alice redeems                     -> bob auto-honours; set-off returns her coins
+%%
+%% Entry point for the Dart harness / goalLabel: play_loan/0.
+%% Requires: self.glp, currency_txn.glp, grassapp_agent.glp, grassapp_mediator.glp
+
+
+%% --- Two-way cold-call router ------------------------------------------------
+
+procedure route2(Stream(OutputMsg)?, Stream(OutputMsg), Stream(OutputMsg)).
+route2([msg(alice, C)|Rest], [msg(alice, C?)|A?], B?) :-
+    route2(Rest?, A, B).
+route2([msg(bob, C)|Rest], A?, [msg(bob, C?)|B?]) :-
+    route2(Rest?, A, B).
+route2([], [], []).
+
+procedure net2(Stream(OutputMsg)?, Stream(OutputMsg)?, Stream(OutputMsg), Stream(OutputMsg)).
+net2(AOut, BOut, AIn?, BIn?) :-
+    merge(AOut?, BOut?, All),
+    route2(All?, AIn, BIn).
+
+%% --- Notification logger (so the headless run is observable) ------------------
+
+procedure tee_notifies(Stream(UserNotify)?, Stream(UserNotify), Stream(UserNotify)).
+tee_notifies([N|Ns], [N?|As?], [N?|Bs?]) :- ground(N?) | tee_notifies(Ns?, As, Bs).
+tee_notifies([], [], []).
+
+procedure log_notifies(Constant?, Stream(UserNotify)?).
+log_notifies(Id, [N|Ns]) :-
+    ground(Id?), ground(N?) |
+    send_to_user([tagged(Id?, N?)]),
+    log_notifies(Id?, Ns?).
+log_notifies(_, []).
+
+%% --- The play ----------------------------------------------------------------
+
+procedure play_loan.
+play_loan :-
+    net2(AliceNetOut?, BobNetOut?, AliceNetIn, BobNetIn),
+
+    %% Alice — lender
+    agent(alice, AliceAgentIn?, AliceNetIn?,
+          [output('_user', AliceA2U) | [output('_net', AliceNetOut)]],
+          [], 1, 0),
+    ui_mediator(alice, ch(AliceA2U?, AliceAgentIn), ch(AliceCmds?, AliceNotifies), [], 1),
+    tee_notifies(AliceNotifies?, AliceActorIn, AliceLog),
+    log_notifies(alice, AliceLog?),
+    lender(AliceActorIn?, AliceCmds),
+
+    %% Bob — borrower
+    agent(bob, BobAgentIn?, BobNetIn?,
+          [output('_user', BobA2U) | [output('_net', BobNetOut)]],
+          [], 1, 0),
+    ui_mediator(bob, ch(BobA2U?, BobAgentIn), ch(BobCmds?, BobNotifies), [], 1),
+    tee_notifies(BobNotifies?, BobActorIn, BobLog),
+    log_notifies(bob, BobLog?),
+    borrower(BobActorIn?, BobCmds).
+
+%% --- Alice: the lender -------------------------------------------------------
+
+procedure lender(Stream(UserNotify)?, Stream(UserCmd)).
+lender(In, [connect(bob)|Out?]) :-
+    lender_wait_connected(In?, Out).
+
+procedure lender_wait_connected(Stream(UserNotify)?, Stream(UserCmd)).
+lender_wait_connected([connected(bob)|In], [mint(3, 0)|Out?]) :-
+    lender_wait_minted(In?, Out).
+lender_wait_connected([_|In], Out?) :-
+    otherwise | lender_wait_connected(In?, Out).
+lender_wait_connected([], []).
+
+%% Minted 3 own coins — propose the loan: give 3 alice-coins, want 5 bob-bonds
+%% maturing at 10 (face 5 > 3 lent is the interest).
+procedure lender_wait_minted(Stream(UserNotify)?, Stream(UserCmd)).
+lender_wait_minted([balance_report(alice, alice, 0, 3)|In],
+                   [trade(bob, [lot(alice, 0, 3)], [lot(bob, 10, 5)])|Out?]) :-
+    lender_wait_loan(In?, Out).
+lender_wait_minted([_|In], Out?) :-
+    otherwise | lender_wait_minted(In?, Out).
+lender_wait_minted([], []).
+
+%% Loan settled — try to redeem BEFORE advancing; our own gate must refuse it
+%% (the bob-bonds mature at 10, our local date is still 0).
+procedure lender_wait_loan(Stream(UserNotify)?, Stream(UserCmd)).
+lender_wait_loan([trade_completed(bob)|In],
+                 [redeem(bob, [lot(bob, 10, 3)], [lot(alice, 0, 3)])|Out?]) :-
+    lender_wait_early_redeem(In?, Out).
+lender_wait_loan([_|In], Out?) :-
+    otherwise | lender_wait_loan(In?, Out).
+lender_wait_loan([], []).
+
+%% Refused — advance our own local date past maturity.
+procedure lender_wait_early_redeem(Stream(UserNotify)?, Stream(UserCmd)).
+lender_wait_early_redeem([trade_failed(bob)|In], [advance_date(11)|Out?]) :-
+    lender_wait_advanced(In?, Out).
+lender_wait_early_redeem([_|In], Out?) :-
+    otherwise | lender_wait_early_redeem(In?, Out).
+lender_wait_early_redeem([], []).
+
+procedure lender_wait_advanced(Stream(UserNotify)?, Stream(UserCmd)).
+lender_wait_advanced([date_advanced(11)|In],
+                     [redeem(bob, [lot(bob, 10, 3)], [lot(alice, 0, 3)])|Out?]) :-
+    lender_wait_redeemed(In?, Out).
+lender_wait_advanced([_|In], Out?) :-
+    otherwise | lender_wait_advanced(In?, Out).
+lender_wait_advanced([], []).
+
+procedure lender_wait_redeemed(Stream(UserNotify)?, Stream(UserCmd)).
+lender_wait_redeemed([trade_completed(bob)|In], [balance|Out?]) :-
+    lender_done(In?, Out).
+lender_wait_redeemed([_|In], Out?) :-
+    otherwise | lender_wait_redeemed(In?, Out).
+lender_wait_redeemed([], []).
+
+procedure lender_done(Stream(UserNotify)?, Stream(UserCmd)).
+lender_done(_, []).
+
+%% --- Bob: the borrower -------------------------------------------------------
+
+procedure borrower(Stream(UserNotify)?, Stream(UserCmd)).
+borrower([befriend(alice, ReqId)|In], [decision(yes, alice, ReqId?)|Out?]) :-
+    ground(ReqId?) |
+    borrower_wait_connected(In?, Out).
+borrower([_|In], Out?) :-
+    otherwise | borrower(In?, Out).
+borrower([], []).
+
+procedure borrower_wait_connected(Stream(UserNotify)?, Stream(UserCmd)).
+borrower_wait_connected([connected(alice)|In], Out?) :-
+    borrower_wait_offer(In?, Out).
+borrower_wait_connected([_|In], Out?) :-
+    otherwise | borrower_wait_connected(In?, Out).
+borrower_wait_connected([], []).
+
+%% The loan is proposed — mint the bonds to lend (face 5, maturity 10), then
+%% accept the swap.
+procedure borrower_wait_offer(Stream(UserNotify)?, Stream(UserCmd)).
+borrower_wait_offer([trade_proposed(alice, _, _, ReqId)|In], [mint(5, 10)|Out?]) :-
+    ground(ReqId?) |
+    borrower_wait_minted(ReqId?, In?, Out).
+borrower_wait_offer([_|In], Out?) :-
+    otherwise | borrower_wait_offer(In?, Out).
+borrower_wait_offer([], []).
+
+procedure borrower_wait_minted(ReqId?, Stream(UserNotify)?, Stream(UserCmd)).
+borrower_wait_minted(ReqId, [balance_report(bob, bob, 10, 5)|In],
+                     [accept_trade(alice, ReqId?)|Out?]) :-
+    borrower_wait_loan(In?, Out).
+borrower_wait_minted(ReqId, [_|In], Out?) :-
+    otherwise | borrower_wait_minted(ReqId?, In?, Out).
+borrower_wait_minted(_, [], []).
+
+%% Swap done (we now hold alice-coins). Alice's redemption is auto-honoured by
+%% our agent — we just observe its completion, then report.
+procedure borrower_wait_loan(Stream(UserNotify)?, Stream(UserCmd)).
+borrower_wait_loan([trade_completed(alice)|In], Out?) :-
+    borrower_wait_redeemed(In?, Out).
+borrower_wait_loan([_|In], Out?) :-
+    otherwise | borrower_wait_loan(In?, Out).
+borrower_wait_loan([], []).
+
+procedure borrower_wait_redeemed(Stream(UserNotify)?, Stream(UserCmd)).
+borrower_wait_redeemed([trade_completed(alice)|In], [balance|Out?]) :-
+    borrower_done(In?, Out).
+borrower_wait_redeemed([_|In], Out?) :-
+    otherwise | borrower_wait_redeemed(In?, Out).
+borrower_wait_redeemed([], []).
+
+procedure borrower_done(Stream(UserNotify)?, Stream(UserCmd)).
+borrower_done(_, []).

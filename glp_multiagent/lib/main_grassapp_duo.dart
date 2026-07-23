@@ -239,6 +239,7 @@ class _DuoScreenState extends State<DuoScreen> {
 
     const scenarioFiles = [
       'self.glp',
+      'currency_txn.glp',
       'grassapp_agent.glp',
       'grassapp_mediator.glp',
       'play_grassapp_duo.glp',

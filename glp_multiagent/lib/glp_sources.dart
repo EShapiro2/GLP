@@ -38,6 +38,7 @@ const _bundledGlp = [
   'programs/lib/routing/befriend.glp',
   // GrassApp (coins among friends).
   'programs/book/grassapp/self.glp',
+  'programs/book/grassapp/currency_txn.glp',
   'programs/book/grassapp/grassapp_agent.glp',
   'programs/book/grassapp/grassapp_mediator.glp',
   'programs/book/grassapp/play_grassapp_boot.glp',
