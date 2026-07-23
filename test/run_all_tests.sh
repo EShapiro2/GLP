@@ -2432,6 +2432,52 @@ check "Z4 trace prints all args of an arity-11 goal (11th not truncated)" "9, \[
 echo ""
 
 # =============================================================================
+# Section ZG: Guard/type agreement (string/1, constant/1)
+# =============================================================================
+# The guards must admit exactly what the root self.glp types define:
+#   Constant ::= Number ; String ; Module.
+# [] is a constant that is neither a Number nor a Module, so it is a String —
+# string([]) succeeds (it used to be excluded).  constant/1 admits a Number, a
+# String (including []) and a Module term (it used to reject module terms).
+# The Module alternative has no GLP-level coverage: nothing constructs a
+# ModuleTerm today, so a module term cannot be produced from GLP source.
+echo "=== Section ZG: Guard/type agreement ==="
+
+zg1=$("$REPL_RUN" <<HEREDOC
+$GLP_DIR/programs/tests/test_guard_type_agreement.glp
+isstr([], R).
+:quit
+HEREDOC
+2>&1)
+check "ZG1 string([]) succeeds — [] is a String" "R = yes" "$zg1"
+
+zg2=$("$REPL_RUN" <<HEREDOC
+$GLP_DIR/programs/tests/test_guard_type_agreement.glp
+isstr(abc, R).
+:quit
+HEREDOC
+2>&1)
+check "ZG2 string(abc) still succeeds" "R = yes" "$zg2"
+
+zg3=$("$REPL_RUN" <<HEREDOC
+$GLP_DIR/programs/tests/test_guard_type_agreement.glp
+iscon([], R).
+:quit
+HEREDOC
+2>&1)
+check "ZG3 constant([]) succeeds" "R = yes" "$zg3"
+
+zg4=$("$REPL_RUN" <<HEREDOC
+$GLP_DIR/programs/tests/test_guard_type_agreement.glp
+iscon(5, R).
+:quit
+HEREDOC
+2>&1)
+check "ZG4 constant(5) succeeds" "R = yes" "$zg4"
+
+echo ""
+
+# =============================================================================
 # SUMMARY
 # =============================================================================
 TOTAL=$((PASS + FAIL))

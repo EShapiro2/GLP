@@ -623,23 +623,29 @@ GuardResult _evaluateGuard(String predicateName, List<Object?> args, RunnerConte
       return (val is int) ? GuardResult.success : GuardResult.failure;
 
     case 'string':
-      // Succeeds if X is a string (lowercase identifier or quoted string)
+      // Succeeds if X is a string. Per the root self.glp type definitions
+      // `Constant ::= Number ; String ; Module`, the empty list [] (held as the
+      // constant 'nil') is a constant that is neither a Number nor a Module, so
+      // it is a String: string([]) succeeds. The guard previously excluded
+      // 'nil', disagreeing with the types.
       if (args.isEmpty) return GuardResult.failure;
       final val = getValue(args[0]);
-      // String: ConstTerm with String value (not 'nil' which represents [])
-      if (val is ConstTerm && val.value is String && val.value != 'nil') {
+      if (val is ConstTerm && val.value is String) {
         return GuardResult.success;
       }
-      if (val is String && val != 'nil') {
+      if (val is String) {
         return GuardResult.success;
       }
       return GuardResult.failure;
 
     case 'constant':
-      // Succeeds if X is a constant (a string, a number, or [])
+      // Succeeds if X is a constant. Per the root self.glp type definitions
+      // `Constant ::= Number ; String ; Module` — a String (including 'nil',
+      // which holds []), a Number, or a Module term. The guard previously
+      // rejected module terms, disagreeing with the types.
       if (args.isEmpty) return GuardResult.failure;
       final val = getValue(args[0]);
-      // String or nil (which represents [])
+      // String (including 'nil', which represents [])
       if (val is ConstTerm && val.value is String) {
         return GuardResult.success;
       }
@@ -651,6 +657,10 @@ GuardResult _evaluateGuard(String predicateName, List<Object?> args, RunnerConte
         return GuardResult.success;
       }
       if (val is ConstTerm && val.value is num) {
+        return GuardResult.success;
+      }
+      // Module — the same representation module/1 tests
+      if (val is ModuleTerm) {
         return GuardResult.success;
       }
       return GuardResult.failure;

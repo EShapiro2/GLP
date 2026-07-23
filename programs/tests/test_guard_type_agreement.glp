@@ -1,0 +1,22 @@
+% Guards must admit exactly what the root self.glp types define:
+%   Number   ::= Integer ; Real.
+%   Constant ::= Number ; String ; Module.
+%
+% [] is a constant that is neither a Number nor a Module, so it is a String —
+% hence string([]) succeeds.  constant/1 admits a Number, a String (including
+% []), and a Module term.
+%
+% The Module alternative is not exercised here: nothing in the runtime
+% constructs a ModuleTerm today (the Distribute/Transmit channel surface is
+% inert for statically linked programs), so a module term cannot be produced
+% from GLP source.  constant/1 accepts it in the engine; there is no GLP-level
+% coverage until module terms are actually produced.
+Res ::= yes ; no.
+
+exported procedure isstr(String?, Res).
+isstr(X, yes) :- string(X?) | true.
+isstr(_, no) :- otherwise | true.
+
+exported procedure iscon(Constant?, Res).
+iscon(X, yes) :- constant(X?) | true.
+iscon(_, no) :- otherwise | true.
