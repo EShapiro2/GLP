@@ -1,0 +1,138 @@
+%% play_escrow_headless.glp — headless two-agent escrow smoke test.
+%%
+%% Charlie deposits 5 of his own coins in escrow for Frank with a real-time
+%% release; nobody cancels, so the timer wins the race and Frank receives the
+%% coins.  This exercises the whole escrow path before the village play is built
+%% on it: the escrow/5 race, the mediator escrowing the cancel-signal writer as
+%% req(N), the depositor's expiry notify, and the beneficiary's release notify.
+%%
+%% Entry point for the Dart harness / goalLabel: play_escrow/0.
+%% Requires: self.glp, currency_txn.glp, grassapp_agent.glp, grassapp_mediator.glp
+%%
+%% Names are suffixed `_esc` so this play can coexist with the other plays if
+%% they are ever loaded together (grassapp files share one flat scope).
+
+
+%% --- Two-way cold-call router --------------------------------------------
+
+procedure route_esc(Stream(OutputMsg)?, Stream(OutputMsg), Stream(OutputMsg)).
+route_esc([msg(charlie, C)|Rest], [msg(charlie, C?)|A?], B?) :-
+    route_esc(Rest?, A, B).
+route_esc([msg(frank, C)|Rest], A?, [msg(frank, C?)|B?]) :-
+    route_esc(Rest?, A, B).
+route_esc([], [], []).
+
+procedure net_esc(Stream(OutputMsg)?, Stream(OutputMsg)?, Stream(OutputMsg), Stream(OutputMsg)).
+net_esc(AOut, BOut, AIn?, BIn?) :-
+    merge(AOut?, BOut?, All),
+    route_esc(All?, AIn, BIn).
+
+%% --- Notification logger (so the headless run is observable) --------------
+
+procedure tee_esc(Stream(UserNotify)?, Stream(UserNotify), Stream(UserNotify)).
+tee_esc([N|Ns], [N?|As?], [N?|Bs?]) :- ground(N?) | tee_esc(Ns?, As, Bs).
+tee_esc([], [], []).
+
+procedure log_esc(Constant?, Stream(UserNotify)?).
+log_esc(Id, [N|Ns]) :-
+    ground(Id?), ground(N?) |
+    send_to_user([tagged(Id?, N?)]),
+    log_esc(Id?, Ns?).
+log_esc(_, []).
+
+%% --- The play ------------------------------------------------------------
+
+procedure play_escrow.
+play_escrow :-
+    now(Now),
+    T := Now? + 700,
+    net_esc(CharlieNetOut?, FrankNetOut?, CharlieNetIn, FrankNetIn),
+
+    %% Charlie — depositor
+    agent(charlie, CharlieAgentIn?, CharlieNetIn?,
+          [output('_user', CharlieA2U) | [output('_net', CharlieNetOut)]],
+          [], 1, 0),
+    ui_mediator(charlie, ch(CharlieA2U?, CharlieAgentIn),
+                ch(CharlieCmds?, CharlieNotifies), [], 1),
+    tee_esc(CharlieNotifies?, CharlieActorIn, CharlieLog),
+    log_esc(charlie, CharlieLog?),
+    depositor(T?, CharlieActorIn?, CharlieCmds),
+
+    %% Frank — beneficiary
+    agent(frank, FrankAgentIn?, FrankNetIn?,
+          [output('_user', FrankA2U) | [output('_net', FrankNetOut)]],
+          [], 1, 0),
+    ui_mediator(frank, ch(FrankA2U?, FrankAgentIn),
+                ch(FrankCmds?, FrankNotifies), [], 1),
+    tee_esc(FrankNotifies?, FrankActorIn, FrankLog),
+    log_esc(frank, FrankLog?),
+    beneficiary(FrankActorIn?, FrankCmds).
+
+%% --- Charlie: the depositor ----------------------------------------------
+
+procedure depositor(Constant?, Stream(UserNotify)?, Stream(UserCmd)).
+depositor(T, In, [connect(frank)|Out?]) :-
+    depositor_wait_connected(T?, In?, Out).
+
+procedure depositor_wait_connected(Constant?, Stream(UserNotify)?, Stream(UserCmd)).
+depositor_wait_connected(T, [connected(frank)|In], [mint(5, 0)|Out?]) :-
+    depositor_wait_minted(T?, In?, Out).
+depositor_wait_connected(T, [_|In], Out?) :-
+    otherwise | depositor_wait_connected(T?, In?, Out).
+depositor_wait_connected(_, [], []).
+
+%% Minted 5 own coins — lock them for Frank until T (nobody cancels).
+procedure depositor_wait_minted(Constant?, Stream(UserNotify)?, Stream(UserCmd)).
+depositor_wait_minted(T, [balance_report(charlie, charlie, 0, 5)|In],
+                      [deposit_escrow(frank, charlie, 0, 5, T?)|Out?]) :-
+    depositor_wait_deposited(In?, Out).
+depositor_wait_minted(T, [_|In], Out?) :-
+    otherwise | depositor_wait_minted(T?, In?, Out).
+depositor_wait_minted(_, [], []).
+
+procedure depositor_wait_deposited(Stream(UserNotify)?, Stream(UserCmd)).
+depositor_wait_deposited([escrow_deposited(frank, _, _)|In], Out?) :-
+    depositor_wait_expired(In?, Out).
+depositor_wait_deposited([_|In], Out?) :-
+    otherwise | depositor_wait_deposited(In?, Out).
+depositor_wait_deposited([], []).
+
+%% The timer won — the coins went to Frank.
+procedure depositor_wait_expired(Stream(UserNotify)?, Stream(UserCmd)).
+depositor_wait_expired([escrow_expired(frank)|In], [balance|Out?]) :-
+    depositor_done(In?, Out).
+depositor_wait_expired([_|In], Out?) :-
+    otherwise | depositor_wait_expired(In?, Out).
+depositor_wait_expired([], []).
+
+procedure depositor_done(Stream(UserNotify)?, Stream(UserCmd)).
+depositor_done(_, []).
+
+%% --- Frank: the beneficiary ----------------------------------------------
+
+procedure beneficiary(Stream(UserNotify)?, Stream(UserCmd)).
+beneficiary([befriend(charlie, ReqId)|In],
+            [decision(yes, charlie, ReqId?)|Out?]) :-
+    ground(ReqId?) |
+    beneficiary_wait_received(In?, Out).
+beneficiary([_|In], Out?) :-
+    otherwise | beneficiary(In?, Out).
+beneficiary([], []).
+
+procedure beneficiary_wait_received(Stream(UserNotify)?, Stream(UserCmd)).
+beneficiary_wait_received([escrow_received(charlie, _)|In], Out?) :-
+    beneficiary_wait_released(In?, Out).
+beneficiary_wait_received([_|In], Out?) :-
+    otherwise | beneficiary_wait_received(In?, Out).
+beneficiary_wait_received([], []).
+
+%% Released — the coins arrive, so a balance report follows.
+procedure beneficiary_wait_released(Stream(UserNotify)?, Stream(UserCmd)).
+beneficiary_wait_released([escrow_released(charlie)|In], [balance|Out?]) :-
+    beneficiary_done(In?, Out).
+beneficiary_wait_released([_|In], Out?) :-
+    otherwise | beneficiary_wait_released(In?, Out).
+beneficiary_wait_released([], []).
+
+procedure beneficiary_done(Stream(UserNotify)?, Stream(UserCmd)).
+beneficiary_done(_, []).

@@ -36,6 +36,14 @@ OutputContent ::= befriend(Constant, Response?)
                 ; trade_returned(Constant)
                 ; trade_returned_menu(Constant, Stream(Bond))
                 ; trade_propose(Stream(Lot), Stream(Bond), TradeResponse?)
+                ; escrow_offer(Constant, EscrowBenResult)
+                ; escrow_deposited(Constant, Constant, EscrowCancel?)
+                ; escrow_received(Constant, Constant)
+                ; escrow_released(Constant)
+                ; escrow_cancelled(Constant)
+                ; escrow_expired(Constant)
+                ; escrow_returned(Constant)
+                ; escrow_failed(Constant)
                 ; coins(Stream(Bond))
                 ; balances(Stream(Bond))
                 ; group_invite(GroupId, Channel(Stream(GroupSetupResponse), Stream(Handshake)))
@@ -326,6 +334,62 @@ redemption_reject(Id, From, OrigHoldings, Menu?, NextSerial, Clock, UserIn, NetI
     after_change(Id?, OrigHoldings?, NextSerial?, Clock?, UserIn?, NetIn?, Outs1?).
 
 %% =============================================================================
+%% ESCROW (paper §5) — a race between the release timer and the cancel signal
+%% =============================================================================
+
+%% Whichever guard commits first decides: the timer releases the bonds to the
+%% beneficiary and reports expiry to the depositor; the cancel returns them to
+%% the depositor and reports cancellation to the beneficiary.  wait_until is REAL
+%% time — the agent's local date (advance_date) governs maturity, not escrow.
+procedure escrow(Constant?, Stream(Bond)?, EscrowCancel?, EscrowBenResult, EscrowDepResult).
+escrow(T, Bonds, _, escrow_bonds(Bonds?), escrow_expired) :-
+    wait_until(T?) | true.
+escrow(_, Bonds, cancel, escrow_cancelled, escrow_bonds(Bonds?)).
+
+procedure bind_escrow_cancel(EscrowCancel).
+bind_escrow_cancel(cancel).
+
+%% Watch the beneficiary's outcome writer; inject the settlement into UserIn.
+procedure inject_escrow_ben_result(EscrowBenResult?, Constant?, Stream(X)?, Stream(X)).
+inject_escrow_ben_result(escrow_bonds(Bonds), From, Ys,
+    [escrow_ben_released(From?, Bonds?)|Ys?]) :-
+    ground(From?), ground(Bonds?) | true.
+inject_escrow_ben_result(escrow_cancelled, From, Ys,
+    [escrow_ben_cancelled(From?)|Ys?]) :-
+    ground(From?) | true.
+inject_escrow_ben_result(R, From, [Y|Ys], [Y?|Ys1?]) :-
+    inject_escrow_ben_result(R?, From?, Ys?, Ys1).
+
+%% Watch the depositor's outcome writer; inject the settlement into UserIn.
+procedure inject_escrow_dep_result(EscrowDepResult?, Constant?, Stream(X)?, Stream(X)).
+inject_escrow_dep_result(escrow_bonds(Bonds), Target, Ys,
+    [escrow_dep_returned(Target?, Bonds?)|Ys?]) :-
+    ground(Target?), ground(Bonds?) | true.
+inject_escrow_dep_result(escrow_expired, Target, Ys,
+    [escrow_dep_expired(Target?)|Ys?]) :-
+    ground(Target?) | true.
+inject_escrow_dep_result(R, Target, [Y|Ys], [Y?|Ys1?]) :-
+    inject_escrow_dep_result(R?, Target?, Ys?, Ys1).
+
+%% Depositor: select the bonds, then open the escrow (or report failure).
+procedure do_deposit_escrow(Constant?, Constant?, Stream(Lot)?, Constant?, Stream(Bond)?, Constant?, Constant?, Stream(X)?, Stream(X)?, OutputsList?).
+do_deposit_escrow(Id, Target, GiveSpec, ReleaseTime, Holdings, NextSerial, Clock, UserIn, NetIn, Outs) :-
+    select_bonds_by_spec(GiveSpec?, Holdings?, Status, Selected, Remaining),
+    do_deposit_escrow_result(Status?, Id?, Target?, ReleaseTime?, Selected?, Remaining?, NextSerial?, Clock?, UserIn?, NetIn?, Outs?).
+
+procedure do_deposit_escrow_result(Constant?, Constant?, Constant?, Constant?, Stream(Bond)?, Stream(Bond)?, Constant?, Constant?, Stream(X)?, Stream(X)?, OutputsList?).
+do_deposit_escrow_result(ok, Id, Target, ReleaseTime, Selected, Remaining, NextSerial, Clock, UserIn, NetIn, Outs) :-
+    escrow(ReleaseTime?, Selected?, CancelSignal?, BenResult, DepResult),
+    inject_escrow_dep_result(DepResult?, Target?, UserIn?, UserIn1),
+    lookup_send(Target?, msg(Id?, Target?, escrow_offer(ReleaseTime?, BenResult?)), Outs?, Outs1),
+    lookup_send('_user', msg(agent, '_user', escrow_deposited(Target?, ReleaseTime?, CancelSignal)), Outs1?, Outs2),
+    after_change(Id?, Remaining?, NextSerial?, Clock?, UserIn1?, NetIn?, Outs2?).
+do_deposit_escrow_result(fail, Id, Target, _, Selected, Remaining, NextSerial, Clock, UserIn, NetIn, Outs) :-
+    append(Selected?, Remaining?, OrigHoldings),
+    lookup_send('_user', msg(agent, '_user', escrow_failed(Target?)), Outs?, Outs1),
+    after_change(Id?, OrigHoldings?, NextSerial?, Clock?, UserIn?, NetIn?, Outs1?).
+
+%% =============================================================================
 %% GROUP HELPERS (paper §7.2 Social Network) — grassapp output model
 %% =============================================================================
 
@@ -492,6 +556,47 @@ agent(Id, [trade_returned_bonds_menu(From, OurBonds, Menu)|UserIn], NetIn, Outs,
     lookup_send('_user', msg(agent, '_user', trade_returned_menu(From?, Menu?)), Outs?, Outs1),
     after_change(Id?, NewHoldings?, NextSerial?, Clock?, UserIn?, NetIn?, Outs1?).
 
+%% --- Escrow: depositor side (paper §5) ---
+
+%% Lock bonds for Target until ReleaseTime; cancellable until then.
+agent(Id, [msg('_user', Id1, deposit_escrow(Target, GiveSpec, ReleaseTime))|UserIn], NetIn, Outs, Holdings, NextSerial, Clock) :-
+    Id? =?= Id1?, ground(Target?), ground(GiveSpec?), ground(ReleaseTime?) |
+    do_deposit_escrow(Id?, Target?, GiveSpec?, ReleaseTime?, Holdings?, NextSerial?, Clock?, UserIn?, NetIn?, Outs?).
+
+%% Cancel before the release time — binding the signal wins the race.
+agent(Id, [msg('_user', Id1, cancel_escrow(_, escrow_pending(CancelSignal?)))|UserIn], NetIn, Outs, Holdings, NextSerial, Clock) :-
+    Id? =?= Id1? |
+    bind_escrow_cancel(CancelSignal),
+    agent(Id?, UserIn?, NetIn?, Outs?, Holdings?, NextSerial?, Clock?).
+
+%% The timer won: the bonds went to the beneficiary.
+agent(Id, [escrow_dep_expired(Target)|UserIn], NetIn, Outs, Holdings, NextSerial, Clock) :-
+    ground(Id?), ground(Target?) |
+    lookup_send('_user', msg(agent, '_user', escrow_expired(Target?)), Outs?, Outs1),
+    agent(Id?, UserIn?, NetIn?, Outs1?, Holdings?, NextSerial?, Clock?).
+
+%% The cancel won: the bonds come home.
+agent(Id, [escrow_dep_returned(Target, OurBonds)|UserIn], NetIn, Outs, Holdings, NextSerial, Clock) :-
+    ground(Id?), ground(Target?), ground(OurBonds?) |
+    append(Holdings?, OurBonds?, NewHoldings),
+    lookup_send('_user', msg(agent, '_user', escrow_returned(Target?)), Outs?, Outs1),
+    after_change(Id?, NewHoldings?, NextSerial?, Clock?, UserIn?, NetIn?, Outs1?).
+
+%% --- Escrow: beneficiary side (paper §5) ---
+
+%% Released: take the bonds.
+agent(Id, [escrow_ben_released(From, Bonds)|UserIn], NetIn, Outs, Holdings, NextSerial, Clock) :-
+    ground(Id?), ground(From?), ground(Bonds?) |
+    append(Holdings?, Bonds?, NewHoldings),
+    lookup_send('_user', msg(agent, '_user', escrow_released(From?)), Outs?, Outs1),
+    after_change(Id?, NewHoldings?, NextSerial?, Clock?, UserIn?, NetIn?, Outs1?).
+
+%% The depositor cancelled.
+agent(Id, [escrow_ben_cancelled(From)|UserIn], NetIn, Outs, Holdings, NextSerial, Clock) :-
+    ground(Id?), ground(From?) |
+    lookup_send('_user', msg(agent, '_user', escrow_cancelled(From?)), Outs?, Outs1),
+    agent(Id?, UserIn?, NetIn?, Outs1?, Holdings?, NextSerial?, Clock?).
+
 %% --- Social: user messages ---
 
 agent(Id, [msg('_user', Id1, connect(Target))|UserIn], NetIn, Outs, Holdings, NextSerial, Clock) :-
@@ -606,6 +711,13 @@ agent(Id, UserIn, [msg(From, Id1, trade_propose(WantSpec, OfferedBonds, TradeRes
     classify_trade(Id?, WantSpec?, OfferedBonds?, TradeClass),
     trade_dispatch(TradeClass?, Id?, From?, WantSpec?, OfferedBonds?, TradeResp,
         Holdings?, NextSerial?, Clock?, UserIn?, NetIn?, Outs?).
+
+%% A friend opened an escrow for me: watch its outcome, tell the user.
+agent(Id, UserIn, [msg(From, Id1, escrow_offer(ReleaseTime, BenResult))|NetIn], Outs, Holdings, NextSerial, Clock) :-
+    Id? =?= Id1?, ground(From?), ground(ReleaseTime?) |
+    inject_escrow_ben_result(BenResult?, From?, UserIn?, UserIn1),
+    lookup_send('_user', msg(agent, '_user', escrow_received(From?, ReleaseTime?)), Outs?, Outs1),
+    agent(Id?, UserIn1?, NetIn?, Outs1?, Holdings?, NextSerial?, Clock?).
 
 %% A friend unfriended me (paper §4 Integrate unfriend).
 agent(Id, UserIn, [msg(From, Id1, unfriend)|NetIn], Outs, Holdings, NextSerial, Clock) :-

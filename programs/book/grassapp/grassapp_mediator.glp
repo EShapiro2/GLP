@@ -11,10 +11,13 @@
 %% maturity-carrying lot-spec trade (a loan is its instance), the local date
 %% advances explicitly, redeem is the holder-gated presentation, and
 %% balance_report is keyed by (owner, issuer, maturity) so the wallet can split
-%% cash (mature) from loans (dated).  Escrow is Milestone 2.
+%% cash (mature) from loans (dated).  Escrow (paper §5) locks bonds until a
+%% real-time release and is cancellable until then; its cancel-signal writer is
+%% escrowed as req(N) exactly like a trade offer's response writer.
 %%
 %% Scalar boundary: the UI — and the scripted actors that stand in for people —
-%% speak SCALAR single-lot commands (pay/4, trade/7, redeem/7), because a compose
+%% speak SCALAR single-lot commands (pay/4, trade/7, redeem/7, deposit_escrow/5),
+%% because a compose
 %% form carries only scalar fields.  This mediator builds the Stream(Lot) the
 %% agent consumes, and flattens the agent's single-lot trade_proposed back to
 %% scalars for the offer card.  Multi-lot portfolios are Milestone 2.
@@ -35,6 +38,8 @@ UserCmd     ::= connect(Constant)
               ; redeem(Constant, Constant, Constant, Constant, Constant, Constant, Constant)
               ; accept_trade(Constant, ReqId)
               ; reject_trade(Constant, ReqId)
+              ; deposit_escrow(Constant, Constant, Constant, Constant, Constant)
+              ; cancel_escrow(Constant, ReqId)
               ; create_group(Constant)
               ; invite_group(GroupId, Constant)
               ; accept_group(GroupId, ReqId)
@@ -57,6 +62,13 @@ UserNotify  ::= befriend(Constant, ReqId)
               ; trade_failed(Constant)
               ; trade_returned(Constant)
               ; trade_returned_menu(Constant, Stream(Bond))
+              ; escrow_deposited(Constant, Constant, ReqId)
+              ; escrow_received(Constant, Constant)
+              ; escrow_released(Constant)
+              ; escrow_cancelled(Constant)
+              ; escrow_expired(Constant)
+              ; escrow_returned(Constant)
+              ; escrow_failed(Constant)
               ; group_invite(GroupId, ReqId)
               ; group_joined(GroupId)
               ; group_joined_member(GroupId, Constant)
@@ -95,6 +107,17 @@ ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
     N1 := N? + 1,
     ui_mediator(Id?, AgentCh1?, UserCh1?,
         [pending(req(N?), trade_pending(Resp, WantSpec?, Offered?)) | Ps?], N1?).
+
+%% Escrow opened: the agent hands over the cancel-signal writer.  Hold it in the
+%% pending table as req(N) so the UI can cancel by id.
+ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
+    receive(msg(agent, '_user', escrow_deposited(Target, ReleaseTime, Cancel?)),
+            AgentCh?, AgentCh1),
+    ground(Target?), ground(ReleaseTime?) |
+    send(escrow_deposited(Target?, ReleaseTime?, req(N?)), UserCh?, UserCh1),
+    N1 := N? + 1,
+    ui_mediator(Id?, AgentCh1?, UserCh1?,
+        [pending(req(N?), escrow_pending(Cancel)) | Ps?], N1?).
 
 %% --- Agent-to-user: ground (pass through) ---
 
@@ -174,6 +197,45 @@ ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
             AgentCh?, AgentCh1),
     ground(Owner?), ground(Issuer?), ground(Maturity?), ground(Count?) |
     send(balance_report(Owner?, Issuer?, Maturity?, Count?), UserCh?, UserCh1),
+    ui_mediator(Id?, AgentCh1?, UserCh1?, Ps?, N?).
+
+%% --- Agent-to-user: escrow settlement (ground pass-through) ---
+
+ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
+    receive(msg(agent, '_user', escrow_received(From, ReleaseTime)),
+            AgentCh?, AgentCh1),
+    ground(From?), ground(ReleaseTime?) |
+    send(escrow_received(From?, ReleaseTime?), UserCh?, UserCh1),
+    ui_mediator(Id?, AgentCh1?, UserCh1?, Ps?, N?).
+
+ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
+    receive(msg(agent, '_user', escrow_released(From)), AgentCh?, AgentCh1),
+    ground(From?) |
+    send(escrow_released(From?), UserCh?, UserCh1),
+    ui_mediator(Id?, AgentCh1?, UserCh1?, Ps?, N?).
+
+ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
+    receive(msg(agent, '_user', escrow_cancelled(From)), AgentCh?, AgentCh1),
+    ground(From?) |
+    send(escrow_cancelled(From?), UserCh?, UserCh1),
+    ui_mediator(Id?, AgentCh1?, UserCh1?, Ps?, N?).
+
+ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
+    receive(msg(agent, '_user', escrow_expired(Target)), AgentCh?, AgentCh1),
+    ground(Target?) |
+    send(escrow_expired(Target?), UserCh?, UserCh1),
+    ui_mediator(Id?, AgentCh1?, UserCh1?, Ps?, N?).
+
+ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
+    receive(msg(agent, '_user', escrow_returned(Target)), AgentCh?, AgentCh1),
+    ground(Target?) |
+    send(escrow_returned(Target?), UserCh?, UserCh1),
+    ui_mediator(Id?, AgentCh1?, UserCh1?, Ps?, N?).
+
+ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
+    receive(msg(agent, '_user', escrow_failed(Target)), AgentCh?, AgentCh1),
+    ground(Target?) |
+    send(escrow_failed(Target?), UserCh?, UserCh1),
     ui_mediator(Id?, AgentCh1?, UserCh1?, Ps?, N?).
 
 %% --- Agent-to-user: group invitation (escrow the setup channel as req(N)) ---
@@ -326,6 +388,25 @@ ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
     lookup_pending(ReqId?, Pv, Ps?, Ps1),
     send(msg('_user', Id?, reject_trade(From?, Pv?)),
          AgentCh?, AgentCh1),
+    ui_mediator(Id?, AgentCh1?, UserCh1?, Ps1?, N?).
+
+%% Escrow deposit: scalar single-lot UI form; the mediator builds the lot.
+ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
+    receive(deposit_escrow(Target, Coin, Maturity, Amount, ReleaseTime),
+            UserCh?, UserCh1),
+    ground(Id?), ground(Target?),
+    ground(Coin?), ground(Maturity?), ground(Amount?), ground(ReleaseTime?) |
+    send(msg('_user', Id?,
+             deposit_escrow(Target?, [lot(Coin?, Maturity?, Amount?)], ReleaseTime?)),
+         AgentCh?, AgentCh1),
+    ui_mediator(Id?, AgentCh1?, UserCh1?, Ps?, N?).
+
+%% Cancel an open escrow by its req id — the pending table returns the writer.
+ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
+    receive(cancel_escrow(Target, ReqId), UserCh?, UserCh1),
+    ground(Id?), ground(Target?), ground(ReqId?) |
+    lookup_pending(ReqId?, Pv, Ps?, Ps1),
+    send(msg('_user', Id?, cancel_escrow(Target?, Pv?)), AgentCh?, AgentCh1),
     ui_mediator(Id?, AgentCh1?, UserCh1?, Ps1?, N?).
 
 %% --- User-to-agent: group commands ---
