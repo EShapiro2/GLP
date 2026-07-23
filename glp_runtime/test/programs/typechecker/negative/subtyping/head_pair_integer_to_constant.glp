@@ -1,0 +1,11 @@
+% test: head_pair_integer_to_constant
+% expected: fail (subtyping does not apply)
+% description: Subtyping relaxes body-body variable pairs only (Definition
+%   "Well-Typed Clause with Subtyping").  A head-head pair still requires dual
+%   types, so copying an Integer input to a Constant output within the head is
+%   rejected even though Integer <: Constant.  The supported route is a direct
+%   body-body connection; positive twin:
+%   positive/subtyping/integer_below_number_and_constant.glp.
+
+procedure elem(Integer?, Constant).
+elem(X, X?).

@@ -1,0 +1,20 @@
+% test: int_list_to_constant_list
+% expected: pass (requires subtyping)
+% description: The primitive order lifted through the list constructor
+%   (Definition "Prefix Acceptance": an output-type endpoint S matches any S'
+%   with S <: S').  IntList <: ConstantList because Integer <: Constant at the
+%   element position.  Body-body pair: writer X at IntList, reader X? at
+%   ConstantList?.
+
+IntList ::= [] ; [Integer|IntList].
+ConstantList ::= [] ; [Constant|ConstantList].
+
+procedure constant_sink(ConstantList?).
+constant_sink([]).
+constant_sink([_|Xs]) :- constant_sink(Xs?).
+
+procedure int_source(IntList).
+int_source([]).
+
+procedure connect.
+connect :- int_source(X), constant_sink(X?).

@@ -20,7 +20,7 @@ const Set<String> predefinedTypeNames = {
   'Integer',  // Primitive builtin
   'Real',     // Primitive builtin
   'String',   // Primitive builtin
-  'Constant', // Primitive builtin (Number ; String)
+  'Constant', // Primitive builtin (top of the primitive subtype order below _)
   'Exp',      // Arithmetic expression type
   'Stream',   // Fundamental collection type
   'OpenStream', // Non-empty stream

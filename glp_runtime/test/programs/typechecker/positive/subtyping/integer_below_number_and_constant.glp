@@ -1,0 +1,21 @@
+% test: integer_below_number_and_constant
+% expected: pass (requires subtyping)
+% description: The primitive subtype order at a leaf (Definition "Primitive
+%   Subtype Order", TGLP sections/typed-glp.tex): Integer <: Number and
+%   Integer <: Constant.  Body-body pair: writer X at Integer (from int_source
+%   output), reader X? at Number? / Constant? (from the sink's input).
+
+procedure int_source(Integer).
+int_source(1).
+
+procedure number_sink(Number?).
+number_sink(_).
+
+procedure constant_sink(Constant?).
+constant_sink(_).
+
+procedure to_number.
+to_number :- int_source(X), number_sink(X?).
+
+procedure to_constant.
+to_constant :- int_source(X), constant_sink(X?).

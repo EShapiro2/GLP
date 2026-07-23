@@ -1,10 +1,10 @@
 # Subtyping — Implementation Specification
 
-**Paper Reference**: Section 4.6, Definitions 4.5–4.9
-**Theoretical Spec**: This file, sections 1–3 (unchanged)
-**Implementation Spec**: Section 4 onward (new)
-**Status**: Not yet implemented
-**Branch**: `subtyping`
+**Paper Reference**: TGLP (Moded-Types), `sections/typed-glp.tex` Definition "Primitive Subtype Order"; `sections/well-typing.tex` §Subtyping — Definitions "Simple Prefix", "Prefix Acceptance", "Subtyping", "Well-Typed Clause with Subtyping", "Well-Typed GLP Program with Subtyping".
+**Authority**: the paper. Where this file and the paper differ, the paper governs.
+**Theoretical Spec**: This file, sections 1–3
+**Implementation Spec**: Section 4 onward
+**Status**: Implemented (2026-07-23)
 
 ---
 
@@ -15,6 +15,10 @@ Well-typing requires type consistency for variable pairs. The strict requirement
 Informally: anything produced by writer X can be consumed by reader X?.
 
 ## 2. Paper Definitions
+
+### Definition (Primitive Subtype Order)
+
+The **primitive subtype order** is the least partial order `<:` on output types with `Integer <: Number`, `Real <: Number`, `Number <: Constant`, `String <: Constant`, `c <: Constant` for every symbolic constant `c`, and `T <: _` for every output type `T`. Being least, it is reflexive and transitive (so `Integer <: Constant`) and relates nothing else (so `Constant` is not a subtype of `Integer`).
 
 ### Definition 4.5 (Simple Prefix)
 
@@ -28,7 +32,7 @@ Since the type automaton is deterministic, each position along a simple prefix c
 
 A simple prefix p of type A is **accepted by** type B if B has a simple prefix q with identical functor/position structure, where endpoints satisfy:
 - `_` matches only `_`
-- output type S matches S or `_`
+- output type S matches any S' with S <: S' in the primitive subtype order
 - mode inversion S? matches any mode inversion at the same position.
 
 ### Definition 4.7 (Subtyping)
@@ -76,9 +80,18 @@ isSubtype(stateA, stateB, dfa, visited):
   // Both must be output types (not dual)
   assert !stateA.isDual && !stateB.isDual
 
-  // Handle primitive type hierarchy (section 4.2)
-  if stateA.isPrimitiveType or stateB.isPrimitiveType:
+  // Primitive subtype order — the base case (section 4.3)
+  if stateA.isPrimitiveType and stateB.isPrimitiveType:
     return checkPrimitiveSubtype(stateA, stateB)
+
+  // c <: Constant for every symbolic constant c, lifted through union: a type
+  // whose alternatives are all symbolic constants, or primitives below
+  // Constant, produces only constants (section 4.3)
+  if stateB.isConstantType:
+    return isConstantUnion(stateA, dfa)
+
+  // A primitive and a user-defined type are otherwise unrelated
+  if stateA.isPrimitiveType or stateB.isPrimitiveType: return false
 
   // Get automata for both types
   automA = dfa.getAutomaton(stateA.name)
@@ -119,7 +132,7 @@ The targets of matching transitions can be:
 
 ### 4.3 Primitive Type Subtyping
 
-Primitive types have a fixed subtype lattice. No transitions need checking.
+The primitive types are `Integer`, `Real`, `Number`, `String`, `Constant` and `_`; each is a DFA state of its own, with no transitions. They carry the primitive subtype order of section 2.
 
 | Relation | Holds? | Reason |
 |----------|--------|--------|
@@ -127,19 +140,22 @@ Primitive types have a fixed subtype lattice. No transitions need checking.
 | Real <: Real | yes | reflexive |
 | Number <: Number | yes | reflexive |
 | String <: String | yes | reflexive |
-| Integer <: Number | yes | integers are numbers |
-| Real <: Number | yes | reals are numbers |
+| Constant <: Constant | yes | reflexive |
+| Integer <: Number | yes | declared |
+| Real <: Number | yes | declared |
+| Number <: Constant | yes | declared |
+| String <: Constant | yes | declared |
+| Integer <: Constant | yes | transitive through Number |
+| Real <: Constant | yes | transitive through Number |
 | _ <: _ | yes | reflexive |
 | T <: _ | yes | _ is the top output type |
 | _ <: T (T ≠ _) | no | _ is broader than any specific type |
-| Integer <: Real | no | disjoint |
-| Integer <: String | no | disjoint |
+| Constant <: Integer | no | the order is directional |
 | Number <: Integer | no | numbers include reals |
+| Integer <: Real | no | unrelated |
+| Integer <: String | no | unrelated |
 
-Summary:
-- `_` is top (any output type is a subtype of `_`)
-- `Integer <: Number`, `Real <: Number`
-- Otherwise, primitive types must be identical
+A symbolic constant is not a DFA state of its own: in the automaton it is a nullary transition to `_FINAL_`. `c <: Constant` is therefore applied to a whole type: a user-defined type is a subtype of `Constant` when it has at least one alternative and every alternative is a symbolic constant or a primitive below `Constant`. A compound alternative disqualifies it.
 
 ### 4.4 Wildcard Handling
 
@@ -159,12 +175,7 @@ The `visited` set stores `(stateA, stateB)` pairs. Since the DFA has finitely ma
 
 In `well_typed_clause.dart`, function `_checkClauseDuality`:
 
-**Current behavior (exact duality):**
 For body-body variable pairs (writer X at type S, reader X? at type T?):
-- Requires `S.baseName == T.baseName` (exact match)
-
-**New behavior (subtyping):**
-For body-body variable pairs:
 - Requires `isSubtype(S_output, T_output, dfa)` where:
   - `S_output` is the output DFAState for the writer's type
   - `T_output` is the output DFAState corresponding to the reader's dual
@@ -178,7 +189,10 @@ In concrete terms: writer X has type state S (output). Reader X? has type state 
 - **Well-typed term checking**: No change.
 - **Moded term construction**: No change.
 - **Input coverage checking**: No change.
-- **DFA construction**: No change.
+
+### 5.2b Constant is a primitive DFA state
+
+`Constant` is a GLP language primitive (TGLP appendix "GLP Language Primitives"), not a root `self.glp` type definition. It is built as a system state with a primitive automaton, alongside `Integer`, `Real`, `Number` and `String`, and a leaf consistency check accepts an integer, real, string or symbolic constant at a `Constant` position (consistency table rows 4–7). The earlier root-scope definition `Constant ::= Number ; String.` could not express `c <: Constant` for a symbolic constant and has been removed.
 
 ### 5.3 Signature
 
@@ -209,6 +223,10 @@ Directory: `positive/subtyping/`
 | `contravariant_response_slot.glp` | FlexibleReq <: FullReq | Contravariance at mode inversion |
 | `direct_constant_subtype.glp` | Pet <: Animal | Direct, no streams |
 | `struct_fewer_functors.glp` | GetOp <: DbOp | Fewer struct alternatives |
+| `constant_accepts_all_literals.glp` | integer/real/string/symbolic constant at a `Constant` position | Consistency table rows 4–7 |
+| `integer_below_number_and_constant.glp` | Integer <: Number, Integer <: Constant | Primitive order at a leaf |
+| `int_list_to_constant_list.glp` | IntList <: ConstantList | Primitive order through the list constructor |
+| `symbolic_constants_to_constant.glp` | Ack <: Constant | `c <: Constant` lifted through union |
 
 ### 6.2 Negative (should fail even with subtyping)
 
@@ -220,6 +238,10 @@ Directory: `negative/subtyping/`
 | `contravariant_wrong_direction.glp` | Contravariance violation | WideResp ≮: NarrowResp |
 | `disjoint_types.glp` | Fruit ≮: Color | Zero overlap |
 | `arg_type_mismatch.glp` | Integer ≠ String at output position | Incompatible primitives |
+| `constant_to_integer_reverse.glp` | Constant ≮: Integer | The order is directional |
+| `integer_to_string_disjoint.glp` | Integer ≮: String | Unrelated primitives |
+| `compound_to_constant.glp` | Wrap ≮: Constant | A compound is not a constant |
+| `head_pair_integer_to_constant.glp` | `elem(Integer?, Constant)` with `elem(X, X?)` | Subtyping relaxes body-body pairs only |
 
 ---
 

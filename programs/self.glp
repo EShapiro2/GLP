@@ -27,9 +27,6 @@ Channel(In, Out) ::= ch(In, Out?).
 % close/1 defined guard, which consumes a closed read stream (see below).
 Closed ::= [].
 
-% Primitive types
-Constant ::= Number ; String.
-
 % Arithmetic expressions
 Exp ::= Number ; +(Exp, Exp) ; -(Exp, Exp) ; *(Exp, Exp) ; /(Exp, Exp) ; //(Exp, Exp) ; mod(Exp, Exp) ; neg(Exp).
 

@@ -1,0 +1,18 @@
+% test: symbolic_constants_to_constant
+% expected: pass (requires subtyping)
+% description: c <: Constant for every symbolic constant c (Definition
+%   "Primitive Subtype Order"), lifted through union: Ack produces only the
+%   symbolic constants ok and error, so Ack <: Constant.  Body-body pair:
+%   writer X at Ack, reader X? at Constant?.
+
+Ack ::= ok ; error.
+
+procedure ack_source(Ack).
+ack_source(ok).
+ack_source(error).
+
+procedure constant_sink(Constant?).
+constant_sink(_).
+
+procedure connect.
+connect :- ack_source(X), constant_sink(X?).

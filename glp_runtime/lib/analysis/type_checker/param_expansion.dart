@@ -674,7 +674,6 @@ List<String> _detectProcTypeParams(ProcDecl pd, Map<String, TypeDef> templates,
     ...monoTypeDefs.map((td) => td.name),
     ...TypeRef.builtins,
     ...externalKnownTypes,
-    'Constant', // also a known type
   };
   final candidates = <String>{};
   // Names appearing as typeArgs of any TypeRef with typeArgs (inner positions).

@@ -250,7 +250,7 @@ bool _isSimpleAlias(TypeDef def) {
 /// - Msg ::= NetMsg ; UserMsg.   (union of two user-defined message types)
 ///
 /// NOT a union alias:
-/// - Constant ::= Number ; String.  (references predefined primitives)
+/// - Key ::= Number ; String.  (references predefined primitives)
 bool _isUnionAlias(TypeDef def) {
   // Must have multiple alternatives
   if (def.alternatives.length < 2) return false;
@@ -618,7 +618,7 @@ void _checkDeterminism(TypeDef def) {
     } else if (alt is TypeRef) {
       // TypeRef in alternative position = primitive type reference
       final name = alt.name;
-      if ({'Integer', 'Real', 'Number', 'String'}.contains(name)) {
+      if ({'Integer', 'Real', 'Number', 'String', 'Constant'}.contains(name)) {
         _checkPrimitiveOverlap(name, primitives, hasWildcard, def);
         primitives.add(name);
       }
@@ -645,6 +645,22 @@ void _checkPrimitiveOverlap(String newPrimitive, Set<String> existing, bool hasW
       existing.contains('Number')) {
     throw NonDeterministicTypeError(
       '$newPrimitive overlaps with Number in ${def.name}',
+      def.line, def.column);
+  }
+
+  // Constant overlaps every other primitive: Integer, Real, Number and String
+  // are all below Constant in the primitive subtype order (Definition
+  // "Primitive Subtype Order"), so a constant would select two alternatives.
+  const belowConstant = {'Integer', 'Real', 'Number', 'String'};
+  if (newPrimitive == 'Constant' &&
+      existing.any(belowConstant.contains)) {
+    throw NonDeterministicTypeError(
+      'Constant overlaps with ${existing.where(belowConstant.contains).join('/')} in ${def.name}',
+      def.line, def.column);
+  }
+  if (belowConstant.contains(newPrimitive) && existing.contains('Constant')) {
+    throw NonDeterministicTypeError(
+      '$newPrimitive overlaps with Constant in ${def.name}',
       def.line, def.column);
   }
 

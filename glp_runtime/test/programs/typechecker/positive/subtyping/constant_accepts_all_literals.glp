@@ -1,0 +1,17 @@
+% test: constant_accepts_all_literals
+% expected: pass
+% description: A Constant-typed position accepts every kind of constant term:
+%   integer, real, string, and symbolic constant.  Rows 4-7 of the consistency
+%   table (Definition "Consistent Paths", TGLP sections/well-typing.tex), which
+%   list Constant as a compatible type for each of them.
+
+ConstantList ::= [] ; [Constant|ConstantList].
+
+procedure lit(Constant).
+lit(42).
+lit(2.5).
+lit("hello").
+lit(ok).
+
+procedure lits(ConstantList).
+lits([1, 2.5, "s", ok]).

@@ -1,0 +1,14 @@
+% test: integer_to_string_disjoint
+% expected: fail (even with subtyping)
+% description: Integer and String are unrelated in the primitive subtype order
+%   — both are below Constant, neither is below the other — so an Integer
+%   writer cannot fill a String reader.
+
+procedure int_source(Integer).
+int_source(1).
+
+procedure string_sink(String?).
+string_sink(_).
+
+procedure connect.
+connect :- int_source(X), string_sink(X?).

@@ -57,6 +57,12 @@ class DFAState {
   /// True for `String` type state (either complement or not)
   bool get isStringType => baseName == 'String';
 
+  /// True for `Constant` type state (either complement or not).
+  /// `Constant` is a GLP language primitive (TGLP appendix "GLP Language
+  /// Primitives"), the top of the primitive subtype order below `_`: every
+  /// number, string and symbolic constant is a `Constant`.
+  bool get isConstantType => baseName == 'Constant';
+
   /// True for `_FINAL_` (anonymous final for constant/literal matches)
   bool get isAnonymousFinal => baseName == '_FINAL_';
 
@@ -65,9 +71,14 @@ class DFAState {
   bool get isNumericType => isIntegerType || isRealType || isNumberType;
 
   // Fix 3.2: Computed properties for type classification
-  /// True for primitive types: _, Integer, Real, Number, String
+  /// True for primitive types: _, Integer, Real, Number, String, Constant
   bool get isPrimitiveType =>
-      isWildcard || isIntegerType || isRealType || isNumberType || isStringType;
+      isWildcard ||
+      isIntegerType ||
+      isRealType ||
+      isNumberType ||
+      isStringType ||
+      isConstantType;
 
   /// True for user-defined types (not primitive, not procedure, not anonymous final)
   bool get isUserDefinedType =>
@@ -142,7 +153,7 @@ class Automaton {
   final Map<(DFAState, TransitionLabel), DFAState> _transitions;
   
   /// Set of primitive type names this type accepts as alternatives
-  /// (e.g., {'Integer', 'String'} for Constant ::= Integer ; String.)
+  /// (e.g., {'Integer', 'String'} for Key ::= Integer ; String.)
   final Set<String> acceptedPrimitives;
 
   Automaton(this.startState, this._transitions, {this.acceptedPrimitives = const {}});
@@ -228,6 +239,8 @@ ProgramDFA buildProgramDFA(TypeEnvironment env) {
   states['Number?'] = DFAState('Number', isDual: true, isFinal: false);
   states['String'] = DFAState('String', isDual: false, isFinal: false);
   states['String?'] = DFAState('String', isDual: true, isFinal: false);
+  states['Constant'] = DFAState('Constant', isDual: false, isFinal: false);
+  states['Constant?'] = DFAState('Constant', isDual: true, isFinal: false);
   states['_FINAL_'] = DFAState('_FINAL_', isDual: false, isFinal: true);
 
   // Create automata for system types
@@ -241,6 +254,8 @@ ProgramDFA buildProgramDFA(TypeEnvironment env) {
   automata['Number?'] = _primitiveTypeAutomaton(states['Number?']!, states['_FINAL_']!);
   automata['String'] = _primitiveTypeAutomaton(states['String']!, states['_FINAL_']!);
   automata['String?'] = _primitiveTypeAutomaton(states['String?']!, states['_FINAL_']!);
+  automata['Constant'] = _primitiveTypeAutomaton(states['Constant']!, states['_FINAL_']!);
+  automata['Constant?'] = _primitiveTypeAutomaton(states['Constant?']!, states['_FINAL_']!);
 
   // Create states for ALL defined types FIRST
   // (Automata may reference other types, so all states must exist before building automata)
@@ -311,7 +326,8 @@ Automaton _buildTypeAutomaton(
 
   for (final alt in typeDef.alternatives) {
     // Collect primitive type alternatives (Integer, Real, Number, String)
-    if (alt is TypeRef && {'Integer', 'Real', 'Number', 'String'}.contains(alt.name)) {
+    if (alt is TypeRef &&
+        {'Integer', 'Real', 'Number', 'String', 'Constant'}.contains(alt.name)) {
       acceptedPrimitives.add(alt.name);
     }
     _addTypeTransitions(
@@ -415,6 +431,9 @@ DFAState _resolveTypeExpr(
     }
     if (typeExpr.name == 'String') {
       return finalIsComplement ? states['String?']! : states['String']!;
+    }
+    if (typeExpr.name == 'Constant') {
+      return finalIsComplement ? states['Constant?']! : states['Constant']!;
     }
 
     final targetName = typeExpr.name;
@@ -612,6 +631,16 @@ LeafConsistencyResult checkLeafConsistency(
     return LeafConsistencyResult.inconsistent('String type requires string literal');
   }
 
+  // Constant accepts every primitive constant: integer, real, string, and
+  // symbolic constant (rows 4-7 of the consistency table, Definition
+  // "Consistent Paths").  Symbolic constants reach here as string leaves.
+  if (state.isConstantType) {
+    if (leaf.isInteger || leaf.isReal || leaf.isString) {
+      return LeafConsistencyResult.consistent(dfa.states['_FINAL_']);
+    }
+    return LeafConsistencyResult.inconsistent('Constant type requires a constant');
+  }
+
   // Case 2c: At wildcard state
   // Per spec v0.6: _ accepts any produced term (mode ↑), _? accepts any consumed term (mode ↓)
   if (state.isProducedWildcard) {
@@ -642,6 +671,12 @@ LeafConsistencyResult checkLeafConsistency(
       
       // Second, check if type accepts primitive types that match this constant
       if (automaton.acceptedPrimitives.isNotEmpty) {
+        // Constant as an alternative accepts every primitive constant
+        // (consistency table rows 4-7).
+        if (automaton.acceptedPrimitives.contains('Constant') &&
+            (leaf.isInteger || leaf.isReal || leaf.isString)) {
+          return LeafConsistencyResult.consistent(dfa.states['_FINAL_']);
+        }
         if (leaf.isInteger &&
             (automaton.acceptedPrimitives.contains('Integer') ||
              automaton.acceptedPrimitives.contains('Number'))) {

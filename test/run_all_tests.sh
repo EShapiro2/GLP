@@ -1078,6 +1078,14 @@ POSITIVE_FILES=(
     "$TC_DIR/positive/subtyping/contravariant_response_slot.glp"
     "$TC_DIR/positive/subtyping/direct_constant_subtype.glp"
     "$TC_DIR/positive/subtyping/struct_fewer_functors.glp"
+    # Primitive subtype order (Definition "Primitive Subtype Order") and the
+    # consistency table's Constant rows.  Negative twins:
+    # negative/subtyping/{constant_to_integer_reverse,integer_to_string_disjoint,
+    # head_pair_integer_to_constant,compound_to_constant}.glp.
+    "$TC_DIR/positive/subtyping/constant_accepts_all_literals.glp"
+    "$TC_DIR/positive/subtyping/integer_below_number_and_constant.glp"
+    "$TC_DIR/positive/subtyping/int_list_to_constant_list.glp"
+    "$TC_DIR/positive/subtyping/symbolic_constants_to_constant.glp"
 
     # --- module guard test ---
     "$TYPED/module_guard.glp"
@@ -1224,6 +1232,13 @@ NEGATIVE_FILES=(
     "$TC_DIR/negative/subtyping/contravariant_wrong_direction.glp"
     "$TC_DIR/negative/subtyping/disjoint_types.glp"
     "$TC_DIR/negative/subtyping/arg_type_mismatch.glp"
+    # Direction and scope of the primitive subtype order: Constant is not below
+    # Integer, Integer and String are unrelated, a compound is not a Constant,
+    # and subtyping does not reach a head-head pair.
+    "$TC_DIR/negative/subtyping/constant_to_integer_reverse.glp"
+    "$TC_DIR/negative/subtyping/integer_to_string_disjoint.glp"
+    "$TC_DIR/negative/subtyping/compound_to_constant.glp"
+    "$TC_DIR/negative/subtyping/head_pair_integer_to_constant.glp"
 
     # --- CSSN Issue 16: control token merged into a narrower network-input reader ---
     # Stream(Ctl) (carries `canonical`) merged into Stream(NetLike); the (Both,Both?)
