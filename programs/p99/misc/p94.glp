@@ -1,0 +1,222 @@
+% P94: K-regular simple graphs on N nodes (nodes 1..N).  Stage A here enumerates
+% every LABELLED K-regular graph by all-solutions search; p94's public entry
+% (regular/3) reduces these to one representative per isomorphism class.
+%
+% Search: process the nodes 1..N in order.  When node I is reached its remaining
+% degree is Deg[I] = K minus the edges already placed to lower-numbered nodes; it
+% must take exactly that many new edges to higher-numbered nodes that still have
+% spare degree.  A node branches over every such choice (every Deg[I]-subset of
+% the eligible higher nodes); a choice with too few eligible nodes is a dead end.
+% Edges are e(I, J) with I < J, so each graph is generated once per labelling.
+%
+% State rs(I, Deg, Edges, N): I the next node to satisfy, Deg the remaining
+% degree per node (1-based), Edges the edges placed so far, N the node count.
+% The whole state rides as one tuple through the branch helpers (keeping their
+% arity low).
+
+RState ::= rs(Integer, IntList, REList, Integer).
+IntListList ::= [] ; [IntList | IntListList].
+IP ::= m(Integer, Integer).
+IPList ::= [] ; [IP | IPList].
+IG ::= ig(REList, REList).
+
+% regular(N, K, Reps): one representative per isomorphism class of the K-regular
+% simple graphs on N nodes.  Generates every labelled graph (search-all) and
+% keeps a graph only when it is isomorphic to no representative kept so far.
+exported procedure regular(Integer?, Integer?, REListList).
+regular(N, K, Reps?) :- integer(N?), integer(K?) |
+    initdeg(N?, K?, Deg),
+    solve_all(rs(1, Deg?, [], N?), Reqs, Sols),
+    expand_server(Reqs?),
+    dedup(Sols?, [], N?, Reps).
+
+% regular_labeled(N, K, Sols): the raw stream of labelled K-regular graphs.
+exported procedure regular_labeled(Integer?, Integer?, Stream(REList)).
+regular_labeled(N, K, Sols?) :- integer(N?), integer(K?) |
+    initdeg(N?, K?, Deg),
+    solve_all(rs(1, Deg?, [], N?), Reqs, Sols),
+    expand_server(Reqs?).
+
+procedure expand_server(Stream(Req(RState, REList))?).
+expand_server([]).
+expand_server([expand(St, Items?)|Rs]) :-
+    expand(St?, Items),
+    expand_server(Rs?).
+
+procedure expand(RState?, Items(RState, REList)).
+expand(rs(I, _, Edges, N), [sol(Edges?)]) :- I? > N?, integer(I?), integer(N?), ground(Edges?) | true.
+expand(rs(I, Deg, Edges, N), Items?) :- I? =< N?, integer(I?), ground(Deg?), ground(Edges?), integer(N?) |
+    gn(Deg?, I?, M),
+    I1 := I? + 1,
+    eligible(I1?, N?, Deg?, Elig),
+    subsets(M?, Elig?, Subs),
+    mkchildren(Subs?, rs(I?, Deg?, Edges?, N?), Items).
+
+% mkchildren: one search node per chosen subset of higher neighbours.
+procedure mkchildren(IntListList?, RState?, Items(RState, REList)).
+mkchildren([], _, []).
+mkchildren([S|Ss], Ctx, [node(Child?)|Out?]) :-
+    ground(S?), ground(Ctx?) |
+    buildchild(S?, Ctx?, Child),
+    mkchildren(Ss?, Ctx?, Out).
+
+% buildchild: place the edges (I, j) for j in the subset, decrement those nodes'
+% degrees and zero node I's, and advance to node I+1.
+procedure buildchild(IntList?, RState?, RState).
+buildchild(S, rs(I, Deg, Edges, N), rs(I1?, Deg2?, Edges2?, N?)) :-
+    integer(I?), ground(Deg?), ground(Edges?), integer(N?), ground(S?) |
+    I1 := I? + 1,
+    addedges(I?, S?, Edges?, Edges2),
+    decmany(Deg?, S?, Deg1),
+    sn(Deg1?, I?, 0, Deg2).
+
+procedure addedges(Integer?, IntList?, REList?, REList).
+addedges(_, [], Edges, Edges?).
+addedges(I, [J|Js], Edges, [re(I?, J?)|Out?]) :-
+    integer(I?), integer(J?), ground(Edges?) |
+    addedges(I?, Js?, Edges?, Out).
+
+procedure decmany(IntList?, IntList?, IntList).
+decmany(Deg, [], Deg?).
+decmany(Deg, [J|Js], Out?) :- ground(Deg?), integer(J?) |
+    gn(Deg?, J?, DJ), DJ1 := DJ? - 1, sn(Deg?, J?, DJ1?, Deg1),
+    decmany(Deg1?, Js?, Out).
+
+% eligible: nodes J..N that still have spare degree.
+procedure eligible(Integer?, Integer?, IntList?, IntList).
+eligible(J, N, _, []) :- J? > N? | true.
+eligible(J, N, Deg, Out?) :- J? =< N?, integer(J?), integer(N?), ground(Deg?) |
+    gn(Deg?, J?, DJ),
+    el1(DJ?, J?, N?, Deg?, Out).
+procedure el1(Integer?, Integer?, Integer?, IntList?, IntList).
+el1(DJ, J, N, Deg, [J?|Out?]) :- DJ? > 0, integer(J?), integer(N?), ground(Deg?) |
+    J1 := J? + 1, eligible(J1?, N?, Deg?, Out).
+el1(DJ, J, N, Deg, Out?) :- DJ? =< 0, integer(J?), integer(N?), ground(Deg?) |
+    J1 := J? + 1, eligible(J1?, N?, Deg?, Out).
+
+% subsets: every size-M subset of a list, as a list of lists.
+procedure subsets(Integer?, IntList?, IntListList).
+subsets(0, _, [[]]).
+subsets(M, [], []) :- M? > 0 | true.
+subsets(M, [X|Xs], Out?) :- M? > 0, integer(M?), integer(X?), ground(Xs?) |
+    M1 := M? - 1,
+    subsets(M1?, Xs?, With0),
+    prepend(X?, With0?, With),
+    subsets(M?, Xs?, Without),
+    append_ll(With?, Without?, Out).
+
+procedure prepend(Integer?, IntListList?, IntListList).
+prepend(_, [], []).
+prepend(X, [S|Ss], [[X?|S?]|Out?]) :- integer(X?), ground(S?) |
+    prepend(X?, Ss?, Out).
+
+procedure append_ll(IntListList?, IntListList?, IntListList).
+append_ll([], Ys, Ys?).
+append_ll([X|Xs], Ys, [X?|Zs?]) :- append_ll(Xs?, Ys?, Zs).
+
+% initial degree list: N copies of K.
+procedure initdeg(Integer?, Integer?, IntList).
+initdeg(N, _, []) :- N? =< 0 | true.
+initdeg(N, K, [K?|R?]) :- N? > 0, integer(N?), integer(K?) |
+    N1 := N? - 1, initdeg(N1?, K?, R).
+
+% 1-based list get / set.
+procedure gn(IntList?, Integer?, Integer).
+gn([], _, 0).
+gn([X|_], 1, X?).
+gn([_|Xs], K, V?) :- K? > 1 | K1 := K? - 1, gn(Xs?, K1?, V).
+
+procedure sn(IntList?, Integer?, Integer?, IntList).
+sn([], _, _, []).
+sn([_|Xs], 1, Val, [Val?|Xs?]).
+sn([X|Xs], P, Val, [X?|R?]) :- P? > 1 | P1 := P? - 1, sn(Xs?, P1?, Val?, R).
+
+% --- Isomorphism dedup ----------------------------------------------------
+
+% dedup(Graphs, Reps, N, Out): keep each graph not isomorphic to a kept rep.
+procedure dedup(REListList?, REListList?, Integer?, REListList).
+dedup([], Reps, _, Reps?).
+dedup([G|Gs], Reps, N, Out?) :- ground(G?), ground(Gs?), ground(Reps?), integer(N?) |
+    isoany(Reps?, G?, N?, Seen),
+    dd1(Seen?, G?, Gs?, Reps?, N?, Out).
+procedure dd1(Ans?, REList?, REListList?, REListList?, Integer?, REListList).
+dd1(yes, _, Gs, Reps, N, Out?) :- ground(Gs?), ground(Reps?), integer(N?) |
+    dedup(Gs?, Reps?, N?, Out).
+dd1(no, G, Gs, Reps, N, Out?) :- ground(G?), ground(Gs?), ground(Reps?), integer(N?) |
+    dedup(Gs?, [G?|Reps?], N?, Out).
+
+procedure isoany(REListList?, REList?, Integer?, Ans).
+isoany([], _, _, no).
+isoany([R|Rs], G, N, Res?) :- ground(R?), ground(Rs?), ground(G?), integer(N?) |
+    iso(R?, G?, N?, Ok),
+    ia1(Ok?, Rs?, G?, N?, Res).
+procedure ia1(Ans?, REListList?, REList?, Integer?, Ans).
+ia1(yes, _, _, _, yes).
+ia1(no, Rs, G, N, Res?) :- ground(Rs?), ground(G?), integer(N?) |
+    isoany(Rs?, G?, N?, Res).
+
+% iso(E1, E2, N): is there a node bijection of 1..N mapping E1's edges onto E2's?
+procedure iso(REList?, REList?, Integer?, Ans).
+iso(E1, E2, N, R?) :- integer(N?), ground(E1?), ground(E2?) |
+    upto(1, N?, Nodes),
+    trymap(Nodes?, Nodes?, [], ig(E1?, E2?), R).
+
+procedure trymap(IntList?, IntList?, IPList?, IG?, Ans).
+trymap([], _, _, _, yes).
+trymap([A|Rest], Unused, Map, G, R?) :-
+    ground(A?), ground(Rest?), ground(Unused?), ground(Map?), ground(G?) |
+    trycand(Unused?, A?, Rest?, Unused?, Map?, G?, R).
+
+procedure trycand(IntList?, Integer?, IntList?, IntList?, IPList?, IG?, Ans).
+trycand([], _, _, _, _, _, no).
+trycand([M|Ms], A, Rest, Unused, Map, G, R?) :-
+    ground(M?), ground(Ms?), ground(A?), ground(Rest?), ground(Unused?), ground(Map?), ground(G?) |
+    consistent(Map?, A?, M?, G?, Ok),
+    tc1(Ok?, M?, Ms?, A?, Rest?, Unused?, Map?, G?, R).
+
+procedure tc1(Ans?, Integer?, IntList?, Integer?, IntList?, IntList?, IPList?, IG?, Ans).
+tc1(no, _, Ms, A, Rest, Unused, Map, G, R?) :-
+    ground(Ms?), ground(A?), ground(Rest?), ground(Unused?), ground(Map?), ground(G?) |
+    trycand(Ms?, A?, Rest?, Unused?, Map?, G?, R).
+tc1(yes, M, Ms, A, Rest, Unused, Map, G, R?) :-
+    ground(M?), ground(Ms?), ground(A?), ground(Rest?), ground(Unused?), ground(Map?), ground(G?) |
+    idel(Unused?, M?, Unused1),
+    trymap(Rest?, Unused1?, [m(A?, M?)|Map?], G?, Sub),
+    tc2(Sub?, Ms?, A?, Rest?, Unused?, Map?, G?, R).
+
+procedure tc2(Ans?, IntList?, Integer?, IntList?, IntList?, IPList?, IG?, Ans).
+tc2(yes, _, _, _, _, _, _, yes).
+tc2(no, Ms, A, Rest, Unused, Map, G, R?) :-
+    ground(Ms?), ground(A?), ground(Rest?), ground(Unused?), ground(Map?), ground(G?) |
+    trycand(Ms?, A?, Rest?, Unused?, Map?, G?, R).
+
+% consistent: for every mapped pair m(X, Y), edge(A, X) in E1 iff edge(M, Y) in E2.
+procedure consistent(IPList?, Integer?, Integer?, IG?, Ans).
+consistent([], _, _, _, yes).
+consistent([m(X, Y)|Map], A, M, ig(E1, E2), Ok?) :-
+    ground(X?), ground(Y?), ground(A?), ground(M?), ground(E1?), ground(E2?), ground(Map?) |
+    hasedge(E1?, A?, X?, H1),
+    hasedge(E2?, M?, Y?, H2),
+    cons1(H1?, H2?, Map?, A?, M?, ig(E1?, E2?), Ok).
+procedure cons1(Ans?, Ans?, IPList?, Integer?, Integer?, IG?, Ans).
+cons1(yes, yes, Map, A, M, G, Ok?) :- ground(Map?), ground(A?), ground(M?), ground(G?) |
+    consistent(Map?, A?, M?, G?, Ok).
+cons1(no, no, Map, A, M, G, Ok?) :- ground(Map?), ground(A?), ground(M?), ground(G?) |
+    consistent(Map?, A?, M?, G?, Ok).
+cons1(yes, no, _, _, _, _, no).
+cons1(no, yes, _, _, _, _, no).
+
+procedure hasedge(REList?, Integer?, Integer?, Ans).
+hasedge([], _, _, no).
+hasedge([re(X, Y)|_], A, B, yes) :- X? =:= A?, Y? =:= B? | true.
+hasedge([re(X, Y)|_], A, B, yes) :- otherwise, X? =:= B?, Y? =:= A? | true.
+hasedge([re(_, _)|Es], A, B, R?) :- otherwise, integer(A?), integer(B?) | hasedge(Es?, A?, B?, R).
+
+procedure idel(IntList?, Integer?, IntList).
+idel([], _, []).
+idel([X|Xs], Y, Xs?) :- X? =:= Y? | true.
+idel([X|Xs], Y, [X?|R?]) :- otherwise, integer(Y?) | idel(Xs?, Y?, R).
+
+procedure upto(Integer?, Integer?, IntList).
+upto(I, N, []) :- I? > N? | true.
+upto(I, N, [I?|R?]) :- I? =< N?, integer(I?) | I1 := I? + 1, upto(I1?, N?, R).

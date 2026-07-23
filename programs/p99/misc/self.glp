@@ -32,6 +32,18 @@ imported procedure p92#von_koch(CList?, VkEdges?, Maybe(NumList)).
 exported procedure von_koch(CList?, VkEdges?, Maybe(NumList)).
 von_koch(Ns, Es, R?) :- p92 # von_koch(Ns?, Es?, R).
 
+RE ::= re(Integer, Integer).
+REList ::= [] ; [RE | REList].
+REListList ::= [] ; [REList | REListList].
+
+imported procedure p94#regular(Integer?, Integer?, REListList).
+exported procedure regular(Integer?, Integer?, REListList).
+regular(N, K, Gs?) :- p94 # regular(N?, K?, Gs).
+
+imported procedure p94#regular_labeled(Integer?, Integer?, Stream(REList)).
+exported procedure regular_labeled(Integer?, Integer?, Stream(REList)).
+regular_labeled(N, K, Gs?) :- p94 # regular_labeled(N?, K?, Gs).
+
 AExp ::= num(Integer) ; plus(AExp, AExp) ; minus(AExp, AExp)
        ; times(AExp, AExp) ; div(AExp, AExp).
 Eq ::= eq(AExp, AExp).
