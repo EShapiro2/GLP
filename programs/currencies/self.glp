@@ -55,6 +55,8 @@ UserContent ::= mint(Constant, Constant)
               ; decision(Decision, Constant, PendingValue)
               ; response(Response)
               ; trade(Constant, Stream(Lot), Stream(Lot))
+              ; redeem(Constant, Stream(Lot), Stream(Lot))
+              ; advance_date(Constant)
               ; accept_trade(Constant, PendingValue)
               ; reject_trade(Constant, PendingValue)
               ; deposit_escrow(Constant, Stream(Lot), Constant)
@@ -68,6 +70,7 @@ PendingValue ::= response(Response?)
 
 %% Content carried inside agent-to-user messages (msg(agent, '_user', Content))
 AgentContent ::= minted(Constant, Constant)
+               ; date_advanced(Constant)
                ; balance_report(Stream(Bond))
                ; befriend(Constant, Response?)
                ; connected(Constant)
@@ -148,6 +151,8 @@ UserCmd ::= mint(Constant, Constant)
           ; connect(Constant)
           ; decision(Decision, Constant, ReqId)
           ; trade(Constant, Stream(Lot), Stream(Lot))
+          ; redeem(Constant, Stream(Lot), Stream(Lot))
+          ; advance_date(Constant)
           ; accept_trade(Constant, ReqId)
           ; reject_trade(Constant, ReqId)
           ; deposit_escrow(Constant, Stream(Lot), Constant)
@@ -155,6 +160,7 @@ UserCmd ::= mint(Constant, Constant)
 
 %% Mediator -> User notifications
 UserNotify ::= minted(Constant, Constant)
+             ; date_advanced(Constant)
              ; balance_report(Stream(Bond))
              ; befriend(Constant, ReqId)
              ; connected(Constant)
@@ -217,18 +223,7 @@ close_outputs([net_output([])|Outs]) :- close_outputs(Outs?).
 close_outputs([friend_output(_, [])|Outs]) :- close_outputs(Outs?).
 close_outputs([]).
 
-%% =============================================================================
-%% CREATE_BONDS — Create K bonds with given issuer and maturity
-%% =============================================================================
-
-procedure create_bonds(Constant?, Constant?, Constant?, Constant?, Stream(Bond)).
-create_bonds(Issuer, Maturity, K, Serial,
-             [bond(Issuer?, Maturity?, Serial?)|Rest?]) :-
-    K? > 0 |
-    K1 := K? - 1,
-    S1 := Serial? + 1,
-    create_bonds(Issuer?, Maturity?, K1?, S1?, Rest).
-create_bonds(_, _, 0, _, []).
+%% create_bonds moved to txn.glp (reusable transaction core).
 
 %% =============================================================================
 %% APPEND — Append two bond lists
@@ -238,37 +233,8 @@ procedure append(Stream(Bond)?, Stream(Bond)?, Stream(Bond)).
 append([X|Xs], Ys, [X?|Zs?]) :- append(Xs?, Ys?, Zs).
 append([], Ys, Ys?).
 
-%% =============================================================================
-%% SELECT_BONDS_EXACT — Select K bonds with exact Issuer+Maturity
-%% =============================================================================
-
-procedure select_bonds_exact(Constant?, Constant?, Constant?, Stream(Bond)?, Constant, Stream(Bond), Stream(Bond)).
-select_bonds_exact(_, _, 0, Hs, ok, [], Hs?).
-select_bonds_exact(Issuer, Maturity, K, [bond(I, M, S)|Rest], Status?, [bond(I?, M?, S?)|Sel?], Rem?) :-
-    K? > 0, Issuer? =?= I?, Maturity? =?= M? |
-    K1 := K? - 1,
-    select_bonds_exact(Issuer?, Maturity?, K1?, Rest?, Status, Sel, Rem).
-select_bonds_exact(Issuer, Maturity, K, [B|Rest], Status?, Sel?, [B?|Rem?]) :-
-    otherwise |
-    select_bonds_exact(Issuer?, Maturity?, K?, Rest?, Status, Sel, Rem).
-select_bonds_exact(_, _, K, [], fail, [], []) :- K? > 0 | true.
-
-%% =============================================================================
-%% SELECT_BONDS_BY_SPEC — Fold over lot list
-%% =============================================================================
-
-procedure select_bonds_by_spec(Stream(Lot)?, Stream(Bond)?, Constant, Stream(Bond), Stream(Bond)).
-select_bonds_by_spec([lot(Issuer, Maturity, Count)|Rest], Holdings, Status?, AllSel?, FinalRem?) :-
-    ground(Issuer?), ground(Maturity?), ground(Count?) |
-    select_bonds_exact(Issuer?, Maturity?, Count?, Holdings?, LotStatus, LotSel, LotRem),
-    select_by_spec_continue(LotStatus?, Rest?, LotSel?, LotRem?, Status, AllSel, FinalRem).
-select_bonds_by_spec([], Holdings, ok, [], Holdings?).
-
-procedure select_by_spec_continue(Constant?, Stream(Lot)?, Stream(Bond)?, Stream(Bond)?, Constant, Stream(Bond), Stream(Bond)).
-select_by_spec_continue(ok, Rest, LotSel, LotRem, Status?, AllSel?, FinalRem?) :-
-    select_bonds_by_spec(Rest?, LotRem?, Status, RestSel, FinalRem),
-    append(LotSel?, RestSel?, AllSel).
-select_by_spec_continue(fail, _, LotSel, LotRem, fail, LotSel?, LotRem?).
+%% select_bonds_exact, select_bonds_by_spec, select_matured_by_spec and their
+%% continuations moved to txn.glp (reusable transaction core).
 
 %% =============================================================================
 %% BIND_TRADE — Bind TradeResponse variable (writer mode)
@@ -297,44 +263,8 @@ inject_trade_result(trade_decline_menu(OurBonds, Menu), From, Ys,
 inject_trade_result(Resp, From, [Y|Ys], [Y?|Ys1?]) :-
     inject_trade_result(Resp?, From?, Ys?, Ys1).
 
-%% =============================================================================
-%% CLASSIFY_TRADE — Classify incoming trade for auto-accept
-%% =============================================================================
-
-procedure classify_trade(Constant?, Stream(Lot)?, Stream(Bond)?, Constant).
-classify_trade(_, [], _, payment).
-classify_trade(Id, _, [bond(I, 0, _)], redemption) :- Id? =?= I? | true.
-classify_trade(_, _, _, normal) :- otherwise | true.
-
-%% =============================================================================
-%% BUILD_MENU — One bond per issuer, earliest maturity
-%% =============================================================================
-
-procedure build_menu(Constant?, Stream(Bond)?, Stream(Bond)).
-build_menu(Id, Holdings, Menu?) :-
-    build_menu_acc(Id?, Holdings?, [], Menu).
-
-procedure build_menu_acc(Constant?, Stream(Bond)?, Stream(Bond)?, Stream(Bond)).
-build_menu_acc(Id, [bond(I, _, _)|Rest], Acc, Menu?) :-
-    Id? =?= I? |
-    build_menu_acc(Id?, Rest?, Acc?, Menu).
-build_menu_acc(Id, [bond(I, M, S)|Rest], Acc, Menu?) :-
-    otherwise |
-    menu_update(I?, M?, S?, Acc?, Acc1),
-    build_menu_acc(Id?, Rest?, Acc1?, Menu).
-build_menu_acc(_, [], Acc, Acc?).
-
-procedure menu_update(Constant?, Constant?, Constant?, Stream(Bond)?, Stream(Bond)).
-menu_update(I, M, S, [bond(I2, M2, _)|Rest],
-    [bond(I2?, M?, S?)|Rest?]) :-
-    I? =?= I2?, M? < M2? | true.
-menu_update(I, _, _, [bond(I2, M2, S2)|Rest],
-    [bond(I2?, M2?, S2?)|Rest?]) :-
-    I? =?= I2? | true.
-menu_update(I, M, S, [B|Rest], [B?|Rest1?]) :-
-    otherwise |
-    menu_update(I?, M?, S?, Rest?, Rest1).
-menu_update(I, M, S, [], [bond(I?, M?, S?)]).
+%% classify_trade and build_menu (with their helpers) moved to txn.glp
+%% (reusable transaction core).
 
 %% =============================================================================
 %% ESCROW — Concurrent race between timer and cancel signal
@@ -449,3 +379,7 @@ fplay11 :- boot # fplay11.
 imported procedure boot#fplay12.
 exported procedure fplay12.
 fplay12 :- boot # fplay12.
+
+imported procedure boot#fplay13.
+exported procedure fplay13.
+fplay13 :- boot # fplay13.

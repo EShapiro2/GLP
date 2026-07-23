@@ -17,8 +17,8 @@
 #   K - CSSN v2 Modules (child_agent with blocking consent)
 #   L - Dynamic Module Dispatch Tests (activate + M # goal)
 #   M - Multi-Isolate (madGLP) Tests (dart test, CSSN v2, one isolate per agent)
-#   N - Bonds V2 Modules (project-directory loading, plays 1-12)
-#   O - Bonds V2 Multi-Isolate Tests (dart test, one isolate per agent)
+#   N - Currencies Modules (project-directory loading, plays 1-12)
+#   O - Currencies Multi-Isolate Tests (dart test, one isolate per agent)
 #   P - Module Boundary Enforcement Tests (exported vs private procedures)
 
 set -e
@@ -1808,12 +1808,12 @@ fi
 echo ""
 
 # =============================================================================
-# Section N: Bonds V2 Modules (project-directory loading, plays 1-12)
+# Section N: Currencies Modules (project-directory loading, plays 1-12)
 # =============================================================================
-echo "=== Section N: Bonds V2 Modules ==="
+echo "=== Section N: Currencies Modules ==="
 echo ""
 
-BONDS_V2="$GLP_DIR/programs/bonds"
+BONDS_V2="$GLP_DIR/programs/currencies"
 
 # Loading
 n_load=$("$REPL_RUN" <<HEREDOC
@@ -1822,11 +1822,11 @@ $BONDS_V2
 HEREDOC
 2>&1)
 
-check "Bonds v2 project loads" "Loaded program" "$n_load"
-check_not "Bonds v2 no type errors" "Type checking failed" "$n_load"
+check "Currencies project loads" "Loaded program" "$n_load"
+check_not "Currencies no type errors" "Type checking failed" "$n_load"
 
 # fplay1: solo mint
-echo "--- Bonds v2 solo mint (fplay1) ---"
+echo "--- Currencies solo mint (fplay1) ---"
 
 n_fp1=$("$REPL_RUN" <<HEREDOC
 $BONDS_V2
@@ -1835,11 +1835,11 @@ fplay1.
 HEREDOC
 2>&1)
 
-check "Bonds v2 fplay1 succeeds" "succeeds" "$n_fp1"
-check "Bonds v2 fplay1 minted" "tagged(alice.*minted" "$n_fp1"
+check "Currencies fplay1 succeeds" "succeeds" "$n_fp1"
+check "Currencies fplay1 minted" "tagged(alice.*minted" "$n_fp1"
 
 # fplay2: befriend + trade
-echo "--- Bonds v2 befriend + trade (fplay2) ---"
+echo "--- Currencies befriend + trade (fplay2) ---"
 
 n_fp2=$("$REPL_RUN" <<HEREDOC
 $BONDS_V2
@@ -1848,12 +1848,12 @@ fplay2.
 HEREDOC
 2>&1)
 
-check "Bonds v2 fplay2 succeeds" "succeeds" "$n_fp2"
-check "Bonds v2 fplay2 connected" "tagged(alice.*connected(bob)" "$n_fp2"
-check "Bonds v2 fplay2 trade_completed" "trade_completed" "$n_fp2"
+check "Currencies fplay2 succeeds" "succeeds" "$n_fp2"
+check "Currencies fplay2 connected" "tagged(alice.*connected(bob)" "$n_fp2"
+check "Currencies fplay2 trade_completed" "trade_completed" "$n_fp2"
 
 # fplay3-6: trade variations
-echo "--- Bonds v2 trade plays (fplay3-fplay6) ---"
+echo "--- Currencies trade plays (fplay3-fplay6) ---"
 
 for play_num in 3 4 5 6; do
     n_fpN=$("$REPL_RUN" <<HEREDOC
@@ -1862,11 +1862,11 @@ fplay${play_num}.
 :quit
 HEREDOC
 2>&1)
-    check "Bonds v2 fplay${play_num} succeeds" "succeeds" "$n_fpN"
+    check "Currencies fplay${play_num} succeeds" "succeeds" "$n_fpN"
 done
 
 # fplay4b: time-dependent trade
-echo "--- Bonds v2 time-dependent trade (fplay4b) ---"
+echo "--- Currencies time-dependent trade (fplay4b) ---"
 
 n_fp4b=$("$REPL_RUN" <<HEREDOC
 $BONDS_V2
@@ -1875,10 +1875,10 @@ fplay4b.
 HEREDOC
 2>&1)
 
-check "Bonds v2 fplay4b succeeds" "succeeds" "$n_fp4b"
+check "Currencies fplay4b succeeds" "succeeds" "$n_fp4b"
 
 # fplay8-9: buyback + symmetric trade
-echo "--- Bonds v2 buyback + symmetric (fplay8-fplay9) ---"
+echo "--- Currencies buyback + symmetric (fplay8-fplay9) ---"
 
 for play_num in 8 9; do
     n_fpN=$("$REPL_RUN" <<HEREDOC
@@ -1887,11 +1887,11 @@ fplay${play_num}.
 :quit
 HEREDOC
 2>&1)
-    check "Bonds v2 fplay${play_num} succeeds" "succeeds" "$n_fpN"
+    check "Currencies fplay${play_num} succeeds" "succeeds" "$n_fpN"
 done
 
 # fplay10-11: escrow
-echo "--- Bonds v2 escrow plays (fplay10-fplay11) ---"
+echo "--- Currencies escrow plays (fplay10-fplay11) ---"
 
 n_fp10=$("$REPL_RUN" <<HEREDOC
 $BONDS_V2
@@ -1900,8 +1900,8 @@ fplay10.
 HEREDOC
 2>&1)
 
-check "Bonds v2 fplay10 succeeds" "succeeds" "$n_fp10"
-check "Bonds v2 fplay10 escrow" "escrow" "$n_fp10"
+check "Currencies fplay10 succeeds" "succeeds" "$n_fp10"
+check "Currencies fplay10 escrow" "escrow" "$n_fp10"
 
 n_fp11=$("$REPL_RUN" <<HEREDOC
 $BONDS_V2
@@ -1910,11 +1910,11 @@ fplay11.
 HEREDOC
 2>&1)
 
-check "Bonds v2 fplay11 succeeds" "succeeds" "$n_fp11"
-check "Bonds v2 fplay11 escrow_cancelled" "escrow_cancelled" "$n_fp11"
+check "Currencies fplay11 succeeds" "succeeds" "$n_fp11"
+check "Currencies fplay11 escrow_cancelled" "escrow_cancelled" "$n_fp11"
 
 # fplay12: village market (6 agents)
-echo "--- Bonds v2 village market (fplay12) ---"
+echo "--- Currencies village market (fplay12) ---"
 
 n_fp12=$("$REPL_RUN" <<HEREDOC
 $BONDS_V2
@@ -1924,16 +1924,31 @@ fplay12.
 HEREDOC
 2>&1)
 
-check "Bonds v2 fplay12 succeeds" "succeeds" "$n_fp12"
-check "Bonds v2 fplay12 tagged output" "tagged(" "$n_fp12"
+check "Currencies fplay12 succeeds" "succeeds" "$n_fp12"
+check "Currencies fplay12 tagged output" "tagged(" "$n_fp12"
+
+# fplay13: loan then maturity-gated redemption on per-agent local clocks
+echo "--- Currencies loan then redemption on local clocks (fplay13) ---"
+
+n_fp13=$("$REPL_RUN" <<HEREDOC
+$BONDS_V2
+fplay13.
+:quit
+HEREDOC
+2>&1)
+
+check "Currencies fplay13 succeeds" "succeeds" "$n_fp13"
+check "Currencies fplay13 pre-maturity redeem refused by local-clock gate" "trade_failed(bob)" "$n_fp13"
+check "Currencies fplay13 local clock advances past maturity" "date_advanced(11)" "$n_fp13"
+check "Currencies fplay13 redemption set-off returns lender's own coins" "bond(alice, 0, 1)" "$n_fp13"
 
 echo ""
 
 # =============================================================================
-# Section O: Bonds V2 Multi-Isolate Tests
+# Section O: Currencies Multi-Isolate Tests
 # =============================================================================
 
-echo "=== Section O: Bonds V2 Multi-Isolate Tests ==="
+echo "=== Section O: Currencies Multi-Isolate Tests ==="
 echo ""
 
 BONDS_MAD_RESULT=$("$DART" test "$GLP_RUNTIME/test/multiagent/bonds_v2_isolate_test.dart" 2>&1)
@@ -2016,7 +2031,7 @@ echo ""
 echo "=== Section J: SecureBonds ==="
 echo ""
 
-SECUREBONDS="$GLP_DIR/programs/bonds/secure"
+SECUREBONDS="$GLP_DIR/programs/currencies/secure"
 
 # Loading
 sb_load=$("$REPL_RUN" <<HEREDOC
@@ -2096,10 +2111,10 @@ HEREDOC
 check "S3 integer instantiation" "Zi = \[1, 4, 2, 5, 3, 6\]" "$s3"
 check "S3 constant instantiation" "Zc = \[\"a\", \"c\", \"b\", \"d\"\]" "$s3"
 
-# --- S4: regression — bonds/play12 loads standalone (inventory I-1) ---
-echo "--- S4: bonds/play12 standalone load (regression) ---"
+# --- S4: regression — currencies/play12 loads standalone (inventory I-1) ---
+echo "--- S4: currencies/play12 standalone load (regression) ---"
 s4=$("$REPL_RUN" <<HEREDOC
-$GLP_DIR/programs/bonds/play12
+$GLP_DIR/programs/currencies/play12
 :quit
 HEREDOC
 2>&1)

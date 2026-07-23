@@ -1,0 +1,139 @@
+%% txn.glp — Reusable currencies transaction core (Grassroots-Bonds owned).
+%%
+%% The pure, UI-agnostic bond-transaction predicates: maturity-aware holdings
+%% (bonds), lot selection, the redeem-side maturity gate, trade classification,
+%% and the redemption menu.  These carry no agent-loop or mediator coupling —
+%% they are data transforms over Stream(Bond) / Stream(Lot) — so a different
+%% agent loop (e.g. the GrassApp agent) can import this module unchanged and
+%% build its own loop and mediator around it.
+%%
+%% Representation (from self.glp):
+%%   Bond ::= bond(Issuer, Maturity, Serial).   Lot ::= lot(Issuer, Maturity, Count).
+%% A coin is a bond mature by the holder's own local clock (Def. 2: cent_{q,d}
+%% is a coin at date t iff d =< t); a maturity-0 bond is a coin from the outset.
+%%
+%% Exported (called by the agent loop): create_bonds, select_bonds_by_spec,
+%% select_matured_by_spec, classify_trade, build_menu.  The rest are internal.
+%% append/3 is provided by the ancestor self.glp (resolved unqualified).
+
+
+%% =============================================================================
+%% CREATE_BONDS — Create K bonds with given issuer and maturity (Mint)
+%% =============================================================================
+
+exported procedure create_bonds(Constant?, Constant?, Constant?, Constant?, Stream(Bond)).
+create_bonds(Issuer, Maturity, K, Serial,
+             [bond(Issuer?, Maturity?, Serial?)|Rest?]) :-
+    K? > 0 |
+    K1 := K? - 1,
+    S1 := Serial? + 1,
+    create_bonds(Issuer?, Maturity?, K1?, S1?, Rest).
+create_bonds(_, _, 0, _, []).
+
+%% =============================================================================
+%% SELECT_BONDS_EXACT — Select K bonds with exact Issuer+Maturity
+%% =============================================================================
+
+procedure select_bonds_exact(Constant?, Constant?, Constant?, Stream(Bond)?, Constant, Stream(Bond), Stream(Bond)).
+select_bonds_exact(_, _, 0, Hs, ok, [], Hs?).
+select_bonds_exact(Issuer, Maturity, K, [bond(I, M, S)|Rest], Status?, [bond(I?, M?, S?)|Sel?], Rem?) :-
+    K? > 0, Issuer? =?= I?, Maturity? =?= M? |
+    K1 := K? - 1,
+    select_bonds_exact(Issuer?, Maturity?, K1?, Rest?, Status, Sel, Rem).
+select_bonds_exact(Issuer, Maturity, K, [B|Rest], Status?, Sel?, [B?|Rem?]) :-
+    otherwise |
+    select_bonds_exact(Issuer?, Maturity?, K?, Rest?, Status, Sel, Rem).
+select_bonds_exact(_, _, K, [], fail, [], []) :- K? > 0 | true.
+
+%% =============================================================================
+%% SELECT_BONDS_BY_SPEC — Fold over a lot list (exact issuer+maturity match)
+%% =============================================================================
+
+exported procedure select_bonds_by_spec(Stream(Lot)?, Stream(Bond)?, Constant, Stream(Bond), Stream(Bond)).
+select_bonds_by_spec([lot(Issuer, Maturity, Count)|Rest], Holdings, Status?, AllSel?, FinalRem?) :-
+    ground(Issuer?), ground(Maturity?), ground(Count?) |
+    select_bonds_exact(Issuer?, Maturity?, Count?, Holdings?, LotStatus, LotSel, LotRem),
+    select_by_spec_continue(LotStatus?, Rest?, LotSel?, LotRem?, Status, AllSel, FinalRem).
+select_bonds_by_spec([], Holdings, ok, [], Holdings?).
+
+procedure select_by_spec_continue(Constant?, Stream(Lot)?, Stream(Bond)?, Stream(Bond)?, Constant, Stream(Bond), Stream(Bond)).
+select_by_spec_continue(ok, Rest, LotSel, LotRem, Status?, AllSel?, FinalRem?) :-
+    select_bonds_by_spec(Rest?, LotRem?, Status, RestSel, FinalRem),
+    append(LotSel?, RestSel?, AllSel).
+select_by_spec_continue(fail, _, LotSel, LotRem, fail, LotSel?, LotRem?).
+
+%% =============================================================================
+%% SELECT_MATURED_BY_SPEC — Select the Target's coins mature by the holder's
+%% local clock (Redeem gate, Def. 2.5: x = {cent_{q,d'}} in c_p, d' =< d*_p).
+%% Each lot must be issued by Target and have maturity =< Clock, else fail
+%% (holdings restored).  This is the redeem-side maturity gate — no global clock.
+%% =============================================================================
+
+exported procedure select_matured_by_spec(Stream(Lot)?, Constant?, Constant?, Stream(Bond)?, Constant, Stream(Bond), Stream(Bond)).
+select_matured_by_spec([lot(Issuer, Maturity, Count)|Rest], Target, Clock, Holdings, Status?, AllSel?, FinalRem?) :-
+    ground(Issuer?), ground(Maturity?), ground(Count?), Issuer? =?= Target?, Maturity? =< Clock? |
+    select_bonds_exact(Issuer?, Maturity?, Count?, Holdings?, LotStatus, LotSel, LotRem),
+    select_matured_continue(LotStatus?, Rest?, Target?, Clock?, LotSel?, LotRem?, Status, AllSel, FinalRem).
+select_matured_by_spec([lot(_, _, _)|_], _, _, Holdings, fail, [], Holdings?) :-
+    otherwise | true.
+select_matured_by_spec([], _, _, Holdings, ok, [], Holdings?).
+
+procedure select_matured_continue(Constant?, Stream(Lot)?, Constant?, Constant?, Stream(Bond)?, Stream(Bond)?, Constant, Stream(Bond), Stream(Bond)).
+select_matured_continue(ok, Rest, Target, Clock, LotSel, LotRem, Status?, AllSel?, FinalRem?) :-
+    select_matured_by_spec(Rest?, Target?, Clock?, LotRem?, Status, RestSel, FinalRem),
+    append(LotSel?, RestSel?, AllSel).
+select_matured_continue(fail, _, _, _, LotSel, LotRem, fail, LotSel?, LotRem?).
+
+%% =============================================================================
+%% CLASSIFY_TRADE — Classify an incoming trade_propose for auto-accept.
+%% Redemption iff every offered bond is issued by the recipient Id, of ANY
+%% maturity: the issuer must fulfil a presentation of its own coin (Def. 2.5,
+%% obligation 2).  Maturity (d' =< d*_p) is the holder's guard, enforced
+%% holder-side in select_matured_by_spec — the issuer keeps no clock.
+%% =============================================================================
+
+exported procedure classify_trade(Constant?, Stream(Lot)?, Stream(Bond)?, Constant).
+classify_trade(_, [], _, payment).
+classify_trade(Id, [_|_], OfferedBonds, Class?) :-
+    classify_offered(Id?, OfferedBonds?, Class).
+
+procedure classify_offered(Constant?, Stream(Bond)?, Constant).
+classify_offered(Id, [bond(I, _, _)|Rest], Class?) :-
+    Id? =?= I? | classify_offered_all_own(Id?, Rest?, Class).
+classify_offered(_, _, normal) :- otherwise | true.
+
+procedure classify_offered_all_own(Constant?, Stream(Bond)?, Constant).
+classify_offered_all_own(Id, [bond(I, _, _)|Rest], Class?) :-
+    Id? =?= I? | classify_offered_all_own(Id?, Rest?, Class).
+classify_offered_all_own(_, [bond(_, _, _)|_], normal) :- otherwise | true.
+classify_offered_all_own(_, [], redemption).
+
+%% =============================================================================
+%% BUILD_MENU — One bond per issuer, earliest maturity (redemption menu)
+%% =============================================================================
+
+exported procedure build_menu(Constant?, Stream(Bond)?, Stream(Bond)).
+build_menu(Id, Holdings, Menu?) :-
+    build_menu_acc(Id?, Holdings?, [], Menu).
+
+procedure build_menu_acc(Constant?, Stream(Bond)?, Stream(Bond)?, Stream(Bond)).
+build_menu_acc(Id, [bond(I, _, _)|Rest], Acc, Menu?) :-
+    Id? =?= I? |
+    build_menu_acc(Id?, Rest?, Acc?, Menu).
+build_menu_acc(Id, [bond(I, M, S)|Rest], Acc, Menu?) :-
+    otherwise |
+    menu_update(I?, M?, S?, Acc?, Acc1),
+    build_menu_acc(Id?, Rest?, Acc1?, Menu).
+build_menu_acc(_, [], Acc, Acc?).
+
+procedure menu_update(Constant?, Constant?, Constant?, Stream(Bond)?, Stream(Bond)).
+menu_update(I, M, S, [bond(I2, M2, _)|Rest],
+    [bond(I2?, M?, S?)|Rest?]) :-
+    I? =?= I2?, M? < M2? | true.
+menu_update(I, _, _, [bond(I2, M2, S2)|Rest],
+    [bond(I2?, M2?, S2?)|Rest?]) :-
+    I? =?= I2? | true.
+menu_update(I, M, S, [B|Rest], [B?|Rest1?]) :-
+    otherwise |
+    menu_update(I?, M?, S?, Rest?, Rest1).
+menu_update(I, M, S, [], [bond(I?, M?, S?)]).

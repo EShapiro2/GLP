@@ -29,6 +29,13 @@ ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
     ui_mediator(Id?, AgentCh1?, UserCh1?, Ps?, N?).
 
 ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
+    receive(msg(agent, '_user', date_advanced(D)),
+            AgentCh?, AgentCh1),
+    ground(D?) |
+    send(date_advanced(D?), UserCh?, UserCh1),
+    ui_mediator(Id?, AgentCh1?, UserCh1?, Ps?, N?).
+
+ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
     receive(msg(agent, '_user', balance_report(Holdings)),
             AgentCh?, AgentCh1),
     ground(Holdings?) |
@@ -161,6 +168,24 @@ ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
     receive(trade(Target, GiveSpec, WantSpec), UserCh?, UserCh1),
     ground(Id?), ground(Target?), ground(GiveSpec?), ground(WantSpec?) |
     send(msg('_user', Id?, trade(Target?, GiveSpec?, WantSpec?)),
+         AgentCh?, AgentCh1),
+    ui_mediator(Id?, AgentCh1?, UserCh1?, Ps?, N?).
+
+%% --- User-to-agent: redeem (pass through) ---
+
+ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
+    receive(redeem(Target, GiveSpec, WantSpec), UserCh?, UserCh1),
+    ground(Id?), ground(Target?), ground(GiveSpec?), ground(WantSpec?) |
+    send(msg('_user', Id?, redeem(Target?, GiveSpec?, WantSpec?)),
+         AgentCh?, AgentCh1),
+    ui_mediator(Id?, AgentCh1?, UserCh1?, Ps?, N?).
+
+%% --- User-to-agent: advance_date (pass through) ---
+
+ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
+    receive(advance_date(D), UserCh?, UserCh1),
+    ground(Id?), ground(D?) |
+    send(msg('_user', Id?, advance_date(D?)),
          AgentCh?, AgentCh1),
     ui_mediator(Id?, AgentCh1?, UserCh1?, Ps?, N?).
 

@@ -1,26 +1,24 @@
-%% mad_fplay4b.glp — madGLP boot for bonds fplay4b (2 isolates: alice, bob)
+%% mad_fplay3.glp — madGLP boot for bonds fplay3 (2 isolates: alice, bob)
 %%
-%% Derived from: bonds/boot.glp fplay4b clause
-%% Bonds: Time-dependent redemption (2 agents)
-%% Each isolate computes its own T = now() + 500.
+%% Derived from: bonds/boot.glp fplay3 clause
+%% Bonds: Credit + payment (2 agents)
+%% One isolate per agent.
 
 
 procedure boot.
 boot :-
-    agent_init_4b(alice, _)@alice,
-    agent_init_4b(bob, _)@bob.
+    agent_init(alice, 3, _)@alice,
+    agent_init(bob, 3, _)@bob.
 
-%% Time-dependent agent — computes T = now + 500 locally
-procedure agent_init_4b(Constant?, Stream(_)?).
-agent_init_4b(Id, NetIn) :-
-    ground(Id?) |
-    now(Now),
-    T := Now? + 500,
-    actor_dispatch_4b(Id?, T?, ch(ActorIn?, ActorOut)),
+%% Adult agent — no children, no bonds
+procedure agent_init(Constant?, Constant?, Stream(_)?).
+agent_init(Id, PlayNum, NetIn) :-
+    ground(Id?), ground(PlayNum?) |
+    actor_dispatch(Id?, PlayNum?, ch(ActorIn?, ActorOut)),
     tee(ActorOut?, MedIn, DispCmd),
     agent(Id?, AgentIn?, NetIn?,
           [user_output(AgentToUser), net_output(NetOut)],
-          [], 1),
+          [], 1, 0),
     send_to_net(NetOut?),
     ui_mediator(Id?, ch(AgentToUser?, AgentIn),
                 ch(MedIn?, MedOut), [], 1),
@@ -47,6 +45,6 @@ procedure sink(Stream(_)?).
 sink([_|Xs]) :- sink(Xs?).
 sink([]).
 
-procedure actor_dispatch_4b(Constant?, Constant?, Channel(Stream(UserNotify), Stream(UserCmd))).
-actor_dispatch_4b(alice, T, Ch) :- alice_p4b(Ch?, T?).
-actor_dispatch_4b(bob, T, Ch) :- bob_p4b(Ch?, T?).
+procedure actor_dispatch(Constant?, Constant?, Channel(Stream(UserNotify), Stream(UserCmd))).
+actor_dispatch(alice, 3, Ch) :- alice_p3(Ch?).
+actor_dispatch(bob, 3, Ch) :- bob_p3(Ch?).

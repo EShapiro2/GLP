@@ -4,7 +4,7 @@ import 'package:glp_runtime/multiagent/boot_loader.dart';
 import 'package:glp_runtime/multiagent/isolate_manager.dart';
 
 /// Base directories (repo-relative from glp_runtime/).
-const _bondsV2Dir = '../programs/bonds';
+const _bondsV2Dir = '../programs/currencies';
 const _madBootDir = '$_bondsV2Dir/mad_boot';
 const _rootSelfGlp = '../programs/self.glp';
 

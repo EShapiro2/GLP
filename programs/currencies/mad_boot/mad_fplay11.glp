@@ -1,16 +1,33 @@
-%% mad_fplay5.glp — madGLP boot for bonds fplay5 (2 isolates: alice, bob)
+%% mad_fplay11.glp — madGLP boot for bonds fplay11 (2 isolates: alice, bob)
 %%
-%% Derived from: bonds/boot.glp fplay5 clause
-%% Bonds: Zero-coupon loan (2 agents)
-%% One isolate per agent.
+%% Derived from: bonds/boot.glp fplay11 clause
+%% Bonds: Escrow — Cancel (2 agents)
+%% Alice computes T = now() + 5000 locally. Bob has no time arg.
 
 
 procedure boot.
 boot :-
-    agent_init(alice, 5, _)@alice,
-    agent_init(bob, 5, _)@bob.
+    alice_init_11(alice, _)@alice,
+    agent_init(bob, 11, _)@bob.
 
-%% Adult agent — no children, no bonds
+%% Alice — time-dependent escrow depositor (far future deadline)
+procedure alice_init_11(Constant?, Stream(_)?).
+alice_init_11(Id, NetIn) :-
+    ground(Id?) |
+    now(Now),
+    T := Now? + 5000,
+    alice_p11(T?, ch(ActorIn?, ActorOut)),
+    tee(ActorOut?, MedIn, DispCmd),
+    agent(Id?, AgentIn?, NetIn?,
+          [user_output(AgentToUser), net_output(NetOut)],
+          [], 1, 0),
+    send_to_net(NetOut?),
+    ui_mediator(Id?, ch(AgentToUser?, AgentIn),
+                ch(MedIn?, MedOut), [], 1),
+    tee(MedOut?, ActorIn, DispNotify),
+    send_to_user_tagged(Id?, DispCmd?, DispNotify?).
+
+%% Bob — standard agent (no time)
 procedure agent_init(Constant?, Constant?, Stream(_)?).
 agent_init(Id, PlayNum, NetIn) :-
     ground(Id?), ground(PlayNum?) |
@@ -18,7 +35,7 @@ agent_init(Id, PlayNum, NetIn) :-
     tee(ActorOut?, MedIn, DispCmd),
     agent(Id?, AgentIn?, NetIn?,
           [user_output(AgentToUser), net_output(NetOut)],
-          [], 1),
+          [], 1, 0),
     send_to_net(NetOut?),
     ui_mediator(Id?, ch(AgentToUser?, AgentIn),
                 ch(MedIn?, MedOut), [], 1),
@@ -46,5 +63,4 @@ sink([_|Xs]) :- sink(Xs?).
 sink([]).
 
 procedure actor_dispatch(Constant?, Constant?, Channel(Stream(UserNotify), Stream(UserCmd))).
-actor_dispatch(alice, 5, Ch) :- alice_p5(Ch?).
-actor_dispatch(bob, 5, Ch) :- bob_p5(Ch?).
+actor_dispatch(bob, 11, Ch) :- bob_p11(Ch?).

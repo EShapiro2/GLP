@@ -1,14 +1,14 @@
-%% mad_fplay3.glp — madGLP boot for bonds fplay3 (2 isolates: alice, bob)
+%% mad_fplay2.glp — madGLP boot for bonds fplay2 (2 isolates: alice, bob)
 %%
-%% Derived from: bonds/boot.glp fplay3 clause
-%% Bonds: Credit + payment (2 agents)
+%% Derived from: bonds/boot.glp fplay2 clause
+%% Bonds: Befriend + credit line (2 agents)
 %% One isolate per agent.
 
 
 procedure boot.
 boot :-
-    agent_init(alice, 3, _)@alice,
-    agent_init(bob, 3, _)@bob.
+    agent_init(alice, 2, _)@alice,
+    agent_init(bob, 2, _)@bob.
 
 %% Adult agent — no children, no bonds
 procedure agent_init(Constant?, Constant?, Stream(_)?).
@@ -18,7 +18,7 @@ agent_init(Id, PlayNum, NetIn) :-
     tee(ActorOut?, MedIn, DispCmd),
     agent(Id?, AgentIn?, NetIn?,
           [user_output(AgentToUser), net_output(NetOut)],
-          [], 1),
+          [], 1, 0),
     send_to_net(NetOut?),
     ui_mediator(Id?, ch(AgentToUser?, AgentIn),
                 ch(MedIn?, MedOut), [], 1),
@@ -46,5 +46,5 @@ sink([_|Xs]) :- sink(Xs?).
 sink([]).
 
 procedure actor_dispatch(Constant?, Constant?, Channel(Stream(UserNotify), Stream(UserCmd))).
-actor_dispatch(alice, 3, Ch) :- alice_p3(Ch?).
-actor_dispatch(bob, 3, Ch) :- bob_p3(Ch?).
+actor_dispatch(alice, 2, Ch) :- alice_p2(Ch?).
+actor_dispatch(bob, 2, Ch) :- bob_p2(Ch?).

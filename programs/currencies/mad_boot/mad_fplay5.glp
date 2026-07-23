@@ -1,33 +1,16 @@
-%% mad_fplay10.glp — madGLP boot for bonds fplay10 (2 isolates: alice, bob)
+%% mad_fplay5.glp — madGLP boot for bonds fplay5 (2 isolates: alice, bob)
 %%
-%% Derived from: bonds/boot.glp fplay10 clause
-%% Bonds: Escrow — Time Release (2 agents)
-%% Alice computes T = now() + 500 locally. Bob has no time arg.
+%% Derived from: bonds/boot.glp fplay5 clause
+%% Bonds: Zero-coupon loan (2 agents)
+%% One isolate per agent.
 
 
 procedure boot.
 boot :-
-    alice_init_10(alice, _)@alice,
-    agent_init(bob, 10, _)@bob.
+    agent_init(alice, 5, _)@alice,
+    agent_init(bob, 5, _)@bob.
 
-%% Alice — time-dependent escrow depositor
-procedure alice_init_10(Constant?, Stream(_)?).
-alice_init_10(Id, NetIn) :-
-    ground(Id?) |
-    now(Now),
-    T := Now? + 500,
-    alice_p10(T?, ch(ActorIn?, ActorOut)),
-    tee(ActorOut?, MedIn, DispCmd),
-    agent(Id?, AgentIn?, NetIn?,
-          [user_output(AgentToUser), net_output(NetOut)],
-          [], 1),
-    send_to_net(NetOut?),
-    ui_mediator(Id?, ch(AgentToUser?, AgentIn),
-                ch(MedIn?, MedOut), [], 1),
-    tee(MedOut?, ActorIn, DispNotify),
-    send_to_user_tagged(Id?, DispCmd?, DispNotify?).
-
-%% Bob — standard agent (no time)
+%% Adult agent — no children, no bonds
 procedure agent_init(Constant?, Constant?, Stream(_)?).
 agent_init(Id, PlayNum, NetIn) :-
     ground(Id?), ground(PlayNum?) |
@@ -35,7 +18,7 @@ agent_init(Id, PlayNum, NetIn) :-
     tee(ActorOut?, MedIn, DispCmd),
     agent(Id?, AgentIn?, NetIn?,
           [user_output(AgentToUser), net_output(NetOut)],
-          [], 1),
+          [], 1, 0),
     send_to_net(NetOut?),
     ui_mediator(Id?, ch(AgentToUser?, AgentIn),
                 ch(MedIn?, MedOut), [], 1),
@@ -63,4 +46,5 @@ sink([_|Xs]) :- sink(Xs?).
 sink([]).
 
 procedure actor_dispatch(Constant?, Constant?, Channel(Stream(UserNotify), Stream(UserCmd))).
-actor_dispatch(bob, 10, Ch) :- bob_p10(Ch?).
+actor_dispatch(alice, 5, Ch) :- alice_p5(Ch?).
+actor_dispatch(bob, 5, Ch) :- bob_p5(Ch?).
