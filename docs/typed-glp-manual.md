@@ -1,7 +1,7 @@
 # Typed GLP Manual
 
-**Version**: 2.20
-**Date**: 2026-06-24
+**Version**: 2.21
+**Date**: 2026-07-23
 **Status**: ACTIVE
 
 This manual captures essential programming principles and advice for writing correct Typed GLP programs. It covers the SRSW (Single-Reader Single-Writer) constraint, type declarations, moding, modules, parameterized types, and common pitfalls.
@@ -346,14 +346,14 @@ Combined with Section 3.3: if a groundness-implying guard like `ground(X?)` is p
 
 ### 3.5 Type Aliases Do Not Inherit Constant-Type Relaxation
 
-A type alias of a primitive type, such as
+A type alias of a constant type, such as
 
 ```prolog
 Agent ::= Constant.
 Epoch ::= Integer.
 ```
 
-is structurally equivalent to the primitive (Section 20.3 type identity is structural).  Aliases improve documentation: `stream_update(Agent, Epoch)` is clearer than `stream_update(Constant, Integer)`.
+is structurally equivalent to the type it names (Section 20.3 type identity is structural).  `Constant` is itself a root `self.glp` union, `Number ; String ; Module`; the primitive types are `Integer`, `Real`, `String` and `Module`.  Aliases improve documentation: `stream_update(Agent, Epoch)` is clearer than `stream_update(Constant, Integer)`.
 
 However, the SRSW relaxation of Section 3.1 (which permits multiple readers of `Constant`, `Integer`, `Number`, `String`, `Real`) does **not** automatically transfer through the alias.  A variable typed as `Agent` is treated by the SRSW checker as a non-constant-type variable; multi-reader use without a ground guard is rejected with:
 
@@ -863,6 +863,43 @@ SRSW does not prevent writer-forwarding through a structure.  If a writer must b
 
 A practical sign of the misconception: arriving at a design where "the play does the wiring by hand" because "the substrate cannot forward writers through a list".  Re-examine the type definition first; the fix is almost always one `?`.
 
+### 15B.5 Transforming an Aggregate That Stores Writers
+
+A procedure that consumes an aggregate and produces a new one must transfer each stored writer, not convert it to a reader.  Consuming `FriendsList?` flips the stored `Stream` to `Stream?`, so a naive copy stores a reader and the stream can never be written again:
+
+```prolog
+FriendEntry ::= friend(String?, Stream).
+FriendsList ::= [] ; [FriendEntry | FriendsList].
+
+%% WRONG — Out? in the output stores a reader; future sends are impossible
+lookup_send_step(Key, Msg, [friend(K, Out)|Rest], [friend(K?, Out?)|Rest1?]) :- ...
+
+%% RIGHT — Out? reads the old entry, Out writes the new one
+lookup_send_step(Key, Msg, [friend(K, Out?)|Rest], [friend(K?, Out)|Rest1?]) :- ...
+```
+
+The pair does the transfer: `Out?` consumes the stream from the old entry and `Out` produces it in the new one — one reader, one writer, and the stream stays writable.  This is not "passing through unchanged"; it is reading and writing the same logical value through its paired variables.
+
+The full traversal pairs a matching clause, which writes into the stream, with an `otherwise` pass-through that preserves it:
+
+```prolog
+procedure lookup_send_step(String?, _?, FriendsList?, FriendsList).
+lookup_send_step(Key, Msg, [friend(K, [Msg?|Out1?])|Rest], [friend(K?, Out1)|Rest?]) :-
+    Key? =?= K? | true.
+lookup_send_step(Key, Msg, [friend(K, Out?)|Rest], [friend(K?, Out)|Rest1?]) :-
+    otherwise |
+    lookup_send_step(Key?, Msg?, Rest?, Rest1).
+lookup_send_step(_, _, [], []).
+```
+
+The same shape builds the aggregate in the first place — a head reader whose paired writer is stored in the list:
+
+```prolog
+agent_init(Id, ch(UserIn, UserOut?), ch(NetIn, NetOut?)) :-
+    merge(UserIn?, NetIn?, In),
+    agent(Id?, In?, [friend(user, UserOut), friend(net, NetOut)]).
+```
+
 ---
 
 ## 16. `?` in Type Definitions vs `?` on Clause Variables
@@ -1188,6 +1225,7 @@ Formal definition: Moded-Types paper, §Type-Compatible Attestation Between Agen
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 2.21 | 2026-07-23 | Added §15B.5: transforming an aggregate that stores writers (folded in from the retired `docs/type system/friends-list-moding-pattern.md`).  §3.5: `Constant` is a root `self.glp` union `Number ; String ; Module`, not a primitive; the primitives are `Integer`, `Real`, `String`, `Module`. |
 | 2.20 | 2026-06-24 | §19.7: defined self-contained module (no `M#p`, no uninstantiated type parameter) and program (self-contained module or directory with `self.glp`); uniform pipeline (link, typecheck, compile if it passes, run) for one module or many; removed the multi-module-only framing and the development-aid note. |
 | 2.19 | 2026-06-24 | §19.6: stated the general scope-chain shadowing rule (nearer definition shadows farther, module's own shadows all ancestors', for types and procedures), previously only in §8.2 and §19.9. |
 | 2.18 | 2026-06-23 | §19 aligned to the paper: cross-module calls resolve at link time to local calls (§19.4); `self.glp` is the directory interface and entry points are the root `self.glp`'s exports (§19.6); §19.7 retitled Static Linking, single-module exports all; dynamic linking retired (present but unsupported, to return via attestation); removed the dynamic-dispatch REPL workflow, renumbering §19.9/§19.10 to §19.8/§19.9. |
