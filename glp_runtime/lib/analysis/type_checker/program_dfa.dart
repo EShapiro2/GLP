@@ -149,10 +149,9 @@ class Automaton {
   /// a transition; it stands for everything the named type accepts, and the
   /// type names a path passes through are not themselves path positions (TGLP
   /// Definition "Moded Paths").  So `Number ::= Integer ; Real.` gives
-  /// {Integer, Real}, and `Constant ::= Number ; String ; Module ; [].` gives
-  /// {Integer, Real, String, Module} — its `[]` alternative is a constant and
-  /// stays a transition.  This is what makes `Integer <: Constant` derive from
-  /// the definitions rather than from a built-in order.
+  /// {Integer, Real}, and `Constant ::= Number ; String ; Module.` gives
+  /// {Integer, Real, String, Module}.  This is what makes `Integer <: Constant`
+  /// derive from the definitions rather than from a built-in order.
   final Set<String> acceptedPrimitives;
 
   Automaton(this.startState, this._transitions, {this.acceptedPrimitives = const {}});
@@ -673,8 +672,8 @@ LeafConsistencyResult checkLeafConsistency(
       // Second, descend the type's bare type-name alternatives to the
       // primitives they stand for, and match the literal against those
       // (consistency table rows 4-6).  `Number ::= Integer ; Real.` accepts a
-      // numeric literal; `Constant ::= Number ; String ; Module ; [].` accepts
-      // any of them, plus `[]` through the constant transition above.
+      // numeric literal; `Constant ::= Number ; String ; Module.` accepts any
+      // of them — and, since `[]` is a String, an empty-list literal too.
       final primitives = automaton.acceptedPrimitives;
       if (leaf.isInteger && primitives.contains('Integer')) {
         return LeafConsistencyResult.consistent(dfa.states['_FINAL_']);
