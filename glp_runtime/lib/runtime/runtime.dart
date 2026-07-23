@@ -21,19 +21,24 @@ class GlpRuntime {
 
   /// Shared runners map: program key → GoalRunner (object or byte loop).
   /// Used by the Scheduler to find the runner for a goal's program.
-  /// Runtime-registered runners (extension point; currently unused since the
-  /// serve/_activate dynamic-dispatch path was retired).
+  /// Runtime-registered runners (extension point; used by `run/2` to route a
+  /// launched goal to its module's ByteRunner; also the seam the retired
+  /// dynamic-dispatch path once used).
   final Map<Object?, GoalRunner> runners = {};
 
   /// GLP channel handles: module name → GlpChannelHandle. Read by the runner's
   /// Distribute/Transmit opcodes to route RPCs via GLP channels. Currently
-  /// unpopulated — the serve/_activate path that registered handles was retired.
+  /// unpopulated — the dynamic-dispatch path that registered handles was retired.
   final Map<String, GlpChannelHandle> glpChannels = {};
 
   final Map<GoalId, int> _budgets = <GoalId, int>{};
   final Map<GoalId, CallEnv> _goalEnvs = <GoalId, CallEnv>{};
   final Map<GoalId, Object?> _goalPrograms = <GoalId, Object?>{};
   final Map<GoalId, Object?> _goalModuleContexts = <GoalId, Object?>{};  // Module context for RPC;
+  /// Per-goal module VALUE — the ModuleTerm whose code the goal's PC indexes
+  /// into. The `self_module`/`run` substrate: every goal carries its module,
+  /// spawned goals inherit it. Distinct from _goalModuleContexts (RPC routing).
+  final Map<GoalId, Object?> _goalModules = <GoalId, Object?>{};
 
   // File handle management
   final Map<int, RandomAccessFile> _fileHandles = <int, RandomAccessFile>{};
@@ -45,6 +50,12 @@ class GlpRuntime {
 
   // Goal ID counter for spawn
   int nextGoalId = 10000;  // Start at 10000 to avoid collisions with test goal IDs
+
+  /// The goal currently being reduced. The interpreter sets this immediately
+  /// before invoking a body kernel, so a kernel (e.g. `self_module`) can reach
+  /// its own goal's per-goal state through `rt` without the (rt, args) kernel
+  /// signature carrying a goal handle.
+  GoalId? currentGoalId;
 
   // Timer tracking for wait() guards
   int _pendingTimers = 0;
@@ -185,6 +196,15 @@ class GlpRuntime {
 
   /// Get module context for a goal
   Object? getGoalModuleContext(GoalId g) => _goalModuleContexts[g];
+
+  /// Set the module VALUE a goal runs (its ModuleTerm) — read back by
+  /// `self_module`, inherited by spawned children.
+  void setGoalModule(GoalId g, Object? module) {
+    _goalModules[g] = module;
+  }
+
+  /// Get the module VALUE a goal runs (its ModuleTerm), or null if unset.
+  Object? getGoalModule(GoalId g) => _goalModules[g];
 
   void _enqueueAll(List<GoalRef> acts) {
     for (final a in acts) {

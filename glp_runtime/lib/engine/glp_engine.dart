@@ -17,6 +17,7 @@ import 'package:glp_runtime/compiler/ast.dart';
 import 'package:glp_runtime/compiler/primitive_layer.dart';
 import 'package:glp_runtime/bytecode/runner.dart';
 import 'package:glp_runtime/engine_v2/interp.dart';
+import 'package:glp_runtime/engine_v2/module_kernels.dart';
 import 'package:glp_runtime/runtime/runtime.dart';
 import 'package:glp_runtime/runtime/machine_state.dart';
 import 'package:glp_runtime/runtime/scheduler.dart';
@@ -160,6 +161,7 @@ class GlpEngine {
     }
 
     registerStandardPredicates(_runtime.systemPredicates);
+    registerModuleKernels(_runtime);
     _loadRootSelf();
   }
 
@@ -607,6 +609,9 @@ class GlpEngine {
     final env = CallEnv(args: argSlots);
     _runtime.setGoalEnv(_goalId, env);
     _runtime.setGoalProgram(_goalId, 'main');
+    // The goal carries its module value (the app it runs), read back by
+    // `self_module`. combinedProgram is the app's linked code.
+    _runtime.setGoalModule(_goalId, rt.ModuleTerm(program, name: 'main'));
 
     final module = _findModuleForProcedure(procedureLabel);
     if (module != null) {
@@ -712,6 +717,9 @@ class GlpEngine {
       final env = CallEnv(args: argSlots);
       _runtime.setGoalEnv(_goalId, env);
       _runtime.setGoalProgram(_goalId, 'main');
+      // The goal carries its module value (the app it runs), read back by
+      // `self_module`. combinedProgram is the app's linked code.
+      _runtime.setGoalModule(_goalId, rt.ModuleTerm(program, name: 'main'));
 
       final module = _findModuleForProcedure(procedureLabel);
       if (module != null) {

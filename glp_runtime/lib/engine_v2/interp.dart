@@ -537,6 +537,9 @@ class ByteRunner with OpExecutors implements GoalRunner {
         for (var i = 0; i < arity; i++) {
           args.add(cx.argSlots[i]);
         }
+        // Expose the calling goal to the kernel (self_module and friends): the
+        // (rt, args) signature carries no goal handle.
+        cx.rt.currentGoalId = cx.goalId;
         final result = kernel(cx.rt, args);
         if (result == BodyKernelResult.abort) {
           print('ERROR: Body kernel ${symbol.name}/$arity aborted');
@@ -574,6 +577,9 @@ class ByteRunner with OpExecutors implements GoalRunner {
     if (parentProgram != null) {
       cx.rt.setGoalProgram(newGoalId, parentProgram);
     }
+    // The invariant: a spawned goal runs its parent's module (its PC indexes
+    // into that module's code). Inherit the module value.
+    cx.rt.setGoalModule(newGoalId, cx.rt.getGoalModule(cx.goalId));
 
     cx.rt.gq.enqueue(newGoalRef);
 

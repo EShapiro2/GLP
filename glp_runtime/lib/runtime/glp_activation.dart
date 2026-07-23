@@ -3,7 +3,7 @@
 /// Writer end of a GLP channel: sending a goal extends the stream
 /// [goal | newTail]. Part of the channel-routing surface used by the
 /// Distribute/Transmit opcodes (currently inert for statically linked
-/// programs). The serve/_activate dynamic-dispatch path that constructed
+/// programs). The dynamic-dispatch path that constructed
 /// these handles has been retired.
 library;
 
