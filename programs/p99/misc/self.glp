@@ -44,6 +44,19 @@ imported procedure p94#regular_labeled(Integer?, Integer?, Stream(REList)).
 exported procedure regular_labeled(Integer?, Integer?, Stream(REList)).
 regular_labeled(N, K, Gs?) :- p94 # regular_labeled(N?, K?, Gs).
 
+% Nonogram (P98).  Bits z (empty) / o (filled); clues are lists of run lengths.
+IntListList ::= [] ; [IntList | IntListList].
+Bit ::= z ; o.
+BitLine ::= [] ; [Bit | BitLine].
+Grid ::= [] ; [BitLine | Grid].
+CState ::= ready ; mustgap ; inrun(Integer).
+ColCol ::= cc(IntList, CState).
+ColCols ::= [] ; [ColCol | ColCols].
+
+imported procedure p98#nonogram(IntListList?, IntListList?, Maybe(Grid)).
+exported procedure nonogram(IntListList?, IntListList?, Maybe(Grid)).
+nonogram(RowClues, ColClues, R?) :- p98 # nonogram(RowClues?, ColClues?, R).
+
 AExp ::= num(Integer) ; plus(AExp, AExp) ; minus(AExp, AExp)
        ; times(AExp, AExp) ; div(AExp, AExp).
 Eq ::= eq(AExp, AExp).

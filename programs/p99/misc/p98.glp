@@ -1,0 +1,171 @@
+% P98: Nonogram.  Fill a grid so that each row and each column shows exactly its
+% run-length clue (a filled block of length r for each r in the clue, separated
+% by at least one empty cell).  First-solution search, row by row: for the next
+% row, enumerate the lines matching its clue; for each, advance every column's
+% run automaton by that row's cell, pruning the moment a column becomes
+% inconsistent; when all rows are placed, accept iff every column automaton has
+% consumed its whole clue.
+%
+% State ns(RemRowClues, ColCols, GridRev, C): the row clues still to place, the
+% per-column automaton states, the rows placed so far (reversed), and the width.
+% The per-row invariant context rides as one pctx tuple through the branch
+% helpers, keeping their arity low (per the 2026-07-23 engine bug).
+
+NState ::= ns(IntListList, ColCols, Grid, Integer).
+PCtx ::= pctx(IntListList, ColCols, Grid, Integer).
+
+exported procedure nonogram(IntListList?, IntListList?, Maybe(Grid)).
+nonogram(RowClues, ColClues, R?) :- ground(RowClues?), ground(ColClues?) |
+    initcols(ColClues?, ColCols),
+    llen(ColClues?, C),
+    solve_first(ns(RowClues?, ColCols?, [], C?), Reqs, R),
+    expand_server(Reqs?).
+
+procedure expand_server(Stream(Req(NState, Grid))?).
+expand_server([]).
+expand_server([expand(St, Items?)|Rs]) :-
+    expand(St?, Items),
+    expand_server(Rs?).
+
+procedure expand(NState?, Items(NState, Grid)).
+expand(ns([], ColCols, GridRev, _), Items?) :- ground(ColCols?), ground(GridRev?) |
+    colsdone(ColCols?, Done),
+    fin(Done?, GridRev?, Items).
+expand(ns([RC|Rest], ColCols, GridRev, C), Items?) :-
+    ground(RC?), ground(Rest?), ground(ColCols?), ground(GridRev?), integer(C?) |
+    rowlines(RC?, C?, Lines),
+    placerows(Lines?, pctx(Rest?, ColCols?, GridRev?, C?), Items).
+
+procedure fin(Ans?, Grid?, Items(NState, Grid)).
+fin(yes, GridRev, [sol(G?)]) :- ground(GridRev?) | grev(GridRev?, [], G).
+fin(no, _, []).
+
+% placerows: one search node per column-consistent line for the current row.
+procedure placerows(Grid?, PCtx?, Items(NState, Grid)).
+placerows([], _, []).
+placerows([L|Ls], PCtx, Out?) :- ground(L?), ground(Ls?), ground(PCtx?) |
+    applyrow(L?, PCtx?, ColCols2, Ok),
+    pr1(Ok?, L?, ColCols2?, Ls?, PCtx?, Out).
+
+procedure pr1(Ans?, BitLine?, ColCols?, Grid?, PCtx?, Items(NState, Grid)).
+pr1(yes, L, ColCols2, Ls, PCtx, [node(Child?)|Out?]) :-
+    ground(L?), ground(ColCols2?), ground(Ls?), ground(PCtx?) |
+    mkns(L?, ColCols2?, PCtx?, Child),
+    placerows(Ls?, PCtx?, Out).
+pr1(no, _, _, Ls, PCtx, Out?) :- ground(Ls?), ground(PCtx?) |
+    placerows(Ls?, PCtx?, Out).
+
+procedure mkns(BitLine?, ColCols?, PCtx?, NState).
+mkns(L, ColCols2, pctx(Rest, _, GridRev, C), ns(Rest?, ColCols2?, [L?|GridRev?], C?)) :-
+    ground(L?), ground(ColCols2?), ground(Rest?), ground(GridRev?), integer(C?) | true.
+
+% applyrow: advance every column by this row's cell; fail if any column breaks.
+procedure applyrow(BitLine?, PCtx?, ColCols, Ans).
+applyrow(L, pctx(_, ColCols, _, _), ColCols2?, Ok?) :- ground(L?), ground(ColCols?) |
+    applyrow2(L?, ColCols?, ColCols2, Ok).
+
+procedure applyrow2(BitLine?, ColCols?, ColCols, Ans).
+applyrow2([], [], [], yes).
+applyrow2([B|Bs], [cc(Runs, CS)|Cs], Out?, Ok?) :-
+    ground(B?), ground(Runs?), ground(CS?), ground(Bs?), ground(Cs?) |
+    cstep(B?, Runs?, CS?, Runs2, CS2, Ok1),
+    ar1(Ok1?, Runs2?, CS2?, Bs?, Cs?, Out, Ok).
+
+procedure ar1(Ans?, IntList?, CState?, BitLine?, ColCols?, ColCols, Ans).
+ar1(no, _, _, _, _, [], no).
+ar1(yes, Runs2, CS2, Bs, Cs, [cc(Runs2?, CS2?)|Out?], Ok?) :-
+    ground(Runs2?), ground(CS2?), ground(Bs?), ground(Cs?) |
+    applyrow2(Bs?, Cs?, Out, Ok).
+
+% cstep: advance one column automaton by one cell.
+procedure cstep(Bit?, IntList?, CState?, IntList, CState, Ans).
+cstep(z, Runs, ready, Runs?, ready, yes).
+cstep(z, Runs, mustgap, Runs?, ready, yes).
+cstep(z, Runs, inrun(_), Runs?, ready, no).
+cstep(o, [], ready, [], ready, no).
+cstep(o, [H|T], ready, T?, mustgap, yes) :- H? =< 1 | true.
+cstep(o, [H|T], ready, T?, inrun(K?), yes) :- H? > 1 | K := H? - 1.
+cstep(o, Runs, mustgap, Runs?, mustgap, no).
+cstep(o, Runs, inrun(K), Runs?, mustgap, yes) :- K? =< 1 | true.
+cstep(o, Runs, inrun(K), Runs?, inrun(K1?), yes) :- K? > 1 | K1 := K? - 1.
+
+% colsdone: every column has consumed its whole clue and is not mid-run.
+procedure colsdone(ColCols?, Ans).
+colsdone([], yes).
+colsdone([cc(Runs, CS)|Cs], R?) :- ground(Runs?), ground(CS?), ground(Cs?) |
+    coldone(Runs?, CS?, D),
+    cd1(D?, Cs?, R).
+procedure coldone(IntList?, CState?, Ans).
+coldone([], ready, yes).
+coldone([], mustgap, yes).
+coldone([], inrun(_), no).
+coldone([_|_], _, no).
+procedure cd1(Ans?, ColCols?, Ans).
+cd1(no, _, no).
+cd1(yes, Cs, R?) :- ground(Cs?) | colsdone(Cs?, R).
+
+procedure initcols(IntListList?, ColCols).
+initcols([], []).
+initcols([Cl|Cls], [cc(Cl?, ready)|Out?]) :- ground(Cl?) | initcols(Cls?, Out).
+
+procedure llen(IntListList?, Integer).
+llen([], 0).
+llen([_|Xs], N?) :- llen(Xs?, M), N := M? + 1.
+
+procedure grev(Grid?, Grid?, Grid).
+grev([], A, A?).
+grev([X|Xs], A, R?) :- grev(Xs?, [X?|A?], R).
+
+% --- Row-line generation ---------------------------------------------------
+% rowlines(Clue, W, Lines): every bit line of width W matching Clue.  At each
+% step either lay a leading empty cell, or place the next run then a gap.
+
+procedure rowlines(IntList?, Integer?, Grid).
+rowlines([], W, [L?]) :- W? >= 0, integer(W?) | zeros(W?, L).
+rowlines([], W, []) :- W? < 0 | true.
+rowlines([R|Rs], W, Out?) :- W? >= 0, integer(R?), integer(W?), ground(Rs?) |
+    optzero([R?|Rs?], W?, A),
+    optrun(R?, Rs?, W?, B),
+    appg(A?, B?, Out).
+rowlines([_|_], W, []) :- W? < 0 | true.
+
+procedure optzero(IntList?, Integer?, Grid).
+optzero(Clue, W, A?) :- W? > 0, integer(W?), ground(Clue?) |
+    W1 := W? - 1, rowlines(Clue?, W1?, Sub), prepz(Sub?, A).
+optzero(_, W, []) :- W? =< 0 | true.
+
+procedure optrun(Integer?, IntList?, Integer?, Grid).
+optrun(R, [], W, [L?]) :- R? =< W?, integer(R?), integer(W?) | onesz(R?, W?, L).
+optrun(R, [], W, []) :- R? > W? | true.
+optrun(R, [R2|Rs], W, B?) :- W? > R?, integer(R?), integer(R2?), ground(Rs?) |
+    W2 := W? - R? - 1, rowlines([R2?|Rs?], W2?, Sub), preprun(R?, Sub?, B).
+optrun(R, [_|_], W, []) :- W? =< R? | true.
+
+procedure zeros(Integer?, BitLine).
+zeros(N, []) :- N? =< 0 | true.
+zeros(N, [z|R?]) :- N? > 0, integer(N?) | N1 := N? - 1, zeros(N1?, R).
+
+procedure ones(Integer?, BitLine).
+ones(N, []) :- N? =< 0 | true.
+ones(N, [o|R?]) :- N? > 0, integer(N?) | N1 := N? - 1, ones(N1?, R).
+
+procedure onesz(Integer?, Integer?, BitLine).
+onesz(R, W, L?) :- integer(R?), integer(W?) |
+    ones(R?, O), W2 := W? - R?, zeros(W2?, Z), appb(O?, Z?, L).
+
+procedure appb(BitLine?, BitLine?, BitLine).
+appb([], Ys, Ys?).
+appb([X|Xs], Ys, [X?|Zs?]) :- appb(Xs?, Ys?, Zs).
+
+procedure prepz(Grid?, Grid).
+prepz([], []).
+prepz([L|Ls], [[z|L?]|Out?]) :- ground(L?) | prepz(Ls?, Out).
+
+procedure preprun(Integer?, Grid?, Grid).
+preprun(_, [], []).
+preprun(R, [L|Ls], [Pre?|Out?]) :- integer(R?), ground(L?) |
+    ones(R?, O), appb(O?, [z|L?], Pre), preprun(R?, Ls?, Out).
+
+procedure appg(Grid?, Grid?, Grid).
+appg([], Ys, Ys?).
+appg([X|Xs], Ys, [X?|Zs?]) :- appg(Xs?, Ys?, Zs).

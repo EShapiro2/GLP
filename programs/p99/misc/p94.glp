@@ -15,7 +15,6 @@
 % arity low).
 
 RState ::= rs(Integer, IntList, REList, Integer).
-IntListList ::= [] ; [IntList | IntListList].
 IP ::= m(Integer, Integer).
 IPList ::= [] ; [IP | IPList].
 IG ::= ig(REList, REList).
