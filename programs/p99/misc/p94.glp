@@ -15,9 +15,6 @@
 % arity low).
 
 RState ::= rs(Integer, IntList, REList, Integer).
-IP ::= m(Integer, Integer).
-IPList ::= [] ; [IP | IPList].
-IG ::= ig(REList, REList).
 
 % regular(N, K, Reps): one representative per isomorphism class of the K-regular
 % simple graphs on N nodes.  Generates every labelled graph (search-all) and
@@ -155,66 +152,22 @@ ia1(no, Rs, G, N, Res?) :- ground(Rs?), ground(G?), integer(N?) |
     isoany(Rs?, G?, N?, Res).
 
 % iso(E1, E2, N): is there a node bijection of 1..N mapping E1's edges onto E2's?
+% Delegates to the shared graph_iso (root self.glp), instantiated at Integer.
+% The edges are copied re(...) -> ge(...) (Integer to Integer, a functor swap).
 procedure iso(REList?, REList?, Integer?, Ans).
 iso(E1, E2, N, R?) :- integer(N?), ground(E1?), ground(E2?) |
-    upto(1, N?, Nodes),
-    trymap(Nodes?, Nodes?, [], ig(E1?, E2?), R).
+    upto(1, N?, Nodes1), upto(1, N?, Nodes2),
+    re2ge(E1?, G1), re2ge(E2?, G2),
+    graph_iso(Nodes1?, Nodes2?, G1?, G2?, M),
+    iso_res(M?, R).
 
-procedure trymap(IntList?, IntList?, IPList?, IG?, Ans).
-trymap([], _, _, _, yes).
-trymap([A|Rest], Unused, Map, G, R?) :-
-    ground(A?), ground(Rest?), ground(Unused?), ground(Map?), ground(G?) |
-    trycand(Unused?, A?, Rest?, Unused?, Map?, G?, R).
+procedure iso_res(Maybe(GMapList(Integer))?, Ans).
+iso_res(found(_), yes).
+iso_res(none, no).
 
-procedure trycand(IntList?, Integer?, IntList?, IntList?, IPList?, IG?, Ans).
-trycand([], _, _, _, _, _, no).
-trycand([M|Ms], A, Rest, Unused, Map, G, R?) :-
-    ground(M?), ground(Ms?), ground(A?), ground(Rest?), ground(Unused?), ground(Map?), ground(G?) |
-    consistent(Map?, A?, M?, G?, Ok),
-    tc1(Ok?, M?, Ms?, A?, Rest?, Unused?, Map?, G?, R).
-
-procedure tc1(Ans?, Integer?, IntList?, Integer?, IntList?, IntList?, IPList?, IG?, Ans).
-tc1(no, _, Ms, A, Rest, Unused, Map, G, R?) :-
-    ground(Ms?), ground(A?), ground(Rest?), ground(Unused?), ground(Map?), ground(G?) |
-    trycand(Ms?, A?, Rest?, Unused?, Map?, G?, R).
-tc1(yes, M, Ms, A, Rest, Unused, Map, G, R?) :-
-    ground(M?), ground(Ms?), ground(A?), ground(Rest?), ground(Unused?), ground(Map?), ground(G?) |
-    idel(Unused?, M?, Unused1),
-    trymap(Rest?, Unused1?, [m(A?, M?)|Map?], G?, Sub),
-    tc2(Sub?, Ms?, A?, Rest?, Unused?, Map?, G?, R).
-
-procedure tc2(Ans?, IntList?, Integer?, IntList?, IntList?, IPList?, IG?, Ans).
-tc2(yes, _, _, _, _, _, _, yes).
-tc2(no, Ms, A, Rest, Unused, Map, G, R?) :-
-    ground(Ms?), ground(A?), ground(Rest?), ground(Unused?), ground(Map?), ground(G?) |
-    trycand(Ms?, A?, Rest?, Unused?, Map?, G?, R).
-
-% consistent: for every mapped pair m(X, Y), edge(A, X) in E1 iff edge(M, Y) in E2.
-procedure consistent(IPList?, Integer?, Integer?, IG?, Ans).
-consistent([], _, _, _, yes).
-consistent([m(X, Y)|Map], A, M, ig(E1, E2), Ok?) :-
-    ground(X?), ground(Y?), ground(A?), ground(M?), ground(E1?), ground(E2?), ground(Map?) |
-    hasedge(E1?, A?, X?, H1),
-    hasedge(E2?, M?, Y?, H2),
-    cons1(H1?, H2?, Map?, A?, M?, ig(E1?, E2?), Ok).
-procedure cons1(Ans?, Ans?, IPList?, Integer?, Integer?, IG?, Ans).
-cons1(yes, yes, Map, A, M, G, Ok?) :- ground(Map?), ground(A?), ground(M?), ground(G?) |
-    consistent(Map?, A?, M?, G?, Ok).
-cons1(no, no, Map, A, M, G, Ok?) :- ground(Map?), ground(A?), ground(M?), ground(G?) |
-    consistent(Map?, A?, M?, G?, Ok).
-cons1(yes, no, _, _, _, _, no).
-cons1(no, yes, _, _, _, _, no).
-
-procedure hasedge(REList?, Integer?, Integer?, Ans).
-hasedge([], _, _, no).
-hasedge([re(X, Y)|_], A, B, yes) :- X? =:= A?, Y? =:= B? | true.
-hasedge([re(X, Y)|_], A, B, yes) :- otherwise, X? =:= B?, Y? =:= A? | true.
-hasedge([re(_, _)|Es], A, B, R?) :- otherwise, integer(A?), integer(B?) | hasedge(Es?, A?, B?, R).
-
-procedure idel(IntList?, Integer?, IntList).
-idel([], _, []).
-idel([X|Xs], Y, Xs?) :- X? =:= Y? | true.
-idel([X|Xs], Y, [X?|R?]) :- otherwise, integer(Y?) | idel(Xs?, Y?, R).
+procedure re2ge(REList?, GEdgeList(Integer)).
+re2ge([], []).
+re2ge([re(A, B)|Es], [ge(A?, B?)|Out?]) :- integer(A?), integer(B?) | re2ge(Es?, Out).
 
 procedure upto(Integer?, Integer?, IntList).
 upto(I, N, []) :- I? > N? | true.

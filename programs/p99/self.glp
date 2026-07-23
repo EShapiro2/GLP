@@ -129,3 +129,75 @@ procedure mm_close(MergeDone?, _?).
 mm_close(done, Ref) :-
     is_mutual_ref(Ref?) |
     close_mutual_reference(Ref?).
+
+% ---------------------------------------------------------------------------
+% Shared graph isomorphism (parameterized over the node type X)
+% ---------------------------------------------------------------------------
+% First-solution search over node bijections: map the first unmapped node of
+% graph 1 to each unused node of graph 2 whose adjacency to every mapped pair
+% agrees.  Used by P85 (atom nodes, X = Constant) and P94's K-regular dedup
+% (integer nodes, X = Integer).  Node identity is =?=, valid for any X.  Edges
+% are ge(X, X); the two edge sets ride as one ges tuple to keep arity low.
+
+GEdge(X) ::= ge(X, X).
+GEdgeList(X) ::= [] ; [GEdge(X) | GEdgeList(X)].
+GMap(X) ::= gmap(X, X).
+GMapList(X) ::= [] ; [GMap(X) | GMapList(X)].
+GEs(X) ::= ges(GEdgeList(X), GEdgeList(X)).
+GIso(X) ::= giso(Stream(X), Stream(X), GMapList(X), GEs(X)).
+
+procedure graph_iso(Stream(X)?, Stream(X)?, GEdgeList(X)?, GEdgeList(X)?, Maybe(GMapList(X))).
+graph_iso(N1, N2, E1, E2, R?) :- ground(N1?), ground(N2?), ground(E1?), ground(E2?) |
+    solve_first(giso(N1?, N2?, [], ges(E1?, E2?)), Reqs, R),
+    gi_server(Reqs?).
+
+procedure gi_server(Stream(Req(GIso(X), GMapList(X)))?).
+gi_server([]).
+gi_server([expand(St, Items?)|Rs]) :- gi_expand(St?, Items), gi_server(Rs?).
+
+procedure gi_expand(GIso(X)?, Items(GIso(X), GMapList(X))).
+gi_expand(giso([], _, Map, _), [sol(Map?)]).
+gi_expand(giso([N|Ns], Unused, Map, Es), Items?) :-
+    ground(N?), ground(Ns?), ground(Unused?), ground(Map?), ground(Es?) |
+    gi_cands(Unused?, N?, Ns?, Unused?, Map?, Es?, Items).
+
+procedure gi_cands(Stream(X)?, X?, Stream(X)?, Stream(X)?, GMapList(X)?, GEs(X)?, Items(GIso(X), GMapList(X))).
+gi_cands([], _, _, _, _, _, []).
+gi_cands([M|Ms], N, Ns, Unused, Map, Es, Out?) :-
+    ground(M?), ground(N?), ground(Ns?), ground(Unused?), ground(Map?), ground(Es?) |
+    gi_consistent(Map?, N?, M?, Es?, Ok),
+    gi_cd1(Ok?, M?, Ms?, N?, Ns?, Unused?, Map?, Es?, Out).
+
+procedure gi_cd1(Ans?, X?, Stream(X)?, X?, Stream(X)?, Stream(X)?, GMapList(X)?, GEs(X)?, Items(GIso(X), GMapList(X))).
+gi_cd1(yes, M, Ms, N, Ns, Unused, Map, Es, [node(giso(Ns?, U1?, [gmap(N?, M?)|Map?], Es?))|Out?]) :-
+    ground(M?), ground(Ms?), ground(N?), ground(Ns?), ground(Unused?), ground(Map?), ground(Es?) |
+    gi_del(Unused?, M?, U1),
+    gi_cands(Ms?, N?, Ns?, Unused?, Map?, Es?, Out).
+gi_cd1(no, _, Ms, N, Ns, Unused, Map, Es, Out?) :-
+    ground(Ms?), ground(N?), ground(Ns?), ground(Unused?), ground(Map?), ground(Es?) |
+    gi_cands(Ms?, N?, Ns?, Unused?, Map?, Es?, Out).
+
+procedure gi_consistent(GMapList(X)?, X?, X?, GEs(X)?, Ans).
+gi_consistent([], _, _, _, yes).
+gi_consistent([gmap(A, B)|Map], N, M, ges(E1, E2), Ok?) :-
+    ground(A?), ground(B?), ground(N?), ground(M?), ground(E1?), ground(E2?), ground(Map?) |
+    gi_hasedge(E1?, N?, A?, H1),
+    gi_hasedge(E2?, M?, B?, H2),
+    gi_cons1(H1?, H2?, Map?, N?, M?, ges(E1?, E2?), Ok).
+
+procedure gi_cons1(Ans?, Ans?, GMapList(X)?, X?, X?, GEs(X)?, Ans).
+gi_cons1(yes, yes, Map, N, M, Es, Ok?) :- ground(Map?), ground(N?), ground(M?), ground(Es?) | gi_consistent(Map?, N?, M?, Es?, Ok).
+gi_cons1(no, no, Map, N, M, Es, Ok?) :- ground(Map?), ground(N?), ground(M?), ground(Es?) | gi_consistent(Map?, N?, M?, Es?, Ok).
+gi_cons1(yes, no, _, _, _, _, no).
+gi_cons1(no, yes, _, _, _, _, no).
+
+procedure gi_hasedge(GEdgeList(X)?, X?, X?, Ans).
+gi_hasedge([], _, _, no).
+gi_hasedge([ge(X, Y)|_], A, B, yes) :- X? =?= A?, Y? =?= B? | true.
+gi_hasedge([ge(X, Y)|_], A, B, yes) :- otherwise, X? =?= B?, Y? =?= A? | true.
+gi_hasedge([ge(_, _)|Es], A, B, R?) :- otherwise | gi_hasedge(Es?, A?, B?, R).
+
+procedure gi_del(Stream(X)?, X?, Stream(X)).
+gi_del([], _, []).
+gi_del([Z|Zs], Y, Zs?) :- Z? =?= Y? | true.
+gi_del([Z|Zs], Y, [Z?|R?]) :- otherwise | gi_del(Zs?, Y?, R).

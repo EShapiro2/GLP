@@ -1,68 +1,24 @@
-% P85: graph isomorphism, by first-solution search over node bijections:
-% map the first unmapped node of the first graph to each unused node of the
-% second consistent with the mapping so far.
-
-IState ::= is(CList, CList, NPairList, EList, EList).
+% P85: graph isomorphism.  Delegates to the shared graph_iso (root self.glp,
+% parameterized over the node type), instantiated here at Constant.  The edges
+% are copied e(...) -> ge(...) (a functor swap, Constant to Constant) and the
+% resulting node bijection copied back gmap(...) -> m(...), so the public result
+% keeps its NPairList form.
 
 exported procedure isomorphic(Graph?, Graph?, Maybe(NPairList)).
 isomorphic(graph(N1, E1), graph(N2, E2), R?) :-
     ground(N1?), ground(N2?), ground(E1?), ground(E2?) |
-    solve_first(is(N1?, N2?, [], E1?, E2?), Reqs, R),
-    expand_server(Reqs?).
+    e2ge(E1?, G1), e2ge(E2?, G2),
+    graph_iso(N1?, N2?, G1?, G2?, M),
+    iso_out(M?, R).
 
-procedure expand_server(Stream(Req(IState, NPairList))?).
-expand_server([]).
-expand_server([expand(St, Items?)|Rs]) :-
-    expand(St?, Items),
-    expand_server(Rs?).
+procedure e2ge(EList?, GEdgeList(Constant)).
+e2ge([], []).
+e2ge([e(A, B)|Es], [ge(A?, B?)|Out?]) :- ground(A?), ground(B?) | e2ge(Es?, Out).
 
-% is(Unmapped1, Unused2, Map, E1, E2).
-procedure expand(IState?, Items(IState, NPairList)).
-expand(is([], _, Map, _, _), [sol(Map?)]).
-expand(is([N|Ns], Unused, Map, E1, E2), Items?) :-
-    ground(N?), ground(Ns?), ground(Unused?), ground(Map?), ground(E1?), ground(E2?) |
-    cands(Unused?, N?, Ns?, Unused?, Map?, E1?, E2?, Items).
+procedure iso_out(Maybe(GMapList(Constant))?, Maybe(NPairList)).
+iso_out(none, none).
+iso_out(found(GM), found(M?)) :- ground(GM?) | gm2m(GM?, M).
 
-% Try mapping N to each unused M; keep candidates whose adjacency to every
-% mapped pair agrees.
-procedure cands(CList?, Constant?, CList?, CList?, NPairList?, EList?, EList?, Items(IState, NPairList)).
-cands([], _, _, _, _, _, _, []).
-cands([M|Ms], N, Ns, Unused, Map, E1, E2, Out?) :-
-    ground(M?), ground(N?), ground(Ns?), ground(Unused?), ground(Map?), ground(E1?), ground(E2?) |
-    consistent(Map?, N?, M?, E1?, E2?, Ok),
-    cd1(Ok?, M?, Ms?, N?, Ns?, Unused?, Map?, E1?, E2?, Out).
-
-procedure cd1(Ans?, Constant?, CList?, Constant?, CList?, CList?, NPairList?, EList?, EList?, Items(IState, NPairList)).
-cd1(yes, M, Ms, N, Ns, Unused, Map, E1, E2,
-    [node(is(Ns?, Unused1?, [m(N?, M?)|Map?], E1?, E2?))|Out?]) :-
-    ground(M?), ground(N?), ground(Ns?), ground(Unused?), ground(Map?), ground(E1?), ground(E2?) |
-    idel(Unused?, M?, Unused1),
-    cands(Ms?, N?, Ns?, Unused?, Map?, E1?, E2?, Out).
-cd1(no, _, Ms, N, Ns, Unused, Map, E1, E2, Out?) :-
-    cands(Ms?, N?, Ns?, Unused?, Map?, E1?, E2?, Out).
-
-% consistent: for every m(A, B) in Map, edge(N, A) in E1 iff edge(M, B) in E2.
-procedure consistent(NPairList?, Constant?, Constant?, EList?, EList?, Ans).
-consistent([], _, _, _, _, yes).
-consistent([m(A, B)|Map], N, M, E1, E2, Ok?) :-
-    ground(A?), ground(B?), ground(N?), ground(M?), ground(E1?), ground(E2?), ground(Map?) |
-    hasedge(E1?, N?, A?, H1),
-    hasedge(E2?, M?, B?, H2),
-    cons1(H1?, H2?, Map?, N?, M?, E1?, E2?, Ok).
-
-procedure cons1(Ans?, Ans?, NPairList?, Constant?, Constant?, EList?, EList?, Ans).
-cons1(yes, yes, Map, N, M, E1, E2, Ok?) :- consistent(Map?, N?, M?, E1?, E2?, Ok).
-cons1(no, no, Map, N, M, E1, E2, Ok?) :- consistent(Map?, N?, M?, E1?, E2?, Ok).
-cons1(yes, no, _, _, _, _, _, no).
-cons1(no, yes, _, _, _, _, _, no).
-
-procedure hasedge(EList?, Constant?, Constant?, Ans).
-hasedge([], _, _, no).
-hasedge([e(X, Y)|_], A, B, yes) :- X? =?= A?, Y? =?= B? | true.
-hasedge([e(X, Y)|_], A, B, yes) :- otherwise, X? =?= B?, Y? =?= A? | true.
-hasedge([e(_, _)|Es], A, B, R?) :- otherwise | hasedge(Es?, A?, B?, R).
-
-procedure idel(CList?, Constant?, CList).
-idel([], _, []).
-idel([X|Xs], Y, Xs?) :- X? =?= Y? | true.
-idel([X|Xs], Y, [X?|R?]) :- otherwise | idel(Xs?, Y?, R).
+procedure gm2m(GMapList(Constant)?, NPairList).
+gm2m([], []).
+gm2m([gmap(A, B)|Rest], [m(A?, B?)|Out?]) :- ground(A?), ground(B?) | gm2m(Rest?, Out).
