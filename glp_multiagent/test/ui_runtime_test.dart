@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:glp_multiagent/manifests/grassroots.dart';
+import 'package:glp_multiagent/manifests/grassapp_ui.dart';
 import 'package:glp_multiagent/ui_runtime/manifest.dart';
 import 'package:glp_multiagent/ui_runtime/runtime.dart';
 import 'package:glp_multiagent/ui_runtime/term.dart';
@@ -56,15 +56,16 @@ void main() {
       expect(r.inbox, isEmpty);
     });
 
-    test('swap_offer card belongs to the Coins panel, keyed by the proposer',
+    test(
+        'trade_proposed card belongs to the Currencies panel, keyed by the proposer',
         () {
-      r.handleLine('swap_offer(alice, alice, 1, bob, 1, req(3))');
+      r.handleLine('trade_proposed(alice, bob, 0, 1, req(3))');
       final card = r.inbox.single;
-      expect(card.panel.id, 'coins');
+      expect(card.panel.id, 'currencies');
       expect(card.itemKey, 'alice');
       final accept = card.desc.answers.firstWhere((a) => a.label == 'Accept');
       r.answerCard(card, accept);
-      expect(sent, ['accept_swap(alice, req(3))']);
+      expect(sent, ['accept_trade(alice, req(3))']);
     });
 
     test('connected adds the friend AND opens the conversation', () {
@@ -98,9 +99,10 @@ void main() {
       expect(r.store.threads['chats']!['alice']!.length, 1);
     });
 
-    test('balance_report sets a keyed holding', () {
-      r.handleLine('balance_report(bob, alice, 2)');
-      expect(formatTerm(r.store.holdings['holdings']!['bob']!['alice']!), '2');
+    test('balance_report sets a keyed (issuer, maturity) holding', () {
+      r.handleLine('balance_report(bob, alice, 0, 2)');
+      expect(
+          formatTerm(r.store.holdings['holdings']!['bob']!['alice@0']!), '2');
     });
 
     test('submitCommand builds the ground UserCmd from a panel form', () {

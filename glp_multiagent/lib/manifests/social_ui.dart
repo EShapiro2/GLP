@@ -1,7 +1,7 @@
 /// Social-graph manifest: the graph platform's UI contract, mirroring the
 /// UserCmd/UserNotify vocabulary of programs/social/graph/ui/mediator.glp —
 /// the manual compilation of the platform's volition-guarded clauses. As
-/// panels it is GrassApp without Coins — a **Friends** panel (the social
+/// panels it is GrassApp without Currencies — a **Friends** panel (the social
 /// graph: friend offers, introductions, the friends list) and a **Chats**
 /// panel (the conversations friendship opens) — over one shared activity
 /// store, so a friend offer is answered once on its Friends row and is then

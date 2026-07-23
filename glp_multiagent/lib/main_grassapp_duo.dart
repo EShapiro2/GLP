@@ -35,7 +35,7 @@ import 'package:sodium_libs/sodium_libs_sumo.dart';
 import 'glp_sources.dart';
 import 'isolate_protocol.dart';
 import 'mad_router.dart';
-import 'manifests/grassroots.dart';
+import 'manifests/grassapp_ui.dart';
 import 'ui_runtime/agent_surface.dart';
 import 'ui_runtime/runtime.dart';
 

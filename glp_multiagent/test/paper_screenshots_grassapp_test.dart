@@ -2,7 +2,7 @@
 // from the LIVE scenario: the real agent + mediator + actors run headlessly
 // (AgentRuntime, the same path the app uses), the person's taps are injected
 // UserCmds, and the surface renders the notify stream the run actually
-// produces. Friends (the social graph), Coins (the wallet, organised by
+// produces. Friends (the social graph), Currencies (the wallet, organised by
 // friend), and Chats (the social network) — one interpreter, one runtime; the
 // panels differ only by manifest. Phone-framed with the green chrome and 9:41
 // status bar to match the live app. Outputs are named for the
@@ -14,7 +14,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:glp_multiagent/manifests/grassroots.dart';
+import 'package:glp_multiagent/manifests/grassapp_ui.dart';
 import 'package:glp_multiagent/ui_runtime/agent_surface.dart';
 import 'package:glp_multiagent/ui_runtime/runtime.dart';
 import 'package:glp_runtime/multiagent/agent_runtime.dart';
@@ -84,7 +84,7 @@ Future<void> _shot(WidgetTester tester, String path) async {
 }
 
 void main() {
-  testWidgets('fig:grassapp — Friends, Coins, Chats panels of one GrassApp',
+  testWidgets('fig:grassapp — Friends, Currencies, Chats panels of one GrassApp',
       (tester) async {
     await _loadFonts();
     tester.view.physicalSize = const Size(420, 860);
@@ -154,10 +154,10 @@ void main() {
     // The person accepts Eve, Dana, and Alice; Charlie's offer stays pending.
     // Eve greets Bob in chat and pays him; Dana pays and proposes a swap,
     // which Bob accepts, and Dana then redeems a bob-coin; Alice pays and
-    // proposes a swap that stays pending on her Coins row.
+    // proposes a swap that stays pending on her Currencies row.
     await tapAnswer('befriend', 'eve', 'Accept');
     await tapAnswer('befriend', 'dana', 'Accept');
-    await tapAnswer('swap_offer', 'dana', 'Accept');
+    await tapAnswer('trade_proposed', 'dana', 'Accept');
     await tapAnswer('befriend', 'alice', 'Accept');
 
     // Bob answers Eve's greeting; she replies.
@@ -189,9 +189,9 @@ void main() {
     expect(find.text('charlie wants to connect'), findsOneWidget);
     await _shot(tester, '/private/tmp/gsg-app-friends.png');
 
-    // Panel 2 — Coins: the wallet, organised by friend; Alice's row alerts her
-    // proposed swap; Dana's redeem has settled.
-    await tester.tap(find.text('Coins').last);
+    // Panel 2 — Currencies: the wallet, organised by friend; Alice's row alerts
+    // her proposed swap; Dana's redeem has settled.
+    await tester.tap(find.text('Currencies').last);
     await tester.pumpAndSettle();
     expect(find.text('You'), findsOneWidget);
     expect(find.text('alice proposes a swap'), findsOneWidget);

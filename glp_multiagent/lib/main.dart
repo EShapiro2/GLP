@@ -8,7 +8,7 @@
 /// forms and card taps. Two scenarios, selectable on desktop:
 ///
 ///  - **GrassApp** (default; the phone deploy): programs/book/grassapp —
-///    grassapp_agent + grassapp_mediator, three panels (Friends/Coins/Chats).
+///    grassapp_agent + grassapp_mediator, three panels (Friends/Currencies/Chats).
 ///  - **Social Graph**: programs/social/graph — agent.glp + ui/mediator.glp,
 ///    the canonical graph pair, booted by play_ui_boot.glp.
 library;
@@ -21,7 +21,7 @@ import 'package:flutter/material.dart';
 
 import 'isolate_protocol.dart';
 import 'glp_sources.dart';
-import 'manifests/grassroots.dart';
+import 'manifests/grassapp_ui.dart';
 import 'ui_runtime/agent_surface.dart';
 import 'ui_runtime/runtime.dart';
 
@@ -161,7 +161,7 @@ class _CoordinatorScreenState extends State<CoordinatorScreen> {
         state.initialized = true;
         state.status = 'Ready';
         TraceLogger.instance.log('COORD', '${msg.agentId} ready');
-        // Coins scenario: ask Bob for his opening balance so the Wallet shows
+        // Currencies scenario: ask Bob for his opening balance so the Wallet shows
         // his starting coins immediately. (The graph agent has no balance.)
         if (msg.agentId == 'Bob') {
           state.commandPort!.send(UserInput('balance'));

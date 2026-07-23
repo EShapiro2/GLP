@@ -12,6 +12,12 @@
 %% advances explicitly, redeem is the holder-gated presentation, and
 %% balance_report is keyed by (owner, issuer, maturity) so the wallet can split
 %% cash (mature) from loans (dated).  Escrow is Milestone 2.
+%%
+%% Scalar boundary: the UI — and the scripted actors that stand in for people —
+%% speak SCALAR single-lot commands (pay/4, trade/7, redeem/7), because a compose
+%% form carries only scalar fields.  This mediator builds the Stream(Lot) the
+%% agent consumes, and flattens the agent's single-lot trade_proposed back to
+%% scalars for the offer card.  Multi-lot portfolios are Milestone 2.
 
 
 ReqId ::= req(Constant).
@@ -24,9 +30,9 @@ UserCmd     ::= connect(Constant)
               ; mint(Constant, Constant)
               ; advance_date(Constant)
               ; balance
-              ; pay(Constant, Stream(Lot))
-              ; trade(Constant, Stream(Lot), Stream(Lot))
-              ; redeem(Constant, Stream(Lot), Stream(Lot))
+              ; pay(Constant, Constant, Constant, Constant)
+              ; trade(Constant, Constant, Constant, Constant, Constant, Constant, Constant)
+              ; redeem(Constant, Constant, Constant, Constant, Constant, Constant, Constant)
               ; accept_trade(Constant, ReqId)
               ; reject_trade(Constant, ReqId)
               ; create_group(Constant)
@@ -46,7 +52,7 @@ UserNotify  ::= befriend(Constant, ReqId)
               ; received(Constant, Constant)
               ; balance_report(Constant, Constant, Constant, Integer)
               ; date_advanced(Constant)
-              ; trade_proposed(Constant, Stream(Lot), Stream(Bond), ReqId)
+              ; trade_proposed(Constant, Constant, Constant, Constant, ReqId)
               ; trade_completed(Constant)
               ; trade_failed(Constant)
               ; trade_returned(Constant)
@@ -83,7 +89,9 @@ ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
     receive(msg(agent, '_user', trade_proposed(From, WantSpec, Resp?, Offered)),
             AgentCh?, AgentCh1),
     ground(From?), ground(WantSpec?), ground(Offered?) |
-    send(trade_proposed(From?, WantSpec?, Offered?, req(N?)), UserCh?, UserCh1),
+    first_lot(WantSpec?, WantIssuer, WantMaturity, WantAmount),
+    send(trade_proposed(From?, WantIssuer?, WantMaturity?, WantAmount?, req(N?)),
+         UserCh?, UserCh1),
     N1 := N? + 1,
     ui_mediator(Id?, AgentCh1?, UserCh1?,
         [pending(req(N?), trade_pending(Resp, WantSpec?, Offered?)) | Ps?], N1?).
@@ -270,25 +278,37 @@ ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
     ui_mediator(Id?, AgentCh1?, UserCh1?, Ps?, N?).
 
 ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
-    receive(pay(Friend, GiveSpec), UserCh?, UserCh1),
-    ground(Id?), ground(Friend?), ground(GiveSpec?) |
-    send(msg('_user', Id?, pay(Friend?, GiveSpec?)),
+    receive(pay(Friend, Coin, Maturity, Amount), UserCh?, UserCh1),
+    ground(Id?), ground(Friend?), ground(Coin?), ground(Maturity?), ground(Amount?) |
+    send(msg('_user', Id?, pay(Friend?, [lot(Coin?, Maturity?, Amount?)])),
          AgentCh?, AgentCh1),
     ui_mediator(Id?, AgentCh1?, UserCh1?, Ps?, N?).
 
-%% The maturity-carrying swap — a loan is its instance.
+%% The maturity-carrying swap — a loan is its instance.  Scalar single-lot UI
+%% form; the mediator builds the give and want lots.
 ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
-    receive(trade(Target, GiveSpec, WantSpec), UserCh?, UserCh1),
-    ground(Id?), ground(Target?), ground(GiveSpec?), ground(WantSpec?) |
-    send(msg('_user', Id?, trade(Target?, GiveSpec?, WantSpec?)),
+    receive(trade(Target, GiveCoin, GiveMat, GiveAmt, WantCoin, WantMat, WantAmt),
+            UserCh?, UserCh1),
+    ground(Id?), ground(Target?),
+    ground(GiveCoin?), ground(GiveMat?), ground(GiveAmt?),
+    ground(WantCoin?), ground(WantMat?), ground(WantAmt?) |
+    send(msg('_user', Id?,
+             trade(Target?, [lot(GiveCoin?, GiveMat?, GiveAmt?)],
+                            [lot(WantCoin?, WantMat?, WantAmt?)])),
          AgentCh?, AgentCh1),
     ui_mediator(Id?, AgentCh1?, UserCh1?, Ps?, N?).
 
 %% Redeem: present the target's matured coins (holder-gated in the agent).
+%% Scalar single-lot UI form; the mediator builds the give and want lots.
 ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
-    receive(redeem(Target, GiveSpec, WantSpec), UserCh?, UserCh1),
-    ground(Id?), ground(Target?), ground(GiveSpec?), ground(WantSpec?) |
-    send(msg('_user', Id?, redeem(Target?, GiveSpec?, WantSpec?)),
+    receive(redeem(Target, GiveCoin, GiveMat, GiveAmt, WantCoin, WantMat, WantAmt),
+            UserCh?, UserCh1),
+    ground(Id?), ground(Target?),
+    ground(GiveCoin?), ground(GiveMat?), ground(GiveAmt?),
+    ground(WantCoin?), ground(WantMat?), ground(WantAmt?) |
+    send(msg('_user', Id?,
+             redeem(Target?, [lot(GiveCoin?, GiveMat?, GiveAmt?)],
+                             [lot(WantCoin?, WantMat?, WantAmt?)])),
          AgentCh?, AgentCh1),
     ui_mediator(Id?, AgentCh1?, UserCh1?, Ps?, N?).
 
@@ -361,6 +381,12 @@ ui_mediator(_, ch([], []), ch([], []), _, _).
 %% =============================================================================
 %% PENDING MANAGEMENT
 %% =============================================================================
+
+%% Flatten a single-lot want-spec to scalars for the offer card (M1b single-lot;
+%% multi-lot display is Milestone 2).  The whole Stream(Lot) stays escrowed in the
+%% pending table, so accept_trade still replays the real lots.
+procedure first_lot(Stream(Lot)?, Constant, Constant, Constant).
+first_lot([lot(I, M, A) | _], I?, M?, A?).
 
 procedure lookup_pending(ReqId?, PendingValue, PendingList?, PendingList).
 lookup_pending(ReqId, Val?,

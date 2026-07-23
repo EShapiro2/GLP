@@ -12,7 +12,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:glp_multiagent/manifests/grassroots.dart';
+import 'package:glp_multiagent/manifests/grassapp_ui.dart';
 import 'package:glp_multiagent/ui_runtime/agent_surface.dart';
 import 'package:glp_multiagent/ui_runtime/runtime.dart';
 import 'package:glp_runtime/multiagent/agent_runtime.dart';
@@ -175,7 +175,7 @@ void main() {
 
     await tapAnswer('befriend', 'eve', 'Accept');
     await tapAnswer('befriend', 'dana', 'Accept');
-    await tapAnswer('swap_offer', 'dana', 'Accept');
+    await tapAnswer('trade_proposed', 'dana', 'Accept');
     await tapAnswer('befriend', 'alice', 'Accept');
     r.sendChat(chatView, 'eve', 'thanks eve');
     await flushSends();
@@ -193,9 +193,9 @@ void main() {
     await tester.tapAt(const Offset(210, 200)); // dismiss the sheet
     await tester.pumpAndSettle();
 
-    // Shot 2 — the pay form: Coins → Dana's wallet → Pay. The friend is fixed
-    // by the open wallet, so the form's fields are the coin and the amount.
-    await tester.tap(find.text('Coins').last);
+    // Shot 2 — the pay form: Currencies → Dana's wallet → Pay. The friend is
+    // fixed by the open wallet, so the form's fields are the coin and amount.
+    await tester.tap(find.text('Currencies').last);
     await tester.pumpAndSettle();
     await tester.tap(find.text('Dana'));
     await tester.pumpAndSettle();

@@ -84,7 +84,7 @@ lender_wait_connected([], []).
 %% maturing at 10 (face 5 > 3 lent is the interest).
 procedure lender_wait_minted(Stream(UserNotify)?, Stream(UserCmd)).
 lender_wait_minted([balance_report(alice, alice, 0, 3)|In],
-                   [trade(bob, [lot(alice, 0, 3)], [lot(bob, 10, 5)])|Out?]) :-
+                   [trade(bob, alice, 0, 3, bob, 10, 5)|Out?]) :-
     lender_wait_loan(In?, Out).
 lender_wait_minted([_|In], Out?) :-
     otherwise | lender_wait_minted(In?, Out).
@@ -94,7 +94,7 @@ lender_wait_minted([], []).
 %% (the bob-bonds mature at 10, our local date is still 0).
 procedure lender_wait_loan(Stream(UserNotify)?, Stream(UserCmd)).
 lender_wait_loan([trade_completed(bob)|In],
-                 [redeem(bob, [lot(bob, 10, 3)], [lot(alice, 0, 3)])|Out?]) :-
+                 [redeem(bob, bob, 10, 3, alice, 0, 3)|Out?]) :-
     lender_wait_early_redeem(In?, Out).
 lender_wait_loan([_|In], Out?) :-
     otherwise | lender_wait_loan(In?, Out).
@@ -110,7 +110,7 @@ lender_wait_early_redeem([], []).
 
 procedure lender_wait_advanced(Stream(UserNotify)?, Stream(UserCmd)).
 lender_wait_advanced([date_advanced(11)|In],
-                     [redeem(bob, [lot(bob, 10, 3)], [lot(alice, 0, 3)])|Out?]) :-
+                     [redeem(bob, bob, 10, 3, alice, 0, 3)|Out?]) :-
     lender_wait_redeemed(In?, Out).
 lender_wait_advanced([_|In], Out?) :-
     otherwise | lender_wait_advanced(In?, Out).
@@ -146,7 +146,7 @@ borrower_wait_connected([], []).
 %% The loan is proposed — mint the bonds to lend (face 5, maturity 10), then
 %% accept the swap.
 procedure borrower_wait_offer(Stream(UserNotify)?, Stream(UserCmd)).
-borrower_wait_offer([trade_proposed(alice, _, _, ReqId)|In], [mint(5, 10)|Out?]) :-
+borrower_wait_offer([trade_proposed(alice, _, _, _, ReqId)|In], [mint(5, 10)|Out?]) :-
     ground(ReqId?) |
     borrower_wait_minted(ReqId?, In?, Out).
 borrower_wait_offer([_|In], Out?) :-

@@ -62,21 +62,21 @@ reply_of(eve, lovely_day_isnt_it).
 procedure coin_actor(Constant?, Stream(UserNotify)?, Stream(UserCmd)).
 %% On becoming Bob's friend: mint, pay Bob some coins, and propose a swap.
 coin_actor(alice, [connected(bob) | Ns],
-    [mint(5, 0) | [pay(bob, [lot(alice, 0, 2)]) | [create_group(chess) | [invite_group(group_id(alice, chess), bob) | [trade(bob, [lot(alice, 0, 1)], [lot(bob, 0, 1)]) | Cs?]]]]]) :-
+    [mint(5, 0) | [pay(bob, alice, 0, 2) | [create_group(chess) | [invite_group(group_id(alice, chess), bob) | [trade(bob, alice, 0, 1, bob, 0, 1) | Cs?]]]]]) :-
     coin_drain(alice, Ns?, Cs).
 %% Charlie also exercises End friend (paper §4): after paying Bob he unfriends
 %% him, so Bob's UI surfaces unfriended(charlie) (the Integrate-unfriend path).
 coin_actor(charlie, [connected(bob) | Ns],
-    [mint(4, 0) | [pay(bob, [lot(charlie, 0, 1)]) | [unfriend(bob) | Cs?]]]) :-
+    [mint(4, 0) | [pay(bob, charlie, 0, 1) | [unfriend(bob) | Cs?]]]) :-
     coin_drain(charlie, Ns?, Cs).
 %% Dana mints, pays, and proposes a swap; once Bob accepts it she holds a
 %% bob-coin, and redeems it — Bob's agent fills back automatically.
 coin_actor(dana, [connected(bob) | Ns],
-    [mint(6, 0) | [pay(bob, [lot(dana, 0, 2)]) | [trade(bob, [lot(dana, 0, 2)], [lot(bob, 0, 1)]) | Cs?]]]) :-
+    [mint(6, 0) | [pay(bob, dana, 0, 2) | [trade(bob, dana, 0, 2, bob, 0, 1) | Cs?]]]) :-
     dana_await_swap(Ns?, Cs).
 %% Eve greets Bob in chat, then mints and pays him.
 coin_actor(eve, [connected(bob) | Ns],
-    [send(bob, welcome_to_grassroots_bob) | [mint(3, 0) | [pay(bob, [lot(eve, 0, 1)]) | Cs?]]]) :-
+    [send(bob, welcome_to_grassroots_bob) | [mint(3, 0) | [pay(bob, eve, 0, 1) | Cs?]]]) :-
     coin_drain(eve, Ns?, Cs).
 coin_actor(Me, [befriend(Who, Req) | Ns], [decision(yes, Who?, Req?) | Cs?]) :-
     ground(Me?), ground(Who?), ground(Req?) | coin_actor(Me?, Ns?, Cs).
@@ -87,7 +87,7 @@ coin_actor(_, [], []).
 %% on trade_completed, redeem one bob-coin (set-off against her own).
 procedure dana_await_swap(Stream(UserNotify)?, Stream(UserCmd)).
 dana_await_swap([trade_completed(bob) | Ns],
-                [redeem(bob, [lot(bob, 0, 1)], [lot(dana, 0, 1)]) | Cs?]) :-
+                [redeem(bob, bob, 0, 1, dana, 0, 1) | Cs?]) :-
     coin_drain(dana, Ns?, Cs).
 dana_await_swap([befriend(Who, Req) | Ns], [decision(yes, Who?, Req?) | Cs?]) :-
     ground(Who?), ground(Req?) | dana_await_swap(Ns?, Cs).
@@ -105,7 +105,7 @@ coin_drain(Me, [received(From, _) | Ns], [send(From?, R?) | Cs?]) :-
     ground(Me?), ground(From?) |
     reply_of(Me?, R),
     coin_drain(Me?, Ns?, Cs).
-coin_drain(Me, [trade_proposed(From, _, _, Req) | Ns], [accept_trade(From?, Req?) | Cs?]) :-
+coin_drain(Me, [trade_proposed(From, _, _, _, Req) | Ns], [accept_trade(From?, Req?) | Cs?]) :-
     ground(Me?), ground(From?), ground(Req?) | coin_drain(Me?, Ns?, Cs).
 coin_drain(Me, [befriend(Who, Req) | Ns], [decision(yes, Who?, Req?) | Cs?]) :-
     ground(Me?), ground(Who?), ground(Req?) | coin_drain(Me?, Ns?, Cs).
@@ -151,19 +151,19 @@ procedure script_cmds(Stream(UserCmd)).
 script_cmds([mint(3, 0), balance]).
 
 procedure pay_script(Stream(UserCmd)).
-pay_script([pay(bob, [lot(alice, 0, 2)])]).
+pay_script([pay(bob, alice, 0, 2)]).
 
 %% Alice proposes: give 2 alice-coins, want 1 bob-coin.
 procedure swap_script(Stream(UserCmd)).
-swap_script([trade(bob, [lot(alice, 0, 2)], [lot(bob, 0, 1)])]).
+swap_script([trade(bob, alice, 0, 2, bob, 0, 1)]).
 
 %% Alice redeems 2 of bob's coins, taking back 2 of her own (set-off).
 procedure redeem_script(Stream(UserCmd)).
-redeem_script([redeem(bob, [lot(bob, 0, 2)], [lot(alice, 0, 2)])]).
+redeem_script([redeem(bob, bob, 0, 2, alice, 0, 2)]).
 
 %% Bob auto-accepts any trade offer.
 procedure bob_swap_actor(Stream(UserNotify)?, Stream(UserCmd)).
-bob_swap_actor([trade_proposed(From, _, _, Req)|Ns], [accept_trade(From?, Req?)|Cs?]) :-
+bob_swap_actor([trade_proposed(From, _, _, _, Req)|Ns], [accept_trade(From?, Req?)|Cs?]) :-
     ground(From?), ground(Req?) | bob_swap_actor(Ns?, Cs).
 bob_swap_actor([_|Ns], Cs?) :- otherwise | bob_swap_actor(Ns?, Cs).
 bob_swap_actor([], []).

@@ -1,6 +1,6 @@
 /// GrassApp — one app, one panel per platform (paper §7, Figure fig:grassapp).
 ///
-/// The bottom bar is the panels — Friends (social graph), Coins, Chats (social
+/// The bottom bar is the panels — Friends (social graph), Currencies, Chats (social
 /// network) — each reached by an icon badged with that panel's pending alerts.
 /// The app bar reads the active panel's name. Each panel renders the two
 /// constructs and the screen (paper §6): compose forms (its "+", the
@@ -246,7 +246,7 @@ class _AgentSurfaceState extends State<AgentSurface> {
     );
   }
 
-  // === Coins panel — the wallet, organised by friend ========================
+  // === Currencies panel — the wallet, organised by friend ===================
 
   Widget _walletPanel(Panel p) {
     final w = p.wallet!;
@@ -363,18 +363,19 @@ class _AgentSurfaceState extends State<AgentSurface> {
                 ? _empty('No coins held')
                 : ListView(
                     padding: const EdgeInsets.symmetric(vertical: 4),
-                    children: [
-                      for (final c in coins)
-                        ListTile(
-                          leading: const Icon(Icons.toll, color: _accent),
-                          title: Text(_coinLabel(c, w),
-                              style:
-                                  const TextStyle(fontWeight: FontWeight.w600)),
-                          trailing: Text(formatTerm(holds[c]!),
-                              style: const TextStyle(
-                                  fontSize: 16, fontWeight: FontWeight.bold)),
-                        ),
-                    ],
+                    children: w.loansLabel == null
+                        // No maturity axis: one undifferentiated list.
+                        ? [for (final c in coins) _holdingTile(w, c, holds[c]!)]
+                        // Cash and loans are not the same thing: two sections.
+                        : [
+                            ..._holdingSection(w, holds,
+                                coins.where(_isCash).toList(), w.cashLabel),
+                            ..._holdingSection(
+                                w,
+                                holds,
+                                coins.where((c) => !_isCash(c)).toList(),
+                                w.loansLabel!),
+                          ],
                   ),
           ),
           if (actions.isNotEmpty)
@@ -406,12 +407,57 @@ class _AgentSurfaceState extends State<AgentSurface> {
     );
   }
 
+  /// A holdings key is `issuer` or, when balances carry a maturity,
+  /// `issuer@maturity` (see [SetBalance.maturityField]).
+  static (String, String?) _splitHolding(String k) {
+    final i = k.indexOf('@');
+    return i < 0 ? (k, null) : (k.substring(0, i), k.substring(i + 1));
+  }
+
+  /// Cash is a holding mature at date 0 — or one with no maturity axis at all.
+  static bool _isCash(String k) {
+    final (_, m) = _splitHolding(k);
+    return m == null || m == '0';
+  }
+
+  List<Widget> _holdingSection(WalletView w, Map<String, GTerm> holds,
+      List<String> keys, String heading) {
+    if (keys.isEmpty) return const [];
+    return [
+      Padding(
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+        child: Text(heading.toUpperCase(),
+            style: const TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+                color: Colors.black54)),
+      ),
+      for (final k in keys) _holdingTile(w, k, holds[k]!),
+    ];
+  }
+
+  Widget _holdingTile(WalletView w, String key, GTerm amount) {
+    final (issuer, maturity) = _splitHolding(key);
+    final dated = maturity != null && maturity != '0';
+    return ListTile(
+      leading: Icon(dated ? Icons.schedule : Icons.toll, color: _accent),
+      title: Text(_coinLabel(issuer, w),
+          style: const TextStyle(fontWeight: FontWeight.w600)),
+      subtitle: dated ? Text('matures $maturity') : null,
+      trailing: Text(formatTerm(amount),
+          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+    );
+  }
+
   String _holdingsSummary(WalletView w, String person) {
     final holds = _r.store.holdings[w.storeKey]?[person] ?? const {};
-    if (holds.isEmpty) return 'No coins';
-    return holds.entries
-        .map((e) => '${formatTerm(e.value)} ${_coinShort(e.key, w)}')
-        .join(', ');
+    if (holds.isEmpty) return 'No currency';
+    return holds.entries.map((e) {
+      final (issuer, maturity) = _splitHolding(e.key);
+      final dated = maturity != null && maturity != '0';
+      final short = '${formatTerm(e.value)} ${_coinShort(issuer, w)}';
+      return dated ? '$short (matures $maturity)' : short;
+    }).join(', ');
   }
 
   String _coinLabel(String coin, WalletView w) =>

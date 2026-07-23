@@ -53,7 +53,7 @@ void main() {
     final all = lines.join('\n');
 
     // The loan: alice offers her maturity-0 coins, wants bob-bonds dated 10.
-    expect(all, contains('trade_proposed(alice, [lot(bob, 10, 5)]'),
+    expect(all, contains('trade_proposed(alice, bob, 10, 5'),
         reason: 'no maturity-carrying loan offer in:\n$all');
 
     // The gate: the pre-maturity redemption is refused, and it is refused

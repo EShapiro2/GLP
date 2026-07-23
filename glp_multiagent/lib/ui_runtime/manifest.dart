@@ -213,7 +213,17 @@ class SetBalance extends Effect {
   final String ownerField;
   final String coinField;
   final String amountField;
-  const SetBalance(this.store, this.ownerField, this.coinField, this.amountField);
+
+  /// Optional maturity field. When set, the inner key becomes `issuer@maturity`,
+  /// so a balance is keyed by (owner, issuer, maturity) rather than
+  /// (owner, issuer). A currency unit is a bond: a coin is one mature by the
+  /// holder's own clock, so the same issuer can be held at several maturities at
+  /// once and they must not collapse onto one row. [WalletView.loansLabel]
+  /// splits the rendered result into cash (maturity 0) and loans (dated).
+  final String? maturityField;
+
+  const SetBalance(this.store, this.ownerField, this.coinField, this.amountField,
+      {this.maturityField});
 }
 
 /// An activity rule: one all-ground `UserNotify` that lands in its target
@@ -296,12 +306,23 @@ class WalletView {
   final String friendField;
   final List<CommandDesc> selfActions;
   final List<CommandDesc> friendActions;
+
+  /// Section headings when balances carry a maturity (see [SetBalance.maturityField]).
+  /// Holdings at maturity 0 are cash; dated holdings are loans, listed separately
+  /// with their maturity date. Cash and loans are not the same thing, so they are
+  /// two distinct views rather than one merged list. When [loansLabel] is null the
+  /// wallet renders a single undifferentiated list (the pre-maturity behaviour).
+  final String cashLabel;
+  final String? loansLabel;
+
   const WalletView({
     required this.storeKey,
     required this.label,
     required this.selfKey,
     required this.friendField,
     required this.selfActions,
+    this.cashLabel = 'Cash',
+    this.loansLabel,
     required this.friendActions,
     this.friendsList = '',
   });

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:glp_multiagent/manifests/grassroots.dart';
-import 'package:glp_multiagent/manifests/social.dart';
+import 'package:glp_multiagent/manifests/grassapp_ui.dart';
+import 'package:glp_multiagent/manifests/social_ui.dart';
 import 'package:glp_multiagent/ui_runtime/agent_surface.dart';
 import 'package:glp_multiagent/ui_runtime/runtime.dart';
 
@@ -89,18 +89,18 @@ void main() {
     expect(find.text('Bob'), findsOneWidget);
   });
 
-  testWidgets('a swap offer alerts a Coins row; tapping it accepts',
+  testWidgets('a swap offer alerts a Currencies row; tapping it accepts',
       (tester) async {
     final sent = <String>[];
     final r = UiRuntime(manifest: grassrootsManifest, onSend: sent.add);
     await tester.pumpWidget(_wrap(r));
 
     r.handleLine('connected(alice)');
-    r.handleLine('swap_offer(alice, alice, 1, bob, 1, req(3))');
+    r.handleLine('trade_proposed(alice, bob, 0, 1, req(3))');
     await tester.pump();
 
-    // Switch to the Coins panel; the swap alerts Alice's wallet row.
-    await tester.tap(find.text('Coins').last);
+    // Switch to the Currencies panel; the swap alerts Alice's wallet row.
+    await tester.tap(find.text('Currencies').last);
     await tester.pumpAndSettle();
     expect(find.text('alice proposes a swap'), findsOneWidget);
 
@@ -108,6 +108,6 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.widgetWithText(ElevatedButton, 'Accept'));
     await tester.pump();
-    expect(sent, ['accept_swap(alice, req(3))']);
+    expect(sent, ['accept_trade(alice, req(3))']);
   });
 }

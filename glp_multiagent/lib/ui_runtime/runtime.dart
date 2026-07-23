@@ -156,12 +156,18 @@ class UiRuntime {
             store: final storeKey,
             :final ownerField,
             :final coinField,
-            :final amountField
+            :final amountField,
+            :final maturityField
           ):
           final h = store.holdings.putIfAbsent(storeKey, () => {});
           final owner = formatTerm(fields[ownerField]!);
           final coin = formatTerm(fields[coinField]!);
-          h.putIfAbsent(owner, () => {})[coin] = fields[amountField]!;
+          // With a maturity the key is `issuer@maturity`: one issuer may be held
+          // at several maturities at once, and those must stay distinct rows.
+          final key = maturityField == null
+              ? coin
+              : '$coin@${formatTerm(fields[maturityField]!)}';
+          h.putIfAbsent(owner, () => {})[key] = fields[amountField]!;
         case Toast(:final template):
           onNotice?.call(renderTemplate(template, fields));
         case ExtendThread(:final thread, :final keyField, :final valueField):

@@ -1,10 +1,10 @@
 /// GrassApp manifest (paper §7): one app, one panel per platform —
-/// **Friends** (the social graph), **Coins** (coins among friends), and
+/// **Friends** (the social graph), **Currencies** (coins and bonds among friends), and
 /// **Chats** (the social network). The bottom bar is these three panels; each
 /// carries its own compose forms and its own per-item alerts. One mediator
 /// (programs/book/grassapp/grassapp_mediator.glp) feeds them all; the Dart side
 /// routes each ask to its platform's panel by notify constructor — a friend
-/// offer to Friends, a proposed swap to Coins, a group invitation to Chats.
+/// offer to Friends, a proposed swap to Currencies, a group invitation to Chats.
 ///
 /// Backed live by the GLP GrassApp scenario in programs/book/grassapp/
 /// (grassapp_agent + grassapp_mediator), whose UserCmd/UserNotify vocabulary
@@ -73,24 +73,38 @@ final Manifest grassrootsManifest = Manifest(
       ],
     ),
 
-    // --- Coins: the wallet, organised by friend ----------------------------
-    // People = self + friends + holdings owners; tapping one drills into their
-    // coins and the actions against them. A swap a friend proposes alerts that
-    // friend's row. The actions live in the drill-down, so the panel has no "+".
+    // --- Currencies: the wallet, organised by friend -----------------------
+    // A currency unit is a bond; a coin is one mature by the holder's own clock,
+    // so a holding is keyed by (issuer, maturity) and the drill-down splits Cash
+    // (mature) from Loans (dated). People = self + friends + holdings owners;
+    // tapping one drills into their holdings and the actions against them. A swap
+    // a friend proposes alerts that friend's row. Actions live in the drill-down,
+    // so the panel has no "+". Compose forms carry scalar fields only; the
+    // mediator assembles the lot specs (see grassapp_mediator.glp).
     Panel(
-      id: 'coins',
-      name: 'Coins',
+      id: 'currencies',
+      name: 'Currencies',
       wallet: WalletView(
         storeKey: 'holdings',
-        label: 'Coins',
+        label: 'Currencies',
         selfKey: 'bob',
         friendsList: 'friends',
         friendField: 'friend',
+        cashLabel: 'Cash',
+        loansLabel: 'Loans',
         selfActions: const [
           CommandDesc(
             ctor: 'mint',
             label: 'Mint',
-            args: [FieldDesc('amount', FieldType.integer, 'How many to mint')],
+            args: [
+              FieldDesc('amount', FieldType.integer, 'How many to mint'),
+              FieldDesc('maturity', FieldType.integer, 'Maturity date (0 = cash)'),
+            ],
+          ),
+          CommandDesc(
+            ctor: 'advance_date',
+            label: 'Advance date',
+            args: [FieldDesc('date', FieldType.integer, 'New local date')],
           ),
         ],
         friendActions: const [
@@ -100,7 +114,21 @@ final Manifest grassrootsManifest = Manifest(
             args: [
               FieldDesc('friend', FieldType.person, 'To'),
               FieldDesc('coin', FieldType.person, 'Coin (issuer)'),
+              FieldDesc('maturity', FieldType.integer, 'Maturity (0 = cash)'),
               FieldDesc('amount', FieldType.integer, 'Amount'),
+            ],
+          ),
+          CommandDesc(
+            ctor: 'trade',
+            label: 'Propose swap',
+            args: [
+              FieldDesc('friend', FieldType.person, 'With'),
+              FieldDesc('give_coin', FieldType.person, 'You give (issuer)'),
+              FieldDesc('give_maturity', FieldType.integer, 'You give (maturity)'),
+              FieldDesc('give_amount', FieldType.integer, 'You give (amount)'),
+              FieldDesc('want_coin', FieldType.person, 'You want (issuer)'),
+              FieldDesc('want_maturity', FieldType.integer, 'You want (maturity)'),
+              FieldDesc('want_amount', FieldType.integer, 'You want (amount)'),
             ],
           ),
           CommandDesc(
@@ -108,17 +136,11 @@ final Manifest grassrootsManifest = Manifest(
             label: 'Redeem',
             args: [
               FieldDesc('friend', FieldType.person, 'From'),
-              FieldDesc('amount', FieldType.integer, 'How many of their coins'),
-            ],
-          ),
-          CommandDesc(
-            ctor: 'propose_swap',
-            label: 'Propose swap',
-            args: [
-              FieldDesc('friend', FieldType.person, 'With'),
-              FieldDesc('give_coin', FieldType.person, 'You give (coin)'),
-              FieldDesc('give_amount', FieldType.integer, 'You give (amount)'),
-              FieldDesc('want_coin', FieldType.person, 'You want (coin)'),
+              FieldDesc('give_coin', FieldType.person, 'Present (issuer)'),
+              FieldDesc('give_maturity', FieldType.integer, 'Present (maturity)'),
+              FieldDesc('give_amount', FieldType.integer, 'Present (amount)'),
+              FieldDesc('want_coin', FieldType.person, 'You want (issuer)'),
+              FieldDesc('want_maturity', FieldType.integer, 'You want (maturity)'),
               FieldDesc('want_amount', FieldType.integer, 'You want (amount)'),
             ],
           ),
@@ -126,28 +148,27 @@ final Manifest grassrootsManifest = Manifest(
       ),
       inbox: [
         InboxDesc(
-          notifyCtor: 'swap_offer',
+          notifyCtor: 'trade_proposed',
           args: const [
             'from',
-            'give_coin',
-            'give_amount',
             'want_coin',
+            'want_maturity',
             'want_amount',
             'req'
           ],
           itemKey: 'from',
           title: '{from} proposes a swap',
           subtitle:
-              'Gives {give_amount} {give_coin}-coins for {want_amount} {want_coin}-coins',
+              'Wants {want_amount} {want_coin} maturing {want_maturity}',
           answers: const [
             AnswerDesc(
               label: 'Accept',
-              cmdCtor: 'accept_swap',
+              cmdCtor: 'accept_trade',
               fill: [FromField('from'), FromField('req')],
             ),
             AnswerDesc(
               label: 'Decline',
-              cmdCtor: 'decline_swap',
+              cmdCtor: 'reject_trade',
               fill: [FromField('from'), FromField('req')],
             ),
           ],
@@ -233,7 +254,8 @@ final Manifest grassrootsManifest = Manifest(
 
   // Activity rules: a friendship lands in BOTH Friends (adds the friend) and
   // Chats (opens the conversation); messages extend it; a balance report sets a
-  // coin's holding. swap_done/swap_failed are acknowledged (no state).
+  // keyed (issuer, maturity) holding. The trade acks (completed/failed/returned)
+  // and date_advanced show a transient notice (no lasting state).
   activity: const [
     ActivityDesc(
       notifyCtor: 'connected',
@@ -255,17 +277,35 @@ final Manifest grassrootsManifest = Manifest(
     ),
     ActivityDesc(
       notifyCtor: 'balance_report',
-      args: ['owner', 'coin', 'amount'],
-      effects: [SetBalance('holdings', 'owner', 'coin', 'amount')],
+      args: ['owner', 'issuer', 'maturity', 'count'],
+      effects: [
+        SetBalance('holdings', 'owner', 'issuer', 'count',
+            maturityField: 'maturity')
+      ],
     ),
+    // The local date advanced (Def. 2 item 2) — an ack, no lasting state.
     ActivityDesc(
-        notifyCtor: 'swap_done',
+        notifyCtor: 'date_advanced',
+        args: ['date'],
+        effects: [Toast('Local date advanced to {date}')]),
+    // Swap / redeem settlement acks. trade_returned: the offer was declined;
+    // trade_returned_menu: a redemption the issuer could not fill (menu is M2).
+    ActivityDesc(
+        notifyCtor: 'trade_completed',
         args: ['who'],
         effects: [Toast('Swap with {who} completed')]),
     ActivityDesc(
-        notifyCtor: 'swap_failed',
+        notifyCtor: 'trade_failed',
         args: ['who'],
-        effects: [Toast('Swap with {who} failed — not enough coins')]),
+        effects: [Toast('Swap with {who} failed')]),
+    ActivityDesc(
+        notifyCtor: 'trade_returned',
+        args: ['who'],
+        effects: [Toast('{who} declined — your bonds are back')]),
+    ActivityDesc(
+        notifyCtor: 'trade_returned_menu',
+        args: ['who', 'menu'],
+        effects: [Toast('{who} could not redeem — bonds returned')]),
     // Groups (in the Chats panel).
     ActivityDesc(
       notifyCtor: 'group_joined',

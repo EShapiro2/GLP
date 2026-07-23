@@ -46,7 +46,7 @@ duo_actor(Me, Target, Ns, [connect(Target?) | Cs?]) :-
 %% On becoming the human's friend: greet, mint, and pay them 2 coins.
 procedure duo_courter(Constant?, Constant?, Stream(UserNotify)?, Stream(UserCmd)).
 duo_courter(Me, Target, [connected(Who) | Ns],
-    [send(Target?, Greeting?) | [mint(5, 0) | [pay(Target?, [lot(Me?, 0, 2)]) | Cs?]]]) :-
+    [send(Target?, Greeting?) | [mint(5, 0) | [pay(Target?, Me?, 0, 2) | Cs?]]]) :-
     ground(Me?), ground(Target?), Who? =?= Target? |
     greeting_of(Me?, Greeting),
     duo_drain(Me?, Ns?, Cs).
@@ -73,7 +73,7 @@ duo_drain(Me, [received(From, _) | Ns], [send(From?, R?) | Cs?]) :-
     duo_drain(Me?, Ns?, Cs).
 duo_drain(Me, [befriend(Who, Req) | Ns], [decision(yes, Who?, Req?) | Cs?]) :-
     ground(Me?), ground(Who?), ground(Req?) | duo_drain(Me?, Ns?, Cs).
-duo_drain(Me, [trade_proposed(From, _, _, Req) | Ns], [accept_trade(From?, Req?) | Cs?]) :-
+duo_drain(Me, [trade_proposed(From, _, _, _, Req) | Ns], [accept_trade(From?, Req?) | Cs?]) :-
     ground(Me?), ground(From?), ground(Req?) | duo_drain(Me?, Ns?, Cs).
 duo_drain(Me, [group_invite(G, Req) | Ns], [accept_group(G?, Req?) | Cs?]) :-
     ground(Me?), ground(G?), ground(Req?) | duo_drain(Me?, Ns?, Cs).

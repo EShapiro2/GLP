@@ -73,7 +73,7 @@ void main() {
 
     // Alice and Charlie as before: message + trade card; pay + unfriend.
     await agent.injectUserInput('decision(yes, alice, ${reqs['alice']})');
-    expect(all(), contains('trade_proposed(alice, [lot(bob, 0, 1)]'));
+    expect(all(), contains('trade_proposed(alice, bob, 0, 1'));
     await agent.injectUserInput('decision(yes, charlie, ${reqs['charlie']})');
     expect(all(), contains('unfriended(charlie)'));
 
