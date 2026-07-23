@@ -226,15 +226,15 @@ class RunnerContext {
   String reformatHead() {
     final name = goalProcName ?? goalHead ?? '?';
     final args = <String>[];
-    for (int i = 0; i < 10; i++) {
+    // No arity cap: argument slots are dense from 0 and env.arg returns null past
+    // the last one, so break on the first null. The former `i < 10` truncated the
+    // trace of goals with more than ten arguments.
+    for (int i = 0; ; i++) {
       final arg = env.arg(i);
-      if (arg != null) {
-        args.add(termFormatter != null
-            ? termFormatter!(arg)
-            : arg.toString());
-      } else {
-        break;
-      }
+      if (arg == null) break;
+      args.add(termFormatter != null
+          ? termFormatter!(arg)
+          : arg.toString());
     }
     if (args.isEmpty) return name;
     return '$name(${args.join(', ')})';

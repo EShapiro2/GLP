@@ -2405,6 +2405,15 @@ HEREDOC
 2>&1)
 check "Z3 arity>=11 body call places compound arg at slot 10" "R = r(5)" "$z_body"
 
+z_trace=$("$REPL_RUN" <<HEREDOC
+$GLP_DIR/programs/tests/test_arity_dispatch_bug.glp
+:trace
+hi(yes, 1, 2, 3, 4, 5, 6, 7, 8, 9, R).
+:quit
+HEREDOC
+2>&1)
+check "Z4 trace prints all args of an arity-11 goal (11th not truncated)" "9, \[t(1, 2, 3, 4, 5)" "$z_trace"
+
 echo ""
 
 # =============================================================================
