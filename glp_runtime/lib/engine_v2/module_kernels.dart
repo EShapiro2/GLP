@@ -14,13 +14,16 @@
 // CodeImage/ByteRunner without an import cycle. `GlpEngine` registers it via
 // [registerModuleKernels].
 
+import 'dart:typed_data';
+
 import '../runtime/runtime.dart';
 import '../runtime/body_kernels.dart' show BodyKernelResult;
 import '../runtime/terms.dart';
 import '../runtime/machine_state.dart' show GoalRef;
-import '../bytecode/runner.dart' show BytecodeProgram, CallEnv;
+import '../wire/artefact.dart' show Artefact;
+import '../bytecode/runner.dart' show CallEnv;
 import 'code_image.dart' show CodeImage;
-import 'interp.dart' show ByteRunner, codeImageFromProgram;
+import 'interp.dart' show ByteRunner;
 
 /// Register the engine_v2-dependent module kernels onto [rt].
 /// Called from the `GlpEngine` constructor, after the runtime is built.
@@ -36,6 +39,11 @@ Object? _deref(GlpRuntime rt, Object? term) {
   return term;
 }
 
+/// Lowercase hex of a hash — used to key a module's runner by its source
+/// identity h(M), so equal modules share one runner.
+String _hex(Uint8List bytes) =>
+    bytes.map((b) => b.toRadixString(16).padLeft(2, '0')).join();
+
 /// `run(Goal, Module)`/2 — module-as-value, consumer half. See the library note.
 BodyKernelResult runKernel(GlpRuntime rt, List<Object?> args) {
   if (args.length != 2) {
@@ -48,9 +56,9 @@ BodyKernelResult runKernel(GlpRuntime rt, List<Object?> args) {
     print('[ABORT] run/2: second argument is not a module value');
     return BodyKernelResult.abort;
   }
-  final program = module.bytecode;
-  if (program is! BytecodeProgram) {
-    print('[ABORT] run/2: module carries no bytecode program');
+  final artefact = module.artefact;
+  if (artefact is! Artefact) {
+    print('[ABORT] run/2: module carries no artefact');
     return BodyKernelResult.abort;
   }
 
@@ -69,7 +77,16 @@ BodyKernelResult runKernel(GlpRuntime rt, List<Object?> args) {
     return BodyKernelResult.abort;
   }
 
-  final CodeImage image = codeImageFromProgram(program, moduleName: module.name);
+  // One ByteRunner per distinct module, keyed by its source identity h(M), so
+  // the Scheduler routes this goal (and its children, which inherit the key) to
+  // the module's code via rt.runners — its documented per-goal-program fallback.
+  // Equal modules share a runner, so the image is decoded once per module.
+  final key = 'module:${_hex(artefact.hM)}';
+  final cached = rt.runners[key];
+  final CodeImage image = cached is ByteRunner
+      ? cached.image
+      : CodeImage.fromArtefactBytes(artefact.toBytes());
+
   final sig = '$functor/${bootArgs.length}';
   final entry = image.entryOffsetOf(sig);
   if (entry == null) {
@@ -78,10 +95,6 @@ BodyKernelResult runKernel(GlpRuntime rt, List<Object?> args) {
     return BodyKernelResult.abort;
   }
 
-  // One ByteRunner per distinct module program, keyed by program identity, so
-  // the Scheduler routes this goal (and its children, which inherit the key) to
-  // the module's code via rt.runners — its documented per-goal-program fallback.
-  final key = 'module:${identityHashCode(program)}';
   rt.runners.putIfAbsent(key, () => ByteRunner(image));
 
   final slots = <int, Term>{};

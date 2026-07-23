@@ -32,6 +32,8 @@ import 'package:glp_runtime/analysis/type_checker/well_typed_clause.dart' as wtc
 import 'package:glp_runtime/runtime/module_hierarchy.dart';
 import 'package:glp_runtime/multiagent/mad_context.dart';
 import 'package:glp_runtime/compiler/program_linker.dart';
+import 'package:glp_runtime/wire/flattening.dart' show canonicalPrint, hashOfPrint;
+import 'package:glp_runtime/wire/artefact.dart' show Artefact;
 
 /// Result of running a goal
 class ExecutionResult {
@@ -108,6 +110,18 @@ sign(T, Sig?) :- ground(T?) | '_sign'(T?, Sig).
 class GlpEngine {
   final GlpCompiler _compiler = GlpCompiler();
   final GlpRuntime _runtime = GlpRuntime();
+
+  /// Module VALUE per loaded unit — its artefact (h(M) + code) as the heap
+  /// `Module` constant, built at load.
+  final Map<String, rt.ModuleTerm> _loadedModuleValues = {};
+
+  /// The loaded app's module value — what a REPL goal carries. Root self.glp is
+  /// not an app, so it never sets this.
+  rt.ModuleTerm? _appModule;
+
+  /// The loaded app's module value: its artefact — h(M) and code — as the heap
+  /// `Module` constant `self_module` returns. Null if no app unit is loaded.
+  rt.ModuleTerm? get appModule => _appModule;
   final Map<String, BytecodeProgram> _loadedPrograms = {};
   final Map<String, ModuleInfo> _loadedModules = {};
 
@@ -289,6 +303,7 @@ class GlpEngine {
     // program — running the global SRSW pass it has no separate per-module pass
     // for. Other sources keep the direct compile path.
     final BytecodeProgram program;
+    rt.ModuleTerm? moduleValue;
     if (selfContained) {
       final modules =
           discoverSingleModule(name, rootSelfGlpPath: _rootSelfGlpPath);
@@ -297,10 +312,16 @@ class GlpEngine {
               rootDir: File(name).parent.path, singleModulePath: name);
       program = _compiler.compileProgram(linked.program,
           procDeclarations: linked.procDeclarations, skipGlobalSRSW: false);
+      // This unit's module value — its artefact: h(M) + code.
+      moduleValue = _moduleValueOf(_baseName(name), program, linked, modules);
     } else {
       program = _compiler.compile(source);
     }
     _loadedPrograms[name] = program;
+    if (moduleValue != null) {
+      _loadedModuleValues[name] = moduleValue;
+      _appModule = moduleValue;
+    }
 
     final moduleInfo = _extractModuleInfo(source, program, name);
     _loadedModules[moduleInfo.name] = moduleInfo;
@@ -350,6 +371,13 @@ class GlpEngine {
       procDeclarations: linked.procDeclarations,
     );
     _loadedPrograms['__program__'] = program;
+
+    // The program's module value — its artefact (h(M) + code): the value
+    // `self_module` returns and a friend adopts.
+    final moduleValue =
+        _moduleValueOf(_baseName(programDir), program, linked, modules);
+    _loadedModuleValues['__program__'] = moduleValue;
+    _appModule = moduleValue;
 
     // Goal-check environment per modules.tex §Scope construction — the chain
     // is anchored at the hierarchy root (programs/), not at the directory
@@ -609,9 +637,11 @@ class GlpEngine {
     final env = CallEnv(args: argSlots);
     _runtime.setGoalEnv(_goalId, env);
     _runtime.setGoalProgram(_goalId, 'main');
-    // The goal carries its module value (the app it runs), read back by
-    // `self_module`. combinedProgram is the app's linked code.
-    _runtime.setGoalModule(_goalId, rt.ModuleTerm(program, name: 'main'));
+    // The goal carries its module value — the loaded app's artefact (h(M) +
+    // code) — read back by `self_module`.
+    if (_appModule != null) {
+      _runtime.setGoalModule(_goalId, _appModule);
+    }
 
     final module = _findModuleForProcedure(procedureLabel);
     if (module != null) {
@@ -717,9 +747,11 @@ class GlpEngine {
       final env = CallEnv(args: argSlots);
       _runtime.setGoalEnv(_goalId, env);
       _runtime.setGoalProgram(_goalId, 'main');
-      // The goal carries its module value (the app it runs), read back by
-      // `self_module`. combinedProgram is the app's linked code.
-      _runtime.setGoalModule(_goalId, rt.ModuleTerm(program, name: 'main'));
+      // The goal carries its module value — the loaded app's artefact (h(M) +
+      // code) — read back by `self_module`.
+      if (_appModule != null) {
+        _runtime.setGoalModule(_goalId, _appModule);
+      }
 
       final module = _findModuleForProcedure(procedureLabel);
       if (module != null) {
@@ -785,6 +817,46 @@ class GlpEngine {
       }
     }
     return false;
+  }
+
+  static String _baseName(String path) {
+    final parts = path.split('/').where((s) => s.isNotEmpty);
+    return parts.isEmpty ? path : parts.last;
+  }
+
+  /// The module VALUE of a freshly linked unit: its compiled artefact — h(M)
+  /// and code — wrapped as the heap `Module` constant (IGLP appendix
+  /// §Self-Module: "the Module constant carries the artefact ... not code
+  /// alone", since the adopter checks h(M) against the offer).
+  ///
+  /// h(M) is the source identity: SHA-256 of the canonical print of the linked,
+  /// pruned program (code-format §Deterministic Flattening). It is computed
+  /// here from the already-linked program rather than through `flattenProject`,
+  /// which would re-run discovery and linking from disk.
+  rt.ModuleTerm _moduleValueOf(
+    String moduleName,
+    BytecodeProgram program,
+    LinkResult linked,
+    List<DiscoveredModule> modules,
+  ) {
+    final typeDefs = <String, TypeDef>{};
+    for (final mod in modules) {
+      for (final td in mod.ast.typeDefs) {
+        typeDefs.putIfAbsent(td.name, () => td);
+      }
+    }
+    final hM = hashOfPrint(canonicalPrint(
+      program: linked.program,
+      procDeclarations: linked.procDeclarations,
+      typeDefs: typeDefs.values.toList(),
+    ));
+    final artefact = Artefact.fromCompiled(
+      ops: program.ops.cast<Object>(),
+      hM: hM,
+      moduleName: moduleName,
+      isaVersion: 'glp-isa-1',
+    );
+    return rt.ModuleTerm(artefact, name: moduleName);
   }
 
   ModuleInfo _extractModuleInfo(

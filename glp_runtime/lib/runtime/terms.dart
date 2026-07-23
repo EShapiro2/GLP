@@ -83,19 +83,22 @@ class MutualRefTerm implements Term {
   int get hashCode => id.hashCode;
 }
 
-/// Module reference term — wraps a compiled BytecodeProgram.
+/// Module value — an app's compiled artefact: h(M) and code.
 ///
-/// Part of the Distribute/Transmit channel-routing surface (currently inert
-/// for statically linked programs). The module binary is represented as a
-/// ground term on the heap, following FCP's convention.
+/// The `Module` constant of the type system. Per IGLP appendix §Self-Module,
+/// the Module constant carries the artefact — h(M) and code — not code alone:
+/// the adopter checks h(M) against the offer and then runs the code, and code
+/// alone has no h(M). A goal carries the module value of the app it belongs to;
+/// `self_module`/1 returns it and `run`/2 launches a goal on it. Ground, and
+/// stored opaquely on the heap, following FCP's module-as-value convention.
 class ModuleTerm implements Term {
-  /// The compiled bytecode program for this module
-  final Object bytecode;  // BytecodeProgram (untyped to avoid circular import)
+  /// This module's compiled artefact: 32-byte h(M), symbol table, and code.
+  final Object artefact;  // Artefact (untyped to avoid a circular import)
 
   /// Module name (for display/debugging)
   final String name;
 
-  ModuleTerm(this.bytecode, {this.name = ''});
+  ModuleTerm(this.artefact, {this.name = ''});
 
   @override
   String toString() => 'Module($name)';
