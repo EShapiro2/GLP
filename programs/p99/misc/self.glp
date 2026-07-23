@@ -57,6 +57,18 @@ imported procedure p98#nonogram(IntListList?, IntListList?, Maybe(Grid)).
 exported procedure nonogram(IntListList?, IntListList?, Maybe(Grid)).
 nonogram(RowClues, ColClues, R?) :- p98 # nonogram(RowClues?, ColClues?, R).
 
+% Crossword (P99).  A site is site(Length, CellIds); crossing sites share a cell
+% id.  Words are lists of characters; the answer assigns one word per site.
+Site ::= site(Integer, IntList).
+Sites ::= [] ; [Site | Sites].
+CM ::= cm(Integer, Constant).
+CMap ::= [] ; [CM | CMap].
+CListList ::= [] ; [CList | CListList].
+
+imported procedure p99x#crossword(Sites?, CListList?, Maybe(CListList)).
+exported procedure crossword(Sites?, CListList?, Maybe(CListList)).
+crossword(Ss, Ws, R?) :- p99x # crossword(Ss?, Ws?, R).
+
 AExp ::= num(Integer) ; plus(AExp, AExp) ; minus(AExp, AExp)
        ; times(AExp, AExp) ; div(AExp, AExp).
 Eq ::= eq(AExp, AExp).

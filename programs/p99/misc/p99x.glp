@@ -1,0 +1,89 @@
+% P99: Crossword.  Place the given words into the framework's sites so that
+% every site holds a word of its length and crossing sites agree on their shared
+% cell.  A site is site(Length, CellIds); two sites cross when they share a cell
+% id.  First-solution search: fill the sites in order, each with an as-yet-unused
+% word, maintaining a cell -> letter map; a word fits a site iff, cell by cell,
+% it agrees with every letter already fixed there.  The answer lists the word
+% placed in each site, in site order.
+%
+% State cw(RemSites, Words, CMap, PlacedRev): the sites still to fill, the words
+% still available, the letters fixed so far, and the words placed (reversed).
+% The per-site branching context rides as one wctx tuple.
+
+CWState ::= cw(Sites, CListList, CMap, CListList).
+WCtx ::= wctx(Sites, IntList, CMap, CListList).
+
+exported procedure crossword(Sites?, CListList?, Maybe(CListList)).
+crossword(Ss, Ws, R?) :- ground(Ss?), ground(Ws?) |
+    solve_first(cw(Ss?, Ws?, [], []), Reqs, R),
+    expand_server(Reqs?).
+
+procedure expand_server(Stream(Req(CWState, CListList))?).
+expand_server([]).
+expand_server([expand(St, Items?)|Rs]) :-
+    expand(St?, Items),
+    expand_server(Rs?).
+
+procedure expand(CWState?, Items(CWState, CListList)).
+expand(cw([], _, _, PlacedRev), [sol(P?)]) :- ground(PlacedRev?) | crev(PlacedRev?, [], P).
+expand(cw([site(_, Cells)|RestSites], Words, CMap, PlacedRev), Items?) :-
+    ground(Cells?), ground(RestSites?), ground(Words?), ground(CMap?), ground(PlacedRev?) |
+    trywords([], Words?, wctx(RestSites?, Cells?, CMap?, PlacedRev?), Items).
+
+% trywords(Before, Remaining, WCtx, Items): try each still-unused word in this
+% site; a fitting word yields a child that removes it from the pool.
+procedure trywords(CListList?, CListList?, WCtx?, Items(CWState, CListList)).
+trywords(_, [], _, []).
+trywords(Before, [W|Ws], wctx(RestSites, Cells, CMap, PlacedRev), Out?) :-
+    ground(Before?), ground(W?), ground(Ws?), ground(RestSites?), ground(Cells?),
+    ground(CMap?), ground(PlacedRev?) |
+    tryplace(Cells?, W?, CMap?, CMap2, Ok),
+    tw1(Ok?, W?, Before?, Ws?, CMap2?, wctx(RestSites?, Cells?, CMap?, PlacedRev?), Out).
+
+procedure tw1(Ans?, CList?, CListList?, CListList?, CMap?, WCtx?, Items(CWState, CListList)).
+tw1(yes, W, Before, Ws, CMap2, WCtx, [node(Child?)|Out?]) :-
+    ground(W?), ground(Before?), ground(Ws?), ground(CMap2?), ground(WCtx?) |
+    appc(Before?, Ws?, Pool),
+    mkcw(W?, Pool?, CMap2?, WCtx?, Child),
+    trywords([W?|Before?], Ws?, WCtx?, Out).
+tw1(no, W, Before, Ws, _, WCtx, Out?) :-
+    ground(W?), ground(Before?), ground(Ws?), ground(WCtx?) |
+    trywords([W?|Before?], Ws?, WCtx?, Out).
+
+procedure mkcw(CList?, CListList?, CMap?, WCtx?, CWState).
+mkcw(W, Pool, CMap2, wctx(RestSites, _, _, PlacedRev), cw(RestSites?, Pool?, CMap2?, [W?|PlacedRev?])) :-
+    ground(W?), ground(Pool?), ground(CMap2?), ground(RestSites?), ground(PlacedRev?) | true.
+
+% tryplace(Cells, Word, CMap, CMap2, Ok): fit Word (a letter per cell) against the
+% fixed letters; Ok is no on any clash or a length mismatch, else yes with the
+% map extended by the newly-fixed cells.
+procedure tryplace(IntList?, CList?, CMap?, CMap, Ans).
+tryplace([], [], CMap, CMap?, yes).
+tryplace([], [_|_], _, [], no).
+tryplace([_|_], [], _, [], no).
+tryplace([C|Cs], [Ch|Chs], CMap, CMap2?, Ok?) :-
+    integer(C?), ground(Ch?), ground(Cs?), ground(Chs?), ground(CMap?) |
+    cmlook(CMap?, C?, Found),
+    tp1(Found?, C?, Ch?, Cs?, Chs?, CMap?, CMap2, Ok).
+
+procedure tp1(Maybe(Constant)?, Integer?, Constant?, IntList?, CList?, CMap?, CMap, Ans).
+tp1(none, C, Ch, Cs, Chs, CMap, CMap2?, Ok?) :-
+    integer(C?), ground(Ch?), ground(Cs?), ground(Chs?), ground(CMap?) |
+    tryplace(Cs?, Chs?, [cm(C?, Ch?)|CMap?], CMap2, Ok).
+tp1(found(Ch2), _, Ch, Cs, Chs, CMap, CMap2?, Ok?) :-
+    Ch2? =?= Ch?, ground(Cs?), ground(Chs?), ground(CMap?) |
+    tryplace(Cs?, Chs?, CMap?, CMap2, Ok).
+tp1(found(_), _, _, _, _, _, [], no) :- otherwise | true.
+
+procedure cmlook(CMap?, Integer?, Maybe(Constant)).
+cmlook([], _, none).
+cmlook([cm(K, V)|_], C, found(V?)) :- K? =:= C? | true.
+cmlook([cm(_, _)|Rest], C, R?) :- otherwise, integer(C?) | cmlook(Rest?, C?, R).
+
+procedure appc(CListList?, CListList?, CListList).
+appc([], Ys, Ys?).
+appc([X|Xs], Ys, [X?|Zs?]) :- appc(Xs?, Ys?, Zs).
+
+procedure crev(CListList?, CListList?, CListList).
+crev([], A, A?).
+crev([X|Xs], A, R?) :- crev(Xs?, [X?|A?], R).
