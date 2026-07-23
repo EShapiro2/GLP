@@ -1,0 +1,135 @@
+% P92: Von Koch's conjecture — a graceful labelling of a tree.  Number the N
+% nodes 1..N so that the N-1 edge differences |a-b| are all distinct (they are
+% then a permutation of 1..N-1).  First-solution search: assign the nodes in
+% list order; a node branches over the numbers not yet used; a branch is pruned
+% as soon as a new edge difference (to an already-numbered neighbour) repeats a
+% difference already taken.
+%
+% State vk(Rem, Asg, Used, Es, N): Rem the nodes still to number (in order),
+% Asg the numbering so far (reversed assoc), Used the edge differences taken,
+% Es the edges (constant), N the node count.  Solution: the numbering, in order.
+%
+% The per-node context (current node, remaining nodes, assignment, used
+% differences, edges, node count) is passed as one ctx/6 tuple rather than six
+% separate arguments, keeping the branch/commit helpers small.
+
+VkState ::= vk(CList, NumList, IntList, VkEdges, Integer).
+Ctx ::= ctx(Constant, CList, NumList, IntList, VkEdges, Integer).
+Opt ::= nada ; other(Constant).
+
+exported procedure von_koch(CList?, VkEdges?, Maybe(NumList)).
+von_koch(Ns, Es, R?) :- ground(Ns?), ground(Es?) |
+    vklen(Ns?, 0, N),
+    solve_first(vk(Ns?, [], [], Es?, N?), Reqs, R),
+    expand_server(Reqs?).
+
+procedure expand_server(Stream(Req(VkState, NumList))?).
+expand_server([]).
+expand_server([expand(St, Items?)|Rs]) :-
+    expand(St?, Items),
+    expand_server(Rs?).
+
+procedure expand(VkState?, Items(VkState, NumList)).
+expand(vk([], Asg, _, _, _), [sol(R?)]) :- ground(Asg?) | vkrev(Asg?, [], R).
+expand(vk([Node|Rest], Asg, Used, Es, N), Items?) :-
+    ground(Node?), ground(Rest?), ground(Asg?), ground(Used?), ground(Es?), integer(N?) |
+    pool(1, N?, Asg?, P),
+    branch(P?, ctx(Node?, Rest?, Asg?, Used?, Es?, N?), Items).
+
+% pool(Lo, Hi, Asg, P): the numbers Lo..Hi not already used as a value in Asg.
+procedure pool(Integer?, Integer?, NumList?, IntList).
+pool(Lo, Hi, _, []) :- Lo? > Hi? | true.
+pool(Lo, Hi, Asg, Out?) :- Lo? =< Hi?, integer(Lo?), ground(Asg?) |
+    hasval(Asg?, Lo?, In),
+    pl1(In?, Lo?, Hi?, Asg?, Out).
+
+procedure pl1(Ans?, Integer?, Integer?, NumList?, IntList).
+pl1(yes, Lo, Hi, Asg, Out?) :- integer(Lo?), ground(Asg?) |
+    Lo1 := Lo? + 1, pool(Lo1?, Hi?, Asg?, Out).
+pl1(no, Lo, Hi, Asg, [Lo?|Out?]) :- integer(Lo?), ground(Asg?) |
+    Lo1 := Lo? + 1, pool(Lo1?, Hi?, Asg?, Out).
+
+procedure hasval(NumList?, Integer?, Ans).
+hasval([], _, no).
+hasval([nn(_,W)|_], V, yes) :- W? =:= V? | true.
+hasval([nn(_,_)|Rest], V, R?) :- otherwise, integer(V?) | hasval(Rest?, V?, R).
+
+% branch(Pool, Ctx, Items): one item per number in Pool whose assignment to the
+% current node keeps all edge differences distinct.
+procedure branch(IntList?, Ctx?, Items(VkState, NumList)).
+branch([], _, []).
+branch([V|Vs], ctx(Node, Rest, Asg, Used, Es, N), Out?) :-
+    integer(V?), ground(Node?), ground(Rest?), ground(Asg?), ground(Used?), ground(Es?), integer(N?) |
+    chkedges(Es?, Node?, V?, Asg?, Used?, Used2, Ok),
+    br1(Ok?, Used2?, V?, Vs?, ctx(Node?, Rest?, Asg?, Used?, Es?, N?), Out).
+
+procedure br1(Ans?, IntList?, Integer?, IntList?, Ctx?, Items(VkState, NumList)).
+br1(yes, Used2, V, Vs, ctx(Node, Rest, Asg, Used, Es, N),
+    [node(vk(Rest?, [nn(Node?, V?)|Asg?], Used2?, Es?, N?))|Out?]) :-
+    ground(Rest?), ground(Node?), integer(V?), ground(Asg?), ground(Used2?), ground(Used?),
+    ground(Es?), integer(N?), ground(Vs?) |
+    branch(Vs?, ctx(Node?, Rest?, Asg?, Used?, Es?, N?), Out).
+br1(no, _, _, Vs, ctx(Node, Rest, Asg, Used, Es, N), Out?) :-
+    branch(Vs?, ctx(Node?, Rest?, Asg?, Used?, Es?, N?), Out).
+
+% chkedges(Es, Node, V, Asg, Acc, Acc2, Ok): fold the edges incident to Node with
+% an already-numbered neighbour, accumulating their differences into Acc; Ok is
+% no as soon as a difference repeats, else yes with the extended set Acc2.
+procedure chkedges(VkEdges?, Constant?, Integer?, NumList?, IntList?, IntList, Ans).
+chkedges([], _, _, _, Acc, Acc?, yes).
+chkedges([e(A,B)|Es], Node, V, Asg, Acc, Acc2?, Ok?) :-
+    ground(A?), ground(B?), ground(Node?), integer(V?), ground(Asg?), ground(Es?), ground(Acc?) |
+    incident(A?, B?, Node?, O),
+    ce1(O?, Es?, Node?, V?, Asg?, Acc?, Acc2, Ok).
+
+procedure incident(Constant?, Constant?, Constant?, Opt).
+incident(A, B, Node, other(B?)) :- A? =?= Node? | true.
+incident(A, B, Node, other(A?)) :- B? =?= Node? | true.
+incident(_, _, _, nada) :- otherwise | true.
+
+procedure ce1(Opt?, VkEdges?, Constant?, Integer?, NumList?, IntList?, IntList, Ans).
+ce1(nada, Es, Node, V, Asg, Acc, Acc2?, Ok?) :-
+    ground(Es?), ground(Node?), integer(V?), ground(Asg?), ground(Acc?) |
+    chkedges(Es?, Node?, V?, Asg?, Acc?, Acc2, Ok).
+ce1(other(W), Es, Node, V, Asg, Acc, Acc2?, Ok?) :-
+    ground(W?), ground(Es?), ground(Node?), integer(V?), ground(Asg?), ground(Acc?) |
+    getnum(Asg?, W?, MW),
+    ce2(MW?, Es?, Node?, V?, Asg?, Acc?, Acc2, Ok).
+
+procedure ce2(Maybe(Integer)?, VkEdges?, Constant?, Integer?, NumList?, IntList?, IntList, Ans).
+ce2(none, Es, Node, V, Asg, Acc, Acc2?, Ok?) :-
+    ground(Es?), ground(Node?), integer(V?), ground(Asg?), ground(Acc?) |
+    chkedges(Es?, Node?, V?, Asg?, Acc?, Acc2, Ok).
+ce2(found(Wn), Es, Node, V, Asg, Acc, Acc2?, Ok?) :-
+    integer(Wn?), integer(V?), ground(Es?), ground(Node?), ground(Asg?), ground(Acc?) |
+    absdiff(V?, Wn?, D),
+    member_int(Acc?, D?, In),
+    ce3(In?, D?, Es?, Node?, V?, Asg?, Acc?, Acc2, Ok).
+
+procedure ce3(Ans?, Integer?, VkEdges?, Constant?, Integer?, NumList?, IntList?, IntList, Ans).
+ce3(yes, _, _, _, _, _, _, [], no).
+ce3(no, D, Es, Node, V, Asg, Acc, Acc2?, Ok?) :-
+    integer(D?), ground(Es?), ground(Node?), integer(V?), ground(Asg?), ground(Acc?) |
+    chkedges(Es?, Node?, V?, Asg?, [D?|Acc?], Acc2, Ok).
+
+procedure getnum(NumList?, Constant?, Maybe(Integer)).
+getnum([], _, none).
+getnum([nn(K,Vn)|_], W, found(Vn?)) :- K? =?= W? | true.
+getnum([nn(K,_)|Rest], W, R?) :- otherwise, ground(W?) | getnum(Rest?, W?, R).
+
+procedure absdiff(Integer?, Integer?, Integer).
+absdiff(A, B, D?) :- A? >= B? | D := A? - B?.
+absdiff(A, B, D?) :- A? < B? | D := B? - A?.
+
+procedure member_int(IntList?, Integer?, Ans).
+member_int([], _, no).
+member_int([Y|_], X, yes) :- X? =:= Y? | true.
+member_int([_|Ys], X, R?) :- otherwise, integer(X?) | member_int(Ys?, X?, R).
+
+procedure vklen(CList?, Integer?, Integer).
+vklen([], A, A?).
+vklen([_|Xs], A, N?) :- A1 := A? + 1, vklen(Xs?, A1?, N).
+
+procedure vkrev(NumList?, NumList?, NumList).
+vkrev([], A, A?).
+vkrev([X|Xs], A, R?) :- vkrev(Xs?, [X?|A?], R).

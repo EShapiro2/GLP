@@ -23,6 +23,15 @@ imported procedure p97#sudoku(IntList?, Maybe(IntList)).
 exported procedure sudoku(IntList?, Maybe(IntList)).
 sudoku(P, R?) :- p97 # sudoku(P?, R).
 
+VkEdge ::= e(Constant, Constant).
+VkEdges ::= [] ; [VkEdge | VkEdges].
+NN ::= nn(Constant, Integer).
+NumList ::= [] ; [NN | NumList].
+
+imported procedure p92#von_koch(CList?, VkEdges?, Maybe(NumList)).
+exported procedure von_koch(CList?, VkEdges?, Maybe(NumList)).
+von_koch(Ns, Es, R?) :- p92 # von_koch(Ns?, Es?, R).
+
 AExp ::= num(Integer) ; plus(AExp, AExp) ; minus(AExp, AExp)
        ; times(AExp, AExp) ; div(AExp, AExp).
 Eq ::= eq(AExp, AExp).

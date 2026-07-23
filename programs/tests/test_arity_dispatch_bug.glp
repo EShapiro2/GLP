@@ -1,0 +1,44 @@
+% Minimal repro of a runtime clause-selection bug found while writing P99/P92.
+%
+% A two-clause committed-choice procedure dispatched on a constant first
+% argument, whose selected clause builds a COMPOUND TERM in its head output
+% using ground-relaxed shared readers, FAILS TO COMMIT at high arity, even
+% though the program is well-typed and the guard is satisfiable.
+%
+% hi(yes, 1,2,3,4,5,6,7,8,9, R)  -> R = <unbound>, "failed"   (WRONG: should bind)
+%
+% The identical logic packed into a tuple (fewer arguments) commits correctly:
+% hip(yes, 1, tt(2,3,4,5,6,7,8,9), R) -> R = [t(1,2,3,4,5)]   (correct)
+%
+% The clause is selected on arg 1 (yes vs no); only clause 1 matches a yes goal,
+% and its guard (nine integer/1 checks on ground integers) is satisfiable, so it
+% should commit.  It does at arity 4 (hip) but not at arity 11 (hi).
+
+Tup ::= t(Integer, Integer, Integer, Integer, Integer).
+TList ::= [] ; [Tup | TList].
+Flag ::= yes ; no.
+Pack ::= tt(Integer, Integer, Integer, Integer, Integer, Integer, Integer, Integer).
+
+% --- Fails: 11-argument version -------------------------------------------
+exported procedure hi(Flag?, Integer?, Integer?, Integer?, Integer?, Integer?, Integer?,
+                      Integer?, Integer?, Integer?, TList).
+hi(yes, A, B, C, D, E, F, G, H, K, [t(A?, B?, C?, D?, E?)|Out?]) :-
+    integer(A?), integer(B?), integer(C?), integer(D?), integer(E?),
+    integer(F?), integer(G?), integer(H?), integer(K?) |
+    lo(A?, B?, C?, D?, E?, F?, G?, H?, K?, Out).
+hi(no, _, _, _, _, _, _, _, _, _, Out?) :-
+    lo(0, 0, 0, 0, 0, 0, 0, 0, 0, Out).
+procedure lo(Integer?, Integer?, Integer?, Integer?, Integer?, Integer?, Integer?, Integer?,
+             Integer?, TList).
+lo(_, _, _, _, _, _, _, _, _, []).
+
+% --- Works: same logic, arguments packed into one tuple -------------------
+exported procedure hip(Flag?, Integer?, Pack?, TList).
+hip(yes, A, tt(B, C, D, E, F, G, H, K), [t(A?, B?, C?, D?, E?)|Out?]) :-
+    integer(A?), integer(B?), integer(C?), integer(D?), integer(E?),
+    integer(F?), integer(G?), integer(H?), integer(K?) |
+    lop(A?, tt(B?, C?, D?, E?, F?, G?, H?, K?), Out).
+hip(no, _, _, Out?) :-
+    lop(0, tt(0, 0, 0, 0, 0, 0, 0, 0), Out).
+procedure lop(Integer?, Pack?, TList).
+lop(_, _, []).
