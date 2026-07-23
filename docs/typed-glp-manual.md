@@ -902,6 +902,27 @@ agent_init(Id, ch(UserIn, UserOut?), ch(NetIn, NetOut?)) :-
 
 ---
 
+## 15C. Preserving Stored Writers Across an Aggregate Transformation
+
+When an aggregate stores plain writers and a clause consumes it to produce a transformed copy, each stored writer must be transferred through its reader/writer pair, not passed through unchanged.
+
+```prolog
+FriendEntry ::= friend(String?, Stream).
+FriendsList ::= [] ; [FriendEntry | FriendsList].
+```
+
+`friend(String?, Stream)` stores a writer at position 2. Consuming a `FriendsList?` flips each entry to `FriendEntry?`, so the stored `Stream` arrives as a reader; producing the new list must restore it as a writer:
+
+```prolog
+procedure lookup_send_step(String?, _?, FriendsList?, FriendsList).
+lookup_send_step(Key, Msg, [friend(K, Out?)|Rest], [friend(K?, Out)|Rest1?]) :-
+    otherwise | lookup_send_step(Key?, Msg?, Rest?, Rest1).
+```
+
+`Out?` in the consumed entry and `Out` in the produced entry are the reader and writer of one variable — one of each, SRSW-compliant. This is not "passing through unchanged": it reads and writes the same logical stream through its paired variables, preserving write capability across the traversal. Unlike §15B, the type stores the stream plain (no `?`); consumption is what flips it to a reader, and reproduction restores the writer.
+
+---
+
 ## 16. `?` in Type Definitions vs `?` on Clause Variables
 
 ### 16.1 The Distinction
