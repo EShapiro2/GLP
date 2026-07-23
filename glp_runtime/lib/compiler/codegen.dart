@@ -88,9 +88,16 @@ class CodeGenContext {
 
   int allocateTemp() => nextTempVar++;
 
-  void resetTemps(int variableCount) {
-    // Start temps after all variable registers to avoid collision
-    nextTempVar = variableCount > 10 ? variableCount : 10;
+  void resetTemps(int variableCount, int argCount) {
+    // Temp registers share the operand space with argument slots (0..argCount-1)
+    // and clause variables (0..variableCount-1); start them above both so a temp
+    // index can never alias a real argument slot. The floor of 10 preserves the
+    // historical numbering for procedures of arity <= 10 (their bytecode is
+    // unchanged); arity >= 11 pushes temps above the argument slots, which is
+    // what makes high-arity clause dispatch correct — the code-format spec makes
+    // argSlot an unbounded clen, not a 0..9 register.
+    final base = variableCount > argCount ? variableCount : argCount;
+    nextTempVar = base > 10 ? base : 10;
     tempAllocation.clear();
   }
 }
@@ -186,7 +193,7 @@ class CodeGenerator {
   }
 
   void _generateClause(AnnotatedClause clause, CodeGenContext ctx, String nextLabel, bool isLastClause) {
-    ctx.resetTemps(clause.varTable.getAllVars().length);
+    ctx.resetTemps(clause.varTable.getAllVars().length, clause.ast.head.arity);
     ctx.seenHeadVars.clear();  // Clear head variable tracking for new clause
 
     // Emit label for non-first clauses

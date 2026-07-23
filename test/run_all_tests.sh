@@ -2376,6 +2376,30 @@ check "Y2 runtime-control meta dumps on abort" "Rd = \[merge(\[1, 2\], \[3\]" "$
 echo ""
 
 # =============================================================================
+# Section Z: Engine regression — high-arity clause dispatch
+# =============================================================================
+# A multi-clause committed-choice procedure of arity >= 11, whose selected clause
+# builds a compound in its head output ([t(...)|Out?]), must commit. It used to
+# fail (R left unbound) because the engine hard-coded 10 argument registers —
+# operand slots >= 10 were read as temp/clause registers, so the 11th argument
+# (the output at slot 10) was misread and the head never matched. Fixed by
+# classifying an operand against the goal's actual argument set (runner.dart) and
+# keeping temp registers above the arity (codegen.dart). The code-format spec
+# makes argSlot an unbounded clen, so there is no 10-argument cap.
+echo "=== Section Z: Engine regression — high-arity clause dispatch ==="
+
+z_arity=$("$REPL_RUN" <<HEREDOC
+$GLP_DIR/programs/tests/test_arity_dispatch_bug.glp
+hi(yes, 1, 2, 3, 4, 5, 6, 7, 8, 9, R).
+:quit
+HEREDOC
+2>&1)
+check "Z1 arity-11 head-constructing clause commits" "R = \[t(1, 2, 3, 4, 5)\]" "$z_arity"
+check_not "Z2 arity-11 output not left unbound" "R = <unbound>" "$z_arity"
+
+echo ""
+
+# =============================================================================
 # SUMMARY
 # =============================================================================
 TOTAL=$((PASS + FAIL))

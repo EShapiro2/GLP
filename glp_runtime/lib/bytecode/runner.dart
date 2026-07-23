@@ -1821,7 +1821,12 @@ mixin OpExecutors {
   /// σ̂w (advance); an unbound reader is added to Si (advance — resolved at
   /// commit); a bound non-nil / structure mismatches (nextClause).
   StepOutcome execHeadNil(RunnerContext cx, int argSlot) {
-    final bool isClauseVar = argSlot >= 10;
+    // A clause/temp register (not a top-level argument slot) iff it is not one of
+    // the current goal's argument positions (slots 0..arity-1). Replaces a
+    // hard-coded `argSlot >= 10` that capped argument registers at 10 and misread
+    // the 11th+ argument of a high-arity goal as a temp register (arity-dispatch
+    // bug; codegen keeps temp indices above the arity so they never alias).
+    final bool isClauseVar = !cx.env.argBySlot.containsKey(argSlot);
     final arg = isClauseVar ? null : _getArg(cx, argSlot);
 
     if (isClauseVar) {
@@ -2027,7 +2032,12 @@ mixin OpExecutors {
   /// reader → suspend (Si); mismatch → next clause.
   StepOutcome execHeadStructure(
       RunnerContext cx, String functor, int arity, int argSlot) {
-    final bool isClauseVar = argSlot >= 10;
+    // A clause/temp register (not a top-level argument slot) iff it is not one of
+    // the current goal's argument positions (slots 0..arity-1). Replaces a
+    // hard-coded `argSlot >= 10` that capped argument registers at 10 and misread
+    // the 11th+ argument of a high-arity goal as a temp register (arity-dispatch
+    // bug; codegen keeps temp indices above the arity so they never alias).
+    final bool isClauseVar = !cx.env.argBySlot.containsKey(argSlot);
     final arg = isClauseVar ? null : _getArg(cx, argSlot);
 
     if (!isClauseVar && arg == null) {
