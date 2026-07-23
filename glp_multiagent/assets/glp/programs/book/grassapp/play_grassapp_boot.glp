@@ -1,6 +1,6 @@
 %% play_grassapp_boot.glp — single-isolate GrassApp scenario.
 %%
-%% Bob is the live-UI agent (agent/5, holding(bob, 10)). Alice, Charlie, Dana,
+%% Bob is the live-UI agent (agent/7, minted 10 own coins at maturity 0). Alice, Charlie, Dana,
 %% and Eve are actors that cold-call Bob and, once he accepts, transact with
 %% him — so his wallet, chats, and inbox come alive:
 %%   - Alice mints, pays Bob, and proposes a swap;
@@ -62,21 +62,21 @@ reply_of(eve, lovely_day_isnt_it).
 procedure coin_actor(Constant?, Stream(UserNotify)?, Stream(UserCmd)).
 %% On becoming Bob's friend: mint, pay Bob some coins, and propose a swap.
 coin_actor(alice, [connected(bob) | Ns],
-    [mint(5) | [pay(bob, alice, 2) | [create_group(chess) | [invite_group(group_id(alice, chess), bob) | [propose_swap(bob, alice, 1, bob, 1) | Cs?]]]]]) :-
+    [mint(5, 0) | [pay(bob, alice, 0, 2) | [create_group(chess) | [invite_group(group_id(alice, chess), bob) | [trade(bob, alice, 0, 1, bob, 0, 1) | Cs?]]]]]) :-
     coin_drain(alice, Ns?, Cs).
 %% Charlie also exercises End friend (paper §4): after paying Bob he unfriends
 %% him, so Bob's UI surfaces unfriended(charlie) (the Integrate-unfriend path).
 coin_actor(charlie, [connected(bob) | Ns],
-    [mint(4) | [pay(bob, charlie, 1) | [unfriend(bob) | Cs?]]]) :-
+    [mint(4, 0) | [pay(bob, charlie, 0, 1) | [unfriend(bob) | Cs?]]]) :-
     coin_drain(charlie, Ns?, Cs).
 %% Dana mints, pays, and proposes a swap; once Bob accepts it she holds a
 %% bob-coin, and redeems it — Bob's agent fills back automatically.
 coin_actor(dana, [connected(bob) | Ns],
-    [mint(6) | [pay(bob, dana, 2) | [propose_swap(bob, dana, 2, bob, 1) | Cs?]]]) :-
+    [mint(6, 0) | [pay(bob, dana, 0, 2) | [trade(bob, dana, 0, 2, bob, 0, 1) | Cs?]]]) :-
     dana_await_swap(Ns?, Cs).
 %% Eve greets Bob in chat, then mints and pays him.
 coin_actor(eve, [connected(bob) | Ns],
-    [send(bob, welcome_to_grassroots_bob) | [mint(3) | [pay(bob, eve, 1) | Cs?]]]) :-
+    [send(bob, welcome_to_grassroots_bob) | [mint(3, 0) | [pay(bob, eve, 0, 1) | Cs?]]]) :-
     coin_drain(eve, Ns?, Cs).
 coin_actor(Me, [befriend(Who, Req) | Ns], [decision(yes, Who?, Req?) | Cs?]) :-
     ground(Me?), ground(Who?), ground(Req?) | coin_actor(Me?, Ns?, Cs).
@@ -84,9 +84,10 @@ coin_actor(Me, [_ | Ns], Cmds?) :- ground(Me?), otherwise | coin_actor(Me?, Ns?,
 coin_actor(_, [], []).
 
 %% Dana between the swap offer and its acceptance: answer chat, accept offers;
-%% on swap_done, redeem one bob-coin.
+%% on trade_completed, redeem one bob-coin (set-off against her own).
 procedure dana_await_swap(Stream(UserNotify)?, Stream(UserCmd)).
-dana_await_swap([swap_done(bob) | Ns], [redeem(bob, 1) | Cs?]) :-
+dana_await_swap([trade_completed(bob) | Ns],
+                [redeem(bob, bob, 0, 1, dana, 0, 1) | Cs?]) :-
     coin_drain(dana, Ns?, Cs).
 dana_await_swap([befriend(Who, Req) | Ns], [decision(yes, Who?, Req?) | Cs?]) :-
     ground(Who?), ground(Req?) | dana_await_swap(Ns?, Cs).
@@ -104,7 +105,7 @@ coin_drain(Me, [received(From, _) | Ns], [send(From?, R?) | Cs?]) :-
     ground(Me?), ground(From?) |
     reply_of(Me?, R),
     coin_drain(Me?, Ns?, Cs).
-coin_drain(Me, [swap_offer(From, _, _, _, _, Req) | Ns], [accept_swap(From?, Req?) | Cs?]) :-
+coin_drain(Me, [trade_proposed(From, _, _, _, Req) | Ns], [accept_trade(From?, Req?) | Cs?]) :-
     ground(Me?), ground(From?), ground(Req?) | coin_drain(Me?, Ns?, Cs).
 coin_drain(Me, [befriend(Who, Req) | Ns], [decision(yes, Who?, Req?) | Cs?]) :-
     ground(Me?), ground(Who?), ground(Req?) | coin_drain(Me?, Ns?, Cs).
@@ -121,24 +122,25 @@ coin_drain(_, [], []).
 
 %% --- Scenario boot (entered as Bob's agent_init) ---
 agent_init(bob, UserIn, _) :-
+    create_bonds(bob, 0, 10, 1, BobCash),
     agent(bob, BAgentIn?, BNetIn?,
-          [output('_user', BA2U) | [output('_net', BNetOut)]], [holding(bob, 10)]),
+          [output('_user', BA2U) | [output('_net', BNetOut)]], BobCash?, 11, 0),
     ui_mediator(bob, ch(BA2U?, BAgentIn), ch(UserIn?, BUserOut), [], 1),
     send_to_user(BUserOut?),
     agent(alice, AAgentIn?, ANetIn?,
-          [output('_user', AA2U) | [output('_net', ANetOut)]], []),
+          [output('_user', AA2U) | [output('_net', ANetOut)]], [], 1, 0),
     ui_mediator(alice, ch(AA2U?, AAgentIn), ch(ACmds?, AUserOut), [], 1),
     alice_actor(AUserOut?, ACmds),
     agent(charlie, CAgentIn?, CNetIn?,
-          [output('_user', CA2U) | [output('_net', CNetOut)]], []),
+          [output('_user', CA2U) | [output('_net', CNetOut)]], [], 1, 0),
     ui_mediator(charlie, ch(CA2U?, CAgentIn), ch(CCmds?, CUserOut), [], 1),
     charlie_actor(CUserOut?, CCmds),
     agent(dana, DAgentIn?, DNetIn?,
-          [output('_user', DA2U) | [output('_net', DNetOut)]], []),
+          [output('_user', DA2U) | [output('_net', DNetOut)]], [], 1, 0),
     ui_mediator(dana, ch(DA2U?, DAgentIn), ch(DCmds?, DUserOut), [], 1),
     dana_actor(DUserOut?, DCmds),
     agent(eve, EAgentIn?, ENetIn?,
-          [output('_user', EA2U) | [output('_net', ENetOut)]], []),
+          [output('_user', EA2U) | [output('_net', ENetOut)]], [], 1, 0),
     ui_mediator(eve, ch(EA2U?, EAgentIn), ch(ECmds?, EUserOut), [], 1),
     eve_actor(EUserOut?, ECmds),
     crossbar(ANetOut?, BNetOut?, CNetOut?, DNetOut?, ENetOut?,
@@ -146,22 +148,22 @@ agent_init(bob, UserIn, _) :-
 
 %% --- REPL test helpers: scripted command streams for inline goals. ---
 procedure script_cmds(Stream(UserCmd)).
-script_cmds([mint(3), balance]).
+script_cmds([mint(3, 0), balance]).
 
 procedure pay_script(Stream(UserCmd)).
-pay_script([pay(bob, alice, 2)]).
+pay_script([pay(bob, alice, 0, 2)]).
 
 %% Alice proposes: give 2 alice-coins, want 1 bob-coin.
 procedure swap_script(Stream(UserCmd)).
-swap_script([propose_swap(bob, alice, 2, bob, 1)]).
+swap_script([trade(bob, alice, 0, 2, bob, 0, 1)]).
 
-%% Alice redeems 2 of bob's coins.
+%% Alice redeems 2 of bob's coins, taking back 2 of her own (set-off).
 procedure redeem_script(Stream(UserCmd)).
-redeem_script([redeem(bob, 2)]).
+redeem_script([redeem(bob, bob, 0, 2, alice, 0, 2)]).
 
-%% Bob auto-accepts any swap offer.
+%% Bob auto-accepts any trade offer.
 procedure bob_swap_actor(Stream(UserNotify)?, Stream(UserCmd)).
-bob_swap_actor([swap_offer(From, _, _, _, _, Req)|Ns], [accept_swap(From?, Req?)|Cs?]) :-
+bob_swap_actor([trade_proposed(From, _, _, _, Req)|Ns], [accept_trade(From?, Req?)|Cs?]) :-
     ground(From?), ground(Req?) | bob_swap_actor(Ns?, Cs).
 bob_swap_actor([_|Ns], Cs?) :- otherwise | bob_swap_actor(Ns?, Cs).
 bob_swap_actor([], []).

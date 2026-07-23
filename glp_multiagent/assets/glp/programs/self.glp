@@ -27,8 +27,10 @@ Channel(In, Out) ::= ch(In, Out?).
 % close/1 defined guard, which consumes a closed read stream (see below).
 Closed ::= [].
 
-% Primitive types
-Constant ::= Number ; String.
+% Derived types.  The primitive types are Integer, Real, String and Module;
+% Number and Constant are defined here (TGLP appendix "GLP Language Primitives").
+Number ::= Integer ; Real.
+Constant ::= Number ; String ; Module.
 
 % Arithmetic expressions
 Exp ::= Number ; +(Exp, Exp) ; -(Exp, Exp) ; *(Exp, Exp) ; /(Exp, Exp) ; //(Exp, Exp) ; mod(Exp, Exp) ; neg(Exp).
@@ -44,7 +46,7 @@ procedure string(String?).
 procedure constant(Constant?).
 procedure compound(_?).
 procedure list(_?).
-procedure module(_?).
+procedure module(Module?).
 % Groundness guards
 procedure ground(_?).
 procedure known(_?).
@@ -95,7 +97,7 @@ procedure _output(_?).
 % =============================================================================
 
 % Assignment (unification)
-procedure =(_?, _).
+procedure =(X, X?).
 X? = X.
 
 % Difference list operations
@@ -409,6 +411,18 @@ Result? := ceil(X) :-
 
 procedure now(Integer).
 now(T?) :- '_now'(T).
+
+% =============================================================================
+% SEEDED RANDOM (random/4)
+% =============================================================================
+% random(Seed, N, Value, NextSeed): Value is a pseudo-random integer
+% 1 =< Value =< N; NextSeed is the next draw's seed.  Threading NextSeed from
+% each draw into the next reproduces exactly from an initial seed.  A body goal,
+% not a guard (GLP-ICLP appendix-guards §"Seeded random numbers").
+procedure random(Integer?, Integer?, Integer, Integer).
+random(Seed, N, Value?, NextSeed?) :-
+  integer(Seed?), integer(N?), N? >= 1 |
+  '_random'(Seed?, N?, Value, NextSeed).
 
 % =============================================================================
 % UNIV (=../2, ..=/2)
