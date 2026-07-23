@@ -2397,6 +2397,14 @@ HEREDOC
 check "Z1 arity-11 head-constructing clause commits" "R = \[t(1, 2, 3, 4, 5)\]" "$z_arity"
 check_not "Z2 arity-11 output not left unbound" "R = <unbound>" "$z_arity"
 
+z_body=$("$REPL_RUN" <<HEREDOC
+$GLP_DIR/programs/tests/test_arity_dispatch_bug.glp
+bp(5, R).
+:quit
+HEREDOC
+2>&1)
+check "Z3 arity>=11 body call places compound arg at slot 10" "R = r(5)" "$z_body"
+
 echo ""
 
 # =============================================================================

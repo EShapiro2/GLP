@@ -42,3 +42,17 @@ hip(no, _, _, Out?) :-
     lop(0, tt(0, 0, 0, 0, 0, 0, 0, 0), Out).
 procedure lop(Integer?, Pack?, TList).
 lop(_, _, []).
+
+% --- Body path: same bug on the goal-construction side ---------------------
+% A clause body calls a procedure of arity >= 11 and passes a COMPOUND term at
+% argument slot 10 (the 11th arg).  Before the fix the compound was built into a
+% temp register instead of the argument slot, so bq never received arg 10 and
+% failed.  bp(5, R) should give R = r(5).
+Thing ::= c(Integer).
+Result ::= r(Integer).
+exported procedure bp(Integer?, Result).
+bp(N, R?) :-
+    bq(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, c(N?), R).
+procedure bq(Integer?, Integer?, Integer?, Integer?, Integer?, Integer?, Integer?,
+             Integer?, Integer?, Integer?, Thing?, Result).
+bq(_, _, _, _, _, _, _, _, _, _, c(M), r(M?)).

@@ -1318,10 +1318,16 @@ mixin OpExecutors {
         ));
       }
       cx.clauseVars[-1] = writerAddr;
-      if (argSlot >= 0 && argSlot < 10) {
-        cx.clauseVars[-2] = argSlot; // remember target slot until complete
+      // Top-level argument of the body goal (place the completed structure into
+      // its argument register at completion) vs a nested sub-structure held in a
+      // temp register. Distinguish by nesting — the parent was pushed above iff
+      // currentStructure was non-null — not by `argSlot < 10`, which capped body
+      // arguments at 10 and misdirected the 11th+ compound argument into a temp
+      // register (arity-dispatch bug, body path).
+      if (argSlot >= 0 && cx.currentStructure == null) {
+        cx.clauseVars[-2] = argSlot; // top-level body arg: place into argSlots when complete
       } else {
-        cx.clauseVars[argSlot] = VarRef(writerAddr);
+        cx.clauseVars[argSlot] = VarRef(writerAddr); // nested sub-structure: temp register
       }
       cx.currentStructure =
           StructTerm(functor, List<Term>.filled(arity, ConstTerm(null)));
@@ -2282,7 +2288,7 @@ mixin OpExecutors {
                   .bindWriterStruct(targetWriterId, struct.functor, struct.args);
 
               final targetSlot = cx.clauseVars[-2];
-              if (targetSlot is int && targetSlot >= 0 && targetSlot < 10) {
+              if (targetSlot is int && targetSlot >= 0) {
                 cx.argSlots[targetSlot] =
                     VarRef(cx.rt.heap.pairedReaderAddr(targetWriterId));
                 cx.clauseVars.remove(-2);
@@ -2556,7 +2562,7 @@ mixin OpExecutors {
                       } else {
                         // No more ancestors - store in argSlots and reset
                         final parentTargetSlot = cx.clauseVars[-2];
-                        if (parentTargetSlot is int && parentTargetSlot >= 0 && parentTargetSlot < 10) {
+                        if (parentTargetSlot is int && parentTargetSlot >= 0) {
                           // Per spec v3.2: use readerForWriter() instead of +1 arithmetic
                           cx.argSlots[parentTargetSlot] = VarRef(cx.rt.heap.pairedReaderAddr(currentWriterAddrInt));  // reader addr
                           cx.clauseVars.remove(-2);
@@ -2575,7 +2581,7 @@ mixin OpExecutors {
                 } else {
                   // No parent - store in argSlots and reset
                   final targetSlot = cx.clauseVars[-2];
-                  if (targetSlot is int && targetSlot >= 0 && targetSlot < 10) {
+                  if (targetSlot is int && targetSlot >= 0) {
                     // Per spec v3.2: use readerForWriter() instead of +1 arithmetic
                     cx.argSlots[targetSlot] = VarRef(cx.rt.heap.pairedReaderAddr(targetWriterAddr!));  // reader addr
                     cx.clauseVars.remove(-2);
@@ -3124,7 +3130,7 @@ mixin OpExecutors {
               // (nested structures should not store until outermost is complete)
               if (!isReaderMode && cx.parentStack.isEmpty) {
                 final targetSlot = cx.clauseVars[-2];
-                if (targetSlot is int && targetSlot >= 0 && targetSlot < 10) {
+                if (targetSlot is int && targetSlot >= 0) {
                   // Per spec v3.2: use readerForWriter() instead of +1 arithmetic
                   cx.argSlots[targetSlot] = VarRef(cx.rt.heap.pairedReaderAddr(targetWriterAddr));  // reader addr
                   cx.clauseVars.remove(-2);
@@ -3179,7 +3185,7 @@ mixin OpExecutors {
                   } else {
                     // No more ancestors - store in argSlots and reset
                     final parentTargetSlot = cx.clauseVars[-2];
-                    if (parentTargetSlot is int && parentTargetSlot >= 0 && parentTargetSlot < 10) {
+                    if (parentTargetSlot is int && parentTargetSlot >= 0) {
                       // Use reader address (writer + 1) for argSlots
                       cx.argSlots[parentTargetSlot] = VarRef(currentWriterAddrInt + 1);
                       cx.clauseVars.remove(-2);
@@ -3356,7 +3362,7 @@ mixin OpExecutors {
                   } else {
                     // No more ancestors - store in argSlots and reset
                     final parentTargetSlot = cx.clauseVars[-2];
-                    if (parentTargetSlot is int && parentTargetSlot >= 0 && parentTargetSlot < 10) {
+                    if (parentTargetSlot is int && parentTargetSlot >= 0) {
                       // Use reader address (writer + 1)
                       cx.argSlots[parentTargetSlot] = VarRef(currentWriterAddrInt + 1);
                       cx.clauseVars.remove(-2);
