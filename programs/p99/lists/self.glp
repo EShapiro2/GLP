@@ -104,6 +104,18 @@ imported procedure p22#range(Integer?, Integer?, IntList).
 exported procedure range(Integer?, Integer?, IntList).
 range(I, K, R?) :- p22 # range(I?, K?, R).
 
+imported procedure p23#rnd_select(CList?, Integer?, Integer?, CList).
+exported procedure rnd_select(CList?, Integer?, Integer?, CList).
+rnd_select(L, N, S, R?) :- p23 # rnd_select(L?, N?, S?, R).
+
+imported procedure p24#lotto(Integer?, Integer?, Integer?, IntList).
+exported procedure lotto(Integer?, Integer?, Integer?, IntList).
+lotto(N, M, S, R?) :- p24 # lotto(N?, M?, S?, R).
+
+imported procedure p25#rnd_permu(CList?, Integer?, CList).
+exported procedure rnd_permu(CList?, Integer?, CList).
+rnd_permu(L, S, R?) :- p25 # rnd_permu(L?, S?, R).
+
 imported procedure p26#combinations(Integer?, Integer?, Stream(IntList)).
 exported procedure combinations(Integer?, Integer?, Stream(IntList)).
 combinations(K, N, Sols?) :- p26 # combinations(K?, N?, Sols).

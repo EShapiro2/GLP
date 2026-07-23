@@ -1,0 +1,47 @@
+% P23: select N random elements from a list, without replacement.  Seeded via
+% random/4 (root self.glp): each draw takes Value in 1..Len and removes that
+% element; thread NextSeed from each draw into the next for a reproducible run.
+% N > length returns the whole list in random order (min(N, length) elements).
+%
+% Parameterized over the element type (Stream(X)) so the same selection serves
+% lists of constants (P25) and the integer pool of the lottery (P24).
+
+exported procedure rnd_select(Stream(X)?, Integer?, Integer?, Stream(X)).
+rnd_select(_, N, _, []) :- N? =< 0 | true.
+rnd_select(L, N, Seed, R?) :- N? > 0 |
+    measure(L?, Len, L2), rs(L2?, N?, Len?, Seed?, R).
+
+% rnd_permu (P25) is selection of all the elements; measured once here so the
+% caller reads its list only once.
+exported procedure rnd_select_all(Stream(X)?, Integer?, Stream(X)).
+rnd_select_all(L, Seed, R?) :-
+    measure(L?, Len, L2), rs(L2?, Len?, Len?, Seed?, R).
+
+% measure(L, Len, L2): Len = length(L) and L2 a fresh copy of L, so the list is
+% read once (the cons structure is walked a single time).
+procedure measure(Stream(X)?, Integer, Stream(X)).
+measure([], 0, []).
+measure([X|Xs], N?, [X?|Ys?]) :- measure(Xs?, M, Ys), N := M? + 1.
+
+% rs(L, N, Len, Seed, R): Len = length(L); draw min(N, Len) elements at random,
+% threading Seed.  Len is decremented alongside each removal.
+procedure rs(Stream(X)?, Integer?, Integer?, Integer?, Stream(X)).
+rs(_, N, _, _, []) :- N? =< 0 | true.
+rs([], _, _, _, []).
+rs(L, N, Len, Seed, R?) :- N? > 0, Len? >= 1 |
+    random(Seed?, Len?, V, Seed1),
+    take_at(L?, V?, M, Rest),
+    rs_take(M?, Rest?, N?, Len?, Seed1?, R).
+
+% take_at(L, K, M, Rest): remove the K-th element (1-based).  Total; V in 1..Len
+% makes found(Y) the only live case, none cannot arise.
+procedure take_at(Stream(X)?, Integer?, Maybe(X), Stream(X)).
+take_at([], _, none, []).
+take_at([X|Xs], 1, found(X?), Xs?).
+take_at([X|Xs], K, M?, [X?|R?]) :- K? > 1 | K1 := K? - 1, take_at(Xs?, K1?, M, R).
+take_at([X|Xs], K, none, [X?|Xs?]) :- K? < 1 | true.
+
+procedure rs_take(Maybe(X)?, Stream(X)?, Integer?, Integer?, Integer?, Stream(X)).
+rs_take(found(Y), Rest, N, Len, Seed, [Y?|R?]) :-
+    N1 := N? - 1, Len1 := Len? - 1, rs(Rest?, N1?, Len1?, Seed?, R).
+rs_take(none, _, _, _, _, []).

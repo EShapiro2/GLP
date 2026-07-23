@@ -1,0 +1,8 @@
+% P25: a random permutation of a list.  Seeded: select all of the list's
+% elements at random (P23's rnd_select_all measures the length in one walk, so
+% the input list is read only once).
+
+imported procedure p23#rnd_select_all(CList?, Integer?, CList).
+
+exported procedure rnd_permu(CList?, Integer?, CList).
+rnd_permu(L, Seed, R?) :- p23 # rnd_select_all(L?, Seed?, R).

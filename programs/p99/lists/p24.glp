@@ -1,0 +1,10 @@
+% P24: draw N different random numbers from the range 1..M (a lottery).  Seeded:
+% build the pool 1..M (P22) and select N of it at random (P23's rnd_select,
+% instantiated at Integer), threading Seed.
+
+imported procedure p22#range(Integer?, Integer?, IntList).
+imported procedure p23#rnd_select(IntList?, Integer?, Integer?, IntList).
+
+exported procedure lotto(Integer?, Integer?, Integer?, IntList).
+lotto(N, M, Seed, R?) :-
+    p22 # range(1, M?, Pool), p23 # rnd_select(Pool?, N?, Seed?, R).
