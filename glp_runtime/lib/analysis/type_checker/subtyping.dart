@@ -1,7 +1,8 @@
 // lib/analysis/type_checker/subtyping.dart
 //
 // Subtyping for GLP output types.
-// Specification: docs/type system/subtyping.md
+// Specification: TGLP (Moded-Types), sections/well-typing.tex §Subtyping;
+// algorithm in sections/appendix-implementation-notes.tex §Subtype Checking
 // Paper Reference: Section 4.6, Definition 4.7 (Subtyping)
 //
 // A <: B iff every simple prefix of A is accepted by B,
@@ -19,7 +20,9 @@ bool isSubtype(DFAState stateA, DFAState stateB, ProgramDFA dfa) {
   return _isSubtype(stateA, stateB, dfa, <String>{});
 }
 
-/// Structural type identity (typed-program §20.3): two base type names denote
+/// Structural type identity (TGLP sections/modules.tex, "Structural type
+/// compatibility": two types with the same type automaton are compatible,
+/// regardless of their names or defining modules): two base type names denote
 /// the same type if they are equal, or if their output automata are mutually
 /// subtypes — e.g. the named list alias `OutputsList` / `FriendStream` and
 /// `Stream<OutputEntry>` / `Stream<FriendMsg>`.  Equality already honours
@@ -74,7 +77,7 @@ bool _isSubtype(
   // A primitive against a defined type: the defined type accepts it when the
   // primitive is among those its bare type-name alternatives reach.  This is
   // what makes `Integer <: Number` and `Integer <: Constant` derive from
-  // `Number ::= Integer ; Real.` and `Constant ::= Number ; String ; Module ; [].`
+  // `Number ::= Integer ; Real.` and `Constant ::= Number ; String ; Module.`
   if (stateA.isPrimitiveType) {
     final automB = dfa.automata[stateB.name];
     return automB != null && automB.acceptedPrimitives.contains(stateA.baseName);

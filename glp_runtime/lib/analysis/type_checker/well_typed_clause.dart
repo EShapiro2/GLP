@@ -30,7 +30,8 @@ import '../../compiler/ast.dart' as ast;
 /// produces plus the scope (env/dfa) in which it was inferred — that scope
 /// already holds the concrete types, so the parameterized procedure's defining
 /// clauses can be re-checked against this instantiation without any merged env.
-/// See docs/type system/typed-program.md (Parameterized Procedure Declarations)
+/// See TGLP (Moded-Types), sections/parameterized-types.tex (Parameterised
+/// Procedure Declarations)
 /// and docs/glp-a5-stage-b-plan.md Step 1.
 class CollectedInstantiation {
   final String procKey;        // "name/arity" of the parameterized procedure

@@ -395,7 +395,7 @@ Write a handover document when:
 | Project | Location |
 |---------|----------|
 | Multiagent GLP | `docs/ma/` |
-| Typed GLP | `docs/type system/` |
+| Typed GLP | `docs/handover/` (its specs live in the TGLP paper) |
 | General/Other | `docs/handover/` |
 
 ### 3.3 Handover Document Format
@@ -477,7 +477,7 @@ Examples:
 |---------|---------------|------------|
 | Overview GLP | Consistency, testing, structure | All files (coordination) |
 | Multiagent GLP | Multiagent implementation | `lib/multiagent/`, `glp_multiagent/`, `programs/multiagent/` |
-| Typed GLP | Type system | `lib/analysis/`, `docs/type system/` |
+| Typed GLP | Type system | `lib/analysis/`; its specs live in the TGLP paper |
 | Book GLP | Book content | `programs/book/`, `programs/typed_book/` |
 | ICLP GLP | Paper | `GLP-ICLP-2026/` |
 
@@ -541,7 +541,7 @@ Public APIs require doc comments:
 ```dart
 /// Checks if the clause is well-typed according to the procedure declaration.
 ///
-/// Implements: docs/type system/well-typed-clause.md
+/// Implements: TGLP (Moded-Types), sections/well-typing.tex Definition "Well-Typed Clause"
 /// 
 /// Returns [WellTypedResult] with success/failure and any errors.
 WellTypedResult checkClause(Clause clause, ProcDecl decl) { ... }
@@ -671,7 +671,7 @@ cd glp_multiagent && flutter build macos
 | Project descriptions | `docs/projects/` |
 | Test scripts | `test/` |
 | Multiagent specs | `docs/ma/` |
-| Type system specs | `docs/type system/` |
+| Type system specs | the TGLP paper, `/Grassroots/TGLP/sections/` |
 | Heap specs | `docs/heap/` |
 | Programs | `programs/` |
 | FCP reference source | `/Users/udi/Dropbox/Concurrent Prolog/FCP/Merged EMULATOR/` |

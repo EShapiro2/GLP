@@ -3,7 +3,7 @@
 // Expand parameterized types to monomorphic equivalents.
 // Runs after parsing and before type automaton construction.
 //
-// Spec: docs/type system/typed-program.md, section "Parameterized Types"
+// Spec: TGLP (Moded-Types), sections/appendix-implementation-notes.tex §Parameterised-Type Expansion
 // Paper: Section 8, Definition 8.1
 
 import '../../compiler/ast.dart' as ast;
