@@ -1,7 +1,7 @@
 // lib/analysis/type_checker/well_typed_clause.dart
 //
 // Well-typed clause checking for GLP type system.
-// Specification: docs/type system/well-typed-clause.md v0.9
+// Specification: TGLP (Moded-Types), sections/well-typing.tex Definition "Well-Typed Clause"
 // Paper Reference: Definition 5.7 (Well-Typed Clause)
 //
 // A clause H :- G | B is well-typed if:

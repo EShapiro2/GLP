@@ -1,7 +1,7 @@
 // lib/analysis/type_checker/moded_head.dart
 //
 // Moded head construction for GLP type checking.
-// Specification: docs/type system/moded-head.md v0.8
+// Specification: TGLP (Moded-Types), sections/well-typing.tex Definition "Moded Head"
 // Paper Reference: Definition 5.5 (moded head)
 //
 // Constructs a moded head H' from a clause head H and a procedure declaration.

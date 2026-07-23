@@ -1,7 +1,7 @@
 // lib/analysis/type_checker/well_typed_term.dart
 //
 // Well-typed moded term checking for GLP type system.
-// Specification: docs/type system/well-typed-term.md v0.7
+// Specification: TGLP (Moded-Types), sections/well-typing.tex Definition "Well-Typed Moded Term"
 // Paper Reference: Definition 5.4 (Well-Typed Moded Term)
 //
 // Determines when a moded term is well-typed by an automaton by checking path

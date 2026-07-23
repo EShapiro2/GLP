@@ -1,7 +1,7 @@
 // lib/analysis/type_checker/type_conversion.dart
 //
 // Converts Term AST (from unified parser) to TypeExpr AST for type definitions.
-// Per spec: /Users/udi/GLP/docs/type system/type-conversion.md
+// Specification: TGLP (Moded-Types), sections/well-typing.tex
 
 import '../../compiler/ast.dart';
 import 'type_ast.dart';

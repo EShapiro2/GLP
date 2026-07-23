@@ -1,7 +1,7 @@
 // lib/analysis/type_checker/clause_validation.dart
 //
 // Validates Term AST nodes in program clause contexts.
-// Per spec: /Users/udi/GLP/docs/type system/clause-validation.md
+// Specification: TGLP (Moded-Types), sections/well-typing.tex Definition "Well-Typed Clause"
 
 import '../../compiler/ast.dart';
 import '../../compiler/error.dart';
