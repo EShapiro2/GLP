@@ -12,9 +12,12 @@
 %% A coin is a bond mature by the holder's own local clock (Def. 2: cent_{q,d}
 %% is a coin at date t iff d =< t); a maturity-0 bond is a coin from the outset.
 %%
-%% Exported (called by the agent loop): create_bonds, select_bonds_by_spec,
-%% select_matured_by_spec, classify_trade, build_menu.  The rest are internal.
-%% append/3 is provided by the ancestor self.glp (resolved unqualified).
+%% Exported (called by the agent loop): create_bonds, append,
+%% select_bonds_by_spec, select_matured_by_spec, classify_trade, build_menu.
+%% The rest are internal helpers.  This module is self-contained: it depends
+%% only on the Bond/Lot type declarations and root-self.glp primitives, so a
+%% different agent (e.g. GrassApp) can lift it by importing txn# and providing
+%% the Bond/Lot types.
 
 
 %% =============================================================================
@@ -29,6 +32,15 @@ create_bonds(Issuer, Maturity, K, Serial,
     S1 := Serial? + 1,
     create_bonds(Issuer?, Maturity?, K1?, S1?, Rest).
 create_bonds(_, _, 0, _, []).
+
+%% =============================================================================
+%% APPEND — Append two bond lists (self-contained here so the module lifts
+%% without a hidden self.glp dependency)
+%% =============================================================================
+
+exported procedure append(Stream(Bond)?, Stream(Bond)?, Stream(Bond)).
+append([X|Xs], Ys, [X?|Zs?]) :- append(Xs?, Ys?, Zs).
+append([], Ys, Ys?).
 
 %% =============================================================================
 %% SELECT_BONDS_EXACT — Select K bonds with exact Issuer+Maturity

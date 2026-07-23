@@ -21,6 +21,7 @@
 %% =============================================================================
 
 imported procedure txn#create_bonds(Constant?, Constant?, Constant?, Constant?, Stream(Bond)).
+imported procedure txn#append(Stream(Bond)?, Stream(Bond)?, Stream(Bond)).
 imported procedure txn#select_bonds_by_spec(Stream(Lot)?, Stream(Bond)?, Constant, Stream(Bond), Stream(Bond)).
 imported procedure txn#select_matured_by_spec(Stream(Lot)?, Constant?, Constant?, Stream(Bond)?, Constant, Stream(Bond), Stream(Bond)).
 imported procedure txn#classify_trade(Constant?, Stream(Lot)?, Stream(Bond)?, Constant).
@@ -70,7 +71,7 @@ do_trade_result(ok, Id, Target, WantSpec, Selected, Remaining, UserIn, NetIn, Ou
     inject_trade_result(TradeResp?, Target?, UserIn?, UserIn1),
     agent(Id?, UserIn1?, NetIn?, Outs1?, Remaining?, NextSerial?, Clock?).
 do_trade_result(fail, Id, Target, _, Selected, Remaining, UserIn, NetIn, Outs, NextSerial, Clock) :-
-    append(Selected?, Remaining?, OrigHoldings),
+    txn # append(Selected?, Remaining?, OrigHoldings),
     send_user( msg(agent, '_user', trade_failed(Target?)), Outs?, Outs1),
     agent(Id?, UserIn?, NetIn?, Outs1?, OrigHoldings?, NextSerial?, Clock?).
 
@@ -95,7 +96,7 @@ do_redeem_result(ok, Id, Target, WantSpec, Selected, Remaining, UserIn, NetIn, O
     inject_trade_result(TradeResp?, Target?, UserIn?, UserIn1),
     agent(Id?, UserIn1?, NetIn?, Outs1?, Remaining?, NextSerial?, Clock?).
 do_redeem_result(fail, Id, Target, _, Selected, Remaining, UserIn, NetIn, Outs, NextSerial, Clock) :-
-    append(Selected?, Remaining?, OrigHoldings),
+    txn # append(Selected?, Remaining?, OrigHoldings),
     send_user( msg(agent, '_user', trade_failed(Target?)), Outs?, Outs1),
     agent(Id?, UserIn?, NetIn?, Outs1?, OrigHoldings?, NextSerial?, Clock?).
 
@@ -106,12 +107,12 @@ do_redeem_result(fail, Id, Target, _, Selected, Remaining, UserIn, NetIn, Outs, 
 procedure handle_trade_fill(Constant?, Constant?, Constant?, TradeResponse, Stream(Bond)?, Stream(Bond)?, Stream(Bond)?, Stream(UserInMsg)?, Stream(NetInMsg)?, Stream(OutputEntry)?, Constant?, Constant?).
 %% Can fill: bind accept(our bonds), take offered bonds, notify user
 handle_trade_fill(ok, Id, From, trade_accept(Selected?), OfferedBonds, Selected, Remaining, UserIn, NetIn, Outs, NextSerial, Clock) :-
-    append(Remaining?, OfferedBonds?, NewHoldings),
+    txn # append(Remaining?, OfferedBonds?, NewHoldings),
     send_user( msg(agent, '_user', trade_completed(From?)), Outs?, Outs1),
     agent(Id?, UserIn?, NetIn?, Outs1?, NewHoldings?, NextSerial?, Clock?).
 %% Can't fill: bind decline(offered bonds back), reconstruct own holdings
 handle_trade_fill(fail, Id, From, trade_decline(OfferedBonds?), OfferedBonds, Selected, Remaining, UserIn, NetIn, Outs, NextSerial, Clock) :-
-    append(Selected?, Remaining?, OrigHoldings),
+    txn # append(Selected?, Remaining?, OrigHoldings),
     send_user( msg(agent, '_user', trade_failed(From?)), Outs?, Outs1),
     agent(Id?, UserIn?, NetIn?, Outs1?, OrigHoldings?, NextSerial?, Clock?).
 
@@ -125,7 +126,7 @@ procedure trade_dispatch(Constant?, Constant?, Constant?, Stream(Lot)?, Stream(B
 %% Payment — auto-accept (proposer gives coins, wants nothing)
 trade_dispatch(payment, Id, From, _, OfferedBonds, trade_accept([]),
     Holdings, UserIn, NetIn, Outs, NextSerial, Clock) :-
-    append(Holdings?, OfferedBonds?, NewHoldings),
+    txn # append(Holdings?, OfferedBonds?, NewHoldings),
     send_user( msg(agent, '_user', trade_completed(From?)), Outs?, Outs1),
     agent(Id?, UserIn?, NetIn?, Outs1?, NewHoldings?, NextSerial?, Clock?).
 
@@ -157,7 +158,7 @@ procedure redemption_result(Constant?, Constant?, Constant?, TradeResponse, Stre
 redemption_result(ok, Id, From, trade_accept(Selected?), OfferedBonds,
     Selected, Remaining,
     UserIn, NetIn, Outs, NextSerial, Clock) :-
-    append(Remaining?, OfferedBonds?, NewHoldings),
+    txn # append(Remaining?, OfferedBonds?, NewHoldings),
     send_user( msg(agent, '_user', trade_completed(From?)), Outs?, Outs1),
     agent(Id?, UserIn?, NetIn?, Outs1?, NewHoldings?, NextSerial?, Clock?).
 
@@ -165,7 +166,7 @@ redemption_result(ok, Id, From, trade_accept(Selected?), OfferedBonds,
 redemption_result(fail, Id, From, trade_decline_menu(OfferedBonds?, Menu?), OfferedBonds,
     Selected, Remaining,
     UserIn, NetIn, Outs, NextSerial, Clock) :-
-    append(Selected?, Remaining?, OrigHoldings),
+    txn # append(Selected?, Remaining?, OrigHoldings),
     redemption_reject(Id?, From?, OrigHoldings?, Menu,
         UserIn?, NetIn?, Outs?, NextSerial?, Clock?).
 
@@ -199,7 +200,7 @@ do_deposit_escrow_result(ok, Id, Target, ReleaseTime, Selected, Remaining, UserI
         Outs1?, Outs2),
     agent(Id?, UserIn1?, NetIn?, Outs2?, Remaining?, NextSerial?, Clock?).
 do_deposit_escrow_result(fail, Id, Target, _, Selected, Remaining, UserIn, NetIn, Outs, NextSerial, Clock) :-
-    append(Selected?, Remaining?, OrigHoldings),
+    txn # append(Selected?, Remaining?, OrigHoldings),
     send_user( msg(agent, '_user', escrow_failed(Target?)), Outs?, Outs1),
     agent(Id?, UserIn?, NetIn?, Outs1?, OrigHoldings?, NextSerial?, Clock?).
 
@@ -225,7 +226,7 @@ agent(Id, [msg('_user', Id1, mint(K, Maturity))|UserIn], NetIn, Outs, Holdings, 
     Id? =?= Id1?, ground(K?), ground(Maturity?) |
     NewNextSerial := NextSerial? + K?,
     txn # create_bonds(Id?, Maturity?, K?, NextSerial?, NewBonds),
-    append(Holdings?, NewBonds?, NewHoldings),
+    txn # append(Holdings?, NewBonds?, NewHoldings),
     send_user( msg(agent, '_user', minted(K?, Maturity?)), Outs?, Outs1),
     agent(Id?, UserIn?, NetIn?, Outs1?, NewHoldings?, NewNextSerial?, Clock?).
 
@@ -293,21 +294,21 @@ agent(Id, [msg('_user', Id1, redeem(Target, GiveSpec, WantSpec))|UserIn],
 %% Proposer: trade_complete (injected — accept)
 agent(Id, [trade_complete(From, TheirBonds)|UserIn], NetIn, Outs, Holdings, NextSerial, Clock) :-
     ground(Id?), ground(From?), ground(TheirBonds?) |
-    append(Holdings?, TheirBonds?, NewHoldings),
+    txn # append(Holdings?, TheirBonds?, NewHoldings),
     send_user( msg(agent, '_user', trade_completed(From?)), Outs?, Outs1),
     agent(Id?, UserIn?, NetIn?, Outs1?, NewHoldings?, NextSerial?, Clock?).
 
 %% Proposer: trade_returned_bonds (injected — decline)
 agent(Id, [trade_returned_bonds(From, OurBonds)|UserIn], NetIn, Outs, Holdings, NextSerial, Clock) :-
     ground(Id?), ground(From?), ground(OurBonds?) |
-    append(Holdings?, OurBonds?, NewHoldings),
+    txn # append(Holdings?, OurBonds?, NewHoldings),
     send_user( msg(agent, '_user', trade_returned(From?)), Outs?, Outs1),
     agent(Id?, UserIn?, NetIn?, Outs1?, NewHoldings?, NextSerial?, Clock?).
 
 %% Proposer: trade returned with menu (redemption rejected — menu of available bonds)
 agent(Id, [trade_returned_bonds_menu(From, OurBonds, Menu)|UserIn], NetIn, Outs, Holdings, NextSerial, Clock) :-
     ground(Id?), ground(From?), ground(OurBonds?), ground(Menu?) |
-    append(Holdings?, OurBonds?, NewHoldings),
+    txn # append(Holdings?, OurBonds?, NewHoldings),
     send_user( msg(agent, '_user', trade_returned_menu(From?, Menu?)), Outs?, Outs1),
     agent(Id?, UserIn?, NetIn?, Outs1?, NewHoldings?, NextSerial?, Clock?).
 
@@ -352,7 +353,7 @@ agent(Id, [escrow_dep_expired(Target)|UserIn], NetIn, Outs, Holdings, NextSerial
 %% Depositor: escrow returned (injected — cancel succeeded, bonds back)
 agent(Id, [escrow_dep_returned(Target, OurBonds)|UserIn], NetIn, Outs, Holdings, NextSerial, Clock) :-
     ground(Id?), ground(Target?), ground(OurBonds?) |
-    append(Holdings?, OurBonds?, NewHoldings),
+    txn # append(Holdings?, OurBonds?, NewHoldings),
     send_user( msg(agent, '_user', escrow_returned(Target?)), Outs?, Outs1),
     agent(Id?, UserIn?, NetIn?, Outs1?, NewHoldings?, NextSerial?, Clock?).
 
@@ -375,7 +376,7 @@ agent(Id, UserIn, [msg(From, Id1, escrow_offer(ReleaseTime, BenResult))|NetIn],
 %% Beneficiary: escrow released (injected — time passed, bonds received)
 agent(Id, [escrow_ben_released(From, Bonds)|UserIn], NetIn, Outs, Holdings, NextSerial, Clock) :-
     ground(Id?), ground(From?), ground(Bonds?) |
-    append(Holdings?, Bonds?, NewHoldings),
+    txn # append(Holdings?, Bonds?, NewHoldings),
     send_user( msg(agent, '_user', escrow_released(From?)), Outs?, Outs1),
     agent(Id?, UserIn?, NetIn?, Outs1?, NewHoldings?, NextSerial?, Clock?).
 
