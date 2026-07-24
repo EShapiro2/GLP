@@ -80,6 +80,12 @@ class UiRuntime {
     final (ctor, args) = ctorArgs(term);
     if (ctor.isEmpty) return;
 
+    // A notify may retire pending cards as well as land as a card or an
+    // activity of its own — an escrow expiring both removes its cancel offer
+    // and announces the release — so dismissal is applied first and does not
+    // consume the notify.
+    _applyDismissals(ctor, args);
+
     final ib = manifest.inboxMatch(ctor, args.length);
     if (ib != null) {
       final (panel, desc) = ib;
@@ -131,6 +137,22 @@ class UiRuntime {
   }
 
   // ---------------------------------------------------------------------------
+
+  /// Remove cards this notify retires: for each pending card, any of its
+  /// [InboxDesc.dismissedBy] entries matching this notify's constructor and
+  /// arity, whose named item equals the card's own item.
+  void _applyDismissals(String ctor, List<GTerm> args) {
+    if (inbox.isEmpty) return;
+    inbox.removeWhere((card) {
+      for (final d in card.desc.dismissedBy) {
+        if (d.notifyCtor != ctor || d.args.length != args.length) continue;
+        final i = d.args.indexOf(d.itemKey);
+        if (i < 0) continue;
+        if (formatTerm(args[i]) == card.itemKey) return true;
+      }
+      return false;
+    });
+  }
 
   Map<String, GTerm> _bind(List<String> names, List<GTerm> args) {
     final m = <String, GTerm>{};

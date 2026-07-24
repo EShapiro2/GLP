@@ -62,8 +62,8 @@ UserNotify  ::= befriend(Constant, ReqId)
               ; trade_failed(Constant)
               ; trade_returned(Constant)
               ; trade_returned_menu(Constant, Stream(Bond))
-              ; escrow_deposited(Constant, Constant, ReqId)
-              ; escrow_received(Constant, Constant)
+              ; escrow_deposited(Constant, Constant, Constant, Constant, Constant, ReqId)
+              ; escrow_received(Constant, Constant, Constant, Constant, Constant)
               ; escrow_released(Constant)
               ; escrow_cancelled(Constant)
               ; escrow_expired(Constant)
@@ -111,10 +111,12 @@ ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
 %% Escrow opened: the agent hands over the cancel-signal writer.  Hold it in the
 %% pending table as req(N) so the UI can cancel by id.
 ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
-    receive(msg(agent, '_user', escrow_deposited(Target, ReleaseTime, Cancel?)),
+    receive(msg(agent, '_user', escrow_deposited(Target, ReleaseTime, Coin, Maturity, Amount, Cancel?)),
             AgentCh?, AgentCh1),
-    ground(Target?), ground(ReleaseTime?) |
-    send(escrow_deposited(Target?, ReleaseTime?, req(N?)), UserCh?, UserCh1),
+    ground(Target?), ground(ReleaseTime?),
+    ground(Coin?), ground(Maturity?), ground(Amount?) |
+    send(escrow_deposited(Target?, ReleaseTime?, Coin?, Maturity?, Amount?, req(N?)),
+         UserCh?, UserCh1),
     N1 := N? + 1,
     ui_mediator(Id?, AgentCh1?, UserCh1?,
         [pending(req(N?), escrow_pending(Cancel)) | Ps?], N1?).
@@ -202,10 +204,12 @@ ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
 %% --- Agent-to-user: escrow settlement (ground pass-through) ---
 
 ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
-    receive(msg(agent, '_user', escrow_received(From, ReleaseTime)),
+    receive(msg(agent, '_user', escrow_received(From, ReleaseTime, Coin, Maturity, Amount)),
             AgentCh?, AgentCh1),
-    ground(From?), ground(ReleaseTime?) |
-    send(escrow_received(From?, ReleaseTime?), UserCh?, UserCh1),
+    ground(From?), ground(ReleaseTime?),
+    ground(Coin?), ground(Maturity?), ground(Amount?) |
+    send(escrow_received(From?, ReleaseTime?, Coin?, Maturity?, Amount?),
+         UserCh?, UserCh1),
     ui_mediator(Id?, AgentCh1?, UserCh1?, Ps?, N?).
 
 ui_mediator(Id, AgentCh, UserCh, Ps, N) :-

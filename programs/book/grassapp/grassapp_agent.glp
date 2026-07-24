@@ -36,9 +36,9 @@ OutputContent ::= befriend(Constant, Response?)
                 ; trade_returned(Constant)
                 ; trade_returned_menu(Constant, Stream(Bond))
                 ; trade_propose(Stream(Lot), Stream(Bond), TradeResponse?)
-                ; escrow_offer(Constant, EscrowBenResult)
-                ; escrow_deposited(Constant, Constant, EscrowCancel?)
-                ; escrow_received(Constant, Constant)
+                ; escrow_offer(Constant, Constant, Constant, Constant, EscrowBenResult)
+                ; escrow_deposited(Constant, Constant, Constant, Constant, Constant, EscrowCancel?)
+                ; escrow_received(Constant, Constant, Constant, Constant, Constant)
                 ; escrow_released(Constant)
                 ; escrow_cancelled(Constant)
                 ; escrow_expired(Constant)
@@ -371,20 +371,33 @@ inject_escrow_dep_result(escrow_expired, Target, Ys,
 inject_escrow_dep_result(R, Target, [Y|Ys], [Y?|Ys1?]) :-
     inject_escrow_dep_result(R?, Target?, Ys?, Ys1).
 
+%% The escrowed bonds leave Holdings, so no balance_report can describe them.
+%% Both sides therefore carry the lot scalars, and the wallet can show what is
+%% locked (Grassroots-Bonds §5; the Escrow section of the Currencies panel).
+procedure lot_scalars(Stream(Lot)?, Constant, Constant, Constant).
+lot_scalars([lot(I, M, A) | _], I?, M?, A?).
+
 %% Depositor: select the bonds, then open the escrow (or report failure).
 procedure do_deposit_escrow(Constant?, Constant?, Stream(Lot)?, Constant?, Stream(Bond)?, Constant?, Constant?, Stream(X)?, Stream(X)?, OutputsList?).
 do_deposit_escrow(Id, Target, GiveSpec, ReleaseTime, Holdings, NextSerial, Clock, UserIn, NetIn, Outs) :-
+    ground(GiveSpec?) |
+    lot_scalars(GiveSpec?, Coin, Maturity, Amount),
     select_bonds_by_spec(GiveSpec?, Holdings?, Status, Selected, Remaining),
-    do_deposit_escrow_result(Status?, Id?, Target?, ReleaseTime?, Selected?, Remaining?, NextSerial?, Clock?, UserIn?, NetIn?, Outs?).
+    do_deposit_escrow_result(Status?, Id?, Target?, ReleaseTime?, Coin?, Maturity?, Amount?, Selected?, Remaining?, NextSerial?, Clock?, UserIn?, NetIn?, Outs?).
 
-procedure do_deposit_escrow_result(Constant?, Constant?, Constant?, Constant?, Stream(Bond)?, Stream(Bond)?, Constant?, Constant?, Stream(X)?, Stream(X)?, OutputsList?).
-do_deposit_escrow_result(ok, Id, Target, ReleaseTime, Selected, Remaining, NextSerial, Clock, UserIn, NetIn, Outs) :-
+procedure do_deposit_escrow_result(Constant?, Constant?, Constant?, Constant?, Constant?, Constant?, Constant?, Stream(Bond)?, Stream(Bond)?, Constant?, Constant?, Stream(X)?, Stream(X)?, OutputsList?).
+do_deposit_escrow_result(ok, Id, Target, ReleaseTime, Coin, Maturity, Amount, Selected, Remaining, NextSerial, Clock, UserIn, NetIn, Outs) :-
+    ground(Coin?), ground(Maturity?), ground(Amount?) |
     escrow(ReleaseTime?, Selected?, CancelSignal?, BenResult, DepResult),
     inject_escrow_dep_result(DepResult?, Target?, UserIn?, UserIn1),
-    lookup_send(Target?, msg(Id?, Target?, escrow_offer(ReleaseTime?, BenResult?)), Outs?, Outs1),
-    lookup_send('_user', msg(agent, '_user', escrow_deposited(Target?, ReleaseTime?, CancelSignal)), Outs1?, Outs2),
+    lookup_send(Target?,
+        msg(Id?, Target?, escrow_offer(ReleaseTime?, Coin?, Maturity?, Amount?, BenResult?)),
+        Outs?, Outs1),
+    lookup_send('_user',
+        msg(agent, '_user', escrow_deposited(Target?, ReleaseTime?, Coin?, Maturity?, Amount?, CancelSignal)),
+        Outs1?, Outs2),
     after_change(Id?, Remaining?, NextSerial?, Clock?, UserIn1?, NetIn?, Outs2?).
-do_deposit_escrow_result(fail, Id, Target, _, Selected, Remaining, NextSerial, Clock, UserIn, NetIn, Outs) :-
+do_deposit_escrow_result(fail, Id, Target, _, _, _, _, Selected, Remaining, NextSerial, Clock, UserIn, NetIn, Outs) :-
     append(Selected?, Remaining?, OrigHoldings),
     lookup_send('_user', msg(agent, '_user', escrow_failed(Target?)), Outs?, Outs1),
     after_change(Id?, OrigHoldings?, NextSerial?, Clock?, UserIn?, NetIn?, Outs1?).
@@ -713,10 +726,13 @@ agent(Id, UserIn, [msg(From, Id1, trade_propose(WantSpec, OfferedBonds, TradeRes
         Holdings?, NextSerial?, Clock?, UserIn?, NetIn?, Outs?).
 
 %% A friend opened an escrow for me: watch its outcome, tell the user.
-agent(Id, UserIn, [msg(From, Id1, escrow_offer(ReleaseTime, BenResult))|NetIn], Outs, Holdings, NextSerial, Clock) :-
-    Id? =?= Id1?, ground(From?), ground(ReleaseTime?) |
+agent(Id, UserIn, [msg(From, Id1, escrow_offer(ReleaseTime, Coin, Maturity, Amount, BenResult))|NetIn], Outs, Holdings, NextSerial, Clock) :-
+    Id? =?= Id1?, ground(From?), ground(ReleaseTime?),
+    ground(Coin?), ground(Maturity?), ground(Amount?) |
     inject_escrow_ben_result(BenResult?, From?, UserIn?, UserIn1),
-    lookup_send('_user', msg(agent, '_user', escrow_received(From?, ReleaseTime?)), Outs?, Outs1),
+    lookup_send('_user',
+        msg(agent, '_user', escrow_received(From?, ReleaseTime?, Coin?, Maturity?, Amount?)),
+        Outs?, Outs1),
     agent(Id?, UserIn1?, NetIn?, Outs1?, Holdings?, NextSerial?, Clock?).
 
 %% A friend unfriended me (paper §4 Integrate unfriend).

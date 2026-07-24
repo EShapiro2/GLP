@@ -91,7 +91,7 @@ depositor_wait_minted(T, [_|In], Out?) :-
 depositor_wait_minted(_, [], []).
 
 procedure depositor_wait_deposited(Stream(UserNotify)?, Stream(UserCmd)).
-depositor_wait_deposited([escrow_deposited(frank, _, _)|In], Out?) :-
+depositor_wait_deposited([escrow_deposited(frank, _, _, _, _, _)|In], Out?) :-
     depositor_wait_expired(In?, Out).
 depositor_wait_deposited([_|In], Out?) :-
     otherwise | depositor_wait_deposited(In?, Out).
@@ -120,7 +120,7 @@ beneficiary([_|In], Out?) :-
 beneficiary([], []).
 
 procedure beneficiary_wait_received(Stream(UserNotify)?, Stream(UserCmd)).
-beneficiary_wait_received([escrow_received(charlie, _)|In], Out?) :-
+beneficiary_wait_received([escrow_received(charlie, _, _, _, _)|In], Out?) :-
     beneficiary_wait_released(In?, Out).
 beneficiary_wait_received([_|In], Out?) :-
     otherwise | beneficiary_wait_received(In?, Out).

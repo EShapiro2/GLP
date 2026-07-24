@@ -80,6 +80,27 @@ class AnswerDesc {
   bool get needsPicker => fill.any((f) => f is PickerFill);
 }
 
+/// A notify that retires a card without it being answered.
+///
+/// Some pending reductions stop being available for reasons other than the
+/// person answering them: an escrow's cancel offer lapses the moment the escrow
+/// releases or comes home. The volition is then gone, so the card must go too —
+/// leaving it on screen would offer a choice the run can no longer take.
+///
+/// [notifyCtor]/[args] identify the retiring notify; [itemKey] names the
+/// argument holding the item the card is pinned to, so only the card for that
+/// counterparty (or group, or person) is removed.
+class DismissDesc {
+  final String notifyCtor;
+  final List<String> args;
+  final String itemKey;
+  const DismissDesc({
+    required this.notifyCtor,
+    required this.args,
+    required this.itemKey,
+  });
+}
+
 /// An inbox card: a Respond-shaped pending volition-guarded reduction — one
 /// `ReqId`-bearing `UserNotify`, its [answers] the sibling clauses. [args]
 /// names the notify's positional arguments so [title]/[subtitle] templates
@@ -97,6 +118,12 @@ class InboxDesc {
   final String title;
   final String? subtitle;
   final List<AnswerDesc> answers;
+
+  /// Notifies that retire this card unanswered (see [DismissDesc]). Empty for a
+  /// card that only ever leaves by being answered, which is every card of the
+  /// social graph — a friend offer stands until the person decides.
+  final List<DismissDesc> dismissedBy;
+
   const InboxDesc({
     required this.notifyCtor,
     required this.args,
@@ -104,6 +131,7 @@ class InboxDesc {
     required this.title,
     this.subtitle,
     required this.answers,
+    this.dismissedBy = const [],
   });
 }
 

@@ -51,10 +51,16 @@ void main() {
 
     // The escrow opened: the depositor holds a cancellable req id, and the
     // beneficiary is told before anything settles.
-    expect(all, contains('tagged(charlie, escrow_deposited(frank,'),
+    // Both sides carry the lot scalars, so the wallet can show what is locked
+    // (escrowed bonds leave Holdings, so no balance_report describes them).
+    expect(all, contains('escrow_deposited(frank, '),
         reason: 'no escrow_deposited for charlie in:\n$all');
-    expect(all, contains('tagged(frank, escrow_received(charlie,'),
+    expect(all, contains(', charlie, 0, 5, req('),
+        reason: 'escrow_deposited does not carry the 5 charlie-coins in:\n$all');
+    expect(all, contains('tagged(frank, escrow_received(charlie, '),
         reason: 'frank was not told of the escrow in:\n$all');
+    expect(all, contains('charlie, 0, 5))'),
+        reason: 'escrow_received does not carry the 5 charlie-coins in:\n$all');
 
     // The timer won the race, not the cancel.
     expect(all, contains('tagged(frank, escrow_released(charlie))'),

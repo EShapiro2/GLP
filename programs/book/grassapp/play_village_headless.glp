@@ -340,7 +340,7 @@ charlie_v_swapped(T, [_|In], Out?) :- otherwise | charlie_v_swapped(T?, In?, Out
 charlie_v_swapped(_, [], []).
 
 procedure charlie_v_deposited(Stream(UserNotify)?, Stream(UserCmd)).
-charlie_v_deposited([escrow_deposited(frank, _, _)|In], Out?) :-
+charlie_v_deposited([escrow_deposited(frank, _, _, _, _, _)|In], Out?) :-
     charlie_v_expired(In?, Out).
 charlie_v_deposited([_|In], Out?) :- otherwise | charlie_v_deposited(In?, Out).
 charlie_v_deposited([], []).
@@ -585,7 +585,7 @@ frank_v_offer_eve([], []).
 
 %% Op 5: Charlie's escrow for the dock arrives, then releases on time.
 procedure frank_v_escrow_in(Stream(UserNotify)?, Stream(UserCmd)).
-frank_v_escrow_in([escrow_received(charlie, _)|In], Out?) :-
+frank_v_escrow_in([escrow_received(charlie, _, _, _, _)|In], Out?) :-
     frank_v_escrow_out(In?, Out).
 frank_v_escrow_in([_|In], Out?) :- otherwise | frank_v_escrow_in(In?, Out).
 frank_v_escrow_in([], []).
