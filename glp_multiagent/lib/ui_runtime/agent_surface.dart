@@ -366,7 +366,8 @@ class _AgentSurfaceState extends State<AgentSurface> {
                     children: w.loansLabel == null
                         // No maturity axis: one undifferentiated list.
                         ? [for (final c in coins) _holdingTile(w, c, holds[c]!)]
-                        // Cash and loans are not the same thing: two sections.
+                        // Cash and loans are not the same thing: two sections,
+                        // plus what is locked in escrow and so held by neither.
                         : [
                             ..._holdingSection(w, holds,
                                 coins.where(_isCash).toList(), w.cashLabel),
@@ -375,6 +376,7 @@ class _AgentSurfaceState extends State<AgentSurface> {
                                 holds,
                                 coins.where((c) => !_isCash(c)).toList(),
                                 w.loansLabel!),
+                            ..._escrowSection(w, isSelf),
                           ],
                   ),
           ),
@@ -434,6 +436,38 @@ class _AgentSurfaceState extends State<AgentSurface> {
       ),
       for (final k in keys) _holdingTile(w, k, holds[k]!),
     ];
+  }
+
+  /// Bonds locked in escrow, shown only in the person's own wallet: they are
+  /// theirs to cancel, and they are not in anyone's holdings while locked.
+  List<Widget> _escrowSection(WalletView w, bool isSelf) {
+    if (!isSelf || w.escrowLabel == null) return const [];
+    final locked = _r.store.escrow[w.escrowKey] ?? const {};
+    if (locked.isEmpty) return const [];
+    return [
+      Padding(
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+        child: Text(w.escrowLabel!.toUpperCase(),
+            style: const TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+                color: Colors.black54)),
+      ),
+      for (final e in locked.entries) _escrowTile(w, e.key, e.value),
+    ];
+  }
+
+  Widget _escrowTile(WalletView w, String who, GTerm entry) {
+    final s = (entry is GStruct && entry.args.length >= 3) ? entry : null;
+    final issuer = s == null ? '' : formatTerm(s.args[0]);
+    final amount = s == null ? '' : formatTerm(s.args[2]);
+    final release = (s != null && s.args.length > 3) ? formatTerm(s.args[3]) : null;
+    return ListTile(
+      leading: const Icon(Icons.lock_clock, color: _accent),
+      title: Text('$amount ${_coinShort(issuer, w)} → ${_cap(who)}',
+          style: const TextStyle(fontWeight: FontWeight.w600)),
+      subtitle: Text(release == null ? 'in escrow' : 'releases $release'),
+    );
   }
 
   Widget _holdingTile(WalletView w, String key, GTerm amount) {

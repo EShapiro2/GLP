@@ -38,6 +38,11 @@ class ActivityStore {
   /// Keyed-balance store: `holdings[storeKey][owner][coin]` is an amount. The
   /// coins app's wallet — a person and the coins they hold.
   final Map<String, Map<String, Map<String, GTerm>>> holdings = {};
+
+  /// Bonds locked in escrow: `escrow[storeKey][counterparty]` is the term
+  /// `esc(coin, maturity, amount, release)`. Kept apart from [holdings] because
+  /// escrowed bonds are precisely those the holder no longer holds.
+  final Map<String, Map<String, GTerm>> escrow = {};
 }
 
 /// The per-agent UI runtime.
@@ -86,12 +91,14 @@ class UiRuntime {
     // consume the notify.
     _applyDismissals(ctor, args);
 
+    // A notify may open a card AND change the screen — an escrow deposit offers
+    // the cancel choice and puts the locked bonds in the wallet — so a card
+    // does not consume the notify either.
     final ib = manifest.inboxMatch(ctor, args.length);
     if (ib != null) {
       final (panel, desc) = ib;
       inbox.add(InboxCard(_cardSeq++, panel, desc, _bind(desc.args, args)));
       onChange?.call();
-      return;
     }
 
     final ac = manifest.activityMatch(ctor, args.length);
@@ -190,6 +197,23 @@ class UiRuntime {
               ? coin
               : '$coin@${formatTerm(fields[maturityField]!)}';
           h.putIfAbsent(owner, () => {})[key] = fields[amountField]!;
+        case AddEscrow(
+            store: final storeKey,
+            :final whoField,
+            :final coinField,
+            :final maturityField,
+            :final amountField,
+            :final releaseField
+          ):
+          final e = store.escrow.putIfAbsent(storeKey, () => {});
+          e[formatTerm(fields[whoField]!)] = GStruct('esc', [
+            fields[coinField]!,
+            fields[maturityField]!,
+            fields[amountField]!,
+            if (releaseField != null) fields[releaseField]!,
+          ]);
+        case RemoveEscrow(store: final storeKey, :final whoField):
+          store.escrow[storeKey]?.remove(formatTerm(fields[whoField]!));
         case Toast(:final template):
           onNotice?.call(renderTemplate(template, fields));
         case ExtendThread(:final thread, :final keyField, :final valueField):

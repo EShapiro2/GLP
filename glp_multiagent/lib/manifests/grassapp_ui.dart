@@ -92,6 +92,7 @@ final Manifest grassrootsManifest = Manifest(
         friendField: 'friend',
         cashLabel: 'Cash',
         loansLabel: 'Loans',
+        escrowLabel: 'Escrow',
         selfActions: const [
           CommandDesc(
             ctor: 'mint',
@@ -129,6 +130,20 @@ final Manifest grassrootsManifest = Manifest(
               FieldDesc('want_coin', FieldType.person, 'You want (issuer)'),
               FieldDesc('want_maturity', FieldType.integer, 'You want (maturity)'),
               FieldDesc('want_amount', FieldType.integer, 'You want (amount)'),
+            ],
+          ),
+          // Escrow (paper §5): lock bonds for a friend until a release time,
+          // cancellable until then. The coins leave the wallet's Cash and
+          // appear under Escrow while they are locked.
+          CommandDesc(
+            ctor: 'deposit_escrow',
+            label: 'Escrow',
+            args: [
+              FieldDesc('friend', FieldType.person, 'For'),
+              FieldDesc('coin', FieldType.person, 'Coin (issuer)'),
+              FieldDesc('maturity', FieldType.integer, 'Maturity (0 = cash)'),
+              FieldDesc('amount', FieldType.integer, 'Amount'),
+              FieldDesc('release', FieldType.integer, 'Release at'),
             ],
           ),
           CommandDesc(
@@ -171,6 +186,30 @@ final Manifest grassrootsManifest = Manifest(
               cmdCtor: 'reject_trade',
               fill: [FromField('from'), FromField('req')],
             ),
+          ],
+        ),
+        // The depositor's standing option to cancel, alerting the
+        // counterparty's row. Unlike a friend offer it is not answered by the
+        // person alone: when the escrow releases or comes home the choice is
+        // gone, so those notifies retire the card (paper §5, the race).
+        InboxDesc(
+          notifyCtor: 'escrow_deposited',
+          args: const ['who', 'release', 'coin', 'maturity', 'amount', 'req'],
+          itemKey: 'who',
+          title: 'Escrow for {who}',
+          subtitle: '{amount} {coin} locked until {release}',
+          answers: const [
+            AnswerDesc(
+              label: 'Cancel escrow',
+              cmdCtor: 'cancel_escrow',
+              fill: [FromField('who'), FromField('req')],
+            ),
+          ],
+          dismissedBy: const [
+            DismissDesc(
+                notifyCtor: 'escrow_expired', args: ['who'], itemKey: 'who'),
+            DismissDesc(
+                notifyCtor: 'escrow_returned', args: ['who'], itemKey: 'who'),
           ],
         ),
       ],
@@ -306,6 +345,40 @@ final Manifest grassrootsManifest = Manifest(
         notifyCtor: 'trade_returned_menu',
         args: ['who', 'menu'],
         effects: [Toast('{who} could not redeem — bonds returned')]),
+    // Escrow (paper §5). The deposit both raises the cancel card and records
+    // what is locked; release, return and cancellation clear it again.
+    ActivityDesc(
+      notifyCtor: 'escrow_deposited',
+      args: ['who', 'release', 'coin', 'maturity', 'amount', 'req'],
+      effects: [
+        AddEscrow('escrow', 'who', 'coin', 'maturity', 'amount',
+            releaseField: 'release')
+      ],
+    ),
+    ActivityDesc(
+        notifyCtor: 'escrow_received',
+        args: ['from', 'release', 'coin', 'maturity', 'amount'],
+        effects: [Toast('{from} escrowed {amount} {coin} for you until {release}')]),
+    ActivityDesc(
+        notifyCtor: 'escrow_expired',
+        args: ['who'],
+        effects: [RemoveEscrow('escrow', 'who'), Toast('Escrow released to {who}')]),
+    ActivityDesc(
+        notifyCtor: 'escrow_returned',
+        args: ['who'],
+        effects: [RemoveEscrow('escrow', 'who'), Toast('Escrow with {who} cancelled — bonds back')]),
+    ActivityDesc(
+        notifyCtor: 'escrow_released',
+        args: ['from'],
+        effects: [Toast("{from}'s escrow released to you")]),
+    ActivityDesc(
+        notifyCtor: 'escrow_cancelled',
+        args: ['from'],
+        effects: [Toast('{from} cancelled the escrow')]),
+    ActivityDesc(
+        notifyCtor: 'escrow_failed',
+        args: ['who'],
+        effects: [Toast('Could not escrow for {who} — not enough coins')]),
     // Groups (in the Chats panel).
     ActivityDesc(
       notifyCtor: 'group_joined',

@@ -68,6 +68,54 @@ void main() {
       expect(sent, ['accept_trade(alice, req(3))']);
     });
 
+    test('an escrow deposit raises the cancel card AND records what is locked',
+        () {
+      r.handleLine('escrow_deposited(frank, 900, frank, 0, 5, req(7))');
+
+      // The card offers the one choice the depositor still has.
+      final card = r.inbox.single;
+      expect(card.desc.notifyCtor, 'escrow_deposited');
+      expect(card.panel.id, 'currencies');
+      expect(card.itemKey, 'frank');
+      expect(card.desc.answers.single.label, 'Cancel escrow');
+
+      // The same notify also puts the locked bonds in the wallet — they are in
+      // nobody's holdings while escrowed, so this is the only record of them.
+      expect(formatTerm(r.store.escrow['escrow']!['frank']!),
+          'esc(frank, 0, 5, 900)');
+    });
+
+    test('escrow expiry retires the cancel card unanswered (dismissed-by)', () {
+      r.handleLine('escrow_deposited(frank, 900, frank, 0, 5, req(7))');
+      expect(r.inbox, hasLength(1));
+
+      // Nobody answered: the timer won, so the choice is gone and so is the
+      // card — and the locked bonds stop being shown as locked.
+      r.handleLine('escrow_expired(frank)');
+      expect(r.inbox, isEmpty);
+      expect(r.store.escrow['escrow'], isEmpty);
+      expect(sent, isEmpty);
+    });
+
+    test('a dismissing notify only retires the card for its own item', () {
+      r.handleLine('escrow_deposited(frank, 900, frank, 0, 5, req(7))');
+      r.handleLine('escrow_deposited(dana, 900, alice, 0, 2, req(8))');
+      expect(r.inbox, hasLength(2));
+
+      r.handleLine('escrow_expired(dana)');
+      expect(r.inbox.single.itemKey, 'frank',
+          reason: "dana's expiry must not retire frank's escrow card");
+      expect(r.store.escrow['escrow']!.keys, ['frank']);
+    });
+
+    test('cancelling an escrow answers the card with its req id', () {
+      r.handleLine('escrow_deposited(frank, 900, frank, 0, 5, req(7))');
+      final card = r.inbox.single;
+      r.answerCard(card, card.desc.answers.single);
+      expect(sent, ['cancel_escrow(frank, req(7))']);
+      expect(r.inbox, isEmpty);
+    });
+
     test('connected adds the friend AND opens the conversation', () {
       r.handleLine('connected(bob)');
       expect(r.store.lists['friends']!.map(formatTerm).toList(), ['bob']);

@@ -254,6 +254,32 @@ class SetBalance extends Effect {
       {this.maturityField});
 }
 
+/// Record bonds locked in escrow with a counterparty: `escrow[store][who]`
+/// becomes the lot `(coin, maturity, amount)` and its release time.
+///
+/// Escrowed bonds have left the holder's own holdings — they are held by the
+/// escrow itself until it releases or is cancelled — so no balance report
+/// describes them. They are tracked separately, and shown as the wallet's third
+/// section, so what is locked stays visible while it is locked.
+class AddEscrow extends Effect {
+  final String store;
+  final String whoField;
+  final String coinField;
+  final String maturityField;
+  final String amountField;
+  final String? releaseField;
+  const AddEscrow(this.store, this.whoField, this.coinField, this.maturityField,
+      this.amountField, {this.releaseField});
+}
+
+/// Drop the escrow entry for the counterparty in [whoField] — it released, was
+/// cancelled, or came home, so it is no longer locked.
+class RemoveEscrow extends Effect {
+  final String store;
+  final String whoField;
+  const RemoveEscrow(this.store, this.whoField);
+}
+
 /// An activity rule: one all-ground `UserNotify` that lands in its target
 /// surface(s) — the screen, the classic stream I/O of concurrent logic
 /// programming (paper §6). [effects] mutate the rendered state — `connected`
@@ -343,6 +369,13 @@ class WalletView {
   final String cashLabel;
   final String? loansLabel;
 
+  /// Heading for bonds locked in escrow (see [AddEscrow]). When null the wallet
+  /// shows no escrow section, which is right for a platform without escrow.
+  final String? escrowLabel;
+
+  /// Store key the escrow entries live under (see [AddEscrow]).
+  final String escrowKey;
+
   const WalletView({
     required this.storeKey,
     required this.label,
@@ -351,6 +384,8 @@ class WalletView {
     required this.selfActions,
     this.cashLabel = 'Cash',
     this.loansLabel,
+    this.escrowLabel,
+    this.escrowKey = 'escrow',
     required this.friendActions,
     this.friendsList = '',
   });
