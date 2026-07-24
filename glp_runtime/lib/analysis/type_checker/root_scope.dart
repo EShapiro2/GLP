@@ -126,6 +126,9 @@ const Set<String> builtinProcedures = {
   '_sign/2',
   // Output (system predicate)
   '_output/1',
+  // Module-as-value kernels (modules.tex §Dynamic Activation, "Modules as values")
+  '_run/2',
+  '_self_module/1',
 };
 
 /// Reserved constant base-names: the `_`-prefixed names that denote a language
@@ -149,6 +152,11 @@ const Set<String> reservedConstantNames = {
   '_output',
   // module-dispatch kernels
   '_select',
+  // module-as-value kernels (modules.tex §Dynamic Activation, "Modules as
+  // values"): `_self_module` yields the running module as a `Module` value,
+  // `_run` starts a goal on such a value.
+  '_run',
+  '_self_module',
 };
 
 /// True if [name] names a language primitive and so is a reserved constant.

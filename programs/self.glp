@@ -92,6 +92,15 @@ procedure _sign(_?, _).
 % Output (system predicate)
 procedure _output(_?).
 
+% Module-as-value kernels (modules.tex §Dynamic Activation, "Modules as
+% values").  '_self_module' yields the running module as a Module value;
+% '_run' starts a goal on such a value.  Type-checking run's goal against a
+% module value is future work — a Module carries no hierarchy position, so the
+% goal cannot be resolved through the ancestor scope — so the goal argument is
+% declared untyped; self_module is typed by its Module output.
+procedure _self_module(Module).
+procedure _run(_?, Module?).
+
 % =============================================================================
 % SINGLE-UNIT-CLAUSE PROCEDURES (DEFINED GUARDS)
 % =============================================================================
