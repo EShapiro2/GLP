@@ -1,0 +1,636 @@
+%% play_village_headless.glp — the six-agent village market, headless.
+%%
+%% The GrassApp port of the currencies village (programs/currencies/play12),
+%% which is the scenario of Grassroots-Bonds §8.2.  Six villagers — Alice
+%% (baker), Bob (farmer), Charlie (carpenter), Diana (doctor), Eve (teacher),
+%% Frank (fisherman) — exercise the seven operations of §8.2:
+%%
+%%   1. symmetric mutual credit  Alice-Bob, Alice-Charlie, Charlie-Eve, Eve-Frank
+%%   2. asymmetric credit (loan) Diana->Bob (24 bonds@25 for 20 coins),
+%%                               Diana->Frank (18 bonds@28 for 15 coins)
+%%   3. pay                      Bob->Alice 5, Eve->Charlie 6, Frank->Diana 3
+%%   4. portfolio swap           Eve gives Charlie 5 frank-coins for 5 alice-coins
+%%   5. escrow (time-release)    Charlie escrows 5 frank-coins for Frank's dock
+%%   6. redeem                   Frank redeems 5 diana-coins (5 unit redemptions)
+%%   7. sale of debt             Alice sells 10 bob-coins to Eve for 4 frank-coins
+%%
+%% Differences from the currencies original, all forced by the grassapp vocabulary:
+%%
+%%   * Commands are SCALAR single-lot (the mediator builds the lots): trade/7,
+%%     redeem/7, pay/4, deposit_escrow/5.  trade_proposed carries the want-spec
+%%     flattened to scalars.
+%%   * A payment is grassapp's native pay/4, not an empty-want trade.  It
+%%     therefore emits NO trade_completed to either side, so a payee sequences on
+%%     the balance_report that reflects the payment.
+%%   * There is no minted/2 notify; an actor waits for the balance_report its
+%%     mint produces.
+%%   * No narrative stream — the figure for §8.2 is now phone screenshots.
+%%
+%% Entry point for the Dart harness / goalLabel: play_village/0.
+%% Requires: self.glp, currency_txn.glp, grassapp_agent.glp, grassapp_mediator.glp
+
+
+%% --- Six-way crossbar -----------------------------------------------------
+
+procedure route6(Stream(OutputMsg)?, Stream(OutputMsg), Stream(OutputMsg),
+                 Stream(OutputMsg), Stream(OutputMsg), Stream(OutputMsg), Stream(OutputMsg)).
+route6([msg(alice, C)|Rest], [msg(alice, C?)|A?], B?, Ch?, D?, E?, F?) :-
+    route6(Rest?, A, B, Ch, D, E, F).
+route6([msg(bob, C)|Rest], A?, [msg(bob, C?)|B?], Ch?, D?, E?, F?) :-
+    route6(Rest?, A, B, Ch, D, E, F).
+route6([msg(charlie, C)|Rest], A?, B?, [msg(charlie, C?)|Ch?], D?, E?, F?) :-
+    route6(Rest?, A, B, Ch, D, E, F).
+route6([msg(diana, C)|Rest], A?, B?, Ch?, [msg(diana, C?)|D?], E?, F?) :-
+    route6(Rest?, A, B, Ch, D, E, F).
+route6([msg(eve, C)|Rest], A?, B?, Ch?, D?, [msg(eve, C?)|E?], F?) :-
+    route6(Rest?, A, B, Ch, D, E, F).
+route6([msg(frank, C)|Rest], A?, B?, Ch?, D?, E?, [msg(frank, C?)|F?]) :-
+    route6(Rest?, A, B, Ch, D, E, F).
+route6([], [], [], [], [], [], []).
+
+procedure network6(Stream(OutputMsg)?, Stream(OutputMsg)?, Stream(OutputMsg)?,
+                   Stream(OutputMsg)?, Stream(OutputMsg)?, Stream(OutputMsg)?,
+                   Stream(OutputMsg), Stream(OutputMsg), Stream(OutputMsg),
+                   Stream(OutputMsg), Stream(OutputMsg), Stream(OutputMsg)).
+network6(AOut, BOut, COut, DOut, EOut, FOut, AIn?, BIn?, CIn?, DIn?, EIn?, FIn?) :-
+    merge(AOut?, BOut?, AB),
+    merge(COut?, DOut?, CD),
+    merge(EOut?, FOut?, EF),
+    merge(AB?, CD?, ABCD),
+    merge(ABCD?, EF?, All),
+    route6(All?, AIn, BIn, CIn, DIn, EIn, FIn).
+
+%% --- Notification logger (so the headless run is observable) --------------
+
+procedure tee_v(Stream(UserNotify)?, Stream(UserNotify), Stream(UserNotify)).
+tee_v([N|Ns], [N?|As?], [N?|Bs?]) :- ground(N?) | tee_v(Ns?, As, Bs).
+tee_v([], [], []).
+
+procedure log_v(Constant?, Stream(UserNotify)?).
+log_v(Id, [N|Ns]) :-
+    ground(Id?), ground(N?) |
+    send_to_user([tagged(Id?, N?)]),
+    log_v(Id?, Ns?).
+log_v(_, []).
+
+%% --- The play -------------------------------------------------------------
+
+procedure play_village.
+play_village :-
+    now(Now),
+    T := Now? + 700,
+    network6(AliceNetOut?, BobNetOut?, CharlieNetOut?,
+             DianaNetOut?, EveNetOut?, FrankNetOut?,
+             AliceNetIn, BobNetIn, CharlieNetIn,
+             DianaNetIn, EveNetIn, FrankNetIn),
+
+    agent(alice, AliceAgentIn?, AliceNetIn?,
+          [output('_user', AliceA2U) | [output('_net', AliceNetOut)]], [], 1, 0),
+    ui_mediator(alice, ch(AliceA2U?, AliceAgentIn), ch(AliceCmds?, AliceNotifies), [], 1),
+    tee_v(AliceNotifies?, AliceIn, AliceLog),
+    log_v(alice, AliceLog?),
+    alice_v(AliceIn?, AliceCmds),
+
+    agent(bob, BobAgentIn?, BobNetIn?,
+          [output('_user', BobA2U) | [output('_net', BobNetOut)]], [], 1, 0),
+    ui_mediator(bob, ch(BobA2U?, BobAgentIn), ch(BobCmds?, BobNotifies), [], 1),
+    tee_v(BobNotifies?, BobIn, BobLog),
+    log_v(bob, BobLog?),
+    bob_v(BobIn?, BobCmds),
+
+    agent(charlie, CharlieAgentIn?, CharlieNetIn?,
+          [output('_user', CharlieA2U) | [output('_net', CharlieNetOut)]], [], 1, 0),
+    ui_mediator(charlie, ch(CharlieA2U?, CharlieAgentIn), ch(CharlieCmds?, CharlieNotifies), [], 1),
+    tee_v(CharlieNotifies?, CharlieIn, CharlieLog),
+    log_v(charlie, CharlieLog?),
+    charlie_v(T?, CharlieIn?, CharlieCmds),
+
+    agent(diana, DianaAgentIn?, DianaNetIn?,
+          [output('_user', DianaA2U) | [output('_net', DianaNetOut)]], [], 1, 0),
+    ui_mediator(diana, ch(DianaA2U?, DianaAgentIn), ch(DianaCmds?, DianaNotifies), [], 1),
+    tee_v(DianaNotifies?, DianaIn, DianaLog),
+    log_v(diana, DianaLog?),
+    diana_v(DianaIn?, DianaCmds),
+
+    agent(eve, EveAgentIn?, EveNetIn?,
+          [output('_user', EveA2U) | [output('_net', EveNetOut)]], [], 1, 0),
+    ui_mediator(eve, ch(EveA2U?, EveAgentIn), ch(EveCmds?, EveNotifies), [], 1),
+    tee_v(EveNotifies?, EveIn, EveLog),
+    log_v(eve, EveLog?),
+    eve_v(EveIn?, EveCmds),
+
+    agent(frank, FrankAgentIn?, FrankNetIn?,
+          [output('_user', FrankA2U) | [output('_net', FrankNetOut)]], [], 1, 0),
+    ui_mediator(frank, ch(FrankA2U?, FrankAgentIn), ch(FrankCmds?, FrankNotifies), [], 1),
+    tee_v(FrankNotifies?, FrankIn, FrankLog),
+    log_v(frank, FrankLog?),
+    frank_v(FrankIn?, FrankCmds).
+
+%% =============================================================================
+%% ALICE — baker.  Opens the three friendships she initiates, sets up two
+%% symmetric credit lines, is paid for bread twice, then sells bob-debt to Eve.
+%% =============================================================================
+
+procedure alice_v(Stream(UserNotify)?, Stream(UserCmd)).
+alice_v(In, [connect(bob)|Out?]) :- alice_v_conn_bob(In?, Out).
+
+procedure alice_v_conn_bob(Stream(UserNotify)?, Stream(UserCmd)).
+alice_v_conn_bob([connected(bob)|In], [connect(charlie)|Out?]) :-
+    alice_v_conn_charlie(In?, Out).
+alice_v_conn_bob([_|In], Out?) :- otherwise | alice_v_conn_bob(In?, Out).
+alice_v_conn_bob([], []).
+
+procedure alice_v_conn_charlie(Stream(UserNotify)?, Stream(UserCmd)).
+alice_v_conn_charlie([connected(charlie)|In], [connect(eve)|Out?]) :-
+    alice_v_conn_eve(In?, Out).
+alice_v_conn_charlie([_|In], Out?) :- otherwise | alice_v_conn_charlie(In?, Out).
+alice_v_conn_charlie([], []).
+
+procedure alice_v_conn_eve(Stream(UserNotify)?, Stream(UserCmd)).
+alice_v_conn_eve([connected(eve)|In], [mint(15, 0)|Out?]) :-
+    alice_v_minted1(In?, Out).
+alice_v_conn_eve([_|In], Out?) :- otherwise | alice_v_conn_eve(In?, Out).
+alice_v_conn_eve([], []).
+
+%% Op 1: symmetric mutual credit with Bob — 15 for 15.
+procedure alice_v_minted1(Stream(UserNotify)?, Stream(UserCmd)).
+alice_v_minted1([balance_report(alice, alice, 0, 15)|In],
+                [trade(bob, alice, 0, 15, bob, 0, 15)|Out?]) :-
+    alice_v_trade_bob(In?, Out).
+alice_v_minted1([_|In], Out?) :- otherwise | alice_v_minted1(In?, Out).
+alice_v_minted1([], []).
+
+procedure alice_v_trade_bob(Stream(UserNotify)?, Stream(UserCmd)).
+alice_v_trade_bob([trade_completed(bob)|In], [mint(15, 0)|Out?]) :-
+    alice_v_minted2(In?, Out).
+alice_v_trade_bob([_|In], Out?) :- otherwise | alice_v_trade_bob(In?, Out).
+alice_v_trade_bob([], []).
+
+%% Op 1: symmetric mutual credit with Charlie — 15 for 15.
+procedure alice_v_minted2(Stream(UserNotify)?, Stream(UserCmd)).
+alice_v_minted2([balance_report(alice, alice, 0, 15)|In],
+                [trade(charlie, alice, 0, 15, charlie, 0, 15)|Out?]) :-
+    alice_v_trade_charlie(In?, Out).
+alice_v_minted2([_|In], Out?) :- otherwise | alice_v_minted2(In?, Out).
+alice_v_minted2([], []).
+
+procedure alice_v_trade_charlie(Stream(UserNotify)?, Stream(UserCmd)).
+alice_v_trade_charlie([trade_completed(charlie)|In], Out?) :-
+    alice_v_paid(In?, Out).
+alice_v_trade_charlie([_|In], Out?) :- otherwise | alice_v_trade_charlie(In?, Out).
+alice_v_trade_charlie([], []).
+
+%% Op 3: both bread payments have landed (5 from Bob, 3 from Eve) — a payment
+%% raises no trade_completed, so the balance_report is the signal.
+%% Op 7: sale of debt — 10 bob-coins to Eve for 4 frank-coins.
+procedure alice_v_paid(Stream(UserNotify)?, Stream(UserCmd)).
+alice_v_paid([balance_report(alice, alice, 0, 8)|In],
+             [trade(eve, bob, 0, 10, frank, 0, 4)|Out?]) :-
+    alice_v_sold(In?, Out).
+alice_v_paid([_|In], Out?) :- otherwise | alice_v_paid(In?, Out).
+alice_v_paid([], []).
+
+procedure alice_v_sold(Stream(UserNotify)?, Stream(UserCmd)).
+alice_v_sold([trade_completed(eve)|In], [balance|Out?]) :- alice_v_done(In?, Out).
+alice_v_sold([_|In], Out?) :- otherwise | alice_v_sold(In?, Out).
+alice_v_sold([], []).
+
+procedure alice_v_done(Stream(UserNotify)?, Stream(UserCmd)).
+alice_v_done(_, []).
+
+%% =============================================================================
+%% BOB — farmer.  Takes Alice's credit line, borrows from Diana at 20% interest,
+%% and buys bread.
+%% =============================================================================
+
+procedure bob_v(Stream(UserNotify)?, Stream(UserCmd)).
+bob_v([befriend(alice, ReqId)|In], [decision(yes, alice, ReqId?)|Out?]) :-
+    ground(ReqId?) | bob_v_conn_alice(In?, Out).
+bob_v([_|In], Out?) :- otherwise | bob_v(In?, Out).
+bob_v([], []).
+
+procedure bob_v_conn_alice(Stream(UserNotify)?, Stream(UserCmd)).
+bob_v_conn_alice([connected(alice)|In], [connect(diana)|Out?]) :-
+    bob_v_conn_diana(In?, Out).
+bob_v_conn_alice([_|In], Out?) :- otherwise | bob_v_conn_alice(In?, Out).
+bob_v_conn_alice([], []).
+
+procedure bob_v_conn_diana(Stream(UserNotify)?, Stream(UserCmd)).
+bob_v_conn_diana([connected(diana)|In], [mint(15, 0)|Out?]) :-
+    bob_v_minted1(In?, Out).
+bob_v_conn_diana([_|In], Out?) :- otherwise | bob_v_conn_diana(In?, Out).
+bob_v_conn_diana([], []).
+
+procedure bob_v_minted1(Stream(UserNotify)?, Stream(UserCmd)).
+bob_v_minted1([balance_report(bob, bob, 0, 15)|In], Out?) :-
+    bob_v_offer_alice(In?, Out).
+bob_v_minted1([_|In], Out?) :- otherwise | bob_v_minted1(In?, Out).
+bob_v_minted1([], []).
+
+%% Op 1: accept Alice's 15-for-15, then mint the bonds for Diana's loan.
+procedure bob_v_offer_alice(Stream(UserNotify)?, Stream(UserCmd)).
+bob_v_offer_alice([trade_proposed(alice, bob, 0, 15, ReqId)|In],
+                  [accept_trade(alice, ReqId?), mint(24, 25)|Out?]) :-
+    ground(ReqId?) | bob_v_minted2(In?, Out).
+bob_v_offer_alice([_|In], Out?) :- otherwise | bob_v_offer_alice(In?, Out).
+bob_v_offer_alice([], []).
+
+%% Op 2: asymmetric credit — 24 bob-bonds maturing day 25 for 20 diana-coins.
+procedure bob_v_minted2(Stream(UserNotify)?, Stream(UserCmd)).
+bob_v_minted2([balance_report(bob, bob, 25, 24)|In],
+              [trade(diana, bob, 25, 24, diana, 0, 20)|Out?]) :-
+    bob_v_loan(In?, Out).
+bob_v_minted2([_|In], Out?) :- otherwise | bob_v_minted2(In?, Out).
+bob_v_minted2([], []).
+
+%% Op 3: pay Alice 5 alice-coins for bread.
+procedure bob_v_loan(Stream(UserNotify)?, Stream(UserCmd)).
+bob_v_loan([trade_completed(diana)|In], [pay(alice, alice, 0, 5)|Out?]) :-
+    bob_v_paid(In?, Out).
+bob_v_loan([_|In], Out?) :- otherwise | bob_v_loan(In?, Out).
+bob_v_loan([], []).
+
+procedure bob_v_paid(Stream(UserNotify)?, Stream(UserCmd)).
+bob_v_paid([balance_report(bob, alice, 0, 10)|In], [balance|Out?]) :-
+    bob_v_done(In?, Out).
+bob_v_paid([_|In], Out?) :- otherwise | bob_v_paid(In?, Out).
+bob_v_paid([], []).
+
+procedure bob_v_done(Stream(UserNotify)?, Stream(UserCmd)).
+bob_v_done(_, []).
+
+%% =============================================================================
+%% CHARLIE — carpenter.  Two credit lines, sells a bookshelf, gives Eve the
+%% alice-coins she needs, and escrows the dock payment for Frank.
+%% =============================================================================
+
+procedure charlie_v(Constant?, Stream(UserNotify)?, Stream(UserCmd)).
+charlie_v(T, [befriend(alice, ReqId)|In], [decision(yes, alice, ReqId?)|Out?]) :-
+    ground(T?), ground(ReqId?) | charlie_v_conn_alice(T?, In?, Out).
+charlie_v(T, [_|In], Out?) :- otherwise | charlie_v(T?, In?, Out).
+charlie_v(_, [], []).
+
+procedure charlie_v_conn_alice(Constant?, Stream(UserNotify)?, Stream(UserCmd)).
+charlie_v_conn_alice(T, [connected(alice)|In], [connect(eve)|Out?]) :-
+    charlie_v_conn_eve(T?, In?, Out).
+charlie_v_conn_alice(T, [_|In], Out?) :- otherwise | charlie_v_conn_alice(T?, In?, Out).
+charlie_v_conn_alice(_, [], []).
+
+procedure charlie_v_conn_eve(Constant?, Stream(UserNotify)?, Stream(UserCmd)).
+charlie_v_conn_eve(T, [connected(eve)|In], [connect(frank)|Out?]) :-
+    charlie_v_conn_frank(T?, In?, Out).
+charlie_v_conn_eve(T, [_|In], Out?) :- otherwise | charlie_v_conn_eve(T?, In?, Out).
+charlie_v_conn_eve(_, [], []).
+
+procedure charlie_v_conn_frank(Constant?, Stream(UserNotify)?, Stream(UserCmd)).
+charlie_v_conn_frank(T, [connected(frank)|In], [mint(15, 0)|Out?]) :-
+    charlie_v_minted1(T?, In?, Out).
+charlie_v_conn_frank(T, [_|In], Out?) :- otherwise | charlie_v_conn_frank(T?, In?, Out).
+charlie_v_conn_frank(_, [], []).
+
+procedure charlie_v_minted1(Constant?, Stream(UserNotify)?, Stream(UserCmd)).
+charlie_v_minted1(T, [balance_report(charlie, charlie, 0, 15)|In], Out?) :-
+    charlie_v_offer_alice(T?, In?, Out).
+charlie_v_minted1(T, [_|In], Out?) :- otherwise | charlie_v_minted1(T?, In?, Out).
+charlie_v_minted1(_, [], []).
+
+%% Op 1: accept Alice's 15-for-15, then mint for the Eve credit line.
+procedure charlie_v_offer_alice(Constant?, Stream(UserNotify)?, Stream(UserCmd)).
+charlie_v_offer_alice(T, [trade_proposed(alice, charlie, 0, 15, ReqId)|In],
+                      [accept_trade(alice, ReqId?), mint(10, 0)|Out?]) :-
+    ground(ReqId?) | charlie_v_minted2(T?, In?, Out).
+charlie_v_offer_alice(T, [_|In], Out?) :- otherwise | charlie_v_offer_alice(T?, In?, Out).
+charlie_v_offer_alice(_, [], []).
+
+%% Op 1: symmetric mutual credit with Eve — 10 for 10.
+procedure charlie_v_minted2(Constant?, Stream(UserNotify)?, Stream(UserCmd)).
+charlie_v_minted2(T, [balance_report(charlie, charlie, 0, 10)|In],
+                  [trade(eve, charlie, 0, 10, eve, 0, 10)|Out?]) :-
+    charlie_v_trade_eve(T?, In?, Out).
+charlie_v_minted2(T, [_|In], Out?) :- otherwise | charlie_v_minted2(T?, In?, Out).
+charlie_v_minted2(_, [], []).
+
+procedure charlie_v_trade_eve(Constant?, Stream(UserNotify)?, Stream(UserCmd)).
+charlie_v_trade_eve(T, [trade_completed(eve)|In], Out?) :-
+    charlie_v_bookshelf(T?, In?, Out).
+charlie_v_trade_eve(T, [_|In], Out?) :- otherwise | charlie_v_trade_eve(T?, In?, Out).
+charlie_v_trade_eve(_, [], []).
+
+%% Op 3: Eve's 6 charlie-coins for the bookshelf have arrived.
+procedure charlie_v_bookshelf(Constant?, Stream(UserNotify)?, Stream(UserCmd)).
+charlie_v_bookshelf(T, [balance_report(charlie, charlie, 0, 6)|In], Out?) :-
+    charlie_v_offer_eve(T?, In?, Out).
+charlie_v_bookshelf(T, [_|In], Out?) :- otherwise | charlie_v_bookshelf(T?, In?, Out).
+charlie_v_bookshelf(_, [], []).
+
+%% Op 4: Eve's portfolio swap — she wants 5 alice-coins, offering 5 frank-coins.
+procedure charlie_v_offer_eve(Constant?, Stream(UserNotify)?, Stream(UserCmd)).
+charlie_v_offer_eve(T, [trade_proposed(eve, alice, 0, 5, ReqId)|In],
+                    [accept_trade(eve, ReqId?)|Out?]) :-
+    ground(ReqId?) | charlie_v_swapped(T?, In?, Out).
+charlie_v_offer_eve(T, [_|In], Out?) :- otherwise | charlie_v_offer_eve(T?, In?, Out).
+charlie_v_offer_eve(_, [], []).
+
+%% Op 5: escrow the dock payment — 5 frank-coins, released at T unless cancelled.
+procedure charlie_v_swapped(Constant?, Stream(UserNotify)?, Stream(UserCmd)).
+charlie_v_swapped(T, [trade_completed(eve)|In],
+                  [deposit_escrow(frank, frank, 0, 5, T?)|Out?]) :-
+    charlie_v_deposited(In?, Out).
+charlie_v_swapped(T, [_|In], Out?) :- otherwise | charlie_v_swapped(T?, In?, Out).
+charlie_v_swapped(_, [], []).
+
+procedure charlie_v_deposited(Stream(UserNotify)?, Stream(UserCmd)).
+charlie_v_deposited([escrow_deposited(frank, _, _)|In], Out?) :-
+    charlie_v_expired(In?, Out).
+charlie_v_deposited([_|In], Out?) :- otherwise | charlie_v_deposited(In?, Out).
+charlie_v_deposited([], []).
+
+%% The dock was built, so Charlie never cancels: the timer wins the race.
+procedure charlie_v_expired(Stream(UserNotify)?, Stream(UserCmd)).
+charlie_v_expired([escrow_expired(frank)|In], [balance|Out?]) :-
+    charlie_v_done(In?, Out).
+charlie_v_expired([_|In], Out?) :- otherwise | charlie_v_expired(In?, Out).
+charlie_v_expired([], []).
+
+procedure charlie_v_done(Stream(UserNotify)?, Stream(UserCmd)).
+charlie_v_done(_, []).
+
+%% =============================================================================
+%% DIANA — doctor, the village lender.  Lends to Bob and Frank, is paid for a
+%% checkup, and honours Frank's five unit redemptions.
+%% =============================================================================
+
+procedure diana_v(Stream(UserNotify)?, Stream(UserCmd)).
+diana_v([befriend(bob, ReqId)|In], [decision(yes, bob, ReqId?)|Out?]) :-
+    ground(ReqId?) | diana_v_conn_bob(In?, Out).
+diana_v([_|In], Out?) :- otherwise | diana_v(In?, Out).
+diana_v([], []).
+
+procedure diana_v_conn_bob(Stream(UserNotify)?, Stream(UserCmd)).
+diana_v_conn_bob([connected(bob)|In], [connect(frank)|Out?]) :-
+    diana_v_conn_frank(In?, Out).
+diana_v_conn_bob([_|In], Out?) :- otherwise | diana_v_conn_bob(In?, Out).
+diana_v_conn_bob([], []).
+
+procedure diana_v_conn_frank(Stream(UserNotify)?, Stream(UserCmd)).
+diana_v_conn_frank([connected(frank)|In], [mint(20, 0)|Out?]) :-
+    diana_v_minted1(In?, Out).
+diana_v_conn_frank([_|In], Out?) :- otherwise | diana_v_conn_frank(In?, Out).
+diana_v_conn_frank([], []).
+
+procedure diana_v_minted1(Stream(UserNotify)?, Stream(UserCmd)).
+diana_v_minted1([balance_report(diana, diana, 0, 20)|In], Out?) :-
+    diana_v_offer_bob(In?, Out).
+diana_v_minted1([_|In], Out?) :- otherwise | diana_v_minted1(In?, Out).
+diana_v_minted1([], []).
+
+%% Op 2: accept Bob's loan terms, then mint the coins to lend Frank.
+procedure diana_v_offer_bob(Stream(UserNotify)?, Stream(UserCmd)).
+diana_v_offer_bob([trade_proposed(bob, diana, 0, 20, ReqId)|In],
+                  [accept_trade(bob, ReqId?), mint(15, 0)|Out?]) :-
+    ground(ReqId?) | diana_v_minted2(In?, Out).
+diana_v_offer_bob([_|In], Out?) :- otherwise | diana_v_offer_bob(In?, Out).
+diana_v_offer_bob([], []).
+
+%% Op 2: lend Frank 15 diana-coins for 18 frank-bonds maturing day 28.
+procedure diana_v_minted2(Stream(UserNotify)?, Stream(UserCmd)).
+diana_v_minted2([balance_report(diana, diana, 0, 15)|In],
+                [trade(frank, diana, 0, 15, frank, 28, 18)|Out?]) :-
+    diana_v_loan_frank(In?, Out).
+diana_v_minted2([_|In], Out?) :- otherwise | diana_v_minted2(In?, Out).
+diana_v_minted2([], []).
+
+%% Op 6: Frank redeems five diana-coins, one at a time; the issuer must fulfil,
+%% so each is auto-accepted and reported as a completed trade.
+procedure diana_v_loan_frank(Stream(UserNotify)?, Stream(UserCmd)).
+diana_v_loan_frank([trade_completed(frank)|In], Out?) :- diana_v_redeem1(In?, Out).
+diana_v_loan_frank([_|In], Out?) :- otherwise | diana_v_loan_frank(In?, Out).
+diana_v_loan_frank([], []).
+
+procedure diana_v_redeem1(Stream(UserNotify)?, Stream(UserCmd)).
+diana_v_redeem1([trade_completed(frank)|In], Out?) :- diana_v_redeem2(In?, Out).
+diana_v_redeem1([_|In], Out?) :- otherwise | diana_v_redeem1(In?, Out).
+diana_v_redeem1([], []).
+
+procedure diana_v_redeem2(Stream(UserNotify)?, Stream(UserCmd)).
+diana_v_redeem2([trade_completed(frank)|In], Out?) :- diana_v_redeem3(In?, Out).
+diana_v_redeem2([_|In], Out?) :- otherwise | diana_v_redeem2(In?, Out).
+diana_v_redeem2([], []).
+
+procedure diana_v_redeem3(Stream(UserNotify)?, Stream(UserCmd)).
+diana_v_redeem3([trade_completed(frank)|In], Out?) :- diana_v_redeem4(In?, Out).
+diana_v_redeem3([_|In], Out?) :- otherwise | diana_v_redeem3(In?, Out).
+diana_v_redeem3([], []).
+
+procedure diana_v_redeem4(Stream(UserNotify)?, Stream(UserCmd)).
+diana_v_redeem4([trade_completed(frank)|In], Out?) :- diana_v_redeem5(In?, Out).
+diana_v_redeem4([_|In], Out?) :- otherwise | diana_v_redeem4(In?, Out).
+diana_v_redeem4([], []).
+
+procedure diana_v_redeem5(Stream(UserNotify)?, Stream(UserCmd)).
+diana_v_redeem5([trade_completed(frank)|In], [balance|Out?]) :- diana_v_done(In?, Out).
+diana_v_redeem5([_|In], Out?) :- otherwise | diana_v_redeem5(In?, Out).
+diana_v_redeem5([], []).
+
+procedure diana_v_done(Stream(UserNotify)?, Stream(UserCmd)).
+diana_v_done(_, []).
+
+%% =============================================================================
+%% EVE — teacher.  Befriended by Alice and Charlie in either order, so she
+%% gathers both before proceeding.  Buys a bookshelf, swaps her way into
+%% alice-coins to buy bread, and buys Bob's debt at a discount.
+%% =============================================================================
+
+%% AS/CS: none -> befriended -> done.
+procedure eve_v_gather(Constant?, Constant?, Stream(UserNotify)?, Stream(UserCmd)).
+eve_v_gather(done, done, In, [connect(frank)|Out?]) :-
+    eve_v_conn_frank(In?, Out).
+eve_v_gather(none, CS, [befriend(alice, ReqId)|In],
+             [decision(yes, alice, ReqId?)|Out?]) :-
+    ground(ReqId?) | eve_v_gather(befriended, CS?, In?, Out).
+eve_v_gather(befriended, CS, [connected(alice)|In], Out?) :-
+    eve_v_gather(done, CS?, In?, Out).
+eve_v_gather(AS, none, [befriend(charlie, ReqId)|In],
+             [decision(yes, charlie, ReqId?)|Out?]) :-
+    ground(ReqId?) | eve_v_gather(AS?, befriended, In?, Out).
+eve_v_gather(AS, befriended, [connected(charlie)|In], Out?) :-
+    eve_v_gather(AS?, done, In?, Out).
+eve_v_gather(AS, CS, [_|In], Out?) :-
+    otherwise | eve_v_gather(AS?, CS?, In?, Out).
+eve_v_gather(_, _, [], []).
+
+procedure eve_v(Stream(UserNotify)?, Stream(UserCmd)).
+eve_v(In, Out?) :- eve_v_gather(none, none, In?, Out).
+
+procedure eve_v_conn_frank(Stream(UserNotify)?, Stream(UserCmd)).
+eve_v_conn_frank([connected(frank)|In], [mint(10, 0)|Out?]) :-
+    eve_v_minted1(In?, Out).
+eve_v_conn_frank([_|In], Out?) :- otherwise | eve_v_conn_frank(In?, Out).
+eve_v_conn_frank([], []).
+
+procedure eve_v_minted1(Stream(UserNotify)?, Stream(UserCmd)).
+eve_v_minted1([balance_report(eve, eve, 0, 10)|In], Out?) :-
+    eve_v_offer_charlie(In?, Out).
+eve_v_minted1([_|In], Out?) :- otherwise | eve_v_minted1(In?, Out).
+eve_v_minted1([], []).
+
+%% Op 1: accept Charlie's 10-for-10, then mint for the Frank credit line.
+procedure eve_v_offer_charlie(Stream(UserNotify)?, Stream(UserCmd)).
+eve_v_offer_charlie([trade_proposed(charlie, eve, 0, 10, ReqId)|In],
+                    [accept_trade(charlie, ReqId?), mint(10, 0)|Out?]) :-
+    ground(ReqId?) | eve_v_minted2(In?, Out).
+eve_v_offer_charlie([_|In], Out?) :- otherwise | eve_v_offer_charlie(In?, Out).
+eve_v_offer_charlie([], []).
+
+%% Op 1: symmetric mutual credit with Frank — 10 for 10, cousins, no interest.
+procedure eve_v_minted2(Stream(UserNotify)?, Stream(UserCmd)).
+eve_v_minted2([balance_report(eve, eve, 0, 10)|In],
+              [trade(frank, eve, 0, 10, frank, 0, 10)|Out?]) :-
+    eve_v_trade_frank(In?, Out).
+eve_v_minted2([_|In], Out?) :- otherwise | eve_v_minted2(In?, Out).
+eve_v_minted2([], []).
+
+%% Op 3 then Op 4: pay Charlie for the bookshelf, then swap frank-coins for the
+%% alice-coins she needs to buy bread.
+procedure eve_v_trade_frank(Stream(UserNotify)?, Stream(UserCmd)).
+eve_v_trade_frank([trade_completed(frank)|In],
+                  [pay(charlie, charlie, 0, 6),
+                   trade(charlie, frank, 0, 5, alice, 0, 5)|Out?]) :-
+    eve_v_swapped(In?, Out).
+eve_v_trade_frank([_|In], Out?) :- otherwise | eve_v_trade_frank(In?, Out).
+eve_v_trade_frank([], []).
+
+%% Op 3: now she has alice-coins, buy bread.
+procedure eve_v_swapped(Stream(UserNotify)?, Stream(UserCmd)).
+eve_v_swapped([trade_completed(charlie)|In], [pay(alice, alice, 0, 3)|Out?]) :-
+    eve_v_offer_alice(In?, Out).
+eve_v_swapped([_|In], Out?) :- otherwise | eve_v_swapped(In?, Out).
+eve_v_swapped([], []).
+
+%% Op 7: buy 10 bob-coins from Alice for 4 frank-coins.
+procedure eve_v_offer_alice(Stream(UserNotify)?, Stream(UserCmd)).
+eve_v_offer_alice([trade_proposed(alice, frank, 0, 4, ReqId)|In],
+                  [accept_trade(alice, ReqId?)|Out?]) :-
+    ground(ReqId?) | eve_v_bought(In?, Out).
+eve_v_offer_alice([_|In], Out?) :- otherwise | eve_v_offer_alice(In?, Out).
+eve_v_offer_alice([], []).
+
+procedure eve_v_bought(Stream(UserNotify)?, Stream(UserCmd)).
+eve_v_bought([trade_completed(alice)|In], [balance|Out?]) :- eve_v_done(In?, Out).
+eve_v_bought([_|In], Out?) :- otherwise | eve_v_bought(In?, Out).
+eve_v_bought([], []).
+
+procedure eve_v_done(Stream(UserNotify)?, Stream(UserCmd)).
+eve_v_done(_, []).
+
+%% =============================================================================
+%% FRANK — fisherman.  Befriended by Charlie, Diana and Eve in any order.
+%% Borrows from Diana, trades with Eve, pays for a checkup, is paid by escrow
+%% for the dock, and redeems five diana-coins against his own bonds.
+%% =============================================================================
+
+%% CS/DS/ES: none -> befriended -> done.
+procedure frank_v_gather(Constant?, Constant?, Constant?, Stream(UserNotify)?, Stream(UserCmd)).
+frank_v_gather(done, done, done, In, [mint(18, 28)|Out?]) :-
+    frank_v_minted1(In?, Out).
+frank_v_gather(none, DS, ES, [befriend(charlie, ReqId)|In],
+               [decision(yes, charlie, ReqId?)|Out?]) :-
+    ground(ReqId?) | frank_v_gather(befriended, DS?, ES?, In?, Out).
+frank_v_gather(befriended, DS, ES, [connected(charlie)|In], Out?) :-
+    frank_v_gather(done, DS?, ES?, In?, Out).
+frank_v_gather(CS, none, ES, [befriend(diana, ReqId)|In],
+               [decision(yes, diana, ReqId?)|Out?]) :-
+    ground(ReqId?) | frank_v_gather(CS?, befriended, ES?, In?, Out).
+frank_v_gather(CS, befriended, ES, [connected(diana)|In], Out?) :-
+    frank_v_gather(CS?, done, ES?, In?, Out).
+frank_v_gather(CS, DS, none, [befriend(eve, ReqId)|In],
+               [decision(yes, eve, ReqId?)|Out?]) :-
+    ground(ReqId?) | frank_v_gather(CS?, DS?, befriended, In?, Out).
+frank_v_gather(CS, DS, befriended, [connected(eve)|In], Out?) :-
+    frank_v_gather(CS?, DS?, done, In?, Out).
+frank_v_gather(CS, DS, ES, [_|In], Out?) :-
+    otherwise | frank_v_gather(CS?, DS?, ES?, In?, Out).
+frank_v_gather(_, _, _, [], []).
+
+procedure frank_v(Stream(UserNotify)?, Stream(UserCmd)).
+frank_v(In, Out?) :- frank_v_gather(none, none, none, In?, Out).
+
+procedure frank_v_minted1(Stream(UserNotify)?, Stream(UserCmd)).
+frank_v_minted1([balance_report(frank, frank, 28, 18)|In], Out?) :-
+    frank_v_offer_diana(In?, Out).
+frank_v_minted1([_|In], Out?) :- otherwise | frank_v_minted1(In?, Out).
+frank_v_minted1([], []).
+
+%% Op 2: accept Diana's loan, then mint frank-coins for Eve's credit line.
+procedure frank_v_offer_diana(Stream(UserNotify)?, Stream(UserCmd)).
+frank_v_offer_diana([trade_proposed(diana, frank, 28, 18, ReqId)|In],
+                    [accept_trade(diana, ReqId?), mint(10, 0)|Out?]) :-
+    ground(ReqId?) | frank_v_minted2(In?, Out).
+frank_v_offer_diana([_|In], Out?) :- otherwise | frank_v_offer_diana(In?, Out).
+frank_v_offer_diana([], []).
+
+procedure frank_v_minted2(Stream(UserNotify)?, Stream(UserCmd)).
+frank_v_minted2([balance_report(frank, frank, 0, 10)|In], Out?) :-
+    frank_v_offer_eve(In?, Out).
+frank_v_minted2([_|In], Out?) :- otherwise | frank_v_minted2(In?, Out).
+frank_v_minted2([], []).
+
+%% Op 1 then Op 3: accept Eve's 10-for-10, then pay Diana for the checkup.
+procedure frank_v_offer_eve(Stream(UserNotify)?, Stream(UserCmd)).
+frank_v_offer_eve([trade_proposed(eve, frank, 0, 10, ReqId)|In],
+                  [accept_trade(eve, ReqId?), pay(diana, diana, 0, 3)|Out?]) :-
+    ground(ReqId?) | frank_v_escrow_in(In?, Out).
+frank_v_offer_eve([_|In], Out?) :- otherwise | frank_v_offer_eve(In?, Out).
+frank_v_offer_eve([], []).
+
+%% Op 5: Charlie's escrow for the dock arrives, then releases on time.
+procedure frank_v_escrow_in(Stream(UserNotify)?, Stream(UserCmd)).
+frank_v_escrow_in([escrow_received(charlie, _)|In], Out?) :-
+    frank_v_escrow_out(In?, Out).
+frank_v_escrow_in([_|In], Out?) :- otherwise | frank_v_escrow_in(In?, Out).
+frank_v_escrow_in([], []).
+
+%% Op 6: redeem five diana-coins, one at a time, against his own bonds she holds.
+procedure frank_v_escrow_out(Stream(UserNotify)?, Stream(UserCmd)).
+frank_v_escrow_out([escrow_released(charlie)|In],
+                   [redeem(diana, diana, 0, 1, frank, 28, 1)|Out?]) :-
+    frank_v_redeem1(In?, Out).
+frank_v_escrow_out([_|In], Out?) :- otherwise | frank_v_escrow_out(In?, Out).
+frank_v_escrow_out([], []).
+
+procedure frank_v_redeem1(Stream(UserNotify)?, Stream(UserCmd)).
+frank_v_redeem1([trade_completed(diana)|In],
+                [redeem(diana, diana, 0, 1, frank, 28, 1)|Out?]) :-
+    frank_v_redeem2(In?, Out).
+frank_v_redeem1([_|In], Out?) :- otherwise | frank_v_redeem1(In?, Out).
+frank_v_redeem1([], []).
+
+procedure frank_v_redeem2(Stream(UserNotify)?, Stream(UserCmd)).
+frank_v_redeem2([trade_completed(diana)|In],
+                [redeem(diana, diana, 0, 1, frank, 28, 1)|Out?]) :-
+    frank_v_redeem3(In?, Out).
+frank_v_redeem2([_|In], Out?) :- otherwise | frank_v_redeem2(In?, Out).
+frank_v_redeem2([], []).
+
+procedure frank_v_redeem3(Stream(UserNotify)?, Stream(UserCmd)).
+frank_v_redeem3([trade_completed(diana)|In],
+                [redeem(diana, diana, 0, 1, frank, 28, 1)|Out?]) :-
+    frank_v_redeem4(In?, Out).
+frank_v_redeem3([_|In], Out?) :- otherwise | frank_v_redeem3(In?, Out).
+frank_v_redeem3([], []).
+
+procedure frank_v_redeem4(Stream(UserNotify)?, Stream(UserCmd)).
+frank_v_redeem4([trade_completed(diana)|In],
+                [redeem(diana, diana, 0, 1, frank, 28, 1)|Out?]) :-
+    frank_v_redeem5(In?, Out).
+frank_v_redeem4([_|In], Out?) :- otherwise | frank_v_redeem4(In?, Out).
+frank_v_redeem4([], []).
+
+procedure frank_v_redeem5(Stream(UserNotify)?, Stream(UserCmd)).
+frank_v_redeem5([trade_completed(diana)|In], [balance|Out?]) :-
+    frank_v_done(In?, Out).
+frank_v_redeem5([_|In], Out?) :- otherwise | frank_v_redeem5(In?, Out).
+frank_v_redeem5([], []).
+
+procedure frank_v_done(Stream(UserNotify)?, Stream(UserCmd)).
+frank_v_done(_, []).
