@@ -1,4 +1,5 @@
-// Module-as-value: the consumer kernel `run/2`.
+// Module-as-value: the consumer kernel `_run`/2 — the kernel behind the
+// user-facing `run` system predicate.
 //
 // `run(Goal, Module)` launches Goal as a fresh initial goal on the Module value,
 // with its program counter into that module's code — the START primitive, the
@@ -28,7 +29,7 @@ import 'interp.dart' show ByteRunner;
 /// Register the engine_v2-dependent module kernels onto [rt].
 /// Called from the `GlpEngine` constructor, after the runtime is built.
 void registerModuleKernels(GlpRuntime rt) {
-  rt.bodyKernels.register('run', 2, runKernel);
+  rt.bodyKernels.register('_run', 2, runKernel);
 }
 
 /// Follow a top-level VarRef to its bound value (shallow dereference).
@@ -44,21 +45,21 @@ Object? _deref(GlpRuntime rt, Object? term) {
 String _hex(Uint8List bytes) =>
     bytes.map((b) => b.toRadixString(16).padLeft(2, '0')).join();
 
-/// `run(Goal, Module)`/2 — module-as-value, consumer half. See the library note.
+/// `_run(Goal, Module)`/2 — module-as-value, consumer half. See the library note.
 BodyKernelResult runKernel(GlpRuntime rt, List<Object?> args) {
   if (args.length != 2) {
-    print('[ABORT] run/2: expected 2 arguments, got ${args.length}');
+    print('[ABORT] _run/2: expected 2 arguments, got ${args.length}');
     return BodyKernelResult.abort;
   }
 
   final module = _deref(rt, args[1]);
   if (module is! ModuleTerm) {
-    print('[ABORT] run/2: second argument is not a module value');
+    print('[ABORT] _run/2: second argument is not a module value');
     return BodyKernelResult.abort;
   }
   final artefact = module.artefact;
   if (artefact is! Artefact) {
-    print('[ABORT] run/2: module carries no artefact');
+    print('[ABORT] _run/2: module carries no artefact');
     return BodyKernelResult.abort;
   }
 
@@ -73,7 +74,7 @@ BodyKernelResult runKernel(GlpRuntime rt, List<Object?> args) {
     functor = goal.value.toString();
     bootArgs = const [];
   } else {
-    print('[ABORT] run/2: first argument is not a goal');
+    print('[ABORT] _run/2: first argument is not a goal');
     return BodyKernelResult.abort;
   }
 
@@ -91,7 +92,7 @@ BodyKernelResult runKernel(GlpRuntime rt, List<Object?> args) {
   final entry = image.entryOffsetOf(sig);
   if (entry == null) {
     // Resolution, not type-checking: the module exposes no such entry point.
-    print('[ABORT] run/2: $sig has no entry point in module ${module.name}');
+    print('[ABORT] _run/2: $sig has no entry point in module ${module.name}');
     return BodyKernelResult.abort;
   }
 

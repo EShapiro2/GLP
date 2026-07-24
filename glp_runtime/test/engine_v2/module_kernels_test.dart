@@ -1,5 +1,7 @@
-/// Tests for module-as-value: `self_module`/1 (producer) and `run`/2 (consumer),
-/// and the module value's payload — the compiled Artefact (h(M) + code).
+/// Tests for module-as-value: the kernels `_self_module`/1 (producer) and
+/// `_run`/2 (consumer), and the module value's payload — the compiled Artefact
+/// (h(M) + code). The unprefixed `self_module`/`run` are the user-facing system
+/// predicates that wrap these kernels.
 ///
 /// Spec: IGLP sections/appendix-implementation-notes.tex §Self-Module — "a goal
 /// carries the module value of the app it belongs to. `self_module` takes no
@@ -8,9 +10,9 @@
 /// the offer and runs the code". `run(Goal, Module)` is the inverse: it launches
 /// Goal as a fresh initial goal on the Module value, PC into its code.
 ///
-/// These are Dart-level tests: the root self.glp system predicates for
-/// `self_module`/`run` are TGLP's and have not landed, so the kernels are
-/// driven directly, as the arithmetic kernel tests do.
+/// These are Dart-level tests: the user-facing `self_module`/`run` system
+/// predicates are TGLP's, so the kernels are driven directly by name, as the
+/// arithmetic kernel tests do.
 library;
 
 import 'dart:io';
@@ -95,9 +97,9 @@ void main() {
       rt.currentGoalId = goalId;
 
       final (outWriter, _) = rt.heap.allocateVariable();
-      final kernel = rt.bodyKernels.lookup('self_module', 1);
+      final kernel = rt.bodyKernels.lookup('_self_module', 1);
       expect(kernel, isNotNull,
-          reason: 'self_module/1 should be a registered body kernel');
+          reason: '_self_module/1 should be a registered body kernel');
 
       final result = kernel!(rt, [VarRef(outWriter)]);
       expect(result, equals(BodyKernelResult.success));
@@ -115,7 +117,7 @@ void main() {
       rt.currentGoalId = 4242; // no setGoalModule for this goal
 
       final (outWriter, _) = rt.heap.allocateVariable();
-      final kernel = rt.bodyKernels.lookup('self_module', 1)!;
+      final kernel = rt.bodyKernels.lookup('_self_module', 1)!;
       expect(kernel(rt, [VarRef(outWriter)]), equals(BodyKernelResult.abort));
     });
   });
@@ -130,8 +132,8 @@ void main() {
       final boot = bootGoalFor(rt, sig);
 
       final before = rt.gq.length;
-      final kernel = rt.bodyKernels.lookup('run', 2);
-      expect(kernel, isNotNull, reason: 'run/2 should be registered');
+      final kernel = rt.bodyKernels.lookup('_run', 2);
+      expect(kernel, isNotNull, reason: '_run/2 should be registered');
 
       final result = kernel!(rt, [boot.goal, module]);
       expect(result, equals(BodyKernelResult.success));
@@ -160,7 +162,7 @@ void main() {
       final (sig, _) = firstCompiledEntry(artefact);
       final boot = bootGoalFor(rt, sig);
 
-      expect(rt.bodyKernels.lookup('run', 2)!(rt, [boot.goal, module]),
+      expect(rt.bodyKernels.lookup('_run', 2)!(rt, [boot.goal, module]),
           equals(BodyKernelResult.success));
 
       // Stand in the launched goal and ask for its module.
@@ -168,7 +170,7 @@ void main() {
       rt.currentGoalId = launched.id;
 
       final (outWriter, _) = rt.heap.allocateVariable();
-      expect(rt.bodyKernels.lookup('self_module', 1)!(rt, [VarRef(outWriter)]),
+      expect(rt.bodyKernels.lookup('_self_module', 1)!(rt, [VarRef(outWriter)]),
           equals(BodyKernelResult.success));
       expect(identical(rt.heap.getValue(outWriter), module), isTrue,
           reason: 'self_module is the inverse of run');
@@ -177,7 +179,7 @@ void main() {
     test('aborts when the second argument is not a module value', () {
       final rt = GlpRuntime();
       registerModuleKernels(rt);
-      final kernel = rt.bodyKernels.lookup('run', 2)!;
+      final kernel = rt.bodyKernels.lookup('_run', 2)!;
       expect(kernel(rt, [ConstTerm('boot'), ConstTerm('not_a_module')]),
           equals(BodyKernelResult.abort));
     });
@@ -186,7 +188,7 @@ void main() {
       final rt = GlpRuntime();
       registerModuleKernels(rt);
       final module = ModuleTerm(artefact, name: 'testmod');
-      final kernel = rt.bodyKernels.lookup('run', 2)!;
+      final kernel = rt.bodyKernels.lookup('_run', 2)!;
       final before = rt.gq.length;
       expect(kernel(rt, [ConstTerm('no_such_procedure_xyz'), module]),
           equals(BodyKernelResult.abort));
@@ -263,7 +265,7 @@ void main() {
         final (sig, entry) = firstCompiledEntry(art);
         final boot = bootGoalFor(rt, sig);
 
-        expect(rt.bodyKernels.lookup('run', 2)!(rt, [boot.goal, moduleValue]),
+        expect(rt.bodyKernels.lookup('_run', 2)!(rt, [boot.goal, moduleValue]),
             equals(BodyKernelResult.success));
         final launched = rt.gq.items.last;
         expect(launched.pc, equals(entry));

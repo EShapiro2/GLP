@@ -100,9 +100,10 @@ void registerStandardBodyKernels(BodyKernelRegistry registry) {
   registry.register('_send', 3, sendKernel);
   registry.register('_sign', 2, signKernel);
 
-  // Module-as-value: producer half. (run/2 — the consumer — is registered by
+  // Module-as-value: producer half. (`_run`/2 — the consumer — is registered by
   // the engine from engine_v2/module_kernels.dart, where CodeImage is in scope.)
-  registry.register('self_module', 1, selfModuleKernel);
+  // The unprefixed `self_module`/`run` are the user-facing system predicates.
+  registry.register('_self_module', 1, selfModuleKernel);
 
   // I/O kernels
   registry.register('_output', 1, outputKernel);
@@ -550,22 +551,23 @@ BodyKernelResult nowKernel(GlpRuntime rt, List<Object?> args) {
   return _bindResult(rt, args[0], currentTime);
 }
 
-/// `self_module`/1 — module-as-value, producer half.
+/// `_self_module`/1 — module-as-value, producer half; the kernel behind the
+/// user-facing `self_module` system predicate.
 ///
 /// Binds its single output (`args[0]`, a writer) to the module VALUE the calling
-/// goal runs: a [ModuleTerm] carrying that app's compiled code. Following the
-/// FCP abstract machine, a goal carries the module value of the app it belongs
-/// to, so this returns what the computation already holds. Takes no input. The
-/// inverse of `run/2`.
+/// goal runs: a [ModuleTerm] carrying that app's artefact — h(M) and code.
+/// Following the FCP abstract machine, a goal carries the module value of the
+/// app it belongs to, so this returns what the computation already holds. Takes
+/// no input. The inverse of `_run`/2.
 BodyKernelResult selfModuleKernel(GlpRuntime rt, List<Object?> args) {
   if (args.length != 1) {
-    print('[ABORT] self_module/1: expected 1 argument, got ${args.length}');
+    print('[ABORT] _self_module/1: expected 1 argument, got ${args.length}');
     return BodyKernelResult.abort;
   }
   final goalId = rt.currentGoalId;
   final module = goalId == null ? null : rt.getGoalModule(goalId);
   if (module == null) {
-    print('[ABORT] self_module/1: calling goal carries no module value');
+    print('[ABORT] _self_module/1: calling goal carries no module value');
     return BodyKernelResult.abort;
   }
   return _bindResult(rt, args[0], module);
