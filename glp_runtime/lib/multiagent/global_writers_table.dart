@@ -186,6 +186,20 @@ class GlobalWritersTable {
     return _globalizeEntries[index];
   }
 
+  /// Search for the LocalizeEntry whose local writer is [writerAddr].
+  ///
+  /// Used by Globalize's forwarding case: an unbound imported reader is one
+  /// whose paired writer carries a LocalizeEntry (X, o, k) — the entry's
+  /// presence is the condition, since applying the incoming value removes it.
+  LocalizeEntry? findLocalizeEntryByWriter(int writerAddr) {
+    for (final entry in _localizeEntries) {
+      if (entry.writerAddr == writerAddr) {
+        return entry;
+      }
+    }
+    return null;
+  }
+
   /// Search for LocalizeEntry matching remote (agent, index).
   ///
   /// Used when receiving `_r(p, i) := T`:

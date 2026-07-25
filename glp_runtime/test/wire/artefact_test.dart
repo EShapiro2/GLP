@@ -46,10 +46,11 @@ Artefact _sample() => Artefact(
 
 void main() {
   group('artefact byte format', () {
-    test('header begins with magic GLPW and wire version 1', () {
+    test('header begins with magic GLPW and code-format version 2', () {
       final b = _sample().toBytes();
       expect(b.sublist(0, 4), artefactMagic); // 'GLPW'
-      expect(b[4], wireFormatVersion); // 1
+      expect(b[4], wireFormatVersion); // 2 (message kind byte, anchored links)
+      expect(wireFormatVersion, 2);
     });
 
     test('whole-artefact byte round-trip is stable', () {

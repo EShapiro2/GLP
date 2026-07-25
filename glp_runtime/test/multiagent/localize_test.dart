@@ -28,6 +28,7 @@ void main() {
       final result = localize(
         globalNames: globalNames,
         localAgent: 'q',
+        fromAgent: 'p',
         table: table,
         freshAddrAllocator: allocateAddr,
       );
@@ -72,6 +73,7 @@ void main() {
       final result = localize(
         globalNames: globalNames,
         localAgent: 'q',
+        fromAgent: 'p',
         table: table,
         freshAddrAllocator: allocateAddr,
       );
@@ -119,6 +121,7 @@ void main() {
       final result = localize(
         globalNames: globalNames,
         localAgent: 'q',
+        fromAgent: 'p',
         table: table,
         freshAddrAllocator: allocateAddr,
       );

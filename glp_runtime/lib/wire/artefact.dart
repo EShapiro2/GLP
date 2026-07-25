@@ -31,8 +31,10 @@ import 'package:glp_runtime/wire/instruction_codec.dart';
 /// Magic `GLPW`.
 const List<int> artefactMagic = [0x47, 0x4C, 0x50, 0x57];
 
-/// Wire-format version this implementation writes and accepts.
-const int wireFormatVersion = 1;
+/// Code-format version this implementation writes and accepts. Version 2
+/// introduces the message kind byte (0 value, 1 request, 2 acknowledgement);
+/// the loader refuses a version it does not support.
+const int wireFormatVersion = 2;
 
 /// An exported procedure recorded in the interface table.
 class ArtefactExport {

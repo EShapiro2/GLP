@@ -378,24 +378,13 @@ void _agentIsolateEntry(AgentConfig config) async {
     network.send(pk, Uint8List.fromList(msg.payload));
   };
 
-  // Incoming (spec §4): deserialize (globalName, value) and handleMadAssignment.
+  // Incoming (spec §4): dispatch on the message kind byte (value/request/
+  // acknowledgement) via the MadContext receive entry point.
   network.onMessageReceived = (senderPk, payload, messageId, transport) {
-    final serializer = PayloadSerializer(agentId);
     try {
-      final (globalName, value) = serializer.deserializeGlobalSendPayload(
-        payload,
-        (isReader) {
-          final (w, r) = runtime.heap.allocateVariable();
-          return isReader ? r : w;
-        },
-      );
       final fromId = config.directory.idOf(senderPk) ?? '?';
-      log('Assignment: $globalName := $value (from $fromId)');
-      ctx.handleMadAssignment(
-        globalName: globalName,
-        value: value,
-        fromAgent: fromId,
-      );
+      log('Incoming payload from $fromId (${payload.length}B)');
+      ctx.handleIncomingPayload(payload: payload, fromAgent: fromId);
     } catch (e) {
       print('[$agentId] ERROR handling delivery: $e');  // Always print errors
     }

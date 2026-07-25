@@ -208,6 +208,7 @@ void bobIsolate(SendPort mainPort) async {
       final localizeResult = localize(
         globalNames: globalNames,
         localAgent: 'bob',
+        fromAgent: 'alice',
         table: ctx.wp,
         freshAddrAllocator: () => runtime.heap.allocateVariable(),
       );

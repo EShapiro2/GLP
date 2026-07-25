@@ -23,8 +23,10 @@ class GlobalSendGoal {
   /// Global name identifying the link (_w(p,i) or _r(p,i))
   final GlobalName globalName;
 
-  /// Agent to send the message to
-  final String destination;
+  /// Agent to send the message to. For a reader-name link this is per-link
+  /// runtime state — the link's current holder — not a destination frozen at
+  /// spawn: a request for the link re-addresses it (spec §app:requests-acks).
+  String destination;
 
   GlobalSendGoal({
     required this.readerAddr,
@@ -111,6 +113,24 @@ class GlobalSendRegistry {
 
   /// Check if there's a goal watching this reader address
   bool hasGoalFor(int readerAddr) => _goals.containsKey(readerAddr);
+
+  /// Record [newHolder] as the holder of the link [globalName]: if a not-yet-
+  /// fired goal for the link exists, update its destination and return true.
+  /// Returns false when no goal matches (the value was already produced, or
+  /// the link never existed here).
+  ///
+  /// Spec (madGLP Receive, Request case): "If the request arrives before the
+  /// value is produced, the anchor records the requester as the link's holder
+  /// — the destination consulted at send time is per-link runtime state."
+  bool redirectGoal(GlobalName globalName, String newHolder) {
+    for (final goal in _goals.values) {
+      if (goal.globalName == globalName) {
+        goal.destination = newHolder;
+        return true;
+      }
+    }
+    return false;
+  }
 
   /// Get the goal watching this reader address (if any)
   GlobalSendGoal? getGoalFor(int readerAddr) => _goals[readerAddr];

@@ -15,6 +15,9 @@ import 'package:glp_runtime/multiagent/global_send.dart';
 import 'package:glp_runtime/multiagent/global_writers_table.dart';
 import 'package:glp_runtime/multiagent/mad_helpers.dart';
 import 'package:glp_runtime/multiagent/glp_network.dart';
+import 'package:glp_runtime/wire/codec.dart'
+    show wireMsgKindValue, wireMsgKindRequest, wireMsgKindAcknowledgement;
+import 'package:glp_runtime/wire/payload_codec.dart' show PayloadCodec;
 
 /// Callback for delivering messages to other agents
 typedef MessageDeliveryCallback = void Function(String destination, OutboundMessage message);
@@ -71,6 +74,20 @@ class MadContext {
   /// entry at index 0 is permanent.
   final Map<(String, int), ({Term value, String fromAgent})>
       _heldReaderAssignments = {};
+
+  /// Pending reader-name values (spec §app:requests-acks): a sent value
+  /// `_r(p, i) := T↑` is retained here, keyed by (p, i), until its
+  /// acknowledgement arrives. A request for the link re-addresses the pending
+  /// value to the requester; the acknowledgement deletes it, closing the link.
+  /// Writer-name and serializer values are fire-and-forget and never pend.
+  final Map<(String, int), ({List<int> payload, String destination})>
+      _pendingReaderValues = {};
+
+  /// Reader names this agent forwarded on (Definition Globalize, forwarding
+  /// case). After forwarding, the no-entry condition on an arriving value for
+  /// the name means stale, not early: such arrivals are dropped, never held.
+  /// Indices are never reused, so the record never misclassifies.
+  final Set<(String, int)> _forwardedReaderNames = {};
 
   /// Send MAD trace output to traceSink if set, otherwise silent.
   void _trace(String msg) {
@@ -157,6 +174,10 @@ class MadContext {
 
     _trace('[MAD $agentId] global_send FIRED: ${result.globalName} -> ${result.destination}');
 
+    // Record names forwarded by this globalization: arrivals for them are
+    // stale from now on (Definition Globalize, forwarding case).
+    _recordForwardedNames(result.globalizeResult);
+
     // Globalize the value term: replace local VarRefs with GlobalNames
     // This is needed so the receiver can localize nested global names
     final globalizedValue = globalizeTermWithResult(
@@ -178,6 +199,16 @@ class MadContext {
       type: MessageType.assignment,
       payload: payload,
     ));
+
+    // A reader-name value pends until acknowledged (§app:requests-acks): a
+    // request re-addresses it, the acknowledgement releases it. Writer-name
+    // values are fire-and-forget — they always find their fixed anchor entry.
+    if (result.globalName.isReader && result.globalName.index > 0) {
+      _pendingReaderValues[
+              (result.globalName.agent, result.globalName.index)] =
+          (payload: payload, destination: result.destination);
+      _trace('[MAD $agentId] value ${result.globalName} pending until ack');
+    }
 
     // Register any new goals spawned for nested variables
     // Must set up both registry entry AND onBind callback (same as registerGlobalSendSpawns)
@@ -233,6 +264,30 @@ class MadContext {
         onWriterBound(spawn.readerAddr, value);
       });
       _trace('[MAD $agentId] registered global_send goal: ${spawn.globalName} -> ${spawn.destAgent}');
+    }
+  }
+
+  /// Record the reader names a globalization forwarded (Definition Globalize,
+  /// forwarding case): from now on a value arriving for such a name is stale
+  /// at this agent and is dropped, not held.
+  void _recordForwardedNames(GlobalizeResult result) {
+    for (final gn in result.forwardedNames) {
+      _forwardedReaderNames.add((gn.agent, gn.index));
+      _trace('[MAD $agentId] forwarded $gn under its original anchor');
+    }
+  }
+
+  /// Queue the requests a localization produced (Definition Localize, request
+  /// rule): req(_r(p,i)) to the anchor p for each reader name received from a
+  /// sender other than its anchor.
+  void _queueLocalizeRequests(LocalizeResult result) {
+    for (final gn in result.requests) {
+      mp.add(OutboundMessage(
+        destination: gn.agent,
+        type: MessageType.request,
+        payload: PayloadCodec.createRequestPayload(gn),
+      ));
+      _trace('[MAD $agentId] queued req($gn) to ${gn.agent}');
     }
   }
 
@@ -306,6 +361,7 @@ class MadContext {
       final localizeResult = localize(
         globalNames: globalNames,
         localAgent: agentId,
+        fromAgent: fromAgent,
         table: wp,
         freshAddrAllocator: () => runtime.heap.allocateVariable(),
       );
@@ -315,6 +371,9 @@ class MadContext {
 
       // Issue 7: deliver any `_r` assignment that arrived before these entries.
       _deliverHeldReaderAssignments(globalNames);
+
+      // Request rule: forwarded names teach their anchors the new holder.
+      _queueLocalizeRequests(localizeResult);
 
       // Replace global names with local variables in content
       content = localizeTermWithResult(content, globalNames, localizeResult);
@@ -353,9 +412,12 @@ class MadContext {
     final entry = wp.lookupByIndex(globalName.index);
 
     if (entry == null) {
-      throw StateError(
-        'No GlobalizeEntry at index ${globalName.index} for $globalName',
-      );
+      // Stale drop (spec §app:requests-acks): a value matching no entry is
+      // dropped. A writer-name value always finds its fixed anchor entry, so
+      // a miss is provably stale — indices are never reused.
+      _trace('[MAD $agentId] _handleWriterAssignment: no entry for $globalName'
+          ' — stale, dropped');
+      return;
     }
 
     final writerAddr = entry.writerAddr;
@@ -370,11 +432,13 @@ class MadContext {
       final localizeResult = localize(
         globalNames: globalNames,
         localAgent: agentId,
+        fromAgent: fromAgent,
         table: wp,
         freshAddrAllocator: () => runtime.heap.allocateVariable(),
       );
       registerGlobalSendSpawns(localizeResult.spawns);
       _deliverHeldReaderAssignments(globalNames);
+      _queueLocalizeRequests(localizeResult);
       localizedValue = localizeTermWithResult(value, globalNames, localizeResult);
       _trace('[MAD $agentId] _handleWriterAssignment: localized value = $localizedValue');
     }
@@ -401,6 +465,15 @@ class MadContext {
   void _handleReaderAssignment(GlobalName globalName, Term value, String fromAgent) {
     final entry = wp.findByRemote(globalName.agent, globalName.index);
     if (entry == null) {
+      // After forwarding, no-entry means stale (spec §app:requests-acks): the
+      // reader moved on, and the anchor's redirected value will reach its
+      // current holder. Drop — holding is never needed for a forwarded name.
+      if (_forwardedReaderNames
+          .contains((globalName.agent, globalName.index))) {
+        _trace('[MAD $agentId] _handleReaderAssignment: $globalName was '
+            'forwarded — stale value dropped');
+        return;
+      }
       // Issue 7 / spec §8.3 (Early Messages): the assignment arrived before its
       // LocalizeEntry exists (possible under any non-FIFO transport). Hold it,
       // keyed by (remoteAgent, remoteIndex); localize() delivers it when it
@@ -423,11 +496,13 @@ class MadContext {
       final localizeResult = localize(
         globalNames: globalNames,
         localAgent: agentId,
+        fromAgent: fromAgent,
         table: wp,
         freshAddrAllocator: () => runtime.heap.allocateVariable(),
       );
       registerGlobalSendSpawns(localizeResult.spawns);
       _deliverHeldReaderAssignments(globalNames);
+      _queueLocalizeRequests(localizeResult);
       localizedValue = localizeTermWithResult(value, globalNames, localizeResult);
       _trace('[MAD $agentId] _handleReaderAssignment: localized value = $localizedValue');
     }
@@ -444,6 +519,17 @@ class MadContext {
     // Remove the entry
     wp.removeLocalizeEntry(globalName.agent, globalName.index);
     _trace('[MAD $agentId] _handleReaderAssignment: entry removed');
+
+    // Acknowledge to the value's sender (madGLP Receive, Reader case): the
+    // acknowledgement releases the pending value at the sender and closes the
+    // link. Only reader-name values are acknowledged.
+    mp.add(OutboundMessage(
+      destination: fromAgent,
+      type: MessageType.acknowledgement,
+      payload: PayloadCodec.createAckPayload(globalName),
+    ));
+    _trace('[MAD $agentId] _handleReaderAssignment: queued ack($globalName) '
+        'to $fromAgent');
   }
 
   /// Deliver any held `_r` assignments whose `LocalizeEntry` was just created.
@@ -481,6 +567,7 @@ class MadContext {
     final localizeResult = localize(
       globalNames: nestedGlobalNames,
       localAgent: agentId,
+      fromAgent: fromAgent,
       table: wp,
       freshAddrAllocator: () => runtime.heap.allocateVariable(),
     );
@@ -491,6 +578,9 @@ class MadContext {
     // Issue 7: deliver any `_r` assignment that arrived before these entries.
     _deliverHeldReaderAssignments(nestedGlobalNames);
 
+    // Request rule: forwarded names teach their anchors the new holder.
+    _queueLocalizeRequests(localizeResult);
+
     // Now handle the main assignment
     handleMadAssignment(
       globalName: globalName,
@@ -498,6 +588,105 @@ class MadContext {
       fromAgent: fromAgent,
     );
   }
+
+  // =========================================================================
+  // madGLP Receive Transaction — Request and Acknowledgement
+  // =========================================================================
+
+  /// Handle an incoming madGLP payload: dispatch on the message kind byte
+  /// (code-format v2 — 0 value, 1 request, 2 acknowledgement).
+  ///
+  /// This is the single entry point for the receive path: both the isolate
+  /// runner and the app runtime hand the opaque payload bytes here.
+  void handleIncomingPayload({
+    required List<int> payload,
+    required String fromAgent,
+  }) {
+    if (payload.isEmpty) {
+      _trace('[MAD $agentId] handleIncomingPayload: empty payload dropped');
+      return;
+    }
+    switch (payload[0]) {
+      case wireMsgKindValue:
+        final (globalName, value) = _serializer.deserializeGlobalSendPayload(
+          payload,
+          (isReader) {
+            final (w, r) = runtime.heap.allocateVariable();
+            return isReader ? r : w;
+          },
+        );
+        handleMadAssignment(
+            globalName: globalName, value: value, fromAgent: fromAgent);
+      case wireMsgKindRequest:
+        handleRequest(
+            PayloadCodec.decodeRequestOrAckPayload(payload), fromAgent);
+      case wireMsgKindAcknowledgement:
+        handleAck(PayloadCodec.decodeRequestOrAckPayload(payload), fromAgent);
+      default:
+        throw FormatException(
+            'unknown madGLP message kind: ${payload[0]}');
+    }
+  }
+
+  /// Handle req(_r(p, i)) — we are the anchor p (madGLP Receive, Request
+  /// case): record the requester as the link's holder; if the value is
+  /// pending, re-address it to the requester. A request for a closed link is
+  /// dropped.
+  void handleRequest(GlobalName globalName, String fromAgent) {
+    _trace('[MAD $agentId] handleRequest: req($globalName) from $fromAgent');
+    final key = (globalName.agent, globalName.index);
+
+    final pending = _pendingReaderValues[key];
+    if (pending != null) {
+      // Redirect the pending value to the requester. The copy sent to a past
+      // holder is dropped there as stale; the value stays pending until the
+      // current holder's acknowledgement arrives.
+      _pendingReaderValues[key] =
+          (payload: pending.payload, destination: fromAgent);
+      mp.add(OutboundMessage(
+        destination: fromAgent,
+        type: MessageType.assignment,
+        payload: pending.payload,
+      ));
+      _trace('[MAD $agentId] handleRequest: pending $globalName re-addressed '
+          'to $fromAgent');
+      return;
+    }
+
+    // Value not yet produced: record the requester as the link's holder — the
+    // destination consulted at send time is per-link runtime state.
+    if (globalSendRegistry.redirectGoal(globalName, fromAgent)) {
+      _trace('[MAD $agentId] handleRequest: holder of $globalName recorded '
+          'as $fromAgent');
+      return;
+    }
+
+    // No pending value, no goal: the link is closed — stale request, dropped.
+    _trace('[MAD $agentId] handleRequest: $globalName matches nothing — '
+        'stale request dropped');
+  }
+
+  /// Handle ack(_r(p, i)) — we sent the value (madGLP Receive,
+  /// Acknowledgement case): remove the pending value; the link is closed.
+  /// An acknowledgement for a closed link is dropped.
+  void handleAck(GlobalName globalName, String fromAgent) {
+    final key = (globalName.agent, globalName.index);
+    final removed = _pendingReaderValues.remove(key);
+    if (removed == null) {
+      _trace('[MAD $agentId] handleAck: ack($globalName) matches no pending '
+          'value — stale, dropped');
+    } else {
+      _trace('[MAD $agentId] handleAck: pending $globalName released — link '
+          'closed');
+    }
+  }
+
+  /// Number of pending (sent, unacknowledged) reader-name values.
+  int get pendingReaderValueCount => _pendingReaderValues.length;
+
+  /// Whether the value for reader name (anchorAgent, index) is still pending.
+  bool hasPendingReaderValue(String anchorAgent, int index) =>
+      _pendingReaderValues.containsKey((anchorAgent, index));
 
   // =========================================================================
   // Export/Import Operations (for Flutter app compatibility)
@@ -574,6 +763,9 @@ class MadContext {
     // Register the spawned global_send goals for readers
     registerGlobalSendSpawns(globalizeResult.spawns);
 
+    // Record names forwarded by this globalization (stale-drop bookkeeping).
+    _recordForwardedNames(globalizeResult);
+
     // For globalize-writer entries: NO onBind is registered here.
     // Per spec Section 5.1: when Y is a writer, p creates an entry (Y, q) and
     // waits for the assignment to arrive. The global_send goal is spawned at q
@@ -616,6 +808,13 @@ class MadContext {
       type: MessageType.assignment,
       payload: payload,
     ));
+
+    // A reader-name value pends until acknowledged (§app:requests-acks).
+    if (!isWriter && gnIndex > 0) {
+      _pendingReaderValues[(gnAgent, gnIndex)] =
+          (payload: payload, destination: destAgent);
+      _trace('[MAD $agentId] send: value ${globalName} pending until ack');
+    }
 
     _trace('[MAD $agentId] send: queued message to $destAgent, mp.totalLength=${mp.totalLength}');
   }

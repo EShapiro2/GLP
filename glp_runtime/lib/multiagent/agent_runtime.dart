@@ -24,7 +24,6 @@ import 'package:glp_runtime/runtime/scheduler.dart';
 import 'package:glp_runtime/runtime/terms.dart' as rt;
 import 'package:glp_runtime/runtime/external_io.dart';
 import 'package:glp_runtime/multiagent/mad_context.dart';
-import 'package:glp_runtime/multiagent/payload_serializer.dart';
 import 'package:glp_runtime/multiagent/glp_network.dart';
 import 'package:glp_runtime/multiagent/simulation_network.dart';
 
@@ -237,20 +236,12 @@ class AgentRuntime {
       network.send(_pkFor(destination), Uint8List.fromList(msg.payload));
     };
 
-    // Incoming (spec §4): deserialize (globalName, value) and handleMadAssignment.
+    // Incoming (spec §4): dispatch on the message kind byte (value/request/
+    // acknowledgement) via the MadContext receive entry point.
     network.onMessageReceived = (senderPk, payload, messageId, transport) {
       try {
-        final (globalName, value) =
-            PayloadSerializer(agentIdLower).deserializeGlobalSendPayload(
-          payload,
-          (isReader) {
-            final (w, r) = _runtime!.heap.allocateVariable();
-            return isReader ? r : w;
-          },
-        );
         final fromId = directory.idOf(senderPk) ?? '?';
-        _ctx!.handleMadAssignment(
-            globalName: globalName, value: value, fromAgent: fromId);
+        _ctx!.handleIncomingPayload(payload: payload, fromAgent: fromId);
       } catch (e) {
         _log('MAD_ERROR: $e');
       }

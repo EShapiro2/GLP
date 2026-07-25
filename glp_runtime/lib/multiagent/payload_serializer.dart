@@ -13,6 +13,7 @@ import 'package:glp_runtime/multiagent/message_queue.dart';
 import 'package:glp_runtime/multiagent/mad_helpers.dart';
 import 'package:glp_runtime/wire/wire_flags.dart';
 import 'package:glp_runtime/wire/payload_codec.dart';
+import 'package:glp_runtime/wire/codec.dart' show wireMsgKindValue;
 
 /// Global Variable ID encoding
 class GlobalVarId {
@@ -207,6 +208,9 @@ class PayloadSerializer {
     }
     final builder = BytesBuilder();
 
+    // Message kind (code-format v2): 0 = value.
+    builder.addByte(wireMsgKindValue);
+
     // GlobalName type (0=writer, 1=reader)
     builder.addByte(globalName.isWriter ? 0 : 1);
 
@@ -254,6 +258,9 @@ class PayloadSerializer {
 
     final builder = BytesBuilder();
 
+    // Message kind (code-format v2): 0 = value.
+    builder.addByte(wireMsgKindValue);
+
     // GlobalName type (0=writer for serializer)
     builder.addByte(0);
 
@@ -300,6 +307,13 @@ class PayloadSerializer {
       return PayloadCodec.deserializeGlobalSendPayload(payload);
     }
     int offset = 0;
+
+    // Message kind (code-format v2): a value payload opens with kind 0.
+    if (payload[offset] != wireMsgKindValue) {
+      throw FormatException(
+          'expected value message (kind 0), got kind ${payload[offset]}');
+    }
+    offset++;
 
     // GlobalName type
     final isWriter = payload[offset] == 0;

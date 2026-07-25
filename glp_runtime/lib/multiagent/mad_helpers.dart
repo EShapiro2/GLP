@@ -124,9 +124,16 @@ class GlobalizeResult {
   /// Spawns needed for reader variables
   final List<GlobalSendSpawn> spawns;
 
+  /// Names forwarded under their original anchor (Definition Globalize,
+  /// forwarding case): the LocalizeEntry was removed and no goal spawned.
+  /// The caller records these so a later value arriving for the name is
+  /// dropped as stale, not held as early.
+  final List<GlobalName> forwardedNames;
+
   GlobalizeResult({
     required this.globalNames,
     required this.spawns,
+    this.forwardedNames = const [],
   });
 }
 
@@ -155,10 +162,17 @@ class LocalizeResult {
   /// Spawns needed for _w(p,i) global names
   final List<GlobalSendSpawn> spawns;
 
+  /// Requests to queue (Definition Localize, request rule): for each _r(p, i)
+  /// received from a sender s ≠ p the name was forwarded, and req(_r(p,i)) is
+  /// sent to the anchor p — the request is how the anchor learns the reader's
+  /// current holder. Each name here is addressed to its own anchor (gn.agent).
+  final List<GlobalName> requests;
+
   LocalizeResult({
     required this.freshPairs,
     required this.useReader,
     required this.spawns,
+    this.requests = const [],
   });
 }
 
@@ -167,13 +181,16 @@ class LocalizeResult {
 /// Given agent p, remote agent q, and a list of variables occurring in term T,
 /// produces the globalized representation T_p↑.
 ///
-/// Spec Section 5.1:
+/// Definition Globalize (IGLP, madglp.tex):
 /// - If Y is a writer: allocate index i, create entry (Y, q) at index i,
 ///   replace with _w(p, i). No goal is spawned.
 /// - If Y? is a reader: allocate index i, replace with _r(p, i),
 ///   spawn global_send(Y?, _r(p,i), q). No entry is created.
+/// - If Y? is the reader of an imported pair — its paired writer carries a
+///   LocalizeEntry (Y, o, k) with anchor o — replace with the original name
+///   _r(o, k) and remove the entry: the name is forwarded, no goal is spawned.
 ///
-/// Returns GlobalizeResult with global names and spawn info.
+/// Returns GlobalizeResult with global names, spawn info, and forwarded names.
 /// Updates the GlobalWritersTable with entries for writers.
 GlobalizeResult globalize({
   required List<TermVar> variables,
@@ -183,6 +200,7 @@ GlobalizeResult globalize({
 }) {
   final globalNames = <GlobalName>[];
   final spawns = <GlobalSendSpawn>[];
+  final forwardedNames = <GlobalName>[];
 
   for (final v in variables) {
     if (v.isWriter) {
@@ -193,28 +211,48 @@ GlobalizeResult globalize({
       // Entry stores the writer address Y for later binding when value arrives.
       final index = table.addGlobalizeEntry(v.writerAddr, remoteAgent);
       globalNames.add(GlobalName.writer(localAgent, index));
-    } else {
-      // Reader: spawn global_send, no entry
-      // Spec: "allocate the next index i, replace Y? in T_p↑ with _r(p, i),
-      //        and spawn global_send(Y?, _r(p,i), q). No entry is created—
-      //        the global_send goal handles outgoing communication."
-      final index = table.allocateIndex();
-      final globalName = GlobalName.reader(localAgent, index);
-      globalNames.add(globalName);
-
-      // Spawn global_send(Y?, _r(p,i), q)
-      // Note: GlobalSendSpawn.readerAddr is used as the key for heap.onBind(),
-      // which is indexed by *writer* address. We pass writerAddr so the
-      // callback fires when bindVariable is called on Y.
-      spawns.add(GlobalSendSpawn(
-        readerAddr: v.writerAddr,
-        globalName: globalName,
-        destAgent: remoteAgent,
-      ));
+      continue;
     }
+
+    // Reader of an imported pair: forward under the original name.
+    // Spec (Definition Globalize, case 3): "replace Y? with the original name
+    // _r(o, k) and remove the entry: the name is forwarded, and no goal is
+    // spawned." The entry's presence implies the reader is unbound — applying
+    // the incoming value removes the entry.
+    final imported = table.findLocalizeEntryByWriter(v.writerAddr);
+    if (imported != null) {
+      final original =
+          GlobalName.reader(imported.remoteAgent, imported.remoteIndex);
+      table.removeLocalizeEntry(imported.remoteAgent, imported.remoteIndex);
+      globalNames.add(original);
+      forwardedNames.add(original);
+      continue;
+    }
+
+    // Reader: spawn global_send, no entry
+    // Spec: "allocate the next index i, replace Y? in T_p↑ with _r(p, i),
+    //        and spawn global_send(Y?, _r(p,i), q). No entry is created—
+    //        the global_send goal handles outgoing communication."
+    final index = table.allocateIndex();
+    final globalName = GlobalName.reader(localAgent, index);
+    globalNames.add(globalName);
+
+    // Spawn global_send(Y?, _r(p,i), q)
+    // Note: GlobalSendSpawn.readerAddr is used as the key for heap.onBind(),
+    // which is indexed by *writer* address. We pass writerAddr so the
+    // callback fires when bindVariable is called on Y.
+    spawns.add(GlobalSendSpawn(
+      readerAddr: v.writerAddr,
+      globalName: globalName,
+      destAgent: remoteAgent,
+    ));
   }
 
-  return GlobalizeResult(globalNames: globalNames, spawns: spawns);
+  return GlobalizeResult(
+    globalNames: globalNames,
+    spawns: spawns,
+    forwardedNames: forwardedNames,
+  );
 }
 
 /// Localize operation
@@ -222,26 +260,30 @@ GlobalizeResult globalize({
 /// Given agent q, remote agent p, and a list of global names from term T_p↑,
 /// produces the localized representation T_q↓.
 ///
-/// Spec Section 5.2:
+/// Definition Localize (IGLP, madglp.tex):
 /// - If _w(p, i): create fresh pair (Y_q, Y_q?), replace with Y_q (writer),
 ///   spawn global_send(Y_q?, _w(p,i), p). No entry is created.
 /// - If _r(p, i): create fresh pair (Z_q, Z_q?), add entry (Z_q, p, i),
-///   replace with Z_q? (reader). No goal is spawned.
+///   replace with Z_q? (reader). No goal is spawned. If the sending agent
+///   [fromAgent] is not p, the name was forwarded, and req(_r(p,i)) is added
+///   to the result's requests, addressed to the anchor p.
 ///
-/// Returns LocalizeResult with fresh pairs, usage info, and spawn info.
-/// Updates the GlobalWritersTable with entries for _r names.
+/// Returns LocalizeResult with fresh pairs, usage info, spawn info, and
+/// requests. Updates the GlobalWritersTable with entries for _r names.
 ///
 /// The [freshAddrAllocator] function is called to allocate each fresh variable pair,
 /// returning (writerAddr, readerAddr).
 LocalizeResult localize({
   required List<GlobalName> globalNames,
   required String localAgent,
+  required String fromAgent,
   required GlobalWritersTable table,
   required (int, int) Function() freshAddrAllocator,
 }) {
   final freshPairs = <FreshPair>[];
   final useReader = <bool>[];
   final spawns = <GlobalSendSpawn>[];
+  final requests = <GlobalName>[];
 
   for (final gn in globalNames) {
     // Allocate fresh pair
@@ -274,6 +316,13 @@ LocalizeResult localize({
       //        assignment on this link."
       table.addLocalizeEntry(writerAddr, gn.agent, gn.index);
       useReader.add(true); // Use Z_q? (reader)
+
+      // Request rule: "If the sending agent is not p, the name was forwarded,
+      // and q adds the request (req(_r(p,i)), p) to its outgoing messages —
+      // the request is how the anchor p learns the reader's current holder."
+      if (fromAgent != gn.agent) {
+        requests.add(gn);
+      }
     }
   }
 
@@ -281,6 +330,7 @@ LocalizeResult localize({
     freshPairs: freshPairs,
     useReader: useReader,
     spawns: spawns,
+    requests: requests,
   );
 }
 

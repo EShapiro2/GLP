@@ -184,6 +184,75 @@ class WireAssignment {
       Object.hash(gIsReader, gIndex, value, Object.hashAll(gAgent));
 }
 
+// ============================================================================
+// Message kinds (§wf-terms, Messages) — code-format version 2
+// ============================================================================
+
+/// Message kind byte: every message opens with a u8 kind.
+const int wireMsgKindValue = 0;
+const int wireMsgKindRequest = 1;
+const int wireMsgKindAcknowledgement = 2;
+
+/// A madGLP message (§wf-terms, Messages). Opens with a u8 kind: 0 value,
+/// 1 request, 2 acknowledgement. The kind byte is new in code-format
+/// version 2.
+sealed class WireMessage {
+  const WireMessage();
+}
+
+/// Kind 0 — a value `G := T↑`.
+class WireValueMessage extends WireMessage {
+  final WireAssignment assignment;
+  const WireValueMessage(this.assignment);
+  @override
+  bool operator ==(Object other) =>
+      other is WireValueMessage && other.assignment == assignment;
+  @override
+  int get hashCode => assignment.hashCode;
+}
+
+/// Kind 1 — a request `req(G)`. G is a reader name `_r(p,i)`: the message
+/// carries polarity (1), agent, and clen index — no term follows.
+class WireRequestMessage extends WireMessage {
+  final Uint8List agent;
+  final int index;
+  WireRequestMessage({required this.agent, required this.index});
+
+  /// Build with a UTF-8 symbolic agent name (simulation realisation).
+  WireRequestMessage.symbolic({required String agent, required this.index})
+      : agent = Uint8List.fromList(utf8.encode(agent));
+
+  String get agentString => utf8.decode(agent);
+  @override
+  bool operator ==(Object other) =>
+      other is WireRequestMessage &&
+      other.index == index &&
+      _bytesEqual(other.agent, agent);
+  @override
+  int get hashCode => Object.hash(index, Object.hashAll(agent));
+}
+
+/// Kind 2 — an acknowledgement `ack(G)`. G is a reader name `_r(p,i)`: the
+/// message carries polarity (1), agent, and clen index — no term follows.
+class WireAckMessage extends WireMessage {
+  final Uint8List agent;
+  final int index;
+  WireAckMessage({required this.agent, required this.index});
+
+  /// Build with a UTF-8 symbolic agent name (simulation realisation).
+  WireAckMessage.symbolic({required String agent, required this.index})
+      : agent = Uint8List.fromList(utf8.encode(agent));
+
+  String get agentString => utf8.decode(agent);
+  @override
+  bool operator ==(Object other) =>
+      other is WireAckMessage &&
+      other.index == index &&
+      _bytesEqual(other.agent, agent);
+  @override
+  int get hashCode => Object.hash(index, Object.hashAll(agent));
+}
+
 /// Thrown when a byte string is not a valid canonical encoding.
 class WireFormatException implements Exception {
   final String message;
@@ -542,6 +611,62 @@ WireAssignment decodeAssignmentFromBytes(Uint8List b) {
   final a = decodeAssignment(r);
   r.expectEnd();
   return a;
+}
+
+/// Encode a message with its opening u8 kind (§wf-terms, Messages; code-format
+/// version 2): 0 value, then the assignment; 1 request / 2 acknowledgement,
+/// then polarity (1, a reader name), agent, clen index — no term.
+void encodeMessage(WireWriter w, WireMessage m) {
+  switch (m) {
+    case WireValueMessage(:final assignment):
+      w.u8(wireMsgKindValue);
+      encodeAssignment(w, assignment);
+    case WireRequestMessage(:final agent, :final index):
+      w.u8(wireMsgKindRequest);
+      w.u8(1); // polarity: a reader name
+      w.bytes(agent);
+      w.clen(index);
+    case WireAckMessage(:final agent, :final index):
+      w.u8(wireMsgKindAcknowledgement);
+      w.u8(1); // polarity: a reader name
+      w.bytes(agent);
+      w.clen(index);
+  }
+}
+
+WireMessage decodeMessage(WireReader r) {
+  final kind = r.u8();
+  switch (kind) {
+    case wireMsgKindValue:
+      return WireValueMessage(decodeAssignment(r));
+    case wireMsgKindRequest:
+    case wireMsgKindAcknowledgement:
+      final pol = r.u8();
+      if (pol != 1) {
+        throw WireFormatException(
+            'request/acknowledgement polarity must be 1 (reader), got $pol');
+      }
+      final agent = r.bytes();
+      final index = r.clen();
+      return kind == wireMsgKindRequest
+          ? WireRequestMessage(agent: agent, index: index)
+          : WireAckMessage(agent: agent, index: index);
+    default:
+      throw WireFormatException('unknown message kind: $kind');
+  }
+}
+
+Uint8List encodeMessageToBytes(WireMessage m) {
+  final w = WireWriter();
+  encodeMessage(w, m);
+  return w.toBytes();
+}
+
+WireMessage decodeMessageFromBytes(Uint8List b) {
+  final r = WireReader(b);
+  final m = decodeMessage(r);
+  r.expectEnd();
+  return m;
 }
 
 // ============================================================================

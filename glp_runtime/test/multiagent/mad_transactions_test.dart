@@ -104,19 +104,24 @@ void main() {
       expect(ctx.wp.findByRemote('q', 2), isNotNull);
     });
 
-    test('receive for non-existent GlobalizeEntry throws', () {
+    test('writer value with no GlobalizeEntry is dropped silently', () {
+      // Spec §app:requests-acks (stale drop): a value matching no entry and no
+      // pending value is dropped. A writer-name value always finds its fixed
+      // anchor entry, so a miss is provably stale — indices are never reused.
+      // This replaces the pre-anchored-links behavior (throw StateError).
       final runtime = GlpRuntime();
       final ctx = MadContext(agentId: 'p', runtime: runtime);
 
-      // No entry exists at index 5
+      // No entry exists at index 5 — the value is dropped, nothing thrown.
       expect(
         () => ctx.handleMadAssignment(
           globalName: GlobalName.writer('p', 5),
           value: ConstTerm(42),
           fromAgent: 'q',
         ),
-        throwsStateError,
+        returnsNormally,
       );
+      expect(ctx.wp.globalizeEntryCount, 0);
     });
 
     test('early _r assignment is held, then delivered when localize creates the entry', () {
@@ -241,6 +246,7 @@ void main() {
       final localizeResult = localize(
         globalNames: globalizeResult.globalNames,
         localAgent: 'q',
+        fromAgent: 'p',
         table: ctxQ.wp,
         freshAddrAllocator: () => runtimeQ.heap.allocateVariable(),
       );
@@ -309,6 +315,7 @@ void main() {
       final localizeResult = localize(
         globalNames: globalizeResult.globalNames,
         localAgent: 'q',
+        fromAgent: 'p',
         table: ctxQ.wp,
         freshAddrAllocator: () => runtimeQ.heap.allocateVariable(),
       );

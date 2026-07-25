@@ -28,33 +28,69 @@ class PayloadCodec {
   // madGLP assignment payloads
   // ==========================================================================
 
-  /// Encode the assignment `G := T↑`: the global name G (polarity, agent,
-  /// index) followed by the encoding of T.
+  /// Encode the value message `G := T↑` (kind 0): the u8 kind, the global
+  /// name G (polarity, agent, index), then the encoding of T.
   static List<int> createGlobalSendPayload(GlobalName globalName, Term value) {
-    return encodeAssignmentToBytes(WireAssignment(
+    return encodeMessageToBytes(WireValueMessage(WireAssignment(
       gIsReader: globalName.isReader,
       gAgent: _agentBytes(globalName.agent),
       gIndex: globalName.index,
       value: termToWire(value),
-    ));
+    )));
   }
 
-  /// Encode a serializer (cold-call) message to agent q: the assignment
+  /// Encode a serializer (cold-call) message to agent q: the value message
   /// `_w(q,0) := [T↑ | _w(q,0)]`. The tail is the encoded variable `_w(q,0)`.
   static List<int> createSerializerPayload(
       GlobalName serializerName, Term content) {
     assert(serializerName.isWriter && serializerName.index == 0,
         'Serializer payload requires _w(agent, 0) global name');
-    return encodeAssignmentToBytes(WireAssignment.serializer(
+    return encodeMessageToBytes(WireValueMessage(WireAssignment.serializer(
       agent: _agentBytes(serializerName.agent),
       head: termToWire(content),
-    ));
+    )));
   }
 
-  /// Decode a global-send payload to (GlobalName, Term). Embedded variables
-  /// return as `_w(p,i)` / `_r(p,i)` structures for the localize machinery.
+  /// Encode a request `req(_r(p,i))` (kind 1): u8 kind, polarity (1), agent,
+  /// clen index — no term. The encoding is flag-independent: request and
+  /// acknowledgement bytes are identical on the legacy and canonical paths.
+  static List<int> createRequestPayload(GlobalName globalName) {
+    assert(globalName.isReader, 'a request carries a reader name');
+    return encodeMessageToBytes(WireRequestMessage.symbolic(
+        agent: globalName.agent, index: globalName.index));
+  }
+
+  /// Encode an acknowledgement `ack(_r(p,i))` (kind 2): u8 kind, polarity (1),
+  /// agent, clen index — no term.
+  static List<int> createAckPayload(GlobalName globalName) {
+    assert(globalName.isReader, 'an acknowledgement carries a reader name');
+    return encodeMessageToBytes(WireAckMessage.symbolic(
+        agent: globalName.agent, index: globalName.index));
+  }
+
+  /// Decode a request or acknowledgement payload (kind 1 or 2) to its reader
+  /// global name. Throws on a value message or malformed bytes.
+  static GlobalName decodeRequestOrAckPayload(List<int> payload) {
+    final m = decodeMessageFromBytes(_asUint8(payload));
+    return switch (m) {
+      WireRequestMessage(:final agentString, :final index) =>
+        GlobalName.reader(agentString, index),
+      WireAckMessage(:final agentString, :final index) =>
+        GlobalName.reader(agentString, index),
+      WireValueMessage() => throw WireFormatException(
+          'expected request/acknowledgement, got value message'),
+    };
+  }
+
+  /// Decode a global-send (value) payload to (GlobalName, Term). Embedded
+  /// variables return as `_w(p,i)` / `_r(p,i)` structures for the localize
+  /// machinery. Throws on a request or acknowledgement message.
   static (GlobalName, Term) deserializeGlobalSendPayload(List<int> payload) {
-    final a = decodeAssignmentFromBytes(_asUint8(payload));
+    final m = decodeMessageFromBytes(_asUint8(payload));
+    if (m is! WireValueMessage) {
+      throw WireFormatException('expected value message (kind 0)');
+    }
+    final a = m.assignment;
     final agent = utf8.decode(a.gAgent);
     final globalName = a.gIsReader
         ? GlobalName.reader(agent, a.gIndex)

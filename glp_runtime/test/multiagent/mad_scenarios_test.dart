@@ -50,6 +50,7 @@ void main() {
       final localizeResult = localize(
         globalNames: globalizeResult.globalNames,
         localAgent: 'q',
+        fromAgent: 'p',
         table: ctxQ.wp,
         freshAddrAllocator: () => runtimeQ.heap.allocateVariable(),
       );
@@ -116,6 +117,7 @@ void main() {
       final localizeResult = localize(
         globalNames: globalizeResult.globalNames,
         localAgent: 'q',
+        fromAgent: 'p',
         table: ctxQ.wp,
         freshAddrAllocator: () => runtimeQ.heap.allocateVariable(),
       );
@@ -187,6 +189,7 @@ void main() {
       final aliceFromBob = localize(
         globalNames: bobToAliceGlobal.globalNames,
         localAgent: 'alice',
+        fromAgent: 'bob',
         table: ctxAlice.wp,
         freshAddrAllocator: () => runtimeAlice.heap.allocateVariable(),
       );
@@ -209,6 +212,7 @@ void main() {
       final charlieFromBob = localize(
         globalNames: bobToCharlieGlobal.globalNames,
         localAgent: 'charlie',
+        fromAgent: 'bob',
         table: ctxCharlie.wp,
         freshAddrAllocator: () => runtimeCharlie.heap.allocateVariable(),
       );
@@ -304,6 +308,7 @@ void main() {
       final localizeResult = localize(
         globalNames: globalizeResult.globalNames,
         localAgent: 'q',
+        fromAgent: 'p',
         table: ctxQ.wp,
         freshAddrAllocator: () => runtimeQ.heap.allocateVariable(),
       );

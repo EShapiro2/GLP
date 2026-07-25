@@ -17,6 +17,14 @@ enum MessageType {
   /// Agent message: structured term sent between agents
   /// Used for friend-to-friend communication (msg/3 terms)
   agentMessage,
+
+  /// Request: req(_r(p, i)) — sent to the anchor p by an agent that localized
+  /// a forwarded reader name (spec §app:requests-acks). Carries no term.
+  request,
+
+  /// Acknowledgement: ack(_r(p, i)) — sent to a reader-name value's sender
+  /// after applying it; releases the pending value and closes the link.
+  acknowledgement,
 }
 
 /// An outbound message to another agent
