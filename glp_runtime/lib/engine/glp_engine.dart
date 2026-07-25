@@ -33,7 +33,7 @@ import 'package:glp_runtime/runtime/module_hierarchy.dart';
 import 'package:glp_runtime/multiagent/mad_context.dart';
 import 'package:glp_runtime/compiler/program_linker.dart';
 import 'package:glp_runtime/wire/flattening.dart' show canonicalPrint, hashOfPrint;
-import 'package:glp_runtime/wire/artefact.dart' show Artefact;
+import 'package:glp_runtime/wire/artefact.dart' show Artefact, ArtefactExport;
 
 /// Result of running a goal
 class ExecutionResult {
@@ -850,11 +850,21 @@ class GlpEngine {
       procDeclarations: linked.procDeclarations,
       typeDefs: typeDefs.values.toList(),
     ));
+    // The artefact's interface table: the module's exports are its entry
+    // points — the linked program's bare (unprefixed) procedures (modules.tex
+    // sec:static-linking; the DCE seed): a directory program's root-self.glp
+    // exported procedures (the aliases), a single-module program's every
+    // procedure. `run/2` admits a posted goal only against this set.
+    final exports = <ArtefactExport>[
+      for (final p in linked.program.procedures)
+        if (!p.name.contains(':')) ArtefactExport(p.name, p.arity, ''),
+    ];
     final artefact = Artefact.fromCompiled(
       ops: program.ops.cast<Object>(),
       hM: hM,
       moduleName: moduleName,
       isaVersion: 'glp-isa-1',
+      exports: exports,
     );
     return rt.ModuleTerm(artefact, name: moduleName);
   }

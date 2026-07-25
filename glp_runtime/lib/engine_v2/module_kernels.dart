@@ -89,10 +89,18 @@ BodyKernelResult runKernel(GlpRuntime rt, List<Object?> args) {
       : CodeImage.fromArtefactBytes(artefact.toBytes());
 
   final sig = '$functor/${bootArgs.length}';
+  // The goal's predicate must be exported by the module, else an error (GLP
+  // paper, appendix "Guards, Body Kernels, and System Predicates", Dynamic
+  // activation). Export check, not entry-point resolution: a compiled but
+  // non-exported internal procedure is not runnable from outside.
+  if (!image.exportAliases.contains(sig)) {
+    print('[ABORT] _run/2: $sig is not exported by module ${module.name}');
+    return BodyKernelResult.abort;
+  }
   final entry = image.entryOffsetOf(sig);
   if (entry == null) {
-    // Resolution, not type-checking: the module exposes no such entry point.
-    print('[ABORT] _run/2: $sig has no entry point in module ${module.name}');
+    print(
+        '[ABORT] _run/2: exported $sig has no entry point in module ${module.name}');
     return BodyKernelResult.abort;
   }
 

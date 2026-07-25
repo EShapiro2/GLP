@@ -115,20 +115,11 @@ const Set<String> builtinProcedures = {
   // Univ operations
   '=../2',
   '..=/2',
-  // MWM (Mutual Write Merge) runtime primitives
-  '_allocate_mutual_reference/2',
+  // MWM (Mutual Write Merge) guard
   'is_mutual_ref/1',
-  '_stream_append/3',
-  '_close_mutual_reference/1',
-  // madGLP network primitives
-  '_send/3',
-  // madGLP attestation kernel (seam spec §4)
-  '_sign/2',
-  // Output (system predicate)
-  '_output/1',
-  // Module-as-value kernels (modules.tex §Dynamic Activation, "Modules as values")
-  '_run/2',
-  '_self_module/1',
+  // Body kernels ('_'-prefixed) are NOT listed: they are undeclared everywhere
+  // and resolve from the runtime (runtime-base convention, e28b135f) — this set
+  // only licenses clause-less DECLARATIONS, which kernels no longer have.
 };
 
 /// Reserved constant base-names: the `_`-prefixed names that denote a language

@@ -2478,6 +2478,44 @@ check "ZG4 constant(5) succeeds" "R = yes" "$zg4"
 echo ""
 
 # =============================================================================
+# SECTION RM: Module-as-value kernels (self_module/1, run/2)
+# =============================================================================
+# GLP paper, appendix "Guards, Body Kernels, and System Predicates":
+# self_module(M) binds M to the caller's own module value; run(Goal, M?)
+# activates the module and posts Goal to it — Goal's predicate must be
+# exported by the module, else an error.  The probe program's entry points
+# (exports) are hello/1 and poke/1; secret/1 is compiled but not exported.
+echo "=== Section RM: Module-as-value kernels (self_module/run) ==="
+
+rm1=$("$REPL_RUN" <<HEREDOC
+$GLP_DIR/programs/tests/run_module_probe
+self_module(M), run(hello(Z), M?).
+:quit
+HEREDOC
+2>&1)
+check "RM1 probe program loads" "Loaded program" "$rm1"
+check "RM1 self_module yields the module value" "M = Module(run_module_probe)" "$rm1"
+check "RM1 run posts exported goal, binding flows back" "Z = \[done\]" "$rm1"
+
+rm2=$("$REPL_RUN" <<HEREDOC
+$GLP_DIR/programs/tests/run_module_probe
+self_module(M), run(secret(Z), M?).
+:quit
+HEREDOC
+2>&1)
+check "RM2 run of non-exported predicate errs" "_run/2: secret/1 is not exported by module run_module_probe" "$rm2"
+
+rm3=$("$REPL_RUN" <<HEREDOC
+$GLP_DIR/programs/tests/run_module_probe
+self_module(M), run(poke(Z), M?).
+:quit
+HEREDOC
+2>&1)
+check "RM3 exported entry may call non-exported internally" "Z = \[leaked\]" "$rm3"
+
+echo ""
+
+# =============================================================================
 # SUMMARY
 # =============================================================================
 TOTAL=$((PASS + FAIL))

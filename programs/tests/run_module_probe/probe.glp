@@ -1,0 +1,11 @@
+%% See self.glp — hello/1 and poke/1 are the program's entry points; secret/1
+%% is compiled but not exported.
+
+exported procedure hello(Stream(Constant)).
+hello([done]).
+
+exported procedure poke(Stream(Constant)).
+poke(S?) :- secret(S).
+
+procedure secret(Stream(Constant)).
+secret([leaked]).

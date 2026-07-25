@@ -1,0 +1,15 @@
+%% IGLP probe: module-as-value kernels behind the self_module/1 and run/2
+%% system predicates (GLP paper, appendix "Guards, Body Kernels, and System
+%% Predicates").  This directory program's entry points — its module value's
+%% exports — are the procedures exported here: hello/1 and poke/1.  probe.glp's
+%% secret/1 is compiled (reachable via poke/1) but NOT exported, so run-ning it
+%% exercises run/2's export check on a compiled procedure, not mere absence.
+
+imported procedure probe#hello(Stream(Constant)).
+imported procedure probe#poke(Stream(Constant)).
+
+exported procedure hello(Stream(Constant)).
+hello(S?) :- probe # hello(S).
+
+exported procedure poke(Stream(Constant)).
+poke(S?) :- probe # poke(S).
