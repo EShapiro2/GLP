@@ -75,7 +75,8 @@ class WBool extends WireConst {
   int get hashCode => value.hashCode;
 }
 
-/// 5 blob — opaque byte string (the form in which compiled modules ship).
+/// 5 bytes — raw byte string, used only in the runtime's own vocabulary (the
+/// 32-byte hashes of §cf-handshake) — never in application terms.
 class WBlob extends WireConst {
   final Uint8List value;
   WBlob(this.value);
@@ -84,6 +85,18 @@ class WBlob extends WireConst {
       other is WBlob && _bytesEqual(other.value, value);
   @override
   int get hashCode => Object.hashAll(value);
+}
+
+/// 6 module — the artefact bytes of §cf-artefact, decoding to the Module
+/// constant: the form in which compiled programs ship.
+class WModule extends WireConst {
+  final Uint8List artefactBytes;
+  WModule(this.artefactBytes);
+  @override
+  bool operator ==(Object other) =>
+      other is WModule && _bytesEqual(other.artefactBytes, artefactBytes);
+  @override
+  int get hashCode => Object.hashAll(artefactBytes);
 }
 
 /// A globalized term (§wf-terms).
@@ -455,6 +468,9 @@ void encodeConstantPayload(WireWriter w, WireConst c) {
     case WBlob(:final value):
       w.u8(5);
       w.bytes(value);
+    case WModule(:final artefactBytes):
+      w.u8(6);
+      w.bytes(artefactBytes);
   }
 }
 
@@ -487,6 +503,11 @@ Object? valueOfWireConst(WireConst c) {
       return value;
     case WBlob(:final value):
       return value;
+    case WModule():
+      // A module constant travels in terms (§cf-terms tag 6); it is never an
+      // instruction operand — no compiler embeds an artefact in code.
+      throw WireFormatException(
+          'module constant not valid as an instruction operand');
   }
 }
 
@@ -509,6 +530,8 @@ WireConst decodeConstantPayload(WireReader r) {
       return WBool(b == 1);
     case 5:
       return WBlob(r.bytes());
+    case 6:
+      return WModule(r.bytes());
     default:
       throw WireFormatException('unknown constant tag: $tag');
   }

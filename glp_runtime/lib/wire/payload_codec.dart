@@ -21,6 +21,7 @@ import 'dart:convert';
 import 'dart:typed_data';
 import 'package:glp_runtime/runtime/terms.dart';
 import 'package:glp_runtime/multiagent/mad_helpers.dart';
+import 'package:glp_runtime/wire/artefact.dart' show Artefact;
 import 'package:glp_runtime/wire/codec.dart';
 
 class PayloadCodec {
@@ -114,6 +115,10 @@ class PayloadCodec {
   static WireTerm termToWire(Term term) {
     if (term is ConstTerm) {
       return WConst(_constToWire(term.value));
+    } else if (term is ModuleTerm) {
+      // §cf-terms constant tag 6: a Module constant travels as its artefact
+      // bytes — the form in which compiled programs ship.
+      return WConst(WModule((term.artefact as Artefact).toBytes()));
     } else if (term is StructTerm) {
       final gn = _asGlobalName(term);
       if (gn != null) return gn;
@@ -133,6 +138,11 @@ class PayloadCodec {
   static Term wireToTerm(WireTerm w) {
     switch (w) {
       case WConst(:final constant):
+        if (constant is WModule) {
+          // §cf-terms constant tag 6 decodes to the Module constant itself.
+          final artefact = Artefact.fromBytes(constant.artefactBytes);
+          return ModuleTerm(artefact, name: artefact.moduleName);
+        }
         return ConstTerm(_constFromWire(constant));
       case WVar(:final isReader, :final index):
         final functor = isReader ? '_r' : '_w';
@@ -191,6 +201,11 @@ class PayloadCodec {
         return value;
       case WBlob(:final value):
         return value;
+      case WModule():
+        // Handled in wireToTerm — a module decodes to a ModuleTerm, never to
+        // a ConstTerm payload.
+        throw WireFormatException(
+            'module constant reached the ConstTerm mapping');
     }
   }
 

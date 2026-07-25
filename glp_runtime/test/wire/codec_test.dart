@@ -69,12 +69,22 @@ void main() {
       const WBool(true),
       const WBool(false),
       WBlob(Uint8List.fromList([0, 1, 2, 255, 128])),
+      WModule(Uint8List.fromList([71, 76, 80, 87, 2, 0, 9])),
     ];
     for (final c in cases) {
       test('$c', () {
         expect(_roundTripTerm(WConst(c)), WConst(c));
       });
     }
+
+    test('module constant carries tag 6, bytes carries tag 5', () {
+      final module = encodeTermToBytes(
+          WConst(WModule(Uint8List.fromList([1, 2, 3]))));
+      expect(module.sublist(0, 2), [1, 6]);
+      final blob =
+          encodeTermToBytes(WConst(WBlob(Uint8List.fromList([1, 2, 3]))));
+      expect(blob.sublist(0, 2), [1, 5]);
+    });
 
     test('NaN float round-trips bitwise', () {
       final t = _roundTripTerm(const WConst(WFloat(double.nan)));

@@ -12,6 +12,7 @@ library;
 import 'dart:typed_data';
 import 'package:glp_runtime/runtime/terms.dart';
 import 'package:glp_runtime/multiagent/mad_helpers.dart';
+import 'package:glp_runtime/wire/artefact.dart' show Artefact;
 import 'package:glp_runtime/wire/payload_codec.dart';
 import 'package:glp_runtime/wire/codec.dart';
 import 'package:test/test.dart';
@@ -93,6 +94,44 @@ void main() {
     test('serializeAgentMessage rejects a non-ground term', () {
       expect(() => PayloadCodec.serializeAgentMessage(StructTerm('m', [VarRef(5)])),
           throwsA(isA<WireFormatException>()));
+    });
+  });
+
+  group('module constant (§wf-terms tag 6)', () {
+    Artefact artefact() => Artefact.fromCompiled(
+          ops: const [],
+          hM: Uint8List(32),
+          moduleName: 'shipped_probe',
+          isaVersion: 'glp-isa-1',
+        );
+
+    test('a ModuleTerm ships as constant tag 6 and decodes to a ModuleTerm',
+        () {
+      final sent = ModuleTerm(artefact(), name: 'shipped_probe');
+      final bytes =
+          Uint8List.fromList(PayloadCodec.serializeAgentMessage(sent));
+      // Term tag 1 (constant), constant tag 6 (module).
+      expect(bytes.sublist(0, 2), [1, 6]);
+      final back = PayloadCodec.wireToTerm(decodeTermFromBytes(bytes));
+      expect(back, isA<ModuleTerm>());
+      final received = back as ModuleTerm;
+      expect(received.name, 'shipped_probe');
+      expect((received.artefact as Artefact).toBytes(),
+          (sent.artefact as Artefact).toBytes());
+    });
+
+    test('a module embedded in a structure round-trips', () {
+      final sent = StructTerm('ship', [
+        ModuleTerm(artefact(), name: 'shipped_probe'),
+        ConstTerm('hello'),
+      ]);
+      final bytes =
+          Uint8List.fromList(PayloadCodec.serializeAgentMessage(sent));
+      final back =
+          PayloadCodec.wireToTerm(decodeTermFromBytes(bytes)) as StructTerm;
+      expect(back.functor, 'ship');
+      expect(back.args[0], isA<ModuleTerm>());
+      expect((back.args[1] as ConstTerm).value, 'hello');
     });
   });
 }
