@@ -80,8 +80,17 @@ class MadContext {
   /// acknowledgement arrives. A request for the link re-addresses the pending
   /// value to the requester; the acknowledgement deletes it, closing the link.
   /// Writer-name and serializer values are fire-and-forget and never pend.
-  final Map<(String, int), ({List<int> payload, String destination})>
-      _pendingReaderValues = {};
+  ///
+  /// nestedReaderNames are the reader names anchored at this agent that the
+  /// value carries (allocated when it was globalized): on the acknowledgement,
+  /// the acker is recorded as the holder of each of their links (madGLP
+  /// Receive, Acknowledgement case) — the acker localized them.
+  final Map<(String, int),
+          ({
+        List<int> payload,
+        String destination,
+        List<GlobalName> nestedReaderNames
+      })> _pendingReaderValues = {};
 
   /// Reader names this agent forwarded on (Definition Globalize, forwarding
   /// case). After forwarding, the no-entry condition on an arriving value for
@@ -203,10 +212,18 @@ class MadContext {
     // A reader-name value pends until acknowledged (§app:requests-acks): a
     // request re-addresses it, the acknowledgement releases it. Writer-name
     // values are fire-and-forget — they always find their fixed anchor entry.
+    // The spawns' names are the value's self-anchored reader links, recorded
+    // so the acknowledgement can name their holder.
     if (result.globalName.isReader && result.globalName.index > 0) {
       _pendingReaderValues[
               (result.globalName.agent, result.globalName.index)] =
-          (payload: payload, destination: result.destination);
+          (
+        payload: payload,
+        destination: result.destination,
+        nestedReaderNames: result.globalizeResult.spawns
+            .map((s) => s.globalName)
+            .toList(),
+      );
       _trace('[MAD $agentId] value ${result.globalName} pending until ack');
     }
 
@@ -641,8 +658,11 @@ class MadContext {
       // Redirect the pending value to the requester. The copy sent to a past
       // holder is dropped there as stale; the value stays pending until the
       // current holder's acknowledgement arrives.
-      _pendingReaderValues[key] =
-          (payload: pending.payload, destination: fromAgent);
+      _pendingReaderValues[key] = (
+        payload: pending.payload,
+        destination: fromAgent,
+        nestedReaderNames: pending.nestedReaderNames,
+      );
       mp.add(OutboundMessage(
         destination: fromAgent,
         type: MessageType.assignment,
@@ -666,18 +686,51 @@ class MadContext {
         'stale request dropped');
   }
 
-  /// Handle ack(_r(p, i)) — we sent the value (madGLP Receive,
-  /// Acknowledgement case): remove the pending value; the link is closed.
-  /// An acknowledgement for a closed link is dropped.
+  /// Handle ack(_r(p, i)) from agent s — we sent the value (madGLP Receive,
+  /// Acknowledgement case): record s as the holder of every link whose reader
+  /// name anchored here occurs in the acknowledged value — s localized them —
+  /// re-addressing any pending value of such a link to s; then remove the
+  /// acknowledged value: the link is closed. An acknowledgement for a closed
+  /// link is dropped.
   void handleAck(GlobalName globalName, String fromAgent) {
     final key = (globalName.agent, globalName.index);
     final removed = _pendingReaderValues.remove(key);
     if (removed == null) {
       _trace('[MAD $agentId] handleAck: ack($globalName) matches no pending '
           'value — stale, dropped');
-    } else {
-      _trace('[MAD $agentId] handleAck: pending $globalName released — link '
-          'closed');
+      return;
+    }
+    for (final nested in removed.nestedReaderNames) {
+      _recordHolder(nested, fromAgent);
+    }
+    _trace('[MAD $agentId] handleAck: pending $globalName released — link '
+        'closed');
+  }
+
+  /// Record [holder] as the holder of the link [globalName] (per-link runtime
+  /// state): a not-yet-fired global_send goal has its destination updated; a
+  /// pending value addressed elsewhere is re-addressed to [holder]. A closed
+  /// link needs nothing.
+  void _recordHolder(GlobalName globalName, String holder) {
+    if (globalSendRegistry.redirectGoal(globalName, holder)) {
+      _trace('[MAD $agentId] holder of $globalName recorded as $holder');
+      return;
+    }
+    final key = (globalName.agent, globalName.index);
+    final pending = _pendingReaderValues[key];
+    if (pending != null && pending.destination != holder) {
+      _pendingReaderValues[key] = (
+        payload: pending.payload,
+        destination: holder,
+        nestedReaderNames: pending.nestedReaderNames,
+      );
+      mp.add(OutboundMessage(
+        destination: holder,
+        type: MessageType.assignment,
+        payload: pending.payload,
+      ));
+      _trace('[MAD $agentId] pending $globalName re-addressed to holder '
+          '$holder');
     }
   }
 
@@ -811,8 +864,12 @@ class MadContext {
 
     // A reader-name value pends until acknowledged (§app:requests-acks).
     if (!isWriter && gnIndex > 0) {
-      _pendingReaderValues[(gnAgent, gnIndex)] =
-          (payload: payload, destination: destAgent);
+      _pendingReaderValues[(gnAgent, gnIndex)] = (
+        payload: payload,
+        destination: destAgent,
+        nestedReaderNames:
+            globalizeResult.spawns.map((s) => s.globalName).toList(),
+      );
       _trace('[MAD $agentId] send: value ${globalName} pending until ack');
     }
 

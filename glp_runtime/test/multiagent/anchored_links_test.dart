@@ -296,6 +296,166 @@ void main() {
     });
 
     test(
+        '(e) the stream continues past a redirect: the ack records the '
+        'acker as holder of the value\'s self-anchored links', () {
+      // Revised Acknowledgement case (madGLP Receive): on ack from s, the
+      // value's sender records s as the holder of every link whose reader
+      // name anchored at the sender occurs in the value — s localized them —
+      // so the next stream element flows to s directly.
+      final net = _Net();
+      final ctxBob = net.add('bob');
+      final ctxCharlie = net.add('charlie');
+      final ctxAlice = net.add('alice');
+      final aliceRt = net.runtimes['alice']!;
+      final bobRt = net.runtimes['bob']!;
+      final charlieRt = net.runtimes['charlie']!;
+      final aliceNetIn = net.bootSerializer('alice');
+
+      // Charlie (the anchor) exports reader Rest? to Bob.
+      final (restW, restR) = charlieRt.heap.allocateVariable();
+      final gres = globalize(
+        variables: [TermVar.reader(restR, writerAddr: restW)],
+        localAgent: 'charlie',
+        remoteAgent: 'bob',
+        table: ctxCharlie.wp,
+      );
+      ctxCharlie.registerGlobalSendSpawns(gres.spawns);
+      final lres = localize(
+        globalNames: gres.globalNames,
+        localAgent: 'bob',
+        fromAgent: 'charlie',
+        table: ctxBob.wp,
+        freshAddrAllocator: () => bobRt.heap.allocateVariable(),
+      );
+      final restBReader = lres.freshPairs[0].readerAddr;
+
+      // Charlie produces a stream cell [one | Rest2?]: the value pends
+      // towards Bob and carries the self-anchored tail name — hold delivery.
+      final (rest2W, _) = charlieRt.heap.allocateVariable();
+      final rest2Reader = charlieRt.heap.pairedReaderAddr(rest2W);
+      charlieRt.heap.bindVariable(
+          restW, StructTerm('.', [ConstTerm('one'), VarRef(rest2Reader)]));
+      net.flushAll();
+
+      // Bob forwards the reader to Alice before the value arrives; Alice's
+      // request redirects the pending value; the copy at Bob is dropped.
+      ctxBob.send(StructTerm('m', [VarRef(restBReader)]), true, 'alice', 0,
+          'alice');
+      net.flushAll();
+      net.deliverWhere((m) => m.from == 'bob' && m.to == 'alice');
+      net.flushAll();
+      net.deliverWhere((m) => m.from == 'charlie' && m.to == 'bob');
+      net.deliverWhere((m) => m.from == 'alice' && m.to == 'charlie');
+      net.flushAll();
+      // Alice applies the redirected value — its tail name comes from the
+      // anchor itself, so no request is sent for it — and acknowledges.
+      net.deliverWhere((m) => m.from == 'charlie' && m.to == 'alice');
+      net.flushAll();
+      net.deliverWhere((m) => m.from == 'alice' && m.to == 'charlie');
+
+      // The ack recorded Alice as the tail link's holder and closed the link.
+      expect(ctxCharlie.globalSendRegistry.getGoalFor(rest2W)!.destination,
+          'alice');
+      expect(ctxCharlie.pendingReaderValueCount, 0);
+
+      // The next element flows Charlie→Alice directly.
+      final mark = net.deliveryLog.length;
+      charlieRt.heap.bindVariable(rest2W, ConstTerm('two'));
+      net.settle();
+      final tail = net.deliveryLog.sublist(mark);
+      expect(tail, isNotEmpty);
+      expect(tail.every((m) => m.from != 'bob' && m.to != 'bob'), isTrue);
+
+      final zA =
+          ((_streamElement(aliceRt, aliceNetIn, 0) as StructTerm).args[0]
+                  as VarRef)
+              .addr;
+      final cell = aliceRt.heap.derefAddr(zA) as StructTerm; // '.'(one, T?)
+      expect((cell.args[0] as ConstTerm).value, 'one');
+      final tailVal =
+          aliceRt.heap.derefAddr((cell.args[1] as VarRef).addr);
+      expect((tailVal as ConstTerm).value, 'two');
+      expect(ctxCharlie.pendingReaderValueCount, 0);
+      expect(ctxAlice.wp.localizeEntryCount, 0);
+    });
+
+    test(
+        '(f) a nested value already in flight to the past holder is '
+        're-addressed to the acker', () {
+      // The tail's value fires towards the past holder before the parent's
+      // ack arrives: the ack records the acker as the tail link's holder and
+      // re-addresses the tail's pending value to it.
+      final net = _Net();
+      final ctxBob = net.add('bob');
+      final ctxCharlie = net.add('charlie');
+      final aliceRt = net.add('alice').runtime;
+      final bobRt = net.runtimes['bob']!;
+      final charlieRt = net.runtimes['charlie']!;
+      final aliceNetIn = net.bootSerializer('alice');
+
+      final (restW, restR) = charlieRt.heap.allocateVariable();
+      final gres = globalize(
+        variables: [TermVar.reader(restR, writerAddr: restW)],
+        localAgent: 'charlie',
+        remoteAgent: 'bob',
+        table: ctxCharlie.wp,
+      );
+      ctxCharlie.registerGlobalSendSpawns(gres.spawns);
+      final lres = localize(
+        globalNames: gres.globalNames,
+        localAgent: 'bob',
+        fromAgent: 'charlie',
+        table: ctxBob.wp,
+        freshAddrAllocator: () => bobRt.heap.allocateVariable(),
+      );
+      final restBReader = lres.freshPairs[0].readerAddr;
+
+      // Parent value [one | Rest2?] pends towards Bob — hold delivery.
+      final (rest2W, _) = charlieRt.heap.allocateVariable();
+      final rest2Reader = charlieRt.heap.pairedReaderAddr(rest2W);
+      charlieRt.heap.bindVariable(
+          restW, StructTerm('.', [ConstTerm('one'), VarRef(rest2Reader)]));
+      net.flushAll();
+
+      // Bob forwards to Alice; her request redirects the parent value.
+      ctxBob.send(StructTerm('m', [VarRef(restBReader)]), true, 'alice', 0,
+          'alice');
+      net.flushAll();
+      net.deliverWhere((m) => m.from == 'bob' && m.to == 'alice');
+      net.flushAll();
+      net.deliverWhere((m) => m.from == 'charlie' && m.to == 'bob');
+      net.deliverWhere((m) => m.from == 'alice' && m.to == 'charlie');
+      net.flushAll();
+
+      // Before the redirected parent reaches Alice, Charlie produces the
+      // tail's value: it fires towards the past holder and pends.
+      charlieRt.heap.bindVariable(rest2W, ConstTerm('two'));
+      net.flushAll();
+      net.deliverWhere((m) => m.to == 'bob'); // held at the past holder
+      expect(ctxCharlie.hasPendingReaderValue(
+              'charlie', gres.globalNames[0].index + 1),
+          isTrue);
+
+      // Alice applies the parent and acks; the ack re-addresses the tail's
+      // pending value to her.
+      net.deliverWhere((m) => m.from == 'charlie' && m.to == 'alice');
+      net.flushAll();
+      net.deliverWhere((m) => m.from == 'alice' && m.to == 'charlie');
+      net.settle();
+
+      final zA =
+          ((_streamElement(aliceRt, aliceNetIn, 0) as StructTerm).args[0]
+                  as VarRef)
+              .addr;
+      final cell = aliceRt.heap.derefAddr(zA) as StructTerm; // '.'(one, T?)
+      expect((cell.args[0] as ConstTerm).value, 'one');
+      final tailVal =
+          aliceRt.heap.derefAddr((cell.args[1] as VarRef).addr);
+      expect((tailVal as ConstTerm).value, 'two');
+      expect(ctxCharlie.pendingReaderValueCount, 0);
+    });
+
+    test(
         '(d) request before value: the anchor records the holder and the '
         'value is sent there on production', () {
       final net = _Net();
