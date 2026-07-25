@@ -486,8 +486,10 @@ LinkResult checkedLinkedProgram(List<DiscoveredModule> modules,
   // declaration. Linking renames those clauses to `M:p` while the root
   // declaration stays bare, leaving the renamed procedure undeclared in the
   // linked program. Supply a renamed declaration from the root scope so the
-  // procedure is checked (entry-point aliases, unqualified, are left undeclared —
-  // they are trivial forwarders).
+  // procedure is checked. (An unqualified entry-point alias carries its
+  // exporting module's declaration from linking — shadowing a root-scope
+  // declaration of the same name/arity; only an alias whose export has no
+  // declaration is left undeclared.)
   final rootEnv = buildRootScopeEnvironment();
   final procDecls = [...linked.procDeclarations];
   final declKeys = {for (final d in procDecls) d.key};
@@ -736,6 +738,7 @@ LinkResult linkAndResolveModules(List<DiscoveredModule> modules,
   // plain-name handle directly on each real head. A forwarding alias is avoided
   // on purpose — its flat arguments cannot carry a structured-mode term's nested
   // reader/writer holes.
+  final aliasDecls = <ProcDecl>[];
   if (singleNorm == null) {
     final rootNorm = _normPath(rootDir);
     final rootSelfMods = modules
@@ -787,6 +790,17 @@ LinkResult linkAndResolveModules(List<DiscoveredModule> modules,
         // First check the owning module, then the program-wide index.
         final decl = _findProcDecl(mod, proc.name, proc.arity) ?? declIndex[sig];
 
+        // The alias carries the exporting declaration under its bare name
+        // (collected into the returned declarations below), so the linked-
+        // program check uses the exporting module's declaration — shadowing a
+        // root-scope declaration of the same name/arity (e.g. the root
+        // self.glp's run/2), exactly as the module's own declaration shadows
+        // it in the per-module check.
+        if (decl != null) {
+          aliasDecls.add(ProcDecl(proc.name, decl.argTypes, decl.line,
+              decl.column, exported: decl.exported, isBuiltin: decl.isBuiltin));
+        }
+
         final aliasClause = _makeAliasClause(
           proc.name,
           proc.arity,
@@ -815,6 +829,8 @@ LinkResult linkAndResolveModules(List<DiscoveredModule> modules,
       ));
     }
   }
+
+  allDecls.addAll(aliasDecls);
 
   return LinkResult(Program(allProcedures, 0, 0), allDecls);
 }
