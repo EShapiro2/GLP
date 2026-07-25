@@ -436,6 +436,21 @@ X? =.. [Y|Ys] :- list(Ys?) | '_list_to_tuple'([Y?|Ys?], X).
 X =.. Y? :- compound(X?) | '_tuple_to_list'(X?, Y).
 
 % =============================================================================
+% MODULE AS A VALUE (self_module/1, run/2)
+% =============================================================================
+% Wrappers over the '_self_module' and '_run' kernels (GLP paper, appendix
+% "Guards, Body Kernels, and System Predicates").  run(Goal, Module) activates
+% the module value Module and posts Goal to it; Goal's predicate must be
+% exported by Module, else an error.  The typed run/3 and find_type/2 (TGLP
+% §Dynamic Activation) follow with the typechecked implementation.
+
+procedure self_module(Module).
+self_module(M?) :- '_self_module'(M).
+
+procedure run(_?, Module?).
+run(G, M) :- '_run'(G?, M?).
+
+% =============================================================================
 % MULTIWAY MERGE (mwm/2)
 % =============================================================================
 % MWM types and procedure declarations are omitted from the scope chain
