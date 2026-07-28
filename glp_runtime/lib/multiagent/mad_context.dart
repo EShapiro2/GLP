@@ -13,6 +13,7 @@ import 'package:glp_runtime/multiagent/message_queue.dart';
 import 'package:glp_runtime/multiagent/payload_serializer.dart';
 import 'package:glp_runtime/multiagent/global_send.dart';
 import 'package:glp_runtime/multiagent/global_writers_table.dart';
+import 'package:glp_runtime/multiagent/imported_writer_records.dart';
 import 'package:glp_runtime/multiagent/mad_helpers.dart';
 import 'package:glp_runtime/multiagent/glp_network.dart';
 import 'package:glp_runtime/wire/codec.dart'
@@ -35,6 +36,12 @@ class MadContext {
 
   /// Global writers table W_p: tracks writers awaiting incoming assignments
   final GlobalWritersTable wp;
+
+  /// Imported-writer records U_p (madGLP Local State `(R_p, W_p, U_p, M_p)`):
+  /// marks each writer localized from a writer global name as the sending end
+  /// of that link, so re-exporting it forwards the original name instead of
+  /// anchoring a new link here (Definition Globalize, case 4).
+  final ImportedWriterRecords up;
 
   /// Message queue M_p: outbound messages to other agents
   final MessageQueue mp;
@@ -109,6 +116,7 @@ class MadContext {
     required this.agentId,
     required this.runtime,
   })  : wp = GlobalWritersTable(agentId),
+        up = ImportedWriterRecords(agentId),
         mp = MessageQueue(),
         globalSendRegistry = GlobalSendRegistry(agentId) {
     _serializer = PayloadSerializer(agentId);
@@ -168,6 +176,7 @@ class MadContext {
       writerAddr: writerAddr,
       value: value,
       table: wp,
+      records: up,
       extractVariables: (val) {
         final vars = <TermVar>[];
         if (val is Term) {
@@ -183,9 +192,21 @@ class MadContext {
 
     _trace('[MAD $agentId] global_send FIRED: ${result.globalName} -> ${result.destination}');
 
+    // The value of this link is on its way: its imported-writer record, if any,
+    // has served its purpose (Definition Imported-Writer Records: "removed when
+    // the value is sent"). The goal itself was removed by the registry.
+    if (up.remove(writerAddr) != null) {
+      _trace('[MAD $agentId] imported-writer record for $writerAddr released '
+          '— value sent');
+    }
+
     // Record names forwarded by this globalization: arrivals for them are
-    // stale from now on (Definition Globalize, forwarding case).
+    // stale from now on (Definition Globalize, case 3).
     _recordForwardedNames(result.globalizeResult);
+
+    // Imported writers occurring in the value were forwarded under their
+    // original names (Definition Globalize, case 4): drop their goals too.
+    _dropForwardedWriterGoals(result.globalizeResult);
 
     // Globalize the value term: replace local VarRefs with GlobalNames
     // This is needed so the receiver can localize nested global names
@@ -285,12 +306,28 @@ class MadContext {
   }
 
   /// Record the reader names a globalization forwarded (Definition Globalize,
-  /// forwarding case): from now on a value arriving for such a name is stale
+  /// case 3): from now on a value arriving for such a name is stale
   /// at this agent and is dropped, not held.
   void _recordForwardedNames(GlobalizeResult result) {
     for (final gn in result.forwardedNames) {
       _forwardedReaderNames.add((gn.agent, gn.index));
       _trace('[MAD $agentId] forwarded $gn under its original anchor');
+    }
+  }
+
+  /// Remove the `global_send` goal of every imported writer this globalization
+  /// forwarded (Definition Globalize, case 4). `globalize` already removed the
+  /// record; the goal is registered under the same writer address, so the two
+  /// go together and this agent leaves the link — it neither holds the sending
+  /// end nor relays the value, which travels to the anchor in one message.
+  void _dropForwardedWriterGoals(GlobalizeResult result) {
+    for (final rec in result.forwardedWriters) {
+      globalSendRegistry.removeGoalFor(rec.writerAddr);
+      // The goal's heap hook goes with it: this writer will never be bound
+      // here, and nothing must fire on its behalf.
+      runtime.heap.removeBindCallback(rec.writerAddr);
+      _trace('[MAD $agentId] forwarded imported writer as _w(${rec.anchor}, '
+          '${rec.index}) — record and goal removed, link left');
     }
   }
 
@@ -380,10 +417,12 @@ class MadContext {
         localAgent: agentId,
         fromAgent: fromAgent,
         table: wp,
+        records: up,
         freshAddrAllocator: () => runtime.heap.allocateVariable(),
       );
 
-      // Register spawned goals from localization (_r cases)
+      // Register spawned goals from localization (_w cases; the records were
+      // added by localize alongside them)
       registerGlobalSendSpawns(localizeResult.spawns);
 
       // Issue 7: deliver any `_r` assignment that arrived before these entries.
@@ -422,9 +461,19 @@ class MadContext {
 
   /// Handle _w(p, i) := T assignment with i > 0 (we globalized writer Y)
   ///
-  /// We are agent p. We globalized writer Y, creating GlobalizeEntry (Y, q) at index i.
-  /// Now q's gs fires and sends _w(p, i) := T to us. Direct index lookup.
-  /// Per spec Section 8.3: "Agent p finds entry (X, q) at index i in W_p."
+  /// We are agent p, the link's anchor. We globalized writer Y, creating
+  /// GlobalizeEntry (Y, q) at index i. The holder's `global_send` goal fires
+  /// and sends `_w(p, i) := T` to us; the lookup is by index alone.
+  ///
+  /// Spec (madGLP Receive, Writer case): "The receiving agent is p, with entry
+  /// (X, q) at index i in W_p; **the sender need not be q, the name having
+  /// been forwarded** (Definition Globalize)." So [fromAgent] is not matched
+  /// against the entry's `remoteAgent` — it serves only to localize the
+  /// nested global names the value carries. The entry's `remoteAgent` records
+  /// who the writer was first exported to; after a forwarding it is no longer
+  /// the only possible sender. A forwarded writer needs no request and gets no
+  /// acknowledgement: `_w(p, i)` names its destination, so one message
+  /// suffices however far the writer travelled.
   void _handleWriterAssignment(GlobalName globalName, Term value, String fromAgent) {
     final entry = wp.lookupByIndex(globalName.index);
 
@@ -451,6 +500,7 @@ class MadContext {
         localAgent: agentId,
         fromAgent: fromAgent,
         table: wp,
+        records: up,
         freshAddrAllocator: () => runtime.heap.allocateVariable(),
       );
       registerGlobalSendSpawns(localizeResult.spawns);
@@ -515,6 +565,7 @@ class MadContext {
         localAgent: agentId,
         fromAgent: fromAgent,
         table: wp,
+        records: up,
         freshAddrAllocator: () => runtime.heap.allocateVariable(),
       );
       registerGlobalSendSpawns(localizeResult.spawns);
@@ -586,6 +637,7 @@ class MadContext {
       localAgent: agentId,
       fromAgent: fromAgent,
       table: wp,
+      records: up,
       freshAddrAllocator: () => runtime.heap.allocateVariable(),
     );
 
@@ -811,6 +863,7 @@ class MadContext {
       localAgent: agentId,
       remoteAgent: destAgent,
       table: wp,
+      records: up,
     );
 
     // Register the spawned global_send goals for readers
@@ -818,6 +871,11 @@ class MadContext {
 
     // Record names forwarded by this globalization (stale-drop bookkeeping).
     _recordForwardedNames(globalizeResult);
+
+    // Imported writers in the term were forwarded under their original names
+    // (Definition Globalize, case 4): drop their goals — this agent leaves
+    // those links, so the value goes from the new holder to the anchor direct.
+    _dropForwardedWriterGoals(globalizeResult);
 
     // For globalize-writer entries: NO onBind is registered here.
     // Per spec Section 5.1: when Y is a writer, p creates an entry (Y, q) and

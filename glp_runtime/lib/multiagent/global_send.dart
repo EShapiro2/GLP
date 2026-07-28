@@ -8,6 +8,7 @@ library;
 
 import 'mad_helpers.dart';
 import 'global_writers_table.dart';
+import 'imported_writer_records.dart';
 
 /// A pending global_send goal waiting for a reader to become known
 ///
@@ -135,6 +136,13 @@ class GlobalSendRegistry {
   /// Get the goal watching this reader address (if any)
   GlobalSendGoal? getGoalFor(int readerAddr) => _goals[readerAddr];
 
+  /// Remove the goal watching this reader address, if any.
+  ///
+  /// Spec (Definition Globalize, case 4): re-exporting an imported writer
+  /// "removes the record and the global_send goal watching Y?" — the exporting
+  /// agent leaves the link, so its goal must not fire.
+  GlobalSendGoal? removeGoalFor(int readerAddr) => _goals.remove(readerAddr);
+
   /// Called when a writer is bound to a value.
   ///
   /// If there's a goal watching this writer's reader, fires the goal:
@@ -155,19 +163,22 @@ class GlobalSendRegistry {
     required int writerAddr,
     required Object? value,
     required GlobalWritersTable table,
+    required ImportedWriterRecords records,
     required List<TermVar> Function(Object?) extractVariables,
   }) {
     // The writer and reader share the same address in our model
     final goal = _goals.remove(writerAddr);
     if (goal == null) return null;
 
-    // Globalize the value (may spawn new goals for nested variables)
+    // Globalize the value (may spawn new goals for nested variables, and may
+    // forward imported writers occurring in it — Globalize case 4)
     final variables = extractVariables(value);
     final globalizeResult = globalize(
       variables: variables,
       localAgent: agentId,
       remoteAgent: goal.destination,
       table: table,
+      records: records,
     );
 
     // Convert spawns to goals

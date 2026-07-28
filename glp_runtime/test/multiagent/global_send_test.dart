@@ -8,6 +8,7 @@
 import 'package:test/test.dart';
 import 'package:glp_runtime/multiagent/global_send.dart';
 import 'package:glp_runtime/multiagent/global_writers_table.dart';
+import 'package:glp_runtime/multiagent/imported_writer_records.dart';
 import 'package:glp_runtime/multiagent/mad_helpers.dart';
 
 void main() {
@@ -16,6 +17,7 @@ void main() {
       // Given: goal registered watching reader at address 100
       final registry = GlobalSendRegistry('p');
       final table = GlobalWritersTable('p');
+      final records = ImportedWriterRecords('p');
 
       final goal = GlobalSendGoal(
         readerAddr: 100,
@@ -32,6 +34,7 @@ void main() {
         writerAddr: 100,
         value: 42,
         table: table,
+        records: records,
         extractVariables: (_) => [], // No nested variables
       );
 
@@ -49,6 +52,7 @@ void main() {
       // Given: goal with global name _w(p,0), destination q
       final registry = GlobalSendRegistry('p');
       final table = GlobalWritersTable('p');
+      final records = ImportedWriterRecords('p');
 
       registry.register(GlobalSendGoal(
         readerAddr: 200,
@@ -61,6 +65,7 @@ void main() {
         writerAddr: 200,
         value: 'hello',
         table: table,
+        records: records,
         extractVariables: (_) => [],
       );
 
@@ -80,6 +85,7 @@ void main() {
       // Given: goal watching reader at 300
       final registry = GlobalSendRegistry('p');
       final table = GlobalWritersTable('p');
+      final records = ImportedWriterRecords('p');
 
       registry.register(GlobalSendGoal(
         readerAddr: 300,
@@ -93,6 +99,7 @@ void main() {
         writerAddr: 300,
         value: 'foo(Y?)', // Symbolic - actual term contains reader Y?
         table: table,
+        records: records,
         extractVariables: (_) => [TermVar.reader(401, writerAddr: 400)], // Y? is a reader at 401
       );
 
@@ -113,6 +120,7 @@ void main() {
       // Given: goal registered on reader at 500
       final registry = GlobalSendRegistry('p');
       final table = GlobalWritersTable('p');
+      final records = ImportedWriterRecords('p');
 
       registry.register(GlobalSendGoal(
         readerAddr: 500,
@@ -127,6 +135,7 @@ void main() {
         writerAddr: 500,
         value: 'done',
         table: table,
+        records: records,
         extractVariables: (_) => [],
       );
 
@@ -178,12 +187,14 @@ void main() {
     test('onWriterBound returns null when no goal registered', () {
       final registry = GlobalSendRegistry('p');
       final table = GlobalWritersTable('p');
+      final records = ImportedWriterRecords('p');
 
       // No goal registered for address 999
       final result = registry.onWriterBound(
         writerAddr: 999,
         value: 'ignored',
         table: table,
+        records: records,
         extractVariables: (_) => [],
       );
 

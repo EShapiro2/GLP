@@ -119,6 +119,7 @@ void aliceIsolate(SendPort mainPort) async {
         localAgent: 'alice',
         remoteAgent: 'bob',
         table: ctx.wp,
+        records: ctx.up,
       );
 
       print('[ALICE] Globalized Resp: ${globalizeResult.globalNames}');
@@ -210,6 +211,7 @@ void bobIsolate(SendPort mainPort) async {
         localAgent: 'bob',
         fromAgent: 'alice',
         table: ctx.wp,
+        records: ctx.up,
         freshAddrAllocator: () => runtime.heap.allocateVariable(),
       );
 

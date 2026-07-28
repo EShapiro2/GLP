@@ -39,6 +39,7 @@ void main() {
         localAgent: 'p',
         remoteAgent: 'q',
         table: ctxP.wp,
+        records: ctxP.up,
       );
       expect(globalizeResult.spawns.length, 1); // spawn for reader
       expect(ctxP.wp.globalizeEntryCount, 0); // no entry
@@ -52,6 +53,7 @@ void main() {
         localAgent: 'q',
         fromAgent: 'p',
         table: ctxQ.wp,
+        records: ctxQ.up,
         freshAddrAllocator: () => runtimeQ.heap.allocateVariable(),
       );
       expect(localizeResult.useReader[0], true); // q gets reader
@@ -108,6 +110,7 @@ void main() {
         localAgent: 'p',
         remoteAgent: 'q',
         table: ctxP.wp,
+        records: ctxP.up,
       );
 
       expect(ctxP.wp.lookupByIndex(1), isNotNull); // Entry at index 1
@@ -119,6 +122,7 @@ void main() {
         localAgent: 'q',
         fromAgent: 'p',
         table: ctxQ.wp,
+        records: ctxQ.up,
         freshAddrAllocator: () => runtimeQ.heap.allocateVariable(),
       );
       ctxQ.registerGlobalSendSpawns(localizeResult.spawns);
@@ -180,6 +184,7 @@ void main() {
         localAgent: 'bob',
         remoteAgent: 'alice',
         table: ctxBob.wp,
+        records: ctxBob.up,
       );
       expect(bobToAliceGlobal.spawns.length, 1); // gs for reader
       expect(ctxBob.wp.globalizeEntryCount, 0); // no entry
@@ -191,6 +196,7 @@ void main() {
         localAgent: 'alice',
         fromAgent: 'bob',
         table: ctxAlice.wp,
+        records: ctxAlice.up,
         freshAddrAllocator: () => runtimeAlice.heap.allocateVariable(),
       );
       expect(aliceFromBob.useReader[0], true); // Alice gets reader
@@ -204,6 +210,7 @@ void main() {
         localAgent: 'bob',
         remoteAgent: 'charlie',
         table: ctxBob.wp,
+        records: ctxBob.up,
       );
       expect(bobToCharlieGlobal.spawns, isEmpty); // No spawn for writer
       expect(ctxBob.wp.globalizeEntryCount, 1); // entry at index 2
@@ -214,6 +221,7 @@ void main() {
         localAgent: 'charlie',
         fromAgent: 'bob',
         table: ctxCharlie.wp,
+        records: ctxCharlie.up,
         freshAddrAllocator: () => runtimeCharlie.heap.allocateVariable(),
       );
       ctxCharlie.registerGlobalSendSpawns(charlieFromBob.spawns);
@@ -293,6 +301,7 @@ void main() {
         localAgent: 'p',
         remoteAgent: 'q',
         table: ctxP.wp,
+        records: ctxP.up,
       );
       ctxP.registerGlobalSendSpawns(globalizeResult.spawns);
 
@@ -310,6 +319,7 @@ void main() {
         localAgent: 'q',
         fromAgent: 'p',
         table: ctxQ.wp,
+        records: ctxQ.up,
         freshAddrAllocator: () => runtimeQ.heap.allocateVariable(),
       );
       ctxQ.registerGlobalSendSpawns(localizeResult.spawns);

@@ -8,6 +8,7 @@
 
 import 'package:test/test.dart';
 import 'package:glp_runtime/multiagent/global_writers_table.dart';
+import 'package:glp_runtime/multiagent/imported_writer_records.dart';
 import 'package:glp_runtime/multiagent/mad_helpers.dart';
 
 void main() {
@@ -15,6 +16,7 @@ void main() {
     test('writer variable: creates entry, no spawn', () {
       // Given: term with writer variable Y at address 100
       final table = GlobalWritersTable('p');
+      final records = ImportedWriterRecords('p');
       final variables = [TermVar.writer(100, readerAddr: 101)];
 
       // When: globalize(Y, 'q')
@@ -23,6 +25,7 @@ void main() {
         localAgent: 'p',
         remoteAgent: 'q',
         table: table,
+        records: records,
       );
 
       // Then:
@@ -46,6 +49,7 @@ void main() {
     test('reader variable: spawns global_send info, no entry', () {
       // Given: term with reader variable Y? at address 201, writer at 200
       final table = GlobalWritersTable('p');
+      final records = ImportedWriterRecords('p');
       final variables = [TermVar.reader(201, writerAddr: 200)];
 
       // When: globalize(Y?, 'q')
@@ -54,6 +58,7 @@ void main() {
         localAgent: 'p',
         remoteAgent: 'q',
         table: table,
+        records: records,
       );
 
       // Then:
@@ -78,6 +83,7 @@ void main() {
     test('mixed term: correct handling of both', () {
       // Given: term [X, Y?] with writer X at 100 and reader Y? at 201
       final table = GlobalWritersTable('p');
+      final records = ImportedWriterRecords('p');
       final variables = [TermVar.writer(100, readerAddr: 101), TermVar.reader(201, writerAddr: 200)];
 
       // When: globalize([X, Y?], 'q')
@@ -86,6 +92,7 @@ void main() {
         localAgent: 'p',
         remoteAgent: 'q',
         table: table,
+        records: records,
       );
 
       // Then:
@@ -116,6 +123,7 @@ void main() {
       // Given: term foo(bar(X), Y?) with nested structure
       // Variables in order of occurrence: X at 100, Y? at 201
       final table = GlobalWritersTable('p');
+      final records = ImportedWriterRecords('p');
       final variables = [TermVar.writer(100, readerAddr: 101), TermVar.reader(201, writerAddr: 200)];
 
       // When: globalize(foo(bar(X), Y?), 'q')
@@ -124,6 +132,7 @@ void main() {
         localAgent: 'p',
         remoteAgent: 'q',
         table: table,
+        records: records,
       );
 
       // Then: correctly processes variables at all nesting levels
@@ -140,6 +149,7 @@ void main() {
     test('index allocation is sequential', () {
       // Given: term [X, Y, Z?] with multiple variables
       final table = GlobalWritersTable('p');
+      final records = ImportedWriterRecords('p');
       final variables = [
         TermVar.writer(100, readerAddr: 101), // X
         TermVar.writer(200, readerAddr: 201), // Y
@@ -152,6 +162,7 @@ void main() {
         localAgent: 'p',
         remoteAgent: 'q',
         table: table,
+        records: records,
       );
 
       // Then: indices 1, 2, 3 allocated in order (0 reserved for serializer)

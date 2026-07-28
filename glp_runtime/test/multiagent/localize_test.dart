@@ -8,6 +8,7 @@
 
 import 'package:test/test.dart';
 import 'package:glp_runtime/multiagent/global_writers_table.dart';
+import 'package:glp_runtime/multiagent/imported_writer_records.dart';
 import 'package:glp_runtime/multiagent/mad_helpers.dart';
 
 void main() {
@@ -15,6 +16,7 @@ void main() {
     test('_w(p,i): spawns global_send, returns writer', () {
       // Given: globalized term _w(p, 5)
       final table = GlobalWritersTable('q');
+      final records = ImportedWriterRecords('q');
       final globalNames = [GlobalName.writer('p', 5)];
 
       var nextAddr = 100;
@@ -30,6 +32,7 @@ void main() {
         localAgent: 'q',
         fromAgent: 'p',
         table: table,
+        records: records,
         freshAddrAllocator: allocateAddr,
       );
 
@@ -60,6 +63,7 @@ void main() {
     test('_r(p,i): creates entry with remote index, returns reader', () {
       // Given: globalized term _r(p, 3)
       final table = GlobalWritersTable('q');
+      final records = ImportedWriterRecords('q');
       final globalNames = [GlobalName.reader('p', 3)];
 
       var nextAddr = 200;
@@ -75,6 +79,7 @@ void main() {
         localAgent: 'q',
         fromAgent: 'p',
         table: table,
+        records: records,
         freshAddrAllocator: allocateAddr,
       );
 
@@ -105,6 +110,7 @@ void main() {
     test('mixed global names: correct handling', () {
       // Given: term [_w(p, 1), _r(p, 2)]
       final table = GlobalWritersTable('q');
+      final records = ImportedWriterRecords('q');
       final globalNames = [
         GlobalName.writer('p', 1),
         GlobalName.reader('p', 2),
@@ -123,6 +129,7 @@ void main() {
         localAgent: 'q',
         fromAgent: 'p',
         table: table,
+        records: records,
         freshAddrAllocator: allocateAddr,
       );
 

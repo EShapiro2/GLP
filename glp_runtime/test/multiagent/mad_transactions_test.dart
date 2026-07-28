@@ -231,6 +231,7 @@ void main() {
         localAgent: 'p',
         remoteAgent: 'q',
         table: ctxP.wp,
+        records: ctxP.up,
       );
 
       expect(globalizeResult.spawns.length, 1);
@@ -248,6 +249,7 @@ void main() {
         localAgent: 'q',
         fromAgent: 'p',
         table: ctxQ.wp,
+        records: ctxQ.up,
         freshAddrAllocator: () => runtimeQ.heap.allocateVariable(),
       );
 
@@ -303,6 +305,7 @@ void main() {
         localAgent: 'p',
         remoteAgent: 'q',
         table: ctxP.wp,
+        records: ctxP.up,
       );
 
       expect(ctxP.wp.lookupByIndex(1), isNotNull); // Entry created at index 1
@@ -317,6 +320,7 @@ void main() {
         localAgent: 'q',
         fromAgent: 'p',
         table: ctxQ.wp,
+        records: ctxQ.up,
         freshAddrAllocator: () => runtimeQ.heap.allocateVariable(),
       );
 

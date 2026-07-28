@@ -9,6 +9,7 @@ library;
 
 import 'package:glp_runtime/runtime/terms.dart';
 import 'global_writers_table.dart';
+import 'imported_writer_records.dart';
 
 /// Type of global variable name
 enum GlobalNameType {
@@ -124,16 +125,24 @@ class GlobalizeResult {
   /// Spawns needed for reader variables
   final List<GlobalSendSpawn> spawns;
 
-  /// Names forwarded under their original anchor (Definition Globalize,
-  /// forwarding case): the LocalizeEntry was removed and no goal spawned.
+  /// Reader names forwarded under their original anchor (Definition Globalize,
+  /// case 3): the LocalizeEntry was removed and no goal spawned.
   /// The caller records these so a later value arriving for the name is
   /// dropped as stale, not held as early.
   final List<GlobalName> forwardedNames;
+
+  /// Imported writers forwarded under their original anchor (Definition
+  /// Globalize, case 4): the record was removed and the original name `_w(o,k)`
+  /// emitted. The caller removes each record's `global_send` goal — the goal is
+  /// registered under the record's writer address — so the exporting agent
+  /// leaves the link instead of relaying its values.
+  final List<ImportedWriterRecord> forwardedWriters;
 
   GlobalizeResult({
     required this.globalNames,
     required this.spawns,
     this.forwardedNames = const [],
+    this.forwardedWriters = const [],
   });
 }
 
@@ -182,29 +191,51 @@ class LocalizeResult {
 /// produces the globalized representation T_p↑.
 ///
 /// Definition Globalize (IGLP, madglp.tex):
-/// - If Y is a writer: allocate index i, create entry (Y, q) at index i,
-///   replace with _w(p, i). No goal is spawned.
-/// - If Y? is a reader: allocate index i, replace with _r(p, i),
+/// - Case 1. If Y is a writer: allocate index i, create entry (Y, q) at index
+///   i, replace with _w(p, i). No goal is spawned.
+/// - Case 2. If Y? is a reader: allocate index i, replace with _r(p, i),
 ///   spawn global_send(Y?, _r(p,i), q). No entry is created.
-/// - If Y? is the reader of an imported pair — its paired writer carries a
-///   LocalizeEntry (Y, o, k) with anchor o — replace with the original name
-///   _r(o, k) and remove the entry: the name is forwarded, no goal is spawned.
+/// - Case 3. If Y? is the reader of an imported pair — its paired writer
+///   carries a LocalizeEntry (Y, o, k) with anchor o — replace with the
+///   original name _r(o, k) and remove the entry: the name is forwarded, no
+///   goal is spawned.
+/// - Case 4. If Y is the writer of an imported pair — [records] has the record
+///   (Y, o, k) with anchor o — replace with the original name _w(o, k), remove
+///   the record and the global_send goal watching Y?, and create no entry: the
+///   name is forwarded, and p leaves the link.
 ///
-/// Returns GlobalizeResult with global names, spawn info, and forwarded names.
-/// Updates the GlobalWritersTable with entries for writers.
+/// Returns GlobalizeResult with global names, spawn info, forwarded reader
+/// names, and the forwarded imported-writer records whose goals the caller
+/// must remove. Updates the GlobalWritersTable and the imported-writer records.
 GlobalizeResult globalize({
   required List<TermVar> variables,
   required String localAgent,
   required String remoteAgent,
   required GlobalWritersTable table,
+  required ImportedWriterRecords records,
 }) {
   final globalNames = <GlobalName>[];
   final spawns = <GlobalSendSpawn>[];
   final forwardedNames = <GlobalName>[];
+  final forwardedWriters = <ImportedWriterRecord>[];
 
   for (final v in variables) {
     if (v.isWriter) {
-      // Writer: create entry, no spawn
+      // Case 4 — writer of an imported pair: forward under the original name.
+      // Spec: "replace Y in T_p↑ with the original name _w(o, k), remove the
+      // record and the global_send goal watching Y?, and create no entry: the
+      // name is forwarded, and p leaves the link." The record's presence is
+      // the condition; it is removed when the value is sent, so a writer whose
+      // value has already gone carries none.
+      final importedWriter = records.remove(v.writerAddr);
+      if (importedWriter != null) {
+        globalNames.add(
+            GlobalName.writer(importedWriter.anchor, importedWriter.index));
+        forwardedWriters.add(importedWriter);
+        continue;
+      }
+
+      // Case 1 — writer: create entry, no spawn
       // Spec: "allocate the next index i, create entry (Y, q) at index i
       //        in W'_p, and replace Y in T_p↑ with _w(p, i).
       //        No goal is spawned—p will receive the assignment on this link."
@@ -214,11 +245,10 @@ GlobalizeResult globalize({
       continue;
     }
 
-    // Reader of an imported pair: forward under the original name.
-    // Spec (Definition Globalize, case 3): "replace Y? with the original name
-    // _r(o, k) and remove the entry: the name is forwarded, and no goal is
-    // spawned." The entry's presence implies the reader is unbound — applying
-    // the incoming value removes the entry.
+    // Case 3 — reader of an imported pair: forward under the original name.
+    // Spec: "replace Y? with the original name _r(o, k) and remove the entry:
+    // the name is forwarded, and no goal is spawned." The entry's presence
+    // implies the reader is unbound — applying the incoming value removes it.
     final imported = table.findLocalizeEntryByWriter(v.writerAddr);
     if (imported != null) {
       final original =
@@ -229,7 +259,7 @@ GlobalizeResult globalize({
       continue;
     }
 
-    // Reader: spawn global_send, no entry
+    // Case 2 — reader: spawn global_send, no entry
     // Spec: "allocate the next index i, replace Y? in T_p↑ with _r(p, i),
     //        and spawn global_send(Y?, _r(p,i), q). No entry is created—
     //        the global_send goal handles outgoing communication."
@@ -252,6 +282,7 @@ GlobalizeResult globalize({
     globalNames: globalNames,
     spawns: spawns,
     forwardedNames: forwardedNames,
+    forwardedWriters: forwardedWriters,
   );
 }
 
@@ -262,14 +293,16 @@ GlobalizeResult globalize({
 ///
 /// Definition Localize (IGLP, madglp.tex):
 /// - If _w(p, i): create fresh pair (Y_q, Y_q?), replace with Y_q (writer),
-///   spawn global_send(Y_q?, _w(p,i), p). No entry is created.
+///   add the record (Y_q, p, i) to U'_q, and spawn global_send(Y_q?, _w(p,i),
+///   p). No entry is created.
 /// - If _r(p, i): create fresh pair (Z_q, Z_q?), add entry (Z_q, p, i),
 ///   replace with Z_q? (reader). No goal is spawned. If the sending agent
 ///   [fromAgent] is not p, the name was forwarded, and req(_r(p,i)) is added
 ///   to the result's requests, addressed to the anchor p.
 ///
 /// Returns LocalizeResult with fresh pairs, usage info, spawn info, and
-/// requests. Updates the GlobalWritersTable with entries for _r names.
+/// requests. Updates the GlobalWritersTable with entries for _r names and the
+/// imported-writer records [records] with records for _w names.
 ///
 /// The [freshAddrAllocator] function is called to allocate each fresh variable pair,
 /// returning (writerAddr, readerAddr).
@@ -278,6 +311,7 @@ LocalizeResult localize({
   required String localAgent,
   required String fromAgent,
   required GlobalWritersTable table,
+  required ImportedWriterRecords records,
   required (int, int) Function() freshAddrAllocator,
 }) {
   final freshPairs = <FreshPair>[];
@@ -292,11 +326,18 @@ LocalizeResult localize({
     freshPairs.add(pair);
 
     if (gn.isWriter) {
-      // _w(p, i): spawn global_send, use writer
+      // _w(p, i): record the imported writer, spawn global_send, use writer
       // Spec: "create fresh local pair (Y_q, Y_q?), replace _w(p, i) with
-      //        Y_q (the writer) in T_q↓, and spawn global_send(Y_q?, _w(p,i), p).
-      //        No entry is created—the global_send goal handles outgoing communication."
+      //        Y_q (the writer) in T_q↓, add the record (Y_q, p, i) to U'_q,
+      //        and spawn global_send(Y_q?, _w(p,i), p)."
+      //        No entry is created—the global_send goal handles outgoing communication.
       useReader.add(false); // Use Y_q (writer)
+
+      // The record marks Y_q as the sending end of the link anchored at
+      // _w(p, i): re-exporting Y_q forwards that name (Globalize case 4)
+      // instead of anchoring a new link here. The anchor is gn.agent whether
+      // or not the sender is the anchor — a forwarded writer keeps its name.
+      records.add(writerAddr, gn.agent, gn.index);
 
       // Spawn global_send(Y_q?, _w(p,i), p)
       // When q assigns Y_q, Y_q? becomes known, gs fires and sends value to p.

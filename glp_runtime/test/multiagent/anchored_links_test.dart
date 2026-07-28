@@ -187,6 +187,7 @@ void main() {
         localAgent: 'p',
         remoteAgent: 'q',
         table: ctxP.wp,
+        records: ctxP.up,
       );
       ctxP.registerGlobalSendSpawns(gres.spawns);
       final rn = gres.globalNames[0]; // _r(p, i)
@@ -195,6 +196,7 @@ void main() {
         localAgent: 'q',
         fromAgent: 'p',
         table: ctxQ.wp,
+        records: ctxQ.up,
         freshAddrAllocator: () => qRt.heap.allocateVariable(),
       );
       expect(lres.requests, isEmpty); // sender is the anchor
@@ -242,6 +244,7 @@ void main() {
         localAgent: 'charlie',
         remoteAgent: 'bob',
         table: ctxCharlie.wp,
+        records: ctxCharlie.up,
       );
       ctxCharlie.registerGlobalSendSpawns(gres.spawns);
       final rn = gres.globalNames[0]; // _r(charlie, k)
@@ -250,6 +253,7 @@ void main() {
         localAgent: 'bob',
         fromAgent: 'charlie',
         table: ctxBob.wp,
+        records: ctxBob.up,
         freshAddrAllocator: () => bobRt.heap.allocateVariable(),
       );
       final restBReader = lres.freshPairs[0].readerAddr;
@@ -318,6 +322,7 @@ void main() {
         localAgent: 'charlie',
         remoteAgent: 'bob',
         table: ctxCharlie.wp,
+        records: ctxCharlie.up,
       );
       ctxCharlie.registerGlobalSendSpawns(gres.spawns);
       final lres = localize(
@@ -325,6 +330,7 @@ void main() {
         localAgent: 'bob',
         fromAgent: 'charlie',
         table: ctxBob.wp,
+        records: ctxBob.up,
         freshAddrAllocator: () => bobRt.heap.allocateVariable(),
       );
       final restBReader = lres.freshPairs[0].readerAddr;
@@ -399,6 +405,7 @@ void main() {
         localAgent: 'charlie',
         remoteAgent: 'bob',
         table: ctxCharlie.wp,
+        records: ctxCharlie.up,
       );
       ctxCharlie.registerGlobalSendSpawns(gres.spawns);
       final lres = localize(
@@ -406,6 +413,7 @@ void main() {
         localAgent: 'bob',
         fromAgent: 'charlie',
         table: ctxBob.wp,
+        records: ctxBob.up,
         freshAddrAllocator: () => bobRt.heap.allocateVariable(),
       );
       final restBReader = lres.freshPairs[0].readerAddr;
@@ -474,6 +482,7 @@ void main() {
         localAgent: 'charlie',
         remoteAgent: 'bob',
         table: ctxCharlie.wp,
+        records: ctxCharlie.up,
       );
       ctxCharlie.registerGlobalSendSpawns(gres.spawns);
       final rn = gres.globalNames[0]; // _r(charlie, k)
@@ -482,6 +491,7 @@ void main() {
         localAgent: 'bob',
         fromAgent: 'charlie',
         table: ctxBob.wp,
+        records: ctxBob.up,
         freshAddrAllocator: () => bobRt.heap.allocateVariable(),
       );
       final restBReader = lres.freshPairs[0].readerAddr;
