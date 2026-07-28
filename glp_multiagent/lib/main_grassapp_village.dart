@@ -71,6 +71,11 @@ const int _currenciesPanel = 1;
 /// Milliseconds per notify during replay — sets the video's pace.
 const int _stepMs = 55;
 
+/// Figure mode hides the app chrome (title bar, Play button, status ticker) and
+/// auto-plays on load, so a recording or screenshot shows only the six phones —
+/// the village-market figure. Flip to false for the interactive, labelled view.
+const bool _figureMode = true;
+
 class VillageScreen extends StatefulWidget {
   const VillageScreen({super.key});
   @override
@@ -187,7 +192,7 @@ class _VillageScreenState extends State<VillageScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFF1B1B1F),
-      appBar: AppBar(
+      appBar: _figureMode ? null : AppBar(
         backgroundColor: const Color(0xFF0B3D2E),
         foregroundColor: Colors.white,
         title: const Text('Village Market — six grassroots phones',
@@ -205,26 +210,28 @@ class _VillageScreenState extends State<VillageScreen> {
           ),
         ],
       ),
-      body: Column(
-        children: [
-          Expanded(
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                for (final v in _villagers.take(3)) Expanded(child: _cell(v)),
-              ],
+      body: SafeArea(
+        child: Column(
+          children: [
+            Expanded(
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  for (final v in _villagers.take(3)) Expanded(child: _cell(v)),
+                ],
+              ),
             ),
-          ),
-          Expanded(
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                for (final v in _villagers.skip(3)) Expanded(child: _cell(v)),
-              ],
+            Expanded(
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  for (final v in _villagers.skip(3)) Expanded(child: _cell(v)),
+                ],
+              ),
             ),
-          ),
-          _statusBar(),
-        ],
+            if (!_figureMode) _statusBar(),
+          ],
+        ),
       ),
     );
   }
