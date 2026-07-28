@@ -29,6 +29,7 @@ OutputContent ::= befriend(Constant, Response?)
                 ; text(Constant)
                 ; intro(Constant, FriendChannel)
                 ; balance_report(Constant, Constant, Constant, Integer)
+                ; balances_synced(Constant)
                 ; date_advanced(Constant)
                 ; trade_proposed(Constant, Stream(Lot), TradeResponse?, Stream(Bond))
                 ; trade_completed(Constant)
@@ -182,10 +183,14 @@ emit_tally(_, [], Outs, Outs?).
 
 %% Emit one balance_report(Owner, Issuer, Maturity, Count) per held position.
 procedure emit_balances(Constant?, Stream(Bond)?, OutputsList?, OutputsList).
-emit_balances(Self, Holdings, Outs, Outs1?) :-
+%% Report the held lots, then a snapshot boundary: emit_tally reports only lots
+%% still held, so a holding spent to zero is silently absent; balances_synced
+%% tells the UI to drop it, keeping money conserved on screen.
+emit_balances(Self, Holdings, Outs, Outs2?) :-
     ground(Self?), ground(Holdings?) |
     tally_bonds(Holdings?, [], Tally),
-    emit_tally(Self?, Tally?, Outs?, Outs1).
+    emit_tally(Self?, Tally?, Outs?, Outs1),
+    lookup_send('_user', msg(agent, '_user', balances_synced(Self?)), Outs1?, Outs2).
 
 %% Publish my holdings to every friend (so their wallet shows my currency).
 %% '_user'/'_net' outputs pass through untouched; any other key is a friend.

@@ -61,6 +61,10 @@ class UiRuntime {
   final ActivityStore store = ActivityStore();
   final List<InboxCard> inbox = [];
 
+  /// Holdings keys set since each owner's last balance snapshot, so a sync can
+  /// drop the ones that vanished (a coin spent to zero). Keyed by owner.
+  final Map<String, Set<String>> _holdingsTouched = {};
+
   /// Raw boundary lines, kept for debugging/trace.
   final List<String> raw = [];
 
@@ -197,6 +201,16 @@ class UiRuntime {
               ? coin
               : '$coin@${formatTerm(fields[maturityField]!)}';
           h.putIfAbsent(owner, () => {})[key] = fields[amountField]!;
+          _holdingsTouched.putIfAbsent(owner, () => <String>{}).add(key);
+        case SyncBalances(store: final storeKey, :final ownerField):
+          // Prune to the just-reported snapshot: drop any of the owner's
+          // holdings not set since the previous sync — how a coin spent to zero
+          // leaves the wallet (it is simply no longer reported).
+          final owner = formatTerm(fields[ownerField]!);
+          final touched = _holdingsTouched[owner] ?? const <String>{};
+          store.holdings[storeKey]?[owner]
+              ?.removeWhere((k, _) => !touched.contains(k));
+          _holdingsTouched.remove(owner);
         case AddEscrow(
             store: final storeKey,
             :final whoField,

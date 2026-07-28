@@ -14,7 +14,7 @@ cp "$SRC/self.glp" "$DST/self.glp"
 for f in output inject intro befriend; do
   cp "$SRC/lib/routing/$f.glp" "$DST/lib/routing/$f.glp"
 done
-for f in self currency_txn grassapp_agent grassapp_mediator play_grassapp_boot play_grassapp_duo; do
+for f in self currency_txn grassapp_agent grassapp_mediator play_grassapp_boot play_grassapp_duo play_village_headless; do
   cp "$SRC/book/grassapp/$f.glp" "$DST/book/grassapp/$f.glp"
 done
 for f in self agent boot play_ui_boot; do

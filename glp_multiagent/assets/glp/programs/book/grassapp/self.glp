@@ -3,7 +3,7 @@
 %% Currencies among friends: the social-graph protocol (cold-call befriending,
 %% friend channels, one-to-one messaging) EXTENDED with maturity-aware holdings
 %% and the guarded transactions — mint, advance-date, pay, trade (the maturity-
-%% carrying swap: a loan), and redeem — confined to the social graph.
+%% carrying swap: a loan), redeem, and escrow — confined to the social graph.
 %%
 %% A currency unit is a BOND: bond(Issuer, Maturity, Serial).  A coin is a bond
 %% mature by the HOLDER's own local clock (Def. 2: a bond of maturity d is a coin
@@ -34,6 +34,14 @@ TradeResponse ::= trade_accept(Stream(Bond))
                 ; trade_decline(Stream(Bond))
                 ; trade_decline_menu(Stream(Bond), Stream(Bond)).
 
+%% Escrow (paper §5).  The depositor locks bonds until a release time and may
+%% cancel until then; escrow/5 races the timer against the cancel signal and
+%% whichever commits first decides the outcome.  The release is REAL time
+%% (wait_until) — only bond maturity uses the agent's local date.
+EscrowCancel    ::= cancel.
+EscrowBenResult ::= escrow_bonds(Stream(Bond)) ; escrow_cancelled.
+EscrowDepResult ::= escrow_bonds(Stream(Bond)) ; escrow_expired.
+
 %% Friend-to-friend channel content. Beyond the social text/intro, friends carry
 %% currency: a payment (mature coins), a holdings publish (so a friend's wallet
 %% is visible), and the trade proposal that carries maturity per lot.  Redemption
@@ -44,6 +52,7 @@ FriendContent ::= response(Response)
                 ; coins(Stream(Bond))
                 ; balances(Stream(Bond))
                 ; trade_propose(Stream(Lot), Stream(Bond), TradeResponse?)
+                ; escrow_offer(Constant, Constant, Constant, Constant, EscrowBenResult)
                 ; group_invite(GroupId, Channel(Stream(GroupSetupResponse), Stream(Handshake)))
                 ; group_msg(GroupId, Constant, Constant)
                 ; group_leave(GroupId, Constant)
@@ -82,6 +91,7 @@ GroupKey ::= group(GroupId) ; group_member(GroupId, Constant).
 %% agent on response.
 PendingValue ::= response(Response?)
                ; trade_pending(TradeResponse?, Stream(Lot), Stream(Bond))
+               ; escrow_pending(EscrowCancel?)
                ; group_channel(Channel(Stream(GroupSetupResponse), Stream(Handshake)))
                ; error.
 
@@ -95,12 +105,20 @@ AgentContent ::= befriend(Constant, Response?)
                ; rejected(Constant)
                ; received(Constant, Constant)
                ; balance_report(Constant, Constant, Constant, Integer)
+               ; balances_synced(Constant)
                ; date_advanced(Constant)
                ; trade_proposed(Constant, Stream(Lot), TradeResponse?, Stream(Bond))
                ; trade_completed(Constant)
                ; trade_failed(Constant)
                ; trade_returned(Constant)
                ; trade_returned_menu(Constant, Stream(Bond))
+               ; escrow_deposited(Constant, Constant, Constant, Constant, Constant, EscrowCancel?)
+               ; escrow_received(Constant, Constant, Constant, Constant, Constant)
+               ; escrow_released(Constant)
+               ; escrow_cancelled(Constant)
+               ; escrow_expired(Constant)
+               ; escrow_returned(Constant)
+               ; escrow_failed(Constant)
                ; group_invite(GroupId, Channel(Stream(GroupSetupResponse), Stream(Handshake)))
                ; group_joined(GroupId)
                ; group_joined_member(GroupId, Constant)
@@ -124,6 +142,8 @@ UserContent ::= connect(Constant)
               ; redeem(Constant, Stream(Lot), Stream(Lot))
               ; accept_trade(Constant, PendingValue)
               ; reject_trade(Constant, PendingValue)
+              ; deposit_escrow(Constant, Stream(Lot), Constant)
+              ; cancel_escrow(Constant, PendingValue)
               ; create_group(Constant)
               ; invite_group(GroupId, Constant)
               ; accept_group(GroupId, PendingValue)

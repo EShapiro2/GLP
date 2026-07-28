@@ -153,6 +153,20 @@ void main() {
           formatTerm(r.store.holdings['holdings']!['bob']!['alice@0']!), '2');
     });
 
+    test('a balance snapshot prunes holdings spent to zero (conservation)', () {
+      // Bob holds 15 of his own coins, then spends them all and holds 10
+      // alice-coins instead. Each snapshot reports only what remains, and the
+      // sync drops the emptied lot — spent coins do not linger in the wallet.
+      r.handleLine('balance_report(bob, bob, 0, 15)');
+      r.handleLine('balances_synced(bob)');
+      expect(r.store.holdings['holdings']!['bob']!.keys, ['bob@0']);
+
+      r.handleLine('balance_report(bob, alice, 0, 10)');
+      r.handleLine('balances_synced(bob)');
+      expect(r.store.holdings['holdings']!['bob']!.keys, ['alice@0'],
+          reason: 'the spent bob-coins must be pruned, not lingering');
+    });
+
     test('submitCommand builds the ground UserCmd from a panel form', () {
       final friends =
           grassrootsManifest.panels.firstWhere((p) => p.id == 'friends');

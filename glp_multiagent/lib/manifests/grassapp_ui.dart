@@ -66,6 +66,12 @@ final Manifest grassrootsManifest = Manifest(
               ],
             ),
           ],
+          // The offer clears once the friendship forms — the person accepting in
+          // the app, or a village actor auto-accepting in GLP, both land as
+          // `connected`.
+          dismissedBy: const [
+            DismissDesc(notifyCtor: 'connected', args: ['who'], itemKey: 'who'),
+          ],
         ),
         // Introductions are the social-graph platform's
         // (programs/social/graph, rendered by the social manifest); the
@@ -186,6 +192,15 @@ final Manifest grassrootsManifest = Manifest(
               cmdCtor: 'reject_trade',
               fill: [FromField('from'), FromField('req')],
             ),
+          ],
+          // A pending swap card clears when that swap resolves by any route —
+          // the counterparty accepting in the app, or the trade settling or
+          // failing in the run (the village agents auto-accept in GLP).
+          dismissedBy: const [
+            DismissDesc(
+                notifyCtor: 'trade_completed', args: ['who'], itemKey: 'who'),
+            DismissDesc(
+                notifyCtor: 'trade_failed', args: ['who'], itemKey: 'who'),
           ],
         ),
         // The depositor's standing option to cancel, alerting the
@@ -321,6 +336,13 @@ final Manifest grassrootsManifest = Manifest(
         SetBalance('holdings', 'owner', 'issuer', 'count',
             maturityField: 'maturity')
       ],
+    ),
+    // After each balance snapshot, drop holdings the snapshot omitted — how a
+    // coin spent to zero leaves the wallet (money conserved on screen).
+    ActivityDesc(
+      notifyCtor: 'balances_synced',
+      args: ['owner'],
+      effects: [SyncBalances('holdings', 'owner')],
     ),
     // The local date advanced (Def. 2 item 2) — an ack, no lasting state.
     ActivityDesc(

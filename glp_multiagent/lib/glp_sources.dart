@@ -42,6 +42,7 @@ const _bundledGlp = [
   'programs/book/grassapp/grassapp_agent.glp',
   'programs/book/grassapp/grassapp_mediator.glp',
   'programs/book/grassapp/play_grassapp_boot.glp',
+  'programs/book/grassapp/play_village_headless.glp',
   // Social graph (the canonical platform program).
   'programs/social/graph/self.glp',
   'programs/social/graph/agent.glp',

@@ -24,7 +24,15 @@ import 'term.dart';
 class AgentSurface extends StatefulWidget {
   final String agentId;
   final UiRuntime runtime;
-  const AgentSurface({super.key, required this.agentId, required this.runtime});
+
+  /// Panel shown first (index into the manifest's panels). The single-phone app
+  /// opens on Friends (0); a village grid opens each phone on Currencies.
+  final int initialPanel;
+  const AgentSurface(
+      {super.key,
+      required this.agentId,
+      required this.runtime,
+      this.initialPanel = 0});
 
   @override
   State<AgentSurface> createState() => _AgentSurfaceState();
@@ -32,7 +40,7 @@ class AgentSurface extends StatefulWidget {
 
 class _AgentSurfaceState extends State<AgentSurface> {
   /// The active panel (index into the manifest's panels).
-  int _panel = 0;
+  late int _panel = widget.initialPanel;
 
   /// Drill-down within the active panel: an open chat peer or wallet person
   /// (null = the panel's list).
@@ -55,6 +63,11 @@ class _AgentSurfaceState extends State<AgentSurface> {
 
   Manifest get _m => widget.runtime.manifest;
   UiRuntime get _r => widget.runtime;
+
+  /// This phone's owner — the wallet's "self". The surface's [agentId] is
+  /// authoritative (a manifest's [WalletVie_self] is only a single-agent
+  /// default), so a grid of surfaces each renders its own agent as "You".
+  String get _self => widget.agentId.toLowerCase();
 
   static const MaterialColor _accent = Colors.green;
 
@@ -251,7 +264,7 @@ class _AgentSurfaceState extends State<AgentSurface> {
   Widget _walletPanel(Panel p) {
     final w = p.wallet!;
     final pending = _pendingByItem(p);
-    final people = <String>{w.selfKey};
+    final people = <String>{_self};
     if (w.friendsList.isNotEmpty) {
       people.addAll((_r.store.lists[w.friendsList] ?? const []).map(formatTerm));
     }
@@ -262,7 +275,7 @@ class _AgentSurfaceState extends State<AgentSurface> {
       children: [
         for (final person in people)
           _personTile(person, pending[person],
-              titleOverride: person == w.selfKey ? 'You' : null,
+              titleOverride: person == _self ? 'You' : null,
               subtitle: _holdingsSummary(w, person),
               onOpen: () => setState(() => _openItem = person)),
       ],
@@ -341,7 +354,7 @@ class _AgentSurfaceState extends State<AgentSurface> {
   // === Wallet drill-down: a person's coins + the actions against them ========
 
   Widget _walletDetail(WalletView w, String person) {
-    final isSelf = person == w.selfKey;
+    final isSelf = person == _self;
     final holds = _r.store.holdings[w.storeKey]?[person] ?? const {};
     final coins = holds.keys.toList();
     final actions = isSelf ? w.selfActions : w.friendActions;
@@ -495,10 +508,10 @@ class _AgentSurfaceState extends State<AgentSurface> {
   }
 
   String _coinLabel(String coin, WalletView w) =>
-      coin == w.selfKey ? 'Your coins' : "${_cap(coin)}'s coins";
+      coin == _self ? 'Your coins' : "${_cap(coin)}'s coins";
 
   String _coinShort(String coin, WalletView w) =>
-      coin == w.selfKey ? 'yours' : "${_cap(coin)}'s";
+      coin == _self ? 'yours' : "${_cap(coin)}'s";
 
   // === Chat drill-down: bubbles + input =====================================
 

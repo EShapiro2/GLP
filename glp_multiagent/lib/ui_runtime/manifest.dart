@@ -280,6 +280,16 @@ class RemoveEscrow extends Effect {
   const RemoveEscrow(this.store, this.whoField);
 }
 
+/// Prune a holdings store to the owner's just-reported snapshot: drop any
+/// holdings not set since the previous sync. A coin spent to zero is simply not
+/// re-reported, so without this it keeps its last non-zero figure; the sync is
+/// what makes it leave the wallet — money conserved on screen.
+class SyncBalances extends Effect {
+  final String store;
+  final String ownerField;
+  const SyncBalances(this.store, this.ownerField);
+}
+
 /// An activity rule: one all-ground `UserNotify` that lands in its target
 /// surface(s) — the screen, the classic stream I/O of concurrent logic
 /// programming (paper §6). [effects] mutate the rendered state — `connected`

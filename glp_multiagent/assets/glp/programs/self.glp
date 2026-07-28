@@ -75,22 +75,23 @@ procedure =?=(_?, _?).
 procedure =..(_, Stream(_)?).      % Compose: Stream? → Compound
 procedure ..=(Stream(_), _?).      % Decompose: Compound? → Stream
 
-% MWM (Mutual Write Merge) runtime primitives
-procedure _allocate_mutual_reference(_, _).
+% Body kernels are deliberately NOT declared in this file.  Per the TGLP
+% appendix "GLP Language Primitives", the primitives "are implemented by the
+% runtime and form the base of every module's scope chain" — that is, below this
+% file, not in it; and per the appendix "Guards, Body Kernels, and System
+% Predicates", body kernels "are not directly accessible to user programs; they
+% are invoked only by system predicates".  A declaration here would place the
+% kernel in every application module's scope, which is exactly what that rule
+% forbids.  The arithmetic, math, time and univ kernels ('_add', '_sqrt',
+% '_now', '_list_to_tuple', ...) have never been declared here and resolve from
+% the runtime; the rest now follow the same rule.
+%
+% The system predicates below invoke kernels by quoted name, which this file may
+% do because it declares -mode(system) (appendix "Admission to the Primitive
+% Layer": only the root self.glp and modules under programs/system/ may).
+
+% MWM (Mutual Write Merge) runtime guard
 procedure is_mutual_ref(_?).
-procedure _stream_append(_?, _?, _).
-procedure _close_mutual_reference(_?).
-
-% madGLP network primitives
-procedure _send(_?, _?, _?).
-
-% madGLP attestation kernel (sign/2 wrapper lives in madPredicates; backed by
-% GlpNetwork.sign — seam spec §4). valid_attestation/4 is a runtime guard, not a
-% kernel; it needs no _-prefixed declaration here (seam spec §4 rework note).
-procedure _sign(_?, _).
-
-% Output (system predicate)
-procedure _output(_?).
 
 % =============================================================================
 % SINGLE-UNIT-CLAUSE PROCEDURES (DEFINED GUARDS)
@@ -433,6 +434,21 @@ X? =.. [Y|Ys] :- list(Ys?) | '_list_to_tuple'([Y?|Ys?], X).
 
 % Decomposition: compound → list
 X =.. Y? :- compound(X?) | '_tuple_to_list'(X?, Y).
+
+% =============================================================================
+% MODULE AS A VALUE (self_module/1, run/2)
+% =============================================================================
+% Wrappers over the '_self_module' and '_run' kernels (GLP paper, appendix
+% "Guards, Body Kernels, and System Predicates").  run(Goal, Module) activates
+% the module value Module and posts Goal to it; Goal's predicate must be
+% exported by Module, else an error.  The typed run/3 and find_type/2 (TGLP
+% §Dynamic Activation) follow with the typechecked implementation.
+
+procedure self_module(Module).
+self_module(M?) :- '_self_module'(M).
+
+procedure run(_?, Module?).
+run(G, M) :- '_run'(G?, M?).
 
 % =============================================================================
 % MULTIWAY MERGE (mwm/2)
