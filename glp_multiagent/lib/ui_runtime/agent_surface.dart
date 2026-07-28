@@ -28,11 +28,22 @@ class AgentSurface extends StatefulWidget {
   /// Panel shown first (index into the manifest's panels). The single-phone app
   /// opens on Friends (0); a village grid opens each phone on Currencies.
   final int initialPanel;
+
+  /// Open straight into the agent's own wallet ("Your wallet") — the
+  /// own-holdings view, which lists this one agent's holdings in full and only
+  /// those, over the platform bar. Used to capture the village-market figure.
+  final bool openSelfWallet;
+
+  /// Suppress the transient "…completed" snackbars. Used for the figure
+  /// capture, where a toast floating over the wallets is noise.
+  final bool muteNotices;
   const AgentSurface(
       {super.key,
       required this.agentId,
       required this.runtime,
-      this.initialPanel = 0});
+      this.initialPanel = 0,
+      this.openSelfWallet = false,
+      this.muteNotices = false});
 
   @override
   State<AgentSurface> createState() => _AgentSurfaceState();
@@ -51,14 +62,17 @@ class _AgentSurfaceState extends State<AgentSurface> {
   @override
   void initState() {
     super.initState();
-    widget.runtime.onNotice = (message) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text(message),
-        duration: const Duration(seconds: 2),
-        behavior: SnackBarBehavior.floating,
-      ));
-    };
+    if (widget.openSelfWallet) _openItem = widget.agentId.toLowerCase();
+    if (!widget.muteNotices) {
+      widget.runtime.onNotice = (message) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(message),
+          duration: const Duration(seconds: 2),
+          behavior: SnackBarBehavior.floating,
+        ));
+      };
+    }
   }
 
   Manifest get _m => widget.runtime.manifest;
@@ -153,7 +167,13 @@ class _AgentSurfaceState extends State<AgentSurface> {
               child: const Icon(Icons.add),
             )
           : null,
-      bottomNavigationBar: NavigationBar(
+      bottomNavigationBar: _bottomBar(),
+    );
+  }
+
+  /// The platform bar — Friends / Currencies / Chats. Shared by the panel view
+  /// and the wallet drill-down, so the own-holdings screen keeps the bar too.
+  Widget _bottomBar() => NavigationBar(
         height: 60,
         selectedIndex: _panel,
         onDestinationSelected: (i) => setState(() {
@@ -161,7 +181,7 @@ class _AgentSurfaceState extends State<AgentSurface> {
           _openItem = null;
         }),
         destinations: [
-          for (final p in panels)
+          for (final p in _m.panels)
             NavigationDestination(
               icon: _alertBadge(
                   _panelAlerts(p), Icon(_panelIcon(p, selected: false))),
@@ -170,9 +190,7 @@ class _AgentSurfaceState extends State<AgentSurface> {
               label: p.name,
             ),
         ],
-      ),
-    );
-  }
+      );
 
   Widget _alertBadge(int count, Widget child) =>
       Badge(isLabelVisible: count > 0, label: Text('$count'), child: child);
@@ -419,6 +437,7 @@ class _AgentSurfaceState extends State<AgentSurface> {
             ),
         ],
       ),
+      bottomNavigationBar: _bottomBar(),
     );
   }
 

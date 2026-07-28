@@ -2,8 +2,8 @@
 /// the live phone UI, all six agents at once.
 ///
 /// Runs `play_village` in-process, captures each agent's `tagged(Id, Notify)`
-/// stream, and replays it into six live GrassApp surfaces (opened on the
-/// Currencies panel) arranged in a 2×3 grid — so the whole economy plays out
+/// stream, and replays it into six live GrassApp surfaces, each opened on its
+/// own "Your wallet" view, arranged in a 2×3 grid — so the whole economy plays out
 /// across the village's phones: mutual credit lines forming, Diana's loans as
 /// dated bonds, payments, Eve's portfolio swap, Charlie's escrow for the dock,
 /// Frank's redemptions, and Alice selling bob-debt to Eve.
@@ -240,10 +240,10 @@ class _VillageScreenState extends State<VillageScreen> {
   /// name plate, so the six read as six distinct phones, not one split screen.
   Widget _cell(_Villager v) {
     return Padding(
-      padding: const EdgeInsets.all(9),
+      padding: const EdgeInsets.all(5),
       child: Center(
         child: AspectRatio(
-          aspectRatio: 0.52,
+          aspectRatio: 0.58,
           child: Container(
             decoration: BoxDecoration(
               color: Colors.black,
@@ -276,6 +276,8 @@ class _VillageScreenState extends State<VillageScreen> {
                       agentId: v.name,
                       runtime: _uis[v.id]!,
                       initialPanel: _currenciesPanel,
+                      openSelfWallet: true,
+                      muteNotices: true,
                     ),
                   ),
                 ],
