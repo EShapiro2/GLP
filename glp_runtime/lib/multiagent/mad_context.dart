@@ -543,11 +543,11 @@ class MadContext {
   /// otherwise have acted. [sender] is the agent the name or the traffic came
   /// from — not the anchor, where they differ.
   ///
-  /// The report is queued and appended when the transaction completes, so that
-  /// a cold-call carrying a held link reaches the program before the report
-  /// about it: the program reads the message, then is asked about the link it
-  /// contains. The paper fixes only that both happen in the same transaction
-  /// (Definition Held Link), leaving the order within it open.
+  /// The report is queued and appended when the transaction completes, per
+  /// Definition Held Link: "The report is appended last in that transaction,
+  /// after anything the transaction itself appends, so a link is reported only
+  /// once the term carrying it can be read." A cold-call carrying a held link
+  /// therefore reaches the program first, and the report about it second.
   void _reportPendingLink(GlobalName gn, String sender) {
     _reportedLinks[(gn.agent, gn.index, gn.isWriter)] = sender;
     _deferredReports.add(StructTerm(
