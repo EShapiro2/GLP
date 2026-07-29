@@ -406,7 +406,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Widget _buildColdCallTrustSelector() {
-    final level = widget.store.state.settings.coldCallTrustLevel;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Column(
@@ -429,59 +428,104 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
           const SizedBox(height: 4),
           const Text(
-            'A "cold call" is an unsolicited BLE first-contact attempt from a '
-            'nearby peer you have not friended yet. This setting controls '
+            'A "cold call" is an unsolicited first-contact attempt from a '
+            'nearby peer you have not friended yet. These settings control '
             'whether you reply.\n\n'
-            '• Open — anyone in range can complete the signed ANNOUNCE '
-            'handshake, so you can discover and meet new peers. Strangers '
-            'learn your public key and nickname, but never your address '
-            'or any friend-only metadata.\n'
+            '• Open — anyone nearby on that medium can complete the signed '
+            'ANNOUNCE handshake, so you can discover and meet new peers. '
+            'Strangers learn your public key, but never your address or any '
+            'friend-only metadata.\n'
             '• Closed — first contact from non-friends is refused. Nearby '
-            'devices still see your service advertisement, but ANNOUNCE is '
-            'not sent and incoming ANNOUNCEs from strangers are dropped, '
-            'so unknown peers cannot learn your nickname over BLE.',
+            'devices still see your advertisement, but ANNOUNCE is not sent '
+            'and incoming ANNOUNCEs from strangers are dropped.\n\n'
+            'Bluetooth and the local network are set separately: being in a '
+            'trusted place says nothing about the network you are on, and '
+            'being on a trusted network says nothing about where you are. '
+            'Contact from the Internet at large is never opened by either — '
+            'it is answered only for peers you already know or who hold an '
+            'invite link.',
             style: TextStyle(fontSize: 12, color: Colors.black54),
           ),
-          const SizedBox(height: 8),
-          Text(
-            switch (level) {
-              ColdCallTrustLevel.open =>
-                'Currently open: nearby unknown peers can complete first '
-                    'contact.',
-              ColdCallTrustLevel.closed =>
-                'Currently closed: only accepted friends complete BLE first '
-                    'contact.',
-            },
-            style: TextStyle(
-              fontSize: 12,
-              color: Colors.green[800],
-              fontWeight: FontWeight.w600,
-            ),
+          const SizedBox(height: 12),
+          _buildTrustLevelSegments(
+            medium: ProximityMedium.ble,
+            label: 'Bluetooth',
+            openDescription:
+                'Currently open: unknown peers in Bluetooth range can '
+                'complete first contact.',
+            closedDescription:
+                'Currently closed: only peers you know complete Bluetooth '
+                'first contact.',
           ),
-          const SizedBox(height: 8),
-          SegmentedButton<ColdCallTrustLevel>(
-            segments: const [
-              ButtonSegment(
-                value: ColdCallTrustLevel.open,
-                label: Text('Open'),
-                icon: Icon(Icons.sensors),
-              ),
-              ButtonSegment(
-                value: ColdCallTrustLevel.closed,
-                label: Text('Closed'),
-                icon: Icon(Icons.lock_outline),
-              ),
-            ],
-            selected: {level},
-            onSelectionChanged: (selection) {
-              if (selection.isEmpty) return;
-              widget.store
-                  .dispatch(SetColdCallTrustLevelAction(selection.first));
-              widget.onSettingsChanged?.call();
-            },
+          const SizedBox(height: 12),
+          _buildTrustLevelSegments(
+            medium: ProximityMedium.lan,
+            label: 'Local network',
+            openDescription:
+                'Currently open: unknown peers on this local network can '
+                'complete first contact.',
+            closedDescription:
+                'Currently closed: only peers you know complete first '
+                'contact on this local network.',
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildTrustLevelSegments({
+    required ProximityMedium medium,
+    required String label,
+    required String openDescription,
+    required String closedDescription,
+  }) {
+    final level = widget.store.state.settings.trustLevelOf(medium);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: const TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+            color: Colors.black87,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          switch (level) {
+            ColdCallTrustLevel.open => openDescription,
+            ColdCallTrustLevel.closed => closedDescription,
+          },
+          style: TextStyle(
+            fontSize: 12,
+            color: Colors.green[800],
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        const SizedBox(height: 8),
+        SegmentedButton<ColdCallTrustLevel>(
+          segments: const [
+            ButtonSegment(
+              value: ColdCallTrustLevel.open,
+              label: Text('Open'),
+              icon: Icon(Icons.sensors),
+            ),
+            ButtonSegment(
+              value: ColdCallTrustLevel.closed,
+              label: Text('Closed'),
+              icon: Icon(Icons.lock_outline),
+            ),
+          ],
+          selected: {level},
+          onSelectionChanged: (selection) {
+            if (selection.isEmpty) return;
+            widget.store
+                .dispatch(SetColdCallTrustLevelAction(medium, selection.first));
+            widget.onSettingsChanged?.call();
+          },
+        ),
+      ],
     );
   }
 

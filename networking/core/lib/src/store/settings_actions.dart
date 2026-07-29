@@ -73,9 +73,11 @@ class SetBleRoleModeAction extends SettingsAction {
   SetBleRoleModeAction(this.mode);
 }
 
-/// Set whether nearby unknown peers may complete BLE first contact.
+/// Set the cold-call trust level of one proximity medium, leaving every other
+/// medium's untouched (spec §Trust levels — the two levels are independent).
 class SetColdCallTrustLevelAction extends SettingsAction {
+  final ProximityMedium medium;
   final ColdCallTrustLevel level;
 
-  SetColdCallTrustLevelAction(this.level);
+  SetColdCallTrustLevelAction(this.medium, this.level);
 }

@@ -26,13 +26,31 @@ enum BleRoleMode {
   peripheralOnly,
 }
 
-/// Policy for unsolicited first contact from peers that do not already have
-/// an accepted relationship with us.
+/// The medium on which a nearby agent is discovered: BLE radio range, or the
+/// local network. Spec `docs/GLP_Networking_API/sections/api.tex` §Networking
+/// API.
+///
+/// Not a `MessageTransport`: a LAN session is an IP session. A trust level is
+/// keyed on the medium of discovery, never on the transport carrying the
+/// session it leads to — keying on the transport would tie LAN contact to
+/// contact from the Internet at large.
+enum ProximityMedium {
+  /// Discovered by BLE advertisement.
+  ble,
+
+  /// Discovered by mDNS on the local network.
+  lan,
+}
+
+/// Policy for unsolicited proximity contact from peers that do not already
+/// have an accepted relationship with us. Spec §Trust levels.
 enum ColdCallTrustLevel {
-  /// Complete BLE ANNOUNCE with nearby strangers and allow first contact.
+  /// Complete the ANNOUNCE exchange and the session handshake with any
+  /// unknown contact on this medium, revealing our full public key.
   open,
 
-  /// Do not complete BLE ANNOUNCE with unknown nearby peers.
+  /// Complete neither with an unknown key: unmatched encounters on this
+  /// medium are ignored.
   closed,
 }
 
@@ -124,8 +142,15 @@ class SettingsState {
   /// Which BLE roles this device should run. Default `auto`.
   final BleRoleMode bleRoleMode;
 
-  /// Whether unsolicited nearby BLE peers may complete first-contact ANNOUNCE.
-  final ColdCallTrustLevel coldCallTrustLevel;
+  /// The cold-call trust level of each proximity medium (spec §Trust levels).
+  /// Both default to Closed, and GLP sets one medium's level with
+  /// `setTrustLevel(medium, level)`.
+  ///
+  /// The two levels are independent because the declarations behind them are:
+  /// this place is trusted, so BLE contact here is open; this local network is
+  /// trusted, so LAN contact on it is open. Neither declaration implies the
+  /// other, and neither is global.
+  final Map<ProximityMedium, ColdCallTrustLevel> coldCallTrustLevels;
 
   const SettingsState({
     this.bluetoothEnabled = true,
@@ -138,10 +163,25 @@ class SettingsState {
     this.anchorPubkeyHex,
     this.rendezvousServers = const [],
     this.bleRoleMode = BleRoleMode.auto,
-    this.coldCallTrustLevel = ColdCallTrustLevel.closed,
+    this.coldCallTrustLevels = closedOnEveryMedium,
   });
 
   static const SettingsState initial = SettingsState();
+
+  /// The starting level of every proximity medium: until GLP sets one, both
+  /// are Closed.
+  static const Map<ProximityMedium, ColdCallTrustLevel> closedOnEveryMedium = {
+    ProximityMedium.ble: ColdCallTrustLevel.closed,
+    ProximityMedium.lan: ColdCallTrustLevel.closed,
+  };
+
+  /// The cold-call trust level of [medium]. Closed until GLP sets it.
+  ColdCallTrustLevel trustLevelOf(ProximityMedium medium) =>
+      coldCallTrustLevels[medium] ?? ColdCallTrustLevel.closed;
+
+  /// Whether [medium] answers unsolicited contact from an unknown key.
+  bool isOpenOn(ProximityMedium medium) =>
+      trustLevelOf(medium) == ColdCallTrustLevel.open;
 
   /// Whether at least one transport is enabled
   bool get hasActiveTransport => bluetoothEnabled || udpEnabled;
@@ -198,7 +238,7 @@ class SettingsState {
     List<TransportProtocol>? transportPriority,
     List<RendezvousServerSettings>? rendezvousServers,
     BleRoleMode? bleRoleMode,
-    ColdCallTrustLevel? coldCallTrustLevel,
+    Map<ProximityMedium, ColdCallTrustLevel>? coldCallTrustLevels,
     // Use Object? + sentinel so callers can pass null to clear.
     Object? anchorAddress = _sentinel,
     Object? anchorPubkeyHex = _sentinel,
@@ -209,7 +249,7 @@ class SettingsState {
       transportPriority: transportPriority ?? this.transportPriority,
       rendezvousServers: rendezvousServers ?? this.rendezvousServers,
       bleRoleMode: bleRoleMode ?? this.bleRoleMode,
-      coldCallTrustLevel: coldCallTrustLevel ?? this.coldCallTrustLevel,
+      coldCallTrustLevels: coldCallTrustLevels ?? this.coldCallTrustLevels,
       anchorAddress: identical(anchorAddress, _sentinel)
           ? this.anchorAddress
           : anchorAddress as String?,
@@ -218,6 +258,15 @@ class SettingsState {
           : anchorPubkeyHex as String?,
     );
   }
+
+  /// Set the level of [medium], leaving every other medium's untouched.
+  SettingsState withTrustLevel(
+    ProximityMedium medium,
+    ColdCallTrustLevel level,
+  ) =>
+      copyWith(
+        coldCallTrustLevels: {...coldCallTrustLevels, medium: level},
+      );
 
   Map<String, dynamic> toJson() => {
         'bluetoothEnabled': bluetoothEnabled,
@@ -228,7 +277,10 @@ class SettingsState {
         'rendezvousServers':
             rendezvousServers.map((server) => server.toJson()).toList(),
         'bleRoleMode': bleRoleMode.name,
-        'coldCallTrustLevel': coldCallTrustLevel.name,
+        'coldCallTrustLevels': {
+          for (final entry in coldCallTrustLevels.entries)
+            entry.key.name: entry.value.name,
+        },
       };
 
   factory SettingsState.fromJson(Map<String, dynamic> json) {
@@ -243,11 +295,24 @@ class SettingsState {
       (m) => m.name == roleModeName,
       orElse: () => BleRoleMode.auto,
     );
-    final trustLevelName = json['coldCallTrustLevel'] as String?;
-    final coldCallTrustLevel = ColdCallTrustLevel.values.firstWhere(
-      (level) => level.name == trustLevelName,
-      orElse: () => ColdCallTrustLevel.closed,
-    );
+    // A level per proximity medium is required. A blob written before the
+    // levels were split carries a single `coldCallTrustLevel` scalar and is
+    // malformed under this shape; it throws, and the caller falls back to the
+    // default — Closed on every medium, which is what an unset level means.
+    final trustLevelsJson = json['coldCallTrustLevels'];
+    if (trustLevelsJson is! Map) {
+      throw FormatException(
+        'settings: coldCallTrustLevels must be a map of '
+        'ProximityMedium to ColdCallTrustLevel, got $trustLevelsJson',
+      );
+    }
+    final coldCallTrustLevels = <ProximityMedium, ColdCallTrustLevel>{
+      for (final medium in ProximityMedium.values)
+        medium: ColdCallTrustLevel.values.firstWhere(
+          (level) => level.name == trustLevelsJson[medium.name],
+          orElse: () => ColdCallTrustLevel.closed,
+        ),
+    };
 
     return SettingsState(
       bluetoothEnabled: json['bluetoothEnabled'] as bool? ?? true,
@@ -263,7 +328,7 @@ class SettingsState {
       anchorPubkeyHex: json['anchorPubkeyHex'] as String?,
       rendezvousServers: rendezvousServers,
       bleRoleMode: bleRoleMode,
-      coldCallTrustLevel: coldCallTrustLevel,
+      coldCallTrustLevels: coldCallTrustLevels,
     );
   }
 
@@ -279,7 +344,7 @@ class SettingsState {
           anchorPubkeyHex == other.anchorPubkeyHex &&
           listEquals(rendezvousServers, other.rendezvousServers) &&
           bleRoleMode == other.bleRoleMode &&
-          coldCallTrustLevel == other.coldCallTrustLevel;
+          mapEquals(coldCallTrustLevels, other.coldCallTrustLevels);
 
   @override
   int get hashCode => Object.hash(
@@ -290,7 +355,10 @@ class SettingsState {
         anchorPubkeyHex,
         Object.hashAll(rendezvousServers),
         bleRoleMode,
-        coldCallTrustLevel,
+        Object.hashAll([
+          for (final medium in ProximityMedium.values)
+            trustLevelOf(medium),
+        ]),
       );
 
   @override

@@ -722,9 +722,9 @@ class BleTransportService extends TransportService {
       );
       return false;
     }
-    if (store.state.settings.coldCallTrustLevel == ColdCallTrustLevel.closed &&
+    if (!store.state.settings.isOpenOn(ProximityMedium.ble) &&
         _knownPeerPubkeyForDerivedServiceUuid(serviceUuid) == null) {
-      debugPrint('Skipping $pathId: closed trust and unknown service UUID');
+      debugPrint('Skipping $pathId: closed BLE trust and unknown service UUID');
       return false;
     }
 
@@ -951,7 +951,7 @@ class BleTransportService extends TransportService {
     if (!_shouldOpenCentralLeg(adv, serviceUuid, existing)) {
       return;
     }
-    if (store.state.settings.coldCallTrustLevel == ColdCallTrustLevel.closed &&
+    if (!store.state.settings.isOpenOn(ProximityMedium.ble) &&
         _knownPeerPubkeyForDerivedServiceUuid(serviceUuid) == null) {
       return;
     }

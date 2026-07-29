@@ -67,7 +67,6 @@ void main() {
       await acceptor.dispose();
     });
 
-    acceptor.setTrustLevel(ColdCallTrustLevel.closed);
     acceptor.putKnownPeer(dialerId.publicKey);
     final delivered = <String>[];
     acceptor.onMessageReceived = (messageId, sender, payload, transport) {

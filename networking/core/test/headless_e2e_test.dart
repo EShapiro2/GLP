@@ -60,9 +60,9 @@ void main() {
       await service.dispose();
     });
 
-    // Service side: Closed trust (the default — set explicitly for the
-    // record), pusher registered, stranger not.
-    service.setTrustLevel(ColdCallTrustLevel.closed);
+    // Service side: pusher registered, stranger not. Unsolicited inbound IP
+    // contact is governed by no trust level — the known-peer set is the whole
+    // of what the service will answer.
     service.putKnownPeer(pusher.identity.publicKey);
 
     final delivered = <(Uint8List sender, String payload)>[];
@@ -131,13 +131,13 @@ void main() {
     expect(service.isPeerReachable(pusher.identity.publicKey), isFalse);
   }, timeout: const Timeout(Duration(minutes: 2)));
 
-  test('open trust admits an unknown initiator', () async {
+  test('a pre-registered initiator is admitted', () async {
     if (sodiumUnavailable != null) {
       markTestSkipped(sodiumUnavailable!);
       return;
     }
     final service = HeadlessGrassrootsNetwork(
-      identity: await identityFromSeed(0x44, 'open-service'),
+      identity: await identityFromSeed(0x44, 'registering-service'),
       sodium: sodium!,
     );
     final caller = HeadlessGrassrootsNetwork(
@@ -148,7 +148,10 @@ void main() {
       await caller.dispose();
       await service.dispose();
     });
-    service.setTrustLevel(ColdCallTrustLevel.open);
+    // No trust level governs unsolicited inbound IP contact, so a caller the
+    // service must answer is registered first — there is no level that would
+    // admit it otherwise.
+    service.putKnownPeer(caller.identity.publicKey);
     final delivered = Completer<String>();
     service.onMessageReceived = (messageId, sender, payload, transport) {
       if (!delivered.isCompleted) delivered.complete(utf8.decode(payload));
@@ -161,11 +164,11 @@ void main() {
     );
     await caller.send(
       service.identity.publicKey,
-      Uint8List.fromList(utf8.encode('cold call')),
+      Uint8List.fromList(utf8.encode('registered call')),
     );
     expect(
       await delivered.future.timeout(const Duration(seconds: 15)),
-      'cold call',
+      'registered call',
     );
   }, timeout: const Timeout(Duration(minutes: 2)));
 

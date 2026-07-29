@@ -26,17 +26,19 @@ import 'known_peers_persistence.dart';
 /// A headless embedding of the same session, framing, and router internals
 /// the Flutter package runs — no reimplementation and no fork — exposing the
 /// spec's API surface: construction with identity, [putKnownPeer] /
-/// [removeKnownPeer] / [putPeerAddress], [setTrustLevel], [send],
-/// [onMessageReceived], [onPeerConnected] / [onPeerDisconnected],
-/// [getPublicAddress]. IP is the only medium: no BLE, no mDNS, no
-/// connectivity plugin — the public address is static configuration
-/// ([staticPublicAddress]), as on a globally routable server.
+/// [removeKnownPeer] / [putPeerAddress], [send], [onMessageReceived],
+/// [onPeerConnected] / [onPeerDisconnected], [getPublicAddress]. IP is the
+/// only medium: no BLE, no mDNS, no connectivity plugin — the public address
+/// is static configuration ([staticPublicAddress]), as on a globally routable
+/// server.
 ///
-/// Trust gating (spec §Cold-Call Trust Levels, applied to unsolicited IP
-/// contact per the GPW answer): under Closed — the default — an inbound
-/// ANNOUNCE or Noise handshake from a key not in the known set is rejected,
-/// so unregistered keys cannot complete a session; [putKnownPeer] registers,
-/// [removeKnownPeer] revokes. Under Open any agent may complete contact.
+/// This profile has no proximity medium and therefore no trust level (spec
+/// §Trust levels — a level is held per `ProximityMedium`, and this profile has
+/// none). Unsolicited inbound IP contact is governed by no level: an inbound
+/// ANNOUNCE or Noise handshake from a key not in the known set is rejected, so
+/// an unknown caller cannot be answered at all. [putKnownPeer] registers a key,
+/// [removeKnownPeer] revokes it; a service that must accept a caller registers
+/// its key first.
 ///
 /// Known peers persist through [HeadlessKnownPeersStore] — file-backed
 /// ([FileKnownPeersStore]) or in-memory ([MemoryKnownPeersStore]) — replacing
@@ -198,13 +200,6 @@ class HeadlessGrassrootsNetwork {
       pubkeyHex: _hex(pubkey),
       udpAddress: parsed.toAddressString(),
     ));
-  }
-
-  /// Set the cold-call trust level (spec §Cold-Call Trust Levels). Until
-  /// set, the level is Closed.
-  void setTrustLevel(ColdCallTrustLevel level) {
-    if (store.state.settings.coldCallTrustLevel == level) return;
-    store.dispatch(SetColdCallTrustLevelAction(level));
   }
 
   /// Whether the peer currently has an authenticated IP session.
@@ -409,9 +404,12 @@ class HeadlessGrassrootsNetwork {
   bool _isKnown(Uint8List pubkey) =>
       store.state.knownPeers.known.containsKey(_hex(pubkey));
 
-  bool _acceptsContactFrom(Uint8List pubkey) =>
-      store.state.settings.coldCallTrustLevel == ColdCallTrustLevel.open ||
-      _isKnown(pubkey);
+  /// Unsolicited inbound IP contact is governed by no trust level (spec §Trust
+  /// levels): it is refused unless the peer is in the known-peer set or
+  /// presents a valid invite. This profile has no proximity medium — no BLE,
+  /// no LAN discovery — and no invite support, so the known-peer set is the
+  /// whole of it.
+  bool _acceptsContactFrom(Uint8List pubkey) => _isKnown(pubkey);
 
   // ===== Wiring (mirrors the Flutter coordinator's IP path) =====
 

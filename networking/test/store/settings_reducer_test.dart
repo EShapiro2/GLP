@@ -240,23 +240,92 @@ void main() {
     });
 
     group('SetColdCallTrustLevelAction', () {
-      test('defaults to closed until set', () {
-        expect(
-          SettingsState.initial.coldCallTrustLevel,
-          ColdCallTrustLevel.closed,
-        );
+      test('every medium defaults to closed until set', () {
+        for (final medium in ProximityMedium.values) {
+          expect(
+            SettingsState.initial.trustLevelOf(medium),
+            ColdCallTrustLevel.closed,
+            reason: '${medium.name} must start closed',
+          );
+        }
       });
 
-      test('updates cold-call trust level', () {
+      test('updates the named medium\'s trust level', () {
         const state = SettingsState.initial;
         final result = settingsReducer(
           state,
-          SetColdCallTrustLevelAction(ColdCallTrustLevel.open),
+          SetColdCallTrustLevelAction(
+            ProximityMedium.ble,
+            ColdCallTrustLevel.open,
+          ),
         );
 
-        expect(result.coldCallTrustLevel, ColdCallTrustLevel.open);
+        expect(result.trustLevelOf(ProximityMedium.ble),
+            ColdCallTrustLevel.open);
         expect(result.bluetoothEnabled, state.bluetoothEnabled);
         expect(result.udpEnabled, state.udpEnabled);
+      });
+
+      test('leaves the other medium\'s level untouched', () {
+        // The two levels are independent: neither declaration implies the
+        // other (spec §Trust levels).
+        final bleOpen = settingsReducer(
+          SettingsState.initial,
+          SetColdCallTrustLevelAction(
+            ProximityMedium.ble,
+            ColdCallTrustLevel.open,
+          ),
+        );
+        expect(bleOpen.trustLevelOf(ProximityMedium.lan),
+            ColdCallTrustLevel.closed);
+
+        final bothOpen = settingsReducer(
+          bleOpen,
+          SetColdCallTrustLevelAction(
+            ProximityMedium.lan,
+            ColdCallTrustLevel.open,
+          ),
+        );
+        expect(bothOpen.trustLevelOf(ProximityMedium.ble),
+            ColdCallTrustLevel.open);
+        expect(bothOpen.trustLevelOf(ProximityMedium.lan),
+            ColdCallTrustLevel.open);
+
+        final lanOnly = settingsReducer(
+          bothOpen,
+          SetColdCallTrustLevelAction(
+            ProximityMedium.ble,
+            ColdCallTrustLevel.closed,
+          ),
+        );
+        expect(lanOnly.trustLevelOf(ProximityMedium.ble),
+            ColdCallTrustLevel.closed);
+        expect(lanOnly.trustLevelOf(ProximityMedium.lan),
+            ColdCallTrustLevel.open);
+      });
+
+      test('round-trips through JSON, one level per medium', () {
+        final bleOpen = settingsReducer(
+          SettingsState.initial,
+          SetColdCallTrustLevelAction(
+            ProximityMedium.ble,
+            ColdCallTrustLevel.open,
+          ),
+        );
+        final restored = SettingsState.fromJson(bleOpen.toJson());
+        expect(restored.trustLevelOf(ProximityMedium.ble),
+            ColdCallTrustLevel.open);
+        expect(restored.trustLevelOf(ProximityMedium.lan),
+            ColdCallTrustLevel.closed);
+      });
+
+      test('a blob carrying the old single level is malformed', () {
+        // No tolerant decoder: the per-medium form is required, and a blob
+        // written before the levels were split does not carry it.
+        final old = SettingsState.initial.toJson()
+          ..remove('coldCallTrustLevels')
+          ..['coldCallTrustLevel'] = 'open';
+        expect(() => SettingsState.fromJson(old), throwsFormatException);
       });
     });
 

@@ -1068,19 +1068,30 @@ class GrassrootsNetwork {
   /// Whether UDP is currently enabled and available
   bool get isUdpEnabled => _udpAvailable && _isUdpEnabledInSettings;
 
-  ColdCallTrustLevel get coldCallTrustLevel =>
-      store.state.settings.coldCallTrustLevel;
+  /// The cold-call trust level of [medium] (spec §Trust levels). Closed until
+  /// GLP sets it with [setTrustLevel]. The two proximity media carry their own
+  /// levels, so an agent may answer strangers over one while ignoring them
+  /// over the other.
+  ColdCallTrustLevel trustLevelOf(ProximityMedium medium) =>
+      store.state.settings.trustLevelOf(medium);
 
   /// Whether IP contact from [senderPubkey] is answered (spec §Cold Calls,
-  /// Trust levels): Open answers anyone; Closed answers the known-peer set.
-  /// Independent of the level: configured rendezvous servers
-  /// (infrastructure this agent itself dials), keys authorized by an
-  /// explicit deep-link cold call, and solicited contact — an ANNOUNCE
-  /// arriving on a connection this agent dialed, which is keyed by the
-  /// dialed key (unsolicited inbound carries a temp connection id until
-  /// identified).
+  /// Trust levels).
+  ///
+  /// Unsolicited inbound IP contact from outside the agent's own local network
+  /// is governed by no trust level: it is refused unless the peer is in the
+  /// known-peer set or presents a valid invite. LAN contact arrives on this
+  /// same path, a LAN session being an IP session, so the two are told apart
+  /// by the source address alone — a source within one of the agent's own
+  /// local address prefixes is LAN contact, governed by the LAN level; any
+  /// other source is governed by no level.
+  ///
+  /// Independent of every level: configured rendezvous servers (infrastructure
+  /// this agent itself dials), keys authorized by an explicit deep-link cold
+  /// call, and solicited contact — an ANNOUNCE arriving on a connection this
+  /// agent dialed, which is keyed by the dialed key (unsolicited inbound
+  /// carries a temp connection id until identified).
   bool _acceptsUdpContactFrom(Uint8List senderPubkey, {String? udpPeerId}) {
-    if (coldCallTrustLevel == ColdCallTrustLevel.open) return true;
     if (_isKnownPeerPubkey(senderPubkey)) return true;
     final hex = _pubkeyToHex(senderPubkey);
     if (_isRendezvousPubkeyHex(hex)) return true;
@@ -1089,7 +1100,22 @@ class GrassrootsNetwork {
         _udpService?.getPeerIdForPubkey(senderPubkey) != null) {
       return true;
     }
+    if (trustLevelOf(ProximityMedium.lan) == ColdCallTrustLevel.open &&
+        _isLanSource(udpPeerId)) {
+      return true;
+    }
     return false;
+  }
+
+  /// Whether contact carried on [udpPeerId] came from within one of the
+  /// agent's own local address prefixes. This is the whole of how the layer
+  /// tells LAN contact from contact from the Internet at large; the prefixes
+  /// come from the interface enumeration behind [networkIdentity].
+  bool _isLanSource(String? udpPeerId) {
+    if (udpPeerId == null) return false;
+    final remote = _udpService?.getRemoteAddress(udpPeerId);
+    if (remote == null) return false;
+    return store.state.localNetwork.network.containsAddress(remote.ip);
   }
 
   List<RendezvousServerSettings> get configuredRendezvousServers =>
@@ -2205,7 +2231,8 @@ class GrassrootsNetwork {
     if (matched == null) {
       debugPrint(
         '[lan] unmatched instance $token '
-        '(trust=${coldCallTrustLevel.name}); no outbound cold-call path',
+        '(lan trust=${trustLevelOf(ProximityMedium.lan).name}); '
+        'no outbound cold-call path',
       );
       return;
     }
@@ -2378,12 +2405,21 @@ class GrassrootsNetwork {
     await _bleService?.applyRoleModeChange();
   }
 
-  /// Set the BLE cold-call trust level (Open/Closed). Spec
-  /// `docs/GLP_Networking_API/sections/ble.tex` §Cold-Call Trust Levels:
-  /// `setTrustLevel(level)`. Until set, the level is Closed.
-  Future<void> setTrustLevel(ColdCallTrustLevel level) async {
-    if (store.state.settings.coldCallTrustLevel == level) return;
-    store.dispatch(SetColdCallTrustLevelAction(level));
+  /// Set the cold-call trust level of one proximity medium. Spec
+  /// `docs/GLP_Networking_API/sections/proximity.tex` §Discovery:
+  /// `setTrustLevel(medium, level)`. Until set, both levels are Closed.
+  ///
+  /// The level is keyed on the medium of discovery, not on the transport that
+  /// carries the session it leads to: a LAN session is an IP session, so
+  /// keying on the transport would tie LAN contact to contact from the
+  /// Internet at large. The two levels are independent — GLP raises one upon
+  /// entering a trusted place or local network and lowers it upon leaving.
+  Future<void> setTrustLevel(
+    ProximityMedium medium,
+    ColdCallTrustLevel level,
+  ) async {
+    if (store.state.settings.trustLevelOf(medium) == level) return;
+    store.dispatch(SetColdCallTrustLevelAction(medium, level));
   }
 
   static const _uuid = Uuid();
@@ -4644,11 +4680,12 @@ class GrassrootsNetwork {
 
     _messageRouter.shouldAcceptBleAnnounce =
         (senderPubkey, {String? bleDeviceId, BleRole? bleRole}) {
-      if (store.state.settings.coldCallTrustLevel == ColdCallTrustLevel.open) {
+      // The BLE level alone governs a BLE encounter (spec §Trust levels).
+      if (store.state.settings.isOpenOn(ProximityMedium.ble)) {
         return true;
       }
       // Closed: recognize only already-known peers — keys GLP supplied via
-      // the API, never a friendship record (spec §Cold-Call Trust Levels).
+      // the API, never a friendship record (spec §Trust gating).
       return _isKnownPeerPubkey(senderPubkey);
     };
 
@@ -5093,12 +5130,12 @@ class GrassrootsNetwork {
     final isKnown = pubkey != null && _isKnownPeerPubkey(pubkey);
 
     final knownHint = _bleService!.getKnownPeerPubkeyHintForPeerId(deviceId);
-    final allowsColdCall =
-        store.state.settings.coldCallTrustLevel == ColdCallTrustLevel.open;
+    // A BLE device is a BLE encounter, so the BLE level governs it.
+    final allowsColdCall = store.state.settings.isOpenOn(ProximityMedium.ble);
     if (!isKnown && !allowsColdCall && knownHint == null) {
       debugPrint(
         '[ble-announce] Suppressed ANNOUNCE to $deviceId '
-        '(closed trust, unknown peer)',
+        '(closed BLE trust, unknown peer)',
       );
       return false;
     }

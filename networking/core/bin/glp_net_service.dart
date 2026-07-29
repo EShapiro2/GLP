@@ -36,15 +36,11 @@ Future<void> main(List<String> argv) async {
         help: 'The service\'s static public ip:port (reported by '
             'getPublicAddress)')
     ..addMultiOption('known-peer',
-        help: 'Public key (64 hex chars) allowed under Closed trust; '
-            'repeatable')
+        help: 'Public key (64 hex chars) this service will answer; '
+            'repeatable. Unsolicited contact from any other key is refused')
     ..addOption('known-peers-file',
         help: 'JSON file persisting the known-peer set across restarts '
             '(default: in-memory only)')
-    ..addOption('trust',
-        allowed: ['closed', 'open'],
-        defaultsTo: 'closed',
-        help: 'Cold-call trust level')
     ..addFlag('help', abbr: 'h', negatable: false);
 
   final ArgResults args;
@@ -78,10 +74,6 @@ Future<void> main(List<String> argv) async {
         ? FileKnownPeersStore(knownPeersFile)
         : MemoryKnownPeersStore(),
   );
-
-  network.setTrustLevel(args['trust'] == 'open'
-      ? ColdCallTrustLevel.open
-      : ColdCallTrustLevel.closed);
 
   for (final hex in args['known-peer'] as List<String>) {
     network.putKnownPeer(_bytes(hex));

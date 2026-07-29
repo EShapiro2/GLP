@@ -187,8 +187,13 @@ void main() {
     });
 
     test('handles partial settings JSON gracefully', () async {
-      // Only bluetoothEnabled present, rest should use defaults
-      final partialJson = {'bluetoothEnabled': false};
+      // Only bluetoothEnabled present, rest should use defaults. The
+      // per-medium trust levels are required, not defaulted — a blob without
+      // them is malformed (spec §Trust levels; no tolerant decoder).
+      final partialJson = {
+        'bluetoothEnabled': false,
+        'coldCallTrustLevels': {'ble': 'closed', 'lan': 'closed'},
+      };
 
       SharedPreferences.setMockInitialValues({
         'grassroots_settings_v2': jsonEncode(partialJson),
@@ -217,6 +222,7 @@ void main() {
           rendezvousA.toJson(),
           rendezvousB.toJson(),
         ],
+        'coldCallTrustLevels': {'ble': 'closed', 'lan': 'closed'},
       };
 
       SharedPreferences.setMockInitialValues({
