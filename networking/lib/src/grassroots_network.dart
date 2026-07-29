@@ -12,6 +12,7 @@ import 'signaling/signaling_codec.dart';
 import 'signaling/signaling_service.dart';
 import 'package:grassroots_networking_core/src/transport/address_utils.dart';
 import 'package:grassroots_networking_core/src/transport/local_network.dart';
+import 'package:grassroots_networking_core/src/places/place_registry.dart';
 import 'transport/ble_transport_service.dart';
 import 'transport/connection_service.dart';
 import 'transport/hole_punch_service.dart';
@@ -758,14 +759,22 @@ class GrassrootsNetwork {
 
   PeersState get _peersState => store.state.peers;
 
+  /// The declared places and their platform registrations, or null when no
+  /// platform geofencing binding was supplied.
+  final PlaceRegistry? _places;
+
   GrassrootsNetwork({
     required this.identity,
     this.config = const GrassrootsNetworkConfig(),
     required this.store,
     required this.sodium,
     PublicAddressDiscovery? publicAddressDiscovery,
-  }) : _publicAddressDiscovery =
-            publicAddressDiscovery ?? PublicAddressDiscovery() {
+    PlaceGeofenceBackend? placeGeofenceBackend,
+  })  : _publicAddressDiscovery =
+            publicAddressDiscovery ?? PublicAddressDiscovery(),
+        _places = placeGeofenceBackend == null
+            ? null
+            : PlaceRegistry(backend: placeGeofenceBackend) {
     _protocolHandler = ProtocolHandler(identity: identity, sodium: sodium);
     _fragmentHandler = FragmentHandler();
     _noiseSessions = NoiseSessionManager(identity: identity, sodium: sodium);
@@ -2421,6 +2430,68 @@ class GrassrootsNetwork {
     if (store.state.settings.trustLevelOf(medium) == level) return;
     store.dispatch(SetColdCallTrustLevelAction(medium, level));
   }
+
+  // ===== Places =====
+
+  /// Register a geofence of [radiusMetres] around the device's **current**
+  /// location under [place]. Spec
+  /// `docs/GLP_Networking_API/sections/system-predicates.tex`:
+  /// `declarePlace(place, radius)`.
+  ///
+  /// Returns false when the platform refuses, in which case [place] is left
+  /// undeclared. A further declaration under the same name replaces the first.
+  /// GLP supplies a name and a radius and receives no coordinates: there is no
+  /// call here that returns a position.
+  ///
+  /// Platforms bound how many geofences an application may register, so a place
+  /// no longer wanted is passed to [removePlace] rather than left in place;
+  /// [dispose] releases whatever is still declared.
+  Future<bool> declarePlace(String place, double radiusMetres) {
+    final places = _places;
+    if (places == null) {
+      throw StateError(
+        'declarePlace needs a PlaceGeofenceBackend; none was supplied to '
+        'GrassrootsNetwork',
+      );
+    }
+    return places.declarePlace(place, radiusMetres);
+  }
+
+  /// End the declaration of [place]: the geofence is unregistered with the
+  /// platform. Spec: `removePlace(place)`. Removing a place that is not
+  /// declared does nothing.
+  Future<void> removePlace(String place) {
+    final places = _places;
+    if (places == null) {
+      throw StateError(
+        'removePlace needs a PlaceGeofenceBackend; none was supplied to '
+        'GrassrootsNetwork',
+      );
+    }
+    return places.removePlace(place);
+  }
+
+  /// Called for each entry and exit crossing of a place still declared. Spec:
+  /// `onPlaceEvent(cb)`. The runtime routes each onto the stream that place's
+  /// `place_declare(Place?, Radius?, Events)` bound.
+  ///
+  /// A crossing the platform reports for a place already removed or superseded
+  /// is dropped, the report being able to race the unregistration; it is
+  /// neither queued nor does it reopen the declaration.
+  set onPlaceEvent(void Function(String place, PlaceCrossing crossing)? cb) {
+    final places = _places;
+    if (places == null) {
+      throw StateError(
+        'onPlaceEvent needs a PlaceGeofenceBackend; none was supplied to '
+        'GrassrootsNetwork',
+      );
+    }
+    places.onPlaceEvent = cb;
+  }
+
+  /// The places currently declared. Empty when no platform geofencing binding
+  /// was supplied.
+  Iterable<String> get declaredPlaces => _places?.declaredPlaces ?? const [];
 
   static const _uuid = Uuid();
 
@@ -4994,6 +5065,9 @@ class GrassrootsNetwork {
 
   /// Clean up resources
   Future<void> dispose() async {
+    // Release every place declaration: platforms bound how many geofences an
+    // application may register, so none may outlive the layer.
+    await _places?.dispose();
     _connectivitySubscription?.cancel();
     _connectivitySubscription = null;
     _storeSubscription?.cancel();
