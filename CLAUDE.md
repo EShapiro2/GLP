@@ -15,7 +15,7 @@ Read these files in order before doing anything else, then state which you have 
 2. This file (`CLAUDE.md`)
 3. `docs/DISCIPLINE.md` — development discipline
 4. `docs/typed-glp-manual.md` — typed GLP programming guide
-5. `docs/glp-cheat-sheet.md` — patterns and idioms; "GLP is NOT Prolog"
+5. `../GLP-ICLP-2026/docs/glp-cheat-sheet.md` — patterns and idioms; "GLP is NOT Prolog"
 6. `/Grassroots/docs/writing-style-guide.md` — how to communicate with Udi (governs every message to him)
 
 Then STOP and wait for Udi's direction.  Do not read any other files until then.
@@ -53,9 +53,11 @@ Do not use heredoc (`<<<`) — that requires approval per invocation.
 
 | Suite | Command (run from `/Users/udi/Grassroots/GLP/`) | Tests |
 |---|---|---|
-| REPL test suite (canonical) | `bash test/run_all_tests.sh` | 489 |
-| Dart unit tests | `cd glp_runtime && dart test` | 353 |
+| REPL test suite | `bash test/run_all_tests.sh` | 581 |
+| Dart unit tests | `cd glp_runtime && dart test` | 520 (505 pass, 11 skip, 4 known red) |
 | Book examples (compilation only) | `bash test/run_book_tests.sh` | 141 files |
+
+🔴 **Neither suite subsumes the other, and neither is "the canonical suite" on its own.**  `run_all_tests.sh` invokes `dart test` on exactly two multiagent files (Sections M and O) — not on the Dart tree — so `ALL TESTS PASSED!` says nothing about `glp_runtime/test/engine_v2/`, `glp_runtime/test/compiler/`, or any other Dart test file.  Counts above measured at commit `6adde682` (2026-07-28).
 
 **Redirect output to `/private/tmp/`** rather than asking Udi to paste:
 
@@ -72,12 +74,12 @@ Then `Read` the file.  Do not use `/tmp/` (not in allowed directories).
 
 ### Baseline-before-commit (mandatory)
 
-Before changing GLP runtime, types, root self.glp, or any cross-cutting code:
+Before changing GLP runtime, types, root self.glp, or any cross-cutting code, baseline **both** suites — one does not cover the other (see the table above):
 
-1. Run `bash test/run_all_tests.sh > /private/tmp/glp-baseline.txt 2>&1`.  Confirm it ends with `ALL TESTS PASSED!`.
+1. Run `bash test/run_all_tests.sh > /private/tmp/glp-baseline.txt 2>&1`, then `cd glp_runtime && dart test > /private/tmp/glp-dart-baseline.txt 2>&1`.  Sequentially, never concurrently.  Record the green count of each **and the set of tests already red at HEAD**.
 2. Make the change.
-3. Re-run the same suite.  If anything new fails, STOP and investigate before committing.
-4. Commit and push only after both runs are clean.
+3. Re-run both suites.  If anything new fails, STOP and investigate before committing.
+4. The commit gate is the one in root `claude.md`: the green count plus the known red set unchanged — add no new failures; do not demand all-green.  A red test you did not cause is baselined, not fixed silently and not ignored — report it.
 
 For changes confined to a single play/test/program, the baseline can be skipped at your judgment.
 
@@ -251,15 +253,15 @@ flutter build macos
 
 - `docs/glp-bytecode-v216-complete.md` — instruction set
 - `docs/glp-runtime-spec.txt` — runtime architecture
-- `docs/guards-reference.md` — guards catalog (success/suspend/fail semantics, negation, groundness implications)
-- `docs/body-kernels-reference.md` — body kernels
+- `../GLP-ICLP-2026/docs/guards-reference.md` — guards catalog (success/suspend/fail semantics, negation, groundness implications)
+- `../GLP-ICLP-2026/docs/body-kernels-reference.md` — body kernels
 - `docs/glp-compiler-spec.md` — compiler
 - `docs/glp-arithmetic-spec.md` — arithmetic
 - `docs/glp-io-spec.md` — I/O
 - `docs/parser-spec.md` — parser
-- `docs/naming-conventions.md` — naming
-- `docs/mutual-ref-spec.md` — mutual references
-- `docs/glp-predicate-taxonomy.md` — predicate taxonomy
+- `../GLP-ICLP-2026/docs/naming-conventions.md` — naming
+- `../GLP-ICLP-2026/docs/mutual-ref-spec.md` — mutual references
+- `../GLP-ICLP-2026/docs/glp-predicate-taxonomy.md` — predicate taxonomy
 - `docs/known-issues.md` — outstanding known issues
 - `docs/Mandatory protocol for debugging the GLP implementation with GLP programs.txt` — debugging protocol
 - `docs/grassroots-testing-framework.md` — theatre-style play testing
