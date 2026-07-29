@@ -11,6 +11,7 @@ import 'signaling/peer_link.dart';
 import 'signaling/signaling_codec.dart';
 import 'signaling/signaling_service.dart';
 import 'package:grassroots_networking_core/src/transport/address_utils.dart';
+import 'package:grassroots_networking_core/src/transport/local_network.dart';
 import 'transport/ble_transport_service.dart';
 import 'transport/connection_service.dart';
 import 'transport/hole_punch_service.dart';
@@ -723,6 +724,22 @@ class GrassrootsNetwork {
   void Function(String? oldAddress, String? newAddress)?
       onConnectivityStatusChanged;
 
+  /// Spec: `docs/GLP_Networking_API/sections/ip.tex` §Local Network Identity —
+  /// "Callback when the fingerprint changes. Receives `(oldId, newId)`, either
+  /// of which may be null."
+  ///
+  /// This is not [onConnectivityStatusChanged]. That one reports the agent's
+  /// public address; this one reports the local network it is attached to, and
+  /// the two are independent in both directions: the attached local network can
+  /// change while the public address does not, and the public address can
+  /// change while the attached local network does not. GLP uses this to lower a
+  /// LAN trust level upon leaving a trusted local network (spec §Trust levels).
+  ///
+  /// The fingerprint is best-effort and collision-prone. A match is evidence
+  /// that the agent is attached to the same local network as before, not proof
+  /// of it; what to do with that is GLP's decision, not the layer's.
+  void Function(String? oldId, String? newId)? onNetworkChanged;
+
   /// Fired when a peer link minted by [generatePeerLink] is redeemed: the
   /// rendezvous server verified the holder's claim, atomically marked the
   /// invite used, and forwarded the redeemer's identity (spec §IP Cold-Call).
@@ -766,6 +783,7 @@ class GrassrootsNetwork {
           _onConnectivityChanged,
         );
     _seedConnectivityState();
+    unawaited(_refreshLocalNetwork());
 
     // Listen to Redux store changes for settings updates
     _lastSettingsState = store.state.settings;
@@ -827,6 +845,17 @@ class GrassrootsNetwork {
   /// The agent's current public `ip:port`, or null if not yet known.
   /// Address changes are surfaced via [onConnectivityStatusChanged].
   String? getPublicAddress() => store.state.transports.publicAddress;
+
+  /// An opaque fingerprint of the local network the agent is currently
+  /// attached to, or null when it is attached to none or no constituent is
+  /// readable. Spec `docs/GLP_Networking_API/sections/ip.tex` §Local Network
+  /// Identity. Changes are surfaced via [onNetworkChanged].
+  ///
+  /// The same interface enumeration also yields the agent's own local address
+  /// prefixes, held in `store.state.localNetwork`. They stay inside the layer:
+  /// they decide whether an inbound source address is LAN contact (spec §Cold
+  /// Calls), and GLP is given the fingerprint, never the addresses.
+  String? networkIdentity() => store.state.localNetwork.networkId;
 
   /// The last known public `ip:port` for [pubkey], or null if unknown.
   ///
@@ -1834,6 +1863,28 @@ class GrassrootsNetwork {
     }
   }
 
+  /// Read the attached local network and, if it differs from the held one,
+  /// record it and tell the runtime.
+  ///
+  /// The layer's own emission point for [onNetworkChanged], separate from the
+  /// public-address one: the two facts are independent, so neither refresh
+  /// implies the other. Called at construction, on every connectivity event
+  /// (before the event is filtered — the local network can change while the
+  /// connection type does not), and on the heartbeat tick, which catches a
+  /// change the platform reports through no event at all.
+  Future<void> _refreshLocalNetwork() async {
+    final network = await readLocalNetwork();
+    final previous = store.state.localNetwork.network;
+    if (network == previous) return;
+
+    store.dispatch(LocalNetworkChangedAction(network));
+    debugPrint(
+      '[local-network] ${previous.networkId} -> ${network.networkId} '
+      '(prefixes: ${network.prefixes.join(', ')})',
+    );
+    onNetworkChanged?.call(previous.networkId, network.networkId);
+  }
+
   void _seedConnectivityState() {
     unawaited(() async {
       try {
@@ -1910,6 +1961,11 @@ class GrassrootsNetwork {
     store.dispatch(
       NetworkConnectionTypeUpdatedAction(_connectionTypeFromResults(ipResults)),
     );
+
+    // Independent of everything below: the attached local network can change
+    // while the connection type and the public address do not (one Wi-Fi
+    // network swapped for another), so this refresh precedes every filter.
+    unawaited(_refreshLocalNetwork());
 
     // Ignore the first notification (initial state, not a change)
     if (_lastConnectivityResults == null) {
@@ -4962,6 +5018,7 @@ class GrassrootsNetwork {
       _discoverUnreachableKnownPeers();
       _refireAvailableForUnreachableKnownPeers();
       _drainQueuedMessagesForLivePeers();
+      unawaited(_refreshLocalNetwork());
     });
   }
 

@@ -20,6 +20,7 @@ export 'src/store/store.dart';
 export 'src/transport/transport_service.dart';
 export 'src/transport/udp_transport_service.dart';
 export 'src/transport/address_utils.dart';
+export 'src/transport/local_network.dart';
 export 'src/platform/compat.dart';
 export 'src/headless/headless_grassroots_network.dart';
 export 'src/headless/known_peers_persistence.dart';

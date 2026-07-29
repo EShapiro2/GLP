@@ -5,6 +5,8 @@ import 'messages_actions.dart';
 import 'messages_reducer.dart';
 import 'known_peers_actions.dart';
 import 'known_peers_reducer.dart';
+import 'local_network_actions.dart';
+import 'local_network_reducer.dart';
 import 'settings_actions.dart';
 import 'settings_reducer.dart';
 import 'signaling_actions.dart';
@@ -46,6 +48,13 @@ AppState appReducer(AppState state, dynamic action) {
   if (action is TransportAction) {
     return state.copyWith(
       transports: transportsReducer(state.transports, action),
+    );
+  }
+
+  // Handle local-network actions via localNetworkReducer
+  if (action is LocalNetworkAction) {
+    return state.copyWith(
+      localNetwork: localNetworkReducer(state.localNetwork, action),
     );
   }
 
