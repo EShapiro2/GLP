@@ -81,38 +81,34 @@ select_by_spec_continue(ok, Rest, LotSel, LotRem, Status?, AllSel?, FinalRem?) :
 select_by_spec_continue(fail, _, LotSel, LotRem, fail, LotSel?, LotRem?).
 
 %% =============================================================================
-%% CLASSIFY_TRADE — Classify an incoming proposal for the accepter Id, judged
-%% at Id's own local date Clock.  A bond cent_{q,d} is a q-coin iff d =< d*_q
-%% (Def 3.2): maturity is decided by the ISSUER's date, so Id tests the offered
-%% bonds against its OWN Clock; the holders' dates play no part.
-%%   * empty want-list, offered are coins         -> payment    (Def 3.2, Pay)
-%%   * wanting Id's bonds, offered are Id's coins  -> redemption (Def 3.2, Redeem)
-%%   * otherwise                                   -> normal (a swap, shown to the user)
+%% CLASSIFY_TRADE — Classify an incoming proposal for the accepter Id, judged at
+%% Id's own local date Clock.  A bond cent_{q,d} is a coin of its issuer q iff
+%% d =< d*_q (Def 3.2): maturity is the ISSUER's call, so Id tests the offered
+%% bonds against its OWN Clock; the holders' dates play no part.  Id auto-accepts
+%% only when EVERY offered bond is a coin of Id; the want-list then says which
+%% obligation it is — empty is a Pay, wanting some of Id's bonds is a Redeem.
+%% Anything else is a normal swap, shown to the user, that Id may accept or decline.
 %% =============================================================================
 
 procedure classify_trade(Constant?, Constant?, Stream(Lot)?, Stream(Bond)?, Constant).
-classify_trade(Id, Clock, [], OfferedBonds, Class?) :-
-    classify_payment(Id?, Clock?, OfferedBonds?, Class).
-classify_trade(Id, Clock, [_|_], OfferedBonds, Class?) :-
-    classify_redemption(Id?, Clock?, OfferedBonds?, Class).
+classify_trade(Id, Clock, WantSpec, OfferedBonds, Class?) :-
+    own_coins(Id?, Clock?, OfferedBonds?, AllCoins),
+    coin_trade(AllCoins?, WantSpec?, Class).
 
-%% Pay: take the coins unless one of Id's OWN bonds is offered before maturity
-%% (not yet a coin, so not a valid payment); others' bonds Id takes as delivered.
-procedure classify_payment(Constant?, Constant?, Stream(Bond)?, Constant).
-classify_payment(Id, Clock, [bond(I, M, _)|_], normal) :-
-    Id? =?= I?, M? > Clock? | true.
-classify_payment(Id, Clock, [bond(_, _, _)|Rest], Class?) :-
-    otherwise | classify_payment(Id?, Clock?, Rest?, Class).
-classify_payment(_, _, [], payment).
-
-%% Redeem: every offered bond must be a coin of Id — issued by Id (I =?= Id)
-%% and mature at Id's own date (M =< Clock); the issuer must then fulfil.
-procedure classify_redemption(Constant?, Constant?, Stream(Bond)?, Constant).
-classify_redemption(Id, Clock, [bond(I, M, _)|Rest], Class?) :-
-    Id? =?= I?, M? =< Clock? | classify_redemption(Id?, Clock?, Rest?, Class).
-classify_redemption(_, _, [bond(_, _, _)|_], normal) :-
+%% own_coins: every offered bond is a coin of Id — issued by Id (I =?= Id) and
+%% mature at Id's own date (M =< Clock).
+procedure own_coins(Constant?, Constant?, Stream(Bond)?, Constant).
+own_coins(Id, Clock, [bond(I, M, _)|Rest], R?) :-
+    Id? =?= I?, M? =< Clock? | own_coins(Id?, Clock?, Rest?, R).
+own_coins(_, _, [bond(_, _, _)|_], no) :-
     otherwise | true.
-classify_redemption(_, _, [], redemption).
+own_coins(_, _, [], yes).
+
+%% One maturity test done; the want-list decides which obligation it is.
+procedure coin_trade(Constant?, Stream(Lot)?, Constant).
+coin_trade(no, _, normal).
+coin_trade(yes, [], payment).
+coin_trade(yes, [_|_], redemption).
 
 %% =============================================================================
 %% BUILD_MENU — One bond per issuer, earliest maturity (redemption menu)

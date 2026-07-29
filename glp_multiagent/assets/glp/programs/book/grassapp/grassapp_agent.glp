@@ -281,15 +281,14 @@ do_pay(fail, Id, Friend, Selected, Remaining, NextSerial, Clock, UserIn, NetIn, 
     after_change(Id?, OrigHoldings?, NextSerial?, Clock?, UserIn?, NetIn?, Outs1?).
 
 %% --- Responder: take an incoming payment (Def 3.2, Pay) ---
-%% classify_payment says `payment` iff none of Id's own bonds is offered before
-%% maturity; then Id takes the coins.  A premature own bond makes it `normal` —
-%% not a coin — so Id returns the whole payment to the payer (to whom these are
-%% another issuer's bonds, taken back as delivered: no re-gating, no loop).
+%% own_coins says `yes` iff every offered bond is a coin of Id; then Id takes
+%% them.  Otherwise it is not a Pay (Pay carries only the recipient's own coins)
+%% but an unsolicited swap, so Id returns the whole lot to the payer unchanged.
 procedure take_payment(Constant?, Constant?, Constant?, Stream(Bond)?, Stream(Bond)?, Constant?, Constant?, Stream(X)?, Stream(X)?, OutputsList?).
-take_payment(payment, Id, _, Bonds, Holdings, NextSerial, Clock, UserIn, NetIn, Outs) :-
+take_payment(yes, Id, _, Bonds, Holdings, NextSerial, Clock, UserIn, NetIn, Outs) :-
     append(Holdings?, Bonds?, NewHoldings),
     after_change(Id?, NewHoldings?, NextSerial?, Clock?, UserIn?, NetIn?, Outs?).
-take_payment(normal, Id, From, Bonds, Holdings, NextSerial, Clock, UserIn, NetIn, Outs) :-
+take_payment(no, Id, From, Bonds, Holdings, NextSerial, Clock, UserIn, NetIn, Outs) :-
     lookup_send(From?, msg(Id?, From?, coins(Bonds?)), Outs?, Outs1),
     after_change(Id?, Holdings?, NextSerial?, Clock?, UserIn?, NetIn?, Outs1?).
 
@@ -725,14 +724,14 @@ agent(Id, UserIn, [msg(From, Id1, text(Text))|NetIn], Outs, Holdings, NextSerial
     lookup_send('_user', msg(agent, '_user', received(From?, Text?)), Outs?, Outs1),
     agent(Id?, UserIn?, NetIn?, Outs1?, Holdings?, NextSerial?, Clock?).
 
-%% A friend pays me coins.  Def 3.2: a q-coin is a q-bond mature at q's date, so
-%% I take them only when none of my OWN bonds is offered before maturity; others'
-%% bonds I take as delivered.  A premature own bond is not yet a coin — I return
-%% the whole payment to the payer unchanged.
+%% A friend pays me coins.  Def 3.2: a coin is a bond mature at its issuer's own
+%% date, so a valid Pay carries the recipient's own coins.  I take them only when
+%% EVERY offered bond is a coin of mine (own_coins); a foreign or premature bond
+%% makes it not a payment but a swap, so I return the whole lot to the payer.
 agent(Id, UserIn, [msg(From, Id1, coins(Bonds))|NetIn], Outs, Holdings, NextSerial, Clock) :-
     Id? =?= Id1?, ground(From?), ground(Bonds?) |
-    classify_payment(Id?, Clock?, Bonds?, PayClass),
-    take_payment(PayClass?, Id?, From?, Bonds?, Holdings?, NextSerial?, Clock?, UserIn?, NetIn?, Outs?).
+    own_coins(Id?, Clock?, Bonds?, AllCoins),
+    take_payment(AllCoins?, Id?, From?, Bonds?, Holdings?, NextSerial?, Clock?, UserIn?, NetIn?, Outs?).
 
 %% A friend proposes a trade (or presents my own bonds for redemption).
 agent(Id, UserIn, [msg(From, Id1, trade_propose(WantSpec, OfferedBonds, TradeResp?))|NetIn], Outs, Holdings, NextSerial, Clock) :-
