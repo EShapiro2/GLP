@@ -1798,28 +1798,8 @@ echo ""
 
 echo "=== Section M: Multi-Isolate (madGLP) Tests ==="
 echo ""
-
-MAD_RESULT=$("$DART" test "$GLP_RUNTIME/test/multiagent/cssn_v2_isolate_test.dart" 2>&1)
-MAD_EXIT=$?
-
-if [ $MAD_EXIT -eq 0 ]; then
-    # Count passing tests from output like "+13: All tests passed!"
-    MAD_PASSED=$(echo "$MAD_RESULT" | grep -oE '\+[0-9]+' | tail -1 | tr -d '+')
-    MAD_PASSED=${MAD_PASSED:-13}
-    echo "  PASS: All $MAD_PASSED multi-isolate tests passed"
-    PASS=$((PASS + MAD_PASSED))
-else
-    # Extract failure count
-    MAD_FAILED=$(echo "$MAD_RESULT" | grep -oE '\-[0-9]+' | tail -1 | tr -d '-')
-    MAD_FAILED=${MAD_FAILED:-1}
-    MAD_PASSED=$(echo "$MAD_RESULT" | grep -oE '\+[0-9]+' | tail -1 | tr -d '+')
-    MAD_PASSED=${MAD_PASSED:-0}
-    echo "  FAIL: $MAD_FAILED multi-isolate test(s) failed ($MAD_PASSED passed)"
-    echo "$MAD_RESULT" | tail -20
-    PASS=$((PASS + MAD_PASSED))
-    FAIL=$((FAIL + MAD_FAILED))
-fi
-
+echo "  (folded into Section Q, which runs the whole Dart tree — running"
+echo "   cssn_v2_isolate_test.dart here as well would only double-count it)"
 echo ""
 
 # =============================================================================
@@ -1984,26 +1964,8 @@ echo ""
 
 echo "=== Section O: Currencies Multi-Isolate Tests ==="
 echo ""
-
-BONDS_MAD_RESULT=$("$DART" test "$GLP_RUNTIME/test/multiagent/bonds_v2_isolate_test.dart" 2>&1)
-BONDS_MAD_EXIT=$?
-
-if [ $BONDS_MAD_EXIT -eq 0 ]; then
-    BONDS_MAD_PASSED=$(echo "$BONDS_MAD_RESULT" | grep -oE '\+[0-9]+' | tail -1 | tr -d '+')
-    BONDS_MAD_PASSED=${BONDS_MAD_PASSED:-12}
-    echo "  PASS: All $BONDS_MAD_PASSED bonds_v2 multi-isolate tests passed"
-    PASS=$((PASS + BONDS_MAD_PASSED))
-else
-    BONDS_MAD_FAILED=$(echo "$BONDS_MAD_RESULT" | grep -oE '\-[0-9]+' | tail -1 | tr -d '-')
-    BONDS_MAD_FAILED=${BONDS_MAD_FAILED:-1}
-    BONDS_MAD_PASSED=$(echo "$BONDS_MAD_RESULT" | grep -oE '\+[0-9]+' | tail -1 | tr -d '+')
-    BONDS_MAD_PASSED=${BONDS_MAD_PASSED:-0}
-    echo "  FAIL: $BONDS_MAD_FAILED bonds_v2 multi-isolate test(s) failed ($BONDS_MAD_PASSED passed)"
-    echo "$BONDS_MAD_RESULT" | tail -20
-    PASS=$((PASS + BONDS_MAD_PASSED))
-    FAIL=$((FAIL + BONDS_MAD_FAILED))
-fi
-
+echo "  (folded into Section Q, which runs the whole Dart tree — running"
+echo "   bonds_v2_isolate_test.dart here as well would only double-count it)"
 echo ""
 
 # =============================================================================
@@ -2531,6 +2493,108 @@ self_module(M), run(poke(Z), M?).
 HEREDOC
 2>&1)
 check "RM3 exported entry may call non-exported internally" "Z = \[leaked\]" "$rm3"
+
+echo ""
+
+# =============================================================================
+# Section Q: Dart unit tests (whole tree)
+# =============================================================================
+#
+# Runs `dart test` over glp_runtime/test in full.  Before this section existed
+# the suite invoked `dart test` on exactly two named multiagent files, so
+# "ALL TESTS PASSED!" said nothing about test/engine_v2/, test/compiler/, or
+# anything else in the tree — four tests sat red there, unseen, for as long as
+# anyone had been reading this suite as the gate.  Sections M and O are folded
+# in here rather than run twice.
+#
+# The gate is the one in root claude.md: the green count plus the KNOWN RED set
+# unchanged.  A test listed below may be red without failing the suite; any
+# other red fails it.  A listed test that PASSES also fails the suite, so the
+# list cannot rot into a permanent exception — it must be removed the moment its
+# fix lands.
+
+# Known-red tests.  One entry per line, matched against "<file>: <test name>".
+# Each entry names the owning project and what blocks it.
+KNOWN_RED=(
+    # TGLP — the body-atom type checker (lib/analysis/type_checker/
+    # well_typed_clause.dart) requires a procedure declaration for every body
+    # atom except isBuiltinGoal, but '_'-prefixed body kernels are undeclared
+    # everywhere and resolve from the runtime (see the builtinProcedures comment
+    # in lib/analysis/type_checker/root_scope.dart).  So a -mode(system) module
+    # loaded as a real file cannot call a kernel, which is what Rule A admits it
+    # to do.  Cross-project request to TGLP is open.  REMOVE THIS ENTRY when the
+    # fix lands — the guard below will fail the suite until you do.
+    "test/compiler/primitive_layer_test.dart: Rule A — -mode(system) location (single-file load) admits a real module under programs/system/"
+)
+
+echo "=== Section Q: Dart unit tests (whole tree) ==="
+echo ""
+
+# `dart test` exits non-zero whenever anything is red — including a known-red
+# entry, which is not a suite failure — so every capture below is guarded
+# against `set -e` (line 24) rather than letting it abort the run.
+DART_TREE_RESULT=$(cd "$GLP_RUNTIME" && "$DART" test 2>&1) || true
+
+# Strip ANSI colour and CR so the reporter's in-place updates become lines.
+DART_TREE_CLEAN=$(printf '%s' "$DART_TREE_RESULT" | sed 's/\x1b\[[0-9;]*m//g' | tr '\r' '\n') || true
+
+DART_TREE_PASSED=$(printf '%s' "$DART_TREE_CLEAN" | grep -oE '\+[0-9]+' | tail -1 | tr -d '+') || true
+DART_TREE_PASSED=${DART_TREE_PASSED:-0}
+
+# Failing tests, one "<file>: <test name>" per line.  grep exits 1 when the
+# tree is fully green, which is the good case, so this is guarded too.
+DART_TREE_FAILS=$(printf '%s' "$DART_TREE_CLEAN" \
+    | grep -oE 'test/[A-Za-z0-9_/]+\.dart: .*\[E\]' \
+    | sed 's/ \[E\]$//' \
+    | sort -u) || true
+
+Q_NEW_RED=0
+Q_KNOWN_RED=0
+
+if [ -n "$DART_TREE_FAILS" ]; then
+    while IFS= read -r failure; do
+        [ -z "$failure" ] && continue
+        is_known=0
+        for known in "${KNOWN_RED[@]}"; do
+            if [ "$failure" = "$known" ]; then
+                is_known=1
+                break
+            fi
+        done
+        if [ $is_known -eq 1 ]; then
+            echo "  KNOWN RED (not a new failure): $failure"
+            Q_KNOWN_RED=$((Q_KNOWN_RED + 1))
+        else
+            echo "  FAIL: $failure"
+            Q_NEW_RED=$((Q_NEW_RED + 1))
+        fi
+    done <<< "$DART_TREE_FAILS"
+fi
+
+# Rot guard: a known-red entry that no longer fails must be removed from the
+# list.  Leaving it would turn the list into a standing exception that silently
+# covers a future regression in the same test.
+Q_STALE=0
+for known in "${KNOWN_RED[@]}"; do
+    if ! printf '%s\n' "$DART_TREE_FAILS" | grep -qxF "$known"; then
+        echo "  FAIL: known-red entry now PASSES — remove it from KNOWN_RED:"
+        echo "        $known"
+        Q_STALE=$((Q_STALE + 1))
+    fi
+done
+
+PASS=$((PASS + DART_TREE_PASSED))
+FAIL=$((FAIL + Q_NEW_RED + Q_STALE))
+
+if [ $Q_NEW_RED -eq 0 ] && [ $Q_STALE -eq 0 ]; then
+    if [ $Q_KNOWN_RED -gt 0 ]; then
+        echo "  PASS: $DART_TREE_PASSED Dart tests passed ($Q_KNOWN_RED known red, see above)"
+    else
+        echo "  PASS: All $DART_TREE_PASSED Dart tests passed"
+    fi
+else
+    echo "$DART_TREE_CLEAN" | tail -20
+fi
 
 echo ""
 
