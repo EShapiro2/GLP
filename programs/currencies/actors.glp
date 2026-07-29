@@ -1260,17 +1260,21 @@ procedure bob_p11_finish(Stream(UserNotify)?, Stream(UserCmd)).
 bob_p11_finish(_, []).
 
 %% =============================================================================
-%% Play 13: alice_p13, bob_p13 — loan then maturity-gated redemption
+%% Play 13: alice_p13, bob_p13 — loan then issuer-dated redemption
 %% =============================================================================
 %%
 %% Alice (lender): connect; mint 3 coins (maturity 0); propose the loan swap
 %% (give 3 alice-coins, want 5 bob-bonds maturing at date 10 — face 5 > 3 lent
-%% is the interest); try to redeem 3 of the bob-bonds BEFORE advancing (refused
-%% by her own local-clock gate); advance her local date past maturity; redeem;
-%% report balance.
+%% is the interest); present 3 bob-bonds for redemption BEFORE they mature at
+%% Bob's date, so it reaches Bob as a normal swap offer he declines; present
+%% again once Bob has advanced past maturity, when Bob must fulfil — set-off,
+%% Alice takes back her own coins; report balance.
 %% Bob (borrower): accept the cold call; on the loan proposal mint 5 bonds
-%% maturing at 10 and accept the swap; his agent then auto-honours Alice's
-%% redemption (the issuer must fulfil); report balance.
+%% maturing at 10 and accept the swap; Alice's early presentation arrives as a
+%% normal offer (at Bob's date the bonds are not coins) — Bob advances his own
+%% date past maturity and declines the early swap; her second presentation is
+%% then a coin his agent must auto-honour (Def 3.2 — the issuer's date is a
+%% machine precondition, not a guard); report balance.
 
 %% --- Alice (play13) — lender ---
 
@@ -1293,33 +1297,27 @@ alice_p13_wait_minted([_|In], Out?) :-
     otherwise | alice_p13_wait_minted(In?, Out).
 alice_p13_wait_minted([], []).
 
-%% Loan swap done — attempt to redeem BEFORE advancing our clock; the bob-bonds
-%% mature at 10 but our local date is still 0, so our own gate refuses it.
+%% Loan swap done — present 3 bob-bonds for redemption BEFORE Bob's date reaches
+%% their maturity (10).  At Bob's date (still 0) they are not coins, so the
+%% presentation reaches Bob as a normal swap offer, which he declines.
 procedure alice_p13_wait_loan(Stream(UserNotify)?, Stream(UserCmd)).
 alice_p13_wait_loan([trade_completed(bob)|In],
                     [redeem(bob, [lot(bob, 10, 3)], [lot(alice, 0, 3)])|Out?]) :-
-    alice_p13_wait_early_redeem(In?, Out).
+    alice_p13_wait_early(In?, Out).
 alice_p13_wait_loan([_|In], Out?) :-
     otherwise | alice_p13_wait_loan(In?, Out).
 alice_p13_wait_loan([], []).
 
-%% Early redeem refused (trade_failed) — advance our local date past maturity.
-procedure alice_p13_wait_early_redeem(Stream(UserNotify)?, Stream(UserCmd)).
-alice_p13_wait_early_redeem([trade_failed(bob)|In], [advance_date(11)|Out?]) :-
-    alice_p13_wait_advanced(In?, Out).
-alice_p13_wait_early_redeem([_|In], Out?) :-
-    otherwise | alice_p13_wait_early_redeem(In?, Out).
-alice_p13_wait_early_redeem([], []).
-
-%% Date advanced past maturity — redeem the now-mature bob-bonds (set-off:
-%% take back our own coins).
-procedure alice_p13_wait_advanced(Stream(UserNotify)?, Stream(UserCmd)).
-alice_p13_wait_advanced([date_advanced(11)|In],
-                        [redeem(bob, [lot(bob, 10, 3)], [lot(alice, 0, 3)])|Out?]) :-
+%% Early presentation declined, bonds returned — present again; by now Bob has
+%% advanced his own date past maturity, so the same bonds are coins at his date
+%% and his agent must fulfil (set-off: take back our own coins).
+procedure alice_p13_wait_early(Stream(UserNotify)?, Stream(UserCmd)).
+alice_p13_wait_early([trade_returned(bob)|In],
+                     [redeem(bob, [lot(bob, 10, 3)], [lot(alice, 0, 3)])|Out?]) :-
     alice_p13_wait_redeemed(In?, Out).
-alice_p13_wait_advanced([_|In], Out?) :-
-    otherwise | alice_p13_wait_advanced(In?, Out).
-alice_p13_wait_advanced([], []).
+alice_p13_wait_early([_|In], Out?) :-
+    otherwise | alice_p13_wait_early(In?, Out).
+alice_p13_wait_early([], []).
 
 procedure alice_p13_wait_redeemed(Stream(UserNotify)?, Stream(UserCmd)).
 alice_p13_wait_redeemed([trade_completed(bob)|In], [balance|Out?]) :-
@@ -1374,14 +1372,28 @@ bob_p13_wait_minted(ReqId, [_|In], Out?) :-
     otherwise | bob_p13_wait_minted(ReqId?, In?, Out).
 bob_p13_wait_minted(_, [], []).
 
-%% Swap completed (we now hold alice-coins).  Wait for Alice's redemption, which
-%% our agent auto-honours; observe its completion, then report.
+%% Swap completed (we now hold alice-coins).  Alice's early presentation arrives
+%% next — but as a NORMAL offer, because at our date (0) her bob-bonds are not
+%% yet coins.  Advance our own date past maturity and decline the early swap; her
+%% next presentation will then be a coin our agent must fulfil.
 procedure bob_p13_wait_loan(Stream(UserNotify)?, Stream(UserCmd)).
 bob_p13_wait_loan([trade_completed(alice)|In], Out?) :-
-    bob_p13_wait_redeemed(In?, Out).
+    bob_p13_wait_early(In?, Out).
 bob_p13_wait_loan([_|In], Out?) :-
     otherwise | bob_p13_wait_loan(In?, Out).
 bob_p13_wait_loan([], []).
+
+%% Early presentation reaches us as a normal offer (her bob-bonds are not coins
+%% at our date): advance past maturity, then decline this early swap.  Her next
+%% presentation will be a coin our agent must auto-honour.
+procedure bob_p13_wait_early(Stream(UserNotify)?, Stream(UserCmd)).
+bob_p13_wait_early([trade_proposed(alice, _, ReqId)|In],
+                   [advance_date(11), reject_trade(alice, ReqId?)|Out?]) :-
+    ground(ReqId?) |
+    bob_p13_wait_redeemed(In?, Out).
+bob_p13_wait_early([_|In], Out?) :-
+    otherwise | bob_p13_wait_early(In?, Out).
+bob_p13_wait_early([], []).
 
 procedure bob_p13_wait_redeemed(Stream(UserNotify)?, Stream(UserCmd)).
 bob_p13_wait_redeemed([trade_completed(alice)|In], [balance|Out?]) :-

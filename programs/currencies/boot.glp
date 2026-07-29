@@ -902,15 +902,16 @@ fplay12 :-
     send_to_user_tagged(frank, FrankDispCmd?, FrankDispNotify?).
 
 %% =============================================================================
-%% FLUTTER PLAY 13 — Loan then redemption on local clocks (2 agents)
+%% FLUTTER PLAY 13 — Loan then issuer-dated redemption (2 agents)
 %% =============================================================================
 %%
 %% Alice (lender) mints coins (maturity 0), Bob (borrower) mints a larger
-%% future-maturity bond; they swap (the loan).  Alice — the holder of the dated
-%% bond — first tries to redeem it before its maturity and is refused by her own
-%% local-clock gate (Def. 2.5: d' =< d*_p); she then advances her own local date
-%% past maturity (Def. 2 item 2) and redeems.  Per-agent local clocks, no global
-%% clock.
+%% future-maturity bond; they swap (the loan).  Alice presents the dated bond
+%% for redemption before it matures at BOB's date, so it reaches Bob as a normal
+%% swap offer (Def 3.2: a bond is a coin only at its issuer's date), which Bob
+%% declines; Bob then advances HIS OWN local date past maturity (Def 3.2), and
+%% Alice's second presentation is a coin Bob must fulfil — set-off.  Per-agent
+%% local clocks, no global clock.
 
 exported procedure fplay13.
 fplay13 :-

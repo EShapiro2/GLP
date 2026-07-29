@@ -23,8 +23,7 @@
 imported procedure txn#create_bonds(Constant?, Constant?, Constant?, Constant?, Stream(Bond)).
 imported procedure txn#append(Stream(Bond)?, Stream(Bond)?, Stream(Bond)).
 imported procedure txn#select_bonds_by_spec(Stream(Lot)?, Stream(Bond)?, Constant, Stream(Bond), Stream(Bond)).
-imported procedure txn#select_matured_by_spec(Stream(Lot)?, Constant?, Constant?, Stream(Bond)?, Constant, Stream(Bond), Stream(Bond)).
-imported procedure txn#classify_trade(Constant?, Stream(Lot)?, Stream(Bond)?, Constant).
+imported procedure txn#classify_trade(Constant?, Constant?, Stream(Lot)?, Stream(Bond)?, Constant).
 imported procedure txn#build_menu(Constant?, Stream(Bond)?, Stream(Bond)).
 
 %% =============================================================================
@@ -76,16 +75,16 @@ do_trade_result(fail, Id, Target, _, Selected, Remaining, UserIn, NetIn, Outs, N
     agent(Id?, UserIn?, NetIn?, Outs1?, OrigHoldings?, NextSerial?, Clock?).
 
 %% =============================================================================
-%% DO_REDEEM — Redeem (Def. 2.5 item 5), guarded by the holder.
-%% Select the Target's coins mature by our own local Clock (d' =< d*_p), then
-%% present them; the issuer must fulfil and auto-accepts (classify_trade), so
-%% this reuses the trade two-phase wire.  On an immature/wrong-issuer spec the
-%% selection fails and holdings are restored.
+%% DO_REDEEM — Redeem (Def 3.2 item 5), guarded by the redeemer.
+%% Offer the Target's bonds named by GiveSpec; whether they are coins is the
+%% issuer's call, tested against the issuer's own date on receipt (classify_trade
+%% -> redemption).  The redeemer does not test maturity; on a wrong-issuer or
+%% missing spec the selection fails and holdings are restored.
 %% =============================================================================
 
 procedure do_redeem(Constant?, Constant?, Stream(Lot)?, Stream(Lot)?, Stream(Bond)?, Stream(UserInMsg)?, Stream(NetInMsg)?, Stream(OutputEntry)?, Constant?, Constant?).
 do_redeem(Id, Target, GiveSpec, WantSpec, Holdings, UserIn, NetIn, Outs, NextSerial, Clock) :-
-    txn # select_matured_by_spec(GiveSpec?, Target?, Clock?, Holdings?, Status, Selected, Remaining),
+    txn # select_bonds_by_spec(GiveSpec?, Holdings?, Status, Selected, Remaining),
     do_redeem_result(Status?, Id?, Target?, WantSpec?, Selected?, Remaining?, UserIn?, NetIn?, Outs?, NextSerial?, Clock?).
 
 procedure do_redeem_result(Constant?, Constant?, Constant?, Stream(Lot)?, Stream(Bond)?, Stream(Bond)?, Stream(UserInMsg)?, Stream(NetInMsg)?, Stream(OutputEntry)?, Constant?, Constant?).
@@ -283,9 +282,9 @@ agent(Id, [msg('_user', Id1, trade(Target, GiveSpec, WantSpec))|UserIn],
     Id? =?= Id1?, ground(Target?), ground(GiveSpec?), ground(WantSpec?) |
     do_trade(Id?, Target?, GiveSpec?, WantSpec?, Holdings?, UserIn?, NetIn?, Outs?, NextSerial?, Clock?).
 
-%% Proposer: redeem command (Def. 2.5 item 5, guarded by the holder).
-%% GiveSpec are the Target's coins we present; they must be mature by our own
-%% Clock.  The issuer must fulfil (auto-accepts via classify_trade -> redemption).
+%% Proposer: redeem command (Def 3.2 item 5, guarded by the redeemer).
+%% GiveSpec names the Target's bonds we present; whether they are coins is the
+%% issuer's call, tested against the issuer's own date (classify_trade -> redemption).
 agent(Id, [msg('_user', Id1, redeem(Target, GiveSpec, WantSpec))|UserIn],
       NetIn, Outs, Holdings, NextSerial, Clock) :-
     Id? =?= Id1?, ground(Target?), ground(GiveSpec?), ground(WantSpec?) |
@@ -312,11 +311,12 @@ agent(Id, [trade_returned_bonds_menu(From, OurBonds, Menu)|UserIn], NetIn, Outs,
     send_user( msg(agent, '_user', trade_returned_menu(From?, Menu?)), Outs?, Outs1),
     agent(Id?, UserIn?, NetIn?, Outs1?, NewHoldings?, NextSerial?, Clock?).
 
-%% Responder: incoming trade_propose (auto-accept if offered bonds are all own)
+%% Responder: incoming trade_propose — auto-accept iff the offered bonds are
+%% coins of Id at Id's own date (payment/redemption); else shown to the user.
 agent(Id, UserIn, [msg(From, Id1, trade_propose(WantSpec, OfferedBonds, TradeResp?))|NetIn],
       Outs, Holdings, NextSerial, Clock) :-
     Id? =?= Id1?, ground(From?), ground(WantSpec?), ground(OfferedBonds?) |
-    txn # classify_trade(Id?, WantSpec?, OfferedBonds?, TradeClass),
+    txn # classify_trade(Id?, Clock?, WantSpec?, OfferedBonds?, TradeClass),
     trade_dispatch(TradeClass?, Id?, From?, WantSpec?, OfferedBonds?, TradeResp,
         Holdings?, UserIn?, NetIn?, Outs?, NextSerial?, Clock?).
 

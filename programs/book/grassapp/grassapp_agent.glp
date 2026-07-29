@@ -11,11 +11,12 @@
 %%   Holdings   — multiset of bonds, Stream(Bond)   (c_p)
 %%   NextSerial — next serial for minting
 %%   Clock      — this agent's local current date   (d*_p), initially 0
-%% A coin is a bond mature by THIS agent's own Clock; there is no global clock.
+%% A bond is a coin of its issuer q iff mature by q's own Clock (Def 3.2); the
+%% holders' dates play no part, and there is no global clock.
 %%
 %% The transaction predicates (create_bonds, append, select_bonds_by_spec,
-%% select_matured_by_spec, classify_trade, build_menu) come from
-%% currency_txn.glp and are called BARE (top-level, no module qualifier).
+%% classify_trade, build_menu) come from currency_txn.glp and are called BARE
+%% (top-level, no module qualifier).
 
 
 %% Output content: union of agent->mediator, friend-channel, and net contents.
@@ -258,13 +259,14 @@ do_trade_result(fail, Id, Target, _, Selected, Remaining, NextSerial, Clock, Use
     lookup_send('_user', msg(agent, '_user', trade_failed(Target?)), Outs?, Outs1),
     after_change(Id?, OrigHoldings?, NextSerial?, Clock?, UserIn?, NetIn?, Outs1?).
 
-%% --- Proposer: redeem (Def. 2.5, guarded by the HOLDER) ---
-%% Present the Target's coins mature by our own Clock (d' =< d*_p); the issuer
-%% must fulfil and auto-accepts (classify_trade -> redemption).
+%% --- Proposer: redeem (Def 3.2, guarded by the redeemer) ---
+%% Offer the Target's bonds named by GiveSpec; whether they are coins is the
+%% issuer's call, tested against the issuer's own date on receipt
+%% (classify_trade -> redemption).  The redeemer does not test maturity.
 
 procedure do_redeem(Constant?, Constant?, Stream(Lot)?, Stream(Lot)?, Stream(Bond)?, Constant?, Constant?, Stream(X)?, Stream(X)?, OutputsList?).
 do_redeem(Id, Target, GiveSpec, WantSpec, Holdings, NextSerial, Clock, UserIn, NetIn, Outs) :-
-    select_matured_by_spec(GiveSpec?, Target?, Clock?, Holdings?, Status, Selected, Remaining),
+    select_bonds_by_spec(GiveSpec?, Holdings?, Status, Selected, Remaining),
     do_trade_result(Status?, Id?, Target?, WantSpec?, Selected?, Remaining?, NextSerial?, Clock?, UserIn?, NetIn?, Outs?).
 
 %% --- Proposer: pay (mature coins of the payee, handed over unilaterally) ---
@@ -277,6 +279,19 @@ do_pay(fail, Id, Friend, Selected, Remaining, NextSerial, Clock, UserIn, NetIn, 
     append(Selected?, Remaining?, OrigHoldings),
     lookup_send('_user', msg(agent, '_user', trade_failed(Friend?)), Outs?, Outs1),
     after_change(Id?, OrigHoldings?, NextSerial?, Clock?, UserIn?, NetIn?, Outs1?).
+
+%% --- Responder: take an incoming payment (Def 3.2, Pay) ---
+%% classify_payment says `payment` iff none of Id's own bonds is offered before
+%% maturity; then Id takes the coins.  A premature own bond makes it `normal` —
+%% not a coin — so Id returns the whole payment to the payer (to whom these are
+%% another issuer's bonds, taken back as delivered: no re-gating, no loop).
+procedure take_payment(Constant?, Constant?, Constant?, Stream(Bond)?, Stream(Bond)?, Constant?, Constant?, Stream(X)?, Stream(X)?, OutputsList?).
+take_payment(payment, Id, _, Bonds, Holdings, NextSerial, Clock, UserIn, NetIn, Outs) :-
+    append(Holdings?, Bonds?, NewHoldings),
+    after_change(Id?, NewHoldings?, NextSerial?, Clock?, UserIn?, NetIn?, Outs?).
+take_payment(normal, Id, From, Bonds, Holdings, NextSerial, Clock, UserIn, NetIn, Outs) :-
+    lookup_send(From?, msg(Id?, From?, coins(Bonds?)), Outs?, Outs1),
+    after_change(Id?, Holdings?, NextSerial?, Clock?, UserIn?, NetIn?, Outs1?).
 
 %% --- Responder: fill an accepted trade ---
 
@@ -514,17 +529,10 @@ agent(Id, [msg('_user', Id1, balance)|UserIn], NetIn, Outs, Holdings, NextSerial
     emit_balances(Id?, Holdings?, Outs?, Outs1),
     agent(Id?, UserIn?, NetIn?, Outs1?, Holdings?, NextSerial?, Clock?).
 
-%% Pay: hand a friend bonds of any issuer (the general GrassApp transfer).
-%%
-%% DEVIATION (recorded): Def. 2 item 4 restricts Pay to *coins* — bonds mature by
-%% the payer's own clock.  select_matured_by_spec cannot express that here: it
-%% also pins the issuer to the counterparty, which is right for Redeem (you
-%% present the issuer's own coins back) but wrong for Pay, whose spec is
-%% "give a friend coins of any issuer".  Maturity-gating Pay needs a
-%% maturity-only, issuer-free selection in the transaction core; that is an M2
-%% item.  Until then Pay behaves exactly as it did before the bond rebuild
-%% (no maturity condition), so this is not a regression — only an un-tightened
-%% guard.
+%% Pay: hand a friend bonds named by GiveSpec (the general GrassApp transfer).
+%% The payer does not test maturity — Def 3.2 makes it the issuer's call: a coin
+%% is judged by its issuer's date, so the recipient checks on receipt that any
+%% of its OWN bonds paid to it are mature (classify_payment, take_payment).
 agent(Id, [msg('_user', Id1, pay(Friend, GiveSpec))|UserIn], NetIn, Outs, Holdings, NextSerial, Clock) :-
     Id? =?= Id1?, ground(Friend?), ground(GiveSpec?) |
     select_bonds_by_spec(GiveSpec?, Holdings?, Status, Selected, Remaining),
@@ -717,16 +725,19 @@ agent(Id, UserIn, [msg(From, Id1, text(Text))|NetIn], Outs, Holdings, NextSerial
     lookup_send('_user', msg(agent, '_user', received(From?, Text?)), Outs?, Outs1),
     agent(Id?, UserIn?, NetIn?, Outs1?, Holdings?, NextSerial?, Clock?).
 
-%% A friend pays me: take the coins, re-report.
-agent(Id, UserIn, [msg(_, Id1, coins(Bonds))|NetIn], Outs, Holdings, NextSerial, Clock) :-
-    Id? =?= Id1?, ground(Bonds?) |
-    append(Holdings?, Bonds?, NewHoldings),
-    after_change(Id?, NewHoldings?, NextSerial?, Clock?, UserIn?, NetIn?, Outs?).
+%% A friend pays me coins.  Def 3.2: a q-coin is a q-bond mature at q's date, so
+%% I take them only when none of my OWN bonds is offered before maturity; others'
+%% bonds I take as delivered.  A premature own bond is not yet a coin — I return
+%% the whole payment to the payer unchanged.
+agent(Id, UserIn, [msg(From, Id1, coins(Bonds))|NetIn], Outs, Holdings, NextSerial, Clock) :-
+    Id? =?= Id1?, ground(From?), ground(Bonds?) |
+    classify_payment(Id?, Clock?, Bonds?, PayClass),
+    take_payment(PayClass?, Id?, From?, Bonds?, Holdings?, NextSerial?, Clock?, UserIn?, NetIn?, Outs?).
 
 %% A friend proposes a trade (or presents my own bonds for redemption).
 agent(Id, UserIn, [msg(From, Id1, trade_propose(WantSpec, OfferedBonds, TradeResp?))|NetIn], Outs, Holdings, NextSerial, Clock) :-
     Id? =?= Id1?, ground(From?), ground(WantSpec?), ground(OfferedBonds?) |
-    classify_trade(Id?, WantSpec?, OfferedBonds?, TradeClass),
+    classify_trade(Id?, Clock?, WantSpec?, OfferedBonds?, TradeClass),
     trade_dispatch(TradeClass?, Id?, From?, WantSpec?, OfferedBonds?, TradeResp,
         Holdings?, NextSerial?, Clock?, UserIn?, NetIn?, Outs?).
 

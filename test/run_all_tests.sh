@@ -1942,19 +1942,20 @@ HEREDOC
 check "Currencies fplay12 succeeds" "succeeds" "$n_fp12"
 check "Currencies fplay12 tagged output" "tagged(" "$n_fp12"
 
-# fplay13: loan then maturity-gated redemption on per-agent local clocks
-echo "--- Currencies loan then redemption on local clocks (fplay13) ---"
+# fplay13: loan then issuer-dated redemption on per-agent local clocks
+echo "--- Currencies loan then issuer-dated redemption (fplay13) ---"
 
 n_fp13=$("$REPL_RUN" <<HEREDOC
 $BONDS_V2
+:limit 5000000
 fplay13.
 :quit
 HEREDOC
 2>&1)
 
 check "Currencies fplay13 succeeds" "succeeds" "$n_fp13"
-check "Currencies fplay13 pre-maturity redeem refused by local-clock gate" "trade_failed(bob)" "$n_fp13"
-check "Currencies fplay13 local clock advances past maturity" "date_advanced(11)" "$n_fp13"
+check "Currencies fplay13 early presentation reaches the issuer as a normal offer (reclassified, not refused)" "trade_proposed(alice, \[lot(alice, 0, 3)" "$n_fp13"
+check "Currencies fplay13 issuer advances its own date past maturity" "date_advanced(11)" "$n_fp13"
 check "Currencies fplay13 redemption set-off returns lender's own coins" "bond(alice, 0, 1)" "$n_fp13"
 
 echo ""

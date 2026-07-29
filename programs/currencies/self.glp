@@ -224,8 +224,8 @@ close_outputs([friend_output(_, [])|Outs]) :- close_outputs(Outs?).
 close_outputs([]).
 
 %% create_bonds, append, select_bonds_exact, select_bonds_by_spec,
-%% select_matured_by_spec and their continuations moved to txn.glp (the
-%% self-contained reusable transaction core).
+%% classify_trade and their helpers moved to txn.glp (the self-contained
+%% reusable transaction core).
 
 %% =============================================================================
 %% BIND_TRADE — Bind TradeResponse variable (writer mode)
