@@ -1958,6 +1958,24 @@ check "Currencies fplay13 early presentation reaches the issuer as a normal offe
 check "Currencies fplay13 issuer advances its own date past maturity" "date_advanced(11)" "$n_fp13"
 check "Currencies fplay13 redemption set-off returns lender's own coins" "bond(alice, 0, 1)" "$n_fp13"
 
+# fplay_cl: credit line (paper §5 item 7), checked against Proposition prop:credit-line
+echo "--- Currencies credit line (fplay_cl) ---"
+
+n_clc=$("$REPL_RUN" <<HEREDOC
+$BONDS_V2
+:limit 5000000
+fplay_cl.
+:quit
+HEREDOC
+2>&1)
+
+check "Currencies credit line succeeds" "succeeds" "$n_clc"
+check "Currencies credit line: draw forwards the borrower's bonds to the lender" "tagged(alice, notify(trade_proposed(charlie" "$n_clc"
+check "Currencies credit line: expiry judged by the escrow's own date d_e*" "date_advanced(26)" "$n_clc"
+check "Currencies credit line: at expiry the escrow holds nothing (line fully returned)" "tagged(charlie, notify(balance_report(\[\])))" "$n_clc"
+check "Currencies credit line: borrower has its principal bond back at T=25" "tagged(bob, notify(balance_report(\[bond(bob, 25, 1), bond(bob, 25, 2), bond(bob, 25, 3), bond(bob, 25, 4)\])))" "$n_clc"
+check "Currencies credit line: at k_d=0 lender holds the full line plus interest, no bond at T" "tagged(alice, notify(balance_report(\[bond(bob, 20, 5), bond(bob, 20, 6), bond(alice, 0, 5)" "$n_clc"
+
 echo ""
 
 # =============================================================================

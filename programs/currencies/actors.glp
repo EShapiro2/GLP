@@ -1411,3 +1411,234 @@ bob_p13_wait_balance([], []).
 
 procedure bob_p13_finish(Stream(UserNotify)?, Stream(UserCmd)).
 bob_p13_finish(_, []).
+
+%% =============================================================================
+%% Credit line (paper §5 item 7): lender alice (p), borrower bob (q), escrow
+%% agent charlie (e).  Limit k=10, expiry T=25, one interest date d_1=20, a
+%% single draw of k'=4 (interest 2), then full repayment and expiry.
+%%   * Establish: alice mints k=10 coins and deposits them with charlie (a
+%%     Voluntary swap {(alice, cent^10_alice), (charlie, {})}, charlie consenting);
+%%     k_d = 0.
+%%   * Draw of k'=4: charlie connects bob (sequencing draw after the deposit);
+%%     bob mints principal cent^4_{bob,25} and interest cent^2_{bob,20}, swaps
+%%     them with charlie for cent^4_alice; charlie forwards the bonds to alice;
+%%     k_d -> 4.
+%%   * Repay: alice connects bob; bob returns cent^4_alice to alice for its
+%%     principal bond back (a redemption of alice-coins for alice's bond, auto-
+%%     fulfilled); alice re-deposits cent^4_alice with charlie; k_d -> 0.
+%%   * Expiry: charlie advances its own date past T=25 (Def 3.2: judged by e's
+%%     own d_e*) and returns the undrawn cent^10_alice to alice.
+%% End state (Prop. prop:credit-line, k_d=0 at expiry): alice holds cent^10_alice
+%% and no bob-bond maturing at T=25; charlie holds nothing; the interest
+%% cent^2_{bob,20} is alice's return.  Between transactions the invariant holds:
+%% charlie holds cent^{k-k_d}_alice and alice the principal cent^{k_d}_{bob,25}.
+%% =============================================================================
+
+%% --- Alice (credit line) — lender p ---
+exported procedure alice_cl(ActorChannel?).
+alice_cl(ch(In, [connect(charlie)|Out?])) :-
+    alice_cl_conn(In?, Out).
+
+procedure alice_cl_conn(Stream(UserNotify)?, Stream(UserCmd)).
+alice_cl_conn([connected(charlie)|In], [mint(10, 0)|Out?]) :-
+    alice_cl_minted(In?, Out).
+alice_cl_conn([_|In], Out?) :- otherwise | alice_cl_conn(In?, Out).
+alice_cl_conn([], []).
+
+%% Deposit the whole line with charlie: give 10 alice-coins, want nothing.
+procedure alice_cl_minted(Stream(UserNotify)?, Stream(UserCmd)).
+alice_cl_minted([minted(10, 0)|In],
+                [trade(charlie, [lot(alice, 0, 10)], [])|Out?]) :-
+    alice_cl_deposited(In?, Out).
+alice_cl_minted([_|In], Out?) :- otherwise | alice_cl_minted(In?, Out).
+alice_cl_minted([], []).
+
+%% Deposit settled; charlie will later forward the drawn bonds — accept them.
+procedure alice_cl_deposited(Stream(UserNotify)?, Stream(UserCmd)).
+alice_cl_deposited([trade_completed(charlie)|In], Out?) :-
+    alice_cl_fwd(In?, Out).
+alice_cl_deposited([_|In], Out?) :- otherwise | alice_cl_deposited(In?, Out).
+alice_cl_deposited([], []).
+
+procedure alice_cl_fwd(Stream(UserNotify)?, Stream(UserCmd)).
+alice_cl_fwd([trade_proposed(charlie, _, ReqId)|In],
+             [accept_trade(charlie, ReqId?)|Out?]) :-
+    ground(ReqId?) | alice_cl_got(In?, Out).
+alice_cl_fwd([_|In], Out?) :- otherwise | alice_cl_fwd(In?, Out).
+alice_cl_fwd([], []).
+
+procedure alice_cl_got(Stream(UserNotify)?, Stream(UserCmd)).
+alice_cl_got([trade_completed(charlie)|In], [connect(bob)|Out?]) :-
+    alice_cl_bconn(In?, Out).
+alice_cl_got([_|In], Out?) :- otherwise | alice_cl_got(In?, Out).
+alice_cl_got([], []).
+
+procedure alice_cl_bconn(Stream(UserNotify)?, Stream(UserCmd)).
+alice_cl_bconn([connected(bob)|In], Out?) :- alice_cl_repaid(In?, Out).
+alice_cl_bconn([_|In], Out?) :- otherwise | alice_cl_bconn(In?, Out).
+alice_cl_bconn([], []).
+
+%% bob's repayment (a redemption of alice-coins for the principal bond) is
+%% auto-fulfilled by our agent; we now hold cent^4_alice — re-deposit it.
+procedure alice_cl_repaid(Stream(UserNotify)?, Stream(UserCmd)).
+alice_cl_repaid([trade_completed(bob)|In],
+                [trade(charlie, [lot(alice, 0, 4)], [])|Out?]) :-
+    alice_cl_redep(In?, Out).
+alice_cl_repaid([_|In], Out?) :- otherwise | alice_cl_repaid(In?, Out).
+alice_cl_repaid([], []).
+
+procedure alice_cl_redep(Stream(UserNotify)?, Stream(UserCmd)).
+alice_cl_redep([trade_completed(charlie)|In], Out?) :- alice_cl_ret(In?, Out).
+alice_cl_redep([_|In], Out?) :- otherwise | alice_cl_redep(In?, Out).
+alice_cl_redep([], []).
+
+%% charlie's expiry return of the undrawn line (our own coins) is auto-accepted
+%% as a payment; then report.
+procedure alice_cl_ret(Stream(UserNotify)?, Stream(UserCmd)).
+alice_cl_ret([trade_completed(charlie)|In], [balance|Out?]) :- alice_cl_bal(In?, Out).
+alice_cl_ret([_|In], Out?) :- otherwise | alice_cl_ret(In?, Out).
+alice_cl_ret([], []).
+
+procedure alice_cl_bal(Stream(UserNotify)?, Stream(UserCmd)).
+alice_cl_bal([balance_report(_)|In], [done|Out?]) :- alice_cl_fin(In?, Out).
+alice_cl_bal([_|In], Out?) :- otherwise | alice_cl_bal(In?, Out).
+alice_cl_bal([], []).
+procedure alice_cl_fin(Stream(UserNotify)?, Stream(UserCmd)).
+alice_cl_fin(_, []).
+
+%% --- Bob (credit line) — borrower q ---
+%% Befriended by charlie once the line is held, bob draws k'=4: mint the
+%% principal 4@25 and interest 2@20, then swap both for 4 alice-coins.
+exported procedure bob_cl(ActorChannel?).
+bob_cl(ch([befriend(charlie, ReqId)|In], [decision(yes, charlie, ReqId?)|Out?])) :-
+    ground(ReqId?) | bob_cl_conn(In?, Out).
+bob_cl(ch([_|In], Out?)) :- otherwise | bob_cl(ch(In?, Out)).
+bob_cl(ch([], [])).
+
+procedure bob_cl_conn(Stream(UserNotify)?, Stream(UserCmd)).
+bob_cl_conn([connected(charlie)|In], [mint(4, 25)|Out?]) :- bob_cl_m1(In?, Out).
+bob_cl_conn([_|In], Out?) :- otherwise | bob_cl_conn(In?, Out).
+bob_cl_conn([], []).
+
+procedure bob_cl_m1(Stream(UserNotify)?, Stream(UserCmd)).
+bob_cl_m1([minted(4, 25)|In], [mint(2, 20)|Out?]) :- bob_cl_m2(In?, Out).
+bob_cl_m1([_|In], Out?) :- otherwise | bob_cl_m1(In?, Out).
+bob_cl_m1([], []).
+
+procedure bob_cl_m2(Stream(UserNotify)?, Stream(UserCmd)).
+bob_cl_m2([minted(2, 20)|In],
+          [trade(charlie, [lot(bob, 25, 4), lot(bob, 20, 2)], [lot(alice, 0, 4)])|Out?]) :-
+    bob_cl_drawn(In?, Out).
+bob_cl_m2([_|In], Out?) :- otherwise | bob_cl_m2(In?, Out).
+bob_cl_m2([], []).
+
+%% Drawn (holding cent^4_alice).  Befriended by alice, repay: hand back the
+%% alice-coins and take the principal bond (a redemption at alice).
+procedure bob_cl_drawn(Stream(UserNotify)?, Stream(UserCmd)).
+bob_cl_drawn([befriend(alice, ReqId)|In], [decision(yes, alice, ReqId?)|Out?]) :-
+    ground(ReqId?) | bob_cl_aconn(In?, Out).
+bob_cl_drawn([_|In], Out?) :- otherwise | bob_cl_drawn(In?, Out).
+bob_cl_drawn([], []).
+
+procedure bob_cl_aconn(Stream(UserNotify)?, Stream(UserCmd)).
+bob_cl_aconn([connected(alice)|In],
+             [trade(alice, [lot(alice, 0, 4)], [lot(bob, 25, 4)])|Out?]) :-
+    bob_cl_repaid(In?, Out).
+bob_cl_aconn([_|In], Out?) :- otherwise | bob_cl_aconn(In?, Out).
+bob_cl_aconn([], []).
+
+procedure bob_cl_repaid(Stream(UserNotify)?, Stream(UserCmd)).
+bob_cl_repaid([trade_completed(alice)|In], [balance|Out?]) :- bob_cl_bal(In?, Out).
+bob_cl_repaid([_|In], Out?) :- otherwise | bob_cl_repaid(In?, Out).
+bob_cl_repaid([], []).
+
+procedure bob_cl_bal(Stream(UserNotify)?, Stream(UserCmd)).
+bob_cl_bal([balance_report(_)|In], [done|Out?]) :- bob_cl_fin(In?, Out).
+bob_cl_bal([_|In], Out?) :- otherwise | bob_cl_bal(In?, Out).
+bob_cl_bal([], []).
+procedure bob_cl_fin(Stream(UserNotify)?, Stream(UserCmd)).
+bob_cl_fin(_, []).
+
+%% --- Charlie (credit line) — escrow agent e ---
+exported procedure charlie_cl(ActorChannel?).
+charlie_cl(ch([befriend(alice, ReqId)|In], [decision(yes, alice, ReqId?)|Out?])) :-
+    ground(ReqId?) | charlie_cl_dep(In?, Out).
+charlie_cl(ch([_|In], Out?)) :- otherwise | charlie_cl(ch(In?, Out)).
+charlie_cl(ch([], [])).
+
+%% Accept alice's deposit: charlie now holds the line (cent^10_alice, k_d=0).
+procedure charlie_cl_dep(Stream(UserNotify)?, Stream(UserCmd)).
+charlie_cl_dep([trade_proposed(alice, _, ReqId)|In],
+               [accept_trade(alice, ReqId?)|Out?]) :-
+    ground(ReqId?) | charlie_cl_held(In?, Out).
+charlie_cl_dep([_|In], Out?) :- otherwise | charlie_cl_dep(In?, Out).
+charlie_cl_dep([], []).
+
+%% Line held → connect bob so it may draw (this sequences draw after deposit).
+procedure charlie_cl_held(Stream(UserNotify)?, Stream(UserCmd)).
+charlie_cl_held([trade_completed(alice)|In], [connect(bob)|Out?]) :-
+    charlie_cl_bconn(In?, Out).
+charlie_cl_held([_|In], Out?) :- otherwise | charlie_cl_held(In?, Out).
+charlie_cl_held([], []).
+
+procedure charlie_cl_bconn(Stream(UserNotify)?, Stream(UserCmd)).
+charlie_cl_bconn([connected(bob)|In], Out?) :- charlie_cl_draw(In?, Out).
+charlie_cl_bconn([_|In], Out?) :- otherwise | charlie_cl_bconn(In?, Out).
+charlie_cl_bconn([], []).
+
+%% bob's draw (wants 4 alice-coins, 4 <= capacity 10): accept it.
+procedure charlie_cl_draw(Stream(UserNotify)?, Stream(UserCmd)).
+charlie_cl_draw([trade_proposed(bob, _, ReqId)|In],
+                [accept_trade(bob, ReqId?)|Out?]) :-
+    ground(ReqId?) | charlie_cl_fwd(In?, Out).
+charlie_cl_draw([_|In], Out?) :- otherwise | charlie_cl_draw(In?, Out).
+charlie_cl_draw([], []).
+
+%% Draw accepted → forward the bob principal+interest bonds to alice; k_d = 4.
+procedure charlie_cl_fwd(Stream(UserNotify)?, Stream(UserCmd)).
+charlie_cl_fwd([trade_completed(bob)|In],
+               [trade(alice, [lot(bob, 25, 4), lot(bob, 20, 2)], [])|Out?]) :-
+    charlie_cl_fwded(In?, Out).
+charlie_cl_fwd([_|In], Out?) :- otherwise | charlie_cl_fwd(In?, Out).
+charlie_cl_fwd([], []).
+
+%% Forward settled; accept alice's re-deposit (restores the line to cent^10).
+procedure charlie_cl_fwded(Stream(UserNotify)?, Stream(UserCmd)).
+charlie_cl_fwded([trade_completed(alice)|In], Out?) :- charlie_cl_redep(In?, Out).
+charlie_cl_fwded([_|In], Out?) :- otherwise | charlie_cl_fwded(In?, Out).
+charlie_cl_fwded([], []).
+
+procedure charlie_cl_redep(Stream(UserNotify)?, Stream(UserCmd)).
+charlie_cl_redep([trade_proposed(alice, _, ReqId)|In],
+                 [accept_trade(alice, ReqId?)|Out?]) :-
+    ground(ReqId?) | charlie_cl_restored(In?, Out).
+charlie_cl_redep([_|In], Out?) :- otherwise | charlie_cl_redep(In?, Out).
+charlie_cl_redep([], []).
+
+%% Line restored (k_d=0); advance our own date past T=25 (Def 3.2: expiry judged
+%% by e's own d_e*, not wall-clock) and return the undrawn cent^10_alice to alice.
+procedure charlie_cl_restored(Stream(UserNotify)?, Stream(UserCmd)).
+charlie_cl_restored([trade_completed(alice)|In], [advance_date(26)|Out?]) :-
+    charlie_cl_expiry(In?, Out).
+charlie_cl_restored([_|In], Out?) :- otherwise | charlie_cl_restored(In?, Out).
+charlie_cl_restored([], []).
+
+procedure charlie_cl_expiry(Stream(UserNotify)?, Stream(UserCmd)).
+charlie_cl_expiry([date_advanced(26)|In],
+                  [trade(alice, [lot(alice, 0, 10)], [])|Out?]) :-
+    charlie_cl_returned(In?, Out).
+charlie_cl_expiry([_|In], Out?) :- otherwise | charlie_cl_expiry(In?, Out).
+charlie_cl_expiry([], []).
+
+procedure charlie_cl_returned(Stream(UserNotify)?, Stream(UserCmd)).
+charlie_cl_returned([trade_completed(alice)|In], [balance|Out?]) :-
+    charlie_cl_bal(In?, Out).
+charlie_cl_returned([_|In], Out?) :- otherwise | charlie_cl_returned(In?, Out).
+charlie_cl_returned([], []).
+
+procedure charlie_cl_bal(Stream(UserNotify)?, Stream(UserCmd)).
+charlie_cl_bal([balance_report(_)|In], [done|Out?]) :- charlie_cl_fin(In?, Out).
+charlie_cl_bal([_|In], Out?) :- otherwise | charlie_cl_bal(In?, Out).
+charlie_cl_bal([], []).
+procedure charlie_cl_fin(Stream(UserNotify)?, Stream(UserCmd)).
+charlie_cl_fin(_, []).

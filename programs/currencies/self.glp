@@ -374,3 +374,7 @@ fplay12 :- boot # fplay12.
 imported procedure boot#fplay13.
 exported procedure fplay13.
 fplay13 :- boot # fplay13.
+
+imported procedure boot#fplay_cl.
+exported procedure fplay_cl.
+fplay_cl :- boot # fplay_cl.
