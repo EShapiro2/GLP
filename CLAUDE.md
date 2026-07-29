@@ -1,6 +1,6 @@
 # Instructions for Claude Code (GLP)
 
-**Last updated:** 2026-05-18
+**Last updated:** 2026-07-29
 **Working directory:** `/Users/udi/Grassroots/GLP/`
 
 ## Code ownership
@@ -15,7 +15,7 @@ Read these files in order before doing anything else, then state which you have 
 2. This file (`CLAUDE.md`)
 3. `docs/DISCIPLINE.md` — development discipline
 4. `docs/typed-glp-manual.md` — typed GLP programming guide
-5. `../GLP-ICLP-2026/docs/glp-cheat-sheet.md` — patterns and idioms; "GLP is NOT Prolog"
+5. `docs/glp-cheat-sheet.md` — patterns and idioms; "GLP is NOT Prolog"
 6. `/Grassroots/docs/writing-style-guide.md` — how to communicate with Udi (governs every message to him)
 
 Then STOP and wait for Udi's direction.  Do not read any other files until then.
@@ -53,20 +53,22 @@ Do not use heredoc (`<<<`) — that requires approval per invocation.
 
 | Suite | Command (run from `/Users/udi/Grassroots/GLP/`) | Tests |
 |---|---|---|
-| REPL test suite | `bash test/run_all_tests.sh` | 581 |
-| Dart unit tests | `cd glp_runtime && dart test` | 520 (505 pass, 11 skip, 4 known red) |
+| Full suite (canonical) | `bash test/run_all_tests.sh` | 1078 (562 REPL + 516 Dart) |
+| Dart unit tests alone | `cd glp_runtime && dart test` | 528 (516 pass, 11 skip, 1 known red) |
 | Book examples (compilation only) | `bash test/run_book_tests.sh` | 141 files |
 
-🔴 **Neither suite subsumes the other, and neither is "the canonical suite" on its own.**  `run_all_tests.sh` invokes `dart test` on exactly two multiagent files (Sections M and O) — not on the Dart tree — so `ALL TESTS PASSED!` says nothing about `glp_runtime/test/engine_v2/`, `glp_runtime/test/compiler/`, or any other Dart test file.  Counts above measured at commit `6adde682` (2026-07-28).
+**`run_all_tests.sh` now covers the whole Dart tree** (Section Q), so it is the canonical gate on its own; running `dart test` separately is for a faster loop on Dart-only work, not for coverage.  Until 2026-07-29 the suite ran `dart test` on just two multiagent files, and four tests sat red in `test/engine_v2/` and `test/compiler/` unseen — `ALL TESTS PASSED!` had never spoken for them.
 
-**Redirect output to `/private/tmp/`** rather than asking Udi to paste:
+🔴 **Section Q gates on the known-red list, not on all-green.**  A test named in `KNOWN_RED` (top of Section Q) may be red without failing the suite; any other red fails it, **and a listed test that starts passing also fails it** — so the list cannot rot into a standing exception.  When you fix a listed test, delete its entry in the same commit.  Each entry names its owning project and the request that blocks it.  Counts above measured at commit `aa68b553` (2026-07-29).
+
+**Redirect output to `/Users/udi/Grassroots/tmp/`** rather than asking Udi to paste:
 
 ```bash
-bash test/run_all_tests.sh > /private/tmp/glp-tests.txt 2>&1
-cd glp_runtime && dart test > /private/tmp/glp-dart.txt 2>&1
+bash test/run_all_tests.sh > /Users/udi/Grassroots/tmp/glp-tests.txt 2>&1
+cd glp_runtime && dart test > /Users/udi/Grassroots/tmp/glp-dart.txt 2>&1
 ```
 
-Then `Read` the file.  Do not use `/tmp/` (not in allowed directories).
+Then `Read` the file.  Do not use `/tmp/` or `/private/tmp/` — neither is in the allowed directories, so a chat session cannot read what you wrote there.
 
 🔴 **Never run `run_all_tests.sh` and `dart test` concurrently** — `run_all_tests.sh` itself invokes `dart test` (Sections M/O), so a parallel `dart test` contends on the Dart build lock and silently aborts the run mid-suite.  Always run them sequentially.
 
@@ -74,12 +76,14 @@ Then `Read` the file.  Do not use `/tmp/` (not in allowed directories).
 
 ### Baseline-before-commit (mandatory)
 
-Before changing GLP runtime, types, root self.glp, or any cross-cutting code, baseline **both** suites — one does not cover the other (see the table above):
+Before changing GLP runtime, types, root self.glp, or any cross-cutting code:
 
-1. Run `bash test/run_all_tests.sh > /private/tmp/glp-baseline.txt 2>&1`, then `cd glp_runtime && dart test > /private/tmp/glp-dart-baseline.txt 2>&1`.  Sequentially, never concurrently.  Record the green count of each **and the set of tests already red at HEAD**.
+1. Run `bash test/run_all_tests.sh > /Users/udi/Grassroots/tmp/glp-baseline.txt 2>&1`.  It covers the Dart tree too (Section Q), so this one run is the baseline.  Record the green count **and the known-red lines Section Q prints**.
 2. Make the change.
-3. Re-run both suites.  If anything new fails, STOP and investigate before committing.
-4. The commit gate is the one in root `claude.md`: the green count plus the known red set unchanged — add no new failures; do not demand all-green.  A red test you did not cause is baselined, not fixed silently and not ignored — report it.
+3. Re-run it.  If anything new fails, STOP and investigate before committing.
+4. The commit gate is the one in root `claude.md`: the green count plus the known red set unchanged — add no new failures; do not demand all-green.  A red test you did not cause is baselined, not fixed silently and not ignored — report it, and add it to `KNOWN_RED` with its owner only if it is another project's to fix.
+
+🔴 **Never run `bash test/run_all_tests.sh` and `dart test` at the same time** — Section Q runs `dart test` itself, so a concurrent invocation contends on the Dart build lock and silently aborts one of them mid-run.  This is easy to do by accident when the suite is in the background; it corrupts the baseline rather than failing loudly.
 
 For changes confined to a single play/test/program, the baseline can be skipped at your judgment.
 
@@ -108,7 +112,7 @@ When quoting a spec: quote exactly.  Don't paraphrase.  If the spec covers the c
 
 🔴 **NEVER include in a paper GLP code that has not been typechecked and runtime tested.**  Every GLP program, clause, or fragment in any paper must first pass the type checker and run in the REPL.  An example that cannot be typechecked or run is fixed or removed — never shipped.
 
-🔴 **A paper includes GLP programs in its body; it has no worked-examples appendix.**  GLP programs belong in the body as exposition.  A debugged paper carries no appendix of worked examples (per-program type automata, moded clauses, type-assignment tables that duplicate tested code).  The complete tested programs live in `/Grassroots/GLP/programs/<Paper>/`, to which the paper points.  Math appendices (proofs, definitions, constructions) stay.  This applies to all papers.
+🔴 **A paper includes GLP programs in its body; it has no worked-examples appendix.**  GLP programs belong in the body as exposition.  A debugged paper carries no appendix of worked examples (per-program type automata, moded clauses, type-assignment tables that duplicate tested code).  The complete tested programs live in `/Grassroots/GLP/programs/`; a paper points to an existing directory that is a superset of what it presents, never a paper-specific carve-out (map, 2026-07-02).  Math appendices (proofs, definitions, constructions) stay.  This applies to all papers.
 
 ## Standing principle: do the right thing
 
@@ -225,9 +229,9 @@ Always offer to fetch / merge / push.
 | Test scripts | `/Users/udi/Grassroots/GLP/test/` |
 | Dart binary | `/opt/homebrew/bin/dart` |
 
-All `.glp` code lives in `/Users/udi/Grassroots/GLP/programs/`.  No `.glp` source files in paper repos (CSSN, GLP-arXiv, GLP-ICLP-2026, etc.) — paper repos may reference paths but must not contain copies.
+All `.glp` code lives in `/Users/udi/Grassroots/GLP/programs/`.  No `.glp` source files in paper repos (CSSN, GLP-Definitive-Spec, IGLP, etc.) — paper repos may reference paths but must not contain copies.
 
-All papers with example GLP programs must be tested.  Their directory in `programs/` is their paper directory.  E.g. `programs/TGLP/`.
+Every GLP program a paper presents must typecheck and run.  A paper points to an existing `programs/` directory that is a superset of what it presents; there are no paper-specific program directories (map, 2026-07-02).
 
 When invoking commands, prefer absolute paths.  Maintain the current working directory across commands; only `cd` when Udi explicitly requests it.
 
@@ -247,27 +251,26 @@ flutter pub get
 flutter build macos
 ```
 
-`flutter clean` is required — `flutter build macos` alone can use cached deps and miss your `glp_runtime` changes.  App log: `/private/tmp/glp_multiagent_trace.log` (clear before each test run).
+`flutter clean` is required — `flutter build macos` alone can use cached deps and miss your `glp_runtime` changes.  App log: `/Users/udi/Grassroots/tmp/glp_multiagent_trace.log` (clear before each test run).
 
 ## Reference specifications (read as needed, not at session start)
 
 - `docs/glp-bytecode-v216-complete.md` — instruction set
 - `docs/glp-runtime-spec.txt` — runtime architecture
-- `../GLP-ICLP-2026/docs/guards-reference.md` — guards catalog (success/suspend/fail semantics, negation, groundness implications)
-- `../GLP-ICLP-2026/docs/body-kernels-reference.md` — body kernels
+- `docs/guards-reference.md` — guards catalog (success/suspend/fail semantics, negation, groundness implications)
+- `docs/body-kernels-reference.md` — body kernels
 - `docs/glp-compiler-spec.md` — compiler
 - `docs/glp-arithmetic-spec.md` — arithmetic
 - `docs/glp-io-spec.md` — I/O
 - `docs/parser-spec.md` — parser
-- `../GLP-ICLP-2026/docs/naming-conventions.md` — naming
-- `../GLP-ICLP-2026/docs/mutual-ref-spec.md` — mutual references
-- `../GLP-ICLP-2026/docs/glp-predicate-taxonomy.md` — predicate taxonomy
+- `docs/naming-conventions.md` — naming
+- `docs/mutual-ref-spec.md` — mutual references
+- `docs/glp-predicate-taxonomy.md` — predicate taxonomy
 - `docs/known-issues.md` — outstanding known issues
 - `docs/Mandatory protocol for debugging the GLP implementation with GLP programs.txt` — debugging protocol
-- `docs/grassroots-testing-framework.md` — theatre-style play testing
 - `docs/village-market-scenario.md` — village market scenario
 - CSSN GLP implementation spec: `/Users/udi/Grassroots/CSSN/docs/cssn-glp-implementation-spec.md`
-- FCP reference (in `/tmp/FCP/` if cloned): `https://github.com/EShapiro2/FCP`
+- FCP reference: `https://github.com/EShapiro2/FCP`
 
 ## Critical implementation context
 
