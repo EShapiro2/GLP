@@ -136,6 +136,26 @@ class GlobalSendRegistry {
   /// Get the goal watching this reader address (if any)
   GlobalSendGoal? getGoalFor(int readerAddr) => _goals[readerAddr];
 
+  /// Whether a not-yet-fired goal exists for the link [globalName].
+  ///
+  /// With a pending value, this distinguishes a live link from a closed one:
+  /// a request matching neither is stale and is dropped rather than held.
+  bool hasGoalForLink(GlobalName globalName) =>
+      _goals.values.any((g) => g.globalName == globalName);
+
+  /// Remove the goal for the link [globalName], if any, and return it.
+  ///
+  /// Used when a link is refused: `'_authorise_link'` releases "the link's
+  /// entry, record, and global_send goal at p".
+  GlobalSendGoal? removeGoalForLink(GlobalName globalName) {
+    for (final entry in _goals.entries) {
+      if (entry.value.globalName == globalName) {
+        return _goals.remove(entry.key);
+      }
+    }
+    return null;
+  }
+
   /// Remove the goal watching this reader address, if any.
   ///
   /// Spec (Definition Globalize, case 4): re-exporting an imported writer

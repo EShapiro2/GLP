@@ -135,6 +135,7 @@ const Set<String> reservedConstantNames = {
   '_close_mutual_reference',
   // madGLP network kernels and reserved global-name functors
   '_send',
+  '_authorise_link',
   '_w',
   '_r',
   // attestation kernel (seam spec §4)

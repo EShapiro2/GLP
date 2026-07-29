@@ -105,6 +105,30 @@ class MadContext {
   /// Indices are never reused, so the record never misclassifies.
   final Set<(String, int)> _forwardedReaderNames = {};
 
+  /// Held incoming assignments (Definition Held Link, case 4): an assignment
+  /// arriving at the anchor from an agent it did not export the name to is
+  /// "retained keyed by its global name" and not applied, until
+  /// `authorise_link/2` authorises it (then applied) or refuses (discarded).
+  ///
+  /// Distinct from [_heldReaderAssignments], which retains an assignment that
+  /// arrived *early*, before its entry existed. That one is applied as soon as
+  /// localization creates the entry and needs no answer; this one waits on the
+  /// program. The paper points at the early hold only as the model for how a
+  /// retained assignment is keyed.
+  final Map<(String, int, bool), ({Term value, String fromAgent})>
+      _heldAssignments = {};
+
+  /// Held incoming requests (Definition Held Link, case 3): every request
+  /// reaching the anchor is held — the agent the anchor exported the name to
+  /// sends none, so a request always means the name was forwarded. The
+  /// requester is retained so authorisation can record it as the link's holder.
+  final Map<(String, int), String> _heldRequests = {};
+
+  /// Links reported and not yet answered, newest report per link. Keyed as
+  /// `(anchor, index, isWriter)`; the value is the agent the name or traffic
+  /// came from — the `S` of the `pending_link(G, S)` report.
+  final Map<(String, int, bool), String> _reportedLinks = {};
+
   /// Send MAD trace output to traceSink if set, otherwise silent.
   void _trace(String msg) {
     if (traceSink != null) {
@@ -133,6 +157,7 @@ class MadContext {
   void onWriterBound(int writerId, Term value) {
     _trace('[MAD $agentId] onWriterBound: writerId=$writerId, value=$value');
     _fireGlobalSendGoalIfExists(writerId, value);
+    _flushReports();
   }
 
   // =========================================================================
@@ -192,10 +217,18 @@ class MadContext {
 
     _trace('[MAD $agentId] global_send FIRED: ${result.globalName} -> ${result.destination}');
 
-    // The value of this link is on its way: its imported-writer record, if any,
-    // has served its purpose (Definition Imported-Writer Records: "removed when
-    // the value is sent"). The goal itself was removed by the registry.
-    if (up.remove(writerAddr) != null) {
+    // Definition Held Link, case 2: at the holder of a forwarded writer, the
+    // value its global_send goal produces. The record carries the agent the
+    // name came from, because the hold happens here, at binding, when the
+    // message that brought the name is long gone.
+    //
+    // The record is removed only when the value is actually sent — which, when
+    // held, is after authorisation — or when refusal releases it. Refusal needs
+    // the record, so it must outlive the hold.
+    final record = up.lookup(writerAddr);
+    final holdValue = record != null && record.isForwarded;
+    if (!holdValue && record != null) {
+      up.remove(writerAddr);
       _trace('[MAD $agentId] imported-writer record for $writerAddr released '
           '— value sent');
     }
@@ -228,7 +261,16 @@ class MadContext {
       destination: result.destination,
       type: MessageType.assignment,
       payload: payload,
+      link: (
+        result.globalName.agent,
+        result.globalName.index,
+        result.globalName.isWriter
+      ),
+      held: holdValue,
     ));
+    if (holdValue) {
+      _reportPendingLink(result.globalName, record!.sender);
+    }
 
     // A reader-name value pends until acknowledged (§app:requests-acks): a
     // request re-addresses it, the acknowledgement releases it. Writer-name
@@ -334,14 +376,22 @@ class MadContext {
   /// Queue the requests a localization produced (Definition Localize, request
   /// rule): req(_r(p,i)) to the anchor p for each reader name received from a
   /// sender other than its anchor.
-  void _queueLocalizeRequests(LocalizeResult result) {
+  /// Every such request is held (Definition Held Link, case 1): "one is created
+  /// exactly when the name was forwarded", so its existence is already the
+  /// proof that the other end is at an agent we did not exchange the name with.
+  /// The request goes into M_p marked held and reported; Send skips it until
+  /// `authorise_link/2` answers.
+  void _queueLocalizeRequests(LocalizeResult result, String fromAgent) {
     for (final gn in result.requests) {
       mp.add(OutboundMessage(
         destination: gn.agent,
         type: MessageType.request,
         payload: PayloadCodec.createRequestPayload(gn),
+        link: (gn.agent, gn.index, false),
+        held: true,
       ));
-      _trace('[MAD $agentId] queued req($gn) to ${gn.agent}');
+      _trace('[MAD $agentId] queued req($gn) to ${gn.agent} — HELD');
+      _reportPendingLink(gn, fromAgent);
     }
   }
 
@@ -429,35 +479,110 @@ class MadContext {
       _deliverHeldReaderAssignments(globalNames);
 
       // Request rule: forwarded names teach their anchors the new holder.
-      _queueLocalizeRequests(localizeResult);
+      _queueLocalizeRequests(localizeResult, fromAgent);
 
       // Replace global names with local variables in content
       content = localizeTermWithResult(content, globalNames, localizeResult);
       _trace('[MAD $agentId] _handleSerializerAssignment: localized content = $content');
     }
 
+    _appendToNetworkInput(content);
+  }
+
+  /// Append [content] to this agent's network input stream through the index-0
+  /// serializer entry (Definition Index-0 Serializer): bind the current
+  /// serializer writer to `[content | N'?]`, repoint the permanent entry at the
+  /// fresh writer, and reactivate whatever was suspended on the stream.
+  ///
+  /// Both a localized cold-call and a `pending_link` report arrive this way —
+  /// the report is "appended to p's network input stream through the index-0
+  /// serializer entry" (Definition Held Link).
+  void _appendToNetworkInput(Term content) {
+    final currentWriter = wp.serializerWriterAddr;
+    if (currentWriter == null) {
+      throw StateError(
+        'Serializer entry not initialized at index 0 for agent $agentId: '
+        'the network input stream is where cold-calls and pending_link reports '
+        'are delivered, and boot must create the entry before either can occur',
+      );
+    }
+
     // Allocate fresh writer for stream continuation
     final (freshWriter, freshReader) = runtime.heap.allocateVariable();
-    _trace('[MAD $agentId] _handleSerializerAssignment: fresh stream continuation ($freshWriter,$freshReader)');
+    _trace('[MAD $agentId] _appendToNetworkInput: fresh stream continuation ($freshWriter,$freshReader)');
 
-    // Build the list cell [content | freshReader]
-    // This extends the network input stream by one element
+    // Build the list cell [content | freshReader] and extend the stream
     final listCell = StructTerm('.', [content, VarRef(freshReader)]);
-
-    // Bind current writer to extend the stream: N_p := [content | N'_p?]
     final activations = runtime.heap.bindVariable(currentWriter, listCell);
-    _trace('[MAD $agentId] _handleSerializerAssignment: bound stream, ${activations.length} activations');
+    _trace('[MAD $agentId] _appendToNetworkInput: bound stream, ${activations.length} activations');
 
-    // Update the serializer entry to point to the fresh writer
-    // This entry is permanent - never removed
+    // Update the serializer entry to point to the fresh writer (permanent entry)
     wp.updateSerializerWriter(freshWriter);
-    _trace('[MAD $agentId] _handleSerializerAssignment: updated serializer entry to writer=$freshWriter');
+    _trace('[MAD $agentId] _appendToNetworkInput: updated serializer entry to writer=$freshWriter');
 
     // Reactivate suspended goals waiting on the network input stream
     for (final act in activations) {
       runtime.enqueueReactivatedGoal(act);
     }
   }
+
+  /// The ground presentation of a global name (§Global Variable Names): the
+  /// 2-ary structures `'_r'(P, I)` and `'_w'(P, I)`, functor giving polarity,
+  /// first argument the anchor. This is the form a program sees — not the wire
+  /// form, which stands in the place of a variable.
+  static Term groundGlobalName(GlobalName gn) => StructTerm(
+      gn.isWriter ? '_w' : '_r',
+      [ConstTerm(gn.agent), ConstTerm(gn.index)]);
+
+  /// Reports produced by the transaction in progress, appended to the network
+  /// input stream when it completes (see [_reportPendingLink]).
+  final List<Term> _deferredReports = [];
+
+  /// Report a held link (Definition Held Link): append `pending_link(G, S)` to
+  /// this agent's network input stream, within the transaction that would
+  /// otherwise have acted. [sender] is the agent the name or the traffic came
+  /// from — not the anchor, where they differ.
+  ///
+  /// The report is queued and appended when the transaction completes, so that
+  /// a cold-call carrying a held link reaches the program before the report
+  /// about it: the program reads the message, then is asked about the link it
+  /// contains. The paper fixes only that both happen in the same transaction
+  /// (Definition Held Link), leaving the order within it open.
+  void _reportPendingLink(GlobalName gn, String sender) {
+    _reportedLinks[(gn.agent, gn.index, gn.isWriter)] = sender;
+    _deferredReports.add(StructTerm(
+        'pending_link', [groundGlobalName(gn), ConstTerm(sender)]));
+    _trace('[MAD $agentId] HELD $gn from $sender — reporting pending_link');
+  }
+
+  /// Append the transaction's reports to the network input stream, in the order
+  /// they were produced. Idempotent when there are none.
+  void _flushReports() {
+    if (_deferredReports.isEmpty) return;
+    final reports = List<Term>.from(_deferredReports);
+    _deferredReports.clear();
+    for (final r in reports) {
+      _appendToNetworkInput(r);
+    }
+  }
+
+  /// Whether the link `(anchor, index, isWriter)` has been reported and not yet
+  /// answered.
+  bool hasReportedLink(String anchor, int index, bool isWriter) =>
+      _reportedLinks.containsKey((anchor, index, isWriter));
+
+  /// Number of links reported and awaiting an answer.
+  int get reportedLinkCount => _reportedLinks.length;
+
+  /// Every link reported and not yet answered, with the sender each was
+  /// reported against — the `(G, S)` of its `pending_link` report.
+  Iterable<(GlobalName, String)> get reportedLinks => _reportedLinks.entries
+      .map((e) => (
+            e.key.$3
+                ? GlobalName.writer(e.key.$1, e.key.$2)
+                : GlobalName.reader(e.key.$1, e.key.$2),
+            e.value
+          ));
 
   /// Handle _w(p, i) := T assignment with i > 0 (we globalized writer Y)
   ///
@@ -474,7 +599,12 @@ class MadContext {
   /// the only possible sender. A forwarded writer needs no request and gets no
   /// acknowledgement: `_w(p, i)` names its destination, so one message
   /// suffices however far the writer travelled.
-  void _handleWriterAssignment(GlobalName globalName, Term value, String fromAgent) {
+  ///
+  /// [authorised] is set when `authorise_link/2` releases an assignment this
+  /// agent held under case 4; the hold test is then skipped, the answer already
+  /// given.
+  void _handleWriterAssignment(GlobalName globalName, Term value, String fromAgent,
+      {bool authorised = false}) {
     final entry = wp.lookupByIndex(globalName.index);
 
     if (entry == null) {
@@ -483,6 +613,17 @@ class MadContext {
       // a miss is provably stale — indices are never reused.
       _trace('[MAD $agentId] _handleWriterAssignment: no entry for $globalName'
           ' — stale, dropped');
+      return;
+    }
+
+    // Definition Held Link, case 4: at the anchor, an assignment arriving from
+    // an agent it did not export the name to. The test is structural — the
+    // entry's `q` against the sender — and consults nothing outside the agent.
+    // This is why `q` is kept in the entry `(X, q)`.
+    if (entry.remoteAgent != fromAgent && !authorised) {
+      _heldAssignments[(globalName.agent, globalName.index, true)] =
+          (value: value, fromAgent: fromAgent);
+      _reportPendingLink(globalName, fromAgent);
       return;
     }
 
@@ -505,7 +646,7 @@ class MadContext {
       );
       registerGlobalSendSpawns(localizeResult.spawns);
       _deliverHeldReaderAssignments(globalNames);
-      _queueLocalizeRequests(localizeResult);
+      _queueLocalizeRequests(localizeResult, fromAgent);
       localizedValue = localizeTermWithResult(value, globalNames, localizeResult);
       _trace('[MAD $agentId] _handleWriterAssignment: localized value = $localizedValue');
     }
@@ -570,7 +711,7 @@ class MadContext {
       );
       registerGlobalSendSpawns(localizeResult.spawns);
       _deliverHeldReaderAssignments(globalNames);
-      _queueLocalizeRequests(localizeResult);
+      _queueLocalizeRequests(localizeResult, fromAgent);
       localizedValue = localizeTermWithResult(value, globalNames, localizeResult);
       _trace('[MAD $agentId] _handleReaderAssignment: localized value = $localizedValue');
     }
@@ -648,7 +789,7 @@ class MadContext {
     _deliverHeldReaderAssignments(nestedGlobalNames);
 
     // Request rule: forwarded names teach their anchors the new holder.
-    _queueLocalizeRequests(localizeResult);
+    _queueLocalizeRequests(localizeResult, fromAgent);
 
     // Now handle the main assignment
     handleMadAssignment(
@@ -695,6 +836,9 @@ class MadContext {
         throw FormatException(
             'unknown madGLP message kind: ${payload[0]}');
     }
+    // The Receive transaction is complete: its held-link reports go on the
+    // network input stream now, after whatever the transaction delivered.
+    _flushReports();
   }
 
   /// Handle req(_r(p, i)) — we are the anchor p (madGLP Receive, Request
@@ -705,6 +849,29 @@ class MadContext {
     _trace('[MAD $agentId] handleRequest: req($globalName) from $fromAgent');
     final key = (globalName.agent, globalName.index);
 
+    // Definition Held Link, case 3: at the anchor, a request. Every request is
+    // held — the agent the anchor exported the name to sends none, so a request
+    // is proof the name was forwarded. Nothing is redirected and no holder is
+    // recorded until `authorise_link/2` answers.
+    //
+    // A request matching no live link is stale and dropped as before, without
+    // troubling the program: "A request for a closed link is dropped."
+    final isLive = _pendingReaderValues.containsKey(key) ||
+        globalSendRegistry.hasGoalForLink(globalName);
+    if (!isLive) {
+      _trace('[MAD $agentId] handleRequest: $globalName matches nothing — '
+          'stale request dropped');
+      return;
+    }
+    _heldRequests[key] = fromAgent;
+    _reportPendingLink(globalName, fromAgent);
+  }
+
+  /// Perform the request the anchor held, once authorised (madGLP Receive,
+  /// Request case): record the requester as the link's holder, and re-address a
+  /// pending value to it, unsent.
+  void _applyRequest(GlobalName globalName, String fromAgent) {
+    final key = (globalName.agent, globalName.index);
     final pending = _pendingReaderValues[key];
     if (pending != null) {
       // Redirect the pending value to the requester. The copy sent to a past
@@ -786,8 +953,96 @@ class MadContext {
     }
   }
 
+  // =========================================================================
+  // Held Links — authorise_link/2
+  // =========================================================================
+
+  /// Answer a reported link (Definition authorise\_link Predicate).
+  ///
+  /// On [authorise], release what was held: a held outgoing message becomes
+  /// unsent, a retained assignment is applied, a retained request is performed.
+  /// On refuse, drop the link: the held message is removed from M_p, a retained
+  /// assignment is discarded, and the link's entry, record, and `global_send`
+  /// goal at this agent are released.
+  ///
+  /// A refusal is accepted in every case — the program refuses for reasons the
+  /// runtime does not see. Returns false only when the link was never reported,
+  /// so the caller can tell an answer from a mis-addressed one.
+  bool answerLink(GlobalName gn, bool authorise) {
+    final linkKey = (gn.agent, gn.index, gn.isWriter);
+    if (_reportedLinks.remove(linkKey) == null) {
+      _trace('[MAD $agentId] answerLink: $gn was not reported — ignored');
+      return false;
+    }
+    _trace('[MAD $agentId] answerLink: $gn '
+        '${authorise ? "AUTHORISED" : "REFUSED"}');
+
+    final requestKey = (gn.agent, gn.index);
+    final heldMessage = mp.findHeld(gn.agent, gn.index, gn.isWriter);
+    final heldAssignment = _heldAssignments.remove(linkKey);
+    final heldRequester = _heldRequests.remove(requestKey);
+
+    if (authorise) {
+      // A held outgoing message becomes unsent — the same message, released.
+      if (heldMessage != null) {
+        heldMessage.held = false;
+        // Case 2: the value now goes, so its record has served its purpose.
+        final rec = up.findByLink(gn.agent, gn.index);
+        if (rec != null) up.remove(rec.writerAddr);
+        _trace('[MAD $agentId] answerLink: held message for $gn released');
+      }
+      // A retained assignment is applied, by the ordinary receive path.
+      if (heldAssignment != null) {
+        _handleWriterAssignment(
+            gn, heldAssignment.value, heldAssignment.fromAgent,
+            authorised: true);
+      }
+      // A retained request is performed.
+      if (heldRequester != null) {
+        _applyRequest(gn, heldRequester);
+      }
+      return true;
+    }
+
+    // Refuse: drop the link.
+    if (heldMessage != null) {
+      mp.remove(heldMessage);
+      _trace('[MAD $agentId] answerLink: held message for $gn removed');
+    }
+    _dropLink(gn);
+    return true;
+  }
+
+  /// Release a refused link's entry, record, and `global_send` goal at this
+  /// agent, and any pending value addressed by it.
+  void _dropLink(GlobalName gn) {
+    if (gn.isWriter) {
+      wp.removeGlobalizeEntry(gn.index);
+    } else {
+      wp.removeLocalizeEntry(gn.agent, gn.index);
+      _pendingReaderValues.remove((gn.agent, gn.index));
+    }
+    final rec = up.findByLink(gn.agent, gn.index);
+    if (rec != null) {
+      up.remove(rec.writerAddr);
+      globalSendRegistry.removeGoalFor(rec.writerAddr);
+      runtime.heap.removeBindCallback(rec.writerAddr);
+    }
+    final goal = globalSendRegistry.removeGoalForLink(gn);
+    if (goal != null) {
+      runtime.heap.removeBindCallback(goal.readerAddr);
+    }
+    _trace('[MAD $agentId] _dropLink: $gn released — entry, record, goal');
+  }
+
   /// Number of pending (sent, unacknowledged) reader-name values.
   int get pendingReaderValueCount => _pendingReaderValues.length;
+
+  /// Number of assignments retained because their link is held.
+  int get heldAssignmentCount => _heldAssignments.length;
+
+  /// Number of requests retained because their link is held.
+  int get heldRequestCount => _heldRequests.length;
 
   /// Whether the value for reader name (anchorAgent, index) is still pending.
   bool hasPendingReaderValue(String anchorAgent, int index) =>
@@ -932,5 +1187,6 @@ class MadContext {
     }
 
     _trace('[MAD $agentId] send: queued message to $destAgent, mp.totalLength=${mp.totalLength}');
+    _flushReports();
   }
 }

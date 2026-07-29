@@ -31,22 +31,38 @@ enum MessageType {
 class OutboundMessage {
   /// Destination agent ID
   final String destination;
-  
+
   /// Type of message
   final MessageType type;
-  
+
   /// Serialized payload (opaque bytes)
   final List<int> payload;
-  
+
+  /// The link this message belongs to, as `(anchor, index, isWriter)`, when the
+  /// message can be held. Null for messages that never hold (serializer sends).
+  final (String, int, bool)? link;
+
+  /// Whether this message is held (Definition Held Link): it stays in M_p and
+  /// is not eligible for Send until `authorise_link/2` authorises it, or is
+  /// removed outright if the link is refused.
+  ///
+  /// Mutable: authorisation clears the mark, and the message then goes out on
+  /// the next Send — it is the same message, released, not a new one.
+  bool held;
+
   OutboundMessage({
     required this.destination,
     required this.type,
     required this.payload,
+    this.link,
+    this.held = false,
   });
-  
+
   @override
   String toString() {
-    return 'OutboundMessage(to=$destination, type=$type, ${payload.length} bytes)';
+    final h = held ? ', HELD' : '';
+    return 'OutboundMessage(to=$destination, type=$type, '
+        '${payload.length} bytes$h)';
   }
 }
 
@@ -73,25 +89,77 @@ class MessageQueue {
     queue.add(message);
   }
   
-  /// Poll (remove and return) the next message for a destination
-  /// 
-  /// Returns null if no messages are queued for this destination.
-  /// Maintains FIFO ordering - oldest message is returned first.
+  /// Poll (remove and return) the next *sendable* message for a destination
+  ///
+  /// Returns null if no sendable message is queued for this destination.
+  /// Maintains FIFO ordering among sendable messages - oldest first.
+  ///
+  /// Held messages are skipped and left in place: Send is "enabled when
+  /// (m, q) ∈ M_p is unsent **and not held**" (Definition madGLP Send), and a
+  /// held message "remains in M_p, marked held" (Definition Held Link).
   OutboundMessage? poll(String destination) {
     final queue = _queuesByDestination[destination];
     if (queue == null || queue.isEmpty) {
       return null;
     }
-    
-    final message = queue.removeFirst();
-    
+
+    OutboundMessage? message;
+    if (!queue.first.held) {
+      message = queue.removeFirst();
+    } else {
+      // Some held message is at the head; take the first sendable one behind
+      // it, preserving order among sendable messages.
+      final rest = queue.toList();
+      final idx = rest.indexWhere((m) => !m.held);
+      if (idx < 0) return null;
+      message = rest.removeAt(idx);
+      queue
+        ..clear()
+        ..addAll(rest);
+    }
+
     // Clean up empty queue
     if (queue.isEmpty) {
       _queuesByDestination.remove(destination);
     }
-    
+
     return message;
   }
+
+  /// Every message currently in M_p, held or not, across all destinations.
+  Iterable<OutboundMessage> get all =>
+      _queuesByDestination.values.expand((q) => q);
+
+  /// The held message for link `(anchor, index, isWriter)`, or null.
+  OutboundMessage? findHeld(String anchor, int index, bool isWriter) {
+    for (final m in all) {
+      if (m.held && m.link == (anchor, index, isWriter)) return m;
+    }
+    return null;
+  }
+
+  /// Remove [message] from M_p wherever it sits. Used when a link is refused.
+  bool remove(OutboundMessage message) {
+    for (final entry in _queuesByDestination.entries) {
+      final rest = entry.value.toList();
+      if (rest.remove(message)) {
+        entry.value
+          ..clear()
+          ..addAll(rest);
+        if (entry.value.isEmpty) {
+          _queuesByDestination.remove(entry.key);
+        }
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /// Number of held messages across all destinations.
+  int get heldCount => all.where((m) => m.held).length;
+
+  /// Number of messages eligible for Send across all destinations.
+  int get sendableLength => all.where((m) => !m.held).length;
   
   /// Peek at the next message for a destination without removing it
   /// 

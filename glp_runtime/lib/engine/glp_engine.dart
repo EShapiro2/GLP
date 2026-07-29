@@ -70,7 +70,8 @@ class ModuleInfo {
 
 /// madGLP system predicates (embedded).
 ///
-/// Provides send_to_net/1, send_to_remote/2, global_send/3, send_to_user/1.
+/// Provides send_to_net/1, send_to_remote/2, global_send/3, authorise_link/2,
+/// send_to_user/1.
 /// Loaded by enableMadGLP().
 const String _madPredicatesSource = r'''
 -mode(system).  %% Uses reserved constants like '_w' and '_send'
@@ -92,6 +93,13 @@ send_to_remote(_, []).
 %% global_send/3 - Send via global link
 procedure global_send(_?, _?, _?).
 global_send(T, G, Q) :- known(T?) | '_send'(T?, G?, Q?).
+
+%% authorise_link/2 - answer a pending_link(Link, Sender) report (Definition
+%% authorise_link Predicate).  L is the reported link's global name in its
+%% ground presentation, A is authorise or refuse.  On authorise the runtime
+%% releases what it held; on refuse it drops the link.
+procedure authorise_link(_?, _?).
+authorise_link(L, A) :- known(A?) | '_authorise_link'(L?, A?).
 
 %% send_to_user/1 is defined in the root self.glp (always loaded), so it is not
 %% repeated here.

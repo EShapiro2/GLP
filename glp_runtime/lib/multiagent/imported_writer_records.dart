@@ -13,8 +13,8 @@
 /// both the record and the goal, so the exporting agent leaves the link.
 library;
 
-/// A record `(Y, o, k)` marking the local writer [writerAddr] as the sending
-/// end of the link anchored by `_w(anchor, index)`.
+/// A record `(Y, o, k, s)` marking the local writer [writerAddr] as the sending
+/// end of the link anchored by `_w(anchor, index)`, received from agent [sender].
 ///
 /// The `global_send` goal watching `Y?` is registered in the agent's
 /// [GlobalSendRegistry] under the same writer address, so the record reaches
@@ -30,15 +30,28 @@ class ImportedWriterRecord {
   /// The index `k` of the link at its anchor.
   final int index;
 
+  /// The agent `s` this name came from. Equal to [anchor] when the name was
+  /// received from the agent that globalized it; otherwise the name was
+  /// forwarded and the value this writer produces is held (Definition Held
+  /// Link, case 2), reported with `s` as the sender — the hold happens at
+  /// binding, when the message being processed is long gone, so the sender
+  /// must be carried here.
+  final String sender;
+
   ImportedWriterRecord({
     required this.writerAddr,
     required this.anchor,
     required this.index,
+    required this.sender,
   });
 
+  /// Whether this writer's link was forwarded to us rather than exported to us
+  /// by its anchor — the condition of Definition Held Link, case 2.
+  bool get isForwarded => sender != anchor;
+
   @override
-  String toString() =>
-      'ImportedWriterRecord(writer=$writerAddr, _w($anchor, $index))';
+  String toString() => 'ImportedWriterRecord(writer=$writerAddr, '
+      '_w($anchor, $index), from=$sender)';
 }
 
 /// The imported-writer records `U_p` of agent `p` (Definition Imported-Writer
@@ -53,12 +66,12 @@ class ImportedWriterRecords {
 
   ImportedWriterRecords(this.agentId);
 
-  /// Add the record `(writerAddr, anchor, index)`.
+  /// Add the record `(writerAddr, anchor, index, sender)`.
   ///
   /// Called by Localize case 1 alongside the spawned `global_send` goal.
   /// Localize allocates a fresh pair for every global name, so the writer is
   /// new; a repeat would mean two links sharing one sending end.
-  void add(int writerAddr, String anchor, int index) {
+  void add(int writerAddr, String anchor, int index, String sender) {
     final existing = _byWriter[writerAddr];
     if (existing != null) {
       throw ArgumentError(
@@ -66,8 +79,23 @@ class ImportedWriterRecords {
         'existing $existing, new _w($anchor, $index)',
       );
     }
-    _byWriter[writerAddr] =
-        ImportedWriterRecord(writerAddr: writerAddr, anchor: anchor, index: index);
+    _byWriter[writerAddr] = ImportedWriterRecord(
+      writerAddr: writerAddr,
+      anchor: anchor,
+      index: index,
+      sender: sender,
+    );
+  }
+
+  /// The record of the link anchored by `_w(anchor, index)`, or null.
+  ///
+  /// Used by `'_authorise_link'` to reach a record from the reported name;
+  /// there is at most one, a link having one sending end at a time.
+  ImportedWriterRecord? findByLink(String anchor, int index) {
+    for (final rec in _byWriter.values) {
+      if (rec.anchor == anchor && rec.index == index) return rec;
+    }
+    return null;
   }
 
   /// The record of [writerAddr], or null when the writer is not imported.

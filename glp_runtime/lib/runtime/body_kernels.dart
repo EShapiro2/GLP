@@ -17,6 +17,7 @@ import 'runtime.dart';
 import 'terms.dart';
 import 'machine_state.dart' show GoalRef;
 import 'package:glp_runtime/multiagent/mad_context.dart';
+import 'package:glp_runtime/multiagent/mad_helpers.dart' show GlobalName;
 
 /// Result of executing a body kernel
 enum BodyKernelResult {
@@ -98,6 +99,7 @@ void registerStandardBodyKernels(BodyKernelRegistry registry) {
 
   // madGLP kernels
   registry.register('_send', 3, sendKernel);
+  registry.register('_authorise_link', 2, authoriseLinkKernel);
   registry.register('_sign', 2, signKernel);
 
   // Module-as-value: producer half. (`_run`/2 — the consumer — is registered by
@@ -803,6 +805,86 @@ BodyKernelResult sendKernel(GlpRuntime rt, List<Object?> args) {
   ctx.send(termArg, isWriter, gnAgent, gnIndex, destAgent);
 
   return BodyKernelResult.success;
+}
+
+/// '_authorise\_link'(L?, A?) — answer a reported held link (Definition
+/// authorise\_link Predicate).
+///
+/// L is the link's global name in its ground presentation — `'_r'(P, I)` or
+/// `'_w'(P, I)`, the same form the `pending_link(G, S)` report carried. A is
+/// the atom `authorise` or `refuse`. The GLP wrapper gates on `known(A?)`, so
+/// A is bound here.
+///
+/// On authorise the runtime releases what it held — a held outgoing message
+/// becomes unsent, a retained assignment is applied, a retained request is
+/// performed. On refuse it drops the link. A refusal is accepted in every case.
+BodyKernelResult authoriseLinkKernel(GlpRuntime rt, List<Object?> args) {
+  if (args.length != 2) {
+    print('[ABORT] \'_authorise_link\'/2: expected 2 arguments, got ${args.length}');
+    return BodyKernelResult.abort;
+  }
+  final ctx = rt.madContext;
+  if (ctx is! MadContext) {
+    print('[ABORT] \'_authorise_link\'/2: not in madGLP mode (no MadContext)');
+    return BodyKernelResult.abort;
+  }
+
+  final gn = _parseGroundGlobalName(rt, args[0]);
+  if (gn == null) {
+    print('[ABORT] \'_authorise_link\'/2: first argument (L) must be '
+        "'_r'(P, I) or '_w'(P, I), got ${_deref(rt, args[0])}");
+    return BodyKernelResult.abort;
+  }
+
+  final answerArg = _deref(rt, args[1]);
+  String? answer;
+  if (answerArg is ConstTerm && answerArg.value is String) {
+    answer = answerArg.value as String;
+  } else if (answerArg is String) {
+    answer = answerArg;
+  }
+  if (answer != 'authorise' && answer != 'refuse') {
+    print('[ABORT] \'_authorise_link\'/2: second argument (A) must be '
+        'authorise or refuse, got $answerArg');
+    return BodyKernelResult.abort;
+  }
+
+  ctx.answerLink(gn, answer == 'authorise');
+  return BodyKernelResult.success;
+}
+
+/// Parse a global name in its ground presentation: the 2-ary structures
+/// `'_r'(P, I)` and `'_w'(P, I)`, functor giving polarity, first argument the
+/// anchor. Returns null when [arg] is not one.
+GlobalName? _parseGroundGlobalName(GlpRuntime rt, Object? arg) {
+  final s = _deref(rt, arg);
+  if (s is! StructTerm || s.args.length != 2) return null;
+  final functor = s.functor;
+  final isWriter = functor == '_w' || functor == '\'_w\'';
+  final isReader = functor == '_r' || functor == '\'_r\'';
+  if (!isWriter && !isReader) return null;
+
+  final agentArg = _deref(rt, s.args[0]);
+  String? agent;
+  if (agentArg is ConstTerm && agentArg.value is String) {
+    agent = agentArg.value as String;
+  } else if (agentArg is String) {
+    agent = agentArg;
+  }
+  if (agent == null) return null;
+
+  final indexArg = _deref(rt, s.args[1]);
+  int? index;
+  if (indexArg is num) {
+    index = indexArg.toInt();
+  } else if (indexArg is ConstTerm && indexArg.value is num) {
+    index = (indexArg.value as num).toInt();
+  }
+  if (index == null) return null;
+
+  return isWriter
+      ? GlobalName.writer(agent, index)
+      : GlobalName.reader(agent, index);
 }
 
 // =============================================================================

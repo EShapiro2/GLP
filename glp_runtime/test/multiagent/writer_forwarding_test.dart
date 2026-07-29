@@ -57,7 +57,9 @@ class _Net {
     }
   }
 
-  /// Flush and deliver until the network is quiescent.
+  /// Flush and deliver until the network is quiescent. Held messages are not
+  /// eligible for Send, so they stay in M_p and settling terminates with them
+  /// still there.
   void settle() {
     while (true) {
       flushAll();
@@ -69,6 +71,44 @@ class _Net {
       }
     }
   }
+
+  /// Answer every link reported and not yet answered, at every agent, as the
+  /// program would through `authorise_link/2`. Returns the number answered.
+  int answerAll(bool authorise) {
+    var n = 0;
+    for (final ctx in agents.values) {
+      for (final (gn, _) in ctx.reportedLinks.toList()) {
+        ctx.answerLink(gn, authorise);
+        n++;
+      }
+    }
+    return n;
+  }
+
+  /// Total links reported and awaiting an answer, across all agents.
+  int get reportedCount =>
+      agents.values.fold(0, (s, c) => s + c.reportedLinkCount);
+
+  /// Total messages held in M_p, across all agents.
+  int get heldCount => agents.values.fold(0, (s, c) => s + c.mp.heldCount);
+}
+
+/// The `pending_link(G, S)` reports on [agentId]'s network input stream, in
+/// order, as the program sees them.
+List<(Term, String)> _reportsOn(_Net net, String agentId, int netIn) {
+  final rt = net.runtimes[agentId]!;
+  final out = <(Term, String)>[];
+  Object? cell = rt.heap.derefAddr(netIn);
+  while (cell is StructTerm && cell.functor == '.') {
+    final head = cell.args[0];
+    if (head is StructTerm &&
+        head.functor == 'pending_link' &&
+        head.args.length == 2) {
+      out.add((head.args[0], (head.args[1] as ConstTerm).value as String));
+    }
+    cell = rt.heap.derefAddr((cell.args[1] as VarRef).addr);
+  }
+  return out;
 }
 
 /// The n-th element of the list rooted at heap address [addr].
@@ -144,9 +184,29 @@ void main() {
       expect(ctxR.mp.totalLength, 0,
           reason: 'a forwarded writer needs no request');
 
-      // r assigns the writer. The value goes straight to the anchor.
+      // r assigns the writer. r's end was forwarded, so the value it produces
+      // is held (Held Link, case 2) and nothing crosses the wire yet.
       final mark = net.deliveryLog.length;
       rRt.heap.bindVariable(zr, ConstTerm(42));
+      net.settle();
+
+      expect(net.deliveryLog.length, mark,
+          reason: 'a held value must not go out before authorisation');
+      expect(ctxR.mp.heldCount, 1);
+      expect(ctxR.hasReportedLink('p', 1, true), isTrue);
+      expect((pRt.heap.derefAddr(xR) as Object?) is ConstTerm, isFalse,
+          reason: 'and must not be applied at the anchor either');
+
+      // r's program authorises: the value is released and goes to the anchor,
+      // where it is held again (case 4) — a forwarded link is held at both
+      // ends — until p's program authorises in turn.
+      net.answerAll(true);
+      net.settle();
+      expect(ctxP.hasReportedLink('p', 1, true), isTrue,
+          reason: 'the anchor holds an assignment from an agent it did not '
+              'export the name to');
+      expect((pRt.heap.derefAddr(xR) as Object?) is ConstTerm, isFalse);
+      net.answerAll(true);
       net.settle();
 
       final tail = net.deliveryLog.sublist(mark);
@@ -205,6 +265,19 @@ void main() {
 
       final mark = net.deliveryLog.length;
       sRt.heap.bindVariable(ws, ConstTerm('through'));
+      net.settle();
+
+      // Held at s (case 2) — nothing out — then held again at the anchor
+      // (case 4) once released. Two forwardings, still two holds, not three:
+      // the link has two ends however far it travelled.
+      expect(net.deliveryLog.length, mark,
+          reason: 'a held value must not go out before authorisation');
+      expect(ctxS.mp.heldCount, 1);
+      expect(ctxS.hasReportedLink('p', 1, true), isTrue);
+      net.answerAll(true);
+      net.settle();
+      expect(ctxP.hasReportedLink('p', 1, true), isTrue);
+      net.answerAll(true);
       net.settle();
 
       final tail = net.deliveryLog.sublist(mark);

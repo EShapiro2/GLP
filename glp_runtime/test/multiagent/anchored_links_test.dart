@@ -75,7 +75,8 @@ class _Net {
     return n;
   }
 
-  /// Flush and deliver until the network is quiescent.
+  /// Flush and deliver until the network is quiescent. Held messages are not
+  /// eligible for Send, so settling terminates with them still in M_p.
   void settle() {
     while (true) {
       flushAll();
@@ -85,6 +86,39 @@ class _Net {
       }
     }
   }
+
+  /// Answer every link reported and not yet answered, at every agent, as the
+  /// program would through `authorise_link/2`.
+  int answerAll(bool authorise) {
+    var n = 0;
+    for (final ctx in agents.values) {
+      for (final (gn, _) in ctx.reportedLinks.toList()) {
+        ctx.answerLink(gn, authorise);
+        n++;
+      }
+    }
+    return n;
+  }
+
+  /// Settle, authorising every link reported along the way, until the network
+  /// is quiescent with nothing left held. Forwarding holds at both ends, so
+  /// this alternates: releasing a holder's request produces a hold at the
+  /// anchor, whose release produces the traffic that follows.
+  void settleAuthorising() {
+    for (var i = 0; i < 20; i++) {
+      settle();
+      if (reportedCount == 0) return;
+      answerAll(true);
+    }
+    throw StateError('links kept being reported after 20 rounds');
+  }
+
+  /// Total links reported and awaiting an answer, across all agents.
+  int get reportedCount =>
+      agents.values.fold(0, (s, c) => s + c.reportedLinkCount);
+
+  /// Total messages held in M_p, across all agents.
+  int get heldCount => agents.values.fold(0, (s, c) => s + c.mp.heldCount);
 }
 
 /// The n-th element of the list rooted at heap address [addr] (a writer or
@@ -140,6 +174,24 @@ void main() {
           xcWriter, StructTerm('.', [ConstTerm('hello'), VarRef(restReader)]));
       net.settle();
 
+      // Alice forwarded nothing yet, but the value she received carried the
+      // tail's reader name from an agent that is not its anchor, so her request
+      // is held (Held Link, case 1) and does not reach Charlie.
+      final beforeAuth = net.deliveryLog.length;
+      expect(ctxAlice.mp.heldCount, 1,
+          reason: "the holder's request is held, not sent");
+      expect(ctxAlice.hasReportedLink('charlie', 1, false), isTrue);
+      expect(
+          net.deliveryLog
+              .sublist(beforeAuth)
+              .where((m) => m.to == 'charlie'),
+          isEmpty,
+          reason: 'nothing reaches the anchor before authorisation');
+
+      // Alice authorises; her request then reaches Charlie, who holds it in
+      // turn (case 3) until his own program authorises.
+      net.settleAuthorising();
+
       // Alice received the first element through Bob.
       expect((_streamElement(aliceRt, xaReader, 0) as ConstTerm).value,
           'hello');
@@ -160,7 +212,7 @@ void main() {
       final rest2Reader = charlieRt.heap.pairedReaderAddr(rest2W);
       charlieRt.heap.bindVariable(
           restW, StructTerm('.', [ConstTerm('world'), VarRef(rest2Reader)]));
-      net.settle();
+      net.settleAuthorising();
 
       final tail = net.deliveryLog.sublist(mark);
       expect(tail, isNotEmpty);
@@ -236,6 +288,8 @@ void main() {
       final bobRt = net.runtimes['bob']!;
       final charlieRt = net.runtimes['charlie']!;
       final aliceNetIn = net.bootSerializer('alice');
+      net.bootSerializer('bob');
+      net.bootSerializer('charlie');
 
       // Charlie (the anchor) exports reader Rest? to Bob.
       final (restW, restR) = charlieRt.heap.allocateVariable();
@@ -270,8 +324,14 @@ void main() {
       expect(ctxBob.wp.localizeEntryCount, 0);
       net.flushAll();
       // Deliver the carrier to Alice: she localizes the forwarded name and
-      // queues req(_r(charlie, k)) to Charlie.
+      // queues req(_r(charlie, k)) to Charlie — held (case 1), so it does not
+      // leave her until her program authorises.
       net.deliverWhere((m) => m.from == 'bob' && m.to == 'alice');
+      net.flushAll();
+      expect(ctxAlice.mp.heldCount, 1);
+      expect(net.queue.where((m) => m.to == 'charlie'), isEmpty,
+          reason: 'a held request is not eligible for Send');
+      net.answerAll(true);
       net.flushAll();
 
       // The in-flight value now reaches the past holder: dropped silently —
@@ -281,8 +341,14 @@ void main() {
       expect(ctxBob.mp.totalLength, 0, reason: 'a dropped value is not acked');
       expect(ctxCharlie.hasPendingReaderValue('charlie', rn.index), isTrue);
 
-      // Alice's request redirects the pending value to her.
+      // Alice's request reaches Charlie, who holds it in turn (case 3): the
+      // pending value is not redirected until he authorises.
       net.deliverWhere((m) => m.from == 'alice' && m.to == 'charlie');
+      expect(ctxCharlie.hasReportedLink('charlie', rn.index, false), isTrue);
+      net.flushAll();
+      expect(net.queue.where((m) => m.to == 'alice'), isEmpty,
+          reason: 'no redirect before the anchor authorises');
+      net.answerAll(true);
       net.flushAll();
       net.deliverWhere((m) => m.from == 'charlie' && m.to == 'alice');
 
@@ -314,6 +380,8 @@ void main() {
       final bobRt = net.runtimes['bob']!;
       final charlieRt = net.runtimes['charlie']!;
       final aliceNetIn = net.bootSerializer('alice');
+      net.bootSerializer('bob');
+      net.bootSerializer('charlie');
 
       // Charlie (the anchor) exports reader Rest? to Bob.
       final (restW, restR) = charlieRt.heap.allocateVariable();
@@ -350,8 +418,20 @@ void main() {
       net.flushAll();
       net.deliverWhere((m) => m.from == 'bob' && m.to == 'alice');
       net.flushAll();
+      // Alice's request is held until she authorises (case 1).
+      expect(ctxAlice.mp.heldCount, 1);
+      expect(net.queue.where((m) => m.to == 'charlie'), isEmpty);
+      net.answerAll(true);
+      net.flushAll();
       net.deliverWhere((m) => m.from == 'charlie' && m.to == 'bob');
       net.deliverWhere((m) => m.from == 'alice' && m.to == 'charlie');
+      // Charlie holds the request in turn (case 3) and redirects only on his
+      // own authorisation.
+      expect(ctxCharlie.hasReportedLink('charlie', gres.globalNames[0].index,
+          false), isTrue);
+      net.flushAll();
+      expect(net.queue.where((m) => m.to == 'alice'), isEmpty);
+      net.answerAll(true);
       net.flushAll();
       // Alice applies the redirected value — its tail name comes from the
       // anchor itself, so no request is sent for it — and acknowledges.
@@ -394,10 +474,13 @@ void main() {
       final net = _Net();
       final ctxBob = net.add('bob');
       final ctxCharlie = net.add('charlie');
-      final aliceRt = net.add('alice').runtime;
+      final ctxAlice = net.add('alice');
+      final aliceRt = ctxAlice.runtime;
       final bobRt = net.runtimes['bob']!;
       final charlieRt = net.runtimes['charlie']!;
       final aliceNetIn = net.bootSerializer('alice');
+      net.bootSerializer('bob');
+      net.bootSerializer('charlie');
 
       final (restW, restR) = charlieRt.heap.allocateVariable();
       final gres = globalize(
@@ -431,8 +514,19 @@ void main() {
       net.flushAll();
       net.deliverWhere((m) => m.from == 'bob' && m.to == 'alice');
       net.flushAll();
+      // Held at both ends before anything crosses: Alice's request (case 1),
+      // then Charlie's receipt of it (case 3).
+      expect(ctxAlice.mp.heldCount, 1);
+      expect(net.queue.where((m) => m.to == 'charlie'), isEmpty);
+      net.answerAll(true);
+      net.flushAll();
       net.deliverWhere((m) => m.from == 'charlie' && m.to == 'bob');
       net.deliverWhere((m) => m.from == 'alice' && m.to == 'charlie');
+      expect(ctxCharlie.hasReportedLink('charlie', gres.globalNames[0].index,
+          false), isTrue);
+      net.flushAll();
+      expect(net.queue.where((m) => m.to == 'alice'), isEmpty);
+      net.answerAll(true);
       net.flushAll();
 
       // Before the redirected parent reaches Alice, Charlie produces the
@@ -474,6 +568,8 @@ void main() {
       final bobRt = net.runtimes['bob']!;
       final charlieRt = net.runtimes['charlie']!;
       final aliceNetIn = net.bootSerializer('alice');
+      net.bootSerializer('bob');
+      net.bootSerializer('charlie');
 
       // Charlie (the anchor) exports reader Rest? to Bob; Bob localizes.
       final (restW, restR) = charlieRt.heap.allocateVariable();
@@ -496,11 +592,22 @@ void main() {
       );
       final restBReader = lres.freshPairs[0].readerAddr;
 
-      // Bob forwards the reader to Alice before any value exists; Alice's
-      // request reaches Charlie, who records her as the link's holder.
+      // Bob forwards the reader to Alice before any value exists. Alice's
+      // request is held (case 1) and does not leave her; Charlie learns
+      // nothing, so his goal still points at the agent he exported to.
       ctxBob.send(StructTerm('m', [VarRef(restBReader)]), true, 'alice', 0,
           'alice');
       net.settle();
+      expect(ctxAlice.mp.heldCount, 1);
+      expect(ctxAlice.hasReportedLink('charlie', rn.index, false), isTrue);
+      expect(ctxCharlie.globalSendRegistry.getGoalFor(restW)!.destination,
+          'bob',
+          reason: 'the holder is not recorded until the request is authorised '
+              'at both ends');
+
+      // Both programs authorise: the request crosses, Charlie holds it in turn
+      // (case 3), and on his authorisation he records Alice as the holder.
+      net.settleAuthorising();
       expect(ctxCharlie.globalSendRegistry.getGoalFor(restW)!.destination,
           'alice');
 

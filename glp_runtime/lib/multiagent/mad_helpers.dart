@@ -337,7 +337,11 @@ LocalizeResult localize({
       // _w(p, i): re-exporting Y_q forwards that name (Globalize case 4)
       // instead of anchoring a new link here. The anchor is gn.agent whether
       // or not the sender is the anchor — a forwarded writer keeps its name.
-      records.add(writerAddr, gn.agent, gn.index);
+      // The sender is recorded too: "If the sending agent is not p, the name
+      // was forwarded, and the value that goal produces is held" (Definition
+      // Held Link, case 2). The hold happens at binding, long after this
+      // message is gone, so the sender has to travel in the record.
+      records.add(writerAddr, gn.agent, gn.index, fromAgent);
 
       // Spawn global_send(Y_q?, _w(p,i), p)
       // When q assigns Y_q, Y_q? becomes known, gs fires and sends value to p.
