@@ -51,6 +51,16 @@ void main() {
   late BytecodeProgram prog;
   late Artefact artefact;
 
+  // A genuinely runnable module value: the project of [_projectSource] put
+  // through the real loader, so its artefact carries the exports `run/2`
+  // checks. The `artefact` above is built straight from the root self.glp's
+  // compiled ops with no exports at all (`Artefact.fromCompiled` defaults
+  // `exports` to const []), and the root self.glp declares no `exported
+  // procedure` — so nothing in it is runnable from outside, by construction.
+  // It stays the fixture for the hash, round-trip, and abort cases.
+  late Directory projectDir;
+  late ModuleTerm projectModule;
+
   setUpAll(() {
     prog = GlpCompiler().compile(File(_rootSelf).readAsStringSync());
     artefact = Artefact.fromCompiled(
@@ -59,18 +69,31 @@ void main() {
       moduleName: 'testmod',
       isaVersion: 'glp-isa-1',
     );
+
+    projectDir = _tempProject(_projectSource);
+    final engine = GlpEngine(rootSelfGlpPath: _rootSelf);
+    engine.loadProgram(projectDir.path);
+    projectModule = engine.appModule!;
   });
 
-  /// A signature the module exposes a compiled entry for, with its entry byte
-  /// offset — chosen from the artefact rather than hard-coded.
-  (String, int) firstCompiledEntry(Artefact a) {
+  tearDownAll(() => projectDir.deleteSync(recursive: true));
+
+  /// A signature `run/2` will accept, with its entry byte offset — chosen from
+  /// the artefact rather than hard-coded.
+  ///
+  /// `run/2` requires both conditions, so the helper must apply both: the
+  /// signature is an export alias of the module, and it has a compiled entry.
+  /// Compiled-ness alone is not enough — an internal procedure is compiled but
+  /// is not runnable from outside (module_kernels.dart, export check), and the
+  /// compiled symbol of an exported procedure carries its qualified name
+  /// (`main:go/2`) while the alias `run/2` matches is unqualified (`go/2`).
+  (String, int) firstRunnableEntry(Artefact a) {
     final image = CodeImage.fromArtefactBytes(a.toBytes());
-    for (final s in image.symbols) {
-      if (!s.compiled) continue;
-      final off = image.entryOffsetOf(s.signature);
-      if (off != null) return (s.signature, off);
+    for (final sig in image.exportAliases) {
+      final off = image.entryOffsetOf(sig);
+      if (off != null) return (sig, off);
     }
-    fail('no compiled entry found in artefact');
+    fail('no exported entry point with code found in artefact');
   }
 
   ({Term goal, int arity}) bootGoalFor(GlpRuntime rt, String sig) {
@@ -127,8 +150,9 @@ void main() {
       final rt = GlpRuntime();
       registerModuleKernels(rt); // normally done by the GlpEngine constructor
 
-      final module = ModuleTerm(artefact, name: 'testmod');
-      final (sig, entry) = firstCompiledEntry(artefact);
+      final module = projectModule;
+      final (sig, entry) =
+          firstRunnableEntry(projectModule.artefact as Artefact);
       final boot = bootGoalFor(rt, sig);
 
       final before = rt.gq.length;
@@ -158,8 +182,8 @@ void main() {
       final rt = GlpRuntime();
       registerModuleKernels(rt);
 
-      final module = ModuleTerm(artefact, name: 'testmod');
-      final (sig, _) = firstCompiledEntry(artefact);
+      final module = projectModule;
+      final (sig, _) = firstRunnableEntry(projectModule.artefact as Artefact);
       final boot = bootGoalFor(rt, sig);
 
       expect(rt.bodyKernels.lookup('_run', 2)!(rt, [boot.goal, module]),
@@ -262,7 +286,7 @@ void main() {
 
         final rt = GlpRuntime();
         registerModuleKernels(rt);
-        final (sig, entry) = firstCompiledEntry(art);
+        final (sig, entry) = firstRunnableEntry(art);
         final boot = bootGoalFor(rt, sig);
 
         expect(rt.bodyKernels.lookup('_run', 2)!(rt, [boot.goal, moduleValue]),

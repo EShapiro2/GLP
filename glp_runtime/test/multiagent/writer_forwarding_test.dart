@@ -93,24 +93,6 @@ class _Net {
   int get heldCount => agents.values.fold(0, (s, c) => s + c.mp.heldCount);
 }
 
-/// The `pending_link(G, S)` reports on [agentId]'s network input stream, in
-/// order, as the program sees them.
-List<(Term, String)> _reportsOn(_Net net, String agentId, int netIn) {
-  final rt = net.runtimes[agentId]!;
-  final out = <(Term, String)>[];
-  Object? cell = rt.heap.derefAddr(netIn);
-  while (cell is StructTerm && cell.functor == '.') {
-    final head = cell.args[0];
-    if (head is StructTerm &&
-        head.functor == 'pending_link' &&
-        head.args.length == 2) {
-      out.add((head.args[0], (head.args[1] as ConstTerm).value as String));
-    }
-    cell = rt.heap.derefAddr((cell.args[1] as VarRef).addr);
-  }
-  return out;
-}
-
 /// The n-th element of the list rooted at heap address [addr].
 Term _streamElement(GlpRuntime rt, int addr, int n) {
   Object? cell = rt.heap.derefAddr(addr);
