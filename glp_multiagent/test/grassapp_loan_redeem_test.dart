@@ -11,10 +11,11 @@
 ///
 /// What it pins down:
 ///   * a loan is a maturity-carrying swap (lot specs with a future maturity);
-///   * redeeming BEFORE the holder's own clock reaches maturity is refused —
-///     and refused *before* the date advances, which is what makes it a gate
-///     rather than a coincidence;
-///   * after Advance-date the same redemption is honoured by the issuer;
+///   * presenting bob-bonds for redemption BEFORE the ISSUER's own clock reaches
+///     maturity is not a redemption (Def 3.2): bob reclassifies it as a normal
+///     offer and returns it — and returns it *before* bob advances its date,
+///     which is what makes it a gate rather than a coincidence;
+///   * after bob advances its own date the re-presented redemption is honoured;
 ///   * set-off returns the lender's own coins, and money is conserved.
 
 import 'dart:io';
@@ -56,23 +57,26 @@ void main() {
     expect(all, contains('trade_proposed(alice, bob, 10, 5'),
         reason: 'no maturity-carrying loan offer in:\n$all');
 
-    // The gate: the pre-maturity redemption is refused, and it is refused
-    // BEFORE the date advances. Order is the point — presence alone would also
-    // hold if the refusal came from something else later in the run.
-    final refused = all.indexOf('tagged(alice, trade_failed(bob))');
-    final advanced = all.indexOf('tagged(alice, date_advanced(11))');
-    expect(refused, greaterThanOrEqualTo(0),
-        reason: 'pre-maturity redeem was not refused in:\n$all');
+    // The gate is the ISSUER's date (Def 3.2), not the holder's.  At bob's date
+    // 0 the bob-bonds are not coins, so bob reclassifies the early presentation
+    // as a normal offer and returns it — it is NOT honoured as a redemption.
+    // (bob advances its own date and declines in one step, so the advance and
+    // the return are adjacent; the point is that the honour comes only after.)
+    final returned = all.indexOf('tagged(alice, trade_returned(bob))');
+    final advanced = all.indexOf('tagged(bob, date_advanced(11))');
+    expect(returned, greaterThanOrEqualTo(0),
+        reason: 'the early presentation was not reclassified and returned in:\n$all');
     expect(advanced, greaterThanOrEqualTo(0),
-        reason: 'local clock never advanced in:\n$all');
-    expect(refused, lessThan(advanced),
-        reason: 'the refusal must precede the advance — otherwise the maturity '
-            'gate is not what refused it');
+        reason: "the issuer's clock never advanced in:\n$all");
 
-    // After advancing, the same redemption is honoured.
-    expect(all.indexOf('tagged(alice, trade_completed(bob))', advanced),
-        greaterThan(advanced),
-        reason: 'redemption not honoured after the date advanced in:\n$all');
+    // The redemption is honoured only after bob's own date reaches maturity, and
+    // the early presentation is returned before that honour — so the gate is the
+    // issuer's date, not a coincidence.
+    final honoured = all.indexOf('tagged(alice, trade_completed(bob))', advanced);
+    expect(honoured, greaterThan(advanced),
+        reason: 'redemption not honoured after the issuer advanced its date in:\n$all');
+    expect(returned, lessThan(honoured),
+        reason: 'the early presentation must be returned before the redemption is honoured');
 
     // Set-off and conservation: alice has her own 3 coins back plus the 2
     // unredeemed bob-bonds (the interest); bob holds the 3 of his own bonds

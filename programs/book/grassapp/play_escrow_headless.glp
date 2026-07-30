@@ -44,8 +44,7 @@ log_esc(_, []).
 
 procedure play_escrow.
 play_escrow :-
-    now(Now),
-    T := Now? + 700,
+    T := 30,
     net_esc(CharlieNetOut?, FrankNetOut?, CharlieNetIn, FrankNetIn),
 
     %% Charlie — depositor
@@ -90,8 +89,11 @@ depositor_wait_minted(T, [_|In], Out?) :-
     otherwise | depositor_wait_minted(T?, In?, Out).
 depositor_wait_minted(_, [], []).
 
+%% Deposited: the depositor advances its own date to the release date T; the
+%% escrow reads it and releases on it (no wall clock, no cancel).
 procedure depositor_wait_deposited(Stream(UserNotify)?, Stream(UserCmd)).
-depositor_wait_deposited([escrow_deposited(frank, _, _, _, _, _)|In], Out?) :-
+depositor_wait_deposited([escrow_deposited(frank, T, _, _, _, _)|In],
+                         [advance_date(T?)|Out?]) :-
     depositor_wait_expired(In?, Out).
 depositor_wait_deposited([_|In], Out?) :-
     otherwise | depositor_wait_deposited(In?, Out).

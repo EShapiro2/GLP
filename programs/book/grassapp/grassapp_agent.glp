@@ -214,12 +214,12 @@ publish_balances(_, _, [], []).
 
 %% After a holdings change: report balances to the user, publish to friends,
 %% then continue.
-procedure after_change(Constant?, Stream(Bond)?, Constant?, Constant?, Stream(X)?, Stream(X)?, OutputsList?).
-after_change(Id, Holdings, NextSerial, Clock, UserIn, NetIn, Outs) :-
+procedure after_change(Constant?, Stream(Bond)?, Constant?, Constant?, Stream(X)?, Stream(X)?, OutputsList?, Stream(Constant)).
+after_change(Id, Holdings, NextSerial, Clock, UserIn, NetIn, Outs, DateW?) :-
     ground(Id?), ground(Holdings?) |
     emit_balances(Id?, Holdings?, Outs?, Outs1),
     publish_balances(Id?, Holdings?, Outs1?, Outs2),
-    agent(Id?, UserIn?, NetIn?, Outs2?, Holdings?, NextSerial?, Clock?).
+    agent(Id?, UserIn?, NetIn?, Outs2?, Holdings?, NextSerial?, Clock?, DateW).
 
 %% =============================================================================
 %% TRADE / REDEEM / PAY — the transaction two-phase (currency_txn called bare)
@@ -244,126 +244,131 @@ inject_trade_result(R, From, [Y|Ys], [Y?|Ys1?]) :-
 
 %% --- Proposer: trade (the maturity-carrying swap; a loan is its instance) ---
 
-procedure do_trade(Constant?, Constant?, Stream(Lot)?, Stream(Lot)?, Stream(Bond)?, Constant?, Constant?, Stream(X)?, Stream(X)?, OutputsList?).
-do_trade(Id, Target, GiveSpec, WantSpec, Holdings, NextSerial, Clock, UserIn, NetIn, Outs) :-
+procedure do_trade(Constant?, Constant?, Stream(Lot)?, Stream(Lot)?, Stream(Bond)?, Constant?, Constant?, Stream(X)?, Stream(X)?, OutputsList?, Stream(Constant)).
+do_trade(Id, Target, GiveSpec, WantSpec, Holdings, NextSerial, Clock, UserIn, NetIn, Outs, DateW?) :-
     select_bonds_by_spec(GiveSpec?, Holdings?, Status, Selected, Remaining),
-    do_trade_result(Status?, Id?, Target?, WantSpec?, Selected?, Remaining?, NextSerial?, Clock?, UserIn?, NetIn?, Outs?).
+    do_trade_result(Status?, Id?, Target?, WantSpec?, Selected?, Remaining?, NextSerial?, Clock?, UserIn?, NetIn?, Outs?, DateW).
 
-procedure do_trade_result(Constant?, Constant?, Constant?, Stream(Lot)?, Stream(Bond)?, Stream(Bond)?, Constant?, Constant?, Stream(X)?, Stream(X)?, OutputsList?).
-do_trade_result(ok, Id, Target, WantSpec, Selected, Remaining, NextSerial, Clock, UserIn, NetIn, Outs) :-
+procedure do_trade_result(Constant?, Constant?, Constant?, Stream(Lot)?, Stream(Bond)?, Stream(Bond)?, Constant?, Constant?, Stream(X)?, Stream(X)?, OutputsList?, Stream(Constant)).
+do_trade_result(ok, Id, Target, WantSpec, Selected, Remaining, NextSerial, Clock, UserIn, NetIn, Outs, DateW?) :-
     lookup_send(Target?, msg(Id?, Target?, trade_propose(WantSpec?, Selected?, TradeResp)), Outs?, Outs1),
     inject_trade_result(TradeResp?, Target?, UserIn?, UserIn1),
-    after_change(Id?, Remaining?, NextSerial?, Clock?, UserIn1?, NetIn?, Outs1?).
-do_trade_result(fail, Id, Target, _, Selected, Remaining, NextSerial, Clock, UserIn, NetIn, Outs) :-
+    after_change(Id?, Remaining?, NextSerial?, Clock?, UserIn1?, NetIn?, Outs1?, DateW).
+do_trade_result(fail, Id, Target, _, Selected, Remaining, NextSerial, Clock, UserIn, NetIn, Outs, DateW?) :-
     append(Selected?, Remaining?, OrigHoldings),
     lookup_send('_user', msg(agent, '_user', trade_failed(Target?)), Outs?, Outs1),
-    after_change(Id?, OrigHoldings?, NextSerial?, Clock?, UserIn?, NetIn?, Outs1?).
+    after_change(Id?, OrigHoldings?, NextSerial?, Clock?, UserIn?, NetIn?, Outs1?, DateW).
 
 %% --- Proposer: redeem (Def 3.2, guarded by the redeemer) ---
 %% Offer the Target's bonds named by GiveSpec; whether they are coins is the
 %% issuer's call, tested against the issuer's own date on receipt
 %% (classify_trade -> redemption).  The redeemer does not test maturity.
 
-procedure do_redeem(Constant?, Constant?, Stream(Lot)?, Stream(Lot)?, Stream(Bond)?, Constant?, Constant?, Stream(X)?, Stream(X)?, OutputsList?).
-do_redeem(Id, Target, GiveSpec, WantSpec, Holdings, NextSerial, Clock, UserIn, NetIn, Outs) :-
+procedure do_redeem(Constant?, Constant?, Stream(Lot)?, Stream(Lot)?, Stream(Bond)?, Constant?, Constant?, Stream(X)?, Stream(X)?, OutputsList?, Stream(Constant)).
+do_redeem(Id, Target, GiveSpec, WantSpec, Holdings, NextSerial, Clock, UserIn, NetIn, Outs, DateW?) :-
     select_bonds_by_spec(GiveSpec?, Holdings?, Status, Selected, Remaining),
-    do_trade_result(Status?, Id?, Target?, WantSpec?, Selected?, Remaining?, NextSerial?, Clock?, UserIn?, NetIn?, Outs?).
+    do_trade_result(Status?, Id?, Target?, WantSpec?, Selected?, Remaining?, NextSerial?, Clock?, UserIn?, NetIn?, Outs?, DateW).
 
 %% --- Proposer: pay (mature coins of the payee, handed over unilaterally) ---
 
-procedure do_pay(Constant?, Constant?, Constant?, Stream(Bond)?, Stream(Bond)?, Constant?, Constant?, Stream(X)?, Stream(X)?, OutputsList?).
-do_pay(ok, Id, Friend, Selected, Remaining, NextSerial, Clock, UserIn, NetIn, Outs) :-
+procedure do_pay(Constant?, Constant?, Constant?, Stream(Bond)?, Stream(Bond)?, Constant?, Constant?, Stream(X)?, Stream(X)?, OutputsList?, Stream(Constant)).
+do_pay(ok, Id, Friend, Selected, Remaining, NextSerial, Clock, UserIn, NetIn, Outs, DateW?) :-
     lookup_send(Friend?, msg(Id?, Friend?, coins(Selected?)), Outs?, Outs1),
-    after_change(Id?, Remaining?, NextSerial?, Clock?, UserIn?, NetIn?, Outs1?).
-do_pay(fail, Id, Friend, Selected, Remaining, NextSerial, Clock, UserIn, NetIn, Outs) :-
+    after_change(Id?, Remaining?, NextSerial?, Clock?, UserIn?, NetIn?, Outs1?, DateW).
+do_pay(fail, Id, Friend, Selected, Remaining, NextSerial, Clock, UserIn, NetIn, Outs, DateW?) :-
     append(Selected?, Remaining?, OrigHoldings),
     lookup_send('_user', msg(agent, '_user', trade_failed(Friend?)), Outs?, Outs1),
-    after_change(Id?, OrigHoldings?, NextSerial?, Clock?, UserIn?, NetIn?, Outs1?).
+    after_change(Id?, OrigHoldings?, NextSerial?, Clock?, UserIn?, NetIn?, Outs1?, DateW).
 
 %% --- Responder: take an incoming payment (Def 3.2, Pay) ---
 %% own_coins says `yes` iff every offered bond is a coin of Id; then Id takes
 %% them.  Otherwise it is not a Pay (Pay carries only the recipient's own coins)
 %% but an unsolicited swap, so Id returns the whole lot to the payer unchanged.
-procedure take_payment(Constant?, Constant?, Constant?, Stream(Bond)?, Stream(Bond)?, Constant?, Constant?, Stream(X)?, Stream(X)?, OutputsList?).
-take_payment(yes, Id, _, Bonds, Holdings, NextSerial, Clock, UserIn, NetIn, Outs) :-
+procedure take_payment(Constant?, Constant?, Constant?, Stream(Bond)?, Stream(Bond)?, Constant?, Constant?, Stream(X)?, Stream(X)?, OutputsList?, Stream(Constant)).
+take_payment(yes, Id, _, Bonds, Holdings, NextSerial, Clock, UserIn, NetIn, Outs, DateW?) :-
     append(Holdings?, Bonds?, NewHoldings),
-    after_change(Id?, NewHoldings?, NextSerial?, Clock?, UserIn?, NetIn?, Outs?).
-take_payment(no, Id, From, Bonds, Holdings, NextSerial, Clock, UserIn, NetIn, Outs) :-
+    after_change(Id?, NewHoldings?, NextSerial?, Clock?, UserIn?, NetIn?, Outs?, DateW).
+take_payment(no, Id, From, Bonds, Holdings, NextSerial, Clock, UserIn, NetIn, Outs, DateW?) :-
     lookup_send(From?, msg(Id?, From?, coins(Bonds?)), Outs?, Outs1),
-    after_change(Id?, Holdings?, NextSerial?, Clock?, UserIn?, NetIn?, Outs1?).
+    after_change(Id?, Holdings?, NextSerial?, Clock?, UserIn?, NetIn?, Outs1?, DateW).
 
 %% --- Responder: fill an accepted trade ---
 
-procedure handle_trade_fill(Constant?, Constant?, Constant?, TradeResponse, Stream(Bond)?, Stream(Bond)?, Stream(Bond)?, Constant?, Constant?, Stream(X)?, Stream(X)?, OutputsList?).
-handle_trade_fill(ok, Id, From, trade_accept(Selected?), OfferedBonds, Selected, Remaining, NextSerial, Clock, UserIn, NetIn, Outs) :-
+procedure handle_trade_fill(Constant?, Constant?, Constant?, TradeResponse, Stream(Bond)?, Stream(Bond)?, Stream(Bond)?, Constant?, Constant?, Stream(X)?, Stream(X)?, OutputsList?, Stream(Constant)).
+handle_trade_fill(ok, Id, From, trade_accept(Selected?), OfferedBonds, Selected, Remaining, NextSerial, Clock, UserIn, NetIn, Outs, DateW?) :-
     append(Remaining?, OfferedBonds?, NewHoldings),
     lookup_send('_user', msg(agent, '_user', trade_completed(From?)), Outs?, Outs1),
-    after_change(Id?, NewHoldings?, NextSerial?, Clock?, UserIn?, NetIn?, Outs1?).
-handle_trade_fill(fail, Id, From, trade_decline(OfferedBonds?), OfferedBonds, Selected, Remaining, NextSerial, Clock, UserIn, NetIn, Outs) :-
+    after_change(Id?, NewHoldings?, NextSerial?, Clock?, UserIn?, NetIn?, Outs1?, DateW).
+handle_trade_fill(fail, Id, From, trade_decline(OfferedBonds?), OfferedBonds, Selected, Remaining, NextSerial, Clock, UserIn, NetIn, Outs, DateW?) :-
     append(Selected?, Remaining?, OrigHoldings),
     lookup_send('_user', msg(agent, '_user', trade_failed(From?)), Outs?, Outs1),
-    after_change(Id?, OrigHoldings?, NextSerial?, Clock?, UserIn?, NetIn?, Outs1?).
+    after_change(Id?, OrigHoldings?, NextSerial?, Clock?, UserIn?, NetIn?, Outs1?, DateW).
 
 %% --- Responder: classify an incoming proposal ---
 
 procedure trade_dispatch(Constant?, Constant?, Constant?, Stream(Lot)?, Stream(Bond)?, TradeResponse,
-    Stream(Bond)?, Constant?, Constant?, Stream(X)?, Stream(X)?, OutputsList?).
+    Stream(Bond)?, Constant?, Constant?, Stream(X)?, Stream(X)?, OutputsList?, Stream(Constant)).
 
 %% Payment — auto-accept (proposer gives, wants nothing).
 trade_dispatch(payment, Id, From, _, OfferedBonds, trade_accept([]),
-    Holdings, NextSerial, Clock, UserIn, NetIn, Outs) :-
+    Holdings, NextSerial, Clock, UserIn, NetIn, Outs, DateW?) :-
     append(Holdings?, OfferedBonds?, NewHoldings),
     lookup_send('_user', msg(agent, '_user', trade_completed(From?)), Outs?, Outs1),
-    after_change(Id?, NewHoldings?, NextSerial?, Clock?, UserIn?, NetIn?, Outs1?).
+    after_change(Id?, NewHoldings?, NextSerial?, Clock?, UserIn?, NetIn?, Outs1?, DateW).
 
 %% Redemption — the issuer must fulfil: auto-accept with the requested bonds,
 %% or decline with a menu of what it does hold.
 trade_dispatch(redemption, Id, From, WantSpec, OfferedBonds, TradeResp?,
-    Holdings, NextSerial, Clock, UserIn, NetIn, Outs) :-
+    Holdings, NextSerial, Clock, UserIn, NetIn, Outs, DateW?) :-
     select_bonds_by_spec(WantSpec?, Holdings?, Status, Selected, Remaining),
     redemption_result(Status?, Id?, From?, TradeResp, OfferedBonds?, Selected?, Remaining?,
-        NextSerial?, Clock?, UserIn?, NetIn?, Outs?).
+        NextSerial?, Clock?, UserIn?, NetIn?, Outs?, DateW).
 
 %% Normal trade — present to the user as an inbox offer (forwarding the writer).
 trade_dispatch(normal, Id, From, WantSpec, OfferedBonds, TradeResp?,
-    Holdings, NextSerial, Clock, UserIn, NetIn, Outs) :-
+    Holdings, NextSerial, Clock, UserIn, NetIn, Outs, DateW?) :-
     lookup_send('_user',
         msg(agent, '_user', trade_proposed(From?, WantSpec?, TradeResp, OfferedBonds?)),
         Outs?, Outs1),
-    agent(Id?, UserIn?, NetIn?, Outs1?, Holdings?, NextSerial?, Clock?).
+    agent(Id?, UserIn?, NetIn?, Outs1?, Holdings?, NextSerial?, Clock?, DateW).
 
 procedure redemption_result(Constant?, Constant?, Constant?, TradeResponse, Stream(Bond)?,
-    Stream(Bond)?, Stream(Bond)?, Constant?, Constant?, Stream(X)?, Stream(X)?, OutputsList?).
+    Stream(Bond)?, Stream(Bond)?, Constant?, Constant?, Stream(X)?, Stream(X)?, OutputsList?, Stream(Constant)).
 redemption_result(ok, Id, From, trade_accept(Selected?), OfferedBonds, Selected, Remaining,
-    NextSerial, Clock, UserIn, NetIn, Outs) :-
+    NextSerial, Clock, UserIn, NetIn, Outs, DateW?) :-
     append(Remaining?, OfferedBonds?, NewHoldings),
     lookup_send('_user', msg(agent, '_user', trade_completed(From?)), Outs?, Outs1),
-    after_change(Id?, NewHoldings?, NextSerial?, Clock?, UserIn?, NetIn?, Outs1?).
+    after_change(Id?, NewHoldings?, NextSerial?, Clock?, UserIn?, NetIn?, Outs1?, DateW).
 redemption_result(fail, Id, From, trade_decline_menu(OfferedBonds?, Menu?), OfferedBonds,
-    Selected, Remaining, NextSerial, Clock, UserIn, NetIn, Outs) :-
+    Selected, Remaining, NextSerial, Clock, UserIn, NetIn, Outs, DateW?) :-
     append(Selected?, Remaining?, OrigHoldings),
-    redemption_reject(Id?, From?, OrigHoldings?, Menu, NextSerial?, Clock?, UserIn?, NetIn?, Outs?).
+    redemption_reject(Id?, From?, OrigHoldings?, Menu, NextSerial?, Clock?, UserIn?, NetIn?, Outs?, DateW).
 
 procedure redemption_reject(Constant?, Constant?, Stream(Bond)?, Stream(Bond),
-    Constant?, Constant?, Stream(X)?, Stream(X)?, OutputsList?).
-redemption_reject(Id, From, OrigHoldings, Menu?, NextSerial, Clock, UserIn, NetIn, Outs) :-
+    Constant?, Constant?, Stream(X)?, Stream(X)?, OutputsList?, Stream(Constant)).
+redemption_reject(Id, From, OrigHoldings, Menu?, NextSerial, Clock, UserIn, NetIn, Outs, DateW?) :-
     ground(OrigHoldings?) |
     build_menu(Id?, OrigHoldings?, Menu),
     lookup_send('_user', msg(agent, '_user', trade_failed(From?)), Outs?, Outs1),
-    after_change(Id?, OrigHoldings?, NextSerial?, Clock?, UserIn?, NetIn?, Outs1?).
+    after_change(Id?, OrigHoldings?, NextSerial?, Clock?, UserIn?, NetIn?, Outs1?, DateW).
 
 %% =============================================================================
-%% ESCROW (paper §5) — a race between the release timer and the cancel signal
+%% ESCROW (paper §5) — the holder's own date releases it; cancel races it
 %% =============================================================================
 
-%% Whichever guard commits first decides: the timer releases the bonds to the
-%% beneficiary and reports expiry to the depositor; the cancel returns them to
-%% the depositor and reports cancellation to the beneficiary.  wait_until is REAL
-%% time — the agent's local date (advance_date) governs maturity, not escrow.
-procedure escrow(Constant?, Stream(Bond)?, EscrowCancel?, EscrowBenResult, EscrowDepResult).
-escrow(T, Bonds, _, escrow_bonds(Bonds?), escrow_expired) :-
-    wait_until(T?) | true.
-escrow(_, Bonds, cancel, escrow_cancelled, escrow_bonds(Bonds?)).
+%% Dates is the holder's own date as it advances (its advance_date events).  The
+%% release clause suspends on that stream and fires automatically the instant a
+%% date reaches T, sending the bonds to the beneficiary and expiry to the
+%% depositor; cancel races it and returns the bonds.  There is no wall clock and
+%% nothing the depositor can withhold.  If the holder stops — the date stream
+%% closes with no cancel — no clause commits: the escrow suspends holding the
+%% bonds (clause 3's `_` covers [] for the typechecker), and never hands them back.
+procedure escrow(Constant?, Stream(Constant)?, Stream(Bond)?, EscrowCancel?, EscrowBenResult, EscrowDepResult).
+escrow(T, [D|_], Bonds, _, escrow_bonds(Bonds?), escrow_expired) :-
+    D? >= T? | true.
+escrow(T, [D|Ds], Bonds, Cancel, Ben?, Dep?) :-
+    D? < T? | escrow(T?, Ds?, Bonds?, Cancel?, Ben, Dep).
+escrow(_, _, Bonds, cancel, escrow_cancelled, escrow_bonds(Bonds?)).
 
 procedure bind_escrow_cancel(EscrowCancel).
 bind_escrow_cancel(cancel).
@@ -407,7 +412,7 @@ do_deposit_escrow(Id, Target, GiveSpec, ReleaseTime, Holdings, NextSerial, Clock
 procedure do_deposit_escrow_result(Constant?, Constant?, Constant?, Constant?, Constant?, Constant?, Constant?, Stream(Bond)?, Stream(Bond)?, Constant?, Constant?, Stream(X)?, Stream(X)?, OutputsList?).
 do_deposit_escrow_result(ok, Id, Target, ReleaseTime, Coin, Maturity, Amount, Selected, Remaining, NextSerial, Clock, UserIn, NetIn, Outs) :-
     ground(Coin?), ground(Maturity?), ground(Amount?) |
-    escrow(ReleaseTime?, Selected?, CancelSignal?, BenResult, DepResult),
+    escrow(ReleaseTime?, EscrowDates?, Selected?, CancelSignal?, BenResult, DepResult),
     inject_escrow_dep_result(DepResult?, Target?, UserIn?, UserIn1),
     lookup_send(Target?,
         msg(Id?, Target?, escrow_offer(ReleaseTime?, Coin?, Maturity?, Amount?, BenResult?)),
@@ -415,11 +420,11 @@ do_deposit_escrow_result(ok, Id, Target, ReleaseTime, Coin, Maturity, Amount, Se
     lookup_send('_user',
         msg(agent, '_user', escrow_deposited(Target?, ReleaseTime?, Coin?, Maturity?, Amount?, CancelSignal)),
         Outs1?, Outs2),
-    after_change(Id?, Remaining?, NextSerial?, Clock?, UserIn1?, NetIn?, Outs2?).
+    after_change(Id?, Remaining?, NextSerial?, Clock?, UserIn1?, NetIn?, Outs2?, EscrowDates).
 do_deposit_escrow_result(fail, Id, Target, _, _, _, _, Selected, Remaining, NextSerial, Clock, UserIn, NetIn, Outs) :-
     append(Selected?, Remaining?, OrigHoldings),
     lookup_send('_user', msg(agent, '_user', escrow_failed(Target?)), Outs?, Outs1),
-    after_change(Id?, OrigHoldings?, NextSerial?, Clock?, UserIn?, NetIn?, Outs1?).
+    after_change(Id?, OrigHoldings?, NextSerial?, Clock?, UserIn?, NetIn?, Outs1?, _).
 
 %% =============================================================================
 %% GROUP HELPERS (paper §7.2 Social Network) — grassapp output model
@@ -489,310 +494,318 @@ inject_group_result(group_join_nack(G, I), Ys,
 inject_group_result(Res, [Y|Ys], [Y?|Ys1?]) :-
     inject_group_result(Res?, Ys?, Ys1).
 
-procedure await_group_channel(Constant?, GroupId?, Stream(GroupSetupResponse)?, Stream(X)?, Stream(X)?, OutputsList?, Stream(Bond)?, Constant?, Constant?).
+procedure await_group_channel(Constant?, GroupId?, Stream(GroupSetupResponse)?, Stream(X)?, Stream(X)?, OutputsList?, Stream(Bond)?, Constant?, Constant?, Stream(Constant)).
 await_group_channel(Id, GroupId, [group_channel(ch(FromHub, ToHub?))|_],
-        UserIn, NetIn, Outs, Holdings, NextSerial, Clock) :-
+        UserIn, NetIn, Outs, Holdings, NextSerial, Clock, DateW?) :-
     ground(Id?), ground(GroupId?) |
     add_group_output(group(GroupId?), ToHub, Outs?, Outs1),
     merge(NetIn?, FromHub?, NetIn1),
     lookup_send('_user', msg(agent, '_user', group_joined(GroupId?)), Outs1?, Outs2),
-    agent(Id?, UserIn?, NetIn1?, Outs2?, Holdings?, NextSerial?, Clock?).
-await_group_channel(_, _, [], _, _, _, _, _, _) :- true.
+    agent(Id?, UserIn?, NetIn1?, Outs2?, Holdings?, NextSerial?, Clock?, DateW).
+await_group_channel(_, _, [], _, _, _, _, _, _, []) :- true.
 
 %% =============================================================================
-%% AGENT/7
+%% AGENT/8 — the main loop, carrying the agent's OWN date as a stream (arg 8)
+%% so an open escrow can read it (advance_date writes it; the escrow reads it
+%% through a fresh channel the deposit path opens — see do_deposit_escrow).
 %% =============================================================================
 
+%% agent/7 shim: the seven-argument interface the plays and tests call.  It opens
+%% the date stream and discards its outward end — only an open escrow consumes it.
 procedure agent(Constant?, Stream(X)?, Stream(X)?, OutputsList?, Stream(Bond)?, Constant?, Constant?).
+agent(Id, UserIn, NetIn, Outs, Holdings, NextSerial, Clock) :-
+    agent(Id?, UserIn?, NetIn?, Outs?, Holdings?, NextSerial?, Clock?, _).
+
+procedure agent(Constant?, Stream(X)?, Stream(X)?, OutputsList?, Stream(Bond)?, Constant?, Constant?, Stream(Constant)).
 
 %% --- Currency transactions ---
 
 %% Mint K bonds of my own at Maturity (Maturity 0 = cash).
-agent(Id, [msg('_user', Id1, mint(K, Maturity))|UserIn], NetIn, Outs, Holdings, NextSerial, Clock) :-
+agent(Id, [msg('_user', Id1, mint(K, Maturity))|UserIn], NetIn, Outs, Holdings, NextSerial, Clock, DateW?) :-
     Id? =?= Id1?, ground(K?), ground(Maturity?) |
     NewNextSerial := NextSerial? + K?,
     create_bonds(Id?, Maturity?, K?, NextSerial?, NewBonds),
     append(Holdings?, NewBonds?, NewHoldings),
-    after_change(Id?, NewHoldings?, NewNextSerial?, Clock?, UserIn?, NetIn?, Outs?).
+    after_change(Id?, NewHoldings?, NewNextSerial?, Clock?, UserIn?, NetIn?, Outs?, DateW).
 
 %% Advance my local date (Def. 2 item 2, unguarded): d*' > d*, holdings
 %% unchanged.  Local time advances by the calendar; there is no global clock.
-agent(Id, [msg('_user', Id1, advance_date(D))|UserIn], NetIn, Outs, Holdings, NextSerial, Clock) :-
+agent(Id, [msg('_user', Id1, advance_date(D))|UserIn], NetIn, Outs, Holdings, NextSerial, Clock, [D?|DateW1?]) :-
     Id? =?= Id1?, ground(D?), D? > Clock? |
     lookup_send('_user', msg(agent, '_user', date_advanced(D?)), Outs?, Outs1),
-    after_change(Id?, Holdings?, NextSerial?, D?, UserIn?, NetIn?, Outs1?).
+    after_change(Id?, Holdings?, NextSerial?, D?, UserIn?, NetIn?, Outs1?, DateW1).
 
 %% Report current balances on demand.
-agent(Id, [msg('_user', Id1, balance)|UserIn], NetIn, Outs, Holdings, NextSerial, Clock) :-
+agent(Id, [msg('_user', Id1, balance)|UserIn], NetIn, Outs, Holdings, NextSerial, Clock, DateW?) :-
     Id? =?= Id1?, ground(Holdings?) |
     emit_balances(Id?, Holdings?, Outs?, Outs1),
-    agent(Id?, UserIn?, NetIn?, Outs1?, Holdings?, NextSerial?, Clock?).
+    agent(Id?, UserIn?, NetIn?, Outs1?, Holdings?, NextSerial?, Clock?, DateW).
 
 %% Pay: hand a friend bonds named by GiveSpec (the general GrassApp transfer).
 %% The payer does not test maturity — Def 3.2 makes it the issuer's call: a coin
 %% is judged by its issuer's date, so the recipient checks on receipt that any
 %% of its OWN bonds paid to it are mature (classify_payment, take_payment).
-agent(Id, [msg('_user', Id1, pay(Friend, GiveSpec))|UserIn], NetIn, Outs, Holdings, NextSerial, Clock) :-
+agent(Id, [msg('_user', Id1, pay(Friend, GiveSpec))|UserIn], NetIn, Outs, Holdings, NextSerial, Clock, DateW?) :-
     Id? =?= Id1?, ground(Friend?), ground(GiveSpec?) |
     select_bonds_by_spec(GiveSpec?, Holdings?, Status, Selected, Remaining),
-    do_pay(Status?, Id?, Friend?, Selected?, Remaining?, NextSerial?, Clock?, UserIn?, NetIn?, Outs?).
+    do_pay(Status?, Id?, Friend?, Selected?, Remaining?, NextSerial?, Clock?, UserIn?, NetIn?, Outs?, DateW).
 
 %% Trade: the maturity-carrying swap (a loan is its instance).
-agent(Id, [msg('_user', Id1, trade(Target, GiveSpec, WantSpec))|UserIn], NetIn, Outs, Holdings, NextSerial, Clock) :-
+agent(Id, [msg('_user', Id1, trade(Target, GiveSpec, WantSpec))|UserIn], NetIn, Outs, Holdings, NextSerial, Clock, DateW?) :-
     Id? =?= Id1?, ground(Target?), ground(GiveSpec?), ground(WantSpec?) |
-    do_trade(Id?, Target?, GiveSpec?, WantSpec?, Holdings?, NextSerial?, Clock?, UserIn?, NetIn?, Outs?).
+    do_trade(Id?, Target?, GiveSpec?, WantSpec?, Holdings?, NextSerial?, Clock?, UserIn?, NetIn?, Outs?, DateW).
 
 %% Redeem: present the Target's matured coins; the issuer must fulfil.
-agent(Id, [msg('_user', Id1, redeem(Target, GiveSpec, WantSpec))|UserIn], NetIn, Outs, Holdings, NextSerial, Clock) :-
+agent(Id, [msg('_user', Id1, redeem(Target, GiveSpec, WantSpec))|UserIn], NetIn, Outs, Holdings, NextSerial, Clock, DateW?) :-
     Id? =?= Id1?, ground(Target?), ground(GiveSpec?), ground(WantSpec?) |
-    do_redeem(Id?, Target?, GiveSpec?, WantSpec?, Holdings?, NextSerial?, Clock?, UserIn?, NetIn?, Outs?).
+    do_redeem(Id?, Target?, GiveSpec?, WantSpec?, Holdings?, NextSerial?, Clock?, UserIn?, NetIn?, Outs?, DateW).
 
 %% Accept a trade a friend proposed: give the want-bonds, take the offered ones.
-agent(Id, [msg('_user', Id1, accept_trade(From, trade_pending(TradeResp?, WantSpec, OfferedBonds)))|UserIn], NetIn, Outs, Holdings, NextSerial, Clock) :-
+agent(Id, [msg('_user', Id1, accept_trade(From, trade_pending(TradeResp?, WantSpec, OfferedBonds)))|UserIn], NetIn, Outs, Holdings, NextSerial, Clock, DateW?) :-
     Id? =?= Id1?, ground(From?), ground(WantSpec?), ground(OfferedBonds?) |
     select_bonds_by_spec(WantSpec?, Holdings?, Status, Selected, Remaining),
-    handle_trade_fill(Status?, Id?, From?, TradeResp, OfferedBonds?, Selected?, Remaining?, NextSerial?, Clock?, UserIn?, NetIn?, Outs?).
+    handle_trade_fill(Status?, Id?, From?, TradeResp, OfferedBonds?, Selected?, Remaining?, NextSerial?, Clock?, UserIn?, NetIn?, Outs?, DateW).
 
 %% Reject a trade a friend proposed.
-agent(Id, [msg('_user', Id1, reject_trade(From, trade_pending(TradeResp?, _, OfferedBonds)))|UserIn], NetIn, Outs, Holdings, NextSerial, Clock) :-
+agent(Id, [msg('_user', Id1, reject_trade(From, trade_pending(TradeResp?, _, OfferedBonds)))|UserIn], NetIn, Outs, Holdings, NextSerial, Clock, DateW?) :-
     Id? =?= Id1?, ground(From?), ground(OfferedBonds?) |
     bind_trade_decline(TradeResp, OfferedBonds?),
     lookup_send('_user', msg(agent, '_user', trade_failed(From?)), Outs?, Outs1),
-    agent(Id?, UserIn?, NetIn?, Outs1?, Holdings?, NextSerial?, Clock?).
+    agent(Id?, UserIn?, NetIn?, Outs1?, Holdings?, NextSerial?, Clock?, DateW).
 
 %% Proposer: my trade was accepted — take the bonds they gave.
-agent(Id, [trade_complete(From, TheirBonds)|UserIn], NetIn, Outs, Holdings, NextSerial, Clock) :-
+agent(Id, [trade_complete(From, TheirBonds)|UserIn], NetIn, Outs, Holdings, NextSerial, Clock, DateW?) :-
     ground(Id?), ground(From?), ground(TheirBonds?) |
     append(Holdings?, TheirBonds?, NewHoldings),
     lookup_send('_user', msg(agent, '_user', trade_completed(From?)), Outs?, Outs1),
-    after_change(Id?, NewHoldings?, NextSerial?, Clock?, UserIn?, NetIn?, Outs1?).
+    after_change(Id?, NewHoldings?, NextSerial?, Clock?, UserIn?, NetIn?, Outs1?, DateW).
 
 %% Proposer: my trade was declined — take my bonds back.
-agent(Id, [trade_returned_bonds(From, OurBonds)|UserIn], NetIn, Outs, Holdings, NextSerial, Clock) :-
+agent(Id, [trade_returned_bonds(From, OurBonds)|UserIn], NetIn, Outs, Holdings, NextSerial, Clock, DateW?) :-
     ground(Id?), ground(From?), ground(OurBonds?) |
     append(Holdings?, OurBonds?, NewHoldings),
     lookup_send('_user', msg(agent, '_user', trade_returned(From?)), Outs?, Outs1),
-    after_change(Id?, NewHoldings?, NextSerial?, Clock?, UserIn?, NetIn?, Outs1?).
+    after_change(Id?, NewHoldings?, NextSerial?, Clock?, UserIn?, NetIn?, Outs1?, DateW).
 
 %% Proposer: redemption declined with a menu of what the issuer holds.
-agent(Id, [trade_returned_bonds_menu(From, OurBonds, Menu)|UserIn], NetIn, Outs, Holdings, NextSerial, Clock) :-
+agent(Id, [trade_returned_bonds_menu(From, OurBonds, Menu)|UserIn], NetIn, Outs, Holdings, NextSerial, Clock, DateW?) :-
     ground(Id?), ground(From?), ground(OurBonds?), ground(Menu?) |
     append(Holdings?, OurBonds?, NewHoldings),
     lookup_send('_user', msg(agent, '_user', trade_returned_menu(From?, Menu?)), Outs?, Outs1),
-    after_change(Id?, NewHoldings?, NextSerial?, Clock?, UserIn?, NetIn?, Outs1?).
+    after_change(Id?, NewHoldings?, NextSerial?, Clock?, UserIn?, NetIn?, Outs1?, DateW).
 
 %% --- Escrow: depositor side (paper §5) ---
 
 %% Lock bonds for Target until ReleaseTime; cancellable until then.
-agent(Id, [msg('_user', Id1, deposit_escrow(Target, GiveSpec, ReleaseTime))|UserIn], NetIn, Outs, Holdings, NextSerial, Clock) :-
+agent(Id, [msg('_user', Id1, deposit_escrow(Target, GiveSpec, ReleaseTime))|UserIn], NetIn, Outs, Holdings, NextSerial, Clock, []) :-
     Id? =?= Id1?, ground(Target?), ground(GiveSpec?), ground(ReleaseTime?) |
     do_deposit_escrow(Id?, Target?, GiveSpec?, ReleaseTime?, Holdings?, NextSerial?, Clock?, UserIn?, NetIn?, Outs?).
 
 %% Cancel before the release time — binding the signal wins the race.
-agent(Id, [msg('_user', Id1, cancel_escrow(_, escrow_pending(CancelSignal?)))|UserIn], NetIn, Outs, Holdings, NextSerial, Clock) :-
+agent(Id, [msg('_user', Id1, cancel_escrow(_, escrow_pending(CancelSignal?)))|UserIn], NetIn, Outs, Holdings, NextSerial, Clock, DateW?) :-
     Id? =?= Id1? |
     bind_escrow_cancel(CancelSignal),
-    agent(Id?, UserIn?, NetIn?, Outs?, Holdings?, NextSerial?, Clock?).
+    agent(Id?, UserIn?, NetIn?, Outs?, Holdings?, NextSerial?, Clock?, DateW).
 
 %% The timer won: the bonds went to the beneficiary.
-agent(Id, [escrow_dep_expired(Target)|UserIn], NetIn, Outs, Holdings, NextSerial, Clock) :-
+agent(Id, [escrow_dep_expired(Target)|UserIn], NetIn, Outs, Holdings, NextSerial, Clock, DateW?) :-
     ground(Id?), ground(Target?) |
     lookup_send('_user', msg(agent, '_user', escrow_expired(Target?)), Outs?, Outs1),
-    agent(Id?, UserIn?, NetIn?, Outs1?, Holdings?, NextSerial?, Clock?).
+    agent(Id?, UserIn?, NetIn?, Outs1?, Holdings?, NextSerial?, Clock?, DateW).
 
 %% The cancel won: the bonds come home.
-agent(Id, [escrow_dep_returned(Target, OurBonds)|UserIn], NetIn, Outs, Holdings, NextSerial, Clock) :-
+agent(Id, [escrow_dep_returned(Target, OurBonds)|UserIn], NetIn, Outs, Holdings, NextSerial, Clock, DateW?) :-
     ground(Id?), ground(Target?), ground(OurBonds?) |
     append(Holdings?, OurBonds?, NewHoldings),
     lookup_send('_user', msg(agent, '_user', escrow_returned(Target?)), Outs?, Outs1),
-    after_change(Id?, NewHoldings?, NextSerial?, Clock?, UserIn?, NetIn?, Outs1?).
+    after_change(Id?, NewHoldings?, NextSerial?, Clock?, UserIn?, NetIn?, Outs1?, DateW).
 
 %% --- Escrow: beneficiary side (paper §5) ---
 
 %% Released: take the bonds.
-agent(Id, [escrow_ben_released(From, Bonds)|UserIn], NetIn, Outs, Holdings, NextSerial, Clock) :-
+agent(Id, [escrow_ben_released(From, Bonds)|UserIn], NetIn, Outs, Holdings, NextSerial, Clock, DateW?) :-
     ground(Id?), ground(From?), ground(Bonds?) |
     append(Holdings?, Bonds?, NewHoldings),
     lookup_send('_user', msg(agent, '_user', escrow_released(From?)), Outs?, Outs1),
-    after_change(Id?, NewHoldings?, NextSerial?, Clock?, UserIn?, NetIn?, Outs1?).
+    after_change(Id?, NewHoldings?, NextSerial?, Clock?, UserIn?, NetIn?, Outs1?, DateW).
 
 %% The depositor cancelled.
-agent(Id, [escrow_ben_cancelled(From)|UserIn], NetIn, Outs, Holdings, NextSerial, Clock) :-
+agent(Id, [escrow_ben_cancelled(From)|UserIn], NetIn, Outs, Holdings, NextSerial, Clock, DateW?) :-
     ground(Id?), ground(From?) |
     lookup_send('_user', msg(agent, '_user', escrow_cancelled(From?)), Outs?, Outs1),
-    agent(Id?, UserIn?, NetIn?, Outs1?, Holdings?, NextSerial?, Clock?).
+    agent(Id?, UserIn?, NetIn?, Outs1?, Holdings?, NextSerial?, Clock?, DateW).
 
 %% --- Social: user messages ---
 
-agent(Id, [msg('_user', Id1, connect(Target))|UserIn], NetIn, Outs, Holdings, NextSerial, Clock) :-
+agent(Id, [msg('_user', Id1, connect(Target))|UserIn], NetIn, Outs, Holdings, NextSerial, Clock, DateW?) :-
     Id? =?= Id1?, ground(Target?) |
     lookup_send('_net', msg(Target?, intro(Id?, Resp)), Outs?, Outs1),
     inject_msg(Resp?, Target?, Id?, UserIn?, UserIn1),
-    agent(Id?, UserIn1?, NetIn?, Outs1?, Holdings?, NextSerial?, Clock?).
+    agent(Id?, UserIn1?, NetIn?, Outs1?, Holdings?, NextSerial?, Clock?, DateW).
 
-agent(Id, [msg('_user', Id1, unfriend(Friend))|UserIn], NetIn, Outs, Holdings, NextSerial, Clock) :-
+agent(Id, [msg('_user', Id1, unfriend(Friend))|UserIn], NetIn, Outs, Holdings, NextSerial, Clock, DateW?) :-
     Id? =?= Id1?, ground(Friend?) |
     end_friend(Friend?, Id?, Outs?, Outs1),
     lookup_send('_user', msg(agent, '_user', unfriended(Friend?)), Outs1?, Outs2),
-    agent(Id?, UserIn?, NetIn?, Outs2?, Holdings?, NextSerial?, Clock?).
+    agent(Id?, UserIn?, NetIn?, Outs2?, Holdings?, NextSerial?, Clock?, DateW).
 
-agent(Id, [msg('_user', Id1, decision(Dec, From, response(Resp?)))|UserIn], NetIn, Outs, Holdings, NextSerial, Clock) :-
+agent(Id, [msg('_user', Id1, decision(Dec, From, response(Resp?)))|UserIn], NetIn, Outs, Holdings, NextSerial, Clock, DateW?) :-
     Id? =?= Id1? |
     bind_response(Dec?, From?, Resp, Outs?, Outs1, NetIn?, NetIn1),
-    agent(Id?, UserIn?, NetIn1?, Outs1?, Holdings?, NextSerial?, Clock?).
+    agent(Id?, UserIn?, NetIn1?, Outs1?, Holdings?, NextSerial?, Clock?, DateW).
 
-agent(Id, [msg('_user', Id1, send(Target, Text))|UserIn], NetIn, Outs, Holdings, NextSerial, Clock) :-
+agent(Id, [msg('_user', Id1, send(Target, Text))|UserIn], NetIn, Outs, Holdings, NextSerial, Clock, DateW?) :-
     Id? =?= Id1?, ground(Target?) |
     lookup_send(Target?, msg(Id?, Target?, text(Text?)), Outs?, Outs1),
-    agent(Id?, UserIn?, NetIn?, Outs1?, Holdings?, NextSerial?, Clock?).
+    agent(Id?, UserIn?, NetIn?, Outs1?, Holdings?, NextSerial?, Clock?, DateW).
 
-agent(Id, [msg(From, Id1, response(Resp))|UserIn], NetIn, Outs, Holdings, NextSerial, Clock) :-
+agent(Id, [msg(From, Id1, response(Resp))|UserIn], NetIn, Outs, Holdings, NextSerial, Clock, DateW?) :-
     Id? =?= Id1? |
     handle_response(Resp?, From?, Outs?, Outs1, NetIn?, NetIn1),
-    agent(Id?, UserIn?, NetIn1?, Outs1?, Holdings?, NextSerial?, Clock?).
+    agent(Id?, UserIn?, NetIn1?, Outs1?, Holdings?, NextSerial?, Clock?, DateW).
 
 %% --- Groups: user-originated (paper §7.2) ---
 
-agent(Id, [msg('_user', Id1, create_group(Name))|UserIn], NetIn, Outs, Holdings, NextSerial, Clock) :-
+agent(Id, [msg('_user', Id1, create_group(Name))|UserIn], NetIn, Outs, Holdings, NextSerial, Clock, DateW?) :-
     Id? =?= Id1?, ground(Name?) |
     setup_group_creator(group_id(Id?, Name?), Outs?, Outs1, NetIn?, NetIn1),
     lookup_send('_user', msg(agent, '_user', group_joined(group_id(Id?, Name?))), Outs1?, Outs2),
-    agent(Id?, UserIn?, NetIn1?, Outs2?, Holdings?, NextSerial?, Clock?).
+    agent(Id?, UserIn?, NetIn1?, Outs2?, Holdings?, NextSerial?, Clock?, DateW).
 
-agent(Id, [msg('_user', Id1, invite_group(GroupId, Invitee))|UserIn], NetIn, Outs, Holdings, NextSerial, Clock) :-
+agent(Id, [msg('_user', Id1, invite_group(GroupId, Invitee))|UserIn], NetIn, Outs, Holdings, NextSerial, Clock, DateW?) :-
     Id? =?= Id1?, ground(GroupId?), ground(Invitee?), new_channel(InviteeCh, CreatorCh) |
     lookup_send(Invitee?, msg(Id?, Invitee?, group_invite(GroupId?, InviteeCh?)), Outs?, Outs1),
     group_await_join(GroupId?, Invitee?, CreatorCh?, Result),
     inject_group_result(Result?, UserIn?, UserIn1),
-    agent(Id?, UserIn1?, NetIn?, Outs1?, Holdings?, NextSerial?, Clock?).
+    agent(Id?, UserIn1?, NetIn?, Outs1?, Holdings?, NextSerial?, Clock?, DateW).
 
-agent(Id, [msg('_user', Id1, accept_group(GroupId, group_channel(ch(ChRead, [ack(Id?)|[]]))))|UserIn], NetIn, Outs, Holdings, NextSerial, Clock) :-
+agent(Id, [msg('_user', Id1, accept_group(GroupId, group_channel(ch(ChRead, [ack(Id?)|[]]))))|UserIn], NetIn, Outs, Holdings, NextSerial, Clock, DateW?) :-
     Id? =?= Id1?, ground(GroupId?) |
-    await_group_channel(Id?, GroupId?, ChRead?, UserIn?, NetIn?, Outs?, Holdings?, NextSerial?, Clock?).
+    await_group_channel(Id?, GroupId?, ChRead?, UserIn?, NetIn?, Outs?, Holdings?, NextSerial?, Clock?, DateW).
 
-agent(Id, [msg('_user', Id1, reject_group(_, group_channel(ch(_, [nack|[]]))))|UserIn], NetIn, Outs, Holdings, NextSerial, Clock) :-
+agent(Id, [msg('_user', Id1, reject_group(_, group_channel(ch(_, [nack|[]]))))|UserIn], NetIn, Outs, Holdings, NextSerial, Clock, DateW?) :-
     Id? =?= Id1? |
-    agent(Id?, UserIn?, NetIn?, Outs?, Holdings?, NextSerial?, Clock?).
+    agent(Id?, UserIn?, NetIn?, Outs?, Holdings?, NextSerial?, Clock?, DateW).
 
-agent(Id, [group_join_ack(GroupId, Invitee, ch(_, [group_channel(MemberEnd?)|[]]))|UserIn], NetIn, Outs, Holdings, NextSerial, Clock) :-
+agent(Id, [group_join_ack(GroupId, Invitee, ch(_, [group_channel(MemberEnd?)|[]]))|UserIn], NetIn, Outs, Holdings, NextSerial, Clock, DateW?) :-
     ground(Id?), ground(GroupId?), ground(Invitee?) |
     setup_group_hub_side(GroupId?, Invitee?, Outs?, Outs1, NetIn?, NetIn1, MemberEnd),
     lookup_send('_user', msg(agent, '_user', group_joined_member(GroupId?, Invitee?)), Outs1?, Outs2),
-    agent(Id?, UserIn?, NetIn1?, Outs2?, Holdings?, NextSerial?, Clock?).
+    agent(Id?, UserIn?, NetIn1?, Outs2?, Holdings?, NextSerial?, Clock?, DateW).
 
-agent(Id, [group_join_nack(_, _)|UserIn], NetIn, Outs, Holdings, NextSerial, Clock) :-
+agent(Id, [group_join_nack(_, _)|UserIn], NetIn, Outs, Holdings, NextSerial, Clock, DateW?) :-
     ground(Id?) |
-    agent(Id?, UserIn?, NetIn?, Outs?, Holdings?, NextSerial?, Clock?).
+    agent(Id?, UserIn?, NetIn?, Outs?, Holdings?, NextSerial?, Clock?, DateW).
 
-agent(Id, [msg('_user', Id1, send_group(GroupId, Text))|UserIn], NetIn, Outs, Holdings, NextSerial, Clock) :-
+agent(Id, [msg('_user', Id1, send_group(GroupId, Text))|UserIn], NetIn, Outs, Holdings, NextSerial, Clock, DateW?) :-
     Id? =?= Id1?, ground(GroupId?), ground(Text?) |
     lookup_send_group(group(GroupId?), msg(Id?, Id?, group_msg(GroupId?, Id?, Text?)), Outs?, Outs1),
-    agent(Id?, UserIn?, NetIn?, Outs1?, Holdings?, NextSerial?, Clock?).
+    agent(Id?, UserIn?, NetIn?, Outs1?, Holdings?, NextSerial?, Clock?, DateW).
 
-agent(Id, [msg('_user', Id1, leave_group(GroupId))|UserIn], NetIn, Outs, Holdings, NextSerial, Clock) :-
+agent(Id, [msg('_user', Id1, leave_group(GroupId))|UserIn], NetIn, Outs, Holdings, NextSerial, Clock, DateW?) :-
     Id? =?= Id1?, ground(GroupId?) |
     lookup_send_group(group(GroupId?), msg(Id?, Id?, group_leave(GroupId?, Id?)), Outs?, Outs1),
     close_output(group(GroupId?), Outs1?, Outs2),
     lookup_send('_user', msg(agent, '_user', group_left(GroupId?)), Outs2?, Outs3),
-    agent(Id?, UserIn?, NetIn?, Outs3?, Holdings?, NextSerial?, Clock?).
+    agent(Id?, UserIn?, NetIn?, Outs3?, Holdings?, NextSerial?, Clock?, DateW).
 
-agent(Id, [msg('_user', Id1, remove_from_group(GroupId, Member))|UserIn], NetIn, Outs, Holdings, NextSerial, Clock) :-
+agent(Id, [msg('_user', Id1, remove_from_group(GroupId, Member))|UserIn], NetIn, Outs, Holdings, NextSerial, Clock, DateW?) :-
     Id? =?= Id1?, ground(GroupId?), ground(Member?) |
     lookup_send_group(group_member(GroupId?, Member?), msg(Id?, Member?, group_removed(GroupId?)), Outs?, Outs1),
     close_output(group_member(GroupId?, Member?), Outs1?, Outs2),
-    agent(Id?, UserIn?, NetIn?, Outs2?, Holdings?, NextSerial?, Clock?).
+    agent(Id?, UserIn?, NetIn?, Outs2?, Holdings?, NextSerial?, Clock?, DateW).
 
 %% User catch-all (drop unrecognised user message).
-agent(Id, [_|UserIn], NetIn, Outs, Holdings, NextSerial, Clock) :-
+agent(Id, [_|UserIn], NetIn, Outs, Holdings, NextSerial, Clock, DateW?) :-
     ground(Id?), otherwise |
-    agent(Id?, UserIn?, NetIn?, Outs?, Holdings?, NextSerial?, Clock?).
+    agent(Id?, UserIn?, NetIn?, Outs?, Holdings?, NextSerial?, Clock?, DateW).
 
 %% --- Social: network messages ---
 
-agent(Id, UserIn, [msg(Id1, intro(From, Resp?))|NetIn], Outs, Holdings, NextSerial, Clock) :-
+agent(Id, UserIn, [msg(Id1, intro(From, Resp?))|NetIn], Outs, Holdings, NextSerial, Clock, DateW?) :-
     Id? =?= Id1? |
     lookup_send('_user', msg(agent, '_user', befriend(From?, Resp)), Outs?, Outs1),
-    agent(Id?, UserIn?, NetIn?, Outs1?, Holdings?, NextSerial?, Clock?).
+    agent(Id?, UserIn?, NetIn?, Outs1?, Holdings?, NextSerial?, Clock?, DateW).
 
-agent(Id, UserIn, [msg(From, Id1, response(Resp))|NetIn], Outs, Holdings, NextSerial, Clock) :-
+agent(Id, UserIn, [msg(From, Id1, response(Resp))|NetIn], Outs, Holdings, NextSerial, Clock, DateW?) :-
     Id? =?= Id1? |
     handle_response(Resp?, From?, Outs?, Outs1, NetIn?, NetIn1),
-    agent(Id?, UserIn?, NetIn1?, Outs1?, Holdings?, NextSerial?, Clock?).
+    agent(Id?, UserIn?, NetIn1?, Outs1?, Holdings?, NextSerial?, Clock?, DateW).
 
-agent(Id, UserIn, [msg(From, Id1, text(Text))|NetIn], Outs, Holdings, NextSerial, Clock) :-
+agent(Id, UserIn, [msg(From, Id1, text(Text))|NetIn], Outs, Holdings, NextSerial, Clock, DateW?) :-
     Id? =?= Id1? |
     lookup_send('_user', msg(agent, '_user', received(From?, Text?)), Outs?, Outs1),
-    agent(Id?, UserIn?, NetIn?, Outs1?, Holdings?, NextSerial?, Clock?).
+    agent(Id?, UserIn?, NetIn?, Outs1?, Holdings?, NextSerial?, Clock?, DateW).
 
 %% A friend pays me coins.  Def 3.2: a coin is a bond mature at its issuer's own
 %% date, so a valid Pay carries the recipient's own coins.  I take them only when
 %% EVERY offered bond is a coin of mine (own_coins); a foreign or premature bond
 %% makes it not a payment but a swap, so I return the whole lot to the payer.
-agent(Id, UserIn, [msg(From, Id1, coins(Bonds))|NetIn], Outs, Holdings, NextSerial, Clock) :-
+agent(Id, UserIn, [msg(From, Id1, coins(Bonds))|NetIn], Outs, Holdings, NextSerial, Clock, DateW?) :-
     Id? =?= Id1?, ground(From?), ground(Bonds?) |
     own_coins(Id?, Clock?, Bonds?, AllCoins),
-    take_payment(AllCoins?, Id?, From?, Bonds?, Holdings?, NextSerial?, Clock?, UserIn?, NetIn?, Outs?).
+    take_payment(AllCoins?, Id?, From?, Bonds?, Holdings?, NextSerial?, Clock?, UserIn?, NetIn?, Outs?, DateW).
 
 %% A friend proposes a trade (or presents my own bonds for redemption).
-agent(Id, UserIn, [msg(From, Id1, trade_propose(WantSpec, OfferedBonds, TradeResp?))|NetIn], Outs, Holdings, NextSerial, Clock) :-
+agent(Id, UserIn, [msg(From, Id1, trade_propose(WantSpec, OfferedBonds, TradeResp?))|NetIn], Outs, Holdings, NextSerial, Clock, DateW?) :-
     Id? =?= Id1?, ground(From?), ground(WantSpec?), ground(OfferedBonds?) |
     classify_trade(Id?, Clock?, WantSpec?, OfferedBonds?, TradeClass),
     trade_dispatch(TradeClass?, Id?, From?, WantSpec?, OfferedBonds?, TradeResp,
-        Holdings?, NextSerial?, Clock?, UserIn?, NetIn?, Outs?).
+        Holdings?, NextSerial?, Clock?, UserIn?, NetIn?, Outs?, DateW).
 
 %% A friend opened an escrow for me: watch its outcome, tell the user.
-agent(Id, UserIn, [msg(From, Id1, escrow_offer(ReleaseTime, Coin, Maturity, Amount, BenResult))|NetIn], Outs, Holdings, NextSerial, Clock) :-
+agent(Id, UserIn, [msg(From, Id1, escrow_offer(ReleaseTime, Coin, Maturity, Amount, BenResult))|NetIn], Outs, Holdings, NextSerial, Clock, DateW?) :-
     Id? =?= Id1?, ground(From?), ground(ReleaseTime?),
     ground(Coin?), ground(Maturity?), ground(Amount?) |
     inject_escrow_ben_result(BenResult?, From?, UserIn?, UserIn1),
     lookup_send('_user',
         msg(agent, '_user', escrow_received(From?, ReleaseTime?, Coin?, Maturity?, Amount?)),
         Outs?, Outs1),
-    agent(Id?, UserIn1?, NetIn?, Outs1?, Holdings?, NextSerial?, Clock?).
+    agent(Id?, UserIn1?, NetIn?, Outs1?, Holdings?, NextSerial?, Clock?, DateW).
 
 %% A friend unfriended me (paper §4 Integrate unfriend).
-agent(Id, UserIn, [msg(From, Id1, unfriend)|NetIn], Outs, Holdings, NextSerial, Clock) :-
+agent(Id, UserIn, [msg(From, Id1, unfriend)|NetIn], Outs, Holdings, NextSerial, Clock, DateW?) :-
     Id? =?= Id1?, ground(From?) |
     drop_friend(From?, Outs?, Outs1),
     lookup_send('_user', msg(agent, '_user', unfriended(From?)), Outs1?, Outs2),
-    agent(Id?, UserIn?, NetIn?, Outs2?, Holdings?, NextSerial?, Clock?).
+    agent(Id?, UserIn?, NetIn?, Outs2?, Holdings?, NextSerial?, Clock?, DateW).
 
 %% A friend publishes their holdings: surface them as that friend's balances.
-agent(Id, UserIn, [msg(From, Id1, balances(FH))|NetIn], Outs, Holdings, NextSerial, Clock) :-
+agent(Id, UserIn, [msg(From, Id1, balances(FH))|NetIn], Outs, Holdings, NextSerial, Clock, DateW?) :-
     Id? =?= Id1?, ground(From?), ground(FH?) |
     emit_balances(From?, FH?, Outs?, Outs1),
-    agent(Id?, UserIn?, NetIn?, Outs1?, Holdings?, NextSerial?, Clock?).
+    agent(Id?, UserIn?, NetIn?, Outs1?, Holdings?, NextSerial?, Clock?, DateW).
 
 %% --- Groups: network-arriving (paper §7.2) ---
 
-agent(Id, UserIn, [msg(_, Id1, group_invite(GroupId, Ch))|NetIn], Outs, Holdings, NextSerial, Clock) :-
+agent(Id, UserIn, [msg(_, Id1, group_invite(GroupId, Ch))|NetIn], Outs, Holdings, NextSerial, Clock, DateW?) :-
     Id? =?= Id1?, ground(GroupId?) |
     lookup_send('_user', msg(agent, '_user', group_invite(GroupId?, Ch?)), Outs?, Outs1),
-    agent(Id?, UserIn?, NetIn?, Outs1?, Holdings?, NextSerial?, Clock?).
+    agent(Id?, UserIn?, NetIn?, Outs1?, Holdings?, NextSerial?, Clock?, DateW).
 
-agent(Id, UserIn, [msg(_, _, group_msg(GroupId, Author, Text))|NetIn], Outs, Holdings, NextSerial, Clock) :-
+agent(Id, UserIn, [msg(_, _, group_msg(GroupId, Author, Text))|NetIn], Outs, Holdings, NextSerial, Clock, DateW?) :-
     ground(Id?), ground(GroupId?), ground(Author?), ground(Text?) |
     distribute_group_msg(GroupId?, msg(Author?, Author?, group_msg(GroupId?, Author?, Text?)), Outs?, Outs1),
     lookup_send('_user', msg(agent, '_user', group_received(GroupId?, Author?, Text?)), Outs1?, Outs2),
-    agent(Id?, UserIn?, NetIn?, Outs2?, Holdings?, NextSerial?, Clock?).
+    agent(Id?, UserIn?, NetIn?, Outs2?, Holdings?, NextSerial?, Clock?, DateW).
 
-agent(Id, UserIn, [msg(Member, _, group_leave(GroupId, Member1))|NetIn], Outs, Holdings, NextSerial, Clock) :-
+agent(Id, UserIn, [msg(Member, _, group_leave(GroupId, Member1))|NetIn], Outs, Holdings, NextSerial, Clock, DateW?) :-
     ground(Id?), ground(GroupId?), ground(Member?), Member? =?= Member1? |
     close_output(group_member(GroupId?, Member?), Outs?, Outs1),
-    agent(Id?, UserIn?, NetIn?, Outs1?, Holdings?, NextSerial?, Clock?).
+    agent(Id?, UserIn?, NetIn?, Outs1?, Holdings?, NextSerial?, Clock?, DateW).
 
-agent(Id, UserIn, [msg(_, _, group_removed(GroupId))|NetIn], Outs, Holdings, NextSerial, Clock) :-
+agent(Id, UserIn, [msg(_, _, group_removed(GroupId))|NetIn], Outs, Holdings, NextSerial, Clock, DateW?) :-
     ground(Id?), ground(GroupId?) |
     close_output(group(GroupId?), Outs?, Outs1),
     lookup_send('_user', msg(agent, '_user', group_removed(GroupId?)), Outs1?, Outs2),
-    agent(Id?, UserIn?, NetIn?, Outs2?, Holdings?, NextSerial?, Clock?).
+    agent(Id?, UserIn?, NetIn?, Outs2?, Holdings?, NextSerial?, Clock?, DateW).
 
 %% Network catch-all (drop unrecognised network message).
-agent(Id, UserIn, [_|NetIn], Outs, Holdings, NextSerial, Clock) :-
+agent(Id, UserIn, [_|NetIn], Outs, Holdings, NextSerial, Clock, DateW?) :-
     ground(Id?), otherwise |
-    agent(Id?, UserIn?, NetIn?, Outs?, Holdings?, NextSerial?, Clock?).
+    agent(Id?, UserIn?, NetIn?, Outs?, Holdings?, NextSerial?, Clock?, DateW).
 
 %% --- Termination ---
 
-agent(_, [], _, Outs, _, _, _) :- close_outputs(Outs?).
-agent(_, _, [], Outs, _, _, _) :- close_outputs(Outs?).
+agent(_, [], _, Outs, _, _, _, []) :- close_outputs(Outs?).
+agent(_, _, [], Outs, _, _, _, []) :- close_outputs(Outs?).

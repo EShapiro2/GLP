@@ -77,8 +77,7 @@ log_v(_, []).
 
 procedure play_village.
 play_village :-
-    now(Now),
-    T := Now? + 700,
+    T := 30,
     network6(AliceNetOut?, BobNetOut?, CharlieNetOut?,
              DianaNetOut?, EveNetOut?, FrankNetOut?,
              AliceNetIn, BobNetIn, CharlieNetIn,
@@ -339,13 +338,16 @@ charlie_v_swapped(T, [trade_completed(eve)|In],
 charlie_v_swapped(T, [_|In], Out?) :- otherwise | charlie_v_swapped(T?, In?, Out).
 charlie_v_swapped(_, [], []).
 
+%% Once deposited, Charlie advances his own date to the release date T: the
+%% escrow reads his date and releases on it — no wall clock, no cancel.
 procedure charlie_v_deposited(Stream(UserNotify)?, Stream(UserCmd)).
-charlie_v_deposited([escrow_deposited(frank, _, _, _, _, _)|In], Out?) :-
+charlie_v_deposited([escrow_deposited(frank, T, _, _, _, _)|In],
+                    [advance_date(T?)|Out?]) :-
     charlie_v_expired(In?, Out).
 charlie_v_deposited([_|In], Out?) :- otherwise | charlie_v_deposited(In?, Out).
 charlie_v_deposited([], []).
 
-%% The dock was built, so Charlie never cancels: the timer wins the race.
+%% The dock was built, so Charlie never cancels: his date reaching T releases it.
 procedure charlie_v_expired(Stream(UserNotify)?, Stream(UserCmd)).
 charlie_v_expired([escrow_expired(frank)|In], [balance|Out?]) :-
     charlie_v_done(In?, Out).

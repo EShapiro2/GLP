@@ -59,17 +59,20 @@ void main() {
     await agent.injectUserInput('send(eve, thanks_eve)');
     expect(all(), contains('received(eve, lovely_day_isnt_it)'));
 
-    // Dana: pay arrives, trade offer arrives; Bob accepts; Dana then redeems a
-    // bob-coin and Bob's agent honours it — his dana-holding drops to 3.
-    // Balances are now keyed by (owner, issuer, maturity); coins are maturity 0.
+    // Dana: her pay of dana-coins is returned — a pay is q-coins to q (Def 3.2),
+    // and Bob is not their issuer, so it is not absorbed.  Her trade offer then
+    // arrives, Bob accepts (+2 dana-coins), and Dana redeems a bob-coin, which
+    // Bob's agent honours by setting off one dana-coin — leaving Bob 1.
+    // Balances are keyed by (owner, issuer, maturity); coins are maturity 0.
     await agent.injectUserInput('decision(yes, dana, ${reqs['dana']})');
     final swap = RegExp('trade_proposed\\(dana, .*?(req\\(\\d+\\))\\)')
         .firstMatch(all());
     expect(swap, isNotNull, reason: 'no trade offer from dana in: $lines');
     await agent.injectUserInput('accept_trade(dana, ${swap!.group(1)})');
     expect(all(), contains('trade_completed(dana)'));
-    expect(all(), contains('balance_report(bob, dana, 0, 3)'),
-        reason: 'dana redeemed one bob-coin; the set-off leaves 3 dana-coins');
+    expect(all(), contains('balance_report(bob, dana, 0, 1)'),
+        reason: 'the swap gave Bob 2 dana-coins and the redemption set off 1, '
+            "leaving 1; Dana's pay of foreign coins was returned (a pay is q-coins to q)");
 
     // Alice and Charlie as before: message + trade card; pay + unfriend.
     await agent.injectUserInput('decision(yes, alice, ${reqs['alice']})');

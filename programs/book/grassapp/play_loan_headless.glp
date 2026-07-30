@@ -8,9 +8,10 @@
 %%   alice (lender)   mints 3 coins (maturity 0)
 %%   bob   (borrower) mints 5 bonds maturing at date 10 (face 5 > 3 lent = interest)
 %%   they swap                         -> the loan
-%%   alice redeems BEFORE advancing    -> refused by her own local-clock gate
-%%   alice advances her date to 11     -> Def. 2 item 2
-%%   alice redeems                     -> bob auto-honours; set-off returns her coins
+%%   alice presents the redemption     -> at bob's date 0 the bonds are not coins,
+%%                                        so bob reclassifies it and returns it
+%%   bob advances its date to 11       -> Def. 2 item 2 (the ISSUER's date, Def 3.2)
+%%   alice re-presents                 -> bob auto-honours; set-off returns her coins
 %%
 %% Entry point for the Dart harness / goalLabel: play_loan/0.
 %% Requires: self.glp, currency_txn.glp, grassapp_agent.glp, grassapp_mediator.glp
@@ -90,31 +91,27 @@ lender_wait_minted([_|In], Out?) :-
     otherwise | lender_wait_minted(In?, Out).
 lender_wait_minted([], []).
 
-%% Loan settled — try to redeem BEFORE advancing; our own gate must refuse it
-%% (the bob-bonds mature at 10, our local date is still 0).
+%% Loan settled — present the redemption now, before the ISSUER's date reaches
+%% maturity.  Def 3.2 judges maturity by bob's date, not ours: at bob's date 0
+%% the bob-bonds are not yet coins, so bob reclassifies the presentation as a
+%% normal offer and returns it.  There is no holder-side gate — we just present.
 procedure lender_wait_loan(Stream(UserNotify)?, Stream(UserCmd)).
 lender_wait_loan([trade_completed(bob)|In],
                  [redeem(bob, bob, 10, 3, alice, 0, 3)|Out?]) :-
-    lender_wait_early_redeem(In?, Out).
+    lender_wait_early(In?, Out).
 lender_wait_loan([_|In], Out?) :-
     otherwise | lender_wait_loan(In?, Out).
 lender_wait_loan([], []).
 
-%% Refused — advance our own local date past maturity.
-procedure lender_wait_early_redeem(Stream(UserNotify)?, Stream(UserCmd)).
-lender_wait_early_redeem([trade_failed(bob)|In], [advance_date(11)|Out?]) :-
-    lender_wait_advanced(In?, Out).
-lender_wait_early_redeem([_|In], Out?) :-
-    otherwise | lender_wait_early_redeem(In?, Out).
-lender_wait_early_redeem([], []).
-
-procedure lender_wait_advanced(Stream(UserNotify)?, Stream(UserCmd)).
-lender_wait_advanced([date_advanced(11)|In],
-                     [redeem(bob, bob, 10, 3, alice, 0, 3)|Out?]) :-
+%% Returned — the early presentation was not a coin at bob's date.  Present it
+%% again; by now bob has advanced its own date past maturity and must honour it.
+procedure lender_wait_early(Stream(UserNotify)?, Stream(UserCmd)).
+lender_wait_early([trade_returned(bob)|In],
+                  [redeem(bob, bob, 10, 3, alice, 0, 3)|Out?]) :-
     lender_wait_redeemed(In?, Out).
-lender_wait_advanced([_|In], Out?) :-
-    otherwise | lender_wait_advanced(In?, Out).
-lender_wait_advanced([], []).
+lender_wait_early([_|In], Out?) :-
+    otherwise | lender_wait_early(In?, Out).
+lender_wait_early([], []).
 
 procedure lender_wait_redeemed(Stream(UserNotify)?, Stream(UserCmd)).
 lender_wait_redeemed([trade_completed(bob)|In], [balance|Out?]) :-
@@ -161,14 +158,27 @@ borrower_wait_minted(ReqId, [_|In], Out?) :-
     otherwise | borrower_wait_minted(ReqId?, In?, Out).
 borrower_wait_minted(_, [], []).
 
-%% Swap done (we now hold alice-coins). Alice's redemption is auto-honoured by
-%% our agent — we just observe its completion, then report.
+%% Swap done (we now hold alice-coins).  Alice's early presentation arrives next
+%% as a NORMAL offer — at our date (0) her bob-bonds are not yet coins (Def 3.2).
+%% Advance our own date past maturity and decline the early swap; her next
+%% presentation will be a coin our agent must auto-honour.
 procedure borrower_wait_loan(Stream(UserNotify)?, Stream(UserCmd)).
 borrower_wait_loan([trade_completed(alice)|In], Out?) :-
-    borrower_wait_redeemed(In?, Out).
+    borrower_wait_early(In?, Out).
 borrower_wait_loan([_|In], Out?) :-
     otherwise | borrower_wait_loan(In?, Out).
 borrower_wait_loan([], []).
+
+%% Early presentation as a normal offer: advance past maturity, decline it.  The
+%% re-presentation is then a coin at our date, which our agent auto-honours.
+procedure borrower_wait_early(Stream(UserNotify)?, Stream(UserCmd)).
+borrower_wait_early([trade_proposed(alice, _, _, _, ReqId)|In],
+                    [advance_date(11), reject_trade(alice, ReqId?)|Out?]) :-
+    ground(ReqId?) |
+    borrower_wait_redeemed(In?, Out).
+borrower_wait_early([_|In], Out?) :-
+    otherwise | borrower_wait_early(In?, Out).
+borrower_wait_early([], []).
 
 procedure borrower_wait_redeemed(Stream(UserNotify)?, Stream(UserCmd)).
 borrower_wait_redeemed([trade_completed(alice)|In], [balance|Out?]) :-
