@@ -25,7 +25,7 @@
 %%
 %% Correspondence to the implementation (clause for clause):
 %%   - a *(X1..Xk) Request clause  ->  a UserCmd constructor over X1..Xk, a mediator
-%%     pass-through, and the agent clause matching msg('_user', Id, cmd(X1..Xk)):
+%%     pass-through, and the agent clause matching msg(person, Id, cmd(X1..Xk)):
 %%     connect/1, unfriend/1, send/2, introduce/2;
 %%   - a responder goal, spawned per arriving offer  ->  a pending-table entry
 %%     req(N) in the mediator, rendered as an inbox card;
@@ -33,7 +33,7 @@
 %%     (cold call) and accept_intro/2, reject_intro/2 (introduction) routing the
 %%     escrowed writer or channel back to the agent; the agent's decision clause
 %%     below, and respond_intro's accept body, match the deployed clauses modulo
-%%     the msg('_user', Id, ...) wrapper and the channel(...) escrow packing.
+%%     the msg(person, Id, ...) wrapper and the channel(...) escrow packing.
 %% The escrow vocabulary — befriend/2, befriend_intro/3, and the pending table —
 %% does not appear here: the machine's question to the person is not a message
 %% but a pending volition-guarded reduction.
@@ -154,7 +154,7 @@ agent(Id, UserIn, [msg(From, Id1, response(Resp))|NetIn], Outs) :-
 %% A friend messages me.
 agent(Id, UserIn, [msg(From, Id1, text(Text))|NetIn], Outs) :-
     Id? =?= Id1? |
-    send_user(msg(agent, '_user', received(From?, Text?)), Outs?, Outs1),
+    send_user(msg(agent, person, received(From?, Text?)), Outs?, Outs1),
     agent(Id?, UserIn?, NetIn?, Outs1?).
 
 %% A friend unfriended me (Integrate unfriend): comply — tear down my side and
@@ -162,7 +162,7 @@ agent(Id, UserIn, [msg(From, Id1, text(Text))|NetIn], Outs) :-
 agent(Id, UserIn, [msg(From, Id1, unfriend)|NetIn], Outs) :-
     Id? =?= Id1?, ground(From?) |
     close_friend(From?, Outs?, Outs1),
-    send_user(msg(agent, '_user', unfriended(From?)), Outs1?, Outs2),
+    send_user(msg(agent, person, unfriended(From?)), Outs1?, Outs2),
     agent(Id?, UserIn?, NetIn?, Outs2?).
 
 %% Network catch-all (drop unrecognised network message).
@@ -193,7 +193,7 @@ agent(Id, [intro_result(Other, Ch)|UserIn], NetIn, Outs) :-
 %% Intro result: peer nacked — notify rejected.
 agent(Id, [intro_rejected(Other)|UserIn], NetIn, Outs) :-
     ground(Id?) |
-    send_user(msg(agent, '_user', rejected(Other?)), Outs?, Outs1),
+    send_user(msg(agent, person, rejected(Other?)), Outs?, Outs1),
     agent(Id?, UserIn?, NetIn?, Outs1?).
 
 %% Injection catch-all (drop unrecognised injected message).
@@ -224,7 +224,7 @@ agent(Id, UserIn, NetIn, Outs) :-
     ground(Id?), ground(Target?) |
     send_friend(Target?, msg(Id?, Target?, unfriend), Outs?, Outs1),
     close_friend(Target?, Outs1?, Outs2),
-    send_user(msg(agent, '_user', unfriended(Target?)), Outs2?, Outs3),
+    send_user(msg(agent, person, unfriended(Target?)), Outs2?, Outs3),
     agent(Id?, UserIn?, NetIn?, Outs3?).
 
 %% Message a friend.

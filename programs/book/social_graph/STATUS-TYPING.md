@@ -56,13 +56,13 @@ Agent sends befriend to user (line 195–198):
 ```glp
 agent(Id, UserIn, [msg(Id1, intro(From, Resp))|NetIn], Outs) :-
     Id? =?= Id1? |
-    lookup_send('_user', msg(agent, '_user', befriend(From?, Resp?)), Outs?, Outs1),
+    lookup_send(person, msg(agent, person, befriend(From?, Resp?)), Outs?, Outs1),
     agent(Id?, UserIn?, NetIn?, Outs1?).
 ```
 
 Agent receives decision from user (line 150–153):
 ```glp
-agent(Id, [msg('_user', Id1, decision(Dec, From, response(Resp?)))|UserIn], NetIn, Outs) :-
+agent(Id, [msg(person, Id1, decision(Dec, From, response(Resp?)))|UserIn], NetIn, Outs) :-
     Id? =?= Id1? |
     bind_response(Dec?, From?, Resp, Outs?, Outs1, NetIn?, NetIn1),
     agent(Id?, UserIn?, NetIn1?, Outs1?).
@@ -88,7 +88,7 @@ Key mediator lines:
 [pending(req(N?), response(Resp)) | Ps?]        %% line 66
 
 %% Retrieve and send: Resp? reads the stored writer
-send(msg('_user', Id?, decision(Dec?, From?, Resp?)), ...)  %% line 117
+send(msg(person, Id?, decision(Dec?, From?, Resp?)), ...)  %% line 117
 ```
 
 ### What about the PendingValue type itself?

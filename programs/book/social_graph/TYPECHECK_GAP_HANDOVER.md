@@ -34,7 +34,7 @@ which the mediator never names.
   PendingValue ::= response(Response?) ; channel(FriendChannel?) ; error.
 
   ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
-      receive(msg(agent, '_user', befriend(From, Resp)),
+      receive(msg(agent, person, befriend(From, Resp)),
               AgentCh?, AgentCh1),
       ground(From?) |
       send(befriend(From?, req(N?)), UserCh?, UserCh1),
@@ -64,7 +64,7 @@ The agent and the mediator never call each other (`M # goal(...)`); they exchang
 messages over a channel wired in `play_ui_boot.glp`:
 
 ```prolog
-agent(Id?, AgentIn?, NetIn?, [output('_user', AgentToUser), output('_net', NetOut)]),
+agent(Id?, AgentIn?, NetIn?, [output(person, AgentToUser), output('_net', NetOut)]),
 ui_mediator(Id?, ch(AgentToUser?, AgentIn), ch(UserIn?, UserOut), [], 1),
 ```
 
@@ -81,8 +81,8 @@ declares the *same* functor at two polarities, by design:
 
 ```prolog
 %% typed_social_agent.glp
-AgentContent  ::= befriend(Constant, Response?) ...   %% reader  (msg(agent,'_user',...))
-OutputContent ::= befriend(Constant, Response)  ...   %% writer  (the _user OUTPUT stream)
+AgentContent  ::= befriend(Constant, Response?) ...   %% reader  (msg(agent,person,...))
+OutputContent ::= befriend(Constant, Response)  ...   %% writer  (the person OUTPUT stream)
 ```
 
 The mediator pattern-matches `befriend(From, Resp)` out of an `X`-typed stream. Because

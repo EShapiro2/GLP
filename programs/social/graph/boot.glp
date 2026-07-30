@@ -375,13 +375,13 @@ fplay3 :-
 %% own user output (one-way: the initiator does not notify itself).
 exported procedure play_unfriend_send.
 play_unfriend_send :-
-    agent # agent(alice, [msg('_user', alice, unfriend(bob))], [],
+    agent # agent(alice, [msg(person, alice, unfriend(bob))], [],
                   [friend_output(bob, ToBob), user_output(AliceOut)]),
     send_to_user(ToBob?),
     send_to_user(AliceOut?).
 
 %% Recipient: bob (friend of alice) receives an unfriend.  Expect bob to tear down
-%% his side and notify the user msg(agent, '_user', unfriended(alice)).
+%% his side and notify the user msg(agent, person, unfriended(alice)).
 exported procedure play_unfriend_recv.
 play_unfriend_recv :-
     agent # agent(bob, [], [msg(alice, bob, unfriend)],
@@ -393,6 +393,6 @@ play_unfriend_recv :-
 %% untouched.  Covers simultaneous unfriend (the second arrival finds no edge).
 exported procedure play_unfriend_absent.
 play_unfriend_absent :-
-    agent # agent(alice, [msg('_user', alice, unfriend(carol))], [],
+    agent # agent(alice, [msg(person, alice, unfriend(carol))], [],
                   [friend_output(bob, _), user_output(AliceOut)]),
     send_to_user(AliceOut?).

@@ -27,7 +27,7 @@ procedure agent_init(Constant?, Stream(X)?).
 agent_init(Id, NetIn) :-
     ground(Id?) |
     send_to_net(NetOut?),
-    agent(Id?, UserOut?, NetIn?, [output('_user', UserIn), output('_net', NetOut)]),
+    agent(Id?, UserOut?, NetIn?, [output(person, UserIn), output('_net', NetOut)]),
     actor(Id?, ch(UserIn?, UserOut)).
 
 %% =============================================================================

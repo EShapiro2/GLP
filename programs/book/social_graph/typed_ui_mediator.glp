@@ -63,7 +63,7 @@ procedure ui_mediator(Constant?,
 %% Cold-call befriend: agent sends befriend(From, Resp)
 %% Resp is received from agent, stored in pending as writer.
 ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
-    receive(msg(agent, '_user', befriend(From, Resp?)),
+    receive(msg(agent, person, befriend(From, Resp?)),
             AgentCh?, AgentCh1),
     ground(From?) |
     send(befriend(From?, req(N?)), UserCh?, UserCh1),
@@ -74,7 +74,7 @@ ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
 %% Introduction befriend_intro: agent sends befriend_intro(From, Other, Ch)
 %% Ch is a Channel (already known, created by introducer).
 ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
-    receive(msg(agent, '_user',
+    receive(msg(agent, person,
                 befriend_intro(From, Other, Ch?)),
             AgentCh?, AgentCh1),
     ground(From?), ground(Other?) |
@@ -87,27 +87,27 @@ ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
 %% --- Agent-to-user: ground (pass through) ---
 
 ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
-    receive(msg(agent, '_user', connected(Who)),
+    receive(msg(agent, person, connected(Who)),
             AgentCh?, AgentCh1),
     ground(Who?) |
     send(connected(Who?), UserCh?, UserCh1),
     ui_mediator(Id?, AgentCh1?, UserCh1?, Ps?, N?).
 
 ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
-    receive(msg(agent, '_user', rejected),
+    receive(msg(agent, person, rejected),
             AgentCh?, AgentCh1) |
     send(rejected, UserCh?, UserCh1),
     ui_mediator(Id?, AgentCh1?, UserCh1?, Ps?, N?).
 
 ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
-    receive(msg(agent, '_user', rejected(Who)),
+    receive(msg(agent, person, rejected(Who)),
             AgentCh?, AgentCh1),
     ground(Who?) |
     send(rejected(Who?), UserCh?, UserCh1),
     ui_mediator(Id?, AgentCh1?, UserCh1?, Ps?, N?).
 
 ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
-    receive(msg(agent, '_user', received(From, Text)),
+    receive(msg(agent, person, received(From, Text)),
             AgentCh?, AgentCh1),
     ground(From?), ground(Text?) |
     send(received(From?, Text?), UserCh?, UserCh1),
@@ -120,7 +120,7 @@ ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
     ground(Id?), ground(Dec?), ground(From?),
     ground(ReqId?) |
     lookup_pending(ReqId?, Resp, Ps?, Ps1),
-    send(msg('_user', Id?, decision(Dec?, From?, Resp?)),
+    send(msg(person, Id?, decision(Dec?, From?, Resp?)),
          AgentCh?, AgentCh1),
     ui_mediator(Id?, AgentCh1?, UserCh1?, Ps1?, N?).
 
@@ -130,14 +130,14 @@ ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
     receive(accept_intro(Other, ReqId), UserCh?, UserCh1),
     ground(Id?), ground(Other?), ground(ReqId?) |
     lookup_pending(ReqId?, Ch, Ps?, Ps1),
-    send(msg('_user', Id?, accept_intro(Other?, Ch?)),
+    send(msg(person, Id?, accept_intro(Other?, Ch?)),
          AgentCh?, AgentCh1),
     ui_mediator(Id?, AgentCh1?, UserCh1?, Ps1?, N?).
 
 ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
     receive(reject_intro(Other), UserCh?, UserCh1),
     ground(Id?), ground(Other?) |
-    send(msg('_user', Id?, reject_intro(Other?)),
+    send(msg(person, Id?, reject_intro(Other?)),
          AgentCh?, AgentCh1),
     ui_mediator(Id?, AgentCh1?, UserCh1?, Ps?, N?).
 
@@ -146,21 +146,21 @@ ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
 ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
     receive(connect(Target), UserCh?, UserCh1),
     ground(Id?), ground(Target?) |
-    send(msg('_user', Id?, connect(Target?)),
+    send(msg(person, Id?, connect(Target?)),
          AgentCh?, AgentCh1),
     ui_mediator(Id?, AgentCh1?, UserCh1?, Ps?, N?).
 
 ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
     receive(send(Target, Text), UserCh?, UserCh1),
     ground(Id?), ground(Target?), ground(Text?) |
-    send(msg('_user', Id?, send(Target?, Text?)),
+    send(msg(person, Id?, send(Target?, Text?)),
          AgentCh?, AgentCh1),
     ui_mediator(Id?, AgentCh1?, UserCh1?, Ps?, N?).
 
 ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
     receive(introduce(P, Q), UserCh?, UserCh1),
     ground(Id?), ground(P?), ground(Q?) |
-    send(msg('_user', Id?, introduce(P?, Q?)),
+    send(msg(person, Id?, introduce(P?, Q?)),
          AgentCh?, AgentCh1),
     ui_mediator(Id?, AgentCh1?, UserCh1?, Ps?, N?).
 

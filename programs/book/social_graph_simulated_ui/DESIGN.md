@@ -111,7 +111,7 @@ The actor's output is tee'd to both the mediator and a display stream. The media
 actor(ch(ActorIn?, ActorOut)),
 tee(ActorOut?, MediatorIn, DisplayCmd),
 agent(Id?, AgentIn?, NetIn?,
-      [output('_user', AgentToUser),
+      [output(person, AgentToUser),
        output('_net', NetOut)]),
 ui_mediator(Id?,
     ch(AgentToUser?, AgentIn),

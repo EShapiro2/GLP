@@ -47,7 +47,7 @@ NetColdCall ::= intro(Constant, Response?).
 %% AGENT <-> MEDIATOR INTERFACE
 %% =============================================================================
 
-%% Content carried inside user-to-agent messages (msg('_user', Id, Content))
+%% Content carried inside user-to-agent messages (msg(person, Id, Content))
 UserContent ::= mint(Constant, Constant)
               ; balance
               ; done
@@ -68,7 +68,7 @@ PendingValue ::= response(Response?)
                ; escrow_pending(EscrowCancel?)
                ; error.
 
-%% Content carried inside agent-to-user messages (msg(agent, '_user', Content))
+%% Content carried inside agent-to-user messages (msg(agent, person, Content))
 AgentContent ::= minted(Constant, Constant)
                ; date_advanced(Constant)
                ; balance_report(Stream(Bond))

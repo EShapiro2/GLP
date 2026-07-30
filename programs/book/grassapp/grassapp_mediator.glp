@@ -88,7 +88,7 @@ procedure ui_mediator(Constant?,
 %% --- Agent-to-user: non-ground (replace writer with req id) ---
 
 ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
-    receive(msg(agent, '_user', befriend(From, Resp?)),
+    receive(msg(agent, person, befriend(From, Resp?)),
             AgentCh?, AgentCh1),
     ground(From?) |
     send(befriend(From?, req(N?)), UserCh?, UserCh1),
@@ -99,7 +99,7 @@ ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
 %% Trade offer: agent sends trade_proposed(...,TradeResp); escrow the writer as
 %% req(N) together with the want-spec and the bonds actually offered.
 ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
-    receive(msg(agent, '_user', trade_proposed(From, WantSpec, Resp?, Offered)),
+    receive(msg(agent, person, trade_proposed(From, WantSpec, Resp?, Offered)),
             AgentCh?, AgentCh1),
     ground(From?), ground(WantSpec?), ground(Offered?) |
     first_lot(WantSpec?, WantIssuer, WantMaturity, WantAmount),
@@ -112,7 +112,7 @@ ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
 %% Escrow opened: the agent hands over the cancel-signal writer.  Hold it in the
 %% pending table as req(N) so the UI can cancel by id.
 ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
-    receive(msg(agent, '_user', escrow_deposited(Target, ReleaseTime, Coin, Maturity, Amount, Cancel?)),
+    receive(msg(agent, person, escrow_deposited(Target, ReleaseTime, Coin, Maturity, Amount, Cancel?)),
             AgentCh?, AgentCh1),
     ground(Target?), ground(ReleaseTime?),
     ground(Coin?), ground(Maturity?), ground(Amount?) |
@@ -125,69 +125,69 @@ ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
 %% --- Agent-to-user: ground (pass through) ---
 
 ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
-    receive(msg(agent, '_user', trade_completed(Who)),
+    receive(msg(agent, person, trade_completed(Who)),
             AgentCh?, AgentCh1),
     ground(Who?) |
     send(trade_completed(Who?), UserCh?, UserCh1),
     ui_mediator(Id?, AgentCh1?, UserCh1?, Ps?, N?).
 
 ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
-    receive(msg(agent, '_user', trade_failed(Who)),
+    receive(msg(agent, person, trade_failed(Who)),
             AgentCh?, AgentCh1),
     ground(Who?) |
     send(trade_failed(Who?), UserCh?, UserCh1),
     ui_mediator(Id?, AgentCh1?, UserCh1?, Ps?, N?).
 
 ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
-    receive(msg(agent, '_user', trade_returned(Who)),
+    receive(msg(agent, person, trade_returned(Who)),
             AgentCh?, AgentCh1),
     ground(Who?) |
     send(trade_returned(Who?), UserCh?, UserCh1),
     ui_mediator(Id?, AgentCh1?, UserCh1?, Ps?, N?).
 
 ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
-    receive(msg(agent, '_user', trade_returned_menu(From, Menu)),
+    receive(msg(agent, person, trade_returned_menu(From, Menu)),
             AgentCh?, AgentCh1),
     ground(From?), ground(Menu?) |
     send(trade_returned_menu(From?, Menu?), UserCh?, UserCh1),
     ui_mediator(Id?, AgentCh1?, UserCh1?, Ps?, N?).
 
 ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
-    receive(msg(agent, '_user', date_advanced(D)),
+    receive(msg(agent, person, date_advanced(D)),
             AgentCh?, AgentCh1),
     ground(D?) |
     send(date_advanced(D?), UserCh?, UserCh1),
     ui_mediator(Id?, AgentCh1?, UserCh1?, Ps?, N?).
 
 ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
-    receive(msg(agent, '_user', connected(Who)),
+    receive(msg(agent, person, connected(Who)),
             AgentCh?, AgentCh1),
     ground(Who?) |
     send(connected(Who?), UserCh?, UserCh1),
     ui_mediator(Id?, AgentCh1?, UserCh1?, Ps?, N?).
 
 ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
-    receive(msg(agent, '_user', unfriended(Who)),
+    receive(msg(agent, person, unfriended(Who)),
             AgentCh?, AgentCh1),
     ground(Who?) |
     send(unfriended(Who?), UserCh?, UserCh1),
     ui_mediator(Id?, AgentCh1?, UserCh1?, Ps?, N?).
 
 ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
-    receive(msg(agent, '_user', rejected),
+    receive(msg(agent, person, rejected),
             AgentCh?, AgentCh1) |
     send(rejected, UserCh?, UserCh1),
     ui_mediator(Id?, AgentCh1?, UserCh1?, Ps?, N?).
 
 ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
-    receive(msg(agent, '_user', rejected(Who)),
+    receive(msg(agent, person, rejected(Who)),
             AgentCh?, AgentCh1),
     ground(Who?) |
     send(rejected(Who?), UserCh?, UserCh1),
     ui_mediator(Id?, AgentCh1?, UserCh1?, Ps?, N?).
 
 ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
-    receive(msg(agent, '_user', received(From, Text)),
+    receive(msg(agent, person, received(From, Text)),
             AgentCh?, AgentCh1),
     ground(From?), ground(Text?) |
     send(received(From?, Text?), UserCh?, UserCh1),
@@ -196,7 +196,7 @@ ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
 %% Holdings are reported per (owner, issuer, maturity) so the wallet can show
 %% cash (mature) and loans (dated) as distinct views.
 ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
-    receive(msg(agent, '_user', balance_report(Owner, Issuer, Maturity, Count)),
+    receive(msg(agent, person, balance_report(Owner, Issuer, Maturity, Count)),
             AgentCh?, AgentCh1),
     ground(Owner?), ground(Issuer?), ground(Maturity?), ground(Count?) |
     send(balance_report(Owner?, Issuer?, Maturity?, Count?), UserCh?, UserCh1),
@@ -205,7 +205,7 @@ ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
 %% Balances snapshot boundary: the UI prunes holdings the snapshot omitted, so a
 %% coin spent to zero leaves the wallet (nothing else reports it gone).
 ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
-    receive(msg(agent, '_user', balances_synced(Owner)), AgentCh?, AgentCh1),
+    receive(msg(agent, person, balances_synced(Owner)), AgentCh?, AgentCh1),
     ground(Owner?) |
     send(balances_synced(Owner?), UserCh?, UserCh1),
     ui_mediator(Id?, AgentCh1?, UserCh1?, Ps?, N?).
@@ -213,7 +213,7 @@ ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
 %% --- Agent-to-user: escrow settlement (ground pass-through) ---
 
 ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
-    receive(msg(agent, '_user', escrow_received(From, ReleaseTime, Coin, Maturity, Amount)),
+    receive(msg(agent, person, escrow_received(From, ReleaseTime, Coin, Maturity, Amount)),
             AgentCh?, AgentCh1),
     ground(From?), ground(ReleaseTime?),
     ground(Coin?), ground(Maturity?), ground(Amount?) |
@@ -222,31 +222,31 @@ ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
     ui_mediator(Id?, AgentCh1?, UserCh1?, Ps?, N?).
 
 ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
-    receive(msg(agent, '_user', escrow_released(From)), AgentCh?, AgentCh1),
+    receive(msg(agent, person, escrow_released(From)), AgentCh?, AgentCh1),
     ground(From?) |
     send(escrow_released(From?), UserCh?, UserCh1),
     ui_mediator(Id?, AgentCh1?, UserCh1?, Ps?, N?).
 
 ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
-    receive(msg(agent, '_user', escrow_cancelled(From)), AgentCh?, AgentCh1),
+    receive(msg(agent, person, escrow_cancelled(From)), AgentCh?, AgentCh1),
     ground(From?) |
     send(escrow_cancelled(From?), UserCh?, UserCh1),
     ui_mediator(Id?, AgentCh1?, UserCh1?, Ps?, N?).
 
 ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
-    receive(msg(agent, '_user', escrow_expired(Target)), AgentCh?, AgentCh1),
+    receive(msg(agent, person, escrow_expired(Target)), AgentCh?, AgentCh1),
     ground(Target?) |
     send(escrow_expired(Target?), UserCh?, UserCh1),
     ui_mediator(Id?, AgentCh1?, UserCh1?, Ps?, N?).
 
 ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
-    receive(msg(agent, '_user', escrow_returned(Target)), AgentCh?, AgentCh1),
+    receive(msg(agent, person, escrow_returned(Target)), AgentCh?, AgentCh1),
     ground(Target?) |
     send(escrow_returned(Target?), UserCh?, UserCh1),
     ui_mediator(Id?, AgentCh1?, UserCh1?, Ps?, N?).
 
 ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
-    receive(msg(agent, '_user', escrow_failed(Target)), AgentCh?, AgentCh1),
+    receive(msg(agent, person, escrow_failed(Target)), AgentCh?, AgentCh1),
     ground(Target?) |
     send(escrow_failed(Target?), UserCh?, UserCh1),
     ui_mediator(Id?, AgentCh1?, UserCh1?, Ps?, N?).
@@ -254,7 +254,7 @@ ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
 %% --- Agent-to-user: group invitation (escrow the setup channel as req(N)) ---
 
 ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
-    receive(msg(agent, '_user', group_invite(GroupId, Ch)),
+    receive(msg(agent, person, group_invite(GroupId, Ch)),
             AgentCh?, AgentCh1),
     ground(GroupId?) |
     send(group_invite(GroupId?, req(N?)), UserCh?, UserCh1),
@@ -265,32 +265,32 @@ ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
 %% --- Agent-to-user: group notifications (ground pass-through) ---
 
 ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
-    receive(msg(agent, '_user', group_joined(GroupId)), AgentCh?, AgentCh1),
+    receive(msg(agent, person, group_joined(GroupId)), AgentCh?, AgentCh1),
     ground(GroupId?) |
     send(group_joined(GroupId?), UserCh?, UserCh1),
     ui_mediator(Id?, AgentCh1?, UserCh1?, Ps?, N?).
 
 ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
-    receive(msg(agent, '_user', group_joined_member(GroupId, Member)),
+    receive(msg(agent, person, group_joined_member(GroupId, Member)),
             AgentCh?, AgentCh1),
     ground(GroupId?), ground(Member?) |
     send(group_joined_member(GroupId?, Member?), UserCh?, UserCh1),
     ui_mediator(Id?, AgentCh1?, UserCh1?, Ps?, N?).
 
 ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
-    receive(msg(agent, '_user', group_left(GroupId)), AgentCh?, AgentCh1),
+    receive(msg(agent, person, group_left(GroupId)), AgentCh?, AgentCh1),
     ground(GroupId?) |
     send(group_left(GroupId?), UserCh?, UserCh1),
     ui_mediator(Id?, AgentCh1?, UserCh1?, Ps?, N?).
 
 ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
-    receive(msg(agent, '_user', group_removed(GroupId)), AgentCh?, AgentCh1),
+    receive(msg(agent, person, group_removed(GroupId)), AgentCh?, AgentCh1),
     ground(GroupId?) |
     send(group_removed(GroupId?), UserCh?, UserCh1),
     ui_mediator(Id?, AgentCh1?, UserCh1?, Ps?, N?).
 
 ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
-    receive(msg(agent, '_user', group_received(GroupId, Author, Text)),
+    receive(msg(agent, person, group_received(GroupId, Author, Text)),
             AgentCh?, AgentCh1),
     ground(GroupId?), ground(Author?), ground(Text?) |
     send(group_received(GroupId?, Author?, Text?), UserCh?, UserCh1),
@@ -302,7 +302,7 @@ ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
     receive(decision(Dec, From, ReqId), UserCh?, UserCh1),
     ground(Id?), ground(Dec?), ground(From?), ground(ReqId?) |
     lookup_pending(ReqId?, Resp, Ps?, Ps1),
-    send(msg('_user', Id?, decision(Dec?, From?, Resp?)),
+    send(msg(person, Id?, decision(Dec?, From?, Resp?)),
          AgentCh?, AgentCh1),
     ui_mediator(Id?, AgentCh1?, UserCh1?, Ps1?, N?).
 
@@ -311,21 +311,21 @@ ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
 ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
     receive(connect(Target), UserCh?, UserCh1),
     ground(Id?), ground(Target?) |
-    send(msg('_user', Id?, connect(Target?)),
+    send(msg(person, Id?, connect(Target?)),
          AgentCh?, AgentCh1),
     ui_mediator(Id?, AgentCh1?, UserCh1?, Ps?, N?).
 
 ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
     receive(unfriend(Friend), UserCh?, UserCh1),
     ground(Id?), ground(Friend?) |
-    send(msg('_user', Id?, unfriend(Friend?)),
+    send(msg(person, Id?, unfriend(Friend?)),
          AgentCh?, AgentCh1),
     ui_mediator(Id?, AgentCh1?, UserCh1?, Ps?, N?).
 
 ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
     receive(send(Target, Text), UserCh?, UserCh1),
     ground(Id?), ground(Target?), ground(Text?) |
-    send(msg('_user', Id?, send(Target?, Text?)),
+    send(msg(person, Id?, send(Target?, Text?)),
          AgentCh?, AgentCh1),
     ui_mediator(Id?, AgentCh1?, UserCh1?, Ps?, N?).
 
@@ -333,7 +333,7 @@ ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
 ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
     receive(mint(K, Maturity), UserCh?, UserCh1),
     ground(Id?), ground(K?), ground(Maturity?) |
-    send(msg('_user', Id?, mint(K?, Maturity?)),
+    send(msg(person, Id?, mint(K?, Maturity?)),
          AgentCh?, AgentCh1),
     ui_mediator(Id?, AgentCh1?, UserCh1?, Ps?, N?).
 
@@ -341,21 +341,21 @@ ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
 ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
     receive(advance_date(D), UserCh?, UserCh1),
     ground(Id?), ground(D?) |
-    send(msg('_user', Id?, advance_date(D?)),
+    send(msg(person, Id?, advance_date(D?)),
          AgentCh?, AgentCh1),
     ui_mediator(Id?, AgentCh1?, UserCh1?, Ps?, N?).
 
 ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
     receive(balance, UserCh?, UserCh1),
     ground(Id?) |
-    send(msg('_user', Id?, balance),
+    send(msg(person, Id?, balance),
          AgentCh?, AgentCh1),
     ui_mediator(Id?, AgentCh1?, UserCh1?, Ps?, N?).
 
 ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
     receive(pay(Friend, Coin, Maturity, Amount), UserCh?, UserCh1),
     ground(Id?), ground(Friend?), ground(Coin?), ground(Maturity?), ground(Amount?) |
-    send(msg('_user', Id?, pay(Friend?, [lot(Coin?, Maturity?, Amount?)])),
+    send(msg(person, Id?, pay(Friend?, [lot(Coin?, Maturity?, Amount?)])),
          AgentCh?, AgentCh1),
     ui_mediator(Id?, AgentCh1?, UserCh1?, Ps?, N?).
 
@@ -367,7 +367,7 @@ ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
     ground(Id?), ground(Target?),
     ground(GiveCoin?), ground(GiveMat?), ground(GiveAmt?),
     ground(WantCoin?), ground(WantMat?), ground(WantAmt?) |
-    send(msg('_user', Id?,
+    send(msg(person, Id?,
              trade(Target?, [lot(GiveCoin?, GiveMat?, GiveAmt?)],
                             [lot(WantCoin?, WantMat?, WantAmt?)])),
          AgentCh?, AgentCh1),
@@ -381,7 +381,7 @@ ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
     ground(Id?), ground(Target?),
     ground(GiveCoin?), ground(GiveMat?), ground(GiveAmt?),
     ground(WantCoin?), ground(WantMat?), ground(WantAmt?) |
-    send(msg('_user', Id?,
+    send(msg(person, Id?,
              redeem(Target?, [lot(GiveCoin?, GiveMat?, GiveAmt?)],
                              [lot(WantCoin?, WantMat?, WantAmt?)])),
          AgentCh?, AgentCh1),
@@ -391,7 +391,7 @@ ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
     receive(accept_trade(From, ReqId), UserCh?, UserCh1),
     ground(Id?), ground(From?), ground(ReqId?) |
     lookup_pending(ReqId?, Pv, Ps?, Ps1),
-    send(msg('_user', Id?, accept_trade(From?, Pv?)),
+    send(msg(person, Id?, accept_trade(From?, Pv?)),
          AgentCh?, AgentCh1),
     ui_mediator(Id?, AgentCh1?, UserCh1?, Ps1?, N?).
 
@@ -399,7 +399,7 @@ ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
     receive(reject_trade(From, ReqId), UserCh?, UserCh1),
     ground(Id?), ground(From?), ground(ReqId?) |
     lookup_pending(ReqId?, Pv, Ps?, Ps1),
-    send(msg('_user', Id?, reject_trade(From?, Pv?)),
+    send(msg(person, Id?, reject_trade(From?, Pv?)),
          AgentCh?, AgentCh1),
     ui_mediator(Id?, AgentCh1?, UserCh1?, Ps1?, N?).
 
@@ -409,7 +409,7 @@ ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
             UserCh?, UserCh1),
     ground(Id?), ground(Target?),
     ground(Coin?), ground(Maturity?), ground(Amount?), ground(ReleaseTime?) |
-    send(msg('_user', Id?,
+    send(msg(person, Id?,
              deposit_escrow(Target?, [lot(Coin?, Maturity?, Amount?)], ReleaseTime?)),
          AgentCh?, AgentCh1),
     ui_mediator(Id?, AgentCh1?, UserCh1?, Ps?, N?).
@@ -419,7 +419,7 @@ ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
     receive(cancel_escrow(Target, ReqId), UserCh?, UserCh1),
     ground(Id?), ground(Target?), ground(ReqId?) |
     lookup_pending(ReqId?, Pv, Ps?, Ps1),
-    send(msg('_user', Id?, cancel_escrow(Target?, Pv?)), AgentCh?, AgentCh1),
+    send(msg(person, Id?, cancel_escrow(Target?, Pv?)), AgentCh?, AgentCh1),
     ui_mediator(Id?, AgentCh1?, UserCh1?, Ps1?, N?).
 
 %% --- User-to-agent: group commands ---
@@ -427,45 +427,45 @@ ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
 ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
     receive(create_group(Name), UserCh?, UserCh1),
     ground(Id?), ground(Name?) |
-    send(msg('_user', Id?, create_group(Name?)), AgentCh?, AgentCh1),
+    send(msg(person, Id?, create_group(Name?)), AgentCh?, AgentCh1),
     ui_mediator(Id?, AgentCh1?, UserCh1?, Ps?, N?).
 
 ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
     receive(invite_group(GroupId, Invitee), UserCh?, UserCh1),
     ground(Id?), ground(GroupId?), ground(Invitee?) |
-    send(msg('_user', Id?, invite_group(GroupId?, Invitee?)), AgentCh?, AgentCh1),
+    send(msg(person, Id?, invite_group(GroupId?, Invitee?)), AgentCh?, AgentCh1),
     ui_mediator(Id?, AgentCh1?, UserCh1?, Ps?, N?).
 
 ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
     receive(send_group(GroupId, Text), UserCh?, UserCh1),
     ground(Id?), ground(GroupId?), ground(Text?) |
-    send(msg('_user', Id?, send_group(GroupId?, Text?)), AgentCh?, AgentCh1),
+    send(msg(person, Id?, send_group(GroupId?, Text?)), AgentCh?, AgentCh1),
     ui_mediator(Id?, AgentCh1?, UserCh1?, Ps?, N?).
 
 ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
     receive(leave_group(GroupId), UserCh?, UserCh1),
     ground(Id?), ground(GroupId?) |
-    send(msg('_user', Id?, leave_group(GroupId?)), AgentCh?, AgentCh1),
+    send(msg(person, Id?, leave_group(GroupId?)), AgentCh?, AgentCh1),
     ui_mediator(Id?, AgentCh1?, UserCh1?, Ps?, N?).
 
 ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
     receive(remove_from_group(GroupId, Member), UserCh?, UserCh1),
     ground(Id?), ground(GroupId?), ground(Member?) |
-    send(msg('_user', Id?, remove_from_group(GroupId?, Member?)), AgentCh?, AgentCh1),
+    send(msg(person, Id?, remove_from_group(GroupId?, Member?)), AgentCh?, AgentCh1),
     ui_mediator(Id?, AgentCh1?, UserCh1?, Ps?, N?).
 
 ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
     receive(accept_group(GroupId, ReqId), UserCh?, UserCh1),
     ground(Id?), ground(GroupId?), ground(ReqId?) |
     lookup_pending(ReqId?, Pv, Ps?, Ps1),
-    send(msg('_user', Id?, accept_group(GroupId?, Pv?)), AgentCh?, AgentCh1),
+    send(msg(person, Id?, accept_group(GroupId?, Pv?)), AgentCh?, AgentCh1),
     ui_mediator(Id?, AgentCh1?, UserCh1?, Ps1?, N?).
 
 ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
     receive(reject_group(GroupId, ReqId), UserCh?, UserCh1),
     ground(Id?), ground(GroupId?), ground(ReqId?) |
     lookup_pending(ReqId?, Pv, Ps?, Ps1),
-    send(msg('_user', Id?, reject_group(GroupId?, Pv?)), AgentCh?, AgentCh1),
+    send(msg(person, Id?, reject_group(GroupId?, Pv?)), AgentCh?, AgentCh1),
     ui_mediator(Id?, AgentCh1?, UserCh1?, Ps1?, N?).
 
 %% --- Termination ---

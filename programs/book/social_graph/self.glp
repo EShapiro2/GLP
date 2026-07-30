@@ -25,7 +25,7 @@ FriendChannel ::= ch(FriendStream, FriendStream?).
 %% constructor: the table forwards the writer back to the agent on response.
 PendingValue ::= response(Response?) ; channel(FriendChannel?) ; error.
 
-%% agent -> mediator  (carried on the agent's '_user' output stream).
+%% agent -> mediator  (carried on the agent's person output stream).
 %% befriend/befriend_intro forward the response writer / channel: `?`-typed.
 AgentContent ::= befriend(Constant, Response?)
                ; befriend_intro(Constant, Constant, FriendChannel?)

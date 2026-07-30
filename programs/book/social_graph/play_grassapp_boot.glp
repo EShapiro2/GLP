@@ -50,15 +50,15 @@ chat_actor(_, [], []).
 %% --- Scenario boot (entered as Bob's agent_init) ---
 agent_init(bob, UserIn, _) :-
     agent(bob, BAgentIn?, BNetIn?,
-          [output('_user', BA2U) | [output('_net', BNetOut)]]),
+          [output(person, BA2U) | [output('_net', BNetOut)]]),
     ui_mediator(bob, ch(BA2U?, BAgentIn), ch(UserIn?, BUserOut), [], 1),
     send_to_user(BUserOut?),
     agent(alice, AAgentIn?, ANetIn?,
-          [output('_user', AA2U) | [output('_net', ANetOut)]]),
+          [output(person, AA2U) | [output('_net', ANetOut)]]),
     ui_mediator(alice, ch(AA2U?, AAgentIn), ch(ACmds?, AUserOut), [], 1),
     alice_actor(AUserOut?, ACmds),
     agent(charlie, CAgentIn?, CNetIn?,
-          [output('_user', CA2U) | [output('_net', CNetOut)]]),
+          [output(person, CA2U) | [output('_net', CNetOut)]]),
     ui_mediator(charlie, ch(CA2U?, CAgentIn), ch(CCmds?, CUserOut), [], 1),
     charlie_actor(CUserOut?, CCmds),
     crossbar(ANetOut?, BNetOut?, CNetOut?, ANetIn, BNetIn, CNetIn).

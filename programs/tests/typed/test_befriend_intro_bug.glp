@@ -3,7 +3,7 @@ send(X, ch(In, [X?|Out?]), ch(In?, Out)).
 receive(X?, ch([X|In], Out?), ch(In?, Out)).
 
 med(Id, AgentCh, UserCh, Ps, N) :-
-    receive(msg(agent, '_user',
+    receive(msg(agent, person,
                 befriend_intro(From, Other, Ch?)),
             AgentCh?, AgentCh1),
     ground(From?), ground(Other?), ground(N?) |

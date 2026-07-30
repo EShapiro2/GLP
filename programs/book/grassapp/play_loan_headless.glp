@@ -52,7 +52,7 @@ play_loan :-
 
     %% Alice — lender
     agent(alice, AliceAgentIn?, AliceNetIn?,
-          [output('_user', AliceA2U) | [output('_net', AliceNetOut)]],
+          [output(person, AliceA2U) | [output('_net', AliceNetOut)]],
           [], 1, 0),
     ui_mediator(alice, ch(AliceA2U?, AliceAgentIn), ch(AliceCmds?, AliceNotifies), [], 1),
     tee_notifies(AliceNotifies?, AliceActorIn, AliceLog),
@@ -61,7 +61,7 @@ play_loan :-
 
     %% Bob — borrower
     agent(bob, BobAgentIn?, BobNetIn?,
-          [output('_user', BobA2U) | [output('_net', BobNetOut)]],
+          [output(person, BobA2U) | [output('_net', BobNetOut)]],
           [], 1, 0),
     ui_mediator(bob, ch(BobA2U?, BobAgentIn), ch(BobCmds?, BobNotifies), [], 1),
     tee_notifies(BobNotifies?, BobActorIn, BobLog),

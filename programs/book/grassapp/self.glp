@@ -95,7 +95,7 @@ PendingValue ::= response(Response?)
                ; group_channel(Channel(Stream(GroupSetupResponse), Stream(Handshake)))
                ; error.
 
-%% agent -> mediator (carried on the agent's '_user' output stream).
+%% agent -> mediator (carried on the agent's person output stream).
 %% balance_report is keyed by (Owner, Issuer, Maturity) so the wallet can split
 %% cash (mature coins) from loans (dated bonds).
 AgentContent ::= befriend(Constant, Response?)

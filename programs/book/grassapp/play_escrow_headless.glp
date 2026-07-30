@@ -49,7 +49,7 @@ play_escrow :-
 
     %% Charlie — depositor
     agent(charlie, CharlieAgentIn?, CharlieNetIn?,
-          [output('_user', CharlieA2U) | [output('_net', CharlieNetOut)]],
+          [output(person, CharlieA2U) | [output('_net', CharlieNetOut)]],
           [], 1, 0),
     ui_mediator(charlie, ch(CharlieA2U?, CharlieAgentIn),
                 ch(CharlieCmds?, CharlieNotifies), [], 1),
@@ -59,7 +59,7 @@ play_escrow :-
 
     %% Frank — beneficiary
     agent(frank, FrankAgentIn?, FrankNetIn?,
-          [output('_user', FrankA2U) | [output('_net', FrankNetOut)]],
+          [output(person, FrankA2U) | [output('_net', FrankNetOut)]],
           [], 1, 0),
     ui_mediator(frank, ch(FrankA2U?, FrankAgentIn),
                 ch(FrankCmds?, FrankNotifies), [], 1),

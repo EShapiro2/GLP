@@ -27,13 +27,13 @@
 %%
 %% Correspondence to the implementation (clause for clause):
 %%   - a *(X1..Xk) Request clause  ->  a UserCmd constructor over X1..Xk, a mediator
-%%     pass-through, and the agent clause matching msg('_user', Id, cmd(X1..Xk));
+%%     pass-through, and the agent clause matching msg(person, Id, cmd(X1..Xk));
 %%   - a responder goal, spawned per arriving offer  ->  a pending-table entry
 %%     req(N) in the mediator, rendered as an inbox card;
 %%   - a responder's volition-guarded clause, injecting its answer through the
 %%     merge into UserIn  ->  the UserCmds decision/3, accept_swap/2,
 %%     decline_swap/2 routing the escrowed writer back to the agent; the agent's
-%%     answer clauses below match the deployed ones modulo the msg('_user', Id,
+%%     answer clauses below match the deployed ones modulo the msg(person, Id,
 %%     ...) wrapper and the mediator's swap_pending packing of the escrowed fields.
 %% The escrow vocabulary — befriend/2, swap_offer/6, and the pending table — does
 %% not appear here: the machine's question to the person is not a message but a
@@ -181,7 +181,7 @@ agent(Id, UserIn, [msg(From, Id1, response(Resp))|NetIn], Outs, Holdings) :-
 %% A friend messages me.
 agent(Id, UserIn, [msg(From, Id1, text(Text))|NetIn], Outs, Holdings) :-
     Id? =?= Id1? |
-    lookup_send('_user', msg(agent, '_user', received(From?, Text?)), Outs?, Outs1),
+    lookup_send(person, msg(agent, person, received(From?, Text?)), Outs?, Outs1),
     agent(Id?, UserIn?, NetIn?, Outs1?, Holdings?).
 
 %% A friend pays me: add the coins, re-report.
@@ -203,7 +203,7 @@ agent(Id, UserIn, [msg(_, Id1, redeem_coins(Returner, Amount))|NetIn], Outs, Hol
 agent(Id, UserIn, [msg(From, Id1, unfriend)|NetIn], Outs, Holdings) :-
     Id? =?= Id1?, ground(From?) |
     drop_friend(From?, Outs?, Outs1),
-    lookup_send('_user', msg(agent, '_user', unfriended(From?)), Outs1?, Outs2),
+    lookup_send(person, msg(agent, person, unfriended(From?)), Outs1?, Outs2),
     agent(Id?, UserIn?, NetIn?, Outs2?, Holdings?).
 
 %% A friend publishes their holdings: report them as that friend's balances.
@@ -225,7 +225,7 @@ agent(Id, UserIn, [msg(_, Id1, group_invite(GroupId, Ch))|NetIn], Outs, Holdings
 agent(Id, UserIn, [msg(_, _, group_msg(GroupId, Author, Text))|NetIn], Outs, Holdings) :-
     ground(Id?), ground(GroupId?), ground(Author?), ground(Text?) |
     distribute_group_msg(GroupId?, msg(Author?, Author?, group_msg(GroupId?, Author?, Text?)), Outs?, Outs1),
-    lookup_send('_user', msg(agent, '_user', group_received(GroupId?, Author?, Text?)), Outs1?, Outs2),
+    lookup_send(person, msg(agent, person, group_received(GroupId?, Author?, Text?)), Outs1?, Outs2),
     agent(Id?, UserIn?, NetIn?, Outs2?, Holdings?).
 
 %% A member left my group — close their hub-side entry.
@@ -238,7 +238,7 @@ agent(Id, UserIn, [msg(Member, _, group_leave(GroupId, Member1))|NetIn], Outs, H
 agent(Id, UserIn, [msg(_, _, group_removed(GroupId))|NetIn], Outs, Holdings) :-
     ground(Id?), ground(GroupId?) |
     close_output(group(GroupId?), Outs?, Outs1),
-    lookup_send('_user', msg(agent, '_user', group_removed(GroupId?)), Outs1?, Outs2),
+    lookup_send(person, msg(agent, person, group_removed(GroupId?)), Outs1?, Outs2),
     agent(Id?, UserIn?, NetIn?, Outs2?, Holdings?).
 
 %% Network catch-all (drop unrecognised network message).
@@ -267,7 +267,7 @@ agent(Id, [accept_swap(From, GiveCoin, GiveAmt, WantCoin, WantAmt, SwapResp?)|Us
 agent(Id, [decline_swap(From, SwapResp?)|UserIn], NetIn, Outs, Holdings) :-
     ground(From?) |
     bind_swap_decline(SwapResp),
-    lookup_send('_user', msg(agent, '_user', swap_failed(From?)), Outs?, Outs1),
+    lookup_send(person, msg(agent, person, swap_failed(From?)), Outs?, Outs1),
     agent(Id?, UserIn?, NetIn?, Outs1?, Holdings?).
 
 %% My cold call was answered (injected by inject_msg).
@@ -280,14 +280,14 @@ agent(Id, [msg(From, Id1, response(Resp))|UserIn], NetIn, Outs, Holdings) :-
 agent(Id, [swap_accepted(From, WantCoin, WantAmt)|UserIn], NetIn, Outs, Holdings) :-
     ground(Id?), ground(From?), ground(WantCoin?), integer(WantAmt?) |
     add_coin(WantCoin?, WantAmt?, Holdings?, Holdings1),
-    lookup_send('_user', msg(agent, '_user', swap_done(From?)), Outs?, Outs1),
+    lookup_send(person, msg(agent, person, swap_done(From?)), Outs?, Outs1),
     after_change(Id?, Holdings1?, UserIn?, NetIn?, Outs1?).
 
 %% Proposer: my swap was declined — refund the give-coins.
 agent(Id, [swap_declined(From, GiveCoin, GiveAmt)|UserIn], NetIn, Outs, Holdings) :-
     ground(Id?), ground(From?), ground(GiveCoin?), integer(GiveAmt?) |
     add_coin(GiveCoin?, GiveAmt?, Holdings?, Holdings1),
-    lookup_send('_user', msg(agent, '_user', swap_failed(From?)), Outs?, Outs1),
+    lookup_send(person, msg(agent, person, swap_failed(From?)), Outs?, Outs1),
     after_change(Id?, Holdings1?, UserIn?, NetIn?, Outs1?).
 
 %% The person accepted a group invitation (injected by respond_group_invite):
@@ -301,7 +301,7 @@ agent(Id, [accept_group(GroupId, ChRead)|UserIn], NetIn, Outs, Holdings) :-
 agent(Id, [group_join_ack(GroupId, Invitee, ch(_, [group_channel(MemberEnd?)|[]]))|UserIn], NetIn, Outs, Holdings) :-
     ground(Id?), ground(GroupId?), ground(Invitee?) |
     setup_group_hub_side(GroupId?, Invitee?, Outs?, Outs1, NetIn?, NetIn1, MemberEnd),
-    lookup_send('_user', msg(agent, '_user', group_joined_member(GroupId?, Invitee?)), Outs1?, Outs2),
+    lookup_send(person, msg(agent, person, group_joined_member(GroupId?, Invitee?)), Outs1?, Outs2),
     agent(Id?, UserIn?, NetIn1?, Outs2?, Holdings?).
 
 %% Injected group_join_nack — nothing to do.
@@ -372,7 +372,7 @@ agent(Id, UserIn, NetIn, Outs, Holdings) :-
 agent(Id, UserIn, NetIn, Outs, Holdings) :-
     ground(Id?), ground(Friend?) |
     end_friend(Friend?, Id?, Outs?, Outs1),
-    lookup_send('_user', msg(agent, '_user', unfriended(Friend?)), Outs1?, Outs2),
+    lookup_send(person, msg(agent, person, unfriended(Friend?)), Outs1?, Outs2),
     agent(Id?, UserIn?, NetIn?, Outs2?, Holdings?).
 
 %% Message a friend.
@@ -392,7 +392,7 @@ agent(Id, UserIn, NetIn, Outs, Holdings) :-
 agent(Id, UserIn, NetIn, Outs, Holdings) :-
     ground(Id?), ground(Name?) |
     setup_group_creator(group_id(Id?, Name?), Outs?, Outs1, NetIn?, NetIn1),
-    lookup_send('_user', msg(agent, '_user', group_joined(group_id(Id?, Name?))), Outs1?, Outs2),
+    lookup_send(person, msg(agent, person, group_joined(group_id(Id?, Name?))), Outs1?, Outs2),
     agent(Id?, UserIn?, NetIn1?, Outs2?, Holdings?).
 
 %% Invite a friend to a group.
@@ -417,7 +417,7 @@ agent(Id, UserIn, NetIn, Outs, Holdings) :-
     ground(Id?), ground(GroupId?) |
     lookup_send_group(group(GroupId?), msg(Id?, Id?, group_leave(GroupId?, Id?)), Outs?, Outs1),
     close_output(group(GroupId?), Outs1?, Outs2),
-    lookup_send('_user', msg(agent, '_user', group_left(GroupId?)), Outs2?, Outs3),
+    lookup_send(person, msg(agent, person, group_left(GroupId?)), Outs2?, Outs3),
     agent(Id?, UserIn?, NetIn?, Outs3?, Holdings?).
 
 %% Remove a member from an owned group.

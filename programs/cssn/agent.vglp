@@ -30,7 +30,7 @@
 %%
 %% Correspondence to the implementation (clause for clause):
 %%   - a *(X1..Xk) Request clause  ->  a UserCmd constructor over X1..Xk, a mediator
-%%     pass-through, and the agent clause matching msg('_user', Id, cmd(X1..Xk)):
+%%     pass-through, and the agent clause matching msg(person, Id, cmd(X1..Xk)):
 %%     connect/1, send/2, introduce/2, child_introduce/3, create_group/1,
 %%     invite_group/2, invite_group/3, send_group/2, leave_group/1,
 %%     leave_child_group/2, remove_from_group/2, unfriend_child_of/2;
@@ -44,7 +44,7 @@
 %%     approve_child_group/3 and reject_child_group/3 (child's consent request)
 %%     routing the escrowed writer or channel back to the agent; the agent's
 %%     answer clauses below, and the accept/reject bodies of the responders,
-%%     match the deployed clauses modulo the msg('_user', Id, ...) wrapper and
+%%     match the deployed clauses modulo the msg(person, Id, ...) wrapper and
 %%     the channel(...)/group_channel(...)/consent(...) escrow packing.
 %% The escrow vocabulary — befriend/2, befriend_intro/3, child_befriend/3,
 %% the agent-to-user group_invite/2 and group_invite_child/3,
@@ -286,7 +286,7 @@ agent(Id, UserIn, NetIn, Outs) :-
     ground(Id?), ground(Name?) |
     setup_group_creator(group_id(Id?, Name?),
         Outs?, Outs1, NetIn?, NetIn1),
-    send_user(msg(agent, '_user', group_joined(group_id(Id?, Name?))),
+    send_user(msg(agent, person, group_joined(group_id(Id?, Name?))),
         Outs1?, Outs2),
     agent(Id?, UserIn?, NetIn1?, Outs2?).
 
@@ -327,7 +327,7 @@ agent(Id, UserIn, NetIn, Outs) :-
     lookup_send_group(group(GroupId?),
         msg(Id?, Id?, group_leave(GroupId?, Id?)), Outs?, Outs1),
     close_output(group(GroupId?), Outs1?, Outs2),
-    send_user(msg(agent, '_user', group_left(GroupId?)), Outs2?, Outs3),
+    send_user(msg(agent, person, group_left(GroupId?)), Outs2?, Outs3),
     agent(Id?, UserIn?, NetIn?, Outs3?).
 
 %% Tell own child to leave a group.
@@ -401,7 +401,7 @@ agent(Id, UserIn, [msg(From, Id1, response(Resp))|NetIn], Outs) :-
 %% A friend messages me.
 agent(Id, UserIn, [msg(From, Id1, text(Text))|NetIn], Outs) :-
     Id? =?= Id1? |
-    send_user(msg(agent, '_user', received(From?, Text?)), Outs?, Outs1),
+    send_user(msg(agent, person, received(From?, Text?)), Outs?, Outs1),
     agent(Id?, UserIn?, NetIn?, Outs1?).
 
 %% A group message arrives on a group channel — distribute to all members
@@ -410,7 +410,7 @@ agent(Id, UserIn, [msg(_, _, group_msg(GroupId, Author, Text))|NetIn], Outs) :-
     ground(Id?), ground(GroupId?), ground(Author?), ground(Text?) |
     distribute_group_msg(GroupId?,
         msg(Author?, Author?, group_msg(GroupId?, Author?, Text?)), Outs?, Outs1),
-    send_user(msg(agent, '_user', group_received(GroupId?, Author?, Text?)),
+    send_user(msg(agent, person, group_received(GroupId?, Author?, Text?)),
         Outs1?, Outs2),
     agent(Id?, UserIn?, NetIn?, Outs2?).
 
@@ -424,7 +424,7 @@ agent(Id, UserIn, [msg(Member, _, group_leave(GroupId, Member1))|NetIn], Outs) :
 agent(Id, UserIn, [msg(_, Id1, group_removed(GroupId))|NetIn], Outs) :-
     Id? =?= Id1?, ground(GroupId?) |
     close_output(group(GroupId?), Outs?, Outs1),
-    send_user(msg(agent, '_user', group_removed(GroupId?)), Outs1?, Outs2),
+    send_user(msg(agent, person, group_removed(GroupId?)), Outs1?, Outs2),
     agent(Id?, UserIn?, NetIn?, Outs2?).
 
 %% A friend unfriended me (Integrate unfriend): comply — tear down my side and
@@ -432,7 +432,7 @@ agent(Id, UserIn, [msg(_, Id1, group_removed(GroupId))|NetIn], Outs) :-
 agent(Id, UserIn, [msg(From, Id1, unfriend)|NetIn], Outs) :-
     Id? =?= Id1?, ground(From?) |
     close_friend(From?, Outs?, Outs1),
-    send_user(msg(agent, '_user', unfriended(From?)), Outs1?, Outs2),
+    send_user(msg(agent, person, unfriended(From?)), Outs1?, Outs2),
     agent(Id?, UserIn?, NetIn?, Outs2?).
 
 %% --- Reactive: responder answers and injected results on UserIn (UserIn does
@@ -481,7 +481,7 @@ agent(Id, [intro_result(Other, Ch)|UserIn], NetIn, Outs) :-
 %% Intro result: peer nacked — notify rejected.
 agent(Id, [intro_rejected(Other)|UserIn], NetIn, Outs) :-
     ground(Id?) |
-    send_user(msg(agent, '_user', rejected(Other?)), Outs?, Outs1),
+    send_user(msg(agent, person, rejected(Other?)), Outs?, Outs1),
     agent(Id?, UserIn?, NetIn?, Outs1?).
 
 %% Injected group_join_ack — creator wires the hub side, tells the person.
@@ -489,7 +489,7 @@ agent(Id, [group_join_ack(GroupId, Invitee, ch(_, [group_channel(MemberEnd?)|[]]
         NetIn, Outs) :-
     ground(Id?), ground(GroupId?), ground(Invitee?) |
     setup_group_hub_side(GroupId?, Invitee?, Outs?, Outs1, NetIn?, NetIn1, MemberEnd),
-    send_user(msg(agent, '_user', group_joined_member(GroupId?, Invitee?)),
+    send_user(msg(agent, person, group_joined_member(GroupId?, Invitee?)),
         Outs1?, Outs2),
     agent(Id?, UserIn?, NetIn1?, Outs2?).
 

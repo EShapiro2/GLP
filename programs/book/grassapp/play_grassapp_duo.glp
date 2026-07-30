@@ -20,7 +20,7 @@ agent_init(Id, UserIn, NetIn) :-
     ground(Id?) |
     send_to_net(NetOut?),
     agent(Id?, AgentIn?, NetIn?,
-          [output('_user', A2U) | [output('_net', NetOut)]],
+          [output(person, A2U) | [output('_net', NetOut)]],
           [], 1, 0),
     ui_mediator(Id?, ch(A2U?, AgentIn), ch(UserIn?, UserOut), [], 1),
     send_to_user(UserOut?).
@@ -31,7 +31,7 @@ actor_init(Id, Target, NetIn) :-
     ground(Id?), ground(Target?) |
     send_to_net(NetOut?),
     agent(Id?, AgentIn?, NetIn?,
-          [output('_user', A2U) | [output('_net', NetOut)]], [], 1, 0),
+          [output(person, A2U) | [output('_net', NetOut)]], [], 1, 0),
     ui_mediator(Id?, ch(A2U?, AgentIn), ch(Cmds?, Notifies), [], 1),
     duo_actor(Id?, Target?, Notifies?, Cmds).
 

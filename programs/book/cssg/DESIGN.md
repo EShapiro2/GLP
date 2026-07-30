@@ -111,7 +111,7 @@ The actor's output is tee'd to both the mediator and a display stream. The media
 actor(ch(ActorIn?, ActorOut)),
 tee(ActorOut?, MediatorIn, DisplayCmd),
 agent(Id?, AgentIn?, NetIn?,
-      [output('_user', AgentToUser),
+      [output(person, AgentToUser),
        output('_net', NetOut)]),
 ui_mediator(Id?,
     ch(AgentToUser?, AgentIn),
@@ -206,7 +206,7 @@ The parent-child relationship is established at boot time, not through the socia
 - Parent's input from child is merged into parent's NetIn
 - Child's input from parent is merged into child's NetIn
 
-Output list keys are structured: `'_user'`, `'_net'`, `friend(Name)`, `child(Name)`. This distinguishes friends from children, allowing the agent to find its child output without knowing the child's name in advance. The `lookup_send` key type is `OutputKey` (see type definitions).
+Output list keys are structured: `person`, `'_net'`, `friend(Name)`, `child(Name)`. This distinguishes friends from children, allowing the agent to find its child output without knowing the child's name in advance. The `lookup_send` key type is `OutputKey` (see type definitions).
 
 Children have the same agent/4 structure as adults. The only difference is boot wiring: children have no network connection. Their only external communication is via the parent-child channel and (eventually) friendship channels established through this protocol.
 
@@ -297,7 +297,7 @@ AgentContent += child_befriend(Constant, Constant, Channel).
 FriendContent += child_intro(Constant, Channel).
 
 %% Output keys (structured)
-OutputKey ::= '_user' ; '_net' ; friend(Constant) ; child(Constant).
+OutputKey ::= person ; '_net' ; friend(Constant) ; child(Constant).
 ```
 
 ### Boot configuration (single isolate, 4 agents)
@@ -315,26 +315,26 @@ network2(ch(AliceNetOut?, AliceNetIn),
 
 %% Alice: network + child channel
 agent(alice, AliceAgentIn?, AliceNetAndChildIn?,
-      [output('_user', AliceToUser),
+      [output(person, AliceToUser),
        output('_net', AliceNetOut),
        output(child(carol), AliceToCarol)]),
 merge(AliceNetIn?, AliceFromCarol?, AliceNetAndChildIn),
 
 %% Carol: parent channel only, no network
 agent(carol, CarolAgentIn?, CarolFromAlice?,
-      [output('_user', CarolToUser),
+      [output(person, CarolToUser),
        output(child(alice), CarolToAlice)]),
 
 %% Bob: network + child channel
 agent(bob, BobAgentIn?, BobNetAndChildIn?,
-      [output('_user', BobToUser),
+      [output(person, BobToUser),
        output('_net', BobNetOut),
        output(child(dave), BobToDave)]),
 merge(BobNetIn?, BobFromDave?, BobNetAndChildIn),
 
 %% Dave: parent channel only, no network
 agent(dave, DaveAgentIn?, DaveFromBob?,
-      [output('_user', DaveToUser),
+      [output(person, DaveToUser),
        output(child(bob), DaveToBob)]),
 
 %% Wire parent-child channels

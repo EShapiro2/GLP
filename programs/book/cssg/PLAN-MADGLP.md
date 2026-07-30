@@ -102,7 +102,7 @@ agent_init_play(Id, PlayNum, NetIn) :-
     ground(Id?), ground(PlayNum?) |
     send_to_net(NetOut?),
     agent(Id?, AgentIn?, NetIn?,
-          [output('_user', AgentToUser), output('_net', NetOut)]),
+          [output(person, AgentToUser), output('_net', NetOut)]),
     ui_mediator(Id?, ch(AgentToUser?, AgentIn),
                 ch(MedIn?, MedOut), [], 1),
     ui_actor(Id?, PlayNum?, ch(ActorIn?, ActorOut)),
@@ -150,7 +150,7 @@ parent_init(Id, Child, PlayNum, NetIn) :-
     merge(ChildToParent?, NetIn?, AgentNetIn),
 
     agent(Id?, AgentIn?, AgentNetIn?,
-          [output('_user', AgentToUser),
+          [output(person, AgentToUser),
            output('_net', NetOut),
            output(child(Child?), ParentToChild)]),
     ui_mediator(Id?, ch(AgentToUser?, AgentIn),
@@ -177,7 +177,7 @@ child_init(Id, PlayNum, [parent_connect(Parent, ParentToChild, Response) | NetIn
     merge(ParentToChild?, NetInRest?, AgentNetIn),
 
     agent(Id?, AgentIn?, AgentNetIn?,
-          [output('_user', AgentToUser),
+          [output(person, AgentToUser),
            output(child(Parent?), ChildToParent)]),
     ui_mediator(Id?, ch(AgentToUser?, AgentIn),
                 ch(MedIn?, MedOut), [], 1),

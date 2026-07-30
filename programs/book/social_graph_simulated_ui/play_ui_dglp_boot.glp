@@ -96,19 +96,19 @@ play1 :-
              ch(CharlieNetOut?, CharlieNetIn)),
 
     agent(alice, AliceAgentIn?, AliceNetIn?,
-          [output('_user', AliceAgentToUser), output('_net', AliceNetOut)]),
+          [output(person, AliceAgentToUser), output('_net', AliceNetOut)]),
     ui_mediator(alice, ch(AliceAgentToUser?, AliceAgentIn),
                 ch(AliceUserOut?, AliceUserIn), [], 1),
     alice1(ch(AliceUserIn?, AliceUserOut)),
 
     agent(bob, BobAgentIn?, BobNetIn?,
-          [output('_user', BobAgentToUser), output('_net', BobNetOut)]),
+          [output(person, BobAgentToUser), output('_net', BobNetOut)]),
     ui_mediator(bob, ch(BobAgentToUser?, BobAgentIn),
                 ch(BobUserOut?, BobUserIn), [], 1),
     bob1(ch(BobUserIn?, BobUserOut)),
 
     agent(charlie, CharlieAgentIn?, CharlieNetIn?,
-          [output('_user', CharlieAgentToUser), output('_net', CharlieNetOut)]),
+          [output(person, CharlieAgentToUser), output('_net', CharlieNetOut)]),
     ui_mediator(charlie, ch(CharlieAgentToUser?, CharlieAgentIn),
                 ch(CharlieUserOut?, CharlieUserIn), [], 1),
     charlie1(ch(CharlieUserIn?, CharlieUserOut)).
@@ -123,19 +123,19 @@ play2 :-
              ch(CharlieNetOut?, CharlieNetIn)),
 
     agent(alice, AliceAgentIn?, AliceNetIn?,
-          [output('_user', AliceAgentToUser), output('_net', AliceNetOut)]),
+          [output(person, AliceAgentToUser), output('_net', AliceNetOut)]),
     ui_mediator(alice, ch(AliceAgentToUser?, AliceAgentIn),
                 ch(AliceUserOut?, AliceUserIn), [], 1),
     alice2(ch(AliceUserIn?, AliceUserOut)),
 
     agent(bob, BobAgentIn?, BobNetIn?,
-          [output('_user', BobAgentToUser), output('_net', BobNetOut)]),
+          [output(person, BobAgentToUser), output('_net', BobNetOut)]),
     ui_mediator(bob, ch(BobAgentToUser?, BobAgentIn),
                 ch(BobUserOut?, BobUserIn), [], 1),
     bob2(ch(BobUserIn?, BobUserOut)),
 
     agent(charlie, CharlieAgentIn?, CharlieNetIn?,
-          [output('_user', CharlieAgentToUser), output('_net', CharlieNetOut)]),
+          [output(person, CharlieAgentToUser), output('_net', CharlieNetOut)]),
     ui_mediator(charlie, ch(CharlieAgentToUser?, CharlieAgentIn),
                 ch(CharlieUserOut?, CharlieUserIn), [], 1),
     charlie2(ch(CharlieUserIn?, CharlieUserOut)).
@@ -150,19 +150,19 @@ play3 :-
              ch(CharlieNetOut?, CharlieNetIn)),
 
     agent(alice, AliceAgentIn?, AliceNetIn?,
-          [output('_user', AliceAgentToUser), output('_net', AliceNetOut)]),
+          [output(person, AliceAgentToUser), output('_net', AliceNetOut)]),
     ui_mediator(alice, ch(AliceAgentToUser?, AliceAgentIn),
                 ch(AliceUserOut?, AliceUserIn), [], 1),
     alice3(ch(AliceUserIn?, AliceUserOut)),
 
     agent(bob, BobAgentIn?, BobNetIn?,
-          [output('_user', BobAgentToUser), output('_net', BobNetOut)]),
+          [output(person, BobAgentToUser), output('_net', BobNetOut)]),
     ui_mediator(bob, ch(BobAgentToUser?, BobAgentIn),
                 ch(BobUserOut?, BobUserIn), [], 1),
     bob3(ch(BobUserIn?, BobUserOut)),
 
     agent(charlie, CharlieAgentIn?, CharlieNetIn?,
-          [output('_user', CharlieAgentToUser), output('_net', CharlieNetOut)]),
+          [output(person, CharlieAgentToUser), output('_net', CharlieNetOut)]),
     ui_mediator(charlie, ch(CharlieAgentToUser?, CharlieAgentIn),
                 ch(CharlieUserOut?, CharlieUserIn), [], 1),
     charlie3(ch(CharlieUserIn?, CharlieUserOut)).

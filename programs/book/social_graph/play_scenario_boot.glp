@@ -66,18 +66,18 @@ auto_accept([], []).
 agent_init(bob, UserIn, _) :-
     %% Bob: live-UI agent. UserIn is injected from Dart; notifies -> _output.
     agent(bob, BAgentIn?, BNetIn?,
-          [output('_user', BA2U) | [output('_net', BNetOut)]]),
+          [output(person, BA2U) | [output('_net', BNetOut)]]),
     ui_mediator(bob, ch(BA2U?, BAgentIn), ch(UserIn?, BUserOut), [], 1),
     send_to_user(BUserOut?),
     %% Alice: real agent, driven by an auto-accepting actor.
     agent(alice, AAgentIn?, ANetIn?,
-          [output('_user', AA2U) | [output('_net', ANetOut)]]),
+          [output(person, AA2U) | [output('_net', ANetOut)]]),
     ui_mediator(alice, ch(AA2U?, AAgentIn), ch(ACmds?, AUserOut), [], 1),
     alice_actor(AUserOut?, ACmds),
     %% Charlie: real agent, driven by an actor that cold-calls alice+bob and,
     %% once friends with bob, introduces alice and bob.
     agent(charlie, CAgentIn?, CNetIn?,
-          [output('_user', CA2U) | [output('_net', CNetOut)]]),
+          [output(person, CA2U) | [output('_net', CNetOut)]]),
     ui_mediator(charlie, ch(CA2U?, CAgentIn), ch(CCmds?, CUserOut), [], 1),
     charlie_actor(CUserOut?, CCmds),
     %% In-heap transport.
