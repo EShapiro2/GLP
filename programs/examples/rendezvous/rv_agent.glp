@@ -4,22 +4,40 @@
 %% that lost connectivity due to IP address changes.
 %%
 %% - Accepts cold-calls from any agent (no friends list, no social graph)
-%% - Verifies friendship proofs cryptographically (via body system predicate)
+%% - Verifies the reconnection attestation cryptographically, in a guard
 %% - Learns A's current public address via peer_address (reading the
 %%   source address of the incoming cold-call packet)
 %% - Relays addresses to coordinate hole-punching
 %%
 %% Protocol:
-%%   1. A detects IP change, cold-calls: reconnect(A_pk, B_pk, Proof, Reply)
+%%   1. A detects IP change, cold-calls:
+%%      reconnect(A_pk, B_pk, Signer, Sig, Reply)
 %%   2. B detects A went silent, cold-calls: available(B_pk, A_pk, Reply)
 %%   3. The RV agent reads A's source address from the networking layer
 %%      via peer_address(A?, AddrA), matches the requests, and tells B
 %%      to punch to AddrA via Reply
 %%
+%% Capability verification (paper §Rendezvous Server, §System Predicates):
+%%   the reconnection attestation is a signed binding of two public keys,
+%%   and the specification states its verification as Secure GLP's guard
+%%   verify(attest(PkA, PkB), Sig, Signer) under the social-graph module.
+%%   verify/3 is not in the runtime yet — it is Secure GLP's to land — so
+%%   this agent uses the guard that is, valid_attestation/4, which performs
+%%   the same Ed25519 verification over the canonical serialization of
+%%   attest(PkA, PkB) and differs only in taking the four arguments flat:
+%%
+%%       valid_attestation(Signer?, PkA?, PkB?, Sig?)
+%%
+%%   When verify/3 lands, this guard becomes
+%%   verify(attest(A?, B?), Sig?, Signer?) and nothing else here changes.
+%%
+%%   The guard is three-valued and never aborts: a malformed key or
+%%   signature, and equally the absence of a madGLP network on the context,
+%%   are guard FAILURE, so the otherwise clause rejects the request.  Under
+%%   the plain REPL there is no network, so every reconnect is rejected —
+%%   which is why the tests exercise the reject path alone.
+%%
 %% System predicates assumed:
-%%   verify_friendship(Proof?, A?, B?, Result) — body predicate,
-%%     returns ok if Proof cryptographically proves A is B's friend,
-%%     invalid otherwise.
 %%   peer_address(Pk?, Addr) — body predicate, reads the observed
 %%     source address for peer Pk from the networking layer.
 
@@ -28,15 +46,20 @@
 %% TYPE DEFINITIONS
 %% =============================================================================
 
+%% The attestation guard is implemented in the runtime and registered in
+%% root_scope.dart's builtin sets, but programs/self.glp carries no
+%% declaration for it, and the body-atom type checker requires one for every
+%% goal that is not true/otherwise/:= — guards included, a guard being
+%% type-checked as a body goal.  programs/self.glp is TGLP's file and the
+%% guard is Secure GLP's, so the declaration sits in the module that calls it.
+procedure valid_attestation(Constant?, Constant?, Constant?, Constant?).
+
 %% Reply sent back to agents via their reply variable
 SignalReply ::= punch(Constant) ; initiated ; rejected.
 
-%% Result of cryptographic friendship verification
-VerifyResult ::= ok ; invalid.
-
 %% Messages arriving via cold-call on the agent's input stream
-SignalMsg ::= reconnect(Constant, Constant, Constant, SignalReply?)
-              %% reconnect(A_pk, B_pk, Proof, Reply)
+SignalMsg ::= reconnect(Constant, Constant, Constant, Constant, SignalReply?)
+              %% reconnect(A_pk, B_pk, Signer, Sig, Reply)
             ; available(Constant, Constant, SignalReply?).
               %% available(B_pk, A_pk, Reply)
 
@@ -53,18 +76,24 @@ PendingList ::= [] ; [PendingEntry | PendingList].
 
 exported procedure rv_agent(Stream(SignalMsg)?, PendingList?).
 
-%% A requests reconnection to B with friendship proof.  The RV agent
-%% reads A's source address from the networking layer via peer_address
-%% (so A does not need to self-report its address).  verify_friendship
-%% returns a status; handle_verify dispatches on it.  If the proof is
-%% invalid, ReplyA is bound to `rejected` and the request is not added
-%% to the pending list.
-rv_agent([reconnect(A, B, Proof, ReplyA?)|In], Pending) :-
-    ground(A?), ground(B?) |
-    verify_friendship(Proof?, A?, B?, Status),
+%% A requests reconnection to B, presenting the attestation Sig, which
+%% Signer made over attest(A, B).  The guard verifies it; only then does
+%% the RV agent read A's source address from the networking layer via
+%% peer_address (so A does not need to self-report its address) and look
+%% for a waiting B.  The guard grounds all four of its inputs.
+rv_agent([reconnect(A, B, Signer, Sig, ReplyA?)|In], Pending) :-
+    valid_attestation(Signer?, A?, B?, Sig?) |
     peer_address(A?, AddrA),
-    handle_verify(Status?, A?, B?, AddrA?, ReplyA, Pending?, Pending1),
+    find_ready(A?, B?, AddrA?, ReplyA, Pending?, Pending1),
     rv_agent(In?, Pending1?).
+
+%% The attestation did not verify: the reply is bound to `rejected` and
+%% the request is not added to the pending list.  What the binding
+%% authorizes is this agent's logic; that it is a genuine signature is
+%% the guard's.
+rv_agent([reconnect(_, _, _, _, rejected)|In], Pending) :-
+    otherwise |
+    rv_agent(In?, Pending?).
 
 %% B is available for reconnection from A
 rv_agent([available(B, A, ReplyB?)|In], Pending) :-
@@ -121,32 +150,9 @@ procedure complete_rendezvous(Constant?, SignalReply, SignalReply).
 complete_rendezvous(AddrA, initiated, punch(AddrA?)).
 
 %% =============================================================================
-%% handle_verify: dispatch on verify_friendship result
-%% =============================================================================
-
-procedure handle_verify(VerifyResult?, Constant?, Constant?, Constant?,
-                        SignalReply, PendingList?, PendingList).
-
-%% Proof valid — proceed to find_ready
-handle_verify(ok, A, B, AddrA, ReplyA?, Pending, Pending1?) :-
-    find_ready(A?, B?, AddrA?, ReplyA, Pending?, Pending1).
-
-%% Proof invalid — bind reply to rejected, leave pending unchanged
-handle_verify(invalid, _, _, _, rejected, Pending, Pending?).
-
-%% =============================================================================
-%% STUBS for system predicates (testing only)
+%% STUB for a system predicate (testing only)
 %% =============================================================================
 %%
-%% verify_friendship(Proof?, A_pk?, B_pk?, Result) — body predicate
-%%   Returns Result = ok if Proof cryptographically proves A is B's friend,
-%%   or Result = invalid otherwise.
-%%   Stub: returns invalid when Proof = 'bad_proof', ok otherwise.
-
-procedure verify_friendship(Constant?, Constant?, Constant?, VerifyResult).
-verify_friendship(Proof, _, _, invalid) :- Proof? =?= bad_proof | true.
-verify_friendship(_, _, _, ok) :- otherwise | true.
-
 %% peer_address(Pk?, Addr) — body predicate
 %%   Reads the observed source address of the incoming packet from peer Pk.
 %%   Stub: hardcoded mapping for alice, bob, carol.  A real implementation

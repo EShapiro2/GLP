@@ -9,7 +9,7 @@
 %% Local type redeclarations (structural identity allows sharing)
 SignalReply ::= punch(Constant) ; initiated ; rejected.
 
-SignalMsg ::= reconnect(Constant, Constant, Constant, SignalReply?)
+SignalMsg ::= reconnect(Constant, Constant, Constant, Constant, SignalReply?)
             ; available(Constant, Constant, SignalReply?).
 
 PendingEntry ::= needs(Constant, Constant, Constant, SignalReply?)

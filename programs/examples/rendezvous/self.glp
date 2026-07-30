@@ -1,0 +1,31 @@
+%% self.glp — the rendezvous example's directory scope and interface.
+%%
+%% Carries the types the modules share and exports the program's entry points:
+%% the test goals the REPL suite posts (manual §19.6, §19.7 — a program's entry
+%% points are its root self.glp's exported procedures, defined there or
+%% forwarded).
+
+%% =============================================================================
+%% SHARED TYPES
+%% =============================================================================
+
+SignalReply ::= punch(Constant) ; initiated ; rejected.
+
+SignalMsg ::= reconnect(Constant, Constant, Constant, Constant, SignalReply?)
+            ; available(Constant, Constant, SignalReply?).
+
+PendingEntry ::= needs(Constant, Constant, Constant, SignalReply?)
+               ; ready(Constant, Constant, SignalReply?).
+PendingList ::= [] ; [PendingEntry | PendingList].
+
+%% =============================================================================
+%% ENTRY POINTS — rv_agent_test
+%% =============================================================================
+
+imported procedure rv_agent_test#test1_needs_stored(PendingList).
+exported procedure test1_needs_stored(PendingList).
+test1_needs_stored(P?) :- rv_agent_test # test1_needs_stored(P).
+
+imported procedure rv_agent_test#test11_reconnect_rejected(SignalReply).
+exported procedure test11_reconnect_rejected(SignalReply).
+test11_reconnect_rejected(R?) :- rv_agent_test # test11_reconnect_rejected(R).

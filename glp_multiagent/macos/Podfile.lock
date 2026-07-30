@@ -1,4 +1,7 @@
 PODS:
+  - bonsoir_darwin (0.0.1):
+    - Flutter
+    - FlutterMacOS
   - connectivity_plus (0.0.1):
     - FlutterMacOS
   - file_selector_macos (0.0.1):
@@ -17,6 +20,7 @@ PODS:
     - FlutterMacOS
 
 DEPENDENCIES:
+  - bonsoir_darwin (from `Flutter/ephemeral/.symlinks/plugins/bonsoir_darwin/darwin`)
   - connectivity_plus (from `Flutter/ephemeral/.symlinks/plugins/connectivity_plus/macos`)
   - file_selector_macos (from `Flutter/ephemeral/.symlinks/plugins/file_selector_macos/macos`)
   - flutter_local_notifications (from `Flutter/ephemeral/.symlinks/plugins/flutter_local_notifications/macos`)
@@ -26,6 +30,8 @@ DEPENDENCIES:
   - sodium_libs (from `Flutter/ephemeral/.symlinks/plugins/sodium_libs/darwin`)
 
 EXTERNAL SOURCES:
+  bonsoir_darwin:
+    :path: Flutter/ephemeral/.symlinks/plugins/bonsoir_darwin/darwin
   connectivity_plus:
     :path: Flutter/ephemeral/.symlinks/plugins/connectivity_plus/macos
   file_selector_macos:
@@ -42,6 +48,7 @@ EXTERNAL SOURCES:
     :path: Flutter/ephemeral/.symlinks/plugins/sodium_libs/darwin
 
 SPEC CHECKSUMS:
+  bonsoir_darwin: 14bd7429acb51db6a8e51f6574ac3b1ea0037a87
   connectivity_plus: 4adf20a405e25b42b9c9f87feff8f4b6fde18a4e
   file_selector_macos: 9e9e068e90ebee155097d00e89ae91edb2374db7
   flutter_local_notifications: 4bf37a31afde695b56091b4ae3e4d9c7a7e6cda0
