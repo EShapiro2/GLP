@@ -15,6 +15,7 @@ import 'package:glp_runtime/compiler/parser.dart';
 import 'package:glp_runtime/compiler/lexer.dart';
 import 'package:glp_runtime/compiler/ast.dart';
 import 'package:glp_runtime/compiler/primitive_layer.dart';
+import 'package:glp_runtime/compiler/error.dart' show CompileError;
 import 'package:glp_runtime/bytecode/runner.dart';
 import 'package:glp_runtime/engine_v2/interp.dart';
 import 'package:glp_runtime/engine_v2/module_kernels.dart';
@@ -267,6 +268,28 @@ class GlpEngine {
         name != '__root_self__' &&
         File(name).existsSync();
     final selfContained = isRealFile && _isSelfContained(module);
+
+    // A real file that is not self-contained is not a program at all: def:program
+    // (modules.tex) admits a self-contained module or a directory with a
+    // self.glp, and a loose source carrying an unresolved M#p is neither. Reject
+    // it here rather than let it fall through to the direct compile path below,
+    // which is what remains of the retired dynamic-dispatch path: that path
+    // emits the retired Distribute instruction and the load appears to succeed,
+    // failing only at run time as "WireFormatException: instruction not in the
+    // wire ISA: Distribute". Composing several modules is by directory program;
+    // composing several apps is by module values posted with run/2.
+    if (isRealFile && !selfContained) {
+      throw CompileError(
+        "'$name' is not a program: it ${_notSelfContainedCause(module)}. By "
+        "def:program a program is a self-contained module or a directory with a "
+        "self.glp, so a source with cross-module calls is not one. Load the "
+        "directory that holds this module as a directory program — the linker "
+        "then resolves its cross-module calls at compile time.",
+        module.line,
+        module.column,
+        phase: 'loader',
+      );
+    }
 
     // Ancestor self.glp chain per modules.tex §Scope construction, anchored at
     // the hierarchy root (programs/) — the same discoverSelfChain bound as the
@@ -529,6 +552,30 @@ class GlpEngine {
       }
     }
     return true;
+  }
+
+  /// Which clause of self-containment [module] fails, for the load-time
+  /// rejection above. An `imported procedure` declaration is named first because
+  /// it names the dependency; otherwise the procedure holding the first
+  /// cross-module call is named.
+  String _notSelfContainedCause(Module module) {
+    for (final d in module.procDeclarations) {
+      if (d.imported) {
+        final target = d.modulePath == null ? d.key : '${d.modulePath}#${d.key}';
+        return "declares 'imported procedure $target'";
+      }
+    }
+    for (final proc in module.procedures) {
+      for (final clause in proc.clauses) {
+        for (final g in clause.body ?? const <Goal>[]) {
+          if (_containsRemoteGoal(g)) {
+            return 'makes a cross-module call in ${clause.head.functor}/'
+                '${clause.head.args.length}';
+          }
+        }
+      }
+    }
+    return 'is not self-contained';
   }
 
   bool _containsRemoteGoal(Goal g) {

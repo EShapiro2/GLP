@@ -1,0 +1,8 @@
+%% co_load_neg/self.glp — root of the co-load rejection fixture.
+%%
+%% Three files in one directory: this self.glp, wallet.glp (self-contained,
+%% loads on its own) and top.glp (imports wallet#mint, so it is not a program by
+%% def:program and is rejected at load). Loading this directory as a directory
+%% program links cleanly. Exercised by
+%% glp_runtime/test/compiler/co_load_reject_test.dart.
+Coin ::= coin(Integer).

@@ -1,0 +1,2 @@
+exported procedure mint(Integer?, Coin).
+mint(N, coin(N?)).

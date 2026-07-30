@@ -1,0 +1,3 @@
+imported procedure wallet#mint(Integer?, Coin).
+exported procedure make(Integer?, Coin).
+make(N, C?) :- wallet # mint(N?, C).
