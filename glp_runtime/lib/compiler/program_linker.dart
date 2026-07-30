@@ -18,6 +18,7 @@ import 'primitive_layer.dart';
 import '../analysis/type_checker/type_ast.dart';
 import '../analysis/type_checker/param_expansion.dart';
 import '../analysis/type_checker/type_checker.dart';
+import '../analysis/type_checker/type_identity.dart';
 import '../runtime/module_hierarchy.dart';
 import '../analysis/type_checker/type_environment_builder.dart';
 
@@ -470,54 +471,7 @@ LinkResult checkedLinkedProgram(List<DiscoveredModule> modules,
   // linkProgram applies all five steps, including step-5 DCE, so the program
   // type-checked and compiled below is restricted to its reachable procedures.
   final linked = linkProgram(modules, rootDir: rootDir);
-
-  // The linked program's type definitions: the union of every module's own type
-  // definitions, deduplicated by name (structural identity makes duplicates the
-  // same type). Root-scope types are supplied by checkModule's root scope.
-  final typeDefs = <String, TypeDef>{};
-  for (final mod in modules) {
-    for (final td in mod.ast.typeDefs) {
-      typeDefs.putIfAbsent(td.name, () => td);
-    }
-  }
-
-  // A module may redefine a root-scope operation (e.g. send/receive/new_channel/
-  // merge) with local clauses but no local declaration, relying on the root
-  // declaration. Linking renames those clauses to `M:p` while the root
-  // declaration stays bare, leaving the renamed procedure undeclared in the
-  // linked program. Supply a renamed declaration from the root scope so the
-  // procedure is checked. (An unqualified entry-point alias carries its
-  // exporting module's declaration from linking — shadowing a root-scope
-  // declaration of the same name/arity; only an alias whose export has no
-  // declaration is left undeclared.)
-  final rootEnv = buildRootScopeEnvironment();
-  final procDecls = [...linked.procDeclarations];
-  final declKeys = {for (final d in procDecls) d.key};
-  for (final p in linked.program.procedures) {
-    final key = '${p.name}/${p.arity}';
-    if (declKeys.contains(key)) continue;
-    final colon = p.name.lastIndexOf(':');
-    if (colon < 0) continue; // unqualified entry-point alias
-    final bareKey = '${p.name.substring(colon + 1)}/${p.arity}';
-    // Prefer the parametric template over the wildcard-instantiated version in
-    // `procedures`: a redefined root op (send/receive/new_channel/merge) is
-    // parametric, and the renamed copy must carry the template so call-site
-    // inference (Case B) concretises it rather than leaving wildcard types.
-    final rd = rootEnv.paramProcDecls[bareKey] ?? rootEnv.procedures[bareKey];
-    if (rd != null) {
-      procDecls.add(ProcDecl(p.name, rd.argTypes, rd.line, rd.column,
-          exported: rd.exported, isBuiltin: rd.isBuiltin));
-      declKeys.add(key);
-    }
-  }
-
-  final flat = Module(
-    typeDefs: typeDefs.values.toList(),
-    procDeclarations: procDecls,
-    procedures: linked.program.procedures,
-    line: 0,
-    column: 0,
-  );
+  final flat = linkedFlatModule(modules, linked);
 
   final pe = PartialEvaluator();
   final transformed = pe.transformDefinedGuards(linked.program);
@@ -544,6 +498,73 @@ LinkResult checkedLinkedProgram(List<DiscoveredModule> modules,
 
   return linked;
 }
+
+/// The single flat Module the linked program is type-checked and compiled as:
+/// the linked program's procedures, every module's own type definitions, and the
+/// linked declarations.
+///
+/// The type definitions are the union of every module's own, deduplicated by
+/// name (structural identity makes duplicates the same type). Root-scope types
+/// are supplied by the root scope, not here.
+///
+/// A module may redefine a root-scope operation (e.g. send/receive/new_channel/
+/// merge) with local clauses but no local declaration, relying on the root
+/// declaration. Linking renames those clauses to `M:p` while the root
+/// declaration stays bare, leaving the renamed procedure undeclared in the
+/// linked program. A renamed declaration is supplied from the root scope so the
+/// procedure is checked. (An unqualified entry-point alias carries its exporting
+/// module's declaration from linking — shadowing a root-scope declaration of the
+/// same name/arity; only an alias whose export has no declaration is left
+/// undeclared.)
+Module linkedFlatModule(List<DiscoveredModule> modules, LinkResult linked) {
+  final typeDefs = <String, TypeDef>{};
+  for (final mod in modules) {
+    for (final td in mod.ast.typeDefs) {
+      typeDefs.putIfAbsent(td.name, () => td);
+    }
+  }
+
+  final rootEnv = buildRootScopeEnvironment();
+  final procDecls = [...linked.procDeclarations];
+  final declKeys = {for (final d in procDecls) d.key};
+  for (final p in linked.program.procedures) {
+    final key = '${p.name}/${p.arity}';
+    if (declKeys.contains(key)) continue;
+    final colon = p.name.lastIndexOf(':');
+    if (colon < 0) continue; // unqualified entry-point alias
+    final bareKey = '${p.name.substring(colon + 1)}/${p.arity}';
+    // Prefer the parametric template over the wildcard-instantiated version in
+    // `procedures`: a redefined root op (send/receive/new_channel/merge) is
+    // parametric, and the renamed copy must carry the template so call-site
+    // inference (Case B) concretises it rather than leaving wildcard types.
+    final rd = rootEnv.paramProcDecls[bareKey] ?? rootEnv.procedures[bareKey];
+    if (rd != null) {
+      procDecls.add(ProcDecl(p.name, rd.argTypes, rd.line, rd.column,
+          exported: rd.exported, isBuiltin: rd.isBuiltin));
+      declKeys.add(key);
+    }
+  }
+
+  return Module(
+    typeDefs: typeDefs.values.toList(),
+    procDeclarations: procDecls,
+    procedures: linked.program.procedures,
+    line: 0,
+    column: 0,
+  );
+}
+
+/// The type-identity tables of a linked program (modules.tex §Dynamic
+/// Activation): declared `p/n` → identity, which `find_type/2` reads, and
+/// exported `p/n` → identity, the table a `Module` value carries.
+///
+/// Built on demand from the same flat module the program was type-checked as,
+/// so the automata are the checked program's. Nothing on the load path calls
+/// this: the kernels that consume the tables (`'_find_type'`, `'_run'`/3) are
+/// step 2 of `/Grassroots/docs/typed-dynamic-activation-plan.md` and are IGLP's.
+TypeIdentityTables linkedTypeIdentityTables(
+        List<DiscoveredModule> modules, LinkResult linked) =>
+    typeIdentityTablesForModule(linkedFlatModule(modules, linked));
 
 /// Whole-program type-check gate (paper: modules §Static Linking — "the unit of
 /// compilation and execution is a program ... only a well-typed program is
