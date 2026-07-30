@@ -53,6 +53,11 @@ procedure known(_?).
 procedure unknown(_?).
 procedure no_readers(_?).
 
+% Attestation guard — holds iff the fourth argument is the first's signature
+% over the pair (PkA, PkB).  Implemented in the runtime guard machinery
+% (bytecode/runner.dart); Secure-GLP renames it verify/3.
+procedure valid_attestation(Constant?, Constant?, Constant?, Constant?).
+
 % Time guards
 procedure wait(Number?).
 procedure wait_until(Number?).
@@ -449,6 +454,27 @@ self_module(M?) :- '_self_module'(M).
 
 procedure run(_?, Module?).
 run(G, M) :- '_run'(G?, M?).
+
+% =============================================================================
+% ATTESTATION AND HELD LINKS (sign/2, authorise_link/2)
+% =============================================================================
+% Moved here from the engine's embedded madGLP prelude, where they were loaded
+% only by enableMadGLP().  GLP's appendix-guards lists both among the system
+% predicates whose complete definitions are in programs/self.glp.  Both kernels
+% abort outside madGLP mode ("not in madGLP mode (no MadContext)").
+
+%% sign/2 - bind Sig to the hex Ed25519 signature over the canonical
+%% serialization of ground term T, under this agent's key (seam spec §4).
+%% The ground/1 guard suspends until T is ground and resumes on binding.
+procedure sign(_?, _).
+sign(T, Sig?) :- ground(T?) | '_sign'(T?, Sig).
+
+%% authorise_link/2 - answer a pending_link(Link, Sender) report (Definition
+%% authorise_link Predicate).  L is the reported link's global name in its
+%% ground presentation, A is authorise or refuse.  On authorise the runtime
+%% releases what it held; on refuse it drops the link.
+procedure authorise_link(_?, _?).
+authorise_link(L, A) :- known(A?) | '_authorise_link'(L?, A?).
 
 % =============================================================================
 % MULTIWAY MERGE (mwm/2)
