@@ -1,0 +1,13 @@
+%% The bodies behind self.glp's three entry points.  See self.glp.
+
+exported procedure run_jobs(Stream(Job)?, Stream(Colour)).
+run_jobs([paint(C)|Js], [C?|Cs?]) :- run_jobs(Js?, Cs).
+run_jobs([stop|_], []).
+run_jobs([], []).
+
+exported procedure serve(Channel(Stream(Job), Stream(Colour))?).
+serve(ch(Js, Cs?)) :- run_jobs(Js?, Cs).
+
+exported procedure drain(Stream(X)?).
+drain([_|Xs]) :- drain(Xs?).
+drain([]).

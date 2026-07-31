@@ -904,6 +904,16 @@ LinkResult linkAndResolveModules(List<DiscoveredModule> modules,
 
   // Collect and rename proc declarations for SRSW relaxation. The loaded
   // module's declarations stay bare, matching its bare procedures.
+  //
+  // A kept-bare declaration is an entry point of the program and carries the
+  // exported flag, whatever the source wrote: "a single-module program, having
+  // no self.glp, exports all its procedures, so every one is an entry point"
+  // (modules.tex sec:static-linking). A renamed `M:p` declaration is not an
+  // entry point — an external goal cannot name it — so it carries the flag not
+  // at all, and a directory program's entry points come from `aliasDecls`
+  // below. This is what the exported type-identity table is built over
+  // (analysis/type_checker/type_identity.dart), and it is the same set the
+  // artefact's interface table records.
   final allDecls = <ProcDecl>[];
   for (final mod in modules) {
     final keepBare =
@@ -916,6 +926,7 @@ LinkResult linkAndResolveModules(List<DiscoveredModule> modules,
         decl.line,
         decl.column,
         isBuiltin: decl.isBuiltin,
+        exported: keepBare,
       ));
     }
   }

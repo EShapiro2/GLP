@@ -1,0 +1,30 @@
+%% TGLP fixture for deriving the exported type-identity table from an
+%% artefact's interface text (modules.tex sec:dynamic-linking; the Implementation
+%% Notes appendix, "Deriving the exported table at load").
+%%
+%% The three entry points cover what the interface text does NOT carry, each of
+%% which would otherwise give a different identity for the same program:
+%%
+%%   run_jobs/2  reaches this directory's own types (Job, Colour), which the text
+%%               carries, through the root-scope Stream(X), which it does not.
+%%   serve/1     reaches the root-scope Channel(In, Out) — ambient at every
+%%               runtime, absent from the text, and supplied from the root scope
+%%               on both paths.
+%%   drain/1     is parameterised: it has no identity and belongs in neither
+%%               table, on the derived path as on the compiled one.
+
+Colour ::= red ; green ; blue.
+Job ::= paint(Colour) ; stop.
+
+imported procedure worker#run_jobs(Stream(Job)?, Stream(Colour)).
+imported procedure worker#serve(Channel(Stream(Job), Stream(Colour))?).
+imported procedure worker#drain(Stream(X)?).
+
+exported procedure run_jobs(Stream(Job)?, Stream(Colour)).
+run_jobs(Js, Cs?) :- worker # run_jobs(Js?, Cs).
+
+exported procedure serve(Channel(Stream(Job), Stream(Colour))?).
+serve(Ch) :- worker # serve(Ch?).
+
+exported procedure drain(Stream(X)?).
+drain(Xs) :- worker # drain(Xs?).

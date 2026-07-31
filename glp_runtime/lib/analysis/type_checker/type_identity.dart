@@ -56,6 +56,8 @@ import 'program_dfa.dart' show UnknownTypeError;
 import 'type_ast.dart';
 import 'type_environment_builder.dart';
 import '../../compiler/ast.dart' as ast;
+import '../../compiler/lexer.dart';
+import '../../compiler/parser.dart';
 import '../../wire/flattening.dart' show hashOfPrint;
 
 /// Version tag of the canonical print, its first line.  A change to the
@@ -478,13 +480,21 @@ class TypeIdentityTables {
 /// An `imported procedure M#p(...)` declares a dependency on another module's
 /// export rather than a procedure of this one, and is keyed `M#p/n`; such
 /// declarations are not tabled.
-TypeIdentityTables buildTypeIdentityTables(TypeEnvironment env) {
+///
+/// [decls] is the set of declarations to table, defaulting to every declaration
+/// in scope — which is what a compiled module's tables are built over, the root
+/// scope included.  A caller tabling a subset (the interface derivation below,
+/// whose declarations are its exports and nothing else) passes that subset; the
+/// identities are still taken against the whole of [env], since a declaration's
+/// automaton expands whatever types its signature reaches.
+TypeIdentityTables buildTypeIdentityTables(TypeEnvironment env,
+    {Iterable<ProcDecl>? decls}) {
   final declared = <String, String>{};
   final exported = <String, String>{};
   final parametric = <String>{};
   final unresolved = <String>{};
 
-  for (final decl in env.procedures.values) {
+  for (final decl in decls ?? env.procedures.values) {
     if (decl.imported) continue;
     final key = decl.key;
     if (env.paramProcDecls.containsKey(key) || decl.isParameterized) {
@@ -522,4 +532,102 @@ TypeIdentityTables typeIdentityTablesForModule(ast.Module module,
       externalTemplates: base.typeTemplates);
   return buildTypeIdentityTables(
       buildTypeEnvironment(expanded, ancestorScope: base));
+}
+
+// =============================================================================
+// The exported table, derived from an artefact's interface text
+// =============================================================================
+
+/// The interface text of an artefact: its reachable type definitions followed
+/// by the declaration of each export, which is what [interfaceTypeIdentityTables]
+/// parses.
+///
+/// [typeDefsText] is the artefact's `typeDefsText` and [exportDeclarationTexts]
+/// the `declarationText` of each of its exports, in order.  An export with no
+/// declaration carries empty text and contributes nothing.
+String artefactInterfaceText({
+  required String typeDefsText,
+  required Iterable<String> exportDeclarationTexts,
+}) {
+  final b = StringBuffer();
+  if (typeDefsText.isNotEmpty) {
+    b.write(typeDefsText);
+    if (!typeDefsText.endsWith('\n')) b.write('\n');
+  }
+  for (final d in exportDeclarationTexts) {
+    if (d.trim().isEmpty) continue;
+    b.write(d);
+    if (!d.endsWith('\n')) b.write('\n');
+  }
+  return b.toString();
+}
+
+/// The exported type-identity table of a shipped module, derived from its
+/// artefact's interface text rather than shipped beside it (modules.tex
+/// §Dynamic Activation; the Implementation Notes appendix, "Deriving the
+/// exported table at load").  A shipped table can disagree with the source it
+/// describes; one recomputed from the attested source cannot.
+///
+/// The text is parsed by [Parser.parseInterface], the type environment is built
+/// over it, and the identity of each parsed declaration is taken — the same
+/// construction, over the same root scope, that [linkedTypeIdentityTables]
+/// applies to the compiled program, so the two agree key for key.
+///
+/// Three things the text does not carry, each of which would otherwise give a
+/// different identity for the same program:
+///
+///   - The primitives and the root-scope types are absent from it, deliberately:
+///     they are ambient at every runtime, as they are excluded from h(M).  They
+///     come from [buildRootScopeEnvironment], the source the compiled path uses.
+///   - An export with no declaration carries empty declaration text and
+///     contributes no types.  Its key is **absent** from every field, which is
+///     what the compiled path does with a procedure that has no declaration:
+///     [buildTypeIdentityTables] tables declarations, so an undeclared
+///     procedure is in none of the four.  `unresolved` is the narrower case of a
+///     declaration whose signature names a type the scope does not define.
+///   - A parameterised declaration has no identity and lands in
+///     [TypeIdentityTables.parametric], on this path as on the compiled one.
+///
+/// [TypeIdentityTables.declared] is empty: an interface section carries the
+/// module's exports and says nothing about the rest of its scope, which is what
+/// the declared table is.  `find_type/2` reads the running module's declared
+/// table, built by [linkedTypeIdentityTables]; `run/3` compares against the
+/// exported table this function derives.
+TypeIdentityTables interfaceTypeIdentityTables({
+  required String typeDefsText,
+  required Iterable<String> exportDeclarationTexts,
+}) {
+  final text = artefactInterfaceText(
+      typeDefsText: typeDefsText,
+      exportDeclarationTexts: exportDeclarationTexts);
+  if (text.trim().isEmpty) {
+    return const TypeIdentityTables(
+        declared: {}, exported: {}, parametric: {}, unresolved: {});
+  }
+
+  final iface = Parser(Lexer(text).tokenize()).parseInterface();
+
+  final base = buildRootScopeEnvironment();
+  final expanded = expandParameterizedTypes(iface,
+      knownTypeNames: base.types.keys.toSet(),
+      externalTemplates: base.typeTemplates);
+  final env = buildTypeEnvironment(expanded, ancestorScope: base);
+
+  // Table the interface's own declarations only.  They are taken from `env`,
+  // not from `expanded`, so alias resolution has been applied to them exactly as
+  // it is on the compiled path; `expanded` supplies which keys they are.
+  final own = <ProcDecl>[];
+  for (final d in expanded.procDeclarations) {
+    if (d.imported) continue;
+    final e = env.procedures[d.qualifiedKey];
+    if (e != null) own.add(e);
+  }
+
+  final tables = buildTypeIdentityTables(env, decls: own);
+  return TypeIdentityTables(
+    declared: const {},
+    exported: tables.exported,
+    parametric: tables.parametric,
+    unresolved: tables.unresolved,
+  );
 }

@@ -1,0 +1,25 @@
+%% TGLP fixture: a single-module program, whose entry points are all of its
+%% procedures ("a single-module program, having no self.glp, exports all its
+%% procedures, so every one is an entry point" — modules.tex sec:static-linking).
+%%
+%% Three exports, covering the three ways the artefact's interface text and the
+%% compiled program's exported table could drift apart:
+%%
+%%   tally/2   declared and concrete — an identity on both paths.
+%%   copy/1    declared and parameterised — no identity on either path.
+%%   nudge/1   NOT declared — its interface text is empty and it contributes no
+%%             types, so its key is absent from every field, exactly as the
+%%             compiled path leaves an undeclared procedure out of all four.
+
+Tick ::= tick ; tock.
+
+procedure tally(Stream(Tick)?, Stream(Tick)).
+tally([tick|Ts], [tick|Us?]) :- tally(Ts?, Us).
+tally([tock|Ts], [tock|Us?]) :- tally(Ts?, Us).
+tally([], []).
+
+procedure copy(Stream(X)?).
+copy([_|Xs]) :- copy(Xs?).
+copy([]).
+
+nudge([tick]).
