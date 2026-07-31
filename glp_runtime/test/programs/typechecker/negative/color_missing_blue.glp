@@ -1,0 +1,21 @@
+%% Negative: nested-union coverage gap at a list head — vGLP's reported repro.
+%%
+%% Source: vGLP's input-coverage bug report of 2026-07-09, retired to
+%% vGLP/OLD/ once the defect was closed; the repro is kept here, at vGLP's
+%% request of 2026-07-31, so the regression is argued from the suite rather than
+%% from a retired report.
+%%
+%% MyList's element type Color declares `red` and `blue`, and no clause handles
+%% blue, so the input path MyList -> [|] -> blue is accepted by no clause
+%% (Well-Typed GLP Program cond. 2). Catching it needs the checker to descend
+%% into the Color union nested under the list constructor and re-resolve the
+%% automaton owning each of its states, which is what carries coverage across a
+%% type reference into a nested union. The checker must reject this program.
+%%
+%% Same defect as counter_missing_updown.glp beside it; this is the shape that
+%% escaped.
+Color ::= red ; blue.
+MyList ::= [] ; [Color | MyList].
+procedure g(MyList?, MyList).
+g([red|Rest], [red|Rest1?]) :- g(Rest?, Rest1).
+g([], []).

@@ -1187,6 +1187,11 @@ NEGATIVE_FILES=(
     # descending into the union nested under the list constructor. Positive twin:
     # moded_types/valid/embedded/counter_show.glp.
     "$TC_DIR/negative/counter_missing_updown.glp"
+    # The same defect in the shape that escaped: vGLP's repro of 2026-07-09,
+    # kept here (at vGLP's request of 2026-07-31) now that the report has been
+    # retired to vGLP/OLD/, so the regression is argued from the suite. Color
+    # declares red and blue; no clause handles blue.
+    "$TC_DIR/negative/color_missing_blue.glp"
     # Channel consumer missing the close clause: unfolding `receive` leaves the
     # closed read stream ch([], _) uncovered. Positive twin:
     # moded_types/valid/channel_consumer_closed.glp.
