@@ -1,0 +1,6 @@
+%% programs/tests/unreachable_neg/reached.glp — the one module the entry point
+%% reaches.  Well-typed; it is what keeps the fixture's failure attributable to
+%% the unreachable modules alone.
+
+exported procedure mint(Integer?, Coin).
+mint(N, coin(N?)).

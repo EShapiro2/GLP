@@ -1,0 +1,7 @@
+%% programs/tests/unreachable_neg/unreached_type.glp — unreachable, and builds a
+%% `holding/2` term where the scope declares only `Coin ::= coin(Integer)`.
+%% vGLP's second case: self.glp no longer declared Holding while
+%% play_grassapp_duo.glp still passed [holding(Id?, 10)].
+
+exported procedure stale_type(Coin).
+stale_type(holding(alice, 10)).

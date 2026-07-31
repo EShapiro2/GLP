@@ -120,7 +120,14 @@ TypeEnvironment buildRootScopeEnvironment() {
 /// the root scope and all ancestor self.glp definitions (built by
 /// assembleTypeScope in module_hierarchy.dart). The module's own
 /// definitions are then merged on top (shadowing ancestors).
-TypeEnvironment buildTypeEnvironment(ast.Module module, {TypeEnvironment? ancestorScope}) {
+/// [typeTemplates] are the module's own parameterised type definitions, which
+/// [expandParameterizedTypes] removed from [module] and which survive this
+/// environment to be expanded later. They are merged over the base scope's and
+/// carried on the returned environment with their simple-alias references
+/// resolved, so a later expansion of one cannot name an alias this build erases.
+TypeEnvironment buildTypeEnvironment(ast.Module module,
+    {TypeEnvironment? ancestorScope,
+    Map<String, TypeDef> typeTemplates = const {}}) {
   // Base environment: ancestor scope if provided, otherwise just root scope
   final baseEnv = ancestorScope ?? buildRootScopeEnvironment();
 
@@ -133,8 +140,10 @@ TypeEnvironment buildTypeEnvironment(ast.Module module, {TypeEnvironment? ancest
   // Now resolve aliases on the merged environment (so user aliases can reference root scope types)
   final types = Map<String, TypeDef>.from(merged.types);
   final procedures = Map<String, ProcDecl>.from(merged.procedures);
-  _resolveAliases(types, procedures);
-
+  final templates = <String, TypeDef>{
+    ...merged.typeTemplates,
+    ...typeTemplates,
+  };
   // Innermost-first shadowing (spec §3.2/§3.3): a module-local MONOMORPHIC
   // procedure shadows an inherited parameterized template of the same key — so
   // the template must not survive in paramProcDecls (else call-site inference,
@@ -149,7 +158,11 @@ TypeEnvironment buildTypeEnvironment(ast.Module module, {TypeEnvironment? ancest
     }
   }
 
-  return TypeEnvironment(types, procedures, paramProcDecls: paramProcDecls);
+  _resolveAliases(types, procedures,
+      typeTemplates: templates, paramProcDecls: paramProcDecls);
+
+  return TypeEnvironment(types, procedures,
+      paramProcDecls: paramProcDecls, typeTemplates: templates);
 }
 
 /// Build TypeEnvironment from Module's type definitions and procedure declarations
@@ -287,7 +300,24 @@ bool _isTypeAlias(TypeDef def) {
 /// - Simple aliases are resolved transitively and replaced everywhere
 /// - Union aliases are expanded by collecting alternatives from referenced types
 /// - Circular alias chains are detected and rejected
-void _resolveAliases(Map<String, TypeDef> types, Map<String, ProcDecl> procedures) {
+///
+/// [typeTemplates], when given, is rewritten alongside [types]: a parameterised
+/// type template is expanded AFTER this environment is built (by the abstract
+/// instance of a parametric declaration, or by an instantiation a clause body
+/// induces), and step 6 erases each simple alias from [types]. A template body
+/// naming a simple alias would therefore expand into a definition referring to a
+/// type no longer in the environment — `Agent ::= Constant.` beside
+/// `NetEnd(C) ::= net_end(Agent, ...)` in one `self.glp` gave
+/// "Unresolved type: Agent". Templates are rewritten here so no expansion of
+/// one can name an erased alias.
+///
+/// [paramProcDecls] are rewritten for the same reason: a parameterised
+/// procedure declaration is instantiated after this build — at a call site, or
+/// as the abstract instance the parametricity check builds — and one whose
+/// signature names a simple alias gave "Unresolved type: Agent?".
+void _resolveAliases(Map<String, TypeDef> types, Map<String, ProcDecl> procedures,
+    {Map<String, TypeDef>? typeTemplates,
+    Map<String, ProcDecl>? paramProcDecls}) {
   // Step 1: Identify simple and union aliases
   final simpleAliases = <String, TypeDef>{};
   final unionAliases = <String, TypeDef>{};
@@ -426,6 +456,23 @@ void _resolveAliases(Map<String, TypeDef> types, Map<String, ProcDecl> procedure
     );
   }
 
+  // Step 4b: Replace simple alias references in the parameterised type
+  // templates, which survive this environment and are expanded later.
+  if (typeTemplates != null) {
+    for (final entry in typeTemplates.entries.toList()) {
+      final newAlternatives = entry.value.alternatives
+          .map((alt) => _replaceAliasReferences(alt, resolved))
+          .toList();
+      typeTemplates[entry.key] = TypeDef(
+        entry.value.name,
+        newAlternatives,
+        entry.value.line,
+        entry.value.column,
+        typeParams: entry.value.typeParams,
+      );
+    }
+  }
+
   // Step 5: Replace alias references in procedure declarations
   for (final entry in procedures.entries.toList()) {
     final newArgTypes = <TypeExpr>[];
@@ -442,6 +489,27 @@ void _resolveAliases(Map<String, TypeDef> types, Map<String, ProcDecl> procedure
       imported: entry.value.imported,
       modulePath: entry.value.modulePath,
     );
+  }
+
+  // Step 5b: Same for the parameterised procedure declarations, which survive
+  // this environment and are instantiated later.
+  if (paramProcDecls != null) {
+    for (final entry in paramProcDecls.entries.toList()) {
+      final newArgTypes = entry.value.argTypes
+          .map((argType) => _replaceAliasReferences(argType, resolved))
+          .toList();
+      paramProcDecls[entry.key] = ProcDecl(
+        entry.value.name,
+        newArgTypes,
+        entry.value.line,
+        entry.value.column,
+        typeParams: entry.value.typeParams,
+        isBuiltin: entry.value.isBuiltin,
+        exported: entry.value.exported,
+        imported: entry.value.imported,
+        modulePath: entry.value.modulePath,
+      );
+    }
   }
 
   // Step 6: Remove simple alias definitions from types map
@@ -510,7 +578,17 @@ TypeExpr _replaceAliasReferences(TypeExpr expr, Map<String, TypeExpr> resolved) 
       // Replace with resolved target, applying complement if needed
       return _applyComplement(resolvedTarget, expr.isInput, expr.line, expr.column);
     }
-    return expr;  // Not an alias, keep as-is
+    if (expr.typeArgs.isEmpty) return expr; // Not an alias, keep as-is
+    // A still-parameterised reference — `Stream(Agent)` in a type template,
+    // which expansion has not yet reached. Its arguments may name aliases.
+    // (In `types` and `procedures` expansion has already replaced every
+    // parameterised reference by its expanded name, so typeArgs is empty there
+    // and this is a no-op.)
+    return TypeRef(expr.name, expr.line, expr.column,
+        isInput: expr.isInput,
+        typeArgs: expr.typeArgs
+            .map((a) => _replaceAliasReferences(a, resolved))
+            .toList());
   }
 
   if (expr is PrimitiveModeAlt) {

@@ -441,6 +441,64 @@ List<String> _ancestorSelfGlpFiles(String rootDir, String programsDir) {
   return result;
 }
 
+/// Step 2 of static linking (modules.tex §Static Linking): "each module is
+/// type-checked independently against its ancestor scope, exactly as for
+/// single-file compilation". It runs after discovery (step 1) and before
+/// renaming (step 3), so every error names the module's own file and line, and
+/// it covers every discovered module — including one that no entry point
+/// reaches, which step 5 (dead-code elimination) drops before the linked check
+/// ever sees it. The linked check that follows is an addition to this one, not
+/// a replacement: it is more stringent where a call supplies concrete types
+/// across a `#` boundary, and blind where a module is unreachable.
+///
+/// Two points the per-module check settles, both as the paper puts them:
+///
+/// - A parameterised procedure with no instantiation in its own module is not
+///   rejected here — [checkModule] is called with
+///   `rejectUninstantiatedInspecting: false`. A procedure that never inspects a
+///   parameter is certified once for all instantiations by the abstract-
+///   parameter route (parameterized-types.tex §Modular Checking via Abstract
+///   Parameters), which [checkModule] runs regardless; one that does inspect a
+///   parameter has no well-typing of its own and acquires one only per
+///   instantiation, which the linked check supplies.
+/// - Defined guards are unfolded per module before checking, as on the
+///   single-file path (`GlpEngine.loadSource`): guard unfolding precedes type
+///   checking, so input coverage is checked on the unfolded head.
+///
+/// A module with no procedure declarations is not checked, matching the
+/// single-file path — a `self.glp` that carries only type definitions has
+/// nothing to check.
+///
+/// Throws on type errors, naming each offending module's file path.
+void checkModulesIndependently(List<DiscoveredModule> modules) {
+  final failures = <String>[];
+
+  for (final mod in modules) {
+    if (mod.ast.procDeclarations.isEmpty) continue;
+
+    final pe = PartialEvaluator();
+    final transformed = pe.transformDefinedGuards(
+        Program(mod.ast.procedures, mod.ast.line, mod.ast.column));
+
+    final result = checkModule(
+      mod.ast,
+      transformedProcedures: transformed.procedures,
+      ancestorScope: mod.ancestorScope,
+      rejectUninstantiatedInspecting: false,
+    );
+    if (result.isWellTyped) continue;
+
+    for (final e in result.errors) {
+      failures.add('  ${mod.filePath}:${e.line}: ${e.message}');
+    }
+  }
+
+  if (failures.isNotEmpty) {
+    throw Exception('Type checking failed for module(s) of the program:\n'
+        '${failures.join('\n')}');
+  }
+}
+
 /// Type-check a program on its LINKED program (paper: modules §Module-System
 /// Design "Self-contained type checking", §Static Linking; def:program —
 /// soundness is established on the linked program). Linking renames every
@@ -455,9 +513,20 @@ List<String> _ancestorSelfGlpFiles(String rootDir, String programsDir) {
 /// needed. A parameterised procedure with no instantiation goes unchecked, not
 /// rejected (typed-program.md "Programs and Modules").
 ///
+/// This is the SECOND of the two checks the paper specifies. Step 2 — each
+/// module against its ancestor scope — runs first, in
+/// [checkModulesIndependently]; a module no entry point reaches is checked
+/// there and nowhere else, since step-5 dead-code elimination drops it before
+/// the linked check.
+///
 /// Throws on type errors with details.
 LinkResult checkedLinkedProgram(List<DiscoveredModule> modules,
     {required String rootDir, bool rejectUninstantiated = false}) {
+  // Step 2 (modules.tex §Static Linking): after discovery, before renaming,
+  // each module is type-checked independently against its ancestor scope. The
+  // linked check below is an addition to it, not a replacement.
+  checkModulesIndependently(modules);
+
   // Soundness is established on the LINKED program (paper: modules §Module-System
   // Design "Self-contained type checking", §Static Linking; def:program). We link
   // first — renaming every procedure to `M:p` and resolving every call, including

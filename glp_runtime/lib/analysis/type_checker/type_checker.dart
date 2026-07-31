@@ -758,24 +758,19 @@ TypeCheckResult _checkModuleImpl(ast.Module module, {List<ast.Procedure>? transf
       knownTypeNames: baseEnv.types.keys.toSet(),
       externalTemplates: baseEnv.typeTemplates);
 
-  // Build type environment from expanded module (reuses baseEnv)
-  final builtEnv = buildTypeEnvironment(expandedModule, ancestorScope: baseEnv);
-
-  // Carry the parameterized-type templates (root/ancestor + this module's own,
-  // which expansion removed from the module) into the checking environment, so
-  // the instantiation closure can materialize types that arise only through it
-  // (e.g. Stream<Box<Msg>> from a type-changing procedure).
-  final templates = <String, TypeDef>{
-    ...baseEnv.typeTemplates,
-    for (final td in module.typeDefs)
-      if (td.isParameterized) td.name: td,
-  };
-  final typeEnv = TypeEnvironment(
-    builtEnv.types,
-    builtEnv.procedures,
-    paramProcDecls: builtEnv.paramProcDecls,
-    typeTemplates: templates,
-  );
+  // Build type environment from expanded module (reuses baseEnv), carrying the
+  // parameterized-type templates (root/ancestor + this module's own, which
+  // expansion removed from the module) so the instantiation closure can
+  // materialize types that arise only through one (e.g. Stream<Box<Msg>> from a
+  // type-changing procedure). buildTypeEnvironment resolves their simple-alias
+  // references, so a template expanded after this point cannot name an alias
+  // the build erased.
+  final typeEnv = buildTypeEnvironment(expandedModule,
+      ancestorScope: baseEnv,
+      typeTemplates: {
+        for (final td in module.typeDefs)
+          if (td.isParameterized) td.name: td,
+      });
 
   // Extract clauses - from transformed procedures if provided, otherwise from module
   final clauses = <ast.Clause>[];

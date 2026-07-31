@@ -1,0 +1,17 @@
+%% programs/tests/unreachable_neg/self.glp
+%%
+%% Negative fixture for step 2 of static linking (TGLP modules.tex §Static
+%% Linking): "each module is type-checked independently against its ancestor
+%% scope".  This directory is a program whose root self.glp exports one entry
+%% point, reaching `reached.glp` and nothing else.  Two further modules are
+%% unreachable, and each is broken in one of the two ways vGLP reported on
+%% 2026-07-23: a call at an arity that does not exist, and a term of a type the
+%% scope no longer declares.  Step 5 (dead-code elimination) drops both before
+%% the linked check sees them, so step 2 is the only check that reaches them.
+
+Coin ::= coin(Integer).
+
+imported procedure reached#mint(Integer?, Coin).
+
+exported procedure make(Integer?, Coin).
+make(N, C?) :- reached # mint(N?, C).

@@ -1,0 +1,8 @@
+%% programs/tests/unreachable_neg/unreached_arity.glp — unreachable, and calls
+%% `reached # mint` at arity 3, which no declaration gives.  vGLP's first case:
+%% grassapp_agent.glp defined agent/7 while play_grassapp_duo.glp called agent/5.
+
+imported procedure reached#mint(Integer?, Coin).
+
+exported procedure stale_call(Integer?, Coin).
+stale_call(N, C?) :- reached # mint(N?, C, C).
