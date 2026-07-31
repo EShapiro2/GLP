@@ -114,3 +114,76 @@ String _printProcDecl(ProcDecl d) {
   final prefix = d.exported ? 'exported ' : '';
   return '${prefix}procedure ${d.name}($args).';
 }
+
+/// The declaration text an artefact's interface table carries for one export
+/// (§5, interface table: "per export a string name, clen arity, and string
+/// declaration text").
+///
+/// Printed as an `exported procedure` whatever the declaration's own visibility
+/// flag says: every entry of the interface table is an export. The linker keeps
+/// a single-module program's own declarations bare and unflagged, so the flag is
+/// not a reliable witness of what the table already asserts.
+String exportDeclarationText(ProcDecl d) {
+  final args = d.argTypes.map((t) => t.toString()).join(', ');
+  return 'exported procedure ${d.name}($args).';
+}
+
+/// The type-definition string an artefact's interface table carries: the type
+/// definitions reachable from [exportDecls], in canonical print, one per line,
+/// lexicographically by type name (§5, interface table; §6 order (i)).
+///
+/// Reachability is the transitive closure over the exported declarations'
+/// argument types: a type named in an export, every type named in that type's
+/// alternatives, and so on. A name with no definition in [typeDefs] contributes
+/// nothing — the primitives (`Integer`, `Real`, `String`, `Module`) and the
+/// root-scope types (`Stream`, `Channel`, …) are ambient at every runtime and
+/// are not the program's own source, exactly as they are excluded from h(M).
+/// A parameterized definition's own parameters are names of that kind too.
+String interfaceTypeDefsText({
+  required Iterable<ProcDecl> exportDecls,
+  required Map<String, TypeDef> typeDefs,
+}) {
+  final pending = <String>[];
+  for (final d in exportDecls) {
+    for (final t in d.argTypes) {
+      _collectTypeNames(t, pending);
+    }
+  }
+
+  final reached = <String, TypeDef>{};
+  while (pending.isNotEmpty) {
+    final name = pending.removeLast();
+    if (reached.containsKey(name)) continue;
+    final td = typeDefs[name];
+    if (td == null) continue; // ambient (primitive or root-scope) or a parameter
+    reached[name] = td;
+    for (final alt in td.alternatives) {
+      _collectTypeNames(alt, pending);
+    }
+  }
+
+  if (reached.isEmpty) return '';
+  final names = reached.keys.toList()..sort();
+  return '${names.map((n) => _printTypeDef(reached[n]!)).join('\n')}\n';
+}
+
+/// Append every named type referenced anywhere in [expr] to [out].
+void _collectTypeNames(TypeExpr expr, List<String> out) {
+  if (expr is TypeRef) {
+    out.add(expr.name);
+    for (final a in expr.typeArgs) {
+      _collectTypeNames(a, out);
+    }
+  } else if (expr is StructAlt) {
+    for (final a in expr.args) {
+      _collectTypeNames(a, out);
+    }
+  } else if (expr is ListConsAlt) {
+    _collectTypeNames(expr.head, out);
+    _collectTypeNames(expr.tail, out);
+  } else if (expr is DiffListAlt) {
+    _collectTypeNames(expr.content, out);
+    _collectTypeNames(expr.hole, out);
+  }
+  // ConstantAlt, ListNilAlt and PrimitiveModeAlt name no type.
+}

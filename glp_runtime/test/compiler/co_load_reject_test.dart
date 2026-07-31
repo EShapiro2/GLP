@@ -69,4 +69,34 @@ void main() {
       expect(engine.loadProgram(fixtureDir), isTrue);
     });
   });
+
+  // The per-isolate loaders (multiagent/agent_runtime.dart,
+  // multiagent/isolate_manager.dart) hand boot sources to loadSource under a
+  // synthetic name, so the source never exists on disk. The rejection covers
+  // that arrival too — otherwise a `#` call in a boot source still reaches the
+  // direct compile path and dies at run time on Distribute.
+  group('Co-loaded source text that cross-calls', () {
+    final crossCalling = File(path('top.glp')).readAsStringSync();
+    // Source text has no place in the hierarchy, so its types must be its own
+    // or the root scope's — wallet.glp's Coin comes from the fixture's self.glp
+    // and would read as a free type parameter here.
+    const selfContained = 'procedure twice(Integer?, Integer).\n'
+        'twice(X, Y?) :- Y := X? * 2.\n';
+
+    test('is rejected under a synthetic name, as a real file is', () {
+      expect(() => engine.loadSource(crossCalling, filename: 'program'),
+          throwsContaining('is not a program'));
+    });
+
+    test('the rejection names the cause and the directory remedy', () {
+      expect(() => engine.loadSource(crossCalling, filename: 'source_0'),
+          throwsContaining('imported procedure'));
+      expect(() => engine.loadSource(crossCalling, filename: 'source_0'),
+          throwsContaining('directory program'));
+    });
+
+    test('self-contained source text still loads', () {
+      expect(engine.loadSource(selfContained, filename: 'program'), isTrue);
+    });
+  });
 }

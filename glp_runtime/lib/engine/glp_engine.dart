@@ -33,7 +33,12 @@ import 'package:glp_runtime/analysis/type_checker/well_typed_clause.dart' as wtc
 import 'package:glp_runtime/runtime/module_hierarchy.dart';
 import 'package:glp_runtime/multiagent/mad_context.dart';
 import 'package:glp_runtime/compiler/program_linker.dart';
-import 'package:glp_runtime/wire/flattening.dart' show canonicalPrint, hashOfPrint;
+import 'package:glp_runtime/wire/flattening.dart'
+    show
+        canonicalPrint,
+        exportDeclarationText,
+        hashOfPrint,
+        interfaceTypeDefsText;
 import 'package:glp_runtime/wire/artefact.dart' show Artefact, ArtefactExport;
 
 /// Result of running a goal
@@ -95,21 +100,13 @@ send_to_remote(_, []).
 procedure global_send(_?, _?, _?).
 global_send(T, G, Q) :- known(T?) | '_send'(T?, G?, Q?).
 
-%% authorise_link/2 - answer a pending_link(Link, Sender) report (Definition
-%% authorise_link Predicate).  L is the reported link's global name in its
-%% ground presentation, A is authorise or refuse.  On authorise the runtime
-%% releases what it held; on refuse it drops the link.
-procedure authorise_link(_?, _?).
-authorise_link(L, A) :- known(A?) | '_authorise_link'(L?, A?).
-
 %% send_to_user/1 is defined in the root self.glp (always loaded), so it is not
-%% repeated here.
-
-%% sign/2 - bind Sig to the hex Ed25519 signature over the canonical
-%% serialization of ground term T, under this agent's key (seam spec §4).
-%% The ground/1 guard suspends until T is ground and resumes on binding.
-procedure sign(_?, _).
-sign(T, Sig?) :- ground(T?) | '_sign'(T?, Sig).
+%% repeated here.  sign/2 and authorise_link/2 are likewise defined there, under
+%% the ATTESTATION AND HELD LINKS heading, and are no longer repeated here: the
+%% copies that stood here were a stale duplicate of the root definitions.  Both
+%% kernels abort outside madGLP mode, so a call to sign/2 with madGLP disabled is
+%% a runtime abort naming madGLP mode rather than a compile-time undefined
+%% procedure.
 
 %% valid_attestation/4 is a guard, not a wrapped body kernel — it is built into
 %% the runtime guard machinery (seam spec §4 rework note); no GLP wrapper here.
@@ -263,13 +260,17 @@ class GlpEngine {
     // module is an entry point (§Static Linking), reached by an unqualified
     // alias that shadows the root self.glp for a posted goal (see
     // combinedProgram). There is no dynamic-dispatch activation (path retired).
-    final isRealFile = name != '_source_' &&
-        name != '__mad_predicates__' &&
-        name != '__root_self__' &&
-        File(name).existsSync();
-    final selfContained = isRealFile && _isSelfContained(module);
+    //
+    // The two internal sources — the madGLP prelude and the root self.glp — are
+    // loaded by name rather than from the program hierarchy and cross-call
+    // nothing, so the program test below does not apply to them.
+    final isInternal =
+        name == '__mad_predicates__' || name == '__root_self__';
+    final isRealFile =
+        !isInternal && name != '_source_' && File(name).existsSync();
+    final selfContained = isInternal || _isSelfContained(module);
 
-    // A real file that is not self-contained is not a program at all: def:program
+    // A source that is not self-contained is not a program at all: def:program
     // (modules.tex) admits a self-contained module or a directory with a
     // self.glp, and a loose source carrying an unresolved M#p is neither. Reject
     // it here rather than let it fall through to the direct compile path below,
@@ -278,7 +279,13 @@ class GlpEngine {
     // failing only at run time as "WireFormatException: instruction not in the
     // wire ISA: Distribute". Composing several modules is by directory program;
     // composing several apps is by module values posted with run/2.
-    if (isRealFile && !selfContained) {
+    //
+    // The test covers source text as well as a real file: the per-isolate
+    // loaders (multiagent/agent_runtime.dart, multiagent/isolate_manager.dart)
+    // hand boot sources to `loadSource` under a synthetic name, and a `#` call
+    // in one reached the run-time WireFormatException by exactly the route this
+    // rejection was written to close.
+    if (!selfContained) {
       throw CompileError(
         "'$name' is not a program: it ${_notSelfContainedCause(module)}. By "
         "def:program a program is a self-contained module or a directory with a "
@@ -328,14 +335,15 @@ class GlpEngine {
       }
     }
 
-    // Compile. A self-contained module goes through the linker (step-3 renaming,
-    // singleModulePath marks the loaded module so all its procedures are entry
-    // points) and compileProgram — the same compiler entry as a directory
-    // program — running the global SRSW pass it has no separate per-module pass
-    // for. Other sources keep the direct compile path.
+    // Compile. A self-contained module on disk goes through the linker (step-3
+    // renaming, singleModulePath marks the loaded module so all its procedures
+    // are entry points) and compileProgram — the same compiler entry as a
+    // directory program — running the global SRSW pass it has no separate
+    // per-module pass for. Source text has no file for the linker to discover,
+    // so it keeps the direct compile path, as do the internal sources.
     final BytecodeProgram program;
     rt.ModuleTerm? moduleValue;
-    if (selfContained) {
+    if (isRealFile) {
       final modules =
           discoverSingleModule(name, rootSelfGlpPath: _rootSelfGlpPath);
       final linked =
@@ -910,15 +918,36 @@ class GlpEngine {
     // sec:static-linking; the DCE seed): a directory program's root-self.glp
     // exported procedures (the aliases), a single-module program's every
     // procedure. `run/2` admits a posted goal only against this set.
-    final exports = <ArtefactExport>[
-      for (final p in linked.program.procedures)
-        if (!p.name.contains(':')) ArtefactExport(p.name, p.arity, ''),
-    ];
+    //
+    // Each export carries its declaration text, and the table carries the type
+    // definitions those declarations reach, so the loader derives the exported
+    // type automata from the artefact itself (code format §Program Artefact:
+    // "Carrying text rather than compiled automata keeps one source of truth").
+    // The linker keeps the entry points' declarations bare, alongside the
+    // renamed `M:p` declarations of everything else, so the bare ones are the
+    // interface's.
+    final declByKey = <String, ProcDecl>{
+      for (final d in linked.procDeclarations)
+        if (!d.name.contains(':')) '${d.name}/${d.arity}': d,
+    };
+    final exports = <ArtefactExport>[];
+    final exportDecls = <ProcDecl>[];
+    for (final p in linked.program.procedures) {
+      if (p.name.contains(':')) continue;
+      final decl = declByKey['${p.name}/${p.arity}'];
+      // An export with no declaration contributes no interface text; it is
+      // undeclared in the source too, so there is nothing to derive from.
+      if (decl != null) exportDecls.add(decl);
+      exports.add(ArtefactExport(
+          p.name, p.arity, decl == null ? '' : exportDeclarationText(decl)));
+    }
     final artefact = Artefact.fromCompiled(
       ops: program.ops.cast<Object>(),
       hM: hM,
       moduleName: moduleName,
       isaVersion: 'glp-isa-1',
+      typeDefsText:
+          interfaceTypeDefsText(exportDecls: exportDecls, typeDefs: typeDefs),
       exports: exports,
     );
     return rt.ModuleTerm(artefact, name: moduleName);

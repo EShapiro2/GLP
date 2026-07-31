@@ -348,6 +348,54 @@ class Parser {
     );
   }
 
+  /// Parse an interface section: type definitions and procedure declarations
+  /// alone, with no clauses.
+  ///
+  /// [parseModule] requires every procedure declaration to be followed by its
+  /// clauses. That rule is right for a module and wrong for an interface
+  /// section, which carries declarations and no clauses: the artefact's
+  /// interface table is the program interface carried as declaration source
+  /// text, from which the loader derives the type automata (IGLP appendix
+  /// §Program Artefact). This is the entry point that reads that text back.
+  ///
+  /// Returns a [Module] whose `procedures` is empty. A clause in the input is a
+  /// parse error, as is a `-mode`/`-expose` directive: an interface section is
+  /// not a module and carries neither.
+  Module parseInterface() {
+    final typeDefs = <TypeDef>[];
+    final procDeclarations = <ProcDecl>[];
+
+    while (!_isAtEnd()) {
+      final isProcedureDecl = _check(TokenType.PROCEDURE) ||
+          (_check(TokenType.ATOM) &&
+              (_peek().lexeme == 'exported' || _peek().lexeme == 'imported') &&
+              _current + 1 < tokens.length &&
+              tokens[_current + 1].type == TokenType.PROCEDURE);
+
+      if (isProcedureDecl) {
+        procDeclarations.add(_parseProcDeclaration());
+      } else if (_isTypeDefinition()) {
+        typeDefs.add(_parseTypeDef());
+      } else {
+        throw CompileError(
+          'Unexpected token "${_peek().lexeme}" in an interface section.\n'
+          '  An interface section carries type definitions and procedure '
+          'declarations only — no clauses and no directives.',
+          _peek().line,
+          _peek().column,
+          phase: 'parser',
+        );
+      }
+    }
+
+    return Module(
+      typeDefs: typeDefs,
+      procDeclarations: procDeclarations,
+      line: 1,
+      column: 1,
+    );
+  }
+
   /// Skip module declarations at start of file (for legacy parse())
   void _skipDeclarations() {
     while (!_isAtEnd() && _check(TokenType.MINUS)) {
