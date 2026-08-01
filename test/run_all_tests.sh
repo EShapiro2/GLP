@@ -28,6 +28,16 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 GLP_DIR="$SCRIPT_DIR/.."
 GLP_RUNTIME="$GLP_DIR/glp_runtime"
 TYPED="$GLP_DIR/programs/tests/typed"
+
+# The tree this run measures.  A concurrent session that commits mid-run leaves
+# the suite testing a mixture: sources are re-read as each section runs, and the
+# REPL binary is rebuilt from whatever is on disc at that moment.  The failures
+# that produces are true statements about a tree that no longer exists, and they
+# look like ordinary failures in unrelated sections — four Section A logic-gate
+# failures on 2026-08-01 were of exactly this kind, and a baseline was lost the
+# same way that morning.  Recorded here, re-checked at the end.
+START_HEAD=$(cd "$GLP_DIR" && git rev-parse HEAD 2>/dev/null || echo "no-git")
+START_DIRTY=$(cd "$GLP_DIR" && git status --porcelain 2>/dev/null | sort | shasum | cut -d' ' -f1)
 BOOK="$GLP_DIR/programs/book"
 TC_DIR="$GLP_RUNTIME/test/programs/typechecker"
 MODED="$GLP_RUNTIME/test/programs/moded_types"
@@ -2620,9 +2630,34 @@ echo ""
 # =============================================================================
 TOTAL=$((PASS + FAIL))
 
+# Did the tree move under us?  If it did, this run's numbers describe no single
+# tree and must not be read as a result — neither a green gate nor a red one.
+END_HEAD=$(cd "$GLP_DIR" && git rev-parse HEAD 2>/dev/null || echo "no-git")
+END_DIRTY=$(cd "$GLP_DIR" && git status --porcelain 2>/dev/null | sort | shasum | cut -d' ' -f1)
+TREE_MOVED=0
+if [ "$START_HEAD" != "$END_HEAD" ] || [ "$START_DIRTY" != "$END_DIRTY" ]; then
+    TREE_MOVED=1
+fi
+
 echo "======================================"
 echo "Total: $TOTAL | Passed: $PASS | Failed: $FAIL"
 echo "======================================"
+
+if [ $TREE_MOVED -eq 1 ]; then
+    echo ""
+    echo "RUN INVALID: the tree changed while the suite ran."
+    if [ "$START_HEAD" != "$END_HEAD" ]; then
+        echo "  HEAD at start: $START_HEAD"
+        echo "  HEAD at end:   $END_HEAD"
+    fi
+    if [ "$START_DIRTY" != "$END_DIRTY" ]; then
+        echo "  the working tree was edited during the run"
+    fi
+    echo "  The counts above describe no single tree and are not a result:"
+    echo "  a pass is not a gate and a failure is not a defect.  Re-run when"
+    echo "  the tree has settled."
+    exit 2
+fi
 
 if [ $FAIL -eq 0 ]; then
     echo "ALL TESTS PASSED!"
