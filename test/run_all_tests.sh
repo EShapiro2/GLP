@@ -1394,17 +1394,21 @@ for f in "${SRSW_FILES[@]}"; do
     fi
 done
 
-# Also test merge_with_reader
-SRSW_MWR="$GLP_DIR/programs/tests/archive/repl/merge_with_reader.glp"
-if [ -f "$SRSW_MWR" ]; then
-    srsw_mwr_out=$(echo -e "$SRSW_MWR\n:quit" | "$REPL_RUN" 2>&1)
-    if echo "$srsw_mwr_out" | grep -qi "SRSW violation"; then
-        echo "  PASS: merge_with_reader (SRSW rejected)"
-        PASS=$((PASS + 1))
-    else
-        echo "  FAIL: merge_with_reader (should be rejected)"
-        FAIL=$((FAIL + 1))
-    fi
+# merge_with_reader: the one entry of this section that is rejected by the SRSW
+# pass rather than by the type checker, so it is the only test that speaks for
+# the "SRSW-violation tests" of the paper's validation sentence. It was gated on
+# `[ -f ... ]` and lived under programs/tests/archive/repl, a directory with an
+# open instruction to delete it: deleting the file made the suite run one test
+# fewer and fail nothing. Moved to programs/tests/srsw/ and wired unconditionally
+# on 2026-08-02 — if the file goes missing now, this goes red.
+SRSW_MWR="$GLP_DIR/programs/tests/srsw/merge_with_reader.glp"
+srsw_mwr_out=$(echo -e "$SRSW_MWR\n:quit" | "$REPL_RUN" 2>&1)
+if echo "$srsw_mwr_out" | grep -qi "SRSW violation"; then
+    echo "  PASS: merge_with_reader (SRSW rejected)"
+    PASS=$((PASS + 1))
+else
+    echo "  FAIL: merge_with_reader (should be rejected)"
+    FAIL=$((FAIL + 1))
 fi
 
 echo ""
