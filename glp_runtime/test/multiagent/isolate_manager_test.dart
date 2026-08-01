@@ -49,7 +49,7 @@ agent_init(_, _) :- true.
 
       // Start and let event-driven execution run
       manager.start();
-      await Future.delayed(Duration(milliseconds: 200));
+      await manager.settle();
 
       // Test verifies boot + start don't crash with trivial goals
     }, timeout: Timeout(Duration(seconds: 10)));
@@ -78,7 +78,7 @@ agent_init(_, _) :- true.
 
       // Start and let event-driven execution run the protocol
       manager.start();
-      await Future.delayed(Duration(seconds: 5));
+      await manager.settle();
 
       // Termination is external — we shut down in tearDown
     }, skip: 'Retired 2026-06-22: tests legacy programs/book/social_graph '
@@ -116,7 +116,7 @@ agent_init(_, _) :- true.
 
       // Start and let event-driven execution run the protocol
       manager.start();
-      await Future.delayed(Duration(seconds: 5));
+      await manager.settle();
 
       // Termination is external — we shut down in tearDown
     }, skip: 'Retired 2026-06-22: tests legacy programs/book/social_graph '

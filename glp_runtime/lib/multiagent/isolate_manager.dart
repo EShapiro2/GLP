@@ -69,6 +69,17 @@ class UIEvent extends IsolateMessage {
   UIEvent(this.agentId, this.payload);
 }
 
+/// An agent reports that it has finished one unit of work — a `Start` or a
+/// `Deliver` — having drained its queue and flushed everything the drain
+/// produced. It is sent after the flush, so the traffic that work generated is
+/// already on its way to the manager when this arrives: a port delivers in
+/// order, so the manager never sees an agent idle while its own output is still
+/// unaccounted for.
+class AgentIdle extends IsolateMessage {
+  final String agentId;
+  AgentIdle(this.agentId);
+}
+
 /// Sent by an agent isolate when initialization fails (e.g. a load/type-check
 /// error or a missing goal label) so the manager fails fast instead of hanging
 /// forever waiting for a `Ready` that will never arrive (known-issues Issue 19).
@@ -147,6 +158,65 @@ class IsolateManager {
   /// Callback for UI output from agents (for Flutter integration)
   void Function(String agentId, Term message)? onUIOutput;
 
+  /// Units of work handed to each agent — one per `Start`, one per `Deliver`.
+  final Map<String, int> _workSent = {};
+
+  /// Units of work each agent has reported finished, via [AgentIdle].
+  final Map<String, int> _workDone = {};
+
+  /// Awaiting [settle]; completed when the system is quiescent.
+  Completer<void>? _settle;
+
+  /// Whether every agent has finished every unit of work handed to it.
+  ///
+  /// A message parked in the router (a pair under [cut] or [holdDelivery]) was
+  /// never handed to anyone, so it does not keep the system busy — parking is
+  /// the harness's own doing and releasing it is the harness's to time.
+  bool get _quiescent {
+    for (final id in _workSent.keys) {
+      if ((_workDone[id] ?? 0) < _workSent[id]!) return false;
+    }
+    return true;
+  }
+
+  void _noteWorkSent(String agentId) {
+    _workSent[agentId] = (_workSent[agentId] ?? 0) + 1;
+  }
+
+  void _noteWorkDone(String agentId) {
+    _workDone[agentId] = (_workDone[agentId] ?? 0) + 1;
+    final s = _settle;
+    if (s != null && !s.isCompleted && _quiescent) {
+      _settle = null;
+      s.complete();
+    }
+  }
+
+  /// Wait until every agent has drained and flushed everything it was given,
+  /// and the cascade of traffic that produced has itself settled.
+  ///
+  /// This is the condition the plays actually wait for. It replaces a fixed
+  /// wall-clock delay, which is a guess: too short and the play is judged before
+  /// it has run, too long and every run pays for the worst machine. [timeout] is
+  /// a backstop for a system that never settles — it throws rather than passing
+  /// quietly, since a play that cannot settle is a failure and not a slow pass.
+  Future<void> settle(
+      {Duration timeout = const Duration(seconds: 30)}) async {
+    if (_quiescent) return;
+    final c = Completer<void>();
+    _settle = c;
+    await c.future.timeout(timeout, onTimeout: () {
+      _settle = null;
+      final outstanding = <String>[];
+      for (final id in _workSent.keys) {
+        final owed = _workSent[id]! - (_workDone[id] ?? 0);
+        if (owed > 0) outstanding.add('$id owes $owed');
+      }
+      throw StateError(
+          'agents did not settle within $timeout: ${outstanding.join(', ')}');
+    });
+  }
+
   /// Infrastructure log: only prints when MAD tracing is on.
   void _log(String msg) {
     if (_traceConfig.mad) print('[IsolateManager] $msg');
@@ -180,6 +250,7 @@ class IsolateManager {
         return;
       }
       final fromId = _router.directory.idOf(fromPk) ?? '?';
+      _noteWorkSent(toId);
       port.send(Deliver(fromId, payload, messageId));
     };
 
@@ -243,8 +314,9 @@ class IsolateManager {
 
   /// Start all agents.
   void start() {
-    for (final port in _agentPorts.values) {
-      port.send(Start());
+    for (final entry in _agentPorts.entries) {
+      _noteWorkSent(entry.key);
+      entry.value.send(Start());
     }
   }
 
@@ -273,6 +345,9 @@ class IsolateManager {
     if (msg is Ready) {
       _log('${msg.agentId} ready');
       _agentPorts[msg.agentId] = msg.sendPort;
+
+    } else if (msg is AgentIdle) {
+      _noteWorkDone(msg.agentId);
 
     } else if (msg is RouterSend) {
       if (_traceConfig.glp && _isTracingAgent(msg.fromId)) {
@@ -469,6 +544,7 @@ void _agentIsolateEntry(AgentConfig config) async {
       // Initial drain+flush: kicks off the agent's goal
       scheduler.drainWithStatus(debug: engine.debugTrace);
       ctx.flushMessages();
+      config.mainPort.send(AgentIdle(agentId));
 
     } else if (msg is Deliver) {
       log('Received delivery from ${msg.fromId} (id=${msg.messageId})');
@@ -487,6 +563,7 @@ void _agentIsolateEntry(AgentConfig config) async {
       // Drain activated goals and flush any response messages
       scheduler.drainWithStatus(debug: engine.debugTrace);
       ctx.flushMessages();
+      config.mainPort.send(AgentIdle(agentId));
 
     } else if (msg is UIEvent) {
       // UIEvent handling is for external Flutter UI integration.

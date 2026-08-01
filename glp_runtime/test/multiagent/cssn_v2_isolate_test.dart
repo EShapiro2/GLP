@@ -9,13 +9,11 @@ const _madBootDir = '$_cssnV2Dir/mad_boot';
 const _rootSelfGlp = '../programs/self.glp';
 
 /// Helper: load boot file, configure project dir, boot and run.
-// NOTE: timeoutSec is a blind settle delay — IsolateManager exposes no
-// quiescence signal (termination is external by design), so these tests just
-// run the play for a fixed wall-clock interval and assert only "no crash".
-// Kept short as a stopgap (Issue 11/suite speed); the proper fix is to await a
-// real idle signal once the madGLP isolate layer grows one.
-Future<void> _runPlay(IsolateManager manager, String bootFilename,
-    {int timeoutSec = 3}) async {
+// The play runs to quiescence: manager.settle() returns when every agent has
+// drained and flushed everything it was handed and the traffic that produced has
+// itself settled. It replaced a fixed wall-clock delay, which judged the play at
+// an arbitrary moment and went red under load rather than when anything broke.
+Future<void> _runPlay(IsolateManager manager, String bootFilename) async {
   final bootFile = File('$_madBootDir/$bootFilename');
   if (!bootFile.existsSync()) {
     print('Skipping: ${bootFile.path} not found');
@@ -30,7 +28,7 @@ Future<void> _runPlay(IsolateManager manager, String bootFilename,
 
   await manager.boot(config, traceConfig: TraceConfig(glp: false, mad: false));
   manager.start();
-  await Future.delayed(Duration(seconds: timeoutSec));
+  await manager.settle();
 }
 
 void main() {
@@ -83,7 +81,7 @@ void main() {
 
     // fplay13: village — 6 agents (alice, bob, frank, carol, dave, eve)
     test('fplay13 runs across isolates (village, 6 agents)', () async {
-      await _runPlay(manager, 'mad_fplay13.glp', timeoutSec: 5);
+      await _runPlay(manager, 'mad_fplay13.glp');
     }, timeout: Timeout(Duration(seconds: 45)));
   });
 }

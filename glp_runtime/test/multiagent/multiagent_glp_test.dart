@@ -43,7 +43,6 @@ void main() {
     /// - [traceMad]: MAD infrastructure trace (send, globalize, localize)
     /// - [traceAgents]: Only trace these agents (null = all)
     Future<void> runGlpTest(String glpFile, {
-      int settleMs = 2000,
       bool traceGlp = false,
       bool traceMad = false,
       Set<String>? traceAgents,
@@ -67,8 +66,9 @@ void main() {
       await manager.boot(config, traceConfig: traceConfig);
       manager.start();
 
-      // Let event-driven execution settle
-      await Future.delayed(Duration(milliseconds: settleMs));
+      // Wait on the condition, not on the clock: settle() returns when every
+      // agent has drained and flushed what it was handed.
+      await manager.settle();
 
       // Termination is external — shutdown happens in tearDown
     }
