@@ -534,6 +534,12 @@ class MadContext {
   /// name. A place is in this map exactly while its declaration stands.
   final Map<String, int> _placeStreamWriters = {};
 
+  /// Which declaration of each place is the standing one. Incremented on every
+  /// [declarePlace], so an answer the layer returns late can be told from the
+  /// declaration it answers: the tail writer moves with every event and cannot
+  /// identify a declaration, this does.
+  final Map<String, int> _placeDeclarations = {};
+
   /// Whether [place] is declared at this agent.
   bool hasDeclaredPlace(String place) =>
       _placeStreamWriters.containsKey(place);
@@ -547,6 +553,9 @@ class MadContext {
   /// A further declaration of the same place supersedes the earlier one, whose
   /// stream is closed (Definition Seam Predicates). The stream exists before the
   /// layer call, so an event cannot arrive before there is a stream to carry it.
+  ///
+  /// Where the layer refuses, the declaration stands and its stream carries
+  /// `unobservable`.
   void declarePlace(String place, double radiusMetres, int streamWriterAddr) {
     final network = this.network;
     if (network == null) {
@@ -557,23 +566,27 @@ class MadContext {
     _closePlaceStream(place);
 
     _placeStreamWriters[place] = streamWriterAddr;
+    final declaration = (_placeDeclarations[place] ?? 0) + 1;
+    _placeDeclarations[place] = declaration;
     _installPlaceEventHandler(network);
     _trace('[MAD $agentId] declarePlace($place, $radiusMetres): stream '
         'writer=$streamWriterAddr');
 
-    // The layer answers asynchronously; the stream exists either way. A refusal
-    // leaves the place undeclared at the layer, and Definition Seam Predicates
-    // closes a place's stream in exactly two cases — place_remove and a
-    // superseding declaration — of which a refusal is neither. So the stream
-    // stays open and carries nothing, which is what an unwatched place looks
-    // like. Reported to IGLP as a gap in the definition.
+    // The layer answers asynchronously; the stream exists either way. On a
+    // refusal E receives `unobservable`, the declaration stands, and
+    // `observable` follows if the layer later begins reporting (Definition Seam
+    // Predicates). A refusal is the layer watching nothing, which is what
+    // `unobservable` says; the stream is not closed, since a refusal is neither
+    // of the two closing cases.
     network.declarePlace(place, radiusMetres).then(
       (declared) {
-        if (!declared) {
-          _trace('[MAD $agentId] declarePlace($place): refused by the '
-              'platform — the place is undeclared and its stream carries '
-              'nothing');
-        }
+        if (declared) return;
+        _trace('[MAD $agentId] declarePlace($place): refused by the platform '
+            '— unobservable');
+        // Answers can arrive after place_remove or after a superseding
+        // declaration, whose stream is the successor's, not this one's.
+        if (_placeDeclarations[place] != declaration) return;
+        deliverPlaceEvent(place, PlaceEvent.unobservable);
       },
       onError: (Object e) => _trace(
           '[MAD $agentId] declarePlace($place): layer failed: $e'),

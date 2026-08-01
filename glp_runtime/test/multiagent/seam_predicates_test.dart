@@ -9,7 +9,9 @@
 /// serializer-fashion so one declaration yields one stream however many events
 /// follow; place_remove ends the declaration. The stream is closed in exactly
 /// two cases — place_remove and a superseding declaration — and an event for a
-/// place removed or superseded is dropped.
+/// place removed or superseded is dropped. A declaration the layer refuses is
+/// neither closing case: E receives unobservable, the declaration stands, and
+/// observable follows if the layer later begins reporting.
 ///
 /// The layer functions are GLP-Networking-API's. The simulation realization
 /// provides none of the four (their paper, §Not provided).
@@ -233,8 +235,7 @@ void main() {
       expect(s.closed, isTrue);
     });
 
-    test('a refused declaration leaves the stream open and carrying nothing',
-        () async {
+    test('a refused declaration carries unobservable and stands', () async {
       final a = _agentContext();
       a.network.accepts = false;
       final (w, _) = a.rt.heap.allocateVariable();
@@ -243,10 +244,48 @@ void main() {
       await Future<void>.delayed(Duration.zero);
 
       final s = _stream(a.rt, w);
-      expect(s.events, isEmpty);
+      expect(s.events, ['unobservable']);
       expect(s.closed, isFalse,
           reason: 'Definition Seam Predicates closes a place stream in exactly '
               'two cases, and a refusal is neither');
+      expect(a.ctx.hasDeclaredPlace('home'), isTrue);
+    });
+
+    test('observable follows a refusal when the layer begins reporting',
+        () async {
+      final a = _agentContext();
+      a.network.accepts = false;
+      final (w, _) = a.rt.heap.allocateVariable();
+
+      a.ctx.declarePlace('home', 100.0, w);
+      await Future<void>.delayed(Duration.zero);
+      a.network.fire('home', PlaceEvent.observable);
+      a.network.fire('home', PlaceEvent.entered);
+
+      expect(_stream(a.rt, w).events, ['unobservable', 'observable', 'entered']);
+    });
+
+    test("a late refusal goes to no stream but the declaration it answers",
+        () async {
+      final a = _agentContext();
+      a.network.accepts = false;
+      final (w1, _) = a.rt.heap.allocateVariable();
+      final (w2, _) = a.rt.heap.allocateVariable();
+
+      a.ctx.declarePlace('home', 100.0, w1);
+      a.network.accepts = true;
+      a.ctx.declarePlace('home', 200.0, w2);
+      await Future<void>.delayed(Duration.zero);
+
+      final first = _stream(a.rt, w1);
+      expect(first.events, isEmpty);
+      expect(first.closed, isTrue,
+          reason: 'the superseded declaration closed before the refusal came');
+
+      final second = _stream(a.rt, w2);
+      expect(second.events, isEmpty,
+          reason: "the first declaration's refusal is not the second's");
+      expect(second.closed, isFalse);
     });
   });
 
