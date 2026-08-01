@@ -836,9 +836,14 @@ class GlpEngine {
         debugOutput: debugOutput,
       );
 
+      // A failed conjunct does not end the query. The conjuncts of a posted
+      // goal are one resolvent of independent goals, and Fail advances the
+      // queue and continues (dGLP/madGLP Reduce): stopping here was the same
+      // defect as the scheduler's break, one level up, and it was what dropped
+      // the siblings of a failed conjunct at the REPL. Suspension already
+      // continued; failure now does too, and the query is reported failed.
       if (result.status == ExecutionStatus.failed) {
         allSucceeded = false;
-        break;
       } else if (result.status == ExecutionStatus.suspended) {
         anySuspended = true;
       }

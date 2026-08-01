@@ -56,6 +56,42 @@ probe(X?) :- X := 1/0.
           reason: 'the argument is the whole content of the fault');
     });
 
+    test('ordinary clause-selection failure also leaves siblings running',
+        () async {
+      final engine = fresh();
+      // No undefined procedure here: pick/2 is declared and defined, and no
+      // clause matches `zzz`. Fail is Fail whatever produced it — the queue
+      // advances, F takes the goal, and the run goes on.
+      engine.loadSource('''
+procedure pick(Constant?, Constant).
+pick(a, one).
+pick(b, two).
+''');
+
+      final result = await engine.runGoal('pick(zzz, X), Y := 2+2');
+
+      expect(result.status, ExecutionStatus.failed);
+      expect(result.bindings['X'], isNull);
+      expect(result.bindings['Y'].toString(), contains('4'),
+          reason: 'the conjunct after the failed one still reduced');
+    });
+
+    test('a failed conjunct does not drop the conjuncts after it', () async {
+      final engine = fresh();
+      engine.loadSource('''
+procedure probe(Integer).
+probe(X?) :- X := 1/0.
+''');
+
+      final result = await engine.runGoal('probe(A), B := 2+2, C := 3+3');
+
+      expect(result.status, ExecutionStatus.failed);
+      expect(result.bindings['A'], isNull);
+      expect(result.bindings['B'].toString(), contains('4'));
+      expect(result.bindings['C'].toString(), contains('6'),
+          reason: 'every conjunct after the failure ran, not just the next');
+    });
+
     test('a later goal still runs after one has failed', () async {
       final engine = fresh();
       engine.loadSource('''

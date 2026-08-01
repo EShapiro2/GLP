@@ -218,7 +218,6 @@ class Scheduler {
     final ran = <int>[];
     final suspendedGoals = <int, String>{}; // Track suspended goals by ID
     var cycles = 0;
-    var hasFailed = false;
     // F at entry: a goal that failed in an earlier drain has already been
     // counted, so only what this drain adds bears on its status.
     final failedAtEntry = rt.failedGoals.length;
@@ -297,14 +296,19 @@ class Scheduler {
       } else if (result == RunResult.terminated) {
         // Goal terminated - check if it reduced (success) or just terminated (failure)
         if (!hadReduction && !isQueryWrapper) {
-          // Terminated without reduction = failed
+          // Terminated without reduction = failed.
           if (debug) {
             final cleanGoal = goalStr.replaceAllMapped(RegExp(r'(\w+)/\d+\('), (m) => '${m.group(1)}(');
             _trace('$cleanGoal → failed');
           }
-          hasFailed = true;
+          // Fail, per the dGLP and madGLP Reduce transactions: Q' = Q_r,
+          // S' = S, F' = F ∪ {A}. The queue has already advanced — the goal was
+          // dequeued — and the run continues. A failed goal makes the
+          // configuration terminal only when no class is enabled in it, which
+          // one failure among many active goals is not. The drain therefore
+          // keeps reducing; F alone decides the run's status, below.
+          rt.failedGoals.add(goalStr);
           suspendedGoals.remove(act.id);
-          break; // Stop on failure
         } else {
           // Goal terminated successfully (with reduction) - remove from suspended list
           suspendedGoals.remove(act.id);
@@ -321,8 +325,10 @@ class Scheduler {
 
     // A goal that joined F during this drain makes the run's status failed,
     // without having stopped the drain: the agent kept reducing the rest of its
-    // queue, which is what the Reduce transactions require.
-    if (rt.failedGoals.length > failedAtEntry) hasFailed = true;
+    // queue, which is what the Reduce transactions require. The outcome of a run
+    // is (G_0 :- G_n) under the accumulated substitution and G_n includes the
+    // failed goals, so a run with a non-empty F is a failed run.
+    final hasFailed = rt.failedGoals.length > failedAtEntry;
 
     final ExecutionStatus status;
     if (hasFailed) {
@@ -354,6 +360,7 @@ class Scheduler {
   /// Async drain that waits for pending timers to fire.
   Future<DrainResult> drainAsyncWithStatus({int maxCycles = 1000, bool debug = false, bool showBindings = true, bool debugOutput = false}) async {
     final ran = <int>[];
+    final failedAtEntry = rt.failedGoals.length;
     var totalCycles = 0;
     ExecutionStatus lastStatus = ExecutionStatus.succeeded;
     List<String> lastSuspended = [];
@@ -373,12 +380,10 @@ class Scheduler {
       lastSuspended = result.suspendedGoals;
       lastBlockingReaders = result.blockingReaders;
 
-      // Stop on failure
-      if (lastStatus == ExecutionStatus.failed) {
-        break;
-      }
-
-      // If no pending timers, we're done
+      // A failed drain does not end the computation either: a pending timer is
+      // a class that becomes enabled, so the configuration is not terminal and
+      // the run goes on. The status is recovered from F below rather than from
+      // the last drain, which would otherwise erase an earlier failure.
       if (rt.pendingTimers <= 0) {
         break;
       }
@@ -394,7 +399,12 @@ class Scheduler {
       }
     }
 
-    return DrainResult(ran, lastStatus, lastSuspended, lastBlockingReaders);
+    // F is cumulative across the drains this call made, so a failure in any of
+    // them is a failure of the whole, whatever the last drain returned.
+    final status = rt.failedGoals.length > failedAtEntry
+        ? ExecutionStatus.failed
+        : lastStatus;
+    return DrainResult(ran, status, lastSuspended, lastBlockingReaders);
   }
 
   /// Legacy async drain for backward compatibility
