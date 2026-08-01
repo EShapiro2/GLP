@@ -219,6 +219,9 @@ class Scheduler {
     final suspendedGoals = <int, String>{}; // Track suspended goals by ID
     var cycles = 0;
     var hasFailed = false;
+    // F at entry: a goal that failed in an earlier drain has already been
+    // counted, so only what this drain adds bears on its status.
+    final failedAtEntry = rt.failedGoals.length;
 
     while (rt.gq.length > 0 && cycles < maxCycles) {
       final act = rt.gq.dequeue();
@@ -315,6 +318,11 @@ class Scheduler {
     // from status determination — their suspension is normal steady state
     final userSuspendedGoals = Map<int, String>.from(suspendedGoals)
       ..removeWhere((goalId, _) => rt.infrastructureGoalIds.contains(goalId));
+
+    // A goal that joined F during this drain makes the run's status failed,
+    // without having stopped the drain: the agent kept reducing the rest of its
+    // queue, which is what the Reduce transactions require.
+    if (rt.failedGoals.length > failedAtEntry) hasFailed = true;
 
     final ExecutionStatus status;
     if (hasFailed) {

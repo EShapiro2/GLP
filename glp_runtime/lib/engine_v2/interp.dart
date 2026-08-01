@@ -548,8 +548,22 @@ class ByteRunner with OpExecutors implements GoalRunner {
         cx.argSlots.clear();
         return null;
       }
-      print('ERROR: Spawn could not find procedure: ${symbol.signature}');
-      return RunResult.terminated;
+      // No kernel of that name, so the spawned body goal has no procedure and
+      // FAILS. It does not end the parent's run: IGLP gives a reduction exactly
+      // three outcomes — succeeds, suspends with a suspension set, or fails —
+      // and the dGLP and madGLP Reduce transactions each put a failed goal in F
+      // and continue with the remainder of the queue. No transaction ends a
+      // computation. So the parent goes on spawning the rest of its body and
+      // proceeds, and this goal joins F.
+      //
+      // The diagnostic carries the call's arguments, not the signature alone:
+      // abort/1 is undefined by decision, so every := domain error arrives here,
+      // and "Division by zero" is the whole content of the fault.
+      final call = _callText(symbol.name, arity, cx);
+      cx.rt.failedGoals.add(call);
+      print('ERROR: no procedure for goal, failed: $call');
+      cx.argSlots.clear();
+      return null;
     }
 
     // Compiled callee — enqueue a new goal at its entry byte offset.
@@ -589,6 +603,20 @@ class ByteRunner with OpExecutors implements GoalRunner {
 
     cx.argSlots.clear();
     return null;
+  }
+
+  /// A goal's call text — `name(arg, ...)`, or `name/arity` when it has no
+  /// arguments — formatted from the argument slots with the context's formatter,
+  /// the same way a spawned goal is formatted for the reduction trace.
+  String _callText(String name, int arity, RunnerContext cx) {
+    final args = <String>[];
+    for (var i = 0; i < arity; i++) {
+      final t = cx.argSlots[i];
+      if (t == null) continue;
+      args.add(
+          cx.termFormatter != null ? cx.termFormatter!(t) : t.toString());
+    }
+    return args.isEmpty ? '$name/$arity' : '$name(${args.join(', ')})';
   }
 
   /// Tail call (`Requeue`). Mirrors the object runner's `Requeue` arm but jumps

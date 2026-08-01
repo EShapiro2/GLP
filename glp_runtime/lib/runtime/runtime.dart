@@ -77,6 +77,13 @@ class GlpRuntime {
   // Their suspension does not affect user goal status determination.
   final Set<int> infrastructureGoalIds = {};
 
+  // F — the failed goals of the dGLP and madGLP Reduce transactions. A reduction
+  // has three outcomes; a goal that fails joins F and the agent goes on reducing
+  // the rest of its queue, since no transaction ends a computation. The
+  // scheduler folds this into the run's status without stopping the drain.
+  // Recorded as the text of the failed goal, which is what a diagnostic needs.
+  final List<String> failedGoals = [];
+
   // madGLP context (set when running in multiagent mode)
   // Used by '_cold_send' kernel to access globalization infrastructure
   Object? madContext;
