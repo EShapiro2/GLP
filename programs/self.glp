@@ -546,6 +546,55 @@ procedure authorise_link(_?, _?).
 authorise_link(L, A) :- known(A?) | '_authorise_link'(L?, A?).
 
 % =============================================================================
+% NETWORKING SEAM (peer_address/2, punch_udp/1, place_declare/3, place_remove/1)
+% =============================================================================
+% GLP-Spec's appendix-guards lists all four among the system predicates, on the
+% same grounds as sign/2 and authorise_link/2 above.  The clause bodies are
+% IGLP's madglp-spec.tex, Definition "Seam Predicates"; the layer behind them is
+% GLP-Networking-API's.
+%
+% The declarations mirror the appendix's body-kernel rows argument for argument
+% — '_peer_address'(_?, _), '_punch_udp'(_?), '_place_declare'(_?, _?, _),
+% '_place_remove'(_?) — which is all the catalogue settles: its system-predicate
+% table gives a name and a description and carries no signature column, so the
+% arity is the catalogue's and the argument types follow the kernel it wraps, as
+% sign/2 and authorise_link/2 do.
+%
+% 🔴 Two clauses depart from the paper, and only where SRSW forces it.  The paper
+% writes peer_address(P, A) and place_declare(P, R, E) with the output variable a
+% writer in the head and a writer again in the body — two writers and no reader,
+% which the analyzer rejects ("Writer variable A occurs 2 times", "Variable A has
+% no reader").  At a produce position the head form is the reader and the body
+% supplies the writer, which is what sign/2 does three lines above.  Reported to
+% IGLP 2026-08-01; the paper is theirs to correct.
+%
+% None of the four kernels is registered yet, so a call reaches the runtime and
+% fails there ("no procedure for goal, failed: _peer_address(...)").  That is the
+% intended half-state: the wrappers are TGLP's and the kernels are IGLP's, and
+% neither half waits on the other.
+
+%% peer_address/2 - assign A the address at which the layer observes peer P.
+procedure peer_address(_?, _).
+peer_address(P, A?) :- ground(P?) | '_peer_address'(P?, A).
+
+%% punch_udp/1 - open a path to address A; assigns nothing.
+procedure punch_udp(_?).
+punch_udp(A) :- ground(A?) | '_punch_udp'(A?).
+
+%% place_declare/3 - declare place P of radius R about the declaring agent's
+%% location at the time of the call, and assign E the stream of that agent's own
+%% entered and exited events for P, carrying unobservable where the layer stops
+%% reporting crossings and observable where it resumes.  A further declaration of
+%% the same place supersedes the earlier one and closes its stream.
+procedure place_declare(_?, _?, _).
+place_declare(P, R, E?) :- ground(P?), ground(R?) | '_place_declare'(P?, R?, E).
+
+%% place_remove/1 - end the declaration of P; does nothing where P is not
+%% declared.
+procedure place_remove(_?).
+place_remove(P) :- ground(P?) | '_place_remove'(P?).
+
+% =============================================================================
 % MULTIWAY MERGE (mwm/2)
 % =============================================================================
 % MWM types and procedure declarations are omitted from the scope chain
