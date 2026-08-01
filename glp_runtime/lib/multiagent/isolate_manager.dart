@@ -184,6 +184,15 @@ class IsolateManager {
   /// agent threw while handling a message.
   final List<String> _faults = [];
 
+  /// One per agent isolate, carrying that isolate's `onError` and `onExit`.
+  ///
+  /// [AgentFaulted] covers a throw the isolate's own handler catches, which is
+  /// every synchronous one. It cannot cover an asynchronous uncaught error or an
+  /// isolate that exits: both kill the isolate without running that handler, and
+  /// the work already counted for it is then never reported. These ports are how
+  /// that becomes a named failure instead of a thirty-second silence.
+  final Map<String, ReceivePort> _isolateEvents = {};
+
   /// What the agents have thrown, if anything.
   List<String> get faults => List.unmodifiable(_faults);
 
@@ -238,6 +247,29 @@ class IsolateManager {
       throw StateError(
           'agents did not settle within $timeout: ${outstanding.join(', ')}');
     });
+  }
+
+  /// Record that [agentId] faulted, and fail any pending [settle] with it.
+  ///
+  /// Surfaced at once rather than left to time out: the fault is the diagnosis,
+  /// and a timeout thirty seconds later is not.
+  void _recordFault(String agentId, String error) {
+    _faults.add('$agentId: $error');
+    print('[IsolateManager] agent $agentId faulted: $error');
+    final s = _settle;
+    if (s != null && !s.isCompleted) {
+      _settle = null;
+      s.completeError(StateError('agent $agentId faulted: $error'));
+    }
+  }
+
+  /// [agentId]'s isolate has exited. An exit while the agent still owes work is
+  /// the hang: that work can no longer be reported, so it is a fault. An exit
+  /// owing nothing is teardown and is ignored.
+  void _noteIsolateExit(String agentId) {
+    final owed = (_workSent[agentId] ?? 0) - (_workDone[agentId] ?? 0);
+    if (owed <= 0) return;
+    _recordFault(agentId, 'isolate exited owing $owed unit(s) of work');
   }
 
   /// Infrastructure log: only prints when MAD tracing is on.
@@ -316,7 +348,21 @@ class IsolateManager {
         traceConfig: traceConfig,
       );
 
-      await Isolate.spawn(_agentIsolateEntry, agentConfig);
+      // An uncaught asynchronous error, and an exit, both bypass the isolate's
+      // own try/catch. One port carries each: `onError` sends a two-element
+      // list, `onExit` the message given here, which is null.
+      final events = ReceivePort();
+      _isolateEvents[directive.agentId] = events;
+      events.listen((event) {
+        if (event is List) {
+          _recordFault(directive.agentId, 'uncaught async error: ${event.first}');
+        } else {
+          _noteIsolateExit(directive.agentId);
+        }
+      });
+
+      await Isolate.spawn(_agentIsolateEntry, agentConfig,
+          onError: events.sendPort, onExit: events.sendPort);
     }
 
     // Wait for all agents to be ready
@@ -360,6 +406,10 @@ class IsolateManager {
   /// Shutdown all isolates.
   Future<void> shutdown() async {
     _mainPort.close();
+    for (final p in _isolateEvents.values) {
+      p.close();
+    }
+    _isolateEvents.clear();
     _agentPorts.clear();
   }
 
@@ -373,15 +423,7 @@ class IsolateManager {
       _noteWorkDone(msg.agentId);
 
     } else if (msg is AgentFaulted) {
-      // Surface it at once rather than letting the wait time out: the fault is
-      // the diagnosis, and a timeout thirty seconds later is not.
-      _faults.add('${msg.agentId}: ${msg.error}');
-      print('[IsolateManager] agent ${msg.agentId} faulted: ${msg.error}');
-      final s = _settle;
-      if (s != null && !s.isCompleted) {
-        _settle = null;
-        s.completeError(StateError('agent ${msg.agentId} faulted: ${msg.error}'));
-      }
+      _recordFault(msg.agentId, msg.error);
 
     } else if (msg is RouterSend) {
       if (_traceConfig.glp && _isTracingAgent(msg.fromId)) {
