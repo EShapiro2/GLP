@@ -2,7 +2,6 @@ import 'ast.dart';
 import 'error.dart';
 import 'partial_evaluator.dart' show getRootScopeUnitClauses;
 import '../analysis/type_checker/type_ast.dart';
-import '../analysis/type_checker/root_scope.dart' show isReservedConstantName;
 
 /// Variable information for semantic analysis
 class VariableInfo {
@@ -275,19 +274,20 @@ class Analyzer {
   /// Procedure declarations for type-based SRSW relaxation (optional)
   Map<String, ProcDecl> _procDecls = {};
 
-  /// Compilation mode: user (default) or system
-  CompileMode _compileMode = CompileMode.user;
-
   Analyzer();
 
+  /// [compileMode] is accepted and unused. It reached exactly one check here —
+  /// the reserved-constant check on data positions — and that check went on
+  /// 2026-07-31 when GLP-Spec narrowed the rule to call position, which the
+  /// loader enforces (compiler/primitive_layer.dart). The parameter is left in
+  /// place because callers pass it and the signature is IGLP's; dropping it is
+  /// theirs to do.
   AnnotatedProgram analyze(Program program, {
     bool generateReduce = false,
     List<ProcDecl>? procDeclarations,
     CompileMode compileMode = CompileMode.user,
     bool skipGlobalSRSW = false,
   }) {
-    _compileMode = compileMode;
-
     // Build procedure declaration lookup map
     _procDecls = {};
     if (procDeclarations != null) {
@@ -813,23 +813,14 @@ class Analyzer {
       if (term.tail != null) {
         _analyzeTerm(term.tail!, varTable, inHeadOrBody: inHeadOrBody);
       }
-    } else if (term is ConstTerm) {
-      // Validate reserved constants in user mode. A constant is reserved iff it
-      // NAMES a language primitive (kernel predicate / reserved functor); a
-      // '_'-prefixed constant that names none (e.g. '_user', '_net') is not
-      // reserved. Per TGLP appendix "Admission to the Primitive Layer".
-      final value = term.value;
-      if (_compileMode == CompileMode.user && value is String && isReservedConstantName(value)) {
-        throw CompileError(
-          "Constant '$value' names a language primitive and is reserved for "
-          "system use. Reach it by calling a programs/system/ export, or declare "
-          "-mode(system). (permitted only in the root self.glp and programs/system/).",
-          term.line,
-          term.column,
-          phase: 'analyzer'
-        );
-      }
     }
+    // A ConstTerm reached here is in argument position, and therefore data.
+    // Until 2026-07-31 a reserved-name check stood here; the rule now restricts
+    // underscore-prefixed names in CALL POSITION only, and leaves the prefix
+    // unrestricted as data — as a message tag, or as a member of a type union
+    // (TGLP appendix-root-self.tex, app:system-mode; GLP-Spec
+    // appendix-guards.tex, "Naming and admission of body kernels"). Call and
+    // definition position are checked by the loader, in primitive_layer.dart.
     // UnderscoreTerm has no variables to track
   }
 

@@ -80,23 +80,92 @@ procedure =?=(_?, _?).
 procedure =..(_, Stream(_)?).      % Compose: Stream? → Compound
 procedure ..=(Stream(_), _?).      % Decompose: Compound? → Stream
 
-% Body kernels are deliberately NOT declared in this file.  Per the TGLP
-% appendix "GLP Language Primitives", the primitives "are implemented by the
-% runtime and form the base of every module's scope chain" — that is, below this
-% file, not in it; and per the appendix "Guards, Body Kernels, and System
-% Predicates", body kernels "are not directly accessible to user programs; they
-% are invoked only by system predicates".  A declaration here would place the
-% kernel in every application module's scope, which is exactly what that rule
-% forbids.  The arithmetic, math, time and univ kernels ('_add', '_sqrt',
-% '_now', '_list_to_tuple', ...) have never been declared here and resolve from
-% the runtime; the rest now follow the same rule.
-%
-% The system predicates below invoke kernels by quoted name, which this file may
-% do because it declares -mode(system) (appendix "Admission to the Primitive
-% Layer": only the root self.glp and modules under programs/system/ may).
-
 % MWM (Mutual Write Merge) runtime guard
 procedure is_mutual_ref(_?).
+
+% =============================================================================
+% BODY KERNELS (no clauses - implemented by runtime)
+% =============================================================================
+%
+% Body kernels get ordinary clause-less declarations here, like every other
+% runtime-implemented predicate (Udi, 2026-07-29).  Declaring them costs nothing
+% in access control: only a system module may name one in call position, so no
+% application module can call '_add' whatever this file declares (appendix
+% "Admission to the Primitive Layer"; GLP-Spec appendix-guards.tex, "Naming and
+% admission of body kernels").  What it buys is compile-time checking of a
+% kernel call's argument types and arity, and a loadable programs/system/ module:
+% the body-atom type checker demands a declaration for every body atom, so
+% without these a real system module that names a kernel failed to load with
+% "Undefined procedure: _send/3".
+%
+% Every kernel registered by runtime/body_kernels.dart and
+% engine_v2/module_kernels.dart is here, and nothing else.  The signatures are
+% GLP-Spec's appendix-guards.tex body-kernel table, which is the authority.  That
+% table's Network group also lists '_peer_address', '_punch_udp',
+% '_place_declare' and '_place_remove'; the table is ahead of the code there and
+% none of the four is registered, so none is declared.
+%
+% This file may name them because it declares -mode(system).
+
+% Arithmetic
+procedure '_add'(Number?, Number?, Number).
+procedure '_sub'(Number?, Number?, Number).
+procedure '_mul'(Number?, Number?, Number).
+procedure '_div'(Number?, Number?, Number).
+procedure '_idiv'(Integer?, Integer?, Integer).
+procedure '_mod'(Integer?, Integer?, Integer).
+procedure '_neg'(Number?, Number).
+
+% Math
+procedure '_abs'(Number?, Number).
+procedure '_sqrt'(Number?, Number).
+procedure '_sin'(Number?, Number).
+procedure '_cos'(Number?, Number).
+procedure '_tan'(Number?, Number).
+procedure '_exp'(Number?, Number).
+procedure '_ln'(Number?, Number).
+procedure '_log10'(Number?, Number).
+procedure '_pow'(Number?, Number?, Number).
+procedure '_asin'(Number?, Number).
+procedure '_acos'(Number?, Number).
+procedure '_atan'(Number?, Number).
+
+% Conversion
+procedure '_integer'(Number?, Integer).
+procedure '_real'(Number?, Number).
+procedure '_round'(Number?, Integer).
+procedure '_floor'(Number?, Integer).
+procedure '_ceil'(Number?, Integer).
+
+% Structure
+procedure '_list_to_tuple'(Stream(_)?, _).
+procedure '_tuple_to_list'(_?, Stream(_)).
+
+% Copy
+procedure '_copy'(_?, _).
+
+% Time and random
+procedure '_now'(Integer).
+procedure '_random'(Integer?, Integer?, Integer, Integer).
+
+% MWM (Mutual Write Merge)
+procedure '_allocate_mutual_reference'(_, _).
+procedure '_stream_append'(_?, _?, _).
+procedure '_close_mutual_reference'(_?).
+
+% madGLP network
+procedure '_send'(_?, _?, _?).
+procedure '_authorise_link'(_?, _?).
+
+% Signature
+procedure '_sign'(_?, _).
+
+% Modules as values
+procedure '_self_module'(Module).
+procedure '_run'(_?, Module?).
+
+% I/O
+procedure '_output'(_?).
 
 % =============================================================================
 % SINGLE-UNIT-CLAUSE PROCEDURES (DEFINED GUARDS)

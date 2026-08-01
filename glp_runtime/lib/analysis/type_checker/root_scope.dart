@@ -117,42 +117,73 @@ const Set<String> builtinProcedures = {
   '..=/2',
   // MWM (Mutual Write Merge) guard
   'is_mutual_ref/1',
-  // Body kernels ('_'-prefixed) are NOT listed: they are undeclared everywhere
-  // and resolve from the runtime (runtime-base convention, e28b135f) — this set
-  // only licenses clause-less DECLARATIONS, which kernels no longer have.
-};
 
-/// Reserved constant base-names: the `_`-prefixed names that denote a language
-/// primitive (kernel predicate or reserved functor). Per TGLP appendix
-/// "Admission to the Primitive Layer": a constant is reserved iff it NAMES a
-/// primitive — a `_`-prefixed constant that names none (e.g. `'_user'`, `'_net'`)
-/// is NOT reserved. Only modules under `-mode(system)` may name these; the
-/// loader rejects any other module that does.
-const Set<String> reservedConstantNames = {
-  // MWM (Mutual Write Merge) runtime kernels
-  '_allocate_mutual_reference',
-  '_stream_append',
-  '_close_mutual_reference',
-  // madGLP network kernels and reserved global-name functors
-  '_send',
-  '_authorise_link',
-  '_w',
-  '_r',
-  // attestation kernel (seam spec §4)
-  '_sign',
-  // output system predicate
-  '_output',
-  // module-dispatch kernels
-  '_select',
-  // module-as-value kernels (modules.tex §Dynamic Activation, "Modules as
-  // values"): `_self_module` yields the running module as a `Module` value,
-  // `_run` starts a goal on such a value.
-  '_run',
-  '_self_module',
+  // ---------------------------------------------------------------------------
+  // Body kernels
+  // ---------------------------------------------------------------------------
+  // Every kernel registered by `runtime/body_kernels.dart` and
+  // `engine_v2/module_kernels.dart`, each with its clause-less declaration in
+  // `programs/self.glp` (Udi, 2026-07-29). Kernels are runtime-implemented like
+  // every other predicate here, and the body-atom type checker demands a
+  // declaration for every body atom; without these a `programs/system/` module
+  // that names a kernel fails to load with `Undefined procedure`.
+  //
+  // The signatures are GLP-Spec's `appendix-guards.tex` body-kernel table, which
+  // is the authority. Its Network group also lists `'_peer_address'`,
+  // `'_punch_udp'`, `'_place_declare'` and `'_place_remove'`; the table is ahead
+  // of the code there and none of the four is registered, so none is listed —
+  // this set is enumerated from the registry.
+  //
+  // Arithmetic
+  '_add/3',
+  '_sub/3',
+  '_mul/3',
+  '_div/3',
+  '_idiv/3',
+  '_mod/3',
+  '_neg/2',
+  // Math
+  '_abs/2',
+  '_sqrt/2',
+  '_sin/2',
+  '_cos/2',
+  '_tan/2',
+  '_exp/2',
+  '_ln/2',
+  '_log10/2',
+  '_pow/3',
+  '_asin/2',
+  '_acos/2',
+  '_atan/2',
+  // Conversion
+  '_integer/2',
+  '_real/2',
+  '_round/2',
+  '_floor/2',
+  '_ceil/2',
+  // Structure
+  '_list_to_tuple/2',
+  '_tuple_to_list/2',
+  // Copy
+  '_copy/2',
+  // Time and random
+  '_now/1',
+  '_random/4',
+  // MWM (Mutual Write Merge)
+  '_allocate_mutual_reference/2',
+  '_stream_append/3',
+  '_close_mutual_reference/1',
+  // madGLP network
+  '_send/3',
+  '_authorise_link/2',
+  // Signature
+  '_sign/2',
+  // Modules as values
+  '_self_module/1',
+  '_run/2',
+  // I/O
+  '_output/1',
 };
-
-/// True if [name] names a language primitive and so is a reserved constant.
-bool isReservedConstantName(String name) => reservedConstantNames.contains(name);
 
 /// Check if a type name is predefined
 bool isPredefinedType(String name) => predefinedTypeNames.contains(name);

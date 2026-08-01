@@ -660,18 +660,22 @@ check "level3 suspend" "suspended" "$a24"
 check "guard ground suspend" "suspended" "$a24"
 
 # --- A25: Quoted functor and body ---
+# quoted_functor_test.glp declared and defined '_test_kernel' in a non-system
+# module and was loaded here until 2026-07-31, when Rule B was corrected to test
+# the underscore prefix and call position rather than a list of reserved names.
+# Its subject is now illegal, so the file is a NEGATIVE fixture (Section C) and
+# its load and goal have moved out of this section.  The rest of A25 stands:
+# quoted_body_test.glp is an ordinary module, and '_equator' in `X = ...` is a
+# term in data position, which the corrected rule leaves unrestricted.
 echo "--- A25: Quoted functor and body ---"
 a25=$("$REPL_RUN" <<HEREDOC
-$TYPED/quoted_functor_test.glp
 $TYPED/quoted_body_test.glp
-'_test_kernel'(5, Rqf1).
 double(5, Rqb1).
 X = '_equator'(E, stop).
 :quit
 HEREDOC
 2>&1)
 
-check "quoted functor" "Rqf1 = 6" "$a25"
 check "double 5" "Rqb1 = 10" "$a25"
 check "struct bind via =" "X = _equator(" "$a25"
 
@@ -1201,6 +1205,16 @@ NEGATIVE_FILES=(
     "$TC_DIR/negative/constant_at_wrong_type.glp"
     "$TC_DIR/negative/functor_mismatch.glp"
     "$TC_DIR/negative/channel_non_complementary.glp"
+
+    # --- typed (primitive layer) ---
+    # Rule B, definition position: a module that does not declare -mode(system)
+    # may not declare or define a procedure whose name is a quoted
+    # underscore-prefixed constant.  This file declares and defines
+    # '_test_kernel'.  It was a POSITIVE fixture in Section A25 until the rule
+    # was corrected on 2026-07-31 to test the prefix and the position rather
+    # than a list of reserved names; the file is kept, reclassified, because its
+    # subject is exactly what the rule now forbids.
+    "$TYPED/quoted_functor_test.glp"
 
     # --- moded_types/invalid ---
     "$MODED/invalid/reader_at_input.glp"

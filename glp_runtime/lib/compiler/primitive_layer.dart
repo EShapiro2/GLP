@@ -2,7 +2,6 @@ import 'dart:io';
 
 import 'ast.dart';
 import 'error.dart';
-import '../analysis/type_checker/root_scope.dart' show isReservedConstantName;
 
 /// Load-time enforcement of "Admission to the Primitive Layer"
 /// (TGLP appendix-root-self.tex, app:system-mode):
@@ -10,10 +9,24 @@ import '../analysis/type_checker/root_scope.dart' show isReservedConstantName;
 ///   Rule A — a module that declares `-mode(system)` must be the root self.glp
 ///            or a module under `programs/system/`; any other location is
 ///            rejected.
-///   Rule B — a module not in system mode may not name a reserved constant: a
-///            constant that names a language primitive (kernel predicate /
-///            reserved functor), as decided by [isReservedConstantName]. A
-///            `_`-prefixed constant that names no primitive is not reserved.
+///   Rule B — a module not in system mode may neither define nor call a
+///            procedure whose name is a quoted underscore-prefixed constant.
+///            The restriction is on names in CALL POSITION only: a constant
+///            with that prefix is unrestricted as data — as a message tag, or
+///            as a member of a type union.
+///
+/// Rule B tests the prefix and the position, not a list of names. It was a list
+/// until 2026-07-31, and the list is what let twenty-nine of the thirty-eight
+/// registered kernels fall outside the rule. The prefix is a sound test on its
+/// own because an unquoted name beginning with an underscore lexes as an
+/// anonymous variable (GLP-Spec appendix-guards.tex, "Naming and admission of
+/// body kernels"), so a functor that begins with one was necessarily written
+/// quoted.
+///
+/// Nothing reserves a functor in data position. A construction ban there is
+/// bypassable through `=..` anyway, and the forgery it would address is a
+/// runtime check on kernels taking a global name, which is IGLP's
+/// (GLP-Spec, 2026-07-31).
 ///
 /// [filePath] is the on-disk path of the module, or null/synthetic for
 /// in-memory or engine-embedded sources; Rule A is skipped when no real file
@@ -60,60 +73,68 @@ void _checkModeAdmission(
   );
 }
 
+/// Rule B: no definition and no call, anywhere in the module, of a procedure
+/// whose name is a quoted underscore-prefixed constant.
+///
+/// The positions checked are exactly the ones the rule names. A procedure
+/// declaration and a clause head are definition position; a guard predicate and
+/// a body goal are call position. Term arguments are data and are not checked —
+/// that is the whole of the 2026-07-31 narrowing.
+///
+/// The declaration is checked as well as the head because `builtinProcedures`
+/// now lists every kernel, so the parser admits a clause-less declaration of one
+/// in any module; without this a user module could declare `'_add'/3` and never
+/// be caught.
 void _checkNoReservedNames(Module module) {
+  for (final decl in module.procDeclarations) {
+    _checkName(decl.name, decl.line, decl.column, 'declares');
+  }
   for (final proc in module.procedures) {
     for (final clause in proc.clauses) {
-      _checkName(clause.head.functor, clause.head, module);
-      for (final a in clause.head.args) {
-        _checkTerm(a, module);
+      _checkName(clause.head.functor, clause.head.line, clause.head.column,
+          'defines');
+      for (final g in clause.guards ?? const <Guard>[]) {
+        _checkName(g.predicate, g.line, g.column, 'calls');
       }
-      final guards = clause.guards;
-      if (guards != null) {
-        for (final g in guards) {
-          _checkName(g.predicate, g, module);
-          for (final a in g.args) {
-            _checkTerm(a, module);
-          }
-        }
-      }
-      final body = clause.body;
-      if (body != null) {
-        for (final goal in body) {
-          _checkName(goal.functor, goal, module);
-          for (final a in goal.args) {
-            _checkTerm(a, module);
-          }
-        }
+      for (final goal in clause.body ?? const <Goal>[]) {
+        _checkGoal(goal);
       }
     }
   }
 }
 
-void _checkTerm(Term term, Module module) {
-  if (term is StructTerm) {
-    _checkName(term.functor, term, module);
-    for (final a in term.args) {
-      _checkTerm(a, module);
-    }
-  } else if (term is ListTerm) {
-    if (term.head != null) _checkTerm(term.head!, module);
-    if (term.tail != null) _checkTerm(term.tail!, module);
-  } else if (term is ConstTerm) {
-    final v = term.value;
-    if (v is String) _checkName(v, term, module);
+/// A goal's called name, through the wrappers that hide it: `RemoteGoal`'s own
+/// functor is `#` and `SpawnGoal`'s is `@`, so checking the wrapper alone would
+/// miss `m # '_add'(...)` and `'_add'(...)@a`.
+void _checkGoal(Goal goal) {
+  if (goal is RemoteGoal) {
+    _checkGoal(goal.goal);
+    return;
   }
+  if (goal is SpawnGoal) {
+    _checkGoal(goal.innerGoal);
+    return;
+  }
+  _checkName(goal.functor, goal.line, goal.column, 'calls');
 }
 
-void _checkName(String name, AstNode at, Module module) {
-  if (isReservedConstantName(name)) {
-    throw CompileError(
-      "Constant '$name' names a language primitive and is reserved for system "
-      "use; an application module may not name it. Call a programs/system/ "
-      "export instead, or move the code into the primitive layer and declare "
-      "-mode(system) (permitted only in the root self.glp and programs/system/).",
-      at.line,
-      at.column,
-      phase: 'loader',
-    );
-  }
+/// True if [name] is admitted only to the primitive layer. An unquoted name
+/// beginning with an underscore is an anonymous variable, so a procedure name
+/// that begins with one was written as a quoted constant.
+bool _isPrimitiveLayerName(String name) => name.startsWith('_');
+
+void _checkName(String name, int line, int column, String what) {
+  if (!_isPrimitiveLayerName(name)) return;
+  throw CompileError(
+    "'$name' is a primitive-layer procedure name: a module that does not "
+    "declare -mode(system) neither defines nor calls a procedure whose name is "
+    "a quoted underscore-prefixed constant, and this module $what one. Call a "
+    "programs/system/ export instead, or move the code into the primitive layer "
+    "and declare -mode(system) (permitted only in the root self.glp and "
+    "programs/system/). The prefix is unrestricted as data — as a message tag, "
+    "or as a member of a type union.",
+    line,
+    column,
+    phase: 'loader',
+  );
 }

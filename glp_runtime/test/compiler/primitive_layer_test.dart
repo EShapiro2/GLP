@@ -7,10 +7,19 @@
 //
 //   Rule A — `-mode(system)` is admitted only for the root self.glp and modules
 //            under programs/system/.
-//   Rule B — a module not in system mode may not NAME a reserved constant (a
-//            kernel predicate / reserved functor), whether it appears as a goal
-//            call, a struct functor, or a bare constant. A `_`-prefixed constant
-//            that names no primitive (e.g. '_user') is not reserved.
+//   Rule B — a module not in system mode neither defines nor calls a procedure
+//            whose name is a quoted underscore-prefixed constant. The
+//            restriction is on names in CALL POSITION only; the prefix is
+//            unrestricted as data — as a message tag, or as a member of a type
+//            union.
+//
+// Rule B was a list of reserved names until 2026-07-31, and tested the whole
+// term tree. GLP-Spec narrowed it to call position that day, with Udi's approval
+// at each step, because the prefix-only-but-everywhere formulation forbids
+// '_net' — 242 green code lines name it as data. Nothing reserves a functor in
+// data position now: a construction ban there is bypassable through `=..`
+// anyway, and the forgery it would address is a runtime check on kernels taking
+// a global name, which is IGLP's.
 
 import 'dart:io';
 
@@ -51,22 +60,46 @@ void main() {
     });
   });
 
-  group('Rule B — reserved-constant naming in user mode (single-file load)', () {
+  group('Rule B — primitive-layer names in user mode (single-file load)', () {
     test('rejects a kernel call (goal functor)', () {
       final f = fixture('out.glp', "p :- '_output'(foo).\n");
       expect(() => engine.loadFile(f.path),
-          throwsContaining('names a language primitive'));
+          throwsContaining('is a primitive-layer procedure name'));
     });
 
-    test('rejects a reserved functor (struct term)', () {
-      final f = fixture('w.glp', "p(t('_w'(a, b))).\n");
+    test('rejects a kernel call in guard position', () {
+      final f = fixture('g.glp', "p(X) :- '_copy'(X?, Y) | q(Y?).\n");
       expect(() => engine.loadFile(f.path),
-          throwsContaining('names a language primitive'));
+          throwsContaining('is a primitive-layer procedure name'));
     });
 
-    test('accepts a _-prefixed constant that names no primitive', () {
-      // '_user' names no kernel; it is not reserved even with the prefix.
+    test('rejects defining a procedure so named (clause head)', () {
+      final f = fixture('def.glp', "'_test_kernel'(a).\n");
+      expect(() => engine.loadFile(f.path),
+          throwsContaining('is a primitive-layer procedure name'));
+    });
+
+    test('rejects declaring a procedure so named', () {
+      // builtinProcedures now lists every kernel, so the parser admits a
+      // clause-less declaration of one; Rule B is what stops a user module
+      // writing it.
+      final f = fixture('decl.glp', "procedure '_add'(Number?, Number?, Number).\n");
+      expect(() => engine.loadFile(f.path),
+          throwsContaining('is a primitive-layer procedure name'));
+    });
+
+    test('accepts a _-prefixed constant in argument position', () {
+      // '_user' in data position — a message tag, not a call.
       final f = fixture('user.glp', "p('_user').\n");
+      expect(engine.loadFile(f.path), isTrue);
+    });
+
+    test('accepts a _-prefixed functor in data position', () {
+      // Was rejected as a "reserved functor" until 2026-07-31. Under the
+      // call-position rule `'_w'(a, b)` here builds a term and calls nothing,
+      // so it is data and unrestricted — the same licence that keeps the 242
+      // '_net' lines green.
+      final f = fixture('w.glp', "p(t('_w'(a, b))).\n");
       expect(engine.loadFile(f.path), isTrue);
     });
   });
