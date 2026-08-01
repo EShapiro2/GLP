@@ -276,16 +276,9 @@ class Analyzer {
 
   Analyzer();
 
-  /// [compileMode] is accepted and unused. It reached exactly one check here —
-  /// the reserved-constant check on data positions — and that check went on
-  /// 2026-07-31 when GLP-Spec narrowed the rule to call position, which the
-  /// loader enforces (compiler/primitive_layer.dart). The parameter is left in
-  /// place because callers pass it and the signature is IGLP's; dropping it is
-  /// theirs to do.
   AnnotatedProgram analyze(Program program, {
     bool generateReduce = false,
     List<ProcDecl>? procDeclarations,
-    CompileMode compileMode = CompileMode.user,
     bool skipGlobalSRSW = false,
   }) {
     // Build procedure declaration lookup map

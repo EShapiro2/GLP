@@ -118,7 +118,6 @@ class GlpCompiler {
         ast,
         generateReduce: generateReduce,
         procDeclarations: module.procDeclarations,
-        compileMode: module.compileMode,
       );
 
       // Phase 4: Code generation
@@ -145,7 +144,6 @@ class GlpCompiler {
     final annotated = analyzer.analyze(
       ast,
       generateReduce: true,
-      compileMode: CompileMode.system,
       procDeclarations: procDeclarations ?? [],
       // Directory programs: each module is SRSW-checked at discovery, so the
       // linked whole skips the global pass. A single-module program has no such
