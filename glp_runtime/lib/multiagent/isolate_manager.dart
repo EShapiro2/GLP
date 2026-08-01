@@ -80,6 +80,19 @@ class AgentIdle extends IsolateMessage {
   AgentIdle(this.agentId);
 }
 
+/// Sent by an agent isolate when handling a message throws.
+///
+/// Without this an uncaught exception ends the isolate silently: the agent stops
+/// answering, no AgentIdle ever arrives, and the only symptom is [settle]
+/// timing out — which is indistinguishable from a system that is merely slow.
+/// A throw and a timing change then look identical, and a diagnosis cannot
+/// separate them. This makes the throw visible at the moment it happens.
+class AgentFaulted extends IsolateMessage {
+  final String agentId;
+  final String error;
+  AgentFaulted(this.agentId, this.error);
+}
+
 /// Sent by an agent isolate when initialization fails (e.g. a load/type-check
 /// error or a missing goal label) so the manager fails fast instead of hanging
 /// forever waiting for a `Ready` that will never arrive (known-issues Issue 19).
@@ -167,6 +180,13 @@ class IsolateManager {
   /// Awaiting [settle]; completed when the system is quiescent.
   Completer<void>? _settle;
 
+  /// Faults reported by agents, newest last. A non-empty list means at least one
+  /// agent threw while handling a message.
+  final List<String> _faults = [];
+
+  /// What the agents have thrown, if anything.
+  List<String> get faults => List.unmodifiable(_faults);
+
   /// Whether every agent has finished every unit of work handed to it.
   ///
   /// A message parked in the router (a pair under [cut] or [holdDelivery]) was
@@ -202,6 +222,9 @@ class IsolateManager {
   /// quietly, since a play that cannot settle is a failure and not a slow pass.
   Future<void> settle(
       {Duration timeout = const Duration(seconds: 30)}) async {
+    if (_faults.isNotEmpty) {
+      throw StateError('an agent faulted before settling: ${_faults.first}');
+    }
     if (_quiescent) return;
     final c = Completer<void>();
     _settle = c;
@@ -348,6 +371,17 @@ class IsolateManager {
 
     } else if (msg is AgentIdle) {
       _noteWorkDone(msg.agentId);
+
+    } else if (msg is AgentFaulted) {
+      // Surface it at once rather than letting the wait time out: the fault is
+      // the diagnosis, and a timeout thirty seconds later is not.
+      _faults.add('${msg.agentId}: ${msg.error}');
+      print('[IsolateManager] agent ${msg.agentId} faulted: ${msg.error}');
+      final s = _settle;
+      if (s != null && !s.isCompleted) {
+        _settle = null;
+        s.completeError(StateError('agent ${msg.agentId} faulted: ${msg.error}'));
+      }
 
     } else if (msg is RouterSend) {
       if (_traceConfig.glp && _isTracingAgent(msg.fromId)) {
@@ -540,6 +574,7 @@ void _agentIsolateEntry(AgentConfig config) async {
 
   // Event-driven message handling loop
   await for (final msg in receivePort) {
+    try {
     if (msg is Start) {
       // Initial drain+flush: kicks off the agent's goal
       scheduler.drainWithStatus(debug: engine.debugTrace);
@@ -570,6 +605,15 @@ void _agentIsolateEntry(AgentConfig config) async {
       // With the current architecture (actors internal to GLP), this is not used.
       // The actor communicates directly with the agent via channels in GLP code.
       log('Received UI event (not processed - actors are internal)');
+    }
+    } catch (e, st) {
+      // An uncaught throw used to end the isolate here, silently. Report it, and
+      // still account the work unit, so a waiter fails on the fault rather than
+      // on a timeout that says nothing about what went wrong.
+      print('[$agentId] ERROR: uncaught while handling ${msg.runtimeType}: $e');
+      print(st);
+      config.mainPort.send(AgentFaulted(agentId, '$e'));
+      config.mainPort.send(AgentIdle(agentId));
     }
   }
 }
