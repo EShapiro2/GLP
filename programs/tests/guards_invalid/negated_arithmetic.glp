@@ -1,0 +1,6 @@
+%% Invalid-guard fixture.  An arithmetic comparison has type-error semantics on
+%% a non-numeric argument, so negating it has no three-valued reading: glp.tex
+%% §Guards gives a guard success, suspend and fail, and negation of a guard that
+%% raises a type error is none of the three.  Rejected at load.
+procedure cmp(Integer?, Integer?, Integer).
+cmp(A, B, R?) :- ~(A? < B?) | R := 0.

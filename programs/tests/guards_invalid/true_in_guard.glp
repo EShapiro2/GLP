@@ -1,0 +1,4 @@
+%% Invalid-guard fixture.  glp.tex Definition "Guarded Clause": a guard is a
+%% conjunction of guard predicates, tests that determine clause applicability.
+%% true is a body construct and not a test, so it is rejected in guard position.
+bad_guard(X?) :- true | X = done.

@@ -1,0 +1,2 @@
+%% Invalid-guard fixture.  false is a body construct, not a guard predicate.
+bad_guard(X?) :- false | X = done.

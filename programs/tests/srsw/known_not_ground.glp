@@ -1,0 +1,13 @@
+%% Negative SRSW fixture.  glp.tex Remark "Guards and SRSW": a guard whose
+%% success implies its argument is ground lets both X and X? occur multiple
+%% times, and "guards such as known and compound do not imply groundness:
+%% known(X?) succeeds when X? is bound to f(Y?) with Y? unbound."
+%%
+%% So known/1 licenses no multiple occurrence, and X? occurring twice in the
+%% body under it is an SRSW violation.  The positive counterpart, where the
+%% guard IS groundness-implying, is srsw/ground_guard_multi_ok.glp.
+procedure k(_?, _).
+k(X, Y?) :- known(X?) | pair(X?, X?, Y).
+
+procedure pair(_?, _?, _).
+pair(_, _, done).

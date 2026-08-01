@@ -1,0 +1,14 @@
+%% Positive SRSW fixture.  glp.tex Remark "Guards and SRSW": "Guard occurrences
+%% count toward SRSW satisfaction: if X? occurs in a guard, its paired writer X
+%% must occur in the head and X? may additionally occur once in the body."
+%%
+%% Here X is the head writer, X? occurs in the guard, and X? occurs once more in
+%% the body — the arrangement the remark licenses, which a reading that counted
+%% the guard occurrence against the single-reader limit would reject.
+Res ::= yes ; no.
+
+procedure g(Integer?, Res).
+g(X, R?) :- integer(X?) | h(X?, R).
+
+procedure h(Integer?, Res).
+h(_, yes).

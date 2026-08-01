@@ -1,0 +1,2 @@
+%% Invalid-guard fixture.  fail is a body construct, not a guard predicate.
+bad_guard(X?) :- fail | X = done.

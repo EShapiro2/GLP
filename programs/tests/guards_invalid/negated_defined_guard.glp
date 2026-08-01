@@ -1,0 +1,10 @@
+%% Invalid-guard fixture.  A defined guard is a user unit-clause procedure
+%% unfolded into the head by partial evaluation; negating it would require
+%% negation as failure over that procedure, which GLP does not have.
+Res ::= yes ; no.
+
+procedure d(Integer?).
+d(1).
+
+procedure use(Integer?, Res).
+use(X, R?) :- ~d(X?) | R = no.

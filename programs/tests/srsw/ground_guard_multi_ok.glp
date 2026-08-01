@@ -1,0 +1,11 @@
+%% Positive SRSW fixture.  glp.tex Remark "Guards and SRSW": "if the success of
+%% a guard implies that X? is bound to a ground term, then both X and X? may
+%% occur multiple times in the clause.  Groundness-implying guards include
+%% ground, integer, number, string, constant, arithmetic comparisons and ground
+%% equality."
+%%
+%% integer/1 is one of them, so X? twice in the body is accepted here.  Its
+%% negative counterpart, under the non-groundness-implying known/1, is
+%% srsw/known_not_ground.glp.
+procedure sq(Integer?, Integer).
+sq(X, Y?) :- integer(X?) | Y := X? * X?.

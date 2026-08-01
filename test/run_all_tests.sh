@@ -1114,6 +1114,14 @@ POSITIVE_FILES=(
     # whole input takes the abstract route and is certified clean against its
     # abstract instance, even though it is never instantiated.
     "$GLP_DIR/programs/tests/param_abstract_covered.glp"
+
+    # --- SRSW relaxations (glp.tex Remark "Guards and SRSW") ---
+    # Both must be ACCEPTED; their negative counterpart is srsw/known_not_ground
+    # in Section D. A guard occurrence counts toward SRSW, so X? in a guard plus
+    # once in the body is legal; and a groundness-implying guard licenses
+    # multiple occurrences of both halves.
+    "$GLP_DIR/programs/tests/srsw/guard_occurrence_ok.glp"
+    "$GLP_DIR/programs/tests/srsw/ground_guard_multi_ok.glp"
 )
 
 # Build REPL input: load each positive file with :clear between
@@ -1184,6 +1192,12 @@ NEGATIVE_FILES=(
     # --- typechecker/negative/head ---
     "$TC_DIR/negative/head/merge_wrong_constant.glp"
     "$TC_DIR/negative/head/merge_wrong_functor.glp"
+    # Moved here from Section D on 2026-08-02. Both are rejected by the type
+    # checker, not by the SRSW pass — measured — so Section D asserted nothing
+    # about SRSW for them. Their headers announce a mode error and an SRSW
+    # violation; the type checker reaches the mode error first.
+    "$TC_DIR/negative/head/merge_reader_at_input.glp"
+    "$TC_DIR/negative/head/merge_writer_at_output.glp"
 
     # --- typechecker/negative/body ---
     "$TC_DIR/negative/body/merge_undefined_proc.glp"
@@ -1377,22 +1391,40 @@ echo ""
 echo "=== Section D: SRSW Violation Tests ==="
 echo ""
 
+# Every file here must be rejected by the SRSW pass and say so. The condition
+# used to be `grep -qi "SRSW violation\|Error loading"`, which any rejection
+# satisfied: two of the three entries were rejected by the type checker before
+# the SRSW pass ran, so this section asserted nothing about SRSW for them. They
+# have moved to NEGATIVE_FILES, where their actual verdict is what is checked.
 SRSW_FILES=(
-    "$TC_DIR/negative/head/merge_reader_at_input.glp"
-    "$TC_DIR/negative/head/merge_writer_at_output.glp"
+    # Every violation class of def:glp-program in one file, each with its own
+    # diagnostic: a writer twice and a reader twice (SO), and a variable with no
+    # reader and one with no writer (the pairing requirement).
+    "$GLP_DIR/programs/tests/srsw/srsw_multi_error.glp"
+    # known/1 does not imply groundness, so it licenses no multiple occurrence
+    # (glp.tex Remark "Guards and SRSW").
+    "$GLP_DIR/programs/tests/srsw/known_not_ground.glp"
 )
 
 for f in "${SRSW_FILES[@]}"; do
     name=$(basename "$f" .glp)
     srsw_out=$(echo -e "$f\n:quit" | "$REPL_RUN" 2>&1)
-    if echo "$srsw_out" | grep -qi "SRSW violation\|Error loading"; then
-        echo "  PASS: $name (rejected)"
+    if echo "$srsw_out" | grep -q "SRSW violations found"; then
+        echo "  PASS: $name (SRSW rejected)"
         PASS=$((PASS + 1))
     else
-        echo "  FAIL: $name (should be rejected)"
+        echo "  FAIL: $name (should be rejected by the SRSW pass)"
         FAIL=$((FAIL + 1))
     fi
 done
+
+# The violation classes of def:glp-program, each named in the diagnostic rather
+# than merely bundled into a rejection.
+srsw_multi=$(echo -e "$GLP_DIR/programs/tests/srsw/srsw_multi_error.glp\n:quit" | "$REPL_RUN" 2>&1)
+check "SO: a writer occurring twice" "Writer variable \"X\" occurs 2 times" "$srsw_multi"
+check "SO: a reader occurring twice" "Reader variable \"Y?\" occurs 2 times" "$srsw_multi"
+check "pairing: a variable with no reader" "Variable \"Z\" has no reader" "$srsw_multi"
+check "pairing: a variable with no writer" "Variable \"Y\" has no writer" "$srsw_multi"
 
 # merge_with_reader: the one entry of this section that is rejected by the SRSW
 # pass rather than by the type checker, so it is the only test that speaks for
@@ -1419,23 +1451,34 @@ echo ""
 echo "=== Section E: Invalid Guard Test ==="
 echo ""
 
-TMP_GUARD=$(mktemp /tmp/glp_test.XXXXXX)
-mv "$TMP_GUARD" "${TMP_GUARD}.glp"
-TMP_GUARD="${TMP_GUARD}.glp"
-cat > "$TMP_GUARD" << 'TMPEOF'
-bad_guard(X?) :- true | X = done.
-TMPEOF
+# The fixtures are on disk, in programs/tests/guards_invalid/, so a reader
+# following the paper to the repository finds this category. It used to be one
+# assertion on a file this script wrote to /tmp and deleted, which showed
+# nothing to anybody reading the tree.
+#
+# Each entry pairs a fixture with the diagnostic it must produce, so a rejection
+# for some other reason does not pass as an invalid-guard rejection.
+GUARD_NEG_DIR="$GLP_DIR/programs/tests/guards_invalid"
+guard_cases=(
+    "true_in_guard.glp|\"true\" is not a guard"
+    "false_in_guard.glp|\"false\" is not a guard"
+    "fail_in_guard.glp|\"fail\" is not a guard"
+    "negated_arithmetic.glp|Guard \"<\" cannot be negated"
+    "negated_defined_guard.glp|Defined guard \"d\" cannot be negated"
+)
 
-guard_out=$(echo -e "$TMP_GUARD\n:quit" | "$REPL_RUN" 2>&1)
-rm -f "$TMP_GUARD"
-
-if echo "$guard_out" | grep -q '"true" is not a guard'; then
-    echo "  PASS: true in guard position rejected"
-    PASS=$((PASS + 1))
-else
-    echo "  FAIL: true in guard position should be rejected"
-    FAIL=$((FAIL + 1))
-fi
+for case in "${guard_cases[@]}"; do
+    gfile="${case%%|*}"
+    gmsg="${case#*|}"
+    guard_out=$(echo -e "$GUARD_NEG_DIR/$gfile\n:quit" | "$REPL_RUN" 2>&1)
+    if echo "$guard_out" | grep -qF "$gmsg"; then
+        echo "  PASS: ${gfile%.glp} rejected ($gmsg)"
+        PASS=$((PASS + 1))
+    else
+        echo "  FAIL: ${gfile%.glp} should be rejected with: $gmsg"
+        FAIL=$((FAIL + 1))
+    fi
+done
 
 echo ""
 
