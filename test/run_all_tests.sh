@@ -2534,17 +2534,15 @@ echo ""
 
 # Known-red tests.  One entry per line, matched against "<file>: <test name>".
 # Each entry names the owning project and what blocks it.
-KNOWN_RED=(
-    # TGLP — the body-atom type checker (lib/analysis/type_checker/
-    # well_typed_clause.dart) requires a procedure declaration for every body
-    # atom except isBuiltinGoal, but '_'-prefixed body kernels are undeclared
-    # everywhere and resolve from the runtime (see the builtinProcedures comment
-    # in lib/analysis/type_checker/root_scope.dart).  So a -mode(system) module
-    # loaded as a real file cannot call a kernel, which is what Rule A admits it
-    # to do.  Cross-project request to TGLP is open.  REMOVE THIS ENTRY when the
-    # fix lands — the guard below will fail the suite until you do.
-    "test/compiler/primitive_layer_test.dart: Rule A — -mode(system) location (single-file load) admits a real module under programs/system/"
-)
+# Empty: nothing is known-red.  An entry names a test another project owns and
+# is expected to fail until they fix it; the guard below fails the suite when a
+# listed test passes, so an entry is deleted in the same commit as its fix.
+#
+# The last entry went on 2026-08-01: TGLP declared every registered body kernel
+# in the root self.glp and narrowed Rule B to call position (9147fa4f), which is
+# the fix the entry was waiting for, so the -mode(system) single-file load it
+# named now passes.
+KNOWN_RED=()
 
 echo "=== Section Q: Dart unit tests (whole tree) ==="
 echo ""
