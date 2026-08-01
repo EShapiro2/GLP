@@ -23,6 +23,8 @@ library;
 
 import 'dart:typed_data';
 import 'package:crypto/crypto.dart' as crypto;
+import 'package:glp_runtime/analysis/type_checker/type_identity.dart'
+    show TypeIdentityTables, interfaceTypeIdentityTables;
 import 'package:glp_runtime/bytecode/opcodes.dart';
 import 'package:glp_runtime/bytecode/runner.dart';
 import 'package:glp_runtime/wire/codec.dart';
@@ -336,12 +338,19 @@ class LoadedModule {
   /// The exported procedure signatures the loader aliases unqualified.
   final Set<String> exportAliases;
 
+  /// The module's exported type-identity table, derived at load from the
+  /// interface text the artefact carries (§7 step 2), not shipped beside it: a
+  /// shipped table can disagree with the source it describes, one recomputed
+  /// from the attested source cannot. `run/3` compares a posted goal against it.
+  final TypeIdentityTables exportedTypes;
+
   LoadedModule({
     required this.hM,
     required this.artefactId,
     required this.artefact,
     required this.program,
     required this.exportAliases,
+    required this.exportedTypes,
   });
 }
 
@@ -351,10 +360,10 @@ class ArtefactLoader {
   final Map<String, LoadedModule> _byId = {};
 
   /// Load an artefact in its adoption context: the offered source identity
-  /// h(M) and the certified artefact identity (the sender's attestation). The
-  /// type-automata derivation and the load-time interface check of §7 step 2
-  /// are the type system's (TGLP); the interface text is carried in
-  /// `artefact.exports` / `artefact.typeDefsText` for that step.
+  /// h(M) and the certified artefact identity (the sender's attestation). Step 2
+  /// derives the type automata from the interface text the artefact carries; the
+  /// derivation is the type system's (TGLP) and the result is the loaded
+  /// module's `exportedTypes`.
   LoadedModule load(
     Uint8List artefactBytes, {
     required Uint8List offeredHM,
@@ -385,9 +394,20 @@ class ArtefactLoader {
         !supportedIsaVersions.contains(art.isaVersion)) {
       throw WireFormatException('unsupported ISA version: ${art.isaVersion}');
     }
-    // 2. (TGLP) derive type automata from the interface text + run the
-    //    load-time interface checks. Deferred to the type system; the interface
-    //    is available on `art` for that hook.
+    // 2. Derive the type automata from the interface table's declaration text.
+    //    Text that will not parse is a failsafe refusal, as an unknown symbol
+    //    name is (§versioning): the interface is what the load-time check
+    //    compares against, so a module whose interface cannot be read is not
+    //    loadable.
+    final TypeIdentityTables exportedTypes;
+    try {
+      exportedTypes = interfaceTypeIdentityTables(
+        typeDefsText: art.typeDefsText,
+        exportDeclarationTexts: art.exports.map((e) => e.declarationText),
+      );
+    } catch (e) {
+      throw WireFormatException('interface text does not parse: $e');
+    }
     // 3. Decode + reconstruct the runnable program; alias exports only.
     final program = art.toProgram();
     final aliases = {for (final e in art.exports) '${e.name}/${e.arity}'};
@@ -398,6 +418,7 @@ class ArtefactLoader {
       artefact: art,
       program: program,
       exportAliases: aliases,
+      exportedTypes: exportedTypes,
     );
     _byId[key] = m;
     return m;

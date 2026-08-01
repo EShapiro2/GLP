@@ -8,6 +8,8 @@ library;
 
 import 'dart:typed_data';
 import 'package:glp_runtime/bytecode/opcodes.dart';
+import 'package:glp_runtime/analysis/type_checker/type_identity.dart'
+    show interfaceTypeIdentityTables;
 import 'package:glp_runtime/wire/artefact.dart';
 import 'package:glp_runtime/wire/codec.dart';
 import 'package:test/test.dart';
@@ -156,6 +158,53 @@ void main() {
       final m2 =
           loader.load(bytes, offeredHM: _hm(), certifiedArtefactId: id);
       expect(identical(m1, m2), isTrue);
+    });
+
+    // Step 2: the exported type-identity table is derived from the interface
+    // text the artefact carries, not shipped beside it.
+    test('derives the exported type-identity table from the interface text',
+        () {
+      final bytes = _sample().toBytes();
+      final id = Artefact.identityOf(bytes);
+      final m = ArtefactLoader().load(bytes,
+          offeredHM: _hm(), certifiedArtefactId: id);
+      expect(m.exportedTypes.exported.keys, {'foo/1'});
+      expect(m.exportedTypes.exported['foo/1'], isNotEmpty);
+      // An interface section says nothing about the rest of the module's scope.
+      expect(m.exportedTypes.declared, isEmpty);
+      expect(m.exportedTypes.unresolved, isEmpty);
+    });
+
+    test('the derived table equals the one derived from the text directly', () {
+      final art = _sample();
+      final bytes = art.toBytes();
+      final id = Artefact.identityOf(bytes);
+      final m = ArtefactLoader().load(bytes,
+          offeredHM: _hm(), certifiedArtefactId: id);
+      final direct = interfaceTypeIdentityTables(
+        typeDefsText: art.typeDefsText,
+        exportDeclarationTexts: art.exports.map((e) => e.declarationText),
+      );
+      expect(m.exportedTypes.exported, direct.exported);
+    });
+
+    test('interface text that does not parse is a failsafe refusal', () {
+      final broken = Artefact(
+        isaVersion: '2.16.3',
+        hM: _hm(),
+        moduleName: 'demo',
+        typeDefsText: 'Stream(X) ::= [] ; [X | Stream(X)].',
+        exports: const [ArtefactExport('foo', 1, 'foo(X, Y?) :- true | true.')],
+        symbols: [
+          ArtefactSymbol.compiled('foo', 1, <Object>[ClauseTry(), Commit(), Proceed()]),
+        ],
+      );
+      final bytes = broken.toBytes();
+      final id = Artefact.identityOf(bytes);
+      expect(
+          () => ArtefactLoader()
+              .load(bytes, offeredHM: _hm(), certifiedArtefactId: id),
+          throwsA(isA<WireFormatException>()));
     });
   });
 }
