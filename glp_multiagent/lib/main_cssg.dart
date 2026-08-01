@@ -1,8 +1,10 @@
-/// GLP Child-Safe Social Graph / Networking — Simulated Plays
+/// GLP Child-Safe Social Networking — Simulated Plays
 ///
-/// Runs CSSG plays (fplay4-7) and CSSN group plays (fplay8-10) via REPL
-/// subprocess, with tagged output parsed and routed to per-agent read-only
-/// panels (Alice, Bob, Carol, Dave).
+/// Runs CSSN group plays (fplay8-10) via REPL subprocess, with tagged output
+/// parsed and routed to per-agent read-only panels (Alice, Bob, Carol, Dave).
+///
+/// Plays 4–7 were the CSSG plays and are retired with `programs/book/cssg`
+/// (Udi, 2026-08-01).
 library;
 
 import 'dart:io';
@@ -149,9 +151,7 @@ class _CssgScreenState extends State<CssgScreen> {
 
     final runner = ReplPlayRunner(
       repoRoot: repoRoot,
-      glpFiles: playNumber >= 8
-          ? ReplPlayRunner.cssnFiles
-          : ReplPlayRunner.cssgFiles,
+      glpFiles: ReplPlayRunner.cssnFiles,
     );
     _playRunner = runner;
 
@@ -240,32 +240,6 @@ class _CssgScreenState extends State<CssgScreen> {
       color: Colors.blue.shade50,
       child: Row(
         children: [
-          ElevatedButton.icon(
-            onPressed: () => _runPlay(4),
-            icon: const Icon(Icons.play_arrow),
-            label: const Text('Play 4'),
-          ),
-          const SizedBox(width: 8),
-          ElevatedButton.icon(
-            onPressed: () => _runPlay(5),
-            icon: const Icon(Icons.play_arrow),
-            label: const Text('Play 5'),
-          ),
-          const SizedBox(width: 8),
-          ElevatedButton.icon(
-            onPressed: () => _runPlay(6),
-            icon: const Icon(Icons.play_arrow),
-            label: const Text('Play 6'),
-          ),
-          const SizedBox(width: 8),
-          ElevatedButton.icon(
-            onPressed: () => _runPlay(7),
-            icon: const Icon(Icons.play_arrow),
-            label: const Text('Play 7'),
-          ),
-          const SizedBox(width: 16),
-          Container(width: 1, height: 24, color: Colors.blue.shade300),
-          const SizedBox(width: 16),
           ElevatedButton.icon(
             onPressed: () => _runPlay(8),
             icon: const Icon(Icons.play_arrow),

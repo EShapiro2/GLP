@@ -1,19 +1,23 @@
 # GLP Multiagent Flutter Apps
 
-**Updated: 2026-02-21**
+**Updated: 2026-08-01**
 
-Flutter desktop apps for simulating GLP multiagent systems.  Each app runs
-agents with the same GLP code (`typed_social_agent.glp`, `typed_ui_mediator.glp`,
-`typed_ui_actors.glp`) but uses a different execution backend and agent topology.
+Flutter desktop apps for simulating GLP multiagent systems.  Each app names its
+own GLP program and uses its own execution backend and agent topology.
 
 ## Apps (entry points)
 
 | Entry point | App | Agents | Backend | Status |
 |---|---|---|---|---|
 | `lib/main.dart` | Interactive SG | Alice, Bob, Charlie | Multi-window (`desktop_multi_window`) | Working |
-| `lib/main_cssg.dart` | CSSG Plays (REPL) | Alice, Bob, Carol, Dave | REPL subprocess | Working |
-| `lib/main_sg_mad.dart` | SG Plays (madGLP) | Alice, Bob, Charlie | Multi-isolate (`AgentRuntime` + `IsolateRouter`) | **Partial** — see Known Issues |
-| `lib/main_cssg_mad.dart` | CSSG Plays (madGLP) | Alice, Bob, Carol, Dave | Multi-isolate (`AgentRuntime` + `IsolateRouter`) | **Partial** — see Known Issues |
+| `lib/main_cssg.dart` | CSSN group plays (REPL) | Alice, Bob, Carol, Dave | REPL subprocess | Working |
+
+`main_sg_mad.dart`, `main_cssg_mad.dart` and `main_cssg_mad_modules.dart` were
+retired on 2026-08-01: each named a program directory that no longer exists
+(`programs/typed_book/cssg`, `programs/social/child_safe`), and the CSSG
+programs they ran are removed with `programs/book/cssg` (Udi, 2026-08-01).  The
+table above lists only the entry points this file documents; `lib/` holds
+others.
 
 ### Interactive SG (`main.dart`)
 
@@ -23,24 +27,12 @@ agent's text field.  Uses `desktop_multi_window` plugin and `MadRouter` for
 cross-window message routing.  Full 10-step introduction protocol verified
 working.
 
-### CSSG Plays — REPL (`main_cssg.dart`)
+### CSSN group plays — REPL (`main_cssg.dart`)
 
 Single-window app with four read-only panels (Alice, Bob, Carol, Dave).
-Runs plays 4–7 by spawning a `glp_repl` subprocess.  Tagged output is parsed
-and routed to the correct panel.  Uses `ReplPlayRunner` from `glp_runtime`.
-
-### SG Plays — madGLP (`main_sg_mad.dart`)
-
-Single-window app with three read-only panels (Alice, Bob, Charlie).
-Runs plays 1–3.  Each agent runs in its own Dart isolate via `AgentRuntime`.
-Uses `IsolateRouter` for cross-isolate MAD message routing and the two-phase
-deferred-start protocol (see below).
-
-### CSSG Plays — madGLP (`main_cssg_mad.dart`)
-
-Single-window app with four read-only panels (Alice, Carol, Bob, Dave).
-Runs plays 4–7.  Same multi-isolate architecture as SG madGLP.  Parent–child
-channels are bootstrapped via `parent_connect` cold call over madGLP.
+Runs plays 8–10 by spawning a `glp_repl` subprocess.  Tagged output is parsed
+and routed to the correct panel.  Uses `ReplPlayRunner` from `glp_runtime`,
+naming its own file list — the runner has no default one.
 
 ## Shared infrastructure
 
@@ -51,8 +43,7 @@ channels are bootstrapped via `parent_connect` cold call over madGLP.
 
 ## Two-phase deferred-start protocol
 
-Used by both madGLP apps (`main_sg_mad.dart`, `main_cssg_mad.dart`).
-Documented in `isolate_protocol.dart`.
+Used by `main_grassapp_duo.dart`.  Documented in `isolate_protocol.dart`.
 
 1. **Phase 1 — Spawn**: Main spawns all agent isolates with `deferStart: true`.
    Each isolate creates its `AgentRuntime`, sends `AgentReady` (with its
@@ -68,22 +59,18 @@ sends network messages, so no message can be dropped due to a missing target.
 
 ## GLP source files
 
-All GLP source files are in `/Users/udi/Grassroots/GLP/programs/typed_book/cssg/`.
-
-| File | Purpose |
-|---|---|
-| `typed_social_agent.glp` | `agent/4`, channel ops, merge, response handling |
-| `typed_ui_mediator.glp` | Ground-term mediator (`agent/4` ↔ Dart UI) |
-| `typed_ui_actors.glp` | Scripted UI actors — talk to `ui_mediator` (ground terms) |
-| `play_ui_boot.glp` | Interactive Flutter UI boot: `agent_init/3` |
-| `play_ui_madglp_boot.glp` | madGLP boot with mediator + actors (multi-isolate Flutter UI) |
-| `play_ui_dglp_boot.glp` | dGLP boot with mediator (single-isolate REPL) |
-| `play_dglp_boot.glp` | dGLP boot without mediator (single-isolate REPL) |
-| `play_madglp_boot.glp` | madGLP boot without mediator (headless multi-isolate) |
+Each app names its own.  `main_cssg.dart` runs `programs/book/cssn`;
+`main.dart` and the grassapp apps take theirs from `lib/glp_sources.dart`.  The
+table that stood here listed `programs/typed_book/cssg`, a directory that has
+not existed for some time.
 
 ## Known Issues
 
 ### madGLP plays stall after introduction step (OPEN)
+
+Observed in `main_sg_mad.dart`, retired 2026-08-01; recorded here because the
+mechanism it names is live and the cross-isolate path is `main_grassapp_duo`'s
+as much as it was that app's.
 
 SG Play 1 (multi-isolate) stops after the introduction step.  Cold calls and
 friend messages work — Alice sends `connect(bob)`, Bob accepts, they exchange

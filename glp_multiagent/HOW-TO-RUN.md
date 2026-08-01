@@ -1,15 +1,18 @@
 # GLP Multiagent UI — HOW TO RUN
 
-**Updated: 2026-02-21**
+**Updated: 2026-08-01**
 
-## Four apps, four entry points
+## The apps this file covers
 
 | App | Entry point | Build target |
 |---|---|---|
 | Interactive SG (multi-window) | `lib/main.dart` | default |
-| CSSG Plays (REPL subprocess) | `lib/main_cssg.dart` | `--dart-define=ENTRY=cssg` or `--target=lib/main_cssg.dart` |
-| SG Plays (madGLP multi-isolate) | `lib/main_sg_mad.dart` | `--target=lib/main_sg_mad.dart` |
-| CSSG Plays (madGLP multi-isolate) | `lib/main_cssg_mad.dart` | `--target=lib/main_cssg_mad.dart` |
+| CSSN group plays (REPL subprocess) | `lib/main_cssg.dart` | `--target=lib/main_cssg.dart` |
+
+The two madGLP multi-isolate apps, `lib/main_sg_mad.dart` and
+`lib/main_cssg_mad.dart`, and `lib/main_cssg_mad_modules.dart` beside them, were
+retired on 2026-08-01 with the program directories they named.  `lib/` holds
+further entry points this file does not cover.
 
 ## Build and launch
 
@@ -29,25 +32,13 @@ Launch:
 open /Users/udi/Grassroots/GLP/glp_multiagent/build/macos/Build/Products/Release/glp_multiagent.app
 ```
 
-### SG Plays — madGLP (multi-isolate)
-
-```bash
-cd /Users/udi/Grassroots/GLP/glp_multiagent && flutter build macos --release --target=lib/main_sg_mad.dart 2>&1
-```
-
-Launch same path as above — the build replaces the binary.
-
-### CSSG Plays — REPL
+### CSSN group plays — REPL
 
 ```bash
 cd /Users/udi/Grassroots/GLP/glp_multiagent && flutter build macos --release --target=lib/main_cssg.dart 2>&1
 ```
 
-### CSSG Plays — madGLP (multi-isolate)
-
-```bash
-cd /Users/udi/Grassroots/GLP/glp_multiagent && flutter build macos --release --target=lib/main_cssg_mad.dart 2>&1
-```
+Launch same path as above — the build replaces the binary.
 
 ### Kill a running instance
 
@@ -123,21 +114,15 @@ dart test test/multiagent/
 - **Interactive SG** (`main.dart`): Coordinator spawns agent windows via
   `desktop_multi_window`, routes madGLP binary messages between them via
   `MadRouter`. Each window runs `AgentRuntime` + `MadContext`.
-- **CSSG REPL** (`main_cssg.dart`): Spawns `glp_repl` subprocess, parses
+- **CSSN group plays** (`main_cssg.dart`): Spawns `glp_repl` subprocess, parses
   tagged output, routes to per-agent panels.
-- **SG/CSSG madGLP** (`main_sg_mad.dart`, `main_cssg_mad.dart`): Single
-  window, each agent in its own Dart isolate via `AgentRuntime` +
-  `IsolateRouter`. Uses two-phase deferred-start protocol documented in
-  `isolate_protocol.dart`.
 
 ## File locations
 
 | File | Purpose |
 |---|---|
 | `lib/main.dart` | Interactive SG — coordinator + agent windows |
-| `lib/main_cssg.dart` | CSSG plays via REPL subprocess |
-| `lib/main_sg_mad.dart` | SG plays via multi-isolate madGLP |
-| `lib/main_cssg_mad.dart` | CSSG plays via multi-isolate madGLP |
+| `lib/main_cssg.dart` | CSSN group plays via REPL subprocess |
 | `lib/isolate_protocol.dart` | Isolate protocol: message types, lifecycle, entry point |
 | `lib/mad_router.dart` | `IsolateRouter` — cross-isolate MAD message routing |
 | `macos/Runner/AppDelegate.swift` | Focus fix (makeFirstResponder) |
@@ -145,22 +130,14 @@ dart test test/multiagent/
 
 ## Related GLP files
 
-All in `/Users/udi/Grassroots/GLP/programs/typed_book/cssg/`.
-
-| File | Purpose |
-|---|---|
-| `typed_social_agent.glp` | `agent/4`, channel ops, merge, response handling |
-| `typed_ui_mediator.glp` | Ground-term mediator (`agent/4` ↔ Dart UI) |
-| `typed_ui_actors.glp` | Scripted UI actors — talk to `ui_mediator` (ground terms) |
-| `play_ui_boot.glp` | Interactive Flutter UI boot: `agent_init/3` |
-| `play_ui_madglp_boot.glp` | madGLP boot with mediator + actors (multi-isolate Flutter UI) |
-| `play_ui_dglp_boot.glp` | dGLP boot with mediator (single-isolate REPL) |
-| `play_dglp_boot.glp` | dGLP boot without mediator (single-isolate REPL) |
-| `play_madglp_boot.glp` | madGLP boot without mediator (headless multi-isolate) |
+Each app names its own.  `main_cssg.dart` runs `programs/book/cssn`; `main.dart`
+takes its sources from `lib/glp_sources.dart`.  The table that stood here listed
+`programs/typed_book/cssg`, a directory that has not existed for some time.
 
 ## Known issues
 
-- **madGLP plays stall after introduction step (OPEN)**: See README.md for details.
+- **madGLP plays stall after introduction step (OPEN)**: Observed in the retired
+  `main_sg_mad.dart`; see README.md for details.
 - **Focus fix requires release build**: The `DispatchQueue.main.async` focus
   fix in `AppDelegate.swift` works in release mode but not reliably in debug
   mode (`flutter run -d macos`).

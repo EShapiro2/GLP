@@ -50,16 +50,10 @@ class ReplPlayRunner {
 
   Process? _process;
 
-  /// Which GLP files to load (relative to glp_runtime/).
+  /// Which GLP files to load (relative to glp_runtime/). A caller names its own;
+  /// there is no default list. A default is what kept `book/cssg` on disc after
+  /// the directory was retired, since nothing else named it.
   final List<String> glpFiles;
-
-  /// CSSG GLP files (child-safe social graph, plays 1–7).
-  static const cssgFiles = [
-    '../programs/book/cssg/typed_social_agent.glp',
-    '../programs/book/cssg/typed_ui_mediator.glp',
-    '../programs/book/cssg/typed_ui_actors.glp',
-    '../programs/book/cssg/play_ui_sim_boot.glp',
-  ];
 
   /// Bonds GLP files (grassroots bonds, plays 1–11).
   static const bondsFiles = [
@@ -99,7 +93,7 @@ class ReplPlayRunner {
   static final _taggedRegex =
       RegExp(r'^tagged\((\w+), (cmd|notify|friend|say|act|event)\((.+)\)\)$');
 
-  ReplPlayRunner({required this.repoRoot, this.glpFiles = cssgFiles});
+  ReplPlayRunner({required this.repoRoot, this.glpFiles = const []});
 
   bool get isRunning => _process != null;
 
