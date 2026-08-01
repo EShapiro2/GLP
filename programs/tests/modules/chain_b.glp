@@ -1,4 +1,0 @@
--import([utils]).
--export([process/2]).
-
-process(X, Y?) :- utils # triple(X?, T), Y := T?.

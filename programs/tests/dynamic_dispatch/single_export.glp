@@ -1,5 +1,0 @@
-%% Test module with a single exported procedure.
-%% Simplest case for _select/1 generation.
-
-exported procedure inc(Integer?, Integer).
-inc(X, Y?) :- Y := X? + 1.
