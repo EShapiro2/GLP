@@ -15,10 +15,24 @@
 %%                              clauses for the same goal, the person's answer
 %%                              selects the clause.
 %%   *(X1,...,Xk)               a volition-guarded clause with person-supplied
-%%                              inputs: the person's answer binds the writers
-%%                              X1..Xk; the clause carries their readers Xi?.
-%%   *(A=t, Y?)                 a ground answer t — the button's label — and a
-%%                              context reader Y?, the card's content.
+%%                              inputs: the position's term is anonymous, so the
+%%                              writer alone is written.  The person fills the
+%%                              field and the clause reads Xi?.
+%%   *(t, Y?)                   the dual abbreviation: the position's writer is
+%%                              anonymous, so the ground term alone is written.
+%%                              t is the button's label; Y? is a context reader,
+%%                              the card's content.
+%%   *(A=t, Y?)                 both named, for a ground answer the clause reads.
+%%
+%% NAME THE POSITION EXACTLY WHEN THE CLAUSE READS ITS VALUE.  An answer is a
+%% tuple over the question's positions, not a substitution over names, so sibling
+%% clauses have different answers whether or not anything is named.  Of the four
+%% responders below, respond_coldcall names its answer because
+%% decision(Answer?, ...) carries it to the agent, and respond_escrow_cancel
+%% names its because the head binds Answer? into the cancel signal.  respond_trade
+%% and respond_group_invite name nothing: their answer reaches the clause only by
+%% selecting it, and the word the person chose has no image in the compiled code,
+%% which is accept_trade against reject_trade.
 %%
 %% RESPONDERS.  An arriving offer spawns a responder goal — respond_coldcall,
 %% respond_trade, respond_group_invite — one goal per offer, so offers pend
@@ -147,13 +161,13 @@ procedure respond_trade(TradeOffer?, TradeResponse, Stream(X)).
 
 %% Accept a proposed swap: the agent's answer clause gives the want-bonds and
 %% takes the offered ones (declining itself if the want-bonds are not held).
-*(Answer=yes, From?, WantSpec?, OfferedBonds?)
+*(yes, From?, WantSpec?, OfferedBonds?)
 respond_trade(offer(From, WantSpec, OfferedBonds), TradeResp?,
     [accept_trade(From?, WantSpec?, OfferedBonds?, TradeResp)]) :-
     ground(From?), ground(WantSpec?), ground(OfferedBonds?) | true.
 
 %% Decline: the offered bonds go back to the proposer.
-*(Answer=no, From?, WantSpec?, OfferedBonds?)
+*(no, From?, WantSpec?, OfferedBonds?)
 respond_trade(offer(From, WantSpec, OfferedBonds), TradeResp?,
     [reject_trade(From?, OfferedBonds?, TradeResp)]) :-
     ground(From?), ground(WantSpec?), ground(OfferedBonds?) | true.
@@ -162,13 +176,13 @@ procedure respond_group_invite(Constant?, GroupInviteOffer?, Channel(Stream(Grou
 
 %% Accept a group invitation: ack on the setup channel, hand the read side to
 %% the agent to await the group channel from the hub.
-*(Answer=yes, GroupId?)
+*(yes, GroupId?)
 respond_group_invite(Id, offer(GroupId), ch(ChRead, [ack(Id?)|[]]),
     [accept_group(GroupId?, ChRead?)]) :-
     ground(Id?), ground(GroupId?) | true.
 
 %% Decline: nack on the setup channel, closing it.
-*(Answer=no, GroupId?)
+*(no, GroupId?)
 respond_group_invite(_, offer(GroupId), ch(_ChRead, [nack|[]]), []) :-
     ground(GroupId?) | true.
 
@@ -242,7 +256,7 @@ procedure agent(Constant?, Stream(X)?, Stream(X)?, OutputsList?, Stream(Bond)?, 
 
 %% A peer cold-calls me: spawn a responder — the offer pends until the person
 %% answers; the answer is merged into UserIn.
-agent(Id, UserIn, [msg(Id1, intro(From, Resp?))|NetIn], Outs, Holdings, NextSerial, Clock, DateW?) :-
+agent(Id, UserIn, [msg(Id1, friend_request(From, Resp?))|NetIn], Outs, Holdings, NextSerial, Clock, DateW?) :-
     Id? =?= Id1? |
     respond_coldcall(offer(From?), Resp, Ans),
     merge(Ans?, UserIn?, UserIn1),
@@ -508,7 +522,7 @@ agent(Id, UserIn, NetIn, Outs, Holdings, NextSerial, Clock, []) :-
 *(Target)
 agent(Id, UserIn, NetIn, Outs, Holdings, NextSerial, Clock, DateW?) :-
     ground(Id?), ground(Target?) |
-    lookup_send('_net', msg(Target?, intro(Id?, Resp)), Outs?, Outs1),
+    lookup_send('_net', msg(Target?, friend_request(Id?, Resp)), Outs?, Outs1),
     inject_msg(Resp?, Target?, Id?, UserIn?, UserIn1),
     agent(Id?, UserIn1?, NetIn?, Outs1?, Holdings?, NextSerial?, Clock?, DateW).
 

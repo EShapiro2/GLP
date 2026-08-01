@@ -155,7 +155,7 @@ UserContent ::= connect(Constant)
               ; remove_from_group(GroupId, Constant).
 
 %% agent <-> network cold-call (2-arg msg(Dest, Content)): forwards the writer.
-NetColdCall ::= intro(Constant, Response?).
+NetColdCall ::= friend_request(Constant, Response?).
 
 %% Wrappers for the agent<->mediator channel (CONCRETE element types).
 %% AgentMsg is what the person's entry carries and what ui_mediator declares:
