@@ -18,6 +18,7 @@ import 'terms.dart';
 import 'machine_state.dart' show GoalRef;
 import 'package:glp_runtime/multiagent/mad_context.dart';
 import 'package:glp_runtime/multiagent/mad_helpers.dart' show GlobalName;
+import 'package:glp_runtime/multiagent/glp_network.dart' show GlpNetwork, PubKey;
 
 /// Result of executing a body kernel
 enum BodyKernelResult {
@@ -101,6 +102,12 @@ void registerStandardBodyKernels(BodyKernelRegistry registry) {
   registry.register('_send', 3, sendKernel);
   registry.register('_authorise_link', 2, authoriseLinkKernel);
   registry.register('_sign', 2, signKernel);
+
+  // Networking seam kernels (Definition Seam Predicates)
+  registry.register('_peer_address', 2, peerAddressKernel);
+  registry.register('_punch_udp', 1, punchUdpKernel);
+  registry.register('_place_declare', 3, placeDeclareKernel);
+  registry.register('_place_remove', 1, placeRemoveKernel);
 
   // Module-as-value: producer half. (`_run`/2 — the consumer — is registered by
   // the engine from engine_v2/module_kernels.dart, where CodeImage is in scope.)
@@ -932,6 +939,176 @@ BodyKernelResult signKernel(GlpRuntime rt, List<Object?> args) {
   }
   final sig = network.sign(Uint8List.fromList(canonical));
   return _bindResult(rt, args[1], ConstTerm(_bytesToHex(sig)));
+}
+
+// =============================================================================
+// NETWORKING SEAM KERNELS (Definition Seam Predicates)
+// =============================================================================
+//
+// The four kernels behind peer_address/2, punch_udp/1, place_declare/3 and
+// place_remove/1. Each reaches the networking layer through MadContext.network,
+// a GlpNetwork; the layer functions are GLP-Networking-API's, specified with
+// the seam contract. Their effects lie outside the madGLP transition system, as
+// sign's and self_module's do.
+//
+// Each GLP wrapper gates its arguments on ground/1, so they are ground here.
+// A realization that does not provide the function throws UnsupportedError,
+// which is a violated precondition and so an abort, as a missing MadContext is.
+
+/// The [MadContext] and its [GlpNetwork], or null with a diagnostic printed.
+({MadContext ctx, GlpNetwork network})? _seamContext(
+    GlpRuntime rt, String kernel) {
+  final ctx = rt.madContext;
+  if (ctx is! MadContext) {
+    print('[ABORT] $kernel: not in madGLP mode (no MadContext)');
+    return null;
+  }
+  final network = ctx.network;
+  if (network == null) {
+    print('[ABORT] $kernel: no GlpNetwork bound to this agent');
+    return null;
+  }
+  return (ctx: ctx, network: network);
+}
+
+/// The ground constant string at [arg], or null if it is not one.
+String? _groundString(GlpRuntime rt, Object? arg) {
+  final v = _deref(rt, arg);
+  if (v is ConstTerm && v.value is String) return v.value as String;
+  if (v is String) return v;
+  return null;
+}
+
+/// '_peer_address'(P?, A) — bind A to the address at which the layer observes
+/// peer P. P is the peer's name, which over a real network is its public key
+/// (§Agent Names), presented as 64 lowercase hex characters.
+BodyKernelResult peerAddressKernel(GlpRuntime rt, List<Object?> args) {
+  if (args.length != 2) {
+    print('[ABORT] \'_peer_address\'/2: expected 2 arguments, got ${args.length}');
+    return BodyKernelResult.abort;
+  }
+  final seam = _seamContext(rt, '\'_peer_address\'/2');
+  if (seam == null) return BodyKernelResult.abort;
+
+  final name = _groundString(rt, args[0]);
+  if (name == null) {
+    print('[ABORT] \'_peer_address\'/2: first argument (P) must be a ground '
+        'constant naming a peer, got ${_deref(rt, args[0])}');
+    return BodyKernelResult.abort;
+  }
+  final PubKey pk;
+  try {
+    pk = PubKey.fromHex(name);
+  } catch (e) {
+    print('[ABORT] \'_peer_address\'/2: peer name $name is not a 64-character '
+        'hex public key: $e');
+    return BodyKernelResult.abort;
+  }
+
+  final String? address;
+  try {
+    address = seam.network.observedPeerAddress(pk);
+  } on UnsupportedError catch (e) {
+    print('[ABORT] \'_peer_address\'/2: ${e.message}');
+    return BodyKernelResult.abort;
+  }
+  if (address == null) {
+    print('[ABORT] \'_peer_address\'/2: the layer observes no address for '
+        'peer $name');
+    return BodyKernelResult.abort;
+  }
+  return _bindResult(rt, args[1], ConstTerm(address));
+}
+
+/// '_punch_udp'(A?) — open a path to address A and return nothing.
+BodyKernelResult punchUdpKernel(GlpRuntime rt, List<Object?> args) {
+  if (args.length != 1) {
+    print('[ABORT] \'_punch_udp\'/1: expected 1 argument, got ${args.length}');
+    return BodyKernelResult.abort;
+  }
+  final seam = _seamContext(rt, '\'_punch_udp\'/1');
+  if (seam == null) return BodyKernelResult.abort;
+
+  final address = _groundString(rt, args[0]);
+  if (address == null) {
+    print('[ABORT] \'_punch_udp\'/1: argument (A) must be a ground constant '
+        'address, got ${_deref(rt, args[0])}');
+    return BodyKernelResult.abort;
+  }
+
+  try {
+    seam.network.punchUdp(address);
+  } on UnsupportedError catch (e) {
+    print('[ABORT] \'_punch_udp\'/1: ${e.message}');
+    return BodyKernelResult.abort;
+  }
+  return BodyKernelResult.success;
+}
+
+/// '_place_declare'(P?, R?, E) — declare place P of radius R about this agent's
+/// location at the time of the call, and grow this agent's own event stream for
+/// P from E's writer. The stream is fed serializer-fashion and closes only on
+/// place_remove or a superseding declaration.
+BodyKernelResult placeDeclareKernel(GlpRuntime rt, List<Object?> args) {
+  if (args.length != 3) {
+    print('[ABORT] \'_place_declare\'/3: expected 3 arguments, got ${args.length}');
+    return BodyKernelResult.abort;
+  }
+  final seam = _seamContext(rt, '\'_place_declare\'/3');
+  if (seam == null) return BodyKernelResult.abort;
+
+  final place = _groundString(rt, args[0]);
+  if (place == null) {
+    print('[ABORT] \'_place_declare\'/3: first argument (P) must be a ground '
+        'constant naming a place, got ${_deref(rt, args[0])}');
+    return BodyKernelResult.abort;
+  }
+  final radius = _getNum(rt, args[1]);
+  if (radius == null) {
+    print('[ABORT] \'_place_declare\'/3: second argument (R) must be a ground '
+        'number of metres, got ${_deref(rt, args[1])}');
+    return BodyKernelResult.abort;
+  }
+
+  final stream = _deref(rt, args[2]);
+  if (stream is! VarRef || !rt.heap.isWriter(stream.addr)) {
+    print('[ABORT] \'_place_declare\'/3: third argument (E) must be a writer');
+    return BodyKernelResult.abort;
+  }
+
+  try {
+    seam.ctx.declarePlace(place, radius.toDouble(), stream.addr);
+  } on UnsupportedError catch (e) {
+    print('[ABORT] \'_place_declare\'/3: ${e.message}');
+    return BodyKernelResult.abort;
+  }
+  return BodyKernelResult.success;
+}
+
+/// '_place_remove'(P?) — end the declaration of place P, closing its stream.
+/// Does nothing where P is not declared.
+BodyKernelResult placeRemoveKernel(GlpRuntime rt, List<Object?> args) {
+  if (args.length != 1) {
+    print('[ABORT] \'_place_remove\'/1: expected 1 argument, got ${args.length}');
+    return BodyKernelResult.abort;
+  }
+  final seam = _seamContext(rt, '\'_place_remove\'/1');
+  if (seam == null) return BodyKernelResult.abort;
+
+  final place = _groundString(rt, args[0]);
+  if (place == null) {
+    print('[ABORT] \'_place_remove\'/1: argument (P) must be a ground constant '
+        'naming a place, got ${_deref(rt, args[0])}');
+    return BodyKernelResult.abort;
+  }
+
+  try {
+    seam.ctx.removePlace(place);
+  } on UnsupportedError catch (e) {
+    print('[ABORT] \'_place_remove\'/1: ${e.message}');
+    return BodyKernelResult.abort;
+  }
+  return BodyKernelResult.success;
 }
 
 // =============================================================================

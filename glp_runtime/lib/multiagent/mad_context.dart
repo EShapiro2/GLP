@@ -526,6 +526,123 @@ class MadContext {
     }
   }
 
+  // ===========================================================================
+  // DECLARED PLACES (Definition Seam Predicates)
+  // ===========================================================================
+
+  /// The current tail writer of each declared place's event stream, by place
+  /// name. A place is in this map exactly while its declaration stands.
+  final Map<String, int> _placeStreamWriters = {};
+
+  /// Whether [place] is declared at this agent.
+  bool hasDeclaredPlace(String place) =>
+      _placeStreamWriters.containsKey(place);
+
+  /// Names of the places declared at this agent.
+  Iterable<String> get declaredPlaces => _placeStreamWriters.keys;
+
+  /// Declare [place] with radius [radiusMetres], its event stream growing from
+  /// [streamWriterAddr] — the writer of the `E` of `place_declare(P, R, E)`.
+  ///
+  /// A further declaration of the same place supersedes the earlier one, whose
+  /// stream is closed (Definition Seam Predicates). The stream exists before the
+  /// layer call, so an event cannot arrive before there is a stream to carry it.
+  void declarePlace(String place, double radiusMetres, int streamWriterAddr) {
+    final network = this.network;
+    if (network == null) {
+      throw StateError('no GlpNetwork bound to agent $agentId');
+    }
+
+    // A further declaration supersedes the earlier one: close its stream.
+    _closePlaceStream(place);
+
+    _placeStreamWriters[place] = streamWriterAddr;
+    _installPlaceEventHandler(network);
+    _trace('[MAD $agentId] declarePlace($place, $radiusMetres): stream '
+        'writer=$streamWriterAddr');
+
+    // The layer answers asynchronously; the stream exists either way. A refusal
+    // leaves the place undeclared at the layer, and Definition Seam Predicates
+    // closes a place's stream in exactly two cases — place_remove and a
+    // superseding declaration — of which a refusal is neither. So the stream
+    // stays open and carries nothing, which is what an unwatched place looks
+    // like. Reported to IGLP as a gap in the definition.
+    network.declarePlace(place, radiusMetres).then(
+      (declared) {
+        if (!declared) {
+          _trace('[MAD $agentId] declarePlace($place): refused by the '
+              'platform — the place is undeclared and its stream carries '
+              'nothing');
+        }
+      },
+      onError: (Object e) => _trace(
+          '[MAD $agentId] declarePlace($place): layer failed: $e'),
+    );
+  }
+
+  /// End the declaration of [place], closing its stream. Does nothing where
+  /// [place] is not declared (Definition Seam Predicates).
+  void removePlace(String place) {
+    final network = this.network;
+    if (network == null) {
+      throw StateError('no GlpNetwork bound to agent $agentId');
+    }
+    if (!_placeStreamWriters.containsKey(place)) return;
+    _closePlaceStream(place);
+    network.removePlace(place).catchError((Object e) =>
+        _trace('[MAD $agentId] removePlace($place): layer failed: $e'));
+    _trace('[MAD $agentId] removePlace($place)');
+  }
+
+  /// Route the layer's place events onto the declared places' streams. Installed
+  /// once per network; the layer reports observability on the stream of every
+  /// standing declaration, so each report arrives here already named.
+  void _installPlaceEventHandler(GlpNetwork network) {
+    if (identical(_placeEventHandlerNetwork, network)) return;
+    _placeEventHandlerNetwork = network;
+    network.onPlaceEvent = deliverPlaceEvent;
+  }
+
+  GlpNetwork? _placeEventHandlerNetwork;
+
+  /// Deliver [event] on [place]'s stream, serializer-fashion (Definition Seam
+  /// Predicates): bind the current tail writer to `[event | E'?]`, retain the
+  /// fresh writer as the new tail, and reactivate whatever suspended on the
+  /// stream. One declaration yields one stream however many events follow.
+  ///
+  /// An event for a place that is not declared here is dropped.
+  void deliverPlaceEvent(String place, PlaceEvent event) {
+    final currentWriter = _placeStreamWriters[place];
+    if (currentWriter == null) {
+      _trace('[MAD $agentId] place event $event for undeclared $place — dropped');
+      return;
+    }
+
+    final (freshWriter, freshReader) = runtime.heap.allocateVariable();
+    final cell = StructTerm(
+        '.', [ConstTerm(event.name), VarRef(freshReader)]);
+    final activations = runtime.heap.bindVariable(currentWriter, cell);
+    _placeStreamWriters[place] = freshWriter;
+    _trace('[MAD $agentId] place $place: $event, ${activations.length} '
+        'activations');
+
+    for (final act in activations) {
+      runtime.enqueueReactivatedGoal(act);
+    }
+  }
+
+  /// Close [place]'s stream — assign its tail `[]` — and forget the place.
+  /// Does nothing where [place] is not declared.
+  void _closePlaceStream(String place) {
+    final writer = _placeStreamWriters.remove(place);
+    if (writer == null) return;
+    final activations = runtime.heap.bindVariable(writer, ConstTerm('nil'));
+    for (final act in activations) {
+      runtime.enqueueReactivatedGoal(act);
+    }
+    _trace('[MAD $agentId] place $place: stream closed');
+  }
+
   /// The ground presentation of a global name (§Global Variable Names): the
   /// 2-ary structures `'_r'(P, I)` and `'_w'(P, I)`, functor giving polarity,
   /// first argument the anchor. This is the form a program sees — not the wire

@@ -206,18 +206,29 @@ class GlpEngine {
   }
 
   /// Load root self.glp (private — called by constructor).
+  ///
+  /// A failure here is fatal and is raised as one. Every program in the tree
+  /// resolves its predefined types and procedures through the root self.glp, so
+  /// an engine whose root scope failed to compile fails every subsequent load
+  /// for reasons that name nothing: the root scope comes back with no labels —
+  /// no merge, no sign — and no diagnostic anywhere. This was swallowed until
+  /// 2026-08-01, which made a broken root self.glp the least diagnosable failure
+  /// in the system.
   void _loadRootSelf() {
     final file = File(_rootSelfGlpPath);
-    if (file.existsSync()) {
-      try {
-        final source = file.readAsStringSync();
-        final compiler = GlpCompiler();
-        final prog = compiler.compile(source);
-        _loadedPrograms['__root_self__'] = prog;
-      } catch (e) {
-        // Silently skip failed load
-      }
+    if (!file.existsSync()) return;
+    final source = file.readAsStringSync();
+    final GlpCompiler compiler = GlpCompiler();
+    final BytecodeProgram prog;
+    try {
+      prog = compiler.compile(source);
+    } catch (e) {
+      throw StateError(
+          'root self.glp failed to compile: $_rootSelfGlpPath\n  $e\n'
+          'Loading the root self.glp is not optional — it is part of engine '
+          'initialization, and every program depends on the scope it defines.');
     }
+    _loadedPrograms['__root_self__'] = prog;
   }
 
   /// Load a GLP file from path

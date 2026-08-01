@@ -375,4 +375,27 @@ class SimulationNetworkClient extends GlpNetwork {
   @override
   void consumePeerLink(String uri) =>
       throw UnsupportedError('peer links not supported in SimulationNetwork');
+
+  // --- Seam predicates (unsupported in simulation, paper §Not provided) ---
+  //
+  // "The IP medium and the rendezvous server are absent: … peer_address/2 and
+  // punch_udp/1 are not provided. Platform geofencing is absent likewise:
+  // place_declare/3 and place_remove/1 are not provided." All four therefore
+  // throw, as the IP-medium calls above do, and [onPlaceEvent] never fires.
+
+  @override
+  String? observedPeerAddress(PubKey pk) =>
+      throw UnsupportedError('peer_address/2 not provided in SimulationNetwork');
+
+  @override
+  void punchUdp(String address) =>
+      throw UnsupportedError('punch_udp/1 not provided in SimulationNetwork');
+
+  @override
+  Future<bool> declarePlace(String place, double radiusMetres) =>
+      throw UnsupportedError('place_declare/3 not provided in SimulationNetwork');
+
+  @override
+  Future<void> removePlace(String place) =>
+      throw UnsupportedError('place_remove/1 not provided in SimulationNetwork');
 }

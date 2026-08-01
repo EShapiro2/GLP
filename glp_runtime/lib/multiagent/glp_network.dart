@@ -80,6 +80,21 @@ class PubKey {
   String toString() => 'PubKey(${hex.substring(0, 8)}…)';
 }
 
+/// An event on a declared place's stream (paper Section 5).
+///
+/// [entered] and [exited] are the declaring device's own crossings of the
+/// place. [unobservable] says the layer has stopped reporting crossings — the
+/// application losing the foreground, a permission withdrawn — and [observable]
+/// that reporting has resumed; between the two no crossing is seen and none is
+/// delivered late. The two exist because the layer takes no background-location
+/// permission: without them a place the device has left cannot be told from a
+/// place nothing is watching.
+///
+/// Observability is a property of the platform's reporting, not of one
+/// registration, so the layer reports it once and delivers it on the stream of
+/// every standing declaration.
+enum PlaceEvent { entered, exited, unobservable, observable }
+
 /// A device found by scanning, before its identity is fully established.
 ///
 /// Carries transport-specific identification; in the simulation realization the
@@ -170,4 +185,37 @@ abstract class GlpNetwork {
 
   /// Consume a peer-link URI to reach another layer.
   void consumePeerLink(String uri);
+
+  // --- Seam predicates (paper Section 5) ---
+  //
+  // The five functions behind the four networking seam predicates
+  // `peer_address/2`, `punch_udp/1`, `place_declare/3` and `place_remove/1`
+  // (IGLP, Definition Seam Predicates). GLP code decides who acts, when, and
+  // whether; each function performs only the mechanism.
+
+  /// The address at which this layer observes peer [pk], or null if none is
+  /// observed. Backs `peer_address/2`.
+  String? observedPeerAddress(PubKey pk);
+
+  /// Open a path to [address] and return nothing. Backs `punch_udp/1`.
+  void punchUdp(String address);
+
+  /// Declare [place] — the region of [radiusMetres] about this device's
+  /// location at the time of the call — and report its crossings through
+  /// [onPlaceEvent]. Backs `place_declare/3`.
+  ///
+  /// Returns false when the platform refuses, leaving the place undeclared. A
+  /// further declaration under the same name supersedes the first. GLP supplies
+  /// a name and a radius and receives no coordinates.
+  Future<bool> declarePlace(String place, double radiusMetres);
+
+  /// End the declaration of [place]. Backs `place_remove/1`. Removing a place
+  /// that is not declared does nothing.
+  Future<void> removePlace(String place);
+
+  /// Fires on each event of a declared place, naming the place and the event.
+  ///
+  /// A crossing reported for a place already removed or superseded is dropped
+  /// by the layer and never arrives here.
+  void Function(String place, PlaceEvent event)? onPlaceEvent;
 }
