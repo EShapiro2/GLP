@@ -23,65 +23,8 @@
 %% scalars for the offer card.  Multi-lot portfolios are Milestone 2.
 
 
-ReqId ::= req(Constant).
-
-%% User -> Mediator (ground commands from Dart).
-UserCmd     ::= connect(Constant)
-              ; unfriend(Constant)
-              ; decision(Decision, Constant, ReqId)
-              ; send(Constant, Constant)
-              ; mint(Constant, Constant)
-              ; advance_date(Constant)
-              ; balance
-              ; pay(Constant, Constant, Constant, Constant)
-              ; trade(Constant, Constant, Constant, Constant, Constant, Constant, Constant)
-              ; redeem(Constant, Constant, Constant, Constant, Constant, Constant, Constant)
-              ; accept_trade(Constant, ReqId)
-              ; reject_trade(Constant, ReqId)
-              ; deposit_escrow(Constant, Constant, Constant, Constant, Constant)
-              ; cancel_escrow(Constant, ReqId)
-              ; create_group(Constant)
-              ; invite_group(GroupId, Constant)
-              ; accept_group(GroupId, ReqId)
-              ; reject_group(GroupId, ReqId)
-              ; send_group(GroupId, Constant)
-              ; leave_group(GroupId)
-              ; remove_from_group(GroupId, Constant).
-
-%% Mediator -> User (ground notifications to Dart).
-UserNotify  ::= befriend(Constant, ReqId)
-              ; connected(Constant)
-              ; unfriended(Constant)
-              ; rejected
-              ; rejected(Constant)
-              ; received(Constant, Constant)
-              ; balance_report(Constant, Constant, Constant, Integer)
-              ; balances_synced(Constant)
-              ; date_advanced(Constant)
-              ; trade_proposed(Constant, Constant, Constant, Constant, ReqId)
-              ; trade_completed(Constant)
-              ; trade_failed(Constant)
-              ; trade_returned(Constant)
-              ; trade_returned_menu(Constant, Stream(Bond))
-              ; escrow_deposited(Constant, Constant, Constant, Constant, Constant, ReqId)
-              ; escrow_received(Constant, Constant, Constant, Constant, Constant)
-              ; escrow_released(Constant)
-              ; escrow_cancelled(Constant)
-              ; escrow_expired(Constant)
-              ; escrow_returned(Constant)
-              ; escrow_failed(Constant)
-              ; group_invite(GroupId, ReqId)
-              ; group_joined(GroupId)
-              ; group_joined_member(GroupId, Constant)
-              ; group_left(GroupId)
-              ; group_removed(GroupId)
-              ; group_received(GroupId, Constant, Constant).
-
-PendingEntry ::= pending(ReqId, PendingValue).
-PendingList  ::= [] ; [PendingEntry | PendingList].
-
-procedure ui_mediator(Constant?,
-                      Channel(Stream(AgentMsg), Stream(UserMsg))?,
+exported procedure ui_mediator(Constant?,
+                      Channel(OutputStream, Stream(UserMsg))?,
                       Channel(Stream(UserCmd), Stream(UserNotify))?,
                       PendingList?, Constant?).
 
@@ -481,6 +424,8 @@ ui_mediator(_, ch([], []), ch([], []), _, _).
 %% pending table, so accept_trade still replays the real lots.
 procedure first_lot(Stream(Lot)?, Constant, Constant, Constant).
 first_lot([lot(I, M, A) | _], I?, M?, A?).
+%% An empty spec names no lot; answer as lookup_pending below answers a miss.
+first_lot([], error, error, error).
 
 procedure lookup_pending(ReqId?, PendingValue, PendingList?, PendingList).
 lookup_pending(ReqId, Val?,

@@ -1,3 +1,5 @@
+-expose(currency_txn).
+
 %% self.glp — shared agent<->mediator protocol types for the Currencies app.
 %%
 %% Currencies among friends: the social-graph protocol (cold-call befriending,
@@ -156,5 +158,121 @@ UserContent ::= connect(Constant)
 NetColdCall ::= intro(Constant, Response?).
 
 %% Wrappers for the agent<->mediator channel (CONCRETE element types).
+%% AgentMsg is the vocabulary the mediator actually matches, but it is not the
+%% type ui_mediator declares: one OutputEntry element type serves the person,
+%% friend and '_net' entries alike, so the agent writes the person entry at
+%% OutputStream and ui_mediator must read it at OutputStream.  Narrowing the
+%% person entry to AgentMsg means splitting OutputEntry, which grassapp_agent
+%% .vglp restates -- vGLP's call, not the Code session's.  AgentMsg is kept
+%% because that narrowing needs it and nothing else supplies it.
 AgentMsg ::= msg(Constant, Constant, AgentContent).   %% agent -> mediator
 UserMsg  ::= msg(Constant, Constant, UserContent).    %% mediator -> agent
+
+
+%% --- Moved here from grassapp_agent.glp: a module resolves a type another
+%% module names only through the ancestor scope, and the play modules name these
+%% in their own declarations. ---
+%% Output content: union of agent->mediator, friend-channel, and net contents.
+OutputContent ::= befriend(Constant, Response?)
+                ; connected(Constant)
+                ; unfriended(Constant)
+                ; rejected
+                ; rejected(Constant)
+                ; received(Constant, Constant)
+                ; response(Response)
+                ; text(Constant)
+                ; intro(Constant, FriendChannel)
+                ; balance_report(Constant, Constant, Constant, Integer)
+                ; balances_synced(Constant)
+                ; date_advanced(Constant)
+                ; trade_proposed(Constant, Stream(Lot), TradeResponse?, Stream(Bond))
+                ; trade_completed(Constant)
+                ; trade_failed(Constant)
+                ; trade_returned(Constant)
+                ; trade_returned_menu(Constant, Stream(Bond))
+                ; trade_propose(Stream(Lot), Stream(Bond), TradeResponse?)
+                ; escrow_offer(Constant, Constant, Constant, Constant, EscrowBenResult)
+                ; escrow_deposited(Constant, Constant, Constant, Constant, Constant, EscrowCancel?)
+                ; escrow_received(Constant, Constant, Constant, Constant, Constant)
+                ; escrow_released(Constant)
+                ; escrow_cancelled(Constant)
+                ; escrow_expired(Constant)
+                ; escrow_returned(Constant)
+                ; escrow_failed(Constant)
+                ; coins(Stream(Bond))
+                ; balances(Stream(Bond))
+                ; group_invite(GroupId, Channel(Stream(GroupSetupResponse), Stream(Handshake)))
+                ; group_joined(GroupId)
+                ; group_joined_member(GroupId, Constant)
+                ; group_left(GroupId)
+                ; group_removed(GroupId)
+                ; group_received(GroupId, Constant, Constant)
+                ; unfriend.
+OutputMsg     ::= msg(Constant, Constant, OutputContent)
+                ; msg(Constant, NetColdCall).
+OutputStream  ::= [] ; [OutputMsg | OutputStream].
+
+%% Output entries: the keyed one-to-one/friend/user/net streams, plus group
+%% channels keyed by GroupKey (the member's own hub link, or a member entry the
+%% creator distributes to), carrying GroupMsg.
+OutputEntry ::= output(Constant, OutputStream?)
+              ; group_entry(GroupKey, Stream(GroupMsg)?).
+OutputsList ::= [] ; [OutputEntry|OutputsList].
+
+%% --- Moved here from grassapp_mediator.glp, for the same reason. ---
+ReqId ::= req(Constant).
+
+%% User -> Mediator (ground commands from Dart).
+UserCmd     ::= connect(Constant)
+              ; unfriend(Constant)
+              ; decision(Decision, Constant, ReqId)
+              ; send(Constant, Constant)
+              ; mint(Constant, Constant)
+              ; advance_date(Constant)
+              ; balance
+              ; pay(Constant, Constant, Constant, Constant)
+              ; trade(Constant, Constant, Constant, Constant, Constant, Constant, Constant)
+              ; redeem(Constant, Constant, Constant, Constant, Constant, Constant, Constant)
+              ; accept_trade(Constant, ReqId)
+              ; reject_trade(Constant, ReqId)
+              ; deposit_escrow(Constant, Constant, Constant, Constant, Constant)
+              ; cancel_escrow(Constant, ReqId)
+              ; create_group(Constant)
+              ; invite_group(GroupId, Constant)
+              ; accept_group(GroupId, ReqId)
+              ; reject_group(GroupId, ReqId)
+              ; send_group(GroupId, Constant)
+              ; leave_group(GroupId)
+              ; remove_from_group(GroupId, Constant).
+
+%% Mediator -> User (ground notifications to Dart).
+UserNotify  ::= befriend(Constant, ReqId)
+              ; connected(Constant)
+              ; unfriended(Constant)
+              ; rejected
+              ; rejected(Constant)
+              ; received(Constant, Constant)
+              ; balance_report(Constant, Constant, Constant, Integer)
+              ; balances_synced(Constant)
+              ; date_advanced(Constant)
+              ; trade_proposed(Constant, Constant, Constant, Constant, ReqId)
+              ; trade_completed(Constant)
+              ; trade_failed(Constant)
+              ; trade_returned(Constant)
+              ; trade_returned_menu(Constant, Stream(Bond))
+              ; escrow_deposited(Constant, Constant, Constant, Constant, Constant, ReqId)
+              ; escrow_received(Constant, Constant, Constant, Constant, Constant)
+              ; escrow_released(Constant)
+              ; escrow_cancelled(Constant)
+              ; escrow_expired(Constant)
+              ; escrow_returned(Constant)
+              ; escrow_failed(Constant)
+              ; group_invite(GroupId, ReqId)
+              ; group_joined(GroupId)
+              ; group_joined_member(GroupId, Constant)
+              ; group_left(GroupId)
+              ; group_removed(GroupId)
+              ; group_received(GroupId, Constant, Constant).
+
+PendingEntry ::= pending(ReqId, PendingValue).
+PendingList  ::= [] ; [PendingEntry | PendingList].

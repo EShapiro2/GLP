@@ -12,6 +12,12 @@
 %% Names are suffixed `_esc` so this play can coexist with the other plays if
 %% they are ever loaded together (grassapp files share one flat scope).
 
+imported procedure grassapp_agent # agent(Constant?, Stream(X)?, Stream(X)?, OutputsList?, Stream(Bond)?, Constant?, Constant?).
+imported procedure grassapp_mediator # ui_mediator(Constant?,
+                      Channel(OutputStream, Stream(UserMsg))?,
+                      Channel(Stream(UserCmd), Stream(UserNotify))?,
+                      PendingList?, Constant?).
+
 
 %% --- Two-way cold-call router --------------------------------------------
 
@@ -19,6 +25,9 @@ procedure route_esc(Stream(OutputMsg)?, Stream(OutputMsg), Stream(OutputMsg)).
 route_esc([msg(charlie, C)|Rest], [msg(charlie, C?)|A?], B?) :-
     route_esc(Rest?, A, B).
 route_esc([msg(frank, C)|Rest], A?, [msg(frank, C?)|B?]) :-
+    route_esc(Rest?, A, B).
+%% `_net` carries cold calls only (msg/2); a msg/3 there is not routable.
+route_esc([msg(_, _, _)|Rest], A?, B?) :-
     route_esc(Rest?, A, B).
 route_esc([], [], []).
 
@@ -48,20 +57,20 @@ play_escrow :-
     net_esc(CharlieNetOut?, FrankNetOut?, CharlieNetIn, FrankNetIn),
 
     %% Charlie — depositor
-    agent(charlie, CharlieAgentIn?, CharlieNetIn?,
+    grassapp_agent # agent(charlie, CharlieAgentIn?, CharlieNetIn?,
           [output(person, CharlieA2U) | [output('_net', CharlieNetOut)]],
           [], 1, 0),
-    ui_mediator(charlie, ch(CharlieA2U?, CharlieAgentIn),
+    grassapp_mediator # ui_mediator(charlie, ch(CharlieA2U?, CharlieAgentIn),
                 ch(CharlieCmds?, CharlieNotifies), [], 1),
     tee_esc(CharlieNotifies?, CharlieActorIn, CharlieLog),
     log_esc(charlie, CharlieLog?),
     depositor(T?, CharlieActorIn?, CharlieCmds),
 
     %% Frank — beneficiary
-    agent(frank, FrankAgentIn?, FrankNetIn?,
+    grassapp_agent # agent(frank, FrankAgentIn?, FrankNetIn?,
           [output(person, FrankA2U) | [output('_net', FrankNetOut)]],
           [], 1, 0),
-    ui_mediator(frank, ch(FrankA2U?, FrankAgentIn),
+    grassapp_mediator # ui_mediator(frank, ch(FrankA2U?, FrankAgentIn),
                 ch(FrankCmds?, FrankNotifies), [], 1),
     tee_esc(FrankNotifies?, FrankActorIn, FrankLog),
     log_esc(frank, FrankLog?),

@@ -29,6 +29,12 @@
 %% Entry point for the Dart harness / goalLabel: play_village/0.
 %% Requires: self.glp, currency_txn.glp, grassapp_agent.glp, grassapp_mediator.glp
 
+imported procedure grassapp_agent # agent(Constant?, Stream(X)?, Stream(X)?, OutputsList?, Stream(Bond)?, Constant?, Constant?).
+imported procedure grassapp_mediator # ui_mediator(Constant?,
+                      Channel(OutputStream, Stream(UserMsg))?,
+                      Channel(Stream(UserCmd), Stream(UserNotify))?,
+                      PendingList?, Constant?).
+
 
 %% --- Six-way crossbar -----------------------------------------------------
 
@@ -45,6 +51,9 @@ route6([msg(diana, C)|Rest], A?, B?, Ch?, [msg(diana, C?)|D?], E?, F?) :-
 route6([msg(eve, C)|Rest], A?, B?, Ch?, D?, [msg(eve, C?)|E?], F?) :-
     route6(Rest?, A, B, Ch, D, E, F).
 route6([msg(frank, C)|Rest], A?, B?, Ch?, D?, E?, [msg(frank, C?)|F?]) :-
+    route6(Rest?, A, B, Ch, D, E, F).
+%% `_net` carries cold calls only (msg/2); a msg/3 there is not routable.
+route6([msg(_, _, _)|Rest], A?, B?, Ch?, D?, E?, F?) :-
     route6(Rest?, A, B, Ch, D, E, F).
 route6([], [], [], [], [], [], []).
 
@@ -83,44 +92,44 @@ play_village :-
              AliceNetIn, BobNetIn, CharlieNetIn,
              DianaNetIn, EveNetIn, FrankNetIn),
 
-    agent(alice, AliceAgentIn?, AliceNetIn?,
+    grassapp_agent # agent(alice, AliceAgentIn?, AliceNetIn?,
           [output(person, AliceA2U) | [output('_net', AliceNetOut)]], [], 1, 0),
-    ui_mediator(alice, ch(AliceA2U?, AliceAgentIn), ch(AliceCmds?, AliceNotifies), [], 1),
+    grassapp_mediator # ui_mediator(alice, ch(AliceA2U?, AliceAgentIn), ch(AliceCmds?, AliceNotifies), [], 1),
     tee_v(AliceNotifies?, AliceIn, AliceLog),
     log_v(alice, AliceLog?),
     alice_v(AliceIn?, AliceCmds),
 
-    agent(bob, BobAgentIn?, BobNetIn?,
+    grassapp_agent # agent(bob, BobAgentIn?, BobNetIn?,
           [output(person, BobA2U) | [output('_net', BobNetOut)]], [], 1, 0),
-    ui_mediator(bob, ch(BobA2U?, BobAgentIn), ch(BobCmds?, BobNotifies), [], 1),
+    grassapp_mediator # ui_mediator(bob, ch(BobA2U?, BobAgentIn), ch(BobCmds?, BobNotifies), [], 1),
     tee_v(BobNotifies?, BobIn, BobLog),
     log_v(bob, BobLog?),
     bob_v(BobIn?, BobCmds),
 
-    agent(charlie, CharlieAgentIn?, CharlieNetIn?,
+    grassapp_agent # agent(charlie, CharlieAgentIn?, CharlieNetIn?,
           [output(person, CharlieA2U) | [output('_net', CharlieNetOut)]], [], 1, 0),
-    ui_mediator(charlie, ch(CharlieA2U?, CharlieAgentIn), ch(CharlieCmds?, CharlieNotifies), [], 1),
+    grassapp_mediator # ui_mediator(charlie, ch(CharlieA2U?, CharlieAgentIn), ch(CharlieCmds?, CharlieNotifies), [], 1),
     tee_v(CharlieNotifies?, CharlieIn, CharlieLog),
     log_v(charlie, CharlieLog?),
     charlie_v(T?, CharlieIn?, CharlieCmds),
 
-    agent(diana, DianaAgentIn?, DianaNetIn?,
+    grassapp_agent # agent(diana, DianaAgentIn?, DianaNetIn?,
           [output(person, DianaA2U) | [output('_net', DianaNetOut)]], [], 1, 0),
-    ui_mediator(diana, ch(DianaA2U?, DianaAgentIn), ch(DianaCmds?, DianaNotifies), [], 1),
+    grassapp_mediator # ui_mediator(diana, ch(DianaA2U?, DianaAgentIn), ch(DianaCmds?, DianaNotifies), [], 1),
     tee_v(DianaNotifies?, DianaIn, DianaLog),
     log_v(diana, DianaLog?),
     diana_v(DianaIn?, DianaCmds),
 
-    agent(eve, EveAgentIn?, EveNetIn?,
+    grassapp_agent # agent(eve, EveAgentIn?, EveNetIn?,
           [output(person, EveA2U) | [output('_net', EveNetOut)]], [], 1, 0),
-    ui_mediator(eve, ch(EveA2U?, EveAgentIn), ch(EveCmds?, EveNotifies), [], 1),
+    grassapp_mediator # ui_mediator(eve, ch(EveA2U?, EveAgentIn), ch(EveCmds?, EveNotifies), [], 1),
     tee_v(EveNotifies?, EveIn, EveLog),
     log_v(eve, EveLog?),
     eve_v(EveIn?, EveCmds),
 
-    agent(frank, FrankAgentIn?, FrankNetIn?,
+    grassapp_agent # agent(frank, FrankAgentIn?, FrankNetIn?,
           [output(person, FrankA2U) | [output('_net', FrankNetOut)]], [], 1, 0),
-    ui_mediator(frank, ch(FrankA2U?, FrankAgentIn), ch(FrankCmds?, FrankNotifies), [], 1),
+    grassapp_mediator # ui_mediator(frank, ch(FrankA2U?, FrankAgentIn), ch(FrankCmds?, FrankNotifies), [], 1),
     tee_v(FrankNotifies?, FrankIn, FrankLog),
     log_v(frank, FrankLog?),
     frank_v(FrankIn?, FrankCmds).
