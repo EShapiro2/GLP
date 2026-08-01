@@ -53,24 +53,28 @@ Do not use heredoc (`<<<`) — that requires approval per invocation.
 
 | Suite | Command (run from `/Users/udi/Grassroots/GLP/`) | Tests |
 |---|---|---|
-| Full suite (canonical) | `bash test/run_all_tests.sh` | 1078 (562 REPL + 516 Dart) |
-| Dart unit tests alone | `cd glp_runtime && dart test` | 528 (516 pass, 11 skip, 1 known red) |
+| Full suite (canonical) | `bash test/run_all_tests.sh` | 1208 (583 REPL + 625 Dart), 7 known red |
+| Dart unit tests alone | `cd glp_runtime && dart test` | 595 — glp_runtime only, not the whole Dart tree |
+| Flutter package alone | `cd glp_multiagent && flutter test` | 37 (30 pass, 7 known red) |
 | Book examples (compilation only) | `bash test/run_book_tests.sh` | 141 files |
 
-**`run_all_tests.sh` now covers the whole Dart tree** (Section Q), so it is the canonical gate on its own; running `dart test` separately is for a faster loop on Dart-only work, not for coverage.  Until 2026-07-29 the suite ran `dart test` on just two multiagent files, and four tests sat red in `test/engine_v2/` and `test/compiler/` unseen — `ALL TESTS PASSED!` had never spoken for them.
+**`run_all_tests.sh` covers the whole Dart tree** (Section Q), so it is the canonical gate on its own; running either package's tests separately is for a faster loop on that package, not for coverage.  Section Q needs two runners because the tree is two packages: `dart test` in `glp_runtime`, and `flutter test` in `glp_multiagent`, which is a Flutter package and which `dart test` cannot run at all.
 
-🔴 **Section Q gates on the known-red list, not on all-green.**  A test named in `KNOWN_RED` (top of Section Q) may be red without failing the suite; any other red fails it, **and a listed test that starts passing also fails it** — so the list cannot rot into a standing exception.  When you fix a listed test, delete its entry in the same commit.  Each entry names its owning project and the request that blocks it.  Counts above measured at commit `aa68b553` (2026-07-29).
+The claim was made true twice, and the counts above are measured at `4aee55e6` plus this session's commits.  Until 2026-07-29 the suite ran `dart test` on just two multiagent files, and four tests sat red in `test/engine_v2/` and `test/compiler/` unseen.  From then until 2026-08-02 Section Q ran `dart test` in `glp_runtime` alone while calling itself the whole tree, so all fifteen files in `glp_multiagent/test/` were outside the gate — seven of them red from 2026-08-01 afternoon, and every count quoted between sessions in that window was silent about them.  The multi-isolate load path is covered by those fifteen files and by nothing in `glp_runtime`.
+
+🔴 **Section Q gates on the known-red list, not on all-green.**  A test named in `KNOWN_RED` (top of Section Q) may be red without failing the suite; any other red fails it, **and a listed test that starts passing also fails it** — so the list cannot rot into a standing exception.  When you fix a listed test, delete its entry in the same commit.  Each entry names its owning project and the request that blocks it.  The seven listed today are vGLP's, one cause: `d4afc77b` added an imported declaration to the grassapp play files, so the co-loaded path those tests use rejects the source; they clear when vGLP moves them onto a directory load.
 
 **Redirect output to `/Users/udi/Grassroots/tmp/`** rather than asking Udi to paste:
 
 ```bash
 bash test/run_all_tests.sh > /Users/udi/Grassroots/tmp/glp-tests.txt 2>&1
 cd glp_runtime && dart test > /Users/udi/Grassroots/tmp/glp-dart.txt 2>&1
+cd glp_multiagent && flutter test > /Users/udi/Grassroots/tmp/glp-multiagent.txt 2>&1
 ```
 
 Then `Read` the file.  Do not use `/tmp/` or `/private/tmp/` — neither is in the allowed directories, so a chat session cannot read what you wrote there.
 
-🔴 **Never run `run_all_tests.sh` and `dart test` concurrently** — `run_all_tests.sh` itself invokes `dart test` (Sections M/O), so a parallel `dart test` contends on the Dart build lock and silently aborts the run mid-suite.  Always run them sequentially.
+🔴 **Never run `run_all_tests.sh` and `dart test` or `flutter test` concurrently** — Section Q invokes both, so a parallel run contends on the Dart build lock and silently aborts the suite mid-run.  Always run them sequentially.
 
 **Staleness is handled automatically**: `glpc` rebuilds the AOT binary when `lib/`/`bin/` change, and `run_all_tests.sh` rebuilds its `.dill` the same way.  Only if you bypass both and call `dart run bin/glp_repl.dart` directly after editing `lib/` might you need `rm glp_runtime/.dart_tool/repl.dill` — another reason to use `glpc`.
 
@@ -83,7 +87,7 @@ Before changing GLP runtime, types, root self.glp, or any cross-cutting code:
 3. Re-run it.  If anything new fails, STOP and investigate before committing.
 4. The commit gate is the one in root `claude.md`: the green count plus the known red set unchanged — add no new failures; do not demand all-green.  A red test you did not cause is baselined, not fixed silently and not ignored — report it, and add it to `KNOWN_RED` with its owner only if it is another project's to fix.
 
-🔴 **Never run `bash test/run_all_tests.sh` and `dart test` at the same time** — Section Q runs `dart test` itself, so a concurrent invocation contends on the Dart build lock and silently aborts one of them mid-run.  This is easy to do by accident when the suite is in the background; it corrupts the baseline rather than failing loudly.
+🔴 **Never run `bash test/run_all_tests.sh` and `dart test` or `flutter test` at the same time** — Section Q runs both itself, so a concurrent invocation contends on the Dart build lock and silently aborts one of them mid-run.  This is easy to do by accident when the suite is in the background; it corrupts the baseline rather than failing loudly.
 
 For changes confined to a single play/test/program, the baseline can be skipped at your judgment.
 

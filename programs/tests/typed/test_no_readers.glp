@@ -1,0 +1,15 @@
+% test_no_readers.glp - the no_readers/1 guard: succeeds on writers, suspends on readers
+%
+% Replaces the loose programs/tests/test_no_readers.glp, which posted its three
+% cases with the `?-` directive form the parser has no handling for, so it
+% loaded by no route and its cases ran nowhere.  All three were ground terms.
+% The property that separates no_readers from ground — a term carrying a writer
+% and no reader succeeds — went untested, as did suspension and the negated
+% form.
+
+exported procedure test_no_readers(_?, Constant).
+test_no_readers(X, ok) :- no_readers(X?) | true.
+
+exported procedure test_neg_no_readers(_?, Constant).
+test_neg_no_readers(X, has_readers) :- ~no_readers(X?) | true.
+test_neg_no_readers(X, none) :- no_readers(X?) | true.

@@ -579,6 +579,34 @@ HEREDOC
 
 check "channel make_pair succeeds" "succeeds" "$a20"
 
+# --- A20b: no_readers guard (succeeds on writers, suspends on readers) ---
+# Replaces the loose programs/tests/test_no_readers.glp, which posted its cases
+# with the `?-` directive form the parser has no handling for, so nothing ran
+# them; its three cases were all ground terms.  The guard never fails: it
+# succeeds when the term carries no reader — writers included, which is what
+# separates it from ground/1 — and otherwise suspends.
+echo "--- A20b: no_readers guard ---"
+a20b=$("$REPL_RUN" <<HEREDOC
+$TYPED/test_no_readers.glp
+test_no_readers(42, Rnr1).
+test_no_readers(foo(1, bar(2)), Rnr2).
+test_no_readers(f(Wnr), Rnr3).
+test_no_readers([1,2|Tnr], Rnr4).
+test_no_readers(g(Ynr?), Rnr5).
+test_neg_no_readers(h(Znr?), Rnr6).
+test_neg_no_readers(7, Rnr7).
+:quit
+HEREDOC
+2>&1)
+
+check "no_readers ground constant" "Rnr1 = ok" "$a20b"
+check "no_readers ground compound" "Rnr2 = ok" "$a20b"
+check "no_readers writer inside term" "Rnr3 = ok" "$a20b"
+check "no_readers writer tail" "Rnr4 = ok" "$a20b"
+check "no_readers reader suspends" "suspended" "$a20b"
+check "~no_readers finds reader" "Rnr6 = has_readers" "$a20b"
+check "~no_readers on ground falls through" "Rnr7 = none" "$a20b"
+
 # --- A21: Comprehensive defined guards ---
 echo "--- A21: Comprehensive defined guards ---"
 a21=$("$REPL_RUN" <<HEREDOC
@@ -2581,12 +2609,24 @@ echo ""
 # Section Q: Dart unit tests (whole tree)
 # =============================================================================
 #
-# Runs `dart test` over glp_runtime/test in full.  Before this section existed
-# the suite invoked `dart test` on exactly two named multiagent files, so
-# "ALL TESTS PASSED!" said nothing about test/engine_v2/, test/compiler/, or
-# anything else in the tree — four tests sat red there, unseen, for as long as
-# anyone had been reading this suite as the gate.  Sections M and O are folded
-# in here rather than run twice.
+# Runs `dart test` over glp_runtime/test and `flutter test` over
+# glp_multiagent/test, both in full.  Before this section existed the suite
+# invoked `dart test` on exactly two named multiagent files, so "ALL TESTS
+# PASSED!" said nothing about test/engine_v2/, test/compiler/, or anything else
+# in the tree — four tests sat red there, unseen, for as long as anyone had been
+# reading this suite as the gate.  Sections M and O are folded in here rather
+# than run twice.
+#
+# glp_multiagent was added on 2026-08-02 and until then the section's title was
+# false: it ran `dart test` in glp_runtime alone, so all fifteen files in
+# glp_multiagent/test/ were outside the gate.  Seven of them were red from
+# 2026-08-01 afternoon and nobody could see it, because every count anyone
+# quoted — 1155, 1160, 1162, 1171 — was silent about them.  The two packages
+# need different runners: glp_multiagent is a Flutter package, so `dart test`
+# cannot run it at all.  This also matters for what the suite gates: the
+# multi-isolate load path is covered by those fifteen files and by nothing in
+# glp_runtime, so a change to it landed before this extension would have gone
+# green here and proved nothing.
 #
 # The gate is the one in root claude.md: the green count plus the KNOWN RED set
 # unchanged.  A test listed below may be red without failing the suite; any
@@ -2600,11 +2640,30 @@ echo ""
 # is expected to fail until they fix it; the guard below fails the suite when a
 # listed test passes, so an entry is deleted in the same commit as its fix.
 #
-# The last entry went on 2026-08-01: TGLP declared every registered body kernel
-# in the root self.glp and narrowed Rule B to call position (9147fa4f), which is
-# the fix the entry was waiting for, so the -mode(system) single-file load it
-# named now passes.
-KNOWN_RED=()
+# glp_runtime entries carry the path `dart test` prints, relative to that
+# package: `test/...`.  glp_multiagent entries carry the package name too —
+# `glp_multiagent/test/...` — so the two trees cannot collide on a file of the
+# same name.
+#
+# The seven below are vGLP's, all one cause, all red since d4afc77b on
+# 2026-08-01: that commit added `imported procedure grassapp_agent#agent/7` to
+# the play files so programs/book/grassapp would pass the per-module check as a
+# directory program, and a source carrying an imported declaration is no longer
+# a self-contained program, so the co-loaded path these seven still use is
+# rejected.  vGLP claimed them at 2026-08-01 22:28 under the test-ownership
+# ruling and is moving them onto a directory load; that needs config.programDir,
+# which is IGLP's line and waits on send_to_net/1 reaching root self.glp.  vGLP
+# named six of the seven — paper_screenshots_constructs was not on their list
+# and fails on the same rejection of the same file.
+KNOWN_RED=(
+    "glp_multiagent/test/grassapp_scenario_test.dart: GrassApp scenario: four actors, chat replies, swap-then-redeem"
+    "glp_multiagent/test/grassapp_unfriend_test.dart: charlie pays then unfriends Bob → unfriended(charlie) reaches Bob"
+    "glp_multiagent/test/grassapp_loan_redeem_test.dart: GrassApp: loan then maturity-gated redemption on local clocks"
+    "glp_multiagent/test/grassapp_escrow_test.dart: GrassApp: escrow time-release pays the beneficiary"
+    "glp_multiagent/test/grassapp_village_test.dart: GrassApp village market: the seven operations of §8.2"
+    "glp_multiagent/test/paper_screenshots_grassapp_test.dart: fig:grassapp — Friends, Currencies, Chats panels of one GrassApp"
+    "glp_multiagent/test/paper_screenshots_constructs_test.dart: fig:constructs — card, form, and chat input in the running app"
+)
 
 echo "=== Section Q: Dart unit tests (whole tree) ==="
 echo ""
@@ -2626,6 +2685,43 @@ DART_TREE_FAILS=$(printf '%s' "$DART_TREE_CLEAN" \
     | grep -oE 'test/[A-Za-z0-9_/]+\.dart: .*\[E\]' \
     | sed 's/ \[E\]$//' \
     | sort -u) || true
+
+# glp_multiagent, the other half of the tree.  It is a Flutter package, so it
+# needs `flutter test`; `dart test` cannot run it.  A missing flutter is a hard
+# failure and not a skip — silently omitting half the tree is the defect this
+# extension exists to remove.
+if ! command -v flutter >/dev/null 2>&1; then
+    echo "  FAIL: flutter is not on PATH, so glp_multiagent/test/ cannot run"
+    echo "        Half the Dart tree would go unmeasured; the suite reports no"
+    echo "        result rather than a green one."
+    FAIL=$((FAIL + 1))
+    MA_PASSED=0
+    MA_FAILS=""
+else
+    MA_RESULT=$(cd "$GLP_DIR/glp_multiagent" && flutter test 2>&1) || true
+    MA_CLEAN=$(printf '%s' "$MA_RESULT" | sed 's/\x1b\[[0-9;]*m//g' | tr '\r' '\n') || true
+
+    MA_PASSED=$(printf '%s' "$MA_CLEAN" | grep -oE '\+[0-9]+' | tail -1 | tr -d '+') || true
+    MA_PASSED=${MA_PASSED:-0}
+
+    # `flutter test` prints absolute paths where `dart test` prints package-
+    # relative ones.  Normalise to `glp_multiagent/test/...`, the form KNOWN_RED
+    # carries.
+    MA_FAILS=$(printf '%s' "$MA_CLEAN" \
+        | grep -oE '[A-Za-z0-9_/.-]+\.dart: .*\[E\]' \
+        | sed 's/ \[E\]$//' \
+        | sed 's|^.*/glp_multiagent/test/|glp_multiagent/test/|' \
+        | sort -u) || true
+fi
+
+DART_TREE_PASSED=$((DART_TREE_PASSED + MA_PASSED))
+if [ -n "$MA_FAILS" ]; then
+    if [ -n "$DART_TREE_FAILS" ]; then
+        DART_TREE_FAILS=$(printf '%s\n%s' "$DART_TREE_FAILS" "$MA_FAILS")
+    else
+        DART_TREE_FAILS="$MA_FAILS"
+    fi
+fi
 
 Q_NEW_RED=0
 Q_KNOWN_RED=0

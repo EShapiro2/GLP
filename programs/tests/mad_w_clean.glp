@@ -1,4 +1,7 @@
-%% mad_w_probe.glp — minimal cross-isolate `_w` writer-match reproducer.
+%% mad_w_clean.glp — minimal cross-isolate `_w` writer-match reproducer, on a
+%% closed channel.  It is mad_w_probe.glp with `ch(S?, closed)` in place of
+%% `ch(S?, _)` at line 28, and that one line is the whole difference: this file
+%% reports bob_ch_matched and mad_w_probe.glp reports bob_ch_otherwise.
 %%
 %% No agent/4, no mediator, no UI. Alice MAD-sends a bare writer (wrapped in
 %% w/1) to Bob; Bob tries to match the received payload against the nested
@@ -10,7 +13,7 @@
 %%   bob_fell_to_otherwise => `_w` reader is NOT admissible in a nested head;
 %%                            that is the madGLP fault.
 %%
-%% Run via glp_multiagent/test/mad_w_probe_test.dart (two isolates).
+%% Run via glp_multiagent/test/mad_w_clean_test.dart (two isolates).
 
 
 procedure agent_init(Constant?, Stream(X)?, Stream(X)?).
