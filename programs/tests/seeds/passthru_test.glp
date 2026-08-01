@@ -1,2 +1,0 @@
-%% Provenance: salvaged from programs/misc/ — A5 Stage A slice 5 (2026-06-13). Regression seed; not in any suite.
-passthru(X, X?, Y, Y?).
