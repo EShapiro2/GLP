@@ -16,7 +16,7 @@
 
 imported procedure grassapp_agent # agent(Constant?, Stream(X)?, Stream(X)?, OutputsList?, Stream(Bond)?, Constant?, Constant?).
 imported procedure grassapp_mediator # ui_mediator(Constant?,
-                      Channel(OutputStream, Stream(UserMsg))?,
+                      Channel(Stream(AgentMsg), Stream(UserMsg))?,
                       Channel(Stream(UserCmd), Stream(UserNotify))?,
                       PendingList?, Constant?).
 
@@ -26,7 +26,7 @@ agent_init(Id, UserIn, NetIn) :-
     ground(Id?) |
     send_to_net(NetOut?),
     grassapp_agent # agent(Id?, AgentIn?, NetIn?,
-          [output(person, A2U) | [output('_net', NetOut)]],
+          [person_output(A2U) | [output('_net', NetOut)]],
           [], 1, 0),
     grassapp_mediator # ui_mediator(Id?, ch(A2U?, AgentIn), ch(UserIn?, UserOut), [], 1),
     send_to_user(UserOut?).
@@ -37,7 +37,7 @@ actor_init(Id, Target, NetIn) :-
     ground(Id?), ground(Target?) |
     send_to_net(NetOut?),
     grassapp_agent # agent(Id?, AgentIn?, NetIn?,
-          [output(person, A2U) | [output('_net', NetOut)]], [], 1, 0),
+          [person_output(A2U) | [output('_net', NetOut)]], [], 1, 0),
     grassapp_mediator # ui_mediator(Id?, ch(A2U?, AgentIn), ch(Cmds?, Notifies), [], 1),
     duo_actor(Id?, Target?, Notifies?, Cmds).
 

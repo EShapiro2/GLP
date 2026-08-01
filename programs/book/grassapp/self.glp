@@ -158,13 +158,9 @@ UserContent ::= connect(Constant)
 NetColdCall ::= intro(Constant, Response?).
 
 %% Wrappers for the agent<->mediator channel (CONCRETE element types).
-%% AgentMsg is the vocabulary the mediator actually matches, but it is not the
-%% type ui_mediator declares: one OutputEntry element type serves the person,
-%% friend and '_net' entries alike, so the agent writes the person entry at
-%% OutputStream and ui_mediator must read it at OutputStream.  Narrowing the
-%% person entry to AgentMsg means splitting OutputEntry, which grassapp_agent
-%% .vglp restates -- vGLP's call, not the Code session's.  AgentMsg is kept
-%% because that narrowing needs it and nothing else supplies it.
+%% AgentMsg is what the person's entry carries and what ui_mediator declares:
+%% OutputEntry names the person's entry separately (below), so the type of the
+%% person channel is the agent->mediator vocabulary and nothing wider.
 AgentMsg ::= msg(Constant, Constant, AgentContent).   %% agent -> mediator
 UserMsg  ::= msg(Constant, Constant, UserContent).    %% mediator -> agent
 
@@ -172,50 +168,34 @@ UserMsg  ::= msg(Constant, Constant, UserContent).    %% mediator -> agent
 %% --- Moved here from grassapp_agent.glp: a module resolves a type another
 %% module names only through the ancestor scope, and the play modules name these
 %% in their own declarations. ---
-%% Output content: union of agent->mediator, friend-channel, and net contents.
-OutputContent ::= befriend(Constant, Response?)
-                ; connected(Constant)
-                ; unfriended(Constant)
-                ; rejected
-                ; rejected(Constant)
-                ; received(Constant, Constant)
-                ; response(Response)
+%% Output content: what a friend, or '_net', can receive.  The person's entry
+%% carries AgentContent, not this: the two vocabularies are disjoint apart from
+%% the friend-channel constructors, and keeping them apart is what lets the
+%% mediator read the person channel at AgentMsg.
+OutputContent ::= response(Response)
                 ; text(Constant)
                 ; intro(Constant, FriendChannel)
-                ; balance_report(Constant, Constant, Constant, Integer)
-                ; balances_synced(Constant)
-                ; date_advanced(Constant)
-                ; trade_proposed(Constant, Stream(Lot), TradeResponse?, Stream(Bond))
-                ; trade_completed(Constant)
-                ; trade_failed(Constant)
-                ; trade_returned(Constant)
-                ; trade_returned_menu(Constant, Stream(Bond))
-                ; trade_propose(Stream(Lot), Stream(Bond), TradeResponse?)
-                ; escrow_offer(Constant, Constant, Constant, Constant, EscrowBenResult)
-                ; escrow_deposited(Constant, Constant, Constant, Constant, Constant, EscrowCancel?)
-                ; escrow_received(Constant, Constant, Constant, Constant, Constant)
-                ; escrow_released(Constant)
-                ; escrow_cancelled(Constant)
-                ; escrow_expired(Constant)
-                ; escrow_returned(Constant)
-                ; escrow_failed(Constant)
                 ; coins(Stream(Bond))
                 ; balances(Stream(Bond))
+                ; trade_propose(Stream(Lot), Stream(Bond), TradeResponse?)
+                ; escrow_offer(Constant, Constant, Constant, Constant, EscrowBenResult)
                 ; group_invite(GroupId, Channel(Stream(GroupSetupResponse), Stream(Handshake)))
-                ; group_joined(GroupId)
-                ; group_joined_member(GroupId, Constant)
-                ; group_left(GroupId)
-                ; group_removed(GroupId)
-                ; group_received(GroupId, Constant, Constant)
                 ; unfriend.
 OutputMsg     ::= msg(Constant, Constant, OutputContent)
                 ; msg(Constant, NetColdCall).
 OutputStream  ::= [] ; [OutputMsg | OutputStream].
 
-%% Output entries: the keyed one-to-one/friend/user/net streams, plus group
-%% channels keyed by GroupKey (the member's own hub link, or a member entry the
-%% creator distributes to), carrying GroupMsg.
-OutputEntry ::= output(Constant, OutputStream?)
+%% Output entries.  Three correspondents, three entries, three element types:
+%%   person_output — the one channel to the person, carrying AgentMsg, the
+%%     agent->mediator vocabulary.  There is exactly one person, so the entry
+%%     carries no key; send_person/3 reaches it.
+%%   output(Key, ...) — a friend, or '_net', carrying OutputMsg.
+%%   group_entry(GroupKey, ...) — a group hub link or a member entry, GroupMsg.
+%% The person's entry is named apart so that its type admits only what the
+%% person can receive: one element type over all three would be the union, and
+%% the mediator would have to read the person channel at that union.
+OutputEntry ::= person_output(Stream(AgentMsg)?)
+              ; output(Constant, OutputStream?)
               ; group_entry(GroupKey, Stream(GroupMsg)?).
 OutputsList ::= [] ; [OutputEntry|OutputsList].
 

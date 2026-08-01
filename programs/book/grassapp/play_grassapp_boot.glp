@@ -16,7 +16,7 @@
 
 imported procedure grassapp_agent # agent(Constant?, Stream(X)?, Stream(X)?, OutputsList?, Stream(Bond)?, Constant?, Constant?).
 imported procedure grassapp_mediator # ui_mediator(Constant?,
-                      Channel(OutputStream, Stream(UserMsg))?,
+                      Channel(Stream(AgentMsg), Stream(UserMsg))?,
                       Channel(Stream(UserCmd), Stream(UserNotify))?,
                       PendingList?, Constant?).
 
@@ -130,23 +130,23 @@ coin_drain(_, [], []).
 agent_init(bob, UserIn, _) :-
     create_bonds(bob, 0, 10, 1, BobCash),
     grassapp_agent # agent(bob, BAgentIn?, BNetIn?,
-          [output(person, BA2U) | [output('_net', BNetOut)]], BobCash?, 11, 0),
+          [person_output(BA2U) | [output('_net', BNetOut)]], BobCash?, 11, 0),
     grassapp_mediator # ui_mediator(bob, ch(BA2U?, BAgentIn), ch(UserIn?, BUserOut), [], 1),
     send_to_user(BUserOut?),
     grassapp_agent # agent(alice, AAgentIn?, ANetIn?,
-          [output(person, AA2U) | [output('_net', ANetOut)]], [], 1, 0),
+          [person_output(AA2U) | [output('_net', ANetOut)]], [], 1, 0),
     grassapp_mediator # ui_mediator(alice, ch(AA2U?, AAgentIn), ch(ACmds?, AUserOut), [], 1),
     alice_actor(AUserOut?, ACmds),
     grassapp_agent # agent(charlie, CAgentIn?, CNetIn?,
-          [output(person, CA2U) | [output('_net', CNetOut)]], [], 1, 0),
+          [person_output(CA2U) | [output('_net', CNetOut)]], [], 1, 0),
     grassapp_mediator # ui_mediator(charlie, ch(CA2U?, CAgentIn), ch(CCmds?, CUserOut), [], 1),
     charlie_actor(CUserOut?, CCmds),
     grassapp_agent # agent(dana, DAgentIn?, DNetIn?,
-          [output(person, DA2U) | [output('_net', DNetOut)]], [], 1, 0),
+          [person_output(DA2U) | [output('_net', DNetOut)]], [], 1, 0),
     grassapp_mediator # ui_mediator(dana, ch(DA2U?, DAgentIn), ch(DCmds?, DUserOut), [], 1),
     dana_actor(DUserOut?, DCmds),
     grassapp_agent # agent(eve, EAgentIn?, ENetIn?,
-          [output(person, EA2U) | [output('_net', ENetOut)]], [], 1, 0),
+          [person_output(EA2U) | [output('_net', ENetOut)]], [], 1, 0),
     grassapp_mediator # ui_mediator(eve, ch(EA2U?, EAgentIn), ch(ECmds?, EUserOut), [], 1),
     eve_actor(EUserOut?, ECmds),
     crossbar(ANetOut?, BNetOut?, CNetOut?, DNetOut?, ENetOut?,

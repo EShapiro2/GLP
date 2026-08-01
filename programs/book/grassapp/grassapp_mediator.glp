@@ -24,7 +24,7 @@
 
 
 exported procedure ui_mediator(Constant?,
-                      Channel(OutputStream, Stream(UserMsg))?,
+                      Channel(Stream(AgentMsg), Stream(UserMsg))?,
                       Channel(Stream(UserCmd), Stream(UserNotify))?,
                       PendingList?, Constant?).
 
