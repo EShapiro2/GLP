@@ -668,20 +668,21 @@ WellTypedResult _checkBodyAtom(
         // the types and re-checks against the complete DFA.
         final present = inferredDecl.argTypes
             .every((t) => dfa.automata.containsKey(getFullTypeName(t)));
-        if (!present) return (WellTypedResult.success({}), null);
+        if (!present) {
+          return (_checkArgumentModes(atom, inferredDecl, env), null);
+        }
       } else {
         // Inference failed (e.g. caller uses monomorphic types instead of the
-        // parameterized form). Skip the body atom check — the proc's own clauses
-        // are checked per concrete instantiation by the closure (and not at all
-        // if the proc is never instantiated; typed-program.md "Programs and
-        // Modules").
-        return (WellTypedResult.success({}), null);
+        // parameterized form). The element type is the closure's to supply, and
+        // the proc's own clauses are checked per concrete instantiation there;
+        // but the MODES of this call are fixed by the template and are checked
+        // here, not deferred.
+        return (_checkArgumentModes(atom, paramTemplate, env), null);
       }
     } else {
-      // No caller variable types available — can't infer type params.
-      // Skip body atom check; the proc's own clauses are checked per concrete
-      // instantiation by the closure (not at all if never instantiated).
-      return (WellTypedResult.success({}), null);
+      // No caller variable types available — can't infer type params. Same as
+      // above: the element type waits for the closure, the modes do not.
+      return (_checkArgumentModes(atom, paramTemplate, env), null);
     }
   }
 
@@ -700,6 +701,76 @@ WellTypedResult _checkBodyAtom(
       ),
     ]), null);
   }
+}
+
+/// Condition 2 of `def:well-typed-clause` (`sections/well-typing.tex`) restricted
+/// to what a call to a parameterised procedure decides without its instantiation.
+///
+/// The mode of each TOP-LEVEL argument of a parameterised declaration is fixed by
+/// the template — `merge(Stream(X)?, Stream(X)?, Stream(X))` consumes at 1 and 2
+/// and produces at 3 whatever `X` turns out to be — so an argument that is itself
+/// a variable must be a reader at 1 and 2 and a writer at 3, whether or not the
+/// element type is known. That is the mode-correspondence half of consistency
+/// (`def:consistent-paths` rows 2 and 3, the same test `checkLeafConsistency`
+/// case 1 applies); the element-type half genuinely needs the instantiation and
+/// stays with the closure.
+///
+/// 🔴 **Only the top level.** A mode NESTED inside an argument is not fixed by the
+/// template: it complements at each embedded `?` of the element type's definition
+/// (`def:moded-head` step 1), and the element type is precisely what inference
+/// could not supply. Checking nested positions here propagates the argument's own
+/// mode into them and rejects correct writer-forwarding — the hollow message of
+/// `sections/typed-glp.tex`, and `NetColdCall ::= intro(Constant, Response?)` in
+/// `programs/social/graph/self.glp`, where the writer at slot 2 is right because
+/// the type says `?` there. Measured 2026-08-02: a first cut of this function
+/// that walked every path reported 29 such rejections across `social/graph`,
+/// `cssn` and `social_graph_simulated_ui`, every one of them false.
+///
+/// This runs at the three points where the full per-argument check cannot: when
+/// call-site inference binds no parameter, when no caller variable types are
+/// available, and when the inferred instantiation names types this DFA has not
+/// materialised. Until 2026-08-02 all three returned success, so a call to the
+/// root scope's `merge`, `send`, `receive` or `new_channel` with a writer and a
+/// reader transposed was passed in silence — the error class
+/// `sections/introduction.tex` gives as the paper's motivating example, and the
+/// one the same call to a monomorphic procedure has always been rejected for.
+WellTypedResult _checkArgumentModes(
+    ast.Goal atom, ProcDecl decl, TypeEnvironment env) {
+  final ModedTerm modedTerm;
+  try {
+    modedTerm = producedTerm(atom, decl, typeEnv: env);
+  } on ArityMismatchError catch (e) {
+    return WellTypedResult.failure([
+      InconsistentPathError(
+        ModedPath([PathStep(symbol: e.message, argIndex: 0, mode: Mode.produce)]),
+        e.message,
+      ),
+    ]);
+  }
+  if (modedTerm is! ModedCompound) return WellTypedResult.success({});
+
+  final errors = <WellTypedError>[];
+  for (int i = 0; i < decl.arity && i < modedTerm.args.length; i++) {
+    final arg = modedTerm.args[i];
+    if (arg is! ModedVariable) continue; // nested modes are the closure's
+    final wanted = arg.isReader ? Mode.consume : Mode.produce;
+    if (arg.mode == wanted) continue;
+    final expected = arg.isReader ? '↓ (consume)' : '↑ (produce)';
+    final actual = arg.mode == Mode.consume ? '↓ (consume)' : '↑ (produce)';
+    errors.add(InconsistentPathError(
+        ModedPath([
+          PathStep(
+              symbol: arg.isReader ? '${arg.name}?' : arg.name,
+              argIndex: i + 1,
+              mode: arg.mode)
+        ]),
+        'Variable mode mismatch: ${arg.isReader ? "reader" : "writer"} '
+        'requires $expected, got $actual'));
+  }
+
+  return errors.isEmpty
+      ? WellTypedResult.success({})
+      : WellTypedResult.failure(errors);
 }
 
 /// Check a remote goal (M # proc(...)) against the imported procedure declaration.

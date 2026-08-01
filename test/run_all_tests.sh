@@ -1343,6 +1343,11 @@ NEGATIVE_FILES=(
     # (typed-program.md "Modular Checking via Abstract Parameters",
     # sec:abstract-parameters). Within a program an instantiation supplies the verdict.
     "$GLP_DIR/programs/tests/param_inspect_uninstantiated.glp"
+    # Condition 2 of def:well-typed-clause at a call to a parameterised
+    # procedure whose parameter the call site cannot bind: the modes of the
+    # top-level arguments are fixed by the template, so a transposed writer and
+    # reader is rejected without waiting for the element type.
+    "$GLP_DIR/programs/tests/param_call_mode_neg.glp"
 
     # --- book/ examples (owned by GLP-ICLP) mis-declared with a bare type
     # parameter where a concrete type belongs: a constant/functor sits at the

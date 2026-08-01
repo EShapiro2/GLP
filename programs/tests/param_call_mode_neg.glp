@@ -1,0 +1,19 @@
+%% Negative fixture for condition 2 of def:well-typed-clause (well-typing.tex)
+%% at a call to a PARAMETERISED procedure.
+%%
+%% merge/3 is declared in the root self.glp as
+%%   procedure merge(Stream(X)?, Stream(X)?, Stream(X)).
+%% so arguments 1 and 2 are consumed and argument 3 is produced whatever X is.
+%% The call below transposes them: Zs is a writer at a consumed position and Xs?
+%% a reader at a produced one.
+%%
+%% Until 2026-08-02 this loaded clean while the identical call to a monomorphic
+%% callee was rejected: call-site inference could not bind X here, and all three
+%% inference-failure paths returned success rather than checking anything. The
+%% mode half of the check does not need X, and is now made. introduction.tex
+%% gives exactly this error class as the paper's motivating example.
+Thing ::= a ; b.
+Bag ::= [] ; [Thing | Bag].
+
+procedure use(Bag?, Bag?, Bag).
+use(Xs, Ys, Zs?) :- merge(Zs, Ys?, Xs?).
