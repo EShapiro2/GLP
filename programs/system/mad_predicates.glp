@@ -33,7 +33,7 @@ GlobalName ::= '_w'(Constant, Integer) ; '_r'(Constant, Integer).
 %% Note: Q is used multiple times, but this is safe because messages in the
 %% network output stream contain ground destination agents.
 
-procedure send_to_net(NetStream?).
+exported procedure send_to_net(NetStream?).
 send_to_net([msg(Q, T) | In]) :- ground(Q?) | global_send(msg(Q?, T?), '_w'(Q?, 0), Q?), send_to_net(In?).
 send_to_net([]).
 

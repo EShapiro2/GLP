@@ -22,12 +22,15 @@
 library;
 
 import 'dart:convert';
+import 'dart:io';
 import 'dart:typed_data';
 import 'package:crypto/crypto.dart' as crypto;
 import 'package:glp_runtime/compiler/ast.dart';
 import 'package:glp_runtime/compiler/glp_printer.dart';
+import 'package:glp_runtime/compiler/partial_evaluator.dart';
 import 'package:glp_runtime/compiler/program_linker.dart';
 import 'package:glp_runtime/analysis/type_checker/type_ast.dart';
+import 'package:glp_runtime/analysis/type_checker/type_environment_builder.dart';
 
 /// The canonical print of a linked, pruned program (§6).
 String canonicalPrint({
@@ -81,6 +84,19 @@ Uint8List hashOfPrint(String canonical) =>
   String projectDir, {
   required String rootSelfGlpPath,
 }) {
+  // Install the root scope from the file we were given, as GlpEngine does at
+  // construction. Without this, buildRootScopeEnvironment() falls back to the
+  // bare Dart rootScopeTypes, which NAMES the root self.glp's derived types but
+  // does not DEFINE them, so a module using one in a type definition — as
+  // programs/system/mad_predicates.glp uses Constant in NetMsg — fails to check
+  // with "Unresolved type". The partial evaluator needs the same source.
+  final rootSelfFile = File(rootSelfGlpPath);
+  if (rootSelfFile.existsSync()) {
+    final rootSource = rootSelfFile.readAsStringSync();
+    setRootScopeUnitClauseSource(rootSource);
+    setRootScopeEnvironmentSource(rootSource);
+  }
+
   final modules =
       discoverProgram(projectDir, rootSelfGlpPath: rootSelfGlpPath);
   // checkedLinkedProgram type-checks and applies the five linking steps,
