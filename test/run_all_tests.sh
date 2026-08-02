@@ -2130,6 +2130,33 @@ check_not "cross-module project not loaded green" "Loaded program: .*cross_modul
 
 echo ""
 
+echo "--- A directory whose root self.glp exports nothing is not a program ---"
+# modules.tex §Static Linking, "Entry and the absence of a boot module": a root
+# self.glp that exports no procedure gives a program with no entry points, which
+# step 5 restricts to the empty set, so no initial goal resolves against it and
+# the loader rejects it rather than linking it and reporting success.
+# co_load_neg's self.glp declares the type Coin and exports no procedure.
+output=$("$REPL_RUN" <<HEREDOC
+$GLP_DIR/programs/tests/co_load_neg
+:quit
+HEREDOC
+2>&1)
+check "no-export directory rejected" "has no entry points" "$output"
+check "rejection names the root self.glp" "self.glp exports no procedure" "$output"
+check_not "no-export directory not loaded green" "Loaded program: .*co_load_neg" "$output"
+
+# Control: the same load path over a directory whose root self.glp forwards an
+# export. One entry point is enough; it need not be reached from another.
+output=$("$REPL_RUN" <<HEREDOC
+$GLP_DIR/programs/tests/module_self_procs
+test_self_proc(21, Y).
+:quit
+HEREDOC
+2>&1)
+check "forwarded root export is an entry point" "Y = 42" "$output"
+
+echo ""
+
 # =============================================================================
 # Section J: SecureBonds (project-directory loading)
 # =============================================================================
@@ -2216,14 +2243,21 @@ HEREDOC
 check "S3 integer instantiation" "Zi = \[1, 4, 2, 5, 3, 6\]" "$s3"
 check "S3 constant instantiation" "Zc = \[\"a\", \"c\", \"b\", \"d\"\]" "$s3"
 
-# --- S4: regression — currencies/play12 loads standalone (inventory I-1) ---
-echo "--- S4: currencies/play12 standalone load (regression) ---"
+# --- S4: restated — currencies/play12 is not a program (Coordination, 2026-08-02 10:20) ---
+# It asserted that play12 loads standalone. It does not and must not: play12/self.glp
+# exports no procedure, so the program has no entry points (modules.tex §Static
+# Linking, "Entry and the absence of a boot module"), and the play itself runs
+# from programs/currencies. Coordination ruled the old assertion wrong rather
+# than Grassroots Currencies' to repair. What the check was FOR — the I-1
+# regression, an ancestor type failing to resolve through the directory load —
+# is kept: an UnknownType would still be wrong, and now so would a load.
+echo "--- S4: currencies/play12 is not a program (restated) ---"
 s4=$("$REPL_RUN" <<HEREDOC
 $GLP_DIR/programs/currencies/play12
 :quit
 HEREDOC
 2>&1)
-check "S4 play12 loads standalone" "Loaded program" "$s4"
+check "S4 play12 rejected: no entry points" "has no entry points" "$s4"
 check_not "S4 no unknown type error" "UnknownType" "$s4"
 
 # --- S5: opaque pass-through walker ---

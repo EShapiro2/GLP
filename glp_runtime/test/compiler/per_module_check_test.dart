@@ -70,11 +70,14 @@ void main() {
 
     test('programs whose every module is well-typed still load', () {
       // Control: the same machinery over a directory program with no
-      // unreachable breakage. co_load_neg is a three-file directory program
-      // (self.glp + wallet.glp + top.glp) that links cleanly.
+      // unreachable breakage. module_self_procs is a three-file directory
+      // program (self.glp + boot.glp + worker.glp) whose root self.glp forwards
+      // an export, so it has an entry point and links cleanly. It replaced
+      // co_load_neg here on 2026-08-02, when the entry-point rejection
+      // (modules.tex §Static Linking) made that directory a negative fixture.
       expect(
           engine.loadProgram(
-              Directory('../programs/tests/co_load_neg').absolute.path),
+              Directory('../programs/tests/module_self_procs').absolute.path),
           isTrue);
     });
   });

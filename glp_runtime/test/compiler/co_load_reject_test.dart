@@ -16,6 +16,11 @@
 // under programs/ so the self.glp ancestor chain resolves Coin — the chain is
 // anchored at the hierarchy root, so a fixture outside programs/ has no
 // ancestor scope and Coin would read as a free type parameter.
+//
+// The fixture carries a second rejection: its self.glp declares a type and
+// exports no procedure, so the directory has no entry points and is not a
+// program either (modules.tex §Static Linking, "Entry and the absence of a boot
+// module"). Both rejections are asserted below.
 
 import 'dart:io';
 
@@ -65,8 +70,24 @@ void main() {
               'not a WireFormatException about Distribute')));
     });
 
-    test('the same fixture loaded as a directory program links cleanly', () {
-      expect(engine.loadProgram(fixtureDir), isTrue);
+    // Reclassified 2026-08-02: this directory used to be the positive control
+    // ("links cleanly"). Its self.glp exports no procedure, so the program has
+    // no entry points and the loader now rejects it (modules.tex §Static
+    // Linking, "Entry and the absence of a boot module"). The fixture keeps its
+    // first purpose — top.glp is not a program on its own — and gains this one.
+    // The positive control for a directory program that links cleanly is
+    // programs/tests/module_self_procs, used in per_module_check_test.dart.
+    test('the same fixture as a directory program is rejected: no entry points',
+        () {
+      expect(() => engine.loadProgram(fixtureDir),
+          throwsContaining('has no entry points'));
+    });
+
+    test('the rejection names the directory and the root self.glp', () {
+      expect(() => engine.loadProgram(fixtureDir),
+          throwsContaining(fixtureDir));
+      expect(() => engine.loadProgram(fixtureDir),
+          throwsContaining('self.glp exports no procedure'));
     });
   });
 

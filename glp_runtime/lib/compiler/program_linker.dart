@@ -653,11 +653,68 @@ void typeCheckProgram(List<DiscoveredModule> modules, {required String rootDir})
 /// step 5 ([eliminateDeadCode]) restricts the result to the reachable
 /// procedures. This is the program of def:program that is type-checked and
 /// compiled.
+///
+/// Between steps 4 and 5, a directory with no entry points is rejected
+/// ([_requireEntryPoints]).
 LinkResult linkProgram(List<DiscoveredModule> modules,
     {required String rootDir, String? singleModulePath}) {
   final linked = linkAndResolveModules(modules,
       rootDir: rootDir, singleModulePath: singleModulePath);
+  if (singleModulePath == null) {
+    _requireEntryPoints(modules, linked, rootDir);
+  }
   return eliminateDeadCode(linked);
+}
+
+/// A directory with no entry points is not a program (modules.tex §Static
+/// Linking, "Entry and the absence of a boot module"): "A root `self.glp` that
+/// exports no procedure therefore gives a program with no entry points, which
+/// the fifth step restricts to the empty set of procedures. No initial goal
+/// resolves against it, so it is not a program in the sense of def:program, and
+/// the loader rejects it rather than linking it and reporting success."
+///
+/// The entry points are the bare (unprefixed) procedures step 4 generated: a
+/// directory's are the aliases of its root `self.glp`'s exports, by definition
+/// or by forwarding (§External access). Every other procedure carries a renamed
+/// `M:p`, so an empty bare set is an empty entry-point set, which is what step 5
+/// would restrict the program to. Rejecting here rather than after step 5 is
+/// what the paper asks for: the loader rejects it rather than linking it.
+///
+/// Two things this is NOT. It is not the reachability check — a program with one
+/// entry point that reaches nothing else is a program, and step 5 keeps it. And
+/// it does not apply to a single module: a single-module program has no
+/// `self.glp`, "exports all its procedures, so every one is an entry point"
+/// (§Static Linking), and the linker keeps them bare rather than aliasing them,
+/// so [linkProgram] tests it only on the directory path.
+///
+/// An `-expose`d procedure is not an entry point either (§`-expose`: it "is not
+/// thereby exported by the root `self.glp`, so it is an entry point only if the
+/// root `self.glp` exports it in its own right"), so a root `self.glp` whose
+/// only exports are exposed ones is rejected here as well.
+void _requireEntryPoints(
+    List<DiscoveredModule> modules, LinkResult linked, String rootDir) {
+  final hasEntryPoint =
+      linked.program.procedures.any((p) => !p.name.contains(':'));
+  if (hasEntryPoint) return;
+
+  final rootNorm = _normPath(rootDir);
+  final rootSelfPaths = modules
+      .where((m) =>
+          m.isSelfGlp && _normPath(File(m.filePath).parent.path) == rootNorm)
+      .map((m) => m.filePath)
+      .toList();
+
+  final cause = rootSelfPaths.isEmpty
+      ? 'it has no root self.glp, and no module at its root exports a procedure'
+      : '${rootSelfPaths.first} exports no procedure';
+
+  throw Exception(
+      'Not a program: $rootDir has no entry points — $cause. A procedure is an '
+      'entry point exactly when the root self.glp exports it, by declaring it '
+      'exported and either defining it or forwarding it to the module that '
+      'does (modules.tex §External access); an exposed procedure is not one. '
+      'With no entry point no initial goal resolves against the directory, so '
+      'it is not a program by def:program and is rejected rather than linked.');
 }
 
 /// Steps 1–4 of static linking: the pure rename-and-resolve transform, without
