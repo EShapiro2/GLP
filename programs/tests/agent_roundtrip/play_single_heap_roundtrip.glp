@@ -15,7 +15,7 @@
 %% Requires (load order): self.glp, typed_social_agent.glp, typed_ui_mediator.glp
 %%
 %% Run from glp_runtime/:
-%%   printf '/Users/udi/Grassroots/GLP/programs/book/social_graph/\ngo.\n:quit\n' | dart run bin/glp_repl.dart
+%%   printf '/Users/udi/Grassroots/GLP/programs/tests/agent_roundtrip/\ngo.\n:quit\n' | dart run bin/glp_repl.dart
 
 
 %% In-heap transport: forward every msg on one agent's `_net` output stream to

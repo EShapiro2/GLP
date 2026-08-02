@@ -1,7 +1,7 @@
 %% play_alice_bob_typed.glp - 2-agent cold-call play (typed version)
 %% Alice initiates connection to Bob, Bob accepts
 %%
-%% Based on: programs/book/social_graph/play_alice_bob.glp
+%% Based on: programs/tests/agent_roundtrip/play_alice_bob.glp
 %% Date: 2026-01-24
 
 %% =============================================================================
