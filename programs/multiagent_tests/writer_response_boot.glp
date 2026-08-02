@@ -4,23 +4,11 @@
 %% Agent2 receives ack with the localized variable, writes done to it.
 %%
 %% Data flow: agent1 sends writer -> agent2 receives, binds it -> value flows back to agent1
+%
+% The agent code is the program directory writer_response/, which this boot spawns
+% into; BootConfig.programDir loads it and this boot clause on top.
 
 procedure boot.
 boot :-
     sender_init(agent1, _)@agent1,
     responder_init(agent2, _)@agent2.
-
-procedure sender_init(_?, _?).
-sender_init(_, _) :-
-    send_to_net([msg(agent2, ack(Resp))]),
-    wait_response(Resp?).
-
-procedure wait_response(_?).
-wait_response(done).
-
-procedure responder_init(_?, _?).
-responder_init(_, [msg(_, ack(X?))|_]) :-
-    bind_done(X).
-
-procedure bind_done(_).
-bind_done(done).

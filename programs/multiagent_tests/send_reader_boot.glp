@@ -7,27 +7,11 @@
 %% Tests globalize-reader path: X? is unbound at send time, so
 %% globalize creates _r(agent1, i) and spawns global_send(X?, ...).
 %% When agent1 binds X=done, the global_send fires and sends to agent2.
+%
+% The agent code is the program directory send_reader/, which this boot spawns
+% into; BootConfig.programDir loads it and this boot clause on top.
 
 procedure boot.
 boot :-
     sender_init(agent1, _)@agent1,
     receiver_init(agent2, _?)@agent2.
-
-procedure sender_init(_?, _?).
-sender_init(_, _) :-
-    send_to_net([msg(agent2, data(X?))]),
-    bind_later(X).
-
-procedure bind_later(_).
-bind_later(Done?) :- wait(1000) | done(Done).
-
-
-procedure done(_).
-done(done).
-
-procedure receiver_init(_?, _?).
-receiver_init(_, [msg(_, data(Y))|_]) :-
-    got_it(Y?).
-
-procedure got_it(_?).
-got_it(done).

@@ -1,0 +1,40 @@
+%% three_agent_pipeline/agents.glp — the agent code of three_agent_pipeline_boot.glp.
+%% The entry points the boot clause spawns are exported here and
+%% forwarded from self.glp; every other procedure is local to this module.
+%% =============================================================================
+%% AGENT1: Producer - sends [1,2,3] to agent2
+%% =============================================================================
+
+exported procedure producer_init(_?, _?).
+producer_init(_, _) :-
+    send_to_net([msg(agent2, data([1,2,3]))]).
+
+%% =============================================================================
+%% AGENT2: Transformer - receives data, transforms, sends to agent3
+%% =============================================================================
+
+exported procedure transformer_init(_?, _?).
+transformer_init(_, [msg(_, data(Xs))|_]) :-
+    ground(Xs?) |
+    transform(Xs?, Ys),
+    send_to_net([msg(agent3, data(Ys?))]).
+
+procedure transform(_?, _).
+transform([X|Xs], [got(X?)|Ys?]) :- transform(Xs?, Ys).
+transform([], []).
+
+%% =============================================================================
+%% AGENT3: Consumer - receives transformed data, wraps as done(List)
+%% =============================================================================
+
+exported procedure consumer_init(_?, _?).
+consumer_init(_, [msg(_, data(Ys))|_]) :-
+    ground(Ys?) |
+    wrap(Ys?, Result),
+    consume(Result?).
+
+procedure wrap(_?, _).
+wrap(List, done(List?)) :- ground(List?) | true.
+
+procedure consume(_?).
+consume(_) :- true.

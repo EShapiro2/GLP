@@ -15,57 +15,12 @@
 %% message and merges with a local list (demonstrating the merge logic).
 %%
 %% Date: 2026-02-10
+%
+% The agent code is the program directory three_agent_merge/, which this boot spawns
+% into; BootConfig.programDir loads it and this boot clause on top.
 
 procedure boot.
 boot :-
     producer1_init(agent1, _)@agent1,
     producer2_init(agent2, _)@agent2,
     merger_init(merger, _)@merger.
-
-%% =============================================================================
-%% MERGE
-%% =============================================================================
-
-procedure merge(_?, _?, _).
-merge([X|Xs], Ys, [X?|Zs?]) :- merge(Ys?, Xs?, Zs).
-merge(Xs, [Y|Ys], [Y?|Zs?]) :- merge(Xs?, Ys?, Zs).
-merge([], Ys, Ys?).
-merge(Xs, [], Xs?).
-
-%% =============================================================================
-%% AGENT1: Producer1 - sends [1,2,3] to merger
-%% =============================================================================
-
-procedure producer1_init(_?, _?).
-producer1_init(_, _) :-
-    send_to_net([msg(merger, xs([1,2,3]))]).
-
-%% =============================================================================
-%% AGENT2: Producer2 - sends [a,b,c] to merger
-%% =============================================================================
-
-procedure producer2_init(_?, _?).
-producer2_init(_, _) :-
-    send_to_net([msg(merger, ys([a,b,c]))]).
-
-%% =============================================================================
-%% MERGER: Receives first message, extracts data, merges with local list
-%%
-%% We handle both possible orderings: xs arrives first or ys arrives first.
-%% The merger consumes the first message and merges its payload with a
-%% known local list. This tests: multi-agent send to single receiver + merge.
-%% =============================================================================
-
-procedure merger_init(_?, _?).
-merger_init(_, [msg(_, xs(Xs))|_]) :-
-    ground(Xs?) |
-    merge(Xs?, [a,b,c], Zs),
-    consume(Zs?).
-merger_init(_, [msg(_, ys(Ys))|_]) :-
-    ground(Ys?) |
-    merge([1,2,3], Ys?, Zs),
-    consume(Zs?).
-
-procedure consume(_?).
-consume([_|Rest]) :- consume(Rest?).
-consume([]).

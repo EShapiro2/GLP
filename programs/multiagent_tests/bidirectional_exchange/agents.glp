@@ -1,0 +1,20 @@
+%% bidirectional_exchange/agents.glp — the agent code of bidirectional_exchange_boot.glp.
+%% The entry points the boot clause spawns are exported here and
+%% forwarded from self.glp; every other procedure is local to this module.
+%% =============================================================================
+%% AGENT1: Sends numbers, receives letters
+%% Sends first, then waits for incoming message on NetIn
+%% =============================================================================
+
+exported procedure agent1_init(_?, _?).
+agent1_init(_, _) :-
+    send_to_net([msg(agent2, numbers([1,2,3]))]).
+
+%% =============================================================================
+%% AGENT2: Sends letters, receives numbers
+%% Sends first, then waits for incoming message on NetIn
+%% =============================================================================
+
+exported procedure agent2_init(_?, _?).
+agent2_init(_, _) :-
+    send_to_net([msg(agent1, letters([a,b,c]))]).

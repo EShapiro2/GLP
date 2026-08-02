@@ -1,0 +1,21 @@
+%% send_reader/agents.glp — the agent code of send_reader_boot.glp.
+%% The entry points the boot clause spawns are exported here and
+%% forwarded from self.glp; every other procedure is local to this module.
+exported procedure sender_init(_?, _?).
+sender_init(_, _) :-
+    send_to_net([msg(agent2, data(X?))]),
+    bind_later(X).
+
+procedure bind_later(_).
+bind_later(Done?) :- wait(1000) | done(Done).
+
+
+procedure done(_).
+done(done).
+
+exported procedure receiver_init(_?, _?).
+receiver_init(_, [msg(_, data(Y))|_]) :-
+    got_it(Y?).
+
+procedure got_it(_?).
+got_it(done).

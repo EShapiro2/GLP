@@ -1,0 +1,23 @@
+%% reversed_flow/agents.glp — the agent code of reversed_flow_boot.glp.
+%% The entry points the boot clause spawns are exported here and
+%% forwarded from self.glp; every other procedure is local to this module.
+%% =============================================================================
+%% AGENT1: Receiver - processes incoming list
+%% =============================================================================
+
+exported procedure agent1_init(_?, _?).
+agent1_init(_, [msg(_, data(List))|_]) :-
+    ground(List?) |
+    consume_list(List?).
+
+procedure consume_list(_?).
+consume_list([_|Xs]) :- consume_list(Xs?).
+consume_list([]).
+
+%% =============================================================================
+%% AGENT2: Sender - sends [a,b] to agent1
+%% =============================================================================
+
+exported procedure agent2_init(_?, _?).
+agent2_init(_, _) :-
+    send_to_net([msg(agent1, data([a,b]))]).

@@ -1,0 +1,21 @@
+%% minimal_race/agents.glp — the agent code of minimal_race_boot.glp.
+%% The entry points the boot clause spawns are exported here and
+%% forwarded from self.glp; every other procedure is local to this module.
+exported procedure producer_init(_?, _?).
+producer_init(_, _) :-
+    build_list(X),
+    send_to_net([msg(agent2, data(X?))]).
+
+procedure build_list(_).
+build_list([1|Xs?]) :- build_rest(Xs).
+
+procedure build_rest(_).
+build_rest([2,3]).
+
+exported procedure consumer_init(_?, _?).
+consumer_init(_, [msg(_, data(Ys))|_]) :-
+    ground(Ys?) |
+    done(Ys?).
+
+procedure done(_?).
+done(_).

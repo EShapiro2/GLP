@@ -1,0 +1,23 @@
+%% imported_reader/agents.glp — the agent code of imported_reader_boot.glp.
+%% The entry points the boot clause spawns are exported here and
+%% forwarded from self.glp; every other procedure is local to this module.
+%% =============================================================================
+%% AGENT1: Sends list [a,b] to agent2
+%% =============================================================================
+
+exported procedure agent1_init(_?, _?).
+agent1_init(_, _) :-
+    send_to_net([msg(agent2, list([a,b]))]).
+
+%% =============================================================================
+%% AGENT2: Receives list and processes element by element
+%% =============================================================================
+
+exported procedure agent2_init(_?, _?).
+agent2_init(_, [msg(_, list(Xs))|_]) :-
+    ground(Xs?) |
+    process(Xs?).
+
+procedure process(_?).
+process([_|Xs]) :- process(Xs?).
+process([]).

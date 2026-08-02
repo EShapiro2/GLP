@@ -1,0 +1,17 @@
+%% shared_variable/agents.glp — the agent code of shared_variable_boot.glp.
+%% The entry points the boot clause spawns are exported here and
+%% forwarded from self.glp; every other procedure is local to this module.
+%% =============================================================================
+%% AGENT1: Sender - sends a single value to agent2
+%% =============================================================================
+
+exported procedure agent1_init(_?, _?).
+agent1_init(_, _) :-
+    send_to_net([msg(agent2, hello)]).
+
+%% =============================================================================
+%% AGENT2: Receiver - reads one message from network input
+%% =============================================================================
+
+exported procedure agent2_init(_?, _?).
+agent2_init(_, [msg(_, hello)|_]) :- true.

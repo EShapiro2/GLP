@@ -57,6 +57,18 @@ void main() {
       final config = loader.load(source);
       config.rootSelfGlpPath = File('../programs/self.glp').absolute.path;
 
+      // The agent code is the program directory beside the boot file, not the
+      // boot file itself: <name>_boot.glp carries the boot clause alone, and
+      // <name>/ holds self.glp and agents.glp. Each isolate loads the program
+      // via loadProgram() and the boot source on top (BootConfig.programDir).
+      // Converted 2026-08-02 so these load clean under strict types; the boot
+      // clause stays out of the directory because a directory load does not
+      // strip it and its @ atoms would meet the type checker.
+      final dir = File('../${glpFile.replaceAll('_boot.glp', '')}').absolute.path;
+      if (Directory(dir).existsSync()) {
+        config.programDir = dir;
+      }
+
       final traceConfig = TraceConfig(
         glp: traceGlp,
         mad: traceMad,

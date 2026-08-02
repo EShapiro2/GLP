@@ -1,0 +1,19 @@
+%% three_agent_merge/self.glp — program interface.
+%%
+% The entry points named in ../three_agent_merge_boot.glp are exported here and forwarded
+%% to agents.glp, which defines them.  The boot clause itself is NOT in this
+%% directory: BootLoader strips it on the boot path, but a directory load does
+%% not, and its @ atoms would then meet the type checker.
+
+imported procedure agents#producer1_init(_?, _?).
+imported procedure agents#producer2_init(_?, _?).
+imported procedure agents#merger_init(_?, _?).
+
+exported procedure producer1_init(_?, _?).
+producer1_init(Id, In) :- agents # producer1_init(Id?, In?).
+
+exported procedure producer2_init(_?, _?).
+producer2_init(Id, In) :- agents # producer2_init(Id?, In?).
+
+exported procedure merger_init(_?, _?).
+merger_init(Id, In) :- agents # merger_init(Id?, In?).

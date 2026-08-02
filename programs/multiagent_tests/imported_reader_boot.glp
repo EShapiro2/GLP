@@ -7,29 +7,11 @@
 %% Data flow: agent1 -> agent2 (one-way with list traversal)
 %%
 %% Date: 2026-02-10
+%
+% The agent code is the program directory imported_reader/, which this boot spawns
+% into; BootConfig.programDir loads it and this boot clause on top.
 
 procedure boot.
 boot :-
     agent1_init(agent1, _)@agent1,
     agent2_init(agent2, _)@agent2.
-
-%% =============================================================================
-%% AGENT1: Sends list [a,b] to agent2
-%% =============================================================================
-
-procedure agent1_init(_?, _?).
-agent1_init(_, _) :-
-    send_to_net([msg(agent2, list([a,b]))]).
-
-%% =============================================================================
-%% AGENT2: Receives list and processes element by element
-%% =============================================================================
-
-procedure agent2_init(_?, _?).
-agent2_init(_, [msg(_, list(Xs))|_]) :-
-    ground(Xs?) |
-    process(Xs?).
-
-procedure process(_?).
-process([_|Xs]) :- process(Xs?).
-process([]).

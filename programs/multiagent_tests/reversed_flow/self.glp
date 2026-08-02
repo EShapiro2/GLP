@@ -1,0 +1,15 @@
+%% reversed_flow/self.glp — program interface.
+%%
+% The entry points named in ../reversed_flow_boot.glp are exported here and forwarded
+%% to agents.glp, which defines them.  The boot clause itself is NOT in this
+%% directory: BootLoader strips it on the boot path, but a directory load does
+%% not, and its @ atoms would then meet the type checker.
+
+imported procedure agents#agent1_init(_?, _?).
+imported procedure agents#agent2_init(_?, _?).
+
+exported procedure agent1_init(_?, _?).
+agent1_init(Id, In) :- agents # agent1_init(Id?, In?).
+
+exported procedure agent2_init(_?, _?).
+agent2_init(Id, In) :- agents # agent2_init(Id?, In?).

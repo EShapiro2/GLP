@@ -9,40 +9,11 @@
 %%   agent2: receives from NetIn, produces local [a,b,c], merges both
 %%
 %% Date: 2026-02-10
+%
+% The agent code is the program directory coop_stream/, which this boot spawns
+% into; BootConfig.programDir loads it and this boot clause on top.
 
 procedure boot.
 boot :-
     agent1_init(agent1, _)@agent1,
     agent2_init(agent2, _)@agent2.
-
-%% =============================================================================
-%% MERGE
-%% =============================================================================
-
-procedure merge(_?, _?, _).
-merge([X|Xs], Ys, [X?|Zs?]) :- merge(Ys?, Xs?, Zs).
-merge(Xs, [Y|Ys], [Y?|Zs?]) :- merge(Xs?, Ys?, Zs).
-merge([], Ys, Ys?).
-merge(Xs, [], Xs?).
-
-%% =============================================================================
-%% AGENT1: Sends list to agent2
-%% =============================================================================
-
-procedure agent1_init(_?, _?).
-agent1_init(_, _) :-
-    send_to_net([msg(agent2, data([1,2,3]))]).
-
-%% =============================================================================
-%% AGENT2: Receives list, merges with local production
-%% =============================================================================
-
-procedure agent2_init(_?, _?).
-agent2_init(_, [msg(_, data(Xs))|_]) :-
-    ground(Xs?) |
-    merge(Xs?, [a,b,c], Zs),
-    consume(Zs?).
-
-procedure consume(_?).
-consume([_|Rest]) :- consume(Rest?).
-consume([]).

@@ -11,31 +11,11 @@
 %% checker to handle send_to_net and NetIn? in the same clause.
 %%
 %% Date: 2026-02-10
+%
+% The agent code is the program directory two_hop_flow/, which this boot spawns
+% into; BootConfig.programDir loads it and this boot clause on top.
 
 procedure boot.
 boot :-
     agent1_init(agent1, _)@agent1,
     agent2_init(agent2, _)@agent2.
-
-%% =============================================================================
-%% AGENT1: Sends data to agent2
-%% =============================================================================
-
-procedure agent1_init(_?, _?).
-agent1_init(_, _) :-
-    send_to_net([msg(agent2, data([1,2,3]))]).
-
-%% =============================================================================
-%% AGENT2: Receives data, transforms it, sends result back to agent1
-%% Tests: receive from network, local computation, send result to network
-%% =============================================================================
-
-procedure agent2_init(_?, _?).
-agent2_init(_, [msg(_, data(Xs))|_]) :-
-    ground(Xs?) |
-    transform(Xs?, Ys),
-    send_to_net([msg(agent1, result(Ys?))]).
-
-procedure transform(_?, _).
-transform([X|Xs], [got(X?)|Ys?]) :- transform(Xs?, Ys).
-transform([], []).

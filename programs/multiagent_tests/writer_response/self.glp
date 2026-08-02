@@ -1,0 +1,15 @@
+%% writer_response/self.glp — program interface.
+%%
+% The entry points named in ../writer_response_boot.glp are exported here and forwarded
+%% to agents.glp, which defines them.  The boot clause itself is NOT in this
+%% directory: BootLoader strips it on the boot path, but a directory load does
+%% not, and its @ atoms would then meet the type checker.
+
+imported procedure agents#sender_init(_?, _?).
+imported procedure agents#responder_init(_?, _?).
+
+exported procedure sender_init(_?, _?).
+sender_init(Id, In) :- agents # sender_init(Id?, In?).
+
+exported procedure responder_init(_?, _?).
+responder_init(Id, In) :- agents # responder_init(Id?, In?).

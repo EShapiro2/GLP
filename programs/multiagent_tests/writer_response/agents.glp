@@ -1,0 +1,17 @@
+%% writer_response/agents.glp — the agent code of writer_response_boot.glp.
+%% The entry points the boot clause spawns are exported here and
+%% forwarded from self.glp; every other procedure is local to this module.
+exported procedure sender_init(_?, _?).
+sender_init(_, _) :-
+    send_to_net([msg(agent2, ack(Resp))]),
+    wait_response(Resp?).
+
+procedure wait_response(_?).
+wait_response(done).
+
+exported procedure responder_init(_?, _?).
+responder_init(_, [msg(_, ack(X?))|_]) :-
+    bind_done(X).
+
+procedure bind_done(_).
+bind_done(done).

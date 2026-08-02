@@ -1,0 +1,15 @@
+%% minimal_race/self.glp — program interface.
+%%
+% The entry points named in ../minimal_race_boot.glp are exported here and forwarded
+%% to agents.glp, which defines them.  The boot clause itself is NOT in this
+%% directory: BootLoader strips it on the boot path, but a directory load does
+%% not, and its @ atoms would then meet the type checker.
+
+imported procedure agents#producer_init(_?, _?).
+imported procedure agents#consumer_init(_?, _?).
+
+exported procedure producer_init(_?, _?).
+producer_init(Id, In) :- agents # producer_init(Id?, In?).
+
+exported procedure consumer_init(_?, _?).
+consumer_init(Id, In) :- agents # consumer_init(Id?, In?).

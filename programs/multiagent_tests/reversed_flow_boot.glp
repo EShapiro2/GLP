@@ -7,29 +7,11 @@
 %% Data flow: agent2 -> agent1 (reversed direction from shared_variable)
 %%
 %% Date: 2026-02-10
+%
+% The agent code is the program directory reversed_flow/, which this boot spawns
+% into; BootConfig.programDir loads it and this boot clause on top.
 
 procedure boot.
 boot :-
     agent1_init(agent1, _)@agent1,
     agent2_init(agent2, _)@agent2.
-
-%% =============================================================================
-%% AGENT1: Receiver - processes incoming list
-%% =============================================================================
-
-procedure agent1_init(_?, _?).
-agent1_init(_, [msg(_, data(List))|_]) :-
-    ground(List?) |
-    consume_list(List?).
-
-procedure consume_list(_?).
-consume_list([_|Xs]) :- consume_list(Xs?).
-consume_list([]).
-
-%% =============================================================================
-%% AGENT2: Sender - sends [a,b] to agent1
-%% =============================================================================
-
-procedure agent2_init(_?, _?).
-agent2_init(_, _) :-
-    send_to_net([msg(agent1, data([a,b]))]).

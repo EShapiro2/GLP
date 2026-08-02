@@ -1,0 +1,40 @@
+%% distribute/agents.glp — the agent code of distribute_boot.glp.
+%% The entry points the boot clause spawns are exported here and
+%% forwarded from self.glp; every other procedure is local to this module.
+%% =============================================================================
+%% PRODUCER: Sends same data to both consumers
+%% =============================================================================
+
+exported procedure producer_init(_?, _?).
+producer_init(_, _) :-
+    send_to_net([msg(consumer1, data([1,2,3])), msg(consumer2, data([1,2,3]))]).
+
+%% =============================================================================
+%% CONSUMER1: Receives and wraps data
+%% =============================================================================
+
+exported procedure consumer1_init(_?, _?).
+consumer1_init(_, [msg(_, data(List))|_]) :-
+    ground(List?) |
+    receive(List?, Result),
+    consume(Result?).
+
+%% =============================================================================
+%% CONSUMER2: Receives and wraps data
+%% =============================================================================
+
+exported procedure consumer2_init(_?, _?).
+consumer2_init(_, [msg(_, data(List))|_]) :-
+    ground(List?) |
+    receive(List?, Result),
+    consume(Result?).
+
+%% =============================================================================
+%% SHARED
+%% =============================================================================
+
+procedure receive(_?, _).
+receive(List, got(List?)) :- ground(List?) | true.
+
+procedure consume(_?).
+consume(_) :- true.

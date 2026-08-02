@@ -8,47 +8,12 @@
 %% Data flow: agent1 -> agent2 -> agent3
 %%
 %% Date: 2026-02-10
+%
+% The agent code is the program directory three_agent_pipeline/, which this boot spawns
+% into; BootConfig.programDir loads it and this boot clause on top.
 
 procedure boot.
 boot :-
     producer_init(agent1, _)@agent1,
     transformer_init(agent2, _)@agent2,
     consumer_init(agent3, _)@agent3.
-
-%% =============================================================================
-%% AGENT1: Producer - sends [1,2,3] to agent2
-%% =============================================================================
-
-procedure producer_init(_?, _?).
-producer_init(_, _) :-
-    send_to_net([msg(agent2, data([1,2,3]))]).
-
-%% =============================================================================
-%% AGENT2: Transformer - receives data, transforms, sends to agent3
-%% =============================================================================
-
-procedure transformer_init(_?, _?).
-transformer_init(_, [msg(_, data(Xs))|_]) :-
-    ground(Xs?) |
-    transform(Xs?, Ys),
-    send_to_net([msg(agent3, data(Ys?))]).
-
-procedure transform(_?, _).
-transform([X|Xs], [got(X?)|Ys?]) :- transform(Xs?, Ys).
-transform([], []).
-
-%% =============================================================================
-%% AGENT3: Consumer - receives transformed data, wraps as done(List)
-%% =============================================================================
-
-procedure consumer_init(_?, _?).
-consumer_init(_, [msg(_, data(Ys))|_]) :-
-    ground(Ys?) |
-    wrap(Ys?, Result),
-    consume(Result?).
-
-procedure wrap(_?, _).
-wrap(List, done(List?)) :- ground(List?) | true.
-
-procedure consume(_?).
-consume(_) :- true.

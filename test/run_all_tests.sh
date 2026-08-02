@@ -2717,6 +2717,33 @@ echo ""
 # ruling and is moving them onto a directory load; that needs config.programDir,
 # which is IGLP's line and waits on send_to_net/1 reaching root self.glp.  vGLP
 # named six of the seven — paper_screenshots_constructs was not on their list
+# =============================================================================
+# SECTION MA: multiagent_tests program directories load under strict types
+# =============================================================================
+# The twelve madGLP boot programs, converted 2026-08-02 from single boot files
+# into program directories: <name>_boot.glp keeps the boot clause alone and
+# <name>/ holds self.glp (entry points exported and forwarded) and agents.glp
+# (the code).  The boot clause stays OUT of the directory — BootLoader strips it
+# on the boot path, but a directory load does not, and its @ atoms would then
+# meet the type checker.  Their runtime behaviour is multiagent_glp_test.dart in
+# Section Q, which loads each directory via BootConfig.programDir; this section
+# gates the thing the conversion was for, that each loads clean under strict
+# types.  A previous shape of this conversion had 8 of the 12 failing; all
+# twelve load here, so that split was the shape's and not the language's.
+echo "=== Section MA: multiagent_tests program directories ==="
+echo ""
+
+for ma_dir in "$GLP_DIR"/programs/multiagent_tests/*/; do
+    ma_name=$(basename "$ma_dir")
+    ma_out=$("$REPL_RUN" <<HEREDOC
+$ma_dir
+:quit
+HEREDOC
+2>&1)
+    check "MA $ma_name loads as a program" "Loaded program" "$ma_out"
+done
+echo ""
+
 # and fails on the same rejection of the same file.
 KNOWN_RED=(
     "glp_multiagent/test/grassapp_scenario_test.dart: GrassApp scenario: four actors, chat replies, swap-then-redeem"

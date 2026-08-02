@@ -1,0 +1,50 @@
+%% three_agent_merge/agents.glp — the agent code of three_agent_merge_boot.glp.
+%% The entry points the boot clause spawns are exported here and
+%% forwarded from self.glp; every other procedure is local to this module.
+%% =============================================================================
+%% MERGE
+%% =============================================================================
+
+procedure merge(_?, _?, _).
+merge([X|Xs], Ys, [X?|Zs?]) :- merge(Ys?, Xs?, Zs).
+merge(Xs, [Y|Ys], [Y?|Zs?]) :- merge(Xs?, Ys?, Zs).
+merge([], Ys, Ys?).
+merge(Xs, [], Xs?).
+
+%% =============================================================================
+%% AGENT1: Producer1 - sends [1,2,3] to merger
+%% =============================================================================
+
+exported procedure producer1_init(_?, _?).
+producer1_init(_, _) :-
+    send_to_net([msg(merger, xs([1,2,3]))]).
+
+%% =============================================================================
+%% AGENT2: Producer2 - sends [a,b,c] to merger
+%% =============================================================================
+
+exported procedure producer2_init(_?, _?).
+producer2_init(_, _) :-
+    send_to_net([msg(merger, ys([a,b,c]))]).
+
+%% =============================================================================
+%% MERGER: Receives first message, extracts data, merges with local list
+%%
+%% We handle both possible orderings: xs arrives first or ys arrives first.
+%% The merger consumes the first message and merges its payload with a
+%% known local list. This tests: multi-agent send to single receiver + merge.
+%% =============================================================================
+
+exported procedure merger_init(_?, _?).
+merger_init(_, [msg(_, xs(Xs))|_]) :-
+    ground(Xs?) |
+    merge(Xs?, [a,b,c], Zs),
+    consume(Zs?).
+merger_init(_, [msg(_, ys(Ys))|_]) :-
+    ground(Ys?) |
+    merge([1,2,3], Ys?, Zs),
+    consume(Zs?).
+
+procedure consume(_?).
+consume([_|Rest]) :- consume(Rest?).
+consume([]).
