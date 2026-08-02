@@ -5,10 +5,10 @@
 %% Creates a self-organizing merge tree.
 %% Uses guard X =\= Y which succeeds if arguments are not unifiable.
 
-procedure merger(Stream(X)?, Stream(X)?, Stream(X)).
+procedure(X) merger(Stream(X)?, Stream(X)?, Stream(X)).
 merger(Ws, Xs, Out?) :- merge(Ws?, Xs?, Out).
 
-procedure merge(Stream(X)?, Stream(X)?, Stream(X)).
+procedure(X) merge(Stream(X)?, Stream(X)?, Stream(X)).
 merge([merge(Ws)|Xs], Ys, Zs?) :-
    merger(Ws?, Xs?, Xs1), merge(Xs1?, Ys?, Zs).
 merge(Xs, [merge(Ws)|Ys], Zs?) :-

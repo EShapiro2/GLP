@@ -33,17 +33,17 @@ test_obs1(Sum?, Copy?) :-
     consumer(Fwd?, 0, Sum).
 
 % Cooperative producers
-procedure bob(Stream(X), Done).
+procedure(X) bob(Stream(X), Done).
 bob([a,a|Tail?], Result?) :- alice(Tail, Result).
 
-procedure alice(Stream(X), Done).
+procedure(X) alice(Stream(X), Done).
 alice([b,b,b|Tail?], Result?) :- bob_finish(Tail, Result).
 
-procedure bob_finish(Stream(X), Done).
+procedure(X) bob_finish(Stream(X), Done).
 bob_finish([a,a], done).
 
 % Cooperative observer (handles direction changes)
-procedure observe(Stream(X)?, Stream(X), Stream(X)).
+procedure(X) observe(Stream(X)?, Stream(X), Stream(X)).
 observe([X|Xs], Ys?, [X?|Zs?]) :- ground(X?) |
     Ys = [X?|Ys1?], observe(Xs?, Ys1, Zs).
 observe([X|Xs?], Ys, [X?|Zs?]) :- ground(X?) |
@@ -51,7 +51,7 @@ observe([X|Xs?], Ys, [X?|Zs?]) :- ground(X?) |
 observe([], [], []).
 
 % Test cooperative observer
-procedure test_obs2(Stream(X), Done).
+procedure(X) test_obs2(Stream(X), Done).
 test_obs2(Copy?, Done?) :-
     bob(Stream, Done),
     observe(Stream?, _, Copy).

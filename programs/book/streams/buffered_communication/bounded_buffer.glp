@@ -8,10 +8,10 @@
 Buffer ::= Stream(_) \ Stream(_)?.
 
 %% Unbounded buffer send/receive (standard stream communication)
-procedure send_unbounded(_?, Stream(X), Stream(X)?).
+procedure(X) send_unbounded(_?, Stream(X), Stream(X)?).
 send_unbounded(Msg, [Msg?|NStrm], NStrm?).
 
-procedure receive_unbounded(_, Stream(X)?, Stream(X)).
+procedure(X) receive_unbounded(_, Stream(X)?, Stream(X)).
 receive_unbounded(Msg?, [Msg|NStrm], NStrm?).
 
 %% Bounded buffer send/receive using difference list H\T
@@ -22,7 +22,7 @@ procedure receive(_, Buffer?, Buffer).
 receive(Msg?, [Msg|Buf]\[_|Tail?], Buf?\Tail).
 
 %% Close and test closure
-procedure close(Stream(X)?).
+procedure(X) close(Stream(X)?).
 close([end_of_stream|_]\_).
 
 procedure closed(_?).
@@ -34,7 +34,7 @@ open(0, X\X?).
 open(N, [_|H?]\T?) :- N? > 0 | N1 := N? - 1, open(N1?, H\T).
 
 %% Example: Buffered stream of squares
-procedure sq_num_buffered(Number?, Stream(X), Number?).
+procedure(X) sq_num_buffered(Number?, Stream(X), Number?).
 sq_num_buffered(N, Ss?, Size) :-
     open(Size?, Buf\Tail),
     integers(1, N?, Buf?\Tail),
@@ -50,12 +50,12 @@ integers(I, N, Buf\_) :-
     I? > N? |
     close(Buf?).
 
-procedure square(Buffer?, Stream(X)).
+procedure(X) square(Buffer?, Stream(X)).
 square(Buf\Tail, Ss?) :-
     receive(I, Buf?\Tail?, NBuf\NTail),
     square2(I?, NBuf?\NTail?, Ss).
 
-procedure square2(_?, Buffer?, Stream(X)).
+procedure(X) square2(_?, Buffer?, Stream(X)).
 square2(I, _\_, []) :- closed(I?) | true.
 square2(I, Buf\Tail, [I2?|Ss?]) :-
     number(I?) |

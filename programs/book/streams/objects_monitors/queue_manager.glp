@@ -10,7 +10,7 @@ ReqList ::= [] ; [QueueReq | ReqList].
 
 %% Queue manager - Head and Tail are difference list pointers
 %% Initial call: qm(Requests?, Q, Q) with same variable for empty queue
-procedure qm(ReqList?, Stream(X), Stream(X)).
+procedure(X) qm(ReqList?, Stream(X), Stream(X)).
 qm([dequeue(X?)|S?], [X|Head?], Tail) :-
     qm(S?, Head?, Tail?).
 
