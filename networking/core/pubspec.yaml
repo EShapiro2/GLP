@@ -26,6 +26,22 @@ dependencies:
   redux: ^5.0.0
 
 
+  # Attestation verification (spec §Session Establishment). Core verifies and
+  # the platform produces: producing an attestation needs a secure element and
+  # therefore a native channel, so it lives above core; verifying one is
+  # arithmetic over bytes and needs no platform, so it lives here with the rest
+  # of session establishment. If verification lived in the Flutter package the
+  # headless profile could not verify, and "attested" would mean one thing on a
+  # phone and another on a server — a capability split by package rather than
+  # by platform, which this specification does not have. A rendezvous server
+  # and a mirroring service both receive attestations from phones and both must
+  # tell a valid one from an invalid one.
+  #
+  # All three are pure Dart, so `dart compile exe` is unaffected.
+  asn1lib: ^1.5.0        # DER parsing: X.509, and Android's KeyDescription
+  pointycastle: ^3.9.0   # RSA and ECDSA verification over the chain
+  cbor: ^6.2.0           # iOS: the App Attest attestation object
+
   args: ^2.4.0
   meta: ^1.11.0
   collection: ^1.18.0
