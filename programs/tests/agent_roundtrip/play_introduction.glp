@@ -212,7 +212,7 @@ network3((alice, ch(AliceIn, AliceOut?)),
 
 %% === The Play ===
 
-procedure play_introduction/0.
+procedure play_introduction.
 play_introduction :-
     %% Network switch
     network3((alice, ch(AliceNetOut?, AliceNetIn)),

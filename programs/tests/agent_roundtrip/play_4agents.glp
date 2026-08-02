@@ -234,7 +234,7 @@ network4((alice, ch(AliceIn, AliceOut?)),
 
 %% === The Play: Alice cold-calls Bob ===
 
-procedure play_4agents/0.
+procedure play_4agents.
 play_4agents :-
     %% Network switch
     network4((alice, ch(AliceNetOut?, AliceNetIn)),

@@ -34,7 +34,7 @@ FriendList ::= [] ; [FriendEntry | FriendList].
 procedure social_graph(_?, MsgList?, FriendList?).
 
 %% Main entry point
-procedure play/0.
+procedure play.
 play :-
     %% Merge all agent outputs into single stream for network
     merge(AliceToNet?, BobToNet?, M1),
