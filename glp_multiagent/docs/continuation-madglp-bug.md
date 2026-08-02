@@ -114,8 +114,8 @@ Expected: 72 passed, 5 skipped, 0 failures.
 - **`/Users/udi/Grassroots/GLP/programs/typed_book/cssg/typed_ui_mediator.glp`** — Stores intro channels as `channel(Ch)` in pending list, retrieves on `accept_intro`.
 
 ### The non-buggy comparison path
-- **`/Users/udi/Grassroots/GLP/programs/typed_book/social_graph/typed_actors.glp`** — Passes raw `Ch` variable directly, no `PendingValue` wrapper.
-- **`/Users/udi/Grassroots/GLP/programs/typed_book/social_graph/play_madglp_boot.glp`** — Boot file for social_graph headless test.
+- **`/Users/udi/Grassroots/GLP/programs/tests/agent_roundtrip/typed_actors.glp`** — Passes raw `Ch` variable directly, no `PendingValue` wrapper.
+- **`/Users/udi/Grassroots/GLP/programs/tests/agent_roundtrip/play_madglp_boot.glp`** — Boot file for social_graph headless test.
 
 ### Test and spec
 - **`/Users/udi/Grassroots/GLP/glp_runtime/test/multiagent/isolate_manager_test.dart`** — Contains both tests: test 2 (social_graph, no UI, no errors) and test 3 (UI mediator, errors).

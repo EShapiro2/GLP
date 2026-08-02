@@ -7,10 +7,11 @@ import 'package:test/test.dart';
 import 'package:glp_runtime/engine/glp_engine.dart';
 
 void main() {
+  final selfPath = '../programs/tests/agent_roundtrip/self.glp';
   final socialAgentPath =
-      '../programs/book/social_graph/typed_social_agent.glp';
+      '../programs/tests/agent_roundtrip/typed_social_agent.glp';
   final uiMediatorPath =
-      '../programs/book/social_graph/typed_ui_mediator.glp';
+      '../programs/tests/agent_roundtrip/typed_ui_mediator.glp';
 
   group('ui_mediator', () {
     late GlpEngine engine;
@@ -23,11 +24,13 @@ void main() {
     });
 
     test('grounds befriend output with request ID', () async {
+      final selfSource = File(selfPath).readAsStringSync();
       final socialSource = File(socialAgentPath).readAsStringSync();
       final mediatorSource = File(uiMediatorPath).readAsStringSync()
           .replaceAll(RegExp(r'-mode\s*\(\s*system\s*\)\s*\.'), '');
 
       engine.loadSource('''
+$selfSource
 $socialSource
 $mediatorSource
 
@@ -52,11 +55,13 @@ test :-
     });
 
     test('passes ground connected message through', () async {
+      final selfSource = File(selfPath).readAsStringSync();
       final socialSource = File(socialAgentPath).readAsStringSync();
       final mediatorSource = File(uiMediatorPath).readAsStringSync()
           .replaceAll(RegExp(r'-mode\s*\(\s*system\s*\)\s*\.'), '');
 
       engine.loadSource('''
+$selfSource
 $socialSource
 $mediatorSource
 
@@ -81,11 +86,13 @@ test :-
     });
 
     test('passes ground received message through', () async {
+      final selfSource = File(selfPath).readAsStringSync();
       final socialSource = File(socialAgentPath).readAsStringSync();
       final mediatorSource = File(uiMediatorPath).readAsStringSync()
           .replaceAll(RegExp(r'-mode\s*\(\s*system\s*\)\s*\.'), '');
 
       engine.loadSource('''
+$selfSource
 $socialSource
 $mediatorSource
 
@@ -108,10 +115,16 @@ test :-
       print('Output: $outputLines');
       expect(outputLines, contains('received(bob, hello)'));
     });
-  }, skip: 'Retired 2026-06-22: legacy book/social_graph rot. The inline _output '
-      'call was fixed (now uses root self.glp send_to_user), but the test loads '
-      'typed_social_agent/typed_ui_mediator without their book/social_graph/self.glp '
-      'scope, so the goal-check hard-fails on Unresolved type: Response. Superseded '
-      'by canonical social/graph + live cssn mediator coverage; consistent with the '
-      'retired isolate_manager/clause_select_probe/probe15. See known-issues Issue 17.');
+  }, skip: 'Skipped for a different cause than before, measured 2026-08-02 when '
+      'the fixture moved to programs/tests/agent_roundtrip. The 2026-06-22 '
+      'reason — the sources loaded without their own self.glp scope, so the '
+      'goal-check hard-failed on Unresolved type: Response — is fixed: self.glp '
+      'is now loaded first and that error is gone. What remains is that agent/4 '
+      'and inject_msg/5 inspect a bare type parameter and have no instantiation '
+      'here, so they take the per-instantiation route and have nothing to '
+      'certify standalone; the goal then fails with no output. Same cause as the '
+      'two agent_roundtrip entries in NEGATIVE_FILES. It clears when the fixture '
+      'is swept — a concrete element type, or a named parameter list per '
+      'Moded-Types "Declaration parameters" — which is IGLP\'s and is 179 '
+      'declarations.');
 }

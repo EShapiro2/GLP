@@ -70,7 +70,7 @@ obligation is vacuously satisfied and then forgotten.
 
 ## Real-world manifestation
 
-`programs/book/social_graph/typed_ui_mediator.glp`:
+`programs/tests/agent_roundtrip/typed_ui_mediator.glp`:
 
 ```prolog
 procedure ui_mediator(Constant?, Channel(X,Y)?, Channel(X,Y)?, PendingList?, Constant?).

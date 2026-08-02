@@ -39,6 +39,10 @@ TYPED="$GLP_DIR/programs/tests/typed"
 START_HEAD=$(cd "$GLP_DIR" && git rev-parse HEAD 2>/dev/null || echo "no-git")
 START_DIRTY=$(cd "$GLP_DIR" && git status --porcelain 2>/dev/null | sort | shasum | cut -d' ' -f1)
 BOOK="$GLP_DIR/programs/book"
+# The agent cold-call round-trip fixture: the four multiagent Dart tests load
+# it (single heap and two isolates). Moved out of book/ on 2026-08-02 and named
+# for what it exercises, not for the platform it borrows.
+AGENT_RT="$GLP_DIR/programs/tests/agent_roundtrip"
 TC_DIR="$GLP_RUNTIME/test/programs/typechecker"
 MODED="$GLP_RUNTIME/test/programs/moded_types"
 
@@ -1397,14 +1401,18 @@ NEGATIVE_FILES=(
     # reader is rejected without waiting for the element type.
     "$GLP_DIR/programs/tests/param_call_mode_neg.glp"
 
-    # --- book/ examples (owned by GLP-ICLP) mis-declared with a bare type
-    # parameter where a concrete type belongs: a constant/functor sits at the
-    # parameter position, so they inspect the parameter, take the per-instantiation
-    # route, and loaded standalone with no instantiation have nothing to certify —
-    # rejected (sec:abstract-parameters). Listed as expected rejections until
-    # GLP-ICLP re-declares or prunes them.
-    "$BOOK/social_graph/channel.glp"
-    "$BOOK/social_graph/typed_social_agent.glp"
+    # Mis-declared with a bare type parameter where a concrete type belongs: a
+    # constant/functor sits at the parameter position, so they inspect the
+    # parameter, take the per-instantiation route, and loaded standalone with no
+    # instantiation have nothing to certify — rejected (sec:abstract-parameters).
+    #
+    # The two agent_roundtrip entries are IGLP's since the fixture moved out of
+    # book/ on 2026-08-02; they clear when the fixture is swept (a concrete
+    # element type, or a named parameter list per Moded-Types "Declaration
+    # parameters"), which also unskips ui_mediator_test. The two streams entries
+    # are GLP-ICLP's, expected rejections until they re-declare or prune them.
+    "$AGENT_RT/channel.glp"
+    "$AGENT_RT/typed_social_agent.glp"
     "$BOOK/streams/producers_consumers/cooperative.glp"
     "$BOOK/streams/producers_consumers/merge_dynamic.glp"
 )

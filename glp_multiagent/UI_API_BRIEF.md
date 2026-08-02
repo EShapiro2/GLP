@@ -81,7 +81,7 @@ Future-proofing (do not implement now, but the schema must not preclude):
 
 ## GSG manifest (implement this instance)
 
-From `programs/book/social_graph/typed_ui_mediator.glp` (verified):
+From `programs/tests/agent_roundtrip/typed_ui_mediator.glp` (verified):
 
 `UserCmd`  = `decision(Decision,Constant,ReqId)`, `accept_intro(Constant,ReqId)`,
 `reject_intro(Constant)`, `connect(Constant)`, `send(Constant,Constant)`,
@@ -109,8 +109,8 @@ Friends list, with a `connect` FAB; introduce/unfriend as per-friend actions.
 
 ## Gaps / landmines (handle explicitly)
 
-1. **Stale GLP dir.** `main.dart` `_defaultGlpDir = '../programs/typed_book/social_graph'`
-   does not exist. Use `../programs/book/social_graph`. Verify the three `_glpFiles`
+1. **Stale GLP dir.** `main.dart` `_defaultGlpDir = '../programs/tests/agent_roundtrip'`
+   does not exist. Use `../programs/tests/agent_roundtrip`. Verify the three `_glpFiles`
    load from there.
 2. **No `unfriend` in this mediator.** The GSG figure shows unfriend, but
    `social_graph` mediator has no `unfriend`/`unfriended`. The child-safe mediator

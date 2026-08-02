@@ -104,7 +104,7 @@ dart test
 ### Active typed files
 
 ```
-programs/typed_book/social_graph/
+programs/tests/agent_roundtrip/
 ├── typed_social_agent.glp    # agent/4, channel ops, merge, helpers (typed, -mode(system))
 ├── typed_ui_mediator.glp     # Ground-term mediator: agent/4 ↔ Dart UI (typed)
 ├── typed_actors.glp          # Scripted actors that talk directly to agent/4 (typed)
@@ -129,7 +129,7 @@ programs/typed_book/social_graph/
 ### Archived untyped originals
 
 ```
-programs/typed_book/social_graph/archive/
+programs/tests/agent_roundtrip/archive/
 ├── social_agent.glp    # Original monolithic file (all code in one file)
 └── ui_mediator.glp     # Original untyped mediator
 ```
@@ -176,7 +176,7 @@ Single-process execution using REPL. All agents run in the same process.
 
 ```bash
 cd /Users/udi/Grassroots/GLP/glp_runtime
-echo -e 'load ../programs/typed_book/social_graph/typed_social_agent.glp\nload ../programs/typed_book/social_graph/typed_actors.glp\nload ../programs/typed_book/social_graph/play_dglp_boot.glp\nplay.\n:quit' | dart run bin/glp_repl.dart
+echo -e 'load ../programs/tests/agent_roundtrip/typed_social_agent.glp\nload ../programs/tests/agent_roundtrip/typed_actors.glp\nload ../programs/tests/agent_roundtrip/play_dglp_boot.glp\nplay.\n:quit' | dart run bin/glp_repl.dart
 ```
 
 Expected output: `→ succeeds`
@@ -185,7 +185,7 @@ Expected output: `→ succeeds`
 
 ```bash
 cd /Users/udi/Grassroots/GLP/glp_runtime
-echo -e 'load ../programs/typed_book/social_graph/typed_social_agent.glp\nload ../programs/typed_book/social_graph/typed_ui_mediator.glp\nload ../programs/typed_book/social_graph/typed_ui_actors.glp\nload ../programs/typed_book/social_graph/play_ui_dglp_boot.glp\nplay.\n:quit' | dart run bin/glp_repl.dart
+echo -e 'load ../programs/tests/agent_roundtrip/typed_social_agent.glp\nload ../programs/tests/agent_roundtrip/typed_ui_mediator.glp\nload ../programs/tests/agent_roundtrip/typed_ui_actors.glp\nload ../programs/tests/agent_roundtrip/play_ui_dglp_boot.glp\nplay.\n:quit' | dart run bin/glp_repl.dart
 ```
 
 Expected output: `→ suspended` (all concurrent processes are active and communicating)
@@ -472,4 +472,4 @@ Multiple GLP files were concatenated with `sources.join('\n')` and loaded as one
 
 ### 4. All paths use repo-relative paths
 
-Replaced all absolute `/Users/udi/Grassroots/GLP/...` paths with repo-relative paths (`../programs/stdlib`, `../programs/typed_book/social_graph/...`).
+Replaced all absolute `/Users/udi/Grassroots/GLP/...` paths with repo-relative paths (`../programs/stdlib`, `../programs/tests/agent_roundtrip/...`).

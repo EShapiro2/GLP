@@ -17,12 +17,12 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:glp_multiagent/isolate_protocol.dart';
 
 const _programs = '/Users/udi/Grassroots/GLP/programs';
-const _sgDir = '$_programs/book/social_graph';
+const _fixtureDir = '$_programs/tests/agent_roundtrip';
 const _sourceFiles = [
-  '$_sgDir/self.glp',
-  '$_sgDir/typed_social_agent.glp',
-  '$_sgDir/typed_ui_mediator.glp',
-  '$_sgDir/play_ui_boot.glp',
+  '$_fixtureDir/self.glp',
+  '$_fixtureDir/typed_social_agent.glp',
+  '$_fixtureDir/typed_ui_mediator.glp',
+  '$_fixtureDir/play_ui_boot.glp',
 ];
 
 void main() {

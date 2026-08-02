@@ -8,15 +8,15 @@ import 'dart:isolate';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:glp_multiagent/isolate_protocol.dart';
 
-const _sg = '/Users/udi/Grassroots/GLP/programs/book/social_graph';
+const _fixture = '/Users/udi/Grassroots/GLP/programs/tests/agent_roundtrip';
 
 void main() {
   test('accept a friend → actor messages Bob → received reaches Bob', () async {
     final paths = [
-      '$_sg/self.glp',
-      '$_sg/typed_social_agent.glp',
-      '$_sg/typed_ui_mediator.glp',
-      '$_sg/play_grassapp_boot.glp',
+      '$_fixture/self.glp',
+      '$_fixture/typed_social_agent.glp',
+      '$_fixture/typed_ui_mediator.glp',
+      '$_fixture/play_grassapp_boot.glp',
     ];
     final sources = paths.map((p) => File(p).readAsStringSync()).toList();
 

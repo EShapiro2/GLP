@@ -6,7 +6,7 @@
 
 **Real cause of `mad_w_probe`'s `otherwise`:** the malformed channel `ch(S?, _)` — an anonymous `_` at the Out position, a writer with no paired reader. `receive`/`send`/`new_channel` are **defined guards unfolded by the partial evaluator at compile time**; the PE statically reduces `receive(NestedReader, ch(S?, _), Cont)` to failure, so the clause is compiled straight to the `otherwise` branch. This is **compile-time, single-heap, no `_w` involved** — reproduced with no isolates by `programs/tests/recv2x2/` (case `b`/`d`: `ch(S?, _)` → otherwise; case `a`/`c`: `ch(S?, closed)` → matched). The bug report combined this malformation with a `_w` and blamed the `_w`.
 
-**The red gate this report was attached to** (the two `isolate_manager_test` timeouts) was a *separate* cause — agents crashing at init with `UnknownTypeError: Response`, a boot-config scope omission (`book/social_graph/self.glp` not supplied), now retired. Not a runtime strand, not `_w`.
+**The red gate this report was attached to** (the two `isolate_manager_test` timeouts) was a *separate* cause — agents crashing at init with `UnknownTypeError: Response`, a boot-config scope omission (`tests/agent_roundtrip/self.glp` not supplied), now retired. Not a runtime strand, not `_w`.
 
 **Follow-ups (ticketed, not fixed):** malformed-channel `ch(S?, _)` should be a diagnosable load error, not a silent `otherwise`; and the unhandled `UnknownTypeError` that turns a missing scope into a silent isolate death. See `known-issues.md`.
 
@@ -29,7 +29,7 @@ is escrowed by the mediator and returned to the agent, but at the return hop the
 ## Discriminator (the evidence)
 
 The **same** real `agent/4` and `ui_mediator/5` clauses
-(`programs/book/social_graph/typed_social_agent.glp`, `typed_ui_mediator.glp`),
+(`programs/tests/agent_roundtrip/typed_social_agent.glp`, `typed_ui_mediator.glp`),
 with only the transport swapped:
 
 - **Single heap** (`test/multiagent/single_heap_roundtrip_test.dart`, in-heap

@@ -61,7 +61,7 @@ reproducer(s). Severity order: all are soundness/liveness, not cosmetic.
 
 ## Status of the UI `.glp` (not a bug — leave as is)
 
-The shared `programs/book/social_graph/self.glp`, the concrete agent-facing
+The shared `programs/tests/agent_roundtrip/self.glp`, the concrete agent-facing
 `Channel(Stream(AgentMsg), Stream(UserMsg))` in `ui_mediator`, and the §15B
 writer-forwarding polarity in `typed_social_agent.glp` (cold-call clause 214,
 intro clause 203) are correct: both files typecheck strict, and the single-heap

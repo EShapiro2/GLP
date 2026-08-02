@@ -3,12 +3,12 @@ import 'package:test/test.dart';
 import 'package:glp_runtime/multiagent/boot_loader.dart';
 import 'package:glp_runtime/multiagent/isolate_manager.dart';
 
-/// Base directory for GLP source files (repo-relative from glp_runtime/).
-const _socialGraphDir = '../programs/book/social_graph';
+/// The agent cold-call round-trip fixture (repo-relative from glp_runtime/).
+const _fixtureDir = '../programs/tests/agent_roundtrip';
 
-/// Read a GLP file from the social_graph directory, or skip the test.
+/// Read a GLP file from the fixture directory, or skip the test.
 String? _readGlpFile(String filename) {
-  final file = File('$_socialGraphDir/$filename');
+  final file = File('$_fixtureDir/$filename');
   if (!file.existsSync()) {
     print('Skipping: $filename not found at ${file.path}');
     return null;
@@ -56,15 +56,20 @@ agent_init(_, _) :- true.
 
     test('runs full play with actor scripts (no UI)', () async {
       final source = _readGlpFile('play_madglp_boot.glp');
+      final selfSource = _readGlpFile('self.glp');
       final agentSource = _readGlpFile('typed_social_agent.glp');
       final actorSource = _readGlpFile('typed_actors.glp');
 
-      if (source == null || agentSource == null || actorSource == null) return;
+      if (source == null || selfSource == null || agentSource == null ||
+          actorSource == null) return;
 
       final loader = BootLoader();
       final config = loader.load(source);
       config.rootSelfGlpPath = File('../programs/self.glp').absolute.path;
-      config.sharedSources = [agentSource, actorSource];
+      // The fixture's own self.glp first: it defines Response and the rest of
+      // the agent/mediator protocol types, and omitting it crashed every agent
+      // at init with UnknownTypeError: Response.
+      config.sharedSources = [selfSource, agentSource, actorSource];
 
       // Should parse correctly with agent_init goal (actors spawned internally)
       expect(config.directives.length, equals(3));
@@ -81,28 +86,28 @@ agent_init(_, _) :- true.
       await manager.settle();
 
       // Termination is external — we shut down in tearDown
-    }, skip: 'Retired 2026-06-22: tests legacy programs/book/social_graph '
-        '(superseded by programs/social/graph + cssn). The IsolateManager '
-        'multi-isolate full-play path is covered green by cssn_v2_isolate_test '
-        'and bonds_v2_isolate_test over live code. Was a 30s timeout because '
-        'the boot config omits book/social_graph/self.glp, so all agents crash '
-        'at init with UnknownTypeError: Response — a harness scope omission, '
-        'same class as the fixed roundtrip_isolate_test, not a runtime/_w bug.',
-        timeout: Timeout(Duration(seconds: 30)));
+    }, timeout: Timeout(Duration(seconds: 30)));
 
     test('runs full play with UI mediator and UI actors', () async {
       final source = _readGlpFile('play_ui_madglp_boot.glp');
+      final selfSource = _readGlpFile('self.glp');
       final agentSource = _readGlpFile('typed_social_agent.glp');
       final mediatorSource = _readGlpFile('typed_ui_mediator.glp');
       final uiActorSource = _readGlpFile('typed_ui_actors.glp');
 
-      if (source == null || agentSource == null ||
+      if (source == null || selfSource == null || agentSource == null ||
           mediatorSource == null || uiActorSource == null) return;
 
       final loader = BootLoader();
       final config = loader.load(source);
       config.rootSelfGlpPath = File('../programs/self.glp').absolute.path;
-      config.sharedSources = [agentSource, mediatorSource, uiActorSource];
+      // See the sibling test: the fixture's self.glp carries the protocol types.
+      config.sharedSources = [
+        selfSource,
+        agentSource,
+        mediatorSource,
+        uiActorSource
+      ];
 
       // Should parse correctly with agent_init goal
       expect(config.directives.length, equals(3));
@@ -119,13 +124,6 @@ agent_init(_, _) :- true.
       await manager.settle();
 
       // Termination is external — we shut down in tearDown
-    }, skip: 'Retired 2026-06-22: tests legacy programs/book/social_graph '
-        '(superseded by programs/social/graph + cssn). The IsolateManager '
-        'multi-isolate full-play path is covered green by cssn_v2_isolate_test '
-        'and bonds_v2_isolate_test over live code. Was a 30s timeout because '
-        'the boot config omits book/social_graph/self.glp, so all agents crash '
-        'at init with UnknownTypeError: Response — a harness scope omission, '
-        'same class as the fixed roundtrip_isolate_test, not a runtime/_w bug.',
-        timeout: Timeout(Duration(seconds: 30)));
+    }, timeout: Timeout(Duration(seconds: 30)));
   });
 }

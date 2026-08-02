@@ -16,7 +16,7 @@ import 'package:glp_runtime/engine/glp_engine.dart';
 void main() {
   test('single-heap cold-call: connect -> accept -> connected on both sides',
       () async {
-    final dir = '../programs/book/social_graph';
+    final dir = '../programs/tests/agent_roundtrip';
     final engine = GlpEngine(
         rootSelfGlpPath: File('../programs/self.glp').absolute.path)
       ..strictTypes = false;
