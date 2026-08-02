@@ -1,0 +1,9 @@
+%% parameterized-types.tex, "Multiple parameters": if the context provides
+%% Stream(Integer)? for arg 1 and Channel(String,String)? for arg 3, the paper
+%% says the checker reports an error: X cannot be both Integer and String.
+procedure relay(Stream(X)?, Stream(X), Channel(X, X)?).
+relay([A|As], [A?|Bs?], C) :- relay(As?, Bs, C?).
+relay([], [], _).
+
+procedure use(Stream(Integer)?, Stream(Integer), Channel(String, String)?).
+use(Is, Os?, Ch) :- relay(Is?, Os, Ch?).
