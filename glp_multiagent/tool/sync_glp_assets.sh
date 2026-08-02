@@ -9,13 +9,13 @@ cd "$(dirname "$0")/.."           # glp_multiagent/
 SRC=../programs
 DST=assets/glp/programs
 rm -rf "$DST"
-mkdir -p "$DST/lib/routing" "$DST/book/grassapp" "$DST/social/graph/ui" "$DST/cssn/ui"
+mkdir -p "$DST/social/graph/routing" "$DST/grassapp" "$DST/social/graph/ui" "$DST/cssn/ui"
 cp "$SRC/self.glp" "$DST/self.glp"
 for f in output inject intro befriend; do
-  cp "$SRC/lib/routing/$f.glp" "$DST/lib/routing/$f.glp"
+  cp "$SRC/social/graph/routing/$f.glp" "$DST/social/graph/routing/$f.glp"
 done
 for f in self currency_txn grassapp_agent grassapp_mediator play_grassapp_boot play_grassapp_duo play_village_headless; do
-  cp "$SRC/book/grassapp/$f.glp" "$DST/book/grassapp/$f.glp"
+  cp "$SRC/grassapp/$f.glp" "$DST/grassapp/$f.glp"
 done
 for f in self agent boot play_ui_boot; do
   cp "$SRC/social/graph/$f.glp" "$DST/social/graph/$f.glp"

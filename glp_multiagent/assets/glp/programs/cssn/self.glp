@@ -63,7 +63,7 @@ PendingValue ::= response(Response?) ; channel(Channel(Stream(IntroContent), Str
 %% AGENT <-> MEDIATOR INTERFACE
 %% =============================================================================
 
-%% Content carried inside user-to-agent messages (msg('_user', Id, Content))
+%% Content carried inside user-to-agent messages (msg(person, Id, Content))
 UserContent ::= connect(Constant)
               ; decision(Decision, Constant, PendingValue)
               ; send(Constant, Constant)
@@ -90,7 +90,7 @@ UserContent ::= connect(Constant)
               ; unfriend_child(Constant)
               ; unfriend_child_of(Constant, Constant).
 
-%% Content carried inside agent-to-user messages (msg(agent, '_user', Content))
+%% Content carried inside agent-to-user messages (msg(agent, person, Content))
 %% Agent-only message content (excludes shared GroupNotifyContent)
 AgentOnlyContent ::= befriend(Constant, Response?)
                    ; befriend_intro(Constant, Constant, Channel(Stream(IntroContent), Stream(IntroContent)))
@@ -106,7 +106,7 @@ AgentOnlyContent ::= befriend(Constant, Response?)
                    ; child_group_consent(Constant, GroupId, Decision?)
                    ; unfriended(Constant).
 
-%% Content carried inside agent-to-user messages (msg(agent, '_user', Content))
+%% Content carried inside agent-to-user messages (msg(agent, person, Content))
 AgentContent ::= AgentOnlyContent ; GroupNotifyContent.
 
 %% Precise message types for agent <-> mediator channel

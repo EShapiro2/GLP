@@ -2689,7 +2689,7 @@ echo ""
 #
 # The seven below are vGLP's, all one cause, all red since d4afc77b on
 # 2026-08-01: that commit added `imported procedure grassapp_agent#agent/7` to
-# the play files so programs/book/grassapp would pass the per-module check as a
+# the play files so programs/grassapp would pass the per-module check as a
 # directory program, and a source carrying an imported declaration is no longer
 # a self-contained program, so the co-loaded path these seven still use is
 # rejected.  vGLP claimed them at 2026-08-01 22:28 under the test-ownership

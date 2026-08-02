@@ -9,7 +9,7 @@ import 'dart:isolate';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:glp_multiagent/isolate_protocol.dart';
 
-const _ga = '/Users/udi/Grassroots/GLP/programs/book/grassapp';
+const _ga = '/Users/udi/Grassroots/GLP/programs/grassapp';
 
 void main() {
   test('charlie pays then unfriends Bob → unfriended(charlie) reaches Bob',

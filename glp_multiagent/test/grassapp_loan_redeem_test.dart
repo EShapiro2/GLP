@@ -27,7 +27,7 @@ void main() {
   test('GrassApp: loan then maturity-gated redemption on local clocks',
       () async {
     const repo = '/Users/udi/Grassroots/GLP';
-    const dir = '$repo/programs/book/grassapp';
+    const dir = '$repo/programs/grassapp';
 
     // Same list the app loads, plus the headless scenario.
     const files = <String>[

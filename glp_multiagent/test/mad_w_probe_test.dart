@@ -72,8 +72,14 @@ void main() {
     ports['alice']!.send(StartAgent());
     ports['bob']!.send(StartAgent());
 
-    await waitUntil(
-        () => out['bob']!.any((l) => l.contains('bob_ch_otherwise')));
+    // Wait for BOTH reports. bob_producer and bob_consumer are concurrent, and
+    // the order they reach the output is not fixed: under load bob_produced can
+    // arrive after bob_ch_otherwise. Waiting on one and then reading the other
+    // is a race, and it is what turned this test red inside the full suite while
+    // it passed run alone.
+    await waitUntil(() =>
+        out['bob']!.any((l) => l.contains('bob_produced')) &&
+        out['bob']!.any((l) => l.contains('bob_ch_otherwise')));
     final produced = out['bob']!.any((l) => l.contains('bob_produced'));
     final otherwise = out['bob']!.any((l) => l.contains('bob_ch_otherwise'));
     final matched = out['bob']!.any((l) => l.contains('bob_ch_matched'));

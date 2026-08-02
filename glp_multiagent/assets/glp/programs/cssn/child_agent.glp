@@ -19,7 +19,7 @@ await_group_channel(Id, ParentId, GroupId, [group_channel(ch(FromHub, ToHub?))|_
     ground(Id?), ground(GroupId?) |
     add_group_output(group(GroupId?), ToHub, Outs?, Outs1),
     merge(NetIn?, FromHub?, NetIn1),
-    send_user( msg(agent, '_user', group_joined(GroupId?)),
+    send_user( msg(agent, person, group_joined(GroupId?)),
         Outs1?, Outs2),
     child_agent(Id?, ParentId?, UserIn?, NetIn1?, Outs2?).
 await_group_channel(_, _, _, [], _, _, _) :- true.
@@ -34,7 +34,7 @@ procedure child_consent_wait(Decision?, Constant?, Constant?, GroupId?,
 %% Parent approved — present invite to child's UI
 child_consent_wait(yes, Id, ParentId, GroupId, Ch, UserIn, NetIn, Outs) :-
     ground(Id?) |
-    send_user( msg(agent, '_user', group_invite(GroupId?, Ch?)),
+    send_user( msg(agent, person, group_invite(GroupId?, Ch?)),
         Outs?, Outs1),
     child_agent(Id?, ParentId?, UserIn?, NetIn?, Outs1?).
 
@@ -51,13 +51,13 @@ exported procedure child_agent(Constant?, Constant?, Stream(UserInMsg)?, Stream(
 %% --- User messages ---
 
 %% Send text to friend
-child_agent(Id, ParentId, [msg('_user', Id1, send(Target, Text))|UserIn], NetIn, Outs) :-
+child_agent(Id, ParentId, [msg(person, Id1, send(Target, Text))|UserIn], NetIn, Outs) :-
     Id? =?= Id1?, ground(Target?) |
     send_friend(Target?, msg(Id?, Target?, text(Text?)), Outs?, Outs1),
     child_agent(Id?, ParentId?, UserIn?, NetIn?, Outs1?).
 
 %% Accept child intro — send ack, await peer
-child_agent(Id, ParentId, [msg('_user', Id1, accept_child_intro(Other, channel(Ch)))|UserIn], NetIn, Outs) :-
+child_agent(Id, ParentId, [msg(person, Id1, accept_child_intro(Other, channel(Ch)))|UserIn], NetIn, Outs) :-
     Id? =?= Id1?, ground(Other?),
     send(ack(Id?), Ch?, Ch1) |
     intro_await_peer(Other?, Ch1?, Result),
@@ -65,23 +65,23 @@ child_agent(Id, ParentId, [msg('_user', Id1, accept_child_intro(Other, channel(C
     child_agent(Id?, ParentId?, UserIn1?, NetIn?, Outs?).
 
 %% Reject child intro — send nack
-child_agent(Id, ParentId, [msg('_user', Id1, reject_child_intro(_, channel(ch(_, [nack|[]]))))|UserIn], NetIn, Outs) :-
+child_agent(Id, ParentId, [msg(person, Id1, reject_child_intro(_, channel(ch(_, [nack|[]]))))|UserIn], NetIn, Outs) :-
     Id? =?= Id1? |
     child_agent(Id?, ParentId?, UserIn?, NetIn?, Outs?).
 
 %% --- Group user messages ---
 
 %% Child creates a group
-child_agent(Id, ParentId, [msg('_user', Id1, create_group(Name))|UserIn], NetIn, Outs) :-
+child_agent(Id, ParentId, [msg(person, Id1, create_group(Name))|UserIn], NetIn, Outs) :-
     Id? =?= Id1?, ground(Name?) |
     setup_group_creator(group_id(Id?, Name?),
         Outs?, Outs1, NetIn?, NetIn1),
-    send_user( msg(agent, '_user', group_joined(group_id(Id?, Name?))),
+    send_user( msg(agent, person, group_joined(group_id(Id?, Name?))),
         Outs1?, Outs2),
     child_agent(Id?, ParentId?, UserIn?, NetIn1?, Outs2?).
 
 %% Child invites friend to group
-child_agent(Id, ParentId, [msg('_user', Id1, invite_group(GroupId, Invitee))|UserIn], NetIn, Outs) :-
+child_agent(Id, ParentId, [msg(person, Id1, invite_group(GroupId, Invitee))|UserIn], NetIn, Outs) :-
     Id? =?= Id1?, ground(GroupId?), ground(Invitee?),
     new_channel(InviteeCh, CreatorCh) |
     send_friend(Invitee?,
@@ -91,40 +91,40 @@ child_agent(Id, ParentId, [msg('_user', Id1, invite_group(GroupId, Invitee))|Use
     child_agent(Id?, ParentId?, UserIn1?, NetIn?, Outs1?).
 
 %% Child accepts group invite
-child_agent(Id, ParentId, [msg('_user', Id1, accept_group(GroupId,
+child_agent(Id, ParentId, [msg(person, Id1, accept_group(GroupId,
         group_channel(ch(ChRead, [ack(Id?)|[]]))))|UserIn],
         NetIn, Outs) :-
     Id? =?= Id1?, ground(GroupId?) |
     await_group_channel(Id?, ParentId?, GroupId?, ChRead?, UserIn?, NetIn?, Outs?).
 
 %% Child rejects group invite — send nack, close channel
-child_agent(Id, ParentId, [msg('_user', Id1, reject_group(_, group_channel(ch(_, [nack|[]]))))|UserIn],
+child_agent(Id, ParentId, [msg(person, Id1, reject_group(_, group_channel(ch(_, [nack|[]]))))|UserIn],
         NetIn, Outs) :-
     Id? =?= Id1? |
     child_agent(Id?, ParentId?, UserIn?, NetIn?, Outs?).
 
 %% Child sends group message
-child_agent(Id, ParentId, [msg('_user', Id1, send_group(GroupId, Text))|UserIn], NetIn, Outs) :-
+child_agent(Id, ParentId, [msg(person, Id1, send_group(GroupId, Text))|UserIn], NetIn, Outs) :-
     Id? =?= Id1?, ground(GroupId?), ground(Text?) |
     lookup_send_group(group(GroupId?),
         msg(Id?, Id?, group_msg(GroupId?, Id?, Text?)), Outs?, Outs1),
     child_agent(Id?, ParentId?, UserIn?, NetIn?, Outs1?).
 
 %% Child leaves group (own choice)
-child_agent(Id, ParentId, [msg('_user', Id1, leave_group(GroupId))|UserIn], NetIn, Outs) :-
+child_agent(Id, ParentId, [msg(person, Id1, leave_group(GroupId))|UserIn], NetIn, Outs) :-
     Id? =?= Id1?, ground(GroupId?) |
     lookup_send_group(group(GroupId?),
         msg(Id?, Id?, group_leave(GroupId?, Id?)), Outs?, Outs1),
     close_output(group(GroupId?), Outs1?, Outs2),
-    send_user( msg(agent, '_user', group_left(GroupId?)), Outs2?, Outs3),
+    send_user( msg(agent, person, group_left(GroupId?)), Outs2?, Outs3),
     child_agent(Id?, ParentId?, UserIn?, NetIn?, Outs3?).
 
 %% Child initiates unfriend
-child_agent(Id, ParentId, [msg('_user', Id1, unfriend_child(Target))|UserIn], NetIn, Outs) :-
+child_agent(Id, ParentId, [msg(person, Id1, unfriend_child(Target))|UserIn], NetIn, Outs) :-
     Id? =?= Id1?, ground(Target?) |
     send_friend(Target?, msg(Id?, Target?, unfriend), Outs?, Outs1),
     close_friend(Target?, Outs1?, Outs2),
-    send_user( msg(agent, '_user', unfriended(Target?)), Outs2?, Outs3),
+    send_user( msg(agent, person, unfriended(Target?)), Outs2?, Outs3),
     child_agent(Id?, ParentId?, UserIn?, NetIn?, Outs3?).
 
 %% --- Injected intro results ---
@@ -138,7 +138,7 @@ child_agent(Id, ParentId, [intro_result(Other, Ch)|UserIn], NetIn, Outs) :-
 %% Intro result: peer nacked — notify rejected
 child_agent(Id, ParentId, [intro_rejected(Other)|UserIn], NetIn, Outs) :-
     ground(Id?) |
-    send_user( msg(agent, '_user', rejected(Other?)), Outs?, Outs1),
+    send_user( msg(agent, person, rejected(Other?)), Outs?, Outs1),
     child_agent(Id?, ParentId?, UserIn?, NetIn?, Outs1?).
 
 %% --- Injected group results ---
@@ -148,7 +148,7 @@ child_agent(Id, ParentId, [group_join_ack(GroupId, Invitee, ch(_, [group_channel
         NetIn, Outs) :-
     ground(Id?), ground(GroupId?), ground(Invitee?) |
     setup_group_hub_side(GroupId?, Invitee?, Outs?, Outs1, NetIn?, NetIn1, MemberEnd),
-    send_user( msg(agent, '_user', group_joined_member(GroupId?, Invitee?)),
+    send_user( msg(agent, person, group_joined_member(GroupId?, Invitee?)),
         Outs1?, Outs2),
     child_agent(Id?, ParentId?, UserIn?, NetIn1?, Outs2?).
 
@@ -162,13 +162,13 @@ child_agent(Id, ParentId, [group_join_nack(_, _)|UserIn], NetIn, Outs) :-
 %% Parent sends child_intro — present to UI
 child_agent(Id, ParentId, UserIn, [msg(From, Id1, child_intro(Other, Ch))|NetIn], Outs) :-
     Id? =?= Id1?, From? =?= ParentId?, ground(Other?) |
-    send_user( msg(agent, '_user', child_befriend(From?, Other?, Ch?)), Outs?, Outs1),
+    send_user( msg(agent, person, child_befriend(From?, Other?, Ch?)), Outs?, Outs1),
     child_agent(Id?, ParentId?, UserIn?, NetIn?, Outs1?).
 
 %% Parent forwards group_invite — parent already consented (consent flow 2)
 child_agent(Id, ParentId, UserIn, [msg(From, Id1, group_invite(GroupId, Ch))|NetIn], Outs) :-
     Id? =?= Id1?, From? =?= ParentId?, ground(GroupId?) |
-    send_user( msg(agent, '_user', group_invite(GroupId?, Ch?)), Outs?, Outs1),
+    send_user( msg(agent, person, group_invite(GroupId?, Ch?)), Outs?, Outs1),
     child_agent(Id?, ParentId?, UserIn?, NetIn?, Outs1?).
 
 %% Parent tells child to leave group
@@ -177,7 +177,7 @@ child_agent(Id, ParentId, UserIn, [msg(From, Id1, leave_group(GroupId))|NetIn], 
     lookup_send_group(group(GroupId?),
         msg(Id?, Id?, group_leave(GroupId?, Id?)), Outs?, Outs1),
     close_output(group(GroupId?), Outs1?, Outs2),
-    send_user( msg(agent, '_user', group_left(GroupId?)), Outs2?, Outs3),
+    send_user( msg(agent, person, group_left(GroupId?)), Outs2?, Outs3),
     child_agent(Id?, ParentId?, UserIn?, NetIn?, Outs3?).
 
 %% Parent tells child to unfriend
@@ -185,7 +185,7 @@ child_agent(Id, ParentId, UserIn, [msg(From, Id1, unfriend_child(Target))|NetIn]
     Id? =?= Id1?, From? =?= ParentId?, ground(Target?) |
     send_friend(Target?, msg(Id?, Target?, unfriend), Outs?, Outs1),
     close_friend(Target?, Outs1?, Outs2),
-    send_user( msg(agent, '_user', unfriended(Target?)), Outs2?, Outs3),
+    send_user( msg(agent, person, unfriended(Target?)), Outs2?, Outs3),
     child_agent(Id?, ParentId?, UserIn?, NetIn?, Outs3?).
 
 %% --- Network messages from friends (otherwise) ---
@@ -193,7 +193,7 @@ child_agent(Id, ParentId, UserIn, [msg(From, Id1, unfriend_child(Target))|NetIn]
 %% Friend sends text — notify UI
 child_agent(Id, ParentId, UserIn, [msg(From, Id1, text(Text))|NetIn], Outs) :-
     Id? =?= Id1? |
-    send_user( msg(agent, '_user', received(From?, Text?)), Outs?, Outs1),
+    send_user( msg(agent, person, received(From?, Text?)), Outs?, Outs1),
     child_agent(Id?, ParentId?, UserIn?, NetIn?, Outs1?).
 
 %% Friend sends group_invite — child-managed group, need parental consent (consent flow 3)
@@ -210,7 +210,7 @@ child_agent(Id, ParentId, UserIn, [msg(_, _, group_msg(GroupId, Author, Text))|N
     ground(Id?), ground(GroupId?), ground(Author?), ground(Text?) |
     distribute_group_msg(GroupId?,
         msg(Author?, Author?, group_msg(GroupId?, Author?, Text?)), Outs?, Outs1),
-    send_user( msg(agent, '_user', group_received(GroupId?, Author?, Text?)),
+    send_user( msg(agent, person, group_received(GroupId?, Author?, Text?)),
         Outs1?, Outs2),
     child_agent(Id?, ParentId?, UserIn?, NetIn?, Outs2?).
 
@@ -218,7 +218,7 @@ child_agent(Id, ParentId, UserIn, [msg(_, _, group_msg(GroupId, Author, Text))|N
 child_agent(Id, ParentId, UserIn, [msg(_, Id1, group_removed(GroupId))|NetIn], Outs) :-
     Id? =?= Id1?, ground(GroupId?) |
     close_output(group(GroupId?), Outs?, Outs1),
-    send_user( msg(agent, '_user', group_removed(GroupId?)), Outs1?, Outs2),
+    send_user( msg(agent, person, group_removed(GroupId?)), Outs1?, Outs2),
     child_agent(Id?, ParentId?, UserIn?, NetIn?, Outs2?).
 
 %% Creator receives leave notification from child member
@@ -231,7 +231,7 @@ child_agent(Id, ParentId, UserIn, [msg(Member, _, group_leave(GroupId, Member1))
 child_agent(Id, ParentId, UserIn, [msg(From, Id1, unfriend)|NetIn], Outs) :-
     Id? =?= Id1?, ground(From?) |
     close_friend(From?, Outs?, Outs1),
-    send_user( msg(agent, '_user', unfriended(From?)), Outs1?, Outs2),
+    send_user( msg(agent, person, unfriended(From?)), Outs1?, Outs2),
     child_agent(Id?, ParentId?, UserIn?, NetIn?, Outs2?).
 
 %% --- Termination ---

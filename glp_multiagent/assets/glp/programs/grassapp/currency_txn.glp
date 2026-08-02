@@ -1,15 +1,18 @@
 %% currency_txn.glp — GrassApp's top-level lift of the currencies transaction core.
 %%
-%% A plain-`procedure` copy of programs/currencies/txn.glp (Grassroots-Bonds
-%% owned, and still the canonical owner of this logic).  The ONLY change is
-%% `exported procedure` -> `procedure`.  GrassApp loads its modules top-level via
-%% loadSource (no module scoping), so the agent calls these predicates BARE — the
-%% same way it calls agent/ui_mediator.  An `exported`/`txn#` module cannot be
-%% reused in-isolate: a co-loaded module's `#` call compiles to a cross-isolate
-%% `Distribute` (see the IGLP relay).  Once IGLP supports in-isolate module reuse
+%% A copy of programs/currencies/txn.glp (Grassroots-Bonds owned, and still the
+%% canonical owner of this logic).  The exports are the canonical file's, plus
+%% own_coins/4, which the agent calls directly and the canonical file does not
+%% export.  The agent calls all of them BARE: this directory's self.glp carries
+%% -expose(currency_txn), which lifts a module's exports into the directory's
+%% scope (modules.tex, -expose), so no `#` qualifier appears at a call site.
+%% Loading the directory as a directory program resolves them at compile time,
+%% in one isolate; the cross-isolate `Distribute` that the retired co-loading
+%% path produced does not arise.  Once GrassApp's entry point sets programDir,
 %% this lift can be replaced by importing currencies/txn.glp directly.
 %%
-%% KEEP IN SYNC with programs/currencies/txn.glp (same author owns both).
+%% KEEP IN SYNC with programs/currencies/txn.glp (same author owns both); the
+%% own_coins export is the one deliberate divergence.
 %%
 %% The pure, UI-agnostic bond-transaction predicates: maturity-aware holdings
 %% (bonds), lot selection, the redeem-side maturity gate, trade classification,
@@ -30,7 +33,7 @@
 %% CREATE_BONDS — Create K bonds with given issuer and maturity (Mint)
 %% =============================================================================
 
-procedure create_bonds(Constant?, Constant?, Constant?, Constant?, Stream(Bond)).
+exported procedure create_bonds(Constant?, Constant?, Constant?, Constant?, Stream(Bond)).
 create_bonds(Issuer, Maturity, K, Serial,
              [bond(Issuer?, Maturity?, Serial?)|Rest?]) :-
     K? > 0 |
@@ -44,7 +47,7 @@ create_bonds(_, _, 0, _, []).
 %% without a hidden self.glp dependency)
 %% =============================================================================
 
-procedure append(Stream(Bond)?, Stream(Bond)?, Stream(Bond)).
+exported procedure append(Stream(Bond)?, Stream(Bond)?, Stream(Bond)).
 append([X|Xs], Ys, [X?|Zs?]) :- append(Xs?, Ys?, Zs).
 append([], Ys, Ys?).
 
@@ -67,7 +70,7 @@ select_bonds_exact(_, _, K, [], fail, [], []) :- K? > 0 | true.
 %% SELECT_BONDS_BY_SPEC — Fold over a lot list (exact issuer+maturity match)
 %% =============================================================================
 
-procedure select_bonds_by_spec(Stream(Lot)?, Stream(Bond)?, Constant, Stream(Bond), Stream(Bond)).
+exported procedure select_bonds_by_spec(Stream(Lot)?, Stream(Bond)?, Constant, Stream(Bond), Stream(Bond)).
 select_bonds_by_spec([lot(Issuer, Maturity, Count)|Rest], Holdings, Status?, AllSel?, FinalRem?) :-
     ground(Issuer?), ground(Maturity?), ground(Count?) |
     select_bonds_exact(Issuer?, Maturity?, Count?, Holdings?, LotStatus, LotSel, LotRem),
@@ -90,14 +93,14 @@ select_by_spec_continue(fail, _, LotSel, LotRem, fail, LotSel?, LotRem?).
 %% Anything else is a normal swap, shown to the user, that Id may accept or decline.
 %% =============================================================================
 
-procedure classify_trade(Constant?, Constant?, Stream(Lot)?, Stream(Bond)?, Constant).
+exported procedure classify_trade(Constant?, Constant?, Stream(Lot)?, Stream(Bond)?, Constant).
 classify_trade(Id, Clock, WantSpec, OfferedBonds, Class?) :-
     own_coins(Id?, Clock?, OfferedBonds?, AllCoins),
     coin_trade(AllCoins?, WantSpec?, Class).
 
 %% own_coins: every offered bond is a coin of Id — issued by Id (I =?= Id) and
 %% mature at Id's own date (M =< Clock).
-procedure own_coins(Constant?, Constant?, Stream(Bond)?, Constant).
+exported procedure own_coins(Constant?, Constant?, Stream(Bond)?, Constant).
 own_coins(Id, Clock, [bond(I, M, _)|Rest], R?) :-
     Id? =?= I?, M? =< Clock? | own_coins(Id?, Clock?, Rest?, R).
 own_coins(_, _, [bond(_, _, _)|_], no) :-
@@ -114,7 +117,7 @@ coin_trade(yes, [_|_], redemption).
 %% BUILD_MENU — One bond per issuer, earliest maturity (redemption menu)
 %% =============================================================================
 
-procedure build_menu(Constant?, Stream(Bond)?, Stream(Bond)).
+exported procedure build_menu(Constant?, Stream(Bond)?, Stream(Bond)).
 build_menu(Id, Holdings, Menu?) :-
     build_menu_acc(Id?, Holdings?, [], Menu).
 

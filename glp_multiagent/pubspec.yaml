@@ -37,8 +37,8 @@ flutter:
   # tool/sync_glp_assets.sh. On macOS the repo on disk is used instead.
   assets:
     - assets/glp/programs/self.glp
-    - assets/glp/programs/lib/routing/
-    - assets/glp/programs/book/grassapp/
+    - assets/glp/programs/social/graph/routing/
+    - assets/glp/programs/grassapp/
     - assets/glp/programs/social/graph/
     - assets/glp/programs/social/graph/ui/
     - assets/glp/programs/cssn/

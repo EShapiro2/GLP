@@ -102,7 +102,7 @@ void main() {
       'grassapp_mediator.glp',
       'play_grassapp_boot.glp',
     ];
-    final paths = [for (final f in files) '$repo/book/grassapp/$f'];
+    final paths = [for (final f in files) '$repo/grassapp/$f'];
     final lines = <String>[];
     final agent = AgentRuntime(
       agentId: 'Bob',

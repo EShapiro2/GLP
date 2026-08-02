@@ -46,7 +46,7 @@ void main() {
 
       // The program's own 6 modules: agent, child_agent, mediator, actors,
       // boot, cssn — plus the 4 routing modules exposed from the root self.glp
-      // (lib/routing/{output,inject,intro,befriend}), discovered as linkable
+      // (social/graph/routing/{output,inject,intro,befriend}), discovered as linkable
       // across the whole programs/ subtree (module-system spec §3.3).  Any left
       // unreachable are pruned by DCE at compile time; discovery still lists them.
       final names = modules.map((m) => m.moduleName).toSet();
@@ -57,7 +57,7 @@ void main() {
       expect(names, contains('boot'));
       expect(names, contains('cssn'));
       // -module removed: module names derive from the filename, so the routing
-      // modules are output/inject/intro/befriend (lib/routing/<name>.glp).
+      // modules are output/inject/intro/befriend (social/graph/routing/<name>.glp).
       expect(names, contains('output'));
       expect(names, contains('inject'));
       expect(names, contains('intro'));

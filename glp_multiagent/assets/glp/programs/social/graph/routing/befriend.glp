@@ -69,7 +69,7 @@ smaller_dispatch(yes, _, ch(_, []), Outs, Outs?, NetIn, NetIn?).
 smaller_dispatch(no, Other, ch(_, [friend_channel(PeerEnd?)|[]]), Outs, Outs2?, NetIn, NetIn1?) :-
     ground(Other?), new_channel(PeerEnd, ch(FIn, FOut?)) |
     output # add_friend_output(Other?, FOut, Outs?, Outs1),
-    output # send_user(msg(agent, '_user', connected(Other?)), Outs1?, Outs2),
+    output # send_user(msg(agent, person, connected(Other?)), Outs1?, Outs2),
     merge(NetIn?, FIn?, NetIn1).
 
 %% Larger-name side: read the setup channel's read end.
@@ -83,7 +83,7 @@ await_friend_channel(Other, ch([friend_channel(ch(FIn, FOut?))|_], []), Outs, Ou
     ground(Other?) |
     close_friend(Other?, Outs?, Outs1),
     output # add_friend_output(Other?, FOut, Outs1?, Outs2),
-    output # send_user(msg(agent, '_user', connected(Other?)), Outs2?, Outs3),
+    output # send_user(msg(agent, person, connected(Other?)), Outs2?, Outs3),
     merge(NetIn?, FIn?, NetIn1).
 
 %% Setup closed ([]): smaller-name side suppressed this offer.  Drop it.

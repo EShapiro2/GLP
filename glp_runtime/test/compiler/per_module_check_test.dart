@@ -10,7 +10,7 @@
 // type-checked by nothing, and a directory load reported "Loaded program" with
 // no diagnostics over a file that called a procedure at an arity that does not
 // exist and constructed a term of a type the scope no longer declared (vGLP,
-// 2026-07-23, against programs/book/grassapp).
+// 2026-07-23, against programs/grassapp).
 //
 // Fixture: programs/tests/unreachable_neg/. Its root self.glp exports one entry
 // point, which reaches reached.glp and nothing else; unreached_arity.glp and

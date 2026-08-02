@@ -23,7 +23,7 @@ import 'package:glp_runtime/engine/glp_engine.dart';
 void main() {
   test('GrassApp: escrow time-release pays the beneficiary', () async {
     const repo = '/Users/udi/Grassroots/GLP';
-    const dir = '$repo/programs/book/grassapp';
+    const dir = '$repo/programs/grassapp';
 
     const files = <String>[
       'self.glp',

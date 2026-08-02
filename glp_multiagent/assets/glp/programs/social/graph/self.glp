@@ -22,7 +22,7 @@ PendingValue ::= response(Response?) ; channel(IntroChannel) ; error.
 
 %% --- Content types for messages ---
 
-%% Content carried inside user-to-agent messages (msg('_user', Id, Content))
+%% Content carried inside user-to-agent messages (msg(person, Id, Content))
 UserContent ::= connect(Constant)
               ; decision(Decision, Constant, PendingValue)
               ; send(Constant, Constant)
@@ -32,7 +32,7 @@ UserContent ::= connect(Constant)
               ; unfriend(Constant)
               ; response(Response).
 
-%% Content carried inside agent-to-user messages (msg(agent, '_user', Content))
+%% Content carried inside agent-to-user messages (msg(agent, person, Content))
 AgentContent ::= befriend(Constant, Response?)
                ; befriend_intro(Constant, Constant, IntroChannel)
                ; connected(Constant)

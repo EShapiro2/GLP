@@ -72,8 +72,12 @@ void main() {
     ports['alice']!.send(StartAgent());
     ports['bob']!.send(StartAgent());
 
-    await waitUntil(
-        () => out['bob']!.any((l) => l.contains('bob_ch_matched')));
+    // Wait for BOTH reports. bob_producer and bob_consumer are concurrent, and
+    // the order they reach the output is not fixed, so waiting on one and then
+    // reading the other is a race.
+    await waitUntil(() =>
+        out['bob']!.any((l) => l.contains('bob_produced')) &&
+        out['bob']!.any((l) => l.contains('bob_ch_matched')));
     final produced = out['bob']!.any((l) => l.contains('bob_produced'));
     final matched = out['bob']!.any((l) => l.contains('bob_ch_matched'));
     final otherwise = out['bob']!.any((l) => l.contains('bob_ch_otherwise'));

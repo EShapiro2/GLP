@@ -18,7 +18,7 @@ import 'package:glp_runtime/engine/glp_engine.dart';
 void main() {
   test('GrassApp village market: the seven operations of §8.2', () async {
     const repo = '/Users/udi/Grassroots/GLP';
-    const dir = '$repo/programs/book/grassapp';
+    const dir = '$repo/programs/grassapp';
 
     const files = <String>[
       'self.glp',

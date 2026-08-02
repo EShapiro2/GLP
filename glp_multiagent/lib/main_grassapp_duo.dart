@@ -2,7 +2,7 @@
 ///
 /// Phone 1 runs Bob (live UI) + Eve (scripted actor); phone 2 runs Alice
 /// (live UI) + Dana (actor). Each agent is its own isolate booted from
-/// `programs/book/grassapp/play_grassapp_duo.glp`; madGLP messages between
+/// `programs/grassapp/play_grassapp_duo.glp`; madGLP messages between
 /// local agents route through [IsolateRouter], and messages addressed to the
 /// other phone's agents travel over the Grassroots networking layer (UDX +
 /// Noise, rendezvous pairing) — the networking-seam swap in its intended

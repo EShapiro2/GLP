@@ -2,11 +2,11 @@
 /// **Friends** (the social graph), **Currencies** (coins and bonds among friends), and
 /// **Chats** (the social network). The bottom bar is these three panels; each
 /// carries its own compose forms and its own per-item alerts. One mediator
-/// (programs/book/grassapp/grassapp_mediator.glp) feeds them all; the Dart side
+/// (programs/grassapp/grassapp_mediator.glp) feeds them all; the Dart side
 /// routes each ask to its platform's panel by notify constructor — a friend
 /// offer to Friends, a proposed swap to Currencies, a group invitation to Chats.
 ///
-/// Backed live by the GLP GrassApp scenario in programs/book/grassapp/
+/// Backed live by the GLP GrassApp scenario in programs/grassapp/
 /// (grassapp_agent + grassapp_mediator), whose UserCmd/UserNotify vocabulary
 /// this manifest mirrors.
 library;

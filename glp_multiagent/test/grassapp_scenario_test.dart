@@ -1,6 +1,6 @@
 /// Live-UI probe for the GrassApp scenario: drives the exact path the app
 /// uses (AgentRuntime, source-list load, agent_init/3, injected UserCmd text)
-/// with programs/book/grassapp (grassapp_agent + grassapp_mediator) booted by
+/// with programs/grassapp (grassapp_agent + grassapp_mediator) booted by
 /// play_grassapp_boot.glp — four actors: Alice (swap), Charlie (unfriend),
 /// Dana (swap then redeem), Eve (chat greeting).
 library;
@@ -23,7 +23,7 @@ void main() {
       'grassapp_mediator.glp',
       'play_grassapp_boot.glp',
     ];
-    final paths = [for (final f in files) '$repo/book/grassapp/$f'];
+    final paths = [for (final f in files) '$repo/grassapp/$f'];
 
     final lines = <String>[];
     final agent = AgentRuntime(

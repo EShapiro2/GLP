@@ -7,7 +7,7 @@
 /// inbox cards and screen state; its UserCmd stream is written by the compose
 /// forms and card taps. Two scenarios, selectable on desktop:
 ///
-///  - **GrassApp** (default; the phone deploy): programs/book/grassapp —
+///  - **GrassApp** (default; the phone deploy): programs/grassapp —
 ///    grassapp_agent + grassapp_mediator, three panels (Friends/Currencies/Chats).
 ///  - **Social Graph**: programs/social/graph — agent.glp + ui/mediator.glp,
 ///    the canonical graph pair, booted by play_ui_boot.glp.

@@ -55,32 +55,15 @@ class ReplPlayRunner {
   /// the directory was retired, since nothing else named it.
   final List<String> glpFiles;
 
-  /// Bonds GLP files (grassroots bonds, plays 1–11).
-  static const bondsFiles = [
-    '../programs/book/bonds/agent.glp',
-    '../programs/book/bonds/mediator.glp',
-    '../programs/book/bonds/actors.glp',
-    '../programs/book/bonds/boot.glp',
-  ];
-
-  /// Bonds GLP files for play 12 (adds play12 actor files).
-  static const bondsPlay12Files = [
-    ...bondsFiles,
-    '../programs/book/bonds/play12/alice.glp',
-    '../programs/book/bonds/play12/bob.glp',
-    '../programs/book/bonds/play12/charlie.glp',
-    '../programs/book/bonds/play12/diana.glp',
-    '../programs/book/bonds/play12/eve.glp',
-    '../programs/book/bonds/play12/frank.glp',
-  ];
-
-  /// CSSN GLP files (child-safe social networking, plays 1–10).
-  static const cssnFiles = [
-    '../programs/book/cssn/typed_social_agent.glp',
-    '../programs/book/cssn/typed_ui_mediator.glp',
-    '../programs/book/cssn/typed_ui_actors.glp',
-    '../programs/book/cssn/play_ui_sim_boot.glp',
-  ];
+  // bondsFiles, bondsPlay12Files and cssnFiles are gone with the directories
+  // they named — programs/book/bonds and programs/book/cssn, deleted 2026-08-02
+  // as stale copies of the live programs/currencies and programs/cssn. Their
+  // four Flutter targets (main_bonds.dart, main_cssg.dart, main_cssg_groups.dart,
+  // main_cssg_consent.dart) are retired rather than repointed, on Coordination's
+  // ruling of 2026-08-02 10:24: the live directories are program directories and
+  // not four-file lists, so a repointed target is a new directory-loading target
+  // and not a repair — work with an owner and a design. cssnVillageFiles below
+  // is what a directory-loading target looks like. Git holds all of them.
 
   /// CSSN v2 modules program (village scenario, fplay13).
   /// Loaded as a program directory — the REPL treats the path as a program root.

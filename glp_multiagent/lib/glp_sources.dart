@@ -18,7 +18,7 @@ import 'package:path_provider/path_provider.dart';
 
 /// Resolved locations of the GLP source tree.
 class GlpPaths {
-  final String grassappDir; // .../programs/book/grassapp
+  final String grassappDir; // .../programs/grassapp
   final String graphDir; // .../programs/social/graph
   final String cssnDir; // .../programs/cssn
   final String rootSelfGlp; // .../programs/self.glp
@@ -31,18 +31,18 @@ class GlpPaths {
 /// pubspec.yaml.
 const _bundledGlp = [
   'programs/self.glp',
-  // lib modules the root self.glp exposes (-expose(lib#routing#...)).
-  'programs/lib/routing/output.glp',
-  'programs/lib/routing/inject.glp',
-  'programs/lib/routing/intro.glp',
-  'programs/lib/routing/befriend.glp',
+  // lib modules the root self.glp exposes (-expose(social#graph#routing#...)).
+  'programs/social/graph/routing/output.glp',
+  'programs/social/graph/routing/inject.glp',
+  'programs/social/graph/routing/intro.glp',
+  'programs/social/graph/routing/befriend.glp',
   // GrassApp (coins among friends).
-  'programs/book/grassapp/self.glp',
-  'programs/book/grassapp/currency_txn.glp',
-  'programs/book/grassapp/grassapp_agent.glp',
-  'programs/book/grassapp/grassapp_mediator.glp',
-  'programs/book/grassapp/play_grassapp_boot.glp',
-  'programs/book/grassapp/play_village_headless.glp',
+  'programs/grassapp/self.glp',
+  'programs/grassapp/currency_txn.glp',
+  'programs/grassapp/grassapp_agent.glp',
+  'programs/grassapp/grassapp_mediator.glp',
+  'programs/grassapp/play_grassapp_boot.glp',
+  'programs/grassapp/play_village_headless.glp',
   // Social graph (the canonical platform program).
   'programs/social/graph/self.glp',
   'programs/social/graph/agent.glp',
@@ -63,15 +63,15 @@ const _bundledGlp = [
 
 Future<GlpPaths> resolveGlpPaths() async {
   // Desktop dev: the repo is reachable on disk — read it directly.
-  final rel = Directory('../programs/book/grassapp');
+  final rel = Directory('../programs/grassapp');
   if (rel.existsSync()) {
     final base = Directory('../programs').absolute.path;
-    return GlpPaths('$base/book/grassapp', '$base/social/graph', '$base/cssn',
+    return GlpPaths('$base/grassapp', '$base/social/graph', '$base/cssn',
         '$base/self.glp');
   }
   const repo = '/Users/udi/Grassroots/GLP/programs';
-  if (Directory('$repo/book/grassapp').existsSync()) {
-    return GlpPaths('$repo/book/grassapp', '$repo/social/graph', '$repo/cssn',
+  if (Directory('$repo/grassapp').existsSync()) {
+    return GlpPaths('$repo/grassapp', '$repo/social/graph', '$repo/cssn',
         '$repo/self.glp');
   }
 
@@ -84,6 +84,6 @@ Future<GlpPaths> resolveGlpPaths() async {
     await out.parent.create(recursive: true);
     await out.writeAsString(source);
   }
-  return GlpPaths('$base/book/grassapp', '$base/social/graph', '$base/cssn',
+  return GlpPaths('$base/grassapp', '$base/social/graph', '$base/cssn',
       '$base/self.glp');
 }
