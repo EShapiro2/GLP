@@ -26,6 +26,7 @@ import 'package:grassroots_networking_core/src/protocol/fragment_handler.dart';
 import 'package:grassroots_networking_core/src/protocol/message_transport.dart';
 import 'package:grassroots_networking_core/src/routing/message_router.dart';
 import 'package:grassroots_networking_core/src/session/noise_session_manager.dart';
+import 'package:grassroots_networking_core/src/session/platform_attestation.dart';
 import 'package:grassroots_networking_core/src/store/store.dart';
 import 'package:grassroots_networking_core/src/transport/transport_service.dart';
 
@@ -695,10 +696,16 @@ class GrassrootsNetwork {
   /// Called when a peer becomes reachable over a given transport. Fires once
   /// per medium: a peer reachable over both BLE and IP fires twice (one BLE,
   /// one IP), and a medium that drops and later recovers fires again. Receives
-  /// the peer's public key and the [MessageTransport] it connected over. Spec
-  /// `docs/GLP_Networking_API/sections/api.tex` §Connection and Reachability.
-  void Function(Uint8List publicKey, MessageTransport transport)?
-      onPeerConnected;
+  /// the peer's public key, the [MessageTransport] it connected over, and the
+  /// attested binary hash — null where the peer's platform provides no
+  /// attestation (spec §Connection and Reachability, §Session Establishment).
+  /// A peer is reachable only once its session is established, authenticated
+  /// AND attested, so this never fires before the attestation exchange.
+  void Function(
+    Uint8List publicKey,
+    MessageTransport transport,
+    Uint8List? attestedBinaryHash,
+  )? onPeerConnected;
 
   /// Called when an existing peer sends an ANNOUNCE update.
   void Function(PeerState peer)? onPeerUpdated;
@@ -768,6 +775,11 @@ class GrassrootsNetwork {
   /// platform geofencing binding was supplied.
   final PlaceRegistry? _places;
 
+  /// The platform's attestation service (spec §Session Establishment). The
+  /// default offers none and reports every peer unattested, which is what a
+  /// platform with no attestation must report in any case.
+  final PlatformAttestation _attestation;
+
   GrassrootsNetwork({
     required this.identity,
     this.config = const GrassrootsNetworkConfig(),
@@ -775,8 +787,10 @@ class GrassrootsNetwork {
     required this.sodium,
     LocalHostAddressReader? localHostAddressReader,
     PlaceGeofenceBackend? placeGeofenceBackend,
+    PlatformAttestation? platformAttestation,
   })  : _readLocalHostAddresses =
             localHostAddressReader ?? readLocalHostAddresses,
+        _attestation = platformAttestation ?? const NoPlatformAttestation(),
         _places = placeGeofenceBackend == null
             ? null
             : PlaceRegistry(backend: placeGeofenceBackend) {
@@ -3309,8 +3323,200 @@ class GrassrootsNetwork {
       case PeerTransport.webrtc:
         break;
     }
-    _drainQueuedMessagesForPeer(pubkey);
+    // The handshake is followed by the mutual attestation exchange, and
+    // neither peer is reported reachable until it succeeds (spec §Session
+    // Establishment). Queued messages wait for it: a session that fails
+    // attestation is torn down, and sending into it would be sending to a
+    // peer that never becomes reachable.
+    unawaited(_sendAttestation(transport, pubkey));
   }
+
+  // ===== Attestation (spec §Session Establishment) =====
+
+  /// The digest this session's attestation binds to, for the agent holding
+  /// [identityPublicKey]: `H("glp attest" | pk | h)`.
+  ///
+  /// Both ends compute the other's expected digest from the peer's key and
+  /// the shared handshake hash, so neither has to be told what was attested.
+  Uint8List? _attestationDigestFor(
+    PeerTransport transport,
+    Uint8List sessionPeer,
+    Uint8List identityPublicKey,
+  ) {
+    final handshakeHash =
+        _noiseSessions.handshakeHashFor(transport, sessionPeer);
+    if (handshakeHash == null) return null;
+    return attestationDigest(
+      identityPublicKey: identityPublicKey,
+      handshakeHash: handshakeHash,
+    );
+  }
+
+  /// Ask the platform to attest this agent over the session's digest, and
+  /// send it. A platform with none sends the absence, which is distinct from
+  /// a failure and is what the peer reports as unattested.
+  Future<void> _sendAttestation(
+    PeerTransport transport,
+    Uint8List pubkey,
+  ) async {
+    final digest =
+        _attestationDigestFor(transport, pubkey, identity.publicKey);
+    if (digest == null) {
+      debugPrint('[attest] No handshake hash for '
+          '${_pubkeyToHex(pubkey).substring(0, 8)}; cannot attest');
+      return;
+    }
+
+    Uint8List? attestation;
+    try {
+      attestation = await _attestation.attest(digest);
+    } catch (e) {
+      // A platform that errs offers nothing; the peer reports us unattested
+      // rather than refusing us.
+      debugPrint('[attest] Platform attestation failed: $e');
+      attestation = null;
+    }
+
+    final packet = GrassrootsPacket(
+      type: PacketType.attestation,
+      payload: encodeAttestationPayload(attestation),
+    );
+
+    // Over the medium the session belongs to, and no other: the digest binds
+    // to that session's handshake hash, so the attestation means nothing
+    // anywhere else. Sessions are per medium (spec §Session Establishment).
+    final sent = await _sendAttestationPacket(packet, transport, pubkey);
+    if (!sent) {
+      debugPrint('[attest] Could not send our attestation to '
+          '${_pubkeyToHex(pubkey).substring(0, 8)} over ${transport.name}');
+    }
+  }
+
+  Future<bool> _sendAttestationPacket(
+    GrassrootsPacket packet,
+    PeerTransport transport,
+    Uint8List pubkey,
+  ) async {
+    final peer = _peersState.getPeerByPubkey(pubkey);
+    switch (transport) {
+      case PeerTransport.bleDirect:
+        final bleDeviceId = _connectedBleDeviceIdForPeer(peer);
+        if (bleDeviceId == null) return false;
+        final bytes = await _packetBytesForTransport(
+          packet: packet,
+          transport: PeerTransport.bleDirect,
+          recipientPubkey: pubkey,
+          peerId: bleDeviceId,
+        );
+        if (bytes == null) return false;
+        return await _bleService?.sendToPeer(bleDeviceId, bytes) ?? false;
+      case PeerTransport.udp:
+        // The session exists, so the path does; send over it rather than
+        // dialing. An endpoint that accepted an inbound connection has no
+        // dial-book address for the caller, and the attestation must still
+        // reach it — this is where the exchange used to stall in one
+        // direction.
+        final peerId = _udpService?.getPeerIdForPubkey(pubkey);
+        if (peerId == null) return false;
+        final bytes = await _packetBytesForTransport(
+          packet: packet,
+          transport: PeerTransport.udp,
+          recipientPubkey: pubkey,
+          peerId: peerId,
+        );
+        if (bytes == null) return false;
+        return await _udpService?.sendToPeer(peerId, bytes) ?? false;
+      case PeerTransport.webrtc:
+        return false;
+    }
+  }
+
+  /// A peer's attestation arrived. Verify it against the digest this session
+  /// binds to; an attestation that fails tears the session down.
+  Future<void> _onAttestationReceived(
+    Uint8List senderPubkey,
+    Uint8List payload,
+    PeerTransport transport,
+  ) async {
+    final medium = _messageTransportOf(transport);
+    if (medium == null) return;
+    final peerShort = _pubkeyToHex(senderPubkey).substring(0, 8);
+
+    final digest = _attestationDigestFor(transport, senderPubkey, senderPubkey);
+    if (digest == null) {
+      debugPrint('[attest] No handshake hash for $peerShort; dropping');
+      return;
+    }
+
+    Uint8List? offered;
+    try {
+      offered = decodeAttestationPayload(payload);
+    } on FormatException catch (e) {
+      debugPrint('[attest] Malformed attestation from $peerShort: $e');
+      _tearDownForAttestation(transport, senderPubkey, 'malformed payload');
+      return;
+    }
+
+    AttestationVerdict verdict;
+    try {
+      verdict = await _attestation.verify(offered, digest);
+    } catch (e) {
+      verdict = InvalidAttestation('verification threw: \$e');
+    }
+
+    switch (verdict) {
+      case AttestedBinary(:final binaryHash):
+        debugPrint('[attest] $peerShort attested');
+        store.dispatch(PeerAttestedAction(
+          publicKey: senderPubkey,
+          transport: medium,
+          attestation: PeerAttestation(binaryHash: binaryHash),
+        ));
+        _drainQueuedMessagesForPeer(senderPubkey);
+      case UnattestedPlatform(:final reason):
+        debugPrint('[attest] $peerShort unattested: $reason');
+        store.dispatch(PeerAttestedAction(
+          publicKey: senderPubkey,
+          transport: medium,
+          attestation: PeerAttestation.unattested,
+        ));
+        _drainQueuedMessagesForPeer(senderPubkey);
+      case InvalidAttestation(:final reason):
+        debugPrint('[attest] $peerShort failed verification: $reason');
+        _tearDownForAttestation(transport, senderPubkey, reason);
+    }
+  }
+
+  /// An attestation failed verification: the session is torn down and
+  /// onPeerConnected does not fire, since reachability was never reported.
+  void _tearDownForAttestation(
+    PeerTransport transport,
+    Uint8List pubkey,
+    String reason,
+  ) {
+    debugPrint('[attest] Tearing down the ${transport.name} session with '
+        '${_pubkeyToHex(pubkey).substring(0, 8)}: $reason');
+    _noiseSessions.reset(transport, pubkey);
+    switch (transport) {
+      case PeerTransport.udp:
+        store.dispatch(PeerUdpConnectionChangedAction(
+          pubkeyHex: _pubkeyToHex(pubkey),
+          connected: false,
+        ));
+        unawaited(_udpService?.disconnectFromPeer(_pubkeyToHex(pubkey)));
+      case PeerTransport.bleDirect:
+        store.dispatch(PeerBleDisconnectedAction(pubkey));
+      case PeerTransport.webrtc:
+        break;
+    }
+  }
+
+  MessageTransport? _messageTransportOf(PeerTransport transport) =>
+      switch (transport) {
+        PeerTransport.udp => MessageTransport.udp,
+        PeerTransport.bleDirect => MessageTransport.ble,
+        PeerTransport.webrtc => null,
+      };
 
   Future<void> _startNoiseHandshakeForPeer({
     required PeerTransport transport,
@@ -4426,6 +4632,11 @@ class GrassrootsNetwork {
       }
     };
 
+    _messageRouter.onAttestationReceived =
+        (senderPubkey, payload, transport) {
+      unawaited(_onAttestationReceived(senderPubkey, payload, transport));
+    };
+
     _messageRouter.decryptSessionPacket =
         (packet, transport, {String? peerId}) async {
       try {
@@ -5431,8 +5642,11 @@ class GrassrootsNetwork {
 void processReachabilityTransitions({
   required PeersState peersState,
   required Map<String, Set<MessageTransport>> lastKnownTransports,
-  required void Function(Uint8List publicKey, MessageTransport transport)?
-      onConnected,
+  required void Function(
+    Uint8List publicKey,
+    MessageTransport transport,
+    Uint8List? attestedBinaryHash,
+  )? onConnected,
   required void Function(Uint8List publicKey, MessageTransport transport)?
       onDisconnected,
 }) {
@@ -5446,7 +5660,11 @@ void processReachabilityTransitions({
     if (setEquals(previous, current)) continue;
 
     for (final t in current.difference(previous)) {
-      onConnected?.call(peer.publicKey, t);
+      onConnected?.call(
+        peer.publicKey,
+        t,
+        peer.attestationFor(t)?.binaryHash,
+      );
     }
     for (final t in previous.difference(current)) {
       onDisconnected?.call(peer.publicKey, t);

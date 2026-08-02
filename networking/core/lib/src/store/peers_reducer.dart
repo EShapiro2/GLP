@@ -1,5 +1,6 @@
 import '../models/peer.dart';
 import 'peers_state.dart';
+import 'messages_actions.dart';
 import 'peers_actions.dart';
 
 /// Reducer for peers-related state
@@ -269,6 +270,10 @@ PeersState peersReducer(PeersState state, dynamic action) {
         // Clear BLE auth only when the last BLE path is gone; a partial drop
         // (one role) leaves the Noise session intact.
         bleAuthenticated: hasAnyBle ? existing.bleAuthenticated : false,
+        // Nothing is cached across sessions: the attestation goes out with
+        // the session that produced it (spec §Session Establishment).
+        bleAttestation: hasAnyBle ? existing.bleAttestation : null,
+        udpAttestation: existing.udpAttestation,
       );
       return state.copyWith(
         peers: Map.from(state.peers)..[pubkeyHex] = updated,
@@ -281,18 +286,35 @@ PeersState peersReducer(PeersState state, dynamic action) {
     final pubkeyHex = _pubkeyToHex(action.publicKey);
     final existing = state.peers[pubkeyHex];
     if (existing != null) {
+      // A fresh session is authenticated but not yet attested; the exchange
+      // follows and its outcome arrives as PeerAttestedAction.
       return state.copyWith(
         peers: Map.from(state.peers)
-          ..[pubkeyHex] = existing.copyWith(bleAuthenticated: true),
+          ..[pubkeyHex] = existing
+              .copyWith(bleAuthenticated: true)
+              .withAttestation(MessageTransport.ble, null),
       );
     }
     return state;
   }
 
+  if (action is PeerAttestedAction) {
+    final pubkeyHex = _pubkeyToHex(action.publicKey);
+    final existing = state.peers[pubkeyHex];
+    if (existing == null) return state;
+    return state.copyWith(
+      peers: Map.from(state.peers)
+        ..[pubkeyHex] =
+            existing.withAttestation(action.transport, action.attestation),
+    );
+  }
+
   if (action is PeerUdpConnectionChangedAction) {
     final existing = state.peers[action.pubkeyHex];
     if (existing != null) {
-      final updated = existing.copyWith(hasLiveUdpConnection: action.connected);
+      final updated = existing
+          .copyWith(hasLiveUdpConnection: action.connected)
+          .withAttestation(MessageTransport.udp, null);
       return state.copyWith(
         peers: Map.from(state.peers)..[action.pubkeyHex] = updated,
       );
@@ -340,6 +362,9 @@ PeersState peersReducer(PeersState state, dynamic action) {
         hasLiveUdpConnection: false,
         // Transport independence: a UDP drop must not touch BLE auth.
         bleAuthenticated: existing.bleAuthenticated,
+        bleAttestation: existing.bleAttestation,
+        // The UDP session is gone, and its attestation with it.
+        udpAttestation: null,
       );
       return state.copyWith(
         peers: Map.from(state.peers)..[pubkeyHex] = updated,
@@ -435,6 +460,8 @@ PeersState peersReducer(PeersState state, dynamic action) {
         lastDirectReachAt: preserveReach ? existing.lastDirectReachAt : null,
         hasLiveUdpConnection: existing.hasLiveUdpConnection,
         bleAuthenticated: existing.bleAuthenticated,
+        bleAttestation: existing.bleAttestation,
+        udpAttestation: existing.udpAttestation,
       );
       return state.copyWith(
         peers: Map.from(state.peers)..[pubkeyHex] = updated,

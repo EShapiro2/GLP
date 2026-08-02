@@ -76,6 +76,16 @@ class MessageRouter {
     int? observedPort,
   })? onSignalingReceived;
 
+  /// Called when a peer's platform attestation arrives (spec §Session
+  /// Establishment). It rides the session, so the sender is
+  /// session-authenticated; the coordinator verifies it against the digest
+  /// this session binds to and tears the session down if it fails.
+  void Function(
+    Uint8List senderPubkey,
+    Uint8List payload,
+    PeerTransport transport,
+  )? onAttestationReceived;
+
   /// Called after payload-signature verification and before a BLE ANNOUNCE is
   /// applied. Return false to reject first contact from that sender.
   bool Function(
@@ -281,6 +291,8 @@ class MessageRouter {
           observedIp: observedIp,
           observedPort: observedPort,
         );
+      case PacketType.attestation:
+        onAttestationReceived?.call(senderPubkey, packet.payload, transport);
       case PacketType.announce:
       case PacketType.noiseHandshake:
       case PacketType.secureFragment:
@@ -288,6 +300,7 @@ class MessageRouter {
       case PacketType.secureAck:
       case PacketType.secureReadReceipt:
       case PacketType.secureSignaling:
+      case PacketType.secureAttestation:
         return;
     }
   }

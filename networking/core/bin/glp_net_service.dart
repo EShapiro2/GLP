@@ -80,7 +80,7 @@ Future<void> main(List<String> argv) async {
     print('Known peer registered: ${hex.substring(0, 8)}…');
   }
 
-  network.onPeerConnected = (pk, transport) =>
+  network.onPeerConnected = (pk, transport, _) =>
       print('Peer connected (${transport.name}): ${_hex(pk)}');
   network.onPeerDisconnected = (pk, transport) =>
       print('Peer disconnected (${transport.name}): ${_hex(pk)}');

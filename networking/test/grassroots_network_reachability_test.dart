@@ -35,8 +35,10 @@ void main() {
         connectionState: PeerConnectionState.connected,
         transport: PeerTransport.bleDirect,
         bleCentralDeviceId: 'ble-$seed',
-        // Reachability now requires an authenticated (Noise) BLE session.
+        // Reachability requires an authenticated (Noise) BLE session AND a
+        // completed attestation exchange (spec §Session Establishment).
         bleAuthenticated: true,
+        bleAttestation: PeerAttestation.unattested,
       );
 
   PeerState peerOnUdp(int seed) => PeerState(
@@ -45,6 +47,7 @@ void main() {
         transport: PeerTransport.udp,
         udpAddress: '10.0.0.$seed:9514',
         hasLiveUdpConnection: true,
+        udpAttestation: PeerAttestation.unattested,
       );
 
   PeerState peerOnBoth(int seed) => PeerState(
@@ -53,8 +56,10 @@ void main() {
         transport: PeerTransport.bleDirect,
         bleCentralDeviceId: 'ble-$seed',
         bleAuthenticated: true,
+        bleAttestation: PeerAttestation.unattested,
         udpAddress: '10.0.0.$seed:9514',
         hasLiveUdpConnection: true,
+        udpAttestation: PeerAttestation.unattested,
       );
 
   PeerState peerOffline(int seed) => PeerState(
@@ -70,7 +75,7 @@ void main() {
   late List<(String, MessageTransport)> disconnects;
   late Map<String, Set<MessageTransport>> tracker;
 
-  void onConnected(Uint8List pk, MessageTransport t) =>
+  void onConnected(Uint8List pk, MessageTransport t, Uint8List? binaryHash) =>
       connects.add((pubkeyHex(pk), t));
   void onDisconnected(Uint8List pk, MessageTransport t) =>
       disconnects.add((pubkeyHex(pk), t));

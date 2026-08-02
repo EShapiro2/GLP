@@ -19,7 +19,15 @@ class ProtocolHandler {
   /// UDX streams removed, session-encrypted fragments ride UDP datagrams
   /// with per-fragment ACK; self-contained fragment format; self-ordering
   /// handshake. Mixed versions are refused at ANNOUNCE.
-  static const int protocolVersion = 3;
+  /// The protocol version carried in ANNOUNCE; a mismatch is refused there.
+  ///
+  /// 4 since 2026-08-02, for the attestation exchange of §Session
+  /// Establishment. It bumps rather than rides version 3 because it changes
+  /// what session establishment REQUIRES: a version-4 agent waits for an
+  /// attestation a version-3 agent never sends, so the peer never becomes
+  /// reachable and the session dies by timeout with nothing saying why. That
+  /// silent divergence is what this check exists to refuse loudly.
+  static const int protocolVersion = 4;
 
   /// Length of the trailing Ed25519 signature on an ANNOUNCE payload.
   static const int announceSignatureLength = 64;

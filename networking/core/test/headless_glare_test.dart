@@ -254,10 +254,36 @@ class _PhoneStyleDialer {
       );
     }
     if (await sessions.waitForSession(PeerTransport.udp, peerPubkey)) {
+      await sendAttestation(peerPubkey);
       return true;
     }
-    if (sessions.hasSession(PeerTransport.udp, peerPubkey)) return true;
-    return sessions.waitForSession(PeerTransport.udp, peerPubkey);
+    if (sessions.hasSession(PeerTransport.udp, peerPubkey)) {
+      await sendAttestation(peerPubkey);
+      return true;
+    }
+    final established =
+        await sessions.waitForSession(PeerTransport.udp, peerPubkey);
+    if (established) await sendAttestation(peerPubkey);
+    return established;
+  }
+
+  /// The handshake is followed by the attestation exchange, and the peer is
+  /// not reachable until it completes (spec §Session Establishment). This
+  /// stand-in has no platform attestation, so it sends the absence — which is
+  /// what a phone coordinator does on a platform that provides none.
+  Future<void> sendAttestation(Uint8List peerPubkey) async {
+    final handshakeHash =
+        sessions.handshakeHashFor(PeerTransport.udp, peerPubkey);
+    if (handshakeHash == null) return;
+    final encrypted = await sessions.encryptPacket(
+      GrassrootsPacket(
+        type: PacketType.attestation,
+        payload: encodeAttestationPayload(null),
+      ),
+      transport: PeerTransport.udp,
+      remotePubkey: peerPubkey,
+    );
+    await udp!.sendToPeer(_hex(peerPubkey), encrypted.serialize());
   }
 
   Future<bool> sendPayload(

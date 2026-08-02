@@ -39,7 +39,15 @@ enum PacketType {
   secureReadReceipt(0x11),
 
   /// Session-encrypted signaling packet.
-  secureSignaling(0x12);
+  secureSignaling(0x12),
+
+  /// One side's platform attestation over the session's digest (spec
+  /// §Session Establishment). Sent once, after the handshake completes;
+  /// never sent in clear, so only [secureAttestation] appears on the wire.
+  attestation(0x13),
+
+  /// Session-encrypted platform attestation.
+  secureAttestation(0x14);
 
   final int value;
   const PacketType(this.value);
@@ -63,6 +71,7 @@ extension PacketTypeSessionSecurity on PacketType {
       case PacketType.ack:
       case PacketType.readReceipt:
       case PacketType.signaling:
+      case PacketType.attestation:
         return true;
       case PacketType.announce:
       case PacketType.noiseHandshake:
@@ -71,6 +80,7 @@ extension PacketTypeSessionSecurity on PacketType {
       case PacketType.secureAck:
       case PacketType.secureReadReceipt:
       case PacketType.secureSignaling:
+      case PacketType.secureAttestation:
         return false;
     }
   }
@@ -82,6 +92,7 @@ extension PacketTypeSessionSecurity on PacketType {
       case PacketType.secureAck:
       case PacketType.secureReadReceipt:
       case PacketType.secureSignaling:
+      case PacketType.secureAttestation:
         return true;
       case PacketType.announce:
       case PacketType.fragment:
@@ -89,6 +100,7 @@ extension PacketTypeSessionSecurity on PacketType {
       case PacketType.ack:
       case PacketType.readReceipt:
       case PacketType.signaling:
+      case PacketType.attestation:
       case PacketType.noiseHandshake:
         return false;
     }
@@ -106,6 +118,8 @@ extension PacketTypeSessionSecurity on PacketType {
         return PacketType.secureReadReceipt;
       case PacketType.signaling:
         return PacketType.secureSignaling;
+      case PacketType.attestation:
+        return PacketType.secureAttestation;
       case PacketType.announce:
       case PacketType.noiseHandshake:
       case PacketType.secureFragment:
@@ -113,6 +127,7 @@ extension PacketTypeSessionSecurity on PacketType {
       case PacketType.secureAck:
       case PacketType.secureReadReceipt:
       case PacketType.secureSignaling:
+      case PacketType.secureAttestation:
         throw StateError('Packet type $this has no secure variant');
     }
   }
@@ -129,12 +144,15 @@ extension PacketTypeSessionSecurity on PacketType {
         return PacketType.readReceipt;
       case PacketType.secureSignaling:
         return PacketType.signaling;
+      case PacketType.secureAttestation:
+        return PacketType.attestation;
       case PacketType.announce:
       case PacketType.fragment:
       case PacketType.fragmentAck:
       case PacketType.ack:
       case PacketType.readReceipt:
       case PacketType.signaling:
+      case PacketType.attestation:
       case PacketType.noiseHandshake:
         throw StateError('Packet type $this is not session encrypted');
     }

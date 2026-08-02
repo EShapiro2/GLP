@@ -96,6 +96,22 @@ class NoiseSessionManager {
         null;
   }
 
+  /// The final handshake hash of the session with [remotePubkey] on
+  /// [transport], or null when there is none.
+  ///
+  /// This is what the attestation exchange binds to (spec §Session
+  /// Establishment): unique per session, identical at both ends, so an
+  /// attestation over it cannot be replayed onto another channel. It is not
+  /// cached anywhere — a fresh handshake yields a fresh hash and hence a fresh
+  /// attestation.
+  Uint8List? handshakeHashFor(
+    PeerTransport transport,
+    Uint8List remotePubkey,
+  ) =>
+      _entries[_SessionKey(transport, _hex(remotePubkey))]
+          ?.session
+          ?.handshakeHash;
+
   /// Starts an XX initiator handshake if no session or in-flight handshake
   /// exists. Returns the encoded first handshake payload to send, or null if
   /// the caller should simply wait for the existing handshake.
@@ -852,6 +868,7 @@ class _NoiseSymmetricState {
     return _NoiseTransportSession(
       sendKey: initiator ? outputs.$1 : outputs.$2,
       receiveKey: initiator ? outputs.$2 : outputs.$1,
+      handshakeHash: Uint8List.fromList(handshakeHash),
     );
   }
 }
@@ -860,6 +877,13 @@ class _NoiseTransportSession {
   final Chacha20 _cipher = Chacha20.poly1305Aead();
   final Uint8List sendKey;
   final Uint8List receiveKey;
+
+  /// The final handshake hash of the handshake that produced this session —
+  /// identical at both ends, unique to this session, and chosen by neither
+  /// side alone. The attestation exchange binds to it (spec §Session
+  /// Establishment).
+  final Uint8List handshakeHash;
+
   final Set<int> _receivedNonces = {};
   final List<int> _receivedNonceOrder = [];
   int _sendNonce = 0;
@@ -867,6 +891,7 @@ class _NoiseTransportSession {
   _NoiseTransportSession({
     required this.sendKey,
     required this.receiveKey,
+    required this.handshakeHash,
   });
 
   Future<Uint8List> encryptPayload(GrassrootsPacket packet) async {

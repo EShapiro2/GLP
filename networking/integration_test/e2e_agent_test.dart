@@ -141,7 +141,7 @@ class Agent {
       note('onMessageReceived from ${hexOf(sender).substring(0, 8)} '
           '(${payload.length} bytes, $transport)');
     };
-    network.onPeerConnected = (pubkey, transport) {
+    network.onPeerConnected = (pubkey, transport, attestedBinaryHash) {
       agent.connects.add((hexOf(pubkey), transport, DateTime.now()));
       note('onPeerConnected ${hexOf(pubkey).substring(0, 8)} via $transport');
     };

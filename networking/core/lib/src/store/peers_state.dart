@@ -4,6 +4,55 @@ import '../models/peer.dart';
 import '../transport/address_utils.dart';
 import 'messages_actions.dart';
 
+/// The outcome of a session's attestation exchange (spec §Session
+/// Establishment).
+///
+/// One of these exists per (peer, medium) once the exchange has completed;
+/// its absence means the exchange is still in flight, and a peer is not
+/// reachable on that medium until it is present. A failed verification never
+/// produces one: it tears the session down.
+///
+/// [binaryHash] is the attested binary hash, carried to GLP on
+/// `onPeerConnected`, and null where the peer's platform provides none —
+/// which is what an unattested peer looks like, absence and failure being
+/// distinct.
+@immutable
+class PeerAttestation {
+  final Uint8List? binaryHash;
+
+  const PeerAttestation({this.binaryHash});
+
+  /// The peer's platform provides no attestation. A headless server profile
+  /// has none, and the peer is reported unattested rather than refused.
+  static const PeerAttestation unattested = PeerAttestation();
+
+  bool get isAttested => binaryHash != null;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is PeerAttestation &&
+          runtimeType == other.runtimeType &&
+          _hashEquals(binaryHash, other.binaryHash);
+
+  @override
+  int get hashCode => Object.hashAll(binaryHash ?? const []);
+
+  @override
+  String toString() => binaryHash == null
+      ? 'PeerAttestation(unattested)'
+      : 'PeerAttestation(${binaryHash!.length} bytes)';
+
+  static bool _hashEquals(Uint8List? a, Uint8List? b) {
+    if (a == null || b == null) return a == null && b == null;
+    if (a.length != b.length) return false;
+    for (var i = 0; i < a.length; i++) {
+      if (a[i] != b[i]) return false;
+    }
+    return true;
+  }
+}
+
 /// A discovered BLE peer before identity (ANNOUNCE) is exchanged.
 ///
 /// This is a strict projection of facts emitted by the grassroots_bluetooth_layer plugin:
@@ -174,6 +223,17 @@ class PeerState {
   /// handshake itself): a peer is only [isReachable] once authenticated.
   final bool bleAuthenticated;
 
+  /// The attestation exchange's outcome on each medium (spec §Session
+  /// Establishment). A session is authenticated before it is attested, and a
+  /// peer is not reachable until it is both: "A peer becomes reachable when
+  /// its session is established, authenticated, and attested."
+  ///
+  /// Null while the exchange is still in flight — which is why reachability
+  /// asks for a non-null entry rather than for a truthy flag. Nothing here is
+  /// cached across sessions: it is cleared with the session that produced it.
+  final PeerAttestation? bleAttestation;
+  final PeerAttestation? udpAttestation;
+
   const PeerState({
     required this.publicKey,
     this.connectionState = PeerConnectionState.discovered,
@@ -189,6 +249,8 @@ class PeerState {
     this.lastDirectReachAt,
     this.hasLiveUdpConnection = false,
     this.bleAuthenticated = false,
+    this.bleAttestation,
+    this.udpAttestation,
   });
 
   /// Hex representation of public key (for map keys)
@@ -234,7 +296,7 @@ class PeerState {
   /// `docs/GLP_Networking_API/sections/ip.tex` §IP Connection: connected fires
   /// once the stream is "established and authenticated". A raw BLE/UDX link
   /// without a session does not count as reachable.
-  bool get isReachable => bleAuthenticated || hasLiveUdpConnection;
+  bool get isReachable => reachableTransports.isNotEmpty;
 
   /// The transports over which this peer is reachable *right now* — one entry
   /// per medium that holds a completed Noise session. Empty when the peer is
@@ -243,9 +305,49 @@ class PeerState {
   /// Iterated BLE-before-IP so callers observe a stable order. Spec
   /// `docs/GLP_Networking_API/sections/api.tex` §Connection and Reachability.
   Set<MessageTransport> get reachableTransports => {
-        if (bleAuthenticated) MessageTransport.ble,
-        if (hasLiveUdpConnection) MessageTransport.udp,
+        if (bleAuthenticated && bleAttestation != null) MessageTransport.ble,
+        if (hasLiveUdpConnection && udpAttestation != null)
+          MessageTransport.udp,
       };
+
+  /// The attestation held for [transport], or null when the exchange has not
+  /// completed on it.
+  PeerAttestation? attestationFor(MessageTransport transport) =>
+      switch (transport) {
+        MessageTransport.ble => bleAttestation,
+        MessageTransport.udp => udpAttestation,
+      };
+
+  /// This peer with [transport]'s attestation set to [attestation], which may
+  /// be null to clear it.
+  ///
+  /// Its own method rather than a [copyWith] argument because clearing is the
+  /// important case and `copyWith` cannot express it: nothing is cached across
+  /// sessions, so the attestation goes out with the session that produced it.
+  PeerState withAttestation(
+    MessageTransport transport,
+    PeerAttestation? attestation,
+  ) =>
+      PeerState(
+        publicKey: publicKey,
+        connectionState: connectionState,
+        transport: this.transport,
+        rssi: rssi,
+        protocolVersion: protocolVersion,
+        lastSeen: lastSeen,
+        bleCentralDeviceId: bleCentralDeviceId,
+        blePeripheralDeviceId: blePeripheralDeviceId,
+        lastBleSeen: lastBleSeen,
+        lastUdpSeen: lastUdpSeen,
+        udpAddress: udpAddress,
+        lastDirectReachAt: lastDirectReachAt,
+        hasLiveUdpConnection: hasLiveUdpConnection,
+        bleAuthenticated: bleAuthenticated,
+        bleAttestation:
+            transport == MessageTransport.ble ? attestation : bleAttestation,
+        udpAttestation:
+            transport == MessageTransport.udp ? attestation : udpAttestation,
+      );
 
   /// The currently active transport based on available connections.
   /// BLE is preferred when available; falls back to UDP, then stored value.
@@ -282,6 +384,8 @@ class PeerState {
     bool clearLastDirectReachAt = false,
     bool? hasLiveUdpConnection,
     bool? bleAuthenticated,
+    PeerAttestation? bleAttestation,
+    PeerAttestation? udpAttestation,
   }) {
     return PeerState(
       publicKey: publicKey ?? this.publicKey,
@@ -301,6 +405,8 @@ class PeerState {
           : lastDirectReachAt ?? this.lastDirectReachAt,
       hasLiveUdpConnection: hasLiveUdpConnection ?? this.hasLiveUdpConnection,
       bleAuthenticated: bleAuthenticated ?? this.bleAuthenticated,
+      bleAttestation: bleAttestation ?? this.bleAttestation,
+      udpAttestation: udpAttestation ?? this.udpAttestation,
     );
   }
 
@@ -317,7 +423,9 @@ class PeerState {
           blePeripheralDeviceId == other.blePeripheralDeviceId &&
           udpAddress == other.udpAddress &&
           lastDirectReachAt == other.lastDirectReachAt &&
-          hasLiveUdpConnection == other.hasLiveUdpConnection;
+          hasLiveUdpConnection == other.hasLiveUdpConnection &&
+          bleAttestation == other.bleAttestation &&
+          udpAttestation == other.udpAttestation;
 
   @override
   int get hashCode => Object.hash(
@@ -330,6 +438,8 @@ class PeerState {
         udpAddress,
         lastDirectReachAt,
         hasLiveUdpConnection,
+        bleAttestation,
+        udpAttestation,
       );
 }
 

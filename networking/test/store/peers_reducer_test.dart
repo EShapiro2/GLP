@@ -1,6 +1,7 @@
 import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:grassroots_networking_core/src/store/messages_actions.dart';
 import 'package:grassroots_networking_core/src/store/peers_state.dart';
 import 'package:grassroots_networking_core/src/store/peers_actions.dart';
 import 'package:grassroots_networking_core/src/store/peers_reducer.dart';
@@ -1191,8 +1192,8 @@ void main() {
       expect(peer.bleDeviceId, 'central-1');
     });
 
-    test('isReachable requires an authenticated BLE session, not just a link',
-        () {
+    test('isReachable requires an authenticated AND attested BLE session, '
+        'not just a link', () {
       final linkOnly = PeerState(
         publicKey: _testPubkey(1),
         blePeripheralDeviceId: 'peripheral-1',
@@ -1201,8 +1202,20 @@ void main() {
       // onPeerConnected fires only after authentication (#2b).
       expect(linkOnly.isReachable, false);
 
+      // Nor is an authenticated session on its own: the handshake is followed
+      // by the attestation exchange, and "a peer becomes reachable when its
+      // session is established, authenticated, and attested" (spec §Session
+      // Establishment).
       final authenticated = linkOnly.copyWith(bleAuthenticated: true);
-      expect(authenticated.isReachable, true);
+      expect(authenticated.isReachable, false);
+
+      final attested = authenticated.withAttestation(
+        MessageTransport.ble,
+        PeerAttestation.unattested,
+      );
+      expect(attested.isReachable, true,
+          reason: 'a peer whose platform provides no attestation is reported '
+              'unattested, not refused');
     });
 
     test('activeTransport prefers BLE', () {

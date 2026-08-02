@@ -1,5 +1,7 @@
 import 'dart:typed_data';
 import '../models/peer.dart';
+import 'messages_actions.dart';
+import 'peers_state.dart';
 
 /// Which BLE role our device played in the connection.
 /// - central: we scanned and connected to the remote peer
@@ -152,6 +154,25 @@ class PeerBleAuthenticatedAction extends PeerAction {
   final Uint8List publicKey;
 
   PeerBleAuthenticatedAction(this.publicKey);
+}
+
+/// The attestation exchange completed on one medium (spec §Session
+/// Establishment). Until it has, the peer is not reachable on that medium:
+/// "A peer becomes reachable when its session is established, authenticated,
+/// and attested."
+///
+/// A failed verification produces no action of this kind — it tears the
+/// session down instead.
+class PeerAttestedAction extends PeerAction {
+  final Uint8List publicKey;
+  final MessageTransport transport;
+  final PeerAttestation attestation;
+
+  PeerAttestedAction({
+    required this.publicKey,
+    required this.transport,
+    required this.attestation,
+  });
 }
 
 /// A verified UDP packet was received from a peer.

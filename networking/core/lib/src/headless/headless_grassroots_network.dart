@@ -15,6 +15,7 @@ import '../protocol/message_transport.dart';
 import '../protocol/protocol_handler.dart';
 import '../routing/message_router.dart';
 import '../session/noise_session_manager.dart';
+import '../session/platform_attestation.dart';
 import '../store/store.dart';
 import '../transport/address_utils.dart';
 import '../transport/udp_transport_service.dart';
@@ -49,6 +50,7 @@ class HeadlessGrassrootsNetwork {
     required this.sodium,
     this.listenPort = 0,
     this.staticPublicAddress,
+    this.attestation = const NoPlatformAttestation(),
     HeadlessKnownPeersStore? knownPeersStore,
   }) : _knownPeersStore = knownPeersStore ?? MemoryKnownPeersStore() {
     store = Store<AppState>(
@@ -85,6 +87,11 @@ class HeadlessGrassrootsNetwork {
   /// The agent's static public `ip:port`, as configured for a globally
   /// routable server. Returned by [getPublicAddress]; no discovery runs.
   final String? staticPublicAddress;
+
+  /// This profile's platform attestation service. A headless server has none
+  /// (spec §Rendezvous Server: "Having no platform attestation to offer, a
+  /// rendezvous server is reported unattested"), which is the default.
+  final PlatformAttestation attestation;
 
   late final Store<AppState> store;
   late final ProtocolHandler _protocolHandler;
@@ -146,7 +153,14 @@ class HeadlessGrassrootsNetwork {
       MessageTransport transport)? onMessageReceived;
 
   /// Fired when a peer becomes reachable over IP (authenticated session up).
-  void Function(Uint8List pubkey, MessageTransport transport)? onPeerConnected;
+  /// Receives the peer's public key, the transport it connected over, and
+  /// the attested binary hash — null where the peer's platform provides none
+  /// (spec §Connection and Reachability).
+  void Function(
+    Uint8List pubkey,
+    MessageTransport transport,
+    Uint8List? attestedBinaryHash,
+  )? onPeerConnected;
 
   /// Fired when a peer stops being reachable over IP.
   void Function(Uint8List pubkey, MessageTransport transport)?
@@ -515,6 +529,11 @@ class HeadlessGrassrootsNetwork {
       }
     };
 
+    _messageRouter.onAttestationReceived =
+        (senderPubkey, payload, transport) {
+      unawaited(_onAttestationReceived(senderPubkey, payload));
+    };
+
     _messageRouter.decryptSessionPacket =
         (packet, transport, {String? peerId}) async {
       try {
@@ -716,8 +735,87 @@ class HeadlessGrassrootsNetwork {
       pubkeyHex: _hex(pubkey),
       connected: true,
     ));
+    // The handshake is followed by the mutual attestation exchange, and
+    // neither peer is reported reachable until it succeeds (spec §Session
+    // Establishment). This profile has no platform attestation to offer, so
+    // it sends the absence — which the peer reports as unattested rather than
+    // refusing, absence and failure being distinct.
+    unawaited(_sendAttestation(pubkey));
+  }
+
+  /// Send this profile's attestation over the session's digest. It has none,
+  /// so what travels is the explicit absence.
+  Future<void> _sendAttestation(Uint8List pubkey) async {
+    final handshakeHash =
+        _noiseSessions.handshakeHashFor(PeerTransport.udp, pubkey);
+    if (handshakeHash == null) return;
+    final digest = attestationDigest(
+      identityPublicKey: identity.publicKey,
+      handshakeHash: handshakeHash,
+    );
+    final offered = await attestation.attest(digest);
+    final bytes = await _sessionPacketBytes(
+      GrassrootsPacket(
+        type: PacketType.attestation,
+        payload: encodeAttestationPayload(offered),
+      ),
+      pubkey,
+    );
+    if (bytes == null) return;
+    await _udpService?.sendToPeer(_hex(pubkey), bytes);
+  }
+
+  /// A peer's attestation arrived. An attestation that fails verification
+  /// tears the session down and onPeerConnected does not fire.
+  Future<void> _onAttestationReceived(
+    Uint8List senderPubkey,
+    Uint8List payload,
+  ) async {
+    final peerShort = _hex(senderPubkey).substring(0, 8);
+    final handshakeHash =
+        _noiseSessions.handshakeHashFor(PeerTransport.udp, senderPubkey);
+    if (handshakeHash == null) return;
+    final digest = attestationDigest(
+      identityPublicKey: senderPubkey,
+      handshakeHash: handshakeHash,
+    );
+
+    AttestationVerdict verdict;
+    try {
+      verdict = await attestation.verify(
+        decodeAttestationPayload(payload),
+        digest,
+      );
+    } on FormatException catch (e) {
+      verdict = InvalidAttestation('malformed payload: $e');
+    }
+
+    switch (verdict) {
+      case InvalidAttestation(:final reason):
+        debugPrint('[headless][attest] $peerShort failed verification: '
+            '$reason; tearing the session down');
+        _noiseSessions.reset(PeerTransport.udp, senderPubkey);
+        store.dispatch(PeerUdpConnectionChangedAction(
+          pubkeyHex: _hex(senderPubkey),
+          connected: false,
+        ));
+        unawaited(_udpService?.disconnectFromPeer(_hex(senderPubkey)));
+      case AttestedBinary(:final binaryHash):
+        _completeAttestation(senderPubkey, PeerAttestation(binaryHash: binaryHash));
+      case UnattestedPlatform(:final reason):
+        debugPrint('[headless][attest] $peerShort unattested: $reason');
+        _completeAttestation(senderPubkey, PeerAttestation.unattested);
+    }
+  }
+
+  void _completeAttestation(Uint8List pubkey, PeerAttestation attestation) {
+    store.dispatch(PeerAttestedAction(
+      publicKey: pubkey,
+      transport: MessageTransport.udp,
+      attestation: attestation,
+    ));
     if (_reachablePeers.add(_hex(pubkey))) {
-      onPeerConnected?.call(pubkey, MessageTransport.udp);
+      onPeerConnected?.call(pubkey, MessageTransport.udp, attestation.binaryHash);
     }
     _drainQueueFor(pubkey);
   }

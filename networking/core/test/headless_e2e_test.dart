@@ -70,7 +70,7 @@ void main() {
     service.onMessageReceived = (messageId, sender, payload, transport) {
       delivered.add((sender, utf8.decode(payload)));
     };
-    service.onPeerConnected = (pk, transport) {
+    service.onPeerConnected = (pk, transport, _) {
       serviceConnected.add(_hex(pk));
     };
 
@@ -82,7 +82,7 @@ void main() {
     // The spec sequence: putPeerAddress supplies key and address; send
     // dials, establishes the session, delivers.
     final pusherLinked = Completer<void>();
-    pusher.onPeerConnected = (pk, transport) {
+    pusher.onPeerConnected = (pk, transport, _) {
       expect(_hex(pk), _hex(service.identity.publicKey));
       expect(transport, MessageTransport.udp);
       if (!pusherLinked.isCompleted) pusherLinked.complete();
@@ -109,7 +109,7 @@ void main() {
     // Stranger: same sequence, unregistered key — the service drops its
     // ANNOUNCE and refuses its handshake; no session, no delivery.
     var strangerLinked = false;
-    stranger.onPeerConnected = (_, __) => strangerLinked = true;
+    stranger.onPeerConnected = (_, __, ___) => strangerLinked = true;
     stranger.putPeerAddress(service.identity.publicKey, address);
     final strangerMessage = await stranger.send(
       service.identity.publicKey,
