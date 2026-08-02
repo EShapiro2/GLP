@@ -218,6 +218,20 @@ procedure send_to_user(Stream(_)?).
 send_to_user([T | In]) :- ground(T?) | '_output'(T?), send_to_user(In?).
 send_to_user([]).
 
+% send_to_net/1 — system predicate emitting each ground message of the stream to
+% the network. Declared here and defined in programs/system/mad_predicates.glp,
+% whose clauses call global_send/3; global_send stays in that system module and
+% is reachable only from one, so the definition cannot move here with the
+% declaration (GLP-Spec, 2026-08-01 21:50 and 2026-08-02 13:20).
+%
+% No catalogue row accompanies this and none is coming: a root declaration does
+% not require one — merge/3 is declared here with its clauses and appears in no
+% appendix — and GLP-Spec has put that rule in the system-predicate paragraph.
+% The type is the loose one, as send_to_user/1 above: the precise NetStream and
+% NetMsg are local to mad_predicates.glp, and defining them here would add two
+% type names to every module's scope for one predicate's sake.
+procedure send_to_net(Stream(_)?).
+
 % =============================================================================
 % ARITHMETIC ASSIGNMENT (:=/2)
 % =============================================================================

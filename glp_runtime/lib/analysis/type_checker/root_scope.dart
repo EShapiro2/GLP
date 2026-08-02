@@ -83,6 +83,16 @@ const Set<String> builtinGoals = {
 /// with root scope clauses (like new_channel).
 /// Keyed by "name/arity" for precise matching.
 const Set<String> builtinProcedures = {
+  // Declared in the root scope, defined outside the root self.glp. Every other
+  // entry here is implemented in Dart; send_to_net/1 is implemented in GLP, in
+  // programs/system/mad_predicates.glp, and is in this set for the one effect
+  // the set has on it — parser.dart:191 admits a clause-less root declaration
+  // for a name in it, and type_environment_builder.dart:204 stops warning that
+  // it is declared and not defined. Its clauses cannot move here with the
+  // declaration: they call global_send/3, which GLP-Spec keeps in that system
+  // module, reachable only from a system module (2026-08-01 21:50).
+  'send_to_net/1',
+
   // Type guards
   'integer/1',
   'number/1',
