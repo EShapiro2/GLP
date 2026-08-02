@@ -1650,6 +1650,13 @@ class Parser {
   /// Parse a procedure declaration: procedure name(Type?, Type).
   /// or: exported procedure name(Type?, Type).
   /// or: imported procedure [path#]name(Type?, Type).
+  ///
+  /// The keyword may carry a type-parameter list, which names the declaration's
+  /// parameters: procedure(X) merge(Stream(X)?, Stream(X)?, Stream(X)).
+  /// The list follows `exported` and `imported` the same way.  A declaration
+  /// with no parameters is written without a list.
+  /// Spec: Moded-Types, sections/parameterized-types.tex, Parameterised
+  /// Procedure Declarations and the paragraph Declaration parameters.
   ProcDecl _parseProcDeclaration() {
     // Check for 'exported' or 'imported' keyword before 'procedure'
     bool exported = false;
@@ -1666,6 +1673,28 @@ class Parser {
     _consume(TokenType.PROCEDURE, 'Expected "procedure" keyword');
     final line = startLine;
     final column = startColumn;
+
+    // Optional type-parameter list: procedure(X, Y) p(...).
+    // No other declaration form has "(" directly after the keyword, so the
+    // list is unambiguous.
+    final typeParams = <String>[];
+    if (_match(TokenType.LPAREN)) {
+      typeParams.add(_consume(TokenType.VARIABLE, 'Expected type parameter name').lexeme);
+      while (_match(TokenType.COMMA)) {
+        typeParams.add(_consume(TokenType.VARIABLE, 'Expected type parameter name').lexeme);
+      }
+      _consume(TokenType.RPAREN, 'Expected ")" after type parameters');
+      for (var i = 0; i < typeParams.length; i++) {
+        if (typeParams.indexOf(typeParams[i]) != i) {
+          throw CompileError(
+            'Type parameter "${typeParams[i]}" is named twice in the parameter list',
+            line,
+            column,
+            phase: 'parser',
+          );
+        }
+      }
+    }
 
     // Parse procedure name, possibly with module path for imported procedures.
     // For imported: 'social#agent' → modulePath='social', name='agent'
@@ -1753,7 +1782,7 @@ class Parser {
 
     _consume(TokenType.DOT, 'Expected "." after procedure declaration');
 
-    return ProcDecl(name, argTypes, line, column, exported: exported, imported: imported, modulePath: modulePath);
+    return ProcDecl(name, argTypes, line, column, typeParams: typeParams, exported: exported, imported: imported, modulePath: modulePath);
   }
 
   /// Parse a procedure argument type: TypeName, TypeName?, _, _?,

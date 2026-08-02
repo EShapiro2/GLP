@@ -1,0 +1,21 @@
+%% param_decl_typo_neg.glp — NEGATIVE.  A misspelt type name is rejected, not
+%% read as a type parameter.
+%%
+%% Spec: Moded-Types, sections/parameterized-types.tex, paragraph "Declaration
+%% parameters" — "The parameters of a procedure declaration are exactly those
+%% its parameter list names.  An undefined type name occurring in a declaration
+%% and not in its parameter list is an error, so a misspelt type name is
+%% rejected rather than read as a parameter."
+%%
+%% pass names X, so Strem is neither a defined type nor a parameter and the
+%% declaration is rejected.  This is the paper's own case: procedure(X) =(X, X?)
+%% and pass(Strem?, Strem) are the same declaration up to renaming, and only the
+%% parameter list tells them apart — the first names X and is legal, the second
+%% names nothing and Strem is an undefined type.  The positive half is
+%% param_decl_list.glp.
+%%
+%% Run (from /Users/udi/Grassroots/GLP/glp_runtime/):
+%%   printf 'load ../programs/tests/param_decl_typo_neg.glp\n:quit\n' | bin/glpc
+
+procedure(X) pass(Strem?, Strem).
+pass(A?, A).

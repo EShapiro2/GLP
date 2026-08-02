@@ -1,0 +1,23 @@
+%% param_decl_list.glp — POSITIVE.  A procedure declaration names its type
+%% parameters in a list after the keyword.
+%%
+%% Spec: Moded-Types, sections/parameterized-types.tex, subsection
+%% "Parameterised Procedure Declarations" — "It names them in a list after the
+%% keyword ... The named parameters are universally quantified, and each may
+%% occur bare or within a template instantiation anywhere in the argument
+%% types."
+%%
+%% pcopy names X and uses it within a template instantiation; ptie names Y and
+%% uses it bare in both argument positions, tying them to one type.  A bare
+%% parameter lies within no template instantiation, which is the case the
+%% replaced inference could not read at all.
+%%
+%% Run (from /Users/udi/Grassroots/GLP/glp_runtime/):
+%%   printf 'load ../programs/tests/param_decl_list.glp\n:quit\n' | bin/glpc
+
+procedure(X) pcopy(Stream(X)?, Stream(X)).
+pcopy([], []).
+pcopy([A|As], [A?|Bs?]) :- pcopy(As?, Bs).
+
+procedure(Y) ptie(Y, Y?).
+ptie(A?, A).

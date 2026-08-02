@@ -1150,6 +1150,12 @@ POSITIVE_FILES=(
     # abstract instance, even though it is never instantiated.
     "$GLP_DIR/programs/tests/param_abstract_covered.glp"
 
+    # --- Declaration parameters (parameterized-types.tex, "Declaration parameters") ---
+    # A declaration names its type parameters in a list after the keyword; each
+    # may occur bare or within a template instantiation. Negative counterpart:
+    # param_decl_typo_neg.glp in NEGATIVE_FILES.
+    "$GLP_DIR/programs/tests/param_decl_list.glp"
+
     # --- SRSW relaxations (glp.tex Remark "Guards and SRSW") ---
     # Both must be ACCEPTED; their negative counterpart is srsw/known_not_ground
     # in Section D. A guard occurrence counts toward SRSW, so X? in a guard plus
@@ -1352,6 +1358,13 @@ NEGATIVE_FILES=(
     # --- Finiteness rule: recursive parameterized type, param as proper subterm ---
     # Bad(X) ::= node(Bad(Box(X))) — rejected statically at the expansion stage.
     "$GLP_DIR/programs/tests/growing_type_recursion.glp"
+
+    # --- Declaration parameters: a misspelt type name is not a parameter ---
+    # procedure(X) pass(Strem?, Strem) — X is named, Strem is neither defined nor
+    # named, so the declaration is rejected instead of reading Strem as a second
+    # parameter (parameterized-types.tex, "Declaration parameters"). Positive
+    # counterpart: param_decl_list.glp in POSITIVE_FILES.
+    "$GLP_DIR/programs/tests/param_decl_typo_neg.glp"
 
     # --- Monomorphic recursion: a recursive call at a different instantiation ---
     # wrap threads Stream(X) -> Stream(Box(X)); the recursive ploop is checked at

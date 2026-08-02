@@ -61,11 +61,12 @@ ast.Module expandParameterizedTypes(ast.Module module, {
   }
 
   // Scan procedure declarations.
-  // For parameterized proc decls (those with bare type params), skip
+  // For parameterized proc decls (those naming type parameters), skip
   // instantiations that contain type parameter names — those are templates,
   // not concrete instantiations.
+  final declKnownTypes = _declKnownTypes(templates, monoTypeDefs, knownTypeNames);
   for (final pd in module.procDeclarations) {
-    final procTypeParams = _detectProcTypeParams(pd, templates, monoTypeDefs, knownTypeNames);
+    final procTypeParams = _procTypeParams(pd, declKnownTypes);
     if (procTypeParams.isEmpty) {
       // Non-parameterized proc decl: collect all instantiations normally
       for (final arg in pd.argTypes) {
@@ -136,7 +137,7 @@ ast.Module expandParameterizedTypes(ast.Module module, {
   final paramProcDeclTemplates = <ProcDecl>[];
 
   for (final pd in module.procDeclarations) {
-    final procTypeParams = _detectProcTypeParams(pd, templates, monoTypeDefs, knownTypeNames);
+    final procTypeParams = _procTypeParams(pd, declKnownTypes);
     if (procTypeParams.isNotEmpty) {
       // Preserve parameterized template for call-site inference
       final paramTemplate = ProcDecl(pd.name, pd.argTypes, pd.line, pd.column,
@@ -656,31 +657,61 @@ bool _paramOccursIn(String p, TypeExpr expr) {
 bool _isBareParam(TypeExpr arg, String p) =>
     arg is TypeRef && arg.name == p && arg.typeArgs.isEmpty;
 
-/// Detect type parameters in a procedure declaration.
-/// A type parameter is a name that is not a known defined type and either:
-///  1. Appears as a bare typeArg inside a TypeRef with typeArgs (e.g., X in Stream(X)), or
-///  2. Appears as a bare top-level argument type (e.g., M in `p(M?, Stream(Ent)?, ...)`).
-/// Case 2 is the spec's "an argument position whose type is a parameter"
-/// (typed-program.md, clause-template paragraph); a carried-message type that
-/// has no constructor wrapper and no common supertype — e.g. a `lib/` router's
-/// message argument — can only appear here. A name defined as a type stays
-/// concrete, so monomorphic declarations are unaffected; inference and
-/// substitution already handle a top-level parameter
-/// (_matchTypeForInference / _substituteTypeParams).
-List<String> _detectProcTypeParams(ProcDecl pd, Map<String, TypeDef> templates,
-    List<TypeDef> monoTypeDefs, Set<String> externalKnownTypes) {
-  final knownTypes = <String>{
-    ...templates.keys,
-    ...monoTypeDefs.map((td) => td.name),
-    ...TypeRef.builtins,
-    ...externalKnownTypes,
-  };
+/// The type names a procedure declaration may use without declaring them: the
+/// templates and monomorphic definitions in scope, the primitives, and the
+/// names the ancestor scope supplies.
+Set<String> _declKnownTypes(Map<String, TypeDef> templates,
+        List<TypeDef> monoTypeDefs, Set<String> externalKnownTypes) =>
+    <String>{
+      ...templates.keys,
+      ...monoTypeDefs.map((td) => td.name),
+      ...TypeRef.builtins,
+      ...TypeRef.systemTypes,
+      ...externalKnownTypes,
+    };
+
+/// The type parameters of a procedure declaration: exactly those its parameter
+/// list names.
+///
+/// Spec: Moded-Types, sections/parameterized-types.tex, paragraph "Declaration
+/// parameters" — "The parameters of a procedure declaration are exactly those
+/// its parameter list names."  Naming them is what lets a misspelt type name be
+/// rejected instead of read as a parameter: `=(X, X?)` and `pass(Strem?, Strem)`
+/// are the same declaration up to renaming, so no rule reading either alone
+/// tells them apart.
+///
+/// TRANSITIONAL, until every declaration in the tree carries its list.  A
+/// declaration that names its parameters gets the rule above, and its undefined
+/// names are rejected.  A declaration that names none falls back to the
+/// inference the rule replaces, because the strict reading applied to an
+/// unswept tree rejects root self.glp's `=(X, X?)` and every load with it.  The
+/// sweep is per owner (GLP-Spec's root self.glp, SGSG's routers under
+/// social/graph/routing, IGLP's fixtures under programs/tests/); when it is
+/// done, delete [_inferProcTypeParamsTransitional] and its two helpers and call
+/// [_checkDeclTypeNames] unconditionally.
+List<String> _procTypeParams(ProcDecl pd, Set<String> knownTypes) {
+  if (pd.typeParams.isNotEmpty) {
+    _checkDeclTypeNames(pd, knownTypes);
+    return pd.typeParams;
+  }
+  return _inferProcTypeParamsTransitional(pd, knownTypes);
+}
+
+/// The inference the named parameter list replaces: a type parameter is a name
+/// that is not a known defined type and either appears as a bare typeArg inside
+/// a TypeRef with typeArgs (X in `Stream(X)`), or appears as a bare top-level
+/// argument type (M in `p(M?, Stream(Ent)?)`).
+///
+/// It cannot separate a parameter from a typo, which is why the paper replaced
+/// it.  Reached only by a declaration that names no parameters; see
+/// [_procTypeParams] for what removes it.
+List<String> _inferProcTypeParamsTransitional(ProcDecl pd, Set<String> knownTypes) {
   final candidates = <String>{};
   // Names appearing as typeArgs of any TypeRef with typeArgs (inner positions).
   for (final arg in pd.argTypes) {
     _collectInnerTypeParamCandidates(arg, knownTypes, candidates);
   }
-  // Bare top-level argument names that are not known types (case 2).
+  // Bare top-level argument names that are not known types.
   for (final arg in pd.argTypes) {
     if (arg is TypeRef && arg.typeArgs.isEmpty && !knownTypes.contains(arg.name)) {
       candidates.add(arg.name);
@@ -707,19 +738,58 @@ void _collectInnerTypeParamCandidates(TypeExpr expr,
     }
     return;
   }
-  // Recurse into structural types
-  if (expr is StructAlt) {
-    for (final arg in expr.args) {
-      _collectInnerTypeParamCandidates(arg, knownTypes, candidates);
+  for (final c in _typeExprChildren(expr)) {
+    _collectInnerTypeParamCandidates(c, knownTypes, candidates);
+  }
+}
+
+/// Reject an undefined type name occurring in [pd] and not in its parameter
+/// list.
+///
+/// Spec: Moded-Types, "Declaration parameters" — "An undefined type name
+/// occurring in a declaration and not in its parameter list is an error, so a
+/// misspelt type name is rejected rather than read as a parameter."
+///
+/// A qualified name (`mod#T`) names a type in another module and is resolved by
+/// the module system, so it is left to it.
+void _checkDeclTypeNames(ProcDecl pd, Set<String> knownTypes) {
+  final params = pd.typeParams.toSet();
+  final undefined = <TypeRef>[];
+  for (final arg in pd.argTypes) {
+    _collectUndefinedTypeNames(arg, knownTypes, params, undefined);
+  }
+  if (undefined.isEmpty) return;
+  final r = undefined.first;
+  final where = 'line ${r.line > 0 ? r.line : pd.line}, '
+      'column ${r.line > 0 ? r.column : pd.column}';
+  final list = pd.typeParams.isEmpty
+      ? 'the declaration names no type parameters'
+      : 'its type parameters are ${pd.typeParams.join(', ')}';
+  throw Exception(
+      'Type checking failed: undefined type "${r.name}" in the declaration of '
+      '${pd.name}/${pd.arity} at $where, and $list. An undefined type name in a '
+      'declaration and not in its parameter list is an error; if "${r.name}" is '
+      'meant as a type parameter, name it — procedure(${r.name}) ${pd.name}(...) '
+      '(typed-program: Declaration parameters).');
+}
+
+/// Collect every named type reference in [expr] that is neither a known type
+/// nor a declared parameter.  Qualified names are skipped.
+void _collectUndefinedTypeNames(TypeExpr expr, Set<String> knownTypes,
+    Set<String> params, List<TypeRef> undefined) {
+  if (expr is TypeRef) {
+    if (!params.contains(expr.name) &&
+        !knownTypes.contains(expr.name) &&
+        !expr.name.contains('#')) {
+      undefined.add(expr);
     }
+    for (final arg in expr.typeArgs) {
+      _collectUndefinedTypeNames(arg, knownTypes, params, undefined);
+    }
+    return;
   }
-  if (expr is ListConsAlt) {
-    _collectInnerTypeParamCandidates(expr.head, knownTypes, candidates);
-    _collectInnerTypeParamCandidates(expr.tail, knownTypes, candidates);
-  }
-  if (expr is DiffListAlt) {
-    _collectInnerTypeParamCandidates(expr.content, knownTypes, candidates);
-    _collectInnerTypeParamCandidates(expr.hole, knownTypes, candidates);
+  for (final c in _typeExprChildren(expr)) {
+    _collectUndefinedTypeNames(c, knownTypes, params, undefined);
   }
 }
 
