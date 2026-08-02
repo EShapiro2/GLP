@@ -25,26 +25,16 @@ TransportsState transportsReducer(
       return state;
     }
     // Address changed — invalidate the prior reachability observation, since
-    // it was bound to the previous address/network path. withNewPublicAddress
-    // also clears publicAddressDiscoveryFailed since we now have an address.
+    // it was bound to the previous address/network path.
     return state.withNewPublicAddress(action.publicAddress!);
   }
 
   if (action is PublicIpUpdatedAction) {
-    // A reflected/discovered IP arrived — discovery isn't "failed" anymore.
-    return state.copyWith(
-      publicIp: action.publicIp,
-      publicAddressDiscoveryFailed: false,
-    );
+    return state.copyWith(publicIp: action.publicIp);
   }
 
   if (action is ClearPublicConnectivityAction) {
     return state.clearPublicConnectivity();
-  }
-
-  if (action is PublicAddressDiscoveryFailedAction) {
-    if (state.publicAddressDiscoveryFailed == action.failed) return state;
-    return state.copyWith(publicAddressDiscoveryFailed: action.failed);
   }
 
   if (action is NetworkConnectionTypeUpdatedAction) {

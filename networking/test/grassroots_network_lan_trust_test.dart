@@ -1,5 +1,5 @@
 import 'dart:convert';
-import 'dart:io' show InternetAddress, InternetAddressType;
+import 'dart:io' show InternetAddress;
 
 import 'package:cryptography/cryptography.dart';
 import 'package:flutter/services.dart';
@@ -11,18 +11,12 @@ import 'package:grassroots_networking/src/grassroots_network.dart';
 import 'package:grassroots_networking_core/src/models/identity.dart';
 import 'package:grassroots_networking_core/src/store/store.dart';
 import 'package:grassroots_networking_core/src/transport/local_network.dart';
-import 'package:grassroots_networking/src/transport/public_address_discovery.dart';
 
 import 'helpers/sodium_test_bootstrap.dart';
 
-/// Hermetic stand-in for the seeip-backed discovery (see the glare test).
-class _LoopbackAddressDiscovery extends PublicAddressDiscovery {
-  @override
-  Future<InternetAddress?> discoverPublicIp({
-    InternetAddressType type = InternetAddressType.IPv6,
-  }) async =>
-      type == InternetAddressType.IPv4 ? InternetAddress.loopbackIPv4 : null;
-}
+/// Hermetic host candidates (see the glare test).
+Future<List<InternetAddress>> _loopbackHostAddresses() async =>
+    [InternetAddress.loopbackIPv4];
 
 /// Unsolicited inbound IP contact from outside the agent's own local network
 /// is governed by no trust level (spec §Trust levels): it is refused unless
@@ -76,7 +70,7 @@ void main() {
       identity: id,
       store: store,
       sodium: sodium,
-      publicAddressDiscovery: _LoopbackAddressDiscovery(),
+      localHostAddressReader: _loopbackHostAddresses,
       config: const GrassrootsNetworkConfig(
         // The heartbeat tick re-reads the attached local network, which would
         // replace the prefixes these tests inject. Long enough that no tick
@@ -90,18 +84,20 @@ void main() {
     return (network, store);
   }
 
-  Future<bool> discoveryCompleted(GrassrootsNetwork network) async {
+  /// Where a node listens, as its own host candidates report it.
+  ///
+  /// Not `getPublicAddress()`: that stays null until a rendezvous server
+  /// reflects an address (spec §Connectivity and Address), and this test has
+  /// none. The host candidates are read asynchronously at UDP init, so wait
+  /// for them.
+  Future<String?> listeningAddress(GrassrootsNetwork network) async {
     final deadline = DateTime.now().add(const Duration(seconds: 12));
-    while (network.getPublicAddress() == null &&
+    while (network.debugLocalCandidates().isEmpty &&
         DateTime.now().isBefore(deadline)) {
       await Future<void>.delayed(const Duration(milliseconds: 200));
     }
-    return network.getPublicAddress() != null;
-  }
-
-  String loopbackOf(String publicAddress) {
-    final port = publicAddress.split(':').last;
-    return publicAddress.startsWith('[') ? '[::1]:$port' : '127.0.0.1:$port';
+    final candidates = network.debugLocalCandidates();
+    return candidates.isEmpty ? null : candidates.first;
   }
 
   /// The receiver's local prefixes, forced so that loopback — the only source
@@ -127,8 +123,9 @@ void main() {
       await receiver.dispose();
     });
 
-    expect(await discoveryCompleted(caller), isTrue);
-    expect(await discoveryCompleted(receiver), isTrue);
+    expect(await listeningAddress(caller), isNotNull);
+    final receiverAddress = await listeningAddress(receiver);
+    expect(receiverAddress, isNotNull);
 
     receiverStore.dispatch(LocalNetworkChangedAction(receiverLocalNetwork));
     await receiver.setTrustLevel(ProximityMedium.lan, lanLevel);
@@ -137,7 +134,7 @@ void main() {
     // caller, so the caller's contact is unsolicited and its key unknown.
     caller.putPeerAddress(
       receiverId.publicKey,
-      loopbackOf(receiver.getPublicAddress()!),
+      receiverAddress!,
     );
     await caller.send(
       receiverId.publicKey,
@@ -209,8 +206,9 @@ void main() {
       await receiver.dispose();
     });
 
-    expect(await discoveryCompleted(caller), isTrue);
-    expect(await discoveryCompleted(receiver), isTrue);
+    expect(await listeningAddress(caller), isNotNull);
+    final receiverAddress = await listeningAddress(receiver);
+    expect(receiverAddress, isNotNull);
 
     receiverStore.dispatch(LocalNetworkChangedAction(loopbackIsLocal));
     await receiver.setTrustLevel(
@@ -223,7 +221,7 @@ void main() {
 
     caller.putPeerAddress(
       receiverId.publicKey,
-      loopbackOf(receiver.getPublicAddress()!),
+      receiverAddress!,
     );
     await caller.send(
       receiverId.publicKey,

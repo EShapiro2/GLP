@@ -36,6 +36,11 @@ class AnchorServer {
   final String identityPath;
   final int announceIntervalSeconds;
 
+  /// The host's fixed public addresses, at most one per family (spec
+  /// §Rendezvous Server). Bare IPs; the listener port is appended. Empty when
+  /// the operator states none, in which case the interface list is read.
+  final List<String> publicAddresses;
+
   late AnchorIdentity _identity;
   late Protocol _protocol;
   late PeerTable _peerTable;
@@ -65,6 +70,7 @@ class AnchorServer {
     required this.identityPath,
     this.announceIntervalSeconds = 30,
     this.ipv6Port = 9516,
+    this.publicAddresses = const [],
   });
 
   Future<void> start() async {
@@ -158,7 +164,7 @@ class AnchorServer {
     _log('Rendezvous server ready');
     for (final listener in _listeners) {
       _log('  ${_familyLabel(listener.family)} address: '
-          '${listener.publicAddress}');
+          '${listener.publicAddress ?? "not configured — pass --public-address"}');
     }
     _log('  Pubkey:   ${_identity.pubkeyHex}');
     _log('Waiting for connections...');
@@ -181,7 +187,7 @@ class AnchorServer {
     _log('Rendezvous server stopped');
   }
 
-  // ===== Public Address Discovery =====
+  // ===== Listeners =====
 
   Future<List<_AnchorListener>> _bindListeners() async {
     final listeners = <_AnchorListener>[];
@@ -198,17 +204,12 @@ class AnchorServer {
         : InternetAddress.anyIPv4;
     try {
       final socket = await RawDatagramSocket.bind(bindAddress, ipv6Port);
-      final publicAddress = family == InternetAddressType.IPv6
-          ? await _discoverPublicIpv6Address(ipv6Port)
-          : await _discoverPublicIpv4Address(ipv6Port);
+      final publicAddress = await _publicAddressFor(family, ipv6Port);
       return _AnchorListener(
         family: family,
         port: ipv6Port,
         rawSocket: socket,
-        publicAddress: publicAddress ??
-            (family == InternetAddressType.IPv6
-                ? '[::]:$ipv6Port'
-                : '0.0.0.0:$ipv6Port'),
+        publicAddress: publicAddress,
       );
     } catch (e) {
       _log('Failed to bind ${_familyLabel(family)} UDP socket on '
@@ -217,106 +218,66 @@ class AnchorServer {
     }
   }
 
-  Future<String?> _discoverPublicIpv6Address(int listenerPort) async {
-    // GCE assigns global IPv6 addresses directly to the interface, so
-    // NetworkInterface.list() works.
+  /// The address this listener is reachable at, for the operator to hand to
+  /// agents.
+  ///
+  /// A rendezvous server's address is static (spec §Rendezvous Server:
+  /// "The host has a fixed public `ip:port`"), so it is configuration —
+  /// `--public-address`, one per family — and where the host's own interface
+  /// carries a globally-routable address of that family, that address stands
+  /// in. Nothing is asked of any third party: a fixed global service is the
+  /// resource a grassroots platform cannot depend on, and a server that had to
+  /// ask one where it lives would be the plainest case of it.
+  Future<String?> _publicAddressFor(
+    InternetAddressType family,
+    int listenerPort,
+  ) async {
+    for (final configured in publicAddresses) {
+      final parsed = InternetAddress.tryParse(configured);
+      if (parsed == null) {
+        _log('Ignoring unparseable --public-address "$configured"');
+        continue;
+      }
+      if (parsed.type != family) continue;
+      return _formatAddress(parsed, listenerPort);
+    }
+
     try {
       final interfaces = await NetworkInterface.list(
-        type: InternetAddressType.IPv6,
+        type: family,
         includeLoopback: false,
       );
       for (final iface in interfaces) {
         for (final addr in iface.addresses) {
           if (addr.isLoopback || addr.isLinkLocal) continue;
-          final discovered = '[${addr.address}]:$listenerPort';
-          _log('Discovered public IPv6 address: $discovered');
-          return discovered;
+          if (_isPrivateIpv4(addr)) continue;
+          final address = _formatAddress(addr, listenerPort);
+          _log('${_familyLabel(family)} address from the interface list: '
+              '$address');
+          return address;
         }
       }
     } catch (e) {
-      _log('Failed to enumerate IPv6 interfaces: $e');
-    }
-
-    // GCE metadata server — IPv6 /96 prefix (we strip the trailing /96).
-    try {
-      final client = HttpClient();
-      try {
-        final request = await client.getUrl(Uri.parse(
-          'http://metadata.google.internal/computeMetadata/v1/instance/'
-          'network-interfaces/0/ipv6s',
-        ));
-        request.headers.set('Metadata-Flavor', 'Google');
-        final response = await request.close();
-        if (response.statusCode == 200) {
-          final body =
-              await response.transform(const SystemEncoding().decoder).join();
-          var ip = body.trim();
-          if (ip.contains('/')) ip = ip.split('/').first;
-          final parsed = InternetAddress.tryParse(ip);
-          if (parsed != null && parsed.type == InternetAddressType.IPv6) {
-            final discovered = '[${parsed.address}]:$listenerPort';
-            _log(
-                'Discovered public IPv6 address via GCE metadata: $discovered');
-            return discovered;
-          }
-        }
-      } finally {
-        client.close();
-      }
-    } catch (e) {
-      _log('GCE metadata unavailable for IPv6: $e');
-    }
-
-    // Fallback: external service.
-    try {
-      final client = HttpClient();
-      try {
-        final request =
-            await client.getUrl(Uri.parse('https://ipv6.seeip.org'));
-        final response = await request.close();
-        final body =
-            await response.transform(const SystemEncoding().decoder).join();
-        final ip = body.trim();
-        final parsed = InternetAddress.tryParse(ip);
-        if (parsed != null && parsed.type == InternetAddressType.IPv6) {
-          final discovered = '[${parsed.address}]:$listenerPort';
-          _log('Discovered public IPv6 address via seeip.org: $discovered');
-          return discovered;
-        }
-      } finally {
-        client.close();
-      }
-    } catch (e) {
-      _log('Failed to discover public IPv6 address via seeip: $e');
+      _log('Failed to enumerate ${_familyLabel(family)} interfaces: $e');
     }
 
     return null;
   }
 
-  Future<String?> _discoverPublicIpv4Address(int listenerPort) async {
-    try {
-      final client = HttpClient();
-      try {
-        final request =
-            await client.getUrl(Uri.parse('https://ipv4.seeip.org'));
-        final response = await request.close();
-        final body =
-            await response.transform(const SystemEncoding().decoder).join();
-        final ip = body.trim();
-        final parsed = InternetAddress.tryParse(ip);
-        if (parsed != null && parsed.type == InternetAddressType.IPv4) {
-          final discovered = '${parsed.address}:$listenerPort';
-          _log('Discovered public IPv4 address via seeip.org: $discovered');
-          return discovered;
-        }
-      } finally {
-        client.close();
-      }
-    } catch (e) {
-      _log('Failed to discover public IPv4 address via seeip: $e');
-    }
+  String _formatAddress(InternetAddress ip, int port) =>
+      ip.type == InternetAddressType.IPv6
+          ? '[${ip.address}]:$port'
+          : '${ip.address}:$port';
 
-    return null;
+  /// Whether [address] is an RFC 1918 address — the interface address of a
+  /// NAT-ed host, which is not the address agents can reach it at.
+  bool _isPrivateIpv4(InternetAddress address) {
+    if (address.type != InternetAddressType.IPv4) return false;
+    final b = address.rawAddress;
+    return b[0] == 10 ||
+        (b[0] == 172 && b[1] >= 16 && b[1] <= 31) ||
+        (b[0] == 192 && b[1] == 168) ||
+        (b[0] == 169 && b[1] == 254);
   }
 
   // ===== Datagram Handling =====
@@ -817,7 +778,10 @@ class _AnchorListener {
   final InternetAddressType family;
   final int port;
   final RawDatagramSocket rawSocket;
-  final String publicAddress;
+
+  /// The address agents reach this listener at, or null when the operator
+  /// stated none and the interface list carries no globally-routable address.
+  final String? publicAddress;
   StreamSubscription? socketSub;
 
   _AnchorListener({

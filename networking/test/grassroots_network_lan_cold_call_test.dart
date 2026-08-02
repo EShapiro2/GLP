@@ -1,4 +1,4 @@
-import 'dart:io' show InternetAddress, InternetAddressType;
+import 'dart:io' show InternetAddress;
 import 'dart:typed_data';
 
 import 'package:cryptography/cryptography.dart';
@@ -8,20 +8,14 @@ import 'package:redux/redux.dart';
 import 'package:sodium_libs/sodium_libs_sumo.dart';
 
 import 'package:grassroots_networking/src/grassroots_network.dart';
-import 'package:grassroots_networking/src/transport/public_address_discovery.dart';
 import 'package:grassroots_networking_core/src/models/identity.dart';
 import 'package:grassroots_networking_core/src/store/store.dart';
 
 import 'helpers/sodium_test_bootstrap.dart';
 
-/// Hermetic stand-in for the seeip-backed discovery (see the glare test).
-class _LoopbackAddressDiscovery extends PublicAddressDiscovery {
-  @override
-  Future<InternetAddress?> discoverPublicIp({
-    InternetAddressType type = InternetAddressType.IPv6,
-  }) async =>
-      type == InternetAddressType.IPv4 ? InternetAddress.loopbackIPv4 : null;
-}
+/// Hermetic host candidates (see the glare test).
+Future<List<InternetAddress>> _loopbackHostAddresses() async =>
+    [InternetAddress.loopbackIPv4];
 
 /// Under Open trust the layer *contacts* an unmatched LAN instance as well as
 /// answering one (spec §Discovery, §Cold-Call Trust Levels). Until 2026-08-02
@@ -70,7 +64,7 @@ void main() {
       identity: id,
       store: store,
       sodium: sodium,
-      publicAddressDiscovery: _LoopbackAddressDiscovery(),
+      localHostAddressReader: _loopbackHostAddresses,
       config: const GrassrootsNetworkConfig(
         announceInterval: Duration(minutes: 30),
       ),

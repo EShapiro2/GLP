@@ -73,7 +73,9 @@ User-facing UI strings should say "Internet", not "UDP" or internal protocol nam
 
 Per **connection**, exactly one address pair is in use — there is no per-message address selection or mid-stream address switching. Each peer has a single dial-book address, supplied by GLP via `putPeerAddress` or observed on a live session; ANNOUNCE carries no addresses (spec §ANNOUNCE and Liveness — address distribution is not its role). The agent's own local candidates (per IP family) are still used to pick a compatible local endpoint when dialing.
 
-The primary public address is discovered via an external service (e.g. seeip.org) and corrected by rendezvous-server address reflection (ADDR_REFLECT).
+**The agent cannot observe its own public address, and asks no external service for it.** A rendezvous server observes the source address of the agent's packets and reflects it back (ADDR_REFLECT); the first connection to a configured rendezvous server is what seeds the address, and later reflections correct it. `getPublicAddress()` returns null until then, which the spec allows — the agent has no public address until one is known. There is no fallback to any global address-discovery service, and none is to be introduced: a fixed global service is exactly the resource a grassroots platform cannot depend on (spec §Connectivity and Address, §Rendezvous Server).
+
+The agent's own **interface addresses** are a separate matter and are read locally: they are its host candidates, and they are what a dial picks the local end of its address pair from. A rendezvous server's own address is static configuration (`--public-address`) or its own interface list.
 
 ## Duo on Two iPhones — Operational Notes
 

@@ -17,6 +17,10 @@ void main(List<String> args) async {
         help: 'Server nickname for ANNOUNCE')
     ..addOption('announce-interval',
         defaultsTo: '30', help: 'ANNOUNCE interval in seconds')
+    ..addMultiOption('public-address',
+        help: 'The host\'s fixed public IP, bare, at most one per family '
+            '(e.g. 203.0.113.7 or 2001:db8::1). Repeatable. Defaults to a '
+            'globally-routable address of the host\'s own interfaces.')
     ..addFlag('help', abbr: 'h', negatable: false);
 
   final ArgResults results;
@@ -44,6 +48,10 @@ void main(List<String> args) async {
     print('On first run, an Ed25519 keypair is generated and saved to the');
     print('identity file. Share the public key with agents that should use');
     print('this server as a rendezvous point.');
+    print('');
+    print('A rendezvous server has a fixed, globally-routable address. It is');
+    print('stated with --public-address, or read from the host\'s own');
+    print('interfaces; nothing is asked of any third-party service.');
     exit(0);
   }
 
@@ -54,12 +62,14 @@ void main(List<String> args) async {
   );
   final nickname = results['nickname'] as String;
   final announceInterval = int.parse(results['announce-interval'] as String);
+  final publicAddresses = results['public-address'] as List<String>;
 
   final server = AnchorServer(
     ipv6Port: ipv6Port,
     nickname: nickname,
     identityPath: identityPath,
     announceIntervalSeconds: announceInterval,
+    publicAddresses: publicAddresses,
   );
 
   // Graceful shutdown

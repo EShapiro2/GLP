@@ -189,6 +189,45 @@ Future<LocalNetwork> readLocalNetwork() async {
   return localNetworkFromPrefixes(prefixes);
 }
 
+/// Reads the agent's own interface addresses. [readLocalHostAddresses] is the
+/// platform reading; a hermetic test supplies its own.
+typedef LocalHostAddressReader = Future<List<InternetAddress>> Function();
+
+/// The agent's own interface addresses — its host candidates for dialing.
+///
+/// These are what tell the layer which address families it can dial in, and
+/// they let a link-local peer on the same segment be paired with a link-local
+/// local endpoint. They are read from the same interface list as
+/// [readLocalNetwork] but are deliberately not part of [LocalNetwork]: the
+/// fingerprint is derived from prefixes and answers §Local Network Identity,
+/// and a fresh temporary address within a prefix already held must not read as
+/// a change of local network.
+///
+/// Loopback is excluded, as it is for the prefixes; link-local addresses are
+/// included.
+Future<List<InternetAddress>> readLocalHostAddresses() async {
+  final List<NetworkInterface> interfaces;
+  try {
+    interfaces = await NetworkInterface.list(
+      includeLoopback: false,
+      includeLinkLocal: true,
+    );
+  } catch (e) {
+    debugPrint('Local host address read failed: $e');
+    return const [];
+  }
+
+  final addresses = <InternetAddress>[];
+  final seen = <String>{};
+  for (final interface in interfaces) {
+    for (final address in interface.addresses) {
+      if (address.isLoopback) continue;
+      if (seen.add(address.address)) addresses.add(address);
+    }
+  }
+  return List.unmodifiable(addresses);
+}
+
 /// Build a [LocalNetwork] from a collection of prefixes, deriving the
 /// fingerprint.
 ///

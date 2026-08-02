@@ -27,29 +27,19 @@ class BleScanningChangedAction extends TransportAction {
   BleScanningChangedAction(this.scanning);
 }
 
-/// Public address discovered or updated (null to clear)
+/// The agent's public address, as a rendezvous server observed it (null to
+/// clear).
 class PublicAddressUpdatedAction extends TransportAction {
   final String? publicAddress;
 
   PublicAddressUpdatedAction(this.publicAddress);
 }
 
-/// Public IP (no port) discovered or reflected by a friend.
+/// Public IP (no port), as reflected by a rendezvous server.
 class PublicIpUpdatedAction extends TransportAction {
   final String publicIp;
 
   PublicIpUpdatedAction(this.publicIp);
-}
-
-/// Sets the publicAddressDiscoveryFailed flag in transports state.
-///
-/// Dispatched with `failed: true` when seeip-based discovery finishes without
-/// producing an address. Dispatched with `failed: false` when a new attempt
-/// starts (so the UI can hide the warning while retrying).
-class PublicAddressDiscoveryFailedAction extends TransportAction {
-  final bool failed;
-
-  PublicAddressDiscoveryFailedAction(this.failed);
 }
 
 /// Clears the discovered public address and public IP.

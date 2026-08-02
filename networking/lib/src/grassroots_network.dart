@@ -17,7 +17,6 @@ import 'transport/ble_transport_service.dart';
 import 'transport/connection_service.dart';
 import 'transport/hole_punch_service.dart';
 import 'transport/lan_discovery_service.dart';
-import 'transport/public_address_discovery.dart';
 import 'package:grassroots_networking_core/src/transport/udp_transport_service.dart';
 import 'package:grassroots_networking_core/src/models/identity.dart';
 import 'package:grassroots_networking_core/src/models/peer.dart';
@@ -534,20 +533,26 @@ class GrassrootsNetwork {
   /// Signaling service for address registration, queries, and hole-punch coordination
   late final SignalingService _signalingService;
 
-  /// Public address discovery for finding our public ip:port. Injectable so
-  /// tests can substitute a stub (the default queries an external service).
-  final PublicAddressDiscovery _publicAddressDiscovery;
+  /// Reads the agent's own interface addresses — its host candidates for
+  /// dialing. Injectable so a hermetic test can name the addresses its nodes
+  /// listen on; the default is the platform's interface list.
+  final LocalHostAddressReader _readLocalHostAddresses;
 
-  /// Our discovered public address (ip:port), shared with friends
+  /// Our public address (ip:port), as a rendezvous server observed it.
+  ///
+  /// Null until the first rendezvous connection reflects one (spec
+  /// §Connectivity and Address: an agent learns its public address from a
+  /// rendezvous server, which observes the source address of its packets).
   String? _publicAddress;
-  String? _linkLocalAddress;
-  Set<String> _publicAddressCandidates = const {};
+
+  /// The agent's own interface addresses, last read.
+  List<InternetAddress> _localHostAddresses = const [];
 
   final UdpConnectionService _connectionService = const UdpConnectionService();
 
-  /// The in-flight background public-address discovery task.
-  Future<void>? _publicAddressDiscoveryFuture;
-  int _publicAddressDiscoveryGeneration = 0;
+  /// The in-flight background read of the local host addresses.
+  Future<void>? _localHostAddressFuture;
+  int _localHostAddressGeneration = 0;
 
   /// Timer for periodic ANNOUNCE broadcasts
   Timer? _announceTimer;
@@ -768,10 +773,10 @@ class GrassrootsNetwork {
     this.config = const GrassrootsNetworkConfig(),
     required this.store,
     required this.sodium,
-    PublicAddressDiscovery? publicAddressDiscovery,
+    LocalHostAddressReader? localHostAddressReader,
     PlaceGeofenceBackend? placeGeofenceBackend,
-  })  : _publicAddressDiscovery =
-            publicAddressDiscovery ?? PublicAddressDiscovery(),
+  })  : _readLocalHostAddresses =
+            localHostAddressReader ?? readLocalHostAddresses,
         _places = placeGeofenceBackend == null
             ? null
             : PlaceRegistry(backend: placeGeofenceBackend) {
@@ -1160,11 +1165,11 @@ class GrassrootsNetwork {
   List<RendezvousServerSettings> get configuredRendezvousServers =>
       store.state.settings.configuredRendezvousServers;
 
-  /// Our UDP address to share with friends.
+  /// Our public UDP address, as a rendezvous server observed it.
   ///
-  /// Returns the public UDP address discovered for the active IP family.
-  /// Never returns a private LAN address. Returns null if public address
-  /// discovery failed and we therefore have nothing to advertise.
+  /// Null until the first rendezvous connection reflects one — the agent
+  /// cannot observe its own public address, and asks no external service for
+  /// it (spec §Connectivity and Address).
   String? get udpAddress => _publicAddress;
 
   /// Whether currently scanning for BLE devices
@@ -1211,16 +1216,6 @@ class GrassrootsNetwork {
         RendezvousServerSettings(address: address, pubkeyHex: pubkeyHex),
       ),
     );
-  }
-
-  /// Force a fresh public-address discovery attempt, bypassing the seeip cache.
-  ///
-  /// Invoked by the UI when the user taps "Retry" on the no-public-address
-  /// warning. Friend/RV reflection runs on its own cadence and is not poked
-  /// here; this only re-runs seeip-based discovery.
-  Future<void> retryPublicAddressDiscovery() async {
-    _publicAddressDiscovery.invalidateCache();
-    await _discoverPublicAddress();
   }
 
   // ===== Lifecycle =====
@@ -1369,9 +1364,10 @@ class GrassrootsNetwork {
           ),
         );
 
-      // Discover our public UDP address for the active IP family in the
-      // background.
-      _publicAddressDiscoveryFuture = _discoverPublicAddress();
+      // Read our own interface addresses in the background; a dial needs one
+      // of them for the local end of the pair. The public address is not read
+      // here and cannot be: it arrives by rendezvous reflection.
+      _localHostAddressFuture = _refreshLocalHostAddresses();
 
       // Treat the configured rendezvous server as a UDP peer we keep a
       // session with so it can immediately learn or refresh our address.
@@ -2000,12 +1996,10 @@ class GrassrootsNetwork {
   }
 
   void _clearDiscoveredPublicConnectivity() {
-    _publicAddressDiscoveryGeneration++;
+    _localHostAddressGeneration++;
     _publicAddress = null;
-    _linkLocalAddress = null;
-    _publicAddressCandidates = const {};
-    _publicAddressDiscovery.invalidateCache();
-    _publicAddressDiscoveryFuture = null;
+    _localHostAddresses = const [];
+    _localHostAddressFuture = null;
     store.dispatch(ClearPublicConnectivityAction());
   }
 
@@ -2121,7 +2115,7 @@ class GrassrootsNetwork {
       await _startLanDiscovery();
     }
 
-    await _waitForPublicUdpAddress();
+    await _waitForLocalHostAddresses();
 
     await _reconnectKnownPeers(reason: 'connectivity-changed');
   }
@@ -3098,6 +3092,16 @@ class GrassrootsNetwork {
   void debugResolveLanInstance(String token, String address) =>
       _onLanInstanceResolved(token, address);
 
+  /// The agent's own candidates for the local end of a dial — its interface
+  /// addresses at the bound UDP port, plus the reflected public address if one
+  /// is known.
+  ///
+  /// A hermetic test reads the address its node listens on from here: there is
+  /// no rendezvous server to reflect a public one, and `getPublicAddress()` is
+  /// null until one does (spec §Connectivity and Address).
+  @visibleForTesting
+  Set<String> debugLocalCandidates() => _connectionLocalCandidates();
+
   /// The peer id bound to [address] on the UDP path, or null when none is —
   /// the address itself while the peer is unidentified, its pubkey hex after
   /// ANNOUNCE has claimed the path.
@@ -3194,124 +3198,34 @@ class GrassrootsNetwork {
     }
   }
 
-  // ===== Public Address Discovery =====
+  // ===== Local Host Addresses =====
 
-  /// Discover our public UDP address and combine it with the bound UDP port.
-  Future<void> _discoverPublicAddress() async {
-    final udpService = _udpService;
-    final discoveryGeneration = _publicAddressDiscoveryGeneration;
-    if (udpService == null || udpService.activeAddressTypes.isEmpty) return;
-    final previousAddress = _publicAddress;
-    final previousCandidates = _publicAddressCandidates;
-    final discoveredCandidates = <String>{};
-
-    // Clear the failure flag while an attempt is in flight so the UI hides
-    // the warning during retry.
-    store.dispatch(PublicAddressDiscoveryFailedAction(false));
-
-    for (final family in const [
-      InternetAddressType.IPv6,
-      InternetAddressType.IPv4,
-    ]) {
-      final localPort = udpService.localPortForAddressType(family);
-      if (localPort == null) continue;
-
-      final publicAddr = await _publicAddressDiscovery.getPublicAddress(
-        localPort,
-        type: family,
-      );
-      if (publicAddr != null) {
-        discoveredCandidates.add(publicAddr);
-      }
-    }
-
-    if (_publicAddressDiscoveryGeneration != discoveryGeneration ||
-        _udpService != udpService ||
-        !_isUdpEnabledInSettings) {
-      return;
-    }
-
-    _publicAddressCandidates = normalizeAddressStrings(discoveredCandidates);
-    final publicAddr = _preferredPublicAddress(_publicAddressCandidates);
-    if (publicAddr != null) {
-      _publicAddress = publicAddr;
-      store.dispatch(PublicAddressUpdatedAction(publicAddr));
-      debugPrint('Public UDP address: $_publicAddress');
-      debugPrint('Public UDP candidates: $_publicAddressCandidates');
-      if (publicAddr != previousAddress ||
-          !setEquals(_publicAddressCandidates, previousCandidates)) {
-        _resetRendezvousBackoff();
-        _resetAutoUdpBackoff();
-        unawaited(_syncConfiguredRendezvous(reason: 'public-address-updated'));
-        // Spec onConnectivityStatus: fires on every public address change.
-        // Startup case is `previousAddress == null`, gain case same.
-        onConnectivityStatusChanged?.call(previousAddress, publicAddr);
-      }
-    } else {
-      debugPrint(
-        'Could not discover a public UDP address. '
-        'No UDP address will be advertised.',
-      );
-      if (previousAddress != null) {
-        // Spec onConnectivityStatus: address became unavailable.
-        onConnectivityStatusChanged?.call(previousAddress, null);
-      }
-    }
-
-    // Always update the display IP (even if no full address/port available).
-    final bestIp = _publicAddressDiscovery.bestPublicIp;
-    if (bestIp != null) {
-      store.dispatch(PublicIpUpdatedAction(bestIp.address));
-    }
-
-    // If we still have neither a full public address nor any reflected/
-    // discovered IP, flag discovery as failed so the UI can warn the user.
-    final transports = store.state.transports;
-    if (transports.publicAddress == null && transports.publicIp == null) {
-      store.dispatch(PublicAddressDiscoveryFailedAction(true));
-    }
-
-    // Discover link-local IPv6 for same-LAN fallback.
-    final ipv6Port = udpService.localPortForAddressType(
-      InternetAddressType.IPv6,
+  /// Read the agent's own interface addresses — the host candidates a dial
+  /// picks its local endpoint from.
+  ///
+  /// This is not the public address. The layer cannot observe its own public
+  /// address (spec §Connectivity and Address); a rendezvous server observes it
+  /// and reflects it back, which is the only thing that ever sets
+  /// [_publicAddress].
+  Future<void> _refreshLocalHostAddresses() async {
+    final generation = _localHostAddressGeneration;
+    final addresses = await _readLocalHostAddresses();
+    if (_localHostAddressGeneration != generation) return;
+    _localHostAddresses = addresses;
+    debugPrint(
+      '[local-host] Host candidates: '
+      '${addresses.map((a) => a.address).join(', ')}',
     );
-    final llAddr = ipv6Port != null
-        ? await _publicAddressDiscovery.getLinkLocalAddress(ipv6Port)
-        : null;
-    if (_publicAddressDiscoveryGeneration != discoveryGeneration ||
-        _udpService != udpService ||
-        !_isUdpEnabledInSettings) {
-      return;
-    }
-    if (llAddr != null) {
-      _linkLocalAddress = llAddr;
-      debugPrint('Link-local UDP address: $_linkLocalAddress');
-    }
   }
 
-  Future<void> _waitForPublicUdpAddress({
+  Future<void> _waitForLocalHostAddresses({
     Duration timeout = const Duration(seconds: 6),
   }) async {
-    final inFlight = _publicAddressDiscoveryFuture;
+    final inFlight = _localHostAddressFuture;
     if (inFlight == null) return;
     try {
       await inFlight.timeout(timeout);
     } catch (_) {}
-  }
-
-  String? _preferredPublicAddress(Set<String> candidates) {
-    String? ipv4;
-    for (final candidate in candidates) {
-      final parsed = parseAddressString(candidate);
-      if (parsed == null || parsed.ip.isLinkLocal) continue;
-      if (parsed.ip.type == InternetAddressType.IPv6) {
-        return parsed.toAddressString();
-      }
-      if (parsed.ip.type == InternetAddressType.IPv4) {
-        ipv4 ??= parsed.toAddressString();
-      }
-    }
-    return ipv4;
   }
 
   AddressInfo? _parseSupportedUdpAddress(
@@ -3512,24 +3426,34 @@ class GrassrootsNetwork {
   HolePunchService? _holePunchServiceFor(InternetAddress address) =>
       _holePunchServices[address.type];
 
-  Set<String> _candidateAddresses({bool includeLinkLocal = false}) =>
-      normalizeAddressStrings([
-        ..._publicAddressCandidates,
-        if (_publicAddress != null) _publicAddress,
-        if (includeLinkLocal && _linkLocalAddress != null) _linkLocalAddress,
-      ]);
-
+  /// The agent's own candidates for the local end of a dial: its interface
+  /// addresses at the bound UDP port of their family, plus the public address
+  /// a rendezvous server reflected once one is known.
+  ///
+  /// Only families the UDP socket is actually bound to are offered, since the
+  /// pair must be dialable from this socket.
   Set<String> _connectionLocalCandidates() {
     final udpService = _udpService;
     if (udpService == null) return const {};
 
-    return normalizeAddressStrings(
-      _candidateAddresses(includeLinkLocal: true).where((address) {
-        final parsed = parseAddressString(address);
-        return parsed != null &&
-            udpService.activeAddressTypes.contains(parsed.ip.type);
-      }),
-    );
+    final candidates = <String>[];
+    for (final address in _localHostAddresses) {
+      if (!udpService.activeAddressTypes.contains(address.type)) continue;
+      final localPort = udpService.localPortForAddressType(address.type);
+      if (localPort == null) continue;
+      candidates.add(AddressInfo(address, localPort).toAddressString());
+    }
+
+    final publicAddress = _publicAddress;
+    if (publicAddress != null) {
+      final parsed = parseAddressString(publicAddress);
+      if (parsed != null &&
+          udpService.activeAddressTypes.contains(parsed.ip.type)) {
+        candidates.add(parsed.toAddressString());
+      }
+    }
+
+    return normalizeAddressStrings(candidates);
   }
 
   /// The peer's dialable addresses: the single dial-book address (supplied
@@ -3819,17 +3743,17 @@ class GrassrootsNetwork {
             fallbackAddress: udpAddress,
           )
         : normalizeAddressStrings([udpAddress]);
-    // First dials can race public-address discovery: with no local
-    // candidates no compatible pair exists and the dial fails spuriously —
-    // this is how a rendezvous probe or an invite redemption issued right
-    // after initialize() used to fail. Wait for the in-flight discovery
-    // before giving up on candidate selection.
+    // First dials can race the interface read: with no local candidates no
+    // compatible pair exists and the dial fails spuriously — this is how a
+    // rendezvous probe or an invite redemption issued right after initialize()
+    // used to fail. Wait for the in-flight read before giving up on candidate
+    // selection.
     if (_connectionLocalCandidates().isEmpty) {
       debugPrint(
         '[udp-send] No local candidates yet for $peerShort — waiting for '
-        'public-address discovery',
+        'the local interface addresses',
       );
-      await _waitForPublicUdpAddress(timeout: const Duration(seconds: 20));
+      await _waitForLocalHostAddresses(timeout: const Duration(seconds: 20));
     }
     final pair = _selectUdpCandidatePair(
       remoteCandidates,
@@ -5296,6 +5220,9 @@ class GrassrootsNetwork {
       _refireAvailableForUnreachableKnownPeers();
       _drainQueuedMessagesForLivePeers();
       unawaited(_refreshLocalNetwork());
+      // The same tick catches an interface address the platform reported
+      // through no event at all; a dial needs one for its local end.
+      unawaited(_refreshLocalHostAddresses());
     });
   }
 

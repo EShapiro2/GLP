@@ -44,12 +44,12 @@ class TransportsState {
   /// Whether BLE is currently scanning
   final bool bleScanning;
 
-  /// Our discovered public UDP address (ip:port), null if not yet discovered
+  /// Our public UDP address (ip:port), null until a rendezvous server has
+  /// observed and reflected one. The agent cannot observe it itself.
   final String? publicAddress;
 
   /// Our public IP address (no port), for display purposes.
-  /// Set even when behind NAT. Updated by seeip.org discovery and friend
-  /// reflection. IPv6-only.
+  /// Set even when behind NAT, by rendezvous address reflection.
   final String? publicIp;
 
   /// The current IP network type used for Internet connectivity.
@@ -63,12 +63,6 @@ class TransportsState {
   /// any prior observation was for a different network path.
   final DateTime? lastUnsolicitedInboundAt;
 
-  /// True when the most recent public address discovery attempt finished
-  /// without producing an address AND no friend/RV reflection has filled
-  /// one in either. Cleared automatically as soon as a public address or
-  /// reflected IP arrives, or when a new discovery attempt is in flight.
-  final bool publicAddressDiscoveryFailed;
-
   const TransportsState({
     this.bleState = TransportState.uninitialized,
     this.udpState = TransportState.uninitialized,
@@ -79,7 +73,6 @@ class TransportsState {
     this.publicIp,
     this.networkConnectionType = NetworkConnectionType.offline,
     this.lastUnsolicitedInboundAt,
-    this.publicAddressDiscoveryFailed = false,
   });
 
   static const TransportsState initial = TransportsState();
@@ -128,7 +121,6 @@ class TransportsState {
     String? publicIp,
     NetworkConnectionType? networkConnectionType,
     DateTime? lastUnsolicitedInboundAt,
-    bool? publicAddressDiscoveryFailed,
   }) {
     return TransportsState(
       bleState: bleState ?? this.bleState,
@@ -142,8 +134,6 @@ class TransportsState {
           networkConnectionType ?? this.networkConnectionType,
       lastUnsolicitedInboundAt:
           lastUnsolicitedInboundAt ?? this.lastUnsolicitedInboundAt,
-      publicAddressDiscoveryFailed:
-          publicAddressDiscoveryFailed ?? this.publicAddressDiscoveryFailed,
     );
   }
 
@@ -161,7 +151,6 @@ class TransportsState {
       publicIp: publicIp,
       networkConnectionType: networkConnectionType,
       lastUnsolicitedInboundAt: null,
-      publicAddressDiscoveryFailed: publicAddressDiscoveryFailed,
     );
   }
 
@@ -178,13 +167,11 @@ class TransportsState {
       publicIp: null,
       networkConnectionType: networkConnectionType,
       lastUnsolicitedInboundAt: null,
-      publicAddressDiscoveryFailed: publicAddressDiscoveryFailed,
     );
   }
 
   /// Create a copy with publicAddress changed to a new value, clearing the
   /// reachability observation because it was bound to the previous address.
-  /// Also clears the discovery-failed flag — we now have an address.
   TransportsState withNewPublicAddress(String address) {
     return TransportsState(
       bleState: bleState,
@@ -196,7 +183,6 @@ class TransportsState {
       publicIp: publicIp,
       networkConnectionType: networkConnectionType,
       lastUnsolicitedInboundAt: null,
-      publicAddressDiscoveryFailed: false,
     );
   }
 
@@ -213,8 +199,7 @@ class TransportsState {
           publicAddress == other.publicAddress &&
           publicIp == other.publicIp &&
           networkConnectionType == other.networkConnectionType &&
-          lastUnsolicitedInboundAt == other.lastUnsolicitedInboundAt &&
-          publicAddressDiscoveryFailed == other.publicAddressDiscoveryFailed;
+          lastUnsolicitedInboundAt == other.lastUnsolicitedInboundAt;
 
   @override
   int get hashCode => Object.hash(
@@ -227,10 +212,9 @@ class TransportsState {
     publicIp,
     networkConnectionType,
     lastUnsolicitedInboundAt,
-    publicAddressDiscoveryFailed,
   );
 
   @override
   String toString() =>
-      'TransportsState(ble: $bleState, udp: $udpState, scanning: $bleScanning, publicAddr: $publicAddress, publicIp: $publicIp, network: ${networkConnectionType.displayName}, wellConnected: $isWellConnected, discoveryFailed: $publicAddressDiscoveryFailed)';
+      'TransportsState(ble: $bleState, udp: $udpState, scanning: $bleScanning, publicAddr: $publicAddress, publicIp: $publicIp, network: ${networkConnectionType.displayName}, wellConnected: $isWellConnected)';
 }

@@ -24,10 +24,6 @@ class SettingsScreen extends StatefulWidget {
   /// Debug-only: switch which BLE roles the local device runs.
   final Future<void> Function(BleRoleMode mode)? onBleRoleModeChanged;
 
-  /// Re-run public-address (seeip) discovery, invoked by the "Retry" button
-  /// shown when discovery has failed and no IP is known.
-  final Future<void> Function()? onRetryPublicAddressDiscovery;
-
   const SettingsScreen({
     super.key,
     required this.store,
@@ -35,7 +31,6 @@ class SettingsScreen extends StatefulWidget {
     this.onAddRendezvousServer,
     this.onRemoveRendezvousServer,
     this.onBleRoleModeChanged,
-    this.onRetryPublicAddressDiscovery,
   });
 
   @override
@@ -46,7 +41,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
   late bool _bluetoothEnabled;
   late bool _udpEnabled;
   bool _isSavingAnchor = false;
-  bool _isRetryingPublicAddressDiscovery = false;
   StreamSubscription<AppState>? _storeSubscription;
 
   late final TextEditingController _anchorAddressController;
@@ -535,10 +529,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final publicAddress = transports.publicAddress;
     final publicIp = transports.publicIp;
     final connectionType = transports.networkConnectionType;
-    final showDiscoveryFailedWarning =
-        transports.publicAddressDiscoveryFailed &&
-            publicAddress == null &&
-            publicIp == null;
+    // No address yet: the agent cannot observe its own public address, so
+    // until a rendezvous server reflects one there is nothing to show (spec
+    // §Connectivity and Address).
+    final showNoPublicAddressWarning =
+        publicAddress == null && publicIp == null;
 
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -605,7 +600,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         color: Colors.grey[400],
                       ),
                     ),
-                  ] else if (showDiscoveryFailedWarning) ...[
+                  ] else if (showNoPublicAddressWarning) ...[
                     const SizedBox(height: 6),
                     _buildNoPublicAddressWarning(),
                   ],
@@ -629,7 +624,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         const SizedBox(width: 6),
         Expanded(
           child: Text(
-            'No public IP address available',
+            'No public address yet — connect a rendezvous server',
             style: TextStyle(
               fontSize: 11,
               color: Colors.orange[700],
@@ -637,49 +632,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
           ),
         ),
-        const SizedBox(width: 4),
-        SizedBox(
-          height: 24,
-          child: TextButton.icon(
-            onPressed: _isRetryingPublicAddressDiscovery ||
-                    widget.onRetryPublicAddressDiscovery == null
-                ? null
-                : _handleRetryPublicAddressDiscovery,
-            icon: _isRetryingPublicAddressDiscovery
-                ? const SizedBox(
-                    width: 12,
-                    height: 12,
-                    child: CircularProgressIndicator(strokeWidth: 1.5),
-                  )
-                : const Icon(Icons.refresh, size: 14),
-            label: const Text('Retry', style: TextStyle(fontSize: 11)),
-            style: TextButton.styleFrom(
-              padding: const EdgeInsets.symmetric(horizontal: 8),
-              minimumSize: Size.zero,
-              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-              visualDensity: VisualDensity.compact,
-            ),
-          ),
-        ),
       ],
     );
-  }
-
-  Future<void> _handleRetryPublicAddressDiscovery() async {
-    final callback = widget.onRetryPublicAddressDiscovery;
-    if (callback == null) return;
-    setState(() {
-      _isRetryingPublicAddressDiscovery = true;
-    });
-    try {
-      await callback();
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isRetryingPublicAddressDiscovery = false;
-        });
-      }
-    }
   }
 
   IconData _networkTypeIcon(NetworkConnectionType connectionType) {

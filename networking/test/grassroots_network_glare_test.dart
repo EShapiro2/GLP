@@ -1,5 +1,5 @@
 import 'dart:convert';
-import 'dart:io' show InternetAddress, InternetAddressType;
+import 'dart:io' show InternetAddress;
 
 import 'package:cryptography/cryptography.dart';
 import 'package:flutter/services.dart';
@@ -10,22 +10,14 @@ import 'package:sodium_libs/sodium_libs_sumo.dart';
 import 'package:grassroots_networking/src/grassroots_network.dart';
 import 'package:grassroots_networking_core/src/models/identity.dart';
 import 'package:grassroots_networking_core/src/store/store.dart';
-import 'package:grassroots_networking/src/transport/public_address_discovery.dart';
 
 import 'helpers/sodium_test_bootstrap.dart';
 
-/// Hermetic stand-in for the seeip-backed discovery: the node's "public"
-/// address is its loopback ip:port, so peers dial exactly where it listens.
-/// (flutter_test blocks real HTTP, so the default discovery cannot run.)
-class _LoopbackAddressDiscovery extends PublicAddressDiscovery {
-  @override
-  Future<InternetAddress?> discoverPublicIp({
-    InternetAddressType type = InternetAddressType.IPv6,
-  }) async =>
-      type == InternetAddressType.IPv4
-          ? InternetAddress.loopbackIPv4
-          : null;
-}
+/// Hermetic host candidates: the node's own address is loopback, so peers dial
+/// exactly where it listens. The real reader enumerates the machine's
+/// interfaces, which a test must not depend on.
+Future<List<InternetAddress>> _loopbackHostAddresses() async =>
+    [InternetAddress.loopbackIPv4];
 
 /// Handshake glare at the coordinator level, per the paper's Wire mechanics
 /// note: over IP the phone coordinator may initiate Noise from both ends —
@@ -34,7 +26,7 @@ class _LoopbackAddressDiscovery extends PublicAddressDiscovery {
 /// the session manager's deterministic rule (smaller key keeps the
 /// initiator role), serialized per pair (spec §Session Establishment: one
 /// handshake per medium per pair). Two full [GrassrootsNetwork] instances
-/// talk over loopback UDP, hermetically ([_LoopbackAddressDiscovery]);
+/// talk over loopback UDP, hermetically ([_loopbackHostAddresses]);
 /// both key orderings of the app-level sender.
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -79,7 +71,7 @@ void main() {
       identity: id,
       store: store,
       sodium: sodium,
-      publicAddressDiscovery: _LoopbackAddressDiscovery(),
+      localHostAddressReader: _loopbackHostAddresses,
       config: const GrassrootsNetworkConfig(
         // Short heartbeat so the non-dialing side's reconnect sweep fires
         // within the test window.
@@ -91,13 +83,20 @@ void main() {
     return network;
   }
 
-  Future<bool> discoveryCompleted(GrassrootsNetwork network) async {
+  /// Where a node listens, as its own host candidates report it.
+  ///
+  /// Not `getPublicAddress()`: that stays null until a rendezvous server
+  /// reflects an address (spec §Connectivity and Address), and this test has
+  /// none. The host candidates are read asynchronously at UDP init, so wait
+  /// for them.
+  Future<String?> listeningAddress(GrassrootsNetwork network) async {
     final deadline = DateTime.now().add(const Duration(seconds: 12));
-    while (network.getPublicAddress() == null &&
+    while (network.debugLocalCandidates().isEmpty &&
         DateTime.now().isBefore(deadline)) {
       await Future<void>.delayed(const Duration(milliseconds: 200));
     }
-    return network.getPublicAddress() != null;
+    final candidates = network.debugLocalCandidates();
+    return candidates.isEmpty ? null : candidates.first;
   }
 
   Future<void> runGlareCase({
@@ -120,21 +119,12 @@ void main() {
       await recipient.dispose();
     });
 
-    expect(await discoveryCompleted(sender), isTrue);
-    expect(await discoveryCompleted(recipient), isTrue);
-
-    // The UDP service binds a separate ephemeral port per address family;
-    // the loopback dial must target the family (and thus the port) of the
-    // node's discovered public address.
-    String loopbackOf(String publicAddress) {
-      final port = publicAddress.split(':').last;
-      return publicAddress.startsWith('[')
-          ? '[::1]:$port'
-          : '127.0.0.1:$port';
-    }
-
-    final senderLoopback = loopbackOf(sender.getPublicAddress()!);
-    final recipientLoopback = loopbackOf(recipient.getPublicAddress()!);
+    final senderLoopback = await listeningAddress(sender);
+    final recipientLoopback = await listeningAddress(recipient);
+    expect(senderLoopback, isNotNull);
+    expect(recipientLoopback, isNotNull);
+    final senderAddress = senderLoopback!;
+    final recipientAddress = recipientLoopback!;
 
     final delivered = <String>[];
     recipient.onMessageReceived = (messageId, senderPk, payload, transport) {
@@ -146,8 +136,8 @@ void main() {
     // key and loopback address — first contact then rides the coordinator's
     // own dial + ANNOUNCE + Noise machinery, with initiation possible from
     // both ends (the glare under test).
-    sender.putPeerAddress(recipientId.publicKey, recipientLoopback);
-    recipient.putPeerAddress(senderId.publicKey, senderLoopback);
+    sender.putPeerAddress(recipientId.publicKey, recipientAddress);
+    recipient.putPeerAddress(senderId.publicKey, senderAddress);
 
     final messageId = await sender.send(
       recipientId.publicKey,
