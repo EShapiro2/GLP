@@ -8,8 +8,11 @@
 // 1. The moded head H is well-typed by the procedure's type
 // 2. Each body atom is well-typed by its procedure's type
 // 3. Variable pairs (X, X?) have:
-//    - dual types if both in head or both in body
-//    - same type if one in head and one in body
+//    - dual types if both occur in the head
+//    - writer a subtype of the dual of the reader if both occur in the body
+//    - head occurrence's dual a subtype of the body occurrence's dual if one
+//      occurs in each (def:well-typed-clause-subtyping 3(b), relaxed from
+//      equality in Moded-Types a5221fd)
 
 import 'mode.dart';
 import 'moded_term.dart';
@@ -1048,16 +1051,35 @@ List<ClauseDualityError> _checkClauseDuality(
           }
         }
       } else {
-        // One in head, one in body: require SAME type
-        final (isSame, reason) = _areSameTypeWithReason(writerInfo, readerInfo, dfa);
-        if (!isSame) {
+        // One in head, one in body: a DIRECTED subtyping check, not equality.
+        //
+        // TGLP def:well-typed-clause-subtyping 3(b), as relaxed in Moded-Types
+        // a5221fd: "if one occurs in the head and the other in the body, the
+        // dual of the type of the head occurrence is a subtype of the dual of
+        // the type of the body occurrence."  The prose above it says what the
+        // check means: the two occurrences carry the SAME mode, and what the
+        // head occurrence receives must be within what the body occurrence
+        // accepts.  Taking the dual of each puts both in output polarity, which
+        // is where <: is defined; sec:subtyping extends <: to input types by
+        // complementation (A? <: B? if B <: A), which is what makes the
+        // comparison well-formed at consumed positions.
+        //
+        // Equality was the base definition's condition 3(b) and is strictly
+        // stronger, so nothing that passed before fails here.
+        final headInfo = writerNormLoc == 'head' ? writerInfo : readerInfo;
+        final bodyInfo = writerNormLoc == 'head' ? readerInfo : writerInfo;
+        final headOutput = dfa.getState(headInfo.typeState.baseName);
+        final bodyOutput = dfa.getState(bodyInfo.typeState.baseName);
+        if (!isSubtype(headOutput, bodyOutput, dfa)) {
           errors.add(ClauseDualityError(
             baseName,
             writerInfo,
             readerInfo,
             writerLoc,
             readerLoc,
-            'Variables across head/body must have same type: $reason',
+            'Variables across head/body: the head occurrence receives '
+            '${headOutput.name}, which is not within what the body occurrence '
+            'accepts (${bodyOutput.name})',
           ));
         }
       }
@@ -1074,17 +1096,9 @@ bool _areDualTypes(VariableTypeInfo writerInfo, VariableTypeInfo readerInfo, Pro
   return isCompat;
 }
 
-/// Check if two variable types are the SAME type
-/// Per spec v0.9: For head-body pairs, types must have same BASE type
-/// (e.g., _ and _? are same base type, Stream and Stream? are same base type)
-(bool, String?) _areSameTypeWithReason(VariableTypeInfo writerInfo, VariableTypeInfo readerInfo, ProgramDFA dfa) {
-  // For same-type check, the BASE types must be the same up to structural
-  // identity (typed-program §20.3): a named alias and its structural form match.
-  if (!sameBaseType(writerInfo.typeState.baseName, readerInfo.typeState.baseName, dfa)) {
-    return (false, '${writerInfo.typeState.name} (base: ${writerInfo.typeState.baseName}) != ${readerInfo.typeState.name} (base: ${readerInfo.typeState.baseName})');
-  }
-  return (true, null);
-}
+// _areSameTypeWithReason is gone with the head-body equality check it served.
+// Condition 3(b) is a directed subtyping check since Moded-Types a5221fd; see
+// _checkClauseDuality.
 
 /// Check duality with reason for failure
 /// Per paper Definition 5.6: head-head and body-body pairs must have dual types.
