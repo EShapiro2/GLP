@@ -637,3 +637,36 @@ Ticketed then **dropped**: a PE diagnostic for an unpaired-Out channel (`ch(S?, 
 **Layer**: type checker (`program_dfa.dart` `_resolveTypeExpr`) + isolate lifecycle (`isolate_manager.dart` `_agentIsolateEntry`).
 
 When an agent isolate loads a program whose scope is incompletely supplied, `buildProgramDFA` throws an **unhandled** `UnknownTypeError` (e.g. `Response`) that kills the isolate. `IsolateManager` is not notified, so the manager waits on a dead isolate until the test's 30s timeout — a missing-scope condition becomes a silent hang instead of a reported error. The type-checker should surface unresolved types as locatable diagnostics, and/or the isolate entry should catch init failures and report them to the manager. This is what turned the (now-retired) `isolate_manager_test` scope omission into a 30s timeout rather than a clear failure.
+
+---
+
+## Issue 20: a parameter-inspecting procedure that nothing instantiates is checked by nothing
+
+**Status**: Half fixed (2026-08-03).  The silence is fixed — a program load now names every such procedure.  What the measurement then showed is open: 45 procedures across five programs are checked by nothing, and each is a place a type error can sit undetected.
+**Layer**: type checker (`lib/analysis/type_checker/type_checker.dart`), surfaced by the program linker (`lib/compiler/program_linker.dart`).
+
+A parameterised procedure that inspects a type parameter has no well-typing of its own and acquires one only per instantiation (`parameterized-types.tex` sec:programs-and-modules).  Loaded standalone it is rejected; inside a program, one that no call instantiates goes **unchecked**, which the paper licenses — "a procedure with no caller in its program goes unchecked" (sec:abstract-parameters).  Until 2026-08-03 the checker said nothing at all about it, so a program containing wholly unchecked clauses printed a clean verdict, indistinguishable from one whose clauses had all been verified.
+
+How it surfaced: not by reading the checker.  `programs/tests/agent_roundtrip/typed_actors.glp` had `bob_actor/1` and `charlie_actor/1` passing a raw `Response` where `UserContent.decision`'s third argument is a `PendingValue` — an untagged value at a tagged-union position.  Every actor is declared `Channel(X, Y)?` and nothing instantiates X and Y, so none of them was ever checked.  It was found because the file entered a program for the first time in months and the play stopped where it should not have (GLP `54dd7020`).  Declared concretely, the checker rejects the same clause at once — `programs/tests/typed/tagged_union_untagged_neg.glp`.
+
+**What landed.**  A `TypeWarning` per such procedure, and one line at the point the program is pronounced well-typed:
+
+```
+[TYPE] 5 parameterized procedure(s) unchecked in this program — no instantiation: typed_actors:alice_actor/1, typed_actors:bob_actor/1, typed_actors:charlie_actor/1, typed_social_agent:agent/4, typed_social_agent:inject_msg/5
+```
+
+Not an error: an error at load refuses all 54 program directories in `programs/`, because root `programs/self.glp` exposes the four `social/graph/routing` modules into every program and their procedures are parameter-inspecting.  Rejection belongs after the tree is clean, not before.  Regression tests: `programs/tests/param_unchecked/` (the report fires and the program still loads) and `tagged_union_untagged_neg.glp` in `NEGATIVE_FILES`.
+
+**The measurement, 2026-08-03, over every program directory under `programs/`.**  Five carry unchecked procedures; the other 49 carry none.
+
+| Program | Unchecked |
+|---|---|
+| `tests/agent_roundtrip/play_ui_madglp` | 14 |
+| `cssn` | 12 |
+| `social/graph` | 10 |
+| `tests/agent_roundtrip/play_madglp` | 5 |
+| `currencies` | 4 |
+
+`typed_social_agent:agent/4` is among them, in both agent_roundtrip programs: the agent itself has never been type-checked in either.  The `social/graph/routing` procedures (`send_user/3`, `send_net/3`, `send_friend/4`, `send_child/4`, `send_parent/4`, `add_friend_output/4`, `inject_msg/5`, `already_friend/4`, `smaller_dispatch/7`, `await_friend_channel/6`, `inject_intro_result/3`, `intro_await_peer/3`) account for CSSN's, `social/graph`'s and Currencies' entries; `output.glp`'s own header says its clauses rely on per-instantiation checking to reject an `Ent` lacking the constructor they destructure, and in these programs that checking never happens.
+
+**Open**: give the inspected arguments concrete element types, program by program, so the clauses are checked; then the report can become a rejection.  Ownership follows the code map — the routing modules are SGSG's, the agent_roundtrip fixture IGLP's, `cssn` CSSN's, `currencies` Currencies'.

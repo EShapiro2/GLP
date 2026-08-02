@@ -78,7 +78,12 @@ class TypeWarning {
   final int line;
   final int column;
 
-  TypeWarning(this.message, this.line, this.column);
+  /// `name/arity` of the procedure the warning is about, where there is one.
+  /// A caller summarising many warnings names the procedures from this rather
+  /// than by digging them back out of [message].
+  final String? procedure;
+
+  TypeWarning(this.message, this.line, this.column, [this.procedure]);
 
   @override
   String toString() => '$message at line $line, column $column';
@@ -894,6 +899,43 @@ TypeCheckResult _checkModuleImpl(ast.Module module, {List<ast.Procedure>? transf
       decl.column,
       '${decl.name}/${decl.arity}',
     ));
+  }
+
+  // Program mode (rejectUninstantiatedInspecting == false), the same procedures
+  // seen from inside a program. Until 2026-08-03 this said NOTHING about them,
+  // and that silence is the defect: an inspecting parametric procedure with no
+  // instantiation is checked by nothing, yet the program it sits in is
+  // pronounced well-typed. It is how typed_actors.glp shipped two clauses
+  // passing a raw Response where UserContent.decision demands a PendingValue —
+  // an untagged value at a tagged-union position, which the checker rejects at
+  // once when the same clauses are declared concretely.
+  //
+  // It is a warning and not an error because the paper licenses the state:
+  // "a procedure with no caller in its program goes unchecked"
+  // (parameterized-types.tex sec:abstract-parameters), and a concrete initial
+  // goal (def:program) may still instantiate it, which is why rejecting at load
+  // would refuse every program whose routers only its goals instantiate. What
+  // was wrong was never the verdict, it was the silence: "well-typed" must not
+  // cover, without a word, code that nothing has checked.
+  if (!rejectUninstantiatedInspecting) {
+    for (final entry in typeEnv.paramProcDecls.entries) {
+      final key = entry.key;
+      if (cert.certifiedKeys.contains(key)) continue; // abstract route — verdict given
+      final cls = clausesByKey[key];
+      if (cls == null || cls.isEmpty) continue; // defined outside this unit
+      if (instantiatedKeys.contains(key)) continue; // checked per instantiation
+      final decl = entry.value;
+      warnings.add(TypeWarning(
+        'Parameterized procedure ${decl.name}/${decl.arity} inspects a type '
+        'parameter and no call in this program instantiates it, so its clauses '
+        'are checked by nothing. Give the inspected argument a concrete element '
+        'type, at the declaration or at a call site, to have it checked '
+        '(parameterized-types.tex sec:programs-and-modules).',
+        decl.line,
+        decl.column,
+        '${decl.name}/${decl.arity}',
+      ));
+    }
   }
 
   return TypeCheckResult(errors, warnings);

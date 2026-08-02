@@ -1,0 +1,17 @@
+%% NEGATIVE: an untagged value at a tagged-union position.  o/1 carries an
+%% Outer, whose arms are wrap(Inner?) and err; the clause below puts the bare
+%% Inner reader there instead of wrap(R).  Declared concretely, as here, the
+%% checker rejects it.  The same clause under a parameterised declaration that
+%% nothing instantiates is checked by nothing --- programs/tests/param_unchecked/,
+%% and the reason typed_actors.glp carried this defect for months.
+Inner ::= a ; b.
+Outer ::= wrap(Inner?) ; err.
+
+InMsg  ::= m(Inner?).
+OutMsg ::= o(Outer).
+InS  ::= [] ; [InMsg|InS].
+OutS ::= [] ; [OutMsg|OutS].
+
+procedure tagger(InS?, OutS).
+tagger([m(R?)|In], [o(R)|Out?]) :- tagger(In?, Out).
+tagger([], []).

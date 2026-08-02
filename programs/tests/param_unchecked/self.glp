@@ -1,0 +1,16 @@
+%% A program whose entry declaration leaves a callee's type parameters free, so
+%% the callee is checked by nothing and the load says so.  The regression test
+%% for the silence found on 2026-08-03: typed_actors.glp had carried an untagged
+%% value at a tagged-union position for months, and the checker's verdict on the
+%% program that contained it was clean.
+
+Inner ::= a ; b.
+Outer ::= wrap(Inner?) ; err.
+
+InMsg  ::= m(Inner?).
+OutMsg ::= o(Outer).
+
+imported procedure code#run(_?).
+
+exported procedure run(_?).
+run(Ch) :- code # run(Ch?).

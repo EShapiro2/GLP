@@ -565,6 +565,24 @@ LinkResult checkedLinkedProgram(List<DiscoveredModule> modules,
     throw Exception('Type checking failed for linked program:\n$errors');
   }
 
+  // What the verdict above does NOT cover. A parameterised procedure that
+  // inspects a type parameter and that no call in this program instantiates is
+  // checked by nothing (parameterized-types.tex sec:programs-and-modules), and
+  // until 2026-08-03 a program said so nowhere: it printed a clean verdict and
+  // the unchecked clauses were indistinguishable from checked ones. That is how
+  // typed_actors.glp carried an untagged value at a tagged-union position for
+  // months. One line, naming them, so the gap is visible at the point the
+  // program is pronounced well-typed rather than only to whoever reads the
+  // checker.
+  final unchecked = [
+    for (final w in result.warnings)
+      if (w.procedure != null) w.procedure!
+  ]..sort();
+  if (unchecked.isNotEmpty) {
+    print('[TYPE] ${unchecked.length} parameterized procedure(s) unchecked in '
+        'this program — no instantiation: ${unchecked.join(', ')}');
+  }
+
   return linked;
 }
 

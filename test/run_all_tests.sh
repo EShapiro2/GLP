@@ -1252,6 +1252,12 @@ NEGATIVE_FILES=(
     "$TC_DIR/negative/complementarity/merge_type_mismatch.glp"
     "$TC_DIR/negative/complementarity/merge_swapped_vars.glp"
 
+    # An untagged value at a tagged-union position, declared concretely: the
+    # checker rejects it here, and the point of the test is the contrast with
+    # programs/tests/param_unchecked/, where the same clause under a
+    # parameterised declaration that nothing instantiates is checked by nothing.
+    "$TYPED/tagged_union_untagged_neg.glp"
+
     # --- typechecker/negative (top level) ---
     "$TC_DIR/negative/merge_incomplete.glp"
     "$TC_DIR/negative/missing_coverage.glp"
@@ -2156,6 +2162,28 @@ HEREDOC
 2>&1)
 check "cross-module param-inspect project rejected" "Head of lib:relay" "$output"
 check_not "cross-module project not loaded green" "Loaded program: .*cross_module_inspect_neg" "$output"
+
+echo ""
+
+echo "--- A param-inspecting procedure no call instantiates is named at load ---"
+# The complement of the case above: there, an instantiation arises across the
+# seam and the callee's clauses are checked at it. Here run/1's declaration is
+# `_?`, so the call supplies no element type, no instantiation of tagger/1
+# arises, and its clauses are checked by nothing (parameterized-types.tex
+# sec:programs-and-modules). The program is still well-typed --- the paper
+# licenses an uninstantiated procedure going unchecked --- so the load succeeds;
+# what it must NOT do is stay silent, which until 2026-08-03 it did. That
+# silence is why typed_actors.glp carried an untagged value at a tagged-union
+# position for months (GLP 54dd7020); the same clause declared concretely is
+# rejected at once, which is tagged_union_untagged_neg.glp in NEGATIVE_FILES.
+output=$("$REPL_RUN" <<HEREDOC
+$GLP_DIR/programs/tests/param_unchecked/
+:quit
+HEREDOC
+2>&1)
+check "uninstantiated param-inspect reported at load" "unchecked in this program" "$output"
+check "the report names the procedure" "code:tagger/1" "$output"
+check "program with an unchecked procedure still loads" "Loaded program: .*param_unchecked" "$output"
 
 echo ""
 
