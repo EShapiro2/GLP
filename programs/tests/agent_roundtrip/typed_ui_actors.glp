@@ -19,7 +19,7 @@
 %% UI ACTOR DISPATCH
 %% =============================================================================
 
-procedure ui_actor(_?, Channel(X, Y)?).
+exported procedure ui_actor(_?, Channel(X, Y)?).
 ui_actor(alice, Ch) :- alice_ui_actor(Ch?).
 ui_actor(bob, Ch) :- bob_ui_actor(Ch?).
 ui_actor(charlie, Ch) :- charlie_ui_actor(Ch?).

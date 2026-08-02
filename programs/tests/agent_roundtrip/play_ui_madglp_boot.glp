@@ -16,23 +16,14 @@
 %% =============================================================================
 %% BOOT - Spawns agents on separate isolates
 %% =============================================================================
+%%
+%% The agent code is the program directory play_ui_madglp/, which this boot
+%% spawns into; BootConfig.programDir loads it and this boot clause on top.
+%% agent/4, ui_mediator/5 and ui_actor/2 are reached from there through the
+%% -expose directives in this directory's self.glp.
 
 procedure boot.
 boot :-
     agent_init(alice, _)@alice,
     agent_init(bob, _)@bob,
     agent_init(charlie, _)@charlie.
-
-%% =============================================================================
-%% AGENT INITIALIZATION
-%% =============================================================================
-
-procedure agent_init(Constant?, Stream(X)?).
-agent_init(Id, NetIn) :-
-    ground(Id?) |
-    send_to_net(NetOut?),
-    agent(Id?, AgentIn?, NetIn?,
-          [output(person, AgentToUser), output('_net', NetOut)]),
-    ui_mediator(Id?, ch(AgentToUser?, AgentIn),
-                ch(UserOut?, UserIn), [], 1),
-    ui_actor(Id?, ch(UserIn?, UserOut)).

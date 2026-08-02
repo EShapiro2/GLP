@@ -53,7 +53,7 @@ PendingList  ::= [] ; [PendingEntry | PendingList].
 
 %% Agent-facing channel is now CONCRETE (§5(1)): reads AgentMsg, writes UserMsg.
 %% User-facing channel reads ground UserCmd, writes ground UserNotify.
-procedure ui_mediator(Constant?,
+exported procedure ui_mediator(Constant?,
                       Channel(Stream(AgentMsg), Stream(UserMsg))?,
                       Channel(Stream(UserCmd), Stream(UserNotify))?,
                       PendingList?, Constant?).

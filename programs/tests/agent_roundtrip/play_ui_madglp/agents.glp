@@ -1,0 +1,13 @@
+%% The agent code of play_ui_madglp_boot.glp: the full stack per isolate,
+%% agent/4 <-> ui_mediator/5 <-> ui_actor/2 <-> send_to_net.  All three come from
+%% the parent directory through -expose.
+
+exported procedure agent_init(_?, _?).
+agent_init(Id, NetIn) :-
+    ground(Id?) |
+    send_to_net(NetOut?),
+    agent(Id?, AgentIn?, NetIn?,
+          [output(person, AgentToUser), output('_net', NetOut)]),
+    ui_mediator(Id?, ch(AgentToUser?, AgentIn),
+                ch(UserOut?, UserIn), [], 1),
+    ui_actor(Id?, ch(UserIn?, UserOut)).

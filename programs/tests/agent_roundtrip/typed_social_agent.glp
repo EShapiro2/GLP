@@ -124,7 +124,7 @@ handle_response(no, From, Outs, Outs1?, In, In?) :-
 %% AGENT/4
 %% =============================================================================
 
-procedure agent(Constant?, Stream(X)?, Stream(X)?, OutputsList?).
+exported procedure agent(Constant?, Stream(X)?, Stream(X)?, OutputsList?).
 
 %% --- User messages ---
 

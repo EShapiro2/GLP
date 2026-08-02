@@ -10,6 +10,21 @@
 %% writer through a structure carries `?` in the type. The cold-call response
 %% variable's writer flows agent -> mediator (escrow) -> agent (bind_response),
 %% so every type position that carries it is `?`-typed.
+%%
+%% The four exposures below put this directory's agent, actors and mediator in
+%% scope for every program beneath it.  A boot converted to a program directory
+%% (play_madglp/, play_ui_madglp/) needs them: the ten alternative plays in this
+%% directory cannot be one program --- five boot/0, fifteen social_graph/3 over
+%% three message protocols --- so each converted boot is its own subdirectory,
+%% and its code is reached through these rather than copied into it.
+
+-expose(typed_social_agent).
+%% -expose(typed_actors). WITHHELD: typed_actors.glp has a type error at lines 73
+%% and 141 (the actor passes a raw FriendChannel where UserContent.accept_intro
+%% expects a PendingValue). An exposure reaches every program beneath this
+%% directory, so exposing it breaks them all. It goes in when that is fixed.
+-expose(typed_ui_mediator).
+-expose(typed_ui_actors).
 
 
 Decision ::= yes ; no.

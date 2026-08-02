@@ -2742,6 +2742,24 @@ HEREDOC
 2>&1)
     check "MA $ma_name loads as a program" "Loaded program" "$ma_out"
 done
+
+# The fixture's own converted boot.  Its code is not in the directory: agent/4,
+# ui_mediator/5 and ui_actor/2 are reached through -expose in the parent
+# programs/tests/agent_roundtrip/self.glp, because the ten alternative plays
+# there cannot be one program (five boot/0, fifteen social_graph/3 over three
+# message protocols).  play_madglp is NOT converted: it needs typed_actors,
+# whose exposure is withheld until the type error at typed_actors.glp:73 and
+# :141 is settled — the actor passes a raw FriendChannel where
+# UserContent.accept_intro expects a PendingValue.
+for ma_dir in "$GLP_DIR"/programs/tests/agent_roundtrip/play_ui_madglp/; do
+    ma_name=$(basename "$ma_dir")
+    ma_out=$("$REPL_RUN" <<HEREDOC
+$ma_dir
+:quit
+HEREDOC
+2>&1)
+    check "MA $ma_name loads as a program" "Loaded program" "$ma_out"
+done
 echo ""
 
 # and fails on the same rejection of the same file.
