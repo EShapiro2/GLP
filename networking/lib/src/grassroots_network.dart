@@ -2257,22 +2257,19 @@ class GrassrootsNetwork {
   /// the expected static: [_connectToPeerViaUdp] dials that key, and the
   /// session aborts on a key mismatch.
   ///
-  /// An unmatched instance is a cold-call opportunity under Open trust, but
-  /// outbound UDX connections are keyed by the peer's public key, so the
-  /// Open-trust answer over LAN is inbound-only for now: an unmatched peer
-  /// who recognizes us dials, and we accept (inbound unknown peers are
-  /// identified by ANNOUNCE). Two mutual strangers on a LAN do not connect.
+  /// An unmatched instance is a cold call: under Open trust the layer contacts
+  /// it as well as answering it (spec §Discovery and §Cold-Call Trust Levels —
+  /// Open completes the ANNOUNCE exchange and the session handshake with any
+  /// unknown contact on the medium). It is [_lanColdCall] that dials, with no
+  /// expected key: the key is unset until the peer's ANNOUNCE claims it and the
+  /// handshake binds it, exactly as BLE first contact works.
   void _tryLanContact(String token, String address) {
     final matched = matchLanToken(
       token,
       store.state.knownPeers.known.keys.map(_hexToBytes),
     );
     if (matched == null) {
-      debugPrint(
-        '[lan] unmatched instance $token '
-        '(lan trust=${trustLevelOf(ProximityMedium.lan).name}); '
-        'no outbound cold-call path',
-      );
+      _lanColdCall(token, address);
       return;
     }
     final pubkeyHex = _pubkeyToHex(matched);
@@ -2296,6 +2293,78 @@ class GrassrootsNetwork {
         '[lan] deterministic initiator is $peerShort; waiting for its dial',
       );
     }
+  }
+
+  /// Contact an unmatched LAN instance under Open trust.
+  ///
+  /// Until 2026-08-02 this was inbound-only — an unmatched peer who recognized
+  /// us dialed and we accepted — on the ground that outbound paths are keyed by
+  /// the peer's public key, which a cold call does not have. The consequence
+  /// was that two mutual strangers on one local network never connected: each
+  /// accepted, neither initiated. Sections §Discovery and §Cold-Call Trust
+  /// Levels say Open contacts as well as answers, so that was a deviation.
+  ///
+  /// The key is not needed to dial. A UDP path is keyed by an opaque peer id,
+  /// and an unsolicited *inbound* datagram already mints one from the source
+  /// address and lets the sender's ANNOUNCE re-key it to their public key
+  /// ([UdpTransportService.mapIncomingConnectionToPubkey]). An outbound cold
+  /// call is the same thing in the other direction: open the path under the
+  /// address, send our signed ANNOUNCE, and let theirs claim it. The expected
+  /// static is therefore unset until ANNOUNCE supplies it and the Noise
+  /// handshake binds it — the BLE first-contact rule, applied to LAN.
+  ///
+  /// Both sides dialing is not a problem to prevent: neither knows the other's
+  /// key yet, so the deterministic-initiator rule has nothing to order them by.
+  /// Each side's ANNOUNCE identifies it to the other, and the existing
+  /// handshake glare resolution settles the pair from there.
+  void _lanColdCall(String token, String address) {
+    final trust = trustLevelOf(ProximityMedium.lan);
+    if (trust != ColdCallTrustLevel.open) {
+      debugPrint(
+        '[lan] unmatched instance $token ignored (lan trust=${trust.name})',
+      );
+      return;
+    }
+    final parsed = parseAddressString(address);
+    if (parsed == null) {
+      debugPrint('[lan] unusable address $address for unmatched $token');
+      return;
+    }
+    final udp = _udpService;
+    if (udp == null) {
+      debugPrint('[lan] UDP unavailable; cannot cold-call $token');
+      return;
+    }
+    final canonical = parsed.toAddressString();
+    // A path to that address already exists — identified, or a temp one from
+    // their datagram having arrived first. Dialing again would only duplicate
+    // it, and whichever ANNOUNCE lands first identifies the peer either way.
+    if (udp.peerIdForAddress(canonical) != null) return;
+
+    debugPrint('[lan] cold-calling unmatched instance $token at $canonical');
+    unawaited(_lanColdCallAnnounce(canonical, parsed));
+  }
+
+  Future<void> _lanColdCallAnnounce(
+    String canonical,
+    AddressInfo parsed,
+  ) async {
+    final udp = _udpService;
+    if (udp == null) return;
+    // The temp peer id IS the canonical address, the same convention the
+    // inbound path uses, so their ANNOUNCE re-keys this very path.
+    final opened = await udp.connectToPeer(canonical, parsed.ip, parsed.port);
+    if (!opened) {
+      debugPrint('[lan] could not open a path to $canonical');
+      return;
+    }
+    final announce = await _createSignedAnnounce();
+    final sent = await udp.sendToPeer(canonical, announce);
+    debugPrint(
+      sent
+          ? '[lan] ANNOUNCE sent to $canonical; awaiting theirs'
+          : '[lan] ANNOUNCE to $canonical failed to send',
+    );
   }
 
   /// Check if two connectivity result lists are equivalent.
@@ -3022,6 +3091,19 @@ class GrassrootsNetwork {
 
   @visibleForTesting
   int get ackPendingMessageCount => _ackPendingMessages.length;
+
+  /// Feed a resolved LAN instance as the mDNS browser would, so the contact
+  /// path can be exercised without a live responder on the machine.
+  @visibleForTesting
+  void debugResolveLanInstance(String token, String address) =>
+      _onLanInstanceResolved(token, address);
+
+  /// The peer id bound to [address] on the UDP path, or null when none is —
+  /// the address itself while the peer is unidentified, its pubkey hex after
+  /// ANNOUNCE has claimed the path.
+  @visibleForTesting
+  String? debugUdpPeerIdForAddress(String address) =>
+      _udpService?.peerIdForAddress(address);
 
   /// Send a read receipt to the original sender of a message.
   /// Call this when the user has read/viewed a message.
@@ -4902,6 +4984,20 @@ class GrassrootsNetwork {
 
     // Listen to connection events — update Redux state and log
     _udpService!.connectionStream.listen((event) {
+      // A temp path — its id is the address, not a public key — belongs to a
+      // peer the layer has not identified yet: an unsolicited inbound datagram,
+      // or an outbound LAN cold call. There is no identity to record against,
+      // and the Redux state is a projection of what the transports report, not
+      // an inference from it, so nothing identity-keyed happens here. The
+      // ANNOUNCE that names the peer re-keys the path and fires a second
+      // connection event under the real key, and that one does this work.
+      if (event.peerId.contains(':')) {
+        debugPrint(
+          'UDP path ${event.connected ? "opened" : "closed"} for the '
+          'unidentified ${event.peerId}',
+        );
+        return;
+      }
       if (event.connected) {
         debugPrint('UDP peer connected: ${event.peerId}');
         store.dispatch(PeerUdpSeenAction(_hexToBytes(event.peerId)));

@@ -442,6 +442,14 @@ class UdpTransportService extends TransportService {
     return bytes;
   }
 
+  /// The peer id currently bound to [addressKey], or null when nothing is.
+  ///
+  /// A pubkey hex once the peer at that address has been identified, and the
+  /// address itself while the path is still a temp one. A caller about to open
+  /// a path to an address uses this to see whether one already exists — under
+  /// either name — rather than dialing a second time.
+  String? peerIdForAddress(String addressKey) => _addressToPeerId[addressKey];
+
   /// The address a peer's datagrams come from / go to.
   ({InternetAddress ip, int port})? getRemoteAddress(String peerId) {
     final path = _peerPaths[peerId];
