@@ -188,10 +188,29 @@ class MessageTransportSender {
     });
   }
 
+  /// The backoff schedule, for tests. What it guards against is invisible
+  /// from the outside — a spinning CPU, not an error — so it is asserted
+  /// directly rather than through the sender's behaviour.
+  @visibleForTesting
+  Duration backoffForAttempt(int attempts) => _backoffFor(attempts);
+
+  /// Exponential backoff, clamped at [maxBackoff].
+  ///
+  /// The doubling is iterated and stopped at the clamp rather than computed
+  /// as `initialBackoff * (1 << (attempts - 1))`, which overflows: at
+  /// attempts 63 the shift is large enough that the Duration multiplication
+  /// wraps to ZERO, and from there every retransmit timer fires immediately —
+  /// a hot loop flooding the carrier instead of a backoff. It is unreachable
+  /// at the attempt limits in use (3 in the coordinator, 8 by default), which
+  /// is why it had never been seen; raising either would have found it as a
+  /// spinning CPU and not as an error.
   Duration _backoffFor(int attempts) {
-    var delay = initialBackoff * (1 << (attempts - 1));
-    if (delay > maxBackoff) delay = maxBackoff;
-    return delay;
+    var delay = initialBackoff;
+    for (var doubling = 1; doubling < attempts; doubling++) {
+      if (delay >= maxBackoff) return maxBackoff;
+      delay *= 2;
+    }
+    return delay > maxBackoff ? maxBackoff : delay;
   }
 
   void _failMessage(_PeerLane lane, _OutboundMessage message) {
