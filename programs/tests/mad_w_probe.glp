@@ -1,14 +1,30 @@
-%% mad_w_probe.glp — minimal cross-isolate `_w` writer-match reproducer.
+%% mad_w_probe.glp — cross-isolate `_w` carried through a channel whose Out
+%% position is an unassigned writer.
 %%
 %% No agent/4, no mediator, no UI. Alice MAD-sends a bare writer (wrapped in
-%% w/1) to Bob; Bob tries to match the received payload against the nested
-%% READER pattern w(X?) — the same shape as the social-graph clause head
-%% `decision(_, _, response(Resp?))` that fails on a `_w`-backed reader.
+%% w/1) to Bob. Bob's producer matches it against the nested READER pattern
+%% w(W?) and forwards it onto a local channel stream; Bob's consumer pulls it
+%% back with receive/3 into the nested reader pattern wrapped(Y?).
 %%
-%%   bob_matched_nested_w  => `_w` reader IS admissible in a nested head;
-%%                            the social-graph bug is elsewhere.
-%%   bob_fell_to_otherwise => `_w` reader is NOT admissible in a nested head;
-%%                            that is the madGLP fault.
+%% What it reports, and what each report means:
+%%
+%%   bob_produced      => a `_w`-backed reader DID match a nested clause head.
+%%                        This is the `_w` admissibility the file was built to
+%%                        test, and it holds. The social-graph failure that
+%%                        prompted the probe is elsewhere.
+%%   bob_ch_otherwise  => receive/3 did not commit, so the second clause fired.
+%%
+%% The second report is about the channel, not about `_w`. receive/3 is a
+%% defined guard whose unit clause is receive(X?, ch([X|In], Out?), ch(In?, Out)):
+%% the Out position is a READER there. This file supplies an unassigned writer
+%% at Out — ch(S?, _) — and the guard does not succeed. mad_w_clean.glp is this
+%% file with ch(S?, closed) at that one line, and it reports bob_ch_matched.
+%% That single line is the whole difference between them, and it is what these
+%% two fixtures distinguish.
+%%
+%% Whether receive/3 should suspend or fail on an unassigned writer at Out, and
+%% whether otherwise firing behind it is the specified outcome, is GLP-Spec's
+%% (receive/3's unit clause and otherwise's semantics). Nothing here waits on it.
 %%
 %% Run via glp_multiagent/test/mad_w_probe_test.dart (two isolates).
 

@@ -1,2 +1,0 @@
-% Producer with head-defined tail
-producer([N?|Tail?], N, Tail) :- ground(N?) | N1 := N? + 1, producer(Rest, N1?, Tail2), Tail = [foo|Tail2?].

@@ -595,6 +595,8 @@ test_no_readers([1,2|Tnr], Rnr4).
 test_no_readers(g(Ynr?), Rnr5).
 test_neg_no_readers(h(Znr?), Rnr6).
 test_neg_no_readers(7, Rnr7).
+test_no_readers(f(_), Rnr8).
+test_no_readers(foo(1, bar(_)), Rnr9).
 :quit
 HEREDOC
 2>&1)
@@ -606,6 +608,11 @@ check "no_readers writer tail" "Rnr4 = ok" "$a20b"
 check "no_readers reader suspends" "suspended" "$a20b"
 check "~no_readers finds reader" "Rnr6 = has_readers" "$a20b"
 check "~no_readers on ground falls through" "Rnr7 = none" "$a20b"
+# An anonymous writer inside a goal argument.  Until 2026-08-02 the REPL goal
+# path had no UnderscoreTerm branch and threw "Unsupported struct argument
+# type", while a NAMED writer in the same position (Rnr3 above) worked.
+check "no_readers anonymous writer inside term" "Rnr8 = ok" "$a20b"
+check "no_readers anonymous writer nested two deep" "Rnr9 = ok" "$a20b"
 
 # --- A21: Comprehensive defined guards ---
 echo "--- A21: Comprehensive defined guards ---"
@@ -1465,7 +1472,8 @@ check "pairing: a variable with no writer" "Variable \"Y\" has no writer" "$srsw
 # `[ -f ... ]` and lived under programs/tests/archive/repl, a directory with an
 # open instruction to delete it: deleting the file made the suite run one test
 # fewer and fail nothing. Moved to programs/tests/srsw/ and wired unconditionally
-# on 2026-08-02 — if the file goes missing now, this goes red.
+# on 2026-08-02 — if the file goes missing now, this goes red. That directory
+# was deleted later the same day, this move being what made it safe to.
 SRSW_MWR="$GLP_DIR/programs/tests/srsw/merge_with_reader.glp"
 srsw_mwr_out=$(echo -e "$SRSW_MWR\n:quit" | "$REPL_RUN" 2>&1)
 if echo "$srsw_mwr_out" | grep -qi "SRSW violation"; then

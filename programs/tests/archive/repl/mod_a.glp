@@ -1,1 +1,0 @@
-double(X, Y?) :- number(X?) | Y := X? * 2.

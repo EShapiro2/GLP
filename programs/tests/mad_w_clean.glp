@@ -1,17 +1,25 @@
-%% mad_w_clean.glp — minimal cross-isolate `_w` writer-match reproducer, on a
-%% closed channel.  It is mad_w_probe.glp with `ch(S?, closed)` in place of
-%% `ch(S?, _)` at line 28, and that one line is the whole difference: this file
-%% reports bob_ch_matched and mad_w_probe.glp reports bob_ch_otherwise.
+%% mad_w_clean.glp — cross-isolate `_w` carried through a channel whose Out
+%% position is closed.  It is mad_w_probe.glp with `ch(S?, closed)` in place of
+%% `ch(S?, _)`, and that one line is the whole difference between them.
 %%
 %% No agent/4, no mediator, no UI. Alice MAD-sends a bare writer (wrapped in
-%% w/1) to Bob; Bob tries to match the received payload against the nested
-%% READER pattern w(X?) — the same shape as the social-graph clause head
-%% `decision(_, _, response(Resp?))` that fails on a `_w`-backed reader.
+%% w/1) to Bob. Bob's producer matches it against the nested READER pattern
+%% w(W?) and forwards it onto a local channel stream; Bob's consumer pulls it
+%% back with receive/3 into the nested reader pattern wrapped(Y?).
 %%
-%%   bob_matched_nested_w  => `_w` reader IS admissible in a nested head;
-%%                            the social-graph bug is elsewhere.
-%%   bob_fell_to_otherwise => `_w` reader is NOT admissible in a nested head;
-%%                            that is the madGLP fault.
+%% What it reports, and what each report means:
+%%
+%%   bob_produced     => a `_w`-backed reader DID match a nested clause head.
+%%                       This is the `_w` admissibility the file was built to
+%%                       test, and it holds. The social-graph failure that
+%%                       prompted the probe is elsewhere.
+%%   bob_ch_matched   => receive/3 committed, because Out carries a constant.
+%%
+%% The second report is about the channel, not about `_w`. receive/3's unit
+%% clause is receive(X?, ch([X|In], Out?), ch(In?, Out)): the Out position is a
+%% READER there, so a constant at Out lets the guard succeed. mad_w_probe.glp
+%% supplies an unassigned writer there instead and reports bob_ch_otherwise.
+%% That is what these two fixtures distinguish.
 %%
 %% Run via glp_multiagent/test/mad_w_clean_test.dart (two isolates).
 

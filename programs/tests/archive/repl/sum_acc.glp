@@ -1,6 +1,0 @@
-% sum_acc.glp - Sum with accumulator (multi-arity pattern)
-% sum/2 is the wrapper, sum/3 is the accumulator version
-
-sum(Xs, S?) :- sum(Xs?, 0, S).
-sum([], Acc, Acc?).
-sum([X|Xs], Acc, S?) :- ground(X?) | Acc1 := Acc? + X?, sum(Xs?, Acc1?, S).

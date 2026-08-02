@@ -1,1 +1,0 @@
-with_guard([N?|Tail?], N) :- ground(N?) | Tail = [a,b].

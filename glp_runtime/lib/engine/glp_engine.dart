@@ -1219,12 +1219,30 @@ class GlpEngine {
                 as rt.StructTerm;
         runtime.heap.bindWriterStruct(writerId, structValue.functor, structValue.args);
         argTerms.add(rt.VarRef(readerId));
+      } else if (arg is UnderscoreTerm) {
+        argTerms.add(_anonymousWriter(runtime, arg));
       } else {
         throw Exception('Unsupported struct argument type: ${arg.runtimeType}');
       }
     }
 
     return rt.StructTerm(struct.functor, argTerms);
+  }
+
+  /// An anonymous writer `_` inside a goal argument: a writer with no paired
+  /// reader, for a value the goal discards. Each occurrence is a distinct
+  /// variable, so it is recorded in neither [varNameToId] (nothing can refer
+  /// back to it) nor queryVarWriters (the REPL has no name to report it under).
+  /// `_?` is not GLP — an anonymous reader would read a variable nothing can
+  /// ever write — and is refused here rather than passed on as a bare reader.
+  rt.Term _anonymousWriter(GlpRuntime runtime, UnderscoreTerm arg) {
+    if (arg.isReader) {
+      throw Exception(
+          'Anonymous reader `_?` is not permitted (line ${arg.line}); '
+          'an anonymous variable may only be a writer.');
+    }
+    final (writerId, _) = runtime.heap.allocateVariable();
+    return rt.VarRef(writerId);
   }
 
   rt.Term _buildStructTermForConj(
@@ -1276,6 +1294,8 @@ class GlpEngine {
                 as rt.StructTerm;
         runtime.heap.bindWriterStruct(writerId, structValue.functor, structValue.args);
         argTerms.add(rt.VarRef(readerId));
+      } else if (arg is UnderscoreTerm) {
+        argTerms.add(_anonymousWriter(runtime, arg));
       } else {
         throw Exception('Unsupported struct argument type: ${arg.runtimeType}');
       }

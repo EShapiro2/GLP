@@ -1,6 +1,0 @@
-% p.glp - Simple predicate p/1
-%
-% Demonstrates basic clause matching and constants
-
-p(a).
-p(b).

@@ -1,6 +1,0 @@
-% length_acc.glp - Length with accumulator (multi-arity pattern)
-% length/2 is the wrapper, length/3 is the accumulator version
-
-length(Xs, N?) :- length(Xs?, 0, N).
-length([], Acc, Acc?).
-length([_|Xs], Acc, N?) :- Acc1 := Acc? + 1, length(Xs?, Acc1?, N).

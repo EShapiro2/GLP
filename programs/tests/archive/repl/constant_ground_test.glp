@@ -1,3 +1,0 @@
-%% Test that constant(X?) marks X as grounded, allowing multiple readers
-%% X is a writer (receives input), X? readers output (grounded by constant guard)
-test_constant(X, X?, X?) :- constant(X?) | true.

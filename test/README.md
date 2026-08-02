@@ -91,7 +91,7 @@ cd /Users/udi/Grassroots/GLP/glp_multiagent && flutter build macos
 | Moded type test files | `glp_runtime/test/programs/moded_types/` |
 | Multiagent tests | `glp_runtime/test/multiagent/` |
 
-**Archived**: Old test scripts (`full_run_repl_tests.sh`, `run_typechecker_repl_tests.sh`) are in `test/archive/`. Old untyped REPL test programs are in `programs/tests/archive/repl/`.
+**Archived**: Old test scripts (`full_run_repl_tests.sh`, `run_typechecker_repl_tests.sh`) are in `test/archive/`. The old untyped REPL test programs that were in `programs/tests/archive/repl/` were deleted on 2026-08-02: seventy-nine fixtures that no test ran, superseded by the typed fixtures under `programs/tests/`. Git holds them.
 
 ---
 

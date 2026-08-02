@@ -1,1 +1,0 @@
-no_guard([N?|Tail?], N) :- Tail = [a,b].

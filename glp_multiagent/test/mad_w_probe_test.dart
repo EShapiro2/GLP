@@ -1,7 +1,15 @@
-/// Minimal two-isolate `_w` writer-match probe (no UI, no mediator).
-/// Alice MAD-sends a bare writer wrapped in w/1 to bob; bob tries to match the
-/// received payload against the nested reader pattern w(X?). Discriminates
-/// whether a `_w`-backed reader is admissible in a clause head.
+/// Two isolates, `_w` carried through a channel whose Out position is an
+/// unassigned writer (no UI, no mediator).
+///
+/// Alice MAD-sends a bare writer wrapped in w/1 to bob. Two things are pinned:
+/// bob_produced, which is the `_w`-backed reader matching the nested clause
+/// head w(W?) and is the admissibility the fixture exists to show; and
+/// bob_ch_otherwise, which is receive/3 declining to commit because this
+/// fixture supplies ch(S?, _) — a writer where receive/3's unit clause reads.
+/// mad_w_clean_test.dart is the same file with a constant at Out, and matches.
+///
+/// Each outcome is asserted singly. The old disjunction matched||otherwise was
+/// vacuous: one of bob_consumer's two clauses always fires.
 import 'dart:async';
 import 'dart:io';
 import 'dart:isolate';
@@ -10,7 +18,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:glp_multiagent/isolate_protocol.dart';
 
 void main() {
-  test('does a _w-backed reader match a nested clause head w(X?)?', () async {
+  test('_w matches the nested head; receive/3 declines on a writer at Out',
+      () async {
     final probe = File(
             '/Users/udi/Grassroots/GLP/programs/tests/mad_w_probe.glp')
         .readAsStringSync();
@@ -63,10 +72,11 @@ void main() {
     ports['alice']!.send(StartAgent());
     ports['bob']!.send(StartAgent());
 
-    final matched = await waitUntil(
-        () => out['bob']!.any((l) => l.contains('bob_ch_matched')));
-    final otherwise =
-        out['bob']!.any((l) => l.contains('bob_ch_otherwise'));
+    await waitUntil(
+        () => out['bob']!.any((l) => l.contains('bob_ch_otherwise')));
+    final produced = out['bob']!.any((l) => l.contains('bob_produced'));
+    final otherwise = out['bob']!.any((l) => l.contains('bob_ch_otherwise'));
+    final matched = out['bob']!.any((l) => l.contains('bob_ch_matched'));
 
     // ignore: avoid_print
     print('BOB OUT: ${out['bob']}');
@@ -78,9 +88,11 @@ void main() {
     }
     reply.close();
 
-    // The report we want either way: matched (=> `_w` ok, bug is elsewhere) or
-    // otherwise (=> `_w` reader not admissible in a nested head — the bug).
-    expect(matched || otherwise, isTrue,
-        reason: 'bob classified the payload (matched=$matched, otherwise=$otherwise)');
+    expect(produced, isTrue,
+        reason: 'the `_w`-backed reader matched the nested head w(W?)');
+    expect(otherwise, isTrue,
+        reason: 'receive/3 does not commit with an unassigned writer at Out');
+    expect(matched, isFalse,
+        reason: 'ch(S?, _) is the probe; ch(S?, closed) is mad_w_clean');
   });
 }
