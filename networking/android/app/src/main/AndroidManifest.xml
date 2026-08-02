@@ -18,11 +18,18 @@
         android:name="android.permission.BLUETOOTH_ADMIN"
         android:maxSdkVersion="30" />
 
-    <!-- BLE scanning required FINE_LOCATION on API 23-30. With
-         `neverForLocation` set on BLUETOOTH_SCAN, API 31+ no longer needs it. -->
-    <uses-permission
-        android:name="android.permission.ACCESS_FINE_LOCATION"
-        android:maxSdkVersion="30" />
+    <!-- Location, for the place predicates' geofencing (spec §System
+         Predicates) and, on API 23-30, for BLE scanning: with
+         `neverForLocation` set on BLUETOOTH_SCAN, scanning alone no longer
+         needs it on API 31+, but a geofence does on every version.
+
+         DELIBERATELY ABSENT: ACCESS_BACKGROUND_LOCATION. Foreground-only
+         location is a standing decision of this project, and it is what the
+         place stream's `unobservable`/`observable` messages report — crossings
+         are seen while the application holds the foreground and not otherwise.
+         Do not add it to "make geofences work in the background". -->
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
 
     <!-- Notifications (Android 13+) -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
@@ -75,6 +82,12 @@
             android:name=".TransportForegroundService"
             android:exported="false"
             android:foregroundServiceType="connectedDevice" />
+        <!-- Geofence transitions are delivered to this receiver through the
+             PendingIntent the plugin registers with GeofencingClient. Not
+             exported: only the platform's own geofencing service targets it. -->
+        <receiver
+            android:name=".GeofenceBroadcastReceiver"
+            android:exported="false" />
         <!-- Don't delete the meta-data below.
              This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->
         <meta-data

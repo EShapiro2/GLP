@@ -47,4 +47,14 @@ flutter {
 
 dependencies {
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
+
+    // Geofencing for the place predicates (spec §System Predicates):
+    // GeofencingClient, its PendingIntent, and the fused location provider a
+    // registration's centre comes from. Play Services is where Android's
+    // geofencing lives; there is no platform API for it outside it.
+    implementation("com.google.android.gms:play-services-location:21.3.0")
+
+    // androidx.core, for the runtime permission check the plugin makes before
+    // it asks the platform for anything.
+    implementation("androidx.core:core-ktx:1.13.1")
 }

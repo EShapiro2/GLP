@@ -394,6 +394,9 @@ class _GrassrootsHomeState extends State<GrassrootsHome>
         identity: identity,
         store: appStore,
         sodium: appSodium,
+        // The place predicates need the platform's location service, which
+        // only the app embedding has (spec §System Predicates).
+        placeGeofenceBackend: PlatformPlaceGeofenceBackend(),
       );
 
       grassroots.onMessageReceived =
@@ -2376,6 +2379,7 @@ class _GrassrootsHomeState extends State<GrassrootsHome>
       identity: newIdentity,
       store: appStore,
       sodium: appSodium,
+      placeGeofenceBackend: PlatformPlaceGeofenceBackend(),
     );
     newGrassroots.onMessageReceived =
         (messageId, senderPubkey, payload, transport) {

@@ -36,6 +36,8 @@
 	<array>
 		<string>_grassroots._udp</string>
 	</array>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Recognise the places you declare, so this app can tell when you enter or leave one. Your location is used on this device only and is never sent anywhere; while-in-use only, never in the background.</string>
 	<key>NSCameraUsageDescription</key>
 	<string>Take photos to send to peers in your mesh</string>
 	<key>NSPhotoLibraryUsageDescription</key>

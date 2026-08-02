@@ -69,6 +69,11 @@ export 'src/grassroots_network.dart';
 // Transport abstraction
 export 'src/transport/transport.dart';
 
+// Places: the layer's declarations and their crossings (spec §System
+// Predicates), and the platform geofencing behind them.
+export 'package:grassroots_networking_core/src/places/place_registry.dart';
+export 'src/places/platform_place_geofence_backend.dart';
+
 // Models
 export 'package:grassroots_networking_core/src/models/identity.dart';
 export 'src/identity_store.dart';
