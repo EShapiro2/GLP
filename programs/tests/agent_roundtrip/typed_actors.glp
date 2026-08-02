@@ -1,11 +1,9 @@
 %% typed_actors.glp - Typed actor scripts for the social graph protocol
 %%
-%% Self-contained actor procedures with procedure declarations (typechecked).
-%% Shared by both boot files:
-%% - play_dglp_boot.glp (single-isolate REPL)
-%% - play_madglp_boot.glp (multi-isolate headless)
-%%
-%% Requires: load typed_social_agent.glp first
+%% The actor scripts that talk DIRECTLY to agent/4, with no mediator between
+%% them.  Exposed by this directory's self.glp, so play_madglp/ reaches them
+%% without copying them; play_dglp_boot.glp (single-isolate REPL) loads this
+%% file alongside typed_social_agent.glp.
 %%
 %% Date: 2026-02-13
 
@@ -13,39 +11,14 @@
 %% =============================================================================
 %% TYPE DEFINITIONS
 %% =============================================================================
-%% Duplicated from typed_social_agent.glp because cross-file type
-%% references are not supported.
-
-Response ::= accept(FriendChannel) ; no.
-Decision ::= yes ; no.
-PendingValue ::= response(Response?) ; channel(FriendChannel?) ; error.
-
-%% Friend channel types (duplicated from typed_social_agent.glp)
-FriendContent ::= response(Response) ; text(Constant) ; intro(Constant, FriendChannel).
-FriendMsg     ::= msg(Constant, Constant, FriendContent).
-FriendStream  ::= [] ; [FriendMsg | FriendStream].
-FriendChannel ::= ch(FriendStream, FriendStream?).
-
-AgentContent ::= befriend(Constant, Response)
-               ; befriend_intro(Constant, Constant, FriendChannel)
-               ; connected(Constant)
-               ; rejected
-               ; rejected(Constant)
-               ; received(Constant, Constant).
-
-UserContent ::= connect(Constant)
-              ; decision(Decision, Constant, PendingValue)
-              ; send(Constant, Constant)
-              ; introduce(Constant, Constant)
-              ; accept_intro(Constant, PendingValue)
-              ; reject_intro(Constant)
-              ; response(Response).
-
-%% Messages from agent to user (actor reads these)
-AgentMsg ::= msg(Constant, Constant, AgentContent).
-
-%% Messages from user to agent (actor writes these)
-UserMsg ::= msg(Constant, Constant, UserContent).
+%% The protocol types --- Response, Decision, PendingValue, the friend-channel
+%% types, AgentContent, UserContent, AgentMsg and UserMsg --- are NOT defined
+%% here.  They come from this directory's self.glp, which is every module's
+%% ancestor scope, so there is one definition of each and producer and consumer
+%% cannot drift.  The copy that stood here until 2026-08-03 had drifted: it
+%% typed befriend_intro's channel and befriend's response WITHOUT `?`, so the
+%% forwarded writer became a consumed value and the clauses below could not be
+%% written at all.  Only the actor's own stream types stay local.
 
 %% Actor input stream (reads AgentMsg)
 ActorIn ::= [] ; [AgentMsg|ActorIn].
@@ -70,8 +43,8 @@ alice_wait_bob_connected([_|In], Out?) :-
 alice_wait_bob_connected([], []).
 
 procedure alice_wait_intro(ActorIn?, ActorOut).
-alice_wait_intro([msg(agent, person, befriend_intro(_, Other, Ch))|In],
-                 [msg(person, alice, accept_intro(Other?, Ch?))|Out?]) :-
+alice_wait_intro([msg(agent, person, befriend_intro(_, Other, Ch?))|In],
+                 [msg(person, alice, accept_intro(Other?, channel(Ch)))|Out?]) :-
     ground(Other?) |
     alice_send_to_charlie(In?, Out).
 alice_wait_intro([_|In], Out?) :-
@@ -93,8 +66,8 @@ alice_wait_charlie_reply([], []).
 %% =============================================================================
 
 exported procedure bob_actor(Channel(X, Y)?).
-bob_actor(ch([msg(agent, person, befriend(From, Resp))|In],
-             [msg(person, bob, decision(yes, From?, Resp?))|Out?])) :-
+bob_actor(ch([msg(agent, person, befriend(From, Resp?))|In],
+             [msg(person, bob, decision(yes, From?, response(Resp)))|Out?])) :-
     ground(From?) |
     bob_wait_alice_msg(In?, Out).
 bob_actor(ch([_|In], Out?)) :-
@@ -129,8 +102,8 @@ bob_wait_charlie_msg([], []).
 %% =============================================================================
 
 exported procedure charlie_actor(Channel(X, Y)?).
-charlie_actor(ch([msg(agent, person, befriend(From, Resp))|In],
-                 [msg(person, charlie, decision(yes, From?, Resp?)),
+charlie_actor(ch([msg(agent, person, befriend(From, Resp?))|In],
+                 [msg(person, charlie, decision(yes, From?, response(Resp))),
                   msg(person, charlie, send(bob, 'Hi Bob, this is Charlie'))|Out?])) :-
     ground(From?) |
     charlie_wait_intro(In?, Out).
@@ -138,8 +111,8 @@ charlie_actor(ch([_|In], Out?)) :-
     otherwise | charlie_actor(ch(In?, Out)).
 
 procedure charlie_wait_intro(ActorIn?, ActorOut).
-charlie_wait_intro([msg(agent, person, befriend_intro(_, Other, Ch))|In],
-                   [msg(person, charlie, accept_intro(Other?, Ch?))|Out?]) :-
+charlie_wait_intro([msg(agent, person, befriend_intro(_, Other, Ch?))|In],
+                   [msg(person, charlie, accept_intro(Other?, channel(Ch)))|Out?]) :-
     ground(Other?) |
     charlie_wait_alice_msg(In?, Out).
 charlie_wait_intro([_|In], Out?) :-

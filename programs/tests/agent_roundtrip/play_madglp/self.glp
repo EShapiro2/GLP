@@ -1,0 +1,14 @@
+%% play_madglp/ — program interface.
+%%
+%% The entry point named in ../play_madglp_boot.glp is exported here and
+%% forwarded to agents.glp.  The boot clause is NOT in this directory:
+%% BootLoader strips it on the boot path, but a directory load does not, and its
+%% @ atoms would then meet the type checker.
+%%
+%% agent/4 and the three actor scripts come from the parent directory's
+%% -expose, not from copies.
+
+imported procedure agents#agent_init(_?, _?).
+
+exported procedure agent_init(_?, _?).
+agent_init(Id, In) :- agents # agent_init(Id?, In?).

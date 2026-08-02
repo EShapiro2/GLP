@@ -19,10 +19,7 @@
 %% and its code is reached through these rather than copied into it.
 
 -expose(typed_social_agent).
-%% -expose(typed_actors). WITHHELD: typed_actors.glp has a type error at lines 73
-%% and 141 (the actor passes a raw FriendChannel where UserContent.accept_intro
-%% expects a PendingValue). An exposure reaches every program beneath this
-%% directory, so exposing it breaks them all. It goes in when that is fixed.
+-expose(typed_actors).
 -expose(typed_ui_mediator).
 -expose(typed_ui_actors).
 

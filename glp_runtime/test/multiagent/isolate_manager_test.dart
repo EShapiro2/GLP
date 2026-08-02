@@ -56,20 +56,17 @@ agent_init(_, _) :- true.
 
     test('runs full play with actor scripts (no UI)', () async {
       final source = _readGlpFile('play_madglp_boot.glp');
-      final selfSource = _readGlpFile('self.glp');
-      final agentSource = _readGlpFile('typed_social_agent.glp');
-      final actorSource = _readGlpFile('typed_actors.glp');
-
-      if (source == null || selfSource == null || agentSource == null ||
-          actorSource == null) return;
+      if (source == null) return;
 
       final loader = BootLoader();
       final config = loader.load(source);
       config.rootSelfGlpPath = File('../programs/self.glp').absolute.path;
-      // The fixture's own self.glp first: it defines Response and the rest of
-      // the agent/mediator protocol types, and omitting it crashed every agent
-      // at init with UnknownTypeError: Response.
-      config.sharedSources = [selfSource, agentSource, actorSource];
+      // Converted 2026-08-03 to a program directory, so this play loads through
+      // the linker rather than as co-loaded sources. Its code is not in the
+      // directory: agent/4 and the three actor scripts are reached through
+      // -expose in the parent self.glp, because the fixture's ten alternative
+      // plays cannot be one program.
+      config.programDir = File('$_fixtureDir/play_madglp').absolute.path;
 
       // Should parse correctly with agent_init goal (actors spawned internally)
       expect(config.directives.length, equals(3));
@@ -99,8 +96,7 @@ agent_init(_, _) :- true.
       // the linker rather than as co-loaded sources. Its code is not in the
       // directory: agent/4, ui_mediator/5 and ui_actor/2 are reached through
       // -expose in the parent self.glp, because the fixture's ten alternative
-      // plays cannot be one program. The sibling madGLP test keeps
-      // sharedSources — typed_actors is not exposed, see the sibling.
+      // plays cannot be one program.
       config.programDir =
           File('$_fixtureDir/play_ui_madglp').absolute.path;
 

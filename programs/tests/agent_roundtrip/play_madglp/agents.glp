@@ -1,0 +1,16 @@
+%% The agent code of play_madglp_boot.glp: the full stack per isolate,
+%% agent/4 <-> actor <-> send_to_net.  agent/4 and alice_actor/1, bob_actor/1
+%% and charlie_actor/1 come from the parent directory through -expose.
+
+exported procedure agent_init(_?, _?).
+agent_init(Id, NetIn) :-
+    ground(Id?) |
+    send_to_net(NetOut?),
+    agent(Id?, UserOut?, NetIn?, [output(person, UserIn), output('_net', NetOut)]),
+    actor(Id?, ch(UserIn?, UserOut)).
+
+%% Actor dispatch — routes to the scripts in ../typed_actors.glp.
+procedure actor(_?, Channel(X, Y)?).
+actor(alice, Ch) :- alice_actor(Ch?).
+actor(bob, Ch) :- bob_actor(Ch?).
+actor(charlie, Ch) :- charlie_actor(Ch?).

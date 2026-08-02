@@ -23,8 +23,8 @@
 |------|-----------|------------|
 | dGLP (no UI) | `typed_social_agent.glp` + `typed_actors.glp` + `play_dglp_boot.glp` | REPL: `play.` |
 | dGLP (with mediator) | `typed_social_agent.glp` + `typed_ui_mediator.glp` + `typed_ui_actors.glp` + `play_ui_dglp_boot.glp` | REPL: `play.` |
-| madGLP (headless, no UI) | `typed_social_agent.glp` + `typed_actors.glp` + `play_madglp_boot.glp` | `dart test test/multiagent/isolate_manager_test.dart -n "no UI"` |
-| madGLP (headless, with mediator) | `typed_social_agent.glp` + `typed_ui_mediator.glp` + `typed_ui_actors.glp` + `play_ui_madglp_boot.glp` | `dart test test/multiagent/isolate_manager_test.dart -n "UI mediator"` |
+| madGLP (headless, no UI) | `play_madglp_boot.glp` + program directory `play_madglp/` | `dart test test/multiagent/isolate_manager_test.dart -n "no UI"` |
+| madGLP (headless, with mediator) | `play_ui_madglp_boot.glp` + program directory `play_ui_madglp/` | `dart test test/multiagent/isolate_manager_test.dart -n "UI mediator"` |
 | madGLP (visual UI) | `typed_social_agent.glp` + `typed_ui_mediator.glp` + `play_ui_boot.glp` | `cd glp_multiagent && flutter build macos --release` |
 | Simulated plays (Flutter) | `cssg/` files via `ReplPlayRunner` | Build Flutter app, click Play 1/2/3 |
 | Simulated plays (REPL) | `cssg/` 4 files + `fplayN.` | See below |
@@ -53,8 +53,12 @@ dart test test/multiagent/isolate_manager_test.dart
 
 Tests:
 - `boots three agents from boot config` — trivial boot, agents complete immediately
-- `runs full play with actor scripts (no UI)` — full protocol via `play_madglp_boot.glp` + `typed_actors.glp`
-- `runs full play with UI mediator and UI actors` — full protocol via `play_ui_madglp_boot.glp` + `typed_ui_mediator.glp` + `typed_ui_actors.glp`
+- `runs full play with actor scripts (no UI)` — the protocol via `play_madglp_boot.glp` + `play_madglp/`
+- `runs full play with UI mediator and UI actors` — the protocol via `play_ui_madglp_boot.glp` + `play_ui_madglp/`
+
+Both booted plays reach the directory's code through the `-expose` directives in
+`programs/tests/agent_roundtrip/self.glp`; neither directory holds a copy of the
+agent, the actors or the mediator.
 
 ### UI mediator tests (3 passing)
 
@@ -111,8 +115,10 @@ programs/tests/agent_roundtrip/
 ├── typed_ui_actors.glp       # Scripted actors that talk to ui_mediator (typed, ground terms)
 ├── play_dglp_boot.glp        # dGLP boot: network3 + play (untyped, cross-file)
 ├── play_ui_dglp_boot.glp     # dGLP boot with mediator: network3 + play (untyped, cross-file)
-├── play_madglp_boot.glp      # madGLP boot: boot + agent_init/2 + actor dispatch (typed)
-├── play_ui_madglp_boot.glp   # madGLP boot with mediator: boot + agent_init/2 (typed)
+├── play_madglp_boot.glp      # madGLP boot: boot/0 alone; code is play_madglp/
+├── play_madglp/              # program directory: agent_init/2 + actor dispatch
+├── play_ui_madglp_boot.glp   # madGLP boot with mediator: boot/0 alone
+├── play_ui_madglp/           # program directory: agent_init/2 (mediator stack)
 └── play_ui_boot.glp          # Flutter UI boot: agent_init/3 with send_to_user (for visual UI)
 ```
 
@@ -122,8 +128,8 @@ programs/tests/agent_roundtrip/
 |-----------|-------|----------|
 | `play_dglp_boot.glp` | network3 → agent/4 → actor | Single-isolate REPL, no mediator |
 | `play_ui_dglp_boot.glp` | network3 → agent/4 → ui_mediator → ui_actor | Single-isolate REPL, with mediator |
-| `play_madglp_boot.glp` | agent/4 → actor + send_to_net | Multi-isolate headless, no mediator |
-| `play_ui_madglp_boot.glp` | agent/4 → ui_mediator → ui_actor + send_to_net | Multi-isolate headless, with mediator |
+| `play_madglp_boot.glp` | agent/4 → actor + send_to_net (in `play_madglp/`) | Multi-isolate headless, no mediator |
+| `play_ui_madglp_boot.glp` | agent/4 → ui_mediator → ui_actor + send_to_net (in `play_ui_madglp/`) | Multi-isolate headless, with mediator |
 | `play_ui_boot.glp` | agent/4 → ui_mediator → send_to_user + send_to_net | Multi-isolate Flutter UI (human input) |
 
 ### Archived untyped originals
