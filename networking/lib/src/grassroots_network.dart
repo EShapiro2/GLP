@@ -920,6 +920,36 @@ class GrassrootsNetwork {
     store.dispatch(KnownPeerRemovedAction(_pubkeyToHex(pubkey)));
   }
 
+  // ===== Signing primitives =====
+  //
+  // Spec `docs/GLP_Networking_API/sections/system-predicates.tex`: signing and
+  // verification are not themselves on the seam. The runtime realizes Secure
+  // GLP's `sign(Term?, Sig)` and `verify(Term?, Sig?, Key?)` over these two
+  // functions, which take and return bytes — the layer never learns about
+  // modules, as it never learns about "friend". The layer holds the private
+  // key, which is why the primitives live here and not above it.
+  //
+  // Both are synchronous: Ed25519 over native libsodium is pure CPU work
+  // (~5-10 ms on Android, ~1-3 ms on iOS). A pure-Dart implementation was
+  // measured at 150-200 ms per verification on Android, which is why the
+  // native binding is kept rather than replaced.
+
+  /// Detached Ed25519 signature over [message] under this layer's identity
+  /// key. Spec summary table: `sign(bytes) -> signature`.
+  Uint8List sign(Uint8List message) => _protocolHandler.signBytes(message);
+
+  /// Whether [signature] is [signer]'s detached Ed25519 signature over
+  /// [message]. Spec summary table: `verify(pk, bytes, signature) -> bool`.
+  ///
+  /// Returns false on any malformed input rather than throwing: a bad
+  /// signature and an unparseable one are the same answer to the caller.
+  bool verify(Uint8List signer, Uint8List message, Uint8List signature) =>
+      _protocolHandler.verifyBytes(
+        signature: signature,
+        message: message,
+        publicKey: signer,
+      );
+
   /// Produce a signed, one-time, rendezvous-mediated invite link and register
   /// the invite with a chosen rendezvous server. Spec
   /// `GLP_Networking_API` §IP Cold-Call: `generatePeerLink() -> URI`.
@@ -2431,6 +2461,41 @@ class GrassrootsNetwork {
     store.dispatch(SetColdCallTrustLevelAction(medium, level));
   }
 
+  // ===== Hole punching =====
+
+  /// Open a NAT mapping toward [address] and return at once. Spec
+  /// `docs/GLP_Networking_API/sections/system-predicates.tex`, backing
+  /// `punch_udp/1`.
+  ///
+  /// [address] is an `ip:port` (IPv4, or bracketed IPv6 as `[ip]:port`); an
+  /// unparseable one is rejected with an [ArgumentError], as [putPeerAddress]
+  /// rejects it. No peer key is named and none is needed: punching is the
+  /// mechanism of opening the mapping, and *who* to punch toward, *when*, and
+  /// *whether* are GLP's decisions, taken above this line.
+  ///
+  /// Fire-and-forget by construction. The punch cannot report success — a NAT
+  /// mapping opens silently and is observed only by the traffic that later
+  /// crosses it — so this returns void and the datagrams continue in the
+  /// background. GLP punches and then waits to hear from the peer; it does not
+  /// wait on this call. A punch toward an address on an IP family this layer
+  /// has no socket for is a no-op.
+  void punchUdp(String address) {
+    final parsed = parseAddressString(address);
+    if (parsed == null) {
+      throw ArgumentError.value(address, 'address', 'not a valid ip:port');
+    }
+    final service = _holePunchServiceFor(parsed.ip);
+    if (service == null) {
+      debugPrint(
+        '[punch-udp] No hole-punch service for ${parsed.ip.type.name}; '
+        'ignoring punch toward ${parsed.toAddressString()}',
+      );
+      return;
+    }
+    debugPrint('[punch-udp] Punching toward ${parsed.toAddressString()}');
+    unawaited(service.punch(parsed.ip, parsed.port));
+  }
+
   // ===== Places =====
 
   /// Register a geofence of [radiusMetres] around the device's **current**
@@ -2471,14 +2536,19 @@ class GrassrootsNetwork {
     return places.removePlace(place);
   }
 
-  /// Called for each entry and exit crossing of a place still declared. Spec:
-  /// `onPlaceEvent(cb)`. The runtime routes each onto the stream that place's
+  /// Called for each event of a place still declared. Spec: `onPlaceEvent(cb)`.
+  /// The runtime routes each onto the stream that place's
   /// `place_declare(Place?, Radius?, Events)` bound.
+  ///
+  /// Carries `entered` and `exited` as the platform reports crossings,
+  /// `unobservable` when the platform stops reporting them, and `observable`
+  /// when it resumes. Between the two, no crossing is seen and none is
+  /// delivered late.
   ///
   /// A crossing the platform reports for a place already removed or superseded
   /// is dropped, the report being able to race the unregistration; it is
   /// neither queued nor does it reopen the declaration.
-  set onPlaceEvent(void Function(String place, PlaceCrossing crossing)? cb) {
+  set onPlaceEvent(void Function(String place, PlaceEvent event)? cb) {
     final places = _places;
     if (places == null) {
       throw StateError(

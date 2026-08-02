@@ -18,10 +18,15 @@ class _FakeGeofenceBackend implements PlaceGeofenceBackend {
   final List<String> unregistered = [];
   final StreamController<PlaceCrossingReport> _crossings =
       StreamController<PlaceCrossingReport>.broadcast();
+  final StreamController<bool> _observability =
+      StreamController<bool>.broadcast();
   String? lastRegistrationId;
 
   @override
   Stream<PlaceCrossingReport> get crossings => _crossings.stream;
+
+  @override
+  Stream<bool> get observability => _observability.stream;
 
   @override
   Future<bool> register(String registrationId, double radiusMetres) async {
@@ -37,10 +42,16 @@ class _FakeGeofenceBackend implements PlaceGeofenceBackend {
   }
 
   @override
-  Future<void> dispose() async => _crossings.close();
+  Future<void> dispose() async {
+    await _crossings.close();
+    await _observability.close();
+  }
 
   void report(String registrationId, PlaceCrossing crossing) =>
       _crossings.add(PlaceCrossingReport(registrationId, crossing));
+
+  /// The platform stops (false) or resumes (true) reporting crossings.
+  void reportObservability(bool observable) => _observability.add(observable);
 }
 
 /// The place functions on the layer's API surface (spec §System Predicates):
@@ -87,8 +98,8 @@ void main() {
     final backend = _FakeGeofenceBackend();
     final network = await buildNetwork(backend: backend);
 
-    final events = <(String, PlaceCrossing)>[];
-    network.onPlaceEvent = (place, crossing) => events.add((place, crossing));
+    final events = <(String, PlaceEvent)>[];
+    network.onPlaceEvent = (place, event) => events.add((place, event));
 
     expect(await network.declarePlace('market', 150), isTrue);
     expect(network.declaredPlaces, ['market']);
@@ -96,7 +107,7 @@ void main() {
     final id = backend.lastRegistrationId!;
     backend.report(id, PlaceCrossing.entered);
     await Future<void>.delayed(Duration.zero);
-    expect(events, [('market', PlaceCrossing.entered)]);
+    expect(events, [('market', PlaceEvent.entered)]);
 
     await network.removePlace('market');
     expect(network.declaredPlaces, isEmpty);
@@ -105,7 +116,40 @@ void main() {
     // A crossing racing the unregistration is dropped, not queued.
     backend.report(id, PlaceCrossing.exited);
     await Future<void>.delayed(Duration.zero);
-    expect(events, [('market', PlaceCrossing.entered)]);
+    expect(events, [('market', PlaceEvent.entered)]);
+
+    await network.dispose();
+  });
+
+  test('the layer reports unobservable and observable through onPlaceEvent',
+      () async {
+    final backend = _FakeGeofenceBackend();
+    final network = await buildNetwork(backend: backend);
+
+    final events = <(String, PlaceEvent)>[];
+    network.onPlaceEvent = (place, event) => events.add((place, event));
+
+    await network.declarePlace('market', 150);
+    final id = backend.lastRegistrationId!;
+
+    // The platform stops reporting — the application lost the foreground, or
+    // a permission was withdrawn. Spec §System Predicates: the stream says so,
+    // and between the two no crossing is seen and none is delivered late.
+    backend.reportObservability(false);
+    await Future<void>.delayed(Duration.zero);
+    expect(events, [('market', PlaceEvent.unobservable)]);
+
+    backend.report(id, PlaceCrossing.exited);
+    await Future<void>.delayed(Duration.zero);
+    expect(events, [('market', PlaceEvent.unobservable)],
+        reason: 'crossings are dropped while unobservable');
+
+    backend.reportObservability(true);
+    await Future<void>.delayed(Duration.zero);
+    expect(events, [
+      ('market', PlaceEvent.unobservable),
+      ('market', PlaceEvent.observable),
+    ], reason: 'nothing is replayed on resumption');
 
     await network.dispose();
   });
