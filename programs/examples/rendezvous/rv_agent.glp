@@ -46,14 +46,6 @@
 %% TYPE DEFINITIONS
 %% =============================================================================
 
-%% The attestation guard is implemented in the runtime and registered in
-%% root_scope.dart's builtin sets, but programs/self.glp carries no
-%% declaration for it, and the body-atom type checker requires one for every
-%% goal that is not true/otherwise/:= — guards included, a guard being
-%% type-checked as a body goal.  programs/self.glp is TGLP's file and the
-%% guard is Secure GLP's, so the declaration sits in the module that calls it.
-procedure valid_attestation(Constant?, Constant?, Constant?, Constant?).
-
 %% Reply sent back to agents via their reply variable
 SignalReply ::= punch(Constant) ; initiated ; rejected.
 

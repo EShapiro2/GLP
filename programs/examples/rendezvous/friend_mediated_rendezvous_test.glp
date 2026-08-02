@@ -23,7 +23,7 @@ imported procedure fmrv#fmrv(Constant?, MsgStream?, FriendList?).
 %% Test 1: A single addr_update message updates a friend's address
 %% =============================================================================
 
-procedure test1_addr_update.
+exported procedure test1_addr_update.
 test1_addr_update :-
     fmrv # fmrv(bob, [msg(alice, bob, addr_update(addr_alice_new))],
                  [fe(alice, [], addr_alice_old)]).
@@ -37,7 +37,7 @@ test1_addr_update :-
 %% Expected: alice's output stream gets msg(bob, alice, punch_to(found(addr_carol))),
 %%           carol's output stream gets msg(bob, carol, punch_to(found(addr_alice))).
 
-procedure test2_mediate(FriendStream, FriendStream).
+exported procedure test2_mediate(FriendStream, FriendStream).
 test2_mediate(AliceOut?, CarolOut?) :-
     fmrv # fmrv(bob,
         [msg(alice, bob, mediate(carol))],
@@ -48,7 +48,7 @@ test2_mediate(AliceOut?, CarolOut?) :-
 %% Test 3: A punch_to(found(...)) message triggers punch_udp
 %% =============================================================================
 
-procedure test3_punch_to.
+exported procedure test3_punch_to.
 test3_punch_to :-
     fmrv # fmrv(bob,
         [msg(alice, bob, punch_to(found(addr_somewhere)))],
@@ -58,7 +58,7 @@ test3_punch_to :-
 %% Test 4: empty input stream terminates cleanly
 %% =============================================================================
 
-procedure test4_empty.
+exported procedure test4_empty.
 test4_empty :-
     fmrv # fmrv(bob, [], []).
 
@@ -72,7 +72,7 @@ test4_empty :-
 %%           no message is sent to dave (no such friend), and punch_udp is
 %%           never called with an invalid address.
 
-procedure test5_mediate_unknown(FriendStream).
+exported procedure test5_mediate_unknown(FriendStream).
 test5_mediate_unknown(AliceOut?) :-
     fmrv # fmrv(bob,
         [msg(alice, bob, mediate(dave))],
@@ -84,7 +84,7 @@ test5_mediate_unknown(AliceOut?) :-
 %%
 %% The recipient simply ignores not_found and continues processing.
 
-procedure test6_punch_to_not_found.
+exported procedure test6_punch_to_not_found.
 test6_punch_to_not_found :-
     fmrv # fmrv(bob,
         [msg(alice, bob, punch_to(not_found))],
@@ -99,7 +99,7 @@ test6_punch_to_not_found :-
 %% Alice is known, so alice's stream should receive punch_to(not_found)
 %% (because eve's address lookup failed).
 
-procedure test7_mediate_unknown_from(FriendStream).
+exported procedure test7_mediate_unknown_from(FriendStream).
 test7_mediate_unknown_from(AliceOut?) :-
     fmrv # fmrv(bob,
         [msg(eve, bob, mediate(alice))],

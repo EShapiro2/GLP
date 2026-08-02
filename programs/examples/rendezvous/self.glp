@@ -18,6 +18,23 @@ PendingEntry ::= needs(Constant, Constant, Constant, SignalReply?)
                ; ready(Constant, Constant, SignalReply?).
 PendingList ::= [] ; [PendingEntry | PendingList].
 
+%% Friend-mediated rendezvous (fmrv) — a friend already reachable over BLE
+%% relays addresses so two NAT-bound friends can punch to each other.
+
+AddrResult ::= found(Constant) ; not_found.
+
+MsgOp ::= mediate(Constant)
+        ; punch_to(AddrResult)
+        ; addr_update(Constant).
+
+Msg ::= msg(Constant, Constant, MsgOp).
+
+MsgStream ::= [] ; [Msg | MsgStream].
+FriendStream ::= [] ; [Msg | FriendStream].
+
+FriendEntry ::= fe(Constant, FriendStream?, Constant).
+FriendList ::= [] ; [FriendEntry | FriendList].
+
 %% =============================================================================
 %% ENTRY POINTS — rv_agent_test
 %% =============================================================================
@@ -26,6 +43,140 @@ imported procedure rv_agent_test#test1_needs_stored(PendingList).
 exported procedure test1_needs_stored(PendingList).
 test1_needs_stored(P?) :- rv_agent_test # test1_needs_stored(P).
 
+imported procedure rv_agent_test#test2_ready_stored(PendingList).
+exported procedure test2_ready_stored(PendingList).
+test2_ready_stored(P?) :- rv_agent_test # test2_ready_stored(P).
+
+imported procedure rv_agent_test#test3_match_find_ready(SignalReply, SignalReply,
+                                                        PendingList).
+exported procedure test3_match_find_ready(SignalReply, SignalReply, PendingList).
+test3_match_find_ready(RA?, RB?, P?) :-
+    rv_agent_test # test3_match_find_ready(RA, RB, P).
+
+imported procedure rv_agent_test#test4_match_find_needs(SignalReply, SignalReply,
+                                                        PendingList).
+exported procedure test4_match_find_needs(SignalReply, SignalReply, PendingList).
+test4_match_find_needs(RA?, RB?, P?) :-
+    rv_agent_test # test4_match_find_needs(RA, RB, P).
+
+imported procedure rv_agent_test#test5_find_ready_no_match(PendingList).
+exported procedure test5_find_ready_no_match(PendingList).
+test5_find_ready_no_match(P?) :- rv_agent_test # test5_find_ready_no_match(P).
+
+imported procedure rv_agent_test#test6_find_ready_skip_then_match(SignalReply,
+                                                                  SignalReply,
+                                                                  PendingList).
+exported procedure test6_find_ready_skip_then_match(SignalReply, SignalReply,
+                                                    PendingList).
+test6_find_ready_skip_then_match(RA?, RB?, P?) :-
+    rv_agent_test # test6_find_ready_skip_then_match(RA, RB, P).
+
+imported procedure rv_agent_test#test7_agent_single_reconnect(SignalReply).
+exported procedure test7_agent_single_reconnect(SignalReply).
+test7_agent_single_reconnect(R?) :-
+    rv_agent_test # test7_agent_single_reconnect(R).
+
+imported procedure rv_agent_test#test8_available_then_reconnect_rejected(
+    SignalReply, SignalReply).
+exported procedure test8_available_then_reconnect_rejected(SignalReply,
+                                                           SignalReply).
+test8_available_then_reconnect_rejected(RA?, RB?) :-
+    rv_agent_test # test8_available_then_reconnect_rejected(RA, RB).
+
+imported procedure rv_agent_test#test9_two_reconnects_rejected(SignalReply,
+                                                               SignalReply).
+exported procedure test9_two_reconnects_rejected(SignalReply, SignalReply).
+test9_two_reconnects_rejected(R1?, R2?) :-
+    rv_agent_test # test9_two_reconnects_rejected(R1, R2).
+
+imported procedure rv_agent_test#test10_reconnect_then_available(SignalReply,
+                                                                 SignalReply).
+exported procedure test10_reconnect_then_available(SignalReply, SignalReply).
+test10_reconnect_then_available(RA?, RB?) :-
+    rv_agent_test # test10_reconnect_then_available(RA, RB).
+
 imported procedure rv_agent_test#test11_reconnect_rejected(SignalReply).
 exported procedure test11_reconnect_rejected(SignalReply).
 test11_reconnect_rejected(R?) :- rv_agent_test # test11_reconnect_rejected(R).
+
+imported procedure rv_agent_test#test12_rejected_does_not_block_stream(
+    SignalReply, SignalReply, SignalReply).
+exported procedure test12_rejected_does_not_block_stream(SignalReply, SignalReply,
+                                                         SignalReply).
+test12_rejected_does_not_block_stream(R1?, R2?, RB?) :-
+    rv_agent_test # test12_rejected_does_not_block_stream(R1, R2, RB).
+
+%% =============================================================================
+%% ENTRY POINTS — rv_client_test
+%% =============================================================================
+
+imported procedure rv_client_test#test1_make_reconnect(SignalMsg, SignalReply).
+exported procedure client1_make_reconnect(SignalMsg, SignalReply).
+client1_make_reconnect(M?, R?) :- rv_client_test # test1_make_reconnect(M, R).
+
+imported procedure rv_client_test#test2_make_available(SignalMsg, SignalReply).
+exported procedure client2_make_available(SignalMsg, SignalReply).
+client2_make_available(M?, R?) :- rv_client_test # test2_make_available(M, R).
+
+imported procedure rv_client_test#test3_full_scenario_a_first(SignalReply,
+                                                              SignalReply).
+exported procedure client3_full_scenario_a_first(SignalReply, SignalReply).
+client3_full_scenario_a_first(RA?, RB?) :-
+    rv_client_test # test3_full_scenario_a_first(RA, RB).
+
+imported procedure rv_client_test#test4_full_scenario_b_first(SignalReply,
+                                                              SignalReply).
+exported procedure client4_full_scenario_b_first(SignalReply, SignalReply).
+client4_full_scenario_b_first(RA?, RB?) :-
+    rv_client_test # test4_full_scenario_b_first(RA, RB).
+
+imported procedure rv_client_test#test5_full_scenario_with_handlers.
+exported procedure client5_full_scenario_with_handlers.
+client5_full_scenario_with_handlers :-
+    rv_client_test # test5_full_scenario_with_handlers.
+
+imported procedure rv_client_test#test6_bad_signature(SignalReply, SignalReply).
+exported procedure client6_bad_signature(SignalReply, SignalReply).
+client6_bad_signature(RA?, RB?) :- rv_client_test # test6_bad_signature(RA, RB).
+
+imported procedure rv_client_test#test7_handle_reply_punch.
+exported procedure client7_handle_reply_punch.
+client7_handle_reply_punch :- rv_client_test # test7_handle_reply_punch.
+
+%% =============================================================================
+%% ENTRY POINTS — friend_mediated_rendezvous_test
+%% =============================================================================
+
+imported procedure friend_mediated_rendezvous_test#test1_addr_update.
+exported procedure fmrv1_addr_update.
+fmrv1_addr_update :- friend_mediated_rendezvous_test # test1_addr_update.
+
+imported procedure friend_mediated_rendezvous_test#test2_mediate(FriendStream,
+                                                                 FriendStream).
+exported procedure fmrv2_mediate(FriendStream, FriendStream).
+fmrv2_mediate(A?, C?) :- friend_mediated_rendezvous_test # test2_mediate(A, C).
+
+imported procedure friend_mediated_rendezvous_test#test3_punch_to.
+exported procedure fmrv3_punch_to.
+fmrv3_punch_to :- friend_mediated_rendezvous_test # test3_punch_to.
+
+imported procedure friend_mediated_rendezvous_test#test4_empty.
+exported procedure fmrv4_empty.
+fmrv4_empty :- friend_mediated_rendezvous_test # test4_empty.
+
+imported procedure friend_mediated_rendezvous_test#test5_mediate_unknown(
+    FriendStream).
+exported procedure fmrv5_mediate_unknown(FriendStream).
+fmrv5_mediate_unknown(A?) :-
+    friend_mediated_rendezvous_test # test5_mediate_unknown(A).
+
+imported procedure friend_mediated_rendezvous_test#test6_punch_to_not_found.
+exported procedure fmrv6_punch_to_not_found.
+fmrv6_punch_to_not_found :-
+    friend_mediated_rendezvous_test # test6_punch_to_not_found.
+
+imported procedure friend_mediated_rendezvous_test#test7_mediate_unknown_from(
+    FriendStream).
+exported procedure fmrv7_mediate_unknown_from(FriendStream).
+fmrv7_mediate_unknown_from(A?) :-
+    friend_mediated_rendezvous_test # test7_mediate_unknown_from(A).

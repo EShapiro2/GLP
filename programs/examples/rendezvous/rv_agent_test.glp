@@ -89,76 +89,94 @@ test6_find_ready_skip_then_match(ReplyA?, ReplyB?, Pending1?) :-
 %% =============================================================================
 %% Test 7: Run rv_agent on a single reconnect message
 %% =============================================================================
+%%
+%% Every reconnect below is rejected, and not because its attestation is
+%% forged: valid_attestation/4 fails outright when there is no madGLP network
+%% on the context, which is every REPL run.  The accept path is unreachable
+%% here by construction, so these tests exercise the reject path and the
+%% pending list around it.
 
 exported procedure test7_agent_single_reconnect(SignalReply).
 test7_agent_single_reconnect(ReplyA?) :-
     rv_agent # rv_agent(
-        [reconnect(alice, bob, proof, ReplyA)], []).
+        [reconnect(alice, bob, bob, sig_ab, ReplyA)], []).
 
-%% Expected: ReplyA unbound (suspended), agent terminates on empty stream
+%% Expected: ReplyA = rejected, agent terminates on empty stream
 
 %% =============================================================================
 %% Test 8: Run rv_agent with available then reconnect (B first, A second)
 %% =============================================================================
+%%
+%% B's availability is stored as a ready entry; A's reconnect is then
+%% rejected, so the entry is never matched and B is never told to punch.
 
-exported procedure test8_agent_full_rendezvous(SignalReply, SignalReply).
-test8_agent_full_rendezvous(ReplyA?, ReplyB?) :-
+exported procedure test8_available_then_reconnect_rejected(SignalReply, SignalReply).
+test8_available_then_reconnect_rejected(ReplyA?, ReplyB?) :-
     rv_agent # rv_agent(
         [available(bob, alice, ReplyB),
-         reconnect(alice, bob, proof, ReplyA)], []).
+         reconnect(alice, bob, bob, sig_ab, ReplyA)], []).
 
-%% Expected: ReplyA = initiated, ReplyB = punch(stub_addr_alice)
+%% Expected: ReplyA = rejected, ReplyB unbound (its ready entry is left pending)
 
 %% =============================================================================
-%% Test 9: Two reconnect messages for unrelated pairs → both stored
+%% Test 9: Two reconnect messages for unrelated pairs → both rejected
 %% =============================================================================
+%%
+%% Neither is stored: a rejected reconnect leaves the pending list untouched.
 
-exported procedure test9_two_reconnects_no_match(SignalReply, SignalReply).
-test9_two_reconnects_no_match(RA1?, RA2?) :-
+exported procedure test9_two_reconnects_rejected(SignalReply, SignalReply).
+test9_two_reconnects_rejected(RA1?, RA2?) :-
     rv_agent # rv_agent(
-        [reconnect(alice, bob, proof1, RA1),
-         reconnect(carol, dave, proof2, RA2)], []).
+        [reconnect(alice, bob, bob, sig_ab, RA1),
+         reconnect(carol, dave, dave, sig_cd, RA2)], []).
 
-%% Expected: RA1 and RA2 both unbound (both stored as needs entries)
+%% Expected: RA1 = rejected, RA2 = rejected
 
 %% =============================================================================
-%% Test 10: reconnect, then available for same pair → match on second msg
+%% Test 10: reconnect, then available for same pair → nothing to match against
 %% =============================================================================
+%%
+%% The reconnect is rejected before it can be stored, so B's availability
+%% arrives to an empty pending list and is stored in its turn.
 
 exported procedure test10_reconnect_then_available(SignalReply, SignalReply).
 test10_reconnect_then_available(RA?, RB?) :-
     rv_agent # rv_agent(
-        [reconnect(alice, bob, proof, RA),
+        [reconnect(alice, bob, bob, sig_ab, RA),
          available(bob, alice, RB)], []).
 
-%% Expected: RA = initiated, RB = punch(stub_addr_alice)
+%% Expected: RA = rejected, RB unbound (stored as a ready entry)
 
 %% =============================================================================
-%% Test 11: reconnect with invalid proof → reply is rejected
+%% Test 11: reconnect with an invalid signature → reply is rejected
 %% =============================================================================
 %%
-%% The verify_friendship stub returns invalid when Proof = bad_proof.
-%% Expected: RA = rejected, agent terminates.
+%% The guard is valid_attestation/4.  It fails here for either of two
+%% reasons — bad_sig is not Signer's signature over attest(alice, bob), and
+%% there is no network on the context to check it against — and the reject
+%% path is the same for both.
 
 exported procedure test11_reconnect_rejected(SignalReply).
 test11_reconnect_rejected(RA?) :-
     rv_agent # rv_agent(
-        [reconnect(alice, bob, bad_proof, RA)], []).
+        [reconnect(alice, bob, bob, bad_sig, RA)], []).
 
 %% Expected: RA = rejected
 
 %% =============================================================================
-%% Test 12: rejected reconnect does not block subsequent valid reconnect
+%% Test 12: a rejected reconnect does not block the rest of the stream
 %% =============================================================================
 %%
-%% First reconnect has bad proof → rejected.  Second has good proof and
-%% finds a waiting available entry → matches normally.
+%% The first reconnect is rejected; the available behind it is still
+%% consumed and stored; the third message is rejected in its turn.  Both
+%% signatures are rejected alike, the well-formed one included, because the
+%% guard has no network to check either against.
 
-exported procedure test12_rejected_then_match(SignalReply, SignalReply, SignalReply).
-test12_rejected_then_match(RA1?, RA2?, RB?) :-
+exported procedure test12_rejected_does_not_block_stream(SignalReply, SignalReply, SignalReply).
+test12_rejected_does_not_block_stream(RA1?, RA2?, RB?) :-
     rv_agent # rv_agent(
-        [reconnect(alice, bob, bad_proof, RA1),
+        [reconnect(alice, bob, bob, bad_sig, RA1),
          available(bob, alice, RB),
-         reconnect(alice, bob, good_proof, RA2)], []).
+         reconnect(alice, bob, bob, good_sig, RA2)], []).
 
-%% Expected: RA1 = rejected, RA2 = initiated, RB = punch(stub_addr_alice)
+%% Expected: RA1 = rejected, RA2 = rejected, RB unbound (stored as ready)
