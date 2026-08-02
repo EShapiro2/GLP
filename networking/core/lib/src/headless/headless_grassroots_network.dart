@@ -753,11 +753,18 @@ class HeadlessGrassrootsNetwork {
       identityPublicKey: identity.publicKey,
       handshakeHash: handshakeHash,
     );
-    final offered = await attestation.attest(digest);
+    // Both halves or neither: a platform with no attestation key has neither
+    // an attestation nor a signature to give, and sends the explicit absence.
+    final offered = await attestation.attestationFor(identity.publicKey);
+    final signature =
+        offered == null ? null : await attestation.signSessionDigest(digest);
+    final evidence = (offered == null || signature == null)
+        ? null
+        : AttestationEvidence(attestation: offered, signature: signature);
     final bytes = await _sessionPacketBytes(
       GrassrootsPacket(
         type: PacketType.attestation,
-        payload: encodeAttestationPayload(offered),
+        payload: encodeAttestationPayload(evidence),
       ),
       pubkey,
     );
@@ -783,8 +790,9 @@ class HeadlessGrassrootsNetwork {
     AttestationVerdict verdict;
     try {
       verdict = await attestation.verify(
-        decodeAttestationPayload(payload),
-        digest,
+        evidence: decodeAttestationPayload(payload),
+        digest: digest,
+        peerIdentityKey: senderPubkey,
       );
     } on FormatException catch (e) {
       verdict = InvalidAttestation('malformed payload: $e');

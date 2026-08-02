@@ -19,35 +19,52 @@ Future<List<InternetAddress>> _loopbackHostAddresses() async =>
     [InternetAddress.loopbackIPv4];
 
 /// A platform that attests, with a verdict the test chooses.
+///
+/// The two-step of §Session Establishment: a long-lived attestation over a
+/// challenge naming the identity key, and a per-session signature over the
+/// digest. [offers] null is a platform with neither.
 class _StubAttestation implements PlatformAttestation {
   _StubAttestation({this.offers, required this.verdictFor});
 
-  /// What this platform offers when asked to attest. Null is a platform with
-  /// none.
+  /// What this platform offers as its long-lived attestation. Null is a
+  /// platform with none.
   final Uint8List? offers;
 
-  /// The verdict this platform returns for a peer's attestation.
-  final AttestationVerdict Function(Uint8List? offered) verdictFor;
+  /// The verdict this platform returns for a peer's evidence.
+  final AttestationVerdict Function(AttestationEvidence? offered) verdictFor;
 
-  /// The digests this platform was asked to attest over.
-  final List<Uint8List> attested = [];
+  /// The identity keys this platform was asked to attest.
+  final List<Uint8List> attestedKeys = [];
+
+  /// The digests this platform was asked to sign — one per session.
+  final List<Uint8List> signed = [];
 
   /// The digests this platform was asked to verify against.
   final List<Uint8List> verified = [];
 
   @override
-  Future<Uint8List?> attest(Uint8List digest) async {
-    attested.add(digest);
+  Future<Uint8List?> attestationFor(Uint8List identityPublicKey) async {
+    attestedKeys.add(identityPublicKey);
     return offers;
   }
 
   @override
-  Future<AttestationVerdict> verify(
-    Uint8List? attestation,
-    Uint8List digest,
-  ) async {
+  Future<Uint8List?> signSessionDigest(Uint8List digest) async {
+    if (offers == null) return null;
+    signed.add(digest);
+    // A stub signature that is a function of the digest, so a test can tell
+    // one session's signature from another's.
+    return Uint8List.fromList([0x51, ...digest]);
+  }
+
+  @override
+  Future<AttestationVerdict> verify({
+    required AttestationEvidence? evidence,
+    required Uint8List digest,
+    required Uint8List peerIdentityKey,
+  }) async {
     verified.add(digest);
-    return verdictFor(attestation);
+    return verdictFor(evidence);
   }
 }
 
@@ -164,7 +181,8 @@ void main() {
     expect(caller.isPeerReachable(calleeId.publicKey), isTrue);
   });
 
-  test('both sides attest over the digest bound to this session', () async {
+  test('the attestation names the identity key and the signature the session',
+      () async {
     final callerAttestation = _StubAttestation(
       offers: Uint8List.fromList(List.filled(48, 0xa1)),
       verdictFor: (offered) =>
@@ -205,16 +223,24 @@ void main() {
     expect(attestedHash, Uint8List.fromList(List.filled(32, 0xb2)),
         reason: 'onPeerConnected carries the attested binary hash');
 
-    // Each side attested over its OWN key and verified over the PEER's, both
-    // against the same handshake hash — so the two digests differ, and the
-    // digest one side attested is the digest the other verified.
-    expect(callerAttestation.attested, isNotEmpty);
+    // The long-lived half names the agent's OWN identity key — not the peer's
+    // and not the session. This is what makes it long-lived: it is the same
+    // attestation on every session the agent opens.
+    expect(callerAttestation.attestedKeys, isNotEmpty);
+    expect(callerAttestation.attestedKeys.first, callerId.publicKey);
+    expect(calleeAttestation.attestedKeys.first, calleeId.publicKey);
+
+    // The per-session half is the signature. Each side signed over its OWN
+    // key's digest and verified over the PEER's, both against the same
+    // handshake hash — so the two digests differ, and the digest one side
+    // signed is the digest the other verified.
+    expect(callerAttestation.signed, isNotEmpty);
     expect(callerAttestation.verified, isNotEmpty);
-    expect(callerAttestation.attested.first,
+    expect(callerAttestation.signed.first,
         isNot(callerAttestation.verified.first));
-    expect(callerAttestation.attested.first, calleeAttestation.verified.first,
-        reason: 'what the caller attested is what the callee verified');
-    expect(calleeAttestation.attested.first, callerAttestation.verified.first);
+    expect(callerAttestation.signed.first, calleeAttestation.verified.first,
+        reason: 'what the caller signed is what the callee verified');
+    expect(calleeAttestation.signed.first, callerAttestation.verified.first);
   });
 
   test('a failed attestation tears the session down and onPeerConnected does '

@@ -3367,19 +3367,31 @@ class GrassrootsNetwork {
       return;
     }
 
-    Uint8List? attestation;
+    // Both halves or neither. The attestation is long-lived — the binding
+    // obtains it once per install — while the signature is computed afresh
+    // over this session's digest.
+    AttestationEvidence? evidence;
     try {
-      attestation = await _attestation.attest(digest);
+      final attestation = await _attestation.attestationFor(identity.publicKey);
+      final signature = attestation == null
+          ? null
+          : await _attestation.signSessionDigest(digest);
+      if (attestation != null && signature != null) {
+        evidence = AttestationEvidence(
+          attestation: attestation,
+          signature: signature,
+        );
+      }
     } catch (e) {
       // A platform that errs offers nothing; the peer reports us unattested
       // rather than refusing us.
       debugPrint('[attest] Platform attestation failed: $e');
-      attestation = null;
+      evidence = null;
     }
 
     final packet = GrassrootsPacket(
       type: PacketType.attestation,
-      payload: encodeAttestationPayload(attestation),
+      payload: encodeAttestationPayload(evidence),
     );
 
     // Over the medium the session belongs to, and no other: the digest binds
@@ -3448,7 +3460,7 @@ class GrassrootsNetwork {
       return;
     }
 
-    Uint8List? offered;
+    AttestationEvidence? offered;
     try {
       offered = decodeAttestationPayload(payload);
     } on FormatException catch (e) {
@@ -3459,9 +3471,13 @@ class GrassrootsNetwork {
 
     AttestationVerdict verdict;
     try {
-      verdict = await _attestation.verify(offered, digest);
+      verdict = await _attestation.verify(
+        evidence: offered,
+        digest: digest,
+        peerIdentityKey: senderPubkey,
+      );
     } catch (e) {
-      verdict = InvalidAttestation('verification threw: \$e');
+      verdict = InvalidAttestation('verification threw: $e');
     }
 
     switch (verdict) {

@@ -78,18 +78,40 @@ void main() {
   });
 
   group('wire framing', () {
-    test('absence round-trips as absence, not as an empty attestation', () {
+    test('absence round-trips as absence, not as empty evidence', () {
       final encoded = encodeAttestationPayload(null);
       expect(encoded.length, 1);
       expect(decodeAttestationPayload(encoded), isNull);
     });
 
-    test('an attestation round-trips', () {
-      final attestation = bytes(0x7f, 100);
-      final decoded = decodeAttestationPayload(
-        encodeAttestationPayload(attestation),
+    test('evidence round-trips with both halves intact', () {
+      final evidence = AttestationEvidence(
+        attestation: bytes(0x7f, 4096),
+        signature: bytes(0x5a, 71),
       );
-      expect(decoded, attestation);
+      final decoded =
+          decodeAttestationPayload(encodeAttestationPayload(evidence))!;
+      expect(decoded.attestation, evidence.attestation);
+      expect(decoded.signature, evidence.signature);
+    });
+
+    test('the split is by the carried length, not by a guess', () {
+      // The signature takes the remainder, so the attestation's length field
+      // is the only thing deciding the boundary. A one-byte error in it would
+      // silently move bytes from one field to the other, which is why the
+      // round-trip is asserted on both halves separately and on a signature
+      // whose length is not a round number.
+      final evidence = AttestationEvidence(
+        attestation: bytes(0xAB, 1),
+        signature: bytes(0xCD, 1),
+      );
+      final encoded = encodeAttestationPayload(evidence);
+      expect(encoded.length, 1 + 4 + 1 + 1);
+      final decoded = decodeAttestationPayload(encoded)!;
+      expect(decoded.attestation, hasLength(1));
+      expect(decoded.signature, hasLength(1));
+      expect(decoded.attestation.single, 0xAB);
+      expect(decoded.signature.single, 0xCD);
     });
 
     test('a malformed payload throws rather than being read tolerantly', () {
@@ -104,7 +126,25 @@ void main() {
       expect(
         () => decodeAttestationPayload(Uint8List.fromList([0x01])),
         throwsFormatException,
-        reason: 'claims presence and carries none',
+        reason: 'claims presence and carries no length field',
+      );
+      expect(
+        () => decodeAttestationPayload(
+            Uint8List.fromList([0x01, 0x00, 0x00, 0x00, 0x00])),
+        throwsFormatException,
+        reason: 'claims presence and a zero-length attestation',
+      );
+      expect(
+        () => decodeAttestationPayload(
+            Uint8List.fromList([0x01, 0x00, 0x00, 0x00, 0x08, 0x01, 0x02])),
+        throwsFormatException,
+        reason: 'claims more attestation bytes than it carries',
+      );
+      expect(
+        () => decodeAttestationPayload(
+            Uint8List.fromList([0x01, 0x00, 0x00, 0x00, 0x02, 0x01, 0x02])),
+        throwsFormatException,
+        reason: 'carries the attestation and no signature',
       );
       expect(
         () => decodeAttestationPayload(Uint8List.fromList([0x02, 0x03])),
@@ -112,26 +152,66 @@ void main() {
         reason: 'unknown tag',
       );
     });
+
+    test('a version-4 payload does not decode as version 5', () {
+      // Version 4 framed the attestation alone: [0x01][attestation...]. Read
+      // as version 5 its first four attestation bytes are a length, so it is
+      // either short or signature-less — it must never be mistaken for valid
+      // evidence. This is the wire half of why the version bumped; ANNOUNCE
+      // refuses the mismatch before a session gets here.
+      final version4 =
+          Uint8List.fromList([0x01, ...List.filled(64, 0x5a)]);
+      expect(() => decodeAttestationPayload(version4), throwsFormatException);
+    });
+
+    test('framing rejects half-evidence at the encoder', () {
+      expect(
+        () => encodeAttestationPayload(AttestationEvidence(
+          attestation: Uint8List(0),
+          signature: bytes(0x01, 64),
+        )),
+        throwsArgumentError,
+      );
+      expect(
+        () => encodeAttestationPayload(AttestationEvidence(
+          attestation: bytes(0x01, 64),
+          signature: Uint8List(0),
+        )),
+        throwsArgumentError,
+      );
+    });
   });
 
   group('NoPlatformAttestation', () {
     const attestation = NoPlatformAttestation();
 
-    test('offers nothing', () async {
-      expect(await attestation.attest(bytes(0x01)), isNull);
+    test('offers neither an attestation nor a signature', () async {
+      expect(await attestation.attestationFor(bytes(0x11)), isNull);
+      expect(await attestation.signSessionDigest(bytes(0x01)), isNull);
     });
 
     test('a peer that offers nothing is unattested, which is not a failure',
         () async {
-      final verdict = await attestation.verify(null, bytes(0x01));
+      final verdict = await attestation.verify(
+        evidence: null,
+        digest: bytes(0x01),
+        peerIdentityKey: bytes(0x11),
+      );
       expect(verdict, isA<UnattestedPlatform>());
     });
 
-    test('a peer that offers one is unattested, not invalid', () async {
+    test('a peer that offers evidence is unattested, not invalid', () async {
       // "Cannot determine" is not "found invalid". Reporting invalid would
       // claim a verification that never ran and would tear down every session
       // with an attesting peer.
-      final verdict = await attestation.verify(bytes(0x55, 64), bytes(0x01));
+      final verdict = await attestation.verify(
+        evidence: AttestationEvidence(
+          attestation: bytes(0x55, 512),
+          signature: bytes(0x66, 64),
+        ),
+        digest: bytes(0x01),
+        peerIdentityKey: bytes(0x11),
+      );
       expect(verdict, isA<UnattestedPlatform>());
       expect(verdict, isNot(isA<InvalidAttestation>()));
     });

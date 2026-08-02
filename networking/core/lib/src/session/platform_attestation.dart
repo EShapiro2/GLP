@@ -2,17 +2,29 @@
 /// runs, exchanged after the Noise handshake.
 ///
 /// Spec `docs/GLP_Networking_API/sections/api.tex` §Session Establishment.
-/// Each side asks its platform to attest over the digest
-/// `H("glp attest" | pk | h)` — `pk` its own identity public key, `h` the
-/// final Noise handshake hash — sends it, and verifies the other's. An
-/// attestation that fails verification tears the session down and
-/// `onPeerConnected` does not fire. Nothing is cached across sessions: a
-/// layer restart yields a fresh handshake and hence a fresh attestation.
+/// The exchange has two parts, one long-lived and one per session. Each agent
+/// holds an *attestation key* generated in its platform's secure element and
+/// attested there once — App Attest on iOS, hardware key attestation on
+/// Android — over a challenge naming the agent's identity public key `pk`.
+/// Per session each side sends that attestation together with a signature by
+/// the attestation key over the digest `H("glp attest" | pk | h)`, `h` being
+/// the final Noise handshake hash, and each side verifies both: the
+/// attestation against the platform's root, and the signature against the key
+/// the attestation carries. Either failing tears the session down and
+/// `onPeerConnected` does not fire.
 ///
-/// The handshake hash is what binds the attestation to this session. An
-/// identity key is long-lived, so an attestation over the key alone would be
-/// replayable onto every channel that agent opens; `h` is unique per session,
-/// identical at both ends, and chosen by neither side alone.
+/// The attestation is long-lived because a platform fixes the challenge when
+/// the key is generated, so a per-session challenge would demand a
+/// secure-element key generation per session. The attestation binds the key to
+/// the application and to the identity key; the signature binds it to this
+/// session. Nothing of the session is cached: the signature is computed afresh
+/// over every handshake hash, so a peer that resumes after a restart proves
+/// itself again before it is reachable.
+///
+/// The handshake hash is what binds the exchange to this session. An identity
+/// key is long-lived, so an attestation over the key alone would be replayable
+/// onto every channel that agent opens; `h` is unique per session, identical
+/// at both ends, and chosen by neither side alone.
 library;
 
 import 'dart:convert';
@@ -83,26 +95,65 @@ class InvalidAttestation extends AttestationVerdict {
   const InvalidAttestation(this.reason);
 }
 
+/// What one side sends: the long-lived attestation and the per-session
+/// signature over the digest.
+///
+/// The two travel together and are verified together. Neither alone is
+/// meaningful — the attestation without the signature does not name this
+/// session, and the signature without the attestation names no hardware-held
+/// key.
+class AttestationEvidence {
+  /// The platform's attestation of this agent's attestation key, over a
+  /// challenge naming the agent's identity public key. Long-lived: obtained
+  /// once per install, not once per session.
+  final Uint8List attestation;
+
+  /// A signature by the attested key over `H("glp attest" | pk | h)`.
+  final Uint8List signature;
+
+  const AttestationEvidence({
+    required this.attestation,
+    required this.signature,
+  });
+}
+
 /// The platform's attestation service, as the layer needs it.
 ///
 /// Kept as an interface because the binding is a platform dependency — App
-/// Attest on iOS, Play Integrity on Android — while the exchange itself, its
-/// binding to the handshake hash, and what a verdict does to the session are
-/// decided above it, in the session layer, and are the same on every platform.
+/// Attest on iOS, hardware key attestation on Android — while the exchange
+/// itself, its binding to the handshake hash, and what a verdict does to the
+/// session are decided above it, in the session layer, and are the same on
+/// every platform.
 abstract class PlatformAttestation {
-  /// Attest this agent's binary over [digest].
+  /// This agent's long-lived attestation: its attestation key as attested by
+  /// the platform over a challenge naming [identityPublicKey].
+  ///
+  /// Obtained once per install and cached by the binding — the platform fixes
+  /// the challenge at key generation, so re-attesting per session would mean a
+  /// secure-element key generation per session.
   ///
   /// Returns null where this platform provides no attestation at all — the
   /// headless server profile has none — which the peer reports as unattested
   /// rather than refusing.
-  Future<Uint8List?> attest(Uint8List digest);
+  Future<Uint8List?> attestationFor(Uint8List identityPublicKey);
 
-  /// Verify a peer's [attestation] against the [digest] it should have
-  /// attested over.
+  /// Sign the per-session [digest] with the attested key.
   ///
-  /// [attestation] is null when the peer sent none, which is
+  /// Returns null where this platform holds no attestation key, which is the
+  /// same condition as [attestationFor] returning null.
+  Future<Uint8List?> signSessionDigest(Uint8List digest);
+
+  /// Verify a peer's [evidence] — the attestation against this platform's
+  /// pinned root, its challenge naming [peerIdentityKey]; and the signature
+  /// against the key the attestation carries, over [digest].
+  ///
+  /// [evidence] is null when the peer sent none, which is
   /// [UnattestedPlatform] and not a failure.
-  Future<AttestationVerdict> verify(Uint8List? attestation, Uint8List digest);
+  Future<AttestationVerdict> verify({
+    required AttestationEvidence? evidence,
+    required Uint8List digest,
+    required Uint8List peerIdentityKey,
+  });
 }
 
 /// The attestation of a platform that has none.
@@ -123,14 +174,18 @@ class NoPlatformAttestation implements PlatformAttestation {
   const NoPlatformAttestation();
 
   @override
-  Future<Uint8List?> attest(Uint8List digest) async => null;
+  Future<Uint8List?> attestationFor(Uint8List identityPublicKey) async => null;
 
   @override
-  Future<AttestationVerdict> verify(
-    Uint8List? attestation,
-    Uint8List digest,
-  ) async {
-    if (attestation == null) {
+  Future<Uint8List?> signSessionDigest(Uint8List digest) async => null;
+
+  @override
+  Future<AttestationVerdict> verify({
+    required AttestationEvidence? evidence,
+    required Uint8List digest,
+    required Uint8List peerIdentityKey,
+  }) async {
+    if (evidence == null) {
       return const UnattestedPlatform("the peer's platform offers none");
     }
     debugPrint('[attest] An attestation was offered; this build verifies none');
@@ -144,22 +199,45 @@ const int _attestationAbsent = 0x00;
 /// Tag byte for "an attestation follows".
 const int _attestationPresent = 0x01;
 
-/// Frame an attestation for the wire: one tag byte, then the attestation.
+/// Width of the attestation-length field: the attestation is variable-length
+/// and the signature takes the remainder, so exactly one length is carried.
+const int _attestationLengthBytes = 4;
+
+/// Frame the evidence for the wire: one tag byte, the attestation length, the
+/// attestation, then the signature as the remainder.
 ///
 /// The tag is what keeps absence and failure distinct on the wire: a peer
 /// with no platform attestation says so explicitly rather than sending
 /// nothing, which would be indistinguishable from a lost packet.
-Uint8List encodeAttestationPayload(Uint8List? attestation) {
-  if (attestation == null) return Uint8List.fromList([_attestationAbsent]);
-  return Uint8List.fromList([_attestationPresent, ...attestation]);
+///
+/// The attestation carries its length because both fields are variable — an
+/// Android chain and an App Attest object are both several kilobytes, and a
+/// signature is tens of bytes — and the signature needs none, being whatever
+/// follows.
+Uint8List encodeAttestationPayload(AttestationEvidence? evidence) {
+  if (evidence == null) return Uint8List.fromList([_attestationAbsent]);
+  if (evidence.attestation.isEmpty) {
+    throw ArgumentError('Cannot frame evidence with an empty attestation');
+  }
+  if (evidence.signature.isEmpty) {
+    throw ArgumentError('Cannot frame evidence with an empty signature');
+  }
+  final header = ByteData(_attestationLengthBytes)
+    ..setUint32(0, evidence.attestation.length, Endian.big);
+  return Uint8List.fromList([
+    _attestationPresent,
+    ...header.buffer.asUint8List(),
+    ...evidence.attestation,
+    ...evidence.signature,
+  ]);
 }
 
-/// Read a framed attestation. Null means the peer's platform provides none.
+/// Read framed evidence. Null means the peer's platform provides none.
 ///
 /// Throws [FormatException] on anything else. There is no old version in the
 /// wild and a malformed payload is malformed, not an older shape to be read
 /// tolerantly.
-Uint8List? decodeAttestationPayload(Uint8List payload) {
+AttestationEvidence? decodeAttestationPayload(Uint8List payload) {
   if (payload.isEmpty) {
     throw const FormatException('Attestation payload is empty');
   }
@@ -172,12 +250,36 @@ Uint8List? decodeAttestationPayload(Uint8List payload) {
       }
       return null;
     case _attestationPresent:
-      if (payload.length == 1) {
+      const headerEnd = 1 + _attestationLengthBytes;
+      if (payload.length < headerEnd) {
         throw const FormatException(
-          'Attestation payload claims presence and carries none',
+          'Attestation payload is too short for its length field',
         );
       }
-      return Uint8List.sublistView(payload, 1);
+      final attestationLength = ByteData.sublistView(payload, 1, headerEnd)
+          .getUint32(0, Endian.big);
+      if (attestationLength == 0) {
+        throw const FormatException(
+          'Attestation payload claims presence and carries no attestation',
+        );
+      }
+      final signatureStart = headerEnd + attestationLength;
+      if (payload.length < signatureStart) {
+        throw FormatException(
+          'Attestation payload claims $attestationLength attestation bytes '
+          'and carries ${payload.length - headerEnd}',
+        );
+      }
+      if (payload.length == signatureStart) {
+        throw const FormatException(
+          'Attestation payload carries no signature',
+        );
+      }
+      return AttestationEvidence(
+        attestation:
+            Uint8List.sublistView(payload, headerEnd, signatureStart),
+        signature: Uint8List.sublistView(payload, signatureStart),
+      );
     default:
       throw FormatException('Unknown attestation tag ${payload[0]}');
   }

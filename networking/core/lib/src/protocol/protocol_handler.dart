@@ -27,7 +27,19 @@ class ProtocolHandler {
   /// attestation a version-3 agent never sends, so the peer never becomes
   /// reachable and the session dies by timeout with nothing saying why. That
   /// silent divergence is what this check exists to refuse loudly.
-  static const int protocolVersion = 4;
+  ///
+  /// 5 since 2026-08-03, for the two-step exchange §Session Establishment now
+  /// specifies: attest the key once over a challenge naming the identity key,
+  /// and sign the per-session digest with it. Two independent reasons, either
+  /// sufficient. The SHAPE changes — version 4 carries an attestation alone,
+  /// version 5 an attestation and a signature, and this layer's decoders do
+  /// not tolerate a missing field. And the MEANING changes, which is worse: a
+  /// version-4 attestation is over the SESSION digest, a version-5 one over
+  /// `pk` and long-lived, so a version-4 verifier handed a version-5
+  /// attestation would check it against the session digest, find it INVALID,
+  /// and tear the session down — a spurious hard security failure with a
+  /// misleading reason rather than a decode error.
+  static const int protocolVersion = 5;
 
   /// Length of the trailing Ed25519 signature on an ANNOUNCE payload.
   static const int announceSignatureLength = 64;
