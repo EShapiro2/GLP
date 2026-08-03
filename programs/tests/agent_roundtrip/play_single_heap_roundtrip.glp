@@ -20,7 +20,7 @@
 
 %% In-heap transport: forward every msg on one agent's `_net` output stream to
 %% the peer's `_net` input stream. (alice only addresses bob and vice versa.)
-procedure pipe(Stream(X)?, Stream(X)).
+procedure(X) pipe(Stream(X)?, Stream(X)).
 pipe([M|In], [M?|Out?]) :- pipe(In?, Out).
 pipe([], []).
 

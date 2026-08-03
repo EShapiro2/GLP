@@ -18,7 +18,7 @@
 %% --- In-heap crossbar: route each agent's `_net` output to the addressed
 %% agent's `_net` input. Merge all outputs, then filter per recipient. ---
 
-procedure crossbar(Stream(M)?, Stream(M)?, Stream(M)?,
+procedure(M) crossbar(Stream(M)?, Stream(M)?, Stream(M)?,
                    Stream(M), Stream(M), Stream(M)).
 crossbar(AOut, BOut, COut, AIn?, BIn?, CIn?) :-
     merge(AOut?, BOut?, AB),
@@ -27,7 +27,7 @@ crossbar(AOut, BOut, COut, AIn?, BIn?, CIn?) :-
 
 %% route: demux the merged stream — each msg(R, _) goes to exactly R's output;
 %% the two non-target outputs are pure holes (?) filled by the recursion.
-procedure route(Stream(M)?, Stream(M), Stream(M), Stream(M)).
+procedure(M) route(Stream(M)?, Stream(M), Stream(M), Stream(M)).
 route([msg(alice, C) | Rest], [msg(alice, C?) | A?], B?, Ch?) :-
     route(Rest?, A, B, Ch).
 route([msg(bob, C) | Rest], A?, [msg(bob, C?) | B?], Ch?) :-

@@ -1420,8 +1420,14 @@ NEGATIVE_FILES=(
     # parameter, take the per-instantiation route, and loaded standalone with no
     # instantiation have nothing to certify — rejected (sec:abstract-parameters).
     #
-    # channel.glp is IGLP's and still awaits the same sweep. Its sibling
-    # typed_social_agent.glp had it on 2026-08-03 — per-kind OutputEntry, agent/4
+    # channel.glp has now had the sweep too (2026-08-03): send/3, receive/3 and
+    # new_channel/3 carry `procedure(X, Y)` parameter lists. It is STILL rejected
+    # standalone, and that is the point of keeping it here — the rejection is now
+    # the abstract-parameter rule doing its job rather than a missing list.
+    # send/3 and receive/3 destructure the parameter's stream (`ch(In, [X?|Out?])`),
+    # so they inspect it, take the per-instantiation route, and standalone have
+    # no instantiation to be checked at (sec:abstract-parameters). Its sibling
+    # typed_social_agent.glp was swept the same day — per-kind OutputEntry, agent/4
     # declared at ActorOut and NetInStream — and now type-checks standalone, so it
     # moved to POSITIVE_FILES. That sweep did NOT unskip ui_mediator_test, which
     # this comment used to predict; the skip records what was measured instead.

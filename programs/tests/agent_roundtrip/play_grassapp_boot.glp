@@ -9,14 +9,14 @@
 
 
 %% --- In-heap crossbar (route each `_net` output to the addressed agent) ---
-procedure crossbar(Stream(M)?, Stream(M)?, Stream(M)?,
+procedure(M) crossbar(Stream(M)?, Stream(M)?, Stream(M)?,
                    Stream(M), Stream(M), Stream(M)).
 crossbar(AOut, BOut, COut, AIn?, BIn?, CIn?) :-
     merge(AOut?, BOut?, AB),
     merge(AB?, COut?, All),
     route(All?, AIn, BIn, CIn).
 
-procedure route(Stream(M)?, Stream(M), Stream(M), Stream(M)).
+procedure(M) route(Stream(M)?, Stream(M), Stream(M), Stream(M)).
 route([msg(alice, C) | Rest], [msg(alice, C?) | A?], B?, Ch?) :-
     route(Rest?, A, B, Ch).
 route([msg(bob, C) | Rest], A?, [msg(bob, C?) | B?], Ch?) :-
