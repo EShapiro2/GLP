@@ -89,9 +89,43 @@ uR2zh/80lQyu9vAFCj6E4AXc+osmRg==
 ''',
 ];
 
+/// Apple's App Attest root.
+///
+/// One, not two: Apple publishes a single App Attest root and documents no
+/// revocation mechanism for App Attest keys at all, so an iOS verifier pins
+/// this certificate and contacts nobody, ever. The Android side is not
+/// symmetric — see Section 2.5.
+///
+/// Fetched from `https://www.apple.com/certificateauthority/`, Apple's own
+/// certificate authority page, on 2026-08-03. EC P-384, ecdsa-with-SHA384,
+/// CN=Apple App Attestation Root CA, 2020-03-18 → 2045-03-15. SHA-256
+/// fingerprint, so a reviewer can check these bytes against Apple's:
+///
+///   1C:B9:82:3B:A2:8B:A6:AD:2D:33:A0:06:94:1D:E2:AE:
+///   4F:51:3E:F1:D4:E8:31:B9:F7:E0:FA:7B:62:42:C9:32
+const String appAttestRootPem = '''
+-----BEGIN CERTIFICATE-----
+MIICITCCAaegAwIBAgIQC/O+DvHN0uD7jG5yH2IXmDAKBggqhkjOPQQDAzBSMSYw
+JAYDVQQDDB1BcHBsZSBBcHAgQXR0ZXN0YXRpb24gUm9vdCBDQTETMBEGA1UECgwK
+QXBwbGUgSW5jLjETMBEGA1UECAwKQ2FsaWZvcm5pYTAeFw0yMDAzMTgxODMyNTNa
+Fw00NTAzMTUwMDAwMDBaMFIxJjAkBgNVBAMMHUFwcGxlIEFwcCBBdHRlc3RhdGlv
+biBSb290IENBMRMwEQYDVQQKDApBcHBsZSBJbmMuMRMwEQYDVQQIDApDYWxpZm9y
+bmlhMHYwEAYHKoZIzj0CAQYFK4EEACIDYgAERTHhmLW07ATaFQIEVwTtT4dyctdh
+NbJhFs/Ii2FdCgAHGbpphY3+d8qjuDngIN3WVhQUBHAoMeQ/cLiP1sOUtgjqK9au
+Yen1mMEvRq9Sk3Jm5X8U62H+xTD3FE9TgS41o0IwQDAPBgNVHRMBAf8EBTADAQH/
+MB0GA1UdDgQWBBSskRBTM72+aEH/pwyp5frq5eWKoTAOBgNVHQ8BAf8EBAMCAQYw
+CgYIKoZIzj0EAwMDaAAwZQIwQgFGnByvsiVbpTKwSga0kP0e8EeDS4+sQmTvb7vn
+53O5+FRXgeLhpJ06ysC5PrOyAjEAp5U4xDgEgllF7En3VcE3iexZZtKeYnpqtijV
+oyFraWVIyd/dganmrduC1bmTBGwD
+-----END CERTIFICATE-----
+''';
+
 /// The pinned Android roots as DER.
 List<Uint8List> androidAttestationRootsDer() =>
     androidAttestationRootsPem.map(pemToDer).toList(growable: false);
+
+/// The pinned Apple App Attest root as DER.
+List<Uint8List> appAttestRootsDer() => [pemToDer(appAttestRootPem)];
 
 /// Decode a PEM certificate to DER.
 ///
