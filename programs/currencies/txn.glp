@@ -93,7 +93,7 @@ classify_trade(Id, Clock, WantSpec, OfferedBonds, Class?) :-
 
 %% own_coins: every offered bond is a coin of Id — issued by Id (I =?= Id) and
 %% mature at Id's own date (M =< Clock).
-procedure own_coins(Constant?, Constant?, Stream(Bond)?, Constant).
+exported procedure own_coins(Constant?, Constant?, Stream(Bond)?, Constant).
 own_coins(Id, Clock, [bond(I, M, _)|Rest], R?) :-
     Id? =?= I?, M? =< Clock? | own_coins(Id?, Clock?, Rest?, R).
 own_coins(_, _, [bond(_, _, _)|_], no) :-
