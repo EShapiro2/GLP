@@ -258,15 +258,26 @@ inject_trade_result(Resp, From, [Y|Ys], [Y?|Ys1?]) :-
 %% (reusable transaction core).
 
 %% =============================================================================
-%% ESCROW — Concurrent race between timer and cancel signal
+%% ESCROW — Concurrent race between the holder's own date and the cancel signal
 %% =============================================================================
+%%
+%% Dates is the holder's own local date as it advances (its advance_date events).
+%% The release clause suspends on that stream and fires the instant a date reaches
+%% T, sending the bonds to the beneficiary and expiry to the depositor; cancel
+%% races it and returns them.  There is no wall clock: the only time in Def. 3.2
+%% is each person's own date, advanced by Advance-date, so release is automatic
+%% and there is nothing the holder can withhold.  If the holder stops — the date
+%% stream closes with no cancel — no clause commits: the escrow suspends holding
+%% the bonds (clause 3's `_` covers [] for the typechecker) and never returns them.
 
-procedure escrow(Constant?, Stream(Bond)?, EscrowCancel?, EscrowBenResult, EscrowDepResult).
-escrow(T, Bonds, _,
+procedure escrow(Constant?, Stream(Constant)?, Stream(Bond)?, EscrowCancel?, EscrowBenResult, EscrowDepResult).
+escrow(T, [D|_], Bonds, _,
     escrow_bonds(Bonds?),
     escrow_expired) :-
-    wait_until(T?) | true.
-escrow(_, Bonds, cancel,
+    D? >= T? | true.
+escrow(T, [D|Ds], Bonds, Cancel, Ben?, Dep?) :-
+    D? < T? | escrow(T?, Ds?, Bonds?, Cancel?, Ben, Dep).
+escrow(_, _, Bonds, cancel,
     escrow_cancelled,
     escrow_bonds(Bonds?)).
 

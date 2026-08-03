@@ -2,7 +2,7 @@
 %%
 %% Derived from: bonds/boot.glp fplay11 clause
 %% Bonds: Escrow — Cancel (2 agents)
-%% Alice computes T = now() + 5000 locally. Bob has no time arg.
+%% Alice deposits until date 30 and cancels without ever reaching it. Bob has no date arg.
 
 
 procedure boot.
@@ -14,8 +14,7 @@ boot :-
 procedure alice_init_11(Constant?, Stream(_)?).
 alice_init_11(Id, NetIn) :-
     ground(Id?) |
-    now(Now),
-    T := Now? + 5000,
+    T := 30,
     alice_p11(T?, ch(ActorIn?, ActorOut)),
     tee(ActorOut?, MedIn, DispCmd),
     agent(Id?, AgentIn?, NetIn?,

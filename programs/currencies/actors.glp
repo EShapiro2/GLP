@@ -1043,8 +1043,10 @@ alice_p10_wait_trade(T, [_|In], Out?) :-
     otherwise | alice_p10_wait_trade(T?, In?, Out).
 alice_p10_wait_trade(_, [], []).
 
+%% Once deposited, Alice advances her own date to the release date: the escrow
+%% reads that date and releases on it.  There is no wall clock to wait for.
 procedure alice_p10_wait_deposited(Stream(UserNotify)?, Stream(UserCmd)).
-alice_p10_wait_deposited([escrow_deposited(bob, _, _)|In], Out?) :-
+alice_p10_wait_deposited([escrow_deposited(bob, T, _)|In], [advance_date(T?)|Out?]) :-
     alice_p10_wait_expired(In?, Out).
 alice_p10_wait_deposited([_|In], Out?) :-
     otherwise | alice_p10_wait_deposited(In?, Out).

@@ -7,7 +7,7 @@
 %% Accepts Eve's swap (5 frank-coins for 5 alice-coins).
 %% Deposits escrow with Frank (dock construction).
 %%
-%% Takes T (escrow release time) as parameter.
+%% Takes T (the escrow release date, on Charlie's own calendar) as parameter.
 %% Types: from bonds/self.glp (ancestor scoping)
 
 
@@ -106,17 +106,19 @@ procedure charlie_p12_wait_trade_eve2(Constant?, Stream(UserNotify)?, Stream(Use
 charlie_p12_wait_trade_eve2(T, [trade_proposed(eve, _, ReqId)|In],
                             [accept_trade(eve, ReqId?),
                              deposit_escrow(frank, [lot(frank, 0, 5)], T?)|Out?],
-                            [say('Frank, 5 frank-coins in escrow for the dock — release day 15')|Narr?]) :-
+                            [say('Frank, 5 frank-coins in escrow for the dock — release day 30')|Narr?]) :-
     ground(ReqId?) |
     charlie_p12_wait_escrow_deposited(In?, Out, Narr).
 charlie_p12_wait_trade_eve2(T, [_|In], Out?, Narr?) :-
     otherwise | charlie_p12_wait_trade_eve2(T?, In?, Out, Narr).
 charlie_p12_wait_trade_eve2(_, [], [], []).
 
-%% Act 5: Escrow deposited, wait for expiry (dock done)
+%% Act 5: Escrow deposited.  Charlie advances his own date to the release date:
+%% the escrow reads his date and releases on it — no wall clock, and the dock was
+%% built, so he never cancels.
 procedure charlie_p12_wait_escrow_deposited(Stream(UserNotify)?, Stream(UserCmd), Stream(NarrativeItem)).
-charlie_p12_wait_escrow_deposited([escrow_deposited(frank, _, _)|In], Out?,
-                                  [act('Escrow deposited: 5 frank-coins for Frank, release day 15')|Narr?]) :-
+charlie_p12_wait_escrow_deposited([escrow_deposited(frank, T, _)|In], [advance_date(T?)|Out?],
+                                  [act('Escrow deposited: 5 frank-coins for Frank, release day 30')|Narr?]) :-
     charlie_p12_wait_escrow_expired(In?, Out, Narr).
 charlie_p12_wait_escrow_deposited([_|In], Out?, Narr?) :-
     otherwise | charlie_p12_wait_escrow_deposited(In?, Out, Narr).

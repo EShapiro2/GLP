@@ -2,7 +2,7 @@
 %%
 %% Derived from: bonds/boot.glp fplay4b clause
 %% Bonds: Time-dependent redemption (2 agents)
-%% Each isolate computes its own T = now() + 500.
+%% T = 30 is the maturity of the dated bonds, the same in both isolates.
 
 
 procedure boot.
@@ -10,12 +10,11 @@ boot :-
     agent_init_4b(alice, _)@alice,
     agent_init_4b(bob, _)@bob.
 
-%% Time-dependent agent — computes T = now + 500 locally
+%% Time-dependent agent — T = 30, the maturity of the dated bonds
 procedure agent_init_4b(Constant?, Stream(_)?).
 agent_init_4b(Id, NetIn) :-
     ground(Id?) |
-    now(Now),
-    T := Now? + 500,
+    T := 30,
     actor_dispatch_4b(Id?, T?, ch(ActorIn?, ActorOut)),
     tee(ActorOut?, MedIn, DispCmd),
     agent(Id?, AgentIn?, NetIn?,

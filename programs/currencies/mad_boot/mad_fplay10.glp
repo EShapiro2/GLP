@@ -2,7 +2,7 @@
 %%
 %% Derived from: bonds/boot.glp fplay10 clause
 %% Bonds: Escrow — Time Release (2 agents)
-%% Alice computes T = now() + 500 locally. Bob has no time arg.
+%% Alice deposits until date 30 and advances her own date to it. Bob has no date arg.
 
 
 procedure boot.
@@ -14,8 +14,7 @@ boot :-
 procedure alice_init_10(Constant?, Stream(_)?).
 alice_init_10(Id, NetIn) :-
     ground(Id?) |
-    now(Now),
-    T := Now? + 500,
+    T := 30,
     alice_p10(T?, ch(ActorIn?, ActorOut)),
     tee(ActorOut?, MedIn, DispCmd),
     agent(Id?, AgentIn?, NetIn?,

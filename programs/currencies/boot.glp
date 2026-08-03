@@ -441,8 +441,7 @@ fplay4 :-
 
 exported procedure play4b.
 play4b :-
-    now(Now),
-    T := Now? + 500,
+    T := 30,
     play4b_run(T?).
 
 procedure play4b_run(Constant?).
@@ -479,8 +478,7 @@ play4b_run(T) :-
 
 exported procedure fplay4b.
 fplay4b :-
-    now(Now),
-    T := Now? + 500,
+    T := 30,
     fplay4b_run(T?).
 
 procedure fplay4b_run(Constant?).
@@ -768,8 +766,7 @@ fplay9 :-
 
 exported procedure play10.
 play10 :-
-    now(Now),
-    T := Now? + 500,
+    T := 30,
     network2(ch(AliceNetOut?, AliceNetIn),
              ch(BobNetOut?, BobNetIn)),
 
@@ -801,8 +798,7 @@ play10 :-
 
 exported procedure fplay10.
 fplay10 :-
-    now(Now),
-    T := Now? + 500,
+    T := 30,
     network2(ch(AliceNetOut?, AliceNetIn),
              ch(BobNetOut?, BobNetIn)),
 
@@ -837,8 +833,7 @@ fplay10 :-
 
 exported procedure play11.
 play11 :-
-    now(Now),
-    T := Now? + 5000,
+    T := 30,
     network2(ch(AliceNetOut?, AliceNetIn),
              ch(BobNetOut?, BobNetIn)),
 
@@ -870,8 +865,7 @@ play11 :-
 
 exported procedure fplay11.
 fplay11 :-
-    now(Now),
-    T := Now? + 5000,
+    T := 30,
     network2(ch(AliceNetOut?, AliceNetIn),
              ch(BobNetOut?, BobNetIn)),
 
@@ -903,8 +897,7 @@ fplay11 :-
 
 exported procedure fplay12.
 fplay12 :-
-    now(Now),
-    T := Now? + 700,
+    T := 30,
     network6(ch(AliceNetOut?, AliceNetIn),
              ch(BobNetOut?, BobNetIn),
              ch(CharlieNetOut?, CharlieNetIn),

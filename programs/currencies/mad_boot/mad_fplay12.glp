@@ -2,7 +2,7 @@
 %%
 %% Derived from: bonds/boot.glp fplay12 clause
 %% Bonds: Village Market Month (6 agents + narrative)
-%% One isolate per agent. Charlie computes T = now() + 700.
+%% One isolate per agent. Charlie escrows until date 30 and advances his own date to it.
 %% Each agent has its own init procedure to avoid SRSW on Narr.
 
 
@@ -47,12 +47,11 @@ bob_init(Id, NetIn) :-
     tee(MedOut?, ActorIn, DispNotify),
     send_to_user_tagged(Id?, DispCmd?, DispNotify?).
 
-%% Charlie — charlie_p12(T, Ch, Narr), T = now() + 700
+%% Charlie — charlie_p12(T, Ch, Narr), T = 30, the escrow release date
 procedure charlie_init(Constant?, Stream(_)?).
 charlie_init(Id, NetIn) :-
     ground(Id?) |
-    now(Now),
-    T := Now? + 700,
+    T := 30,
     charlie_p12(T?, ch(ActorIn?, ActorOut), Narr),
     send_to_user_narrate(Id?, Narr?),
     tee(ActorOut?, MedIn, DispCmd),
