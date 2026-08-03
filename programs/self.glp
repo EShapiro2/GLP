@@ -114,14 +114,17 @@ procedure is_mutual_ref(_?).
 % "Undefined procedure: _send/3".
 %
 % Every kernel registered by runtime/body_kernels.dart and
-% engine_v2/module_kernels.dart is here, save the four of the Network group.  The
-% signatures are GLP-Spec's appendix-guards.tex body-kernel table, which is the
-% authority.  The four — '_peer_address', '_punch_udp', '_place_declare',
-% '_place_remove' — were registered by 9d5e0dd9 and are still undeclared here,
-% and not by choice: parser.dart:191 admits a clause-less root declaration only
-% for a name in the Dart builtinProcedures set, and the four are not in it, so
-% declaring them here fails the root scope and takes every load in the tree with
-% it.  The four set entries are IGLP's to add and the declarations follow them.
+% engine_v2/module_kernels.dart is here, save the five of the Network group, and
+% they are outside it for two different reasons.  The signatures are GLP-Spec's
+% appendix-guards.tex body-kernel table, which is the authority.  Four —
+% '_peer_address', '_punch_udp', '_place_declare', '_place_remove' — were
+% registered by 9d5e0dd9 and are still undeclared here, and not by choice:
+% parser.dart:191 admits a clause-less root declaration only for a name in the
+% Dart builtinProcedures set, and they are not in it, so declaring them here
+% fails the root scope and takes every load in the tree with it.  The fifth,
+% '_trust_declare', is the row the table is ahead of the code on: nothing
+% registers it, so trust_declare/2 below wraps a kernel that does not yet exist.
+% All five set entries are IGLP's to add and the declarations follow them.
 %
 % '_copy' is registered by body_kernels.dart and is deliberately NOT declared
 % here: its catalogue row was removed and no caller in programs/ names it, so
@@ -571,7 +574,8 @@ procedure authorise_link(_?, _?).
 authorise_link(L, A) :- known(A?) | '_authorise_link'(L?, A?).
 
 % =============================================================================
-% NETWORKING SEAM (peer_address/2, punch_udp/1, place_declare/3, place_remove/1)
+% NETWORKING SEAM (peer_address/2, punch_udp/1, place_declare/3, place_remove/1,
+% trust_declare/2)
 % =============================================================================
 % GLP-Spec's appendix-guards lists all four among the system predicates, on the
 % same grounds as sign/2 and authorise_link/2 above.  The clause bodies are
@@ -584,8 +588,8 @@ authorise_link(L, A) :- known(A?) | '_authorise_link'(L?, A?).
 % written: its system-predicate table then gave a name and a description and
 % carried no signature column, so the arity was the catalogue's and the argument
 % types followed the kernel, as sign/2 and authorise_link/2 do.  The table has
-% carried a signature column since 2026-08-01, so a wrapper added now would take
-% its declaration from that column instead.
+% carried a signature column since 2026-08-01, so trust_declare/2 below takes its
+% declaration from that column instead.
 %
 % 🔴 Two clauses depart from the paper, and only where SRSW forces it.  The paper
 % writes peer_address(P, A) and place_declare(P, R, E) with the output variable a
@@ -596,8 +600,10 @@ authorise_link(L, A) :- known(A?) | '_authorise_link'(L?, A?).
 % IGLP 2026-08-01; the paper is theirs to correct.
 %
 % The four kernels were registered by 9d5e0dd9, though not yet declared in the
-% block above.  The wrappers are GLP-Spec's and the kernels are IGLP's, and
-% neither half waits on the other.
+% block above.  '_trust_declare' was not, so a trust_declare/2 call reaches the
+% runtime and fails there ("no procedure for goal, failed: _trust_declare(...)").
+% That is the intended half-state: the wrappers are GLP-Spec's and the kernels
+% are IGLP's, and neither half waits on the other.
 
 %% peer_address/2 - assign A the address at which the layer observes peer P.
 procedure peer_address(_?, _).
@@ -619,6 +625,16 @@ place_declare(P, R, E?) :- ground(P?), ground(R?) | '_place_declare'(P?, R?, E).
 %% declared.
 procedure place_remove(_?).
 place_remove(P) :- ground(P?) | '_place_remove'(P?).
+
+%% trust_declare/2 - declare Level as the cold-call trust level of proximity
+%% medium Medium.  Medium is ble or lan and Level is open or closed; both media
+%% stand at closed until declared, a later declaration of a medium replaces the
+%% level then standing, and the two are declared independently.  The declaration
+%% is the catalogue's signature column verbatim.
+procedure trust_declare(Constant?, Constant?).
+trust_declare(Medium, Level) :-
+    ground(Medium?), ground(Level?) |
+    '_trust_declare'(Medium?, Level?).
 
 % =============================================================================
 % MULTIWAY MERGE (mwm/2)
