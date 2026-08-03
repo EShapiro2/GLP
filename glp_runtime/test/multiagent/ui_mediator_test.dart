@@ -115,16 +115,14 @@ test :-
       print('Output: $outputLines');
       expect(outputLines, contains('received(bob, hello)'));
     });
-  }, skip: 'Skipped for a different cause than before, measured 2026-08-02 when '
-      'the fixture moved to programs/tests/agent_roundtrip. The 2026-06-22 '
-      'reason — the sources loaded without their own self.glp scope, so the '
-      'goal-check hard-failed on Unresolved type: Response — is fixed: self.glp '
-      'is now loaded first and that error is gone. What remains is that agent/4 '
-      'and inject_msg/5 inspect a bare type parameter and have no instantiation '
-      'here, so they take the per-instantiation route and have nothing to '
-      'certify standalone; the goal then fails with no output. Same cause as the '
-      'two agent_roundtrip entries in NEGATIVE_FILES. It clears when the fixture '
-      'is swept — a concrete element type, or a named parameter list per '
-      'Moded-Types "Declaration parameters" — which is IGLP\'s and is 179 '
-      'declarations.');
+  }, skip: 'Still skipped, and the reason that stood here until 2026-08-03 has '
+      'been ruled out. That reason was that agent/4 and inject_msg/5 inspect a '
+      'bare type parameter with no instantiation here. The fixture was swept on '
+      '2026-08-03 (GLP: per-kind OutputEntry, agent/4 declared at ActorOut and '
+      'NetInStream): play_madglp now loads with ZERO unchecked procedures and '
+      'typed_social_agent.glp type-checks standalone, so it moved out of '
+      'NEGATIVE_FILES. Unskipped and measured anyway: all three still fail, the '
+      'goal failing with no output and no load-time diagnostic at all. So the '
+      'cause is on the co-loaded goal path rather than in the fixture types, and '
+      'it needs its own diagnosis rather than another sweep.');
 }

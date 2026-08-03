@@ -1167,6 +1167,14 @@ POSITIVE_FILES=(
     # multiple occurrences of both halves.
     "$GLP_DIR/programs/tests/srsw/guard_occurrence_ok.glp"
     "$GLP_DIR/programs/tests/srsw/ground_guard_multi_ok.glp"
+
+    # Moved here from NEGATIVE_FILES on 2026-08-03, the day the fixture was
+    # swept. It was rejected standalone because agent/4 and inject_msg/5 were
+    # declared over a bare type parameter nothing instantiated; agent/4 is now
+    # declared at ActorOut and NetInStream, its two streams separated, and the
+    # outputs list carries one constructor per kind, so the file type-checks on
+    # its own. Its sibling channel.glp still awaits the same sweep.
+    "$AGENT_RT/typed_social_agent.glp"
 )
 
 # Build REPL input: load each positive file with :clear between
@@ -1412,13 +1420,14 @@ NEGATIVE_FILES=(
     # parameter, take the per-instantiation route, and loaded standalone with no
     # instantiation have nothing to certify — rejected (sec:abstract-parameters).
     #
-    # The two agent_roundtrip entries are IGLP's since the fixture moved out of
-    # book/ on 2026-08-02; they clear when the fixture is swept (a concrete
-    # element type, or a named parameter list per Moded-Types "Declaration
-    # parameters"), which also unskips ui_mediator_test. The two streams entries
-    # are GLP-ICLP's, expected rejections until they re-declare or prune them.
+    # channel.glp is IGLP's and still awaits the same sweep. Its sibling
+    # typed_social_agent.glp had it on 2026-08-03 — per-kind OutputEntry, agent/4
+    # declared at ActorOut and NetInStream — and now type-checks standalone, so it
+    # moved to POSITIVE_FILES. That sweep did NOT unskip ui_mediator_test, which
+    # this comment used to predict; the skip records what was measured instead.
+    # The two streams entries are GLP-ICLP's, expected rejections until they
+    # re-declare or prune them.
     "$AGENT_RT/channel.glp"
-    "$AGENT_RT/typed_social_agent.glp"
     "$BOOK/streams/producers_consumers/cooperative.glp"
     "$BOOK/streams/producers_consumers/merge_dynamic.glp"
 )

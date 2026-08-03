@@ -28,19 +28,23 @@ Decision ::= yes ; no.
 Response ::= accept(FriendChannel) ; no.
 
 %% Friend-to-friend channel (the opaque value escrowed on accept).
-FriendContent ::= response(Response) ; text(Constant) ; intro(Constant, FriendChannel?).
+FriendContent ::= response(Response) ; text(Constant) ; intro(Constant, FriendChannel).
 FriendMsg     ::= msg(Constant, Constant, FriendContent).
 FriendStream  ::= [] ; [FriendMsg | FriendStream].
 FriendChannel ::= ch(FriendStream, FriendStream?).
 
-%% Escrowed opaque values held in the mediator's pending table. `?` inside the
-%% constructor: the table forwards the writer back to the agent on response.
-PendingValue ::= response(Response?) ; channel(FriendChannel?) ; error.
+%% Escrowed opaque values held in the mediator's pending table.  ONLY the
+%% response arm forwards a writer, so only it is `?`-typed; a channel is passed
+%% as a value, like canonical social/graph, whose PendingValue is
+%% `response(Response?) ; channel(IntroChannel) ; error`.  Until 2026-08-03 all
+%% three channel positions here carried a `?` they had no use for.
+PendingValue ::= response(Response?) ; channel(FriendChannel) ; error.
 
 %% agent -> mediator  (carried on the agent's person output stream).
-%% befriend/befriend_intro forward the response writer / channel: `?`-typed.
+%% befriend forwards the response WRITER, so its Response slot is `?`-typed;
+%% befriend_intro carries a channel as a value and its slot is plain.
 AgentContent ::= befriend(Constant, Response?)
-               ; befriend_intro(Constant, Constant, FriendChannel?)
+               ; befriend_intro(Constant, Constant, FriendChannel)
                ; connected(Constant)
                ; rejected
                ; rejected(Constant)
@@ -72,3 +76,27 @@ UserMsg  ::= msg(Constant, Constant, UserContent).    %% mediator -> agent
 %% ever type-checked (known-issues Issue 20).
 ActorIn  ::= [] ; [AgentMsg|ActorIn].    %% the actor reads
 ActorOut ::= [] ; [UserMsg|ActorOut].    %% the actor writes
+
+%% The agent's network side.  OUT carries only the two-argument cold call, the
+%% shape send_to_net/1 transports; IN carries that plus every friend message,
+%% because accepting a friend merges that friend's stream into it (agent/4's
+%% accept_intro and handle_response clauses).  Same split as canonical
+%% social/graph/self.glp, which these are named after.
+NetOutMsg    ::= msg(Constant, NetColdCall).
+NetOutStream ::= [] ; [NetOutMsg|NetOutStream].
+NetInMsg     ::= msg(Constant, NetColdCall)
+               ; msg(Constant, Constant, FriendContent).
+NetInStream  ::= [] ; [NetInMsg|NetInStream].
+
+%% One constructor per output kind, each typed at exactly what it carries.
+%% Replaces output(Constant, OutputStream?), whose element type had to be the
+%% union of the person, network and friend messages because one list carries one
+%% type --- so every consumer got the union and none could be given the arm it
+%% actually handles.  Canonical social/graph retired that shape for the same
+%% reason (its self.glp: "broke duality"); this directory was the last holdout,
+%% and it is why agent/4 could not be declared concretely and so was checked by
+%% nothing (known-issues Issue 20).
+OutputEntry ::= user_output(ActorIn?)
+              ; net_output(NetOutStream?)
+              ; friend_output(Constant, FriendStream?).
+OutputsList ::= [] ; [OutputEntry|OutputsList].

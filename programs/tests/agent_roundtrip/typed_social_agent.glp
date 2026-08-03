@@ -14,30 +14,17 @@
 %%   Stream ::= [] ; [_|Stream].
 %%   Channel ::= ch(Stream, Stream?).
 
-%% Shared protocol types (Response, Decision, PendingValue, UserContent,
-%% AgentContent, NetColdCall, Friend* and FriendChannel) live in this
-%% directory's self.glp and are imported as ancestor type scope. Only the
-%% agent-internal Output* union is defined here.
-
-%% Output content (union of AgentContent and FriendContent). befriend forwards
-%% the response writer, so its Response slot is `?`-typed (manual §15B), matching
-%% AgentContent in self.glp.
-OutputContent ::= befriend(Constant, Response?)
-                ; befriend_intro(Constant, Constant, FriendChannel?)
-                ; connected(Constant)
-                ; rejected
-                ; rejected(Constant)
-                ; received(Constant, Constant)
-                ; response(Response)
-                ; text(Constant)
-                ; intro(Constant, FriendChannel).
-OutputMsg     ::= msg(Constant, Constant, OutputContent)
-                ; msg(Constant, NetColdCall).
-OutputStream  ::= [] ; [OutputMsg | OutputStream].
-
-%% Output list
-OutputEntry ::= output(Constant, OutputStream?).
-OutputsList ::= [] ; [OutputEntry|OutputsList].
+%% Every type this file uses lives in this directory's self.glp and reaches it
+%% as ancestor type scope: the protocol types (Response, Decision, PendingValue,
+%% UserContent, AgentContent, NetColdCall, Friend* and FriendChannel), the
+%% actor's ActorIn and ActorOut, the network's NetIn*/NetOut*, and OutputEntry
+%% with its three per-kind constructors. This file defines no type of its own.
+%%
+%% Until 2026-08-03 it defined an OutputContent/OutputMsg/OutputStream union and
+%% output(Constant, OutputStream?) --- one entry type for person, network and
+%% friend alike --- which is the shape canonical social/graph had already retired
+%% for breaking duality, and which forced agent/4's two stream arguments to be
+%% one parametric type. See self.glp.
 
 %% =============================================================================
 %% CHANNEL OPERATIONS (Defined Guards)
@@ -58,21 +45,46 @@ merge([], Ys, Ys?).
 merge(Xs, [], Xs?).
 
 %% =============================================================================
-%% LOOKUP_SEND
+%% OUTPUT ROUTING — one router per output kind
 %% =============================================================================
+%%
+%% These replace lookup_send/4 and lookup_send_step/4, which took a Constant key
+%% and so could only be declared over the union of every output message.  Each
+%% router destructures its own OutputEntry constructor, so each is declared at
+%% exactly the message type that constructor carries and is checked there.
+%%
+%% Bodies follow canonical social/graph/routing/output.glp, which root
+%% programs/self.glp exposes.  They are LOCAL rather than that exposure because
+%% the per-module check (step 2 of static linking, each module against its
+%% ancestor scope) does not see a module exposed from another tree: calling them
+%% bare from here fails with "Undefined procedure: send_user/3" even though the
+%% linked program has them.  Reported separately; nothing here depends on it.
 
-procedure lookup_send(Constant?, OutputMsg?, OutputsList?, OutputsList).
-lookup_send(Key, Msg, Outs, Outs1?) :-
-    ground(Key?) |
-    lookup_send_step(Key?, Msg?, Outs?, Outs1).
-
-procedure lookup_send_step(Constant?, OutputMsg?, OutputsList?, OutputsList).
-lookup_send_step(Key, Msg, [output(K, [Msg?|Out1?])|Rest], [output(K?, Out1)|Rest?]) :-
-    Key? =?= K? | true.
-lookup_send_step(Key, Msg, [output(K, Out?)|Rest], [output(K?, Out)|Rest1?]) :-
+procedure send_user(AgentMsg?, OutputsList?, OutputsList).
+send_user(Msg, [user_output([Msg?|Out1?])|Rest], [user_output(Out1)|Rest?]).
+send_user(Msg, [E|Rest], [E?|Rest1?]) :-
     otherwise |
-    lookup_send_step(Key?, Msg?, Rest?, Rest1).
-lookup_send_step(_, _, [], []).
+    send_user(Msg?, Rest?, Rest1).
+send_user(_, [], []).
+
+procedure send_net(NetOutMsg?, OutputsList?, OutputsList).
+send_net(Msg, [net_output([Msg?|Out1?])|Rest], [net_output(Out1)|Rest?]).
+send_net(Msg, [E|Rest], [E?|Rest1?]) :-
+    otherwise |
+    send_net(Msg?, Rest?, Rest1).
+send_net(_, [], []).
+
+procedure send_friend(Constant?, FriendMsg?, OutputsList?, OutputsList).
+send_friend(Name, Msg, [friend_output(K, [Msg?|Out1?])|Rest],
+            [friend_output(K?, Out1)|Rest?]) :-
+    Name? =?= K? | true.
+send_friend(Name, Msg, [E|Rest], [E?|Rest1?]) :-
+    otherwise |
+    send_friend(Name?, Msg?, Rest?, Rest1).
+send_friend(_, _, [], []).
+
+procedure add_friend_output(Constant?, FriendStream, OutputsList?, OutputsList).
+add_friend_output(Name, Out?, Outs, [friend_output(Name?, Out)|Outs?]).
 
 %% =============================================================================
 %% INJECT_MSG
@@ -85,18 +97,14 @@ inject_msg(Resp, Target, Id, [Y|Ys], [Y?|Ys1?]) :-
     inject_msg(Resp?, Target?, Id?, Ys?, Ys1).
 
 %% =============================================================================
-%% ADD_OUTPUT
-%% =============================================================================
-
-procedure add_output(Constant?, OutputStream, OutputsList?, OutputsList).
-add_output(Name, Out?, Outs, [output(Name?, Out)|Outs?]).
-
-%% =============================================================================
 %% CLOSE_OUTPUTS
 %% =============================================================================
 
+%% One clause per output kind, because each closes a stream of its own type.
 procedure close_outputs(OutputsList?).
-close_outputs([output(_, [])|Outs]) :- close_outputs(Outs?).
+close_outputs([user_output([])|Outs]) :- close_outputs(Outs?).
+close_outputs([net_output([])|Outs]) :- close_outputs(Outs?).
+close_outputs([friend_output(_, [])|Outs]) :- close_outputs(Outs?).
 close_outputs([]).
 
 %% =============================================================================
@@ -108,30 +116,33 @@ bind_response(yes, From, accept(RetCh?), Outs, Outs1?, In, In1?) :-
     new_channel(RetCh, LocalCh) |
     handle_response(accept(LocalCh?), From?, Outs?, Outs1, In?, In1).
 bind_response(no, _, no, Outs, Outs1?, In, In?) :-
-    lookup_send(person, msg(agent, person, rejected), Outs?, Outs1).
+    send_user(msg(agent, person, rejected), Outs?, Outs1).
 
 procedure handle_response(Response?, Constant?, OutputsList?, OutputsList, Stream(X)?, Stream(X)).
 handle_response(accept(ch(FIn, FOut?)), From, Outs, Outs2?, In, In1?) :-
     ground(From?) |
-    add_output(From?, FOut, Outs?, Outs1),
-    lookup_send(person, msg(agent, person, connected(From?)), Outs1?, Outs2),
+    add_friend_output(From?, FOut, Outs?, Outs1),
+    send_user(msg(agent, person, connected(From?)), Outs1?, Outs2),
     merge(In?, FIn?, In1).
 handle_response(no, From, Outs, Outs1?, In, In?) :-
     ground(From?) |
-    lookup_send(person, msg(agent, person, rejected(From?)), Outs?, Outs1).
+    send_user(msg(agent, person, rejected(From?)), Outs?, Outs1).
 
 %% =============================================================================
 %% AGENT/4
 %% =============================================================================
 
-exported procedure agent(Constant?, Stream(X)?, Stream(X)?, OutputsList?).
+%% The two streams are separate types and always were two things: the person
+%% stream carries what the actor or mediator writes, the network stream carries
+%% cold calls plus every friend's messages, merged in on accept.
+exported procedure agent(Constant?, ActorOut?, NetInStream?, OutputsList?).
 
 %% --- User messages ---
 
 %% User initiates cold call
 agent(Id, [msg(person, Id1, connect(Target))|UserIn], NetIn, Outs) :-
     Id? =?= Id1?, ground(Target?) |
-    lookup_send('_net', msg(Target?, intro(Id?, Resp)), Outs?, Outs1),
+    send_net(msg(Target?, intro(Id?, Resp)), Outs?, Outs1),
     inject_msg(Resp?, Target?, Id?, UserIn?, UserIn1),
     agent(Id?, UserIn1?, NetIn?, Outs1?).
 
@@ -144,21 +155,21 @@ agent(Id, [msg(person, Id1, decision(Dec, From, response(Resp?)))|UserIn], NetIn
 %% User sends text message
 agent(Id, [msg(person, Id1, send(Target, Text))|UserIn], NetIn, Outs) :-
     Id? =?= Id1?, ground(Target?) |
-    lookup_send(Target?, msg(Id?, Target?, text(Text?)), Outs?, Outs1),
+    send_friend(Target?, msg(Id?, Target?, text(Text?)), Outs?, Outs1),
     agent(Id?, UserIn?, NetIn?, Outs1?).
 
 %% User introduces P to Q
 agent(Id, [msg(person, Id1, introduce(P, Q))|UserIn], NetIn, Outs) :-
     Id? =?= Id1?, ground(P?), ground(Q?), new_channel(PQCh, QPCh) |
-    lookup_send(P?, msg(Id?, P?, intro(Q?, QPCh?)), Outs?, Outs1),
-    lookup_send(Q?, msg(Id?, Q?, intro(P?, PQCh?)), Outs1?, Outs2),
+    send_friend(P?, msg(Id?, P?, intro(Q?, QPCh?)), Outs?, Outs1),
+    send_friend(Q?, msg(Id?, Q?, intro(P?, PQCh?)), Outs1?, Outs2),
     agent(Id?, UserIn?, NetIn?, Outs2?).
 
 %% User accepts friend introduction
 agent(Id, [msg(person, Id1, accept_intro(Other, channel(ch(FIn, FOut?))))|UserIn], NetIn, Outs) :-
     Id? =?= Id1?, ground(Other?) |
-    add_output(Other?, FOut, Outs?, Outs1),
-    lookup_send(person, msg(agent, person, connected(Other?)), Outs1?, Outs2),
+    add_friend_output(Other?, FOut, Outs?, Outs1),
+    send_user(msg(agent, person, connected(Other?)), Outs1?, Outs2),
     merge(NetIn?, FIn?, NetIn1),
     agent(Id?, UserIn?, NetIn1?, Outs2?).
 
@@ -183,7 +194,7 @@ agent(Id, [_|UserIn], NetIn, Outs) :-
 %% Cold-call from network
 agent(Id, UserIn, [msg(Id1, intro(From, Resp?))|NetIn], Outs) :-
     Id? =?= Id1? |
-    lookup_send(person, msg(agent, person, befriend(From?, Resp)), Outs?, Outs1),
+    send_user(msg(agent, person, befriend(From?, Resp)), Outs?, Outs1),
     agent(Id?, UserIn?, NetIn?, Outs1?).
 
 %% Response to cold-call from network
@@ -195,13 +206,13 @@ agent(Id, UserIn, [msg(From, Id1, response(Resp))|NetIn], Outs) :-
 %% Text from friend
 agent(Id, UserIn, [msg(From, Id1, text(Text))|NetIn], Outs) :-
     Id? =?= Id1? |
-    lookup_send(person, msg(agent, person, received(From?, Text?)), Outs?, Outs1),
+    send_user(msg(agent, person, received(From?, Text?)), Outs?, Outs1),
     agent(Id?, UserIn?, NetIn?, Outs1?).
 
 %% Introduction from friend
-agent(Id, UserIn, [msg(From, Id1, intro(Other, Ch?))|NetIn], Outs) :-
+agent(Id, UserIn, [msg(From, Id1, intro(Other, Ch))|NetIn], Outs) :-
     Id? =?= Id1?, ground(Other?) |
-    lookup_send(person, msg(agent, person, befriend_intro(From?, Other?, Ch)), Outs?, Outs1),
+    send_user(msg(agent, person, befriend_intro(From?, Other?, Ch?)), Outs?, Outs1),
     agent(Id?, UserIn?, NetIn?, Outs1?).
 
 %% Network catch-all

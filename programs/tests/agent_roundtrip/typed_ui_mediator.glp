@@ -75,14 +75,14 @@ ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
 %% Ch is a Channel (already known, created by introducer).
 ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
     receive(msg(agent, person,
-                befriend_intro(From, Other, Ch?)),
+                befriend_intro(From, Other, Ch)),
             AgentCh?, AgentCh1),
     ground(From?), ground(Other?) |
     send(befriend_intro(From?, Other?, req(N?)),
          UserCh?, UserCh1),
     N1 := N? + 1,
     ui_mediator(Id?, AgentCh1?, UserCh1?,
-        [pending(req(N?), channel(Ch)) | Ps?], N1?).
+        [pending(req(N?), channel(Ch?)) | Ps?], N1?).
 
 %% --- Agent-to-user: ground (pass through) ---
 

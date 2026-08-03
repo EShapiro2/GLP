@@ -51,13 +51,13 @@ procedure go.
 go :-
     %% Alice node: real agent + real mediator.
     agent(alice, AAgentIn?, ANetIn?,
-          [output(person, AA2U) | [output('_net', ANetOut)]]),
+          [user_output(AA2U) | [net_output(ANetOut)]]),
     ui_mediator(alice, ch(AA2U?, AAgentIn), ch(ACmds?, AUserOut), [], 1),
     alice_cmds(ACmds),
     alice_user(AUserOut?),
     %% Bob node: real agent + real mediator.
     agent(bob, BAgentIn?, BNetIn?,
-          [output(person, BA2U) | [output('_net', BNetOut)]]),
+          [user_output(BA2U) | [net_output(BNetOut)]]),
     ui_mediator(bob, ch(BA2U?, BAgentIn), ch(BCmds?, BUserOut), [], 1),
     bob_user(BUserOut?, BCmds),
     %% In-heap network crossbar (replaces send_to_net/MAD).

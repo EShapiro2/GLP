@@ -7,7 +7,7 @@ agent_init(Id, NetIn) :-
     ground(Id?) |
     send_to_net(NetOut?),
     agent(Id?, AgentIn?, NetIn?,
-          [output(person, AgentToUser), output('_net', NetOut)]),
+          [user_output(AgentToUser), net_output(NetOut)]),
     ui_mediator(Id?, ch(AgentToUser?, AgentIn),
                 ch(UserOut?, UserIn), [], 1),
     ui_actor(Id?, ch(UserIn?, UserOut)).

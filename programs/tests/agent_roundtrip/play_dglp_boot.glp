@@ -92,9 +92,9 @@ play :-
              ch(BobNetOut?, BobNetIn),
              ch(CharlieNetOut?, CharlieNetIn)),
 
-    agent(alice, AliceUserOut?, AliceNetIn?, [output(person, AliceUserIn), output('_net', AliceNetOut)]),
-    agent(bob, BobUserOut?, BobNetIn?, [output(person, BobUserIn), output('_net', BobNetOut)]),
-    agent(charlie, CharlieUserOut?, CharlieNetIn?, [output(person, CharlieUserIn), output('_net', CharlieNetOut)]),
+    agent(alice, AliceUserOut?, AliceNetIn?, [user_output(AliceUserIn), net_output(AliceNetOut)]),
+    agent(bob, BobUserOut?, BobNetIn?, [user_output(BobUserIn), net_output(BobNetOut)]),
+    agent(charlie, CharlieUserOut?, CharlieNetIn?, [user_output(CharlieUserIn), net_output(CharlieNetOut)]),
 
     alice_actor(ch(AliceUserIn?, AliceUserOut)),
     bob_actor(ch(BobUserIn?, BobUserOut)),

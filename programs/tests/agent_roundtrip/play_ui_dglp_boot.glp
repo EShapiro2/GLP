@@ -97,21 +97,21 @@ play :-
 
     %% Alice: agent ↔ mediator ↔ ui_actor
     agent(alice, AliceAgentIn?, AliceNetIn?,
-          [output(person, AliceAgentToUser), output('_net', AliceNetOut)]),
+          [user_output(AliceAgentToUser), net_output(AliceNetOut)]),
     ui_mediator(alice, ch(AliceAgentToUser?, AliceAgentIn),
                 ch(AliceUserOut?, AliceUserIn), [], 1),
     alice_ui_actor(ch(AliceUserIn?, AliceUserOut)),
 
     %% Bob: agent ↔ mediator ↔ ui_actor
     agent(bob, BobAgentIn?, BobNetIn?,
-          [output(person, BobAgentToUser), output('_net', BobNetOut)]),
+          [user_output(BobAgentToUser), net_output(BobNetOut)]),
     ui_mediator(bob, ch(BobAgentToUser?, BobAgentIn),
                 ch(BobUserOut?, BobUserIn), [], 1),
     bob_ui_actor(ch(BobUserIn?, BobUserOut)),
 
     %% Charlie: agent ↔ mediator ↔ ui_actor
     agent(charlie, CharlieAgentIn?, CharlieNetIn?,
-          [output(person, CharlieAgentToUser), output('_net', CharlieNetOut)]),
+          [user_output(CharlieAgentToUser), net_output(CharlieNetOut)]),
     ui_mediator(charlie, ch(CharlieAgentToUser?, CharlieAgentIn),
                 ch(CharlieUserOut?, CharlieUserIn), [], 1),
     charlie_ui_actor(ch(CharlieUserIn?, CharlieUserOut)).

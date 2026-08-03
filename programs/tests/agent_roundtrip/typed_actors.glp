@@ -37,8 +37,8 @@ alice_wait_bob_connected([_|In], Out?) :-
 alice_wait_bob_connected([], []).
 
 procedure alice_wait_intro(ActorIn?, ActorOut).
-alice_wait_intro([msg(agent, person, befriend_intro(_, Other, Ch?))|In],
-                 [msg(person, alice, accept_intro(Other?, channel(Ch)))|Out?]) :-
+alice_wait_intro([msg(agent, person, befriend_intro(_, Other, Ch))|In],
+                 [msg(person, alice, accept_intro(Other?, channel(Ch?)))|Out?]) :-
     ground(Other?) |
     alice_send_to_charlie(In?, Out).
 alice_wait_intro([_|In], Out?) :-
@@ -107,8 +107,8 @@ charlie_actor(ch([_|In], Out?)) :-
 charlie_actor(ch([], [])).
 
 procedure charlie_wait_intro(ActorIn?, ActorOut).
-charlie_wait_intro([msg(agent, person, befriend_intro(_, Other, Ch?))|In],
-                   [msg(person, charlie, accept_intro(Other?, channel(Ch)))|Out?]) :-
+charlie_wait_intro([msg(agent, person, befriend_intro(_, Other, Ch))|In],
+                   [msg(person, charlie, accept_intro(Other?, channel(Ch?)))|Out?]) :-
     ground(Other?) |
     charlie_wait_alice_msg(In?, Out).
 charlie_wait_intro([_|In], Out?) :-

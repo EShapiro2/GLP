@@ -6,7 +6,7 @@ exported procedure agent_init(_?, _?).
 agent_init(Id, NetIn) :-
     ground(Id?) |
     send_to_net(NetOut?),
-    agent(Id?, UserOut?, NetIn?, [output(person, UserIn), output('_net', NetOut)]),
+    agent(Id?, UserOut?, NetIn?, [user_output(UserIn), net_output(NetOut)]),
     actor(Id?, ch(UserIn?, UserOut)).
 
 %% Actor dispatch — routes to the scripts in ../typed_actors.glp.
