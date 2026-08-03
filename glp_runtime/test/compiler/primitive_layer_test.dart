@@ -68,7 +68,7 @@ void main() {
     });
 
     test('rejects a kernel call in guard position', () {
-      final f = fixture('g.glp', "p(X) :- '_copy'(X?, Y) | q(Y?).\n");
+      final f = fixture('g.glp', "p(X) :- '_list_to_tuple'(X?, Y) | q(Y?).\n");
       expect(() => engine.loadFile(f.path),
           throwsContaining('is a primitive-layer procedure name'));
     });

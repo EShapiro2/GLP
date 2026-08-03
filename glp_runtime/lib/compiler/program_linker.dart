@@ -574,6 +574,12 @@ LinkResult checkedLinkedProgram(List<DiscoveredModule> modules,
   // months. One line, naming them, so the gap is visible at the point the
   // program is pronounced well-typed rather than only to whoever reads the
   // checker.
+  //
+  // 🔴 A line printed, not a load refused, and that is INTERIM — see the
+  // downgrade note at the check itself in analysis/type_checker/type_checker.dart.
+  // It becomes a refusal when social/graph/routing carries concrete types.
+  // Runtime-posted goals stay unchecked either way until run(Goal, Type, Module)
+  // is implemented.
   final unchecked = [
     for (final w in result.warnings)
       if (w.procedure != null) w.procedure!

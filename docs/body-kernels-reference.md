@@ -65,7 +65,6 @@ Body kernels are the mechanism by which GLP system-mode code (in `programs/self.
 |--------|-------|-------------|
 | `_list_to_tuple` | 2 | Convert GLP list to tuple term |
 | `_tuple_to_list` | 2 | Convert tuple term to GLP list |
-| `_copy` | 2 | Deep-copy a ground term |
 
 ### Time
 

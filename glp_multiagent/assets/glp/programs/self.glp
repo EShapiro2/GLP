@@ -148,9 +148,6 @@ procedure '_ceil'(Number?, Integer).
 procedure '_list_to_tuple'(Stream(_)?, _).
 procedure '_tuple_to_list'(_?, Stream(_)).
 
-% Copy
-procedure '_copy'(_?, _).
-
 % Time and random
 procedure '_now'(Integer).
 procedure '_random'(Integer?, Integer?, Integer, Integer).

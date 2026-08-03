@@ -910,13 +910,33 @@ TypeCheckResult _checkModuleImpl(ast.Module module, {List<ast.Procedure>? transf
   // an untagged value at a tagged-union position, which the checker rejects at
   // once when the same clauses are declared concretely.
   //
-  // It is a warning and not an error because the paper licenses the state:
-  // "a procedure with no caller in its program goes unchecked"
-  // (parameterized-types.tex sec:abstract-parameters), and a concrete initial
-  // goal (def:program) may still instantiate it, which is why rejecting at load
-  // would refuse every program whose routers only its goals instantiate. What
-  // was wrong was never the verdict, it was the silence: "well-typed" must not
-  // cover, without a word, code that nothing has checked.
+  // 🔴 THIS IS AN ERROR DOWNGRADED TO A WARNING, AND THE DOWNGRADE IS INTERIM.
+  // Do not read it as the intended design. Measured 2026-08-03: as an error it
+  // refuses ALL 54 program directories under programs/, because root
+  // programs/self.glp exposes the four social/graph/routing modules into every
+  // program and their procedures are parameter-inspecting — so the check would
+  // have nowhere to stand. It goes to error when the concrete-type work in
+  // social/graph/routing is done (SGSG's; known-issues Issue 20 holds the
+  // measurement and the per-owner split). Restoring it is one edit here:
+  // errors.add(TypeError(...)) in place of warnings.add.
+  //
+  // The reason to record this rather than leave it: TGLP's request of
+  // 2026-08-01 20:45 — still open as Task A step 5 — is precisely that a type
+  // error must FAIL the load rather than print a warning and proceed, since a
+  // program that runs unchecked has none of the guarantee the type system
+  // offers. This warning is a second instance of exactly that, and an
+  // unremarkable warning becomes permanent by being unremarkable.
+  //
+  // A second hole stays open behind it and no warning covers it: a goal posted
+  // at RUNTIME is not checked at all. It closes when run(Goal, Type, Module) is
+  // implemented — GLP-Spec specifies it, IGLP implements it, it is not built.
+  //
+  // The paper does license the unchecked STATE — "a procedure with no caller in
+  // its program goes unchecked" (parameterized-types.tex
+  // sec:abstract-parameters), and a concrete initial goal (def:program) may
+  // still instantiate one. What it does not license is the silence: until
+  // 2026-08-03 "well-typed" covered, without a word, code that nothing had
+  // checked.
   if (!rejectUninstantiatedInspecting) {
     for (final entry in typeEnv.paramProcDecls.entries) {
       final key = entry.key;

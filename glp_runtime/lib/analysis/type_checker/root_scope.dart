@@ -136,10 +136,14 @@ const Set<String> builtinProcedures = {
   // that names a kernel fails to load with `Undefined procedure`.
   //
   // The signatures are GLP-Spec's `appendix-guards.tex` body-kernel table, which
-  // is the authority. Its Network group also lists `'_peer_address'`,
-  // `'_punch_udp'`, `'_place_declare'` and `'_place_remove'`; the table is ahead
-  // of the code there and none of the four is registered, so none is listed —
-  // this set is enumerated from the registry.
+  // is the authority. Its Network group's four — `'_peer_address'`,
+  // `'_punch_udp'`, `'_place_declare'` and `'_place_remove'` — were registered
+  // by `9d5e0dd9` and are listed here as of 2026-08-03; the comment that said
+  // the table was ahead of the code was true when written and stale by the time
+  // it was read. Until they were listed, root `programs/self.glp` could not
+  // declare them at all: parser.dart admits a clause-less root declaration only
+  // for a name in this set, so declaring them there took every load in the tree
+  // with it. The declarations are GLP-Spec's and follow these entries.
   //
   // Arithmetic
   '_add/3',
@@ -171,8 +175,6 @@ const Set<String> builtinProcedures = {
   // Structure
   '_list_to_tuple/2',
   '_tuple_to_list/2',
-  // Copy
-  '_copy/2',
   // Time and random
   '_now/1',
   '_random/4',
@@ -183,6 +185,11 @@ const Set<String> builtinProcedures = {
   // madGLP network
   '_send/3',
   '_authorise_link/2',
+  // Networking seam (Definition Seam Predicates)
+  '_peer_address/2',
+  '_punch_udp/1',
+  '_place_declare/3',
+  '_place_remove/1',
   // Signature
   '_sign/2',
   // Modules as values

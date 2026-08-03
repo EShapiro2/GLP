@@ -86,9 +86,6 @@ void registerStandardBodyKernels(BodyKernelRegistry registry) {
   registry.register('_list_to_tuple', 2, listToTupleKernel);
   registry.register('_tuple_to_list', 2, tupleToListKernel);
 
-  // Identity/copy
-  registry.register('_copy', 2, copyKernel);
-
   // Time operations
   registry.register('_now', 1, nowKernel);
   registry.register('_random', 4, randomKernel);
@@ -535,16 +532,6 @@ BodyKernelResult tupleToListKernel(GlpRuntime rt, List<Object?> args) {
 
   final list = _dartListToGlpList(items);
   return _bindResult(rt, args[1], list);
-}
-
-BodyKernelResult copyKernel(GlpRuntime rt, List<Object?> args) {
-  if (args.length != 2) {
-    print('[ABORT] copy/2: expected 2 arguments, got ${args.length}');
-    return BodyKernelResult.abort;
-  }
-
-  final source = _deref(rt, args[0]);
-  return _bindResult(rt, args[1], source!);
 }
 
 // ============================================================================

@@ -203,7 +203,6 @@ redeem(T, Result?) :- wait_until(T?) | Result = done.
 *Structure:*
 - `'_list_to_tuple'(List?, Tuple)` - Convert list to structure: `[foo, a, b]` → `foo(a, b)`
 - `'_tuple_to_list'(Tuple?, List)` - Convert structure to list: `foo(a, b)` → `[foo, a, b]`
-- `'_copy'(Source?, Target)` - Copy term
 
 *Time:*
 - `'_now'(T)` - Bind T to current Unix milliseconds since epoch
