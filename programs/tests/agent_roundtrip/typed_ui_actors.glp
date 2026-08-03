@@ -19,7 +19,7 @@
 %% UI ACTOR DISPATCH
 %% =============================================================================
 
-exported procedure ui_actor(_?, Channel(X, Y)?).
+exported procedure ui_actor(_?, Channel(Stream(UserNotify), Stream(UserCmd))?).
 ui_actor(alice, Ch) :- alice_ui_actor(Ch?).
 ui_actor(bob, Ch) :- bob_ui_actor(Ch?).
 ui_actor(charlie, Ch) :- charlie_ui_actor(Ch?).
@@ -34,11 +34,11 @@ ui_actor(charlie, Ch) :- charlie_ui_actor(Ch?).
 %% 5. Wait received(charlie, _) → done
 %% =============================================================================
 
-procedure alice_ui_actor(Channel(X, Y)?).
+procedure alice_ui_actor(Channel(Stream(UserNotify), Stream(UserCmd))?).
 alice_ui_actor(ch(In, [connect(bob)|Out?])) :-
     alice_ui_wait_bob_connected(In?, Out).
 
-procedure alice_ui_wait_bob_connected(Stream(X)?, Stream(X)).
+procedure alice_ui_wait_bob_connected(Stream(UserNotify)?, Stream(UserCmd)).
 alice_ui_wait_bob_connected([connected(bob)|In],
                             [send(bob, 'Hi Bob, this is Alice')|Out?]) :-
     alice_ui_wait_intro(In?, Out).
@@ -46,7 +46,7 @@ alice_ui_wait_bob_connected([_|In], Out?) :-
     otherwise | alice_ui_wait_bob_connected(In?, Out).
 alice_ui_wait_bob_connected([], []).
 
-procedure alice_ui_wait_intro(Stream(X)?, Stream(X)).
+procedure alice_ui_wait_intro(Stream(UserNotify)?, Stream(UserCmd)).
 alice_ui_wait_intro([befriend_intro(bob, charlie, ReqId)|In],
                     [accept_intro(charlie, ReqId?)|Out?]) :-
     ground(ReqId?) |
@@ -55,7 +55,7 @@ alice_ui_wait_intro([_|In], Out?) :-
     otherwise | alice_ui_wait_intro(In?, Out).
 alice_ui_wait_intro([], []).
 
-procedure alice_ui_wait_charlie_connected(Stream(X)?, Stream(X)).
+procedure alice_ui_wait_charlie_connected(Stream(UserNotify)?, Stream(UserCmd)).
 alice_ui_wait_charlie_connected([connected(charlie)|In],
                                 [send(charlie, 'Hi Charlie, this is Alice')|Out?]) :-
     alice_ui_wait_charlie_reply(In?, Out).
@@ -63,7 +63,7 @@ alice_ui_wait_charlie_connected([_|In], Out?) :-
     otherwise | alice_ui_wait_charlie_connected(In?, Out).
 alice_ui_wait_charlie_connected([], []).
 
-procedure alice_ui_wait_charlie_reply(Stream(X)?, Stream(X)).
+procedure alice_ui_wait_charlie_reply(Stream(UserNotify)?, Stream(UserCmd)).
 alice_ui_wait_charlie_reply([received(charlie, _)|_], []).
 alice_ui_wait_charlie_reply([_|In], Out?) :-
     otherwise | alice_ui_wait_charlie_reply(In?, Out).
@@ -78,15 +78,16 @@ alice_ui_wait_charlie_reply([], []).
 %% 4. Done
 %% =============================================================================
 
-procedure bob_ui_actor(Channel(X, Y)?).
+procedure bob_ui_actor(Channel(Stream(UserNotify), Stream(UserCmd))?).
 bob_ui_actor(ch([befriend(alice, ReqId)|In],
                [decision(yes, alice, ReqId?)|Out?])) :-
     ground(ReqId?) |
     bob_ui_wait_alice_msg(In?, Out).
 bob_ui_actor(ch([_|In], Out?)) :-
     otherwise | bob_ui_actor(ch(In?, Out)).
+bob_ui_actor(ch([], [])).
 
-procedure bob_ui_wait_alice_msg(Stream(X)?, Stream(X)).
+procedure bob_ui_wait_alice_msg(Stream(UserNotify)?, Stream(UserCmd)).
 bob_ui_wait_alice_msg([connected(_)|In], Out?) :-
     bob_ui_wait_alice_msg(In?, Out).
 bob_ui_wait_alice_msg([received(alice, _)|In],
@@ -96,14 +97,14 @@ bob_ui_wait_alice_msg([_|In], Out?) :-
     otherwise | bob_ui_wait_alice_msg(In?, Out).
 bob_ui_wait_alice_msg([], []).
 
-procedure bob_ui_wait_charlie_connected(Stream(X)?, Stream(X)).
+procedure bob_ui_wait_charlie_connected(Stream(UserNotify)?, Stream(UserCmd)).
 bob_ui_wait_charlie_connected([connected(charlie)|In], Out?) :-
     bob_ui_wait_charlie_msg(In?, Out).
 bob_ui_wait_charlie_connected([_|In], Out?) :-
     otherwise | bob_ui_wait_charlie_connected(In?, Out).
 bob_ui_wait_charlie_connected([], []).
 
-procedure bob_ui_wait_charlie_msg(Stream(X)?, Stream(X)).
+procedure bob_ui_wait_charlie_msg(Stream(UserNotify)?, Stream(UserCmd)).
 bob_ui_wait_charlie_msg([received(charlie, _)|_],
                         [introduce(alice, charlie)]).
 bob_ui_wait_charlie_msg([_|In], Out?) :-
@@ -119,7 +120,7 @@ bob_ui_wait_charlie_msg([], []).
 %% 4. Done
 %% =============================================================================
 
-procedure charlie_ui_actor(Channel(X, Y)?).
+procedure charlie_ui_actor(Channel(Stream(UserNotify), Stream(UserCmd))?).
 charlie_ui_actor(ch([befriend(bob, ReqId)|In],
                     [decision(yes, bob, ReqId?),
                      send(bob, 'Hi Bob, this is Charlie')|Out?])) :-
@@ -127,8 +128,9 @@ charlie_ui_actor(ch([befriend(bob, ReqId)|In],
     charlie_ui_wait_intro(In?, Out).
 charlie_ui_actor(ch([_|In], Out?)) :-
     otherwise | charlie_ui_actor(ch(In?, Out)).
+charlie_ui_actor(ch([], [])).
 
-procedure charlie_ui_wait_intro(Stream(X)?, Stream(X)).
+procedure charlie_ui_wait_intro(Stream(UserNotify)?, Stream(UserCmd)).
 charlie_ui_wait_intro([befriend_intro(bob, alice, ReqId)|In],
                       [accept_intro(alice, ReqId?)|Out?]) :-
     ground(ReqId?) |
@@ -137,7 +139,7 @@ charlie_ui_wait_intro([_|In], Out?) :-
     otherwise | charlie_ui_wait_intro(In?, Out).
 charlie_ui_wait_intro([], []).
 
-procedure charlie_ui_wait_alice_msg(Stream(X)?, Stream(X)).
+procedure charlie_ui_wait_alice_msg(Stream(UserNotify)?, Stream(UserCmd)).
 charlie_ui_wait_alice_msg([received(alice, _)|_],
                           [send(alice, 'Hi Alice, this is Charlie')]).
 charlie_ui_wait_alice_msg([_|In], Out?) :-

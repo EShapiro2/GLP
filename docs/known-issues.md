@@ -661,7 +661,7 @@ Not an error: an error at load refuses all 54 program directories in `programs/`
 
 | Program | Unchecked |
 |---|---|
-| `tests/agent_roundtrip/play_ui_madglp` | 14 |
+| `tests/agent_roundtrip/play_ui_madglp` | 14 → **0** (see below) |
 | `cssn` | 12 |
 | `social/graph` | 10 |
 | `tests/agent_roundtrip/play_madglp` | 5 → **0** (see below) |
@@ -681,4 +681,8 @@ Three defects fell out of it, none visible while the types were parametric.  `bo
 
 Two consequences beyond the count.  `typed_social_agent.glp` moved from `NEGATIVE_FILES` to `POSITIVE_FILES` --- it type-checks standalone now, which the negative entry's own comment had predicted the sweep would do.  The same comment predicted the sweep would unskip `ui_mediator_test`; it does NOT.  Unskipped and measured: all three fail with the goal producing no output and no load-time diagnostic at all, so the cause is on the co-loaded goal path and not in the fixture's types.  The skip records that now instead of the prediction.
 
-`play_ui_madglp` goes 14 to 12: `agent/4` and `inject_msg/5` are checked there too, and the twelve that remain are `typed_ui_actors`, whose own declarations are `Channel(X, Y)?` and `Stream(X)?` --- the UI half of the same job.
+**Third instalment, same day: the UI half, `play_ui_madglp` to ZERO unchecked.**  `typed_ui_actors.glp` declared every procedure over a bare parameter --- `Channel(X, Y)?` for the four entry actors, `Stream(X)?, Stream(X)` for the nine continuations, one parameter standing for BOTH the notification stream it reads and the command stream it writes.  The ground Dart-facing protocol they speak (`ReqId`, `UserCmd`, `UserNotify`) was defined inside `typed_ui_mediator.glp` and so could not be named from another module; it moved to `self.glp`, and the thirteen declarations became `Channel(Stream(UserNotify), Stream(UserCmd))?` and `Stream(UserNotify)?, Stream(UserCmd)`.
+
+The checker's first look found the same defect it had found in the no-UI pair, in the same two roles: `bob_ui_actor` and `charlie_ui_actor` covered no empty input.  Both got a `ch([], [])` clause.
+
+**Both agent_roundtrip programs are now checked end to end, and the table above reads 0 for each.**  What remains of Issue 20 is the routing procedures, which are SGSG's: 12 in `cssn`, 10 in `social/graph`, 4 in `currencies`, all of them `social/graph/routing`, reached through the root's exposures.

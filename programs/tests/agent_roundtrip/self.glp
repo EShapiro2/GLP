@@ -88,6 +88,29 @@ NetInMsg     ::= msg(Constant, NetColdCall)
                ; msg(Constant, Constant, FriendContent).
 NetInStream  ::= [] ; [NetInMsg|NetInStream].
 
+%% The ground Dart-facing protocol between the mediator and whoever plays the
+%% user --- the UI actors here, a human in the Flutter app.  Shared, and here
+%% rather than in typed_ui_mediator.glp, because the actors are its other end and
+%% have to be able to name it: while they could not, every ui_actor procedure was
+%% declared over a bare Stream(X) and so was checked by nothing (Issue 20).
+ReqId ::= req(Constant).
+
+%% user -> mediator
+UserCmd    ::= decision(Decision, Constant, ReqId)
+             ; accept_intro(Constant, ReqId)
+             ; reject_intro(Constant)
+             ; connect(Constant)
+             ; send(Constant, Constant)
+             ; introduce(Constant, Constant).
+
+%% mediator -> user
+UserNotify ::= befriend(Constant, ReqId)
+             ; befriend_intro(Constant, Constant, ReqId)
+             ; connected(Constant)
+             ; rejected
+             ; rejected(Constant)
+             ; received(Constant, Constant).
+
 %% One constructor per output kind, each typed at exactly what it carries.
 %% Replaces output(Constant, OutputStream?), whose element type had to be the
 %% union of the person, network and friend messages because one list carries one

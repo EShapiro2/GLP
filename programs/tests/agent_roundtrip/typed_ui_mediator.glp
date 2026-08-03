@@ -18,30 +18,14 @@
 %% TYPE DEFINITIONS
 %% =============================================================================
 
-%% Response, Decision, PendingValue, the Friend* types and the agent<->mediator
-%% message wrappers (AgentMsg, UserMsg) are shared — defined once in this
-%% directory's self.glp. Only the ground Dart-facing protocol (ReqId, UserCmd,
-%% UserNotify) and the pending-table structure are mediator-local.
-
-ReqId ::= req(Constant).
-
-%% --- User channel messages (all ground, mediator-specific) ---
-
-%% User -> Mediator
-UserCmd     ::= decision(Decision, Constant, ReqId)
-              ; accept_intro(Constant, ReqId)
-              ; reject_intro(Constant)
-              ; connect(Constant)
-              ; send(Constant, Constant)
-              ; introduce(Constant, Constant).
-
-%% Mediator -> User
-UserNotify  ::= befriend(Constant, ReqId)
-              ; befriend_intro(Constant, Constant, ReqId)
-              ; connected(Constant)
-              ; rejected
-              ; rejected(Constant)
-              ; received(Constant, Constant).
+%% Every type this protocol uses is shared and defined once in this directory's
+%% self.glp: Response, Decision, PendingValue, the Friend* types, the
+%% agent<->mediator wrappers (AgentMsg, UserMsg), and the ground Dart-facing
+%% protocol (ReqId, UserCmd, UserNotify).  The last three moved there on
+%% 2026-08-03: the UI actors are the other end of that protocol and have to be
+%% able to NAME them, and while they could not, every ui_actor procedure was
+%% declared over a bare Stream(X) and so was checked by nothing (known-issues
+%% Issue 20).  Only the pending table stays mediator-local.
 
 %% --- Pending entries (PendingValue is shared, in self.glp) ---
 PendingEntry ::= pending(ReqId, PendingValue).
