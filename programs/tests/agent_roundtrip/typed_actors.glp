@@ -13,24 +13,18 @@
 %% =============================================================================
 %% The protocol types --- Response, Decision, PendingValue, the friend-channel
 %% types, AgentContent, UserContent, AgentMsg and UserMsg --- are NOT defined
-%% here.  They come from this directory's self.glp, which is every module's
-%% ancestor scope, so there is one definition of each and producer and consumer
-%% cannot drift.  The copy that stood here until 2026-08-03 had drifted: it
-%% typed befriend_intro's channel and befriend's response WITHOUT `?`, so the
-%% forwarded writer became a consumed value and the clauses below could not be
-%% written at all.  Only the actor's own stream types stay local.
-
-%% Actor input stream (reads AgentMsg)
-ActorIn ::= [] ; [AgentMsg|ActorIn].
-
-%% Actor output stream (writes UserMsg)
-ActorOut ::= [] ; [UserMsg|ActorOut].
+%% here, and neither are ActorIn and ActorOut.  They come from this directory's
+%% self.glp, which is every module's ancestor scope, so there is one definition
+%% of each and producer and consumer cannot drift.  The copy that stood here
+%% until 2026-08-03 had drifted: it typed befriend_intro's channel and
+%% befriend's response WITHOUT `?`, so the forwarded writer became a consumed
+%% value and the clauses below could not be written at all.
 
 %% =============================================================================
 %% ALICE
 %% =============================================================================
 
-exported procedure alice_actor(Channel(X, Y)?).
+exported procedure alice_actor(Channel(ActorIn, ActorOut)?).
 alice_actor(ch(In, [msg(person, alice, connect(bob))|Out?])) :-
     alice_wait_bob_connected(In?, Out).
 
@@ -65,13 +59,14 @@ alice_wait_charlie_reply([], []).
 %% BOB
 %% =============================================================================
 
-exported procedure bob_actor(Channel(X, Y)?).
+exported procedure bob_actor(Channel(ActorIn, ActorOut)?).
 bob_actor(ch([msg(agent, person, befriend(From, Resp?))|In],
              [msg(person, bob, decision(yes, From?, response(Resp)))|Out?])) :-
     ground(From?) |
     bob_wait_alice_msg(In?, Out).
 bob_actor(ch([_|In], Out?)) :-
     otherwise | bob_actor(ch(In?, Out)).
+bob_actor(ch([], [])).
 
 procedure bob_wait_alice_msg(ActorIn?, ActorOut).
 bob_wait_alice_msg([msg(agent, person, connected(_))|In], Out?) :-
@@ -101,7 +96,7 @@ bob_wait_charlie_msg([], []).
 %% CHARLIE
 %% =============================================================================
 
-exported procedure charlie_actor(Channel(X, Y)?).
+exported procedure charlie_actor(Channel(ActorIn, ActorOut)?).
 charlie_actor(ch([msg(agent, person, befriend(From, Resp?))|In],
                  [msg(person, charlie, decision(yes, From?, response(Resp))),
                   msg(person, charlie, send(bob, 'Hi Bob, this is Charlie'))|Out?])) :-
@@ -109,6 +104,7 @@ charlie_actor(ch([msg(agent, person, befriend(From, Resp?))|In],
     charlie_wait_intro(In?, Out).
 charlie_actor(ch([_|In], Out?)) :-
     otherwise | charlie_actor(ch(In?, Out)).
+charlie_actor(ch([], [])).
 
 procedure charlie_wait_intro(ActorIn?, ActorOut).
 charlie_wait_intro([msg(agent, person, befriend_intro(_, Other, Ch?))|In],

@@ -64,3 +64,11 @@ NetColdCall ::= intro(Constant, Response?).
 %% checker enforces the agent/mediator polarity duality — §5(1)).
 AgentMsg ::= msg(Constant, Constant, AgentContent).   %% agent -> mediator
 UserMsg  ::= msg(Constant, Constant, UserContent).    %% mediator -> agent
+
+%% The actor's two streams.  Here rather than in typed_actors.glp because a
+%% caller in another module has to be able to NAME them: an actor declared
+%% Channel(X, Y)? is a parameterised procedure that inspects its parameter, and
+%% nothing instantiated X and Y, so until 2026-08-03 not one actor clause was
+%% ever type-checked (known-issues Issue 20).
+ActorIn  ::= [] ; [AgentMsg|ActorIn].    %% the actor reads
+ActorOut ::= [] ; [UserMsg|ActorOut].    %% the actor writes

@@ -10,7 +10,7 @@ agent_init(Id, NetIn) :-
     actor(Id?, ch(UserIn?, UserOut)).
 
 %% Actor dispatch — routes to the scripts in ../typed_actors.glp.
-procedure actor(_?, Channel(X, Y)?).
+procedure actor(_?, Channel(ActorIn, ActorOut)?).
 actor(alice, Ch) :- alice_actor(Ch?).
 actor(bob, Ch) :- bob_actor(Ch?).
 actor(charlie, Ch) :- charlie_actor(Ch?).

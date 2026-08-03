@@ -664,9 +664,13 @@ Not an error: an error at load refuses all 54 program directories in `programs/`
 | `tests/agent_roundtrip/play_ui_madglp` | 14 |
 | `cssn` | 12 |
 | `social/graph` | 10 |
-| `tests/agent_roundtrip/play_madglp` | 5 |
+| `tests/agent_roundtrip/play_madglp` | 5 → **2** (see below) |
 | `currencies` | 4 |
 
 `typed_social_agent:agent/4` is among them, in both agent_roundtrip programs: the agent itself has never been type-checked in either.  The `social/graph/routing` procedures (`send_user/3`, `send_net/3`, `send_friend/4`, `send_child/4`, `send_parent/4`, `add_friend_output/4`, `inject_msg/5`, `already_friend/4`, `smaller_dispatch/7`, `await_friend_channel/6`, `inject_intro_result/3`, `intro_await_peer/3`) account for CSSN's, `social/graph`'s and Currencies' entries; `output.glp`'s own header says its clauses rely on per-instantiation checking to reject an `Ent` lacking the constructor they destructure, and in these programs that checking never happens.
 
 **Open**: give the inspected arguments concrete element types, program by program, so the clauses are checked; then the report can become a rejection.  Ownership follows the code map — the routing modules are SGSG's, the agent_roundtrip fixture IGLP's, `cssn` CSSN's, `currencies` Currencies'.
+
+**First instalment, 2026-08-03: the actor half of `play_madglp`, 5 unchecked down to 2.**  `ActorIn` and `ActorOut` moved from `typed_actors.glp` into the directory's `self.glp` — a caller in another module has to be able to name them — and the three `<who>_actor(Channel(X, Y)?)` declarations and `actor/2`'s became `Channel(ActorIn, ActorOut)?`.  The checker, seeing the actors for the first time, rejected two of them at once: `bob_actor` and `charlie_actor` covered no empty input, though `ActorIn` has a `[]` alternative and every continuation in the file carries an explicit `[], []` clause.  Both got one.  That is the value of the exercise in miniature — the declarations were what the checker lacked, and the first thing it did with them was find a defect.  Runtime behaviour is unchanged, measured on the madGLP play: 40 `connected(`, 18 `received(`, both messages, `introduce` reached, identical to before.
+
+The two that remain are `typed_social_agent:agent/4` and `inject_msg/5`, and they are not the same job.  `agent/4` is declared `agent(Constant?, Stream(X)?, Stream(X)?, OutputsList?)` — its second and third arguments share ONE element type while carrying the person stream and the network stream, which are not the same traffic.  Either that declaration is wrong or the two really are one union; that question has to be settled before `agent_init` can be declared concretely, and it is what blocks the agent half.
