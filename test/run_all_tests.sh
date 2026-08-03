@@ -733,8 +733,8 @@ echo "--- A26: Univ, assignment, MWM ---"
 a26=$("$REPL_RUN" <<HEREDOC
 T1 =.. [foo].
 T2 =.. [bar, x, y].
-foo(a, b) =.. L1.
-bar(1, 2, 3) =.. L2.
+L1 ..= foo(a, b).
+L2 ..= bar(1, 2, 3).
 Xu1 = foo.
 Xu2 = 42.
 Xu3 = foo(a, b).
@@ -750,8 +750,8 @@ Xa6 := 5 + 3 * 2.
 Xa7 := (5 + 3) * 2.
 Xa8 := -5.
 mwm([], Xmwm1).
-mwm([stream([1,2,3])], Xmwm2).
-mwm([stream([a,b]), stream([1,2])], Xmwm3).
+mwm([merge([1,2,3])], Xmwm2).
+mwm([merge([a,b]), merge([1,2])], Xmwm3).
 :quit
 HEREDOC
 2>&1)
@@ -774,9 +774,9 @@ check "Assign div" "Xa5 = 5" "$a26"
 check "Assign precedence" "Xa6 = 11" "$a26"
 check "Assign parens" "Xa7 = 16" "$a26"
 check "Assign negative" "Xa8 = -5" "$a26"
-check "MWM empty rejected: mwm/2 undeclared to type checker" "Undefined procedure: mwm/2" "$a26"
-check "MWM single rejected: mwm/2 undeclared to type checker" "Undefined procedure: mwm/2" "$a26"
-check "MWM two streams rejected: mwm/2 undeclared to type checker" "Undefined procedure: mwm/2" "$a26"
+check "MWM empty" "Xmwm1 = \[\]" "$a26"
+check "MWM single stream" "Xmwm2 = \[1, 2, 3\]" "$a26"
+check "MWM two streams" "Xmwm3 = \[a, b, 1, 2\]" "$a26"
 
 # --- A26c: Well-typed-goal check (initial goal type-checked as a body goal) ---
 # The REPL type-checks every initial goal as a body goal (def:well-typed-clause)

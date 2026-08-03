@@ -95,6 +95,12 @@ For changes confined to a single play/test/program, the baseline can be skipped 
 
 `test/run_all_tests.sh` has sections A (typed runtime tests) through P+ (module boundary, SecureBonds, etc.).  Section A uses heredoc-based REPL sessions; positive-typecheck-only files go in the `POSITIVE_FILES` array; negative-typecheck files go in `NEGATIVE_FILES`.  When you fix a bug, add a test that exercises the fix.  When you add a feature, add tests that cover its main cases.  Tests are never removed.
 
+## Archiving
+
+🔴 **Live code NEVER points to archived code (Udi, 2026-08-03).**  A file the suite loads, a program another program calls, a path any live script or Dart source names — none of these may resolve into `programs/archive/` or `programs/old-archive/`.  So a file cannot be archived while anything live still points at it.  Either it stays live where it is, or the thing pointing at it goes in the same commit.  Repointing a live reference at an archived path is not the remedy; it is the violation.
+
+Before archiving anything, grep for every reference to it and count what breaks.  The case (2026-08-03): `programs/book/recursive` and fourteen `book/social_networks` files were to be archived on the measurement that it cost 54 path removals in `test/run_all_tests.sh`.  Forty-two were compile-list entries worth one test each, but twelve were heredoc loads feeding live sections — A2, A3, A4, A6, A9 and Y1 — whose goals and assertions hang off them.  Archiving would have silently cost 80 passing checks instead of none.  `recursive`, `broadcast.glp`, `replicate.glp` and the three loose `test_*.glp` were restored to where they were, and only the twelve files nothing points at stayed archived.
+
 ## Spec-first development
 
 🔴 **No implementation without a spec.**
