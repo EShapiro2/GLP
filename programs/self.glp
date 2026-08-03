@@ -114,21 +114,22 @@ procedure is_mutual_ref(_?).
 % "Undefined procedure: _send/3".
 %
 % Every kernel registered by runtime/body_kernels.dart and
-% engine_v2/module_kernels.dart is here, save the five of the Network group, and
-% they are outside it for two different reasons.  The signatures are GLP-Spec's
-% appendix-guards.tex body-kernel table, which is the authority.  Four —
-% '_peer_address', '_punch_udp', '_place_declare', '_place_remove' — were
-% registered by 9d5e0dd9 and are still undeclared here, and not by choice:
-% parser.dart:191 admits a clause-less root declaration only for a name in the
-% Dart builtinProcedures set, and they are not in it, so declaring them here
-% fails the root scope and takes every load in the tree with it.  The fifth,
-% '_trust_declare', is the row the table is ahead of the code on: nothing
-% registers it, so trust_declare/2 below wraps a kernel that does not yet exist.
-% All five set entries are IGLP's to add and the declarations follow them.
+% engine_v2/module_kernels.dart is here, and nothing else.  The signatures are
+% GLP-Spec's appendix-guards.tex body-kernel table, which is the authority, and
+% the Network group's four seam rows are taken from it verbatim: they were
+% registered by 9d5e0dd9 and entered builtinProcedures in d6760b3a, which is what
+% lets them be declared at all — parser.dart:191 admits a clause-less root
+% declaration only for a name in that set.
 %
-% '_copy' is registered by body_kernels.dart and is deliberately NOT declared
-% here: its catalogue row was removed and no caller in programs/ names it, so
-% the file and the registry disagree until IGLP unregisters the kernel.
+% '_trust_declare' is the one Network row with no declaration.  It is in the
+% catalogue as GLP-Networking-API's fifth seam predicate, nothing registers it
+% and it is not in builtinProcedures, so declaring it here would fail the root
+% scope and take every load in the tree with it.  Its entry is IGLP's to add and
+% the declaration follows it; until then trust_declare/2 below wraps a kernel
+% that does not yet exist.
+%
+% '_copy' is neither registered nor declared: d6760b3a unregistered the kernel
+% after its catalogue row was removed, and no caller in programs/ ever named it.
 %
 % This file may name them because it declares -mode(system).
 
@@ -178,6 +179,10 @@ procedure '_close_mutual_reference'(_?).
 % Network
 procedure '_send'(_?, _?, _?).
 procedure '_authorise_link'(_?, _?).
+procedure '_peer_address'(_?, _).
+procedure '_punch_udp'(_?).
+procedure '_place_declare'(_?, _?, _).
+procedure '_place_remove'(_?).
 
 % Signature
 procedure '_sign'(_?, _).
@@ -599,11 +604,11 @@ authorise_link(L, A) :- known(A?) | '_authorise_link'(L?, A?).
 % supplies the writer, which is what sign/2 does three lines above.  Reported to
 % IGLP 2026-08-01; the paper is theirs to correct.
 %
-% The four kernels were registered by 9d5e0dd9, though not yet declared in the
-% block above.  '_trust_declare' was not, so a trust_declare/2 call reaches the
-% runtime and fails there ("no procedure for goal, failed: _trust_declare(...)").
-% That is the intended half-state: the wrappers are GLP-Spec's and the kernels
-% are IGLP's, and neither half waits on the other.
+% The four kernels were registered by 9d5e0dd9 and are declared in the block
+% above.  '_trust_declare' is not registered, so a trust_declare/2 call reaches
+% the runtime and fails there ("no procedure for goal, failed:
+% _trust_declare(...)").  That is the intended half-state: the wrappers are
+% GLP-Spec's and the kernels are IGLP's, and neither half waits on the other.
 
 %% peer_address/2 - assign A the address at which the layer observes peer P.
 procedure peer_address(_?, _).
