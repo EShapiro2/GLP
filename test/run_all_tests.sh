@@ -1430,7 +1430,8 @@ NEGATIVE_FILES=(
     # typed_social_agent.glp was swept the same day — per-kind OutputEntry, agent/4
     # declared at ActorOut and NetInStream — and now type-checks standalone, so it
     # moved to POSITIVE_FILES. That sweep did NOT unskip ui_mediator_test, which
-    # this comment used to predict; the skip records what was measured instead.
+    # this comment used to predict; that test was removed on 2026-08-03 (Udi's
+    # instruction) rather than repaired, and known-issues Issue 20 says why.
     # The two streams entries are GLP-ICLP's, expected rejections until they
     # re-declare or prune them.
     "$AGENT_RT/channel.glp"
@@ -2526,6 +2527,67 @@ HEREDOC
 check_not "X7 bad-OutputEntry fixture not loaded" "Loaded program" "$x7"
 check "X7 rejected at send_user instantiation" "send_user" "$x7"
 check "X7 names the missing user_output constructor" "user_output" "$x7"
+
+# --- X8: a directory self.glp's PARAMETERISED type reaches its other modules ---
+# code.glp names Para(C) from the directory's own self.glp; Plain, monomorphic
+# and from the same file, is the control.  Reported as broken by SGSG on
+# 2026-08-03 and it never was: their measurement ran from a program root OUTSIDE
+# programs/, where by S10's rule there is no ancestor scope at all, so NEITHER
+# type was in scope.  Only the asymmetry looked like a defect, and that is the
+# type-parameter rule: an unknown capitalised name in a declaration reads as a
+# type parameter, which Plain can be and Para(Constant) cannot, so Plain went
+# quiet and Para was reported unresolved.
+echo "--- X8: parameterised type from a directory self.glp ---"
+x8=$("$REPL_RUN" <<HEREDOC
+$GLP_DIR/programs/tests/param_ancestor_scope
+plain([wrap(a), wrap(b)]).
+:quit
+HEREDOC
+2>&1)
+check "X8 fixture loaded" "Loaded program" "$x8"
+check_not "X8 Para resolves" "Unresolved type: Para" "$x8"
+check "X8 goal succeeds" "succeeds" "$x8"
+
+# --- X9: one type name, two arities, across an exposed module boundary ---
+# NetMsg/1 in the fixture and NetMsg/0 in programs/system/mad_predicates.glp,
+# which the root self.glp -expose's into EVERY program.  The linked program's
+# type definitions were keyed by bare name, so one arity was dropped and every
+# reference to it went unresolved: this is why programs/spm/{cva,gsg,secure_gsg}
+# would not load.  The negative check is on mad_predicates' own NetStream, whose
+# element type is the arity-0 NetMsg that used to be the one displaced.
+echo "--- X9: one type name at two arities across an exposed boundary ---"
+x9=$("$REPL_RUN" <<HEREDOC
+$GLP_DIR/programs/tests/type_name_collision
+go([wrap(a), wrap(b), wrap(c)]).
+:quit
+HEREDOC
+2>&1)
+check "X9 fixture loaded" "Loaded program" "$x9"
+check_not "X9 arity-0 NetMsg not displaced" "Unresolved type: NetMsg" "$x9"
+check "X9 goal succeeds" "succeeds" "$x9"
+
+# --- X10: the three spm program directories load and accept a goal ---
+# They are SGSG's since 2026-08-03 and were unloadable until X9's defect was
+# fixed; the goal is what X8's goal-check ordering fix made possible (every
+# goal used to fail with UnknownTypeError: UserEvent, a gsg/self.glp template
+# named by a module one directory below it).
+echo "--- X10: spm program directories ---"
+for spm_dir in cva gsg secure_gsg; do
+    x10=$("$REPL_RUN" <<HEREDOC
+$GLP_DIR/programs/spm/$spm_dir
+:quit
+HEREDOC
+2>&1)
+    check "X10 spm/$spm_dir loads" "Loaded program" "$x10"
+done
+x10g=$("$REPL_RUN" <<HEREDOC
+$GLP_DIR/programs/spm/gsg
+is_even(4).
+:quit
+HEREDOC
+2>&1)
+check "X10 spm/gsg accepts a goal" "succeeds" "$x10g"
+check_not "X10 spm/gsg goal check resolves UserEvent" "UnknownTypeError: UserEvent" "$x10g"
 
 echo ""
 

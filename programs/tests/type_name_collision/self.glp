@@ -1,0 +1,15 @@
+% A program may define a type whose NAME an exposed module also defines at a
+% DIFFERENT ARITY.  NetMsg/1 here and NetMsg/0 in programs/system/mad_predicates.glp
+% are two type constructors, not two spellings of one, and mad_predicates is in
+% every program (the root self.glp -expose's it), so this is not a contrived
+% pairing: it is what programs/spm/{cva,gsg,secure_gsg} do, and what stopped all
+% three loading.  The linked program's type definitions used to be keyed by bare
+% name, so whichever arity the directory walk reached second was dropped and every
+% reference to it failed to resolve — here mad_predicates.glp:19's NetStream would
+% lose its element type.  GREEN, and it must stay green whichever order the walk
+% reaches the two definitions in.
+NetMsg(C) ::= wrap(C).
+NetMsgList(C) ::= [] ; [NetMsg(C) | NetMsgList(C)].
+imported procedure code#go(NetMsgList(Constant)?).
+exported procedure go(NetMsgList(Constant)?).
+go(X) :- code # go(X?).

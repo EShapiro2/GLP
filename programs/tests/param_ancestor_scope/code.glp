@@ -1,0 +1,7 @@
+exported procedure plain(Stream(Plain)?).
+plain([]).
+plain([_|Xs]) :- plain(Xs?).
+
+procedure para(Stream(Para(Constant))?).
+para([]).
+para([_|Xs]) :- para(Xs?).

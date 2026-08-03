@@ -448,8 +448,29 @@ class GlpEngine {
     }
     _goalCheckEnv = goalEnv;
 
-    // Make the program's module declarations available to the REPL goal checker.
-    for (final m in modules) {
+    // Make the program's module declarations available to the REPL goal checker,
+    // IN SCOPE ORDER (modules.tex §Scope construction: root-first, later
+    // definitions shadowing earlier). Each merge expands the module's
+    // parameterised type references against what the environment holds SO FAR,
+    // so a module merged before the `self.glp` that defines a template it names
+    // loses that template and its declaration keeps an unresolved type. In
+    // discovery order — the directory walk's — that is what happened to every
+    // module in a subdirectory: `programs/spm/gsg/plays/play_befriend.glp:24`
+    // names `UserEvent(V, Q, A)` from `gsg/self.glp` one level up, and the
+    // program loaded but every goal posted to it failed the goal check with
+    // `UnknownTypeError: UserEvent`. Shallower directories first, and a
+    // directory's `self.glp` before its siblings, is the order §Scope
+    // construction specifies and the order the linker's ancestor chain uses.
+    final ordered = [...modules]..sort((a, b) {
+        int depth(DiscoveredModule m) =>
+            File(m.filePath).absolute.parent.path.split(Platform.pathSeparator).length;
+        final byDepth = depth(a).compareTo(depth(b));
+        if (byDepth != 0) return byDepth;
+        // Within one directory, self.glp is the scope and comes first.
+        if (a.isSelfGlp != b.isSelfGlp) return a.isSelfGlp ? -1 : 1;
+        return a.filePath.compareTo(b.filePath);
+      });
+    for (final m in ordered) {
       _extendGoalCheckEnv(m.ast);
     }
 

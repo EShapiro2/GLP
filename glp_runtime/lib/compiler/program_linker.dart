@@ -597,9 +597,23 @@ LinkResult checkedLinkedProgram(List<DiscoveredModule> modules,
 /// linked declarations.
 ///
 /// The type definitions are the union of every module's own, deduplicated by
-/// name (structural identity makes duplicates the same type). Root-scope types
-/// are supplied by the root scope, not here.
+/// name AND ARITY (structural identity makes duplicates the same type).
+/// Root-scope types are supplied by the root scope, not here.
 ///
+/// The arity is part of the key because it is part of the type constructor's
+/// identity, exactly as `p/n` is a procedure's: `NetMsg` and `NetMsg(C)` are two
+/// type constructors, not two spellings of one, and a scope may hold both — the
+/// per-module environment does, keeping monomorphic types and parameterised
+/// templates in separate maps. Keying this union by bare name dropped whichever
+/// arity the directory walk reached second, and every reference to the dropped
+/// one then failed to resolve in the linked program while the per-module check
+/// passed. That is what made `programs/spm/{cva,gsg,secure_gsg}` unloadable:
+/// `cva/self.glp`'s `NetMsg(C)` displaced the arity-0 `NetMsg` of
+/// `programs/system/mad_predicates.glp`, which the root `self.glp` `-expose`s
+/// into every program, so `mad_predicates.glp:19`'s `NetStream` lost its element
+/// type. Fixture: `programs/tests/type_name_collision/` (Section X9).
+///
+
 /// A module may redefine a root-scope operation (e.g. send/receive/new_channel/
 /// merge) with local clauses but no local declaration, relying on the root
 /// declaration. Linking renames those clauses to `M:p` while the root
@@ -613,7 +627,7 @@ Module linkedFlatModule(List<DiscoveredModule> modules, LinkResult linked) {
   final typeDefs = <String, TypeDef>{};
   for (final mod in modules) {
     for (final td in mod.ast.typeDefs) {
-      typeDefs.putIfAbsent(td.name, () => td);
+      typeDefs.putIfAbsent('${td.name}/${td.typeParams.length}', () => td);
     }
   }
 

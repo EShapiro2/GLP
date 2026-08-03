@@ -1,0 +1,15 @@
+% A directory self.glp's PARAMETERISED type is visible to that directory's other
+% modules, exactly as a monomorphic one is (modules.tex sec:mod-design, "Implicit
+% ancestor scoping": a module sees every type and procedure definition from every
+% ancestor scope).  Para(C) below is named only by code.glp, which is a sibling
+% module and not a descendant of anything but this directory.  GREEN.
+%
+% code.glp is SGSG's 2026-08-03 reproduction verbatim, so its line 5 — the line
+% their report cites — is still line 5.  What that report measured was a program
+% root OUTSIDE programs/, where Section S10 of the suite says there is no
+% ancestor scope at all, so neither Para NOR Plain was in scope there.
+Plain   ::= wrap(Constant).
+Para(C) ::= wrap(C).
+imported procedure code#plain(Stream(Plain)?).
+exported procedure plain(Stream(Plain)?).
+plain(X) :- code # plain(X?).

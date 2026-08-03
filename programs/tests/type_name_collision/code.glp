@@ -1,0 +1,6 @@
+% Destructures wrap/1, so the clause heads type-check only against the LOCAL
+% NetMsg/1.  Had NetMsg resolved to mad_predicates' NetMsg/0 (msg(Constant, _)),
+% this head would be ill-typed rather than merely unresolved.
+exported procedure go(NetMsgList(Constant)?).
+go([]).
+go([wrap(_)|Xs]) :- go(Xs?).
