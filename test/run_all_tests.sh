@@ -2196,6 +2196,30 @@ check "program with an unchecked procedure still loads" "Loaded program: .*param
 
 echo ""
 
+echo "--- The fixture's two single-isolate REPL boots load ---"
+# docs/ma/HOW-TO-RUN.md documents these as the dGLP routes a human runs by hand,
+# and until 2026-08-03 nothing tested them: they were two of the 35 files in
+# agent_roundtrip that no test named. Both load, so they are working routes and
+# stayed when the other 32 — which cannot load at all under the current language
+# — were retired to programs/archive/agent_roundtrip/. Tested here so that the
+# next person asking "does anything need this?" gets an answer from the suite
+# rather than from a filename search.
+for dglp_boot in play_dglp_boot play_ui_dglp_boot; do
+    output=$("$REPL_RUN" <<HEREDOC
+$AGENT_RT/typed_social_agent.glp
+$AGENT_RT/typed_actors.glp
+$AGENT_RT/typed_ui_mediator.glp
+$AGENT_RT/typed_ui_actors.glp
+$AGENT_RT/$dglp_boot.glp
+:quit
+HEREDOC
+2>&1)
+    check "dGLP $dglp_boot loads" "Loaded: .*$dglp_boot.glp" "$output"
+    check_not "dGLP $dglp_boot no type error" "Error loading.*$dglp_boot" "$output"
+done
+
+echo ""
+
 echo "--- A directory whose root self.glp exports nothing is not a program ---"
 # modules.tex §Static Linking, "Entry and the absence of a boot module": a root
 # self.glp that exports no procedure gives a program with no entry points, which
