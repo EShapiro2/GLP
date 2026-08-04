@@ -17,7 +17,7 @@ frank_p12(ch(In, Out?), Narr?) :-
 %% Gather befriends from Charlie, Diana, Eve (3 actors, any order).
 %% CS = charlie status, DS = diana status, ES = eve status.
 %% Status atoms: none → befriended → done.
-procedure frank_p12_gather(Constant?, Constant?, Constant?, Stream(UserNotify)?, Stream(UserCmd), Stream(NarrativeItem)).
+procedure frank_p12_gather(Constant?, Constant?, Constant?, Stream(PersonNotify)?, Stream(PersonCmd), Stream(NarrativeItem)).
 
 %% All three connected — proceed to mint bonds for Diana's loan
 frank_p12_gather(done, done, done, In, [mint(18, 28)|Out?], Narr?) :-
@@ -62,7 +62,7 @@ frank_p12_gather(CS, DS, ES, [_|In], Out?, Narr?) :-
 frank_p12_gather(_, _, _, [], [], []).
 
 %% Act 2e: Mint frank-bonds(Day28) for Diana's loan
-procedure frank_p12_wait_minted1(Stream(UserNotify)?, Stream(UserCmd), Stream(NarrativeItem)).
+procedure frank_p12_wait_minted1(Stream(PersonNotify)?, Stream(PersonCmd), Stream(NarrativeItem)).
 frank_p12_wait_minted1([minted(18, 28)|In], Out?, Narr?) :-
     frank_p12_wait_trade_diana(In?, Out, Narr).
 frank_p12_wait_minted1([_|In], Out?, Narr?) :-
@@ -70,7 +70,7 @@ frank_p12_wait_minted1([_|In], Out?, Narr?) :-
 frank_p12_wait_minted1([], [], []).
 
 %% Accept Diana's loan: 15 diana-coins for 18 frank-bonds(28)
-procedure frank_p12_wait_trade_diana(Stream(UserNotify)?, Stream(UserCmd), Stream(NarrativeItem)).
+procedure frank_p12_wait_trade_diana(Stream(PersonNotify)?, Stream(PersonCmd), Stream(NarrativeItem)).
 frank_p12_wait_trade_diana([trade_proposed(diana, _, ReqId)|In],
                            [accept_trade(diana, ReqId?), mint(10, 0)|Out?],
                            [say('Diana, deal — 18 bonds maturing day 28 for 15 coins'),
@@ -82,7 +82,7 @@ frank_p12_wait_trade_diana([_|In], Out?, Narr?) :-
 frank_p12_wait_trade_diana([], [], []).
 
 %% Act 2f: Mint frank-coins for symmetric trade with Eve
-procedure frank_p12_wait_minted2(Stream(UserNotify)?, Stream(UserCmd), Stream(NarrativeItem)).
+procedure frank_p12_wait_minted2(Stream(PersonNotify)?, Stream(PersonCmd), Stream(NarrativeItem)).
 frank_p12_wait_minted2([minted(10, 0)|In], Out?, Narr?) :-
     frank_p12_wait_trade_eve(In?, Out, Narr).
 frank_p12_wait_minted2([_|In], Out?, Narr?) :-
@@ -90,7 +90,7 @@ frank_p12_wait_minted2([_|In], Out?, Narr?) :-
 frank_p12_wait_minted2([], [], []).
 
 %% Accept Eve's symmetric trade proposal
-procedure frank_p12_wait_trade_eve(Stream(UserNotify)?, Stream(UserCmd), Stream(NarrativeItem)).
+procedure frank_p12_wait_trade_eve(Stream(PersonNotify)?, Stream(PersonCmd), Stream(NarrativeItem)).
 frank_p12_wait_trade_eve([trade_proposed(eve, _, ReqId)|In],
                          [accept_trade(eve, ReqId?),
                           trade(diana, [lot(diana, 0, 3)], [])|Out?],
@@ -104,7 +104,7 @@ frank_p12_wait_trade_eve([_|In], Out?, Narr?) :-
 frank_p12_wait_trade_eve([], [], []).
 
 %% Act 3b: Frank pays Diana for medical checkup
-procedure frank_p12_wait_trade_pay(Stream(UserNotify)?, Stream(UserCmd), Stream(NarrativeItem)).
+procedure frank_p12_wait_trade_pay(Stream(PersonNotify)?, Stream(PersonCmd), Stream(NarrativeItem)).
 frank_p12_wait_trade_pay([trade_completed(diana)|In], Out?,
                          [act('Paid Diana 3 for checkup')|Narr?]) :-
     frank_p12_wait_escrow_received(In?, Out, Narr).
@@ -113,7 +113,7 @@ frank_p12_wait_trade_pay([_|In], Out?, Narr?) :-
 frank_p12_wait_trade_pay([], [], []).
 
 %% Act 5: Receive escrow from Charlie (dock work)
-procedure frank_p12_wait_escrow_received(Stream(UserNotify)?, Stream(UserCmd), Stream(NarrativeItem)).
+procedure frank_p12_wait_escrow_received(Stream(PersonNotify)?, Stream(PersonCmd), Stream(NarrativeItem)).
 frank_p12_wait_escrow_received([escrow_received(charlie, _)|In], Out?,
                                [event('Escrow from Charlie: 5 frank-coins, release day 15')|Narr?]) :-
     frank_p12_wait_escrow_released(In?, Out, Narr).
@@ -122,7 +122,7 @@ frank_p12_wait_escrow_received([_|In], Out?, Narr?) :-
 frank_p12_wait_escrow_received([], [], []).
 
 %% Dock done, escrow released — send first unit redemption
-procedure frank_p12_wait_escrow_released(Stream(UserNotify)?, Stream(UserCmd), Stream(NarrativeItem)).
+procedure frank_p12_wait_escrow_released(Stream(PersonNotify)?, Stream(PersonCmd), Stream(NarrativeItem)).
 frank_p12_wait_escrow_released([escrow_released(charlie)|In],
                                [trade(diana, [lot(diana, 0, 1)], [lot(frank, 28, 1)])|Out?],
                                [event('Escrow released — received 5 frank-coins for dock'),
@@ -133,7 +133,7 @@ frank_p12_wait_escrow_released([_|In], Out?, Narr?) :-
 frank_p12_wait_escrow_released([], [], []).
 
 %% Act 6: Redeem diana-coins — 5 sequential unit trades
-procedure frank_p12_wait_redeem1(Stream(UserNotify)?, Stream(UserCmd), Stream(NarrativeItem)).
+procedure frank_p12_wait_redeem1(Stream(PersonNotify)?, Stream(PersonCmd), Stream(NarrativeItem)).
 frank_p12_wait_redeem1([trade_completed(diana)|In],
                        [trade(diana, [lot(diana, 0, 1)], [lot(frank, 28, 1)])|Out?], Narr?) :-
     frank_p12_wait_redeem2(In?, Out, Narr).
@@ -141,7 +141,7 @@ frank_p12_wait_redeem1([_|In], Out?, Narr?) :-
     otherwise | frank_p12_wait_redeem1(In?, Out, Narr).
 frank_p12_wait_redeem1([], [], []).
 
-procedure frank_p12_wait_redeem2(Stream(UserNotify)?, Stream(UserCmd), Stream(NarrativeItem)).
+procedure frank_p12_wait_redeem2(Stream(PersonNotify)?, Stream(PersonCmd), Stream(NarrativeItem)).
 frank_p12_wait_redeem2([trade_completed(diana)|In],
                        [trade(diana, [lot(diana, 0, 1)], [lot(frank, 28, 1)])|Out?], Narr?) :-
     frank_p12_wait_redeem3(In?, Out, Narr).
@@ -149,7 +149,7 @@ frank_p12_wait_redeem2([_|In], Out?, Narr?) :-
     otherwise | frank_p12_wait_redeem2(In?, Out, Narr).
 frank_p12_wait_redeem2([], [], []).
 
-procedure frank_p12_wait_redeem3(Stream(UserNotify)?, Stream(UserCmd), Stream(NarrativeItem)).
+procedure frank_p12_wait_redeem3(Stream(PersonNotify)?, Stream(PersonCmd), Stream(NarrativeItem)).
 frank_p12_wait_redeem3([trade_completed(diana)|In],
                        [trade(diana, [lot(diana, 0, 1)], [lot(frank, 28, 1)])|Out?], Narr?) :-
     frank_p12_wait_redeem4(In?, Out, Narr).
@@ -157,7 +157,7 @@ frank_p12_wait_redeem3([_|In], Out?, Narr?) :-
     otherwise | frank_p12_wait_redeem3(In?, Out, Narr).
 frank_p12_wait_redeem3([], [], []).
 
-procedure frank_p12_wait_redeem4(Stream(UserNotify)?, Stream(UserCmd), Stream(NarrativeItem)).
+procedure frank_p12_wait_redeem4(Stream(PersonNotify)?, Stream(PersonCmd), Stream(NarrativeItem)).
 frank_p12_wait_redeem4([trade_completed(diana)|In],
                        [trade(diana, [lot(diana, 0, 1)], [lot(frank, 28, 1)])|Out?], Narr?) :-
     frank_p12_wait_redeem5(In?, Out, Narr).
@@ -165,7 +165,7 @@ frank_p12_wait_redeem4([_|In], Out?, Narr?) :-
     otherwise | frank_p12_wait_redeem4(In?, Out, Narr).
 frank_p12_wait_redeem4([], [], []).
 
-procedure frank_p12_wait_redeem5(Stream(UserNotify)?, Stream(UserCmd), Stream(NarrativeItem)).
+procedure frank_p12_wait_redeem5(Stream(PersonNotify)?, Stream(PersonCmd), Stream(NarrativeItem)).
 frank_p12_wait_redeem5([trade_completed(diana)|In], [balance|Out?],
                        [act('Redeemed 5 diana-coins from Diana')|Narr?]) :-
     frank_p12_wait_balance(In?, Out, Narr).
@@ -173,7 +173,7 @@ frank_p12_wait_redeem5([_|In], Out?, Narr?) :-
     otherwise | frank_p12_wait_redeem5(In?, Out, Narr).
 frank_p12_wait_redeem5([], [], []).
 
-procedure frank_p12_wait_balance(Stream(UserNotify)?, Stream(UserCmd), Stream(NarrativeItem)).
+procedure frank_p12_wait_balance(Stream(PersonNotify)?, Stream(PersonCmd), Stream(NarrativeItem)).
 frank_p12_wait_balance([balance_report(_)|In], [done|Out?],
                        [act('Balance: 7 diana-coins, 10 eve-coins')|Narr?]) :-
     frank_p12_finish(In?, Out, Narr).
@@ -181,5 +181,5 @@ frank_p12_wait_balance([_|In], Out?, Narr?) :-
     otherwise | frank_p12_wait_balance(In?, Out, Narr).
 frank_p12_wait_balance([], [], []).
 
-procedure frank_p12_finish(Stream(UserNotify)?, Stream(UserCmd), Stream(NarrativeItem)).
+procedure frank_p12_finish(Stream(PersonNotify)?, Stream(PersonCmd), Stream(NarrativeItem)).
 frank_p12_finish(_, [], []).

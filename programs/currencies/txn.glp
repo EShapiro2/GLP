@@ -83,7 +83,7 @@ select_by_spec_continue(fail, _, LotSel, LotRem, fail, LotSel?, LotRem?).
 %% bonds against its OWN Clock; the holders' dates play no part.  Id auto-accepts
 %% only when EVERY offered bond is a coin of Id; the want-list then says which
 %% obligation it is — empty is a Pay, wanting some of Id's bonds is a Redeem.
-%% Anything else is a normal swap, shown to the user, that Id may accept or decline.
+%% Anything else is a normal swap, shown to the person, that Id may accept or decline.
 %% =============================================================================
 
 exported procedure classify_trade(Constant?, Constant?, Stream(Lot)?, Stream(Bond)?, Constant).

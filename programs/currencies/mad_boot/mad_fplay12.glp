@@ -20,32 +20,32 @@ procedure alice_init(Constant?, Stream(_)?).
 alice_init(Id, NetIn) :-
     ground(Id?) |
     alice_p12(0, ch(ActorIn?, ActorOut), Narr),
-    send_to_user_narrate(Id?, Narr?),
+    send_to_person_narrate(Id?, Narr?),
     tee(ActorOut?, MedIn, DispCmd),
     agent(Id?, AgentIn?, NetIn?,
-          [user_output(AgentToUser), net_output(NetOut)],
+          [user_output(AgentToPerson), net_output(NetOut)],
           [], 1, 0),
     send_to_net(NetOut?),
-    ui_mediator(Id?, ch(AgentToUser?, AgentIn),
+    ui_mediator(Id?, ch(AgentToPerson?, AgentIn),
                 ch(MedIn?, MedOut), [], 1),
     tee(MedOut?, ActorIn, DispNotify),
-    send_to_user_tagged(Id?, DispCmd?, DispNotify?).
+    send_to_person_tagged(Id?, DispCmd?, DispNotify?).
 
 %% Bob — bob_p12(Ch, Narr)
 procedure bob_init(Constant?, Stream(_)?).
 bob_init(Id, NetIn) :-
     ground(Id?) |
     bob_p12(ch(ActorIn?, ActorOut), Narr),
-    send_to_user_narrate(Id?, Narr?),
+    send_to_person_narrate(Id?, Narr?),
     tee(ActorOut?, MedIn, DispCmd),
     agent(Id?, AgentIn?, NetIn?,
-          [user_output(AgentToUser), net_output(NetOut)],
+          [user_output(AgentToPerson), net_output(NetOut)],
           [], 1, 0),
     send_to_net(NetOut?),
-    ui_mediator(Id?, ch(AgentToUser?, AgentIn),
+    ui_mediator(Id?, ch(AgentToPerson?, AgentIn),
                 ch(MedIn?, MedOut), [], 1),
     tee(MedOut?, ActorIn, DispNotify),
-    send_to_user_tagged(Id?, DispCmd?, DispNotify?).
+    send_to_person_tagged(Id?, DispCmd?, DispNotify?).
 
 %% Charlie — charlie_p12(T, Ch, Narr), T = 30, the escrow release date
 procedure charlie_init(Constant?, Stream(_)?).
@@ -53,99 +53,99 @@ charlie_init(Id, NetIn) :-
     ground(Id?) |
     T := 30,
     charlie_p12(T?, ch(ActorIn?, ActorOut), Narr),
-    send_to_user_narrate(Id?, Narr?),
+    send_to_person_narrate(Id?, Narr?),
     tee(ActorOut?, MedIn, DispCmd),
     agent(Id?, AgentIn?, NetIn?,
-          [user_output(AgentToUser), net_output(NetOut)],
+          [user_output(AgentToPerson), net_output(NetOut)],
           [], 1, 0),
     send_to_net(NetOut?),
-    ui_mediator(Id?, ch(AgentToUser?, AgentIn),
+    ui_mediator(Id?, ch(AgentToPerson?, AgentIn),
                 ch(MedIn?, MedOut), [], 1),
     tee(MedOut?, ActorIn, DispNotify),
-    send_to_user_tagged(Id?, DispCmd?, DispNotify?).
+    send_to_person_tagged(Id?, DispCmd?, DispNotify?).
 
 %% Diana — diana_p12(Ch, Narr)
 procedure diana_init(Constant?, Stream(_)?).
 diana_init(Id, NetIn) :-
     ground(Id?) |
     diana_p12(ch(ActorIn?, ActorOut), Narr),
-    send_to_user_narrate(Id?, Narr?),
+    send_to_person_narrate(Id?, Narr?),
     tee(ActorOut?, MedIn, DispCmd),
     agent(Id?, AgentIn?, NetIn?,
-          [user_output(AgentToUser), net_output(NetOut)],
+          [user_output(AgentToPerson), net_output(NetOut)],
           [], 1, 0),
     send_to_net(NetOut?),
-    ui_mediator(Id?, ch(AgentToUser?, AgentIn),
+    ui_mediator(Id?, ch(AgentToPerson?, AgentIn),
                 ch(MedIn?, MedOut), [], 1),
     tee(MedOut?, ActorIn, DispNotify),
-    send_to_user_tagged(Id?, DispCmd?, DispNotify?).
+    send_to_person_tagged(Id?, DispCmd?, DispNotify?).
 
 %% Eve — eve_p12(Ch, Narr)
 procedure eve_init(Constant?, Stream(_)?).
 eve_init(Id, NetIn) :-
     ground(Id?) |
     eve_p12(ch(ActorIn?, ActorOut), Narr),
-    send_to_user_narrate(Id?, Narr?),
+    send_to_person_narrate(Id?, Narr?),
     tee(ActorOut?, MedIn, DispCmd),
     agent(Id?, AgentIn?, NetIn?,
-          [user_output(AgentToUser), net_output(NetOut)],
+          [user_output(AgentToPerson), net_output(NetOut)],
           [], 1, 0),
     send_to_net(NetOut?),
-    ui_mediator(Id?, ch(AgentToUser?, AgentIn),
+    ui_mediator(Id?, ch(AgentToPerson?, AgentIn),
                 ch(MedIn?, MedOut), [], 1),
     tee(MedOut?, ActorIn, DispNotify),
-    send_to_user_tagged(Id?, DispCmd?, DispNotify?).
+    send_to_person_tagged(Id?, DispCmd?, DispNotify?).
 
 %% Frank — frank_p12(Ch, Narr)
 procedure frank_init(Constant?, Stream(_)?).
 frank_init(Id, NetIn) :-
     ground(Id?) |
     frank_p12(ch(ActorIn?, ActorOut), Narr),
-    send_to_user_narrate(Id?, Narr?),
+    send_to_person_narrate(Id?, Narr?),
     tee(ActorOut?, MedIn, DispCmd),
     agent(Id?, AgentIn?, NetIn?,
-          [user_output(AgentToUser), net_output(NetOut)],
+          [user_output(AgentToPerson), net_output(NetOut)],
           [], 1, 0),
     send_to_net(NetOut?),
-    ui_mediator(Id?, ch(AgentToUser?, AgentIn),
+    ui_mediator(Id?, ch(AgentToPerson?, AgentIn),
                 ch(MedIn?, MedOut), [], 1),
     tee(MedOut?, ActorIn, DispNotify),
-    send_to_user_tagged(Id?, DispCmd?, DispNotify?).
+    send_to_person_tagged(Id?, DispCmd?, DispNotify?).
 
 procedure tee(Stream(_)?, Stream(_), Stream(_)).
 tee([X|Xs], [X?|Ys?], [X?|Zs?]) :- ground(X?) | tee(Xs?, Ys, Zs).
 tee([], [], []).
 
-procedure send_to_user_tagged(Constant?, Stream(_)?, Stream(_)?).
-send_to_user_tagged(Id, [T|Cmds], Notifies) :-
+procedure send_to_person_tagged(Constant?, Stream(_)?, Stream(_)?).
+send_to_person_tagged(Id, [T|Cmds], Notifies) :-
     ground(Id?), ground(T?) |
     send_to_user([tagged(Id?, cmd(T?))]),
-    send_to_user_tagged(Id?, Cmds?, Notifies?).
-send_to_user_tagged(Id, Cmds, [T|Notifies]) :-
+    send_to_person_tagged(Id?, Cmds?, Notifies?).
+send_to_person_tagged(Id, Cmds, [T|Notifies]) :-
     ground(Id?), ground(T?) |
     send_to_user([tagged(Id?, notify(T?))]),
-    send_to_user_tagged(Id?, Cmds?, Notifies?).
-send_to_user_tagged(_, [], []).
-send_to_user_tagged(_, Cmds, []) :- sink(Cmds?).
+    send_to_person_tagged(Id?, Cmds?, Notifies?).
+send_to_person_tagged(_, [], []).
+send_to_person_tagged(_, Cmds, []) :- sink(Cmds?).
 
-procedure send_to_user_narrate(Constant?, Stream(_)?).
-send_to_user_narrate(Id, [friend(X)|Ns]) :-
+procedure send_to_person_narrate(Constant?, Stream(_)?).
+send_to_person_narrate(Id, [friend(X)|Ns]) :-
     ground(Id?), ground(X?) |
     send_to_user([tagged(Id?, friend(X?))]),
-    send_to_user_narrate(Id?, Ns?).
-send_to_user_narrate(Id, [say(X)|Ns]) :-
+    send_to_person_narrate(Id?, Ns?).
+send_to_person_narrate(Id, [say(X)|Ns]) :-
     ground(Id?), ground(X?) |
     send_to_user([tagged(Id?, say(X?))]),
-    send_to_user_narrate(Id?, Ns?).
-send_to_user_narrate(Id, [act(X)|Ns]) :-
+    send_to_person_narrate(Id?, Ns?).
+send_to_person_narrate(Id, [act(X)|Ns]) :-
     ground(Id?), ground(X?) |
     send_to_user([tagged(Id?, act(X?))]),
-    send_to_user_narrate(Id?, Ns?).
-send_to_user_narrate(Id, [event(X)|Ns]) :-
+    send_to_person_narrate(Id?, Ns?).
+send_to_person_narrate(Id, [event(X)|Ns]) :-
     ground(Id?), ground(X?) |
     send_to_user([tagged(Id?, event(X?))]),
-    send_to_user_narrate(Id?, Ns?).
-send_to_user_narrate(_, []).
+    send_to_person_narrate(Id?, Ns?).
+send_to_person_narrate(_, []).
 
 procedure sink(Stream(_)?).
 sink([_|Xs]) :- sink(Xs?).

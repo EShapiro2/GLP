@@ -18,13 +18,13 @@ alice_init_10(Id, NetIn) :-
     alice_p10(T?, ch(ActorIn?, ActorOut)),
     tee(ActorOut?, MedIn, DispCmd),
     agent(Id?, AgentIn?, NetIn?,
-          [user_output(AgentToUser), net_output(NetOut)],
+          [user_output(AgentToPerson), net_output(NetOut)],
           [], 1, 0),
     send_to_net(NetOut?),
-    ui_mediator(Id?, ch(AgentToUser?, AgentIn),
+    ui_mediator(Id?, ch(AgentToPerson?, AgentIn),
                 ch(MedIn?, MedOut), [], 1),
     tee(MedOut?, ActorIn, DispNotify),
-    send_to_user_tagged(Id?, DispCmd?, DispNotify?).
+    send_to_person_tagged(Id?, DispCmd?, DispNotify?).
 
 %% Bob — standard agent (no time)
 procedure agent_init(Constant?, Constant?, Stream(_)?).
@@ -33,33 +33,33 @@ agent_init(Id, PlayNum, NetIn) :-
     actor_dispatch(Id?, PlayNum?, ch(ActorIn?, ActorOut)),
     tee(ActorOut?, MedIn, DispCmd),
     agent(Id?, AgentIn?, NetIn?,
-          [user_output(AgentToUser), net_output(NetOut)],
+          [user_output(AgentToPerson), net_output(NetOut)],
           [], 1, 0),
     send_to_net(NetOut?),
-    ui_mediator(Id?, ch(AgentToUser?, AgentIn),
+    ui_mediator(Id?, ch(AgentToPerson?, AgentIn),
                 ch(MedIn?, MedOut), [], 1),
     tee(MedOut?, ActorIn, DispNotify),
-    send_to_user_tagged(Id?, DispCmd?, DispNotify?).
+    send_to_person_tagged(Id?, DispCmd?, DispNotify?).
 
 procedure tee(Stream(_)?, Stream(_), Stream(_)).
 tee([X|Xs], [X?|Ys?], [X?|Zs?]) :- ground(X?) | tee(Xs?, Ys, Zs).
 tee([], [], []).
 
-procedure send_to_user_tagged(Constant?, Stream(_)?, Stream(_)?).
-send_to_user_tagged(Id, [T|Cmds], Notifies) :-
+procedure send_to_person_tagged(Constant?, Stream(_)?, Stream(_)?).
+send_to_person_tagged(Id, [T|Cmds], Notifies) :-
     ground(Id?), ground(T?) |
     send_to_user([tagged(Id?, cmd(T?))]),
-    send_to_user_tagged(Id?, Cmds?, Notifies?).
-send_to_user_tagged(Id, Cmds, [T|Notifies]) :-
+    send_to_person_tagged(Id?, Cmds?, Notifies?).
+send_to_person_tagged(Id, Cmds, [T|Notifies]) :-
     ground(Id?), ground(T?) |
     send_to_user([tagged(Id?, notify(T?))]),
-    send_to_user_tagged(Id?, Cmds?, Notifies?).
-send_to_user_tagged(_, [], []).
-send_to_user_tagged(_, Cmds, []) :- sink(Cmds?).
+    send_to_person_tagged(Id?, Cmds?, Notifies?).
+send_to_person_tagged(_, [], []).
+send_to_person_tagged(_, Cmds, []) :- sink(Cmds?).
 
 procedure sink(Stream(_)?).
 sink([_|Xs]) :- sink(Xs?).
 sink([]).
 
-procedure actor_dispatch(Constant?, Constant?, Channel(Stream(UserNotify), Stream(UserCmd))).
+procedure actor_dispatch(Constant?, Constant?, Channel(Stream(PersonNotify), Stream(PersonCmd))).
 actor_dispatch(bob, 10, Ch) :- bob_p10(Ch?).

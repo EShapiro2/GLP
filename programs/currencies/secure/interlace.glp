@@ -11,7 +11,7 @@
 %%     the current block is taken as a tip.
 %%   - If the stream has advanced (otherwise), skip and pass on.
 %%
-%% Specialized for sovereign/custodian: payloads are SovPayload,
+%% Specialized for issuer/custodian: payloads are IssuerPayload,
 %% other streams are ack streams (Stream(AckMsg)).
 
 %% =============================================================================
@@ -41,10 +41,10 @@ collect_tips([], [], []).
 %% INTERLACE (generic, for reference and reuse)
 %% =============================================================================
 %%
-%% Produces a stream of SovBlocks from a payload stream,
+%% Produces a stream of IssuerBlocks from a payload stream,
 %% interlaced with tips collected from AckStreams.
 
-exported procedure interlace(Stream(SovPayload)?, Stream(SovBlock), AckStreams?).
+exported procedure interlace(Stream(IssuerPayload)?, Stream(IssuerBlock), AckStreams?).
 
 interlace([Payload|Payloads], [block(Payload?, Tips?)|Stream?], Others) :-
     collect_tips(Others?, Tips, Others1),

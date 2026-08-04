@@ -13,7 +13,7 @@ bob_p12(ch(In, Out?), Narr?) :-
     bob_p12_wait_befriend_alice(In?, Out, Narr).
 
 %% Act 1: Accept Alice's befriend request
-procedure bob_p12_wait_befriend_alice(Stream(UserNotify)?, Stream(UserCmd), Stream(NarrativeItem)).
+procedure bob_p12_wait_befriend_alice(Stream(PersonNotify)?, Stream(PersonCmd), Stream(NarrativeItem)).
 bob_p12_wait_befriend_alice([befriend(alice, ReqId)|In],
                             [decision(yes, alice, ReqId?)|Out?],
                             Narr?) :-
@@ -23,7 +23,7 @@ bob_p12_wait_befriend_alice([_|In], Out?, Narr?) :-
     otherwise | bob_p12_wait_befriend_alice(In?, Out, Narr).
 bob_p12_wait_befriend_alice([], [], []).
 
-procedure bob_p12_wait_connected_alice(Stream(UserNotify)?, Stream(UserCmd), Stream(NarrativeItem)).
+procedure bob_p12_wait_connected_alice(Stream(PersonNotify)?, Stream(PersonCmd), Stream(NarrativeItem)).
 bob_p12_wait_connected_alice([connected(alice)|In],
                              [connect(diana)|Out?],
                              [friend(alice)|Narr?]) :-
@@ -32,7 +32,7 @@ bob_p12_wait_connected_alice([_|In], Out?, Narr?) :-
     otherwise | bob_p12_wait_connected_alice(In?, Out, Narr).
 bob_p12_wait_connected_alice([], [], []).
 
-procedure bob_p12_wait_connected_diana(Stream(UserNotify)?, Stream(UserCmd), Stream(NarrativeItem)).
+procedure bob_p12_wait_connected_diana(Stream(PersonNotify)?, Stream(PersonCmd), Stream(NarrativeItem)).
 bob_p12_wait_connected_diana([connected(diana)|In],
                              [mint(15, 0)|Out?],
                              [friend(diana)|Narr?]) :-
@@ -42,7 +42,7 @@ bob_p12_wait_connected_diana([_|In], Out?, Narr?) :-
 bob_p12_wait_connected_diana([], [], []).
 
 %% Act 2a: Mint bob-coins for symmetric trade with Alice
-procedure bob_p12_wait_minted1(Stream(UserNotify)?, Stream(UserCmd), Stream(NarrativeItem)).
+procedure bob_p12_wait_minted1(Stream(PersonNotify)?, Stream(PersonCmd), Stream(NarrativeItem)).
 bob_p12_wait_minted1([minted(15, 0)|In], Out?, Narr?) :-
     bob_p12_wait_trade_alice(In?, Out, Narr).
 bob_p12_wait_minted1([_|In], Out?, Narr?) :-
@@ -50,7 +50,7 @@ bob_p12_wait_minted1([_|In], Out?, Narr?) :-
 bob_p12_wait_minted1([], [], []).
 
 %% Accept Alice's symmetric trade proposal
-procedure bob_p12_wait_trade_alice(Stream(UserNotify)?, Stream(UserCmd), Stream(NarrativeItem)).
+procedure bob_p12_wait_trade_alice(Stream(PersonNotify)?, Stream(PersonCmd), Stream(NarrativeItem)).
 bob_p12_wait_trade_alice([trade_proposed(alice, _, ReqId)|In],
                          [accept_trade(alice, ReqId?), mint(24, 25)|Out?],
                          [say('Sure Alice, 15 for 15'),
@@ -62,7 +62,7 @@ bob_p12_wait_trade_alice([_|In], Out?, Narr?) :-
 bob_p12_wait_trade_alice([], [], []).
 
 %% Act 2c: Mint bob-bonds(Day25) for loan from Diana
-procedure bob_p12_wait_minted2(Stream(UserNotify)?, Stream(UserCmd), Stream(NarrativeItem)).
+procedure bob_p12_wait_minted2(Stream(PersonNotify)?, Stream(PersonCmd), Stream(NarrativeItem)).
 bob_p12_wait_minted2([minted(24, 25)|In],
                      [trade(diana, [lot(bob, 25, 24)], [lot(diana, 0, 20)])|Out?],
                      [say('Diana, 24 bonds maturing day 25 for 20 coins — 20 percent interest')|Narr?]) :-
@@ -72,7 +72,7 @@ bob_p12_wait_minted2([_|In], Out?, Narr?) :-
 bob_p12_wait_minted2([], [], []).
 
 %% Bob proposes 20% loan: 24 bob-bonds(25) for 20 diana-coins (skip negotiation)
-procedure bob_p12_wait_trade_diana(Stream(UserNotify)?, Stream(UserCmd), Stream(NarrativeItem)).
+procedure bob_p12_wait_trade_diana(Stream(PersonNotify)?, Stream(PersonCmd), Stream(NarrativeItem)).
 bob_p12_wait_trade_diana([trade_completed(diana)|In],
                          [trade(alice, [lot(alice, 0, 5)], [])|Out?],
                          [act('Loan from Diana: 20 diana-coins for 24 bob-bonds(25)'),
@@ -83,7 +83,7 @@ bob_p12_wait_trade_diana([_|In], Out?, Narr?) :-
 bob_p12_wait_trade_diana([], [], []).
 
 %% Act 3a: Bob buys bread from Alice
-procedure bob_p12_wait_trade_pay(Stream(UserNotify)?, Stream(UserCmd), Stream(NarrativeItem)).
+procedure bob_p12_wait_trade_pay(Stream(PersonNotify)?, Stream(PersonCmd), Stream(NarrativeItem)).
 bob_p12_wait_trade_pay([trade_completed(alice)|In], [balance|Out?],
                        [act('Paid Alice 5 for bread')|Narr?]) :-
     bob_p12_wait_balance(In?, Out, Narr).
@@ -91,7 +91,7 @@ bob_p12_wait_trade_pay([_|In], Out?, Narr?) :-
     otherwise | bob_p12_wait_trade_pay(In?, Out, Narr).
 bob_p12_wait_trade_pay([], [], []).
 
-procedure bob_p12_wait_balance(Stream(UserNotify)?, Stream(UserCmd), Stream(NarrativeItem)).
+procedure bob_p12_wait_balance(Stream(PersonNotify)?, Stream(PersonCmd), Stream(NarrativeItem)).
 bob_p12_wait_balance([balance_report(_)|In], [done|Out?],
                      [act('Balance: 10 alice-coins, 20 diana-coins')|Narr?]) :-
     bob_p12_finish(In?, Out, Narr).
@@ -99,5 +99,5 @@ bob_p12_wait_balance([_|In], Out?, Narr?) :-
     otherwise | bob_p12_wait_balance(In?, Out, Narr).
 bob_p12_wait_balance([], [], []).
 
-procedure bob_p12_finish(Stream(UserNotify)?, Stream(UserCmd), Stream(NarrativeItem)).
+procedure bob_p12_finish(Stream(PersonNotify)?, Stream(PersonCmd), Stream(NarrativeItem)).
 bob_p12_finish(_, [], []).

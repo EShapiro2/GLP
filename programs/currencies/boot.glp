@@ -19,10 +19,10 @@
 %% =============================================================================
 
 %% From agent.glp
-imported procedure agent#agent(Constant?, Stream(UserInMsg)?, Stream(NetInMsg)?, Stream(OutputEntry)?, Stream(Bond)?, Constant?, Constant?).
+imported procedure agent#agent(Constant?, Stream(PersonInMsg)?, Stream(NetInMsg)?, Stream(OutputEntry)?, Stream(Bond)?, Constant?, Constant?).
 
 %% From mediator.glp
-imported procedure mediator#ui_mediator(Constant?, AgentChannel?, UserChannel?, Stream(PendingEntry)?, Constant?).
+imported procedure mediator#ui_mediator(Constant?, AgentChannel?, PersonChannel?, Stream(PendingEntry)?, Constant?).
 
 %% From actors.glp — play actors
 imported procedure actors#alice_p1(ActorChannel?).
@@ -77,44 +77,44 @@ sink([_|Xs]) :- sink(Xs?).
 sink([]).
 
 %% =============================================================================
-%% SEND_TO_USER_TAGGED — Merge display streams, tag with agent ID
+%% SEND_TO_PERSON_TAGGED — Merge display streams, tag with agent ID
 %% =============================================================================
 
-procedure send_to_user_tagged(Constant?, Stream(UserCmd)?, Stream(UserNotify)?).
-send_to_user_tagged(Id, [T|Cmds], Notifies) :-
+procedure send_to_person_tagged(Constant?, Stream(PersonCmd)?, Stream(PersonNotify)?).
+send_to_person_tagged(Id, [T|Cmds], Notifies) :-
     ground(Id?), ground(T?) |
     send_to_user([tagged(Id?, cmd(T?))]),
-    send_to_user_tagged(Id?, Cmds?, Notifies?).
-send_to_user_tagged(Id, Cmds, [T|Notifies]) :-
+    send_to_person_tagged(Id?, Cmds?, Notifies?).
+send_to_person_tagged(Id, Cmds, [T|Notifies]) :-
     ground(Id?), ground(T?) |
     send_to_user([tagged(Id?, notify(T?))]),
-    send_to_user_tagged(Id?, Cmds?, Notifies?).
-send_to_user_tagged(_, [], []).
-send_to_user_tagged(_, Cmds, []) :- sink(Cmds?).
+    send_to_person_tagged(Id?, Cmds?, Notifies?).
+send_to_person_tagged(_, [], []).
+send_to_person_tagged(_, Cmds, []) :- sink(Cmds?).
 
 %% =============================================================================
-%% SEND_TO_USER_NARRATE — Emit narrative items as tagged output
+%% SEND_TO_PERSON_NARRATE — Emit narrative items as tagged output
 %% =============================================================================
 
-procedure send_to_user_narrate(Constant?, Stream(NarrativeItem)?).
+procedure send_to_person_narrate(Constant?, Stream(NarrativeItem)?).
 
-send_to_user_narrate(Id, [friend(X)|Ns]) :-
+send_to_person_narrate(Id, [friend(X)|Ns]) :-
     ground(Id?), ground(X?) |
     send_to_user([tagged(Id?, friend(X?))]),
-    send_to_user_narrate(Id?, Ns?).
-send_to_user_narrate(Id, [say(X)|Ns]) :-
+    send_to_person_narrate(Id?, Ns?).
+send_to_person_narrate(Id, [say(X)|Ns]) :-
     ground(Id?), ground(X?) |
     send_to_user([tagged(Id?, say(X?))]),
-    send_to_user_narrate(Id?, Ns?).
-send_to_user_narrate(Id, [act(X)|Ns]) :-
+    send_to_person_narrate(Id?, Ns?).
+send_to_person_narrate(Id, [act(X)|Ns]) :-
     ground(Id?), ground(X?) |
     send_to_user([tagged(Id?, act(X?))]),
-    send_to_user_narrate(Id?, Ns?).
-send_to_user_narrate(Id, [event(X)|Ns]) :-
+    send_to_person_narrate(Id?, Ns?).
+send_to_person_narrate(Id, [event(X)|Ns]) :-
     ground(Id?), ground(X?) |
     send_to_user([tagged(Id?, event(X?))]),
-    send_to_user_narrate(Id?, Ns?).
-send_to_user_narrate(_, []).
+    send_to_person_narrate(Id?, Ns?).
+send_to_person_narrate(_, []).
 
 %% =============================================================================
 %% NETWORK SWITCH (2-way)
@@ -228,8 +228,8 @@ play1 :-
     actors # alice_p1(ch(AliceActorIn?, AliceActorOut)),
     tee(AliceActorOut?, AliceMedIn, AliceDispCmd),
     agent # agent(alice, AliceAgentIn?, [],
-          [user_output(AliceAgentToUser)], [], 1, 0),
-    mediator # ui_mediator(alice, ch(AliceAgentToUser?, AliceAgentIn),
+          [user_output(AliceAgentToPerson)], [], 1, 0),
+    mediator # ui_mediator(alice, ch(AliceAgentToPerson?, AliceAgentIn),
                 ch(AliceMedIn?, AliceMedOut), [], 1),
     tee(AliceMedOut?, AliceActorIn, AliceDispNotify),
     sink(AliceDispCmd?), sink(AliceDispNotify?).
@@ -243,11 +243,11 @@ fplay1 :-
     actors # alice_p1(ch(AliceActorIn?, AliceActorOut)),
     tee(AliceActorOut?, AliceMedIn, AliceDispCmd),
     agent # agent(alice, AliceAgentIn?, [],
-          [user_output(AliceAgentToUser)], [], 1, 0),
-    mediator # ui_mediator(alice, ch(AliceAgentToUser?, AliceAgentIn),
+          [user_output(AliceAgentToPerson)], [], 1, 0),
+    mediator # ui_mediator(alice, ch(AliceAgentToPerson?, AliceAgentIn),
                 ch(AliceMedIn?, AliceMedOut), [], 1),
     tee(AliceMedOut?, AliceActorIn, AliceDispNotify),
-    send_to_user_tagged(alice, AliceDispCmd?, AliceDispNotify?).
+    send_to_person_tagged(alice, AliceDispCmd?, AliceDispNotify?).
 
 %% =============================================================================
 %% PLAY 2 — Befriend + credit line (with tee + sink display)
@@ -262,9 +262,9 @@ play2 :-
     actors # alice_p2(ch(AliceActorIn?, AliceActorOut)),
     tee(AliceActorOut?, AliceMedIn, AliceDispCmd),
     agent # agent(alice, AliceAgentIn?, AliceNetIn?,
-          [user_output(AliceAgentToUser), net_output(AliceNetOut)],
+          [user_output(AliceAgentToPerson), net_output(AliceNetOut)],
           [], 1, 0),
-    mediator # ui_mediator(alice, ch(AliceAgentToUser?, AliceAgentIn),
+    mediator # ui_mediator(alice, ch(AliceAgentToPerson?, AliceAgentIn),
                 ch(AliceMedIn?, AliceMedOut), [], 1),
     tee(AliceMedOut?, AliceActorIn, AliceDispNotify),
     sink(AliceDispCmd?), sink(AliceDispNotify?),
@@ -273,9 +273,9 @@ play2 :-
     actors # bob_p2(ch(BobActorIn?, BobActorOut)),
     tee(BobActorOut?, BobMedIn, BobDispCmd),
     agent # agent(bob, BobAgentIn?, BobNetIn?,
-          [user_output(BobAgentToUser), net_output(BobNetOut)],
+          [user_output(BobAgentToPerson), net_output(BobNetOut)],
           [], 1, 0),
-    mediator # ui_mediator(bob, ch(BobAgentToUser?, BobAgentIn),
+    mediator # ui_mediator(bob, ch(BobAgentToPerson?, BobAgentIn),
                 ch(BobMedIn?, BobMedOut), [], 1),
     tee(BobMedOut?, BobActorIn, BobDispNotify),
     sink(BobDispCmd?), sink(BobDispNotify?).
@@ -293,23 +293,23 @@ fplay2 :-
     actors # alice_p2(ch(AliceActorIn?, AliceActorOut)),
     tee(AliceActorOut?, AliceMedIn, AliceDispCmd),
     agent # agent(alice, AliceAgentIn?, AliceNetIn?,
-          [user_output(AliceAgentToUser), net_output(AliceNetOut)],
+          [user_output(AliceAgentToPerson), net_output(AliceNetOut)],
           [], 1, 0),
-    mediator # ui_mediator(alice, ch(AliceAgentToUser?, AliceAgentIn),
+    mediator # ui_mediator(alice, ch(AliceAgentToPerson?, AliceAgentIn),
                 ch(AliceMedIn?, AliceMedOut), [], 1),
     tee(AliceMedOut?, AliceActorIn, AliceDispNotify),
-    send_to_user_tagged(alice, AliceDispCmd?, AliceDispNotify?),
+    send_to_person_tagged(alice, AliceDispCmd?, AliceDispNotify?),
 
     %% Bob
     actors # bob_p2(ch(BobActorIn?, BobActorOut)),
     tee(BobActorOut?, BobMedIn, BobDispCmd),
     agent # agent(bob, BobAgentIn?, BobNetIn?,
-          [user_output(BobAgentToUser), net_output(BobNetOut)],
+          [user_output(BobAgentToPerson), net_output(BobNetOut)],
           [], 1, 0),
-    mediator # ui_mediator(bob, ch(BobAgentToUser?, BobAgentIn),
+    mediator # ui_mediator(bob, ch(BobAgentToPerson?, BobAgentIn),
                 ch(BobMedIn?, BobMedOut), [], 1),
     tee(BobMedOut?, BobActorIn, BobDispNotify),
-    send_to_user_tagged(bob, BobDispCmd?, BobDispNotify?).
+    send_to_person_tagged(bob, BobDispCmd?, BobDispNotify?).
 
 %% =============================================================================
 %% PLAY 3 — Credit + payment (with tee + sink display)
@@ -324,9 +324,9 @@ play3 :-
     actors # alice_p3(ch(AliceActorIn?, AliceActorOut)),
     tee(AliceActorOut?, AliceMedIn, AliceDispCmd),
     agent # agent(alice, AliceAgentIn?, AliceNetIn?,
-          [user_output(AliceAgentToUser), net_output(AliceNetOut)],
+          [user_output(AliceAgentToPerson), net_output(AliceNetOut)],
           [], 1, 0),
-    mediator # ui_mediator(alice, ch(AliceAgentToUser?, AliceAgentIn),
+    mediator # ui_mediator(alice, ch(AliceAgentToPerson?, AliceAgentIn),
                 ch(AliceMedIn?, AliceMedOut), [], 1),
     tee(AliceMedOut?, AliceActorIn, AliceDispNotify),
     sink(AliceDispCmd?), sink(AliceDispNotify?),
@@ -335,9 +335,9 @@ play3 :-
     actors # bob_p3(ch(BobActorIn?, BobActorOut)),
     tee(BobActorOut?, BobMedIn, BobDispCmd),
     agent # agent(bob, BobAgentIn?, BobNetIn?,
-          [user_output(BobAgentToUser), net_output(BobNetOut)],
+          [user_output(BobAgentToPerson), net_output(BobNetOut)],
           [], 1, 0),
-    mediator # ui_mediator(bob, ch(BobAgentToUser?, BobAgentIn),
+    mediator # ui_mediator(bob, ch(BobAgentToPerson?, BobAgentIn),
                 ch(BobMedIn?, BobMedOut), [], 1),
     tee(BobMedOut?, BobActorIn, BobDispNotify),
     sink(BobDispCmd?), sink(BobDispNotify?).
@@ -355,23 +355,23 @@ fplay3 :-
     actors # alice_p3(ch(AliceActorIn?, AliceActorOut)),
     tee(AliceActorOut?, AliceMedIn, AliceDispCmd),
     agent # agent(alice, AliceAgentIn?, AliceNetIn?,
-          [user_output(AliceAgentToUser), net_output(AliceNetOut)],
+          [user_output(AliceAgentToPerson), net_output(AliceNetOut)],
           [], 1, 0),
-    mediator # ui_mediator(alice, ch(AliceAgentToUser?, AliceAgentIn),
+    mediator # ui_mediator(alice, ch(AliceAgentToPerson?, AliceAgentIn),
                 ch(AliceMedIn?, AliceMedOut), [], 1),
     tee(AliceMedOut?, AliceActorIn, AliceDispNotify),
-    send_to_user_tagged(alice, AliceDispCmd?, AliceDispNotify?),
+    send_to_person_tagged(alice, AliceDispCmd?, AliceDispNotify?),
 
     %% Bob
     actors # bob_p3(ch(BobActorIn?, BobActorOut)),
     tee(BobActorOut?, BobMedIn, BobDispCmd),
     agent # agent(bob, BobAgentIn?, BobNetIn?,
-          [user_output(BobAgentToUser), net_output(BobNetOut)],
+          [user_output(BobAgentToPerson), net_output(BobNetOut)],
           [], 1, 0),
-    mediator # ui_mediator(bob, ch(BobAgentToUser?, BobAgentIn),
+    mediator # ui_mediator(bob, ch(BobAgentToPerson?, BobAgentIn),
                 ch(BobMedIn?, BobMedOut), [], 1),
     tee(BobMedOut?, BobActorIn, BobDispNotify),
-    send_to_user_tagged(bob, BobDispCmd?, BobDispNotify?).
+    send_to_person_tagged(bob, BobDispCmd?, BobDispNotify?).
 
 %% =============================================================================
 %% PLAY 4 — Credit + redemption (with tee + sink display)
@@ -386,9 +386,9 @@ play4 :-
     actors # alice_p4(ch(AliceActorIn?, AliceActorOut)),
     tee(AliceActorOut?, AliceMedIn, AliceDispCmd),
     agent # agent(alice, AliceAgentIn?, AliceNetIn?,
-          [user_output(AliceAgentToUser), net_output(AliceNetOut)],
+          [user_output(AliceAgentToPerson), net_output(AliceNetOut)],
           [], 1, 0),
-    mediator # ui_mediator(alice, ch(AliceAgentToUser?, AliceAgentIn),
+    mediator # ui_mediator(alice, ch(AliceAgentToPerson?, AliceAgentIn),
                 ch(AliceMedIn?, AliceMedOut), [], 1),
     tee(AliceMedOut?, AliceActorIn, AliceDispNotify),
     sink(AliceDispCmd?), sink(AliceDispNotify?),
@@ -397,9 +397,9 @@ play4 :-
     actors # bob_p4(ch(BobActorIn?, BobActorOut)),
     tee(BobActorOut?, BobMedIn, BobDispCmd),
     agent # agent(bob, BobAgentIn?, BobNetIn?,
-          [user_output(BobAgentToUser), net_output(BobNetOut)],
+          [user_output(BobAgentToPerson), net_output(BobNetOut)],
           [], 1, 0),
-    mediator # ui_mediator(bob, ch(BobAgentToUser?, BobAgentIn),
+    mediator # ui_mediator(bob, ch(BobAgentToPerson?, BobAgentIn),
                 ch(BobMedIn?, BobMedOut), [], 1),
     tee(BobMedOut?, BobActorIn, BobDispNotify),
     sink(BobDispCmd?), sink(BobDispNotify?).
@@ -417,23 +417,23 @@ fplay4 :-
     actors # alice_p4(ch(AliceActorIn?, AliceActorOut)),
     tee(AliceActorOut?, AliceMedIn, AliceDispCmd),
     agent # agent(alice, AliceAgentIn?, AliceNetIn?,
-          [user_output(AliceAgentToUser), net_output(AliceNetOut)],
+          [user_output(AliceAgentToPerson), net_output(AliceNetOut)],
           [], 1, 0),
-    mediator # ui_mediator(alice, ch(AliceAgentToUser?, AliceAgentIn),
+    mediator # ui_mediator(alice, ch(AliceAgentToPerson?, AliceAgentIn),
                 ch(AliceMedIn?, AliceMedOut), [], 1),
     tee(AliceMedOut?, AliceActorIn, AliceDispNotify),
-    send_to_user_tagged(alice, AliceDispCmd?, AliceDispNotify?),
+    send_to_person_tagged(alice, AliceDispCmd?, AliceDispNotify?),
 
     %% Bob
     actors # bob_p4(ch(BobActorIn?, BobActorOut)),
     tee(BobActorOut?, BobMedIn, BobDispCmd),
     agent # agent(bob, BobAgentIn?, BobNetIn?,
-          [user_output(BobAgentToUser), net_output(BobNetOut)],
+          [user_output(BobAgentToPerson), net_output(BobNetOut)],
           [], 1, 0),
-    mediator # ui_mediator(bob, ch(BobAgentToUser?, BobAgentIn),
+    mediator # ui_mediator(bob, ch(BobAgentToPerson?, BobAgentIn),
                 ch(BobMedIn?, BobMedOut), [], 1),
     tee(BobMedOut?, BobActorIn, BobDispNotify),
-    send_to_user_tagged(bob, BobDispCmd?, BobDispNotify?).
+    send_to_person_tagged(bob, BobDispCmd?, BobDispNotify?).
 
 %% =============================================================================
 %% PLAY 4b — Time-dependent redemption (with tee + sink display)
@@ -454,9 +454,9 @@ play4b_run(T) :-
     actors # alice_p4b(ch(AliceActorIn?, AliceActorOut), T?),
     tee(AliceActorOut?, AliceMedIn, AliceDispCmd),
     agent # agent(alice, AliceAgentIn?, AliceNetIn?,
-          [user_output(AliceAgentToUser), net_output(AliceNetOut)],
+          [user_output(AliceAgentToPerson), net_output(AliceNetOut)],
           [], 1, 0),
-    mediator # ui_mediator(alice, ch(AliceAgentToUser?, AliceAgentIn),
+    mediator # ui_mediator(alice, ch(AliceAgentToPerson?, AliceAgentIn),
                 ch(AliceMedIn?, AliceMedOut), [], 1),
     tee(AliceMedOut?, AliceActorIn, AliceDispNotify),
     sink(AliceDispCmd?), sink(AliceDispNotify?),
@@ -465,9 +465,9 @@ play4b_run(T) :-
     actors # bob_p4b(ch(BobActorIn?, BobActorOut), T?),
     tee(BobActorOut?, BobMedIn, BobDispCmd),
     agent # agent(bob, BobAgentIn?, BobNetIn?,
-          [user_output(BobAgentToUser), net_output(BobNetOut)],
+          [user_output(BobAgentToPerson), net_output(BobNetOut)],
           [], 1, 0),
-    mediator # ui_mediator(bob, ch(BobAgentToUser?, BobAgentIn),
+    mediator # ui_mediator(bob, ch(BobAgentToPerson?, BobAgentIn),
                 ch(BobMedIn?, BobMedOut), [], 1),
     tee(BobMedOut?, BobActorIn, BobDispNotify),
     sink(BobDispCmd?), sink(BobDispNotify?).
@@ -491,23 +491,23 @@ fplay4b_run(T) :-
     actors # alice_p4b(ch(AliceActorIn?, AliceActorOut), T?),
     tee(AliceActorOut?, AliceMedIn, AliceDispCmd),
     agent # agent(alice, AliceAgentIn?, AliceNetIn?,
-          [user_output(AliceAgentToUser), net_output(AliceNetOut)],
+          [user_output(AliceAgentToPerson), net_output(AliceNetOut)],
           [], 1, 0),
-    mediator # ui_mediator(alice, ch(AliceAgentToUser?, AliceAgentIn),
+    mediator # ui_mediator(alice, ch(AliceAgentToPerson?, AliceAgentIn),
                 ch(AliceMedIn?, AliceMedOut), [], 1),
     tee(AliceMedOut?, AliceActorIn, AliceDispNotify),
-    send_to_user_tagged(alice, AliceDispCmd?, AliceDispNotify?),
+    send_to_person_tagged(alice, AliceDispCmd?, AliceDispNotify?),
 
     %% Bob
     actors # bob_p4b(ch(BobActorIn?, BobActorOut), T?),
     tee(BobActorOut?, BobMedIn, BobDispCmd),
     agent # agent(bob, BobAgentIn?, BobNetIn?,
-          [user_output(BobAgentToUser), net_output(BobNetOut)],
+          [user_output(BobAgentToPerson), net_output(BobNetOut)],
           [], 1, 0),
-    mediator # ui_mediator(bob, ch(BobAgentToUser?, BobAgentIn),
+    mediator # ui_mediator(bob, ch(BobAgentToPerson?, BobAgentIn),
                 ch(BobMedIn?, BobMedOut), [], 1),
     tee(BobMedOut?, BobActorIn, BobDispNotify),
-    send_to_user_tagged(bob, BobDispCmd?, BobDispNotify?).
+    send_to_person_tagged(bob, BobDispCmd?, BobDispNotify?).
 
 %% =============================================================================
 %% PLAY 5 — Zero-coupon loan (with tee + sink display)
@@ -522,9 +522,9 @@ play5 :-
     actors # alice_p5(ch(AliceActorIn?, AliceActorOut)),
     tee(AliceActorOut?, AliceMedIn, AliceDispCmd),
     agent # agent(alice, AliceAgentIn?, AliceNetIn?,
-          [user_output(AliceAgentToUser), net_output(AliceNetOut)],
+          [user_output(AliceAgentToPerson), net_output(AliceNetOut)],
           [], 1, 0),
-    mediator # ui_mediator(alice, ch(AliceAgentToUser?, AliceAgentIn),
+    mediator # ui_mediator(alice, ch(AliceAgentToPerson?, AliceAgentIn),
                 ch(AliceMedIn?, AliceMedOut), [], 1),
     tee(AliceMedOut?, AliceActorIn, AliceDispNotify),
     sink(AliceDispCmd?), sink(AliceDispNotify?),
@@ -533,9 +533,9 @@ play5 :-
     actors # bob_p5(ch(BobActorIn?, BobActorOut)),
     tee(BobActorOut?, BobMedIn, BobDispCmd),
     agent # agent(bob, BobAgentIn?, BobNetIn?,
-          [user_output(BobAgentToUser), net_output(BobNetOut)],
+          [user_output(BobAgentToPerson), net_output(BobNetOut)],
           [], 1, 0),
-    mediator # ui_mediator(bob, ch(BobAgentToUser?, BobAgentIn),
+    mediator # ui_mediator(bob, ch(BobAgentToPerson?, BobAgentIn),
                 ch(BobMedIn?, BobMedOut), [], 1),
     tee(BobMedOut?, BobActorIn, BobDispNotify),
     sink(BobDispCmd?), sink(BobDispNotify?).
@@ -553,23 +553,23 @@ fplay5 :-
     actors # alice_p5(ch(AliceActorIn?, AliceActorOut)),
     tee(AliceActorOut?, AliceMedIn, AliceDispCmd),
     agent # agent(alice, AliceAgentIn?, AliceNetIn?,
-          [user_output(AliceAgentToUser), net_output(AliceNetOut)],
+          [user_output(AliceAgentToPerson), net_output(AliceNetOut)],
           [], 1, 0),
-    mediator # ui_mediator(alice, ch(AliceAgentToUser?, AliceAgentIn),
+    mediator # ui_mediator(alice, ch(AliceAgentToPerson?, AliceAgentIn),
                 ch(AliceMedIn?, AliceMedOut), [], 1),
     tee(AliceMedOut?, AliceActorIn, AliceDispNotify),
-    send_to_user_tagged(alice, AliceDispCmd?, AliceDispNotify?),
+    send_to_person_tagged(alice, AliceDispCmd?, AliceDispNotify?),
 
     %% Bob
     actors # bob_p5(ch(BobActorIn?, BobActorOut)),
     tee(BobActorOut?, BobMedIn, BobDispCmd),
     agent # agent(bob, BobAgentIn?, BobNetIn?,
-          [user_output(BobAgentToUser), net_output(BobNetOut)],
+          [user_output(BobAgentToPerson), net_output(BobNetOut)],
           [], 1, 0),
-    mediator # ui_mediator(bob, ch(BobAgentToUser?, BobAgentIn),
+    mediator # ui_mediator(bob, ch(BobAgentToPerson?, BobAgentIn),
                 ch(BobMedIn?, BobMedOut), [], 1),
     tee(BobMedOut?, BobActorIn, BobDispNotify),
-    send_to_user_tagged(bob, BobDispCmd?, BobDispNotify?).
+    send_to_person_tagged(bob, BobDispCmd?, BobDispNotify?).
 
 %% =============================================================================
 %% PLAY 6 — Balloon loan (with tee + sink display)
@@ -584,9 +584,9 @@ play6 :-
     actors # alice_p6(ch(AliceActorIn?, AliceActorOut)),
     tee(AliceActorOut?, AliceMedIn, AliceDispCmd),
     agent # agent(alice, AliceAgentIn?, AliceNetIn?,
-          [user_output(AliceAgentToUser), net_output(AliceNetOut)],
+          [user_output(AliceAgentToPerson), net_output(AliceNetOut)],
           [], 1, 0),
-    mediator # ui_mediator(alice, ch(AliceAgentToUser?, AliceAgentIn),
+    mediator # ui_mediator(alice, ch(AliceAgentToPerson?, AliceAgentIn),
                 ch(AliceMedIn?, AliceMedOut), [], 1),
     tee(AliceMedOut?, AliceActorIn, AliceDispNotify),
     sink(AliceDispCmd?), sink(AliceDispNotify?),
@@ -595,9 +595,9 @@ play6 :-
     actors # bob_p6(ch(BobActorIn?, BobActorOut)),
     tee(BobActorOut?, BobMedIn, BobDispCmd),
     agent # agent(bob, BobAgentIn?, BobNetIn?,
-          [user_output(BobAgentToUser), net_output(BobNetOut)],
+          [user_output(BobAgentToPerson), net_output(BobNetOut)],
           [], 1, 0),
-    mediator # ui_mediator(bob, ch(BobAgentToUser?, BobAgentIn),
+    mediator # ui_mediator(bob, ch(BobAgentToPerson?, BobAgentIn),
                 ch(BobMedIn?, BobMedOut), [], 1),
     tee(BobMedOut?, BobActorIn, BobDispNotify),
     sink(BobDispCmd?), sink(BobDispNotify?).
@@ -615,23 +615,23 @@ fplay6 :-
     actors # alice_p6(ch(AliceActorIn?, AliceActorOut)),
     tee(AliceActorOut?, AliceMedIn, AliceDispCmd),
     agent # agent(alice, AliceAgentIn?, AliceNetIn?,
-          [user_output(AliceAgentToUser), net_output(AliceNetOut)],
+          [user_output(AliceAgentToPerson), net_output(AliceNetOut)],
           [], 1, 0),
-    mediator # ui_mediator(alice, ch(AliceAgentToUser?, AliceAgentIn),
+    mediator # ui_mediator(alice, ch(AliceAgentToPerson?, AliceAgentIn),
                 ch(AliceMedIn?, AliceMedOut), [], 1),
     tee(AliceMedOut?, AliceActorIn, AliceDispNotify),
-    send_to_user_tagged(alice, AliceDispCmd?, AliceDispNotify?),
+    send_to_person_tagged(alice, AliceDispCmd?, AliceDispNotify?),
 
     %% Bob
     actors # bob_p6(ch(BobActorIn?, BobActorOut)),
     tee(BobActorOut?, BobMedIn, BobDispCmd),
     agent # agent(bob, BobAgentIn?, BobNetIn?,
-          [user_output(BobAgentToUser), net_output(BobNetOut)],
+          [user_output(BobAgentToPerson), net_output(BobNetOut)],
           [], 1, 0),
-    mediator # ui_mediator(bob, ch(BobAgentToUser?, BobAgentIn),
+    mediator # ui_mediator(bob, ch(BobAgentToPerson?, BobAgentIn),
                 ch(BobMedIn?, BobMedOut), [], 1),
     tee(BobMedOut?, BobActorIn, BobDispNotify),
-    send_to_user_tagged(bob, BobDispCmd?, BobDispNotify?).
+    send_to_person_tagged(bob, BobDispCmd?, BobDispNotify?).
 
 %% =============================================================================
 %% PLAY 8 — Sale of Debt (with tee + sink display)
@@ -646,9 +646,9 @@ play8 :-
     actors # alice_p8(ch(AliceActorIn?, AliceActorOut)),
     tee(AliceActorOut?, AliceMedIn, AliceDispCmd),
     agent # agent(alice, AliceAgentIn?, AliceNetIn?,
-          [user_output(AliceAgentToUser), net_output(AliceNetOut)],
+          [user_output(AliceAgentToPerson), net_output(AliceNetOut)],
           [], 1, 0),
-    mediator # ui_mediator(alice, ch(AliceAgentToUser?, AliceAgentIn),
+    mediator # ui_mediator(alice, ch(AliceAgentToPerson?, AliceAgentIn),
                 ch(AliceMedIn?, AliceMedOut), [], 1),
     tee(AliceMedOut?, AliceActorIn, AliceDispNotify),
     sink(AliceDispCmd?), sink(AliceDispNotify?),
@@ -657,9 +657,9 @@ play8 :-
     actors # bob_p8(ch(BobActorIn?, BobActorOut)),
     tee(BobActorOut?, BobMedIn, BobDispCmd),
     agent # agent(bob, BobAgentIn?, BobNetIn?,
-          [user_output(BobAgentToUser), net_output(BobNetOut)],
+          [user_output(BobAgentToPerson), net_output(BobNetOut)],
           [], 1, 0),
-    mediator # ui_mediator(bob, ch(BobAgentToUser?, BobAgentIn),
+    mediator # ui_mediator(bob, ch(BobAgentToPerson?, BobAgentIn),
                 ch(BobMedIn?, BobMedOut), [], 1),
     tee(BobMedOut?, BobActorIn, BobDispNotify),
     sink(BobDispCmd?), sink(BobDispNotify?).
@@ -677,23 +677,23 @@ fplay8 :-
     actors # alice_p8(ch(AliceActorIn?, AliceActorOut)),
     tee(AliceActorOut?, AliceMedIn, AliceDispCmd),
     agent # agent(alice, AliceAgentIn?, AliceNetIn?,
-          [user_output(AliceAgentToUser), net_output(AliceNetOut)],
+          [user_output(AliceAgentToPerson), net_output(AliceNetOut)],
           [], 1, 0),
-    mediator # ui_mediator(alice, ch(AliceAgentToUser?, AliceAgentIn),
+    mediator # ui_mediator(alice, ch(AliceAgentToPerson?, AliceAgentIn),
                 ch(AliceMedIn?, AliceMedOut), [], 1),
     tee(AliceMedOut?, AliceActorIn, AliceDispNotify),
-    send_to_user_tagged(alice, AliceDispCmd?, AliceDispNotify?),
+    send_to_person_tagged(alice, AliceDispCmd?, AliceDispNotify?),
 
     %% Bob
     actors # bob_p8(ch(BobActorIn?, BobActorOut)),
     tee(BobActorOut?, BobMedIn, BobDispCmd),
     agent # agent(bob, BobAgentIn?, BobNetIn?,
-          [user_output(BobAgentToUser), net_output(BobNetOut)],
+          [user_output(BobAgentToPerson), net_output(BobNetOut)],
           [], 1, 0),
-    mediator # ui_mediator(bob, ch(BobAgentToUser?, BobAgentIn),
+    mediator # ui_mediator(bob, ch(BobAgentToPerson?, BobAgentIn),
                 ch(BobMedIn?, BobMedOut), [], 1),
     tee(BobMedOut?, BobActorIn, BobDispNotify),
-    send_to_user_tagged(bob, BobDispCmd?, BobDispNotify?).
+    send_to_person_tagged(bob, BobDispCmd?, BobDispNotify?).
 
 %% =============================================================================
 %% PLAY 9 — Forward Contract (with tee + sink display)
@@ -708,9 +708,9 @@ play9 :-
     actors # alice_p9(ch(AliceActorIn?, AliceActorOut)),
     tee(AliceActorOut?, AliceMedIn, AliceDispCmd),
     agent # agent(alice, AliceAgentIn?, AliceNetIn?,
-          [user_output(AliceAgentToUser), net_output(AliceNetOut)],
+          [user_output(AliceAgentToPerson), net_output(AliceNetOut)],
           [], 1, 0),
-    mediator # ui_mediator(alice, ch(AliceAgentToUser?, AliceAgentIn),
+    mediator # ui_mediator(alice, ch(AliceAgentToPerson?, AliceAgentIn),
                 ch(AliceMedIn?, AliceMedOut), [], 1),
     tee(AliceMedOut?, AliceActorIn, AliceDispNotify),
     sink(AliceDispCmd?), sink(AliceDispNotify?),
@@ -719,9 +719,9 @@ play9 :-
     actors # bob_p9(ch(BobActorIn?, BobActorOut)),
     tee(BobActorOut?, BobMedIn, BobDispCmd),
     agent # agent(bob, BobAgentIn?, BobNetIn?,
-          [user_output(BobAgentToUser), net_output(BobNetOut)],
+          [user_output(BobAgentToPerson), net_output(BobNetOut)],
           [], 1, 0),
-    mediator # ui_mediator(bob, ch(BobAgentToUser?, BobAgentIn),
+    mediator # ui_mediator(bob, ch(BobAgentToPerson?, BobAgentIn),
                 ch(BobMedIn?, BobMedOut), [], 1),
     tee(BobMedOut?, BobActorIn, BobDispNotify),
     sink(BobDispCmd?), sink(BobDispNotify?).
@@ -739,23 +739,23 @@ fplay9 :-
     actors # alice_p9(ch(AliceActorIn?, AliceActorOut)),
     tee(AliceActorOut?, AliceMedIn, AliceDispCmd),
     agent # agent(alice, AliceAgentIn?, AliceNetIn?,
-          [user_output(AliceAgentToUser), net_output(AliceNetOut)],
+          [user_output(AliceAgentToPerson), net_output(AliceNetOut)],
           [], 1, 0),
-    mediator # ui_mediator(alice, ch(AliceAgentToUser?, AliceAgentIn),
+    mediator # ui_mediator(alice, ch(AliceAgentToPerson?, AliceAgentIn),
                 ch(AliceMedIn?, AliceMedOut), [], 1),
     tee(AliceMedOut?, AliceActorIn, AliceDispNotify),
-    send_to_user_tagged(alice, AliceDispCmd?, AliceDispNotify?),
+    send_to_person_tagged(alice, AliceDispCmd?, AliceDispNotify?),
 
     %% Bob
     actors # bob_p9(ch(BobActorIn?, BobActorOut)),
     tee(BobActorOut?, BobMedIn, BobDispCmd),
     agent # agent(bob, BobAgentIn?, BobNetIn?,
-          [user_output(BobAgentToUser), net_output(BobNetOut)],
+          [user_output(BobAgentToPerson), net_output(BobNetOut)],
           [], 1, 0),
-    mediator # ui_mediator(bob, ch(BobAgentToUser?, BobAgentIn),
+    mediator # ui_mediator(bob, ch(BobAgentToPerson?, BobAgentIn),
                 ch(BobMedIn?, BobMedOut), [], 1),
     tee(BobMedOut?, BobActorIn, BobDispNotify),
-    send_to_user_tagged(bob, BobDispCmd?, BobDispNotify?).
+    send_to_person_tagged(bob, BobDispCmd?, BobDispNotify?).
 
 %% =============================================================================
 %% PLAY 10 — Escrow: Time Release
@@ -774,9 +774,9 @@ play10 :-
     actors # alice_p10(T?, ch(AliceActorIn?, AliceActorOut)),
     tee(AliceActorOut?, AliceMedIn, AliceDispCmd),
     agent # agent(alice, AliceAgentIn?, AliceNetIn?,
-          [user_output(AliceAgentToUser), net_output(AliceNetOut)],
+          [user_output(AliceAgentToPerson), net_output(AliceNetOut)],
           [], 1, 0),
-    mediator # ui_mediator(alice, ch(AliceAgentToUser?, AliceAgentIn),
+    mediator # ui_mediator(alice, ch(AliceAgentToPerson?, AliceAgentIn),
                 ch(AliceMedIn?, AliceMedOut), [], 1),
     tee(AliceMedOut?, AliceActorIn, AliceDispNotify),
     sink(AliceDispCmd?), sink(AliceDispNotify?),
@@ -785,9 +785,9 @@ play10 :-
     actors # bob_p10(ch(BobActorIn?, BobActorOut)),
     tee(BobActorOut?, BobMedIn, BobDispCmd),
     agent # agent(bob, BobAgentIn?, BobNetIn?,
-          [user_output(BobAgentToUser), net_output(BobNetOut)],
+          [user_output(BobAgentToPerson), net_output(BobNetOut)],
           [], 1, 0),
-    mediator # ui_mediator(bob, ch(BobAgentToUser?, BobAgentIn),
+    mediator # ui_mediator(bob, ch(BobAgentToPerson?, BobAgentIn),
                 ch(BobMedIn?, BobMedOut), [], 1),
     tee(BobMedOut?, BobActorIn, BobDispNotify),
     sink(BobDispCmd?), sink(BobDispNotify?).
@@ -806,23 +806,23 @@ fplay10 :-
     actors # alice_p10(T?, ch(AliceActorIn?, AliceActorOut)),
     tee(AliceActorOut?, AliceMedIn, AliceDispCmd),
     agent # agent(alice, AliceAgentIn?, AliceNetIn?,
-          [user_output(AliceAgentToUser), net_output(AliceNetOut)],
+          [user_output(AliceAgentToPerson), net_output(AliceNetOut)],
           [], 1, 0),
-    mediator # ui_mediator(alice, ch(AliceAgentToUser?, AliceAgentIn),
+    mediator # ui_mediator(alice, ch(AliceAgentToPerson?, AliceAgentIn),
                 ch(AliceMedIn?, AliceMedOut), [], 1),
     tee(AliceMedOut?, AliceActorIn, AliceDispNotify),
-    send_to_user_tagged(alice, AliceDispCmd?, AliceDispNotify?),
+    send_to_person_tagged(alice, AliceDispCmd?, AliceDispNotify?),
 
     %% Bob
     actors # bob_p10(ch(BobActorIn?, BobActorOut)),
     tee(BobActorOut?, BobMedIn, BobDispCmd),
     agent # agent(bob, BobAgentIn?, BobNetIn?,
-          [user_output(BobAgentToUser), net_output(BobNetOut)],
+          [user_output(BobAgentToPerson), net_output(BobNetOut)],
           [], 1, 0),
-    mediator # ui_mediator(bob, ch(BobAgentToUser?, BobAgentIn),
+    mediator # ui_mediator(bob, ch(BobAgentToPerson?, BobAgentIn),
                 ch(BobMedIn?, BobMedOut), [], 1),
     tee(BobMedOut?, BobActorIn, BobDispNotify),
-    send_to_user_tagged(bob, BobDispCmd?, BobDispNotify?).
+    send_to_person_tagged(bob, BobDispCmd?, BobDispNotify?).
 
 %% =============================================================================
 %% PLAY 11 — Escrow: Cancel
@@ -841,9 +841,9 @@ play11 :-
     actors # alice_p11(T?, ch(AliceActorIn?, AliceActorOut)),
     tee(AliceActorOut?, AliceMedIn, AliceDispCmd),
     agent # agent(alice, AliceAgentIn?, AliceNetIn?,
-          [user_output(AliceAgentToUser), net_output(AliceNetOut)],
+          [user_output(AliceAgentToPerson), net_output(AliceNetOut)],
           [], 1, 0),
-    mediator # ui_mediator(alice, ch(AliceAgentToUser?, AliceAgentIn),
+    mediator # ui_mediator(alice, ch(AliceAgentToPerson?, AliceAgentIn),
                 ch(AliceMedIn?, AliceMedOut), [], 1),
     tee(AliceMedOut?, AliceActorIn, AliceDispNotify),
     sink(AliceDispCmd?), sink(AliceDispNotify?),
@@ -852,9 +852,9 @@ play11 :-
     actors # bob_p11(ch(BobActorIn?, BobActorOut)),
     tee(BobActorOut?, BobMedIn, BobDispCmd),
     agent # agent(bob, BobAgentIn?, BobNetIn?,
-          [user_output(BobAgentToUser), net_output(BobNetOut)],
+          [user_output(BobAgentToPerson), net_output(BobNetOut)],
           [], 1, 0),
-    mediator # ui_mediator(bob, ch(BobAgentToUser?, BobAgentIn),
+    mediator # ui_mediator(bob, ch(BobAgentToPerson?, BobAgentIn),
                 ch(BobMedIn?, BobMedOut), [], 1),
     tee(BobMedOut?, BobActorIn, BobDispNotify),
     sink(BobDispCmd?), sink(BobDispNotify?).
@@ -873,23 +873,23 @@ fplay11 :-
     actors # alice_p11(T?, ch(AliceActorIn?, AliceActorOut)),
     tee(AliceActorOut?, AliceMedIn, AliceDispCmd),
     agent # agent(alice, AliceAgentIn?, AliceNetIn?,
-          [user_output(AliceAgentToUser), net_output(AliceNetOut)],
+          [user_output(AliceAgentToPerson), net_output(AliceNetOut)],
           [], 1, 0),
-    mediator # ui_mediator(alice, ch(AliceAgentToUser?, AliceAgentIn),
+    mediator # ui_mediator(alice, ch(AliceAgentToPerson?, AliceAgentIn),
                 ch(AliceMedIn?, AliceMedOut), [], 1),
     tee(AliceMedOut?, AliceActorIn, AliceDispNotify),
-    send_to_user_tagged(alice, AliceDispCmd?, AliceDispNotify?),
+    send_to_person_tagged(alice, AliceDispCmd?, AliceDispNotify?),
 
     %% Bob
     actors # bob_p11(ch(BobActorIn?, BobActorOut)),
     tee(BobActorOut?, BobMedIn, BobDispCmd),
     agent # agent(bob, BobAgentIn?, BobNetIn?,
-          [user_output(BobAgentToUser), net_output(BobNetOut)],
+          [user_output(BobAgentToPerson), net_output(BobNetOut)],
           [], 1, 0),
-    mediator # ui_mediator(bob, ch(BobAgentToUser?, BobAgentIn),
+    mediator # ui_mediator(bob, ch(BobAgentToPerson?, BobAgentIn),
                 ch(BobMedIn?, BobMedOut), [], 1),
     tee(BobMedOut?, BobActorIn, BobDispNotify),
-    send_to_user_tagged(bob, BobDispCmd?, BobDispNotify?).
+    send_to_person_tagged(bob, BobDispCmd?, BobDispNotify?).
 
 %% =============================================================================
 %% FLUTTER PLAY 12 — Village Market Month (6 agents + narrative)
@@ -907,69 +907,69 @@ fplay12 :-
 
     %% Alice (T unused by alice, pass dummy constant to avoid SRSW on T?)
     alice # alice_p12(0, ch(AliceActorIn?, AliceActorOut), AliceNarr),
-    send_to_user_narrate(alice, AliceNarr?),
+    send_to_person_narrate(alice, AliceNarr?),
     tee(AliceActorOut?, AliceMedIn, AliceDispCmd),
     agent # agent(alice, AliceAgentIn?, AliceNetIn?,
-          [user_output(AliceAgentToUser), net_output(AliceNetOut)], [], 1, 0),
-    mediator # ui_mediator(alice, ch(AliceAgentToUser?, AliceAgentIn),
+          [user_output(AliceAgentToPerson), net_output(AliceNetOut)], [], 1, 0),
+    mediator # ui_mediator(alice, ch(AliceAgentToPerson?, AliceAgentIn),
                 ch(AliceMedIn?, AliceMedOut), [], 1),
     tee(AliceMedOut?, AliceActorIn, AliceDispNotify),
-    send_to_user_tagged(alice, AliceDispCmd?, AliceDispNotify?),
+    send_to_person_tagged(alice, AliceDispCmd?, AliceDispNotify?),
 
     %% Bob
     bob # bob_p12(ch(BobActorIn?, BobActorOut), BobNarr),
-    send_to_user_narrate(bob, BobNarr?),
+    send_to_person_narrate(bob, BobNarr?),
     tee(BobActorOut?, BobMedIn, BobDispCmd),
     agent # agent(bob, BobAgentIn?, BobNetIn?,
-          [user_output(BobAgentToUser), net_output(BobNetOut)], [], 1, 0),
-    mediator # ui_mediator(bob, ch(BobAgentToUser?, BobAgentIn),
+          [user_output(BobAgentToPerson), net_output(BobNetOut)], [], 1, 0),
+    mediator # ui_mediator(bob, ch(BobAgentToPerson?, BobAgentIn),
                 ch(BobMedIn?, BobMedOut), [], 1),
     tee(BobMedOut?, BobActorIn, BobDispNotify),
-    send_to_user_tagged(bob, BobDispCmd?, BobDispNotify?),
+    send_to_person_tagged(bob, BobDispCmd?, BobDispNotify?),
 
     %% Charlie
     charlie # charlie_p12(T?, ch(CharlieActorIn?, CharlieActorOut), CharlieNarr),
-    send_to_user_narrate(charlie, CharlieNarr?),
+    send_to_person_narrate(charlie, CharlieNarr?),
     tee(CharlieActorOut?, CharlieMedIn, CharlieDispCmd),
     agent # agent(charlie, CharlieAgentIn?, CharlieNetIn?,
-          [user_output(CharlieAgentToUser), net_output(CharlieNetOut)], [], 1, 0),
-    mediator # ui_mediator(charlie, ch(CharlieAgentToUser?, CharlieAgentIn),
+          [user_output(CharlieAgentToPerson), net_output(CharlieNetOut)], [], 1, 0),
+    mediator # ui_mediator(charlie, ch(CharlieAgentToPerson?, CharlieAgentIn),
                 ch(CharlieMedIn?, CharlieMedOut), [], 1),
     tee(CharlieMedOut?, CharlieActorIn, CharlieDispNotify),
-    send_to_user_tagged(charlie, CharlieDispCmd?, CharlieDispNotify?),
+    send_to_person_tagged(charlie, CharlieDispCmd?, CharlieDispNotify?),
 
     %% Diana
     diana # diana_p12(ch(DianaActorIn?, DianaActorOut), DianaNarr),
-    send_to_user_narrate(diana, DianaNarr?),
+    send_to_person_narrate(diana, DianaNarr?),
     tee(DianaActorOut?, DianaMedIn, DianaDispCmd),
     agent # agent(diana, DianaAgentIn?, DianaNetIn?,
-          [user_output(DianaAgentToUser), net_output(DianaNetOut)], [], 1, 0),
-    mediator # ui_mediator(diana, ch(DianaAgentToUser?, DianaAgentIn),
+          [user_output(DianaAgentToPerson), net_output(DianaNetOut)], [], 1, 0),
+    mediator # ui_mediator(diana, ch(DianaAgentToPerson?, DianaAgentIn),
                 ch(DianaMedIn?, DianaMedOut), [], 1),
     tee(DianaMedOut?, DianaActorIn, DianaDispNotify),
-    send_to_user_tagged(diana, DianaDispCmd?, DianaDispNotify?),
+    send_to_person_tagged(diana, DianaDispCmd?, DianaDispNotify?),
 
     %% Eve
     eve # eve_p12(ch(EveActorIn?, EveActorOut), EveNarr),
-    send_to_user_narrate(eve, EveNarr?),
+    send_to_person_narrate(eve, EveNarr?),
     tee(EveActorOut?, EveMedIn, EveDispCmd),
     agent # agent(eve, EveAgentIn?, EveNetIn?,
-          [user_output(EveAgentToUser), net_output(EveNetOut)], [], 1, 0),
-    mediator # ui_mediator(eve, ch(EveAgentToUser?, EveAgentIn),
+          [user_output(EveAgentToPerson), net_output(EveNetOut)], [], 1, 0),
+    mediator # ui_mediator(eve, ch(EveAgentToPerson?, EveAgentIn),
                 ch(EveMedIn?, EveMedOut), [], 1),
     tee(EveMedOut?, EveActorIn, EveDispNotify),
-    send_to_user_tagged(eve, EveDispCmd?, EveDispNotify?),
+    send_to_person_tagged(eve, EveDispCmd?, EveDispNotify?),
 
     %% Frank
     frank # frank_p12(ch(FrankActorIn?, FrankActorOut), FrankNarr),
-    send_to_user_narrate(frank, FrankNarr?),
+    send_to_person_narrate(frank, FrankNarr?),
     tee(FrankActorOut?, FrankMedIn, FrankDispCmd),
     agent # agent(frank, FrankAgentIn?, FrankNetIn?,
-          [user_output(FrankAgentToUser), net_output(FrankNetOut)], [], 1, 0),
-    mediator # ui_mediator(frank, ch(FrankAgentToUser?, FrankAgentIn),
+          [user_output(FrankAgentToPerson), net_output(FrankNetOut)], [], 1, 0),
+    mediator # ui_mediator(frank, ch(FrankAgentToPerson?, FrankAgentIn),
                 ch(FrankMedIn?, FrankMedOut), [], 1),
     tee(FrankMedOut?, FrankActorIn, FrankDispNotify),
-    send_to_user_tagged(frank, FrankDispCmd?, FrankDispNotify?).
+    send_to_person_tagged(frank, FrankDispCmd?, FrankDispNotify?).
 
 %% =============================================================================
 %% FLUTTER PLAY 13 — Loan then issuer-dated redemption (2 agents)
@@ -992,23 +992,23 @@ fplay13 :-
     actors # alice_p13(ch(AliceActorIn?, AliceActorOut)),
     tee(AliceActorOut?, AliceMedIn, AliceDispCmd),
     agent # agent(alice, AliceAgentIn?, AliceNetIn?,
-          [user_output(AliceAgentToUser), net_output(AliceNetOut)],
+          [user_output(AliceAgentToPerson), net_output(AliceNetOut)],
           [], 1, 0),
-    mediator # ui_mediator(alice, ch(AliceAgentToUser?, AliceAgentIn),
+    mediator # ui_mediator(alice, ch(AliceAgentToPerson?, AliceAgentIn),
                 ch(AliceMedIn?, AliceMedOut), [], 1),
     tee(AliceMedOut?, AliceActorIn, AliceDispNotify),
-    send_to_user_tagged(alice, AliceDispCmd?, AliceDispNotify?),
+    send_to_person_tagged(alice, AliceDispCmd?, AliceDispNotify?),
 
     %% Bob — borrower
     actors # bob_p13(ch(BobActorIn?, BobActorOut)),
     tee(BobActorOut?, BobMedIn, BobDispCmd),
     agent # agent(bob, BobAgentIn?, BobNetIn?,
-          [user_output(BobAgentToUser), net_output(BobNetOut)],
+          [user_output(BobAgentToPerson), net_output(BobNetOut)],
           [], 1, 0),
-    mediator # ui_mediator(bob, ch(BobAgentToUser?, BobAgentIn),
+    mediator # ui_mediator(bob, ch(BobAgentToPerson?, BobAgentIn),
                 ch(BobMedIn?, BobMedOut), [], 1),
     tee(BobMedOut?, BobActorIn, BobDispNotify),
-    send_to_user_tagged(bob, BobDispCmd?, BobDispNotify?).
+    send_to_person_tagged(bob, BobDispCmd?, BobDispNotify?).
 
 %% =============================================================================
 %% CREDIT LINE (paper §5 item 7) — lender alice (p), borrower bob (q), escrow
@@ -1025,31 +1025,31 @@ fplay_cl :-
     actors # alice_cl(ch(AliceActorIn?, AliceActorOut)),
     tee(AliceActorOut?, AliceMedIn, AliceDispCmd),
     agent # agent(alice, AliceAgentIn?, AliceNetIn?,
-          [user_output(AliceAgentToUser), net_output(AliceNetOut)], [], 1, 0),
-    mediator # ui_mediator(alice, ch(AliceAgentToUser?, AliceAgentIn),
+          [user_output(AliceAgentToPerson), net_output(AliceNetOut)], [], 1, 0),
+    mediator # ui_mediator(alice, ch(AliceAgentToPerson?, AliceAgentIn),
                 ch(AliceMedIn?, AliceMedOut), [], 1),
     tee(AliceMedOut?, AliceActorIn, AliceDispNotify),
-    send_to_user_tagged(alice, AliceDispCmd?, AliceDispNotify?),
+    send_to_person_tagged(alice, AliceDispCmd?, AliceDispNotify?),
 
     %% Bob — borrower q
     actors # bob_cl(ch(BobActorIn?, BobActorOut)),
     tee(BobActorOut?, BobMedIn, BobDispCmd),
     agent # agent(bob, BobAgentIn?, BobNetIn?,
-          [user_output(BobAgentToUser), net_output(BobNetOut)], [], 1, 0),
-    mediator # ui_mediator(bob, ch(BobAgentToUser?, BobAgentIn),
+          [user_output(BobAgentToPerson), net_output(BobNetOut)], [], 1, 0),
+    mediator # ui_mediator(bob, ch(BobAgentToPerson?, BobAgentIn),
                 ch(BobMedIn?, BobMedOut), [], 1),
     tee(BobMedOut?, BobActorIn, BobDispNotify),
-    send_to_user_tagged(bob, BobDispCmd?, BobDispNotify?),
+    send_to_person_tagged(bob, BobDispCmd?, BobDispNotify?),
 
     %% Charlie — escrow agent e
     actors # charlie_cl(ch(CharlieActorIn?, CharlieActorOut)),
     tee(CharlieActorOut?, CharlieMedIn, CharlieDispCmd),
     agent # agent(charlie, CharlieAgentIn?, CharlieNetIn?,
-          [user_output(CharlieAgentToUser), net_output(CharlieNetOut)], [], 1, 0),
-    mediator # ui_mediator(charlie, ch(CharlieAgentToUser?, CharlieAgentIn),
+          [user_output(CharlieAgentToPerson), net_output(CharlieNetOut)], [], 1, 0),
+    mediator # ui_mediator(charlie, ch(CharlieAgentToPerson?, CharlieAgentIn),
                 ch(CharlieMedIn?, CharlieMedOut), [], 1),
     tee(CharlieMedOut?, CharlieActorIn, CharlieDispNotify),
-    send_to_user_tagged(charlie, CharlieDispCmd?, CharlieDispNotify?).
+    send_to_person_tagged(charlie, CharlieDispCmd?, CharlieDispNotify?).
 
 %% =============================================================================
 %% NETWORK SWITCH (6-way)

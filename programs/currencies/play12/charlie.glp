@@ -17,7 +17,7 @@ charlie_p12(T, ch(In, Out?), Narr?) :-
     charlie_p12_wait_befriend_alice(T?, In?, Out, Narr).
 
 %% Act 1: Accept Alice's befriend request
-procedure charlie_p12_wait_befriend_alice(Constant?, Stream(UserNotify)?, Stream(UserCmd), Stream(NarrativeItem)).
+procedure charlie_p12_wait_befriend_alice(Constant?, Stream(PersonNotify)?, Stream(PersonCmd), Stream(NarrativeItem)).
 charlie_p12_wait_befriend_alice(T, [befriend(alice, ReqId)|In],
                                 [decision(yes, alice, ReqId?)|Out?],
                                 Narr?) :-
@@ -27,7 +27,7 @@ charlie_p12_wait_befriend_alice(T, [_|In], Out?, Narr?) :-
     otherwise | charlie_p12_wait_befriend_alice(T?, In?, Out, Narr).
 charlie_p12_wait_befriend_alice(_, [], [], []).
 
-procedure charlie_p12_wait_connected_alice(Constant?, Stream(UserNotify)?, Stream(UserCmd), Stream(NarrativeItem)).
+procedure charlie_p12_wait_connected_alice(Constant?, Stream(PersonNotify)?, Stream(PersonCmd), Stream(NarrativeItem)).
 charlie_p12_wait_connected_alice(T, [connected(alice)|In],
                                  [connect(eve)|Out?],
                                  [friend(alice)|Narr?]) :-
@@ -36,7 +36,7 @@ charlie_p12_wait_connected_alice(T, [_|In], Out?, Narr?) :-
     otherwise | charlie_p12_wait_connected_alice(T?, In?, Out, Narr).
 charlie_p12_wait_connected_alice(_, [], [], []).
 
-procedure charlie_p12_wait_connected_eve(Constant?, Stream(UserNotify)?, Stream(UserCmd), Stream(NarrativeItem)).
+procedure charlie_p12_wait_connected_eve(Constant?, Stream(PersonNotify)?, Stream(PersonCmd), Stream(NarrativeItem)).
 charlie_p12_wait_connected_eve(T, [connected(eve)|In],
                                [connect(frank)|Out?],
                                [friend(eve)|Narr?]) :-
@@ -45,7 +45,7 @@ charlie_p12_wait_connected_eve(T, [_|In], Out?, Narr?) :-
     otherwise | charlie_p12_wait_connected_eve(T?, In?, Out, Narr).
 charlie_p12_wait_connected_eve(_, [], [], []).
 
-procedure charlie_p12_wait_connected_frank(Constant?, Stream(UserNotify)?, Stream(UserCmd), Stream(NarrativeItem)).
+procedure charlie_p12_wait_connected_frank(Constant?, Stream(PersonNotify)?, Stream(PersonCmd), Stream(NarrativeItem)).
 charlie_p12_wait_connected_frank(T, [connected(frank)|In],
                                  [mint(15, 0)|Out?],
                                  [friend(frank)|Narr?]) :-
@@ -55,7 +55,7 @@ charlie_p12_wait_connected_frank(T, [_|In], Out?, Narr?) :-
 charlie_p12_wait_connected_frank(_, [], [], []).
 
 %% Act 2b: Mint charlie-coins for symmetric trade with Alice
-procedure charlie_p12_wait_minted1(Constant?, Stream(UserNotify)?, Stream(UserCmd), Stream(NarrativeItem)).
+procedure charlie_p12_wait_minted1(Constant?, Stream(PersonNotify)?, Stream(PersonCmd), Stream(NarrativeItem)).
 charlie_p12_wait_minted1(T, [minted(15, 0)|In], Out?, Narr?) :-
     charlie_p12_wait_trade_alice(T?, In?, Out, Narr).
 charlie_p12_wait_minted1(T, [_|In], Out?, Narr?) :-
@@ -63,7 +63,7 @@ charlie_p12_wait_minted1(T, [_|In], Out?, Narr?) :-
 charlie_p12_wait_minted1(_, [], [], []).
 
 %% Accept Alice's symmetric trade proposal
-procedure charlie_p12_wait_trade_alice(Constant?, Stream(UserNotify)?, Stream(UserCmd), Stream(NarrativeItem)).
+procedure charlie_p12_wait_trade_alice(Constant?, Stream(PersonNotify)?, Stream(PersonCmd), Stream(NarrativeItem)).
 charlie_p12_wait_trade_alice(T, [trade_proposed(alice, _, ReqId)|In],
                              [accept_trade(alice, ReqId?), mint(10, 0)|Out?],
                              [say('Alice, happy to trade 15 for 15'),
@@ -75,7 +75,7 @@ charlie_p12_wait_trade_alice(T, [_|In], Out?, Narr?) :-
 charlie_p12_wait_trade_alice(_, [], [], []).
 
 %% Act 2d: Mint charlie-coins for symmetric trade with Eve
-procedure charlie_p12_wait_minted2(Constant?, Stream(UserNotify)?, Stream(UserCmd), Stream(NarrativeItem)).
+procedure charlie_p12_wait_minted2(Constant?, Stream(PersonNotify)?, Stream(PersonCmd), Stream(NarrativeItem)).
 charlie_p12_wait_minted2(T, [minted(10, 0)|In],
                          [trade(eve, [lot(charlie, 0, 10)], [lot(eve, 0, 10)])|Out?],
                          [say('Eve, 10 for 10?')|Narr?]) :-
@@ -84,7 +84,7 @@ charlie_p12_wait_minted2(T, [_|In], Out?, Narr?) :-
     otherwise | charlie_p12_wait_minted2(T?, In?, Out, Narr).
 charlie_p12_wait_minted2(_, [], [], []).
 
-procedure charlie_p12_wait_trade_eve(Constant?, Stream(UserNotify)?, Stream(UserCmd), Stream(NarrativeItem)).
+procedure charlie_p12_wait_trade_eve(Constant?, Stream(PersonNotify)?, Stream(PersonCmd), Stream(NarrativeItem)).
 charlie_p12_wait_trade_eve(T, [trade_completed(eve)|In], Out?,
                            [act('Credit line with Eve: 10 charlie-coins for 10 eve-coins')|Narr?]) :-
     charlie_p12_wait_trade_pay_eve(T?, In?, Out, Narr).
@@ -93,7 +93,7 @@ charlie_p12_wait_trade_eve(T, [_|In], Out?, Narr?) :-
 charlie_p12_wait_trade_eve(_, [], [], []).
 
 %% Act 3c: Eve buys bookshelf (auto-accepted trade)
-procedure charlie_p12_wait_trade_pay_eve(Constant?, Stream(UserNotify)?, Stream(UserCmd), Stream(NarrativeItem)).
+procedure charlie_p12_wait_trade_pay_eve(Constant?, Stream(PersonNotify)?, Stream(PersonCmd), Stream(NarrativeItem)).
 charlie_p12_wait_trade_pay_eve(T, [trade_completed(eve)|In], Out?,
                                [event('Eve bought a bookshelf — paid 6 charlie-coins')|Narr?]) :-
     charlie_p12_wait_trade_eve2(T?, In?, Out, Narr).
@@ -102,7 +102,7 @@ charlie_p12_wait_trade_pay_eve(T, [_|In], Out?, Narr?) :-
 charlie_p12_wait_trade_pay_eve(_, [], [], []).
 
 %% Act 4a: Accept Eve's swap (5 frank-coins for 5 alice-coins), then deposit escrow
-procedure charlie_p12_wait_trade_eve2(Constant?, Stream(UserNotify)?, Stream(UserCmd), Stream(NarrativeItem)).
+procedure charlie_p12_wait_trade_eve2(Constant?, Stream(PersonNotify)?, Stream(PersonCmd), Stream(NarrativeItem)).
 charlie_p12_wait_trade_eve2(T, [trade_proposed(eve, _, ReqId)|In],
                             [accept_trade(eve, ReqId?),
                              deposit_escrow(frank, [lot(frank, 0, 5)], T?)|Out?],
@@ -116,7 +116,7 @@ charlie_p12_wait_trade_eve2(_, [], [], []).
 %% Act 5: Escrow deposited.  Charlie advances his own date to the release date:
 %% the escrow reads his date and releases on it — no wall clock, and the dock was
 %% built, so he never cancels.
-procedure charlie_p12_wait_escrow_deposited(Stream(UserNotify)?, Stream(UserCmd), Stream(NarrativeItem)).
+procedure charlie_p12_wait_escrow_deposited(Stream(PersonNotify)?, Stream(PersonCmd), Stream(NarrativeItem)).
 charlie_p12_wait_escrow_deposited([escrow_deposited(frank, T, _)|In], [advance_date(T?)|Out?],
                                   [act('Escrow deposited: 5 frank-coins for Frank, release day 30')|Narr?]) :-
     charlie_p12_wait_escrow_expired(In?, Out, Narr).
@@ -124,7 +124,7 @@ charlie_p12_wait_escrow_deposited([_|In], Out?, Narr?) :-
     otherwise | charlie_p12_wait_escrow_deposited(In?, Out, Narr).
 charlie_p12_wait_escrow_deposited([], [], []).
 
-procedure charlie_p12_wait_escrow_expired(Stream(UserNotify)?, Stream(UserCmd), Stream(NarrativeItem)).
+procedure charlie_p12_wait_escrow_expired(Stream(PersonNotify)?, Stream(PersonCmd), Stream(NarrativeItem)).
 charlie_p12_wait_escrow_expired([escrow_expired(frank)|In], [balance|Out?],
                                 [event('Escrow released — Frank got paid for dock')|Narr?]) :-
     charlie_p12_wait_balance(In?, Out, Narr).
@@ -132,7 +132,7 @@ charlie_p12_wait_escrow_expired([_|In], Out?, Narr?) :-
     otherwise | charlie_p12_wait_escrow_expired(In?, Out, Narr).
 charlie_p12_wait_escrow_expired([], [], []).
 
-procedure charlie_p12_wait_balance(Stream(UserNotify)?, Stream(UserCmd), Stream(NarrativeItem)).
+procedure charlie_p12_wait_balance(Stream(PersonNotify)?, Stream(PersonCmd), Stream(NarrativeItem)).
 charlie_p12_wait_balance([balance_report(_)|In], [done|Out?],
                          [act('Balance: 10 alice-coins, 10 eve-coins, 6 charlie-coins')|Narr?]) :-
     charlie_p12_finish(In?, Out, Narr).
@@ -140,5 +140,5 @@ charlie_p12_wait_balance([_|In], Out?, Narr?) :-
     otherwise | charlie_p12_wait_balance(In?, Out, Narr).
 charlie_p12_wait_balance([], [], []).
 
-procedure charlie_p12_finish(Stream(UserNotify)?, Stream(UserCmd), Stream(NarrativeItem)).
+procedure charlie_p12_finish(Stream(PersonNotify)?, Stream(PersonCmd), Stream(NarrativeItem)).
 charlie_p12_finish(_, [], []).

@@ -1,10 +1,10 @@
 
 %% custodian.glp — Custodian mirror
 %%
-%% Reads the sovereign's block stream and writes ack(TxId) for each block.
+%% Reads the issuer's block stream and writes ack(TxId) for each block.
 %% The custodian's ack stream serves as a recoverable copy of the log.
 
-exported procedure custodian(Stream(SovBlock)?, Stream(AckMsg)).
+exported procedure custodian(Stream(IssuerBlock)?, Stream(AckMsg)).
 
 custodian([block(tx(TxId, _), _)|Rest], [ack(TxId?)|AckTail?]) :-
     custodian(Rest?, AckTail).

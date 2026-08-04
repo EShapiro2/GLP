@@ -1,16 +1,16 @@
 
-%% play_sovereign.glp — Test plays for secure bonds sovereign
+%% play_issuer.glp — Test plays for secure bonds issuer
 %%
-%% play: basic sovereign with mint + pay, verify finality
+%% play: basic issuer with mint + pay, verify finality
 %% play_recover: same, plus verify the log is recoverable
 
 %% =============================================================================
 %% IMPORTED PROCEDURES
 %% =============================================================================
 
-imported procedure sovereign#setup(Stream(ApprovalReq)?).
-imported procedure sovereign#setup_with_log(Stream(ApprovalReq)?, Stream(SovBlock)).
-imported procedure sovereign#recover_counter(Stream(SovBlock)?, Constant).
+imported procedure issuer#setup(Stream(ApprovalReq)?).
+imported procedure issuer#setup_with_log(Stream(ApprovalReq)?, Stream(IssuerBlock)).
+imported procedure issuer#recover_counter(Stream(IssuerBlock)?, Constant).
 
 %% =============================================================================
 %% OBSERVE — Wait for finality then terminate
@@ -27,7 +27,7 @@ procedure check_equals(Constant?, Constant?).
 check_equals(N, M) :- N? =?= M? | true.
 
 %% =============================================================================
-%% PLAY — Basic sovereign test
+%% PLAY — Basic issuer test
 %% =============================================================================
 
 exported procedure play.
@@ -36,16 +36,16 @@ play :-
         approve_mint(10, 0, FinalityMint),
         approve_pay(bob, charlie, bond(alice, 0, 1), FinalityPayQ, FinalityPayR)
     ] |
-    sovereign # setup(Requests?),
+    issuer # setup(Requests?),
     observe(mint, FinalityMint?),
     observe(pay_q, FinalityPayQ?),
     observe(pay_r, FinalityPayR?).
 
 %% =============================================================================
-%% PLAY_RECOVER — Sovereign test with recovery verification
+%% PLAY_RECOVER — Issuer test with recovery verification
 %% =============================================================================
 %%
-%% Runs the sovereign with a log copy, verifies finality,
+%% Runs the issuer with a log copy, verifies finality,
 %% then recovers the counter from the log and checks it equals 2
 %% (two transactions: mint at counter 1, pay at counter 2).
 
@@ -55,9 +55,9 @@ play_recover :-
         approve_mint(10, 0, FinalityMint),
         approve_pay(bob, charlie, bond(alice, 0, 1), FinalityPayQ, FinalityPayR)
     ] |
-    sovereign # setup_with_log(Requests?, Log),
+    issuer # setup_with_log(Requests?, Log),
     observe(mint, FinalityMint?),
     observe(pay_q, FinalityPayQ?),
     observe(pay_r, FinalityPayR?),
-    sovereign # recover_counter(Log?, Counter),
+    issuer # recover_counter(Log?, Counter),
     check_equals(Counter?, 2).

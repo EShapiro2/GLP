@@ -47,8 +47,8 @@ NetColdCall ::= intro(Constant, Response?).
 %% AGENT <-> MEDIATOR INTERFACE
 %% =============================================================================
 
-%% Content carried inside user-to-agent messages (msg(person, Id, Content))
-UserContent ::= mint(Constant, Constant)
+%% Content carried inside person-to-agent messages (msg(person, Id, Content))
+PersonContent ::= mint(Constant, Constant)
               ; balance
               ; done
               ; connect(Constant)
@@ -68,7 +68,7 @@ PendingValue ::= response(Response?)
                ; escrow_pending(EscrowCancel?)
                ; error.
 
-%% Content carried inside agent-to-user messages (msg(agent, person, Content))
+%% Content carried inside agent-to-person messages (msg(agent, person, Content))
 AgentContent ::= minted(Constant, Constant)
                ; date_advanced(Constant)
                ; balance_report(Stream(Bond))
@@ -90,8 +90,8 @@ AgentContent ::= minted(Constant, Constant)
                ; trade_returned_menu(Constant, Stream(Bond)).
 
 %% Precise message types for agent <-> mediator channel
-AgentToUserMsg     ::= msg(Constant, Constant, AgentContent).
-MediatorToAgentMsg ::= msg(Constant, Constant, UserContent).
+AgentToPersonMsg     ::= msg(Constant, Constant, AgentContent).
+MediatorToAgentMsg ::= msg(Constant, Constant, PersonContent).
 
 %% =============================================================================
 %% AGENT INPUT TYPES
@@ -102,7 +102,7 @@ NetInMsg ::= msg(Constant, NetColdCall)
            ; msg(Constant, Constant, FriendContent).
 
 %% Agent input stream (from mediator + injected results)
-UserInMsg ::= msg(Constant, Constant, UserContent)
+PersonInMsg ::= msg(Constant, Constant, PersonContent)
             ; trade_complete(Constant, Stream(Bond))
             ; trade_returned_bonds(Constant, Stream(Bond))
             ; escrow_ben_released(Constant, Stream(Bond))
@@ -126,8 +126,8 @@ NetInStream  ::= [] ; [NetInMsg | NetInStream].
 %% Output list — one constructor per output kind, each carrying its own stream
 %% type.  Replaces output(OutputKey, Stream(OutputMsg)?) whose union OutputMsg
 %% typed every entry at the join of all kinds and broke duality against narrower
-%% readers (mediator AgentToUserMsg, peer NetInStream).
-OutputEntry ::= user_output(Stream(AgentToUserMsg)?)
+%% readers (mediator AgentToPersonMsg, peer NetInStream).
+OutputEntry ::= user_output(Stream(AgentToPersonMsg)?)
               ; net_output(NetOutStream?)
               ; friend_output(Constant, Stream(FriendMsg)?).
 OutputsList ::= [] ; [OutputEntry | OutputsList].
@@ -136,16 +136,16 @@ OutputsList ::= [] ; [OutputEntry | OutputsList].
 %% AGENT-MEDIATOR CHANNEL
 %% =============================================================================
 
-AgentChannel ::= ch(Stream(AgentToUserMsg), Stream(MediatorToAgentMsg)?).
+AgentChannel ::= ch(Stream(AgentToPersonMsg), Stream(MediatorToAgentMsg)?).
 
 %% =============================================================================
-%% MEDIATOR <-> USER (UI) INTERFACE
+%% MEDIATOR <-> PERSON (UI) INTERFACE
 %% =============================================================================
 
 ReqId ::= req(Constant).
 
-%% User -> Mediator commands
-UserCmd ::= mint(Constant, Constant)
+%% Person -> Mediator commands
+PersonCmd ::= mint(Constant, Constant)
           ; balance
           ; done
           ; connect(Constant)
@@ -158,8 +158,8 @@ UserCmd ::= mint(Constant, Constant)
           ; deposit_escrow(Constant, Stream(Lot), Constant)
           ; cancel_escrow(Constant, ReqId).
 
-%% Mediator -> User notifications
-UserNotify ::= minted(Constant, Constant)
+%% Mediator -> Person notifications
+PersonNotify ::= minted(Constant, Constant)
              ; date_advanced(Constant)
              ; balance_report(Stream(Bond))
              ; befriend(Constant, ReqId)
@@ -180,8 +180,8 @@ UserNotify ::= minted(Constant, Constant)
              ; trade_returned_menu(Constant, Stream(Bond)).
 
 %% Channel aliases for readability
-UserChannel  ::= ch(Stream(UserCmd), Stream(UserNotify)?).
-ActorChannel ::= ch(Stream(UserNotify), Stream(UserCmd)?).
+PersonChannel  ::= ch(Stream(PersonCmd), Stream(PersonNotify)?).
+ActorChannel ::= ch(Stream(PersonNotify), Stream(PersonCmd)?).
 
 %% =============================================================================
 %% MEDIATOR PENDING LIST
@@ -238,10 +238,10 @@ procedure bind_trade_decline(TradeResponse, Stream(Bond)?).
 bind_trade_decline(trade_decline(Bonds?), Bonds).
 
 %% =============================================================================
-%% INJECT_TRADE_RESULT — Inject trade response into UserIn
+%% INJECT_TRADE_RESULT — Inject trade response into PersonIn
 %% =============================================================================
 
-procedure inject_trade_result(TradeResponse?, Constant?, Stream(UserInMsg)?, Stream(UserInMsg)).
+procedure inject_trade_result(TradeResponse?, Constant?, Stream(PersonInMsg)?, Stream(PersonInMsg)).
 inject_trade_result(trade_accept(TheirBonds), From, Ys,
     [trade_complete(From?, TheirBonds?)|Ys?]) :-
     ground(From?), ground(TheirBonds?) | true.
@@ -285,7 +285,7 @@ escrow(_, _, Bonds, cancel,
 %% INJECT_ESCROW_BEN_RESULT — Monitor beneficiary's escrow outcome
 %% =============================================================================
 
-procedure inject_escrow_ben_result(EscrowBenResult?, Constant?, Stream(UserInMsg)?, Stream(UserInMsg)).
+procedure inject_escrow_ben_result(EscrowBenResult?, Constant?, Stream(PersonInMsg)?, Stream(PersonInMsg)).
 inject_escrow_ben_result(escrow_bonds(Bonds), From, Ys,
     [escrow_ben_released(From?, Bonds?)|Ys?]) :-
     ground(From?), ground(Bonds?) | true.
@@ -299,7 +299,7 @@ inject_escrow_ben_result(Resp, From, [Y|Ys], [Y?|Ys1?]) :-
 %% INJECT_ESCROW_DEP_RESULT — Monitor depositor's escrow outcome
 %% =============================================================================
 
-procedure inject_escrow_dep_result(EscrowDepResult?, Constant?, Stream(UserInMsg)?, Stream(UserInMsg)).
+procedure inject_escrow_dep_result(EscrowDepResult?, Constant?, Stream(PersonInMsg)?, Stream(PersonInMsg)).
 inject_escrow_dep_result(escrow_bonds(Bonds), Target, Ys,
     [escrow_dep_returned(Target?, Bonds?)|Ys?]) :-
     ground(Target?), ground(Bonds?) | true.

@@ -1,16 +1,16 @@
 
-%% sovereign.glp — Sovereign setup with custodian finality and recovery
+%% issuer.glp — Issuer setup with custodian finality and recovery
 %%
-%% The sovereign processes approval requests, producing an interlaced
-%% sovereign stream. A custodian mirrors the stream and acknowledges
-%% each block. When the sovereign observes a custodian's ack (via tips
+%% The issuer processes approval requests, producing an interlaced
+%% issuer stream. A custodian mirrors the stream and acknowledges
+%% each block. When the issuer observes a custodian's ack (via tips
 %% in subsequent blocks), it binds the corresponding finality variables.
 %%
 %% Architecture (5 concurrent processes):
-%%   request comes in → sovereign_loop produces blocks with tips
+%%   request comes in → issuer_loop produces blocks with tips
 %%                    → custodian reads blocks, produces acks
 %%                    → tee splits acks into two copies
-%%                    → one copy feeds back to sovereign_loop (via collect_tips)
+%%                    → one copy feeds back to issuer_loop (via collect_tips)
 %%                    → other copy goes to finality_binder
 %%                    → finality_binder binds reply variables
 %%
@@ -22,7 +22,7 @@
 %% =============================================================================
 
 imported procedure interlace#collect_tips(AckStreams?, TipList, AckStreams).
-imported procedure custodian#custodian(Stream(SovBlock)?, Stream(AckMsg)).
+imported procedure custodian#custodian(Stream(IssuerBlock)?, Stream(AckMsg)).
 
 %% =============================================================================
 %% TEE — Split a ground-element stream into two copies
@@ -51,9 +51,9 @@ bind_finality(finalized).
 %% =============================================================================
 %%
 %% The first block has no tips because no custodian acks exist yet.
-%% Produces a SovBlock and a PendingFinality entry.
+%% Produces an IssuerBlock and a PendingFinality entry.
 
-procedure first_request(ApprovalReq?, Constant?, SovBlock, PendingFinality).
+procedure first_request(ApprovalReq?, Constant?, IssuerBlock, PendingFinality).
 
 first_request(approve_mint(K, Maturity, FinalityM?), Counter,
     block(tx(Counter?, tx_mint(K?, Maturity?)), []),
@@ -64,36 +64,36 @@ first_request(approve_pay(From, To, Coin, FinalityQ?, FinalityR?), Counter,
     pending_pay(Counter?, FinalityQ, FinalityR)).
 
 %% =============================================================================
-%% SOVEREIGN_LOOP — Process subsequent requests with interlaced tips
+%% ISSUER_LOOP — Process subsequent requests with interlaced tips
 %% =============================================================================
 %%
 %% Like interlace, but specialized: each payload comes from an approval
 %% request, and finality reply variables are extracted into a parallel
 %% pending stream for later binding.
 
-procedure sovereign_loop(Stream(ApprovalReq)?, Constant?, AckStreams?,
-    Stream(SovBlock), Stream(PendingFinality)).
+procedure issuer_loop(Stream(ApprovalReq)?, Constant?, AckStreams?,
+    Stream(IssuerBlock), Stream(PendingFinality)).
 
 %% Mint request
-sovereign_loop(
+issuer_loop(
     [approve_mint(K, Maturity, FinalityM?)|Reqs], Counter, Others,
-    [block(tx(Counter?, tx_mint(K?, Maturity?)), Tips?)|SovTail?],
+    [block(tx(Counter?, tx_mint(K?, Maturity?)), Tips?)|IssuerTail?],
     [pending_mint(Counter?, FinalityM)|PendTail?]) :-
     interlace # collect_tips(Others?, Tips, Others1),
     Counter1 := Counter? + 1,
-    sovereign_loop(Reqs?, Counter1?, Others1?, SovTail, PendTail).
+    issuer_loop(Reqs?, Counter1?, Others1?, IssuerTail, PendTail).
 
 %% Pay request
-sovereign_loop(
+issuer_loop(
     [approve_pay(From, To, Coin, FinalityQ?, FinalityR?)|Reqs], Counter, Others,
-    [block(tx(Counter?, tx_pay(From?, To?, Coin?)), Tips?)|SovTail?],
+    [block(tx(Counter?, tx_pay(From?, To?, Coin?)), Tips?)|IssuerTail?],
     [pending_pay(Counter?, FinalityQ, FinalityR)|PendTail?]) :-
     interlace # collect_tips(Others?, Tips, Others1),
     Counter1 := Counter? + 1,
-    sovereign_loop(Reqs?, Counter1?, Others1?, SovTail, PendTail).
+    issuer_loop(Reqs?, Counter1?, Others1?, IssuerTail, PendTail).
 
 %% No more requests
-sovereign_loop([], _, _, [], []).
+issuer_loop([], _, _, [], []).
 
 %% =============================================================================
 %% FINALITY_BINDER — Bind finality variables when acks arrive
@@ -128,9 +128,9 @@ exported procedure setup(Stream(ApprovalReq)?).
 
 setup([FirstReq|RestReqs]) :-
     first_request(FirstReq?, 1, FirstBlock, FirstPending),
-    custodian # custodian([FirstBlock?|SovTail?], RawAcks),
+    custodian # custodian([FirstBlock?|IssuerTail?], RawAcks),
     tee(RawAcks?, TipAcks, FinAcks),
-    sovereign_loop(RestReqs?, 2, [TipAcks?], SovTail, RestPendings),
+    issuer_loop(RestReqs?, 2, [TipAcks?], IssuerTail, RestPendings),
     finality_binder(FinAcks?, [FirstPending?|RestPendings?]).
 
 setup([]).
@@ -139,18 +139,18 @@ setup([]).
 %% SETUP_WITH_LOG — Setup with a log copy for recovery
 %% =============================================================================
 %%
-%% Like setup, but tees the sovereign stream so a copy is available.
+%% Like setup, but tees the issuer stream so a copy is available.
 %% The log copy can be used after a fault to recover the counter
 %% and reconstruct holdings.
 
-exported procedure setup_with_log(Stream(ApprovalReq)?, Stream(SovBlock)).
+exported procedure setup_with_log(Stream(ApprovalReq)?, Stream(IssuerBlock)).
 
 setup_with_log([FirstReq|RestReqs], LogCopy?) :-
     first_request(FirstReq?, 1, FirstBlock, FirstPending),
-    tee([FirstBlock?|SovTail?], CustodianCopy, LogCopy),
+    tee([FirstBlock?|IssuerTail?], CustodianCopy, LogCopy),
     custodian # custodian(CustodianCopy?, RawAcks),
     tee(RawAcks?, TipAcks, FinAcks),
-    sovereign_loop(RestReqs?, 2, [TipAcks?], SovTail, RestPendings),
+    issuer_loop(RestReqs?, 2, [TipAcks?], IssuerTail, RestPendings),
     finality_binder(FinAcks?, [FirstPending?|RestPendings?]).
 
 setup_with_log([], []).
@@ -159,17 +159,17 @@ setup_with_log([], []).
 %% RECOVER_COUNTER — Walk a log stream, return the last block counter
 %% =============================================================================
 %%
-%% After a fault (major or minor), the recovered sovereign reads
+%% After a fault (major or minor), the recovered issuer reads
 %% the custodian's copy of the log to determine where to resume.
 
-exported procedure recover_counter(Stream(SovBlock)?, Constant).
+exported procedure recover_counter(Stream(IssuerBlock)?, Constant).
 
 recover_counter([block(tx(N, _), _)|Rest], Counter?) :-
     recover_counter_next(N?, Rest?, Counter).
 
 recover_counter([], 0).
 
-procedure recover_counter_next(Constant?, Stream(SovBlock)?, Constant).
+procedure recover_counter_next(Constant?, Stream(IssuerBlock)?, Constant).
 
 recover_counter_next(_, [block(tx(N, _), _)|Rest], Counter?) :-
     recover_counter_next(N?, Rest?, Counter).

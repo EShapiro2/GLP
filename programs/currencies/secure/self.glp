@@ -1,7 +1,7 @@
 
 %% SecureBonds/self.glp — Shared types for secure bonds
 %%
-%% Types for the sovereign transaction log with custodian finality,
+%% Types for the issuer transaction log with custodian finality,
 %% using interlaced streams as the core data structure.
 
 %% =============================================================================
@@ -12,14 +12,14 @@
 Bond     ::= bond(Constant, Constant, Constant).
 BondList ::= [] ; [Bond | BondList].
 
-%% Transaction records in the sovereign's log
+%% Transaction records in the issuer's log
 TxRecord ::= tx_mint(Constant, Constant)             %% tx_mint(K, Maturity)
             ; tx_pay(Constant, Constant, Bond).       %% tx_pay(From, To, Coin)
 
-%% Sovereign payload: numbered transaction
-SovPayload ::= tx(Constant, TxRecord).               %% tx(Counter, TxRecord)
+%% Issuer payload: numbered transaction
+IssuerPayload ::= tx(Constant, TxRecord).               %% tx(Counter, TxRecord)
 
-%% Finality signal — bound by sovereign when custodian acknowledges
+%% Finality signal — bound by issuer when custodian acknowledges
 Finality ::= finalized.
 
 %% Custodian acknowledgment
@@ -32,8 +32,8 @@ AckMsg ::= ack(Constant).                            %% ack(BlockId)
 %% Tip list: ack messages observed from custodian streams
 TipList ::= [] ; [AckMsg | TipList].
 
-%% Sovereign block in the interlaced stream: payload + tips
-SovBlock ::= block(SovPayload, TipList).
+%% Issuer block in the interlaced stream: payload + tips
+IssuerBlock ::= block(IssuerPayload, TipList).
 
 %% List of ack streams being tracked for interlacing
 %% (one per custodian; currently one custodian)
@@ -43,9 +43,9 @@ AckStreams ::= [] ; [Stream(AckMsg) | AckStreams].
 %% APPROVAL AND PENDING TYPES
 %% =============================================================================
 
-%% Approval request from trader to sovereign.
+%% Approval request from trader to issuer.
 %% Finality? positions carry reply variable references (unbound writers
-%% held by the requester; the sovereign binds them upon custodian ack).
+%% held by the requester; the issuer binds them upon custodian ack).
 ApprovalReq ::= approve_mint(Constant, Constant, Finality?)
               ; approve_pay(Constant, Constant, Bond, Finality?, Finality?).
 
@@ -57,12 +57,12 @@ PendingFinality ::= pending_mint(Constant, Finality?)
 %% =============================================================================
 %% ENTRY POINTS (modules.tex sec:static-linking step 5, §External access)
 %% The root self.glp exports each program entry by forwarding, so an external
-%% goal calls it by plain name. play_sovereign.glp is unchanged.
+%% goal calls it by plain name.  play_issuer.glp needs no export of its own.
 %% =============================================================================
-imported procedure play_sovereign#play.
+imported procedure play_issuer#play.
 exported procedure play.
-play :- play_sovereign # play.
+play :- play_issuer # play.
 
-imported procedure play_sovereign#play_recover.
+imported procedure play_issuer#play_recover.
 exported procedure play_recover.
-play_recover :- play_sovereign # play_recover.
+play_recover :- play_issuer # play_recover.
