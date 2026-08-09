@@ -100,7 +100,7 @@ Output goes to `/private/tmp/glp-tests.txt` and `/private/tmp/repl-tests.txt` re
 cd /Users/udi/Grassroots/GLP && git checkout main && git pull origin main && git merge origin/claude/branch-name
 
 # Claude needs to see any output → redirect to /private/tmp file
-cd /Users/udi/Grassroots/GLP && bash test/run_book_tests.sh > /private/tmp/book-tests.txt 2>&1
+cd /Users/udi/Grassroots/GLP && bash test/run_all_tests.sh > /Users/udi/Grassroots/tmp/glp-tests.txt 2>&1
 ```
 
 **Rules:**
@@ -320,7 +320,6 @@ When the user provides explicit code, instructions, or decisions:
 | **Dart Unit Tests** | ~236 | `cd glp_runtime && dart test` | `glp_runtime/test/` |
 | **REPL Tests** | 222 | `bash test/full_run_repl_tests.sh` | `test/` |
 | **Typed REPL Tests** | varies | `bash test/run_typechecker_repl_tests.sh` | `test/` |
-| **Book Compilation** | 141 files | `bash test/run_book_tests.sh` | `test/` |
 | **Multiagent Tests** | 139 | `cd glp_runtime && dart test test/multiagent/` | `glp_runtime/test/multiagent/` |
 | **Flutter Build** | — | `cd glp_multiagent && flutter build macos` | `glp_multiagent/` |
 
@@ -657,7 +656,6 @@ cd glp_runtime && dart test                           # Unit tests
 cd glp_runtime && dart test test/multiagent/          # Multiagent only
 bash test/full_run_repl_tests.sh                      # REPL tests
 bash test/run_typechecker_repl_tests.sh               # Type checker REPL
-bash test/run_book_tests.sh                           # Book compilation
 
 # Flutter build
 cd glp_multiagent && flutter build macos

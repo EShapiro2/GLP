@@ -60,17 +60,18 @@ Both booted plays reach the directory's code through the `-expose` directives in
 `programs/tests/agent_roundtrip/self.glp`; neither directory holds a copy of the
 agent, the actors or the mediator.
 
-### UI mediator tests (3 passing)
+### UI mediator tests — removed 2026-08-03
 
-```bash
-cd /Users/udi/Grassroots/GLP/glp_runtime
-dart test test/multiagent/ui_mediator_test.dart
-```
+`ui_mediator_test.dart` is gone (Udi's instruction).  It read three files by
+hardcoded path, concatenated them as strings, regex-stripped `-mode(system).` to
+make the source loadable, injected its own procedure and ran with
+`strictTypes = false` — every one of those a workaround for something the module
+system now does properly, and the last of them meaning it exercised none of the
+typing the mediator now carries.  It had been skipped since 2026-06-22 and failed
+when unskipped.
 
-Tests:
-- `grounds befriend output with request ID` — verifies `befriend(bob, req(1))` output
-- `passes ground connected message through` — verifies `connected(bob)` passthrough
-- `passes ground received message through` — verifies `received(bob, hello)` passthrough
+`typed_ui_mediator.glp` itself is untouched and alive: `agent_roundtrip/self.glp`
+exposes it and the converted boots reach it.
 
 ### UI I/O tests (5 passing)
 
@@ -158,7 +159,6 @@ glp_runtime/lib/multiagent/
 ```
 glp_runtime/test/multiagent/
 ├── isolate_manager_test.dart        # 3 tests: trivial boot, full play (no UI), full play (with UI)
-├── ui_mediator_test.dart            # 3 tests: mediator grounding + passthrough
 ├── output_kernel_test.dart          # 5 tests: _output/1 kernel + send_to_user/1
 ├── multiagent_glp_test.dart         # 12 tests: madGLP shared-variable and stream tests
 ├── boot_loader_test.dart            # BootLoader parsing tests
