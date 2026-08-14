@@ -1,191 +1,69 @@
-%% eve.glp — Eve actor for Village scenario
+%% eve.glp — Eve (Bob's child) actor for the Village scenario
 %%
-%% Eve is a child of Bob.
-%% Act 2: Accepts intros to Dave (sibling) and Carol (may interleave).
-%% Act 3: Joins Carol's kids_chat group, sends reply, then leaves.
+%% ORDER-INDEPENDENT.  The actor is one loop with one state, not a chain of
+%% states each waiting for one notification.  A chained actor drops whatever its
+%% current state did not expect --- its skip clause cannot put a message back ---
+%% so it works only for the interleaving it was written against, and changing
+%% the boot changed that interleaving.  Here every notification the actor ever
+%% acts on has a clause of its own, so none can arrive "too early".  Where order
+%% genuinely matters it is carried in the loop's own counters, never in which
+%% clause is currently waiting.
 %% Types: from village/self.glp (ancestor scoping)
 
-
-%% =============================================================================
-%% Act 2: Accept sibling intro to Dave, then intro to Carol
-%%
-%% Bob fires sibling intro (dave-eve) and approve_child_intro(carol,eve) close together.
-%% So child_befriend(bob,carol) may arrive before connected(dave). Handle both orderings.
-%% =============================================================================
-
 %% Act 1: a party becomes a child by accepting an enrolment.  Before this it is
-%% of no age and has no parent; accepting creates the parent-child channel, and
-%% the main loop takes the confirmation.
+%% of no age and has no parent; accepting creates the parent-child channel.
 exported procedure eve13(Constant?, Channel(Stream(UserNotify), Stream(UserCmd))?, Stream(NarrativeItem)).
-eve13(Id, ch([enrol_offer(bob, ReqId)|In],
+eve13(_, ch([enrol_offer(bob, ReqId)|In],
     [enrol_decision(yes, bob, ReqId?)|Out?]),
     [act('Accepting Bob as my parent')|Narr?]) :-
     ground(ReqId?) |
-    eve13_main(Id?, ch(In?, Out), Narr).
+    eve13_loop(In?, Out, Narr).
 eve13(Id, ch([_|In], Out?), Narr?) :-
     otherwise | eve13(Id?, ch(In?, Out), Narr).
 eve13(_, ch([], []), []).
 
-procedure eve13_main(Constant?, Channel(Stream(UserNotify), Stream(UserCmd))?, Stream(NarrativeItem)).
-eve13_main(_, ch([child_befriend(bob, dave, ReqId)|In],
-            [accept_child_intro(dave, ReqId?)|Out?]),
-      Narr?) :-
-    ground(ReqId?) |
-    eve13_wait_dave_or_carol(In?, Out, Narr).
-%% Skip any message arriving before the expected intro, and close on channel end.
-%% The two introductions Bob sends can arrive in either order, and an entry that
-%% accepted only one would drop the other: the skip clause below cannot put a
-%% message back.
-eve13_main(_, ch([child_befriend(bob, carol, ReqId)|In],
-            [accept_child_intro(carol, ReqId?)|Out?]),
-      Narr?) :-
-    ground(ReqId?) |
-    eve13_wait_dave_intro(In?, Out, Narr).
-eve13_main(Id, ch([_|In], Out?), Narr?) :-
-    otherwise | eve13_main(Id?, ch(In?, Out), Narr).
-eve13_main(_, ch([], []), []).
+procedure eve13_loop(Stream(UserNotify)?, Stream(UserCmd), Stream(NarrativeItem)).
 
-%% After accepting Dave intro, either connected(dave) or child_befriend(carol) first
-procedure eve13_wait_dave_or_carol(Stream(UserNotify)?, Stream(UserCmd), Stream(NarrativeItem)).
-%% Case 1: connected(dave) arrives first
-eve13_wait_dave_or_carol([connected(dave)|In], Out?,
-                         [friend(dave)|Narr?]) :-
-    eve13_wait_carol_intro(In?, Out, Narr).
-%% Case 2: child_befriend(carol) arrives first
-eve13_wait_dave_or_carol([child_befriend(bob, carol, ReqId)|In],
-                         [accept_child_intro(carol, ReqId?)|Out?],
-                         Narr?) :-
-    ground(ReqId?) |
-    eve13_wait_both_connected(In?, Out, Narr).
-eve13_wait_dave_or_carol([_|In], Out?, Narr?) :-
-    otherwise | eve13_wait_dave_or_carol(In?, Out, Narr).
-eve13_wait_dave_or_carol([], [], []).
+eve13_loop([enrolled(bob)|In], Out?, [event('Bob is my parent')|Narr?]) :-
+    eve13_loop(In?, Out, Narr).
 
-%% Case 1: Dave connected, wait for Carol intro
-procedure eve13_wait_carol_intro(Stream(UserNotify)?, Stream(UserCmd), Stream(NarrativeItem)).
-eve13_wait_carol_intro([child_befriend(bob, carol, ReqId)|In],
-                       [accept_child_intro(carol, ReqId?)|Out?],
-                       Narr?) :-
-    ground(ReqId?) |
-    eve13_wait_carol_connected(In?, Out, Narr).
-eve13_wait_carol_intro([_|In], Out?, Narr?) :-
-    otherwise | eve13_wait_carol_intro(In?, Out, Narr).
-eve13_wait_carol_intro([], [], []).
+%% Act 3: accept either introduction, in either order.
+eve13_loop([child_befriend(bob, dave, ReqId)|In],
+    [accept_child_intro(dave, ReqId?)|Out?], Narr?) :-
+    ground(ReqId?) | eve13_loop(In?, Out, Narr).
+eve13_loop([child_befriend(bob, carol, ReqId)|In],
+    [accept_child_intro(carol, ReqId?)|Out?], Narr?) :-
+    ground(ReqId?) | eve13_loop(In?, Out, Narr).
+eve13_loop([connected(dave)|In], Out?, [friend(dave)|Narr?]) :-
+    eve13_loop(In?, Out, Narr).
+eve13_loop([connected(carol)|In], Out?, [friend(carol)|Narr?]) :-
+    eve13_loop(In?, Out, Narr).
 
-%% Case 1: Wait for connected(carol)
-procedure eve13_wait_carol_connected(Stream(UserNotify)?, Stream(UserCmd), Stream(NarrativeItem)).
-eve13_wait_carol_connected([connected(carol)|In], Out?,
-                           [friend(carol)|Narr?]) :-
-    eve13_act3(In?, Out, Narr).
-eve13_wait_carol_connected([_|In], Out?, Narr?) :-
-    otherwise | eve13_wait_carol_connected(In?, Out, Narr).
-eve13_wait_carol_connected([], [], []).
+%% Act 4: join kids_chat, reply, and leave.
+eve13_loop([group_invite(group_id(carol, kids_chat), ReqId)|In],
+    [accept_group(group_id(carol, kids_chat), ReqId?)|Out?],
+    [act('Accepting kids_chat invite')|Narr?]) :-
+    ground(ReqId?) | eve13_loop(In?, Out, Narr).
+eve13_loop([group_joined(group_id(carol, kids_chat))|In], Out?,
+    [event('Joined kids_chat')|Narr?]) :-
+    eve13_loop(In?, Out, Narr).
+eve13_loop([group_received(group_id(carol, kids_chat), carol, _)|In],
+    [send_group(group_id(carol, kids_chat), 'Hi all!'),
+     leave_group(group_id(carol, kids_chat))|Out?],
+    [say('Hi all!'), act('Leaving kids_chat')|Narr?]) :-
+    eve13_loop(In?, Out, Narr).
 
-%% Case 2: Both intros accepted, wait for connected(dave) then connected(carol)
-procedure eve13_wait_both_connected(Stream(UserNotify)?, Stream(UserCmd), Stream(NarrativeItem)).
-eve13_wait_both_connected([connected(dave)|In], Out?,
-                          [friend(dave)|Narr?]) :-
-    eve13_wait_carol_connected(In?, Out, Narr).
-%% Carol's connection can land first, and the skip clause below cannot put it back.
-eve13_wait_both_connected([connected(carol)|In], Out?,
-                          [friend(carol)|Narr?]) :-
-    eve13_wait_dave_connected(In?, Out, Narr).
-eve13_wait_both_connected([_|In], Out?, Narr?) :-
-    otherwise | eve13_wait_both_connected(In?, Out, Narr).
-eve13_wait_both_connected([], [], []).
-
-%% =============================================================================
-%% Act 3: Join Carol's kids_chat group, send reply, then leave
-%% =============================================================================
-
-%% Wait for group_invite from Carol's kids_chat
-procedure eve13_act3(Stream(UserNotify)?, Stream(UserCmd), Stream(NarrativeItem)).
-eve13_act3([group_invite(group_id(carol, kids_chat), ReqId)|In],
-           [accept_group(group_id(carol, kids_chat), ReqId?)|Out?],
-           [act('Accepting kids_chat invite')|Narr?]) :-
-    ground(ReqId?) |
-    eve13_wait_kids_joined(In?, Out, Narr).
-eve13_act3([_|In], Out?, Narr?) :-
-    otherwise | eve13_act3(In?, Out, Narr).
-eve13_act3([], [], []).
-
-%% Wait for group_joined
-procedure eve13_wait_kids_joined(Stream(UserNotify)?, Stream(UserCmd), Stream(NarrativeItem)).
-eve13_wait_kids_joined([group_joined(group_id(carol, kids_chat))|In], Out?,
-                       [event('Joined kids_chat')|Narr?]) :-
-    eve13_wait_kids_welcome(In?, Out, Narr).
-eve13_wait_kids_joined([_|In], Out?, Narr?) :-
-    otherwise | eve13_wait_kids_joined(In?, Out, Narr).
-eve13_wait_kids_joined([], [], []).
-
-%% Wait for Carol's welcome message, then reply
-procedure eve13_wait_kids_welcome(Stream(UserNotify)?, Stream(UserCmd), Stream(NarrativeItem)).
-eve13_wait_kids_welcome([group_received(group_id(carol, kids_chat), carol, _)|In],
-                        [send_group(group_id(carol, kids_chat), 'Hi all!')|Out?],
-                        [say('Hi all!')|Narr?]) :-
-    eve13_leave_kids(In?, Out, Narr).
-eve13_wait_kids_welcome([_|In], Out?, Narr?) :-
-    otherwise | eve13_wait_kids_welcome(In?, Out, Narr).
-eve13_wait_kids_welcome([], [], []).
-
-%% Leave kids_chat
-procedure eve13_leave_kids(Stream(UserNotify)?, Stream(UserCmd), Stream(NarrativeItem)).
-eve13_leave_kids(In, [leave_group(group_id(carol, kids_chat))|Out?],
-                 [act('Leaving kids_chat')|Narr?]) :-
-    eve13_wait_kids_left(In?, Out, Narr).
-
-%% Wait for group_left
-procedure eve13_wait_kids_left(Stream(UserNotify)?, Stream(UserCmd), Stream(NarrativeItem)).
-eve13_wait_kids_left([group_left(group_id(carol, kids_chat))|In], Out?,
-                     [event('Left kids_chat')|Narr?]) :-
-    eve13_finish(In?, Out, Narr).
-eve13_wait_kids_left([_|In], Out?, Narr?) :-
-    otherwise | eve13_wait_kids_left(In?, Out, Narr).
-eve13_wait_kids_left([], [], []).
-
-%% =============================================================================
-%% Act 7: Termination
-%% =============================================================================
-
-%% Act 7: coming of age.  Eve asks Bob to release her; once released she is of
-%% age, and she befriends Frank with no parent among the guards.
-procedure eve13_finish(Stream(UserNotify)?, Stream(UserCmd), Stream(NarrativeItem)).
-eve13_finish(In, [request_release|Out?],
-    [act('Asking Bob to release me')|Narr?]) :-
-    eve13_released(In?, Out, Narr).
-
-procedure eve13_released(Stream(UserNotify)?, Stream(UserCmd), Stream(NarrativeItem)).
-eve13_released([released(bob)|In], [connect(frank)|Out?],
+%% Act 7: coming of age.  Eve asks Bob to release her; released, she is of age,
+%% and she befriends Frank with no parent among the guards.
+eve13_loop([group_left(group_id(carol, kids_chat))|In], [request_release|Out?],
+    [event('Left kids_chat'), act('Asking Bob to release me')|Narr?]) :-
+    eve13_loop(In?, Out, Narr).
+eve13_loop([released(bob)|In], [connect(frank)|Out?],
     [event('Released, and of age'), act('Befriending Frank directly')|Narr?]) :-
-    eve13_frank(In?, Out, Narr).
-eve13_released([_|In], Out?, Narr?) :-
-    otherwise | eve13_released(In?, Out, Narr).
-eve13_released([], [], []).
+    eve13_loop(In?, Out, Narr).
+eve13_loop([connected(frank)|In], Out?, [friend(frank)|Narr?]) :-
+    eve13_loop(In?, Out, Narr).
 
-procedure eve13_frank(Stream(UserNotify)?, Stream(UserCmd), Stream(NarrativeItem)).
-eve13_frank([connected(frank)|In], Out?, [friend(frank)|Narr?]) :-
-    eve13_done(In?, Out, Narr).
-eve13_frank([_|In], Out?, Narr?) :-
-    otherwise | eve13_frank(In?, Out, Narr).
-eve13_frank([], [], []).
-
-procedure eve13_done(Stream(UserNotify)?, Stream(UserCmd), Stream(NarrativeItem)).
-eve13_done(_, [], []).
-
-%% Carol's introduction was accepted first; take Dave's when it comes.
-procedure eve13_wait_dave_intro(Stream(UserNotify)?, Stream(UserCmd), Stream(NarrativeItem)).
-eve13_wait_dave_intro([child_befriend(bob, dave, ReqId)|In],
-                      [accept_child_intro(dave, ReqId?)|Out?], Narr?) :-
-    ground(ReqId?) |
-    eve13_wait_both_connected(In?, Out, Narr).
-eve13_wait_dave_intro([_|In], Out?, Narr?) :-
-    otherwise | eve13_wait_dave_intro(In?, Out, Narr).
-eve13_wait_dave_intro([], [], []).
-
-%% Carol connected first; take Dave's connection, then act 3 as before.
-procedure eve13_wait_dave_connected(Stream(UserNotify)?, Stream(UserCmd), Stream(NarrativeItem)).
-eve13_wait_dave_connected([connected(dave)|In], Out?, [friend(dave)|Narr?]) :-
-    eve13_act3(In?, Out, Narr).
-eve13_wait_dave_connected([_|In], Out?, Narr?) :-
-    otherwise | eve13_wait_dave_connected(In?, Out, Narr).
-eve13_wait_dave_connected([], [], []).
+eve13_loop([_|In], Out?, Narr?) :-
+    otherwise | eve13_loop(In?, Out, Narr).
+eve13_loop([], [], []).

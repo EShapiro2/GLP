@@ -1,172 +1,100 @@
-%% bob.glp — Bob actor for Village scenario
+%% bob.glp — Bob actor for the Village scenario
 %%
-%% Bob is an adult, parent of Dave and Eve.
+%% ORDER-INDEPENDENT.  The actor is one loop with one state, not a chain of
+%% states each waiting for one notification.  A chained actor drops whatever its
+%% current state did not expect --- its skip clause cannot put a message back ---
+%% so it works only for the interleaving it was written against, and changing
+%% the boot changed that interleaving.  Here every notification the actor ever
+%% acts on has a clause of its own, so none can arrive "too early".  Where order
+%% genuinely matters it is carried in the loop's own counters, never in which
+%% clause is currently waiting.
+%% Types: from village/self.glp (ancestor scoping)
+
 %% Act 1: coming into the contract.  Bob enrols both his children.
 exported procedure bob13(Constant?, Channel(Stream(UserNotify), Stream(UserCmd))?, Stream(NarrativeItem)).
-bob13(Id, ch(In, [declare_age, enrol_child(dave), enrol_child(eve)|Out?]),
+bob13(_, ch(In, [declare_age, enrol_child(dave), enrol_child(eve)|Out?]),
     [act('Declaring myself of age'), act('Enrolling Dave'), act('Enrolling Eve')|Narr?]) :-
-    bob13_main(Id?, ch(In?, Out), Narr).
+    bob13_loop(0, 0, In?, Out, Narr).
 
-procedure bob13_main(Constant?, Channel(Stream(UserNotify), Stream(UserCmd))?, Stream(NarrativeItem)).
-bob13_main(_, ch([befriend(alice, ReqId)|In],
-            [decision(yes, alice, ReqId?)|Out?]),
-      Narr?) :-
+%% Intros counts the child introductions Alice has sent (the first is Carol to
+%% Dave, the second Carol to Eve); Consents counts the kids_chat approvals, and
+%% the second of them is where Bob turns to Frank.  Both were positions in a
+%% chain before, which is exactly what made the actor order-dependent.
+procedure bob13_loop(Integer?, Integer?, Stream(UserNotify)?, Stream(UserCmd), Stream(NarrativeItem)).
+
+bob13_loop(I, C, [enrolled(dave)|In], Out?, [event('Dave is my child')|Narr?]) :-
+    bob13_loop(I?, C?, In?, Out, Narr).
+bob13_loop(I, C, [enrolled(eve)|In], Out?, [event('Eve is my child')|Narr?]) :-
+    bob13_loop(I?, C?, In?, Out, Narr).
+
+bob13_loop(I, C, [befriend(alice, ReqId)|In], [decision(yes, alice, ReqId?)|Out?], Narr?) :-
+    ground(ReqId?) | bob13_loop(I?, C?, In?, Out, Narr).
+bob13_loop(I, C, [connected(alice)|In], Out?, [friend(alice)|Narr?]) :-
+    bob13_loop(I?, C?, In?, Out, Narr).
+bob13_loop(I, C, [received(alice, _)|In], Out?,
+    [event('Received Hello from Alice')|Narr?]) :-
+    bob13_loop(I?, C?, In?, Out, Narr).
+
+%% Act 3: the first introduction is Carol to Dave, and Bob adds the sibling one.
+bob13_loop(I, C, [child_befriend(alice, carol, ReqId)|In],
+    [approve_child_intro(carol, dave, ReqId?), child_introduce(dave, bob, eve)|Out?],
+    [act('Approved Carol-Dave introduction'), act('Introducing Dave to Eve (siblings)')|Narr?]) :-
+    I? < 1, ground(ReqId?) |
+    bob13_loop(1, C?, In?, Out, Narr).
+%% The second is Carol to Eve.
+bob13_loop(I, C, [child_befriend(alice, carol, ReqId)|In],
+    [approve_child_intro(carol, eve, ReqId?)|Out?],
+    [act('Approved Carol-Eve introduction')|Narr?]) :-
+    I? > 0, ground(ReqId?) |
+    bob13_loop(2, C?, In?, Out, Narr).
+
+%% Act 4: parental consent for kids_chat, once for each child.
+bob13_loop(I, C, [child_group_consent(dave, group_id(carol, kids_chat), ReqId)|In],
+    [approve_child_group(dave, group_id(carol, kids_chat), ReqId?)|Out?],
+    [act('Approved Dave joining kids_chat')|Narr?]) :-
+    C? < 1, ground(ReqId?) |
+    bob13_loop(I?, 1, In?, Out, Narr).
+bob13_loop(I, C, [child_group_consent(dave, group_id(carol, kids_chat), ReqId)|In],
+    [approve_child_group(dave, group_id(carol, kids_chat), ReqId?), connect(frank)|Out?],
+    [act('Approved Dave joining kids_chat')|Narr?]) :-
+    C? > 0, ground(ReqId?) |
+    bob13_loop(I?, 2, In?, Out, Narr).
+bob13_loop(I, C, [child_group_consent(eve, group_id(carol, kids_chat), ReqId)|In],
+    [approve_child_group(eve, group_id(carol, kids_chat), ReqId?)|Out?],
+    [act('Approved Eve joining kids_chat')|Narr?]) :-
+    C? < 1, ground(ReqId?) |
+    bob13_loop(I?, 1, In?, Out, Narr).
+bob13_loop(I, C, [child_group_consent(eve, group_id(carol, kids_chat), ReqId)|In],
+    [approve_child_group(eve, group_id(carol, kids_chat), ReqId?), connect(frank)|Out?],
+    [act('Approved Eve joining kids_chat')|Narr?]) :-
+    C? > 0, ground(ReqId?) |
+    bob13_loop(I?, 2, In?, Out, Narr).
+
+bob13_loop(I, C, [connected(frank)|In], [send(frank, 'ready')|Out?],
+    [friend(frank), say('ready')|Narr?]) :-
+    bob13_loop(I?, C?, In?, Out, Narr).
+
+%% Act 5: approve Dave into Frank's study group.
+bob13_loop(I, C, [group_invite_child(group_id(frank, study), dave, ReqId)|In],
+    [approve_group(dave, group_id(frank, study), ReqId?)|Out?],
+    [act('Approved Dave joining study group')|Narr?]) :-
     ground(ReqId?) |
-    bob13_wait_alice_connected(In?, Out, Narr).
-%% Skip any message arriving before the expected befriend, and close on channel end.
-bob13_main(Id, ch([_|In], Out?), Narr?) :-
-    otherwise | bob13_main(Id?, ch(In?, Out), Narr).
-bob13_main(_, ch([], []), []).
+    bob13_loop(I?, C?, In?, Out, Narr).
 
-%% Wait for connected(alice)
-procedure bob13_wait_alice_connected(Stream(UserNotify)?, Stream(UserCmd), Stream(NarrativeItem)).
-bob13_wait_alice_connected([connected(alice)|In], Out?,
-                           [friend(alice)|Narr?]) :-
-    bob13_wait_alice_text(In?, Out, Narr).
-bob13_wait_alice_connected([_|In], Out?, Narr?) :-
-    otherwise | bob13_wait_alice_connected(In?, Out, Narr).
-bob13_wait_alice_connected([], [], []).
+%% Act 6: Frank signals done; remove Dave from the study group.
+bob13_loop(I, C, [received(frank, _)|In],
+    [leave_child_group(dave, group_id(frank, study))|Out?],
+    [act('Removing Dave from study group')|Narr?]) :-
+    bob13_loop(I?, C?, In?, Out, Narr).
 
-%% Wait for received(alice, 'Hello Bob')
-procedure bob13_wait_alice_text(Stream(UserNotify)?, Stream(UserCmd), Stream(NarrativeItem)).
-bob13_wait_alice_text([received(alice, _)|In], Out?,
-                      [event('Received Hello from Alice')|Narr?]) :-
-    bob13_act2(In?, Out, Narr).
-bob13_wait_alice_text([_|In], Out?, Narr?) :-
-    otherwise | bob13_wait_alice_text(In?, Out, Narr).
-bob13_wait_alice_text([], [], []).
-
-%% =============================================================================
-%% Act 2: Approve child intros
-%% =============================================================================
-
-%% First child_befriend from Alice: approve Carol to Dave, and introduce Dave to Eve (siblings)
-procedure bob13_act2(Stream(UserNotify)?, Stream(UserCmd), Stream(NarrativeItem)).
-bob13_act2([child_befriend(alice, carol, ReqId)|In],
-           [approve_child_intro(carol, dave, ReqId?),
-            child_introduce(dave, bob, eve)|Out?],
-           [act('Approved Carol-Dave introduction'),
-            act('Introducing Dave to Eve (siblings)')|Narr?]) :-
-    ground(ReqId?) |
-    bob13_wait_carol_eve_intro(In?, Out, Narr).
-bob13_act2([_|In], Out?, Narr?) :-
-    otherwise | bob13_act2(In?, Out, Narr).
-bob13_act2([], [], []).
-
-%% Second child_befriend from Alice: approve Carol to Eve
-procedure bob13_wait_carol_eve_intro(Stream(UserNotify)?, Stream(UserCmd), Stream(NarrativeItem)).
-bob13_wait_carol_eve_intro([child_befriend(alice, carol, ReqId)|In],
-                           [approve_child_intro(carol, eve, ReqId?)|Out?],
-                           [act('Approved Carol-Eve introduction')|Narr?]) :-
-    ground(ReqId?) |
-    bob13_act3(In?, Out, Narr).
-bob13_wait_carol_eve_intro([_|In], Out?, Narr?) :-
-    otherwise | bob13_wait_carol_eve_intro(In?, Out, Narr).
-bob13_wait_carol_eve_intro([], [], []).
-
-%% =============================================================================
-%% Act 3: Approve Dave and Eve joining Carol's kids_chat (consent flow 3)
-%% =============================================================================
-
-%% Approve Dave joining kids_chat
-procedure bob13_act3(Stream(UserNotify)?, Stream(UserCmd), Stream(NarrativeItem)).
-bob13_act3([child_group_consent(dave, group_id(carol, kids_chat), ReqId)|In],
-           [approve_child_group(dave, group_id(carol, kids_chat), ReqId?)|Out?],
-           [act('Approved Dave joining kids_chat')|Narr?]) :-
-    ground(ReqId?) |
-    bob13_act3_eve(In?, Out, Narr).
-bob13_act3([_|In], Out?, Narr?) :-
-    otherwise | bob13_act3(In?, Out, Narr).
-bob13_act3([], [], []).
-
-%% Approve Eve joining kids_chat
-procedure bob13_act3_eve(Stream(UserNotify)?, Stream(UserCmd), Stream(NarrativeItem)).
-bob13_act3_eve([child_group_consent(eve, group_id(carol, kids_chat), ReqId)|In],
-               [approve_child_group(eve, group_id(carol, kids_chat), ReqId?)|Out?],
-               [act('Approved Eve joining kids_chat')|Narr?]) :-
-    ground(ReqId?) |
-    bob13_connect_frank(In?, Out, Narr).
-bob13_act3_eve([_|In], Out?, Narr?) :-
-    otherwise | bob13_act3_eve(In?, Out, Narr).
-bob13_act3_eve([], [], []).
-
-%% =============================================================================
-%% After Act 3: Connect to Frank, send ready signal
-%% =============================================================================
-
-%% Bob initiates connection to Frank
-procedure bob13_connect_frank(Stream(UserNotify)?, Stream(UserCmd), Stream(NarrativeItem)).
-bob13_connect_frank(In, [connect(frank)|Out?], Narr?) :-
-    bob13_wait_frank_connected(In?, Out, Narr).
-
-%% Wait for connected(frank), then send ready signal
-procedure bob13_wait_frank_connected(Stream(UserNotify)?, Stream(UserCmd), Stream(NarrativeItem)).
-bob13_wait_frank_connected([connected(frank)|In],
-                           [send(frank, ready)|Out?],
-                           [friend(frank), say(ready)|Narr?]) :-
-    bob13_act4(In?, Out, Narr).
-bob13_wait_frank_connected([_|In], Out?, Narr?) :-
-    otherwise | bob13_wait_frank_connected(In?, Out, Narr).
-bob13_wait_frank_connected([], [], []).
-
-%% =============================================================================
-%% Act 4: Approve Dave joining Frank's study group
-%% =============================================================================
-
-procedure bob13_act4(Stream(UserNotify)?, Stream(UserCmd), Stream(NarrativeItem)).
-bob13_act4([group_invite_child(group_id(frank, study), dave, ReqId)|In],
-           [approve_group(dave, group_id(frank, study), ReqId?)|Out?],
-           [act('Approved Dave joining study group')|Narr?]) :-
-    ground(ReqId?) |
-    bob13_act5(In?, Out, Narr).
-bob13_act4([_|In], Out?, Narr?) :-
-    otherwise | bob13_act4(In?, Out, Narr).
-bob13_act4([], [], []).
-
-%% =============================================================================
-%% Act 5: Wait for Frank's "done" signal, then remove Dave from study group
-%% =============================================================================
-
-procedure bob13_act5(Stream(UserNotify)?, Stream(UserCmd), Stream(NarrativeItem)).
-bob13_act5([received(frank, _)|In],
-           [leave_child_group(dave, group_id(frank, study))|Out?],
-           [act('Removing Dave from study group')|Narr?]) :-
-    bob13_finish(In?, Out, Narr).
-%% Eve's request can arrive while act 5 is still running, and the skip clause
-%% below cannot put it back.  The release is owed whenever it is asked.
-bob13_act5([release_asked(eve)|In], [approve_release(eve)|Out?],
-           [act('Releasing Eve')|Narr?]) :-
-    bob13_act5(In?, Out, Narr).
-bob13_act5([released(eve)|In], Out?,
-           [event('Eve is no longer my child')|Narr?]) :-
-    bob13_act5(In?, Out, Narr).
-bob13_act5([_|In], Out?, Narr?) :-
-    otherwise | bob13_act5(In?, Out, Narr).
-bob13_act5([], [], []).
-
-%% =============================================================================
-%% Act 7: Termination
-%% =============================================================================
-
-%% Act 7: Eve asks to be released, and the release is owed.
-procedure bob13_finish(Stream(UserNotify)?, Stream(UserCmd), Stream(NarrativeItem)).
-bob13_finish([release_asked(eve)|In], [approve_release(eve)|Out?],
+%% Act 7: the release Eve asks for is owed, whenever it is asked.
+bob13_loop(I, C, [release_asked(eve)|In], [approve_release(eve)|Out?],
     [act('Releasing Eve')|Narr?]) :-
-    bob13_released(In?, Out, Narr).
-bob13_finish([released(eve)|In], Out?,
+    bob13_loop(I?, C?, In?, Out, Narr).
+bob13_loop(I, C, [released(eve)|In], Out?,
     [event('Eve is no longer my child')|Narr?]) :-
-    bob13_done(In?, Out, Narr).
-bob13_finish([_|In], Out?, Narr?) :-
-    otherwise | bob13_finish(In?, Out, Narr).
-bob13_finish([], [], []).
+    bob13_loop(I?, C?, In?, Out, Narr).
 
-procedure bob13_released(Stream(UserNotify)?, Stream(UserCmd), Stream(NarrativeItem)).
-bob13_released([released(eve)|In], Out?,
-    [event('Eve is no longer my child')|Narr?]) :-
-    bob13_done(In?, Out, Narr).
-bob13_released([_|In], Out?, Narr?) :-
-    otherwise | bob13_released(In?, Out, Narr).
-bob13_released([], [], []).
-
-procedure bob13_done(Stream(UserNotify)?, Stream(UserCmd), Stream(NarrativeItem)).
-bob13_done(_, [], []).
+bob13_loop(I, C, [_|In], Out?, Narr?) :-
+    otherwise | bob13_loop(I?, C?, In?, Out, Narr).
+bob13_loop(_, _, [], [], []).

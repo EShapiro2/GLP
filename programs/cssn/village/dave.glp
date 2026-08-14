@@ -1,210 +1,76 @@
-%% dave.glp — Dave actor for Village scenario
+%% dave.glp — Dave (Bob's child) actor for the Village scenario
 %%
-%% Dave is a child of Bob.
-%% Act 2: Accepts intros to Carol and Eve (may interleave). Receives text from Carol.
-%% Act 3: Joins Carol's kids_chat group, sends reply.
-%% Act 4: Accepts study group invite, sends reply.
-%% Act 5: Receives group_removed (removed from study by Bob).
-%% Act 6: Receives unfriended(carol).
+%% ORDER-INDEPENDENT.  The actor is one loop with one state, not a chain of
+%% states each waiting for one notification.  A chained actor drops whatever its
+%% current state did not expect --- its skip clause cannot put a message back ---
+%% so it works only for the interleaving it was written against, and changing
+%% the boot changed that interleaving.  Here every notification the actor ever
+%% acts on has a clause of its own, so none can arrive "too early".  Where order
+%% genuinely matters it is carried in the loop's own counters, never in which
+%% clause is currently waiting.
 %% Types: from village/self.glp (ancestor scoping)
 
-
-%% =============================================================================
-%% Act 2: Accept intros to Carol and Eve
-%%
-%% Bob fires approve_child_intro(carol,dave) and child_introduce(dave,bob,eve) together.
-%% So child_befriend(bob,eve) may arrive before connected(carol). Handle both orderings.
-%% =============================================================================
-
 %% Act 1: a party becomes a child by accepting an enrolment.  Before this it is
-%% of no age and has no parent; accepting creates the parent-child channel, and
-%% the main loop takes the confirmation.
+%% of no age and has no parent; accepting creates the parent-child channel.
 exported procedure dave13(Constant?, Channel(Stream(UserNotify), Stream(UserCmd))?, Stream(NarrativeItem)).
-dave13(Id, ch([enrol_offer(bob, ReqId)|In],
+dave13(_, ch([enrol_offer(bob, ReqId)|In],
     [enrol_decision(yes, bob, ReqId?)|Out?]),
     [act('Accepting Bob as my parent')|Narr?]) :-
     ground(ReqId?) |
-    dave13_main(Id?, ch(In?, Out), Narr).
+    dave13_loop(In?, Out, Narr).
 dave13(Id, ch([_|In], Out?), Narr?) :-
     otherwise | dave13(Id?, ch(In?, Out), Narr).
 dave13(_, ch([], []), []).
 
-procedure dave13_main(Constant?, Channel(Stream(UserNotify), Stream(UserCmd))?, Stream(NarrativeItem)).
-dave13_main(_, ch([child_befriend(bob, carol, ReqId)|In],
-             [accept_child_intro(carol, ReqId?)|Out?]),
-        Narr?) :-
-    ground(ReqId?) |
-    dave13_wait_carol_or_eve(In?, Out, Narr).
-%% Skip any message arriving before the expected intro, and close on channel end.
-dave13_main(Id, ch([_|In], Out?), Narr?) :-
-    otherwise | dave13_main(Id?, ch(In?, Out), Narr).
-dave13_main(_, ch([], []), []).
+procedure dave13_loop(Stream(UserNotify)?, Stream(UserCmd), Stream(NarrativeItem)).
 
-%% After accepting Carol intro, either connected(carol) or child_befriend(eve) first
-procedure dave13_wait_carol_or_eve(Stream(UserNotify)?, Stream(UserCmd), Stream(NarrativeItem)).
-%% Case 1: connected(carol) arrives first
-dave13_wait_carol_or_eve([connected(carol)|In], Out?,
-                         [friend(carol)|Narr?]) :-
-    dave13_wait_eve_intro(In?, Out, Narr).
-%% Case 2: child_befriend(eve) arrives first
-dave13_wait_carol_or_eve([child_befriend(bob, eve, ReqId)|In],
-                         [accept_child_intro(eve, ReqId?)|Out?],
-                         Narr?) :-
-    ground(ReqId?) |
-    dave13_wait_both_connected(In?, Out, Narr).
-dave13_wait_carol_or_eve([_|In], Out?, Narr?) :-
-    otherwise | dave13_wait_carol_or_eve(In?, Out, Narr).
-dave13_wait_carol_or_eve([], [], []).
+dave13_loop([enrolled(bob)|In], Out?, [event('Bob is my parent')|Narr?]) :-
+    dave13_loop(In?, Out, Narr).
 
-%% Case 1: Dave connected to Carol, wait for Eve intro
-procedure dave13_wait_eve_intro(Stream(UserNotify)?, Stream(UserCmd), Stream(NarrativeItem)).
-dave13_wait_eve_intro([child_befriend(bob, eve, ReqId)|In],
-                      [accept_child_intro(eve, ReqId?)|Out?],
-                      Narr?) :-
-    ground(ReqId?) |
-    dave13_wait_eve_connected(In?, Out, Narr).
-dave13_wait_eve_intro([_|In], Out?, Narr?) :-
-    otherwise | dave13_wait_eve_intro(In?, Out, Narr).
-dave13_wait_eve_intro([], [], []).
+%% Act 3: accept either introduction, in either order.
+dave13_loop([child_befriend(bob, carol, ReqId)|In],
+    [accept_child_intro(carol, ReqId?)|Out?], Narr?) :-
+    ground(ReqId?) | dave13_loop(In?, Out, Narr).
+dave13_loop([child_befriend(bob, eve, ReqId)|In],
+    [accept_child_intro(eve, ReqId?)|Out?], Narr?) :-
+    ground(ReqId?) | dave13_loop(In?, Out, Narr).
+dave13_loop([connected(carol)|In], Out?, [friend(carol)|Narr?]) :-
+    dave13_loop(In?, Out, Narr).
+dave13_loop([connected(eve)|In], Out?, [friend(eve)|Narr?]) :-
+    dave13_loop(In?, Out, Narr).
+dave13_loop([received(carol, _)|In], Out?, [event('Received Hi from Carol')|Narr?]) :-
+    dave13_loop(In?, Out, Narr).
 
-%% Case 1: Wait for connected(eve), then wait for Carol's text
-procedure dave13_wait_eve_connected(Stream(UserNotify)?, Stream(UserCmd), Stream(NarrativeItem)).
-dave13_wait_eve_connected([connected(eve)|In], Out?,
-                          [friend(eve)|Narr?]) :-
-    dave13_wait_carol_text(In?, Out, Narr).
-dave13_wait_eve_connected([_|In], Out?, Narr?) :-
-    otherwise | dave13_wait_eve_connected(In?, Out, Narr).
-dave13_wait_eve_connected([], [], []).
+%% Act 4: Carol's kids_chat, joined with Bob's consent.
+dave13_loop([group_invite(group_id(carol, kids_chat), ReqId)|In],
+    [accept_group(group_id(carol, kids_chat), ReqId?)|Out?],
+    [act('Accepting kids_chat invite')|Narr?]) :-
+    ground(ReqId?) | dave13_loop(In?, Out, Narr).
+dave13_loop([group_joined(group_id(carol, kids_chat))|In],
+    [send_group(group_id(carol, kids_chat), 'Thanks Carol!')|Out?],
+    [event('Joined kids_chat'), say('Thanks Carol!')|Narr?]) :-
+    dave13_loop(In?, Out, Narr).
 
-%% Case 2: Both intros accepted, wait for connected(carol) then connected(eve)
-procedure dave13_wait_both_connected(Stream(UserNotify)?, Stream(UserCmd), Stream(NarrativeItem)).
-dave13_wait_both_connected([connected(carol)|In], Out?,
-                           [friend(carol)|Narr?]) :-
-    dave13_wait_eve_connected(In?, Out, Narr).
-dave13_wait_both_connected([_|In], Out?, Narr?) :-
-    otherwise | dave13_wait_both_connected(In?, Out, Narr).
-dave13_wait_both_connected([], [], []).
+%% Act 5: Frank's study group, joined through Bob.
+dave13_loop([group_invite(group_id(frank, study), ReqId)|In],
+    [accept_group(group_id(frank, study), ReqId?)|Out?],
+    [act('Accepting study group invite')|Narr?]) :-
+    ground(ReqId?) | dave13_loop(In?, Out, Narr).
+dave13_loop([group_joined(group_id(frank, study))|In],
+    [send_group(group_id(frank, study), 'Hi from Dave!')|Out?],
+    [event('Joined study group'), say('Hi from Dave!')|Narr?]) :-
+    dave13_loop(In?, Out, Narr).
 
-%% Wait for received(carol, 'Hi Dave!')
-procedure dave13_wait_carol_text(Stream(UserNotify)?, Stream(UserCmd), Stream(NarrativeItem)).
-dave13_wait_carol_text([received(carol, _)|In], Out?,
-                       [event('Received Hi from Carol')|Narr?]) :-
-    dave13_act3(In?, Out, Narr).
-dave13_wait_carol_text([_|In], Out?, Narr?) :-
-    otherwise | dave13_wait_carol_text(In?, Out, Narr).
-dave13_wait_carol_text([], [], []).
+%% Act 6: what the others do to Dave.
+dave13_loop([unfriended(carol)|In], Out?, [event('Unfriended by Carol')|Narr?]) :-
+    dave13_loop(In?, Out, Narr).
+%% A parent-initiated removal reaches the child as group_left, not group_removed:
+%% Bob tells Dave to leave, and Dave's own agent leaves.  group_removed is what
+%% the creator's removal would send, and Frank did not remove him.
+dave13_loop([group_left(group_id(frank, study))|In], Out?,
+    [event('Removed from study group')|Narr?]) :-
+    dave13_loop(In?, Out, Narr).
 
-%% =============================================================================
-%% Act 3: Join Carol's kids_chat group
-%% =============================================================================
-
-%% Wait for group_invite from Carol's kids_chat
-procedure dave13_act3(Stream(UserNotify)?, Stream(UserCmd), Stream(NarrativeItem)).
-dave13_act3([group_invite(group_id(carol, kids_chat), ReqId)|In],
-            [accept_group(group_id(carol, kids_chat), ReqId?)|Out?],
-            [act('Accepting kids_chat invite')|Narr?]) :-
-    ground(ReqId?) |
-    dave13_wait_kids_joined(In?, Out, Narr).
-dave13_act3([_|In], Out?, Narr?) :-
-    otherwise | dave13_act3(In?, Out, Narr).
-dave13_act3([], [], []).
-
-%% Wait for group_joined
-procedure dave13_wait_kids_joined(Stream(UserNotify)?, Stream(UserCmd), Stream(NarrativeItem)).
-dave13_wait_kids_joined([group_joined(group_id(carol, kids_chat))|In], Out?,
-                        [event('Joined kids_chat')|Narr?]) :-
-    dave13_wait_kids_welcome(In?, Out, Narr).
-dave13_wait_kids_joined([_|In], Out?, Narr?) :-
-    otherwise | dave13_wait_kids_joined(In?, Out, Narr).
-dave13_wait_kids_joined([], [], []).
-
-%% Wait for Carol's welcome message, then reply
-procedure dave13_wait_kids_welcome(Stream(UserNotify)?, Stream(UserCmd), Stream(NarrativeItem)).
-dave13_wait_kids_welcome([group_received(group_id(carol, kids_chat), carol, _)|In],
-                         [send_group(group_id(carol, kids_chat), 'Thanks Carol!')|Out?],
-                         [say('Thanks Carol!')|Narr?]) :-
-    dave13_act4(In?, Out, Narr).
-dave13_wait_kids_welcome([_|In], Out?, Narr?) :-
-    otherwise | dave13_wait_kids_welcome(In?, Out, Narr).
-dave13_wait_kids_welcome([], [], []).
-
-%% =============================================================================
-%% Act 4: Accept study group invite
-%% =============================================================================
-
-procedure dave13_act4(Stream(UserNotify)?, Stream(UserCmd), Stream(NarrativeItem)).
-dave13_act4([group_invite(group_id(frank, study), ReqId)|In],
-            [accept_group(group_id(frank, study), ReqId?)|Out?],
-            [act('Accepting study group invite')|Narr?]) :-
-    ground(ReqId?) |
-    dave13_wait_study_joined(In?, Out, Narr).
-dave13_act4([_|In], Out?, Narr?) :-
-    otherwise | dave13_act4(In?, Out, Narr).
-dave13_act4([], [], []).
-
-%% Wait for group_joined
-procedure dave13_wait_study_joined(Stream(UserNotify)?, Stream(UserCmd), Stream(NarrativeItem)).
-dave13_wait_study_joined([group_joined(group_id(frank, study))|In], Out?,
-                         [event('Joined study group')|Narr?]) :-
-    dave13_wait_frank_group_msg(In?, Out, Narr).
-dave13_wait_study_joined([_|In], Out?, Narr?) :-
-    otherwise | dave13_wait_study_joined(In?, Out, Narr).
-dave13_wait_study_joined([], [], []).
-
-%% Wait for Frank's welcome message, then reply
-procedure dave13_wait_frank_group_msg(Stream(UserNotify)?, Stream(UserCmd), Stream(NarrativeItem)).
-dave13_wait_frank_group_msg([group_received(group_id(frank, study), frank, _)|In],
-                            [send_group(group_id(frank, study), 'Hi from Dave!')|Out?],
-                            [say('Hi from Dave!')|Narr?]) :-
-    dave13_act5(In?, Out, Narr).
-dave13_wait_frank_group_msg([_|In], Out?, Narr?) :-
-    otherwise | dave13_wait_frank_group_msg(In?, Out, Narr).
-dave13_wait_frank_group_msg([], [], []).
-
-%% =============================================================================
-%% Acts 5-6: Group removal and unfriended (either order)
-%% =============================================================================
-
-procedure dave13_act5(Stream(UserNotify)?, Stream(UserCmd), Stream(NarrativeItem)).
-%% Case 1: group_left arrives first
-dave13_act5([group_removed(group_id(frank, study))|In], Out?,
-            [event('Removed from study group')|Narr?]) :-
-    dave13_wait_unfriended(In?, Out, Narr).
-dave13_act5([group_left(group_id(frank, study))|In], Out?,
-            [event('Removed from study group')|Narr?]) :-
-    dave13_wait_unfriended(In?, Out, Narr).
-%% Case 2: unfriended arrives first
-dave13_act5([unfriended(carol)|In], Out?,
-            [event('Unfriended by Carol')|Narr?]) :-
-    dave13_wait_group_left(In?, Out, Narr).
-dave13_act5([_|In], Out?, Narr?) :-
-    otherwise | dave13_act5(In?, Out, Narr).
-dave13_act5([], [], []).
-
-%% Case 1: wait for unfriended(carol)
-procedure dave13_wait_unfriended(Stream(UserNotify)?, Stream(UserCmd), Stream(NarrativeItem)).
-dave13_wait_unfriended([unfriended(carol)|In], Out?,
-                       [event('Unfriended by Carol')|Narr?]) :-
-    dave13_finish(In?, Out, Narr).
-dave13_wait_unfriended([_|In], Out?, Narr?) :-
-    otherwise | dave13_wait_unfriended(In?, Out, Narr).
-dave13_wait_unfriended([], [], []).
-
-%% Case 2: wait for group_left/group_removed
-procedure dave13_wait_group_left(Stream(UserNotify)?, Stream(UserCmd), Stream(NarrativeItem)).
-dave13_wait_group_left([group_removed(group_id(frank, study))|In], Out?,
-                       [event('Removed from study group')|Narr?]) :-
-    dave13_finish(In?, Out, Narr).
-dave13_wait_group_left([group_left(group_id(frank, study))|In], Out?,
-                       [event('Removed from study group')|Narr?]) :-
-    dave13_finish(In?, Out, Narr).
-dave13_wait_group_left([_|In], Out?, Narr?) :-
-    otherwise | dave13_wait_group_left(In?, Out, Narr).
-dave13_wait_group_left([], [], []).
-
-%% =============================================================================
-%% Act 7: Termination
-%% =============================================================================
-
-procedure dave13_finish(Stream(UserNotify)?, Stream(UserCmd), Stream(NarrativeItem)).
-dave13_finish(_, [], []).
+dave13_loop([_|In], Out?, Narr?) :-
+    otherwise | dave13_loop(In?, Out, Narr).
+dave13_loop([], [], []).

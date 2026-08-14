@@ -1,59 +1,48 @@
-%% alice.glp — Alice actor for Village scenario
+%% alice.glp — Alice actor for the Village scenario
 %%
-%% Alice is an adult, parent of Carol.
+%% ORDER-INDEPENDENT.  The actor is one loop with one state, not a chain of
+%% states each waiting for one notification.  A chained actor drops whatever its
+%% current state did not expect --- its skip clause cannot put a message back ---
+%% so it works only for the interleaving it was written against, and changing
+%% the boot changed that interleaving.  Here every notification the actor ever
+%% acts on has a clause of its own, so none can arrive "too early".  Where order
+%% genuinely matters it is carried in the loop's own counters, never in which
+%% clause is currently waiting.
+%% Types: from village/self.glp (ancestor scoping)
+
 %% Act 1: coming into the contract.  The three commands need no answer between
-%% them, so they are issued together and the main loop below takes the replies;
-%% a prologue that waited would consume the cold call Bob's own prologue is
-%% still to send.
+%% them, so they are issued together.
 exported procedure alice13(Constant?, Channel(Stream(UserNotify), Stream(UserCmd))?, Stream(NarrativeItem)).
-alice13(Id, ch(In, [declare_age, enrol_child(carol), connect(bob)|Out?]),
+alice13(_, ch(In, [declare_age, enrol_child(carol), connect(bob)|Out?]),
     [act('Declaring myself of age'), act('Enrolling Carol')|Narr?]) :-
-    alice13_main(Id?, ch(In?, Out), Narr).
+    alice13_loop(In?, Out, Narr).
 
-procedure alice13_main(Constant?, Channel(Stream(UserNotify), Stream(UserCmd))?, Stream(NarrativeItem)).
-alice13_main(_, ch(In, [connect(bob)|Out?]), Narr?) :-
-    alice13_wait_bob(In?, Out, Narr).
+procedure alice13_loop(Stream(UserNotify)?, Stream(UserCmd), Stream(NarrativeItem)).
 
-%% Wait for connected(bob), then text Bob and connect to Frank
-procedure alice13_wait_bob(Stream(UserNotify)?, Stream(UserCmd), Stream(NarrativeItem)).
-alice13_wait_bob([connected(bob)|In],
-                 [send(bob, 'Hello Bob'), connect(frank)|Out?],
-                 [friend(bob), say('Hello Bob')|Narr?]) :-
-    alice13_wait_frank(In?, Out, Narr).
-alice13_wait_bob([_|In], Out?, Narr?) :-
-    otherwise | alice13_wait_bob(In?, Out, Narr).
-alice13_wait_bob([], [], []).
+alice13_loop([enrolled(carol)|In], Out?, [event('Carol is my child')|Narr?]) :-
+    alice13_loop(In?, Out, Narr).
 
-%% Wait for connected(frank), then fire both child introductions
-procedure alice13_wait_frank(Stream(UserNotify)?, Stream(UserCmd), Stream(NarrativeItem)).
-alice13_wait_frank([connected(frank)|In],
-                   [child_introduce(carol, bob, dave),
-                    child_introduce(carol, bob, eve)|Out?],
-                   [friend(frank),
-                    act('Introducing Carol to Dave via Bob'),
-                    act('Introducing Carol to Eve via Bob')|Narr?]) :-
-    alice13_wait_act4(In?, Out, Narr).
-alice13_wait_frank([_|In], Out?, Narr?) :-
-    otherwise | alice13_wait_frank(In?, Out, Narr).
-alice13_wait_frank([], [], []).
+%% Act 2: adult friendships.
+alice13_loop([connected(bob)|In], [send(bob, 'Hello Bob'), connect(frank)|Out?],
+    [friend(bob), say('Hello Bob')|Narr?]) :-
+    alice13_loop(In?, Out, Narr).
 
-%% =============================================================================
-%% Act 4: Approve Carol joining Frank's study group
-%% =============================================================================
+%% Act 3: both child introductions, once Frank is a friend.
+alice13_loop([connected(frank)|In],
+    [child_introduce(carol, bob, dave), child_introduce(carol, bob, eve)|Out?],
+    [friend(frank), act('Introducing Carol to Dave via Bob'),
+     act('Introducing Carol to Eve via Bob')|Narr?]) :-
+    alice13_loop(In?, Out, Narr).
 
-procedure alice13_wait_act4(Stream(UserNotify)?, Stream(UserCmd), Stream(NarrativeItem)).
-alice13_wait_act4([group_invite_child(group_id(frank, study), carol, ReqId)|In],
-                  [approve_group(carol, group_id(frank, study), ReqId?)|Out?],
-                  [act('Approved Carol joining study group')|Narr?]) :-
+%% Act 5: approve Carol joining Frank's study group.
+alice13_loop([group_invite_child(group_id(frank, study), carol, ReqId)|In],
+    [approve_group(carol, group_id(frank, study), ReqId?)|Out?],
+    [act('Approved Carol joining study group')|Narr?]) :-
     ground(ReqId?) |
-    alice13_finish(In?, Out, Narr).
-alice13_wait_act4([_|In], Out?, Narr?) :-
-    otherwise | alice13_wait_act4(In?, Out, Narr).
-alice13_wait_act4([], [], []).
+    alice13_loop(In?, Out, Narr).
 
-%% =============================================================================
-%% Act 7: Termination
-%% =============================================================================
-
-procedure alice13_finish(Stream(UserNotify)?, Stream(UserCmd), Stream(NarrativeItem)).
-alice13_finish(_, [], []).
+%% Everything else: acted on nowhere in this scenario.  With one state there is
+%% no notification this actor acts on that can reach here.
+alice13_loop([_|In], Out?, Narr?) :-
+    otherwise | alice13_loop(In?, Out, Narr).
+alice13_loop([], [], []).
