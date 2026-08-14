@@ -1857,6 +1857,27 @@ else
     FAIL=$((FAIL + 1))
 fi
 
+# fplay16: the three acts of the child-safe social graph — declare_age, enrol and
+# release — driven at the agent level.  Alice declares herself of age and enrols
+# Bob; Bob accepts and so becomes a child; Bob asks to be released and Alice
+# releases him; Bob, now of age, befriends Alice directly, with no parent among
+# the guards.  The drivers stand in for ui/mediator.glp, which is vGLP's and does
+# not yet route these acts.
+echo "--- CSSN v3 enrolment and release (fplay16) ---"
+k_fp16=$("$REPL_RUN" <<HEREDOC
+$CSSN_V2
+fplay16.
+:quit
+HEREDOC
+2>&1)
+check "CSSN v3 fplay16 succeeds" "succeeds\|suspended" "$k_fp16"
+check "CSSN v3 fplay16 alice declares herself of age" "tagged(alice, act(Declaring myself of age))" "$k_fp16"
+check "CSSN v3 fplay16 enrol creates the parent-child channel" "tagged(alice, event(Bob is my child))" "$k_fp16"
+check "CSSN v3 fplay16 the child holds its parent" "tagged(bob, event(Alice is my parent))" "$k_fp16"
+check "CSSN v3 fplay16 release tears the channel down" "tagged(alice, event(Bob is no longer my child))" "$k_fp16"
+check "CSSN v3 fplay16 release makes the child of age" "tagged(bob, event(Released, and of age))" "$k_fp16"
+check "CSSN v3 fplay16 the released child befriends unguarded by a parent" "tagged(bob, friend(alice))" "$k_fp16"
+
 # fplay8-10: CSSN groups
 echo "--- CSSN v2 group plays (fplay8-fplay10) ---"
 

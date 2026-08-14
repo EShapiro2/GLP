@@ -1111,3 +1111,108 @@ fplay15 :-
                 ch(BobMedIn?, BobMedOut), [], 1),
     tee(BobMedOut?, BobActorIn, BobDispNotify),
     send_to_user_tagged(bob, BobDispCmd?, BobDispNotify?).
+
+%% =============================================================================
+%% FPLAY16 — the three acts, measured without the mediator
+%%
+%% Alice declares herself of age and enrols Bob; Bob accepts and so becomes a
+%% child; Bob asks to be released and Alice releases him; Bob, now of age,
+%% befriends Alice directly, with no parent among the guards.  That last step is
+%% village act 7 in miniature.
+%%
+%% The two drivers stand in for the mediator, which is vGLP's and does not yet
+%% route these acts: they read the agent's own user_output and answer on its
+%% UserIn, so the acts can be measured at the agent level meanwhile.
+%% =============================================================================
+
+procedure drive_parent(Constant?, Constant?, Stream(AgentToUserMsg)?, Stream(UserInMsg), Stream(NarrativeItem)).
+
+%% Open: declare age, then offer the enrolment.
+drive_parent(Id, Kid, In, [msg(person, Id?, declare_age),
+                          msg(person, Id?, enrol_child(Kid?))|Out?],
+             [act('Declaring myself of age'), act('Enrolling Bob')|Narr?]) :-
+    ground(Id?), ground(Kid?) |
+    drive_parent_wait(Id?, Kid?, In?, Out, Narr).
+
+procedure drive_parent_wait(Constant?, Constant?, Stream(AgentToUserMsg)?, Stream(UserInMsg), Stream(NarrativeItem)).
+
+drive_parent_wait(Id, Kid, [msg(agent, person, enrolled(Who))|In], Out?,
+                  [event('Bob is my child')|Narr?]) :-
+    ground(Who?) |
+    drive_parent_wait(Id?, Kid?, In?, Out, Narr).
+
+%% The release is owed, and answering it is the parent's act.
+drive_parent_wait(Id, Kid, [msg(agent, person, release_asked(Child))|In],
+                  [msg(person, Id?, approve_release(Child?))|Out?],
+                  [act('Releasing Bob')|Narr?]) :-
+    ground(Child?) |
+    drive_parent_wait(Id?, Kid?, In?, Out, Narr).
+
+drive_parent_wait(Id, Kid, [msg(agent, person, released(Who))|In], Out?,
+                  [event('Bob is no longer my child')|Narr?]) :-
+    ground(Who?) |
+    drive_parent_wait(Id?, Kid?, In?, Out, Narr).
+
+%% Bob, now of age, cold-calls me.
+drive_parent_wait(Id, Kid, [msg(agent, person, befriend(From, Resp?))|In],
+                  [msg(person, Id?, decision(yes, From?, response(Resp)))|Out?],
+                  [act('Accepting Bob as a friend')|Narr?]) :-
+    ground(From?) |
+    drive_parent_wait(Id?, Kid?, In?, Out, Narr).
+
+drive_parent_wait(Id, Kid, [msg(agent, person, connected(Who))|In], Out?,
+                  [friend(Who?)|Narr?]) :-
+    ground(Who?) |
+    drive_parent_wait(Id?, Kid?, In?, Out, Narr).
+
+drive_parent_wait(Id, Kid, [_|In], Out?, Narr?) :-
+    otherwise |
+    drive_parent_wait(Id?, Kid?, In?, Out, Narr).
+drive_parent_wait(_, _, [], [], []).
+
+procedure drive_child(Constant?, Constant?, Stream(AgentToUserMsg)?, Stream(UserInMsg), Stream(NarrativeItem)).
+
+drive_child(Id, Parent, [msg(agent, person, enrol_offer(P, Resp?))|In],
+            [msg(person, Id?, enrol_decision(yes, P?, enrol_response(Resp)))|Out?],
+            [act('Accepting Alice as my parent')|Narr?]) :-
+    ground(P?) |
+    drive_child(Id?, Parent?, In?, Out, Narr).
+
+drive_child(Id, Parent, [msg(agent, person, enrolled(Who))|In],
+            [msg(person, Id?, request_release)|Out?],
+            [event('Alice is my parent'), act('Asking Alice to release me')|Narr?]) :-
+    ground(Who?) |
+    drive_child(Id?, Parent?, In?, Out, Narr).
+
+%% Released, and thereby of age: befriend directly.
+drive_child(Id, Parent, [msg(agent, person, released(Who))|In],
+            [msg(person, Id?, connect(Parent?))|Out?],
+            [event('Released, and of age'),
+             act('Befriending Alice with no parent among the guards')|Narr?]) :-
+    ground(Who?) |
+    drive_child(Id?, Parent?, In?, Out, Narr).
+
+drive_child(Id, Parent, [msg(agent, person, connected(Who))|In], Out?,
+            [friend(Who?)|Narr?]) :-
+    ground(Who?) |
+    drive_child(Id?, Parent?, In?, Out, Narr).
+
+drive_child(Id, Parent, [_|In], Out?, Narr?) :-
+    otherwise |
+    drive_child(Id?, Parent?, In?, Out, Narr).
+drive_child(_, _, [], [], []).
+
+exported procedure fplay16.
+fplay16 :-
+    network2(ch(AliceNetOut?, AliceNetIn),
+             ch(BobNetOut?, BobNetIn)),
+
+    agent # agent(alice, state(0, []), AliceIn?, AliceNetIn?,
+          [user_output(AliceToUser), net_output(AliceNetOut)]),
+    drive_parent(alice, bob, AliceToUser?, AliceIn, AliceNarr),
+    send_to_user_narrate(alice, AliceNarr?),
+
+    agent # agent(bob, state(0, []), BobIn?, BobNetIn?,
+          [user_output(BobToUser), net_output(BobNetOut)]),
+    drive_child(bob, alice, BobToUser?, BobIn, BobNarr),
+    send_to_user_narrate(bob, BobNarr?).

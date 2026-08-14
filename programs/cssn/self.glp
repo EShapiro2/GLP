@@ -596,3 +596,7 @@ fplay15 :- boot # fplay15.
 imported procedure play_ui_boot#agent_init(Constant?, Stream(UserCmd)?, Stream(NetInMsg)?).
 exported procedure agent_init(Constant?, Stream(UserCmd)?, Stream(NetInMsg)?).
 agent_init(Id, UserIn, NetIn) :- play_ui_boot # agent_init(Id?, UserIn?, NetIn?).
+
+imported procedure boot#fplay16.
+exported procedure fplay16.
+fplay16 :- boot # fplay16.
