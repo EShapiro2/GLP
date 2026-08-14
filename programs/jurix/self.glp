@@ -1,0 +1,549 @@
+% ---------------------------------------------------------------------------
+% Jurix: the syntactically-grassroots checker.
+%
+% Decides def:syntactically-grassroots of /Grassroots/Jurix, Section 3.  The
+% paper is the specification and no definition of it is restated here; each
+% procedure names the definition it decides.  README.md maps the two.
+%
+% This file is the directory's shared scope: the representation of a contract,
+% the substitution and matching machinery every condition needs, and the
+% directory's entry points.
+% ---------------------------------------------------------------------------
+
+% --- The syntax of a schema (def:schema) -----------------------------------
+% An argument is a role, named by its index in the schema, a party variable or
+% a speech-act variable.
+Arg   ::= role(Integer) ; pvar(Constant) ; svar(Constant).
+Args  ::= [] ; [Arg | Args].
+Atom  ::= atom(Constant, Args).
+Atoms ::= [] ; [Atom | Atoms].
+
+% rs(Guard, Add, Del, Keep, Forb) holds a role's four multisets in the order
+% +(i), -(i), =(i), not(i); Guard records the mark ?.
+Guard     ::= guarded ; unguarded.
+RoleSpec  ::= rs(Guard, Atoms, Atoms, Atoms, Atoms).
+RoleSpecs ::= [] ; [RoleSpec | RoleSpecs].
+Schema    ::= schema(Constant, RoleSpecs).
+Contract  ::= [] ; [Schema | Contract].
+
+% --- The image of a binding (def:schema) -----------------------------------
+% People and speech acts are numbered; person(0) and person(1) are the two
+% the conditions quantify over.  undef marks a variable that a partial
+% substitution leaves unbound and occurs in no completed one.
+Val    ::= person(Integer) ; speech(Integer) ; undef.
+Vals   ::= [] ; [Val | Vals].
+GAtom  ::= gatom(Constant, Vals).
+GAtoms ::= [] ; [GAtom | GAtoms].
+
+Bind     ::= bind(Arg, Val).
+Subst    ::= [] ; [Bind | Subst].
+Substs   ::= [] ; [Subst | Substs].
+Found    ::= bound(Val) ; free.
+MatchRes ::= match(Subst) ; nomatch.
+
+% --- What a schema determines at a binding (def:instance) ------------------
+% One eff(Person, Guard, Add, Del, Keep, Forb) per role, under the binding.
+Effect ::= eff(Val, Guard, GAtoms, GAtoms, GAtoms, GAtoms).
+Vgt    ::= [] ; [Effect | Vgt].
+% The introductory act's own transaction, and the first unused name index.
+Ctx    ::= ctx(Vgt, Integer).
+
+% --- Verdicts --------------------------------------------------------------
+Ans   ::= yes ; no.
+Preds ::= [] ; [Constant | Preds].
+Cause ::= unobtainable ; blocked_by(Constant, Integer, Atom).
+Fault ::= no_introductory_act
+        ; obstructed(Constant, Integer, Atom, Cause)
+        ; volition(Constant, Integer, Integer).
+Faults  ::= [] ; [Fault | Faults].
+Verdict ::= syntactically_grassroots ; not_grassroots(Faults).
+
+Block ::= blocked(Constant, Integer, Atom) ; clear.
+Cand  ::= none ; some(Faults).
+TakeE ::= tooke(Vgt) ; misse.
+TakeG ::= tookg(GAtoms) ; missg.
+
+% ---------------------------------------------------------------------------
+% Booleans
+% ---------------------------------------------------------------------------
+
+procedure both_yes(Ans?, Ans?, Ans).
+both_yes(yes, A, A?).
+both_yes(no, _, no).
+
+procedure or_yes(Ans?, Ans?, Ans).
+or_yes(yes, _, yes).
+or_yes(no, A, A?).
+
+% ---------------------------------------------------------------------------
+% Lists
+% ---------------------------------------------------------------------------
+
+procedure args_app(Args?, Args?, Args).
+args_app([], T, T?).
+args_app([A|As], T, [A?|R?]) :- args_app(As?, T?, R).
+
+procedure atoms_app(Atoms?, Atoms?, Atoms).
+atoms_app([], T, T?).
+atoms_app([A|As], T, [A?|R?]) :- atoms_app(As?, T?, R).
+
+procedure faults_app(Faults?, Faults?, Faults).
+faults_app([], T, T?).
+faults_app([F|Fs], T, [F?|R?]) :- faults_app(Fs?, T?, R).
+
+procedure preds_len(Preds?, Integer).
+preds_len([], 0).
+preds_len([_|Xs], N?) :- preds_len(Xs?, M), N := M? + 1.
+
+procedure roles_len(RoleSpecs?, Integer).
+roles_len([], 0).
+roles_len([_|Xs], N?) :- roles_len(Xs?, M), N := M? + 1.
+
+procedure pred_member(Constant?, Preds?, Ans).
+pred_member(_, [], no).
+pred_member(P, [Q|_], yes) :- P? =?= Q? | true.
+pred_member(P, [_|Qs], R?) :- otherwise | pred_member(P?, Qs?, R).
+
+procedure args_member(Args?, Arg?, Ans).
+args_member([], _, no).
+args_member([A|_], U, yes) :- A? =?= U? | true.
+args_member([_|As], U, R?) :- otherwise | args_member(As?, U?, R).
+
+procedure vals_member(Vals?, Val?, Ans).
+vals_member([], _, no).
+vals_member([V|_], W, yes) :- V? =?= W? | true.
+vals_member([_|Vs], W, R?) :- otherwise | vals_member(Vs?, W?, R).
+
+% args_remove(As, A, R): every occurrence of A dropped from As.
+procedure args_remove(Args?, Arg?, Args).
+args_remove([], _, []).
+args_remove([B|As], A, R?) :- B? =?= A? | args_remove(As?, A?, R).
+args_remove([B|As], A, [B?|R?]) :- otherwise, ground(B?) | args_remove(As?, A?, R).
+
+procedure args_dedup(Args?, Args).
+args_dedup([], []).
+args_dedup([A|As], [A?|R?]) :- ground(A?), ground(As?) |
+    args_remove(As?, A?, As1),
+    args_dedup(As1?, R).
+
+procedure preds_remove(Preds?, Constant?, Preds).
+preds_remove([], _, []).
+preds_remove([Q|Ps], P, R?) :- Q? =?= P? | preds_remove(Ps?, P?, R).
+preds_remove([Q|Ps], P, [Q?|R?]) :- otherwise, ground(Q?) | preds_remove(Ps?, P?, R).
+
+procedure preds_dedup(Preds?, Preds).
+preds_dedup([], []).
+preds_dedup([P|Ps], [P?|R?]) :- ground(P?), ground(Ps?) |
+    preds_remove(Ps?, P?, Ps1),
+    preds_dedup(Ps1?, R).
+
+% ---------------------------------------------------------------------------
+% Substitutions
+% ---------------------------------------------------------------------------
+
+procedure subst_lookup(Subst?, Arg?, Found).
+subst_lookup([], _, free).
+subst_lookup([bind(A, V)|_], B, bound(V?)) :- A? =?= B? | true.
+subst_lookup([bind(_, _)|S], B, R?) :- otherwise | subst_lookup(S?, B?, R).
+
+procedure subst_app(Subst?, Subst?, Subst).
+subst_app([], T, T?).
+subst_app([B|Bs], T, [B?|R?]) :- subst_app(Bs?, T?, R).
+
+procedure unwrap_val(Found?, Val).
+unwrap_val(bound(V), V?).
+unwrap_val(free, undef).
+
+% apply_arg/apply_atom/apply_atoms: the image under a binding, written
+% beta(phi) in Section 3.  A completed substitution binds every variable of
+% the schema, so undef never reaches an atom.
+procedure apply_arg(Subst?, Arg?, Val).
+apply_arg(S, A, V?) :- ground(S?), ground(A?) |
+    subst_lookup(S?, A?, F),
+    unwrap_val(F?, V).
+
+procedure apply_args(Subst?, Args?, Vals).
+apply_args(_, [], []).
+apply_args(S, [A|As], [V?|Vs?]) :- ground(S?), ground(A?), ground(As?) |
+    apply_arg(S?, A?, V),
+    apply_args(S?, As?, Vs).
+
+procedure apply_atom(Subst?, Atom?, GAtom).
+apply_atom(S, atom(P, As), gatom(P?, Vs?)) :- ground(S?), ground(P?), ground(As?) |
+    apply_args(S?, As?, Vs).
+
+procedure apply_atoms(Subst?, Atoms?, GAtoms).
+apply_atoms(_, [], []).
+apply_atoms(S, [A|As], [G?|Gs?]) :- ground(S?), ground(A?), ground(As?) |
+    apply_atom(S?, A?, G),
+    apply_atoms(S?, As?, Gs).
+
+% ---------------------------------------------------------------------------
+% Matching a schema's atom against a ground one
+% ---------------------------------------------------------------------------
+% match_atom(Psi, G, S, R): the bindings extending S under which Psi becomes
+% G, if any.  A binding sends roles and party variables to people, injectively
+% on the roles, and speech-act variables to speech acts (def:schema); the
+% three checks below are exactly those three requirements.
+
+procedure kind_ok(Arg?, Val?, Ans).
+kind_ok(role(_), person(_), yes).
+kind_ok(role(_), speech(_), no).
+kind_ok(role(_), undef, no).
+kind_ok(pvar(_), person(_), yes).
+kind_ok(pvar(_), speech(_), no).
+kind_ok(pvar(_), undef, no).
+kind_ok(svar(_), person(_), no).
+kind_ok(svar(_), speech(_), yes).
+kind_ok(svar(_), undef, no).
+
+% No two roles take the same person.
+procedure no_role_at(Subst?, Val?, Ans).
+no_role_at([], _, yes).
+no_role_at([bind(role(_), V)|_], W, no) :- V? =?= W? | true.
+no_role_at([bind(_, _)|S], W, R?) :- otherwise | no_role_at(S?, W?, R).
+
+procedure injective_ok(Arg?, Val?, Subst?, Ans).
+injective_ok(role(_), V, S, R?) :- ground(V?), ground(S?) | no_role_at(S?, V?, R).
+injective_ok(pvar(_), _, _, yes).
+injective_ok(svar(_), _, _, yes).
+
+procedure match_bind(Ans?, Arg?, Val?, Subst?, MatchRes).
+match_bind(yes, A, V, S, match([bind(A?, V?)|S?])).
+match_bind(no, _, _, _, nomatch).
+
+procedure val_same(Val?, Val?, Subst?, MatchRes).
+val_same(W, V, S, match(S?)) :- W? =?= V? | true.
+val_same(_, _, _, nomatch) :- otherwise | true.
+
+procedure match_one1(Found?, Arg?, Val?, Subst?, MatchRes).
+match_one1(free, A, V, S, R?) :- ground(A?), ground(V?), ground(S?) |
+    kind_ok(A?, V?, K),
+    injective_ok(A?, V?, S?, I),
+    both_yes(K?, I?, Ok),
+    match_bind(Ok?, A?, V?, S?, R).
+match_one1(bound(W), _, V, S, R?) :- ground(W?), ground(V?), ground(S?) |
+    val_same(W?, V?, S?, R).
+
+procedure match_one(Arg?, Val?, Subst?, MatchRes).
+match_one(A, V, S, R?) :- ground(A?), ground(V?), ground(S?) |
+    subst_lookup(S?, A?, F),
+    match_one1(F?, A?, V?, S?, R).
+
+procedure match_rest(MatchRes?, Args?, Vals?, MatchRes).
+match_rest(nomatch, _, _, nomatch).
+match_rest(match(S), As, Vs, R?) :- ground(S?), ground(As?), ground(Vs?) |
+    match_args(As?, Vs?, S?, R).
+
+procedure match_args(Args?, Vals?, Subst?, MatchRes).
+match_args([], [], S, match(S?)).
+match_args([], [_|_], _, nomatch).
+match_args([_|_], [], _, nomatch).
+match_args([A|As], [V|Vs], S, R?) :- ground(A?), ground(V?), ground(As?), ground(Vs?), ground(S?) |
+    match_one(A?, V?, S?, R1),
+    match_rest(R1?, As?, Vs?, R).
+
+procedure match_atom(Atom?, GAtom?, Subst?, MatchRes).
+match_atom(atom(P, As), gatom(Q, Vs), S, R?) :-
+    P? =?= Q?, ground(As?), ground(Vs?), ground(S?) |
+    match_args(As?, Vs?, S?, R).
+match_atom(atom(_, _), gatom(_, _), _, nomatch) :- otherwise | true.
+
+% some_match(Psis, G, S, R): does any of Psis match G over S?
+procedure some_match1(MatchRes?, Atoms?, GAtom?, Subst?, Ans).
+some_match1(match(_), _, _, _, yes).
+some_match1(nomatch, As, G, S, R?) :- ground(As?), ground(G?), ground(S?) |
+    some_match(As?, G?, S?, R).
+
+procedure some_match(Atoms?, GAtom?, Subst?, Ans).
+some_match([], _, _, no).
+some_match([A|As], G, S, R?) :- ground(A?), ground(As?), ground(G?), ground(S?) |
+    match_atom(A?, G?, S?, M),
+    some_match1(M?, As?, G?, S?, R).
+
+% ---------------------------------------------------------------------------
+% The variables of a schema
+% ---------------------------------------------------------------------------
+
+procedure atoms_args(Atoms?, Args?, Args).
+atoms_args([], T, T?).
+atoms_args([atom(_, As)|Xs], T, R?) :- ground(As?), ground(Xs?), ground(T?) |
+    atoms_args(Xs?, T?, R1),
+    args_app(As?, R1?, R).
+
+procedure rolespecs_args(RoleSpecs?, Args?, Args).
+rolespecs_args([], T, T?).
+rolespecs_args([rs(_, P, M, K, N)|Rs], T, R?) :-
+    ground(P?), ground(M?), ground(K?), ground(N?), ground(Rs?), ground(T?) |
+    rolespecs_args(Rs?, T?, R1),
+    atoms_args(N?, R1?, R2),
+    atoms_args(K?, R2?, R3),
+    atoms_args(M?, R3?, R4),
+    atoms_args(P?, R4?, R).
+
+procedure schema_args(Schema?, Args).
+schema_args(schema(_, Rs), R?) :- ground(Rs?) | rolespecs_args(Rs?, [], R).
+
+procedure filter_pvars(Args?, Args).
+filter_pvars([], []).
+filter_pvars([pvar(X)|As], [pvar(X?)|R?]) :- filter_pvars(As?, R).
+filter_pvars([role(_)|As], R?) :- filter_pvars(As?, R).
+filter_pvars([svar(_)|As], R?) :- filter_pvars(As?, R).
+
+procedure filter_svars(Args?, Args).
+filter_svars([], []).
+filter_svars([svar(X)|As], [svar(X?)|R?]) :- filter_svars(As?, R).
+filter_svars([role(_)|As], R?) :- filter_svars(As?, R).
+filter_svars([pvar(_)|As], R?) :- filter_svars(As?, R).
+
+procedure schema_pvars(Schema?, Args).
+schema_pvars(Sc, R?) :- ground(Sc?) |
+    schema_args(Sc?, As),
+    filter_pvars(As?, Ps),
+    args_dedup(Ps?, R).
+
+procedure schema_svars(Schema?, Args).
+schema_svars(Sc, R?) :- ground(Sc?) |
+    schema_args(Sc?, As),
+    filter_svars(As?, Ss),
+    args_dedup(Ss?, R).
+
+% role_args(I, K, R): role(I) .. role(K).
+procedure role_args(Integer?, Integer?, Args).
+role_args(I, K, []) :- I? > K? | true.
+role_args(I, K, [role(I?)|R?]) :- I? =< K?, integer(I?), integer(K?) |
+    I1 := I? + 1,
+    role_args(I1?, K?, R).
+
+% Every variable of a schema: its roles, then its party and speech-act
+% variables in order of first occurrence.
+procedure schema_vars(Schema?, Args).
+schema_vars(schema(Nm, Rs), R?) :- ground(Nm?), ground(Rs?) |
+    roles_len(Rs?, K),
+    role_args(1, K?, RA),
+    schema_pvars(schema(Nm?, Rs?), PV),
+    schema_svars(schema(Nm?, Rs?), SV),
+    args_app(SV?, [], SV1),
+    args_app(PV?, SV1?, PS),
+    args_app(RA?, PS?, R).
+
+% ---------------------------------------------------------------------------
+% Completing a partial substitution with fresh names
+% ---------------------------------------------------------------------------
+% A match constrains only the variables it meets.  The rest take names no
+% other binding in play uses, so that the transaction built from the result
+% differs from the introductory act's whenever any completion does.
+
+procedure fresh_val(Arg?, Integer?, Val).
+fresh_val(role(_), N, person(N?)).
+fresh_val(pvar(_), N, person(N?)).
+fresh_val(svar(_), N, speech(N?)).
+
+procedure complete1(Found?, Arg?, Args?, Subst?, Integer?, Subst).
+complete1(bound(_), _, As, S, N, R?) :- ground(As?), ground(S?), integer(N?) |
+    complete_vars(As?, S?, N?, R).
+complete1(free, A, As, S, N, R?) :- ground(A?), ground(As?), ground(S?), integer(N?) |
+    fresh_val(A?, N?, V),
+    N1 := N? + 1,
+    complete_vars(As?, [bind(A?, V?)|S?], N1?, R).
+
+procedure complete_vars(Args?, Subst?, Integer?, Subst).
+complete_vars([], S, _, S?).
+complete_vars([A|As], S, N, R?) :- ground(A?), ground(As?), ground(S?), integer(N?) |
+    subst_lookup(S?, A?, F),
+    complete1(F?, A?, As?, S?, N?, R).
+
+procedure complete(Schema?, Subst?, Integer?, Subst).
+complete(Sc, S, N, R?) :- ground(Sc?), ground(S?), integer(N?) |
+    schema_vars(Sc?, Vs),
+    complete_vars(Vs?, S?, N?, R).
+
+% The first name index no binding of the introductory act uses: person(0) and
+% person(1) are its two people and speech(0)..speech(m-1) its speech acts.
+procedure fresh_base(Schema?, Integer).
+fresh_base(Sc, N?) :- ground(Sc?) |
+    schema_svars(Sc?, SV),
+    args_len(SV?, M),
+    N := M? + 2.
+
+procedure args_len(Args?, Integer).
+args_len([], 0).
+args_len([_|As], N?) :- args_len(As?, M), N := M? + 1.
+
+% ---------------------------------------------------------------------------
+% The transactions a schema determines at a binding (def:instance)
+% ---------------------------------------------------------------------------
+% Two schemas at two bindings determine the same set of volition-guarded
+% transactions exactly when the participants, their guards and the four
+% multisets at each of them agree, which is what vgt_eq compares.
+
+procedure role_effects(RoleSpecs?, Integer?, Subst?, Vgt).
+role_effects([], _, _, []).
+role_effects([rs(Gd, P, M, K, N)|Rs], I, S, [eff(V?, Gd?, GP?, GM?, GK?, GN?)|R?]) :-
+    ground(Gd?), ground(P?), ground(M?), ground(K?), ground(N?),
+    ground(Rs?), ground(S?), integer(I?) |
+    apply_arg(S?, role(I?), V),
+    apply_atoms(S?, P?, GP),
+    apply_atoms(S?, M?, GM),
+    apply_atoms(S?, K?, GK),
+    apply_atoms(S?, N?, GN),
+    I1 := I? + 1,
+    role_effects(Rs?, I1?, S?, R).
+
+procedure vgt(Schema?, Subst?, Vgt).
+vgt(schema(_, Rs), S, R?) :- ground(Rs?), ground(S?) | role_effects(Rs?, 1, S?, R).
+
+procedure take_gatom1(TakeG?, GAtom?, TakeG).
+take_gatom1(missg, _, missg).
+take_gatom1(tookg(Bs), B, tookg([B?|Bs?])).
+
+procedure take_gatom(GAtoms?, GAtom?, TakeG).
+take_gatom([], _, missg).
+take_gatom([B|Bs], A, tookg(Bs?)) :- B? =?= A? | true.
+take_gatom([B|Bs], A, R?) :- otherwise, ground(B?), ground(Bs?), ground(A?) |
+    take_gatom(Bs?, A?, T),
+    take_gatom1(T?, B?, R).
+
+procedure mset_eq1(TakeG?, GAtoms?, Ans).
+mset_eq1(missg, _, no).
+mset_eq1(tookg(Bs), As, R?) :- ground(Bs?), ground(As?) | mset_eq(As?, Bs?, R).
+
+procedure mset_eq(GAtoms?, GAtoms?, Ans).
+mset_eq([], [], yes).
+mset_eq([], [_|_], no).
+mset_eq([_|_], [], no).
+mset_eq([A|As], Bs, R?) :- ground(A?), ground(As?), ground(Bs?) |
+    take_gatom(Bs?, A?, T),
+    mset_eq1(T?, As?, R).
+
+procedure guard_eq(Guard?, Guard?, Ans).
+guard_eq(guarded, guarded, yes).
+guard_eq(guarded, unguarded, no).
+guard_eq(unguarded, guarded, no).
+guard_eq(unguarded, unguarded, yes).
+
+procedure val_eq(Val?, Val?, Ans).
+val_eq(V, W, yes) :- V? =?= W? | true.
+val_eq(_, _, no) :- otherwise | true.
+
+procedure eff_eq(Effect?, Effect?, Ans).
+eff_eq(eff(V1, G1, P1, M1, K1, N1), eff(V2, G2, P2, M2, K2, N2), R?) :-
+    ground(V1?), ground(G1?), ground(P1?), ground(M1?), ground(K1?), ground(N1?),
+    ground(V2?), ground(G2?), ground(P2?), ground(M2?), ground(K2?), ground(N2?) |
+    val_eq(V1?, V2?, A1),
+    guard_eq(G1?, G2?, A2),
+    mset_eq(P1?, P2?, A3),
+    mset_eq(M1?, M2?, A4),
+    mset_eq(K1?, K2?, A5),
+    mset_eq(N1?, N2?, A6),
+    both_yes(A1?, A2?, B1),
+    both_yes(A3?, A4?, B2),
+    both_yes(A5?, A6?, B3),
+    both_yes(B1?, B2?, B4),
+    both_yes(B4?, B3?, R).
+
+procedure take_eff2(TakeE?, Effect?, TakeE).
+take_eff2(misse, _, misse).
+take_eff2(tooke(Fs), F, tooke([F?|Fs?])).
+
+procedure take_eff1(Ans?, Effect?, Vgt?, Effect?, TakeE).
+take_eff1(yes, _, Fs, _, tooke(Fs?)).
+take_eff1(no, F, Fs, E, R?) :- ground(F?), ground(Fs?), ground(E?) |
+    take_eff(Fs?, E?, T),
+    take_eff2(T?, F?, R).
+
+procedure take_eff(Vgt?, Effect?, TakeE).
+take_eff([], _, misse).
+take_eff([F|Fs], E, R?) :- ground(F?), ground(Fs?), ground(E?) |
+    eff_eq(F?, E?, A),
+    take_eff1(A?, F?, Fs?, E?, R).
+
+procedure vgt_eq1(TakeE?, Vgt?, Ans).
+vgt_eq1(misse, _, no).
+vgt_eq1(tooke(Fs), Es, R?) :- ground(Fs?), ground(Es?) | vgt_eq(Es?, Fs?, R).
+
+procedure vgt_eq(Vgt?, Vgt?, Ans).
+vgt_eq([], [], yes).
+vgt_eq([], [_|_], no).
+vgt_eq([_|_], [], no).
+vgt_eq([E|Es], Fs, R?) :- ground(E?), ground(Es?), ground(Fs?) |
+    take_eff(Fs?, E?, T),
+    vgt_eq1(T?, Es?, R).
+
+% ---------------------------------------------------------------------------
+% Atoms a role requires (def:schema: the atoms =(i) and -(i))
+% ---------------------------------------------------------------------------
+
+% atoms_witness(Phis, U, E, R): some atom of Phis has its predicate in E and U
+% among its arguments.
+procedure atoms_witness1(Ans?, Atoms?, Arg?, Preds?, Ans).
+atoms_witness1(yes, _, _, _, yes).
+atoms_witness1(no, Xs, U, E, R?) :- ground(Xs?), ground(U?), ground(E?) |
+    atoms_witness(Xs?, U?, E?, R).
+
+procedure atoms_witness(Atoms?, Arg?, Preds?, Ans).
+atoms_witness([], _, _, no).
+atoms_witness([atom(Q, As)|Xs], U, E, R?) :-
+    ground(Q?), ground(As?), ground(Xs?), ground(U?), ground(E?) |
+    pred_member(Q?, E?, A1),
+    args_member(As?, U?, A2),
+    both_yes(A1?, A2?, B),
+    atoms_witness1(B?, Xs?, U?, E?, R).
+
+% req_names(Role, U, E, R): the role requires an atom with predicate in E and
+% U among its arguments.
+procedure req_names(RoleSpec?, Arg?, Preds?, Ans).
+req_names(rs(_, _, M, K, _), U, E, R?) :- ground(M?), ground(K?), ground(U?), ground(E?) |
+    atoms_witness(M?, U?, E?, A1),
+    atoms_witness(K?, U?, E?, A2),
+    or_yes(A1?, A2?, R).
+
+procedure any_req_names1(Ans?, RoleSpecs?, Arg?, Preds?, Ans).
+any_req_names1(yes, _, _, _, yes).
+any_req_names1(no, Rs, U, E, R?) :- ground(Rs?), ground(U?), ground(E?) |
+    any_req_names(Rs?, U?, E?, R).
+
+procedure any_req_names(RoleSpecs?, Arg?, Preds?, Ans).
+any_req_names([], _, _, no).
+any_req_names([RS|Rs], U, E, R?) :- ground(RS?), ground(Rs?), ground(U?), ground(E?) |
+    req_names(RS?, U?, E?, A),
+    any_req_names1(A?, Rs?, U?, E?, R).
+
+% nth_rs(Rs, I, R): the I-th role of a schema, counting from one.  The empty
+% case is out of range and cannot arise; it answers with a role that requires
+% nothing, so that a caller reports a fault rather than passing.
+procedure nth_rs(RoleSpecs?, Integer?, RoleSpec).
+nth_rs([], _, rs(unguarded, [], [], [], [])).
+nth_rs([X|_], I, X?) :- I? =:= 1 | true.
+nth_rs([_|Xs], I, R?) :- I? > 1, integer(I?), ground(Xs?) |
+    I1 := I? - 1,
+    nth_rs(Xs?, I1?, R).
+
+procedure all_guarded(RoleSpecs?, Ans).
+all_guarded([], yes).
+all_guarded([rs(guarded, _, _, _, _)|Rs], R?) :- ground(Rs?) | all_guarded(Rs?, R).
+all_guarded([rs(unguarded, _, _, _, _)|_], no).
+
+% ---------------------------------------------------------------------------
+% Entry points
+% ---------------------------------------------------------------------------
+
+% The directory's interface: each entry point is forwarded to the module that
+% defines it (manual 19.6).  check.glp composes the two halves of
+% def:syntactically-grassroots; contracts.glp holds the contracts to run on.
+
+imported procedure check#check(Contract?, Verdict).
+exported procedure check(Contract?, Verdict).
+check(C, V?) :- check # check(C?, V).
+
+imported procedure check#check_named(Constant?, Verdict).
+exported procedure check_named(Constant?, Verdict).
+check_named(Nm, V?) :- check # check_named(Nm?, V).
+
+imported procedure check#traceable_of(Constant?, Preds).
+exported procedure traceable_of(Constant?, Preds).
+traceable_of(Nm, E?) :- check # traceable_of(Nm?, E).
+
+imported procedure contracts#contract(Constant?, Contract).
+exported procedure contract_named(Constant?, Contract).
+contract_named(Nm, C?) :- contracts # contract(Nm?, C).

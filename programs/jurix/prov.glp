@@ -1,0 +1,130 @@
+% ---------------------------------------------------------------------------
+% Traceable provenance (def:grounded of /Grassroots/Jurix, Section 3).
+%
+% The largest set of predicates having it is a greatest fixpoint: start from
+% every predicate of the contract, drop those the definition rejects against
+% the set in hand, and repeat until nothing drops.  A contract has finitely
+% many predicates, so the loop ends.
+% ---------------------------------------------------------------------------
+
+procedure atoms_preds(Atoms?, Preds?, Preds).
+atoms_preds([], T, T?).
+atoms_preds([atom(Q, _)|Xs], T, [Q?|R?]) :- ground(Xs?), ground(T?) |
+    atoms_preds(Xs?, T?, R).
+
+procedure roles_preds(RoleSpecs?, Preds?, Preds).
+roles_preds([], T, T?).
+roles_preds([rs(_, P, M, K, N)|Rs], T, R?) :-
+    ground(P?), ground(M?), ground(K?), ground(N?), ground(Rs?), ground(T?) |
+    roles_preds(Rs?, T?, R1),
+    atoms_preds(N?, R1?, R2),
+    atoms_preds(K?, R2?, R3),
+    atoms_preds(M?, R3?, R4),
+    atoms_preds(P?, R4?, R).
+
+procedure contract_preds(Contract?, Preds?, Preds).
+contract_preds([], T, T?).
+contract_preds([schema(_, Rs)|Ss], T, R?) :- ground(Rs?), ground(Ss?), ground(T?) |
+    contract_preds(Ss?, T?, R1),
+    roles_preds(Rs?, R1?, R).
+
+procedure all_preds(Contract?, Preds).
+all_preds(C, R?) :- ground(C?) |
+    contract_preds(C?, [], P),
+    preds_dedup(P?, R).
+
+% --- one pass -------------------------------------------------------------
+% args_ok(As, All, E, R): every argument of an added atom that is a role or a
+% party variable meets def:grounded.  A role meets it outright, since the
+% argument in question is one of the schema's own roles; a speech-act variable
+% is not in R + X and is not asked about; a party variable needs a required
+% atom of Phi_E naming it, at some role of the same schema.
+
+procedure args_ok1(Ans?, Args?, RoleSpecs?, Preds?, Ans).
+args_ok1(no, _, _, _, no).
+args_ok1(yes, As, All, E, R?) :- ground(As?), ground(All?), ground(E?) |
+    args_ok(As?, All?, E?, R).
+
+procedure args_ok(Args?, RoleSpecs?, Preds?, Ans).
+args_ok([], _, _, yes).
+args_ok([role(_)|As], All, E, R?) :- ground(As?), ground(All?), ground(E?) |
+    args_ok(As?, All?, E?, R).
+args_ok([svar(_)|As], All, E, R?) :- ground(As?), ground(All?), ground(E?) |
+    args_ok(As?, All?, E?, R).
+args_ok([pvar(X)|As], All, E, R?) :- ground(X?), ground(As?), ground(All?), ground(E?) |
+    any_req_names(All?, pvar(X?), E?, A),
+    args_ok1(A?, As?, All?, E?, R).
+
+% The added atoms of one role, those carrying the predicate under test.
+procedure plus_ok1(Ans?, Atoms?, Constant?, RoleSpecs?, Preds?, Ans).
+plus_ok1(no, _, _, _, _, no).
+plus_ok1(yes, Xs, Pd, All, E, R?) :- ground(Xs?), ground(Pd?), ground(All?), ground(E?) |
+    plus_ok(Xs?, Pd?, All?, E?, R).
+
+procedure plus_ok(Atoms?, Constant?, RoleSpecs?, Preds?, Ans).
+plus_ok([], _, _, _, yes).
+plus_ok([atom(Q, As)|Xs], Pd, All, E, R?) :-
+    Q? =?= Pd?, ground(As?), ground(Xs?), ground(Pd?), ground(All?), ground(E?) |
+    args_ok(As?, All?, E?, A),
+    plus_ok1(A?, Xs?, Pd?, All?, E?, R).
+plus_ok([atom(_, _)|Xs], Pd, All, E, R?) :-
+    otherwise, ground(Xs?), ground(Pd?), ground(All?), ground(E?) |
+    plus_ok(Xs?, Pd?, All?, E?, R).
+
+procedure roles_ok1(Ans?, RoleSpecs?, Constant?, RoleSpecs?, Preds?, Ans).
+roles_ok1(no, _, _, _, _, no).
+roles_ok1(yes, Rs, Pd, All, E, R?) :- ground(Rs?), ground(Pd?), ground(All?), ground(E?) |
+    roles_ok(Rs?, Pd?, All?, E?, R).
+
+procedure roles_ok(RoleSpecs?, Constant?, RoleSpecs?, Preds?, Ans).
+roles_ok([], _, _, _, yes).
+roles_ok([rs(_, P, _, _, _)|Rs], Pd, All, E, R?) :-
+    ground(P?), ground(Rs?), ground(Pd?), ground(All?), ground(E?) |
+    plus_ok(P?, Pd?, All?, E?, A),
+    roles_ok1(A?, Rs?, Pd?, All?, E?, R).
+
+procedure pred_ok1(Ans?, Constant?, Contract?, Preds?, Ans).
+pred_ok1(no, _, _, _, no).
+pred_ok1(yes, Pd, Ss, E, R?) :- ground(Pd?), ground(Ss?), ground(E?) |
+    pred_ok(Pd?, Ss?, E?, R).
+
+procedure pred_ok(Constant?, Contract?, Preds?, Ans).
+pred_ok(_, [], _, yes).
+pred_ok(Pd, [schema(_, Rs)|Ss], E, R?) :- ground(Rs?), ground(Ss?), ground(Pd?), ground(E?) |
+    roles_ok(Rs?, Pd?, Rs?, E?, A),
+    pred_ok1(A?, Pd?, Ss?, E?, R).
+
+procedure tp_filter1(Ans?, Constant?, Preds?, Contract?, Preds?, Preds).
+tp_filter1(yes, P, Ps, C, E, [P?|R?]) :- ground(P?), ground(Ps?), ground(C?), ground(E?) |
+    tp_filter(Ps?, C?, E?, R).
+tp_filter1(no, _, Ps, C, E, R?) :- ground(Ps?), ground(C?), ground(E?) |
+    tp_filter(Ps?, C?, E?, R).
+
+procedure tp_filter(Preds?, Contract?, Preds?, Preds).
+tp_filter([], _, _, []).
+tp_filter([P|Ps], C, E, R?) :- ground(P?), ground(Ps?), ground(C?), ground(E?) |
+    pred_ok(P?, C?, E?, A),
+    tp_filter1(A?, P?, Ps?, C?, E?, R).
+
+% --- the fixpoint ---------------------------------------------------------
+
+procedure tp_loop2(Integer?, Integer?, Preds?, Contract?, Preds).
+tp_loop2(L1, L2, E1, _, E1?) :- L1? =:= L2? | true.
+tp_loop2(_, _, E1, C, R?) :- otherwise, ground(E1?), ground(C?) |
+    tp_loop(C?, E1?, R).
+
+procedure tp_loop1(Preds?, Preds?, Contract?, Preds).
+tp_loop1(E1, E, C, R?) :- ground(E1?), ground(E?), ground(C?) |
+    preds_len(E1?, L1),
+    preds_len(E?, L2),
+    tp_loop2(L1?, L2?, E1?, C?, R).
+
+procedure tp_loop(Contract?, Preds?, Preds).
+tp_loop(C, E, R?) :- ground(C?), ground(E?) |
+    tp_filter(E?, C?, E?, E1),
+    tp_loop1(E1?, E?, C?, R).
+
+exported procedure traceable(Contract?, Preds).
+traceable(C, E?) :- ground(C?) |
+    all_preds(C?, P0),
+    tp_loop(C?, P0?, E).

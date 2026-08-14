@@ -1,0 +1,34 @@
+% ---------------------------------------------------------------------------
+% The verdict: def:syntactically-grassroots of /Grassroots/Jurix, Section 3.
+% A contract passes when it has an unobstructed introductory act and satisfies
+% volition; the faults of both halves are reported together.
+% ---------------------------------------------------------------------------
+
+imported procedure unobstructed#intro_result(Contract?, Faults).
+imported procedure prov#traceable(Contract?, Preds).
+imported procedure volition#volition_faults(Contract?, Preds?, Faults).
+imported procedure contracts#contract(Constant?, Contract).
+
+procedure verdict(Faults?, Faults?, Verdict).
+verdict([], [], syntactically_grassroots).
+verdict([], [F|Fs], not_grassroots([F?|Fs?])).
+verdict([F|Fs], G, not_grassroots(R?)) :- ground(F?), ground(Fs?), ground(G?) |
+    faults_app([F?|Fs?], G?, R).
+
+exported procedure check(Contract?, Verdict).
+check(C, V?) :- ground(C?) |
+    prov # traceable(C?, E),
+    unobstructed # intro_result(C?, F1),
+    volition # volition_faults(C?, E?, F2),
+    verdict(F1?, F2?, V).
+
+exported procedure check_named(Constant?, Verdict).
+check_named(Nm, V?) :- ground(Nm?) |
+    contracts # contract(Nm?, C),
+    check(C?, V).
+
+% The predicates of traceable provenance (def:grounded), for inspection.
+exported procedure traceable_of(Constant?, Preds).
+traceable_of(Nm, E?) :- ground(Nm?) |
+    contracts # contract(Nm?, C),
+    prov # traceable(C?, E).

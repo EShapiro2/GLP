@@ -1,0 +1,62 @@
+% ---------------------------------------------------------------------------
+% Volition (def:volition of /Grassroots/Jurix, Section 3).
+%
+% A scan of the roles: a schema of arity two or more passes outright when it
+% is guarded in all its roles, and otherwise every pair of its roles is put to
+% the second test.  A pair that fails is reported as volition(Schema, I, J).
+% ---------------------------------------------------------------------------
+
+procedure pair_ok(Integer?, Integer?, RoleSpecs?, Preds?, Ans).
+pair_ok(I, J, Rs, E, R?) :- integer(I?), integer(J?), ground(Rs?), ground(E?) |
+    nth_rs(Rs?, I?, RI),
+    nth_rs(Rs?, J?, RJ),
+    req_names(RI?, role(J?), E?, A1),
+    req_names(RJ?, role(I?), E?, A2),
+    or_yes(A1?, A2?, R).
+
+procedure pc1(Ans?, Integer?, Integer?, Integer?, Constant?, RoleSpecs?, Preds?, Faults).
+pc1(yes, I, J, K, Nm, Rs, E, R?) :-
+    integer(I?), integer(J?), integer(K?), ground(Nm?), ground(Rs?), ground(E?) |
+    J1 := J? + 1,
+    pairs_check(I?, J1?, K?, Nm?, Rs?, E?, R).
+pc1(no, I, J, K, Nm, Rs, E, [volition(Nm?, I?, J?)|R?]) :-
+    integer(I?), integer(J?), integer(K?), ground(Nm?), ground(Rs?), ground(E?) |
+    J1 := J? + 1,
+    pairs_check(I?, J1?, K?, Nm?, Rs?, E?, R).
+
+% Every pair I < J of roles, I from 1 and J from I+1.
+procedure pairs_check(Integer?, Integer?, Integer?, Constant?, RoleSpecs?, Preds?, Faults).
+pairs_check(I, _, K, _, _, _, []) :- I? >= K? | true.
+pairs_check(I, J, K, Nm, Rs, E, R?) :-
+    I? < K?, J? > K?, integer(I?), integer(K?), ground(Nm?), ground(Rs?), ground(E?) |
+    I1 := I? + 1,
+    J1 := I? + 2,
+    pairs_check(I1?, J1?, K?, Nm?, Rs?, E?, R).
+pairs_check(I, J, K, Nm, Rs, E, R?) :-
+    I? < K?, J? =< K?, integer(I?), integer(J?), integer(K?),
+    ground(Nm?), ground(Rs?), ground(E?) |
+    pair_ok(I?, J?, Rs?, E?, A),
+    pc1(A?, I?, J?, K?, Nm?, Rs?, E?, R).
+
+procedure sv2(Ans?, Integer?, Constant?, RoleSpecs?, Preds?, Faults).
+sv2(yes, _, _, _, _, []).
+sv2(no, K, Nm, Rs, E, R?) :- integer(K?), ground(Nm?), ground(Rs?), ground(E?) |
+    pairs_check(1, 2, K?, Nm?, Rs?, E?, R).
+
+procedure sv1(Integer?, Constant?, RoleSpecs?, Preds?, Faults).
+sv1(K, _, _, _, []) :- K? < 2 | true.
+sv1(K, Nm, Rs, E, R?) :- K? >= 2, integer(K?), ground(Nm?), ground(Rs?), ground(E?) |
+    all_guarded(Rs?, A),
+    sv2(A?, K?, Nm?, Rs?, E?, R).
+
+procedure schema_volition(Schema?, Preds?, Faults).
+schema_volition(schema(Nm, Rs), E, R?) :- ground(Nm?), ground(Rs?), ground(E?) |
+    roles_len(Rs?, K),
+    sv1(K?, Nm?, Rs?, E?, R).
+
+exported procedure volition_faults(Contract?, Preds?, Faults).
+volition_faults([], _, []).
+volition_faults([S|Ss], E, R?) :- ground(S?), ground(Ss?), ground(E?) |
+    schema_volition(S?, E?, F1),
+    volition_faults(Ss?, E?, F2),
+    faults_app(F1?, F2?, R).

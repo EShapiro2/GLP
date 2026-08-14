@@ -1,0 +1,140 @@
+% ---------------------------------------------------------------------------
+% The contracts the checker is run on.
+%
+% social_graph and currency are the two of /Grassroots/Jurix, Sections 3.3 and
+% 3.4, transcribed from the tables there; Section 7 certifies both by hand.
+% The paper writes the currency's predicate as the cent sign, which is not a
+% GLP constant; it is written coin here.
+%
+% The other four are those two broken in one place each, one per way of
+% failing def:syntactically-grassroots.  Each names in its comment what it
+% changes and which fault it is meant to raise.
+%
+% rs(Guard, Add, Del, Keep, Forb) is the role's +(i), -(i), =(i), not(i); a
+% role is named by its index, so role(1) is the schema's first role.
+% ---------------------------------------------------------------------------
+
+% --- the grassroots social network (Section 3.3) ---------------------------
+% befriend(p?, q?) :   not friend(q), +friend(q)      not friend(p), +friend(p)
+% unfriend(p?, q)  :   -friend(q)                     -friend(p)
+% sign(p?; x)      :   +item(x, p, p)
+% forward(p?, q; x, a, f) :
+%                      item(x, a, f), friend(f), +sent(x, q)
+%                                                     friend(p), +item(x, a, p)
+procedure sg(Contract).
+sg([schema(befriend,
+       [rs(guarded, [atom(friend, [role(2)])], [], [], [atom(friend, [role(2)])]),
+        rs(guarded, [atom(friend, [role(1)])], [], [], [atom(friend, [role(1)])])]),
+    schema(unfriend,
+       [rs(guarded,   [], [atom(friend, [role(2)])], [], []),
+        rs(unguarded, [], [atom(friend, [role(1)])], [], [])]),
+    schema(sign,
+       [rs(guarded, [atom(item, [svar(x), role(1), role(1)])], [], [], [])]),
+    schema(forward,
+       [rs(guarded,   [atom(sent, [svar(x), role(2)])], [],
+                      [atom(item, [svar(x), pvar(a), pvar(f)]),
+                       atom(friend, [pvar(f)])], []),
+        rs(unguarded, [atom(item, [svar(x), pvar(a), role(1)])], [],
+                      [atom(friend, [role(1)])], [])])]).
+
+% --- grassroots currencies (Section 3.4) -----------------------------------
+% mint(p?)          :  +coin(p)
+% swap(p?, q?; u, v):  -coin(u), +coin(v)             -coin(v), +coin(u)
+% pay(p?, q)        :  -coin(q)                       +coin(q)
+% redeem(p?, q; r)  :  -coin(q), +coin(r)             -coin(r), +coin(q)
+procedure cur(Contract).
+cur([schema(mint,
+       [rs(guarded, [atom(coin, [role(1)])], [], [], [])]),
+     schema(swap,
+       [rs(guarded, [atom(coin, [pvar(v)])], [atom(coin, [pvar(u)])], [], []),
+        rs(guarded, [atom(coin, [pvar(u)])], [atom(coin, [pvar(v)])], [], [])]),
+     schema(pay,
+       [rs(guarded,   [], [atom(coin, [role(2)])], [], []),
+        rs(unguarded, [atom(coin, [role(2)])], [], [], [])]),
+     schema(redeem,
+       [rs(guarded,   [atom(coin, [pvar(r)])], [atom(coin, [role(2)])], [], []),
+        rs(unguarded, [atom(coin, [role(2)])], [atom(coin, [pvar(r)])], [], [])])]).
+
+% --- negative: befriend guarded in one role only ---------------------------
+% Nothing is then an introductory act, and befriend fails volition too.
+procedure sg_unguarded(Contract).
+sg_unguarded([schema(befriend,
+       [rs(guarded,   [atom(friend, [role(2)])], [], [], [atom(friend, [role(2)])]),
+        rs(unguarded, [atom(friend, [role(1)])], [], [], [atom(friend, [role(1)])])]),
+    schema(unfriend,
+       [rs(guarded,   [], [atom(friend, [role(2)])], [], []),
+        rs(unguarded, [], [atom(friend, [role(1)])], [], [])]),
+    schema(sign,
+       [rs(guarded, [atom(item, [svar(x), role(1), role(1)])], [], [], [])]),
+    schema(forward,
+       [rs(guarded,   [atom(sent, [svar(x), role(2)])], [],
+                      [atom(item, [svar(x), pvar(a), pvar(f)]),
+                       atom(friend, [pvar(f)])], []),
+        rs(unguarded, [atom(item, [svar(x), pvar(a), role(1)])], [],
+                      [atom(friend, [role(1)])], [])])]).
+
+% --- negative: an act that lays a friend atom without the friend's will ----
+% impose(p?, q) : +friend(q)   +friend(p)
+% Befriend forbids friend(q) at p, and impose puts it there by a transaction
+% befriend does not determine: clause 2 of def:unobstructed fails.
+procedure sg_imposed(Contract).
+sg_imposed([schema(befriend,
+       [rs(guarded, [atom(friend, [role(2)])], [], [], [atom(friend, [role(2)])]),
+        rs(guarded, [atom(friend, [role(1)])], [], [], [atom(friend, [role(1)])])]),
+    schema(unfriend,
+       [rs(guarded,   [], [atom(friend, [role(2)])], [], []),
+        rs(unguarded, [], [atom(friend, [role(1)])], [], [])]),
+    schema(sign,
+       [rs(guarded, [atom(item, [svar(x), role(1), role(1)])], [], [], [])]),
+    schema(forward,
+       [rs(guarded,   [atom(sent, [svar(x), role(2)])], [],
+                      [atom(item, [svar(x), pvar(a), pvar(f)]),
+                       atom(friend, [pvar(f)])], []),
+        rs(unguarded, [atom(item, [svar(x), pvar(a), role(1)])], [],
+                      [atom(friend, [role(1)])], [])]),
+    schema(impose,
+       [rs(guarded,   [atom(friend, [role(2)])], [], [], []),
+        rs(unguarded, [atom(friend, [role(1)])], [], [], [])])]).
+
+% --- negative: the currency without mint -----------------------------------
+% The swap is still an introductory act, and each role requires a coin of its
+% own issue that no act of arity one supplies: clause 1 of def:unobstructed
+% fails.
+procedure cur_no_mint(Contract).
+cur_no_mint([schema(swap,
+       [rs(guarded, [atom(coin, [pvar(v)])], [atom(coin, [pvar(u)])], [], []),
+        rs(guarded, [atom(coin, [pvar(u)])], [atom(coin, [pvar(v)])], [], [])]),
+     schema(pay,
+       [rs(guarded,   [], [atom(coin, [role(2)])], [], []),
+        rs(unguarded, [atom(coin, [role(2)])], [], [], [])]),
+     schema(redeem,
+       [rs(guarded,   [atom(coin, [pvar(r)])], [atom(coin, [role(2)])], [], []),
+        rs(unguarded, [atom(coin, [role(2)])], [atom(coin, [pvar(r)])], [], [])])]).
+
+% --- negative: minting a coin of somebody else's issue ---------------------
+% mint(p?; u) : +coin(u), where u is named by no atom mint requires.  coin
+% loses traceable provenance (def:grounded), and pay and redeem, guarded at
+% one role and resting on it, then fail def:volition.
+procedure cur_loose_mint(Contract).
+cur_loose_mint([schema(mint,
+       [rs(guarded, [atom(coin, [pvar(u)])], [], [], [])]),
+     schema(swap,
+       [rs(guarded, [atom(coin, [pvar(v)])], [atom(coin, [pvar(u)])], [], []),
+        rs(guarded, [atom(coin, [pvar(u)])], [atom(coin, [pvar(v)])], [], [])]),
+     schema(pay,
+       [rs(guarded,   [], [atom(coin, [role(2)])], [], []),
+        rs(unguarded, [atom(coin, [role(2)])], [], [], [])]),
+     schema(redeem,
+       [rs(guarded,   [atom(coin, [pvar(r)])], [atom(coin, [role(2)])], [], []),
+        rs(unguarded, [atom(coin, [role(2)])], [atom(coin, [pvar(r)])], [], [])])]).
+
+% --- the contracts by name -------------------------------------------------
+% An unknown name is the empty contract, which has no introductory act.
+exported procedure contract(Constant?, Contract).
+contract(social_graph, C?) :- sg(C).
+contract(currency, C?) :- cur(C).
+contract(sg_unguarded, C?) :- sg_unguarded(C).
+contract(sg_imposed, C?) :- sg_imposed(C).
+contract(cur_no_mint, C?) :- cur_no_mint(C).
+contract(cur_loose_mint, C?) :- cur_loose_mint(C).
+contract(_, []) :- otherwise | true.

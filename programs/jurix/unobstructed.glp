@@ -1,0 +1,299 @@
+% ---------------------------------------------------------------------------
+% The introductory act (def:introduction) and unobstructedness
+% (def:unobstructed) of /Grassroots/Jurix, Section 3.
+%
+% Both definitions quantify over all distinct p and q.  The schemas name no
+% person (prop:anonymity), so one pair stands for every pair, and the bindings
+% over it are finite: person(0) and person(1) take the two roles, each party
+% variable takes one of the two, and each speech-act variable a speech act of
+% its own.  intro_bindings enumerates them and keeps the introductions.
+%
+% One point of clause 2 of def:unobstructed is decided at the level of the
+% transaction rather than of the pair (schema, binding): the exception "other
+% than tau at beta" is read as "other than a transaction tau at beta
+% determines" (def:instance), which is what the proof of prop:open uses.  Read
+% literally the clause fails on befriend, since befriend at the binding that
+% swaps the two roles adds the same forbidden atom at the same person -- the
+% same transaction, as Section 5 observes of unfriend.  See README.md.
+% ---------------------------------------------------------------------------
+
+% --- the introductions of person(0) and person(1) --------------------------
+
+procedure svar_binds(Args?, Integer?, Subst).
+svar_binds([], _, []).
+svar_binds([A|As], N, [bind(A?, speech(N?))|R?]) :- ground(A?), ground(As?), integer(N?) |
+    N1 := N? + 1,
+    svar_binds(As?, N1?, R).
+
+procedure extend_each(Substs?, Arg?, Substs).
+extend_each([], _, []).
+extend_each([S|Ss], A, [[bind(A?, person(0))|S?], [bind(A?, person(1))|S?]|R?]) :-
+    ground(S?), ground(A?), ground(Ss?) |
+    extend_each(Ss?, A?, R).
+
+procedure pvar_assignments(Args?, Substs).
+pvar_assignments([], [[]]).
+pvar_assignments([A|As], R?) :- ground(A?), ground(As?) |
+    pvar_assignments(As?, Rs),
+    extend_each(Rs?, A?, R).
+
+procedure gatom_has(GAtom?, Val?, Ans).
+gatom_has(gatom(_, Vs), V, R?) :- ground(Vs?), ground(V?) | vals_member(Vs?, V?, R).
+
+procedure atoms_name1(Ans?, Atoms?, Subst?, Val?, Ans).
+atoms_name1(yes, _, _, _, yes).
+atoms_name1(no, As, B, V, R?) :- ground(As?), ground(B?), ground(V?) |
+    atoms_name(As?, B?, V?, R).
+
+% atoms_name(Phis, B, V, R): some atom of B(Phis) has V among its arguments.
+procedure atoms_name(Atoms?, Subst?, Val?, Ans).
+atoms_name([], _, _, no).
+atoms_name([A|As], B, V, R?) :- ground(A?), ground(As?), ground(B?), ground(V?) |
+    apply_atom(B?, A?, G),
+    gatom_has(G?, V?, H),
+    atoms_name1(H?, As?, B?, V?, R).
+
+procedure is_intro(Schema?, Subst?, Ans).
+is_intro(schema(_, [rs(_, P1, _, _, _), rs(_, P2, _, _, _)]), B, R?) :-
+    ground(P1?), ground(P2?), ground(B?) |
+    atoms_name(P1?, B?, person(1), A1),
+    atoms_name(P2?, B?, person(0), A2),
+    both_yes(A1?, A2?, R).
+is_intro(schema(_, []), _, no).
+is_intro(schema(_, [_]), _, no).
+is_intro(schema(_, [_, _, _|_]), _, no).
+
+procedure intro_keep(Ans?, Subst?, Substs?, Subst?, Schema?, Substs).
+intro_keep(yes, B, PAs, SB, Sc, [B?|R?]) :-
+    ground(B?), ground(PAs?), ground(SB?), ground(Sc?) |
+    intro_filter(PAs?, SB?, Sc?, R).
+intro_keep(no, _, PAs, SB, Sc, R?) :- ground(PAs?), ground(SB?), ground(Sc?) |
+    intro_filter(PAs?, SB?, Sc?, R).
+
+procedure intro_filter2(Subst?, Schema?, Substs?, Subst?, Substs).
+intro_filter2(S0, Sc, PAs, SB, R?) :-
+    ground(S0?), ground(Sc?), ground(PAs?), ground(SB?) |
+    is_intro(Sc?, [bind(role(1), person(0)), bind(role(2), person(1))|S0?], Ok),
+    intro_keep(Ok?, [bind(role(1), person(0)), bind(role(2), person(1))|S0?],
+               PAs?, SB?, Sc?, R).
+
+procedure intro_filter(Substs?, Subst?, Schema?, Substs).
+intro_filter([], _, _, []).
+intro_filter([PA|PAs], SB, Sc, R?) :-
+    ground(PA?), ground(PAs?), ground(SB?), ground(Sc?) |
+    subst_app(SB?, PA?, S0),
+    intro_filter2(S0?, Sc?, PAs?, SB?, R).
+
+procedure intro_bindings(Schema?, Substs).
+intro_bindings(Sc, R?) :- ground(Sc?) |
+    schema_svars(Sc?, SV),
+    svar_binds(SV?, 0, SB),
+    schema_pvars(Sc?, PV),
+    pvar_assignments(PV?, PAs),
+    intro_filter(PAs?, SB?, Sc?, R).
+
+procedure is_two_guarded(Schema?, Ans).
+is_two_guarded(schema(_, [rs(guarded, _, _, _, _), rs(guarded, _, _, _, _)]), yes).
+is_two_guarded(schema(_, _), no) :- otherwise | true.
+
+procedure iab1(Ans?, Schema?, Substs).
+iab1(no, _, []).
+iab1(yes, Sc, R?) :- ground(Sc?) | intro_bindings(Sc?, R).
+
+% The introductions of a schema, empty unless it is an introductory act.
+procedure intro_act_bindings(Schema?, Substs).
+intro_act_bindings(Sc, R?) :- ground(Sc?) |
+    is_two_guarded(Sc?, A),
+    iab1(A?, Sc?, R).
+
+% --- clause 1 of def:unobstructed -----------------------------------------
+% The atom is added by a schema of arity one, guarded in its role and
+% requiring and forbidding nothing, at the binding sending its role to the
+% person in question.
+
+procedure unary_supplies(Schema?, GAtom?, Val?, Ans).
+unary_supplies(schema(_, [rs(guarded, P, [], [], [])]), G, V, R?) :-
+    ground(P?), ground(G?), ground(V?) |
+    some_match(P?, G?, [bind(role(1), V?)], R).
+unary_supplies(schema(_, _), _, _, no) :- otherwise | true.
+
+procedure obtainable1(Ans?, Contract?, GAtom?, Val?, Ans).
+obtainable1(yes, _, _, _, yes).
+obtainable1(no, Ss, G, V, R?) :- ground(Ss?), ground(G?), ground(V?) |
+    obtainable(Ss?, G?, V?, R).
+
+procedure obtainable(Contract?, GAtom?, Val?, Ans).
+obtainable([], _, _, no).
+obtainable([S|Ss], G, V, R?) :- ground(S?), ground(Ss?), ground(G?), ground(V?) |
+    unary_supplies(S?, G?, V?, A),
+    obtainable1(A?, Ss?, G?, V?, R).
+
+% --- clause 2 of def:unobstructed -----------------------------------------
+% Some schema at some binding adds the forbidden atom at the same person, and
+% does not determine the transaction the introductory act itself determines.
+
+procedure ctx_parts(Ctx?, Vgt, Integer).
+ctx_parts(ctx(T, N), T?, N?).
+
+procedure psi_block1(Ans?, Atom?, Atoms?, Integer?, Schema?, Ctx?, GAtom?, Val?, Block).
+psi_block1(yes, _, Ps, J, Sc, Cx, G, P, R?) :-
+    ground(Ps?), integer(J?), ground(Sc?), ground(Cx?), ground(G?), ground(P?) |
+    plus_blocks(Ps?, J?, Sc?, Cx?, G?, P?, R).
+psi_block1(no, Psi, _, J, schema(Nm, _), _, _, _, blocked(Nm?, J?, Psi?)).
+
+procedure psi_block(MatchRes?, Atom?, Atoms?, Integer?, Schema?, Ctx?, GAtom?, Val?, Block).
+psi_block(nomatch, _, Ps, J, Sc, Cx, G, P, R?) :-
+    ground(Ps?), integer(J?), ground(Sc?), ground(Cx?), ground(G?), ground(P?) |
+    plus_blocks(Ps?, J?, Sc?, Cx?, G?, P?, R).
+psi_block(match(S), Psi, Ps, J, Sc, Cx, G, P, R?) :-
+    ground(S?), ground(Psi?), ground(Ps?), integer(J?), ground(Sc?),
+    ground(Cx?), ground(G?), ground(P?) |
+    ctx_parts(Cx?, T, N),
+    complete(Sc?, S?, N?, S1),
+    vgt(Sc?, S1?, T2),
+    vgt_eq(T?, T2?, Same),
+    psi_block1(Same?, Psi?, Ps?, J?, Sc?, Cx?, G?, P?, R).
+
+procedure plus_blocks(Atoms?, Integer?, Schema?, Ctx?, GAtom?, Val?, Block).
+plus_blocks([], _, _, _, _, _, clear).
+plus_blocks([Psi|Ps], J, Sc, Cx, G, P, R?) :-
+    ground(Psi?), ground(Ps?), integer(J?), ground(Sc?), ground(Cx?),
+    ground(G?), ground(P?) |
+    match_atom(Psi?, G?, [bind(role(J?), P?)], M),
+    psi_block(M?, Psi?, Ps?, J?, Sc?, Cx?, G?, P?, R).
+
+procedure role_blocks1(Block?, RoleSpecs?, Integer?, Schema?, Ctx?, GAtom?, Val?, Block).
+role_blocks1(clear, Rs, J, Sc, Cx, G, P, R?) :-
+    ground(Rs?), integer(J?), ground(Sc?), ground(Cx?), ground(G?), ground(P?) |
+    J1 := J? + 1,
+    role_blocks(Rs?, J1?, Sc?, Cx?, G?, P?, R).
+role_blocks1(blocked(Nm, Jx, Psi), _, _, _, _, _, _, blocked(Nm?, Jx?, Psi?)).
+
+procedure role_blocks(RoleSpecs?, Integer?, Schema?, Ctx?, GAtom?, Val?, Block).
+role_blocks([], _, _, _, _, _, clear).
+role_blocks([rs(_, Plus, _, _, _)|Rs], J, Sc, Cx, G, P, R?) :-
+    ground(Plus?), ground(Rs?), integer(J?), ground(Sc?), ground(Cx?),
+    ground(G?), ground(P?) |
+    plus_blocks(Plus?, J?, Sc?, Cx?, G?, P?, B),
+    role_blocks1(B?, Rs?, J?, Sc?, Cx?, G?, P?, R).
+
+procedure schema_blocks(Schema?, Ctx?, GAtom?, Val?, Block).
+schema_blocks(schema(Nm, Rs), Cx, G, P, R?) :-
+    ground(Nm?), ground(Rs?), ground(Cx?), ground(G?), ground(P?) |
+    role_blocks(Rs?, 1, schema(Nm?, Rs?), Cx?, G?, P?, R).
+
+procedure blocker1(Block?, Contract?, Ctx?, GAtom?, Val?, Block).
+blocker1(clear, Ss, Cx, G, P, R?) :-
+    ground(Ss?), ground(Cx?), ground(G?), ground(P?) |
+    blocker(Ss?, Cx?, G?, P?, R).
+blocker1(blocked(Nm, Jx, Psi), _, _, _, _, blocked(Nm?, Jx?, Psi?)).
+
+procedure blocker(Contract?, Ctx?, GAtom?, Val?, Block).
+blocker([], _, _, _, clear).
+blocker([S|Ss], Cx, G, P, R?) :-
+    ground(S?), ground(Ss?), ground(Cx?), ground(G?), ground(P?) |
+    schema_blocks(S?, Cx?, G?, P?, B),
+    blocker1(B?, Ss?, Cx?, G?, P?, R).
+
+% --- def:unobstructed at one introduction ---------------------------------
+
+procedure unob_req1(Ans?, Atom?, Atoms?, Val?, Integer?, Constant?, Subst?, Contract?, Faults).
+unob_req1(yes, _, As, V, I, Nm, B, C, R?) :-
+    ground(As?), ground(V?), integer(I?), ground(Nm?), ground(B?), ground(C?) |
+    unob_req(As?, V?, I?, Nm?, B?, C?, R).
+unob_req1(no, A, As, V, I, Nm, B, C, [obstructed(Nm?, I?, A?, unobtainable)|R?]) :-
+    ground(A?), ground(As?), ground(V?), integer(I?), ground(Nm?), ground(B?), ground(C?) |
+    unob_req(As?, V?, I?, Nm?, B?, C?, R).
+
+procedure unob_req(Atoms?, Val?, Integer?, Constant?, Subst?, Contract?, Faults).
+unob_req([], _, _, _, _, _, []).
+unob_req([A|As], V, I, Nm, B, C, R?) :-
+    ground(A?), ground(As?), ground(V?), integer(I?), ground(Nm?), ground(B?), ground(C?) |
+    apply_atom(B?, A?, G),
+    obtainable(C?, G?, V?, Ok),
+    unob_req1(Ok?, A?, As?, V?, I?, Nm?, B?, C?, R).
+
+procedure unob_forb1(Block?, Atom?, Atoms?, Val?, Integer?, Constant?, Subst?, Contract?, Ctx?, Faults).
+unob_forb1(clear, _, As, V, I, Nm, B, C, Cx, R?) :-
+    ground(As?), ground(V?), integer(I?), ground(Nm?), ground(B?), ground(C?), ground(Cx?) |
+    unob_forb(As?, V?, I?, Nm?, B?, C?, Cx?, R).
+unob_forb1(blocked(Nm2, Jx, Psi), A, As, V, I, Nm, B, C, Cx,
+           [obstructed(Nm?, I?, A?, blocked_by(Nm2?, Jx?, Psi?))|R?]) :-
+    ground(A?), ground(As?), ground(V?), integer(I?), ground(Nm?), ground(B?),
+    ground(C?), ground(Cx?) |
+    unob_forb(As?, V?, I?, Nm?, B?, C?, Cx?, R).
+
+procedure unob_forb(Atoms?, Val?, Integer?, Constant?, Subst?, Contract?, Ctx?, Faults).
+unob_forb([], _, _, _, _, _, _, []).
+unob_forb([A|As], V, I, Nm, B, C, Cx, R?) :-
+    ground(A?), ground(As?), ground(V?), integer(I?), ground(Nm?), ground(B?),
+    ground(C?), ground(Cx?) |
+    apply_atom(B?, A?, G),
+    blocker(C?, Cx?, G?, V?, Bl),
+    unob_forb1(Bl?, A?, As?, V?, I?, Nm?, B?, C?, Cx?, R).
+
+% The person in the role is produced by the body, so the two clauses of
+% def:unobstructed are put to it through one call that can guard on it.
+procedure unob_role1(Val?, Atoms?, Atoms?, Integer?, Constant?, Subst?, Contract?, Ctx?, Faults).
+unob_role1(V, Req, Forb, I, Nm, B, C, Cx, R?) :-
+    ground(V?), ground(Req?), ground(Forb?), integer(I?), ground(Nm?),
+    ground(B?), ground(C?), ground(Cx?) |
+    unob_req(Req?, V?, I?, Nm?, B?, C?, F1),
+    unob_forb(Forb?, V?, I?, Nm?, B?, C?, Cx?, F2),
+    faults_app(F1?, F2?, R).
+
+procedure unob_roles(RoleSpecs?, Integer?, Constant?, Subst?, Contract?, Ctx?, Faults).
+unob_roles([], _, _, _, _, _, []).
+unob_roles([rs(_, _, M, K, N)|Rs], I, Nm, B, C, Cx, R?) :-
+    ground(M?), ground(K?), ground(N?), ground(Rs?), integer(I?),
+    ground(Nm?), ground(B?), ground(C?), ground(Cx?) |
+    apply_arg(B?, role(I?), V),
+    atoms_app(K?, M?, Req),
+    unob_role1(V?, Req?, N?, I?, Nm?, B?, C?, Cx?, F1),
+    I1 := I? + 1,
+    unob_roles(Rs?, I1?, Nm?, B?, C?, Cx?, F2),
+    faults_app(F1?, F2?, R).
+
+% unobstructed(Sc, B, C, Faults): the faults of def:unobstructed at the
+% introduction B; empty when it satisfies both clauses at every role.
+procedure unobstructed(Schema?, Subst?, Contract?, Faults).
+unobstructed(schema(Nm, Rs), B, C, R?) :-
+    ground(Nm?), ground(Rs?), ground(B?), ground(C?) |
+    vgt(schema(Nm?, Rs?), B?, T),
+    fresh_base(schema(Nm?, Rs?), N),
+    unob_roles(Rs?, 1, Nm?, B?, C?, ctx(T?, N?), R).
+
+% --- def:syntactically-grassroots, first half ------------------------------
+% Some schema is an introductory act unobstructed at some introduction.  The
+% faults reported are those of the first introductory act at its first
+% failing introduction.
+
+procedure note_cand(Cand?, Faults?, Cand).
+note_cand(none, F, some(F?)).
+note_cand(some(F), _, some(F?)).
+
+procedure intro_try1(Faults?, Substs?, Schema?, Contract?, Contract?, Cand?, Faults).
+intro_try1([], _, _, _, _, _, []).
+intro_try1([F|Fs], Bs, S, Ss, C, Cd, R?) :-
+    ground(F?), ground(Fs?), ground(Bs?), ground(S?), ground(Ss?), ground(C?), ground(Cd?) |
+    note_cand(Cd?, [F?|Fs?], Cd1),
+    intro_try(Bs?, S?, Ss?, C?, Cd1?, R).
+
+procedure intro_try(Substs?, Schema?, Contract?, Contract?, Cand?, Faults).
+intro_try([], _, Ss, C, Cd, R?) :- ground(Ss?), ground(C?), ground(Cd?) |
+    intro_scan(Ss?, C?, Cd?, R).
+intro_try([B|Bs], S, Ss, C, Cd, R?) :-
+    ground(B?), ground(Bs?), ground(S?), ground(Ss?), ground(C?), ground(Cd?) |
+    unobstructed(S?, B?, C?, F),
+    intro_try1(F?, Bs?, S?, Ss?, C?, Cd?, R).
+
+procedure intro_scan(Contract?, Contract?, Cand?, Faults).
+intro_scan([], _, none, [no_introductory_act]).
+intro_scan([], _, some(F), F?).
+intro_scan([S|Ss], C, Cd, R?) :-
+    ground(S?), ground(Ss?), ground(C?), ground(Cd?) |
+    intro_act_bindings(S?, Bs),
+    intro_try(Bs?, S?, Ss?, C?, Cd?, R).
+
+exported procedure intro_result(Contract?, Faults).
+intro_result(C, R?) :- ground(C?) | intro_scan(C?, C?, none, R).
