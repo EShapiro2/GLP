@@ -15,16 +15,29 @@
 %% before connected(dave). We handle both orderings.
 %% =============================================================================
 
+%% Act 1: a party becomes a child by accepting an enrolment.  Before this it is
+%% of no age and has no parent; accepting creates the parent-child channel, and
+%% the main loop takes the confirmation.
 exported procedure carol13(Constant?, Channel(Stream(UserNotify), Stream(UserCmd))?, Stream(NarrativeItem)).
-carol13(_, ch([child_befriend(alice, dave, ReqId)|In],
+carol13(Id, ch([enrol_offer(alice, ReqId)|In],
+    [enrol_decision(yes, alice, ReqId?)|Out?]),
+    [act('Accepting Alice as my parent')|Narr?]) :-
+    ground(ReqId?) |
+    carol13_main(Id?, ch(In?, Out), Narr).
+carol13(Id, ch([_|In], Out?), Narr?) :-
+    otherwise | carol13(Id?, ch(In?, Out), Narr).
+carol13(_, ch([], []), []).
+
+procedure carol13_main(Constant?, Channel(Stream(UserNotify), Stream(UserCmd))?, Stream(NarrativeItem)).
+carol13_main(_, ch([child_befriend(alice, dave, ReqId)|In],
               [accept_child_intro(dave, ReqId?)|Out?]),
          Narr?) :-
     ground(ReqId?) |
     carol13_wait_dave_or_eve(In?, Out, Narr).
 %% Skip any message arriving before the expected intro, and close on channel end.
-carol13(Id, ch([_|In], Out?), Narr?) :-
-    otherwise | carol13(Id?, ch(In?, Out), Narr).
-carol13(_, ch([], []), []).
+carol13_main(Id, ch([_|In], Out?), Narr?) :-
+    otherwise | carol13_main(Id?, ch(In?, Out), Narr).
+carol13_main(_, ch([], []), []).
 
 %% After accepting Dave intro, either connected(dave) or child_befriend(eve) arrives first
 procedure carol13_wait_dave_or_eve(Stream(UserNotify)?, Stream(UserCmd), Stream(NarrativeItem)).
@@ -58,6 +71,10 @@ procedure carol13_wait_both_connected(Stream(UserNotify)?, Stream(UserCmd), Stre
 carol13_wait_both_connected([connected(dave)|In], Out?,
                             [friend(dave)|Narr?]) :-
     carol13_wait_eve_connected(In?, Out, Narr).
+%% Eve's connection can land first, and the skip clause below cannot put it back.
+carol13_wait_both_connected([connected(eve)|In], Out?,
+                            [friend(eve)|Narr?]) :-
+    carol13_wait_dave_connected(In?, Out, Narr).
 carol13_wait_both_connected([_|In], Out?, Narr?) :-
     otherwise | carol13_wait_both_connected(In?, Out, Narr).
 carol13_wait_both_connected([], [], []).
@@ -213,3 +230,13 @@ carol13_wait_unfriended([], [], []).
 
 procedure carol13_finish(Stream(UserNotify)?, Stream(UserCmd), Stream(NarrativeItem)).
 carol13_finish(_, [], []).
+
+%% Eve connected first; take Dave's connection, then open kids_chat as before.
+procedure carol13_wait_dave_connected(Stream(UserNotify)?, Stream(UserCmd), Stream(NarrativeItem)).
+carol13_wait_dave_connected([connected(dave)|In],
+                            [send(dave, 'Hi Dave!')|Out?],
+                            [friend(dave), say('Hi Dave!')|Narr?]) :-
+    carol13_act3(In?, Out, Narr).
+carol13_wait_dave_connected([_|In], Out?, Narr?) :-
+    otherwise | carol13_wait_dave_connected(In?, Out, Narr).
+carol13_wait_dave_connected([], [], []).

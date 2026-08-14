@@ -600,3 +600,6 @@ agent_init(Id, UserIn, NetIn) :- play_ui_boot # agent_init(Id?, UserIn?, NetIn?)
 imported procedure boot#fplay16.
 exported procedure fplay16.
 fplay16 :- boot # fplay16.
+
+%% Network switch entry: one per agent, keyed by name.
+NetEntry ::= net_entry(Constant, NetOutStream?).

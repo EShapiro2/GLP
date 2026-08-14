@@ -226,6 +226,39 @@ network2(ch(AliceIn, [msg(bob, alice, X?)|AliceOut?]),
 network2(ch([], []), ch([], [])).
 
 %% =============================================================================
+%% NETWORK SWITCH (name-routed, any number of agents)
+%%
+%% village_net's pairwise clauses cost one clause per ordered pair --- thirty for
+%% the village's six agents, where three cost six.  This routes on the
+%% destination name instead, so an agent costs one entry.  Every party has a
+%% network entry now: childhood is not given, so a party has nowhere else to
+%% receive the enrolment offer that makes it a child, and a released child has
+%% nowhere else to place the cold call that makes it a friend.
+%% =============================================================================
+
+procedure switch_send(Constant?, NetOutMsg?, Stream(NetEntry)?, Stream(NetEntry)).
+switch_send(Dest, Msg, [net_entry(K, [Msg?|Out1?])|Rest], [net_entry(K?, Out1)|Rest?]) :-
+    Dest? =?= K? | true.
+switch_send(Dest, Msg, [E|Rest], [E?|Rest1?]) :-
+    otherwise |
+    switch_send(Dest?, Msg?, Rest?, Rest1).
+switch_send(_, _, [], []).
+
+procedure switch_close(Stream(NetEntry)?).
+switch_close([net_entry(_, [])|Rest]) :- switch_close(Rest?).
+switch_close([]).
+
+%% An agent's net_output carries cold calls only (NetOutMsg), whose first
+%% argument IS the destination; friend traffic goes on the friend channels the
+%% commit allocates and never crosses the switch.
+procedure net_switch(NetOutStream?, Stream(NetEntry)?).
+net_switch([msg(Dest, Content)|In], Entries) :-
+    ground(Dest?) |
+    switch_send(Dest?, msg(Dest?, Content?), Entries?, Entries1),
+    net_switch(In?, Entries1?).
+net_switch([], Entries) :- switch_close(Entries?).
+
+%% =============================================================================
 %% FPLAY1 — Both accept introduction (tagged output)
 %% =============================================================================
 
@@ -935,92 +968,86 @@ village_net(ch([], []), ch([], []), ch([], [])).
 
 exported procedure fplay13.
 fplay13 :-
-    village_net(ch(AliceNetOut?, AliceNetIn),
-             ch(BobNetOut?, BobNetIn),
-             ch(FrankNetOut?, FrankNetIn)),
 
-    %% Alice — adult, parent of Carol
+    %% Alice — boots of no age, with no parent and no child: childhood is not given.
     alice # alice13(alice, ch(AliceActorIn?, AliceActorOut), AliceNarr),
     send_to_user_narrate(alice, AliceNarr?),
     tee(AliceActorOut?, AliceMedIn, AliceDispCmd),
-    agent # agent(alice, state(1, []), AliceAgentIn?, AliceNetAndChildIn?,
-          [user_output(AliceAgentToUser),
-           net_output(AliceNetOut),
-           child_output(carol, AliceToCarol)]),
-    merge(AliceNetIn?, AliceFromCarol?, AliceNetAndChildIn),
+    agent # agent(alice, state(0, []), AliceAgentIn?, AliceNetIn?,
+          [user_output(AliceAgentToUser), net_output(AliceNetOut)]),
     mediator # ui_mediator(alice, ch(AliceAgentToUser?, AliceAgentIn),
                 ch(AliceMedIn?, AliceMedOut), [], 1),
     tee(AliceMedOut?, AliceActorIn, AliceDispNotify),
     send_to_user_tagged(alice, AliceDispCmd?, AliceDispNotify?),
 
-    %% Bob — adult, parent of Dave and Eve
+    %% Bob — boots of no age, with no parent and no child: childhood is not given.
     bob # bob13(bob, ch(BobActorIn?, BobActorOut), BobNarr),
     send_to_user_narrate(bob, BobNarr?),
     tee(BobActorOut?, BobMedIn, BobDispCmd),
-    agent # agent(bob, state(1, []), BobAgentIn?, BobNetAndChildIn?,
-          [user_output(BobAgentToUser),
-           net_output(BobNetOut),
-           child_output(dave, BobToDave),
-           child_output(eve, BobToEve)]),
-    merge(BobNetIn?, BobFromChildren?, BobNetAndChildIn),
+    agent # agent(bob, state(0, []), BobAgentIn?, BobNetIn?,
+          [user_output(BobAgentToUser), net_output(BobNetOut)]),
     mediator # ui_mediator(bob, ch(BobAgentToUser?, BobAgentIn),
                 ch(BobMedIn?, BobMedOut), [], 1),
     tee(BobMedOut?, BobActorIn, BobDispNotify),
     send_to_user_tagged(bob, BobDispCmd?, BobDispNotify?),
 
-    %% Frank — adult, no children
+    %% Frank — boots of no age, with no parent and no child: childhood is not given.
     frank # frank13(frank, ch(FrankActorIn?, FrankActorOut), FrankNarr),
     send_to_user_narrate(frank, FrankNarr?),
     tee(FrankActorOut?, FrankMedIn, FrankDispCmd),
-    agent # agent(frank, state(1, []), FrankAgentIn?, FrankNetIn?,
+    agent # agent(frank, state(0, []), FrankAgentIn?, FrankNetIn?,
           [user_output(FrankAgentToUser), net_output(FrankNetOut)]),
     mediator # ui_mediator(frank, ch(FrankAgentToUser?, FrankAgentIn),
                 ch(FrankMedIn?, FrankMedOut), [], 1),
     tee(FrankMedOut?, FrankActorIn, FrankDispNotify),
     send_to_user_tagged(frank, FrankDispCmd?, FrankDispNotify?),
 
-    %% Carol — child of Alice
+    %% Carol — boots of no age, with no parent and no child: childhood is not given.
     carol # carol13(carol, ch(CarolActorIn?, CarolActorOut), CarolNarr),
     send_to_user_narrate(carol, CarolNarr?),
     tee(CarolActorOut?, CarolMedIn, CarolDispCmd),
-    child_agent # child_agent(carol, alice, state(0, []), CarolAgentIn?, CarolFromAlice?,
-          [user_output(CarolAgentToUser),
-           parent_output(alice, CarolToAlice)]),
+    agent # agent(carol, state(0, []), CarolAgentIn?, CarolNetIn?,
+          [user_output(CarolAgentToUser), net_output(CarolNetOut)]),
     mediator # ui_mediator(carol, ch(CarolAgentToUser?, CarolAgentIn),
                 ch(CarolMedIn?, CarolMedOut), [], 1),
     tee(CarolMedOut?, CarolActorIn, CarolDispNotify),
     send_to_user_tagged(carol, CarolDispCmd?, CarolDispNotify?),
 
-    %% Dave — child of Bob
+    %% Dave — boots of no age, with no parent and no child: childhood is not given.
     dave # dave13(dave, ch(DaveActorIn?, DaveActorOut), DaveNarr),
     send_to_user_narrate(dave, DaveNarr?),
     tee(DaveActorOut?, DaveMedIn, DaveDispCmd),
-    child_agent # child_agent(dave, bob, state(0, []), DaveAgentIn?, DaveFromBob?,
-          [user_output(DaveAgentToUser),
-           parent_output(bob, DaveToBob)]),
+    agent # agent(dave, state(0, []), DaveAgentIn?, DaveNetIn?,
+          [user_output(DaveAgentToUser), net_output(DaveNetOut)]),
     mediator # ui_mediator(dave, ch(DaveAgentToUser?, DaveAgentIn),
                 ch(DaveMedIn?, DaveMedOut), [], 1),
     tee(DaveMedOut?, DaveActorIn, DaveDispNotify),
     send_to_user_tagged(dave, DaveDispCmd?, DaveDispNotify?),
 
-    %% Eve — child of Bob
+    %% Eve — boots of no age, with no parent and no child: childhood is not given.
     eve # eve13(eve, ch(EveActorIn?, EveActorOut), EveNarr),
     send_to_user_narrate(eve, EveNarr?),
     tee(EveActorOut?, EveMedIn, EveDispCmd),
-    child_agent # child_agent(eve, bob, state(0, []), EveAgentIn?, EveFromBob?,
-          [user_output(EveAgentToUser),
-           parent_output(bob, EveToBob)]),
+    agent # agent(eve, state(0, []), EveAgentIn?, EveNetIn?,
+          [user_output(EveAgentToUser), net_output(EveNetOut)]),
     mediator # ui_mediator(eve, ch(EveAgentToUser?, EveAgentIn),
                 ch(EveMedIn?, EveMedOut), [], 1),
     tee(EveMedOut?, EveActorIn, EveDispNotify),
     send_to_user_tagged(eve, EveDispCmd?, EveDispNotify?),
 
-    %% Parent-child channel wiring
-    merge(AliceToCarol?, [], CarolFromAlice),
-    merge(CarolToAlice?, [], AliceFromCarol),
-    merge(BobToDave?, [], DaveFromBob),
-    merge(DaveToBob?, EveToBob?, BobFromChildren),
-    merge(BobToEve?, [], EveFromBob).
+    %% One switch for all six.  No parent-child channel is wired here: enrol
+    %% creates each one and release tears it down.
+    merge(AliceNetOut?, BobNetOut?, M1),
+    merge(M1?, FrankNetOut?, M2),
+    merge(M2?, CarolNetOut?, M3),
+    merge(M3?, DaveNetOut?, M4),
+    merge(M4?, EveNetOut?, AllNetOut),
+    net_switch(AllNetOut?, [net_entry(alice, AliceNetIn),
+                            net_entry(bob, BobNetIn),
+                            net_entry(frank, FrankNetIn),
+                            net_entry(carol, CarolNetIn),
+                            net_entry(dave, DaveNetIn),
+                            net_entry(eve, EveNetIn)]).
 
 %% =============================================================================
 %% FPLAY14 — Idempotent befriend commit: redundant child_introduce

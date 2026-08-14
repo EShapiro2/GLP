@@ -1,18 +1,17 @@
 %% alice.glp — Alice actor for Village scenario
 %%
 %% Alice is an adult, parent of Carol.
-%% Act 1: Connects to Bob. Texts Bob. Connects to Frank.
-%% Act 2: Introduces Carol to Dave (via Bob) and Carol to Eve (via Bob).
-%% Act 4: Approves Carol joining Frank's study group.
-%% Types: from village/self.glp (ancestor scoping)
-
-
-%% =============================================================================
-%% Act 1: Adult friendships
-%% =============================================================================
-
+%% Act 1: coming into the contract.  The three commands need no answer between
+%% them, so they are issued together and the main loop below takes the replies;
+%% a prologue that waited would consume the cold call Bob's own prologue is
+%% still to send.
 exported procedure alice13(Constant?, Channel(Stream(UserNotify), Stream(UserCmd))?, Stream(NarrativeItem)).
-alice13(_, ch(In, [connect(bob)|Out?]), Narr?) :-
+alice13(Id, ch(In, [declare_age, enrol_child(carol), connect(bob)|Out?]),
+    [act('Declaring myself of age'), act('Enrolling Carol')|Narr?]) :-
+    alice13_main(Id?, ch(In?, Out), Narr).
+
+procedure alice13_main(Constant?, Channel(Stream(UserNotify), Stream(UserCmd))?, Stream(NarrativeItem)).
+alice13_main(_, ch(In, [connect(bob)|Out?]), Narr?) :-
     alice13_wait_bob(In?, Out, Narr).
 
 %% Wait for connected(bob), then text Bob and connect to Frank

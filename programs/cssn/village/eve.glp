@@ -13,16 +13,37 @@
 %% So child_befriend(bob,carol) may arrive before connected(dave). Handle both orderings.
 %% =============================================================================
 
+%% Act 1: a party becomes a child by accepting an enrolment.  Before this it is
+%% of no age and has no parent; accepting creates the parent-child channel, and
+%% the main loop takes the confirmation.
 exported procedure eve13(Constant?, Channel(Stream(UserNotify), Stream(UserCmd))?, Stream(NarrativeItem)).
-eve13(_, ch([child_befriend(bob, dave, ReqId)|In],
+eve13(Id, ch([enrol_offer(bob, ReqId)|In],
+    [enrol_decision(yes, bob, ReqId?)|Out?]),
+    [act('Accepting Bob as my parent')|Narr?]) :-
+    ground(ReqId?) |
+    eve13_main(Id?, ch(In?, Out), Narr).
+eve13(Id, ch([_|In], Out?), Narr?) :-
+    otherwise | eve13(Id?, ch(In?, Out), Narr).
+eve13(_, ch([], []), []).
+
+procedure eve13_main(Constant?, Channel(Stream(UserNotify), Stream(UserCmd))?, Stream(NarrativeItem)).
+eve13_main(_, ch([child_befriend(bob, dave, ReqId)|In],
             [accept_child_intro(dave, ReqId?)|Out?]),
       Narr?) :-
     ground(ReqId?) |
     eve13_wait_dave_or_carol(In?, Out, Narr).
 %% Skip any message arriving before the expected intro, and close on channel end.
-eve13(Id, ch([_|In], Out?), Narr?) :-
-    otherwise | eve13(Id?, ch(In?, Out), Narr).
-eve13(_, ch([], []), []).
+%% The two introductions Bob sends can arrive in either order, and an entry that
+%% accepted only one would drop the other: the skip clause below cannot put a
+%% message back.
+eve13_main(_, ch([child_befriend(bob, carol, ReqId)|In],
+            [accept_child_intro(carol, ReqId?)|Out?]),
+      Narr?) :-
+    ground(ReqId?) |
+    eve13_wait_dave_intro(In?, Out, Narr).
+eve13_main(Id, ch([_|In], Out?), Narr?) :-
+    otherwise | eve13_main(Id?, ch(In?, Out), Narr).
+eve13_main(_, ch([], []), []).
 
 %% After accepting Dave intro, either connected(dave) or child_befriend(carol) first
 procedure eve13_wait_dave_or_carol(Stream(UserNotify)?, Stream(UserCmd), Stream(NarrativeItem)).
@@ -65,6 +86,10 @@ procedure eve13_wait_both_connected(Stream(UserNotify)?, Stream(UserCmd), Stream
 eve13_wait_both_connected([connected(dave)|In], Out?,
                           [friend(dave)|Narr?]) :-
     eve13_wait_carol_connected(In?, Out, Narr).
+%% Carol's connection can land first, and the skip clause below cannot put it back.
+eve13_wait_both_connected([connected(carol)|In], Out?,
+                          [friend(carol)|Narr?]) :-
+    eve13_wait_dave_connected(In?, Out, Narr).
 eve13_wait_both_connected([_|In], Out?, Narr?) :-
     otherwise | eve13_wait_both_connected(In?, Out, Narr).
 eve13_wait_both_connected([], [], []).
@@ -122,5 +147,45 @@ eve13_wait_kids_left([], [], []).
 %% Act 7: Termination
 %% =============================================================================
 
+%% Act 7: coming of age.  Eve asks Bob to release her; once released she is of
+%% age, and she befriends Frank with no parent among the guards.
 procedure eve13_finish(Stream(UserNotify)?, Stream(UserCmd), Stream(NarrativeItem)).
-eve13_finish(_, [], []).
+eve13_finish(In, [request_release|Out?],
+    [act('Asking Bob to release me')|Narr?]) :-
+    eve13_released(In?, Out, Narr).
+
+procedure eve13_released(Stream(UserNotify)?, Stream(UserCmd), Stream(NarrativeItem)).
+eve13_released([released(bob)|In], [connect(frank)|Out?],
+    [event('Released, and of age'), act('Befriending Frank directly')|Narr?]) :-
+    eve13_frank(In?, Out, Narr).
+eve13_released([_|In], Out?, Narr?) :-
+    otherwise | eve13_released(In?, Out, Narr).
+eve13_released([], [], []).
+
+procedure eve13_frank(Stream(UserNotify)?, Stream(UserCmd), Stream(NarrativeItem)).
+eve13_frank([connected(frank)|In], Out?, [friend(frank)|Narr?]) :-
+    eve13_done(In?, Out, Narr).
+eve13_frank([_|In], Out?, Narr?) :-
+    otherwise | eve13_frank(In?, Out, Narr).
+eve13_frank([], [], []).
+
+procedure eve13_done(Stream(UserNotify)?, Stream(UserCmd), Stream(NarrativeItem)).
+eve13_done(_, [], []).
+
+%% Carol's introduction was accepted first; take Dave's when it comes.
+procedure eve13_wait_dave_intro(Stream(UserNotify)?, Stream(UserCmd), Stream(NarrativeItem)).
+eve13_wait_dave_intro([child_befriend(bob, dave, ReqId)|In],
+                      [accept_child_intro(dave, ReqId?)|Out?], Narr?) :-
+    ground(ReqId?) |
+    eve13_wait_both_connected(In?, Out, Narr).
+eve13_wait_dave_intro([_|In], Out?, Narr?) :-
+    otherwise | eve13_wait_dave_intro(In?, Out, Narr).
+eve13_wait_dave_intro([], [], []).
+
+%% Carol connected first; take Dave's connection, then act 3 as before.
+procedure eve13_wait_dave_connected(Stream(UserNotify)?, Stream(UserCmd), Stream(NarrativeItem)).
+eve13_wait_dave_connected([connected(dave)|In], Out?, [friend(dave)|Narr?]) :-
+    eve13_act3(In?, Out, Narr).
+eve13_wait_dave_connected([_|In], Out?, Narr?) :-
+    otherwise | eve13_wait_dave_connected(In?, Out, Narr).
+eve13_wait_dave_connected([], [], []).

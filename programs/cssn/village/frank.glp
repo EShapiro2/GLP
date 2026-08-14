@@ -1,28 +1,22 @@
 %% frank.glp — Frank actor for Village scenario
 %%
 %% Frank is an adult teacher (no children).
-%% Act 1: Accepts befriend from Alice. Accepts befriend from Bob (Bob initiates after Act 2).
-%% Act 4: Creates study group after Bob's ready signal.
-%%         Invites Dave (via Bob) and Carol (via Alice).
-%%         Sends group message, receives replies.
-%% Types: from village/self.glp (ancestor scoping)
-
-
-%% =============================================================================
-%% Act 1: Adult friendships
-%% =============================================================================
-
-%% Wait for befriend(alice, ReqId) — Alice connects to Frank
+%% Act 1: Frank has no children; he only declares himself of age.
 exported procedure frank13(Constant?, Channel(Stream(UserNotify), Stream(UserCmd))?, Stream(NarrativeItem)).
-frank13(_, ch([befriend(alice, ReqId)|In],
+frank13(Id, ch(In, [declare_age|Out?]),
+    [act('Declaring myself of age')|Narr?]) :-
+    frank13_main(Id?, ch(In?, Out), Narr).
+
+procedure frank13_main(Constant?, Channel(Stream(UserNotify), Stream(UserCmd))?, Stream(NarrativeItem)).
+frank13_main(_, ch([befriend(alice, ReqId)|In],
               [decision(yes, alice, ReqId?)|Out?]),
          Narr?) :-
     ground(ReqId?) |
     frank13_wait_alice_connected(In?, Out, Narr).
 %% Skip any message arriving before the expected befriend, and close on channel end.
-frank13(Id, ch([_|In], Out?), Narr?) :-
-    otherwise | frank13(Id?, ch(In?, Out), Narr).
-frank13(_, ch([], []), []).
+frank13_main(Id, ch([_|In], Out?), Narr?) :-
+    otherwise | frank13_main(Id?, ch(In?, Out), Narr).
+frank13_main(_, ch([], []), []).
 
 %% Wait for connected(alice), then wait for Bob's befriend
 procedure frank13_wait_alice_connected(Stream(UserNotify)?, Stream(UserCmd), Stream(NarrativeItem)).
@@ -143,5 +137,22 @@ frank13_wait_dave_reply([], [], []).
 %% Act 7: Termination
 %% =============================================================================
 
+%% Act 7: Eve, released and thereby of age, cold-calls Frank.
 procedure frank13_finish(Stream(UserNotify)?, Stream(UserCmd), Stream(NarrativeItem)).
-frank13_finish(_, [], []).
+frank13_finish([befriend(eve, ReqId)|In], [decision(yes, eve, ReqId?)|Out?],
+    [act('Accepting Eve, now of age')|Narr?]) :-
+    ground(ReqId?) |
+    frank13_eve(In?, Out, Narr).
+frank13_finish([_|In], Out?, Narr?) :-
+    otherwise | frank13_finish(In?, Out, Narr).
+frank13_finish([], [], []).
+
+procedure frank13_eve(Stream(UserNotify)?, Stream(UserCmd), Stream(NarrativeItem)).
+frank13_eve([connected(eve)|In], Out?, [friend(eve)|Narr?]) :-
+    frank13_done(In?, Out, Narr).
+frank13_eve([_|In], Out?, Narr?) :-
+    otherwise | frank13_eve(In?, Out, Narr).
+frank13_eve([], [], []).
+
+procedure frank13_done(Stream(UserNotify)?, Stream(UserCmd), Stream(NarrativeItem)).
+frank13_done(_, [], []).

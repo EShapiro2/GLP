@@ -16,16 +16,29 @@
 %% So child_befriend(bob,eve) may arrive before connected(carol). Handle both orderings.
 %% =============================================================================
 
+%% Act 1: a party becomes a child by accepting an enrolment.  Before this it is
+%% of no age and has no parent; accepting creates the parent-child channel, and
+%% the main loop takes the confirmation.
 exported procedure dave13(Constant?, Channel(Stream(UserNotify), Stream(UserCmd))?, Stream(NarrativeItem)).
-dave13(_, ch([child_befriend(bob, carol, ReqId)|In],
+dave13(Id, ch([enrol_offer(bob, ReqId)|In],
+    [enrol_decision(yes, bob, ReqId?)|Out?]),
+    [act('Accepting Bob as my parent')|Narr?]) :-
+    ground(ReqId?) |
+    dave13_main(Id?, ch(In?, Out), Narr).
+dave13(Id, ch([_|In], Out?), Narr?) :-
+    otherwise | dave13(Id?, ch(In?, Out), Narr).
+dave13(_, ch([], []), []).
+
+procedure dave13_main(Constant?, Channel(Stream(UserNotify), Stream(UserCmd))?, Stream(NarrativeItem)).
+dave13_main(_, ch([child_befriend(bob, carol, ReqId)|In],
              [accept_child_intro(carol, ReqId?)|Out?]),
         Narr?) :-
     ground(ReqId?) |
     dave13_wait_carol_or_eve(In?, Out, Narr).
 %% Skip any message arriving before the expected intro, and close on channel end.
-dave13(Id, ch([_|In], Out?), Narr?) :-
-    otherwise | dave13(Id?, ch(In?, Out), Narr).
-dave13(_, ch([], []), []).
+dave13_main(Id, ch([_|In], Out?), Narr?) :-
+    otherwise | dave13_main(Id?, ch(In?, Out), Narr).
+dave13_main(_, ch([], []), []).
 
 %% After accepting Carol intro, either connected(carol) or child_befriend(eve) first
 procedure dave13_wait_carol_or_eve(Stream(UserNotify)?, Stream(UserCmd), Stream(NarrativeItem)).
