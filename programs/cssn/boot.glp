@@ -15,10 +15,10 @@
 %% =============================================================================
 
 %% From agent.glp (sibling)
-imported procedure agent#agent(Constant?, Stream(UserInMsg)?, Stream(NetInMsg)?, Stream(OutputEntry)?).
+imported procedure agent#agent(Constant?, AgentState?, Stream(UserInMsg)?, Stream(NetInMsg)?, Stream(OutputEntry)?).
 
 %% From child_agent.glp (sibling)
-imported procedure child_agent#child_agent(Constant?, Constant?, Stream(UserInMsg)?, Stream(NetInMsg)?, Stream(OutputEntry)?).
+imported procedure child_agent#child_agent(Constant?, Constant?, AgentState?, Stream(UserInMsg)?, Stream(NetInMsg)?, Stream(OutputEntry)?).
 
 %% From ui/mediator.glp
 imported procedure mediator#ui_mediator(Constant?, Channel(Stream(AgentToUserMsg), Stream(MediatorToAgentMsg))?, Channel(Stream(UserCmd), Stream(UserNotify))?, Stream(PendingEntry)?, Constant?).
@@ -237,7 +237,7 @@ fplay1 :-
 
     actors # alice1(ch(AliceActorIn?, AliceActorOut)),
     tee(AliceActorOut?, AliceMedIn, AliceDispCmd),
-    agent # agent(alice, AliceAgentIn?, AliceNetIn?,
+    agent # agent(alice, state(1, []), AliceAgentIn?, AliceNetIn?,
           [user_output(AliceAgentToUser), net_output(AliceNetOut)]),
     mediator # ui_mediator(alice, ch(AliceAgentToUser?, AliceAgentIn),
                 ch(AliceMedIn?, AliceMedOut), [], 1),
@@ -246,7 +246,7 @@ fplay1 :-
 
     actors # bob1(ch(BobActorIn?, BobActorOut)),
     tee(BobActorOut?, BobMedIn, BobDispCmd),
-    agent # agent(bob, BobAgentIn?, BobNetIn?,
+    agent # agent(bob, state(1, []), BobAgentIn?, BobNetIn?,
           [user_output(BobAgentToUser), net_output(BobNetOut)]),
     mediator # ui_mediator(bob, ch(BobAgentToUser?, BobAgentIn),
                 ch(BobMedIn?, BobMedOut), [], 1),
@@ -255,7 +255,7 @@ fplay1 :-
 
     actors # charlie1(ch(CharlieActorIn?, CharlieActorOut)),
     tee(CharlieActorOut?, CharlieMedIn, CharlieDispCmd),
-    agent # agent(charlie, CharlieAgentIn?, CharlieNetIn?,
+    agent # agent(charlie, state(1, []), CharlieAgentIn?, CharlieNetIn?,
           [user_output(CharlieAgentToUser), net_output(CharlieNetOut)]),
     mediator # ui_mediator(charlie, ch(CharlieAgentToUser?, CharlieAgentIn),
                 ch(CharlieMedIn?, CharlieMedOut), [], 1),
@@ -274,7 +274,7 @@ fplay2 :-
 
     actors # alice2(ch(AliceActorIn?, AliceActorOut)),
     tee(AliceActorOut?, AliceMedIn, AliceDispCmd),
-    agent # agent(alice, AliceAgentIn?, AliceNetIn?,
+    agent # agent(alice, state(1, []), AliceAgentIn?, AliceNetIn?,
           [user_output(AliceAgentToUser), net_output(AliceNetOut)]),
     mediator # ui_mediator(alice, ch(AliceAgentToUser?, AliceAgentIn),
                 ch(AliceMedIn?, AliceMedOut), [], 1),
@@ -283,7 +283,7 @@ fplay2 :-
 
     actors # bob2(ch(BobActorIn?, BobActorOut)),
     tee(BobActorOut?, BobMedIn, BobDispCmd),
-    agent # agent(bob, BobAgentIn?, BobNetIn?,
+    agent # agent(bob, state(1, []), BobAgentIn?, BobNetIn?,
           [user_output(BobAgentToUser), net_output(BobNetOut)]),
     mediator # ui_mediator(bob, ch(BobAgentToUser?, BobAgentIn),
                 ch(BobMedIn?, BobMedOut), [], 1),
@@ -292,7 +292,7 @@ fplay2 :-
 
     actors # charlie2(ch(CharlieActorIn?, CharlieActorOut)),
     tee(CharlieActorOut?, CharlieMedIn, CharlieDispCmd),
-    agent # agent(charlie, CharlieAgentIn?, CharlieNetIn?,
+    agent # agent(charlie, state(1, []), CharlieAgentIn?, CharlieNetIn?,
           [user_output(CharlieAgentToUser), net_output(CharlieNetOut)]),
     mediator # ui_mediator(charlie, ch(CharlieAgentToUser?, CharlieAgentIn),
                 ch(CharlieMedIn?, CharlieMedOut), [], 1),
@@ -311,7 +311,7 @@ fplay3 :-
 
     actors # alice3(ch(AliceActorIn?, AliceActorOut)),
     tee(AliceActorOut?, AliceMedIn, AliceDispCmd),
-    agent # agent(alice, AliceAgentIn?, AliceNetIn?,
+    agent # agent(alice, state(1, []), AliceAgentIn?, AliceNetIn?,
           [user_output(AliceAgentToUser), net_output(AliceNetOut)]),
     mediator # ui_mediator(alice, ch(AliceAgentToUser?, AliceAgentIn),
                 ch(AliceMedIn?, AliceMedOut), [], 1),
@@ -320,7 +320,7 @@ fplay3 :-
 
     actors # bob3(ch(BobActorIn?, BobActorOut)),
     tee(BobActorOut?, BobMedIn, BobDispCmd),
-    agent # agent(bob, BobAgentIn?, BobNetIn?,
+    agent # agent(bob, state(1, []), BobAgentIn?, BobNetIn?,
           [user_output(BobAgentToUser), net_output(BobNetOut)]),
     mediator # ui_mediator(bob, ch(BobAgentToUser?, BobAgentIn),
                 ch(BobMedIn?, BobMedOut), [], 1),
@@ -329,7 +329,7 @@ fplay3 :-
 
     actors # charlie3(ch(CharlieActorIn?, CharlieActorOut)),
     tee(CharlieActorOut?, CharlieMedIn, CharlieDispCmd),
-    agent # agent(charlie, CharlieAgentIn?, CharlieNetIn?,
+    agent # agent(charlie, state(1, []), CharlieAgentIn?, CharlieNetIn?,
           [user_output(CharlieAgentToUser), net_output(CharlieNetOut)]),
     mediator # ui_mediator(charlie, ch(CharlieAgentToUser?, CharlieAgentIn),
                 ch(CharlieMedIn?, CharlieMedOut), [], 1),
@@ -347,7 +347,7 @@ fplay4 :-
 
     actors # alice4(ch(AliceActorIn?, AliceActorOut)),
     tee(AliceActorOut?, AliceMedIn, AliceDispCmd),
-    agent # agent(alice, AliceAgentIn?, AliceNetAndChildIn?,
+    agent # agent(alice, state(1, []), AliceAgentIn?, AliceNetAndChildIn?,
           [user_output(AliceAgentToUser),
            net_output(AliceNetOut),
            child_output(carol, AliceToCarol)]),
@@ -359,7 +359,7 @@ fplay4 :-
 
     actors # bob4(ch(BobActorIn?, BobActorOut)),
     tee(BobActorOut?, BobMedIn, BobDispCmd),
-    agent # agent(bob, BobAgentIn?, BobNetAndChildIn?,
+    agent # agent(bob, state(1, []), BobAgentIn?, BobNetAndChildIn?,
           [user_output(BobAgentToUser),
            net_output(BobNetOut),
            child_output(dave, BobToDave)]),
@@ -371,7 +371,7 @@ fplay4 :-
 
     actors # carol4(ch(CarolActorIn?, CarolActorOut)),
     tee(CarolActorOut?, CarolMedIn, CarolDispCmd),
-    child_agent # child_agent(carol, alice, CarolAgentIn?, CarolFromAlice?,
+    child_agent # child_agent(carol, alice, state(0, []), CarolAgentIn?, CarolFromAlice?,
           [user_output(CarolAgentToUser),
            parent_output(alice, CarolToAlice)]),
     mediator # ui_mediator(carol, ch(CarolAgentToUser?, CarolAgentIn),
@@ -381,7 +381,7 @@ fplay4 :-
 
     actors # dave4(ch(DaveActorIn?, DaveActorOut)),
     tee(DaveActorOut?, DaveMedIn, DaveDispCmd),
-    child_agent # child_agent(dave, bob, DaveAgentIn?, DaveFromBob?,
+    child_agent # child_agent(dave, bob, state(0, []), DaveAgentIn?, DaveFromBob?,
           [user_output(DaveAgentToUser),
            parent_output(bob, DaveToBob)]),
     mediator # ui_mediator(dave, ch(DaveAgentToUser?, DaveAgentIn),
@@ -405,7 +405,7 @@ fplay5 :-
 
     actors # alice5(ch(AliceActorIn?, AliceActorOut)),
     tee(AliceActorOut?, AliceMedIn, AliceDispCmd),
-    agent # agent(alice, AliceAgentIn?, AliceNetAndChildIn?,
+    agent # agent(alice, state(1, []), AliceAgentIn?, AliceNetAndChildIn?,
           [user_output(AliceAgentToUser),
            net_output(AliceNetOut),
            child_output(carol, AliceToCarol)]),
@@ -417,7 +417,7 @@ fplay5 :-
 
     actors # bob5(ch(BobActorIn?, BobActorOut)),
     tee(BobActorOut?, BobMedIn, BobDispCmd),
-    agent # agent(bob, BobAgentIn?, BobNetAndChildIn?,
+    agent # agent(bob, state(1, []), BobAgentIn?, BobNetAndChildIn?,
           [user_output(BobAgentToUser),
            net_output(BobNetOut),
            child_output(dave, BobToDave)]),
@@ -429,7 +429,7 @@ fplay5 :-
 
     actors # carol5(ch(CarolActorIn?, CarolActorOut)),
     tee(CarolActorOut?, CarolMedIn, CarolDispCmd),
-    child_agent # child_agent(carol, alice, CarolAgentIn?, CarolFromAlice?,
+    child_agent # child_agent(carol, alice, state(0, []), CarolAgentIn?, CarolFromAlice?,
           [user_output(CarolAgentToUser),
            parent_output(alice, CarolToAlice)]),
     mediator # ui_mediator(carol, ch(CarolAgentToUser?, CarolAgentIn),
@@ -439,7 +439,7 @@ fplay5 :-
 
     actors # dave5(ch(DaveActorIn?, DaveActorOut)),
     tee(DaveActorOut?, DaveMedIn, DaveDispCmd),
-    child_agent # child_agent(dave, bob, DaveAgentIn?, DaveFromBob?,
+    child_agent # child_agent(dave, bob, state(0, []), DaveAgentIn?, DaveFromBob?,
           [user_output(DaveAgentToUser),
            parent_output(bob, DaveToBob)]),
     mediator # ui_mediator(dave, ch(DaveAgentToUser?, DaveAgentIn),
@@ -463,7 +463,7 @@ fplay6 :-
 
     actors # alice6(ch(AliceActorIn?, AliceActorOut)),
     tee(AliceActorOut?, AliceMedIn, AliceDispCmd),
-    agent # agent(alice, AliceAgentIn?, AliceNetAndChildIn?,
+    agent # agent(alice, state(1, []), AliceAgentIn?, AliceNetAndChildIn?,
           [user_output(AliceAgentToUser),
            net_output(AliceNetOut),
            child_output(carol, AliceToCarol)]),
@@ -475,7 +475,7 @@ fplay6 :-
 
     actors # bob6(ch(BobActorIn?, BobActorOut)),
     tee(BobActorOut?, BobMedIn, BobDispCmd),
-    agent # agent(bob, BobAgentIn?, BobNetAndChildIn?,
+    agent # agent(bob, state(1, []), BobAgentIn?, BobNetAndChildIn?,
           [user_output(BobAgentToUser),
            net_output(BobNetOut),
            child_output(dave, BobToDave)]),
@@ -487,7 +487,7 @@ fplay6 :-
 
     actors # carol6(ch(CarolActorIn?, CarolActorOut)),
     tee(CarolActorOut?, CarolMedIn, CarolDispCmd),
-    child_agent # child_agent(carol, alice, CarolAgentIn?, CarolFromAlice?,
+    child_agent # child_agent(carol, alice, state(0, []), CarolAgentIn?, CarolFromAlice?,
           [user_output(CarolAgentToUser),
            parent_output(alice, CarolToAlice)]),
     mediator # ui_mediator(carol, ch(CarolAgentToUser?, CarolAgentIn),
@@ -497,7 +497,7 @@ fplay6 :-
 
     actors # dave6(ch(DaveActorIn?, DaveActorOut)),
     tee(DaveActorOut?, DaveMedIn, DaveDispCmd),
-    child_agent # child_agent(dave, bob, DaveAgentIn?, DaveFromBob?,
+    child_agent # child_agent(dave, bob, state(0, []), DaveAgentIn?, DaveFromBob?,
           [user_output(DaveAgentToUser),
            parent_output(bob, DaveToBob)]),
     mediator # ui_mediator(dave, ch(DaveAgentToUser?, DaveAgentIn),
@@ -521,7 +521,7 @@ fplay7 :-
 
     actors # alice7(ch(AliceActorIn?, AliceActorOut)),
     tee(AliceActorOut?, AliceMedIn, AliceDispCmd),
-    agent # agent(alice, AliceAgentIn?, AliceNetAndChildIn?,
+    agent # agent(alice, state(1, []), AliceAgentIn?, AliceNetAndChildIn?,
           [user_output(AliceAgentToUser),
            net_output(AliceNetOut),
            child_output(carol, AliceToCarol)]),
@@ -533,7 +533,7 @@ fplay7 :-
 
     actors # bob7(ch(BobActorIn?, BobActorOut)),
     tee(BobActorOut?, BobMedIn, BobDispCmd),
-    agent # agent(bob, BobAgentIn?, BobNetAndChildIn?,
+    agent # agent(bob, state(1, []), BobAgentIn?, BobNetAndChildIn?,
           [user_output(BobAgentToUser),
            net_output(BobNetOut),
            child_output(dave, BobToDave)]),
@@ -545,7 +545,7 @@ fplay7 :-
 
     actors # carol7(ch(CarolActorIn?, CarolActorOut)),
     tee(CarolActorOut?, CarolMedIn, CarolDispCmd),
-    child_agent # child_agent(carol, alice, CarolAgentIn?, CarolFromAlice?,
+    child_agent # child_agent(carol, alice, state(0, []), CarolAgentIn?, CarolFromAlice?,
           [user_output(CarolAgentToUser),
            parent_output(alice, CarolToAlice)]),
     mediator # ui_mediator(carol, ch(CarolAgentToUser?, CarolAgentIn),
@@ -555,7 +555,7 @@ fplay7 :-
 
     actors # dave7(ch(DaveActorIn?, DaveActorOut)),
     tee(DaveActorOut?, DaveMedIn, DaveDispCmd),
-    child_agent # child_agent(dave, bob, DaveAgentIn?, DaveFromBob?,
+    child_agent # child_agent(dave, bob, state(0, []), DaveAgentIn?, DaveFromBob?,
           [user_output(DaveAgentToUser),
            parent_output(bob, DaveToBob)]),
     mediator # ui_mediator(dave, ch(DaveAgentToUser?, DaveAgentIn),
@@ -579,7 +579,7 @@ fplay8 :-
 
     actors # alice8(ch(AliceActorIn?, AliceActorOut)),
     tee(AliceActorOut?, AliceMedIn, AliceDispCmd),
-    agent # agent(alice, AliceAgentIn?, AliceNetIn?,
+    agent # agent(alice, state(1, []), AliceAgentIn?, AliceNetIn?,
           [user_output(AliceAgentToUser), net_output(AliceNetOut)]),
     mediator # ui_mediator(alice, ch(AliceAgentToUser?, AliceAgentIn),
                 ch(AliceMedIn?, AliceMedOut), [], 1),
@@ -588,7 +588,7 @@ fplay8 :-
 
     actors # bob8(ch(BobActorIn?, BobActorOut)),
     tee(BobActorOut?, BobMedIn, BobDispCmd),
-    agent # agent(bob, BobAgentIn?, BobNetIn?,
+    agent # agent(bob, state(1, []), BobAgentIn?, BobNetIn?,
           [user_output(BobAgentToUser), net_output(BobNetOut)]),
     mediator # ui_mediator(bob, ch(BobAgentToUser?, BobAgentIn),
                 ch(BobMedIn?, BobMedOut), [], 1),
@@ -606,7 +606,7 @@ fplay9 :-
 
     actors # alice9(ch(AliceActorIn?, AliceActorOut)),
     tee(AliceActorOut?, AliceMedIn, AliceDispCmd),
-    agent # agent(alice, AliceAgentIn?, AliceNetIn?,
+    agent # agent(alice, state(1, []), AliceAgentIn?, AliceNetIn?,
           [user_output(AliceAgentToUser), net_output(AliceNetOut)]),
     mediator # ui_mediator(alice, ch(AliceAgentToUser?, AliceAgentIn),
                 ch(AliceMedIn?, AliceMedOut), [], 1),
@@ -615,7 +615,7 @@ fplay9 :-
 
     actors # bob9(ch(BobActorIn?, BobActorOut)),
     tee(BobActorOut?, BobMedIn, BobDispCmd),
-    agent # agent(bob, BobAgentIn?, BobNetAndChildIn?,
+    agent # agent(bob, state(1, []), BobAgentIn?, BobNetAndChildIn?,
           [user_output(BobAgentToUser),
            net_output(BobNetOut),
            child_output(dave, BobToDave)]),
@@ -627,7 +627,7 @@ fplay9 :-
 
     actors # dave9(ch(DaveActorIn?, DaveActorOut)),
     tee(DaveActorOut?, DaveMedIn, DaveDispCmd),
-    child_agent # child_agent(dave, bob, DaveAgentIn?, DaveFromBob?,
+    child_agent # child_agent(dave, bob, state(0, []), DaveAgentIn?, DaveFromBob?,
           [user_output(DaveAgentToUser),
            parent_output(bob, DaveToBob)]),
     mediator # ui_mediator(dave, ch(DaveAgentToUser?, DaveAgentIn),
@@ -649,7 +649,7 @@ fplay10 :-
 
     actors # alice10(ch(AliceActorIn?, AliceActorOut)),
     tee(AliceActorOut?, AliceMedIn, AliceDispCmd),
-    agent # agent(alice, AliceAgentIn?, AliceNetIn?,
+    agent # agent(alice, state(1, []), AliceAgentIn?, AliceNetIn?,
           [user_output(AliceAgentToUser), net_output(AliceNetOut)]),
     mediator # ui_mediator(alice, ch(AliceAgentToUser?, AliceAgentIn),
                 ch(AliceMedIn?, AliceMedOut), [], 1),
@@ -658,7 +658,7 @@ fplay10 :-
 
     actors # bob10(ch(BobActorIn?, BobActorOut)),
     tee(BobActorOut?, BobMedIn, BobDispCmd),
-    agent # agent(bob, BobAgentIn?, BobNetAndChildIn?,
+    agent # agent(bob, state(1, []), BobAgentIn?, BobNetAndChildIn?,
           [user_output(BobAgentToUser),
            net_output(BobNetOut),
            child_output(dave, BobToDave)]),
@@ -670,7 +670,7 @@ fplay10 :-
 
     actors # dave10(ch(DaveActorIn?, DaveActorOut)),
     tee(DaveActorOut?, DaveMedIn, DaveDispCmd),
-    child_agent # child_agent(dave, bob, DaveAgentIn?, DaveFromBob?,
+    child_agent # child_agent(dave, bob, state(0, []), DaveAgentIn?, DaveFromBob?,
           [user_output(DaveAgentToUser),
            parent_output(bob, DaveToBob)]),
     mediator # ui_mediator(dave, ch(DaveAgentToUser?, DaveAgentIn),
@@ -693,7 +693,7 @@ fplay11 :-
 
     actors # alice11(ch(AliceActorIn?, AliceActorOut)),
     tee(AliceActorOut?, AliceMedIn, AliceDispCmd),
-    agent # agent(alice, AliceAgentIn?, AliceNetAndChildIn?,
+    agent # agent(alice, state(1, []), AliceAgentIn?, AliceNetAndChildIn?,
           [user_output(AliceAgentToUser),
            net_output(AliceNetOut),
            child_output(carol, AliceToCarol)]),
@@ -705,7 +705,7 @@ fplay11 :-
 
     actors # bob11(ch(BobActorIn?, BobActorOut)),
     tee(BobActorOut?, BobMedIn, BobDispCmd),
-    agent # agent(bob, BobAgentIn?, BobNetAndChildIn?,
+    agent # agent(bob, state(1, []), BobAgentIn?, BobNetAndChildIn?,
           [user_output(BobAgentToUser),
            net_output(BobNetOut),
            child_output(dave, BobToDave)]),
@@ -717,7 +717,7 @@ fplay11 :-
 
     actors # charlie11(ch(CharlieActorIn?, CharlieActorOut)),
     tee(CharlieActorOut?, CharlieMedIn, CharlieDispCmd),
-    agent # agent(charlie, CharlieAgentIn?, CharlieNetAndChildIn?,
+    agent # agent(charlie, state(1, []), CharlieAgentIn?, CharlieNetAndChildIn?,
           [user_output(CharlieAgentToUser),
            net_output(CharlieNetOut),
            child_output(eve, CharlieToEve)]),
@@ -729,7 +729,7 @@ fplay11 :-
 
     actors # carol11(ch(CarolActorIn?, CarolActorOut)),
     tee(CarolActorOut?, CarolMedIn, CarolDispCmd),
-    child_agent # child_agent(carol, alice, CarolAgentIn?, CarolFromAlice?,
+    child_agent # child_agent(carol, alice, state(0, []), CarolAgentIn?, CarolFromAlice?,
           [user_output(CarolAgentToUser),
            parent_output(alice, CarolToAlice)]),
     mediator # ui_mediator(carol, ch(CarolAgentToUser?, CarolAgentIn),
@@ -739,7 +739,7 @@ fplay11 :-
 
     actors # dave11(ch(DaveActorIn?, DaveActorOut)),
     tee(DaveActorOut?, DaveMedIn, DaveDispCmd),
-    child_agent # child_agent(dave, bob, DaveAgentIn?, DaveFromBob?,
+    child_agent # child_agent(dave, bob, state(0, []), DaveAgentIn?, DaveFromBob?,
           [user_output(DaveAgentToUser),
            parent_output(bob, DaveToBob)]),
     mediator # ui_mediator(dave, ch(DaveAgentToUser?, DaveAgentIn),
@@ -749,7 +749,7 @@ fplay11 :-
 
     actors # eve11(ch(EveActorIn?, EveActorOut)),
     tee(EveActorOut?, EveMedIn, EveDispCmd),
-    child_agent # child_agent(eve, charlie, EveAgentIn?, EveFromCharlie?,
+    child_agent # child_agent(eve, charlie, state(0, []), EveAgentIn?, EveFromCharlie?,
           [user_output(EveAgentToUser),
            parent_output(charlie, EveToCharlie)]),
     mediator # ui_mediator(eve, ch(EveAgentToUser?, EveAgentIn),
@@ -776,7 +776,7 @@ fplay12 :-
 
     actors # alice12(ch(AliceActorIn?, AliceActorOut)),
     tee(AliceActorOut?, AliceMedIn, AliceDispCmd),
-    agent # agent(alice, AliceAgentIn?, AliceNetIn?,
+    agent # agent(alice, state(1, []), AliceAgentIn?, AliceNetIn?,
           [user_output(AliceAgentToUser), net_output(AliceNetOut)]),
     mediator # ui_mediator(alice, ch(AliceAgentToUser?, AliceAgentIn),
                 ch(AliceMedIn?, AliceMedOut), [], 1),
@@ -785,7 +785,7 @@ fplay12 :-
 
     actors # bob12(ch(BobActorIn?, BobActorOut)),
     tee(BobActorOut?, BobMedIn, BobDispCmd),
-    agent # agent(bob, BobAgentIn?, BobNetAndChildIn?,
+    agent # agent(bob, state(1, []), BobAgentIn?, BobNetAndChildIn?,
           [user_output(BobAgentToUser),
            net_output(BobNetOut),
            child_output(dave, BobToDave)]),
@@ -797,7 +797,7 @@ fplay12 :-
 
     actors # charlie12(ch(CharlieActorIn?, CharlieActorOut)),
     tee(CharlieActorOut?, CharlieMedIn, CharlieDispCmd),
-    agent # agent(charlie, CharlieAgentIn?, CharlieNetAndChildIn?,
+    agent # agent(charlie, state(1, []), CharlieAgentIn?, CharlieNetAndChildIn?,
           [user_output(CharlieAgentToUser),
            net_output(CharlieNetOut),
            child_output(eve, CharlieToEve)]),
@@ -809,7 +809,7 @@ fplay12 :-
 
     actors # dave12(ch(DaveActorIn?, DaveActorOut)),
     tee(DaveActorOut?, DaveMedIn, DaveDispCmd),
-    child_agent # child_agent(dave, bob, DaveAgentIn?, DaveFromBob?,
+    child_agent # child_agent(dave, bob, state(0, []), DaveAgentIn?, DaveFromBob?,
           [user_output(DaveAgentToUser),
            parent_output(bob, DaveToBob)]),
     mediator # ui_mediator(dave, ch(DaveAgentToUser?, DaveAgentIn),
@@ -819,7 +819,7 @@ fplay12 :-
 
     actors # eve12(ch(EveActorIn?, EveActorOut)),
     tee(EveActorOut?, EveMedIn, EveDispCmd),
-    child_agent # child_agent(eve, charlie, EveAgentIn?, EveFromCharlie?,
+    child_agent # child_agent(eve, charlie, state(0, []), EveAgentIn?, EveFromCharlie?,
           [user_output(EveAgentToUser),
            parent_output(charlie, EveToCharlie)]),
     mediator # ui_mediator(eve, ch(EveAgentToUser?, EveAgentIn),
@@ -943,7 +943,7 @@ fplay13 :-
     alice # alice13(alice, ch(AliceActorIn?, AliceActorOut), AliceNarr),
     send_to_user_narrate(alice, AliceNarr?),
     tee(AliceActorOut?, AliceMedIn, AliceDispCmd),
-    agent # agent(alice, AliceAgentIn?, AliceNetAndChildIn?,
+    agent # agent(alice, state(1, []), AliceAgentIn?, AliceNetAndChildIn?,
           [user_output(AliceAgentToUser),
            net_output(AliceNetOut),
            child_output(carol, AliceToCarol)]),
@@ -957,7 +957,7 @@ fplay13 :-
     bob # bob13(bob, ch(BobActorIn?, BobActorOut), BobNarr),
     send_to_user_narrate(bob, BobNarr?),
     tee(BobActorOut?, BobMedIn, BobDispCmd),
-    agent # agent(bob, BobAgentIn?, BobNetAndChildIn?,
+    agent # agent(bob, state(1, []), BobAgentIn?, BobNetAndChildIn?,
           [user_output(BobAgentToUser),
            net_output(BobNetOut),
            child_output(dave, BobToDave),
@@ -972,7 +972,7 @@ fplay13 :-
     frank # frank13(frank, ch(FrankActorIn?, FrankActorOut), FrankNarr),
     send_to_user_narrate(frank, FrankNarr?),
     tee(FrankActorOut?, FrankMedIn, FrankDispCmd),
-    agent # agent(frank, FrankAgentIn?, FrankNetIn?,
+    agent # agent(frank, state(1, []), FrankAgentIn?, FrankNetIn?,
           [user_output(FrankAgentToUser), net_output(FrankNetOut)]),
     mediator # ui_mediator(frank, ch(FrankAgentToUser?, FrankAgentIn),
                 ch(FrankMedIn?, FrankMedOut), [], 1),
@@ -983,7 +983,7 @@ fplay13 :-
     carol # carol13(carol, ch(CarolActorIn?, CarolActorOut), CarolNarr),
     send_to_user_narrate(carol, CarolNarr?),
     tee(CarolActorOut?, CarolMedIn, CarolDispCmd),
-    child_agent # child_agent(carol, alice, CarolAgentIn?, CarolFromAlice?,
+    child_agent # child_agent(carol, alice, state(0, []), CarolAgentIn?, CarolFromAlice?,
           [user_output(CarolAgentToUser),
            parent_output(alice, CarolToAlice)]),
     mediator # ui_mediator(carol, ch(CarolAgentToUser?, CarolAgentIn),
@@ -995,7 +995,7 @@ fplay13 :-
     dave # dave13(dave, ch(DaveActorIn?, DaveActorOut), DaveNarr),
     send_to_user_narrate(dave, DaveNarr?),
     tee(DaveActorOut?, DaveMedIn, DaveDispCmd),
-    child_agent # child_agent(dave, bob, DaveAgentIn?, DaveFromBob?,
+    child_agent # child_agent(dave, bob, state(0, []), DaveAgentIn?, DaveFromBob?,
           [user_output(DaveAgentToUser),
            parent_output(bob, DaveToBob)]),
     mediator # ui_mediator(dave, ch(DaveAgentToUser?, DaveAgentIn),
@@ -1007,7 +1007,7 @@ fplay13 :-
     eve # eve13(eve, ch(EveActorIn?, EveActorOut), EveNarr),
     send_to_user_narrate(eve, EveNarr?),
     tee(EveActorOut?, EveMedIn, EveDispCmd),
-    child_agent # child_agent(eve, bob, EveAgentIn?, EveFromBob?,
+    child_agent # child_agent(eve, bob, state(0, []), EveAgentIn?, EveFromBob?,
           [user_output(EveAgentToUser),
            parent_output(bob, EveToBob)]),
     mediator # ui_mediator(eve, ch(EveAgentToUser?, EveAgentIn),
@@ -1038,7 +1038,7 @@ fplay14 :-
 
     actors # alice14(ch(AliceActorIn?, AliceActorOut)),
     tee(AliceActorOut?, AliceMedIn, AliceDispCmd),
-    agent # agent(alice, AliceAgentIn?, AliceNetAndChildIn?,
+    agent # agent(alice, state(1, []), AliceAgentIn?, AliceNetAndChildIn?,
           [user_output(AliceAgentToUser),
            net_output(AliceNetOut),
            child_output(carol, AliceToCarol)]),
@@ -1050,7 +1050,7 @@ fplay14 :-
 
     actors # bob14(ch(BobActorIn?, BobActorOut)),
     tee(BobActorOut?, BobMedIn, BobDispCmd),
-    agent # agent(bob, BobAgentIn?, BobNetAndChildIn?,
+    agent # agent(bob, state(1, []), BobAgentIn?, BobNetAndChildIn?,
           [user_output(BobAgentToUser),
            net_output(BobNetOut),
            child_output(dave, BobToDave)]),
@@ -1062,7 +1062,7 @@ fplay14 :-
 
     actors # carol14(ch(CarolActorIn?, CarolActorOut)),
     tee(CarolActorOut?, CarolMedIn, CarolDispCmd),
-    child_agent # child_agent(carol, alice, CarolAgentIn?, CarolFromAlice?,
+    child_agent # child_agent(carol, alice, state(0, []), CarolAgentIn?, CarolFromAlice?,
           [user_output(CarolAgentToUser),
            parent_output(alice, CarolToAlice)]),
     mediator # ui_mediator(carol, ch(CarolAgentToUser?, CarolAgentIn),
@@ -1072,7 +1072,7 @@ fplay14 :-
 
     actors # dave14(ch(DaveActorIn?, DaveActorOut)),
     tee(DaveActorOut?, DaveMedIn, DaveDispCmd),
-    child_agent # child_agent(dave, bob, DaveAgentIn?, DaveFromBob?,
+    child_agent # child_agent(dave, bob, state(0, []), DaveAgentIn?, DaveFromBob?,
           [user_output(DaveAgentToUser),
            parent_output(bob, DaveToBob)]),
     mediator # ui_mediator(dave, ch(DaveAgentToUser?, DaveAgentIn),
@@ -1096,7 +1096,7 @@ fplay15 :-
 
     actors # alice15(ch(AliceActorIn?, AliceActorOut)),
     tee(AliceActorOut?, AliceMedIn, AliceDispCmd),
-    agent # agent(alice, AliceAgentIn?, AliceNetIn?,
+    agent # agent(alice, state(1, []), AliceAgentIn?, AliceNetIn?,
           [user_output(AliceAgentToUser), net_output(AliceNetOut)]),
     mediator # ui_mediator(alice, ch(AliceAgentToUser?, AliceAgentIn),
                 ch(AliceMedIn?, AliceMedOut), [], 1),
@@ -1105,7 +1105,7 @@ fplay15 :-
 
     actors # bob15(ch(BobActorIn?, BobActorOut)),
     tee(BobActorOut?, BobMedIn, BobDispCmd),
-    agent # agent(bob, BobAgentIn?, BobNetIn?,
+    agent # agent(bob, state(1, []), BobAgentIn?, BobNetIn?,
           [user_output(BobAgentToUser), net_output(BobNetOut)]),
     mediator # ui_mediator(bob, ch(BobAgentToUser?, BobAgentIn),
                 ch(BobMedIn?, BobMedOut), [], 1),

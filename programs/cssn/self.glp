@@ -28,7 +28,11 @@ FriendOnlyContent ::= response(Response)
                     ; group_leave(GroupId, Constant)
                     ; leave_group(GroupId)
                     ; unfriend
-                    ; unfriend_child(Constant).
+                    ; unfriend_child(Constant)
+                    ; release_request
+                    ; release_grant
+                    ; child_befriended(Constant)
+                    ; child_unfriended(Constant).
 
 %% Friend messages (after connection established)
 FriendContent ::= FriendOnlyContent ; GroupNotifyContent.
@@ -44,6 +48,15 @@ Response ::= accept(Channel(Stream(IntroContent), Stream(IntroContent))) ; no.
 Decision ::= yes ; no.
 Handshake ::= ack(Constant) ; nack.
 
+%% An enrolment offer is answered by conveying the parent-child channel itself.
+%% Enrol is directional --- p enrols r, and r is not simultaneously enrolling p ---
+%% so there is no bilateral case to tie-break and no setup channel is needed: the
+%% child allocates the channel and returns the parent's end.  This is the one act
+%% whose parties have no channel between them when it starts, which is why it
+%% travels the cold-call path.
+EnrolResponse ::= enrol_accept(Channel(Stream(FriendMsg), Stream(FriendMsg)))
+                ; enrol_no.
+
 %% Setup channel content — the befriend handshake (ack/nack) plus the
 %% fresh-friend-channel conveyance that the smaller-named side uses to select
 %% the canonical friend channel.  The setup channel is consumed at commit and
@@ -57,7 +70,20 @@ GroupId   ::= group_id(Constant, Constant).
 %% Pending values — opaque values stored by mediator, forwarded to agent
 PendingValue ::= response(Response?) ; channel(Channel(Stream(IntroContent), Stream(IntroContent)))
                ; group_channel(Channel(Stream(GroupSetupResponse), Stream(IntroContent)))
-               ; consent(Decision?) ; error.
+               ; consent(Decision?) ; enrol_response(EnrolResponse?) ; error.
+
+%% =============================================================================
+%% AGENT RECORDS
+%% =============================================================================
+
+%% The local state Definition "Child-Safe Social Graph Guarded Transactions"
+%% names, less what the outputs list already holds.  The friend set c_p is the
+%% friend_output entries, the parents rho_p the parent_output entries and the
+%% children kappa_p the child_output entries: those three records ARE the
+%% channels, created and torn down by the acts that establish and end them.
+%% What is left has no channel to stand for it — the count of declarations of
+%% age a_p, and the approvals alpha_p, which name children of other parents.
+AgentState ::= state(Integer, Stream(Constant)).
 
 %% =============================================================================
 %% AGENT <-> MEDIATOR INTERFACE
@@ -88,7 +114,12 @@ UserContent ::= connect(Constant)
               ; approve_child_group(Constant, GroupId, PendingValue)
               ; reject_child_group(Constant, GroupId, PendingValue)
               ; unfriend_child(Constant)
-              ; unfriend_child_of(Constant, Constant).
+              ; unfriend_child_of(Constant, Constant)
+              ; declare_age
+              ; enrol_child(Constant)
+              ; enrol_decision(Decision, Constant, PendingValue)
+              ; request_release
+              ; approve_release(Constant).
 
 %% Content carried inside agent-to-user messages (msg(agent, person, Content))
 %% Agent-only message content (excludes shared GroupNotifyContent)
@@ -104,7 +135,12 @@ AgentOnlyContent ::= befriend(Constant, Response?)
                    ; group_left(GroupId)
                    ; group_received(GroupId, Constant, Constant)
                    ; child_group_consent(Constant, GroupId, Decision?)
-                   ; unfriended(Constant).
+                   ; unfriended(Constant)
+                   ; age_declared
+                   ; enrol_offer(Constant, EnrolResponse?)
+                   ; enrolled(Constant)
+                   ; release_asked(Constant)
+                   ; released(Constant).
 
 %% Content carried inside agent-to-user messages (msg(agent, person, Content))
 AgentContent ::= AgentOnlyContent ; GroupNotifyContent.
@@ -118,7 +154,10 @@ MediatorToAgentMsg    ::= msg(Constant, Constant, UserContent).
 %% =============================================================================
 
 %% Network content (2-arg cold-call: msg(Dest, Content))
-NetColdCall ::= intro(Constant, Response?).
+%% Enrol joins intro here because the parent and the child it enrols have no
+%% channel between them until the act creates one.
+NetColdCall ::= intro(Constant, Response?)
+              ; enrol(Constant, EnrolResponse?).
 
 %% Network input message (cold calls + friend messages)
 NetInMsg    ::= msg(Constant, NetColdCall)
@@ -141,7 +180,8 @@ UserInMsg ::= msg(Constant, Constant, UserContent)
             ; intro_result(Constant, Channel(Stream(IntroContent), Stream(IntroContent)))
             ; intro_rejected(Constant)
             ; group_join_ack(GroupId, Constant, Channel(Stream(IntroContent), Stream(GroupSetupResponse)))
-            ; group_join_nack(GroupId, Constant).
+            ; group_join_nack(GroupId, Constant)
+            ; enrol_response(Constant, EnrolResponse).
 
 %% =============================================================================
 %% AGENT OUTPUT TYPES
@@ -206,7 +246,12 @@ UserCmd ::= decision(Decision, Constant, ReqId)
           ; approve_child_group(Constant, GroupId, ReqId)
           ; reject_child_group(Constant, GroupId, ReqId)
           ; unfriend_child(Constant)
-          ; unfriend_child_of(Constant, Constant).
+          ; unfriend_child_of(Constant, Constant)
+          ; declare_age
+          ; enrol_child(Constant)
+          ; enrol_decision(Decision, Constant, ReqId)
+          ; request_release
+          ; approve_release(Constant).
 
 %% Mediator -> User notifications
 UserNotify ::= befriend(Constant, ReqId)
@@ -224,7 +269,12 @@ UserNotify ::= befriend(Constant, ReqId)
              ; group_removed(GroupId)
              ; group_received(GroupId, Constant, Constant)
              ; child_group_consent(Constant, GroupId, ReqId)
-             ; unfriended(Constant).
+             ; unfriended(Constant)
+             ; age_declared
+             ; enrol_offer(Constant, ReqId)
+             ; enrolled(Constant)
+             ; release_asked(Constant)
+             ; released(Constant).
 
 
 %% =============================================================================
@@ -323,6 +373,87 @@ distribute_group_msg(_, _, [], []).
 
 procedure add_group_output(OutputKey?, Stream(GroupMsg), Stream(OutputEntry)?, Stream(OutputEntry)).
 add_group_output(Key, Out?, Outs, [group_entry(Key?, Out)|Outs?]).
+
+%% =============================================================================
+%% ENROLMENT AND RELEASE — the parent-child channel and the records it stands for
+%% =============================================================================
+%% kappa_p and rho_p are the child_output and parent_output entries of the
+%% outputs list, so enrol adds one and release removes it.  These mirror
+%% add_friend_output and close_friend of lib/routing, which do the same for c_p.
+
+procedure add_child_output(Constant?, Stream(FriendMsg), Stream(OutputEntry)?, Stream(OutputEntry)).
+add_child_output(Name, Out?, Outs, [child_output(Name?, Out)|Outs?]).
+
+procedure add_parent_output(Constant?, Stream(FriendMsg), Stream(OutputEntry)?, Stream(OutputEntry)).
+add_parent_output(Name, Out?, Outs, [parent_output(Name?, Out)|Outs?]).
+
+procedure close_child(Constant?, Stream(OutputEntry)?, Stream(OutputEntry)).
+close_child(_, [], []).
+close_child(Name, [child_output(K, [])|Rest], Rest?) :-
+    Name? =?= K? | true.
+close_child(Name, [E|Rest], [E?|Rest1?]) :-
+    otherwise |
+    close_child(Name?, Rest?, Rest1).
+
+procedure close_parent(Constant?, Stream(OutputEntry)?, Stream(OutputEntry)).
+close_parent(_, [], []).
+close_parent(Name, [parent_output(K, [])|Rest], Rest?) :-
+    Name? =?= K? | true.
+close_parent(Name, [E|Rest], [E?|Rest1?]) :-
+    otherwise |
+    close_parent(Name?, Rest?, Rest1).
+
+%% Parent side of enrol: adopt the channel the child allocated and conveyed, and
+%% merge its read end into the parent's network input.
+procedure enrol_commit(Constant?, Channel(Stream(FriendMsg), Stream(FriendMsg))?,
+                       Stream(OutputEntry)?, Stream(OutputEntry),
+                       Stream(NetInMsg)?, Stream(NetInMsg)).
+enrol_commit(Child, ch(FromChild, ToChild?), Outs, Outs2?, NetIn, NetIn1?) :-
+    ground(Child?) |
+    add_child_output(Child?, ToChild, Outs?, Outs1),
+    send_user( msg(agent, person, enrolled(Child?)), Outs1?, Outs2),
+    merge(NetIn?, FromChild?, NetIn1).
+
+%% The enrolling parent waits on the writer it sent with the cold call, exactly
+%% as inject_msg does for a cold-call response.
+procedure inject_enrol_response(EnrolResponse?, Constant?, Stream(UserInMsg)?, Stream(UserInMsg)).
+inject_enrol_response(Resp, Child, Ys, [enrol_response(Child?, Resp?)|Ys?]) :-
+    known(Resp?) | true.
+inject_enrol_response(Resp, Child, [Y|Ys], [Y?|Ys1?]) :-
+    inject_enrol_response(Resp?, Child?, Ys?, Ys1).
+
+%% =============================================================================
+%% APPROVALS — alpha_p, the one record with no channel to stand for it
+%% =============================================================================
+%% Set union and set difference: a parent gains an approved record of the other
+%% child when a child friendship commits, and loses it when that friendship ends.
+
+procedure add_approval(Constant?, Stream(Constant)?, Stream(Constant)).
+add_approval(Who, [A|Rest], [A?|Rest?]) :-
+    Who? =?= A? | true.
+add_approval(Who, [A|Rest], [A?|Rest1?]) :-
+    otherwise |
+    add_approval(Who?, Rest?, Rest1).
+add_approval(Who, [], [Who?|[]]).
+
+%% Child unfriend is provided s in alpha_p at the named parent, so the record has
+%% to be readable and not only writable.  Walk alpha_p binding Decision, exactly
+%% as already_friend of lib/routing walks the friend set.
+procedure has_approval(Constant?, Stream(Constant)?, Stream(Constant), Decision).
+has_approval(Who, [A|Rest], [A?|Rest?], yes) :-
+    Who? =?= A? | true.
+has_approval(Who, [A|Rest], [A?|Rest1?], D?) :-
+    otherwise |
+    has_approval(Who?, Rest?, Rest1, D).
+has_approval(_, [], [], no).
+
+procedure remove_approval(Constant?, Stream(Constant)?, Stream(Constant)).
+remove_approval(_, [], []).
+remove_approval(Who, [A|Rest], Rest?) :-
+    Who? =?= A? | true.
+remove_approval(Who, [A|Rest], [A?|Rest1?]) :-
+    otherwise |
+    remove_approval(Who?, Rest?, Rest1).
 
 procedure close_outputs(Stream(OutputEntry)?).
 close_outputs([user_output([])|Outs]) :- close_outputs(Outs?).
