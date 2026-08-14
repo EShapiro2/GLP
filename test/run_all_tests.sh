@@ -1857,6 +1857,40 @@ else
     FAIL=$((FAIL + 1))
 fi
 
+# fplay13: the village scenario's seven acts.  The actors are order-independent —
+# one state each, every notification acted on has its own clause — so these hold
+# whatever order the six agents' messages interleave in.  Checked act by act
+# because a chained actor used to pass "suspended" while silently dropping a
+# notification and stopping halfway.
+echo "--- CSSN v3 village scenario, seven acts (fplay13) ---"
+k_fp13=$("$REPL_RUN" <<HEREDOC
+$CSSN_V2
+fplay13.
+:quit
+HEREDOC
+2>&1)
+check "CSSN v3 fplay13 act 1 declaring of age" "tagged(alice, act(Declaring myself of age))" "$k_fp13"
+check "CSSN v3 fplay13 act 1 enrolment is an act of both" "tagged(carol, act(Accepting Alice as my parent))" "$k_fp13"
+check "CSSN v3 fplay13 act 1 the parent holds the child" "tagged(bob, event(Eve is my child))" "$k_fp13"
+check "CSSN v3 fplay13 act 2 adult friendship" "tagged(alice, friend(frank))" "$k_fp13"
+check "CSSN v3 fplay13 act 3 child befriending" "tagged(carol, friend(dave))" "$k_fp13"
+check "CSSN v3 fplay13 act 3 the sibling case" "tagged(dave, friend(eve))" "$k_fp13"
+check "CSSN v3 fplay13 act 4 child-managed group" "tagged(carol, event(Eve joined kids_chat))" "$k_fp13"
+check "CSSN v3 fplay13 act 5 adult-managed group" "tagged(frank, event(Carol joined study group))" "$k_fp13"
+check "CSSN v3 fplay13 act 6 child unfriending" "tagged(dave, event(Unfriended by Carol))" "$k_fp13"
+check "CSSN v3 fplay13 act 6 parent-initiated removal" "tagged(dave, event(Removed from study group))" "$k_fp13"
+check "CSSN v3 fplay13 act 7 the release is owed and given" "tagged(bob, act(Releasing Eve))" "$k_fp13"
+check "CSSN v3 fplay13 act 7 release makes the child of age" "tagged(eve, event(Released, and of age))" "$k_fp13"
+check "CSSN v3 fplay13 act 7 befriending with no parent among the guards" "tagged(eve, friend(frank))" "$k_fp13"
+fp13_narr=$(echo "$k_fp13" | grep -cE "tagged\((alice|bob|frank|carol|dave|eve), (act|event|friend|say)\(")
+if [ "$fp13_narr" = "87" ]; then
+    echo "  PASS: CSSN v3 fplay13 narrative is 87 lines"
+    PASS=$((PASS + 1))
+else
+    echo "  FAIL: CSSN v3 fplay13 narrative is $fp13_narr lines (expected 87)"
+    FAIL=$((FAIL + 1))
+fi
+
 # fplay16: the three acts of the child-safe social graph — declare_age, enrol and
 # release — driven at the agent level.  Alice declares herself of age and enrols
 # Bob; Bob accepts and so becomes a child; Bob asks to be released and Alice
