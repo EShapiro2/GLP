@@ -177,6 +177,10 @@ cur_loose_mint([schema(mint,
 % n names a group.  A group is no person, so n is a speech-act variable here;
 % that is also the reading CSSN's own provenance set takes, member and listed
 % having traceable provenance only under it.
+%
+% DO NOT REMOVE OR ALTER THIS CONTRACT WITHOUT TELLING CSSN (their 2026-08-15
+% 22:00 UTC).  Their Section 3.3 cites the run over it, and its schemas are the
+% table printed in their Section 3.2; the two have to stay the same sixteen.
 procedure cssn(Contract).
 cssn([schema(parent_child,
        [rs(guarded, [atom(parenting, [role(2)])], [], [], []),
