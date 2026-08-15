@@ -112,14 +112,14 @@ check "loose mint: pay fails volition" "volition(pay, 1, 2)" "$out"
 check "loose mint: redeem fails volition" "volition(redeem, 1, 2)" "$out"
 check_not "loose mint: the swap is still unobstructed" "obstructed(swap" "$out"
 
-# CSSN's child-safe contract, transcribed from their entry of 2026-08-15
-# 20:35 UTC in Coordination/mail/Legal_inbox.md.  Its introductory act is
-# parent_child; befriending is obstructed there by design.
+# CSSN's child-safe contract, transcribed from their entries of 2026-08-15
+# 20:35 and 21:40 UTC in Coordination/mail/Legal_inbox.md.  Its introductory
+# act is parent_child; befriending is obstructed there by design.
 out=$(run 'check_named(cssn, V).' 'traceable_of(cssn, E).')
 check "CSSN's contract is syntactically grassroots" \
       "V = syntactically_grassroots" "$out"
 check "CSSN's predicates of traceable provenance" \
-      "E = [parenting, parent, child, friend, approval, withdrawal, member, listed, item, sent]" \
+      "E = [parenting, parent, child, friend, approval, withdrawal, member, listed, item, sent, posted, delivered]" \
       "$out"
 
 # A contract with no schemas.

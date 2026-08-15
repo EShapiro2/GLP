@@ -170,7 +170,9 @@ cur_loose_mint([schema(mint,
 % --- CSSN's child-safe social contract -------------------------------------
 % Transcribed from CSSN's entry in Coordination/mail/Legal_inbox.md dated
 % 2026-08-15 20:35 UTC, as written there: sixteen schemas, and the guard marks
-% of the source, so deliver is unguarded at both roles.
+% of the source, so deliver is unguarded at both roles -- their decision, in
+% their Section 3.2.  post and deliver carry the repair of their 21:40 UTC,
+% which ties an item delivered in a group to a posting of it there.
 %
 % n names a group.  A group is no person, so n is a speech-act variable here;
 % that is also the reading CSSN's own provenance set takes, member and listed
@@ -250,12 +252,15 @@ cssn([schema(parent_child,
        [rs(guarded,   [atom(sent, [svar(x), role(2)])], [],
                       [atom(item, [svar(x), pvar(b), pvar(f)]),
                        atom(member, [role(2), svar(n)])], []),
-        rs(unguarded, [atom(item, [svar(x), pvar(b), role(1)])], [],
+        rs(unguarded, [atom(item, [svar(x), pvar(b), role(1)]),
+                       atom(posted, [svar(x), svar(n)])], [],
                       [atom(listed, [role(1), svar(n)])], [])]),
      schema(deliver,
-       [rs(unguarded, [atom(sent, [svar(x), role(2)])], [],
+       [rs(unguarded, [atom(delivered, [svar(x), role(2), svar(n)])], [],
                       [atom(item, [svar(x), pvar(b), pvar(f)]),
-                       atom(listed, [role(2), svar(n)])], []),
+                       atom(posted, [svar(x), svar(n)]),
+                       atom(listed, [role(2), svar(n)])],
+                      [atom(delivered, [svar(x), role(2), svar(n)])]),
         rs(unguarded, [atom(item, [svar(x), pvar(b), role(1)])], [],
                       [atom(member, [role(1), svar(n)])], [])])]).
 
