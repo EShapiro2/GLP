@@ -167,6 +167,98 @@ cur_loose_mint([schema(mint,
        [rs(guarded,   [atom(coin, [pvar(r)])], [atom(coin, [role(2)])], [], []),
         rs(unguarded, [atom(coin, [role(2)])], [atom(coin, [pvar(r)])], [], [])])]).
 
+% --- CSSN's child-safe social contract -------------------------------------
+% Transcribed from CSSN's entry in Coordination/mail/Legal_inbox.md dated
+% 2026-08-15 20:35 UTC, as written there: sixteen schemas, and the guard marks
+% of the source, so deliver is unguarded at both roles.
+%
+% n names a group.  A group is no person, so n is a speech-act variable here;
+% that is also the reading CSSN's own provenance set takes, member and listed
+% having traceable provenance only under it.
+procedure cssn(Contract).
+cssn([schema(parent_child,
+       [rs(guarded, [atom(parenting, [role(2)])], [], [], []),
+        rs(guarded, [atom(parent, [role(1)]), atom(child, [])], [], [],
+                    [atom(parent, [role(1)])])]),
+     schema(end_parenting,
+       [rs(guarded, [], [atom(parent, [role(2)]), atom(child, [])], [], []),
+        rs(guarded, [], [atom(parenting, [role(1)])], [], [])]),
+     schema(befriend,
+       [rs(guarded, [atom(friend, [role(2)])], [], [],
+                    [atom(child, []), atom(friend, [role(2)])]),
+        rs(guarded, [atom(friend, [role(1)])], [], [],
+                    [atom(child, []), atom(friend, [role(1)])])]),
+     schema(unfriend,
+       [rs(guarded,   [], [atom(friend, [role(2)])], [], []),
+        rs(unguarded, [], [atom(friend, [role(1)])], [], [])]),
+     schema(child_befriend,
+       [rs(guarded, [atom(friend, [role(2)])], [], [atom(parent, [role(3)])],
+                    [atom(friend, [role(2)])]),
+        rs(guarded, [atom(friend, [role(1)])], [], [atom(parent, [role(4)])],
+                    [atom(friend, [role(1)])]),
+        rs(guarded, [atom(approval, [])], [],
+                    [atom(parenting, [role(1)]), atom(friend, [role(4)])], []),
+        rs(guarded, [atom(approval, [])], [],
+                    [atom(parenting, [role(2)]), atom(friend, [role(3)])], [])]),
+     schema(child_unfriend,
+       [rs(unguarded, [], [atom(friend, [role(2)])], [atom(parent, [role(3)])], []),
+        rs(unguarded, [], [atom(friend, [role(1)])], [atom(parent, [role(4)])], []),
+        rs(unguarded, [atom(withdrawal, [])], [], [atom(parenting, [role(1)])], []),
+        rs(unguarded, [atom(withdrawal, [])], [], [atom(parenting, [role(2)])], [])]),
+     schema(create,
+       [rs(guarded, [atom(member, [role(1), svar(n)]),
+                     atom(listed, [role(1), svar(n)])], [], [], [])]),
+     schema(join,
+       [rs(guarded, [atom(listed, [role(2), svar(n)])], [],
+                    [atom(member, [role(1), svar(n)]), atom(friend, [role(2)])], []),
+        rs(guarded, [atom(member, [role(1), svar(n)])], [],
+                    [atom(friend, [role(1)])],
+                    [atom(child, []), atom(member, [role(1), svar(n)])])]),
+     schema(child_join,
+       [rs(guarded, [atom(listed, [role(2), svar(n)])], [],
+                    [atom(member, [role(1), svar(n)]), atom(friend, [role(3)])], []),
+        rs(guarded, [atom(member, [role(1), svar(n)])], [],
+                    [atom(parent, [role(3)])],
+                    [atom(member, [role(1), svar(n)])]),
+        rs(guarded, [atom(approval, [])], [],
+                    [atom(parenting, [role(2)]), atom(friend, [role(1)])], [])]),
+     schema(child_join2,
+       [rs(guarded, [atom(listed, [role(2), svar(n)])], [],
+                    [atom(member, [role(1), svar(n)]), atom(friend, [role(2)]),
+                     atom(parent, [role(3)])], []),
+        rs(guarded, [atom(member, [role(1), svar(n)])], [],
+                    [atom(parent, [role(4)]), atom(friend, [role(1)])],
+                    [atom(member, [role(1), svar(n)])]),
+        rs(guarded, [atom(approval, [])], [], [atom(parenting, [role(1)])], []),
+        rs(guarded, [atom(approval, [])], [], [atom(parenting, [role(2)])], [])]),
+     schema(leave,
+       [rs(unguarded, [], [atom(listed, [role(2), svar(n)])], [], []),
+        rs(unguarded, [], [atom(member, [role(1), svar(n)])], [], [])]),
+     schema(child_leave,
+       [rs(unguarded, [], [atom(listed, [role(2), svar(n)])], [], []),
+        rs(unguarded, [], [atom(member, [role(1), svar(n)])], [], []),
+        rs(unguarded, [atom(withdrawal, [])], [], [atom(parenting, [role(2)])], [])]),
+     schema(sign,
+       [rs(guarded, [atom(item, [svar(x), role(1), role(1)])], [], [], [])]),
+     schema(send,
+       [rs(guarded,   [atom(sent, [svar(x), role(2)])], [],
+                      [atom(item, [svar(x), pvar(a), pvar(f)]),
+                       atom(friend, [pvar(f)])], []),
+        rs(unguarded, [atom(item, [svar(x), pvar(a), role(1)])], [],
+                      [atom(friend, [role(1)])], [])]),
+     schema(post,
+       [rs(guarded,   [atom(sent, [svar(x), role(2)])], [],
+                      [atom(item, [svar(x), pvar(b), pvar(f)]),
+                       atom(member, [role(2), svar(n)])], []),
+        rs(unguarded, [atom(item, [svar(x), pvar(b), role(1)])], [],
+                      [atom(listed, [role(1), svar(n)])], [])]),
+     schema(deliver,
+       [rs(unguarded, [atom(sent, [svar(x), role(2)])], [],
+                      [atom(item, [svar(x), pvar(b), pvar(f)]),
+                       atom(listed, [role(2), svar(n)])], []),
+        rs(unguarded, [atom(item, [svar(x), pvar(b), role(1)])], [],
+                      [atom(member, [role(1), svar(n)])], [])])]).
+
 % --- the contracts by name -------------------------------------------------
 % An unknown name is the empty contract, which has no introductory act.
 exported procedure contract(Constant?, Contract).
@@ -177,6 +269,7 @@ contract(sg_imposed, C?) :- sg_imposed(C).
 contract(sg_gossip, C?) :- sg_gossip(C).
 contract(sg_chain, C?) :- sg_chain(C).
 contract(sg_chain_cut, C?) :- sg_chain_cut(C).
+contract(cssn, C?) :- cssn(C).
 contract(cur_no_mint, C?) :- cur_no_mint(C).
 contract(cur_loose_mint, C?) :- cur_loose_mint(C).
 contract(_, []) :- otherwise | true.
