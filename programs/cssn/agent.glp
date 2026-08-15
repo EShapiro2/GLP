@@ -6,21 +6,29 @@
 %% bind_response, bind_enrol, handle_response, await_group_channel: local (call
 %% agent recursively)
 %%
-%% v3 changes — childhood is no longer given:
-%%   - agent/4 becomes agent/5, carrying the records of Definition "Child-Safe
-%%     Social Graph Guarded Transactions" that no channel stands for: the count
-%%     of declarations of age a_p, and the approvals alpha_p.  The friend set
-%%     c_p, the parents rho_p and the children kappa_p ARE the friend_output,
-%%     parent_output and child_output entries of the outputs list.
-%%   - declare_age, enrol and release added.  Befriending requires a_p > 0 at
-%%     both parties.  The parent-child channel is created by enrol and torn down
-%%     by release, where v2 had boot wire it.
-%%   - Accepting an enrolment turns this agent into a child agent; release turns
-%%     a child agent back into this one.  That is why the module cannot decide
-%%     from boot which of the two a party runs.
-%%   - A child friendship's commit and its ending reach each named parent, which
-%%     is what adds and removes the approved record that makes the parent a party
-%%     to the act rather than a bystander.
+%% This is the ADULT agent: a party running it holds no parent, which is what
+%% being an adult is.  Its state carries the records of Definition "Child-Safe
+%% Social Graph Guarded Transactions" that no channel stands for --- alpha_p and
+%% omega_p, the approvals given and withdrawals taken, and h_p, the posts held.
+%% The friend set c_p, the parents rho_p and the children kappa_p ARE the
+%% friend_output, parent_output and child_output entries of the outputs list.
+%%
+%%   - There is no declaring of age and no count of declarations.  A party is a
+%%     child exactly while it holds a parent on record, so befriending and adult
+%%     group joining need no test of this agent's state: running this module IS
+%%     rho_p empty.  The parent-child channel is created by becoming parent and
+%%     child, and torn down by ending it.
+%%   - Becoming a parent asks nothing of the party that becomes one: a child may
+%%     be a parent, and no clause of a grassroots contract may gate the act by
+%%     which two strangers come into relation.
+%%   - Accepting the offer turns this agent into a child agent; ending the
+%%     parenting turns a child agent back into this one.  That is why the module
+%%     cannot decide from boot which of the two a party runs.
+%%   - A child friendship or membership that commits, and one that ends, reach
+%%     each named parent as a bare approval or withdrawal, naming nobody.  The
+%%     counts are what make the parent a party to the act rather than a
+%%     bystander, and what let ANY parent of a child end ANY friendship or
+%%     membership of that child.
 
 %% =============================================================================
 %% IMPORTED PROCEDURES
@@ -49,14 +57,14 @@ await_group_channel(_, _, _, [], _, _, _) :- true.
 %% RESPONSE HANDLING — local (calls merge)
 %% =============================================================================
 
-%% Befriend adds the precondition a_p > 0 at both parties, so the acceptance is
-%% where this party's own count of declarations of age is checked.
-procedure bind_response(Constant?, Decision?, Constant?, Response, AgentState?, Stream(OutputEntry)?, Stream(OutputEntry), Stream(NetInMsg)?, Stream(NetInMsg)).
-bind_response(Id, yes, From, accept(RetCh?), state(Age, _), Outs, Outs1?, In, In1?) :-
-    Age? > 0, new_channel(RetCh, LocalCh) |
+%% Befriending requires both parties to hold no parent.  This module is what a
+%% party holding none runs, so the precondition is met by construction here and
+%% denied by construction in child_agent, which takes no cold calls at all.
+procedure bind_response(Constant?, Decision?, Constant?, Response, Stream(OutputEntry)?, Stream(OutputEntry), Stream(NetInMsg)?, Stream(NetInMsg)).
+bind_response(Id, yes, From, accept(RetCh?), Outs, Outs1?, In, In1?) :-
+    new_channel(RetCh, LocalCh) |
     handle_response(Id?, accept(LocalCh?), From?, Outs?, Outs1, In?, In1).
-%% Refused, or this party is of no age and may not befriend.
-bind_response(_, _, _, no, _, Outs, Outs1?, In, In?) :-
+bind_response(_, _, _, no, Outs, Outs1?, In, In?) :-
     otherwise |
     send_user( msg(agent, person, rejected), Outs?, Outs1).
 
@@ -72,37 +80,19 @@ handle_response(_, no, From, Outs, Outs1?, In, In?) :-
 %% ENROLMENT — local (calls agent and child_agent)
 %% =============================================================================
 
-%% The child's side of enrol.  It allocates the parent-child channel, conveys
-%% the parent's end in its answer, keeps its own end, and thereafter runs as a
-%% child agent: rho_r has gained p, so this party IS a child.
+%% The child's side of becoming parent and child.  It allocates the parent-child
+%% channel, conveys the parent's end in its answer, keeps its own end, and
+%% thereafter runs as a child agent: rho_r has gained p, so this party IS a child.
 procedure bind_enrol(Constant?, Decision?, Constant?, EnrolResponse, AgentState?, Stream(UserInMsg)?, Stream(NetInMsg)?, Stream(OutputEntry)?).
-bind_enrol(Id, yes, Parent, enrol_accept(ParentEnd?), state(Age, Ap), UserIn, NetIn, Outs) :-
-    Age? < 1, ground(Parent?), new_channel(ParentEnd, ch(FromParent, ToParent?)) |
+bind_enrol(Id, yes, Parent, enrol_accept(ParentEnd?), St, UserIn, NetIn, Outs) :-
+    ground(Parent?), new_channel(ParentEnd, ch(FromParent, ToParent?)) |
     add_parent_output(Parent?, ToParent, Outs?, Outs1),
     send_user( msg(agent, person, enrolled(Parent?)), Outs1?, Outs2),
     merge(NetIn?, FromParent?, NetIn1),
-    child_agent # child_agent(Id?, Parent?, state(Age?, Ap?), UserIn?, NetIn1?, Outs2?).
-%% Refused, or this party is already of age and so cannot be enrolled.
+    child_agent # child_agent(Id?, Parent?, St?, UserIn?, NetIn1?, Outs2?).
 bind_enrol(Id, _, _, enrol_no, St, UserIn, NetIn, Outs) :-
     otherwise |
     agent(Id?, St?, UserIn?, NetIn?, Outs?).
-
-%% =============================================================================
-%% UNFRIEND ON BEHALF OF A CHILD — local (calls agent)
-%% =============================================================================
-
-procedure unfriend_child_of_dispatch(Decision?, Constant?, Constant?, Constant?, AgentState?,
-    Stream(UserInMsg)?, Stream(NetInMsg)?, Stream(OutputEntry)?).
-%% Approved: tell the child to end it.  alpha_p loses the other child when the
-%% child reports the friendship ended, which is the same transaction.
-unfriend_child_of_dispatch(yes, Id, MyChild, Target, St, UserIn, NetIn, Outs) :-
-    ground(MyChild?) |
-    send_child(MyChild?, msg(Id?, MyChild?, unfriend_child(Target?)), Outs?, Outs1),
-    agent(Id?, St?, UserIn?, NetIn?, Outs1?).
-%% Not a friendship this parent approved.
-unfriend_child_of_dispatch(no, Id, _, _, St, UserIn, NetIn, Outs) :-
-    send_user( msg(agent, person, rejected), Outs?, Outs1),
-    agent(Id?, St?, UserIn?, NetIn?, Outs1?).
 
 %% =============================================================================
 %% AGENT/5
@@ -110,36 +100,20 @@ unfriend_child_of_dispatch(no, Id, _, _, St, UserIn, NetIn, Outs) :-
 
 exported procedure agent(Constant?, AgentState?, Stream(UserInMsg)?, Stream(NetInMsg)?, Stream(OutputEntry)?).
 
-%% --- Majority ---
-
-%% A party declares itself of age, at its own election.  The act requires and
-%% forbids nothing, so a child may perform it too (see child_agent); what it
-%% cannot do is remove the child(r) record standing in its parent's state.
-agent(Id, state(Age, Ap), [msg(person, Id1, declare_age)|UserIn], NetIn, Outs) :-
-    Id? =?= Id1? |
-    Age1 := Age? + 1,
-    send_user( msg(agent, person, age_declared), Outs?, Outs1),
-    agent(Id?, state(Age1?, Ap?), UserIn?, NetIn?, Outs1?).
-
 %% --- User messages ---
 
-%% User initiates cold call — two parties of age become friends.
-agent(Id, state(Age, Ap), [msg(person, Id1, connect(Target))|UserIn], NetIn, Outs) :-
-    Id? =?= Id1?, Age? > 0, ground(Target?) |
+%% User initiates cold call.  Befriending requires both parties to hold no
+%% parent; this party holds none, since that is what running this module means.
+agent(Id, St, [msg(person, Id1, connect(Target))|UserIn], NetIn, Outs) :-
+    Id? =?= Id1?, ground(Target?) |
     send_net( msg(Target?, intro(Id?, Resp)), Outs?, Outs1),
     inject_msg(Resp?, Target?, Id?, UserIn?, UserIn1),
-    agent(Id?, state(Age?, Ap?), UserIn1?, NetIn?, Outs1?).
-
-%% A party of no age cannot open a friendship.
-agent(Id, state(Age, Ap), [msg(person, Id1, connect(_))|UserIn], NetIn, Outs) :-
-    Id? =?= Id1?, Age? < 1 |
-    send_user( msg(agent, person, rejected), Outs?, Outs1),
-    agent(Id?, state(Age?, Ap?), UserIn?, NetIn?, Outs1?).
+    agent(Id?, St?, UserIn1?, NetIn?, Outs1?).
 
 %% User decision on cold-call
 agent(Id, St, [msg(person, Id1, decision(Dec, From, response(Resp?)))|UserIn], NetIn, Outs) :-
     Id? =?= Id1? |
-    bind_response(Id?, Dec?, From?, Resp, St?, Outs?, Outs1, NetIn?, NetIn1),
+    bind_response(Id?, Dec?, From?, Resp, Outs?, Outs1, NetIn?, NetIn1),
     agent(Id?, St?, UserIn?, NetIn1?, Outs1?).
 
 %% User sends text message to friend
@@ -186,34 +160,30 @@ agent(Id, St, [msg(From, Id1, response(Resp))|UserIn], NetIn, Outs) :-
     handle_response(Id?, Resp?, From?, Outs?, Outs1, NetIn?, NetIn1),
     agent(Id?, St?, UserIn?, NetIn1?, Outs1?).
 
-%% --- Enrolment and release ---
+%% --- Becoming parent and child, and ending it ---
 
-%% A party of age enrols a party not of age.  The two have no channel between
-%% them yet — creating it is what the act does — so the offer travels the
-%% cold-call path.
-agent(Id, state(Age, Ap), [msg(person, Id1, enrol_child(Child))|UserIn], NetIn, Outs) :-
-    Id? =?= Id1?, Age? > 0, ground(Child?) |
+%% A party offers to become a parent of another.  The act asks nothing of either
+%% beyond the first not being a parent of the second already, so there is no test
+%% here: no clause of a grassroots contract may gate the act by which two
+%% strangers come into relation.  The two have no channel between them yet ---
+%% creating it is what the act does --- so the offer travels the cold-call path.
+agent(Id, St, [msg(person, Id1, enrol_child(Child))|UserIn], NetIn, Outs) :-
+    Id? =?= Id1?, ground(Child?) |
     send_net( msg(Child?, enrol(Id?, Resp)), Outs?, Outs1),
     inject_enrol_response(Resp?, Child?, UserIn?, UserIn1),
-    agent(Id?, state(Age?, Ap?), UserIn1?, NetIn?, Outs1?).
+    agent(Id?, St?, UserIn1?, NetIn?, Outs1?).
 
-%% A party of no age cannot declare itself a parent.
-agent(Id, state(Age, Ap), [msg(person, Id1, enrol_child(_))|UserIn], NetIn, Outs) :-
-    Id? =?= Id1?, Age? < 1 |
-    send_user( msg(agent, person, rejected), Outs?, Outs1),
-    agent(Id?, state(Age?, Ap?), UserIn?, NetIn?, Outs1?).
-
-%% The person answers the enrolment offer.  On acceptance this agent becomes a
-%% child agent, so there is no recursive call here.
+%% The person answers the offer.  On acceptance this agent becomes a child agent,
+%% so there is no recursive call here.
 agent(Id, St, [msg(person, Id1, enrol_decision(Dec, Parent, enrol_response(Resp?)))|UserIn], NetIn, Outs) :-
     Id? =?= Id1? |
     bind_enrol(Id?, Dec?, Parent?, Resp, St?, UserIn?, NetIn?, Outs?).
 
 %% The child accepted: adopt the channel it conveyed.  kappa_p gains it.
-agent(Id, state(Age, Ap), [enrol_response(Child, enrol_accept(Ch))|UserIn], NetIn, Outs) :-
+agent(Id, St, [enrol_response(Child, enrol_accept(Ch))|UserIn], NetIn, Outs) :-
     ground(Id?), ground(Child?) |
     enrol_commit(Child?, Ch?, Outs?, Outs1, NetIn?, NetIn1),
-    agent(Id?, state(Age?, Ap?), UserIn?, NetIn1?, Outs1?).
+    agent(Id?, St?, UserIn?, NetIn1?, Outs1?).
 
 %% The child declined.
 agent(Id, St, [enrol_response(Child, enrol_no)|UserIn], NetIn, Outs) :-
@@ -221,14 +191,14 @@ agent(Id, St, [enrol_response(Child, enrol_no)|UserIn], NetIn, Outs) :-
     send_user( msg(agent, person, rejected(Child?)), Outs?, Outs1),
     agent(Id?, St?, UserIn?, NetIn?, Outs1?).
 
-%% The parent releases its child: grant it on the parent-child channel, then
-%% tear the channel down.  kappa_p loses the child.
-agent(Id, state(Age, Ap), [msg(person, Id1, approve_release(Child))|UserIn], NetIn, Outs) :-
+%% The parent ends the parenting: grant it on the parent-child channel, then tear
+%% the channel down.  kappa_p loses the child.
+agent(Id, St, [msg(person, Id1, approve_release(Child))|UserIn], NetIn, Outs) :-
     Id? =?= Id1?, ground(Child?) |
     send_child(Child?, msg(Id?, Child?, release_grant), Outs?, Outs1),
     close_child(Child?, Outs1?, Outs2),
     send_user( msg(agent, person, released(Child?)), Outs2?, Outs3),
-    agent(Id?, state(Age?, Ap?), UserIn?, NetIn?, Outs3?).
+    agent(Id?, St?, UserIn?, NetIn?, Outs3?).
 
 %% --- CSSG: Child-safe social graph ---
 
@@ -288,21 +258,22 @@ agent(Id, St, UserIn, [msg(Child, Id1, release_request)|NetIn], Outs) :-
     send_user( msg(agent, person, release_asked(Child?)), Outs?, Outs1),
     agent(Id?, St?, UserIn?, NetIn?, Outs1?).
 
-%% --- The approvals a child friendship leaves at its named parents ---
+%% --- The counts a child's acts leave at its parents ---
 
-%% A child of ours has befriended another child: alpha_p gains that child.  The
-%% record arrives at the commit rather than at the parent's own step, so no
-%% approval stands for a friendship that was never formed.
-agent(Id, state(Age, Ap), UserIn, [msg(_, Id1, child_befriended(Other))|NetIn], Outs) :-
-    Id? =?= Id1?, ground(Other?) |
-    add_approval(Other?, Ap?, Ap1),
-    agent(Id?, state(Age?, Ap1?), UserIn?, NetIn?, Outs?).
+%% A friendship or membership of a child of ours has been established: alpha_p
+%% advances.  The count arrives at the commit rather than at the parent's own
+%% step, so no approval stands for an act that was never carried out, and it
+%% names nobody, so it records that this parent approved and not what.
+agent(Id, state(Al, Om, Ps, Sn), UserIn, [msg(_, Id1, approval)|NetIn], Outs) :-
+    Id? =?= Id1? |
+    Al1 := Al? + 1,
+    agent(Id?, state(Al1?, Om?, Ps?, Sn?), UserIn?, NetIn?, Outs?).
 
-%% That friendship has ended: alpha_p loses the child.
-agent(Id, state(Age, Ap), UserIn, [msg(_, Id1, child_unfriended(Other))|NetIn], Outs) :-
-    Id? =?= Id1?, ground(Other?) |
-    remove_approval(Other?, Ap?, Ap1),
-    agent(Id?, state(Age?, Ap1?), UserIn?, NetIn?, Outs?).
+%% One has ended: omega_p advances.
+agent(Id, state(Al, Om, Ps, Sn), UserIn, [msg(_, Id1, withdrawal)|NetIn], Outs) :-
+    Id? =?= Id1? |
+    Om1 := Om? + 1,
+    agent(Id?, state(Al?, Om1?, Ps?, Sn?), UserIn?, NetIn?, Outs?).
 
 %% --- CSSN: Child-safe social networking (groups) ---
 
@@ -348,14 +319,16 @@ agent(Id, St, [msg(person, Id1, reject_group(_, group_channel(ch(_, [nack|[]])))
     Id? =?= Id1? |
     agent(Id?, St?, UserIn?, NetIn?, Outs?).
 
-%% Injected group_join_ack — creator wires hub-side, sends member-end channel
-agent(Id, St, [group_join_ack(GroupId, Invitee, ch(_, [group_channel(MemberEnd?)|[]]))|UserIn],
+%% Injected group_join_ack — creator wires hub-side, sends member-end channel.
+%% The joiner is owed every post this creator holds for the group, so the hub
+%% side writes them on its stream as it opens it.
+agent(Id, state(Al, Om, Ps, Sn), [group_join_ack(GroupId, Invitee, ch(_, [group_channel(MemberEnd?)|[]]))|UserIn],
         NetIn, Outs) :-
     ground(Id?), ground(GroupId?), ground(Invitee?) |
-    setup_group_hub_side(GroupId?, Invitee?, Outs?, Outs1, NetIn?, NetIn1, MemberEnd),
+    setup_group_hub_side(GroupId?, Invitee?, Ps?, Ps1, Sn?, Sn1, Outs?, Outs1, NetIn?, NetIn1, MemberEnd),
     send_user( msg(agent, person, group_joined_member(GroupId?, Invitee?)),
         Outs1?, Outs2),
-    agent(Id?, St?, UserIn?, NetIn1?, Outs2?).
+    agent(Id?, state(Al?, Om?, Ps1?, Sn1?), UserIn?, NetIn1?, Outs2?).
 
 %% Injected group_join_nack — nothing to clean up
 agent(Id, St, [group_join_nack(_, _)|UserIn], NetIn, Outs) :-
@@ -417,14 +390,16 @@ agent(Id, St, [msg(person, Id1, reject_child_group(_, _, consent(no)))|UserIn],
 
 %% --- Unfriend (v3) ---
 
-%% Parent initiates unfriend on behalf of child.  Child unfriend is provided
-%% s in alpha_p, so the parent may only end a friendship it approved: this is
-%% what makes the approval a record the protocol reads and not merely writes.
-agent(Id, state(Age, Ap), [msg(person, Id1, unfriend_child_of(MyChild, Target))|UserIn], NetIn, Outs) :-
+%% A parent ends a friendship of a child of its own.  It holds no record of whom
+%% that child befriended --- its approvals name nobody --- so there is nothing to
+%% look up and nothing to check: any parent of either child may end any
+%% friendship of that child, whether or not it was the parent that approved it.
+%% omega_p advances when the child reports the friendship ended, which is the
+%% same transaction.
+agent(Id, St, [msg(person, Id1, unfriend_child_of(MyChild, Target))|UserIn], NetIn, Outs) :-
     Id? =?= Id1?, ground(MyChild?), ground(Target?) |
-    has_approval(Target?, Ap?, Ap1, Approved),
-    unfriend_child_of_dispatch(Approved?, Id?, MyChild?, Target?, state(Age?, Ap1?),
-        UserIn?, NetIn?, Outs?).
+    send_child(MyChild?, msg(Id?, MyChild?, unfriend_child(Target?)), Outs?, Outs1),
+    agent(Id?, St?, UserIn?, NetIn?, Outs1?).
 
 %% --- Network messages ---
 
@@ -481,14 +456,17 @@ agent(Id, St, UserIn, [msg(Child, Id1, group_consent_req(GroupId, Consent?))|Net
         child_group_consent(Child?, GroupId?, Consent)), Outs?, Outs1),
     agent(Id?, St?, UserIn?, NetIn?, Outs1?).
 
-%% Group message from group channel — distribute to all members and notify user
-agent(Id, St, UserIn, [msg(_, _, group_msg(GroupId, Author, Text))|NetIn], Outs) :-
+%% Group message from group channel — hold it, distribute to the members on the
+%% list now, and notify the user.  Holding it is what makes it deliverable to a
+%% member that joins later: the creator has not sent it that member yet.
+agent(Id, state(Al, Om, Ps, Sn), UserIn, [msg(_, _, group_msg(GroupId, Author, Text))|NetIn], Outs) :-
     ground(Id?), ground(GroupId?), ground(Author?), ground(Text?) |
+    add_post(post(GroupId?, Author?, Text?), Ps?, Ps1),
     distribute_group_msg(GroupId?,
-        msg(Author?, Author?, group_msg(GroupId?, Author?, Text?)), Outs?, Outs1),
+        msg(Author?, Author?, group_msg(GroupId?, Author?, Text?)), Sn?, Sn1, Outs?, Outs1),
     send_user( msg(agent, person, group_received(GroupId?, Author?, Text?)),
         Outs1?, Outs2),
-    agent(Id?, St?, UserIn?, NetIn?, Outs2?).
+    agent(Id?, state(Al?, Om?, Ps1?, Sn1?), UserIn?, NetIn?, Outs2?).
 
 %% Creator receives leave notification from member
 agent(Id, St, UserIn, [msg(Member, _, group_leave(GroupId, Member1))|NetIn], Outs) :-

@@ -21,7 +21,7 @@
 %% IMPORTED PROCEDURES — cross-module dependencies
 %% =============================================================================
 
-imported procedure agent#agent(Constant?, Stream(UserInMsg)?, Stream(NetInMsg)?, Stream(OutputEntry)?).
+imported procedure agent#agent(Constant?, AgentState?, Stream(UserInMsg)?, Stream(NetInMsg)?, Stream(OutputEntry)?).
 
 imported procedure mediator#ui_mediator(Constant?, Channel(Stream(AgentToUserMsg), Stream(MediatorToAgentMsg))?, Channel(Stream(UserCmd), Stream(UserNotify))?, Stream(PendingEntry)?, Constant?).
 
@@ -107,17 +107,17 @@ ui_drain(_, [], []).
 
 procedure agent_init(Constant?, Stream(UserCmd)?, Stream(NetInMsg)?).
 agent_init(bob, UserIn, _) :-
-    agent # agent(bob, BAgentIn?, BNetIn?,
+    agent # agent(bob, state(0, 0, [], []), BAgentIn?, BNetIn?,
           [user_output(BA2U), net_output(BNetOut)]),
     mediator # ui_mediator(bob, ch(BA2U?, BAgentIn),
                 ch(UserIn?, BUserOut), [], 1),
     send_to_user(BUserOut?),
-    agent # agent(alice, AAgentIn?, ANetIn?,
+    agent # agent(alice, state(0, 0, [], []), AAgentIn?, ANetIn?,
           [user_output(AA2U), net_output(ANetOut)]),
     mediator # ui_mediator(alice, ch(AA2U?, AAgentIn),
                 ch(ACmds?, AUserOut), [], 1),
     alice_actor(AUserOut?, ACmds),
-    agent # agent(charlie, CAgentIn?, CNetIn?,
+    agent # agent(charlie, state(0, 0, [], []), CAgentIn?, CNetIn?,
           [user_output(CA2U), net_output(CNetOut)]),
     mediator # ui_mediator(charlie, ch(CA2U?, CAgentIn),
                 ch(CCmds?, CUserOut), [], 1),

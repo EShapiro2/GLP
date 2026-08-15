@@ -34,9 +34,8 @@
 %%     pass-through, and the agent clause matching msg(person, Id, cmd(X1..Xk)):
 %%     connect/1, send/2, introduce/2, child_introduce/3, create_group/1,
 %%     invite_group/2, invite_group/3, send_group/2, leave_group/1,
-%%     leave_child_group/2, remove_from_group/2, unfriend_child_of/2,
-%%     enrol_child/1, and declare_age, whose Request clause takes no input
-%%     because the willing IS the declaration;
+%%     leave_child_group/2, remove_from_group/2, unfriend_child_of/2 and
+%%     enrol_child/1;
 %%   - a responder goal, spawned per arriving offer  ->  a pending-table entry
 %%     req(N) in the mediator, rendered as an inbox card;
 %%   - a responder's volition-guarded clause  ->  the UserCmds decision/3
@@ -70,9 +69,9 @@
 %% distribute_group_msg, add_group_output, group_await_join,
 %% inject_group_result, close_output, close_outputs), the enrolment and approval
 %% helpers (add_parent_output, close_child, enrol_commit,
-%% inject_enrol_response, add_approval, remove_approval, has_approval), and the
+%% inject_enrol_response, add_post, replay_posts), and the
 %% local await_group_channel, bind_response, handle_response,
-%% unfriend_child_of_dispatch — are those of agent.glp, self.glp, and
+%% — are those of agent.glp, self.glp, and
 %% lib/routing/, unchanged; this file gives the agent procedure and its
 %% responders.
 
@@ -92,7 +91,6 @@ AgentContent ::= connected(Constant)
                ; group_received(GroupId, Constant, Constant)
                ; group_removed(GroupId)
                ; unfriended(Constant)
-               ; age_declared
                ; enrolled(Constant)
                ; released(Constant).
 AgentToUserMsg ::= msg(Constant, Constant, AgentContent).
@@ -266,39 +264,34 @@ respond_release(offer(Child), []) :-
 
 procedure agent(Constant?, AgentState?, Stream(UserInMsg)?, Stream(NetInMsg)?, Stream(OutputEntry)?).
 
-%% --- Volitional: majority ---
+%% --- Volitional: becoming a parent ---
 
-%% Declare oneself of age, at one's own election.  The clause takes no input
-%% from the person: the willing IS the declaration.
-*
-agent(Id, state(Age, Ap), UserIn, NetIn, Outs) :-
-    ground(Id?) |
-    Age1 := Age? + 1,
-    send_user(msg(agent, person, age_declared), Outs?, Outs1),
-    agent(Id?, state(Age1?, Ap?), UserIn?, NetIn?, Outs1?).
-
-%% Enrol a party not of age as one's child.  The two have no channel between
-%% them yet — creating it is what the act does — so the offer goes by cold call.
+%% Offer to become a parent of another party.  The act asks nothing of either
+%% beyond the first not being a parent of the second already, so the clause has
+%% no precondition on my own state: a party that is itself a child may will it.
+%% The two have no channel between them yet — creating it is what the act does —
+%% so the offer goes by cold call.
 *(Child)
-agent(Id, state(Age, Ap), UserIn, NetIn, Outs) :-
-    ground(Id?), Age? > 0, ground(Child?) |
+agent(Id, St, UserIn, NetIn, Outs) :-
+    ground(Id?), ground(Child?) |
     send_net(msg(Child?, enrol(Id?, Resp)), Outs?, Outs1),
     inject_enrol_response(Resp?, Child?, UserIn?, UserIn1),
-    agent(Id?, state(Age?, Ap?), UserIn1?, NetIn?, Outs1?).
+    agent(Id?, St?, UserIn1?, NetIn?, Outs1?).
 
 %% --- Volitional: social transactions the person originates ---
 %% Request clauses, perpetually pending; each willing supplies the parameters.
 %% Compiled form: UserCmds connect/1, send/2, introduce/2, child_introduce/3,
 %% unfriend_child_of/2.
 
-%% Offer friendship by cold call.  Two parties of age become friends, so the
-%% person's own count of declarations of age guards the clause.
+%% Offer friendship by cold call.  Befriending requires both parties to hold no
+%% parent, and a party holding none is exactly a party running this program, so
+%% the clause needs no test of my own state.
 *(Target)
-agent(Id, state(Age, Ap), UserIn, NetIn, Outs) :-
-    ground(Id?), Age? > 0, ground(Target?) |
+agent(Id, St, UserIn, NetIn, Outs) :-
+    ground(Id?), ground(Target?) |
     send_net(msg(Target?, intro(Id?, Resp)), Outs?, Outs1),
     inject_msg(Resp?, Target?, Id?, UserIn?, UserIn1),
-    agent(Id?, state(Age?, Ap?), UserIn1?, NetIn?, Outs1?).
+    agent(Id?, St?, UserIn1?, NetIn?, Outs1?).
 
 %% Message a friend.
 *(Target, Text)
@@ -337,17 +330,15 @@ agent(Id, St, UserIn, NetIn, Outs) :-
     send_friend(Friend?, msg(Id?, Friend?, child_intro(MyChild?, C2Ch?)), Outs1?, Outs2),
     agent(Id?, St?, UserIn?, NetIn?, Outs2?).
 
-%% Unfriend on behalf of own child: tell the child to unfriend Target.  Child
-%% unfriend is provided s in alpha_p, so the parent may only end a friendship it
-%% approved; the deployed clause reaches the same test through a dispatch on
-%% has_approval, a body goal being the only way to walk a record in a guard's
-%% place.
+%% End a friendship of a child of mine: tell the child to unfriend Target.  My
+%% approvals name nobody, so I hold no record of whom my child befriended and
+%% there is nothing to look up: any parent of either child may end any friendship
+%% of that child, whether or not it approved it.
 *(MyChild, Target)
-agent(Id, state(Age, Ap), UserIn, NetIn, Outs) :-
+agent(Id, St, UserIn, NetIn, Outs) :-
     ground(Id?), ground(MyChild?), ground(Target?) |
-    has_approval(Target?, Ap?, Ap1, Approved),
-    unfriend_child_of_dispatch(Approved?, Id?, MyChild?, Target?, state(Age?, Ap1?),
-        UserIn?, NetIn?, Outs?).
+    send_child(MyChild?, msg(Id?, MyChild?, unfriend_child(Target?)), Outs?, Outs1),
+    agent(Id?, St?, UserIn?, NetIn?, Outs1?).
 
 %% --- Volitional: group transactions the person originates ---
 %% Request clauses, perpetually pending; each willing supplies the parameters.
@@ -430,7 +421,7 @@ agent(Id, St, UserIn, [msg(Id1, intro(From, Resp?))|NetIn], Outs) :-
     merge(Ans?, UserIn?, UserIn1),
     agent(Id?, St?, UserIn1?, NetIn?, Outs?).
 
-%% A party of age offers to enrol me as its child: spawn a responder likewise.
+%% Another party offers to become my parent: spawn a responder likewise.
 agent(Id, St, UserIn, [msg(Id1, enrol(Parent, Resp?))|NetIn], Outs) :-
     Id? =?= Id1? |
     respond_enrol(Id?, offer(Parent?), Resp, Ans),
@@ -445,20 +436,20 @@ agent(Id, St, UserIn, [msg(Child, Id1, release_request)|NetIn], Outs) :-
     merge(Ans?, UserIn?, UserIn1),
     agent(Id?, St?, UserIn1?, NetIn?, Outs?).
 
-%% A child of mine has befriended another child: alpha_p gains that child.  The
-%% record arrives at the commit rather than at my own step, so no approval of
-%% mine stands for a friendship that was never formed.  Unguarded: my will was
-%% given when I approved the introduction.
-agent(Id, state(Age, Ap), UserIn, [msg(_, Id1, child_befriended(Other))|NetIn], Outs) :-
-    Id? =?= Id1?, ground(Other?) |
-    add_approval(Other?, Ap?, Ap1),
-    agent(Id?, state(Age?, Ap1?), UserIn?, NetIn?, Outs?).
+%% A friendship or membership of a child of mine has been established: alpha_p
+%% advances.  The count arrives at the commit rather than at my own step, so no
+%% approval of mine stands for an act that was never carried out, and it names
+%% nobody.  Unguarded: my will was given when I approved.
+agent(Id, state(Al, Om, Ps, Sn), UserIn, [msg(_, Id1, approval)|NetIn], Outs) :-
+    Id? =?= Id1? |
+    Al1 := Al? + 1,
+    agent(Id?, state(Al1?, Om?, Ps?, Sn?), UserIn?, NetIn?, Outs?).
 
-%% That friendship has ended: alpha_p loses the child.
-agent(Id, state(Age, Ap), UserIn, [msg(_, Id1, child_unfriended(Other))|NetIn], Outs) :-
-    Id? =?= Id1?, ground(Other?) |
-    remove_approval(Other?, Ap?, Ap1),
-    agent(Id?, state(Age?, Ap1?), UserIn?, NetIn?, Outs?).
+%% One has ended: omega_p advances.
+agent(Id, state(Al, Om, Ps, Sn), UserIn, [msg(_, Id1, withdrawal)|NetIn], Outs) :-
+    Id? =?= Id1? |
+    Om1 := Om? + 1,
+    agent(Id?, state(Al?, Om1?, Ps?, Sn?), UserIn?, NetIn?, Outs?).
 
 %% A common friend offers an introduction: spawn a responder likewise.
 agent(Id, St, UserIn, [msg(_From, Id1, intro(Other, Ch))|NetIn], Outs) :-
@@ -508,15 +499,17 @@ agent(Id, St, UserIn, [msg(From, Id1, text(Text))|NetIn], Outs) :-
     send_user(msg(agent, person, received(From?, Text?)), Outs?, Outs1),
     agent(Id?, St?, UserIn?, NetIn?, Outs1?).
 
-%% A group message arrives on a group channel — distribute to all members
-%% (hub side) and show it to the person.
-agent(Id, St, UserIn, [msg(_, _, group_msg(GroupId, Author, Text))|NetIn], Outs) :-
+%% A group message arrives on a group channel — hold it, distribute to the
+%% members on the list now, and show it to the person.  Holding it is what makes
+%% it deliverable to a member that joins later.
+agent(Id, state(Al, Om, Ps, Sn), UserIn, [msg(_, _, group_msg(GroupId, Author, Text))|NetIn], Outs) :-
     ground(Id?), ground(GroupId?), ground(Author?), ground(Text?) |
+    add_post(post(GroupId?, Author?, Text?), Ps?, Ps1),
     distribute_group_msg(GroupId?,
-        msg(Author?, Author?, group_msg(GroupId?, Author?, Text?)), Outs?, Outs1),
+        msg(Author?, Author?, group_msg(GroupId?, Author?, Text?)), Sn?, Sn1, Outs?, Outs1),
     send_user(msg(agent, person, group_received(GroupId?, Author?, Text?)),
         Outs1?, Outs2),
-    agent(Id?, St?, UserIn?, NetIn?, Outs2?).
+    agent(Id?, state(Al?, Om?, Ps1?, Sn1?), UserIn?, NetIn?, Outs2?).
 
 %% A member left my group — close their hub-side entry.
 agent(Id, St, UserIn, [msg(Member, _, group_leave(GroupId, Member1))|NetIn], Outs) :-
@@ -588,14 +581,15 @@ agent(Id, St, [intro_rejected(Other)|UserIn], NetIn, Outs) :-
     send_user(msg(agent, person, rejected(Other?)), Outs?, Outs1),
     agent(Id?, St?, UserIn?, NetIn?, Outs1?).
 
-%% Injected group_join_ack — creator wires the hub side, tells the person.
-agent(Id, St, [group_join_ack(GroupId, Invitee, ch(_, [group_channel(MemberEnd?)|[]]))|UserIn],
+%% Injected group_join_ack — creator wires the hub side and writes on it every
+%% post of the group it holds, which the joiner is owed, then tells the person.
+agent(Id, state(Al, Om, Ps, Sn), [group_join_ack(GroupId, Invitee, ch(_, [group_channel(MemberEnd?)|[]]))|UserIn],
         NetIn, Outs) :-
     ground(Id?), ground(GroupId?), ground(Invitee?) |
-    setup_group_hub_side(GroupId?, Invitee?, Outs?, Outs1, NetIn?, NetIn1, MemberEnd),
+    setup_group_hub_side(GroupId?, Invitee?, Ps?, Ps1, Sn?, Sn1, Outs?, Outs1, NetIn?, NetIn1, MemberEnd),
     send_user(msg(agent, person, group_joined_member(GroupId?, Invitee?)),
         Outs1?, Outs2),
-    agent(Id?, St?, UserIn?, NetIn1?, Outs2?).
+    agent(Id?, state(Al?, Om?, Ps1?, Sn1?), UserIn?, NetIn1?, Outs2?).
 
 %% Injected group_join_nack — nothing to clean up.
 agent(Id, St, [group_join_nack(_, _)|UserIn], NetIn, Outs) :-
@@ -609,19 +603,19 @@ agent(Id, St, [group_join_nack(_, _)|UserIn], NetIn, Outs) :-
 %% My own acceptance of an enrolment, from respond_enrol.  rho_r gains the
 %% parent, and this agent is thereafter the child agent — a separate program,
 %% and the one point at which this exhibit hands over.
-agent(Id, state(Age, Ap), [enrol_accepted(Parent, ch(FromParent, ToParent?))|UserIn], NetIn, Outs) :-
+agent(Id, St, [enrol_accepted(Parent, ch(FromParent, ToParent?))|UserIn], NetIn, Outs) :-
     ground(Id?), ground(Parent?) |
     add_parent_output(Parent?, ToParent, Outs?, Outs1),
     send_user(msg(agent, person, enrolled(Parent?)), Outs1?, Outs2),
     merge(NetIn?, FromParent?, NetIn1),
-    child_agent(Id?, Parent?, state(Age?, Ap?), UserIn?, NetIn1?, Outs2?).
+    child_agent(Id?, Parent?, St?, UserIn?, NetIn1?, Outs2?).
 
 %% The party I offered to enrol accepted: adopt the channel it conveyed.
 %% kappa_p gains it.
-agent(Id, state(Age, Ap), [enrol_response(Child, enrol_accept(Ch))|UserIn], NetIn, Outs) :-
+agent(Id, St, [enrol_response(Child, enrol_accept(Ch))|UserIn], NetIn, Outs) :-
     ground(Id?), ground(Child?) |
     enrol_commit(Child?, Ch?, Outs?, Outs1, NetIn?, NetIn1),
-    agent(Id?, state(Age?, Ap?), UserIn?, NetIn1?, Outs1?).
+    agent(Id?, St?, UserIn?, NetIn1?, Outs1?).
 
 %% It declined.
 agent(Id, St, [enrol_response(Child, enrol_no)|UserIn], NetIn, Outs) :-
@@ -629,14 +623,14 @@ agent(Id, St, [enrol_response(Child, enrol_no)|UserIn], NetIn, Outs) :-
     send_user(msg(agent, person, rejected(Child?)), Outs?, Outs1),
     agent(Id?, St?, UserIn?, NetIn?, Outs1?).
 
-%% My grant of a release, from respond_release: grant it on the parent-child
+%% My ending of the parenting, from respond_release: grant it on the parent-child
 %% channel, then tear the channel down.  kappa_p loses the child.
-agent(Id, state(Age, Ap), [approve_release(Child)|UserIn], NetIn, Outs) :-
+agent(Id, St, [approve_release(Child)|UserIn], NetIn, Outs) :-
     ground(Id?), ground(Child?) |
     send_child(Child?, msg(Id?, Child?, release_grant), Outs?, Outs1),
     close_child(Child?, Outs1?, Outs2),
     send_user(msg(agent, person, released(Child?)), Outs2?, Outs3),
-    agent(Id?, state(Age?, Ap?), UserIn?, NetIn?, Outs3?).
+    agent(Id?, St?, UserIn?, NetIn?, Outs3?).
 
 agent(_, _, [], _, Outs) :- close_outputs(Outs?).
 agent(_, _, _, [], Outs) :- close_outputs(Outs?).

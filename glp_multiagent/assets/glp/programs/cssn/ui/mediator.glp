@@ -382,6 +382,97 @@ ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
     send(unfriended(Target?), UserCh?, UserCh1),
     ui_mediator(Id?, AgentCh1?, UserCh1?, Ps?, N?).
 
+%% --- Enrolment and release ---
+%%
+%% Childhood is made by an act, not given: a party becomes a child by enrol and
+%% stops being one by release.  Enrol is the one act whose two parties have no
+%% channel between them when it starts --- the parent-child channel is what enrol
+%% creates --- so it travels the cold-call path and the child answers a card,
+%% which is why the offer and the decision need the pending list.  Release
+%% travels the parent-child channel that already exists, so both its clauses
+%% pass through.
+
+%% Agent-to-user: enrol_offer (non-ground --- store the response writer in pending)
+
+ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
+    receive(msg(agent, person, enrol_offer(Parent, Resp?)),
+            AgentCh?, AgentCh1),
+    ground(Parent?) |
+    send(enrol_offer(Parent?, req(N?)), UserCh?, UserCh1),
+    N1 := N? + 1,
+    ui_mediator(Id?, AgentCh1?, UserCh1?,
+        [pending(req(N?), enrol_response(Resp)) | Ps?], N1?).
+
+%% User-to-agent: enrol_decision (cold-call response)
+
+ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
+    receive(enrol_decision(Dec, Parent, ReqId), UserCh?, UserCh1),
+    ground(Id?), ground(Dec?), ground(Parent?),
+    ground(ReqId?) |
+    lookup_pending(ReqId?, Pv, Ps?, Ps1),
+    send(msg(person, Id?, enrol_decision(Dec?, Parent?, Pv?)),
+         AgentCh?, AgentCh1),
+    ui_mediator(Id?, AgentCh1?, UserCh1?, Ps1?, N?).
+
+%% User-to-agent: pass-through commands
+
+ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
+    receive(declare_age, UserCh?, UserCh1),
+    ground(Id?) |
+    send(msg(person, Id?, declare_age),
+         AgentCh?, AgentCh1),
+    ui_mediator(Id?, AgentCh1?, UserCh1?, Ps?, N?).
+
+ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
+    receive(enrol_child(Child), UserCh?, UserCh1),
+    ground(Id?), ground(Child?) |
+    send(msg(person, Id?, enrol_child(Child?)),
+         AgentCh?, AgentCh1),
+    ui_mediator(Id?, AgentCh1?, UserCh1?, Ps?, N?).
+
+ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
+    receive(request_release, UserCh?, UserCh1),
+    ground(Id?) |
+    send(msg(person, Id?, request_release),
+         AgentCh?, AgentCh1),
+    ui_mediator(Id?, AgentCh1?, UserCh1?, Ps?, N?).
+
+ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
+    receive(approve_release(Child), UserCh?, UserCh1),
+    ground(Id?), ground(Child?) |
+    send(msg(person, Id?, approve_release(Child?)),
+         AgentCh?, AgentCh1),
+    ui_mediator(Id?, AgentCh1?, UserCh1?, Ps?, N?).
+
+%% Agent-to-user: ground notifications (pass through)
+
+ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
+    receive(msg(agent, person, age_declared),
+            AgentCh?, AgentCh1) |
+    send(age_declared, UserCh?, UserCh1),
+    ui_mediator(Id?, AgentCh1?, UserCh1?, Ps?, N?).
+
+ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
+    receive(msg(agent, person, enrolled(Who)),
+            AgentCh?, AgentCh1),
+    ground(Who?) |
+    send(enrolled(Who?), UserCh?, UserCh1),
+    ui_mediator(Id?, AgentCh1?, UserCh1?, Ps?, N?).
+
+ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
+    receive(msg(agent, person, release_asked(Child)),
+            AgentCh?, AgentCh1),
+    ground(Child?) |
+    send(release_asked(Child?), UserCh?, UserCh1),
+    ui_mediator(Id?, AgentCh1?, UserCh1?, Ps?, N?).
+
+ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
+    receive(msg(agent, person, released(Who)),
+            AgentCh?, AgentCh1),
+    ground(Who?) |
+    send(released(Who?), UserCh?, UserCh1),
+    ui_mediator(Id?, AgentCh1?, UserCh1?, Ps?, N?).
+
 %% --- Termination ---
 
 ui_mediator(_, ch([], []), ch([], []), _, _).

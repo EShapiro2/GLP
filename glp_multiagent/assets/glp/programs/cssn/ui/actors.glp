@@ -1670,3 +1670,207 @@ procedure bob15_done(Stream(UserNotify)?, Stream(UserCmd)).
 bob15_done([_|In], Out?) :-
     otherwise | bob15_done(In?, Out).
 bob15_done([], []).
+
+%% =============================================================================
+%% PLAY 17 — a member that joins after a post was made
+%%
+%% Alice creates a group, Bob joins, Alice posts, and only then does Carol join.
+%% What Carol receives is the measurement: under a delivery index she receives
+%% nothing posted before her join; under Definition "Grassroots Social Network
+%% Guarded Transactions" item 5 she is owed the post, being on the member list
+%% with no record at the creator of having been sent it.
+%% =============================================================================
+
+exported procedure alice17(Channel(Stream(UserNotify), Stream(UserCmd))?).
+alice17(ch(In, [connect(bob)|Out?])) :-
+    alice17_wait_bob(In?, Out).
+
+procedure alice17_wait_bob(Stream(UserNotify)?, Stream(UserCmd)).
+alice17_wait_bob([connected(bob)|In], [connect(carol), connect(dave)|Out?]) :-
+    alice17_wait_carol(In?, Out).
+alice17_wait_bob([_|In], Out?) :-
+    otherwise | alice17_wait_bob(In?, Out).
+alice17_wait_bob([], []).
+
+procedure alice17_wait_carol(Stream(UserNotify)?, Stream(UserCmd)).
+alice17_wait_carol([connected(dave)|In], [create_group(late_join)|Out?]) :-
+    alice17_wait_created(In?, Out).
+alice17_wait_carol([_|In], Out?) :-
+    otherwise | alice17_wait_carol(In?, Out).
+alice17_wait_carol([], []).
+
+procedure alice17_wait_created(Stream(UserNotify)?, Stream(UserCmd)).
+alice17_wait_created([group_joined(group_id(alice, late_join))|In],
+                     [invite_group(group_id(alice, late_join), bob)|Out?]) :-
+    alice17_wait_bob_joined(In?, Out).
+alice17_wait_created([_|In], Out?) :-
+    otherwise | alice17_wait_created(In?, Out).
+alice17_wait_created([], []).
+
+procedure alice17_wait_bob_joined(Stream(UserNotify)?, Stream(UserCmd)).
+alice17_wait_bob_joined(
+        [group_joined_member(group_id(alice, late_join), bob)|In],
+        [send_group(group_id(alice, late_join), 'Posted before Carol joined')|Out?]) :-
+    alice17_wait_posted(In?, Out).
+alice17_wait_bob_joined([_|In], Out?) :-
+    otherwise | alice17_wait_bob_joined(In?, Out).
+alice17_wait_bob_joined([], []).
+
+%% The post is distributed when it comes back round the creator's own group
+%% channel, and group_received is what reports that.  Inviting Carol only then
+%% is what makes her join late rather than racing the post.
+procedure alice17_wait_posted(Stream(UserNotify)?, Stream(UserCmd)).
+alice17_wait_posted(
+        [group_received(group_id(alice, late_join), alice, 'Posted before Carol joined')|In],
+        [invite_group(group_id(alice, late_join), carol)|Out?]) :-
+    alice17_wait_carol_joined(In?, Out).
+alice17_wait_posted([_|In], Out?) :-
+    otherwise | alice17_wait_posted(In?, Out).
+alice17_wait_posted([], []).
+
+%% A second post, then a third member: Dave has been sent none of the two and is
+%% owed both, in the order they were made.
+procedure alice17_wait_carol_joined(Stream(UserNotify)?, Stream(UserCmd)).
+alice17_wait_carol_joined(
+        [group_joined_member(group_id(alice, late_join), carol)|In],
+        [send_group(group_id(alice, late_join), 'Posted before Dave joined')|Out?]) :-
+    alice17_wait_posted2(In?, Out).
+alice17_wait_carol_joined([_|In], Out?) :-
+    otherwise | alice17_wait_carol_joined(In?, Out).
+alice17_wait_carol_joined([], []).
+
+procedure alice17_wait_posted2(Stream(UserNotify)?, Stream(UserCmd)).
+alice17_wait_posted2(
+        [group_received(group_id(alice, late_join), alice, 'Posted before Dave joined')|In],
+        [invite_group(group_id(alice, late_join), dave)|Out?]) :-
+    alice17_done(In?, Out).
+alice17_wait_posted2([_|In], Out?) :-
+    otherwise | alice17_wait_posted2(In?, Out).
+alice17_wait_posted2([], []).
+
+procedure alice17_done(Stream(UserNotify)?, Stream(UserCmd)).
+alice17_done([_|In], Out?) :-
+    otherwise | alice17_done(In?, Out).
+alice17_done([], []).
+
+exported procedure dave17(Channel(Stream(UserNotify), Stream(UserCmd))?).
+dave17(ch([befriend(alice, ReqId)|In],
+          [decision(yes, alice, ReqId?)|Out?])) :-
+    ground(ReqId?) |
+    dave17_wait_invite(In?, Out).
+dave17(ch([_|In], Out?)) :-
+    otherwise | dave17(ch(In?, Out)).
+dave17(ch([], [])).
+
+procedure dave17_wait_invite(Stream(UserNotify)?, Stream(UserCmd)).
+dave17_wait_invite([group_invite(group_id(alice, late_join), ReqId)|In],
+                   [accept_group(group_id(alice, late_join), ReqId?)|Out?]) :-
+    ground(ReqId?) |
+    dave17_done(In?, Out).
+dave17_wait_invite([_|In], Out?) :-
+    otherwise | dave17_wait_invite(In?, Out).
+dave17_wait_invite([], []).
+
+procedure dave17_done(Stream(UserNotify)?, Stream(UserCmd)).
+dave17_done([_|In], Out?) :-
+    otherwise | dave17_done(In?, Out).
+dave17_done([], []).
+
+exported procedure bob17(Channel(Stream(UserNotify), Stream(UserCmd))?).
+bob17(ch([befriend(alice, ReqId)|In],
+         [decision(yes, alice, ReqId?)|Out?])) :-
+    ground(ReqId?) |
+    bob17_wait_invite(In?, Out).
+bob17(ch([_|In], Out?)) :-
+    otherwise | bob17(ch(In?, Out)).
+bob17(ch([], [])).
+
+procedure bob17_wait_invite(Stream(UserNotify)?, Stream(UserCmd)).
+bob17_wait_invite([group_invite(group_id(alice, late_join), ReqId)|In],
+                  [accept_group(group_id(alice, late_join), ReqId?)|Out?]) :-
+    ground(ReqId?) |
+    bob17_done(In?, Out).
+bob17_wait_invite([_|In], Out?) :-
+    otherwise | bob17_wait_invite(In?, Out).
+bob17_wait_invite([], []).
+
+procedure bob17_done(Stream(UserNotify)?, Stream(UserCmd)).
+bob17_done([_|In], Out?) :-
+    otherwise | bob17_done(In?, Out).
+bob17_done([], []).
+
+exported procedure carol17(Channel(Stream(UserNotify), Stream(UserCmd))?).
+carol17(ch([befriend(alice, ReqId)|In],
+           [decision(yes, alice, ReqId?)|Out?])) :-
+    ground(ReqId?) |
+    carol17_wait_invite(In?, Out).
+carol17(ch([_|In], Out?)) :-
+    otherwise | carol17(ch(In?, Out)).
+carol17(ch([], [])).
+
+procedure carol17_wait_invite(Stream(UserNotify)?, Stream(UserCmd)).
+carol17_wait_invite([group_invite(group_id(alice, late_join), ReqId)|In],
+                    [accept_group(group_id(alice, late_join), ReqId?)|Out?]) :-
+    ground(ReqId?) |
+    carol17_done(In?, Out).
+carol17_wait_invite([_|In], Out?) :-
+    otherwise | carol17_wait_invite(In?, Out).
+carol17_wait_invite([], []).
+
+procedure carol17_done(Stream(UserNotify)?, Stream(UserCmd)).
+carol17_done([_|In], Out?) :-
+    otherwise | carol17_done(In?, Out).
+carol17_done([], []).
+
+%% =============================================================================
+%% PLAY 18 — a child that is a parent
+%%
+%% Alice becomes Bob's parent, and Bob, who is now a child, becomes Carol's.
+%% Becoming a parent asks nothing of the party that becomes one --- it is the act
+%% by which two strangers come into relation, and no clause of a grassroots
+%% contract may gate it --- so Bob holds a parent and a child at once.  Carol
+%% then asks Bob to end the parenting and Bob, a child himself, does.
+%% =============================================================================
+
+exported procedure alice18(Channel(Stream(UserNotify), Stream(UserCmd))?).
+alice18(ch(In, [enrol_child(bob)|Out?])) :-
+    alice18_done(In?, Out).
+
+procedure alice18_done(Stream(UserNotify)?, Stream(UserCmd)).
+alice18_done([_|In], Out?) :-
+    otherwise | alice18_done(In?, Out).
+alice18_done([], []).
+
+exported procedure bob18(Channel(Stream(UserNotify), Stream(UserCmd))?).
+bob18(ch(In, Out?)) :-
+    bob18_loop(In?, Out).
+
+%% One state, so no notification can arrive too early.  enrolled(alice) is the
+%% offer Bob accepted; enrolled(carol) is the one Bob made.
+procedure bob18_loop(Stream(UserNotify)?, Stream(UserCmd)).
+bob18_loop([enrol_offer(alice, ReqId)|In],
+           [enrol_decision(yes, alice, ReqId?)|Out?]) :-
+    ground(ReqId?) |
+    bob18_loop(In?, Out).
+bob18_loop([enrolled(alice)|In], [enrol_child(carol)|Out?]) :-
+    bob18_loop(In?, Out).
+bob18_loop([release_asked(carol)|In], [approve_release(carol)|Out?]) :-
+    bob18_loop(In?, Out).
+bob18_loop([_|In], Out?) :-
+    otherwise | bob18_loop(In?, Out).
+bob18_loop([], []).
+
+exported procedure carol18(Channel(Stream(UserNotify), Stream(UserCmd))?).
+carol18(ch(In, Out?)) :-
+    carol18_loop(In?, Out).
+
+procedure carol18_loop(Stream(UserNotify)?, Stream(UserCmd)).
+carol18_loop([enrol_offer(bob, ReqId)|In],
+             [enrol_decision(yes, bob, ReqId?)|Out?]) :-
+    ground(ReqId?) |
+    carol18_loop(In?, Out).
+carol18_loop([enrolled(bob)|In], [request_release|Out?]) :-
+    carol18_loop(In?, Out).
+carol18_loop([_|In], Out?) :-
+    otherwise | carol18_loop(In?, Out).
+carol18_loop([], []).

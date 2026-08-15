@@ -10,11 +10,12 @@
 %% clause is currently waiting.
 %% Types: from village/self.glp (ancestor scoping)
 
-%% Act 1: coming into the contract.  The three commands need no answer between
+%% Act 1: coming into the contract.  Alice starts an adult, as every agent does,
+%% so the act is the parenting alone.  The two commands need no answer between
 %% them, so they are issued together.
 exported procedure alice13(Constant?, Channel(Stream(UserNotify), Stream(UserCmd))?, Stream(NarrativeItem)).
-alice13(_, ch(In, [declare_age, enrol_child(carol), connect(bob)|Out?]),
-    [act('Declaring myself of age'), act('Enrolling Carol')|Narr?]) :-
+alice13(_, ch(In, [enrol_child(carol), connect(bob)|Out?]),
+    [act('Becoming the parent of Carol')|Narr?]) :-
     alice13_loop(In?, Out, Narr).
 
 procedure alice13_loop(Stream(UserNotify)?, Stream(UserCmd), Stream(NarrativeItem)).

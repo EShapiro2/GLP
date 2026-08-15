@@ -53,13 +53,15 @@ eve13_loop([group_received(group_id(carol, kids_chat), carol, _)|In],
     [say('Hi all!'), act('Leaving kids_chat')|Narr?]) :-
     eve13_loop(In?, Out, Narr).
 
-%% Act 7: coming of age.  Eve asks Bob to release her; released, she is of age,
+%% Act 7: coming of age.  Eve asks Bob to end the parenting; once it is ended she
+%% holds no parent, which IS being an adult,
 %% and she befriends Frank with no parent among the guards.
 eve13_loop([group_left(group_id(carol, kids_chat))|In], [request_release|Out?],
-    [event('Left kids_chat'), act('Asking Bob to release me')|Narr?]) :-
+    [event('Left kids_chat'), act('Asking Bob to end the parenting')|Narr?]) :-
     eve13_loop(In?, Out, Narr).
 eve13_loop([released(bob)|In], [connect(frank)|Out?],
-    [event('Released, and of age'), act('Befriending Frank directly')|Narr?]) :-
+    [event('No parent on record, so an adult'),
+     act('Befriending Frank directly')|Narr?]) :-
     eve13_loop(In?, Out, Narr).
 eve13_loop([connected(frank)|In], Out?, [friend(frank)|Narr?]) :-
     eve13_loop(In?, Out, Narr).

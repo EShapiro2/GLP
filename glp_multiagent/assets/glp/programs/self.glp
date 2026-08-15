@@ -42,6 +42,14 @@ Constant ::= Number ; String ; Module.
 % Arithmetic expressions
 Exp ::= Number ; +(Exp, Exp) ; -(Exp, Exp) ; *(Exp, Exp) ; /(Exp, Exp) ; //(Exp, Exp) ; mod(Exp, Exp) ; neg(Exp).
 
+% Multiway merge (mwm/2 below).  Its input is a stream of merge(Stream(X))
+% terms, each carrying one stream to be merged into the output.
+MwmStream(X) ::= merge(Stream(X)).
+MwmInput(X) ::= [] ; [MwmStream(X) | MwmInput(X)].
+
+% Short-circuit termination token, threaded through mwm1/4 and mwm_copy/4.
+Done ::= done.
+
 % =============================================================================
 % BUILTIN PROCEDURE DECLARATIONS (no clauses - implemented by runtime)
 % =============================================================================
@@ -107,10 +115,21 @@ procedure is_mutual_ref(_?).
 %
 % Every kernel registered by runtime/body_kernels.dart and
 % engine_v2/module_kernels.dart is here, and nothing else.  The signatures are
-% GLP-Spec's appendix-guards.tex body-kernel table, which is the authority.  That
-% table's Network group also lists '_peer_address', '_punch_udp',
-% '_place_declare' and '_place_remove'; the table is ahead of the code there and
-% none of the four is registered, so none is declared.
+% GLP-Spec's appendix-guards.tex body-kernel table, which is the authority, and
+% the Network group's four seam rows are taken from it verbatim: they were
+% registered by 9d5e0dd9 and entered builtinProcedures in d6760b3a, which is what
+% lets them be declared at all — parser.dart:191 admits a clause-less root
+% declaration only for a name in that set.
+%
+% '_trust_declare' is the one Network row with no declaration.  It is in the
+% catalogue as GLP-Networking-API's fifth seam predicate, nothing registers it
+% and it is not in builtinProcedures, so declaring it here would fail the root
+% scope and take every load in the tree with it.  Its entry is IGLP's to add and
+% the declaration follows it; until then trust_declare/2 below wraps a kernel
+% that does not yet exist.
+%
+% '_copy' is neither registered nor declared: d6760b3a unregistered the kernel
+% after its catalogue row was removed, and no caller in programs/ ever named it.
 %
 % This file may name them because it declares -mode(system).
 
@@ -157,9 +176,13 @@ procedure '_allocate_mutual_reference'(_, _).
 procedure '_stream_append'(_?, _?, _).
 procedure '_close_mutual_reference'(_?).
 
-% madGLP network
+% Network
 procedure '_send'(_?, _?, _?).
 procedure '_authorise_link'(_?, _?).
+procedure '_peer_address'(_?, _).
+procedure '_punch_udp'(_?).
+procedure '_place_declare'(_?, _?, _).
+procedure '_place_remove'(_?).
 
 % Signature
 procedure '_sign'(_?, _).
@@ -176,27 +199,27 @@ procedure '_output'(_?).
 % =============================================================================
 
 % Assignment (unification)
-procedure =(X, X?).
+procedure(X) =(X, X?).
 X? = X.
 
 % Difference list operations
-procedure dl_append(DiffList(X)?, DiffList(X)?, DiffList(X)).
+procedure(X) dl_append(DiffList(X)?, DiffList(X)?, DiffList(X)).
 dl_append(A\B?, B\C?, A?\C).
 
-procedure dl_to_list(DiffList(X)?, Stream(X)).
+procedure(X) dl_to_list(DiffList(X)?, Stream(X)).
 dl_to_list(L\[], L?).
 
 % Channel operations
-procedure new_channel(Channel(X, Y), Channel(Y, X)).
+procedure(X, Y) new_channel(Channel(X, Y), Channel(Y, X)).
 new_channel(ch(Xs?, Ys), ch(Ys?, Xs)).
 
-procedure send(X?, Channel(Y, Stream(X))?, Channel(Y, Stream(X))).
+procedure(X, Y) send(X?, Channel(Y, Stream(X))?, Channel(Y, Stream(X))).
 send(X, ch(In, [X?|Out?]), ch(In?, Out)).
 
 % receive consumes a message from a non-empty read stream (OpenStream(X));
 % its continuation's read stream may be empty (Stream(X)).  A channel consumer
 % covers the closed read stream with the close guard below.
-procedure receive(X, Channel(OpenStream(X), Y)?, Channel(Stream(X), Y)).
+procedure(X, Y) receive(X, Channel(OpenStream(X), Y)?, Channel(Stream(X), Y)).
 receive(X?, ch([X|In], Out?), ch(In?, Out)).
 
 % close consumes a closed read stream and closes the write stream.  Together with
@@ -209,7 +232,7 @@ close(ch([], [])).
 % STREAM UTILITIES (multi-clause)
 % =============================================================================
 
-procedure merge(Stream(X)?, Stream(X)?, Stream(X)).
+procedure(X) merge(Stream(X)?, Stream(X)?, Stream(X)).
 merge([X|Xs], Ys, [X?|Zs?]) :- merge(Ys?, Xs?, Zs).
 merge(Xs, [Y|Ys], [Y?|Zs?]) :- merge(Xs?, Ys?, Zs).
 merge([], Ys, Ys?).
@@ -517,7 +540,7 @@ random(Seed, N, Value?, NextSeed?) :-
 X? =.. [Y|Ys] :- list(Ys?) | '_list_to_tuple'([Y?|Ys?], X).
 
 % Decomposition: compound → list
-X =.. Y? :- compound(X?) | '_tuple_to_list'(X?, Y).
+Y? ..= X :- compound(X?) | '_tuple_to_list'(X?, Y).
 
 % =============================================================================
 % MODULE AS A VALUE (self_module/1, run/2)
@@ -556,19 +579,22 @@ procedure authorise_link(_?, _?).
 authorise_link(L, A) :- known(A?) | '_authorise_link'(L?, A?).
 
 % =============================================================================
-% NETWORKING SEAM (peer_address/2, punch_udp/1, place_declare/3, place_remove/1)
+% NETWORKING SEAM (peer_address/2, punch_udp/1, place_declare/3, place_remove/1,
+% trust_declare/2)
 % =============================================================================
 % GLP-Spec's appendix-guards lists all four among the system predicates, on the
 % same grounds as sign/2 and authorise_link/2 above.  The clause bodies are
 % IGLP's madglp-spec.tex, Definition "Seam Predicates"; the layer behind them is
 % GLP-Networking-API's.
 %
-% The declarations mirror the appendix's body-kernel rows argument for argument
-% — '_peer_address'(_?, _), '_punch_udp'(_?), '_place_declare'(_?, _?, _),
-% '_place_remove'(_?) — which is all the catalogue settles: its system-predicate
-% table gives a name and a description and carries no signature column, so the
-% arity is the catalogue's and the argument types follow the kernel it wraps, as
-% sign/2 and authorise_link/2 do.
+% The four declarations mirror the appendix's body-kernel rows argument for
+% argument — '_peer_address'(_?, _), '_punch_udp'(_?), '_place_declare'(_?, _?, _),
+% '_place_remove'(_?) — which was all the catalogue settled when they were
+% written: its system-predicate table then gave a name and a description and
+% carried no signature column, so the arity was the catalogue's and the argument
+% types followed the kernel, as sign/2 and authorise_link/2 do.  The table has
+% carried a signature column since 2026-08-01, so trust_declare/2 below takes its
+% declaration from that column instead.
 %
 % 🔴 Two clauses depart from the paper, and only where SRSW forces it.  The paper
 % writes peer_address(P, A) and place_declare(P, R, E) with the output variable a
@@ -578,10 +604,11 @@ authorise_link(L, A) :- known(A?) | '_authorise_link'(L?, A?).
 % supplies the writer, which is what sign/2 does three lines above.  Reported to
 % IGLP 2026-08-01; the paper is theirs to correct.
 %
-% None of the four kernels is registered yet, so a call reaches the runtime and
-% fails there ("no procedure for goal, failed: _peer_address(...)").  That is the
-% intended half-state: the wrappers are TGLP's and the kernels are IGLP's, and
-% neither half waits on the other.
+% The four kernels were registered by 9d5e0dd9 and are declared in the block
+% above.  '_trust_declare' is not registered, so a trust_declare/2 call reaches
+% the runtime and fails there ("no procedure for goal, failed:
+% _trust_declare(...)").  That is the intended half-state: the wrappers are
+% GLP-Spec's and the kernels are IGLP's, and neither half waits on the other.
 
 %% peer_address/2 - assign A the address at which the layer observes peer P.
 procedure peer_address(_?, _).
@@ -604,47 +631,53 @@ place_declare(P, R, E?) :- ground(P?), ground(R?) | '_place_declare'(P?, R?, E).
 procedure place_remove(_?).
 place_remove(P) :- ground(P?) | '_place_remove'(P?).
 
+%% trust_declare/2 - declare Level as the cold-call trust level of proximity
+%% medium Medium.  Medium is ble or lan and Level is open or closed; both media
+%% stand at closed until declared, a later declaration of a medium replaces the
+%% level then standing, and the two are declared independently.  The declaration
+%% is the catalogue's signature column verbatim.
+procedure trust_declare(Constant?, Constant?).
+trust_declare(Medium, Level) :-
+    ground(Medium?), ground(Level?) |
+    '_trust_declare'(Medium?, Level?).
+
 % =============================================================================
 % MULTIWAY MERGE (mwm/2)
 % =============================================================================
-% MWM types and procedure declarations are omitted from the scope chain
-% because the type system's DFA builder cannot handle compound type
-% constructors like stream(Stream) in MwmInput. The clauses below are
-% compiled for runtime use only — they are not type-checked.
-
+procedure(X) mwm(MwmInput(X)?, Stream(X)).
 mwm(In, Out?) :-
     '_allocate_mutual_reference'(Ref, Out),
     mwm_main(In?, Ref?).
 
+% Intermediate predicate whose guard admits the multiple Ref? occurrences below.
+procedure(X) mwm_main(MwmInput(X)?, _?).
 mwm_main(In, Ref) :-
     is_mutual_ref(Ref?) |
     mwm1(In?, Ref?, done, Done),
     close_when_done(Done?, Ref?).
 
-mwm1([stream(Xs)|Streams], Ref, L, R?) :-
+procedure(X) mwm1(MwmInput(X)?, _?, Done?, Done).
+mwm1([merge(Xs)|Streams], Ref, L, R?) :-
     is_mutual_ref(Ref?) |
     mwm_copy(Xs?, Ref?, L?, M),
     mwm1(Streams?, Ref?, M?, R).
-mwm1([merge(NewIn)|Streams], Ref, L, R?) :-
-    is_mutual_ref(Ref?) |
-    mwm1(NewIn?, Ref?, L?, M),
-    mwm1(Streams?, Ref?, M?, R).
 mwm1([], _, L, L?).
 
+procedure(X) mwm_copy(Stream(X)?, _?, Done?, Done).
 mwm_copy([X|Xs], Ref, L, R?) :-
     is_mutual_ref(Ref?) |
     stream_append(X?, Ref?, Ref1),
     mwm_copy(Xs?, Ref1?, L?, R).
 mwm_copy([], _, L, L?).
 
+procedure close_when_done(Done?, _?).
 close_when_done(done, Ref) :-
     is_mutual_ref(Ref?) |
     close_mutual_reference(Ref?).
 
-% The mwm stream wrappers carry permissive (`_`) system-builtin types so that
-% typed application modules can call them without a local declaration (the mwm/2
-% input type stays undeclared — its compound constructors defeat the DFA builder,
-% per the note above).
+% The mutual-reference wrappers carry permissive (`_`) system-builtin types so
+% that typed application modules can call them without a local declaration: a
+% mutual reference is an opaque runtime value with no GLP type of its own.
 procedure stream_append(_?, _?, _).
 stream_append(Value, RefIn, RefOut?) :-
     is_mutual_ref(RefIn?) |

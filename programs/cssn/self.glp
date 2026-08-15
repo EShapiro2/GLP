@@ -31,8 +31,8 @@ FriendOnlyContent ::= response(Response)
                     ; unfriend_child(Constant)
                     ; release_request
                     ; release_grant
-                    ; child_befriended(Constant)
-                    ; child_unfriended(Constant).
+                    ; approval
+                    ; withdrawal.
 
 %% Friend messages (after connection established)
 FriendContent ::= FriendOnlyContent ; GroupNotifyContent.
@@ -81,9 +81,27 @@ PendingValue ::= response(Response?) ; channel(Channel(Stream(IntroContent), Str
 %% friend_output entries, the parents rho_p the parent_output entries and the
 %% children kappa_p the child_output entries: those three records ARE the
 %% channels, created and torn down by the acts that establish and end them.
-%% What is left has no channel to stand for it — the count of declarations of
-%% age a_p, and the approvals alpha_p, which name children of other parents.
-AgentState ::= state(Integer, Stream(Constant)).
+%% What is left has no channel to stand for it — alpha_p and omega_p, the
+%% numbers of approvals this party has given for a child of its own and of
+%% withdrawals it has taken.  They name nobody, which is what makes any parent
+%% of a child able to end any friendship or membership of that child.
+%%
+%% The other two are h_p, the posts this party holds, and t_p, its record of what
+%% it has sent and to whom.  Delivery to a member is owed while the member is on
+%% the creator's list and the creator has not already sent it that item, so the
+%% creator has to hold BOTH: the posts, because a member that joins late is owed
+%% what was posted before it joined, and the sent record, because what keeps a
+%% member from receiving an item twice is that record and nothing else.  A member
+%% that leaves and rejoins is the case that needs it --- its stream is gone and
+%% remade, and only t_p remembers what it has already had.
+%%
+%% This is not a delivery index.  An index is a position in a queue that decides
+%% what a member may ever receive; sent(g, q, n) says only that the first n posts
+%% of g have gone to q, and the posts of g are appended in order and sent in
+%% order, so n is exactly the t_p of Definition item 5 written compactly.
+GroupPost  ::= post(GroupId, Constant, Constant).
+SentEntry  ::= sent(GroupId, Constant, Integer).
+AgentState ::= state(Integer, Integer, Stream(GroupPost), Stream(SentEntry)).
 
 %% =============================================================================
 %% AGENT <-> MEDIATOR INTERFACE
@@ -115,6 +133,11 @@ UserContent ::= connect(Constant)
               ; reject_child_group(Constant, GroupId, PendingValue)
               ; unfriend_child(Constant)
               ; unfriend_child_of(Constant, Constant)
+              %% declare_age is retired from the contract --- a party is a child
+              %% exactly while it holds a parent, and no act declares an age.  No
+              %% agent clause accepts it and no actor issues it; the alternative
+              %% stands only until vGLP drops the mediator's pass-through, which
+              %% would not typecheck without it.
               ; declare_age
               ; enrol_child(Constant)
               ; enrol_decision(Decision, Constant, PendingValue)
@@ -136,6 +159,7 @@ AgentOnlyContent ::= befriend(Constant, Response?)
                    ; group_received(GroupId, Constant, Constant)
                    ; child_group_consent(Constant, GroupId, Decision?)
                    ; unfriended(Constant)
+                   %% Retired with declare_age; see the note there.
                    ; age_declared
                    ; enrol_offer(Constant, EnrolResponse?)
                    ; enrolled(Constant)
@@ -247,6 +271,7 @@ UserCmd ::= decision(Decision, Constant, ReqId)
           ; reject_child_group(Constant, GroupId, ReqId)
           ; unfriend_child(Constant)
           ; unfriend_child_of(Constant, Constant)
+          %% Retired with declare_age; see the note in UserContent.
           ; declare_age
           ; enrol_child(Constant)
           ; enrol_decision(Decision, Constant, ReqId)
@@ -270,6 +295,7 @@ UserNotify ::= befriend(Constant, ReqId)
              ; group_received(GroupId, Constant, Constant)
              ; child_group_consent(Constant, GroupId, ReqId)
              ; unfriended(Constant)
+             %% Retired with declare_age; see the note in UserContent.
              ; age_declared
              ; enrol_offer(Constant, ReqId)
              ; enrolled(Constant)
@@ -311,12 +337,87 @@ NarrativeItem   ::= friend(Constant)
 %% SETUP_GROUP_HUB_SIDE
 %% =============================================================================
 
-procedure setup_group_hub_side(GroupId?, Constant?, Stream(OutputEntry)?, Stream(OutputEntry), Stream(NetInMsg)?, Stream(NetInMsg), Channel(Stream(GroupMsg), Stream(GroupMsg))).
-setup_group_hub_side(GroupId, Member, Outs, Outs1?, NetIn, NetIn1?,
+%% The joining member's stream is opened and then every post of this group the
+%% creator holds that it has not already sent to this member is written on it, in
+%% the order the posts were made.  That is the whole of "a member is owed a post
+%% while it is on the member list and the creator has not already sent it that
+%% item".  A first-time joiner has been sent none and is owed all of them; one
+%% that left and rejoined is owed only what arrived while it was away.
+procedure setup_group_hub_side(GroupId?, Constant?, Stream(GroupPost)?, Stream(GroupPost), Stream(SentEntry)?, Stream(SentEntry), Stream(OutputEntry)?, Stream(OutputEntry), Stream(NetInMsg)?, Stream(NetInMsg), Channel(Stream(GroupMsg), Stream(GroupMsg))).
+setup_group_hub_side(GroupId, Member, Posts, Posts2?, Sent, Sent1?, Outs, Outs2?, NetIn, NetIn1?,
     ch(HubToMember?, MemberToHub)) :-
     ground(GroupId?), ground(Member?) |
     add_group_output(group_member(GroupId?, Member?), HubToMember, Outs?, Outs1),
+    sent_count(GroupId?, Member?, Sent?, SentA, C),
+    send_from(GroupId?, Member?, C?, Posts?, Posts1, Outs1?, Outs2),
+    count_posts(GroupId?, Posts1?, Posts2, N),
+    set_sent(GroupId?, Member?, N?, SentA?, Sent1),
     merge(NetIn?, MemberToHub?, NetIn1).
+
+%% =============================================================================
+%% HELD POSTS AND THE SENT RECORD — h_p and t_p
+%% =============================================================================
+
+%% A post joins the holding at its end, so the holding is in the order the posts
+%% were made and the n already sent to a member are always its first n.
+procedure add_post(GroupPost?, Stream(GroupPost)?, Stream(GroupPost)).
+add_post(P, [], [P?|[]]).
+add_post(P, [Q|Rest], [Q?|Rest1?]) :-
+    add_post(P?, Rest?, Rest1).
+
+procedure count_posts(GroupId?, Stream(GroupPost)?, Stream(GroupPost), Integer).
+count_posts(G, [post(G1, A, T)|Rest], [post(G1?, A?, T?)|Rest1?], N?) :-
+    G? =?= G1?, ground(G?) |
+    count_posts(G?, Rest?, Rest1, N1),
+    N := N1? + 1.
+count_posts(G, [P|Rest], [P?|Rest1?], N?) :-
+    otherwise |
+    count_posts(G?, Rest?, Rest1, N).
+count_posts(_, [], [], 0).
+
+%% Send this group's posts past the first Skip of them onto the member's stream,
+%% through the ordinary group router.
+procedure send_from(GroupId?, Constant?, Integer?, Stream(GroupPost)?, Stream(GroupPost),
+                    Stream(OutputEntry)?, Stream(OutputEntry)).
+send_from(G, M, Skip, [post(G1, A, T)|Rest], [post(G1?, A?, T?)|Rest1?], Outs, Outs1?) :-
+    G? =?= G1?, ground(G?), ground(M?), Skip? > 0 |
+    Skip1 := Skip? - 1,
+    send_from(G?, M?, Skip1?, Rest?, Rest1, Outs?, Outs1).
+send_from(G, M, Skip, [post(G1, A, T)|Rest], [post(G1?, A?, T?)|Rest1?], Outs, Outs2?) :-
+    G? =?= G1?, ground(G?), ground(M?), Skip? < 1 |
+    lookup_send_group(group_member(G?, M?),
+        msg(A?, A?, group_msg(G1?, A?, T?)), Outs?, Outs1),
+    send_from(G?, M?, 0, Rest?, Rest1, Outs1?, Outs2).
+send_from(G, M, Skip, [P|Rest], [P?|Rest1?], Outs, Outs1?) :-
+    otherwise |
+    send_from(G?, M?, Skip?, Rest?, Rest1, Outs?, Outs1).
+send_from(_, _, _, [], [], Outs, Outs?).
+
+%% t_p: how many of a group's posts have gone to a member.
+procedure sent_count(GroupId?, Constant?, Stream(SentEntry)?, Stream(SentEntry), Integer).
+sent_count(G, M, [sent(G1, M1, N)|Rest], [sent(G1?, M1?, N?)|Rest?], N?) :-
+    G? =?= G1?, M? =?= M1? | true.
+sent_count(G, M, [E|Rest], [E?|Rest1?], C?) :-
+    otherwise |
+    sent_count(G?, M?, Rest?, Rest1, C).
+sent_count(_, _, [], [], 0).
+
+procedure set_sent(GroupId?, Constant?, Integer?, Stream(SentEntry)?, Stream(SentEntry)).
+set_sent(G, M, N, [sent(G1, M1, _)|Rest], [sent(G1?, M1?, N?)|Rest?]) :-
+    G? =?= G1?, M? =?= M1? | true.
+set_sent(G, M, N, [E|Rest], [E?|Rest1?]) :-
+    otherwise |
+    set_sent(G?, M?, N?, Rest?, Rest1).
+set_sent(G, M, N, [], [sent(G?, M?, N?)|[]]).
+
+procedure bump_sent(GroupId?, Constant?, Stream(SentEntry)?, Stream(SentEntry)).
+bump_sent(G, M, [sent(G1, M1, N)|Rest], [sent(G1?, M1?, N1?)|Rest?]) :-
+    G? =?= G1?, M? =?= M1? |
+    N1 := N? + 1.
+bump_sent(G, M, [E|Rest], [E?|Rest1?]) :-
+    otherwise |
+    bump_sent(G?, M?, Rest?, Rest1).
+bump_sent(G, M, [], [sent(G?, M?, 1)|[]]).
 
 %% =============================================================================
 %% SETUP_GROUP_CREATOR
@@ -353,16 +454,19 @@ lookup_send_group_step(_, _, [], []).
 %% DISTRIBUTE_GROUP_MSG
 %% =============================================================================
 
-procedure distribute_group_msg(GroupId?, GroupMsg?, Stream(OutputEntry)?, Stream(OutputEntry)).
-distribute_group_msg(GroupId, Msg,
+%% Write the post onto the stream of every member on the list now, and advance
+%% the creator's record of what it has sent to each of them.
+procedure distribute_group_msg(GroupId?, GroupMsg?, Stream(SentEntry)?, Stream(SentEntry), Stream(OutputEntry)?, Stream(OutputEntry)).
+distribute_group_msg(GroupId, Msg, Sent, Sent2?,
     [group_entry(group_member(GId, M), [Msg?|Out1?])|Rest],
     [group_entry(group_member(GId?, M?), Out1)|Rest1?]) :-
-    GroupId? =?= GId?, ground(Msg?) |
-    distribute_group_msg(GroupId?, Msg?, Rest?, Rest1).
-distribute_group_msg(GroupId, Msg, [E|Rest], [E?|Rest1?]) :-
+    GroupId? =?= GId?, ground(GroupId?), ground(Msg?) |
+    bump_sent(GroupId?, M?, Sent?, Sent1),
+    distribute_group_msg(GroupId?, Msg?, Sent1?, Sent2, Rest?, Rest1).
+distribute_group_msg(GroupId, Msg, Sent, Sent1?, [E|Rest], [E?|Rest1?]) :-
     otherwise |
-    distribute_group_msg(GroupId?, Msg?, Rest?, Rest1).
-distribute_group_msg(_, _, [], []).
+    distribute_group_msg(GroupId?, Msg?, Sent?, Sent1, Rest?, Rest1).
+distribute_group_msg(_, _, Sent, Sent?, [], []).
 
 %% inject_msg and add_friend_output are now provided by lib/routing/, exposed
 %% from the root self.glp (A5 Stage B); resolved here unqualified.
@@ -423,37 +527,16 @@ inject_enrol_response(Resp, Child, [Y|Ys], [Y?|Ys1?]) :-
     inject_enrol_response(Resp?, Child?, Ys?, Ys1).
 
 %% =============================================================================
-%% APPROVALS — alpha_p, the one record with no channel to stand for it
+%% APPROVALS AND WITHDRAWALS — alpha_p and omega_p, the two records with no
+%% channel to stand for them
 %% =============================================================================
-%% Set union and set difference: a parent gains an approved record of the other
-%% child when a child friendship commits, and loses it when that friendship ends.
-
-procedure add_approval(Constant?, Stream(Constant)?, Stream(Constant)).
-add_approval(Who, [A|Rest], [A?|Rest?]) :-
-    Who? =?= A? | true.
-add_approval(Who, [A|Rest], [A?|Rest1?]) :-
-    otherwise |
-    add_approval(Who?, Rest?, Rest1).
-add_approval(Who, [], [Who?|[]]).
-
-%% Child unfriend is provided s in alpha_p at the named parent, so the record has
-%% to be readable and not only writable.  Walk alpha_p binding Decision, exactly
-%% as already_friend of lib/routing walks the friend set.
-procedure has_approval(Constant?, Stream(Constant)?, Stream(Constant), Decision).
-has_approval(Who, [A|Rest], [A?|Rest?], yes) :-
-    Who? =?= A? | true.
-has_approval(Who, [A|Rest], [A?|Rest1?], D?) :-
-    otherwise |
-    has_approval(Who?, Rest?, Rest1, D).
-has_approval(_, [], [], no).
-
-procedure remove_approval(Constant?, Stream(Constant)?, Stream(Constant)).
-remove_approval(_, [], []).
-remove_approval(Who, [A|Rest], Rest?) :-
-    Who? =?= A? | true.
-remove_approval(Who, [A|Rest], [A?|Rest1?]) :-
-    otherwise |
-    remove_approval(Who?, Rest?, Rest1).
+%% Both are counts and name nobody, so there is nothing to look up: a child
+%% friendship or membership that commits advances alpha_p at each named parent,
+%% and one that ends advances omega_p.  A parent therefore holds no record of
+%% whom its child befriended, and any parent of either child may end any
+%% friendship or membership of that child.  The child carries the message that
+%% advances the count, at the commit rather than at the parent's own step, so no
+%% approval stands for an act that was never carried out.
 
 procedure close_outputs(Stream(OutputEntry)?).
 close_outputs([user_output([])|Outs]) :- close_outputs(Outs?).
@@ -603,3 +686,11 @@ fplay16 :- boot # fplay16.
 
 %% Network switch entry: one per agent, keyed by name.
 NetEntry ::= net_entry(Constant, NetOutStream?).
+
+imported procedure boot#fplay17.
+exported procedure fplay17.
+fplay17 :- boot # fplay17.
+
+imported procedure boot#fplay18.
+exported procedure fplay18.
+fplay18 :- boot # fplay18.

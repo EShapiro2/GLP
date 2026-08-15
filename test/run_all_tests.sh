@@ -1869,8 +1869,8 @@ fplay13.
 :quit
 HEREDOC
 2>&1)
-check "CSSN v3 fplay13 act 1 declaring of age" "tagged(alice, act(Declaring myself of age))" "$k_fp13"
-check "CSSN v3 fplay13 act 1 enrolment is an act of both" "tagged(carol, act(Accepting Alice as my parent))" "$k_fp13"
+check "CSSN v3 fplay13 act 1 every agent starts an adult and the act is the parenting" "tagged(alice, act(Becoming the parent of Carol))" "$k_fp13"
+check "CSSN v3 fplay13 act 1 becoming parent and child is an act of both" "tagged(carol, act(Accepting Alice as my parent))" "$k_fp13"
 check "CSSN v3 fplay13 act 1 the parent holds the child" "tagged(bob, event(Eve is my child))" "$k_fp13"
 check "CSSN v3 fplay13 act 2 adult friendship" "tagged(alice, friend(frank))" "$k_fp13"
 check "CSSN v3 fplay13 act 3 child befriending" "tagged(carol, friend(dave))" "$k_fp13"
@@ -1879,25 +1879,26 @@ check "CSSN v3 fplay13 act 4 child-managed group" "tagged(carol, event(Eve joine
 check "CSSN v3 fplay13 act 5 adult-managed group" "tagged(frank, event(Carol joined study group))" "$k_fp13"
 check "CSSN v3 fplay13 act 6 child unfriending" "tagged(dave, event(Unfriended by Carol))" "$k_fp13"
 check "CSSN v3 fplay13 act 6 parent-initiated removal" "tagged(dave, event(Removed from study group))" "$k_fp13"
-check "CSSN v3 fplay13 act 7 the release is owed and given" "tagged(bob, act(Releasing Eve))" "$k_fp13"
-check "CSSN v3 fplay13 act 7 release makes the child of age" "tagged(eve, event(Released, and of age))" "$k_fp13"
+check "CSSN v3 fplay13 act 7 ending the parenting is owed and given" "tagged(bob, act(Ending the parenting of Eve))" "$k_fp13"
+check "CSSN v3 fplay13 act 7 no parent on record is what being an adult is" "tagged(eve, event(No parent on record, so an adult))" "$k_fp13"
+check "CSSN v3 fplay13 act 5 a member joining late is owed what was posted before" "tagged(carol, notify(group_received(group_id(frank, study), dave, Hi from Dave!)))" "$k_fp13"
 check "CSSN v3 fplay13 act 7 befriending with no parent among the guards" "tagged(eve, friend(frank))" "$k_fp13"
 fp13_narr=$(echo "$k_fp13" | grep -cE "tagged\((alice|bob|frank|carol|dave|eve), (act|event|friend|say)\(")
-if [ "$fp13_narr" = "87" ]; then
-    echo "  PASS: CSSN v3 fplay13 narrative is 87 lines"
+if [ "$fp13_narr" = "84" ]; then
+    echo "  PASS: CSSN v3 fplay13 narrative is 84 lines"
     PASS=$((PASS + 1))
 else
-    echo "  FAIL: CSSN v3 fplay13 narrative is $fp13_narr lines (expected 87)"
+    echo "  FAIL: CSSN v3 fplay13 narrative is $fp13_narr lines (expected 84)"
     FAIL=$((FAIL + 1))
 fi
 
-# fplay16: the three acts of the child-safe social graph — declare_age, enrol and
-# release — driven at the agent level.  Alice declares herself of age and enrols
-# Bob; Bob accepts and so becomes a child; Bob asks to be released and Alice
-# releases him; Bob, now of age, befriends Alice directly, with no parent among
-# the guards.  The drivers stand in for ui/mediator.glp, which is vGLP's and does
-# not yet route these acts.
-echo "--- CSSN v3 enrolment and release (fplay16) ---"
+# fplay16: the two acts of the child-safe social graph — becoming parent and
+# child, and ending it — driven at the agent level.  Alice offers to become Bob's
+# parent; Bob accepts and so becomes a child; Bob asks her to end it and she
+# does; Bob, holding no parent and so an adult, befriends Alice directly, with no
+# parent among the guards.  The drivers stand in for ui/mediator.glp, which is
+# vGLP's and does not yet route these acts.
+echo "--- CSSN v3 becoming parent and child, and ending it (fplay16) ---"
 k_fp16=$("$REPL_RUN" <<HEREDOC
 $CSSN_V2
 fplay16.
@@ -1905,11 +1906,65 @@ fplay16.
 HEREDOC
 2>&1)
 check "CSSN v3 fplay16 succeeds" "succeeds\|suspended" "$k_fp16"
-check "CSSN v3 fplay16 alice declares herself of age" "tagged(alice, act(Declaring myself of age))" "$k_fp16"
+check "CSSN v3 fplay16 becoming a parent asks nothing of either party" "tagged(alice, act(Becoming the parent of Bob))" "$k_fp16"
 check "CSSN v3 fplay16 enrol creates the parent-child channel" "tagged(alice, event(Bob is my child))" "$k_fp16"
 check "CSSN v3 fplay16 the child holds its parent" "tagged(bob, event(Alice is my parent))" "$k_fp16"
-check "CSSN v3 fplay16 release tears the channel down" "tagged(alice, event(Bob is no longer my child))" "$k_fp16"
-check "CSSN v3 fplay16 release makes the child of age" "tagged(bob, event(Released, and of age))" "$k_fp16"
+check "CSSN v3 fplay16 ending the parenting tears the channel down" "tagged(alice, event(Bob is no longer my child))" "$k_fp16"
+check "CSSN v3 fplay16 an empty rho is what being an adult is" "tagged(bob, event(No parent on record, so an adult))" "$k_fp16"
+
+# fplay17: a member that joins after a post was made.  There is no delivery index
+# and no queue: a member is owed a post while it is on the member list and the
+# creator has not already sent it that item, so Carol, who joins after Alice
+# posts, is owed that post.  Under the index this was impossible, and the run
+# above measured it: before this change Carol received nothing.
+echo "--- CSSN v3 a late joiner is owed the earlier posts (fplay17) ---"
+k_fp17=$("$REPL_RUN" <<HEREDOC
+$CSSN_V2
+fplay17.
+:quit
+HEREDOC
+2>&1)
+check "CSSN v3 fplay17 succeeds" "succeeds\|suspended" "$k_fp17"
+check "CSSN v3 fplay17 the member on the list at the post receives it" "tagged(bob, notify(group_received(group_id(alice, late_join), alice, Posted before Carol joined)))" "$k_fp17"
+check "CSSN v3 fplay17 the late joiner is owed it too" "tagged(carol, notify(group_received(group_id(alice, late_join), alice, Posted before Carol joined)))" "$k_fp17"
+check "CSSN v3 fplay17 a member joining after two posts is owed the first" "tagged(dave, notify(group_received(group_id(alice, late_join), alice, Posted before Carol joined)))" "$k_fp17"
+check "CSSN v3 fplay17 and the second" "tagged(dave, notify(group_received(group_id(alice, late_join), alice, Posted before Dave joined)))" "$k_fp17"
+fp17_bob=$(echo "$k_fp17" | grep -c "tagged(bob, notify(group_received(group_id(alice, late_join), alice, Posted before Carol joined)))")
+if [ "$fp17_bob" = "1" ]; then
+    echo "  PASS: CSSN v3 fplay17 no member receives the post twice"
+    PASS=$((PASS + 1))
+else
+    echo "  FAIL: CSSN v3 fplay17 bob received the post $fp17_bob times (expected 1)"
+    FAIL=$((FAIL + 1))
+fi
+# The catch-up hands the posts over in the order they were made, so Dave's first
+# line is the earlier post and his second the later one.
+fp17_dave_order=$(echo "$k_fp17" | grep "tagged(dave, notify(group_received(group_id(alice, late_join)" | head -2 | tr '\n' '|')
+case "$fp17_dave_order" in
+    *"Posted before Carol joined"*"Posted before Dave joined"*)
+        echo "  PASS: CSSN v3 fplay17 the catch-up is in the order the posts were made"
+        PASS=$((PASS + 1)) ;;
+    *)
+        echo "  FAIL: CSSN v3 fplay17 catch-up order was: $fp17_dave_order"
+        FAIL=$((FAIL + 1)) ;;
+esac
+
+# fplay18: a child that is a parent.  Becoming a parent asks nothing of the party
+# that becomes one --- it is the act by which two strangers come into relation,
+# and no clause of a grassroots contract may gate it --- so a party holding a
+# parent may hold a child at the same time.
+echo "--- CSSN v3 a child may be a parent (fplay18) ---"
+k_fp18=$("$REPL_RUN" <<HEREDOC
+$CSSN_V2
+fplay18.
+:quit
+HEREDOC
+2>&1)
+check "CSSN v3 fplay18 succeeds" "succeeds\|suspended" "$k_fp18"
+check "CSSN v3 fplay18 bob becomes a child" "tagged(bob, notify(enrolled(alice)))" "$k_fp18"
+check "CSSN v3 fplay18 a child offers to become a parent" "tagged(bob, cmd(enrol_child(carol)))" "$k_fp18"
+check "CSSN v3 fplay18 and holds the child it gained" "tagged(bob, notify(enrolled(carol)))" "$k_fp18"
+check "CSSN v3 fplay18 a child ends a parenting of its own" "tagged(bob, notify(released(carol)))" "$k_fp18"
 check "CSSN v3 fplay16 the released child befriends unguarded by a parent" "tagged(bob, friend(alice))" "$k_fp16"
 
 # fplay8-10: CSSN groups

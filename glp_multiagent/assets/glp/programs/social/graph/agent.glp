@@ -91,7 +91,9 @@ agent(Id, [msg(person, Id1, send(Target, Text))|UserIn], NetIn, Outs) :-
 
 %% User unfriends Target — notify the peer on the friend channel, tear down,
 %% and tell the person the friend is gone.
-%% Guarded by either party (paper §3a), so one-way: no ack, no decline.
+%% Guarded by either party (SGSG Section 3, "The Grassroots Social Graph as a
+%% Grassroots Social Contract": befriending is guarded by both parties and
+%% unfriending by either), so one-way: no ack, no decline.
 %% Idempotent: if Target is not a friend, send_friend and close_friend are no-ops.
 agent(Id, [msg(person, Id1, unfriend(Target))|UserIn], NetIn, Outs) :-
     Id? =?= Id1?, ground(Target?) |
@@ -163,7 +165,8 @@ agent(Id, UserIn, [msg(From, Id1, text(Text))|NetIn], Outs) :-
     send_user(msg(agent, person, received(From?, Text?)), Outs?, Outs1),
     agent(Id?, UserIn?, NetIn?, Outs1?).
 
-%% Unfriended by From — comply (paper §3a, guarded by either): tear down my
+%% Unfriended by From — comply (SGSG Section 3, "The Grassroots Social Graph as
+%% a Grassroots Social Contract": unfriending is guarded by either): tear down my
 %% side and notify the user.  close_friend is a no-op if From is already gone,
 %% so a simultaneous unfriend from both sides cannot error or double-tear.
 agent(Id, UserIn, [msg(From, Id1, unfriend)|NetIn], Outs) :-

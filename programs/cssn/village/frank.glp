@@ -10,10 +10,10 @@
 %% clause is currently waiting.
 %% Types: from village/self.glp (ancestor scoping)
 
-%% Act 1: Frank has no children; he only declares himself of age.
+%% Act 1: Frank has no children, and starting an adult is not an act, so act 1
+%% asks nothing of him: he waits.
 exported procedure frank13(Constant?, Channel(Stream(UserNotify), Stream(UserCmd))?, Stream(NarrativeItem)).
-frank13(_, ch(In, [declare_age|Out?]),
-    [act('Declaring myself of age')|Narr?]) :-
+frank13(_, ch(In, Out?), Narr?) :-
     frank13_loop(In?, Out, Narr).
 
 procedure frank13_loop(Stream(UserNotify)?, Stream(UserCmd), Stream(NarrativeItem)).
@@ -53,9 +53,9 @@ frank13_loop([group_received(group_id(frank, study), dave, _)|In],
     [event('Dave replied in study group')|Narr?]) :-
     frank13_loop(In?, Out, Narr).
 
-%% Act 7: Eve, released and thereby of age, cold-calls Frank.
+%% Act 7: Eve, holding no parent and so an adult, cold-calls Frank.
 frank13_loop([befriend(eve, ReqId)|In], [decision(yes, eve, ReqId?)|Out?],
-    [act('Accepting Eve, now of age')|Narr?]) :-
+    [act('Accepting Eve, who holds no parent')|Narr?]) :-
     ground(ReqId?) | frank13_loop(In?, Out, Narr).
 frank13_loop([connected(eve)|In], Out?, [friend(eve)|Narr?]) :-
     frank13_loop(In?, Out, Narr).

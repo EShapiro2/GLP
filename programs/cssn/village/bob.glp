@@ -10,10 +10,11 @@
 %% clause is currently waiting.
 %% Types: from village/self.glp (ancestor scoping)
 
-%% Act 1: coming into the contract.  Bob enrols both his children.
+%% Act 1: coming into the contract.  Bob starts an adult, as every agent does,
+%% and becomes the parent of both his children.
 exported procedure bob13(Constant?, Channel(Stream(UserNotify), Stream(UserCmd))?, Stream(NarrativeItem)).
-bob13(_, ch(In, [declare_age, enrol_child(dave), enrol_child(eve)|Out?]),
-    [act('Declaring myself of age'), act('Enrolling Dave'), act('Enrolling Eve')|Narr?]) :-
+bob13(_, ch(In, [enrol_child(dave), enrol_child(eve)|Out?]),
+    [act('Becoming the parent of Dave'), act('Becoming the parent of Eve')|Narr?]) :-
     bob13_loop(0, 0, In?, Out, Narr).
 
 %% Intros counts the child introductions Alice has sent (the first is Carol to
@@ -87,9 +88,9 @@ bob13_loop(I, C, [received(frank, _)|In],
     [act('Removing Dave from study group')|Narr?]) :-
     bob13_loop(I?, C?, In?, Out, Narr).
 
-%% Act 7: the release Eve asks for is owed, whenever it is asked.
+%% Act 7: ending the parenting is owed to Eve, whenever she asks for it.
 bob13_loop(I, C, [release_asked(eve)|In], [approve_release(eve)|Out?],
-    [act('Releasing Eve')|Narr?]) :-
+    [act('Ending the parenting of Eve')|Narr?]) :-
     bob13_loop(I?, C?, In?, Out, Narr).
 bob13_loop(I, C, [released(eve)|In], Out?,
     [event('Eve is no longer my child')|Narr?]) :-
