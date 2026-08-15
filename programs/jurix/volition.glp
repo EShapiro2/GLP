@@ -1,11 +1,16 @@
 % ---------------------------------------------------------------------------
 % Volition (def:volition of /Grassroots/Jurix, Section 3).
 %
-% A scan of the roles: a schema of arity two or more passes outright when it
-% is guarded in all its roles, and otherwise every pair of its roles is put to
-% the second test.  A pair that fails is reported as volition(Schema, I, J).
+% A schema of arity two or more passes when it is guarded in all its roles or
+% when its role graph is connected.  pair_ok is the edge test.  Connectedness
+% is the set of roles reached from role 1, grown by a scan repeated until it
+% stops growing.  A schema that fails is reported as volition(Schema, 1, J) for
+% the first role J that role 1 does not reach; at arity two the role graph is
+% connected exactly when the one pair has an edge, so the report is that pair.
 % ---------------------------------------------------------------------------
 
+% An edge of the role graph: one of the two roles requires an atom of traceable
+% provenance with the other among its arguments.
 procedure pair_ok(Integer?, Integer?, RoleSpecs?, Preds?, Ans).
 pair_ok(I, J, Rs, E, R?) :- integer(I?), integer(J?), ground(Rs?), ground(E?) |
     nth_rs(Rs?, I?, RI),
@@ -14,34 +19,92 @@ pair_ok(I, J, Rs, E, R?) :- integer(I?), integer(J?), ground(Rs?), ground(E?) |
     req_names(RJ?, role(I?), E?, A2),
     or_yes(A1?, A2?, R).
 
-procedure pc1(Ans?, Integer?, Integer?, Integer?, Constant?, RoleSpecs?, Preds?, Faults).
-pc1(yes, I, J, K, Nm, Rs, E, R?) :-
-    integer(I?), integer(J?), integer(K?), ground(Nm?), ground(Rs?), ground(E?) |
-    J1 := J? + 1,
-    pairs_check(I?, J1?, K?, Nm?, Rs?, E?, R).
-pc1(no, I, J, K, Nm, Rs, E, [volition(Nm?, I?, J?)|R?]) :-
-    integer(I?), integer(J?), integer(K?), ground(Nm?), ground(Rs?), ground(E?) |
-    J1 := J? + 1,
-    pairs_check(I?, J1?, K?, Nm?, Rs?, E?, R).
+procedure linked_any1(Ans?, Ints?, Integer?, RoleSpecs?, Preds?, Ans).
+linked_any1(yes, _, _, _, _, yes).
+linked_any1(no, Is, J, Rs, E, R?) :-
+    ground(Is?), integer(J?), ground(Rs?), ground(E?) |
+    linked_any(Is?, J?, Rs?, E?, R).
 
-% Every pair I < J of roles, I from 1 and J from I+1.
-procedure pairs_check(Integer?, Integer?, Integer?, Constant?, RoleSpecs?, Preds?, Faults).
-pairs_check(I, _, K, _, _, _, []) :- I? >= K? | true.
-pairs_check(I, J, K, Nm, Rs, E, R?) :-
-    I? < K?, J? > K?, integer(I?), integer(K?), ground(Nm?), ground(Rs?), ground(E?) |
-    I1 := I? + 1,
-    J1 := I? + 2,
-    pairs_check(I1?, J1?, K?, Nm?, Rs?, E?, R).
-pairs_check(I, J, K, Nm, Rs, E, R?) :-
-    I? < K?, J? =< K?, integer(I?), integer(J?), integer(K?),
-    ground(Nm?), ground(Rs?), ground(E?) |
+% linked_any(Is, J, Rs, E, R): the role graph has an edge from J into Is.
+procedure linked_any(Ints?, Integer?, RoleSpecs?, Preds?, Ans).
+linked_any([], _, _, _, no).
+linked_any([I|Is], J, Rs, E, R?) :-
+    integer(I?), integer(J?), ground(Is?), ground(Rs?), ground(E?) |
     pair_ok(I?, J?, Rs?, E?, A),
-    pc1(A?, I?, J?, K?, Nm?, Rs?, E?, R).
+    linked_any1(A?, Is?, J?, Rs?, E?, R).
+
+procedure conn_scan2(Ans?, Integer?, Ints?, Integer?, RoleSpecs?, Preds?, Ints).
+conn_scan2(yes, J, Reached, K, Rs, E, R?) :-
+    integer(J?), ground(Reached?), integer(K?), ground(Rs?), ground(E?) |
+    J1 := J? + 1,
+    conn_scan(J1?, [J?|Reached?], K?, Rs?, E?, R).
+conn_scan2(no, J, Reached, K, Rs, E, R?) :-
+    integer(J?), ground(Reached?), integer(K?), ground(Rs?), ground(E?) |
+    J1 := J? + 1,
+    conn_scan(J1?, Reached?, K?, Rs?, E?, R).
+
+procedure conn_scan1(Ans?, Integer?, Ints?, Integer?, RoleSpecs?, Preds?, Ints).
+conn_scan1(yes, J, Reached, K, Rs, E, R?) :-
+    integer(J?), ground(Reached?), integer(K?), ground(Rs?), ground(E?) |
+    J1 := J? + 1,
+    conn_scan(J1?, Reached?, K?, Rs?, E?, R).
+conn_scan1(no, J, Reached, K, Rs, E, R?) :-
+    integer(J?), ground(Reached?), integer(K?), ground(Rs?), ground(E?) |
+    linked_any(Reached?, J?, Rs?, E?, A),
+    conn_scan2(A?, J?, Reached?, K?, Rs?, E?, R).
+
+% One pass over the roles J..K, adding each that the reached set touches.
+procedure conn_scan(Integer?, Ints?, Integer?, RoleSpecs?, Preds?, Ints).
+conn_scan(J, Reached, K, _, _, Reached?) :- J? > K? | true.
+conn_scan(J, Reached, K, Rs, E, R?) :-
+    J? =< K?, integer(J?), ground(Reached?), integer(K?), ground(Rs?), ground(E?) |
+    ints_member(Reached?, J?, M),
+    conn_scan1(M?, J?, Reached?, K?, Rs?, E?, R).
+
+procedure conn_loop2(Integer?, Integer?, Ints?, Integer?, RoleSpecs?, Preds?, Ints).
+conn_loop2(L1, L0, R1, _, _, _, R1?) :- L1? =:= L0? | true.
+conn_loop2(_, _, R1, K, Rs, E, R?) :-
+    otherwise, ground(R1?), integer(K?), ground(Rs?), ground(E?) |
+    conn_loop(R1?, K?, Rs?, E?, R).
+
+procedure conn_loop1(Ints?, Ints?, Integer?, RoleSpecs?, Preds?, Ints).
+conn_loop1(R1, R0, K, Rs, E, R?) :-
+    ground(R1?), ground(R0?), integer(K?), ground(Rs?), ground(E?) |
+    ints_len(R1?, L1),
+    ints_len(R0?, L0),
+    conn_loop2(L1?, L0?, R1?, K?, Rs?, E?, R).
+
+% The roles reached from those in hand, to a fixpoint.
+procedure conn_loop(Ints?, Integer?, RoleSpecs?, Preds?, Ints).
+conn_loop(Reached, K, Rs, E, R?) :-
+    ground(Reached?), integer(K?), ground(Rs?), ground(E?) |
+    conn_scan(1, Reached?, K?, Rs?, E?, R1),
+    conn_loop1(R1?, Reached?, K?, Rs?, E?, R).
+
+procedure first_missing1(Ans?, Integer?, Integer?, Ints?, Missing).
+first_missing1(no, J, _, _, missing(J?)).
+first_missing1(yes, J, K, Reached, R?) :-
+    integer(J?), integer(K?), ground(Reached?) |
+    J1 := J? + 1,
+    first_missing(J1?, K?, Reached?, R).
+
+procedure first_missing(Integer?, Integer?, Ints?, Missing).
+first_missing(J, K, _, all_reached) :- J? > K? | true.
+first_missing(J, K, Reached, R?) :-
+    J? =< K?, integer(J?), integer(K?), ground(Reached?) |
+    ints_member(Reached?, J?, M),
+    first_missing1(M?, J?, K?, Reached?, R).
+
+procedure sv3(Missing?, Constant?, Faults).
+sv3(all_reached, _, []).
+sv3(missing(J), Nm, [volition(Nm?, 1, J?)]).
 
 procedure sv2(Ans?, Integer?, Constant?, RoleSpecs?, Preds?, Faults).
 sv2(yes, _, _, _, _, []).
 sv2(no, K, Nm, Rs, E, R?) :- integer(K?), ground(Nm?), ground(Rs?), ground(E?) |
-    pairs_check(1, 2, K?, Nm?, Rs?, E?, R).
+    conn_loop([1], K?, Rs?, E?, Reached),
+    first_missing(1, K?, Reached?, M),
+    sv3(M?, Nm?, R).
 
 procedure sv1(Integer?, Constant?, RoleSpecs?, Preds?, Faults).
 sv1(K, _, _, _, []) :- K? < 2 | true.

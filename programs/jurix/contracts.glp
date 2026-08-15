@@ -73,28 +73,67 @@ sg_unguarded([schema(befriend,
         rs(unguarded, [atom(item, [svar(x), pvar(a), role(1)])], [],
                       [atom(friend, [role(1)])], [])])]).
 
-% --- negative: an act that lays a friend atom without the friend's will ----
+% --- negative: befriending done to one of the two ---------------------------
 % impose(p?, q) : +friend(q)   +friend(p)
-% Befriend forbids friend(q) at p, and impose puts it there by a transaction
-% befriend does not determine: clause 2 of def:unobstructed fails.
+% Clause 2 of def:unobstructed excuses it against befriend -- it gives the
+% other party a role and the atom it adds names that party -- and volition is
+% what rejects it: two roles, guarded at one, and neither requires an atom of
+% traceable provenance naming the other.
 procedure sg_imposed(Contract).
-sg_imposed([schema(befriend,
-       [rs(guarded, [atom(friend, [role(2)])], [], [], [atom(friend, [role(2)])]),
-        rs(guarded, [atom(friend, [role(1)])], [], [], [atom(friend, [role(1)])])]),
-    schema(unfriend,
-       [rs(guarded,   [], [atom(friend, [role(2)])], [], []),
-        rs(unguarded, [], [atom(friend, [role(1)])], [], [])]),
-    schema(sign,
-       [rs(guarded, [atom(item, [svar(x), role(1), role(1)])], [], [], [])]),
-    schema(forward,
-       [rs(guarded,   [atom(sent, [svar(x), role(2)])], [],
-                      [atom(item, [svar(x), pvar(a), pvar(f)]),
-                       atom(friend, [pvar(f)])], []),
-        rs(unguarded, [atom(item, [svar(x), pvar(a), role(1)])], [],
-                      [atom(friend, [role(1)])], [])]),
-    schema(impose,
-       [rs(guarded,   [atom(friend, [role(2)])], [], [], []),
-        rs(unguarded, [atom(friend, [role(1)])], [], [], [])])]).
+sg_imposed(C?) :-
+    sg(S),
+    contract_app(S?,
+      [schema(impose,
+         [rs(guarded,   [atom(friend, [role(2)])], [], [], []),
+          rs(unguarded, [atom(friend, [role(1)])], [], [], [])])], C).
+
+% --- negative: a friend atom naming somebody who takes no part -------------
+% gossip(p?, f?) : knows(u), +friend(u)   +gossiped
+% The atom befriend forbids at p is added at p by an act whose binding sends
+% no role to q, so clause 2 of def:unobstructed fails: p can be left holding
+% friend(q) without q ever taking part.  friend keeps traceable provenance,
+% u being named by the knows atom the role requires, and gossip is guarded in
+% both its roles, so volition is not what rejects this one.
+procedure sg_gossip(Contract).
+sg_gossip(C?) :-
+    sg(S),
+    contract_app(S?,
+      [schema(gossip,
+         [rs(guarded, [atom(friend, [pvar(u)])], [],
+                      [atom(knows, [pvar(u)])], []),
+          rs(guarded, [atom(gossiped, [])], [], [], [])])], C).
+
+% --- volition above arity two: a role graph that is a path -----------------
+% chain(p?, q, r, s) : friend(q), +chained(q)   friend(r), +chained(r)
+%                      friend(s), +chained(s)   +chained(r)
+% Guarded at one role, and no pair beyond the path has an edge, so the schema
+% passes on connectedness and would fail on every pair.
+procedure sg_chain(Contract).
+sg_chain(C?) :-
+    sg(S),
+    contract_app(S?,
+      [schema(chain,
+         [rs(guarded,   [atom(chained, [role(2)])], [],
+                        [atom(friend, [role(2)])], []),
+          rs(unguarded, [atom(chained, [role(3)])], [],
+                        [atom(friend, [role(3)])], []),
+          rs(unguarded, [atom(chained, [role(4)])], [],
+                        [atom(friend, [role(4)])], []),
+          rs(unguarded, [atom(chained, [role(3)])], [], [], [])])], C).
+
+% --- negative: the same schema with one edge of the path removed -----------
+% Role 2 requires nothing, so the role graph falls into {1,2} and {3,4}.
+procedure sg_chain_cut(Contract).
+sg_chain_cut(C?) :-
+    sg(S),
+    contract_app(S?,
+      [schema(chain,
+         [rs(guarded,   [atom(chained, [role(2)])], [],
+                        [atom(friend, [role(2)])], []),
+          rs(unguarded, [atom(chained, [role(3)])], [], [], []),
+          rs(unguarded, [atom(chained, [role(4)])], [],
+                        [atom(friend, [role(4)])], []),
+          rs(unguarded, [atom(chained, [role(3)])], [], [], [])])], C).
 
 % --- negative: the currency without mint -----------------------------------
 % The swap is still an introductory act, and each role requires a coin of its
@@ -135,6 +174,9 @@ contract(social_graph, C?) :- sg(C).
 contract(currency, C?) :- cur(C).
 contract(sg_unguarded, C?) :- sg_unguarded(C).
 contract(sg_imposed, C?) :- sg_imposed(C).
+contract(sg_gossip, C?) :- sg_gossip(C).
+contract(sg_chain, C?) :- sg_chain(C).
+contract(sg_chain_cut, C?) :- sg_chain_cut(C).
 contract(cur_no_mint, C?) :- cur_no_mint(C).
 contract(cur_loose_mint, C?) :- cur_loose_mint(C).
 contract(_, []) :- otherwise | true.

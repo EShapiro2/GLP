@@ -40,10 +40,12 @@ The tests are `bash programs/jurix/test_jurix.sh` from the repository root.
 | `traceable_of(Name, E)` | its predicates of traceable provenance |
 | `contract_named(Name, C)` | the contract itself |
 
-The names are `social_graph`, `currency`, and the four broken contracts
-`sg_unguarded`, `sg_imposed`, `cur_no_mint`, `cur_loose_mint`; any other name is
-the empty contract.  A verdict is `syntactically_grassroots` or
-`not_grassroots(Faults)`, where each fault is one of
+The names are `social_graph` and `currency`, the two the paper works through;
+`sg_chain`, which certifies and exercises volition above arity two; and the five
+broken contracts `sg_unguarded`, `sg_imposed`, `sg_gossip`, `sg_chain_cut`,
+`cur_no_mint`, `cur_loose_mint`.  Any other name is the empty contract.  A
+verdict is `syntactically_grassroots` or `not_grassroots(Faults)`, where each
+fault is one of
 
     no_introductory_act
     obstructed(Schema, Role, Atom, unobtainable)
@@ -51,7 +53,9 @@ the empty contract.  A verdict is `syntactically_grassroots` or
     volition(Schema, Role, Role)
 
 `unobtainable` is clause 1 of `def:unobstructed` and `blocked_by` is clause 2,
-naming the schema, role and added atom that obstruct.
+naming the schema, role and added atom that obstruct.  A `volition` fault names
+two roles the role graph does not join — the first role and the first one it
+does not reach — so at arity two it names the pair that has no edge.
 
 ## Writing a contract
 
@@ -96,29 +100,20 @@ and not both empty).
 
 ## Why it terminates
 
-As Section 3.5 says.  Bindings are finite once taken up to renaming: the
+As Section 3.6 says.  Bindings are finite once taken up to renaming: the
 schemas name no person (`prop:anonymity`), so the pair of people the conditions
 quantify over may be fixed, and a binding is then an assignment of the schema's
 party variables to the two of them.  Unobstructedness matches one atom against
-those the finitely many schemas add, volition is a scan of the roles, and
-traceable provenance is a greatest fixpoint over finitely many predicates,
-reached by dropping and repeating.
+those the finitely many schemas add, volition is a connectivity check on the
+roles, and traceable provenance is a greatest fixpoint over finitely many
+predicates, reached by dropping and repeating.
 
-## Two things to know about the reading
+## One thing to know about the reading
 
-**Clause 2 of `def:unobstructed` is decided at the level of the transaction.**
-Its exception, "other than `tau` at `beta`", is read here as "other than a
-transaction `tau` at `beta` determines" (`def:instance`), which is what the
-proof of `prop:open` uses.  Read literally the clause fails on befriend, the
-paper's own certified example: befriend at the binding that swaps its two roles
-adds the same forbidden atom at the same person, and that is the same machine
-transaction, as Section 5 observes of unfriend at its swapped binding.  The
-checker therefore compares the transactions the two bindings determine —
-participants, guards, and the four multisets at each role — and excepts a match
-only when they agree.  This is reported to the paper; the wording is the
-paper's to settle.
-
-**The comparison is conservative.** Two schemas at two bindings are treated as
-determining the same transactions only when those tuples agree exactly, which
-can report an obstruction where a subtler reading would not.  It never certifies
-a contract that the literal condition rejects.
+Clause 2 of `def:unobstructed` quantifies over every binding of every schema,
+and matching the forbidden atom constrains only the variables it meets.  The
+checker completes the rest with names nothing else uses, and decides the clause
+against that completion.  That is the binding that settles it: the clause
+excuses a binding that sends a role to the other party, and a variable the match
+left free can be sent elsewhere, so if the completion is not excused then some
+binding obstructs.

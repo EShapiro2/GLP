@@ -30,10 +30,9 @@ Contract  ::= [] ; [Schema | Contract].
 % People and speech acts are numbered; person(0) and person(1) are the two
 % the conditions quantify over.  undef marks a variable that a partial
 % substitution leaves unbound and occurs in no completed one.
-Val    ::= person(Integer) ; speech(Integer) ; undef.
-Vals   ::= [] ; [Val | Vals].
-GAtom  ::= gatom(Constant, Vals).
-GAtoms ::= [] ; [GAtom | GAtoms].
+Val   ::= person(Integer) ; speech(Integer) ; undef.
+Vals  ::= [] ; [Val | Vals].
+GAtom ::= gatom(Constant, Vals).
 
 Bind     ::= bind(Arg, Val).
 Subst    ::= [] ; [Bind | Subst].
@@ -41,15 +40,13 @@ Substs   ::= [] ; [Subst | Substs].
 Found    ::= bound(Val) ; free.
 MatchRes ::= match(Subst) ; nomatch.
 
-% --- What a schema determines at a binding (def:instance) ------------------
-% One eff(Person, Guard, Add, Del, Keep, Forb) per role, under the binding.
-Effect ::= eff(Val, Guard, GAtoms, GAtoms, GAtoms, GAtoms).
-Vgt    ::= [] ; [Effect | Vgt].
-% The introductory act's own transaction, and the first unused name index.
-Ctx    ::= ctx(Vgt, Integer).
+% --- What clause 2 of def:unobstructed is decided against ------------------
+% The other party of the introduction, and the first unused name index.
+Ctx ::= ctx(Val, Integer).
 
 % --- Verdicts --------------------------------------------------------------
 Ans   ::= yes ; no.
+Ints  ::= [] ; [Integer | Ints].
 Preds ::= [] ; [Constant | Preds].
 Cause ::= unobtainable ; blocked_by(Constant, Integer, Atom).
 Fault ::= no_introductory_act
@@ -58,10 +55,9 @@ Fault ::= no_introductory_act
 Faults  ::= [] ; [Fault | Faults].
 Verdict ::= syntactically_grassroots ; not_grassroots(Faults).
 
-Block ::= blocked(Constant, Integer, Atom) ; clear.
-Cand  ::= none ; some(Faults).
-TakeE ::= tooke(Vgt) ; misse.
-TakeG ::= tookg(GAtoms) ; missg.
+Block   ::= blocked(Constant, Integer, Atom) ; clear.
+Cand    ::= none ; some(Faults).
+Missing ::= missing(Integer) ; all_reached.
 
 % ---------------------------------------------------------------------------
 % Booleans
@@ -74,6 +70,10 @@ both_yes(no, _, no).
 procedure or_yes(Ans?, Ans?, Ans).
 or_yes(yes, _, yes).
 or_yes(no, A, A?).
+
+procedure flip(Ans?, Ans).
+flip(yes, no).
+flip(no, yes).
 
 % ---------------------------------------------------------------------------
 % Lists
@@ -91,6 +91,10 @@ procedure faults_app(Faults?, Faults?, Faults).
 faults_app([], T, T?).
 faults_app([F|Fs], T, [F?|R?]) :- faults_app(Fs?, T?, R).
 
+procedure contract_app(Contract?, Contract?, Contract).
+contract_app([], T, T?).
+contract_app([S|Ss], T, [S?|R?]) :- contract_app(Ss?, T?, R).
+
 procedure preds_len(Preds?, Integer).
 preds_len([], 0).
 preds_len([_|Xs], N?) :- preds_len(Xs?, M), N := M? + 1.
@@ -98,6 +102,10 @@ preds_len([_|Xs], N?) :- preds_len(Xs?, M), N := M? + 1.
 procedure roles_len(RoleSpecs?, Integer).
 roles_len([], 0).
 roles_len([_|Xs], N?) :- roles_len(Xs?, M), N := M? + 1.
+
+procedure ints_len(Ints?, Integer).
+ints_len([], 0).
+ints_len([_|Xs], N?) :- ints_len(Xs?, M), N := M? + 1.
 
 procedure pred_member(Constant?, Preds?, Ans).
 pred_member(_, [], no).
@@ -113,6 +121,11 @@ procedure vals_member(Vals?, Val?, Ans).
 vals_member([], _, no).
 vals_member([V|_], W, yes) :- V? =?= W? | true.
 vals_member([_|Vs], W, R?) :- otherwise | vals_member(Vs?, W?, R).
+
+procedure ints_member(Ints?, Integer?, Ans).
+ints_member([], _, no).
+ints_member([I|_], J, yes) :- I? =:= J? | true.
+ints_member([_|Is], J, R?) :- otherwise | ints_member(Is?, J?, R).
 
 % args_remove(As, A, R): every occurrence of A dropped from As.
 procedure args_remove(Args?, Arg?, Args).
@@ -154,9 +167,9 @@ procedure unwrap_val(Found?, Val).
 unwrap_val(bound(V), V?).
 unwrap_val(free, undef).
 
-% apply_arg/apply_atom/apply_atoms: the image under a binding, written
-% beta(phi) in Section 3.  A completed substitution binds every variable of
-% the schema, so undef never reaches an atom.
+% apply_arg/apply_atom: the image under a binding, written beta(phi) in
+% Section 3.  A completed substitution binds every variable of the schema, so
+% undef never reaches an atom.
 procedure apply_arg(Subst?, Arg?, Val).
 apply_arg(S, A, V?) :- ground(S?), ground(A?) |
     subst_lookup(S?, A?, F),
@@ -171,12 +184,6 @@ apply_args(S, [A|As], [V?|Vs?]) :- ground(S?), ground(A?), ground(As?) |
 procedure apply_atom(Subst?, Atom?, GAtom).
 apply_atom(S, atom(P, As), gatom(P?, Vs?)) :- ground(S?), ground(P?), ground(As?) |
     apply_args(S?, As?, Vs).
-
-procedure apply_atoms(Subst?, Atoms?, GAtoms).
-apply_atoms(_, [], []).
-apply_atoms(S, [A|As], [G?|Gs?]) :- ground(S?), ground(A?), ground(As?) |
-    apply_atom(S?, A?, G),
-    apply_atoms(S?, As?, Gs).
 
 % ---------------------------------------------------------------------------
 % Matching a schema's atom against a ground one
@@ -197,11 +204,18 @@ kind_ok(svar(_), person(_), no).
 kind_ok(svar(_), speech(_), yes).
 kind_ok(svar(_), undef, no).
 
+% subst_role_at(S, V, R): S sends a role to V.  Clause 2 of def:unobstructed
+% asks it of the other party; injectivity on the roles asks its negation.
+procedure subst_role_at(Subst?, Val?, Ans).
+subst_role_at([], _, no).
+subst_role_at([bind(role(_), V)|_], W, yes) :- V? =?= W? | true.
+subst_role_at([bind(_, _)|S], W, R?) :- otherwise | subst_role_at(S?, W?, R).
+
 % No two roles take the same person.
 procedure no_role_at(Subst?, Val?, Ans).
-no_role_at([], _, yes).
-no_role_at([bind(role(_), V)|_], W, no) :- V? =?= W? | true.
-no_role_at([bind(_, _)|S], W, R?) :- otherwise | no_role_at(S?, W?, R).
+no_role_at(S, V, R?) :- ground(S?), ground(V?) |
+    subst_role_at(S?, V?, A),
+    flip(A?, R).
 
 procedure injective_ok(Arg?, Val?, Subst?, Ans).
 injective_ok(role(_), V, S, R?) :- ground(V?), ground(S?) | no_role_at(S?, V?, R).
@@ -331,8 +345,9 @@ schema_vars(schema(Nm, Rs), R?) :- ground(Nm?), ground(Rs?) |
 % Completing a partial substitution with fresh names
 % ---------------------------------------------------------------------------
 % A match constrains only the variables it meets.  The rest take names no
-% other binding in play uses, so that the transaction built from the result
-% differs from the introductory act's whenever any completion does.
+% other binding in play uses: clause 2 of def:unobstructed excuses a binding
+% that sends a role to the other party, and a variable the match left free can
+% be sent elsewhere, so the fresh completion is the binding that decides it.
 
 procedure fresh_val(Arg?, Integer?, Val).
 fresh_val(role(_), N, person(N?)).
@@ -369,106 +384,6 @@ fresh_base(Sc, N?) :- ground(Sc?) |
 procedure args_len(Args?, Integer).
 args_len([], 0).
 args_len([_|As], N?) :- args_len(As?, M), N := M? + 1.
-
-% ---------------------------------------------------------------------------
-% The transactions a schema determines at a binding (def:instance)
-% ---------------------------------------------------------------------------
-% Two schemas at two bindings determine the same set of volition-guarded
-% transactions exactly when the participants, their guards and the four
-% multisets at each of them agree, which is what vgt_eq compares.
-
-procedure role_effects(RoleSpecs?, Integer?, Subst?, Vgt).
-role_effects([], _, _, []).
-role_effects([rs(Gd, P, M, K, N)|Rs], I, S, [eff(V?, Gd?, GP?, GM?, GK?, GN?)|R?]) :-
-    ground(Gd?), ground(P?), ground(M?), ground(K?), ground(N?),
-    ground(Rs?), ground(S?), integer(I?) |
-    apply_arg(S?, role(I?), V),
-    apply_atoms(S?, P?, GP),
-    apply_atoms(S?, M?, GM),
-    apply_atoms(S?, K?, GK),
-    apply_atoms(S?, N?, GN),
-    I1 := I? + 1,
-    role_effects(Rs?, I1?, S?, R).
-
-procedure vgt(Schema?, Subst?, Vgt).
-vgt(schema(_, Rs), S, R?) :- ground(Rs?), ground(S?) | role_effects(Rs?, 1, S?, R).
-
-procedure take_gatom1(TakeG?, GAtom?, TakeG).
-take_gatom1(missg, _, missg).
-take_gatom1(tookg(Bs), B, tookg([B?|Bs?])).
-
-procedure take_gatom(GAtoms?, GAtom?, TakeG).
-take_gatom([], _, missg).
-take_gatom([B|Bs], A, tookg(Bs?)) :- B? =?= A? | true.
-take_gatom([B|Bs], A, R?) :- otherwise, ground(B?), ground(Bs?), ground(A?) |
-    take_gatom(Bs?, A?, T),
-    take_gatom1(T?, B?, R).
-
-procedure mset_eq1(TakeG?, GAtoms?, Ans).
-mset_eq1(missg, _, no).
-mset_eq1(tookg(Bs), As, R?) :- ground(Bs?), ground(As?) | mset_eq(As?, Bs?, R).
-
-procedure mset_eq(GAtoms?, GAtoms?, Ans).
-mset_eq([], [], yes).
-mset_eq([], [_|_], no).
-mset_eq([_|_], [], no).
-mset_eq([A|As], Bs, R?) :- ground(A?), ground(As?), ground(Bs?) |
-    take_gatom(Bs?, A?, T),
-    mset_eq1(T?, As?, R).
-
-procedure guard_eq(Guard?, Guard?, Ans).
-guard_eq(guarded, guarded, yes).
-guard_eq(guarded, unguarded, no).
-guard_eq(unguarded, guarded, no).
-guard_eq(unguarded, unguarded, yes).
-
-procedure val_eq(Val?, Val?, Ans).
-val_eq(V, W, yes) :- V? =?= W? | true.
-val_eq(_, _, no) :- otherwise | true.
-
-procedure eff_eq(Effect?, Effect?, Ans).
-eff_eq(eff(V1, G1, P1, M1, K1, N1), eff(V2, G2, P2, M2, K2, N2), R?) :-
-    ground(V1?), ground(G1?), ground(P1?), ground(M1?), ground(K1?), ground(N1?),
-    ground(V2?), ground(G2?), ground(P2?), ground(M2?), ground(K2?), ground(N2?) |
-    val_eq(V1?, V2?, A1),
-    guard_eq(G1?, G2?, A2),
-    mset_eq(P1?, P2?, A3),
-    mset_eq(M1?, M2?, A4),
-    mset_eq(K1?, K2?, A5),
-    mset_eq(N1?, N2?, A6),
-    both_yes(A1?, A2?, B1),
-    both_yes(A3?, A4?, B2),
-    both_yes(A5?, A6?, B3),
-    both_yes(B1?, B2?, B4),
-    both_yes(B4?, B3?, R).
-
-procedure take_eff2(TakeE?, Effect?, TakeE).
-take_eff2(misse, _, misse).
-take_eff2(tooke(Fs), F, tooke([F?|Fs?])).
-
-procedure take_eff1(Ans?, Effect?, Vgt?, Effect?, TakeE).
-take_eff1(yes, _, Fs, _, tooke(Fs?)).
-take_eff1(no, F, Fs, E, R?) :- ground(F?), ground(Fs?), ground(E?) |
-    take_eff(Fs?, E?, T),
-    take_eff2(T?, F?, R).
-
-procedure take_eff(Vgt?, Effect?, TakeE).
-take_eff([], _, misse).
-take_eff([F|Fs], E, R?) :- ground(F?), ground(Fs?), ground(E?) |
-    eff_eq(F?, E?, A),
-    take_eff1(A?, F?, Fs?, E?, R).
-
-procedure vgt_eq1(TakeE?, Vgt?, Ans).
-vgt_eq1(misse, _, no).
-vgt_eq1(tooke(Fs), Es, R?) :- ground(Fs?), ground(Es?) | vgt_eq(Es?, Fs?, R).
-
-procedure vgt_eq(Vgt?, Vgt?, Ans).
-vgt_eq([], [], yes).
-vgt_eq([], [_|_], no).
-vgt_eq([_|_], [], no).
-vgt_eq([E|Es], Fs, R?) :- ground(E?), ground(Es?), ground(Fs?) |
-    take_eff(Fs?, E?, T),
-    vgt_eq1(T?, Es?, R).
 
 % ---------------------------------------------------------------------------
 % Atoms a role requires (def:schema: the atoms =(i) and -(i))

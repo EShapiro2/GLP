@@ -67,15 +67,35 @@ check "one guard dropped: no introductory act" \
 check "one guard dropped: befriend fails volition" \
       "volition(befriend, 1, 2)" "$out"
 
-# An act laying a friend atom without the friend's will obstructs befriend:
-# clause 2 of def:unobstructed.
+# An act that adds the forbidden atom while giving the other party a role, and
+# naming it in what it adds, is excused by clause 2 of def:unobstructed; what
+# rejects it is volition.
 out=$(run 'check_named(sg_imposed, V).')
-check "impose blocks befriend at role 1" \
-      "obstructed(befriend, 1, atom(friend, [role(2)]), blocked_by(impose, 1," "$out"
-check "impose blocks befriend at role 2" \
-      "obstructed(befriend, 2, atom(friend, [role(1)]), blocked_by(impose, 1," "$out"
+check "impose is rejected by volition, not by clause 2" \
+      "V = not_grassroots([volition(impose, 1, 2)])" "$out"
+check_not "impose does not obstruct befriend" "obstructed" "$out"
+
+# An act that adds it while sending no role to the other party is not excused:
+# p is left holding friend(q) with q taking no part.
+out=$(run 'check_named(sg_gossip, V).')
+check "gossip blocks befriend at role 1" \
+      "obstructed(befriend, 1, atom(friend, [role(2)]), blocked_by(gossip, 1," "$out"
+check "gossip blocks befriend at role 2" \
+      "obstructed(befriend, 2, atom(friend, [role(1)]), blocked_by(gossip, 1," "$out"
 check_not "befriend is not blocked by itself" \
       "blocked_by(befriend" "$out"
+check_not "gossip itself satisfies volition" "volition(gossip" "$out"
+
+# Volition above arity two is connectedness of the role graph, not a test on
+# every pair: a schema of arity four guarded at one role, whose role graph is
+# the path 1-2-3-4, passes; cutting one edge of the path splits it.
+out=$(run 'check_named(sg_chain, V).')
+check "a path role graph at arity four certifies" \
+      "V = syntactically_grassroots" "$out"
+
+out=$(run 'check_named(sg_chain_cut, V).')
+check "cutting an edge of the path fails volition" \
+      "V = not_grassroots([volition(chain, 1, 3)])" "$out"
 
 # No mint: the swap requires at each role a coin no act of arity one supplies.
 out=$(run 'check_named(cur_no_mint, V).')
