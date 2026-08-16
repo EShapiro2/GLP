@@ -17,6 +17,13 @@
 %%   *(X1,...,Xk)               a volition-guarded clause with person-supplied inputs:
 %%                              the person's answer binds the writers X1..Xk; the clause
 %%                              carries their readers Xi?.
+%%   *(v, ...)                  a named position X=T is written as the value alone when
+%%                              the clause never reads X?: the answer reaches the clause
+%%                              only by selecting it, so there is no position from which
+%%                              to type the name.  The card still shows both buttons.
+%%                              Where the answer IS read --- respond_coldcall's
+%%                              decision(Answer?, ...) and respond_child_consent, which
+%%                              binds it for the asking child --- the name stays.
 %%
 %% RESPONDERS. An arriving offer spawns a responder goal — respond_coldcall,
 %% respond_intro, respond_child_intro, respond_group_invite,
@@ -151,7 +158,7 @@ procedure respond_intro(Constant?, IntroOffer?, Channel(Stream(IntroContent), St
 
 %% Accept an introduction: ack on the setup channel, await the peer, inject
 %% the result.
-*(Answer=yes, Other?)
+*(yes, Other?)
 respond_intro(Id, offer(Other), Ch, Ans?) :-
     ground(Id?), ground(Other?),
     send(ack(Id?), Ch?, Ch1) |
@@ -159,7 +166,7 @@ respond_intro(Id, offer(Other), Ch, Ans?) :-
     inject_intro_result(Result?, [], Ans).
 
 %% Reject: nack on the setup channel, closing it.
-*(Answer=no, Other?)
+*(no, Other?)
 respond_intro(_, offer(Other), ch(_ChIn, [nack|[]]), []) :-
     ground(Other?) | true.
 
@@ -167,7 +174,7 @@ procedure respond_child_intro(Constant?, ChildIntroOffer?, Channel(Stream(IntroC
 
 %% Accept (as the introduced child's counterpart): ack on the setup channel,
 %% await the peer, inject the result.
-*(Answer=yes, Other?)
+*(yes, Other?)
 respond_child_intro(Id, offer(Other), Ch, Ans?) :-
     ground(Id?), ground(Other?),
     send(ack(Id?), Ch?, Ch1) |
@@ -175,7 +182,7 @@ respond_child_intro(Id, offer(Other), Ch, Ans?) :-
     inject_intro_result(Result?, [], Ans).
 
 %% Reject: nack on the setup channel, closing it.
-*(Answer=no, Other?)
+*(no, Other?)
 respond_child_intro(_, offer(Other), ch(_ChIn, [nack|[]]), []) :-
     ground(Other?) | true.
 
@@ -189,26 +196,26 @@ procedure respond_group_invite(Constant?, GroupInviteOffer?, Channel(Stream(Grou
 
 %% Accept: ack on the setup channel, hand the read side to the agent to await
 %% the group channel from the hub.
-*(Answer=yes, GroupId?)
+*(yes, GroupId?)
 respond_group_invite(Id, offer(GroupId), ch(ChRead, [ack(Id?)|[]]),
     [accept_group(GroupId?, ChRead?)]) :-
     ground(Id?), ground(GroupId?) | true.
 
 %% Reject: nack on the setup channel, closing it.
-*(Answer=no, GroupId?)
+*(no, GroupId?)
 respond_group_invite(_, offer(GroupId), ch(_ChRead, [nack|[]]), []) :-
     ground(GroupId?) | true.
 
 procedure respond_group_invite_child(GroupInviteChildOffer?, Channel(Stream(IntroContent), Stream(GroupSetupResponse))?, Stream(UserInMsg)).
 
 %% Approve: forward the invite to the child.
-*(Answer=yes, GroupId?, Child?)
+*(yes, GroupId?, Child?)
 respond_group_invite_child(offer(GroupId, Child), Ch,
     [approve_group(Child?, GroupId?, Ch?)]) :-
     ground(GroupId?), ground(Child?) | true.
 
 %% Reject: nack on the setup channel, closing it.
-*(Answer=no, GroupId?, Child?)
+*(no, GroupId?, Child?)
 respond_group_invite_child(offer(GroupId, Child), ch(_ChRead, [nack|[]]), []) :-
     ground(GroupId?) | true.
 
@@ -236,13 +243,13 @@ procedure respond_enrol(Constant?, EnrolOffer?, EnrolResponse, Stream(UserInMsg)
 
 %% Accept: become this person's child.  The reduction that follows is the
 %% child agent's, which is a separate program and not part of this exhibit.
-*(Answer=yes, Parent?)
+*(yes, Parent?)
 respond_enrol(Id, offer(Parent), enrol_accept(ParentEnd?),
               [enrol_accepted(Parent?, ch(FromParent, ToParent?))]) :-
     ground(Id?), ground(Parent?), new_channel(ParentEnd, ch(FromParent, ToParent?)) | true.
 
 %% Decline.
-*(Answer=no, Parent?)
+*(no, Parent?)
 respond_enrol(_, offer(Parent), enrol_no, []) :-
     ground(Parent?) | true.
 
@@ -253,12 +260,12 @@ respond_enrol(_, offer(Parent), enrol_no, []) :-
 procedure respond_release(ReleaseOffer?, Stream(UserInMsg)).
 
 %% Grant the release.
-*(Answer=yes, Child?)
+*(yes, Child?)
 respond_release(offer(Child), [approve_release(Child?)]) :-
     ground(Child?) | true.
 
 %% Withhold it.
-*(Answer=no, Child?)
+*(no, Child?)
 respond_release(offer(Child), []) :-
     ground(Child?) | true.
 

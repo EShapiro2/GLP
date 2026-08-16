@@ -17,6 +17,13 @@
 %%   *(X1,...,Xk)               a volition-guarded clause with person-supplied inputs:
 %%                              the person's answer binds the writers X1..Xk; the clause
 %%                              carries their readers Xi?.
+%%   *(v, ...)                  a named position X=T is written as the value alone when
+%%                              the clause never reads X?: the answer reaches the clause
+%%                              only by selecting it, so there is no position from which
+%%                              to type the name.  The card still shows both buttons.
+%%                              Where the answer IS read --- respond_coldcall's
+%%                              decision(Answer?, ...) and respond_child_consent, which
+%%                              binds it for the asking child --- the name stays.
 %%
 %% WHY EVERY ACT OF THE CHILD'S IS GUARDED HERE, which is the claim the paper
 %% rests on and was measured rather than assumed (CSSN Code, 2026-08-16 14:22).
@@ -168,7 +175,7 @@ ReleaseOffer     ::= offer(Constant).
 procedure respond_child_intro(Constant?, ChildIntroOffer?, Channel(Stream(IntroContent), Stream(IntroContent))?, Stream(UserInMsg)).
 
 %% Accept: ack on the setup channel, await the peer, inject the result.
-*(Answer=yes, Other?)
+*(yes, Other?)
 respond_child_intro(Id, offer(Other), Ch, Ans?) :-
     ground(Id?), ground(Other?),
     send(ack(Id?), Ch?, Ch1) |
@@ -176,7 +183,7 @@ respond_child_intro(Id, offer(Other), Ch, Ans?) :-
     inject_intro_result(Result?, [], Ans).
 
 %% Reject: nack on the setup channel, closing it.
-*(Answer=no, Other?)
+*(no, Other?)
 respond_child_intro(_, offer(Other), ch(_ChIn, [nack|[]]), []) :-
     ground(Other?) | true.
 
@@ -196,13 +203,13 @@ procedure respond_group_invite(Constant?, GroupInviteOffer?, Channel(Stream(Grou
 
 %% Accept: ack on the setup channel, hand the read side to the agent to await
 %% the group channel from the hub.
-*(Answer=yes, GroupId?)
+*(yes, GroupId?)
 respond_group_invite(Id, offer(GroupId), ch(ChRead, [ack(Id?)|[]]),
     [accept_group(GroupId?, ChRead?)]) :-
     ground(Id?), ground(GroupId?) | true.
 
 %% Reject: nack on the setup channel, closing it.
-*(Answer=no, GroupId?)
+*(no, GroupId?)
 respond_group_invite(_, offer(GroupId), ch(_ChRead, [nack|[]]), []) :-
     ground(GroupId?) | true.
 
@@ -211,13 +218,13 @@ respond_group_invite(_, offer(GroupId), ch(_ChRead, [nack|[]]), []) :-
 procedure respond_group_invite_child(GroupInviteChildOffer?, Channel(Stream(IntroContent), Stream(GroupSetupResponse))?, Stream(UserInMsg)).
 
 %% Approve: forward the invitation to the child.
-*(Answer=yes, GroupId?, Child?)
+*(yes, GroupId?, Child?)
 respond_group_invite_child(offer(GroupId, Child), Ch,
     [approve_group(Child?, GroupId?, Ch?)]) :-
     ground(GroupId?), ground(Child?) | true.
 
 %% Reject: nack on the setup channel, closing it.
-*(Answer=no, GroupId?, Child?)
+*(no, GroupId?, Child?)
 respond_group_invite_child(offer(GroupId, Child), ch(_ChRead, [nack|[]]), []) :-
     ground(GroupId?) | true.
 
@@ -242,12 +249,12 @@ respond_child_consent(offer(Child, GroupId), Answer?) :-
 procedure respond_release(ReleaseOffer?, Stream(UserInMsg)).
 
 %% Grant it.
-*(Answer=yes, Child?)
+*(yes, Child?)
 respond_release(offer(Child), [approve_release(Child?)]) :-
     ground(Child?) | true.
 
 %% Withhold it.
-*(Answer=no, Child?)
+*(no, Child?)
 respond_release(offer(Child), []) :-
     ground(Child?) | true.
 
