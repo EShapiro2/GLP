@@ -34,8 +34,13 @@ class CompiledProgram {
 }
 
 /// Compile a vGLP module against the generic mediator source.
-CompiledProgram compileProgram(ast.Module module, MediatorSource mediator) {
-  final types = compileTypes(module);
+///
+/// [ancestors] are the program's own `self.glp` modules, outermost first: a
+/// .vglp source is a module of a program and calls procedures the program
+/// declares above it, and an answer writer may be typed by one of them.
+CompiledProgram compileProgram(ast.Module module, MediatorSource mediator,
+    {List<ast.Module> ancestors = const []}) {
+  final types = compileTypes(module, ancestors: ancestors);
   final med = instantiate(mediator);
 
   final declsByKey = <String, ProcDecl>{

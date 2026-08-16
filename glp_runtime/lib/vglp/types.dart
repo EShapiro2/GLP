@@ -67,8 +67,9 @@ class CompiledTypes {
 ///
 /// [slotCountOf] gives the number of volition-guarded clauses of a procedure of
 /// M, which is the number of slot arguments its compiled declaration gains.
-CompiledTypes compileTypes(ast.Module module) {
-  final env = _environmentOf(module);
+CompiledTypes compileTypes(ast.Module module,
+    {List<ast.Module> ancestors = const []}) {
+  final env = _environmentOf(module, ancestors);
 
   final byClause = <String, ClauseTypes>{};
   final added = <TypeDef>[];
@@ -190,9 +191,26 @@ TypeExpr medChannelType({required bool isInput}) => TypeRef('Channel', 0, 0,
 // ---------------------------------------------------------------------------
 
 /// The environment of M, built as the type checker builds it: parameterised
-/// types expanded, the root scope beneath.
-TypeEnvironment _environmentOf(ast.Module module) {
-  final base = buildRootScopeEnvironment();
+/// types expanded, the root scope beneath, and beneath M itself the program's
+/// own ancestor `self.glp` modules.
+///
+/// The ancestors are not optional in practice: a .vglp source calls procedures
+/// its program declares in `self.glp` — `inject_enrol_response`, `send_net` —
+/// and an answer writer is typed by the position it occurs at, which may be an
+/// argument of one of those.  Without them the writer has no type and the
+/// compilation stops on a defect that is not in the source.
+TypeEnvironment _environmentOf(ast.Module module, List<ast.Module> ancestors) {
+  var base = buildRootScopeEnvironment();
+  for (final a in ancestors) {
+    final expandedAncestor = expandParameterizedTypes(a,
+        knownTypeNames: base.types.keys.toSet(),
+        externalTemplates: base.typeTemplates);
+    base = buildTypeEnvironment(expandedAncestor, ancestorScope: base,
+        typeTemplates: {
+          for (final td in a.typeDefs)
+            if (td.isParameterized) td.name: td,
+        });
+  }
   final expanded = expandParameterizedTypes(module,
       knownTypeNames: base.types.keys.toSet(),
       externalTemplates: base.typeTemplates);
