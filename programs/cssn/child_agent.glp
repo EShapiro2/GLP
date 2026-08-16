@@ -259,6 +259,19 @@ child_agent(Id, ParentId, St, [msg(person, Id1, send_group(GroupId, Text))|UserI
         msg(Id?, Id?, group_msg(GroupId?, Id?, Text?)), Outs?, Outs1),
     child_agent(Id?, ParentId?, St?, UserIn?, NetIn?, Outs1?).
 
+%% The creator of a group of ours removes a member.  This is the creator's role
+%% of child_leave_2, the four-role ending of child_join_2: a child that created
+%% a group is one of the four who may end a child's membership of it, and until
+%% now it was the one that could not.  Our own parent takes a withdrawal, the
+%% removed child's parent taking the other when group_removed reaches it.
+child_agent(Id, ParentId, St, [msg(person, Id1, remove_from_group(GroupId, Member))|UserIn], NetIn, Outs) :-
+    Id? =?= Id1?, ground(GroupId?), ground(Member?) |
+    lookup_send_group(group_member(GroupId?, Member?),
+        msg(Id?, Member?, group_removed(GroupId?)), Outs?, Outs1),
+    close_output(group_member(GroupId?, Member?), Outs1?, Outs2),
+    send_parent(ParentId?, msg(Id?, ParentId?, withdrawal), Outs2?, Outs3),
+    child_agent(Id?, ParentId?, St?, UserIn?, NetIn?, Outs3?).
+
 %% Child leaves group (own choice).  A child's leaving is guarded by any one of
 %% the creator, the child and a parent of it, and advances that parent's
 %% withdrawal count whichever of them willed it.
