@@ -343,6 +343,16 @@ ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
          AgentCh?, AgentCh1),
     ui_mediator(Id?, AgentCh1?, UserCh1?, Ps?, N?).
 
+%% A parent removes a member from a group its own child created: the fourth
+%% role of CSSN's child_leave_2, and the only one with no route in the
+%% deployed code (CSSN, 2026-08-16).
+ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
+    receive(remove_child_member(MyChild, GroupId, Member), UserCh?, UserCh1),
+    ground(Id?), ground(MyChild?), ground(GroupId?), ground(Member?) |
+    send(msg(person, Id?, remove_child_member(MyChild?, GroupId?, Member?)),
+         AgentCh?, AgentCh1),
+    ui_mediator(Id?, AgentCh1?, UserCh1?, Ps?, N?).
+
 %% --- Agent notifications: group_left, group_removed ---
 
 ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
