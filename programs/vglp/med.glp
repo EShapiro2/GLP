@@ -1,0 +1,143 @@
+%% med.glp — the mediator of the canonical compilation, and its helpers.
+%%
+%% vGLP paper "Volition Elicitation", Section "Elicitation", Definition
+%% "Canonical Compilation": the mediator sits between the person channel and
+%% the compiled agent, renders each ask as the card of the manifest's
+%% construct, routes the person's answer to the clause that posed it, answers
+%% for the person on the deadline, and closes an ask another clause aborted.
+%%
+%% Generic in the compiled program's answer type A and context type X, and in
+%% nothing else: a compiled program instantiates A and X at its own, and no
+%% line here is program-specific.  The two departures from the Definition's
+%% letter are stated in self.glp in this directory.
+
+%% ---------------------------------------------------------------------------
+%% The mediator
+%% ---------------------------------------------------------------------------
+
+exported procedure(A, X) med(
+    Channel(Stream(UserAnswer(A)), Stream(Card(X)))?,
+    Channel(Stream(AgentMsg(A, X)), Closed)?,
+    TimerStream?, PendingList(A)?, Integer?).
+
+%% Escrow: an ask arrives, is shown as a card, and its timer is started.
+med(UserCh, AgentCh, Ts, Ps, N) :-
+    receive(ask(C, Ctx, R?, Id?), AgentCh?, AgentCh1),
+    ground(C?), ground(Ctx?) |
+    Id := req(N?),
+    send(card(C?, Ctx?, req(N?)), UserCh?, UserCh1),
+    N1 := N? + 1,
+    deadline(D),
+    timer(req(N?), D?, T),
+    merge(T?, Ts?, Ts1),
+    med(UserCh1?, AgentCh1?, Ts1?,
+        [pending(req(N?), escrow(R)) | Ps?], N1?).
+
+%% Routing: the person's answer selects the then-branch and supplies the
+%% answer's values.
+med(UserCh, AgentCh, Ts, Ps, N) :-
+    receive(answer(ReqId, Vs), UserCh?, UserCh1),
+    ground(ReqId?), ground(Vs?) |
+    lookup(ReqId?, E, Ps?, Ps1),
+    grant_then(E?, Vs?),
+    med(UserCh1?, AgentCh?, Ts?, Ps1?, N?).
+
+%% Timeout: on the deadline the machine answers for the person, and the
+%% else-branch is selected.
+med(UserCh, AgentCh, [timeout(ReqId) | Ts], Ps, N) :-
+    ground(ReqId?) |
+    lookup(ReqId?, E, Ps?, Ps1),
+    grant_else(E?),
+    send(close(ReqId?), UserCh?, UserCh1),
+    med(UserCh1?, AgentCh?, Ts?, Ps1?, N?).
+
+%% Abort: another clause reduced the goal, so the ask is closed unanswered and
+%% neither branch is selected.
+med(UserCh, AgentCh, Ts, Ps, N) :-
+    receive(abort(ReqId), AgentCh?, AgentCh1),
+    ground(ReqId?) |
+    lookup(ReqId?, _, Ps?, Ps1),
+    send(close(ReqId?), UserCh?, UserCh1),
+    med(UserCh1?, AgentCh1?, Ts?, Ps1?, N?).
+
+%% ---------------------------------------------------------------------------
+%% The timer
+%% ---------------------------------------------------------------------------
+
+%% One timer per escrowed ask: a single-element stream, produced on the
+%% deadline.  The fairness condition of GLP with persons is clocked — every
+%% wait_until guard that suspends eventually succeeds — so the timeout
+%% arrives.
+exported procedure timer(ReqId?, Number?, TimerStream).
+timer(ReqId, D, [timeout(ReqId?)]) :-
+    wait_until(D?) | true.
+
+%% ---------------------------------------------------------------------------
+%% The deadline
+%% ---------------------------------------------------------------------------
+
+%% deadline(D) binds D to a date past the mediator's by the delay it sets.
+%% THE DELAY IS NAMED HERE AND NOWHERE ELSE: it is the one constant per
+%% platform the compilation asks for.
+exported procedure deadline(Number).
+deadline(D?) :- now(T) | D := T? + 60000.
+
+%% ---------------------------------------------------------------------------
+%% The pending table
+%% ---------------------------------------------------------------------------
+
+%% lookup consumes the pending entry of an identifier and yields its escrow,
+%% or no_escrow where none is pending — which is what makes an answer granted
+%% on a closed ask reach no goal.
+exported procedure(A) lookup(ReqId?, Escrow(A),
+                             PendingList(A)?, PendingList(A)).
+lookup(ReqId, E?, [pending(Id, E) | Ps], Ps?) :-
+    ReqId? =?= Id? | true.
+lookup(ReqId, E?, [P | Ps], [P? | Ps1?]) :-
+    otherwise |
+    lookup(ReqId?, E, Ps?, Ps1).
+lookup(_, no_escrow, [], []).
+
+%% Binding the escrowed reply.  On a closed ask there is nothing to bind.
+exported procedure(A) grant_then(Escrow(A)?, A?).
+grant_then(escrow(R?), Vs) :- R := then(Vs?).
+grant_then(no_escrow, _).
+
+exported procedure(A) grant_else(Escrow(A)?).
+grant_else(escrow(R?)) :- R := else.
+grant_else(no_escrow).
+
+%% ---------------------------------------------------------------------------
+%% Aborting a goal's open asks
+%% ---------------------------------------------------------------------------
+
+%% aborts(Slots?, Med?, Med1) sends abort(Id?) to the mediator for every ask
+%% among the slots.  Every clause of a compiled procedure calls it, so that any
+%% clause reducing the goal closes the questions the goal had open, whether or
+%% not the person has begun to answer them.
+exported procedure(A, X) aborts(Slots(A)?,
+    Channel(Closed, Stream(AgentMsg(A, X)))?,
+    Channel(Closed, Stream(AgentMsg(A, X)))).
+aborts([], Med, Med?).
+aborts([none | Ss], Med, Med1?) :-
+    aborts(Ss?, Med?, Med1).
+aborts([ask(_, Id) | Ss], Med, Med1?) :-
+    ground(Id?) |
+    send(abort(Id?), Med?, Med2),
+    aborts(Ss?, Med2?, Med1).
+
+%% ---------------------------------------------------------------------------
+%% Splitting the mediator channel among body goals
+%% ---------------------------------------------------------------------------
+
+%% The compilation threads Med through every procedure and splits it among the
+%% body goals "by the standard stream techniques, which are used without
+%% comment" (Definition "Canonical Compilation").  This is that technique: the
+%% two branches' message streams are merged into the parent's, so each body
+%% goal holds a mediator channel of its own and the mediator sees one stream.
+exported procedure(A, X) med_split(
+    Channel(Closed, Stream(AgentMsg(A, X)))?,
+    Channel(Closed, Stream(AgentMsg(A, X))),
+    Channel(Closed, Stream(AgentMsg(A, X)))).
+med_split(ch(_, Out?), ch([], O1), ch([], O2)) :-
+    merge(O1?, O2?, Out).

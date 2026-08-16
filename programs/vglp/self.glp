@@ -1,0 +1,70 @@
+%% self.glp — the vocabulary of the vGLP mediator.
+%%
+%% The mediator of vGLP's Definition "Canonical Compilation" (paper
+%% "Volition Elicitation", Section "Elicitation", subsection "The
+%% Implementation: Compiling vGLP onto GLP"), generic in the compiled
+%% program's answer type A and context type X.
+%%
+%% A compiled program supplies both: A is the program's answer type
+%%   A ::= Xs_C1 ; ... ; Xs_Ck
+%% over its volition-guarded clauses, and X its context type
+%%   X ::= ctx_C1 ; ... ; ctx_Ck.
+%% The paper's types item names A and leaves the context's type unstated; the
+%% card carries the context to the person, so the mediator is generic in it
+%% too, on the same construction.
+%%
+%% TWO DEPARTURES FROM THE DEFINITION, both forced by the moded type system
+%% and both reported to the paper's session.
+%%
+%% ONE ESCROWED WRITER, NOT TWO.  The paper escrows a selector Sel and an
+%% answer Xs separately, and the compiled clause guards on Sel? =?= then.
+%% Here the two are one Reply(A) ::= then(A) ; else: the mediator binds it
+%% once, and the compiled clause selects its branch by head unification
+%% instead of by a guard.  A second escrowed writer would have to be left
+%% unbound on the else path, and the type system admits no way to write that:
+%% the position wants a reader, and _? is not permitted in a program clause.
+%%
+%% ONE SLOT TYPE, NOT ONE PER CLAUSE.  The paper gives each volition-guarded
+%% clause C its own Slot_C ::= none ; ask(Selector?, Xs_C?, Id?).  Here
+%% Slot(A) is that type with A in place of Xs_C, so every slot of the program
+%% has one type and a clause selects its own alternative by head unification.
+%% That is what lets aborts/3 take the slot list of a clause — whose slots
+%% belong to different clauses — and lets one mediator serve every program.
+
+%% The identifier the mediator assigns an ask.
+ReqId ::= req(Integer).
+
+%% What the mediator binds when the ask is answered: the then-branch with the
+%% answer's values, or the else-branch, which carries none.
+Reply(A) ::= then(A) ; else.
+
+%% A slot of a compiled goal: no open ask, or one whose reply and identifier
+%% the goal holds the READERS of — their writers went to the mediator with the
+%% ask.
+Slot(A) ::= none ; ask(Reply(A), ReqId).
+Slots(A) ::= [] ; [Slot(A) | Slots(A)].
+
+%% Agent to mediator: an ask posed, carrying the writers the mediator binds,
+%% or an ask aborted because another clause reduced the goal.
+AgentMsg(A, X) ::= ask(Constant, X, Reply(A)?, ReqId?)
+                 ; abort(ReqId).
+
+%% Mediator to person: the card of an open ask, and its removal.
+Card(X) ::= card(Constant, X, ReqId) ; close(ReqId).
+
+%% Person to mediator: the grant of a construct's tap or submission.
+UserAnswer(A) ::= answer(ReqId, A).
+
+%% The escrowed writer of one open ask.  It sits inside a constructor because
+%% a complemented position must: it is the idiom of the deployed mediators'
+%% PendingValue.  no_escrow is what lookup yields where no ask is pending, so
+%% that an answer granted on a closed ask reaches no goal.
+Escrow(A) ::= escrow(Reply(A)?) ; no_escrow.
+
+%% The pending table: one entry per open ask.
+PendingEntry(A) ::= pending(ReqId, Escrow(A)).
+PendingList(A) ::= [] ; [PendingEntry(A) | PendingList(A)].
+
+%% The timer stream: one timeout per ask, on its deadline.
+Timeout ::= timeout(ReqId).
+TimerStream ::= [] ; [Timeout | TimerStream].
