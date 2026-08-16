@@ -11,7 +11,13 @@ class Parser {
   int _current = 0;
   Clause? _pendingClause;  // Clause parsed but belongs to different procedure
 
-  Parser(this.tokens);
+  /// Admit vGLP's volition guards and else-branches (vGLP, Definition "Guarded
+  /// Clause, Volition-Guarded Clause, ...").  False for a .glp source, which is
+  /// a vGLP program with no volition-guarded clauses (Definition "GLP, maGLP,
+  /// cGLP"): a volition guard in one is a parse error, not silently ignored.
+  final bool vglp;
+
+  Parser(this.tokens, {this.vglp = false});
 
   /// Parse tokens into an AST (legacy method, skips declarations)
   Program parse() {
@@ -272,8 +278,9 @@ class Parser {
           seenProcedures[sig] = proc;
           procedures.add(proc);
         }
-      } else if (_check(TokenType.ATOM)) {
-        // Clause starting with atom (procedure name)
+      } else if (_check(TokenType.ATOM) || (vglp && _check(TokenType.STAR))) {
+        // Clause starting with an atom (procedure name), or with the volition
+        // guard preceding one.
         final proc = _parseProcedure();
         final sig = '${proc.name}/${proc.arity}';
 
@@ -455,7 +462,11 @@ class Parser {
       // Check if next clause could be part of this procedure
       bool couldBeSameProcedure = false;
 
-      if (_peek().type == TokenType.ATOM && _peek().lexeme == name) {
+      // A volition guard precedes the head, so look past it for the name.
+      final headIdx = vglp ? _indexAfterVolitionGuard(_current) : _current;
+      if (headIdx < tokens.length &&
+          tokens[headIdx].type == TokenType.ATOM &&
+          tokens[headIdx].lexeme == name) {
         // Same predicate name
         couldBeSameProcedure = true;
       } else if (name == ':=' && (_peek().type == TokenType.VARIABLE || _peek().type == TokenType.READER || _peek().type == TokenType.UNDERSCORE)) {
@@ -511,10 +522,104 @@ class Parser {
     return Procedure(name, arity, clauses, firstClause.line, firstClause.column);
   }
 
+  /// The index of the first token past a volition guard beginning at [i], or
+  /// [i] itself if none begins there.  Used to look at the head of a clause the
+  /// guard precedes without parsing it.
+  int _indexAfterVolitionGuard(int i) {
+    if (i >= tokens.length || tokens[i].type != TokenType.STAR) return i;
+    var j = i + 1;
+    if (j < tokens.length && tokens[j].type == TokenType.LPAREN) {
+      var depth = 0;
+      while (j < tokens.length) {
+        if (tokens[j].type == TokenType.LPAREN) depth++;
+        if (tokens[j].type == TokenType.RPAREN) {
+          depth--;
+          if (depth == 0) { j++; break; }
+        }
+        j++;
+      }
+    }
+    return j;
+  }
+
+  /// Whether the STAR at the current position opens an else-branch rather than
+  /// standing for multiplication.  An else-branch is `*(T'1, ..., T'i) B'`, so
+  /// the parenthesised group is followed by a goal; a product `A * (B)` is
+  /// followed by an operator, a comma, or the clause's full stop.
+  bool _isElseBranchStar() {
+    if (!vglp || !_check(TokenType.STAR)) return false;
+    if (_current + 1 >= tokens.length ||
+        tokens[_current + 1].type != TokenType.LPAREN) return false;
+    final after = _indexAfterVolitionGuard(_current);
+    if (after >= tokens.length) return false;
+    final t = tokens[after].type;
+    return t == TokenType.ATOM || t == TokenType.VARIABLE ||
+           t == TokenType.READER || t == TokenType.UNDERSCORE;
+  }
+
+  /// Parse a volition guard if one precedes the clause (vGLP, Definition
+  /// "Guarded Clause, Volition-Guarded Clause, ...").  Returns null where the
+  /// clause is ordinary.
+  ///
+  /// The paper's abbreviations decide each position: `X_l=T_l` is written in
+  /// full; a bare writer `X_l` abbreviates `X_l=_`, an anonymous value, which
+  /// is a field of the construct; a bare ground term `T_l` abbreviates `_=T_l`,
+  /// an anonymous writer; and a reader `Y_l?` is a context position.
+  VolitionGuard? _parseVolitionGuardOpt() {
+    if (!_check(TokenType.STAR)) return null;
+    if (!vglp) {
+      throw CompileError(
+        'A volition guard "*" may appear only in a .vglp source.\n'
+        '  GLP is vGLP without volition-guarded clauses.',
+        _peek().line, _peek().column, phase: 'parser');
+    }
+    final star = _advance();
+    final question = <QuestionPosition>[];
+    final context = <VarTerm>[];
+
+    // Bare `*` is the volition guard with i = j = 0.
+    if (!_match(TokenType.LPAREN)) {
+      return VolitionGuard(question, context, star.line, star.column);
+    }
+
+    if (!_check(TokenType.RPAREN)) {
+      do {
+        final term = _parsePrimary();
+        if (_match(TokenType.EQUALS)) {
+          // X_l = T_l, with either side possibly anonymous.
+          final value = _parsePrimary();
+          if (term is VarTerm && !term.isReader) {
+            question.add(QuestionPosition(
+                writer: term,
+                value: value is UnderscoreTerm ? null : value));
+          } else if (term is UnderscoreTerm && !term.isReader) {
+            question.add(QuestionPosition(writer: null, value: value));
+          } else {
+            throw CompileError(
+              'The left side of a volition-guard position must be a writer or "_", got "$term".',
+              term.line, term.column, phase: 'parser');
+          }
+        } else if (term is VarTerm && term.isReader) {
+          context.add(term);              // Y_l? — a context position
+        } else if (term is VarTerm) {
+          question.add(QuestionPosition(writer: term, value: null));  // X_l = _
+        } else {
+          question.add(QuestionPosition(writer: null, value: term));  // _ = T_l
+        }
+      } while (_match(TokenType.COMMA));
+    }
+    _consume(TokenType.RPAREN, 'Expected ")" after volition guard');
+    return VolitionGuard(question, context, star.line, star.column);
+  }
+
   // Clause: Head :- Guards | Body.
   //     or: Head :- Body.
   //     or: Head.
+  //
+  // A vGLP clause may be preceded by a volition guard and, if it is, followed
+  // by an else-branch before the full stop.
   Clause _parseClause() {
+    final volitionGuard = _parseVolitionGuardOpt();
     final head = _parseAtom();
 
     List<Guard>? guards;
@@ -554,9 +659,41 @@ class Parser {
       }
     }
 
+    // Else-branch: *(T'1, ..., T'i) B', after the body and before the full stop.
+    ElseBranch? elseBranch;
+    if (_isElseBranchStar()) {
+      if (volitionGuard == null) {
+        throw CompileError(
+          'An else-branch may only follow a volition-guarded clause.',
+          _peek().line, _peek().column, phase: 'parser');
+      }
+      final star = _advance();
+      _consume(TokenType.LPAREN, 'Expected "(" after "*" of an else-branch');
+      final answer = <Term>[];
+      if (!_check(TokenType.RPAREN)) {
+        do {
+          answer.add(_parsePrimary());
+        } while (_match(TokenType.COMMA));
+      }
+      _consume(TokenType.RPAREN, 'Expected ")" after the else answer');
+      if (answer.length != volitionGuard.question.length) {
+        throw CompileError(
+          'The else answer has ${answer.length} positions, '
+          'the clause\'s question ${volitionGuard.question.length}.',
+          star.line, star.column, phase: 'parser');
+      }
+      final elseBody = <Goal>[_parseGoal()];
+      while (_match(TokenType.COMMA)) {
+        elseBody.add(_parseGoal());
+      }
+      elseBranch = ElseBranch(answer, elseBody, star.line, star.column);
+    }
+
     _consume(TokenType.DOT, 'Expected "." at end of clause');
 
-    return Clause(head, guards: guards, body: body, line: head.line, column: head.column);
+    return Clause(head, guards: guards, body: body,
+        volitionGuard: volitionGuard, elseBranch: elseBranch,
+        line: head.line, column: head.column);
   }
 
   // Parse a predicate that could be either a guard or a goal
@@ -968,7 +1105,8 @@ class Parser {
   Term _parseExpression([int minPrecedence = 0]) {
     var left = _parsePrimary();
 
-    while (_isOperator(_peek()) && _precedence(_peek()) >= minPrecedence) {
+    while (_isOperator(_peek()) && _precedence(_peek()) >= minPrecedence &&
+           !_isElseBranchStar()) {
       final op = _advance();
       final right = _parseExpression(_precedence(op) + 1);
       left = StructTerm(_operatorFunctor(op), [left, right], op.line, op.column);

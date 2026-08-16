@@ -43,20 +43,90 @@ class Procedure extends AstNode {
   String toString() => 'Procedure($signature, ${clauses.length} clauses)';
 }
 
+/// One position of a volition guard's question, `X_l = T_l` (vGLP,
+/// Definition "Guarded Clause, Volition-Guarded Clause, Volition Guard,
+/// Question, Answer, Context, Else-Branch, Ordinary Clause, Procedure, vGLP
+/// Program").
+///
+/// [writer] is the answer writer `X_l`, or null where the position abbreviates
+/// `_ = T_l` — an anonymous writer, which requires [value] ground.  [value] is
+/// the ground term `T_l`, or null where the position abbreviates `X_l = _` — an
+/// anonymous value, which is the field the person fills.
+class QuestionPosition {
+  final VarTerm? writer;
+  final Term? value;
+
+  QuestionPosition({this.writer, this.value});
+
+  /// A field of the construct: the person supplies the value (Definition
+  /// "Manifest", `fields`).
+  bool get isField => value == null;
+
+  @override
+  String toString() {
+    if (writer == null) return '$value';
+    if (value == null) return '$writer';
+    return '$writer=$value';
+  }
+}
+
+/// A volition guard preceding a clause: `*(X1=T1, ..., Xi=Ti, Y1?, ..., Yj?)`,
+/// or bare `*` where i = j = 0 (vGLP, Definition "Guarded Clause, ...").
+class VolitionGuard extends AstNode {
+  final List<QuestionPosition> question;
+  final List<VarTerm> context;  // the readers Y_l?
+
+  VolitionGuard(this.question, this.context, int line, int column)
+      : super(line, column);
+
+  @override
+  String toString() =>
+      '*(${[...question.map((q) => '$q'), ...context.map((c) => '$c')].join(", ")})';
+}
+
+/// The else-branch of a volition-guarded clause, written after its body:
+/// `*(T'1, ..., T'i) B'` (vGLP, Definition "Guarded Clause, ...").  Each
+/// [answer] term is a ground term or a reader paired to a head writer that the
+/// clause's guard makes ground.
+class ElseBranch extends AstNode {
+  final List<Term> answer;
+  final List<Goal> body;
+
+  ElseBranch(this.answer, this.body, int line, int column)
+      : super(line, column);
+
+  @override
+  String toString() => '*(${answer.join(", ")}) ${body.join(", ")}';
+}
+
 // Clause: Head :- Guards | Body.
+//
+// A vGLP clause may carry a volition guard before its head and, if it does, an
+// else-branch after its body.  Both are null in GLP, which is vGLP without
+// volition-guarded clauses (vGLP, Definition "GLP, maGLP, cGLP"), and the
+// parser only admits them for a .vglp source.
 class Clause extends AstNode {
   final Atom head;
   final List<Guard>? guards;  // Optional guard list before |
   final List<Goal>? body;     // Optional body goals after |
+  final VolitionGuard? volitionGuard;
+  final ElseBranch? elseBranch;
 
-  Clause(this.head, {this.guards, this.body, required int line, required int column})
+  Clause(this.head, {this.guards, this.body, this.volitionGuard, this.elseBranch,
+      required int line, required int column})
       : super(line, column);
+
+  /// Whether this is a volition-guarded clause (vGLP, Definition "Guarded
+  /// Clause, ...").
+  bool get isVolitionGuarded => volitionGuard != null;
 
   @override
   String toString() {
+    final volStr = volitionGuard != null ? '$volitionGuard ' : '';
     final guardsStr = guards != null && guards!.isNotEmpty ? ' :- ${guards!.join(", ")}' : '';
     final bodyStr = body != null && body!.isNotEmpty ? ' | ${body!.join(", ")}' : '';
-    return 'Clause($head$guardsStr$bodyStr)';
+    final elseStr = elseBranch != null ? ' $elseBranch' : '';
+    return 'Clause($volStr$head$guardsStr$bodyStr$elseStr)';
   }
 }
 
