@@ -86,19 +86,27 @@ PendingValue ::= response(Response?) ; channel(Channel(Stream(IntroContent), Str
 %% withdrawals it has taken.  They name nobody, which is what makes any parent
 %% of a child able to end any friendship or membership of that child.
 %%
-%% The other two are h_p, the posts this party holds, and t_p, its record of what
-%% it has sent and to whom.  Delivery to a member is owed while the member is on
-%% the creator's list and the creator has not already sent it that item, so the
-%% creator has to hold BOTH: the posts, because a member that joins late is owed
-%% what was posted before it joined, and the sent record, because what keeps a
-%% member from receiving an item twice is that record and nothing else.  A member
-%% that leaves and rejoins is the case that needs it --- its stream is gone and
-%% remade, and only t_p remembers what it has already had.
+%% The other two are the posts this party holds and its record of what it has
+%% sent in a group and to whom.  Against Definition "Grassroots Social Network
+%% Guarded Transactions" as it now stands, those are pi_p^g and delta_p^g: the
+%% items posted to g, and the pairs delivered in g.  They are NOT t_p, which is
+%% what this party has sent to a FRIEND, and which the code holds nowhere --- a
+%% direct send writes to the friend channel and records nothing.
+%%
+%% Delivery to a member is owed while the member is on the creator's list and the
+%% creator has not already sent it that item, so the creator has to hold BOTH:
+%% pi_p^g, because a member that joins late is owed what was posted before it
+%% joined, and delta_p^g, because what keeps a member from receiving an item
+%% twice is that record and nothing else.  A member that leaves and rejoins is
+%% the case that needs it --- its stream is gone and remade, and only delta_p^g
+%% remembers what it has already had.
 %%
 %% This is not a delivery index.  An index is a position in a queue that decides
 %% what a member may ever receive; sent(g, q, n) says only that the first n posts
 %% of g have gone to q, and the posts of g are appended in order and sent in
-%% order, so n is exactly the t_p of Definition item 5 written compactly.
+%% order, so n is delta_p^g written compactly --- a count where the Definition
+%% has a set of pairs, sound exactly because posting and sending are both in
+%% order.
 GroupPost  ::= post(GroupId, Constant, Constant).
 SentEntry  ::= sent(GroupId, Constant, Integer).
 AgentState ::= state(Integer, Integer, Stream(GroupPost), Stream(SentEntry)).
@@ -133,12 +141,6 @@ UserContent ::= connect(Constant)
               ; reject_child_group(Constant, GroupId, PendingValue)
               ; unfriend_child(Constant)
               ; unfriend_child_of(Constant, Constant)
-              %% declare_age is retired from the contract --- a party is a child
-              %% exactly while it holds a parent, and no act declares an age.  No
-              %% agent clause accepts it and no actor issues it; the alternative
-              %% stands only until vGLP drops the mediator's pass-through, which
-              %% would not typecheck without it.
-              ; declare_age
               ; enrol_child(Constant)
               ; enrol_decision(Decision, Constant, PendingValue)
               ; request_release
@@ -159,8 +161,6 @@ AgentOnlyContent ::= befriend(Constant, Response?)
                    ; group_received(GroupId, Constant, Constant)
                    ; child_group_consent(Constant, GroupId, Decision?)
                    ; unfriended(Constant)
-                   %% Retired with declare_age; see the note there.
-                   ; age_declared
                    ; enrol_offer(Constant, EnrolResponse?)
                    ; enrolled(Constant)
                    ; release_asked(Constant)
@@ -271,8 +271,6 @@ UserCmd ::= decision(Decision, Constant, ReqId)
           ; reject_child_group(Constant, GroupId, ReqId)
           ; unfriend_child(Constant)
           ; unfriend_child_of(Constant, Constant)
-          %% Retired with declare_age; see the note in UserContent.
-          ; declare_age
           ; enrol_child(Constant)
           ; enrol_decision(Decision, Constant, ReqId)
           ; request_release
@@ -295,8 +293,6 @@ UserNotify ::= befriend(Constant, ReqId)
              ; group_received(GroupId, Constant, Constant)
              ; child_group_consent(Constant, GroupId, ReqId)
              ; unfriended(Constant)
-             %% Retired with declare_age; see the note in UserContent.
-             ; age_declared
              ; enrol_offer(Constant, ReqId)
              ; enrolled(Constant)
              ; release_asked(Constant)

@@ -81,17 +81,14 @@ carol13_loop(N, [group_joined(group_id(frank, study))|In],
     [event('Joined study group'), say('Hi from Carol!')|Narr?]) :-
     carol13_loop(N?, In?, Out, Narr).
 
-%% Act 6: Carol ends the friendship with Dave.  The trigger is Frank's welcome
-%% rather than Dave's reply, and that choice is now only historical: it was made
-%% when a member received only what was posted after it joined, so that Dave's
-%% reply --- posted before Carol joined the study group --- never reached her.
-%% The delivery index is gone (941196c1); a member is owed a post while it is on
-%% the member list and the creator has not already sent it that item, so Carol
-%% DOES receive Dave's reply now, and either trigger would fire.  Which one the
-%% scenario should use is Section 7.3's to say, not this file's.
-carol13_loop(N, [group_received(group_id(frank, study), frank, _)|In],
+%% Act 6: Dave has spoken in the study group; Carol ends the friendship.  She
+%% joined after he posted and receives it anyway: the delivery index is gone
+%% (941196c1), and a member is owed a post while it is on the member list and the
+%% creator has not already sent it that item.  This is the one panel of the
+%% figure where that is visible.
+carol13_loop(N, [group_received(group_id(frank, study), dave, _)|In],
     [unfriend_child(dave)|Out?],
-    [act('Unfriending Dave')|Narr?]) :-
+    [event('Dave replied in study group'), act('Unfriending Dave')|Narr?]) :-
     carol13_loop(N?, In?, Out, Narr).
 carol13_loop(N, [unfriended(dave)|In], Out?, [event('Unfriended Dave')|Narr?]) :-
     carol13_loop(N?, In?, Out, Narr).

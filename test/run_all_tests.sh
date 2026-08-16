@@ -1884,11 +1884,11 @@ check "CSSN v3 fplay13 act 7 no parent on record is what being an adult is" "tag
 check "CSSN v3 fplay13 act 5 a member joining late is owed what was posted before" "tagged(carol, notify(group_received(group_id(frank, study), dave, Hi from Dave!)))" "$k_fp13"
 check "CSSN v3 fplay13 act 7 befriending with no parent among the guards" "tagged(eve, friend(frank))" "$k_fp13"
 fp13_narr=$(echo "$k_fp13" | grep -cE "tagged\((alice|bob|frank|carol|dave|eve), (act|event|friend|say)\(")
-if [ "$fp13_narr" = "84" ]; then
-    echo "  PASS: CSSN v3 fplay13 narrative is 84 lines"
+if [ "$fp13_narr" = "85" ]; then
+    echo "  PASS: CSSN v3 fplay13 narrative is 85 lines"
     PASS=$((PASS + 1))
 else
-    echo "  FAIL: CSSN v3 fplay13 narrative is $fp13_narr lines (expected 84)"
+    echo "  FAIL: CSSN v3 fplay13 narrative is $fp13_narr lines (expected 85)"
     FAIL=$((FAIL + 1))
 fi
 
