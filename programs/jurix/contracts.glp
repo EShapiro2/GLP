@@ -168,11 +168,12 @@ cur_loose_mint([schema(mint,
         rs(unguarded, [atom(coin, [role(2)])], [atom(coin, [pvar(r)])], [], [])])]).
 
 % --- CSSN's child-safe social contract -------------------------------------
-% Transcribed from CSSN's entry in Coordination/mail/Legal_inbox.md dated
-% 2026-08-15 20:35 UTC, as written there: sixteen schemas, and the guard marks
-% of the source, so deliver is unguarded at both roles -- their decision, in
-% their Section 3.2.  post and deliver carry the repair of their 21:40 UTC,
-% which ties an item delivered in a group to a posting of it there.
+% Transcribed from CSSN's entries in Coordination/mail/Legal_inbox.md, as
+% written there and with the guard marks of the source: sixteen schemas on
+% 2026-08-15 20:35 UTC, so deliver is unguarded at both roles -- their
+% decision, in their Section 3.2; post and deliver repaired at 21:40 UTC, which
+% ties an item delivered in a group to a posting of it there; and
+% child_leave_2 and post_own added at 2026-08-16 12:37 UTC, making eighteen.
 %
 % n names a group.  A group is no person, so n is a speech-act variable here;
 % that is also the reading CSSN's own provenance set takes, member and listed
@@ -266,7 +267,16 @@ cssn([schema(parent_child,
                        atom(listed, [role(2), svar(n)])],
                       [atom(delivered, [svar(x), role(2), svar(n)])]),
         rs(unguarded, [atom(item, [svar(x), pvar(b), role(1)])], [],
-                      [atom(member, [role(1), svar(n)])], [])])]).
+                      [atom(member, [role(1), svar(n)])], [])]),
+     schema(child_leave_2,
+       [rs(unguarded, [], [atom(listed, [role(2), svar(n)])], [], []),
+        rs(unguarded, [], [atom(member, [role(1), svar(n)])], [], []),
+        rs(unguarded, [atom(withdrawal, [])], [], [atom(parenting, [role(1)])], []),
+        rs(unguarded, [atom(withdrawal, [])], [], [atom(parenting, [role(2)])], [])]),
+     schema(post_own,
+       [rs(guarded, [atom(posted, [svar(x), svar(n)])], [],
+                    [atom(item, [svar(x), pvar(b), pvar(f)]),
+                     atom(listed, [role(1), svar(n)])], [])])]).
 
 % --- the contracts by name -------------------------------------------------
 % An unknown name is the empty contract, which has no introductory act.
