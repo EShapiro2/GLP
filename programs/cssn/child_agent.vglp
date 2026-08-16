@@ -21,10 +21,11 @@
 %% WHY EVERY ACT OF THE CHILD'S IS GUARDED HERE, which is the claim the paper
 %% rests on and was measured rather than assumed (CSSN Code, 2026-08-16 14:22).
 %% Twenty clauses of child_agent/6 are triggered by msg(person, Id1, ...), the
-%% person's own command, and each is a volition-guarded clause below.  Three
+%% person's own command, and each is a volition-guarded clause below.  Five
 %% arriving offers only notify and wait — child_intro from the parent,
-%% group_invite from the parent, and group_invite from a friend, which asks the
-%% parent first — and each is a responder.  In a run of fplay13 each offer
+%% group_invite from the parent, group_invite from a friend, which asks the
+%% parent first, and, for the parent role a child may hold, child_intro from a
+%% friend and group_invite_child — and each is a responder.  In a run of fplay13 each offer
 %% arrives as a card the child answers and each act is a form the child issues.
 %%
 %% THREE CLAUSES CARRY NO VOLITION GUARD, AND THAT IS CORRECT.  The parent
@@ -49,23 +50,23 @@
 %%     without the other.
 %%
 %% RESPONDERS.  An arriving offer spawns a responder goal — respond_child_intro,
-%% respond_group_invite, respond_child_consent, respond_release — one goal per
+%% respond_group_invite, respond_group_invite_child, respond_child_consent,
+%% respond_release — one goal per
 %% offer, so offers pend concurrently and are answered in any order.  The
 %% responder carries the offer and the escrowed writer or channel; its
 %% volition-guarded sibling clauses are the person's choice, and the chosen
 %% clause acts — directly on the escrowed channel, or by injecting its answer,
 %% through a merge, into the agent's UserIn.
 %%
-%% TWO ANSWER CLAUSES BELOW HAVE NO RESPONDER, and that is a gap in the deployed
-%% code rather than in this exhibit.  child_agent.glp carries
-%% approve_child_intro/3 and approve_group/3 as person commands — the parent's
-%% approval of an introduction, and of a group invitation, for a child of its own
-%% — but it has NO clause receiving child_intro from a friend or
-%% group_invite_child at all, where agent.glp has both.  So a party that is both
-%% a child and a parent can approve neither: nothing can deliver it the offer.
-%% The answer clauses are written here because they are in the deployed code and
-%% the correspondence is clause for clause; the responders are absent because the
-%% offers are.  Reported to CSSN Cowork.
+%% THE PARENT ROLE IS REACHABLE IN BOTH DIRECTIONS, which it was not when this
+%% file was first written.  child_agent.glp carried approve_child_intro/3 and
+%% approve_group/3 as person commands but had no clause receiving child_intro
+%% from a friend or group_invite_child at all, so a party that was both a child
+%% and a parent could approve neither: nothing could deliver it the offer.  Both
+%% receiving clauses are in the deployed code now, and respond_child_intro's
+%% approve branch and respond_group_invite_child below are what they spawn.  A
+%% module that let a child become a parent and not act as one would have gated
+%% the introductory act by half.
 %%
 %% Correspondence to the implementation (clause for clause):
 %%   - a *(X1..Xk) Request clause  ->  a UserCmd constructor over X1..Xk, a mediator
@@ -81,9 +82,12 @@
 %%     and reject_group/2 (a group invitation), approve_child_group/3 and
 %%     reject_child_group/3 (a consent request from a child of its own), and
 %%     approve_release/1 (a child of its own asking that the parenting end),
-%%     routing the escrowed writer or channel back to the agent.
-%% The escrow vocabulary — child_befriend/3, the agent-to-user group_invite/2,
-%% child_group_consent/3, release_asked/1, and the pending table — does not
+%%     approve_child_intro/3 (an introduction offered for a child of its own) and
+%%     approve_group/3 (a group invitation offered for one), routing the escrowed
+%%     writer or channel back to the agent.
+%% The escrow vocabulary — child_befriend/3, the agent-to-user group_invite/2 and
+%% group_invite_child/3, child_group_consent/3, release_asked/1, and the pending
+%% table — does not
 %% appear here: the machine's question to the person is not a message but a
 %% pending volition-guarded reduction.
 %%
@@ -149,6 +153,7 @@ OutputEntry ::= user_output(Stream(AgentToUserMsg)?)
 %% The offers the responders carry: the question the pending reduction poses.
 ChildIntroOffer  ::= offer(Constant).
 GroupInviteOffer ::= offer(GroupId).
+GroupInviteChildOffer ::= offer(GroupId, Constant).
 ConsentOffer     ::= offer(Constant, GroupId).
 ReleaseOffer     ::= offer(Constant).
 
@@ -175,6 +180,14 @@ respond_child_intro(Id, offer(Other), Ch, Ans?) :-
 respond_child_intro(_, offer(Other), ch(_ChIn, [nack|[]]), []) :-
     ground(Other?) | true.
 
+%% Approve, as a parent: forward the introduction to the named child of our own.
+%% This is the branch a party that is both a child and a parent takes, and the
+%% offer that spawns it now arrives.
+*(MyChild, OtherChild?)
+respond_child_intro(_, offer(OtherChild), Ch,
+    [approve_child_intro(OtherChild?, MyChild?, Ch?)]) :-
+    ground(OtherChild?), ground(MyChild?) | true.
+
 %% A group invitation.  It reaches the child two ways and this responder serves
 %% both: forwarded by the parent, who has already consented, or sent by a friend,
 %% in which case the parent's consent has just been given on the parent-child
@@ -191,6 +204,21 @@ respond_group_invite(Id, offer(GroupId), ch(ChRead, [ack(Id?)|[]]),
 %% Reject: nack on the setup channel, closing it.
 *(Answer=no, GroupId?)
 respond_group_invite(_, offer(GroupId), ch(_ChRead, [nack|[]]), []) :-
+    ground(GroupId?) | true.
+
+%% A group invitation offered for a child of our own — the parent role again,
+%% held by a party that is itself a child.
+procedure respond_group_invite_child(GroupInviteChildOffer?, Channel(Stream(IntroContent), Stream(GroupSetupResponse))?, Stream(UserInMsg)).
+
+%% Approve: forward the invitation to the child.
+*(Answer=yes, GroupId?, Child?)
+respond_group_invite_child(offer(GroupId, Child), Ch,
+    [approve_group(Child?, GroupId?, Ch?)]) :-
+    ground(GroupId?), ground(Child?) | true.
+
+%% Reject: nack on the setup channel, closing it.
+*(Answer=no, GroupId?, Child?)
+respond_group_invite_child(offer(GroupId, Child), ch(_ChRead, [nack|[]]), []) :-
     ground(GroupId?) | true.
 
 %% A consent request from a child of this party's own — the parent role, held by
@@ -389,6 +417,21 @@ child_agent(Id, ParentId, St, UserIn, [msg(From, Id1, group_invite(GroupId, Ch))
     child_consent_wait(Consent?, Id?, ParentId?, St?, GroupId?, Ch?,
         UserIn?, NetIn?, Outs1?).
 
+%% A friend introduces a child of theirs to a child of ours: spawn a responder.
+%% Without this the approve branch could never be reached.
+child_agent(Id, ParentId, St, UserIn, [msg(From, Id1, child_intro(Other, Ch))|NetIn], Outs) :-
+    Id? =?= Id1?, ~(From? =?= ParentId?), ground(Other?) |
+    respond_child_intro(Id?, offer(Other?), Ch?, Ans),
+    merge(Ans?, UserIn?, UserIn1),
+    child_agent(Id?, ParentId?, St?, UserIn1?, NetIn?, Outs?).
+
+%% A creator invites a child of ours into a group: spawn a responder.
+child_agent(Id, ParentId, St, UserIn, [msg(_, Id1, group_invite_child(GroupId, Child, Ch))|NetIn], Outs) :-
+    Id? =?= Id1?, ground(GroupId?), ground(Child?) |
+    respond_group_invite_child(offer(GroupId?, Child?), Ch?, Ans),
+    merge(Ans?, UserIn?, UserIn1),
+    child_agent(Id?, ParentId?, St?, UserIn1?, NetIn?, Outs?).
+
 %% A child of ours asks that the parenting end: spawn a responder.
 child_agent(Id, ParentId, St, UserIn, [msg(Child, Id1, release_request)|NetIn], Outs) :-
     Id? =?= Id1?, ground(Child?) |
@@ -562,18 +605,15 @@ child_agent(Id, ParentId, St, [approve_release(Child)|UserIn], NetIn, Outs) :-
     send_user(msg(agent, person, released(Child?)), Outs2?, Outs3),
     child_agent(Id?, ParentId?, St?, UserIn?, NetIn?, Outs3?).
 
-%% Our approval of an introduction for a child of our own — forward it on.  NO
-%% RESPONDER YIELDS THIS TODAY: see the note in the header.  child_agent.glp has
-%% no clause receiving child_intro from a friend, so nothing can deliver the
-%% offer to a party that is both a child and a parent.
+%% Our approval of an introduction for a child of our own, from
+%% respond_child_intro's approve branch — forward it on.
 child_agent(Id, ParentId, St, [approve_child_intro(OtherChild, MyChild, Ch)|UserIn], NetIn, Outs) :-
     ground(Id?), ground(OtherChild?), ground(MyChild?) |
     send_child(MyChild?, msg(Id?, MyChild?, child_intro(OtherChild?, Ch?)), Outs?, Outs1),
     child_agent(Id?, ParentId?, St?, UserIn?, NetIn?, Outs1?).
 
-%% Our approval of a group invitation for a child of our own — forward it on.
-%% NO RESPONDER YIELDS THIS TODAY either: child_agent.glp has no clause
-%% receiving group_invite_child.
+%% Our approval of a group invitation for a child of our own, from
+%% respond_group_invite_child — forward it on.
 child_agent(Id, ParentId, St, [approve_group(Child, GroupId, Ch)|UserIn], NetIn, Outs) :-
     ground(Id?), ground(GroupId?), ground(Child?) |
     send_child(Child?, msg(Id?, Child?, group_invite(GroupId?, Ch?)), Outs?, Outs1),

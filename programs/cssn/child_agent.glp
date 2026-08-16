@@ -408,6 +408,23 @@ child_agent(Id, ParentId, St, UserIn, [msg(Child, Id1, group_consent_req(GroupId
 
 %% --- Network messages from friends (otherwise) ---
 
+%% A friend introduces a child of theirs to a child of ours.  A party that is
+%% both a child and a parent is delivered this exactly as an adult parent is:
+%% without it the approve_child_intro clause above could never be reached, and a
+%% module that lets a child become a parent and not act as one has gated the
+%% introductory act by half.
+child_agent(Id, ParentId, St, UserIn, [msg(From, Id1, child_intro(Other, Ch))|NetIn], Outs) :-
+    Id? =?= Id1?, ~(From? =?= ParentId?), ground(Other?) |
+    send_user( msg(agent, person, child_befriend(From?, Other?, Ch?)), Outs?, Outs1),
+    child_agent(Id?, ParentId?, St?, UserIn?, NetIn?, Outs1?).
+
+%% A creator invites a child of ours into a group.  Delivered here for the same
+%% reason, and it is what makes the approve_group clause above reachable.
+child_agent(Id, ParentId, St, UserIn, [msg(_, Id1, group_invite_child(GroupId, Child, Ch))|NetIn], Outs) :-
+    Id? =?= Id1?, ground(GroupId?), ground(Child?) |
+    send_user( msg(agent, person, group_invite_child(GroupId?, Child?, Ch?)), Outs?, Outs1),
+    child_agent(Id?, ParentId?, St?, UserIn?, NetIn?, Outs1?).
+
 %% Friend sends text — notify UI
 child_agent(Id, ParentId, St, UserIn, [msg(From, Id1, text(Text))|NetIn], Outs) :-
     Id? =?= Id1? |
