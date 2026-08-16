@@ -21,6 +21,7 @@ enum TokenType {
   PIPE,           // |
   QUESTION,       // ? (for readers)
   SEMICOLON,      // ; (disjunction/OR in guards)
+  COLON,          // : (display declarations)
 
   // Operators
   IMPLIES,        // :-

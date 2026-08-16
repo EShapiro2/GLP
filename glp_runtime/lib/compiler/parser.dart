@@ -177,6 +177,7 @@ class Parser {
     final typeDefs = <TypeDef>[];
     final procDeclarations = <ProcDecl>[];
     final procedures = <Procedure>[];
+    final displayDecls = <DisplayDecl>[];
 
     // Track pending procedure declaration (waiting for its first clause)
     ProcDecl? pendingProcDecl;
@@ -189,7 +190,12 @@ class Parser {
           (_check(TokenType.ATOM) && (_peek().lexeme == 'exported' || _peek().lexeme == 'imported') &&
            _current + 1 < tokens.length && tokens[_current + 1].type == TokenType.PROCEDURE);
 
-      if (isProcedureDecl) {
+      if (_atDisplayDecl()) {
+        // A display declaration is a declaration, not a clause, so it does not
+        // break the run of clauses a pending procedure declaration is waiting
+        // for; it may stand anywhere a type definition may.
+        displayDecls.add(_parseDisplayDecl());
+      } else if (isProcedureDecl) {
         // Procedure declaration (possibly exported or imported)
         if (pendingProcDecl != null) {
           // Check if the pending declaration is for a builtin or imported (no clauses needed)
@@ -350,6 +356,7 @@ class Parser {
       procedures: procedures,
       compileMode: compileMode,
       exposes: exposes,
+      displayDecls: displayDecls,
       line: 1,
       column: 1,
     );
@@ -565,9 +572,9 @@ class Parser {
   /// full; a bare writer `X_l` abbreviates `X_l=_`, an anonymous value, which
   /// is a field of the construct; a bare ground term `T_l` abbreviates `_=T_l`,
   /// an anonymous writer; and a reader `Y_l?` is a context position.
-  VolitionGuard? _parseVolitionGuardOpt() {
+  VolitionGuard? _parseVolitionGuardOpt({bool inDisplay = false}) {
     if (!_check(TokenType.STAR)) return null;
-    if (!vglp) {
+    if (!vglp && !inDisplay) {
       throw CompileError(
         'A volition guard "*" may appear only in a .vglp source.\n'
         '  GLP is vGLP without volition-guarded clauses.',
@@ -610,6 +617,76 @@ class Parser {
     }
     _consume(TokenType.RPAREN, 'Expected ")" after volition guard');
     return VolitionGuard(question, context, star.line, star.column);
+  }
+
+  /// Whether a display declaration begins at the current position.
+  ///
+  /// `display` is an ordinary atom, not a keyword, so a procedure may be called
+  /// `display`: a clause of one has `(` or `:-` after the name, a declaration
+  /// has the predicate or the message pattern, which begins with an atom.
+  bool _atDisplayDecl() {
+    if (!_check(TokenType.ATOM) || _peek().lexeme != 'display') return false;
+    return _current + 1 < tokens.length &&
+        tokens[_current + 1].type == TokenType.ATOM;
+  }
+
+  /// Parse a display declaration (vGLP, Definition "Display Declaration,
+  /// Default Display").  Admitted in a .glp source as well as a .vglp one: the
+  /// compiled program carries its declarations unchanged, for the bridge to
+  /// read, so GLP must parse what the compilation emits.
+  DisplayDecl _parseDisplayDecl() {
+    final start = _advance();  // consume 'display'
+    final nameToken = _consume(TokenType.ATOM,
+        'Expected a predicate or a message pattern after "display"');
+
+    String? predicate;
+    VolitionGuard? guard;
+    Term? pattern;
+
+    if (_check(TokenType.STAR)) {
+      // Clause form: display p *(...) : ...
+      predicate = nameToken.lexeme;
+      guard = _parseVolitionGuardOpt(inDisplay: true);
+    } else {
+      // Message form: display m : ...  — m a term, possibly with arguments.
+      final args = <Term>[];
+      if (_match(TokenType.LPAREN)) {
+        if (!_check(TokenType.RPAREN)) {
+          args.add(_parseTerm());
+          while (_match(TokenType.COMMA)) {
+            args.add(_parseTerm());
+          }
+        }
+        _consume(TokenType.RPAREN, 'Expected ")" after the message pattern');
+      }
+      pattern = args.isEmpty
+          ? ConstTerm(nameToken.lexeme, nameToken.line, nameToken.column)
+          : StructTerm(nameToken.lexeme, args, nameToken.line, nameToken.column);
+    }
+
+    _consume(TokenType.COLON, 'Expected ":" after the subject of a display declaration');
+
+    final items = <DisplayItem>[];
+    do {
+      final itemToken = _consume(TokenType.ATOM, 'Expected a display item');
+      final itemArgs = <Term>[];
+      if (_match(TokenType.LPAREN)) {
+        if (!_check(TokenType.RPAREN)) {
+          itemArgs.add(_parseTerm());
+          while (_match(TokenType.COMMA)) {
+            itemArgs.add(_parseTerm());
+          }
+        }
+        _consume(TokenType.RPAREN, 'Expected ")" after display item arguments');
+      }
+      items.add(DisplayItem(itemToken.lexeme, itemArgs,
+          itemToken.line, itemToken.column));
+    } while (_match(TokenType.COMMA));
+
+    _consume(TokenType.DOT, 'Expected "." at end of display declaration');
+
+    return DisplayDecl(predicate: predicate, guard: guard, pattern: pattern,
+        items: items, line: start.line, column: start.column);
   }
 
   // Clause: Head :- Guards | Body.

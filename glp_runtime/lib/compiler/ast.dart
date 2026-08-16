@@ -99,6 +99,55 @@ class ElseBranch extends AstNode {
   String toString() => '*(${answer.join(", ")}) ${body.join(", ")}';
 }
 
+/// One item of a display declaration: `panel(N)`, `label(L)`, `field(X, W)`,
+/// `view(K)`, `persistent` or `transient` (vGLP, Definition "Display
+/// Declaration, Default Display").
+class DisplayItem extends AstNode {
+  final String name;
+  final List<Term> args;
+
+  DisplayItem(this.name, this.args, int line, int column) : super(line, column);
+
+  @override
+  String toString() => args.isEmpty ? name : '$name(${args.join(", ")})';
+}
+
+/// A display declaration (vGLP, Definition "Display Declaration, Default
+/// Display").  Two forms: for a volition-guarded clause, naming its predicate
+/// and its volition guard —
+///
+///     display p *(...) : panel(N), label(L), field(X, W), persistent.
+///
+/// and for a message pattern of the person channel —
+///
+///     display m : panel(N), view(K).
+///
+/// It fixes how a construct looks and how the program's output is viewed, and
+/// changes nothing the manifest fixes, so every item has a default read off the
+/// program and a program with no display declarations still renders.  The
+/// compiled program carries its declarations unchanged, for the bridge to read.
+class DisplayDecl extends AstNode {
+  /// Clause form: the predicate of the volition-guarded clause, and its guard.
+  final String? predicate;
+  final VolitionGuard? guard;
+
+  /// Message form: the pattern of the person-channel message.
+  final Term? pattern;
+
+  final List<DisplayItem> items;
+
+  DisplayDecl({this.predicate, this.guard, this.pattern,
+      required this.items, required int line, required int column})
+      : super(line, column);
+
+  bool get isClauseForm => predicate != null;
+
+  @override
+  String toString() => isClauseForm
+      ? 'display $predicate $guard : ${items.join(", ")}.'
+      : 'display $pattern : ${items.join(", ")}.';
+}
+
 // Clause: Head :- Guards | Body.
 //
 // A vGLP clause may carry a volition guard before its head and, if it does, an
@@ -319,6 +368,7 @@ class Module extends AstNode {
   final List<Procedure> procedures;
   final CompileMode compileMode;  // user (default) or system
   final List<String> exposes;     // `-expose(M).` module paths (e.g. "lib#streams")
+  final List<DisplayDecl> displayDecls;  // `display ... : ... .` declarations
 
   Module({
     this.typeDefs = const [],
@@ -327,6 +377,7 @@ class Module extends AstNode {
     this.procedures = const [],
     this.compileMode = CompileMode.user,
     this.exposes = const [],
+    this.displayDecls = const [],
     required int line,
     required int column,
   }) : super(line, column);

@@ -135,7 +135,10 @@ class Lexer {
           final lexeme = source.substring(_current - 2, _current);
           return Token(TokenType.ASSIGN, lexeme, startLine, startColumn);
         }
-        throw CompileError('Unexpected character :', startLine, startColumn, phase: 'lexer');
+        // A bare ':' separates a display declaration's subject from its items
+        // (vGLP, Definition "Display Declaration, Default Display").  It was a
+        // lexer error before, so no existing source carries one.
+        return _makeToken(TokenType.COLON, startLine, startColumn);
 
       case '_':
         if (!_isAlphaNumeric(_peek())) {
