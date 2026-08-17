@@ -104,19 +104,17 @@ display respond *(Answer=yes, From?) : panel(inbox), label("Accept"), transient.
     });
   });
 
-  group('the three deployed sources', () {
-    // They PARSE as vGLP.  They do not yet COMPILE: each carries volition
-    // guards the compilation cannot type, reported to their owners —
-    // social/graph and grassapp to SGSG, cssn to CSSN.  Two causes: a guard
-    // naming a writer whose reader occurs nowhere in the clause, which
-    // Definition "Guarded Clause, ..." does not admit and whose abbreviation
-    // is *(yes, Other?); and, in grassapp, a declaration over Stream(X) with
-    // no parameter list, so the answer writer sits at an abstract position.
-    // The compilation of all three goes in here when the sources are repaired.
+  group('the deployed sources', () {
+    // FOUR, not three: cssn/child_agent.vglp arrived on 2026-08-16 and a list
+    // written from memory misses it.  They PARSE as vGLP; they do not yet
+    // COMPILE, the edits being with their owners — social/graph and grassapp
+    // SGSG's, the two cssn sources CSSN's.  Each parse test becomes the
+    // compilation test as its source is repaired.
     for (final path in [
       'social/graph/agent.vglp',
       'grassapp/grassapp_agent.vglp',
       'cssn/agent.vglp',
+      'cssn/child_agent.vglp',
     ]) {
       test('$path parses as vGLP', () {
         final file = File('$_programs/$path');
