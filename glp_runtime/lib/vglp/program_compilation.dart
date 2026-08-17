@@ -16,12 +16,23 @@
 // and it is why the compiled program needs nothing of programs/vglp/ at run
 // time.
 
+import 'dart:io';
+
 import '../compiler/ast.dart' as ast;
+import '../compiler/lexer.dart';
+import '../compiler/parser.dart';
 import '../compiler/glp_printer.dart';
 import '../analysis/type_checker/type_ast.dart';
 import 'clause_compilation.dart';
 import 'mediator.dart';
 import 'types.dart';
+
+/// The first line of every emitted module, by which the emitter tells its own
+/// output from a hand-written module it must not overwrite.
+const compiledHeader =
+    '%% Compiled from vGLP by the canonical compilation\n'
+    '%% (vGLP, Definition "Canonical Compilation").  Do not edit: edit\n'
+    '%% the .vglp source and compile again.\n';
 
 /// The compiled program: one GLP module's source text, and the pieces it was
 /// built from, for tests to inspect.
@@ -35,12 +46,14 @@ class CompiledProgram {
 
 /// Compile a vGLP module against the generic mediator source.
 ///
-/// [ancestors] are the program's own `self.glp` modules, outermost first: a
-/// .vglp source is a module of a program and calls procedures the program
-/// declares above it, and an answer writer may be typed by one of them.
+/// [scope] is the module's ancestor scope as the loader built it — the root
+/// scope, the ancestor `self.glp` chain, and whatever an ancestor `-expose`s.
+/// A .vglp source calls procedures none of its own declarations names, and an
+/// answer writer may be typed by one of them, so the loader supplies this.
+/// [ancestors] is the same thing for a caller with no loader.
 CompiledProgram compileProgram(ast.Module module, MediatorSource mediator,
-    {List<ast.Module> ancestors = const []}) {
-  final types = compileTypes(module, ancestors: ancestors);
+    {List<ast.Module> ancestors = const [], TypeEnvironment? scope}) {
+  final types = compileTypes(module, ancestors: ancestors, scope: scope);
   final med = instantiate(mediator);
 
   final declsByKey = <String, ProcDecl>{
@@ -84,9 +97,7 @@ String _emit(ast.Module module, CompiledTypes types, InstantiatedMediator med,
   final b = StringBuffer();
   final printer = GlpPrinter();
 
-  b.writeln('%% Compiled from vGLP by the canonical compilation');
-  b.writeln('%% (vGLP, Definition "Canonical Compilation").  Do not edit: edit');
-  b.writeln('%% the .vglp source and compile again.');
+  b.write(compiledHeader);
   b.writeln();
 
   b.writeln('%% --- the source\'s own types ---');
@@ -137,4 +148,48 @@ String _emit(ast.Module module, CompiledTypes types, InstantiatedMediator med,
   }
 
   return b.toString();
+}
+
+/// Emit the compiled GLP beside each `.vglp` source under [rootDir], and return
+/// the paths written.
+///
+/// This is the flag's half of the load: the loader compiles a `.vglp` in memory
+/// and runs it, and this writes the same text to disc, which is what the paper's
+/// platform section exhibits.
+///
+/// It never clobbers a hand-written module.  The emitted file is `<stem>.glp`,
+/// and a `<stem>.glp` that exists and does not carry the compiler's header is
+/// left alone and reported: switching a deployed program onto its compiled
+/// agent is its own change.
+List<String> emitCompiledVglp(String rootDir, MediatorSource mediator,
+    {required TypeEnvironment Function(String vglpPath) scopeFor,
+    void Function(String message)? onSkip}) {
+  final root = Directory(rootDir);
+  if (!root.existsSync()) {
+    throw ArgumentError('Program root directory not found: $rootDir');
+  }
+
+  final written = <String>[];
+  final sources = root
+      .listSync(recursive: true)
+      .whereType<File>()
+      .where((f) => f.path.endsWith('.vglp'));
+
+  for (final file in sources) {
+    final target = '${file.path.substring(0, file.path.length - 5)}.glp';
+    final existing = File(target);
+    if (existing.existsSync() &&
+        !existing.readAsStringSync().startsWith(compiledHeader)) {
+      onSkip?.call('$target is hand-written; not overwritten');
+      continue;
+    }
+
+    final module = Parser(Lexer(file.readAsStringSync()).tokenize(), vglp: true)
+        .parseModule();
+    final compiled =
+        compileProgram(module, mediator, scope: scopeFor(file.path));
+    existing.writeAsStringSync(compiled.source);
+    written.add(target);
+  }
+  return written;
 }

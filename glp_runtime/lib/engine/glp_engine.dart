@@ -169,6 +169,10 @@ class GlpEngine {
   ///
   /// [rootSelfGlpPath] is the absolute path to programs/self.glp.
   /// Loading root self.glp is not optional — it's part of engine initialization.
+  /// The absolute path to programs/self.glp, for callers that build a scope of
+  /// their own — the vGLP emitter does.
+  String get rootSelfGlpPath => _rootSelfGlpPath;
+
   GlpEngine({required String rootSelfGlpPath}) {
     _rootSelfGlpPath = rootSelfGlpPath;
 

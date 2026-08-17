@@ -117,7 +117,7 @@ Clause _compileOrdinary(Clause c, Procedure proc, int m,
 
   final head = _extendHead(c.head, med, slots.map((s) => _w(s)).toList());
   final body = <Goal>[];
-  final medIn = _abortsInto(body, slots, slots, med, names);
+  final medIn = _abortsInto(body, slots, med, names);
   body.addAll(_compileBody(c.body ?? const [], medIn, names,
       isProcedureOfM: isProcedureOfM, slotCountOf: slotCountOf));
 
@@ -153,7 +153,7 @@ Clause _compileAnswer(Clause c, Procedure proc, int m, int j,
 
   final head = _extendHead(c.head, med, slotArgs);
   final body = <Goal>[];
-  final medIn = _abortsInto(body, passed, passed, med, names);
+  final medIn = _abortsInto(body, passed, med, names);
   body.addAll(_compileBody(c.body ?? const [], medIn, names,
       isProcedureOfM: isProcedureOfM, slotCountOf: slotCountOf));
 
@@ -200,7 +200,7 @@ Clause _compileElse(Clause c, Procedure proc, int m, int j,
   ];
 
   final body = <Goal>[];
-  final medIn = _abortsInto(body, passed, passed, med, names);
+  final medIn = _abortsInto(body, passed, med, names);
   body.addAll(_compileBody(elseBody, medIn, names,
       isProcedureOfM: isProcedureOfM, slotCountOf: slotCountOf));
 
@@ -357,7 +357,7 @@ List<Goal> _compileBody(List<Goal> body, String med, _NameSource names,
 /// Emit the abort call and return the name of the channel the body continues
 /// on.  With no slots to abort the call is the identity, so it is omitted.
 String _abortsInto(List<Goal> body, List<String> slotsInList,
-    List<String> _unused, String med, _NameSource names) {
+    String med, _NameSource names) {
   if (slotsInList.isEmpty) return med;
   final med1 = names.fresh('${_medStem}1');
   body.add(Goal('aborts', [

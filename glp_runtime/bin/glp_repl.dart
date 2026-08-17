@@ -5,6 +5,7 @@
 library;
 
 import 'dart:io';
+import 'package:glp_runtime/compiler/program_linker.dart' show emitVglpSources;
 import 'package:glp_runtime/engine/glp_engine.dart';
 import 'package:glp_runtime/runtime/scheduler.dart';
 import 'package:glp_runtime/runtime/terms.dart' as rt;
@@ -60,6 +61,32 @@ void main() async {
 
     if (trimmed == ':help' || trimmed == ':h') {
       _printHelp();
+      continue;
+    }
+
+    if (trimmed.startsWith(':emit')) {
+      // :emit <dir> — write the compiled GLP beside each .vglp source under
+      // <dir> (vGLP, Definition "Canonical Compilation").  The loader compiles
+      // a .vglp in memory and runs it; this puts the same text on disc.
+      final parts = trimmed.split(RegExp(r'\s+'));
+      if (parts.length < 2) {
+        print('Usage: :emit <directory>');
+        continue;
+      }
+      try {
+        final written = emitVglpSources(parts[1],
+            rootSelfGlpPath: engine.rootSelfGlpPath,
+            onSkip: (m) => print('  skipped: $m'));
+        if (written.isEmpty) {
+          print('No .vglp source was emitted.');
+        } else {
+          for (final w in written) {
+            print('  wrote $w');
+          }
+        }
+      } catch (e) {
+        print('Emit failed: $e');
+      }
       continue;
     }
 
@@ -228,6 +255,7 @@ void _printHelp() {
   print('  :strict, :s            Toggle strict type checking (default: on)');
   print('  :limit <n>             Set goal reduction limit to <n>');
   print('  :bytecode, :bc         Show loaded bytecode');
+  print('  :emit <dir>            Write the compiled GLP beside each .vglp');
   print('');
   print('Type Checking:');
   print('  Programs with procedure declarations are type-checked');

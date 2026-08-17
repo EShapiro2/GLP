@@ -68,8 +68,8 @@ class CompiledTypes {
 /// [slotCountOf] gives the number of volition-guarded clauses of a procedure of
 /// M, which is the number of slot arguments its compiled declaration gains.
 CompiledTypes compileTypes(ast.Module module,
-    {List<ast.Module> ancestors = const []}) {
-  final env = _environmentOf(module, ancestors);
+    {List<ast.Module> ancestors = const [], TypeEnvironment? scope}) {
+  final env = _environmentOf(module, ancestors, scope);
 
   final byClause = <String, ClauseTypes>{};
   final added = <TypeDef>[];
@@ -199,8 +199,16 @@ TypeExpr medChannelType({required bool isInput}) => TypeRef('Channel', 0, 0,
 /// and an answer writer is typed by the position it occurs at, which may be an
 /// argument of one of those.  Without them the writer has no type and the
 /// compilation stops on a defect that is not in the source.
-TypeEnvironment _environmentOf(ast.Module module, List<ast.Module> ancestors) {
-  var base = buildRootScopeEnvironment();
+///
+/// [scope] is the module's ancestor scope as the loader built it, which is the
+/// complete answer: it carries the root scope, every ancestor `self.glp`, and
+/// the modules an ancestor `-expose`s — `send_net` and the rest of
+/// `social/graph/routing`, which a .vglp source calls and no ancestor of it
+/// declares.  Given it, [ancestors] is redundant and is for callers with no
+/// loader.
+TypeEnvironment _environmentOf(ast.Module module, List<ast.Module> ancestors,
+    TypeEnvironment? scope) {
+  var base = scope ?? buildRootScopeEnvironment();
   for (final a in ancestors) {
     final expandedAncestor = expandParameterizedTypes(a,
         knownTypeNames: base.types.keys.toSet(),

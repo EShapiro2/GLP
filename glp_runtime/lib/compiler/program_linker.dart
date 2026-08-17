@@ -21,6 +21,8 @@ import '../analysis/type_checker/type_checker.dart';
 import '../analysis/type_checker/type_identity.dart';
 import '../runtime/module_hierarchy.dart';
 import '../analysis/type_checker/type_environment_builder.dart';
+import '../vglp/mediator.dart';
+import '../vglp/program_compilation.dart';
 
 /// A discovered module in the program tree.
 class DiscoveredModule {
@@ -136,7 +138,74 @@ List<DiscoveredModule> discoverProgram(String rootDir,
   // resolve -expose directives.
   _addAncestorContextAndExposes(
       modules, root.absolute.path, programsDir, rootSelfGlpPath);
+
+  // A .vglp source is compiled and joins the program as the module of its own
+  // name (vGLP, Definition "Canonical Compilation").  This runs AFTER the
+  // exposes are resolved, because the compilation types an answer writer by the
+  // position it occurs at and those positions are often arguments of an exposed
+  // procedure — `send_net` and the rest of social/graph/routing.
+  _addVglpModules(modules, root, programsDir, rootSelfGlpPath);
   return modules;
+}
+
+/// Compile each `.vglp` source of the tree and add it as a module.
+///
+/// A `.vglp` whose directory holds a `.glp` of the same name is SKIPPED, and
+/// the hand-written module stands: switching a deployed program onto its
+/// compiled agent is its own change, not a side effect of loading it.  A
+/// directory whose program is written in vGLP alone has no such file, and its
+/// sources compile and run.
+void _addVglpModules(List<DiscoveredModule> modules, Directory root,
+    String? programsDir, String? rootSelfGlpPath) {
+  final vglpFiles = root
+      .listSync(recursive: true)
+      .whereType<File>()
+      .where((f) => f.path.endsWith('.vglp'))
+      .toList();
+  if (vglpFiles.isEmpty) return;
+
+  final mediator = _mediatorSource(programsDir);
+  if (mediator == null) return;
+
+  for (final file in vglpFiles) {
+    final filename = file.path.split(Platform.pathSeparator).last;
+    final stem = filename.substring(0, filename.length - '.vglp'.length);
+    if (File('${file.parent.path}${Platform.pathSeparator}$stem.glp')
+        .existsSync()) {
+      continue;  // the hand-written module stands
+    }
+
+    final chain = discoverSelfChain(
+      targetFile: file.absolute.path,
+      rootDir: root.absolute.path,
+      programsDir: programsDir,
+    );
+    final ancestorScope =
+        buildAncestorScope(chain: chain, rootSelfGlpPath: rootSelfGlpPath);
+
+    final source = Parser(Lexer(file.readAsStringSync()).tokenize(), vglp: true)
+        .parseModule();
+    final compiled =
+        compileProgram(source, mediator, scope: ancestorScope);
+    final compiledAst =
+        Parser(Lexer(compiled.source).tokenize()).parseModule();
+
+    modules.add(DiscoveredModule(
+      filePath: file.path,
+      moduleName: _moduleNameFromFilename('$stem.glp'),
+      ast: compiledAst,
+      ancestorScope: ancestorScope,
+    ));
+  }
+}
+
+/// The generic mediator source, `programs/vglp/`, which the compilation
+/// instantiates into every compiled program.
+MediatorSource? _mediatorSource(String? programsDir) {
+  if (programsDir == null) return null;
+  final dir = '$programsDir${Platform.pathSeparator}vglp';
+  if (!Directory(dir).existsSync()) return null;
+  return MediatorSource.fromDirectory(dir);
 }
 
 /// Discover a single self-contained module as a one-module program (modules.tex
@@ -1274,3 +1343,33 @@ String _moduleNameFromDirPath(String dirPath) {
 
 // Ancestor-scope assembly lives in module_hierarchy.dart (buildAncestorScope)
 // — the one shared implementation; no linker-local copy.
+
+/// Write the compiled GLP beside each `.vglp` source under [rootDir].
+///
+/// The scope each source is compiled in is the one the loader would give it —
+/// the root scope, its ancestor `self.glp` chain and whatever an ancestor
+/// `-expose`s — so the emitted text is exactly what the load produces in
+/// memory (vGLP, Definition "Canonical Compilation").
+List<String> emitVglpSources(String rootDir,
+    {required String rootSelfGlpPath,
+    void Function(String message)? onSkip}) {
+  final root = Directory(rootDir).absolute;
+  final programsDir = File(rootSelfGlpPath).parent.absolute.path;
+  final mediator = _mediatorSource(programsDir);
+  if (mediator == null) {
+    throw StateError(
+        'The generic mediator source is not at $programsDir/vglp: the '
+        'canonical compilation emits the mediator into every compiled program '
+        'and reads it from there.');
+  }
+
+  return emitCompiledVglp(root.path, mediator,
+      scopeFor: (vglpPath) => buildAncestorScope(
+          chain: discoverSelfChain(
+            targetFile: File(vglpPath).absolute.path,
+            rootDir: root.path,
+            programsDir: programsDir,
+          ),
+          rootSelfGlpPath: rootSelfGlpPath),
+      onSkip: onSkip);
+}
