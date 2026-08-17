@@ -24,6 +24,18 @@
 %%                              Where the answer IS read --- respond_coldcall's
 %%                              decision(Answer?, ...) and respond_child_consent, which
 %%                              binds it for the asking child --- the name stays.
+%%   ... :- G | B *(T') B'     an ELSE-BRANCH: B is the then-branch, B' the else-branch,
+%%                              which reduces with the else answer T' when the person
+%%                              wills no answer and the machine answers for them.  The
+%%                              two branches share the HEAD and the GUARD, so a clause
+%%                              whose branches build different things builds them in
+%%                              the two bodies --- which is why the responders below
+%%                              build nothing but the offer, the channel and the answer
+%%                              stream in the head, and send nothing in the guard: a
+%%                              guard that acked would ack a refusal.  A declining
+%%                              sibling, where one remains, precedes the clause that
+%%                              carries the branch, since that clause reduces whether
+%%                              or not the person wills it.
 %%
 %% RESPONDERS. An arriving offer spawns a responder goal — respond_coldcall,
 %% respond_intro, respond_child_intro, respond_group_invite,
@@ -138,86 +150,168 @@ EnrolOffer            ::= offer(Constant).
 ReleaseOffer          ::= offer(Constant).
 
 %% =============================================================================
+%% DISPLAY DECLARATIONS (Definition "Display Declaration, Default Display")
+%% =============================================================================
+%% Only what the default gets wrong is declared, which is the rule the
+%% definition sets and the reason a program with no declarations still renders.
+%%
+%%   - THE PANEL is right by default everywhere here: it is the program, and the
+%%     app shows this program in one panel.  None is declared.
+%%   - THE FIELD WIDGET is the widget of the writer's type by default, and every
+%%     person named in a question is a Constant, whose widget is text --- so
+%%     every party position is declared a peer, and the ones that are genuinely
+%%     text are left to the default only where declaring the peers beside them
+%%     would leave the clause half declared.
+%%   - THE LABEL is the ground term of the volition guard if there is one, else
+%%     the predicate.  No request clause of agent/5 has a ground position, so all
+%%     fifteen would be labelled "agent": wrong for every one of them.  Each is
+%%     declared.  The responders keep their defaults, yes and no being ground in
+%%     their guards, except the parent's approval, whose guard names a child and
+%%     has no ground position.
+%%   - PERSISTENCE is right by default throughout: a request clause of agent/5
+%%     calls agent, so it is persistent, and a responder does not, so its card is
+%%     transient.  None is declared.
+
+display agent *(Target) : label('Add a friend'), field(Target, peer).
+display agent *(Target, Text) : label('Send a message'), field(Target, peer), field(Text, text).
+display agent *(P, Q) : label('Introduce two friends'), field(P, peer), field(Q, peer).
+display agent *(Child1, Friend, Child2) : label('Introduce two children of mine'), field(Child1, peer), field(Friend, peer), field(Child2, peer).
+display agent *(MyChild, Friend, FriendChild) : label('Introduce my child to the child of a friend'), field(MyChild, peer), field(Friend, peer), field(FriendChild, peer).
+display agent *(MyChild, Target) : label('End a friendship of my child'), field(MyChild, peer), field(Target, peer).
+display agent *(Child) : label('Become a parent'), field(Child, peer).
+display agent *(Name) : label('Create a group'), field(Name, text).
+display agent *(GroupId, Invitee) : label('Invite a friend to a group'), field(GroupId, text), field(Invitee, peer).
+display agent *(GroupId, Child, Parent) : label('Invite the child of a friend to a group'), field(GroupId, text), field(Child, peer), field(Parent, peer).
+display agent *(GroupId, Text) : label('Post to a group'), field(GroupId, text), field(Text, text).
+display agent *(GroupId) : label('Leave a group'), field(GroupId, text).
+display agent *(Child, GroupId) : label('Tell my child to leave a group'), field(Child, peer), field(GroupId, text).
+display agent *(GroupId, Member) : label('Remove a member from my group'), field(GroupId, text), field(Member, peer).
+display agent *(MyChild, GroupId, Member) : label('Remove a member from the group of my child'), field(MyChild, peer), field(GroupId, text), field(Member, peer).
+
+display respond_child_intro *(MyChild, OtherChild?) : label('Approve for a child of mine'), field(MyChild, peer).
+
+%% The two message patterns the default gets wrong: a conversation is a thread,
+%% not a list.  Every other alternative of AgentContent is a list in the
+%% program's panel, which is the default, so none of them is declared.
+display msg(agent, person, received(_, _)) : panel(agent), view(thread).
+display msg(agent, person, group_received(_, _, _)) : panel(agent), view(thread).
+
+%% =============================================================================
 %% RESPONDERS — one goal per arriving offer; the volition-guarded clauses live
 %% here, so offers pend concurrently and are answered in any order.
 %% =============================================================================
 
 procedure respond_coldcall(ColdCallOffer?, Response, Stream(UserInMsg)).
 
-%% Accept a friend offer.
-*(Answer=yes, From?)
-respond_coldcall(offer(From), Resp?, [decision(Answer?, From?, response(Resp))]) :-
-    ground(From?) | true.
-
-%% Decline.
+%% Decline.  It precedes the accepting clause because that clause carries an
+%% else-branch and so reduces whether or not the person wills it.
 *(Answer=no, From?)
 respond_coldcall(offer(From), Resp?, [decision(Answer?, From?, response(Resp))]) :-
     ground(From?) | true.
 
-procedure respond_intro(Constant?, IntroOffer?, Channel(Stream(IntroContent), Stream(IntroContent))?, Stream(UserInMsg)).
+%% Accept a friend offer.  Head and guard already suit both answers --- the
+%% clause builds the same decision either way and the answer alone tells them
+%% apart --- so the else-branch is the empty body: the machine, answering for a
+%% person who leaves the card unanswered, reaches the decline above.
+*(Answer=yes, From?)
+respond_coldcall(offer(From), Resp?, [decision(Answer?, From?, response(Resp))]) :-
+    ground(From?) | true
+ *(no) true.
 
-%% Accept an introduction: ack on the setup channel, await the peer, inject
-%% the result.
-*(yes, Other?)
-respond_intro(Id, offer(Other), Ch, Ans?) :-
-    ground(Id?), ground(Other?),
-    send(ack(Id?), Ch?, Ch1) |
+%% =============================================================================
+%% THE BRANCH BODIES — what an acceptance and a refusal each do
+%% =============================================================================
+%% A responder that answers an offer on a channel used to be two clauses whose
+%% HEADS differed: the acceptance acked in its guard and the refusal built the
+%% nack in its head.  An else-branch shares the head and the guard with its
+%% then-branch, so neither could carry one, and an else clause built from the
+%% acceptance would have acked a refusal.  Each responder's two effects are
+%% therefore procedures called from the two branches, and the head builds only
+%% the offer, the channel and the answer stream.
+
+%% The acceptance of an introduction: ack on the setup channel, wait for the
+%% peer's, and hand the result to the agent.
+procedure ack_and_await(Constant?, Constant?, Channel(Stream(IntroContent), Stream(IntroContent))?, Stream(UserInMsg)).
+ack_and_await(Id, Other, Ch, Ans?) :-
+    ground(Id?), ground(Other?), send(ack(Id?), Ch?, Ch1) |
     intro_await_peer(Other?, Ch1?, Result),
     inject_intro_result(Result?, [], Ans).
 
-%% Reject: nack on the setup channel, closing it.
-*(no, Other?)
-respond_intro(_, offer(Other), ch(_ChIn, [nack|[]]), []) :-
-    ground(Other?) | true.
+%% The refusal of one: nack on the setup channel, which closes it, and no answer
+%% for the agent to act on.
+procedure nack_and_close(Channel(Stream(IntroContent), Stream(IntroContent))?, Stream(UserInMsg)).
+nack_and_close(ch(_ChIn, [nack|[]]), []).
+
+%% The acceptance of a group invitation: ack on the setup channel and hand the
+%% read side to the agent, which awaits the group channel from the hub.
+procedure ack_group_invite(Constant?, GroupId?, Channel(Stream(GroupSetupResponse), Stream(Handshake))?, Stream(UserInMsg)).
+ack_group_invite(Id, GroupId, ch(ChRead, [ack(Id?)|[]]), [accept_group(GroupId?, ChRead?)]) :-
+    ground(Id?), ground(GroupId?) | true.
+
+%% The refusal of one.
+procedure nack_group_invite(Channel(Stream(GroupSetupResponse), Stream(Handshake))?, Stream(UserInMsg)).
+nack_group_invite(ch(_ChRead, [nack|[]]), []).
+
+%% The approval of a group invitation offered for a child of mine: forward it.
+procedure forward_group_invite(Constant?, GroupId?, Channel(Stream(IntroContent), Stream(GroupSetupResponse))?, Stream(UserInMsg)).
+forward_group_invite(Child, GroupId, Ch, [approve_group(Child?, GroupId?, Ch?)]) :-
+    ground(Child?), ground(GroupId?) | true.
+
+%% The refusal of one.
+procedure nack_group_invite_child(Channel(Stream(IntroContent), Stream(GroupSetupResponse))?, Stream(UserInMsg)).
+nack_group_invite_child(ch(_ChRead, [nack|[]]), []).
+
+%% =============================================================================
+
+procedure respond_intro(Constant?, IntroOffer?, Channel(Stream(IntroContent), Stream(IntroContent))?, Stream(UserInMsg)).
+
+%% Answer an introduction.  Accepting acks and waits for the peer; the
+%% else-branch refuses, which is what the machine answers for a person who
+%% leaves the card unanswered, and what the rejecting sibling used to do.
+*(yes, Other?)
+respond_intro(Id, offer(Other), Ch, Ans?) :-
+    ground(Id?), ground(Other?) |
+    ack_and_await(Id?, Other?, Ch?, Ans)
+ *(no) nack_and_close(Ch?, Ans).
 
 procedure respond_child_intro(Constant?, ChildIntroOffer?, Channel(Stream(IntroContent), Stream(IntroContent))?, Stream(UserInMsg)).
 
-%% Accept (as the introduced child's counterpart): ack on the setup channel,
-%% await the peer, inject the result.
-*(yes, Other?)
-respond_child_intro(Id, offer(Other), Ch, Ans?) :-
-    ground(Id?), ground(Other?),
-    send(ack(Id?), Ch?, Ch1) |
-    intro_await_peer(Other?, Ch1?, Result),
-    inject_intro_result(Result?, [], Ans).
-
-%% Reject: nack on the setup channel, closing it.
-*(no, Other?)
-respond_child_intro(_, offer(Other), ch(_ChIn, [nack|[]]), []) :-
-    ground(Other?) | true.
-
-%% Approve (as a parent): forward the introduction to the named own child.
+%% Approve (as a parent): forward the introduction to the named own child.  It
+%% precedes the answering clause below, which carries an else-branch and so
+%% reduces whether or not the person wills it.
 *(MyChild, OtherChild?)
 respond_child_intro(_, offer(OtherChild), Ch,
     [approve_child_intro(OtherChild?, MyChild?, Ch?)]) :-
     ground(OtherChild?), ground(MyChild?) | true.
 
+%% Answer it (as the introduced child's counterpart), exactly as respond_intro
+%% does: accept acks and waits, the else-branch refuses.
+*(yes, Other?)
+respond_child_intro(Id, offer(Other), Ch, Ans?) :-
+    ground(Id?), ground(Other?) |
+    ack_and_await(Id?, Other?, Ch?, Ans)
+ *(no) nack_and_close(Ch?, Ans).
+
 procedure respond_group_invite(Constant?, GroupInviteOffer?, Channel(Stream(GroupSetupResponse), Stream(Handshake))?, Stream(UserInMsg)).
 
-%% Accept: ack on the setup channel, hand the read side to the agent to await
-%% the group channel from the hub.
+%% Answer a group invitation.  Accepting acks and hands the read side to the
+%% agent; the else-branch nacks, closing the setup channel.
 *(yes, GroupId?)
-respond_group_invite(Id, offer(GroupId), ch(ChRead, [ack(Id?)|[]]),
-    [accept_group(GroupId?, ChRead?)]) :-
-    ground(Id?), ground(GroupId?) | true.
-
-%% Reject: nack on the setup channel, closing it.
-*(no, GroupId?)
-respond_group_invite(_, offer(GroupId), ch(_ChRead, [nack|[]]), []) :-
-    ground(GroupId?) | true.
+respond_group_invite(Id, offer(GroupId), Ch, Ans?) :-
+    ground(Id?), ground(GroupId?) |
+    ack_group_invite(Id?, GroupId?, Ch?, Ans)
+ *(no) nack_group_invite(Ch?, Ans).
 
 procedure respond_group_invite_child(GroupInviteChildOffer?, Channel(Stream(IntroContent), Stream(GroupSetupResponse))?, Stream(UserInMsg)).
 
-%% Approve: forward the invite to the child.
+%% Answer a group invitation offered for a child of mine.  Approving forwards
+%% it; the else-branch nacks, so a child is not let into a group by its parent's
+%% silence.
 *(yes, GroupId?, Child?)
-respond_group_invite_child(offer(GroupId, Child), Ch,
-    [approve_group(Child?, GroupId?, Ch?)]) :-
-    ground(GroupId?), ground(Child?) | true.
-
-%% Reject: nack on the setup channel, closing it.
-*(no, GroupId?, Child?)
-respond_group_invite_child(offer(GroupId, Child), ch(_ChRead, [nack|[]]), []) :-
-    ground(GroupId?) | true.
+respond_group_invite_child(offer(GroupId, Child), Ch, Ans?) :-
+    ground(GroupId?), ground(Child?) |
+    forward_group_invite(Child?, GroupId?, Ch?, Ans)
+ *(no) nack_group_invite_child(Ch?, Ans).
 
 procedure respond_child_consent(ConsentOffer?, Decision).
 
