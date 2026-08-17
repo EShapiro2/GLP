@@ -401,6 +401,20 @@ agent(Id, St, [msg(person, Id1, unfriend_child_of(MyChild, Target))|UserIn], Net
     send_child(MyChild?, msg(Id?, MyChild?, unfriend_child(Target?)), Outs?, Outs1),
     agent(Id?, St?, UserIn?, NetIn?, Outs1?).
 
+%% --- The parent of a child that created a group ---
+
+%% A parent ends a child's membership of a group a child of ITS OWN created: the
+%% fourth role of child_leave_2, which requires parenting of the creator and
+%% takes a withdrawal.  It holds no member list --- the list is the creator's ---
+%% so there is nothing to look up here: it tells its own child to remove the
+%% member, and the creator's clause carries it out and takes the withdrawal at
+%% this parent.  Like the other three roles, it names no approval and checks
+%% none: any parent of the creator may end any membership of its group.
+agent(Id, St, [msg(person, Id1, remove_child_member(MyChild, GroupId, Member))|UserIn], NetIn, Outs) :-
+    Id? =?= Id1?, ground(MyChild?), ground(GroupId?), ground(Member?) |
+    send_child(MyChild?, msg(Id?, MyChild?, remove_member(GroupId?, Member?)), Outs?, Outs1),
+    agent(Id?, St?, UserIn?, NetIn?, Outs1?).
+
 %% --- Network messages ---
 
 %% Cold-call from network

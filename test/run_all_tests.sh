@@ -1967,6 +1967,25 @@ check "CSSN v3 fplay18 and holds the child it gained" "tagged(bob, notify(enroll
 check "CSSN v3 fplay18 a child ends a parenting of its own" "tagged(bob, notify(released(carol)))" "$k_fp18"
 check "CSSN v3 fplay16 the released child befriends unguarded by a parent" "tagged(bob, friend(alice))" "$k_fp16"
 
+# fplay19: ending a child's membership at two of the four roles of child_leave_2.
+# Carol, a child, created kids_chat and holds Dave and Eve on its list.  Carol
+# removes Dave, which is the creator's role; Alice, Carol's parent, removes Eve,
+# which is the role of the creator's parent --- the fourth, and the one that had
+# no route before 2026-08-17.  Alice holds no member list, so the only thing she
+# can do is tell Carol, and the two roles reach the same commit.
+echo "--- CSSN v3 ending a child's membership, creator and creator's parent (fplay19) ---"
+k_fp19=$("$REPL_RUN" <<HEREDOC
+$CSSN_V2
+fplay19.
+:quit
+HEREDOC
+2>&1)
+check "CSSN v3 fplay19 succeeds" "succeeds\|suspended" "$k_fp19"
+check "CSSN v3 fplay19 the creator's parent wills the removal" "tagged(alice, cmd(remove_child_member(carol, group_id(carol, kids_chat), eve)))" "$k_fp19"
+check "CSSN v3 fplay19 and it reaches the removed child through the creator" "tagged(eve, notify(group_removed(group_id(carol, kids_chat))))" "$k_fp19"
+check "CSSN v3 fplay19 the creator's own role still ends a membership" "tagged(carol, cmd(remove_from_group(group_id(carol, kids_chat), dave)))" "$k_fp19"
+check "CSSN v3 fplay19 and reaches that member too" "tagged(dave, notify(group_removed(group_id(carol, kids_chat))))" "$k_fp19"
+
 # fplay8-10: CSSN groups
 echo "--- CSSN v2 group plays (fplay8-fplay10) ---"
 

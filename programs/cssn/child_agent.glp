@@ -197,6 +197,17 @@ child_agent(Id, ParentId, St, [msg(person, Id1, unfriend_child_of(MyChild, Targe
     send_child(MyChild?, msg(Id?, MyChild?, unfriend_child(Target?)), Outs?, Outs1),
     child_agent(Id?, ParentId?, St?, UserIn?, NetIn?, Outs1?).
 
+%% End a child's membership of a group a child of our own created: the fourth
+%% role of child_leave_2.  A party that is a child carries this like every other
+%% part of the parent role --- the creator it names is a child of ITS OWN, and
+%% its own parent is a different entry of the outputs list.  Nothing is looked up:
+%% the member list belongs to the creator, so this clause tells it and the
+%% creator's clause carries the removal out.
+child_agent(Id, ParentId, St, [msg(person, Id1, remove_child_member(MyChild, GroupId, Member))|UserIn], NetIn, Outs) :-
+    Id? =?= Id1?, ground(MyChild?), ground(GroupId?), ground(Member?) |
+    send_child(MyChild?, msg(Id?, MyChild?, remove_member(GroupId?, Member?)), Outs?, Outs1),
+    child_agent(Id?, ParentId?, St?, UserIn?, NetIn?, Outs1?).
+
 %% --- User messages ---
 
 %% Send text to friend
@@ -266,11 +277,8 @@ child_agent(Id, ParentId, St, [msg(person, Id1, send_group(GroupId, Text))|UserI
 %% removed child's parent taking the other when group_removed reaches it.
 child_agent(Id, ParentId, St, [msg(person, Id1, remove_from_group(GroupId, Member))|UserIn], NetIn, Outs) :-
     Id? =?= Id1?, ground(GroupId?), ground(Member?) |
-    lookup_send_group(group_member(GroupId?, Member?),
-        msg(Id?, Member?, group_removed(GroupId?)), Outs?, Outs1),
-    close_output(group_member(GroupId?, Member?), Outs1?, Outs2),
-    send_parent(ParentId?, msg(Id?, ParentId?, withdrawal), Outs2?, Outs3),
-    child_agent(Id?, ParentId?, St?, UserIn?, NetIn?, Outs3?).
+    remove_member_commit(Id?, ParentId?, GroupId?, Member?, Outs?, Outs1),
+    child_agent(Id?, ParentId?, St?, UserIn?, NetIn?, Outs1?).
 
 %% Child leaves group (own choice).  A child's leaving is guarded by any one of
 %% the creator, the child and a parent of it, and advances that parent's
@@ -368,6 +376,18 @@ child_agent(Id, ParentId, St, UserIn, [msg(From, Id1, leave_group(GroupId))|NetI
     send_user( msg(agent, person, group_left(GroupId?)), Outs2?, Outs3),
     send_parent(ParentId?, msg(Id?, ParentId?, withdrawal), Outs3?, Outs4),
     child_agent(Id?, ParentId?, St?, UserIn?, NetIn?, Outs4?).
+
+%% Our parent tells us, the creator of a group, to remove a member of it: the
+%% fourth role of child_leave_2 arriving at the creator.  It is the same act the
+%% clause above carries out when we will it ourselves, so it is the same body ---
+%% the member is told, dropped from the list, and our parent takes the
+%% withdrawal, which is the parent that willed it here.  Our approvals name
+%% nobody, so there is nothing to check: any parent of ours may end any
+%% membership of a group of ours.
+child_agent(Id, ParentId, St, UserIn, [msg(From, Id1, remove_member(GroupId, Member))|NetIn], Outs) :-
+    Id? =?= Id1?, From? =?= ParentId?, ground(GroupId?), ground(Member?) |
+    remove_member_commit(Id?, ParentId?, GroupId?, Member?, Outs?, Outs1),
+    child_agent(Id?, ParentId?, St?, UserIn?, NetIn?, Outs1?).
 
 %% Parent tells child to unfriend.  ANY parent of either child may will this, so
 %% the parent that sent it need not be the one that approved the friendship ---

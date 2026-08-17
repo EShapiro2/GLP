@@ -102,6 +102,14 @@ imported procedure actors#alice18(Channel(Stream(UserNotify), Stream(UserCmd))?)
 imported procedure actors#bob18(Channel(Stream(UserNotify), Stream(UserCmd))?).
 imported procedure actors#carol18(Channel(Stream(UserNotify), Stream(UserCmd))?).
 
+%% From ui/actors.glp — play 19 (6 agents: ending a child's membership)
+imported procedure actors#alice19(Channel(Stream(UserNotify), Stream(UserCmd))?).
+imported procedure actors#bob19(Channel(Stream(UserNotify), Stream(UserCmd))?).
+imported procedure actors#charlie19(Channel(Stream(UserNotify), Stream(UserCmd))?).
+imported procedure actors#carol19(Channel(Stream(UserNotify), Stream(UserCmd))?).
+imported procedure actors#dave19(Channel(Stream(UserNotify), Stream(UserCmd))?).
+imported procedure actors#eve19(Channel(Stream(UserNotify), Stream(UserCmd))?).
+
 %% =============================================================================
 %% LOCAL UTILITIES
 %% =============================================================================
@@ -111,6 +119,14 @@ imported procedure actors#carol18(Channel(Stream(UserNotify), Stream(UserCmd))?)
 procedure tee(Stream(X)?, Stream(X), Stream(X)).
 tee([X|Xs], [X?|Ys?], [X?|Zs?]) :- ground(X?) | tee(Xs?, Ys, Zs).
 tee([], [], []).
+
+%% Merge two streams into an agent's network input.  merge/3 is parametric and
+%% takes its element type from the streams handed to it, so merging a friend
+%% channel with a group-hub stream fixes it at the narrower of the two; this
+%% names the type the agent actually reads, and every stream a boot wires into it
+%% --- friend, parent-child, group-hub, and the switch's own --- is a subtype.
+procedure merge_in(Stream(NetInMsg)?, Stream(NetInMsg)?, Stream(NetInMsg)).
+merge_in(A, B, C?) :- merge(A?, B?, C).
 
 procedure sink(Stream(X)?).
 sink([_|Xs]) :- sink(Xs?).
@@ -1348,3 +1364,123 @@ fplay18 :-
     net_switch(AllNetOut?, [net_entry(alice, AliceNetIn),
                             net_entry(bob, BobNetIn),
                             net_entry(carol, CarolNetIn)]).
+
+%% =============================================================================
+%% FPLAY19 — the four-role ending of a child's membership, at two of its roles
+%%
+%% Carol is a child of Alice and the creator of kids_chat; Dave, a child of Bob,
+%% and Eve, a child of Charlie, are on its member list.  The parent-child
+%% channels and the member streams are wired here rather than built by the acts
+%% that create them, which fplay11 covers: what this play measures is the
+%% ending.  Carol removes Dave, which is the creator's role of child_leave_2,
+%% and Alice removes Eve, which is the role of the creator's parent --- the
+%% fourth, and the one that had no route until now.  Alice holds no member list
+%% and no record of whom Carol listed, so all she can do is tell Carol; the two
+%% roles reach the same commit and differ only in who willed them.
+%% =============================================================================
+
+exported procedure fplay19.
+fplay19 :-
+
+    %% Alice — Carol's parent.  She reads Carol's parent-channel traffic, which
+    %% is where the withdrawal each removal owes her arrives.
+    actors # alice19(ch(AliceActorIn?, AliceActorOut)),
+    tee(AliceActorOut?, AliceMedIn, AliceDispCmd),
+    merge_in(AliceNetIn?, CarolToAlice?, AliceAllIn),
+    agent # agent(alice, state(0, 0, [], []), AliceAgentIn?, AliceAllIn?,
+          [user_output(AliceAgentToUser),
+           net_output(AliceNetOut),
+           child_output(carol, AliceToCarol)]),
+    mediator # ui_mediator(alice, ch(AliceAgentToUser?, AliceAgentIn),
+                ch(AliceMedIn?, AliceMedOut), [], 1),
+    tee(AliceMedOut?, AliceActorIn, AliceDispNotify),
+    send_to_user_tagged(alice, AliceDispCmd?, AliceDispNotify?),
+
+    %% Bob — Dave's parent.
+    actors # bob19(ch(BobActorIn?, BobActorOut)),
+    tee(BobActorOut?, BobMedIn, BobDispCmd),
+    merge_in(BobNetIn?, DaveToBob?, BobAllIn),
+    agent # agent(bob, state(0, 0, [], []), BobAgentIn?, BobAllIn?,
+          [user_output(BobAgentToUser),
+           net_output(BobNetOut),
+           child_output(dave, BobToDave)]),
+    mediator # ui_mediator(bob, ch(BobAgentToUser?, BobAgentIn),
+                ch(BobMedIn?, BobMedOut), [], 1),
+    tee(BobMedOut?, BobActorIn, BobDispNotify),
+    send_to_user_tagged(bob, BobDispCmd?, BobDispNotify?),
+
+    %% Charlie — Eve's parent.
+    actors # charlie19(ch(CharlieActorIn?, CharlieActorOut)),
+    tee(CharlieActorOut?, CharlieMedIn, CharlieDispCmd),
+    merge_in(CharlieNetIn?, EveToCharlie?, CharlieAllIn),
+    agent # agent(charlie, state(0, 0, [], []), CharlieAgentIn?, CharlieAllIn?,
+          [user_output(CharlieAgentToUser),
+           net_output(CharlieNetOut),
+           child_output(eve, CharlieToEve)]),
+    mediator # ui_mediator(charlie, ch(CharlieAgentToUser?, CharlieAgentIn),
+                ch(CharlieMedIn?, CharlieMedOut), [], 1),
+    tee(CharlieMedOut?, CharlieActorIn, CharlieDispNotify),
+    send_to_user_tagged(charlie, CharlieDispCmd?, CharlieDispNotify?),
+
+    %% Carol — a child, and the creator of the group.  Her outputs carry the
+    %% member list: one entry per member, which is what a removal closes.
+    actors # carol19(ch(CarolActorIn?, CarolActorOut)),
+    tee(CarolActorOut?, CarolMedIn, CarolDispCmd),
+    merge_in(CarolNetIn?, AliceToCarol?, CarolIn1),
+    merge_in(CarolIn1?, DaveToHub?, CarolIn2),
+    merge_in(CarolIn2?, EveToHub?, CarolAllIn),
+    child_agent # child_agent(carol, alice, state(0, 0, [], []), CarolAgentIn?, CarolAllIn?,
+          [user_output(CarolAgentToUser),
+           net_output(CarolNetOut),
+           parent_output(alice, CarolToAlice),
+           group_entry(group_member(group_id(carol, kids_chat), dave), CarolToDave),
+           group_entry(group_member(group_id(carol, kids_chat), eve), CarolToEve)]),
+    mediator # ui_mediator(carol, ch(CarolAgentToUser?, CarolAgentIn),
+                ch(CarolMedIn?, CarolMedOut), [], 1),
+    tee(CarolMedOut?, CarolActorIn, CarolDispNotify),
+    send_to_user_tagged(carol, CarolDispCmd?, CarolDispNotify?),
+
+    %% Dave — a member, removed by the creator.
+    actors # dave19(ch(DaveActorIn?, DaveActorOut)),
+    tee(DaveActorOut?, DaveMedIn, DaveDispCmd),
+    merge_in(DaveNetIn?, BobToDave?, DaveIn1),
+    merge_in(DaveIn1?, CarolToDave?, DaveAllIn),
+    child_agent # child_agent(dave, bob, state(0, 0, [], []), DaveAgentIn?, DaveAllIn?,
+          [user_output(DaveAgentToUser),
+           net_output(DaveNetOut),
+           parent_output(bob, DaveToBob),
+           group_entry(group(group_id(carol, kids_chat)), DaveToHub)]),
+    mediator # ui_mediator(dave, ch(DaveAgentToUser?, DaveAgentIn),
+                ch(DaveMedIn?, DaveMedOut), [], 1),
+    tee(DaveMedOut?, DaveActorIn, DaveDispNotify),
+    send_to_user_tagged(dave, DaveDispCmd?, DaveDispNotify?),
+
+    %% Eve — a member, removed by the creator's parent.
+    actors # eve19(ch(EveActorIn?, EveActorOut)),
+    tee(EveActorOut?, EveMedIn, EveDispCmd),
+    merge_in(EveNetIn?, CharlieToEve?, EveIn1),
+    merge_in(EveIn1?, CarolToEve?, EveAllIn),
+    child_agent # child_agent(eve, charlie, state(0, 0, [], []), EveAgentIn?, EveAllIn?,
+          [user_output(EveAgentToUser),
+           net_output(EveNetOut),
+           parent_output(charlie, EveToCharlie),
+           group_entry(group(group_id(carol, kids_chat)), EveToHub)]),
+    mediator # ui_mediator(eve, ch(EveAgentToUser?, EveAgentIn),
+                ch(EveMedIn?, EveMedOut), [], 1),
+    tee(EveMedOut?, EveActorIn, EveDispNotify),
+    send_to_user_tagged(eve, EveDispCmd?, EveDispNotify?),
+
+    %% One switch for all six.  Nothing travels it in this play — every party is
+    %% already in relation with the parties it acts on — but a party with no
+    %% network entry could not be cold-called at all.
+    merge(AliceNetOut?, BobNetOut?, M1),
+    merge(M1?, CharlieNetOut?, M2),
+    merge(M2?, CarolNetOut?, M3),
+    merge(M3?, DaveNetOut?, M4),
+    merge(M4?, EveNetOut?, AllNetOut),
+    net_switch(AllNetOut?, [net_entry(alice, AliceNetIn),
+                            net_entry(bob, BobNetIn),
+                            net_entry(charlie, CharlieNetIn),
+                            net_entry(carol, CarolNetIn),
+                            net_entry(dave, DaveNetIn),
+                            net_entry(eve, EveNetIn)]).

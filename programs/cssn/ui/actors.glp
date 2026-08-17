@@ -1,7 +1,9 @@
 %% actors.glp — CSSN simulated UI actors module
 %%
 %% Exports: alice1..alice12, bob1..bob12, charlie1..charlie12,
-%%          carol4..carol11, dave4..dave12, eve11..eve12
+%%          carol4..carol11, dave4..dave12, eve11..eve12,
+%%          alice14..alice18, bob14..bob18, carol14, carol17..carol19,
+%%          dave17, alice19, bob19, charlie19, dave19, eve19
 %% Types: from self.glp (ancestor scoping)
 %% No cross-module imports — all helpers are local.
 
@@ -1874,3 +1876,38 @@ carol18_loop([enrolled(bob)|In], [request_release|Out?]) :-
 carol18_loop([_|In], Out?) :-
     otherwise | carol18_loop(In?, Out).
 carol18_loop([], []).
+
+%% =============================================================================
+%% PLAY 19 — ending a child's membership, at two of the four roles
+%%
+%% Carol, a child, created kids_chat and holds Dave and Eve on its member list.
+%% Carol removes Dave, which is the creator's role of child_leave_2; Alice, who
+%% is Carol's parent and holds no member list, removes Eve, which is the fourth
+%% role.  Nobody else acts: the other four are here to receive.
+%% =============================================================================
+
+exported procedure alice19(Channel(Stream(UserNotify), Stream(UserCmd))?).
+alice19(ch(In, [remove_child_member(carol, group_id(carol, kids_chat), eve)|Out?])) :-
+    idle19(In?, Out).
+
+exported procedure carol19(Channel(Stream(UserNotify), Stream(UserCmd))?).
+carol19(ch(In, [remove_from_group(group_id(carol, kids_chat), dave)|Out?])) :-
+    idle19(In?, Out).
+
+exported procedure bob19(Channel(Stream(UserNotify), Stream(UserCmd))?).
+bob19(ch(In, Out?)) :- idle19(In?, Out).
+
+exported procedure charlie19(Channel(Stream(UserNotify), Stream(UserCmd))?).
+charlie19(ch(In, Out?)) :- idle19(In?, Out).
+
+exported procedure dave19(Channel(Stream(UserNotify), Stream(UserCmd))?).
+dave19(ch(In, Out?)) :- idle19(In?, Out).
+
+exported procedure eve19(Channel(Stream(UserNotify), Stream(UserCmd))?).
+eve19(ch(In, Out?)) :- idle19(In?, Out).
+
+%% A person who wills nothing in this play: every notification is read and
+%% displayed, and no command is issued.
+procedure idle19(Stream(UserNotify)?, Stream(UserCmd)).
+idle19([_|In], Out?) :- idle19(In?, Out).
+idle19([], []).

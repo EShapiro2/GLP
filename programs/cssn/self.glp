@@ -27,6 +27,7 @@ FriendOnlyContent ::= response(Response)
                     ; group_consent_req(GroupId, Decision?)
                     ; group_leave(GroupId, Constant)
                     ; leave_group(GroupId)
+                    ; remove_member(GroupId, Constant)
                     ; unfriend
                     ; unfriend_child(Constant)
                     ; release_request
@@ -466,6 +467,25 @@ distribute_group_msg(GroupId, Msg, Sent, Sent1?, [E|Rest], [E?|Rest1?]) :-
     distribute_group_msg(GroupId?, Msg?, Sent?, Sent1, Rest?, Rest1).
 distribute_group_msg(_, _, Sent, Sent?, [], []).
 
+%% =============================================================================
+%% REMOVE_MEMBER_COMMIT — the creator's side of ending a child's membership
+%% =============================================================================
+
+%% A child that created a group removes a member of it: the removed party is told
+%% on its own stream, dropped from the list, and the creator's parent takes a
+%% withdrawal.  Two of the four roles of child_leave_2 reach this and they must
+%% do the same thing --- the creator willing it itself, and its parent willing it
+%% and telling it --- so the body is written once here and called from both
+%% clauses rather than twice in child_agent.  The removed child's own parent
+%% takes the other withdrawal when group_removed reaches it.
+procedure remove_member_commit(Constant?, Constant?, GroupId?, Constant?, Stream(OutputEntry)?, Stream(OutputEntry)).
+remove_member_commit(Id, ParentId, GroupId, Member, Outs, Outs3?) :-
+    ground(Id?), ground(GroupId?), ground(Member?) |
+    lookup_send_group(group_member(GroupId?, Member?),
+        msg(Id?, Member?, group_removed(GroupId?)), Outs?, Outs1),
+    close_output(group_member(GroupId?, Member?), Outs1?, Outs2),
+    send_parent(ParentId?, msg(Id?, ParentId?, withdrawal), Outs2?, Outs3).
+
 %% inject_msg and add_friend_output are now provided by lib/routing/, exposed
 %% from the root self.glp (A5 Stage B); resolved here unqualified.
 
@@ -692,3 +712,7 @@ fplay17 :- boot # fplay17.
 imported procedure boot#fplay18.
 exported procedure fplay18.
 fplay18 :- boot # fplay18.
+
+imported procedure boot#fplay19.
+exported procedure fplay19.
+fplay19 :- boot # fplay19.

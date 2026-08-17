@@ -41,8 +41,8 @@
 %%     pass-through, and the agent clause matching msg(person, Id, cmd(X1..Xk)):
 %%     connect/1, send/2, introduce/2, child_introduce/3, create_group/1,
 %%     invite_group/2, invite_group/3, send_group/2, leave_group/1,
-%%     leave_child_group/2, remove_from_group/2, unfriend_child_of/2 and
-%%     enrol_child/1;
+%%     leave_child_group/2, remove_from_group/2, remove_child_member/3,
+%%     unfriend_child_of/2 and enrol_child/1;
 %%   - a responder goal, spawned per arriving offer  ->  a pending-table entry
 %%     req(N) in the mediator, rendered as an inbox card;
 %%   - a responder's volition-guarded clause  ->  the UserCmds decision/3
@@ -350,7 +350,8 @@ agent(Id, St, UserIn, NetIn, Outs) :-
 %% --- Volitional: group transactions the person originates ---
 %% Request clauses, perpetually pending; each willing supplies the parameters.
 %% Compiled form: UserCmds create_group/1, invite_group/2, invite_group/3,
-%% send_group/2, leave_group/1, leave_child_group/2, remove_from_group/2.
+%% send_group/2, leave_group/1, leave_child_group/2, remove_from_group/2,
+%% remove_child_member/3.
 
 %% Create a group — creator sets up the member-side write (no hub self-loop).
 *(Name)
@@ -417,6 +418,18 @@ agent(Id, St, UserIn, NetIn, Outs) :-
         msg(Id?, Member?, group_removed(GroupId?)), Outs?, Outs1),
     close_output(group_member(GroupId?, Member?), Outs1?, Outs2),
     agent(Id?, St?, UserIn?, NetIn?, Outs2?).
+
+%% End a child's membership of a group a child of MINE created: the fourth role
+%% of child_leave_2, which the specification guards at the creator's parent.  I
+%% hold no member list --- the list is the creator's --- and my approvals name
+%% nobody, so there is nothing here to look up and nothing to check: I tell my
+%% own child, and its clause carries the removal out and takes the withdrawal
+%% here.  The removed child's parent takes the other.
+*(MyChild, GroupId, Member)
+agent(Id, St, UserIn, NetIn, Outs) :-
+    ground(Id?), ground(MyChild?), ground(GroupId?), ground(Member?) |
+    send_child(MyChild?, msg(Id?, MyChild?, remove_member(GroupId?, Member?)), Outs?, Outs1),
+    agent(Id?, St?, UserIn?, NetIn?, Outs1?).
 
 %% --- Reactive: network messages — arriving offers spawn responders ---
 

@@ -35,12 +35,14 @@
 %% friend and group_invite_child — and each is a responder.  In a run of fplay13 each offer
 %% arrives as a card the child answers and each act is a form the child issues.
 %%
-%% THREE CLAUSES CARRY NO VOLITION GUARD, AND THAT IS CORRECT.  The parent
-%% telling this child to leave a group, the parent telling it to unfriend, and a
-%% friend unfriending it change this child's state without asking it.  Those are
-%% exactly the acts the specification guards by any ONE of the parties, where
-%% this child is not a guard: an unguarded clause here is the absence of a guard
-%% in the transaction, not an omission in the elicitation.
+%% FIVE CLAUSES CARRY NO VOLITION GUARD, AND THAT IS CORRECT.  The parent telling
+%% this child to leave a group, the parent telling it to unfriend, a friend
+%% unfriending it, the parent telling it to remove a member from a group it
+%% created, and the creator removing it from a group all change this child's
+%% state without asking it.  Those are exactly the acts the specification guards
+%% by any ONE of the parties, where this child is not a guard: an unguarded
+%% clause here is the absence of a guard in the transaction, not an omission in
+%% the elicitation.
 %%
 %% TWO THINGS THIS FILE CARRIES THAT THE ADULT EXHIBIT DOES NOT.
 %%   - THE PARENT ROLE ENTIRE.  A child may itself become a parent: becoming one
@@ -79,7 +81,8 @@
 %%   - a *(X1..Xk) Request clause  ->  a UserCmd constructor over X1..Xk, a mediator
 %%     pass-through, and the child_agent clause matching msg(person, Id, cmd(X1..Xk)):
 %%     send/2, child_introduce/3, create_group/1, invite_group/2, send_group/2,
-%%     leave_group/1, leave_child_group/2, unfriend_child/1, unfriend_child_of/2
+%%     leave_group/1, leave_child_group/2, remove_from_group/2,
+%%     remove_child_member/3, unfriend_child/1, unfriend_child_of/2
 %%     and enrol_child/1; and request_release, whose Request clause takes no
 %%     input because the asking IS the act;
 %%   - a responder goal, spawned per arriving offer  ->  a pending-table entry
@@ -111,7 +114,7 @@
 %% inject_intro_result, befriend_commit, close_friend, the self.glp group helpers
 %% (setup_group_creator, setup_group_hub_side, lookup_send_group,
 %% distribute_group_msg, add_group_output, group_await_join, inject_group_result,
-%% close_output, close_outputs), the enrolment helpers (add_parent_output,
+%% close_output, close_outputs, remove_member_commit), the enrolment helpers (add_parent_output,
 %% close_parent, close_child, enrol_commit, inject_enrol_response), add_post, and
 %% the local await_group_channel, child_consent_wait, decline_intro and
 %% decline_enrol — are those of
@@ -324,6 +327,17 @@ child_agent(Id, ParentId, St, UserIn, NetIn, Outs) :-
     send_child(MyChild?, msg(Id?, MyChild?, unfriend_child(Target?)), Outs?, Outs1),
     child_agent(Id?, ParentId?, St?, UserIn?, NetIn?, Outs1?).
 
+%% End a child's membership of a group a child of our own created: the fourth
+%% role of child_leave_2, which the specification guards at the creator's
+%% parent.  A party that is a child carries this like the rest of the parent
+%% role.  The member list is the creator's, so nothing is looked up here: we
+%% tell our own child, and its clause above carries the removal out.
+*(MyChild, GroupId, Member)
+child_agent(Id, ParentId, St, UserIn, NetIn, Outs) :-
+    ground(Id?), ground(MyChild?), ground(GroupId?), ground(Member?) |
+    send_child(MyChild?, msg(Id?, MyChild?, remove_member(GroupId?, Member?)), Outs?, Outs1),
+    child_agent(Id?, ParentId?, St?, UserIn?, NetIn?, Outs1?).
+
 %% --- Volitional: what the child does as a child ---
 
 %% Message a friend.
@@ -362,15 +376,14 @@ child_agent(Id, ParentId, St, UserIn, NetIn, Outs) :-
 %% Remove a member from a group of ours.  This is the creator's role of
 %% child_leave_2: a child that created a group is one of the four who may end a
 %% child's membership of it.  Our own parent takes a withdrawal, the removed
-%% child's parent taking the other when group_removed reaches it.
+%% child's parent taking the other when group_removed reaches it.  The body is
+%% remove_member_commit because the creator's parent wills the same removal
+%% through the reactive clause below, and the two must do the same thing.
 *(GroupId, Member)
 child_agent(Id, ParentId, St, UserIn, NetIn, Outs) :-
     ground(Id?), ground(GroupId?), ground(Member?) |
-    lookup_send_group(group_member(GroupId?, Member?),
-        msg(Id?, Member?, group_removed(GroupId?)), Outs?, Outs1),
-    close_output(group_member(GroupId?, Member?), Outs1?, Outs2),
-    send_parent(ParentId?, msg(Id?, ParentId?, withdrawal), Outs2?, Outs3),
-    child_agent(Id?, ParentId?, St?, UserIn?, NetIn?, Outs3?).
+    remove_member_commit(Id?, ParentId?, GroupId?, Member?, Outs?, Outs1),
+    child_agent(Id?, ParentId?, St?, UserIn?, NetIn?, Outs1?).
 
 %% Leave a group.  A child's leaving is guarded by any one of the creator, the
 %% child and a parent of it, and advances that parent's withdrawal count
@@ -454,7 +467,7 @@ child_agent(Id, ParentId, St, UserIn, [msg(Child, Id1, group_consent_req(GroupId
     child_agent(Id?, ParentId?, St?, UserIn?, NetIn?, Outs?).
 
 %% --- Reactive: acts this child is not a guard of ---
-%% These three change this child's state without asking it, and the
+%% These five change this child's state without asking it, and the
 %% specification guards each by any ONE of the parties, this child not among
 %% them.  An unguarded clause here is the absence of a guard in the transaction.
 
@@ -487,6 +500,16 @@ child_agent(Id, ParentId, St, UserIn, [msg(From, Id1, unfriend)|NetIn], Outs) :-
     send_parent(ParentId?, msg(Id?, ParentId?, withdrawal), Outs1?, Outs2),
     send_user(msg(agent, person, unfriended(From?)), Outs2?, Outs3),
     child_agent(Id?, ParentId?, St?, UserIn?, NetIn?, Outs3?).
+
+%% Our parent tells us, the creator of a group, to remove a member of it — the
+%% fourth role of child_leave_2.  The clause is unguarded because we are not
+%% among the guards of that schema: there the willing is the parent's alone.
+%% The body is the commit our own removal uses, so which of the two willed it
+%% changes nothing that happens.
+child_agent(Id, ParentId, St, UserIn, [msg(From, Id1, remove_member(GroupId, Member))|NetIn], Outs) :-
+    Id? =?= Id1?, From? =?= ParentId?, ground(GroupId?), ground(Member?) |
+    remove_member_commit(Id?, ParentId?, GroupId?, Member?, Outs?, Outs1),
+    child_agent(Id?, ParentId?, St?, UserIn?, NetIn?, Outs1?).
 
 %% The creator removes this child from a group — the third party that may will a
 %% child's leaving, and it advances the parent's withdrawal count like the other
