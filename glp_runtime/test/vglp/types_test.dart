@@ -91,6 +91,104 @@ respond(offer(From), Resp?, [decision(yes, From?, response(Resp))]) :-
     });
   });
 
+  group('an answer writer at a type-parameter position', () {
+    // send_friend is generic in the message M it carries; Text occurs nowhere
+    // but inside msg(Id?, Target?, text(Text?)) at that position.  The call
+    // instantiates M from the term's shape: FriendMsg and NetInMsg both accept
+    // the term, and both type the position Constant.
+    const decls = '''
+FriendContent ::= text(Constant) ; hello.
+FriendMsg     ::= msg(Constant, Constant, FriendContent).
+NetInMsg      ::= msg(Constant, Constant, FriendContent)
+                ; msg(Constant, ColdCallOffer).
+OutputEntry   ::= friend_output(Constant, Stream(FriendMsg))
+                ; user_output(UserInStream).
+procedure(M, Ent) send_friend(Constant?, M?, Stream(Ent)?, Stream(Ent)).
+send_friend(_, _, Outs, Outs?).
+''';
+
+    test('is typed by the shape of the term it occurs in', () {
+      expect(compile('''
+$decls
+procedure agent(Constant?, UserInStream?, Stream(OutputEntry)?, Stream(OutputEntry)).
+*(Target, Text)
+agent(Id, UserIn, Outs, Outs1?) :-
+    ground(Id?), ground(Target?) |
+    send_friend(Target?, msg(Id?, Target?, text(Text?)), Outs?, Outs1).
+''').byClause['agent_1']!.answer.toString(),
+          'Xs_agent_1 ::= xs_agent_1(Constant, Constant).');
+    });
+
+    test('a declared occurrence wins over a shape', () {
+      // Text also occurs in the head, at a String position: that is its type,
+      // whatever the shape would say.
+      expect(compile('''
+$decls
+Note ::= note(String).
+procedure agent(Constant?, Note?, Stream(OutputEntry)?, Stream(OutputEntry)).
+*(Target, Text)
+agent(Id, note(Text), Outs, Outs1?) :-
+    ground(Id?), ground(Target?) |
+    send_friend(Target?, msg(Id?, Target?, text(Text?)), Outs?, Outs1).
+''').byClause['agent_1']!.answer.toString(),
+          'Xs_agent_1 ::= xs_agent_1(Constant, String).');
+    });
+
+    test('types that disagree on the position stop the compilation', () {
+      expect(
+          () => compile('''
+Alpha ::= f(Constant).
+Beta  ::= f(Integer).
+procedure(M) q(M?).
+q(_).
+procedure p(Constant?).
+*(X)
+p(Id) :- ground(Id?) | q(f(X?)).
+'''),
+          throwsA(isA<StateError>().having(
+              (e) => e.message, 'message', contains('disagree'))));
+    });
+
+    test('a term of no type stops the compilation', () {
+      expect(
+          () => compile('''
+procedure(M) q(M?).
+q(_).
+procedure p(Constant?).
+*(X)
+p(Id) :- ground(Id?) | q(nothing_has_this(X?)).
+'''),
+          throwsA(isA<StateError>().having(
+              (e) => e.message, 'message', contains('no type'))));
+    });
+
+    test('a writer whose only occurrence is a guard =?= takes the other side',
+        () {
+      // Friend occurs in no head or body position: the guard Friend? =?= Id?
+      // compares it with Id, whose type the head declares.
+      expect(compile('''
+$decls
+procedure agent(Constant?, Stream(OutputEntry)?, Stream(OutputEntry)).
+*(Child, Friend)
+agent(Id, Outs, Outs1?) :-
+    ground(Id?), Friend? =?= Id?, ground(Child?) |
+    send_friend(Child?, msg(Id?, Child?, hello), Outs?, Outs1).
+''').byClause['agent_1']!.answer.toString(),
+          'Xs_agent_1 ::= xs_agent_1(Constant, Constant).');
+    });
+
+    test('a writer inside a list at a Stream position is typed by the element',
+        () {
+      expect(compile('''
+$decls
+procedure agent(Constant?, Stream(FriendMsg)).
+*(Target)
+agent(Id, [msg(Id?, Target?, hello)]) :- ground(Id?) | true.
+''').byClause['agent_1']!.answer.toString(),
+          'Xs_agent_1 ::= xs_agent_1(Constant).');
+    });
+  });
+
   group("the program's answer and context types", () {
     const src = '''
 procedure respond(ColdCallOffer?, Response, UserInStream).

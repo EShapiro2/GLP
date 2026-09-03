@@ -32,7 +32,7 @@ void main() {
     test('every procedure the Definition names is there', () {
       final names = source.clauses.procedures.map((p) => p.name).toSet();
       expect(names, containsAll(
-          ['med', 'timer', 'deadline', 'lookup', 'aborts', 'med_split']));
+          ['med', 'timer', 'deadline', 'answer', 'close', 'aborts', 'med_split']));
     });
   });
 

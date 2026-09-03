@@ -13,23 +13,11 @@
 %% card carries the context to the person, so the mediator is generic in it
 %% too, on the same construction.
 %%
-%% TWO DEPARTURES FROM THE DEFINITION, both forced by the moded type system
-%% and both reported to the paper's session.
-%%
-%% ONE ESCROWED WRITER, NOT TWO.  The paper escrows a selector Sel and an
-%% answer Xs separately, and the compiled clause guards on Sel? =?= then.
-%% Here the two are one Reply(A) ::= then(A) ; else: the mediator binds it
-%% once, and the compiled clause selects its branch by head unification
-%% instead of by a guard.  A second escrowed writer would have to be left
-%% unbound on the else path, and the type system admits no way to write that:
-%% the position wants a reader, and _? is not permitted in a program clause.
-%%
-%% ONE SLOT TYPE, NOT ONE PER CLAUSE.  The paper gives each volition-guarded
-%% clause C its own Slot_C ::= none ; ask(Selector?, Xs_C?, Id?).  Here
-%% Slot(A) is that type with A in place of Xs_C, so every slot of the program
-%% has one type and a clause selects its own alternative by head unification.
-%% That is what lets aborts/3 take the slot list of a clause — whose slots
-%% belong to different clauses — and lets one mediator serve every program.
+%% The vocabulary is the Definition's types item, letter for letter: one
+%% escrowed writer, the reply, bound once to then(A) or else, so a compiled
+%% clause selects its branch by head unification; and one slot type over the
+%% program's answer type, so aborts/3 takes the slot list of a clause whose
+%% slots belong to different clauses, and one mediator serves every program.
 
 %% The identifier the mediator assigns an ask.
 ReqId ::= req(Integer).
@@ -54,19 +42,14 @@ AgentMsg(A, X) ::= ask(Constant, X, Reply(A)?, ReqId?, Deadline)
                  ; abort(ReqId).
 
 %% Mediator to person: the card of an open ask, and its removal.
-Card(X) ::= card(Constant, X, ReqId) ; close(ReqId).
+Card(X) ::= card(Constant, X, ReqId) ; closed(ReqId).
 
 %% Person to mediator: the grant of a construct's tap or submission.
 UserAnswer(A) ::= answer(ReqId, A).
 
-%% The escrowed writer of one open ask.  It sits inside a constructor because
-%% a complemented position must: it is the idiom of the deployed mediators'
-%% PendingValue.  no_escrow is what lookup yields where no ask is pending, so
-%% that an answer granted on a closed ask reaches no goal.
-Escrow(A) ::= escrow(Reply(A)?) ; no_escrow.
-
-%% The pending table: one entry per open ask.
-PendingEntry(A) ::= pending(ReqId, Escrow(A)).
+%% The pending table: one entry per open ask, carrying the WRITER of its
+%% reply, which answer/4 or close/3 binds in place.
+PendingEntry(A) ::= pending(ReqId, Reply(A)?).
 PendingList(A) ::= [] ; [PendingEntry(A) | PendingList(A)].
 
 %% The timer stream: one timeout per ask, on its deadline.

@@ -170,6 +170,38 @@ respond(offer(From), [answered(no, From?)]) :- ground(From?) | true.
       expect(second, equals(first));
     });
 
+    test('it compiles in the scope the loader gives, exposes included', () {
+      // The root self.glp exposes social/graph/routing; a .vglp source calls
+      // send_net and types its answer writer by the message's shape at the
+      // router's M position.  :emit must see the same scope as the load, or
+      // it fails on a source the load compiles.
+      write('self.glp', '''
+Note      ::= msg(Constant, Constant).
+Ent       ::= net_output(Stream(Note)).
+Decision  ::= yes ; no.
+Offer     ::= offer(Constant).
+imported procedure greeter#greet(Offer?, Stream(Ent)?, Stream(Ent)).
+exported procedure greet(Offer?, Stream(Ent)?, Stream(Ent)).
+greet(O, Outs, Outs1?) :- greeter # greet(O?, Outs?, Outs1).
+''');
+      write('greeter.vglp', '''
+procedure greet(Offer?, Stream(Ent)?, Stream(Ent)).
+*(Target)
+greet(offer(From), Outs, Outs1?) :-
+    ground(From?) |
+    send_net(msg(Target?, From?), Outs?, Outs1).
+''');
+      final written = emitVglpSources(fixture.path,
+          rootSelfGlpPath: File(_rootSelfGlp).absolute.path);
+      expect(written, hasLength(1));
+      final emitted = File(written.single).readAsStringSync();
+      expect(emitted, contains('Xs_greet_1 ::= xs_greet_1(Constant).'));
+      // And the load compiles the same source.
+      final m = discoverProgram(fixture.path, rootSelfGlpPath: _rootSelfGlp)
+          .firstWhere((m) => m.moduleName == 'greeter');
+      expect(m.ast.procedures.map((p) => p.name), contains('greet'));
+    });
+
     test('it never overwrites a hand-written module', () {
       write('self.glp', selfGlp);
       write('responder.vglp', responderVglp);

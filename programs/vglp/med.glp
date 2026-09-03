@@ -8,8 +8,9 @@
 %%
 %% Generic in the compiled program's answer type A and context type X, and in
 %% nothing else: a compiled program instantiates A and X at its own, and no
-%% line here is program-specific.  The two departures from the Definition's
-%% letter are stated in self.glp in this directory.
+%% line here is program-specific.  The clauses are the Definition's, letter for
+%% letter; a reader who diffs the emitted source against its listing finds
+%% them equal.
 
 %% ---------------------------------------------------------------------------
 %% The mediator
@@ -34,7 +35,7 @@ med(UserCh, AgentCh, Ts, Ps, N) :-
     timer(req(N?), D?, T),
     merge(T?, Ts?, Ts1),
     med(UserCh1?, AgentCh1?, Ts1?,
-        [pending(req(N?), escrow(R)) | Ps?], N1?).
+        [pending(req(N?), R) | Ps?], N1?).
 
 med(UserCh, AgentCh, Ts, Ps, N) :-
     receive(ask(C, Ctx, R?, Id?, no_deadline), AgentCh?, AgentCh1),
@@ -43,24 +44,22 @@ med(UserCh, AgentCh, Ts, Ps, N) :-
     send(card(C?, Ctx?, req(N?)), UserCh?, UserCh1),
     N1 := N? + 1,
     med(UserCh1?, AgentCh1?, Ts?,
-        [pending(req(N?), escrow(R)) | Ps?], N1?).
+        [pending(req(N?), R) | Ps?], N1?).
 
 %% Routing: the person's answer selects the then-branch and supplies the
 %% answer's values.
 med(UserCh, AgentCh, Ts, Ps, N) :-
     receive(answer(ReqId, Vs), UserCh?, UserCh1),
     ground(ReqId?), ground(Vs?) |
-    lookup(ReqId?, E, Ps?, Ps1),
-    grant_then(E?, Vs?),
+    answer(ReqId?, Vs?, Ps?, Ps1),
     med(UserCh1?, AgentCh?, Ts?, Ps1?, N?).
 
 %% Timeout: on the deadline the machine answers for the person, and the
 %% else-branch is selected.
 med(UserCh, AgentCh, [timeout(ReqId) | Ts], Ps, N) :-
     ground(ReqId?) |
-    lookup(ReqId?, E, Ps?, Ps1),
-    grant_else(E?),
-    send(close(ReqId?), UserCh?, UserCh1),
+    close(ReqId?, Ps?, Ps1),
+    send(closed(ReqId?), UserCh?, UserCh1),
     med(UserCh1?, AgentCh?, Ts?, Ps1?, N?).
 
 %% Abort: another clause reduced the goal, so the ask is closed unanswered and
@@ -68,8 +67,8 @@ med(UserCh, AgentCh, [timeout(ReqId) | Ts], Ps, N) :-
 med(UserCh, AgentCh, Ts, Ps, N) :-
     receive(abort(ReqId), AgentCh?, AgentCh1),
     ground(ReqId?) |
-    lookup(ReqId?, _, Ps?, Ps1),
-    send(close(ReqId?), UserCh?, UserCh1),
+    close(ReqId?, Ps?, Ps1),
+    send(closed(ReqId?), UserCh?, UserCh1),
     med(UserCh1?, AgentCh1?, Ts?, Ps1?, N?).
 
 %% ---------------------------------------------------------------------------
@@ -98,26 +97,28 @@ deadline(D?) :- now(T), D := T? + 60000.
 %% The pending table
 %% ---------------------------------------------------------------------------
 
-%% lookup consumes the pending entry of an identifier and yields its escrow,
-%% or no_escrow where none is pending — which is what makes an answer granted
-%% on a closed ask reach no goal.
-exported procedure(A) lookup(ReqId?, Escrow(A),
-                             PendingList(A)?, PendingList(A)).
-lookup(ReqId, E?, [pending(Id, E) | Ps], Ps?) :-
-    ReqId? =?= Id? | true.
-lookup(ReqId, E?, [P | Ps], [P? | Ps1?]) :-
+%% answer(ReqId?, Vs?, Ps?, Ps1) consumes the pending entry of an identifier,
+%% binding its escrowed reply to then(Vs); close(ReqId?, Ps?, Ps1) consumes it
+%% binding the reply to else.  Both leave Ps as it is where no entry is
+%% pending — which is what makes an answer granted on a closed ask reach no
+%% goal.
+exported procedure(A) answer(ReqId?, A?, PendingList(A)?, PendingList(A)).
+answer(ReqId, Vs, [pending(Id, R?) | Ps], Ps?) :-
+    ReqId? =?= Id? |
+    R = then(Vs?).
+answer(ReqId, Vs, [P | Ps], [P? | Ps1?]) :-
     otherwise |
-    lookup(ReqId?, E, Ps?, Ps1).
-lookup(_, no_escrow, [], []).
+    answer(ReqId?, Vs?, Ps?, Ps1).
+answer(_, _, [], []).
 
-%% Binding the escrowed reply.  On a closed ask there is nothing to bind.
-exported procedure(A) grant_then(Escrow(A)?, A?).
-grant_then(escrow(R?), Vs) :- R = then(Vs?).
-grant_then(no_escrow, _).
-
-exported procedure(A) grant_else(Escrow(A)?).
-grant_else(escrow(R?)) :- R = else.
-grant_else(no_escrow).
+exported procedure(A) close(ReqId?, PendingList(A)?, PendingList(A)).
+close(ReqId, [pending(Id, R?) | Ps], Ps?) :-
+    ReqId? =?= Id? |
+    R = else.
+close(ReqId, [P | Ps], [P? | Ps1?]) :-
+    otherwise |
+    close(ReqId?, Ps?, Ps1).
+close(_, [], []).
 
 %% ---------------------------------------------------------------------------
 %% Aborting a goal's open asks

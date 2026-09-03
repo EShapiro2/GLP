@@ -241,13 +241,27 @@ String _termSource(ast.Term t) {
   if (t is ast.UnderscoreTerm) return '_';
   if (t is ast.ConstTerm) {
     final v = t.value;
-    if (v is String) return v;  // an atom bare; a string literal keeps its quotes
+    if (v is String) return _atomSource(v);
     return '$v';
   }
   if (t is ast.StructTerm) {
     return '${t.functor}(${t.args.map(_termSource).join(', ')})';
   }
   return GlpPrinter().printTerm(t);
+}
+
+/// An atom as source: bare where the lexer reads it back as one, else quoted
+/// with single quotes --- `label('Send a message')`; a string literal keeps
+/// the double quotes its value carries.
+String _atomSource(String v) {
+  if (v.startsWith('"')) return v;
+  if (RegExp(r'^[a-z][A-Za-z0-9_]*$').hasMatch(v)) return v;
+  final escaped = v
+      .replaceAll('\\', '\\\\')
+      .replaceAll("'", "\\'")
+      .replaceAll('\n', '\\n')
+      .replaceAll('\t', '\\t');
+  return "'$escaped'";
 }
 
 /// The mediator's clauses as GLP source.

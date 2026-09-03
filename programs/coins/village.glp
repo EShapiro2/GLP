@@ -30,7 +30,7 @@ imported procedure coins_agent#med(Channel(Stream(UserAnswer), Stream(Card))?, C
 
 %% What a person sees: the cards and their closing, and the screen.
 Event ::= card(Constant, Context, ReqId)
-        ; close(ReqId)
+        ; closed(ReqId)
         ; msg(Constant, Constant, ScreenContent).
 
 %% A script: the person's acts, in order.  A step is an answer to one of the
@@ -106,11 +106,11 @@ villager(Id, Script, NetIn, NetOut?) :-
 %% so each element is rebuilt at the event type.
 procedure merge_events(Stream(Card)?, Stream(ScreenMsg)?, Stream(Event)).
 merge_events([card(C, X, R)|Cs], Ms, [card(C?, X?, R?)|Es?]) :- merge_events(Cs?, Ms?, Es).
-merge_events([close(R)|Cs], Ms, [close(R?)|Es?]) :- merge_events(Cs?, Ms?, Es).
+merge_events([closed(R)|Cs], Ms, [closed(R?)|Es?]) :- merge_events(Cs?, Ms?, Es).
 merge_events(Cs, [msg(A, P, M)|Ms], [msg(A?, P?, M?)|Es?]) :- merge_events(Cs?, Ms?, Es).
 merge_events([], [msg(A, P, M)|Ms], [msg(A?, P?, M?)|Es?]) :- merge_events([], Ms?, Es).
 merge_events([card(C, X, R)|Cs], [], [card(C?, X?, R?)|Es?]) :- merge_events(Cs?, [], Es).
-merge_events([close(R)|Cs], [], [close(R?)|Es?]) :- merge_events(Cs?, [], Es).
+merge_events([closed(R)|Cs], [], [closed(R?)|Es?]) :- merge_events(Cs?, [], Es).
 merge_events([], [], []).
 
 %% --- The network: first contacts, routed by addressee ---
@@ -172,7 +172,7 @@ person(Id, [card(_, _, _)|Es], As?, Script, Open, Swaps, Pending) :-
 
 %% A card closed: the answer out to it, if any, reached no goal, and the card is
 %% no longer open.
-person(Id, [close(R)|Es], As?, Script, Open, Swaps, Pending) :-
+person(Id, [closed(R)|Es], As?, Script, Open, Swaps, Pending) :-
     ground(R?) |
     close_open(R?, Open?, Open1),
     close_pending(R?, Pending?, Pending1),

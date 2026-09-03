@@ -76,8 +76,8 @@ respond(offer(From), Resp?, [decision(Answer?, From?, response(Resp))]) :-
 
     test('the mediator comes with it, clauses and declarations', () {
       final out = compile(src).source;
-      for (final p in ['med', 'timer', 'deadline', 'lookup', 'aborts',
-          'med_split', 'grant_then', 'grant_else']) {
+      for (final p in ['med', 'timer', 'deadline', 'answer', 'close',
+          'aborts', 'med_split']) {
         expect(out, contains('procedure $p('), reason: '$p is missing');
       }
     });

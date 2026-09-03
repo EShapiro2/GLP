@@ -28,6 +28,7 @@
 // declared.
 
 import '../compiler/ast.dart' as ast;
+import '../compiler/glp_printer.dart';
 import '../analysis/type_checker/type_ast.dart';
 import '../analysis/type_checker/type_environment_builder.dart';
 import '../analysis/type_checker/param_expansion.dart';
@@ -250,8 +251,19 @@ TypeExpr _typeOfValue(ast.Term value, ast.Clause c) {
 /// types.  The type is therefore resolved by POSITION: the first occurrence of
 /// the variable in the head or a body goal is found, and the declared type of
 /// that argument is walked down to the sub-position the variable sits at.
+///
+/// A writer whose only occurrence is one side of a guard `X? =?= T` has the
+/// type of the other side, since the guard compares two terms of one type.
+///
+/// A parameterised body goal --- `send_friend(Constant?, M?, Stream(Ent)?,
+/// Stream(Ent))` and the rest of `lib/routing` --- is instantiated at the call
+/// from the term's shape: a position declared as a bare type parameter has no
+/// type of its own, so the term there is typed by the program's types that
+/// accept it, and the variable takes the type of its position in them.  The
+/// head and the monomorphic goals are tried first, so that a variable with an
+/// occurrence at a declared position is typed by it and never by a shape.
 TypeExpr _typeOfVariable(String? variable, ast.Clause c, TypeEnvironment env,
-    String clauseName) {
+    String clauseName, {Set<String> visiting = const {}}) {
   if (variable == null) return TypeRef('Any', c.line, c.column);
 
   final headDecl = env.getProcedure(c.head.functor, c.head.arity);
@@ -264,11 +276,34 @@ TypeExpr _typeOfVariable(String? variable, ast.Clause c, TypeEnvironment env,
     }
   }
 
+  final parameterised = <(ast.Goal, ProcDecl)>[];
   for (final g in c.body ?? const <ast.Goal>[]) {
-    final decl = env.getProcedure(g.functor, g.args.length);
+    final decl = _declarationOf(g, env);
     if (decl == null) continue;
+    if (decl.isParameterized) {
+      parameterised.add((g, decl));
+      continue;
+    }
     for (var k = 0; k < g.args.length && k < decl.argTypes.length; k++) {
       final found = _walk(g.args[k], decl.argTypes[k], variable, env);
+      if (found != null) return found;
+    }
+  }
+
+  for (final guard in c.guards ?? const <ast.Guard>[]) {
+    if (guard.predicate != '=?=' || guard.args.length != 2) continue;
+    final other = _otherSideOf(guard, variable);
+    if (other == null) continue;
+    final found = _typeOfTerm(other, c, env, clauseName,
+        visiting: {...visiting, variable});
+    if (found != null) return found;
+  }
+
+  for (final (g, decl) in parameterised) {
+    final params = decl.typeParams.toSet();
+    for (var k = 0; k < g.args.length && k < decl.argTypes.length; k++) {
+      final found = _walk(g.args[k], decl.argTypes[k], variable, env,
+          params: params, clauseName: clauseName);
       if (found != null) return found;
     }
   }
@@ -280,12 +315,72 @@ TypeExpr _typeOfVariable(String? variable, ast.Clause c, TypeEnvironment env,
       'in the clause (vGLP, Definition "Guarded Clause, ...").');
 }
 
+/// The side of the guard `A =?= B` that [variable] is not, where [variable]
+/// is one side of it; null otherwise.
+ast.Term? _otherSideOf(ast.Guard guard, String variable) {
+  final a = guard.args[0];
+  final b = guard.args[1];
+  if (a is ast.VarTerm && a.name == variable) return b;
+  if (b is ast.VarTerm && b.name == variable) return a;
+  return null;
+}
+
+/// The type of a whole term of the clause, for the other side of a guard: a
+/// variable's by the clause, a constant's by its value, and a compound term's
+/// the one type of the program that accepts it.  Null where it has none, or
+/// where the variable is already being resolved (two writers compared only
+/// with each other type neither).
+TypeExpr? _typeOfTerm(ast.Term t, ast.Clause c, TypeEnvironment env,
+    String clauseName, {required Set<String> visiting}) {
+  if (t is ast.VarTerm) {
+    if (visiting.contains(t.name)) return null;
+    try {
+      return _typeOfVariable(t.name, c, env, clauseName, visiting: visiting);
+    } on StateError {
+      return null;
+    }
+  }
+  if (t is ast.ConstTerm) return _typeOfValue(t, c);
+  if (t is ast.StructTerm || t is ast.ListTerm) {
+    final accepting = [
+      for (final def in env.types.values)
+        if (!def.isParameterized &&
+            def.name != 'Any' &&
+            _accepts(t, TypeRef(def.name, 0, 0), env, 0))
+          def.name
+    ];
+    if (accepting.length == 1) return TypeRef(accepting.single, c.line, c.column);
+  }
+  return null;
+}
+
+/// The declaration a body goal is checked against: the parameterised template
+/// where there is one, since that is the one whose type parameters are known,
+/// else the monomorphic declaration.
+ProcDecl? _declarationOf(ast.Goal g, TypeEnvironment env) =>
+    env.paramProcDecls['${g.functor}/${g.args.length}'] ??
+    env.getProcedure(g.functor, g.args.length);
+
 /// Walk [term] against [type], looking for [variable]; return the type at the
-/// position it sits at, or null if it is not in this argument.
+/// position it sits at, or null if it is not in this argument.  [params] are
+/// the type parameters of the declaration being walked; a position typed by
+/// one is instantiated from the term's shape.
 TypeExpr? _walk(ast.Term term, TypeExpr type, String variable,
-    TypeEnvironment env) {
+    TypeEnvironment env,
+    {Set<String> params = const {}, String clauseName = ''}) {
+  final atParameter =
+      type is TypeRef && type.typeArgs.isEmpty && params.contains(type.name);
+
   if (term is ast.VarTerm) {
-    return term.name == variable ? _bare(type) : null;
+    if (term.name != variable) return null;
+    // A variable that is the whole argument at a bare type parameter gives the
+    // parameter no shape to be instantiated from, and the position no type.
+    return atParameter ? null : _bare(type);
+  }
+
+  if (atParameter) {
+    if (!_mentions(term, variable)) return null;
+    return _typeByShape(term, variable, env, clauseName);
   }
 
   if (term is ast.StructTerm) {
@@ -322,13 +417,170 @@ TypeExpr? _walk(ast.Term term, TypeExpr type, String variable,
   return null;
 }
 
-/// The alternatives a type expression offers, following one named type.
-List<TypeExpr> _alternatives(TypeExpr type, TypeEnvironment env) {
-  if (type is TypeRef) {
-    final def = env.types[type.name];
-    if (def != null) return def.alternatives;
+/// The type of [variable]'s position in [term], where [term] stands at a
+/// position declared as a bare type parameter: every monomorphic type of the
+/// program that accepts the term is a candidate instantiation, and the
+/// variable's type is the type of its position in them, which they must
+/// agree on.  A term of no type, or of types that disagree on the position,
+/// leaves the variable untyped, and the compilation stops on it.
+TypeExpr _typeByShape(
+    ast.Term term, String variable, TypeEnvironment env, String clauseName) {
+  final accepting = <String>[];
+  final found = <String, TypeExpr>{};
+  for (final def in env.types.values) {
+    if (def.isParameterized) continue;
+    final ref = TypeRef(def.name, 0, 0);
+    if (!_accepts(term, ref, env, 0)) continue;
+    accepting.add(def.name);
+    final t = _walk(term, ref, variable, env);
+    if (t != null) found[t.toString()] = t;
   }
+  if (found.length == 1) return found.values.single;
+
+  final text = GlpPrinter().printTerm(term);
+  final where = 'The type of "$variable" in the volition guard of $clauseName '
+      'cannot be resolved: it occurs in $text at a position declared as a type '
+      'parameter, ';
+  if (found.isEmpty) {
+    throw StateError(accepting.isEmpty
+        ? '${where}and $text is a term of no type of the program.'
+        : '${where}and no type of the program that $text is a term of '
+            '(${accepting.join(', ')}) types the position of "$variable".');
+  }
+  throw StateError('${where}and the types of the program that $text is a term '
+      'of (${accepting.join(', ')}) disagree on the type of "$variable": '
+      '${found.keys.join(', ')}.');
+}
+
+/// Whether [term] is a term of [type]: a variable is a term of every type, a
+/// constant of a type with it as an alternative or of its primitive type, and
+/// a compound term of a type with an alternative of its functor whose
+/// arguments accept its own.
+bool _accepts(ast.Term term, TypeExpr type, TypeEnvironment env, int depth) {
+  if (term is ast.VarTerm || term is ast.UnderscoreTerm) return true;
+  if (depth > 64) return false;
+  if (type is PrimitiveModeAlt) return true;
+  if (type is TypeRef) {
+    switch (type.name) {
+      case 'Any':
+      case '_':
+        return true;
+      case 'Constant':
+        return term is ast.ConstTerm && _isAtom(term);
+      case 'String':
+        return term is ast.ConstTerm && _isString(term);
+      case 'Integer':
+        return term is ast.ConstTerm && term.value is int;
+      case 'Real':
+        return term is ast.ConstTerm && term.value is double;
+      case 'Number':
+        return term is ast.ConstTerm &&
+            (term.value is int || term.value is double);
+    }
+    return _alternatives(type, env)
+        .any((a) => _accepts(term, a, env, depth + 1));
+  }
+  if (type is ConstantAlt) {
+    return term is ast.ConstTerm && term.value == type.value;
+  }
+  if (type is StructAlt) {
+    if (term is! ast.StructTerm ||
+        term.functor != type.functor ||
+        term.args.length != type.args.length) {
+      return false;
+    }
+    for (var k = 0; k < term.args.length; k++) {
+      if (!_accepts(term.args[k], type.args[k], env, depth + 1)) return false;
+    }
+    return true;
+  }
+  if (type is ListNilAlt) return term is ast.ListTerm && term.isNil;
+  if (type is ListConsAlt) {
+    return term is ast.ListTerm &&
+        !term.isNil &&
+        (term.head == null || _accepts(term.head!, type.head, env, depth + 1)) &&
+        (term.tail == null || _accepts(term.tail!, type.tail, env, depth + 1));
+  }
+  return false;
+}
+
+bool _isAtom(ast.ConstTerm t) {
+  final v = t.value;
+  return v is String && !v.startsWith('"');
+}
+
+bool _isString(ast.ConstTerm t) {
+  final v = t.value;
+  return v is String && v.startsWith('"');
+}
+
+/// Whether [variable] occurs in [term].
+bool _mentions(ast.Term term, String variable) {
+  if (term is ast.VarTerm) return term.name == variable;
+  if (term is ast.StructTerm) return term.args.any((a) => _mentions(a, variable));
+  if (term is ast.ListTerm) {
+    return (term.head != null && _mentions(term.head!, variable)) ||
+        (term.tail != null && _mentions(term.tail!, variable));
+  }
+  return false;
+}
+
+/// The alternatives a type expression offers, following one named type.  A
+/// reference to a parameterised type, `Stream(FriendMsg)`, offers the
+/// template's alternatives with its arguments in place of the parameters ---
+/// or those of the instantiation the environment already holds under its
+/// expanded name, `Stream<FriendMsg>`.
+List<TypeExpr> _alternatives(TypeExpr type, TypeEnvironment env) {
+  if (type is! TypeRef) return const [];
+  final def = env.types[type.name];
+  if (def != null && (def.typeParams.isEmpty || type.typeArgs.isEmpty)) {
+    return def.alternatives;
+  }
+  final template = def ?? env.typeTemplates[type.name];
+  if (template != null && template.typeParams.length == type.typeArgs.length) {
+    final subst = {
+      for (var i = 0; i < template.typeParams.length; i++)
+        template.typeParams[i]: type.typeArgs[i]
+    };
+    return [for (final a in template.alternatives) _subst(a, subst)];
+  }
+  final expanded = env.types[_expandedName(type)];
+  if (expanded != null) return expanded.alternatives;
   return const [];
+}
+
+/// `Stream<FriendMsg>`, the environment's name for an instantiation.
+String _expandedName(TypeRef t) => t.typeArgs.isEmpty
+    ? t.name
+    : '${t.name}<${t.typeArgs.map((a) => a is TypeRef ? _expandedName(a) : a.toString()).join(', ')}>';
+
+/// [e] with the type parameters in [subst] replaced.
+TypeExpr _subst(TypeExpr e, Map<String, TypeExpr> subst) {
+  if (e is TypeRef) {
+    final bound = subst[e.name];
+    if (bound != null && e.typeArgs.isEmpty) {
+      return bound is TypeRef
+          ? TypeRef(bound.name, e.line, e.column,
+              isInput: e.isInput, typeArgs: bound.typeArgs)
+          : bound;
+    }
+    return TypeRef(e.name, e.line, e.column,
+        isInput: e.isInput,
+        typeArgs: [for (final a in e.typeArgs) _subst(a, subst)]);
+  }
+  if (e is StructAlt) {
+    return StructAlt(e.functor, [for (final a in e.args) _subst(a, subst)],
+        e.line, e.column);
+  }
+  if (e is ListConsAlt) {
+    return ListConsAlt(
+        _subst(e.head, subst), _subst(e.tail, subst), e.line, e.column);
+  }
+  if (e is DiffListAlt) {
+    return DiffListAlt(
+        _subst(e.content, subst), _subst(e.hole, subst), e.line, e.column);
+  }
+  return e;
 }
 
 /// The type at a position, without its mode: the answer's type is the type of

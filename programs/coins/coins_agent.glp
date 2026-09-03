@@ -23,10 +23,9 @@ Slot ::= none ; ask(Reply, ReqId).
 Slots ::= [] ; [Slot | Slots].
 Deadline ::= deadline ; no_deadline.
 AgentMsg ::= ask(Constant, Context, Reply?, ReqId?, Deadline) ; abort(ReqId).
-Card ::= card(Constant, Context, ReqId) ; close(ReqId).
+Card ::= card(Constant, Context, ReqId) ; closed(ReqId).
 UserAnswer ::= answer(ReqId, Answer).
-Escrow ::= escrow(Reply?) ; no_escrow.
-PendingEntry ::= pending(ReqId, Escrow).
+PendingEntry ::= pending(ReqId, Reply?).
 PendingList ::= [] ; [PendingEntry | PendingList].
 Timeout ::= timeout(ReqId).
 TimerStream ::= [] ; [Timeout | TimerStream].
@@ -116,11 +115,11 @@ after_change(Med, Id, UserIn, NetIn, Outs, Holdings, Serial) :- ground(Holdings?
 
 %% --- the mediator ---
 exported procedure med(Channel(Stream(UserAnswer), Stream(Card))?, Channel(Stream(AgentMsg), Closed)?, TimerStream?, PendingList?, Integer?).
-med(UserCh, AgentCh, Ts, Ps, N) :- receive(ask(C, Ctx, R?, Id?, deadline), AgentCh?, AgentCh1), ground(C?), ground(Ctx?) | Id = req(N?), send(card(C?, Ctx?, req(N?)), UserCh?, UserCh1), N1 := (N? + 1), deadline(D), timer(req(N?), D?, T), merge(T?, Ts?, Ts1), med(UserCh1?, AgentCh1?, Ts1?, [pending(req(N?), escrow(R)) | Ps?], N1?).
-med(UserCh, AgentCh, Ts, Ps, N) :- receive(ask(C, Ctx, R?, Id?, no_deadline), AgentCh?, AgentCh1), ground(C?), ground(Ctx?) | Id = req(N?), send(card(C?, Ctx?, req(N?)), UserCh?, UserCh1), N1 := (N? + 1), med(UserCh1?, AgentCh1?, Ts?, [pending(req(N?), escrow(R)) | Ps?], N1?).
-med(UserCh, AgentCh, Ts, Ps, N) :- receive(answer(ReqId, Vs), UserCh?, UserCh1), ground(ReqId?), ground(Vs?) | lookup(ReqId?, E, Ps?, Ps1), grant_then(E?, Vs?), med(UserCh1?, AgentCh?, Ts?, Ps1?, N?).
-med(UserCh, AgentCh, [timeout(ReqId) | Ts], Ps, N) :- ground(ReqId?) | lookup(ReqId?, E, Ps?, Ps1), grant_else(E?), send(close(ReqId?), UserCh?, UserCh1), med(UserCh1?, AgentCh?, Ts?, Ps1?, N?).
-med(UserCh, AgentCh, Ts, Ps, N) :- receive(abort(ReqId), AgentCh?, AgentCh1), ground(ReqId?) | lookup(ReqId?, _, Ps?, Ps1), send(close(ReqId?), UserCh?, UserCh1), med(UserCh1?, AgentCh1?, Ts?, Ps1?, N?).
+med(UserCh, AgentCh, Ts, Ps, N) :- receive(ask(C, Ctx, R?, Id?, deadline), AgentCh?, AgentCh1), ground(C?), ground(Ctx?) | Id = req(N?), send(card(C?, Ctx?, req(N?)), UserCh?, UserCh1), N1 := (N? + 1), deadline(D), timer(req(N?), D?, T), merge(T?, Ts?, Ts1), med(UserCh1?, AgentCh1?, Ts1?, [pending(req(N?), R) | Ps?], N1?).
+med(UserCh, AgentCh, Ts, Ps, N) :- receive(ask(C, Ctx, R?, Id?, no_deadline), AgentCh?, AgentCh1), ground(C?), ground(Ctx?) | Id = req(N?), send(card(C?, Ctx?, req(N?)), UserCh?, UserCh1), N1 := (N? + 1), med(UserCh1?, AgentCh1?, Ts?, [pending(req(N?), R) | Ps?], N1?).
+med(UserCh, AgentCh, Ts, Ps, N) :- receive(answer(ReqId, Vs), UserCh?, UserCh1), ground(ReqId?), ground(Vs?) | answer(ReqId?, Vs?, Ps?, Ps1), med(UserCh1?, AgentCh?, Ts?, Ps1?, N?).
+med(UserCh, AgentCh, [timeout(ReqId) | Ts], Ps, N) :- ground(ReqId?) | close(ReqId?, Ps?, Ps1), send(closed(ReqId?), UserCh?, UserCh1), med(UserCh1?, AgentCh?, Ts?, Ps1?, N?).
+med(UserCh, AgentCh, Ts, Ps, N) :- receive(abort(ReqId), AgentCh?, AgentCh1), ground(ReqId?) | close(ReqId?, Ps?, Ps1), send(closed(ReqId?), UserCh?, UserCh1), med(UserCh1?, AgentCh1?, Ts?, Ps1?, N?).
 
 exported procedure timer(ReqId?, Number?, TimerStream).
 timer(ReqId, D, [timeout(ReqId?)]) :- wait_until(D?) | true.
@@ -128,18 +127,15 @@ timer(ReqId, D, [timeout(ReqId?)]) :- wait_until(D?) | true.
 exported procedure deadline(Number).
 deadline(D?) :- now(T), D := (T? + 60000).
 
-exported procedure lookup(ReqId?, Escrow, PendingList?, PendingList).
-lookup(ReqId, E?, [pending(Id, E) | Ps], Ps?) :- (ReqId? =?= Id?) | true.
-lookup(ReqId, E?, [P | Ps], [P? | Ps1?]) :- otherwise | lookup(ReqId?, E, Ps?, Ps1).
-lookup(_, no_escrow, [], []).
+exported procedure answer(ReqId?, Answer?, PendingList?, PendingList).
+answer(ReqId, Vs, [pending(Id, R?) | Ps], Ps?) :- (ReqId? =?= Id?) | R = then(Vs?).
+answer(ReqId, Vs, [P | Ps], [P? | Ps1?]) :- otherwise | answer(ReqId?, Vs?, Ps?, Ps1).
+answer(_, _, [], []).
 
-exported procedure grant_then(Escrow?, Answer?).
-grant_then(escrow(R?), Vs) :- R = then(Vs?).
-grant_then(no_escrow, _).
-
-exported procedure grant_else(Escrow?).
-grant_else(escrow(R?)) :- R = else.
-grant_else(no_escrow).
+exported procedure close(ReqId?, PendingList?, PendingList).
+close(ReqId, [pending(Id, R?) | Ps], Ps?) :- (ReqId? =?= Id?) | R = else.
+close(ReqId, [P | Ps], [P? | Ps1?]) :- otherwise | close(ReqId?, Ps?, Ps1).
+close(_, [], []).
 
 exported procedure aborts(Slots?, Channel(Closed, Stream(AgentMsg))?, Channel(Closed, Stream(AgentMsg))).
 aborts([], Med, Med?).
