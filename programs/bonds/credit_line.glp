@@ -1,0 +1,73 @@
+%% credit_line.glp --- the credit line of Section 5 of "Grassroots Bonds", on
+%% the compiled bond agent and the escrow program, checked against the Credit
+%% Line proposition (prop:credit-line).
+%%
+%% Lender Alice, borrower Bob, and the escrow agent.  The agreement: limit 20,
+%% expiry day 25, interest bonds maturing day 20.
+%%
+%%   1. establishment   Alice mints 20 coins and deposits them with the escrow
+%%                      agent; nothing is drawn
+%%   2. draw            Bob mints 8 bonds maturing day 25 (the principal) and 2
+%%                      maturing day 20 (the interest), and deposits both lots;
+%%                      once both are held the escrow agent releases the
+%%                      principal and the interest to Alice and 8 alice-coins to
+%%                      Bob --- the packaged exchange of Section 5; drawn 8
+%%   3. repayment       Bob redeems 3 alice-coins from Alice, taking back his
+%%                      principal bonds one by one, and Alice deposits the 3
+%%                      coins with the escrow agent; drawn 5.  Then 5 more, the
+%%                      same way; drawn 0
+%%   4. expiry          the escrow agent's date reaches 25, and it returns the
+%%                      20 undrawn coins to Alice
+%%
+%% Between the operations the escrow agent holds the undrawn coins, 20 less
+%% the amount drawn, and Alice holds Bob's principal bonds for the amount
+%% drawn; at expiry with nothing drawn Alice holds her 20 coins and no bond of
+%% Bob's maturing day 25.  Each party's holdings are on its screen after every
+%% change, so the proposition is read off the log.
+%%
+%% Entry point: run/0, exported by self.glp as credit_line/0.
+
+imported procedure village#villager(Constant?, Script?, Stream(NetInMsg)?, Stream(NetOutMsg)).
+imported procedure village#escrow_agent(Constant?, Script?, Agreement?, Stream(NetInMsg)?, Stream(NetOutMsg)).
+
+exported procedure run.
+run :-
+    network3(AOut?, BOut?, GOut?, AIn, BIn, GIn),
+    village # villager(alice,
+        [mint(20, 0), deposit(escrow, alice, 0, 20),
+         accept_transfer(escrow), accept_transfer(escrow),
+         await(presented(bob, bob, 25)), await(presented(bob, bob, 25)),
+         await(presented(bob, bob, 25)),
+         deposit(escrow, alice, 0, 3),
+         await(presented(bob, bob, 25)), await(presented(bob, bob, 25)),
+         await(presented(bob, bob, 25)), await(presented(bob, bob, 25)),
+         await(presented(bob, bob, 25)),
+         deposit(escrow, alice, 0, 5),
+         accept_transfer(escrow)],
+        AIn?, AOut),
+    village # villager(bob,
+        [mint(8, 25), mint(2, 20),
+         deposit(escrow, bob, 25, 8), deposit(escrow, bob, 20, 2),
+         accept_transfer(escrow),
+         redeem(alice, 0, bob, 25), redeem(alice, 0, bob, 25), redeem(alice, 0, bob, 25),
+         redeem(alice, 0, bob, 25), redeem(alice, 0, bob, 25), redeem(alice, 0, bob, 25),
+         redeem(alice, 0, bob, 25), redeem(alice, 0, bob, 25)],
+        BIn?, BOut),
+    village # escrow_agent(escrow,
+        [await(received_transfer(deposit, alice, [lot(alice, 0, 5)])), advance(25)],
+        credit_line(alice, bob, 20, 25, 20, 0, 0, opening, 0),
+        GIn?, GOut).
+
+%% --- The network: first contacts, routed by addressee ---
+
+procedure route3(Stream(NetOutMsg)?, Stream(NetInMsg), Stream(NetInMsg), Stream(NetInMsg)).
+route3([msg(alice, C)|Rest], [msg(alice, C?)|A?], B?, G?) :- route3(Rest?, A, B, G).
+route3([msg(bob, C)|Rest], A?, [msg(bob, C?)|B?], G?) :- route3(Rest?, A, B, G).
+route3([msg(escrow, C)|Rest], A?, B?, [msg(escrow, C?)|G?]) :- route3(Rest?, A, B, G).
+route3([], [], [], []).
+
+procedure network3(Stream(NetOutMsg)?, Stream(NetOutMsg)?, Stream(NetOutMsg)?, Stream(NetInMsg), Stream(NetInMsg), Stream(NetInMsg)).
+network3(AOut, BOut, GOut, AIn?, BIn?, GIn?) :-
+    merge(AOut?, BOut?, AB),
+    merge(AB?, GOut?, All),
+    route3(All?, AIn, BIn, GIn).

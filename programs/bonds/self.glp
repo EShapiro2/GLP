@@ -1,0 +1,429 @@
+%% self.glp — grassroots bonds, the bonds program.
+%%
+%% The program every participant runs under the grassroots social contract of
+%% "Grassroots Bonds: Financing by the People, for the People" (Section 3),
+%% derived from the transactions of its Section 3.4, Definition "The
+%% Transactions of Grassroots Bonds".  It extends the coins program
+%% (programs/coins) by what dates add.  This file holds the types shared by the
+%% agent (bonds_agent.vglp, compiled by the vGLP canonical compilation into
+%% bonds_agent.glp beside it), the escrow programs (escrow.glp) and the plays
+%% (village.glp, credit_line.glp), and the helpers over holdings, dates and
+%% channels that the agent calls.
+%%
+%% A bond is bond(Issuer, Maturity, Serial): the atom cent(u, d) of the act
+%% schemas, with the serial a practical implementation gives each bond.  A
+%% party's holdings are a multiset of bonds, Stream(Bond).  A lot is k bonds of
+%% one issuer and maturity, lot(Issuer, Maturity, K): the cent^k_{u,d} of
+%% Section 3.4.  A warranty dated(Issuer, Date) is the pair (q, d*_q) of the
+%% definition: the issuer's warranty of its date, recorded at the counterparty
+%% of a payment or a redemption.
+
+Bond     ::= bond(Constant, Integer, Integer).
+Lot      ::= lot(Constant, Integer, Integer).
+Warranty ::= dated(Constant, Integer).
+
+%% The three escrow transfers of clause 7: a deposit by the depositor with the
+%% escrow agent, a release by the escrow agent to the beneficiary, a return by
+%% the escrow agent to the depositor.  Each is a transfer of one lot guarded by
+%% both participants, and the kind is what the receiver's card shows.
+Kind ::= deposit ; release ; return.
+
+%% The counterparty's answer to a swap: the bonds it gives, or the offered bonds
+%% returned.
+SwapResponse ::= swap_accept(Stream(Bond)) ; swap_decline(Stream(Bond)).
+
+%% The payee's answer to a payment: the bonds taken, with the payee's date ---
+%% the issuer's warranty --- or the bonds returned, because they are not the
+%% payee's own coins by its own date.
+PayResponse ::= pay_taken(Integer) ; pay_returned(Stream(Bond)).
+
+%% The issuer's answer to a presentation: the bond taken in exchange, with the
+%% issuer's date; the presented bond returned with the lots the issuer holds,
+%% its own apart, for the bearer to choose among; or the bond returned because
+%% it is not the issuer's coin by the issuer's date.
+RedeemResponse ::= redeem_give(Bond, Integer)
+                 ; redeem_menu(Bond, Stream(Lot))
+                 ; redeem_declined(Bond).
+
+%% The receiver's answer to an escrow transfer: taken, or the bonds returned.
+TransferResponse ::= transfer_accept ; transfer_decline(Stream(Bond)).
+
+%% What one agent sends another: the bilateral acts of Section 3.4.  A position
+%% that forwards a writer carries ? in the type (typed-glp-manual, 15B).
+PeerContent ::= pay(Stream(Bond), PayResponse?)
+              ; swap(Lot, Stream(Bond), SwapResponse?)
+              ; redeem(Bond, Constant, Integer, RedeemResponse?)
+              ; transfer(Kind, Stream(Bond), TransferResponse?).
+PeerMsg     ::= msg(Constant, Constant, PeerContent).
+PeerChannel ::= ch(Stream(PeerMsg), Stream(PeerMsg)?).
+
+%% First contact.  An act sent to a party the sender has no channel to carries
+%% the receiver's end of a fresh channel, on which the two transact thereafter.
+NetCall   ::= call(Constant, PeerContent, PeerChannel).
+NetOutMsg ::= msg(Constant, NetCall).
+NetInMsg  ::= msg(Constant, NetCall)
+            ; msg(Constant, Constant, PeerContent).
+
+%% A channel held for a swap or a transfer proposed at first contact ---
+%% adopted when it is accepted, closed when it is declined --- or linked, an
+%% established channel.
+Link ::= link(PeerChannel) ; linked.
+
+%% Whether a bond was found in the holdings.
+Found ::= found(Bond) ; not_found.
+
+%% The agent's outputs: the screen, the network, and a channel per
+%% counterparty, keyed by its name.  The routers send_user, send_net,
+%% send_friend and add_friend_output are those of lib/routing, exposed from the
+%% root scope.
+OutputEntry ::= user_output(Stream(ScreenMsg)?)
+              ; net_output(Stream(NetOutMsg)?)
+              ; friend_output(Constant, Stream(PeerMsg)?).
+
+%% The screen: the holdings, tallied by issuer and maturity, after every change
+%% of them; the date after every advance; each warranty as it is recorded; and
+%% what each act came to.
+ScreenContent ::= holdings(Stream(Lot))
+                ; date_advanced(Integer)
+                ; warranty(Constant, Integer)
+                ; minted(Integer, Integer)
+                ; paying(Constant, Integer, Integer)
+                ; paid(Constant, Integer)
+                ; not_accepted(Constant, Integer)
+                ; received(Constant, Integer)
+                ; refused_payment(Constant, Integer)
+                ; swap_done(Constant)
+                ; swap_declined(Constant)
+                ; swap_failed(Constant)
+                ; declined(Constant)
+                ; redeemed(Constant, Constant, Integer)
+                ; menu(Constant, Stream(Lot))
+                ; refused(Constant)
+                ; presented(Constant, Constant, Integer)
+                ; unfulfilled(Constant, Constant, Integer)
+                ; offered_transfer(Kind, Constant, Lot)
+                ; transferred(Kind, Constant)
+                ; transfer_declined(Kind, Constant)
+                ; received_transfer(Kind, Constant, Stream(Lot))
+                ; declined_transfer(Kind, Constant)
+                ; lacking(Constant, Integer, Integer).
+ScreenMsg ::= msg(Constant, Constant, ScreenContent).
+
+%% The agent's own input: the answers its responders inject, and the results
+%% of the acts it proposed.
+UserInMsg ::= accept_swap(Constant, Lot, Stream(Bond), SwapResponse?, Link)
+            ; decline_swap(Constant, Stream(Bond), SwapResponse?, Link)
+            ; swap_accepted(Constant, Stream(Bond), Link)
+            ; swap_declined_by(Constant, Stream(Bond), Link)
+            ; pay_taken_by(Constant, Integer, Integer)
+            ; pay_returned_by(Constant, Stream(Bond))
+            ; redeem_given(Constant, Bond, Integer)
+            ; redeem_menu_from(Constant, Bond, Stream(Lot))
+            ; redeem_declined_by(Constant, Bond)
+            ; accept_transfer(Kind, Constant, Stream(Bond), TransferResponse?, Link)
+            ; decline_transfer(Kind, Constant, Stream(Bond), TransferResponse?, Link)
+            ; transfer_accepted(Kind, Constant, Link)
+            ; transfer_declined_by(Kind, Constant, Stream(Bond), Link).
+
+%% The offer a swap responder carries: the proposer, the lot it wants, the
+%% bonds it offers.  The offer a transfer responder carries: the kind, the
+%% giver, the bonds.
+SwapOffer     ::= offer(Constant, Lot, Stream(Bond)).
+TransferOffer ::= offer_transfer(Kind, Constant, Stream(Bond)).
+
+%% =============================================================================
+%% The vocabulary of the compiled agent's mediator, at this program's answer and
+%% context types, so that the plays can type the goals they spawn.  These are
+%% the types the canonical compilation emits into bonds_agent.glp (programs/
+%% vglp/self.glp instantiated at Answer and Context); the compiled module's own
+%% definitions shadow these within it, and the two must agree.
+%% =============================================================================
+
+ReqId ::= req(Integer).
+Reply ::= then(Answer) ; else.
+Slot ::= none ; ask(Reply, ReqId).
+Deadline ::= deadline ; no_deadline.
+AgentMsg ::= ask(Constant, Context, Reply?, ReqId?, Deadline) ; abort(ReqId).
+Card ::= card(Constant, Context, ReqId) ; closed(ReqId).
+UserAnswer ::= answer(ReqId, Answer).
+PendingEntry ::= pending(ReqId, Reply?).
+PendingList ::= [] ; [PendingEntry | PendingList].
+Timeout ::= timeout(ReqId).
+TimerStream ::= [] ; [Timeout | TimerStream].
+
+%% One alternative per volition-guarded clause of the agent: its seven request
+%% clauses --- mint, swap, pay, redeem, deposit, release, return, in the order
+%% of Section 3.4, advance-date being unguarded --- and the decline and accept
+%% clauses of the swap responder and of the transfer responder.
+Answer ::= xs_respond_swap_1(Constant)
+         ; xs_respond_swap_2(Constant)
+         ; xs_respond_transfer_1(Constant)
+         ; xs_respond_transfer_2(Constant)
+         ; xs_agent_1(Integer, Integer)
+         ; xs_agent_2(Constant, Constant, Integer, Integer, Constant, Integer, Integer)
+         ; xs_agent_3(Constant, Integer, Integer)
+         ; xs_agent_4(Constant, Integer, Constant, Integer)
+         ; xs_agent_5(Constant, Constant, Integer, Integer)
+         ; xs_agent_6(Constant, Constant, Integer, Integer)
+         ; xs_agent_7(Constant, Constant, Integer, Integer).
+Context ::= ctx_respond_swap_1(Constant, Lot, Stream(Bond))
+          ; ctx_respond_swap_2(Constant, Lot, Stream(Bond))
+          ; ctx_respond_transfer_1(Kind, Constant, Stream(Bond))
+          ; ctx_respond_transfer_2(Kind, Constant, Stream(Bond))
+          ; ctx_agent_1 ; ctx_agent_2 ; ctx_agent_3 ; ctx_agent_4
+          ; ctx_agent_5 ; ctx_agent_6 ; ctx_agent_7.
+
+%% =============================================================================
+%% The plays' vocabulary: what a person sees, and the agreements the escrow
+%% programs run.
+%% =============================================================================
+
+%% What a person sees: the cards and their closing, and the screen.
+Event ::= card(Constant, Context, ReqId)
+        ; closed(ReqId)
+        ; msg(Constant, Constant, ScreenContent).
+
+%% A script: the person's acts, in order.  A step is an answer to one of the
+%% agent's seven request cards; an advance of the calendar, which in a headless
+%% run the play drives; an acceptance of a swap or of a transfer the named party
+%% proposes; or a wait for a screen message.
+Step ::= mint(Integer, Integer)
+       ; advance(Integer)
+       ; swap(Constant, Constant, Integer, Integer, Constant, Integer, Integer)
+       ; pay(Constant, Integer, Integer)
+       ; redeem(Constant, Integer, Constant, Integer)
+       ; deposit(Constant, Constant, Integer, Integer)
+       ; release(Constant, Constant, Integer, Integer)
+       ; return(Constant, Constant, Integer, Integer)
+       ; accept(Constant)
+       ; accept_transfer(Constant)
+       ; await(ScreenContent).
+Script ::= [] ; [Step | Script].
+
+%% An escrow agreement, run by the escrow program of escrow.glp as the will of
+%% the escrow agent, with its state: none, for a party under no agreement; a
+%% date-based escrow --- the depositor, the beneficiary, the lot, the date of
+%% the escrow agent at which it releases, its phase, and the escrow agent's
+%% date; or a credit line --- the lender, the borrower, the limit, the expiry,
+%% the date of the interest bonds, the drawn amount, the principal of a draw
+%% deposited and awaiting its interest lot (0 when none), its phase, and the
+%% escrow agent's date.
+Agreement ::= none
+            ; dated_escrow(Constant, Constant, Lot, Integer, Phase, Integer)
+            ; credit_line(Constant, Constant, Integer, Integer, Integer, Integer, Integer, Phase, Integer).
+Phase ::= awaiting ; deposited ; released ; opening ; open ; closed.
+
+%% =============================================================================
+%% Holdings
+%% =============================================================================
+
+%% K fresh bonds of Issuer maturing at D, serials from Serial up.
+procedure create_bonds(Constant?, Integer?, Integer?, Integer?, Stream(Bond)).
+create_bonds(Issuer, D, K, Serial, [bond(Issuer?, D?, Serial?)|Rest?]) :-
+    K? > 0 |
+    K1 := K? - 1,
+    S1 := Serial? + 1,
+    create_bonds(Issuer?, D?, K1?, S1?, Rest).
+create_bonds(_, _, 0, _, []).
+
+procedure append_bonds(Stream(Bond)?, Stream(Bond)?, Stream(Bond)).
+append_bonds([B|Bs], Ys, [B?|Zs?]) :- append_bonds(Bs?, Ys?, Zs).
+append_bonds([], Ys, Ys?).
+
+%% K bonds of Issuer maturing at D out of the holdings: ok, with the bonds and
+%% the rest; or fail --- the precondition cent^k_{u,d} in c_p of Section 3.4
+%% does not hold --- with the bonds found and the rest, which the caller puts
+%% back together.
+procedure select_bonds(Constant?, Integer?, Integer?, Stream(Bond)?, Constant, Stream(Bond), Stream(Bond)).
+select_bonds(_, _, 0, Hs, ok, [], Hs?).
+select_bonds(Issuer, D, K, [bond(I, M, S)|Rest], Status?, [bond(I?, M?, S?)|Sel?], Rem?) :-
+    K? > 0, Issuer? =?= I?, D? =:= M? |
+    K1 := K? - 1,
+    select_bonds(Issuer?, D?, K1?, Rest?, Status, Sel, Rem).
+select_bonds(Issuer, D, K, [B|Rest], Status?, Sel?, [B?|Rem?]) :-
+    otherwise |
+    select_bonds(Issuer?, D?, K?, Rest?, Status, Sel, Rem).
+select_bonds(_, _, K, [], fail, [], []) :- K? > 0 | true.
+
+%% One bond of Issuer maturing at D out of the holdings, or not_found with the
+%% holdings intact.
+procedure take_bond(Constant?, Integer?, Stream(Bond)?, Found, Stream(Bond)).
+take_bond(Issuer, D, [bond(I, M, S)|Rest], found(bond(I?, M?, S?)), Rest?) :-
+    Issuer? =?= I?, D? =:= M? | true.
+take_bond(Issuer, D, [B|Rest], Found?, [B?|Rem?]) :-
+    otherwise |
+    take_bond(Issuer?, D?, Rest?, Found, Rem).
+take_bond(_, _, [], not_found, []).
+
+%% Whether every bond is a coin of the holder: issued by it, and mature by its
+%% own date --- the issuer's date test d <= d*_q of pay and redeem.
+procedure own_coins(Constant?, Integer?, Stream(Bond)?, Constant).
+own_coins(Id, Date, [bond(I, M, _)|Rest], R?) :-
+    Id? =?= I?, M? =< Date? |
+    own_coins(Id?, Date?, Rest?, R).
+own_coins(_, _, [bond(_, _, _)|_], no) :- otherwise | true.
+own_coins(_, _, [], yes).
+
+procedure count_bonds(Stream(Bond)?, Integer?, Integer).
+count_bonds([_|Bs], N, M?) :- N1 := N? + 1, count_bonds(Bs?, N1?, M).
+count_bonds([], N, N?).
+
+%% The holdings tallied by issuer and maturity, in order of first appearance.
+procedure tally(Stream(Bond)?, Stream(Lot)?, Stream(Lot)).
+tally([bond(I, M, _)|Rest], Acc, Lots?) :-
+    ground(I?), integer(M?) |
+    tally_add(I?, M?, Acc?, Acc1),
+    tally(Rest?, Acc1?, Lots).
+tally([], Acc, Acc?).
+
+procedure tally_add(Constant?, Integer?, Stream(Lot)?, Stream(Lot)).
+tally_add(I, M, [lot(I2, M2, N)|Rest], [lot(I2?, M2?, N1?)|Rest?]) :-
+    I? =?= I2?, M? =:= M2? |
+    N1 := N? + 1.
+tally_add(I, M, [L|Rest], [L?|Rest1?]) :- otherwise | tally_add(I?, M?, Rest?, Rest1).
+tally_add(I, M, [], [lot(I?, M?, 1)]).
+
+%% The lots held, the holder's own apart: what an issuer discloses to a bearer
+%% whose presentation it cannot fulfil as named.
+procedure menu_of(Constant?, Stream(Bond)?, Stream(Lot)?, Stream(Lot)).
+menu_of(Id, [bond(I, _, _)|Rest], Acc, Menu?) :-
+    Id? =?= I? |
+    menu_of(Id?, Rest?, Acc?, Menu).
+menu_of(Id, [bond(I, M, _)|Rest], Acc, Menu?) :-
+    otherwise |
+    tally_add(I?, M?, Acc?, Acc1),
+    menu_of(Id?, Rest?, Acc1?, Menu).
+menu_of(_, [], Acc, Acc?).
+
+%% =============================================================================
+%% Warranties
+%% =============================================================================
+
+%% The warranties with the pair (Issuer, Date) added: the set union
+%% w'_p = w_p + {(q, d*_q)} of pay and redeem.
+procedure add_warranty(Constant?, Integer?, Stream(Warranty)?, Stream(Warranty)).
+add_warranty(Q, T, [dated(Q1, T1)|Rest], [dated(Q1?, T1?)|Rest?]) :-
+    Q? =?= Q1?, T? =:= T1? | true.
+add_warranty(Q, T, [W|Rest], [W?|Rest1?]) :-
+    otherwise |
+    add_warranty(Q?, T?, Rest?, Rest1).
+add_warranty(Q, T, [], [dated(Q?, T?)]).
+
+%% =============================================================================
+%% Channels to counterparties
+%% =============================================================================
+
+%% Whether a channel to Q is among the outputs.
+procedure has_peer(Constant?, Stream(OutputEntry)?, Stream(OutputEntry), Constant).
+has_peer(Q, [friend_output(K, Out?)|Rest], [friend_output(K?, Out)|Rest?], yes) :-
+    Q? =?= K? | true.
+has_peer(Q, [E|Rest], [E?|Rest1?], Known?) :-
+    otherwise |
+    has_peer(Q?, Rest?, Rest1, Known).
+has_peer(_, [], [], no).
+
+%% Adopt a channel to Q: its write side becomes Q's output entry and its read
+%% side joins the network input.  An established link adopts nothing.
+procedure adopt(Link?, Constant?, Stream(OutputEntry)?, Stream(OutputEntry), Stream(NetInMsg)?, Stream(NetInMsg)).
+adopt(link(ch(In, Out?)), Q, Outs, Outs1?, NetIn, NetIn1?) :-
+    ground(Q?) |
+    add_friend_output(Q?, Out, Outs?, Outs1),
+    merge(NetIn?, In?, NetIn1).
+adopt(linked, _, Outs, Outs?, NetIn, NetIn?).
+
+%% A channel held for a declined swap or transfer: its write side closes.  An
+%% established link stays.
+procedure drop_link(Link?).
+drop_link(link(ch(_, []))).
+drop_link(linked).
+
+%% =============================================================================
+%% Results injected into the agent's input
+%% =============================================================================
+
+%% The counterparty's answer to a proposed swap, when it comes, with the link
+%% the proposal was made on.
+procedure inject_swap_result(SwapResponse?, Constant?, Link?, Stream(UserInMsg)?, Stream(UserInMsg)).
+inject_swap_result(swap_accept(Bonds), Q, Link, Ys, [swap_accepted(Q?, Bonds?, Link?)|Ys?]) :-
+    ground(Q?), ground(Bonds?) | true.
+inject_swap_result(swap_decline(Bonds), Q, Link, Ys, [swap_declined_by(Q?, Bonds?, Link?)|Ys?]) :-
+    ground(Q?), ground(Bonds?) | true.
+inject_swap_result(R, Q, Link, [Y|Ys], [Y?|Ys1?]) :-
+    inject_swap_result(R?, Q?, Link?, Ys?, Ys1).
+
+%% The payee's answer to a payment of K bonds, when it comes.
+procedure inject_pay_result(PayResponse?, Constant?, Integer?, Stream(UserInMsg)?, Stream(UserInMsg)).
+inject_pay_result(pay_taken(T), Q, K, Ys, [pay_taken_by(Q?, K?, T?)|Ys?]) :-
+    ground(Q?), integer(T?) | true.
+inject_pay_result(pay_returned(Bonds), Q, _, Ys, [pay_returned_by(Q?, Bonds?)|Ys?]) :-
+    ground(Q?), ground(Bonds?) | true.
+inject_pay_result(R, Q, K, [Y|Ys], [Y?|Ys1?]) :-
+    inject_pay_result(R?, Q?, K?, Ys?, Ys1).
+
+%% The issuer's answer to a presentation, when it comes.
+procedure inject_redeem_result(RedeemResponse?, Constant?, Stream(UserInMsg)?, Stream(UserInMsg)).
+inject_redeem_result(redeem_give(B, T), Q, Ys, [redeem_given(Q?, B?, T?)|Ys?]) :-
+    ground(Q?), ground(B?), integer(T?) | true.
+inject_redeem_result(redeem_menu(B, Menu), Q, Ys, [redeem_menu_from(Q?, B?, Menu?)|Ys?]) :-
+    ground(Q?), ground(B?), ground(Menu?) | true.
+inject_redeem_result(redeem_declined(B), Q, Ys, [redeem_declined_by(Q?, B?)|Ys?]) :-
+    ground(Q?), ground(B?) | true.
+inject_redeem_result(R, Q, [Y|Ys], [Y?|Ys1?]) :-
+    inject_redeem_result(R?, Q?, Ys?, Ys1).
+
+%% The receiver's answer to a proposed transfer, when it comes, with the link
+%% the proposal was made on.
+procedure inject_transfer_result(TransferResponse?, Kind?, Constant?, Link?, Stream(UserInMsg)?, Stream(UserInMsg)).
+inject_transfer_result(transfer_accept, Kind, Q, Link, Ys, [transfer_accepted(Kind?, Q?, Link?)|Ys?]) :-
+    ground(Kind?), ground(Q?) | true.
+inject_transfer_result(transfer_decline(Bonds), Kind, Q, Link, Ys, [transfer_declined_by(Kind?, Q?, Bonds?, Link?)|Ys?]) :-
+    ground(Kind?), ground(Q?), ground(Bonds?) | true.
+inject_transfer_result(R, Kind, Q, Link, [Y|Ys], [Y?|Ys1?]) :-
+    inject_transfer_result(R?, Kind?, Q?, Link?, Ys?, Ys1).
+
+%% The two bodies of the swap responder's accept clause: the acceptance, and
+%% the refusal the machine gives for a person who has not answered.  Each hands
+%% the agent the offer with the response writer and the link.
+procedure accept_answer(Constant?, Lot?, Stream(Bond)?, SwapResponse, Link?, Stream(UserInMsg)).
+accept_answer(From, Want, Offered, Resp?, Link, [accept_swap(From?, Want?, Offered?, Resp, Link?)]).
+
+procedure decline_answer(Constant?, Stream(Bond)?, SwapResponse, Link?, Stream(UserInMsg)).
+decline_answer(From, Offered, Resp?, Link, [decline_swap(From?, Offered?, Resp, Link?)]).
+
+%% The same for the transfer responder.
+procedure accept_transfer_answer(Kind?, Constant?, Stream(Bond)?, TransferResponse, Link?, Stream(UserInMsg)).
+accept_transfer_answer(Kind, From, Bonds, Resp?, Link, [accept_transfer(Kind?, From?, Bonds?, Resp, Link?)]).
+
+procedure decline_transfer_answer(Kind?, Constant?, Stream(Bond)?, TransferResponse, Link?, Stream(UserInMsg)).
+decline_transfer_answer(Kind, From, Bonds, Resp?, Link, [decline_transfer(Kind?, From?, Bonds?, Resp, Link?)]).
+
+%% Binding a declined swap's response: the offered bonds go back.
+procedure decline(SwapResponse, Stream(Bond)?).
+decline(swap_decline(Bonds?), Bonds).
+
+%% Binding a transfer's response: taken, or the bonds go back.
+procedure take_transfer(TransferResponse).
+take_transfer(transfer_accept).
+
+procedure decline_transfer_resp(TransferResponse, Stream(Bond)?).
+decline_transfer_resp(transfer_decline(Bonds?), Bonds).
+
+%% =============================================================================
+%% The screen, and the outputs
+%% =============================================================================
+
+procedure show(ScreenContent?, Stream(OutputEntry)?, Stream(OutputEntry)).
+show(C, Outs, Outs1?) :- send_user(msg(agent, person, C?), Outs?, Outs1).
+
+%% =============================================================================
+%% Entry points: the village market of Section 7 of the paper, and the credit
+%% line of its Section 5
+%% =============================================================================
+
+imported procedure village#market.
+exported procedure village.
+village :- village # market.
+
+imported procedure credit_line#run.
+exported procedure credit_line.
+credit_line :- credit_line # run.

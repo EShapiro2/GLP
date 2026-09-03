@@ -2304,6 +2304,86 @@ check "Coins village: five redemptions" "tagged(frank, redeemed(diana, frank))" 
 echo ""
 
 # =============================================================================
+# Section N3: The bonds program (programs/bonds): the vGLP bond agent of the
+# Grassroots Bonds paper, its canonical compilation bonds_agent.glp (emitted by
+# glpc :emit), the escrow programs, the seven-party village market of the
+# paper's Section 7, and the credit line of its Section 5.  As for N2 the runs
+# need the reduction limit raised and end about a minute after their last act.
+# =============================================================================
+echo "=== Section N3: Bonds program (Grassroots Bonds) ==="
+echo ""
+
+BONDS="$GLP_DIR/programs/bonds"
+
+n3_load=$("$REPL_RUN" <<HEREDOC
+$BONDS
+:quit
+HEREDOC
+2>&1)
+
+check "Bonds program loads" "Loaded program" "$n3_load"
+check_not "Bonds program no type errors" "Type checking failed" "$n3_load"
+
+n3_emit=$("$REPL_RUN" <<HEREDOC
+$BONDS
+:emit $BONDS
+:quit
+HEREDOC
+2>&1)
+check "Bonds program: :emit re-emits bonds_agent.glp" "wrote $BONDS/bonds_agent.glp" "$n3_emit"
+n3_emit_diff=$(cd "$GLP_DIR" && git diff --stat -- programs/bonds/bonds_agent.glp)
+check_not "Bonds program: committed bonds_agent.glp is the compiler's output" "bonds_agent.glp" "$n3_emit_diff"
+
+echo "--- Bonds village market (village) ---"
+
+n3_run=$("$REPL_RUN" <<HEREDOC
+$BONDS
+:limit 50000000
+village.
+:quit
+HEREDOC
+2>&1)
+
+check "Bonds village: no runtime error" "→ suspended" "$n3_run"
+check_not "Bonds village: no failed goal" "ERROR" "$n3_run"
+check "Bonds village: Alice's holdings" "tagged(alice, holdings(\[lot(bob, 0, 5), lot(alice, 0, 8), lot(charlie, 0, 15), lot(frank, 0, 4)\]))" "$n3_run"
+check "Bonds village: Bob's holdings" "tagged(bob, holdings(\[lot(alice, 0, 10), lot(diana, 0, 20)\]))" "$n3_run"
+check "Bonds village: Charlie's holdings" "tagged(charlie, holdings(\[lot(alice, 0, 10), lot(eve, 0, 10), lot(charlie, 0, 6)\]))" "$n3_run"
+check "Bonds village: Diana's holdings" "tagged(diana, holdings(\[lot(bob, 25, 24), lot(frank, 28, 13), lot(diana, 0, 8)\]))" "$n3_run"
+check "Bonds village: Eve's holdings" "tagged(eve, holdings(\[lot(charlie, 0, 4), lot(frank, 0, 1), lot(alice, 0, 2), lot(bob, 0, 10)\]))" "$n3_run"
+check "Bonds village: Frank's holdings" "tagged(frank, holdings(\[lot(diana, 0, 7), lot(eve, 0, 10), lot(frank, 28, 5), lot(frank, 0, 5)\]))" "$n3_run"
+check "Bonds village: the escrow agent holds nothing at the end" "tagged(escrow, holdings(\[\]))" "$n3_run"
+check "Bonds village: a payment of immature bonds is refused by the issuer's date" "tagged(bob, refused_payment(diana, 4))" "$n3_run"
+check "Bonds village: Bob's bonds mature by his own calendar" "tagged(bob, date_advanced(25))" "$n3_run"
+check "Bonds village: the redemption takes back an immature bond" "tagged(frank, redeemed(diana, frank, 28))" "$n3_run"
+check "Bonds village: the issuer's date is recorded at the counterparty" "tagged(frank, warranty(diana, 0))" "$n3_run"
+check "Bonds village: the escrow agent's date reaches the release date" "tagged(escrow, date_advanced(30))" "$n3_run"
+check "Bonds village: the escrow releases to the beneficiary" "tagged(frank, received_transfer(release, escrow, \[lot(frank, 0, 5)\]))" "$n3_run"
+
+echo "--- Bonds credit line (credit_line), Proposition prop:credit-line ---"
+
+n3_cl=$("$REPL_RUN" <<HEREDOC
+$BONDS
+:limit 50000000
+credit_line.
+:quit
+HEREDOC
+2>&1)
+
+check "Bonds credit line: no runtime error" "→ suspended" "$n3_cl"
+check_not "Bonds credit line: no failed goal" "ERROR" "$n3_cl"
+check "Bonds credit line: establishment, the escrow holds the limit" "tagged(escrow, holdings(\[lot(alice, 0, 20)\]))" "$n3_cl"
+check "Bonds credit line: draw, the escrow holds the undrawn coins" "tagged(escrow, holdings(\[lot(alice, 0, 12)\]))" "$n3_cl"
+check "Bonds credit line: draw, the lender holds the principal for the amount drawn" "tagged(alice, holdings(\[lot(bob, 25, 8), lot(bob, 20, 2)\]))" "$n3_cl"
+check "Bonds credit line: partial repayment restores capacity" "tagged(escrow, holdings(\[lot(alice, 0, 15)\]))" "$n3_cl"
+check "Bonds credit line: expiry judged by the escrow agent's own date" "tagged(escrow, date_advanced(25))" "$n3_cl"
+check "Bonds credit line: at expiry the undrawn coins return to the lender" "tagged(alice, received_transfer(return, escrow, \[lot(alice, 0, 20)\]))" "$n3_cl"
+check "Bonds credit line: at expiry with nothing drawn the lender holds its coins and no principal bond" "tagged(alice, holdings(\[lot(bob, 20, 2), lot(alice, 0, 20)\]))" "$n3_cl"
+check "Bonds credit line: the borrower holds its principal bonds back" "tagged(bob, holdings(\[lot(bob, 25, 8)\]))" "$n3_cl"
+check "Bonds credit line: the escrow holds nothing at the end" "tagged(escrow, holdings(\[\]))" "$n3_cl"
+echo ""
+
+# =============================================================================
 # Section O: Currencies Multi-Isolate Tests
 # =============================================================================
 

@@ -1,0 +1,146 @@
+%% escrow.glp --- the escrow programs: the will of the escrow agent under an
+%% agreement, Section 5 of "Grassroots Bonds".
+%%
+%% The escrow agent e is an ordinary party running the bond agent
+%% (bonds_agent.vglp), and its volitions on the escrow transfers are those of
+%% the escrow program implementing the agreement: it accepts the deposits the
+%% agreement provides for, and wills a release or a return when the agreed
+%% condition is met or fails --- for a date-based condition, by e's own date.
+%% In the plays the escrow program takes the place of e's person: the scripted
+%% person of village.glp asks it, at every transfer card, whether to accept,
+%% and, at every screen message, what acts it wills, which the person then
+%% performs on e's release and return forms as any person would.
+%%
+%% Two agreements.  A date-based escrow: the depositor deposits the agreed lot,
+%% and e releases it to the beneficiary once e's date has reached the release
+%% date (the village market's dock escrow, Section 7).  A credit line
+%% (Section 5): the lender p deposits its k coins; a draw of k' by the borrower
+%% q is q's deposit of its principal bond, k' q-bonds maturing at the expiry T,
+%% and of its interest bonds, a packaged exchange, on which e, holding both,
+%% releases the bonds to p and k' p-coins to q; a repayment is q's redemption of p-coins from p against its
+%% principal bond, after which p deposits the coins with e; and at expiry, e's
+%% date having reached T, e returns the undrawn coins to p.  The drawn amount
+%% k_d is the one state e keeps across the transactions.
+
+%% =============================================================================
+%% Whether the escrow program accepts a transfer offered to the escrow agent:
+%% yes, no, or keep --- a party under no agreement keeps the card for its
+%% script.  A card the program does not accept now stays open, and is put to
+%% it again at every change of its state; one it never accepts is declined for
+%% it by the machine on the card's deadline.
+%% =============================================================================
+
+exported procedure accepts(Agreement?, Kind?, Constant?, Stream(Lot)?, Constant, Agreement).
+
+accepts(none, _, _, _, keep, none).
+
+%% The date-based escrow accepts the agreed lot from the depositor, once.
+accepts(dated_escrow(Dep, Ben, lot(U, D, K), T, awaiting, Date), deposit, From, [lot(U1, D1, K1)], yes,
+        dated_escrow(Dep?, Ben?, lot(U?, D?, K?), T?, awaiting, Date?)) :-
+    Dep? =?= From?, U? =?= U1?, D? =:= D1?, K? =:= K1? | true.
+accepts(dated_escrow(Dep, Ben, Lot, T, Ph, Date), _, _, _, no,
+        dated_escrow(Dep?, Ben?, Lot?, T?, Ph?, Date?)) :-
+    otherwise | true.
+
+%% The credit line accepts the lender's coins --- the limit at establishment,
+%% and repayments up to the drawn amount --- and the borrower's bonds --- a
+%% principal lot maturing at the expiry, up to the undrawn amount, and interest
+%% lots maturing at the interest date.
+accepts(credit_line(P, Q, K, T, D1, Kd, Pd, Ph, Date), deposit, From, [lot(U, D, N)], V?,
+        credit_line(P?, Q?, K?, T?, D1?, Kd?, Pd?, Ph?, Date?)) :-
+    ground(From?), ground(U?), integer(D?), integer(N?) |
+    line_accepts(P?, Q?, K?, T?, D1?, Kd?, Pd?, Ph?, From?, U?, D?, N?, V).
+accepts(credit_line(P, Q, K, T, D1, Kd, Pd, Ph, Date), _, _, _, no,
+        credit_line(P?, Q?, K?, T?, D1?, Kd?, Pd?, Ph?, Date?)) :-
+    otherwise | true.
+
+procedure line_accepts(Constant?, Constant?, Integer?, Integer?, Integer?, Integer?, Integer?, Phase?, Constant?, Constant?, Integer?, Integer?, Constant).
+line_accepts(P, _, K, _, _, _, _, opening, From, U, 0, N, yes) :-
+    P? =?= From?, P? =?= U?, K? =:= N? | true.
+line_accepts(P, _, _, _, _, Kd, _, open, From, U, 0, N, yes) :-
+    P? =?= From?, P? =?= U?, N? =< Kd? | true.
+line_accepts(_, Q, K, T, _, Kd, 0, open, From, U, D, N, yes) :-
+    Q? =?= From?, Q? =?= U?, D? =:= T?, N? + Kd? =< K? | true.
+line_accepts(_, Q, _, _, D1, _, Pd, open, From, U, D, _, yes) :-
+    Q? =?= From?, Q? =?= U?, D? =:= D1?, Pd? > 0 | true.
+line_accepts(_, _, _, _, _, _, _, _, _, _, _, _, no) :- otherwise | true.
+
+%% =============================================================================
+%% What the escrow program does on a screen message of the escrow agent: the
+%% acts it wills, as steps for the person to perform, and its state.
+%% =============================================================================
+
+exported procedure react(Agreement?, ScreenContent?, Script, Agreement).
+
+react(none, _, [], none).
+
+%% The date-based escrow: the agreed lot is deposited; the date advances; and
+%% once both the lot is held and the date has reached the release date, the
+%% release to the beneficiary is willed.
+react(dated_escrow(Dep, Ben, lot(U, D, K), T, awaiting, Date), received_transfer(deposit, From, [lot(U1, D1, K1)]), Steps?, Ag?) :-
+    Dep? =?= From?, U? =?= U1?, D? =:= D1?, K? =:= K1? |
+    dated_check(Date?, T?, Dep?, Ben?, lot(U?, D?, K?), deposited, Steps, Ag).
+react(dated_escrow(Dep, Ben, Lot, T, Ph, _), date_advanced(T1), Steps?, Ag?) :-
+    integer(T1?) |
+    dated_check(T1?, T?, Dep?, Ben?, Lot?, Ph?, Steps, Ag).
+react(dated_escrow(Dep, Ben, Lot, T, Ph, Date), _, [], dated_escrow(Dep?, Ben?, Lot?, T?, Ph?, Date?)) :-
+    otherwise | true.
+
+%% The credit line: a deposit taken is the establishment, a draw, an interest
+%% lot, or a repayment; and the date reaching the expiry is the expiry.
+react(credit_line(P, Q, K, T, D1, Kd, Pd, Ph, Date), received_transfer(deposit, From, [lot(U, D, N)]), Steps?, Ag?) :-
+    ground(From?), ground(U?), integer(D?), integer(N?) |
+    line_deposited(P?, Q?, K?, T?, D1?, Kd?, Pd?, Ph?, Date?, From?, U?, D?, N?, Steps, Ag).
+react(credit_line(P, Q, K, T, D1, Kd, Pd, open, _), date_advanced(T1), Steps?, Ag?) :-
+    T1? >= T? |
+    line_expire(P?, Q?, K?, T?, D1?, Kd?, Pd?, T1?, Steps, Ag).
+react(credit_line(P, Q, K, T, D1, Kd, Pd, Ph, _), date_advanced(T1), [], credit_line(P?, Q?, K?, T?, D1?, Kd?, Pd?, Ph?, T1?)) :-
+    otherwise | true.
+react(credit_line(P, Q, K, T, D1, Kd, Pd, Ph, Date), _, [], credit_line(P?, Q?, K?, T?, D1?, Kd?, Pd?, Ph?, Date?)) :-
+    otherwise | true.
+
+procedure dated_check(Integer?, Integer?, Constant?, Constant?, Lot?, Phase?, Script, Agreement).
+dated_check(Date, T, Dep, Ben, lot(U, D, K), deposited, [release(Ben?, U?, D?, K?)],
+            dated_escrow(Dep?, Ben?, lot(U?, D?, K?), T?, released, Date?)) :-
+    Date? >= T? | true.
+dated_check(Date, T, Dep, Ben, Lot, Ph, [], dated_escrow(Dep?, Ben?, Lot?, T?, Ph?, Date?)) :-
+    otherwise | true.
+
+procedure line_deposited(Constant?, Constant?, Integer?, Integer?, Integer?, Integer?, Integer?, Phase?, Integer?, Constant?, Constant?, Integer?, Integer?, Script, Agreement).
+%% Establishment: the lender's k coins; the line is open, nothing drawn.
+line_deposited(P, Q, K, T, D1, _, _, opening, Date, From, U, 0, N, [],
+               credit_line(P?, Q?, K?, T?, D1?, 0, 0, open, Date?)) :-
+    P? =?= From?, P? =?= U?, K? =:= N? | true.
+%% Repayment: the lender deposits the coins the borrower redeemed from it, and
+%% the capacity is restored by that amount.
+line_deposited(P, Q, K, T, D1, Kd, Pd, open, Date, From, U, 0, N, [],
+               credit_line(P?, Q?, K?, T?, D1?, Kd1?, Pd?, open, Date?)) :-
+    P? =?= From?, P? =?= U?, N? =< Kd? |
+    Kd1 := Kd? - N?.
+%% A draw is a packaged exchange: the borrower's principal bond, k' q-bonds
+%% maturing at the expiry, is held until its interest lot is deposited too.
+line_deposited(P, Q, K, T, D1, Kd, 0, open, Date, From, U, D, N, [],
+               credit_line(P?, Q?, K?, T?, D1?, Kd?, N?, open, Date?)) :-
+    Q? =?= From?, Q? =?= U?, D? =:= T?, N? + Kd? =< K? | true.
+%% Both lots held: the principal and the interest are released to the lender
+%% and k' of the lender's coins to the borrower, and the drawn amount grows by
+%% k'.
+line_deposited(P, Q, K, T, D1, Kd, Pd, open, Date, From, U, D, N,
+               [release(P?, Q?, T?, Pd?), release(P?, Q?, D1?, N?), release(Q?, P?, 0, Pd?)],
+               credit_line(P?, Q?, K?, T?, D1?, Kd1?, 0, open, Date?)) :-
+    Q? =?= From?, Q? =?= U?, D? =:= D1?, Pd? > 0 |
+    Kd1 := Kd? + Pd?.
+line_deposited(P, Q, K, T, D1, Kd, Pd, Ph, Date, _, _, _, _, [],
+               credit_line(P?, Q?, K?, T?, D1?, Kd?, Pd?, Ph?, Date?)) :-
+    otherwise | true.
+
+%% Expiry: the undrawn coins, k - k_d, go back to the lender, and the line is
+%% closed.
+procedure line_expire(Constant?, Constant?, Integer?, Integer?, Integer?, Integer?, Integer?, Integer?, Script, Agreement).
+line_expire(P, Q, K, T, D1, Kd, Pd, T1, [return(P?, P?, 0, N?)],
+            credit_line(P?, Q?, K?, T?, D1?, Kd?, Pd?, closed, T1?)) :-
+    Kd? < K? |
+    N := K? - Kd?.
+line_expire(P, Q, K, T, D1, Kd, Pd, T1, [],
+            credit_line(P?, Q?, K?, T?, D1?, Kd?, Pd?, closed, T1?)) :-
+    Kd? >= K? | true.
