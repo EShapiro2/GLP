@@ -1,0 +1,3 @@
+% Checked against the DESCENDANT Lot: two arguments.
+exported procedure one(Lot?, Constant).
+one(lot(A, _), A?).

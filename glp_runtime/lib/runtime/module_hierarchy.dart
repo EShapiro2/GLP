@@ -112,7 +112,16 @@ List<String> discoverSelfChain({
 /// references to them; expands the module's own parameterized types against
 /// the accumulated environment (known type names are not mistaken for type
 /// parameters); merges with shadowing.
-TypeEnvironment mergeModuleIntoScope(TypeEnvironment env, ast.Module module) {
+/// [typesFillGapsOnly] keeps the module's type definitions from shadowing what
+/// [env] already defines: they fill gaps and nothing more. This is the rule for
+/// a module of a DESCENDANT directory in the goal-check environment — a goal is
+/// posted to the program's entry points and is therefore checked in the program
+/// ROOT's scope, so a deeper `self.glp`'s redefinition of one of its type names
+/// is that subtree's business and not the goal's. (Reported by Currencies Code,
+/// 2026-09-03, against the linked program; the goal check took the deeper
+/// definition the same way.)
+TypeEnvironment mergeModuleIntoScope(TypeEnvironment env, ast.Module module,
+    {bool typesFillGapsOnly = false}) {
   final templates = <String, TypeDef>{};
   for (final td in module.typeDefs) {
     if (td.isParameterized) {
@@ -123,8 +132,13 @@ TypeEnvironment mergeModuleIntoScope(TypeEnvironment env, ast.Module module) {
       knownTypeNames: env.types.keys.toSet(),
       externalTemplates: env.typeTemplates);
   final moduleEnv = buildScopeFromModule(expanded);
-  return env.merge(TypeEnvironment(moduleEnv.types, moduleEnv.procedures,
+  final merged = env.merge(TypeEnvironment(moduleEnv.types, moduleEnv.procedures,
       paramProcDecls: moduleEnv.paramProcDecls, typeTemplates: templates));
+  if (!typesFillGapsOnly) return merged;
+  return TypeEnvironment(
+      {...merged.types, ...env.types}, merged.procedures,
+      paramProcDecls: merged.paramProcDecls,
+      typeTemplates: {...merged.typeTemplates, ...env.typeTemplates});
 }
 
 /// Merge a self.glp file into a scope environment: parse, then

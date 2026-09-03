@@ -2384,6 +2384,57 @@ check "Bonds credit line: the escrow holds nothing at the end" "tagged(escrow, h
 echo ""
 
 # =============================================================================
+# Section VG: The canonical compilation on one-clause procedures
+# (programs/vglp_tests/one_clause): every procedure of responder.vglp has one
+# volition-guarded clause, the case the per-clause reply types exist for.  The
+# source compiles on load (no .glp beside it).  Three plays: the person's
+# answer reaches its clause; an answer of another clause's form leaves the
+# pending table as it is; a clause reducing a goal with an open ask drops the
+# ask and closes its card.  The two plays on respond, whose clause has an
+# else-branch, end a minute after the answer, when its deadline timer expires.
+# =============================================================================
+echo "=== Section VG: Canonical compilation, one-clause procedures ==="
+echo ""
+
+ONECLAUSE="$GLP_DIR/programs/vglp_tests/one_clause"
+
+vg_load=$("$REPL_RUN" <<HEREDOC
+$ONECLAUSE
+:quit
+HEREDOC
+2>&1)
+check "One-clause program loads, the .vglp compiled on load" "Loaded program" "$vg_load"
+check_not "One-clause program no type errors" "Type checking failed" "$vg_load"
+
+vg_answer=$("$REPL_RUN" <<HEREDOC
+$ONECLAUSE
+play_answer.
+:quit
+HEREDOC
+2>&1)
+check_not "One-clause: answer, no failed goal" "ERROR" "$vg_answer"
+check "One-clause: the answer reaches its clause" "tagged(answer, \[decided(yes, bob)\])" "$vg_answer"
+
+vg_mismatch=$("$REPL_RUN" <<HEREDOC
+$ONECLAUSE
+play_mismatch.
+:quit
+HEREDOC
+2>&1)
+check_not "One-clause: mismatch, no failed goal" "ERROR" "$vg_mismatch"
+check "One-clause: a mismatched answer leaves the table, the next one reaches its clause" "tagged(mismatch, \[decided(yes, bob)\])" "$vg_mismatch"
+
+vg_abort=$("$REPL_RUN" <<HEREDOC
+$ONECLAUSE
+play_abort.
+:quit
+HEREDOC
+2>&1)
+check_not "One-clause: abort, no failed goal" "ERROR" "$vg_abort"
+check "One-clause: the reducing clause drops the open ask and its card is closed" "tagged(abort, closed(req(0)), \[picked(bob)\])" "$vg_abort"
+echo ""
+
+# =============================================================================
 # Section O: Currencies Multi-Isolate Tests
 # =============================================================================
 
@@ -2853,6 +2904,82 @@ HEREDOC
 2>&1)
 check "X10 spm/gsg accepts a goal" "succeeds" "$x10g"
 check_not "X10 spm/gsg goal check resolves UserEvent" "UnknownTypeError: UserEvent" "$x10g"
+
+echo ""
+
+# --- X11: a descendant directory's types stay in the descendant's subtree ---
+# The linked program held ONE flat type namespace, so whichever `Lot` the
+# directory walk reached first became every module's: `inner/self.glp`'s two-
+# argument Lot was what `txn.glp` — a module of the program ABOVE it — was
+# checked against, and the program did not load.  Reported by Currencies Code
+# on 2026-09-03 against programs/currencies with programs/currencies/coins
+# under it.  Steps 3 and 4 of modules.tex §Compilation now rename each module's
+# types to `M:T` and resolve every reference to the nearest scope defining it,
+# so this holds whichever order the walk takes.  The goal is the second half:
+# a goal is posted in the program ROOT's scope, and the descendant's Lot used
+# to shadow the root's there too.
+echo "--- X11: a descendant self.glp does not redefine an ancestor's types ---"
+x11=$("$REPL_RUN" <<HEREDOC
+$GLP_DIR/programs/tests/type_scope_descendant
+go(lot(a, b, c), C).
+:quit
+HEREDOC
+2>&1)
+check "X11 fixture loaded" "Loaded program" "$x11"
+check_not "X11 txn keeps its own directory's Lot" "uncovered alternative" "$x11"
+check "X11 goal succeeds" "succeeds" "$x11"
+
+# --- X12: a module's own type name is its own, whatever the walk order ---
+# `a_agent.glp` sorts before `self.glp`, the order that stopped programs/bonds
+# loading (Currencies Code, 2026-09-03): the two definitions of `Answer` were
+# merged into one namespace and the first the filesystem listed won.
+echo "--- X12: a module's own type is its own ---"
+x12=$("$REPL_RUN" <<HEREDOC
+$GLP_DIR/programs/tests/type_scope_module_own
+play(N).
+:quit
+HEREDOC
+2>&1)
+check "X12 fixture loaded" "Loaded program" "$x12"
+check "X12 goal succeeds" "succeeds" "$x12"
+
+# --- X13: an alternative that names a type inherits its transitions ---
+# TGLP appendix sec:type-automaton: "If A_j references another type S or S?:
+# transitions are inherited from S or S? respectively" — the type union of
+# typed-glp.tex.  The automaton built no transition at all for such an
+# alternative, so a term of the named type had none from the naming type's
+# state: `T ::= A ; b.  A ::= a(Integer, Constant).` rejected a(N, _) at a T?
+# position (Currencies Code, 2026-09-03).
+echo "--- X13: a type-name alternative inherits transitions ---"
+x13=$("$REPL_RUN" <<HEREDOC
+$GLP_DIR/programs/tests/type_alt_typename.glp
+take(a(3, x), N).
+take(b, M).
+:quit
+HEREDOC
+2>&1)
+check "X13 fixture loaded" "Loaded" "$x13"
+check_not "X13 a/2 has a transition from T?" "No transition for a(2,1)" "$x13"
+check "X13 both alternatives run" "N = 3" "$x13"
+check "X13 constant alternative runs" "M = 0" "$x13"
+
+# --- X14: a head reader occurrence of a variable a later argument binds ---
+# `g12(_, r(Date?), Date, Date?)` — the goal's writer at argument 4 was bound to
+# the clause variable's WRITER, which the commit refused as a WxW violation, so
+# the call died with "Bad state: WxW violation in commit".  A reader occurrence
+# denotes the variable's READER.  Reported by Currencies Code, 2026-09-03: in
+# the bonds agent the issuer's date came out unbound after its first fulfilled
+# presentation and every later one was refused.
+echo "--- X14: a head reader of a later-bound variable ---"
+x14=$("$REPL_RUN" <<HEREDOC
+$GLP_DIR/programs/tests/head_reader_later_arg.glp
+t12(A, B).
+:quit
+HEREDOC
+2>&1)
+check_not "X14 no WxW violation" "WxW violation" "$x14"
+check "X14 output term carries the value" "A = r(0)" "$x14"
+check "X14 output argument carries the value" "B = 0" "$x14"
 
 echo ""
 

@@ -320,7 +320,8 @@ Automaton _buildTypeAutomaton(
 
   for (final alt in typeDef.alternatives) {
     _addTypeTransitions(
-        startState, alt, Mode.produce, states, transitions, isDual);
+        startState, alt, Mode.produce, states, transitions, isDual,
+        types: types, inherited: {typeName});
   }
 
   return Automaton(startState, transitions,
@@ -359,8 +360,10 @@ void _addTypeTransitions(
   Mode contextMode,
   Map<String, DFAState> states,
   Map<(DFAState, TransitionLabel), DFAState> transitions,
-  bool isDual,
-) {
+  bool isDual, {
+  Map<String, TypeDef> types = const {},
+  Set<String> inherited = const {},
+}) {
   if (alt is ConstantAlt) {
     final label = TransitionLabel.constant(alt.value);
     transitions[(fromState, label)] = states['_FINAL_']!;
@@ -411,6 +414,27 @@ void _addTypeTransitions(
         _resolveTypeExpr(alt.content, states, isDual);
     transitions[(fromState, holeLabel)] =
         _resolveTypeExpr(alt.hole, states, isDual);
+  } else if (alt is TypeRef && !alt.isParameterized) {
+    // "If A_j references another type S or S?: transitions are inherited from
+    // S or S? respectively" (TGLP appendix sec:type-automaton, Type definition
+    // transitions) — the union of types with disjoint top-level functors
+    // (typed-glp.tex: "An alternative in a type definition may also be a type
+    // name S, providing type union"). Without this a term of the named type had
+    // no transition from the naming type's state at all: reported by Currencies
+    // Code on 2026-09-03 for `T ::= A ; b.  A ::= a(Integer, Constant).`
+    // A primitive alternative (`T ::= Integer ; b`) carries no transitions and
+    // is accepted through [Automaton.acceptedPrimitives] instead.
+    final target = types[alt.name];
+    if (target != null && !inherited.contains(alt.name)) {
+      // `S?` inherits the dual's transitions: XOR, exactly as [_resolveTypeExpr]
+      // composes a nested complement with the automaton's own.
+      final inheritedDual = alt.isInput != isDual;
+      for (final a in target.alternatives) {
+        _addTypeTransitions(
+            fromState, a, contextMode, states, transitions, inheritedDual,
+            types: types, inherited: {...inherited, alt.name});
+      }
+    }
   }
   // PrimitiveModeAlt is handled in resolveTypeExpr - it's a leaf, not a constructor
 }

@@ -3046,8 +3046,21 @@ mixin OpExecutors {
           if (arg is VarRef && cx.rt.heap.isWriter(arg.addr)) {
             // Goal has writer, head has reader - bind goal writer to stored value
             if (storedValue is VarRef) {
-              // storedValue is a reader/writer reference - bind goal writer to it
-              cx.sigmaHat[arg.addr] = storedValue;
+              // storedValue is a reader/writer reference - bind goal writer to it.
+              //
+              // The clause variable is held by its WRITER address whenever an
+              // earlier head argument bound it as a writer — `g(_, r(D?), D,
+              // D?)` reaches this reader occurrence with `D` already stored as
+              // its writer. A writer is never bound to a writer (the writer mgu
+              // binds writers to terms and to readers), and what a reader
+              // occurrence denotes is the variable's READER: pair it across.
+              // Reported by Currencies Code, 2026-09-03, as "the engine binds an
+              // output term's reader to a fresh writer when the variable is bound
+              // by a later head argument"; the commit's WxW check caught it as
+              // `WxW violation in commit`.
+              cx.sigmaHat[arg.addr] = cx.rt.heap.isWriter(storedValue.addr)
+                  ? VarRef(cx.rt.heap.pairedReaderAddr(storedValue.addr))
+                  : storedValue;
             } else if (storedValue is int) {
               // storedValue is a reader addr - use abstraction methods for imported reader support
               if (cx.rt.heap.isReaderBound(storedValue)) {

@@ -51,9 +51,21 @@ class DiscoveredModule {
 /// Result of linking a program.
 class LinkResult {
   final Program program;
+
+  /// The linked declarations in SOURCE type names — the program's external
+  /// interface, which an artefact's interface table carries and the parser
+  /// reads back (`M:T` is no type name of the language).
   final List<ProcDecl> procDeclarations;
 
-  LinkResult(this.program, this.procDeclarations);
+  /// The same declarations with every type reference resolved to the renamed
+  /// type of the nearest scope defining it (modules.tex §Compilation, step 4).
+  /// These are what the linked program is CHECKED against, where a type name
+  /// alone no longer identifies a type: two sibling modules may define one.
+  final List<ProcDecl> checkedDeclarations;
+
+  LinkResult(this.program, this.procDeclarations,
+      {List<ProcDecl>? checkedDeclarations})
+      : checkedDeclarations = checkedDeclarations ?? procDeclarations;
 }
 
 /// Walk the program directory tree and discover all modules.
@@ -719,25 +731,39 @@ LinkResult checkedLinkedProgram(List<DiscoveredModule> modules,
 /// same name/arity; only an alias whose export has no declaration is left
 /// undeclared.)
 Module linkedFlatModule(List<DiscoveredModule> modules, LinkResult linked) {
-  // The scope's definitions first: a type a self.glp defines is what every
-  // sibling module was checked against, so it is what the linked program is
-  // checked against too; a module's own redefinition of the same name (a
-  // compiled vGLP module carries its answer and context types) is what that
-  // module shadows within itself, and must not depend on the order the
-  // filesystem lists the modules in.
+  // Step 3 for types (modules.tex §Compilation): every type `T` of module `M`
+  // is renamed to `M:T`, on the same argument as procedures — two sibling
+  // modules have distinct scopes, so two same-named types defined in them are
+  // two types, which one flat namespace would otherwise make one, checking a
+  // module against a definition it cannot see. Every reference was resolved to
+  // the renamed type of the nearest scope defining it (step 4,
+  // [_renamedTypeDefs] / [renameDeclTypes]), so the union below cannot collide
+  // and cannot depend on the order the filesystem lists the modules in.
+  final owners = typeOwnersByModule(modules);
   final typeDefs = <String, TypeDef>{};
-  final ordered = [
-    ...modules.where((m) => m.isSelfGlp),
-    ...modules.where((m) => !m.isSelfGlp),
-  ];
-  for (final mod in ordered) {
-    for (final td in mod.ast.typeDefs) {
-      typeDefs.putIfAbsent('${td.name}/${td.typeParams.length}', () => td);
+  final definedIn = <String, String>{};
+  for (final mod in modules) {
+    // One file can appear twice in [modules] under two spellings of its path —
+    // the walk's and an `-expose`'s — so the comparison is on the normalised
+    // path, not the string.
+    final modPath = _normPath(mod.filePath);
+    for (final td in _renamedTypeDefs(mod, owners[mod.filePath]!)) {
+      final key = '${td.name}/${td.typeParams.length}';
+      final prev = definedIn[key];
+      if (prev != null && prev != modPath) {
+        // Two modules of one name (the module name is a file's, not yet a path
+        // from the root) defining one type: the rename cannot separate them.
+        throw Exception(
+            'Module-name collision: "${mod.moduleName}" names both $prev and '
+            '${mod.filePath}, and both define the type ${td.name}.');
+      }
+      definedIn[key] = modPath;
+      typeDefs.putIfAbsent(key, () => td);
     }
   }
 
   final rootEnv = buildRootScopeEnvironment();
-  final procDecls = [...linked.procDeclarations];
+  final procDecls = [...linked.checkedDeclarations];
   final declKeys = {for (final d in procDecls) d.key};
   for (final p in linked.program.procedures) {
     final key = '${p.name}/${p.arity}';
@@ -875,6 +901,9 @@ void _requireEntryPoints(
 /// program actually compiled is [linkProgram] (which also applies step 5).
 LinkResult linkAndResolveModules(List<DiscoveredModule> modules,
     {required String rootDir, String? singleModulePath}) {
+  // Step 4 for types: the scope each module's type references resolve in.
+  final typeOwners = typeOwnersByModule(modules);
+
   // Build procedure registry: module name → set of procedure signatures
   final registry = <String, Set<String>>{};
   for (final mod in modules) {
@@ -1007,12 +1036,17 @@ LinkResult linkAndResolveModules(List<DiscoveredModule> modules,
   // Build a program-wide procedure declaration index for mode-aware aliases.
   // Maps 'name/arity' → ProcDecl, collecting from all modules' non-imported decls.
   final declIndex = <String, ProcDecl>{};
+  // The file each indexed declaration came from, so its types resolve in ITS
+  // scope rather than the aliasing module's.
+  final declIndexFile = <String, String>{};
   for (final mod in modules) {
     for (final d in mod.ast.procDeclarations) {
       if (d.imported) continue;
       final sig = '${d.name}/${d.arity}';
       // First declaration wins (could also prefer exported, but any is fine)
-      declIndex.putIfAbsent(sig, () => d);
+      if (declIndex.containsKey(sig)) continue;
+      declIndex[sig] = d;
+      declIndexFile[sig] = mod.filePath;
     }
   }
 
@@ -1029,6 +1063,7 @@ LinkResult linkAndResolveModules(List<DiscoveredModule> modules,
   // on purpose — its flat arguments cannot carry a structured-mode term's nested
   // reader/writer holes.
   final aliasDecls = <ProcDecl>[];
+  final aliasCheckedDecls = <ProcDecl>[];
   if (singleNorm == null) {
     final rootNorm = _normPath(rootDir);
     final rootSelfMods = modules
@@ -1078,7 +1113,9 @@ LinkResult linkAndResolveModules(List<DiscoveredModule> modules,
 
         // Look up ProcDecl for mode-aware alias generation.
         // First check the owning module, then the program-wide index.
-        final decl = _findProcDecl(mod, proc.name, proc.arity) ?? declIndex[sig];
+        final own = _findProcDecl(mod, proc.name, proc.arity);
+        final decl = own ?? declIndex[sig];
+        final declFile = own != null ? mod.filePath : declIndexFile[sig];
 
         // The alias carries the exporting declaration under its bare name
         // (collected into the returned declarations below), so the linked-
@@ -1089,6 +1126,13 @@ LinkResult linkAndResolveModules(List<DiscoveredModule> modules,
         if (decl != null) {
           aliasDecls.add(ProcDecl(proc.name, decl.argTypes, decl.line,
               decl.column, exported: decl.exported, isBuiltin: decl.isBuiltin));
+          aliasCheckedDecls.add(ProcDecl(
+              proc.name,
+              renameDeclTypes(decl, typeOwners[declFile ?? mod.filePath]!),
+              decl.line,
+              decl.column,
+              exported: decl.exported,
+              isBuiltin: decl.isBuiltin));
         }
 
         final aliasClause = _makeAliasClause(
@@ -1115,14 +1159,27 @@ LinkResult linkAndResolveModules(List<DiscoveredModule> modules,
   // (analysis/type_checker/type_identity.dart), and it is the same set the
   // artefact's interface table records.
   final allDecls = <ProcDecl>[];
+  final checkedDecls = <ProcDecl>[];
   for (final mod in modules) {
     final keepBare =
         singleNorm != null && _normPath(mod.filePath) == singleNorm;
+    final owners = typeOwners[mod.filePath]!;
     for (final decl in mod.ast.procDeclarations) {
       if (decl.imported) continue; // Skip imported — they're in other modules
+      final name = keepBare ? decl.name : '${mod.moduleName}:${decl.name}';
       allDecls.add(ProcDecl(
-        keepBare ? decl.name : '${mod.moduleName}:${decl.name}',
+        name,
         decl.argTypes,
+        decl.line,
+        decl.column,
+        isBuiltin: decl.isBuiltin,
+        exported: keepBare,
+      ));
+      // Step 4 for types: in the linked program each of this declaration's
+      // types carries the prefix of the scope that defines it for THIS module.
+      checkedDecls.add(ProcDecl(
+        name,
+        renameDeclTypes(decl, owners),
         decl.line,
         decl.column,
         isBuiltin: decl.isBuiltin,
@@ -1132,8 +1189,10 @@ LinkResult linkAndResolveModules(List<DiscoveredModule> modules,
   }
 
   allDecls.addAll(aliasDecls);
+  checkedDecls.addAll(aliasCheckedDecls);
 
-  return LinkResult(Program(allProcedures, 0, 0), allDecls);
+  return LinkResult(Program(allProcedures, 0, 0), allDecls,
+      checkedDeclarations: checkedDecls);
 }
 
 /// Dead-code elimination: the linker's step 5 (modules.tex sec:static-linking).
@@ -1222,8 +1281,12 @@ LinkResult eliminateDeadCode(LinkResult linked) {
   final keptDecls = linked.procDeclarations
       .where((d) => reachable.contains('${d.name}/${d.arity}'))
       .toList();
+  final keptChecked = linked.checkedDeclarations
+      .where((d) => reachable.contains('${d.name}/${d.arity}'))
+      .toList();
 
-  return LinkResult(Program(keptProcedures, 0, 0), keptDecls);
+  return LinkResult(Program(keptProcedures, 0, 0), keptDecls,
+      checkedDeclarations: keptChecked);
 }
 
 /// Resolve a defined-guard call in a clause's guard list, mirroring
@@ -1364,6 +1427,118 @@ Clause _makeAliasClause(String name, int arity, String targetName,
 }
 
 /// Extract module name from filename (without .glp extension).
+/// The module defining each type name visible to [mod], by the scope order of
+/// modules.tex §Scope construction: the module's own definitions, then the
+/// ancestor `self.glp` chain inner-most first, then whatever an ancestor
+/// `-expose`s (which fills gaps only, as [_mergeExposed] does). A name absent
+/// from the map is defined by no module of the program — a root-scope,
+/// primitive or system type — and stays bare.
+///
+/// This is step 4 of §Compilation for types: "every type reference is resolved
+/// the same way, to the renamed type of the nearest scope defining it".
+Map<String, String> _visibleTypeOwners(
+    DiscoveredModule mod, List<DiscoveredModule> modules) {
+  final owners = <String, String>{};
+  for (final td in mod.ast.typeDefs) {
+    owners[td.name] = mod.moduleName;
+  }
+
+  final modDir = File(mod.filePath).parent.absolute.path;
+  final ancestors = modules
+      .where((s) {
+        if (!s.isSelfGlp || identical(s, mod)) return false;
+        final selfDir = File(s.filePath).parent.absolute.path;
+        return modDir.startsWith(selfDir);
+      })
+      .toList()
+    ..sort((a, b) => b.filePath.length.compareTo(a.filePath.length));
+  for (final s in ancestors) {
+    for (final td in s.ast.typeDefs) {
+      owners.putIfAbsent(td.name, () => s.moduleName);
+    }
+  }
+
+  final modDirNorm = _normPath(File(mod.filePath).parent.path);
+  for (final em in modules) {
+    if (em.exposingDir == null || identical(em, mod)) continue;
+    if (!_dirUnder(modDirNorm, em.exposingDir!)) continue;
+    for (final td in em.ast.typeDefs) {
+      owners.putIfAbsent(td.name, () => em.moduleName);
+    }
+  }
+
+  return owners;
+}
+
+/// [_visibleTypeOwners] for every module of the program, keyed by file path —
+/// the one key that is unique whatever two files are named.
+Map<String, Map<String, String>> typeOwnersByModule(
+    List<DiscoveredModule> modules) {
+  final byFile = <String, Map<String, String>>{};
+  for (final mod in modules) {
+    byFile[mod.filePath] = _visibleTypeOwners(mod, modules);
+  }
+  return byFile;
+}
+
+/// A module's type definitions renamed to `M:T`, with every type reference in
+/// their alternatives resolved (steps 3 and 4 of §Compilation for types).
+List<TypeDef> _renamedTypeDefs(
+    DiscoveredModule mod, Map<String, String> owners) {
+  return [
+    for (final td in mod.ast.typeDefs)
+      TypeDef(
+        '${mod.moduleName}:${td.name}',
+        [
+          for (final alt in td.alternatives)
+            _renameTypeExpr(alt, owners, td.typeParams.toSet())
+        ],
+        td.line,
+        td.column,
+        typeParams: td.typeParams,
+      )
+  ];
+}
+
+/// A declaration's argument types with every reference resolved to the renamed
+/// type of the nearest scope defining it. The declaration's own type parameters
+/// name no type and are left alone.
+List<TypeExpr> renameDeclTypes(ProcDecl decl, Map<String, String> owners) => [
+      for (final t in decl.argTypes)
+        _renameTypeExpr(t, owners, decl.typeParams.toSet())
+    ];
+
+/// Resolve every type name in [expr] against [owners], leaving a type parameter
+/// and a name no module defines (root-scope, primitive, system) bare.
+TypeExpr _renameTypeExpr(
+    TypeExpr expr, Map<String, String> owners, Set<String> typeParams) {
+  if (expr is TypeRef) {
+    final args = [
+      for (final a in expr.typeArgs) _renameTypeExpr(a, owners, typeParams)
+    ];
+    final owner = typeParams.contains(expr.name) ? null : owners[expr.name];
+    return TypeRef(owner == null ? expr.name : '$owner:${expr.name}',
+        expr.line, expr.column,
+        isInput: expr.isInput, typeArgs: args);
+  }
+  if (expr is StructAlt) {
+    return StructAlt(
+        expr.functor,
+        [for (final a in expr.args) _renameTypeExpr(a, owners, typeParams)],
+        expr.line,
+        expr.column);
+  }
+  if (expr is ListConsAlt) {
+    return ListConsAlt(_renameTypeExpr(expr.head, owners, typeParams),
+        _renameTypeExpr(expr.tail, owners, typeParams), expr.line, expr.column);
+  }
+  if (expr is DiffListAlt) {
+    return DiffListAlt(_renameTypeExpr(expr.content, owners, typeParams),
+        _renameTypeExpr(expr.hole, owners, typeParams), expr.line, expr.column);
+  }
+  return expr; // ConstantAlt, ListNilAlt, PrimitiveModeAlt: no type name
+}
+
 String _moduleNameFromFilename(String filename) {
   if (filename.endsWith('.glp')) {
     return filename.substring(0, filename.length - 4);

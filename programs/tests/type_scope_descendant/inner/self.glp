@@ -1,0 +1,6 @@
+% The descendant scope: its own Lot, two arguments, shadowing the ancestor's for
+% the modules of THIS subtree and for nothing above it.
+Lot ::= lot(Constant, Integer).
+imported procedure pick#one(Lot?, Constant).
+exported procedure go(Lot?, Constant).
+go(L, C?) :- pick # one(L?, C).

@@ -10,6 +10,7 @@
 library;
 
 import 'dart:io';
+import 'package:path/path.dart' as ppath;
 import 'package:glp_runtime/compiler/compiler.dart';
 import 'package:glp_runtime/compiler/parser.dart';
 import 'package:glp_runtime/compiler/lexer.dart';
@@ -474,8 +475,14 @@ class GlpEngine {
         if (a.isSelfGlp != b.isSelfGlp) return a.isSelfGlp ? -1 : 1;
         return a.filePath.compareTo(b.filePath);
       });
+    // A module of a DESCENDANT directory contributes its declarations but must
+    // not shadow the program root's types: a goal is posted to the program's
+    // entry points, so it is checked in the ROOT's scope (Currencies Code,
+    // 2026-09-03 — the same shadowing that stopped the linked program loading).
     for (final m in ordered) {
-      _extendGoalCheckEnv(m.ast);
+      _extendGoalCheckEnv(m.ast,
+          typesFillGapsOnly:
+              _normDir(File(m.filePath).parent.path) != _normDir(programRoot));
     }
 
     return true;
@@ -1057,8 +1064,20 @@ class GlpEngine {
 
   /// Extend the goal-check environment with a loaded module's declarations, so
   /// goals referencing its procedures can be type-checked.
-  void _extendGoalCheckEnv(Module module) {
-    _goalCheckEnv = mergeModuleIntoScope(_ensureGoalCheckBaseEnv(), module);
+  void _extendGoalCheckEnv(Module module, {bool typesFillGapsOnly = false}) {
+    _goalCheckEnv = mergeModuleIntoScope(_ensureGoalCheckBaseEnv(), module,
+        typesFillGapsOnly: typesFillGapsOnly);
+  }
+
+  /// A directory path for comparison: absolute, `..` and `.` segments resolved
+  /// lexically (a caller may pass `GLP/test/..`, as the test suite does), and no
+  /// trailing separator.
+  static String _normDir(String p) {
+    var n = ppath.normalize(Directory(p).absolute.path);
+    while (n.length > 1 && n.endsWith(Platform.pathSeparator)) {
+      n = n.substring(0, n.length - 1);
+    }
+    return n;
   }
 
   ModuleInfo? _findModuleForProcedure(String procedureLabel) {

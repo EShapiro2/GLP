@@ -1,0 +1,3 @@
+% Checked against the Lot of its OWN directory's self.glp: three arguments.
+exported procedure select(Lot?, Constant).
+select(lot(A, _, _), A?).

@@ -1,0 +1,5 @@
+% Its own Answer, in the indirect form: an alternative that is a type name.
+Answer ::= Xs.
+Xs ::= xs(Integer).
+exported procedure step(Answer?, Integer).
+step(xs(N), N?).

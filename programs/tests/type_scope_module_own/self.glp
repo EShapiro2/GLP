@@ -1,0 +1,11 @@
+% The program's own scope defines Answer in DIRECT form, so the play can name the
+% functor at an Answer position.  `a_agent.glp` defines a type of the same name in
+% the indirect form a compiled vGLP module carries.  The two are two types (each
+% module is checked against its own scope), and which of them the linked program
+% held used to depend on the order `Directory.listSync` returned the files in:
+% `a_agent.glp` sorts before `self.glp`, which is the order that failed for
+% programs/bonds (Currencies Code, 2026-09-03).  GREEN, and green in either order.
+Answer ::= xs(Integer).
+imported procedure a_agent#step(Answer?, Integer).
+exported procedure play(Integer).
+play(N?) :- a_agent # step(xs(7), N).

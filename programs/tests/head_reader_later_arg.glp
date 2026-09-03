@@ -1,0 +1,12 @@
+% A clause head is order-independent: argument 2's output term reads Date, which
+% argument 3 binds and argument 4 reads again.  The goal's writer at argument 4
+% was bound to the clause variable's WRITER rather than its reader, and the
+% commit refused it: "Bad state: WxW violation in commit".  Reported by
+% Currencies Code, 2026-09-03, from the bonds agent, whose issuer date came out
+% unbound after its first fulfilled presentation.  Expected: A = r(0), B = 0.
+B ::= bond(Constant, Integer, Integer).
+RI ::= r(Integer).
+procedure g12(B?, RI, Integer?, Integer).
+g12(_, r(Date?), Date, Date?).
+exported procedure t12(RI, Integer).
+t12(A?, B?) :- g12(bond(x, 0, 7), A, 0, B).

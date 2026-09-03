@@ -1,0 +1,11 @@
+% An alternative of a type definition may be a TYPE NAME, giving the union of
+% types with disjoint top-level functors (TGLP typed-glp.tex).  The automaton
+% inherits the named type's transitions (appendix sec:type-automaton, "Type
+% definition transitions"); it used to build none at all for such an
+% alternative, so a(N, _) had no transition from state T? and this file did not
+% load.  Reported by Currencies Code, 2026-09-03.
+T ::= A ; b.
+A ::= a(Integer, Constant).
+exported procedure take(T?, Integer).
+take(a(N, _), N?).
+take(b, 0).

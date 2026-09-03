@@ -1,0 +1,12 @@
+% A DESCENDANT directory's self.glp redefines a type name this one defines, and
+% this program's OWN modules must keep THIS definition: the module system has the
+% nearer definition shadow the farther FOR THE MODULES OF ITS SUBTREE, and
+% `inner/` is not this directory's subtree scope but its own.  The linked program
+% used to hold one flat type namespace, so whichever `Lot` the directory walk
+% reached first became every module's `Lot` — reported by Currencies Code on
+% 2026-09-03, where `txn.glp` was checked against `coins/self.glp`'s `Lot` and
+% the program did not load.  GREEN, and green whichever order the walk takes.
+Lot ::= lot(Constant, Constant, Constant).
+imported procedure txn#select(Lot?, Constant).
+exported procedure go(Lot?, Constant).
+go(L, C?) :- txn # select(L?, C).
