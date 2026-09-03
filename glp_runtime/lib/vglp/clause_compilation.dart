@@ -92,8 +92,39 @@ CompiledProcedure compileProcedure(
     }
     out.add(_compileAsk(c, proc, decl, m, j, name));
   }
+  if (m >= 1) out.add(_otherwiseClause(proc, decl, m));
 
   return CompiledProcedure(proc.name, proc.arity + 1 + m, out, volitionGuarded);
+}
+
+/// Last in a procedure with m >= 1, the clause
+///
+///     H'(Med, S1, ..., Sm) :- otherwise | true
+///
+/// which no safe run reaches, a goal's slots holding only asks of its own
+/// clauses, and which input coverage requires: the slot type, one for every
+/// slot of the program, admits every clause's answer, and a procedure whose
+/// clauses are all volition-guarded with m = 1 would otherwise accept its own
+/// answer alone at the slot.  The channel, every input position and every
+/// slot is anonymous, since the clause reads nothing; each output position
+/// carries the reader of a fresh writer, as H_a does, since a head produces
+/// nothing at an output it does not bind.
+Clause _otherwiseClause(Procedure proc, ProcDecl decl, int m) {
+  final line = proc.line;
+  final column = proc.column;
+  final head = Atom(proc.name, [
+    UnderscoreTerm(line, column),
+    for (var k = 0; k < proc.arity; k++)
+      k < decl.argTypes.length && !decl.isInputArg(k)
+          ? _r('A${k + 1}')
+          : UnderscoreTerm(line, column),
+    for (var k = 0; k < m; k++) UnderscoreTerm(line, column),
+  ], line, column);
+  return Clause(head,
+      guards: [Guard('otherwise', const [], line, column)],
+      body: [Goal('true', const [], line, column)],
+      line: line,
+      column: column);
 }
 
 // ---------------------------------------------------------------------------

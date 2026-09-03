@@ -124,6 +124,52 @@ respond(offer(From), [answered(Answer?, From?)]) :-
     });
   });
 
+  group('the compiled program is well-typed', () {
+    // The linked program's type-check, input coverage included.  A procedure
+    // with one volition-guarded clause and no ordinary clause is the case the
+    // otherwise clause exists for: without it the slot position accepts only
+    // its own clause's answer, and coverage rejects the procedure.
+    const oneClauseVglp = '''
+procedure respond(Offer?, AnswerStream).
+
+*(Answer=yes, From?)
+respond(offer(From), [answered(Answer?, From?)]) :-
+    ground(From?) | true
+*(no) true.
+''';
+
+    // The program's entry point is a procedure of its own: a caller of the
+    // compiled responder would have to import its COMPILED signature, channel
+    // and slots included, which is a play's business and not this test's.
+    const typesSelfGlp = '''
+Decision      ::= yes ; no.
+Offer         ::= offer(Constant).
+Answered      ::= answered(Decision, Constant).
+AnswerStream  ::= [] ; [Answered | AnswerStream].
+
+exported procedure ping(Constant).
+ping(a).
+''';
+
+    test('with one volition-guarded clause and no ordinary clause', () {
+      write('self.glp', typesSelfGlp);
+      write('responder.vglp', oneClauseVglp);
+      final modules =
+          discoverProgram(fixture.path, rootSelfGlpPath: _rootSelfGlp);
+      expect(() => typeCheckProgram(modules, rootDir: fixture.path),
+          returnsNormally);
+    });
+
+    test('with two', () {
+      write('self.glp', typesSelfGlp);
+      write('responder.vglp', responderVglp);
+      final modules =
+          discoverProgram(fixture.path, rootSelfGlpPath: _rootSelfGlp);
+      expect(() => typeCheckProgram(modules, rootDir: fixture.path),
+          returnsNormally);
+    });
+  });
+
   group('a .vglp source beside a .glp of its name', () {
     test('the hand-written module stands and the .vglp is not compiled', () {
       write('self.glp', selfGlp);

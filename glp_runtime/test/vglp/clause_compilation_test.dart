@@ -53,8 +53,17 @@ agent(Id, UserIn, Outs) :-
 
     test('the head gains the mediator channel and one slot', () {
       final cs = emit(src, 'agent/3');
-      expect(cs.length, 2);  // answer clause and ask clause; no else-branch
+      // answer clause and ask clause, no else-branch; and the otherwise clause
+      expect(cs.length, 3);
       expect(cs[0], startsWith('agent(Med, Id, UserIn, Outs, '));
+    });
+
+    test('the otherwise clause comes last, and no safe run reaches it', () {
+      // Input coverage requires it: the slot type, one for every slot of the
+      // program, admits every clause's answer, and a goal's slots hold only
+      // asks of its own clauses.
+      expect(emit(src, 'agent/3').last,
+          'agent(_, _, _, A3?, _) :- otherwise | true.');
     });
 
     test('the answer clause takes the then-branch and the answer binds Target',
@@ -100,8 +109,10 @@ respond(offer(From), Resp?, [decision(Answer?, From?, response(Resp))]) :-
 *(no) true.
 ''';
 
-    test('three clauses: answer, else, ask', () {
-      expect(emit(src, 'respond/3').length, 3);
+    test('four clauses: answer, else, ask, otherwise', () {
+      final cs = emit(src, 'respond/3');
+      expect(cs.length, 4);
+      expect(cs.last, 'respond(_, _, A2?, A3?, _) :- otherwise | true.');
     });
 
     test('the else clause matches the else reply and carries no answer', () {
@@ -136,7 +147,7 @@ respond(offer(From), Resp?, [decision(Answer?, From?, response(Resp))]) :-
 
     test('two slots, and each clause exposes its own', () {
       final cs = emit(src, 'respond/3');
-      expect(cs.length, 4);  // answer + ask, twice
+      expect(cs.length, 5);  // answer + ask, twice, and the otherwise clause
       expect(cs[0], contains('ask(then(xs_respond_1(Answer)), _), S2)'));
       expect(cs[2], contains('S1, ask(then(xs_respond_2(Answer)), _))'));
     });
@@ -193,6 +204,10 @@ relay(Id, In, Out?) :- ground(Id?) | true.
       final cs = emit(src, 'relay/3');
       expect(cs.single, startsWith('relay(Med, Id, In, Out?)'));
       expect(cs.single, isNot(contains('aborts')));
+    });
+
+    test('and no otherwise clause: with m = 0 there is no slot to cover', () {
+      expect(emit(src, 'relay/3').any((c) => c.contains('otherwise')), isFalse);
     });
   });
 }

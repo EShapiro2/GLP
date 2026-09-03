@@ -58,6 +58,7 @@ respond_swap(Med, offer(From, Want, Offered), Link, A3?, A4?, none, S2) :- groun
 respond_swap(Med, offer(From, Want, Offered), Link, Resp?, Ans?, S1, ask(then(xs_respond_swap_2(_)), _)) :- ground(From?), ground(Want?), ground(Offered?) | aborts([S1?], Med?, Med1), accept_answer(From?, Want?, Offered?, Resp, Link?, Ans).
 respond_swap(Med, offer(From, Want, Offered), Link, Resp?, Ans?, S1, ask(else, _)) :- ground(From?), ground(Want?), ground(Offered?) | aborts([S1?], Med?, Med1), decline_answer(From?, Offered?, Resp, Link?, Ans).
 respond_swap(Med, offer(From, Want, Offered), Link, A3?, A4?, S1, none) :- ground(From?), ground(Want?), ground(Offered?) | send(ask(respond_swap_2, ctx_respond_swap_2(From?, Want?, Offered?), R, Id, deadline), Med?, Med1), respond_swap(Med1?, offer(From?, Want?, Offered?), Link?, A3, A4, S1?, ask(R?, Id?)).
+respond_swap(_, _, _, A3?, A4?, _, _) :- otherwise | true.
 
 procedure respond_transfer(Channel(Closed, Stream(AgentMsg))?, TransferOffer?, Link?, TransferResponse, Stream(UserInMsg), Slot?, Slot?).
 respond_transfer(Med, offer_transfer(Kind, From, Bonds), Link, Resp?, [decline_transfer(Kind?, From?, Bonds?, Resp, Link?)], ask(then(xs_respond_transfer_1(_)), _), S2) :- ground(Kind?), ground(From?), ground(Bonds?) | aborts([S2?], Med?, Med1).
@@ -65,6 +66,7 @@ respond_transfer(Med, offer_transfer(Kind, From, Bonds), Link, A3?, A4?, none, S
 respond_transfer(Med, offer_transfer(Kind, From, Bonds), Link, Resp?, Ans?, S1, ask(then(xs_respond_transfer_2(_)), _)) :- ground(Kind?), ground(From?), ground(Bonds?) | aborts([S1?], Med?, Med1), accept_transfer_answer(Kind?, From?, Bonds?, Resp, Link?, Ans).
 respond_transfer(Med, offer_transfer(Kind, From, Bonds), Link, Resp?, Ans?, S1, ask(else, _)) :- ground(Kind?), ground(From?), ground(Bonds?) | aborts([S1?], Med?, Med1), decline_transfer_answer(Kind?, From?, Bonds?, Resp, Link?, Ans).
 respond_transfer(Med, offer_transfer(Kind, From, Bonds), Link, A3?, A4?, S1, none) :- ground(Kind?), ground(From?), ground(Bonds?) | send(ask(respond_transfer_2, ctx_respond_transfer_2(Kind?, From?, Bonds?), R, Id, deadline), Med?, Med1), respond_transfer(Med1?, offer_transfer(Kind?, From?, Bonds?), Link?, A3, A4, S1?, ask(R?, Id?)).
+respond_transfer(_, _, _, A3?, A4?, _, _) :- otherwise | true.
 
 exported procedure agent(Channel(Closed, Stream(AgentMsg))?, Constant?, Stream(UserInMsg)?, Stream(NetInMsg)?, Stream(Integer)?, Stream(OutputEntry)?, Stream(Bond)?, Integer?, Stream(Warranty)?, Integer?, Slot?, Slot?, Slot?, Slot?, Slot?, Slot?, Slot?).
 agent(Med, Id, UserIn, [msg(Id1, call(From, Act, Ch)) | NetIn], Cal, Outs, Holdings, Date, Ws, Serial, S1, S2, S3, S4, S5, S6, S7) :- (Id? =?= Id1?), ground(From?) | aborts([S1?, S2?, S3?, S4?, S5?, S6?, S7?], Med?, Med1), on_act(Med1?, Act?, link(Ch?), From?, Id?, UserIn?, NetIn?, Cal?, Outs?, Holdings?, Date?, Ws?, Serial?).
@@ -100,6 +102,7 @@ agent(Med, Id, UserIn, NetIn, Cal, Outs, Holdings, Date, Ws, Serial, S1, S2, S3,
 agent(Med, Id, UserIn, NetIn, Cal, Outs, Holdings, Date, Ws, Serial, S1, S2, S3, S4, S5, none, S7) :- ground(Id?) | send(ask(agent_6, ctx_agent_6, R, Id1, no_deadline), Med?, Med1), agent(Med1?, Id?, UserIn?, NetIn?, Cal?, Outs?, Holdings?, Date?, Ws?, Serial?, S1?, S2?, S3?, S4?, S5?, ask(R?, Id1?), S7?).
 agent(Med, Id, UserIn, NetIn, Cal, Outs, Holdings, Date, Ws, Serial, S1, S2, S3, S4, S5, S6, ask(then(xs_agent_7(P, U, D, K)), _)) :- ground(Id?), ground(P?), ground(U?), integer(D?), integer(K?), (K? >= 1) | aborts([S1?, S2?, S3?, S4?, S5?, S6?], Med?, Med1), select_bonds(U?, D?, K?, Holdings?, Status, Give, Rest), propose_transfer(Med1?, Status?, return, Id?, P?, lot(U?, D?, K?), Give?, Rest?, UserIn?, NetIn?, Cal?, Outs?, Date?, Ws?, Serial?).
 agent(Med, Id, UserIn, NetIn, Cal, Outs, Holdings, Date, Ws, Serial, S1, S2, S3, S4, S5, S6, none) :- ground(Id?) | send(ask(agent_7, ctx_agent_7, R, Id1, no_deadline), Med?, Med1), agent(Med1?, Id?, UserIn?, NetIn?, Cal?, Outs?, Holdings?, Date?, Ws?, Serial?, S1?, S2?, S3?, S4?, S5?, S6?, ask(R?, Id1?)).
+agent(_, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _) :- otherwise | true.
 
 procedure on_act(Channel(Closed, Stream(AgentMsg))?, PeerContent?, Link?, Constant?, Constant?, Stream(UserInMsg)?, Stream(NetInMsg)?, Stream(Integer)?, Stream(OutputEntry)?, Stream(Bond)?, Integer?, Stream(Warranty)?, Integer?).
 on_act(Med, pay(Bonds, Resp?), Link, From, Id, UserIn, NetIn, Cal, Outs, Holdings, Date, Ws, Serial) :- ground(Bonds?) | adopt(Link?, From?, Outs?, Outs1, NetIn?, NetIn1), own_coins(Id?, Date?, Bonds?, Own), take_payment(Med?, Own?, Id?, From?, Bonds?, Date?, Resp, UserIn?, NetIn1?, Cal?, Outs1?, Holdings?, Ws?, Serial?).

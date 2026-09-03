@@ -46,6 +46,7 @@ respond_swap(Med, offer(From, Want, Offered), Link, A3?, A4?, none, S2) :- groun
 respond_swap(Med, offer(From, Want, Offered), Link, Resp?, Ans?, S1, ask(then(xs_respond_swap_2(_)), _)) :- ground(From?), ground(Want?), ground(Offered?) | aborts([S1?], Med?, Med1), accept_answer(From?, Want?, Offered?, Resp, Link?, Ans).
 respond_swap(Med, offer(From, Want, Offered), Link, Resp?, Ans?, S1, ask(else, _)) :- ground(From?), ground(Want?), ground(Offered?) | aborts([S1?], Med?, Med1), decline_answer(From?, Offered?, Resp, Link?, Ans).
 respond_swap(Med, offer(From, Want, Offered), Link, A3?, A4?, S1, none) :- ground(From?), ground(Want?), ground(Offered?) | send(ask(respond_swap_2, ctx_respond_swap_2(From?, Want?, Offered?), R, Id, deadline), Med?, Med1), respond_swap(Med1?, offer(From?, Want?, Offered?), Link?, A3, A4, S1?, ask(R?, Id?)).
+respond_swap(_, _, _, A3?, A4?, _, _) :- otherwise | true.
 
 exported procedure agent(Channel(Closed, Stream(AgentMsg))?, Constant?, Stream(UserInMsg)?, Stream(NetInMsg)?, Stream(OutputEntry)?, Stream(Coin)?, Integer?, Slot?, Slot?, Slot?, Slot?).
 agent(Med, Id, UserIn, [msg(Id1, call(From, Act, Ch)) | NetIn], Outs, Holdings, Serial, S1, S2, S3, S4) :- (Id? =?= Id1?), ground(From?) | aborts([S1?, S2?, S3?, S4?], Med?, Med1), on_act(Med1?, Act?, link(Ch?), From?, Id?, UserIn?, NetIn?, Outs?, Holdings?, Serial?).
@@ -67,6 +68,7 @@ agent(Med, Id, UserIn, NetIn, Outs, Holdings, Serial, S1, S2, ask(then(xs_agent_
 agent(Med, Id, UserIn, NetIn, Outs, Holdings, Serial, S1, S2, none, S4) :- ground(Id?) | send(ask(agent_3, ctx_agent_3, R, Id1, no_deadline), Med?, Med1), agent(Med1?, Id?, UserIn?, NetIn?, Outs?, Holdings?, Serial?, S1?, S2?, ask(R?, Id1?), S4?).
 agent(Med, Id, UserIn, NetIn, Outs, Holdings, Serial, S1, S2, S3, ask(then(xs_agent_4(Q, R)), _)) :- ground(Id?), ground(Q?), ground(R?) | aborts([S1?, S2?, S3?], Med?, Med1), take_coin(Q?, Holdings?, Found, Rest), do_redeem(Med1?, Found?, Id?, Q?, R?, Rest?, UserIn?, NetIn?, Outs?, Serial?).
 agent(Med, Id, UserIn, NetIn, Outs, Holdings, Serial, S1, S2, S3, none) :- ground(Id?) | send(ask(agent_4, ctx_agent_4, R1, Id1, no_deadline), Med?, Med1), agent(Med1?, Id?, UserIn?, NetIn?, Outs?, Holdings?, Serial?, S1?, S2?, S3?, ask(R1?, Id1?)).
+agent(_, _, _, _, _, _, _, _, _, _, _) :- otherwise | true.
 
 procedure on_act(Channel(Closed, Stream(AgentMsg))?, PeerContent?, Link?, Constant?, Constant?, Stream(UserInMsg)?, Stream(NetInMsg)?, Stream(OutputEntry)?, Stream(Coin)?, Integer?).
 on_act(Med, pay(Coins), Link, From, Id, UserIn, NetIn, Outs, Holdings, Serial) :- ground(Coins?) | adopt(Link?, From?, Outs?, Outs1, NetIn?, NetIn1), own_coins(Id?, Coins?, Own), take_payment(Med?, Own?, Id?, From?, Coins?, UserIn?, NetIn1?, Outs1?, Holdings?, Serial?).
