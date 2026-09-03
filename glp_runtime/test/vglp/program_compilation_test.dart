@@ -53,7 +53,7 @@ respond(offer(From), Resp?, [decision(Answer?, From?, response(Resp))]) :-
         () {
       final out = compile(src).source;
       expect(out, contains('UserInStream ::='));       // the source's own
-      expect(out, contains('Xs_respond_1 ::= xs(Decision).'));  // added
+      expect(out, contains('Xs_respond_1 ::= xs_respond_1(Decision).'));  // added
       expect(out, contains('Answer ::= Xs_respond_1 ; Xs_respond_2.'));
       expect(out, contains('Reply ::= then(Answer) ; else.'));  // instantiated
     });
@@ -101,20 +101,31 @@ display respond *(Answer=yes, From?) : panel(inbox), label("Accept"), transient.
 ''');
       expect(out.source, contains('display respond'));
       expect(out.source, contains('label("Accept")'));
+      // An atom is printed bare and a string literal keeps its quotes, as the
+      // source had them: a declaration printed panel("inbox") would no longer
+      // match its clause's guard.
+      expect(out.source, contains('panel(inbox)'));
+      expect(out.source, contains('*(Answer=yes, From?)'));
+      expect(out.source, isNot(contains('"inbox"')));
+      expect(out.source, isNot(contains('"yes"')));
     });
   });
 
   group('the deployed sources', () {
-    // FOUR, not three: cssn/child_agent.vglp arrived on 2026-08-16 and a list
-    // written from memory misses it.  They PARSE as vGLP; they do not yet
-    // COMPILE, the edits being with their owners — social/graph and grassapp
-    // SGSG's, the two cssn sources CSSN's.  Each parse test becomes the
-    // compilation test as its source is repaired.
+    // FIVE, and a list written from memory misses one: cssn/child_agent.vglp
+    // arrived on 2026-08-16 and coins/coins_agent.vglp on 2026-09-03.  They
+    // PARSE as vGLP.  coins/coins_agent.vglp also COMPILES and RUNS ---
+    // Section N2 of test/run_all_tests.sh loads its emitted coins_agent.glp
+    // and runs the village market; the others do not yet compile, the edits
+    // being with their owners — social/graph and grassapp SGSG's, the two
+    // cssn sources CSSN's.  Each parse test becomes the compilation test as
+    // its source is repaired.
     for (final path in [
       'social/graph/agent.vglp',
       'grassapp/grassapp_agent.vglp',
       'cssn/agent.vglp',
       'cssn/child_agent.vglp',
+      'coins/coins_agent.vglp',
     ]) {
       test('$path parses as vGLP', () {
         final file = File('$_programs/$path');

@@ -180,8 +180,18 @@ void _addVglpModules(List<DiscoveredModule> modules, Directory root,
       rootDir: root.absolute.path,
       programsDir: programsDir,
     );
-    final ancestorScope =
+    var ancestorScope =
         buildAncestorScope(chain: chain, rootSelfGlpPath: rootSelfGlpPath);
+    // The exposes are resolved already, and were merged into the scope of
+    // every module then in the list; this module joins after, so it gets the
+    // same merge --- a .vglp source calls the exposed routers as its sibling
+    // modules do.
+    final modDir = _normPath(file.parent.path);
+    for (final e in modules.where((m) => m.exposingDir != null)) {
+      if (!_dirUnder(modDir, e.exposingDir!)) continue;
+      ancestorScope =
+          _mergeExposed(ancestorScope, _exposedExportScope(e.ast, ancestorScope));
+    }
 
     final source = Parser(Lexer(file.readAsStringSync()).tokenize(), vglp: true)
         .parseModule();

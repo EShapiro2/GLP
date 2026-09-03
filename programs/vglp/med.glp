@@ -20,17 +20,29 @@ exported procedure(A, X) med(
     Channel(Stream(AgentMsg(A, X)), Closed)?,
     TimerStream?, PendingList(A)?, Integer?).
 
-%% Escrow: an ask arrives, is shown as a card, and its timer is started.
+%% Escrow: an ask arrives, is shown as a card, and its timer is started.  Only
+%% an ask the machine can answer for the person carries a deadline: a clause
+%% with an else-branch.  A question the machine cannot answer stands until the
+%% person answers it or the goal is reduced by another clause.
 med(UserCh, AgentCh, Ts, Ps, N) :-
-    receive(ask(C, Ctx, R?, Id?), AgentCh?, AgentCh1),
+    receive(ask(C, Ctx, R?, Id?, deadline), AgentCh?, AgentCh1),
     ground(C?), ground(Ctx?) |
-    Id := req(N?),
+    Id = req(N?),
     send(card(C?, Ctx?, req(N?)), UserCh?, UserCh1),
     N1 := N? + 1,
     deadline(D),
     timer(req(N?), D?, T),
     merge(T?, Ts?, Ts1),
     med(UserCh1?, AgentCh1?, Ts1?,
+        [pending(req(N?), escrow(R)) | Ps?], N1?).
+
+med(UserCh, AgentCh, Ts, Ps, N) :-
+    receive(ask(C, Ctx, R?, Id?, no_deadline), AgentCh?, AgentCh1),
+    ground(C?), ground(Ctx?) |
+    Id = req(N?),
+    send(card(C?, Ctx?, req(N?)), UserCh?, UserCh1),
+    N1 := N? + 1,
+    med(UserCh1?, AgentCh1?, Ts?,
         [pending(req(N?), escrow(R)) | Ps?], N1?).
 
 %% Routing: the person's answer selects the then-branch and supplies the
@@ -80,7 +92,7 @@ timer(ReqId, D, [timeout(ReqId?)]) :-
 %% THE DELAY IS NAMED HERE AND NOWHERE ELSE: it is the one constant per
 %% platform the compilation asks for.
 exported procedure deadline(Number).
-deadline(D?) :- now(T) | D := T? + 60000.
+deadline(D?) :- now(T), D := T? + 60000.
 
 %% ---------------------------------------------------------------------------
 %% The pending table
@@ -100,11 +112,11 @@ lookup(_, no_escrow, [], []).
 
 %% Binding the escrowed reply.  On a closed ask there is nothing to bind.
 exported procedure(A) grant_then(Escrow(A)?, A?).
-grant_then(escrow(R?), Vs) :- R := then(Vs?).
+grant_then(escrow(R?), Vs) :- R = then(Vs?).
 grant_then(no_escrow, _).
 
 exported procedure(A) grant_else(Escrow(A)?).
-grant_else(escrow(R?)) :- R := else.
+grant_else(escrow(R?)) :- R = else.
 grant_else(no_escrow).
 
 %% ---------------------------------------------------------------------------

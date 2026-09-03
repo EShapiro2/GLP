@@ -98,6 +98,30 @@ respond(offer(From), [answered(Answer?, From?)]) :-
           m.ast.procedures.firstWhere((p) => p.name == 'respond');
       expect(respond.arity, 2 + 1 + 2);
     });
+
+    test('it gets the exposed scope its sibling modules get', () {
+      // The root self.glp exposes social/graph/routing, and every module under
+      // programs/ resolves send_net and the rest of it unqualified.  The
+      // compiled module joins the list after the exposes are resolved, so it
+      // is given the same merge; without it a .vglp source calling send_net
+      // compiled to a module in which send_net was undefined.
+      write('self.glp', selfGlp);
+      write('responder.vglp', responderVglp);
+
+      final modules =
+          discoverProgram(fixture.path, rootSelfGlpPath: _rootSelfGlp);
+      final compiled = modules.firstWhere((m) => m.moduleName == 'responder');
+      final sibling = modules.firstWhere((m) => m.isSelfGlp);
+      bool declares(DiscoveredModule m, String sig) =>
+          m.ancestorScope.procedures.containsKey(sig) ||
+          m.ancestorScope.paramProcDecls.containsKey(sig);
+      for (final sig in ['send_net/3', 'send_user/3', 'send_friend/4']) {
+        expect(declares(sibling, sig), isTrue,
+            reason: '$sig should reach the self.glp module');
+        expect(declares(compiled, sig), isTrue,
+            reason: '$sig should reach the compiled module too');
+      }
+    });
   });
 
   group('a .vglp source beside a .glp of its name', () {

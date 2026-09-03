@@ -44,9 +44,13 @@ Reply(A) ::= then(A) ; else.
 Slot(A) ::= none ; ask(Reply(A), ReqId).
 Slots(A) ::= [] ; [Slot(A) | Slots(A)].
 
+%% Whether an ask carries a deadline: it does iff its clause has an
+%% else-branch, which is what the machine answers on the deadline.
+Deadline ::= deadline ; no_deadline.
+
 %% Agent to mediator: an ask posed, carrying the writers the mediator binds,
 %% or an ask aborted because another clause reduced the goal.
-AgentMsg(A, X) ::= ask(Constant, X, Reply(A)?, ReqId?)
+AgentMsg(A, X) ::= ask(Constant, X, Reply(A)?, ReqId?, Deadline)
                  ; abort(ReqId).
 
 %% Mediator to person: the card of an open ask, and its removal.

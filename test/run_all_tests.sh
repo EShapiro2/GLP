@@ -2270,6 +2270,18 @@ HEREDOC
 check "Coins program loads" "Loaded program" "$n2_load"
 check_not "Coins program no type errors" "Type checking failed" "$n2_load"
 
+# The committed coins_agent.glp must be the compiler's own output: :emit
+# rewrites it from coins_agent.vglp, and the working tree must be unchanged.
+n2_emit=$("$REPL_RUN" <<HEREDOC
+$COINS
+:emit $COINS
+:quit
+HEREDOC
+2>&1)
+check "Coins program: :emit re-emits coins_agent.glp" "wrote $COINS/coins_agent.glp" "$n2_emit"
+n2_emit_diff=$(cd "$GLP_DIR" && git diff --stat -- programs/coins/coins_agent.glp)
+check_not "Coins program: committed coins_agent.glp is the compiler's output" "coins_agent.glp" "$n2_emit_diff"
+
 echo "--- Coins village market (village) ---"
 
 n2_run=$("$REPL_RUN" <<HEREDOC

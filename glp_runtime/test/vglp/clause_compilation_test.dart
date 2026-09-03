@@ -60,7 +60,7 @@ agent(Id, UserIn, Outs) :-
     test('the answer clause takes the then-branch and the answer binds Target',
         () {
       expect(emit(src, 'agent/3')[0],
-          'agent(Med, Id, UserIn, Outs, ask(then(xs(Target)), _)) :- '
+          'agent(Med, Id, UserIn, Outs, ask(then(xs_agent_1(Target)), _)) :- '
           'ground(Id?), ground(Target?) | '
           'connect(Target?, Outs?, Outs1), '
           'agent(Med?, Id?, UserIn?, Outs1?, none).');
@@ -69,7 +69,7 @@ agent(Id, UserIn, Outs) :-
     test('the ask clause poses the question once and re-poses the goal', () {
       expect(emit(src, 'agent/3')[1],
           'agent(Med, Id, UserIn, A3?, none) :- ground(Id?) | '
-          'send(ask(agent_1, ctx, R, Id1), Med?, Med1), '
+          'send(ask(agent_1, ctx_agent_1, R, Id1, no_deadline), Med?, Med1), '
           'agent(Med1?, Id?, UserIn?, A3, ask(R?, Id1?)).');
     });
 
@@ -112,7 +112,14 @@ respond(offer(From), Resp?, [decision(Answer?, From?, response(Resp))]) :-
     });
 
     test('the context reaches the mediator with the ask', () {
-      expect(emit(src, 'respond/3')[2], contains('ctx(From?)'));
+      expect(emit(src, 'respond/3')[2], contains('ctx_respond_1(From?)'));
+    });
+
+    test('the ask carries a deadline, because the clause has an else-branch',
+        () {
+      // D_k is deadline iff C_k has an else-branch: the machine answers on the
+      // deadline only where the program says how.
+      expect(emit(src, 'respond/3')[2], contains(', deadline), Med?, Med1)'));
     });
   });
 
@@ -130,14 +137,23 @@ respond(offer(From), Resp?, [decision(Answer?, From?, response(Resp))]) :-
     test('two slots, and each clause exposes its own', () {
       final cs = emit(src, 'respond/3');
       expect(cs.length, 4);  // answer + ask, twice
-      expect(cs[0], contains('ask(then(xs(Answer)), _), S2)'));
-      expect(cs[2], contains('S1, ask(then(xs(Answer)), _))'));
+      expect(cs[0], contains('ask(then(xs_respond_1(Answer)), _), S2)'));
+      expect(cs[2], contains('S1, ask(then(xs_respond_2(Answer)), _))'));
     });
 
     test('a clause aborts the other slots, not its own', () {
       final cs = emit(src, 'respond/3');
       expect(cs[0], contains('aborts([S2?], Med?, Med1)'));
       expect(cs[2], contains('aborts([S1?], Med?, Med1)'));
+    });
+
+    test('the body true of a guarded unit clause is not copied after aborts',
+        () {
+      // `| true` is the idiom of an empty body; copied it would be a call of
+      // true/0, which no procedure defines.
+      final cs = emit(src, 'respond/3');
+      expect(cs[0], endsWith('aborts([S2?], Med?, Med1).'));
+      expect(cs[2], endsWith('aborts([S1?], Med?, Med1).'));
     });
 
     test('each ask clause carries its own clause name', () {

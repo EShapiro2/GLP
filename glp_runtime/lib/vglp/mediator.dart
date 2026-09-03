@@ -82,10 +82,18 @@ InstantiatedMediator instantiate(MediatorSource source) {
     answerParam: answerTypeName,
     contextParam: contextTypeName,
   };
+  // The vocabulary's own parameterised types become monomorphic, so a
+  // reference to one --- Reply(A), Slot(A), AgentMsg(A, X) --- loses its
+  // arguments along with the definition's parameter list.
+  final instantiated = <String>{
+    for (final td in source.vocabulary.typeDefs)
+      if (td.isParameterized) td.name
+  };
 
   final typeDefs = [
     for (final td in source.vocabulary.typeDefs)
-      TypeDef(td.name, [for (final a in td.alternatives) _bindExpr(a, binding)],
+      TypeDef(td.name,
+          [for (final a in td.alternatives) _bindExpr(a, binding, instantiated)],
           td.line, td.column)
       // The parameter list goes: the instantiated definition is monomorphic.
   ];
@@ -94,7 +102,7 @@ InstantiatedMediator instantiate(MediatorSource source) {
     for (final d in source.clauses.procDeclarations)
       ProcDecl(
         d.name,
-        [for (final t in d.argTypes) _bindExpr(t, binding)],
+        [for (final t in d.argTypes) _bindExpr(t, binding, instantiated)],
         d.line,
         d.column,
         isBuiltin: d.isBuiltin,
@@ -107,27 +115,78 @@ InstantiatedMediator instantiate(MediatorSource source) {
   return InstantiatedMediator(typeDefs, procDecls, source.clauses.procedures);
 }
 
-/// Replace the type parameters throughout a type expression.
-TypeExpr _bindExpr(TypeExpr e, Map<String, String> binding) {
+/// Replace the type parameters throughout a type expression, and drop the
+/// arguments of a reference to one of the vocabulary's own parameterised
+/// types, which the instantiation makes monomorphic.
+TypeExpr _bindExpr(
+    TypeExpr e, Map<String, String> binding, Set<String> instantiated) {
   if (e is TypeRef) {
     final name = binding[e.name] ?? e.name;
     return TypeRef(name, e.line, e.column,
         isInput: e.isInput,
-        typeArgs: [for (final a in e.typeArgs) _bindExpr(a, binding)]);
+        typeArgs: instantiated.contains(e.name)
+            ? const []
+            : [for (final a in e.typeArgs) _bindExpr(a, binding, instantiated)]);
   }
   if (e is StructAlt) {
     return StructAlt(e.functor,
-        [for (final a in e.args) _bindExpr(a, binding)], e.line, e.column);
-  }
-  if (e is ListConsAlt) {
-    return ListConsAlt(_bindExpr(e.head, binding), _bindExpr(e.tail, binding),
+        [for (final a in e.args) _bindExpr(a, binding, instantiated)],
         e.line, e.column);
   }
+  if (e is ListConsAlt) {
+    return ListConsAlt(_bindExpr(e.head, binding, instantiated),
+        _bindExpr(e.tail, binding, instantiated), e.line, e.column);
+  }
   if (e is DiffListAlt) {
-    return DiffListAlt(_bindExpr(e.content, binding),
-        _bindExpr(e.hole, binding), e.line, e.column);
+    return DiffListAlt(_bindExpr(e.content, binding, instantiated),
+        _bindExpr(e.hole, binding, instantiated), e.line, e.column);
   }
   return e;
+}
+
+/// A type expression as GLP source.  A type read off the checker's environment
+/// may carry an EXPANDED name, `Stream<Coin>`, which is the environment's
+/// internal name for an instantiation and is not source syntax; it is printed
+/// as the instantiation it stands for, `Stream(Coin)`.
+String typeSource(TypeExpr e) {
+  if (e is TypeRef) {
+    final name = _sourceName(e.name);
+    final args = e.typeArgs.isEmpty
+        ? ''
+        : '(${e.typeArgs.map(typeSource).join(', ')})';
+    return e.isInput ? '$name$args?' : '$name$args';
+  }
+  if (e is StructAlt) {
+    return '${e.functor}(${e.args.map(typeSource).join(', ')})';
+  }
+  if (e is ListConsAlt) {
+    return '[${typeSource(e.head)} | ${typeSource(e.tail)}]';
+  }
+  if (e is DiffListAlt) {
+    return '${typeSource(e.content)} \\ ${typeSource(e.hole)}';
+  }
+  return e.toString();
+}
+
+/// `Stream<Coin>` to `Stream(Coin)`, nested instantiations included.
+String _sourceName(String name) {
+  final lt = name.indexOf('<');
+  if (lt < 0 || !name.endsWith('>')) return name;
+  final inner = name.substring(lt + 1, name.length - 1);
+  final args = <String>[];
+  var depth = 0;
+  var start = 0;
+  for (var i = 0; i < inner.length; i++) {
+    final c = inner[i];
+    if (c == '<' || c == '(') depth++;
+    if (c == '>' || c == ')') depth--;
+    if (c == ',' && depth == 0) {
+      args.add(inner.substring(start, i).trim());
+      start = i + 1;
+    }
+  }
+  args.add(inner.substring(start).trim());
+  return '${name.substring(0, lt)}(${args.map(_sourceName).join(', ')})';
 }
 
 // ---------------------------------------------------------------------------
@@ -143,18 +202,53 @@ String printProcDecl(ProcDecl d) {
   final prefix = d.exported ? 'exported ' : (d.imported ? 'imported ' : '');
   final params = d.typeParams.isEmpty ? '' : '(${d.typeParams.join(', ')})';
   return '${prefix}procedure$params ${d.name}'
-      '(${d.argTypes.map((t) => t.toString()).join(', ')}).';
+      '(${d.argTypes.map(typeSource).join(', ')}).';
 }
 
 /// A type definition as GLP source.
 String printTypeDef(TypeDef d) {
   final params = d.typeParams.isEmpty ? '' : '(${d.typeParams.join(', ')})';
-  return '${d.name}$params ::= ${d.alternatives.join(' ; ')}.';
+  return '${d.name}$params ::= ${d.alternatives.map(typeSource).join(' ; ')}.';
 }
 
 /// A display declaration as GLP source, carried into the compiled program
-/// unchanged (vGLP, Definition "Display Declaration, Default Display").
-String printDisplayDecl(ast.DisplayDecl d) => d.toString();
+/// unchanged (vGLP, Definition "Display Declaration, Default Display").  Atoms
+/// are printed bare and string literals quoted, as the source had them.
+String printDisplayDecl(ast.DisplayDecl d) {
+  final items = d.items
+      .map((i) => i.args.isEmpty
+          ? i.name
+          : '${i.name}(${i.args.map(_termSource).join(', ')})')
+      .join(', ');
+  if (d.isClauseForm) {
+    final g = d.guard!;
+    final positions = <String>[
+      for (final q in g.question)
+        q.writer == null
+            ? _termSource(q.value!)
+            : (q.value == null || q.value is ast.UnderscoreTerm
+                ? q.writer!.name
+                : '${q.writer!.name}=${_termSource(q.value!)}'),
+      for (final c in g.context) '${c.name}?',
+    ];
+    return 'display ${d.predicate} *(${positions.join(', ')}) : $items.';
+  }
+  return 'display ${_termSource(d.pattern!)} : $items.';
+}
+
+String _termSource(ast.Term t) {
+  if (t is ast.VarTerm) return t.isReader ? '${t.name}?' : t.name;
+  if (t is ast.UnderscoreTerm) return '_';
+  if (t is ast.ConstTerm) {
+    final v = t.value;
+    if (v is String) return v;  // an atom bare; a string literal keeps its quotes
+    return '$v';
+  }
+  if (t is ast.StructTerm) {
+    return '${t.functor}(${t.args.map(_termSource).join(', ')})';
+  }
+  return GlpPrinter().printTerm(t);
+}
 
 /// The mediator's clauses as GLP source.
 String printProcedures(List<ast.Procedure> procedures) {

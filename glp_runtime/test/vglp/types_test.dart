@@ -52,7 +52,7 @@ respond(offer(From), Resp?, [decision(Answer?, From?, response(Resp))]) :-
       final t = compile(src);
       final c = t.byClause['respond_1']!;
       expect(c.answer!.name, 'Xs_respond_1');
-      expect(c.answer.toString(), startsWith('Xs_respond_1 ::= xs('));
+      expect(c.answer.toString(), startsWith('Xs_respond_1 ::= xs_respond_1('));
     });
 
     test('the answer writer is typed by where it occurs, not by its own name',
@@ -61,12 +61,33 @@ respond(offer(From), Resp?, [decision(Answer?, From?, response(Resp))]) :-
       // position of decision/3, which is Decision.  Nothing declares Answer:
       // its type is the type of the position it sits at.
       expect(compile(src).byClause['respond_1']!.answer.toString(),
-          'Xs_respond_1 ::= xs(Decision).');
+          'Xs_respond_1 ::= xs_respond_1(Decision).');
     });
 
     test('the context reader is typed the same way', () {
       expect(compile(src).byClause['respond_1']!.context.toString(),
-          'Ctx_respond_1 ::= ctx(Constant).');
+          'Ctx_respond_1 ::= ctx_respond_1(Constant).');
+    });
+  });
+
+  group('an anonymous question position', () {
+    // The volition guard writes a ground term there and no writer: its type is
+    // the type of the term, Constant for an atom and Integer for an integer.
+    test('is typed by its ground term', () {
+      expect(compile('''
+procedure respond(ColdCallOffer?, Response, UserInStream).
+*(yes, From?)
+respond(offer(From), Resp?, [decision(yes, From?, response(Resp))]) :-
+    ground(From?) | true.
+''').byClause['respond_1']!.answer.toString(),
+          'Xs_respond_1 ::= xs_respond_1(Constant).');
+      expect(compile('''
+procedure respond(ColdCallOffer?, Response, UserInStream).
+*(3, From?)
+respond(offer(From), Resp?, [decision(yes, From?, response(Resp))]) :-
+    ground(From?) | true.
+''').byClause['respond_1']!.answer.toString(),
+          'Xs_respond_1 ::= xs_respond_1(Integer).');
     });
   });
 
@@ -86,6 +107,16 @@ respond(offer(From), Resp?, [decision(Answer?, From?, response(Resp))]) :-
           .typeDefs
           .firstWhere((d) => d.name == answerTypeName);
       expect(a.toString(), 'Answer ::= Xs_respond_1 ; Xs_respond_2.');
+    });
+
+    test('two clauses with questions of one length keep distinct functors', () {
+      // A union's top-level functors must be distinct, so the functor names
+      // the clause: xs_respond_1 and xs_respond_2, never xs/1 twice.
+      final t = compile(src);
+      expect(t.byClause['respond_1']!.answer.toString(),
+          'Xs_respond_1 ::= xs_respond_1(Decision).');
+      expect(t.byClause['respond_2']!.answer.toString(),
+          'Xs_respond_2 ::= xs_respond_2(Decision).');
     });
 
     test('the context type unions theirs', () {
@@ -108,9 +139,9 @@ agent(Id, UserIn) :- ground(Id?) | agent(Id?, UserIn?).
       expect(t.byClause['agent_1']!.answer, isNull);
       expect(t.byClause['agent_1']!.context, isNull);
       expect(t.typeDefs.firstWhere((d) => d.name == answerTypeName).toString(),
-          'Answer ::= xs.');
+          'Answer ::= xs_agent_1.');
       expect(t.typeDefs.firstWhere((d) => d.name == contextTypeName).toString(),
-          'Context ::= ctx.');
+          'Context ::= ctx_agent_1.');
     });
   });
 
@@ -126,9 +157,11 @@ agent(Id, UserIn, Outs) :-
     test('the channel comes first and the slots last', () {
       final d = compile(src).procDecls.firstWhere((d) => d.name == 'agent');
       expect(d.arity, 5);
+      // AgentMsg and Slot are the vocabulary's, instantiated at the program's
+      // answer and context types: monomorphic, so referenced bare.
       expect(d.argTypes.first.toString(),
-          'Channel(Closed, Stream(AgentMsg(Answer, Context)))?');
-      expect(d.argTypes.last.toString(), 'Slot(Answer)?');
+          'Channel(Closed, Stream(AgentMsg))?');
+      expect(d.argTypes.last.toString(), 'Slot?');
     });
 
     test("the source's own argument types are unchanged between them", () {
@@ -158,7 +191,7 @@ relay(Id, In) :- ground(Id?) | relay(Id?, In?).
 ''').procDecls.single;
       expect(d.arity, 3);
       expect(d.argTypes.first.toString(),
-          'Channel(Closed, Stream(AgentMsg(Answer, Context)))?');
+          'Channel(Closed, Stream(AgentMsg))?');
     });
   });
 }

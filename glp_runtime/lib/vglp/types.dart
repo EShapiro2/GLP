@@ -86,43 +86,44 @@ CompiledTypes compileTypes(ast.Module module,
       final q = c.volitionGuard!.question;
       final ctx = c.volitionGuard!.context;
 
+      // The answer and context terms carry the clause's own functor, xs_C and
+      // ctx_C: the program's answer type is a union over its clauses, and a
+      // union's top-level functors must be distinct, so two clauses whose
+      // questions have the same length cannot both contribute `xs/i`.
       TypeDef? answer;
       if (q.isNotEmpty) {
         final typeName = 'Xs_$name';
         answer = TypeDef(typeName, [
-          StructAlt('xs', [
+          StructAlt('xs_$name', [
             for (final pos in q)
-              _typeOfVariable(pos.writer?.name, c, env, name)
+              pos.writer == null
+                  ? _typeOfValue(pos.value!, c)
+                  : _typeOfVariable(pos.writer!.name, c, env, name)
           ], c.line, c.column)
         ], c.line, c.column);
         added.add(answer);
         answerAlts.add(TypeRef(typeName, c.line, c.column));
+      } else {
+        // An empty question still asks, carrying the bare constant xs_C.
+        answerAlts.add(ConstantAlt('xs_$name', c.line, c.column));
       }
 
       TypeDef? context;
       if (ctx.isNotEmpty) {
         final typeName = 'Ctx_$name';
         context = TypeDef(typeName, [
-          StructAlt('ctx', [
+          StructAlt('ctx_$name', [
             for (final v in ctx) _typeOfVariable(v.name, c, env, name)
           ], c.line, c.column)
         ], c.line, c.column);
         added.add(context);
         contextAlts.add(TypeRef(typeName, c.line, c.column));
+      } else {
+        contextAlts.add(ConstantAlt('ctx_$name', c.line, c.column));
       }
 
       byClause[name] = ClauseTypes(name, answer, context);
     }
-  }
-
-  // A clause with an empty question or an empty context still asks, carrying
-  // the bare constant `xs` or `ctx`; the program's type therefore has that
-  // constant as an alternative whenever some clause omits one.
-  if (answerAlts.length < byClause.length) {
-    answerAlts.add(ConstantAlt('xs', 0, 0));
-  }
-  if (contextAlts.length < byClause.length) {
-    contextAlts.add(ConstantAlt('ctx', 0, 0));
   }
 
   if (byClause.isNotEmpty) {
@@ -156,9 +157,8 @@ List<ProcDecl> _rewriteDeclarations(ast.Module module) {
       [
         medChannelType(isInput: true),
         ...d.argTypes,
-        for (var k = 0; k < m; k++)
-          TypeRef('Slot', 0, 0,
-              isInput: true, typeArgs: [TypeRef(answerTypeName, 0, 0)]),
+        // The slot type is the vocabulary's, instantiated: monomorphic.
+        for (var k = 0; k < m; k++) TypeRef('Slot', 0, 0, isInput: true),
       ],
       d.line,
       d.column,
@@ -172,18 +172,14 @@ List<ProcDecl> _rewriteDeclarations(ast.Module module) {
   return out;
 }
 
-/// `Channel(Closed, Stream(AgentMsg(Answer, Context)))`, the compiled goal's
-/// end of the mediator channel: it only ever sends, so its read side is closed.
+/// `Channel(Closed, Stream(AgentMsg))`, the compiled goal's end of the
+/// mediator channel: it only ever sends, so its read side is closed.  AgentMsg
+/// is the vocabulary's, instantiated at the program's types: monomorphic.
 TypeExpr medChannelType({required bool isInput}) => TypeRef('Channel', 0, 0,
         isInput: isInput,
         typeArgs: [
           TypeRef('Closed', 0, 0),
-          TypeRef('Stream', 0, 0, typeArgs: [
-            TypeRef('AgentMsg', 0, 0, typeArgs: [
-              TypeRef(answerTypeName, 0, 0),
-              TypeRef(contextTypeName, 0, 0),
-            ])
-          ])
+          TypeRef('Stream', 0, 0, typeArgs: [TypeRef('AgentMsg', 0, 0)])
         ]);
 
 // ---------------------------------------------------------------------------
@@ -226,6 +222,23 @@ TypeEnvironment _environmentOf(ast.Module module, List<ast.Module> ancestors,
     for (final td in module.typeDefs)
       if (td.isParameterized) td.name: td,
   });
+}
+
+/// The type of an anonymous answer position, which is the type of the ground
+/// term the volition guard writes there: `yes` is a Constant, `3` an Integer,
+/// and a compound term takes the primitive type `_`, since it has no declared
+/// one.  (`Any` is the checker's internal name and is not source syntax.)
+TypeExpr _typeOfValue(ast.Term value, ast.Clause c) {
+  if (value is ast.ConstTerm) {
+    final v = value.value;
+    if (v is int) return TypeRef('Integer', c.line, c.column);
+    if (v is double) return TypeRef('Real', c.line, c.column);
+    if (v is String && v.startsWith('"')) {
+      return TypeRef('String', c.line, c.column);
+    }
+    return TypeRef('Constant', c.line, c.column);
+  }
+  return PrimitiveModeAlt(false, c.line, c.column);
 }
 
 /// The type of the answer writer or context reader [variable] of clause [c].

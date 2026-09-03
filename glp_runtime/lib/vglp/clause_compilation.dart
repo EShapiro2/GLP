@@ -84,7 +84,7 @@ CompiledProcedure compileProcedure(
     final name = clauseName(proc, j);
     // In the order of the Definition: the answer clause, the else clause where
     // C has an else-branch, and the ask clause.
-    out.add(_compileAnswer(c, proc, m, j,
+    out.add(_compileAnswer(c, proc, m, j, name,
         isProcedureOfM: isProcedureOfM, slotCountOf: slotCountOf));
     if (c.elseBranch != null) {
       out.add(_compileElse(c, proc, m, j,
@@ -130,7 +130,7 @@ Clause _compileOrdinary(Clause c, Procedure proc, int m,
 ///
 ///     H'(Med, ..., ask(then(xs(X1, ..., Xi)), _), ...) :- G |
 ///         aborts([<the other slots>], Med?, Med1), B'
-Clause _compileAnswer(Clause c, Procedure proc, int m, int j,
+Clause _compileAnswer(Clause c, Procedure proc, int m, int j, String name,
     {required bool Function(String, int) isProcedureOfM,
     required int Function(String, int) slotCountOf}) {
   final names = _NameSource(c);
@@ -140,7 +140,7 @@ Clause _compileAnswer(Clause c, Procedure proc, int m, int j,
   final slotArgs = <Term>[];
   for (var k = 0; k < m; k++) {
     slotArgs.add(k == j - 1
-        ? _ask(_then(_xs(c.volitionGuard!, c)), _anon(c))
+        ? _ask(_then(_xs(c.volitionGuard!, c, name)), _anon(c))
         : _w(slots[k]));
   }
   // The exposed slot is a pattern, not a variable, so it is not among the slots
@@ -266,9 +266,12 @@ Clause _compileAsk(Clause c, Procedure proc, ProcDecl decl, int m, int j,
 
   final guardsC = _contextGuards(c, answerWriters);
 
-  final ctx = StructTerm('ctx',
-      c.volitionGuard!.context.map<Term>((v) => _r(v.name)).toList(),
-      c.line, c.column);
+  // The context term carries the clause's own functor, as the answer does.
+  final Term ctx = c.volitionGuard!.context.isEmpty
+      ? ConstTerm('ctx_$clauseName', c.line, c.column)
+      : StructTerm('ctx_$clauseName',
+          c.volitionGuard!.context.map<Term>((v) => _r(v.name)).toList(),
+          c.line, c.column);
 
   final body = <Goal>[
     Goal('send', [
@@ -277,6 +280,10 @@ Clause _compileAsk(Clause c, Procedure proc, ProcDecl decl, int m, int j,
         ctx,
         _w(reply),
         _w(id),
+        // An ask carries a deadline iff its clause has an else-branch: the
+        // machine answers on the deadline only where the program says how.
+        ConstTerm(c.elseBranch != null ? 'deadline' : 'no_deadline',
+            c.line, c.column),
       ], c.line, c.column),
       _r(med),
       _w(med1),
@@ -318,7 +325,12 @@ List<Goal> _compileBody(List<Goal> body, String med, _NameSource names,
   }
 
   final out = <Goal>[];
-  if (indices.isEmpty) return List<Goal>.from(body);
+  // A body that is the single goal `true` is the guarded unit clause's idiom
+  // and is empty; copied after the abort call it would be a call of true/0,
+  // which no procedure defines.
+  if (indices.isEmpty) {
+    return [for (final g in body) if (!_isTrue(g)) g];
+  }
 
   // One channel per calling goal, chained off `med`.
   final channels = <String>[];
@@ -340,7 +352,7 @@ List<Goal> _compileBody(List<Goal> body, String med, _NameSource names,
   for (var i = 0; i < body.length; i++) {
     final g = body[i];
     if (!isProcedureOfM(g.functor, g.args.length)) {
-      out.add(g);
+      if (!_isTrue(g)) out.add(g);
       continue;
     }
     final ch = channels[t++];
@@ -353,6 +365,8 @@ List<Goal> _compileBody(List<Goal> body, String med, _NameSource names,
   }
   return out;
 }
+
+bool _isTrue(Goal g) => g.functor == 'true' && g.args.isEmpty;
 
 /// Emit the abort call and return the name of the channel the body continues
 /// on.  With no slots to abort the call is the identity, so it is omitted.
@@ -379,12 +393,18 @@ Atom _extendHead(Atom head, String med, List<Term> slotArgs) =>
 Term _ask(Term reply, Term id) => StructTerm('ask', [reply, id], 0, 0);
 Term _then(Term xs) => StructTerm('then', [xs], 0, 0);
 
-/// `xs(X1, ..., Xi)` over the clause's answer writers, an anonymous writer at
-/// each position the volition guard leaves anonymous.
-Term _xs(VolitionGuard g, Clause c) => StructTerm('xs', [
-      for (final q in g.question)
-        q.writer == null ? UnderscoreTerm(c.line, c.column) : _w(q.writer!.name)
-    ], c.line, c.column);
+/// `xs_C(X1, ..., Xi)` over the clause's answer writers, an anonymous writer
+/// at each position the volition guard leaves anonymous; the bare constant
+/// `xs_C` for an empty question.  The functor is the clause's own, so that the
+/// program's answer type, a union over its clauses, has distinct functors.
+Term _xs(VolitionGuard g, Clause c, String name) => g.question.isEmpty
+    ? ConstTerm('xs_$name', c.line, c.column)
+    : StructTerm('xs_$name', [
+        for (final q in g.question)
+          q.writer == null
+              ? UnderscoreTerm(c.line, c.column)
+              : _w(q.writer!.name)
+      ], c.line, c.column);
 
 Term _anon(Clause c) => UnderscoreTerm(c.line, c.column);
 
