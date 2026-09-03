@@ -2248,7 +2248,7 @@ check "Currencies credit line: at k_d=0 lender holds the full line plus interest
 echo ""
 
 # =============================================================================
-# Section N2: The coins program (programs/currencies/coins): the vGLP currency
+# Section N2: The coins program (programs/coins): the vGLP currency
 # agent of the Grassroots Currencies paper, its canonical compilation
 # coins_agent.glp (emitted by glpc :emit; the .vglp beside it is skipped by the
 # loader while the .glp stands), and the six-agent village market of the
@@ -2259,7 +2259,7 @@ echo ""
 echo "=== Section N2: Coins program (Grassroots Currencies) ==="
 echo ""
 
-COINS="$GLP_DIR/programs/currencies/coins"
+COINS="$GLP_DIR/programs/coins"
 
 n2_load=$("$REPL_RUN" <<HEREDOC
 $COINS
