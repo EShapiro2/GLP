@@ -1,0 +1,296 @@
+%% self.glp — grassroots currencies, the coins program.
+%%
+%% The program every participant runs under the grassroots social contract of
+%% "Grassroots Currencies: Turning Mutual Trust into Liquidity" (Section 3),
+%% derived from the four transactions of its Section 3.4.  This file holds the
+%% types shared by the agent (coins_agent.vglp, compiled by the vGLP canonical
+%% compilation into coins_agent.glp beside it) and the play (village.glp), and
+%% the helpers over holdings and channels that the agent calls.
+%%
+%% A coin is coin(Issuer, Serial): the atom cent(u) of the act schemas, with the
+%% serial a practical implementation gives each coin.  A party's holdings are a
+%% multiset of coins, Stream(Coin).  A lot is k coins of one issuer,
+%% lot(Issuer, K): the cent^k_u of Section 3.4.
+
+Coin ::= coin(Constant, Integer).
+Lot  ::= lot(Constant, Integer).
+
+%% The counterparty's answer to a swap: the coins it gives, or the offered coins
+%% returned.
+SwapResponse ::= swap_accept(Stream(Coin)) ; swap_decline(Stream(Coin)).
+
+%% The issuer's answer to a presentation: the coin taken in exchange; the
+%% presented coin returned with the issuers of the coins it holds, one per
+%% issuer, for the bearer to choose among; or the coin returned because it is
+%% not the issuer's.
+RedeemResponse ::= redeem_give(Coin)
+                 ; redeem_menu(Coin, Stream(Constant))
+                 ; redeem_declined(Coin).
+
+%% What one agent sends another: the three bilateral acts of Section 3.4, and
+%% the return of coins that were not a payment, because they are not the
+%% payee's own.  A position that forwards a writer carries ? in the type
+%% (typed-glp-manual, 15B).
+PeerContent ::= pay(Stream(Coin))
+              ; swap(Lot, Stream(Coin), SwapResponse?)
+              ; redeem(Coin, Constant, RedeemResponse?)
+              ; return(Stream(Coin)).
+PeerMsg     ::= msg(Constant, Constant, PeerContent).
+PeerChannel ::= ch(Stream(PeerMsg), Stream(PeerMsg)?).
+
+%% First contact.  An act sent to a party the sender has no channel to carries
+%% the receiver's end of a fresh channel, on which the two transact thereafter.
+NetCall   ::= call(Constant, PeerContent, PeerChannel).
+NetOutMsg ::= msg(Constant, NetCall).
+NetInMsg  ::= msg(Constant, NetCall)
+            ; msg(Constant, Constant, PeerContent).
+
+%% A channel held for a swap proposed at first contact --- adopted when the
+%% swap is accepted, closed when it is declined --- or linked, an established
+%% channel.
+Link ::= link(PeerChannel) ; linked.
+
+%% Whether a coin was found in the holdings.
+Found ::= found(Coin) ; not_found.
+
+%% The agent's outputs: the screen, the network, and a channel per
+%% counterparty, keyed by its name.  The routers send_user, send_net,
+%% send_friend and add_friend_output are those of lib/routing, exposed from the
+%% root scope.
+OutputEntry ::= user_output(Stream(ScreenMsg)?)
+              ; net_output(Stream(NetOutMsg)?)
+              ; friend_output(Constant, Stream(PeerMsg)?).
+
+%% The screen: the holdings, tallied by issuer, after every change, and what
+%% each act came to.
+ScreenContent ::= holdings(Stream(Lot))
+                ; minted(Integer)
+                ; paid(Constant, Integer)
+                ; received(Constant, Integer)
+                ; returned(Constant, Integer)
+                ; swap_done(Constant)
+                ; swap_declined(Constant)
+                ; swap_failed(Constant)
+                ; declined(Constant)
+                ; redeemed(Constant, Constant)
+                ; menu(Constant, Stream(Constant))
+                ; presented(Constant, Constant)
+                ; unfulfilled(Constant, Constant)
+                ; refused(Constant)
+                ; lacking(Constant, Integer).
+ScreenMsg ::= msg(Constant, Constant, ScreenContent).
+
+%% The agent's own input: the answers its swap responders inject, and the
+%% results of the acts it proposed.
+UserInMsg ::= accept_swap(Constant, Lot, Stream(Coin), SwapResponse?, Link)
+            ; decline_swap(Constant, Stream(Coin), SwapResponse?, Link)
+            ; swap_accepted(Constant, Stream(Coin), Link)
+            ; swap_declined_by(Constant, Stream(Coin), Link)
+            ; redeem_given(Constant, Coin)
+            ; redeem_menu_from(Constant, Coin, Stream(Constant))
+            ; redeem_declined_by(Constant, Coin).
+
+%% The offer a swap responder carries: the proposer, the lot it wants, the
+%% coins it offers.
+SwapOffer ::= offer(Constant, Lot, Stream(Coin)).
+
+%% =============================================================================
+%% The vocabulary of the compiled agent's mediator, at this program's answer and
+%% context types, so that the play can type the goals it spawns.  These are the
+%% types the canonical compilation emits into coins_agent.glp (programs/vglp/
+%% self.glp instantiated at Answer and Context); the compiled module's own
+%% definitions shadow these within it, and the two must agree.
+%% =============================================================================
+
+ReqId ::= req(Integer).
+Reply ::= then(Answer) ; else.
+Slot ::= none ; ask(Reply, ReqId).
+Deadline ::= deadline ; no_deadline.
+AgentMsg ::= ask(Constant, Context, Reply?, ReqId?, Deadline) ; abort(ReqId).
+Card ::= card(Constant, Context, ReqId) ; close(ReqId).
+UserAnswer ::= answer(ReqId, Answer).
+Escrow ::= escrow(Reply?) ; no_escrow.
+PendingEntry ::= pending(ReqId, Escrow).
+PendingList ::= [] ; [PendingEntry | PendingList].
+Timeout ::= timeout(ReqId).
+TimerStream ::= [] ; [Timeout | TimerStream].
+
+%% One alternative per volition-guarded clause of the agent: its four request
+%% clauses --- mint, swap, pay, redeem, in the order of Section 3.4 --- and the
+%% decline and accept clauses of the swap responder.
+Answer ::= xs_agent_1(Integer)
+         ; xs_agent_2(Constant, Constant, Integer, Constant, Integer)
+         ; xs_agent_3(Constant, Integer)
+         ; xs_agent_4(Constant, Constant)
+         ; xs_respond_swap_1(Constant)
+         ; xs_respond_swap_2(Constant).
+Context ::= ctx_agent_1 ; ctx_agent_2 ; ctx_agent_3 ; ctx_agent_4
+          ; ctx_respond_swap_1(Constant, Lot, Stream(Coin))
+          ; ctx_respond_swap_2(Constant, Lot, Stream(Coin)).
+
+%% =============================================================================
+%% Holdings
+%% =============================================================================
+
+%% K fresh coins of Issuer, serials from Serial up.
+procedure create_coins(Constant?, Integer?, Integer?, Stream(Coin)).
+create_coins(Issuer, K, Serial, [coin(Issuer?, Serial?)|Rest?]) :-
+    K? > 0 |
+    K1 := K? - 1,
+    S1 := Serial? + 1,
+    create_coins(Issuer?, K1?, S1?, Rest).
+create_coins(_, 0, _, []).
+
+procedure append_coins(Stream(Coin)?, Stream(Coin)?, Stream(Coin)).
+append_coins([C|Cs], Ys, [C?|Zs?]) :- append_coins(Cs?, Ys?, Zs).
+append_coins([], Ys, Ys?).
+
+%% K coins of Issuer out of the holdings: ok, with the coins and the rest; or
+%% fail --- the precondition cent^k_u in c_p of Section 3.4 does not hold ---
+%% with the coins found and the rest, which the caller puts back together.
+procedure select_coins(Constant?, Integer?, Stream(Coin)?, Constant, Stream(Coin), Stream(Coin)).
+select_coins(_, 0, Hs, ok, [], Hs?).
+select_coins(Issuer, K, [coin(I, S)|Rest], Status?, [coin(I?, S?)|Sel?], Rem?) :-
+    K? > 0, Issuer? =?= I? |
+    K1 := K? - 1,
+    select_coins(Issuer?, K1?, Rest?, Status, Sel, Rem).
+select_coins(Issuer, K, [C|Rest], Status?, Sel?, [C?|Rem?]) :-
+    otherwise |
+    select_coins(Issuer?, K?, Rest?, Status, Sel, Rem).
+select_coins(_, K, [], fail, [], []) :- K? > 0 | true.
+
+%% One coin of Issuer out of the holdings, or not_found with the holdings intact.
+procedure take_coin(Constant?, Stream(Coin)?, Found, Stream(Coin)).
+take_coin(Issuer, [coin(I, S)|Rest], found(coin(I?, S?)), Rest?) :-
+    Issuer? =?= I? | true.
+take_coin(Issuer, [C|Rest], Found?, [C?|Rem?]) :-
+    otherwise |
+    take_coin(Issuer?, Rest?, Found, Rem).
+take_coin(_, [], not_found, []).
+
+%% Whether every coin is the issuer's own.
+procedure own_coins(Constant?, Stream(Coin)?, Constant).
+own_coins(Id, [coin(I, _)|Rest], R?) :- Id? =?= I? | own_coins(Id?, Rest?, R).
+own_coins(_, [coin(_, _)|_], no) :- otherwise | true.
+own_coins(_, [], yes).
+
+procedure count_coins(Stream(Coin)?, Integer?, Integer).
+count_coins([_|Cs], N, M?) :- N1 := N? + 1, count_coins(Cs?, N1?, M).
+count_coins([], N, N?).
+
+%% The holdings tallied by issuer, in order of first appearance.
+procedure tally(Stream(Coin)?, Stream(Lot)?, Stream(Lot)).
+tally([coin(I, _)|Rest], Acc, Lots?) :-
+    ground(I?) |
+    tally_add(I?, Acc?, Acc1),
+    tally(Rest?, Acc1?, Lots).
+tally([], Acc, Acc?).
+
+procedure tally_add(Constant?, Stream(Lot)?, Stream(Lot)).
+tally_add(I, [lot(I2, N)|Rest], [lot(I2?, N1?)|Rest?]) :- I? =?= I2? | N1 := N? + 1.
+tally_add(I, [L|Rest], [L?|Rest1?]) :- otherwise | tally_add(I?, Rest?, Rest1).
+tally_add(I, [], [lot(I?, 1)]).
+
+%% The issuers of the coins held, one each, the holder's own apart: what an
+%% issuer discloses to a bearer whose presentation it cannot fulfil as named.
+procedure menu_of(Constant?, Stream(Coin)?, Stream(Constant)?, Stream(Constant)).
+menu_of(Id, [coin(I, _)|Rest], Acc, Menu?) :-
+    Id? =?= I? |
+    menu_of(Id?, Rest?, Acc?, Menu).
+menu_of(Id, [coin(I, _)|Rest], Acc, Menu?) :-
+    otherwise |
+    menu_add(I?, Acc?, Acc1),
+    menu_of(Id?, Rest?, Acc1?, Menu).
+menu_of(_, [], Acc, Acc?).
+
+procedure menu_add(Constant?, Stream(Constant)?, Stream(Constant)).
+menu_add(I, [I2|Rest], [I2?|Rest?]) :- I? =?= I2? | true.
+menu_add(I, [J|Rest], [J?|Rest1?]) :- otherwise | menu_add(I?, Rest?, Rest1).
+menu_add(I, [], [I?]).
+
+%% =============================================================================
+%% Channels to counterparties
+%% =============================================================================
+
+%% Whether a channel to Q is among the outputs.
+procedure has_peer(Constant?, Stream(OutputEntry)?, Stream(OutputEntry), Constant).
+has_peer(Q, [friend_output(K, Out?)|Rest], [friend_output(K?, Out)|Rest?], yes) :-
+    Q? =?= K? | true.
+has_peer(Q, [E|Rest], [E?|Rest1?], Known?) :-
+    otherwise |
+    has_peer(Q?, Rest?, Rest1, Known).
+has_peer(_, [], [], no).
+
+%% Adopt a channel to Q: its write side becomes Q's output entry and its read
+%% side joins the network input.  An established link adopts nothing.
+procedure adopt(Link?, Constant?, Stream(OutputEntry)?, Stream(OutputEntry), Stream(NetInMsg)?, Stream(NetInMsg)).
+adopt(link(ch(In, Out?)), Q, Outs, Outs1?, NetIn, NetIn1?) :-
+    ground(Q?) |
+    add_friend_output(Q?, Out, Outs?, Outs1),
+    merge(NetIn?, In?, NetIn1).
+adopt(linked, _, Outs, Outs?, NetIn, NetIn?).
+
+%% A channel held for a declined swap: its write side closes.  An established
+%% link stays.
+procedure drop_link(Link?).
+drop_link(link(ch(_, []))).
+drop_link(linked).
+
+%% =============================================================================
+%% Results injected into the agent's input
+%% =============================================================================
+
+%% The counterparty's answer to a proposed swap, when it comes, with the link
+%% the proposal was made on.
+procedure inject_swap_result(SwapResponse?, Constant?, Link?, Stream(UserInMsg)?, Stream(UserInMsg)).
+inject_swap_result(swap_accept(Coins), Q, Link, Ys, [swap_accepted(Q?, Coins?, Link?)|Ys?]) :-
+    ground(Q?), ground(Coins?) | true.
+inject_swap_result(swap_decline(Coins), Q, Link, Ys, [swap_declined_by(Q?, Coins?, Link?)|Ys?]) :-
+    ground(Q?), ground(Coins?) | true.
+inject_swap_result(R, Q, Link, [Y|Ys], [Y?|Ys1?]) :-
+    inject_swap_result(R?, Q?, Link?, Ys?, Ys1).
+
+%% The issuer's answer to a presentation, when it comes.
+procedure inject_redeem_result(RedeemResponse?, Constant?, Stream(UserInMsg)?, Stream(UserInMsg)).
+inject_redeem_result(redeem_give(C), Q, Ys, [redeem_given(Q?, C?)|Ys?]) :-
+    ground(Q?), ground(C?) | true.
+inject_redeem_result(redeem_menu(C, Issuers), Q, Ys, [redeem_menu_from(Q?, C?, Issuers?)|Ys?]) :-
+    ground(Q?), ground(C?), ground(Issuers?) | true.
+inject_redeem_result(redeem_declined(C), Q, Ys, [redeem_declined_by(Q?, C?)|Ys?]) :-
+    ground(Q?), ground(C?) | true.
+inject_redeem_result(R, Q, [Y|Ys], [Y?|Ys1?]) :-
+    inject_redeem_result(R?, Q?, Ys?, Ys1).
+
+%% The two bodies of the swap responder's accept clause: the acceptance, and
+%% the refusal the machine gives for a person who has not answered.  Each hands
+%% the agent the offer with the response writer and the link.
+procedure accept_answer(Constant?, Lot?, Stream(Coin)?, SwapResponse, Link?, Stream(UserInMsg)).
+accept_answer(From, Want, Offered, Resp?, Link, [accept_swap(From?, Want?, Offered?, Resp, Link?)]).
+
+procedure decline_answer(Constant?, Stream(Coin)?, SwapResponse, Link?, Stream(UserInMsg)).
+decline_answer(From, Offered, Resp?, Link, [decline_swap(From?, Offered?, Resp, Link?)]).
+
+%% Binding a declined swap's response: the offered coins go back.
+procedure decline(SwapResponse, Stream(Coin)?).
+decline(swap_decline(Coins?), Coins).
+
+%% =============================================================================
+%% The screen, and the outputs
+%% =============================================================================
+
+procedure show(ScreenContent?, Stream(OutputEntry)?, Stream(OutputEntry)).
+show(C, Outs, Outs1?) :- send_user(msg(agent, person, C?), Outs?, Outs1).
+
+procedure close_outputs(Stream(OutputEntry)?).
+close_outputs([user_output([])|Outs]) :- close_outputs(Outs?).
+close_outputs([net_output([])|Outs]) :- close_outputs(Outs?).
+close_outputs([friend_output(_, [])|Outs]) :- close_outputs(Outs?).
+close_outputs([]).
+
+%% =============================================================================
+%% Entry point: the village market of Section 5 of the paper
+%% =============================================================================
+
+imported procedure village#market.
+exported procedure village.
+village :- village # market.

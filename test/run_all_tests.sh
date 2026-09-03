@@ -2248,6 +2248,50 @@ check "Currencies credit line: at k_d=0 lender holds the full line plus interest
 echo ""
 
 # =============================================================================
+# Section N2: The coins program (programs/currencies/coins): the vGLP currency
+# agent of the Grassroots Currencies paper, its canonical compilation
+# coins_agent.glp (emitted by glpc :emit; the .vglp beside it is skipped by the
+# loader while the .glp stands), and the six-agent village market of the
+# paper's Section 5.  The run needs the reduction limit raised, and ends about
+# a minute after its last act, when the deadline timers of the answered swap
+# cards expire.
+# =============================================================================
+echo "=== Section N2: Coins program (Grassroots Currencies) ==="
+echo ""
+
+COINS="$GLP_DIR/programs/currencies/coins"
+
+n2_load=$("$REPL_RUN" <<HEREDOC
+$COINS
+:quit
+HEREDOC
+2>&1)
+
+check "Coins program loads" "Loaded program" "$n2_load"
+check_not "Coins program no type errors" "Type checking failed" "$n2_load"
+
+echo "--- Coins village market (village) ---"
+
+n2_run=$("$REPL_RUN" <<HEREDOC
+$COINS
+:limit 50000000
+village.
+:quit
+HEREDOC
+2>&1)
+
+check "Coins village: no runtime error" "→ suspended" "$n2_run"
+check_not "Coins village: no failed goal" "ERROR" "$n2_run"
+check "Coins village: Alice's holdings" "tagged(alice, holdings(\[lot(bob, 5), lot(alice, 8), lot(charlie, 15), lot(frank, 4)\]))" "$n2_run"
+check "Coins village: Bob's holdings" "tagged(bob, holdings(\[lot(alice, 10), lot(diana, 20)\]))" "$n2_run"
+check "Coins village: Charlie's holdings" "tagged(charlie, holdings(\[lot(alice, 10), lot(eve, 10), lot(charlie, 6), lot(frank, 5)\]))" "$n2_run"
+check "Coins village: Diana's holdings" "tagged(diana, holdings(\[lot(bob, 24), lot(frank, 13), lot(diana, 8)\]))" "$n2_run"
+check "Coins village: Eve's holdings" "tagged(eve, holdings(\[lot(charlie, 4), lot(frank, 1), lot(alice, 2), lot(bob, 10)\]))" "$n2_run"
+check "Coins village: Frank's holdings" "tagged(frank, holdings(\[lot(diana, 7), lot(eve, 10), lot(frank, 5)\]))" "$n2_run"
+check "Coins village: five redemptions" "tagged(frank, redeemed(diana, frank))" "$n2_run"
+echo ""
+
+# =============================================================================
 # Section O: Currencies Multi-Isolate Tests
 # =============================================================================
 

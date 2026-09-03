@@ -1,0 +1,332 @@
+%% coins_agent.vglp --- the currency agent of grassroots currencies, in vGLP.
+%%
+%% The program every participant runs, derived from the four transactions of
+%% Section 3.4 of "Grassroots Currencies: Turning Mutual Trust into Liquidity"
+%% --- Mint, Swap, Pay and Redeem --- one volition-guarded clause each, guarded
+%% where the transaction is guarded: Mint, Pay and Redeem at the one party whose
+%% election they are, Swap at both, the proposer by its request clause and the
+%% counterparty by the responder respond_swap.  Its compilation by the vGLP
+%% canonical compilation, the agent and its mediator, is coins_agent.glp beside
+%% this file (glpc :emit); the compiled module is not edited.
+%%
+%% The machine state of a party is its holdings, a multiset of coins, and the
+%% serial its next coin takes.  Two parties transact over a channel, and the
+%% first act between them carries it: a payment or a presentation, which the
+%% receiver owes, opens the channel at once; a swap opens it when the receiver
+%% accepts, and a declined swap opens none.
+%%
+%% The types, and the helpers over holdings and channels, are self.glp's.
+
+%% The four request clauses of agent and the two clauses of the swap responder,
+%% as the app renders them.
+display agent *(K) : panel(coins), label("Mint"), field(K, number), persistent.
+display agent *(Q, U, K, V, K1) : panel(coins), label("Swap"), field(Q, peer), field(U, peer), field(K, number), field(V, peer), field(K1, number), persistent.
+display agent *(Q, K) : panel(coins), label("Pay"), field(Q, peer), field(K, number), persistent.
+display agent *(Q, R) : panel(coins), label("Redeem"), field(Q, peer), field(R, peer), persistent.
+display respond_swap *(no, From?, Want?, Offered?) : panel(coins), label("Decline"), transient.
+display respond_swap *(yes, From?, Want?, Offered?) : panel(coins), label("Accept"), transient.
+display msg(agent, person, holdings(Lots)) : panel(coins), view(balances).
+
+%% =============================================================================
+%% The swap responder: one goal per arriving proposal, so proposals pend
+%% concurrently and are answered in any order.  Swap is guarded by both
+%% parties; this is the counterparty's guard.
+%% =============================================================================
+
+procedure respond_swap(SwapOffer?, Link?, SwapResponse, Stream(UserInMsg)).
+
+%% Decline: the offered coins go back to the proposer.
+*(no, From?, Want?, Offered?)
+respond_swap(offer(From, Want, Offered), Link, Resp?, [decline_swap(From?, Offered?, Resp, Link?)]) :-
+    ground(From?), ground(Want?), ground(Offered?) | true.
+
+%% Accept: the agent gives the wanted coins and takes the offered ones,
+%% declining itself when it does not hold the wanted coins.  Unanswered, the
+%% machine declines for the person.
+*(yes, From?, Want?, Offered?)
+respond_swap(offer(From, Want, Offered), Link, Resp?, Ans?) :-
+    ground(From?), ground(Want?), ground(Offered?) |
+    accept_answer(From?, Want?, Offered?, Resp, Link?, Ans)
+ *(no) decline_answer(From?, Offered?, Resp, Link?, Ans).
+
+%% =============================================================================
+%% The agent
+%% =============================================================================
+
+exported procedure agent(Constant?, Stream(UserInMsg)?, Stream(NetInMsg)?, Stream(OutputEntry)?, Stream(Coin)?, Integer?).
+
+%% --- Reactive: acts arriving from other agents ---
+
+%% First contact: the act carries the sender's channel to me.
+agent(Id, UserIn, [msg(Id1, call(From, Act, Ch))|NetIn], Outs, Holdings, Serial) :-
+    Id? =?= Id1?, ground(From?) |
+    on_act(Act?, link(Ch?), From?, Id?, UserIn?, NetIn?, Outs?, Holdings?, Serial?).
+
+%% An act on an established channel.
+agent(Id, UserIn, [msg(From, Id1, Act)|NetIn], Outs, Holdings, Serial) :-
+    Id? =?= Id1?, ground(From?) |
+    on_act(Act?, linked, From?, Id?, UserIn?, NetIn?, Outs?, Holdings?, Serial?).
+
+%% Anything else on the network is dropped.
+agent(Id, UserIn, [_|NetIn], Outs, Holdings, Serial) :-
+    ground(Id?), otherwise |
+    agent(Id?, UserIn?, NetIn?, Outs?, Holdings?, Serial?).
+
+%% --- Reactive: the person's answers to swap offers, and the results of the
+%% acts this agent proposed, on its own input ---
+
+%% The person accepted a proposed swap (respond_swap): give the wanted coins and
+%% take the offered ones, if the wanted coins are held.
+agent(Id, [accept_swap(From, lot(V, K), Offered, Resp?, Link)|UserIn], NetIn, Outs, Holdings, Serial) :-
+    ground(Id?), ground(From?), ground(V?), integer(K?) |
+    select_coins(V?, K?, Holdings?, Status, Give, Rest),
+    fill_swap(Status?, Id?, From?, Resp, Give?, Offered?, Rest?, Link?, UserIn?, NetIn?, Outs?, Serial?).
+
+%% The person declined one.
+agent(Id, [decline_swap(From, Offered, Resp?, Link)|UserIn], NetIn, Outs, Holdings, Serial) :-
+    ground(Id?), ground(From?) |
+    decline(Resp, Offered?),
+    drop_link(Link?),
+    show(declined(From?), Outs?, Outs1),
+    agent(Id?, UserIn?, NetIn?, Outs1?, Holdings?, Serial?).
+
+%% My proposal was accepted: the counterparty's coins are mine.
+agent(Id, [swap_accepted(Q, Coins, Link)|UserIn], NetIn, Outs, Holdings, Serial) :-
+    ground(Id?), ground(Q?), ground(Coins?) |
+    adopt(Link?, Q?, Outs?, Outs1, NetIn?, NetIn1),
+    append_coins(Holdings?, Coins?, Holdings1),
+    show(swap_done(Q?), Outs1?, Outs2),
+    after_change(Id?, UserIn?, NetIn1?, Outs2?, Holdings1?, Serial?).
+
+%% My proposal was declined: my coins come back, and a channel held for it closes.
+agent(Id, [swap_declined_by(Q, Coins, Link)|UserIn], NetIn, Outs, Holdings, Serial) :-
+    ground(Id?), ground(Q?), ground(Coins?) |
+    drop_link(Link?),
+    append_coins(Holdings?, Coins?, Holdings1),
+    show(swap_declined(Q?), Outs?, Outs1),
+    after_change(Id?, UserIn?, NetIn?, Outs1?, Holdings1?, Serial?).
+
+%% My presentation was fulfilled: the coin taken is mine.
+agent(Id, [redeem_given(Q, coin(R, S))|UserIn], NetIn, Outs, Holdings, Serial) :-
+    ground(Id?), ground(Q?), ground(R?), ground(S?) |
+    append_coins(Holdings?, [coin(R?, S?)], Holdings1),
+    show(redeemed(Q?, R?), Outs?, Outs1),
+    after_change(Id?, UserIn?, NetIn?, Outs1?, Holdings1?, Serial?).
+
+%% The issuer holds no coin of the issuer I named: my coin is back, with the
+%% issuers of the coins it does hold, to choose among.
+agent(Id, [redeem_menu_from(Q, Coin, Issuers)|UserIn], NetIn, Outs, Holdings, Serial) :-
+    ground(Id?), ground(Q?), ground(Coin?), ground(Issuers?) |
+    append_coins(Holdings?, [Coin?], Holdings1),
+    show(menu(Q?, Issuers?), Outs?, Outs1),
+    after_change(Id?, UserIn?, NetIn?, Outs1?, Holdings1?, Serial?).
+
+%% The coin I presented was not the issuer's: back.
+agent(Id, [redeem_declined_by(Q, Coin)|UserIn], NetIn, Outs, Holdings, Serial) :-
+    ground(Id?), ground(Q?), ground(Coin?) |
+    append_coins(Holdings?, [Coin?], Holdings1),
+    show(refused(Q?), Outs?, Outs1),
+    after_change(Id?, UserIn?, NetIn?, Outs1?, Holdings1?, Serial?).
+
+%% Anything else on the input is dropped.
+agent(Id, [_|UserIn], NetIn, Outs, Holdings, Serial) :-
+    ground(Id?), otherwise |
+    agent(Id?, UserIn?, NetIn?, Outs?, Holdings?, Serial?).
+
+%% --- Volitional: the four transactions of Section 3.4, at the party whose
+%% election they are.  Request clauses, perpetually pending, after every
+%% otherwise clause of the procedure. ---
+
+%% Mint_p(k), guarded by p: c'_p = c_p + cent^k_p.
+*(K)
+agent(Id, UserIn, NetIn, Outs, Holdings, Serial) :-
+    ground(Id?), integer(K?), K? >= 1 |
+    create_coins(Id?, K?, Serial?, New),
+    Serial1 := Serial? + K?,
+    append_coins(Holdings?, New?, Holdings1),
+    show(minted(K?), Outs?, Outs1),
+    after_change(Id?, UserIn?, NetIn?, Outs1?, Holdings1?, Serial1?).
+
+%% Swap_{p,q}(cent^k_u, cent^{k'}_v), guarded by both: p proposes, giving k
+%% u-coins for k' v-coins, and q answers by respond_swap.  The precondition at
+%% p, cent^k_u in c_p, is the selection; q's part of it is q's.
+*(Q, U, K, V, K1)
+agent(Id, UserIn, NetIn, Outs, Holdings, Serial) :-
+    ground(Id?), ground(Q?), ground(U?), integer(K?), K? >= 1, ground(V?), integer(K1?), K1? >= 1 |
+    select_coins(U?, K?, Holdings?, Status, Give, Rest),
+    propose_swap(Status?, Id?, Q?, lot(U?, K?), lot(V?, K1?), Give?, Rest?, UserIn?, NetIn?, Outs?, Serial?).
+
+%% Pay_{p,q}(k), guarded by p: k q-coins to q, which q accepts (clause 3 of the
+%% contract).  The precondition cent^k_q in c_p is the selection.
+*(Q, K)
+agent(Id, UserIn, NetIn, Outs, Holdings, Serial) :-
+    ground(Id?), ground(Q?), integer(K?), K? >= 1 |
+    select_coins(Q?, K?, Holdings?, Status, Give, Rest),
+    do_pay(Status?, Id?, Q?, K?, Give?, Rest?, UserIn?, NetIn?, Outs?, Serial?).
+
+%% Redeem_{p,q}(r), guarded by p: a q-coin presented to q for an r-coin q holds
+%% (clause 4).  The precondition cent_q in c_p is the selection; cent_r in c_q
+%% is tested at q, which discloses what it holds where it fails.
+*(Q, R)
+agent(Id, UserIn, NetIn, Outs, Holdings, Serial) :-
+    ground(Id?), ground(Q?), ground(R?) |
+    take_coin(Q?, Holdings?, Found, Rest),
+    do_redeem(Found?, Id?, Q?, R?, Rest?, UserIn?, NetIn?, Outs?, Serial?).
+
+%% =============================================================================
+%% An arriving act, on the channel it came on or opened
+%% =============================================================================
+
+procedure on_act(PeerContent?, Link?, Constant?, Constant?, Stream(UserInMsg)?, Stream(NetInMsg)?, Stream(OutputEntry)?, Stream(Coin)?, Integer?).
+
+%% Pay_{p,q}(k) at q: the coins are q's own, so they are taken; the channel of
+%% a first contact is adopted.
+on_act(pay(Coins), Link, From, Id, UserIn, NetIn, Outs, Holdings, Serial) :-
+    ground(Coins?) |
+    adopt(Link?, From?, Outs?, Outs1, NetIn?, NetIn1),
+    own_coins(Id?, Coins?, Own),
+    take_payment(Own?, Id?, From?, Coins?, UserIn?, NetIn1?, Outs1?, Holdings?, Serial?).
+
+%% Redeem_{p,q}(r) at q: the presented coin is taken back and an r-coin given.
+on_act(redeem(Coin, R, Resp?), Link, From, Id, UserIn, NetIn, Outs, Holdings, Serial) :-
+    ground(Coin?), ground(R?) |
+    adopt(Link?, From?, Outs?, Outs1, NetIn?, NetIn1),
+    fulfil(Coin?, R?, Resp, Id?, From?, UserIn?, NetIn1?, Outs1?, Holdings?, Serial?).
+
+%% Swap at q: a responder poses it to the person; the answer reaches the agent
+%% on its input.
+on_act(swap(Want, Offered, Resp?), Link, From, Id, UserIn, NetIn, Outs, Holdings, Serial) :-
+    ground(Want?), ground(Offered?) |
+    respond_swap(offer(From?, Want?, Offered?), Link?, Resp, Ans),
+    merge(Ans?, UserIn?, UserIn1),
+    agent(Id?, UserIn1?, NetIn?, Outs?, Holdings?, Serial?).
+
+%% Coins returned by a party they were not a payment to.
+on_act(return(Coins), _, From, Id, UserIn, NetIn, Outs, Holdings, Serial) :-
+    ground(Coins?) |
+    append_coins(Holdings?, Coins?, Holdings1),
+    count_coins(Coins?, 0, K),
+    show(returned(From?, K?), Outs?, Outs1),
+    after_change(Id?, UserIn?, NetIn?, Outs1?, Holdings1?, Serial?).
+
+%% A payment of my own coins is taken; coins that are not mine are no payment
+%% of clause 3, and go back.
+procedure take_payment(Constant?, Constant?, Constant?, Stream(Coin)?, Stream(UserInMsg)?, Stream(NetInMsg)?, Stream(OutputEntry)?, Stream(Coin)?, Integer?).
+take_payment(yes, Id, From, Coins, UserIn, NetIn, Outs, Holdings, Serial) :-
+    ground(Coins?) |
+    append_coins(Holdings?, Coins?, Holdings1),
+    count_coins(Coins?, 0, K),
+    show(received(From?, K?), Outs?, Outs1),
+    after_change(Id?, UserIn?, NetIn?, Outs1?, Holdings1?, Serial?).
+take_payment(no, Id, From, Coins, UserIn, NetIn, Outs, Holdings, Serial) :-
+    send_friend(From?, msg(Id?, From?, return(Coins?)), Outs?, Outs1),
+    agent(Id?, UserIn?, NetIn?, Outs1?, Holdings?, Serial?).
+
+%% A presentation: my coin is taken back and an R-coin given, if held; else the
+%% coin goes back with the issuers of the coins I hold; a coin not mine goes back.
+procedure fulfil(Coin?, Constant?, RedeemResponse, Constant?, Constant?, Stream(UserInMsg)?, Stream(NetInMsg)?, Stream(OutputEntry)?, Stream(Coin)?, Integer?).
+fulfil(coin(I, S), R, Resp?, Id, From, UserIn, NetIn, Outs, Holdings, Serial) :-
+    I? =?= Id? |
+    take_coin(R?, Holdings?, Found, Rest),
+    give(Found?, coin(I?, S?), R?, Resp, Id?, From?, UserIn?, NetIn?, Outs?, Rest?, Serial?).
+fulfil(coin(I, S), _, redeem_declined(coin(I?, S?)), Id, From, UserIn, NetIn, Outs, Holdings, Serial) :-
+    otherwise |
+    show(refused(From?), Outs?, Outs1),
+    agent(Id?, UserIn?, NetIn?, Outs1?, Holdings?, Serial?).
+
+procedure give(Found?, Coin?, Constant?, RedeemResponse, Constant?, Constant?, Stream(UserInMsg)?, Stream(NetInMsg)?, Stream(OutputEntry)?, Stream(Coin)?, Integer?).
+give(found(C), Mine, R, redeem_give(C?), Id, From, UserIn, NetIn, Outs, Rest, Serial) :-
+    append_coins(Rest?, [Mine?], Holdings1),
+    show(presented(From?, R?), Outs?, Outs1),
+    after_change(Id?, UserIn?, NetIn?, Outs1?, Holdings1?, Serial?).
+give(not_found, Mine, R, redeem_menu(Mine?, Menu?), Id, From, UserIn, NetIn, Outs, Rest, Serial) :-
+    ground(Rest?) |
+    menu_of(Id?, Rest?, [], Menu),
+    show(unfulfilled(From?, R?), Outs?, Outs1),
+    agent(Id?, UserIn?, NetIn?, Outs1?, Rest?, Serial?).
+
+%% An accepted swap is filled: the wanted coins go and the offered ones come,
+%% and the channel of a first contact is adopted; wanted coins not held decline
+%% it, and the channel held for it closes.
+procedure fill_swap(Constant?, Constant?, Constant?, SwapResponse, Stream(Coin)?, Stream(Coin)?, Stream(Coin)?, Link?, Stream(UserInMsg)?, Stream(NetInMsg)?, Stream(OutputEntry)?, Integer?).
+fill_swap(ok, Id, From, swap_accept(Give?), Give, Offered, Rest, Link, UserIn, NetIn, Outs, Serial) :-
+    adopt(Link?, From?, Outs?, Outs1, NetIn?, NetIn1),
+    append_coins(Rest?, Offered?, Holdings1),
+    show(swap_done(From?), Outs1?, Outs2),
+    after_change(Id?, UserIn?, NetIn1?, Outs2?, Holdings1?, Serial?).
+fill_swap(fail, Id, From, swap_decline(Offered?), Give, Offered, Rest, Link, UserIn, NetIn, Outs, Serial) :-
+    drop_link(Link?),
+    append_coins(Give?, Rest?, Orig),
+    show(swap_failed(From?), Outs?, Outs1),
+    agent(Id?, UserIn?, NetIn?, Outs1?, Orig?, Serial?).
+
+%% =============================================================================
+%% The acts this agent proposes
+%% =============================================================================
+
+%% Swap: the proposal, with the coins given set aside until the answer.
+procedure propose_swap(Constant?, Constant?, Constant?, Lot?, Lot?, Stream(Coin)?, Stream(Coin)?, Stream(UserInMsg)?, Stream(NetInMsg)?, Stream(OutputEntry)?, Integer?).
+propose_swap(ok, Id, Q, _, Want, Give, Rest, UserIn, NetIn, Outs, Serial) :-
+    ground(Q?), ground(Want?), ground(Give?) |
+    has_peer(Q?, Outs?, Outs1, Known),
+    send_swap(Known?, Id?, Q?, Want?, Give?, Outs1?, Outs2, UserIn?, UserIn1),
+    after_change(Id?, UserIn1?, NetIn?, Outs2?, Rest?, Serial?).
+propose_swap(fail, Id, Q, lot(U, K), _, Give, Rest, UserIn, NetIn, Outs, Serial) :-
+    append_coins(Give?, Rest?, Orig),
+    show(lacking(U?, K?), Outs?, Outs1),
+    agent(Id?, UserIn?, NetIn?, Outs1?, Orig?, Serial?).
+
+%% On the channel to Q, or as a first contact, holding my end of the channel
+%% until Q answers.
+procedure send_swap(Constant?, Constant?, Constant?, Lot?, Stream(Coin)?, Stream(OutputEntry)?, Stream(OutputEntry), Stream(UserInMsg)?, Stream(UserInMsg)).
+send_swap(yes, Id, Q, Want, Give, Outs, Outs1?, UserIn, UserIn1?) :-
+    ground(Q?) |
+    send_friend(Q?, msg(Id?, Q?, swap(Want?, Give?, Resp)), Outs?, Outs1),
+    inject_swap_result(Resp?, Q?, linked, UserIn?, UserIn1).
+send_swap(no, Id, Q, Want, Give, Outs, Outs1?, UserIn, UserIn1?) :-
+    ground(Q?), new_channel(TheirEnd, MyEnd) |
+    send_net(msg(Q?, call(Id?, swap(Want?, Give?, Resp), TheirEnd?)), Outs?, Outs1),
+    inject_swap_result(Resp?, Q?, link(MyEnd?), UserIn?, UserIn1).
+
+%% Pay: the coins go to Q.
+procedure do_pay(Constant?, Constant?, Constant?, Integer?, Stream(Coin)?, Stream(Coin)?, Stream(UserInMsg)?, Stream(NetInMsg)?, Stream(OutputEntry)?, Integer?).
+do_pay(ok, Id, Q, K, Give, Rest, UserIn, NetIn, Outs, Serial) :-
+    ground(Q?) |
+    has_peer(Q?, Outs?, Outs1, Known),
+    send_owed(Known?, Id?, Q?, pay(Give?), Outs1?, Outs2, NetIn?, NetIn1),
+    show(paid(Q?, K?), Outs2?, Outs3),
+    after_change(Id?, UserIn?, NetIn1?, Outs3?, Rest?, Serial?).
+do_pay(fail, Id, Q, K, Give, Rest, UserIn, NetIn, Outs, Serial) :-
+    append_coins(Give?, Rest?, Orig),
+    show(lacking(Q?, K?), Outs?, Outs1),
+    agent(Id?, UserIn?, NetIn?, Outs1?, Orig?, Serial?).
+
+%% Redeem: the coin is presented to Q, with the issuer wanted.
+procedure do_redeem(Found?, Constant?, Constant?, Constant?, Stream(Coin)?, Stream(UserInMsg)?, Stream(NetInMsg)?, Stream(OutputEntry)?, Integer?).
+do_redeem(found(C), Id, Q, R, Rest, UserIn, NetIn, Outs, Serial) :-
+    ground(Q?) |
+    has_peer(Q?, Outs?, Outs1, Known),
+    send_owed(Known?, Id?, Q?, redeem(C?, R?, Resp), Outs1?, Outs2, NetIn?, NetIn1),
+    inject_redeem_result(Resp?, Q?, UserIn?, UserIn1),
+    after_change(Id?, UserIn1?, NetIn1?, Outs2?, Rest?, Serial?).
+do_redeem(not_found, Id, Q, _, Holdings, UserIn, NetIn, Outs, Serial) :-
+    show(lacking(Q?, 1), Outs?, Outs1),
+    agent(Id?, UserIn?, NetIn?, Outs1?, Holdings?, Serial?).
+
+%% An act Q owes: on the channel to Q, or as a first contact, adopting my end
+%% of the channel at once.
+procedure send_owed(Constant?, Constant?, Constant?, PeerContent?, Stream(OutputEntry)?, Stream(OutputEntry), Stream(NetInMsg)?, Stream(NetInMsg)).
+send_owed(yes, Id, Q, Act, Outs, Outs1?, NetIn, NetIn?) :-
+    send_friend(Q?, msg(Id?, Q?, Act?), Outs?, Outs1).
+send_owed(no, Id, Q, Act, Outs, Outs2?, NetIn, NetIn1?) :-
+    ground(Q?), new_channel(TheirEnd, MyEnd) |
+    send_net(msg(Q?, call(Id?, Act?, TheirEnd?)), Outs?, Outs1),
+    adopt(link(MyEnd?), Q?, Outs1?, Outs2, NetIn?, NetIn1).
+
+%% After a change of holdings: the screen shows them, and the agent continues.
+procedure after_change(Constant?, Stream(UserInMsg)?, Stream(NetInMsg)?, Stream(OutputEntry)?, Stream(Coin)?, Integer?).
+after_change(Id, UserIn, NetIn, Outs, Holdings, Serial) :-
+    ground(Holdings?) |
+    tally(Holdings?, [], Lots),
+    show(holdings(Lots?), Outs?, Outs1),
+    agent(Id?, UserIn?, NetIn?, Outs1?, Holdings?, Serial?).
