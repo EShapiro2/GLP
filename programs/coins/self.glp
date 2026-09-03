@@ -103,29 +103,36 @@ SwapOffer ::= offer(Constant, Lot, Stream(Coin)).
 %% =============================================================================
 
 ReqId ::= req(Integer).
-Reply ::= then(Answer) ; else.
-Slot ::= none ; ask(Reply, ReqId).
+Slot(R) ::= none ; ask(R, ReqId).
 Deadline ::= deadline ; no_deadline.
-AgentMsg ::= ask(Constant, Context, Reply?, ReqId?, Deadline) ; abort(ReqId).
+AgentMsg ::= ask(Constant, Context, Escrow, ReqId?, Deadline) ; abort(ReqId).
 Card ::= card(Constant, Context, ReqId) ; closed(ReqId).
 UserAnswer ::= answer(ReqId, Answer).
-PendingEntry ::= pending(ReqId, Reply?).
+PendingEntry ::= pending(ReqId, Escrow).
 PendingList ::= [] ; [PendingEntry | PendingList].
 Timeout ::= timeout(ReqId).
 TimerStream ::= [] ; [Timeout | TimerStream].
 
-%% One alternative per volition-guarded clause of the agent: its four request
-%% clauses --- mint, swap, pay, redeem, in the order of Section 3.4 --- and the
-%% decline and accept clauses of the swap responder.
-Answer ::= xs_agent_1(Integer)
-         ; xs_agent_2(Constant, Constant, Integer, Constant, Integer)
-         ; xs_agent_3(Constant, Integer)
-         ; xs_agent_4(Constant, Constant)
-         ; xs_respond_swap_1(Constant)
-         ; xs_respond_swap_2(Constant).
-Context ::= ctx_agent_1 ; ctx_agent_2 ; ctx_agent_3 ; ctx_agent_4
-          ; ctx_respond_swap_1(Constant, Lot, Stream(Coin))
-          ; ctx_respond_swap_2(Constant, Lot, Stream(Coin)).
+%% One alternative per volition-guarded clause of the agent, its reply type
+%% and its escrow, as the compilation emits them --- Answer and Context with
+%% the alternatives written out, which the compiled module names.
+Xs_respond_swap_1 ::= xs_respond_swap_1(Constant).
+Reply_respond_swap_1 ::= then(Xs_respond_swap_1).
+Ctx_respond_swap_1 ::= ctx_respond_swap_1(Constant, Lot, Stream(Coin)).
+Xs_respond_swap_2 ::= xs_respond_swap_2(Constant).
+Reply_respond_swap_2 ::= then(Xs_respond_swap_2) ; else.
+Ctx_respond_swap_2 ::= ctx_respond_swap_2(Constant, Lot, Stream(Coin)).
+Xs_agent_1 ::= xs_agent_1(Integer).
+Reply_agent_1 ::= then(Xs_agent_1).
+Xs_agent_2 ::= xs_agent_2(Constant, Constant, Integer, Constant, Integer).
+Reply_agent_2 ::= then(Xs_agent_2).
+Xs_agent_3 ::= xs_agent_3(Constant, Integer).
+Reply_agent_3 ::= then(Xs_agent_3).
+Xs_agent_4 ::= xs_agent_4(Constant, Constant).
+Reply_agent_4 ::= then(Xs_agent_4).
+Answer ::= xs_respond_swap_1(Constant) ; xs_respond_swap_2(Constant) ; xs_agent_1(Integer) ; xs_agent_2(Constant, Constant, Integer, Constant, Integer) ; xs_agent_3(Constant, Integer) ; xs_agent_4(Constant, Constant).
+Escrow ::= esc_respond_swap_1(Reply_respond_swap_1?) ; esc_respond_swap_2(Reply_respond_swap_2?) ; esc_agent_1(Reply_agent_1?) ; esc_agent_2(Reply_agent_2?) ; esc_agent_3(Reply_agent_3?) ; esc_agent_4(Reply_agent_4?).
+Context ::= ctx_respond_swap_1(Constant, Lot, Stream(Coin)) ; ctx_respond_swap_2(Constant, Lot, Stream(Coin)) ; ctx_agent_1 ; ctx_agent_2 ; ctx_agent_3 ; ctx_agent_4.
 
 %% =============================================================================
 %% Holdings

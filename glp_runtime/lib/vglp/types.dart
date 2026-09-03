@@ -33,8 +33,10 @@ import '../analysis/type_checker/type_ast.dart';
 import '../analysis/type_checker/type_environment_builder.dart';
 import '../analysis/type_checker/param_expansion.dart';
 
-/// The name a compiled program gives its answer type and its context type.
+/// The names a compiled program gives its answer type, its escrow type and
+/// its context type.
 const answerTypeName = 'Answer';
+const escrowTypeName = 'Escrow';
 const contextTypeName = 'Context';
 
 /// One volition-guarded clause of M, with the identity the compilation gives
@@ -44,14 +46,20 @@ class ClauseTypes {
   /// volition-guarded clause of the procedure.
   final String name;
 
-  /// `Xs_C ::= xs(t1, ..., ti)`; null where the clause's question is empty, in
-  /// which case the ask carries `xs` and contributes no alternative.
-  final TypeDef? answer;
+  /// `Xs_C ::= xs_C(t1, ..., ti)`, or `Xs_C ::= xs_C` where the question is
+  /// empty.
+  final TypeDef answer;
 
-  /// `Ctx_C ::= ctx(t'1, ..., t'j)`; null where the clause has no context.
+  /// `Reply_C ::= then(Xs_C) ; else` where C has an else-branch, and
+  /// `Reply_C ::= then(Xs_C)` where not: a slot admits exactly the replies
+  /// its clause can receive.
+  final TypeDef reply;
+
+  /// `Ctx_C ::= ctx_C(t'1, ..., t'j)`; null where the clause has no context,
+  /// in which case the ask carries the bare constant `ctx_C`.
   final TypeDef? context;
 
-  ClauseTypes(this.name, this.answer, this.context);
+  ClauseTypes(this.name, this.answer, this.reply, this.context);
 }
 
 /// The types the compilation of [module] adds, and the rewritten procedure
@@ -75,6 +83,7 @@ CompiledTypes compileTypes(ast.Module module,
   final byClause = <String, ClauseTypes>{};
   final added = <TypeDef>[];
   final answerAlts = <TypeExpr>[];
+  final escrowAlts = <TypeExpr>[];
   final contextAlts = <TypeExpr>[];
 
   for (final proc in module.procedures) {
@@ -91,23 +100,33 @@ CompiledTypes compileTypes(ast.Module module,
       // ctx_C: the program's answer type is a union over its clauses, and a
       // union's top-level functors must be distinct, so two clauses whose
       // questions have the same length cannot both contribute `xs/i`.
-      TypeDef? answer;
-      if (q.isNotEmpty) {
-        final typeName = 'Xs_$name';
-        answer = TypeDef(typeName, [
-          StructAlt('xs_$name', [
-            for (final pos in q)
-              pos.writer == null
-                  ? _typeOfValue(pos.value!, c)
-                  : _typeOfVariable(pos.writer!.name, c, env, name)
-          ], c.line, c.column)
-        ], c.line, c.column);
-        added.add(answer);
-        answerAlts.add(TypeRef(typeName, c.line, c.column));
-      } else {
-        // An empty question still asks, carrying the bare constant xs_C.
-        answerAlts.add(ConstantAlt('xs_$name', c.line, c.column));
-      }
+      // An empty question still asks, carrying the bare constant xs_C, which
+      // is then the type's one alternative.
+      final answer = TypeDef('Xs_$name', [
+        q.isEmpty
+            ? ConstantAlt('xs_$name', c.line, c.column)
+            : StructAlt('xs_$name', [
+                for (final pos in q)
+                  pos.writer == null
+                      ? _typeOfValue(pos.value!, c)
+                      : _typeOfVariable(pos.writer!.name, c, env, name)
+              ], c.line, c.column)
+      ], c.line, c.column);
+      added.add(answer);
+      answerAlts.add(TypeRef('Xs_$name', c.line, c.column));
+
+      // The reply type admits exactly what the clause can receive: the
+      // then-branch with its answer, and else only where it has an else-branch.
+      final reply = TypeDef('Reply_$name', [
+        StructAlt('then', [TypeRef('Xs_$name', c.line, c.column)],
+            c.line, c.column),
+        if (c.elseBranch != null) ConstantAlt('else', c.line, c.column),
+      ], c.line, c.column);
+      added.add(reply);
+      // The escrow names the clause and holds the writer of its reply.
+      escrowAlts.add(StructAlt('esc_$name',
+          [TypeRef('Reply_$name', c.line, c.column, isInput: true)],
+          c.line, c.column));
 
       TypeDef? context;
       if (ctx.isNotEmpty) {
@@ -123,12 +142,13 @@ CompiledTypes compileTypes(ast.Module module,
         contextAlts.add(ConstantAlt('ctx_$name', c.line, c.column));
       }
 
-      byClause[name] = ClauseTypes(name, answer, context);
+      byClause[name] = ClauseTypes(name, answer, reply, context);
     }
   }
 
   if (byClause.isNotEmpty) {
     added.add(TypeDef(answerTypeName, answerAlts, 0, 0));
+    added.add(TypeDef(escrowTypeName, escrowAlts, 0, 0));
     added.add(TypeDef(contextTypeName, contextAlts, 0, 0));
   }
 
@@ -137,8 +157,9 @@ CompiledTypes compileTypes(ast.Module module,
 
 /// Each procedure declaration of M with the added arguments: the mediator
 /// channel first, then one slot per volition-guarded clause of the procedure,
-/// in the order of the compiled head.  Both are input positions: the caller
-/// supplies the channel it holds and the slots the goal carries.
+/// in the order of the compiled head, the j-th typed `Slot(Reply_Cj)` by its
+/// own clause's reply type.  Both are input positions: the caller supplies
+/// the channel it holds and the slots the goal carries.
 List<ProcDecl> _rewriteDeclarations(ast.Module module) {
   final slots = <String, int>{
     for (final p in module.procedures)
@@ -158,8 +179,10 @@ List<ProcDecl> _rewriteDeclarations(ast.Module module) {
       [
         medChannelType(isInput: true),
         ...d.argTypes,
-        // The slot type is the vocabulary's, instantiated: monomorphic.
-        for (var k = 0; k < m; k++) TypeRef('Slot', 0, 0, isInput: true),
+        for (var k = 0; k < m; k++)
+          TypeRef('Slot', 0, 0, isInput: true, typeArgs: [
+            TypeRef('Reply_${d.name}_${k + 1}', 0, 0),
+          ]),
       ],
       d.line,
       d.column,

@@ -32,14 +32,20 @@ void main() {
     test('every procedure the Definition names is there', () {
       final names = source.clauses.procedures.map((p) => p.name).toSet();
       expect(names, containsAll(
-          ['med', 'timer', 'deadline', 'answer', 'close', 'aborts', 'med_split']));
+          ['med', 'timer', 'deadline', 'answer', 'close', 'drop', 'abort',
+           'med_split']));
     });
   });
 
   group('instantiation', () {
     test('the answer parameter becomes the program\'s answer type', () {
-      final reply = med.typeDefs.firstWhere((d) => d.name == 'Reply');
-      expect(printTypeDef(reply), 'Reply ::= then($answerTypeName) ; else.');
+      final ua = med.typeDefs.firstWhere((d) => d.name == 'UserAnswer');
+      expect(printTypeDef(ua), 'UserAnswer ::= answer(ReqId, $answerTypeName).');
+    });
+
+    test('the escrow parameter becomes the program\'s escrow type', () {
+      final pe = med.typeDefs.firstWhere((d) => d.name == 'PendingEntry');
+      expect(printTypeDef(pe), 'PendingEntry ::= pending(ReqId, $escrowTypeName).');
     });
 
     test('the context parameter becomes the program\'s context type', () {
@@ -48,21 +54,27 @@ void main() {
       expect(printTypeDef(agentMsg), isNot(contains('(X)')));
     });
 
-    test('an instantiated definition is monomorphic', () {
-      for (final d in med.typeDefs) {
+    test('a definition parameterised in A, E and X alone is monomorphic', () {
+      for (final d in med.typeDefs.where((d) => d.name != 'Slot')) {
         expect(d.typeParams, isEmpty, reason: '${d.name} kept a parameter');
       }
     });
 
-    test('an instantiated declaration is monomorphic too', () {
+    test('Slot keeps its own parameter, instantiated per slot', () {
+      final slot = med.typeDefs.firstWhere((d) => d.name == 'Slot');
+      expect(printTypeDef(slot), 'Slot(R) ::= none ; ask(R, ReqId).');
+    });
+
+    test('a declaration keeps only its own parameter', () {
       for (final d in med.procDecls) {
-        expect(d.typeParams, isEmpty, reason: '${d.name} kept a parameter');
+        expect(d.typeParams, d.name == 'abort' ? ['R'] : isEmpty,
+            reason: d.name);
       }
     });
 
-    test('no type parameter survives anywhere in the emitted vocabulary', () {
+    test('no program parameter survives anywhere in the emitted vocabulary', () {
       final text = med.typeDefs.map(printTypeDef).join('\n');
-      expect(text, isNot(matches(RegExp(r'\b[AX]\b'))));
+      expect(text, isNot(matches(RegExp(r'\b[AEX]\b'))));
     });
 
     test('the mediator channel type of a compiled goal matches the emitted one',
@@ -74,14 +86,14 @@ void main() {
     });
 
     test('a reference to an instantiated type drops its arguments', () {
-      // Slot(A) is monomorphic once instantiated, so a reference to it inside
-      // the vocabulary, Reply(A) in Slot, is bare too: a reference that kept
-      // its arguments would name a type that no longer exists.
-      final slot = med.typeDefs.firstWhere((d) => d.name == 'Slot');
-      expect(printTypeDef(slot), 'Slot ::= none ; ask(Reply, ReqId).');
+      // PendingList(E) is monomorphic once instantiated, so a reference to it,
+      // PendingEntry(E) inside it, is bare too: a reference that kept its
+      // arguments would name a type that no longer exists.
+      final pl = med.typeDefs.firstWhere((d) => d.name == 'PendingList');
+      expect(printTypeDef(pl), 'PendingList ::= [] ; [PendingEntry | PendingList].');
       final agentMsg = med.typeDefs.firstWhere((d) => d.name == 'AgentMsg');
       expect(printTypeDef(agentMsg),
-          'AgentMsg ::= ask(Constant, $contextTypeName, Reply?, ReqId?, Deadline)'
+          'AgentMsg ::= ask(Constant, $contextTypeName, $escrowTypeName, ReqId?, Deadline)'
           ' ; abort(ReqId).');
     });
 
@@ -130,11 +142,27 @@ void main() {
       // fails at run time; the paper writes Id = req(N?).
       final text = printProcedures(med.procedures);
       expect(text, contains('Id = req(N?)'));
-      expect(text, contains('R = then(Vs?)'));
-      expect(text, contains('R = else'));
       expect(text, isNot(contains(':= req(')));
-      expect(text, isNot(contains(':= then(')));
-      expect(text, isNot(contains(':= else')));
+    });
+
+    test('the abort clause drops the entry unbound, the timeout closes it', () {
+      final medProc = med.procedures.firstWhere((p) => p.name == 'med');
+      final text = printProcedures([medProc]);
+      expect(text, contains('receive(abort(ReqId), AgentCh?, AgentCh1)'));
+      expect(text, contains('drop(ReqId?, Ps?, Ps1)'));
+      expect(text, contains('close(ReqId?, Ps?, Ps1)'));
+      expect(text, contains('[pending(req(N?), Esc?) | Ps?]'));
+    });
+
+    test('the pending table\'s search clauses are the generic source\'s', () {
+      // The clauses that match an entry are the program's, emitted ahead of
+      // these; the source carries only the otherwise-recursion and [].
+      final answer = med.procedures.firstWhere((p) => p.name == 'answer');
+      expect(answer.clauses, hasLength(2));
+      final close = med.procedures.firstWhere((p) => p.name == 'close');
+      expect(close.clauses, hasLength(2));
+      final drop = med.procedures.firstWhere((p) => p.name == 'drop');
+      expect(drop.clauses, hasLength(3));
     });
   });
 }

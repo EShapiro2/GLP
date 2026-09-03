@@ -170,6 +170,32 @@ ping(a).
     });
   });
 
+  group('the one-clause program of programs/vglp_tests', () {
+    // Every procedure has one volition-guarded clause and no ordinary clause
+    // beside it, save pick, which has one: the case the per-clause reply
+    // types exist for.  Its plays run in Section VG of test/run_all_tests.sh.
+    const dir = '$_programs/vglp_tests/one_clause';
+
+    test('compiles on load and is well-typed, input coverage included', () {
+      final modules = discoverProgram(dir, rootSelfGlpPath: _rootSelfGlp);
+      expect(modules.map((m) => m.moduleName), contains('responder'));
+      expect(() => typeCheckProgram(modules, rootDir: dir), returnsNormally);
+    });
+
+    test("a clause with no else-branch has a reply type with no else", () {
+      final m = discoverProgram(dir, rootSelfGlpPath: _rootSelfGlp)
+          .firstWhere((m) => m.moduleName == 'responder');
+      String def(String name) =>
+          m.ast.typeDefs.firstWhere((d) => d.name == name).toString();
+      expect(def('Reply_greet_1'), 'Reply_greet_1 ::= then(Xs_greet_1).');
+      expect(def('Reply_respond_1'),
+          'Reply_respond_1 ::= then(Xs_respond_1) ; else.');
+      expect(def('Escrow'),
+          'Escrow ::= esc_respond_1(Reply_respond_1?) ; '
+          'esc_greet_1(Reply_greet_1?) ; esc_pick_1(Reply_pick_1?).');
+    });
+  });
+
   group('a .vglp source beside a .glp of its name', () {
     test('the hand-written module stands and the .vglp is not compiled', () {
       write('self.glp', selfGlp);

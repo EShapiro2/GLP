@@ -140,38 +140,48 @@ TransferOffer ::= offer_transfer(Kind, Constant, Stream(Bond)).
 %% =============================================================================
 
 ReqId ::= req(Integer).
-Reply ::= then(Answer) ; else.
-Slot ::= none ; ask(Reply, ReqId).
+Slot(R) ::= none ; ask(R, ReqId).
 Deadline ::= deadline ; no_deadline.
-AgentMsg ::= ask(Constant, Context, Reply?, ReqId?, Deadline) ; abort(ReqId).
+AgentMsg ::= ask(Constant, Context, Escrow, ReqId?, Deadline) ; abort(ReqId).
 Card ::= card(Constant, Context, ReqId) ; closed(ReqId).
 UserAnswer ::= answer(ReqId, Answer).
-PendingEntry ::= pending(ReqId, Reply?).
+PendingEntry ::= pending(ReqId, Escrow).
 PendingList ::= [] ; [PendingEntry | PendingList].
 Timeout ::= timeout(ReqId).
 TimerStream ::= [] ; [Timeout | TimerStream].
 
-%% One alternative per volition-guarded clause of the agent: its seven request
-%% clauses --- mint, swap, pay, redeem, deposit, release, return, in the order
-%% of Section 3.4, advance-date being unguarded --- and the decline and accept
-%% clauses of the swap responder and of the transfer responder.
-Answer ::= xs_respond_swap_1(Constant)
-         ; xs_respond_swap_2(Constant)
-         ; xs_respond_transfer_1(Constant)
-         ; xs_respond_transfer_2(Constant)
-         ; xs_agent_1(Integer, Integer)
-         ; xs_agent_2(Constant, Constant, Integer, Integer, Constant, Integer, Integer)
-         ; xs_agent_3(Constant, Integer, Integer)
-         ; xs_agent_4(Constant, Integer, Constant, Integer)
-         ; xs_agent_5(Constant, Constant, Integer, Integer)
-         ; xs_agent_6(Constant, Constant, Integer, Integer)
-         ; xs_agent_7(Constant, Constant, Integer, Integer).
-Context ::= ctx_respond_swap_1(Constant, Lot, Stream(Bond))
-          ; ctx_respond_swap_2(Constant, Lot, Stream(Bond))
-          ; ctx_respond_transfer_1(Kind, Constant, Stream(Bond))
-          ; ctx_respond_transfer_2(Kind, Constant, Stream(Bond))
-          ; ctx_agent_1 ; ctx_agent_2 ; ctx_agent_3 ; ctx_agent_4
-          ; ctx_agent_5 ; ctx_agent_6 ; ctx_agent_7.
+%% One alternative per volition-guarded clause of the agent, its reply type
+%% and its escrow, as the compilation emits them --- Answer and Context with
+%% the alternatives written out, which the compiled module names.
+Xs_respond_swap_1 ::= xs_respond_swap_1(Constant).
+Reply_respond_swap_1 ::= then(Xs_respond_swap_1).
+Ctx_respond_swap_1 ::= ctx_respond_swap_1(Constant, Lot, Stream(Bond)).
+Xs_respond_swap_2 ::= xs_respond_swap_2(Constant).
+Reply_respond_swap_2 ::= then(Xs_respond_swap_2) ; else.
+Ctx_respond_swap_2 ::= ctx_respond_swap_2(Constant, Lot, Stream(Bond)).
+Xs_respond_transfer_1 ::= xs_respond_transfer_1(Constant).
+Reply_respond_transfer_1 ::= then(Xs_respond_transfer_1).
+Ctx_respond_transfer_1 ::= ctx_respond_transfer_1(Kind, Constant, Stream(Bond)).
+Xs_respond_transfer_2 ::= xs_respond_transfer_2(Constant).
+Reply_respond_transfer_2 ::= then(Xs_respond_transfer_2) ; else.
+Ctx_respond_transfer_2 ::= ctx_respond_transfer_2(Kind, Constant, Stream(Bond)).
+Xs_agent_1 ::= xs_agent_1(Integer, Integer).
+Reply_agent_1 ::= then(Xs_agent_1).
+Xs_agent_2 ::= xs_agent_2(Constant, Constant, Integer, Integer, Constant, Integer, Integer).
+Reply_agent_2 ::= then(Xs_agent_2).
+Xs_agent_3 ::= xs_agent_3(Constant, Integer, Integer).
+Reply_agent_3 ::= then(Xs_agent_3).
+Xs_agent_4 ::= xs_agent_4(Constant, Integer, Constant, Integer).
+Reply_agent_4 ::= then(Xs_agent_4).
+Xs_agent_5 ::= xs_agent_5(Constant, Constant, Integer, Integer).
+Reply_agent_5 ::= then(Xs_agent_5).
+Xs_agent_6 ::= xs_agent_6(Constant, Constant, Integer, Integer).
+Reply_agent_6 ::= then(Xs_agent_6).
+Xs_agent_7 ::= xs_agent_7(Constant, Constant, Integer, Integer).
+Reply_agent_7 ::= then(Xs_agent_7).
+Answer ::= xs_respond_swap_1(Constant) ; xs_respond_swap_2(Constant) ; xs_respond_transfer_1(Constant) ; xs_respond_transfer_2(Constant) ; xs_agent_1(Integer, Integer) ; xs_agent_2(Constant, Constant, Integer, Integer, Constant, Integer, Integer) ; xs_agent_3(Constant, Integer, Integer) ; xs_agent_4(Constant, Integer, Constant, Integer) ; xs_agent_5(Constant, Constant, Integer, Integer) ; xs_agent_6(Constant, Constant, Integer, Integer) ; xs_agent_7(Constant, Constant, Integer, Integer).
+Escrow ::= esc_respond_swap_1(Reply_respond_swap_1?) ; esc_respond_swap_2(Reply_respond_swap_2?) ; esc_respond_transfer_1(Reply_respond_transfer_1?) ; esc_respond_transfer_2(Reply_respond_transfer_2?) ; esc_agent_1(Reply_agent_1?) ; esc_agent_2(Reply_agent_2?) ; esc_agent_3(Reply_agent_3?) ; esc_agent_4(Reply_agent_4?) ; esc_agent_5(Reply_agent_5?) ; esc_agent_6(Reply_agent_6?) ; esc_agent_7(Reply_agent_7?).
+Context ::= ctx_respond_swap_1(Constant, Lot, Stream(Bond)) ; ctx_respond_swap_2(Constant, Lot, Stream(Bond)) ; ctx_respond_transfer_1(Kind, Constant, Stream(Bond)) ; ctx_respond_transfer_2(Kind, Constant, Stream(Bond)) ; ctx_agent_1 ; ctx_agent_2 ; ctx_agent_3 ; ctx_agent_4 ; ctx_agent_5 ; ctx_agent_6 ; ctx_agent_7.
 
 %% =============================================================================
 %% The plays' vocabulary: what a person sees, and the agreements the escrow

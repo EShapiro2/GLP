@@ -55,13 +55,19 @@ respond(offer(From), Resp?, [decision(Answer?, From?, response(Resp))]) :-
       expect(out, contains('UserInStream ::='));       // the source's own
       expect(out, contains('Xs_respond_1 ::= xs_respond_1(Decision).'));  // added
       expect(out, contains('Answer ::= Xs_respond_1 ; Xs_respond_2.'));
-      expect(out, contains('Reply ::= then(Answer) ; else.'));  // instantiated
+      expect(out, contains('Reply_respond_1 ::= then(Xs_respond_1) ; else.'));
+      expect(out, contains('Reply_respond_2 ::= then(Xs_respond_2).'));
+      expect(out, contains('Escrow ::= esc_respond_1(Reply_respond_1?) ; '
+          'esc_respond_2(Reply_respond_2?).'));
+      expect(out, contains('UserAnswer ::= answer(ReqId, Answer).'));  // instantiated
     });
 
     test('no type parameter survives the emission', () {
       final out = compile(src).source;
       expect(out, isNot(contains('(A)')));
-      expect(out, isNot(contains('(A, X)')));
+      expect(out, isNot(contains('(A, E, X)')));
+      expect(out, isNot(contains('(E, X)')));
+      expect(out, isNot(contains('PendingList(E)')));
     });
 
     test('every compiled procedure is declared immediately above its clauses',
@@ -76,10 +82,31 @@ respond(offer(From), Resp?, [decision(Answer?, From?, response(Resp))]) :-
 
     test('the mediator comes with it, clauses and declarations', () {
       final out = compile(src).source;
-      for (final p in ['med', 'timer', 'deadline', 'answer', 'close',
-          'aborts', 'med_split']) {
+      for (final p in ['med', 'timer', 'deadline', 'answer', 'close', 'drop',
+          'med_split']) {
         expect(out, contains('procedure $p('), reason: '$p is missing');
       }
+      // abort/3 stays generic in the slot's reply type.
+      expect(out, contains('procedure(R) abort('));
+    });
+
+    test('the pending table\'s program clauses come ahead of the search clauses',
+        () {
+      final out = compile(src).source;
+      final own = out.indexOf('answer(ReqId, xs_respond_1(X1), ');
+      final search = out.indexOf('otherwise | answer(');
+      expect(own, greaterThan(-1));
+      expect(search, greaterThan(own));
+      expect(out, contains('answer(ReqId, xs_respond_2(X1), '));
+      // close only for the clause with an else-branch
+      expect(out, contains('close(ReqId, [pending(Id, esc_respond_1(R?)) | Ps], Ps?)'));
+      expect(out, isNot(contains('esc_respond_2(R?)) | Ps], Ps?) :- (ReqId? =?= Id?) | R = else')));
+    });
+
+    test('the slots are typed by their clauses\' reply types', () {
+      final out = compile(src).source;
+      expect(out, contains('Slot(Reply_respond_1)?, Slot(Reply_respond_2)?)'));
+      expect(out, contains('Slot(R) ::= none ; ask(R, ReqId).'));
     });
 
     test('the emitted module parses back as GLP', () {

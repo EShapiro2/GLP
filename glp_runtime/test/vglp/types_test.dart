@@ -51,7 +51,7 @@ respond(offer(From), Resp?, [decision(Answer?, From?, response(Resp))]) :-
     test('each volition-guarded clause gets an answer type', () {
       final t = compile(src);
       final c = t.byClause['respond_1']!;
-      expect(c.answer!.name, 'Xs_respond_1');
+      expect(c.answer.name, 'Xs_respond_1');
       expect(c.answer.toString(), startsWith('Xs_respond_1 ::= xs_respond_1('));
     });
 
@@ -67,6 +67,23 @@ respond(offer(From), Resp?, [decision(Answer?, From?, response(Resp))]) :-
     test('the context reader is typed the same way', () {
       expect(compile(src).byClause['respond_1']!.context.toString(),
           'Ctx_respond_1 ::= ctx_respond_1(Constant).');
+    });
+
+    test('the reply type of a clause with no else-branch has no else', () {
+      // A slot admits exactly the replies its clause can receive.
+      expect(compile(src).byClause['respond_1']!.reply.toString(),
+          'Reply_respond_1 ::= then(Xs_respond_1).');
+    });
+
+    test('the reply type of a clause with an else-branch has else', () {
+      expect(compile('''
+procedure respond(ColdCallOffer?, Response, UserInStream).
+*(Answer=yes, From?)
+respond(offer(From), Resp?, [decision(Answer?, From?, response(Resp))]) :-
+    ground(From?) | true
+*(no) true.
+''').byClause['respond_1']!.reply.toString(),
+          'Reply_respond_1 ::= then(Xs_respond_1) ; else.');
     });
   });
 
@@ -223,6 +240,14 @@ respond(offer(From), Resp?, [decision(Answer?, From?, response(Resp))]) :-
           .firstWhere((d) => d.name == contextTypeName);
       expect(x.toString(), 'Context ::= Ctx_respond_1 ; Ctx_respond_2.');
     });
+
+    test('the escrow type names each clause, its reply writer inside', () {
+      final e = compile(src)
+          .typeDefs
+          .firstWhere((d) => d.name == escrowTypeName);
+      expect(e.toString(),
+          'Escrow ::= esc_respond_1(Reply_respond_1?) ; esc_respond_2(Reply_respond_2?).');
+    });
   });
 
   group('a clause with no question and no context', () {
@@ -234,10 +259,15 @@ agent(Id, UserIn) :- ground(Id?) | agent(Id?, UserIn?).
 
     test('it contributes the bare constants', () {
       final t = compile(src);
-      expect(t.byClause['agent_1']!.answer, isNull);
+      // The answer type is the constant, named so the reply type can refer
+      // to it; the context has no type of its own and is the constant.
+      expect(t.byClause['agent_1']!.answer.toString(),
+          'Xs_agent_1 ::= xs_agent_1.');
+      expect(t.byClause['agent_1']!.reply.toString(),
+          'Reply_agent_1 ::= then(Xs_agent_1).');
       expect(t.byClause['agent_1']!.context, isNull);
       expect(t.typeDefs.firstWhere((d) => d.name == answerTypeName).toString(),
-          'Answer ::= xs_agent_1.');
+          'Answer ::= Xs_agent_1.');
       expect(t.typeDefs.firstWhere((d) => d.name == contextTypeName).toString(),
           'Context ::= ctx_agent_1.');
     });
@@ -255,11 +285,12 @@ agent(Id, UserIn, Outs) :-
     test('the channel comes first and the slots last', () {
       final d = compile(src).procDecls.firstWhere((d) => d.name == 'agent');
       expect(d.arity, 5);
-      // AgentMsg and Slot are the vocabulary's, instantiated at the program's
-      // answer and context types: monomorphic, so referenced bare.
+      // AgentMsg is the vocabulary's, instantiated at the program's escrow
+      // and context types: monomorphic, so referenced bare.
       expect(d.argTypes.first.toString(),
           'Channel(Closed, Stream(AgentMsg))?');
-      expect(d.argTypes.last.toString(), 'Slot?');
+      // The j-th slot is typed by its own clause's reply type.
+      expect(d.argTypes.last.toString(), 'Slot(Reply_agent_1)?');
     });
 
     test("the source's own argument types are unchanged between them", () {

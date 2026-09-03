@@ -88,12 +88,18 @@ CompiledProgram compileProgram(ast.Module module, MediatorSource mediator,
         slotCountOf: (n, a) => slotCounts['$n/$a'] ?? 0));
   }
 
+  final pending = pendingTableClauses(
+      module.procedures, (proc, j) => '${proc.name}_$j');
+
   return CompiledProgram(
-      _emit(module, types, med, compiled, compiledDecls), types, compiled);
+      _emit(module, types, med, compiled, compiledDecls, pending),
+      types,
+      compiled);
 }
 
 String _emit(ast.Module module, CompiledTypes types, InstantiatedMediator med,
-    List<CompiledProcedure> compiled, Map<String, ProcDecl> compiledDecls) {
+    List<CompiledProcedure> compiled, Map<String, ProcDecl> compiledDecls,
+    PendingTableClauses pending) {
   final b = StringBuffer();
   final printer = GlpPrinter();
 
@@ -136,11 +142,23 @@ String _emit(ast.Module module, CompiledTypes types, InstantiatedMediator med,
     b.writeln();
   }
 
-  b.writeln('%% --- the mediator ---');
+  b.writeln('%% --- the mediator, and the pending table with the program\'s '
+      'clauses ahead of the search clauses ---');
   final medDecls = <String, ProcDecl>{for (final d in med.procDecls) d.key: d};
   for (final p in med.procedures) {
     final decl = medDecls['${p.name}/${p.arity}'];
     if (decl != null) b.writeln(printProcDecl(decl));
+    // The pending table's answer and close clauses are the program's, one per
+    // volition-guarded clause; the mediator source carries the search clauses
+    // that follow them (Definition "Canonical Compilation").
+    final own = p.name == 'answer' && p.arity == 4
+        ? pending.answer
+        : p.name == 'close' && p.arity == 3
+            ? pending.close
+            : const <ast.Clause>[];
+    for (final c in own) {
+      b.writeln(printer.printClause(c));
+    }
     for (final c in p.clauses) {
       b.writeln(printer.printClause(c));
     }

@@ -37,7 +37,7 @@
 %%
 %% Entry point: market/0, exported by self.glp as village/0.
 
-imported procedure bonds_agent#agent(Channel(Closed, Stream(AgentMsg))?, Constant?, Stream(UserInMsg)?, Stream(NetInMsg)?, Stream(Integer)?, Stream(OutputEntry)?, Stream(Bond)?, Integer?, Stream(Warranty)?, Integer?, Slot?, Slot?, Slot?, Slot?, Slot?, Slot?, Slot?).
+imported procedure bonds_agent#agent(Channel(Closed, Stream(AgentMsg))?, Constant?, Stream(UserInMsg)?, Stream(NetInMsg)?, Stream(Integer)?, Stream(OutputEntry)?, Stream(Bond)?, Integer?, Stream(Warranty)?, Integer?, Slot(Reply_agent_1)?, Slot(Reply_agent_2)?, Slot(Reply_agent_3)?, Slot(Reply_agent_4)?, Slot(Reply_agent_5)?, Slot(Reply_agent_6)?, Slot(Reply_agent_7)?).
 imported procedure bonds_agent#med(Channel(Stream(UserAnswer), Stream(Card))?, Channel(Stream(AgentMsg), Closed)?, TimerStream?, PendingList?, Integer?).
 imported procedure escrow#accepts(Agreement?, Kind?, Constant?, Stream(Lot)?, Constant, Agreement).
 imported procedure escrow#react(Agreement?, ScreenContent?, Script, Agreement).

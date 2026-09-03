@@ -53,17 +53,14 @@ agent(Id, UserIn, Outs) :-
 
     test('the head gains the mediator channel and one slot', () {
       final cs = emit(src, 'agent/3');
-      // answer clause and ask clause, no else-branch; and the otherwise clause
-      expect(cs.length, 3);
+      expect(cs.length, 2);  // answer clause and ask clause; no else-branch
       expect(cs[0], startsWith('agent(Med, Id, UserIn, Outs, '));
     });
 
-    test('the otherwise clause comes last, and no safe run reaches it', () {
-      // Input coverage requires it: the slot type, one for every slot of the
-      // program, admits every clause's answer, and a goal's slots hold only
-      // asks of its own clauses.
-      expect(emit(src, 'agent/3').last,
-          'agent(_, _, _, A3?, _) :- otherwise | true.');
+    test('no clause of the compiled procedure is unreachable', () {
+      // The slot is typed by its own clause's reply type, so the answer and
+      // ask clauses cover it and no otherwise clause is needed.
+      expect(emit(src, 'agent/3').any((c) => c.contains('otherwise')), isFalse);
     });
 
     test('the answer clause takes the then-branch and the answer binds Target',
@@ -78,7 +75,7 @@ agent(Id, UserIn, Outs) :-
     test('the ask clause poses the question once and re-poses the goal', () {
       expect(emit(src, 'agent/3')[1],
           'agent(Med, Id, UserIn, A3?, none) :- ground(Id?) | '
-          'send(ask(agent_1, ctx_agent_1, R, Id1, no_deadline), Med?, Med1), '
+          'send(ask(agent_1, ctx_agent_1, esc_agent_1(R), Id1, no_deadline), Med?, Med1), '
           'agent(Med1?, Id?, UserIn?, A3, ask(R?, Id1?)).');
     });
 
@@ -109,10 +106,39 @@ respond(offer(From), Resp?, [decision(Answer?, From?, response(Resp))]) :-
 *(no) true.
 ''';
 
-    test('four clauses: answer, else, ask, otherwise', () {
+    test('three clauses: answer, else, ask', () {
+      expect(emit(src, 'respond/3').length, 3);
+    });
+
+    test('a guarded clause with nothing to do keeps its | true', () {
+      // The source's `true` is dropped only where an abort call or a body
+      // goal stands in its place; with one slot there is nothing to abort.
       final cs = emit(src, 'respond/3');
-      expect(cs.length, 4);
-      expect(cs.last, 'respond(_, _, A2?, A3?, _) :- otherwise | true.');
+      expect(cs[0], endsWith(':- ground(From?) | true.'));
+      expect(cs[1], endsWith(':- ground(From?) | true.'));
+    });
+
+    test('the reply writer travels inside the escrow that names the clause',
+        () {
+      expect(emit(src, 'respond/3')[2],
+          contains('send(ask(respond_1, ctx_respond_1(From?), esc_respond_1(R), Id, deadline)'));
+    });
+
+    test('the pending table gets an answer clause and a close clause', () {
+      final m = Parser(Lexer(_preamble + src).tokenize(), vglp: true)
+          .parseModule();
+      final t = pendingTableClauses(m.procedures, (p, j) => '${p.name}_$j');
+      final printer = GlpPrinter();
+      expect(t.answer, hasLength(1));
+      expect(t.close, hasLength(1));  // the clause has an else-branch
+      final answer = printer.printClause(t.answer.single).trim();
+      expect(answer, startsWith('answer(ReqId, xs_respond_1(X1), '));
+      expect(answer, contains('[pending(Id, esc_respond_1(R?)) | Ps], Ps?)'));
+      expect(answer, contains('ReqId? =?= Id?'));
+      expect(answer, endsWith('| R = then(xs_respond_1(X1?)).'));
+      final close = printer.printClause(t.close.single).trim();
+      expect(close, startsWith('close(ReqId, [pending(Id, esc_respond_1(R?)) | Ps], Ps?)'));
+      expect(close, endsWith('| R = else.'));
     });
 
     test('the else clause matches the else reply and carries no answer', () {
@@ -147,15 +173,23 @@ respond(offer(From), Resp?, [decision(Answer?, From?, response(Resp))]) :-
 
     test('two slots, and each clause exposes its own', () {
       final cs = emit(src, 'respond/3');
-      expect(cs.length, 5);  // answer + ask, twice, and the otherwise clause
+      expect(cs.length, 4);  // answer + ask, twice
       expect(cs[0], contains('ask(then(xs_respond_1(Answer)), _), S2)'));
       expect(cs[2], contains('S1, ask(then(xs_respond_2(Answer)), _))'));
     });
 
     test('a clause aborts the other slots, not its own', () {
       final cs = emit(src, 'respond/3');
-      expect(cs[0], contains('aborts([S2?], Med?, Med1)'));
-      expect(cs[2], contains('aborts([S1?], Med?, Med1)'));
+      expect(cs[0], contains('abort(S2?, Med?, Med1)'));
+      expect(cs[2], contains('abort(S1?, Med?, Med1)'));
+    });
+
+    test('no close clause for a clause without an else-branch', () {
+      final m = Parser(Lexer(_preamble + src).tokenize(), vglp: true)
+          .parseModule();
+      final t = pendingTableClauses(m.procedures, (p, j) => '${p.name}_$j');
+      expect(t.answer, hasLength(2));
+      expect(t.close, isEmpty);
     });
 
     test('the body true of a guarded unit clause is not copied after aborts',
@@ -163,8 +197,8 @@ respond(offer(From), Resp?, [decision(Answer?, From?, response(Resp))]) :-
       // `| true` is the idiom of an empty body; copied it would be a call of
       // true/0, which no procedure defines.
       final cs = emit(src, 'respond/3');
-      expect(cs[0], endsWith('aborts([S2?], Med?, Med1).'));
-      expect(cs[2], endsWith('aborts([S1?], Med?, Med1).'));
+      expect(cs[0], endsWith('abort(S2?, Med?, Med1).'));
+      expect(cs[2], endsWith('abort(S1?, Med?, Med1).'));
     });
 
     test('each ask clause carries its own clause name', () {
@@ -190,7 +224,35 @@ agent(Id, UserIn, Outs) :-
 ''';
 
     test('it aborts every slot of the goal', () {
-      expect(emit(src, 'agent/3')[0], contains('aborts([S1?], Med?, Med1)'));
+      expect(emit(src, 'agent/3')[0], contains('abort(S1?, Med?, Med1)'));
+    });
+  });
+
+  group('an ordinary clause of a procedure with three volition-guarded ones',
+      () {
+    const src = '''
+procedure agent(Constant?, Stream(Constant)?, Stream(Constant)).
+agent(Id, UserIn, Outs?) :- ground(Id?) | true.
+*(Target)
+agent(Id, UserIn, Outs) :-
+    ground(Id?), ground(Target?) | connect(Target?, Outs?, Outs1),
+    agent(Id?, UserIn?, Outs1?).
+*(Other)
+agent(Id, UserIn, Outs) :-
+    ground(Id?), ground(Other?) | connect(Other?, Outs?, Outs1),
+    agent(Id?, UserIn?, Outs1?).
+*(Third)
+agent(Id, UserIn, Outs) :-
+    ground(Id?), ground(Third?) | connect(Third?, Outs?, Outs1),
+    agent(Id?, UserIn?, Outs1?).
+''';
+
+    test('the abort calls chain over the slots, one channel each', () {
+      // The slots are of different reply types, so they cannot share a list:
+      // abort(S1?, Med?, M1), abort(S2?, M1?, M2), abort(S3?, M2?, Med1).
+      expect(emit(src, 'agent/3')[0],
+          contains('abort(S1?, Med?, M1), abort(S2?, M1?, M2), '
+              'abort(S3?, M2?, Med1)'));
     });
   });
 
@@ -206,8 +268,6 @@ relay(Id, In, Out?) :- ground(Id?) | true.
       expect(cs.single, isNot(contains('aborts')));
     });
 
-    test('and no otherwise clause: with m = 0 there is no slot to cover', () {
-      expect(emit(src, 'relay/3').any((c) => c.contains('otherwise')), isFalse);
-    });
+
   });
 }

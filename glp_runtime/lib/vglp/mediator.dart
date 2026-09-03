@@ -49,13 +49,16 @@ class MediatorSource {
   }
 }
 
-/// The mediator instantiated at one program's answer and context types.
+/// The mediator instantiated at one program's answer, escrow and context
+/// types.
 class InstantiatedMediator {
-  /// The vocabulary's type definitions, with A and X replaced.
+  /// The vocabulary's type definitions, with A, E and X replaced.  `Slot(R)`
+  /// keeps its parameter: it is instantiated per slot, at the slot's own
+  /// clause's reply type.
   final List<TypeDef> typeDefs;
 
-  /// The mediator's procedure declarations, with A and X replaced and their
-  /// type-parameter lists dropped: instantiated, they are monomorphic.
+  /// The mediator's procedure declarations, with A, E and X replaced and
+  /// dropped from their type-parameter lists; `abort/3` keeps its R.
   final List<ProcDecl> procDecls;
 
   /// The mediator's clauses, unchanged: they mention no type.
@@ -66,36 +69,38 @@ class InstantiatedMediator {
 
 /// Instantiate the generic mediator at the compiled program's types.
 ///
-/// The generic source is parameterised in the answer type and the context
-/// type; the compiled program defines [answerTypeName] and [contextTypeName],
-/// and every occurrence of a parameter becomes the corresponding one.  The
-/// mediator's own types — `Reply`, `Slot`, `AgentMsg`, `Card`, `UserAnswer`,
-/// `Escrow`, `PendingEntry`, `PendingList` — are parameterised in the same way
-/// and are instantiated with them.
+/// The generic source is parameterised in the answer type A, the escrow type
+/// E and the context type X; the compiled program defines [answerTypeName],
+/// [escrowTypeName] and [contextTypeName], and every occurrence of a parameter
+/// becomes the corresponding one.  The vocabulary's types parameterised in
+/// these alone — `AgentMsg`, `Card`, `UserAnswer`, `PendingEntry`,
+/// `PendingList` — become monomorphic; `Slot(R)` is generic in a reply type
+/// and stays so, instantiated per slot by the compiled declarations, as does
+/// `abort/3`, which takes any slot.
 InstantiatedMediator instantiate(MediatorSource source) {
-  // The parameters, in the order the generic declarations name them: the
-  // answer type first and the context type second, which is how
-  // programs/vglp/self.glp writes every parameterised definition.
-  const answerParam = 'A';
-  const contextParam = 'X';
-  final binding = <String, String>{
-    answerParam: answerTypeName,
-    contextParam: contextTypeName,
+  const binding = <String, String>{
+    'A': answerTypeName,
+    'E': escrowTypeName,
+    'X': contextTypeName,
   };
-  // The vocabulary's own parameterised types become monomorphic, so a
-  // reference to one --- Reply(A), Slot(A), AgentMsg(A, X) --- loses its
-  // arguments along with the definition's parameter list.
+  // A vocabulary type parameterised in A, E and X alone becomes monomorphic,
+  // so a reference to it loses its arguments along with the definition's
+  // parameter list; one with a parameter of its own keeps that parameter.
   final instantiated = <String>{
     for (final td in source.vocabulary.typeDefs)
-      if (td.isParameterized) td.name
+      if (td.isParameterized &&
+          td.typeParams.every(binding.containsKey))
+        td.name
   };
+  List<String> remaining(List<String> params) =>
+      [for (final p in params) if (!binding.containsKey(p)) p];
 
   final typeDefs = [
     for (final td in source.vocabulary.typeDefs)
       TypeDef(td.name,
           [for (final a in td.alternatives) _bindExpr(a, binding, instantiated)],
-          td.line, td.column)
-      // The parameter list goes: the instantiated definition is monomorphic.
+          td.line, td.column,
+          typeParams: remaining(td.typeParams))
   ];
 
   final procDecls = [
@@ -105,6 +110,7 @@ InstantiatedMediator instantiate(MediatorSource source) {
         [for (final t in d.argTypes) _bindExpr(t, binding, instantiated)],
         d.line,
         d.column,
+        typeParams: remaining(d.typeParams),
         isBuiltin: d.isBuiltin,
         exported: d.exported,
         imported: d.imported,

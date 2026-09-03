@@ -92,39 +92,79 @@ CompiledProcedure compileProcedure(
     }
     out.add(_compileAsk(c, proc, decl, m, j, name));
   }
-  if (m >= 1) out.add(_otherwiseClause(proc, decl, m));
 
   return CompiledProcedure(proc.name, proc.arity + 1 + m, out, volitionGuarded);
 }
 
-/// Last in a procedure with m >= 1, the clause
+/// The pending table's clauses that are the program's: per volition-guarded
+/// clause C with question X1, ..., Xi, the answer clause
 ///
-///     H'(Med, S1, ..., Sm) :- otherwise | true
+///     answer(ReqId, xs_C(X1, ..., Xi), [pending(Id, esc_C(R?))|Ps], Ps?) :-
+///         ReqId? =?= Id? | R = then(xs_C(X1?, ..., Xi?)).
 ///
-/// which no safe run reaches, a goal's slots holding only asks of its own
-/// clauses, and which input coverage requires: the slot type, one for every
-/// slot of the program, admits every clause's answer, and a procedure whose
-/// clauses are all volition-guarded with m = 1 would otherwise accept its own
-/// answer alone at the slot.  The channel, every input position and every
-/// slot is anonymous, since the clause reads nothing; each output position
-/// carries the reader of a fresh writer, as H_a does, since a head produces
-/// nothing at an output it does not bind.
-Clause _otherwiseClause(Procedure proc, ProcDecl decl, int m) {
-  final line = proc.line;
-  final column = proc.column;
-  final head = Atom(proc.name, [
-    UnderscoreTerm(line, column),
-    for (var k = 0; k < proc.arity; k++)
-      k < decl.argTypes.length && !decl.isInputArg(k)
-          ? _r('A${k + 1}')
-          : UnderscoreTerm(line, column),
-    for (var k = 0; k < m; k++) UnderscoreTerm(line, column),
-  ], line, column);
-  return Clause(head,
-      guards: [Guard('otherwise', const [], line, column)],
-      body: [Goal('true', const [], line, column)],
-      line: line,
-      column: column);
+/// and, where C has an else-branch, the close clause
+///
+///     close(ReqId, [pending(Id, esc_C(R?))|Ps], Ps?) :-
+///         ReqId? =?= Id? | R = else.
+///
+/// An answer not of its clause's form matches no answer clause and passes on
+/// to the search clauses, reaching no goal.  Emitted ahead of the mediator's
+/// search clauses of `answer/4` and `close/3`.
+class PendingTableClauses {
+  final List<Clause> answer;
+  final List<Clause> close;
+  PendingTableClauses(this.answer, this.close);
+}
+
+PendingTableClauses pendingTableClauses(
+    List<Procedure> procedures, String Function(Procedure, int) clauseName) {
+  final answer = <Clause>[];
+  final close = <Clause>[];
+  for (final proc in procedures) {
+    var j = 0;
+    for (final c in proc.clauses) {
+      if (!c.isVolitionGuarded) continue;
+      j++;
+      final name = clauseName(proc, j);
+      final n = c.volitionGuard!.question.length;
+      final xs = List.generate(n, (k) => 'X${k + 1}');
+      Term xsTerm(bool reader) => n == 0
+          ? ConstTerm('xs_$name', c.line, c.column)
+          : StructTerm('xs_$name',
+              [for (final x in xs) reader ? _r(x) : _w(x)], c.line, c.column);
+      Term entry() => ListTerm(
+          StructTerm('pending', [
+            _w('Id'),
+            StructTerm('esc_$name', [_r('R')], c.line, c.column),
+          ], c.line, c.column),
+          _w('Ps'),
+          c.line,
+          c.column);
+      final guard = Guard('=?=', [_r('ReqId'), _r('Id')], c.line, c.column);
+
+      answer.add(Clause(
+          Atom('answer', [_w('ReqId'), xsTerm(false), entry(), _r('Ps')],
+              c.line, c.column),
+          guards: [guard],
+          body: [
+            Goal('=', [_w('R'), _then(xsTerm(true))], c.line, c.column)
+          ],
+          line: c.line,
+          column: c.column));
+      if (c.elseBranch != null) {
+        close.add(Clause(
+            Atom('close', [_w('ReqId'), entry(), _r('Ps')], c.line, c.column),
+            guards: [guard],
+            body: [
+              Goal('=', [_w('R'), ConstTerm('else', c.line, c.column)],
+                  c.line, c.column)
+            ],
+            line: c.line,
+            column: c.column));
+      }
+    }
+  }
+  return PendingTableClauses(answer, close);
 }
 
 // ---------------------------------------------------------------------------
@@ -133,12 +173,13 @@ Clause _otherwiseClause(Procedure proc, ProcDecl decl, int m) {
 
 /// An ordinary clause C = H :- G | B becomes
 ///
-///     H'(Med, S1, ..., Sm) :- G | aborts([S1?, ..., Sm?], Med?, Med1), B'
+///     H'(Med, S1, ..., Sm) :- G | aborts(S1?, ..., Sm?, Med?, Med1), B'
 ///
-/// with B' the body given its branch of Med1 and slots `none`.  Where the
-/// procedure has no volition-guarded clause the abort call is `aborts([], ...)`,
-/// which is the identity on the channel, so it is omitted and Med carried
-/// straight through: the Definition's formula with m = 0, one reduction fewer.
+/// with B' the body given its branch of Med1 and slots `none`, and aborts the
+/// chain abort(S1?, Med?, M1), ..., abort(Sm?, M_{m-1}?, Med1).  Where the
+/// procedure has no volition-guarded clause the chain is empty and the
+/// identity on the channel, so it is omitted and Med carried straight
+/// through: the Definition's formula with m = 0, one reduction fewer.
 Clause _compileOrdinary(Clause c, Procedure proc, int m,
     {required bool Function(String, int) isProcedureOfM,
     required int Function(String, int) slotCountOf}) {
@@ -153,7 +194,7 @@ Clause _compileOrdinary(Clause c, Procedure proc, int m,
       isProcedureOfM: isProcedureOfM, slotCountOf: slotCountOf));
 
   return Clause(head,
-      guards: c.guards, body: body, line: c.line, column: c.column);
+      guards: c.guards, body: _nonEmpty(body, c), line: c.line, column: c.column);
 }
 
 /// The answer clause of the j-th volition-guarded clause: the person answered,
@@ -189,7 +230,7 @@ Clause _compileAnswer(Clause c, Procedure proc, int m, int j, String name,
       isProcedureOfM: isProcedureOfM, slotCountOf: slotCountOf));
 
   return Clause(head,
-      guards: c.guards, body: body, line: c.line, column: c.column);
+      guards: c.guards, body: _nonEmpty(body, c), line: c.line, column: c.column);
 }
 
 /// The else clause: the deadline passed, the machine answers for the person.
@@ -236,15 +277,15 @@ Clause _compileElse(Clause c, Procedure proc, int m, int j,
       isProcedureOfM: isProcedureOfM, slotCountOf: slotCountOf));
 
   return Clause(head,
-      guards: guards, body: body, line: c.line, column: c.column);
+      guards: guards, body: _nonEmpty(body, c), line: c.line, column: c.column);
 }
 
 /// The ask clause: the goal reaches the clause with the slot empty, poses the
 /// question once, and recurses holding the readers of what it escrowed.
 ///
-///     H'(Med, ..., none, ...) :- G_c |
-///         send(ask(C, ctx(Y1?, ..., Yj?), R, Id), Med?, Med1),
-///         H'(Med1?, ..., ask(R?, Id?), ...)
+///     H_a(Med, ..., none, ...) :- G_c |
+///         send(ask(C, ctx_C(Y1?, ..., Yj?), esc_C(R), Id, D), Med?, Med1),
+///         H_r(Med1?, ..., ask(R?, Id?), ...)
 ///
 /// `G_c` is the conjuncts of G that read no answer position: the guard on the
 /// context alone, which is what the goal can test before the person answers.
@@ -309,7 +350,9 @@ Clause _compileAsk(Clause c, Procedure proc, ProcDecl decl, int m, int j,
       StructTerm('ask', [
         ConstTerm(clauseName, c.line, c.column),
         ctx,
-        _w(reply),
+        // The reply's writer travels inside the escrow that names the clause,
+        // which is what types the pending entry by its clause.
+        StructTerm('esc_$clauseName', [_w(reply)], c.line, c.column),
         _w(id),
         // An ask carries a deadline iff its clause has an else-branch: the
         // machine answers on the deadline only where the program says how.
@@ -399,17 +442,29 @@ List<Goal> _compileBody(List<Goal> body, String med, _NameSource names,
 
 bool _isTrue(Goal g) => g.functor == 'true' && g.args.isEmpty;
 
-/// Emit the abort call and return the name of the channel the body continues
-/// on.  With no slots to abort the call is the identity, so it is omitted.
-String _abortsInto(List<Goal> body, List<String> slotsInList,
+/// A body with nothing left in it is the guarded unit clause's `| true`: the
+/// source's `true` is dropped where an abort call or a body goal stands in
+/// its place, and kept where nothing does, since a clause with a guard and no
+/// body would print as `H :- G.` and read back as a body goal.
+List<Goal> _nonEmpty(List<Goal> body, Clause c) =>
+    body.isEmpty ? [Goal('true', const [], c.line, c.column)] : body;
+
+/// Emit the abort chain over the slots and return the name of the channel
+/// the body continues on: abort(S1?, Med?, M1), abort(S2?, M1?, M2), ...,
+/// abort(Sm?, M_{m-1}?, Med1).  The slots are of different reply types, so
+/// they cannot share a list; abort/3 is generic in the slot's reply type and
+/// takes them one at a time.  With no slots to abort the chain is the
+/// identity, so it is omitted.
+String _abortsInto(List<Goal> body, List<String> slots,
     String med, _NameSource names) {
-  if (slotsInList.isEmpty) return med;
+  if (slots.isEmpty) return med;
   final med1 = names.fresh('${_medStem}1');
-  body.add(Goal('aborts', [
-    _list(slotsInList.map<Term>((s) => _r(s)).toList()),
-    _r(med),
-    _w(med1),
-  ], 0, 0));
+  var from = med;
+  for (var i = 0; i < slots.length; i++) {
+    final to = i == slots.length - 1 ? med1 : names.fresh('M${i + 1}');
+    body.add(Goal('abort', [_r(slots[i]), _r(from), _w(to)], 0, 0));
+    from = to;
+  }
   return med1;
 }
 
@@ -441,14 +496,6 @@ Term _anon(Clause c) => UnderscoreTerm(c.line, c.column);
 
 VarTerm _w(String name) => VarTerm(name, false, 0, 0);
 VarTerm _r(String name) => VarTerm(name, true, 0, 0);
-
-Term _list(List<Term> items) {
-  Term acc = ListTerm(null, null, 0, 0);
-  for (var i = items.length - 1; i >= 0; i--) {
-    acc = ListTerm(items[i], acc, 0, 0);
-  }
-  return acc;
-}
 
 /// The reader image of a head input pattern: every writer the head bound is
 /// passed on as its reader, structure and constants unchanged.

@@ -1,0 +1,27 @@
+%% responder.vglp — three procedures, each with one volition-guarded clause,
+%% the case the per-clause reply types of the canonical compilation exist for
+%% (vGLP, Definition "Canonical Compilation", the types item): a slot admits
+%% exactly the replies its clause can receive, so the compiled clauses cover
+%% it with no ordinary clause beside them.
+%%
+%% respond has an else-branch, so its reply type has else and its ask a
+%% deadline; greet has none, so its reply type has no else; pick also has an
+%% ordinary clause, which aborts the open ask when it reduces the goal.
+
+procedure respond(Offer?, Stream(Decision)).
+*(Answer=yes, From?)
+respond(offer(From), [decided(Answer?, From?)]) :-
+    ground(From?) | true
+*(no) true.
+
+procedure greet(Offer?, Stream(Decision)).
+*(Name, From?)
+greet(offer(From), [greeted(Name?, From?)]) :-
+    ground(From?), ground(Name?) | true.
+
+procedure pick(Stream(Constant)?, Offer?, Stream(Decision)).
+pick([go | _], offer(From), [picked(From?)]) :-
+    ground(From?) | true.
+*(Choice, From?)
+pick(_, offer(From), [picked(Choice?)]) :-
+    ground(From?), ground(Choice?) | true.

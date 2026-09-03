@@ -6,27 +6,29 @@
 %% construct, routes the person's answer to the clause that posed it, answers
 %% for the person on the deadline, and closes an ask another clause aborted.
 %%
-%% Generic in the compiled program's answer type A and context type X, and in
-%% nothing else: a compiled program instantiates A and X at its own, and no
-%% line here is program-specific.  The clauses are the Definition's, letter for
-%% letter; a reader who diffs the emitted source against its listing finds
-%% them equal.
+%% Generic in the compiled program's answer type A, escrow type E and context
+%% type X, and in nothing else: a compiled program instantiates the three at
+%% its own, and no line here is program-specific.  The clauses are the
+%% Definition's, letter for letter; a reader who diffs the emitted source
+%% against its listing finds them equal.  The pending table's answer/4 and
+%% close/3 are the program's: the compiler emits their clauses, one per
+%% volition-guarded clause, ahead of the search clauses given here.
 
 %% ---------------------------------------------------------------------------
 %% The mediator
 %% ---------------------------------------------------------------------------
 
-exported procedure(A, X) med(
+exported procedure(A, E, X) med(
     Channel(Stream(UserAnswer(A)), Stream(Card(X)))?,
-    Channel(Stream(AgentMsg(A, X)), Closed)?,
-    TimerStream?, PendingList(A)?, Integer?).
+    Channel(Stream(AgentMsg(E, X)), Closed)?,
+    TimerStream?, PendingList(E)?, Integer?).
 
 %% Escrow: an ask arrives, is shown as a card, and its timer is started.  Only
 %% an ask the machine can answer for the person carries a deadline: a clause
 %% with an else-branch.  A question the machine cannot answer stands until the
 %% person answers it or the goal is reduced by another clause.
 med(UserCh, AgentCh, Ts, Ps, N) :-
-    receive(ask(C, Ctx, R?, Id?, deadline), AgentCh?, AgentCh1),
+    receive(ask(C, Ctx, Esc, Id?, deadline), AgentCh?, AgentCh1),
     ground(C?), ground(Ctx?) |
     Id = req(N?),
     send(card(C?, Ctx?, req(N?)), UserCh?, UserCh1),
@@ -35,19 +37,19 @@ med(UserCh, AgentCh, Ts, Ps, N) :-
     timer(req(N?), D?, T),
     merge(T?, Ts?, Ts1),
     med(UserCh1?, AgentCh1?, Ts1?,
-        [pending(req(N?), R) | Ps?], N1?).
+        [pending(req(N?), Esc?) | Ps?], N1?).
 
 med(UserCh, AgentCh, Ts, Ps, N) :-
-    receive(ask(C, Ctx, R?, Id?, no_deadline), AgentCh?, AgentCh1),
+    receive(ask(C, Ctx, Esc, Id?, no_deadline), AgentCh?, AgentCh1),
     ground(C?), ground(Ctx?) |
     Id = req(N?),
     send(card(C?, Ctx?, req(N?)), UserCh?, UserCh1),
     N1 := N? + 1,
     med(UserCh1?, AgentCh1?, Ts?,
-        [pending(req(N?), R) | Ps?], N1?).
+        [pending(req(N?), Esc?) | Ps?], N1?).
 
 %% Routing: the person's answer selects the then-branch and supplies the
-%% answer's values.
+%% answer's values.  An answer not of its clause's form finds no entry.
 med(UserCh, AgentCh, Ts, Ps, N) :-
     receive(answer(ReqId, Vs), UserCh?, UserCh1),
     ground(ReqId?), ground(Vs?) |
@@ -63,11 +65,11 @@ med(UserCh, AgentCh, [timeout(ReqId) | Ts], Ps, N) :-
     med(UserCh1?, AgentCh?, Ts?, Ps1?, N?).
 
 %% Abort: another clause reduced the goal, so the ask is closed unanswered and
-%% neither branch is selected.
+%% neither branch is selected: the entry is dropped with its reply unbound.
 med(UserCh, AgentCh, Ts, Ps, N) :-
     receive(abort(ReqId), AgentCh?, AgentCh1),
     ground(ReqId?) |
-    close(ReqId?, Ps?, Ps1),
+    drop(ReqId?, Ps?, Ps1),
     send(closed(ReqId?), UserCh?, UserCh1),
     med(UserCh1?, AgentCh1?, Ts?, Ps1?, N?).
 
@@ -97,47 +99,52 @@ deadline(D?) :- now(T), D := T? + 60000.
 %% The pending table
 %% ---------------------------------------------------------------------------
 
-%% answer(ReqId?, Vs?, Ps?, Ps1) consumes the pending entry of an identifier,
-%% binding its escrowed reply to then(Vs); close(ReqId?, Ps?, Ps1) consumes it
-%% binding the reply to else.  Both leave Ps as it is where no entry is
-%% pending — which is what makes an answer granted on a closed ask reach no
-%% goal.
-exported procedure(A) answer(ReqId?, A?, PendingList(A)?, PendingList(A)).
-answer(ReqId, Vs, [pending(Id, R?) | Ps], Ps?) :-
-    ReqId? =?= Id? |
-    R = then(Vs?).
+%% answer(ReqId?, Vs?, Ps?, Ps1) and close(ReqId?, Ps?, Ps1) search the table
+%% for the entry of an identifier, the first binding its escrowed reply to
+%% then(Vs) where Vs is of the entry's clause, the second binding it to else;
+%% drop(ReqId?, Ps?, Ps1) consumes the entry unbound.  Each leaves Ps as it is
+%% where it finds none — which is what makes an answer granted on a closed
+%% ask, or not of its clause's form, reach no goal.  The clauses that match an
+%% entry are the program's, one per volition-guarded clause (close only where
+%% the clause has an else-branch), and the compiler emits them ahead of the
+%% search clauses below.
+exported procedure(A, E) answer(ReqId?, A?, PendingList(E)?, PendingList(E)).
 answer(ReqId, Vs, [P | Ps], [P? | Ps1?]) :-
     otherwise |
     answer(ReqId?, Vs?, Ps?, Ps1).
 answer(_, _, [], []).
 
-exported procedure(A) close(ReqId?, PendingList(A)?, PendingList(A)).
-close(ReqId, [pending(Id, R?) | Ps], Ps?) :-
-    ReqId? =?= Id? |
-    R = else.
+exported procedure(E) close(ReqId?, PendingList(E)?, PendingList(E)).
 close(ReqId, [P | Ps], [P? | Ps1?]) :-
     otherwise |
     close(ReqId?, Ps?, Ps1).
 close(_, [], []).
 
+exported procedure(E) drop(ReqId?, PendingList(E)?, PendingList(E)).
+drop(ReqId, [pending(Id, _) | Ps], Ps?) :-
+    ReqId? =?= Id? | true.
+drop(ReqId, [P | Ps], [P? | Ps1?]) :-
+    otherwise |
+    drop(ReqId?, Ps?, Ps1).
+drop(_, [], []).
+
 %% ---------------------------------------------------------------------------
 %% Aborting a goal's open asks
 %% ---------------------------------------------------------------------------
 
-%% aborts(Slots?, Med?, Med1) sends abort(Id?) to the mediator for every ask
-%% among the slots.  Every clause of a compiled procedure calls it, so that any
-%% clause reducing the goal closes the questions the goal had open, whether or
-%% not the person has begun to answer them.
-exported procedure(A, X) aborts(Slots(A)?,
-    Channel(Closed, Stream(AgentMsg(A, X)))?,
-    Channel(Closed, Stream(AgentMsg(A, X)))).
-aborts([], Med, Med?).
-aborts([none | Ss], Med, Med1?) :-
-    aborts(Ss?, Med?, Med1).
-aborts([ask(_, Id) | Ss], Med, Med1?) :-
+%% abort(S?, Med?, Med1) sends abort(Id?) to the mediator where slot S is an
+%% ask and passes Med on where it is none; aborts(S1?, ..., Sm?, Med?, Med1)
+%% abbreviates its chaining over the slots.  Every clause of a compiled
+%% procedure calls it over the slots it does not expose, so that any clause
+%% reducing the goal closes the questions the goal had open, whether or not
+%% the person has begun to answer them.  Generic in the slot's reply type R.
+exported procedure(R, E, X) abort(Slot(R)?,
+    Channel(Closed, Stream(AgentMsg(E, X)))?,
+    Channel(Closed, Stream(AgentMsg(E, X)))).
+abort(none, Med, Med?).
+abort(ask(_, Id), Med, Med1?) :-
     ground(Id?) |
-    send(abort(Id?), Med?, Med2),
-    aborts(Ss?, Med2?, Med1).
+    send(abort(Id?), Med?, Med1).
 
 %% ---------------------------------------------------------------------------
 %% Splitting the mediator channel among body goals
@@ -148,9 +155,9 @@ aborts([ask(_, Id) | Ss], Med, Med1?) :-
 %% comment" (Definition "Canonical Compilation").  This is that technique: the
 %% two branches' message streams are merged into the parent's, so each body
 %% goal holds a mediator channel of its own and the mediator sees one stream.
-exported procedure(A, X) med_split(
-    Channel(Closed, Stream(AgentMsg(A, X)))?,
-    Channel(Closed, Stream(AgentMsg(A, X))),
-    Channel(Closed, Stream(AgentMsg(A, X)))).
+exported procedure(E, X) med_split(
+    Channel(Closed, Stream(AgentMsg(E, X)))?,
+    Channel(Closed, Stream(AgentMsg(E, X))),
+    Channel(Closed, Stream(AgentMsg(E, X)))).
 med_split(ch(_, Out?), ch([], O1), ch([], O2)) :-
     merge(O1?, O2?, Out).

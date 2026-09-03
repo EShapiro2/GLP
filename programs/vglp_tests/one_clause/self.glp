@@ -1,0 +1,99 @@
+%% self.glp — the one-clause program of programs/vglp_tests: its types, the
+%% mirror of the vocabulary the canonical compilation emits into responder.glp
+%% (programs/vglp/self.glp instantiated at this program's Answer, Escrow and
+%% Context; the compiled module's own definitions shadow these within it, and
+%% the two must agree), and three plays.  Section VG of test/run_all_tests.sh
+%% runs them: an answer reaches its clause, a mismatched answer leaves the
+%% pending table as it is, and a clause reducing a goal with an open ask
+%% drops the ask and closes its card.
+
+Offer    ::= offer(Constant).
+Decision ::= decided(Constant, Constant) ; greeted(Constant, Constant) ; picked(Constant).
+Report   ::= tagged(Constant, Stream(Decision)) ; tagged(Constant, Card, Stream(Decision)).
+
+%% --- the compiled vocabulary, mirrored ---
+ReqId ::= req(Integer).
+Xs_respond_1 ::= xs_respond_1(Constant).
+Reply_respond_1 ::= then(Xs_respond_1) ; else.
+Ctx_respond_1 ::= ctx_respond_1(Constant).
+Xs_greet_1 ::= xs_greet_1(Constant).
+Reply_greet_1 ::= then(Xs_greet_1).
+Ctx_greet_1 ::= ctx_greet_1(Constant).
+Xs_pick_1 ::= xs_pick_1(Constant).
+Reply_pick_1 ::= then(Xs_pick_1).
+Ctx_pick_1 ::= ctx_pick_1(Constant).
+Answer ::= Xs_respond_1 ; Xs_greet_1 ; Xs_pick_1.
+Escrow ::= esc_respond_1(Reply_respond_1?) ; esc_greet_1(Reply_greet_1?) ; esc_pick_1(Reply_pick_1?).
+Context ::= Ctx_respond_1 ; Ctx_greet_1 ; Ctx_pick_1.
+Slot(R) ::= none ; ask(R, ReqId).
+Deadline ::= deadline ; no_deadline.
+AgentMsg ::= ask(Constant, Context, Escrow, ReqId?, Deadline) ; abort(ReqId).
+Card ::= card(Constant, Context, ReqId) ; closed(ReqId).
+UserAnswer ::= answer(ReqId, Answer).
+PendingEntry ::= pending(ReqId, Escrow).
+PendingList ::= [] ; [PendingEntry | PendingList].
+Timeout ::= timeout(ReqId).
+TimerStream ::= [] ; [Timeout | TimerStream].
+
+imported procedure responder#respond(Channel(Closed, Stream(AgentMsg))?, Offer?, Stream(Decision), Slot(Reply_respond_1)?).
+imported procedure responder#greet(Channel(Closed, Stream(AgentMsg))?, Offer?, Stream(Decision), Slot(Reply_greet_1)?).
+imported procedure responder#pick(Channel(Closed, Stream(AgentMsg))?, Stream(Constant)?, Offer?, Stream(Decision), Slot(Reply_pick_1)?).
+imported procedure responder#med(Channel(Stream(UserAnswer), Stream(Card))?, Channel(Stream(AgentMsg), Closed)?, TimerStream?, PendingList?, Integer?).
+
+%% --- the plays ---
+
+%% The person answers respond's card yes; the then-branch reduces.
+exported procedure play_answer.
+play_answer :-
+    responder # respond(ch([], Asks), offer(bob), D, none),
+    responder # med(ch(Answers?, Cards), ch(Asks?, []), [], [], 0),
+    person_answer(Cards?, Answers),
+    report(answer, D?).
+
+procedure person_answer(Stream(Card)?, Stream(UserAnswer)).
+person_answer([card(respond_1, ctx_respond_1(From), R) | _],
+              [answer(R?, xs_respond_1(yes))]) :-
+    ground(From?), ground(R?) | true.
+person_answer([_ | Cs], As?) :- otherwise | person_answer(Cs?, As).
+person_answer([], []).
+
+%% The person first answers with a term of another clause's form, which
+%% matches no answer clause and leaves the table as it is, then answers yes.
+exported procedure play_mismatch.
+play_mismatch :-
+    responder # respond(ch([], Asks), offer(bob), D, none),
+    responder # med(ch(Answers?, Cards), ch(Asks?, []), [], [], 0),
+    person_mismatch(Cards?, Answers),
+    report(mismatch, D?).
+
+procedure person_mismatch(Stream(Card)?, Stream(UserAnswer)).
+person_mismatch([card(respond_1, ctx_respond_1(From), R) | _],
+                [answer(R?, xs_greet_1(nobody)), answer(R?, xs_respond_1(yes))]) :-
+    ground(From?), ground(R?) | true.
+person_mismatch([_ | Cs], As?) :- otherwise | person_mismatch(Cs?, As).
+person_mismatch([], []).
+
+%% pick's card is open when go arrives; the ordinary clause reduces the goal,
+%% aborts the ask, and the mediator drops the entry and closes the card.
+exported procedure play_abort.
+play_abort :-
+    responder # pick(ch([], Asks), Go?, offer(bob), D, none),
+    responder # med(ch(Answers?, Cards), ch(Asks?, []), [], [], 0),
+    person_abort(Cards?, Answers, Go, D?).
+
+procedure person_abort(Stream(Card)?, Stream(UserAnswer), Stream(Constant), Stream(Decision)?).
+person_abort([card(pick_1, ctx_pick_1(From), R) | Cs], [], [go], D) :-
+    ground(From?), ground(R?) |
+    seen_closed(Cs?, R?, D?).
+person_abort([_ | Cs], As?, Go?, D) :- otherwise | person_abort(Cs?, As, Go, D?).
+person_abort([], [], [], _).
+
+procedure seen_closed(Stream(Card)?, ReqId?, Stream(Decision)?).
+seen_closed([closed(R1) | _], R, D) :-
+    R? =?= R1?, ground(D?) |
+    send_to_user([tagged(abort, closed(R?), D?)]).
+seen_closed([_ | Cs], R, D) :- otherwise | seen_closed(Cs?, R?, D?).
+seen_closed([], _, _).
+
+procedure report(Constant?, Stream(Decision)?).
+report(Tag, D) :- ground(D?) | send_to_user([tagged(Tag?, D?)]).
