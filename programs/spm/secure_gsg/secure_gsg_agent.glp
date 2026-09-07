@@ -8,12 +8,14 @@
 %%       PASS 2: volitional accept_offer with Inbox.
 %%       PASS 3: classify_pending + Resolve simultaneous offer.
 %%
-%% Deferred to later PASSes:
-%%   - Periodic re-broadcast / Integrate checkpoint (paper §8.5).
-%%   - Replace cascade (paper §8.7).
-%%   - End friendship / Integrate unfriend on secure FMap.
-%%   - Vouch / Announce new identity / Integrate new identity / Integrate rebind.
-%%   - Stub promotion via Integrate checkpoint (spec-issue O).
+%% Also here (SGSG Code, 2026-09-07): periodic re-broadcast and Integrate
+%% checkpoint in full (skeleton install, stub promotion, direct heal, observer
+%% heal under the epoch order); the state-loss fault (crash) and the passive
+%% Restore it is repaired by; End friendship and Integrate unfriend on the
+%% secure FMap.
+%%
+%% Not yet implemented: the Replace cascade --- Vouch, Announce new identity,
+%% Integrate new identity, Integrate rebind (SPM, Replace Protocol).
 
 
 %% =============================================================================
@@ -86,11 +88,49 @@ agent(Id, IRec, [tick | UserIn], NetIn, NetOut?, Date,
     tick_step(LBD?, Date1?, Id?, IRec?, UserIn?, NetIn?, NetOut, Date1?,
               Known?, Vols?, Inbox?, FMap?, FoFMap?, Pending?).
 
+%% End friendship (paper, Unfriend inherited): FMap[Q].epoch := epoch + 1,
+%% preserving K and σ; emit unfriend(X) to Q and stream_update(Q, X) to every
+%% recipient; bind Reply.
+agent(Id, IRec, [will(end_friendship(Q, R)) | UserIn], NetIn,
+      [msg(Id?, Q?, unfriend(X?)) | NetOut1?], Date,
+      secure_gsg(Known, Vols, Inbox, FMap, FoFMap, Pending, LBD)) :-
+    ground(Q?), ground(Id?), ground(FMap?) |
+    bump_epoch_secure(Q?, FMap?, FMap1, X),
+    secure_broadcast_update(Id?, Q?, X?, FMap1?, NetOut1, NetOut2?),
+    bind_ok(R),
+    agent(Id?, IRec?, UserIn?, NetIn?, NetOut2, Date?,
+          secure_gsg(Known?, Vols?, Inbox?, FMap1?, FoFMap?, Pending?, LBD?)).
+
+%% Crash: the state-loss fault of the Restore Protocol.  The machine state ---
+%% Known, Volitions, Inbox, FMap, FoFMap, Pending, the last-broadcast date ---
+%% returns to its initial values; the identity record survives, and the agent
+%% resumes under it.  The play's streams stand in for the machine: input
+%% already in NetIn is not discarded.
+agent(Id, IRec, [crash | UserIn], NetIn, NetOut?, Date, _) :-
+    agent(Id?, IRec?, UserIn?, NetIn?, NetOut, Date?,
+          secure_gsg([], [], [], [], [], [], 0)).
+
 %% Query: q_epoch(Q) -- answer with secure_epoch_of(Q).
 agent(Id, IRec, [query(q_epoch(Q), a_epoch(E)) | UserIn], NetIn, NetOut?, Date,
       secure_gsg(Known, Vols, Inbox, FMap, FoFMap, Pending, LBD)) :-
     ground(Q?), ground(FMap?) |
     secure_epoch_of(Q?, FMap?, E),
+    agent(Id?, IRec?, UserIn?, NetIn?, NetOut, Date?,
+          secure_gsg(Known?, Vols?, Inbox?, FMap?, FoFMap?, Pending?, LBD?)).
+
+%% Query: q_ir(Q) -- the identity record stored for Q.
+agent(Id, IRec, [query(q_ir(Q), a_ir(IR)) | UserIn], NetIn, NetOut?, Date,
+      secure_gsg(Known, Vols, Inbox, FMap, FoFMap, Pending, LBD)) :-
+    ground(Q?), ground(FMap?) |
+    secure_ir_of(Q?, FMap?, IR),
+    agent(Id?, IRec?, UserIn?, NetIn?, NetOut, Date?,
+          secure_gsg(Known?, Vols?, Inbox?, FMap?, FoFMap?, Pending?, LBD?)).
+
+%% Query: q_fof_epoch(Q, F) -- epoch_p(q, f).
+agent(Id, IRec, [query(q_fof_epoch(Q, F), a_epoch(E)) | UserIn], NetIn, NetOut?, Date,
+      secure_gsg(Known, Vols, Inbox, FMap, FoFMap, Pending, LBD)) :-
+    ground(Q?), ground(F?), ground(FoFMap?) |
+    fof_epoch_of(Q?, F?, FoFMap?, E),
     agent(Id?, IRec?, UserIn?, NetIn?, NetOut, Date?,
           secure_gsg(Known?, Vols?, Inbox?, FMap?, FoFMap?, Pending?, LBD?)).
 
@@ -124,16 +164,31 @@ agent(Id, IRec, UserIn, [msg(P, accept(X, ir(K, S))) | NetIn], NetOut?, Date,
     activate(Id?, IRec?, P?, X?, UserIn?, NetIn?,
              NetOut, Date?, Known?, Vols?, Inbox?, FMap1?, FoFMap?, Pending1?, LBD?).
 
-%% Checkpoint received (paper §8.5 Integrate checkpoint, PASS B-minimal):
-%% only the FoF-absorption case; skeleton install / stub promotion /
-%% direct-heal deferred to fault-harness session.  P's pair (Self, _) is
-%% skipped inside absorb_fof_pairs.
-agent(Id, IRec, UserIn, [msg(P, checkpoint(_, _, L)) | NetIn], NetOut?, Date,
+%% Checkpoint received (paper, Integrate checkpoint), its three branches in
+%% order: install the sender where unrecorded (a skeleton at epoch 0 carrying
+%% its identity record) or promote a stub; the direct heal, absorbing (Self, E)
+%% from L where epoch(P) < E; the observer heal, absorbing the remaining pairs
+%% under the epoch order.  This is the whole of Restore: an agent that lost
+%% its state is rebuilt by the checkpoints its friends keep sending.
+agent(Id, IRec, UserIn, [msg(P, checkpoint(_, ir(K, S), L)) | NetIn], NetOut?, Date,
       secure_gsg(Known, Vols, Inbox, FMap, FoFMap, Pending, LBD)) :-
-    ground(P?), ground(L?), ground(Id?) |
+    ground(P?), ground(L?), ground(Id?), ground(K?), ground(S?) |
+    install_sender(P?, K?, S?, FMap?, FMap1),
+    direct_heal(Id?, P?, L?, FMap1?, FMap2),
     absorb_fof_pairs(Id?, P?, L?, FoFMap?, FoFMap1),
     agent(Id?, IRec?, UserIn?, NetIn?, NetOut, Date?,
-          secure_gsg(Known?, Vols?, Inbox?, FMap?, FoFMap1?, Pending?, LBD?)).
+          secure_gsg(Known?, Vols?, Inbox?, FMap2?, FoFMap1?, Pending?, LBD?)).
+
+%% Unfriend received (paper, Integrate unfriend): where P ∈ dom(FMap) and
+%% epoch(P) < X, FMap[P].epoch := X preserving K and σ, and stream_update(P, X)
+%% to every recipient; otherwise dropped.
+agent(Id, IRec, UserIn, [msg(P, unfriend(X)) | NetIn], NetOut?, Date,
+      secure_gsg(Known, Vols, Inbox, FMap, FoFMap, Pending, LBD)) :-
+    ground(P?), ground(X?), ground(Id?), ground(FMap?) |
+    secure_member(P?, FMap?, Member),
+    secure_epoch_of(P?, FMap?, E0),
+    unfriend_step(Member?, E0?, Id?, IRec?, P?, X?, UserIn?, NetIn?, NetOut, Date?,
+                  Known?, Vols?, Inbox?, FMap?, FoFMap?, Pending?, LBD?).
 
 %% Stream update received (paper §6.5): FoFMap update.
 agent(Id, IRec, UserIn, [msg(P, stream_update(F, X)) | NetIn], NetOut?, Date,
@@ -303,4 +358,34 @@ tick_step(LBD, Date, Id, IRec, UserIn, NetIn, NetOut?, Date1,
           Known, Vols, Inbox, FMap, FoFMap, Pending) :-
     otherwise |
     agent(Id?, IRec?, UserIn?, NetIn?, NetOut, Date1?,
+          secure_gsg(Known?, Vols?, Inbox?, FMap?, FoFMap?, Pending?, LBD?)).
+
+%% =============================================================================
+%% unfriend_step -- dispatch of Integrate unfriend on membership and epoch order.
+%% =============================================================================
+
+exported procedure unfriend_step(Constant?, Integer?, Agent?, IdentityRecord?,
+                                  Agent?, Integer?,
+                                  Stream(UserEvent(SecureGsgVolition, SecureGsgQuery, SecureGsgAnswer))?,
+                                  Stream(InMsg(SecureGsgCargo))?,
+                                  Stream(NetMsg(SecureGsgCargo)),
+                                  Integer?,
+                                  Stream(Agent)?, Stream(SecureGsgVolition)?,
+                                  Stream(InMsg(SecureGsgCargo))?,
+                                  SecureFMap?, FoFMap?, PendingList?, Integer?).
+
+%% P recorded and epoch(P) < X: record the even epoch and tell the recipients.
+unfriend_step(true, E0, Id, IRec, P, X, UserIn, NetIn, NetOut?, Date,
+              Known, Vols, Inbox, FMap, FoFMap, Pending, LBD) :-
+    E0? < X? |
+    set_entry_epoch(P?, X?, FMap?, FMap1),
+    secure_broadcast_update(Id?, P?, X?, FMap1?, NetOut, NetOut1?),
+    agent(Id?, IRec?, UserIn?, NetIn?, NetOut1, Date?,
+          secure_gsg(Known?, Vols?, Inbox?, FMap1?, FoFMap?, Pending?, LBD?)).
+
+%% Otherwise: not a friend, or a stale unfriend; dropped.
+unfriend_step(_, _, Id, IRec, _, _, UserIn, NetIn, NetOut?, Date,
+              Known, Vols, Inbox, FMap, FoFMap, Pending, LBD) :-
+    otherwise |
+    agent(Id?, IRec?, UserIn?, NetIn?, NetOut, Date?,
           secure_gsg(Known?, Vols?, Inbox?, FMap?, FoFMap?, Pending?, LBD?)).

@@ -492,3 +492,20 @@ classify_pending(Self, P, [Entry | Rest], [Entry? | Rest1?], M?) :-
 
 %% Empty: no matching pending_offer; caller falls through to Accept offer.
 classify_pending(_, _, [], [], pm_none).
+
+%% =============================================================================
+%% ENTRY POINTS (modules.tex, External access): the plays, forwarded to the
+%% modules that define them, so that programs/spm/self.glp can enter this
+%% directory through this file and export them as the program's entry points.
+%% =============================================================================
+imported procedure play_befriend # play_befriend(Integer, Integer).
+exported procedure play_befriend(Integer, Integer).
+play_befriend(A?, B?) :- play_befriend # play_befriend(A, B).
+
+imported procedure play_befriend_simultaneous # play_befriend_simultaneous(Integer, Integer).
+exported procedure play_befriend_simultaneous(Integer, Integer).
+play_befriend_simultaneous(A?, B?) :- play_befriend_simultaneous # play_befriend_simultaneous(A, B).
+
+imported procedure play_three_agents # play_three_agents.
+exported procedure play_three_agents.
+play_three_agents :- play_three_agents # play_three_agents.

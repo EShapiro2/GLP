@@ -1,0 +1,66 @@
+%% secure_gsg/plays/play_secure_restore.glp -- state loss and passive Restore
+%% (SPM, Restore Protocol; SGSG paper, Section 5.3).
+%%
+%% Alice and Bob befriend (secure).  Bob then suffers the state-loss fault:
+%% `crash` resets his machine state and he resumes under his retained
+%% identity record with an empty FMap --- his epoch of alice reads 0 (Zero).
+%% Alice, who still records bob, ticks: re-broadcast sends him
+%% checkpoint(1, IR_alice, [fe(bob, 1)]).  Integrate checkpoint at bob finds
+%% alice unrecorded and installs the skeleton (0, K_a, σ_a) from the carried
+%% identity record; the direct heal absorbs (bob, 1) and advances his epoch
+%% of alice to 1, preserving K_a and σ_a.  Bob then reads back epoch 1 and
+%% alice's identity record: the friendship is recovered with no custodian
+%% action and no message beyond the periodic checkpoint.
+%%
+%% Expected: AliceEpochOfBob = 1, Zero = 0, BobEpochOfAlice = 1,
+%% BobIRofAlice = ir([cust_a1, cust_a2], 67), → succeeds.
+%%
+%% Bob's read-back is gated on real time (wait_after: 300 ms after alice's
+%% tick has been answered), since UserIn and NetIn are absorbed in whichever
+%% order the scheduler takes them.
+
+
+imported procedure secure_gsg_agent # agent(Agent?, IdentityRecord?,
+                                             Stream(UserEvent(SecureGsgVolition, SecureGsgQuery, SecureGsgAnswer))?,
+                                             Stream(InMsg(SecureGsgCargo))?,
+                                             Stream(NetMsg(SecureGsgCargo)),
+                                             Integer?,
+                                             SecureGsgPlatform?).
+
+imported procedure cva # network(NetEndList(SecureGsgCargo)?).
+
+NetEnd(C) ::= net_end(Agent, Stream(NetMsg(C)), Stream(InMsg(C))?).
+NetEndList(C) ::= [] ; [NetEnd(C) | NetEndList(C)].
+
+exported procedure play_secure_restore(Integer, Integer, Integer, IdentityRecord).
+
+play_secure_restore(AliceEpochOfBob?, Zero?, BobEpochOfAlice?, BobIRofAlice?) :-
+    secure_gsg_agent # agent(alice, ir([cust_a1, cust_a2], 67),
+          [will(discover(bob, R0a?)), await(R0a?),
+           will(offer_friendship(bob, RA?)), await(RA?),
+           await(Zero?),                                       %% bob has crashed and reads 0
+           tick,                                               %% re-broadcast: checkpoint to bob
+           query(q_epoch(bob), a_epoch(AliceEpochOfBob?)),
+           shutdown],
+          AliceIn?, AliceOut, 0,
+          secure_gsg([], [], [], [], [], [], 0)),
+    secure_gsg_agent # agent(bob, ir([cust_b1, cust_b2], 67),
+          [will(accept_offer(alice, RB?)), await(RB?),
+           crash,
+           query(q_epoch(alice), a_epoch(Zero?)),              %% the state is gone
+           await(Later?),                                      %% the checkpoint has had time to arrive
+           query(q_epoch(alice), a_epoch(BobEpochOfAlice?)),
+           query(q_ir(alice), a_ir(BobIRofAlice?)),
+           shutdown],
+          BobIn?, BobOut, 0,
+          secure_gsg([], [], [], [], [], [], 0)),
+    wait_after(AliceEpochOfBob?, Later),
+    cva # network([net_end(alice, AliceOut?, AliceIn),
+                   net_end(bob,   BobOut?,   BobIn)]).
+
+%% wait_after(X?, Later): once X is known, bind Later 300 ms later.
+procedure wait_after(Integer?, Constant).
+wait_after(X, Later?) :- ground(X?) | now(T0), T1 := T0? + 300, wait_then(T1?, Later).
+
+procedure wait_then(Integer?, Constant).
+wait_then(T, ok) :- wait_until(T?) | true.

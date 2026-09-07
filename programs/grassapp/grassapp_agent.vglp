@@ -127,9 +127,11 @@ AgentContent ::= connected(Constant)
 AgentMsg     ::= msg(Constant, Constant, AgentContent).
 
 %% Output entries, as in self.glp: the person's entry apart, carrying AgentMsg;
-%% the friend and '_net' entries keyed, carrying OutputMsg; the group entries
-%% keyed by GroupKey, carrying GroupMsg.
+%% the network's entry apart, carrying NetOutMsg (cold calls); the friend
+%% entries keyed, carrying OutputMsg; the group entries keyed by GroupKey,
+%% carrying GroupMsg.
 OutputEntry ::= person_output(Stream(AgentMsg)?)
+              ; net_output(NetOutStream?)
               ; output(Constant, OutputStream?)
               ; group_entry(GroupKey, Stream(GroupMsg)?).
 OutputsList ::= [] ; [OutputEntry|OutputsList].
@@ -229,7 +231,7 @@ trade_dispatch(normal, Id, From, WantSpec, OfferedBonds, TradeResp?,
 
 %% Open the escrow.  The cancel signal is the person's to bind, so it goes to a
 %% responder rather than to the mediator's pending table.
-procedure do_deposit_escrow_result(Constant?, Constant?, Constant?, Constant?, Constant?, Constant?, Constant?, Stream(Bond)?, Stream(Bond)?, Constant?, Constant?, Stream(X)?, Stream(X)?, OutputsList?).
+procedure do_deposit_escrow_result(Constant?, Constant?, Constant?, Constant?, Constant?, Constant?, Constant?, Stream(Bond)?, Stream(Bond)?, Constant?, Constant?, UserInStream?, NetInStream?, OutputsList?).
 do_deposit_escrow_result(ok, Id, Target, ReleaseTime, Coin, Maturity, Amount, Selected, Remaining, NextSerial, Clock, UserIn, NetIn, Outs) :-
     ground(Coin?), ground(Maturity?), ground(Amount?) |
     escrow(ReleaseTime?, EscrowDates?, Selected?, CancelSignal?, BenResult, DepResult),
@@ -250,7 +252,7 @@ do_deposit_escrow_result(fail, Id, Target, _, _, _, _, Selected, Remaining, Next
 %% deposit path opens a fresh channel onto it.
 %% =============================================================================
 
-procedure agent(Constant?, Stream(X)?, Stream(X)?, OutputsList?, Stream(Bond)?, Constant?, Constant?, Stream(Constant)).
+procedure agent(Constant?, UserInStream?, NetInStream?, OutputsList?, Stream(Bond)?, Constant?, Constant?, Stream(Constant)).
 
 %% --- Reactive: network messages ---
 
@@ -522,7 +524,7 @@ agent(Id, UserIn, NetIn, Outs, Holdings, NextSerial, Clock, []) :-
 *(Target)
 agent(Id, UserIn, NetIn, Outs, Holdings, NextSerial, Clock, DateW?) :-
     ground(Id?), ground(Target?) |
-    lookup_send('_net', msg(Target?, friend_request(Id?, Resp)), Outs?, Outs1),
+    send_net(msg(Target?, friend_request(Id?, Resp)), Outs?, Outs1),
     inject_msg(Resp?, Target?, Id?, UserIn?, UserIn1),
     agent(Id?, UserIn1?, NetIn?, Outs1?, Holdings?, NextSerial?, Clock?, DateW).
 

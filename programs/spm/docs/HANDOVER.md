@@ -1,28 +1,31 @@
-## State
+## State (SGSG Code, 2026-09-07)
 
-Committed at GLP `1ca04b2c`.  Five plays load, type-check, and run:
+The three directories are one program, `programs/spm`, entered through `spm/self.glp`, which exports every play; `cva/` still loads on its own (suite Section X10), and Section SG runs the plays.  Load `programs/spm` in glpc and post a play by plain name.
 
 | Play | Result | What it verifies |
 |---|---|---|
-| `play_befriend(A, B)` | `A=1, B=1` → succeeds | Paper §6.3 Offer + Accept + Integrate accept with reply-variable sync. |
-| `play_befriend_simultaneous(A, B)` | `A=1, B=1` → succeeds | Paper §6.3 Resolve simultaneous offer. |
-| `play_three_agents` | → succeeds | Three-agent befriend + cross-broadcast (paper §6.5 stream dissemination). |
-| `play_secure_befriend(A, B)` | `A=1, B=1` → succeeds | Paper §8.2 Befriend extension — IR transported on friend_request/accept, stored as `full(Q, E, K, σ)` in FMap. |
-| `play_secure_rebroadcast(A, B)` | `A=1, B=1` → suspended | Paper §8.5 Re-broadcast plumbing — tick fires checkpoint, recipient runs Integrate checkpoint's FoF-absorption branch.  Suspended is intentional (bob omits shutdown so he is alive to integrate; doc'd in the play). |
+| `play_befriend(A, B)` | `A=1, B=1` → succeeds | Offer + Accept + Integrate accept with reply-variable sync. |
+| `play_befriend_simultaneous(A, B)` | `A=1, B=1` → succeeds | Resolve simultaneous offer. |
+| `play_three_agents` | → succeeds | Three-agent befriend + cross-broadcast (stream dissemination). |
+| `play_secure_befriend(A, B)` | `A=1, B=1` → succeeds | Befriend extension: IR transported and stored as `full(Q, E, K, σ)`. |
+| `play_secure_rebroadcast(A, B)` | `A=1, B=1` → suspended | Periodic re-broadcast; the recipient integrates the checkpoint (suspended is intentional, see the play). |
+| `play_secure_unfriend(A, B, IR)` | `A=2, B=2, IR=ir([cust_a1, cust_a2], 67)` → succeeds | End friendship and Integrate unfriend on the secure FMap: only the epoch moves, K and σ preserved. |
+| `play_secure_restore(A, Z, B, IR)` | `A=1, Z=0, B=1, IR=ir([cust_a1, cust_a2], 67)` → succeeds | The state-loss fault (`crash`) and passive Restore: skeleton install from the checkpoint's identity record, direct heal of the epoch. |
 
 Code:
 
+- `self.glp` — the program's root: the plays as entry points.
 - `cva/{self.glp, network.glp}` — CVA substrate + mediator.
-- `gsg/{self.glp, agent.glp}` — clean GSG (paper §6.1–§6.5).
-- `gsg/plays/{play_befriend, play_befriend_simultaneous, play_three_agents}.glp`.
-- `secure_gsg/{self.glp, agent.glp}` — secure GSG (paper §8.2 in full; §8.5 partial — see Deferrals).
-- `secure_gsg/plays/{play_secure_befriend, play_secure_rebroadcast}.glp`.
+- `gsg/{self.glp, gsg_agent.glp}` — the social graph (SPM, GSG-CVA); `gsg/plays/`.
+- `secure_gsg/{self.glp, secure_gsg_agent.glp}` — the secure social graph: Befriend extension, periodic re-broadcast, Integrate checkpoint in full (skeleton install, stub promotion, direct heal, observer heal under the epoch order), the state-loss fault and Restore, Unfriend inherited; `secure_gsg/plays/`.
 
-All helpers are declared `exported procedure` as a workaround for `/GLP/docs/bugs/local-procedure-not-found-with-module-directive.md` (still open as far as this session knows).
+Not implemented: the Replace cascade (SPM, Replace Protocol) — Vouch, Announce new identity, Integrate new identity, Integrate rebind; its cargo and volition types are declared in `secure_gsg/self.glp` and no clause handles them.
 
-## Next Work — Fault Harness + PASS B-full
+The fault harness below (supervisor, mediator rebind) was not built: `crash` is a clause of the agent that resets the platform state and keeps the streams, which is enough for Restore; in-flight input is not discarded.
 
-Required to exercise the parts of the paper that only fire under faults: state-loss Restore (paper §8.5 stub install / direct heal in Integrate checkpoint) and identity-loss Replace (paper §8.7).
+## Next Work — the Replace cascade
+
+Restore is done (above).  What remains is identity-loss Replace (SPM, Replace Protocol): Vouch, Announce new identity, Integrate new identity, Integrate rebind, with supermajority counting and stub installation from rebinds.  The architectural notes below were written for a fault harness with a supervisor; Restore did without one, and Replace may too (a play can script the vouches directly).
 
 ### Architectural questions, with proposed answers
 
@@ -50,28 +53,20 @@ The `crash` UserIn event is in the type but no agent clause handles it.
 
 ## Deferrals (paper-spec-code gap; must close before declaring done)
 
-Tracked per the "Paper – Spec – Code Harmonisation" rule in `/Users/udi/Grassroots/CLAUDE.md`.
-
-- **Integrate accept precondition `epoch_p(q) < x`** (`gsg/agent.glp`): not enforced; stale/duplicate accepts re-trigger broadcast/snapshot.  Fix: precondition check via body dispatch on the `epoch_of(P, FMap)` result, analogous to PASS 3 dispatch.
-- **Integrate unfriend precondition `epoch_q(p) < x`** (`gsg/agent.glp`): same shape; not enforced.
-- **Integrate checkpoint branches** (`secure_gsg/agent.glp`): only the FoF-absorption case is implemented.  Skeleton install (when P ∉ dom(FMap_r)), stub promotion (spec-issue O), and direct heal ((r, e) ∈ L update of FMap_r[p].epoch) are the three branches the harness session will add.
-- **`stream_update` precondition `q ∈ dom(FMap_r)`** (paper §6.5): receiver doesn't check membership before FoFMap update; spurious stream updates from non-friends are absorbed.
-- **Application-data field** (paper §6.7): FMap entry data slot is implicit `⊥`; Get/Set data operations not exposed.
+- **Replace cascade** (`secure_gsg/secure_gsg_agent.glp`): Vouch, Announce new identity, Integrate new identity, Integrate rebind — not implemented (2026-09-07).
+- **Integrate accept precondition `epoch_p(q) < x`** (`gsg/gsg_agent.glp`): not enforced; stale/duplicate accepts re-trigger broadcast/snapshot.
+- **`stream_update` precondition `q ∈ dom(FMap_r)`**: receiver doesn't check membership before FoFMap update.
+- **Application-data field**: FMap entry data slot is implicit `⊥`; Get/Set data operations not exposed.
+- **`checkpoint/3` carries the date** (`checkpoint(Date, IR, L)`); the paper's cargo is `checkpoint(R, L)`, the date having been dropped as redundant under monotone absorption.
 
 ## How to Run
 
 ```bash
 cd /Users/udi/Grassroots/GLP/glp_runtime
-echo -e '../programs/SPM/\nplay_secure_befriend(A, B).\n:quit' | dart run bin/glp_repl.dart
+printf '/Users/udi/Grassroots/GLP/programs/spm\n:limit 1000000\nplay_secure_restore(A, Z, B, IR).\n:quit\n' | bin/glpc
 ```
 
-All five plays in one shot:
-
-```bash
-echo -e '../programs/SPM/\nplay_befriend(A, B).\nplay_befriend_simultaneous(A, B).\nplay_three_agents.\nplay_secure_befriend(A, B).\nplay_secure_rebroadcast(A, B).\n:quit' | dart run bin/glp_repl.dart
-```
-
-`:trace` before the goal enables full trace; redirect to `/private/tmp/spm.txt` and `Read` it.
+All plays: suite Section SG (`bash test/run_all_tests.sh` from the GLP root).
 
 ## Read Before Starting
 

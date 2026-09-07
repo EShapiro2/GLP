@@ -1,0 +1,21 @@
+%% budget/self.glp --- the resource-bounded meta-interpreter of the super-app
+%% (SGSG paper, Section 6.3 and Appendix D), the stream counter it is partially
+%% evaluated against, and the plays that run both under a granting super-app.
+%% The listing in budget.glp is the specification of record for the paper's.
+
+%% A request for more budget.  The mini-app writes more(N1) with N1 unbound and
+%% keeps N1?; the super-app, reading the stream, assigns N1.  The position
+%% therefore carries the writer (typed-glp-manual 15B).
+Request ::= more(Integer?).
+
+imported procedure bounded # play_meta(Stream(Integer)).
+exported procedure play_meta(Stream(Integer)).
+play_meta(Out?) :- bounded # play_meta(Out).
+
+imported procedure bounded # play_residual(Stream(Integer)).
+exported procedure play_residual(Stream(Integer)).
+play_residual(Out?) :- bounded # play_residual(Out).
+
+imported procedure bounded # bench(Constant?, Integer?, Integer?, Integer).
+exported procedure bench(Constant?, Integer?, Integer?, Integer).
+bench(Which, N, K, Last?) :- bounded # bench(Which?, N?, K?, Last).

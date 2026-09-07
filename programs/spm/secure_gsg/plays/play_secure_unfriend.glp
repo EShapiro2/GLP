@@ -1,0 +1,53 @@
+%% secure_gsg/plays/play_secure_unfriend.glp -- End friendship and Integrate
+%% unfriend on the secure FMap (SPM, Unfriend inherited: only the epoch moves;
+%% the identity-record fields are preserved).
+%%
+%% Alice and Bob befriend (secure), then alice ends the friendship: her epoch
+%% of bob goes to 2 (even), unfriend(2) reaches bob, and Integrate unfriend
+%% sets his epoch of alice to 2 while his stored identity record of alice
+%% stands.
+%%
+%% Expected: A = 2, B = 2, BobIRofAlice = ir([cust_a1, cust_a2], 67), → succeeds.
+
+
+imported procedure secure_gsg_agent # agent(Agent?, IdentityRecord?,
+                                             Stream(UserEvent(SecureGsgVolition, SecureGsgQuery, SecureGsgAnswer))?,
+                                             Stream(InMsg(SecureGsgCargo))?,
+                                             Stream(NetMsg(SecureGsgCargo)),
+                                             Integer?,
+                                             SecureGsgPlatform?).
+
+imported procedure cva # network(NetEndList(SecureGsgCargo)?).
+
+NetEnd(C) ::= net_end(Agent, Stream(NetMsg(C)), Stream(InMsg(C))?).
+NetEndList(C) ::= [] ; [NetEnd(C) | NetEndList(C)].
+
+exported procedure play_secure_unfriend(Integer, Integer, IdentityRecord).
+
+play_secure_unfriend(A?, B?, BobIRofAlice?) :-
+    secure_gsg_agent # agent(alice, ir([cust_a1, cust_a2], 67),
+          [will(discover(bob, R0a?)), await(R0a?),
+           will(offer_friendship(bob, RA?)), await(RA?),
+           will(end_friendship(bob, RE?)), await(RE?),
+           query(q_epoch(bob), a_epoch(A?)),
+           shutdown],
+          AliceIn?, AliceOut, 0,
+          secure_gsg([], [], [], [], [], [], 0)),
+    secure_gsg_agent # agent(bob, ir([cust_b1, cust_b2], 67),
+          [will(accept_offer(alice, RB?)), await(RB?),
+           await(Later?),                                      %% the unfriend has had time to arrive
+           query(q_epoch(alice), a_epoch(B?)),
+           query(q_ir(alice), a_ir(BobIRofAlice?)),
+           shutdown],
+          BobIn?, BobOut, 0,
+          secure_gsg([], [], [], [], [], [], 0)),
+    wait_after(A?, Later),
+    cva # network([net_end(alice, AliceOut?, AliceIn),
+                   net_end(bob,   BobOut?,   BobIn)]).
+
+%% wait_after(X?, Later): once X is known, bind Later 300 ms later.
+procedure wait_after(Integer?, Constant).
+wait_after(X, Later?) :- ground(X?) | now(T0), T1 := T0? + 300, wait_then(T1?, Later).
+
+procedure wait_then(Integer?, Constant).
+wait_then(T, ok) :- wait_until(T?) | true.

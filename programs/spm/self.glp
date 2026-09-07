@@ -1,0 +1,38 @@
+%% spm/self.glp -- the SPM programs as one program (SGSG paper, Section 5.3).
+%%
+%% cva/ is the CVA substrate (types and the network mediator), shared by the
+%% two platforms beside it, gsg/ (the social graph) and secure_gsg/ (its
+%% secure version).  A play reaches the mediator as `cva # network(...)`,
+%% which resolves only where cva/ is a module of the loaded program: so the
+%% program is this directory, entered through this file, and its entry points
+%% are the plays of the two platforms, forwarded here through each platform's
+%% own self.glp (modules.tex, External access).  Each platform directory still
+%% loads on its own (suite Section X10), with its plays dropped as dead code.
+
+imported procedure gsg # play_befriend(Integer, Integer).
+exported procedure play_befriend(Integer, Integer).
+play_befriend(A?, B?) :- gsg # play_befriend(A, B).
+
+imported procedure gsg # play_befriend_simultaneous(Integer, Integer).
+exported procedure play_befriend_simultaneous(Integer, Integer).
+play_befriend_simultaneous(A?, B?) :- gsg # play_befriend_simultaneous(A, B).
+
+imported procedure gsg # play_three_agents.
+exported procedure play_three_agents.
+play_three_agents :- gsg # play_three_agents.
+
+imported procedure secure_gsg # play_secure_befriend(Integer, Integer).
+exported procedure play_secure_befriend(Integer, Integer).
+play_secure_befriend(A?, B?) :- secure_gsg # play_secure_befriend(A, B).
+
+imported procedure secure_gsg # play_secure_rebroadcast(Integer, Integer).
+exported procedure play_secure_rebroadcast(Integer, Integer).
+play_secure_rebroadcast(A?, B?) :- secure_gsg # play_secure_rebroadcast(A, B).
+
+imported procedure secure_gsg # play_secure_restore(Integer, Integer, Integer, IdentityRecord).
+exported procedure play_secure_restore(Integer, Integer, Integer, IdentityRecord).
+play_secure_restore(A?, Z?, B?, IR?) :- secure_gsg # play_secure_restore(A, Z, B, IR).
+
+imported procedure secure_gsg # play_secure_unfriend(Integer, Integer, IdentityRecord).
+exported procedure play_secure_unfriend(Integer, Integer, IdentityRecord).
+play_secure_unfriend(A?, B?, IR?) :- secure_gsg # play_secure_unfriend(A, B, IR).

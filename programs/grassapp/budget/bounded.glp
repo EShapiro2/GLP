@@ -1,0 +1,116 @@
+%% bounded.glp --- the resource-bounded meta-interpreter bounded/3, the stream
+%% counter as a mini-app, the residual program the compiler's partial
+%% evaluation of bounded/3 against it yields, and the super-app's granting of
+%% budgets.  SGSG paper, Section 6.3 and Appendix D, which follow this listing.
+%%
+%% OBJECT PROGRAMS.  GLP has no clause/2 and no meta-call, so a meta-interpreter
+%% runs over a representation of the mini-app, the one programs/book/meta uses:
+%% a clause  A :- G | S, B  of the mini-app, with S its system goals and B its
+%% user goals, is the unit clause  reduce(A, B) :- G | S.  The reduce clause
+%% executes the system goals itself, within the one reduction charged for the
+%% clause; the meta-interpreter counts reductions of the mini-app's clauses and
+%% nothing else.  Arithmetic assignment (:=) is a body predicate, not a guard,
+%% so budgets are compared in guards and decremented in bodies.  Meta-interpreter typing is deferred (typed-glp-manual 18.3):
+%% bounded/3 and reduce/2 range over any goal term, hence `_`.
+
+%% =============================================================================
+%% THE META-INTERPRETER: bounded(Goal, Budget, Requests)
+%% =============================================================================
+%% Reduces Goal with at most Budget reductions; when the budget is spent it
+%% writes more(N1) on Requests, a stream the super-app reads, and proceeds with
+%% whatever budget the super-app assigns to N1.  A conjunction splits its budget
+%% between its conjuncts and merges their request streams.
+
+procedure bounded(_?, Integer?, Stream(Request)).
+bounded(true, _, []).
+bounded((A, B), N, Rs?) :-
+    N1 := N? // 2, N2 := N? - N1?,
+    bounded(A?, N1?, Rs1), bounded(B?, N2?, Rs2), merge(Rs1?, Rs2?, Rs).
+bounded(G, N, Rs?) :-
+    otherwise, N? > 0 |
+    N1 := N? - 1, reduce(G?, B), bounded(B?, N1?, Rs).
+bounded(G, N, [more(N1)|Rs?]) :-
+    otherwise, N? =?= 0 |
+    bounded(G?, N1?, Rs).
+
+%% The request streams of two conjuncts joined into one; when either closes the
+%% merged stream continues as the other, so a chain of merges left by a
+%% recursive goal shortens as its conjuncts terminate.
+procedure merge(Stream(Request)?, Stream(Request)?, Stream(Request)).
+merge([X|Xs], Ys, [X?|Zs?]) :- merge(Xs?, Ys?, Zs).
+merge(Xs, [Y|Ys], [Y?|Zs?]) :- merge(Xs?, Ys?, Zs).
+merge([], Ys, Ys?).
+merge(Xs, [], Xs?).
+
+%% =============================================================================
+%% THE MINI-APP: a stream counter, three ways
+%% =============================================================================
+
+%% (a) As the mini-app writes it.
+procedure count(Stream(Integer)?, Integer?, Stream(Integer)).
+count([_|Xs], N, [N1?|Out?]) :- N1 := N? + 1, count(Xs?, N1?, Out).
+count([], _, []).
+
+%% (b) As the meta-interpreter runs it: one reduce clause per clause of (a).
+procedure reduce(_?, _).
+reduce(count([_|Xs], N, [N1?|Out?]), count(Xs?, N1?, Out)) :- N1 := N? + 1.
+reduce(count([], _, []), true).
+
+%% (c) The residual program: bounded/3 partially evaluated against (a).  Each
+%% predicate gains the budget and the request stream; each clause a test and a
+%% decrement; each predicate one clause that requests a budget when it has
+%% none.  The body of the first clause is a single user goal, so no merge
+%% remains; a body of k user goals would keep k-1 merges.
+procedure count(Stream(Integer)?, Integer?, Stream(Integer), Integer?, Stream(Request)).
+count([_|Xs], N, [N1?|Out?], B, Rs?) :-
+    B? > 0 |
+    B1 := B? - 1, N1 := N? + 1, count(Xs?, N1?, Out, B1?, Rs).
+count([], _, [], B, []) :- B? > 0 | true.
+count(Xs, N, Out?, B, [more(B1)|Rs?]) :-
+    B? =?= 0 |
+    count(Xs?, N?, Out, B1?, Rs).
+
+%% =============================================================================
+%% THE SUPER-APP: granting budgets
+%% =============================================================================
+%% grant(Rs, K) assigns K to every request on Rs: a super-app granting a fixed
+%% budget at the rate at which the mini-app asks.
+procedure grant(Stream(Request)?, Integer?).
+grant([more(K?)|Rs], K) :- grant(Rs?, K?).
+grant([], _).
+
+%% =============================================================================
+%% PLAYS
+%% =============================================================================
+
+%% The counter under the meta-interpreter, budget 2, grants of 2: Out = [1,2,3,4,5].
+exported procedure play_meta(Stream(Integer)).
+play_meta(Out?) :-
+    bounded(count([1,2,3,4,5], 0, Out), 2, Rs),
+    grant(Rs?, 2).
+
+%% The residual program, budget 2, grants of 2: the same Out.
+exported procedure play_residual(Stream(Integer)).
+play_residual(Out?) :-
+    count([1,2,3,4,5], 0, Out, 2, Rs),
+    grant(Rs?, 2).
+
+%% bench(Which, N, K, Last): count a stream of N integers, Which = plain (the
+%% mini-app unbudgeted), residual (the residual program under grants of K) or
+%% meta (under bounded/3 with grants of K); Last is the last count, N.
+exported procedure bench(Constant?, Integer?, Integer?, Integer).
+bench(plain, N, _, Last?) :-
+    iota(N?, Xs), count(Xs?, 0, Out), last(Out?, Last).
+bench(residual, N, K, Last?) :-
+    iota(N?, Xs), count(Xs?, 0, Out, K?, Rs), grant(Rs?, K?), last(Out?, Last).
+bench(meta, N, K, Last?) :-
+    iota(N?, Xs), bounded(count(Xs?, 0, Out), K?, Rs), grant(Rs?, K?), last(Out?, Last).
+
+procedure iota(Integer?, Stream(Integer)).
+iota(N, [N?|Xs?]) :- N? > 0 | N1 := N? - 1, iota(N1?, Xs).
+iota(0, []).
+
+procedure last(Stream(Integer)?, Integer).
+last([X], X?).
+last([_|Xs], L?) :- otherwise | last(Xs?, L).
+last([], 0).

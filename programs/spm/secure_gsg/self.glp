@@ -398,11 +398,10 @@ broadcast_checkpoint(Id, Date, IR, L, [stub(R, _) | Rest],
     broadcast_checkpoint(Id?, Date?, IR?, L?, Rest?, NewTail, Cont?).
 broadcast_checkpoint(_, _, _, _, [], Cont?, Cont).
 
-%% absorb_fof_pairs(Self?, P?, L?, FoFMapIn?, FoFMapOut): per paper §8.5,
-%% for each (f, e) in L with f ≠ Self, set FoFMap[P][f] := e and
-%% FoFMap[f][P] := e (preserving FoFMap Symmetry).  PASS B-minimal: no
-%% epoch-comparison guard yet -- always writes, which is monotone if e is
-%% greater (later: add per-pair < check).
+%% absorb_fof_pairs(Self?, P?, L?, FoFMapIn?, FoFMapOut): Integrate
+%% checkpoint's third branch, for each (f, e) in L with f ≠ Self and
+%% epoch_r(p, f) < e, set FoFMap[P][f] := e and FoFMap[f][P] := e (preserving
+%% FoFMap Symmetry).
 exported procedure absorb_fof_pairs(Agent?, Agent?, FriendList?,
                                       FoFMap?, FoFMap).
 
@@ -411,12 +410,140 @@ absorb_fof_pairs(Self, P, [fe(F, _) | Rest], FoFMap, FoFMap1?) :-
     Self? =?= F? |
     absorb_fof_pairs(Self?, P?, Rest?, FoFMap?, FoFMap1).
 
-%% Non-self pair: update FoFMap[P][F] and symmetric FoFMap[F][P].
+%% Non-self pair: where epoch_r(p, f) < e, update FoFMap[P][F] and the
+%% symmetric FoFMap[F][P] (the observer heal; absorb_step carries the guard).
 absorb_fof_pairs(Self, P, [fe(F, E) | Rest], FoFMap, FoFMap2?) :-
     otherwise |
-    set_fof_epoch(P?, F?, E?, FoFMap?, FoFMap1),
-    set_fof_epoch(F?, P?, E?, FoFMap1?, FoFMapMid),
+    fof_epoch_of(P?, F?, FoFMap?, E0),
+    absorb_step(E0?, P?, F?, E?, FoFMap?, FoFMapMid),
     absorb_fof_pairs(Self?, P?, Rest?, FoFMapMid?, FoFMap2).
 
 %% Empty: pass through (alias arg 4 writer to arg 5 reader).
 absorb_fof_pairs(_, _, [], FoFMap, FoFMap?).
+
+%% =============================================================================
+%% RESTORE (paper, Restore Protocol): the first two branches of Integrate
+%% checkpoint, and the epoch-order guard of the third.  Restore adds no
+%% transaction and no cargo of its own; a recipient that lost its state is
+%% rebuilt by the checkpoints its friends keep sending.
+%% =============================================================================
+
+%% install_sender(P?, K?, σ?, FMap?, FMap1): the first branch.  P ∉ dom(FMap):
+%% append skeleton(P, K, σ), the inactive epoch 0 carrying the sender's
+%% identity record.  FMap[P] a stub: promote it to full(P, E, K, σ),
+%% preserving its epoch (spec-issue O).  A full or skeleton entry: unchanged.
+exported procedure install_sender(Agent?, Stream(Agent)?, Integer?,
+                                   SecureFMap?, SecureFMap).
+install_sender(P, K, S, [stub(P1, E) | Rest], [full(P?, E?, K?, S?) | Rest?]) :-
+    P? =?= P1? | true.
+install_sender(P, _, _, [full(P1, E, K1, S1) | Rest],
+               [full(P1?, E?, K1?, S1?) | Rest?]) :-
+    P? =?= P1? | true.
+install_sender(P, _, _, [skeleton(P1, K1, S1) | Rest],
+               [skeleton(P1?, K1?, S1?) | Rest?]) :-
+    P? =?= P1? | true.
+install_sender(P, K, S, [Other | Rest], [Other? | Rest1?]) :-
+    otherwise | install_sender(P?, K?, S?, Rest?, Rest1).
+install_sender(P, K, S, [], [skeleton(P?, K?, S?)]).
+
+%% set_entry_epoch(P?, E?, FMap?, FMap1): FMap[P].epoch := E, preserving the
+%% identity-record fields --- the direct heal, and Unfriend inherited.  A
+%% skeleton healed to an epoch becomes a full entry; an absent P is unchanged.
+exported procedure set_entry_epoch(Agent?, Integer?, SecureFMap?, SecureFMap).
+set_entry_epoch(P, E, [full(P1, _, K, S) | Rest], [full(P1?, E?, K?, S?) | Rest?]) :-
+    P? =?= P1? | true.
+set_entry_epoch(P, E, [skeleton(P1, K, S) | Rest], [full(P1?, E?, K?, S?) | Rest?]) :-
+    P? =?= P1? | true.
+set_entry_epoch(P, E, [stub(P1, _) | Rest], [stub(P1?, E?) | Rest?]) :-
+    P? =?= P1? | true.
+set_entry_epoch(P, E, [Other | Rest], [Other? | Rest1?]) :-
+    otherwise | set_entry_epoch(P?, E?, Rest?, Rest1).
+set_entry_epoch(_, _, [], []).
+
+%% direct_heal(Self?, P?, L?, FMap?, FMap1): the second branch.  If (Self, E) ∈ L
+%% and epoch(P) < E, set FMap[P].epoch := E, preserving K and σ.
+exported procedure direct_heal(Agent?, Agent?, FriendList?, SecureFMap?, SecureFMap).
+direct_heal(Self, P, [fe(F, E) | _], FMap, FMap1?) :-
+    Self? =?= F? |
+    secure_epoch_of(P?, FMap?, E0),
+    heal_step(P?, E?, E0?, FMap?, FMap1).
+direct_heal(Self, P, [_ | Rest], FMap, FMap1?) :-
+    otherwise | direct_heal(Self?, P?, Rest?, FMap?, FMap1).
+direct_heal(_, _, [], FMap, FMap?).
+
+exported procedure heal_step(Agent?, Integer?, Integer?, SecureFMap?, SecureFMap).
+heal_step(P, E, E0, FMap, FMap1?) :-
+    E0? < E? | set_entry_epoch(P?, E?, FMap?, FMap1).
+heal_step(_, _, _, FMap, FMap?) :- otherwise | true.
+
+%% fof_epoch_of(Q?, F?, FoFMap?, E): epoch_r(q, f), 0 if unrecorded (as gsg).
+exported procedure fof_epoch_of(Agent?, Agent?, FoFMap?, Integer).
+fof_epoch_of(Q, F, [fofb(Q1, Inner) | _], E?) :-
+    Q? =?= Q1? | fof_inner_epoch(F?, Inner?, E).
+fof_epoch_of(Q, F, [_ | Rest], E?) :-
+    otherwise | fof_epoch_of(Q?, F?, Rest?, E).
+fof_epoch_of(_, _, [], 0).
+
+exported procedure fof_inner_epoch(Agent?, FoFInner?, Integer).
+fof_inner_epoch(F, [fofe(F1, E) | _], E?) :- F? =?= F1? | true.
+fof_inner_epoch(F, [_ | Rest], E?) :- otherwise | fof_inner_epoch(F?, Rest?, E).
+fof_inner_epoch(_, [], 0).
+
+%% absorb_step(E0?, P?, F?, E?, FoFMap?, FoFMap1): the third branch's guard,
+%% epoch_r(p, f) < e; then FoFMap[P][F] := E and FoFMap[F][P] := E.
+exported procedure absorb_step(Integer?, Agent?, Agent?, Integer?, FoFMap?, FoFMap).
+absorb_step(E0, P, F, E, FoFMap, FoFMap2?) :-
+    E0? < E? |
+    set_fof_epoch(P?, F?, E?, FoFMap?, FoFMap1),
+    set_fof_epoch(F?, P?, E?, FoFMap1?, FoFMap2).
+absorb_step(_, _, _, _, FoFMap, FoFMap?) :- otherwise | true.
+
+%% =============================================================================
+%% UNFRIEND, INHERITED: End friendship and Integrate unfriend modify only the
+%% epoch of the FMap entry, preserving K and σ.
+%% =============================================================================
+
+%% bump_epoch_secure(Q?, FMap?, FMap1, X): FMap[Q].epoch := epoch_p(q) + 1,
+%% X the new (even) epoch.
+exported procedure bump_epoch_secure(Agent?, SecureFMap?, SecureFMap, Integer).
+bump_epoch_secure(Q, FMap, FMap1?, X?) :-
+    secure_epoch_of(Q?, FMap?, E),
+    X := E? + 1,
+    set_entry_epoch(Q?, X?, FMap?, FMap1).
+
+%% secure_member(Q?, FMap?, B): q ∈ dom(FMap), any entry kind.
+exported procedure secure_member(Agent?, SecureFMap?, Constant).
+secure_member(Q, [full(Q1, _, _, _) | _], true) :- Q? =?= Q1? | true.
+secure_member(Q, [skeleton(Q1, _, _) | _], true) :- Q? =?= Q1? | true.
+secure_member(Q, [stub(Q1, _) | _], true) :- Q? =?= Q1? | true.
+secure_member(Q, [_ | Rest], B?) :- otherwise | secure_member(Q?, Rest?, B).
+secure_member(_, [], false).
+
+%% secure_ir_of(Q?, FMap?, IR): IR_p[q], the identity record stored for q;
+%% ir([], 0) where q is absent or a stub.
+exported procedure secure_ir_of(Agent?, SecureFMap?, IdentityRecord).
+secure_ir_of(Q, [full(Q1, _, K, S) | _], ir(K?, S?)) :- Q? =?= Q1? | true.
+secure_ir_of(Q, [skeleton(Q1, K, S) | _], ir(K?, S?)) :- Q? =?= Q1? | true.
+secure_ir_of(Q, [_ | Rest], IR?) :- otherwise | secure_ir_of(Q?, Rest?, IR).
+secure_ir_of(_, [], ir([], 0)).
+
+%% =============================================================================
+%% ENTRY POINTS (modules.tex, External access): the root self.glp exports each
+%% play by forwarding to the module that defines it, so a directory load of
+%% programs/spm/secure_gsg is a program whose plays an external goal can call.
+%% =============================================================================
+imported procedure play_secure_befriend # play_secure_befriend(Integer, Integer).
+exported procedure play_secure_befriend(Integer, Integer).
+play_secure_befriend(A?, B?) :- play_secure_befriend # play_secure_befriend(A, B).
+
+imported procedure play_secure_rebroadcast # play_secure_rebroadcast(Integer, Integer).
+exported procedure play_secure_rebroadcast(Integer, Integer).
+play_secure_rebroadcast(A?, B?) :- play_secure_rebroadcast # play_secure_rebroadcast(A, B).
+
+imported procedure play_secure_restore # play_secure_restore(Integer, Integer, Integer, IdentityRecord).
+exported procedure play_secure_restore(Integer, Integer, Integer, IdentityRecord).
+play_secure_restore(A?, Z?, B?, IR?) :- play_secure_restore # play_secure_restore(A, Z, B, IR).
+
+imported procedure play_secure_unfriend # play_secure_unfriend(Integer, Integer, IdentityRecord).
+exported procedure play_secure_unfriend(Integer, Integer, IdentityRecord).
+play_secure_unfriend(A?, B?, IR?) :- play_secure_unfriend # play_secure_unfriend(A, B, IR).

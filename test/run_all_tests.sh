@@ -2882,28 +2882,36 @@ check "X9 fixture loaded" "Loaded program" "$x9"
 check_not "X9 arity-0 NetMsg not displaced" "Unresolved type: NetMsg" "$x9"
 check "X9 goal succeeds" "succeeds" "$x9"
 
-# --- X10: the three spm program directories load and accept a goal ---
+# --- X10: the spm programs load and accept a goal ---
 # They are SGSG's since 2026-08-03 and were unloadable until X9's defect was
 # fixed; the goal is what X8's goal-check ordering fix made possible (every
 # goal used to fail with UnknownTypeError: UserEvent, a gsg/self.glp template
-# named by a module one directory below it).
-echo "--- X10: spm program directories ---"
-for spm_dir in cva gsg secure_gsg; do
-    x10=$("$REPL_RUN" <<HEREDOC
-$GLP_DIR/programs/spm/$spm_dir
+# named by a module one directory below it).  Since 2026-09-07 the program is
+# programs/spm: the platform plays reach the CVA mediator as `cva # network`,
+# which resolves only where cva/ is a module of the loaded program, so
+# spm/self.glp is the root and exports the plays as the entry points; cva/
+# still loads on its own.
+echo "--- X10: spm programs ---"
+x10c=$("$REPL_RUN" <<HEREDOC
+$GLP_DIR/programs/spm/cva
 :quit
 HEREDOC
 2>&1)
-    check "X10 spm/$spm_dir loads" "Loaded program" "$x10"
-done
+check "X10 spm/cva loads" "Loaded program" "$x10c"
+x10=$("$REPL_RUN" <<HEREDOC
+$GLP_DIR/programs/spm
+:quit
+HEREDOC
+2>&1)
+check "X10 spm loads" "Loaded program" "$x10"
 x10g=$("$REPL_RUN" <<HEREDOC
-$GLP_DIR/programs/spm/gsg
-is_even(4).
+$GLP_DIR/programs/spm
+play_befriend(A, B).
 :quit
 HEREDOC
 2>&1)
-check "X10 spm/gsg accepts a goal" "succeeds" "$x10g"
-check_not "X10 spm/gsg goal check resolves UserEvent" "UnknownTypeError: UserEvent" "$x10g"
+check "X10 spm accepts a goal" "succeeds" "$x10g"
+check_not "X10 spm goal check resolves UserEvent" "UnknownTypeError: UserEvent" "$x10g"
 
 echo ""
 
@@ -3279,6 +3287,105 @@ HEREDOC
 2>&1)
     check "MA $ma_name loads as a program" "Loaded program" "$ma_out"
 done
+echo ""
+
+# =============================================================================
+# Section SG: SGSG's programs --- the SPM programs (programs/spm: the CVA
+# substrate, the social graph and its secure version, with Restore and
+# Unfriend), the super-app prototype (programs/grassapp, a program since
+# 2026-09-07), and the resource-bounded meta-interpreter of the SGSG paper's
+# Section 6.3 (programs/grassapp/budget).  The three headless grassapp plays
+# assert the lines the glp_multiagent tests assert; the village run takes
+# about a minute.
+# =============================================================================
+echo "=== Section SG: SGSG programs (spm, grassapp, budget) ==="
+echo ""
+
+sg_spm=$("$REPL_RUN" <<HEREDOC
+$GLP_DIR/programs/spm
+:limit 1000000
+play_befriend(A1, B1).
+play_befriend_simultaneous(A2, B2).
+play_three_agents.
+play_secure_befriend(A3, B3).
+play_secure_unfriend(A5, B5, IR5).
+play_secure_restore(A6, Z6, B6, IR6).
+:quit
+HEREDOC
+2>&1)
+check "SG spm loads" "Loaded program" "$sg_spm"
+check "SG spm befriend: alice at epoch 1" "A1 = 1" "$sg_spm"
+check "SG spm befriend: bob at epoch 1" "B1 = 1" "$sg_spm"
+check "SG spm simultaneous offer resolves" "A2 = 1" "$sg_spm"
+check "SG spm secure befriend: alice at epoch 1" "A3 = 1" "$sg_spm"
+check "SG spm secure befriend: bob at epoch 1" "B3 = 1" "$sg_spm"
+check "SG spm End friendship: epoch 2 at alice" "A5 = 2" "$sg_spm"
+check "SG spm Integrate unfriend: epoch 2 at bob" "B5 = 2" "$sg_spm"
+check "SG spm Unfriend preserves the identity record" "IR5 = ir(\[cust_a1, cust_a2\], 67)" "$sg_spm"
+check "SG spm crash resets the state" "Z6 = 0" "$sg_spm"
+check "SG spm Restore: epoch 1 healed from the checkpoint" "B6 = 1" "$sg_spm"
+check "SG spm Restore: identity record from the checkpoint" "IR6 = ir(\[cust_a1, cust_a2\], 67)" "$sg_spm"
+check_not "SG spm no failed play" "→ failed" "$sg_spm"
+
+sg_ga=$("$REPL_RUN" <<HEREDOC
+$GLP_DIR/programs/grassapp
+:quit
+HEREDOC
+2>&1)
+check "SG grassapp loads as a program" "Loaded program" "$sg_ga"
+check_not "SG grassapp no type errors" "Type checking failed" "$sg_ga"
+
+sg_loan=$("$REPL_RUN" <<HEREDOC
+$GLP_DIR/programs/grassapp
+:limit 5000000
+play_loan.
+:quit
+HEREDOC
+2>&1)
+check "SG grassapp loan: alice holds 3 of her own" "balance_report(alice, alice, 0, 3)" "$sg_loan"
+check "SG grassapp loan: alice holds bob's dated bonds" "balance_report(alice, bob, 10, 2)" "$sg_loan"
+check "SG grassapp loan: bob holds 3 of his own" "balance_report(bob, bob, 10, 3)" "$sg_loan"
+
+sg_escrow=$("$REPL_RUN" <<HEREDOC
+$GLP_DIR/programs/grassapp
+:limit 5000000
+play_escrow.
+:quit
+HEREDOC
+2>&1)
+check "SG grassapp escrow: released to the beneficiary" "tagged(frank, escrow_released(charlie))" "$sg_escrow"
+check "SG grassapp escrow: expired at the depositor" "tagged(charlie, escrow_expired(frank))" "$sg_escrow"
+
+sg_village=$("$REPL_RUN" <<HEREDOC
+$GLP_DIR/programs/grassapp
+:limit 5000000
+play_village.
+:quit
+HEREDOC
+2>&1)
+check "SG grassapp village: the eighth edge" "tagged(frank, connected(eve))" "$sg_village"
+check "SG grassapp village: the last trade" "tagged(alice, trade_completed(eve))" "$sg_village"
+check "SG grassapp village: escrow released" "tagged(frank, escrow_released(charlie))" "$sg_village"
+check "SG grassapp village: closing balance (diana, bob)" "balance_report(diana, bob, 25, 24)" "$sg_village"
+check "SG grassapp village: closing balance (frank, eve)" "balance_report(frank, eve, 0, 10)" "$sg_village"
+
+sg_budget=$("$REPL_RUN" <<HEREDOC
+$GLP_DIR/programs/grassapp/budget
+:limit 1000000
+play_meta(Out).
+play_residual(Out2).
+bench(residual, 100, 7, L).
+bench(meta, 100, 7, L2).
+:quit
+HEREDOC
+2>&1)
+check "SG budget loads" "Loaded program" "$sg_budget"
+check "SG budget: the counter under bounded/3" "Out = \[1, 2, 3, 4, 5\]" "$sg_budget"
+check "SG budget: the residual program" "Out2 = \[1, 2, 3, 4, 5\]" "$sg_budget"
+check "SG budget: residual counter of 100 under grants of 7" "L = 100" "$sg_budget"
+check "SG budget: meta-interpreted counter of 100 under grants of 7" "L2 = 100" "$sg_budget"
+check_not "SG budget no failed play" "→ failed" "$sg_budget"
+
 echo ""
 
 # and fails on the same rejection of the same file.
