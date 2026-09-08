@@ -25,6 +25,7 @@ import 'package:glp_runtime/runtime/terms.dart' as rt;
 import 'package:glp_runtime/runtime/external_io.dart';
 import 'package:glp_runtime/multiagent/mad_context.dart';
 import 'package:glp_runtime/multiagent/glp_network.dart';
+import 'package:glp_runtime/multiagent/identity.dart' show PersonIdentity;
 import 'package:glp_runtime/multiagent/simulation_network.dart';
 
 /// Agent runtime encapsulating GLP execution, madGLP context, and I/O.
@@ -173,8 +174,17 @@ class AgentRuntime {
     _log('INIT: Starting');
     _output('[INIT] Creating MadContext...');
 
+    // The agent's key pair: provided by the coordinator, or generated. The
+    // engine holds it as the person's identity from construction — so the
+    // certificate its compiler writes, self_key/1 and sign/3 are all under it —
+    // and the networking layer below is given the same pair.
+    final kp = keyPair ?? generateKeyPair();
+
     // Use GlpEngine — the ONE way to run GLP programs.
-    final engine = GlpEngine(rootSelfGlpPath: rootSelfGlpPath)..strictTypes = false;
+    final engine = GlpEngine(
+        rootSelfGlpPath: rootSelfGlpPath,
+        identity: PersonIdentity(kp.pub, kp.priv))
+      ..strictTypes = false;
 
     // Enable madGLP mode (loads madPredicates + creates MadContext)
     engine.enableMadGLP(agentId: agentIdLower);
@@ -219,7 +229,6 @@ class AgentRuntime {
     // Networking seam (spec §3-4): route outgoing/incoming through a
     // SimulationNetworkClient instead of serializing OutboundMessages directly.
     // The wire carries the opaque payload bytes only (no MessageType).
-    final kp = keyPair ?? generateKeyPair();
     directory.register(agentIdLower, kp.pub); // self identity (for sign/verify)
     final network = SimulationNetworkClient(
       selfId: agentIdLower,
@@ -229,7 +238,7 @@ class AgentRuntime {
     );
     network.putIdentity(kp.pub, kp.priv);
     _network = network;
-    _ctx!.network = network; // backs sign/2 and the valid_attestation/4 guard (§4)
+    _ctx!.network = network; // backs the seam predicates and valid_attestation/4 (§4)
 
     // Outgoing (spec §4): ctx.onMessageReady(destId, msg) → network.send.
     _ctx!.onMessageReady = (destination, msg) async {

@@ -1,0 +1,14 @@
+%% roundtrip(T, R): R = signed(K, H, T1) where K is the key the signature
+%% carries, H the source identity it was made under, and T1 the term signed.
+exported procedure roundtrip(_?, _).
+roundtrip(T, R?) :- self_key(K), sign(T?, K?, S), signed(S?, K1, H, T1),
+    R = signed(K1?, H?, T1?).
+
+%% signer(T, K): the signer alone, by signed/2.
+exported procedure signer(_?, Key).
+signer(T, K?) :- self_key(K0), sign(T?, K0?, S), signed(S?, K).
+
+%% identities(K, S, C): the compiler's key and the two identities of this
+%% program's own module value.
+exported procedure identities(Key, Hash, Hash).
+identities(K?, S?, C?) :- self_module(M), decompose_module(M?, K, S, C).

@@ -39,6 +39,19 @@ Closed ::= [].
 Number ::= Integer ; Real.
 Constant ::= Number ; String ; Module.
 
+% The identity and signature types (GLP-Spec appendix-guards, "Predefined
+% types"; Secure GLP core.tex, §The Seam, where they are declared once for the
+% root scope).  A key is a person's public key, a hash a source or compiled
+% identity, a signed term the byte string sign/3 produces; all three are
+% carried as hex strings.  Each names a structure String already denotes, and
+% is declared all the same: it says what a value is for, and localises a change
+% of representation to one definition.  GlobalName, Answer, Compiled and
+% Content, the catalogue's other four, are GLP-Spec's to add with the retyping
+% of authorise_link/2 (GLP-Spec_inbox.md 2026-08-04 14:10, items 1--3).
+Key ::= String.
+SignedTerm ::= String.
+Hash ::= String.
+
 % Arithmetic expressions
 Exp ::= Number ; +(Exp, Exp) ; -(Exp, Exp) ; *(Exp, Exp) ; /(Exp, Exp) ; //(Exp, Exp) ; mod(Exp, Exp) ; neg(Exp).
 
@@ -184,11 +197,14 @@ procedure '_punch_udp'(_?).
 procedure '_place_declare'(_?, _?, _).
 procedure '_place_remove'(_?).
 
-% Signature
-procedure '_sign'(_?, _).
+% Signature (GLP-Spec appendix-guards, the Signature kernel rows)
+procedure '_self_key'(Key).
+procedure '_sign'(_?, Key?, SignedTerm).
+procedure '_signed'(_?, Key, Hash, _).
 
 % Modules as values
 procedure '_self_module'(Module).
+procedure '_decompose_module'(Module?, Key, Hash, Hash).
 procedure '_run'(_?, Module?).
 procedure '_run'(_?, Constant?, Module?).
 procedure '_find_type'(_?, Constant).
@@ -563,6 +579,15 @@ Y? ..= X :- compound(X?) | '_tuple_to_list'(X?, Y).
 procedure self_module(Module).
 self_module(M?) :- '_self_module'(M).
 
+%% decompose_module/4 - take a module value apart: the public key of the
+%% compiler that produced it, the identity of the source it was compiled from,
+%% and the identity of the compiled module itself (GLP-Spec appendix-guards,
+%% "Module as a value"; Secure GLP §The Seam, Modules).  Read from the
+%% artefact's certificate; not verified, since a module value exists only where
+%% the runtime compiled it or the loader admitted it.
+procedure decompose_module(Module?, Key, Hash, Hash).
+decompose_module(M, K?, S?, C?) :- known(M?) | '_decompose_module'(M?, K, S, C).
+
 procedure run(_?, Module?).
 run(G, M) :- known(M?) | '_run'(G?, M?).
 
@@ -573,18 +598,38 @@ procedure find_type(_?, Constant).
 find_type(P, T?) :- ground(P?) | '_find_type'(P?, T).
 
 % =============================================================================
-% ATTESTATION AND HELD LINKS (sign/2, authorise_link/2)
+% IDENTITY, SIGNATURE AND HELD LINKS (self_key/1, sign/3, signed/4, signed/2,
+% authorise_link/2)
 % =============================================================================
-% Moved here from the engine's embedded madGLP prelude, where they were loaded
-% only by enableMadGLP().  GLP's appendix-guards lists both among the system
-% predicates whose complete definitions are in programs/self.glp.  Both kernels
-% abort outside madGLP mode ("not in madGLP mode (no MadContext)").
+% The wrappers of GLP-Spec appendix-guards, "Identity and signature", over the
+% Signature kernel rows; the seam they join GLP to is the person's keys, whose
+% specification is Secure GLP's (core.tex §The Seam).  Written by IGLP Code from
+% the catalogue rows (Udi, 2026-09-08), GLP-Spec having no Code session, and
+% reported to GLP-Spec for retrospective approval.  The person's key is the
+% runtime's, held from construction, so none of these needs madGLP mode; the
+% earlier sign/2 over a 2-argument '_sign', which did, is gone with its kernel.
 
-%% sign/2 - bind Sig to the hex Ed25519 signature over the canonical
-%% serialization of ground term T, under this agent's key (seam spec §4).
-%% The ground/1 guard suspends until T is ground and resumes on binding.
-procedure sign(_?, _).
-sign(T, Sig?) :- ground(T?) | '_sign'(T?, Sig).
+%% self_key/1 - assign Key the public key of the person operating the agent.
+procedure self_key(Key).
+self_key(K?) :- '_self_key'(K).
+
+%% sign/3 - sign(Term, Key, Signed) requires Term ground and Key a key of that
+%% person, and assigns Signed the signature under Key of the pair of Term and
+%% the identity of the module making the call, which the runtime supplies and
+%% the caller cannot choose.  ground/1 suspends until Term is ground.
+procedure sign(_?, Key?, SignedTerm).
+sign(T, K, S?) :- ground(T?), known(K?) | '_sign'(T?, K?, S).
+
+%% signed/4 - take a signed term apart, assigning the signer's key, the
+%% identity of the module under which the signature was made, and the term
+%% signed; holds only where Signed is a signed term whose signature verifies.
+procedure signed(_?, Key, Hash, _).
+signed(S, K?, H?, T?) :- known(S?) | '_signed'(S?, K, H, T).
+
+%% signed/2 - the signer alone, for a reader that needs to know who signed and
+%% not what.
+procedure signed(_?, Key).
+signed(S, K?) :- known(S?) | '_signed'(S?, K, _, _).
 
 %% authorise_link/2 - answer a pending_link(Link, Sender) report (Definition
 %% authorise_link Predicate).  L is the reported link's global name in its
@@ -598,7 +643,7 @@ authorise_link(L, A) :- known(A?) | '_authorise_link'(L?, A?).
 % trust_declare/2)
 % =============================================================================
 % GLP-Spec's appendix-guards lists all four among the system predicates, on the
-% same grounds as sign/2 and authorise_link/2 above.  The clause bodies are
+% same grounds as sign/3 and authorise_link/2 above.  The clause bodies are
 % IGLP's madglp-spec.tex, Definition "Seam Predicates"; the layer behind them is
 % GLP-Networking-API's.
 %
@@ -607,7 +652,7 @@ authorise_link(L, A) :- known(A?) | '_authorise_link'(L?, A?).
 % '_place_remove'(_?) — which was all the catalogue settled when they were
 % written: its system-predicate table then gave a name and a description and
 % carried no signature column, so the arity was the catalogue's and the argument
-% types followed the kernel, as sign/2 and authorise_link/2 do.  The table has
+% types followed the kernel, as authorise_link/2 does.  The table has
 % carried a signature column since 2026-08-01, so trust_declare/2 below takes its
 % declaration from that column instead.
 %
@@ -616,7 +661,7 @@ authorise_link(L, A) :- known(A?) | '_authorise_link'(L?, A?).
 % writer in the head and a writer again in the body — two writers and no reader,
 % which the analyzer rejects ("Writer variable A occurs 2 times", "Variable A has
 % no reader").  At a produce position the head form is the reader and the body
-% supplies the writer, which is what sign/2 does three lines above.  Reported to
+% supplies the writer, which is what self_key/1 does above.  Reported to
 % IGLP 2026-08-01; the paper is theirs to correct.
 %
 % The four kernels were registered by 9d5e0dd9 and are declared in the block

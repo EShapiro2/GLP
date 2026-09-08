@@ -1,0 +1,2 @@
+exported procedure double(Integer?, Integer).
+double(X, Y?) :- Y := X? * 2.

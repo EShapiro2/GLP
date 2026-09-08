@@ -545,6 +545,15 @@ class ByteRunner with OpExecutors implements GoalRunner {
           print('ERROR: Body kernel ${symbol.name}/$arity aborted');
           return RunResult.terminated;
         }
+        if (result == BodyKernelResult.fail) {
+          // The predicate does not hold of its arguments: the goal fails and
+          // joins F, exactly as a spawned goal with no procedure does below.
+          final call = _callText(symbol.name, arity, cx);
+          cx.rt.failedGoals.add(call);
+          print('ERROR: goal failed: $call');
+          cx.argSlots.clear();
+          return null;
+        }
         cx.argSlots.clear();
         return null;
       }

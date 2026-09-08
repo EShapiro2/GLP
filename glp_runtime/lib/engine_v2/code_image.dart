@@ -20,7 +20,7 @@ library;
 
 import 'dart:typed_data';
 import 'package:glp_runtime/wire/artefact.dart'
-    show artefactMagic, wireFormatVersion, ArtefactExport;
+    show artefactMagic, wireFormatVersion, ArtefactExport, Certificate;
 import 'package:glp_runtime/wire/codec.dart';
 
 /// A symbol-table entry in the loaded image. A `proc` operand indexes the
@@ -131,7 +131,6 @@ class CodeImage {
       throw WireFormatException('unsupported code-format version: $ver');
     }
     final isaVersion = r.string();
-    final hM = r.hash();
     final moduleName = r.string();
     // 2. Interface table
     final typeDefsText = r.string();
@@ -163,7 +162,11 @@ class CodeImage {
     }
     // 4. Code section
     final code = r.bytes();
+    // The certificate follows the body; h(M) is read from it (§Program
+    // Artefact: neither identity is in the header).
+    final certificate = Certificate.read(r);
     r.expectEnd();
+    final hM = certificate.hSrc;
 
     return CodeImage(
       isaVersion: isaVersion,

@@ -1,0 +1,8 @@
+exported procedure leak(Stream(_)?).
+leak(S) :- send_to_net(S?).
+
+exported procedure shout(Stream(_)?).
+shout(S) :- wrapper(S?).
+
+procedure wrapper(Stream(_)?).
+wrapper(S) :- send_to_user(S?).

@@ -3247,6 +3247,88 @@ check "RM8 find_type resolves P/N in the calling module's scope" "T = [0-9a-f]\{
 check "RM8 a module-local P/N is not declared at the root" "_find_type/2: local/1 is not declared in the caller's scope" "$rm8"
 
 echo ""
+# =============================================================================
+# SECTION SK: Identity, signature and the certificate (self_key/1, sign/3,
+# signed/4, signed/2, decompose_module/4; the OS-privileged refusal)
+# =============================================================================
+# GLP-Spec appendix-guards, "Identity and signature" and "Module as a value";
+# Secure GLP core.tex §The Seam; IGLP code format §Program Artefact and
+# "Signed content"; SGSG Section 3 "What the super-app grants a mini-app" and
+# Section 6.1 G1.  Keys, hashes and signed terms are hex strings; a key and a
+# hash are 64 characters.  The probe runs in madGLP mode (:mad), as SGSG's
+# harness will.
+echo "=== Section SK: Identity, signature, certificate ==="
+
+sk1=$("$REPL_RUN" <<HEREDOC
+:mad alice
+$GLP_DIR/programs/tests/sign_probe
+self_key(K).
+roundtrip(hello(world), R).
+:quit
+HEREDOC
+2>&1)
+check "SK1 madGLP mode enters for a directory load" "madGLP mode on: agent alice" "$sk1"
+check "SK1 self_key assigns the person's key" "K = [0-9a-f]\{64\}" "$sk1"
+check "SK1 sign then signed round-trips the term under the signer's key and module identity" "R = signed([0-9a-f]\{64\}, [0-9a-f]\{64\}, hello(world))" "$sk1"
+
+# The key the signed term carries is self_key's answer, and the module identity
+# is this program's source identity, which decompose_module also reports.
+sk2=$("$REPL_RUN" <<HEREDOC
+$GLP_DIR/programs/tests/sign_probe
+self_key(K), signer(a_term, K1).
+identities(K, S, C).
+:quit
+HEREDOC
+2>&1)
+sk2_keys=$(echo "$sk2" | grep "^K1\{0,1\} = " | grep -o "[0-9a-f]\{64\}" | sort -u | wc -l | tr -d ' ')
+check "SK2 signed/2 assigns the signer, and it is self_key's answer" "1" "$sk2_keys"
+check "SK2 decompose_module assigns the compiler's key" "K = [0-9a-f]\{64\}" "$sk2"
+check "SK2 decompose_module assigns the source identity" "S = [0-9a-f]\{64\}" "$sk2"
+check "SK2 decompose_module assigns the compiled identity" "C = [0-9a-f]\{64\}" "$sk2"
+
+# sign/3 signs only under a key whose private half the runtime holds (G2).
+sk3=$("$REPL_RUN" <<HEREDOC
+$GLP_DIR/programs/tests/sign_probe
+sign(hello, "0000000000000000000000000000000000000000000000000000000000000000", S).
+:quit
+HEREDOC
+2>&1)
+check "SK3 sign under another person's key is an error" "_sign/3: the runtime holds no private key for" "$sk3"
+
+# signed/4 on a string that is not a signed term does not hold.
+sk4=$("$REPL_RUN" <<HEREDOC
+$GLP_DIR/programs/tests/sign_probe
+signed("00ff", K, H, T).
+:quit
+HEREDOC
+2>&1)
+check "SK4 signed/4 on a non-signed term fails" "→ failed" "$sk4"
+
+# The certificate: a mini-app calling nothing that reaches the network or the
+# person is certified; one that does is refused, naming the offending calls,
+# and decompose_module has no compiler's key to give for it.
+sk5=$("$REPL_RUN" <<HEREDOC
+$GLP_DIR/programs/tests/cert_ok
+self_module(M), decompose_module(M?, K, S, C).
+double(21, Y).
+:quit
+HEREDOC
+2>&1)
+check_not "SK5 a mini-app reaching neither the network nor the person is certified" "CERTIFICATE REFUSED" "$sk5"
+check "SK5 its certificate carries the compiler's key" "K = [0-9a-f]\{64\}" "$sk5"
+check "SK5 it runs" "Y = 42" "$sk5"
+
+sk6=$("$REPL_RUN" <<HEREDOC
+$GLP_DIR/programs/tests/cert_refused
+self_module(M), decompose_module(M?, K, S, C).
+:quit
+HEREDOC
+2>&1)
+check "SK6 a mini-app calling send_to_net/1 is refused a certificate naming the call" "CERTIFICATE REFUSED.*app:leak/1 calls mad_predicates:send_to_net/1" "$sk6"
+check "SK6 a wrapper reaching send_to_user/1 does not pass" "app:wrapper/1 calls send_to_user/1" "$sk6"
+check "SK6 the refused module has no compiler's key" "_decompose_module/4: module cert_refused carries no certificate" "$sk6"
+
+echo ""
 
 # =============================================================================
 # Section Q: Dart unit tests (whole tree)

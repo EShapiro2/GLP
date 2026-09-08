@@ -21,6 +21,7 @@ import 'package:glp_runtime/runtime/machine_state.dart';
 import 'package:glp_runtime/multiagent/payload_serializer.dart';
 import 'package:glp_runtime/multiagent/boot_loader.dart';
 import 'package:glp_runtime/multiagent/glp_network.dart';
+import 'package:glp_runtime/multiagent/identity.dart' show PersonIdentity;
 import 'package:glp_runtime/multiagent/simulation_network.dart';
 
 /// Message types for inter-isolate communication
@@ -461,7 +462,13 @@ void _agentIsolateEntry(AgentConfig config) async {
 
   // Create GlpEngine — the ONE way to run GLP programs.
   // Non-strict types: actor code may have type warnings that shouldn't be fatal.
-  final engine = GlpEngine(rootSelfGlpPath: config.rootSelfGlpPath)..strictTypes = false;
+  // The engine holds the agent's key pair as the person's identity from
+  // construction, so the certificate its compiler writes, self_key/1 and
+  // sign/3 are under the key the networking layer below is given.
+  final engine = GlpEngine(
+      rootSelfGlpPath: config.rootSelfGlpPath,
+      identity: PersonIdentity(config.keyPair.pub, config.keyPair.priv))
+    ..strictTypes = false;
 
   // Enable madGLP mode (loads madPredicates + creates MadContext)
   engine.enableMadGLP(agentId: agentId);
@@ -515,7 +522,7 @@ void _agentIsolateEntry(AgentConfig config) async {
         config.mainPort.send(RouterSend(agentId, toId, payload)),
   );
   network.putIdentity(config.keyPair.pub, config.keyPair.priv);
-  // Back the sign/2 kernel and the valid_attestation/4 guard (seam spec §4).
+  // Back the seam predicates and the valid_attestation/4 guard (seam spec §4).
   ctx.network = network;
 
   // Outgoing (spec §4): ctx.onMessageReady(destId, msg) → network.send.

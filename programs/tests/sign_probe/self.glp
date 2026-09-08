@@ -1,0 +1,19 @@
+%% IGLP probe: the signature kernels behind self_key/1, sign/3, signed/4 and
+%% signed/2 (GLP-Spec appendix-guards, "Identity and signature"; Secure GLP,
+%% §The Seam), and decompose_module/4 (ibid., "Module as a value").
+%% roundtrip/2 signs a ground term under this person's key and takes the signed
+%% term apart again; the signer's key is self_key's answer, the module identity
+%% is this program's source identity, and the term comes back as it went.
+
+imported procedure probe#roundtrip(_?, _).
+imported procedure probe#signer(_?, Key).
+imported procedure probe#identities(Key, Hash, Hash).
+
+exported procedure roundtrip(_?, _).
+roundtrip(T, R?) :- probe # roundtrip(T?, R).
+
+exported procedure signer(_?, Key).
+signer(T, K?) :- probe # signer(T?, K).
+
+exported procedure identities(Key, Hash, Hash).
+identities(K?, S?, C?) :- probe # identities(K, S, C).

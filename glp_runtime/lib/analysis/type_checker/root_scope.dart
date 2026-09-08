@@ -191,9 +191,12 @@ const Set<String> builtinProcedures = {
   '_place_declare/3',
   '_place_remove/1',
   // Signature
-  '_sign/2',
+  '_self_key/1',
+  '_sign/3',
+  '_signed/4',
   // Modules as values
   '_self_module/1',
+  '_decompose_module/4',
   '_run/2',
   '_run/3',
   '_find_type/2',

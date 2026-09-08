@@ -19,6 +19,10 @@ import 'machine_state.dart' show GoalRef;
 import 'package:glp_runtime/multiagent/mad_context.dart';
 import 'package:glp_runtime/multiagent/mad_helpers.dart' show GlobalName;
 import 'package:glp_runtime/multiagent/glp_network.dart' show GlpNetwork, PubKey;
+import 'package:glp_runtime/multiagent/identity.dart' show PersonIdentity;
+import 'package:glp_runtime/wire/artefact.dart' show Artefact;
+import 'package:glp_runtime/wire/codec.dart';
+import 'package:glp_runtime/wire/payload_codec.dart' show PayloadCodec;
 
 /// Result of executing a body kernel
 enum BodyKernelResult {
@@ -27,6 +31,12 @@ enum BodyKernelResult {
 
   /// Kernel aborted - fatal error (e.g., type error, unbound reader)
   abort,
+
+  /// The predicate the kernel realises does not hold of its arguments: the
+  /// goal fails, as a goal with no matching clause does, and the computation
+  /// goes on (IGLP: a reduction succeeds, suspends, or fails). `signed/4` on a
+  /// string that is not a signed term is the case.
+  fail,
 }
 
 /// Body kernel function signature
@@ -98,7 +108,14 @@ void registerStandardBodyKernels(BodyKernelRegistry registry) {
   // madGLP kernels
   registry.register('_send', 3, sendKernel);
   registry.register('_authorise_link', 2, authoriseLinkKernel);
-  registry.register('_sign', 2, signKernel);
+
+  // Signature kernels (GLP-Spec appendix-guards, the Signature rows) and the
+  // module decomposition (the Modules rows): the person's key is the
+  // runtime's, so none of these needs madGLP mode.
+  registry.register('_self_key', 1, selfKeyKernel);
+  registry.register('_sign', 3, signKernel);
+  registry.register('_signed', 4, signedKernel);
+  registry.register('_decompose_module', 4, decomposeModuleKernel);
 
   // Networking seam kernels (Definition Seam Predicates)
   registry.register('_peer_address', 2, peerAddressKernel);
@@ -881,15 +898,6 @@ GlobalName? _parseGroundGlobalName(GlpRuntime rt, Object? arg) {
       : GlobalName.reader(agent, index);
 }
 
-// =============================================================================
-// SYSTEM PREDICATE KERNEL — sign/2 (seam spec §4)
-// =============================================================================
-//
-// Backed by GlpNetwork.sign (real Ed25519). The GLP wrapper gates on ground/1
-// (suspend-until-ground), so the term is ground when this runs. Signatures are
-// lowercase-hex string constants — no new GLP value type. (verify_attestation/4
-// was superseded by the valid_attestation/4 guard, seam spec §4 rework note.)
-
 String _bytesToHex(List<int> bytes) {
   final sb = StringBuffer();
   for (final b in bytes) {
@@ -898,34 +906,207 @@ String _bytesToHex(List<int> bytes) {
   return sb.toString();
 }
 
-/// '_sign'(T?, Sig) — bind Sig to the 128-character lowercase-hex Ed25519
-/// signature (under this agent's key) over the canonical serialization of the
-/// ground term T. The GLP wrapper gates on `ground(T?)`, so T is ground here.
+// =============================================================================
+// SIGNATURE KERNELS — '_self_key'/1, '_sign'/3, '_signed'/4,
+// '_decompose_module'/4 (GLP-Spec appendix-guards, "Identity and signature"
+// and "Module as a value"; Secure GLP core.tex §The Seam; IGLP code format
+// §Offer and Handshake Messages, "Signed content", and §Program Artefact)
+// =============================================================================
+//
+// The runtime holds one identity for its person (multiagent/identity.dart):
+// `self_key/1` answers its public half, `sign/3` signs under it and under no
+// other key, and the compiler's certificate is written under it. Keys, hashes
+// and signed terms are the catalogue's Key, Hash and SignedTerm — strings —
+// carried as lowercase hex: a key is the 32-byte Ed25519 public key, a hash
+// the 32-byte SHA-256, and a signed term the byte string S of "Signed content":
+// agent (the signer's key), bytes (the signature), then e(sig(HSrc, T)), the
+// canonical encoding of the 2-ary structure `sig` whose arguments are the
+// source identity of the signing instance's module and the ground term. The
+// signature is over those encoded bytes. The runtime supplies HSrc from the
+// calling goal's module value; the caller cannot choose it.
+
+String _hexOf(List<int> bytes) => _bytesToHex(bytes);
+
+Uint8List? _bytesOfHex(String hex) {
+  if (hex.length.isOdd) return null;
+  final out = Uint8List(hex.length ~/ 2);
+  for (var i = 0; i < out.length; i++) {
+    final v = int.tryParse(hex.substring(i * 2, i * 2 + 2), radix: 16);
+    if (v == null) return null;
+    out[i] = v;
+  }
+  return out;
+}
+
+/// The runtime's person identity, or null with a diagnostic printed.
+PersonIdentity? _personIdentity(GlpRuntime rt, String kernel) {
+  final id = rt.identity;
+  if (id == null) {
+    print('[ABORT] $kernel: the runtime holds no key for its person');
+    return null;
+  }
+  return id;
+}
+
+/// '_self_key'(Key) — bind Key to the public key of the person operating the
+/// agent, as 64 lowercase hex characters. Every instance on the machine is
+/// assigned the same one.
+BodyKernelResult selfKeyKernel(GlpRuntime rt, List<Object?> args) {
+  if (args.length != 1) {
+    print('[ABORT] _self_key/1: expected 1 argument, got ${args.length}');
+    return BodyKernelResult.abort;
+  }
+  final id = _personIdentity(rt, '_self_key/1');
+  if (id == null) return BodyKernelResult.abort;
+  return _bindResult(rt, args[0], ConstTerm(id.pub.hex));
+}
+
+/// '_sign'(T?, Key?, SignedTerm) — bind SignedTerm to the signed term of the
+/// ground term T under Key, which must be a key whose private half the runtime
+/// holds for its own person (Secure GLP G2), else an error. The module identity
+/// in the signed term is the calling goal's module's source identity, supplied
+/// here and not by the caller.
 BodyKernelResult signKernel(GlpRuntime rt, List<Object?> args) {
-  if (args.length != 2) {
-    print('[ABORT] _sign/2: expected 2 arguments, got ${args.length}');
+  if (args.length != 3) {
+    print('[ABORT] _sign/3: expected 3 arguments, got ${args.length}');
     return BodyKernelResult.abort;
   }
-  final ctx = rt.madContext;
-  if (ctx is! MadContext) {
-    print('[ABORT] _sign/2: not in madGLP mode (no MadContext)');
+  final id = _personIdentity(rt, '_sign/3');
+  if (id == null) return BodyKernelResult.abort;
+
+  final key = _groundString(rt, args[1]);
+  if (key == null) {
+    print('[ABORT] _sign/3: second argument (Key) must be a ground key, got '
+        '${_deref(rt, args[1])}');
     return BodyKernelResult.abort;
   }
-  final network = ctx.network;
-  if (network == null) {
-    print('[ABORT] _sign/2: no GlpNetwork bound to this agent');
+  if (key != id.pub.hex) {
+    print('[ABORT] _sign/3: the runtime holds no private key for $key; it '
+        'signs only under ${id.pub.hex}, its own person\'s');
     return BodyKernelResult.abort;
   }
+
+  final goalId = rt.currentGoalId;
+  final module = goalId == null ? null : rt.getGoalModule(goalId);
+  final artefact = module is ModuleTerm ? module.artefact : null;
+  if (artefact is! Artefact) {
+    print('[ABORT] _sign/3: the calling goal carries no module value, so the '
+        'signature has no module identity');
+    return BodyKernelResult.abort;
+  }
+  final hSrc = artefact.hM;
+
   final term = _deepDeref(rt, args[0] as Term);
-  final List<int> canonical;
+  final WireTerm wired;
   try {
-    canonical = ctx.canonicalSerialize(term);
+    wired = PayloadCodec.termToWire(term);
   } catch (e) {
-    print('[ABORT] _sign/2: term is not ground: $e');
+    print('[ABORT] _sign/3: term is not ground: $e');
     return BodyKernelResult.abort;
   }
-  final sig = network.sign(Uint8List.fromList(canonical));
-  return _bindResult(rt, args[1], ConstTerm(_bytesToHex(sig)));
+  final content =
+      encodeTermToBytes(WStruct('sig', [WConst(WBlob(hSrc)), wired]));
+  final signature = id.sign(content);
+
+  final w = WireWriter();
+  w.bytes(id.pub.bytes);
+  w.bytes(signature);
+  final signed = Uint8List.fromList([...w.toBytes(), ...content]);
+  return _bindResult(rt, args[2], ConstTerm(_hexOf(signed)));
+}
+
+/// '_signed'(S?, Key, Hash, T) — take a signed term apart: the signer's key,
+/// the source identity of the module under which the signature was made, and
+/// the term signed, where S is a signed term whose signature verifies under
+/// the key it carries. Neither key is taken as input — a reader learns who
+/// signed — and the signing module is not run. Where S is not a signed term
+/// the predicate does not hold: the goal fails.
+BodyKernelResult signedKernel(GlpRuntime rt, List<Object?> args) {
+  if (args.length != 4) {
+    print('[ABORT] _signed/4: expected 4 arguments, got ${args.length}');
+    return BodyKernelResult.abort;
+  }
+  final hex = _groundString(rt, args[0]);
+  if (hex == null) {
+    print('[ABORT] _signed/4: first argument is not a ground string, got '
+        '${_deref(rt, args[0])}');
+    return BodyKernelResult.abort;
+  }
+  final bytes = _bytesOfHex(hex);
+  if (bytes == null) {
+    print('[FAIL] _signed/4: not a signed term: not a hex byte string');
+    return BodyKernelResult.fail;
+  }
+
+  final PubKey signer;
+  final Uint8List signature;
+  final Uint8List content;
+  final Uint8List hSrc;
+  final Term term;
+  try {
+    final r = WireReader(bytes);
+    signer = PubKey(Uint8List.fromList(r.bytes()));
+    signature = Uint8List.fromList(r.bytes());
+    content = Uint8List.sublistView(bytes, r.offset);
+    final sig = decodeTermFromBytes(Uint8List.fromList(content));
+    if (sig is! WStruct || sig.functor != 'sig' || sig.args.length != 2) {
+      throw WireFormatException('signed content is not sig/2');
+    }
+    final h = sig.args[0];
+    if (h is! WConst || h.constant is! WBlob) {
+      throw WireFormatException('signed content carries no module identity');
+    }
+    hSrc = (h.constant as WBlob).value;
+    term = PayloadCodec.wireToTerm(sig.args[1]);
+  } catch (e) {
+    print('[FAIL] _signed/4: not a signed term: $e');
+    return BodyKernelResult.fail;
+  }
+  if (!PersonIdentity.verify(signer, content, signature)) {
+    print('[FAIL] _signed/4: the signature does not verify under the key the '
+        'signed term carries');
+    return BodyKernelResult.fail;
+  }
+  final r1 = _bindResult(rt, args[1], ConstTerm(signer.hex));
+  if (r1 != BodyKernelResult.success) return r1;
+  final r2 = _bindResult(rt, args[2], ConstTerm(_hexOf(hSrc)));
+  if (r2 != BodyKernelResult.success) return r2;
+  return _bindResult(rt, args[3], term);
+}
+
+/// '_decompose_module'(Module?, Key, Hash, Hash) — take a module value apart:
+/// the public key of the compiler that produced it, the identity of the source
+/// it was compiled from, and the identity of the compiled module, read from
+/// the artefact's certificate. It does not verify the certificate: a module
+/// value exists only where the runtime compiled it or the loader admitted it.
+/// A module refused a certificate has no compiler's key to give: an error.
+BodyKernelResult decomposeModuleKernel(GlpRuntime rt, List<Object?> args) {
+  if (args.length != 4) {
+    print('[ABORT] _decompose_module/4: expected 4 arguments, got '
+        '${args.length}');
+    return BodyKernelResult.abort;
+  }
+  final module = _deref(rt, args[0]);
+  if (module is! ModuleTerm) {
+    print('[ABORT] _decompose_module/4: first argument is not a module value');
+    return BodyKernelResult.abort;
+  }
+  final artefact = module.artefact;
+  if (artefact is! Artefact) {
+    print('[ABORT] _decompose_module/4: module carries no artefact');
+    return BodyKernelResult.abort;
+  }
+  final cert = artefact.certificate;
+  if (cert.isRefused) {
+    print('[ABORT] _decompose_module/4: module ${module.name} carries no '
+        'certificate (it was refused one, or no one compiled it for a person)');
+    return BodyKernelResult.abort;
+  }
+  final r1 = _bindResult(rt, args[1], ConstTerm(_hexOf(cert.agent)));
+  if (r1 != BodyKernelResult.success) return r1;
+  final r2 = _bindResult(rt, args[2], ConstTerm(_hexOf(cert.hSrc)));
+  if (r2 != BodyKernelResult.success) return r2;
+  return _bindResult(rt, args[3], ConstTerm(_hexOf(cert.hBin)));
 }
 
 // =============================================================================

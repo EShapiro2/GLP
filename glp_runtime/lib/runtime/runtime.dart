@@ -9,6 +9,7 @@ import 'abandon.dart';
 import 'fairness.dart';
 import 'system_predicates.dart';
 import 'body_kernels.dart';
+import 'package:glp_runtime/multiagent/identity.dart' show PersonIdentity;
 import 'package:glp_runtime/bytecode/runner.dart'
     show CallEnv, GoalRunner;
 import 'package:glp_runtime/runtime/glp_activation.dart' show GlpChannelHandle;
@@ -87,6 +88,11 @@ class GlpRuntime {
   // madGLP context (set when running in multiagent mode)
   // Used by '_cold_send' kernel to access globalization infrastructure
   Object? madContext;
+
+  /// The person's identity this runtime holds: the key `self_key/1` answers,
+  /// `sign/3` signs under, and the compiler certifies modules with. Set by the
+  /// engine at construction (multiagent/identity.dart).
+  PersonIdentity? identity;
 
   // Output callback for '_output'/1 kernel.
   // If set, called instead of print(). Used by tests and Flutter UI.

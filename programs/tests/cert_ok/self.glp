@@ -1,0 +1,9 @@
+%% IGLP probe: a mini-app that calls no system predicate or kernel reaching the
+%% network or the person is certified (SGSG Section 3, "What the super-app
+%% grants a mini-app"; IGLP code format §Program Artefact).  Its module value's
+%% certificate carries the compiler's key and both identities.
+
+imported procedure app#double(Integer?, Integer).
+
+exported procedure double(Integer?, Integer).
+double(X, Y?) :- app # double(X?, Y).

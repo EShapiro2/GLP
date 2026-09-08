@@ -1,0 +1,14 @@
+%% IGLP probe: a mini-app that reaches the network or the person is refused a
+%% certificate, naming the offending call (SGSG Section 3 and Section 6.1 G1;
+%% IGLP code format §Program Artefact).  leak/1 calls send_to_net/1 directly;
+%% shout/1 reaches send_to_user/1 through a wrapper of its own, which the
+%% reachability decision does not let pass.
+
+imported procedure app#leak(Stream(_)?).
+imported procedure app#shout(Stream(_)?).
+
+exported procedure leak(Stream(_)?).
+leak(S) :- app # leak(S?).
+
+exported procedure shout(Stream(_)?).
+shout(S) :- app # shout(S?).

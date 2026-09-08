@@ -7,6 +7,8 @@ library;
 import 'dart:io';
 import 'package:glp_runtime/compiler/program_linker.dart' show emitVglpSources;
 import 'package:glp_runtime/engine/glp_engine.dart';
+import 'package:glp_runtime/multiagent/simulation_network.dart'
+    show NetworkDirectory, SimulationNetworkClient;
 import 'package:glp_runtime/runtime/scheduler.dart';
 import 'package:glp_runtime/runtime/terms.dart' as rt;
 
@@ -25,7 +27,7 @@ void main() async {
   print('Working directory: ${Directory.current.path}');
   print('');
   print('Input: filename.glp to load, or goal to execute');
-  print('Commands: :quit, :help, :trace, :debug, :limit, :activate');
+  print('Commands: :quit, :help, :trace, :debug, :limit, :activate, :mad');
   print('');
 
   // Resolve programs/self.glp relative to this script's location.
@@ -87,6 +89,39 @@ void main() async {
       } catch (e) {
         print('Emit failed: $e');
       }
+      continue;
+    }
+
+    if (trimmed.startsWith(':mad')) {
+      // :mad <agent> — enter madGLP mode for what follows: the madGLP system
+      // predicates are loaded and a MadContext is created for <agent>, backed
+      // by a single-agent simulation networking layer carrying the runtime's
+      // own identity, so that the seam predicates — send_to_net/1, the
+      // networking seam, authorise_link/2 — execute instead of aborting. A
+      // directory program loaded afterwards runs under it (SGSG's harness
+      // request of 2026-08-03 19:01; IGLP Cowork 2026-09-08 00:04, item 2).
+      final parts = trimmed.split(RegExp(r'\s+'));
+      if (parts.length != 2) {
+        print('Usage: :mad <agent>');
+        continue;
+      }
+      if (engine.madContext != null) {
+        print('madGLP mode is already on for ${engine.madContext!.agentId}');
+        continue;
+      }
+      final agent = parts[1].toLowerCase();
+      engine.enableMadGLP(agentId: agent);
+      final directory = NetworkDirectory()..register(agent, engine.identity.pub);
+      final network = SimulationNetworkClient(
+        selfId: agent,
+        directory: directory,
+        sendToRouter: (toId, payload) {
+          print('[MAD $agent] message to $toId dropped: no router in the REPL');
+        },
+      );
+      network.putIdentity(engine.identity.pub, engine.identity.priv);
+      engine.madContext!.network = network;
+      print('madGLP mode on: agent $agent, key ${engine.identity.pub.hex}');
       continue;
     }
 
@@ -256,6 +291,7 @@ void _printHelp() {
   print('  :limit <n>             Set goal reduction limit to <n>');
   print('  :bytecode, :bc         Show loaded bytecode');
   print('  :emit <dir>            Write the compiled GLP beside each .vglp');
+  print('  :mad <agent>           Enter madGLP mode as <agent> (seam predicates run)');
   print('');
   print('Type Checking:');
   print('  Programs with procedure declarations are type-checked');

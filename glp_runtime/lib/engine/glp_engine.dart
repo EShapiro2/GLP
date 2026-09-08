@@ -43,6 +43,9 @@ import 'package:glp_runtime/wire/flattening.dart'
 import 'package:glp_runtime/wire/artefact.dart' show Artefact, ArtefactExport;
 import 'package:glp_runtime/analysis/type_checker/type_identity.dart'
     show TypeIdentityTables;
+import 'package:glp_runtime/multiagent/identity.dart' show PersonIdentity;
+import 'package:glp_runtime/compiler/certification.dart'
+    show privilegedRootNames, privilegedCalls;
 
 /// Result of running a goal
 class ExecutionResult {
@@ -161,6 +164,20 @@ class GlpEngine {
   /// For madGLP: the MadContext for this engine
   MadContext? madContext;
 
+  /// The person's identity the runtime holds (Secure GLP §Assumptions: `sign`
+  /// succeeds only under a key whose private half the runtime holds for its
+  /// own person). It signs every certificate this engine's compiler writes and
+  /// backs `self_key/1` and `sign/3`. Given at construction by a harness that
+  /// also installs it on the agent's networking layer; generated fresh
+  /// otherwise (glpc, the suite), where the paper names no key.
+  PersonIdentity get identity => _runtime.identity!;
+
+  /// The privileged names of the root scope — the kernels and predicates that
+  /// reach the network or the person, and every root-scope procedure from
+  /// which one is reachable — computed once from the root self.glp and the
+  /// madGLP system predicates (compiler/certification.dart).
+  late final Set<String> _privilegedRootNames;
+
   /// Access to the runtime (for madGLP integration)
   GlpRuntime get runtime => _runtime;
 
@@ -176,16 +193,20 @@ class GlpEngine {
   /// their own — the vGLP emitter does.
   String get rootSelfGlpPath => _rootSelfGlpPath;
 
-  GlpEngine({required String rootSelfGlpPath}) {
+  GlpEngine({required String rootSelfGlpPath, PersonIdentity? identity}) {
     _rootSelfGlpPath = rootSelfGlpPath;
+    _runtime.identity = identity ?? PersonIdentity.generate();
 
     // Set root scope sources from programs/self.glp for PE and type checker
     final rootSelfFile = File(_rootSelfGlpPath);
+    final rootSources = <String>[_madPredicatesSource];
     if (rootSelfFile.existsSync()) {
       final rootSource = rootSelfFile.readAsStringSync();
       setRootScopeUnitClauseSource(rootSource);
       setRootScopeEnvironmentSource(rootSource);
+      rootSources.add(rootSource);
     }
+    _privilegedRootNames = privilegedRootNames(rootSources);
 
     registerStandardPredicates(_runtime.systemPredicates);
     registerModuleKernels(_runtime);
@@ -991,6 +1012,23 @@ class GlpEngine {
       exports.add(ArtefactExport(
           p.name, p.arity, decl == null ? '' : exportDeclarationText(decl)));
     }
+    // The certificate (code format §Program Artefact; SGSG Section 3 and G1):
+    // written at every compilation under the compiling person's key, and
+    // refused, naming the offending calls, where the linked, pruned program
+    // reaches an OS-privileged predicate or kernel — by reachability from its
+    // entry points, so that a wrapper does not pass. A refused module still
+    // loads and runs here, as the OS's own boot and play programs must: it
+    // carries its two identities under no signature, no loader admits it, and
+    // decompose_module/4 has no compiler's key to give for it.
+    final offending = privilegedCalls(linked.program, _privilegedRootNames,
+        ownModules: {
+          for (final m in modules)
+            if (m.exposingDir == null) m.moduleName
+        });
+    if (offending.isNotEmpty) {
+      print('[CERTIFICATE REFUSED] $moduleName reaches the network or the '
+          'person: ${offending.join('; ')}');
+    }
     final artefact = Artefact.fromCompiled(
       ops: program.ops.cast<Object>(),
       hM: hM,
@@ -999,6 +1037,7 @@ class GlpEngine {
       typeDefsText:
           interfaceTypeDefsText(exportDecls: exportDecls, typeDefs: typeDefs),
       exports: exports,
+      signer: offending.isEmpty ? identity : null,
     );
     // The module's declared type-identity table (TGLP §Dynamic Activation and
     // Implementation Notes, "The tables"): every procedure declared in the
