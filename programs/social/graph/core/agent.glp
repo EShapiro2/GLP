@@ -380,12 +380,11 @@ agent(Id, UserIn, [pending_link(Name, S)|NetIn], Outs, host(Apps, Atts, Pend, Tr
 %% of a warm call): the anchor is found among this agent's own friends, and
 %% with the person's consent the two are introduced; otherwise the request
 %% waits for it.
-agent(Id, UserIn, [msg(From, Id1, request_intro(Name))|NetIn], Outs,
+agent(Id, UserIn, [msg(From, Id1, request_intro(Anchor))|NetIn], Outs,
       host(Apps, Atts, Pend, Trusted)) :-
-    Id? =?= Id1?, ground(From?), ground(Name?) |
-    Parts ..= Name?,
-    anchor_friend(Parts?, Outs?, Outs1, Found),
-    intro_request(Found?, Id?, From?, Name?, UserIn?, NetIn?, Outs1?,
+    Id? =?= Id1?, ground(From?), ground(Anchor?) |
+    anchor_friend(Anchor?, Outs?, Outs1, Found),
+    intro_request(Found?, Id?, From?, Anchor?, UserIn?, NetIn?, Outs1?,
                   host(Apps?, Atts?, Pend?, Trusted?)).
 
 %% The warm call itself, from a new friend: the name must be anchored here,
@@ -747,26 +746,31 @@ anchor_is(_, _, false) :- otherwise | true.
 
 %% take_warm_consent_for(Parts, Pend, Pend1, C): the person's consent to a warm
 %% call with the name's anchor, removed.
-procedure take_warm_consent_for(Stream(_)?, PendingInv?, PendingInv, Constant).
+procedure take_warm_consent_for(Stream(_)?, PendingInv?, PendingInv, WarmConsent).
 take_warm_consent_for(Parts, [warm_consent(W) | Rest], Pend1?, C?) :-
     ground(Parts?) |
     anchor_is(Parts?, W?, B),
     twc_step(B?, Parts?, W?, Rest?, Pend1, C).
 take_warm_consent_for(Parts, [P | Rest], [P? | Rest1?], C?) :-
     otherwise | take_warm_consent_for(Parts?, Rest?, Rest1, C).
-take_warm_consent_for(_, [], [], false).
+take_warm_consent_for(_, [], [], no).
 
-procedure twc_step(Constant?, Stream(_)?, Constant?, PendingInv?, PendingInv, Constant).
-twc_step(true, _, _, Rest, Rest?, true).
+procedure twc_step(Constant?, Stream(_)?, Constant?, PendingInv?, PendingInv, WarmConsent).
+twc_step(true, _, W, Rest, Rest?, yes(W?)).
 twc_step(false, Parts, W, Rest, [warm_consent(W?) | Rest1?], C?) :-
     take_warm_consent_for(Parts?, Rest?, Rest1, C).
 
-procedure warm_step(Constant?, Constant?, Constant?, _?, Constant?, UserInStream?, NetInStream?, OutputsList?, Host?).
-warm_step(true, Id, App, Name, Via, UserIn, NetIn, Outs, host(Apps, Atts, Pend, Trusted)) :-
-    send_friend(Via?, msg(Id?, Via?, request_intro(Name?)), Outs?, Outs1),
+%% warm_step(C, ...): with the person's consent, the social graph asks the
+%% forwarding friend to introduce it to the ANCHOR, named by the constant the
+%% person consented to --- never by the held link's global name, which is a
+%% name of a variable and is not a term at the friend that receives it.  The
+%% name stays here, where authorise_link/2 will take it.
+procedure warm_step(WarmConsent?, Constant?, Constant?, _?, Constant?, UserInStream?, NetInStream?, OutputsList?, Host?).
+warm_step(yes(Anchor), Id, App, Name, Via, UserIn, NetIn, Outs, host(Apps, Atts, Pend, Trusted)) :-
+    send_friend(Via?, msg(Id?, Via?, request_intro(Anchor?)), Outs?, Outs1),
     agent(Id?, UserIn?, NetIn?, Outs1?,
           host(Apps?, Atts?, [warm(App?, Name?) | Pend?], Trusted?)).
-warm_step(false, Id, App, Name, Via, UserIn, NetIn, Outs, host(Apps, Atts, Pend, Trusted)) :-
+warm_step(no, Id, App, Name, Via, UserIn, NetIn, Outs, host(Apps, Atts, Pend, Trusted)) :-
     agent(Id?, UserIn?, NetIn?, Outs?,
           host(Apps?, Atts?, [warm_wait(App?, Name?, Via?) | Pend?], Trusted?)).
 
@@ -789,8 +793,8 @@ tww_step(false, Who, App, Name, Via, Rest, [warm_wait(App?, Name?, Via?) | Rest1
 procedure warm_consent_step(WarmWait?, Constant?, Constant?, UserInStream?, NetInStream?, OutputsList?, Host?).
 warm_consent_step(none, Id, Who, UserIn, NetIn, Outs, host(Apps, Atts, Pend, Trusted)) :-
     agent(Id?, UserIn?, NetIn?, Outs?, host(Apps?, Atts?, [warm_consent(Who?) | Pend?], Trusted?)).
-warm_consent_step(wait(App, Name, Via), Id, _, UserIn, NetIn, Outs, Host) :-
-    warm_step(true, Id?, App?, Name?, Via?, UserIn?, NetIn?, Outs?, Host?).
+warm_consent_step(wait(App, Name, Via), Id, Who, UserIn, NetIn, Outs, Host) :-
+    warm_step(yes(Who?), Id?, App?, Name?, Via?, UserIn?, NetIn?, Outs?, Host?).
 
 %% warm_after_commit(Id, Friend, Pend, Outs, Outs1): a friendship just made
 %% with the anchor of a warm call under way: send the warm call.
@@ -876,23 +880,17 @@ warm_call_step(_, _, Id, _, _, _, UserIn, NetIn, Outs, Host) :-
 
 %% anchor_friend(Parts, Outs, Outs1, F): the friend whose identity the name's
 %% anchor is, the outputs passed through.
-procedure anchor_friend(Stream(_)?, OutputsList?, OutputsList, AnchorFriend).
-anchor_friend(Parts, [friend_output(K, Out?) | Rest], [friend_output(K?, Out) | Rest1?], F?) :-
-    ground(Parts?) |
-    anchor_is(Parts?, K?, B),
-    af_step(B?, Parts?, K?, Rest?, Rest1, F).
-anchor_friend(Parts, [E | Rest], [E? | Rest1?], F?) :-
-    otherwise | anchor_friend(Parts?, Rest?, Rest1, F).
+procedure anchor_friend(Constant?, OutputsList?, OutputsList, AnchorFriend).
+anchor_friend(Anchor, [friend_output(K, Out?) | Rest], [friend_output(K?, Out) | Rest1?], found(K?)) :-
+    Anchor? =?= K? | true.
+anchor_friend(Anchor, [E | Rest], [E? | Rest1?], F?) :-
+    otherwise | anchor_friend(Anchor?, Rest?, Rest1, F).
 anchor_friend(_, [], [], none).
 
-procedure af_step(Constant?, Stream(_)?, Constant?, OutputsList?, OutputsList, AnchorFriend).
-af_step(true, _, K, Rest, Rest?, found(K?)).
-af_step(false, Parts, _, Rest, Rest1?, F?) :- anchor_friend(Parts?, Rest?, Rest1, F).
-
-procedure intro_request(AnchorFriend?, Constant?, Constant?, _?, UserInStream?, NetInStream?, OutputsList?, Host?).
-intro_request(found(Anchor), Id, From, Name, UserIn, NetIn, Outs, host(Apps, Atts, Pend, Trusted)) :-
+procedure intro_request(AnchorFriend?, Constant?, Constant?, Constant?, UserInStream?, NetInStream?, OutputsList?, Host?).
+intro_request(found(Anchor), Id, From, Anchor1, UserIn, NetIn, Outs, host(Apps, Atts, Pend, Trusted)) :-
     take_intro_consent(From?, Anchor?, Pend?, Pend1, C),
-    intro_request_step(C?, Id?, From?, Anchor?, Name?, UserIn?, NetIn?, Outs?,
+    intro_request_step(C?, Id?, From?, Anchor?, Anchor1?, UserIn?, NetIn?, Outs?,
                        host(Apps?, Atts?, Pend1?, Trusted?)).
 intro_request(none, Id, _, _, UserIn, NetIn, Outs, Host) :-
     agent(Id?, UserIn?, NetIn?, Outs?, Host?).
@@ -903,27 +901,19 @@ take_intro_consent(R, A, [intro_consent(R1, A1) | Rest], Rest?, true) :-
 take_intro_consent(R, A, [P | Rest], [P? | Rest1?], C?) :- otherwise | take_intro_consent(R?, A?, Rest?, Rest1, C).
 take_intro_consent(_, _, [], [], false).
 
-procedure intro_request_step(Constant?, Constant?, Constant?, Constant?, _?, UserInStream?, NetInStream?, OutputsList?, Host?).
+procedure intro_request_step(Constant?, Constant?, Constant?, Constant?, Constant?, UserInStream?, NetInStream?, OutputsList?, Host?).
 intro_request_step(true, Id, From, Anchor, _, UserIn, NetIn, Outs, Host) :-
     agent(Id?, [msg(person, Id?, introduce(From?, Anchor?)) | UserIn?], NetIn?, Outs?, Host?).
-intro_request_step(false, Id, From, _, Name, UserIn, NetIn, Outs, host(Apps, Atts, Pend, Trusted)) :-
-    agent(Id?, UserIn?, NetIn?, Outs?, host(Apps?, Atts?, [intro_wait(From?, Name?) | Pend?], Trusted?)).
+intro_request_step(false, Id, From, _, Anchor1, UserIn, NetIn, Outs, host(Apps, Atts, Pend, Trusted)) :-
+    agent(Id?, UserIn?, NetIn?, Outs?, host(Apps?, Atts?, [intro_wait(From?, Anchor1?) | Pend?], Trusted?)).
 
 %% take_intro_wait(Requester, Anchor, Pend, Pend1, W): a request from Requester
 %% waiting for consent whose name is anchored at Anchor, removed.
 procedure take_intro_wait(Constant?, Constant?, PendingInv?, PendingInv, Constant).
-take_intro_wait(R, A, [intro_wait(R1, Name) | Rest], Pend1?, W?) :-
-    R? =?= R1?, ground(Name?) |
-    Parts ..= Name?,
-    anchor_is(Parts?, A?, B),
-    tiw_step(B?, R?, A?, Name?, Rest?, Pend1, W).
+take_intro_wait(R, A, [intro_wait(R1, A1) | Rest], Rest?, true) :-
+    R? =?= R1?, A? =?= A1? | true.
 take_intro_wait(R, A, [P | Rest], [P? | Rest1?], W?) :- otherwise | take_intro_wait(R?, A?, Rest?, Rest1, W).
 take_intro_wait(_, _, [], [], false).
-
-procedure tiw_step(Constant?, Constant?, Constant?, _?, PendingInv?, PendingInv, Constant).
-tiw_step(true, _, _, _, Rest, Rest?, true).
-tiw_step(false, R, A, Name, Rest, [intro_wait(R?, Name?) | Rest1?], W?) :-
-    take_intro_wait(R?, A?, Rest?, Rest1, W).
 
 procedure intro_consent_step(Constant?, Constant?, Constant?, Constant?, UserInStream?, NetInStream?, OutputsList?, Host?).
 intro_consent_step(true, Id, From, Anchor, UserIn, NetIn, Outs, Host) :-

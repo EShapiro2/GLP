@@ -88,7 +88,7 @@ FriendContent ::= response(Response)
                 %% The warm call (Section 5.2): the holder asks the forwarding
                 %% friend for an introduction to the anchor; over the friend
                 %% channel that results, warm_call(App, Name) to the anchor.
-                ; request_intro(_)
+                ; request_intro(Constant)
                 ; warm_call(Constant, _).
 
 %% Setup channel content: ack/nack handshake plus the fresh-friend-channel
@@ -204,7 +204,7 @@ Pending      ::= offered(Constant, Constant, String, Constant, String)
                ; warm_consent(Constant)
                ; warm_ok(_, Constant)
                ; intro_consent(Constant, Constant)
-               ; intro_wait(Constant, _).
+               ; intro_wait(Constant, Constant).
 PendingInv   ::= [] ; [Pending | PendingInv].
 Host ::= host(AppList, AttestList, PendingInv, Stream(String)).
 
@@ -363,6 +363,9 @@ CsAppNotify ::= befriend_intro(Constant, Constant, ReqId)
               ; enrolled(Constant)
               ; release_asked(Constant)
               ; released(Constant).
+%% The person's consent to a warm call, and the anchor it names.
+WarmConsent ::= no ; yes(Constant).
+
 %% One end of a root channel, of the test mini-app's protocol, of the
 %% currency's or of the child-safe platform's, as the friend channel conveys it
 %% at the handshake.

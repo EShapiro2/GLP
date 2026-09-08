@@ -3443,6 +3443,22 @@ HEREDOC
 check "MB3 the holder reads both elements of the stream" "\[bob\] saw(probe)" "$mb3"
 check "MB3 a writer inside a stream element crosses, and the assignment comes back" "\[alice\] got(hi)" "$mb3"
 
+# MB4: an end that arrived TWO CROSSINGS down, written into in a LATER
+# reduction than the one that handed it over (SGSG Code, 2026-09-08 17:14).  A
+# `global_send` goal watching such a tail was realised as a heap callback and
+# never fired when the tail became known by the resolution of a variable chain,
+# so the later element was produced and never sent; the warm call of SGSG's
+# Section 5.2 stopped exactly there.  Without the repair bob sees saw(hello)
+# and nothing after it.
+mb4=$("$REPL_RUN" <<HEREDOC
+:boot $GLP_DIR/programs/tests/mad_two_crossings_boot.glp
+:quit
+HEREDOC
+2>&1)
+check "MB4 the twice-crossed end delivers the hand-over reduction's element" "\[bob\] saw(hello)" "$mb4"
+check "MB4 and the element written into its tail afterwards" "\[bob\] saw(probe)" "$mb4"
+check "MB4 the holder's assignment comes back" "\[alice\] got(hi)" "$mb4"
+
 echo ""
 # =============================================================================
 # SECTION SL: load_file/2 and the artefact on disc (:artefact)
@@ -3717,13 +3733,18 @@ check "SG super-app on two smartphones: alice's execution opened" "\[alice\] ope
 check "SG super-app on two smartphones: bob greeted" "\[bob\] greeted(alice)" "$sg_boot"
 check "SG super-app on two smartphones: alice greeted" "\[alice\] greeted(bob)" "$sg_boot"
 
-# The warm call on three smartphones (paper Section 5.2): the social graph's
-# side is written (superapp3_boot.glp, core/agent.glp, pingapp/miniapp.glp) and
-# runs as far as the runtime carries it: the three conversations open, and
-# alice's execution sends carol the end of a fresh variable; the assignment a
-# holder makes to an end that travelled inside a stream element does not come
-# back across the link (programs/social/linkprobe, IGLP), so the held-link
-# report, the introduction and the warm call itself are not reached here.
+# The warm call on three smartphones (paper Section 5.2): the three
+# conversations open, alice's execution sends carol the end of a fresh
+# variable, carol's forwards it to bob's, bob's assigns it, bob's runtime holds
+# the assignment and reports the held link, bob's mini-app asks for a warm
+# call, bob's social graph asks carol to introduce him to the anchor, carol's
+# person consents, and alice and bob befriend.  The release itself is not
+# reached: the two ends of a held link have different global names, one at the
+# holder and one at the anchor, and which of them authorises what is IGLP's to
+# say (SGSG Code to IGLP, 2026-09-08).  A global name does not cross a link as
+# a term at all, which is why the request for an introduction names the anchor
+# by the constant the person consented to; programs/social/docs/linkprobes.md
+# holds the two-agent programs that fence the runtime behaviour in.
 sg_warm=$("$REPL_RUN" <<HEREDOC
 :artefact $GLP_DIR/programs/social/graph/pingapp $SG_CORE
 :boot $GLP_DIR/programs/social/superapp3_boot.glp $SG_CORE
@@ -3734,6 +3755,12 @@ check "SG warm call on three smartphones: the boot settles" "Boot settled: 3 age
 check "SG warm call: alice and carol converse" "\[carol\] greeted(alice)" "$sg_warm"
 check "SG warm call: carol and bob converse" "\[bob\] greeted(carol)" "$sg_warm"
 check "SG warm call: alice's execution sends carol the probe's end" "\[alice\] probed(carol)" "$sg_warm"
+check "SG warm call: carol's execution forwards it to bob" "\[carol\] forwarded(bob)" "$sg_warm"
+check "SG warm call: bob's execution assigns it" "\[bob\] answered" "$sg_warm"
+check "SG warm call: bob's runtime holds the link and reports it" "\[bob\] held_link(carol)" "$sg_warm"
+check "SG warm call: carol introduces bob to alice" "\[bob\] sg(intro_from(carol, alice))" "$sg_warm"
+check "SG warm call: and alice to bob" "\[alice\] sg(intro_from(carol, bob))" "$sg_warm"
+check "SG warm call: alice and bob befriend" "\[alice\] sg(connected(bob))" "$sg_warm"
 
 # The currency on two smartphones (paper Section 7): the same super-app, two
 # isolates with their own keys, hosting Currencies' mini-app from its certified
