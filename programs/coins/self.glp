@@ -2,10 +2,14 @@
 %%
 %% The program every participant runs under the grassroots social contract of
 %% "Grassroots Currencies: Turning Mutual Trust into Liquidity" (Section 3),
-%% derived from the four transactions of its Section 3.4.  This file holds the
-%% types shared by the agent (coins_agent.vglp, compiled by the vGLP canonical
-%% compilation into coins_agent.glp beside it) and the play (village.glp), and
-%% the helpers over holdings and channels that the agent calls.
+%% derived from the four transactions of its Section 3.4.  It runs as a
+%% mini-app of the Grassroots Super-App: currency/ is the certified program --- the
+%% agent (currency/coins_agent.vglp, compiled by the vGLP canonical compilation
+%% into currency/coins_agent.glp beside it) and the mini-app entry coins/3
+%% (currency/miniapp.glp) --- and this directory adds the village play
+%% (village.glp), which stands in for the super-app and the persons.  This
+%% file holds the types shared by all of them, and the helpers over holdings
+%% and channels that the agent calls.
 %%
 %% A coin is coin(Issuer, Serial): the atom cent(u) of the act schemas, with the
 %% serial a practical implementation gives each coin.  A party's holdings are a
@@ -38,32 +42,25 @@ PeerContent ::= pay(Stream(Coin))
 PeerMsg     ::= msg(Constant, Constant, PeerContent).
 PeerChannel ::= ch(Stream(PeerMsg), Stream(PeerMsg)?).
 
-%% First contact.  An act sent to a party the sender has no channel to carries
-%% the receiver's end of a fresh channel, on which the two transact thereafter.
-NetCall   ::= call(Constant, PeerContent, PeerChannel).
-NetOutMsg ::= msg(Constant, NetCall).
-NetInMsg  ::= msg(Constant, NetCall)
-            ; msg(Constant, Constant, PeerContent).
-
-%% A channel held for a swap proposed at first contact --- adopted when the
-%% swap is accepted, closed when it is declined --- or linked, an established
-%% channel.
-Link ::= link(PeerChannel) ; linked.
+%% What the social graph hands the mini-app on its channel to the social graph
+%% (SGSG paper, Section 3): at each invitation, one end of the root channel of
+%% a conversation with a friend's execution of this program.  Two agents
+%% transact over that channel and over nothing else.
+Conversation ::= conversation(Constant, PeerChannel).
 
 %% Whether a coin was found in the holdings.
 Found ::= found(Coin) ; not_found.
 
-%% The agent's outputs: the screen, the network, and a channel per
-%% counterparty, keyed by its name.  The routers send_user, send_net,
-%% send_friend and add_friend_output are those of lib/routing, exposed from the
-%% root scope.
+%% The agent's outputs: the screen, and a channel per counterparty, keyed by
+%% its name.  The routers send_user, send_friend and add_friend_output are
+%% those of social/graph/routing, exposed from the root scope.
 OutputEntry ::= user_output(Stream(ScreenMsg)?)
-              ; net_output(Stream(NetOutMsg)?)
               ; friend_output(Constant, Stream(PeerMsg)?).
 
 %% The screen: the holdings, tallied by issuer, after every change, and what
 %% each act came to.
 ScreenContent ::= holdings(Stream(Lot))
+                ; opened(Constant)
                 ; minted(Integer)
                 ; paid(Constant, Integer)
                 ; received(Constant, Integer)
@@ -77,15 +74,16 @@ ScreenContent ::= holdings(Stream(Lot))
                 ; presented(Constant, Constant)
                 ; unfulfilled(Constant, Constant)
                 ; refused(Constant)
-                ; lacking(Constant, Integer).
+                ; lacking(Constant, Integer)
+                ; no_conversation(Constant).
 ScreenMsg ::= msg(Constant, Constant, ScreenContent).
 
 %% The agent's own input: the answers its swap responders inject, and the
 %% results of the acts it proposed.
-UserInMsg ::= accept_swap(Constant, Lot, Stream(Coin), SwapResponse?, Link)
-            ; decline_swap(Constant, Stream(Coin), SwapResponse?, Link)
-            ; swap_accepted(Constant, Stream(Coin), Link)
-            ; swap_declined_by(Constant, Stream(Coin), Link)
+UserInMsg ::= accept_swap(Constant, Lot, Stream(Coin), SwapResponse?)
+            ; decline_swap(Constant, Stream(Coin), SwapResponse?)
+            ; swap_accepted(Constant, Stream(Coin))
+            ; swap_declined_by(Constant, Stream(Coin))
             ; redeem_given(Constant, Coin)
             ; redeem_menu_from(Constant, Coin, Stream(Constant))
             ; redeem_declined_by(Constant, Coin).
@@ -96,10 +94,11 @@ SwapOffer ::= offer(Constant, Lot, Stream(Coin)).
 
 %% =============================================================================
 %% The vocabulary of the compiled agent's mediator, at this program's answer and
-%% context types, so that the play can type the goals it spawns.  These are the
-%% types the canonical compilation emits into coins_agent.glp (programs/vglp/
-%% self.glp instantiated at Answer and Context); the compiled module's own
-%% definitions shadow these within it, and the two must agree.
+%% context types, so that the mini-app entry and the play can type the goals
+%% they spawn.  These are the types the canonical compilation emits into
+%% currency/coins_agent.glp (programs/vglp/self.glp instantiated at Answer and
+%% Context); the compiled module's own definitions shadow these within it, and
+%% the two must agree.
 %% =============================================================================
 
 ReqId ::= req(Integer).
@@ -133,6 +132,12 @@ Reply_agent_4 ::= then(Xs_agent_4).
 Answer ::= xs_respond_swap_1(Constant) ; xs_respond_swap_2(Constant) ; xs_agent_1(Integer) ; xs_agent_2(Constant, Constant, Integer, Constant, Integer) ; xs_agent_3(Constant, Integer) ; xs_agent_4(Constant, Constant).
 Escrow ::= esc_respond_swap_1(Reply_respond_swap_1?) ; esc_respond_swap_2(Reply_respond_swap_2?) ; esc_agent_1(Reply_agent_1?) ; esc_agent_2(Reply_agent_2?) ; esc_agent_3(Reply_agent_3?) ; esc_agent_4(Reply_agent_4?).
 Context ::= ctx_respond_swap_1(Constant, Lot, Stream(Coin)) ; ctx_respond_swap_2(Constant, Lot, Stream(Coin)) ; ctx_agent_1 ; ctx_agent_2 ; ctx_agent_3 ; ctx_agent_4.
+
+%% What the mini-app shows its person on its channel to the super-app user
+%% interface: the mediator's cards and their closing, and the screen.
+Event ::= card(Constant, Context, ReqId)
+        ; closed(ReqId)
+        ; msg(Constant, Constant, ScreenContent).
 
 %% =============================================================================
 %% Holdings
@@ -215,10 +220,10 @@ menu_add(I, [J|Rest], [J?|Rest1?]) :- otherwise | menu_add(I?, Rest?, Rest1).
 menu_add(I, [], [I?]).
 
 %% =============================================================================
-%% Channels to counterparties
+%% Conversations with counterparties
 %% =============================================================================
 
-%% Whether a channel to Q is among the outputs.
+%% Whether a conversation with Q is open: Q's output entry is among the outputs.
 procedure has_peer(Constant?, Stream(OutputEntry)?, Stream(OutputEntry), Constant).
 has_peer(Q, [friend_output(K, Out?)|Rest], [friend_output(K?, Out)|Rest?], yes) :-
     Q? =?= K? | true.
@@ -227,34 +232,26 @@ has_peer(Q, [E|Rest], [E?|Rest1?], Known?) :-
     has_peer(Q?, Rest?, Rest1, Known).
 has_peer(_, [], [], no).
 
-%% Adopt a channel to Q: its write side becomes Q's output entry and its read
-%% side joins the network input.  An established link adopts nothing.
-procedure adopt(Link?, Constant?, Stream(OutputEntry)?, Stream(OutputEntry), Stream(NetInMsg)?, Stream(NetInMsg)).
-adopt(link(ch(In, Out?)), Q, Outs, Outs1?, NetIn, NetIn1?) :-
+%% Adopt the channel of a conversation with Q: its write side becomes Q's
+%% output entry and its read side joins the input from counterparties.
+procedure adopt(Constant?, PeerChannel?, Stream(OutputEntry)?, Stream(OutputEntry), Stream(PeerMsg)?, Stream(PeerMsg)).
+adopt(Q, ch(In, Out?), Outs, Outs1?, PeerIn, PeerIn1?) :-
     ground(Q?) |
     add_friend_output(Q?, Out, Outs?, Outs1),
-    merge(NetIn?, In?, NetIn1).
-adopt(linked, _, Outs, Outs?, NetIn, NetIn?).
-
-%% A channel held for a declined swap: its write side closes.  An established
-%% link stays.
-procedure drop_link(Link?).
-drop_link(link(ch(_, []))).
-drop_link(linked).
+    merge(PeerIn?, In?, PeerIn1).
 
 %% =============================================================================
 %% Results injected into the agent's input
 %% =============================================================================
 
-%% The counterparty's answer to a proposed swap, when it comes, with the link
-%% the proposal was made on.
-procedure inject_swap_result(SwapResponse?, Constant?, Link?, Stream(UserInMsg)?, Stream(UserInMsg)).
-inject_swap_result(swap_accept(Coins), Q, Link, Ys, [swap_accepted(Q?, Coins?, Link?)|Ys?]) :-
+%% The counterparty's answer to a proposed swap, when it comes.
+procedure inject_swap_result(SwapResponse?, Constant?, Stream(UserInMsg)?, Stream(UserInMsg)).
+inject_swap_result(swap_accept(Coins), Q, Ys, [swap_accepted(Q?, Coins?)|Ys?]) :-
     ground(Q?), ground(Coins?) | true.
-inject_swap_result(swap_decline(Coins), Q, Link, Ys, [swap_declined_by(Q?, Coins?, Link?)|Ys?]) :-
+inject_swap_result(swap_decline(Coins), Q, Ys, [swap_declined_by(Q?, Coins?)|Ys?]) :-
     ground(Q?), ground(Coins?) | true.
-inject_swap_result(R, Q, Link, [Y|Ys], [Y?|Ys1?]) :-
-    inject_swap_result(R?, Q?, Link?, Ys?, Ys1).
+inject_swap_result(R, Q, [Y|Ys], [Y?|Ys1?]) :-
+    inject_swap_result(R?, Q?, Ys?, Ys1).
 
 %% The issuer's answer to a presentation, when it comes.
 procedure inject_redeem_result(RedeemResponse?, Constant?, Stream(UserInMsg)?, Stream(UserInMsg)).
@@ -269,12 +266,12 @@ inject_redeem_result(R, Q, [Y|Ys], [Y?|Ys1?]) :-
 
 %% The two bodies of the swap responder's accept clause: the acceptance, and
 %% the refusal the machine gives for a person who has not answered.  Each hands
-%% the agent the offer with the response writer and the link.
-procedure accept_answer(Constant?, Lot?, Stream(Coin)?, SwapResponse, Link?, Stream(UserInMsg)).
-accept_answer(From, Want, Offered, Resp?, Link, [accept_swap(From?, Want?, Offered?, Resp, Link?)]).
+%% the agent the offer with the response writer.
+procedure accept_answer(Constant?, Lot?, Stream(Coin)?, SwapResponse, Stream(UserInMsg)).
+accept_answer(From, Want, Offered, Resp?, [accept_swap(From?, Want?, Offered?, Resp)]).
 
-procedure decline_answer(Constant?, Stream(Coin)?, SwapResponse, Link?, Stream(UserInMsg)).
-decline_answer(From, Offered, Resp?, Link, [decline_swap(From?, Offered?, Resp, Link?)]).
+procedure decline_answer(Constant?, Stream(Coin)?, SwapResponse, Stream(UserInMsg)).
+decline_answer(From, Offered, Resp?, [decline_swap(From?, Offered?, Resp)]).
 
 %% Binding a declined swap's response: the offered coins go back.
 procedure decline(SwapResponse, Stream(Coin)?).
@@ -289,7 +286,6 @@ show(C, Outs, Outs1?) :- send_user(msg(agent, person, C?), Outs?, Outs1).
 
 procedure close_outputs(Stream(OutputEntry)?).
 close_outputs([user_output([])|Outs]) :- close_outputs(Outs?).
-close_outputs([net_output([])|Outs]) :- close_outputs(Outs?).
 close_outputs([friend_output(_, [])|Outs]) :- close_outputs(Outs?).
 close_outputs([]).
 

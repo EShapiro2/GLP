@@ -16,22 +16,21 @@
 %%                                time, taking back his own
 %%   6. sale of debt              Alice sells 10 bob-coins to Eve for 4 frank-coins
 %%
-%% Each villager runs the compiled agent (coins_agent.glp) with its mediator,
-%% and a scripted person: it reads the cards the mediator shows and the screen
-%% the agent writes, and answers the cards --- the person's taps --- in the
-%% order of its script, each step when the one before it has taken effect.
-%% The screen messages are logged as tagged(Villager, Message), so the run is
-%% observable and the final holdings can be read off it.
+%% Each villager runs the mini-app (currency/miniapp.glp): the compiled agent with
+%% its mediator, activated with its two channels.  The play stands in for the
+%% super-app: it opens, before the market, the conversation between every two
+%% villagers who transact --- one root channel each, an end to each of the two
+%% --- and hands each villager its conversations on its channel to the social
+%% graph.  A scripted person stands in for the super-app user interface: it
+%% reads the cards the mediator shows and the screen the agent writes, and
+%% answers the cards --- the person's taps --- in the order of its script, each
+%% step when the one before it has taken effect.  The screen messages are
+%% logged as tagged(Villager, Message), so the run is observable and the final
+%% holdings can be read off it.
 %%
 %% Entry point: market/0, exported by self.glp as village/0.
 
-imported procedure coins_agent#agent(Channel(Closed, Stream(AgentMsg))?, Constant?, Stream(UserInMsg)?, Stream(NetInMsg)?, Stream(OutputEntry)?, Stream(Coin)?, Integer?, Slot(Reply_agent_1)?, Slot(Reply_agent_2)?, Slot(Reply_agent_3)?, Slot(Reply_agent_4)?).
-imported procedure coins_agent#med(Channel(Stream(UserAnswer), Stream(Card))?, Channel(Stream(AgentMsg), Closed)?, TimerStream?, PendingList?, Integer?).
-
-%% What a person sees: the cards and their closing, and the screen.
-Event ::= card(Constant, Context, ReqId)
-        ; closed(ReqId)
-        ; msg(Constant, Constant, ScreenContent).
+imported procedure miniapp#coins(Constant?, Channel(Stream(UserAnswer), Stream(Event))?, Stream(Conversation)?).
 
 %% A script: the person's acts, in order.  A step is an answer to one of the
 %% agent's four request cards, an acceptance of a swap the named party
@@ -83,56 +82,28 @@ script(frank, [mint(18), accept(diana), mint(10), accept(eve), pay(diana, 3),
 
 exported procedure market.
 market :-
-    network6(AOut?, BOut?, COut?, DOut?, EOut?, FOut?, AIn, BIn, CIn, DIn, EIn, FIn),
-    script(alice, SA), villager(alice, SA?, AIn?, AOut),
-    script(bob, SB), villager(bob, SB?, BIn?, BOut),
-    script(charlie, SC), villager(charlie, SC?, CIn?, COut),
-    script(diana, SD), villager(diana, SD?, DIn?, DOut),
-    script(eve, SE), villager(eve, SE?, EIn?, EOut),
-    script(frank, SF), villager(frank, SF?, FIn?, FOut).
+    script(alice, SA),
+    villager(alice, SA?, [conversation(bob, ch(AB?, BA)), conversation(charlie, ch(AC?, CA)),
+                          conversation(eve, ch(AE?, EA))]),
+    script(bob, SB),
+    villager(bob, SB?, [conversation(alice, ch(BA?, AB)), conversation(diana, ch(BD?, DB))]),
+    script(charlie, SC),
+    villager(charlie, SC?, [conversation(alice, ch(CA?, AC)), conversation(eve, ch(CE?, EC))]),
+    script(diana, SD),
+    villager(diana, SD?, [conversation(bob, ch(DB?, BD)), conversation(frank, ch(DF?, FD))]),
+    script(eve, SE),
+    villager(eve, SE?, [conversation(alice, ch(EA?, AE)), conversation(charlie, ch(EC?, CE)),
+                        conversation(frank, ch(EF?, FE))]),
+    script(frank, SF),
+    villager(frank, SF?, [conversation(diana, ch(FD?, DF)), conversation(eve, ch(FE?, EF))]).
 
-%% One villager: the compiled agent, its mediator, and the scripted person.
-exported procedure villager(Constant?, Script?, Stream(NetInMsg)?, Stream(NetOutMsg)).
-villager(Id, Script, NetIn, NetOut?) :-
+%% One villager: the mini-app, activated with its channel to the person and its
+%% conversations, and the scripted person on the other end of the channel.
+exported procedure villager(Constant?, Script?, Stream(Conversation)?).
+villager(Id, Script, Convs) :-
     ground(Id?) |
-    coins_agent # agent(ch([], Asks), Id?, [], NetIn?,
-                        [user_output(Screen), net_output(NetOut)], [], 1,
-                        none, none, none, none),
-    coins_agent # med(ch(Answers?, Cards), ch(Asks?, []), [], [], 0),
-    merge_events(Cards?, Screen?, Events),
+    miniapp # coins(Id?, ch(Answers?, Events), Convs?),
     person(Id?, Events?, Answers, Script?, open(no_card, no_card, no_card, no_card), [], idle).
-
-%% The cards and the screen, as one stream of events.  A pair carries one type,
-%% so each element is rebuilt at the event type.
-procedure merge_events(Stream(Card)?, Stream(ScreenMsg)?, Stream(Event)).
-merge_events([card(C, X, R)|Cs], Ms, [card(C?, X?, R?)|Es?]) :- merge_events(Cs?, Ms?, Es).
-merge_events([closed(R)|Cs], Ms, [closed(R?)|Es?]) :- merge_events(Cs?, Ms?, Es).
-merge_events(Cs, [msg(A, P, M)|Ms], [msg(A?, P?, M?)|Es?]) :- merge_events(Cs?, Ms?, Es).
-merge_events([], [msg(A, P, M)|Ms], [msg(A?, P?, M?)|Es?]) :- merge_events([], Ms?, Es).
-merge_events([card(C, X, R)|Cs], [], [card(C?, X?, R?)|Es?]) :- merge_events(Cs?, [], Es).
-merge_events([closed(R)|Cs], [], [closed(R?)|Es?]) :- merge_events(Cs?, [], Es).
-merge_events([], [], []).
-
-%% --- The network: first contacts, routed by addressee ---
-
-procedure route6(Stream(NetOutMsg)?, Stream(NetInMsg), Stream(NetInMsg), Stream(NetInMsg), Stream(NetInMsg), Stream(NetInMsg), Stream(NetInMsg)).
-route6([msg(alice, C)|Rest], [msg(alice, C?)|A?], B?, Ch?, D?, E?, F?) :- route6(Rest?, A, B, Ch, D, E, F).
-route6([msg(bob, C)|Rest], A?, [msg(bob, C?)|B?], Ch?, D?, E?, F?) :- route6(Rest?, A, B, Ch, D, E, F).
-route6([msg(charlie, C)|Rest], A?, B?, [msg(charlie, C?)|Ch?], D?, E?, F?) :- route6(Rest?, A, B, Ch, D, E, F).
-route6([msg(diana, C)|Rest], A?, B?, Ch?, [msg(diana, C?)|D?], E?, F?) :- route6(Rest?, A, B, Ch, D, E, F).
-route6([msg(eve, C)|Rest], A?, B?, Ch?, D?, [msg(eve, C?)|E?], F?) :- route6(Rest?, A, B, Ch, D, E, F).
-route6([msg(frank, C)|Rest], A?, B?, Ch?, D?, E?, [msg(frank, C?)|F?]) :- route6(Rest?, A, B, Ch, D, E, F).
-route6([], [], [], [], [], [], []).
-
-exported procedure network6(Stream(NetOutMsg)?, Stream(NetOutMsg)?, Stream(NetOutMsg)?, Stream(NetOutMsg)?, Stream(NetOutMsg)?, Stream(NetOutMsg)?,
-                   Stream(NetInMsg), Stream(NetInMsg), Stream(NetInMsg), Stream(NetInMsg), Stream(NetInMsg), Stream(NetInMsg)).
-network6(AOut, BOut, COut, DOut, EOut, FOut, AIn?, BIn?, CIn?, DIn?, EIn?, FIn?) :-
-    merge(AOut?, BOut?, AB),
-    merge(COut?, DOut?, CD),
-    merge(EOut?, FOut?, EF),
-    merge(AB?, CD?, ABCD),
-    merge(ABCD?, EF?, All),
-    route6(All?, AIn, BIn, CIn, DIn, EIn, FIn).
 
 %% =============================================================================
 %% The scripted person

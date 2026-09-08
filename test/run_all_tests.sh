@@ -2248,18 +2248,35 @@ check "Currencies credit line: at k_d=0 lender holds the full line plus interest
 echo ""
 
 # =============================================================================
-# Section N2: The coins program (programs/coins): the vGLP currency
-# agent of the Grassroots Currencies paper, its canonical compilation
-# coins_agent.glp (emitted by glpc :emit; the .vglp beside it is skipped by the
-# loader while the .glp stands), and the six-agent village market of the
-# paper's Section 5.  The run needs the reduction limit raised, and ends about
-# a minute after its last act, when the deadline timers of the answered swap
-# cards expire.
+# Section N2: The coins program (programs/coins): the vGLP currency agent of
+# the Grassroots Currencies paper as a mini-app of the Grassroots Super-App.
+# programs/coins/currency is the certified program --- the agent
+# coins_agent.vglp, its canonical compilation coins_agent.glp (emitted by glpc
+# :emit; the .vglp beside it is skipped by the loader while the .glp stands)
+# and the mini-app entry coins/3 --- and programs/coins adds the six-agent
+# village market of the paper's Section 5, which stands in for the super-app
+# (the conversations) and the persons.  The run needs the reduction limit
+# raised, and ends about a minute after its last act, when the deadline timers
+# of the answered swap cards expire.
 # =============================================================================
 echo "=== Section N2: Coins program (Grassroots Currencies) ==="
 echo ""
 
 COINS="$GLP_DIR/programs/coins"
+
+# The certified program: loads, type-checks, and carries the compiler's
+# certificate, since no entry point reaches the network or the person.
+n2_core=$("$REPL_RUN" <<HEREDOC
+$COINS/currency
+self_module(M), decompose_module(M?, K, S, C).
+:quit
+HEREDOC
+2>&1)
+
+check "Coins mini-app loads as a program" "Loaded program" "$n2_core"
+check_not "Coins mini-app no type errors" "Type checking failed" "$n2_core"
+check_not "Coins mini-app is certified" "CERTIFICATE REFUSED" "$n2_core"
+check "Coins mini-app: its certificate carries the compiler's key" "K = [0-9a-f]\{64\}" "$n2_core"
 
 n2_load=$("$REPL_RUN" <<HEREDOC
 $COINS
@@ -2278,8 +2295,8 @@ $COINS
 :quit
 HEREDOC
 2>&1)
-check "Coins program: :emit re-emits coins_agent.glp" "wrote $COINS/coins_agent.glp" "$n2_emit"
-n2_emit_diff=$(cd "$GLP_DIR" && git diff --stat -- programs/coins/coins_agent.glp)
+check "Coins program: :emit re-emits coins_agent.glp" "wrote $COINS/currency/coins_agent.glp" "$n2_emit"
+n2_emit_diff=$(cd "$GLP_DIR" && git diff --stat -- programs/coins/currency/coins_agent.glp)
 check_not "Coins program: committed coins_agent.glp is the compiler's output" "coins_agent.glp" "$n2_emit_diff"
 
 echo "--- Coins village market (village) ---"
@@ -2294,7 +2311,8 @@ HEREDOC
 
 check "Coins village: no runtime error" "→ suspended" "$n2_run"
 check_not "Coins village: no failed goal" "ERROR" "$n2_run"
-check "Coins village: Alice's holdings" "tagged(alice, holdings(\[lot(bob, 5), lot(alice, 8), lot(charlie, 15), lot(frank, 4)\]))" "$n2_run"
+check "Coins village: the conversations open" "tagged(frank, opened(eve))" "$n2_run"
+check "Coins village: Alice's holdings" "tagged(alice, holdings(\[lot(bob, 5), lot(charlie, 15), lot(alice, 8), lot(frank, 4)\]))" "$n2_run"
 check "Coins village: Bob's holdings" "tagged(bob, holdings(\[lot(alice, 10), lot(diana, 20)\]))" "$n2_run"
 check "Coins village: Charlie's holdings" "tagged(charlie, holdings(\[lot(alice, 10), lot(eve, 10), lot(charlie, 6), lot(frank, 5)\]))" "$n2_run"
 check "Coins village: Diana's holdings" "tagged(diana, holdings(\[lot(bob, 24), lot(frank, 13), lot(diana, 8)\]))" "$n2_run"
@@ -3648,21 +3666,16 @@ echo ""
 
 # and fails on the same rejection of the same file.
 KNOWN_RED=(
-    # SGSG's: these four drive one agent through play_grassapp_boot.glp's
-    # agent_init/3 (four actors, chat replies, swap-then-redeem), but
-    # programs/grassapp/self.glp exports play_grassapp_duo's agent_init/3, so a
-    # directory load runs the duo play and the scenario never starts.  The boot
-    # play carries imported declarations and cannot be co-loaded on top.  They
-    # clear when grassapp/self.glp exports the boot play's entry point (IGLP
-    # Code to SGSG, 2026-09-08).
-    "glp_multiagent/test/grassapp_scenario_test.dart: GrassApp scenario: four actors, chat replies, swap-then-redeem"
-    "glp_multiagent/test/grassapp_unfriend_test.dart: charlie pays then unfriends Bob → unfriended(charlie) reaches Bob"
-    "glp_multiagent/test/paper_screenshots_grassapp_test.dart: fig:grassapp — Friends, Currencies, Chats panels of one GrassApp"
-    "glp_multiagent/test/paper_screenshots_constructs_test.dart: fig:constructs — card, form, and chat input in the running app"
     # vGLP's: the deployed source moved with its agent to programs/social/graph/core/
     # (SGSG, 2026-09-08; a lone .vglp is compiled by the loader, so it must stand
     # beside its .glp); the test's path is vGLP's to change (vGLP_inbox.md).
     "test/vglp/program_compilation_test.dart: the deployed sources social/graph/agent.vglp parses as vGLP"
+    # Currencies': the deployed source moved with its agent to
+    # programs/coins/currency/ (Currencies, 2026-09-08; the certified program of
+    # the mini-app is that directory, and a lone .vglp is compiled by the
+    # loader, so it must stand beside its .glp); the test's path is vGLP's to
+    # change (vGLP_inbox.md 2026-09-08).
+    "test/vglp/program_compilation_test.dart: the deployed sources coins/coins_agent.vglp parses as vGLP"
 )
 
 echo "=== Section Q: Dart unit tests (whole tree) ==="

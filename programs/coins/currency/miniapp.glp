@@ -1,0 +1,37 @@
+%% miniapp.glp --- the coins program as a mini-app of the Grassroots Super-App
+%% (Grassroots Social Graph paper, Section 3).
+%%
+%% coins(Id, Ui, Convs) is the goal the super-app activates by run/3, with
+%% exactly its two channels.  Ui is the channel to the super-app user
+%% interface: on it the mini-app shows the cards of its mediator and the
+%% screen of its agent, and receives the person's answers to the cards.  Convs
+%% is the channel to the social graph, on which the social graph hands the
+%% mini-app, at each invitation, one end of the root channel of a conversation
+%% with the execution of this program at a friend.  The mini-app holds
+%% nothing else --- no network entry, and no call to a predicate that reaches
+%% the network or the person --- so the program is certified.
+
+imported procedure coins_agent#agent(Channel(Closed, Stream(AgentMsg))?, Constant?, Stream(UserInMsg)?, Stream(PeerMsg)?, Stream(Conversation)?, Stream(OutputEntry)?, Stream(Coin)?, Integer?, Slot(Reply_agent_1)?, Slot(Reply_agent_2)?, Slot(Reply_agent_3)?, Slot(Reply_agent_4)?).
+imported procedure coins_agent#med(Channel(Stream(UserAnswer), Stream(Card))?, Channel(Stream(AgentMsg), Closed)?, TimerStream?, PendingList?, Integer?).
+
+%% The agent with its mediator: the agent starts with no holdings, serial 1, no
+%% conversation and its screen; the mediator's cards and the screen go to the
+%% person as one stream of events.
+exported procedure coins(Constant?, Channel(Stream(UserAnswer), Stream(Event))?, Stream(Conversation)?).
+coins(Id, ch(Answers, Events?), Convs) :-
+    ground(Id?) |
+    coins_agent # agent(ch([], Asks), Id?, [], [], Convs?, [user_output(Screen)], [], 1,
+                        none, none, none, none),
+    coins_agent # med(ch(Answers?, Cards), ch(Asks?, []), [], [], 0),
+    merge_events(Cards?, Screen?, Events).
+
+%% The cards and the screen, as one stream of events.  A pair carries one type,
+%% so each element is rebuilt at the event type.
+procedure merge_events(Stream(Card)?, Stream(ScreenMsg)?, Stream(Event)).
+merge_events([card(C, X, R)|Cs], Ms, [card(C?, X?, R?)|Es?]) :- merge_events(Cs?, Ms?, Es).
+merge_events([closed(R)|Cs], Ms, [closed(R?)|Es?]) :- merge_events(Cs?, Ms?, Es).
+merge_events(Cs, [msg(A, P, M)|Ms], [msg(A?, P?, M?)|Es?]) :- merge_events(Cs?, Ms?, Es).
+merge_events([], [msg(A, P, M)|Ms], [msg(A?, P?, M?)|Es?]) :- merge_events([], Ms?, Es).
+merge_events([card(C, X, R)|Cs], [], [card(C?, X?, R?)|Es?]) :- merge_events(Cs?, [], Es).
+merge_events([closed(R)|Cs], [], [closed(R?)|Es?]) :- merge_events(Cs?, [], Es).
+merge_events([], [], []).

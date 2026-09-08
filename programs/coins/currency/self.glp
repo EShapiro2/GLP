@@ -1,0 +1,14 @@
+%% currency/self.glp --- the coins program as a certified program of its own: the
+%% currency agent (coins_agent.vglp, its compilation coins_agent.glp) and the
+%% mini-app entry coins/3 (miniapp.glp); the types and the helpers are the
+%% parent's (../self.glp, an ancestor scope).  It is a program of its own
+%% because the certificate of a program is refused where any entry point
+%% reaches the person or the network, and the parent's village play does
+%% (send_to_user/1): loaded here, without it, the program is certified, and its
+%% module value is the mini-app the super-app installs and activates by run/3.
+%% Loaded as part of ../ (the village play), coins_agent and miniapp are found
+%% by module name.
+
+imported procedure miniapp#coins(Constant?, Channel(Stream(UserAnswer), Stream(Event))?, Stream(Conversation)?).
+exported procedure coins(Constant?, Channel(Stream(UserAnswer), Stream(Event))?, Stream(Conversation)?).
+coins(Id, Ui, Convs) :- miniapp # coins(Id?, Ui?, Convs?).
