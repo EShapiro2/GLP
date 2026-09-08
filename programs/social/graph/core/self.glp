@@ -44,3 +44,7 @@ play_load(N, Kind?, K?) :- superapp_plays # play_load(N?, Kind, K).
 imported procedure superapp_plays#play_install(String?, Constant?, Stream(Constant)).
 exported procedure play_install(String?, Constant?, Stream(Constant)).
 play_install(N, App, I?) :- superapp_plays # play_install(N?, App?, I).
+
+imported procedure superapp_plays#play_coins(Stream(ScreenContent), Stream(ScreenContent)).
+exported procedure play_coins(Stream(ScreenContent), Stream(ScreenContent)).
+play_coins(A?, B?) :- superapp_plays # play_coins(A, B).

@@ -40,6 +40,7 @@ UserContent ::= connect(Constant)
               %% attestation: read back the attestation minted at
               %% befriend_commit (Section 5.5).
               ; install(Constant, Content, String, AppUiStream?)
+              ; install_coins(Constant, Content, String, Channel(Stream(UserAnswer), Stream(Event)))
               ; invite(Constant, Constant)
               ; accept_invite(Constant, Constant)
               ; decline_invite(Constant, Constant)
@@ -82,7 +83,7 @@ FriendContent ::= response(Response)
                 ; invite(Constant, String, Constant, String)
                 ; join(Constant, String, Constant, String)
                 ; decline(Constant)
-                ; root(Constant, String, Constant, String, RootChannel)
+                ; root(Constant, String, Constant, String, RootEnd)
                 %% The warm call (Section 5.2): the holder asks the forwarding
                 %% friend for an introduction to the anchor; over the friend
                 %% channel that results, warm_call(App, Name) to the anchor.
@@ -175,7 +176,8 @@ CreatorCert ::= creator_cert(String, Stream(Constant), Constant).
 %%   mini-app's user-interface writer until activation, or running(SgEnd) once
 %%   run/3 has activated it, SgEnd the super-app's writer of the mini-app's
 %%   social-graph stream.
-AppStatus ::= idle(AppUiStream?) ; running(SgToAppStream?).
+AppStatus ::= idle(AppUiStream?) ; running(SgToAppStream?)
+            ; idle_coins(Channel(Stream(UserAnswer), Stream(Event))) ; running_coins(Stream(Conversation)?).
 App       ::= app(Constant, Content, String, AppStatus).
 AppList   ::= [] ; [App | AppList].
 Attest     ::= att(Constant, String).
@@ -202,6 +204,71 @@ Pending      ::= offered(Constant, Constant, String, Constant, String)
                ; intro_wait(Constant, _).
 PendingInv   ::= [] ; [Pending | PendingInv].
 Host ::= host(AppList, AttestList, PendingInv, Stream(String)).
+
+%% =============================================================================
+%% THE INTERFACE OF THE CURRENCY MINI-APP (programs/coins/currency), as the
+%% super-app declares it: coins(Id, Ui, Convs), Ui the mini-app's end of a
+%% channel of the mediator's cards and the person's answers, Convs the stream
+%% on which the social graph hands it its conversations, each a root channel
+%% of the currency protocol.  The definitions are Currencies' own
+%% (programs/coins/self.glp) written here again, since find_type/2 resolves a
+%% declaration in the caller's scope and the identity is structural: the
+%% super-app carries the interface of every mini-app it hosts.  The names are
+%% the super-app's where they clash with the mediator's (CReqId).
+%% =============================================================================
+Coin ::= coin(Constant, Integer).
+Lot  ::= lot(Constant, Integer).
+SwapResponse ::= swap_accept(Stream(Coin)) ; swap_decline(Stream(Coin)).
+RedeemResponse ::= redeem_give(Coin)
+                 ; redeem_menu(Coin, Stream(Constant))
+                 ; redeem_declined(Coin).
+PeerContent ::= pay(Stream(Coin))
+              ; swap(Lot, Stream(Coin), SwapResponse?)
+              ; redeem(Coin, Constant, RedeemResponse?)
+              ; return(Stream(Coin)).
+PeerMsg     ::= msg(Constant, Constant, PeerContent).
+PeerChannel ::= ch(Stream(PeerMsg), Stream(PeerMsg)?).
+Conversation ::= conversation(Constant, PeerChannel).
+ScreenContent ::= holdings(Stream(Lot))
+                ; opened(Constant)
+                ; minted(Integer)
+                ; paid(Constant, Integer)
+                ; received(Constant, Integer)
+                ; returned(Constant, Integer)
+                ; swap_done(Constant)
+                ; swap_declined(Constant)
+                ; swap_failed(Constant)
+                ; declined(Constant)
+                ; redeemed(Constant, Constant)
+                ; menu(Constant, Stream(Constant))
+                ; presented(Constant, Constant)
+                ; unfulfilled(Constant, Constant)
+                ; refused(Constant)
+                ; lacking(Constant, Integer)
+                ; no_conversation(Constant).
+CReqId ::= req(Integer).
+Answer ::= xs_respond_swap_1(Constant) ; xs_respond_swap_2(Constant) ; xs_agent_1(Integer) ; xs_agent_2(Constant, Constant, Integer, Constant, Integer) ; xs_agent_3(Constant, Integer) ; xs_agent_4(Constant, Constant).
+Context ::= ctx_respond_swap_1(Constant, Lot, Stream(Coin)) ; ctx_respond_swap_2(Constant, Lot, Stream(Coin)) ; ctx_agent_1 ; ctx_agent_2 ; ctx_agent_3 ; ctx_agent_4.
+UserAnswer ::= answer(CReqId, Answer).
+Event ::= card(Constant, Context, CReqId)
+        ; closed(CReqId)
+        ; msg(Constant, Constant, ScreenContent).
+
+%% A person's script for the currency (core/superapp_plays.glp): its acts in
+%% order; a step is answered on the mediator's latest open card for its
+%% clause and is done when the screen shows its effect.
+CoinStep   ::= mint(Integer) ; swap(Constant, Constant, Integer, Constant, Integer) ; accept(Constant).
+CoinScript ::= [] ; [CoinStep | CoinScript].
+OpenReq    ::= no_card ; req(Integer).
+OpenCards  ::= open(OpenReq, OpenReq).
+SwapCard   ::= swap_card(Constant, CReqId).
+SwapCards  ::= [] ; [SwapCard | SwapCards].
+Sent       ::= idle ; sent(CReqId).
+Choice     ::= answer(CReqId, Answer) ; wait.
+
+%% One end of a root channel, of the test mini-app's protocol or of the
+%% currency's, as the friend channel conveys it at the handshake.
+RootEnd ::= ping_end(RootChannel) ; coins_end(PeerChannel).
 
 %% Output list — one constructor per output kind, each typed at exactly what it
 %% carries. Replaces the former output(Constant, OutputStream?) whose union

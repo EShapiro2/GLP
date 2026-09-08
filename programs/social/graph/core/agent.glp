@@ -175,6 +175,15 @@ agent(Id, [msg(person, Id1, install(App, M, CSig, Ui?))|UserIn], NetIn, Outs,
     install_step(V?, App?, M?, CSig?, Ui, Apps?, Apps1),
     agent(Id?, UserIn?, NetIn?, Outs?, host(Apps1?, Atts?, Pend?, Trusted?)).
 
+%% Install a certified mini-app of the currency's interface: its
+%% user-interface grant is its end of a channel of cards and answers.
+agent(Id, [msg(person, Id1, install_coins(App, M, CSig, Ui))|UserIn], NetIn, Outs,
+      host(Apps, Atts, Pend, Trusted)) :-
+    Id? =?= Id1?, ground(App?), ground(Trusted?) |
+    verify_install(M?, CSig?, Trusted?, V),
+    install_coins_step(V?, App?, M?, CSig?, Ui?, Apps?, Apps1),
+    agent(Id?, UserIn?, NetIn?, Outs?, host(Apps1?, Atts?, Pend?, Trusted?)).
+
 %% Invite a friend to the instance of a mini-app: over the friend channel, the
 %% mini-app's source identity, the type identity of the root channel (that of
 %% its entry, ping/3), and the social graph's signed invitation over the
@@ -330,7 +339,7 @@ agent(Id, UserIn, [msg(From, Id1, join(App, Src, T, U))|NetIn], Outs,
     signed(U?, _, _, Und),
     undertaking_check(Und?, Src?, Ok0),
     app_module(App?, Apps?, Apps1, L),
-    join_verify(Ok0?, L?, Src?, T?, Ok),
+    join_verify(Ok0?, L?, App?, Src?, T?, Ok),
     root_step(Ok?, Id?, From?, App?, Src?, T?, UserIn?, NetIn?, Outs?,
               Apps1?, Atts?, Pend?, Trusted?).
 
@@ -344,7 +353,7 @@ agent(Id, UserIn, [msg(From, Id1, root(App, Src, T, Up, End))|NetIn], Outs,
     signed(Up?, _, _, Und),
     undertaking_check(Und?, Src?, Ok0),
     app_module(App?, Apps?, Apps1, L),
-    join_verify(Ok0?, L?, Src?, T?, Ok),
+    join_verify(Ok0?, L?, App?, Src?, T?, Ok),
     accept_root_step(Ok?, Id?, From?, App?, T?, End?, UserIn?, NetIn?, Outs?,
                      Apps1?, Atts?, Pend?, Trusted?).
 
@@ -431,6 +440,16 @@ procedure install_step(Constant?, Constant?, Content?, String?, AppUiStream, App
 install_step(ok, App, M, CSig, Ui?, Apps, [app(App?, M?, CSig?, idle(Ui)) | Apps?]).
 install_step(refused, _, _, _, [], Apps, Apps?).
 
+procedure install_coins_step(Constant?, Constant?, Content?, String?, Channel(Stream(UserAnswer), Stream(Event))?, AppList?, AppList).
+install_coins_step(ok, App, M, CSig, Ui, Apps, [app(App?, M?, CSig?, idle_coins(Ui?)) | Apps?]).
+install_coins_step(refused, _, _, _, _, Apps, Apps?).
+
+%% app_kind(App, Kind): the interface a hosted mini-app has, by its name ---
+%% the currency's, or the test mini-app's.
+procedure app_kind(Constant?, Constant).
+app_kind(currency, coins).
+app_kind(_, ping) :- otherwise | true.
+
 %% app_module(App, Apps, Apps1, L): the installed mini-app's module value, the
 %% list passed through.
 procedure app_module(Constant?, AppList?, AppList, AppLookup).
@@ -440,18 +459,28 @@ app_module(App, [E | Rest], [E? | Rest1?], L?) :-
     otherwise | app_module(App?, Rest?, Rest1, L).
 app_module(_, [], [], missing).
 
-%% identities(M, Src, T): the mini-app's source identity, from its certificate,
-%% and the type identity of its entry ping/3, in this scope.
-procedure identities(Content?, String, Constant).
-identities(M, Src?, T?) :-
+%% identities(App, M, Src, T): the mini-app's source identity, from its
+%% certificate, and the type identity of its entry in this scope --- ping/3, or
+%% coins/3 for the currency.
+procedure identities(Constant?, Content?, String, Constant).
+identities(App, M, Src?, T?) :-
     decompose_module(M?, _, Src, _),
-    find_type(ping/3, T).
+    app_kind(App?, K),
+    entry_type(K?, T).
+
+procedure entry_type(Constant?, Constant).
+entry_type(coins, T?) :- find_type(coins/3, T).
+entry_type(ping, T?) :- find_type(ping/3, T).
+
+%% The currency's entry, declared here for find_type/2 (never run).
+procedure coins(Constant?, Channel(Stream(UserAnswer), Stream(Event))?, Stream(Conversation)?).
+coins(_, _, _).
 
 %% --- The inviter ---
 
 procedure invite_step(AppLookup?, Constant?, Constant?, Constant?, UserInStream?, NetInStream?, OutputsList?, Host?).
 invite_step(found(M), Id, App, Friend, UserIn, NetIn, Outs, Host) :-
-    identities(M?, Src, T),
+    identities(App?, M?, Src, T),
     self_key(K),
     sign(invitation(Src?, Friend?), K?, InvSig),
     send_friend(Friend?, msg(Id?, Friend?, invite(App?, Src?, T?, InvSig?)), Outs?, Outs1),
@@ -521,7 +550,7 @@ offer_consent(false, Id, From, App, Src, T, InvSig, UserIn, NetIn, Outs, host(Ap
 procedure do_join(Constant?, Constant?, Constant?, String?, Constant?, UserInStream?, NetInStream?, OutputsList?, Host?).
 do_join(Id, App, From, Src, T, UserIn, NetIn, Outs, host(Apps, Atts, Pend, Trusted)) :-
     app_module(App?, Apps?, Apps1, L),
-    join_verify(true, L?, Src?, T?, Ok),
+    join_verify(true, L?, App?, Src?, T?, Ok),
     join_step(Ok?, Id?, App?, From?, Src?, T?, UserIn?, NetIn?, Outs?,
               host(Apps1?, Atts?, Pend?, Trusted?)).
 
@@ -544,11 +573,11 @@ undertaking_check(_, _, false) :- otherwise | true.
 
 %% join_verify(Ok0, L, Src, T, Ok): the peer's term checked, the mini-app
 %% installed, and its identities equal to the peer's at both ends.
-procedure join_verify(Constant?, AppLookup?, String?, Constant?, Verdict).
-join_verify(true, found(M), Src, T, Ok?) :-
-    identities(M?, Src1, T1),
+procedure join_verify(Constant?, AppLookup?, Constant?, String?, Constant?, Verdict).
+join_verify(true, found(M), App, Src, T, Ok?) :-
+    identities(App?, M?, Src1, T1),
     identity_match(Src?, Src1?, T?, T1?, M?, Ok).
-join_verify(_, _, _, _, refused) :- otherwise | true.
+join_verify(_, _, _, _, _, refused) :- otherwise | true.
 
 procedure identity_match(String?, String?, Constant?, Constant?, Content?, Verdict).
 identity_match(Src, Src1, T, T1, M, ok(M?)) :- Src? =?= Src1?, T? =?= T1? | true.
@@ -558,18 +587,27 @@ identity_match(_, _, _, _, _, refused) :- otherwise | true.
 
 procedure root_step(Verdict?, Constant?, Constant?, Constant?, String?, Constant?, UserInStream?, NetInStream?, OutputsList?, AppList?, AttestList?, PendingInv?, Stream(String)?).
 root_step(ok(M), Id, From, App, Src, T, UserIn, NetIn, Outs, Apps, Atts, Pend, Trusted) :-
-    new_channel(Mine, Theirs) |
+    ground(App?) |
+    app_kind(App?, Kind),
+    root_ends(Kind?, Mine, Theirs),
     self_key(K),
     sign(undertaking(Src?), K?, Up),
     send_friend(From?, msg(Id?, From?, root(App?, Src?, T?, Up?, Theirs?)), Outs?, Outs1),
     deliver(App?, From?, Mine?, Id?, T?, M?, Apps?, Apps1, UserIn?, UserIn1),
     agent(Id?, UserIn1?, NetIn?, Outs1?, host(Apps1?, Atts?, Pend?, Trusted?)).
+
 root_step(refused, Id, _, _, _, _, UserIn, NetIn, Outs, Apps, Atts, Pend, Trusted) :-
     agent(Id?, UserIn?, NetIn?, Outs?, host(Apps?, Atts?, Pend?, Trusted?)).
 
+%% root_ends(Kind, Mine, Theirs): the two ends of a fresh root channel of the
+%% mini-app's protocol, wrapped for the friend channel.
+procedure root_ends(Constant?, RootEnd, RootEnd).
+root_ends(ping, ping_end(Mine?), ping_end(Theirs?)) :- new_channel(Mine, Theirs) | true.
+root_ends(coins, coins_end(Mine?), coins_end(Theirs?)) :- new_channel(Mine, Theirs) | true.
+
 %% --- The invitee, on the root channel ---
 
-procedure accept_root_step(Verdict?, Constant?, Constant?, Constant?, Constant?, RootChannel?, UserInStream?, NetInStream?, OutputsList?, AppList?, AttestList?, PendingInv?, Stream(String)?).
+procedure accept_root_step(Verdict?, Constant?, Constant?, Constant?, Constant?, RootEnd?, UserInStream?, NetInStream?, OutputsList?, AppList?, AttestList?, PendingInv?, Stream(String)?).
 accept_root_step(ok(M), Id, From, App, T, End, UserIn, NetIn, Outs, Apps, Atts, Pend, Trusted) :-
     deliver(App?, From?, End?, Id?, T?, M?, Apps?, Apps1, UserIn?, UserIn1),
     release_held(App?, From?, Pend?, Pend1),
@@ -585,17 +623,29 @@ accept_root_step(refused, Id, _, _, _, _, UserIn, NetIn, Outs, Apps, Atts, Pend,
 %% channel.  An idle mini-app is activated first by run/3 under the type
 %% identity of its entry, with exactly its two channels: the user-interface
 %% channel held since installation, and the social-graph channel.
-procedure deliver(Constant?, Constant?, RootChannel?, Constant?, Constant?, Content?, AppList?, AppList, UserInStream?, UserInStream).
-deliver(App, Friend, End, Id, T, M, [app(A, M1, C, idle(Ui?)) | Rest],
+procedure deliver(Constant?, Constant?, RootEnd?, Constant?, Constant?, Content?, AppList?, AppList, UserInStream?, UserInStream).
+deliver(App, Friend, ping_end(End), Id, T, M, [app(A, M1, C, idle(Ui?)) | Rest],
         [app(A?, M1?, C?, running(Sg1)) | Rest?], UserIn, UserIn1?) :-
     App? =?= A? |
     run(ping(Id?, Ui, ch(Sg?, Up)), T?, M?),
     open_conv(Friend?, End?, Sg, Sg1?),
     inject_requests(App?, Up?, UserIn?, UserIn1).
-deliver(App, Friend, End, _, _, _, [app(A, M1, C, running(Sg?)) | Rest],
+deliver(App, Friend, ping_end(End), _, _, _, [app(A, M1, C, running(Sg?)) | Rest],
         [app(A?, M1?, C?, running(Sg1)) | Rest?], UserIn, UserIn?) :-
     App? =?= A? |
     open_conv(Friend?, End?, Sg, Sg1?).
+%% The currency: activated with its two channels, the cards-and-answers
+%% channel held since installation and the conversations stream; each
+%% conversation handed to it on the latter.
+deliver(App, Friend, coins_end(End), Id, T, M, [app(A, M1, C, idle_coins(Ui)) | Rest],
+        [app(A?, M1?, C?, running_coins(Convs1)) | Rest?], UserIn, UserIn?) :-
+    App? =?= A? |
+    run(coins(Id?, Ui?, Convs?), T?, M?),
+    open_conv_coins(Friend?, End?, Convs, Convs1?).
+deliver(App, Friend, coins_end(End), _, _, _, [app(A, M1, C, running_coins(Convs?)) | Rest],
+        [app(A?, M1?, C?, running_coins(Convs1)) | Rest?], UserIn, UserIn?) :-
+    App? =?= A? |
+    open_conv_coins(Friend?, End?, Convs, Convs1?).
 deliver(App, Friend, End, Id, T, M, [E | Rest], [E? | Rest1?], UserIn, UserIn1?) :-
     otherwise | deliver(App?, Friend?, End?, Id?, T?, M?, Rest?, Rest1, UserIn?, UserIn1).
 deliver(_, _, _, _, _, _, [], [], UserIn, UserIn?).
@@ -616,6 +666,9 @@ inject_requests(_, [], Ys, Ys?).
 procedure open_conv(Constant?, RootChannel?, SgToAppStream, SgToAppStream?).
 open_conv(Friend, End, [conversation(Friend?, End?) | Sg1?], Sg1).
 
+procedure open_conv_coins(Constant?, PeerChannel?, Stream(Conversation), Stream(Conversation)?).
+open_conv_coins(Friend, End, [conversation(Friend?, End?) | Convs1?], Convs1).
+
 %% --- Attestations (Section 5.5) ---
 
 procedure lookup_att(Constant?, AttestList?, AttestList, String).
@@ -631,6 +684,8 @@ close_host(host(Apps, _, _, _)) :- close_apps(Apps?).
 procedure close_apps(AppList?).
 close_apps([app(_, _, _, idle([])) | Rest]) :- close_apps(Rest?).
 close_apps([app(_, _, _, running([])) | Rest]) :- close_apps(Rest?).
+close_apps([app(_, _, _, idle_coins(ch(_, []))) | Rest]) :- close_apps(Rest?).
+close_apps([app(_, _, _, running_coins([])) | Rest]) :- close_apps(Rest?).
 close_apps([]).
 
 procedure app_names(AppList?, AppList, Stream(Constant)).

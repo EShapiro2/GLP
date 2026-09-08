@@ -3609,7 +3609,7 @@ sg_core=$("$REPL_RUN" <<HEREDOC
 :artefact $GLP_DIR/programs/cssn $SG_CORE
 :artefact $GLP_DIR/programs/coins/currency $SG_CORE
 $SG_CORE
-:limit 1000000
+:limit 5000000
 play_load("cssn.glpw", K1, Key1).
 play_load("currency.glpw", K2, Key2).
 play_install("cssn.glpw", cssn, I1).
@@ -3619,6 +3619,7 @@ play_attest(S, K, H, T).
 play_invite(A, B).
 play_invite_declined(A2, B2).
 play_invite_timed(Ms).
+play_coins(C1, C2).
 :quit
 HEREDOC
 2>&1)
@@ -3638,6 +3639,8 @@ check "SG super-app: invitation, handshake, activation: bob greeted" "B = \[open
 check "SG super-app: a declined invitation opens nothing at alice" "A2 = \[\]" "$sg_core"
 check "SG super-app: a declined invitation opens nothing at bob" "B2 = \[\]" "$sg_core"
 check "SG super-app: the handshake is timed" "Ms = [0-9]*" "$sg_core"
+check "SG super-app hosts the currency: alice's swap done" "C1 = \[opened(bob), minted(2), holdings(\[lot(alice, 2)\]), holdings(\[\]), swap_done(bob), holdings(\[lot(bob, 2)\]) | " "$sg_core"
+check "SG super-app hosts the currency: bob's swap done" "C2 = \[opened(alice), minted(2), holdings(\[lot(bob, 2)\]), swap_done(alice), holdings(\[lot(alice, 2)\]) | " "$sg_core"
 check_not "SG super-app no failed play" "→ failed" "$sg_core"
 
 # Under the boot harness: two isolates, each its own person with its own key,
