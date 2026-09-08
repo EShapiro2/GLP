@@ -13,3 +13,7 @@ hello(S?) :- probe # hello(S).
 
 exported procedure poke(Stream(Constant)).
 poke(S?) :- probe # poke(S).
+
+imported procedure probe#merged(Stream(Constant)).
+exported procedure merged(Stream(Constant)).
+merged(S?) :- probe # merged(S).

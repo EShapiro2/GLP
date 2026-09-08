@@ -257,6 +257,13 @@ class GlpEngine {
           'initialization, and every program depends on the scope it defines.');
     }
     _loadedPrograms['__root_self__'] = prog;
+    // The root runner: the root self.glp's procedures as a runner of their
+    // own, which an activated module's goals reach for a body call to a
+    // root-scope procedure --- merge/3, send/3 --- absent from its artefact
+    // (engine_v2/interp.dart, _spawnInRoot). A REPL goal still runs on the
+    // combined program, where the root is the fallback in one image.
+    _runtime.runners['__root__'] =
+        ByteRunner(codeImageFromProgram(prog, moduleName: '__root__'));
   }
 
   /// Load a GLP file from path

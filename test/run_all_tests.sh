@@ -3415,11 +3415,18 @@ HEREDOC
 2>&1)
 check "SL0 :artefact writes a certified artefact into the loading program's directory" "Wrote $SL_DIR/run_module_probe.glpw --- certified under [0-9a-f]\{64\}" "$sl0"
 
-# A forged artefact: the certified one with its last byte --- inside the
-# signature --- flipped.
+# The forged artefact loads as its text, which is binary; the capture keeps
+# printable ASCII only, so the check reads clean lines.
+# A forged artefact: the certified one with a byte inside the signature ---
+# the 40th from the end --- replaced by its complement, so the file always
+# differs (a signature's last byte is often zero already, which setting it to
+# zero would leave unchanged).
 cp "$SL_DIR/run_module_probe.glpw" "$SL_DIR/forged.glpw"
 sl_size=$(stat -f%z "$SL_DIR/forged.glpw")
-printf '\000' | dd of="$SL_DIR/forged.glpw" bs=1 seek=$((sl_size - 1)) conv=notrunc 2>/dev/null
+sl_off=$((sl_size - 40))
+sl_byte=$(xxd -s "$sl_off" -l 1 -p "$SL_DIR/forged.glpw")
+sl_new=$(printf '%02x' $(( 0x$sl_byte ^ 0xff )))
+printf "\\x$sl_new" | dd of="$SL_DIR/forged.glpw" bs=1 seek="$sl_off" conv=notrunc 2>/dev/null
 
 sl1=$("$REPL_RUN" <<HEREDOC
 $SL_DIR
@@ -3431,7 +3438,7 @@ load("../cert_ok/self.glp", E).
 load("/etc/hosts", A).
 :quit
 HEREDOC
-2>&1)
+2>&1 | tr -cd '\11\12\15\40-\176')
 check "SL1 a certified artefact loads as a Module" "C = Module(run_module_probe)" "$sl1"
 check "SL1 run/3 activates the loaded module under find_type's identity" "Z = \[done\]" "$sl1"
 check "SL1 a text file loads as its text" "T = hello world" "$sl1"

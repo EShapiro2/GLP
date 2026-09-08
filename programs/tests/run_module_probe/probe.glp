@@ -9,3 +9,9 @@ poke(S?) :- secret(S).
 
 procedure secret(Stream(Constant)).
 secret([leaked]).
+
+%% merged/1 calls a root-scope procedure in its body: an activated module
+%% reaches merge/3 through the runtime's root runner, its artefact carrying no
+%% root code (IGLP Code, 2026-09-08, Currencies Code's report of 12:14 UTC).
+exported procedure merged(Stream(Constant)).
+merged(Z?) :- merge([a], [b], Z).
