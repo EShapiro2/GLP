@@ -1,0 +1,11 @@
+%% IGLP probe: find_type/2 resolves its P/N argument in the CALLING module's
+%% scope (GLP-Spec appendix-guards, "Dynamic activation": the type identity of
+%% the declaration of P/N in the caller's scope).  m.glp's probe/1 asks for the
+%% identity of its own local/1, which the linker resolves to m:local/1, the key
+%% the compiled module carries (TGLP Implementation Notes, "The tables"); at
+%% the root, local/1 is declared nowhere and find_type errs.
+
+imported procedure m#probe(Constant).
+
+exported procedure probe(Constant).
+probe(T?) :- m # probe(T).

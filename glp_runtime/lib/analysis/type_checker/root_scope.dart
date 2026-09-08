@@ -195,6 +195,8 @@ const Set<String> builtinProcedures = {
   // Modules as values
   '_self_module/1',
   '_run/2',
+  '_run/3',
+  '_find_type/2',
   // I/O
   '_output/1',
 };

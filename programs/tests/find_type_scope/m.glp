@@ -1,0 +1,6 @@
+%% probe/1 assigns the type identity of this module's own local/1.
+exported procedure probe(Constant).
+probe(T?) :- find_type(local/1, T).
+
+procedure local(Integer?).
+local(_).

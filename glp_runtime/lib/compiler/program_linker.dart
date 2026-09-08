@@ -63,9 +63,19 @@ class LinkResult {
   /// alone no longer identifies a type: two sibling modules may define one.
   final List<ProcDecl> checkedDeclarations;
 
+  /// Every checked declaration in the program's scope, BEFORE step-5 dead-code
+  /// elimination restricts [checkedDeclarations] to the reachable procedures.
+  /// The declared type-identity table is built over these (TGLP Implementation
+  /// Notes, "The tables": every procedure declared in the module's scope):
+  /// `find_type(P/N, T)` refers to a declaration, not to code, and a procedure
+  /// that nothing calls is still declared.
+  final List<ProcDecl> scopeDeclarations;
+
   LinkResult(this.program, this.procDeclarations,
-      {List<ProcDecl>? checkedDeclarations})
-      : checkedDeclarations = checkedDeclarations ?? procDeclarations;
+      {List<ProcDecl>? checkedDeclarations, List<ProcDecl>? scopeDeclarations})
+      : checkedDeclarations = checkedDeclarations ?? procDeclarations,
+        scopeDeclarations =
+            scopeDeclarations ?? checkedDeclarations ?? procDeclarations;
 }
 
 /// Walk the program directory tree and discover all modules.
@@ -730,7 +740,12 @@ LinkResult checkedLinkedProgram(List<DiscoveredModule> modules,
 /// module's declaration from linking — shadowing a root-scope declaration of the
 /// same name/arity; only an alias whose export has no declaration is left
 /// undeclared.)
-Module linkedFlatModule(List<DiscoveredModule> modules, LinkResult linked) {
+///
+/// With [allDeclarations], the declarations are the whole scope's
+/// ([LinkResult.scopeDeclarations]) rather than the reachable subset — the
+/// module `find_type/2`'s declared table is built over.
+Module linkedFlatModule(List<DiscoveredModule> modules, LinkResult linked,
+    {bool allDeclarations = false}) {
   // Step 3 for types (modules.tex §Compilation): every type `T` of module `M`
   // is renamed to `M:T`, on the same argument as procedures — two sibling
   // modules have distinct scopes, so two same-named types defined in them are
@@ -763,7 +778,9 @@ Module linkedFlatModule(List<DiscoveredModule> modules, LinkResult linked) {
   }
 
   final rootEnv = buildRootScopeEnvironment();
-  final procDecls = [...linked.checkedDeclarations];
+  final procDecls = [
+    ...(allDeclarations ? linked.scopeDeclarations : linked.checkedDeclarations)
+  ];
   final declKeys = {for (final d in procDecls) d.key};
   for (final p in linked.program.procedures) {
     final key = '${p.name}/${p.arity}';
@@ -802,7 +819,8 @@ Module linkedFlatModule(List<DiscoveredModule> modules, LinkResult linked) {
 /// step 2 of `/Grassroots/docs/typed-dynamic-activation-plan.md` and are IGLP's.
 TypeIdentityTables linkedTypeIdentityTables(
         List<DiscoveredModule> modules, LinkResult linked) =>
-    typeIdentityTablesForModule(linkedFlatModule(modules, linked));
+    typeIdentityTablesForModule(
+        linkedFlatModule(modules, linked, allDeclarations: true));
 
 /// Whole-program type-check gate (paper: modules §Static Linking — "the unit of
 /// compilation and execution is a program ... only a well-typed program is
@@ -1286,7 +1304,8 @@ LinkResult eliminateDeadCode(LinkResult linked) {
       .toList();
 
   return LinkResult(Program(keptProcedures, 0, 0), keptDecls,
-      checkedDeclarations: keptChecked);
+      checkedDeclarations: keptChecked,
+      scopeDeclarations: linked.scopeDeclarations);
 }
 
 /// Resolve a defined-guard call in a clause's guard list, mirroring
@@ -1348,6 +1367,23 @@ Goal _resolveGoal(Goal goal, String moduleName, Set<String> localSigs,
     return goal;
   }
 
+  // find_type(P/N, T) names a procedure rather than calling one. P/N is
+  // resolved in the calling module's scope exactly as a call to P/N would be
+  // (GLP-Spec catalogue, "Dynamic activation": the identity of the declaration
+  // of P/N in the caller's scope), so the kernel's lookup key is the one the
+  // compiled module carries (TGLP Implementation Notes, "The tables"): `M:p/n`
+  // for the module's own procedure, `anc:p/n` for an ancestor self.glp's, bare
+  // for an entry-point alias or a root-scope declaration.
+  if ((goal.functor == 'find_type' || goal.functor == '_find_type') &&
+      goal.arity == 2) {
+    final ref = _resolveProcedureRef(
+        goal.args[0], moduleName, localSigs, ancestorSelfProcs,
+        keepLocalBare: keepLocalBare);
+    if (!identical(ref, goal.args[0])) {
+      return Goal(goal.functor, [ref, goal.args[1]], goal.line, goal.column);
+    }
+  }
+
   // Regular goal: check if it matches a local procedure
   final sig = '${goal.functor}/${goal.arity}';
   if (localSigs.contains(sig)) {
@@ -1374,6 +1410,37 @@ Goal _resolveGoal(Goal goal, String moduleName, Set<String> localSigs,
 
   // Root scope/stdlib/body kernel — leave unchanged
   return goal;
+}
+
+/// Resolve a procedure reference `P/N` — the first argument of `find_type/2`
+/// — in the same scope order as [_resolveGoal]: local → ancestor self.glp →
+/// root scope (left bare). Anything that is not a ground `Name/Arity` term is
+/// returned as it is; the kernel reports it.
+Term _resolveProcedureRef(Term ref, String moduleName, Set<String> localSigs,
+    Map<String, String> ancestorSelfProcs,
+    {bool keepLocalBare = false}) {
+  if (ref is! StructTerm || ref.functor != '/' || ref.args.length != 2) {
+    return ref;
+  }
+  final nameTerm = ref.args[0];
+  final arityTerm = ref.args[1];
+  if (nameTerm is! ConstTerm || nameTerm.value is! String) return ref;
+  if (arityTerm is! ConstTerm || arityTerm.value is! int) return ref;
+  final name = nameTerm.value as String;
+  final sig = '$name/${arityTerm.value}';
+  String? owner;
+  if (localSigs.contains(sig)) {
+    if (keepLocalBare) return ref;
+    owner = moduleName;
+  } else {
+    owner = ancestorSelfProcs[sig];
+  }
+  if (owner == null) return ref;
+  return StructTerm(
+      '/',
+      [ConstTerm('$owner:$name', nameTerm.line, nameTerm.column), arityTerm],
+      ref.line,
+      ref.column);
 }
 
 /// Find the ProcDecl for a procedure in a module (non-imported only).

@@ -190,6 +190,8 @@ procedure '_sign'(_?, _).
 % Modules as values
 procedure '_self_module'(Module).
 procedure '_run'(_?, Module?).
+procedure '_run'(_?, Constant?, Module?).
+procedure '_find_type'(_?, Constant).
 
 % I/O
 procedure '_output'(_?).
@@ -543,19 +545,32 @@ X? =.. [Y|Ys] :- list(Ys?) | '_list_to_tuple'([Y?|Ys?], X).
 Y? ..= X :- compound(X?) | '_tuple_to_list'(X?, Y).
 
 % =============================================================================
-% MODULE AS A VALUE (self_module/1, run/2)
+% MODULE AS A VALUE (self_module/1, run/2, run/3, find_type/2)
 % =============================================================================
-% Wrappers over the '_self_module' and '_run' kernels (GLP paper, appendix
-% "Guards, Body Kernels, and System Predicates").  run(Goal, Module) activates
-% the module value Module and posts Goal to it; Goal's predicate must be
-% exported by Module, else an error.  The typed run/3 and find_type/2 (TGLP
-% §Dynamic Activation) follow with the typechecked implementation.
+% Wrappers over the '_self_module', '_run' and '_find_type' kernels (GLP-Spec
+% appendix-guards, "Module as a value" and "Dynamic activation").  run(Goal,
+% Module) activates the module value Module and posts Goal to it; Goal's
+% predicate must be exported by Module, else an error.  run(Goal, Type, Module)
+% activates Module and posts Goal to it where Type equals the type identity that
+% Module's exports record for Goal's predicate, and errs otherwise.
+% find_type(P/N, Type) assigns Type the type identity of the declaration of P/N
+% in the caller's scope, and errs where P/N is not declared there.  Type
+% identity is TGLP's (§Dynamic Activation); the declarations are the catalogue's
+% system-predicate rows.  Each wrapper waits for its inputs: a kernel does not
+% suspend, so an unbound module value or identity would be an abort rather than
+% a wait.
 
 procedure self_module(Module).
 self_module(M?) :- '_self_module'(M).
 
 procedure run(_?, Module?).
-run(G, M) :- '_run'(G?, M?).
+run(G, M) :- known(M?) | '_run'(G?, M?).
+
+procedure run(_?, Constant?, Module?).
+run(G, T, M) :- known(T?), known(M?) | '_run'(G?, T?, M?).
+
+procedure find_type(_?, Constant).
+find_type(P, T?) :- ground(P?) | '_find_type'(P?, T).
 
 % =============================================================================
 % ATTESTATION AND HELD LINKS (sign/2, authorise_link/2)

@@ -92,13 +92,26 @@ class MutualRefTerm implements Term {
 /// `self_module`/1 returns it and `run`/2 launches a goal on it. Ground, and
 /// stored opaquely on the heap, following FCP's module-as-value convention.
 class ModuleTerm implements Term {
-  /// This module's compiled artefact: 32-byte h(M), symbol table, and code.
+  /// This module's compiled artefact: body (interface, symbol table, code) and
+  /// certificate (compiler's key, source identity h(M), compiled identity).
   final Object artefact;  // Artefact (untyped to avoid a circular import)
 
   /// Module name (for display/debugging)
   final String name;
 
-  ModuleTerm(this.artefact, {this.name = ''});
+  /// The module's declared type-identity table (TGLP, Implementation Notes,
+  /// "The tables"): every procedure declared in the module's scope, keyed
+  /// `p/n` as the compiled module carries it. What `find_type/2` reads. Set by
+  /// the compiler at load; null for a module that arrived as a value, whose
+  /// artefact carries its interface and not its scope.
+  final Object? declaredTypes;  // TypeIdentityTables (untyped, same reason)
+
+  /// The exported table `run/3` compares against, derived on first use from
+  /// the artefact's interface text and cached here (a shipped table can
+  /// disagree with the source it describes; one recomputed from it cannot).
+  Object? exportedTypesCache;  // TypeIdentityTables
+
+  ModuleTerm(this.artefact, {this.name = '', this.declaredTypes});
 
   @override
   String toString() => 'Module($name)';

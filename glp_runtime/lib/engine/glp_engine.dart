@@ -41,6 +41,8 @@ import 'package:glp_runtime/wire/flattening.dart'
         hashOfPrint,
         interfaceTypeDefsText;
 import 'package:glp_runtime/wire/artefact.dart' show Artefact, ArtefactExport;
+import 'package:glp_runtime/analysis/type_checker/type_identity.dart'
+    show TypeIdentityTables;
 
 /// Result of running a goal
 class ExecutionResult {
@@ -998,7 +1000,23 @@ class GlpEngine {
           interfaceTypeDefsText(exportDecls: exportDecls, typeDefs: typeDefs),
       exports: exports,
     );
-    return rt.ModuleTerm(artefact, name: moduleName);
+    // The module's declared type-identity table (TGLP §Dynamic Activation and
+    // Implementation Notes, "The tables"): every procedure declared in the
+    // linked program's scope, root scope included, keyed as the compiled module
+    // carries it. `find_type/2` reads it from the calling goal's module value.
+    // Built over the same flat module the program was type-checked as. A
+    // program loaded with strictTypes off may carry type errors the checker
+    // waved through; the table construction is not waved through, so a failure
+    // there leaves the module without a table (find_type then errs on every
+    // key) rather than failing a load that succeeded before.
+    TypeIdentityTables? declaredTypes;
+    try {
+      declaredTypes = linkedTypeIdentityTables(modules, linked);
+    } catch (e) {
+      print('[TYPE WARNING] $moduleName: type-identity tables not built: $e');
+    }
+    return rt.ModuleTerm(artefact,
+        name: moduleName, declaredTypes: declaredTypes);
   }
 
   ModuleInfo _extractModuleInfo(

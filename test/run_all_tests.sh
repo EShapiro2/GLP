@@ -3195,6 +3195,57 @@ HEREDOC
 2>&1)
 check "RM3 exported entry may call non-exported internally" "Z = \[leaked\]" "$rm3"
 
+# run/3 and find_type/2 (GLP-Spec appendix-guards, "Dynamic activation"; TGLP
+# §Dynamic Activation).  find_type(P/N, Type) assigns the type identity of the
+# declaration of P/N in the caller's scope, and errs where P/N is not declared
+# there; run(Goal, Type, Module) activates Module and posts Goal where Type
+# equals the identity Module's exports record for Goal's predicate, and errs
+# otherwise.  The identity is a 64-hex SHA-256 (TGLP Implementation Notes).
+rm4=$("$REPL_RUN" <<HEREDOC
+$GLP_DIR/programs/tests/run_module_probe
+find_type(hello/1, T).
+:quit
+HEREDOC
+2>&1)
+check "RM4 find_type yields the type identity of a declared entry point" "T = [0-9a-f]\{64\}" "$rm4"
+
+rm5=$("$REPL_RUN" <<HEREDOC
+$GLP_DIR/programs/tests/run_module_probe
+self_module(M), find_type(hello/1, T), run(hello(Z), T?, M?).
+:quit
+HEREDOC
+2>&1)
+check "RM5 run/3 under the recorded identity posts the goal" "Z = \[done\]" "$rm5"
+
+rm6=$("$REPL_RUN" <<HEREDOC
+$GLP_DIR/programs/tests/run_module_probe
+self_module(M), run(hello(Z), "0000", M?).
+:quit
+HEREDOC
+2>&1)
+check "RM6 run/3 under another identity is refused" "_run/3: type identity mismatch for hello/1 in module run_module_probe" "$rm6"
+
+rm7=$("$REPL_RUN" <<HEREDOC
+$GLP_DIR/programs/tests/run_module_probe
+find_type(nosuch/1, T).
+:quit
+HEREDOC
+2>&1)
+check "RM7 find_type on an undeclared P/N is an error" "_find_type/2: nosuch/1 is not declared in the caller's scope" "$rm7"
+
+# P/N is resolved in the calling module's scope, as a call would be: m.glp's
+# probe/1 obtains the identity of its own local/1 (the key m:local/1), which at
+# the root is declared nowhere.
+rm8=$("$REPL_RUN" <<HEREDOC
+$GLP_DIR/programs/tests/find_type_scope
+probe(T).
+find_type(local/1, U).
+:quit
+HEREDOC
+2>&1)
+check "RM8 find_type resolves P/N in the calling module's scope" "T = [0-9a-f]\{64\}" "$rm8"
+check "RM8 a module-local P/N is not declared at the root" "_find_type/2: local/1 is not declared in the caller's scope" "$rm8"
+
 echo ""
 
 # =============================================================================
