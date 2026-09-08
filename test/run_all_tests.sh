@@ -3584,11 +3584,15 @@ echo ""
 
 # and fails on the same rejection of the same file.
 KNOWN_RED=(
+    # SGSG's: these four drive one agent through play_grassapp_boot.glp's
+    # agent_init/3 (four actors, chat replies, swap-then-redeem), but
+    # programs/grassapp/self.glp exports play_grassapp_duo's agent_init/3, so a
+    # directory load runs the duo play and the scenario never starts.  The boot
+    # play carries imported declarations and cannot be co-loaded on top.  They
+    # clear when grassapp/self.glp exports the boot play's entry point (IGLP
+    # Code to SGSG, 2026-09-08).
     "glp_multiagent/test/grassapp_scenario_test.dart: GrassApp scenario: four actors, chat replies, swap-then-redeem"
     "glp_multiagent/test/grassapp_unfriend_test.dart: charlie pays then unfriends Bob → unfriended(charlie) reaches Bob"
-    "glp_multiagent/test/grassapp_loan_redeem_test.dart: GrassApp: loan then maturity-gated redemption on local clocks"
-    "glp_multiagent/test/grassapp_escrow_test.dart: GrassApp: escrow time-release pays the beneficiary"
-    "glp_multiagent/test/grassapp_village_test.dart: GrassApp village market: the seven operations of §8.2"
     "glp_multiagent/test/paper_screenshots_grassapp_test.dart: fig:grassapp — Friends, Currencies, Chats panels of one GrassApp"
     "glp_multiagent/test/paper_screenshots_constructs_test.dart: fig:constructs — card, form, and chat input in the running app"
     # vGLP's: the deployed source moved with its agent to programs/social/graph/core/

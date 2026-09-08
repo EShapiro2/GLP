@@ -14,14 +14,6 @@ const _ga = '/Users/udi/Grassroots/GLP/programs/grassapp';
 void main() {
   test('charlie pays then unfriends Bob → unfriended(charlie) reaches Bob',
       () async {
-    final paths = [
-      '$_ga/self.glp',
-      '$_ga/currency_txn.glp',
-      '$_ga/grassapp_agent.glp',
-      '$_ga/grassapp_mediator.glp',
-      '$_ga/play_grassapp_boot.glp',
-    ];
-    final sources = paths.map((p) => File(p).readAsStringSync()).toList();
 
     final reply = ReceivePort();
     SendPort? bob;
@@ -40,8 +32,9 @@ void main() {
       agentIsolateEntry,
       InitAgent(
         agentId: 'Bob',
-        glpSources: sources,
-        glpSourcePaths: paths,
+        // programs/grassapp is a program (SGSG, d27e4d6a): loaded as one.
+        glpSources: const [],
+        programDir: _ga,
         rootSelfGlpPath:
             File('/Users/udi/Grassroots/GLP/programs/self.glp').absolute.path,
         friends: const ['alice', 'charlie'],

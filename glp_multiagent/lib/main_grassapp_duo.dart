@@ -237,23 +237,9 @@ class _DuoScreenState extends State<DuoScreen> {
   Future<void> _spawnAgents() async {
     final glp = await resolveGlpPaths();
 
-    const scenarioFiles = [
-      'self.glp',
-      'currency_txn.glp',
-      'grassapp_agent.glp',
-      'grassapp_mediator.glp',
-      'play_grassapp_duo.glp',
-    ];
-    final paths = [for (final f in scenarioFiles) '${glp.grassappDir}/$f'];
-    final sources = <String>[];
-    for (final p in paths) {
-      final file = File(p);
-      if (!file.existsSync()) {
-        setState(() => _netStatus = 'missing GLP source: $p');
-        return;
-      }
-      sources.add(await file.readAsString());
-    }
+    // programs/grassapp is a program (SGSG, d27e4d6a): every isolate loads
+    // it as one, and its self.glp exports the entry points.
+    final programDir = glp.grassappDir;
 
     // Interactive agent (the surface).
     final human = AgentState(_cast.human);
@@ -279,8 +265,8 @@ class _DuoScreenState extends State<DuoScreen> {
         agentIsolateEntry,
         InitAgent(
           agentId: _cast.human,
-          glpSources: sources,
-          glpSourcePaths: paths,
+          glpSources: const [],
+          programDir: programDir,
           rootSelfGlpPath: glp.rootSelfGlp,
           friends: const [],
           replyPort: _replyPort.sendPort,
@@ -292,8 +278,8 @@ class _DuoScreenState extends State<DuoScreen> {
           agentIsolateEntry,
           InitAgent(
             agentId: entry.key,
-            glpSources: sources,
-            glpSourcePaths: paths,
+            glpSources: const [],
+            programDir: programDir,
             rootSelfGlpPath: glp.rootSelfGlp,
             friends: const [],
             replyPort: _replyPort.sendPort,

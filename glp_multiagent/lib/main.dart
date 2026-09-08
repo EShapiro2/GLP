@@ -223,32 +223,17 @@ class _CoordinatorScreenState extends State<CoordinatorScreen> {
 
     // The GrassApp: the one integrated program (social graph + one-to-one and
     // group messaging + coins), loaded in order.
-    const scenarioFiles = [
-      'self.glp',
-      'currency_txn.glp',
-      'grassapp_agent.glp',
-      'grassapp_mediator.glp',
-      'play_grassapp_boot.glp',
-    ];
-    final paths = [for (final f in scenarioFiles) '${glp.grassappDir}/$f'];
-    final sources = <String>[];
-    for (final p in paths) {
-      final file = File(p);
-      if (!file.existsSync()) {
-        TraceLogger.instance.log('COORD', 'scenario file not found: $p');
-        setState(() {});
-        return;
-      }
-      sources.add(await file.readAsString());
-    }
+    // programs/grassapp is a program (SGSG, d27e4d6a): every isolate loads
+    // it as one, and its self.glp exports the entry points.
+    final programDir = glp.grassappDir;
     bob.ui = UiRuntime(
       manifest: grassrootsManifest,
       onSend: (text) => bob.commandPort?.send(UserInput(text)),
     );
     initMsg = InitAgent(
       agentId: 'Bob',
-      glpSources: sources,
-      glpSourcePaths: paths,
+      glpSources: const [],
+      programDir: programDir,
       rootSelfGlpPath: glp.rootSelfGlp,
       friends: const ['alice', 'charlie'],
       replyPort: _replyPort.sendPort,

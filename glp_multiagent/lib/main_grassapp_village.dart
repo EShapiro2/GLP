@@ -117,23 +117,14 @@ class _VillageScreenState extends State<VillageScreen> {
   /// Run the village once and capture its notify stream, tagged per agent.
   Future<void> _compute() async {
     setState(() => _status = 'Running the village…');
-    const files = [
-      'self.glp',
-      'currency_txn.glp',
-      'grassapp_agent.glp',
-      'grassapp_mediator.glp',
-      'play_village_headless.glp',
-    ];
     try {
       final glp = await resolveGlpPaths();
       final engine = GlpEngine(rootSelfGlpPath: glp.rootSelfGlp)
         ..strictTypes = false
         ..maxCycles = 5000000;
-      for (final f in files) {
-        engine.loadSource(
-            File('${glp.grassappDir}/$f').readAsStringSync(),
-            filename: f);
-      }
+      // programs/grassapp is a program (SGSG, d27e4d6a): loaded as one, its
+      // self.glp exports play_village as an entry point.
+      engine.loadProgram(glp.grassappDir);
       final captured = <String>[];
       engine.runtime.outputCallback = captured.add;
       await engine.runGoal('play_village.');

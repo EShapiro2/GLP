@@ -25,23 +25,12 @@ void main() {
     const repo = '/Users/udi/Grassroots/GLP';
     const dir = '$repo/programs/grassapp';
 
-    const files = <String>[
-      'self.glp',
-      'currency_txn.glp',
-      'grassapp_agent.glp',
-      'grassapp_mediator.glp',
-      'play_escrow_headless.glp',
-    ];
-
     final engine = GlpEngine(rootSelfGlpPath: '$repo/programs/self.glp')
       ..strictTypes = false;
 
-    for (final f in files) {
-      final file = File('$dir/$f');
-      expect(file.existsSync(), isTrue,
-          reason: 'missing GLP source: ${file.path}');
-      engine.loadSource(file.readAsStringSync(), filename: f);
-    }
+    // programs/grassapp is a program (SGSG, d27e4d6a): loaded as one, its
+    // self.glp exports the play as an entry point.
+    engine.loadProgram(dir);
 
     final lines = <String>[];
     engine.runtime.outputCallback = lines.add;

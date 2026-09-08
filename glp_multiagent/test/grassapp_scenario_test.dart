@@ -16,20 +16,14 @@ void main() {
     final repo = Directory('../programs').existsSync()
         ? Directory('../programs').absolute.path
         : '/Users/udi/Grassroots/GLP/programs';
-    const files = [
-      'self.glp',
-      'currency_txn.glp',
-      'grassapp_agent.glp',
-      'grassapp_mediator.glp',
-      'play_grassapp_boot.glp',
-    ];
-    final paths = [for (final f in files) '$repo/grassapp/$f'];
 
     final lines = <String>[];
     final agent = AgentRuntime(
       agentId: 'Bob',
-      glpSources: [for (final p in paths) File(p).readAsStringSync()],
-      glpSourcePaths: paths,
+      // programs/grassapp is a program (SGSG, d27e4d6a): loaded as one, its
+      // self.glp exports agent_init/3 as an entry point.
+      glpSources: const [],
+      programDir: '$repo/grassapp',
       rootSelfGlpPath: '$repo/self.glp',
       friends: const ['alice', 'charlie', 'dana', 'eve'],
     );
