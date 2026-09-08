@@ -184,6 +184,15 @@ agent(Id, [msg(person, Id1, install_coins(App, M, CSig, Ui))|UserIn], NetIn, Out
     install_coins_step(V?, App?, M?, CSig?, Ui?, Apps?, Apps1),
     agent(Id?, UserIn?, NetIn?, Outs?, host(Apps1?, Atts?, Pend?, Trusted?)).
 
+%% Install a certified mini-app of the child-safe platform's interface: its
+%% user-interface grant is its end of a channel of commands and notifications.
+agent(Id, [msg(person, Id1, install_cssn(App, M, CSig, Ui))|UserIn], NetIn, Outs,
+      host(Apps, Atts, Pend, Trusted)) :-
+    Id? =?= Id1?, ground(App?), ground(Trusted?) |
+    verify_install(M?, CSig?, Trusted?, V),
+    install_cssn_step(V?, App?, M?, CSig?, Ui?, Apps?, Apps1),
+    agent(Id?, UserIn?, NetIn?, Outs?, host(Apps1?, Atts?, Pend?, Trusted?)).
+
 %% Invite a friend to the instance of a mini-app: over the friend channel, the
 %% mini-app's source identity, the type identity of the root channel (that of
 %% its entry, ping/3), and the social graph's signed invitation over the
@@ -444,10 +453,15 @@ procedure install_coins_step(Constant?, Constant?, Content?, String?, Channel(St
 install_coins_step(ok, App, M, CSig, Ui, Apps, [app(App?, M?, CSig?, idle_coins(Ui?)) | Apps?]).
 install_coins_step(refused, _, _, _, _, Apps, Apps?).
 
+procedure install_cssn_step(Constant?, Constant?, Content?, String?, Channel(Stream(CsAppCmd), Stream(CsAppNotify))?, AppList?, AppList).
+install_cssn_step(ok, App, M, CSig, Ui, Apps, [app(App?, M?, CSig?, idle_cssn(Ui?)) | Apps?]).
+install_cssn_step(refused, _, _, _, _, Apps, Apps?).
+
 %% app_kind(App, Kind): the interface a hosted mini-app has, by its name ---
-%% the currency's, or the test mini-app's.
+%% the currency's, the child-safe platform's, or the test mini-app's.
 procedure app_kind(Constant?, Constant).
 app_kind(currency, coins).
+app_kind(childsafe, cssn).
 app_kind(_, ping) :- otherwise | true.
 
 %% app_module(App, Apps, Apps1, L): the installed mini-app's module value, the
@@ -470,11 +484,16 @@ identities(App, M, Src?, T?) :-
 
 procedure entry_type(Constant?, Constant).
 entry_type(coins, T?) :- find_type(coins/3, T).
+entry_type(cssn, T?) :- find_type(cssn/3, T).
 entry_type(ping, T?) :- find_type(ping/3, T).
 
 %% The currency's entry, declared here for find_type/2 (never run).
 procedure coins(Constant?, Channel(Stream(UserAnswer), Stream(Event))?, Stream(Conversation)?).
 coins(_, _, _).
+
+%% The child-safe platform's entry, likewise.
+procedure cssn(Constant?, Channel(Stream(CsAppCmd), Stream(CsAppNotify))?, Stream(CsConversation)?).
+cssn(_, _, _).
 
 %% --- The inviter ---
 
@@ -604,6 +623,7 @@ root_step(refused, Id, _, _, _, _, UserIn, NetIn, Outs, Apps, Atts, Pend, Truste
 procedure root_ends(Constant?, RootEnd, RootEnd).
 root_ends(ping, ping_end(Mine?), ping_end(Theirs?)) :- new_channel(Mine, Theirs) | true.
 root_ends(coins, coins_end(Mine?), coins_end(Theirs?)) :- new_channel(Mine, Theirs) | true.
+root_ends(cssn, cssn_end(Mine?), cssn_end(Theirs?)) :- new_channel(Mine, Theirs) | true.
 
 %% --- The invitee, on the root channel ---
 
@@ -646,6 +666,19 @@ deliver(App, Friend, coins_end(End), _, _, _, [app(A, M1, C, running_coins(Convs
         [app(A?, M1?, C?, running_coins(Convs1)) | Rest?], UserIn, UserIn?) :-
     App? =?= A? |
     open_conv_coins(Friend?, End?, Convs, Convs1?).
+%% The child-safe platform: activated with its two channels, the commands and
+%% notifications channel held since installation and the conversations stream;
+%% each conversation handed to it on the latter, and adopting one is the
+%% friendship under its contract.
+deliver(App, Friend, cssn_end(End), Id, T, M, [app(A, M1, C, idle_cssn(Ui)) | Rest],
+        [app(A?, M1?, C?, running_cssn(Convs1)) | Rest?], UserIn, UserIn?) :-
+    App? =?= A? |
+    run(cssn(Id?, Ui?, Convs?), T?, M?),
+    open_conv_cssn(Friend?, End?, Convs, Convs1?).
+deliver(App, Friend, cssn_end(End), _, _, _, [app(A, M1, C, running_cssn(Convs?)) | Rest],
+        [app(A?, M1?, C?, running_cssn(Convs1)) | Rest?], UserIn, UserIn?) :-
+    App? =?= A? |
+    open_conv_cssn(Friend?, End?, Convs, Convs1?).
 deliver(App, Friend, End, Id, T, M, [E | Rest], [E? | Rest1?], UserIn, UserIn1?) :-
     otherwise | deliver(App?, Friend?, End?, Id?, T?, M?, Rest?, Rest1, UserIn?, UserIn1).
 deliver(_, _, _, _, _, _, [], [], UserIn, UserIn?).
@@ -669,6 +702,9 @@ open_conv(Friend, End, [conversation(Friend?, End?) | Sg1?], Sg1).
 procedure open_conv_coins(Constant?, PeerChannel?, Stream(Conversation), Stream(Conversation)?).
 open_conv_coins(Friend, End, [conversation(Friend?, End?) | Convs1?], Convs1).
 
+procedure open_conv_cssn(Constant?, CsChannel?, Stream(CsConversation), Stream(CsConversation)?).
+open_conv_cssn(Friend, End, [conversation(Friend?, End?) | Convs1?], Convs1).
+
 %% --- Attestations (Section 5.5) ---
 
 procedure lookup_att(Constant?, AttestList?, AttestList, String).
@@ -686,6 +722,8 @@ close_apps([app(_, _, _, idle([])) | Rest]) :- close_apps(Rest?).
 close_apps([app(_, _, _, running([])) | Rest]) :- close_apps(Rest?).
 close_apps([app(_, _, _, idle_coins(ch(_, []))) | Rest]) :- close_apps(Rest?).
 close_apps([app(_, _, _, running_coins([])) | Rest]) :- close_apps(Rest?).
+close_apps([app(_, _, _, idle_cssn(ch(_, []))) | Rest]) :- close_apps(Rest?).
+close_apps([app(_, _, _, running_cssn([])) | Rest]) :- close_apps(Rest?).
 close_apps([]).
 
 procedure app_names(AppList?, AppList, Stream(Constant)).

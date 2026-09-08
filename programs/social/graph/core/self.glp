@@ -48,3 +48,7 @@ play_install(N, App, I?) :- superapp_plays # play_install(N?, App?, I).
 imported procedure superapp_plays#play_coins(Stream(ScreenContent), Stream(ScreenContent)).
 exported procedure play_coins(Stream(ScreenContent), Stream(ScreenContent)).
 play_coins(A?, B?) :- superapp_plays # play_coins(A, B).
+
+imported procedure superapp_plays#play_cssn(Stream(CsAppNotify), Stream(CsAppNotify)).
+exported procedure play_cssn(Stream(CsAppNotify), Stream(CsAppNotify)).
+play_cssn(A?, B?) :- superapp_plays # play_cssn(A, B).

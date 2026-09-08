@@ -3661,6 +3661,7 @@ sg_core=$("$REPL_RUN" <<HEREDOC
 :artefact $GLP_DIR/programs/social/graph/pingapp $SG_CORE
 :artefact $GLP_DIR/programs/cssn $SG_CORE
 :artefact $GLP_DIR/programs/coins/currency $SG_CORE
+:artefact $GLP_DIR/programs/cssn/childsafe $SG_CORE
 $SG_CORE
 :limit 5000000
 play_load("cssn.glpw", K1, Key1).
@@ -3673,6 +3674,7 @@ play_invite(A, B).
 play_invite_declined(A2, B2).
 play_invite_timed(Ms).
 play_coins(C1, C2).
+play_cssn(N1, N2).
 :quit
 HEREDOC
 2>&1)
@@ -3693,6 +3695,9 @@ check "SG super-app: a declined invitation opens nothing at alice" "A2 = \[\]" "
 check "SG super-app: a declined invitation opens nothing at bob" "B2 = \[\]" "$sg_core"
 check "SG super-app: the handshake is timed" "Ms = [0-9]*" "$sg_core"
 check "SG super-app hosts the currency: alice's swap done" "C1 = \[opened(bob), minted(2), holdings(\[lot(alice, 2)\]), holdings(\[\]), swap_done(bob), holdings(\[lot(bob, 2)\]) | " "$sg_core"
+check "SG super-app: the child-safe platform's artefact is certified" "childsafe.glpw --- certified under" "$sg_core"
+check "SG super-app hosts the child-safe platform: alice connected to bob" "N1 = \[connected(bob) | " "$sg_core"
+check "SG super-app hosts the child-safe platform: bob connected and greeted" "N2 = \[connected(alice), received(alice, hello) | " "$sg_core"
 check "SG super-app hosts the currency: bob's swap done" "C2 = \[opened(alice), minted(2), holdings(\[lot(bob, 2)\]), swap_done(alice), holdings(\[lot(alice, 2)\]) | " "$sg_core"
 check_not "SG super-app no failed play" "→ failed" "$sg_core"
 
@@ -3749,6 +3754,21 @@ check "SG currency on two smartphones: alice's swap with bob done" "\[alice\] sw
 check "SG currency on two smartphones: bob's swap with alice done" "\[bob\] swap_done(alice)" "$sg_coins"
 check "SG currency on two smartphones: alice holds bob's coin" "\[alice\] holdings(\[lot(bob, 2)\])" "$sg_coins"
 check "SG currency on two smartphones: bob holds alice's coin" "\[bob\] holdings(\[lot(alice, 2)\])" "$sg_coins"
+
+# The child-safe platform on two smartphones (paper Section 7): the same
+# super-app hosting CSSN's mini-app from its certified artefact; adopting the
+# conversation the handshake opens is the friendship under that platform's
+# contract, and one message of it crosses between the isolates.
+sg_cssn=$("$REPL_RUN" <<HEREDOC
+:artefact $GLP_DIR/programs/cssn/childsafe $SG_CORE
+:boot $GLP_DIR/programs/social/cssn_boot.glp $SG_CORE
+:quit
+HEREDOC
+2>&1)
+check "SG child-safe platform on two smartphones: the boot settles" "Boot settled: 2 agents" "$sg_cssn"
+check "SG child-safe platform on two smartphones: alice is connected to bob" "\[alice\] connected(bob)" "$sg_cssn"
+check "SG child-safe platform on two smartphones: bob is connected to alice" "\[bob\] connected(alice)" "$sg_cssn"
+check "SG child-safe platform on two smartphones: alice's message reaches bob" "\[bob\] received(alice, hello)" "$sg_cssn"
 rm -f "$SG_CORE"/*.glpw
 
 sg_ga=$("$REPL_RUN" <<HEREDOC

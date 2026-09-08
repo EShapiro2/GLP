@@ -41,6 +41,7 @@ UserContent ::= connect(Constant)
               %% befriend_commit (Section 5.5).
               ; install(Constant, Content, String, AppUiStream?)
               ; install_coins(Constant, Content, String, Channel(Stream(UserAnswer), Stream(Event)))
+              ; install_cssn(Constant, Content, String, Channel(Stream(CsAppCmd), Stream(CsAppNotify)))
               ; invite(Constant, Constant)
               ; accept_invite(Constant, Constant)
               ; decline_invite(Constant, Constant)
@@ -178,7 +179,8 @@ CreatorCert ::= creator_cert(String, Stream(Constant), Constant).
 %%   run/3 has activated it, SgEnd the super-app's writer of the mini-app's
 %%   social-graph stream.
 AppStatus ::= idle(AppUiStream?) ; running(SgToAppStream?)
-            ; idle_coins(Channel(Stream(UserAnswer), Stream(Event))) ; running_coins(Stream(Conversation)?).
+            ; idle_coins(Channel(Stream(UserAnswer), Stream(Event))) ; running_coins(Stream(Conversation)?)
+            ; idle_cssn(Channel(Stream(CsAppCmd), Stream(CsAppNotify))) ; running_cssn(Stream(CsConversation)?).
 App       ::= app(Constant, Content, String, AppStatus).
 AppList   ::= [] ; [App | AppList].
 Attest     ::= att(Constant, String).
@@ -267,9 +269,104 @@ SwapCards  ::= [] ; [SwapCard | SwapCards].
 Sent       ::= idle ; sent(CReqId).
 Choice     ::= answer(CReqId, Answer) ; wait.
 
-%% One end of a root channel, of the test mini-app's protocol or of the
-%% currency's, as the friend channel conveys it at the handshake.
-RootEnd ::= ping_end(RootChannel) ; coins_end(PeerChannel).
+%% =============================================================================
+%% THE CHILD-SAFE PLATFORM'S INTERFACE, copied from programs/cssn/self.glp for
+%% the same reason as the currency's above: find_type/2 resolves the entry's
+%% type identity in the caller's scope, and the goal that activates cssn/3 is
+%% written here.  Type identity is structural, so the names are the super-app's
+%% --- prefixed Cs where they clash with the social graph's own FriendMsg,
+%% FriendContent, IntroContent and Conversation, which are different types.
+%% Decision and ReqId are shared: theirs and ours are the same type.
+%% =============================================================================
+CsGroupId   ::= group_id(Constant, Constant).
+CsGroupContent ::= group_msg(CsGroupId, Constant, Constant)
+                 ; group_leave(CsGroupId, Constant)
+                 ; group_removed(CsGroupId).
+CsGroupMsg  ::= msg(Constant, Constant, CsGroupContent).
+CsGroupSetupResponse ::= group_channel(Channel(Stream(CsGroupMsg), Stream(CsGroupMsg))).
+CsIntroContent ::= ack(Constant) ; nack
+                 ; friend_channel(Channel(Stream(CsFriendMsg), Stream(CsFriendMsg))).
+CsGroupNotifyContent ::= group_invite(CsGroupId, Channel(Stream(CsGroupSetupResponse), Stream(CsIntroContent)))
+                       ; group_invite_child(CsGroupId, Constant, Channel(Stream(CsGroupSetupResponse), Stream(CsIntroContent)))
+                       ; group_removed(CsGroupId).
+CsFriendOnlyContent ::= text(Constant)
+                      ; intro(Constant, Channel(Stream(CsIntroContent), Stream(CsIntroContent)))
+                      ; child_intro(Constant, Channel(Stream(CsIntroContent), Stream(CsIntroContent)))
+                      ; group_msg(CsGroupId, Constant, Constant)
+                      ; group_consent_req(CsGroupId, Decision?)
+                      ; group_leave(CsGroupId, Constant)
+                      ; leave_group(CsGroupId)
+                      ; remove_member(CsGroupId, Constant)
+                      ; unfriend
+                      ; unfriend_child(Constant)
+                      ; enrol(Constant, CsEnrolResponse?)
+                      ; release_request
+                      ; release_grant
+                      ; approval
+                      ; withdrawal.
+CsFriendContent ::= CsFriendOnlyContent ; CsGroupNotifyContent.
+CsFriendMsg ::= msg(Constant, Constant, CsFriendContent).
+CsEnrolResponse ::= enrol_accept(Channel(Stream(CsFriendMsg), Stream(CsFriendMsg)))
+                  ; enrol_no.
+
+%% One end of a conversation of the child-safe platform, and the conversations
+%% stream the mini-app is granted.
+CsChannel ::= ch(Stream(CsFriendMsg), Stream(CsFriendMsg)?).
+CsConversation ::= conversation(Constant, Channel(Stream(CsFriendMsg), Stream(CsFriendMsg))).
+
+%% Person -> mini-app commands, and mini-app -> person notifications: the
+%% cards-and-answers channel of this platform, as the currency's Event and
+%% UserAnswer are of that one.
+CsAppCmd ::= accept_intro(Constant, ReqId)
+           ; reject_intro(Constant, ReqId)
+           ; accept_child_intro(Constant, ReqId)
+           ; reject_child_intro(Constant, ReqId)
+           ; approve_child_intro(Constant, Constant, ReqId)
+           ; child_introduce(Constant, Constant, Constant)
+           ; send(Constant, Constant)
+           ; introduce(Constant, Constant)
+           ; create_group(Constant)
+           ; invite_group(CsGroupId, Constant)
+           ; invite_group(CsGroupId, Constant, Constant)
+           ; accept_group(CsGroupId, ReqId)
+           ; reject_group(CsGroupId, ReqId)
+           ; approve_group(Constant, CsGroupId, ReqId)
+           ; send_group(CsGroupId, Constant)
+           ; leave_group(CsGroupId)
+           ; leave_child_group(Constant, CsGroupId)
+           ; remove_from_group(CsGroupId, Constant)
+           ; approve_child_group(Constant, CsGroupId, ReqId)
+           ; reject_child_group(Constant, CsGroupId, ReqId)
+           ; unfriend_child(Constant)
+           ; unfriend_child_of(Constant, Constant)
+           ; remove_child_member(Constant, CsGroupId, Constant)
+           ; enrol_child(Constant)
+           ; enrol_decision(Decision, Constant, ReqId)
+           ; request_release
+           ; approve_release(Constant).
+CsAppNotify ::= befriend_intro(Constant, Constant, ReqId)
+              ; child_befriend(Constant, Constant, ReqId)
+              ; connected(Constant)
+              ; rejected(Constant)
+              ; no_conversation(Constant)
+              ; received(Constant, Constant)
+              ; group_invite(CsGroupId, ReqId)
+              ; group_invite_child(CsGroupId, Constant, ReqId)
+              ; group_joined(CsGroupId)
+              ; group_joined_member(CsGroupId, Constant)
+              ; group_left(CsGroupId)
+              ; group_removed(CsGroupId)
+              ; group_received(CsGroupId, Constant, Constant)
+              ; child_group_consent(Constant, CsGroupId, ReqId)
+              ; unfriended(Constant)
+              ; enrol_offer(Constant, ReqId)
+              ; enrolled(Constant)
+              ; release_asked(Constant)
+              ; released(Constant).
+%% One end of a root channel, of the test mini-app's protocol, of the
+%% currency's or of the child-safe platform's, as the friend channel conveys it
+%% at the handshake.
+RootEnd ::= ping_end(RootChannel) ; coins_end(PeerChannel) ; cssn_end(CsChannel).
 
 %% Output list — one constructor per output kind, each typed at exactly what it
 %% carries. Replaces the former output(Constant, OutputStream?) whose union

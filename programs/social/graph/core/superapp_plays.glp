@@ -310,6 +310,29 @@ sg_init(bob, coins, NetIn) :-
     coin_person(bob, PersonEnd?, [mint(2), accept(alice)], Screen),
     send_to_user(Screen?).
 
+%% The child-safe platform on two smartphones (../../cssn_boot.glp), as the
+%% currency's clauses above: each person trusts the compiler's key, installs
+%% the certified platform with its own end of a commands-and-notifications
+%% channel, and alice's greets bob once the conversation is adopted.
+sg_init(alice, cssn, NetIn) :-
+    agent # agent(alice, In?, NetIn?, [user_output(Out), net_output(NetOut)]),
+    send_to_net(NetOut?),
+    load_file("childsafe.glpw", C),
+    certified(C?, CK, CSig),
+    new_channel(AppEnd, PersonEnd),
+    alice_cssn_boot(C?, CK?, CSig?, AppEnd?, Out?, In),
+    cssn_greeter(bob, PersonEnd?, Seen),
+    send_to_user(Seen?).
+sg_init(bob, cssn, NetIn) :-
+    agent # agent(bob, In?, NetIn?, [user_output(Out), net_output(NetOut)]),
+    send_to_net(NetOut?),
+    load_file("childsafe.glpw", C),
+    certified(C?, CK, CSig),
+    new_channel(AppEnd, PersonEnd),
+    bob_cssn_boot(C?, CK?, CSig?, AppEnd?, Out?, In),
+    cssn_onlooker(PersonEnd?, Seen),
+    send_to_user(Seen?).
+
 sg_init(alice, warm, NetIn) :-
     agent # agent(alice, In?, NetIn?, [user_output(Out), net_output(NetOut)]),
     send_to_net(NetOut?),
@@ -481,6 +504,21 @@ bob_coins_run([_ | Outs], Cmds?) :- otherwise | bob_coins_run(Outs?, Cmds).
 bob_coins_run([], []).
 
 
+%% The child-safe platform's two persons under :boot.
+procedure alice_cssn_boot(Content?, String?, String?, Channel(Stream(CsAppCmd), Stream(CsAppNotify))?, AgentToUserStream?, UserInStream).
+alice_cssn_boot(C, CK, CSig, AppEnd, Outs,
+                [msg(person, alice, trust(CK?)),
+                 msg(person, alice, install_cssn(childsafe, C?, CSig?, AppEnd?)),
+                 msg(person, alice, connect(bob)) | Cmds?]) :-
+    alice_cssn_run(Outs?, Cmds).
+
+procedure bob_cssn_boot(Content?, String?, String?, Channel(Stream(CsAppCmd), Stream(CsAppNotify))?, AgentToUserStream?, UserInStream).
+bob_cssn_boot(C, CK, CSig, AppEnd, Outs,
+              [msg(person, bob, trust(CK?)),
+               msg(person, bob, install_cssn(childsafe, C?, CSig?, AppEnd?)),
+               msg(person, bob, accept_invite(childsafe, alice)) | Cmds?]) :-
+    bob_cssn_run(Outs?, Cmds).
+
 %% The same two persons under :boot, each trusting the compiler's key first.
 procedure alice_coins_boot(Content?, String?, String?, Channel(Stream(UserAnswer), Stream(Event))?, AgentToUserStream?, UserInStream).
 alice_coins_boot(C, CK, CSig, AppEnd, Outs,
@@ -495,6 +533,90 @@ bob_coins_boot(C, CK, CSig, AppEnd, Outs,
                 msg(person, bob, install_coins(currency, C?, CSig?, AppEnd?)),
                 msg(person, bob, accept_invite(currency, alice)) | Cmds?]) :-
     bob_coins_run(Outs?, Cmds).
+
+%% =============================================================================
+%% play_cssn(SeenA, SeenB): the child-safe platform (programs/cssn/childsafe,
+%% its artefact childsafe.glpw beside this program) hosted by the super-app,
+%% as play_coins hosts the currency.  alice and bob install it with its two
+%% certifications, alice befriends bob and invites him, and the handshake opens
+%% a root channel of that platform's protocol between their two executions,
+%% each activated by run/3 with its commands-and-notifications channel and its
+%% conversations.  Adopting a conversation IS befriending under that contract,
+%% so each execution tells its person it is connected; alice's person then
+%% sends bob one message of the platform, and bob's execution shows it.
+%% Expected: SeenA = [connected(bob) | _], SeenB = [connected(alice),
+%% received(alice, hello) | _], → suspended (the executions pend on their
+%% persons and their friends).  ../../cssn_boot.glp runs the same on two
+%% smartphones.
+%% =============================================================================
+exported procedure play_cssn(Stream(CsAppNotify), Stream(CsAppNotify)).
+play_cssn(SeenA?, SeenB?) :-
+    crossbar2(AliceNetOut?, BobNetOut?, AliceNetIn, BobNetIn),
+    load_file("childsafe.glpw", C),
+    certified(C?, _, CSig),
+    new_channel(AppEndA, PersonEndA),
+    new_channel(AppEndB, PersonEndB),
+    agent # agent(alice, AliceIn?, AliceNetIn?, [user_output(AliceOut), net_output(AliceNetOut)]),
+    alice_cssn_person(C?, CSig?, AppEndA?, AliceOut?, AliceIn),
+    cssn_greeter(bob, PersonEndA?, SeenA),
+    agent # agent(bob, BobIn?, BobNetIn?, [user_output(BobOut), net_output(BobNetOut)]),
+    bob_cssn_person(C?, CSig?, AppEndB?, BobOut?, BobIn),
+    cssn_onlooker(PersonEndB?, SeenB).
+
+procedure alice_cssn_person(Content?, String?, Channel(Stream(CsAppCmd), Stream(CsAppNotify))?, AgentToUserStream?, UserInStream).
+alice_cssn_person(C, CSig, AppEnd, Outs,
+                  [msg(person, alice, install_cssn(childsafe, C?, CSig?, AppEnd?)),
+                   msg(person, alice, connect(bob)) | Cmds?]) :-
+    alice_cssn_run(Outs?, Cmds).
+
+procedure alice_cssn_run(AgentToUserStream?, UserInStream).
+alice_cssn_run([msg(agent, person, connected(bob)) | Outs],
+               [msg(person, alice, invite(childsafe, bob)) | Cmds?]) :-
+    alice_cssn_run(Outs?, Cmds).
+alice_cssn_run([_ | Outs], Cmds?) :- otherwise | alice_cssn_run(Outs?, Cmds).
+alice_cssn_run([], []).
+
+procedure bob_cssn_person(Content?, String?, Channel(Stream(CsAppCmd), Stream(CsAppNotify))?, AgentToUserStream?, UserInStream).
+bob_cssn_person(C, CSig, AppEnd, Outs,
+                [msg(person, bob, install_cssn(childsafe, C?, CSig?, AppEnd?)),
+                 msg(person, bob, accept_invite(childsafe, alice)) | Cmds?]) :-
+    bob_cssn_run(Outs?, Cmds).
+
+procedure bob_cssn_run(AgentToUserStream?, UserInStream).
+bob_cssn_run([msg(agent, person, befriend(alice, Resp?)) | Outs],
+             [msg(person, bob, decision(yes, alice, response(Resp))) | Cmds?]) :-
+    bob_cssn_run(Outs?, Cmds).
+bob_cssn_run([_ | Outs], Cmds?) :- otherwise | bob_cssn_run(Outs?, Cmds).
+bob_cssn_run([], []).
+
+%% The person on the mini-app's own channel: told it is connected to the
+%% friend, it sends that friend one message of the platform.
+procedure cssn_greeter(Constant?, Channel(Stream(CsAppNotify), Stream(CsAppCmd))?, Stream(CsAppNotify)).
+cssn_greeter(F, ch(Notify, Cmds?), Seen?) :-
+    ground(F?) |
+    cg(F?, Notify?, Cmds, Seen).
+
+procedure cg(Constant?, Stream(CsAppNotify)?, Stream(CsAppCmd), Stream(CsAppNotify)).
+cg(F, [connected(F1) | Ns], [send(F1?, hello) | Cmds?], [connected(F1?) | Seen?]) :-
+    F? =?= F1? |
+    cg_rest(Ns?, Cmds, Seen).
+cg(F, [N | Ns], Cmds?, [N? | Seen?]) :- otherwise | cg(F?, Ns?, Cmds, Seen).
+cg(_, [], [], []).
+
+procedure cg_rest(Stream(CsAppNotify)?, Stream(CsAppCmd), Stream(CsAppNotify)).
+cg_rest([N | Ns], Cmds?, [N? | Seen?]) :- ground(N?) | cg_rest(Ns?, Cmds, Seen).
+cg_rest([], [], []).
+
+%% The person who only watches, and commands nothing.
+procedure cssn_onlooker(Channel(Stream(CsAppNotify), Stream(CsAppCmd))?, Stream(CsAppNotify)).
+cssn_onlooker(ch(Notify, Cmds?), Seen?) :- hold_cmds(Cmds), pass_notify(Notify?, Seen).
+
+procedure hold_cmds(Stream(CsAppCmd)).
+hold_cmds(X?) :- true.
+
+procedure pass_notify(Stream(CsAppNotify)?, Stream(CsAppNotify)).
+pass_notify([N | Ns], [N? | Seen?]) :- ground(N?) | pass_notify(Ns?, Seen).
+pass_notify([], []).
 
 %% =============================================================================
 %% coin_person(Id, PersonEnd, Script, Screen): a scripted person on the
