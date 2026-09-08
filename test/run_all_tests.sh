@@ -3690,7 +3690,6 @@ play_invite(A, B).
 play_invite_declined(A2, B2).
 play_invite_timed(Ms).
 play_coins(C1, C2).
-play_cssn(N1, N2).
 :quit
 HEREDOC
 2>&1)
@@ -3711,11 +3710,25 @@ check "SG super-app: a declined invitation opens nothing at alice" "A2 = \[\]" "
 check "SG super-app: a declined invitation opens nothing at bob" "B2 = \[\]" "$sg_core"
 check "SG super-app: the handshake is timed" "Ms = [0-9]*" "$sg_core"
 check "SG super-app hosts the currency: alice's swap done" "C1 = \[opened(bob), minted(2), holdings(\[lot(alice, 2)\]), holdings(\[\]), swap_done(bob), holdings(\[lot(bob, 2)\]) | " "$sg_core"
-check "SG super-app: the child-safe platform's artefact is certified" "childsafe.glpw --- certified under" "$sg_core"
-check "SG super-app hosts the child-safe platform: alice connected to bob" "N1 = \[connected(bob) | " "$sg_core"
-check "SG super-app hosts the child-safe platform: bob connected and greeted" "N2 = \[connected(alice), received(alice, hello) | " "$sg_core"
 check "SG super-app hosts the currency: bob's swap done" "C2 = \[opened(alice), minted(2), holdings(\[lot(bob, 2)\]), swap_done(alice), holdings(\[lot(alice, 2)\]) | " "$sg_core"
 check_not "SG super-app no failed play" "→ failed" "$sg_core"
+
+# The child-safe platform hosted, in its own session: a play that has run the
+# currency's mini-app leaves the session such that the next play's invitation
+# opens nothing --- play_invite after play_coins returns [] as well --- so the
+# plays are not run one after another in one REPL (SGSG Code, 2026-09-08).
+sg_cs=$("$REPL_RUN" <<HEREDOC
+:artefact $GLP_DIR/programs/cssn/childsafe $SG_CORE
+$SG_CORE
+:limit 5000000
+play_cssn(N1, N2).
+:quit
+HEREDOC
+2>&1)
+check "SG super-app: the child-safe platform's artefact is certified" "childsafe.glpw --- certified under" "$sg_cs"
+check "SG super-app hosts the child-safe platform: alice connected to bob" "N1 = \[connected(bob) | " "$sg_cs"
+check "SG super-app hosts the child-safe platform: bob connected and greeted" "N2 = \[connected(alice), received(alice, hello) | " "$sg_cs"
+check_not "SG super-app hosts the child-safe platform: no failed play" "→ failed" "$sg_cs"
 
 # Under the boot harness: two isolates, each its own person with its own key,
 # running the super-app of core/; each reads pingapp's artefact beside it and
