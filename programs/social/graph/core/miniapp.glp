@@ -5,17 +5,24 @@
 %% Ui, its channel to the super-app user interface, and Sg, its channel to the
 %% social graph, on which the social graph hands it, at each invitation, one
 %% end of a root channel to the execution of the same mini-app at a friend.
-%% On each conversation the two executions greet each other over the root
-%% channel and each reports the greeting to its person.  The mini-app calls no
+%% On each conversation each execution reports to its person that the
+%% conversation opened, greets the other over the root channel, and reports
+%% the greeting it receives.  The mini-app calls no
 %% system predicate reaching the network or the person, so the program is
 %% certified.
 
 exported procedure ping(Constant?, AppUiStream, SgToAppStream?).
 ping(Id, Ui?, [conversation(Friend, ch(In, Out?)) | Sg]) :-
     ground(Id?), ground(Friend?) |
+    opened(Friend?, Ui, Ui1?),
     greet(Id?, Out),
-    ping_recv(Id?, In?, Ui, Sg?).
+    ping_recv(Id?, In?, Ui1, Sg?).
 ping(_, [], []).
+
+%% opened(Friend, Ui, Ui1): report to the person that a conversation opened;
+%% Ui := [opened(Friend) | Ui1], the caller keeping Ui1's writer.
+procedure opened(Constant?, AppUiStream, AppUiStream?).
+opened(Friend, [opened(Friend?) | Ui1?], Ui1).
 
 %% greet(Id, Out): say hello on the root channel's write stream, then close it.
 procedure greet(Constant?, PingStream).

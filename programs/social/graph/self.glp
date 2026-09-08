@@ -122,7 +122,7 @@ SgToAppStream ::= [] ; [SgToApp | SgToAppStream].
 
 %% (ii) The channel to the super-app user interface: what the mini-app shows
 %% its person.
-AppUi       ::= greeted(Constant).
+AppUi       ::= opened(Constant) ; greeted(Constant).
 AppUiStream ::= [] ; [AppUi | AppUiStream].
 
 %% Answers of the host's lookups and checks.

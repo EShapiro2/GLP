@@ -3515,8 +3515,8 @@ check "SG super-app core loads" "Loaded program" "$sg_core"
 check_not "SG super-app core is certified" "CERTIFICATE REFUSED" "$sg_core"
 check "SG super-app: the attestation minted at befriend_commit" "T = attest(alice, bob)" "$sg_core"
 check "SG super-app: signed under the person's key" "K = [0-9a-f]\{64\}" "$sg_core"
-check "SG super-app: invitation, handshake, activation: alice greeted" "A = \[greeted(bob)\]" "$sg_core"
-check "SG super-app: invitation, handshake, activation: bob greeted" "B = \[greeted(alice)\]" "$sg_core"
+check "SG super-app: invitation, handshake, activation: alice greeted" "A = \[opened(bob), greeted(bob)\]" "$sg_core"
+check "SG super-app: invitation, handshake, activation: bob greeted" "B = \[opened(alice), greeted(alice)\]" "$sg_core"
 check "SG super-app: a declined invitation opens nothing at alice" "A2 = \[\]" "$sg_core"
 check "SG super-app: a declined invitation opens nothing at bob" "B2 = \[\]" "$sg_core"
 check_not "SG super-app no failed play" "→ failed" "$sg_core"
@@ -3570,10 +3570,15 @@ play_meta(Out).
 play_residual(Out2).
 bench(residual, 100, 7, L).
 bench(meta, 100, 7, L2).
+play_clean(O5, R5).
+play_abort_waiting(O6, R6).
 :quit
 HEREDOC
 2>&1)
 check "SG budget loads" "Loaded program" "$sg_budget"
+check "SG budget control: clean termination closes the request stream" "R5 = \[\]" "$sg_budget"
+check "SG budget control: a counter waiting on its stream is aborted" "O6 = \[1, 2, 3\]" "$sg_budget"
+check "SG budget control: the aborted goal's request stream closes" "R6 = \[\]" "$sg_budget"
 check "SG budget: the counter under bounded/3" "Out = \[1, 2, 3, 4, 5\]" "$sg_budget"
 check "SG budget: the residual program" "Out2 = \[1, 2, 3, 4, 5\]" "$sg_budget"
 check "SG budget: residual counter of 100 under grants of 7" "L = 100" "$sg_budget"

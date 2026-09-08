@@ -126,8 +126,11 @@ coin_drain(Me, [group_joined_member(G, _) | Ns], [send_group(G?, R?) | Cs?]) :-
 coin_drain(Me, [_ | Ns], Cmds?) :- ground(Me?), otherwise | coin_drain(Me?, Ns?, Cmds).
 coin_drain(_, [], []).
 
-%% --- Scenario boot (entered as Bob's agent_init) ---
-agent_init(bob, UserIn, _) :-
+%% --- Scenario boot: the four-actor scenario around Bob, the live-UI agent.
+%% Exported as scenario_init/3, since play_grassapp_duo's agent_init/3 is the
+%% program's agent_init (IGLP Code to SGSG, 2026-09-08 09:01). ---
+exported procedure scenario_init(Constant?, Stream(UserCmd)?, NetInStream?).
+scenario_init(bob, UserIn, _) :-
     create_bonds(bob, 0, 10, 1, BobCash),
     grassapp_agent # agent(bob, BAgentIn?, BNetIn?,
           [person_output(BA2U) | [net_output(BNetOut)]], BobCash?, 11, 0),

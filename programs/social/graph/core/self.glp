@@ -28,3 +28,7 @@ imported procedure superapp_plays#play_attest(String, String, String, _).
 exported procedure play_attest(String, String, String, _).
 play_attest(S?, K?, H?, T?) :- superapp_plays # play_attest(S, K, H, T).
 
+
+imported procedure superapp_plays#play_invite_timed(Integer).
+exported procedure play_invite_timed(Integer).
+play_invite_timed(Ms?) :- superapp_plays # play_invite_timed(Ms).

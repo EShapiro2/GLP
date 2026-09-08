@@ -141,3 +141,49 @@ bob_answer([msg(agent, person, befriend(alice, Resp?)) | _],
            [msg(person, bob, decision(yes, alice, response(Resp)))]).
 bob_answer([_ | Outs], Cmds?) :- otherwise | bob_answer(Outs?, Cmds).
 bob_answer([], []).
+
+%% =============================================================================
+%% play_invite_timed(Ms): play_invite, timed --- the milliseconds from the
+%% moment alice's person sends the invitation to the moment the root
+%% channel's end reaches bob's execution of the mini-app (its opened/1 on the
+%% user-interface stream); the clock is now/1, in milliseconds.
+%% =============================================================================
+exported procedure play_invite_timed(Integer).
+play_invite_timed(Ms?) :-
+    crossbar2(AliceNetOut?, BobNetOut?, AliceNetIn, BobNetIn),
+    self_module(M),
+    certify(M?, CSig),
+    agent # agent(alice, AliceIn?, AliceNetIn?, [user_output(AliceOut), net_output(AliceNetOut)]),
+    tee(AliceUiRaw?, AliceUi, AliceSeen),
+    alice_person_timed(M?, CSig?, AliceUiRaw, AliceOut?, AliceSeen?, T0, AliceIn),
+    sink(AliceUi?),
+    agent # agent(bob, BobIn?, BobNetIn?, [user_output(BobOut), net_output(BobNetOut)]),
+    tee(BobUiRaw?, BobUi, BobSeen),
+    bob_person(M?, CSig?, yes, BobUiRaw, BobOut?, BobSeen?, BobIn),
+    opened_at(BobUi?, T0?, Ms).
+
+procedure sink(Stream(X)?).
+sink([_ | Xs]) :- sink(Xs?).
+sink([]).
+
+%% Alice's person as in play_invite, reading the clock as she sends the
+%% invitation.
+procedure alice_person_timed(Module?, String?, AppUiStream, AgentToUserStream?, AppUiStream?, Integer, UserInStream).
+alice_person_timed(M, CSig, Ui?, Outs, Seen, T0?,
+                   [msg(person, alice, install(ping, M?, CSig?, Ui)),
+                    msg(person, alice, connect(bob)) | Cmds?]) :-
+    alice_wait_timed(Outs?, Seen?, T0, Cmds).
+
+procedure alice_wait_timed(AgentToUserStream?, AppUiStream?, Integer, UserInStream).
+alice_wait_timed([msg(agent, person, connected(bob)) | _], Seen, T0?,
+                 [msg(person, alice, invite(ping, bob)) | Cmds?]) :-
+    now(T0),
+    person_done(Seen?, Cmds).
+alice_wait_timed([_ | Outs], Seen, T0?, Cmds?) :- otherwise | alice_wait_timed(Outs?, Seen?, T0, Cmds).
+alice_wait_timed([], _, 0, []).
+
+%% opened_at(Ui, T0, Ms): the clock at bob's opened/1, less T0.
+procedure opened_at(AppUiStream?, Integer?, Integer).
+opened_at([opened(_) | _], T0, Ms?) :- now(T1), Ms := T1? - T0?.
+opened_at([_ | Ui], T0, Ms?) :- otherwise | opened_at(Ui?, T0?, Ms).
+opened_at([], _, 0).

@@ -320,3 +320,7 @@ agent_init(Id, UserIn, NetIn) :- play_grassapp_duo # agent_init(Id?, UserIn?, Ne
 imported procedure play_grassapp_duo # actor_init(Constant?, Constant?, NetInStream?).
 exported procedure actor_init(Constant?, Constant?, NetInStream?).
 actor_init(Id, Target, NetIn) :- play_grassapp_duo # actor_init(Id?, Target?, NetIn?).
+
+imported procedure play_grassapp_boot # scenario_init(Constant?, Stream(UserCmd)?, NetInStream?).
+exported procedure scenario_init(Constant?, Stream(UserCmd)?, NetInStream?).
+scenario_init(Id, UserIn, NetIn) :- play_grassapp_boot # scenario_init(Id?, UserIn?, NetIn?).

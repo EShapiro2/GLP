@@ -114,3 +114,127 @@ procedure last(Stream(Integer)?, Integer).
 last([X], X?).
 last([_|Xs], L?) :- otherwise | last(Xs?, L).
 last([], 0).
+
+%% =============================================================================
+%% CONTROL AS WELL AS RESOURCE BOUNDS: execute(Goal, Budget, Requests, Control)
+%% (SGSG paper, Section 6.3 at GSG d51747f, after Logix's control mode)
+%% =============================================================================
+%% As bounded/3, and in addition a control stream the super-app writes,
+%% distributed to both conjuncts of a conjunction, read by unknown/1 in the
+%% guards, and an abort clause that ends a goal once abort is written on it.
+%%
+%% WHAT DOES NOT RUN OF THE PAPER'S INTENT, and why the residual program is the
+%% one that gives control: reduce/2 is a body goal (a guard may call only what
+%% the partial evaluator unfolds, never a multi-clause procedure), so execute/4
+%% commits to its reduce clause before reduce/2 waits for the goal's data; a
+%% goal waiting for data is then inside a suspended reduce/2, past the clause
+%% that would abort it, and abort does not end it (play_abort_interpreted
+%% suspends).  In the residual program the control test precedes each clause's
+%% own guard, so the abort clause takes a waiting goal as it takes a running
+%% one (play_abort_waiting succeeds).  Logix could put clause/2 in the guard;
+%% GLP cannot, and the paper's listing should say that the meta-interpreter
+%% states the semantics and the residual program realises it.
+
+procedure execute(_?, Integer?, Stream(Request), Stream(Constant)?).
+execute(true, _, [], _).
+execute((A, B), N, Rs?, Cs) :-
+    N1 := N? // 2, N2 := N? - N1?,
+    distribute(Cs?, Cs1, Cs2),
+    execute(A?, N1?, Rs1, Cs1?),
+    execute(B?, N2?, Rs2, Cs2?),
+    merge(Rs1?, Rs2?, Rs).
+execute(G, N, Rs?, Cs) :-
+    otherwise, unknown(Cs?), N? > 0 |
+    N1 := N? - 1, reduce(G?, B),
+    execute(B?, N1?, Rs, Cs?).
+execute(G, N, [more(N1)|Rs?], Cs) :-
+    otherwise, unknown(Cs?), N? =?= 0 |
+    execute(G?, N1?, Rs, Cs?).
+execute(_, _, [], [abort|_]).
+
+%% The control stream given to both conjuncts; its messages are constants,
+%% which is what lets one reader of it be written twice in a clause.
+procedure distribute(Stream(Constant)?, Stream(Constant), Stream(Constant)).
+distribute([X|Xs], [X?|Ys?], [X?|Zs?]) :- constant(X?) | distribute(Xs?, Ys, Zs).
+distribute([], [], []).
+
+%% (d) The residual program of execute/4 against count/3: each predicate gains
+%% the budget, the request stream and the control stream; each clause gains,
+%% before its own guard, the test that the control stream is unwritten and the
+%% budget test; each predicate gains a request clause and an abort clause,
+%% which takes a waiting goal as it takes a running one.  The abort clause
+%% closes the goal's output stream: a head has no anonymous writer at an
+%% output position, so the paper's `_` there is `[]` here.
+procedure count(Stream(Integer)?, Integer?, Stream(Integer), Integer?, Stream(Request), Stream(Constant)?).
+count([_|Xs], N, [N1?|Out?], B, Rs?, Cs) :-
+    unknown(Cs?), B? > 0 |
+    B1 := B? - 1, N1 := N? + 1,
+    count(Xs?, N1?, Out, B1?, Rs, Cs?).
+count([], _, [], B, [], _) :- B? > 0 | true.
+count(Xs, N, Out?, B, [more(B1)|Rs?], Cs) :-
+    unknown(Cs?), B? =?= 0 |
+    count(Xs?, N?, Out, B1?, Rs, Cs?).
+count(_, _, [], _, [], [abort|_]).
+
+%% --- The super-app's control ---
+
+%% abort_when(Trigger, Cs): write abort on the control stream once Trigger is
+%% known --- here, once the counter has shown three counts.
+procedure abort_when(Constant?, Stream(Constant)).
+abort_when(T, [abort]) :- ground(T?) | true.
+
+%% third(Out, T): T := ok at the third element of Out (none if it closes first).
+procedure third(Stream(Integer)?, Constant).
+third([_, _, _ | _], ok).
+third([_, _], none).
+third([_], none).
+third([], none).
+
+%% =============================================================================
+%% PLAYS OF CONTROL
+%% =============================================================================
+
+%% play_abort_waiting(Out, Rs): the residual counter on a stream that never
+%% closes, budget 10 (no request); after three counts the super-app writes
+%% abort; the counter, waiting on its stream, ends and its request stream
+%% closes.  Out = [1, 2, 3 | _], Rs = [], → succeeds.
+exported procedure play_abort_waiting(Stream(Integer), Stream(Request)).
+play_abort_waiting(Out?, Rs?) :-
+    open_three(Xs),
+    count(Xs?, 0, Out, 10, Rs, Cs?),
+    third(Out?, T),
+    abort_when(T?, Cs).
+
+%% open_three(Xs): three elements and a tail that is never written.
+procedure open_three(Stream(Integer)).
+open_three([1, 2, 3 | Tail?]) :- hold(Tail).
+
+%% hold(X): hold a writer and never bind it.
+procedure hold(Stream(Integer)).
+hold(X?) :- true.
+
+%% play_clean(Out, Rs): the residual counter on a closed stream under grants of
+%% 2, the control stream never written: clean termination, the request stream
+%% closing with nothing on the control stream.  Out = [1,2,3,4,5], Rs = [],
+%% → succeeds.
+exported procedure play_clean(Stream(Integer), Stream(Request)).
+play_clean(Out?, Rs?) :-
+    count([1, 2, 3, 4, 5], 0, Out, 2, Rs0, Cs?),
+    grant_seen(Rs0?, 2, Rs, Cs).
+
+%% grant_seen(Rs0, K, Rs, Cs): the super-app grants K to every request; when
+%% the request stream closes it closes its copy Rs, for the caller to see, and
+%% the control stream Cs, on which it wrote nothing (Appendix D).
+procedure grant_seen(Stream(Request)?, Integer?, Stream(Request), Stream(Constant)).
+grant_seen([more(K?) | Rs0], K, Rs?, Cs?) :- grant_seen(Rs0?, K?, Rs, Cs).
+grant_seen([], _, [], []).
+
+%% play_abort_interpreted(Out, Rs): the same abort under execute/4, where
+%% reduce/2 waits inside the committed reduce clause and abort cannot reach
+%% the waiting goal: the play SUSPENDS (Out = [1, 2, 3 | _], Rs unbound).
+exported procedure play_abort_interpreted(Stream(Integer), Stream(Request)).
+play_abort_interpreted(Out?, Rs?) :-
+    open_three(Xs),
+    execute(count(Xs?, 0, Out), 10, Rs, Cs?),
+    third(Out?, T),
+    abort_when(T?, Cs).

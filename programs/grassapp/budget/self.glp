@@ -19,3 +19,15 @@ play_residual(Out?) :- bounded # play_residual(Out).
 imported procedure bounded # bench(Constant?, Integer?, Integer?, Integer).
 exported procedure bench(Constant?, Integer?, Integer?, Integer).
 bench(Which, N, K, Last?) :- bounded # bench(Which?, N?, K?, Last).
+
+imported procedure bounded # play_abort_waiting(Stream(Integer), Stream(Request)).
+exported procedure play_abort_waiting(Stream(Integer), Stream(Request)).
+play_abort_waiting(Out?, Rs?) :- bounded # play_abort_waiting(Out, Rs).
+
+imported procedure bounded # play_clean(Stream(Integer), Stream(Request)).
+exported procedure play_clean(Stream(Integer), Stream(Request)).
+play_clean(Out?, Rs?) :- bounded # play_clean(Out, Rs).
+
+imported procedure bounded # play_abort_interpreted(Stream(Integer), Stream(Request)).
+exported procedure play_abort_interpreted(Stream(Integer), Stream(Request)).
+play_abort_interpreted(Out?, Rs?) :- bounded # play_abort_interpreted(Out, Rs).
