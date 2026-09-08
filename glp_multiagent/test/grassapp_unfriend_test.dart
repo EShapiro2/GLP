@@ -35,6 +35,8 @@ void main() {
         // programs/grassapp is a program (SGSG, d27e4d6a): loaded as one.
         glpSources: const [],
         programDir: _ga,
+        // The boot play's entry point (SGSG, 8412aae7).
+        goalLabel: 'scenario_init/3',
         rootSelfGlpPath:
             File('/Users/udi/Grassroots/GLP/programs/self.glp').absolute.path,
         friends: const ['alice', 'charlie'],

@@ -24,6 +24,9 @@ void main() {
       // self.glp exports agent_init/3 as an entry point.
       glpSources: const [],
       programDir: '$repo/grassapp',
+      // The boot play's entry point, exported by grassapp/self.glp under its
+      // own name (SGSG, 8412aae7); agent_init/3 is the duo play's.
+      goalLabel: 'scenario_init/3',
       rootSelfGlpPath: '$repo/self.glp',
       friends: const ['alice', 'charlie', 'dana', 'eve'],
     );

@@ -300,8 +300,13 @@ class AgentRuntime {
     heap.bindVariable(arg0Writer, rt.ConstTerm(agentIdLower));
     args[argIdx++] = rt.VarRef(arg0Reader);
 
-    // For agent_init/3 (legacy): insert UserIn before NetIn
-    if (goalLabel == 'agent_init/3') {
+    // Arg 1: the person's input stream, where the entry takes one --- an
+    // arity-3 entry with no extra constants (agent_init/3, scenario_init/3:
+    // Id, UserIn, NetIn). The plays' actors (actor_init/3: Id, Target, NetIn)
+    // and the parent/child entries take constants there instead. Decided by
+    // the goal's shape, not its name.
+    final goalArity = int.parse(goalLabel.split('/').last);
+    if (goalArity == extraArgs.length + 3) {
       final (userWriter, userReader) = heap.allocateVariable();
       heap.bindVariable(userWriter, rt.VarRef(userInReader));
       args[argIdx++] = rt.VarRef(userReader);

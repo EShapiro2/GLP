@@ -234,6 +234,8 @@ class _CoordinatorScreenState extends State<CoordinatorScreen> {
       agentId: 'Bob',
       glpSources: const [],
       programDir: programDir,
+      // The boot play's entry point (SGSG, 8412aae7); agent_init/3 is the duo's.
+      goalLabel: 'scenario_init/3',
       rootSelfGlpPath: glp.rootSelfGlp,
       friends: const ['alice', 'charlie'],
       replyPort: _replyPort.sendPort,
