@@ -10,6 +10,7 @@ import 'package:glp_runtime/engine/glp_engine.dart';
 import 'package:glp_runtime/multiagent/simulation_network.dart'
     show NetworkDirectory, SimulationNetworkClient;
 import 'package:glp_runtime/multiagent/boot_loader.dart' show BootLoader;
+import 'package:glp_runtime/wire/artefact.dart' show Artefact;
 import 'package:glp_runtime/multiagent/isolate_manager.dart'
     show IsolateManager;
 import 'package:glp_runtime/runtime/scheduler.dart';
@@ -93,6 +94,47 @@ void main() async {
         }
       } catch (e) {
         print('Emit failed: $e');
+      }
+      continue;
+    }
+
+    if (trimmed.startsWith(':artefact')) {
+      // :artefact <program dir> [<dest dir>] — compile the program directory
+      // and write its certified artefact as <dest dir>/<name>.glpw, the dest
+      // defaulting to the program's own directory, which is where the
+      // catalogue's compile/2 writes it. A program that load_file/2s another
+      // has the artefact placed in its own directory, the only place it can
+      // resolve a name. The certificate is under this REPL's person's key.
+      final parts = trimmed.split(RegExp(r'\s+'));
+      if (parts.length < 2 || parts.length > 3) {
+        print('Usage: :artefact <program directory> [<destination directory>]');
+        continue;
+      }
+      final progDir = parts[1];
+      final destDir = parts.length == 3 ? parts[2] : progDir;
+      if (!Directory(progDir).existsSync()) {
+        print('Error: no such directory: $progDir');
+        continue;
+      }
+      if (!Directory(destDir).existsSync()) {
+        print('Error: no such directory: $destDir');
+        continue;
+      }
+      try {
+        final compiler = GlpEngine(
+            rootSelfGlpPath: rootSelfGlpPath, identity: engine.identity)
+          ..strictTypes = engine.strictTypes;
+        compiler.loadProgram(progDir);
+        final module = compiler.appModule!;
+        final artefact = module.artefact as Artefact;
+        final out = File('$destDir/${module.name}.glpw');
+        out.writeAsBytesSync(artefact.toBytes());
+        final cert = artefact.certificate;
+        print(cert.isRefused
+            ? '✓ Wrote ${out.path} --- no certificate: refused'
+            : '✓ Wrote ${out.path} --- certified under ${engine.identity.pub.hex}');
+      } catch (e) {
+        print('Artefact failed: $e');
       }
       continue;
     }
@@ -345,6 +387,7 @@ void _printHelp() {
   print('  :emit <dir>            Write the compiled GLP beside each .vglp');
   print('  :mad <agent>           Enter madGLP mode as <agent> (seam predicates run)');
   print('  :boot <f>_boot.glp     Run a multi-agent boot program (one isolate per agent)');
+  print('  :artefact <dir> [<to>] Write a program directory\'s certified artefact (<to>/<name>.glpw)');
   print('');
   print('Type Checking:');
   print('  Programs with procedure declarations are type-checked');

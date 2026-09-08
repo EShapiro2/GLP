@@ -1,0 +1,18 @@
+%% mad_load_module/agents.glp — the agent of ../mad_load_module_boot.glp.
+
+%% alice reads the artefact beside her program and activates it.
+exported procedure alice_init(_?, _?).
+alice_init(_, _) :-
+    load_file("run_module_probe.glpw", C),
+    run_it(C?).
+
+procedure run_it(Content?).
+run_it(M) :- module(M?) | find_type(hello/1, T), run(hello(Z), T?, M?), report(Z?).
+run_it(S) :- string(S?) | send_to_user([not_a_module]).
+
+procedure report(Stream(Constant)?).
+report(Z) :- ground(Z?) | send_to_user([ran(Z?)]).
+
+%% Declared so that find_type/2 has hello/1's identity in scope; never run.
+procedure hello(Stream(Constant)).
+hello([]).

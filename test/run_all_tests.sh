@@ -3362,6 +3362,65 @@ check "MB2 the boot settles with two agents" "Boot settled: 2 agents" "$mb2"
 check "MB2 a shipped module value is activated by run/3 under find_type's identity" "\[bob\] ran(\[done\])" "$mb2"
 
 echo ""
+# =============================================================================
+# SECTION SL: load_file/2 and the artefact on disc (:artefact)
+# =============================================================================
+# GLP-Spec appendix-guards, "Compilation and file reading": load_file(Name,
+# Content) reads the file Name names, within the calling module's own
+# directory, and assigns Content the module it holds where it is a certified
+# compiled program --- the certificate verified as the loader verifies it ---
+# and its text otherwise.  The artefacts are written by the REPL's :artefact
+# into the loading program's directory at test time (they are build outputs,
+# ignored by git) and removed at the end of the section.
+echo "=== Section SL: load_file/2 and :artefact ==="
+
+SL_DIR="$GLP_DIR/programs/tests/load_probe"
+SL_MAD="$GLP_DIR/programs/tests/mad_load_module"
+rm -f "$SL_DIR"/*.glpw "$SL_MAD"/*.glpw
+
+sl0=$("$REPL_RUN" <<HEREDOC
+:artefact $GLP_DIR/programs/tests/run_module_probe $SL_DIR
+:artefact $GLP_DIR/programs/tests/run_module_probe $SL_MAD
+:quit
+HEREDOC
+2>&1)
+check "SL0 :artefact writes a certified artefact into the loading program's directory" "Wrote $SL_DIR/run_module_probe.glpw --- certified under [0-9a-f]\{64\}" "$sl0"
+
+# A forged artefact: the certified one with its last byte --- inside the
+# signature --- flipped.
+cp "$SL_DIR/run_module_probe.glpw" "$SL_DIR/forged.glpw"
+sl_size=$(stat -f%z "$SL_DIR/forged.glpw")
+printf '\000' | dd of="$SL_DIR/forged.glpw" bs=1 seek=$((sl_size - 1)) conv=notrunc 2>/dev/null
+
+sl1=$("$REPL_RUN" <<HEREDOC
+$SL_DIR
+load("run_module_probe.glpw", C).
+activate("run_module_probe.glpw", Z).
+load("note.txt", T).
+load("forged.glpw", F).
+load("../cert_ok/self.glp", E).
+load("/etc/hosts", A).
+:quit
+HEREDOC
+2>&1)
+check "SL1 a certified artefact loads as a Module" "C = Module(run_module_probe)" "$sl1"
+check "SL1 run/3 activates the loaded module under find_type's identity" "Z = \[done\]" "$sl1"
+check "SL1 a text file loads as its text" "T = hello world" "$sl1"
+check "SL1 an artefact whose certificate does not verify loads as text, not a Module" "F = GLPW" "$sl1"
+check "SL1 a name that leaves the caller's directory is an error" "_load_file/2: ../cert_ok/self.glp is not resolved within the calling module's directory" "$sl1"
+check "SL1 an absolute name is an error" "_load_file/2: /etc/hosts is not resolved within the calling module's directory" "$sl1"
+
+# Under the boot harness: an agent reads the artefact beside its program and
+# activates it --- the super-app installing a mini-app it did not compile.
+sl2=$("$REPL_RUN" <<HEREDOC
+:boot $GLP_DIR/programs/tests/mad_load_module_boot.glp
+:quit
+HEREDOC
+2>&1)
+check "SL2 under :boot an agent loads the artefact from its program's directory and activates it" "\[alice\] ran(\[done\])" "$sl2"
+
+rm -f "$SL_DIR"/*.glpw "$SL_MAD"/*.glpw
+echo ""
 
 # =============================================================================
 # Section Q: Dart unit tests (whole tree)

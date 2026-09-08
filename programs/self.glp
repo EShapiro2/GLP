@@ -52,6 +52,12 @@ Key ::= String.
 SignedTerm ::= String.
 Hash ::= String.
 
+% What load_file/2 assigns (GLP-Spec appendix-guards, "Compilation and file
+% reading"): the module a file holds where it is a certified compiled program,
+% and its text otherwise, the caller discriminating with the string and module
+% guards.  Compiled, the catalogue's type for compile/2, waits with compile/2.
+Content ::= String ; Module.
+
 % Arithmetic expressions
 Exp ::= Number ; +(Exp, Exp) ; -(Exp, Exp) ; *(Exp, Exp) ; /(Exp, Exp) ; //(Exp, Exp) ; mod(Exp, Exp) ; neg(Exp).
 
@@ -208,6 +214,7 @@ procedure '_decompose_module'(Module?, Key, Hash, Hash).
 procedure '_run'(_?, Module?).
 procedure '_run'(_?, Constant?, Module?).
 procedure '_find_type'(_?, Constant).
+procedure '_load_file'(String?, Content).
 
 % I/O
 procedure '_output'(_?).
@@ -561,7 +568,7 @@ X? =.. [Y|Ys] :- list(Ys?) | '_list_to_tuple'([Y?|Ys?], X).
 Y? ..= X :- compound(X?) | '_tuple_to_list'(X?, Y).
 
 % =============================================================================
-% MODULE AS A VALUE (self_module/1, run/2, run/3, find_type/2)
+% MODULE AS A VALUE (self_module/1, run/2, run/3, find_type/2, load_file/2)
 % =============================================================================
 % Wrappers over the '_self_module', '_run' and '_find_type' kernels (GLP-Spec
 % appendix-guards, "Module as a value" and "Dynamic activation").  run(Goal,
@@ -596,6 +603,16 @@ run(G, T, M) :- known(T?), known(M?) | '_run'(G?, T?, M?).
 
 procedure find_type(_?, Constant).
 find_type(P, T?) :- ground(P?) | '_find_type'(P?, T).
+
+%% load_file/2 - read the file Name names and assign Content the module that
+%% file holds where it is a certified compiled program, and its text otherwise
+%% (GLP-Spec appendix-guards, "Compilation and file reading").  Name is
+%% resolved within the calling module's own directory, which compilation
+%% assigns it; the caller can neither escape it nor choose otherwise, and there
+%% is no absolute form.  A file whose certificate does not check is text and
+%% not a Module, which is what decompose_module/4 rests on.
+procedure load_file(String?, Content).
+load_file(N, C?) :- ground(N?) | '_load_file'(N?, C).
 
 % =============================================================================
 % IDENTITY, SIGNATURE AND HELD LINKS (self_key/1, sign/3, signed/4, signed/2,

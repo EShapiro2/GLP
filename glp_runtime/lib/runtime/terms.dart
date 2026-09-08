@@ -111,7 +111,15 @@ class ModuleTerm implements Term {
   /// disagree with the source it describes; one recomputed from it cannot).
   Object? exportedTypesCache;  // TypeIdentityTables
 
-  ModuleTerm(this.artefact, {this.name = '', this.declaredTypes});
+  /// The module's own directory, which compilation assigns it (GLP-Spec
+  /// appendix-guards, "Compilation and file reading": the module's path from
+  /// the root): where `load_file/2` resolves a name, and the caller can neither
+  /// escape it nor choose otherwise. Null for a module that arrived as a value
+  /// or was read from a file, whose artefact names no directory.
+  final String? directory;
+
+  ModuleTerm(this.artefact,
+      {this.name = '', this.declaredTypes, this.directory});
 
   @override
   String toString() => 'Module($name)';

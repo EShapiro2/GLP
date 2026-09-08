@@ -391,7 +391,8 @@ class GlpEngine {
       program = _compiler.compileProgram(linked.program,
           procDeclarations: linked.procDeclarations, skipGlobalSRSW: false);
       // This unit's module value — its artefact: h(M) + code.
-      moduleValue = _moduleValueOf(_baseName(name), program, linked, modules);
+      moduleValue = _moduleValueOf(_baseName(name), program, linked, modules,
+          directory: File(name).parent.absolute.path);
     } else {
       program = _compiler.compile(source);
     }
@@ -453,7 +454,8 @@ class GlpEngine {
     // The program's module value — its artefact (h(M) + code): the value
     // `self_module` returns and a friend adopts.
     final moduleValue =
-        _moduleValueOf(_baseName(programDir), program, linked, modules);
+        _moduleValueOf(_baseName(programDir), program, linked, modules,
+            directory: Directory(programDir).absolute.path);
     _loadedModuleValues['__program__'] = moduleValue;
     _appModule = moduleValue;
 
@@ -971,8 +973,9 @@ class GlpEngine {
     String moduleName,
     BytecodeProgram program,
     LinkResult linked,
-    List<DiscoveredModule> modules,
-  ) {
+    List<DiscoveredModule> modules, {
+    String? directory,
+  }) {
     final typeDefs = <String, TypeDef>{};
     for (final mod in modules) {
       for (final td in mod.ast.typeDefs) {
@@ -1055,7 +1058,7 @@ class GlpEngine {
       print('[TYPE WARNING] $moduleName: type-identity tables not built: $e');
     }
     return rt.ModuleTerm(artefact,
-        name: moduleName, declaredTypes: declaredTypes);
+        name: moduleName, declaredTypes: declaredTypes, directory: directory);
   }
 
   ModuleInfo _extractModuleInfo(

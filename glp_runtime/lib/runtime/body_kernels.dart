@@ -10,6 +10,8 @@
 /// - VarRef has only addr field
 /// - Use heap.isWriter/isReader to check cell type
 
+import 'dart:convert';
+import 'dart:io';
 import 'dart:math' as math;
 import 'dart:typed_data';
 
@@ -116,6 +118,7 @@ void registerStandardBodyKernels(BodyKernelRegistry registry) {
   registry.register('_sign', 3, signKernel);
   registry.register('_signed', 4, signedKernel);
   registry.register('_decompose_module', 4, decomposeModuleKernel);
+  registry.register('_load_file', 2, loadFileKernel);
 
   // Networking seam kernels (Definition Seam Predicates)
   registry.register('_peer_address', 2, peerAddressKernel);
@@ -1107,6 +1110,84 @@ BodyKernelResult decomposeModuleKernel(GlpRuntime rt, List<Object?> args) {
   final r2 = _bindResult(rt, args[2], ConstTerm(_hexOf(cert.hSrc)));
   if (r2 != BodyKernelResult.success) return r2;
   return _bindResult(rt, args[3], ConstTerm(_hexOf(cert.hBin)));
+}
+
+// =============================================================================
+// FILE READING — '_load_file'/2 (GLP-Spec appendix-guards, "Compilation and
+// file reading"; IGLP code format §Loader)
+// =============================================================================
+
+/// '_load_file'(Name?, Content) — read the file Name names and assign Content
+/// the module it holds where it is a certified compiled program — its
+/// certificate verified as the loader verifies it — and its text otherwise, so
+/// a forged artefact is a string and never a Module. Name is resolved within
+/// the calling module's own directory, which compilation assigned it: no
+/// absolute form, no `..`, and a symbolic link that leaves the directory is
+/// refused too. The caller can neither escape the directory nor choose
+/// otherwise. A module that arrived as a value has no directory and can read
+/// no file.
+BodyKernelResult loadFileKernel(GlpRuntime rt, List<Object?> args) {
+  if (args.length != 2) {
+    print('[ABORT] _load_file/2: expected 2 arguments, got ${args.length}');
+    return BodyKernelResult.abort;
+  }
+  var name = _groundString(rt, args[0]);
+  if (name == null) {
+    print('[ABORT] _load_file/2: first argument (Name) must be a ground '
+        'string, got ${_deref(rt, args[0])}');
+    return BodyKernelResult.abort;
+  }
+  // A string literal keeps its quotes in the runtime's constant; the file
+  // name is the text between them.
+  if (name.length >= 2 && name.startsWith('"') && name.endsWith('"')) {
+    name = name.substring(1, name.length - 1);
+  }
+
+  final goalId = rt.currentGoalId;
+  final module = goalId == null ? null : rt.getGoalModule(goalId);
+  final dir = module is ModuleTerm ? module.directory : null;
+  if (dir == null) {
+    print('[ABORT] _load_file/2: the calling goal\'s module has no directory '
+        'to resolve $name in (a module that arrived as a value has none)');
+    return BodyKernelResult.abort;
+  }
+  if (name.isEmpty ||
+      name.startsWith('/') ||
+      name.split('/').any((seg) => seg == '..' || seg.isEmpty)) {
+    print('[ABORT] _load_file/2: $name is not resolved within the calling '
+        'module\'s directory: a name is relative to it, has no absolute form, '
+        'and does not leave it');
+    return BodyKernelResult.abort;
+  }
+  final file = File('$dir/$name');
+  if (!file.existsSync()) {
+    print('[ABORT] _load_file/2: no file $name in the calling module\'s '
+        'directory $dir');
+    return BodyKernelResult.abort;
+  }
+  final String base;
+  final String resolved;
+  try {
+    base = Directory(dir).resolveSymbolicLinksSync();
+    resolved = file.resolveSymbolicLinksSync();
+  } catch (e) {
+    print('[ABORT] _load_file/2: cannot resolve $name: $e');
+    return BodyKernelResult.abort;
+  }
+  if (!resolved.startsWith('$base${Platform.pathSeparator}')) {
+    print('[ABORT] _load_file/2: $name is not resolved within the calling '
+        'module\'s directory: it leaves $dir');
+    return BodyKernelResult.abort;
+  }
+
+  final bytes = file.readAsBytesSync();
+  final artefact = Artefact.certifiedFromBytes(bytes);
+  if (artefact != null) {
+    return _bindResult(
+        rt, args[1], ModuleTerm(artefact, name: artefact.moduleName));
+  }
+  return _bindResult(
+      rt, args[1], ConstTerm(utf8.decode(bytes, allowMalformed: true)));
 }
 
 // =============================================================================

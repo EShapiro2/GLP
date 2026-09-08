@@ -1,0 +1,10 @@
+%% mad_load_module_boot.glp — under the boot harness, an agent reads a
+%% certified artefact from its program's own directory with load_file/2 and
+%% activates it by run/3 (GLP-Spec appendix-guards, "Compilation and file
+%% reading" and "Dynamic activation"): the super-app's installation of a
+%% mini-app it did not compile itself.  The artefact, run_module_probe.glpw, is
+%% written into mad_load_module/ by the REPL's :artefact before the boot.
+
+procedure boot.
+boot :-
+    alice_init(alice, _)@alice.

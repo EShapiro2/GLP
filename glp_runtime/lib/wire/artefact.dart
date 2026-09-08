@@ -443,6 +443,33 @@ class Artefact {
       compiledIdentityOfBody(
           Uint8List.sublistView(artefactBytes, 0, bodyLength(artefactBytes)));
 
+  /// The artefact [bytes] hold, where they are a certified compiled program:
+  /// they parse as an artefact, the body hashes to the certificate's compiled
+  /// identity, and the certificate's signature verifies under the key it
+  /// carries — the loader's step 1 without an adoption offer (§Loader).
+  /// Null otherwise: a file that is not an artefact, or whose certificate does
+  /// not check, is text and not a Module (GLP-Spec appendix-guards,
+  /// "Compilation and file reading"), and a forged artefact is never a Module.
+  static Artefact? certifiedFromBytes(Uint8List bytes) {
+    final Artefact art;
+    try {
+      art = fromBytes(bytes);
+    } catch (_) {
+      return null;
+    }
+    final cert = art.certificate;
+    if (cert.isRefused) return null;
+    final Uint8List id;
+    try {
+      id = compiledIdentityOf(bytes);
+    } catch (_) {
+      return null;
+    }
+    if (!_bytesEqual(id, cert.hBin)) return null;
+    if (!cert.verifies()) return null;
+    return art;
+  }
+
   /// Parse artefact bytes (§Program Artefact). Verifies the magic and
   /// code-format version, and the framing; not the certificate — that is the
   /// loader's.

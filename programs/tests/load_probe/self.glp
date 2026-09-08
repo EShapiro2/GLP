@@ -1,0 +1,16 @@
+%% IGLP probe: load_file/2 (GLP-Spec appendix-guards, "Compilation and file
+%% reading").  A name is resolved within this program's own directory: a
+%% certified artefact placed here --- run_module_probe.glpw, written by the
+%% REPL's :artefact from programs/tests/run_module_probe --- loads as a Module
+%% that run/3 activates; a text file loads as its text; an artefact whose
+%% certificate does not verify loads as text; a name that leaves the directory
+%% is an error.
+
+imported procedure probe#load(String?, Content).
+imported procedure probe#activate(String?, Stream(Constant)).
+
+exported procedure load(String?, Content).
+load(N, C?) :- probe # load(N?, C).
+
+exported procedure activate(String?, Stream(Constant)).
+activate(N, Z?) :- probe # activate(N?, Z).

@@ -18,3 +18,6 @@ pubspec.lock
 .vscode/
 .idea/
 glp_runtime/bin/glp_repl_exe
+
+## Compiled GLP artefacts (the REPL's :artefact; the catalogue's compile/2)
+*.glpw

@@ -1,0 +1,17 @@
+%% load(N, C): what load_file/2 assigns for the file N names.
+exported procedure load(String?, Content).
+load(N, C?) :- load_file(N?, C).
+
+%% activate(N, Z): load the file, and where it holds a module, activate it by
+%% run/3 under the type identity of hello/1 in this scope, posting hello(Z).
+exported procedure activate(String?, Stream(Constant)).
+activate(N, Z?) :- load_file(N?, C), run_it(C?, Z).
+
+procedure run_it(Content?, Stream(Constant)).
+run_it(M, Z?) :- module(M?) | find_type(hello/1, T), run(hello(Z), T?, M?).
+run_it(S, [not_a_module]) :- string(S?) | true.
+
+%% Declared here so that find_type/2 has hello/1's identity in scope --- the
+%% same automaton as the artefact's exported hello/1; the clause never runs.
+procedure hello(Stream(Constant)).
+hello([]).
