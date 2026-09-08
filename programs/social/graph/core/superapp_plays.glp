@@ -1,12 +1,12 @@
 %% superapp_plays.glp --- distribution with an invitation, the handshake,
 %% activation by run/3 with the two grants, and the attestation (SGSG paper,
 %% Sections 3 and 5.5), played by two social-graph agents in one heap, the
-%% network a two-way crossbar for cold calls.  The certified mini-app is this
-%% program: its module value is the one the REPL can obtain, and, holding no UI
-%% boot play, the program is certified (self.glp).  The persons are scripted
-%% on the agents' person streams --- the mediator's cards for an invitation
-%% are vGLP's to add --- and the mini-apps' user-interface streams come back
-%% to the caller.
+%% network a two-way crossbar for cold calls, and under :boot (../../superapp_boot.glp)
+%% by two isolates with their own keys.  The certified mini-app is ../pingapp,
+%% whose artefact the super-app reads with load_file/2.  The persons are
+%% scripted on the agents' person streams --- the mediator's cards for an
+%% invitation are vGLP's to add --- and the mini-apps' user-interface streams
+%% come back to the caller, or, under :boot, go to the person.
 
 imported procedure agent#agent(Constant?, UserInStream?, NetInStream?, OutputsList?).
 
@@ -24,11 +24,16 @@ procedure tee(Stream(X)?, Stream(X), Stream(X)).
 tee([X|Xs], [X?|Ys?], [X?|Zs?]) :- ground(X?) | tee(Xs?, Ys, Zs).
 tee([], [], []).
 
-%% The creator's certification of this program as a mini-app: signed over its
-%% source identity, the contract's two act schemas and the checker's verdict.
-procedure certify(Module?, String).
-certify(M, CSig?) :-
-    decompose_module(M?, _, Src, _),
+%% The certified mini-app: pingapp.glpw beside this program, written by the
+%% REPL's :artefact from ../pingapp and read with load_file/2 --- a Module
+%% where its certificate verifies, its text otherwise.  certified/4 gives the
+%% module, the compiler's key its certificate carries, and the creator's
+%% certification, signed here over its source identity, the contract's two act
+%% schemas and the checker's verdict.
+procedure certified(Content?, String, String).
+certified(M, CK?, CSig?) :-
+    module(M?) |
+    decompose_module(M?, CK, Src, _),
     self_key(K),
     sign(creator_cert(Src?, [friendship, ending_a_friendship], grassroots), K?, CSig).
 
@@ -41,14 +46,14 @@ certify(M, CSig?) :-
 exported procedure play_invite(AppUiStream, AppUiStream).
 play_invite(AliceUi?, BobUi?) :-
     crossbar2(AliceNetOut?, BobNetOut?, AliceNetIn, BobNetIn),
-    self_module(M),
-    certify(M?, CSig),
+    load_file("pingapp.glpw", C),
+    certified(C?, _, CSig),
     agent # agent(alice, AliceIn?, AliceNetIn?, [user_output(AliceOut), net_output(AliceNetOut)]),
     tee(AliceUiRaw?, AliceUi, AliceSeen),
-    alice_person(M?, CSig?, yes, AliceUiRaw, AliceOut?, AliceSeen?, AliceIn),
+    alice_person(C?, CSig?, yes, AliceUiRaw, AliceOut?, AliceSeen?, AliceIn),
     agent # agent(bob, BobIn?, BobNetIn?, [user_output(BobOut), net_output(BobNetOut)]),
     tee(BobUiRaw?, BobUi, BobSeen),
-    bob_person(M?, CSig?, yes, BobUiRaw, BobOut?, BobSeen?, BobIn).
+    bob_person(C?, CSig?, yes, BobUiRaw, BobOut?, BobSeen?, BobIn).
 
 %% =============================================================================
 %% play_invite_declined: as above, but bob's person declines; no conversation
@@ -58,19 +63,19 @@ play_invite(AliceUi?, BobUi?) :-
 exported procedure play_invite_declined(AppUiStream, AppUiStream).
 play_invite_declined(AliceUi?, BobUi?) :-
     crossbar2(AliceNetOut?, BobNetOut?, AliceNetIn, BobNetIn),
-    self_module(M),
-    certify(M?, CSig),
+    load_file("pingapp.glpw", C),
+    certified(C?, _, CSig),
     agent # agent(alice, AliceIn?, AliceNetIn?, [user_output(AliceOut), net_output(AliceNetOut)]),
     tee(AliceUiRaw?, AliceUi, AliceSeen),
-    alice_person(M?, CSig?, no, AliceUiRaw, AliceOut?, AliceSeen?, AliceIn),
+    alice_person(C?, CSig?, no, AliceUiRaw, AliceOut?, AliceSeen?, AliceIn),
     agent # agent(bob, BobIn?, BobNetIn?, [user_output(BobOut), net_output(BobNetOut)]),
     tee(BobUiRaw?, BobUi, BobSeen),
-    bob_person(M?, CSig?, no, BobUiRaw, BobOut?, BobSeen?, BobIn).
+    bob_person(C?, CSig?, no, BobUiRaw, BobOut?, BobSeen?, BobIn).
 
 %% Alice's person: install the mini-app, cold-call bob, and once connected
 %% invite him.  Wait = yes: keep the person stream open until her execution
 %% has been greeted; no: close it after inviting.
-procedure alice_person(Module?, String?, Decision?, AppUiStream, AgentToUserStream?, AppUiStream?, UserInStream).
+procedure alice_person(Content?, String?, Decision?, AppUiStream, AgentToUserStream?, AppUiStream?, UserInStream).
 alice_person(M, CSig, Wait, Ui?, Outs, Seen,
              [msg(person, alice, install(ping, M?, CSig?, Ui)),
               msg(person, alice, connect(bob)) | Cmds?]) :-
@@ -92,7 +97,7 @@ person_done([], []).
 
 %% Bob's person: install the mini-app and give (or refuse) consent before the
 %% offer arrives; answer alice's cold call; then wait to be greeted, or close.
-procedure bob_person(Module?, String?, Decision?, AppUiStream, AgentToUserStream?, AppUiStream?, UserInStream).
+procedure bob_person(Content?, String?, Decision?, AppUiStream, AgentToUserStream?, AppUiStream?, UserInStream).
 bob_person(M, CSig, yes, Ui?, Outs, Seen,
            [msg(person, bob, install(ping, M?, CSig?, Ui)),
             msg(person, bob, accept_invite(ping, alice)) | Cmds?]) :-
@@ -151,15 +156,15 @@ bob_answer([], []).
 exported procedure play_invite_timed(Integer).
 play_invite_timed(Ms?) :-
     crossbar2(AliceNetOut?, BobNetOut?, AliceNetIn, BobNetIn),
-    self_module(M),
-    certify(M?, CSig),
+    load_file("pingapp.glpw", C),
+    certified(C?, _, CSig),
     agent # agent(alice, AliceIn?, AliceNetIn?, [user_output(AliceOut), net_output(AliceNetOut)]),
     tee(AliceUiRaw?, AliceUi, AliceSeen),
-    alice_person_timed(M?, CSig?, AliceUiRaw, AliceOut?, AliceSeen?, T0, AliceIn),
+    alice_person_timed(C?, CSig?, AliceUiRaw, AliceOut?, AliceSeen?, T0, AliceIn),
     sink(AliceUi?),
     agent # agent(bob, BobIn?, BobNetIn?, [user_output(BobOut), net_output(BobNetOut)]),
     tee(BobUiRaw?, BobUi, BobSeen),
-    bob_person(M?, CSig?, yes, BobUiRaw, BobOut?, BobSeen?, BobIn),
+    bob_person(C?, CSig?, yes, BobUiRaw, BobOut?, BobSeen?, BobIn),
     opened_at(BobUi?, T0?, Ms).
 
 procedure sink(Stream(X)?).
@@ -168,7 +173,7 @@ sink([]).
 
 %% Alice's person as in play_invite, reading the clock as she sends the
 %% invitation.
-procedure alice_person_timed(Module?, String?, AppUiStream, AgentToUserStream?, AppUiStream?, Integer, UserInStream).
+procedure alice_person_timed(Content?, String?, AppUiStream, AgentToUserStream?, AppUiStream?, Integer, UserInStream).
 alice_person_timed(M, CSig, Ui?, Outs, Seen, T0?,
                    [msg(person, alice, install(ping, M?, CSig?, Ui)),
                     msg(person, alice, connect(bob)) | Cmds?]) :-
@@ -187,3 +192,78 @@ procedure opened_at(AppUiStream?, Integer?, Integer).
 opened_at([opened(_) | _], T0, Ms?) :- now(T1), Ms := T1? - T0?.
 opened_at([_ | Ui], T0, Ms?) :- otherwise | opened_at(Ui?, T0?, Ms).
 opened_at([], _, 0).
+
+%% =============================================================================
+%% sg_init(Id, Role, NetIn): one super-app per isolate under :boot
+%% (../../superapp_boot.glp): the social graph's agent on the isolate's network, the
+%% mini-app read from the artefact beside this program and installed under the
+%% compiler's key the person trusts, and the person's script by Role --- alice
+%% invites, bob consents.  What the mini-app shows its person goes to the
+%% person (send_to_user/1), printed by the harness as [agent] term.
+%% =============================================================================
+exported procedure sg_init(Constant?, Constant?, NetInStream?).
+sg_init(alice, _, NetIn) :-
+    agent # agent(alice, AliceIn?, NetIn?, [user_output(Out), net_output(NetOut)]),
+    send_to_net(NetOut?),
+    load_file("pingapp.glpw", C),
+    certified(C?, CK, CSig),
+    tee(Ui?, Show, Seen),
+    send_to_user(Show?),
+    alice_person_boot(C?, CK?, CSig?, Ui, Out?, Seen?, AliceIn).
+sg_init(bob, _, NetIn) :-
+    agent # agent(bob, BobIn?, NetIn?, [user_output(Out), net_output(NetOut)]),
+    send_to_net(NetOut?),
+    load_file("pingapp.glpw", C),
+    certified(C?, CK, CSig),
+    tee(Ui?, Show, Seen),
+    send_to_user(Show?),
+    bob_person_boot(C?, CK?, CSig?, Ui, Out?, Seen?, BobIn).
+
+procedure alice_person_boot(Content?, String?, String?, AppUiStream, AgentToUserStream?, AppUiStream?, UserInStream).
+alice_person_boot(M, CK, CSig, Ui?, Outs, Seen,
+                  [msg(person, alice, trust(CK?)),
+                   msg(person, alice, install(ping, M?, CSig?, Ui)),
+                   msg(person, alice, connect(bob)) | Cmds?]) :-
+    alice_wait(yes, Outs?, Seen?, Cmds).
+
+procedure bob_person_boot(Content?, String?, String?, AppUiStream, AgentToUserStream?, AppUiStream?, UserInStream).
+bob_person_boot(M, CK, CSig, Ui?, Outs, Seen,
+                [msg(person, bob, trust(CK?)),
+                 msg(person, bob, install(ping, M?, CSig?, Ui)),
+                 msg(person, bob, accept_invite(ping, alice)) | Cmds?]) :-
+    bob_wait(yes, Outs?, Seen?, Cmds).
+
+%% =============================================================================
+%% play_load(Name, Kind, Key): what load_file/2 makes of an artefact beside
+%% this program --- module, with the compiler's key its certificate carries,
+%% or text, with none (the artefact of a program refused a certificate).
+%% =============================================================================
+exported procedure play_load(String?, Constant, String).
+play_load(N, Kind?, K?) :-
+    load_file(N?, C),
+    loaded(C?, Kind, K).
+
+procedure loaded(Content?, Constant, String).
+loaded(M, module, K?) :- module(M?) | decompose_module(M?, K, _, _).
+loaded(S, text, none) :- string(S?) | true.
+
+%% =============================================================================
+%% play_install(Name, App, Installed): the super-app installs, as mini-app App,
+%% the artefact Name beside this program --- what load_file/2 gave, the
+%% creator's certification the play signs over its source identity where it is
+%% a Module --- and reports which mini-apps are installed afterwards: [App]
+%% for a certified artefact, [] for one refused a certificate (load_file/2
+%% gives its text, and the super-app installs no text).
+%% =============================================================================
+exported procedure play_install(String?, Constant?, Stream(Constant)).
+play_install(N, App, Installed?) :-
+    load_file(N?, C),
+    certified_or_not(C?, CSig),
+    agent # agent(alice, [msg(person, alice, install(App?, C?, CSig?, Ui)),
+                          msg(person, alice, installed(Installed))],
+                  [], [user_output(Out), net_output(NetOut)]),
+    sink(Ui?), sink(Out?), sink(NetOut?).
+
+procedure certified_or_not(Content?, String).
+certified_or_not(M, CSig?) :- module(M?) | certified(M?, _, CSig).
+certified_or_not(S, none) :- string(S?) | true.

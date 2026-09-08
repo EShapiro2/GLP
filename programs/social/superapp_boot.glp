@@ -1,0 +1,19 @@
+%% superapp_boot.glp --- the super-app on two smartphones (SGSG paper, Section 3):
+%% under the boot harness, one isolate per person, each with its own key pair,
+%% running the social graph of core/ as its super-app.  Each reads the
+%% certified mini-app's artefact, pingapp.glpw, from core/ with load_file/2
+%% and installs it under the compiler's key its person trusts; alice
+%% cold-calls bob, they befriend across the isolates, alice invites bob to the
+%% mini-app, bob consents, the handshake runs over their friend channel, and
+%% the two executions greet each other over the root channel.  The program is
+%% graph/core, named as :boot's second argument (this file stands outside
+%% graph/, which is a program and would compile it as a module):
+%%   :artefact programs/social/graph/pingapp programs/social/graph/core
+%%   :boot programs/social/superapp_boot.glp programs/social/graph/core
+%% Expected on the persons' screens: [alice] opened(bob), [alice] greeted(bob),
+%% [bob] opened(alice), [bob] greeted(alice).
+
+procedure boot.
+boot :-
+    sg_init(alice, invite, _)@alice,
+    sg_init(bob, consent, _)@bob.

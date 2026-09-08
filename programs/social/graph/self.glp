@@ -39,11 +39,16 @@ UserContent ::= connect(Constant)
               %% accept_invite / decline_invite: the invitee's volition.
               %% attestation: read back the attestation minted at
               %% befriend_commit (Section 5.5).
-              ; install(Constant, Module, String, AppUiStream?)
+              ; install(Constant, Content, String, AppUiStream?)
               ; invite(Constant, Constant)
               ; accept_invite(Constant, Constant)
               ; decline_invite(Constant, Constant)
-              ; attestation(Constant, String?).
+              ; attestation(Constant, String?)
+              %% trust: the person trusts a compiler's key (Section 6.4); the
+              %% bundled compiler's, trusted by installing the super-app.
+              ; trust(String)
+              %% installed: the names of the mini-apps installed, for a play.
+              ; installed(Stream(Constant)?).
 
 %% Content carried inside agent-to-user messages (msg(agent, person, Content))
 AgentContent ::= befriend(Constant, Response?)
@@ -126,8 +131,8 @@ AppUi       ::= opened(Constant) ; greeted(Constant).
 AppUiStream ::= [] ; [AppUi | AppUiStream].
 
 %% Answers of the host's lookups and checks.
-AppLookup ::= found(Module) ; missing.
-Verdict   ::= ok(Module) ; refused.
+AppLookup ::= found(Content) ; missing.
+Verdict   ::= ok(Content) ; refused.
 Offer     ::= none ; offer(String, Constant, String).
 
 %% The creator's certification, signed over the source identity together with
@@ -137,12 +142,13 @@ CreatorCert ::= creator_cert(String, Stream(Constant), Constant).
 %% Host state: the installed mini-apps, the attestations minted at
 %% befriend_commit, the invitations pending a volition, and the keys of the
 %% compilers the person trusts (the bundled compilers' by installation).
-%%   app(Name, Module, CreatorSig, Status): Status is idle(Ui), holding the
+%%   app(Name, Content, CreatorSig, Status), Content the module value load_file/2
+%%   gave (a Module where the certificate verified): Status is idle(Ui), holding the
 %%   mini-app's user-interface writer until activation, or running(SgEnd) once
 %%   run/3 has activated it, SgEnd the super-app's writer of the mini-app's
 %%   social-graph stream.
 AppStatus ::= idle(AppUiStream?) ; running(SgToAppStream?).
-App       ::= app(Constant, Module, String, AppStatus).
+App       ::= app(Constant, Content, String, AppStatus).
 AppList   ::= [] ; [App | AppList].
 Attest     ::= att(Constant, String).
 AttestList ::= [] ; [Attest | AttestList].

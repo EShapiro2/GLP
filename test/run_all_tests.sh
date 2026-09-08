@@ -3264,6 +3264,17 @@ HEREDOC
 check "RM8 find_type resolves P/N in the calling module's scope" "T = [0-9a-f]\{64\}" "$rm8"
 check "RM8 a module-local P/N is not declared at the root" "_find_type/2: local/1 is not declared in the caller's scope" "$rm8"
 
+# An activated module's body call to a root-scope procedure (merge/3): the
+# root self.glp is not in the artefact, and the goal runs on the runtime's root
+# runner (Currencies Code's report of 2026-09-08 12:14 UTC).
+rm9=$("$REPL_RUN" <<HEREDOC
+$GLP_DIR/programs/tests/run_module_probe
+self_module(M), run(merged(Z), M?).
+:quit
+HEREDOC
+2>&1)
+check "RM9 an activated module reaches a root-scope procedure in its body" "Z = \[a, b\]" "$rm9"
+
 echo ""
 # =============================================================================
 # SECTION SK: Identity, signature and the certificate (self_key/1, sign/3,
@@ -3576,27 +3587,68 @@ check "SG spm Replace: alice2 rebound to bob" "C7 = 1" "$sg_spm"
 check "SG spm Replace: the cascade reached carol through bob's vouch" "D7 = 1" "$sg_spm"
 check_not "SG spm no failed play" "→ failed" "$sg_spm"
 
-# The social graph as the super-app (SGSG paper, Sections 3 and 5.5):
-# programs/social/graph/core is the agent, the test mini-app and the plays,
-# certified because it holds no UI boot play; it is its own certified mini-app.
+# The social graph as the super-app (SGSG paper, Sections 3, 5.5 and 6.4):
+# programs/social/graph/core is the agent and the plays; the certified
+# mini-apps are programs of their own --- graph/pingapp, coins/currency ---
+# whose artefacts :artefact writes into core, where the agent's load_file/2
+# reads them; cssn's artefact carries no certificate (its boot glue reaches the
+# person) and loads as text, which the super-app does not install.  The
+# artefacts are written in the session that runs the plays: a certificate is
+# accepted under a key the person trusts, and the REPL's key is that person's.
+SG_CORE="$GLP_DIR/programs/social/graph/core"
+rm -f "$SG_CORE"/*.glpw
 sg_core=$("$REPL_RUN" <<HEREDOC
-$GLP_DIR/programs/social/graph/core
+:artefact $GLP_DIR/programs/social/graph/pingapp $SG_CORE
+:artefact $GLP_DIR/programs/cssn $SG_CORE
+:artefact $GLP_DIR/programs/coins/currency $SG_CORE
+$SG_CORE
 :limit 1000000
+play_load("cssn.glpw", K1, Key1).
+play_load("currency.glpw", K2, Key2).
+play_install("cssn.glpw", cssn, I1).
+play_install("currency.glpw", currency, I2).
+play_install("pingapp.glpw", ping, I3).
 play_attest(S, K, H, T).
 play_invite(A, B).
 play_invite_declined(A2, B2).
+play_invite_timed(Ms).
 :quit
 HEREDOC
 2>&1)
+check "SG super-app: pingapp's artefact is certified" "pingapp.glpw --- certified under" "$sg_core"
+check "SG super-app: cssn's artefact is refused a certificate" "cssn.glpw --- no certificate: refused" "$sg_core"
+check "SG super-app: currency's artefact is certified" "currency.glpw --- certified under" "$sg_core"
 check "SG super-app core loads" "Loaded program" "$sg_core"
-check_not "SG super-app core is certified" "CERTIFICATE REFUSED" "$sg_core"
+check "SG super-app: load_file gives cssn's artefact as text" "K1 = text" "$sg_core"
+check "SG super-app: load_file gives currency's artefact as a Module" "K2 = module" "$sg_core"
+check "SG super-app: the super-app installs no text" "I1 = \[\]" "$sg_core"
+check "SG super-app: the super-app installs the certified currency" "I2 = \[currency\]" "$sg_core"
+check "SG super-app: the super-app installs the certified pingapp" "I3 = \[ping\]" "$sg_core"
 check "SG super-app: the attestation minted at befriend_commit" "T = attest(alice, bob)" "$sg_core"
 check "SG super-app: signed under the person's key" "K = [0-9a-f]\{64\}" "$sg_core"
 check "SG super-app: invitation, handshake, activation: alice greeted" "A = \[opened(bob), greeted(bob)\]" "$sg_core"
 check "SG super-app: invitation, handshake, activation: bob greeted" "B = \[opened(alice), greeted(alice)\]" "$sg_core"
 check "SG super-app: a declined invitation opens nothing at alice" "A2 = \[\]" "$sg_core"
 check "SG super-app: a declined invitation opens nothing at bob" "B2 = \[\]" "$sg_core"
+check "SG super-app: the handshake is timed" "Ms = [0-9]*" "$sg_core"
 check_not "SG super-app no failed play" "→ failed" "$sg_core"
+
+# Under the boot harness: two isolates, each its own person with its own key,
+# running the super-app of core/; each reads pingapp's artefact beside it and
+# trusts the bundled compiler's key; the invitation crosses the friend channel
+# between the isolates and the root channel opens across them.
+sg_boot=$("$REPL_RUN" <<HEREDOC
+:artefact $GLP_DIR/programs/social/graph/pingapp $SG_CORE
+:boot $GLP_DIR/programs/social/superapp_boot.glp $SG_CORE
+:quit
+HEREDOC
+2>&1)
+check "SG super-app on two smartphones: the boot settles" "Boot settled: 2 agents" "$sg_boot"
+check "SG super-app on two smartphones: bob's execution opened" "\[bob\] opened(alice)" "$sg_boot"
+check "SG super-app on two smartphones: alice's execution opened" "\[alice\] opened(bob)" "$sg_boot"
+check "SG super-app on two smartphones: bob greeted" "\[bob\] greeted(alice)" "$sg_boot"
+check "SG super-app on two smartphones: alice greeted" "\[alice\] greeted(bob)" "$sg_boot"
+rm -f "$SG_CORE"/*.glpw
 
 sg_ga=$("$REPL_RUN" <<HEREDOC
 $GLP_DIR/programs/grassapp

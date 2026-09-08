@@ -210,6 +210,19 @@ agent(Id, [msg(person, Id1, decline_invite(App, From))|UserIn], NetIn, Outs,
 %% refused a certificate, which this program must hold to serve, in the plays,
 %% as its own certified mini-app.
 
+%% The person trusts a compiler's key: a certificate under it is accepted.
+agent(Id, [msg(person, Id1, trust(K))|UserIn], NetIn, Outs,
+      host(Apps, Atts, Pend, Trusted)) :-
+    Id? =?= Id1?, ground(K?) |
+    agent(Id?, UserIn?, NetIn?, Outs?, host(Apps?, Atts?, Pend?, [K? | Trusted?])).
+
+%% The names of the installed mini-apps, for a play to read back.
+agent(Id, [msg(person, Id1, installed(Names?))|UserIn], NetIn, Outs,
+      host(Apps, Atts, Pend, Trusted)) :-
+    Id? =?= Id1? |
+    app_names(Apps?, Apps1, Names),
+    agent(Id?, UserIn?, NetIn?, Outs?, host(Apps1?, Atts?, Pend?, Trusted?)).
+
 %% The attestation held for a friend, for a play to read back.
 agent(Id, [msg(person, Id1, attestation(Friend, S?))|UserIn], NetIn, Outs,
       host(Apps, Atts, Pend, Trusted)) :-
@@ -317,14 +330,17 @@ agent(_, _, [], Outs, Host) :- close_outputs(Outs?), close_host(Host?).
 
 %% --- Installation and the certifications (Sections 3 and 6.4) ---
 
-%% verify_install(M, CSig, Trusted, V): the compiler's key must be trusted,
-%% and the creator's certification signed over the module's source identity
-%% with the verdict grassroots.
-procedure verify_install(Module?, String?, Stream(String)?, Constant).
+%% verify_install(M, CSig, Trusted, V): what load_file/2 gave must be a Module
+%% (a forged artefact is its text), the compiler's key must be trusted, and the
+%% creator's certification signed over the module's source identity with the
+%% verdict grassroots.
+procedure verify_install(Content?, String?, Stream(String)?, Constant).
 verify_install(M, CSig, Trusted, V?) :-
+    module(M?) |
     decompose_module(M?, CK, Src, _),
     key_trusted(CK?, Trusted?, T),
     creator_check(T?, CSig?, Src?, V).
+verify_install(_, _, _, refused) :- otherwise | true.
 
 procedure key_trusted(String?, Stream(String)?, Constant).
 key_trusted(K, [K1 | _], true) :- K? =?= K1? | true.
@@ -342,7 +358,7 @@ procedure cert_check(_?, String?, Constant).
 cert_check(creator_cert(Src1, _, grassroots), Src, ok) :- Src? =?= Src1? | true.
 cert_check(_, _, refused) :- otherwise | true.
 
-procedure install_step(Constant?, Constant?, Module?, String?, AppUiStream, AppList?, AppList).
+procedure install_step(Constant?, Constant?, Content?, String?, AppUiStream, AppList?, AppList).
 install_step(ok, App, M, CSig, Ui?, Apps, [app(App?, M?, CSig?, idle(Ui)) | Apps?]).
 install_step(refused, _, _, _, [], Apps, Apps?).
 
@@ -357,7 +373,7 @@ app_module(_, [], [], missing).
 
 %% identities(M, Src, T): the mini-app's source identity, from its certificate,
 %% and the type identity of its entry ping/3, in this scope.
-procedure identities(Module?, String, Constant).
+procedure identities(Content?, String, Constant).
 identities(M, Src?, T?) :-
     decompose_module(M?, _, Src, _),
     find_type(ping/3, T).
@@ -465,7 +481,7 @@ join_verify(true, found(M), Src, T, Ok?) :-
     identity_match(Src?, Src1?, T?, T1?, M?, Ok).
 join_verify(_, _, _, _, refused) :- otherwise | true.
 
-procedure identity_match(String?, String?, Constant?, Constant?, Module?, Verdict).
+procedure identity_match(String?, String?, Constant?, Constant?, Content?, Verdict).
 identity_match(Src, Src1, T, T1, M, ok(M?)) :- Src? =?= Src1?, T? =?= T1? | true.
 identity_match(_, _, _, _, _, refused) :- otherwise | true.
 
@@ -499,7 +515,7 @@ accept_root_step(refused, Id, _, _, _, _, UserIn, NetIn, Outs, Apps, Atts, Pend,
 %% channel.  An idle mini-app is activated first by run/3 under the type
 %% identity of its entry, with exactly its two channels: the user-interface
 %% channel held since installation, and the social-graph channel.
-procedure deliver(Constant?, Constant?, RootChannel?, Constant?, Constant?, Module?, AppList?, AppList).
+procedure deliver(Constant?, Constant?, RootChannel?, Constant?, Constant?, Content?, AppList?, AppList).
 deliver(App, Friend, End, Id, T, M, [app(A, M1, C, idle(Ui?)) | Rest],
         [app(A?, M1?, C?, running(Sg1)) | Rest?]) :-
     App? =?= A? |
@@ -533,3 +549,8 @@ procedure close_apps(AppList?).
 close_apps([app(_, _, _, idle([])) | Rest]) :- close_apps(Rest?).
 close_apps([app(_, _, _, running([])) | Rest]) :- close_apps(Rest?).
 close_apps([]).
+
+procedure app_names(AppList?, AppList, Stream(Constant)).
+app_names([app(A, M, C, St) | Rest], [app(A?, M?, C?, St?) | Rest1?], [A? | Names?]) :-
+    app_names(Rest?, Rest1, Names).
+app_names([], [], []).
