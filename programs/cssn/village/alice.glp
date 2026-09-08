@@ -11,14 +11,18 @@
 %% Types: from village/self.glp (ancestor scoping)
 
 %% Act 1: coming into the contract.  Alice starts an adult, as every agent does,
-%% so the act is the parenting alone.  The two commands need no answer between
-%% them, so they are issued together.
+%% so the act is the parenting alone.  The offer to become Carol's parent travels
+%% the conversation the super-app opens between them: this platform is a mini-app
+%% and holds no network entry, so the friendship comes first and the act follows.
 exported procedure alice13(Constant?, Channel(Stream(UserNotify), Stream(UserCmd))?, Stream(NarrativeItem)).
-alice13(_, ch(In, [enrol_child(carol), connect(bob)|Out?]),
-    [act('Becoming the parent of Carol')|Narr?]) :-
+alice13(_, ch(In, [connect(carol), connect(bob)|Out?]), Narr?) :-
     alice13_loop(In?, Out, Narr).
 
 procedure alice13_loop(Stream(UserNotify)?, Stream(UserCmd), Stream(NarrativeItem)).
+
+alice13_loop([connected(carol)|In], [enrol_child(carol)|Out?],
+    [act('Becoming the parent of Carol')|Narr?]) :-
+    alice13_loop(In?, Out, Narr).
 
 alice13_loop([enrolled(carol)|In], Out?, [event('Carol is my child')|Narr?]) :-
     alice13_loop(In?, Out, Narr).

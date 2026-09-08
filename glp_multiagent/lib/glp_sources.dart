@@ -51,14 +51,21 @@ const _bundledGlp = [
   'programs/social/graph/ui/mediator.glp',
   'programs/social/graph/ui/actors.glp',
   // CSSN social network (groups): the whole program is statically linked, so
-  // every module the root self.glp reaches must be bundled.
+  // every module the root self.glp reaches must be bundled.  childsafe/ is the
+  // certified program --- the two agents, the mediator and the mini-app entry
+  // cssn/3 --- and programs/cssn adds the play glue and the stand-in for the
+  // Grassroots Super-App, which befriends and hands down the conversations.
   'programs/cssn/self.glp',
-  'programs/cssn/agent.glp',
-  'programs/cssn/child_agent.glp',
+  'programs/cssn/superapp.glp',
   'programs/cssn/boot.glp',
   'programs/cssn/play_ui_boot.glp',
-  'programs/cssn/ui/mediator.glp',
   'programs/cssn/ui/actors.glp',
+  'programs/cssn/childsafe/self.glp',
+  'programs/cssn/childsafe/miniapp.glp',
+  'programs/cssn/childsafe/plays.glp',
+  'programs/cssn/childsafe/agent.glp',
+  'programs/cssn/childsafe/child_agent.glp',
+  'programs/cssn/childsafe/mediator.glp',
 ];
 
 Future<GlpPaths> resolveGlpPaths() async {

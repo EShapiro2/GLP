@@ -44,8 +44,9 @@ void main() {
     test('discovers all modules in cssn', () {
       final modules = discoverProgram(cssnRoot, rootSelfGlpPath: rootSelfPath);
 
-      // The program's own 6 modules: agent, child_agent, mediator, actors,
-      // boot, cssn — plus the 4 routing modules exposed from the root self.glp
+      // The program's own modules: the certified program's (agent, child_agent,
+      // mediator, miniapp, plays, childsafe) and the play glue's (actors, boot,
+      // superapp, cssn) — plus the 4 routing modules exposed from the root self.glp
       // (social/graph/routing/{output,inject,intro,befriend}), discovered as linkable
       // across the whole programs/ subtree (module-system spec §3.3).  Any left
       // unreachable are pruned by DCE at compile time; discovery still lists them.
@@ -56,13 +57,16 @@ void main() {
       expect(names, contains('actors'));
       expect(names, contains('boot'));
       expect(names, contains('cssn'));
+      expect(names, contains('childsafe'));
+      expect(names, contains('miniapp'));
+      expect(names, contains('superapp'));
       // -module removed: module names derive from the filename, so the routing
       // modules are output/inject/intro/befriend (social/graph/routing/<name>.glp).
       expect(names, contains('output'));
       expect(names, contains('inject'));
       expect(names, contains('intro'));
       expect(names, contains('befriend'));
-      // At least the 6 own modules + 4 exposed routing modules; cssn also carries
+      // At least the 10 own modules + 4 exposed routing modules; cssn also carries
       // a village/ subtree of actor scenarios, so the total is larger.
       expect(names.length, greaterThanOrEqualTo(10));
     });
@@ -147,10 +151,12 @@ void main() {
       // Cross-module calls should be resolved
       expect(bodyFunctors, contains('actors:alice1'),
           reason: 'actors # alice1 should become actors:alice1');
-      expect(bodyFunctors, contains('agent:agent'),
-          reason: 'agent # agent should become agent:agent');
-      expect(bodyFunctors, contains('mediator:ui_mediator'),
-          reason: 'mediator # ui_mediator should become mediator:ui_mediator');
+      expect(bodyFunctors, contains('childsafe:agent'),
+          reason: 'childsafe # agent should become childsafe:agent');
+      expect(bodyFunctors, contains('childsafe:ui_mediator'),
+          reason: 'childsafe # ui_mediator should become childsafe:ui_mediator');
+      expect(bodyFunctors, contains('superapp:superapp'),
+          reason: 'superapp # superapp should become superapp:superapp');
 
       // No # dispatch should remain
       expect(bodyFunctors, isNot(contains('#')),
@@ -158,7 +164,7 @@ void main() {
     });
 
     test('local calls are resolved', () {
-      // boot:fplay1 calls tee/network3/send_to_user_tagged, local to boot —
+      // boot:fplay1 calls tee/merge_in/send_to_user_tagged, local to boot —
       // each should be prefixed boot:.
       final bootPlay1 = linked.procedures
           .firstWhere((p) => p.name == 'boot:fplay1');
@@ -176,8 +182,9 @@ void main() {
           reason: 'Local tee call should become boot:tee');
       expect(bodyFunctors, contains('boot:send_to_user_tagged'),
           reason: 'Local send_to_user_tagged call should become boot:send_to_user_tagged');
-      expect(bodyFunctors, contains('boot:network3'),
-          reason: 'Local network3 call should become boot:network3');
+      // The simulated platform network is gone: this platform is a mini-app and
+      // makes no first contact, so the switch a play carries is the super-app's
+      // (superapp:sg_switch), and boot's own locals are the display helpers.
     });
 
     test('prelude calls are preserved unprefixed', () {

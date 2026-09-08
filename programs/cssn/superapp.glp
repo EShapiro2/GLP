@@ -1,0 +1,237 @@
+%% superapp.glp — the Grassroots Super-App, as much of it as these plays need.
+%%
+%% The platform runs as a mini-app (childsafe/), and a mini-app makes no first
+%% contact: the social graph befriends, and hands each execution a conversation
+%% with the execution of the same mini-app at a friend.  In deployment that is
+%% the Grassroots Super-App (SGSG paper, Sections 3 and 7); in these plays it is
+%% this module, one process beside each mini-app, standing in for it.
+%%
+%% It sits on the person's side, not the mini-app's: the person's commands are
+%% split (split_cmds) into what the mini-app takes and what the super-app does,
+%% and what each shows the person is merged back into one stream.  This is the
+%% person's one screen carrying the super-app's own controls and the mini-app's,
+%% which is what a super-app is.
+%%
+%% It calls nothing that reaches the network or the person: the play wires its
+%% network to the other parties' (boot.glp, sg_switch) and its notifications to
+%% the person's actor.
+
+%% =============================================================================
+%% SPLITTING WHAT THE PERSON COMMANDS
+%% =============================================================================
+
+%% Each element is rebuilt at the type of the stream it goes to: a stream
+%% carries one type, and the mini-app's vocabulary is not the super-app's.
+exported procedure split_cmds(Stream(UserCmd)?, Stream(AppCmd), Stream(SgCmd)).
+split_cmds([accept_intro(A, B)|Cs], [accept_intro(A?, B?)|As?], Ss?) :-
+    ground(A?), ground(B?) |
+    split_cmds(Cs?, As, Ss).
+split_cmds([reject_intro(A, B)|Cs], [reject_intro(A?, B?)|As?], Ss?) :-
+    ground(A?), ground(B?) |
+    split_cmds(Cs?, As, Ss).
+split_cmds([accept_child_intro(A, B)|Cs], [accept_child_intro(A?, B?)|As?], Ss?) :-
+    ground(A?), ground(B?) |
+    split_cmds(Cs?, As, Ss).
+split_cmds([reject_child_intro(A, B)|Cs], [reject_child_intro(A?, B?)|As?], Ss?) :-
+    ground(A?), ground(B?) |
+    split_cmds(Cs?, As, Ss).
+split_cmds([approve_child_intro(A, B, C)|Cs], [approve_child_intro(A?, B?, C?)|As?], Ss?) :-
+    ground(A?), ground(B?), ground(C?) |
+    split_cmds(Cs?, As, Ss).
+split_cmds([child_introduce(A, B, C)|Cs], [child_introduce(A?, B?, C?)|As?], Ss?) :-
+    ground(A?), ground(B?), ground(C?) |
+    split_cmds(Cs?, As, Ss).
+split_cmds([send(A, B)|Cs], [send(A?, B?)|As?], Ss?) :-
+    ground(A?), ground(B?) |
+    split_cmds(Cs?, As, Ss).
+split_cmds([introduce(A, B)|Cs], [introduce(A?, B?)|As?], Ss?) :-
+    ground(A?), ground(B?) |
+    split_cmds(Cs?, As, Ss).
+split_cmds([create_group(A)|Cs], [create_group(A?)|As?], Ss?) :-
+    ground(A?) |
+    split_cmds(Cs?, As, Ss).
+split_cmds([invite_group(A, B)|Cs], [invite_group(A?, B?)|As?], Ss?) :-
+    ground(A?), ground(B?) |
+    split_cmds(Cs?, As, Ss).
+split_cmds([invite_group(A, B, C)|Cs], [invite_group(A?, B?, C?)|As?], Ss?) :-
+    ground(A?), ground(B?), ground(C?) |
+    split_cmds(Cs?, As, Ss).
+split_cmds([accept_group(A, B)|Cs], [accept_group(A?, B?)|As?], Ss?) :-
+    ground(A?), ground(B?) |
+    split_cmds(Cs?, As, Ss).
+split_cmds([reject_group(A, B)|Cs], [reject_group(A?, B?)|As?], Ss?) :-
+    ground(A?), ground(B?) |
+    split_cmds(Cs?, As, Ss).
+split_cmds([approve_group(A, B, C)|Cs], [approve_group(A?, B?, C?)|As?], Ss?) :-
+    ground(A?), ground(B?), ground(C?) |
+    split_cmds(Cs?, As, Ss).
+split_cmds([send_group(A, B)|Cs], [send_group(A?, B?)|As?], Ss?) :-
+    ground(A?), ground(B?) |
+    split_cmds(Cs?, As, Ss).
+split_cmds([leave_group(A)|Cs], [leave_group(A?)|As?], Ss?) :-
+    ground(A?) |
+    split_cmds(Cs?, As, Ss).
+split_cmds([leave_child_group(A, B)|Cs], [leave_child_group(A?, B?)|As?], Ss?) :-
+    ground(A?), ground(B?) |
+    split_cmds(Cs?, As, Ss).
+split_cmds([remove_from_group(A, B)|Cs], [remove_from_group(A?, B?)|As?], Ss?) :-
+    ground(A?), ground(B?) |
+    split_cmds(Cs?, As, Ss).
+split_cmds([approve_child_group(A, B, C)|Cs], [approve_child_group(A?, B?, C?)|As?], Ss?) :-
+    ground(A?), ground(B?), ground(C?) |
+    split_cmds(Cs?, As, Ss).
+split_cmds([reject_child_group(A, B, C)|Cs], [reject_child_group(A?, B?, C?)|As?], Ss?) :-
+    ground(A?), ground(B?), ground(C?) |
+    split_cmds(Cs?, As, Ss).
+split_cmds([unfriend_child(A)|Cs], [unfriend_child(A?)|As?], Ss?) :-
+    ground(A?) |
+    split_cmds(Cs?, As, Ss).
+split_cmds([unfriend_child_of(A, B)|Cs], [unfriend_child_of(A?, B?)|As?], Ss?) :-
+    ground(A?), ground(B?) |
+    split_cmds(Cs?, As, Ss).
+split_cmds([remove_child_member(A, B, C)|Cs], [remove_child_member(A?, B?, C?)|As?], Ss?) :-
+    ground(A?), ground(B?), ground(C?) |
+    split_cmds(Cs?, As, Ss).
+split_cmds([enrol_child(A)|Cs], [enrol_child(A?)|As?], Ss?) :-
+    ground(A?) |
+    split_cmds(Cs?, As, Ss).
+split_cmds([enrol_decision(A, B, C)|Cs], [enrol_decision(A?, B?, C?)|As?], Ss?) :-
+    ground(A?), ground(B?), ground(C?) |
+    split_cmds(Cs?, As, Ss).
+split_cmds([request_release|Cs], [request_release|As?], Ss?) :-
+    split_cmds(Cs?, As, Ss).
+split_cmds([approve_release(A)|Cs], [approve_release(A?)|As?], Ss?) :-
+    ground(A?) |
+    split_cmds(Cs?, As, Ss).
+split_cmds([connect(A)|Cs], As?, [connect(A?)|Ss?]) :-
+    ground(A?) |
+    split_cmds(Cs?, As, Ss).
+split_cmds([decision(A, B, C)|Cs], As?, [decision(A?, B?, C?)|Ss?]) :-
+    ground(A?), ground(B?), ground(C?) |
+    split_cmds(Cs?, As, Ss).
+split_cmds([], [], []).
+
+%% The two notification streams as the person's one screen.
+exported procedure merge_notify(Stream(UserNotify)?, Stream(UserNotify)?, Stream(UserNotify)).
+merge_notify(A, B, C?) :- merge(A?, B?, C).
+
+%% =============================================================================
+%% THE SUPER-APP BESIDE ONE MINI-APP
+%% =============================================================================
+
+%% superapp(Id, Cmds, Notify, Convs, Out, In, Ps, N): the person's befriending
+%% commands, what it shows the person, the conversations it hands its mini-app,
+%% its own network, the invitations awaiting the person's answer, and the
+%% counter that names them.
+exported procedure superapp(Constant?, Stream(SgCmd)?, Stream(SgNotify), Stream(Conversation), SgOutStream, SgInStream?, Stream(SgPending)?, Constant?).
+
+%% The person asks for a friendship: the invitation goes on the super-app's own
+%% network, and the answer is injected here when it comes.
+superapp(Id, [connect(Target)|Cmds], Notify?, Convs?,
+         [sg(Target?, sg_invite(Id?, Resp))|Out?], In, Ps, N) :-
+    ground(Id?), ground(Target?) |
+    inject_sg_answer(Resp?, Target?, In?, In1),
+    superapp(Id?, Cmds?, Notify, Convs, Out, In1?, Ps?, N?).
+
+%% The person answers an invitation put to it.  On acceptance the super-app
+%% creates the root channel of the conversation, keeps one end for its own
+%% mini-app and conveys the other in its answer.
+superapp(Id, [decision(Dec, From, ReqId)|Cmds], Notify?, Convs?, Out?, In, Ps, N) :-
+    ground(Id?), ground(Dec?), ground(From?), ground(ReqId?) |
+    lookup_sg(ReqId?, Val, Ps?, Ps1),
+    answer_invite(Dec?, From?, Val?, Convs, Convs1?),
+    superapp(Id?, Cmds?, Notify, Convs1, Out, In?, Ps1?, N?).
+
+%% An invitation arrives: put it to the person.
+superapp(Id, Cmds, Notify?, Convs?, Out?,
+         [sg(Id1, sg_invite(From, Resp?))|In], Ps, N) :-
+    Id? =?= Id1?, ground(From?) |
+    N1 := N? + 1,
+    show_invite(From?, req(N?), Notify, Notify1?),
+    superapp(Id?, Cmds?, Notify1, Convs, Out, In?,
+             [sg_pending(req(N?), sg_response(Resp))|Ps?], N1?).
+
+%% Our own invitation was accepted: the conversation goes to our mini-app.
+superapp(Id, Cmds, Notify?, Convs?, Out?,
+         [sg_answer(Target, sg_accept(End))|In], Ps, N) :-
+    ground(Id?), ground(Target?) |
+    open_conv(Target?, End?, Convs, Convs1?),
+    superapp(Id?, Cmds?, Notify, Convs1, Out, In?, Ps?, N?).
+
+%% Or declined.
+superapp(Id, Cmds, Notify?, Convs?, Out?,
+         [sg_answer(Target, sg_decline)|In], Ps, N) :-
+    ground(Id?), ground(Target?) |
+    show_declined(Target?, Notify, Notify1?),
+    superapp(Id?, Cmds?, Notify1, Convs, Out, In?, Ps?, N?).
+
+superapp(_, [], [], [], [], _, _, _).
+superapp(_, _, [], [], [], [], _, _).
+
+%% One notification onto the person's stream.  These are body helpers rather
+%% than terms in the clause head because a reader in an output list, placed
+%% before the nested input term that binds it, meets an engine defect (SGSG,
+%% 2026-09-08, reported to IGLP).
+procedure show_invite(Constant?, ReqId?, Stream(SgNotify), Stream(SgNotify)?).
+show_invite(From, ReqId, [befriend(From?, ReqId?)|Notify1?], Notify1).
+
+procedure show_declined(Constant?, Stream(SgNotify), Stream(SgNotify)?).
+show_declined(Target, [declined(Target?)|Notify1?], Notify1).
+
+%% The invitation awaiting an answer, by the identifier the person was shown.
+procedure lookup_sg(ReqId?, SgPendingValue, Stream(SgPending)?, Stream(SgPending)).
+lookup_sg(ReqId, Val?, [sg_pending(Id, Val)|Rest], Rest?) :-
+    ReqId? =?= Id? | true.
+lookup_sg(ReqId, Val?, [P|Rest], [P?|Rest1?]) :-
+    otherwise |
+    lookup_sg(ReqId?, Val, Rest?, Rest1).
+lookup_sg(_, sg_error, [], []).
+
+procedure answer_invite(Decision?, Constant?, SgPendingValue?, Stream(Conversation), Stream(Conversation)?).
+answer_invite(Dec, From, sg_response(Resp?), Convs?, Convs1) :-
+    ground(Dec?), ground(From?) |
+    bind_invite(Resp, Dec?, From?, Convs, Convs1?).
+answer_invite(_, _, sg_error, Convs?, Convs).
+
+%% Accepting creates the root channel of the conversation: one end is conveyed
+%% in the answer, the other becomes this side's conversation.  Declining binds
+%% the answer and opens nothing.
+procedure bind_invite(SgResponse, Decision?, Constant?, Stream(Conversation), Stream(Conversation)?).
+bind_invite(sg_accept(TheirEnd?), yes, From, Convs?, Convs1) :-
+    ground(From?), new_channel(TheirEnd, MyEnd) |
+    open_conv(From?, MyEnd?, Convs, Convs1?).
+bind_invite(sg_decline, no, _, Convs?, Convs).
+
+%% One conversation onto the stream the mini-app reads.
+procedure open_conv(Constant?, Channel(Stream(FriendMsg), Stream(FriendMsg))?, Stream(Conversation), Stream(Conversation)?).
+open_conv(Q, End, [conversation(Q?, End?)|Convs1?], Convs1).
+
+%% The answer to an invitation of ours, when it comes.
+procedure inject_sg_answer(SgResponse?, Constant?, SgInStream?, SgInStream).
+inject_sg_answer(Resp, Target, Ys, [sg_answer(Target?, Resp?)|Ys?]) :-
+    known(Resp?), ground(Target?) | true.
+inject_sg_answer(Resp, Target, [Y|Ys], [Y?|Ys1?]) :-
+    inject_sg_answer(Resp?, Target?, Ys?, Ys1).
+
+%% =============================================================================
+%% THE SUPER-APPS' OWN NETWORK — one entry per party, keyed by name
+%% =============================================================================
+
+exported procedure sg_switch(SgOutStream?, Stream(SgEntry)?).
+sg_switch([sg(Dest, Content)|In], Entries) :-
+    ground(Dest?) |
+    sg_send(Dest?, sg(Dest?, Content?), Entries?, Entries1),
+    sg_switch(In?, Entries1?).
+sg_switch([], Entries) :- sg_close(Entries?).
+
+procedure sg_send(Constant?, SgInMsg?, Stream(SgEntry)?, Stream(SgEntry)).
+sg_send(Dest, Msg, [sg_entry(K, [Msg?|Out1?])|Rest], [sg_entry(K?, Out1)|Rest?]) :-
+    Dest? =?= K? | true.
+sg_send(Dest, Msg, [E|Rest], [E?|Rest1?]) :-
+    otherwise |
+    sg_send(Dest?, Msg?, Rest?, Rest1).
+sg_send(_, _, [], []).
+
+procedure sg_close(Stream(SgEntry)?).
+sg_close([sg_entry(_, [])|Rest]) :- sg_close(Rest?).
+sg_close([]).

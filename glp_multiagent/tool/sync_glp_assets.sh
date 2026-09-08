@@ -9,7 +9,7 @@ cd "$(dirname "$0")/.."           # glp_multiagent/
 SRC=../programs
 DST=assets/glp/programs
 rm -rf "$DST"
-mkdir -p "$DST/social/graph/routing" "$DST/grassapp" "$DST/social/graph/ui" "$DST/cssn/ui"
+mkdir -p "$DST/social/graph/routing" "$DST/grassapp" "$DST/social/graph/ui" "$DST/cssn/ui" "$DST/cssn/childsafe"
 cp "$SRC/self.glp" "$DST/self.glp"
 for f in output inject intro befriend; do
   cp "$SRC/social/graph/routing/$f.glp" "$DST/social/graph/routing/$f.glp"
@@ -23,10 +23,13 @@ done
 for f in mediator actors; do
   cp "$SRC/social/graph/ui/$f.glp" "$DST/social/graph/ui/$f.glp"
 done
-for f in self agent child_agent boot play_ui_boot; do
+for f in self superapp boot play_ui_boot; do
   cp "$SRC/cssn/$f.glp" "$DST/cssn/$f.glp"
 done
-for f in mediator actors; do
-  cp "$SRC/cssn/ui/$f.glp" "$DST/cssn/ui/$f.glp"
+cp "$SRC/cssn/ui/actors.glp" "$DST/cssn/ui/actors.glp"
+# childsafe/ is the certified program: the two agents, the mediator and the
+# mini-app entry cssn/3 the super-app activates.
+for f in self miniapp plays agent child_agent mediator; do
+  cp "$SRC/cssn/childsafe/$f.glp" "$DST/cssn/childsafe/$f.glp"
 done
 echo "Synced GLP assets from $SRC -> $DST"

@@ -1,0 +1,31 @@
+%% miniapp.glp --- the child-safe social networking platform as a mini-app of
+%% the Grassroots Super-App (Grassroots Social Graph paper, Section 3).
+%%
+%% cssn(Id, Ui, Convs) is the goal the super-app activates by run/3, with
+%% exactly its two channels.  Ui is the channel to the super-app user interface:
+%% on it the mini-app shows this platform's notifications and receives the
+%% person's commands, which is precisely the person's side of the UI mediator.
+%% Convs is the channel to the social graph, on which the social graph hands the
+%% mini-app, at each invitation, one end of the root channel of a conversation
+%% with the execution of this program at a friend.  The mini-app holds nothing
+%% else --- no network entry, and no call to a predicate that reaches the network
+%% or the person --- so the program is certified.
+%%
+%% A party is activated as an adult, because that is what holding no parent is:
+%% childhood is not given, it is made by an act (enrol), and the agent hands
+%% itself over to the child agent when that act is taken.
+%%
+%% The agent's input from the parties it is in relation with starts empty and
+%% unclosed: it has no writer here, because every stream that ever joins it ---
+%% a conversation's read end, a parent-child channel, a group's hub stream --- is
+%% merged into it by the act that creates that relation.
+
+imported procedure agent#agent(Constant?, AgentState?, Stream(UserInMsg)?, Stream(NetInMsg)?, Stream(Conversation)?, Stream(OutputEntry)?).
+imported procedure mediator#ui_mediator(Constant?, Channel(Stream(AgentToUserMsg), Stream(MediatorToAgentMsg))?, Channel(Stream(AppCmd), Stream(AppNotify))?, Stream(PendingEntry)?, Constant?).
+
+exported procedure cssn(Constant?, Channel(Stream(AppCmd), Stream(AppNotify))?, Stream(Conversation)?).
+cssn(Id, Ui, Convs) :-
+    ground(Id?) |
+    agent # agent(Id?, state(0, 0, [], []), AgentIn?, FriendIn?, Convs?,
+                  [user_output(AgentToUser)]),
+    mediator # ui_mediator(Id?, ch(AgentToUser?, AgentIn), Ui?, [], 1).

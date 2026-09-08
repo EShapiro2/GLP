@@ -15,13 +15,19 @@
 %% =============================================================================
 
 %% From agent.glp (sibling)
-imported procedure agent#agent(Constant?, AgentState?, Stream(UserInMsg)?, Stream(NetInMsg)?, Stream(OutputEntry)?).
+imported procedure childsafe#agent(Constant?, AgentState?, Stream(UserInMsg)?, Stream(NetInMsg)?, Stream(Conversation)?, Stream(OutputEntry)?).
 
 %% From child_agent.glp (sibling)
-imported procedure child_agent#child_agent(Constant?, Constant?, AgentState?, Stream(UserInMsg)?, Stream(NetInMsg)?, Stream(OutputEntry)?).
+imported procedure childsafe#child_agent(Constant?, Constant?, AgentState?, Stream(UserInMsg)?, Stream(NetInMsg)?, Stream(Conversation)?, Stream(OutputEntry)?).
 
 %% From ui/mediator.glp
-imported procedure mediator#ui_mediator(Constant?, Channel(Stream(AgentToUserMsg), Stream(MediatorToAgentMsg))?, Channel(Stream(UserCmd), Stream(UserNotify))?, Stream(PendingEntry)?, Constant?).
+imported procedure childsafe#ui_mediator(Constant?, Channel(Stream(AgentToUserMsg), Stream(MediatorToAgentMsg))?, Channel(Stream(AppCmd), Stream(AppNotify))?, Stream(PendingEntry)?, Constant?).
+
+%% From superapp.glp (sibling): the stand-in for the Grassroots Super-App.
+imported procedure superapp#split_cmds(Stream(UserCmd)?, Stream(AppCmd), Stream(SgCmd)).
+imported procedure superapp#merge_notify(Stream(UserNotify)?, Stream(UserNotify)?, Stream(UserNotify)).
+imported procedure superapp#superapp(Constant?, Stream(SgCmd)?, Stream(SgNotify), Stream(Conversation), SgOutStream, SgInStream?, Stream(SgPending)?, Integer?).
+imported procedure superapp#sg_switch(SgOutStream?, Stream(SgEntry)?).
 
 %% From ui/actors.glp — plays 1-3 (3 agents)
 imported procedure actors#alice1(Channel(Stream(UserNotify), Stream(UserCmd))?).
@@ -149,106 +155,6 @@ send_to_user_tagged(_, [], []).
 send_to_user_tagged(_, Cmds, []) :- sink(Cmds?).
 
 %% =============================================================================
-%% NETWORK SWITCH (3-way)
-%% =============================================================================
-
-%% --- Cold-call routing (2-arg msg) ---
-
-%% The simulated network switches carry the full transport union NetInStream
-%% (writer ⊆ reader: producers emit the narrower NetOutStream); switches stay general.
-procedure network3(Channel(NetInStream, NetInStream)?,
-                   Channel(NetInStream, NetInStream)?,
-                   Channel(NetInStream, NetInStream)?).
-network3(ch([msg(bob, X)|AliceIn], AliceOut?),
-         ch(BobIn, [msg(bob, X?)|BobOut?]),
-         ch(CharlieIn, CharlieOut?)) :-
-    network3(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut), ch(CharlieIn?, CharlieOut)).
-
-network3(ch([msg(charlie, X)|AliceIn], AliceOut?),
-         ch(BobIn, BobOut?),
-         ch(CharlieIn, [msg(charlie, X?)|CharlieOut?])) :-
-    network3(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut), ch(CharlieIn?, CharlieOut)).
-
-network3(ch(AliceIn, [msg(alice, X?)|AliceOut?]),
-         ch([msg(alice, X)|BobIn], BobOut?),
-         ch(CharlieIn, CharlieOut?)) :-
-    network3(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut), ch(CharlieIn?, CharlieOut)).
-
-network3(ch(AliceIn, AliceOut?),
-         ch([msg(charlie, X)|BobIn], BobOut?),
-         ch(CharlieIn, [msg(charlie, X?)|CharlieOut?])) :-
-    network3(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut), ch(CharlieIn?, CharlieOut)).
-
-network3(ch(AliceIn, [msg(alice, X?)|AliceOut?]),
-         ch(BobIn, BobOut?),
-         ch([msg(alice, X)|CharlieIn], CharlieOut?)) :-
-    network3(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut), ch(CharlieIn?, CharlieOut)).
-
-network3(ch(AliceIn, AliceOut?),
-         ch(BobIn, [msg(bob, X?)|BobOut?]),
-         ch([msg(bob, X)|CharlieIn], CharlieOut?)) :-
-    network3(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut), ch(CharlieIn?, CharlieOut)).
-
-%% --- Friend-to-friend routing (3-arg msg) ---
-
-network3(ch([msg(alice, bob, X)|AliceIn], AliceOut?),
-         ch(BobIn, [msg(alice, bob, X?)|BobOut?]),
-         ch(CharlieIn, CharlieOut?)) :-
-    network3(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut), ch(CharlieIn?, CharlieOut)).
-
-network3(ch([msg(alice, charlie, X)|AliceIn], AliceOut?),
-         ch(BobIn, BobOut?),
-         ch(CharlieIn, [msg(alice, charlie, X?)|CharlieOut?])) :-
-    network3(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut), ch(CharlieIn?, CharlieOut)).
-
-network3(ch(AliceIn, [msg(bob, alice, X?)|AliceOut?]),
-         ch([msg(bob, alice, X)|BobIn], BobOut?),
-         ch(CharlieIn, CharlieOut?)) :-
-    network3(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut), ch(CharlieIn?, CharlieOut)).
-
-network3(ch(AliceIn, AliceOut?),
-         ch([msg(bob, charlie, X)|BobIn], BobOut?),
-         ch(CharlieIn, [msg(bob, charlie, X?)|CharlieOut?])) :-
-    network3(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut), ch(CharlieIn?, CharlieOut)).
-
-network3(ch(AliceIn, [msg(charlie, alice, X?)|AliceOut?]),
-         ch(BobIn, BobOut?),
-         ch([msg(charlie, alice, X)|CharlieIn], CharlieOut?)) :-
-    network3(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut), ch(CharlieIn?, CharlieOut)).
-
-network3(ch(AliceIn, AliceOut?),
-         ch(BobIn, [msg(charlie, bob, X?)|BobOut?]),
-         ch([msg(charlie, bob, X)|CharlieIn], CharlieOut?)) :-
-    network3(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut), ch(CharlieIn?, CharlieOut)).
-
-%% Termination
-network3(ch([], []), ch([], []), ch([], [])).
-
-%% =============================================================================
-%% NETWORK SWITCH (2-way)
-%% =============================================================================
-
-procedure network2(Channel(NetInStream, NetInStream)?,
-                   Channel(NetInStream, NetInStream)?).
-network2(ch([msg(bob, X)|AliceIn], AliceOut?),
-         ch(BobIn, [msg(bob, X?)|BobOut?])) :-
-    network2(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut)).
-
-network2(ch(AliceIn, [msg(alice, X?)|AliceOut?]),
-         ch([msg(alice, X)|BobIn], BobOut?)) :-
-    network2(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut)).
-
-network2(ch([msg(alice, bob, X)|AliceIn], AliceOut?),
-         ch(BobIn, [msg(alice, bob, X?)|BobOut?])) :-
-    network2(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut)).
-
-network2(ch(AliceIn, [msg(bob, alice, X?)|AliceOut?]),
-         ch([msg(bob, alice, X)|BobIn], BobOut?)) :-
-    network2(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut)).
-
-network2(ch([], []), ch([], [])).
-
-%% =============================================================================
 %% NETWORK SWITCH (name-routed, any number of agents)
 %%
 %% village_net's pairwise clauses cost one clause per ordered pair --- thirty for
@@ -259,64 +165,59 @@ network2(ch([], []), ch([], [])).
 %% nowhere else to place the cold call that makes it a friend.
 %% =============================================================================
 
-procedure switch_send(Constant?, NetOutMsg?, Stream(NetEntry)?, Stream(NetEntry)).
-switch_send(Dest, Msg, [net_entry(K, [Msg?|Out1?])|Rest], [net_entry(K?, Out1)|Rest?]) :-
-    Dest? =?= K? | true.
-switch_send(Dest, Msg, [E|Rest], [E?|Rest1?]) :-
-    otherwise |
-    switch_send(Dest?, Msg?, Rest?, Rest1).
-switch_send(_, _, [], []).
-
-procedure switch_close(Stream(NetEntry)?).
-switch_close([net_entry(_, [])|Rest]) :- switch_close(Rest?).
-switch_close([]).
-
 %% An agent's net_output carries cold calls only (NetOutMsg), whose first
 %% argument IS the destination; friend traffic goes on the friend channels the
 %% commit allocates and never crosses the switch.
-procedure net_switch(NetOutStream?, Stream(NetEntry)?).
-net_switch([msg(Dest, Content)|In], Entries) :-
-    ground(Dest?) |
-    switch_send(Dest?, msg(Dest?, Content?), Entries?, Entries1),
-    net_switch(In?, Entries1?).
-net_switch([], Entries) :- switch_close(Entries?).
-
 %% =============================================================================
 %% FPLAY1 — Both accept introduction (tagged output)
 %% =============================================================================
 
 exported procedure fplay1.
 fplay1 :-
-    network3(ch(AliceNetOut?, AliceNetIn),
-             ch(BobNetOut?, BobNetIn),
-             ch(CharlieNetOut?, CharlieNetIn)),
-
     actors # alice1(ch(AliceActorIn?, AliceActorOut)),
-    tee(AliceActorOut?, AliceMedIn, AliceDispCmd),
-    agent # agent(alice, state(0, 0, [], []), AliceAgentIn?, AliceNetIn?,
-          [user_output(AliceAgentToUser), net_output(AliceNetOut)]),
-    mediator # ui_mediator(alice, ch(AliceAgentToUser?, AliceAgentIn),
+    tee(AliceActorOut?, AliceCmds, AliceDispCmd),
+    superapp # split_cmds(AliceCmds?, AliceMedIn, AliceSgCmds),
+    superapp # superapp(alice, AliceSgCmds?, AliceSgNotify, AliceConvs, AliceSgOut, AliceSgIn?, [], 1),
+    childsafe # agent(alice, state(0, 0, [], []), AliceAgentIn?, AliceNetIn?, AliceConvs?,
+          [user_output(AliceAgentToUser)]),
+    childsafe # ui_mediator(alice, ch(AliceAgentToUser?, AliceAgentIn),
                 ch(AliceMedIn?, AliceMedOut), [], 1),
-    tee(AliceMedOut?, AliceActorIn, AliceDispNotify),
+    superapp # merge_notify(AliceSgNotify?, AliceMedOut?, AliceNotify),
+    tee(AliceNotify?, AliceActorIn, AliceDispNotify),
     send_to_user_tagged(alice, AliceDispCmd?, AliceDispNotify?),
 
     actors # bob1(ch(BobActorIn?, BobActorOut)),
-    tee(BobActorOut?, BobMedIn, BobDispCmd),
-    agent # agent(bob, state(0, 0, [], []), BobAgentIn?, BobNetIn?,
-          [user_output(BobAgentToUser), net_output(BobNetOut)]),
-    mediator # ui_mediator(bob, ch(BobAgentToUser?, BobAgentIn),
+    tee(BobActorOut?, BobCmds, BobDispCmd),
+    superapp # split_cmds(BobCmds?, BobMedIn, BobSgCmds),
+    superapp # superapp(bob, BobSgCmds?, BobSgNotify, BobConvs, BobSgOut, BobSgIn?, [], 1),
+    childsafe # agent(bob, state(0, 0, [], []), BobAgentIn?, BobNetIn?, BobConvs?,
+          [user_output(BobAgentToUser)]),
+    childsafe # ui_mediator(bob, ch(BobAgentToUser?, BobAgentIn),
                 ch(BobMedIn?, BobMedOut), [], 1),
-    tee(BobMedOut?, BobActorIn, BobDispNotify),
+    superapp # merge_notify(BobSgNotify?, BobMedOut?, BobNotify),
+    tee(BobNotify?, BobActorIn, BobDispNotify),
     send_to_user_tagged(bob, BobDispCmd?, BobDispNotify?),
 
     actors # charlie1(ch(CharlieActorIn?, CharlieActorOut)),
-    tee(CharlieActorOut?, CharlieMedIn, CharlieDispCmd),
-    agent # agent(charlie, state(0, 0, [], []), CharlieAgentIn?, CharlieNetIn?,
-          [user_output(CharlieAgentToUser), net_output(CharlieNetOut)]),
-    mediator # ui_mediator(charlie, ch(CharlieAgentToUser?, CharlieAgentIn),
+    tee(CharlieActorOut?, CharlieCmds, CharlieDispCmd),
+    superapp # split_cmds(CharlieCmds?, CharlieMedIn, CharlieSgCmds),
+    superapp # superapp(charlie, CharlieSgCmds?, CharlieSgNotify, CharlieConvs, CharlieSgOut, CharlieSgIn?, [], 1),
+    childsafe # agent(charlie, state(0, 0, [], []), CharlieAgentIn?, CharlieNetIn?, CharlieConvs?,
+          [user_output(CharlieAgentToUser)]),
+    childsafe # ui_mediator(charlie, ch(CharlieAgentToUser?, CharlieAgentIn),
                 ch(CharlieMedIn?, CharlieMedOut), [], 1),
-    tee(CharlieMedOut?, CharlieActorIn, CharlieDispNotify),
-    send_to_user_tagged(charlie, CharlieDispCmd?, CharlieDispNotify?).
+    superapp # merge_notify(CharlieSgNotify?, CharlieMedOut?, CharlieNotify),
+    tee(CharlieNotify?, CharlieActorIn, CharlieDispNotify),
+    send_to_user_tagged(charlie, CharlieDispCmd?, CharlieDispNotify?),
+
+    %% The super-apps' own network, one entry per party: the invitation and
+    %% its answer travel it, and the platform travels none.
+    merge(AliceSgOut?, BobSgOut?, SG1),
+    merge(SG1?, CharlieSgOut?, AllSgOut),
+    superapp # sg_switch(AllSgOut?, [sg_entry(alice, AliceSgIn),
+                                   sg_entry(bob, BobSgIn),
+                                   sg_entry(charlie, CharlieSgIn)]).
+
 
 %% =============================================================================
 %% FPLAY2 — Alice accepts, Charlie rejects (tagged output)
@@ -324,36 +225,50 @@ fplay1 :-
 
 exported procedure fplay2.
 fplay2 :-
-    network3(ch(AliceNetOut?, AliceNetIn),
-             ch(BobNetOut?, BobNetIn),
-             ch(CharlieNetOut?, CharlieNetIn)),
-
     actors # alice2(ch(AliceActorIn?, AliceActorOut)),
-    tee(AliceActorOut?, AliceMedIn, AliceDispCmd),
-    agent # agent(alice, state(0, 0, [], []), AliceAgentIn?, AliceNetIn?,
-          [user_output(AliceAgentToUser), net_output(AliceNetOut)]),
-    mediator # ui_mediator(alice, ch(AliceAgentToUser?, AliceAgentIn),
+    tee(AliceActorOut?, AliceCmds, AliceDispCmd),
+    superapp # split_cmds(AliceCmds?, AliceMedIn, AliceSgCmds),
+    superapp # superapp(alice, AliceSgCmds?, AliceSgNotify, AliceConvs, AliceSgOut, AliceSgIn?, [], 1),
+    childsafe # agent(alice, state(0, 0, [], []), AliceAgentIn?, AliceNetIn?, AliceConvs?,
+          [user_output(AliceAgentToUser)]),
+    childsafe # ui_mediator(alice, ch(AliceAgentToUser?, AliceAgentIn),
                 ch(AliceMedIn?, AliceMedOut), [], 1),
-    tee(AliceMedOut?, AliceActorIn, AliceDispNotify),
+    superapp # merge_notify(AliceSgNotify?, AliceMedOut?, AliceNotify),
+    tee(AliceNotify?, AliceActorIn, AliceDispNotify),
     send_to_user_tagged(alice, AliceDispCmd?, AliceDispNotify?),
 
     actors # bob2(ch(BobActorIn?, BobActorOut)),
-    tee(BobActorOut?, BobMedIn, BobDispCmd),
-    agent # agent(bob, state(0, 0, [], []), BobAgentIn?, BobNetIn?,
-          [user_output(BobAgentToUser), net_output(BobNetOut)]),
-    mediator # ui_mediator(bob, ch(BobAgentToUser?, BobAgentIn),
+    tee(BobActorOut?, BobCmds, BobDispCmd),
+    superapp # split_cmds(BobCmds?, BobMedIn, BobSgCmds),
+    superapp # superapp(bob, BobSgCmds?, BobSgNotify, BobConvs, BobSgOut, BobSgIn?, [], 1),
+    childsafe # agent(bob, state(0, 0, [], []), BobAgentIn?, BobNetIn?, BobConvs?,
+          [user_output(BobAgentToUser)]),
+    childsafe # ui_mediator(bob, ch(BobAgentToUser?, BobAgentIn),
                 ch(BobMedIn?, BobMedOut), [], 1),
-    tee(BobMedOut?, BobActorIn, BobDispNotify),
+    superapp # merge_notify(BobSgNotify?, BobMedOut?, BobNotify),
+    tee(BobNotify?, BobActorIn, BobDispNotify),
     send_to_user_tagged(bob, BobDispCmd?, BobDispNotify?),
 
     actors # charlie2(ch(CharlieActorIn?, CharlieActorOut)),
-    tee(CharlieActorOut?, CharlieMedIn, CharlieDispCmd),
-    agent # agent(charlie, state(0, 0, [], []), CharlieAgentIn?, CharlieNetIn?,
-          [user_output(CharlieAgentToUser), net_output(CharlieNetOut)]),
-    mediator # ui_mediator(charlie, ch(CharlieAgentToUser?, CharlieAgentIn),
+    tee(CharlieActorOut?, CharlieCmds, CharlieDispCmd),
+    superapp # split_cmds(CharlieCmds?, CharlieMedIn, CharlieSgCmds),
+    superapp # superapp(charlie, CharlieSgCmds?, CharlieSgNotify, CharlieConvs, CharlieSgOut, CharlieSgIn?, [], 1),
+    childsafe # agent(charlie, state(0, 0, [], []), CharlieAgentIn?, CharlieNetIn?, CharlieConvs?,
+          [user_output(CharlieAgentToUser)]),
+    childsafe # ui_mediator(charlie, ch(CharlieAgentToUser?, CharlieAgentIn),
                 ch(CharlieMedIn?, CharlieMedOut), [], 1),
-    tee(CharlieMedOut?, CharlieActorIn, CharlieDispNotify),
-    send_to_user_tagged(charlie, CharlieDispCmd?, CharlieDispNotify?).
+    superapp # merge_notify(CharlieSgNotify?, CharlieMedOut?, CharlieNotify),
+    tee(CharlieNotify?, CharlieActorIn, CharlieDispNotify),
+    send_to_user_tagged(charlie, CharlieDispCmd?, CharlieDispNotify?),
+
+    %% The super-apps' own network, one entry per party: the invitation and
+    %% its answer travel it, and the platform travels none.
+    merge(AliceSgOut?, BobSgOut?, SG1),
+    merge(SG1?, CharlieSgOut?, AllSgOut),
+    superapp # sg_switch(AllSgOut?, [sg_entry(alice, AliceSgIn),
+                                   sg_entry(bob, BobSgIn),
+                                   sg_entry(charlie, CharlieSgIn)]).
+
 
 %% =============================================================================
 %% FPLAY3 — Both reject introduction (tagged output)
@@ -361,36 +276,50 @@ fplay2 :-
 
 exported procedure fplay3.
 fplay3 :-
-    network3(ch(AliceNetOut?, AliceNetIn),
-             ch(BobNetOut?, BobNetIn),
-             ch(CharlieNetOut?, CharlieNetIn)),
-
     actors # alice3(ch(AliceActorIn?, AliceActorOut)),
-    tee(AliceActorOut?, AliceMedIn, AliceDispCmd),
-    agent # agent(alice, state(0, 0, [], []), AliceAgentIn?, AliceNetIn?,
-          [user_output(AliceAgentToUser), net_output(AliceNetOut)]),
-    mediator # ui_mediator(alice, ch(AliceAgentToUser?, AliceAgentIn),
+    tee(AliceActorOut?, AliceCmds, AliceDispCmd),
+    superapp # split_cmds(AliceCmds?, AliceMedIn, AliceSgCmds),
+    superapp # superapp(alice, AliceSgCmds?, AliceSgNotify, AliceConvs, AliceSgOut, AliceSgIn?, [], 1),
+    childsafe # agent(alice, state(0, 0, [], []), AliceAgentIn?, AliceNetIn?, AliceConvs?,
+          [user_output(AliceAgentToUser)]),
+    childsafe # ui_mediator(alice, ch(AliceAgentToUser?, AliceAgentIn),
                 ch(AliceMedIn?, AliceMedOut), [], 1),
-    tee(AliceMedOut?, AliceActorIn, AliceDispNotify),
+    superapp # merge_notify(AliceSgNotify?, AliceMedOut?, AliceNotify),
+    tee(AliceNotify?, AliceActorIn, AliceDispNotify),
     send_to_user_tagged(alice, AliceDispCmd?, AliceDispNotify?),
 
     actors # bob3(ch(BobActorIn?, BobActorOut)),
-    tee(BobActorOut?, BobMedIn, BobDispCmd),
-    agent # agent(bob, state(0, 0, [], []), BobAgentIn?, BobNetIn?,
-          [user_output(BobAgentToUser), net_output(BobNetOut)]),
-    mediator # ui_mediator(bob, ch(BobAgentToUser?, BobAgentIn),
+    tee(BobActorOut?, BobCmds, BobDispCmd),
+    superapp # split_cmds(BobCmds?, BobMedIn, BobSgCmds),
+    superapp # superapp(bob, BobSgCmds?, BobSgNotify, BobConvs, BobSgOut, BobSgIn?, [], 1),
+    childsafe # agent(bob, state(0, 0, [], []), BobAgentIn?, BobNetIn?, BobConvs?,
+          [user_output(BobAgentToUser)]),
+    childsafe # ui_mediator(bob, ch(BobAgentToUser?, BobAgentIn),
                 ch(BobMedIn?, BobMedOut), [], 1),
-    tee(BobMedOut?, BobActorIn, BobDispNotify),
+    superapp # merge_notify(BobSgNotify?, BobMedOut?, BobNotify),
+    tee(BobNotify?, BobActorIn, BobDispNotify),
     send_to_user_tagged(bob, BobDispCmd?, BobDispNotify?),
 
     actors # charlie3(ch(CharlieActorIn?, CharlieActorOut)),
-    tee(CharlieActorOut?, CharlieMedIn, CharlieDispCmd),
-    agent # agent(charlie, state(0, 0, [], []), CharlieAgentIn?, CharlieNetIn?,
-          [user_output(CharlieAgentToUser), net_output(CharlieNetOut)]),
-    mediator # ui_mediator(charlie, ch(CharlieAgentToUser?, CharlieAgentIn),
+    tee(CharlieActorOut?, CharlieCmds, CharlieDispCmd),
+    superapp # split_cmds(CharlieCmds?, CharlieMedIn, CharlieSgCmds),
+    superapp # superapp(charlie, CharlieSgCmds?, CharlieSgNotify, CharlieConvs, CharlieSgOut, CharlieSgIn?, [], 1),
+    childsafe # agent(charlie, state(0, 0, [], []), CharlieAgentIn?, CharlieNetIn?, CharlieConvs?,
+          [user_output(CharlieAgentToUser)]),
+    childsafe # ui_mediator(charlie, ch(CharlieAgentToUser?, CharlieAgentIn),
                 ch(CharlieMedIn?, CharlieMedOut), [], 1),
-    tee(CharlieMedOut?, CharlieActorIn, CharlieDispNotify),
-    send_to_user_tagged(charlie, CharlieDispCmd?, CharlieDispNotify?).
+    superapp # merge_notify(CharlieSgNotify?, CharlieMedOut?, CharlieNotify),
+    tee(CharlieNotify?, CharlieActorIn, CharlieDispNotify),
+    send_to_user_tagged(charlie, CharlieDispCmd?, CharlieDispNotify?),
+
+    %% The super-apps' own network, one entry per party: the invitation and
+    %% its answer travel it, and the platform travels none.
+    merge(AliceSgOut?, BobSgOut?, SG1),
+    merge(SG1?, CharlieSgOut?, AllSgOut),
+    superapp # sg_switch(AllSgOut?, [sg_entry(alice, AliceSgIn),
+                                   sg_entry(bob, BobSgIn),
+                                   sg_entry(charlie, CharlieSgIn)]).
+
 
 %% =============================================================================
 %% FPLAY4 — CSSG: All four accept (tagged output)
@@ -398,57 +327,75 @@ fplay3 :-
 
 exported procedure fplay4.
 fplay4 :-
-    network2(ch(AliceNetOut?, AliceNetIn),
-             ch(BobNetOut?, BobNetIn)),
-
     actors # alice4(ch(AliceActorIn?, AliceActorOut)),
-    tee(AliceActorOut?, AliceMedIn, AliceDispCmd),
-    agent # agent(alice, state(0, 0, [], []), AliceAgentIn?, AliceNetAndChildIn?,
+    tee(AliceActorOut?, AliceCmds, AliceDispCmd),
+    superapp # split_cmds(AliceCmds?, AliceMedIn, AliceSgCmds),
+    superapp # superapp(alice, AliceSgCmds?, AliceSgNotify, AliceConvs, AliceSgOut, AliceSgIn?, [], 1),
+    childsafe # agent(alice, state(0, 0, [], []), AliceAgentIn?, AliceNetAndChildIn?, AliceConvs?,
           [user_output(AliceAgentToUser),
-           net_output(AliceNetOut),
            child_output(carol, AliceToCarol)]),
     merge(AliceNetIn?, AliceFromCarol?, AliceNetAndChildIn),
-    mediator # ui_mediator(alice, ch(AliceAgentToUser?, AliceAgentIn),
+    childsafe # ui_mediator(alice, ch(AliceAgentToUser?, AliceAgentIn),
                 ch(AliceMedIn?, AliceMedOut), [], 1),
-    tee(AliceMedOut?, AliceActorIn, AliceDispNotify),
+    superapp # merge_notify(AliceSgNotify?, AliceMedOut?, AliceNotify),
+    tee(AliceNotify?, AliceActorIn, AliceDispNotify),
     send_to_user_tagged(alice, AliceDispCmd?, AliceDispNotify?),
 
     actors # bob4(ch(BobActorIn?, BobActorOut)),
-    tee(BobActorOut?, BobMedIn, BobDispCmd),
-    agent # agent(bob, state(0, 0, [], []), BobAgentIn?, BobNetAndChildIn?,
+    tee(BobActorOut?, BobCmds, BobDispCmd),
+    superapp # split_cmds(BobCmds?, BobMedIn, BobSgCmds),
+    superapp # superapp(bob, BobSgCmds?, BobSgNotify, BobConvs, BobSgOut, BobSgIn?, [], 1),
+    childsafe # agent(bob, state(0, 0, [], []), BobAgentIn?, BobNetAndChildIn?, BobConvs?,
           [user_output(BobAgentToUser),
-           net_output(BobNetOut),
            child_output(dave, BobToDave)]),
     merge(BobNetIn?, BobFromDave?, BobNetAndChildIn),
-    mediator # ui_mediator(bob, ch(BobAgentToUser?, BobAgentIn),
+    childsafe # ui_mediator(bob, ch(BobAgentToUser?, BobAgentIn),
                 ch(BobMedIn?, BobMedOut), [], 1),
-    tee(BobMedOut?, BobActorIn, BobDispNotify),
+    superapp # merge_notify(BobSgNotify?, BobMedOut?, BobNotify),
+    tee(BobNotify?, BobActorIn, BobDispNotify),
     send_to_user_tagged(bob, BobDispCmd?, BobDispNotify?),
 
     actors # carol4(ch(CarolActorIn?, CarolActorOut)),
-    tee(CarolActorOut?, CarolMedIn, CarolDispCmd),
-    child_agent # child_agent(carol, alice, state(0, 0, [], []), CarolAgentIn?, CarolFromAlice?,
+    tee(CarolActorOut?, CarolCmds, CarolDispCmd),
+    superapp # split_cmds(CarolCmds?, CarolMedIn, CarolSgCmds),
+    superapp # superapp(carol, CarolSgCmds?, CarolSgNotify, CarolConvs, CarolSgOut, CarolSgIn?, [], 1),
+    childsafe # child_agent(carol, alice, state(0, 0, [], []), CarolAgentIn?, CarolFromAlice?, CarolConvs?,
           [user_output(CarolAgentToUser),
            parent_output(alice, CarolToAlice)]),
-    mediator # ui_mediator(carol, ch(CarolAgentToUser?, CarolAgentIn),
+    childsafe # ui_mediator(carol, ch(CarolAgentToUser?, CarolAgentIn),
                 ch(CarolMedIn?, CarolMedOut), [], 1),
-    tee(CarolMedOut?, CarolActorIn, CarolDispNotify),
+    superapp # merge_notify(CarolSgNotify?, CarolMedOut?, CarolNotify),
+    tee(CarolNotify?, CarolActorIn, CarolDispNotify),
     send_to_user_tagged(carol, CarolDispCmd?, CarolDispNotify?),
 
     actors # dave4(ch(DaveActorIn?, DaveActorOut)),
-    tee(DaveActorOut?, DaveMedIn, DaveDispCmd),
-    child_agent # child_agent(dave, bob, state(0, 0, [], []), DaveAgentIn?, DaveFromBob?,
+    tee(DaveActorOut?, DaveCmds, DaveDispCmd),
+    superapp # split_cmds(DaveCmds?, DaveMedIn, DaveSgCmds),
+    superapp # superapp(dave, DaveSgCmds?, DaveSgNotify, DaveConvs, DaveSgOut, DaveSgIn?, [], 1),
+    childsafe # child_agent(dave, bob, state(0, 0, [], []), DaveAgentIn?, DaveFromBob?, DaveConvs?,
           [user_output(DaveAgentToUser),
            parent_output(bob, DaveToBob)]),
-    mediator # ui_mediator(dave, ch(DaveAgentToUser?, DaveAgentIn),
+    childsafe # ui_mediator(dave, ch(DaveAgentToUser?, DaveAgentIn),
                 ch(DaveMedIn?, DaveMedOut), [], 1),
-    tee(DaveMedOut?, DaveActorIn, DaveDispNotify),
+    superapp # merge_notify(DaveSgNotify?, DaveMedOut?, DaveNotify),
+    tee(DaveNotify?, DaveActorIn, DaveDispNotify),
     send_to_user_tagged(dave, DaveDispCmd?, DaveDispNotify?),
 
     merge(AliceToCarol?, [], CarolFromAlice),
     merge(CarolToAlice?, [], AliceFromCarol),
     merge(BobToDave?, [], DaveFromBob),
-    merge(DaveToBob?, [], BobFromDave).
+    merge(DaveToBob?, [], BobFromDave),
+
+    %% The super-apps' own network, one entry per party: the invitation and
+    %% its answer travel it, and the platform travels none.
+    merge(AliceSgOut?, BobSgOut?, SG1),
+    merge(SG1?, CarolSgOut?, SG2),
+    merge(SG2?, DaveSgOut?, AllSgOut),
+    superapp # sg_switch(AllSgOut?, [sg_entry(alice, AliceSgIn),
+                                   sg_entry(bob, BobSgIn),
+                                   sg_entry(carol, CarolSgIn),
+                                   sg_entry(dave, DaveSgIn)]).
+
 
 %% =============================================================================
 %% FPLAY5 — CSSG: Bob rejects (tagged output)
@@ -456,57 +403,75 @@ fplay4 :-
 
 exported procedure fplay5.
 fplay5 :-
-    network2(ch(AliceNetOut?, AliceNetIn),
-             ch(BobNetOut?, BobNetIn)),
-
     actors # alice5(ch(AliceActorIn?, AliceActorOut)),
-    tee(AliceActorOut?, AliceMedIn, AliceDispCmd),
-    agent # agent(alice, state(0, 0, [], []), AliceAgentIn?, AliceNetAndChildIn?,
+    tee(AliceActorOut?, AliceCmds, AliceDispCmd),
+    superapp # split_cmds(AliceCmds?, AliceMedIn, AliceSgCmds),
+    superapp # superapp(alice, AliceSgCmds?, AliceSgNotify, AliceConvs, AliceSgOut, AliceSgIn?, [], 1),
+    childsafe # agent(alice, state(0, 0, [], []), AliceAgentIn?, AliceNetAndChildIn?, AliceConvs?,
           [user_output(AliceAgentToUser),
-           net_output(AliceNetOut),
            child_output(carol, AliceToCarol)]),
     merge(AliceNetIn?, AliceFromCarol?, AliceNetAndChildIn),
-    mediator # ui_mediator(alice, ch(AliceAgentToUser?, AliceAgentIn),
+    childsafe # ui_mediator(alice, ch(AliceAgentToUser?, AliceAgentIn),
                 ch(AliceMedIn?, AliceMedOut), [], 1),
-    tee(AliceMedOut?, AliceActorIn, AliceDispNotify),
+    superapp # merge_notify(AliceSgNotify?, AliceMedOut?, AliceNotify),
+    tee(AliceNotify?, AliceActorIn, AliceDispNotify),
     send_to_user_tagged(alice, AliceDispCmd?, AliceDispNotify?),
 
     actors # bob5(ch(BobActorIn?, BobActorOut)),
-    tee(BobActorOut?, BobMedIn, BobDispCmd),
-    agent # agent(bob, state(0, 0, [], []), BobAgentIn?, BobNetAndChildIn?,
+    tee(BobActorOut?, BobCmds, BobDispCmd),
+    superapp # split_cmds(BobCmds?, BobMedIn, BobSgCmds),
+    superapp # superapp(bob, BobSgCmds?, BobSgNotify, BobConvs, BobSgOut, BobSgIn?, [], 1),
+    childsafe # agent(bob, state(0, 0, [], []), BobAgentIn?, BobNetAndChildIn?, BobConvs?,
           [user_output(BobAgentToUser),
-           net_output(BobNetOut),
            child_output(dave, BobToDave)]),
     merge(BobNetIn?, BobFromDave?, BobNetAndChildIn),
-    mediator # ui_mediator(bob, ch(BobAgentToUser?, BobAgentIn),
+    childsafe # ui_mediator(bob, ch(BobAgentToUser?, BobAgentIn),
                 ch(BobMedIn?, BobMedOut), [], 1),
-    tee(BobMedOut?, BobActorIn, BobDispNotify),
+    superapp # merge_notify(BobSgNotify?, BobMedOut?, BobNotify),
+    tee(BobNotify?, BobActorIn, BobDispNotify),
     send_to_user_tagged(bob, BobDispCmd?, BobDispNotify?),
 
     actors # carol5(ch(CarolActorIn?, CarolActorOut)),
-    tee(CarolActorOut?, CarolMedIn, CarolDispCmd),
-    child_agent # child_agent(carol, alice, state(0, 0, [], []), CarolAgentIn?, CarolFromAlice?,
+    tee(CarolActorOut?, CarolCmds, CarolDispCmd),
+    superapp # split_cmds(CarolCmds?, CarolMedIn, CarolSgCmds),
+    superapp # superapp(carol, CarolSgCmds?, CarolSgNotify, CarolConvs, CarolSgOut, CarolSgIn?, [], 1),
+    childsafe # child_agent(carol, alice, state(0, 0, [], []), CarolAgentIn?, CarolFromAlice?, CarolConvs?,
           [user_output(CarolAgentToUser),
            parent_output(alice, CarolToAlice)]),
-    mediator # ui_mediator(carol, ch(CarolAgentToUser?, CarolAgentIn),
+    childsafe # ui_mediator(carol, ch(CarolAgentToUser?, CarolAgentIn),
                 ch(CarolMedIn?, CarolMedOut), [], 1),
-    tee(CarolMedOut?, CarolActorIn, CarolDispNotify),
+    superapp # merge_notify(CarolSgNotify?, CarolMedOut?, CarolNotify),
+    tee(CarolNotify?, CarolActorIn, CarolDispNotify),
     send_to_user_tagged(carol, CarolDispCmd?, CarolDispNotify?),
 
     actors # dave5(ch(DaveActorIn?, DaveActorOut)),
-    tee(DaveActorOut?, DaveMedIn, DaveDispCmd),
-    child_agent # child_agent(dave, bob, state(0, 0, [], []), DaveAgentIn?, DaveFromBob?,
+    tee(DaveActorOut?, DaveCmds, DaveDispCmd),
+    superapp # split_cmds(DaveCmds?, DaveMedIn, DaveSgCmds),
+    superapp # superapp(dave, DaveSgCmds?, DaveSgNotify, DaveConvs, DaveSgOut, DaveSgIn?, [], 1),
+    childsafe # child_agent(dave, bob, state(0, 0, [], []), DaveAgentIn?, DaveFromBob?, DaveConvs?,
           [user_output(DaveAgentToUser),
            parent_output(bob, DaveToBob)]),
-    mediator # ui_mediator(dave, ch(DaveAgentToUser?, DaveAgentIn),
+    childsafe # ui_mediator(dave, ch(DaveAgentToUser?, DaveAgentIn),
                 ch(DaveMedIn?, DaveMedOut), [], 1),
-    tee(DaveMedOut?, DaveActorIn, DaveDispNotify),
+    superapp # merge_notify(DaveSgNotify?, DaveMedOut?, DaveNotify),
+    tee(DaveNotify?, DaveActorIn, DaveDispNotify),
     send_to_user_tagged(dave, DaveDispCmd?, DaveDispNotify?),
 
     merge(AliceToCarol?, [], CarolFromAlice),
     merge(CarolToAlice?, [], AliceFromCarol),
     merge(BobToDave?, [], DaveFromBob),
-    merge(DaveToBob?, [], BobFromDave).
+    merge(DaveToBob?, [], BobFromDave),
+
+    %% The super-apps' own network, one entry per party: the invitation and
+    %% its answer travel it, and the platform travels none.
+    merge(AliceSgOut?, BobSgOut?, SG1),
+    merge(SG1?, CarolSgOut?, SG2),
+    merge(SG2?, DaveSgOut?, AllSgOut),
+    superapp # sg_switch(AllSgOut?, [sg_entry(alice, AliceSgIn),
+                                   sg_entry(bob, BobSgIn),
+                                   sg_entry(carol, CarolSgIn),
+                                   sg_entry(dave, DaveSgIn)]).
+
 
 %% =============================================================================
 %% FPLAY6 — CSSG: Carol rejects (tagged output)
@@ -514,57 +479,75 @@ fplay5 :-
 
 exported procedure fplay6.
 fplay6 :-
-    network2(ch(AliceNetOut?, AliceNetIn),
-             ch(BobNetOut?, BobNetIn)),
-
     actors # alice6(ch(AliceActorIn?, AliceActorOut)),
-    tee(AliceActorOut?, AliceMedIn, AliceDispCmd),
-    agent # agent(alice, state(0, 0, [], []), AliceAgentIn?, AliceNetAndChildIn?,
+    tee(AliceActorOut?, AliceCmds, AliceDispCmd),
+    superapp # split_cmds(AliceCmds?, AliceMedIn, AliceSgCmds),
+    superapp # superapp(alice, AliceSgCmds?, AliceSgNotify, AliceConvs, AliceSgOut, AliceSgIn?, [], 1),
+    childsafe # agent(alice, state(0, 0, [], []), AliceAgentIn?, AliceNetAndChildIn?, AliceConvs?,
           [user_output(AliceAgentToUser),
-           net_output(AliceNetOut),
            child_output(carol, AliceToCarol)]),
     merge(AliceNetIn?, AliceFromCarol?, AliceNetAndChildIn),
-    mediator # ui_mediator(alice, ch(AliceAgentToUser?, AliceAgentIn),
+    childsafe # ui_mediator(alice, ch(AliceAgentToUser?, AliceAgentIn),
                 ch(AliceMedIn?, AliceMedOut), [], 1),
-    tee(AliceMedOut?, AliceActorIn, AliceDispNotify),
+    superapp # merge_notify(AliceSgNotify?, AliceMedOut?, AliceNotify),
+    tee(AliceNotify?, AliceActorIn, AliceDispNotify),
     send_to_user_tagged(alice, AliceDispCmd?, AliceDispNotify?),
 
     actors # bob6(ch(BobActorIn?, BobActorOut)),
-    tee(BobActorOut?, BobMedIn, BobDispCmd),
-    agent # agent(bob, state(0, 0, [], []), BobAgentIn?, BobNetAndChildIn?,
+    tee(BobActorOut?, BobCmds, BobDispCmd),
+    superapp # split_cmds(BobCmds?, BobMedIn, BobSgCmds),
+    superapp # superapp(bob, BobSgCmds?, BobSgNotify, BobConvs, BobSgOut, BobSgIn?, [], 1),
+    childsafe # agent(bob, state(0, 0, [], []), BobAgentIn?, BobNetAndChildIn?, BobConvs?,
           [user_output(BobAgentToUser),
-           net_output(BobNetOut),
            child_output(dave, BobToDave)]),
     merge(BobNetIn?, BobFromDave?, BobNetAndChildIn),
-    mediator # ui_mediator(bob, ch(BobAgentToUser?, BobAgentIn),
+    childsafe # ui_mediator(bob, ch(BobAgentToUser?, BobAgentIn),
                 ch(BobMedIn?, BobMedOut), [], 1),
-    tee(BobMedOut?, BobActorIn, BobDispNotify),
+    superapp # merge_notify(BobSgNotify?, BobMedOut?, BobNotify),
+    tee(BobNotify?, BobActorIn, BobDispNotify),
     send_to_user_tagged(bob, BobDispCmd?, BobDispNotify?),
 
     actors # carol6(ch(CarolActorIn?, CarolActorOut)),
-    tee(CarolActorOut?, CarolMedIn, CarolDispCmd),
-    child_agent # child_agent(carol, alice, state(0, 0, [], []), CarolAgentIn?, CarolFromAlice?,
+    tee(CarolActorOut?, CarolCmds, CarolDispCmd),
+    superapp # split_cmds(CarolCmds?, CarolMedIn, CarolSgCmds),
+    superapp # superapp(carol, CarolSgCmds?, CarolSgNotify, CarolConvs, CarolSgOut, CarolSgIn?, [], 1),
+    childsafe # child_agent(carol, alice, state(0, 0, [], []), CarolAgentIn?, CarolFromAlice?, CarolConvs?,
           [user_output(CarolAgentToUser),
            parent_output(alice, CarolToAlice)]),
-    mediator # ui_mediator(carol, ch(CarolAgentToUser?, CarolAgentIn),
+    childsafe # ui_mediator(carol, ch(CarolAgentToUser?, CarolAgentIn),
                 ch(CarolMedIn?, CarolMedOut), [], 1),
-    tee(CarolMedOut?, CarolActorIn, CarolDispNotify),
+    superapp # merge_notify(CarolSgNotify?, CarolMedOut?, CarolNotify),
+    tee(CarolNotify?, CarolActorIn, CarolDispNotify),
     send_to_user_tagged(carol, CarolDispCmd?, CarolDispNotify?),
 
     actors # dave6(ch(DaveActorIn?, DaveActorOut)),
-    tee(DaveActorOut?, DaveMedIn, DaveDispCmd),
-    child_agent # child_agent(dave, bob, state(0, 0, [], []), DaveAgentIn?, DaveFromBob?,
+    tee(DaveActorOut?, DaveCmds, DaveDispCmd),
+    superapp # split_cmds(DaveCmds?, DaveMedIn, DaveSgCmds),
+    superapp # superapp(dave, DaveSgCmds?, DaveSgNotify, DaveConvs, DaveSgOut, DaveSgIn?, [], 1),
+    childsafe # child_agent(dave, bob, state(0, 0, [], []), DaveAgentIn?, DaveFromBob?, DaveConvs?,
           [user_output(DaveAgentToUser),
            parent_output(bob, DaveToBob)]),
-    mediator # ui_mediator(dave, ch(DaveAgentToUser?, DaveAgentIn),
+    childsafe # ui_mediator(dave, ch(DaveAgentToUser?, DaveAgentIn),
                 ch(DaveMedIn?, DaveMedOut), [], 1),
-    tee(DaveMedOut?, DaveActorIn, DaveDispNotify),
+    superapp # merge_notify(DaveSgNotify?, DaveMedOut?, DaveNotify),
+    tee(DaveNotify?, DaveActorIn, DaveDispNotify),
     send_to_user_tagged(dave, DaveDispCmd?, DaveDispNotify?),
 
     merge(AliceToCarol?, [], CarolFromAlice),
     merge(CarolToAlice?, [], AliceFromCarol),
     merge(BobToDave?, [], DaveFromBob),
-    merge(DaveToBob?, [], BobFromDave).
+    merge(DaveToBob?, [], BobFromDave),
+
+    %% The super-apps' own network, one entry per party: the invitation and
+    %% its answer travel it, and the platform travels none.
+    merge(AliceSgOut?, BobSgOut?, SG1),
+    merge(SG1?, CarolSgOut?, SG2),
+    merge(SG2?, DaveSgOut?, AllSgOut),
+    superapp # sg_switch(AllSgOut?, [sg_entry(alice, AliceSgIn),
+                                   sg_entry(bob, BobSgIn),
+                                   sg_entry(carol, CarolSgIn),
+                                   sg_entry(dave, DaveSgIn)]).
+
 
 %% =============================================================================
 %% FPLAY7 — CSSG: Dave rejects (tagged output)
@@ -572,57 +555,75 @@ fplay6 :-
 
 exported procedure fplay7.
 fplay7 :-
-    network2(ch(AliceNetOut?, AliceNetIn),
-             ch(BobNetOut?, BobNetIn)),
-
     actors # alice7(ch(AliceActorIn?, AliceActorOut)),
-    tee(AliceActorOut?, AliceMedIn, AliceDispCmd),
-    agent # agent(alice, state(0, 0, [], []), AliceAgentIn?, AliceNetAndChildIn?,
+    tee(AliceActorOut?, AliceCmds, AliceDispCmd),
+    superapp # split_cmds(AliceCmds?, AliceMedIn, AliceSgCmds),
+    superapp # superapp(alice, AliceSgCmds?, AliceSgNotify, AliceConvs, AliceSgOut, AliceSgIn?, [], 1),
+    childsafe # agent(alice, state(0, 0, [], []), AliceAgentIn?, AliceNetAndChildIn?, AliceConvs?,
           [user_output(AliceAgentToUser),
-           net_output(AliceNetOut),
            child_output(carol, AliceToCarol)]),
     merge(AliceNetIn?, AliceFromCarol?, AliceNetAndChildIn),
-    mediator # ui_mediator(alice, ch(AliceAgentToUser?, AliceAgentIn),
+    childsafe # ui_mediator(alice, ch(AliceAgentToUser?, AliceAgentIn),
                 ch(AliceMedIn?, AliceMedOut), [], 1),
-    tee(AliceMedOut?, AliceActorIn, AliceDispNotify),
+    superapp # merge_notify(AliceSgNotify?, AliceMedOut?, AliceNotify),
+    tee(AliceNotify?, AliceActorIn, AliceDispNotify),
     send_to_user_tagged(alice, AliceDispCmd?, AliceDispNotify?),
 
     actors # bob7(ch(BobActorIn?, BobActorOut)),
-    tee(BobActorOut?, BobMedIn, BobDispCmd),
-    agent # agent(bob, state(0, 0, [], []), BobAgentIn?, BobNetAndChildIn?,
+    tee(BobActorOut?, BobCmds, BobDispCmd),
+    superapp # split_cmds(BobCmds?, BobMedIn, BobSgCmds),
+    superapp # superapp(bob, BobSgCmds?, BobSgNotify, BobConvs, BobSgOut, BobSgIn?, [], 1),
+    childsafe # agent(bob, state(0, 0, [], []), BobAgentIn?, BobNetAndChildIn?, BobConvs?,
           [user_output(BobAgentToUser),
-           net_output(BobNetOut),
            child_output(dave, BobToDave)]),
     merge(BobNetIn?, BobFromDave?, BobNetAndChildIn),
-    mediator # ui_mediator(bob, ch(BobAgentToUser?, BobAgentIn),
+    childsafe # ui_mediator(bob, ch(BobAgentToUser?, BobAgentIn),
                 ch(BobMedIn?, BobMedOut), [], 1),
-    tee(BobMedOut?, BobActorIn, BobDispNotify),
+    superapp # merge_notify(BobSgNotify?, BobMedOut?, BobNotify),
+    tee(BobNotify?, BobActorIn, BobDispNotify),
     send_to_user_tagged(bob, BobDispCmd?, BobDispNotify?),
 
     actors # carol7(ch(CarolActorIn?, CarolActorOut)),
-    tee(CarolActorOut?, CarolMedIn, CarolDispCmd),
-    child_agent # child_agent(carol, alice, state(0, 0, [], []), CarolAgentIn?, CarolFromAlice?,
+    tee(CarolActorOut?, CarolCmds, CarolDispCmd),
+    superapp # split_cmds(CarolCmds?, CarolMedIn, CarolSgCmds),
+    superapp # superapp(carol, CarolSgCmds?, CarolSgNotify, CarolConvs, CarolSgOut, CarolSgIn?, [], 1),
+    childsafe # child_agent(carol, alice, state(0, 0, [], []), CarolAgentIn?, CarolFromAlice?, CarolConvs?,
           [user_output(CarolAgentToUser),
            parent_output(alice, CarolToAlice)]),
-    mediator # ui_mediator(carol, ch(CarolAgentToUser?, CarolAgentIn),
+    childsafe # ui_mediator(carol, ch(CarolAgentToUser?, CarolAgentIn),
                 ch(CarolMedIn?, CarolMedOut), [], 1),
-    tee(CarolMedOut?, CarolActorIn, CarolDispNotify),
+    superapp # merge_notify(CarolSgNotify?, CarolMedOut?, CarolNotify),
+    tee(CarolNotify?, CarolActorIn, CarolDispNotify),
     send_to_user_tagged(carol, CarolDispCmd?, CarolDispNotify?),
 
     actors # dave7(ch(DaveActorIn?, DaveActorOut)),
-    tee(DaveActorOut?, DaveMedIn, DaveDispCmd),
-    child_agent # child_agent(dave, bob, state(0, 0, [], []), DaveAgentIn?, DaveFromBob?,
+    tee(DaveActorOut?, DaveCmds, DaveDispCmd),
+    superapp # split_cmds(DaveCmds?, DaveMedIn, DaveSgCmds),
+    superapp # superapp(dave, DaveSgCmds?, DaveSgNotify, DaveConvs, DaveSgOut, DaveSgIn?, [], 1),
+    childsafe # child_agent(dave, bob, state(0, 0, [], []), DaveAgentIn?, DaveFromBob?, DaveConvs?,
           [user_output(DaveAgentToUser),
            parent_output(bob, DaveToBob)]),
-    mediator # ui_mediator(dave, ch(DaveAgentToUser?, DaveAgentIn),
+    childsafe # ui_mediator(dave, ch(DaveAgentToUser?, DaveAgentIn),
                 ch(DaveMedIn?, DaveMedOut), [], 1),
-    tee(DaveMedOut?, DaveActorIn, DaveDispNotify),
+    superapp # merge_notify(DaveSgNotify?, DaveMedOut?, DaveNotify),
+    tee(DaveNotify?, DaveActorIn, DaveDispNotify),
     send_to_user_tagged(dave, DaveDispCmd?, DaveDispNotify?),
 
     merge(AliceToCarol?, [], CarolFromAlice),
     merge(CarolToAlice?, [], AliceFromCarol),
     merge(BobToDave?, [], DaveFromBob),
-    merge(DaveToBob?, [], BobFromDave).
+    merge(DaveToBob?, [], BobFromDave),
+
+    %% The super-apps' own network, one entry per party: the invitation and
+    %% its answer travel it, and the platform travels none.
+    merge(AliceSgOut?, BobSgOut?, SG1),
+    merge(SG1?, CarolSgOut?, SG2),
+    merge(SG2?, DaveSgOut?, AllSgOut),
+    superapp # sg_switch(AllSgOut?, [sg_entry(alice, AliceSgIn),
+                                   sg_entry(bob, BobSgIn),
+                                   sg_entry(carol, CarolSgIn),
+                                   sg_entry(dave, DaveSgIn)]).
+
 
 %% =============================================================================
 %% FPLAY8 — CSSN: Group join (tagged output)
@@ -630,26 +631,36 @@ fplay7 :-
 
 exported procedure fplay8.
 fplay8 :-
-    network2(ch(AliceNetOut?, AliceNetIn),
-             ch(BobNetOut?, BobNetIn)),
-
     actors # alice8(ch(AliceActorIn?, AliceActorOut)),
-    tee(AliceActorOut?, AliceMedIn, AliceDispCmd),
-    agent # agent(alice, state(0, 0, [], []), AliceAgentIn?, AliceNetIn?,
-          [user_output(AliceAgentToUser), net_output(AliceNetOut)]),
-    mediator # ui_mediator(alice, ch(AliceAgentToUser?, AliceAgentIn),
+    tee(AliceActorOut?, AliceCmds, AliceDispCmd),
+    superapp # split_cmds(AliceCmds?, AliceMedIn, AliceSgCmds),
+    superapp # superapp(alice, AliceSgCmds?, AliceSgNotify, AliceConvs, AliceSgOut, AliceSgIn?, [], 1),
+    childsafe # agent(alice, state(0, 0, [], []), AliceAgentIn?, AliceNetIn?, AliceConvs?,
+          [user_output(AliceAgentToUser)]),
+    childsafe # ui_mediator(alice, ch(AliceAgentToUser?, AliceAgentIn),
                 ch(AliceMedIn?, AliceMedOut), [], 1),
-    tee(AliceMedOut?, AliceActorIn, AliceDispNotify),
+    superapp # merge_notify(AliceSgNotify?, AliceMedOut?, AliceNotify),
+    tee(AliceNotify?, AliceActorIn, AliceDispNotify),
     send_to_user_tagged(alice, AliceDispCmd?, AliceDispNotify?),
 
     actors # bob8(ch(BobActorIn?, BobActorOut)),
-    tee(BobActorOut?, BobMedIn, BobDispCmd),
-    agent # agent(bob, state(0, 0, [], []), BobAgentIn?, BobNetIn?,
-          [user_output(BobAgentToUser), net_output(BobNetOut)]),
-    mediator # ui_mediator(bob, ch(BobAgentToUser?, BobAgentIn),
+    tee(BobActorOut?, BobCmds, BobDispCmd),
+    superapp # split_cmds(BobCmds?, BobMedIn, BobSgCmds),
+    superapp # superapp(bob, BobSgCmds?, BobSgNotify, BobConvs, BobSgOut, BobSgIn?, [], 1),
+    childsafe # agent(bob, state(0, 0, [], []), BobAgentIn?, BobNetIn?, BobConvs?,
+          [user_output(BobAgentToUser)]),
+    childsafe # ui_mediator(bob, ch(BobAgentToUser?, BobAgentIn),
                 ch(BobMedIn?, BobMedOut), [], 1),
-    tee(BobMedOut?, BobActorIn, BobDispNotify),
-    send_to_user_tagged(bob, BobDispCmd?, BobDispNotify?).
+    superapp # merge_notify(BobSgNotify?, BobMedOut?, BobNotify),
+    tee(BobNotify?, BobActorIn, BobDispNotify),
+    send_to_user_tagged(bob, BobDispCmd?, BobDispNotify?),
+
+    %% The super-apps' own network, one entry per party: the invitation and
+    %% its answer travel it, and the platform travels none.
+    merge(AliceSgOut?, BobSgOut?, AllSgOut),
+    superapp # sg_switch(AllSgOut?, [sg_entry(alice, AliceSgIn),
+                                   sg_entry(bob, BobSgIn)]).
+
 
 %% =============================================================================
 %% FPLAY9 — CSSN: Child joins adult-managed group (tagged output)
@@ -657,42 +668,56 @@ fplay8 :-
 
 exported procedure fplay9.
 fplay9 :-
-    network2(ch(AliceNetOut?, AliceNetIn),
-             ch(BobNetOut?, BobNetIn)),
-
     actors # alice9(ch(AliceActorIn?, AliceActorOut)),
-    tee(AliceActorOut?, AliceMedIn, AliceDispCmd),
-    agent # agent(alice, state(0, 0, [], []), AliceAgentIn?, AliceNetIn?,
-          [user_output(AliceAgentToUser), net_output(AliceNetOut)]),
-    mediator # ui_mediator(alice, ch(AliceAgentToUser?, AliceAgentIn),
+    tee(AliceActorOut?, AliceCmds, AliceDispCmd),
+    superapp # split_cmds(AliceCmds?, AliceMedIn, AliceSgCmds),
+    superapp # superapp(alice, AliceSgCmds?, AliceSgNotify, AliceConvs, AliceSgOut, AliceSgIn?, [], 1),
+    childsafe # agent(alice, state(0, 0, [], []), AliceAgentIn?, AliceNetIn?, AliceConvs?,
+          [user_output(AliceAgentToUser)]),
+    childsafe # ui_mediator(alice, ch(AliceAgentToUser?, AliceAgentIn),
                 ch(AliceMedIn?, AliceMedOut), [], 1),
-    tee(AliceMedOut?, AliceActorIn, AliceDispNotify),
+    superapp # merge_notify(AliceSgNotify?, AliceMedOut?, AliceNotify),
+    tee(AliceNotify?, AliceActorIn, AliceDispNotify),
     send_to_user_tagged(alice, AliceDispCmd?, AliceDispNotify?),
 
     actors # bob9(ch(BobActorIn?, BobActorOut)),
-    tee(BobActorOut?, BobMedIn, BobDispCmd),
-    agent # agent(bob, state(0, 0, [], []), BobAgentIn?, BobNetAndChildIn?,
+    tee(BobActorOut?, BobCmds, BobDispCmd),
+    superapp # split_cmds(BobCmds?, BobMedIn, BobSgCmds),
+    superapp # superapp(bob, BobSgCmds?, BobSgNotify, BobConvs, BobSgOut, BobSgIn?, [], 1),
+    childsafe # agent(bob, state(0, 0, [], []), BobAgentIn?, BobNetAndChildIn?, BobConvs?,
           [user_output(BobAgentToUser),
-           net_output(BobNetOut),
            child_output(dave, BobToDave)]),
     merge(BobNetIn?, BobFromDave?, BobNetAndChildIn),
-    mediator # ui_mediator(bob, ch(BobAgentToUser?, BobAgentIn),
+    childsafe # ui_mediator(bob, ch(BobAgentToUser?, BobAgentIn),
                 ch(BobMedIn?, BobMedOut), [], 1),
-    tee(BobMedOut?, BobActorIn, BobDispNotify),
+    superapp # merge_notify(BobSgNotify?, BobMedOut?, BobNotify),
+    tee(BobNotify?, BobActorIn, BobDispNotify),
     send_to_user_tagged(bob, BobDispCmd?, BobDispNotify?),
 
     actors # dave9(ch(DaveActorIn?, DaveActorOut)),
-    tee(DaveActorOut?, DaveMedIn, DaveDispCmd),
-    child_agent # child_agent(dave, bob, state(0, 0, [], []), DaveAgentIn?, DaveFromBob?,
+    tee(DaveActorOut?, DaveCmds, DaveDispCmd),
+    superapp # split_cmds(DaveCmds?, DaveMedIn, DaveSgCmds),
+    superapp # superapp(dave, DaveSgCmds?, DaveSgNotify, DaveConvs, DaveSgOut, DaveSgIn?, [], 1),
+    childsafe # child_agent(dave, bob, state(0, 0, [], []), DaveAgentIn?, DaveFromBob?, DaveConvs?,
           [user_output(DaveAgentToUser),
            parent_output(bob, DaveToBob)]),
-    mediator # ui_mediator(dave, ch(DaveAgentToUser?, DaveAgentIn),
+    childsafe # ui_mediator(dave, ch(DaveAgentToUser?, DaveAgentIn),
                 ch(DaveMedIn?, DaveMedOut), [], 1),
-    tee(DaveMedOut?, DaveActorIn, DaveDispNotify),
+    superapp # merge_notify(DaveSgNotify?, DaveMedOut?, DaveNotify),
+    tee(DaveNotify?, DaveActorIn, DaveDispNotify),
     send_to_user_tagged(dave, DaveDispCmd?, DaveDispNotify?),
 
     merge(BobToDave?, [], DaveFromBob),
-    merge(DaveToBob?, [], BobFromDave).
+    merge(DaveToBob?, [], BobFromDave),
+
+    %% The super-apps' own network, one entry per party: the invitation and
+    %% its answer travel it, and the platform travels none.
+    merge(AliceSgOut?, BobSgOut?, SG1),
+    merge(SG1?, DaveSgOut?, AllSgOut),
+    superapp # sg_switch(AllSgOut?, [sg_entry(alice, AliceSgIn),
+                                   sg_entry(bob, BobSgIn),
+                                   sg_entry(dave, DaveSgIn)]).
+
 
 %% =============================================================================
 %% FPLAY10 — CSSN: Parent rejects child's group invite (tagged output)
@@ -700,42 +725,56 @@ fplay9 :-
 
 exported procedure fplay10.
 fplay10 :-
-    network2(ch(AliceNetOut?, AliceNetIn),
-             ch(BobNetOut?, BobNetIn)),
-
     actors # alice10(ch(AliceActorIn?, AliceActorOut)),
-    tee(AliceActorOut?, AliceMedIn, AliceDispCmd),
-    agent # agent(alice, state(0, 0, [], []), AliceAgentIn?, AliceNetIn?,
-          [user_output(AliceAgentToUser), net_output(AliceNetOut)]),
-    mediator # ui_mediator(alice, ch(AliceAgentToUser?, AliceAgentIn),
+    tee(AliceActorOut?, AliceCmds, AliceDispCmd),
+    superapp # split_cmds(AliceCmds?, AliceMedIn, AliceSgCmds),
+    superapp # superapp(alice, AliceSgCmds?, AliceSgNotify, AliceConvs, AliceSgOut, AliceSgIn?, [], 1),
+    childsafe # agent(alice, state(0, 0, [], []), AliceAgentIn?, AliceNetIn?, AliceConvs?,
+          [user_output(AliceAgentToUser)]),
+    childsafe # ui_mediator(alice, ch(AliceAgentToUser?, AliceAgentIn),
                 ch(AliceMedIn?, AliceMedOut), [], 1),
-    tee(AliceMedOut?, AliceActorIn, AliceDispNotify),
+    superapp # merge_notify(AliceSgNotify?, AliceMedOut?, AliceNotify),
+    tee(AliceNotify?, AliceActorIn, AliceDispNotify),
     send_to_user_tagged(alice, AliceDispCmd?, AliceDispNotify?),
 
     actors # bob10(ch(BobActorIn?, BobActorOut)),
-    tee(BobActorOut?, BobMedIn, BobDispCmd),
-    agent # agent(bob, state(0, 0, [], []), BobAgentIn?, BobNetAndChildIn?,
+    tee(BobActorOut?, BobCmds, BobDispCmd),
+    superapp # split_cmds(BobCmds?, BobMedIn, BobSgCmds),
+    superapp # superapp(bob, BobSgCmds?, BobSgNotify, BobConvs, BobSgOut, BobSgIn?, [], 1),
+    childsafe # agent(bob, state(0, 0, [], []), BobAgentIn?, BobNetAndChildIn?, BobConvs?,
           [user_output(BobAgentToUser),
-           net_output(BobNetOut),
            child_output(dave, BobToDave)]),
     merge(BobNetIn?, BobFromDave?, BobNetAndChildIn),
-    mediator # ui_mediator(bob, ch(BobAgentToUser?, BobAgentIn),
+    childsafe # ui_mediator(bob, ch(BobAgentToUser?, BobAgentIn),
                 ch(BobMedIn?, BobMedOut), [], 1),
-    tee(BobMedOut?, BobActorIn, BobDispNotify),
+    superapp # merge_notify(BobSgNotify?, BobMedOut?, BobNotify),
+    tee(BobNotify?, BobActorIn, BobDispNotify),
     send_to_user_tagged(bob, BobDispCmd?, BobDispNotify?),
 
     actors # dave10(ch(DaveActorIn?, DaveActorOut)),
-    tee(DaveActorOut?, DaveMedIn, DaveDispCmd),
-    child_agent # child_agent(dave, bob, state(0, 0, [], []), DaveAgentIn?, DaveFromBob?,
+    tee(DaveActorOut?, DaveCmds, DaveDispCmd),
+    superapp # split_cmds(DaveCmds?, DaveMedIn, DaveSgCmds),
+    superapp # superapp(dave, DaveSgCmds?, DaveSgNotify, DaveConvs, DaveSgOut, DaveSgIn?, [], 1),
+    childsafe # child_agent(dave, bob, state(0, 0, [], []), DaveAgentIn?, DaveFromBob?, DaveConvs?,
           [user_output(DaveAgentToUser),
            parent_output(bob, DaveToBob)]),
-    mediator # ui_mediator(dave, ch(DaveAgentToUser?, DaveAgentIn),
+    childsafe # ui_mediator(dave, ch(DaveAgentToUser?, DaveAgentIn),
                 ch(DaveMedIn?, DaveMedOut), [], 1),
-    tee(DaveMedOut?, DaveActorIn, DaveDispNotify),
+    superapp # merge_notify(DaveSgNotify?, DaveMedOut?, DaveNotify),
+    tee(DaveNotify?, DaveActorIn, DaveDispNotify),
     send_to_user_tagged(dave, DaveDispCmd?, DaveDispNotify?),
 
     merge(BobToDave?, [], DaveFromBob),
-    merge(DaveToBob?, [], BobFromDave).
+    merge(DaveToBob?, [], BobFromDave),
+
+    %% The super-apps' own network, one entry per party: the invitation and
+    %% its answer travel it, and the platform travels none.
+    merge(AliceSgOut?, BobSgOut?, SG1),
+    merge(SG1?, DaveSgOut?, AllSgOut),
+    superapp # sg_switch(AllSgOut?, [sg_entry(alice, AliceSgIn),
+                                   sg_entry(bob, BobSgIn),
+                                   sg_entry(dave, DaveSgIn)]).
+
 
 %% =============================================================================
 %% FPLAY11 — CSSN: Child-Safe Social Groups, 6 agents (tagged output)
@@ -743,74 +782,85 @@ fplay10 :-
 
 exported procedure fplay11.
 fplay11 :-
-    network3(ch(AliceNetOut?, AliceNetIn),
-             ch(BobNetOut?, BobNetIn),
-             ch(CharlieNetOut?, CharlieNetIn)),
-
     actors # alice11(ch(AliceActorIn?, AliceActorOut)),
-    tee(AliceActorOut?, AliceMedIn, AliceDispCmd),
-    agent # agent(alice, state(0, 0, [], []), AliceAgentIn?, AliceNetAndChildIn?,
+    tee(AliceActorOut?, AliceCmds, AliceDispCmd),
+    superapp # split_cmds(AliceCmds?, AliceMedIn, AliceSgCmds),
+    superapp # superapp(alice, AliceSgCmds?, AliceSgNotify, AliceConvs, AliceSgOut, AliceSgIn?, [], 1),
+    childsafe # agent(alice, state(0, 0, [], []), AliceAgentIn?, AliceNetAndChildIn?, AliceConvs?,
           [user_output(AliceAgentToUser),
-           net_output(AliceNetOut),
            child_output(carol, AliceToCarol)]),
     merge(AliceNetIn?, AliceFromCarol?, AliceNetAndChildIn),
-    mediator # ui_mediator(alice, ch(AliceAgentToUser?, AliceAgentIn),
+    childsafe # ui_mediator(alice, ch(AliceAgentToUser?, AliceAgentIn),
                 ch(AliceMedIn?, AliceMedOut), [], 1),
-    tee(AliceMedOut?, AliceActorIn, AliceDispNotify),
+    superapp # merge_notify(AliceSgNotify?, AliceMedOut?, AliceNotify),
+    tee(AliceNotify?, AliceActorIn, AliceDispNotify),
     send_to_user_tagged(alice, AliceDispCmd?, AliceDispNotify?),
 
     actors # bob11(ch(BobActorIn?, BobActorOut)),
-    tee(BobActorOut?, BobMedIn, BobDispCmd),
-    agent # agent(bob, state(0, 0, [], []), BobAgentIn?, BobNetAndChildIn?,
+    tee(BobActorOut?, BobCmds, BobDispCmd),
+    superapp # split_cmds(BobCmds?, BobMedIn, BobSgCmds),
+    superapp # superapp(bob, BobSgCmds?, BobSgNotify, BobConvs, BobSgOut, BobSgIn?, [], 1),
+    childsafe # agent(bob, state(0, 0, [], []), BobAgentIn?, BobNetAndChildIn?, BobConvs?,
           [user_output(BobAgentToUser),
-           net_output(BobNetOut),
            child_output(dave, BobToDave)]),
     merge(BobNetIn?, BobFromDave?, BobNetAndChildIn),
-    mediator # ui_mediator(bob, ch(BobAgentToUser?, BobAgentIn),
+    childsafe # ui_mediator(bob, ch(BobAgentToUser?, BobAgentIn),
                 ch(BobMedIn?, BobMedOut), [], 1),
-    tee(BobMedOut?, BobActorIn, BobDispNotify),
+    superapp # merge_notify(BobSgNotify?, BobMedOut?, BobNotify),
+    tee(BobNotify?, BobActorIn, BobDispNotify),
     send_to_user_tagged(bob, BobDispCmd?, BobDispNotify?),
 
     actors # charlie11(ch(CharlieActorIn?, CharlieActorOut)),
-    tee(CharlieActorOut?, CharlieMedIn, CharlieDispCmd),
-    agent # agent(charlie, state(0, 0, [], []), CharlieAgentIn?, CharlieNetAndChildIn?,
+    tee(CharlieActorOut?, CharlieCmds, CharlieDispCmd),
+    superapp # split_cmds(CharlieCmds?, CharlieMedIn, CharlieSgCmds),
+    superapp # superapp(charlie, CharlieSgCmds?, CharlieSgNotify, CharlieConvs, CharlieSgOut, CharlieSgIn?, [], 1),
+    childsafe # agent(charlie, state(0, 0, [], []), CharlieAgentIn?, CharlieNetAndChildIn?, CharlieConvs?,
           [user_output(CharlieAgentToUser),
-           net_output(CharlieNetOut),
            child_output(eve, CharlieToEve)]),
     merge(CharlieNetIn?, CharlieFromEve?, CharlieNetAndChildIn),
-    mediator # ui_mediator(charlie, ch(CharlieAgentToUser?, CharlieAgentIn),
+    childsafe # ui_mediator(charlie, ch(CharlieAgentToUser?, CharlieAgentIn),
                 ch(CharlieMedIn?, CharlieMedOut), [], 1),
-    tee(CharlieMedOut?, CharlieActorIn, CharlieDispNotify),
+    superapp # merge_notify(CharlieSgNotify?, CharlieMedOut?, CharlieNotify),
+    tee(CharlieNotify?, CharlieActorIn, CharlieDispNotify),
     send_to_user_tagged(charlie, CharlieDispCmd?, CharlieDispNotify?),
 
     actors # carol11(ch(CarolActorIn?, CarolActorOut)),
-    tee(CarolActorOut?, CarolMedIn, CarolDispCmd),
-    child_agent # child_agent(carol, alice, state(0, 0, [], []), CarolAgentIn?, CarolFromAlice?,
+    tee(CarolActorOut?, CarolCmds, CarolDispCmd),
+    superapp # split_cmds(CarolCmds?, CarolMedIn, CarolSgCmds),
+    superapp # superapp(carol, CarolSgCmds?, CarolSgNotify, CarolConvs, CarolSgOut, CarolSgIn?, [], 1),
+    childsafe # child_agent(carol, alice, state(0, 0, [], []), CarolAgentIn?, CarolFromAlice?, CarolConvs?,
           [user_output(CarolAgentToUser),
            parent_output(alice, CarolToAlice)]),
-    mediator # ui_mediator(carol, ch(CarolAgentToUser?, CarolAgentIn),
+    childsafe # ui_mediator(carol, ch(CarolAgentToUser?, CarolAgentIn),
                 ch(CarolMedIn?, CarolMedOut), [], 1),
-    tee(CarolMedOut?, CarolActorIn, CarolDispNotify),
+    superapp # merge_notify(CarolSgNotify?, CarolMedOut?, CarolNotify),
+    tee(CarolNotify?, CarolActorIn, CarolDispNotify),
     send_to_user_tagged(carol, CarolDispCmd?, CarolDispNotify?),
 
     actors # dave11(ch(DaveActorIn?, DaveActorOut)),
-    tee(DaveActorOut?, DaveMedIn, DaveDispCmd),
-    child_agent # child_agent(dave, bob, state(0, 0, [], []), DaveAgentIn?, DaveFromBob?,
+    tee(DaveActorOut?, DaveCmds, DaveDispCmd),
+    superapp # split_cmds(DaveCmds?, DaveMedIn, DaveSgCmds),
+    superapp # superapp(dave, DaveSgCmds?, DaveSgNotify, DaveConvs, DaveSgOut, DaveSgIn?, [], 1),
+    childsafe # child_agent(dave, bob, state(0, 0, [], []), DaveAgentIn?, DaveFromBob?, DaveConvs?,
           [user_output(DaveAgentToUser),
            parent_output(bob, DaveToBob)]),
-    mediator # ui_mediator(dave, ch(DaveAgentToUser?, DaveAgentIn),
+    childsafe # ui_mediator(dave, ch(DaveAgentToUser?, DaveAgentIn),
                 ch(DaveMedIn?, DaveMedOut), [], 1),
-    tee(DaveMedOut?, DaveActorIn, DaveDispNotify),
+    superapp # merge_notify(DaveSgNotify?, DaveMedOut?, DaveNotify),
+    tee(DaveNotify?, DaveActorIn, DaveDispNotify),
     send_to_user_tagged(dave, DaveDispCmd?, DaveDispNotify?),
 
     actors # eve11(ch(EveActorIn?, EveActorOut)),
-    tee(EveActorOut?, EveMedIn, EveDispCmd),
-    child_agent # child_agent(eve, charlie, state(0, 0, [], []), EveAgentIn?, EveFromCharlie?,
+    tee(EveActorOut?, EveCmds, EveDispCmd),
+    superapp # split_cmds(EveCmds?, EveMedIn, EveSgCmds),
+    superapp # superapp(eve, EveSgCmds?, EveSgNotify, EveConvs, EveSgOut, EveSgIn?, [], 1),
+    childsafe # child_agent(eve, charlie, state(0, 0, [], []), EveAgentIn?, EveFromCharlie?, EveConvs?,
           [user_output(EveAgentToUser),
            parent_output(charlie, EveToCharlie)]),
-    mediator # ui_mediator(eve, ch(EveAgentToUser?, EveAgentIn),
+    childsafe # ui_mediator(eve, ch(EveAgentToUser?, EveAgentIn),
                 ch(EveMedIn?, EveMedOut), [], 1),
-    tee(EveMedOut?, EveActorIn, EveDispNotify),
+    superapp # merge_notify(EveSgNotify?, EveMedOut?, EveNotify),
+    tee(EveNotify?, EveActorIn, EveDispNotify),
     send_to_user_tagged(eve, EveDispCmd?, EveDispNotify?),
 
     merge(AliceToCarol?, [], CarolFromAlice),
@@ -818,7 +868,22 @@ fplay11 :-
     merge(BobToDave?, [], DaveFromBob),
     merge(DaveToBob?, [], BobFromDave),
     merge(CharlieToEve?, [], EveFromCharlie),
-    merge(EveToCharlie?, [], CharlieFromEve).
+    merge(EveToCharlie?, [], CharlieFromEve),
+
+    %% The super-apps' own network, one entry per party: the invitation and
+    %% its answer travel it, and the platform travels none.
+    merge(AliceSgOut?, BobSgOut?, SG1),
+    merge(SG1?, CharlieSgOut?, SG2),
+    merge(SG2?, CarolSgOut?, SG3),
+    merge(SG3?, DaveSgOut?, SG4),
+    merge(SG4?, EveSgOut?, AllSgOut),
+    superapp # sg_switch(AllSgOut?, [sg_entry(alice, AliceSgIn),
+                                   sg_entry(bob, BobSgIn),
+                                   sg_entry(charlie, CharlieSgIn),
+                                   sg_entry(carol, CarolSgIn),
+                                   sg_entry(dave, DaveSgIn),
+                                   sg_entry(eve, EveSgIn)]).
+
 
 %% =============================================================================
 %% FPLAY12 — CSSN: Parental Consent for Groups, 5 agents (tagged output)
@@ -826,67 +891,89 @@ fplay11 :-
 
 exported procedure fplay12.
 fplay12 :-
-    network3(ch(AliceNetOut?, AliceNetIn),
-             ch(BobNetOut?, BobNetIn),
-             ch(CharlieNetOut?, CharlieNetIn)),
-
     actors # alice12(ch(AliceActorIn?, AliceActorOut)),
-    tee(AliceActorOut?, AliceMedIn, AliceDispCmd),
-    agent # agent(alice, state(0, 0, [], []), AliceAgentIn?, AliceNetIn?,
-          [user_output(AliceAgentToUser), net_output(AliceNetOut)]),
-    mediator # ui_mediator(alice, ch(AliceAgentToUser?, AliceAgentIn),
+    tee(AliceActorOut?, AliceCmds, AliceDispCmd),
+    superapp # split_cmds(AliceCmds?, AliceMedIn, AliceSgCmds),
+    superapp # superapp(alice, AliceSgCmds?, AliceSgNotify, AliceConvs, AliceSgOut, AliceSgIn?, [], 1),
+    childsafe # agent(alice, state(0, 0, [], []), AliceAgentIn?, AliceNetIn?, AliceConvs?,
+          [user_output(AliceAgentToUser)]),
+    childsafe # ui_mediator(alice, ch(AliceAgentToUser?, AliceAgentIn),
                 ch(AliceMedIn?, AliceMedOut), [], 1),
-    tee(AliceMedOut?, AliceActorIn, AliceDispNotify),
+    superapp # merge_notify(AliceSgNotify?, AliceMedOut?, AliceNotify),
+    tee(AliceNotify?, AliceActorIn, AliceDispNotify),
     send_to_user_tagged(alice, AliceDispCmd?, AliceDispNotify?),
 
     actors # bob12(ch(BobActorIn?, BobActorOut)),
-    tee(BobActorOut?, BobMedIn, BobDispCmd),
-    agent # agent(bob, state(0, 0, [], []), BobAgentIn?, BobNetAndChildIn?,
+    tee(BobActorOut?, BobCmds, BobDispCmd),
+    superapp # split_cmds(BobCmds?, BobMedIn, BobSgCmds),
+    superapp # superapp(bob, BobSgCmds?, BobSgNotify, BobConvs, BobSgOut, BobSgIn?, [], 1),
+    childsafe # agent(bob, state(0, 0, [], []), BobAgentIn?, BobNetAndChildIn?, BobConvs?,
           [user_output(BobAgentToUser),
-           net_output(BobNetOut),
            child_output(dave, BobToDave)]),
     merge(BobNetIn?, BobFromDave?, BobNetAndChildIn),
-    mediator # ui_mediator(bob, ch(BobAgentToUser?, BobAgentIn),
+    childsafe # ui_mediator(bob, ch(BobAgentToUser?, BobAgentIn),
                 ch(BobMedIn?, BobMedOut), [], 1),
-    tee(BobMedOut?, BobActorIn, BobDispNotify),
+    superapp # merge_notify(BobSgNotify?, BobMedOut?, BobNotify),
+    tee(BobNotify?, BobActorIn, BobDispNotify),
     send_to_user_tagged(bob, BobDispCmd?, BobDispNotify?),
 
     actors # charlie12(ch(CharlieActorIn?, CharlieActorOut)),
-    tee(CharlieActorOut?, CharlieMedIn, CharlieDispCmd),
-    agent # agent(charlie, state(0, 0, [], []), CharlieAgentIn?, CharlieNetAndChildIn?,
+    tee(CharlieActorOut?, CharlieCmds, CharlieDispCmd),
+    superapp # split_cmds(CharlieCmds?, CharlieMedIn, CharlieSgCmds),
+    superapp # superapp(charlie, CharlieSgCmds?, CharlieSgNotify, CharlieConvs, CharlieSgOut, CharlieSgIn?, [], 1),
+    childsafe # agent(charlie, state(0, 0, [], []), CharlieAgentIn?, CharlieNetAndChildIn?, CharlieConvs?,
           [user_output(CharlieAgentToUser),
-           net_output(CharlieNetOut),
            child_output(eve, CharlieToEve)]),
     merge(CharlieNetIn?, CharlieFromEve?, CharlieNetAndChildIn),
-    mediator # ui_mediator(charlie, ch(CharlieAgentToUser?, CharlieAgentIn),
+    childsafe # ui_mediator(charlie, ch(CharlieAgentToUser?, CharlieAgentIn),
                 ch(CharlieMedIn?, CharlieMedOut), [], 1),
-    tee(CharlieMedOut?, CharlieActorIn, CharlieDispNotify),
+    superapp # merge_notify(CharlieSgNotify?, CharlieMedOut?, CharlieNotify),
+    tee(CharlieNotify?, CharlieActorIn, CharlieDispNotify),
     send_to_user_tagged(charlie, CharlieDispCmd?, CharlieDispNotify?),
 
     actors # dave12(ch(DaveActorIn?, DaveActorOut)),
-    tee(DaveActorOut?, DaveMedIn, DaveDispCmd),
-    child_agent # child_agent(dave, bob, state(0, 0, [], []), DaveAgentIn?, DaveFromBob?,
+    tee(DaveActorOut?, DaveCmds, DaveDispCmd),
+    superapp # split_cmds(DaveCmds?, DaveMedIn, DaveSgCmds),
+    superapp # superapp(dave, DaveSgCmds?, DaveSgNotify, DaveConvs, DaveSgOut, DaveSgIn?, [], 1),
+    childsafe # child_agent(dave, bob, state(0, 0, [], []), DaveAgentIn?, DaveFromBob?, DaveConvs?,
           [user_output(DaveAgentToUser),
            parent_output(bob, DaveToBob)]),
-    mediator # ui_mediator(dave, ch(DaveAgentToUser?, DaveAgentIn),
+    childsafe # ui_mediator(dave, ch(DaveAgentToUser?, DaveAgentIn),
                 ch(DaveMedIn?, DaveMedOut), [], 1),
-    tee(DaveMedOut?, DaveActorIn, DaveDispNotify),
+    superapp # merge_notify(DaveSgNotify?, DaveMedOut?, DaveNotify),
+    tee(DaveNotify?, DaveActorIn, DaveDispNotify),
     send_to_user_tagged(dave, DaveDispCmd?, DaveDispNotify?),
 
     actors # eve12(ch(EveActorIn?, EveActorOut)),
-    tee(EveActorOut?, EveMedIn, EveDispCmd),
-    child_agent # child_agent(eve, charlie, state(0, 0, [], []), EveAgentIn?, EveFromCharlie?,
+    tee(EveActorOut?, EveCmds, EveDispCmd),
+    superapp # split_cmds(EveCmds?, EveMedIn, EveSgCmds),
+    superapp # superapp(eve, EveSgCmds?, EveSgNotify, EveConvs, EveSgOut, EveSgIn?, [], 1),
+    childsafe # child_agent(eve, charlie, state(0, 0, [], []), EveAgentIn?, EveFromCharlie?, EveConvs?,
           [user_output(EveAgentToUser),
            parent_output(charlie, EveToCharlie)]),
-    mediator # ui_mediator(eve, ch(EveAgentToUser?, EveAgentIn),
+    childsafe # ui_mediator(eve, ch(EveAgentToUser?, EveAgentIn),
                 ch(EveMedIn?, EveMedOut), [], 1),
-    tee(EveMedOut?, EveActorIn, EveDispNotify),
+    superapp # merge_notify(EveSgNotify?, EveMedOut?, EveNotify),
+    tee(EveNotify?, EveActorIn, EveDispNotify),
     send_to_user_tagged(eve, EveDispCmd?, EveDispNotify?),
 
     merge(BobToDave?, [], DaveFromBob),
     merge(DaveToBob?, [], BobFromDave),
     merge(CharlieToEve?, [], EveFromCharlie),
-    merge(EveToCharlie?, [], CharlieFromEve).
+    merge(EveToCharlie?, [], CharlieFromEve),
+
+    %% The super-apps' own network, one entry per party: the invitation and
+    %% its answer travel it, and the platform travels none.
+    merge(AliceSgOut?, BobSgOut?, SG1),
+    merge(SG1?, CharlieSgOut?, SG2),
+    merge(SG2?, DaveSgOut?, SG3),
+    merge(SG3?, EveSgOut?, AllSgOut),
+    superapp # sg_switch(AllSgOut?, [sg_entry(alice, AliceSgIn),
+                                   sg_entry(bob, BobSgIn),
+                                   sg_entry(charlie, CharlieSgIn),
+                                   sg_entry(dave, DaveSgIn),
+                                   sg_entry(eve, EveSgIn)]).
+
 
 %% =============================================================================
 %% NARRATIVE DISPLAY — for village scenario actors
@@ -912,80 +999,6 @@ send_to_user_narrate(Id, [event(X)|Ns]) :-
 send_to_user_narrate(_, []).
 
 %% =============================================================================
-%% VILLAGE NETWORK (3-way: alice, bob, frank)
-%% =============================================================================
-
-%% --- Cold-call routing (2-arg msg) ---
-
-procedure village_net(Channel(NetInStream, NetInStream)?,
-                      Channel(NetInStream, NetInStream)?,
-                      Channel(NetInStream, NetInStream)?).
-village_net(ch([msg(bob, X)|AliceIn], AliceOut?),
-            ch(BobIn, [msg(bob, X?)|BobOut?]),
-            ch(FrankIn, FrankOut?)) :-
-    village_net(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut), ch(FrankIn?, FrankOut)).
-
-village_net(ch([msg(frank, X)|AliceIn], AliceOut?),
-            ch(BobIn, BobOut?),
-            ch(FrankIn, [msg(frank, X?)|FrankOut?])) :-
-    village_net(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut), ch(FrankIn?, FrankOut)).
-
-village_net(ch(AliceIn, [msg(alice, X?)|AliceOut?]),
-            ch([msg(alice, X)|BobIn], BobOut?),
-            ch(FrankIn, FrankOut?)) :-
-    village_net(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut), ch(FrankIn?, FrankOut)).
-
-village_net(ch(AliceIn, AliceOut?),
-            ch([msg(frank, X)|BobIn], BobOut?),
-            ch(FrankIn, [msg(frank, X?)|FrankOut?])) :-
-    village_net(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut), ch(FrankIn?, FrankOut)).
-
-village_net(ch(AliceIn, [msg(alice, X?)|AliceOut?]),
-            ch(BobIn, BobOut?),
-            ch([msg(alice, X)|FrankIn], FrankOut?)) :-
-    village_net(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut), ch(FrankIn?, FrankOut)).
-
-village_net(ch(AliceIn, AliceOut?),
-            ch(BobIn, [msg(bob, X?)|BobOut?]),
-            ch([msg(bob, X)|FrankIn], FrankOut?)) :-
-    village_net(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut), ch(FrankIn?, FrankOut)).
-
-%% --- Friend-to-friend routing (3-arg msg) ---
-
-village_net(ch([msg(alice, bob, X)|AliceIn], AliceOut?),
-            ch(BobIn, [msg(alice, bob, X?)|BobOut?]),
-            ch(FrankIn, FrankOut?)) :-
-    village_net(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut), ch(FrankIn?, FrankOut)).
-
-village_net(ch([msg(alice, frank, X)|AliceIn], AliceOut?),
-            ch(BobIn, BobOut?),
-            ch(FrankIn, [msg(alice, frank, X?)|FrankOut?])) :-
-    village_net(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut), ch(FrankIn?, FrankOut)).
-
-village_net(ch(AliceIn, [msg(bob, alice, X?)|AliceOut?]),
-            ch([msg(bob, alice, X)|BobIn], BobOut?),
-            ch(FrankIn, FrankOut?)) :-
-    village_net(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut), ch(FrankIn?, FrankOut)).
-
-village_net(ch(AliceIn, AliceOut?),
-            ch([msg(bob, frank, X)|BobIn], BobOut?),
-            ch(FrankIn, [msg(bob, frank, X?)|FrankOut?])) :-
-    village_net(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut), ch(FrankIn?, FrankOut)).
-
-village_net(ch(AliceIn, [msg(frank, alice, X?)|AliceOut?]),
-            ch(BobIn, BobOut?),
-            ch([msg(frank, alice, X)|FrankIn], FrankOut?)) :-
-    village_net(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut), ch(FrankIn?, FrankOut)).
-
-village_net(ch(AliceIn, AliceOut?),
-            ch(BobIn, [msg(frank, bob, X?)|BobOut?]),
-            ch([msg(frank, bob, X)|FrankIn], FrankOut?)) :-
-    village_net(ch(AliceIn?, AliceOut), ch(BobIn?, BobOut), ch(FrankIn?, FrankOut)).
-
-%% Termination
-village_net(ch([], []), ch([], []), ch([], [])).
-
-%% =============================================================================
 %% FPLAY13 — Village Scenario: 3 adults, 3 children (tagged output + narrative)
 %% =============================================================================
 
@@ -995,82 +1008,104 @@ fplay13 :-
     %% Alice — boots of no age, with no parent and no child: childhood is not given.
     alice # alice13(alice, ch(AliceActorIn?, AliceActorOut), AliceNarr),
     send_to_user_narrate(alice, AliceNarr?),
-    tee(AliceActorOut?, AliceMedIn, AliceDispCmd),
-    agent # agent(alice, state(0, 0, [], []), AliceAgentIn?, AliceNetIn?,
-          [user_output(AliceAgentToUser), net_output(AliceNetOut)]),
-    mediator # ui_mediator(alice, ch(AliceAgentToUser?, AliceAgentIn),
+    tee(AliceActorOut?, AliceCmds, AliceDispCmd),
+    superapp # split_cmds(AliceCmds?, AliceMedIn, AliceSgCmds),
+    superapp # superapp(alice, AliceSgCmds?, AliceSgNotify, AliceConvs, AliceSgOut, AliceSgIn?, [], 1),
+    childsafe # agent(alice, state(0, 0, [], []), AliceAgentIn?, AliceNetIn?, AliceConvs?,
+          [user_output(AliceAgentToUser)]),
+    childsafe # ui_mediator(alice, ch(AliceAgentToUser?, AliceAgentIn),
                 ch(AliceMedIn?, AliceMedOut), [], 1),
-    tee(AliceMedOut?, AliceActorIn, AliceDispNotify),
+    superapp # merge_notify(AliceSgNotify?, AliceMedOut?, AliceNotify),
+    tee(AliceNotify?, AliceActorIn, AliceDispNotify),
     send_to_user_tagged(alice, AliceDispCmd?, AliceDispNotify?),
 
     %% Bob — boots of no age, with no parent and no child: childhood is not given.
     bob # bob13(bob, ch(BobActorIn?, BobActorOut), BobNarr),
     send_to_user_narrate(bob, BobNarr?),
-    tee(BobActorOut?, BobMedIn, BobDispCmd),
-    agent # agent(bob, state(0, 0, [], []), BobAgentIn?, BobNetIn?,
-          [user_output(BobAgentToUser), net_output(BobNetOut)]),
-    mediator # ui_mediator(bob, ch(BobAgentToUser?, BobAgentIn),
+    tee(BobActorOut?, BobCmds, BobDispCmd),
+    superapp # split_cmds(BobCmds?, BobMedIn, BobSgCmds),
+    superapp # superapp(bob, BobSgCmds?, BobSgNotify, BobConvs, BobSgOut, BobSgIn?, [], 1),
+    childsafe # agent(bob, state(0, 0, [], []), BobAgentIn?, BobNetIn?, BobConvs?,
+          [user_output(BobAgentToUser)]),
+    childsafe # ui_mediator(bob, ch(BobAgentToUser?, BobAgentIn),
                 ch(BobMedIn?, BobMedOut), [], 1),
-    tee(BobMedOut?, BobActorIn, BobDispNotify),
+    superapp # merge_notify(BobSgNotify?, BobMedOut?, BobNotify),
+    tee(BobNotify?, BobActorIn, BobDispNotify),
     send_to_user_tagged(bob, BobDispCmd?, BobDispNotify?),
 
     %% Frank — boots of no age, with no parent and no child: childhood is not given.
     frank # frank13(frank, ch(FrankActorIn?, FrankActorOut), FrankNarr),
     send_to_user_narrate(frank, FrankNarr?),
-    tee(FrankActorOut?, FrankMedIn, FrankDispCmd),
-    agent # agent(frank, state(0, 0, [], []), FrankAgentIn?, FrankNetIn?,
-          [user_output(FrankAgentToUser), net_output(FrankNetOut)]),
-    mediator # ui_mediator(frank, ch(FrankAgentToUser?, FrankAgentIn),
+    tee(FrankActorOut?, FrankCmds, FrankDispCmd),
+    superapp # split_cmds(FrankCmds?, FrankMedIn, FrankSgCmds),
+    superapp # superapp(frank, FrankSgCmds?, FrankSgNotify, FrankConvs, FrankSgOut, FrankSgIn?, [], 1),
+    childsafe # agent(frank, state(0, 0, [], []), FrankAgentIn?, FrankNetIn?, FrankConvs?,
+          [user_output(FrankAgentToUser)]),
+    childsafe # ui_mediator(frank, ch(FrankAgentToUser?, FrankAgentIn),
                 ch(FrankMedIn?, FrankMedOut), [], 1),
-    tee(FrankMedOut?, FrankActorIn, FrankDispNotify),
+    superapp # merge_notify(FrankSgNotify?, FrankMedOut?, FrankNotify),
+    tee(FrankNotify?, FrankActorIn, FrankDispNotify),
     send_to_user_tagged(frank, FrankDispCmd?, FrankDispNotify?),
 
     %% Carol — boots of no age, with no parent and no child: childhood is not given.
     carol # carol13(carol, ch(CarolActorIn?, CarolActorOut), CarolNarr),
     send_to_user_narrate(carol, CarolNarr?),
-    tee(CarolActorOut?, CarolMedIn, CarolDispCmd),
-    agent # agent(carol, state(0, 0, [], []), CarolAgentIn?, CarolNetIn?,
-          [user_output(CarolAgentToUser), net_output(CarolNetOut)]),
-    mediator # ui_mediator(carol, ch(CarolAgentToUser?, CarolAgentIn),
+    tee(CarolActorOut?, CarolCmds, CarolDispCmd),
+    superapp # split_cmds(CarolCmds?, CarolMedIn, CarolSgCmds),
+    superapp # superapp(carol, CarolSgCmds?, CarolSgNotify, CarolConvs, CarolSgOut, CarolSgIn?, [], 1),
+    childsafe # agent(carol, state(0, 0, [], []), CarolAgentIn?, CarolNetIn?, CarolConvs?,
+          [user_output(CarolAgentToUser)]),
+    childsafe # ui_mediator(carol, ch(CarolAgentToUser?, CarolAgentIn),
                 ch(CarolMedIn?, CarolMedOut), [], 1),
-    tee(CarolMedOut?, CarolActorIn, CarolDispNotify),
+    superapp # merge_notify(CarolSgNotify?, CarolMedOut?, CarolNotify),
+    tee(CarolNotify?, CarolActorIn, CarolDispNotify),
     send_to_user_tagged(carol, CarolDispCmd?, CarolDispNotify?),
 
     %% Dave — boots of no age, with no parent and no child: childhood is not given.
     dave # dave13(dave, ch(DaveActorIn?, DaveActorOut), DaveNarr),
     send_to_user_narrate(dave, DaveNarr?),
-    tee(DaveActorOut?, DaveMedIn, DaveDispCmd),
-    agent # agent(dave, state(0, 0, [], []), DaveAgentIn?, DaveNetIn?,
-          [user_output(DaveAgentToUser), net_output(DaveNetOut)]),
-    mediator # ui_mediator(dave, ch(DaveAgentToUser?, DaveAgentIn),
+    tee(DaveActorOut?, DaveCmds, DaveDispCmd),
+    superapp # split_cmds(DaveCmds?, DaveMedIn, DaveSgCmds),
+    superapp # superapp(dave, DaveSgCmds?, DaveSgNotify, DaveConvs, DaveSgOut, DaveSgIn?, [], 1),
+    childsafe # agent(dave, state(0, 0, [], []), DaveAgentIn?, DaveNetIn?, DaveConvs?,
+          [user_output(DaveAgentToUser)]),
+    childsafe # ui_mediator(dave, ch(DaveAgentToUser?, DaveAgentIn),
                 ch(DaveMedIn?, DaveMedOut), [], 1),
-    tee(DaveMedOut?, DaveActorIn, DaveDispNotify),
+    superapp # merge_notify(DaveSgNotify?, DaveMedOut?, DaveNotify),
+    tee(DaveNotify?, DaveActorIn, DaveDispNotify),
     send_to_user_tagged(dave, DaveDispCmd?, DaveDispNotify?),
 
     %% Eve — boots of no age, with no parent and no child: childhood is not given.
     eve # eve13(eve, ch(EveActorIn?, EveActorOut), EveNarr),
     send_to_user_narrate(eve, EveNarr?),
-    tee(EveActorOut?, EveMedIn, EveDispCmd),
-    agent # agent(eve, state(0, 0, [], []), EveAgentIn?, EveNetIn?,
-          [user_output(EveAgentToUser), net_output(EveNetOut)]),
-    mediator # ui_mediator(eve, ch(EveAgentToUser?, EveAgentIn),
+    tee(EveActorOut?, EveCmds, EveDispCmd),
+    superapp # split_cmds(EveCmds?, EveMedIn, EveSgCmds),
+    superapp # superapp(eve, EveSgCmds?, EveSgNotify, EveConvs, EveSgOut, EveSgIn?, [], 1),
+    childsafe # agent(eve, state(0, 0, [], []), EveAgentIn?, EveNetIn?, EveConvs?,
+          [user_output(EveAgentToUser)]),
+    childsafe # ui_mediator(eve, ch(EveAgentToUser?, EveAgentIn),
                 ch(EveMedIn?, EveMedOut), [], 1),
-    tee(EveMedOut?, EveActorIn, EveDispNotify),
+    superapp # merge_notify(EveSgNotify?, EveMedOut?, EveNotify),
+    tee(EveNotify?, EveActorIn, EveDispNotify),
     send_to_user_tagged(eve, EveDispCmd?, EveDispNotify?),
 
     %% One switch for all six.  No parent-child channel is wired here: enrol
-    %% creates each one and release tears it down.
-    merge(AliceNetOut?, BobNetOut?, M1),
-    merge(M1?, FrankNetOut?, M2),
-    merge(M2?, CarolNetOut?, M3),
-    merge(M3?, DaveNetOut?, M4),
-    merge(M4?, EveNetOut?, AllNetOut),
-    net_switch(AllNetOut?, [net_entry(alice, AliceNetIn),
-                            net_entry(bob, BobNetIn),
-                            net_entry(frank, FrankNetIn),
-                            net_entry(carol, CarolNetIn),
-                            net_entry(dave, DaveNetIn),
-                            net_entry(eve, EveNetIn)]).
+    %% creates each one and release tears it down.,
+
+    %% The super-apps' own network, one entry per party: the invitation and
+    %% its answer travel it, and the platform travels none.
+    merge(AliceSgOut?, BobSgOut?, SG1),
+    merge(SG1?, FrankSgOut?, SG2),
+    merge(SG2?, CarolSgOut?, SG3),
+    merge(SG3?, DaveSgOut?, SG4),
+    merge(SG4?, EveSgOut?, AllSgOut),
+    superapp # sg_switch(AllSgOut?, [sg_entry(alice, AliceSgIn),
+                                   sg_entry(bob, BobSgIn),
+                                   sg_entry(frank, FrankSgIn),
+                                   sg_entry(carol, CarolSgIn),
+                                   sg_entry(dave, DaveSgIn),
+                                   sg_entry(eve, EveSgIn)]).
+
 
 %% =============================================================================
 %% FPLAY14 — Idempotent befriend commit: redundant child_introduce
@@ -1083,57 +1118,75 @@ fplay13 :-
 
 exported procedure fplay14.
 fplay14 :-
-    network2(ch(AliceNetOut?, AliceNetIn),
-             ch(BobNetOut?, BobNetIn)),
-
     actors # alice14(ch(AliceActorIn?, AliceActorOut)),
-    tee(AliceActorOut?, AliceMedIn, AliceDispCmd),
-    agent # agent(alice, state(0, 0, [], []), AliceAgentIn?, AliceNetAndChildIn?,
+    tee(AliceActorOut?, AliceCmds, AliceDispCmd),
+    superapp # split_cmds(AliceCmds?, AliceMedIn, AliceSgCmds),
+    superapp # superapp(alice, AliceSgCmds?, AliceSgNotify, AliceConvs, AliceSgOut, AliceSgIn?, [], 1),
+    childsafe # agent(alice, state(0, 0, [], []), AliceAgentIn?, AliceNetAndChildIn?, AliceConvs?,
           [user_output(AliceAgentToUser),
-           net_output(AliceNetOut),
            child_output(carol, AliceToCarol)]),
     merge(AliceNetIn?, AliceFromCarol?, AliceNetAndChildIn),
-    mediator # ui_mediator(alice, ch(AliceAgentToUser?, AliceAgentIn),
+    childsafe # ui_mediator(alice, ch(AliceAgentToUser?, AliceAgentIn),
                 ch(AliceMedIn?, AliceMedOut), [], 1),
-    tee(AliceMedOut?, AliceActorIn, AliceDispNotify),
+    superapp # merge_notify(AliceSgNotify?, AliceMedOut?, AliceNotify),
+    tee(AliceNotify?, AliceActorIn, AliceDispNotify),
     send_to_user_tagged(alice, AliceDispCmd?, AliceDispNotify?),
 
     actors # bob14(ch(BobActorIn?, BobActorOut)),
-    tee(BobActorOut?, BobMedIn, BobDispCmd),
-    agent # agent(bob, state(0, 0, [], []), BobAgentIn?, BobNetAndChildIn?,
+    tee(BobActorOut?, BobCmds, BobDispCmd),
+    superapp # split_cmds(BobCmds?, BobMedIn, BobSgCmds),
+    superapp # superapp(bob, BobSgCmds?, BobSgNotify, BobConvs, BobSgOut, BobSgIn?, [], 1),
+    childsafe # agent(bob, state(0, 0, [], []), BobAgentIn?, BobNetAndChildIn?, BobConvs?,
           [user_output(BobAgentToUser),
-           net_output(BobNetOut),
            child_output(dave, BobToDave)]),
     merge(BobNetIn?, BobFromDave?, BobNetAndChildIn),
-    mediator # ui_mediator(bob, ch(BobAgentToUser?, BobAgentIn),
+    childsafe # ui_mediator(bob, ch(BobAgentToUser?, BobAgentIn),
                 ch(BobMedIn?, BobMedOut), [], 1),
-    tee(BobMedOut?, BobActorIn, BobDispNotify),
+    superapp # merge_notify(BobSgNotify?, BobMedOut?, BobNotify),
+    tee(BobNotify?, BobActorIn, BobDispNotify),
     send_to_user_tagged(bob, BobDispCmd?, BobDispNotify?),
 
     actors # carol14(ch(CarolActorIn?, CarolActorOut)),
-    tee(CarolActorOut?, CarolMedIn, CarolDispCmd),
-    child_agent # child_agent(carol, alice, state(0, 0, [], []), CarolAgentIn?, CarolFromAlice?,
+    tee(CarolActorOut?, CarolCmds, CarolDispCmd),
+    superapp # split_cmds(CarolCmds?, CarolMedIn, CarolSgCmds),
+    superapp # superapp(carol, CarolSgCmds?, CarolSgNotify, CarolConvs, CarolSgOut, CarolSgIn?, [], 1),
+    childsafe # child_agent(carol, alice, state(0, 0, [], []), CarolAgentIn?, CarolFromAlice?, CarolConvs?,
           [user_output(CarolAgentToUser),
            parent_output(alice, CarolToAlice)]),
-    mediator # ui_mediator(carol, ch(CarolAgentToUser?, CarolAgentIn),
+    childsafe # ui_mediator(carol, ch(CarolAgentToUser?, CarolAgentIn),
                 ch(CarolMedIn?, CarolMedOut), [], 1),
-    tee(CarolMedOut?, CarolActorIn, CarolDispNotify),
+    superapp # merge_notify(CarolSgNotify?, CarolMedOut?, CarolNotify),
+    tee(CarolNotify?, CarolActorIn, CarolDispNotify),
     send_to_user_tagged(carol, CarolDispCmd?, CarolDispNotify?),
 
     actors # dave14(ch(DaveActorIn?, DaveActorOut)),
-    tee(DaveActorOut?, DaveMedIn, DaveDispCmd),
-    child_agent # child_agent(dave, bob, state(0, 0, [], []), DaveAgentIn?, DaveFromBob?,
+    tee(DaveActorOut?, DaveCmds, DaveDispCmd),
+    superapp # split_cmds(DaveCmds?, DaveMedIn, DaveSgCmds),
+    superapp # superapp(dave, DaveSgCmds?, DaveSgNotify, DaveConvs, DaveSgOut, DaveSgIn?, [], 1),
+    childsafe # child_agent(dave, bob, state(0, 0, [], []), DaveAgentIn?, DaveFromBob?, DaveConvs?,
           [user_output(DaveAgentToUser),
            parent_output(bob, DaveToBob)]),
-    mediator # ui_mediator(dave, ch(DaveAgentToUser?, DaveAgentIn),
+    childsafe # ui_mediator(dave, ch(DaveAgentToUser?, DaveAgentIn),
                 ch(DaveMedIn?, DaveMedOut), [], 1),
-    tee(DaveMedOut?, DaveActorIn, DaveDispNotify),
+    superapp # merge_notify(DaveSgNotify?, DaveMedOut?, DaveNotify),
+    tee(DaveNotify?, DaveActorIn, DaveDispNotify),
     send_to_user_tagged(dave, DaveDispCmd?, DaveDispNotify?),
 
     merge(AliceToCarol?, [], CarolFromAlice),
     merge(CarolToAlice?, [], AliceFromCarol),
     merge(BobToDave?, [], DaveFromBob),
-    merge(DaveToBob?, [], BobFromDave).
+    merge(DaveToBob?, [], BobFromDave),
+
+    %% The super-apps' own network, one entry per party: the invitation and
+    %% its answer travel it, and the platform travels none.
+    merge(AliceSgOut?, BobSgOut?, SG1),
+    merge(SG1?, CarolSgOut?, SG2),
+    merge(SG2?, DaveSgOut?, AllSgOut),
+    superapp # sg_switch(AllSgOut?, [sg_entry(alice, AliceSgIn),
+                                   sg_entry(bob, BobSgIn),
+                                   sg_entry(carol, CarolSgIn),
+                                   sg_entry(dave, DaveSgIn)]).
+
 
 %% =============================================================================
 %% FPLAY15 — Idempotent befriend commit: simultaneous bilateral cold-call
@@ -1141,26 +1194,36 @@ fplay14 :-
 
 exported procedure fplay15.
 fplay15 :-
-    network2(ch(AliceNetOut?, AliceNetIn),
-             ch(BobNetOut?, BobNetIn)),
-
     actors # alice15(ch(AliceActorIn?, AliceActorOut)),
-    tee(AliceActorOut?, AliceMedIn, AliceDispCmd),
-    agent # agent(alice, state(0, 0, [], []), AliceAgentIn?, AliceNetIn?,
-          [user_output(AliceAgentToUser), net_output(AliceNetOut)]),
-    mediator # ui_mediator(alice, ch(AliceAgentToUser?, AliceAgentIn),
+    tee(AliceActorOut?, AliceCmds, AliceDispCmd),
+    superapp # split_cmds(AliceCmds?, AliceMedIn, AliceSgCmds),
+    superapp # superapp(alice, AliceSgCmds?, AliceSgNotify, AliceConvs, AliceSgOut, AliceSgIn?, [], 1),
+    childsafe # agent(alice, state(0, 0, [], []), AliceAgentIn?, AliceNetIn?, AliceConvs?,
+          [user_output(AliceAgentToUser)]),
+    childsafe # ui_mediator(alice, ch(AliceAgentToUser?, AliceAgentIn),
                 ch(AliceMedIn?, AliceMedOut), [], 1),
-    tee(AliceMedOut?, AliceActorIn, AliceDispNotify),
+    superapp # merge_notify(AliceSgNotify?, AliceMedOut?, AliceNotify),
+    tee(AliceNotify?, AliceActorIn, AliceDispNotify),
     send_to_user_tagged(alice, AliceDispCmd?, AliceDispNotify?),
 
     actors # bob15(ch(BobActorIn?, BobActorOut)),
-    tee(BobActorOut?, BobMedIn, BobDispCmd),
-    agent # agent(bob, state(0, 0, [], []), BobAgentIn?, BobNetIn?,
-          [user_output(BobAgentToUser), net_output(BobNetOut)]),
-    mediator # ui_mediator(bob, ch(BobAgentToUser?, BobAgentIn),
+    tee(BobActorOut?, BobCmds, BobDispCmd),
+    superapp # split_cmds(BobCmds?, BobMedIn, BobSgCmds),
+    superapp # superapp(bob, BobSgCmds?, BobSgNotify, BobConvs, BobSgOut, BobSgIn?, [], 1),
+    childsafe # agent(bob, state(0, 0, [], []), BobAgentIn?, BobNetIn?, BobConvs?,
+          [user_output(BobAgentToUser)]),
+    childsafe # ui_mediator(bob, ch(BobAgentToUser?, BobAgentIn),
                 ch(BobMedIn?, BobMedOut), [], 1),
-    tee(BobMedOut?, BobActorIn, BobDispNotify),
-    send_to_user_tagged(bob, BobDispCmd?, BobDispNotify?).
+    superapp # merge_notify(BobSgNotify?, BobMedOut?, BobNotify),
+    tee(BobNotify?, BobActorIn, BobDispNotify),
+    send_to_user_tagged(bob, BobDispCmd?, BobDispNotify?),
+
+    %% The super-apps' own network, one entry per party: the invitation and
+    %% its answer travel it, and the platform travels none.
+    merge(AliceSgOut?, BobSgOut?, AllSgOut),
+    superapp # sg_switch(AllSgOut?, [sg_entry(alice, AliceSgIn),
+                                   sg_entry(bob, BobSgIn)]).
+
 
 %% =============================================================================
 %% FPLAY16 — the two acts, measured without the mediator
@@ -1171,18 +1234,31 @@ fplay15 :-
 %% last step is village act 7 in miniature.
 %%
 %% The two drivers stand in for the mediator, which is vGLP's and does not yet
-%% route these acts: they read the agent's own user_output and answer on its
-%% UserIn, so the acts can be measured at the agent level meanwhile.
+%% route these acts, and for the super-app: they read the agent's own
+%% user_output and answer on its UserIn, so the acts can be measured at the
+%% agent level meanwhile.
+%%
+%% Act 7 is measured here as the mini-app makes it visible.  A conversation with
+%% Charlie is put to Bob only once the parenting has ended: a child refuses one,
+%% because a child's friendships are its parents' to approve, and an adult
+%% adopts it --- and holding no parent is the whole of being an adult.
 %% =============================================================================
 
 procedure drive_parent(Constant?, Constant?, Stream(AgentToUserMsg)?, Stream(UserInMsg), Stream(NarrativeItem)).
 
-%% Open: offer to become Bob's parent.  Nothing precedes it --- Alice starts an
-%% adult, and starting one is not an act.
-drive_parent(Id, Kid, In, [msg(person, Id?, enrol_child(Kid?))|Out?],
-             [act('Becoming the parent of Bob')|Narr?]) :-
-    ground(Id?), ground(Kid?) |
+%% Open: offer to become Bob's parent, once the conversation the super-app
+%% opened between them has been adopted --- the offer travels it, this platform
+%% holding no network entry.  Nothing else precedes it: Alice starts an adult,
+%% and starting one is not an act.
+drive_parent(Id, Kid, [msg(agent, person, connected(Who))|In],
+             [msg(person, Id?, enrol_child(Kid?))|Out?],
+             [friend(Who?), act('Becoming the parent of Bob')|Narr?]) :-
+    ground(Id?), ground(Kid?), ground(Who?) |
     drive_parent_wait(Id?, Kid?, In?, Out, Narr).
+drive_parent(Id, Kid, [_|In], Out?, Narr?) :-
+    otherwise |
+    drive_parent(Id?, Kid?, In?, Out, Narr).
+drive_parent(_, _, [], [], []).
 
 procedure drive_parent_wait(Constant?, Constant?, Stream(AgentToUserMsg)?, Stream(UserInMsg), Stream(NarrativeItem)).
 
@@ -1203,13 +1279,6 @@ drive_parent_wait(Id, Kid, [msg(agent, person, released(Who))|In], Out?,
     ground(Who?) |
     drive_parent_wait(Id?, Kid?, In?, Out, Narr).
 
-%% Bob, holding no parent, cold-calls me.
-drive_parent_wait(Id, Kid, [msg(agent, person, befriend(From, Resp?))|In],
-                  [msg(person, Id?, decision(yes, From?, response(Resp)))|Out?],
-                  [act('Accepting Bob as a friend')|Narr?]) :-
-    ground(From?) |
-    drive_parent_wait(Id?, Kid?, In?, Out, Narr).
-
 drive_parent_wait(Id, Kid, [msg(agent, person, connected(Who))|In], Out?,
                   [friend(Who?)|Narr?]) :-
     ground(Who?) |
@@ -1220,53 +1289,79 @@ drive_parent_wait(Id, Kid, [_|In], Out?, Narr?) :-
     drive_parent_wait(Id?, Kid?, In?, Out, Narr).
 drive_parent_wait(_, _, [], [], []).
 
-procedure drive_child(Constant?, Constant?, Stream(AgentToUserMsg)?, Stream(UserInMsg), Stream(NarrativeItem)).
+procedure drive_child(Constant?, Constant?, Stream(AgentToUserMsg)?, Stream(UserInMsg), Conversation?, Stream(Conversation), Stream(NarrativeItem)).
 
 drive_child(Id, Parent, [msg(agent, person, enrol_offer(P, Resp?))|In],
             [msg(person, Id?, enrol_decision(yes, P?, enrol_response(Resp)))|Out?],
-            [act('Accepting Alice as my parent')|Narr?]) :-
+            Conv, Convs?, [act('Accepting Alice as my parent')|Narr?]) :-
     ground(P?) |
-    drive_child(Id?, Parent?, In?, Out, Narr).
+    drive_child(Id?, Parent?, In?, Out, Conv?, Convs, Narr).
 
 drive_child(Id, Parent, [msg(agent, person, enrolled(Who))|In],
             [msg(person, Id?, request_release)|Out?],
-            [event('Alice is my parent'),
+            Conv, Convs?, [event('Alice is my parent'),
              act('Asking Alice to end the parenting')|Narr?]) :-
     ground(Who?) |
-    drive_child(Id?, Parent?, In?, Out, Narr).
+    drive_child(Id?, Parent?, In?, Out, Conv?, Convs, Narr).
 
-%% The parenting is over, so rho is empty and I am an adult: befriend directly.
-drive_child(Id, Parent, [msg(agent, person, released(Who))|In],
-            [msg(person, Id?, connect(Parent?))|Out?],
+%% The parenting is over, so rho is empty and I am an adult.  The conversation
+%% with Charlie, which a child refuses, is put to the agent now.
+drive_child(Id, Parent, [msg(agent, person, released(Who))|In], Out?,
+            Conv, [Conv?|Convs?],
             [event('No parent on record, so an adult'),
-             act('Befriending Alice with no parent among the guards')|Narr?]) :-
+             act('Taking up a conversation, which a child refuses')|Narr?]) :-
     ground(Who?) |
-    drive_child(Id?, Parent?, In?, Out, Narr).
+    drive_child_done(Id?, Parent?, In?, Out, Convs, Narr).
 
 drive_child(Id, Parent, [msg(agent, person, connected(Who))|In], Out?,
-            [friend(Who?)|Narr?]) :-
+            Conv, Convs?, [friend(Who?)|Narr?]) :-
     ground(Who?) |
-    drive_child(Id?, Parent?, In?, Out, Narr).
+    drive_child(Id?, Parent?, In?, Out, Conv?, Convs, Narr).
 
-drive_child(Id, Parent, [_|In], Out?, Narr?) :-
+drive_child(Id, Parent, [_|In], Out?, Conv, Convs?, Narr?) :-
     otherwise |
-    drive_child(Id?, Parent?, In?, Out, Narr).
-drive_child(_, _, [], [], []).
+    drive_child(Id?, Parent?, In?, Out, Conv?, Convs, Narr).
+drive_child(_, _, [], [], _, [], []).
+
+%% After the release: the friendship the adopted conversation is, and nothing
+%% further to offer.
+procedure drive_child_done(Constant?, Constant?, Stream(AgentToUserMsg)?, Stream(UserInMsg), Stream(Conversation), Stream(NarrativeItem)).
+drive_child_done(Id, Parent, [msg(agent, person, connected(Who))|In], Out?, Convs?,
+                 [friend(Who?)|Narr?]) :-
+    ground(Who?) |
+    drive_child_done(Id?, Parent?, In?, Out, Convs, Narr).
+drive_child_done(Id, Parent, [_|In], Out?, Convs?, Narr?) :-
+    otherwise |
+    drive_child_done(Id?, Parent?, In?, Out, Convs, Narr).
+drive_child_done(_, _, [], [], [], []).
+
+%% A person who wills nothing: Charlie is here to be befriended.
+procedure idle_person(Stream(AgentToUserMsg)?, Stream(UserInMsg)).
+idle_person([_|In], Out?) :- idle_person(In?, Out).
+idle_person([], []).
 
 exported procedure fplay16.
 fplay16 :-
-    network2(ch(AliceNetOut?, AliceNetIn),
-             ch(BobNetOut?, BobNetIn)),
-
-    agent # agent(alice, state(0, 0, [], []), AliceIn?, AliceNetIn?,
-          [user_output(AliceToUser), net_output(AliceNetOut)]),
+    %% The super-app has befriended Alice and Bob and opened the conversation
+    %% between their two executions: on this platform that IS the friendship,
+    %% and it is what the enrolment then travels.
+    childsafe # agent(alice, state(0, 0, [], []), AliceIn?, AliceNetIn?,
+          [conversation(bob, ch(AB?, BA))],
+          [user_output(AliceToUser)]),
     drive_parent(alice, bob, AliceToUser?, AliceIn, AliceNarr),
     send_to_user_narrate(alice, AliceNarr?),
 
-    agent # agent(bob, state(0, 0, [], []), BobIn?, BobNetIn?,
-          [user_output(BobToUser), net_output(BobNetOut)]),
-    drive_child(bob, alice, BobToUser?, BobIn, BobNarr),
-    send_to_user_narrate(bob, BobNarr?).
+    childsafe # agent(bob, state(0, 0, [], []), BobIn?, BobNetIn?,
+          [conversation(alice, ch(BA?, AB))|BobRest?],
+          [user_output(BobToUser)]),
+    drive_child(bob, alice, BobToUser?, BobIn,
+                conversation(charlie, ch(BC?, CB)), BobRest, BobNarr),
+    send_to_user_narrate(bob, BobNarr?),
+
+    childsafe # agent(charlie, state(0, 0, [], []), CharlieIn?, CharlieNetIn?,
+          [conversation(bob, ch(CB?, BC))],
+          [user_output(CharlieToUser)]),
+    idle_person(CharlieToUser?, CharlieIn).
 
 %% =============================================================================
 %% FPLAY17 — a member that joins after a post was made
@@ -1279,48 +1374,63 @@ fplay16 :-
 exported procedure fplay17.
 fplay17 :-
     actors # alice17(ch(AliceActorIn?, AliceActorOut)),
-    tee(AliceActorOut?, AliceMedIn, AliceDispCmd),
-    agent # agent(alice, state(0, 0, [], []), AliceAgentIn?, AliceNetIn?,
-          [user_output(AliceAgentToUser), net_output(AliceNetOut)]),
-    mediator # ui_mediator(alice, ch(AliceAgentToUser?, AliceAgentIn),
+    tee(AliceActorOut?, AliceCmds, AliceDispCmd),
+    superapp # split_cmds(AliceCmds?, AliceMedIn, AliceSgCmds),
+    superapp # superapp(alice, AliceSgCmds?, AliceSgNotify, AliceConvs, AliceSgOut, AliceSgIn?, [], 1),
+    childsafe # agent(alice, state(0, 0, [], []), AliceAgentIn?, AliceNetIn?, AliceConvs?,
+          [user_output(AliceAgentToUser)]),
+    childsafe # ui_mediator(alice, ch(AliceAgentToUser?, AliceAgentIn),
                 ch(AliceMedIn?, AliceMedOut), [], 1),
-    tee(AliceMedOut?, AliceActorIn, AliceDispNotify),
+    superapp # merge_notify(AliceSgNotify?, AliceMedOut?, AliceNotify),
+    tee(AliceNotify?, AliceActorIn, AliceDispNotify),
     send_to_user_tagged(alice, AliceDispCmd?, AliceDispNotify?),
 
     actors # bob17(ch(BobActorIn?, BobActorOut)),
-    tee(BobActorOut?, BobMedIn, BobDispCmd),
-    agent # agent(bob, state(0, 0, [], []), BobAgentIn?, BobNetIn?,
-          [user_output(BobAgentToUser), net_output(BobNetOut)]),
-    mediator # ui_mediator(bob, ch(BobAgentToUser?, BobAgentIn),
+    tee(BobActorOut?, BobCmds, BobDispCmd),
+    superapp # split_cmds(BobCmds?, BobMedIn, BobSgCmds),
+    superapp # superapp(bob, BobSgCmds?, BobSgNotify, BobConvs, BobSgOut, BobSgIn?, [], 1),
+    childsafe # agent(bob, state(0, 0, [], []), BobAgentIn?, BobNetIn?, BobConvs?,
+          [user_output(BobAgentToUser)]),
+    childsafe # ui_mediator(bob, ch(BobAgentToUser?, BobAgentIn),
                 ch(BobMedIn?, BobMedOut), [], 1),
-    tee(BobMedOut?, BobActorIn, BobDispNotify),
+    superapp # merge_notify(BobSgNotify?, BobMedOut?, BobNotify),
+    tee(BobNotify?, BobActorIn, BobDispNotify),
     send_to_user_tagged(bob, BobDispCmd?, BobDispNotify?),
 
     actors # carol17(ch(CarolActorIn?, CarolActorOut)),
-    tee(CarolActorOut?, CarolMedIn, CarolDispCmd),
-    agent # agent(carol, state(0, 0, [], []), CarolAgentIn?, CarolNetIn?,
-          [user_output(CarolAgentToUser), net_output(CarolNetOut)]),
-    mediator # ui_mediator(carol, ch(CarolAgentToUser?, CarolAgentIn),
+    tee(CarolActorOut?, CarolCmds, CarolDispCmd),
+    superapp # split_cmds(CarolCmds?, CarolMedIn, CarolSgCmds),
+    superapp # superapp(carol, CarolSgCmds?, CarolSgNotify, CarolConvs, CarolSgOut, CarolSgIn?, [], 1),
+    childsafe # agent(carol, state(0, 0, [], []), CarolAgentIn?, CarolNetIn?, CarolConvs?,
+          [user_output(CarolAgentToUser)]),
+    childsafe # ui_mediator(carol, ch(CarolAgentToUser?, CarolAgentIn),
                 ch(CarolMedIn?, CarolMedOut), [], 1),
-    tee(CarolMedOut?, CarolActorIn, CarolDispNotify),
+    superapp # merge_notify(CarolSgNotify?, CarolMedOut?, CarolNotify),
+    tee(CarolNotify?, CarolActorIn, CarolDispNotify),
     send_to_user_tagged(carol, CarolDispCmd?, CarolDispNotify?),
 
     actors # dave17(ch(DaveActorIn?, DaveActorOut)),
-    tee(DaveActorOut?, DaveMedIn, DaveDispCmd),
-    agent # agent(dave, state(0, 0, [], []), DaveAgentIn?, DaveNetIn?,
-          [user_output(DaveAgentToUser), net_output(DaveNetOut)]),
-    mediator # ui_mediator(dave, ch(DaveAgentToUser?, DaveAgentIn),
+    tee(DaveActorOut?, DaveCmds, DaveDispCmd),
+    superapp # split_cmds(DaveCmds?, DaveMedIn, DaveSgCmds),
+    superapp # superapp(dave, DaveSgCmds?, DaveSgNotify, DaveConvs, DaveSgOut, DaveSgIn?, [], 1),
+    childsafe # agent(dave, state(0, 0, [], []), DaveAgentIn?, DaveNetIn?, DaveConvs?,
+          [user_output(DaveAgentToUser)]),
+    childsafe # ui_mediator(dave, ch(DaveAgentToUser?, DaveAgentIn),
                 ch(DaveMedIn?, DaveMedOut), [], 1),
-    tee(DaveMedOut?, DaveActorIn, DaveDispNotify),
+    superapp # merge_notify(DaveSgNotify?, DaveMedOut?, DaveNotify),
+    tee(DaveNotify?, DaveActorIn, DaveDispNotify),
     send_to_user_tagged(dave, DaveDispCmd?, DaveDispNotify?),
 
-    merge(AliceNetOut?, BobNetOut?, M1),
-    merge(M1?, CarolNetOut?, M2),
-    merge(M2?, DaveNetOut?, AllNetOut),
-    net_switch(AllNetOut?, [net_entry(alice, AliceNetIn),
-                            net_entry(bob, BobNetIn),
-                            net_entry(carol, CarolNetIn),
-                            net_entry(dave, DaveNetIn)]).
+    %% The super-apps' own network, one entry per party: the invitation and
+    %% its answer travel it, and the platform travels none.
+    merge(AliceSgOut?, BobSgOut?, SG1),
+    merge(SG1?, CarolSgOut?, SG2),
+    merge(SG2?, DaveSgOut?, AllSgOut),
+    superapp # sg_switch(AllSgOut?, [sg_entry(alice, AliceSgIn),
+                                   sg_entry(bob, BobSgIn),
+                                   sg_entry(carol, CarolSgIn),
+                                   sg_entry(dave, DaveSgIn)]).
+
 
 %% =============================================================================
 %% FPLAY18 — a child that is a parent
@@ -1333,37 +1443,49 @@ fplay17 :-
 exported procedure fplay18.
 fplay18 :-
     actors # alice18(ch(AliceActorIn?, AliceActorOut)),
-    tee(AliceActorOut?, AliceMedIn, AliceDispCmd),
-    agent # agent(alice, state(0, 0, [], []), AliceAgentIn?, AliceNetIn?,
-          [user_output(AliceAgentToUser), net_output(AliceNetOut)]),
-    mediator # ui_mediator(alice, ch(AliceAgentToUser?, AliceAgentIn),
+    tee(AliceActorOut?, AliceCmds, AliceDispCmd),
+    superapp # split_cmds(AliceCmds?, AliceMedIn, AliceSgCmds),
+    superapp # superapp(alice, AliceSgCmds?, AliceSgNotify, AliceConvs, AliceSgOut, AliceSgIn?, [], 1),
+    childsafe # agent(alice, state(0, 0, [], []), AliceAgentIn?, AliceNetIn?, AliceConvs?,
+          [user_output(AliceAgentToUser)]),
+    childsafe # ui_mediator(alice, ch(AliceAgentToUser?, AliceAgentIn),
                 ch(AliceMedIn?, AliceMedOut), [], 1),
-    tee(AliceMedOut?, AliceActorIn, AliceDispNotify),
+    superapp # merge_notify(AliceSgNotify?, AliceMedOut?, AliceNotify),
+    tee(AliceNotify?, AliceActorIn, AliceDispNotify),
     send_to_user_tagged(alice, AliceDispCmd?, AliceDispNotify?),
 
     actors # bob18(ch(BobActorIn?, BobActorOut)),
-    tee(BobActorOut?, BobMedIn, BobDispCmd),
-    agent # agent(bob, state(0, 0, [], []), BobAgentIn?, BobNetIn?,
-          [user_output(BobAgentToUser), net_output(BobNetOut)]),
-    mediator # ui_mediator(bob, ch(BobAgentToUser?, BobAgentIn),
+    tee(BobActorOut?, BobCmds, BobDispCmd),
+    superapp # split_cmds(BobCmds?, BobMedIn, BobSgCmds),
+    superapp # superapp(bob, BobSgCmds?, BobSgNotify, BobConvs, BobSgOut, BobSgIn?, [], 1),
+    childsafe # agent(bob, state(0, 0, [], []), BobAgentIn?, BobNetIn?, BobConvs?,
+          [user_output(BobAgentToUser)]),
+    childsafe # ui_mediator(bob, ch(BobAgentToUser?, BobAgentIn),
                 ch(BobMedIn?, BobMedOut), [], 1),
-    tee(BobMedOut?, BobActorIn, BobDispNotify),
+    superapp # merge_notify(BobSgNotify?, BobMedOut?, BobNotify),
+    tee(BobNotify?, BobActorIn, BobDispNotify),
     send_to_user_tagged(bob, BobDispCmd?, BobDispNotify?),
 
     actors # carol18(ch(CarolActorIn?, CarolActorOut)),
-    tee(CarolActorOut?, CarolMedIn, CarolDispCmd),
-    agent # agent(carol, state(0, 0, [], []), CarolAgentIn?, CarolNetIn?,
-          [user_output(CarolAgentToUser), net_output(CarolNetOut)]),
-    mediator # ui_mediator(carol, ch(CarolAgentToUser?, CarolAgentIn),
+    tee(CarolActorOut?, CarolCmds, CarolDispCmd),
+    superapp # split_cmds(CarolCmds?, CarolMedIn, CarolSgCmds),
+    superapp # superapp(carol, CarolSgCmds?, CarolSgNotify, CarolConvs, CarolSgOut, CarolSgIn?, [], 1),
+    childsafe # agent(carol, state(0, 0, [], []), CarolAgentIn?, CarolNetIn?, CarolConvs?,
+          [user_output(CarolAgentToUser)]),
+    childsafe # ui_mediator(carol, ch(CarolAgentToUser?, CarolAgentIn),
                 ch(CarolMedIn?, CarolMedOut), [], 1),
-    tee(CarolMedOut?, CarolActorIn, CarolDispNotify),
+    superapp # merge_notify(CarolSgNotify?, CarolMedOut?, CarolNotify),
+    tee(CarolNotify?, CarolActorIn, CarolDispNotify),
     send_to_user_tagged(carol, CarolDispCmd?, CarolDispNotify?),
 
-    merge(AliceNetOut?, BobNetOut?, M1),
-    merge(M1?, CarolNetOut?, AllNetOut),
-    net_switch(AllNetOut?, [net_entry(alice, AliceNetIn),
-                            net_entry(bob, BobNetIn),
-                            net_entry(carol, CarolNetIn)]).
+    %% The super-apps' own network, one entry per party: the invitation and
+    %% its answer travel it, and the platform travels none.
+    merge(AliceSgOut?, BobSgOut?, SG1),
+    merge(SG1?, CarolSgOut?, AllSgOut),
+    superapp # sg_switch(AllSgOut?, [sg_entry(alice, AliceSgIn),
+                                   sg_entry(bob, BobSgIn),
+                                   sg_entry(carol, CarolSgIn)]).
+
 
 %% =============================================================================
 %% FPLAY19 — the four-role ending of a child's membership, at two of its roles
@@ -1385,102 +1507,117 @@ fplay19 :-
     %% Alice — Carol's parent.  She reads Carol's parent-channel traffic, which
     %% is where the withdrawal each removal owes her arrives.
     actors # alice19(ch(AliceActorIn?, AliceActorOut)),
-    tee(AliceActorOut?, AliceMedIn, AliceDispCmd),
+    tee(AliceActorOut?, AliceCmds, AliceDispCmd),
+    superapp # split_cmds(AliceCmds?, AliceMedIn, AliceSgCmds),
+    superapp # superapp(alice, AliceSgCmds?, AliceSgNotify, AliceConvs, AliceSgOut, AliceSgIn?, [], 1),
     merge_in(AliceNetIn?, CarolToAlice?, AliceAllIn),
-    agent # agent(alice, state(0, 0, [], []), AliceAgentIn?, AliceAllIn?,
+    childsafe # agent(alice, state(0, 0, [], []), AliceAgentIn?, AliceAllIn?, AliceConvs?,
           [user_output(AliceAgentToUser),
-           net_output(AliceNetOut),
            child_output(carol, AliceToCarol)]),
-    mediator # ui_mediator(alice, ch(AliceAgentToUser?, AliceAgentIn),
+    childsafe # ui_mediator(alice, ch(AliceAgentToUser?, AliceAgentIn),
                 ch(AliceMedIn?, AliceMedOut), [], 1),
-    tee(AliceMedOut?, AliceActorIn, AliceDispNotify),
+    superapp # merge_notify(AliceSgNotify?, AliceMedOut?, AliceNotify),
+    tee(AliceNotify?, AliceActorIn, AliceDispNotify),
     send_to_user_tagged(alice, AliceDispCmd?, AliceDispNotify?),
 
     %% Bob — Dave's parent.
     actors # bob19(ch(BobActorIn?, BobActorOut)),
-    tee(BobActorOut?, BobMedIn, BobDispCmd),
+    tee(BobActorOut?, BobCmds, BobDispCmd),
+    superapp # split_cmds(BobCmds?, BobMedIn, BobSgCmds),
+    superapp # superapp(bob, BobSgCmds?, BobSgNotify, BobConvs, BobSgOut, BobSgIn?, [], 1),
     merge_in(BobNetIn?, DaveToBob?, BobAllIn),
-    agent # agent(bob, state(0, 0, [], []), BobAgentIn?, BobAllIn?,
+    childsafe # agent(bob, state(0, 0, [], []), BobAgentIn?, BobAllIn?, BobConvs?,
           [user_output(BobAgentToUser),
-           net_output(BobNetOut),
            child_output(dave, BobToDave)]),
-    mediator # ui_mediator(bob, ch(BobAgentToUser?, BobAgentIn),
+    childsafe # ui_mediator(bob, ch(BobAgentToUser?, BobAgentIn),
                 ch(BobMedIn?, BobMedOut), [], 1),
-    tee(BobMedOut?, BobActorIn, BobDispNotify),
+    superapp # merge_notify(BobSgNotify?, BobMedOut?, BobNotify),
+    tee(BobNotify?, BobActorIn, BobDispNotify),
     send_to_user_tagged(bob, BobDispCmd?, BobDispNotify?),
 
     %% Charlie — Eve's parent.
     actors # charlie19(ch(CharlieActorIn?, CharlieActorOut)),
-    tee(CharlieActorOut?, CharlieMedIn, CharlieDispCmd),
+    tee(CharlieActorOut?, CharlieCmds, CharlieDispCmd),
+    superapp # split_cmds(CharlieCmds?, CharlieMedIn, CharlieSgCmds),
+    superapp # superapp(charlie, CharlieSgCmds?, CharlieSgNotify, CharlieConvs, CharlieSgOut, CharlieSgIn?, [], 1),
     merge_in(CharlieNetIn?, EveToCharlie?, CharlieAllIn),
-    agent # agent(charlie, state(0, 0, [], []), CharlieAgentIn?, CharlieAllIn?,
+    childsafe # agent(charlie, state(0, 0, [], []), CharlieAgentIn?, CharlieAllIn?, CharlieConvs?,
           [user_output(CharlieAgentToUser),
-           net_output(CharlieNetOut),
            child_output(eve, CharlieToEve)]),
-    mediator # ui_mediator(charlie, ch(CharlieAgentToUser?, CharlieAgentIn),
+    childsafe # ui_mediator(charlie, ch(CharlieAgentToUser?, CharlieAgentIn),
                 ch(CharlieMedIn?, CharlieMedOut), [], 1),
-    tee(CharlieMedOut?, CharlieActorIn, CharlieDispNotify),
+    superapp # merge_notify(CharlieSgNotify?, CharlieMedOut?, CharlieNotify),
+    tee(CharlieNotify?, CharlieActorIn, CharlieDispNotify),
     send_to_user_tagged(charlie, CharlieDispCmd?, CharlieDispNotify?),
 
     %% Carol — a child, and the creator of the group.  Her outputs carry the
     %% member list: one entry per member, which is what a removal closes.
     actors # carol19(ch(CarolActorIn?, CarolActorOut)),
-    tee(CarolActorOut?, CarolMedIn, CarolDispCmd),
+    tee(CarolActorOut?, CarolCmds, CarolDispCmd),
+    superapp # split_cmds(CarolCmds?, CarolMedIn, CarolSgCmds),
+    superapp # superapp(carol, CarolSgCmds?, CarolSgNotify, CarolConvs, CarolSgOut, CarolSgIn?, [], 1),
     merge_in(CarolNetIn?, AliceToCarol?, CarolIn1),
     merge_in(CarolIn1?, DaveToHub?, CarolIn2),
     merge_in(CarolIn2?, EveToHub?, CarolAllIn),
-    child_agent # child_agent(carol, alice, state(0, 0, [], []), CarolAgentIn?, CarolAllIn?,
+    childsafe # child_agent(carol, alice, state(0, 0, [], []), CarolAgentIn?, CarolAllIn?, CarolConvs?,
           [user_output(CarolAgentToUser),
-           net_output(CarolNetOut),
            parent_output(alice, CarolToAlice),
            group_entry(group_member(group_id(carol, kids_chat), dave), CarolToDave),
            group_entry(group_member(group_id(carol, kids_chat), eve), CarolToEve)]),
-    mediator # ui_mediator(carol, ch(CarolAgentToUser?, CarolAgentIn),
+    childsafe # ui_mediator(carol, ch(CarolAgentToUser?, CarolAgentIn),
                 ch(CarolMedIn?, CarolMedOut), [], 1),
-    tee(CarolMedOut?, CarolActorIn, CarolDispNotify),
+    superapp # merge_notify(CarolSgNotify?, CarolMedOut?, CarolNotify),
+    tee(CarolNotify?, CarolActorIn, CarolDispNotify),
     send_to_user_tagged(carol, CarolDispCmd?, CarolDispNotify?),
 
     %% Dave — a member, removed by the creator.
     actors # dave19(ch(DaveActorIn?, DaveActorOut)),
-    tee(DaveActorOut?, DaveMedIn, DaveDispCmd),
+    tee(DaveActorOut?, DaveCmds, DaveDispCmd),
+    superapp # split_cmds(DaveCmds?, DaveMedIn, DaveSgCmds),
+    superapp # superapp(dave, DaveSgCmds?, DaveSgNotify, DaveConvs, DaveSgOut, DaveSgIn?, [], 1),
     merge_in(DaveNetIn?, BobToDave?, DaveIn1),
     merge_in(DaveIn1?, CarolToDave?, DaveAllIn),
-    child_agent # child_agent(dave, bob, state(0, 0, [], []), DaveAgentIn?, DaveAllIn?,
+    childsafe # child_agent(dave, bob, state(0, 0, [], []), DaveAgentIn?, DaveAllIn?, DaveConvs?,
           [user_output(DaveAgentToUser),
-           net_output(DaveNetOut),
            parent_output(bob, DaveToBob),
            group_entry(group(group_id(carol, kids_chat)), DaveToHub)]),
-    mediator # ui_mediator(dave, ch(DaveAgentToUser?, DaveAgentIn),
+    childsafe # ui_mediator(dave, ch(DaveAgentToUser?, DaveAgentIn),
                 ch(DaveMedIn?, DaveMedOut), [], 1),
-    tee(DaveMedOut?, DaveActorIn, DaveDispNotify),
+    superapp # merge_notify(DaveSgNotify?, DaveMedOut?, DaveNotify),
+    tee(DaveNotify?, DaveActorIn, DaveDispNotify),
     send_to_user_tagged(dave, DaveDispCmd?, DaveDispNotify?),
 
     %% Eve — a member, removed by the creator's parent.
     actors # eve19(ch(EveActorIn?, EveActorOut)),
-    tee(EveActorOut?, EveMedIn, EveDispCmd),
+    tee(EveActorOut?, EveCmds, EveDispCmd),
+    superapp # split_cmds(EveCmds?, EveMedIn, EveSgCmds),
+    superapp # superapp(eve, EveSgCmds?, EveSgNotify, EveConvs, EveSgOut, EveSgIn?, [], 1),
     merge_in(EveNetIn?, CharlieToEve?, EveIn1),
     merge_in(EveIn1?, CarolToEve?, EveAllIn),
-    child_agent # child_agent(eve, charlie, state(0, 0, [], []), EveAgentIn?, EveAllIn?,
+    childsafe # child_agent(eve, charlie, state(0, 0, [], []), EveAgentIn?, EveAllIn?, EveConvs?,
           [user_output(EveAgentToUser),
-           net_output(EveNetOut),
            parent_output(charlie, EveToCharlie),
            group_entry(group(group_id(carol, kids_chat)), EveToHub)]),
-    mediator # ui_mediator(eve, ch(EveAgentToUser?, EveAgentIn),
+    childsafe # ui_mediator(eve, ch(EveAgentToUser?, EveAgentIn),
                 ch(EveMedIn?, EveMedOut), [], 1),
-    tee(EveMedOut?, EveActorIn, EveDispNotify),
+    superapp # merge_notify(EveSgNotify?, EveMedOut?, EveNotify),
+    tee(EveNotify?, EveActorIn, EveDispNotify),
     send_to_user_tagged(eve, EveDispCmd?, EveDispNotify?),
 
     %% One switch for all six.  Nothing travels it in this play — every party is
     %% already in relation with the parties it acts on — but a party with no
-    %% network entry could not be cold-called at all.
-    merge(AliceNetOut?, BobNetOut?, M1),
-    merge(M1?, CharlieNetOut?, M2),
-    merge(M2?, CarolNetOut?, M3),
-    merge(M3?, DaveNetOut?, M4),
-    merge(M4?, EveNetOut?, AllNetOut),
-    net_switch(AllNetOut?, [net_entry(alice, AliceNetIn),
-                            net_entry(bob, BobNetIn),
-                            net_entry(charlie, CharlieNetIn),
-                            net_entry(carol, CarolNetIn),
-                            net_entry(dave, DaveNetIn),
-                            net_entry(eve, EveNetIn)]).
+    %% network entry could not be cold-called at all.,
+
+    %% The super-apps' own network, one entry per party: the invitation and
+    %% its answer travel it, and the platform travels none.
+    merge(AliceSgOut?, BobSgOut?, SG1),
+    merge(SG1?, CharlieSgOut?, SG2),
+    merge(SG2?, CarolSgOut?, SG3),
+    merge(SG3?, DaveSgOut?, SG4),
+    merge(SG4?, EveSgOut?, AllSgOut),
+    superapp # sg_switch(AllSgOut?, [sg_entry(alice, AliceSgIn),
+                                   sg_entry(bob, BobSgIn),
+                                   sg_entry(charlie, CharlieSgIn),
+                                   sg_entry(carol, CarolSgIn),
+                                   sg_entry(dave, DaveSgIn),
+                                   sg_entry(eve, EveSgIn)]).

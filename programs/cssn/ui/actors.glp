@@ -82,13 +82,22 @@ bob1_wait_charlie_msg([], []).
 
 exported procedure charlie1(Channel(Stream(UserNotify), Stream(UserCmd))?).
 charlie1(ch([befriend(bob, ReqId)|In],
-            [decision(yes, bob, ReqId?),
-             send(bob, hello)|Out?])) :-
+            [decision(yes, bob, ReqId?)|Out?])) :-
     ground(ReqId?) |
-    charlie1_wait_intro(In?, Out).
+    charlie1_greet(In?, Out).
 charlie1(ch([_|In], Out?)) :-
     otherwise | charlie1(ch(In?, Out)).
 charlie1(ch([], [])).
+
+%% The friendship is the super-app's to make: accepting its offer is one act
+%% and greeting the friend another, and only the conversation the super-app
+%% then opens carries the greeting.
+procedure charlie1_greet(Stream(UserNotify)?, Stream(UserCmd)).
+charlie1_greet([connected(bob)|In], [send(bob, hello)|Out?]) :-
+    charlie1_wait_intro(In?, Out).
+charlie1_greet([_|In], Out?) :-
+    otherwise | charlie1_greet(In?, Out).
+charlie1_greet([], []).
 
 procedure charlie1_wait_intro(Stream(UserNotify)?, Stream(UserCmd)).
 charlie1_wait_intro([befriend_intro(bob, alice, ReqId)|In],
@@ -172,13 +181,22 @@ bob2_wait_charlie_msg([], []).
 
 exported procedure charlie2(Channel(Stream(UserNotify), Stream(UserCmd))?).
 charlie2(ch([befriend(bob, ReqId)|In],
-            [decision(yes, bob, ReqId?),
-             send(bob, hello)|Out?])) :-
+            [decision(yes, bob, ReqId?)|Out?])) :-
     ground(ReqId?) |
-    charlie2_wait_intro(In?, Out).
+    charlie2_greet(In?, Out).
 charlie2(ch([_|In], Out?)) :-
     otherwise | charlie2(ch(In?, Out)).
 charlie2(ch([], [])).
+
+%% The friendship is the super-app's to make: accepting its offer is one act
+%% and greeting the friend another, and only the conversation the super-app
+%% then opens carries the greeting.
+procedure charlie2_greet(Stream(UserNotify)?, Stream(UserCmd)).
+charlie2_greet([connected(bob)|In], [send(bob, hello)|Out?]) :-
+    charlie2_wait_intro(In?, Out).
+charlie2_greet([_|In], Out?) :-
+    otherwise | charlie2_greet(In?, Out).
+charlie2_greet([], []).
 
 procedure charlie2_wait_intro(Stream(UserNotify)?, Stream(UserCmd)).
 charlie2_wait_intro([befriend_intro(bob, alice, ReqId)|_],
@@ -247,13 +265,22 @@ bob3_wait_charlie_msg([], []).
 
 exported procedure charlie3(Channel(Stream(UserNotify), Stream(UserCmd))?).
 charlie3(ch([befriend(bob, ReqId)|In],
-            [decision(yes, bob, ReqId?),
-             send(bob, hello)|Out?])) :-
+            [decision(yes, bob, ReqId?)|Out?])) :-
     ground(ReqId?) |
-    charlie3_wait_intro(In?, Out).
+    charlie3_greet(In?, Out).
 charlie3(ch([_|In], Out?)) :-
     otherwise | charlie3(ch(In?, Out)).
 charlie3(ch([], [])).
+
+%% The friendship is the super-app's to make: accepting its offer is one act
+%% and greeting the friend another, and only the conversation the super-app
+%% then opens carries the greeting.
+procedure charlie3_greet(Stream(UserNotify)?, Stream(UserCmd)).
+charlie3_greet([connected(bob)|In], [send(bob, hello)|Out?]) :-
+    charlie3_wait_intro(In?, Out).
+charlie3_greet([_|In], Out?) :-
+    otherwise | charlie3_greet(In?, Out).
+charlie3_greet([], []).
 
 procedure charlie3_wait_intro(Stream(UserNotify)?, Stream(UserCmd)).
 charlie3_wait_intro([befriend_intro(bob, alice, ReqId)|_],
@@ -1835,42 +1862,84 @@ carol17_done([], []).
 %% =============================================================================
 
 exported procedure alice18(Channel(Stream(UserNotify), Stream(UserCmd))?).
-alice18(ch(In, [enrol_child(bob)|Out?])) :-
+alice18(ch(In, [connect(bob)|Out?])) :-
+    alice18_wait(In?, Out).
+
+%% The offer travels the conversation the super-app opens, so it waits for it.
+procedure alice18_wait(Stream(UserNotify)?, Stream(UserCmd)).
+alice18_wait([connected(bob)|In], [enrol_child(bob)|Out?]) :-
     alice18_done(In?, Out).
+alice18_wait([befriend(Who, R)|In], [decision(yes, Who?, R?)|Out?]) :-
+    ground(Who?), ground(R?) | alice18_wait(In?, Out).
+alice18_wait([_|In], Out?) :-
+    otherwise | alice18_wait(In?, Out).
+alice18_wait([], []).
 
 procedure alice18_done(Stream(UserNotify)?, Stream(UserCmd)).
 alice18_done([_|In], Out?) :-
     otherwise | alice18_done(In?, Out).
 alice18_done([], []).
 
+%% Bob takes his conversation with Carol FIRST, while he is still an adult: a
+%% child refuses one, so a child may become the parent only of a party it is
+%% already in conversation with.  Becoming a parent is still asked of nobody ---
+%% no clause here tests whether Bob is a child --- but on this platform the two
+%% strangers are brought into relation by the social graph, and that is the act
+%% a child cannot take for itself.
 exported procedure bob18(Channel(Stream(UserNotify), Stream(UserCmd))?).
-bob18(ch(In, Out?)) :-
+bob18(ch(In, [connect(carol)|Out?])) :-
     bob18_loop(In?, Out).
 
-%% One state, so no notification can arrive too early.  enrolled(alice) is the
-%% offer Bob accepted; enrolled(carol) is the one Bob made.
 procedure bob18_loop(Stream(UserNotify)?, Stream(UserCmd)).
-bob18_loop([enrol_offer(alice, ReqId)|In],
-           [enrol_decision(yes, alice, ReqId?)|Out?]) :-
-    ground(ReqId?) |
-    bob18_loop(In?, Out).
-bob18_loop([enrolled(alice)|In], [enrol_child(carol)|Out?]) :-
-    bob18_loop(In?, Out).
-bob18_loop([release_asked(carol)|In], [approve_release(carol)|Out?]) :-
-    bob18_loop(In?, Out).
+bob18_loop([connected(carol)|In], Out?) :-
+    bob18_ready(In?, Out).
+bob18_loop([enrol_offer(alice, R)|In], Out?) :-
+    ground(R?) | bob18_held(R?, In?, Out).
+bob18_loop([befriend(Who, R)|In], [decision(yes, Who?, R?)|Out?]) :-
+    ground(Who?), ground(R?) | bob18_loop(In?, Out).
 bob18_loop([_|In], Out?) :-
     otherwise | bob18_loop(In?, Out).
 bob18_loop([], []).
+
+%% The conversation with Carol is open, so Alice's offer may be accepted.
+procedure bob18_ready(Stream(UserNotify)?, Stream(UserCmd)).
+bob18_ready([enrol_offer(alice, R)|In], [enrol_decision(yes, alice, R?)|Out?]) :-
+    ground(R?) | bob18_parent(In?, Out).
+bob18_ready([befriend(Who, R)|In], [decision(yes, Who?, R?)|Out?]) :-
+    ground(Who?), ground(R?) | bob18_ready(In?, Out).
+bob18_ready([_|In], Out?) :-
+    otherwise | bob18_ready(In?, Out).
+bob18_ready([], []).
+
+%% The offer came first: it waits for the conversation.
+procedure bob18_held(ReqId?, Stream(UserNotify)?, Stream(UserCmd)).
+bob18_held(R, [connected(carol)|In], [enrol_decision(yes, alice, R?)|Out?]) :-
+    ground(R?) | bob18_parent(In?, Out).
+bob18_held(R, [befriend(Who, R2)|In], [decision(yes, Who?, R2?)|Out?]) :-
+    ground(R?), ground(Who?), ground(R2?) | bob18_held(R?, In?, Out).
+bob18_held(R, [_|In], Out?) :-
+    ground(R?), otherwise | bob18_held(R?, In?, Out).
+bob18_held(_, [], []).
+
+%% A child, and a parent of its own.
+procedure bob18_parent(Stream(UserNotify)?, Stream(UserCmd)).
+bob18_parent([enrolled(alice)|In], [enrol_child(carol)|Out?]) :-
+    bob18_parent(In?, Out).
+bob18_parent([release_asked(carol)|In], [approve_release(carol)|Out?]) :-
+    bob18_parent(In?, Out).
+bob18_parent([_|In], Out?) :-
+    otherwise | bob18_parent(In?, Out).
+bob18_parent([], []).
 
 exported procedure carol18(Channel(Stream(UserNotify), Stream(UserCmd))?).
 carol18(ch(In, Out?)) :-
     carol18_loop(In?, Out).
 
 procedure carol18_loop(Stream(UserNotify)?, Stream(UserCmd)).
-carol18_loop([enrol_offer(bob, ReqId)|In],
-             [enrol_decision(yes, bob, ReqId?)|Out?]) :-
-    ground(ReqId?) |
-    carol18_loop(In?, Out).
+carol18_loop([befriend(Who, R)|In], [decision(yes, Who?, R?)|Out?]) :-
+    ground(Who?), ground(R?) | carol18_loop(In?, Out).
+carol18_loop([enrol_offer(bob, R)|In], [enrol_decision(yes, bob, R?)|Out?]) :-
+    ground(R?) | carol18_loop(In?, Out).
 carol18_loop([enrolled(bob)|In], [request_release|Out?]) :-
     carol18_loop(In?, Out).
 carol18_loop([_|In], Out?) :-

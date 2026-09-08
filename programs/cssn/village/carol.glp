@@ -18,6 +18,12 @@ carol13(_, ch([enrol_offer(alice, ReqId)|In],
     [act('Accepting Alice as my parent')|Narr?]) :-
     ground(ReqId?) |
     carol13_loop(0, In?, Out, Narr).
+%% A child's own friendships are its parents' to approve, but the party that is
+%% to become its parent must reach it first, and on this platform that is the
+%% conversation the super-app opens.  Accepting that is not befriending under
+%% this contract: it is what lets the offer arrive.
+carol13(Id, ch([befriend(alice, ReqId)|In], [decision(yes, alice, ReqId?)|Out?]), Narr?) :-
+    ground(ReqId?) | carol13(Id?, ch(In?, Out), Narr).
 carol13(Id, ch([_|In], Out?), Narr?) :-
     otherwise | carol13(Id?, ch(In?, Out), Narr).
 carol13(_, ch([], []), []).

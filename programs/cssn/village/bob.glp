@@ -11,10 +11,11 @@
 %% Types: from village/self.glp (ancestor scoping)
 
 %% Act 1: coming into the contract.  Bob starts an adult, as every agent does,
-%% and becomes the parent of both his children.
+%% and becomes the parent of both his children.  Each offer travels the
+%% conversation the super-app opens with that child, so the friendship comes
+%% first and the act follows.
 exported procedure bob13(Constant?, Channel(Stream(UserNotify), Stream(UserCmd))?, Stream(NarrativeItem)).
-bob13(_, ch(In, [enrol_child(dave), enrol_child(eve)|Out?]),
-    [act('Becoming the parent of Dave'), act('Becoming the parent of Eve')|Narr?]) :-
+bob13(_, ch(In, [connect(dave), connect(eve)|Out?]), Narr?) :-
     bob13_loop(0, 0, In?, Out, Narr).
 
 %% Intros counts the child introductions Alice has sent (the first is Carol to
@@ -22,6 +23,13 @@ bob13(_, ch(In, [enrol_child(dave), enrol_child(eve)|Out?]),
 %% the second of them is where Bob turns to Frank.  Both were positions in a
 %% chain before, which is exactly what made the actor order-dependent.
 procedure bob13_loop(Integer?, Integer?, Stream(UserNotify)?, Stream(UserCmd), Stream(NarrativeItem)).
+
+bob13_loop(I, C, [connected(dave)|In], [enrol_child(dave)|Out?],
+    [act('Becoming the parent of Dave')|Narr?]) :-
+    bob13_loop(I?, C?, In?, Out, Narr).
+bob13_loop(I, C, [connected(eve)|In], [enrol_child(eve)|Out?],
+    [act('Becoming the parent of Eve')|Narr?]) :-
+    bob13_loop(I?, C?, In?, Out, Narr).
 
 bob13_loop(I, C, [enrolled(dave)|In], Out?, [event('Dave is my child')|Narr?]) :-
     bob13_loop(I?, C?, In?, Out, Narr).

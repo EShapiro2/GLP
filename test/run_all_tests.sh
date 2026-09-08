@@ -1734,6 +1734,45 @@ echo "=== Section K: CSSN v2 Modules ==="
 echo ""
 
 CSSN_V2="$GLP_DIR/programs/cssn"
+CSSN_APP="$CSSN_V2/childsafe"
+
+# The certified program: the platform as a mini-app of the Grassroots Super-App
+# (SGSG paper, Section 3).  programs/cssn/childsafe is the two agents, the UI
+# mediator and the entry cssn/3 the super-app activates with exactly its two
+# channels; it holds no network entry and reaches neither the network nor the
+# person, so it carries the compiler's certificate.  programs/cssn adds the play
+# glue and the stand-in for the super-app, which befriends and hands each
+# execution the conversations it opens.
+echo "--- CSSN mini-app (programs/cssn/childsafe) ---"
+
+k_app=$("$REPL_RUN" <<HEREDOC
+$CSSN_APP
+self_module(M), decompose_module(M?, K, S, C).
+:quit
+HEREDOC
+2>&1)
+
+check "CSSN mini-app loads as a program" "Loaded program" "$k_app"
+check_not "CSSN mini-app no type errors" "Type checking failed" "$k_app"
+check_not "CSSN mini-app is certified" "CERTIFICATE REFUSED" "$k_app"
+check "CSSN mini-app: its certificate carries the compiler's key" "K = [0-9a-f]\{64\}" "$k_app"
+
+# The two plays activate the mini-app as the super-app does: by run/3, under the
+# type identity of cssn/3, with its two channels; and, for two executions, with
+# the two ends of one root channel handed to them as their conversation.
+k_app_plays=$("$REPL_RUN" <<HEREDOC
+$CSSN_APP
+:limit 5000000
+play_open(A, B).
+play_enrol(C, D).
+:quit
+HEREDOC
+2>&1)
+
+check "CSSN mini-app: run/3 activates it, and adopting the conversation is the friendship" "A = \[connected(bob)" "$k_app_plays"
+check "CSSN mini-app: the friend's execution sees it too, and the greeting crosses" "B = \[connected(alice), received(alice, hello)" "$k_app_plays"
+check "CSSN mini-app: becoming parent and child travels the conversation" "C = \[connected(carol), enrolled(carol)" "$k_app_plays"
+check "CSSN mini-app: and the child holds its parent" "D = \[connected(alice), enrol_offer(alice, req(1)), enrolled(alice)" "$k_app_plays"
 
 # Loading
 k_load=$("$REPL_RUN" <<HEREDOC
@@ -1911,6 +1950,7 @@ check "CSSN v3 fplay16 enrol creates the parent-child channel" "tagged(alice, ev
 check "CSSN v3 fplay16 the child holds its parent" "tagged(bob, event(Alice is my parent))" "$k_fp16"
 check "CSSN v3 fplay16 ending the parenting tears the channel down" "tagged(alice, event(Bob is no longer my child))" "$k_fp16"
 check "CSSN v3 fplay16 an empty rho is what being an adult is" "tagged(bob, event(No parent on record, so an adult))" "$k_fp16"
+check "CSSN v3 fplay16 a released child takes up a conversation a child refuses" "tagged(bob, friend(charlie))" "$k_fp16"
 
 # fplay17: a member that joins after a post was made.  There is no delivery index
 # and no queue: a member is owed a post while it is on the member list and the
@@ -1965,7 +2005,7 @@ check "CSSN v3 fplay18 bob becomes a child" "tagged(bob, notify(enrolled(alice))
 check "CSSN v3 fplay18 a child offers to become a parent" "tagged(bob, cmd(enrol_child(carol)))" "$k_fp18"
 check "CSSN v3 fplay18 and holds the child it gained" "tagged(bob, notify(enrolled(carol)))" "$k_fp18"
 check "CSSN v3 fplay18 a child ends a parenting of its own" "tagged(bob, notify(released(carol)))" "$k_fp18"
-check "CSSN v3 fplay16 the released child befriends unguarded by a parent" "tagged(bob, friend(alice))" "$k_fp16"
+check "CSSN v3 fplay18 a child that is a parent ends the parenting" "tagged(carol, notify(released(bob)))" "$k_fp18"
 
 # fplay19: ending a child's membership at two of the four roles of child_leave_2.
 # Carol, a child, created kids_chat and holds Dave and Eve on its list.  Carol
@@ -3789,6 +3829,12 @@ KNOWN_RED=(
     # loader, so it must stand beside its .glp); the test's path is vGLP's to
     # change (vGLP_inbox.md 2026-09-08).
     "test/vglp/program_compilation_test.dart: the deployed sources coins/coins_agent.vglp parses as vGLP"
+    # CSSN's: the two deployed sources moved with their agents into the
+    # certified program, programs/cssn/childsafe/ (CSSN, 2026-09-08; a lone
+    # .vglp is compiled by the loader, so each must stand beside its .glp); the
+    # test's paths are vGLP's to change (vGLP_inbox.md 2026-09-08).
+    "test/vglp/program_compilation_test.dart: the deployed sources cssn/agent.vglp parses as vGLP"
+    "test/vglp/program_compilation_test.dart: the deployed sources cssn/child_agent.vglp parses as vGLP"
 )
 
 echo "=== Section Q: Dart unit tests (whole tree) ==="

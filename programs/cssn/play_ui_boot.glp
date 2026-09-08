@@ -10,8 +10,9 @@
 %%   - Charlie befriends Bob and waits; if Bob creates a group and invites him,
 %%     Charlie accepts and greets the group.
 %% Both actors accept any friend offer or group invite Bob composes and reply to
-%% his chat messages.  An in-heap crossbar routes '_net' cold calls by
-%% addressee; friend channels are in-heap.
+%% his chat messages.  Each party carries a stand-in for the Grassroots
+%% Super-App (superapp.glp), which befriends over a network of its own and hands
+%% each mini-app the conversations it opens; friend channels are in-heap.
 %%
 %% The play wires the deployed compiled pair of this platform — agent.glp and
 %% ui/mediator.glp — to the Dart bridge: the code under the live UI is the code
@@ -21,29 +22,15 @@
 %% IMPORTED PROCEDURES — cross-module dependencies
 %% =============================================================================
 
-imported procedure agent#agent(Constant?, AgentState?, Stream(UserInMsg)?, Stream(NetInMsg)?, Stream(OutputEntry)?).
+imported procedure childsafe#agent(Constant?, AgentState?, Stream(UserInMsg)?, Stream(NetInMsg)?, Stream(Conversation)?, Stream(OutputEntry)?).
 
-imported procedure mediator#ui_mediator(Constant?, Channel(Stream(AgentToUserMsg), Stream(MediatorToAgentMsg))?, Channel(Stream(UserCmd), Stream(UserNotify))?, Stream(PendingEntry)?, Constant?).
+imported procedure childsafe#ui_mediator(Constant?, Channel(Stream(AgentToUserMsg), Stream(MediatorToAgentMsg))?, Channel(Stream(AppCmd), Stream(AppNotify))?, Stream(PendingEntry)?, Constant?).
 
-%% =============================================================================
-%% IN-HEAP CROSSBAR — route '_net' cold calls by addressee
-%% =============================================================================
-
-procedure crossbar(NetOutStream?, NetOutStream?, NetOutStream?,
-                   NetInStream, NetInStream, NetInStream).
-crossbar(AOut, BOut, COut, AIn?, BIn?, CIn?) :-
-    merge(AOut?, BOut?, AB),
-    merge(AB?, COut?, All),
-    route(All?, AIn, BIn, CIn).
-
-procedure route(NetOutStream?, NetInStream, NetInStream, NetInStream).
-route([msg(alice, C) | Rest], [msg(alice, C?) | A?], B?, Ch?) :-
-    route(Rest?, A, B, Ch).
-route([msg(bob, C) | Rest], A?, [msg(bob, C?) | B?], Ch?) :-
-    route(Rest?, A, B, Ch).
-route([msg(charlie, C) | Rest], A?, B?, [msg(charlie, C?) | Ch?]) :-
-    route(Rest?, A, B, Ch).
-route([], [], [], []).
+%% From superapp.glp (sibling): the stand-in for the Grassroots Super-App.
+imported procedure superapp#split_cmds(Stream(UserCmd)?, Stream(AppCmd), Stream(SgCmd)).
+imported procedure superapp#merge_notify(Stream(UserNotify)?, Stream(UserNotify)?, Stream(UserNotify)).
+imported procedure superapp#superapp(Constant?, Stream(SgCmd)?, Stream(SgNotify), Stream(Conversation), SgOutStream, SgInStream?, Stream(SgPending)?, Constant?).
+imported procedure superapp#sg_switch(SgOutStream?, Stream(SgEntry)?).
 
 %% =============================================================================
 %% ACTORS
@@ -105,21 +92,37 @@ ui_drain(_, [], []).
 %% SCENARIO BOOT (entered as Bob's agent_init)
 %% =============================================================================
 
-procedure agent_init(Constant?, Stream(UserCmd)?, Stream(NetInMsg)?).
+%% The third argument was the isolate's network entry; the platform holds
+%% none.  It is the channel to the social graph, and in the live app the
+%% super-app writes it; here each party's stand-in does.
+procedure agent_init(Constant?, Stream(UserCmd)?, Stream(Conversation)?).
 agent_init(bob, UserIn, _) :-
-    agent # agent(bob, state(0, 0, [], []), BAgentIn?, BNetIn?,
-          [user_output(BA2U), net_output(BNetOut)]),
-    mediator # ui_mediator(bob, ch(BA2U?, BAgentIn),
-                ch(UserIn?, BUserOut), [], 1),
+    superapp # split_cmds(UserIn?, BMedIn, BSgCmds),
+    superapp # superapp(bob, BSgCmds?, BSgNotify, BConvs, BSgOut, BSgIn?, [], 1),
+    childsafe # agent(bob, state(0, 0, [], []), BAgentIn?, BNetIn?, BConvs?,
+          [user_output(BA2U)]),
+    childsafe # ui_mediator(bob, ch(BA2U?, BAgentIn),
+                ch(BMedIn?, BAppOut), [], 1),
+    superapp # merge_notify(BSgNotify?, BAppOut?, BUserOut),
     send_to_user(BUserOut?),
-    agent # agent(alice, state(0, 0, [], []), AAgentIn?, ANetIn?,
-          [user_output(AA2U), net_output(ANetOut)]),
-    mediator # ui_mediator(alice, ch(AA2U?, AAgentIn),
-                ch(ACmds?, AUserOut), [], 1),
+    superapp # split_cmds(ACmds?, AMedIn, ASgCmds),
+    superapp # superapp(alice, ASgCmds?, ASgNotify, AConvs, ASgOut, ASgIn?, [], 1),
+    childsafe # agent(alice, state(0, 0, [], []), AAgentIn?, ANetIn?, AConvs?,
+          [user_output(AA2U)]),
+    childsafe # ui_mediator(alice, ch(AA2U?, AAgentIn),
+                ch(AMedIn?, AAppOut), [], 1),
+    superapp # merge_notify(ASgNotify?, AAppOut?, AUserOut),
     alice_actor(AUserOut?, ACmds),
-    agent # agent(charlie, state(0, 0, [], []), CAgentIn?, CNetIn?,
-          [user_output(CA2U), net_output(CNetOut)]),
-    mediator # ui_mediator(charlie, ch(CA2U?, CAgentIn),
-                ch(CCmds?, CUserOut), [], 1),
+    superapp # split_cmds(CCmds?, CMedIn, CSgCmds),
+    superapp # superapp(charlie, CSgCmds?, CSgNotify, CConvs, CSgOut, CSgIn?, [], 1),
+    childsafe # agent(charlie, state(0, 0, [], []), CAgentIn?, CNetIn?, CConvs?,
+          [user_output(CA2U)]),
+    childsafe # ui_mediator(charlie, ch(CA2U?, CAgentIn),
+                ch(CMedIn?, CAppOut), [], 1),
+    superapp # merge_notify(CSgNotify?, CAppOut?, CUserOut),
     charlie_actor(CUserOut?, CCmds),
-    crossbar(ANetOut?, BNetOut?, CNetOut?, ANetIn, BNetIn, CNetIn).
+    merge(ASgOut?, BSgOut?, SG1),
+    merge(SG1?, CSgOut?, AllSgOut),
+    superapp # sg_switch(AllSgOut?, [sg_entry(alice, ASgIn),
+                                     sg_entry(bob, BSgIn),
+                                     sg_entry(charlie, CSgIn)]).
