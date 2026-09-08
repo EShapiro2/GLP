@@ -619,6 +619,73 @@ pass_notify([N | Ns], [N? | Seen?]) :- ground(N?) | pass_notify(Ns?, Seen).
 pass_notify([], []).
 
 %% =============================================================================
+%% play_both(ScreenA, ScreenB, SeenA, SeenB): ONE super-app hosting BOTH
+%% mini-apps at once (SGSG paper, Section 7, and Theorem 6.5, which is about
+%% two mini-apps on one smartphone).  alice and bob each install the currency
+%% and the child-safe platform, each with its own user-interface grant; alice
+%% invites bob to both; the two handshakes open a root channel of each
+%% platform's own protocol, and each super-app activates both entries by run/3,
+%% each with its own conversations.  Then both platforms run at once over the
+%% one friendship: alice and bob mint and swap under the currency's contract,
+%% and alice greets bob under the child-safe platform's.  Expected: ScreenA and
+%% ScreenB as in play_coins, SeenA = [connected(bob) | _], SeenB =
+%% [connected(alice), received(alice, hello) | _], → suspended.
+%% =============================================================================
+exported procedure play_both(Stream(ScreenContent), Stream(ScreenContent), Stream(CsAppNotify), Stream(CsAppNotify)).
+play_both(ScreenA?, ScreenB?, SeenA?, SeenB?) :-
+    crossbar2(AliceNetOut?, BobNetOut?, AliceNetIn, BobNetIn),
+    load_file("currency.glpw", CC),
+    certified(CC?, _, CCSig),
+    load_file("childsafe.glpw", CS),
+    certified(CS?, _, CSSig),
+    new_channel(CoinsEndA, CoinsPersonA),
+    new_channel(CssnEndA, CssnPersonA),
+    new_channel(CoinsEndB, CoinsPersonB),
+    new_channel(CssnEndB, CssnPersonB),
+    agent # agent(alice, AliceIn?, AliceNetIn?, [user_output(AliceOut), net_output(AliceNetOut)]),
+    alice_both_person(CC?, CCSig?, CoinsEndA?, CS?, CSSig?, CssnEndA?, AliceOut?, AliceIn),
+    coin_person(alice, CoinsPersonA?, [mint(2), swap(bob, alice, 2, bob, 2)], ScreenA),
+    cssn_greeter(bob, CssnPersonA?, SeenA),
+    agent # agent(bob, BobIn?, BobNetIn?, [user_output(BobOut), net_output(BobNetOut)]),
+    bob_both_person(CC?, CCSig?, CoinsEndB?, CS?, CSSig?, CssnEndB?, BobOut?, BobIn),
+    coin_person(bob, CoinsPersonB?, [mint(2), accept(alice)], ScreenB),
+    cssn_onlooker(CssnPersonB?, SeenB).
+
+%% alice's person: install both, cold-call bob, and invite him to both once
+%% they are friends.
+procedure alice_both_person(Content?, String?, Channel(Stream(UserAnswer), Stream(Event))?, Content?, String?, Channel(Stream(CsAppCmd), Stream(CsAppNotify))?, AgentToUserStream?, UserInStream).
+alice_both_person(CC, CCSig, CoinsEnd, CS, CSSig, CssnEnd, Outs,
+                  [msg(person, alice, install_coins(currency, CC?, CCSig?, CoinsEnd?)),
+                   msg(person, alice, install_cssn(childsafe, CS?, CSSig?, CssnEnd?)),
+                   msg(person, alice, connect(bob)) | Cmds?]) :-
+    alice_both_run(Outs?, Cmds).
+
+procedure alice_both_run(AgentToUserStream?, UserInStream).
+alice_both_run([msg(agent, person, connected(bob)) | Outs],
+               [msg(person, alice, invite(currency, bob)),
+                msg(person, alice, invite(childsafe, bob)) | Cmds?]) :-
+    alice_both_run(Outs?, Cmds).
+alice_both_run([_ | Outs], Cmds?) :- otherwise | alice_both_run(Outs?, Cmds).
+alice_both_run([], []).
+
+%% bob's person: install both, consent to the friendship, and accept both
+%% invitations.
+procedure bob_both_person(Content?, String?, Channel(Stream(UserAnswer), Stream(Event))?, Content?, String?, Channel(Stream(CsAppCmd), Stream(CsAppNotify))?, AgentToUserStream?, UserInStream).
+bob_both_person(CC, CCSig, CoinsEnd, CS, CSSig, CssnEnd, Outs,
+                [msg(person, bob, install_coins(currency, CC?, CCSig?, CoinsEnd?)),
+                 msg(person, bob, install_cssn(childsafe, CS?, CSSig?, CssnEnd?)),
+                 msg(person, bob, accept_invite(currency, alice)),
+                 msg(person, bob, accept_invite(childsafe, alice)) | Cmds?]) :-
+    bob_both_run(Outs?, Cmds).
+
+procedure bob_both_run(AgentToUserStream?, UserInStream).
+bob_both_run([msg(agent, person, befriend(alice, Resp?)) | Outs],
+             [msg(person, bob, decision(yes, alice, response(Resp))) | Cmds?]) :-
+    bob_both_run(Outs?, Cmds).
+bob_both_run([_ | Outs], Cmds?) :- otherwise | bob_both_run(Outs?, Cmds).
+bob_both_run([], []).
+
+%% =============================================================================
 %% coin_person(Id, PersonEnd, Script, Screen): a scripted person on the
 %% super-app's end of the currency's cards-and-answers channel, after
 %% Currencies' person.glp: the mediator reissues the request cards after every

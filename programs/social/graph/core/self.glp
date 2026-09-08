@@ -52,3 +52,7 @@ play_coins(A?, B?) :- superapp_plays # play_coins(A, B).
 imported procedure superapp_plays#play_cssn(Stream(CsAppNotify), Stream(CsAppNotify)).
 exported procedure play_cssn(Stream(CsAppNotify), Stream(CsAppNotify)).
 play_cssn(A?, B?) :- superapp_plays # play_cssn(A, B).
+
+imported procedure superapp_plays#play_both(Stream(ScreenContent), Stream(ScreenContent), Stream(CsAppNotify), Stream(CsAppNotify)).
+exported procedure play_both(Stream(ScreenContent), Stream(ScreenContent), Stream(CsAppNotify), Stream(CsAppNotify)).
+play_both(A?, B?, C?, D?) :- superapp_plays # play_both(A, B, C, D).
