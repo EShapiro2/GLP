@@ -315,6 +315,13 @@ Term? _getArg(RunnerContext cx, int slot) {
   return arg;
 }
 
+/// A ground value at an argument position: a constant, a structure, or an
+/// opaque constant of the runtime's own — a module value (the `Module`
+/// constant of the type system) or a mutual reference. Every branch that
+/// matches or binds a ground argument admits all of them alike: a module value
+/// arriving bare inside a delivered structure is as ground as a constant.
+bool _isGroundValue(Object? v) => v is Term && v is! VarRef;
+
 (Object?, Set<int>) _dereferenceWithTracking(Object? term, RunnerContext cx) {
   final unboundReaders = <int>{};
 
@@ -2629,7 +2636,7 @@ mixin OpExecutors {
                   if (existingValue != null) {
                     // Xi already allocated from previous writer occurrence
                     // Bind query writer to existing value (per spec 8.2)
-                    if (existingValue is ConstTerm || existingValue is StructTerm) {
+                    if (_isGroundValue(existingValue)) {
                       // Ground value - bind writer directly to it
                       cx.sigmaHat[value.addr] = existingValue;
                     } else if (existingValue is VarRef) {
@@ -2652,7 +2659,7 @@ mixin OpExecutors {
                     cx.clauseVars[varIndex] = value.addr;
                     cx.S++;
                   }
-                } else if (value is ConstTerm || value is StructTerm) {
+                } else if (_isGroundValue(value)) {
                   // Query has ground term, clause expects reader
                   final (writerAddr, _) = cx.rt.heap.allocateVariable();
                   cx.sigmaHat[writerAddr] = value;
@@ -2679,7 +2686,7 @@ mixin OpExecutors {
                   } else if (value is VarRef && cx.rt.heap.isReader(value.addr)) {
                     cx.sigmaHat[clauseVarAddr] = value;
                     cx.S++;
-                  } else if (value is ConstTerm || value is StructTerm) {
+                  } else if (_isGroundValue(value)) {
                     cx.sigmaHat[clauseVarAddr] = value;
                     cx.S++;
                   } else {
@@ -2703,7 +2710,7 @@ mixin OpExecutors {
                       cx.clauseVars[varIndex] = value;
                     }
                     cx.S++;
-                  } else if (value is ConstTerm || value is StructTerm) {
+                  } else if (_isGroundValue(value)) {
                     cx.clauseVars[varIndex] = value;
                     cx.S++;
                   } else {
@@ -3080,7 +3087,7 @@ mixin OpExecutors {
             if (storedValue is int && compareTo != storedValue) {
               return StepOutcome.nextClause;
             }
-          } else if (arg is ConstTerm || arg is StructTerm) {
+          } else if (_isGroundValue(arg)) {
             if (storedValue != arg) {
               return StepOutcome.nextClause;
             }

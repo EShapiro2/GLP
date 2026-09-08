@@ -1,0 +1,14 @@
+%% mad_ship_module_boot.glp — a module value shipped from one agent to another
+%% and activated there by run/3 (IGLP \S Self-Module; GLP-Spec appendix-guards,
+%% "Dynamic activation").
+%%
+%% alice obtains her own module value with self_module/1 and sends it to bob in
+%% a message; bob receives it as a value of type Module, obtains the type
+%% identity of hello/1 in his own scope with find_type/2, and activates the
+%% shipped module with run/3 under that identity, posting hello(Z) to it.  The
+%% agent code is the program directory mad_ship_module/.
+
+procedure boot.
+boot :-
+    alice_init(alice, _)@alice,
+    bob_init(bob, _)@bob.

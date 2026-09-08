@@ -1,0 +1,17 @@
+%% mad_held_links/self.glp — program interface.  The entry points named in
+%% ../mad_held_links_boot.glp are exported here and forwarded to agents.glp,
+%% which defines them.  The boot clause stays out of the directory: the boot
+%% harness strips it, a directory load does not.
+
+imported procedure agents#alice_init(_?, _?).
+imported procedure agents#bob_init(_?, _?).
+imported procedure agents#carol_init(_?, _?).
+
+exported procedure alice_init(_?, _?).
+alice_init(Id, In) :- agents # alice_init(Id?, In?).
+
+exported procedure bob_init(_?, _?).
+bob_init(Id, In) :- agents # bob_init(Id?, In?).
+
+exported procedure carol_init(_?, _?).
+carol_init(Id, In) :- agents # carol_init(Id?, In?).

@@ -9,6 +9,9 @@ import 'package:glp_runtime/compiler/program_linker.dart' show emitVglpSources;
 import 'package:glp_runtime/engine/glp_engine.dart';
 import 'package:glp_runtime/multiagent/simulation_network.dart'
     show NetworkDirectory, SimulationNetworkClient;
+import 'package:glp_runtime/multiagent/boot_loader.dart' show BootLoader;
+import 'package:glp_runtime/multiagent/isolate_manager.dart'
+    show IsolateManager;
 import 'package:glp_runtime/runtime/scheduler.dart';
 import 'package:glp_runtime/runtime/terms.dart' as rt;
 
@@ -27,7 +30,7 @@ void main() async {
   print('Working directory: ${Directory.current.path}');
   print('');
   print('Input: filename.glp to load, or goal to execute');
-  print('Commands: :quit, :help, :trace, :debug, :limit, :activate, :mad');
+  print('Commands: :quit, :help, :trace, :debug, :limit, :activate, :mad, :boot');
   print('');
 
   // Resolve programs/self.glp relative to this script's location.
@@ -43,7 +46,9 @@ void main() async {
     final input = stdin.readLineSync();
 
     if (input == null) {
-      break;
+      // End of input: leave the process, not just the loop — after a :boot the
+      // VM would otherwise wait on whatever the harness left behind.
+      exit(0);
     }
 
     if (input.trim().isEmpty) {
@@ -58,7 +63,7 @@ void main() async {
     // Handle commands
     if (trimmed == ':quit' || trimmed == ':q') {
       print('Goodbye!');
-      break;
+      exit(0);
     }
 
     if (trimmed == ':help' || trimmed == ':h') {
@@ -88,6 +93,53 @@ void main() async {
         }
       } catch (e) {
         print('Emit failed: $e');
+      }
+      continue;
+    }
+
+    if (trimmed.startsWith(':boot')) {
+      // :boot <file>_boot.glp [<program dir>] — run a multi-agent boot program
+      // under madGLP mode (IGLP \S Boot): the boot clause's goals G@p each spawn
+      // an isolate for agent p, with its own key pair installed on its
+      // networking layer and held by its runtime, its index-0 entry, and G
+      // spawned with the network-input reader as its last argument; the
+      // simulation router carries the traffic; held links are reported and
+      // authorised across the agents. The agent code is the program directory
+      // beside the boot file (<file>/, or the second argument), loaded as a
+      // program in every isolate with the boot source on top. Each line an
+      // agent sends to its person is printed as `[agent] term`. Returns when
+      // every agent has drained what it was handed and the traffic has settled.
+      final parts = trimmed.split(RegExp(r'\s+'));
+      if (parts.length < 2 || parts.length > 3) {
+        print('Usage: :boot <file>_boot.glp [<program directory>]');
+        continue;
+      }
+      final bootPath = parts[1];
+      try {
+        final bootFile = File(bootPath);
+        if (!bootFile.existsSync()) {
+          print('Error: File not found: $bootPath');
+          continue;
+        }
+        final config = BootLoader().load(bootFile.readAsStringSync());
+        config.rootSelfGlpPath = rootSelfGlpPath;
+        final String? dir = parts.length == 3
+            ? parts[2]
+            : (bootPath.endsWith('_boot.glp')
+                ? bootPath.substring(0, bootPath.length - '_boot.glp'.length)
+                : null);
+        if (dir != null && Directory(dir).existsSync()) {
+          config.programDir = dir;
+        }
+        final manager = IsolateManager();
+        await manager.boot(config);
+        manager.start();
+        await manager.settle();
+        await manager.shutdown();
+        final agents = config.directives.map((d) => d.agentId).join(', ');
+        print('✓ Boot settled: ${config.directives.length} agents ($agents)');
+      } catch (e) {
+        print('Boot failed: $e');
       }
       continue;
     }
@@ -292,6 +344,7 @@ void _printHelp() {
   print('  :bytecode, :bc         Show loaded bytecode');
   print('  :emit <dir>            Write the compiled GLP beside each .vglp');
   print('  :mad <agent>           Enter madGLP mode as <agent> (seam predicates run)');
+  print('  :boot <f>_boot.glp     Run a multi-agent boot program (one isolate per agent)');
   print('');
   print('Type Checking:');
   print('  Programs with procedure declarations are type-checked');

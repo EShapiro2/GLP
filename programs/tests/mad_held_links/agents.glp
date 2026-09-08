@@ -1,0 +1,38 @@
+%% mad_held_links/agents.glp — the three agents of ../mad_held_links_boot.glp.
+
+%% alice: the anchor.  Sends the writer end of W to bob, waits on W's reader,
+%% and answers every pending_link report on her network input.
+exported procedure alice_init(_?, _?).
+alice_init(_, In) :-
+    send_to_net([msg(bob, w(W))]),
+    alice_wait(W?),
+    answer_reports(alice, In?).
+
+procedure alice_wait(_?).
+alice_wait(V) :- ground(V?) | send_to_user([delivered(V?)]).
+
+%% bob: receives the end from alice and forwards it to carol, re-exporting
+%% alice's name rather than anchoring a new link (Definition Globalize).
+exported procedure bob_init(_?, _?).
+bob_init(_, [msg(_, w(W)) | _]) :-
+    send_to_net([msg(carol, w(W))]).
+
+%% carol: the holder.  Binds the forwarded end, then answers the report her
+%% runtime makes when it holds the assignment.
+exported procedure carol_init(_?, _?).
+carol_init(_, [msg(_, w(W)) | In]) :-
+    W = hello_from_carol,
+    answer_reports(carol, In?).
+
+%% answer_reports(Me, In): report each pending_link(Name, Sender) to the person
+%% and authorise the link; ignore anything else on the input stream.
+procedure answer_reports(Constant?, _?).
+answer_reports(Me, [pending_link(G, S) | In]) :-
+    ground(G?), ground(S?) |
+    send_to_user([held(Me?, G?, S?)]),
+    authorise_link(G?, authorise),
+    answer_reports(Me?, In?).
+answer_reports(Me, [_ | In]) :-
+    otherwise |
+    answer_reports(Me?, In?).
+answer_reports(_, []).

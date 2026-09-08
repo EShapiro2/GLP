@@ -1,0 +1,23 @@
+%% mad_ship_module/agents.glp — the two agents of ../mad_ship_module_boot.glp.
+
+%% alice ships her module value to bob.
+exported procedure alice_init(_?, _?).
+alice_init(_, _) :-
+    self_module(M),
+    send_to_net([msg(bob, ship(M?))]).
+
+%% bob activates the shipped module under the type identity of hello/1 as
+%% declared in his own scope, and reports what the activated goal produced.
+exported procedure bob_init(_?, _?).
+bob_init(_, [msg(_, ship(M)) | _]) :-
+    module(M?) |
+    find_type(hello/1, T),
+    run(hello(Z), T?, M?),
+    report(Z?).
+
+procedure report(Stream(Constant)?).
+report(Z) :- ground(Z?) | send_to_user([ran(Z?)]).
+
+%% The entry point a shipped copy is activated on.
+exported procedure hello(Stream(Constant)).
+hello([done]).

@@ -1,0 +1,16 @@
+%% mad_ship_module/self.glp — program interface: the two entry points of
+%% ../mad_ship_module_boot.glp, and hello/1, the procedure a shipped copy of
+%% this program is activated on.
+
+imported procedure agents#alice_init(_?, _?).
+imported procedure agents#bob_init(_?, _?).
+imported procedure agents#hello(Stream(Constant)).
+
+exported procedure alice_init(_?, _?).
+alice_init(Id, In) :- agents # alice_init(Id?, In?).
+
+exported procedure bob_init(_?, _?).
+bob_init(Id, In) :- agents # bob_init(Id?, In?).
+
+exported procedure hello(Stream(Constant)).
+hello(S?) :- agents # hello(S).

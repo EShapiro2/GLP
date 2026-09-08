@@ -1,0 +1,19 @@
+%% mad_held_links_boot.glp — a forwarded link is held at both of its ends, two
+%% reports, two answers, and the value is delivered (IGLP madglp-spec \S Held
+%% Links; the Implementation Notes' "Held links").
+%%
+%% alice, the anchor, sends the writer end of a variable to bob and waits on its
+%% reader; bob forwards the end to carol, who binds it.  carol's runtime holds
+%% her assignment --- the end reached her from bob, not from alice --- and
+%% reports pending_link(Name, bob) on her network input; her program authorises,
+%% and the value goes to alice.  alice's runtime holds it --- it came from carol,
+%% to whom alice exported nothing --- and reports pending_link(Name, carol); her
+%% program authorises, the assignment is applied, and alice's reader delivers.
+%% The agent code is the program directory mad_held_links/, which the boot
+%% harness loads in every isolate with this boot clause on top.
+
+procedure boot.
+boot :-
+    alice_init(alice, _)@alice,
+    bob_init(bob, _)@bob,
+    carol_init(carol, _)@carol.

@@ -3329,6 +3329,39 @@ check "SK6 a wrapper reaching send_to_user/1 does not pass" "app:wrapper/1 calls
 check "SK6 the refused module has no compiler's key" "_decompose_module/4: module cert_refused carries no certificate" "$sk6"
 
 echo ""
+# =============================================================================
+# SECTION MB: multi-agent boot programs run from the REPL (:boot)
+# =============================================================================
+# The two-agent madGLP harness (IGLP Cowork 2026-09-08 08:08, item 1): `:boot
+# <f>_boot.glp` spawns an isolate per agent of the boot clause, each under its
+# own key pair, loads the program directory beside the boot file in each, and
+# returns when the traffic has settled; what an agent sends to its person is
+# printed as `[agent] term`.  MB1: a forwarded link is held at both ends, each
+# end reports pending_link and authorises, and the value is delivered (IGLP
+# madglp-spec \S Held Links).  MB2: a module value shipped from one agent to
+# another is activated there by run/3 under the type identity find_type/2
+# gives (GLP-Spec appendix-guards, "Dynamic activation").
+echo "=== Section MB: multi-agent boot programs (:boot) ==="
+
+mb1=$("$REPL_RUN" <<HEREDOC
+:boot $GLP_DIR/programs/tests/mad_held_links_boot.glp
+:quit
+HEREDOC
+2>&1)
+check "MB1 the boot settles with three agents" "Boot settled: 3 agents" "$mb1"
+check "MB1 the holder's assignment is held and reported, from the forwarding friend" "\[carol\] held(carol, _w(alice, [0-9]*), bob)" "$mb1"
+check "MB1 the anchor's incoming assignment is held and reported, from the holder" "\[alice\] held(alice, _w(alice, [0-9]*), carol)" "$mb1"
+check "MB1 both ends authorised, the value is delivered at the anchor" "\[alice\] delivered(hello_from_carol)" "$mb1"
+
+mb2=$("$REPL_RUN" <<HEREDOC
+:boot $GLP_DIR/programs/tests/mad_ship_module_boot.glp
+:quit
+HEREDOC
+2>&1)
+check "MB2 the boot settles with two agents" "Boot settled: 2 agents" "$mb2"
+check "MB2 a shipped module value is activated by run/3 under find_type's identity" "\[bob\] ran(\[done\])" "$mb2"
+
+echo ""
 
 # =============================================================================
 # Section Q: Dart unit tests (whole tree)

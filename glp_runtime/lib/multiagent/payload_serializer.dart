@@ -14,6 +14,7 @@ import 'package:glp_runtime/multiagent/mad_helpers.dart';
 import 'package:glp_runtime/wire/wire_flags.dart';
 import 'package:glp_runtime/wire/payload_codec.dart';
 import 'package:glp_runtime/wire/codec.dart' show wireMsgKindValue;
+import 'package:glp_runtime/wire/artefact.dart' show Artefact;
 
 /// Global Variable ID encoding
 class GlobalVarId {
@@ -478,6 +479,15 @@ class PayloadSerializer {
         final pairedReaderLocalId = creatorLocalId + 1;
         builder.add(_encodeLength(pairedReaderLocalId));
       }
+    } else if (term is ModuleTerm) {
+      // A Module constant travels as its artefact bytes — constant tag 6 of
+      // the code format (§Term and Message Encoding), the form in which
+      // compiled programs ship (§Self-Module).
+      builder.addByte(_tagConstant);
+      builder.addByte(6);
+      final bytes = (term.artefact as Artefact).toBytes();
+      builder.add(_encodeLength(bytes.length));
+      builder.add(bytes);
     } else if (term is StructTerm) {
       builder.addByte(_tagStruct);
       // Encode functor
@@ -639,7 +649,8 @@ class PayloadSerializer {
     switch (tag) {
       case _tagConstant:
         final (value, constSize) = _deserializeConstant(bytes, offset);
-        return (ConstTerm(value), 1 + constSize);
+        // A module constant is already a term; every other constant is wrapped.
+        return (value is ModuleTerm ? value : ConstTerm(value), 1 + constSize);
         
       case _tagVariable:
         // Decode global ID length
@@ -743,6 +754,17 @@ class PayloadSerializer {
         final value = bytes[offset] == 1;
         offset++;
         return (value, offset - startOffset);
+      case 6: // module — the artefact bytes, decoding to the Module constant
+        final (length, lengthSize) = _decodeLength(bytes, offset);
+        offset += lengthSize;
+        final artefactBytes =
+            Uint8List.fromList(bytes.sublist(offset, offset + length));
+        offset += length;
+        final artefact = Artefact.fromBytes(artefactBytes);
+        return (
+          ModuleTerm(artefact, name: artefact.moduleName),
+          offset - startOffset
+        );
       default:
         throw FormatException('Unknown constant type tag: $typeTag');
     }

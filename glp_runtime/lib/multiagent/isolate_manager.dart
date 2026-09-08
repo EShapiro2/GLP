@@ -185,6 +185,11 @@ class IsolateManager {
   /// agent threw while handling a message.
   final List<String> _faults = [];
 
+  /// The agent isolates, killed at [shutdown]: a settled system's agents wait
+  /// on their ports for ever, and would otherwise keep a long-lived process —
+  /// the REPL's `:boot` — alive after the harness is done with them.
+  final Map<String, Isolate> _isolates = {};
+
   /// One per agent isolate, carrying that isolate's `onError` and `onExit`.
   ///
   /// [AgentFaulted] covers a throw the isolate's own handler catches, which is
@@ -362,7 +367,8 @@ class IsolateManager {
         }
       });
 
-      await Isolate.spawn(_agentIsolateEntry, agentConfig,
+      _isolates[directive.agentId] = await Isolate.spawn(
+          _agentIsolateEntry, agentConfig,
           onError: events.sendPort, onExit: events.sendPort);
     }
 
@@ -404,7 +410,8 @@ class IsolateManager {
     port.send(UIEvent(agentId, payload));
   }
 
-  /// Shutdown all isolates.
+  /// Shutdown all isolates: close the ports, then kill the isolates, whose
+  /// exits then reach no port and are not faults.
   Future<void> shutdown() async {
     _mainPort.close();
     for (final p in _isolateEvents.values) {
@@ -412,6 +419,10 @@ class IsolateManager {
     }
     _isolateEvents.clear();
     _agentPorts.clear();
+    for (final i in _isolates.values) {
+      i.kill(priority: Isolate.immediate);
+    }
+    _isolates.clear();
   }
 
   /// Handle messages from agent isolates.
@@ -594,9 +605,16 @@ void _agentIsolateEntry(AgentConfig config) async {
   runtime.heap.bindVariable(netInArgWriter, VarRef(netInReader));
   args[arity - 1] = VarRef(netInArgReader);
 
-  // Spawn main goal
+  // What the agent sends to its person is printed under the agent's name, so
+  // a harness reading the process's output can tell whose line it is.
+  runtime.outputCallback = (text) => print('[$agentId] $text');
+
+  // Spawn main goal. It carries the program's module value, as a REPL goal
+  // does: self_module/1 returns it, sign/3 puts its source identity into a
+  // signed term, and every goal spawned from it inherits it.
   runtime.setGoalEnv(1, CallEnv(args: args));
   runtime.setGoalProgram(1, 'main');
+  runtime.setGoalModule(1, engine.appModule);
   runtime.gq.enqueue(GoalRef(1, goalPC));
   log('Spawned ${config.goalFunctor}/$arity');
 
