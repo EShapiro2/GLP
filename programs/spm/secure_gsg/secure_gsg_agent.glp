@@ -14,8 +14,8 @@
 %% Restore it is repaired by; End friendship and Integrate unfriend on the
 %% secure FMap.
 %%
-%% Not yet implemented: the Replace cascade --- Vouch, Announce new identity,
-%% Integrate new identity, Integrate rebind (SPM, Replace Protocol).
+%% And the Replace cascade (SPM, Replace Protocol): Vouch, Announce new
+%% identity, Integrate new identity, Integrate rebind (SGSG Code, 2026-09-08).
 
 
 %% =============================================================================
@@ -134,6 +134,32 @@ agent(Id, IRec, [query(q_fof_epoch(Q, F), a_epoch(E)) | UserIn], NetIn, NetOut?,
     agent(Id?, IRec?, UserIn?, NetIn?, NetOut, Date?,
           secure_gsg(Known?, Vols?, Inbox?, FMap?, FoFMap?, Pending?, LBD?)).
 
+%% Vouch (SPM, Replace Protocol, Phase 2): a custodian, willing, sends the
+%% fresh agent P1 vouch(P, P1, L), L its own view of P's friends.
+agent(Id, IRec, [will(vouch(P, P1, R)) | UserIn], NetIn,
+      [msg(Id?, P1?, vouch(P?, P1?, L?)) | NetOut1?], Date,
+      secure_gsg(Known, Vols, Inbox, FMap, FoFMap, Pending, LBD)) :-
+    ground(P?), ground(P1?), ground(Id?), ground(FoFMap?) |
+    vouch_pairs(P?, FoFMap?, L),
+    bind_ok(R),
+    agent(Id?, IRec?, UserIn?, NetIn?, NetOut1, Date?,
+          secure_gsg(Known?, Vols?, Inbox?, FMap?, FoFMap?, Pending?, LBD?)).
+
+%% Announce new identity (Phase 3, at the fresh agent): with a supermajority
+%% of P's custodians vouching --- the custodian set and threshold of P known
+%% to the person out of band --- install a stub for every friend of P the
+%% vouches name and for every voucher, and send new_identity(P, Id, V, IR_Id)
+%% to every stub; the Reply reads insufficient where the vouches do not reach
+%% the threshold.
+agent(Id, IRec, [will(announce_new_identity(P, ir(K, S), R)) | UserIn], NetIn, NetOut?, Date,
+      secure_gsg(Known, Vols, Inbox, FMap, FoFMap, Pending, LBD)) :-
+    ground(P?), ground(K?), ground(S?), ground(Id?), ground(Inbox?) |
+    vouchers(K?, P?, Id?, Inbox?, V),
+    count(K?, NK),
+    Need := (S? * NK? + 99) // 100,
+    announce_step(V?, Need?, Id?, IRec?, P?, R, UserIn?, NetIn?, NetOut, Date?,
+                  Known?, Vols?, Inbox?, FMap?, FoFMap?, Pending?, LBD?).
+
 %% Catch-all for unmatched UserIn events.
 agent(Id, IRec, [_ | UserIn], NetIn, NetOut?, Date, Platform) :-
     otherwise | agent(Id?, IRec?, UserIn?, NetIn?, NetOut, Date?, Platform?).
@@ -198,6 +224,42 @@ agent(Id, IRec, UserIn, [msg(P, stream_update(F, X)) | NetIn], NetOut?, Date,
     set_fof_epoch(F?, P?, X?, FoFMap1?, FoFMap2),
     agent(Id?, IRec?, UserIn?, NetIn?, NetOut, Date?,
           secure_gsg(Known?, Vols?, Inbox?, FMap?, FoFMap2?, Pending?, LBD?)).
+
+%% A vouch received (at the fresh agent): retained in the Inbox, never
+%% consumed, so the vouching set is recomputable at each announcement.
+agent(Id, IRec, UserIn, [msg(C, vouch(P, P1, L)) | NetIn], NetOut?, Date,
+      secure_gsg(Known, Vols, Inbox, FMap, FoFMap, Pending, LBD)) :-
+    ground(C?), ground(P?), ground(P1?), ground(L?) |
+    agent(Id?, IRec?, UserIn?, NetIn?, NetOut, Date?,
+          secure_gsg(Known?, Vols?, [msg(C?, vouch(P?, P1?, L?)) | Inbox?],
+                     FMap?, FoFMap?, Pending?, LBD?)).
+
+%% Integrate new identity: where P is recorded here and the vouching set is a
+%% supermajority of the custodians in the identity record stored for P, P is
+%% renamed to P1 in both maps at the same epoch, and rebind goes to P1 with
+%% this agent's identity record, its friends and its view of P1's friends;
+%% otherwise dropped.
+agent(Id, IRec, UserIn, [msg(_, new_identity(P, P1, V, ir(K1, S1))) | NetIn], NetOut?, Date,
+      secure_gsg(Known, Vols, Inbox, FMap, FoFMap, Pending, LBD)) :-
+    ground(P?), ground(P1?), ground(V?), ground(K1?), ground(S1?), ground(Id?), ground(FMap?) |
+    secure_member(P?, FMap?, Member),
+    secure_ir_of(P?, FMap?, IR),
+    new_identity_step(Member?, IR?, Id?, IRec?, P?, P1?, V?, K1?, S1?, UserIn?, NetIn?, NetOut, Date?,
+                      Known?, Vols?, Inbox?, FMap?, FoFMap?, Pending?, LBD?).
+
+%% Integrate rebind (at the fresh agent): the rebinding friend's entry made
+%% full at the greater epoch, its friendships absorbed under the epoch order,
+%% and a stub installed for each friend of the replaced identity it names
+%% that is not yet recorded --- the cascade reaches them at the next
+%% announcement.
+agent(Id, IRec, UserIn, [msg(Q, rebind(E, ir(K, S), L, Lp)) | NetIn], NetOut?, Date,
+      secure_gsg(Known, Vols, Inbox, FMap, FoFMap, Pending, LBD)) :-
+    ground(Q?), ground(E?), ground(K?), ground(S?), ground(L?), ground(Lp?), ground(Id?) |
+    rebind_entry(Q?, E?, K?, S?, FMap?, FMap1),
+    absorb_fof_pairs(Id?, Q?, L?, FoFMap?, FoFMap1),
+    install_stubs_from(Lp?, Id?, Q?, FMap1?, FMap2),
+    agent(Id?, IRec?, UserIn?, NetIn?, NetOut, Date?,
+          secure_gsg(Known?, Vols?, Inbox?, FMap2?, FoFMap1?, Pending?, LBD?)).
 
 %% Catch-all for unmatched NetIn messages.
 agent(Id, IRec, UserIn, [_ | NetIn], NetOut?, Date, Platform) :-
@@ -389,3 +451,110 @@ unfriend_step(_, _, Id, IRec, _, _, UserIn, NetIn, NetOut?, Date,
     otherwise |
     agent(Id?, IRec?, UserIn?, NetIn?, NetOut, Date?,
           secure_gsg(Known?, Vols?, Inbox?, FMap?, FoFMap?, Pending?, LBD?)).
+
+%% =============================================================================
+%% REPLACE: the dispatch steps
+%% =============================================================================
+
+%% announce_step: fire where the vouchers reach the threshold.
+exported procedure announce_step(Stream(Agent)?, Integer?, Agent?, IdentityRecord?, Agent?, Constant,
+                                  Stream(UserEvent(SecureGsgVolition, SecureGsgQuery, SecureGsgAnswer))?,
+                                  Stream(InMsg(SecureGsgCargo))?,
+                                  Stream(NetMsg(SecureGsgCargo)),
+                                  Integer?,
+                                  Stream(Agent)?, Stream(SecureGsgVolition)?,
+                                  Stream(InMsg(SecureGsgCargo))?,
+                                  SecureFMap?, FoFMap?, PendingList?, Integer?).
+announce_step(V, Need, Id, IRec, P, R?, UserIn, NetIn, NetOut?, Date,
+              Known, Vols, Inbox, FMap, FoFMap, Pending, LBD) :-
+    ground(V?), ground(Inbox?), ground(IRec?) |
+    count(V?, NV),
+    announce_fire(NV?, Need?, V?, Id?, IRec?, P?, R, UserIn?, NetIn?, NetOut, Date?,
+                  Known?, Vols?, Inbox?, FMap?, FoFMap?, Pending?, LBD?).
+
+exported procedure announce_fire(Integer?, Integer?, Stream(Agent)?, Agent?, IdentityRecord?, Agent?, Constant,
+                                  Stream(UserEvent(SecureGsgVolition, SecureGsgQuery, SecureGsgAnswer))?,
+                                  Stream(InMsg(SecureGsgCargo))?,
+                                  Stream(NetMsg(SecureGsgCargo)),
+                                  Integer?,
+                                  Stream(Agent)?, Stream(SecureGsgVolition)?,
+                                  Stream(InMsg(SecureGsgCargo))?,
+                                  SecureFMap?, FoFMap?, PendingList?, Integer?).
+announce_fire(NV, Need, V, Id, IRec, P, R?, UserIn, NetIn, NetOut?, Date,
+              Known, Vols, Inbox, FMap, FoFMap, Pending, LBD) :-
+    NV? >= Need?, ground(V?), ground(Inbox?), ground(IRec?) |
+    vouch_friends(P?, Id?, V?, Inbox?, Fs),
+    install_stubs(Fs?, P?, Id?, FMap?, FMap1),
+    install_stubs(V?, P?, Id?, FMap1?, FMap2),
+    announce_to_stubs(Id?, P?, V?, IRec?, FMap2?, NetOut, NetOut1?),
+    bind_ok(R),
+    agent(Id?, IRec?, UserIn?, NetIn?, NetOut1, Date?,
+          secure_gsg(Known?, Vols?, Inbox?, FMap2?, FoFMap?, Pending?, LBD?)).
+announce_fire(_, _, _, Id, IRec, _, R?, UserIn, NetIn, NetOut?, Date,
+              Known, Vols, Inbox, FMap, FoFMap, Pending, LBD) :-
+    otherwise |
+    bind_insufficient(R),
+    agent(Id?, IRec?, UserIn?, NetIn?, NetOut, Date?,
+          secure_gsg(Known?, Vols?, Inbox?, FMap?, FoFMap?, Pending?, LBD?)).
+
+%% new_identity_step: P recorded here; the vouching set must be a supermajority
+%% of the custodians in the identity record stored for P.
+exported procedure new_identity_step(Constant?, IdentityRecord?, Agent?, IdentityRecord?, Agent?, Agent?,
+                                      Stream(Agent)?, Stream(Agent)?, Integer?,
+                                      Stream(UserEvent(SecureGsgVolition, SecureGsgQuery, SecureGsgAnswer))?,
+                                      Stream(InMsg(SecureGsgCargo))?,
+                                      Stream(NetMsg(SecureGsgCargo)),
+                                      Integer?,
+                                      Stream(Agent)?, Stream(SecureGsgVolition)?,
+                                      Stream(InMsg(SecureGsgCargo))?,
+                                      SecureFMap?, FoFMap?, PendingList?, Integer?).
+new_identity_step(true, ir(K, S), Id, IRec, P, P1, V, K1, S1, UserIn, NetIn, NetOut?, Date,
+                  Known, Vols, Inbox, FMap, FoFMap, Pending, LBD) :-
+    ground(K?), ground(V?) |
+    subset(V?, K?, Sub),
+    count(V?, NV),
+    count(K?, NK),
+    Need := (S? * NK? + 99) // 100,
+    rename_step(Sub?, NV?, Need?, Id?, IRec?, P?, P1?, K1?, S1?, UserIn?, NetIn?, NetOut, Date?,
+                Known?, Vols?, Inbox?, FMap?, FoFMap?, Pending?, LBD?).
+new_identity_step(_, _, Id, IRec, _, _, _, _, _, UserIn, NetIn, NetOut?, Date,
+                  Known, Vols, Inbox, FMap, FoFMap, Pending, LBD) :-
+    otherwise |
+    agent(Id?, IRec?, UserIn?, NetIn?, NetOut, Date?,
+          secure_gsg(Known?, Vols?, Inbox?, FMap?, FoFMap?, Pending?, LBD?)).
+
+%% rename_step: the rename and the rebind, where V ⊆ K and |V| reaches the
+%% threshold.
+exported procedure rename_step(Constant?, Integer?, Integer?, Agent?, IdentityRecord?, Agent?, Agent?,
+                                Stream(Agent)?, Integer?,
+                                Stream(UserEvent(SecureGsgVolition, SecureGsgQuery, SecureGsgAnswer))?,
+                                Stream(InMsg(SecureGsgCargo))?,
+                                Stream(NetMsg(SecureGsgCargo)),
+                                Integer?,
+                                Stream(Agent)?, Stream(SecureGsgVolition)?,
+                                Stream(InMsg(SecureGsgCargo))?,
+                                SecureFMap?, FoFMap?, PendingList?, Integer?).
+rename_step(true, NV, Need, Id, IRec, P, P1, K1, S1, UserIn, NetIn,
+            [msg(Id?, P1?, rebind(E?, IRec?, L?, Lp?)) | NetOut1?], Date,
+            Known, Vols, Inbox, FMap, FoFMap, Pending, LBD) :-
+    NV? >= Need?, ground(FMap?), ground(IRec?), ground(Id?), ground(P1?) |
+    secure_epoch_of(P?, FMap?, E),
+    remove_entry(P?, FMap?, FMap1),
+    set_full_entry(P1?, E?, K1?, S1?, FMap1?, FMap2),
+    rename_fof(P?, P1?, FoFMap?, FoFMap1),
+    rebind_lists(FMap2?, FoFMap1?, P1?, Id?, L, Lp, FMap3, FoFMap2),
+    agent(Id?, IRec?, UserIn?, NetIn?, NetOut1, Date?,
+          secure_gsg(Known?, Vols?, Inbox?, FMap3?, FoFMap2?, Pending?, LBD?)).
+rename_step(_, _, _, Id, IRec, _, _, _, _, UserIn, NetIn, NetOut?, Date,
+            Known, Vols, Inbox, FMap, FoFMap, Pending, LBD) :-
+    otherwise |
+    agent(Id?, IRec?, UserIn?, NetIn?, NetOut, Date?,
+          secure_gsg(Known?, Vols?, Inbox?, FMap?, FoFMap?, Pending?, LBD?)).
+
+%% rebind_lists(FMap?, FoFMap?, P1?, Id?, L, Lp, FMap1, FoFMap1): L_q and
+%% L_q^p after the rename, the maps passed through.
+exported procedure rebind_lists(SecureFMap?, FoFMap?, Agent?, Agent?, FriendList, FriendList, SecureFMap, FoFMap).
+rebind_lists(FMap, FoFMap, P1, Id, L?, Lp?, FMap?, FoFMap?) :-
+    ground(FMap?), ground(FoFMap?) |
+    friend_pairs_except(FMap?, P1?, Id?, L),
+    fof_pairs_except(FoFMap?, P1?, P1?, Id?, Lp).

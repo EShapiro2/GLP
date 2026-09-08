@@ -19,13 +19,15 @@ Code:
 - `gsg/{self.glp, gsg_agent.glp}` — the social graph (SPM, GSG-CVA); `gsg/plays/`.
 - `secure_gsg/{self.glp, secure_gsg_agent.glp}` — the secure social graph: Befriend extension, periodic re-broadcast, Integrate checkpoint in full (skeleton install, stub promotion, direct heal, observer heal under the epoch order), the state-loss fault and Restore, Unfriend inherited; `secure_gsg/plays/`.
 
-Not implemented: the Replace cascade (SPM, Replace Protocol) — Vouch, Announce new identity, Integrate new identity, Integrate rebind; its cargo and volition types are declared in `secure_gsg/self.glp` and no clause handles them.
+| `play_secure_replace(R, A, B, C, D)` | `R=ok, A=1, B=0, C=1, D=1` → succeeds | Identity loss and the Replace cascade: bob vouches, alice2 announces on a supermajority, bob and carol rename alice to alice2 at epoch 1 and rebind, alice2's stubs become full entries. |
+
+The Replace cascade (SPM, Replace Protocol) is implemented in full (2026-09-08): Vouch, Announce new identity (the replaced identity's custodian record supplied by the person, spec-issue F), Integrate new identity, Integrate rebind; vouches are retained in the Inbox and every stub is notified at each announcement.  Not checked: Vouch's precondition p ∈ dom(FMap_c), and w ∈ known_{p'} for the agents notified.
 
 The fault harness below (supervisor, mediator rebind) was not built: `crash` is a clause of the agent that resets the platform state and keeps the streams, which is enough for Restore; in-flight input is not discarded.
 
-## Next Work — the Replace cascade
+## Next Work
 
-Restore is done (above).  What remains is identity-loss Replace (SPM, Replace Protocol): Vouch, Announce new identity, Integrate new identity, Integrate rebind, with supermajority counting and stub installation from rebinds.  The architectural notes below were written for a fault harness with a supervisor; Restore did without one, and Replace may too (a play can script the vouches directly).
+Restore and Replace are done (above).  The architectural notes below were written for a fault harness with a supervisor; neither needed one (the plays script crashes and vouches directly), and the notes are kept for the message-loss scenarios still unplayed.
 
 ### Architectural questions, with proposed answers
 
@@ -53,7 +55,7 @@ The `crash` UserIn event is in the type but no agent clause handles it.
 
 ## Deferrals (paper-spec-code gap; must close before declaring done)
 
-- **Replace cascade** (`secure_gsg/secure_gsg_agent.glp`): Vouch, Announce new identity, Integrate new identity, Integrate rebind — not implemented (2026-09-07).
+- **Replace preconditions**: Vouch does not check p ∈ dom(FMap_c); Announce does not check w ∈ known_{p'}.
 - **Integrate accept precondition `epoch_p(q) < x`** (`gsg/gsg_agent.glp`): not enforced; stale/duplicate accepts re-trigger broadcast/snapshot.
 - **`stream_update` precondition `q ∈ dom(FMap_r)`**: receiver doesn't check membership before FoFMap update.
 - **Application-data field**: FMap entry data slot is implicit `⊥`; Get/Set data operations not exposed.

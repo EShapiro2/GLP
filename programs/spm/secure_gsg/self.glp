@@ -67,8 +67,11 @@ SecureGsgVolition ::= discover(Agent, Constant)
                     ; offer_friendship(Agent, Constant)
                     ; accept_offer(Agent, Constant)
                     ; end_friendship(Agent, Constant)
-                    ; vouch(Agent, Agent, Constant)              %% paper §8.7 Vouch
-                    ; announce_new_identity(Agent, Constant).    %% paper §8.7 Announce
+                    ; vouch(Agent, Agent, Constant)              %% Vouch: vouch(p, p', Reply)
+                    ; announce_new_identity(Agent, IdentityRecord, Constant).
+                      %% Announce new identity at p': the replaced p, its
+                      %% identity record (K_p, σ_p), known to the person out
+                      %% of band (spec-issue F), and Reply.
 
 %% =============================================================================
 %% READ-ONLY QUERIES (extend GSG queries with secure-state observers)
@@ -547,3 +550,216 @@ play_secure_restore(A?, Z?, B?, IR?) :- play_secure_restore # play_secure_restor
 imported procedure play_secure_unfriend # play_secure_unfriend(Integer, Integer, IdentityRecord).
 exported procedure play_secure_unfriend(Integer, Integer, IdentityRecord).
 play_secure_unfriend(A?, B?, IR?) :- play_secure_unfriend # play_secure_unfriend(A, B, IR).
+
+imported procedure play_secure_replace # play_secure_replace(Constant, Integer, Integer, Integer, Integer).
+exported procedure play_secure_replace(Constant, Integer, Integer, Integer, Integer).
+play_secure_replace(R?, A?, B?, C?, D?) :- play_secure_replace # play_secure_replace(R, A, B, C, D).
+
+%% =============================================================================
+%% REPLACE (SPM, Replace Protocol): Vouch, Announce new identity, Integrate
+%% new identity, Integrate rebind.  The vouch messages are retained in the
+%% Inbox and never consumed, so the vouching set is recomputable at each
+%% announcement; a stub entry marks a friend of the replaced identity still to
+%% be notified, and every stub is notified at each announcement (a duplicate
+%% new_identity is harmless: Integrate new identity drops it once p is
+%% renamed).
+%% =============================================================================
+
+%% vouch_pairs(P?, FoFMap?, L): L_c = {(f, e) : f ∈ dom(FoFMap[P]), f ≠ P}.
+exported procedure vouch_pairs(Agent?, FoFMap?, FriendList).
+vouch_pairs(P, [fofb(P1, Inner) | _], L?) :- P? =?= P1? | inner_pairs_except(P?, Inner?, L).
+vouch_pairs(P, [_ | Rest], L?) :- otherwise | vouch_pairs(P?, Rest?, L).
+vouch_pairs(_, [], []).
+
+exported procedure inner_pairs_except(Agent?, FoFInner?, FriendList).
+inner_pairs_except(X, [fofe(F, _) | Rest], L?) :- X? =?= F? | inner_pairs_except(X?, Rest?, L).
+inner_pairs_except(X, [fofe(F, E) | Rest], [fe(F?, E?) | L?]) :- otherwise | inner_pairs_except(X?, Rest?, L).
+inner_pairs_except(_, [], []).
+
+%% inbox_has_vouch(C?, P?, P1?, Inbox?, B): whether custodian C's vouch for
+%% the replacement of P by P1 is in the Inbox.
+exported procedure inbox_has_vouch(Agent?, Agent?, Agent?, Stream(InMsg(SecureGsgCargo))?, Constant).
+inbox_has_vouch(C, P, P1, [msg(C1, vouch(P2, P3, _)) | _], true) :-
+    C? =?= C1?, P? =?= P2?, P1? =?= P3? | true.
+inbox_has_vouch(C, P, P1, [_ | Rest], B?) :- otherwise | inbox_has_vouch(C?, P?, P1?, Rest?, B).
+inbox_has_vouch(_, _, _, [], false).
+
+%% vouchers(K?, P?, P1?, Inbox?, V): the custodians in K that have vouched.
+exported procedure vouchers(Stream(Agent)?, Agent?, Agent?, Stream(InMsg(SecureGsgCargo))?, Stream(Agent)).
+vouchers([C | Cs], P, P1, Inbox, V?) :-
+    ground(Inbox?) |
+    inbox_has_vouch(C?, P?, P1?, Inbox?, B),
+    vouchers_step(B?, C?, Cs?, P?, P1?, Inbox?, V).
+vouchers([], _, _, _, []).
+
+exported procedure vouchers_step(Constant?, Agent?, Stream(Agent)?, Agent?, Agent?, Stream(InMsg(SecureGsgCargo))?, Stream(Agent)).
+vouchers_step(true, C, Cs, P, P1, Inbox, [C? | V?]) :- vouchers(Cs?, P?, P1?, Inbox?, V).
+vouchers_step(false, _, Cs, P, P1, Inbox, V?) :- vouchers(Cs?, P?, P1?, Inbox?, V).
+
+exported procedure count(Stream(Agent)?, Integer).
+count([_ | Xs], N?) :- count(Xs?, N0), N := N0? + 1.
+count([], 0).
+
+exported procedure is_member(Agent?, Stream(Agent)?, Constant).
+is_member(X, [Y | _], true) :- X? =?= Y? | true.
+is_member(X, [_ | Ys], B?) :- otherwise | is_member(X?, Ys?, B).
+is_member(_, [], false).
+
+%% subset(V?, K?, B): V ⊆ K.
+exported procedure subset(Stream(Agent)?, Stream(Agent)?, Constant).
+subset([X | Xs], K, B?) :- ground(K?) | is_member(X?, K?, M), subset_step(M?, Xs?, K?, B).
+subset([], _, true).
+
+exported procedure subset_step(Constant?, Stream(Agent)?, Stream(Agent)?, Constant).
+subset_step(true, Xs, K, B?) :- subset(Xs?, K?, B).
+subset_step(false, _, _, false).
+
+%% vouch_friends(P?, P1?, V?, Inbox?, Fs): the friends of P named by the
+%% vouches of the custodians in V.
+exported procedure vouch_friends(Agent?, Agent?, Stream(Agent)?, Stream(InMsg(SecureGsgCargo))?, Stream(Agent)).
+vouch_friends(P, P1, V, [msg(C, vouch(P2, P3, L)) | Rest], Fs?) :-
+    P? =?= P2?, P1? =?= P3?, ground(V?) |
+    is_member(C?, V?, M),
+    vouch_friends_step(M?, L?, P?, P1?, V?, Rest?, Fs).
+vouch_friends(P, P1, V, [_ | Rest], Fs?) :- otherwise | vouch_friends(P?, P1?, V?, Rest?, Fs).
+vouch_friends(_, _, _, [], []).
+
+exported procedure vouch_friends_step(Constant?, FriendList?, Agent?, Agent?, Stream(Agent)?, Stream(InMsg(SecureGsgCargo))?, Stream(Agent)).
+vouch_friends_step(true, [fe(F, _) | L], P, P1, V, Rest, [F? | Fs?]) :-
+    vouch_friends_step(true, L?, P?, P1?, V?, Rest?, Fs).
+vouch_friends_step(true, [], P, P1, V, Rest, Fs?) :- vouch_friends(P?, P1?, V?, Rest?, Fs).
+vouch_friends_step(false, _, P, P1, V, Rest, Fs?) :- vouch_friends(P?, P1?, V?, Rest?, Fs).
+
+%% install_stubs(Ws?, P?, P1?, FMap?, FMap1): a stub(w, 0) for each w ∉ {P, P1}
+%% not in dom(FMap): a friend of P still to be notified.
+exported procedure install_stubs(Stream(Agent)?, Agent?, Agent?, SecureFMap?, SecureFMap).
+install_stubs([W | Ws], P, P1, FMap, FMap1?) :-
+    ground(FMap?) |
+    stub_wanted(W?, P?, P1?, FMap?, B),
+    install_stub_step(B?, W?, Ws?, P?, P1?, FMap?, FMap1).
+install_stubs([], _, _, FMap, FMap?).
+
+exported procedure stub_wanted(Agent?, Agent?, Agent?, SecureFMap?, Constant).
+stub_wanted(W, P, _, _, false) :- W? =?= P? | true.
+stub_wanted(W, _, P1, _, false) :- W? =?= P1? | true.
+stub_wanted(W, _, _, FMap, B?) :- otherwise | secure_member(W?, FMap?, M), not_bool(M?, B).
+
+exported procedure not_bool(Constant?, Constant).
+not_bool(true, false).
+not_bool(false, true).
+
+exported procedure install_stub_step(Constant?, Agent?, Stream(Agent)?, Agent?, Agent?, SecureFMap?, SecureFMap).
+install_stub_step(true, W, Ws, P, P1, FMap, FMap1?) :-
+    append_entry(stub(W?, 0), FMap?, FMapMid),
+    install_stubs(Ws?, P?, P1?, FMapMid?, FMap1).
+install_stub_step(false, _, Ws, P, P1, FMap, FMap1?) :-
+    install_stubs(Ws?, P?, P1?, FMap?, FMap1).
+
+exported procedure append_entry(SecureFMapEntry?, SecureFMap?, SecureFMap).
+append_entry(E, [X | Rest], [X? | Rest1?]) :- append_entry(E?, Rest?, Rest1).
+append_entry(E, [], [E?]).
+
+%% announce_to_stubs(Id?, P?, V?, IR?, FMap?, NetOut, Cont): new_identity to
+%% every stub entry, the list passed through.
+exported procedure announce_to_stubs(Agent?, Agent?, Stream(Agent)?, IdentityRecord?, SecureFMap?,
+                                      Stream(NetMsg(SecureGsgCargo)), Stream(NetMsg(SecureGsgCargo))?).
+announce_to_stubs(Id, P, V, IR, [stub(W, _) | Rest],
+                  [msg(Id?, W?, new_identity(P?, Id?, V?, IR?)) | NewTail?], Cont) :-
+    ground(Id?), ground(P?), ground(V?), ground(IR?) |
+    announce_to_stubs(Id?, P?, V?, IR?, Rest?, NewTail, Cont?).
+announce_to_stubs(Id, P, V, IR, [_ | Rest], NetOut?, Cont) :-
+    otherwise | announce_to_stubs(Id?, P?, V?, IR?, Rest?, NetOut, Cont?).
+announce_to_stubs(_, _, _, _, [], Cont?, Cont).
+
+exported procedure bind_insufficient(Constant).
+bind_insufficient(insufficient).
+
+%% --- Integrate new identity ---
+
+%% remove_entry(P?, FMap?, FMap1): FMap without P's entry, of any kind.
+exported procedure remove_entry(Agent?, SecureFMap?, SecureFMap).
+remove_entry(P, [full(P1, _, _, _) | Rest], Rest?) :- P? =?= P1? | true.
+remove_entry(P, [skeleton(P1, _, _) | Rest], Rest?) :- P? =?= P1? | true.
+remove_entry(P, [stub(P1, _) | Rest], Rest?) :- P? =?= P1? | true.
+remove_entry(P, [E | Rest], [E? | Rest1?]) :- otherwise | remove_entry(P?, Rest?, Rest1).
+remove_entry(_, [], []).
+
+%% rename_fof(P?, P1?, FoFMap?, FoFMap1): P renamed to P1 as an outer key and
+%% as an inner key throughout, epochs preserved.
+exported procedure rename_fof(Agent?, Agent?, FoFMap?, FoFMap).
+rename_fof(P, P1, [fofb(Y, Inner) | Rest], [fofb(P1?, Inner1?) | Rest1?]) :-
+    P? =?= Y? |
+    rename_inner(P?, P1?, Inner?, Inner1),
+    rename_fof(P?, P1?, Rest?, Rest1).
+rename_fof(P, P1, [fofb(Y, Inner) | Rest], [fofb(Y?, Inner1?) | Rest1?]) :-
+    otherwise |
+    rename_inner(P?, P1?, Inner?, Inner1),
+    rename_fof(P?, P1?, Rest?, Rest1).
+rename_fof(_, _, [], []).
+
+exported procedure rename_inner(Agent?, Agent?, FoFInner?, FoFInner).
+rename_inner(P, P1, [fofe(F, E) | Rest], [fofe(P1?, E?) | Rest1?]) :-
+    P? =?= F? | rename_inner(P?, P1?, Rest?, Rest1).
+rename_inner(P, P1, [fofe(F, E) | Rest], [fofe(F?, E?) | Rest1?]) :-
+    otherwise | rename_inner(P?, P1?, Rest?, Rest1).
+rename_inner(_, _, [], []).
+
+%% friend_pairs_except(FMap?, A?, B?, L): {(f, epoch(f)) : f ∈ dom(FMap), f ∉ {A, B}}.
+exported procedure friend_pairs_except(SecureFMap?, Agent?, Agent?, FriendList).
+friend_pairs_except(FMap, A, B, L?) :-
+    build_friend_list(FMap?, L0),
+    pairs_except(L0?, A?, B?, L).
+
+exported procedure pairs_except(FriendList?, Agent?, Agent?, FriendList).
+pairs_except([fe(F, _) | Rest], A, B, L?) :- F? =?= A? | pairs_except(Rest?, A?, B?, L).
+pairs_except([fe(F, _) | Rest], A, B, L?) :- F? =?= B? | pairs_except(Rest?, A?, B?, L).
+pairs_except([fe(F, E) | Rest], A, B, [fe(F?, E?) | L?]) :- otherwise | pairs_except(Rest?, A?, B?, L).
+pairs_except([], _, _, []).
+
+%% fof_pairs_except(FoFMap?, Q?, A?, B?, L): {(w, e) : w ∈ dom(FoFMap[Q]), w ∉ {A, B}}.
+exported procedure fof_pairs_except(FoFMap?, Agent?, Agent?, Agent?, FriendList).
+fof_pairs_except([fofb(Y, Inner) | _], Q, A, B, L?) :-
+    Q? =?= Y? | inner_to_pairs(Inner?, Lin), pairs_except(Lin?, A?, B?, L).
+fof_pairs_except([_ | Rest], Q, A, B, L?) :- otherwise | fof_pairs_except(Rest?, Q?, A?, B?, L).
+fof_pairs_except([], _, _, _, []).
+
+exported procedure inner_to_pairs(FoFInner?, FriendList).
+inner_to_pairs([fofe(F, E) | Rest], [fe(F?, E?) | L?]) :- inner_to_pairs(Rest?, L).
+inner_to_pairs([], []).
+
+%% --- Integrate rebind ---
+
+%% rebind_entry(Q?, E?, K?, σ?, FMap?, FMap1): FMap[q] := (max(epoch(q), e), K, σ)
+%% where epoch(q) < e or the entry is a stub; unchanged otherwise.
+exported procedure rebind_entry(Agent?, Integer?, Stream(Agent)?, Integer?, SecureFMap?, SecureFMap).
+rebind_entry(Q, E, K, S, [full(Q1, E0, K0, S0) | Rest], [full(Q1?, E?, K?, S?) | Rest?]) :-
+    Q? =?= Q1?, E0? < E? | true.
+rebind_entry(Q, E, K, S, [full(Q1, E0, K0, S0) | Rest], [full(Q1?, E0?, K0?, S0?) | Rest?]) :-
+    Q? =?= Q1?, E0? >= E? | true.
+rebind_entry(Q, E, K, S, [skeleton(Q1, _, _) | Rest], [full(Q1?, E?, K?, S?) | Rest?]) :-
+    Q? =?= Q1? | true.
+rebind_entry(Q, E, K, S, [stub(Q1, E0) | Rest], [full(Q1?, E1?, K?, S?) | Rest?]) :-
+    Q? =?= Q1? | max_int(E0?, E?, E1).
+rebind_entry(Q, E, K, S, [Other | Rest], [Other? | Rest1?]) :-
+    otherwise | rebind_entry(Q?, E?, K?, S?, Rest?, Rest1).
+rebind_entry(Q, E, K, S, [], [full(Q?, E?, K?, S?)]).
+
+exported procedure max_int(Integer?, Integer?, Integer).
+max_int(A, B, A?) :- A? >= B? | true.
+max_int(A, B, B?) :- A? < B? | true.
+
+%% install_stubs_from(Lp?, Id?, Q?, FMap?, FMap1): for each (w, e'') in Lp with
+%% w ∉ {Id, Q} and w ∉ dom(FMap), the stub (w, e'').
+exported procedure install_stubs_from(FriendList?, Agent?, Agent?, SecureFMap?, SecureFMap).
+install_stubs_from([fe(W, E) | Rest], Id, Q, FMap, FMap1?) :-
+    ground(FMap?) |
+    stub_wanted(W?, Id?, Q?, FMap?, B),
+    install_stub_from_step(B?, W?, E?, Rest?, Id?, Q?, FMap?, FMap1).
+install_stubs_from([], _, _, FMap, FMap?).
+
+exported procedure install_stub_from_step(Constant?, Agent?, Integer?, FriendList?, Agent?, Agent?, SecureFMap?, SecureFMap).
+install_stub_from_step(true, W, E, Rest, Id, Q, FMap, FMap1?) :-
+    append_entry(stub(W?, E?), FMap?, FMapMid),
+    install_stubs_from(Rest?, Id?, Q?, FMapMid?, FMap1).
+install_stub_from_step(false, _, _, Rest, Id, Q, FMap, FMap1?) :-
+    install_stubs_from(Rest?, Id?, Q?, FMap?, FMap1).

@@ -1,0 +1,30 @@
+%% core/self.glp --- the social graph as the super-app, as a program of its own.
+%%
+%% The directory holds the agent (agent.glp), the test mini-app (miniapp.glp)
+%% and the super-app plays (superapp_plays.glp); the types are the parent's
+%% (../self.glp, an ancestor scope).  It is a program of its own because the
+%% certificate of a program is refused where any entry point reaches the
+%% person or the network, and the parent's UI boot plays do (send_to_user/1):
+%% loaded here, without them, the program is certified, so its own module
+%% value --- the only one the REPL can obtain --- serves as the certified
+%% mini-app of the plays, and decompose_module/4 reads its identities.
+%% Loaded as part of ../ (the boot plays), agent is found by module name.
+
+%% The super-app plays (superapp_plays.glp) and the test mini-app's entry,
+%% exported so that run/3 finds it among the program's exports.
+imported procedure miniapp#ping(Constant?, AppUiStream, SgToAppStream?).
+exported procedure ping(Constant?, AppUiStream, SgToAppStream?).
+ping(Id, Ui?, Sg) :- miniapp # ping(Id?, Ui, Sg?).
+
+imported procedure superapp_plays#play_invite(AppUiStream, AppUiStream).
+exported procedure play_invite(AppUiStream, AppUiStream).
+play_invite(A?, B?) :- superapp_plays # play_invite(A, B).
+
+imported procedure superapp_plays#play_invite_declined(AppUiStream, AppUiStream).
+exported procedure play_invite_declined(AppUiStream, AppUiStream).
+play_invite_declined(A?, B?) :- superapp_plays # play_invite_declined(A, B).
+
+imported procedure superapp_plays#play_attest(String, String, String, _).
+exported procedure play_attest(String, String, String, _).
+play_attest(S?, K?, H?, T?) :- superapp_plays # play_attest(S, K, H, T).
+

@@ -1,0 +1,86 @@
+%% secure_gsg/plays/play_secure_replace.glp -- identity loss and Replace (SPM,
+%% Replace Protocol; SGSG paper, Section 5.3).
+%%
+%% Alice, whose identity custodians are bob and carol at threshold 50, befriends
+%% both (bob first, so bob's view of alice's friends records carol through
+%% alice's stream_update).  Alice loses her key: the person chooses the fresh
+%% agent alice2.  Bob vouches for the replacement (Phase 2): vouch(alice,
+%% alice2, [(carol, 1)]) reaches alice2.  Alice2's person announces (Phase 3)
+%% with alice's custodian record known out of band: one voucher of two reaches
+%% ⌈50·2/100⌉ = 1, stubs are installed for carol (named by bob's vouch) and
+%% bob (the voucher), and new_identity(alice, alice2, [bob], IR_alice2) goes
+%% to both.  Each verifies [bob] against the record it stored for alice,
+%% renames alice to alice2 at epoch 1 in both maps, and rebinds; alice2
+%% integrates the rebinds, promoting the stubs to full entries at epoch 1.
+%%
+%% Expected: R = ok, BobAlice2 = 1, BobAlice = 0 (alice is gone from bob's
+%% map), Alice2Bob = 1, Alice2Carol = 1, → succeeds.
+%%
+%% Sequencing is by real time (wait_after), since the four agents' streams
+%% are absorbed in whichever order the scheduler takes them.
+
+
+imported procedure secure_gsg_agent # agent(Agent?, IdentityRecord?,
+                                             Stream(UserEvent(SecureGsgVolition, SecureGsgQuery, SecureGsgAnswer))?,
+                                             Stream(InMsg(SecureGsgCargo))?,
+                                             Stream(NetMsg(SecureGsgCargo)),
+                                             Integer?,
+                                             SecureGsgPlatform?).
+
+imported procedure cva # network(NetEndList(SecureGsgCargo)?).
+
+NetEnd(C) ::= net_end(Agent, Stream(NetMsg(C)), Stream(InMsg(C))?).
+NetEndList(C) ::= [] ; [NetEnd(C) | NetEndList(C)].
+
+exported procedure play_secure_replace(Constant, Integer, Integer, Integer, Integer).
+
+play_secure_replace(R?, BobAlice2?, BobAlice?, Alice2Bob?, Alice2Carol?) :-
+    secure_gsg_agent # agent(alice, ir([bob, carol], 50),
+          [will(discover(bob, R0?)), await(R0?),
+           will(offer_friendship(bob, RA?)), await(RA?),
+           will(discover(carol, R1?)), await(R1?),
+           will(offer_friendship(carol, RB?)), await(RB?),
+           await(Later1?),                                     %% the friendships have settled
+           shutdown],                                          %% alice's key is lost
+          AliceIn?, AliceOut, 0,
+          secure_gsg([], [], [], [], [], [], 0)),
+    secure_gsg_agent # agent(bob, ir([cust_b], 100),
+          [will(accept_offer(alice, RAb?)), await(RAb?),
+           await(Later1?),
+           will(vouch(alice, alice2, RV?)), await(RV?),
+           await(Later3?),
+           query(q_epoch(alice2), a_epoch(BobAlice2?)),
+           query(q_epoch(alice), a_epoch(BobAlice?)),
+           shutdown],
+          BobIn?, BobOut, 0,
+          secure_gsg([], [], [], [], [], [], 0)),
+    secure_gsg_agent # agent(carol, ir([cust_c], 100),
+          [will(accept_offer(alice, RAc?)), await(RAc?),
+           await(Later3?),
+           shutdown],
+          CarolIn?, CarolOut, 0,
+          secure_gsg([], [], [], [], [], [], 0)),
+    secure_gsg_agent # agent(alice2, ir([bob, carol], 50),
+          [await(Later2?),                                     %% bob's vouch has arrived
+           will(announce_new_identity(alice, ir([bob, carol], 50), R?)),
+           await(R?),
+           await(Later3?),                                     %% the rebinds have arrived
+           query(q_epoch(bob), a_epoch(Alice2Bob?)),
+           query(q_epoch(carol), a_epoch(Alice2Carol?)),
+           shutdown],
+          Alice2In?, Alice2Out, 0,
+          secure_gsg([], [], [], [], [], [], 0)),
+    wait_after(RB?, Later1),
+    wait_after(RV?, Later2),
+    wait_after(R?, Later3),
+    cva # network([net_end(alice,  AliceOut?,  AliceIn),
+                   net_end(bob,    BobOut?,    BobIn),
+                   net_end(carol,  CarolOut?,  CarolIn),
+                   net_end(alice2, Alice2Out?, Alice2In)]).
+
+%% wait_after(X?, Later): once X is known, bind Later 300 ms later.
+procedure wait_after(Constant?, Constant).
+wait_after(X, Later?) :- ground(X?) | now(T0), T1 := T0? + 300, wait_then(T1?, Later).
+
+procedure wait_then(Integer?, Constant).
+wait_then(T, ok) :- wait_until(T?) | true.

@@ -30,7 +30,20 @@ UserContent ::= connect(Constant)
               ; accept_intro(Constant, PendingValue)
               ; reject_intro(Constant, PendingValue)
               ; unfriend(Constant)
-              ; response(Response).
+              ; response(Response)
+              %% The super-app (SGSG paper, Section 3).  install: the person
+              %% installs a certified mini-app --- its module value, its
+              %% creator's certification, and the mini-app's user-interface
+              %% channel (the super-app user interface holds the other end; in
+              %% a play, the play does).  invite: offer a friend the mini-app.
+              %% accept_invite / decline_invite: the invitee's volition.
+              %% attestation: read back the attestation minted at
+              %% befriend_commit (Section 5.5).
+              ; install(Constant, Module, String, AppUiStream?)
+              ; invite(Constant, Constant)
+              ; accept_invite(Constant, Constant)
+              ; decline_invite(Constant, Constant)
+              ; attestation(Constant, String?).
 
 %% Content carried inside agent-to-user messages (msg(agent, person, Content))
 AgentContent ::= befriend(Constant, Response?)
@@ -48,7 +61,18 @@ NetColdCall ::= intro(Constant, Response?).
 FriendContent ::= response(Response)
                 ; text(Constant)
                 ; unfriend
-                ; intro(Constant, IntroChannel).
+                ; intro(Constant, IntroChannel)
+                %% Distribution with an invitation and the handshake (SGSG
+                %% paper, Section 3): the offer carries the mini-app's source
+                %% identity, the root channel's type identity and the social
+                %% graph's signed invitation; join carries the invitee's signed
+                %% undertaking; root carries the inviter's undertaking and one
+                %% end of the root channel, which the invitee's super-app hands
+                %% to its mini-app only after the handshake succeeds.
+                ; invite(Constant, String, Constant, String)
+                ; join(Constant, String, Constant, String)
+                ; decline(Constant)
+                ; root(Constant, String, Constant, String, RootChannel).
 
 %% Setup channel content: ack/nack handshake plus the fresh-friend-channel
 %% conveyance the shared lib befriend_commit uses to install the friend channel.
@@ -69,6 +93,66 @@ NetOutStream ::= [] ; [NetOutMsg | NetOutStream].
 
 %% Intro result — written by intro_await_peer, injected into UserIn
 IntroResult ::= intro_result(Constant, IntroChannel) ; intro_rejected(Constant).
+
+%% NOTE (SGSG Code, 2026-09-08): the catalogue's Key, SignedTerm and Hash are
+%% root-scope aliases of String; they resolve in procedure declarations but
+%% not inside a descendant's type definitions ("Unresolved type: SignedTerm"),
+%% reported to IGLP.  The definitions below therefore say String where the
+%% catalogue says Key, SignedTerm or Hash; the declarations keep the names.
+
+%% =============================================================================
+%% THE SUPER-APP (SGSG paper, Section 3): what a mini-app is granted, and the
+%% host state the social graph keeps for it.
+%% =============================================================================
+
+%% The test mini-app, ping/3 (miniapp.glp): two executions greet each other
+%% over the root channel of their conversation and report to their persons.
+%% The root channel's message type is the mini-app's; the friend-channel
+%% message that conveys an end names it, this program being both the super-app
+%% and the mini-app in the plays.
+PingMsg     ::= hello(Constant).
+PingStream  ::= [] ; [PingMsg | PingStream].
+RootChannel ::= ch(PingStream, PingStream?).
+
+%% (i) The channel to the social graph: the social graph hands the mini-app,
+%% at each invitation, one end of a root channel to the execution of the same
+%% mini-app at a friend.
+SgToApp       ::= conversation(Constant, RootChannel).
+SgToAppStream ::= [] ; [SgToApp | SgToAppStream].
+
+%% (ii) The channel to the super-app user interface: what the mini-app shows
+%% its person.
+AppUi       ::= greeted(Constant).
+AppUiStream ::= [] ; [AppUi | AppUiStream].
+
+%% Answers of the host's lookups and checks.
+AppLookup ::= found(Module) ; missing.
+Verdict   ::= ok(Module) ; refused.
+Offer     ::= none ; offer(String, Constant, String).
+
+%% The creator's certification, signed over the source identity together with
+%% the contract's act schemas and the checker's verdict (Sections 3 and 6.4).
+CreatorCert ::= creator_cert(String, Stream(Constant), Constant).
+
+%% Host state: the installed mini-apps, the attestations minted at
+%% befriend_commit, the invitations pending a volition, and the keys of the
+%% compilers the person trusts (the bundled compilers' by installation).
+%%   app(Name, Module, CreatorSig, Status): Status is idle(Ui), holding the
+%%   mini-app's user-interface writer until activation, or running(SgEnd) once
+%%   run/3 has activated it, SgEnd the super-app's writer of the mini-app's
+%%   social-graph stream.
+AppStatus ::= idle(AppUiStream?) ; running(SgToAppStream?).
+App       ::= app(Constant, Module, String, AppStatus).
+AppList   ::= [] ; [App | AppList].
+Attest     ::= att(Constant, String).
+AttestList ::= [] ; [Attest | AttestList].
+%% A pending invitation at the invitee: from whom, which mini-app, the offered
+%% identities and the signed invitation; or the person's consent given before
+%% the offer arrived.
+Pending      ::= offered(Constant, Constant, String, Constant, String)
+               ; consented(Constant, Constant).
+PendingInv   ::= [] ; [Pending | PendingInv].
+Host ::= host(AppList, AttestList, PendingInv, Stream(String)).
 
 %% Output list — one constructor per output kind, each typed at exactly what it
 %% carries. Replaces the former output(Constant, OutputStream?) whose union

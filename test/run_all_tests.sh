@@ -3443,6 +3443,7 @@ play_three_agents.
 play_secure_befriend(A3, B3).
 play_secure_unfriend(A5, B5, IR5).
 play_secure_restore(A6, Z6, B6, IR6).
+play_secure_replace(R7, A7, B7, C7, D7).
 :quit
 HEREDOC
 2>&1)
@@ -3458,7 +3459,34 @@ check "SG spm Unfriend preserves the identity record" "IR5 = ir(\[cust_a1, cust_
 check "SG spm crash resets the state" "Z6 = 0" "$sg_spm"
 check "SG spm Restore: epoch 1 healed from the checkpoint" "B6 = 1" "$sg_spm"
 check "SG spm Restore: identity record from the checkpoint" "IR6 = ir(\[cust_a1, cust_a2\], 67)" "$sg_spm"
+check "SG spm Replace: the announcement fires on a supermajority" "R7 = ok" "$sg_spm"
+check "SG spm Replace: bob renamed alice to alice2 at epoch 1" "A7 = 1" "$sg_spm"
+check "SG spm Replace: alice is gone from bob's map" "B7 = 0" "$sg_spm"
+check "SG spm Replace: alice2 rebound to bob" "C7 = 1" "$sg_spm"
+check "SG spm Replace: the cascade reached carol through bob's vouch" "D7 = 1" "$sg_spm"
 check_not "SG spm no failed play" "→ failed" "$sg_spm"
+
+# The social graph as the super-app (SGSG paper, Sections 3 and 5.5):
+# programs/social/graph/core is the agent, the test mini-app and the plays,
+# certified because it holds no UI boot play; it is its own certified mini-app.
+sg_core=$("$REPL_RUN" <<HEREDOC
+$GLP_DIR/programs/social/graph/core
+:limit 1000000
+play_attest(S, K, H, T).
+play_invite(A, B).
+play_invite_declined(A2, B2).
+:quit
+HEREDOC
+2>&1)
+check "SG super-app core loads" "Loaded program" "$sg_core"
+check_not "SG super-app core is certified" "CERTIFICATE REFUSED" "$sg_core"
+check "SG super-app: the attestation minted at befriend_commit" "T = attest(alice, bob)" "$sg_core"
+check "SG super-app: signed under the person's key" "K = [0-9a-f]\{64\}" "$sg_core"
+check "SG super-app: invitation, handshake, activation: alice greeted" "A = \[greeted(bob)\]" "$sg_core"
+check "SG super-app: invitation, handshake, activation: bob greeted" "B = \[greeted(alice)\]" "$sg_core"
+check "SG super-app: a declined invitation opens nothing at alice" "A2 = \[\]" "$sg_core"
+check "SG super-app: a declined invitation opens nothing at bob" "B2 = \[\]" "$sg_core"
+check_not "SG super-app no failed play" "→ failed" "$sg_core"
 
 sg_ga=$("$REPL_RUN" <<HEREDOC
 $GLP_DIR/programs/grassapp
@@ -3530,6 +3558,10 @@ KNOWN_RED=(
     "glp_multiagent/test/grassapp_village_test.dart: GrassApp village market: the seven operations of §8.2"
     "glp_multiagent/test/paper_screenshots_grassapp_test.dart: fig:grassapp — Friends, Currencies, Chats panels of one GrassApp"
     "glp_multiagent/test/paper_screenshots_constructs_test.dart: fig:constructs — card, form, and chat input in the running app"
+    # vGLP's: the deployed source moved with its agent to programs/social/graph/core/
+    # (SGSG, 2026-09-08; a lone .vglp is compiled by the loader, so it must stand
+    # beside its .glp); the test's path is vGLP's to change (vGLP_inbox.md).
+    "test/vglp/program_compilation_test.dart: the deployed sources social/graph/agent.vglp parses as vGLP"
 )
 
 echo "=== Section Q: Dart unit tests (whole tree) ==="

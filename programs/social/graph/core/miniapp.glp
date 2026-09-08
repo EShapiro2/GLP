@@ -1,0 +1,30 @@
+%% miniapp.glp --- the test mini-app of the super-app plays: ping/3.
+%%
+%% A mini-app holds, at activation, the variables the super-app posted with
+%% its goal, and afterwards only what arrives on them (SGSG paper, Section 3):
+%% Ui, its channel to the super-app user interface, and Sg, its channel to the
+%% social graph, on which the social graph hands it, at each invitation, one
+%% end of a root channel to the execution of the same mini-app at a friend.
+%% On each conversation the two executions greet each other over the root
+%% channel and each reports the greeting to its person.  The mini-app calls no
+%% system predicate reaching the network or the person, so the program is
+%% certified.
+
+exported procedure ping(Constant?, AppUiStream, SgToAppStream?).
+ping(Id, Ui?, [conversation(Friend, ch(In, Out?)) | Sg]) :-
+    ground(Id?), ground(Friend?) |
+    greet(Id?, Out),
+    ping_recv(Id?, In?, Ui, Sg?).
+ping(_, [], []).
+
+%% greet(Id, Out): say hello on the root channel's write stream, then close it.
+procedure greet(Constant?, PingStream).
+greet(Id, [hello(Id?)]).
+
+%% The friend's greeting arrives on the read stream; report it and go on.
+procedure ping_recv(Constant?, PingStream?, AppUiStream, SgToAppStream?).
+ping_recv(Id, [hello(Who) | _], [greeted(Who?) | Ui?], Sg) :-
+    ground(Who?) |
+    ping(Id?, Ui, Sg?).
+ping_recv(Id, [], Ui?, Sg) :-
+    ping(Id?, Ui, Sg?).

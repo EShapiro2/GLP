@@ -36,3 +36,7 @@ play_secure_restore(A?, Z?, B?, IR?) :- secure_gsg # play_secure_restore(A, Z, B
 imported procedure secure_gsg # play_secure_unfriend(Integer, Integer, IdentityRecord).
 exported procedure play_secure_unfriend(Integer, Integer, IdentityRecord).
 play_secure_unfriend(A?, B?, IR?) :- secure_gsg # play_secure_unfriend(A, B, IR).
+
+imported procedure secure_gsg # play_secure_replace(Constant, Integer, Integer, Integer, Integer).
+exported procedure play_secure_replace(Constant, Integer, Integer, Integer, Integer).
+play_secure_replace(R?, A?, B?, C?, D?) :- secure_gsg # play_secure_replace(R, A, B, C, D).

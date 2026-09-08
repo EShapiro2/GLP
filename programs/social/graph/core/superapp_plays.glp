@@ -1,0 +1,143 @@
+%% superapp_plays.glp --- distribution with an invitation, the handshake,
+%% activation by run/3 with the two grants, and the attestation (SGSG paper,
+%% Sections 3 and 5.5), played by two social-graph agents in one heap, the
+%% network a two-way crossbar for cold calls.  The certified mini-app is this
+%% program: its module value is the one the REPL can obtain, and, holding no UI
+%% boot play, the program is certified (self.glp).  The persons are scripted
+%% on the agents' person streams --- the mediator's cards for an invitation
+%% are vGLP's to add --- and the mini-apps' user-interface streams come back
+%% to the caller.
+
+imported procedure agent#agent(Constant?, UserInStream?, NetInStream?, OutputsList?).
+
+procedure crossbar2(NetOutStream?, NetOutStream?, NetInStream, NetInStream).
+crossbar2(AOut, BOut, AIn?, BIn?) :-
+    merge(AOut?, BOut?, All),
+    route2(All?, AIn, BIn).
+
+procedure route2(NetOutStream?, NetInStream, NetInStream).
+route2([msg(alice, C) | Rest], [msg(alice, C?) | A?], B?) :- route2(Rest?, A, B).
+route2([msg(bob, C) | Rest], A?, [msg(bob, C?) | B?]) :- route2(Rest?, A, B).
+route2([], [], []).
+
+procedure tee(Stream(X)?, Stream(X), Stream(X)).
+tee([X|Xs], [X?|Ys?], [X?|Zs?]) :- ground(X?) | tee(Xs?, Ys, Zs).
+tee([], [], []).
+
+%% The creator's certification of this program as a mini-app: signed over its
+%% source identity, the contract's two act schemas and the checker's verdict.
+procedure certify(Module?, String).
+certify(M, CSig?) :-
+    decompose_module(M?, _, Src, _),
+    self_key(K),
+    sign(creator_cert(Src?, [friendship, ending_a_friendship], grassroots), K?, CSig).
+
+%% =============================================================================
+%% play_invite: alice installs the mini-app, befriends bob and invites him;
+%% bob installs it and consents; the handshake opens the root channel and the
+%% two executions greet each other.
+%% Expected: AliceUi = [greeted(bob)], BobUi = [greeted(alice)], → succeeds.
+%% =============================================================================
+exported procedure play_invite(AppUiStream, AppUiStream).
+play_invite(AliceUi?, BobUi?) :-
+    crossbar2(AliceNetOut?, BobNetOut?, AliceNetIn, BobNetIn),
+    self_module(M),
+    certify(M?, CSig),
+    agent # agent(alice, AliceIn?, AliceNetIn?, [user_output(AliceOut), net_output(AliceNetOut)]),
+    tee(AliceUiRaw?, AliceUi, AliceSeen),
+    alice_person(M?, CSig?, yes, AliceUiRaw, AliceOut?, AliceSeen?, AliceIn),
+    agent # agent(bob, BobIn?, BobNetIn?, [user_output(BobOut), net_output(BobNetOut)]),
+    tee(BobUiRaw?, BobUi, BobSeen),
+    bob_person(M?, CSig?, yes, BobUiRaw, BobOut?, BobSeen?, BobIn).
+
+%% =============================================================================
+%% play_invite_declined: as above, but bob's person declines; no conversation
+%% opens and neither execution is activated.
+%% Expected: AliceUi = [], BobUi = [], → succeeds.
+%% =============================================================================
+exported procedure play_invite_declined(AppUiStream, AppUiStream).
+play_invite_declined(AliceUi?, BobUi?) :-
+    crossbar2(AliceNetOut?, BobNetOut?, AliceNetIn, BobNetIn),
+    self_module(M),
+    certify(M?, CSig),
+    agent # agent(alice, AliceIn?, AliceNetIn?, [user_output(AliceOut), net_output(AliceNetOut)]),
+    tee(AliceUiRaw?, AliceUi, AliceSeen),
+    alice_person(M?, CSig?, no, AliceUiRaw, AliceOut?, AliceSeen?, AliceIn),
+    agent # agent(bob, BobIn?, BobNetIn?, [user_output(BobOut), net_output(BobNetOut)]),
+    tee(BobUiRaw?, BobUi, BobSeen),
+    bob_person(M?, CSig?, no, BobUiRaw, BobOut?, BobSeen?, BobIn).
+
+%% Alice's person: install the mini-app, cold-call bob, and once connected
+%% invite him.  Wait = yes: keep the person stream open until her execution
+%% has been greeted; no: close it after inviting.
+procedure alice_person(Module?, String?, Decision?, AppUiStream, AgentToUserStream?, AppUiStream?, UserInStream).
+alice_person(M, CSig, Wait, Ui?, Outs, Seen,
+             [msg(person, alice, install(ping, M?, CSig?, Ui)),
+              msg(person, alice, connect(bob)) | Cmds?]) :-
+    alice_wait(Wait?, Outs?, Seen?, Cmds).
+
+procedure alice_wait(Decision?, AgentToUserStream?, AppUiStream?, UserInStream).
+alice_wait(yes, [msg(agent, person, connected(bob)) | _], Seen,
+           [msg(person, alice, invite(ping, bob)) | Cmds?]) :-
+    person_done(Seen?, Cmds).
+alice_wait(no, [msg(agent, person, connected(bob)) | _], _,
+           [msg(person, alice, invite(ping, bob))]).
+alice_wait(W, [_ | Outs], Seen, Cmds?) :- otherwise | alice_wait(W?, Outs?, Seen?, Cmds).
+alice_wait(_, [], _, []).
+
+%% Close the person stream once the mini-app has shown something, or closed.
+procedure person_done(AppUiStream?, UserInStream).
+person_done([_ | _], []).
+person_done([], []).
+
+%% Bob's person: install the mini-app and give (or refuse) consent before the
+%% offer arrives; answer alice's cold call; then wait to be greeted, or close.
+procedure bob_person(Module?, String?, Decision?, AppUiStream, AgentToUserStream?, AppUiStream?, UserInStream).
+bob_person(M, CSig, yes, Ui?, Outs, Seen,
+           [msg(person, bob, install(ping, M?, CSig?, Ui)),
+            msg(person, bob, accept_invite(ping, alice)) | Cmds?]) :-
+    bob_wait(yes, Outs?, Seen?, Cmds).
+bob_person(M, CSig, no, Ui?, Outs, Seen,
+           [msg(person, bob, install(ping, M?, CSig?, Ui)),
+            msg(person, bob, decline_invite(ping, alice)) | Cmds?]) :-
+    bob_wait(no, Outs?, Seen?, Cmds).
+
+procedure bob_wait(Decision?, AgentToUserStream?, AppUiStream?, UserInStream).
+bob_wait(yes, [msg(agent, person, befriend(alice, Resp?)) | _], Seen,
+         [msg(person, bob, decision(yes, alice, response(Resp))) | Cmds?]) :-
+    person_done(Seen?, Cmds).
+bob_wait(no, [msg(agent, person, befriend(alice, Resp?)) | _], _,
+         [msg(person, bob, decision(yes, alice, response(Resp)))]).
+bob_wait(W, [_ | Outs], Seen, Cmds?) :- otherwise | bob_wait(W?, Outs?, Seen?, Cmds).
+bob_wait(_, [], _, []).
+
+%% =============================================================================
+%% play_attest: alice and bob befriend; alice reads back the attestation her
+%% social graph minted at the commit, and the play takes it apart.
+%% Expected: T = attest(alice, bob), K the person's key, H this program's
+%% source identity, → succeeds.
+%% =============================================================================
+exported procedure play_attest(String, String, String, _).
+play_attest(S?, K?, H?, T?) :-
+    crossbar2(AliceNetOut?, BobNetOut?, AliceNetIn, BobNetIn),
+    agent # agent(alice, AliceIn?, AliceNetIn?, [user_output(AliceOut), net_output(AliceNetOut)]),
+    alice_attest(AliceOut?, S, AliceIn),
+    agent # agent(bob, BobIn?, BobNetIn?, [user_output(BobOut), net_output(BobNetOut)]),
+    bob_answer(BobOut?, BobIn),
+    signed(S?, K, H, T).
+
+procedure alice_attest(AgentToUserStream?, String, UserInStream).
+alice_attest(Outs, S?, [msg(person, alice, connect(bob)) | Cmds?]) :-
+    alice_attest_wait(Outs?, S, Cmds).
+
+procedure alice_attest_wait(AgentToUserStream?, String, UserInStream).
+alice_attest_wait([msg(agent, person, connected(bob)) | _], S?,
+                  [msg(person, alice, attestation(bob, S))]).
+alice_attest_wait([_ | Outs], S?, Cmds?) :- otherwise | alice_attest_wait(Outs?, S, Cmds).
+alice_attest_wait([], none, []).
+
+procedure bob_answer(AgentToUserStream?, UserInStream).
+bob_answer([msg(agent, person, befriend(alice, Resp?)) | _],
+           [msg(person, bob, decision(yes, alice, response(Resp)))]).
+bob_answer([_ | Outs], Cmds?) :- otherwise | bob_answer(Outs?, Cmds).
+bob_answer([], []).
