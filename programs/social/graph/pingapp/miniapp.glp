@@ -2,36 +2,125 @@
 %%
 %% A mini-app holds, at activation, the variables the super-app posted with
 %% its goal, and afterwards only what arrives on them (SGSG paper, Section 3):
-%% Ui, its channel to the super-app user interface, and Sg, its channel to the
-%% social graph, on which the social graph hands it, at each invitation, one
-%% end of a root channel to the execution of the same mini-app at a friend.
-%% On each conversation each execution reports to its person that the
-%% conversation opened, greets the other over the root channel, and reports
-%% the greeting it receives.  The mini-app calls no
+%% Ui, its stream to the super-app user interface, and Sg, its channel to the
+%% social graph, on which the social graph hands it, at each invitation and
+%% each warm call, one end of a root channel to the execution of the same
+%% mini-app at a friend, and reports a held link, and on which the mini-app
+%% asks for a warm call (Section 5.2).  On each conversation the execution
+%% reports to its person that it opened, greets the other over the root
+%% channel, and reports the greeting it receives.  The mini-app calls no
 %% system predicate reaching the network or the person, so the program is
 %% certified.
+%%
+%% THE RELAY, for the warm call: the execution at alice, once greeted by carol,
+%% sends carol probe(W), the writer end of a fresh variable, and waits on W?;
+%% the execution at carol forwards probe(W) on its conversation with bob (or
+%% holds it until that conversation opens); the execution at bob assigns W.
+%% The end reached bob under alice's name from carol, so bob's runtime holds
+%% the assignment and reports pending_link(Name, carol) to bob's super-app,
+%% which reports it here; the mini-app asks its social graph for a warm call
+%% to the anchor through carol, and, the warm call done, alice's execution
+%% reads the value and reports got(V).
 
-exported procedure ping(Constant?, AppUiStream, SgToAppStream?).
-ping(Id, Ui?, [conversation(Friend, ch(In, Out?)) | Sg]) :-
-    ground(Id?), ground(Friend?) |
-    opened(Friend?, Ui, Ui1?),
-    greet(Id?, Out),
-    ping_recv(Id?, In?, Ui1, Sg?).
-ping(_, [], []).
+exported procedure ping(Constant?, AppUiStream, SgChannel?).
+ping(Id, Ui?, ch(Down, Up?)) :-
+    ground(Id?) |
+    loop(Id?, Down?, Ev?, Ui, Up, [], []).
 
-%% opened(Friend, Ui, Ui1): report to the person that a conversation opened;
-%% Ui := [opened(Friend) | Ui1], the caller keeping Ui1's writer.
-procedure opened(Constant?, AppUiStream, AppUiStream?).
-opened(Friend, [opened(Friend?) | Ui1?], Ui1).
+%% loop(Id, Down, Ev, Ui, Up, Convs, Held): Down the social graph's stream,
+%% Ev the events of the conversations' readers (merged), Ui the person's
+%% stream, Up the requests to the social graph, Convs the conversations' write
+%% ends, Held the probes waiting for a conversation with bob.
+procedure loop(Constant?, SgToAppStream?, EvStream?, AppUiStream, AppToSgStream, ConvList?, HeldList?).
 
-%% greet(Id, Out): say hello on the root channel's write stream, then close it.
-procedure greet(Constant?, PingStream).
-greet(Id, [hello(Id?)]).
+%% A conversation opens: report it, greet the friend, read the friend's stream
+%% into the events, and flush a held probe if this is the conversation it
+%% waits for.
+loop(Id, [conversation(F, ch(In, Out?)) | Down], Ev, [opened(F?) | Ui?], Up?, Convs, Held) :-
+    ground(Id?), ground(F?) |
+    talk(Id?, F?, In?, EvF),
+    merge(Ev?, EvF?, Ev1),
+    open_out(F?, Id?, Held?, Held1, Out, Out2?),
+    loop(Id?, Down?, Ev1?, Ui, Up, [conv(F?, Out2) | Convs?], Held1?).
 
-%% The friend's greeting arrives on the read stream; report it and go on.
-procedure ping_recv(Constant?, PingStream?, AppUiStream, SgToAppStream?).
-ping_recv(Id, [hello(Who) | _], [greeted(Who?) | Ui?], Sg) :-
+%% The social graph reports a held link: ask it for a warm call to the anchor
+%% through the friend that forwarded the end.
+loop(Id, [pending_link(Name, Via) | Down], Ev, [held_link(Via?) | Ui?], [warm_call(Name?, Via?) | Up?], Convs, Held) :-
+    ground(Via?) |
+    loop(Id?, Down?, Ev?, Ui, Up, Convs?, Held?).
+
+%% A greeting received: report it; at alice, greeted by carol, probe her.
+%% (The clauses on the events are made exclusive by guards, not by otherwise,
+%% which would wait on the clauses that read the social graph's stream.)
+loop(alice, Down, [greeted(carol, Who) | Ev], [greeted(Who?), probed(carol) | Ui?], Up?, Convs, Held) :-
     ground(Who?) |
-    ping(Id?, Ui, Sg?).
-ping_recv(Id, [], Ui?, Sg) :-
-    ping(Id?, Ui, Sg?).
+    send_on(carol, probe(W), Convs?, Convs1),
+    await_probe(W?, EvW),
+    merge(Ev?, EvW?, Ev1),
+    loop(alice, Down?, Ev1?, Ui, Up, Convs1?, Held?).
+loop(alice, Down, [greeted(F, Who) | Ev], [greeted(Who?) | Ui?], Up?, Convs, Held) :-
+    ~(F? =?= carol), ground(Who?) |
+    loop(alice, Down?, Ev?, Ui, Up, Convs?, Held?).
+loop(Id, Down, [greeted(_, Who) | Ev], [greeted(Who?) | Ui?], Up?, Convs, Held) :-
+    ~(Id? =?= alice), ground(Who?) |
+    loop(Id?, Down?, Ev?, Ui, Up, Convs?, Held?).
+
+%% A probe received: at carol, forward it to bob (or hold it); elsewhere,
+%% answer it.
+loop(carol, Down, [probe_from(_, W?) | Ev], [forwarded(bob) | Ui?], Up?, Convs, Held) :-
+    forward(W, Convs?, Convs1, Held?, Held1),
+    loop(carol, Down?, Ev?, Ui, Up, Convs1?, Held1?).
+loop(Id, Down, [probe_from(_, W?) | Ev], [answered | Ui?], Up?, Convs, Held) :-
+    ~(Id? =?= carol) |
+    answer_probe(W),
+    loop(Id?, Down?, Ev?, Ui, Up, Convs?, Held?).
+
+%% The probe's answer arrived at alice: report it.
+loop(Id, Down, [got(V) | Ev], [got(V?) | Ui?], Up?, Convs, Held) :-
+    ground(V?) |
+    loop(Id?, Down?, Ev?, Ui, Up, Convs?, Held?).
+
+%% The social graph closes the stream: close everything.
+loop(_, [], _, [], [], Convs, _) :- close_convs(Convs?).
+
+%% talk(Id, F, In, Ev): read the friend's stream into events.
+procedure talk(Constant?, Constant?, PingStream?, EvStream).
+talk(Id, F, [hello(Who) | In], [greeted(F?, Who?) | Ev?]) :-
+    ground(Who?) | talk(Id?, F?, In?, Ev).
+talk(Id, F, [probe(W?) | In], [probe_from(F?, W) | Ev?]) :-
+    talk(Id?, F?, In?, Ev).
+talk(_, _, [], []).
+
+%% open_out(F, Id, Held, Held1, Out, Out2): the conversation's write stream
+%% opens with the greeting and, on the conversation with bob, a held probe;
+%% the caller keeps the writer of the rest, Out2.
+procedure open_out(Constant?, Constant?, HeldList?, HeldList, PingStream, PingStream?).
+open_out(bob, Id, [held(W?) | Held], Held?, [hello(Id?), probe(W) | Out2?], Out2).
+open_out(F, Id, Held, Held?, [hello(Id?) | Out2?], Out2) :- otherwise | true.
+
+%% send_on(F, Msg, Convs, Convs1): send Msg on the conversation with F.
+procedure send_on(Constant?, PingMsg?, ConvList?, ConvList).
+send_on(F, Msg, [conv(F1, [Msg? | Out1?]) | Rest], [conv(F1?, Out1) | Rest?]) :-
+    F? =?= F1? | true.
+send_on(F, Msg, [C | Rest], [C? | Rest1?]) :- otherwise | send_on(F?, Msg?, Rest?, Rest1).
+send_on(_, _, [], []).
+
+%% forward(W, Convs, Convs1, Held, Held1): carol forwards the probe's end to bob
+%% where that conversation is open, else holds it.
+procedure forward(String, ConvList?, ConvList, HeldList?, HeldList).
+forward(W?, [conv(bob, [probe(W) | Out1?]) | Rest], [conv(bob, Out1) | Rest?], Held, Held?).
+forward(W?, [C | Rest], [C? | Rest1?], Held, Held1?) :-
+    otherwise | forward(W, Rest?, Rest1, Held?, Held1).
+forward(W?, [], [], Held, [held(W) | Held?]).
+
+%% answer_probe(W): bob assigns the probe's end.
+procedure answer_probe(String).
+answer_probe(hello_from_bob).
+
+%% await_probe(W, Ev): the probe's answer as an event, once it arrives.
+procedure await_probe(String?, EvStream).
+await_probe(V, [got(V?)]) :- ground(V?) | true.
+
+procedure close_convs(ConvList?).
+close_convs([conv(_, []) | Rest]) :- close_convs(Rest?).
+close_convs([]).

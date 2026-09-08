@@ -48,7 +48,12 @@ UserContent ::= connect(Constant)
               %% bundled compiler's, trusted by installing the super-app.
               ; trust(String)
               %% installed: the names of the mini-apps installed, for a play.
-              ; installed(Stream(Constant)?).
+              ; installed(Stream(Constant)?)
+              %% The warm call's volitions (Section 5.2): the person consents to
+              %% a warm call with an agent (as holder, or as its anchor); the
+              %% person consents to introduce a requester to an anchor.
+              ; accept_warm_call(Constant)
+              ; allow_intro(Constant, Constant).
 
 %% Content carried inside agent-to-user messages (msg(agent, person, Content))
 AgentContent ::= befriend(Constant, Response?)
@@ -77,7 +82,12 @@ FriendContent ::= response(Response)
                 ; invite(Constant, String, Constant, String)
                 ; join(Constant, String, Constant, String)
                 ; decline(Constant)
-                ; root(Constant, String, Constant, String, RootChannel).
+                ; root(Constant, String, Constant, String, RootChannel)
+                %% The warm call (Section 5.2): the holder asks the forwarding
+                %% friend for an introduction to the anchor; over the friend
+                %% channel that results, warm_call(App, Name) to the anchor.
+                ; request_intro(_)
+                ; warm_call(Constant, _).
 
 %% Setup channel content: ack/nack handshake plus the fresh-friend-channel
 %% conveyance the shared lib befriend_commit uses to install the friend channel.
@@ -115,19 +125,37 @@ IntroResult ::= intro_result(Constant, IntroChannel) ; intro_rejected(Constant).
 %% The root channel's message type is the mini-app's; the friend-channel
 %% message that conveys an end names it, this program being both the super-app
 %% and the mini-app in the plays.
-PingMsg     ::= hello(Constant).
+PingMsg     ::= hello(Constant) ; probe(String?).
 PingStream  ::= [] ; [PingMsg | PingStream].
 RootChannel ::= ch(PingStream, PingStream?).
 
-%% (i) The channel to the social graph: the social graph hands the mini-app,
-%% at each invitation, one end of a root channel to the execution of the same
-%% mini-app at a friend.
-SgToApp       ::= conversation(Constant, RootChannel).
+%% (i) The channel to the social graph: down it the social graph hands the
+%% mini-app, at each invitation and each warm call, one end of a root channel
+%% to the execution of the same mini-app at a friend, and reports a held link
+%% (Section 5.2: an end that reached this agent under another anchor, named,
+%% and the friend that forwarded it); up it the mini-app asks for a warm call
+%% to the link's anchor through that friend.
+SgToApp       ::= conversation(Constant, RootChannel) ; pending_link(_, Constant).
 SgToAppStream ::= [] ; [SgToApp | SgToAppStream].
+AppToSg       ::= warm_call(_, Constant).
+AppToSgStream ::= [] ; [AppToSg | AppToSgStream].
+SgChannel     ::= ch(SgToAppStream, AppToSgStream?).
+
+%% The relay's bookkeeping (pingapp/miniapp.glp): the events of its
+%% conversations, their write ends, and probes held for a conversation.
+EvMsg    ::= greeted(Constant, Constant) ; probe_from(Constant, String?) ; got(String).
+EvStream ::= [] ; [EvMsg | EvStream].
+ConvEnd  ::= conv(Constant, PingStream?).
+ConvList ::= [] ; [ConvEnd | ConvList].
+HeldProbe ::= held(String?).
+HeldList  ::= [] ; [HeldProbe | HeldList].
+WarmWait  ::= none ; wait(Constant, _, Constant).
+AnchorFriend ::= none ; found(Constant).
 
 %% (ii) The channel to the super-app user interface: what the mini-app shows
 %% its person.
-AppUi       ::= opened(Constant) ; greeted(Constant).
+AppUi       ::= opened(Constant) ; greeted(Constant) ; got(String)
+              ; probed(Constant) ; forwarded(Constant) ; answered ; held_link(Constant).
 AppUiStream ::= [] ; [AppUi | AppUiStream].
 
 %% Answers of the host's lookups and checks.
@@ -156,7 +184,22 @@ AttestList ::= [] ; [Attest | AttestList].
 %% identities and the signed invitation; or the person's consent given before
 %% the offer arrived.
 Pending      ::= offered(Constant, Constant, String, Constant, String)
-               ; consented(Constant, Constant).
+               ; consented(Constant, Constant)
+               %% The warm call (Section 5.2), at the holder: the warm call
+               %% under way (mini-app, held name), or waiting for the person's
+               %% consent (mini-app, name, forwarding friend); the person's
+               %% consent to a warm call with an agent; at the anchor: a warm
+               %% call accepted, its handshake pending (name, caller); at the
+               %% forwarding friend: the person's consent to introduce a
+               %% requester to an anchor, or a request (requester, name)
+               %% waiting for it.  A name is never taken apart into an agent:
+               %% its anchor is only ever compared with an agent at hand.
+               ; warm(Constant, _)
+               ; warm_wait(Constant, _, Constant)
+               ; warm_consent(Constant)
+               ; warm_ok(_, Constant)
+               ; intro_consent(Constant, Constant)
+               ; intro_wait(Constant, _).
 PendingInv   ::= [] ; [Pending | PendingInv].
 Host ::= host(AppList, AttestList, PendingInv, Stream(String)).
 
@@ -211,11 +254,15 @@ AgentChannel          ::= ch(AgentToUserStream, MediatorToAgentStream?).
 %% Agent input types
 UserInMsg    ::= msg(Constant, Constant, UserContent)
                ; intro_result(Constant, IntroChannel)
-               ; intro_rejected(Constant).
+               ; intro_rejected(Constant)
+               %% A running mini-app's request up its social-graph channel.
+               ; app_request(Constant, AppToSg).
 UserInStream ::= [] ; [UserInMsg | UserInStream].
 
 NetInMsg     ::= msg(Constant, NetColdCall)
-               ; msg(Constant, Constant, FriendContent).
+               ; msg(Constant, Constant, FriendContent)
+               %% The runtime's report of a held link (Section 5.2; madGLP).
+               ; pending_link(_, Constant).
 NetInStream  ::= [] ; [NetInMsg | NetInStream].
 
 %% Pending entries

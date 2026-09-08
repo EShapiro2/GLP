@@ -5,6 +5,6 @@
 %% with load_file/2, verifies its two certifications, installs it, and
 %% activates it by run/3 (SGSG paper, Section 3).
 
-imported procedure miniapp#ping(Constant?, AppUiStream, SgToAppStream?).
-exported procedure ping(Constant?, AppUiStream, SgToAppStream?).
+imported procedure miniapp#ping(Constant?, AppUiStream, SgChannel?).
+exported procedure ping(Constant?, AppUiStream, SgChannel?).
 ping(Id, Ui?, Sg) :- miniapp # ping(Id?, Ui, Sg?).

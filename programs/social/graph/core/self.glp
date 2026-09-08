@@ -13,7 +13,7 @@
 %% The interface of the mini-app the super-app hosts, declared in the
 %% super-app's own scope so that find_type/2 has its type identity: structural,
 %% so the same declaration in pingapp/ has the same identity.  Never run.
-procedure ping(Constant?, AppUiStream, SgToAppStream?).
+procedure ping(Constant?, AppUiStream, SgChannel?).
 ping(_, [], _).
 
 imported procedure superapp_plays#play_invite(AppUiStream, AppUiStream).

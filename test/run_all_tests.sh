@@ -3655,6 +3655,24 @@ check "SG super-app on two smartphones: bob's execution opened" "\[bob\] opened(
 check "SG super-app on two smartphones: alice's execution opened" "\[alice\] opened(bob)" "$sg_boot"
 check "SG super-app on two smartphones: bob greeted" "\[bob\] greeted(alice)" "$sg_boot"
 check "SG super-app on two smartphones: alice greeted" "\[alice\] greeted(bob)" "$sg_boot"
+
+# The warm call on three smartphones (paper Section 5.2): the social graph's
+# side is written (superapp3_boot.glp, core/agent.glp, pingapp/miniapp.glp) and
+# runs as far as the runtime carries it: the three conversations open, and
+# alice's execution sends carol the end of a fresh variable; the assignment a
+# holder makes to an end that travelled inside a stream element does not come
+# back across the link (programs/social/linkprobe, IGLP), so the held-link
+# report, the introduction and the warm call itself are not reached here.
+sg_warm=$("$REPL_RUN" <<HEREDOC
+:artefact $GLP_DIR/programs/social/graph/pingapp $SG_CORE
+:boot $GLP_DIR/programs/social/superapp3_boot.glp $SG_CORE
+:quit
+HEREDOC
+2>&1)
+check "SG warm call on three smartphones: the boot settles" "Boot settled: 3 agents" "$sg_warm"
+check "SG warm call: alice and carol converse" "\[carol\] greeted(alice)" "$sg_warm"
+check "SG warm call: carol and bob converse" "\[bob\] greeted(carol)" "$sg_warm"
+check "SG warm call: alice's execution sends carol the probe's end" "\[alice\] probed(carol)" "$sg_warm"
 rm -f "$SG_CORE"/*.glpw
 
 sg_ga=$("$REPL_RUN" <<HEREDOC

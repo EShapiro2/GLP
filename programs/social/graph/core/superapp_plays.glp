@@ -90,9 +90,10 @@ alice_wait(no, [msg(agent, person, connected(bob)) | _], _,
 alice_wait(W, [_ | Outs], Seen, Cmds?) :- otherwise | alice_wait(W?, Outs?, Seen?, Cmds).
 alice_wait(_, [], _, []).
 
-%% Close the person stream once the mini-app has shown something, or closed.
+%% Close the person stream once the mini-app has been greeted, or closed.
 procedure person_done(AppUiStream?, UserInStream).
-person_done([_ | _], []).
+person_done([greeted(_) | _], []).
+person_done([_ | Seen], Cmds?) :- otherwise | person_done(Seen?, Cmds).
 person_done([], []).
 
 %% Bob's person: install the mini-app and give (or refuse) consent before the
@@ -201,24 +202,6 @@ opened_at([], _, 0).
 %% invites, bob consents.  What the mini-app shows its person goes to the
 %% person (send_to_user/1), printed by the harness as [agent] term.
 %% =============================================================================
-exported procedure sg_init(Constant?, Constant?, NetInStream?).
-sg_init(alice, _, NetIn) :-
-    agent # agent(alice, AliceIn?, NetIn?, [user_output(Out), net_output(NetOut)]),
-    send_to_net(NetOut?),
-    load_file("pingapp.glpw", C),
-    certified(C?, CK, CSig),
-    tee(Ui?, Show, Seen),
-    send_to_user(Show?),
-    alice_person_boot(C?, CK?, CSig?, Ui, Out?, Seen?, AliceIn).
-sg_init(bob, _, NetIn) :-
-    agent # agent(bob, BobIn?, NetIn?, [user_output(Out), net_output(NetOut)]),
-    send_to_net(NetOut?),
-    load_file("pingapp.glpw", C),
-    certified(C?, CK, CSig),
-    tee(Ui?, Show, Seen),
-    send_to_user(Show?),
-    bob_person_boot(C?, CK?, CSig?, Ui, Out?, Seen?, BobIn).
-
 procedure alice_person_boot(Content?, String?, String?, AppUiStream, AgentToUserStream?, AppUiStream?, UserInStream).
 alice_person_boot(M, CK, CSig, Ui?, Outs, Seen,
                   [msg(person, alice, trust(CK?)),
@@ -267,3 +250,137 @@ play_install(N, App, Installed?) :-
 procedure certified_or_not(Content?, String).
 certified_or_not(M, CSig?) :- module(M?) | certified(M?, _, CSig).
 certified_or_not(S, none) :- string(S?) | true.
+
+%% =============================================================================
+%% The warm call on three smartphones (../../superapp3_boot.glp): alice, bob
+%% and carol, carol a friend of both, alice and bob not friends.  alice
+%% invites carol to the mini-app and carol invites bob; alice's execution,
+%% greeted by carol, sends her probe(W), the end of a fresh variable, which
+%% carol's execution forwards to bob's; bob's execution assigns it, bob's
+%% runtime holds the assignment --- the end reached bob under alice's name from
+%% carol --- and reports the held link; bob's mini-app asks for a warm call;
+%% bob's social graph asks carol for an introduction to alice, which carol's
+%% person allows; alice's and bob's persons accept it and befriend; bob's
+%% social graph sends alice warm_call(ping, Name); alice's person having
+%% consented, alice invites bob, bob joins, the handshake opens their root
+%% channel, bob's social graph releases the held end, and the value reaches
+%% alice, whose execution reports got(hello_from_bob).  Every volition is the
+%% person's, given here in advance.  Nothing closes: the harness settles.
+%% =============================================================================
+exported procedure sg_init(Constant?, Constant?, NetInStream?).
+sg_init(alice, invite, NetIn) :-
+    agent # agent(alice, AliceIn?, NetIn?, [user_output(Out), net_output(NetOut)]),
+    send_to_net(NetOut?),
+    load_file("pingapp.glpw", C),
+    certified(C?, CK, CSig),
+    tee(Ui?, Show, Seen),
+    send_to_user(Show?),
+    alice_person_boot(C?, CK?, CSig?, Ui, Out?, Seen?, AliceIn).
+sg_init(bob, consent, NetIn) :-
+    agent # agent(bob, BobIn?, NetIn?, [user_output(Out), net_output(NetOut)]),
+    send_to_net(NetOut?),
+    load_file("pingapp.glpw", C),
+    certified(C?, CK, CSig),
+    tee(Ui?, Show, Seen),
+    send_to_user(Show?),
+    bob_person_boot(C?, CK?, CSig?, Ui, Out?, Seen?, BobIn).
+
+sg_init(alice, warm, NetIn) :-
+    agent # agent(alice, In?, NetIn?, [user_output(Out), net_output(NetOut)]),
+    send_to_net(NetOut?),
+    load_file("pingapp.glpw", C),
+    certified(C?, CK, CSig),
+    send_to_user(Ui?),
+    alice_warm(C?, CK?, CSig?, Ui, Out?, In).
+sg_init(bob, warm, NetIn) :-
+    agent # agent(bob, In?, NetIn?, [user_output(Out), net_output(NetOut)]),
+    send_to_net(NetOut?),
+    load_file("pingapp.glpw", C),
+    certified(C?, CK, CSig),
+    send_to_user(Ui?),
+    bob_warm(C?, CK?, CSig?, Ui, Out?, In).
+sg_init(carol, warm, NetIn) :-
+    agent # agent(carol, In?, NetIn?, [user_output(Out), net_output(NetOut)]),
+    send_to_net(NetOut?),
+    load_file("pingapp.glpw", C),
+    certified(C?, CK, CSig),
+    send_to_user(Ui?),
+    carol_warm(C?, CK?, CSig?, Ui, Out?, In).
+
+%% alice's person: install; consent in advance to a warm call from bob;
+%% cold-call carol, invite her once connected; accept carol's introduction to
+%% bob.
+procedure alice_warm(Content?, String?, String?, AppUiStream, AgentToUserStream?, UserInStream).
+alice_warm(C, CK, CSig, Ui?, Outs,
+           [msg(person, alice, trust(CK?)),
+            msg(person, alice, install(ping, C?, CSig?, Ui)),
+            msg(person, alice, accept_warm_call(bob)),
+            msg(person, alice, connect(carol)) | Cmds?]) :-
+    alice_warm_run(Outs?, Cmds).
+
+procedure alice_warm_run(AgentToUserStream?, UserInStream).
+alice_warm_run([msg(agent, person, connected(carol)) | Outs],
+               [msg(person, alice, invite(ping, carol)) | Cmds?]) :-
+    send_to_user([sg(connected(carol))]),
+    alice_warm_run(Outs?, Cmds).
+alice_warm_run([msg(agent, person, connected(bob)) | Outs], Cmds?) :-
+    send_to_user([sg(connected(bob))]),
+    alice_warm_run(Outs?, Cmds).
+alice_warm_run([msg(agent, person, befriend_intro(carol, bob, Ch)) | Outs],
+               [msg(person, alice, accept_intro(bob, channel(Ch?))) | Cmds?]) :-
+    send_to_user([sg(intro_from(carol, bob))]),
+    alice_warm_run(Outs?, Cmds).
+alice_warm_run([_ | Outs], Cmds?) :- otherwise | alice_warm_run(Outs?, Cmds).
+alice_warm_run([], []).
+
+%% bob's person: install; consent in advance to carol's and alice's
+%% invitations and to a warm call with alice; cold-call carol; accept carol's
+%% introduction to alice.
+procedure bob_warm(Content?, String?, String?, AppUiStream, AgentToUserStream?, UserInStream).
+bob_warm(C, CK, CSig, Ui?, Outs,
+         [msg(person, bob, trust(CK?)),
+          msg(person, bob, install(ping, C?, CSig?, Ui)),
+          msg(person, bob, accept_invite(ping, carol)),
+          msg(person, bob, accept_invite(ping, alice)),
+          msg(person, bob, accept_warm_call(alice)),
+          msg(person, bob, connect(carol)) | Cmds?]) :-
+    bob_warm_run(Outs?, Cmds).
+
+procedure bob_warm_run(AgentToUserStream?, UserInStream).
+bob_warm_run([msg(agent, person, befriend_intro(carol, alice, Ch)) | Outs],
+             [msg(person, bob, accept_intro(alice, channel(Ch?))) | Cmds?]) :-
+    send_to_user([sg(intro_from(carol, alice))]),
+    bob_warm_run(Outs?, Cmds).
+bob_warm_run([msg(agent, person, connected(Who)) | Outs], Cmds?) :-
+    ground(Who?) |
+    send_to_user([sg(connected(Who?))]),
+    bob_warm_run(Outs?, Cmds).
+bob_warm_run([_ | Outs], Cmds?) :- otherwise | bob_warm_run(Outs?, Cmds).
+bob_warm_run([], []).
+
+%% carol's person: install; consent in advance to alice's invitation and allow
+%% the introduction of bob to alice; accept both cold calls; invite bob once
+%% connected.
+procedure carol_warm(Content?, String?, String?, AppUiStream, AgentToUserStream?, UserInStream).
+carol_warm(C, CK, CSig, Ui?, Outs,
+           [msg(person, carol, trust(CK?)),
+            msg(person, carol, install(ping, C?, CSig?, Ui)),
+            msg(person, carol, accept_invite(ping, alice)),
+            msg(person, carol, allow_intro(bob, alice)) | Cmds?]) :-
+    carol_warm_run(Outs?, Cmds).
+
+procedure carol_warm_run(AgentToUserStream?, UserInStream).
+carol_warm_run([msg(agent, person, befriend(Who, Resp?)) | Outs],
+               [msg(person, carol, decision(yes, Who?, response(Resp))) | Cmds?]) :-
+    ground(Who?) |
+    send_to_user([sg(cold_call(Who?))]),
+    carol_warm_run(Outs?, Cmds).
+carol_warm_run([msg(agent, person, connected(bob)) | Outs],
+               [msg(person, carol, invite(ping, bob)) | Cmds?]) :-
+    send_to_user([sg(connected(bob))]),
+    carol_warm_run(Outs?, Cmds).
+carol_warm_run([msg(agent, person, connected(alice)) | Outs], Cmds?) :-
+    send_to_user([sg(connected(alice))]),
+    carol_warm_run(Outs?, Cmds).
+carol_warm_run([_ | Outs], Cmds?) :- otherwise | carol_warm_run(Outs?, Cmds).
+carol_warm_run([], []).

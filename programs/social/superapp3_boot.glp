@@ -1,0 +1,20 @@
+%% superapp3_boot.glp --- the warm call on three smartphones (SGSG paper,
+%% Section 5.2, "Encounters among participants of the same mini-app"): under
+%% the boot harness, alice, bob and carol, each with its own key pair, running
+%% the social graph of graph/core as its super-app and the test mini-app read
+%% from pingapp.glpw beside it.  carol befriends both; alice and bob, not
+%% friends, come to communicate through the mini-app when carol's execution
+%% forwards to bob's an end alice's execution gave it; bob's runtime holds
+%% bob's assignment and reports it; the warm call befriends alice and bob by
+%% carol's introduction, the handshake opens their root channel, the held end
+%% is released, and alice's execution reads the value.  The persons' scripts
+%% are in core/superapp_plays.glp (sg_init/3, role warm).
+%%   :artefact programs/social/graph/pingapp programs/social/graph/core
+%%   :boot programs/social/superapp3_boot.glp programs/social/graph/core
+%% Expected: [alice] got(hello_from_bob) after [bob] opened(alice).
+
+procedure boot.
+boot :-
+    sg_init(alice, warm, _)@alice,
+    sg_init(bob, warm, _)@bob,
+    sg_init(carol, warm, _)@carol.
