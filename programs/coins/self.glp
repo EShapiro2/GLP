@@ -5,11 +5,12 @@
 %% derived from the four transactions of its Section 3.4.  It runs as a
 %% mini-app of the Grassroots Super-App: currency/ is the certified program --- the
 %% agent (currency/coins_agent.vglp, compiled by the vGLP canonical compilation
-%% into currency/coins_agent.glp beside it) and the mini-app entry coins/3
-%% (currency/miniapp.glp) --- and this directory adds the village play
-%% (village.glp), which stands in for the super-app and the persons.  This
-%% file holds the types shared by all of them, and the helpers over holdings
-%% and channels that the agent calls.
+%% into currency/coins_agent.glp beside it), the mini-app entry coins/3
+%% (currency/miniapp.glp), a scripted person (currency/person.glp) and the plays
+%% that activate the mini-app by run/3 (currency/plays.glp) --- and this
+%% directory adds the village play (village.glp), which stands in for the
+%% super-app.  This file holds the types shared by all of them, and the helpers
+%% over holdings and channels that the agent calls.
 %%
 %% A coin is coin(Issuer, Serial): the atom cent(u) of the act schemas, with the
 %% serial a practical implementation gives each coin.  A party's holdings are a
@@ -138,6 +139,17 @@ Context ::= ctx_respond_swap_1(Constant, Lot, Stream(Coin)) ; ctx_respond_swap_2
 Event ::= card(Constant, Context, ReqId)
         ; closed(ReqId)
         ; msg(Constant, Constant, ScreenContent).
+
+%% A person's script (currency/person.glp): its acts, in order.  A step is an
+%% answer to one of the agent's four request cards, an acceptance of a swap the
+%% named party proposes, or a wait for a screen message.
+Step ::= mint(Integer)
+       ; swap(Constant, Constant, Integer, Constant, Integer)
+       ; pay(Constant, Integer)
+       ; redeem(Constant, Constant)
+       ; accept(Constant)
+       ; await(ScreenContent).
+Script ::= [] ; [Step | Script].
 
 %% =============================================================================
 %% Holdings

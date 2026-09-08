@@ -1,0 +1,149 @@
+%% person.glp --- a scripted person on the other end of the mini-app's channel
+%% to the super-app user interface.  It reads the events the mini-app shows
+%% --- the cards of the mediator and their closing, and the screen of the
+%% agent --- and answers the cards, which are the person's taps, in the order
+%% of its script, each step when the one before it has taken effect on the
+%% screen.  The screen messages come out on its last argument, for a play to
+%% read or a harness to print.  It calls nothing that reaches the person or
+%% the network, so it stands in the certified program's own plays (plays.glp)
+%% as well as in the village (../village.glp).
+%%
+%% A request card replaces the one before it for its clause: the agent closes
+%% its open cards and shows fresh ones at every reduction, so an answer to a
+%% card the agent has meanwhile closed reaches no goal; the person then answers
+%% the fresh one.  A step is done when the screen shows its effect.
+
+%% The latest open card of each request clause --- mint, swap, pay, redeem ---
+%% and the open accept cards of proposed swaps, by proposer.
+OpenReq ::= no_card ; req(Integer).
+Open ::= open(OpenReq, OpenReq, OpenReq, OpenReq).
+SwapCard ::= swap_card(Constant, ReqId).
+SwapCards ::= [] ; [SwapCard | SwapCards].
+
+%% Whether an answer is out for the current step.
+Pending ::= idle ; sent(ReqId).
+
+%% What a step can do now.
+Choice ::= answer(ReqId, Answer) ; wait.
+
+%% person(Id, Events, Answers, Script, Screen): the person's answers on the
+%% channel, and the screen messages as they come.
+exported procedure person(Constant?, Stream(Event)?, Stream(UserAnswer), Script?, Stream(ScreenContent)).
+person(Id, Events, Answers?, Script, Screen?) :-
+    ground(Id?) |
+    person(Id?, Events?, Answers, Script?, open(no_card, no_card, no_card, no_card), [], idle, Screen).
+
+procedure person(Constant?, Stream(Event)?, Stream(UserAnswer), Script?, Open?, SwapCards?, Pending?, Stream(ScreenContent)).
+
+%% The request cards, by clause: mint, swap, pay, redeem.
+person(Id, [card(agent_1, _, R)|Es], As?, Script, open(_, S, P, D), Swaps, Pending, Screen?) :-
+    ground(R?) |
+    try_step(Id?, Es?, As, Script?, open(R?, S?, P?, D?), Swaps?, Pending?, Screen).
+person(Id, [card(agent_2, _, R)|Es], As?, Script, open(M, _, P, D), Swaps, Pending, Screen?) :-
+    ground(R?) |
+    try_step(Id?, Es?, As, Script?, open(M?, R?, P?, D?), Swaps?, Pending?, Screen).
+person(Id, [card(agent_3, _, R)|Es], As?, Script, open(M, S, _, D), Swaps, Pending, Screen?) :-
+    ground(R?) |
+    try_step(Id?, Es?, As, Script?, open(M?, S?, R?, D?), Swaps?, Pending?, Screen).
+person(Id, [card(agent_4, _, R)|Es], As?, Script, open(M, S, P, _), Swaps, Pending, Screen?) :-
+    ground(R?) |
+    try_step(Id?, Es?, As, Script?, open(M?, S?, P?, R?), Swaps?, Pending?, Screen).
+
+%% The accept card of a proposed swap, kept until the script reaches it.
+person(Id, [card(respond_swap_2, ctx_respond_swap_2(From, _, _), R)|Es], As?, Script, Open, Swaps, Pending, Screen?) :-
+    ground(From?), ground(R?) |
+    try_step(Id?, Es?, As, Script?, Open?, [swap_card(From?, R?)|Swaps?], Pending?, Screen).
+
+%% Any other card --- the decline of a swap --- is left.
+person(Id, [card(_, _, _)|Es], As?, Script, Open, Swaps, Pending, Screen?) :-
+    otherwise |
+    person(Id?, Es?, As, Script?, Open?, Swaps?, Pending?, Screen).
+
+%% A card closed: the answer out to it, if any, reached no goal, and the card is
+%% no longer open.
+person(Id, [closed(R)|Es], As?, Script, Open, Swaps, Pending, Screen?) :-
+    ground(R?) |
+    close_open(R?, Open?, Open1),
+    close_pending(R?, Pending?, Pending1),
+    try_step(Id?, Es?, As, Script?, Open1?, Swaps?, Pending1?, Screen).
+
+%% The screen: passed on; the current step is done when it shows its effect.
+person(Id, [msg(_, _, M)|Es], As?, [Step|Script], Open, Swaps, Pending, [M?|Screen?]) :-
+    ground(M?), ground(Step?) |
+    done(Step?, M?, Done),
+    advance(Done?, Id?, Es?, As, Step?, Script?, Open?, Swaps?, Pending?, Screen).
+person(Id, [msg(_, _, M)|Es], As?, [], Open, Swaps, Pending, [M?|Screen?]) :-
+    ground(M?) |
+    person(Id?, Es?, As, [], Open?, Swaps?, Pending?, Screen).
+
+person(_, [], [], _, _, _, _, []).
+
+procedure close_open(ReqId?, Open?, Open).
+close_open(R, open(M, S, P, D), open(M1?, S1?, P1?, D1?)) :-
+    ground(R?) |
+    close_req(R?, M?, M1),
+    close_req(R?, S?, S1),
+    close_req(R?, P?, P1),
+    close_req(R?, D?, D1).
+
+procedure close_req(ReqId?, OpenReq?, OpenReq).
+close_req(R, R1, no_card) :- R? =?= R1? | true.
+close_req(_, R1, R1?) :- otherwise | true.
+
+procedure close_pending(ReqId?, Pending?, Pending).
+close_pending(R, sent(R1), idle) :- R? =?= R1? | true.
+close_pending(_, P, P?) :- otherwise | true.
+
+%% Whether the screen shows the step's effect.
+procedure done(Step?, ScreenContent?, Constant).
+done(mint(K), minted(K1), yes) :- K? =:= K1? | true.
+done(swap(Q, _, _, _, _), swap_done(Q1), yes) :- Q? =?= Q1? | true.
+done(pay(Q, K), paid(Q1, K1), yes) :- Q? =?= Q1?, K? =:= K1? | true.
+done(redeem(Q, R), redeemed(Q1, R1), yes) :- Q? =?= Q1?, R? =?= R1? | true.
+done(accept(Q), swap_done(Q1), yes) :- Q? =?= Q1? | true.
+done(await(M), M1, yes) :- M? =?= M1? | true.
+done(_, _, no) :- otherwise | true.
+
+procedure advance(Constant?, Constant?, Stream(Event)?, Stream(UserAnswer), Step?, Script?, Open?, SwapCards?, Pending?, Stream(ScreenContent)).
+advance(yes, Id, Es, As?, _, Script, Open, Swaps, _, Screen?) :-
+    try_step(Id?, Es?, As, Script?, Open?, Swaps?, idle, Screen).
+advance(no, Id, Es, As?, Step, Script, Open, Swaps, Pending, Screen?) :-
+    person(Id?, Es?, As, [Step?|Script?], Open?, Swaps?, Pending?, Screen).
+
+%% Answer the current step's card, if it is open and no answer is out.
+procedure try_step(Constant?, Stream(Event)?, Stream(UserAnswer), Script?, Open?, SwapCards?, Pending?, Stream(ScreenContent)).
+try_step(Id, Es, As?, [], Open, Swaps, Pending, Screen?) :-
+    person(Id?, Es?, As, [], Open?, Swaps?, Pending?, Screen).
+try_step(Id, Es, As?, [Step|Script], Open, Swaps, sent(R), Screen?) :-
+    person(Id?, Es?, As, [Step?|Script?], Open?, Swaps?, sent(R?), Screen).
+try_step(Id, Es, As?, [Step|Script], Open, Swaps, idle, Screen?) :-
+    ground(Step?), ground(Open?), ground(Swaps?) |
+    pick(Step?, Open?, Swaps?, Choice, Swaps1),
+    act(Choice?, Id?, Es?, As, [Step?|Script?], Open?, Swaps1?, Screen).
+
+procedure pick(Step?, Open?, SwapCards?, Choice, SwapCards).
+pick(mint(K), open(req(N), _, _, _), Swaps, answer(req(N?), xs_agent_1(K?)), Swaps?).
+pick(swap(Q, U, K, V, K1), open(_, req(N), _, _), Swaps, answer(req(N?), xs_agent_2(Q?, U?, K?, V?, K1?)), Swaps?).
+pick(pay(Q, K), open(_, _, req(N), _), Swaps, answer(req(N?), xs_agent_3(Q?, K?)), Swaps?).
+pick(redeem(Q, R), open(_, _, _, req(N)), Swaps, answer(req(N?), xs_agent_4(Q?, R?)), Swaps?).
+pick(accept(From), _, Swaps, Choice?, Swaps1?) :-
+    ground(From?) |
+    find_swap(From?, Swaps?, Choice, Swaps1).
+pick(_, _, Swaps, wait, Swaps?) :- otherwise | true.
+
+procedure find_swap(Constant?, SwapCards?, Choice, SwapCards).
+find_swap(From, [swap_card(F, R)|Rest], answer(R?, xs_respond_swap_2(yes)), Rest?) :-
+    From? =?= F? | true.
+find_swap(From, [S|Rest], C?, [S?|Rest1?]) :-
+    otherwise |
+    find_swap(From?, Rest?, C, Rest1).
+find_swap(_, [], wait, []).
+
+procedure act(Choice?, Constant?, Stream(Event)?, Stream(UserAnswer), Script?, Open?, SwapCards?, Stream(ScreenContent)).
+%% An answered card is consumed: it is no longer open.
+act(answer(R, X), Id, Es, [answer(R?, X?)|As?], Script, Open, Swaps, Screen?) :-
+    ground(R?) |
+    close_open(R?, Open?, Open1),
+    person(Id?, Es?, As, Script?, Open1?, Swaps?, sent(R?), Screen).
+act(wait, Id, Es, As?, Script, Open, Swaps, Screen?) :-
+    person(Id?, Es?, As, Script?, Open?, Swaps?, idle, Screen).

@@ -1,0 +1,42 @@
+%% plays.glp --- the mini-app activated as the super-app activates it (SGSG
+%% paper, Section 3): by run/3, under the type identity of its entry coins/3,
+%% with exactly its two channels; and, for two executions, with the two ends
+%% of one root channel handed to them as their conversation.  The certified
+%% mini-app is this program, whose module value is the one the REPL can
+%% obtain; the persons are scripted (person.glp), and each play returns their
+%% screens.  A run does not end --- the agent's request clauses pend
+%% perpetually --- so a play's result is read off a partial stream.
+%%
+%% Both plays FAIL on the tree of 2026-09-08 (GLP ac516779 and after): the
+%% module run/3 activates resolves no root-scope body procedure, and the
+%% compiled agent's send/3 (posting an ask to its mediator) and adopt's merge/3
+%% fail with "no procedure for goal", though the same goals run when coins/3
+%% is called directly (../village.glp).  Reported to IGLP (IGLP_inbox.md,
+%% 2026-09-08); the plays enter Section N2 of the suite when they run.
+
+imported procedure person#person(Constant?, Stream(Event)?, Stream(UserAnswer), Script?, Stream(ScreenContent)).
+
+%% play_mint(Screen): alice, alone, mints 3.
+%% Expected: Screen = [minted(3), holdings([lot(alice, 3)]) | _].
+exported procedure play_mint(Stream(ScreenContent)).
+play_mint(Screen?) :-
+    self_module(M),
+    find_type(coins/3, T),
+    run(coins(alice, ch(Answers?, Events), []), T?, M?),
+    person # person(alice, Events?, Answers, [mint(3)], Screen).
+
+%% play_swap(ScreenA, ScreenB): alice and bob with one conversation between
+%% their two executions; each mints 2, alice offers her 2 for bob's 2, and bob
+%% accepts.
+%% Expected: ScreenA = [opened(bob), minted(2), holdings([lot(alice, 2)]),
+%%   holdings([]), swap_done(bob), holdings([lot(bob, 2)]) | _],
+%%   ScreenB = [opened(alice), minted(2), holdings([lot(bob, 2)]),
+%%   swap_done(alice), holdings([lot(alice, 2)]) | _].
+exported procedure play_swap(Stream(ScreenContent), Stream(ScreenContent)).
+play_swap(ScreenA?, ScreenB?) :-
+    self_module(M),
+    find_type(coins/3, T),
+    run(coins(alice, ch(AnswersA?, EventsA), [conversation(bob, ch(AB?, BA))]), T?, M?),
+    person # person(alice, EventsA?, AnswersA, [mint(2), swap(bob, alice, 2, bob, 2)], ScreenA),
+    run(coins(bob, ch(AnswersB?, EventsB), [conversation(alice, ch(BA?, AB))]), T?, M?),
+    person # person(bob, EventsB?, AnswersB, [mint(2), accept(alice)], ScreenB).

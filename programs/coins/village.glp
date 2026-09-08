@@ -21,40 +21,17 @@
 %% super-app: it opens, before the market, the conversation between every two
 %% villagers who transact --- one root channel each, an end to each of the two
 %% --- and hands each villager its conversations on its channel to the social
-%% graph.  A scripted person stands in for the super-app user interface: it
-%% reads the cards the mediator shows and the screen the agent writes, and
-%% answers the cards --- the person's taps --- in the order of its script, each
-%% step when the one before it has taken effect.  The screen messages are
-%% logged as tagged(Villager, Message), so the run is observable and the final
-%% holdings can be read off it.
+%% graph.  A scripted person (currency/person.glp) stands in for the super-app
+%% user interface: it reads the cards the mediator shows and the screen the
+%% agent writes, and answers the cards --- the person's taps --- in the order
+%% of its script, each step when the one before it has taken effect.  The
+%% screen messages are logged as tagged(Villager, Message), so the run is
+%% observable and the final holdings can be read off it.
 %%
 %% Entry point: market/0, exported by self.glp as village/0.
 
 imported procedure miniapp#coins(Constant?, Channel(Stream(UserAnswer), Stream(Event))?, Stream(Conversation)?).
-
-%% A script: the person's acts, in order.  A step is an answer to one of the
-%% agent's four request cards, an acceptance of a swap the named party
-%% proposes, or a wait for a screen message.
-Step ::= mint(Integer)
-       ; swap(Constant, Constant, Integer, Constant, Integer)
-       ; pay(Constant, Integer)
-       ; redeem(Constant, Constant)
-       ; accept(Constant)
-       ; await(ScreenContent).
-Script ::= [] ; [Step | Script].
-
-%% The latest open card of each request clause --- mint, swap, pay, redeem ---
-%% and the open accept cards of proposed swaps, by proposer.
-OpenReq ::= no_card ; req(Integer).
-Open ::= open(OpenReq, OpenReq, OpenReq, OpenReq).
-SwapCard ::= swap_card(Constant, ReqId).
-SwapCards ::= [] ; [SwapCard | SwapCards].
-
-%% Whether an answer is out for the current step.
-Pending ::= idle ; sent(ReqId).
-
-%% What a step can do now.
-Choice ::= answer(ReqId, Answer) ; wait.
+imported procedure person#person(Constant?, Stream(Event)?, Stream(UserAnswer), Script?, Stream(ScreenContent)).
 
 %% =============================================================================
 %% The scripts
@@ -98,136 +75,16 @@ market :-
     villager(frank, SF?, [conversation(diana, ch(FD?, DF)), conversation(eve, ch(FE?, EF))]).
 
 %% One villager: the mini-app, activated with its channel to the person and its
-%% conversations, and the scripted person on the other end of the channel.
+%% conversations, the scripted person on the other end of the channel, and its
+%% screen logged.
 exported procedure villager(Constant?, Script?, Stream(Conversation)?).
 villager(Id, Script, Convs) :-
     ground(Id?) |
     miniapp # coins(Id?, ch(Answers?, Events), Convs?),
-    person(Id?, Events?, Answers, Script?, open(no_card, no_card, no_card, no_card), [], idle).
+    person # person(Id?, Events?, Answers, Script?, Screen),
+    log(Id?, Screen?).
 
-%% =============================================================================
-%% The scripted person
-%% =============================================================================
-%%
-%% person(Id, Events, Answers, Script, Open, Swaps, Pending).  A request card
-%% replaces the one before it for its clause: the agent closes its open cards
-%% and shows fresh ones at every reduction, so an answer to a card the agent
-%% has meanwhile closed reaches no goal; the person then answers the fresh one.
-%% A step is done when the screen shows its effect.
-
-procedure person(Constant?, Stream(Event)?, Stream(UserAnswer), Script?, Open?, SwapCards?, Pending?).
-
-%% The request cards, by clause: mint, swap, pay, redeem.
-person(Id, [card(agent_1, _, R)|Es], As?, Script, open(_, S, P, D), Swaps, Pending) :-
-    ground(R?) |
-    try_step(Id?, Es?, As, Script?, open(R?, S?, P?, D?), Swaps?, Pending?).
-person(Id, [card(agent_2, _, R)|Es], As?, Script, open(M, _, P, D), Swaps, Pending) :-
-    ground(R?) |
-    try_step(Id?, Es?, As, Script?, open(M?, R?, P?, D?), Swaps?, Pending?).
-person(Id, [card(agent_3, _, R)|Es], As?, Script, open(M, S, _, D), Swaps, Pending) :-
-    ground(R?) |
-    try_step(Id?, Es?, As, Script?, open(M?, S?, R?, D?), Swaps?, Pending?).
-person(Id, [card(agent_4, _, R)|Es], As?, Script, open(M, S, P, _), Swaps, Pending) :-
-    ground(R?) |
-    try_step(Id?, Es?, As, Script?, open(M?, S?, P?, R?), Swaps?, Pending?).
-
-%% The accept card of a proposed swap, kept until the script reaches it.
-person(Id, [card(respond_swap_2, ctx_respond_swap_2(From, _, _), R)|Es], As?, Script, Open, Swaps, Pending) :-
-    ground(From?), ground(R?) |
-    try_step(Id?, Es?, As, Script?, Open?, [swap_card(From?, R?)|Swaps?], Pending?).
-
-%% Any other card --- the decline of a swap --- is left.
-person(Id, [card(_, _, _)|Es], As?, Script, Open, Swaps, Pending) :-
-    otherwise |
-    person(Id?, Es?, As, Script?, Open?, Swaps?, Pending?).
-
-%% A card closed: the answer out to it, if any, reached no goal, and the card is
-%% no longer open.
-person(Id, [closed(R)|Es], As?, Script, Open, Swaps, Pending) :-
-    ground(R?) |
-    close_open(R?, Open?, Open1),
-    close_pending(R?, Pending?, Pending1),
-    try_step(Id?, Es?, As, Script?, Open1?, Swaps?, Pending1?).
-
-%% The screen: logged; the current step is done when it shows its effect.
-person(Id, [msg(_, _, M)|Es], As?, [Step|Script], Open, Swaps, Pending) :-
-    ground(M?), ground(Step?) |
-    send_to_user([tagged(Id?, M?)]),
-    done(Step?, M?, Done),
-    advance(Done?, Id?, Es?, As, Step?, Script?, Open?, Swaps?, Pending?).
-person(Id, [msg(_, _, M)|Es], As?, [], Open, Swaps, Pending) :-
-    ground(M?) |
-    send_to_user([tagged(Id?, M?)]),
-    person(Id?, Es?, As, [], Open?, Swaps?, Pending?).
-
-person(_, [], [], _, _, _, _).
-
-procedure close_open(ReqId?, Open?, Open).
-close_open(R, open(M, S, P, D), open(M1?, S1?, P1?, D1?)) :-
-    ground(R?) |
-    close_req(R?, M?, M1),
-    close_req(R?, S?, S1),
-    close_req(R?, P?, P1),
-    close_req(R?, D?, D1).
-
-procedure close_req(ReqId?, OpenReq?, OpenReq).
-close_req(R, R1, no_card) :- R? =?= R1? | true.
-close_req(_, R1, R1?) :- otherwise | true.
-
-procedure close_pending(ReqId?, Pending?, Pending).
-close_pending(R, sent(R1), idle) :- R? =?= R1? | true.
-close_pending(_, P, P?) :- otherwise | true.
-
-%% Whether the screen shows the step's effect.
-procedure done(Step?, ScreenContent?, Constant).
-done(mint(K), minted(K1), yes) :- K? =:= K1? | true.
-done(swap(Q, _, _, _, _), swap_done(Q1), yes) :- Q? =?= Q1? | true.
-done(pay(Q, K), paid(Q1, K1), yes) :- Q? =?= Q1?, K? =:= K1? | true.
-done(redeem(Q, R), redeemed(Q1, R1), yes) :- Q? =?= Q1?, R? =?= R1? | true.
-done(accept(Q), swap_done(Q1), yes) :- Q? =?= Q1? | true.
-done(await(M), M1, yes) :- M? =?= M1? | true.
-done(_, _, no) :- otherwise | true.
-
-procedure advance(Constant?, Constant?, Stream(Event)?, Stream(UserAnswer), Step?, Script?, Open?, SwapCards?, Pending?).
-advance(yes, Id, Es, As?, _, Script, Open, Swaps, _) :-
-    try_step(Id?, Es?, As, Script?, Open?, Swaps?, idle).
-advance(no, Id, Es, As?, Step, Script, Open, Swaps, Pending) :-
-    person(Id?, Es?, As, [Step?|Script?], Open?, Swaps?, Pending?).
-
-%% Answer the current step's card, if it is open and no answer is out.
-procedure try_step(Constant?, Stream(Event)?, Stream(UserAnswer), Script?, Open?, SwapCards?, Pending?).
-try_step(Id, Es, As?, [], Open, Swaps, Pending) :-
-    person(Id?, Es?, As, [], Open?, Swaps?, Pending?).
-try_step(Id, Es, As?, [Step|Script], Open, Swaps, sent(R)) :-
-    person(Id?, Es?, As, [Step?|Script?], Open?, Swaps?, sent(R?)).
-try_step(Id, Es, As?, [Step|Script], Open, Swaps, idle) :-
-    ground(Step?), ground(Open?), ground(Swaps?) |
-    pick(Step?, Open?, Swaps?, Choice, Swaps1),
-    act(Choice?, Id?, Es?, As, [Step?|Script?], Open?, Swaps1?).
-
-procedure pick(Step?, Open?, SwapCards?, Choice, SwapCards).
-pick(mint(K), open(req(N), _, _, _), Swaps, answer(req(N?), xs_agent_1(K?)), Swaps?).
-pick(swap(Q, U, K, V, K1), open(_, req(N), _, _), Swaps, answer(req(N?), xs_agent_2(Q?, U?, K?, V?, K1?)), Swaps?).
-pick(pay(Q, K), open(_, _, req(N), _), Swaps, answer(req(N?), xs_agent_3(Q?, K?)), Swaps?).
-pick(redeem(Q, R), open(_, _, _, req(N)), Swaps, answer(req(N?), xs_agent_4(Q?, R?)), Swaps?).
-pick(accept(From), _, Swaps, Choice?, Swaps1?) :-
-    ground(From?) |
-    find_swap(From?, Swaps?, Choice, Swaps1).
-pick(_, _, Swaps, wait, Swaps?) :- otherwise | true.
-
-procedure find_swap(Constant?, SwapCards?, Choice, SwapCards).
-find_swap(From, [swap_card(F, R)|Rest], answer(R?, xs_respond_swap_2(yes)), Rest?) :-
-    From? =?= F? | true.
-find_swap(From, [S|Rest], C?, [S?|Rest1?]) :-
-    otherwise |
-    find_swap(From?, Rest?, C, Rest1).
-find_swap(_, [], wait, []).
-
-procedure act(Choice?, Constant?, Stream(Event)?, Stream(UserAnswer), Script?, Open?, SwapCards?).
-%% An answered card is consumed: it is no longer open.
-act(answer(R, X), Id, Es, [answer(R?, X?)|As?], Script, Open, Swaps) :-
-    ground(R?) |
-    close_open(R?, Open?, Open1),
-    person(Id?, Es?, As, Script?, Open1?, Swaps?, sent(R?)).
-act(wait, Id, Es, As?, Script, Open, Swaps) :-
-    person(Id?, Es?, As, Script?, Open?, Swaps?, idle).
+%% The screen messages, logged as tagged(Villager, Message).
+procedure log(Constant?, Stream(ScreenContent)?).
+log(Id, [M|Ms]) :- ground(M?) | send_to_user([tagged(Id?, M?)]), log(Id?, Ms?).
+log(_, []).
