@@ -405,6 +405,38 @@ class HeapFCP {
     return activations;
   }
 
+  /// Fire every registered callback whose writer has become bound.
+  ///
+  /// An observer registered with [onBind] is fired by the bind that binds its
+  /// writer. A writer can also become bound without such a call: a commit
+  /// binds a writer to a reader, leaving a chain, and the chain is resolved to
+  /// a value by rewriting cells (`applySigmaHatFCP`). Nothing fires the
+  /// observers on the cells so rewritten, and they are never fired again.
+  ///
+  /// The observer that matters is a `global_send` goal, which the madGLP
+  /// specification puts in the resolvent (Definition global_send) and which
+  /// this runtime realises as a callback instead: as a goal it would be woken
+  /// by the ordinary suspension machinery, which follows chains, and as a
+  /// callback it is not. Calling this at the end of a commit — where suspended
+  /// goals are activated — is that waking. Until 2026-09-08 it was absent, and
+  /// a value written into the tail of a stream whose reader had already
+  /// crossed a link was produced and never sent (SGSG's linkprobe10 and 12,
+  /// and with them the warm call of their Section 5.2).
+  ///
+  /// The map holds one entry per open global link, so the pass is over a few
+  /// entries and each fires at most once.
+  void fireBoundCallbacks() {
+    if (_bindCallbacks.isEmpty) return;
+    for (final addr in _bindCallbacks.keys.toList()) {
+      if (!isFullyBound(addr)) continue;
+      final callback = _bindCallbacks.remove(addr);
+      final value = getValue(addr);
+      if (callback != null && value != null) {
+        callback(value);
+      }
+    }
+  }
+
   /// Fire pending callback for a writer (if any)
   ///
   /// Used after all bindings complete to fire deferred callbacks.

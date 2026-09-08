@@ -1,0 +1,12 @@
+%% mad_two_crossings_boot.glp --- a stream end that arrived TWO CROSSINGS down,
+%% written into in a LATER reduction than the one that handed it over (SGSG
+%% Code's report of 2026-09-08 17:14 UTC).  A crossing is an end sent inside an
+%% element of a stream: one is an end in a network message, two is an end sent
+%% on a channel that itself arrived that way --- which is what the social
+%% graph's warm call does.  alice greets on the twice-crossed end and puts the
+%% probe on its tail one reduction later; bob must see both.
+
+procedure boot.
+boot :-
+    alice_init(alice, _)@alice,
+    bob_init(bob, _)@bob.

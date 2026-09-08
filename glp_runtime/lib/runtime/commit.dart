@@ -93,6 +93,11 @@ class CommitOps {
       heap.firePendingCallback(writerAddr);
     }
 
+    // And every observer whose writer this commit made known by resolving a
+    // chain rather than by a bind call — the waking a `global_send` goal would
+    // get from the suspension machinery if it were a goal (heap.fireBoundCallbacks).
+    heap.fireBoundCallbacks();
+
     return activations;
   }
 

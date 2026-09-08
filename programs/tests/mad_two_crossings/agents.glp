@@ -1,0 +1,69 @@
+%% mad_two_crossings/agents.glp --- the two agents.
+%%
+%% alice cold-calls bob with a stream (crossing one), sends an inner channel on
+%% it (crossing two), then GREETS on the inner channel and, in a later
+%% reduction, puts probe(W) on its tail.  bob reads both and assigns W.  The
+%% later write is the point: what is written into the tail of a twice-crossed
+%% end after the reduction that handed the end over.
+
+Inner ::= probe(String?) ; hello.
+InnerStream ::= [] ; [Inner | InnerStream].
+InnerChannel ::= ch(InnerStream, InnerStream?).
+
+Outer ::= chan(InnerChannel) ; ping.
+OuterStream ::= [] ; [Outer | OuterStream].
+
+exported procedure alice_init(_?, _?).
+alice_init(_, _) :-
+    send_to_net([msg(bob, stream(S?))]),
+    new_channel(Mine, Theirs),
+    fill_outer(S, Theirs?),
+    write_end(Mine?, W),
+    wait_value(W?).
+
+procedure fill_outer(OuterStream, InnerChannel?).
+fill_outer([ping, chan(C?) | []], C).
+
+%% The greeting, then the probe on the tail in a LATER reduction.
+procedure write_end(InnerChannel?, String).
+write_end(ch(In, Out?), W?) :-
+    hold_in(In?),
+    greet(Out, Rest?),
+    probe_later(Rest, W).
+
+%% The read side of alice's own end, which she never reads, and the write side
+%% of bob's, which he never writes: each is held by a clause that does nothing.
+procedure hold_in(InnerStream?).
+hold_in(X) :- true.
+
+procedure greet(InnerStream, InnerStream?).
+greet([hello | Rest?], Rest).
+
+procedure probe_later(InnerStream, String).
+probe_later([probe(W) | []], W?).
+
+procedure wait_value(String?).
+wait_value(V) :- ground(V?) | send_to_user([got(V?)]).
+
+exported procedure bob_init(_?, _?).
+bob_init(_, [msg(_, stream(S)) | _]) :-
+    read_outer(S?).
+
+procedure read_outer(OuterStream?).
+read_outer([ping | S]) :- send_to_user([saw(ping)]), read_outer(S?).
+read_outer([chan(C) | S]) :- send_to_user([saw(chan)]), read_end(C?), read_outer(S?).
+read_outer([]).
+
+procedure read_end(InnerChannel?).
+read_end(ch(In, Out?)) :- read_inner(In?), hold_out(Out).
+
+procedure hold_out(InnerStream).
+hold_out(X?) :- true.
+
+procedure read_inner(InnerStream?).
+read_inner([hello | S]) :- send_to_user([saw(hello)]), read_inner(S?).
+read_inner([probe(W?) | S]) :- send_to_user([saw(probe)]), answer(W), read_inner(S?).
+read_inner([]).
+
+procedure answer(String).
+answer(hi).
