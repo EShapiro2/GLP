@@ -333,6 +333,38 @@ sg_init(bob, cssn, NetIn) :-
     cssn_onlooker(PersonEnd?, Seen),
     send_to_user(Seen?).
 
+%% Both mini-apps on two smartphones (../../both_boot.glp): each person trusts
+%% the compiler's key, installs both certified mini-apps with their own
+%% user-interface grants, and runs both platforms over the one friendship.
+sg_init(alice, both, NetIn) :-
+    agent # agent(alice, In?, NetIn?, [user_output(Out), net_output(NetOut)]),
+    send_to_net(NetOut?),
+    load_file("currency.glpw", CC),
+    certified(CC?, CK, CCSig),
+    load_file("childsafe.glpw", CS),
+    certified(CS?, _, CSSig),
+    new_channel(CoinsEnd, CoinsPerson),
+    new_channel(CssnEnd, CssnPerson),
+    alice_both_boot(CK?, CC?, CCSig?, CoinsEnd?, CS?, CSSig?, CssnEnd?, Out?, In),
+    coin_person(alice, CoinsPerson?, [mint(2), swap(bob, alice, 2, bob, 2)], Screen),
+    send_to_user(Screen?),
+    cssn_greeter(bob, CssnPerson?, Seen),
+    send_to_user(Seen?).
+sg_init(bob, both, NetIn) :-
+    agent # agent(bob, In?, NetIn?, [user_output(Out), net_output(NetOut)]),
+    send_to_net(NetOut?),
+    load_file("currency.glpw", CC),
+    certified(CC?, CK, CCSig),
+    load_file("childsafe.glpw", CS),
+    certified(CS?, _, CSSig),
+    new_channel(CoinsEnd, CoinsPerson),
+    new_channel(CssnEnd, CssnPerson),
+    bob_both_boot(CK?, CC?, CCSig?, CoinsEnd?, CS?, CSSig?, CssnEnd?, Out?, In),
+    coin_person(bob, CoinsPerson?, [mint(2), accept(alice)], Screen),
+    send_to_user(Screen?),
+    cssn_onlooker(CssnPerson?, Seen),
+    send_to_user(Seen?).
+
 sg_init(alice, warm, NetIn) :-
     agent # agent(alice, In?, NetIn?, [user_output(Out), net_output(NetOut)]),
     send_to_net(NetOut?),
@@ -503,6 +535,25 @@ bob_coins_run([msg(agent, person, befriend(alice, Resp?)) | Outs],
 bob_coins_run([_ | Outs], Cmds?) :- otherwise | bob_coins_run(Outs?, Cmds).
 bob_coins_run([], []).
 
+
+%% The two persons of both platforms under :boot, each trusting the compiler's
+%% key once for the two artefacts it signed.
+procedure alice_both_boot(String?, Content?, String?, Channel(Stream(UserAnswer), Stream(Event))?, Content?, String?, Channel(Stream(CsAppCmd), Stream(CsAppNotify))?, AgentToUserStream?, UserInStream).
+alice_both_boot(CK, CC, CCSig, CoinsEnd, CS, CSSig, CssnEnd, Outs,
+                [msg(person, alice, trust(CK?)),
+                 msg(person, alice, install_coins(currency, CC?, CCSig?, CoinsEnd?)),
+                 msg(person, alice, install_cssn(childsafe, CS?, CSSig?, CssnEnd?)),
+                 msg(person, alice, connect(bob)) | Cmds?]) :-
+    alice_both_run(Outs?, Cmds).
+
+procedure bob_both_boot(String?, Content?, String?, Channel(Stream(UserAnswer), Stream(Event))?, Content?, String?, Channel(Stream(CsAppCmd), Stream(CsAppNotify))?, AgentToUserStream?, UserInStream).
+bob_both_boot(CK, CC, CCSig, CoinsEnd, CS, CSSig, CssnEnd, Outs,
+              [msg(person, bob, trust(CK?)),
+               msg(person, bob, install_coins(currency, CC?, CCSig?, CoinsEnd?)),
+               msg(person, bob, install_cssn(childsafe, CS?, CSSig?, CssnEnd?)),
+               msg(person, bob, accept_invite(currency, alice)),
+               msg(person, bob, accept_invite(childsafe, alice)) | Cmds?]) :-
+    bob_both_run(Outs?, Cmds).
 
 %% The child-safe platform's two persons under :boot.
 procedure alice_cssn_boot(Content?, String?, String?, Channel(Stream(CsAppCmd), Stream(CsAppNotify))?, AgentToUserStream?, UserInStream).

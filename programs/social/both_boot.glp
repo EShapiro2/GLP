@@ -1,0 +1,27 @@
+%% both_boot.glp --- BOTH mini-apps under one super-app, on two smartphones
+%% (SGSG paper, Section 7, and Theorem 6.5): under the boot harness, one
+%% isolate per person, each with its own key pair, running the social graph of
+%% graph/core as its super-app and hosting the currency (programs/coins/
+%% currency) and the child-safe platform (programs/cssn/childsafe) at the same
+%% time.  Each person trusts the bundled compiler's key, reads both certified
+%% artefacts from graph/core with load_file/2 and installs both, each with its
+%% own user-interface grant --- the currency's channel of cards and answers,
+%% the platform's channel of commands and notifications.  alice cold-calls bob,
+%% they befriend across the isolates, alice invites him to both mini-apps, bob
+%% consents to both, and each handshake opens a root channel of that platform's
+%% own protocol; each super-app activates both entries by run/3, each with its
+%% own conversations.  Then both platforms run at once over the one friendship:
+%% alice and bob mint and swap under the currency's contract, and alice greets
+%% bob under the child-safe platform's.  The program is graph/core, named as
+%% :boot's second argument:
+%%   :artefact programs/coins/currency programs/social/graph/core
+%%   :artefact programs/cssn/childsafe programs/social/graph/core
+%%   :boot programs/social/both_boot.glp programs/social/graph/core
+%% Expected on the persons' screens: [alice] opened(bob), minted(2),
+%% swap_done(bob), connected(bob); [bob] opened(alice), minted(2),
+%% swap_done(alice), connected(alice), received(alice, hello).
+
+procedure boot.
+boot :-
+    sg_init(alice, both, _)@alice,
+    sg_init(bob, both, _)@bob.

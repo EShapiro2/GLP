@@ -3730,6 +3730,42 @@ check "SG super-app hosts the child-safe platform: alice connected to bob" "N1 =
 check "SG super-app hosts the child-safe platform: bob connected and greeted" "N2 = \[connected(alice), received(alice, hello) | " "$sg_cs"
 check_not "SG super-app hosts the child-safe platform: no failed play" "→ failed" "$sg_cs"
 
+# BOTH mini-apps under one super-app, in one heap (paper Section 7, Theorem
+# 6.5): each person installs the currency and the child-safe platform, each
+# with its own user-interface grant; the friend is invited to both, both
+# handshakes open, both entries are activated by run/3 with their own
+# conversations, and the two protocols proceed over the one friendship.
+sg_two=$("$REPL_RUN" <<HEREDOC
+:artefact $GLP_DIR/programs/coins/currency $SG_CORE
+:artefact $GLP_DIR/programs/cssn/childsafe $SG_CORE
+$SG_CORE
+:limit 5000000
+play_both(A, B, C, D).
+:quit
+HEREDOC
+2>&1)
+check "SG two mini-apps at once: alice's swap settles" "A = \[opened(bob), minted(2), holdings(\[lot(alice, 2)\]), holdings(\[\]), swap_done(bob), holdings(\[lot(bob, 2)\]) | " "$sg_two"
+check "SG two mini-apps at once: bob's swap settles" "B = \[opened(alice), minted(2), holdings(\[lot(bob, 2)\]), swap_done(alice), holdings(\[lot(alice, 2)\]) | " "$sg_two"
+check "SG two mini-apps at once: alice connected under the child-safe platform" "C = \[connected(bob) | " "$sg_two"
+check "SG two mini-apps at once: bob connected and greeted under it" "D = \[connected(alice), received(alice, hello) | " "$sg_two"
+check_not "SG two mini-apps at once: no failed play" "→ failed" "$sg_two"
+
+# The same on two smartphones: one isolate per person, both mini-apps hosted by
+# each super-app, both protocols over the one friendship.
+sg_two_boot=$("$REPL_RUN" <<HEREDOC
+:artefact $GLP_DIR/programs/coins/currency $SG_CORE
+:artefact $GLP_DIR/programs/cssn/childsafe $SG_CORE
+:boot $GLP_DIR/programs/social/both_boot.glp $SG_CORE
+:quit
+HEREDOC
+2>&1)
+check "SG two mini-apps on two smartphones: the boot settles" "Boot settled: 2 agents" "$sg_two_boot"
+check "SG two mini-apps on two smartphones: the currency's conversation opens" "\[alice\] opened(bob)" "$sg_two_boot"
+check "SG two mini-apps on two smartphones: alice's swap settles" "\[alice\] swap_done(bob)" "$sg_two_boot"
+check "SG two mini-apps on two smartphones: bob's swap settles" "\[bob\] swap_done(alice)" "$sg_two_boot"
+check "SG two mini-apps on two smartphones: the child-safe friendship holds" "\[alice\] connected(bob)" "$sg_two_boot"
+check "SG two mini-apps on two smartphones: and its message arrives" "\[bob\] received(alice, hello)" "$sg_two_boot"
+
 # Under the boot harness: two isolates, each its own person with its own key,
 # running the super-app of core/; each reads pingapp's artefact beside it and
 # trusts the bundled compiler's key; the invitation crosses the friend channel
