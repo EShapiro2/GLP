@@ -1,0 +1,40 @@
+%% mad_stream_writer/agents.glp --- the two agents.
+%%
+%% The element type carries a variable whose WRITER goes to the reader of the
+%% stream: probe(String?) at a produce position is a writer to supply, and at
+%% the consume position bob receives it and assigns it.  alice therefore
+%% creates the variable, puts its writer in the element and keeps its reader
+%% --- fill/2 produces both, which is the one SRSW-legal shape: a clause
+%% cannot hand out the writer of a variable whose reader it was given.
+
+Probe ::= probe(String?) ; hello.
+ProbeStream ::= [] ; [Probe | ProbeStream].
+
+exported procedure alice_init(_?, _?).
+alice_init(_, _) :-
+    send_to_net([msg(bob, stream(S?))]),
+    fill(S, W),
+    wait_value(W?).
+
+%% fill(S, W): S := [hello, probe(W)], and the caller keeps W's reader.  hello
+%% first, as the social graph's relay does.  The stream is closed rather than
+%% left open because a tail nobody writes is a writer with no writer
+%% occurrence, which SRSW forbids; what is under test is the element, not the
+%% tail.
+procedure fill(ProbeStream, String).
+fill([hello, probe(W) | []], W?).
+
+procedure wait_value(String?).
+wait_value(V) :- ground(V?) | send_to_user([got(V?)]).
+
+exported procedure bob_init(_?, _?).
+bob_init(_, [msg(_, stream(S)) | _]) :-
+    read_stream(S?).
+
+procedure read_stream(ProbeStream?).
+read_stream([hello | S]) :- send_to_user([saw(hello)]), read_stream(S?).
+read_stream([probe(W?) | S]) :- send_to_user([saw(probe)]), answer(W), read_stream(S?).
+read_stream([]).
+
+procedure answer(String).
+answer(hi).

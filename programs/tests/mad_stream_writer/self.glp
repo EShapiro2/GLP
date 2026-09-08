@@ -1,0 +1,11 @@
+%% mad_stream_writer/self.glp --- program interface for
+%% ../mad_stream_writer_boot.glp.
+
+imported procedure agents#alice_init(_?, _?).
+imported procedure agents#bob_init(_?, _?).
+
+exported procedure alice_init(_?, _?).
+alice_init(Id, In) :- agents # alice_init(Id?, In?).
+
+exported procedure bob_init(_?, _?).
+bob_init(Id, In) :- agents # bob_init(Id?, In?).

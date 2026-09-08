@@ -145,9 +145,17 @@ class GlpCompiler {
       ast,
       generateReduce: true,
       procDeclarations: procDeclarations ?? [],
-      // Directory programs: each module is SRSW-checked at discovery, so the
-      // linked whole skips the global pass. A single-module program has no such
-      // per-module pass, so it runs SRSW here.
+      // 🔴 The default skips SRSW, and for a directory program nothing else
+      // performs it: discovery type-checks each module (checkModulesIndependently)
+      // and runs no SRSW pass, so a directory program is compiled and run
+      // unchecked. This comment claimed the opposite until 2026-09-08, when
+      // SGSG lost an afternoon to a clause the check would have rejected at
+      // once (a head handing out the writer of a variable whose reader it was
+      // given, which the compiler silently split into two variables). Turning
+      // it on here is a tree-wide decision, not a local one: 16 of the 24
+      // directory programs the suite loads violate SRSW today, across every
+      // project (IGLP Code's measurement, reported 2026-09-08). A single-module
+      // program passes false and is checked.
       skipGlobalSRSW: skipGlobalSRSW,
     );
 

@@ -3390,6 +3390,19 @@ HEREDOC
 check "MB2 the boot settles with two agents" "Boot settled: 2 agents" "$mb2"
 check "MB2 a shipped module value is activated by run/3 under find_type's identity" "\[bob\] ran(\[done\])" "$mb2"
 
+# MB3: a writer end that travels INSIDE A STREAM ELEMENT --- one level below
+# the link itself --- and the holder's assignment coming back (SGSG Code's
+# report of 2026-09-08 12:53 UTC; madglp-spec, Definition Globalize).  alice
+# cold-calls bob with a stream, writes [hello, probe(W)] on it keeping W's
+# reader, and bob assigns W.  This is the first step of the warm call.
+mb3=$("$REPL_RUN" <<HEREDOC
+:boot $GLP_DIR/programs/tests/mad_stream_writer_boot.glp
+:quit
+HEREDOC
+2>&1)
+check "MB3 the holder reads both elements of the stream" "\[bob\] saw(probe)" "$mb3"
+check "MB3 a writer inside a stream element crosses, and the assignment comes back" "\[alice\] got(hi)" "$mb3"
+
 echo ""
 # =============================================================================
 # SECTION SL: load_file/2 and the artefact on disc (:artefact)
@@ -3676,6 +3689,26 @@ check "SG warm call on three smartphones: the boot settles" "Boot settled: 3 age
 check "SG warm call: alice and carol converse" "\[carol\] greeted(alice)" "$sg_warm"
 check "SG warm call: carol and bob converse" "\[bob\] greeted(carol)" "$sg_warm"
 check "SG warm call: alice's execution sends carol the probe's end" "\[alice\] probed(carol)" "$sg_warm"
+
+# The currency on two smartphones (paper Section 7): the same super-app, two
+# isolates with their own keys, hosting Currencies' mini-app from its certified
+# artefact; the invitation and handshake cross the isolates and the swap of the
+# currency's own contract runs over the conversation the social graph delivered.
+sg_coins=$("$REPL_RUN" <<HEREDOC
+:artefact $GLP_DIR/programs/coins/currency $SG_CORE
+:boot $GLP_DIR/programs/social/coins_boot.glp $SG_CORE
+:quit
+HEREDOC
+2>&1)
+check "SG currency on two smartphones: the boot settles" "Boot settled: 2 agents" "$sg_coins"
+check "SG currency on two smartphones: alice's execution opened" "\[alice\] opened(bob)" "$sg_coins"
+check "SG currency on two smartphones: bob's execution opened" "\[bob\] opened(alice)" "$sg_coins"
+check "SG currency on two smartphones: alice minted her own 2" "\[alice\] minted(2)" "$sg_coins"
+check "SG currency on two smartphones: bob minted his own 2" "\[bob\] minted(2)" "$sg_coins"
+check "SG currency on two smartphones: alice's swap with bob done" "\[alice\] swap_done(bob)" "$sg_coins"
+check "SG currency on two smartphones: bob's swap with alice done" "\[bob\] swap_done(alice)" "$sg_coins"
+check "SG currency on two smartphones: alice holds bob's coin" "\[alice\] holdings(\[lot(bob, 2)\])" "$sg_coins"
+check "SG currency on two smartphones: bob holds alice's coin" "\[bob\] holdings(\[lot(alice, 2)\])" "$sg_coins"
 rm -f "$SG_CORE"/*.glpw
 
 sg_ga=$("$REPL_RUN" <<HEREDOC

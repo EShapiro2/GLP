@@ -1,0 +1,11 @@
+%% mad_stream_writer_boot.glp --- a writer end that travels INSIDE A STREAM
+%% ELEMENT, one level below the link, and the holder's assignment coming back
+%% (SGSG Code's report of 2026-09-08 12:53 UTC; IGLP madglp-spec, Definition
+%% Globalize).  alice cold-calls bob with a stream, then writes
+%% [hello, probe(W) | _] on it keeping W's reader; bob reads the stream and
+%% assigns W; alice's value arrives.  The first step of the warm call.
+
+procedure boot.
+boot :-
+    alice_init(alice, _)@alice,
+    bob_init(bob, _)@bob.
