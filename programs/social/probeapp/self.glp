@@ -1,0 +1,17 @@
+%% probeapp/self.glp --- the smallest certified mini-app: given one end of a
+%% channel, it writes a greeting and a fresh probe on it and hands its holder
+%% the probe's reader.  It calls nothing reaching the network or the person, so
+%% it is certified and can be activated by run/3 (../runprobe).
+
+Inner ::= probe(String?) ; hello.
+InnerStream ::= [] ; [Inner | InnerStream].
+InnerChannel ::= ch(InnerStream, InnerStream?).
+
+exported procedure pa(InnerChannel?, String).
+pa(ch(In, Out?), W?) :- hold_in(In?), fill(Out, W).
+
+procedure hold_in(InnerStream?).
+hold_in(X) :- true.
+
+procedure fill(InnerStream, String).
+fill([hello, probe(W) | []], W?).

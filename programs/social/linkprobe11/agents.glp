@@ -1,0 +1,98 @@
+%% linkprobe11/agents.glp --- linkprobe10's control: the later element is
+%% GROUND, a second greeting carrying no writer, and it does not cross either.
+%% What linkprobe10 shows is therefore the later write, not the writer in it.
+%% Expected of a working runtime: [bob] saw(hello) twice; what happens: once.
+%% See docs/linkprobes.md.
+
+Inner ::= probe(String?) ; hello.
+InnerStream ::= [] ; [Inner | InnerStream].
+InnerChannel ::= ch(InnerStream, InnerStream?).
+
+Mid ::= root(InnerChannel) ; midping.
+MidStream ::= [] ; [Mid | MidStream].
+MidChannel ::= ch(MidStream, MidStream?).
+
+Outer ::= chan(MidChannel) ; ping.
+OuterStream ::= [] ; [Outer | OuterStream].
+
+exported procedure alice_init(_?, _?).
+alice_init(_, _) :-
+    send_to_net([msg(bob, stream(S?))]),
+    new_channel(MidMine, MidTheirs),
+    fill_outer(S, MidTheirs?),
+    new_channel(RootMine, RootTheirs),
+    send_root(MidMine?, RootTheirs?),
+    write_end(RootMine?, W),
+    wait_value(W?).
+
+procedure fill_outer(OuterStream, MidChannel?).
+fill_outer([ping, chan(T?) | []], T).
+
+%% send_root(Mid, Root): the root channel's end on the friend channel.
+procedure send_root(MidChannel?, InnerChannel?).
+send_root(ch(In, Out?), R) :- hold_mid_in(In?), fill_mid(Out, R?).
+
+procedure fill_mid(MidStream, InnerChannel?).
+fill_mid([midping, root(R?) | []], R).
+
+procedure hold_mid_in(MidStream?).
+hold_mid_in(X) :- true.
+
+%% write_end(Ch, W): hello and a fresh probe on the root channel.
+procedure write_end(InnerChannel?, String).
+write_end(ch(In, Out?), W?) :-
+    hold_in(In?),
+    greet(Out, Out2?),
+    probe_later(Out2, W).
+
+procedure hold_in(InnerStream?).
+hold_in(X) :- true.
+
+%% The greeting, the caller keeping the writer of the rest.
+procedure greet(InnerStream, InnerStream?).
+greet([hello | Out2?], Out2).
+
+%% A second greeting, in a later reduction, on the tail; the probe's variable
+%% is never sent, and is held so the clause is SRSW-legal.
+procedure probe_later(InnerStream, String).
+probe_later([hello | []], W?) :- hold_w(W).
+
+procedure hold_w(String).
+hold_w(X?) :- true.
+
+procedure wait_value(String?).
+wait_value(V) :- ground(V?) | send_to_user([got(V?)]).
+
+exported procedure bob_init(_?, _?).
+bob_init(_, [msg(_, stream(S)) | _]) :-
+    read_outer(S?).
+
+procedure read_outer(OuterStream?).
+read_outer([ping | S]) :- send_to_user([saw(ping)]), read_outer(S?).
+read_outer([chan(C) | S]) :- send_to_user([saw(chan)]), read_mid(C?), read_outer(S?).
+read_outer([]).
+
+procedure read_mid(MidChannel?).
+read_mid(ch(In, Out?)) :- read_mid_stream(In?), hold_mid_out(Out).
+
+procedure hold_mid_out(MidStream).
+hold_mid_out(X?) :- true.
+
+procedure read_mid_stream(MidStream?).
+read_mid_stream([midping | S]) :- send_to_user([saw(midping)]), read_mid_stream(S?).
+read_mid_stream([root(C) | S]) :- send_to_user([saw(root)]), read_end(C?), read_mid_stream(S?).
+read_mid_stream([]).
+
+procedure read_end(InnerChannel?).
+read_end(ch(In, Out?)) :- read_inner(In?), hold_out(Out).
+
+procedure hold_out(InnerStream).
+hold_out(X?) :- true.
+
+procedure read_inner(InnerStream?).
+read_inner([hello | S]) :- send_to_user([saw(hello)]), read_inner(S?).
+read_inner([probe(W?) | S]) :- send_to_user([saw(probe)]), answer(W), read_inner(S?).
+read_inner([]).
+
+procedure answer(String).
+answer(hi).

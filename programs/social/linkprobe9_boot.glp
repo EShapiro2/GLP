@@ -1,0 +1,5 @@
+%% linkprobe9_boot.glp --- see linkprobe9/self.glp.
+procedure boot.
+boot :-
+    alice_init(alice, _)@alice,
+    bob_init(bob, _)@bob.

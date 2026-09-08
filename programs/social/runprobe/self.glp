@@ -1,0 +1,7 @@
+%% runprobe/self.glp --- program interface for ../runprobe_boot.glp.
+imported procedure host#alice_init(_?, _?).
+imported procedure host#bob_init(_?, _?).
+exported procedure alice_init(_?, _?).
+alice_init(Id, In) :- host # alice_init(Id?, In?).
+exported procedure bob_init(_?, _?).
+bob_init(Id, In) :- host # bob_init(Id?, In?).

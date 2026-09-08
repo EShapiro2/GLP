@@ -1,0 +1,72 @@
+%% runprobe/host.glp --- ONE CROSSING, the writer created by a MINI-APP
+%% ACTIVATED BY run/3 (../probeapp): WORKS.  bob makes the channel and sends
+%% alice its end; alice loads the certified artefact beside this program,
+%% takes its entry's type identity with find_type/2 and activates it by run/3
+%% with that end; the mini-app writes hello and a fresh probe and hands alice
+%% the probe's reader; bob reads his end and assigns it.  Activation is
+%% therefore not what stops the warm call.  Expected: [bob] saw(hello),
+%% saw(probe), [alice] got(hi).  See ../docs/linkprobes.md.
+
+Inner ::= probe(String?) ; hello.
+InnerStream ::= [] ; [Inner | InnerStream].
+InnerChannel ::= ch(InnerStream, InnerStream?).
+NetContent ::= call ; chan(InnerChannel).
+NetMsg ::= msg(Constant, NetContent).
+NetStream ::= [] ; [NetMsg | NetStream].
+
+%% The mini-app's entry, declared here for find_type/2 (never run here).
+procedure pa(InnerChannel?, String).
+pa(_, W?) :- hold_w(W).
+
+procedure hold_w(String).
+hold_w(X?) :- true.
+
+exported procedure alice_init(_?, _?).
+alice_init(_, In) :-
+    send_to_net([msg(bob, call)]),
+    alice_wait(In?).
+
+procedure alice_wait(NetStream?).
+alice_wait([msg(_, chan(C)) | _]) :- start_app(C?).
+alice_wait([msg(_, call) | In]) :- alice_wait(In?).
+alice_wait([]).
+
+procedure start_app(InnerChannel?).
+start_app(C) :-
+    load_file("probeapp.glpw", M),
+    activate(C?, M?).
+
+%% The artefact is a Module where its certificate verifies (the guard), which
+%% is what run/3 takes.
+procedure activate(InnerChannel?, Content?).
+activate(C, M) :-
+    module(M?) |
+    find_type(pa/2, T),
+    run(pa(C?, W), T?, M?),
+    wait_value(W?).
+
+procedure wait_value(String?).
+wait_value(V) :- ground(V?) | send_to_user([got(V?)]).
+
+exported procedure bob_init(_?, _?).
+bob_init(_, [msg(_, call) | _]) :-
+    new_channel(Mine, Theirs),
+    send_chan(Theirs?),
+    read_end(Mine?).
+
+procedure send_chan(InnerChannel?).
+send_chan(C) :- send_to_net([msg(alice, chan(C?))]).
+
+procedure read_end(InnerChannel?).
+read_end(ch(In, Out?)) :- read_inner(In?), hold_out(Out).
+
+procedure hold_out(InnerStream).
+hold_out(X?) :- true.
+
+procedure read_inner(InnerStream?).
+read_inner([hello | S]) :- send_to_user([saw(hello)]), read_inner(S?).
+read_inner([probe(W?) | S]) :- send_to_user([saw(probe)]), answer(W), read_inner(S?).
+read_inner([]).
+
+procedure answer(String).
+answer(hi).

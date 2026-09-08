@@ -287,6 +287,29 @@ sg_init(bob, consent, NetIn) :-
     send_to_user(Show?),
     bob_person_boot(C?, CK?, CSig?, Ui, Out?, Seen?, BobIn).
 
+%% The currency on two smartphones (../../coins_boot.glp): each person trusts
+%% the compiler's key, installs the certified currency with its own end of a
+%% cards-and-answers channel, and scripts the swap of play_coins; what the
+%% currency shows a person goes to the person, printed by the harness.
+sg_init(alice, coins, NetIn) :-
+    agent # agent(alice, In?, NetIn?, [user_output(Out), net_output(NetOut)]),
+    send_to_net(NetOut?),
+    load_file("currency.glpw", C),
+    certified(C?, CK, CSig),
+    new_channel(AppEnd, PersonEnd),
+    alice_coins_boot(C?, CK?, CSig?, AppEnd?, Out?, In),
+    coin_person(alice, PersonEnd?, [mint(2), swap(bob, alice, 2, bob, 2)], Screen),
+    send_to_user(Screen?).
+sg_init(bob, coins, NetIn) :-
+    agent # agent(bob, In?, NetIn?, [user_output(Out), net_output(NetOut)]),
+    send_to_net(NetOut?),
+    load_file("currency.glpw", C),
+    certified(C?, CK, CSig),
+    new_channel(AppEnd, PersonEnd),
+    bob_coins_boot(C?, CK?, CSig?, AppEnd?, Out?, In),
+    coin_person(bob, PersonEnd?, [mint(2), accept(alice)], Screen),
+    send_to_user(Screen?).
+
 sg_init(alice, warm, NetIn) :-
     agent # agent(alice, In?, NetIn?, [user_output(Out), net_output(NetOut)]),
     send_to_net(NetOut?),
@@ -394,10 +417,14 @@ carol_warm_run([], []).
 %% and invites him, and the handshake opens a root channel of the currency
 %% protocol between their two executions, each activated by run/3 with its
 %% cards-and-answers channel and its conversations.  The persons hold the
-%% other ends of the cards-and-answers channels and read their screens: each
-%% execution shows the conversation opened.  Expected: ScreenA = [opened(bob) |
-%% _], ScreenB = [opened(alice) | _], → suspended (the executions pend on their
-%% cards).
+%% other ends of the cards-and-answers channels: each mints 2, alice offers her
+%% 2 for bob's 2 and bob accepts --- the currency's own swap (its play_swap)
+%% over the conversation the social graph delivered.  Expected: ScreenA =
+%% [opened(bob), minted(2), holdings([lot(alice, 2)]), holdings([]),
+%% swap_done(bob), holdings([lot(bob, 2)]) | _], ScreenB = [opened(alice),
+%% minted(2), holdings([lot(bob, 2)]), swap_done(alice), holdings([lot(alice,
+%% 2)]) | _], → suspended (the executions pend on their remaining cards).
+%% ../../coins_boot.glp runs the same swap on two smartphones.
 %% =============================================================================
 exported procedure play_coins(Stream(ScreenContent), Stream(ScreenContent)).
 play_coins(ScreenA?, ScreenB?) :-
@@ -453,6 +480,21 @@ bob_coins_run([msg(agent, person, befriend(alice, Resp?)) | Outs],
 bob_coins_run([_ | Outs], Cmds?) :- otherwise | bob_coins_run(Outs?, Cmds).
 bob_coins_run([], []).
 
+
+%% The same two persons under :boot, each trusting the compiler's key first.
+procedure alice_coins_boot(Content?, String?, String?, Channel(Stream(UserAnswer), Stream(Event))?, AgentToUserStream?, UserInStream).
+alice_coins_boot(C, CK, CSig, AppEnd, Outs,
+                 [msg(person, alice, trust(CK?)),
+                  msg(person, alice, install_coins(currency, C?, CSig?, AppEnd?)),
+                  msg(person, alice, connect(bob)) | Cmds?]) :-
+    alice_coins_run(Outs?, Cmds).
+
+procedure bob_coins_boot(Content?, String?, String?, Channel(Stream(UserAnswer), Stream(Event))?, AgentToUserStream?, UserInStream).
+bob_coins_boot(C, CK, CSig, AppEnd, Outs,
+               [msg(person, bob, trust(CK?)),
+                msg(person, bob, install_coins(currency, C?, CSig?, AppEnd?)),
+                msg(person, bob, accept_invite(currency, alice)) | Cmds?]) :-
+    bob_coins_run(Outs?, Cmds).
 
 %% =============================================================================
 %% coin_person(Id, PersonEnd, Script, Screen): a scripted person on the

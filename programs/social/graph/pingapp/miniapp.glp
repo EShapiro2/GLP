@@ -52,10 +52,11 @@ loop(Id, [pending_link(Name, Via) | Down], Ev, [held_link(Via?) | Ui?], [warm_ca
 %% A greeting received: report it; at alice, greeted by carol, probe her.
 %% (The clauses on the events are made exclusive by guards, not by otherwise,
 %% which would wait on the clauses that read the social graph's stream.)
-loop(alice, Down, [greeted(carol, Who) | Ev], [greeted(Who?), probed(carol) | Ui?], Up?, Convs, Held) :-
+loop(alice, Down, [greeted(carol, Who) | Ev], [greeted(Who?) | Ui1?], Up?, Convs, Held) :-
     ground(Who?) |
-    send_on(carol, probe(W), Convs?, Convs1),
-    await_probe(W?, EvW),
+    probe_on(carol, Convs?, Convs1, V, St),
+    report(St?, Ui1, Ui?),
+    await_probe(V?, EvW),
     merge(Ev?, EvW?, Ev1),
     loop(alice, Down?, Ev1?, Ui, Up, Convs1?, Held?).
 loop(alice, Down, [greeted(F, Who) | Ev], [greeted(Who?) | Ui?], Up?, Convs, Held) :-
@@ -98,12 +99,25 @@ procedure open_out(Constant?, Constant?, HeldList?, HeldList, PingStream, PingSt
 open_out(bob, Id, [held(W?) | Held], Held?, [hello(Id?), probe(W) | Out2?], Out2).
 open_out(F, Id, Held, Held?, [hello(Id?) | Out2?], Out2) :- otherwise | true.
 
-%% send_on(F, Msg, Convs, Convs1): send Msg on the conversation with F.
-procedure send_on(Constant?, PingMsg?, ConvList?, ConvList).
-send_on(F, Msg, [conv(F1, [Msg? | Out1?]) | Rest], [conv(F1?, Out1) | Rest?]) :-
+%% probe_on(F, Convs, Convs1, V): put a fresh probe on the conversation with F
+%% --- the element carries the variable's writer, for the far side to assign,
+%% and the caller is given its reader.  The element is built HERE, at an
+%% output position: a fresh writer passed into a goal's input argument does
+%% not carry an assignment back across a link (programs/social/linkprobe
+%% beside programs/social/linkprobe3).
+procedure probe_on(Constant?, ConvList?, ConvList, String, Constant).
+probe_on(F, [conv(F1, [probe(W) | Out1?]) | Rest], [conv(F1?, Out1) | Rest?], W?, sent) :-
     F? =?= F1? | true.
-send_on(F, Msg, [C | Rest], [C? | Rest1?]) :- otherwise | send_on(F?, Msg?, Rest?, Rest1).
-send_on(_, _, [], []).
+probe_on(F, [C | Rest], [C? | Rest1?], V?, St?) :- otherwise | probe_on(F?, Rest?, Rest1, V, St).
+probe_on(_, [], [], V?, none) :- hold_value(V).
+
+%% report(St, Ui, Ui2): what became of the probe, on the person's stream.
+procedure report(Constant?, AppUiStream, AppUiStream?).
+report(sent, [probed(carol) | Ui2?], Ui2).
+report(none, [no_conv(carol) | Ui2?], Ui2).
+
+procedure hold_value(String).
+hold_value(X?) :- true.
 
 %% forward(W, Convs, Convs1, Held, Held1): carol forwards the probe's end to bob
 %% where that conversation is open, else holds it.

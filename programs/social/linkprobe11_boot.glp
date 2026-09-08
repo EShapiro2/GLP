@@ -1,4 +1,4 @@
-%% linkprobe_boot.glp --- see linkprobe/self.glp.
+%% linkprobe11_boot.glp --- see linkprobe11/self.glp.
 procedure boot.
 boot :-
     alice_init(alice, _)@alice,

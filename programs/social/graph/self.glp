@@ -156,7 +156,8 @@ AnchorFriend ::= none ; found(Constant).
 %% (ii) The channel to the super-app user interface: what the mini-app shows
 %% its person.
 AppUi       ::= opened(Constant) ; greeted(Constant) ; got(String)
-              ; probed(Constant) ; forwarded(Constant) ; answered ; held_link(Constant).
+              ; probed(Constant) ; forwarded(Constant) ; answered ; held_link(Constant)
+              ; no_conv(Constant).
 AppUiStream ::= [] ; [AppUi | AppUiStream].
 
 %% Answers of the host's lookups and checks.
