@@ -3556,26 +3556,6 @@ echo ""
 # list cannot rot into a permanent exception — it must be removed the moment its
 # fix lands.
 
-# Known-red tests.  One entry per line, matched against "<file>: <test name>".
-# Each entry names the owning project and what blocks it.
-# Empty: nothing is known-red.  An entry names a test another project owns and
-# is expected to fail until they fix it; the guard below fails the suite when a
-# listed test passes, so an entry is deleted in the same commit as its fix.
-#
-# glp_runtime entries carry the path `dart test` prints, relative to that
-# package: `test/...`.  glp_multiagent entries carry the package name too —
-# `glp_multiagent/test/...` — so the two trees cannot collide on a file of the
-# same name.
-#
-# The seven below are vGLP's, all one cause, all red since d4afc77b on
-# 2026-08-01: that commit added `imported procedure grassapp_agent#agent/7` to
-# the play files so programs/grassapp would pass the per-module check as a
-# directory program, and a source carrying an imported declaration is no longer
-# a self-contained program, so the co-loaded path these seven still use is
-# rejected.  vGLP claimed them at 2026-08-01 22:28 under the test-ownership
-# ruling and is moving them onto a directory load; that needs config.programDir,
-# which is IGLP's line and waits on send_to_net/1 reaching root self.glp.  vGLP
-# named six of the seven — paper_screenshots_constructs was not on their list
 # =============================================================================
 # SECTION MA: multiagent_tests program directories load under strict types
 # =============================================================================
@@ -3916,7 +3896,17 @@ check_not "SG budget no failed play" "→ failed" "$sg_budget"
 
 echo ""
 
-# and fails on the same rejection of the same file.
+# Known-red tests.  One entry per line, matched against "<file>: <test name>".
+# Each entry names the owning project and what blocks it.
+# Empty: nothing is known-red.  An entry names a test another project owns and
+# is expected to fail until they fix it; the guard below fails the suite when a
+# listed test passes, so an entry is deleted in the same commit as its fix.
+#
+# glp_runtime entries carry the path `dart test` prints, relative to that
+# package: `test/...`.  glp_multiagent entries carry the package name too —
+# `glp_multiagent/test/...` — so the two trees cannot collide on a file of the
+# same name.
+#
 # The four vGLP entries went on 2026-09-09: each named a parse test of a
 # deployed .vglp by the path it had before SGSG, Currencies and CSSN moved the
 # source with its .glp into the certified program of a mini-app, and vGLP
