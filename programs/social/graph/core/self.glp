@@ -16,6 +16,10 @@
 procedure ping(Constant?, AppUiStream, SgChannel?).
 ping(_, [], _).
 
+imported procedure home_ui#superapp_ui(Constant?, Stream(_)?, Stream(_)?).
+exported procedure superapp_ui(Constant?, Stream(_)?, Stream(_)?).
+superapp_ui(Id, Answers, NetIn) :- home_ui # superapp_ui(Id?, Answers?, NetIn?).
+
 imported procedure superapp_plays#play_invite(AppUiStream, AppUiStream).
 exported procedure play_invite(AppUiStream, AppUiStream).
 play_invite(A?, B?) :- superapp_plays # play_invite(A, B).

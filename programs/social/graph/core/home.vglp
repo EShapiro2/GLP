@@ -1,0 +1,128 @@
+%% home.vglp --- the super-app's person interface, in vGLP: the acts a person
+%% wills of their own super-app, one volition-guarded clause each, with the
+%% display declarations from which the screen is derived.  Its compilation by
+%% the vGLP canonical compilation --- the agent and its mediator --- is
+%% home.glp beside this file (glpc :emit); the compiled module is not edited.
+%%
+%% The four acts are those of SGSG paper Section 3: trusting a compiler's key,
+%% installing a certified mini-app, inviting a friend to it, and answering a
+%% friend who asks to connect.  What the clauses produce is the very command
+%% stream the super-app's agent reads (agent.glp, agent/5's person input), so
+%% the person's volitions reach the same agent whether they are willed through
+%% these constructs or written by a play's script.
+%%
+%% The types are the social graph's (../self.glp).
+
+%% The person's acts, as the app renders them.
+display home *(Key) : panel(apps), label("Trust a compiler"), field(Key, text), persistent.
+display home *(Name, App) : panel(apps), label("Install a mini-app"), field(Name, text), field(App, text), persistent.
+display home *(App, Friend) : panel(apps), label("Invite a friend"), field(App, peer), field(Friend, peer), persistent.
+display home *(Friend) : panel(apps), label("Connect"), field(Friend, peer), persistent.
+display respond_friend *(yes, From?) : panel(apps), label("Accept"), transient.
+display respond_friend *(no, From?) : panel(apps), label("Decline"), transient.
+display msg(agent, person, connected(Friend)) : panel(apps), view(friends).
+
+%% =============================================================================
+%% The person's answer to a friend who asks to connect: one goal per request,
+%% so several pend at once and are answered in any order.
+%% =============================================================================
+
+procedure respond_friend(Constant?, Constant?, Response, Stream(UserInMsg)).
+
+*(yes, From?)
+respond_friend(Id, From, Resp?, [msg(person, Id?, decision(yes, From?, response(Resp)))]) :-
+    ground(Id?), ground(From?) | true.
+
+*(no, From?)
+respond_friend(Id, From, Resp?, [msg(person, Id?, decision(no, From?, response(Resp)))]) :-
+    ground(Id?), ground(From?) | true.
+
+%% =============================================================================
+%% The person's own acts on their super-app
+%% =============================================================================
+
+%% home(Id, Outs, Cmds): the person's commands to their super-app, willed
+%% through the constructs above; Outs is what the super-app tells the person,
+%% on which a friend's request to connect raises its card.
+exported procedure home(Constant?, AgentToUserStream?, Stream(UserInMsg)).
+
+%% Trust a compiler's key: what its certificate signs is then installable.
+*(Key)
+home(Id, Outs, Cmds?) :-
+    ground(Id?), ground(Key?) |
+    trust_act(Key?, Id?, Outs?, Cmds).
+
+%% Install a certified mini-app: the artefact beside this program is read, its
+%% creator's certification signed over its source identity, and the mini-app
+%% installed under the name the person gives it, with the channel on which it
+%% will show its person its own screen.
+*(Name, App)
+home(Id, Outs, Cmds?) :-
+    ground(Id?), ground(Name?), ground(App?) |
+    load_file(Name?, C),
+    install_act(C?, App?, Id?, Outs?, Cmds).
+
+%% Invite a friend to a mini-app installed here.
+*(App, Friend)
+home(Id, Outs, Cmds?) :-
+    ground(Id?), ground(App?), ground(Friend?) |
+    invite_act(App?, Friend?, Id?, Outs?, Cmds).
+
+%% Ask a person to connect: the cold call of the social graph.
+*(Friend)
+home(Id, Outs, Cmds?) :-
+    ground(Id?), ground(Friend?) |
+    connect_act(Friend?, Id?, Outs?, Cmds).
+
+%% A friend asks to connect: the person answers on a card of their own.
+home(Id, [msg(agent, person, befriend(From, Resp?)) | Outs], Cmds?) :-
+    ground(Id?), ground(From?) |
+    respond_friend(Id?, From?, Resp, Answer),
+    merge(Answer?, Cmds1?, Cmds),
+    home(Id?, Outs?, Cmds1).
+
+%% Anything else the super-app says is the screen's, not an ask.
+home(Id, [_ | Outs], Cmds?) :-
+    ground(Id?), otherwise |
+    home(Id?, Outs?, Cmds).
+
+home(_, [], []).
+
+%% The willed acts, each the command it puts on the person's stream.
+procedure trust_act(String?, Constant?, AgentToUserStream?, Stream(UserInMsg)).
+trust_act(Key, Id, Outs, [msg(person, Id?, trust(Key?)) | Cmds?]) :-
+    ground(Key?) | home(Id?, Outs?, Cmds).
+
+procedure invite_act(Constant?, Constant?, Constant?, AgentToUserStream?, Stream(UserInMsg)).
+invite_act(App, Friend, Id, Outs, [msg(person, Id?, invite(App?, Friend?)) | Cmds?]) :-
+    ground(App?), ground(Friend?) | home(Id?, Outs?, Cmds).
+
+procedure connect_act(Constant?, Constant?, AgentToUserStream?, Stream(UserInMsg)).
+connect_act(Friend, Id, Outs, [msg(person, Id?, connect(Friend?)) | Cmds?]) :-
+    ground(Friend?) | home(Id?, Outs?, Cmds).
+
+%% install_act(Content, App, Id, Outs, Cmds): a certified artefact is installed
+%% under the person's name for it; anything else is not installed, and the
+%% person's stream carries on.
+procedure install_act(Content?, Constant?, Constant?, AgentToUserStream?, Stream(UserInMsg)).
+install_act(M, App, Id, Outs, [msg(person, Id?, install(App?, M?, CSig?, Ui)) | Cmds?]) :-
+    module(M?) |
+    creator_certification(M?, CSig),
+    hold_ui(Ui?),
+    home(Id?, Outs?, Cmds).
+install_act(S, _, Id, Outs, Cmds?) :-
+    string(S?) |
+    home(Id?, Outs?, Cmds).
+
+%% The creator's certification, signed here over the mini-app's source identity
+%% and the acts of its contract, as the super-app's plays sign it.
+procedure creator_certification(Content?, String).
+creator_certification(M, CSig?) :-
+    decompose_module(M?, _, Src, _),
+    self_key(K),
+    sign(creator_cert(Src?, [friendship, ending_a_friendship], grassroots), K?, CSig).
+
+%% The mini-app's user-interface stream: the super-app user interface holds it;
+%% here it is held until there is a screen to show it on.
+procedure hold_ui(AppUiStream?).
+hold_ui(X) :- true.
