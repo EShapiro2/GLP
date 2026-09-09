@@ -1,0 +1,64 @@
+%% linkprobe14/agents.glp --- THE WORKAROUND'S SHAPE: one of the two parties
+%% makes the channel and only ONE end crosses, forwarded by the third agent.
+%% bob makes the channel and keeps one end; he sends the other to carol, who
+%% forwards it to alice; then bob and alice greet each other on it.  Beside
+%% ../linkprobe13, where carol makes the channel and both ends cross, and
+%% nothing passes.
+%% Expected: [alice] saw(hello_from(bob)) and [bob] saw(hello_from(alice)).
+
+Greeting ::= hello(Constant).
+GreetStream ::= [] ; [Greeting | GreetStream].
+GreetChannel ::= ch(GreetStream, GreetStream?).
+Outer ::= chan(GreetChannel).
+OuterStream ::= [] ; [Outer | OuterStream].
+NetContent ::= stream(OuterStream).
+NetMsg ::= msg(Constant, NetContent).
+NetStream ::= [] ; [NetMsg | NetStream].
+
+%% bob: make the channel, keep one end, send the other to carol, and greet.
+exported procedure bob_init(_?, _?).
+bob_init(_, _) :-
+    send_to_net([msg(carol, stream(S?))]),
+    new_channel(Mine, Theirs),
+    put(S, Theirs?),
+    greet(bob, Mine?).
+
+procedure put(OuterStream, GreetChannel?).
+put([chan(C?) | T?], C) :- hold_outer(T).
+
+procedure hold_outer(OuterStream).
+hold_outer(X?) :- true.
+
+%% carol: forward what bob sent her to alice, on a stream of her own.
+exported procedure carol_init(_?, _?).
+carol_init(_, [msg(_, stream(S)) | _]) :-
+    send_to_net([msg(alice, stream(S1?))]),
+    forward(S?, S1).
+
+procedure forward(OuterStream?, OuterStream).
+forward([chan(C) | _], [chan(C?) | T?]) :- hold_outer(T).
+forward([], []).
+
+%% alice: greet on the end that reached her through carol.
+exported procedure alice_init(_?, _?).
+alice_init(_, [msg(_, stream(S)) | _]) :- await(alice, S?).
+
+procedure await(Constant?, OuterStream?).
+await(Me, [chan(C) | _]) :- ground(Me?) | greet(Me?, C?).
+await(_, []).
+
+procedure greet(Constant?, GreetChannel?).
+greet(Me, ch(In, Out?)) :-
+    ground(Me?) |
+    say(Me?, Out),
+    listen(In?).
+
+procedure say(Constant?, GreetStream).
+say(Me, [hello(Me?) | T?]) :- hold(T).
+
+procedure hold(GreetStream).
+hold(X?) :- true.
+
+procedure listen(GreetStream?).
+listen([hello(Who) | In]) :- ground(Who?) | send_to_user([saw(hello_from(Who?))]), listen(In?).
+listen([]).

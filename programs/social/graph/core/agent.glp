@@ -126,13 +126,22 @@ agent(Id, [msg(person, Id1, introduce(P, Q))|UserIn], NetIn, Outs, Host) :-
     send_friend(Q?, msg(Id?, Q?, intro(P?, PQCh?)), Outs1?, Outs2),
     agent(Id?, UserIn?, NetIn?, Outs2?, Host?).
 
-%% User accepts intro — send ack, spawn peer-wait, inject result
-agent(Id, [msg(person, Id1, accept_intro(Other, channel(Ch)))|UserIn], NetIn, Outs, Host) :-
+%% User accepts intro --- send ack, spawn peer-wait, inject result.  The
+%% consent is kept: the channel the introducer made reaches this agent through
+%% the introducer, so its links are held at both ends until each end's own
+%% person's volition is found (IGLP, madglp-spec, Held Links), and this is
+%% that volition.
+agent(Id, [msg(person, Id1, accept_intro(Other, channel(Ch)))|UserIn], NetIn, Outs,
+      host(Apps, Atts, Pend, Trusted)) :-
     Id? =?= Id1?, ground(Other?),
     send(ack(Id?), Ch?, Ch1) |
     intro_await_peer(Other?, Ch1?, Result),
     inject_intro_result(Result?, UserIn?, UserIn1),
-    agent(Id?, UserIn1?, NetIn?, Outs?, Host?).
+    take_intro_via(Other?, Pend?, Pend1, Via),
+    release_by_sender(Via?, Pend1?, Pend2),
+    accepted_intro(Via?, Other?, Pend2?, Pend3),
+    agent(Id?, UserIn1?, NetIn?, Outs?,
+          host(Apps?, Atts?, Pend3?, Trusted?)).
 
 %% User rejects intro — send nack on channel, close it
 agent(Id, [msg(person, Id1, reject_intro(_, channel(ch(_, [nack|[]]))))|UserIn], NetIn, Outs, Host) :-
@@ -317,11 +326,16 @@ agent(Id, UserIn, [msg(From, Id1, unfriend)|NetIn], Outs, Host) :-
     send_user(msg(agent, person, unfriended(From?)), Outs1?, Outs2),
     agent(Id?, UserIn?, NetIn?, Outs2?, Host?).
 
-%% Introduction from friend — pass channel to user via mediator
-agent(Id, UserIn, [msg(From, Id1, intro(Other, Ch))|NetIn], Outs, Host) :-
-    Id? =?= Id1?, ground(Other?) |
+%% Introduction from a friend --- the channel goes to the person, and who
+%% introduced whom is remembered: the channel is the introducer's, so the links
+%% it brings are anchored at the introducer, and it is the introducer that the
+%% person's consent must be matched against when they are released.
+agent(Id, UserIn, [msg(From, Id1, intro(Other, Ch))|NetIn], Outs,
+      host(Apps, Atts, Pend, Trusted)) :-
+    Id? =?= Id1?, ground(Other?), ground(From?) |
     send_user(msg(agent, person, befriend_intro(From?, Other?, Ch?)), Outs?, Outs1),
-    agent(Id?, UserIn?, NetIn?, Outs1?, Host?).
+    agent(Id?, UserIn?, NetIn?, Outs1?,
+          host(Apps?, Atts?, [intro_via(Other?, From?) | Pend?], Trusted?)).
 
 %% --- The handshake over the friend channel (Section 3, "Activation and
 %% joining"; Section 6.1, Mechanisms) ---
@@ -373,7 +387,9 @@ agent(Id, UserIn, [msg(From, Id1, root(App, Src, T, Up, End))|NetIn], Outs,
 %% conversations.
 agent(Id, UserIn, [pending_link(Name, S)|NetIn], Outs, host(Apps, Atts, Pend, Trusted)) :-
     ground(Id?), ground(S?), ground(Name?) |
-    take_warm_ok(Name?, S?, Pend?, Pend1, Found),
+    Parts ..= Name?,
+    anchor_is(Parts?, Id?, Mine),
+    release_check(Mine?, Parts?, S?, Pend?, Pend1, Found),
     pending_step(Found?, Name?, S?, Id?, UserIn?, NetIn?, Outs?, Apps?, Atts?, Pend1?, Trusted?).
 
 %% A friend asks to be introduced to the anchor of a held name (the holder
@@ -387,17 +403,16 @@ agent(Id, UserIn, [msg(From, Id1, request_intro(Anchor))|NetIn], Outs,
     intro_request(Found?, Id?, From?, Anchor?, UserIn?, NetIn?, Outs1?,
                   host(Apps?, Atts?, Pend?, Trusted?)).
 
-%% The warm call itself, from a new friend: the name must be anchored here,
-%% and the person must have consented to a warm call with the caller; then
-%% the exchange proceeds as an invitation of the caller to the mini-app, and
-%% the held value, once released by the caller, is accepted.
-agent(Id, UserIn, [msg(From, Id1, warm_call(App, Name))|NetIn], Outs,
+%% The warm call itself, from a new friend: the person must have consented to
+%% a warm call with the caller, which is what identifies the call --- the held
+%% link's name stays at the holder and never crosses.  Then the exchange
+%% proceeds as an invitation of the caller to the mini-app, and the held value,
+%% once the caller releases it, is accepted at this end in its turn.
+agent(Id, UserIn, [msg(From, Id1, warm_call(App))|NetIn], Outs,
       host(Apps, Atts, Pend, Trusted)) :-
-    Id? =?= Id1?, ground(From?), ground(App?), ground(Name?) |
-    Parts ..= Name?,
-    anchor_is(Parts?, Id?, Ok),
+    Id? =?= Id1?, ground(From?), ground(App?) |
     take_warm_consent(From?, Pend?, Pend1, C),
-    warm_call_step(Ok?, C?, Id?, From?, App?, Name?, UserIn?, NetIn?, Outs?,
+    warm_call_step(C?, Id?, From?, App?, UserIn?, NetIn?, Outs?,
                    host(Apps?, Atts?, Pend1?, Trusted?)).
 
 %% Network catch-all
@@ -809,8 +824,8 @@ warm_after_commit(Id, Friend, [_ | Rest], Outs, Outs1?) :-
 warm_after_commit(_, _, [], Outs, Outs?).
 
 procedure wac_step(Constant?, Constant?, Constant?, Constant?, _?, PendingInv?, OutputsList?, OutputsList).
-wac_step(true, Id, Friend, App, Name, _, Outs, Outs1?) :-
-    send_friend(Friend?, msg(Id?, Friend?, warm_call(App?, Name?)), Outs?, Outs1).
+wac_step(true, Id, Friend, App, _, _, Outs, Outs1?) :-
+    send_friend(Friend?, msg(Id?, Friend?, warm_call(App?)), Outs?, Outs1).
 wac_step(false, Id, Friend, _, _, Rest, Outs, Outs1?) :-
     warm_after_commit(Id?, Friend?, Rest?, Outs?, Outs1).
 
@@ -838,22 +853,96 @@ take_warm_consent(Who, [warm_consent(W) | Rest], Rest?, true) :- Who? =?= W? | t
 take_warm_consent(Who, [P | Rest], [P? | Rest1?], C?) :- otherwise | take_warm_consent(Who?, Rest?, Rest1, C).
 take_warm_consent(_, [], [], false).
 
-%% take_warm_ok(Name, S, Pend, Pend1, Found): a warm call accepted from S for
-%% the name, removed.
-procedure take_warm_ok(_?, Constant?, PendingInv?, PendingInv, Constant).
-take_warm_ok(Name, S, [warm_ok(N, F) | Rest], Rest?, true) :-
-    Name? =?= N?, S? =?= F? | true.
-take_warm_ok(Name, S, [P | Rest], [P? | Rest1?], B?) :-
-    otherwise | take_warm_ok(Name?, S?, Rest?, Rest1, B).
-take_warm_ok(_, _, [], [], false).
+%% warm_release(Mine, S, Pend, Pend1, B): a held link is authorised at BOTH of
+%% its ends and each end decides for itself (IGLP, madglp-spec, Held Links).
+%% This end is the ANCHOR when the name is anchored here --- the value is
+%% coming home, and it is released where the person accepted a warm call from
+%% the friend that sends it.  Otherwise this end is the HOLDER, and the report
+%% goes to the mini-app, which asks for the warm call.  The two ends of one
+%% link have different names and neither crosses, so they are never compared:
+%% the friend it comes from is what identifies the link to a program.
+procedure release_check(Constant?, Stream(_)?, Constant?, PendingInv?, PendingInv, Constant).
+release_check(true, _, S, Pend, Pend1?, B?) :- take_warm_ok(S?, Pend?, Pend1, B).
+release_check(false, Parts, S, Pend, Pend1?, B?) :- intro_ok_for(Parts?, S?, Pend?, Pend1, B).
+
+%% take_intro_via(Other, Pend, Pend1, Via): who introduced Other, removed.
+procedure take_intro_via(Constant?, PendingInv?, PendingInv, AnchorFriend).
+take_intro_via(Other, [intro_via(O, V) | Rest], Rest?, found(V?)) :-
+    Other? =?= O? | true.
+take_intro_via(Other, [P | Rest], [P? | Rest1?], V?) :-
+    otherwise | take_intro_via(Other?, Rest?, Rest1, V).
+take_intro_via(_, [], [], none).
+
+%% accepted_intro(Via, Other, Pend, Pend1): the consent kept, so that a link of
+%% this introduction reported later is released in its turn.
+procedure accepted_intro(AnchorFriend?, Constant?, PendingInv?, PendingInv).
+accepted_intro(found(Via), Other, Pend, [intro_ok(Via?), intro_ok(Other?) | Pend?]).
+accepted_intro(none, Other, Pend, [intro_ok(Other?) | Pend?]).
+
+%% release_by_sender(Via, Pend, Pend1): every link already reported and held
+%% that came FROM Via, authorised now that the person has consented to the
+%% introduction Via made.  The introducer's channel carries the introducer's
+%% own variables, so these links are anchored at the introducer and not at the
+%% friend being introduced.
+procedure release_by_sender(AnchorFriend?, PendingInv?, PendingInv).
+release_by_sender(found(Via), Pend, Pend1?) :- rbs(Via?, Pend?, Pend1).
+release_by_sender(none, Pend, Pend?).
+
+procedure rbs(Constant?, PendingInv?, PendingInv).
+rbs(Via, [held(Name, S) | Rest], Pend1?) :-
+    ground(Name?), Via? =?= S? |
+    authorise_link(Name?, authorise),
+    rbs(Via?, Rest?, Pend1).
+rbs(Via, [P | Rest], [P? | Rest1?]) :- otherwise | rbs(Via?, Rest?, Rest1).
+rbs(_, [], []).
+
+%% intro_ok_for(Parts, Pend, Pend1, B): whether the person has accepted an
+%% introduction with the anchor of this held name.  The introducer makes the
+%% channel and each of the two it introduces receives its end FROM the
+%% introducer, so both ends are held; the consent to the introduction is what
+%% releases them, and it is kept, since one introduction holds several links.
+%% intro_ok_for(Parts, S, Pend, Pend1, B): whether the person has consented to
+%% an introduction whose channel this link belongs to --- the link's anchor or
+%% the agent it came from is one they accepted an introduction with or from.
+procedure intro_ok_for(Stream(_)?, Constant?, PendingInv?, PendingInv, Constant).
+intro_ok_for(Parts, S, [intro_ok(W) | Rest], [intro_ok(W?) | Rest1?], B?) :-
+    ground(Parts?), ground(S?) |
+    anchor_is(Parts?, W?, Hit),
+    iof_step(Hit?, Parts?, S?, W?, Rest?, Rest1, B).
+intro_ok_for(Parts, S, [P | Rest], [P? | Rest1?], B?) :-
+    otherwise | intro_ok_for(Parts?, S?, Rest?, Rest1, B).
+intro_ok_for(_, _, [], [], false).
+
+procedure iof_step(Constant?, Stream(_)?, Constant?, Constant?, PendingInv?, PendingInv, Constant).
+iof_step(true, _, _, _, Rest, Rest?, true).
+iof_step(false, Parts, S, W, Rest, Rest1?, B?) :-
+    S? =?= W? | iof_hit(Parts?, S?, Rest?, Rest1, B).
+iof_step(false, Parts, S, W, Rest, Rest1?, B?) :-
+    ~(S? =?= W?) | intro_ok_for(Parts?, S?, Rest?, Rest1, B).
+
+procedure iof_hit(Stream(_)?, Constant?, PendingInv?, PendingInv, Constant).
+iof_hit(_, _, Rest, Rest?, true).
+
+%% take_warm_ok(S, Pend, Pend1, Found): a warm call accepted from S, removed.
+procedure take_warm_ok(Constant?, PendingInv?, PendingInv, Constant).
+take_warm_ok(S, [warm_ok(F) | Rest], Rest?, true) :- S? =?= F? | true.
+take_warm_ok(S, [P | Rest], [P? | Rest1?], B?) :-
+    otherwise | take_warm_ok(S?, Rest?, Rest1, B).
+take_warm_ok(_, [], [], false).
 
 procedure pending_step(Constant?, _?, Constant?, Constant?, UserInStream?, NetInStream?, OutputsList?, AppList?, AttestList?, PendingInv?, Stream(String)?).
 pending_step(true, Name, _, Id, UserIn, NetIn, Outs, Apps, Atts, Pend, Trusted) :-
     authorise_link(Name?, authorise),
     agent(Id?, UserIn?, NetIn?, Outs?, host(Apps?, Atts?, Pend?, Trusted?)).
+%% No volition for it yet: the report goes to the mini-apps, which know their
+%% conversations, AND the link is remembered, so that a consent given after the
+%% report --- the person accepting the introduction the link came with ---
+%% releases it in its turn.  A link reported before its volition and then
+%% forgotten is a link nothing can ever release.
 pending_step(false, Name, S, Id, UserIn, NetIn, Outs, Apps, Atts, Pend, Trusted) :-
     forward_pending(Name?, S?, Apps?, Apps1),
-    agent(Id?, UserIn?, NetIn?, Outs?, host(Apps1?, Atts?, Pend?, Trusted?)).
+    agent(Id?, UserIn?, NetIn?, Outs?,
+          host(Apps1?, Atts?, [held(Name?, S?) | Pend?], Trusted?)).
 
 %% forward_pending(Name, S, Apps, Apps1): the report to every running mini-app.
 procedure forward_pending(_?, Constant?, AppList?, AppList).
@@ -868,12 +957,11 @@ forward_pending(_, _, [], []).
 procedure push_down(SgToApp?, SgToAppStream, SgToAppStream?).
 push_down(Msg, [Msg? | Sg1?], Sg1).
 
-procedure warm_call_step(Constant?, Constant?, Constant?, Constant?, Constant?, _?, UserInStream?, NetInStream?, OutputsList?, Host?).
-warm_call_step(true, true, Id, From, App, Name, UserIn, NetIn, Outs, host(Apps, Atts, Pend, Trusted)) :-
+procedure warm_call_step(Constant?, Constant?, Constant?, Constant?, UserInStream?, NetInStream?, OutputsList?, Host?).
+warm_call_step(true, Id, From, App, UserIn, NetIn, Outs, host(Apps, Atts, Pend, Trusted)) :-
     agent(Id?, [msg(person, Id?, invite(App?, From?)) | UserIn?], NetIn?, Outs?,
-          host(Apps?, Atts?, [warm_ok(Name?, From?) | Pend?], Trusted?)).
-warm_call_step(_, _, Id, _, _, _, UserIn, NetIn, Outs, Host) :-
-    otherwise |
+          host(Apps?, Atts?, [warm_ok(From?) | Pend?], Trusted?)).
+warm_call_step(false, Id, _, _, UserIn, NetIn, Outs, Host) :-
     agent(Id?, UserIn?, NetIn?, Outs?, Host?).
 
 %% --- at the forwarding friend ---

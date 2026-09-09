@@ -87,9 +87,14 @@ FriendContent ::= response(Response)
                 ; root(Constant, String, Constant, String, RootEnd)
                 %% The warm call (Section 5.2): the holder asks the forwarding
                 %% friend for an introduction to the anchor; over the friend
-                %% channel that results, warm_call(App, Name) to the anchor.
+                %% channel that results, warm_call(App) to the anchor.  The
+                %% call carries the mini-app and not the held link's name: a
+                %% global name is encoded as a variable in a message and does
+                %% not cross as data (IGLP, madglp-spec, Global Variable
+                %% Names), and the anchor identifies the call by the friend it
+                %% comes from, which is who its person consented to.
                 ; request_intro(Constant)
-                ; warm_call(Constant, _).
+                ; warm_call(Constant).
 
 %% Setup channel content: ack/nack handshake plus the fresh-friend-channel
 %% conveyance the shared lib befriend_commit uses to install the friend channel.
@@ -202,9 +207,12 @@ Pending      ::= offered(Constant, Constant, String, Constant, String)
                ; warm(Constant, _)
                ; warm_wait(Constant, _, Constant)
                ; warm_consent(Constant)
-               ; warm_ok(_, Constant)
+               ; warm_ok(Constant)
                ; intro_consent(Constant, Constant)
-               ; intro_wait(Constant, Constant).
+               ; intro_wait(Constant, Constant)
+               ; intro_ok(Constant)
+               ; intro_via(Constant, Constant)
+               ; held(_, Constant).
 PendingInv   ::= [] ; [Pending | PendingInv].
 Host ::= host(AppList, AttestList, PendingInv, Stream(String)).
 
