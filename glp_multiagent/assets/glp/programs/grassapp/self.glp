@@ -157,6 +157,39 @@ UserContent ::= connect(Constant)
 %% agent <-> network cold-call (2-arg msg(Dest, Content)): forwards the writer.
 NetColdCall ::= friend_request(Constant, Response?).
 
+%% Network output: only cold calls are ever written to the network entry
+%% (grassapp_agent's connect clause); a friend's messages go on the friend
+%% channel.  A per-kind entry (net_output below) types the stream at exactly
+%% this, so send_to_net/1, which reads msg(Constant, _), accepts it --- the
+%% split social/graph makes (its NetOutMsg / NetOutStream).
+NetOutMsg    ::= msg(Constant, NetColdCall).
+NetOutStream ::= [] ; [NetOutMsg | NetOutStream].
+
+%% The agent's network input: the cold calls of others, delivered by the
+%% network (or a headless play's router), and, once a friend channel is merged
+%% into it (handle_response), that friend's messages.  The shape social/graph
+%% gives its NetInMsg.
+NetInMsg     ::= msg(Constant, NetColdCall)
+               ; msg(Constant, Constant, FriendContent).
+NetInStream  ::= [] ; [NetInMsg | NetInStream].
+
+%% The agent's person input: the mediator's vocabulary (UserMsg, including the
+%% injected response/1 of a cold call), and the results the agent's own
+%% concurrent goals inject into it --- a filled or declined trade, an escrow's
+%% outcome at either end, a group join.  The shape social/graph gives its
+%% UserInMsg.
+UserInMsg    ::= msg(Constant, Constant, UserContent)
+               ; trade_complete(Constant, Stream(Bond))
+               ; trade_returned_bonds(Constant, Stream(Bond))
+               ; trade_returned_bonds_menu(Constant, Stream(Bond), Stream(Bond))
+               ; escrow_dep_expired(Constant)
+               ; escrow_dep_returned(Constant, Stream(Bond))
+               ; escrow_ben_released(Constant, Stream(Bond))
+               ; escrow_ben_cancelled(Constant)
+               ; group_join_ack(GroupId, Constant, Channel(Stream(Handshake), Stream(GroupSetupResponse)))
+               ; group_join_nack(GroupId, Constant).
+UserInStream ::= [] ; [UserInMsg | UserInStream].
+
 %% Wrappers for the agent<->mediator channel (CONCRETE element types).
 %% AgentMsg is what the person's entry carries and what ui_mediator declares:
 %% OutputEntry names the person's entry separately (below), so the type of the
@@ -168,10 +201,11 @@ UserMsg  ::= msg(Constant, Constant, UserContent).    %% mediator -> agent
 %% --- Moved here from grassapp_agent.glp: a module resolves a type another
 %% module names only through the ancestor scope, and the play modules name these
 %% in their own declarations. ---
-%% Output content: what a friend, or '_net', can receive.  The person's entry
-%% carries AgentContent, not this: the two vocabularies are disjoint apart from
-%% the friend-channel constructors, and keeping them apart is what lets the
-%% mediator read the person channel at AgentMsg.
+%% Output content: what a friend can receive.  The person's entry carries
+%% AgentContent, not this, and the network entry carries NetOutMsg: the three
+%% vocabularies are disjoint apart from the friend-channel constructors, and
+%% keeping them apart is what lets the mediator read the person channel at
+%% AgentMsg and send_to_net/1 read the network entry at msg(Constant, _).
 OutputContent ::= response(Response)
                 ; text(Constant)
                 ; intro(Constant, FriendChannel)
@@ -181,20 +215,24 @@ OutputContent ::= response(Response)
                 ; escrow_offer(Constant, Constant, Constant, Constant, EscrowBenResult)
                 ; group_invite(GroupId, Channel(Stream(GroupSetupResponse), Stream(Handshake)))
                 ; unfriend.
-OutputMsg     ::= msg(Constant, Constant, OutputContent)
-                ; msg(Constant, NetColdCall).
+OutputMsg     ::= msg(Constant, Constant, OutputContent).
 OutputStream  ::= [] ; [OutputMsg | OutputStream].
 
-%% Output entries.  Three correspondents, three entries, three element types:
+%% Output entries.  Four correspondents, four entries, four element types:
 %%   person_output — the one channel to the person, carrying AgentMsg, the
 %%     agent->mediator vocabulary.  There is exactly one person, so the entry
 %%     carries no key; send_person/3 reaches it.
-%%   output(Key, ...) — a friend, or '_net', carrying OutputMsg.
+%%   net_output — the one stream to the network, carrying NetOutMsg (cold
+%%     calls); there is exactly one network, so the entry carries no key;
+%%     send_net/3 reaches it.
+%%   output(Key, ...) — a friend, carrying OutputMsg.
 %%   group_entry(GroupKey, ...) — a group hub link or a member entry, GroupMsg.
-%% The person's entry is named apart so that its type admits only what the
-%% person can receive: one element type over all three would be the union, and
-%% the mediator would have to read the person channel at that union.
+%% The person's and the network's entries are named apart so that each type
+%% admits only what its correspondent can receive: one element type over all
+%% would be the union, the mediator would have to read the person channel at
+%% that union, and send_to_net/1 would be handed friend messages.
 OutputEntry ::= person_output(Stream(AgentMsg)?)
+              ; net_output(NetOutStream?)
               ; output(Constant, OutputStream?)
               ; group_entry(GroupKey, Stream(GroupMsg)?).
 OutputsList ::= [] ; [OutputEntry|OutputsList].
@@ -256,3 +294,33 @@ UserNotify  ::= befriend(Constant, ReqId)
 
 PendingEntry ::= pending(ReqId, PendingValue).
 PendingList  ::= [] ; [PendingEntry | PendingList].
+
+%% =============================================================================
+%% ENTRY POINTS (modules.tex, External access): the root self.glp exports each
+%% program entry by forwarding to the play module that defines it, so a
+%% directory load of programs/grassapp is a program and an external goal calls
+%% the entry by plain name.
+%% =============================================================================
+imported procedure play_village_headless # play_village.
+exported procedure play_village.
+play_village :- play_village_headless # play_village.
+
+imported procedure play_loan_headless # play_loan.
+exported procedure play_loan.
+play_loan :- play_loan_headless # play_loan.
+
+imported procedure play_escrow_headless # play_escrow.
+exported procedure play_escrow.
+play_escrow :- play_escrow_headless # play_escrow.
+
+imported procedure play_grassapp_duo # agent_init(Constant?, Stream(UserCmd)?, NetInStream?).
+exported procedure agent_init(Constant?, Stream(UserCmd)?, NetInStream?).
+agent_init(Id, UserIn, NetIn) :- play_grassapp_duo # agent_init(Id?, UserIn?, NetIn?).
+
+imported procedure play_grassapp_duo # actor_init(Constant?, Constant?, NetInStream?).
+exported procedure actor_init(Constant?, Constant?, NetInStream?).
+actor_init(Id, Target, NetIn) :- play_grassapp_duo # actor_init(Id?, Target?, NetIn?).
+
+imported procedure play_grassapp_boot # scenario_init(Constant?, Stream(UserCmd)?, NetInStream?).
+exported procedure scenario_init(Constant?, Stream(UserCmd)?, NetInStream?).
+scenario_init(Id, UserIn, NetIn) :- play_grassapp_boot # scenario_init(Id?, UserIn?, NetIn?).

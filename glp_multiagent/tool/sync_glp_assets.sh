@@ -9,7 +9,8 @@ cd "$(dirname "$0")/.."           # glp_multiagent/
 SRC=../programs
 DST=assets/glp/programs
 rm -rf "$DST"
-mkdir -p "$DST/social/graph/routing" "$DST/grassapp" "$DST/social/graph/ui" "$DST/cssn/ui" "$DST/cssn/childsafe"
+mkdir -p "$DST/social/graph/routing" "$DST/grassapp" "$DST/social/graph/ui" \
+  "$DST/social/graph/core" "$DST/social/graph/pingapp" "$DST/cssn/ui" "$DST/cssn/childsafe"
 cp "$SRC/self.glp" "$DST/self.glp"
 for f in output inject intro befriend; do
   cp "$SRC/social/graph/routing/$f.glp" "$DST/social/graph/routing/$f.glp"
@@ -17,8 +18,18 @@ done
 for f in self currency_txn grassapp_agent grassapp_mediator play_grassapp_boot play_grassapp_duo play_village_headless; do
   cp "$SRC/grassapp/$f.glp" "$DST/grassapp/$f.glp"
 done
-for f in self agent boot play_ui_boot; do
+for f in self boot play_ui_boot; do
   cp "$SRC/social/graph/$f.glp" "$DST/social/graph/$f.glp"
+done
+# The Grassroots Super-App: core/ is the certified program, pingapp/ the
+# mini-app it installs. The agent moved from social/graph/agent.glp to
+# core/agent.glp (SGSG, 2026-09-08) and this script still copied the old path,
+# so it failed under set -e and no iOS bundle could be built.
+for f in self agent superapp_plays; do
+  cp "$SRC/social/graph/core/$f.glp" "$DST/social/graph/core/$f.glp"
+done
+for f in self miniapp; do
+  cp "$SRC/social/graph/pingapp/$f.glp" "$DST/social/graph/pingapp/$f.glp"
 done
 for f in mediator actors; do
   cp "$SRC/social/graph/ui/$f.glp" "$DST/social/graph/ui/$f.glp"

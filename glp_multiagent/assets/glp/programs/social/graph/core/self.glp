@@ -1,0 +1,58 @@
+%% core/self.glp --- the social graph as the super-app, as a program of its own.
+%%
+%% The directory holds the agent (agent.glp) and the super-app plays
+%% (superapp_plays.glp); the types are the parent's (../self.glp, an ancestor
+%% scope).  The certified mini-apps it hosts are programs of their own
+%% (../pingapp; programs/coins/currency), whose artefacts the REPL's :artefact
+%% writes here, the one place the agent's load_file/2 resolves a name.  Loaded
+%% as part of ../ (the UI boot plays), agent is found by module name; under
+%% :boot (../../superapp_boot.glp) sg_init/3 runs one super-app per isolate.
+
+%% The super-app plays (superapp_plays.glp) and the test mini-app's entry,
+%% exported so that run/3 finds it among the program's exports.
+%% The interface of the mini-app the super-app hosts, declared in the
+%% super-app's own scope so that find_type/2 has its type identity: structural,
+%% so the same declaration in pingapp/ has the same identity.  Never run.
+procedure ping(Constant?, AppUiStream, SgChannel?).
+ping(_, [], _).
+
+imported procedure superapp_plays#play_invite(AppUiStream, AppUiStream).
+exported procedure play_invite(AppUiStream, AppUiStream).
+play_invite(A?, B?) :- superapp_plays # play_invite(A, B).
+
+imported procedure superapp_plays#play_invite_declined(AppUiStream, AppUiStream).
+exported procedure play_invite_declined(AppUiStream, AppUiStream).
+play_invite_declined(A?, B?) :- superapp_plays # play_invite_declined(A, B).
+
+imported procedure superapp_plays#play_attest(String, String, String, _).
+exported procedure play_attest(String, String, String, _).
+play_attest(S?, K?, H?, T?) :- superapp_plays # play_attest(S, K, H, T).
+
+
+imported procedure superapp_plays#play_invite_timed(Integer).
+exported procedure play_invite_timed(Integer).
+play_invite_timed(Ms?) :- superapp_plays # play_invite_timed(Ms).
+
+imported procedure superapp_plays#sg_init(Constant?, Constant?, NetInStream?).
+exported procedure sg_init(Constant?, Constant?, NetInStream?).
+sg_init(Id, Role, NetIn) :- superapp_plays # sg_init(Id?, Role?, NetIn?).
+
+imported procedure superapp_plays#play_load(String?, Constant, String).
+exported procedure play_load(String?, Constant, String).
+play_load(N, Kind?, K?) :- superapp_plays # play_load(N?, Kind, K).
+
+imported procedure superapp_plays#play_install(String?, Constant?, Stream(Constant)).
+exported procedure play_install(String?, Constant?, Stream(Constant)).
+play_install(N, App, I?) :- superapp_plays # play_install(N?, App?, I).
+
+imported procedure superapp_plays#play_coins(Stream(ScreenContent), Stream(ScreenContent)).
+exported procedure play_coins(Stream(ScreenContent), Stream(ScreenContent)).
+play_coins(A?, B?) :- superapp_plays # play_coins(A, B).
+
+imported procedure superapp_plays#play_cssn(Stream(CsAppNotify), Stream(CsAppNotify)).
+exported procedure play_cssn(Stream(CsAppNotify), Stream(CsAppNotify)).
+play_cssn(A?, B?) :- superapp_plays # play_cssn(A, B).
+
+imported procedure superapp_plays#play_both(Stream(ScreenContent), Stream(ScreenContent), Stream(CsAppNotify), Stream(CsAppNotify)).
+exported procedure play_both(Stream(ScreenContent), Stream(ScreenContent), Stream(CsAppNotify), Stream(CsAppNotify)).
+play_both(A?, B?, C?, D?) :- superapp_plays # play_both(A, B, C, D).

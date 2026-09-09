@@ -41,6 +41,8 @@ flutter:
     - assets/glp/programs/grassapp/
     - assets/glp/programs/social/graph/
     - assets/glp/programs/social/graph/ui/
+    - assets/glp/programs/social/graph/core/
+    - assets/glp/programs/social/graph/pingapp/
     - assets/glp/programs/cssn/
     - assets/glp/programs/cssn/ui/
     - assets/glp/programs/cssn/childsafe/

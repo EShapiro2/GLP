@@ -1,0 +1,86 @@
+%% plays.glp --- the mini-app activated as the super-app activates it (SGSG
+%% paper, Section 3): by run/3, under the type identity of its entry cssn/3,
+%% with exactly its two channels; and, for two executions, with the two ends of
+%% one root channel handed to them as their conversation.  The certified
+%% mini-app is this program, whose module value is the one the REPL can obtain;
+%% the persons are scripted here, and each play returns what they saw.
+%%
+%% A run does not end --- the agents pend on their persons and their friends ---
+%% so a play's result is read off a partial stream.
+
+%% =============================================================================
+%% play_open(SeenA, SeenB): alice and bob, with one conversation between their
+%% two executions of this program.  Adopting it is the friendship: each is told
+%% it is connected to the other, and Alice's greeting reaches Bob over it.
+%% Expected: SeenA = [connected(bob) | _], SeenB = [connected(alice),
+%% received(alice, hello) | _].
+%% =============================================================================
+exported procedure play_open(Stream(UserNotify), Stream(UserNotify)).
+play_open(SeenA?, SeenB?) :-
+    self_module(M),
+    find_type(cssn/3, T),
+    run(cssn(alice, ch(CmdsA?, NotifyA), [conversation(bob, ch(AB?, BA))]), T?, M?),
+    greeter(bob, NotifyA?, CmdsA, SeenA),
+    run(cssn(bob, ch(CmdsB?, NotifyB), [conversation(alice, ch(BA?, AB))]), T?, M?),
+    onlooker(NotifyB?, CmdsB, SeenB).
+
+%% =============================================================================
+%% play_enrol(SeenA, SeenC): alice and carol, with one conversation between
+%% their two executions.  Alice offers to become Carol's parent and Carol
+%% accepts, so the offer travels the conversation and the act creates the
+%% parent-child channel: Carol runs the child agent thereafter.
+%% Expected: SeenA = [connected(carol), enrolled(carol) | _],
+%%   SeenC = [connected(alice), enrol_offer(alice, req(1)), enrolled(alice) | _].
+%% =============================================================================
+exported procedure play_enrol(Stream(UserNotify), Stream(UserNotify)).
+play_enrol(SeenA?, SeenC?) :-
+    self_module(M),
+    find_type(cssn/3, T),
+    run(cssn(alice, ch(CmdsA?, NotifyA), [conversation(carol, ch(AC?, CA))]), T?, M?),
+    enroller(carol, NotifyA?, CmdsA, SeenA),
+    run(cssn(carol, ch(CmdsC?, NotifyC), [conversation(alice, ch(CA?, AC))]), T?, M?),
+    enrollee(alice, NotifyC?, CmdsC, SeenC).
+
+%% =============================================================================
+%% The scripted persons.  Each reads its own notification stream, answers on its
+%% command stream, and passes what it saw to the play.  None of them reaches the
+%% person or the network, so they stand inside the certified program.
+%% =============================================================================
+
+%% Greets the friend as soon as the conversation with it is open.
+procedure greeter(Constant?, Stream(UserNotify)?, Stream(UserCmd), Stream(UserNotify)).
+greeter(Peer, [connected(Q)|Ns], [send(Q?, hello)|Cs?], [connected(Q?)|Seen?]) :-
+    ground(Q?), Q? =?= Peer? |
+    greeter(Peer?, Ns?, Cs, Seen).
+greeter(Peer, [N|Ns], Cs?, [N?|Seen?]) :-
+    ground(N?), otherwise |
+    greeter(Peer?, Ns?, Cs, Seen).
+greeter(_, [], [], []).
+
+%% Wills nothing: every notification is passed on and no command is issued.
+procedure onlooker(Stream(UserNotify)?, Stream(UserCmd), Stream(UserNotify)).
+onlooker([N|Ns], Cs?, [N?|Seen?]) :-
+    ground(N?) |
+    onlooker(Ns?, Cs, Seen).
+onlooker([], [], []).
+
+%% Offers to become the parent of the party as soon as the conversation is open.
+procedure enroller(Constant?, Stream(UserNotify)?, Stream(UserCmd), Stream(UserNotify)).
+enroller(Kid, [connected(Q)|Ns], [enrol_child(Q?)|Cs?], [connected(Q?)|Seen?]) :-
+    ground(Q?), Q? =?= Kid? |
+    enroller(Kid?, Ns?, Cs, Seen).
+enroller(Kid, [N|Ns], Cs?, [N?|Seen?]) :-
+    ground(N?), otherwise |
+    enroller(Kid?, Ns?, Cs, Seen).
+enroller(_, [], [], []).
+
+%% Accepts the offer, which is what makes this party a child.
+procedure enrollee(Constant?, Stream(UserNotify)?, Stream(UserCmd), Stream(UserNotify)).
+enrollee(Parent, [enrol_offer(P, ReqId)|Ns], [enrol_decision(yes, P?, ReqId?)|Cs?],
+         [enrol_offer(P?, ReqId?)|Seen?]) :-
+    ground(P?), ground(ReqId?), P? =?= Parent? |
+    enrollee(Parent?, Ns?, Cs, Seen).
+enrollee(Parent, [N|Ns], Cs?, [N?|Seen?]) :-
+    ground(N?), otherwise |
+    enrollee(Parent?, Ns?, Cs, Seen).
+enrollee(_, [], [], []).

@@ -1,5 +1,9 @@
 %% mediator.glp — CSSN UI mediator module
 %%
+%% It is inside the certified program (childsafe/), because the mini-app entry
+%% spawns it: the person's side of its channel IS the mini-app's channel to the
+%% super-app user interface, and the mini-app holds nothing else.
+%%
 %% Exports: ui_mediator/5
 %% Types: from self.glp (ancestor scoping)
 %% No cross-module imports — all helpers are local.
@@ -30,19 +34,9 @@ lookup_pending(_, error, [], []).
 %% UI MEDIATOR - Main loop
 %% =============================================================================
 
-exported procedure ui_mediator(Constant?, Channel(Stream(AgentToUserMsg), Stream(MediatorToAgentMsg))?, Channel(Stream(UserCmd), Stream(UserNotify))?, Stream(PendingEntry)?, Constant?).
+exported procedure ui_mediator(Constant?, Channel(Stream(AgentToUserMsg), Stream(MediatorToAgentMsg))?, Channel(Stream(AppCmd), Stream(AppNotify))?, Stream(PendingEntry)?, Constant?).
 
 %% --- Agent-to-user: non-ground (replace variable with req ID) ---
-
-%% befriend: Resp? reader in receive, Resp writer in body
-ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
-    receive(msg(agent, person, befriend(From, Resp?)),
-            AgentCh?, AgentCh1),
-    ground(From?) |
-    send(befriend(From?, req(N?)), UserCh?, UserCh1),
-    N1 := N? + 1,
-    ui_mediator(Id?, AgentCh1?, UserCh1?,
-        [pending(req(N?), response(Resp)) | Ps?], N1?).
 
 %% Introduction befriend_intro: agent sends befriend_intro(From, Other, Ch)
 ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
@@ -78,16 +72,17 @@ ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
     ui_mediator(Id?, AgentCh1?, UserCh1?, Ps?, N?).
 
 ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
-    receive(msg(agent, person, rejected),
-            AgentCh?, AgentCh1) |
-    send(rejected, UserCh?, UserCh1),
-    ui_mediator(Id?, AgentCh1?, UserCh1?, Ps?, N?).
-
-ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
     receive(msg(agent, person, rejected(Who)),
             AgentCh?, AgentCh1),
     ground(Who?) |
     send(rejected(Who?), UserCh?, UserCh1),
+    ui_mediator(Id?, AgentCh1?, UserCh1?, Ps?, N?).
+
+ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
+    receive(msg(agent, person, no_conversation(Who)),
+            AgentCh?, AgentCh1),
+    ground(Who?) |
+    send(no_conversation(Who?), UserCh?, UserCh1),
     ui_mediator(Id?, AgentCh1?, UserCh1?, Ps?, N?).
 
 ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
@@ -96,17 +91,6 @@ ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
     ground(From?), ground(Text?) |
     send(received(From?, Text?), UserCh?, UserCh1),
     ui_mediator(Id?, AgentCh1?, UserCh1?, Ps?, N?).
-
-%% --- User-to-agent: decision (cold-call response) ---
-
-ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
-    receive(decision(Dec, From, ReqId), UserCh?, UserCh1),
-    ground(Id?), ground(Dec?), ground(From?),
-    ground(ReqId?) |
-    lookup_pending(ReqId?, Resp, Ps?, Ps1),
-    send(msg(person, Id?, decision(Dec?, From?, Resp?)),
-         AgentCh?, AgentCh1),
-    ui_mediator(Id?, AgentCh1?, UserCh1?, Ps1?, N?).
 
 %% --- User-to-agent: accept/reject intro ---
 
@@ -153,13 +137,6 @@ ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
     ui_mediator(Id?, AgentCh1?, UserCh1?, Ps1?, N?).
 
 %% --- User-to-agent: pass-through commands ---
-
-ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
-    receive(connect(Target), UserCh?, UserCh1),
-    ground(Id?), ground(Target?) |
-    send(msg(person, Id?, connect(Target?)),
-         AgentCh?, AgentCh1),
-    ui_mediator(Id?, AgentCh1?, UserCh1?, Ps?, N?).
 
 ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
     receive(send(Target, Text), UserCh?, UserCh1),
@@ -343,6 +320,16 @@ ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
          AgentCh?, AgentCh1),
     ui_mediator(Id?, AgentCh1?, UserCh1?, Ps?, N?).
 
+%% A parent removes a member from a group its own child created: the fourth
+%% role of CSSN's child_leave_2, and the only one with no route in the
+%% deployed code (CSSN, 2026-08-16).
+ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
+    receive(remove_child_member(MyChild, GroupId, Member), UserCh?, UserCh1),
+    ground(Id?), ground(MyChild?), ground(GroupId?), ground(Member?) |
+    send(msg(person, Id?, remove_child_member(MyChild?, GroupId?, Member?)),
+         AgentCh?, AgentCh1),
+    ui_mediator(Id?, AgentCh1?, UserCh1?, Ps?, N?).
+
 %% --- Agent notifications: group_left, group_removed ---
 
 ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
@@ -417,13 +404,6 @@ ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
 %% User-to-agent: pass-through commands
 
 ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
-    receive(declare_age, UserCh?, UserCh1),
-    ground(Id?) |
-    send(msg(person, Id?, declare_age),
-         AgentCh?, AgentCh1),
-    ui_mediator(Id?, AgentCh1?, UserCh1?, Ps?, N?).
-
-ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
     receive(enrol_child(Child), UserCh?, UserCh1),
     ground(Id?), ground(Child?) |
     send(msg(person, Id?, enrol_child(Child?)),
@@ -445,12 +425,6 @@ ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
     ui_mediator(Id?, AgentCh1?, UserCh1?, Ps?, N?).
 
 %% Agent-to-user: ground notifications (pass through)
-
-ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
-    receive(msg(agent, person, age_declared),
-            AgentCh?, AgentCh1) |
-    send(age_declared, UserCh?, UserCh1),
-    ui_mediator(Id?, AgentCh1?, UserCh1?, Ps?, N?).
 
 ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
     receive(msg(agent, person, enrolled(Who)),

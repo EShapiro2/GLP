@@ -1,0 +1,51 @@
+%% childsafe/self.glp --- the child-safe social networking platform as a
+%% certified program of its own: the adult agent (agent.glp) and the child agent
+%% (child_agent.glp), their vGLP sources beside them, the UI mediator
+%% (mediator.glp), the mini-app entry cssn/3 (miniapp.glp) and the plays that
+%% activate it by run/3 (plays.glp).  The types and the helpers are the parent's
+%% (../self.glp, an ancestor scope).
+%%
+%% It is a program of its own because the certificate of a program is refused
+%% where any entry point reaches the person or the network, and the parent's
+%% boot and play glue does (send_to_user/1): loaded here, without it, the program
+%% is certified, and its module value is the mini-app the super-app installs and
+%% activates by run/3 (SGSG paper, Section 3).  Loaded as part of ../ (the
+%% nineteen plays), its modules are found by name.
+
+%% =============================================================================
+%% The mini-app: the entry the super-app activates, with exactly two channels.
+%% =============================================================================
+
+imported procedure miniapp#cssn(Constant?, Channel(Stream(AppCmd), Stream(AppNotify))?, Stream(Conversation)?).
+exported procedure cssn(Constant?, Channel(Stream(AppCmd), Stream(AppNotify))?, Stream(Conversation)?).
+cssn(Id, Ui, Convs) :- miniapp # cssn(Id?, Ui?, Convs?).
+
+%% =============================================================================
+%% The agent, the child agent and the mediator, for the plays of the parent
+%% directory, which stand in for the super-app and wire the three by hand.
+%% =============================================================================
+
+imported procedure agent#agent(Constant?, AgentState?, Stream(UserInMsg)?, Stream(NetInMsg)?, Stream(Conversation)?, Stream(OutputEntry)?).
+exported procedure agent(Constant?, AgentState?, Stream(UserInMsg)?, Stream(NetInMsg)?, Stream(Conversation)?, Stream(OutputEntry)?).
+agent(Id, St, UserIn, NetIn, Convs, Outs) :- agent # agent(Id?, St?, UserIn?, NetIn?, Convs?, Outs?).
+
+imported procedure child_agent#child_agent(Constant?, Constant?, AgentState?, Stream(UserInMsg)?, Stream(NetInMsg)?, Stream(Conversation)?, Stream(OutputEntry)?).
+exported procedure child_agent(Constant?, Constant?, AgentState?, Stream(UserInMsg)?, Stream(NetInMsg)?, Stream(Conversation)?, Stream(OutputEntry)?).
+child_agent(Id, Parent, St, UserIn, NetIn, Convs, Outs) :-
+    child_agent # child_agent(Id?, Parent?, St?, UserIn?, NetIn?, Convs?, Outs?).
+
+imported procedure mediator#ui_mediator(Constant?, Channel(Stream(AgentToUserMsg), Stream(MediatorToAgentMsg))?, Channel(Stream(AppCmd), Stream(AppNotify))?, Stream(PendingEntry)?, Constant?).
+exported procedure ui_mediator(Constant?, Channel(Stream(AgentToUserMsg), Stream(MediatorToAgentMsg))?, Channel(Stream(AppCmd), Stream(AppNotify))?, Stream(PendingEntry)?, Constant?).
+ui_mediator(Id, AgentCh, UserCh, Ps, N) :- mediator # ui_mediator(Id?, AgentCh?, UserCh?, Ps?, N?).
+
+%% =============================================================================
+%% The plays that activate the mini-app as the super-app does.
+%% =============================================================================
+
+imported procedure plays#play_open(Stream(AppNotify), Stream(AppNotify)).
+exported procedure play_open(Stream(AppNotify), Stream(AppNotify)).
+play_open(A?, B?) :- plays # play_open(A, B).
+
+imported procedure plays#play_enrol(Stream(AppNotify), Stream(AppNotify)).
+exported procedure play_enrol(Stream(AppNotify), Stream(AppNotify)).
+play_enrol(A?, B?) :- plays # play_enrol(A, B).

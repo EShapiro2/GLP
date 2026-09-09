@@ -1,0 +1,1016 @@
+%% agent.glp — Social agent module
+%%
+%% Exports: agent/4
+%% Types: from self.glp (ancestor scoping)
+%% No cross-module imports — all helpers are local.
+
+
+%% =============================================================================
+%% CHANNEL OPERATIONS (Defined Guards)
+%% =============================================================================
+
+send(X, ch(In, [X?|Out?]), ch(In?, Out)).
+receive(X?, ch([X|In], Out?), ch(In?, Out)).
+new_channel(ch(Xs?, Ys), ch(Ys?, Xs)).
+
+%% =============================================================================
+%% MERGE
+%% =============================================================================
+
+%% merge/3 is now defined once in the root programs/self.glp (A3 amendment).
+
+%% =============================================================================
+%% OUTPUT ROUTING, INJECT_MSG, ADD_FRIEND_OUTPUT — provided by lib/routing/
+%% (output.glp, inject.glp), exposed from the root self.glp and resolved here
+%% unqualified.  Local copies deleted in the 4-of-4 dedup; alias-aware inference
+%% binds the lib routers' type parameters from graph's OutputsList/UserInStream/
+%% FriendStream aliases.
+%% =============================================================================
+
+%% =============================================================================
+%% CLOSE_OUTPUTS
+%% =============================================================================
+
+procedure close_outputs(OutputsList?).
+close_outputs([user_output([])|Outs]) :- close_outputs(Outs?).
+close_outputs([net_output([])|Outs]) :- close_outputs(Outs?).
+close_outputs([friend_output(_, [])|Outs]) :- close_outputs(Outs?).
+close_outputs([]).
+
+%% =============================================================================
+%% INTRO_AWAIT_PEER, INJECT_INTRO_RESULT — provided by lib/routing/intro.glp,
+%% exposed from the root self.glp and resolved here unqualified.  Local copies
+%% deleted in the 4-of-4 dedup.
+%% =============================================================================
+
+%% =============================================================================
+%% RESPONSE HANDLING
+%% =============================================================================
+
+%% Both thread the attestation list: a commit mints the reconnection
+%% attestation of SGSG paper Section 5.5, the signature of attest(Id, From)
+%% under the person's key, into which the runtime puts this program's source
+%% identity, so no mini-app can mint one.
+procedure bind_response(Constant?, Decision?, Constant?, Response, OutputsList?, OutputsList, NetInStream?, NetInStream, AttestList?, AttestList).
+bind_response(Id, yes, From, accept(RetCh?), Outs, Outs1?, In, In1?, Atts, Atts1?) :-
+    new_channel(RetCh, LocalCh) |
+    handle_response(Id?, accept(LocalCh?), From?, Outs?, Outs1, In?, In1, Atts?, Atts1).
+bind_response(_, no, _, no, Outs, Outs1?, In, In?, Atts, Atts?) :-
+    send_user(msg(agent, person, rejected), Outs?, Outs1).
+
+procedure handle_response(Constant?, Response?, Constant?, OutputsList?, OutputsList, NetInStream?, NetInStream, AttestList?, AttestList).
+handle_response(Id, accept(Ch), From, Outs, Outs1?, In, In1?, Atts, [att(From?, S?) | Atts?]) :-
+    ground(From?) |
+    befriend_commit(Id?, From?, Ch?, Outs?, Outs1, In?, In1),
+    self_key(K),
+    sign(attest(Id?, From?), K?, S).
+handle_response(_, no, From, Outs, Outs1?, In, In?, Atts, Atts?) :-
+    ground(From?) |
+    send_user(msg(agent, person, rejected(From?)), Outs?, Outs1).
+
+%% =============================================================================
+%% AGENT/4
+%% =============================================================================
+
+exported procedure agent(Constant?, UserInStream?, NetInStream?, OutputsList?).
+
+%% The social graph as the super-app (SGSG paper, Section 3): agent/4 enters
+%% agent/5 with the host state --- no mini-app, no attestation, no pending
+%% invitation, and the person's own key as the one trusted compiler key, the
+%% compiler bundled with the super-app being trusted by installing it.
+agent(Id, UserIn, NetIn, Outs) :-
+    self_key(K),
+    agent(Id?, UserIn?, NetIn?, Outs?, host([], [], [], [K?])).
+
+procedure agent(Constant?, UserInStream?, NetInStream?, OutputsList?, Host?).
+
+%% --- User messages ---
+
+%% User initiates cold call
+agent(Id, [msg(person, Id1, connect(Target))|UserIn], NetIn, Outs, Host) :-
+    Id? =?= Id1?, ground(Target?) |
+    send_net(msg(Target?, intro(Id?, Resp)), Outs?, Outs1),
+    inject_msg(Resp?, Target?, Id?, UserIn?, UserIn1),
+    agent(Id?, UserIn1?, NetIn?, Outs1?, Host?).
+
+%% User decision on cold-call
+agent(Id, [msg(person, Id1, decision(Dec, From, response(Resp?)))|UserIn], NetIn, Outs,
+      host(Apps, Atts, Pend, Trusted)) :-
+    Id? =?= Id1? |
+    bind_response(Id?, Dec?, From?, Resp, Outs?, Outs1, NetIn?, NetIn1, Atts?, Atts1),
+    agent(Id?, UserIn?, NetIn1?, Outs1?, host(Apps?, Atts1?, Pend?, Trusted?)).
+
+%% User sends text message
+agent(Id, [msg(person, Id1, send(Target, Text))|UserIn], NetIn, Outs, Host) :-
+    Id? =?= Id1?, ground(Target?) |
+    send_friend(Target?, msg(Id?, Target?, text(Text?)), Outs?, Outs1),
+    agent(Id?, UserIn?, NetIn?, Outs1?, Host?).
+
+%% User unfriends Target — notify the peer on the friend channel, tear down,
+%% and tell the person the friend is gone.
+%% Guarded by either party (SGSG Section 3, "The Grassroots Social Graph as a
+%% Grassroots Social Contract": befriending is guarded by both parties and
+%% unfriending by either), so one-way: no ack, no decline.
+%% Idempotent: if Target is not a friend, send_friend and close_friend are no-ops.
+agent(Id, [msg(person, Id1, unfriend(Target))|UserIn], NetIn, Outs, Host) :-
+    Id? =?= Id1?, ground(Target?) |
+    send_friend(Target?, msg(Id?, Target?, unfriend), Outs?, Outs1),
+    close_friend(Target?, Outs1?, Outs2),
+    send_user(msg(agent, person, unfriended(Target?)), Outs2?, Outs3),
+    agent(Id?, UserIn?, NetIn?, Outs3?, Host?).
+
+%% User introduces P to Q
+agent(Id, [msg(person, Id1, introduce(P, Q))|UserIn], NetIn, Outs, Host) :-
+    Id? =?= Id1?, ground(P?), ground(Q?), ~(P? =?= Q?), new_channel(PQCh, QPCh) |
+    send_friend(P?, msg(Id?, P?, intro(Q?, QPCh?)), Outs?, Outs1),
+    send_friend(Q?, msg(Id?, Q?, intro(P?, PQCh?)), Outs1?, Outs2),
+    agent(Id?, UserIn?, NetIn?, Outs2?, Host?).
+
+%% User accepts intro --- send ack, spawn peer-wait, inject result.  The
+%% consent is kept: the channel the introducer made reaches this agent through
+%% the introducer, so its links are held at both ends until each end's own
+%% person's volition is found (IGLP, madglp-spec, Held Links), and this is
+%% that volition.
+agent(Id, [msg(person, Id1, accept_intro(Other, channel(Ch)))|UserIn], NetIn, Outs,
+      host(Apps, Atts, Pend, Trusted)) :-
+    Id? =?= Id1?, ground(Other?),
+    send(ack(Id?), Ch?, Ch1) |
+    intro_await_peer(Other?, Ch1?, Result),
+    inject_intro_result(Result?, UserIn?, UserIn1),
+    take_intro_via(Other?, Pend?, Pend1, Via),
+    release_by_sender(Via?, Pend1?, Pend2),
+    accepted_intro(Via?, Other?, Pend2?, Pend3),
+    agent(Id?, UserIn1?, NetIn?, Outs?,
+          host(Apps?, Atts?, Pend3?, Trusted?)).
+
+%% User rejects intro — send nack on channel, close it
+agent(Id, [msg(person, Id1, reject_intro(_, channel(ch(_, [nack|[]]))))|UserIn], NetIn, Outs, Host) :-
+    Id? =?= Id1? |
+    agent(Id?, UserIn?, NetIn?, Outs?, Host?).
+
+%% Intro result: peer acked — idempotent befriend commit (shared lib).
+agent(Id, [intro_result(Other, Ch)|UserIn], NetIn, Outs, host(Apps, Atts, Pend, Trusted)) :-
+    ground(Id?), ground(Other?), ground(Pend?) |
+    befriend_commit(Id?, Other?, Ch?, Outs?, Outs1, NetIn?, NetIn1),
+    self_key(K),
+    sign(attest(Id?, Other?), K?, S),
+    warm_after_commit(Id?, Other?, Pend?, Outs1?, Outs2),
+    agent(Id?, UserIn?, NetIn1?, Outs2?, host(Apps?, [att(Other?, S?) | Atts?], Pend?, Trusted?)).
+
+%% Intro result: peer nacked — notify rejected
+agent(Id, [intro_rejected(Other)|UserIn], NetIn, Outs, Host) :-
+    ground(Id?) |
+    send_user(msg(agent, person, rejected(Other?)), Outs?, Outs1),
+    agent(Id?, UserIn?, NetIn?, Outs1?, Host?).
+
+%% Response to cold-call (injected by inject_msg)
+agent(Id, [msg(From, Id1, response(Resp))|UserIn], NetIn, Outs, host(Apps, Atts, Pend, Trusted)) :-
+    Id? =?= Id1? |
+    handle_response(Id?, Resp?, From?, Outs?, Outs1, NetIn?, NetIn1, Atts?, Atts1),
+    agent(Id?, UserIn?, NetIn1?, Outs1?, host(Apps?, Atts1?, Pend?, Trusted?)).
+
+%% --- The super-app (SGSG paper, Section 3): install, invite, consent,
+%% reconnect ---
+
+%% Install a certified mini-app.  The compiler's certificate is accepted when
+%% its key is one the person trusts (Section 6.4), and the creator's
+%% certification must be signed over this source identity with the checker's
+%% verdict that the contract is grassroots.  signed/4 does not hold on a
+%% forged certification, so a forged one fails the verifying goal outright.
+agent(Id, [msg(person, Id1, install(App, M, CSig, Ui?))|UserIn], NetIn, Outs,
+      host(Apps, Atts, Pend, Trusted)) :-
+    Id? =?= Id1?, ground(App?), ground(Trusted?) |
+    verify_install(M?, CSig?, Trusted?, V),
+    install_step(V?, App?, M?, CSig?, Ui, Apps?, Apps1),
+    agent(Id?, UserIn?, NetIn?, Outs?, host(Apps1?, Atts?, Pend?, Trusted?)).
+
+%% Install a certified mini-app of the currency's interface: its
+%% user-interface grant is its end of a channel of cards and answers.
+agent(Id, [msg(person, Id1, install_coins(App, M, CSig, Ui))|UserIn], NetIn, Outs,
+      host(Apps, Atts, Pend, Trusted)) :-
+    Id? =?= Id1?, ground(App?), ground(Trusted?) |
+    verify_install(M?, CSig?, Trusted?, V),
+    install_coins_step(V?, App?, M?, CSig?, Ui?, Apps?, Apps1),
+    agent(Id?, UserIn?, NetIn?, Outs?, host(Apps1?, Atts?, Pend?, Trusted?)).
+
+%% Install a certified mini-app of the child-safe platform's interface: its
+%% user-interface grant is its end of a channel of commands and notifications.
+agent(Id, [msg(person, Id1, install_cssn(App, M, CSig, Ui))|UserIn], NetIn, Outs,
+      host(Apps, Atts, Pend, Trusted)) :-
+    Id? =?= Id1?, ground(App?), ground(Trusted?) |
+    verify_install(M?, CSig?, Trusted?, V),
+    install_cssn_step(V?, App?, M?, CSig?, Ui?, Apps?, Apps1),
+    agent(Id?, UserIn?, NetIn?, Outs?, host(Apps1?, Atts?, Pend?, Trusted?)).
+
+%% Invite a friend to the instance of a mini-app: over the friend channel, the
+%% mini-app's source identity, the type identity of the root channel (that of
+%% its entry, ping/3), and the social graph's signed invitation over the
+%% source identity and the friend.
+agent(Id, [msg(person, Id1, invite(App, Friend))|UserIn], NetIn, Outs,
+      host(Apps, Atts, Pend, Trusted)) :-
+    Id? =?= Id1?, ground(App?), ground(Friend?) |
+    app_module(App?, Apps?, Apps1, L),
+    invite_step(L?, Id?, App?, Friend?, UserIn?, NetIn?, Outs?,
+                host(Apps1?, Atts?, Pend?, Trusted?)).
+
+%% The person's consent to an offer: the volitional guard of joining.  Where
+%% the offer has arrived, join; where it has not, the consent waits for it.
+agent(Id, [msg(person, Id1, accept_invite(App, From))|UserIn], NetIn, Outs,
+      host(Apps, Atts, Pend, Trusted)) :-
+    Id? =?= Id1?, ground(App?), ground(From?) |
+    take_offer(App?, From?, Pend?, Pend1, Offer),
+    consent_step(Offer?, Id?, App?, From?, UserIn?, NetIn?, Outs?,
+                 host(Apps?, Atts?, Pend1?, Trusted?)).
+
+%% The person declines an offer that has arrived; a decline before the offer
+%% is nothing.
+agent(Id, [msg(person, Id1, decline_invite(App, From))|UserIn], NetIn, Outs,
+      host(Apps, Atts, Pend, Trusted)) :-
+    Id? =?= Id1?, ground(App?), ground(From?) |
+    take_offer(App?, From?, Pend?, Pend1, Offer),
+    decline_step(Offer?, Id?, App?, From?, UserIn?, NetIn?, Outs?,
+                 host(Apps?, Atts?, Pend1?, Trusted?)).
+
+%% Reconnection (Section 5.5) is not here: the social graph would call the
+%% layer's peer_address/2 and punch_udp/1 under the attestation minted at
+%% commit, but the seam takes no attestation --- presenting it at the
+%% rendezvous server is the layer's --- and a program that calls the seam is
+%% refused a certificate, which this program must hold to serve, in the plays,
+%% as its own certified mini-app.
+
+%% The person trusts a compiler's key: a certificate under it is accepted.
+agent(Id, [msg(person, Id1, trust(K))|UserIn], NetIn, Outs,
+      host(Apps, Atts, Pend, Trusted)) :-
+    Id? =?= Id1?, ground(K?) |
+    agent(Id?, UserIn?, NetIn?, Outs?, host(Apps?, Atts?, Pend?, [K? | Trusted?])).
+
+%% The names of the installed mini-apps, for a play to read back.
+agent(Id, [msg(person, Id1, installed(Names?))|UserIn], NetIn, Outs,
+      host(Apps, Atts, Pend, Trusted)) :-
+    Id? =?= Id1? |
+    app_names(Apps?, Apps1, Names),
+    agent(Id?, UserIn?, NetIn?, Outs?, host(Apps1?, Atts?, Pend?, Trusted?)).
+
+%% The attestation held for a friend, for a play to read back.
+agent(Id, [msg(person, Id1, attestation(Friend, S?))|UserIn], NetIn, Outs,
+      host(Apps, Atts, Pend, Trusted)) :-
+    Id? =?= Id1?, ground(Friend?) |
+    lookup_att(Friend?, Atts?, Atts1, S),
+    agent(Id?, UserIn?, NetIn?, Outs?, host(Apps?, Atts1?, Pend?, Trusted?)).
+
+%% --- The warm call (Section 5.2, "Encounters among participants of the same
+%% mini-app") ---
+
+%% A mini-app asks for a warm call: an end reached it under an anchor other
+%% than the friend that passed it; the name carries the anchor.  With the
+%% person's consent to a warm call with that anchor the social graph asks the
+%% forwarding friend for an introduction to it; without it the request waits.
+agent(Id, [app_request(App, warm_call(Name, Via))|UserIn], NetIn, Outs,
+      host(Apps, Atts, Pend, Trusted)) :-
+    ground(Id?), ground(App?), ground(Via?), ground(Name?) |
+    Parts ..= Name?,
+    take_warm_consent_for(Parts?, Pend?, Pend1, C),
+    warm_step(C?, Id?, App?, Name?, Via?, UserIn?, NetIn?, Outs?,
+              host(Apps?, Atts?, Pend1?, Trusted?)).
+
+%% The person consents to a warm call with Who: as holder, the request waiting
+%% for it proceeds; as anchor, the call from Who is accepted when it comes.
+agent(Id, [msg(person, Id1, accept_warm_call(Who))|UserIn], NetIn, Outs,
+      host(Apps, Atts, Pend, Trusted)) :-
+    Id? =?= Id1?, ground(Who?) |
+    take_warm_wait(Who?, Pend?, Pend1, Wait),
+    warm_consent_step(Wait?, Id?, Who?, UserIn?, NetIn?, Outs?,
+                      host(Apps?, Atts?, Pend1?, Trusted?)).
+
+%% The person consents to introduce Requester to Anchor: a request waiting for
+%% it proceeds; otherwise the consent waits for the request.
+agent(Id, [msg(person, Id1, allow_intro(Requester, Anchor))|UserIn], NetIn, Outs,
+      host(Apps, Atts, Pend, Trusted)) :-
+    Id? =?= Id1?, ground(Requester?), ground(Anchor?) |
+    take_intro_wait(Requester?, Anchor?, Pend?, Pend1, W),
+    intro_consent_step(W?, Id?, Requester?, Anchor?, UserIn?, NetIn?, Outs?,
+                       host(Apps?, Atts?, Pend1?, Trusted?)).
+
+%% User catch-all
+agent(Id, [_|UserIn], NetIn, Outs, Host) :-
+    ground(Id?), otherwise |
+    agent(Id?, UserIn?, NetIn?, Outs?, Host?).
+
+%% --- Network messages ---
+
+%% Cold-call from network
+agent(Id, UserIn, [msg(Id1, intro(From, Resp?))|NetIn], Outs, Host) :-
+    Id? =?= Id1? |
+    send_user(msg(agent, person, befriend(From?, Resp)), Outs?, Outs1),
+    agent(Id?, UserIn?, NetIn?, Outs1?, Host?).
+
+%% Response to cold-call from network
+agent(Id, UserIn, [msg(From, Id1, response(Resp))|NetIn], Outs, host(Apps, Atts, Pend, Trusted)) :-
+    Id? =?= Id1? |
+    handle_response(Id?, Resp?, From?, Outs?, Outs1, NetIn?, NetIn1, Atts?, Atts1),
+    agent(Id?, UserIn?, NetIn1?, Outs1?, host(Apps?, Atts1?, Pend?, Trusted?)).
+
+%% Text from friend
+agent(Id, UserIn, [msg(From, Id1, text(Text))|NetIn], Outs, Host) :-
+    Id? =?= Id1? |
+    send_user(msg(agent, person, received(From?, Text?)), Outs?, Outs1),
+    agent(Id?, UserIn?, NetIn?, Outs1?, Host?).
+
+%% Unfriended by From — comply (SGSG Section 3, "The Grassroots Social Graph as
+%% a Grassroots Social Contract": unfriending is guarded by either): tear down my
+%% side and notify the user.  close_friend is a no-op if From is already gone,
+%% so a simultaneous unfriend from both sides cannot error or double-tear.
+agent(Id, UserIn, [msg(From, Id1, unfriend)|NetIn], Outs, Host) :-
+    Id? =?= Id1?, ground(From?) |
+    close_friend(From?, Outs?, Outs1),
+    send_user(msg(agent, person, unfriended(From?)), Outs1?, Outs2),
+    agent(Id?, UserIn?, NetIn?, Outs2?, Host?).
+
+%% Introduction from a friend --- the channel goes to the person, and who
+%% introduced whom is remembered: the channel is the introducer's, so the links
+%% it brings are anchored at the introducer, and it is the introducer that the
+%% person's consent must be matched against when they are released.
+agent(Id, UserIn, [msg(From, Id1, intro(Other, Ch))|NetIn], Outs,
+      host(Apps, Atts, Pend, Trusted)) :-
+    Id? =?= Id1?, ground(Other?), ground(From?) |
+    send_user(msg(agent, person, befriend_intro(From?, Other?, Ch?)), Outs?, Outs1),
+    agent(Id?, UserIn?, NetIn?, Outs1?,
+          host(Apps?, Atts?, [intro_via(Other?, From?) | Pend?], Trusted?)).
+
+%% --- The handshake over the friend channel (Section 3, "Activation and
+%% joining"; Section 6.1, Mechanisms) ---
+
+%% An offer from a friend: the invitation must be the social graph's signature
+%% over the offered source identity and this agent.  Where the person has
+%% consented already, join; otherwise the offer waits for the person.
+agent(Id, UserIn, [msg(From, Id1, invite(App, Src, T, InvSig))|NetIn], Outs,
+      host(Apps, Atts, Pend, Trusted)) :-
+    Id? =?= Id1?, ground(From?), ground(App?) |
+    signed(InvSig?, _, _, Inv),
+    invite_check(Inv?, Src?, Id?, Ok),
+    offer_step(Ok?, Id?, From?, App?, Src?, T?, InvSig?, UserIn?, NetIn?, Outs?,
+               host(Apps?, Atts?, Pend?, Trusted?)).
+
+%% The invitee joins: its undertaking must be signed over the source identity,
+%% and the mini-app installed here must have that identity and that root
+%% channel type.  Then the root channel is created, this side's undertaking
+%% and one end go to the invitee, and the other end goes to this side's
+%% execution of the mini-app.
+agent(Id, UserIn, [msg(From, Id1, join(App, Src, T, U))|NetIn], Outs,
+      host(Apps, Atts, Pend, Trusted)) :-
+    Id? =?= Id1?, ground(From?), ground(App?) |
+    signed(U?, _, _, Und),
+    undertaking_check(Und?, Src?, Ok0),
+    app_module(App?, Apps?, Apps1, L),
+    join_verify(Ok0?, L?, App?, Src?, T?, Ok),
+    root_step(Ok?, Id?, From?, App?, Src?, T?, UserIn?, NetIn?, Outs?,
+              Apps1?, Atts?, Pend?, Trusted?).
+
+%% The root channel arrives with the inviter's undertaking: verify it and the
+%% two identities against the mini-app installed here; on success hand the end
+%% to this side's execution, on mismatch deliver nothing --- to the mini-app an
+%% aborted conversation is silent.
+agent(Id, UserIn, [msg(From, Id1, root(App, Src, T, Up, End))|NetIn], Outs,
+      host(Apps, Atts, Pend, Trusted)) :-
+    Id? =?= Id1?, ground(From?), ground(App?) |
+    signed(Up?, _, _, Und),
+    undertaking_check(Und?, Src?, Ok0),
+    app_module(App?, Apps?, Apps1, L),
+    join_verify(Ok0?, L?, App?, Src?, T?, Ok),
+    accept_root_step(Ok?, Id?, From?, App?, T?, End?, UserIn?, NetIn?, Outs?,
+                     Apps1?, Atts?, Pend?, Trusted?).
+
+%% The runtime reports a held link: an end that reached this agent under an
+%% anchor other than the sender, or, at the anchor, a value that came from the
+%% holder of a warm call already accepted.  The latter is released; the
+%% former is reported to every running mini-app, which knows its
+%% conversations.
+agent(Id, UserIn, [pending_link(Name, S)|NetIn], Outs, host(Apps, Atts, Pend, Trusted)) :-
+    ground(Id?), ground(S?), ground(Name?) |
+    Parts ..= Name?,
+    may_release(Parts?, S?, Pend?, Pend1, Found),
+    pending_step(Found?, Name?, S?, Id?, UserIn?, NetIn?, Outs?, Apps?, Atts?, Pend1?, Trusted?).
+
+%% A friend asks to be introduced to the anchor of a held name (the holder
+%% of a warm call): the anchor is found among this agent's own friends, and
+%% with the person's consent the two are introduced; otherwise the request
+%% waits for it.
+agent(Id, UserIn, [msg(From, Id1, request_intro(Anchor))|NetIn], Outs,
+      host(Apps, Atts, Pend, Trusted)) :-
+    Id? =?= Id1?, ground(From?), ground(Anchor?) |
+    anchor_friend(Anchor?, Outs?, Outs1, Found),
+    intro_request(Found?, Id?, From?, Anchor?, UserIn?, NetIn?, Outs1?,
+                  host(Apps?, Atts?, Pend?, Trusted?)).
+
+%% The warm call itself, from a new friend: the person must have consented to
+%% a warm call with the caller, which is what identifies the call --- the held
+%% link's name stays at the holder and never crosses.  Then the exchange
+%% proceeds as an invitation of the caller to the mini-app, and the held value,
+%% once the caller releases it, is accepted at this end in its turn.
+agent(Id, UserIn, [msg(From, Id1, warm_call(App))|NetIn], Outs,
+      host(Apps, Atts, Pend, Trusted)) :-
+    Id? =?= Id1?, ground(From?), ground(App?) |
+    take_warm_consent(From?, Pend?, Pend1, C),
+    warm_call_step(C?, Id?, From?, App?, UserIn?, NetIn?, Outs?,
+                   host(Apps?, Atts?, Pend1?, Trusted?)).
+
+%% Network catch-all
+agent(Id, UserIn, [_|NetIn], Outs, Host) :-
+    ground(Id?), otherwise |
+    agent(Id?, UserIn?, NetIn?, Outs?, Host?).
+
+%% --- Termination ---
+
+agent(_, [], _, Outs, Host) :- close_outputs(Outs?), close_host(Host?).
+agent(_, _, [], Outs, Host) :- close_outputs(Outs?), close_host(Host?).
+
+%% =============================================================================
+%% THE SUPER-APP'S HOST: installation, invitation, handshake, activation
+%% =============================================================================
+
+%% --- Installation and the certifications (Sections 3 and 6.4) ---
+
+%% verify_install(M, CSig, Trusted, V): what load_file/2 gave must be a Module
+%% (a forged artefact is its text), the compiler's key must be trusted, and the
+%% creator's certification signed over the module's source identity with the
+%% verdict grassroots.
+procedure verify_install(Content?, String?, Stream(String)?, Constant).
+verify_install(M, CSig, Trusted, V?) :-
+    module(M?) |
+    decompose_module(M?, CK, Src, _),
+    key_trusted(CK?, Trusted?, T),
+    creator_check(T?, CSig?, Src?, V).
+verify_install(_, _, _, refused) :- otherwise | true.
+
+procedure key_trusted(String?, Stream(String)?, Constant).
+key_trusted(K, [K1 | _], true) :- K? =?= K1? | true.
+key_trusted(K, [_ | Ks], T?) :- otherwise | key_trusted(K?, Ks?, T).
+key_trusted(_, [], false).
+
+procedure creator_check(Constant?, String?, String?, Constant).
+creator_check(true, CSig, Src, V?) :-
+    signed(CSig?, _, _, Cert),
+    cert_check(Cert?, Src?, V).
+creator_check(false, _, _, refused).
+
+%% The signed term is untyped; the certification is read by its shape.
+procedure cert_check(_?, String?, Constant).
+cert_check(creator_cert(Src1, _, grassroots), Src, ok) :- Src? =?= Src1? | true.
+cert_check(_, _, refused) :- otherwise | true.
+
+procedure install_step(Constant?, Constant?, Content?, String?, AppUiStream, AppList?, AppList).
+install_step(ok, App, M, CSig, Ui?, Apps, [app(App?, M?, CSig?, idle(Ui)) | Apps?]).
+install_step(refused, _, _, _, [], Apps, Apps?).
+
+procedure install_coins_step(Constant?, Constant?, Content?, String?, Channel(Stream(UserAnswer), Stream(Event))?, AppList?, AppList).
+install_coins_step(ok, App, M, CSig, Ui, Apps, [app(App?, M?, CSig?, idle_coins(Ui?)) | Apps?]).
+install_coins_step(refused, _, _, _, _, Apps, Apps?).
+
+procedure install_cssn_step(Constant?, Constant?, Content?, String?, Channel(Stream(CsAppCmd), Stream(CsAppNotify))?, AppList?, AppList).
+install_cssn_step(ok, App, M, CSig, Ui, Apps, [app(App?, M?, CSig?, idle_cssn(Ui?)) | Apps?]).
+install_cssn_step(refused, _, _, _, _, Apps, Apps?).
+
+%% app_kind(App, Kind): the interface a hosted mini-app has, by its name ---
+%% the currency's, the child-safe platform's, or the test mini-app's.
+procedure app_kind(Constant?, Constant).
+app_kind(currency, coins).
+app_kind(childsafe, cssn).
+app_kind(_, ping) :- otherwise | true.
+
+%% app_module(App, Apps, Apps1, L): the installed mini-app's module value, the
+%% list passed through.
+procedure app_module(Constant?, AppList?, AppList, AppLookup).
+app_module(App, [app(A, M, C, St) | Rest], [app(A?, M?, C?, St?) | Rest?], found(M?)) :-
+    App? =?= A? | true.
+app_module(App, [E | Rest], [E? | Rest1?], L?) :-
+    otherwise | app_module(App?, Rest?, Rest1, L).
+app_module(_, [], [], missing).
+
+%% identities(App, M, Src, T): the mini-app's source identity, from its
+%% certificate, and the type identity of its entry in this scope --- ping/3, or
+%% coins/3 for the currency.
+procedure identities(Constant?, Content?, String, Constant).
+identities(App, M, Src?, T?) :-
+    decompose_module(M?, _, Src, _),
+    app_kind(App?, K),
+    entry_type(K?, T).
+
+procedure entry_type(Constant?, Constant).
+entry_type(coins, T?) :- find_type(coins/3, T).
+entry_type(cssn, T?) :- find_type(cssn/3, T).
+entry_type(ping, T?) :- find_type(ping/3, T).
+
+%% The currency's entry, declared here for find_type/2 (never run).
+procedure coins(Constant?, Channel(Stream(UserAnswer), Stream(Event))?, Stream(Conversation)?).
+coins(_, _, _).
+
+%% The child-safe platform's entry, likewise.
+procedure cssn(Constant?, Channel(Stream(CsAppCmd), Stream(CsAppNotify))?, Stream(CsConversation)?).
+cssn(_, _, _).
+
+%% --- The inviter ---
+
+procedure invite_step(AppLookup?, Constant?, Constant?, Constant?, UserInStream?, NetInStream?, OutputsList?, Host?).
+invite_step(found(M), Id, App, Friend, UserIn, NetIn, Outs, Host) :-
+    identities(App?, M?, Src, T),
+    self_key(K),
+    sign(invitation(Src?, Friend?), K?, InvSig),
+    send_friend(Friend?, msg(Id?, Friend?, invite(App?, Src?, T?, InvSig?)), Outs?, Outs1),
+    agent(Id?, UserIn?, NetIn?, Outs1?, Host?).
+invite_step(missing, Id, _, _, UserIn, NetIn, Outs, Host) :-
+    agent(Id?, UserIn?, NetIn?, Outs?, Host?).
+
+%% --- The invitee ---
+
+%% take_offer(App, From, Pend, Pend1, Offer): the offer pending from From for
+%% App, removed; none where there is none.
+procedure take_offer(Constant?, Constant?, PendingInv?, PendingInv, Offer).
+take_offer(App, From, [offered(F, A, Src, T, S) | Rest], Rest?, offer(Src?, T?, S?)) :-
+    App? =?= A?, From? =?= F? | true.
+take_offer(App, From, [P | Rest], [P? | Rest1?], O?) :-
+    otherwise | take_offer(App?, From?, Rest?, Rest1, O).
+take_offer(_, _, [], [], none).
+
+%% take_consent(App, From, Pend, Pend1, C): whether the person has consented
+%% already, the consent removed.
+procedure take_consent(Constant?, Constant?, PendingInv?, PendingInv, Constant).
+take_consent(App, From, [consented(A, F) | Rest], Rest?, true) :-
+    App? =?= A?, From? =?= F? | true.
+take_consent(App, From, [P | Rest], [P? | Rest1?], C?) :-
+    otherwise | take_consent(App?, From?, Rest?, Rest1, C).
+take_consent(_, _, [], [], false).
+
+procedure consent_step(Offer?, Constant?, Constant?, Constant?, UserInStream?, NetInStream?, OutputsList?, Host?).
+consent_step(none, Id, App, From, UserIn, NetIn, Outs, host(Apps, Atts, Pend, Trusted)) :-
+    agent(Id?, UserIn?, NetIn?, Outs?, host(Apps?, Atts?, [consented(App?, From?) | Pend?], Trusted?)).
+consent_step(offer(Src, T, _), Id, App, From, UserIn, NetIn, Outs, Host) :-
+    do_join(Id?, App?, From?, Src?, T?, UserIn?, NetIn?, Outs?, Host?).
+
+procedure decline_step(Offer?, Constant?, Constant?, Constant?, UserInStream?, NetInStream?, OutputsList?, Host?).
+decline_step(none, Id, _, _, UserIn, NetIn, Outs, Host) :-
+    agent(Id?, UserIn?, NetIn?, Outs?, Host?).
+decline_step(offer(_, _, _), Id, App, From, UserIn, NetIn, Outs, Host) :-
+    send_friend(From?, msg(Id?, From?, decline(App?)), Outs?, Outs1),
+    agent(Id?, UserIn?, NetIn?, Outs1?, Host?).
+
+%% The signed invitation is untyped; it must name the offered source identity
+%% and this agent.
+procedure invite_check(_?, String?, Constant?, Constant).
+invite_check(invitation(Src1, Me), Src, Id, true) :- Src? =?= Src1?, Me? =?= Id? | true.
+invite_check(_, _, _, false) :- otherwise | true.
+
+procedure offer_step(Constant?, Constant?, Constant?, Constant?, String?, Constant?, String?, UserInStream?, NetInStream?, OutputsList?, Host?).
+offer_step(true, Id, From, App, Src, T, InvSig, UserIn, NetIn, Outs, host(Apps, Atts, Pend, Trusted)) :-
+    take_consent(App?, From?, Pend?, Pend1, C),
+    offer_consent(C?, Id?, From?, App?, Src?, T?, InvSig?, UserIn?, NetIn?, Outs?,
+                  host(Apps?, Atts?, Pend1?, Trusted?)).
+offer_step(false, Id, _, _, _, _, _, UserIn, NetIn, Outs, Host) :-
+    agent(Id?, UserIn?, NetIn?, Outs?, Host?).
+
+procedure offer_consent(Constant?, Constant?, Constant?, Constant?, String?, Constant?, String?, UserInStream?, NetInStream?, OutputsList?, Host?).
+offer_consent(true, Id, From, App, Src, T, _, UserIn, NetIn, Outs, Host) :-
+    do_join(Id?, App?, From?, Src?, T?, UserIn?, NetIn?, Outs?, Host?).
+offer_consent(false, Id, From, App, Src, T, InvSig, UserIn, NetIn, Outs, host(Apps, Atts, Pend, Trusted)) :-
+    agent(Id?, UserIn?, NetIn?, Outs?,
+          host(Apps?, Atts?, [offered(From?, App?, Src?, T?, InvSig?) | Pend?], Trusted?)).
+
+%% do_join: the person having consented, where the mini-app is installed here
+%% with the offered identities, sign the undertaking to keep its contract and
+%% run its certified code, and send it; otherwise decline.  (Shipping the
+%% certified program to an invitee that lacks it is not implemented: such an
+%% invitee declines.)
+procedure do_join(Constant?, Constant?, Constant?, String?, Constant?, UserInStream?, NetInStream?, OutputsList?, Host?).
+do_join(Id, App, From, Src, T, UserIn, NetIn, Outs, host(Apps, Atts, Pend, Trusted)) :-
+    app_module(App?, Apps?, Apps1, L),
+    join_verify(true, L?, App?, Src?, T?, Ok),
+    join_step(Ok?, Id?, App?, From?, Src?, T?, UserIn?, NetIn?, Outs?,
+              host(Apps1?, Atts?, Pend?, Trusted?)).
+
+procedure join_step(Verdict?, Constant?, Constant?, Constant?, String?, Constant?, UserInStream?, NetInStream?, OutputsList?, Host?).
+join_step(ok(_), Id, App, From, Src, T, UserIn, NetIn, Outs, Host) :-
+    self_key(K),
+    sign(undertaking(Src?), K?, U),
+    send_friend(From?, msg(Id?, From?, join(App?, Src?, T?, U?)), Outs?, Outs1),
+    agent(Id?, UserIn?, NetIn?, Outs1?, Host?).
+join_step(refused, Id, App, From, _, _, UserIn, NetIn, Outs, Host) :-
+    send_friend(From?, msg(Id?, From?, decline(App?)), Outs?, Outs1),
+    agent(Id?, UserIn?, NetIn?, Outs1?, Host?).
+
+%% --- The handshake's checks ---
+
+%% The signed undertaking is untyped; it must name the source identity.
+procedure undertaking_check(_?, String?, Constant).
+undertaking_check(undertaking(Src1), Src, true) :- Src? =?= Src1? | true.
+undertaking_check(_, _, false) :- otherwise | true.
+
+%% join_verify(Ok0, L, Src, T, Ok): the peer's term checked, the mini-app
+%% installed, and its identities equal to the peer's at both ends.
+procedure join_verify(Constant?, AppLookup?, Constant?, String?, Constant?, Verdict).
+join_verify(true, found(M), App, Src, T, Ok?) :-
+    identities(App?, M?, Src1, T1),
+    identity_match(Src?, Src1?, T?, T1?, M?, Ok).
+join_verify(_, _, _, _, _, refused) :- otherwise | true.
+
+procedure identity_match(String?, String?, Constant?, Constant?, Content?, Verdict).
+identity_match(Src, Src1, T, T1, M, ok(M?)) :- Src? =?= Src1?, T? =?= T1? | true.
+identity_match(_, _, _, _, _, refused) :- otherwise | true.
+
+%% --- The inviter, on the invitee's undertaking: the root channel ---
+
+procedure root_step(Verdict?, Constant?, Constant?, Constant?, String?, Constant?, UserInStream?, NetInStream?, OutputsList?, AppList?, AttestList?, PendingInv?, Stream(String)?).
+root_step(ok(M), Id, From, App, Src, T, UserIn, NetIn, Outs, Apps, Atts, Pend, Trusted) :-
+    ground(App?) |
+    app_kind(App?, Kind),
+    root_ends(Kind?, Mine, Theirs),
+    self_key(K),
+    sign(undertaking(Src?), K?, Up),
+    send_friend(From?, msg(Id?, From?, root(App?, Src?, T?, Up?, Theirs?)), Outs?, Outs1),
+    deliver(App?, From?, Mine?, Id?, T?, M?, Apps?, Apps1, UserIn?, UserIn1),
+    agent(Id?, UserIn1?, NetIn?, Outs1?, host(Apps1?, Atts?, Pend?, Trusted?)).
+
+root_step(refused, Id, _, _, _, _, UserIn, NetIn, Outs, Apps, Atts, Pend, Trusted) :-
+    agent(Id?, UserIn?, NetIn?, Outs?, host(Apps?, Atts?, Pend?, Trusted?)).
+
+%% root_ends(Kind, Mine, Theirs): the two ends of a fresh root channel of the
+%% mini-app's protocol, wrapped for the friend channel.
+procedure root_ends(Constant?, RootEnd, RootEnd).
+root_ends(ping, ping_end(Mine?), ping_end(Theirs?)) :- new_channel(Mine, Theirs) | true.
+root_ends(coins, coins_end(Mine?), coins_end(Theirs?)) :- new_channel(Mine, Theirs) | true.
+root_ends(cssn, cssn_end(Mine?), cssn_end(Theirs?)) :- new_channel(Mine, Theirs) | true.
+
+%% --- The invitee, on the root channel ---
+
+procedure accept_root_step(Verdict?, Constant?, Constant?, Constant?, Constant?, RootEnd?, UserInStream?, NetInStream?, OutputsList?, AppList?, AttestList?, PendingInv?, Stream(String)?).
+accept_root_step(ok(M), Id, From, App, T, End, UserIn, NetIn, Outs, Apps, Atts, Pend, Trusted) :-
+    deliver(App?, From?, End?, Id?, T?, M?, Apps?, Apps1, UserIn?, UserIn1),
+    release_held(App?, From?, Pend?, Pend1),
+    agent(Id?, UserIn1?, NetIn?, Outs?, host(Apps1?, Atts?, Pend1?, Trusted?)).
+accept_root_step(refused, Id, _, _, _, _, UserIn, NetIn, Outs, Apps, Atts, Pend, Trusted) :-
+    agent(Id?, UserIn?, NetIn?, Outs?, host(Apps?, Atts?, Pend?, Trusted?)).
+
+%% --- Activation and the grants (Section 3, "What the super-app grants a
+%% mini-app") ---
+
+%% deliver(App, Friend, End, Id, T, M, Apps, Apps1): hand the mini-app one end
+%% of the root channel of its conversation with Friend, on its social-graph
+%% channel.  An idle mini-app is activated first by run/3 under the type
+%% identity of its entry, with exactly its two channels: the user-interface
+%% channel held since installation, and the social-graph channel.
+procedure deliver(Constant?, Constant?, RootEnd?, Constant?, Constant?, Content?, AppList?, AppList, UserInStream?, UserInStream).
+deliver(App, Friend, ping_end(End), Id, T, M, [app(A, M1, C, idle(Ui?)) | Rest],
+        [app(A?, M1?, C?, running(Sg1)) | Rest?], UserIn, UserIn1?) :-
+    App? =?= A? |
+    run(ping(Id?, Ui, ch(Sg?, Up)), T?, M?),
+    open_conv(Friend?, End?, Sg, Sg1?),
+    inject_requests(App?, Up?, UserIn?, UserIn1).
+deliver(App, Friend, ping_end(End), _, _, _, [app(A, M1, C, running(Sg?)) | Rest],
+        [app(A?, M1?, C?, running(Sg1)) | Rest?], UserIn, UserIn?) :-
+    App? =?= A? |
+    open_conv(Friend?, End?, Sg, Sg1?).
+%% The currency: activated with its two channels, the cards-and-answers
+%% channel held since installation and the conversations stream; each
+%% conversation handed to it on the latter.
+deliver(App, Friend, coins_end(End), Id, T, M, [app(A, M1, C, idle_coins(Ui)) | Rest],
+        [app(A?, M1?, C?, running_coins(Convs1)) | Rest?], UserIn, UserIn?) :-
+    App? =?= A? |
+    run(coins(Id?, Ui?, Convs?), T?, M?),
+    open_conv_coins(Friend?, End?, Convs, Convs1?).
+deliver(App, Friend, coins_end(End), _, _, _, [app(A, M1, C, running_coins(Convs?)) | Rest],
+        [app(A?, M1?, C?, running_coins(Convs1)) | Rest?], UserIn, UserIn?) :-
+    App? =?= A? |
+    open_conv_coins(Friend?, End?, Convs, Convs1?).
+%% The child-safe platform: activated with its two channels, the commands and
+%% notifications channel held since installation and the conversations stream;
+%% each conversation handed to it on the latter, and adopting one is the
+%% friendship under its contract.
+deliver(App, Friend, cssn_end(End), Id, T, M, [app(A, M1, C, idle_cssn(Ui)) | Rest],
+        [app(A?, M1?, C?, running_cssn(Convs1)) | Rest?], UserIn, UserIn?) :-
+    App? =?= A? |
+    run(cssn(Id?, Ui?, Convs?), T?, M?),
+    open_conv_cssn(Friend?, End?, Convs, Convs1?).
+deliver(App, Friend, cssn_end(End), _, _, _, [app(A, M1, C, running_cssn(Convs?)) | Rest],
+        [app(A?, M1?, C?, running_cssn(Convs1)) | Rest?], UserIn, UserIn?) :-
+    App? =?= A? |
+    open_conv_cssn(Friend?, End?, Convs, Convs1?).
+deliver(App, Friend, End, Id, T, M, [E | Rest], [E? | Rest1?], UserIn, UserIn1?) :-
+    otherwise | deliver(App?, Friend?, End?, Id?, T?, M?, Rest?, Rest1, UserIn?, UserIn1).
+deliver(_, _, _, _, _, _, [], [], UserIn, UserIn?).
+
+%% inject_requests(App, Up, UserIn, UserIn1): the mini-app's requests up its
+%% social-graph channel, tagged with its name, injected into the agent's person
+%% stream as they come (as inject_msg does a response); the stream closes when
+%% the person's does, whatever the mini-app still asks.
+procedure inject_requests(Constant?, AppToSgStream?, UserInStream?, UserInStream).
+inject_requests(App, [warm_call(N, V) | Up], Ys, [app_request(App?, warm_call(N?, V?)) | Ys1?]) :-
+    ground(V?) | inject_requests(App?, Up?, Ys?, Ys1).
+inject_requests(App, Up, [Y | Ys], [Y? | Ys1?]) :-
+    inject_requests(App?, Up?, Ys?, Ys1).
+inject_requests(_, _, [], []).
+inject_requests(_, [], Ys, Ys?).
+
+%% open_conv(Friend, End, Sg, Sg1): Sg := [conversation(Friend, End) | Sg1].
+procedure open_conv(Constant?, RootChannel?, SgToAppStream, SgToAppStream?).
+open_conv(Friend, End, [conversation(Friend?, End?) | Sg1?], Sg1).
+
+procedure open_conv_coins(Constant?, PeerChannel?, Stream(Conversation), Stream(Conversation)?).
+open_conv_coins(Friend, End, [conversation(Friend?, End?) | Convs1?], Convs1).
+
+procedure open_conv_cssn(Constant?, CsChannel?, Stream(CsConversation), Stream(CsConversation)?).
+open_conv_cssn(Friend, End, [conversation(Friend?, End?) | Convs1?], Convs1).
+
+%% --- Attestations (Section 5.5) ---
+
+procedure lookup_att(Constant?, AttestList?, AttestList, String).
+lookup_att(F, [att(F1, S) | Rest], [att(F1?, S?) | Rest?], S?) :- F? =?= F1? | true.
+lookup_att(F, [E | Rest], [E? | Rest1?], S?) :- otherwise | lookup_att(F?, Rest?, Rest1, S).
+lookup_att(_, [], [], none).
+
+%% --- Termination: the mini-apps' streams close with the agent's ---
+
+procedure close_host(Host?).
+close_host(host(Apps, _, _, _)) :- close_apps(Apps?).
+
+procedure close_apps(AppList?).
+close_apps([app(_, _, _, idle([])) | Rest]) :- close_apps(Rest?).
+close_apps([app(_, _, _, running([])) | Rest]) :- close_apps(Rest?).
+close_apps([app(_, _, _, idle_coins(ch(_, []))) | Rest]) :- close_apps(Rest?).
+close_apps([app(_, _, _, running_coins([])) | Rest]) :- close_apps(Rest?).
+close_apps([app(_, _, _, idle_cssn(ch(_, []))) | Rest]) :- close_apps(Rest?).
+close_apps([app(_, _, _, running_cssn([])) | Rest]) :- close_apps(Rest?).
+close_apps([]).
+
+procedure app_names(AppList?, AppList, Stream(Constant)).
+app_names([app(A, M, C, St) | Rest], [app(A?, M?, C?, St?) | Rest1?], [A? | Names?]) :-
+    app_names(Rest?, Rest1, Names).
+app_names([], [], []).
+
+%% =============================================================================
+%% THE WARM CALL'S STEPS AND BOOKKEEPING (Section 5.2)
+%% =============================================================================
+
+%% anchor_is(Parts, X, B): whether the anchor a global name carries --- the
+%% name taken apart into a list, '_w'(Anchor, I) or '_r'(Anchor, I) --- is X.
+%% A name's parts are untyped, so the anchor is only ever compared, never
+%% produced as an agent.
+procedure anchor_is(Stream(_)?, Constant?, Constant).
+anchor_is([_, A | _], X, true) :- A? =?= X? | true.
+anchor_is(_, _, false) :- otherwise | true.
+
+%% --- at the holder ---
+
+%% take_warm_consent_for(Parts, Pend, Pend1, C): the person's consent to a warm
+%% call with the name's anchor, removed.
+procedure take_warm_consent_for(Stream(_)?, PendingInv?, PendingInv, WarmConsent).
+take_warm_consent_for(Parts, [warm_consent(W) | Rest], Pend1?, C?) :-
+    ground(Parts?) |
+    anchor_is(Parts?, W?, B),
+    twc_step(B?, Parts?, W?, Rest?, Pend1, C).
+take_warm_consent_for(Parts, [P | Rest], [P? | Rest1?], C?) :-
+    otherwise | take_warm_consent_for(Parts?, Rest?, Rest1, C).
+take_warm_consent_for(_, [], [], no).
+
+procedure twc_step(Constant?, Stream(_)?, Constant?, PendingInv?, PendingInv, WarmConsent).
+twc_step(true, _, W, Rest, Rest?, yes(W?)).
+twc_step(false, Parts, W, Rest, [warm_consent(W?) | Rest1?], C?) :-
+    take_warm_consent_for(Parts?, Rest?, Rest1, C).
+
+%% warm_step(C, ...): with the person's consent, the social graph asks the
+%% forwarding friend to introduce it to the ANCHOR, named by the constant the
+%% person consented to --- never by the held link's global name, which is a
+%% name of a variable and is not a term at the friend that receives it.  The
+%% name stays here, where authorise_link/2 will take it.
+procedure warm_step(WarmConsent?, Constant?, Constant?, _?, Constant?, UserInStream?, NetInStream?, OutputsList?, Host?).
+warm_step(yes(Anchor), Id, App, Name, Via, UserIn, NetIn, Outs, host(Apps, Atts, Pend, Trusted)) :-
+    send_friend(Via?, msg(Id?, Via?, request_intro(Anchor?)), Outs?, Outs1),
+    agent(Id?, UserIn?, NetIn?, Outs1?,
+          host(Apps?, Atts?, [warm(App?, Name?) | Pend?], Trusted?)).
+warm_step(no, Id, App, Name, Via, UserIn, NetIn, Outs, host(Apps, Atts, Pend, Trusted)) :-
+    agent(Id?, UserIn?, NetIn?, Outs?,
+          host(Apps?, Atts?, [warm_wait(App?, Name?, Via?) | Pend?], Trusted?)).
+
+%% take_warm_wait(Who, Pend, Pend1, Wait): a warm call waiting for the person's
+%% consent whose anchor is Who, removed: wait(App, Name, Via), or none.
+procedure take_warm_wait(Constant?, PendingInv?, PendingInv, WarmWait).
+take_warm_wait(Who, [warm_wait(App, Name, Via) | Rest], Pend1?, W?) :-
+    ground(Name?) |
+    Parts ..= Name?,
+    anchor_is(Parts?, Who?, B),
+    tww_step(B?, Who?, App?, Name?, Via?, Rest?, Pend1, W).
+take_warm_wait(Who, [P | Rest], [P? | Rest1?], W?) :- otherwise | take_warm_wait(Who?, Rest?, Rest1, W).
+take_warm_wait(_, [], [], none).
+
+procedure tww_step(Constant?, Constant?, Constant?, _?, Constant?, PendingInv?, PendingInv, WarmWait).
+tww_step(true, _, App, Name, Via, Rest, Rest?, wait(App?, Name?, Via?)).
+tww_step(false, Who, App, Name, Via, Rest, [warm_wait(App?, Name?, Via?) | Rest1?], W?) :-
+    take_warm_wait(Who?, Rest?, Rest1, W).
+
+procedure warm_consent_step(WarmWait?, Constant?, Constant?, UserInStream?, NetInStream?, OutputsList?, Host?).
+warm_consent_step(none, Id, Who, UserIn, NetIn, Outs, host(Apps, Atts, Pend, Trusted)) :-
+    agent(Id?, UserIn?, NetIn?, Outs?, host(Apps?, Atts?, [warm_consent(Who?) | Pend?], Trusted?)).
+warm_consent_step(wait(App, Name, Via), Id, Who, UserIn, NetIn, Outs, Host) :-
+    warm_step(yes(Who?), Id?, App?, Name?, Via?, UserIn?, NetIn?, Outs?, Host?).
+
+%% warm_after_commit(Id, Friend, Pend, Outs, Outs1): a friendship just made
+%% with the anchor of a warm call under way: send the warm call.
+procedure warm_after_commit(Constant?, Constant?, PendingInv?, OutputsList?, OutputsList).
+warm_after_commit(Id, Friend, [warm(App, Name) | Rest], Outs, Outs1?) :-
+    ground(Name?) |
+    Parts ..= Name?,
+    anchor_is(Parts?, Friend?, B),
+    wac_step(B?, Id?, Friend?, App?, Name?, Rest?, Outs?, Outs1).
+warm_after_commit(Id, Friend, [_ | Rest], Outs, Outs1?) :-
+    otherwise | warm_after_commit(Id?, Friend?, Rest?, Outs?, Outs1).
+warm_after_commit(_, _, [], Outs, Outs?).
+
+procedure wac_step(Constant?, Constant?, Constant?, Constant?, _?, PendingInv?, OutputsList?, OutputsList).
+wac_step(true, Id, Friend, App, _, _, Outs, Outs1?) :-
+    send_friend(Friend?, msg(Id?, Friend?, warm_call(App?)), Outs?, Outs1).
+wac_step(false, Id, Friend, _, _, Rest, Outs, Outs1?) :-
+    warm_after_commit(Id?, Friend?, Rest?, Outs?, Outs1).
+
+%% release_held(App, From, Pend, Pend1): the handshake with the anchor done,
+%% the held end is released, and the value goes to the anchor.
+procedure release_held(Constant?, Constant?, PendingInv?, PendingInv).
+release_held(App, From, [warm(A, Name) | Rest], Pend1?) :-
+    App? =?= A?, ground(Name?) |
+    Parts ..= Name?,
+    anchor_is(Parts?, From?, B),
+    rh_step(B?, App?, From?, Name?, Rest?, Pend1).
+release_held(App, From, [P | Rest], [P? | Rest1?]) :-
+    otherwise | release_held(App?, From?, Rest?, Rest1).
+release_held(_, _, [], []).
+
+procedure rh_step(Constant?, Constant?, Constant?, _?, PendingInv?, PendingInv).
+rh_step(true, _, _, Name, Rest, Rest?) :- authorise_link(Name?, authorise).
+rh_step(false, App, From, Name, Rest, [warm(App?, Name?) | Rest1?]) :-
+    release_held(App?, From?, Rest?, Rest1).
+
+%% --- at the anchor ---
+
+procedure take_warm_consent(Constant?, PendingInv?, PendingInv, Constant).
+take_warm_consent(Who, [warm_consent(W) | Rest], Rest?, true) :- Who? =?= W? | true.
+take_warm_consent(Who, [P | Rest], [P? | Rest1?], C?) :- otherwise | take_warm_consent(Who?, Rest?, Rest1, C).
+take_warm_consent(_, [], [], false).
+
+%% warm_release(Mine, S, Pend, Pend1, B): a held link is authorised at BOTH of
+%% its ends and each end decides for itself (IGLP, madglp-spec, Held Links).
+%% This end is the ANCHOR when the name is anchored here --- the value is
+%% coming home, and it is released where the person accepted a warm call from
+%% the friend that sends it.  Otherwise this end is the HOLDER, and the report
+%% goes to the mini-app, which asks for the warm call.  The two ends of one
+%% link have different names and neither crosses, so they are never compared:
+%% the friend it comes from is what identifies the link to a program.
+%% may_release(Parts, S, Pend, Pend1, B): whether this end authorises the link
+%% the runtime is asking about --- the person's volition for it.  Both ends of
+%% a held link are asked, each about its own end, and the traffic one
+%% authorisation lets through is itself held at the other end, so the reports
+%% come in ROUNDS and every one of them must be answered (IGLP, 2026-09-09):
+%% a program that answers only the first round stops with the acknowledgement
+%% it is waiting for sitting held at its own end.  The volitions are: a warm
+%% call accepted from the friend the traffic comes from, and an introduction
+%% accepted with or from that friend --- an introduction's channel is the
+%% introducer's, so its links are anchored at the introducer, while the
+%% acknowledgement the other party sends on it is anchored at this agent and
+%% arrives from that party.  The entries are KEPT: one volition releases every
+%% link and every round it brings.
+procedure may_release(Stream(_)?, Constant?, PendingInv?, PendingInv, Constant).
+may_release(Parts, S, [warm_ok(F) | Rest], [warm_ok(F?) | Rest1?], B?) :-
+    ground(Parts?), ground(S?) |
+    mr_warm(S?, F?, Parts?, Rest?, Rest1, B).
+may_release(Parts, S, [intro_ok(W) | Rest], [intro_ok(W?) | Rest1?], B?) :-
+    ground(Parts?), ground(S?) |
+    mr_intro(Parts?, S?, W?, Rest?, Rest1, B).
+may_release(Parts, S, [P | Rest], [P? | Rest1?], B?) :-
+    otherwise | may_release(Parts?, S?, Rest?, Rest1, B).
+may_release(_, _, [], [], false).
+
+procedure mr_warm(Constant?, Constant?, Stream(_)?, PendingInv?, PendingInv, Constant).
+mr_warm(S, F, _, Rest, Rest?, true) :- S? =?= F? | true.
+mr_warm(S, F, Parts, Rest, Rest1?, B?) :-
+    ~(S? =?= F?) | may_release(Parts?, S?, Rest?, Rest1, B).
+
+procedure mr_intro(Stream(_)?, Constant?, Constant?, PendingInv?, PendingInv, Constant).
+mr_intro(_, S, W, Rest, Rest?, true) :- S? =?= W? | true.
+mr_intro(Parts, S, W, Rest, Rest1?, B?) :-
+    ~(S? =?= W?) |
+    anchor_is(Parts?, W?, Hit),
+    mr_anchor(Hit?, Parts?, S?, Rest?, Rest1, B).
+
+procedure mr_anchor(Constant?, Stream(_)?, Constant?, PendingInv?, PendingInv, Constant).
+mr_anchor(true, _, _, Rest, Rest?, true).
+mr_anchor(false, Parts, S, Rest, Rest1?, B?) :- may_release(Parts?, S?, Rest?, Rest1, B).
+
+%% take_intro_via(Other, Pend, Pend1, Via): who introduced Other, removed.
+procedure take_intro_via(Constant?, PendingInv?, PendingInv, AnchorFriend).
+take_intro_via(Other, [intro_via(O, V) | Rest], Rest?, found(V?)) :-
+    Other? =?= O? | true.
+take_intro_via(Other, [P | Rest], [P? | Rest1?], V?) :-
+    otherwise | take_intro_via(Other?, Rest?, Rest1, V).
+take_intro_via(_, [], [], none).
+
+%% accepted_intro(Via, Other, Pend, Pend1): the consent kept, so that a link of
+%% this introduction reported later is released in its turn.
+procedure accepted_intro(AnchorFriend?, Constant?, PendingInv?, PendingInv).
+accepted_intro(found(Via), Other, Pend, [intro_ok(Via?), intro_ok(Other?) | Pend?]).
+accepted_intro(none, Other, Pend, [intro_ok(Other?) | Pend?]).
+
+%% release_by_sender(Via, Pend, Pend1): every link already reported and held
+%% that came FROM Via, authorised now that the person has consented to the
+%% introduction Via made.  The introducer's channel carries the introducer's
+%% own variables, so these links are anchored at the introducer and not at the
+%% friend being introduced.
+procedure release_by_sender(AnchorFriend?, PendingInv?, PendingInv).
+release_by_sender(found(Via), Pend, Pend1?) :- rbs(Via?, Pend?, Pend1).
+release_by_sender(none, Pend, Pend?).
+
+procedure rbs(Constant?, PendingInv?, PendingInv).
+rbs(Via, [held(Name, S) | Rest], Pend1?) :-
+    ground(Name?), Via? =?= S? |
+    authorise_link(Name?, authorise),
+    rbs(Via?, Rest?, Pend1).
+rbs(Via, [P | Rest], [P? | Rest1?]) :- otherwise | rbs(Via?, Rest?, Rest1).
+rbs(_, [], []).
+
+%% intro_ok_for(Parts, Pend, Pend1, B): whether the person has accepted an
+%% introduction with the anchor of this held name.  The introducer makes the
+%% channel and each of the two it introduces receives its end FROM the
+%% introducer, so both ends are held; the consent to the introduction is what
+%% releases them, and it is kept, since one introduction holds several links.
+procedure pending_step(Constant?, _?, Constant?, Constant?, UserInStream?, NetInStream?, OutputsList?, AppList?, AttestList?, PendingInv?, Stream(String)?).
+pending_step(true, Name, _, Id, UserIn, NetIn, Outs, Apps, Atts, Pend, Trusted) :-
+    authorise_link(Name?, authorise),
+    agent(Id?, UserIn?, NetIn?, Outs?, host(Apps?, Atts?, Pend?, Trusted?)).
+%% No volition for it yet: the report goes to the mini-apps, which know their
+%% conversations, AND the link is remembered, so that a consent given after the
+%% report --- the person accepting the introduction the link came with ---
+%% releases it in its turn.  A link reported before its volition and then
+%% forgotten is a link nothing can ever release.
+pending_step(false, Name, S, Id, UserIn, NetIn, Outs, Apps, Atts, Pend, Trusted) :-
+    forward_pending(Name?, S?, Apps?, Apps1),
+    agent(Id?, UserIn?, NetIn?, Outs?,
+          host(Apps1?, Atts?, [held(Name?, S?) | Pend?], Trusted?)).
+
+%% forward_pending(Name, S, Apps, Apps1): the report to every running mini-app.
+procedure forward_pending(_?, Constant?, AppList?, AppList).
+forward_pending(Name, S, [app(A, M, C, running(Sg?)) | Rest], [app(A?, M?, C?, running(Sg1)) | Rest1?]) :-
+    ground(Name?) |
+    push_down(pending_link(Name?, S?), Sg, Sg1?),
+    forward_pending(Name?, S?, Rest?, Rest1).
+forward_pending(Name, S, [E | Rest], [E? | Rest1?]) :-
+    otherwise | forward_pending(Name?, S?, Rest?, Rest1).
+forward_pending(_, _, [], []).
+
+procedure push_down(SgToApp?, SgToAppStream, SgToAppStream?).
+push_down(Msg, [Msg? | Sg1?], Sg1).
+
+procedure warm_call_step(Constant?, Constant?, Constant?, Constant?, UserInStream?, NetInStream?, OutputsList?, Host?).
+warm_call_step(true, Id, From, App, UserIn, NetIn, Outs, host(Apps, Atts, Pend, Trusted)) :-
+    agent(Id?, [msg(person, Id?, invite(App?, From?)) | UserIn?], NetIn?, Outs?,
+          host(Apps?, Atts?, [warm_ok(From?) | Pend?], Trusted?)).
+warm_call_step(false, Id, _, _, UserIn, NetIn, Outs, Host) :-
+    agent(Id?, UserIn?, NetIn?, Outs?, Host?).
+
+%% --- at the forwarding friend ---
+
+%% anchor_friend(Parts, Outs, Outs1, F): the friend whose identity the name's
+%% anchor is, the outputs passed through.
+procedure anchor_friend(Constant?, OutputsList?, OutputsList, AnchorFriend).
+anchor_friend(Anchor, [friend_output(K, Out?) | Rest], [friend_output(K?, Out) | Rest1?], found(K?)) :-
+    Anchor? =?= K? | true.
+anchor_friend(Anchor, [E | Rest], [E? | Rest1?], F?) :-
+    otherwise | anchor_friend(Anchor?, Rest?, Rest1, F).
+anchor_friend(_, [], [], none).
+
+procedure intro_request(AnchorFriend?, Constant?, Constant?, Constant?, UserInStream?, NetInStream?, OutputsList?, Host?).
+intro_request(found(Anchor), Id, From, Anchor1, UserIn, NetIn, Outs, host(Apps, Atts, Pend, Trusted)) :-
+    take_intro_consent(From?, Anchor?, Pend?, Pend1, C),
+    intro_request_step(C?, Id?, From?, Anchor?, Anchor1?, UserIn?, NetIn?, Outs?,
+                       host(Apps?, Atts?, Pend1?, Trusted?)).
+intro_request(none, Id, _, _, UserIn, NetIn, Outs, Host) :-
+    agent(Id?, UserIn?, NetIn?, Outs?, Host?).
+
+procedure take_intro_consent(Constant?, Constant?, PendingInv?, PendingInv, Constant).
+take_intro_consent(R, A, [intro_consent(R1, A1) | Rest], Rest?, true) :-
+    R? =?= R1?, A? =?= A1? | true.
+take_intro_consent(R, A, [P | Rest], [P? | Rest1?], C?) :- otherwise | take_intro_consent(R?, A?, Rest?, Rest1, C).
+take_intro_consent(_, _, [], [], false).
+
+procedure intro_request_step(Constant?, Constant?, Constant?, Constant?, Constant?, UserInStream?, NetInStream?, OutputsList?, Host?).
+intro_request_step(true, Id, From, Anchor, _, UserIn, NetIn, Outs, Host) :-
+    agent(Id?, [msg(person, Id?, introduce(From?, Anchor?)) | UserIn?], NetIn?, Outs?, Host?).
+intro_request_step(false, Id, From, _, Anchor1, UserIn, NetIn, Outs, host(Apps, Atts, Pend, Trusted)) :-
+    agent(Id?, UserIn?, NetIn?, Outs?, host(Apps?, Atts?, [intro_wait(From?, Anchor1?) | Pend?], Trusted?)).
+
+%% take_intro_wait(Requester, Anchor, Pend, Pend1, W): a request from Requester
+%% waiting for consent whose name is anchored at Anchor, removed.
+procedure take_intro_wait(Constant?, Constant?, PendingInv?, PendingInv, Constant).
+take_intro_wait(R, A, [intro_wait(R1, A1) | Rest], Rest?, true) :-
+    R? =?= R1?, A? =?= A1? | true.
+take_intro_wait(R, A, [P | Rest], [P? | Rest1?], W?) :- otherwise | take_intro_wait(R?, A?, Rest?, Rest1, W).
+take_intro_wait(_, _, [], [], false).
+
+procedure intro_consent_step(Constant?, Constant?, Constant?, Constant?, UserInStream?, NetInStream?, OutputsList?, Host?).
+intro_consent_step(true, Id, From, Anchor, UserIn, NetIn, Outs, Host) :-
+    agent(Id?, [msg(person, Id?, introduce(From?, Anchor?)) | UserIn?], NetIn?, Outs?, Host?).
+intro_consent_step(false, Id, From, Anchor, UserIn, NetIn, Outs, host(Apps, Atts, Pend, Trusted)) :-
+    agent(Id?, UserIn?, NetIn?, Outs?, host(Apps?, Atts?, [intro_consent(From?, Anchor?) | Pend?], Trusted?)).

@@ -24,6 +24,12 @@ class GlpPaths {
   final String rootSelfGlp; // .../programs/self.glp
   const GlpPaths(
       this.grassappDir, this.graphDir, this.cssnDir, this.rootSelfGlp);
+
+  /// The Grassroots Super-App's program, and the mini-app it installs. A
+  /// mini-app's certified artefact is read by `load_file/2` from the super-app's
+  /// own directory, so `.glpw` files belong in [coreDir].
+  String get coreDir => '$graphDir/core';
+  String get pingappDir => '$graphDir/pingapp';
 }
 
 /// The bundled assets (relative to `assets/glp/`), in the tree the engine's
@@ -45,11 +51,21 @@ const _bundledGlp = [
   'programs/grassapp/play_village_headless.glp',
   // Social graph (the canonical platform program).
   'programs/social/graph/self.glp',
-  'programs/social/graph/agent.glp',
   'programs/social/graph/boot.glp',
   'programs/social/graph/play_ui_boot.glp',
   'programs/social/graph/ui/mediator.glp',
   'programs/social/graph/ui/actors.glp',
+  // The Grassroots Super-App. graph/core is the certified program --- the
+  // agent, its plays, and the person interface that installs a mini-app and
+  // invites a friend to it; graph/pingapp is the mini-app it installs by
+  // load_file/2. The agent moved here from graph/agent.glp (SGSG, 2026-09-08),
+  // which this list still named, so the asset sync failed at that copy and no
+  // iOS bundle could be built.
+  'programs/social/graph/core/self.glp',
+  'programs/social/graph/core/agent.glp',
+  'programs/social/graph/core/superapp_plays.glp',
+  'programs/social/graph/pingapp/self.glp',
+  'programs/social/graph/pingapp/miniapp.glp',
   // CSSN social network (groups): the whole program is statically linked, so
   // every module the root self.glp reaches must be bundled.  childsafe/ is the
   // certified program --- the two agents, the mediator and the mini-app entry

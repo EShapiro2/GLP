@@ -19,16 +19,17 @@ GroupNotifyContent ::= group_invite(GroupId, Channel(Stream(GroupSetupResponse),
                      ; group_removed(GroupId).
 
 %% Friend-only message content (excludes shared GroupNotifyContent)
-FriendOnlyContent ::= response(Response)
-                    ; text(Constant)
+FriendOnlyContent ::= text(Constant)
                     ; intro(Constant, Channel(Stream(IntroContent), Stream(IntroContent)))
                     ; child_intro(Constant, Channel(Stream(IntroContent), Stream(IntroContent)))
                     ; group_msg(GroupId, Constant, Constant)
                     ; group_consent_req(GroupId, Decision?)
                     ; group_leave(GroupId, Constant)
                     ; leave_group(GroupId)
+                    ; remove_member(GroupId, Constant)
                     ; unfriend
                     ; unfriend_child(Constant)
+                    ; enrol(Constant, EnrolResponse?)
                     ; release_request
                     ; release_grant
                     ; approval
@@ -36,24 +37,24 @@ FriendOnlyContent ::= response(Response)
 
 %% Friend messages (after connection established)
 FriendContent ::= FriendOnlyContent ; GroupNotifyContent.
-%% Friend channel content — friend messages only, canonical-free.
-%% Stream(FriendMsg) is therefore a subtype of Stream(NetInMsg), so merging a
-%% friend channel's read end into NetIn is sound.
+%% Friend channel content — friend messages only, canonical-free.  It is the
+%% whole of what the agent reads (NetInMsg below), so a conversation's read end,
+%% a parent-child channel and a group-hub stream all merge into one input.
 FriendMsg     ::= msg(Constant, Constant, FriendContent).
 
-%% A cold-call accept conveys a SETUP channel (IntroContent), not the friend
+%% A child introduction conveys a SETUP channel (IntroContent), not the friend
 %% channel directly; the fresh friend channel is conveyed on the setup channel
-%% at commit (see befriend_commit).
-Response ::= accept(Channel(Stream(IntroContent), Stream(IntroContent))) ; no.
+%% at commit (see befriend_commit).  An adult friendship has no setup channel at
+%% all: it IS the conversation the social graph opens.
 Decision ::= yes ; no.
 Handshake ::= ack(Constant) ; nack.
 
 %% An enrolment offer is answered by conveying the parent-child channel itself.
 %% Enrol is directional --- p enrols r, and r is not simultaneously enrolling p ---
 %% so there is no bilateral case to tie-break and no setup channel is needed: the
-%% child allocates the channel and returns the parent's end.  This is the one act
-%% whose parties have no channel between them when it starts, which is why it
-%% travels the cold-call path.
+%% child allocates the channel and returns the parent's end.  It travels the
+%% conversation the social graph opened between the two, as every other act of
+%% this platform does: the mini-app holds no network entry.
 EnrolResponse ::= enrol_accept(Channel(Stream(FriendMsg), Stream(FriendMsg)))
                 ; enrol_no.
 
@@ -67,8 +68,16 @@ IntroContent ::= ack(Constant) ; nack
 %% Group identifier
 GroupId   ::= group_id(Constant, Constant).
 
+%% What the social graph hands the mini-app on its channel to the social graph
+%% (SGSG paper, Section 3): at each invitation, one end of the root channel of a
+%% conversation with a friend's execution of this program.  Adopting it IS
+%% befriending under this contract --- c_p gains the party and the agent tells
+%% its person it is connected --- so the platform makes no first contact of its
+%% own and holds no network entry.
+Conversation ::= conversation(Constant, Channel(Stream(FriendMsg), Stream(FriendMsg))).
+
 %% Pending values — opaque values stored by mediator, forwarded to agent
-PendingValue ::= response(Response?) ; channel(Channel(Stream(IntroContent), Stream(IntroContent)))
+PendingValue ::= channel(Channel(Stream(IntroContent), Stream(IntroContent)))
                ; group_channel(Channel(Stream(GroupSetupResponse), Stream(IntroContent)))
                ; consent(Decision?) ; enrol_response(EnrolResponse?) ; error.
 
@@ -86,19 +95,27 @@ PendingValue ::= response(Response?) ; channel(Channel(Stream(IntroContent), Str
 %% withdrawals it has taken.  They name nobody, which is what makes any parent
 %% of a child able to end any friendship or membership of that child.
 %%
-%% The other two are h_p, the posts this party holds, and t_p, its record of what
-%% it has sent and to whom.  Delivery to a member is owed while the member is on
-%% the creator's list and the creator has not already sent it that item, so the
-%% creator has to hold BOTH: the posts, because a member that joins late is owed
-%% what was posted before it joined, and the sent record, because what keeps a
-%% member from receiving an item twice is that record and nothing else.  A member
-%% that leaves and rejoins is the case that needs it --- its stream is gone and
-%% remade, and only t_p remembers what it has already had.
+%% The other two are the posts this party holds and its record of what it has
+%% sent in a group and to whom.  Against Definition "Grassroots Social Network
+%% Guarded Transactions" as it now stands, those are pi_p^g and delta_p^g: the
+%% items posted to g, and the pairs delivered in g.  They are NOT t_p, which is
+%% what this party has sent to a FRIEND, and which the code holds nowhere --- a
+%% direct send writes to the friend channel and records nothing.
+%%
+%% Delivery to a member is owed while the member is on the creator's list and the
+%% creator has not already sent it that item, so the creator has to hold BOTH:
+%% pi_p^g, because a member that joins late is owed what was posted before it
+%% joined, and delta_p^g, because what keeps a member from receiving an item
+%% twice is that record and nothing else.  A member that leaves and rejoins is
+%% the case that needs it --- its stream is gone and remade, and only delta_p^g
+%% remembers what it has already had.
 %%
 %% This is not a delivery index.  An index is a position in a queue that decides
 %% what a member may ever receive; sent(g, q, n) says only that the first n posts
 %% of g have gone to q, and the posts of g are appended in order and sent in
-%% order, so n is exactly the t_p of Definition item 5 written compactly.
+%% order, so n is delta_p^g written compactly --- a count where the Definition
+%% has a set of pairs, sound exactly because posting and sending are both in
+%% order.
 GroupPost  ::= post(GroupId, Constant, Constant).
 SentEntry  ::= sent(GroupId, Constant, Integer).
 AgentState ::= state(Integer, Integer, Stream(GroupPost), Stream(SentEntry)).
@@ -108,9 +125,7 @@ AgentState ::= state(Integer, Integer, Stream(GroupPost), Stream(SentEntry)).
 %% =============================================================================
 
 %% Content carried inside user-to-agent messages (msg(person, Id, Content))
-UserContent ::= connect(Constant)
-              ; decision(Decision, Constant, PendingValue)
-              ; send(Constant, Constant)
+UserContent ::= send(Constant, Constant)
               ; introduce(Constant, Constant)
               ; accept_intro(Constant, PendingValue)
               ; reject_intro(Constant, PendingValue)
@@ -118,7 +133,6 @@ UserContent ::= connect(Constant)
               ; accept_child_intro(Constant, PendingValue)
               ; reject_child_intro(Constant, PendingValue)
               ; approve_child_intro(Constant, Constant, PendingValue)
-              ; response(Response)
               ; create_group(Constant)
               ; invite_group(GroupId, Constant)
               ; invite_group(GroupId, Constant, Constant)
@@ -133,12 +147,7 @@ UserContent ::= connect(Constant)
               ; reject_child_group(Constant, GroupId, PendingValue)
               ; unfriend_child(Constant)
               ; unfriend_child_of(Constant, Constant)
-              %% declare_age is retired from the contract --- a party is a child
-              %% exactly while it holds a parent, and no act declares an age.  No
-              %% agent clause accepts it and no actor issues it; the alternative
-              %% stands only until vGLP drops the mediator's pass-through, which
-              %% would not typecheck without it.
-              ; declare_age
+              ; remove_child_member(Constant, GroupId, Constant)
               ; enrol_child(Constant)
               ; enrol_decision(Decision, Constant, PendingValue)
               ; request_release
@@ -146,12 +155,11 @@ UserContent ::= connect(Constant)
 
 %% Content carried inside agent-to-user messages (msg(agent, person, Content))
 %% Agent-only message content (excludes shared GroupNotifyContent)
-AgentOnlyContent ::= befriend(Constant, Response?)
-                   ; befriend_intro(Constant, Constant, Channel(Stream(IntroContent), Stream(IntroContent)))
+AgentOnlyContent ::= befriend_intro(Constant, Constant, Channel(Stream(IntroContent), Stream(IntroContent)))
                    ; child_befriend(Constant, Constant, Channel(Stream(IntroContent), Stream(IntroContent)))
                    ; connected(Constant)
-                   ; rejected
                    ; rejected(Constant)
+                   ; no_conversation(Constant)
                    ; received(Constant, Constant)
                    ; group_joined(GroupId)
                    ; group_joined_member(GroupId, Constant)
@@ -159,8 +167,6 @@ AgentOnlyContent ::= befriend(Constant, Response?)
                    ; group_received(GroupId, Constant, Constant)
                    ; child_group_consent(Constant, GroupId, Decision?)
                    ; unfriended(Constant)
-                   %% Retired with declare_age; see the note there.
-                   ; age_declared
                    ; enrol_offer(Constant, EnrolResponse?)
                    ; enrolled(Constant)
                    ; release_asked(Constant)
@@ -177,18 +183,12 @@ MediatorToAgentMsg    ::= msg(Constant, Constant, UserContent).
 %% AGENT INPUT TYPES
 %% =============================================================================
 
-%% Network content (2-arg cold-call: msg(Dest, Content))
-%% Enrol joins intro here because the parent and the child it enrols have no
-%% channel between them until the act creates one.
-NetColdCall ::= intro(Constant, Response?)
-              ; enrol(Constant, EnrolResponse?).
-
-%% Network input message (cold calls + friend messages)
-NetInMsg    ::= msg(Constant, NetColdCall)
-              ; msg(Constant, Constant, FriendContent).
-
-%% Transport union carried by the simulated network switches (network3/network2).
-%% Producers write the narrower NetOutStream; NetOutStream ⊆ NetInStream is sound.
+%% What the agent reads from the parties it is in relation with: its friends,
+%% its parents, its children, and the groups it belongs to --- every one of them
+%% a channel it holds, none of them a network entry.  A cold-call alphabet would
+%% have nowhere to arrive: a conversation arrives on the channel to the social
+%% graph, and every act of the contract travels a conversation thereafter.
+NetInMsg    ::= FriendMsg.
 NetInStream ::= [] ; [NetInMsg | NetInStream].
 
 %% Intro result — written by intro_await_peer, injected into UserIn
@@ -221,10 +221,6 @@ GroupMsg     ::= msg(Constant, Constant, GroupContent).
 %% Creator→Invitee stream carries the group channel after handshake
 GroupSetupResponse ::= group_channel(Channel(Stream(GroupMsg), Stream(GroupMsg))).
 
-%% Network output stream — cold calls the agent emits on its net entry.
-NetOutMsg    ::= msg(Constant, NetColdCall).
-NetOutStream ::= [] ; [NetOutMsg | NetOutStream].
-
 %% Output list — one constructor per output kind, each carrying its own stream
 %% type.  Replaces the former output(OutputKey, Stream(OutputMsg)?) whose union
 %% OutputMsg typed every entry at the join of all kinds and so broke duality
@@ -233,7 +229,6 @@ NetOutStream ::= [] ; [NetOutMsg | NetOutStream].
 %% groups and members) and its GroupMsg stream is already precise.
 OutputKey   ::= group(GroupId) ; group_member(GroupId, Constant).
 OutputEntry ::= user_output(Stream(AgentToUserMsg)?)
-              ; net_output(NetOutStream?)
               ; friend_output(Constant, Stream(FriendMsg)?)
               ; child_output(Constant, Stream(FriendMsg)?)
               ; parent_output(Constant, Stream(FriendMsg)?)
@@ -246,15 +241,13 @@ OutputsList ::= [] ; [OutputEntry|OutputsList].
 
 ReqId ::= req(Constant).
 
-%% User -> Mediator commands
-UserCmd ::= decision(Decision, Constant, ReqId)
-          ; accept_intro(Constant, ReqId)
+%% Person -> mini-app commands: what this platform's mediator takes.
+AppCmd ::= accept_intro(Constant, ReqId)
           ; reject_intro(Constant, ReqId)
           ; accept_child_intro(Constant, ReqId)
           ; reject_child_intro(Constant, ReqId)
           ; approve_child_intro(Constant, Constant, ReqId)
           ; child_introduce(Constant, Constant, Constant)
-          ; connect(Constant)
           ; send(Constant, Constant)
           ; introduce(Constant, Constant)
           ; create_group(Constant)
@@ -271,20 +264,26 @@ UserCmd ::= decision(Decision, Constant, ReqId)
           ; reject_child_group(Constant, GroupId, ReqId)
           ; unfriend_child(Constant)
           ; unfriend_child_of(Constant, Constant)
-          %% Retired with declare_age; see the note in UserContent.
-          ; declare_age
+          ; remove_child_member(Constant, GroupId, Constant)
           ; enrol_child(Constant)
           ; enrol_decision(Decision, Constant, ReqId)
           ; request_release
           ; approve_release(Constant).
 
-%% Mediator -> User notifications
-UserNotify ::= befriend(Constant, ReqId)
-             ; befriend_intro(Constant, Constant, ReqId)
+%% Person -> super-app commands: befriending is the social graph's, so these
+%% reach the super-app and never the mini-app.
+SgCmd ::= connect(Constant)
+        ; decision(Decision, Constant, ReqId).
+
+%% What the person commands, which is both.
+UserCmd ::= AppCmd ; SgCmd.
+
+%% Mini-app -> person notifications.
+AppNotify ::= befriend_intro(Constant, Constant, ReqId)
              ; child_befriend(Constant, Constant, ReqId)
              ; connected(Constant)
-             ; rejected
              ; rejected(Constant)
+             ; no_conversation(Constant)
              ; received(Constant, Constant)
              ; group_invite(GroupId, ReqId)
              ; group_invite_child(GroupId, Constant, ReqId)
@@ -295,13 +294,42 @@ UserNotify ::= befriend(Constant, ReqId)
              ; group_received(GroupId, Constant, Constant)
              ; child_group_consent(Constant, GroupId, ReqId)
              ; unfriended(Constant)
-             %% Retired with declare_age; see the note in UserContent.
-             ; age_declared
              ; enrol_offer(Constant, ReqId)
              ; enrolled(Constant)
              ; release_asked(Constant)
              ; released(Constant).
 
+%% Super-app -> person notifications: an offer of friendship put to the person,
+%% and an offer of its own that was declined.
+SgNotify ::= befriend(Constant, ReqId)
+           ; declined(Constant).
+
+%% What the person is shown, which is both.
+UserNotify ::= AppNotify ; SgNotify.
+
+
+%% =============================================================================
+%% THE SUPER-APP, AS MUCH OF IT AS THE PLAYS STAND IN FOR
+%% =============================================================================
+%% Befriending is the social graph's, not this platform's, so the plays carry a
+%% stand-in for the super-app (superapp.glp): it takes the person's befriending
+%% commands, carries the invitation over a network of its own, and hands each
+%% side of an accepted invitation a conversation with the other's execution of
+%% the mini-app.  None of this is the certified program's --- in deployment it is
+%% the Grassroots Super-App (SGSG paper, Sections 3 and 7) --- and none of these
+%% types is used below childsafe/.
+
+%% An invitation is answered by conveying the root channel of the conversation,
+%% as an enrolment is answered by conveying the parent-child channel.
+SgResponse  ::= sg_accept(Channel(Stream(FriendMsg), Stream(FriendMsg))) ; sg_decline.
+SgContent   ::= sg_invite(Constant, SgResponse?).
+SgOutMsg    ::= sg(Constant, SgContent).
+SgOutStream ::= [] ; [SgOutMsg | SgOutStream].
+SgInMsg     ::= sg(Constant, SgContent) ; sg_answer(Constant, SgResponse).
+SgInStream  ::= [] ; [SgInMsg | SgInStream].
+SgEntry     ::= sg_entry(Constant, SgInStream?).
+SgPendingValue ::= sg_response(SgResponse?) ; sg_error.
+SgPending   ::= sg_pending(ReqId, SgPendingValue).
 
 %% =============================================================================
 %% MEDIATOR PENDING LIST
@@ -332,6 +360,31 @@ NarrativeItem   ::= friend(Constant)
 %% =============================================================================
 
 %% merge/3 is now defined once in the root programs/self.glp (A3 amendment).
+
+%% =============================================================================
+%% CONVERSATIONS --- what the social graph hands the mini-app
+%% =============================================================================
+
+%% Adopt the conversation with Q: its write side becomes Q's friend channel, its
+%% read side joins the agent's input, and the person is told it is connected.
+%% Adopting IS befriending under this contract, so c_p gains Q here and nowhere
+%% else --- the platform makes no first contact of its own.
+procedure adopt(Constant?, Channel(Stream(FriendMsg), Stream(FriendMsg))?, Stream(OutputEntry)?, Stream(OutputEntry), Stream(NetInMsg)?, Stream(NetInMsg)).
+adopt(Q, ch(In, Out?), Outs, Outs2?, NetIn, NetIn1?) :-
+    ground(Q?) |
+    add_friend_output(Q?, Out, Outs?, Outs1),
+    send_user( msg(agent, person, connected(Q?)), Outs1?, Outs2),
+    merge(NetIn?, In?, NetIn1).
+
+%% Whether a conversation with Q is open: Q's friend channel is among the
+%% outputs.  An act willed towards a party with no conversation is not sent.
+procedure has_friend(Constant?, Stream(OutputEntry)?, Stream(OutputEntry), Decision).
+has_friend(Q, [friend_output(K, Out?)|Rest], [friend_output(K?, Out)|Rest?], yes) :-
+    Q? =?= K? | true.
+has_friend(Q, [E|Rest], [E?|Rest1?], Open?) :-
+    otherwise |
+    has_friend(Q?, Rest?, Rest1, Open).
+has_friend(_, [], [], no).
 
 %% =============================================================================
 %% SETUP_GROUP_HUB_SIDE
@@ -468,6 +521,25 @@ distribute_group_msg(GroupId, Msg, Sent, Sent1?, [E|Rest], [E?|Rest1?]) :-
     distribute_group_msg(GroupId?, Msg?, Sent?, Sent1, Rest?, Rest1).
 distribute_group_msg(_, _, Sent, Sent?, [], []).
 
+%% =============================================================================
+%% REMOVE_MEMBER_COMMIT — the creator's side of ending a child's membership
+%% =============================================================================
+
+%% A child that created a group removes a member of it: the removed party is told
+%% on its own stream, dropped from the list, and the creator's parent takes a
+%% withdrawal.  Two of the four roles of child_leave_2 reach this and they must
+%% do the same thing --- the creator willing it itself, and its parent willing it
+%% and telling it --- so the body is written once here and called from both
+%% clauses rather than twice in child_agent.  The removed child's own parent
+%% takes the other withdrawal when group_removed reaches it.
+procedure remove_member_commit(Constant?, Constant?, GroupId?, Constant?, Stream(OutputEntry)?, Stream(OutputEntry)).
+remove_member_commit(Id, ParentId, GroupId, Member, Outs, Outs3?) :-
+    ground(Id?), ground(GroupId?), ground(Member?) |
+    lookup_send_group(group_member(GroupId?, Member?),
+        msg(Id?, Member?, group_removed(GroupId?)), Outs?, Outs1),
+    close_output(group_member(GroupId?, Member?), Outs1?, Outs2),
+    send_parent(ParentId?, msg(Id?, ParentId?, withdrawal), Outs2?, Outs3).
+
 %% inject_msg and add_friend_output are now provided by lib/routing/, exposed
 %% from the root self.glp (A5 Stage B); resolved here unqualified.
 
@@ -540,7 +612,6 @@ inject_enrol_response(Resp, Child, [Y|Ys], [Y?|Ys1?]) :-
 
 procedure close_outputs(Stream(OutputEntry)?).
 close_outputs([user_output([])|Outs]) :- close_outputs(Outs?).
-close_outputs([net_output([])|Outs]) :- close_outputs(Outs?).
 close_outputs([friend_output(_, [])|Outs]) :- close_outputs(Outs?).
 close_outputs([child_output(_, [])|Outs]) :- close_outputs(Outs?).
 close_outputs([parent_output(_, [])|Outs]) :- close_outputs(Outs?).
@@ -676,16 +747,13 @@ fplay15 :- boot # fplay15.
 %% Live-UI entry point (Dart bridge): the single-isolate scenario booting Bob's
 %% agent + ui/mediator plus scripted peers.  Added under the 2026-07-09 waiver
 %% (UIVE app wiring).
-imported procedure play_ui_boot#agent_init(Constant?, Stream(UserCmd)?, Stream(NetInMsg)?).
-exported procedure agent_init(Constant?, Stream(UserCmd)?, Stream(NetInMsg)?).
-agent_init(Id, UserIn, NetIn) :- play_ui_boot # agent_init(Id?, UserIn?, NetIn?).
+imported procedure play_ui_boot#agent_init(Constant?, Stream(UserCmd)?, Stream(Conversation)?).
+exported procedure agent_init(Constant?, Stream(UserCmd)?, Stream(Conversation)?).
+agent_init(Id, UserIn, Convs) :- play_ui_boot # agent_init(Id?, UserIn?, Convs?).
 
 imported procedure boot#fplay16.
 exported procedure fplay16.
 fplay16 :- boot # fplay16.
-
-%% Network switch entry: one per agent, keyed by name.
-NetEntry ::= net_entry(Constant, NetOutStream?).
 
 imported procedure boot#fplay17.
 exported procedure fplay17.
@@ -694,3 +762,7 @@ fplay17 :- boot # fplay17.
 imported procedure boot#fplay18.
 exported procedure fplay18.
 fplay18 :- boot # fplay18.
+
+imported procedure boot#fplay19.
+exported procedure fplay19.
+fplay19 :- boot # fplay19.
