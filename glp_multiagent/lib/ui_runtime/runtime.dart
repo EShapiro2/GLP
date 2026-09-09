@@ -20,11 +20,28 @@ class InboxCard {
   final Panel panel;
   final InboxDesc desc;
   final Map<String, GTerm> fields;
-  InboxCard(this.id, this.panel, this.desc, this.fields);
+
+  /// The open asks this card carries, clause to its own `ReqId` — a compiled
+  /// vGLP program's card only. Sibling clauses with an equal context are drawn
+  /// as one card, so a card may carry several, and each of the card's buttons
+  /// answers the ask of its own clause. Empty for a hand-written mediator's
+  /// card, whose id (where it has one) is an ordinary field.
+  final Map<String, GTerm> asks;
+
+  InboxCard(this.id, this.panel, this.desc, this.fields,
+      {Map<String, GTerm>? asks})
+      : asks = asks ?? <String, GTerm>{};
 
   /// The row key this card alerts on — the formatted value of its [itemKey]
   /// field (the offering person, the proposing friend, the invited group).
   String get itemKey => formatTerm(fields[desc.itemKey]!);
+
+  /// The answers whose ask is still open — the buttons this card actually
+  /// offers. A sibling whose ask the agent has aborted is no longer offered.
+  List<AnswerDesc> get liveAnswers => [
+        for (final a in desc.answers)
+          if (a.clause == null || asks.containsKey(a.clause)) a
+      ];
 }
 
 /// Structured state built from all-ground notifies — the screen (friends
@@ -43,6 +60,11 @@ class ActivityStore {
   /// `esc(coin, maturity, amount, release)`. Kept apart from [holdings] because
   /// escrowed bonds are precisely those the holder no longer holds.
   final Map<String, Map<String, GTerm>> escrow = {};
+
+  /// A declared balances view: `balances[viewStore][key]` is an amount. A
+  /// snapshot REPLACES what the view held — the program tallies its whole
+  /// state after every change, so a key no longer reported is no longer held.
+  final Map<String, Map<String, GTerm>> balances = {};
 }
 
 /// The per-agent UI runtime.
@@ -70,12 +92,30 @@ class UiRuntime {
 
   int _cardSeq = 0;
 
+  /// The standing card of each persistent clause: its `ReqId`, which the
+  /// clause's compose form answers. A fresh card of a clause replaces the one
+  /// before it — the agent closes its open cards and poses them again at every
+  /// reduction — so a form always grants against the ask that is open now.
+  final Map<String, GTerm> standing = {};
+
+  /// The parsed patterns of the manifest's declared views, by source text.
+  final Map<String, GPattern> _viewPatterns = {};
+
   UiRuntime({required this.manifest, required this.onSend}) {
     for (final v in manifest.state) {
       if (v.kind == StateKind.list) {
         store.lists.putIfAbsent(v.key, () => <GTerm>[]);
       } else if (v.kind == StateKind.thread) {
         store.threads.putIfAbsent(v.key, () => <String, List<GTerm>>{});
+      }
+    }
+    for (final p in manifest.panels) {
+      for (final v in p.views) {
+        final pat = GPattern.parse(v.pattern);
+        if (pat != null) _viewPatterns[v.pattern] = pat;
+        if (v.kind == ViewKind.list) {
+          store.lists.putIfAbsent(v.store, () => <GTerm>[]);
+        }
       }
     }
   }
@@ -88,6 +128,15 @@ class UiRuntime {
     if (term == null) return;
     final (ctor, args) = ctorArgs(term);
     if (ctor.isEmpty) return;
+
+    // The person channel of a compiled vGLP program (Definition "Canonical
+    // Compilation") carries one vocabulary whatever the program: the
+    // mediator's cards and their closing, the agent's screen messages, and,
+    // from the person, answers. A card is selected by its CLAUSE, not by
+    // constructor and arity — `card`/3 is one constructor for every clause of
+    // the program — so these two come first and consume what they recognise.
+    if (ctor == cardCtor && args.length == 3 && _handleCard(args)) return;
+    if (ctor == closedCtor && args.length == 1 && _handleClosed(args[0])) return;
 
     // A notify may retire pending cards as well as land as a card or an
     // activity of its own — an escrow expiring both removes its cancel offer
@@ -111,12 +160,150 @@ class UiRuntime {
       onChange?.call();
       return;
     }
+    // A screen message the manifest views, by the pattern of its display
+    // declaration — including the default display, which is a declared pattern
+    // like any other and, being last, takes what the others leave.
+    if (_applyViews(term)) {
+      onChange?.call();
+      return;
+    }
     // Not a notify this manifest knows — ignore (e.g. a command echoed in help).
+  }
+
+  // === The compiled vGLP person channel =====================================
+
+  /// A card of a compiled vGLP program: `card(C, ctx_C(y1, ..., yj), req(N))`.
+  ///
+  /// A persistent clause's card is the standing card its compose form answers.
+  /// A transient clause's card is an inbox card, its context destructured into
+  /// the descriptor's named fields; a card whose family and context are those
+  /// of a card already open JOINS it, contributing its own ask, so sibling
+  /// clauses offering a choice over one context are one card with a button per
+  /// ask. Returns false for a clause the manifest does not name.
+  bool _handleCard(List<GTerm> args) {
+    final c = args[0];
+    if (c is! GAtom) return false;
+    final clause = c.name;
+    final reqId = args[2];
+
+    if (manifest.standingForm(clause) != null) {
+      standing[clause] = reqId;
+      onChange?.call();
+      return true;
+    }
+
+    final match = manifest.clauseCard(clause);
+    if (match == null) return false;
+    final (panel, desc) = match;
+    final (_, ctx) = ctorArgs(args[1]);
+    final fields = _bind(desc.args, ctx);
+    for (final open in inbox) {
+      if (!identical(open.desc, desc)) continue;
+      if (!_sameContext(open.fields, fields)) continue;
+      open.asks[clause] = reqId;
+      onChange?.call();
+      return true;
+    }
+    inbox.add(InboxCard(_cardSeq++, panel, desc, fields, asks: {clause: reqId}));
+    onChange?.call();
+    return true;
+  }
+
+  /// `closed(req(N))`: the mediator retired that ask — the machine answered on
+  /// the deadline, or another clause reduced the goal and aborted it. The ask
+  /// goes from whatever holds it; a card left with no ask is gone.
+  bool _handleClosed(GTerm reqId) {
+    final key = formatTerm(reqId);
+    var changed = false;
+    standing.removeWhere((_, v) {
+      final hit = formatTerm(v) == key;
+      changed = changed || hit;
+      return hit;
+    });
+    for (final card in [...inbox]) {
+      if (!card.asks.values.any((v) => formatTerm(v) == key)) continue;
+      card.asks.removeWhere((_, v) => formatTerm(v) == key);
+      changed = true;
+      if (card.asks.isEmpty) inbox.removeWhere((c) => c.id == card.id);
+    }
+    if (changed) onChange?.call();
+    return changed;
+  }
+
+  /// Whether two cards' contexts are equal — what makes sibling clauses one
+  /// card.
+  static bool _sameContext(Map<String, GTerm> a, Map<String, GTerm> b) {
+    if (a.length != b.length) return false;
+    for (final e in a.entries) {
+      final other = b[e.key];
+      if (other == null || formatTerm(other) != formatTerm(e.value)) return false;
+    }
+    return true;
+  }
+
+  /// Land a screen message in the first declared view whose pattern it
+  /// matches. No constructor of the program is named here: the display
+  /// declaration's pattern is what selects the view.
+  bool _applyViews(GTerm term) {
+    for (final p in manifest.panels) {
+      for (final v in p.views) {
+        final pattern = _viewPatterns[v.pattern];
+        if (pattern == null) continue;
+        final bound = pattern.match(term);
+        if (bound == null) continue;
+        final content = bound[v.content];
+        if (content == null) continue;
+        switch (v.kind) {
+          case ViewKind.balances:
+            // A tally of pairs `f(Key, Amount)`, replacing what was held.
+            final rows = <String, GTerm>{};
+            if (content is GList) {
+              for (final item in content.items) {
+                final (_, itemArgs) = ctorArgs(item);
+                if (itemArgs.length == 2) {
+                  rows[formatTerm(itemArgs[0])] = itemArgs[1];
+                }
+              }
+            }
+            store.balances[v.store] = rows;
+          case ViewKind.list:
+            store.lists.putIfAbsent(v.store, () => <GTerm>[]).add(content);
+          case ViewKind.thread:
+            // A pair `f(Key, Entry)`: the entry extends the conversation Key.
+            final (_, itemArgs) = ctorArgs(content);
+            if (itemArgs.length == 2) {
+              store.threads
+                  .putIfAbsent(v.store, () => <String, List<GTerm>>{})
+                  .putIfAbsent(formatTerm(itemArgs[0]), () => <GTerm>[])
+                  .add(itemArgs[1]);
+            }
+        }
+        return true;
+      }
+    }
+    return false;
   }
 
   /// Submit a compose form — the person's tap grants the Request-shaped
   /// clause, the field values its person inputs.
+  ///
+  /// A compiled vGLP program's form grants `answer(Id, xs_C(v1, ..., vi))` for
+  /// the ReqId of its clause's standing card, and that ask is then consumed:
+  /// the goal poses the next, and the mediator's fresh card takes its place.
+  /// Where no card of the clause stands there is nothing to grant, and the
+  /// submission does nothing.
   void submitCommand(CommandDesc cmd, Map<String, GTerm> values) {
+    if (cmd.isStanding) {
+      final reqId = standing[cmd.clause];
+      if (reqId == null) return;
+      onSend(formatTerm(GStruct(answerCtor, [
+        reqId,
+        _answer(cmd.answerCtor!, [for (final f in cmd.args) values[f.name]!]),
+      ])));
+      standing.remove(cmd.clause);
+      onChange?.call();
+      return;
+    }
     final term = cmd.args.isEmpty
         ? GAtom(cmd.ctor)
         : GStruct(cmd.ctor, [for (final f in cmd.args) values[f.name]!]);
@@ -141,11 +328,27 @@ class UiRuntime {
           filled.add(picks[list]!);
       }
     }
-    final term = filled.isEmpty ? GAtom(answer.cmdCtor) : GStruct(answer.cmdCtor, filled);
-    onSend(formatTerm(term));
+    if (answer.clause != null) {
+      // The button of a compiled vGLP program's card answers ITS OWN ReqId:
+      // sibling clauses drawn as one card are two entries of the pending
+      // table, and the one not answered is aborted by the goal's reduction.
+      final reqId = card.asks[answer.clause];
+      if (reqId == null) return;
+      onSend(formatTerm(
+          GStruct(answerCtor, [reqId, _answer(answer.answerCtor!, filled)])));
+    } else {
+      final term =
+          filled.isEmpty ? GAtom(answer.cmdCtor) : GStruct(answer.cmdCtor, filled);
+      onSend(formatTerm(term));
+    }
     inbox.removeWhere((c) => c.id == card.id);
     onChange?.call();
   }
+
+  /// The answer term `xs_C(t1, ..., ti)` of a clause, or the bare `xs_C` where
+  /// its question has no positions.
+  static GTerm _answer(String ctor, List<GTerm> args) =>
+      args.isEmpty ? GAtom(ctor) : GStruct(ctor, args);
 
   // ---------------------------------------------------------------------------
 
@@ -300,6 +503,13 @@ class UiRuntime {
     onChange?.call();
   }
 }
+
+/// The constructors of the compiled vGLP person channel, fixed by vGLP's
+/// Definition "Canonical Compilation" and therefore the same for every
+/// compiled program — they are the compilation's, not any application's.
+const String cardCtor = 'card';
+const String closedCtor = 'closed';
+const String answerCtor = 'answer';
 
 /// Free text as a GLP constant the boundary round-trips: the `_output` kernel
 /// prints atoms unquoted, so a chat text must be a plain lowercase atom —

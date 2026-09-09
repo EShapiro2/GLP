@@ -1,0 +1,42 @@
+%% play_ui.glp --- the currency mini-app with a LIVE person: the person on the
+%% other end of the mini-app's channel is the app's user, not a script.
+%%
+%% coins_ui(alice, Answers, NetIn) is the entry the Flutter agent runtime
+%% starts, whose three arguments are (Id, UserIn, NetIn): alice's answers
+%% arrive on the second, injected as ground terms by her taps on the mini-app's
+%% constructs, and what her mini-app shows her --- the mediator's cards and
+%% their closing, and the screen --- leaves by send_to_user/1, one term to a
+%% line, which is what the app's UI runtime reads.  Her screen is therefore
+%% derived from the display declarations of currency/coins_agent.vglp and from
+%% nothing else.
+%%
+%% Bob is scripted (currency/person.glp) and shares one conversation with her,
+%% as the villagers do in village.glp.  His script exercises both of alice's
+%% constructs: he mints 2, accepts the swap alice proposes through her Swap
+%% form, and then proposes the reverse swap himself --- the 2 alice-coins he
+%% now holds for the 2 bob-coins she now holds --- which arrives at her as the
+%% card of the swap responder, its two sibling clauses her Accept and Decline.
+%% Both executions are in one heap and the network is not used.
+%%
+%% This file is the harness of the app, not part of the currency: the certified
+%% program is currency/, which this directory is not (see self.glp).
+
+imported procedure miniapp#coins(Constant?, Channel(Stream(UserAnswer), Stream(Event))?, Stream(Conversation)?).
+imported procedure person#person(Constant?, Stream(Event)?, Stream(UserAnswer), Script?, Stream(ScreenContent)).
+
+exported procedure coins_ui(Constant?, Stream(UserAnswer)?, Stream(_)?).
+coins_ui(alice, Answers, _) :-
+    miniapp # coins(alice, ch(Answers?, Events), [conversation(bob, ch(AB?, BA))]),
+    send_to_user(Events?),
+    miniapp # coins(bob, ch(BobAnswers?, BobEvents), [conversation(alice, ch(BA?, AB))]),
+    person # person(bob, BobEvents?, BobAnswers,
+                    [mint(2), accept(alice), swap(alice, alice, 2, bob, 2)],
+                    BobScreen),
+    log_peer(bob, BobScreen?).
+
+%% Bob's screen, tagged, so the run is observable in the app's trace while
+%% nothing of his reaches alice's own screen: her manifest views the messages
+%% matching msg(agent, person, S) and nothing else.
+procedure log_peer(Constant?, Stream(ScreenContent)?).
+log_peer(Id, [M|Ms]) :- ground(M?) | send_to_user([tagged(Id?, M?)]), log_peer(Id?, Ms?).
+log_peer(_, []).

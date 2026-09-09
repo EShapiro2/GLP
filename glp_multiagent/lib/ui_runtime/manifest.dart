@@ -24,13 +24,39 @@ class FieldDesc {
 }
 
 /// A compose form: a Request-shaped volition-guarded clause, its fields the
-/// clause's person inputs — a free `UserCmd` (no escrowed `ReqId`).
-/// Submitting builds the ground term `ctor(arg, ...)` from the field values.
+/// clause's person inputs.
+///
+/// Two boundaries reach this one descriptor. A hand-written mediator takes a
+/// free `UserCmd`: submitting builds the ground term `ctor(arg, ...)` from the
+/// field values. A compiled vGLP program takes the person-channel vocabulary
+/// of Definition "Canonical Compilation", one for every program: then [clause]
+/// names the persistent clause whose card the form is bound to and
+/// [answerCtor] the functor `xs_C` of its answer, and submitting grants
+/// `answer(Id, xs_C(v1, ..., vi))` for the ReqId of that clause's standing
+/// card. The clause is perpetually pending, so a card of it always stands;
+/// answering consumes that ask and the goal poses the next, so the form stays
+/// and its ReqId advances (vGLP, Remark "Persistence from Tail Recursion").
 class CommandDesc {
   final String ctor;
   final List<FieldDesc> args;
   final String label;
-  const CommandDesc({required this.ctor, required this.args, required this.label});
+
+  /// The persistent clause this form is the construct of, for a compiled vGLP
+  /// program; null for a hand-written mediator's free command.
+  final String? clause;
+
+  /// The functor of the clause's answer, `xs_C`. Set with [clause].
+  final String? answerCtor;
+
+  const CommandDesc(
+      {required this.ctor,
+      required this.args,
+      required this.label,
+      this.clause,
+      this.answerCtor});
+
+  /// Whether this form grants through the compiled vGLP person channel.
+  bool get isStanding => clause != null;
 }
 
 /// How to fill one argument of an answering command.
@@ -71,11 +97,22 @@ class AnswerDesc {
   /// conversation). Set on a group invitation's Accept so joining opens the
   /// group; left false for answers that leave no item to open.
   final bool opensItem;
+
+  /// The volition-guarded clause this button grants, for a compiled vGLP
+  /// program, and the functor `xs_C` of its answer. Sibling clauses sharing a
+  /// context are drawn as one card with a button each, and each button answers
+  /// ITS OWN ReqId — the two asks are two entries of the pending table — so the
+  /// clause is carried here and not on the card.
+  final String? clause;
+  final String? answerCtor;
+
   const AnswerDesc(
       {required this.label,
       required this.cmdCtor,
       required this.fill,
-      this.opensItem = false});
+      this.opensItem = false,
+      this.clause,
+      this.answerCtor});
 
   bool get needsPicker => fill.any((f) => f is PickerFill);
 }
@@ -124,15 +161,33 @@ class InboxDesc {
   /// social graph — a friend offer stands until the person decides.
   final List<DismissDesc> dismissedBy;
 
+  /// The transient clauses this card family covers, for a compiled vGLP
+  /// program. `card`/3 is one constructor for every clause of the program, so a
+  /// descriptor cannot be selected by constructor and arity: it is selected by
+  /// the VALUE of the card's first argument, which is the clause name. [args]
+  /// then names the arguments of the card's context term `ctx_C(y1, ..., yj)`,
+  /// which is destructured into them.
+  ///
+  /// Sibling clauses with the same context are drawn as ONE card (vGLP's
+  /// derivation): a card of any clause in this list joins the open card of the
+  /// family whose context is equal, contributing its own ask, and each of
+  /// [answers] answers the ask of its own clause. Empty for a hand-written
+  /// mediator's notify, matched by [notifyCtor] and arity as before.
+  final List<String> clauses;
+
   const InboxDesc({
-    required this.notifyCtor,
+    this.notifyCtor = '',
     required this.args,
     required this.itemKey,
     required this.title,
     this.subtitle,
     required this.answers,
     this.dismissedBy = const [],
+    this.clauses = const [],
   });
+
+  /// Whether this card arrives through the compiled vGLP person channel.
+  bool get isClauseKeyed => clauses.isNotEmpty;
 }
 
 /// Structural effect of an all-ground `UserNotify` on the activity store.
@@ -424,6 +479,43 @@ class StateView {
   const StateView(this.key, this.label, this.kind);
 }
 
+/// The view kinds of the construct family that renders a compiled vGLP program
+/// — the grassroots app's are the list, thread and balances views (vGLP,
+/// Definition "Display Declaration").
+enum ViewKind { list, thread, balances }
+
+/// One `display m : panel(N), view(K)` — the panel's view of kind [kind], fed
+/// by the screen messages matching the pattern [pattern] (vGLP, Definition
+/// "Display Declaration").
+///
+/// [pattern] is written in the declaration's own syntax, a ground term with
+/// capitalised identifiers for variables, e.g.
+/// `msg(agent, person, holdings(Lots))`; [content] names the variable carrying
+/// what is viewed, and [store] where it lands in the [ActivityStore]. A
+/// panel's views are tried in order, so the LAST may be the default display —
+/// the pattern every other screen message of the program matches, a list in
+/// the program's panel.
+///
+/// A balances view's content is a list of pairs `f(Key, Amount)`, one row each,
+/// and it REPLACES what the view held: the program tallies its whole state
+/// after every change, so a key no longer reported is a key no longer held. A
+/// list view appends. No constructor of any program is named here or in the
+/// runtime: the declaration's pattern is what selects the view.
+class ScreenView {
+  final String pattern;
+  final String content;
+  final ViewKind kind;
+  final String label;
+  final String store;
+  const ScreenView({
+    required this.pattern,
+    required this.content,
+    required this.kind,
+    required this.label,
+    required this.store,
+  });
+}
+
 /// One platform's panel (paper §7): a name (app-bar title + bottom-nav tab
 /// label), exactly one state view — a friends list, a wallet, or a chat
 /// list — its own compose [commands] (the panel's "+"), and its own [inbox]
@@ -450,6 +542,12 @@ class Panel {
   /// The panel's inbox cards, each pinned to a row by its [InboxDesc.itemKey].
   final List<InboxDesc> inbox;
 
+  /// The panel's declared views over the program's screen messages, tried in
+  /// order (see [ScreenView]). A compiled vGLP program's panel renders from
+  /// these; a hand-written mediator's panel uses the four view classes above
+  /// and leaves this empty.
+  final List<ScreenView> views;
+
   const Panel({
     required this.id,
     required this.name,
@@ -459,6 +557,7 @@ class Panel {
     this.groups,
     this.commands = const [],
     this.inbox = const [],
+    this.views = const [],
   });
 }
 
@@ -498,4 +597,35 @@ class Manifest {
     }
     return null;
   }
+
+  // === The compiled vGLP person channel =====================================
+  //
+  // `card(C, ctx_C(...), req(N))` carries one constructor for every clause of
+  // the program, so these select by the VALUE of C — the clause name — where
+  // the three above select by constructor and arity.
+
+  /// The panel and card descriptor whose clause family contains [clause].
+  (Panel, InboxDesc)? clauseCard(String clause) {
+    for (final p in panels) {
+      for (final d in p.inbox) {
+        if (d.clauses.contains(clause)) return (p, d);
+      }
+    }
+    return null;
+  }
+
+  /// The panel and compose form bound to the standing card of [clause].
+  (Panel, CommandDesc)? standingForm(String clause) {
+    for (final p in panels) {
+      for (final c in p.commands) {
+        if (c.clause == clause) return (p, c);
+      }
+    }
+    return null;
+  }
+
+  /// Whether any panel names [clause] — a card of a clause the manifest does
+  /// not name is not this program's, and is left alone.
+  bool knowsClause(String clause) =>
+      clauseCard(clause) != null || standingForm(clause) != null;
 }

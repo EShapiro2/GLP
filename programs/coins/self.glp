@@ -308,3 +308,11 @@ close_outputs([]).
 imported procedure village#market.
 exported procedure village.
 village :- village # market.
+
+%% =============================================================================
+%% Entry point: the mini-app on a live person's screen (play_ui.glp)
+%% =============================================================================
+
+imported procedure play_ui#coins_ui(Constant?, Stream(UserAnswer)?, Stream(_)?).
+exported procedure coins_ui(Constant?, Stream(UserAnswer)?, Stream(_)?).
+coins_ui(Id, Answers, NetIn) :- play_ui # coins_ui(Id?, Answers?, NetIn?).

@@ -206,3 +206,89 @@ class _Parser {
     return _isIdentStart(c) || _isDigit(c);
   }
 }
+
+// =============================================================================
+// Patterns — a display declaration's message pattern (vGLP, Definition
+// "Display Declaration")
+// =============================================================================
+
+/// A message pattern of a display declaration, e.g.
+/// `msg(agent, person, holdings(Lots))`: the same ground-term syntax, with a
+/// capitalised identifier standing for a variable that binds what it matches.
+/// A declaration names the messages it views by such a pattern, so the runtime
+/// selects a view without naming any constructor of its own.
+class GPattern {
+  final GTerm term;
+  const GPattern(this.term);
+
+  /// Parse [source] as a pattern. Returns null if it is not a well-formed term.
+  static GPattern? parse(String source) {
+    final t = tryParseTerm(source);
+    return t == null ? null : GPattern(t);
+  }
+
+  /// The variable names occurring in the pattern, in order of occurrence.
+  List<String> get variables {
+    final out = <String>[];
+    void walk(GTerm t) {
+      switch (t) {
+        case GAtom(:final name):
+          if (isPatternVariable(name) && !out.contains(name)) out.add(name);
+        case GStruct(:final args):
+          args.forEach(walk);
+        case GList(:final items):
+          items.forEach(walk);
+        case GInt():
+          break;
+      }
+    }
+
+    walk(term);
+    return out;
+  }
+
+  /// Match [t] against this pattern, returning the bindings of its variables,
+  /// or null where it does not match.
+  Map<String, GTerm>? match(GTerm t) {
+    final out = <String, GTerm>{};
+    return _match(term, t, out) ? out : null;
+  }
+}
+
+/// Whether an identifier read off a pattern is a variable: GLP spells a
+/// variable with a leading capital or underscore, a constant without one.
+bool isPatternVariable(String name) {
+  if (name.isEmpty) return false;
+  final u = name.codeUnitAt(0);
+  return name[0] == '_' || (u >= 0x41 && u <= 0x5a);
+}
+
+bool _match(GTerm pattern, GTerm t, Map<String, GTerm> out) {
+  if (pattern is GAtom && isPatternVariable(pattern.name)) {
+    if (pattern.name == '_') return true;
+    final seen = out[pattern.name];
+    if (seen != null) return formatTerm(seen) == formatTerm(t);
+    out[pattern.name] = t;
+    return true;
+  }
+  switch (pattern) {
+    case GAtom(:final name):
+      return t is GAtom && t.name == name;
+    case GInt(:final value):
+      return t is GInt && t.value == value;
+    case GStruct(:final functor, :final args):
+      if (t is! GStruct || t.functor != functor || t.args.length != args.length) {
+        return false;
+      }
+      for (var i = 0; i < args.length; i++) {
+        if (!_match(args[i], t.args[i], out)) return false;
+      }
+      return true;
+    case GList(:final items):
+      if (t is! GList || t.items.length != items.length) return false;
+      for (var i = 0; i < items.length; i++) {
+        if (!_match(items[i], t.items[i], out)) return false;
+      }
+      return true;
+  }
+}

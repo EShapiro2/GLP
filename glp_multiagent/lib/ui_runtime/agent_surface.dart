@@ -59,9 +59,46 @@ class _AgentSurfaceState extends State<AgentSurface> {
 
   final TextEditingController _msg = TextEditingController();
 
+  /// The change callback the embedder had registered, kept so it still runs
+  /// and is restored when this surface goes.
+  void Function()? _priorOnChange;
+
+  /// The surface renders from the runtime, so it subscribes to the runtime's
+  /// changes itself rather than leaving every embedder to remember to rebuild
+  /// it. The embedder's own callback is chained, not replaced.
+  void _subscribe() {
+    _priorOnChange = widget.runtime.onChange;
+    widget.runtime.onChange = () {
+      _priorOnChange?.call();
+      if (mounted) setState(() {});
+    };
+  }
+
+  void _unsubscribe() {
+    widget.runtime.onChange = _priorOnChange;
+    _priorOnChange = null;
+  }
+
+  @override
+  void didUpdateWidget(AgentSurface old) {
+    super.didUpdateWidget(old);
+    if (!identical(old.runtime, widget.runtime)) {
+      old.runtime.onChange = _priorOnChange;
+      _subscribe();
+    }
+  }
+
+  @override
+  void dispose() {
+    _unsubscribe();
+    _msg.dispose();
+    super.dispose();
+  }
+
   @override
   void initState() {
     super.initState();
+    _subscribe();
     if (widget.openSelfWallet) _openItem = widget.agentId.toLowerCase();
     if (!widget.muteNotices) {
       widget.runtime.onNotice = (message) {
@@ -141,7 +178,7 @@ class _AgentSurfaceState extends State<AgentSurface> {
         backgroundColor: _accent,
         foregroundColor: Colors.white,
         elevation: 0,
-        title: Text(active.name,
+        title: Text(_cap(active.name),
             style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
         actions: [
           Padding(
@@ -173,7 +210,11 @@ class _AgentSurfaceState extends State<AgentSurface> {
 
   /// The platform bar — Friends / Currencies / Chats. Shared by the panel view
   /// and the wallet drill-down, so the own-holdings screen keeps the bar too.
-  Widget _bottomBar() => NavigationBar(
+  /// An app of ONE platform has no bar: there is nothing to switch between, and
+  /// the bar is the panels (paper §7).
+  Widget? _bottomBar() {
+    if (_m.panels.length < 2) return null;
+    return NavigationBar(
         height: 60,
         selectedIndex: _panel,
         onDestinationSelected: (i) => setState(() {
@@ -187,19 +228,163 @@ class _AgentSurfaceState extends State<AgentSurface> {
                   _panelAlerts(p), Icon(_panelIcon(p, selected: false))),
               selectedIcon: _alertBadge(
                   _panelAlerts(p), Icon(_panelIcon(p, selected: true))),
-              label: p.name,
+              label: _cap(p.name),
             ),
         ],
       );
+  }
 
   Widget _alertBadge(int count, Widget child) =>
       Badge(isLabelVisible: count > 0, label: Text('$count'), child: child);
 
   Widget _panelBody(Panel p) {
+    if (p.views.isNotEmpty) return _screenPanel(p);
     if (p.wallet != null) return _walletPanel(p);
     if (p.chat != null) return _chatPanel(p);
     return _friendsPanel(p);
   }
+
+  // === A compiled vGLP program's panel ======================================
+  //
+  // Its open cards, then its declared views in order — the last of which is
+  // the default display, a list of everything the others leave. A card here is
+  // not pinned to a row: this panel has none, so the card is the paper's inbox
+  // card itself, its content the context and its buttons the sibling clauses.
+
+  Widget _screenPanel(Panel p) {
+    final cards = _r.inbox.where((c) => c.panel.id == p.id).toList();
+    return ListView(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      children: [
+        for (final c in cards) _clauseCard(c),
+        for (final v in p.views) ..._viewSection(v),
+      ],
+    );
+  }
+
+  /// One inbox card of a compiled vGLP program: the context values in order —
+  /// the default display, a card having no declaration that says how its
+  /// context looks — and one button per open ask.
+  Widget _clauseCard(InboxCard card) {
+    return Card(
+      margin: const EdgeInsets.fromLTRB(12, 6, 12, 6),
+      elevation: 1,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(14, 12, 14, 8),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (card.desc.title.isNotEmpty)
+              Text(renderTemplate(card.desc.title, card.fields),
+                  style: const TextStyle(
+                      fontWeight: FontWeight.bold, fontSize: 15)),
+            for (final name in card.desc.args)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 2),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    SizedBox(
+                        width: 74,
+                        child: Text(name,
+                            style: const TextStyle(
+                                fontSize: 13,
+                                color: Colors.black54,
+                                fontWeight: FontWeight.w600))),
+                    Expanded(
+                        child: Text(formatTerm(card.fields[name]!),
+                            style: const TextStyle(fontSize: 13))),
+                  ],
+                ),
+              ),
+            const SizedBox(height: 6),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                for (final a in card.liveAnswers)
+                  Padding(
+                    padding: const EdgeInsets.only(left: 8),
+                    child: a.label.toLowerCase() == 'accept'
+                        ? ElevatedButton(
+                            onPressed: () => _answer(card, a),
+                            child: Text(a.label))
+                        : OutlinedButton(
+                            onPressed: () => _answer(card, a),
+                            child: Text(a.label)),
+                  ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// One declared view. A balances view is its rows, key and amount; a list
+  /// view — which the default display is — the messages in the order they came.
+  List<Widget> _viewSection(ScreenView v) {
+    final rows = <Widget>[];
+    switch (v.kind) {
+      case ViewKind.balances:
+        final held = _r.store.balances[v.store] ?? const <String, GTerm>{};
+        if (held.isEmpty) {
+          rows.add(_viewEmpty('nothing held'));
+        } else {
+          for (final e in held.entries) {
+            rows.add(ListTile(
+              dense: true,
+              leading: const Icon(Icons.toll, color: _accent),
+              title: Text(e.key,
+                  style: const TextStyle(fontWeight: FontWeight.w600)),
+              trailing: Text(formatTerm(e.value),
+                  style: const TextStyle(
+                      fontSize: 16, fontWeight: FontWeight.bold)),
+            ));
+          }
+        }
+      case ViewKind.list:
+        final items = _r.store.lists[v.store] ?? const <GTerm>[];
+        if (items.isEmpty) {
+          rows.add(_viewEmpty('nothing yet'));
+        } else {
+          for (final t in items) {
+            rows.add(Padding(
+              padding: const EdgeInsets.fromLTRB(18, 3, 18, 3),
+              child: Text(formatTerm(t),
+                  style: const TextStyle(fontSize: 13, height: 1.3)),
+            ));
+          }
+        }
+      case ViewKind.thread:
+        final convs = _r.store.threads[v.store] ?? const <String, List<GTerm>>{};
+        for (final e in convs.entries) {
+          rows.add(ListTile(
+              dense: true,
+              title: Text(e.key),
+              subtitle: Text(e.value.map(formatTerm).join(', '))));
+        }
+    }
+    return [_viewHeading(v.label), ...rows];
+  }
+
+  Widget _viewHeading(String label) => Padding(
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
+        child: Text(label.toUpperCase(),
+            style: const TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+                color: Colors.black54)),
+      );
+
+  Widget _viewEmpty(String text) => Padding(
+        padding: const EdgeInsets.fromLTRB(18, 2, 18, 2),
+        child: Text(text,
+            style: TextStyle(
+                fontSize: 13,
+                fontStyle: FontStyle.italic,
+                color: Colors.grey.shade500)),
+      );
 
   // === The per-item alert: tap a row → accept/decline (confirmed gesture) ====
 
@@ -224,7 +409,7 @@ class _AgentSurfaceState extends State<AgentSurface> {
               const SizedBox(height: 18),
               Row(
                 mainAxisAlignment: MainAxisAlignment.end,
-                children: card.desc.answers.map((a) {
+                children: card.liveAnswers.map((a) {
                   final primary = a.label.toLowerCase() == 'accept';
                   final onPressed = () {
                     Navigator.pop(ctx);
@@ -808,9 +993,16 @@ class _AgentSurfaceState extends State<AgentSurface> {
 
   // === Compose forms — the "+" (Request-shaped clauses) =====================
 
+  /// Whether a form is offered now. A compiled vGLP program's form grants the
+  /// ask of its clause's standing card, so it is offered exactly while a card
+  /// of that clause stands — a volition is offered iff it is pending (vGLP,
+  /// Theorem "Elicitation Completeness"). A free command is always offered.
+  bool _offered(CommandDesc c) =>
+      !c.isStanding || _r.standing.containsKey(c.clause);
+
   void _composeSheet(BuildContext context, List<CommandDesc> commands) {
     if (commands.length == 1) {
-      _composeCommand(context, commands.first);
+      if (_offered(commands.first)) _composeCommand(context, commands.first);
       return;
     }
     showModalBottomSheet<void>(
@@ -821,6 +1013,7 @@ class _AgentSurfaceState extends State<AgentSurface> {
           children: [
             for (final c in commands)
               ListTile(
+                enabled: _offered(c),
                 leading: const Icon(Icons.edit_outlined),
                 title: Text(c.label),
                 onTap: () {
