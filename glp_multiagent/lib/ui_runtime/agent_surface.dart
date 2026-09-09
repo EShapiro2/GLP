@@ -356,6 +356,29 @@ class _AgentSurfaceState extends State<AgentSurface> {
             ));
           }
         }
+      case ViewKind.friends:
+        final people = _r.store.lists[v.store] ?? const <GTerm>[];
+        if (people.isEmpty) {
+          rows.add(_viewEmpty('no friends yet'));
+        } else {
+          for (final p in people) {
+            final name = formatTerm(p);
+            rows.add(ListTile(
+              dense: true,
+              leading: CircleAvatar(
+                radius: 14,
+                backgroundColor: _accent.shade100,
+                child: Text(_initial(name),
+                    style: const TextStyle(
+                        fontSize: 12,
+                        color: Colors.black87,
+                        fontWeight: FontWeight.bold)),
+              ),
+              title: Text(_cap(name),
+                  style: const TextStyle(fontWeight: FontWeight.w600)),
+            ));
+          }
+        }
       case ViewKind.thread:
         final convs = _r.store.threads[v.store] ?? const <String, List<GTerm>>{};
         for (final e in convs.entries) {
@@ -1080,6 +1103,9 @@ class _AgentSurfaceState extends State<AgentSurface> {
         return GAtom(raw.toLowerCase());
       case FieldType.text:
         return GAtom(chatAtom(raw));
+      case FieldType.string:
+        // A GLP `String`, not an atom: the person's text goes across as typed.
+        return GString(raw);
     }
   }
 

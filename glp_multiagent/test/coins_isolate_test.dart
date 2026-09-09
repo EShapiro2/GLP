@@ -81,7 +81,7 @@ void main() {
         reason: 'four standing cards, one per request clause');
 
     // Mint 2.
-    r.submitCommand(r.manifest.standingForm('agent_1')!.$2, {'K': GInt(2)});
+    r.submitCommand(r.manifest.standingForm('agent_1')!.$2, {'Amount': GInt(2)});
     await grant();
     expect(
         await until(() =>
@@ -92,11 +92,11 @@ void main() {
     // Swap her 2 for bob's 2; bob's script accepts.
     await until(() => r.standing.containsKey('agent_2'));
     r.submitCommand(r.manifest.standingForm('agent_2')!.$2, {
-      'Q': GAtom('bob'),
-      'U': GAtom('alice'),
-      'K': GInt(2),
-      'V': GAtom('bob'),
-      'K1': GInt(2),
+      'Friend': GAtom('bob'),
+      'GiveCoin': GAtom('alice'),
+      'GiveAmount': GInt(2),
+      'WantCoin': GAtom('bob'),
+      'WantAmount': GInt(2),
     });
     await grant();
     expect(

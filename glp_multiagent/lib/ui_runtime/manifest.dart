@@ -13,7 +13,13 @@ library;
 import 'term.dart';
 
 /// Input widget kind for a compose-form field.
-enum FieldType { person, text, integer }
+///
+/// [text] and [string] are the same WIDGET — a display declaration's
+/// `field(X, text)` — and differ in the term the person's typing becomes: an
+/// atom where the clause's answer type takes a `Constant`, a GLP `String`
+/// where it takes a `String`. The declaration does not settle that; the
+/// compiled answer type `Xs_C` does, so a transcriber reads both.
+enum FieldType { person, text, string, integer }
 
 /// One field of a compose form — one person input of the clause.
 class FieldDesc {
@@ -482,7 +488,7 @@ class StateView {
 /// The view kinds of the construct family that renders a compiled vGLP program
 /// — the grassroots app's are the list, thread and balances views (vGLP,
 /// Definition "Display Declaration").
-enum ViewKind { list, thread, balances }
+enum ViewKind { list, thread, balances, friends }
 
 /// One `display m : panel(N), view(K)` — the panel's view of kind [kind], fed
 /// by the screen messages matching the pattern [pattern] (vGLP, Definition
@@ -496,8 +502,10 @@ enum ViewKind { list, thread, balances }
 /// the pattern every other screen message of the program matches, a list in
 /// the program's panel.
 ///
-/// A balances view's content is a list of pairs `f(Key, Amount)`, one row each,
-/// and it REPLACES what the view held: the program tallies its whole state
+/// A friends view's content is one person per message, accumulated without
+/// repetition — the program announces a friendship as it is made, so the view
+/// is the set of them.  A balances view's content is a list of pairs
+/// `f(Key, Amount)`, one row each, and it REPLACES what the view held: the program tallies its whole state
 /// after every change, so a key no longer reported is a key no longer held. A
 /// list view appends. No constructor of any program is named here or in the
 /// runtime: the declaration's pattern is what selects the view.

@@ -113,7 +113,7 @@ class UiRuntime {
       for (final v in p.views) {
         final pat = GPattern.parse(v.pattern);
         if (pat != null) _viewPatterns[v.pattern] = pat;
-        if (v.kind == ViewKind.list) {
+        if (v.kind == ViewKind.list || v.kind == ViewKind.friends) {
           store.lists.putIfAbsent(v.store, () => <GTerm>[]);
         }
       }
@@ -268,6 +268,13 @@ class UiRuntime {
             store.balances[v.store] = rows;
           case ViewKind.list:
             store.lists.putIfAbsent(v.store, () => <GTerm>[]).add(content);
+          case ViewKind.friends:
+            // One person per message, announced as the friendship is made: the
+            // view is the set of them, so a repeat is not a second row.
+            final l = store.lists.putIfAbsent(v.store, () => <GTerm>[]);
+            if (!l.any((e) => formatTerm(e) == formatTerm(content))) {
+              l.add(content);
+            }
           case ViewKind.thread:
             // A pair `f(Key, Entry)`: the entry extends the conversation Key.
             final (_, itemArgs) = ctorArgs(content);

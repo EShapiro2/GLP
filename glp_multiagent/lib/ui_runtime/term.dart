@@ -25,6 +25,14 @@ class GInt extends GTerm {
   const GInt(this.value);
 }
 
+/// A string constant, `"..."` — GLP's `String`, which is not an atom: a
+/// `text` widget over a `String` writer grants one of these, and over a
+/// `Constant` writer an atom, so the widget alone does not settle the term.
+class GString extends GTerm {
+  final String value;
+  const GString(this.value);
+}
+
 /// A compound term `functor(arg, ...)` with arity >= 1.
 class GStruct extends GTerm {
   final String functor;
@@ -47,6 +55,7 @@ class GList extends GTerm {
     GAtom(:final name) => (name, const []),
     GStruct(:final functor, :final args) => (functor, args),
     GInt() => ('', const []),
+    GString() => ('', const []),
     GList() => ('', const []),
   };
 }
@@ -58,6 +67,8 @@ String formatTerm(GTerm t) {
       return name;
     case GInt(:final value):
       return '$value';
+    case GString(:final value):
+      return '"$value"';
     case GStruct(:final functor, :final args):
       return '$functor(${args.map(formatTerm).join(', ')})';
     case GList(:final items):
@@ -110,6 +121,7 @@ class _Parser {
     if (_atEnd) _fail();
     final c = _s[_i];
     if (c == '[') return _list();
+    if (c == '"') return _string();
     if (c == "'") return _quotedAtomOrStruct();
     if (c == '-' || _isDigit(c)) return _number();
     if (_isIdentStart(c)) return _identAtomOrStruct();
@@ -135,6 +147,18 @@ class _Parser {
     if (_peekChar() != ']') _fail();
     _i++;
     return GList(items);
+  }
+
+  GTerm _string() {
+    _expect('"');
+    final sb = StringBuffer();
+    while (!_atEnd && _s[_i] != '"') {
+      sb.write(_s[_i]);
+      _i++;
+    }
+    if (_atEnd) _fail();
+    _i++; // closing quote
+    return GString(sb.toString());
   }
 
   GTerm _number() {
@@ -239,6 +263,7 @@ class GPattern {
         case GList(:final items):
           items.forEach(walk);
         case GInt():
+        case GString():
           break;
       }
     }
@@ -276,6 +301,8 @@ bool _match(GTerm pattern, GTerm t, Map<String, GTerm> out) {
       return t is GAtom && t.name == name;
     case GInt(:final value):
       return t is GInt && t.value == value;
+    case GString(:final value):
+      return t is GString && t.value == value;
     case GStruct(:final functor, :final args):
       if (t is! GStruct || t.functor != functor || t.args.length != args.length) {
         return false;

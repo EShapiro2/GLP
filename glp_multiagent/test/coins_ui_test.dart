@@ -65,18 +65,18 @@ void main() {
     test('a form grants answer(Id, xs_C(v1, ..., vi))', () {
       poseRequestCards();
       final mint = _form(r, 'agent_1');
-      r.submitCommand(mint, {'K': GInt(3)});
+      r.submitCommand(mint, {'Amount': GInt(3)});
       expect(sent, ['answer(req(1), xs_agent_1(3))']);
     });
 
     test('the swap form carries its five person inputs in order', () {
       poseRequestCards();
       r.submitCommand(_form(r, 'agent_2'), {
-        'Q': GAtom('bob'),
-        'U': GAtom('alice'),
-        'K': GInt(2),
-        'V': GAtom('bob'),
-        'K1': GInt(2),
+        'Friend': GAtom('bob'),
+        'GiveCoin': GAtom('alice'),
+        'GiveAmount': GInt(2),
+        'WantCoin': GAtom('bob'),
+        'WantAmount': GInt(2),
       });
       expect(sent, ['answer(req(2), xs_agent_2(bob, alice, 2, bob, 2))']);
     });
@@ -96,20 +96,20 @@ void main() {
       poseRequestCards();
       r.handleLine('card(agent_1, ctx_agent_1, req(11))');
       expect(formatTerm(r.standing['agent_1']!), 'req(11)');
-      r.submitCommand(_form(r, 'agent_1'), {'K': GInt(1)});
+      r.submitCommand(_form(r, 'agent_1'), {'Amount': GInt(1)});
       expect(sent, ['answer(req(11), xs_agent_1(1))']);
     });
 
     test('answering consumes the ask; the next card restores the form', () {
       poseRequestCards();
-      r.submitCommand(_form(r, 'agent_1'), {'K': GInt(3)});
+      r.submitCommand(_form(r, 'agent_1'), {'Amount': GInt(3)});
       expect(r.standing.containsKey('agent_1'), isFalse);
       // A second submission with no card standing grants nothing.
-      r.submitCommand(_form(r, 'agent_1'), {'K': GInt(4)});
+      r.submitCommand(_form(r, 'agent_1'), {'Amount': GInt(4)});
       expect(sent, ['answer(req(1), xs_agent_1(3))']);
       // The goal poses the next question.
       r.handleLine('card(agent_1, ctx_agent_1, req(12))');
-      r.submitCommand(_form(r, 'agent_1'), {'K': GInt(4)});
+      r.submitCommand(_form(r, 'agent_1'), {'Amount': GInt(4)});
       expect(sent.last, 'answer(req(12), xs_agent_1(4))');
     });
 

@@ -8,14 +8,16 @@
 /// carried through into the compiled `coins_agent.glp`, are:
 ///
 /// ```
-/// display agent *(K) : panel(coins), label("Mint"), field(K, number), persistent.
-/// display agent *(Q, U, K, V, K1) : panel(coins), label("Swap"),
-///     field(Q, peer), field(U, peer), field(K, number),
-///     field(V, peer), field(K1, number), persistent.
-/// display agent *(Q, K) : panel(coins), label("Pay"),
-///     field(Q, peer), field(K, number), persistent.
-/// display agent *(Q, R) : panel(coins), label("Redeem"),
-///     field(Q, peer), field(R, peer), persistent.
+/// display agent *(Amount) : panel(coins), label("Mint"),
+///     field(Amount, number), persistent.
+/// display agent *(Friend, GiveCoin, GiveAmount, WantCoin, WantAmount) :
+///     panel(coins), label("Swap"), field(Friend, peer), field(GiveCoin, peer),
+///     field(GiveAmount, number), field(WantCoin, peer),
+///     field(WantAmount, number), persistent.
+/// display agent *(Friend, Amount) : panel(coins), label("Pay"),
+///     field(Friend, peer), field(Amount, number), persistent.
+/// display agent *(Friend, WantCoin) : panel(coins), label("Redeem"),
+///     field(Friend, peer), field(WantCoin, peer), persistent.
 /// display respond_swap *(no, From?, Want?, Offered?) : panel(coins),
 ///     label("Decline"), transient.
 /// display respond_swap *(yes, From?, Want?, Offered?) : panel(coins),
@@ -25,7 +27,8 @@
 ///
 /// A field's label is its writer's name: a display declaration's `field(X, W)`
 /// item gives the widget and not a label, so the writer is what the person
-/// sees. The clause names and answer functors are the compilation's — the
+/// sees, and Currencies named the writers on 2026-09-09 so that the forms
+/// label themselves. The clause names and answer functors are the compilation's — the
 /// four request clauses of `agent` are `agent_1` to `agent_4` in the order
 /// they are written, and the two of `respond_swap` are `respond_swap_1`
 /// (decline) and `respond_swap_2` (accept).
@@ -41,7 +44,7 @@ const _mint = CommandDesc(
   clause: 'agent_1',
   answerCtor: 'xs_agent_1',
   label: 'Mint',
-  args: [FieldDesc('K', FieldType.integer, 'K')],
+  args: [FieldDesc('Amount', FieldType.integer, 'Amount')],
 );
 
 const _swap = CommandDesc(
@@ -50,11 +53,11 @@ const _swap = CommandDesc(
   answerCtor: 'xs_agent_2',
   label: 'Swap',
   args: [
-    FieldDesc('Q', FieldType.person, 'Q'),
-    FieldDesc('U', FieldType.person, 'U'),
-    FieldDesc('K', FieldType.integer, 'K'),
-    FieldDesc('V', FieldType.person, 'V'),
-    FieldDesc('K1', FieldType.integer, 'K1'),
+    FieldDesc('Friend', FieldType.person, 'Friend'),
+    FieldDesc('GiveCoin', FieldType.person, 'GiveCoin'),
+    FieldDesc('GiveAmount', FieldType.integer, 'GiveAmount'),
+    FieldDesc('WantCoin', FieldType.person, 'WantCoin'),
+    FieldDesc('WantAmount', FieldType.integer, 'WantAmount'),
   ],
 );
 
@@ -64,8 +67,8 @@ const _pay = CommandDesc(
   answerCtor: 'xs_agent_3',
   label: 'Pay',
   args: [
-    FieldDesc('Q', FieldType.person, 'Q'),
-    FieldDesc('K', FieldType.integer, 'K'),
+    FieldDesc('Friend', FieldType.person, 'Friend'),
+    FieldDesc('Amount', FieldType.integer, 'Amount'),
   ],
 );
 
@@ -75,8 +78,8 @@ const _redeem = CommandDesc(
   answerCtor: 'xs_agent_4',
   label: 'Redeem',
   args: [
-    FieldDesc('Q', FieldType.person, 'Q'),
-    FieldDesc('R', FieldType.person, 'R'),
+    FieldDesc('Friend', FieldType.person, 'Friend'),
+    FieldDesc('WantCoin', FieldType.person, 'WantCoin'),
   ],
 );
 
