@@ -24,10 +24,10 @@
 
 %% The four request clauses of agent and the two clauses of the swap responder,
 %% as the app renders them.
-display agent *(K) : panel(coins), label("Mint"), field(K, number), persistent.
-display agent *(Q, U, K, V, K1) : panel(coins), label("Swap"), field(Q, peer), field(U, peer), field(K, number), field(V, peer), field(K1, number), persistent.
-display agent *(Q, K) : panel(coins), label("Pay"), field(Q, peer), field(K, number), persistent.
-display agent *(Q, R) : panel(coins), label("Redeem"), field(Q, peer), field(R, peer), persistent.
+display agent *(Amount) : panel(coins), label("Mint"), field(Amount, number), persistent.
+display agent *(Friend, GiveCoin, GiveAmount, WantCoin, WantAmount) : panel(coins), label("Swap"), field(Friend, peer), field(GiveCoin, peer), field(GiveAmount, number), field(WantCoin, peer), field(WantAmount, number), persistent.
+display agent *(Friend, Amount) : panel(coins), label("Pay"), field(Friend, peer), field(Amount, number), persistent.
+display agent *(Friend, WantCoin) : panel(coins), label("Redeem"), field(Friend, peer), field(WantCoin, peer), persistent.
 display respond_swap *(no, From?, Want?, Offered?) : panel(coins), label("Decline"), transient.
 display respond_swap *(yes, From?, Want?, Offered?) : panel(coins), label("Accept"), transient.
 display msg(agent, person, holdings(Lots)) : panel(coins), view(balances).
@@ -146,40 +146,40 @@ agent(Id, [_|UserIn], PeerIn, Convs, Outs, Holdings, Serial) :-
 %% otherwise clause of the procedure. ---
 
 %% Mint_p(k), guarded by p: c'_p = c_p + cent^k_p.
-*(K)
+*(Amount)
 agent(Id, UserIn, PeerIn, Convs, Outs, Holdings, Serial) :-
-    ground(Id?), integer(K?), K? >= 1 |
-    create_coins(Id?, K?, Serial?, New),
-    Serial1 := Serial? + K?,
+    ground(Id?), integer(Amount?), Amount? >= 1 |
+    create_coins(Id?, Amount?, Serial?, New),
+    Serial1 := Serial? + Amount?,
     append_coins(Holdings?, New?, Holdings1),
-    show(minted(K?), Outs?, Outs1),
+    show(minted(Amount?), Outs?, Outs1),
     after_change(Id?, UserIn?, PeerIn?, Convs?, Outs1?, Holdings1?, Serial1?).
 
 %% Swap_{p,q}(cent^k_u, cent^{k'}_v), guarded by both: p proposes, giving k
 %% u-coins for k' v-coins, and q answers by respond_swap.  The precondition at
 %% p, cent^k_u in c_p, is the selection; q's part of it is q's.
-*(Q, U, K, V, K1)
+*(Friend, GiveCoin, GiveAmount, WantCoin, WantAmount)
 agent(Id, UserIn, PeerIn, Convs, Outs, Holdings, Serial) :-
-    ground(Id?), ground(Q?), ground(U?), integer(K?), K? >= 1, ground(V?), integer(K1?), K1? >= 1 |
-    select_coins(U?, K?, Holdings?, Status, Give, Rest),
-    propose_swap(Status?, Id?, Q?, lot(U?, K?), lot(V?, K1?), Give?, Rest?, UserIn?, PeerIn?, Convs?, Outs?, Serial?).
+    ground(Id?), ground(Friend?), ground(GiveCoin?), integer(GiveAmount?), GiveAmount? >= 1, ground(WantCoin?), integer(WantAmount?), WantAmount? >= 1 |
+    select_coins(GiveCoin?, GiveAmount?, Holdings?, Status, Give, Rest),
+    propose_swap(Status?, Id?, Friend?, lot(GiveCoin?, GiveAmount?), lot(WantCoin?, WantAmount?), Give?, Rest?, UserIn?, PeerIn?, Convs?, Outs?, Serial?).
 
 %% Pay_{p,q}(k), guarded by p: k q-coins to q, which q accepts (clause 3 of the
 %% contract).  The precondition cent^k_q in c_p is the selection.
-*(Q, K)
+*(Friend, Amount)
 agent(Id, UserIn, PeerIn, Convs, Outs, Holdings, Serial) :-
-    ground(Id?), ground(Q?), integer(K?), K? >= 1 |
-    select_coins(Q?, K?, Holdings?, Status, Give, Rest),
-    do_pay(Status?, Id?, Q?, K?, Give?, Rest?, UserIn?, PeerIn?, Convs?, Outs?, Serial?).
+    ground(Id?), ground(Friend?), integer(Amount?), Amount? >= 1 |
+    select_coins(Friend?, Amount?, Holdings?, Status, Give, Rest),
+    do_pay(Status?, Id?, Friend?, Amount?, Give?, Rest?, UserIn?, PeerIn?, Convs?, Outs?, Serial?).
 
 %% Redeem_{p,q}(r), guarded by p: a q-coin presented to q for an r-coin q holds
 %% (clause 4).  The precondition cent_q in c_p is the selection; cent_r in c_q
 %% is tested at q, which discloses what it holds where it fails.
-*(Q, R)
+*(Friend, WantCoin)
 agent(Id, UserIn, PeerIn, Convs, Outs, Holdings, Serial) :-
-    ground(Id?), ground(Q?), ground(R?) |
-    take_coin(Q?, Holdings?, Found, Rest),
-    do_redeem(Found?, Id?, Q?, R?, Rest?, UserIn?, PeerIn?, Convs?, Outs?, Serial?).
+    ground(Id?), ground(Friend?), ground(WantCoin?) |
+    take_coin(Friend?, Holdings?, Found, Rest),
+    do_redeem(Found?, Id?, Friend?, WantCoin?, Rest?, UserIn?, PeerIn?, Convs?, Outs?, Serial?).
 
 %% =============================================================================
 %% An arriving act, on the conversation it came on
