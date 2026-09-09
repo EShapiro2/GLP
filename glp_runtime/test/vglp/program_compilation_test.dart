@@ -139,20 +139,27 @@ display respond *(Answer=yes, From?) : panel(inbox), label("Accept"), transient.
   });
 
   group('the deployed sources', () {
-    // FIVE, and a list written from memory misses one: cssn/child_agent.vglp
-    // arrived on 2026-08-16 and coins/coins_agent.vglp on 2026-09-03.  They
-    // PARSE as vGLP.  coins/coins_agent.vglp also COMPILES and RUNS ---
-    // Section N2 of test/run_all_tests.sh loads its emitted coins_agent.glp
-    // and runs the village market; the others do not yet compile, the edits
-    // being with their owners — social/graph and grassapp SGSG's, the two
-    // cssn sources CSSN's.  Each parse test becomes the compilation test as
-    // its source is repaired.
+    // SIX, and a list written from memory misses one: cssn/child_agent.vglp
+    // arrived on 2026-08-16, and coins_agent.vglp and bonds_agent.vglp on
+    // 2026-09-03.  Count them on disc --- `find programs -name "*.vglp"`,
+    // less the one-clause fixture of programs/vglp_tests, which load_test
+    // covers.  Four of the paths moved on 2026-09-08, each source going with
+    // its .glp into the certified program of a mini-app --- social/graph/core,
+    // coins/currency and cssn/childsafe --- since a lone .vglp is compiled by
+    // the loader and must stand beside its .glp.  They all PARSE as vGLP.
+    // coins/currency/coins_agent.vglp and bonds/bonds_agent.vglp also COMPILE
+    // and RUN --- Sections N2 and N3 of test/run_all_tests.sh load their
+    // emitted .glp and run the village market; the others do not yet compile,
+    // the edits being with their owners — social/graph and grassapp SGSG's,
+    // the two cssn sources CSSN's.  Each parse test becomes the compilation
+    // test as its source is repaired.
     for (final path in [
-      'social/graph/agent.vglp',
+      'social/graph/core/agent.vglp',
       'grassapp/grassapp_agent.vglp',
-      'cssn/agent.vglp',
-      'cssn/child_agent.vglp',
-      'coins/coins_agent.vglp',
+      'cssn/childsafe/agent.vglp',
+      'cssn/childsafe/child_agent.vglp',
+      'coins/currency/coins_agent.vglp',
+      'bonds/bonds_agent.vglp',
     ]) {
       test('$path parses as vGLP', () {
         final file = File('$_programs/$path');

@@ -3917,24 +3917,13 @@ check_not "SG budget no failed play" "→ failed" "$sg_budget"
 echo ""
 
 # and fails on the same rejection of the same file.
-KNOWN_RED=(
-    # vGLP's: the deployed source moved with its agent to programs/social/graph/core/
-    # (SGSG, 2026-09-08; a lone .vglp is compiled by the loader, so it must stand
-    # beside its .glp); the test's path is vGLP's to change (vGLP_inbox.md).
-    "test/vglp/program_compilation_test.dart: the deployed sources social/graph/agent.vglp parses as vGLP"
-    # Currencies': the deployed source moved with its agent to
-    # programs/coins/currency/ (Currencies, 2026-09-08; the certified program of
-    # the mini-app is that directory, and a lone .vglp is compiled by the
-    # loader, so it must stand beside its .glp); the test's path is vGLP's to
-    # change (vGLP_inbox.md 2026-09-08).
-    "test/vglp/program_compilation_test.dart: the deployed sources coins/coins_agent.vglp parses as vGLP"
-    # CSSN's: the two deployed sources moved with their agents into the
-    # certified program, programs/cssn/childsafe/ (CSSN, 2026-09-08; a lone
-    # .vglp is compiled by the loader, so each must stand beside its .glp); the
-    # test's paths are vGLP's to change (vGLP_inbox.md 2026-09-08).
-    "test/vglp/program_compilation_test.dart: the deployed sources cssn/agent.vglp parses as vGLP"
-    "test/vglp/program_compilation_test.dart: the deployed sources cssn/child_agent.vglp parses as vGLP"
-)
+# The four vGLP entries went on 2026-09-09: each named a parse test of a
+# deployed .vglp by the path it had before SGSG, Currencies and CSSN moved the
+# source with its .glp into the certified program of a mini-app, and vGLP
+# changed the four paths in test/vglp/program_compilation_test.dart, which is
+# what every one of the three entries said was owed.  All six deployed sources
+# parse.
+KNOWN_RED=()
 
 echo "=== Section Q: Dart unit tests (whole tree) ==="
 echo ""
