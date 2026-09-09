@@ -388,8 +388,7 @@ agent(Id, UserIn, [msg(From, Id1, root(App, Src, T, Up, End))|NetIn], Outs,
 agent(Id, UserIn, [pending_link(Name, S)|NetIn], Outs, host(Apps, Atts, Pend, Trusted)) :-
     ground(Id?), ground(S?), ground(Name?) |
     Parts ..= Name?,
-    anchor_is(Parts?, Id?, Mine),
-    release_check(Mine?, Parts?, S?, Pend?, Pend1, Found),
+    may_release(Parts?, S?, Pend?, Pend1, Found),
     pending_step(Found?, Name?, S?, Id?, UserIn?, NetIn?, Outs?, Apps?, Atts?, Pend1?, Trusted?).
 
 %% A friend asks to be introduced to the anchor of a held name (the holder
@@ -861,9 +860,45 @@ take_warm_consent(_, [], [], false).
 %% goes to the mini-app, which asks for the warm call.  The two ends of one
 %% link have different names and neither crosses, so they are never compared:
 %% the friend it comes from is what identifies the link to a program.
-procedure release_check(Constant?, Stream(_)?, Constant?, PendingInv?, PendingInv, Constant).
-release_check(true, _, S, Pend, Pend1?, B?) :- take_warm_ok(S?, Pend?, Pend1, B).
-release_check(false, Parts, S, Pend, Pend1?, B?) :- intro_ok_for(Parts?, S?, Pend?, Pend1, B).
+%% may_release(Parts, S, Pend, Pend1, B): whether this end authorises the link
+%% the runtime is asking about --- the person's volition for it.  Both ends of
+%% a held link are asked, each about its own end, and the traffic one
+%% authorisation lets through is itself held at the other end, so the reports
+%% come in ROUNDS and every one of them must be answered (IGLP, 2026-09-09):
+%% a program that answers only the first round stops with the acknowledgement
+%% it is waiting for sitting held at its own end.  The volitions are: a warm
+%% call accepted from the friend the traffic comes from, and an introduction
+%% accepted with or from that friend --- an introduction's channel is the
+%% introducer's, so its links are anchored at the introducer, while the
+%% acknowledgement the other party sends on it is anchored at this agent and
+%% arrives from that party.  The entries are KEPT: one volition releases every
+%% link and every round it brings.
+procedure may_release(Stream(_)?, Constant?, PendingInv?, PendingInv, Constant).
+may_release(Parts, S, [warm_ok(F) | Rest], [warm_ok(F?) | Rest1?], B?) :-
+    ground(Parts?), ground(S?) |
+    mr_warm(S?, F?, Parts?, Rest?, Rest1, B).
+may_release(Parts, S, [intro_ok(W) | Rest], [intro_ok(W?) | Rest1?], B?) :-
+    ground(Parts?), ground(S?) |
+    mr_intro(Parts?, S?, W?, Rest?, Rest1, B).
+may_release(Parts, S, [P | Rest], [P? | Rest1?], B?) :-
+    otherwise | may_release(Parts?, S?, Rest?, Rest1, B).
+may_release(_, _, [], [], false).
+
+procedure mr_warm(Constant?, Constant?, Stream(_)?, PendingInv?, PendingInv, Constant).
+mr_warm(S, F, _, Rest, Rest?, true) :- S? =?= F? | true.
+mr_warm(S, F, Parts, Rest, Rest1?, B?) :-
+    ~(S? =?= F?) | may_release(Parts?, S?, Rest?, Rest1, B).
+
+procedure mr_intro(Stream(_)?, Constant?, Constant?, PendingInv?, PendingInv, Constant).
+mr_intro(_, S, W, Rest, Rest?, true) :- S? =?= W? | true.
+mr_intro(Parts, S, W, Rest, Rest1?, B?) :-
+    ~(S? =?= W?) |
+    anchor_is(Parts?, W?, Hit),
+    mr_anchor(Hit?, Parts?, S?, Rest?, Rest1, B).
+
+procedure mr_anchor(Constant?, Stream(_)?, Constant?, PendingInv?, PendingInv, Constant).
+mr_anchor(true, _, _, Rest, Rest?, true).
+mr_anchor(false, Parts, S, Rest, Rest1?, B?) :- may_release(Parts?, S?, Rest?, Rest1, B).
 
 %% take_intro_via(Other, Pend, Pend1, Via): who introduced Other, removed.
 procedure take_intro_via(Constant?, PendingInv?, PendingInv, AnchorFriend).
@@ -901,35 +936,6 @@ rbs(_, [], []).
 %% channel and each of the two it introduces receives its end FROM the
 %% introducer, so both ends are held; the consent to the introduction is what
 %% releases them, and it is kept, since one introduction holds several links.
-%% intro_ok_for(Parts, S, Pend, Pend1, B): whether the person has consented to
-%% an introduction whose channel this link belongs to --- the link's anchor or
-%% the agent it came from is one they accepted an introduction with or from.
-procedure intro_ok_for(Stream(_)?, Constant?, PendingInv?, PendingInv, Constant).
-intro_ok_for(Parts, S, [intro_ok(W) | Rest], [intro_ok(W?) | Rest1?], B?) :-
-    ground(Parts?), ground(S?) |
-    anchor_is(Parts?, W?, Hit),
-    iof_step(Hit?, Parts?, S?, W?, Rest?, Rest1, B).
-intro_ok_for(Parts, S, [P | Rest], [P? | Rest1?], B?) :-
-    otherwise | intro_ok_for(Parts?, S?, Rest?, Rest1, B).
-intro_ok_for(_, _, [], [], false).
-
-procedure iof_step(Constant?, Stream(_)?, Constant?, Constant?, PendingInv?, PendingInv, Constant).
-iof_step(true, _, _, _, Rest, Rest?, true).
-iof_step(false, Parts, S, W, Rest, Rest1?, B?) :-
-    S? =?= W? | iof_hit(Parts?, S?, Rest?, Rest1, B).
-iof_step(false, Parts, S, W, Rest, Rest1?, B?) :-
-    ~(S? =?= W?) | intro_ok_for(Parts?, S?, Rest?, Rest1, B).
-
-procedure iof_hit(Stream(_)?, Constant?, PendingInv?, PendingInv, Constant).
-iof_hit(_, _, Rest, Rest?, true).
-
-%% take_warm_ok(S, Pend, Pend1, Found): a warm call accepted from S, removed.
-procedure take_warm_ok(Constant?, PendingInv?, PendingInv, Constant).
-take_warm_ok(S, [warm_ok(F) | Rest], Rest?, true) :- S? =?= F? | true.
-take_warm_ok(S, [P | Rest], [P? | Rest1?], B?) :-
-    otherwise | take_warm_ok(S?, Rest?, Rest1, B).
-take_warm_ok(_, [], [], false).
-
 procedure pending_step(Constant?, _?, Constant?, Constant?, UserInStream?, NetInStream?, OutputsList?, AppList?, AttestList?, PendingInv?, Stream(String)?).
 pending_step(true, Name, _, Id, UserIn, NetIn, Outs, Apps, Atts, Pend, Trusted) :-
     authorise_link(Name?, authorise),

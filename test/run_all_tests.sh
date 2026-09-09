@@ -3782,18 +3782,20 @@ check "SG super-app on two smartphones: alice's execution opened" "\[alice\] ope
 check "SG super-app on two smartphones: bob greeted" "\[bob\] greeted(alice)" "$sg_boot"
 check "SG super-app on two smartphones: alice greeted" "\[alice\] greeted(bob)" "$sg_boot"
 
-# The warm call on three smartphones (paper Section 5.2): the three
+# The warm call on three smartphones (paper Section 5.2), END TO END: the three
 # conversations open, alice's execution sends carol the end of a fresh
 # variable, carol's forwards it to bob's, bob's assigns it, bob's runtime holds
 # the assignment and reports the held link, bob's mini-app asks for a warm
 # call, bob's social graph asks carol to introduce him to the anchor, carol's
-# person consents, and alice and bob befriend.  The release itself is not
-# reached: the two ends of a held link have different global names, one at the
-# holder and one at the anchor, and which of them authorises what is IGLP's to
-# say (SGSG Code to IGLP, 2026-09-08).  A global name does not cross a link as
-# a term at all, which is why the request for an introduction names the anchor
-# by the constant the person consented to; programs/social/docs/linkprobes.md
-# holds the two-agent programs that fence the runtime behaviour in.
+# person consents, alice and bob befriend, each end authorises the links its
+# own person's volition covers, and the value reaches alice's execution.
+# A held link is authorised at BOTH of its ends, and the traffic one
+# authorisation lets through is itself held at the other, so the reports come
+# in rounds and every one must be answered (IGLP, 2026-09-09).  A global name
+# does not cross a link as a term, which is why the request for an
+# introduction names the anchor by the constant the person consented to;
+# programs/social/docs/linkprobes.md holds the two-agent programs that fence
+# the runtime behaviour in.
 sg_warm=$("$REPL_RUN" <<HEREDOC
 :artefact $GLP_DIR/programs/social/graph/pingapp $SG_CORE
 :boot $GLP_DIR/programs/social/superapp3_boot.glp $SG_CORE
@@ -3810,6 +3812,7 @@ check "SG warm call: bob's runtime holds the link and reports it" "\[bob\] held_
 check "SG warm call: carol introduces bob to alice" "\[bob\] sg(intro_from(carol, alice))" "$sg_warm"
 check "SG warm call: and alice to bob" "\[alice\] sg(intro_from(carol, bob))" "$sg_warm"
 check "SG warm call: alice and bob befriend" "\[alice\] sg(connected(bob))" "$sg_warm"
+check "SG warm call: the held value reaches alice's execution" "\[alice\] got(hello_from_bob)" "$sg_warm"
 
 # The currency on two smartphones (paper Section 7): the same super-app, two
 # isolates with their own keys, hosting Currencies' mini-app from its certified
