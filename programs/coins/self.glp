@@ -2,7 +2,7 @@
 %%
 %% The program every participant runs under the grassroots social contract of
 %% "Grassroots Currencies: Turning Mutual Trust into Liquidity" (Section 3),
-%% derived from the four transactions of its Section 3.4.  It runs as a
+%% derived from the four transactions of its Definition 3.1.  It runs as a
 %% mini-app of the Grassroots Super-App: currency/ is the certified program --- the
 %% agent (currency/coins_agent.vglp, compiled by the vGLP canonical compilation
 %% into currency/coins_agent.glp beside it), the mini-app entry coins/3
@@ -15,7 +15,7 @@
 %% A coin is coin(Issuer, Serial): the atom cent(u) of the act schemas, with the
 %% serial a practical implementation gives each coin.  A party's holdings are a
 %% multiset of coins, Stream(Coin).  A lot is k coins of one issuer,
-%% lot(Issuer, K): the cent^k_u of Section 3.4.
+%% lot(Issuer, K): the cent^k_u of Section 3.2.
 
 Coin ::= coin(Constant, Integer).
 Lot  ::= lot(Constant, Integer).
@@ -32,7 +32,7 @@ RedeemResponse ::= redeem_give(Coin)
                  ; redeem_menu(Coin, Stream(Constant))
                  ; redeem_declined(Coin).
 
-%% What one agent sends another: the three bilateral acts of Section 3.4, and
+%% What one agent sends another: the three bilateral acts of Definition 3.1, and
 %% the return of coins that were not a payment, because they are not the
 %% payee's own.  A position that forwards a writer carries ? in the type
 %% (typed-glp-manual, 15B).
@@ -169,7 +169,7 @@ append_coins([C|Cs], Ys, [C?|Zs?]) :- append_coins(Cs?, Ys?, Zs).
 append_coins([], Ys, Ys?).
 
 %% K coins of Issuer out of the holdings: ok, with the coins and the rest; or
-%% fail --- the precondition cent^k_u in c_p of Section 3.4 does not hold ---
+%% fail --- the precondition cent^k_u in c_p of Definition 3.1 does not hold ---
 %% with the coins found and the rest, which the caller puts back together.
 procedure select_coins(Constant?, Integer?, Stream(Coin)?, Constant, Stream(Coin), Stream(Coin)).
 select_coins(_, 0, Hs, ok, [], Hs?).
@@ -302,7 +302,7 @@ close_outputs([friend_output(_, [])|Outs]) :- close_outputs(Outs?).
 close_outputs([]).
 
 %% =============================================================================
-%% Entry point: the village market of Section 5 of the paper
+%% Entry point: the village market of Appendix C.2 of the paper
 %% =============================================================================
 
 imported procedure village#market.
@@ -316,3 +316,16 @@ village :- village # market.
 imported procedure play_ui#coins_ui(Constant?, Stream(UserAnswer)?, Stream(_)?).
 exported procedure coins_ui(Constant?, Stream(UserAnswer)?, Stream(_)?).
 coins_ui(Id, Answers, NetIn) :- play_ui # coins_ui(Id?, Answers?, NetIn?).
+
+%% =============================================================================
+%% Entry point: the village market with one villager on the app's screen
+%% (village.glp, market_ui/1) --- the app shows that villager's screen as the
+%% market runs, which is how the six balances views of the paper's Appendix
+%% C.2 are taken, one villager per run.  The second and third arguments are
+%% the app's, as for coins_ui/3, and are not read: the villager's cards are
+%% answered by its scripted person, as in village/0.
+%% =============================================================================
+
+imported procedure village#market_ui(Constant?).
+exported procedure village_ui(Constant?, Stream(UserAnswer)?, Stream(_)?).
+village_ui(Id, _, _) :- village # market_ui(Id?).

@@ -1,9 +1,9 @@
-%% village.glp --- the village market of Section 5 of "Grassroots Currencies:
+%% village.glp --- the village market of Appendix C.2 of "Grassroots Currencies:
 %% Turning Mutual Trust into Liquidity", on the compiled coins agent.
 %%
 %% Six villagers --- Alice (baker), Bob (farmer), Charlie (carpenter), Diana
 %% (doctor), Eve (teacher), Frank (fisherman) --- perform the six operations of
-%% Section 5.1, each an act of the contract:
+%% Appendix C.2, each an act of the contract:
 %%
 %%   1. symmetric mutual credit   Alice-Bob 15, Alice-Charlie 15, Charlie-Eve 10,
 %%                                Eve-Frank 10
@@ -28,7 +28,13 @@
 %% screen messages are logged as tagged(Villager, Message), so the run is
 %% observable and the final holdings can be read off it.
 %%
-%% Entry point: market/0, exported by self.glp as village/0.
+%% Entry points: market/0, exported by self.glp as village/0; and market_ui/1,
+%% exported as village_ui/3, which runs the same market with one villager,
+%% named, also on the app's own path: every event its mini-app shows it --- the
+%% cards, their closing and the screen --- goes as well to send_to_user/1, one
+%% term to a line, which is what the app's UI runtime reads and renders (as
+%% play_ui.glp does for alice).  The app therefore shows that villager's screen
+%% as the market runs, while its scripted person answers the cards as before.
 
 imported procedure miniapp#coins(Constant?, Channel(Stream(UserAnswer), Stream(Event))?, Stream(Conversation)?).
 imported procedure person#person(Constant?, Stream(Event)?, Stream(UserAnswer), Script?, Stream(ScreenContent)).
@@ -58,31 +64,54 @@ script(frank, [mint(18), accept(diana), mint(10), accept(eve), pay(diana, 3),
 %% =============================================================================
 
 exported procedure market.
-market :-
+market :- market(none).
+
+exported procedure market_ui(Constant?).
+market_ui(V) :- market(V?).
+
+%% The market, with the villager named on the app's path, or none.
+procedure market(Constant?).
+market(V) :-
     script(alice, SA),
-    villager(alice, SA?, [conversation(bob, ch(AB?, BA)), conversation(charlie, ch(AC?, CA)),
+    villager(V?, alice, SA?, [conversation(bob, ch(AB?, BA)), conversation(charlie, ch(AC?, CA)),
                           conversation(eve, ch(AE?, EA))]),
     script(bob, SB),
-    villager(bob, SB?, [conversation(alice, ch(BA?, AB)), conversation(diana, ch(BD?, DB))]),
+    villager(V?, bob, SB?, [conversation(alice, ch(BA?, AB)), conversation(diana, ch(BD?, DB))]),
     script(charlie, SC),
-    villager(charlie, SC?, [conversation(alice, ch(CA?, AC)), conversation(eve, ch(CE?, EC))]),
+    villager(V?, charlie, SC?, [conversation(alice, ch(CA?, AC)), conversation(eve, ch(CE?, EC))]),
     script(diana, SD),
-    villager(diana, SD?, [conversation(bob, ch(DB?, BD)), conversation(frank, ch(DF?, FD))]),
+    villager(V?, diana, SD?, [conversation(bob, ch(DB?, BD)), conversation(frank, ch(DF?, FD))]),
     script(eve, SE),
-    villager(eve, SE?, [conversation(alice, ch(EA?, AE)), conversation(charlie, ch(EC?, CE)),
+    villager(V?, eve, SE?, [conversation(alice, ch(EA?, AE)), conversation(charlie, ch(EC?, CE)),
                         conversation(frank, ch(EF?, FE))]),
     script(frank, SF),
-    villager(frank, SF?, [conversation(diana, ch(FD?, DF)), conversation(eve, ch(FE?, EF))]).
+    villager(V?, frank, SF?, [conversation(diana, ch(FD?, DF)), conversation(eve, ch(FE?, EF))]).
 
 %% One villager: the mini-app, activated with its channel to the person and its
 %% conversations, the scripted person on the other end of the channel, and its
-%% screen logged.
+%% screen logged.  The villager on the app's path has its events sent to the
+%% user as well.
 exported procedure villager(Constant?, Script?, Stream(Conversation)?).
-villager(Id, Script, Convs) :-
-    ground(Id?) |
+villager(Id, Script, Convs) :- villager(none, Id?, Script?, Convs?).
+
+procedure villager(Constant?, Constant?, Script?, Stream(Conversation)?).
+villager(V, Id, Script, Convs) :-
+    V? =?= Id? |
+    miniapp # coins(Id?, ch(Answers?, Events), Convs?),
+    tee(Events?, ToPerson, ToUser),
+    send_to_user(ToUser?),
+    person # person(Id?, ToPerson?, Answers, Script?, Screen),
+    log(Id?, Screen?).
+villager(_, Id, Script, Convs) :-
+    otherwise |
     miniapp # coins(Id?, ch(Answers?, Events), Convs?),
     person # person(Id?, Events?, Answers, Script?, Screen),
     log(Id?, Screen?).
+
+%% Each event to the person and to the user both.
+procedure tee(Stream(Event)?, Stream(Event), Stream(Event)).
+tee([E|Es], [E?|Ps?], [E?|Us?]) :- ground(E?) | tee(Es?, Ps, Us).
+tee([], [], []).
 
 %% The screen messages, logged as tagged(Villager, Message).
 procedure log(Constant?, Stream(ScreenContent)?).

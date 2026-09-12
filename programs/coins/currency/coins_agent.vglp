@@ -1,13 +1,14 @@
 %% coins_agent.vglp --- the currency agent of grassroots currencies, in vGLP.
 %%
 %% The program every participant runs, derived from the four transactions of
-%% Section 3.4 of "Grassroots Currencies: Turning Mutual Trust into Liquidity"
-%% --- Mint, Swap, Pay and Redeem --- one volition-guarded clause each, guarded
-%% where the transaction is guarded: Mint, Pay and Redeem at the one party whose
-%% election they are, Swap at both, the proposer by its request clause and the
-%% counterparty by the responder respond_swap.  Its compilation by the vGLP
-%% canonical compilation, the agent and its mediator, is coins_agent.glp beside
-%% this file (glpc :emit); the compiled module is not edited.
+%% Definition 3.1 (Section 3.2) of "Grassroots Currencies: Turning Mutual Trust
+%% into Liquidity" --- Mint, Swap, Pay and Redeem --- one volition-guarded
+%% clause each, guarded where the transaction is guarded: Mint, Pay and Redeem
+%% at the one party whose election they are, Swap at both, the proposer by its
+%% request clause and the counterparty by the responder respond_swap.  Its
+%% compilation by the vGLP canonical compilation, the agent and its mediator,
+%% is coins_agent.glp beside this file (glpc :emit); the compiled module is not
+%% edited.
 %%
 %% The agent runs as a mini-app of the Grassroots Super-App (miniapp.glp) and
 %% holds no network entry.  Two parties transact over the root channel of the
@@ -141,7 +142,7 @@ agent(Id, [_|UserIn], PeerIn, Convs, Outs, Holdings, Serial) :-
     ground(Id?), otherwise |
     agent(Id?, UserIn?, PeerIn?, Convs?, Outs?, Holdings?, Serial?).
 
-%% --- Volitional: the four transactions of Section 3.4, at the party whose
+%% --- Volitional: the four transactions of Definition 3.1, at the party whose
 %% election they are.  Request clauses, perpetually pending, after every
 %% otherwise clause of the procedure. ---
 
