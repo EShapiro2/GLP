@@ -1,10 +1,12 @@
 #!/bin/bash
-# Tests for the syntactically-grassroots checker (programs/jurix).
+# Tests for the syntactically-grassroots checker and the compiler
+# (programs/jurix).
 #
 #   bash programs/jurix/test_jurix.sh
 #
 # The two contracts of /Grassroots/Jurix Sections 3.3 and 3.4, which Section 7
-# certifies by hand, and four contracts broken in one place each.  Exits
+# certifies by hand, and four contracts broken in one place each; then the
+# compilation of Section 5, against the two displays of Section 5.2.  Exits
 # non-zero if any check fails.
 
 set -u
@@ -33,6 +35,25 @@ check_not() {
     echo "  PASS  $1"
     PASS=$((PASS + 1))
   fi
+}
+
+check_eq() { # check_eq <name> <expected> <actual>
+  if [ "$2" = "$3" ]; then
+    echo "  PASS  $1"
+    PASS=$((PASS + 1))
+  else
+    echo "  FAIL  $1"
+    echo "        expected: $2"
+    echo "        got:      $3"
+    FAIL=$((FAIL + 1))
+  fi
+}
+
+squash() { tr -d ' \t\n'; }
+
+compiled() { # compiled <contract> <schema> ; the display, whitespace removed
+  run "compile_schema($1, $2)." | sed -n '/begin{align/,/end{align/p' \
+    | sed 's/GLP>//' | squash
 }
 
 run() {     # run <goal> ... ; loads the program, then posts each goal
@@ -127,6 +148,57 @@ check "CSSN's predicates of traceable provenance" \
 out=$(run 'check_named(nonesuch, V).')
 check "the empty contract has no introductory act" \
       "V = not_grassroots([no_introductory_act])" "$out"
+
+# --- the compilation (Section 5) -------------------------------------------
+# The two displays of Section 5.2, transcribed from
+# /Grassroots/Jurix/sections/05-compilation.tex, compared with the whitespace
+# removed: the compiler emits a display one token to a line, GLP having no
+# string concatenation, and a newline is whitespace to LaTeX.  The comma and
+# the full stop that close the paper's two displays belong to the sentences
+# around them, not to the compiled form, and are not expected here.
+
+befriend_paper=$(cat <<'EOF' | squash
+\begin{align*}
+& c'_{\Alice} := c_{\Alice} \uplus \{\mathit{friend}(\Bob)\}, \qquad c'_{\Bob} := c_{\Bob} \uplus \{\mathit{friend}(\Alice)\},\\
+& \text{provided } \mathit{friend}(\Bob) \notin c_{\Alice} \text{ and } \mathit{friend}(\Alice) \notin c_{\Bob}, \qquad \text{guarded by } \{\Alice,\Bob\}
+\end{align*}
+EOF
+)
+check_eq "befriend compiles to the display of Section 5.2" \
+         "$befriend_paper" "$(compiled social_graph befriend)"
+
+swap_paper=$(cat <<'EOF' | squash
+\begin{align*}
+& c'_{\Alice} := (c_{\Alice} \setminus \{\text{\textcent}(u)\}) \uplus \{\text{\textcent}(v)\}, \qquad c'_{\Bob} := (c_{\Bob} \setminus \{\text{\textcent}(v)\}) \uplus \{\text{\textcent}(u)\},\\
+& \text{provided } \text{\textcent}(u) \in c_{\Alice} \text{ and } \text{\textcent}(v) \in c_{\Bob}, \qquad \text{guarded by } \{\Alice,\Bob\}
+\end{align*}
+EOF
+)
+check_eq "the swap compiles to the display of Section 5.2" \
+         "$swap_paper" "$(compiled currency swap)"
+
+# A contract compiles schema by schema, and only after it is checked.
+out=$(run 'compile_named(social_graph).')
+check_eq "the social graph compiles to four displays" "4" \
+         "$(printf '%s' "$out" | grep -c 'begin{align')"
+out=$(run 'compile_named(currency).')
+check_eq "the currency compiles to four displays" "4" \
+         "$(printf '%s' "$out" | grep -c 'begin{align')"
+
+out=$(run 'compile_named(sg_gossip).')
+check "a contract that fails the conditions is not compiled" \
+      "% not compiled: sg_gossip" "$(printf '%s' "$out" | tr '\n' ' ')"
+check_not "and no display is printed for it" "begin{align" "$out"
+
+# A schema with no guarding role compiles to transactions with an empty guard
+# (Section 5.1); CSSN's deliver is unguarded at both roles.
+out=$(run 'compile_schema(cssn, deliver).')
+check "an unguarded schema compiles to an empty guard" \
+      "\\text{guarded by } \\emptyset" "$(printf '%s' "$out" | tr '\n' ' ')"
+
+out=$(run 'compile_schema(cssn, nosuch).')
+check "a schema the contract does not hold is reported" \
+      "% no schema named" "$(printf '%s' "$out" | tr '\n' ' ')"
 
 echo "=== $PASS passed, $FAIL failed ==="
 [ "$FAIL" -eq 0 ]

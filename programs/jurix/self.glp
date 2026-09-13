@@ -59,6 +59,15 @@ Block   ::= blocked(Constant, Integer, Atom) ; clear.
 Cand    ::= none ; some(Faults).
 Missing ::= missing(Integer) ; all_reached.
 
+% --- The LaTeX of a compiled schema (def:compile, Section 5.2) -------------
+% GLP has no string concatenation, so a display is carried as its tokens and
+% printed one to a line; a newline is whitespace to LaTeX, so the lines are
+% the display.  ChunkLists holds the conjuncts of the proviso, each a display
+% of its own, before they are joined.
+Chunks     ::= [] ; [Constant | Chunks].
+ChunkLists ::= [] ; [Chunks | ChunkLists].
+FoundS     ::= found(Schema) ; not_found.
+
 % ---------------------------------------------------------------------------
 % Booleans
 % ---------------------------------------------------------------------------
@@ -462,3 +471,11 @@ traceable_of(Nm, E?) :- check # traceable_of(Nm?, E).
 imported procedure contracts#contract(Constant?, Contract).
 exported procedure contract_named(Constant?, Contract).
 contract_named(Nm, C?) :- contracts # contract(Nm?, C).
+
+imported procedure compile#compile_named(Constant?).
+exported procedure compile_named(Constant?).
+compile_named(Nm) :- compile # compile_named(Nm?).
+
+imported procedure compile#compile_schema(Constant?, Constant?).
+exported procedure compile_schema(Constant?, Constant?).
+compile_schema(Nm, Sn) :- compile # compile_schema(Nm?, Sn?).

@@ -1,0 +1,271 @@
+% ---------------------------------------------------------------------------
+% The compilation (def:compile of /Grassroots/Jurix, Section 5), as LaTeX.
+%
+% A schema compiles to the assignment, the proviso and the guard of
+% def:compile, and Section 5.2 is the form printed here; the paper is the
+% specification and neither is restated in this file.  Section 5 opens by
+% saying that the compilation is defined for syntactically grassroots
+% contracts, so compile_named runs the checker first and compiles nothing
+% otherwise.
+%
+% GLP has no string concatenation, so a display is emitted as its tokens, one
+% to a line.  A newline is whitespace to LaTeX, so the lines are the display
+% and are pasted as they stand.
+% ---------------------------------------------------------------------------
+
+imported procedure check#check(Contract?, Verdict).
+imported procedure contracts#contract(Constant?, Contract).
+
+procedure chunks_app(Chunks?, Chunks?, Chunks).
+chunks_app([], T, T?).
+chunks_app([C|Cs], T, [C?|R?]) :- chunks_app(Cs?, T?, R).
+
+procedure is_empty(Atoms?, Ans).
+is_empty([], yes).
+is_empty([_|_], no).
+
+% --- Arguments (def:schema) ------------------------------------------------
+% Roles one and two are the paper's \Alice and \Bob; a party or speech-act
+% variable is written as it is named.
+
+procedure latex_role(Integer?, Chunks?, Chunks).
+latex_role(I, T, ['\\Alice'|T?]) :- I? =:= 1 | true.
+latex_role(I, T, ['\\Bob'|T?]) :- I? =:= 2 | true.
+latex_role(I, T, ['\\mathit{Carol}'|T?]) :- I? =:= 3 | true.
+latex_role(I, T, ['\\mathit{Dave}'|T?]) :- I? =:= 4 | true.
+latex_role(I, T, R?) :- otherwise, integer(I?), ground(T?) | latex_role_n(I?, T?, R).
+
+% A role beyond the fourth has no name in the paper and is written p_i.
+procedure latex_role_n(Constant?, Chunks?, Chunks).
+latex_role_n(I, T, ['\\mathit{p}_{', I?, '}'|T?]).
+
+procedure latex_arg(Arg?, Chunks?, Chunks).
+latex_arg(role(I), T, R?) :- integer(I?), ground(T?) | latex_role(I?, T?, R).
+latex_arg(pvar(X), T, [X?|T?]).
+latex_arg(svar(X), T, [X?|T?]).
+
+procedure latex_args(Args?, Chunks?, Chunks).
+latex_args([], T, T?).
+latex_args([A], T, R?) :- ground(A?), ground(T?) | latex_arg(A?, T?, R).
+latex_args([A, B|As], T, R?) :- ground(A?), ground(B?), ground(As?), ground(T?) |
+    latex_args([B?|As?], T?, R1),
+    latex_arg(A?, [','|R1?], R).
+
+% --- Atoms -----------------------------------------------------------------
+% The paper writes the currency's predicate as the cent sign; every other
+% predicate is set in \mathit.  A predicate of arity zero carries no
+% parentheses.
+
+procedure latex_pred(Constant?, Chunks?, Chunks).
+latex_pred(P, T, ['\\text{\\textcent}'|T?]) :- P? =?= coin | true.
+latex_pred(P, T, ['\\mathit{', P?, '}'|T?]) :- otherwise, ground(P?) | true.
+
+procedure latex_atom(Atom?, Chunks?, Chunks).
+latex_atom(atom(P, []), T, R?) :- ground(P?), ground(T?) | latex_pred(P?, T?, R).
+latex_atom(atom(P, [A|As]), T, R?) :-
+    ground(P?), ground(A?), ground(As?), ground(T?) |
+    latex_args([A?|As?], [')'|T?], R1),
+    latex_pred(P?, ['('|R1?], R).
+
+procedure latex_atoms(Atoms?, Chunks?, Chunks).
+latex_atoms([], T, T?).
+latex_atoms([A], T, R?) :- ground(A?), ground(T?) | latex_atom(A?, T?, R).
+latex_atoms([A, B|As], T, R?) :- ground(A?), ground(B?), ground(As?), ground(T?) |
+    latex_atoms([B?|As?], T?, R1),
+    latex_atom(A?, [','|R1?], R).
+
+procedure latex_set(Atoms?, Chunks?, Chunks).
+latex_set(As, T, ['\\{'|R?]) :- ground(As?), ground(T?) |
+    latex_atoms(As?, ['\\}'|T?], R).
+
+% --- The assignment of one role (def:compile) ------------------------------
+% c'_p := (c_p \ -(i)) u +(i), with an empty half left out.
+
+procedure update_body(Ans?, Ans?, Atoms?, Atoms?, Integer?, Chunks?, Chunks).
+update_body(yes, yes, _, _, I, T, ['c_{'|R?]) :- integer(I?), ground(T?) |
+    latex_role(I?, ['}'|T?], R).
+update_body(no, yes, Add, _, I, T, ['c_{'|R?]) :-
+    ground(Add?), integer(I?), ground(T?) |
+    latex_set(Add?, T?, R1),
+    latex_role(I?, ['} \\uplus '|R1?], R).
+update_body(yes, no, _, Del, I, T, ['c_{'|R?]) :-
+    ground(Del?), integer(I?), ground(T?) |
+    latex_set(Del?, T?, R1),
+    latex_role(I?, ['} \\setminus '|R1?], R).
+update_body(no, no, Add, Del, I, T, ['(c_{'|R?]) :-
+    ground(Add?), ground(Del?), integer(I?), ground(T?) |
+    latex_set(Add?, T?, R1),
+    latex_set(Del?, [') \\uplus '|R1?], R2),
+    latex_role(I?, ['} \\setminus '|R2?], R).
+
+procedure latex_update(RoleSpec?, Integer?, Chunks?, Chunks).
+latex_update(rs(_, Add, Del, _, _), I, T, ['c\'_{'|R?]) :-
+    ground(Add?), ground(Del?), integer(I?), ground(T?) |
+    is_empty(Add?, AE),
+    is_empty(Del?, DE),
+    update_body(AE?, DE?, Add?, Del?, I?, T?, R1),
+    latex_role(I?, ['} := '|R1?], R).
+
+procedure latex_updates(RoleSpecs?, Integer?, Chunks?, Chunks).
+latex_updates([], _, T, T?).
+latex_updates([RS], I, T, R?) :- ground(RS?), integer(I?), ground(T?) |
+    latex_update(RS?, I?, T?, R).
+latex_updates([RS, RS2|Rs], I, T, R?) :-
+    ground(RS?), ground(RS2?), ground(Rs?), integer(I?), ground(T?) |
+    I1 := I? + 1,
+    latex_updates([RS2?|Rs?], I1?, T?, R1),
+    latex_update(RS?, I?, [', \\qquad '|R1?], R).
+
+% --- The proviso (def:compile) ---------------------------------------------
+% =(i) u -(i) included in c_p and not(i) disjoint from it, one conjunct each
+% and left out when the multiset is empty; a singleton is written with \in and
+% \notin, as Section 5.2 writes it.
+
+procedure req_conj(Atoms?, Integer?, ChunkLists?, ChunkLists).
+req_conj([], _, T, T?).
+req_conj([A], I, T, [C?|T?]) :- ground(A?), integer(I?), ground(T?) |
+    latex_role(I?, ['}'], R1),
+    latex_atom(A?, [' \\in c_{'|R1?], C).
+req_conj([A, B|As], I, T, [C?|T?]) :-
+    ground(A?), ground(B?), ground(As?), integer(I?), ground(T?) |
+    latex_role(I?, ['}'], R1),
+    latex_set([A?, B?|As?], [' \\subseteq c_{'|R1?], C).
+
+procedure forb_conj(Atoms?, Integer?, ChunkLists?, ChunkLists).
+forb_conj([], _, T, T?).
+forb_conj([A], I, T, [C?|T?]) :- ground(A?), integer(I?), ground(T?) |
+    latex_role(I?, ['}'], R1),
+    latex_atom(A?, [' \\notin c_{'|R1?], C).
+forb_conj([A, B|As], I, T, [C?|T?]) :-
+    ground(A?), ground(B?), ground(As?), integer(I?), ground(T?) |
+    latex_role(I?, ['} = \\emptyset'], R1),
+    latex_set([A?, B?|As?], [' \\cap c_{'|R1?], C).
+
+procedure role_conjs(RoleSpec?, Integer?, ChunkLists?, ChunkLists).
+role_conjs(rs(_, _, Del, Keep, Forb), I, T, R?) :-
+    ground(Del?), ground(Keep?), ground(Forb?), integer(I?), ground(T?) |
+    forb_conj(Forb?, I?, T?, T1),
+    atoms_app(Keep?, Del?, Req),
+    req_conj(Req?, I?, T1?, R).
+
+procedure all_conjs(RoleSpecs?, Integer?, ChunkLists?, ChunkLists).
+all_conjs([], _, T, T?).
+all_conjs([RS|Rs], I, T, R?) :-
+    ground(RS?), ground(Rs?), integer(I?), ground(T?) |
+    I1 := I? + 1,
+    all_conjs(Rs?, I1?, T?, T1),
+    role_conjs(RS?, I?, T1?, R).
+
+procedure join_conjs(ChunkLists?, Chunks?, Chunks).
+join_conjs([], T, T?).
+join_conjs([C], T, R?) :- ground(C?), ground(T?) | chunks_app(C?, T?, R).
+join_conjs([C, D|Cs], T, R?) :- ground(C?), ground(D?), ground(Cs?), ground(T?) |
+    join_conjs([D?|Cs?], T?, R1),
+    chunks_app(C?, [' \\text{ and } '|R1?], R).
+
+procedure latex_provided(ChunkLists?, Chunks?, Chunks).
+latex_provided([], T, T?).
+latex_provided([C|Cs], T, ['\\text{provided } '|R?]) :-
+    ground(C?), ground(Cs?), ground(T?) |
+    join_conjs([C?|Cs?], [', \\qquad '|T?], R).
+
+% --- The guard (def:compile): the guarding roles of the schema -------------
+
+procedure guard_roles(RoleSpecs?, Integer?, Ints?, Ints).
+guard_roles([], _, T, T?).
+guard_roles([rs(guarded, _, _, _, _)|Rs], I, T, [I?|R?]) :-
+    ground(Rs?), integer(I?), ground(T?) |
+    I1 := I? + 1,
+    guard_roles(Rs?, I1?, T?, R).
+guard_roles([rs(unguarded, _, _, _, _)|Rs], I, T, R?) :-
+    ground(Rs?), integer(I?), ground(T?) |
+    I1 := I? + 1,
+    guard_roles(Rs?, I1?, T?, R).
+
+procedure latex_guard_list(Ints?, Chunks?, Chunks).
+latex_guard_list([], T, T?).
+latex_guard_list([I], T, R?) :- integer(I?), ground(T?) | latex_role(I?, T?, R).
+latex_guard_list([I, J|Is], T, R?) :-
+    integer(I?), integer(J?), ground(Is?), ground(T?) |
+    latex_guard_list([J?|Is?], T?, R1),
+    latex_role(I?, [','|R1?], R).
+
+procedure latex_guard(Ints?, Chunks?, Chunks).
+latex_guard([], T, ['\\text{guarded by } \\emptyset'|T?]).
+latex_guard([I|Is], T, ['\\text{guarded by } \\{'|R?]) :-
+    integer(I?), ground(Is?), ground(T?) |
+    latex_guard_list([I?|Is?], ['\\}'|T?], R).
+
+% --- The display of one schema (Section 5.2) -------------------------------
+
+procedure latex_schema(Schema?, Chunks?, Chunks).
+latex_schema(schema(_, Rs), T, ['\\begin{align*}', '&'|R?]) :-
+    ground(Rs?), ground(T?) |
+    guard_roles(Rs?, 1, [], G),
+    latex_guard(G?, ['\\end{align*}'|T?], R1),
+    all_conjs(Rs?, 1, [], Cs),
+    latex_provided(Cs?, R1?, R2),
+    latex_updates(Rs?, 1, [',\\\\', '&'|R2?], R).
+
+% A schema's name is no part of its compiled form, so it is carried in a
+% conditional TeX skips, and the whole output is pasted as it stands.
+procedure latex_contract(Contract?, Chunks?, Chunks).
+latex_contract([], T, T?).
+latex_contract([schema(Nm, Rs)|Ss], T, ['\\iffalse', Nm?, '\\fi'|R?]) :-
+    ground(Nm?), ground(Rs?), ground(Ss?), ground(T?) |
+    latex_contract(Ss?, T?, R1),
+    latex_schema(schema(Nm?, Rs?), R1?, R).
+
+% --- Entry points ----------------------------------------------------------
+% The checker first: a contract that is not syntactically grassroots is not
+% compiled at all (Section 5).
+
+procedure find_schema(Contract?, Constant?, FoundS).
+find_schema([], _, not_found).
+find_schema([schema(Nm, Rs)|_], Sn, found(schema(Nm?, Rs?))) :- Nm? =?= Sn? | true.
+find_schema([_|Ss], Sn, R?) :- otherwise, ground(Ss?), ground(Sn?) |
+    find_schema(Ss?, Sn?, R).
+
+procedure emit_schema(FoundS?, Constant?).
+emit_schema(found(S), _) :- ground(S?) |
+    latex_schema(S?, [], L),
+    send_to_user(L?).
+emit_schema(not_found, Sn) :- ground(Sn?) |
+    send_to_user(['% no schema named', Sn?, 'in this contract.']).
+
+procedure not_compiled(Constant?).
+not_compiled(Nm) :- ground(Nm?) |
+    send_to_user(['% not compiled:', Nm?,
+                  'is not syntactically grassroots; check_named gives the faults.']).
+
+procedure compile_on(Verdict?, Constant?, Contract?).
+compile_on(syntactically_grassroots, _, C) :- ground(C?) |
+    latex_contract(C?, [], L),
+    send_to_user(L?).
+compile_on(not_grassroots(_), Nm, _) :- ground(Nm?) | not_compiled(Nm?).
+
+procedure compile_checked(Constant?, Contract?).
+compile_checked(Nm, C) :- ground(Nm?), ground(C?) |
+    check # check(C?, V),
+    compile_on(V?, Nm?, C?).
+
+exported procedure compile_named(Constant?).
+compile_named(Nm) :- ground(Nm?) |
+    contracts # contract(Nm?, C),
+    compile_checked(Nm?, C?).
+
+procedure compile_s_on(Verdict?, Constant?, Constant?, Contract?).
+compile_s_on(syntactically_grassroots, _, Sn, C) :- ground(Sn?), ground(C?) |
+    find_schema(C?, Sn?, S),
+    emit_schema(S?, Sn?).
+compile_s_on(not_grassroots(_), Nm, _, _) :- ground(Nm?) | not_compiled(Nm?).
+
+procedure compile_s_checked(Constant?, Constant?, Contract?).
+compile_s_checked(Nm, Sn, C) :- ground(Nm?), ground(Sn?), ground(C?) |
+    check # check(C?, V),
+    compile_s_on(V?, Nm?, Sn?, C?).
+
+exported procedure compile_schema(Constant?, Constant?).
+compile_schema(Nm, Sn) :- ground(Nm?), ground(Sn?) |
+    contracts # contract(Nm?, C),
+    compile_s_checked(Nm?, Sn?, C?).

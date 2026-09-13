@@ -1,7 +1,9 @@
-# The syntactically-grassroots checker
+# The syntactically-grassroots checker, and the compiler
 
 Decides whether a contract is **syntactically grassroots**, and when it is not,
-which condition failed, at which schema, role and atom.
+which condition failed, at which schema, role and atom; and compiles the
+schemas of a contract that is into their volition-guarded transactions,
+printed as the LaTeX of Section 5.2.
 
 The specification is the paper — *Formal Grassroots Social Contracts*
 (`/Grassroots/Jurix`, `main.tex`), Section 3.  Nothing of it is restated here or
@@ -12,7 +14,11 @@ is read in the paper.  A contract is syntactically grassroots
 (`def:volition`), which rests on traceable provenance (`def:grounded`).  Section
 7 certifies the two contracts of Sections 3.3 and 3.4 by hand; the checker
 returns the same verdict for both, and the same sets of predicates of traceable
-provenance.
+provenance.  The compiler is Section 5: a schema compiles to the assignment,
+the proviso and the guard of `def:compile`, and Section 5.2 is the form
+printed.  Section 5 defines the compilation for syntactically grassroots
+contracts, so the compiler runs the checker first and compiles nothing for a
+contract that fails.
 
 ## Running it
 
@@ -31,6 +37,33 @@ and then a goal:
 
 The tests are `bash programs/jurix/test_jurix.sh` from the repository root.
 
+## The compiler
+
+    cd glp_runtime
+    printf '/path/to/GLP/programs/jurix/\ncompile_named(social_graph).\n:quit\n' | bin/glpc
+
+prints the four displays of the social graph's contract, and
+`compile_schema(currency, swap).` prints one.  GLP has no string
+concatenation, so a display is printed one token to a line.  A newline is
+whitespace to LaTeX, so those lines are the display and are pasted into a
+paper as they stand; the two the paper writes by hand, in Section 5.2, come
+back token for token, and `test_jurix.sh` compares them with the whitespace
+removed.  The closing comma and full stop of the paper's two displays belong
+to the sentences around them rather than to the compiled form, and are not
+printed.
+
+A schema's name is no part of its compiled form, so `compile_named` puts it
+in an `\iffalse ... \fi` before each display, which TeX skips.
+
+The compilation is defined for syntactically grassroots contracts (Section 5),
+so the compiler runs the checker first; `compile_named(sg_gossip).` prints
+that the contract is not compiled and nothing else, and `check_named` gives
+the faults.
+
+Printing reaches the person, so the module's certificate is refused on load
+(`[CERTIFICATE REFUSED] jurix ... calls send_to_user/1`) and it carries no
+signature.  It loads and runs as before.
+
 ## The entry points
 
 | Goal | What it gives |
@@ -39,6 +72,8 @@ The tests are `bash programs/jurix/test_jurix.sh` from the repository root.
 | `check_named(Name, V)` | the verdict on one of the contracts of `contracts.glp` |
 | `traceable_of(Name, E)` | its predicates of traceable provenance |
 | `contract_named(Name, C)` | the contract itself |
+| `compile_named(Name)` | prints the compiled form of every schema of it |
+| `compile_schema(Name, Schema)` | prints the compiled form of one schema |
 
 The names are `social_graph` and `currency`, the two the paper works through;
 `sg_chain`, which certifies and exercises volition above arity two; and the five
@@ -96,6 +131,7 @@ and not both empty).
 | `prov.glp` | `def:grounded`, as a greatest fixpoint |
 | `volition.glp` | `def:volition` |
 | `check.glp` | `def:syntactically-grassroots`, the two halves together |
+| `compile.glp` | `def:compile`, printed as the LaTeX of Section 5.2 |
 | `contracts.glp` | the contracts to run on |
 
 ## Why it terminates
