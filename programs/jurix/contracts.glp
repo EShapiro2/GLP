@@ -19,7 +19,7 @@
 % unfriend(p?, q)  :   -friend(q)                     -friend(p)
 % sign(p?; x)      :   +item(x, p, p)
 % forward(p?, q; x, a, f) :
-%                      item(x, a, f), friend(f), +sent(x, q)
+%                      item(x, a, f), +sent(x, q)
 %                                                     friend(p), +item(x, a, p)
 procedure sg(Contract).
 sg([schema(befriend,
@@ -32,8 +32,7 @@ sg([schema(befriend,
        [rs(guarded, [atom(item, [svar(x), role(1), role(1)])], [], [], [])]),
     schema(forward,
        [rs(guarded,   [atom(sent, [svar(x), role(2)])], [],
-                      [atom(item, [svar(x), pvar(a), pvar(f)]),
-                       atom(friend, [pvar(f)])], []),
+                      [atom(item, [svar(x), pvar(a), pvar(f)])], []),
         rs(unguarded, [atom(item, [svar(x), pvar(a), role(1)])], [],
                       [atom(friend, [role(1)])], [])])]).
 
@@ -68,8 +67,7 @@ sg_unguarded([schema(befriend,
        [rs(guarded, [atom(item, [svar(x), role(1), role(1)])], [], [], [])]),
     schema(forward,
        [rs(guarded,   [atom(sent, [svar(x), role(2)])], [],
-                      [atom(item, [svar(x), pvar(a), pvar(f)]),
-                       atom(friend, [pvar(f)])], []),
+                      [atom(item, [svar(x), pvar(a), pvar(f)])], []),
         rs(unguarded, [atom(item, [svar(x), pvar(a), role(1)])], [],
                       [atom(friend, [role(1)])], [])])]).
 
