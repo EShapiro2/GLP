@@ -1,0 +1,107 @@
+%% instruments.glp --- the forward contract of Section 4 of "Grassroots Bonds"
+%% and the guarantee of its Appendix C, on the compiled bond agent.
+%%
+%% Two entry points, forward/0 and guarantee/0, exported by self.glp.
+%%
+%% FORWARD CONTRACT (Section 4, item 3).  One swap, guarded by both: p and q
+%% exchange bonds both maturing at d, x = cent^k_{p,d} for y = cent^k'_{q,d}.
+%% Alice mints 10 of her own maturing day 30 and Bob 12 of his, and they swap.
+%% Each then holds a claim on the other of the agreed face value, maturing
+%% together, which is what the paper says a forward settled at d comes to ---
+%% with the difference the paper also states, that each holds the other's debt
+%% in the interval, so a default there falls on the counterparty.  It needs no
+%% escrow agent: one lot each side, so it is one act of the contract.
+%%
+%% GUARANTEE (Appendix C, item 2).  Three transfers: the guarantor deposits its
+%% own bonds with the escrow agent; on the borrower's default the agent
+%% releases them to the lender; on fulfilment it returns them to the guarantor.
+%% Lender Alice, borrower Bob, guarantor Gary, and the escrow agent, with both
+%% outcomes in one run, as for collateral:
+%%
+%%   1. Gary mints 6 gary-coins
+%%   2. Alice lends Bob 5 alice-coins for 6 bob-bonds maturing day 20, and Gary
+%%      deposits 3 gary-coins with the escrow agent against it
+%%   3. Bob redeems his 5 alice-coins from Alice, taking back a bob-bond each
+%%      time; the escrow agent returns the 3 gary-coins to Gary
+%%   4. Alice lends Bob 5 more for 6 bob-bonds maturing day 30, and Gary
+%%      deposits his other 3; Bob repays nothing and the agent releases them to
+%%      Alice
+%%
+%% 🔴 The judgement is the escrow agent's own, supplied here by its script:
+%% no act of the contract carries an attestation, so nothing in the program can
+%% tell the agent that Bob repaid or defaulted.  See collateral.glp, which
+%% carries the same note, and /Grassroots/GB/docs/instruments-2026-09-15.md.
+
+imported procedure village#villager(Constant?, Script?, Stream(NetInMsg)?, Stream(NetOutMsg)).
+
+%% =============================================================================
+%% The forward contract
+%% =============================================================================
+
+exported procedure forward.
+forward :-
+    network2(AOut?, BOut?, AIn, BIn),
+    village # villager(alice,
+        [mint(10, 30), swap(bob, alice, 30, 10, bob, 30, 12)],
+        AIn?, AOut),
+    village # villager(bob,
+        [mint(12, 30), accept(alice)],
+        BIn?, BOut).
+
+procedure route2(Stream(NetOutMsg)?, Stream(NetInMsg), Stream(NetInMsg)).
+route2([msg(alice, C)|Rest], [msg(alice, C?)|A?], B?) :- route2(Rest?, A, B).
+route2([msg(bob, C)|Rest], A?, [msg(bob, C?)|B?]) :- route2(Rest?, A, B).
+route2([], [], []).
+
+procedure network2(Stream(NetOutMsg)?, Stream(NetOutMsg)?, Stream(NetInMsg), Stream(NetInMsg)).
+network2(AOut, BOut, AIn?, BIn?) :-
+    merge(AOut?, BOut?, All),
+    route2(All?, AIn, BIn).
+
+%% =============================================================================
+%% The guarantee
+%% =============================================================================
+
+exported procedure guarantee.
+guarantee :-
+    network4g(AOut?, BOut?, GaOut?, GOut?, AIn, BIn, GaIn, GIn),
+    village # villager(alice,
+        [mint(5, 0), swap(bob, alice, 0, 5, bob, 20, 6),
+         await(presented(bob, bob, 20)), await(presented(bob, bob, 20)),
+         await(presented(bob, bob, 20)), await(presented(bob, bob, 20)),
+         await(presented(bob, bob, 20)),
+         mint(5, 0), swap(bob, alice, 0, 5, bob, 30, 6),
+         accept_transfer(escrow)],
+        AIn?, AOut),
+    village # villager(bob,
+        [mint(6, 20), accept(alice),
+         redeem(alice, 0, bob, 20), redeem(alice, 0, bob, 20),
+         redeem(alice, 0, bob, 20), redeem(alice, 0, bob, 20),
+         redeem(alice, 0, bob, 20),
+         mint(6, 30), accept(alice)],
+        BIn?, BOut),
+    village # villager(gary,
+        [mint(6, 0), deposit(escrow, gary, 0, 3),
+         accept_transfer(escrow),
+         deposit(escrow, gary, 0, 3)],
+        GaIn?, GaOut),
+    village # villager(escrow,
+        [accept_transfer(gary),
+         return(gary, gary, 0, 3),
+         accept_transfer(gary),
+         release(alice, gary, 0, 3)],
+        GIn?, GOut).
+
+procedure route4g(Stream(NetOutMsg)?, Stream(NetInMsg), Stream(NetInMsg), Stream(NetInMsg), Stream(NetInMsg)).
+route4g([msg(alice, C)|Rest], [msg(alice, C?)|A?], B?, Ga?, G?) :- route4g(Rest?, A, B, Ga, G).
+route4g([msg(bob, C)|Rest], A?, [msg(bob, C?)|B?], Ga?, G?) :- route4g(Rest?, A, B, Ga, G).
+route4g([msg(gary, C)|Rest], A?, B?, [msg(gary, C?)|Ga?], G?) :- route4g(Rest?, A, B, Ga, G).
+route4g([msg(escrow, C)|Rest], A?, B?, Ga?, [msg(escrow, C?)|G?]) :- route4g(Rest?, A, B, Ga, G).
+route4g([], [], [], [], []).
+
+procedure network4g(Stream(NetOutMsg)?, Stream(NetOutMsg)?, Stream(NetOutMsg)?, Stream(NetOutMsg)?, Stream(NetInMsg), Stream(NetInMsg), Stream(NetInMsg), Stream(NetInMsg)).
+network4g(AOut, BOut, GaOut, GOut, AIn?, BIn?, GaIn?, GIn?) :-
+    merge(AOut?, BOut?, AB),
+    merge(GaOut?, GOut?, GaG),
+    merge(AB?, GaG?, All),
+    route4g(All?, AIn, BIn, GaIn, GIn).

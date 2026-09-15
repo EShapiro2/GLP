@@ -2458,6 +2458,38 @@ check "Bonds collateral: on default it is released to the lender" "tagged(alice,
 check "Bonds collateral: the repaid lender holds its coins back and the interest bond" "tagged(alice, holdings(\[lot(bob, 20, 1), lot(alice, 0, 5), lot(bob, 30, 6), lot(carol, 0, 3)\]))" "$n3_col"
 check "Bonds collateral: the borrower holds the bonds it redeemed back and the returned collateral" "tagged(bob, holdings(\[lot(bob, 20, 5), lot(carol, 0, 3), lot(alice, 0, 5)\]))" "$n3_col"
 check "Bonds collateral: the escrow agent holds nothing at the end" "tagged(escrow, holdings(\[\]))" "$n3_col"
+
+echo "--- Bonds forward contract (forward) ---"
+
+n3_fwd=$("$REPL_RUN" <<HEREDOC
+$BONDS
+:limit 50000000
+forward.
+:quit
+HEREDOC
+2>&1)
+
+check_not "Bonds forward: no failed goal" "ERROR" "$n3_fwd"
+check "Bonds forward: each party holds the other's bonds of the agreed face value, maturing together (alice)" "tagged(alice, holdings(\[lot(bob, 30, 12)\]))" "$n3_fwd"
+check "Bonds forward: and bob" "tagged(bob, holdings(\[lot(alice, 30, 10)\]))" "$n3_fwd"
+
+echo "--- Bonds guarantee (guarantee) ---"
+
+n3_gtee=$("$REPL_RUN" <<HEREDOC
+$BONDS
+:limit 50000000
+guarantee.
+:quit
+HEREDOC
+2>&1)
+
+check_not "Bonds guarantee: no failed goal" "ERROR" "$n3_gtee"
+check "Bonds guarantee: the guarantor deposits its own bonds" "tagged(escrow, received_transfer(deposit, gary, \[lot(gary, 0, 3)\]))" "$n3_gtee"
+check "Bonds guarantee: on fulfilment they are returned to the guarantor" "tagged(gary, received_transfer(return, escrow, \[lot(gary, 0, 3)\]))" "$n3_gtee"
+check "Bonds guarantee: on default they are released to the lender" "tagged(alice, received_transfer(release, escrow, \[lot(gary, 0, 3)\]))" "$n3_gtee"
+check "Bonds guarantee: the lender holds the guarantor's bonds and the defaulted loan's" "tagged(alice, holdings(\[lot(bob, 20, 1), lot(alice, 0, 5), lot(bob, 30, 6), lot(gary, 0, 3)\]))" "$n3_gtee"
+check "Bonds guarantee: the guarantor is left with what it did not forfeit" "tagged(gary, holdings(\[lot(gary, 0, 3)\]))" "$n3_gtee"
+check "Bonds guarantee: the escrow agent holds nothing at the end" "tagged(escrow, holdings(\[\]))" "$n3_gtee"
 echo ""
 
 # =============================================================================

@@ -441,3 +441,11 @@ credit_line :- credit_line # run.
 imported procedure collateral#run.
 exported procedure collateral.
 collateral :- collateral # run.
+
+imported procedure instruments#forward.
+exported procedure forward.
+forward :- instruments # forward.
+
+imported procedure instruments#guarantee.
+exported procedure guarantee.
+guarantee :- instruments # guarantee.
