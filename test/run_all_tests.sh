@@ -2814,12 +2814,14 @@ echo ""
 # source compiles on load (no .glp beside it).  Three plays: the person's
 # answer reaches its clause; an answer of another clause's form leaves the
 # pending table as it is; a clause reducing a goal with an open ask drops the
-# ask and closes its card.  They end at once: the deadline went on 2026-09-15
+# ask and closes its card; and the person's decline selects the else-branch,
+# which is the fourth play.  They end at once: the deadline went on 2026-09-15
 # (Udi), so nothing waits out a wall-clock minute for a person who is not at
-# the phone.  The program carries a fourth play, play_decline, which is not
-# checked here — it is the reproduction of the else clause's defect reported to
-# vGLP Cowork on 2026-09-15, the head of the compiled else clause keeping the
-# answer writer that no reply binds.
+# the phone.  play_decline is the only play that reduces an else clause, and
+# writing it found the defect it now guards: the compiled else clause kept the
+# answer writer in its head, which no reply binds, so its output suspended for
+# ever.  The Definition's else clause is H'[T'] since 2026-09-15 and the head
+# carries the else answer, which is why the play reports decided(no, bob).
 # =============================================================================
 echo "=== Section VG: Canonical compilation, one-clause procedures ==="
 echo ""
@@ -2842,6 +2844,15 @@ HEREDOC
 2>&1)
 check_not "One-clause: answer, no failed goal" "ERROR" "$vg_answer"
 check "One-clause: the answer reaches its clause" "tagged(answer, \[decided(yes, bob)\])" "$vg_answer"
+
+vg_decline=$("$REPL_RUN" <<HEREDOC
+$ONECLAUSE
+play_decline.
+:quit
+HEREDOC
+2>&1)
+check_not "One-clause: decline, no failed goal" "ERROR" "$vg_decline"
+check "One-clause: the person's decline selects the else-branch, with its else answer" "tagged(decline, \[decided(no, bob)\])" "$vg_decline"
 
 vg_mismatch=$("$REPL_RUN" <<HEREDOC
 $ONECLAUSE

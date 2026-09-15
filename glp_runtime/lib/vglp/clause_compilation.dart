@@ -235,12 +235,18 @@ Clause _compileAnswer(Clause c, Procedure proc, int m, int j, String name,
 
 /// The else clause: the person declined the ask, selecting the else-branch.
 ///
-///     H'(Med, ..., ask(else, _), ...) :- G[T'] |
+///     H'[T'](Med, ..., ask(else, _), ...) :- G[T'] |
 ///         aborts([<the other slots>], Med?, Med1), B'[T']
 ///
-/// `G[T']` and `B'[T']` are the guard and the else-branch with the else answer
-/// T'_l in place of X_l?, so no answer position is read and the reply carries
-/// no values.
+/// `H[T']`, `G[T']` and `B'[T']` are the head, the guard and the else-branch
+/// with the else answer T'_l in place of X_l?, so no answer position is read
+/// and the reply carries no values.  THE HEAD TOO: an answer writer occurs in
+/// it wherever the clause builds its output from the person's answer, which is
+/// the ordinary case, and the else clause binds no answer — so a head left
+/// unsubstituted emits a reader nothing can ever bind, and the goal consuming
+/// that output suspends for ever.  It was invisible while a timer selected the
+/// else-branch, because no play reduced an else clause (vGLP Cowork,
+/// 2026-09-15).
 Clause _compileElse(Clause c, Procedure proc, int m, int j,
     {required bool Function(String, int) isProcedureOfM,
     required int Function(String, int) slotCountOf}) {
@@ -259,7 +265,12 @@ Clause _compileElse(Clause c, Procedure proc, int m, int j,
     for (var k = 0; k < m; k++) if (k != j - 1) slots[k]
   ];
 
-  final head = _extendHead(c.head, med, slotArgs);
+  // H[T']: the else answer stands in place of every answer reader in the head
+  // as well as in the guard and the body (Definition "Canonical Compilation").
+  final substHead = Atom(c.head.functor,
+      c.head.args.map((t) => _substTerm(t, subst)).toList(),
+      c.head.line, c.head.column);
+  final head = _extendHead(substHead, med, slotArgs);
   final guards = [
     for (final g in c.guards ?? const <Guard>[])
       Guard(g.predicate, g.args.map((t) => _substTerm(t, subst)).toList(),
