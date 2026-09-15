@@ -70,6 +70,11 @@ const _bundledGlp = [
   'programs/social/graph/core/self.glp',
   'programs/social/graph/core/agent.glp',
   'programs/social/graph/core/superapp_plays.glp',
+  // home_ui.glp is superapp_ui/3, what the Flutter agent runtime starts, and
+  // home.glp the compiled mediator it imports. Neither was listed, so
+  // superapp_ui/3 could not be found on iOS (GSG, 2026-09-15).
+  'programs/social/graph/core/home.glp',
+  'programs/social/graph/core/home_ui.glp',
   'programs/social/graph/pingapp/self.glp',
   'programs/social/graph/pingapp/miniapp.glp',
   // CSSN social network (groups): the whole program is statically linked, so
@@ -88,6 +93,15 @@ const _bundledGlp = [
   'programs/cssn/childsafe/agent.glp',
   'programs/cssn/childsafe/child_agent.glp',
   'programs/cssn/childsafe/mediator.glp',
+  // The certified mini-apps the super-app installs. They reach the phone as
+  // artefacts rather than as sources: load_file/2 resolves a name only within
+  // the calling program's own directory, and what it reads there is a
+  // certified compiled program. Built into the bundle by
+  // tool/sync_glp_assets.sh; each is binary, which is why nothing below reads
+  // an asset as a string.
+  'programs/social/graph/core/pingapp.glpw',
+  'programs/social/graph/core/currency.glpw',
+  'programs/social/graph/core/childsafe.glpw',
 ];
 
 Future<GlpPaths> resolveGlpPaths() async {
@@ -108,10 +122,15 @@ Future<GlpPaths> resolveGlpPaths() async {
   final docs = await getApplicationDocumentsDirectory();
   final base = '${docs.path}/glp/programs';
   for (final a in _bundledGlp) {
-    final source = await rootBundle.loadString('assets/glp/$a');
+    // Byte-for-byte, not as text: a `.glpw` opens with the magic `GLPW` and
+    // fixed-width little-endian fields and is not UTF-8, so loadString fails
+    // on it (currency.glpw at byte 24). Bytes carry the `.glp` sources
+    // unchanged too, so one loop serves both.
+    final data = await rootBundle.load('assets/glp/$a');
     final out = File('${docs.path}/glp/$a');
     await out.parent.create(recursive: true);
-    await out.writeAsString(source);
+    await out.writeAsBytes(data.buffer
+        .asUint8List(data.offsetInBytes, data.lengthInBytes));
   }
   return GlpPaths('$base/grassapp', '$base/social/graph', '$base/cssn',
       '$base/self.glp');

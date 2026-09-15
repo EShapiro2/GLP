@@ -25,7 +25,10 @@ done
 # mini-app it installs. The agent moved from social/graph/agent.glp to
 # core/agent.glp (SGSG, 2026-09-08) and this script still copied the old path,
 # so it failed under set -e and no iOS bundle could be built.
-for f in self agent superapp_plays; do
+# home_ui.glp is what the Flutter agent runtime starts as superapp_ui/3, and
+# home.glp is the compiled mediator it imports; neither was copied, so
+# superapp_ui/3 could not be found on iOS (GSG, 2026-09-15).
+for f in self agent superapp_plays home home_ui; do
   cp "$SRC/social/graph/core/$f.glp" "$DST/social/graph/core/$f.glp"
 done
 for f in self miniapp; do
@@ -43,4 +46,21 @@ cp "$SRC/cssn/ui/actors.glp" "$DST/cssn/ui/actors.glp"
 for f in self miniapp plays agent child_agent mediator; do
   cp "$SRC/cssn/childsafe/$f.glp" "$DST/cssn/childsafe/$f.glp"
 done
+# The certified mini-apps the super-app installs reach the phone as artefacts,
+# not as sources: the agent's load_file/2 resolves a name only within its own
+# directory, and what it reads there is a certified compiled program. A .glpw
+# is a build product (gitignored), so it is built here from the canonical
+# sources rather than copied --- the same :artefact the tests use, writing
+# <name>.glpw into the super-app's directory in the bundle.
+( cd ../glp_runtime && for prog in ../programs/social/graph/pingapp \
+                                   ../programs/coins/currency \
+                                   ../programs/cssn/childsafe; do
+    printf ':artefact %s %s\n:quit\n' \
+      "$prog" "../glp_multiagent/$DST/social/graph/core" | bin/glpc
+  done ) | grep -E '(✓ Wrote|Artefact failed|Error:)' || true
+for a in pingapp currency childsafe; do
+  test -s "$DST/social/graph/core/$a.glpw" \
+    || { echo "sync_glp_assets: $a.glpw was not written" >&2; exit 1; }
+done
+
 echo "Synced GLP assets from $SRC -> $DST"

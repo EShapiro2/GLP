@@ -35,6 +35,9 @@ flutter:
   # GLP scenario sources, bundled for sandboxed platforms (iOS) where the engine
   # cannot read the repo from disk. Copied from programs/ — keep in sync via
   # tool/sync_glp_assets.sh. On macOS the repo on disk is used instead.
+  # social/graph/core/ also carries the certified mini-apps' .glpw artefacts,
+  # which that script builds; they are gitignored build products, so run it
+  # before an iOS build or the directory ships without them.
   assets:
     - assets/glp/programs/self.glp
     - assets/glp/programs/social/graph/routing/
