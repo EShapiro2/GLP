@@ -4067,6 +4067,34 @@ check "SG warm call: and alice to bob" "\[alice\] sg(intro_from(carol, bob))" "$
 check "SG warm call: alice and bob befriend" "\[alice\] sg(connected(bob))" "$sg_warm"
 check "SG warm call: the held value reaches alice's execution" "\[alice\] got(hello_from_bob)" "$sg_warm"
 
+# The registry's return from running to idle (paper Section 3, "Activation and
+# joining"): the super-app records whether a mini-app is running, and an
+# invitation is looked up in that record.  Until 2026-09-15 nothing ever put an
+# entry back --- install wrote idle, the first invitation wrote running, and no
+# clause wrote idle again --- so a mini-app that had ended was still recorded as
+# running and the next invitation's root channel went to the execution that was
+# gone.  social/graph/endapp is the mini-app that makes the case reachable:
+# pingapp cannot, its loop ending only when the super-app closes the stream it
+# reads, which the super-app does only as it closes itself.  endapp's execution
+# AT ALICE ends once it has been greeted and at bob it does not, so alice's
+# second invitation must reach bob's live execution, and the discriminating
+# check is bob's SECOND greeted(alice): with the entry left at running it does
+# not come, and his stream stops at the second opened(alice).  Its own session,
+# a play that has run another mini-app leaving the session such that the next
+# play's invitation opens nothing (see the child-safe platform below).
+sg_reinvite=$("$REPL_RUN" <<HEREDOC
+:artefact $GLP_DIR/programs/social/graph/endapp $SG_CORE
+$SG_CORE
+:limit 5000000
+play_reinvite(A, B).
+:quit
+HEREDOC
+2>&1)
+check "SG registry: the self-ending mini-app's artefact is certified" "endapp.glpw --- certified under" "$sg_reinvite"
+check "SG registry: alice's execution ends of its own accord" "A = \[opened(bob), greeted(bob)\]" "$sg_reinvite"
+check "SG registry: the entry returns to idle and the second invitation is activated afresh" "B = \[opened(alice), greeted(alice), opened(alice), greeted(alice) | " "$sg_reinvite"
+check_not "SG registry no failed play" "→ failed" "$sg_reinvite"
+
 # The currency on two smartphones (paper Section 7): the same super-app, two
 # isolates with their own keys, hosting Currencies' mini-app from its certified
 # artefact; the invitation and handshake cross the isolates and the swap of the

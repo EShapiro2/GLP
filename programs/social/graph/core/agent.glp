@@ -273,6 +273,17 @@ agent(Id, [app_request(App, warm_call(Name, Via))|UserIn], NetIn, Outs,
     warm_step(C?, Id?, App?, Name?, Via?, UserIn?, NetIn?, Outs?,
               host(Apps?, Atts?, Pend1?, Trusted?)).
 
+%% A mini-app's execution has ended.  Its entry in the registry returns from
+%% running to idle, so that the next invitation activates the mini-app afresh
+%% by run/3 instead of handing the new conversation's root channel to an
+%% execution that is gone (SGSG paper, Section 3, "Activation and joining":
+%% the registry records whether the mini-app is running, and an invitation is
+%% looked up in it).
+agent(Id, [app_ended(App)|UserIn], NetIn, Outs, host(Apps, Atts, Pend, Trusted)) :-
+    ground(Id?), ground(App?) |
+    app_idle(App?, Apps?, Apps1),
+    agent(Id?, UserIn?, NetIn?, Outs?, host(Apps1?, Atts?, Pend?, Trusted?)).
+
 %% The person consents to a warm call with Who: as holder, the request waiting
 %% for it proceeds; as anchor, the call from Who is accepted when it comes.
 agent(Id, [msg(person, Id1, accept_warm_call(Who))|UserIn], NetIn, Outs,
@@ -469,6 +480,25 @@ install_coins_step(refused, _, _, _, _, Apps, Apps?).
 procedure install_cssn_step(Constant?, Constant?, Content?, String?, Channel(Stream(CsAppCmd), Stream(CsAppNotify))?, AppList?, AppList).
 install_cssn_step(ok, App, M, CSig, Ui, Apps, [app(App?, M?, CSig?, idle_cssn(Ui?)) | Apps?]).
 install_cssn_step(refused, _, _, _, _, Apps, Apps?).
+
+%% app_idle(App, Apps, Apps1): the mini-app's entry returns from running to
+%% idle.  The user-interface writer the entry held at installation went to the
+%% execution that has now ended, so the entry takes a fresh one, as it did at
+%% installation; the next activation posts that one with the entry goal.  An
+%% entry that is not running is left as it is, so a report that arrives twice,
+%% or for a mini-app never activated, changes nothing.
+procedure app_idle(Constant?, AppList?, AppList).
+app_idle(App, [app(A, M, C, running([])) | Rest], [app(A?, M?, C?, idle(Ui)) | Rest?]) :-
+    App? =?= A? | hold_app_ui(Ui?).
+app_idle(App, [E | Rest], [E? | Rest1?]) :-
+    otherwise | app_idle(App?, Rest?, Rest1).
+app_idle(_, [], []).
+
+%% The fresh user-interface stream of a re-idled mini-app: held, as the person
+%% interface holds the one it makes at installation, so that it is not closed
+%% before there is a screen to show it on.
+procedure hold_app_ui(AppUiStream?).
+hold_app_ui(X) :- true.
 
 %% app_kind(App, Kind): the interface a hosted mini-app has, by its name ---
 %% the currency's, the child-safe platform's, or the test mini-app's.
@@ -706,7 +736,10 @@ inject_requests(App, [warm_call(N, V) | Up], Ys, [app_request(App?, warm_call(N?
 inject_requests(App, Up, [Y | Ys], [Y? | Ys1?]) :-
     inject_requests(App?, Up?, Ys?, Ys1).
 inject_requests(_, _, [], []).
-inject_requests(_, [], Ys, Ys?).
+%% The mini-app's stream up to the social graph closed: its execution has
+%% ended.  Report it on the agent's own person stream, ahead of the rest of
+%% that stream, and stop --- this goal has nothing further to splice.
+inject_requests(App, [], Ys, [app_ended(App?) | Ys?]) :- ground(App?) | true.
 
 %% open_conv(Friend, End, Sg, Sg1): Sg := [conversation(Friend, End) | Sg1].
 procedure open_conv(Constant?, RootChannel?, SgToAppStream, SgToAppStream?).

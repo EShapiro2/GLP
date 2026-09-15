@@ -1,0 +1,79 @@
+%% miniapp.glp --- the test mini-app that ENDS OF ITS OWN ACCORD: ping/3, the
+%% same entry and the same interface as ../pingapp, so the super-app hosts it
+%% with no change at all --- its kind is the default (agent.glp, app_kind/2),
+%% and the interface being structural, find_type/2 gives the two programs the
+%% same type identity.
+%%
+%% It exists to fence the registry's return from running to idle (SGSG paper,
+%% Section 3, "Activation and joining": an invitation is looked up in the
+%% registry, and a mini-app not running is activated).  ../pingapp cannot
+%% fence it.  That program's loop ends only when the social graph closes the
+%% stream it reads, and the super-app closes that only as it closes itself, so
+%% nothing there can show a mini-app ending and the same mini-app being
+%% invited again --- which is the case the return to idle is for.
+%%
+%% Here the execution AT ALICE ends once it has been greeted: it closes its
+%% person stream, its stream up to the social graph and its conversation, and
+%% every goal of it terminates.  The execution at anyone else does not end, so
+%% alice's second invitation reaches bob's live execution, and bob's person
+%% stream records both conversations while alice's records one and closes.
+%% The asymmetry is by identity, as ../pingapp's relay is.
+%%
+%% What the super-app sees of the end is the stream up to the social graph
+%% closing, which is the one signal of it the host holds a reader of today.
+%% The clean termination of Section 6.3 --- every goal terminated, the request
+%% stream closed with nothing on the control stream --- and the person's abort
+%% are the meta-interpreter's, and activation does not yet post a control
+%% stream (Section 7).
+
+exported procedure ping(Constant?, AppUiStream, SgChannel?).
+ping(Id, Ui?, ch(Down, Up?)) :-
+    ground(Id?) |
+    loop(Id?, Down?, Ev?, Ui, Up, []).
+
+%% loop(Id, Down, Ev, Ui, Up, Convs): Down the social graph's stream, Ev the
+%% events of the conversations' readers (merged), Ui the person's stream, Up
+%% the requests to the social graph, Convs the conversations' write ends.
+procedure loop(Constant?, SgToAppStream?, EvStream?, AppUiStream, AppToSgStream, ConvList?).
+
+%% A conversation opens: report it, greet the friend, and read the friend's
+%% stream into the events.
+loop(Id, [conversation(F, ch(In, Out?)) | Down], Ev, [opened(F?) | Ui?], Up?, Convs) :-
+    ground(Id?), ground(F?) |
+    talk(F?, In?, EvF),
+    merge(Ev?, EvF?, Ev1),
+    greet(Id?, Out, Out2?),
+    loop(Id?, Down?, Ev1?, Ui, Up, [conv(F?, Out2) | Convs?]).
+
+%% Greeted, at alice: report it and END.  The person stream and the stream up
+%% to the social graph close here and the conversations with them; the social
+%% graph's own stream is dropped, and the goal terminates.
+%% (The clauses on the events are made exclusive by guards, not by otherwise,
+%% which would wait on the clause that reads the social graph's stream.)
+loop(alice, _, [greeted(_, Who) | _], [greeted(Who?)], [], Convs) :-
+    ground(Who?) |
+    close_convs(Convs?).
+
+%% Greeted, at anyone else: report it and carry on, so that a second
+%% invitation has a live execution to reach.
+loop(Id, Down, [greeted(_, Who) | Ev], [greeted(Who?) | Ui?], Up?, Convs) :-
+    ~(Id? =?= alice), ground(Who?) |
+    loop(Id?, Down?, Ev?, Ui, Up, Convs?).
+
+%% The social graph closes the stream: close everything.
+loop(_, [], _, [], [], Convs) :- close_convs(Convs?).
+
+%% talk(F, In, Ev): read the friend's stream into events.
+procedure talk(Constant?, PingStream?, EvStream).
+talk(F, [hello(Who) | In], [greeted(F?, Who?) | Ev?]) :-
+    ground(Who?) | talk(F?, In?, Ev).
+talk(_, [], []).
+
+%% greet(Id, Out, Out2): the conversation's write stream opens with the
+%% greeting; the caller keeps the writer of the rest, Out2.
+procedure greet(Constant?, PingStream, PingStream?).
+greet(Id, [hello(Id?) | Out2?], Out2).
+
+procedure close_convs(ConvList?).
+close_convs([conv(_, []) | Rest]) :- close_convs(Rest?).
+close_convs([]).

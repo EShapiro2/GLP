@@ -1,0 +1,13 @@
+%% endapp/self.glp --- the test mini-app that ends of its own accord, as a
+%% certified program of its own: ping/3 (miniapp.glp), its types the parent's
+%% (../self.glp, an ancestor scope).  The REPL's :artefact writes its certified
+%% artefact, endapp.glpw, into ../core, where the super-app's agent reads it
+%% with load_file/2, verifies its two certifications, installs it, and
+%% activates it by run/3 (SGSG paper, Section 3).
+%%
+%% It exists because ../pingapp cannot fence the registry's return from
+%% running to idle: see miniapp.glp.
+
+imported procedure miniapp#ping(Constant?, AppUiStream, SgChannel?).
+exported procedure ping(Constant?, AppUiStream, SgChannel?).
+ping(Id, Ui?, Sg) :- miniapp # ping(Id?, Ui, Sg?).

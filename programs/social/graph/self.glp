@@ -432,7 +432,11 @@ UserInMsg    ::= msg(Constant, Constant, UserContent)
                ; intro_result(Constant, IntroChannel)
                ; intro_rejected(Constant)
                %% A running mini-app's request up its social-graph channel.
-               ; app_request(Constant, AppToSg).
+               ; app_request(Constant, AppToSg)
+               %% A mini-app's execution has ended: the stream it writes up to
+               %% the social graph closed with it, which is the one signal of
+               %% its end the super-app holds a reader of.
+               ; app_ended(Constant).
 UserInStream ::= [] ; [UserInMsg | UserInStream].
 
 NetInMsg     ::= msg(Constant, NetColdCall)
