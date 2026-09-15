@@ -2518,6 +2518,19 @@ check_not "Bonds fixed-payment loan: no failed goal" "ERROR" "$n3_fix"
 check "Bonds fixed-payment loan: the lender holds the three equal payments" "tagged(alice, holdings(\[lot(bob, 10, 4), lot(bob, 20, 4), lot(bob, 30, 4)\]))" "$n3_fix"
 check "Bonds fixed-payment loan: the borrower holds the coins lent" "tagged(bob, holdings(\[lot(alice, 0, 9)\]))" "$n3_fix"
 check "Bonds fixed-payment loan: the escrow agent holds nothing at the end" "tagged(escrow, holdings(\[\]))" "$n3_fix"
+
+n3_irs=$("$REPL_RUN" <<HEREDOC
+$BONDS
+:limit 50000000
+interest_rate_swap.
+:quit
+HEREDOC
+2>&1)
+
+check_not "Bonds interest rate swap: no failed goal" "ERROR" "$n3_irs"
+check "Bonds interest rate swap: the fixed payer holds the floating leg" "tagged(alice, holdings(\[lot(bob, 10, 2), lot(bob, 20, 4), lot(bob, 30, 5)\]))" "$n3_irs"
+check "Bonds interest rate swap: the floating payer holds the fixed leg" "tagged(bob, holdings(\[lot(alice, 10, 3), lot(alice, 20, 3), lot(alice, 30, 3)\]))" "$n3_irs"
+check "Bonds interest rate swap: the escrow agent holds nothing at the end" "tagged(escrow, holdings(\[\]))" "$n3_irs"
 echo ""
 
 # =============================================================================

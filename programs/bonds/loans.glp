@@ -39,7 +39,7 @@ balloon :-
          accept_transfer(escrow)],
         BIn?, BOut),
     village # escrow_agent(escrow, [],
-        packaged(alice, bob, lot(alice, 0, 10),
+        packaged(alice, bob, [lot(alice, 0, 10)],
                  [lot(bob, 10, 1), lot(bob, 20, 1), lot(bob, 30, 10)], [], opening, 0),
         GIn?, GOut).
 
@@ -57,8 +57,40 @@ fixed_payment :-
          accept_transfer(escrow)],
         BIn?, BOut),
     village # escrow_agent(escrow, [],
-        packaged(alice, bob, lot(alice, 0, 9),
+        packaged(alice, bob, [lot(alice, 0, 9)],
                  [lot(bob, 10, 4), lot(bob, 20, 4), lot(bob, 30, 4)], [], opening, 0),
+        GIn?, GOut).
+
+%% The interest rate swap, Section 5 item 1(c): the same packaged exchange with
+%% several lots on BOTH sides.  Alice pays the fixed leg, 3 at each of days 10,
+%% 20 and 30; Bob pays the floating leg, 2, 4 and 5 at the same dates, the
+%% amounts a reference rate gives.
+%%
+%% 🔴 The floating amounts are "attested by the interest-rate oracle", and no
+%% act of the contract carries an attestation, so the oracle is not in this run:
+%% the amounts are the ones the parties would have agreed once attested, and
+%% they are written into the agreement.  What runs is the exchange, not the
+%% attestation.  See collateral.glp and /Grassroots/GB/docs/instruments-2026-09-15.md.
+
+exported procedure interest_rate_swap.
+interest_rate_swap :-
+    network3l(AOut?, BOut?, GOut?, AIn, BIn, GIn),
+    village # villager(alice,
+        [mint(3, 10), mint(3, 20), mint(3, 30),
+         deposit(escrow, alice, 10, 3), deposit(escrow, alice, 20, 3),
+         deposit(escrow, alice, 30, 3),
+         accept_transfer(escrow), accept_transfer(escrow), accept_transfer(escrow)],
+        AIn?, AOut),
+    village # villager(bob,
+        [mint(2, 10), mint(4, 20), mint(5, 30),
+         deposit(escrow, bob, 10, 2), deposit(escrow, bob, 20, 4),
+         deposit(escrow, bob, 30, 5),
+         accept_transfer(escrow), accept_transfer(escrow), accept_transfer(escrow)],
+        BIn?, BOut),
+    village # escrow_agent(escrow, [],
+        packaged(alice, bob,
+                 [lot(alice, 10, 3), lot(alice, 20, 3), lot(alice, 30, 3)],
+                 [lot(bob, 10, 2), lot(bob, 20, 4), lot(bob, 30, 5)], [], opening, 0),
         GIn?, GOut).
 
 %% --- The network: first contacts, routed by addressee ---
