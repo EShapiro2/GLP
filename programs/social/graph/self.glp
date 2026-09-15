@@ -260,7 +260,7 @@ ScreenContent ::= holdings(Stream(Lot))
 CReqId ::= req(Integer).
 Answer ::= xs_respond_swap_1(Constant) ; xs_respond_swap_2(Constant) ; xs_agent_1(Integer) ; xs_agent_2(Constant, Constant, Integer, Constant, Integer) ; xs_agent_3(Constant, Integer) ; xs_agent_4(Constant, Constant).
 Context ::= ctx_respond_swap_1(Constant, Lot, Stream(Coin)) ; ctx_respond_swap_2(Constant, Lot, Stream(Coin)) ; ctx_agent_1 ; ctx_agent_2 ; ctx_agent_3 ; ctx_agent_4.
-UserAnswer ::= answer(CReqId, Answer).
+UserAnswer ::= answer(CReqId, Answer) ; decline(CReqId).
 Event ::= card(Constant, Context, CReqId)
         ; closed(CReqId)
         ; msg(Constant, Constant, ScreenContent).

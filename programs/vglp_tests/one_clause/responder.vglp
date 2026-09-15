@@ -4,9 +4,9 @@
 %% exactly the replies its clause can receive, so the compiled clauses cover
 %% it with no ordinary clause beside them.
 %%
-%% respond has an else-branch, so its reply type has else and its ask a
-%% deadline; greet has none, so its reply type has no else; pick also has an
-%% ordinary clause, which aborts the open ask when it reduces the goal.
+%% respond has an else-branch, so its reply type has else and the person can
+%% decline its card; greet has none, so its reply type has no else; pick also
+%% has an ordinary clause, which aborts the open ask when it reduces the goal.
 
 procedure respond(Offer?, Stream(Decision)).
 *(Answer=yes, From?)

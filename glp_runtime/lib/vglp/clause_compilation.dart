@@ -233,7 +233,7 @@ Clause _compileAnswer(Clause c, Procedure proc, int m, int j, String name,
       guards: c.guards, body: _nonEmpty(body, c), line: c.line, column: c.column);
 }
 
-/// The else clause: the deadline passed, the machine answers for the person.
+/// The else clause: the person declined the ask, selecting the else-branch.
 ///
 ///     H'(Med, ..., ask(else, _), ...) :- G[T'] |
 ///         aborts([<the other slots>], Med?, Med1), B'[T']
@@ -354,10 +354,6 @@ Clause _compileAsk(Clause c, Procedure proc, ProcDecl decl, int m, int j,
         // which is what types the pending entry by its clause.
         StructTerm('esc_$clauseName', [_w(reply)], c.line, c.column),
         _w(id),
-        // An ask carries a deadline iff its clause has an else-branch: the
-        // machine answers on the deadline only where the program says how.
-        ConstTerm(c.elseBranch != null ? 'deadline' : 'no_deadline',
-            c.line, c.column),
       ], c.line, c.column),
       _r(med),
       _w(med1),

@@ -3,8 +3,9 @@
 %% vGLP paper "Volition Elicitation", Section "Elicitation", Definition
 %% "Canonical Compilation": the mediator sits between the person channel and
 %% the compiled agent, renders each ask as the card of the manifest's
-%% construct, routes the person's answer to the clause that posed it, answers
-%% for the person on the deadline, and closes an ask another clause aborted.
+%% construct, routes the person's answer to the clause that posed it, selects
+%% the else-branch on the person's decline, and closes an ask another clause
+%% aborted.
 %%
 %% Generic in the compiled program's answer type A, escrow type E and context
 %% type X, and in nothing else: a compiled program instantiates the three at
@@ -21,79 +22,44 @@
 exported procedure(A, E, X) med(
     Channel(Stream(UserAnswer(A)), Stream(Card(X)))?,
     Channel(Stream(AgentMsg(E, X)), Closed)?,
-    TimerStream?, PendingList(E)?, Integer?).
+    PendingList(E)?, Integer?).
 
-%% Escrow: an ask arrives, is shown as a card, and its timer is started.  Only
-%% an ask the machine can answer for the person carries a deadline: a clause
-%% with an else-branch.  A question the machine cannot answer stands until the
-%% person answers it or the goal is reduced by another clause.
-med(UserCh, AgentCh, Ts, Ps, N) :-
-    receive(ask(C, Ctx, Esc, Id?, deadline), AgentCh?, AgentCh1),
+%% Escrow: an ask arrives and is shown as a card.  It stands until the person
+%% answers or declines it, or the goal is reduced by another clause.
+med(UserCh, AgentCh, Ps, N) :-
+    receive(ask(C, Ctx, Esc, Id?), AgentCh?, AgentCh1),
     ground(C?), ground(Ctx?) |
     Id = req(N?),
     send(card(C?, Ctx?, req(N?)), UserCh?, UserCh1),
     N1 := N? + 1,
-    deadline(D),
-    timer(req(N?), D?, T),
-    merge(T?, Ts?, Ts1),
-    med(UserCh1?, AgentCh1?, Ts1?,
-        [pending(req(N?), Esc?) | Ps?], N1?).
-
-med(UserCh, AgentCh, Ts, Ps, N) :-
-    receive(ask(C, Ctx, Esc, Id?, no_deadline), AgentCh?, AgentCh1),
-    ground(C?), ground(Ctx?) |
-    Id = req(N?),
-    send(card(C?, Ctx?, req(N?)), UserCh?, UserCh1),
-    N1 := N? + 1,
-    med(UserCh1?, AgentCh1?, Ts?,
+    med(UserCh1?, AgentCh1?,
         [pending(req(N?), Esc?) | Ps?], N1?).
 
 %% Routing: the person's answer selects the then-branch and supplies the
 %% answer's values.  An answer not of its clause's form finds no entry.
-med(UserCh, AgentCh, Ts, Ps, N) :-
+med(UserCh, AgentCh, Ps, N) :-
     receive(answer(ReqId, Vs), UserCh?, UserCh1),
     ground(ReqId?), ground(Vs?) |
     answer(ReqId?, Vs?, Ps?, Ps1),
-    med(UserCh1?, AgentCh?, Ts?, Ps1?, N?).
+    med(UserCh1?, AgentCh?, Ps1?, N?).
 
-%% Timeout: on the deadline the machine answers for the person, and the
-%% else-branch is selected.
-med(UserCh, AgentCh, [timeout(ReqId) | Ts], Ps, N) :-
+%% Decline: the person says they do not will the reduction, and the
+%% else-branch of the ask's clause is selected.  It needs no clock.
+med(UserCh, AgentCh, Ps, N) :-
+    receive(decline(ReqId), UserCh?, UserCh1),
     ground(ReqId?) |
     close(ReqId?, Ps?, Ps1),
-    send(closed(ReqId?), UserCh?, UserCh1),
-    med(UserCh1?, AgentCh?, Ts?, Ps1?, N?).
+    send(closed(ReqId?), UserCh1?, UserCh2),
+    med(UserCh2?, AgentCh?, Ps1?, N?).
 
 %% Abort: another clause reduced the goal, so the ask is closed unanswered and
 %% neither branch is selected: the entry is dropped with its reply unbound.
-med(UserCh, AgentCh, Ts, Ps, N) :-
+med(UserCh, AgentCh, Ps, N) :-
     receive(abort(ReqId), AgentCh?, AgentCh1),
     ground(ReqId?) |
     drop(ReqId?, Ps?, Ps1),
     send(closed(ReqId?), UserCh?, UserCh1),
-    med(UserCh1?, AgentCh1?, Ts?, Ps1?, N?).
-
-%% ---------------------------------------------------------------------------
-%% The timer
-%% ---------------------------------------------------------------------------
-
-%% One timer per escrowed ask: a single-element stream, produced on the
-%% deadline.  The fairness condition of GLP with persons is clocked — every
-%% wait_until guard that suspends eventually succeeds — so the timeout
-%% arrives.
-exported procedure timer(ReqId?, Number?, TimerStream).
-timer(ReqId, D, [timeout(ReqId?)]) :-
-    wait_until(D?) | true.
-
-%% ---------------------------------------------------------------------------
-%% The deadline
-%% ---------------------------------------------------------------------------
-
-%% deadline(D) binds D to a date past the mediator's by the delay it sets.
-%% THE DELAY IS NAMED HERE AND NOWHERE ELSE: it is the one constant per
-%% platform the compilation asks for.
-exported procedure deadline(Number).
-deadline(D?) :- now(T), D := T? + 60000.
+    med(UserCh1?, AgentCh1?, Ps1?, N?).
 
 %% ---------------------------------------------------------------------------
 %% The pending table

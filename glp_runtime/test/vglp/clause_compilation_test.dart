@@ -75,7 +75,7 @@ agent(Id, UserIn, Outs) :-
     test('the ask clause poses the question once and re-poses the goal', () {
       expect(emit(src, 'agent/3')[1],
           'agent(Med, Id, UserIn, A3?, none) :- ground(Id?) | '
-          'send(ask(agent_1, ctx_agent_1, esc_agent_1(R), Id1, no_deadline), Med?, Med1), '
+          'send(ask(agent_1, ctx_agent_1, esc_agent_1(R), Id1), Med?, Med1), '
           'agent(Med1?, Id?, UserIn?, A3, ask(R?, Id1?)).');
     });
 
@@ -121,7 +121,7 @@ respond(offer(From), Resp?, [decision(Answer?, From?, response(Resp))]) :-
     test('the reply writer travels inside the escrow that names the clause',
         () {
       expect(emit(src, 'respond/3')[2],
-          contains('send(ask(respond_1, ctx_respond_1(From?), esc_respond_1(R), Id, deadline)'));
+          contains('send(ask(respond_1, ctx_respond_1(From?), esc_respond_1(R), Id)'));
     });
 
     test('the pending table gets an answer clause and a close clause', () {
@@ -152,11 +152,13 @@ respond(offer(From), Resp?, [decision(Answer?, From?, response(Resp))]) :-
       expect(emit(src, 'respond/3')[2], contains('ctx_respond_1(From?)'));
     });
 
-    test('the ask carries a deadline, because the clause has an else-branch',
-        () {
-      // D_k is deadline iff C_k has an else-branch: the machine answers on the
-      // deadline only where the program says how.
-      expect(emit(src, 'respond/3')[2], contains(', deadline), Med?, Med1)'));
+    test('the ask carries no deadline, an else-branch or not', () {
+      // The deadline went on 2026-09-15 (Udi): madGLP assumes nothing about
+      // time, so nothing answers for the person; the else-branch is selected
+      // by the person's decline, which needs no clock.
+      final ask = emit(src, 'respond/3')[2];
+      expect(ask, contains('esc_respond_1(R), Id), Med?, Med1)'));
+      expect(ask, isNot(contains('deadline')));
     });
   });
 

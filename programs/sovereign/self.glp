@@ -154,14 +154,11 @@ TransferOffer ::= offer_transfer(Kind, Constant, Stream(Bond)).
 
 ReqId ::= req(Integer).
 Slot(R) ::= none ; ask(R, ReqId).
-Deadline ::= deadline ; no_deadline.
-AgentMsg ::= ask(Constant, Context, Escrow, ReqId?, Deadline) ; abort(ReqId).
+AgentMsg ::= ask(Constant, Context, Escrow, ReqId?) ; abort(ReqId).
 Card ::= card(Constant, Context, ReqId) ; closed(ReqId).
-UserAnswer ::= answer(ReqId, Answer).
+UserAnswer ::= answer(ReqId, Answer) ; decline(ReqId).
 PendingEntry ::= pending(ReqId, Escrow).
 PendingList ::= [] ; [PendingEntry | PendingList].
-Timeout ::= timeout(ReqId).
-TimerStream ::= [] ; [Timeout | TimerStream].
 
 %% One alternative per volition-guarded clause of the agent, its reply type
 %% and its escrow, as the compilation emits them --- Answer and Context with

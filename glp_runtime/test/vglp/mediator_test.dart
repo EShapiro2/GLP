@@ -3,7 +3,7 @@
 // The mediator's instantiation and emission.
 // Spec: vGLP, sections/elicitation.tex, Definition "Canonical Compilation":
 // ⌈M⌉ consists of the compiled procedures together with the mediator and the
-// timer, the mediator generic in A and X and instantiated at the program's.
+// mediator generic in A, E and X and instantiated at the program's.
 
 import 'dart:io';
 
@@ -32,15 +32,19 @@ void main() {
     test('every procedure the Definition names is there', () {
       final names = source.clauses.procedures.map((p) => p.name).toSet();
       expect(names, containsAll(
-          ['med', 'timer', 'deadline', 'answer', 'close', 'drop', 'abort',
-           'med_split']));
+          ['med', 'answer', 'close', 'drop', 'abort', 'med_split']));
+      // The deadline went with Udi's decision of 2026-09-15: madGLP assumes
+      // nothing about time, so no timer answers for the person.
+      expect(names, isNot(contains('timer')));
+      expect(names, isNot(contains('deadline')));
     });
   });
 
   group('instantiation', () {
     test('the answer parameter becomes the program\'s answer type', () {
       final ua = med.typeDefs.firstWhere((d) => d.name == 'UserAnswer');
-      expect(printTypeDef(ua), 'UserAnswer ::= answer(ReqId, $answerTypeName).');
+      expect(printTypeDef(ua),
+          'UserAnswer ::= answer(ReqId, $answerTypeName) ; decline(ReqId).');
     });
 
     test('the escrow parameter becomes the program\'s escrow type', () {
@@ -93,7 +97,7 @@ void main() {
       expect(printTypeDef(pl), 'PendingList ::= [] ; [PendingEntry | PendingList].');
       final agentMsg = med.typeDefs.firstWhere((d) => d.name == 'AgentMsg');
       expect(printTypeDef(agentMsg),
-          'AgentMsg ::= ask(Constant, $contextTypeName, $escrowTypeName, ReqId?, Deadline)'
+          'AgentMsg ::= ask(Constant, $contextTypeName, $escrowTypeName, ReqId?)'
           ' ; abort(ReqId).');
     });
 
@@ -114,27 +118,33 @@ void main() {
       expect(med.procedures, same(source.clauses.procedures));
     });
 
-    test('the timer is the single-element stream produced on the deadline', () {
-      final timer = med.procedures.firstWhere((p) => p.name == 'timer');
-      expect(printProcedures([timer]), contains('wait_until(D?)'));
+    test('no clock is left anywhere in the mediator', () {
+      // madGLP is proved correct under fair message delivery and assumes
+      // nothing about time, and two agents' system clocks are not comparable,
+      // so a transaction taken because a timer expired is a transition the
+      // semantics does not model (Udi, 2026-09-15).
+      final text = printProcedures(med.procedures);
+      expect(text, isNot(contains('wait_until')));
+      expect(text, isNot(contains('now(')));
+      expect(text, isNot(contains('timeout')));
+      expect(text, isNot(contains('deadline')));
     });
 
-    test('the deadline names the delay in one place', () {
-      final deadline = med.procedures.firstWhere((p) => p.name == 'deadline');
-      expect(printProcedures([deadline]), contains('now(T)'));
-      // now/1 is a body goal, not a guard.
-      expect(printProcedures([deadline]), isNot(contains('now(T) |')));
-    });
-
-    test('two escrow clauses, and only the one with a deadline starts a timer',
-        () {
+    test('one escrow clause, the ask carrying no deadline tag', () {
       final medProc = med.procedures.firstWhere((p) => p.name == 'med');
-      // escrow with deadline, escrow without, answer, timeout, abort
-      expect(medProc.clauses, hasLength(5));
+      // escrow, answer, decline, abort
+      expect(medProc.clauses, hasLength(4));
       final text = printProcedures([medProc]);
-      expect(text, contains('Id?, deadline)'));
-      expect(text, contains('Id?, no_deadline)'));
-      expect('timer('.allMatches(text), hasLength(1));
+      expect(text, contains('receive(ask(C, Ctx, Esc, Id?), AgentCh?, AgentCh1)'));
+    });
+
+    test('the decline clause selects the else-branch and closes the card', () {
+      final medProc = med.procedures.firstWhere((p) => p.name == 'med');
+      final text = printProcedures([medProc]);
+      expect(text, contains('receive(decline(ReqId), UserCh?, UserCh1)'));
+      // close/3 binds the escrowed reply to else; the card goes with it.
+      expect(text, contains('close(ReqId?, Ps?, Ps1)'));
+      expect(text, contains('send(closed(ReqId?), UserCh1?, UserCh2)'));
     });
 
     test('the mediator binds a non-arithmetic term with =, never :=', () {
@@ -145,7 +155,7 @@ void main() {
       expect(text, isNot(contains(':= req(')));
     });
 
-    test('the abort clause drops the entry unbound, the timeout closes it', () {
+    test('the abort clause drops the entry unbound, the decline closes it', () {
       final medProc = med.procedures.firstWhere((p) => p.name == 'med');
       final text = printProcedures([medProc]);
       expect(text, contains('receive(abort(ReqId), AgentCh?, AgentCh1)'));

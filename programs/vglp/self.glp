@@ -26,26 +26,20 @@ ReqId ::= req(Integer).
 %% ask.  Generic in the reply type R, one per volition-guarded clause.
 Slot(R) ::= none ; ask(R, ReqId).
 
-%% Whether an ask carries a deadline: it does iff its clause has an
-%% else-branch, which is what the machine answers on the deadline.
-Deadline ::= deadline ; no_deadline.
-
 %% Agent to mediator: an ask posed, carrying in its escrow the writer the
 %% mediator binds, or an ask aborted because another clause reduced the goal.
-AgentMsg(E, X) ::= ask(Constant, X, E, ReqId?, Deadline)
+AgentMsg(E, X) ::= ask(Constant, X, E, ReqId?)
                  ; abort(ReqId).
 
 %% Mediator to person: the card of an open ask, and its removal.
 Card(X) ::= card(Constant, X, ReqId) ; closed(ReqId).
 
-%% Person to mediator: the grant of a construct's tap or submission.
-UserAnswer(A) ::= answer(ReqId, A).
+%% Person to mediator: the grant of a construct's tap or submission.  A decline
+%% is the person saying that they do not will the reduction, and it selects the
+%% else-branch of the ask's clause.
+UserAnswer(A) ::= answer(ReqId, A) ; decline(ReqId).
 
 %% The pending table: one entry per open ask, carrying its escrow, which
 %% answer/4 or close/3 binds in place and drop/3 consumes unbound.
 PendingEntry(E) ::= pending(ReqId, E).
 PendingList(E) ::= [] ; [PendingEntry(E) | PendingList(E)].
-
-%% The timer stream: one timeout per ask, on its deadline.
-Timeout ::= timeout(ReqId).
-TimerStream ::= [] ; [Timeout | TimerStream].

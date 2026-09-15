@@ -59,7 +59,8 @@ respond(offer(From), Resp?, [decision(Answer?, From?, response(Resp))]) :-
       expect(out, contains('Reply_respond_2 ::= then(Xs_respond_2).'));
       expect(out, contains('Escrow ::= esc_respond_1(Reply_respond_1?) ; '
           'esc_respond_2(Reply_respond_2?).'));
-      expect(out, contains('UserAnswer ::= answer(ReqId, Answer).'));  // instantiated
+      expect(out, contains(                                             // instantiated
+          'UserAnswer ::= answer(ReqId, Answer) ; decline(ReqId).'));
     });
 
     test('no type parameter survives the emission', () {
@@ -82,12 +83,15 @@ respond(offer(From), Resp?, [decision(Answer?, From?, response(Resp))]) :-
 
     test('the mediator comes with it, clauses and declarations', () {
       final out = compile(src).source;
-      for (final p in ['med', 'timer', 'deadline', 'answer', 'close', 'drop',
-          'med_split']) {
+      for (final p in ['med', 'answer', 'close', 'drop', 'med_split']) {
         expect(out, contains('procedure $p('), reason: '$p is missing');
       }
       // abort/3 stays generic in the slot's reply type.
       expect(out, contains('procedure(R) abort('));
+      // The timer and the deadline went on 2026-09-15 (Udi), so no compiled
+      // program carries them.
+      expect(out, isNot(contains('procedure timer(')));
+      expect(out, isNot(contains('procedure deadline(')));
     });
 
     test('the pending table\'s program clauses come ahead of the search clauses',

@@ -4,9 +4,8 @@
 // self-contained GLP module.
 // Spec: vGLP, sections/elicitation.tex, Definition "Canonical Compilation".
 //
-// ⌈M⌉ is the compiled procedures "together with the mediator ... and the
-// timer", so the mediator is part of the compiled program and not a library it
-// imports — which the module system forces anyway, a module path resolving from
+// ⌈M⌉ is the compiled procedures "together with the mediator", so the mediator
+// is part of the compiled program and not a library it imports — which the module system forces anyway, a module path resolving from
 // the program root downward.
 //
 // The emission is ONE FILE.  The mediator's vocabulary types the compiled

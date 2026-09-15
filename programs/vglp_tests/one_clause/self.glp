@@ -26,19 +26,16 @@ Answer ::= Xs_respond_1 ; Xs_greet_1 ; Xs_pick_1.
 Escrow ::= esc_respond_1(Reply_respond_1?) ; esc_greet_1(Reply_greet_1?) ; esc_pick_1(Reply_pick_1?).
 Context ::= Ctx_respond_1 ; Ctx_greet_1 ; Ctx_pick_1.
 Slot(R) ::= none ; ask(R, ReqId).
-Deadline ::= deadline ; no_deadline.
-AgentMsg ::= ask(Constant, Context, Escrow, ReqId?, Deadline) ; abort(ReqId).
+AgentMsg ::= ask(Constant, Context, Escrow, ReqId?) ; abort(ReqId).
 Card ::= card(Constant, Context, ReqId) ; closed(ReqId).
-UserAnswer ::= answer(ReqId, Answer).
+UserAnswer ::= answer(ReqId, Answer) ; decline(ReqId).
 PendingEntry ::= pending(ReqId, Escrow).
 PendingList ::= [] ; [PendingEntry | PendingList].
-Timeout ::= timeout(ReqId).
-TimerStream ::= [] ; [Timeout | TimerStream].
 
 imported procedure responder#respond(Channel(Closed, Stream(AgentMsg))?, Offer?, Stream(Decision), Slot(Reply_respond_1)?).
 imported procedure responder#greet(Channel(Closed, Stream(AgentMsg))?, Offer?, Stream(Decision), Slot(Reply_greet_1)?).
 imported procedure responder#pick(Channel(Closed, Stream(AgentMsg))?, Stream(Constant)?, Offer?, Stream(Decision), Slot(Reply_pick_1)?).
-imported procedure responder#med(Channel(Stream(UserAnswer), Stream(Card))?, Channel(Stream(AgentMsg), Closed)?, TimerStream?, PendingList?, Integer?).
+imported procedure responder#med(Channel(Stream(UserAnswer), Stream(Card))?, Channel(Stream(AgentMsg), Closed)?, PendingList?, Integer?).
 
 %% --- the plays ---
 
@@ -46,7 +43,7 @@ imported procedure responder#med(Channel(Stream(UserAnswer), Stream(Card))?, Cha
 exported procedure play_answer.
 play_answer :-
     responder # respond(ch([], Asks), offer(bob), D, none),
-    responder # med(ch(Answers?, Cards), ch(Asks?, []), [], [], 0),
+    responder # med(ch(Answers?, Cards), ch(Asks?, []), [], 0),
     person_answer(Cards?, Answers),
     report(answer, D?).
 
@@ -57,12 +54,29 @@ person_answer([card(respond_1, ctx_respond_1(From), R) | _],
 person_answer([_ | Cs], As?) :- otherwise | person_answer(Cs?, As).
 person_answer([], []).
 
+%% The person declines respond's card: no answer is willed, the else-branch
+%% reduces with the else answer no, and the card is closed.  This is what
+%% selects an else-branch now that no timer does (Udi, 2026-09-15).
+exported procedure play_decline.
+play_decline :-
+    responder # respond(ch([], Asks), offer(bob), D, none),
+    responder # med(ch(Answers?, Cards), ch(Asks?, []), [], 0),
+    person_decline(Cards?, Answers),
+    report(decline, D?).
+
+procedure person_decline(Stream(Card)?, Stream(UserAnswer)).
+person_decline([card(respond_1, ctx_respond_1(From), R) | _],
+               [decline(R?)]) :-
+    ground(From?), ground(R?) | true.
+person_decline([_ | Cs], As?) :- otherwise | person_decline(Cs?, As).
+person_decline([], []).
+
 %% The person first answers with a term of another clause's form, which
 %% matches no answer clause and leaves the table as it is, then answers yes.
 exported procedure play_mismatch.
 play_mismatch :-
     responder # respond(ch([], Asks), offer(bob), D, none),
-    responder # med(ch(Answers?, Cards), ch(Asks?, []), [], [], 0),
+    responder # med(ch(Answers?, Cards), ch(Asks?, []), [], 0),
     person_mismatch(Cards?, Answers),
     report(mismatch, D?).
 
@@ -78,7 +92,7 @@ person_mismatch([], []).
 exported procedure play_abort.
 play_abort :-
     responder # pick(ch([], Asks), Go?, offer(bob), D, none),
-    responder # med(ch(Answers?, Cards), ch(Asks?, []), [], [], 0),
+    responder # med(ch(Answers?, Cards), ch(Asks?, []), [], 0),
     person_abort(Cards?, Answers, Go, D?).
 
 procedure person_abort(Stream(Card)?, Stream(UserAnswer), Stream(Constant), Stream(Decision)?).

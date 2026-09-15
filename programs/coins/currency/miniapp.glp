@@ -12,7 +12,7 @@
 %% the network or the person --- so the program is certified.
 
 imported procedure coins_agent#agent(Channel(Closed, Stream(AgentMsg))?, Constant?, Stream(UserInMsg)?, Stream(PeerMsg)?, Stream(Conversation)?, Stream(OutputEntry)?, Stream(Coin)?, Integer?, Slot(Reply_agent_1)?, Slot(Reply_agent_2)?, Slot(Reply_agent_3)?, Slot(Reply_agent_4)?).
-imported procedure coins_agent#med(Channel(Stream(UserAnswer), Stream(Card))?, Channel(Stream(AgentMsg), Closed)?, TimerStream?, PendingList?, Integer?).
+imported procedure coins_agent#med(Channel(Stream(UserAnswer), Stream(Card))?, Channel(Stream(AgentMsg), Closed)?, PendingList?, Integer?).
 
 %% The agent with its mediator: the agent starts with no holdings, serial 1, no
 %% conversation and its screen; the mediator's cards and the screen go to the
@@ -22,7 +22,7 @@ coins(Id, ch(Answers, Events?), Convs) :-
     ground(Id?) |
     coins_agent # agent(ch([], Asks), Id?, [], [], Convs?, [user_output(Screen)], [], 1,
                         none, none, none, none),
-    coins_agent # med(ch(Answers?, Cards), ch(Asks?, []), [], [], 0),
+    coins_agent # med(ch(Answers?, Cards), ch(Asks?, []), [], 0),
     merge_events(Cards?, Screen?, Events).
 
 %% The cards and the screen, as one stream of events.  A pair carries one type,

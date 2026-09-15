@@ -2814,8 +2814,12 @@ echo ""
 # source compiles on load (no .glp beside it).  Three plays: the person's
 # answer reaches its clause; an answer of another clause's form leaves the
 # pending table as it is; a clause reducing a goal with an open ask drops the
-# ask and closes its card.  The two plays on respond, whose clause has an
-# else-branch, end a minute after the answer, when its deadline timer expires.
+# ask and closes its card.  They end at once: the deadline went on 2026-09-15
+# (Udi), so nothing waits out a wall-clock minute for a person who is not at
+# the phone.  The program carries a fourth play, play_decline, which is not
+# checked here — it is the reproduction of the else clause's defect reported to
+# vGLP Cowork on 2026-09-15, the head of the compiled else clause keeping the
+# answer writer that no reply binds.
 # =============================================================================
 echo "=== Section VG: Canonical compilation, one-clause procedures ==="
 echo ""

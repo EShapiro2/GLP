@@ -3,8 +3,8 @@
 // The mediator's emission.
 // Spec: vGLP, sections/elicitation.tex, Definition "Canonical Compilation":
 // ⌈M⌉ CONSISTS OF the compiled procedures "together with the mediator, between
-// the person channel and the agent ... and the timer", the mediator "being
-// generic in A and X and instantiated at the program's".
+// the person channel and the agent", the mediator "being generic in A, E and X
+// and instantiated at the program's".
 //
 // So the mediator is part of the compiled program, not a library it imports.
 // That is forced twice over: the Definition says ⌈M⌉ contains it, and a GLP
