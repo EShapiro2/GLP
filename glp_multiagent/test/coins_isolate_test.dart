@@ -67,6 +67,16 @@ void main() {
       return done();
     }
 
+    /// The balances panel as owner-to-amount, sorted — the state the
+    /// assertions below are on. A tally message replaces the panel whole, so
+    /// during a swap the panel is empty between her coins leaving and bob's
+    /// arriving: a wait on "alice is named" sees the panel mid-swap.
+    String balances() {
+      final b = r.store.balances['balances'] ?? const <String, GTerm>{};
+      final keys = b.keys.toList()..sort();
+      return [for (final k in keys) '$k=${formatTerm(b[k]!)}'].join(' ');
+    }
+
     /// The person's grant: what the surface sends when she submits a form or
     /// taps a button.
     Future<void> grant() async {
@@ -83,11 +93,8 @@ void main() {
     // Mint 2.
     r.submitCommand(r.manifest.standingForm('agent_1')!.$2, {'Amount': GInt(2)});
     await grant();
-    expect(
-        await until(() =>
-            r.store.balances['balances']?.containsKey('alice') ?? false),
-        isTrue);
-    expect(formatTerm(r.store.balances['balances']!['alice']!), '2');
+    await until(() => balances() == 'alice=2');
+    expect(balances(), 'alice=2');
 
     // Swap her 2 for bob's 2; bob's script accepts.
     await until(() => r.standing.containsKey('agent_2'));
@@ -103,18 +110,18 @@ void main() {
         await until(() => r.store.lists['screen']!
             .any((t) => formatTerm(t) == 'swap_done(bob)')),
         isTrue);
-    expect(r.store.balances['balances']!.keys, ['bob']);
+    await until(() => balances() == 'bob=2');
+    expect(balances(), 'bob=2');
 
-    // Bob proposes the reverse swap: one card, both sibling asks.
-    expect(await until(() => r.inbox.length == 1), isTrue);
+    // Bob proposes the reverse swap: one card, both sibling asks. The second
+    // ask joins the card a message after the first, so wait for the pair.
+    await until(() => r.inbox.length == 1 && r.inbox.single.asks.length == 2);
+    expect(r.inbox.length, 1);
     final card = r.inbox.single;
     expect(card.asks.keys.toSet(), {'respond_swap_1', 'respond_swap_2'});
     r.answerCard(card, card.liveAnswers.firstWhere((a) => a.label == 'Accept'));
     await grant();
-    expect(
-        await until(() =>
-            r.store.balances['balances']?.containsKey('alice') ?? false),
-        isTrue);
-    expect(r.store.balances['balances']!.keys, ['alice']);
+    await until(() => balances() == 'alice=2');
+    expect(balances(), 'alice=2');
   }, timeout: const Timeout(Duration(minutes: 2)));
 }
