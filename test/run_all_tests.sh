@@ -2442,6 +2442,91 @@ check "Bonds credit line: the escrow holds nothing at the end" "tagged(escrow, h
 echo ""
 
 # =============================================================================
+# Section N4: The denominated program (programs/sovereign): the bond agent of
+# grassroots bonds with the denomination added, as the act schemas of
+# "Sovereign Grassroots Currencies" are the bonds schemas with the denomination
+# added --- cent(u, f, d) carrying f as its middle argument, every schema
+# carrying the one denomination variable f.  Two runs: the village market of
+# the bonds paper denominated in one fiat currency, which must end in exactly
+# the holdings of the undenominated run with usd in every lot; and the same
+# village with the central bank as an eighth party, which mints its own
+# sovereign grassroots coins, opens a mutual credit line with the community
+# bank by a swap of coins for coins, and settles a presentation of its own coin
+# in the fiat currency itself.  As for N2 and N3 the runs need the reduction
+# limit raised and end about a minute after their last act.
+# =============================================================================
+echo "=== Section N4: Denominated program (Sovereign Grassroots Currencies) ==="
+echo ""
+
+SOV="$GLP_DIR/programs/sovereign"
+
+n4_load=$("$REPL_RUN" <<HEREDOC
+$SOV
+:quit
+HEREDOC
+2>&1)
+
+check "Denominated program loads" "Loaded program" "$n4_load"
+check_not "Denominated program no type errors" "Type checking failed" "$n4_load"
+
+n4_emit=$("$REPL_RUN" <<HEREDOC
+$SOV
+:emit $SOV
+:quit
+HEREDOC
+2>&1)
+check "Denominated program: :emit re-emits sovereign_agent.glp" "wrote $SOV/sovereign_agent.glp" "$n4_emit"
+n4_emit_diff=$(cd "$GLP_DIR" && git diff --stat -- programs/sovereign/sovereign_agent.glp)
+check_not "Denominated program: committed sovereign_agent.glp is the compiler's output" "sovereign_agent.glp" "$n4_emit_diff"
+
+echo "--- The denominated village market (village) ---"
+
+n4_run=$("$REPL_RUN" <<HEREDOC
+$SOV
+:limit 50000000
+village.
+:quit
+HEREDOC
+2>&1)
+
+check "Denominated village: no runtime error" "→ suspended" "$n4_run"
+check_not "Denominated village: no failed goal" "ERROR" "$n4_run"
+check "Denominated village: Alice's holdings, denominated" "tagged(alice, holdings(\[lot(bob, usd, 0, 5), lot(alice, usd, 0, 8), lot(charlie, usd, 0, 15), lot(frank, usd, 0, 4)\]))" "$n4_run"
+check "Denominated village: Bob's holdings, denominated" "tagged(bob, holdings(\[lot(alice, usd, 0, 10), lot(diana, usd, 0, 20)\]))" "$n4_run"
+check "Denominated village: Charlie's holdings, denominated" "tagged(charlie, holdings(\[lot(alice, usd, 0, 10), lot(eve, usd, 0, 10), lot(charlie, usd, 0, 6)\]))" "$n4_run"
+check "Denominated village: Diana's holdings, denominated" "tagged(diana, holdings(\[lot(bob, usd, 25, 24), lot(frank, usd, 28, 13), lot(diana, usd, 0, 8)\]))" "$n4_run"
+check "Denominated village: Eve's holdings, denominated" "tagged(eve, holdings(\[lot(charlie, usd, 0, 4), lot(frank, usd, 0, 1), lot(alice, usd, 0, 2), lot(bob, usd, 0, 10)\]))" "$n4_run"
+check "Denominated village: Frank's holdings, denominated" "tagged(frank, holdings(\[lot(diana, usd, 0, 7), lot(eve, usd, 0, 10), lot(frank, usd, 28, 5), lot(frank, usd, 0, 5)\]))" "$n4_run"
+check "Denominated village: the escrow agent holds nothing at the end" "tagged(escrow, holdings(\[\]))" "$n4_run"
+check "Denominated village: a payment of immature bonds is still refused by the issuer's date" "tagged(bob, refused_payment(diana, 4))" "$n4_run"
+
+echo "--- The sovereign market (sovereign_village) ---"
+
+n4_sov=$("$REPL_RUN" <<HEREDOC
+$SOV
+:limit 50000000
+sovereign_village.
+:quit
+HEREDOC
+2>&1)
+
+check "Sovereign market: no runtime error" "→ suspended" "$n4_sov"
+check_not "Sovereign market: no failed goal" "ERROR" "$n4_sov"
+check "Sovereign market: the central bank mints its own coins" "tagged(cb, minted(30, 0))" "$n4_sov"
+check "Sovereign market: the mutual credit line is willed by the central bank" "tagged(cb, swap_done(diana))" "$n4_sov"
+check "Sovereign market: and by the community bank" "tagged(diana, swap_done(cb))" "$n4_sov"
+check "Sovereign market: the central bank holds the community bank's coins" "tagged(cb, holdings(\[lot(cb, usd, 0, 20), lot(diana, usd, 0, 10)\]))" "$n4_sov"
+check "Sovereign market: chain redemption --- the household takes a sovereign coin for a community-bank coin" "tagged(frank, redeemed(diana, cb, 0))" "$n4_sov"
+check "Sovereign market: and the community bank gives it out of the credit line" "tagged(diana, presented(frank, cb, 0))" "$n4_sov"
+check "Sovereign market: the fiat interface --- the sovereign pays a unit of the fiat currency" "tagged(cb, fiat_paid(frank, 1))" "$n4_sov"
+check "Sovereign market: and the household receives it" "tagged(frank, fiat_received(cb, 1))" "$n4_sov"
+check "Sovereign market: the sovereign coin redeemed into fiat is back with its issuer" "tagged(cb, holdings(\[lot(cb, usd, 0, 21), lot(diana, usd, 0, 10)\]))" "$n4_sov"
+check "Sovereign market: the community bank's holdings after the line and the redemption" "tagged(diana, holdings(\[lot(cb, usd, 0, 9), lot(bob, usd, 25, 24), lot(frank, usd, 28, 13), lot(diana, usd, 0, 9)\]))" "$n4_sov"
+check "Sovereign market: the household's holdings, one community-bank coin spent up the chain" "tagged(frank, holdings(\[lot(diana, usd, 0, 6), lot(eve, usd, 0, 10), lot(frank, usd, 28, 5), lot(frank, usd, 0, 5)\]))" "$n4_sov"
+check "Sovereign market: the four parties outside the sovereign layer are unmoved" "tagged(eve, holdings(\[lot(charlie, usd, 0, 4), lot(frank, usd, 0, 1), lot(alice, usd, 0, 2), lot(bob, usd, 0, 10)\]))" "$n4_sov"
+echo ""
+
+# =============================================================================
 # Section VG: The canonical compilation on one-clause procedures
 # (programs/vglp_tests/one_clause): every procedure of responder.vglp has one
 # volition-guarded clause, the case the per-clause reply types exist for.  The
