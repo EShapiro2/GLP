@@ -437,3 +437,7 @@ village :- village # market.
 imported procedure credit_line#run.
 exported procedure credit_line.
 credit_line :- credit_line # run.
+
+imported procedure collateral#run.
+exported procedure collateral.
+collateral :- collateral # run.

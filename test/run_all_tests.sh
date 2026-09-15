@@ -2439,6 +2439,25 @@ check "Bonds credit line: at expiry the undrawn coins return to the lender" "tag
 check "Bonds credit line: at expiry with nothing drawn the lender holds its coins and no principal bond" "tagged(alice, holdings(\[lot(bob, 20, 2), lot(alice, 0, 20)\]))" "$n3_cl"
 check "Bonds credit line: the borrower holds its principal bonds back" "tagged(bob, holdings(\[lot(bob, 25, 8)\]))" "$n3_cl"
 check "Bonds credit line: the escrow holds nothing at the end" "tagged(escrow, holdings(\[\]))" "$n3_cl"
+
+echo "--- Bonds collateral (collateral) ---"
+
+n3_col=$("$REPL_RUN" <<HEREDOC
+$BONDS
+:limit 50000000
+collateral.
+:quit
+HEREDOC
+2>&1)
+
+check "Bonds collateral: no runtime error" "→ suspended" "$n3_col"
+check_not "Bonds collateral: no failed goal" "ERROR" "$n3_col"
+check "Bonds collateral: the borrower posts coins that are not its own" "tagged(escrow, received_transfer(deposit, bob, \[lot(carol, 0, 3)\]))" "$n3_col"
+check "Bonds collateral: on fulfilment the collateral is returned to the borrower" "tagged(bob, received_transfer(return, escrow, \[lot(carol, 0, 3)\]))" "$n3_col"
+check "Bonds collateral: on default it is released to the lender" "tagged(alice, received_transfer(release, escrow, \[lot(carol, 0, 3)\]))" "$n3_col"
+check "Bonds collateral: the repaid lender holds its coins back and the interest bond" "tagged(alice, holdings(\[lot(bob, 20, 1), lot(alice, 0, 5), lot(bob, 30, 6), lot(carol, 0, 3)\]))" "$n3_col"
+check "Bonds collateral: the borrower holds the bonds it redeemed back and the returned collateral" "tagged(bob, holdings(\[lot(bob, 20, 5), lot(carol, 0, 3), lot(alice, 0, 5)\]))" "$n3_col"
+check "Bonds collateral: the escrow agent holds nothing at the end" "tagged(escrow, holdings(\[\]))" "$n3_col"
 echo ""
 
 # =============================================================================

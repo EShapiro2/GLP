@@ -1,0 +1,90 @@
+%% collateral.glp --- collateral, item 1 of Appendix C of "Grassroots Bonds",
+%% on the compiled bond agent, with both of its outcomes in one run.
+%%
+%% The construction is three transfers: the borrower deposits bonds with the
+%% escrow agent; on default the agent releases them to the lender; on
+%% fulfilment it returns them to the borrower.  Each is guarded by the escrow
+%% agent and the counterparty, as every escrow transfer is.
+%%
+%% Lender Alice, borrower Bob, third party Carol whose coins are the security
+%% --- personal coins acquired through bilateral mutual credit, which is what
+%% Appendix E says serves as collateral --- and the escrow agent.
+%%
+%%   0. mutual credit    Carol gives Bob 6 carol-coins for 6 bob-coins, so Bob
+%%                       holds coins that are not his own to post
+%%   1. loan, repaid     Alice gives Bob 5 alice-coins for 6 bob-bonds maturing
+%%                       day 20 --- 5 lent, 1 of interest
+%%   2. collateral       Bob deposits 3 carol-coins with the escrow agent
+%%   3. fulfilment       Bob redeems his 5 alice-coins from Alice, taking back
+%%                       a bob-bond each time; Alice is left holding the one
+%%                       interest bond
+%%   4. return           the escrow agent returns the 3 carol-coins to Bob
+%%   5. loan, defaulted  Alice gives Bob 5 more alice-coins for 6 bob-bonds
+%%                       maturing day 30
+%%   6. collateral       Bob deposits his other 3 carol-coins
+%%   7. release          Bob repays nothing and the escrow agent releases the
+%%                       3 carol-coins to Alice
+%%
+%% 🔴 WHAT THE PAPER DOES NOT SAY, and what this play therefore supplies from
+%% the escrow agent's script.  Section 5 makes an event-based condition "the
+%% judgment of e, informed where needed by an oracle agreed by the parties",
+%% and the contract has no act by which an attestation reaches e: its five acts
+%% are mint, swap, pay, redeem and the three escrow transfers, and none of them
+%% carries an attestation.  So nothing in the program can tell the escrow agent
+%% that Bob has repaid or defaulted, and the order of the two outcomes here is
+%% the order of its script and not a consequence of what Bob did.  The
+%% date-based escrows (village.glp) and the credit line (credit_line.glp) do
+%% not need this: their conditions are the escrow agent's own date and the
+%% deposits it receives, both of which it sees.  Reported to the paper.
+%%
+%% Entry point: run/0, exported by self.glp as collateral/0.
+
+imported procedure village#villager(Constant?, Script?, Stream(NetInMsg)?, Stream(NetOutMsg)).
+
+exported procedure run.
+run :-
+    network4(AOut?, BOut?, COut?, GOut?, AIn, BIn, CIn, GIn),
+    village # villager(alice,
+        [mint(5, 0), swap(bob, alice, 0, 5, bob, 20, 6),
+         await(presented(bob, bob, 20)), await(presented(bob, bob, 20)),
+         await(presented(bob, bob, 20)), await(presented(bob, bob, 20)),
+         await(presented(bob, bob, 20)),
+         mint(5, 0), swap(bob, alice, 0, 5, bob, 30, 6),
+         accept_transfer(escrow)],
+        AIn?, AOut),
+    village # villager(bob,
+        [mint(6, 0), accept(carol),
+         mint(6, 20), accept(alice),
+         deposit(escrow, carol, 0, 3),
+         redeem(alice, 0, bob, 20), redeem(alice, 0, bob, 20),
+         redeem(alice, 0, bob, 20), redeem(alice, 0, bob, 20),
+         redeem(alice, 0, bob, 20),
+         accept_transfer(escrow),
+         mint(6, 30), accept(alice),
+         deposit(escrow, carol, 0, 3)],
+        BIn?, BOut),
+    village # villager(carol,
+        [mint(6, 0), swap(bob, carol, 0, 6, bob, 0, 6)],
+        CIn?, COut),
+    village # villager(escrow,
+        [accept_transfer(bob),
+         return(bob, carol, 0, 3),
+         accept_transfer(bob),
+         release(alice, carol, 0, 3)],
+        GIn?, GOut).
+
+%% --- The network: first contacts, routed by addressee ---
+
+procedure route4(Stream(NetOutMsg)?, Stream(NetInMsg), Stream(NetInMsg), Stream(NetInMsg), Stream(NetInMsg)).
+route4([msg(alice, C)|Rest], [msg(alice, C?)|A?], B?, Ca?, G?) :- route4(Rest?, A, B, Ca, G).
+route4([msg(bob, C)|Rest], A?, [msg(bob, C?)|B?], Ca?, G?) :- route4(Rest?, A, B, Ca, G).
+route4([msg(carol, C)|Rest], A?, B?, [msg(carol, C?)|Ca?], G?) :- route4(Rest?, A, B, Ca, G).
+route4([msg(escrow, C)|Rest], A?, B?, Ca?, [msg(escrow, C?)|G?]) :- route4(Rest?, A, B, Ca, G).
+route4([], [], [], [], []).
+
+procedure network4(Stream(NetOutMsg)?, Stream(NetOutMsg)?, Stream(NetOutMsg)?, Stream(NetOutMsg)?, Stream(NetInMsg), Stream(NetInMsg), Stream(NetInMsg), Stream(NetInMsg)).
+network4(AOut, BOut, COut, GOut, AIn?, BIn?, CIn?, GIn?) :-
+    merge(AOut?, BOut?, AB),
+    merge(COut?, GOut?, CG),
+    merge(AB?, CG?, All),
+    route4(All?, AIn, BIn, CIn, GIn).
