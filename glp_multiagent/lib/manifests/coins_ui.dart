@@ -84,10 +84,19 @@ const _redeem = CommandDesc(
 );
 
 /// The two clauses of the swap responder, transient and sharing the context
-/// `ctx_respond_swap_j(From, Want, Offered)`: one card, a button each. The
-/// accept ask carries a deadline and the decline ask does not, the accept
-/// clause having an else-branch — unanswered, the machine declines for the
-/// person and both asks are retired by `closed`.
+/// `ctx_respond_swap_j(From, Want, Offered)`: one card, a button each, and
+/// whichever the person taps the other ask is aborted by the reduction and
+/// retired by `closed`.
+///
+/// The accept clause carries an else-branch, which until 2026-09-15 the
+/// mediator's deadline selected — the machine declining for a person who had
+/// not answered. With the deadline gone it is selected only by a decline, and
+/// this program does not need one: the decline is its own volition-guarded
+/// clause here, `respond_swap_1`, and a will for that sibling reaches the same
+/// answer (vGLP, Section "Elicitation"). So the card declares no
+/// [InboxDesc.elseBranch] and offers two buttons rather than a second decline
+/// that says what the first says. The else-branch of `coins_agent.vglp` is
+/// what is now redundant, and removing it is Currencies' and vGLP's.
 const _respondSwap = InboxDesc(
   clauses: ['respond_swap_1', 'respond_swap_2'],
   args: ['From', 'Want', 'Offered'],

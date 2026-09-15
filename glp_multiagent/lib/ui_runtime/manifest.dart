@@ -119,13 +119,21 @@ class AnswerDesc {
   final String? clause;
   final String? answerCtor;
 
+  /// A decline rather than an answer: it grants `decline(ReqId)` on [clause]'s
+  /// ask, which selects that clause's else-branch (vGLP, Definition "Canonical
+  /// Compilation", the constructs item). It carries no answer, so [answerCtor]
+  /// and [fill] are empty. Not written in a manifest: [InboxCard.liveAnswers]
+  /// makes one for each open ask whose clause [InboxDesc.elseBranch] names.
+  final bool decline;
+
   const AnswerDesc(
       {required this.label,
       required this.cmdCtor,
       required this.fill,
       this.opensItem = false,
       this.clause,
-      this.answerCtor});
+      this.answerCtor,
+      this.decline = false});
 
   bool get needsPicker => fill.any((f) => f is PickerFill);
 }
@@ -188,6 +196,15 @@ class InboxDesc {
   /// mediator's notify, matched by [notifyCtor] and arity as before.
   final List<String> clauses;
 
+  /// Those of [clauses] whose vGLP clause has an else-branch. The card of such
+  /// an ask carries a decline, whose tap grants `decline(ReqId)` and selects
+  /// the else-branch (vGLP, Definition "Canonical Compilation"): it is the
+  /// person saying they do not will the reduction, and it adds no volition.
+  /// Read off the compiled program, where such a clause's reply type is
+  /// `Reply_C ::= then(Xs_C) ; else` and its goal carries an `ask(else, _)`
+  /// clause.
+  final List<String> elseBranch;
+
   const InboxDesc({
     this.notifyCtor = '',
     required this.args,
@@ -197,6 +214,7 @@ class InboxDesc {
     required this.answers,
     this.dismissedBy = const [],
     this.clauses = const [],
+    this.elseBranch = const [],
   });
 
   /// Whether this card arrives through the compiled vGLP person channel.

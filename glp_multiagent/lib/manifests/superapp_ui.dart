@@ -79,8 +79,9 @@ const _connect = CommandDesc(
 );
 
 /// The two clauses of the friend responder, transient and sharing the context
-/// `ctx_respond_friend_j(From)`: one card, a button each, neither carrying a
-/// deadline — a request to connect stands until the person decides.
+/// `ctx_respond_friend_j(From)`: one card, a button each. Neither has an
+/// else-branch, so neither carries a decline — a request to connect stands
+/// until the person decides it, either way by a will of their own.
 const _respondFriend = InboxDesc(
   clauses: ['respond_friend_1', 'respond_friend_2'],
   args: ['From'],

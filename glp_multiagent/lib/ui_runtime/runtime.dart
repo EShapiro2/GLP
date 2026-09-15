@@ -38,9 +38,22 @@ class InboxCard {
 
   /// The answers whose ask is still open — the buttons this card actually
   /// offers. A sibling whose ask the agent has aborted is no longer offered.
+  ///
+  /// An open ask of a clause with an else-branch adds a decline, which the
+  /// manifest does not write: vGLP's Definition "Canonical Compilation" gives
+  /// every such card one, and deriving it here is what makes it impossible to
+  /// leave a clause's else-branch unreachable from the app.
   List<AnswerDesc> get liveAnswers => [
         for (final a in desc.answers)
-          if (a.clause == null || asks.containsKey(a.clause)) a
+          if (a.clause == null || asks.containsKey(a.clause)) a,
+        for (final c in desc.elseBranch)
+          if (asks.containsKey(c))
+            AnswerDesc(
+                label: 'Decline',
+                cmdCtor: '',
+                fill: const [],
+                clause: c,
+                decline: true),
       ];
 }
 
@@ -209,8 +222,8 @@ class UiRuntime {
     return true;
   }
 
-  /// `closed(req(N))`: the mediator retired that ask — the machine answered on
-  /// the deadline, or another clause reduced the goal and aborted it. The ask
+  /// `closed(req(N))`: the mediator retired that ask — the person declined it,
+  /// or another clause reduced the goal and aborted it. The ask
   /// goes from whatever holds it; a card left with no ask is gone.
   bool _handleClosed(GTerm reqId) {
     final key = formatTerm(reqId);
@@ -318,9 +331,10 @@ class UiRuntime {
     onChange?.call();
   }
 
-  /// Answer an inbox card with one of its answers — the person's tap grants
-  /// the chosen sibling clause; the volition is consumed by the reduction it
-  /// authorises, so the card is consumed. [picks] supplies any `PickerFill`
+  /// Answer an inbox card with one of its buttons — the person's tap grants
+  /// the chosen sibling clause, or, for a decline, grants `decline(ReqId)` on
+  /// its clause's ask; the card is consumed either way, the volition by the
+  /// reduction it authorises and the decline by the else-branch it selects. [picks] supplies any `PickerFill`
   /// values (unused by GSG v1).
   void answerCard(InboxCard card, AnswerDesc answer,
       {Map<String, GTerm> picks = const {}}) {
@@ -341,8 +355,12 @@ class UiRuntime {
       // table, and the one not answered is aborted by the goal's reduction.
       final reqId = card.asks[answer.clause];
       if (reqId == null) return;
-      onSend(formatTerm(
-          GStruct(answerCtor, [reqId, _answer(answer.answerCtor!, filled)])));
+      // A decline grants no answer: it closes the ask, which binds its reply
+      // to `else` and selects the clause's else-branch. The reduction that
+      // follows aborts the goal's other asks, so the card goes either way.
+      onSend(formatTerm(answer.decline
+          ? GStruct(declineCtor, [reqId])
+          : GStruct(answerCtor, [reqId, _answer(answer.answerCtor!, filled)])));
     } else {
       final term =
           filled.isEmpty ? GAtom(answer.cmdCtor) : GStruct(answer.cmdCtor, filled);
@@ -517,6 +535,7 @@ class UiRuntime {
 const String cardCtor = 'card';
 const String closedCtor = 'closed';
 const String answerCtor = 'answer';
+const String declineCtor = 'decline';
 
 /// Free text as a GLP constant the boundary round-trips: the `_output` kernel
 /// prints atoms unquoted, so a chat text must be a plain lowercase atom —

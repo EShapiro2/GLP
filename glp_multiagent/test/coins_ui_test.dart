@@ -156,7 +156,7 @@ void main() {
       expect(card.liveAnswers.map((a) => a.label), ['Accept']);
     });
 
-    test('the deadline retires both asks and the card with them', () {
+    test('closing both asks retires the card with them', () {
       r.handleLine('closed(req(6))');
       r.handleLine('closed(req(5))');
       expect(r.inbox, isEmpty);

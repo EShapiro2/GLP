@@ -19,7 +19,7 @@
 %% This file is the harness of the app, not part of the super-app's contract.
 
 imported procedure home#home(_?, Constant?, AgentToUserStream?, Stream(UserInMsg), _?, _?, _?, _?).
-imported procedure home#med(_?, _?, _?, _?, Integer?).
+imported procedure home#med(_?, _?, _?, Integer?).
 imported procedure agent#agent(Constant?, UserInStream?, NetInStream?, OutputsList?).
 
 exported procedure superapp_ui(Constant?, Stream(_)?, Stream(_)?).
@@ -29,7 +29,7 @@ superapp_ui(alice, Answers, _) :-
     tee_out(Outs?, Shown, Seen),
     send_to_user(Shown?),
     home # home(ch([], Asks), alice, Seen?, Cmds, none, none, none, none),
-    home # med(ch(Answers?, Cards), ch(Asks?, []), [], [], 0),
+    home # med(ch(Answers?, Cards), ch(Asks?, []), [], 0),
     send_to_user(Cards?),
     agent # agent(bob, BobIn?, BobNetIn?, [user_output(BobOut), net_output(BobNetOut)]),
     bob_answers(BobOut?, BobIn).
