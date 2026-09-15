@@ -31,14 +31,14 @@ final Manifest socialManifest = Manifest(
         CommandDesc(
           ctor: 'connect',
           label: 'Add friend',
-          args: [FieldDesc('target', FieldType.person, 'Person to connect')],
+          args: [FieldDesc('target', FieldType.peer, 'Person to connect')],
         ),
         // End a friendship: a unilateral compose command — no one else
         // answers; the other side's agent integrates it.
         CommandDesc(
           ctor: 'unfriend',
           label: 'End friendship',
-          args: [FieldDesc('friend', FieldType.person, 'Friend to remove')],
+          args: [FieldDesc('friend', FieldType.peer, 'Friend to remove')],
         ),
         // Offer an introduction of two of your friends to each other; each of
         // them gets an introduction card.
@@ -46,8 +46,8 @@ final Manifest socialManifest = Manifest(
           ctor: 'introduce',
           label: 'Introduce friends',
           args: [
-            FieldDesc('p', FieldType.person, 'Introduce'),
-            FieldDesc('q', FieldType.person, 'To'),
+            FieldDesc('p', FieldType.peer, 'Introduce'),
+            FieldDesc('q', FieldType.peer, 'To'),
           ],
         ),
       ],

@@ -65,8 +65,8 @@ const _invite = CommandDesc(
   answerCtor: 'xs_home_3',
   label: 'Invite a friend',
   args: [
-    FieldDesc('App', FieldType.person, 'App'),
-    FieldDesc('Friend', FieldType.person, 'Friend'),
+    FieldDesc('App', FieldType.peer, 'App'),
+    FieldDesc('Friend', FieldType.peer, 'Friend'),
   ],
 );
 
@@ -75,7 +75,7 @@ const _connect = CommandDesc(
   clause: 'home_4',
   answerCtor: 'xs_home_4',
   label: 'Connect',
-  args: [FieldDesc('Friend', FieldType.person, 'Friend')],
+  args: [FieldDesc('Friend', FieldType.peer, 'Friend')],
 );
 
 /// The two clauses of the friend responder, transient and sharing the context

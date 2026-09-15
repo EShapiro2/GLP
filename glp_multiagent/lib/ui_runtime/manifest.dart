@@ -12,14 +12,21 @@ library;
 
 import 'term.dart';
 
-/// Input widget kind for a compose-form field.
+/// Input widget kind for a compose-form field: the widgets of the grassroots
+/// app's construct family, as vGLP's display declarations name them.
 ///
 /// [text] and [string] are the same WIDGET — a display declaration's
 /// `field(X, text)` — and differ in the term the person's typing becomes: an
 /// atom where the clause's answer type takes a `Constant`, a GLP `String`
 /// where it takes a `String`. The declaration does not settle that; the
 /// compiled answer type `Xs_C` does, so a transcriber reads both.
-enum FieldType { person, text, string, integer }
+///
+/// [number] and [date] are the mirror of that pair: two widgets over one term,
+/// a GLP `Integer` — every `field(X, date)` on disc has `Integer` in its
+/// clause's `Xs_C`, a day the program counts rather than a calendar date. What
+/// a date widget shows, and what a picked calendar date would become, no
+/// specification fixes; until one does it takes the day as typed.
+enum FieldType { text, string, number, date, peer }
 
 /// One field of a compose form — one person input of the clause.
 class FieldDesc {
@@ -486,8 +493,8 @@ class StateView {
 }
 
 /// The view kinds of the construct family that renders a compiled vGLP program
-/// — the grassroots app's are the list, thread and balances views (vGLP,
-/// Definition "Display Declaration").
+/// — the grassroots app's are the list, thread, balances and friends views
+/// (vGLP, Definition "Display Declaration").
 enum ViewKind { list, thread, balances, friends }
 
 /// One `display m : panel(N), view(K)` — the panel's view of kind [kind], fed

@@ -193,7 +193,7 @@ class _DuoScreenState extends State<DuoScreen> {
             '(${env.payload.length}B, $transport)');
         IsolateRouter.instance.route(env.from, env.to, env.payload);
       };
-      network.onPeerConnected = (pk, transport) {
+      network.onPeerConnected = (pk, transport, _) {
         setState(() => _netStatus = 'linked ($transport)');
         TraceLog.log('NET', 'peer phone connected via $transport');
       };

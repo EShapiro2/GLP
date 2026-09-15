@@ -29,7 +29,7 @@ final Manifest grassrootsManifest = Manifest(
         CommandDesc(
           ctor: 'connect',
           label: 'Add friend',
-          args: [FieldDesc('target', FieldType.person, 'Person to connect')],
+          args: [FieldDesc('target', FieldType.peer, 'Person to connect')],
         ),
         // End a friendship (paper §5 Request; Table 1 "end a friendship"). A
         // unilateral compose command — no one else answers; the other side's
@@ -37,7 +37,7 @@ final Manifest grassrootsManifest = Manifest(
         CommandDesc(
           ctor: 'unfriend',
           label: 'End friendship',
-          args: [FieldDesc('friend', FieldType.person, 'Friend to remove')],
+          args: [FieldDesc('friend', FieldType.peer, 'Friend to remove')],
         ),
       ],
       inbox: [
@@ -104,14 +104,14 @@ final Manifest grassrootsManifest = Manifest(
             ctor: 'mint',
             label: 'Mint',
             args: [
-              FieldDesc('amount', FieldType.integer, 'How many to mint'),
-              FieldDesc('maturity', FieldType.integer, 'Maturity date (0 = cash)'),
+              FieldDesc('amount', FieldType.number, 'How many to mint'),
+              FieldDesc('maturity', FieldType.number, 'Maturity date (0 = cash)'),
             ],
           ),
           CommandDesc(
             ctor: 'advance_date',
             label: 'Advance date',
-            args: [FieldDesc('date', FieldType.integer, 'New local date')],
+            args: [FieldDesc('date', FieldType.number, 'New local date')],
           ),
         ],
         friendActions: const [
@@ -119,23 +119,23 @@ final Manifest grassrootsManifest = Manifest(
             ctor: 'pay',
             label: 'Pay',
             args: [
-              FieldDesc('friend', FieldType.person, 'To'),
-              FieldDesc('coin', FieldType.person, 'Coin (issuer)'),
-              FieldDesc('maturity', FieldType.integer, 'Maturity (0 = cash)'),
-              FieldDesc('amount', FieldType.integer, 'Amount'),
+              FieldDesc('friend', FieldType.peer, 'To'),
+              FieldDesc('coin', FieldType.peer, 'Coin (issuer)'),
+              FieldDesc('maturity', FieldType.number, 'Maturity (0 = cash)'),
+              FieldDesc('amount', FieldType.number, 'Amount'),
             ],
           ),
           CommandDesc(
             ctor: 'trade',
             label: 'Propose swap',
             args: [
-              FieldDesc('friend', FieldType.person, 'With'),
-              FieldDesc('give_coin', FieldType.person, 'You give (issuer)'),
-              FieldDesc('give_maturity', FieldType.integer, 'You give (maturity)'),
-              FieldDesc('give_amount', FieldType.integer, 'You give (amount)'),
-              FieldDesc('want_coin', FieldType.person, 'You want (issuer)'),
-              FieldDesc('want_maturity', FieldType.integer, 'You want (maturity)'),
-              FieldDesc('want_amount', FieldType.integer, 'You want (amount)'),
+              FieldDesc('friend', FieldType.peer, 'With'),
+              FieldDesc('give_coin', FieldType.peer, 'You give (issuer)'),
+              FieldDesc('give_maturity', FieldType.number, 'You give (maturity)'),
+              FieldDesc('give_amount', FieldType.number, 'You give (amount)'),
+              FieldDesc('want_coin', FieldType.peer, 'You want (issuer)'),
+              FieldDesc('want_maturity', FieldType.number, 'You want (maturity)'),
+              FieldDesc('want_amount', FieldType.number, 'You want (amount)'),
             ],
           ),
           // Escrow (paper §5): lock bonds for a friend until a release time,
@@ -145,24 +145,24 @@ final Manifest grassrootsManifest = Manifest(
             ctor: 'deposit_escrow',
             label: 'Escrow',
             args: [
-              FieldDesc('friend', FieldType.person, 'For'),
-              FieldDesc('coin', FieldType.person, 'Coin (issuer)'),
-              FieldDesc('maturity', FieldType.integer, 'Maturity (0 = cash)'),
-              FieldDesc('amount', FieldType.integer, 'Amount'),
-              FieldDesc('release', FieldType.integer, 'Release at'),
+              FieldDesc('friend', FieldType.peer, 'For'),
+              FieldDesc('coin', FieldType.peer, 'Coin (issuer)'),
+              FieldDesc('maturity', FieldType.number, 'Maturity (0 = cash)'),
+              FieldDesc('amount', FieldType.number, 'Amount'),
+              FieldDesc('release', FieldType.number, 'Release at'),
             ],
           ),
           CommandDesc(
             ctor: 'redeem',
             label: 'Redeem',
             args: [
-              FieldDesc('friend', FieldType.person, 'From'),
-              FieldDesc('give_coin', FieldType.person, 'Present (issuer)'),
-              FieldDesc('give_maturity', FieldType.integer, 'Present (maturity)'),
-              FieldDesc('give_amount', FieldType.integer, 'Present (amount)'),
-              FieldDesc('want_coin', FieldType.person, 'You want (issuer)'),
-              FieldDesc('want_maturity', FieldType.integer, 'You want (maturity)'),
-              FieldDesc('want_amount', FieldType.integer, 'You want (amount)'),
+              FieldDesc('friend', FieldType.peer, 'From'),
+              FieldDesc('give_coin', FieldType.peer, 'Present (issuer)'),
+              FieldDesc('give_maturity', FieldType.number, 'Present (maturity)'),
+              FieldDesc('give_amount', FieldType.number, 'Present (amount)'),
+              FieldDesc('want_coin', FieldType.peer, 'You want (issuer)'),
+              FieldDesc('want_maturity', FieldType.number, 'You want (maturity)'),
+              FieldDesc('want_amount', FieldType.number, 'You want (amount)'),
             ],
           ),
         ],
@@ -250,7 +250,7 @@ final Manifest grassrootsManifest = Manifest(
             label: 'Add member',
             args: [
               FieldDesc('group', FieldType.text, 'Group'),
-              FieldDesc('invitee', FieldType.person, 'Friend to add'),
+              FieldDesc('invitee', FieldType.peer, 'Friend to add'),
             ],
           ),
           CommandDesc(
@@ -258,7 +258,7 @@ final Manifest grassrootsManifest = Manifest(
             label: 'Remove member',
             args: [
               FieldDesc('group', FieldType.text, 'Group'),
-              FieldDesc('member', FieldType.person, 'Member to remove'),
+              FieldDesc('member', FieldType.peer, 'Member to remove'),
             ],
           ),
           CommandDesc(

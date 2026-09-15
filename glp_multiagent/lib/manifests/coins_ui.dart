@@ -44,7 +44,7 @@ const _mint = CommandDesc(
   clause: 'agent_1',
   answerCtor: 'xs_agent_1',
   label: 'Mint',
-  args: [FieldDesc('Amount', FieldType.integer, 'Amount')],
+  args: [FieldDesc('Amount', FieldType.number, 'Amount')],
 );
 
 const _swap = CommandDesc(
@@ -53,11 +53,11 @@ const _swap = CommandDesc(
   answerCtor: 'xs_agent_2',
   label: 'Swap',
   args: [
-    FieldDesc('Friend', FieldType.person, 'Friend'),
-    FieldDesc('GiveCoin', FieldType.person, 'GiveCoin'),
-    FieldDesc('GiveAmount', FieldType.integer, 'GiveAmount'),
-    FieldDesc('WantCoin', FieldType.person, 'WantCoin'),
-    FieldDesc('WantAmount', FieldType.integer, 'WantAmount'),
+    FieldDesc('Friend', FieldType.peer, 'Friend'),
+    FieldDesc('GiveCoin', FieldType.peer, 'GiveCoin'),
+    FieldDesc('GiveAmount', FieldType.number, 'GiveAmount'),
+    FieldDesc('WantCoin', FieldType.peer, 'WantCoin'),
+    FieldDesc('WantAmount', FieldType.number, 'WantAmount'),
   ],
 );
 
@@ -67,8 +67,8 @@ const _pay = CommandDesc(
   answerCtor: 'xs_agent_3',
   label: 'Pay',
   args: [
-    FieldDesc('Friend', FieldType.person, 'Friend'),
-    FieldDesc('Amount', FieldType.integer, 'Amount'),
+    FieldDesc('Friend', FieldType.peer, 'Friend'),
+    FieldDesc('Amount', FieldType.number, 'Amount'),
   ],
 );
 
@@ -78,8 +78,8 @@ const _redeem = CommandDesc(
   answerCtor: 'xs_agent_4',
   label: 'Redeem',
   args: [
-    FieldDesc('Friend', FieldType.person, 'Friend'),
-    FieldDesc('WantCoin', FieldType.person, 'WantCoin'),
+    FieldDesc('Friend', FieldType.peer, 'Friend'),
+    FieldDesc('WantCoin', FieldType.peer, 'WantCoin'),
   ],
 );
 
