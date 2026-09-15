@@ -2490,6 +2490,34 @@ check "Bonds guarantee: on default they are released to the lender" "tagged(alic
 check "Bonds guarantee: the lender holds the guarantor's bonds and the defaulted loan's" "tagged(alice, holdings(\[lot(bob, 20, 1), lot(alice, 0, 5), lot(bob, 30, 6), lot(gary, 0, 3)\]))" "$n3_gtee"
 check "Bonds guarantee: the guarantor is left with what it did not forfeit" "tagged(gary, holdings(\[lot(gary, 0, 3)\]))" "$n3_gtee"
 check "Bonds guarantee: the escrow agent holds nothing at the end" "tagged(escrow, holdings(\[\]))" "$n3_gtee"
+
+echo "--- Bonds packaged exchange: balloon and fixed-payment loans ---"
+
+n3_bal=$("$REPL_RUN" <<HEREDOC
+$BONDS
+:limit 50000000
+balloon.
+:quit
+HEREDOC
+2>&1)
+
+check_not "Bonds balloon loan: no failed goal" "ERROR" "$n3_bal"
+check "Bonds balloon loan: the lender holds the interest bonds and the principal" "tagged(alice, holdings(\[lot(bob, 10, 1), lot(bob, 20, 1), lot(bob, 30, 10)\]))" "$n3_bal"
+check "Bonds balloon loan: the borrower holds the coins lent" "tagged(bob, holdings(\[lot(alice, 0, 10)\]))" "$n3_bal"
+check "Bonds balloon loan: the escrow agent holds nothing at the end" "tagged(escrow, holdings(\[\]))" "$n3_bal"
+
+n3_fix=$("$REPL_RUN" <<HEREDOC
+$BONDS
+:limit 50000000
+fixed_payment.
+:quit
+HEREDOC
+2>&1)
+
+check_not "Bonds fixed-payment loan: no failed goal" "ERROR" "$n3_fix"
+check "Bonds fixed-payment loan: the lender holds the three equal payments" "tagged(alice, holdings(\[lot(bob, 10, 4), lot(bob, 20, 4), lot(bob, 30, 4)\]))" "$n3_fix"
+check "Bonds fixed-payment loan: the borrower holds the coins lent" "tagged(bob, holdings(\[lot(alice, 0, 9)\]))" "$n3_fix"
+check "Bonds fixed-payment loan: the escrow agent holds nothing at the end" "tagged(escrow, holdings(\[\]))" "$n3_fix"
 echo ""
 
 # =============================================================================

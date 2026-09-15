@@ -217,10 +217,17 @@ Script ::= [] ; [Step | Script].
 %% date; or a credit line --- the lender, the borrower, the limit, the expiry,
 %% the date of the interest bonds, the drawn amount, the principal of a draw
 %% deposited and awaiting its interest lot (0 when none), its phase, and the
-%% escrow agent's date.
+%% escrow agent's date; or a packaged exchange --- the party giving one lot,
+%% the party giving several, that one lot, the lots the second party owes, the
+%% lots deposited so far, its phase, and the escrow agent's date.  The packaged
+%% exchange is the construction of Section 5 item 1: each party deposits its
+%% lots, one transfer per lot, and once every lot of both is held the escrow
+%% agent releases them crosswise, so all the lots change hands or none do.  It
+%% realises the balloon loan and the fixed-payment loan (loans.glp).
 Agreement ::= none
             ; dated_escrow(Constant, Constant, Lot, Integer, Phase, Integer)
-            ; credit_line(Constant, Constant, Integer, Integer, Integer, Integer, Integer, Phase, Integer).
+            ; credit_line(Constant, Constant, Integer, Integer, Integer, Integer, Integer, Phase, Integer)
+            ; packaged(Constant, Constant, Lot, Stream(Lot), Stream(Lot), Phase, Integer).
 Phase ::= awaiting ; deposited ; released ; opening ; open ; closed.
 
 %% =============================================================================
@@ -449,3 +456,11 @@ forward :- instruments # forward.
 imported procedure instruments#guarantee.
 exported procedure guarantee.
 guarantee :- instruments # guarantee.
+
+imported procedure loans#balloon.
+exported procedure balloon.
+balloon :- loans # balloon.
+
+imported procedure loans#fixed_payment.
+exported procedure fixed_payment.
+fixed_payment :- loans # fixed_payment.

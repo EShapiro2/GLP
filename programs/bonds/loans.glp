@@ -1,0 +1,76 @@
+%% loans.glp --- the balloon loan and the fixed-payment loan of Section 5 of
+%% "Grassroots Bonds", item 1, on the compiled bond agent and the packaged
+%% exchange of escrow.glp.
+%%
+%% Both are the packaged exchange: the lender gives one lot of its own coins,
+%% the borrower gives several lots of its own bonds, each party deposits its
+%% lots with the escrow agent one transfer per lot, and once every lot of both
+%% is held the agent releases them crosswise.  All the lots change hands or
+%% none do, and neither party holds the other's before both deposits are
+%% complete.
+%%
+%%   balloon        Alice lends 10 alice-coins; Bob gives interest bonds 1
+%%                  maturing day 10 and 1 maturing day 20, and a principal bond
+%%                  of 10 maturing day 30 --- the principal repaid in one sum at
+%%                  the end, the interest along the way
+%%   fixed_payment  Alice lends 9 alice-coins; Bob gives 4 maturing day 10, 4
+%%                  maturing day 20 and 4 maturing day 30 --- equal payments,
+%%                  12 for 9, the interest spread through them
+%%
+%% Both conditions are ones the escrow agent sees --- the deposits it receives
+%% --- so neither needs the judgement that collateral and the guarantee do.
+%%
+%% Entry points: balloon/0 and fixed_payment/0, exported by self.glp.
+
+imported procedure village#villager(Constant?, Script?, Stream(NetInMsg)?, Stream(NetOutMsg)).
+imported procedure village#escrow_agent(Constant?, Script?, Agreement?, Stream(NetInMsg)?, Stream(NetOutMsg)).
+
+exported procedure balloon.
+balloon :-
+    network3l(AOut?, BOut?, GOut?, AIn, BIn, GIn),
+    village # villager(alice,
+        [mint(10, 0), deposit(escrow, alice, 0, 10),
+         accept_transfer(escrow), accept_transfer(escrow), accept_transfer(escrow)],
+        AIn?, AOut),
+    village # villager(bob,
+        [mint(1, 10), mint(1, 20), mint(10, 30),
+         deposit(escrow, bob, 10, 1), deposit(escrow, bob, 20, 1),
+         deposit(escrow, bob, 30, 10),
+         accept_transfer(escrow)],
+        BIn?, BOut),
+    village # escrow_agent(escrow, [],
+        packaged(alice, bob, lot(alice, 0, 10),
+                 [lot(bob, 10, 1), lot(bob, 20, 1), lot(bob, 30, 10)], [], opening, 0),
+        GIn?, GOut).
+
+exported procedure fixed_payment.
+fixed_payment :-
+    network3l(AOut?, BOut?, GOut?, AIn, BIn, GIn),
+    village # villager(alice,
+        [mint(9, 0), deposit(escrow, alice, 0, 9),
+         accept_transfer(escrow), accept_transfer(escrow), accept_transfer(escrow)],
+        AIn?, AOut),
+    village # villager(bob,
+        [mint(4, 10), mint(4, 20), mint(4, 30),
+         deposit(escrow, bob, 10, 4), deposit(escrow, bob, 20, 4),
+         deposit(escrow, bob, 30, 4),
+         accept_transfer(escrow)],
+        BIn?, BOut),
+    village # escrow_agent(escrow, [],
+        packaged(alice, bob, lot(alice, 0, 9),
+                 [lot(bob, 10, 4), lot(bob, 20, 4), lot(bob, 30, 4)], [], opening, 0),
+        GIn?, GOut).
+
+%% --- The network: first contacts, routed by addressee ---
+
+procedure route3l(Stream(NetOutMsg)?, Stream(NetInMsg), Stream(NetInMsg), Stream(NetInMsg)).
+route3l([msg(alice, C)|Rest], [msg(alice, C?)|A?], B?, G?) :- route3l(Rest?, A, B, G).
+route3l([msg(bob, C)|Rest], A?, [msg(bob, C?)|B?], G?) :- route3l(Rest?, A, B, G).
+route3l([msg(escrow, C)|Rest], A?, B?, [msg(escrow, C?)|G?]) :- route3l(Rest?, A, B, G).
+route3l([], [], [], []).
+
+procedure network3l(Stream(NetOutMsg)?, Stream(NetOutMsg)?, Stream(NetOutMsg)?, Stream(NetInMsg), Stream(NetInMsg), Stream(NetInMsg)).
+network3l(AOut, BOut, GOut, AIn?, BIn?, GIn?) :-
+    merge(AOut?, BOut?, AB),
+    merge(AB?, GOut?, All),
+    route3l(All?, AIn, BIn, GIn).

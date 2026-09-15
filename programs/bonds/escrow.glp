@@ -54,6 +54,18 @@ accepts(credit_line(P, Q, K, T, D1, Kd, Pd, Ph, Date), _, _, _, no,
         credit_line(P?, Q?, K?, T?, D1?, Kd?, Pd?, Ph?, Date?)) :-
     otherwise | true.
 
+%% The packaged exchange accepts, from each party, a lot it owes and has not
+%% yet deposited: the one lot of the first party, or one of the lots of the
+%% second.  Two lots identical in issuer, maturity and amount are not
+%% distinguished, and no instrument of the paper gives a party such a pair.
+accepts(packaged(P, Q, X, Ys, Got, Ph, Date), deposit, From, [L], V?,
+        packaged(P?, Q?, X?, Ys?, Got?, Ph?, Date?)) :-
+    ground(From?), ground(L?) |
+    packaged_accepts(P?, Q?, X?, Ys?, Got?, From?, L?, V).
+accepts(packaged(P, Q, X, Ys, Got, Ph, Date), _, _, _, no,
+        packaged(P?, Q?, X?, Ys?, Got?, Ph?, Date?)) :-
+    otherwise | true.
+
 procedure line_accepts(Constant?, Constant?, Integer?, Integer?, Integer?, Integer?, Integer?, Phase?, Constant?, Constant?, Integer?, Integer?, Constant).
 line_accepts(P, _, K, _, _, _, _, opening, From, U, 0, N, yes) :-
     P? =?= From?, P? =?= U?, K? =:= N? | true.
@@ -97,6 +109,18 @@ react(credit_line(P, Q, K, T, D1, Kd, Pd, open, _), date_advanced(T1), Steps?, A
 react(credit_line(P, Q, K, T, D1, Kd, Pd, Ph, _), date_advanced(T1), [], credit_line(P?, Q?, K?, T?, D1?, Kd?, Pd?, Ph?, T1?)) :-
     otherwise | true.
 react(credit_line(P, Q, K, T, D1, Kd, Pd, Ph, Date), _, [], credit_line(P?, Q?, K?, T?, D1?, Kd?, Pd?, Ph?, Date?)) :-
+    otherwise | true.
+
+%% The packaged exchange: every deposit is recorded, and once the first party's
+%% lot and every lot of the second are held, the escrow agent wills the
+%% releases crosswise --- the second party's lots to the first, the first
+%% party's lot to the second --- one transfer per lot.
+react(packaged(P, Q, X, Ys, Got, Ph, Date), received_transfer(deposit, From, [L]), Steps?, Ag?) :-
+    ground(From?), ground(L?) |
+    add_lot(L?, Got?, Got1),
+    packaged_check(P?, Q?, X?, Ys?, Got1?, Ph?, Date?, Steps, Ag).
+react(packaged(P, Q, X, Ys, Got, Ph, Date), _, [],
+      packaged(P?, Q?, X?, Ys?, Got?, Ph?, Date?)) :-
     otherwise | true.
 
 procedure dated_check(Integer?, Integer?, Constant?, Constant?, Lot?, Phase?, Script, Agreement).
@@ -144,3 +168,77 @@ line_expire(P, Q, K, T, D1, Kd, Pd, T1, [return(P?, P?, 0, N?)],
 line_expire(P, Q, K, T, D1, Kd, Pd, T1, [],
             credit_line(P?, Q?, K?, T?, D1?, Kd?, Pd?, closed, T1?)) :-
     Kd? >= K? | true.
+
+%% =============================================================================
+%% The packaged exchange (Section 5, item 1)
+%% =============================================================================
+
+procedure packaged_accepts(Constant?, Constant?, Lot?, Stream(Lot)?, Stream(Lot)?, Constant?, Lot?, Constant).
+packaged_accepts(P, _, X, _, Got, From, L, V?) :-
+    P? =?= From? |
+    same_lot(X?, L?, Same),
+    owed(Same?, L?, Got?, V).
+packaged_accepts(_, Q, _, Ys, Got, From, L, V?) :-
+    Q? =?= From? |
+    lot_member(L?, Ys?, In),
+    owed(In?, L?, Got?, V).
+packaged_accepts(_, _, _, _, _, _, _, no) :- otherwise | true.
+
+%% A lot the party owes and has not deposited yet.
+procedure owed(Constant?, Lot?, Stream(Lot)?, Constant).
+owed(no, _, _, no).
+owed(yes, L, Got, V?) :- lot_member(L?, Got?, In), negate(In?, V).
+
+procedure negate(Constant?, Constant).
+negate(yes, no).
+negate(no, yes).
+
+procedure same_lot(Lot?, Lot?, Constant).
+same_lot(lot(U, D, K), lot(U1, D1, K1), yes) :- U? =?= U1?, D? =:= D1?, K? =:= K1? | true.
+same_lot(lot(_, _, _), lot(_, _, _), no) :- otherwise | true.
+
+procedure lot_member(Lot?, Stream(Lot)?, Constant).
+lot_member(L, [M|Rest], V?) :- same_lot(L?, M?, Same), member_step(Same?, L?, Rest?, V).
+lot_member(_, [], no).
+
+procedure member_step(Constant?, Lot?, Stream(Lot)?, Constant).
+member_step(yes, _, _, yes).
+member_step(no, L, Rest, V?) :- lot_member(L?, Rest?, V).
+
+procedure add_lot(Lot?, Stream(Lot)?, Stream(Lot)).
+add_lot(L, [M|Rest], [M?|Rest1?]) :- add_lot(L?, Rest?, Rest1).
+add_lot(L, [], [L?]).
+
+procedure packaged_check(Constant?, Constant?, Lot?, Stream(Lot)?, Stream(Lot)?, Phase?, Integer?, Script, Agreement).
+packaged_check(P, Q, X, Ys, Got, Ph, Date, Steps?, Ag?) :-
+    ground(Got?) |
+    lot_member(X?, Got?, HaveX),
+    all_in(Ys?, Got?, HaveY),
+    packaged_release(HaveX?, HaveY?, P?, Q?, X?, Ys?, Got?, Ph?, Date?, Steps, Ag).
+
+procedure all_in(Stream(Lot)?, Stream(Lot)?, Constant).
+all_in([L|Rest], Got, V?) :- lot_member(L?, Got?, In), all_in_step(In?, Rest?, Got?, V).
+all_in([], _, yes).
+
+procedure all_in_step(Constant?, Stream(Lot)?, Stream(Lot)?, Constant).
+all_in_step(no, _, _, no).
+all_in_step(yes, Rest, Got, V?) :- all_in(Rest?, Got?, V).
+
+procedure packaged_release(Constant?, Constant?, Constant?, Constant?, Lot?, Stream(Lot)?, Stream(Lot)?, Phase?, Integer?, Script, Agreement).
+packaged_release(yes, yes, P, Q, X, Ys, Got, _, Date, Steps?,
+                 packaged(P?, Q?, X?, Ys?, Got?, released, Date?)) :-
+    ground(Ys?) |
+    give_one(Q?, X?, Tail),
+    release_all(P?, Ys?, Tail?, Steps).
+packaged_release(_, _, P, Q, X, Ys, Got, Ph, Date, [],
+                 packaged(P?, Q?, X?, Ys?, Got?, Ph?, Date?)) :-
+    otherwise | true.
+
+%% One release step per lot, to the named party, ending in the tail given.
+procedure release_all(Constant?, Stream(Lot)?, Script?, Script).
+release_all(R, [lot(U, D, K)|Rest], Tail, [release(R?, U?, D?, K?)|Steps?]) :-
+    release_all(R?, Rest?, Tail?, Steps).
+release_all(_, [], Tail, Tail?).
+
+procedure give_one(Constant?, Lot?, Script).
+give_one(R, lot(U, D, K), [release(R?, U?, D?, K?)]).
