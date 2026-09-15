@@ -64,3 +64,7 @@ play_both(A?, B?, C?, D?) :- superapp_plays # play_both(A, B, C, D).
 imported procedure superapp_plays#play_reinvite(AppUiStream, AppUiStream).
 exported procedure play_reinvite(AppUiStream, AppUiStream).
 play_reinvite(A?, B?) :- superapp_plays # play_reinvite(A, B).
+
+imported procedure superapp_plays#play_sovereign(Stream(SvScreenContent), Stream(SvScreenContent)).
+exported procedure play_sovereign(Stream(SvScreenContent), Stream(SvScreenContent)).
+play_sovereign(A?, B?) :- superapp_plays # play_sovereign(A, B).

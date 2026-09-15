@@ -915,3 +915,77 @@ bob_reinvite_wait([], []).
 %% child-safe platform's command stream and is a different type.)
 procedure hold_person(UserInStream).
 hold_person(X?) :- true.
+
+%% =============================================================================
+%% play_sovereign: the denominated currencies mini-app (programs/sovereign/
+%% denominated, its artefact denominated.glpw beside this program) hosted by
+%% the super-app.  alice and bob install it with its two certifications, alice
+%% befriends bob and invites him, the handshake opens a root channel of the
+%% denominated protocol between their two executions, and each is activated by
+%% run/3 with its cards-and-answers channel and its conversations.
+%%
+%% What this play is for is the ACTIVATION, not the acts: run/3 admits the
+%% mini-app only if the entry's type identity in this scope is the one its
+%% module carries, and this scope's copy of the denominated channel is written
+%% by hand in ../self.glp.  So the play fences the copy: if a constructor of
+%% it drifts from Currencies' own, run/3 refuses the mini-app and the screens
+%% stay empty.  The acts over the conversation are the mini-app's own and are
+%% exercised in its Section N4, so no card is answered here.
+%% Expected: ScreenA = [opened(bob) | _], ScreenB = [opened(alice) | _],
+%% → suspended (both executions pend on their cards).
+%% =============================================================================
+exported procedure play_sovereign(Stream(SvScreenContent), Stream(SvScreenContent)).
+play_sovereign(ScreenA?, ScreenB?) :-
+    crossbar2(AliceNetOut?, BobNetOut?, AliceNetIn, BobNetIn),
+    load_file("denominated.glpw", C),
+    certified(C?, _, CSig),
+    new_channel(AppEndA, PersonEndA),
+    new_channel(AppEndB, PersonEndB),
+    agent # agent(alice, AliceIn?, AliceNetIn?, [user_output(AliceOut), net_output(AliceNetOut)]),
+    alice_sv_person(C?, CSig?, AppEndA?, AliceOut?, AliceIn),
+    sv_screen_of(PersonEndA?, ScreenA),
+    agent # agent(bob, BobIn?, BobNetIn?, [user_output(BobOut), net_output(BobNetOut)]),
+    bob_sv_person(C?, CSig?, AppEndB?, BobOut?, BobIn),
+    sv_screen_of(PersonEndB?, ScreenB).
+
+%% The person's end of the cards-and-answers channel, as screen_of/2 is for the
+%% currency: the screen messages read off the events, no card answered.
+procedure sv_screen_of(Channel(Stream(SvEvent), Stream(SvUserAnswer))?, Stream(SvScreenContent)).
+sv_screen_of(ch(Events, Answers?), Screen?) :-
+    sv_hold_answers(Answers),
+    sv_screen_events(Events?, Screen).
+
+procedure sv_hold_answers(Stream(SvUserAnswer)).
+sv_hold_answers(X?) :- true.
+
+procedure sv_screen_events(Stream(SvEvent)?, Stream(SvScreenContent)).
+sv_screen_events([msg(_, _, X) | Es], [X? | Screen?]) :- ground(X?) | sv_screen_events(Es?, Screen).
+sv_screen_events([card(_, _, _) | Es], Screen?) :- sv_screen_events(Es?, Screen).
+sv_screen_events([closed(_) | Es], Screen?) :- sv_screen_events(Es?, Screen).
+sv_screen_events([], []).
+
+procedure alice_sv_person(Content?, String?, Channel(Stream(SvUserAnswer), Stream(SvEvent))?, AgentToUserStream?, UserInStream).
+alice_sv_person(C, CSig, AppEnd, Outs,
+                [msg(person, alice, install_sovereign(denominated, C?, CSig?, AppEnd?)),
+                 msg(person, alice, connect(bob)) | Cmds?]) :-
+    alice_sv_run(Outs?, Cmds).
+
+procedure alice_sv_run(AgentToUserStream?, UserInStream).
+alice_sv_run([msg(agent, person, connected(bob)) | Outs],
+             [msg(person, alice, invite(denominated, bob)) | Cmds?]) :-
+    alice_sv_run(Outs?, Cmds).
+alice_sv_run([_ | Outs], Cmds?) :- otherwise | alice_sv_run(Outs?, Cmds).
+alice_sv_run([], []).
+
+procedure bob_sv_person(Content?, String?, Channel(Stream(SvUserAnswer), Stream(SvEvent))?, AgentToUserStream?, UserInStream).
+bob_sv_person(C, CSig, AppEnd, Outs,
+              [msg(person, bob, install_sovereign(denominated, C?, CSig?, AppEnd?)),
+               msg(person, bob, accept_invite(denominated, alice)) | Cmds?]) :-
+    bob_sv_run(Outs?, Cmds).
+
+procedure bob_sv_run(AgentToUserStream?, UserInStream).
+bob_sv_run([msg(agent, person, befriend(alice, Resp?)) | Outs],
+           [msg(person, bob, decision(yes, alice, response(Resp))) | Cmds?]) :-
+    bob_sv_run(Outs?, Cmds).
+bob_sv_run([_ | Outs], Cmds?) :- otherwise | bob_sv_run(Outs?, Cmds).
+bob_sv_run([], []).
