@@ -4305,8 +4305,9 @@ echo ""
 # deployed .vglp by the path it had before SGSG, Currencies and CSSN moved the
 # source with its .glp into the certified program of a mini-app, and vGLP
 # changed the four paths in test/vglp/program_compilation_test.dart, which is
-# what every one of the three entries said was owed.  All six deployed sources
-# parse.
+# what each of the three moving projects asked for --- CSSN's move carried two
+# sources and the other two one each, which is why four entries answered three
+# requests.  All eight deployed sources parse.
 KNOWN_RED=()
 
 echo "=== Section Q: Dart unit tests (whole tree) ==="

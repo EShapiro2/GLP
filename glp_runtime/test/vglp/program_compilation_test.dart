@@ -139,27 +139,33 @@ display respond *(Answer=yes, From?) : panel(inbox), label("Accept"), transient.
   });
 
   group('the deployed sources', () {
-    // SIX, and a list written from memory misses one: cssn/child_agent.vglp
-    // arrived on 2026-08-16, and coins_agent.vglp and bonds_agent.vglp on
-    // 2026-09-03.  Count them on disc --- `find programs -name "*.vglp"`,
-    // less the one-clause fixture of programs/vglp_tests, which load_test
-    // covers.  Four of the paths moved on 2026-09-08, each source going with
-    // its .glp into the certified program of a mini-app --- social/graph/core,
-    // coins/currency and cssn/childsafe --- since a lone .vglp is compiled by
-    // the loader and must stand beside its .glp.  They all PARSE as vGLP.
-    // coins/currency/coins_agent.vglp and bonds/bonds_agent.vglp also COMPILE
-    // and RUN --- Sections N2 and N3 of test/run_all_tests.sh load their
-    // emitted .glp and run the village market; the others do not yet compile,
-    // the edits being with their owners — social/graph and grassapp SGSG's,
-    // the two cssn sources CSSN's.  Each parse test becomes the compilation
-    // test as its source is repaired.
+    // EIGHT, and a list written from memory misses one: cssn/child_agent.vglp
+    // arrived on 2026-08-16, coins_agent.vglp and bonds_agent.vglp on
+    // 2026-09-03, social/graph/core/home.vglp on 2026-09-09 and
+    // sovereign/denominated/sovereign_agent.vglp on 2026-09-15.  Count them on
+    // disc --- `find programs -name "*.vglp"`, less the one-clause fixture of
+    // programs/vglp_tests, which load_test covers.  Four of the paths moved on
+    // 2026-09-08, each source going with its .glp into the certified program of
+    // a mini-app --- social/graph/core, coins/currency and cssn/childsafe ---
+    // since a lone .vglp is compiled by the loader and must stand beside its
+    // .glp.  They all PARSE as vGLP.  coins/currency/coins_agent.vglp,
+    // bonds/bonds_agent.vglp and sovereign/denominated/sovereign_agent.vglp
+    // also COMPILE and RUN --- Sections N2, N3 and N4 of test/run_all_tests.sh
+    // load their emitted .glp and run the village market; social/graph/core/
+    // home.vglp compiles, its home.glp being the compiler's output, and no
+    // section of the suite runs it.  The rest do not yet compile, the edits
+    // being with their owners — social/graph and grassapp SGSG's, the two cssn
+    // sources CSSN's.  Each parse test becomes the compilation test as its
+    // source is repaired.
     for (final path in [
       'social/graph/core/agent.vglp',
+      'social/graph/core/home.vglp',
       'grassapp/grassapp_agent.vglp',
       'cssn/childsafe/agent.vglp',
       'cssn/childsafe/child_agent.vglp',
       'coins/currency/coins_agent.vglp',
       'bonds/bonds_agent.vglp',
+      'sovereign/denominated/sovereign_agent.vglp',
     ]) {
       test('$path parses as vGLP', () {
         final file = File('$_programs/$path');
