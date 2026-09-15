@@ -2292,12 +2292,12 @@ echo ""
 # the Grassroots Currencies paper as a mini-app of the Grassroots Super-App.
 # programs/coins/currency is the certified program --- the agent
 # coins_agent.vglp, its canonical compilation coins_agent.glp (emitted by glpc
-# :emit; the .vglp beside it is skipped by the loader while the .glp stands)
-# and the mini-app entry coins/3 --- and programs/coins adds the six-agent
-# village market of the paper's Section 5, which stands in for the super-app
-# (the conversations) and the persons.  The run needs the reduction limit
-# raised, and ends about a minute after its last act, when the deadline timers
-# of the answered swap cards expire.
+# :emit; the .vglp beside it is skipped by the loader while the .glp stands),
+# the mini-app entry coins/3 and the mini-app's own two plays --- and
+# programs/coins adds the six-agent village market of the paper's Section 5,
+# which stands in for the super-app (the conversations) and the persons.  The
+# run needs the reduction limit raised, and ends about a minute after its last
+# act, when the deadline timers of the answered swap cards expire.
 # =============================================================================
 echo "=== Section N2: Coins program (Grassroots Currencies) ==="
 echo ""
@@ -2359,6 +2359,31 @@ check "Coins village: Diana's holdings" "tagged(diana, holdings(\[lot(bob, 24), 
 check "Coins village: Eve's holdings" "tagged(eve, holdings(\[lot(charlie, 4), lot(frank, 1), lot(alice, 2), lot(bob, 10)\]))" "$n2_run"
 check "Coins village: Frank's holdings" "tagged(frank, holdings(\[lot(diana, 7), lot(eve, 10), lot(frank, 5)\]))" "$n2_run"
 check "Coins village: five redemptions" "tagged(frank, redeemed(diana, frank))" "$n2_run"
+
+echo "--- The coins mini-app's own plays (play_mint, play_swap) ---"
+
+n2_pm=$("$REPL_RUN" <<HEREDOC
+$COINS/currency
+:limit 5000000
+play_mint(S).
+:quit
+HEREDOC
+2>&1)
+
+check_not "Coins mini-app play_mint: no failed goal" "ERROR" "$n2_pm"
+check "Coins mini-app play_mint: alice mints 3 of her own" "S = \[minted(3), holdings(\[lot(alice, 3)\])" "$n2_pm"
+
+n2_ps=$("$REPL_RUN" <<HEREDOC
+$COINS/currency
+:limit 5000000
+play_swap(A, B).
+:quit
+HEREDOC
+2>&1)
+
+check_not "Coins mini-app play_swap: no failed goal" "ERROR" "$n2_ps"
+check "Coins mini-app play_swap: the proposer's screen, her conversation opened and the swap done" "A = \[opened(bob), minted(2), holdings(\[lot(alice, 2)\]), holdings(\[\]), swap_done(bob), holdings(\[lot(bob, 2)\])" "$n2_ps"
+check "Coins mini-app play_swap: the counterparty's screen" "B = \[opened(alice), minted(2), holdings(\[lot(bob, 2)\]), swap_done(alice), holdings(\[lot(alice, 2)\])" "$n2_ps"
 echo ""
 
 # =============================================================================
@@ -2634,19 +2659,41 @@ echo ""
 # grassroots bonds with the denomination added, as the act schemas of
 # "Sovereign Grassroots Currencies" are the bonds schemas with the denomination
 # added --- cent(u, f, d) carrying f as its middle argument, every schema
-# carrying the one denomination variable f.  Two runs: the village market of
-# the bonds paper denominated in one fiat currency, which must end in exactly
-# the holdings of the undenominated run with usd in every lot; and the same
-# village with the central bank as an eighth party, which mints its own
-# sovereign grassroots coins, opens a mutual credit line with the community
-# bank by a swap of coins for coins, and settles a presentation of its own coin
-# in the fiat currency itself.  As for N2 and N3 the runs need the reduction
-# limit raised and end about a minute after their last act.
+# carrying the one denomination variable f --- as a mini-app of the Grassroots
+# Super-App.  programs/sovereign/denominated is the certified program --- the
+# agent sovereign_agent.vglp, its canonical compilation sovereign_agent.glp
+# (emitted by glpc :emit; the .vglp beside it is skipped by the loader while
+# the .glp stands), the mini-app entry sovereign/3, the scripted person with
+# the escrow programs it answers by, and the mini-app's own two plays --- and
+# programs/sovereign adds the plays that stand in for the super-app: the
+# village market of the bonds paper denominated in one fiat currency, which
+# must end in exactly the holdings of the undenominated run with usd in every
+# lot; the same village with the central bank as an eighth party, which mints
+# its own sovereign grassroots coins, opens a mutual credit line with the
+# community bank by a swap of coins for coins, and settles a presentation of
+# its own coin in the fiat currency itself; and the term credit line of the
+# bonds paper's Section 5.  As for N2 and N3 the runs need the reduction limit
+# raised and end about a minute after their last act.
 # =============================================================================
 echo "=== Section N4: Denominated program (Sovereign Grassroots Currencies) ==="
 echo ""
 
 SOV="$GLP_DIR/programs/sovereign"
+SOVD="$SOV/denominated"
+
+# The certified program: loads, type-checks, and carries the compiler's
+# certificate, since no entry point reaches the network or the person.
+n4_core=$("$REPL_RUN" <<HEREDOC
+$SOVD
+self_module(M), decompose_module(M?, K, S, C).
+:quit
+HEREDOC
+2>&1)
+
+check "Denominated mini-app loads as a program" "Loaded program" "$n4_core"
+check_not "Denominated mini-app no type errors" "Type checking failed" "$n4_core"
+check_not "Denominated mini-app is certified" "CERTIFICATE REFUSED" "$n4_core"
+check "Denominated mini-app: its certificate carries the compiler's key" "K = [0-9a-f]\{64\}" "$n4_core"
 
 n4_load=$("$REPL_RUN" <<HEREDOC
 $SOV
@@ -2659,12 +2706,12 @@ check_not "Denominated program no type errors" "Type checking failed" "$n4_load"
 
 n4_emit=$("$REPL_RUN" <<HEREDOC
 $SOV
-:emit $SOV
+:emit $SOVD
 :quit
 HEREDOC
 2>&1)
-check "Denominated program: :emit re-emits sovereign_agent.glp" "wrote $SOV/sovereign_agent.glp" "$n4_emit"
-n4_emit_diff=$(cd "$GLP_DIR" && git diff --stat -- programs/sovereign/sovereign_agent.glp)
+check "Denominated program: :emit re-emits sovereign_agent.glp" "wrote $SOVD/sovereign_agent.glp" "$n4_emit"
+n4_emit_diff=$(cd "$GLP_DIR" && git diff --stat -- programs/sovereign/denominated/sovereign_agent.glp)
 check_not "Denominated program: committed sovereign_agent.glp is the compiler's output" "sovereign_agent.glp" "$n4_emit_diff"
 
 echo "--- The denominated village market (village) ---"
@@ -2679,6 +2726,7 @@ HEREDOC
 
 check "Denominated village: no runtime error" "→ suspended" "$n4_run"
 check_not "Denominated village: no failed goal" "ERROR" "$n4_run"
+check "Denominated village: the conversations open" "tagged(frank, opened(escrow))" "$n4_run"
 check "Denominated village: Alice's holdings, denominated" "tagged(alice, holdings(\[lot(bob, usd, 0, 5), lot(alice, usd, 0, 8), lot(charlie, usd, 0, 15), lot(frank, usd, 0, 4)\]))" "$n4_run"
 check "Denominated village: Bob's holdings, denominated" "tagged(bob, holdings(\[lot(alice, usd, 0, 10), lot(diana, usd, 0, 20)\]))" "$n4_run"
 check "Denominated village: Charlie's holdings, denominated" "tagged(charlie, holdings(\[lot(alice, usd, 0, 10), lot(eve, usd, 0, 10), lot(charlie, usd, 0, 6)\]))" "$n4_run"
@@ -2712,6 +2760,51 @@ check "Sovereign market: the sovereign coin redeemed into fiat is back with its 
 check "Sovereign market: the community bank's holdings after the line and the redemption" "tagged(diana, holdings(\[lot(cb, usd, 0, 9), lot(bob, usd, 25, 24), lot(frank, usd, 28, 13), lot(diana, usd, 0, 9)\]))" "$n4_sov"
 check "Sovereign market: the household's holdings, one community-bank coin spent up the chain" "tagged(frank, holdings(\[lot(diana, usd, 0, 6), lot(eve, usd, 0, 10), lot(frank, usd, 28, 5), lot(frank, usd, 0, 5)\]))" "$n4_sov"
 check "Sovereign market: the four parties outside the sovereign layer are unmoved" "tagged(eve, holdings(\[lot(charlie, usd, 0, 4), lot(frank, usd, 0, 1), lot(alice, usd, 0, 2), lot(bob, usd, 0, 10)\]))" "$n4_sov"
+
+echo "--- The denominated credit line (credit_line), Proposition prop:credit-line ---"
+
+n4_cl=$("$REPL_RUN" <<HEREDOC
+$SOV
+:limit 50000000
+credit_line.
+:quit
+HEREDOC
+2>&1)
+
+check "Denominated credit line: no runtime error" "→ suspended" "$n4_cl"
+check_not "Denominated credit line: no failed goal" "ERROR" "$n4_cl"
+check "Denominated credit line: establishment, the escrow agent holds the limit" "tagged(escrow, holdings(\[lot(alice, usd, 0, 20)\]))" "$n4_cl"
+check "Denominated credit line: the draw is a packaged exchange, both lots held at once" "tagged(escrow, holdings(\[lot(alice, usd, 0, 20), lot(bob, usd, 25, 8), lot(bob, usd, 20, 2)\]))" "$n4_cl"
+check "Denominated credit line: drawn 8, the escrow agent holds the undrawn coins" "tagged(escrow, holdings(\[lot(alice, usd, 0, 12)\]))" "$n4_cl"
+check "Denominated credit line: the borrower holds the coins lent" "tagged(bob, holdings(\[lot(alice, usd, 0, 8)\]))" "$n4_cl"
+check "Denominated credit line: at expiry the undrawn coins return to the lender" "tagged(alice, received_transfer(return, escrow, \[lot(alice, usd, 0, 20)\]))" "$n4_cl"
+check "Denominated credit line: at expiry with nothing drawn the lender holds its coins and no principal bond" "tagged(alice, holdings(\[lot(bob, usd, 20, 2), lot(alice, usd, 0, 20)\]))" "$n4_cl"
+check "Denominated credit line: the escrow agent holds nothing at the end" "tagged(escrow, holdings(\[\]))" "$n4_cl"
+
+echo "--- The denominated mini-app's own plays (play_mint, play_swap) ---"
+
+n4_pm=$("$REPL_RUN" <<HEREDOC
+$SOVD
+:limit 5000000
+play_mint(S).
+:quit
+HEREDOC
+2>&1)
+
+check_not "Denominated mini-app play_mint: no failed goal" "ERROR" "$n4_pm"
+check "Denominated mini-app play_mint: alice mints 3 of her own" "S = \[minted(3, 0), holdings(\[lot(alice, usd, 0, 3)\])" "$n4_pm"
+
+n4_ps=$("$REPL_RUN" <<HEREDOC
+$SOVD
+:limit 5000000
+play_swap(A, B).
+:quit
+HEREDOC
+2>&1)
+
+check_not "Denominated mini-app play_swap: no failed goal" "ERROR" "$n4_ps"
+check "Denominated mini-app play_swap: the proposer's screen, her conversation opened and the swap done" "A = \[opened(bob), minted(2, 0), holdings(\[lot(alice, usd, 0, 2)\]), holdings(\[\]), swap_done(bob), holdings(\[lot(bob, usd, 0, 2)\])" "$n4_ps"
+check "Denominated mini-app play_swap: the counterparty's screen" "B = \[opened(alice), minted(2, 0), holdings(\[lot(bob, usd, 0, 2)\]), swap_done(alice), holdings(\[lot(alice, usd, 0, 2)\])" "$n4_ps"
 echo ""
 
 # =============================================================================

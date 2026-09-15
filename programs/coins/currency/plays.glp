@@ -6,13 +6,6 @@
 %% obtain; the persons are scripted (person.glp), and each play returns their
 %% screens.  A run does not end --- the agent's request clauses pend
 %% perpetually --- so a play's result is read off a partial stream.
-%%
-%% Both plays FAIL on the tree of 2026-09-08 (GLP ac516779 and after): the
-%% module run/3 activates resolves no root-scope body procedure, and the
-%% compiled agent's send/3 (posting an ask to its mediator) and adopt's merge/3
-%% fail with "no procedure for goal", though the same goals run when coins/3
-%% is called directly (../village.glp).  Reported to IGLP (IGLP_inbox.md,
-%% 2026-09-08); the plays enter Section N2 of the suite when they run.
 
 imported procedure person#person(Constant?, Stream(Event)?, Stream(UserAnswer), Script?, Stream(ScreenContent)).
 

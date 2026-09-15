@@ -4,11 +4,19 @@
 %% "Grassroots Bonds: Financing by the People, for the People" (Section 3),
 %% derived from the transactions of its Section 3.4, Definition "The
 %% Transactions of Grassroots Bonds".  It extends the coins program
-%% (programs/coins) by what dates add.  This file holds the types shared by the
-%% agent (sovereign_agent.vglp, compiled by the vGLP canonical compilation into
-%% sovereign_agent.glp beside it), the escrow programs (escrow.glp) and the plays
-%% (village.glp, credit_line.glp), and the helpers over holdings, dates and
-%% channels that the agent calls.
+%% (programs/coins) by what dates add.  It runs as a mini-app of the Grassroots
+%% Super-App: denominated/ is the certified program --- the agent
+%% (denominated/sovereign_agent.vglp, compiled by the vGLP canonical
+%% compilation into denominated/sovereign_agent.glp beside it), the mini-app
+%% entry sovereign/3 (denominated/miniapp.glp), a scripted person
+%% (denominated/person.glp) with the escrow programs it answers by
+%% (denominated/escrow.glp), and the plays that activate the mini-app by run/3
+%% (denominated/plays.glp) --- and this directory adds the plays that stand in
+%% for the super-app: the village market of the bonds paper denominated in one
+%% fiat currency, the same market with the central bank (village.glp), and the
+%% term credit line (credit_line.glp).  This file holds the types shared by all
+%% of them, and the helpers over holdings, dates and conversations that the
+%% agent calls.
 %%
 %% A bond is bond(Issuer, Denomination, Maturity, Serial): the atom
 %% cent(u, f, d) of the act schemas, the denomination its middle argument, with
@@ -59,17 +67,11 @@ PeerContent ::= pay(Stream(Bond), PayResponse?)
 PeerMsg     ::= msg(Constant, Constant, PeerContent).
 PeerChannel ::= ch(Stream(PeerMsg), Stream(PeerMsg)?).
 
-%% First contact.  An act sent to a party the sender has no channel to carries
-%% the receiver's end of a fresh channel, on which the two transact thereafter.
-NetCall   ::= call(Constant, PeerContent, PeerChannel).
-NetOutMsg ::= msg(Constant, NetCall).
-NetInMsg  ::= msg(Constant, NetCall)
-            ; msg(Constant, Constant, PeerContent).
-
-%% A channel held for a swap or a transfer proposed at first contact ---
-%% adopted when it is accepted, closed when it is declined --- or linked, an
-%% established channel.
-Link ::= link(PeerChannel) ; linked.
+%% What the social graph hands the mini-app on its channel to the social graph
+%% (Grassroots Social Graph paper, Section 3): at each invitation, one end of
+%% the root channel of a conversation with a friend's execution of this
+%% program.  Two agents transact over that channel and over nothing else.
+Conversation ::= conversation(Constant, PeerChannel).
 
 %% Whether a bond was found in the holdings.
 Found ::= found(Bond) ; not_found.
@@ -80,18 +82,17 @@ Found ::= found(Bond) ; not_found.
 %% which is performed OUTSIDE the operations of the currency.
 Wanted ::= in_kind ; in_fiat.
 
-%% The agent's outputs: the screen, the network, and a channel per
-%% counterparty, keyed by its name.  The routers send_user, send_net,
-%% send_friend and add_friend_output are those of lib/routing, exposed from the
-%% root scope.
+%% The agent's outputs: the screen, and a channel per counterparty, keyed by
+%% its name.  The routers send_user, send_friend and add_friend_output are
+%% those of social/graph/routing, exposed from the root scope.
 OutputEntry ::= user_output(Stream(ScreenMsg)?)
-              ; net_output(Stream(NetOutMsg)?)
               ; friend_output(Constant, Stream(PeerMsg)?).
 
 %% The screen: the holdings, tallied by issuer and maturity, after every change
 %% of them; the date after every advance; each warranty as it is recorded; and
 %% what each act came to.
 ScreenContent ::= holdings(Stream(Lot))
+                ; opened(Constant)
                 ; date_advanced(Integer)
                 ; warranty(Constant, Integer)
                 ; minted(Integer, Integer)
@@ -116,25 +117,26 @@ ScreenContent ::= holdings(Stream(Lot))
                 ; declined_transfer(Kind, Constant)
                 ; lacking(Constant, Integer, Integer)
                 ; fiat_paid(Constant, Integer)
-                ; fiat_received(Constant, Integer).
+                ; fiat_received(Constant, Integer)
+                ; no_conversation(Constant).
 ScreenMsg ::= msg(Constant, Constant, ScreenContent).
 
 %% The agent's own input: the answers its responders inject, and the results
 %% of the acts it proposed.
-UserInMsg ::= accept_swap(Constant, Lot, Stream(Bond), SwapResponse?, Link)
-            ; decline_swap(Constant, Stream(Bond), SwapResponse?, Link)
-            ; swap_accepted(Constant, Stream(Bond), Link)
-            ; swap_declined_by(Constant, Stream(Bond), Link)
+UserInMsg ::= accept_swap(Constant, Lot, Stream(Bond), SwapResponse?)
+            ; decline_swap(Constant, Stream(Bond), SwapResponse?)
+            ; swap_accepted(Constant, Stream(Bond))
+            ; swap_declined_by(Constant, Stream(Bond))
             ; pay_taken_by(Constant, Integer, Integer)
             ; pay_returned_by(Constant, Stream(Bond))
             ; redeem_given(Constant, Bond, Integer)
             ; redeem_menu_from(Constant, Bond, Stream(Lot))
             ; redeem_declined_by(Constant, Bond)
             ; redeem_fiat_from(Constant, Integer)
-            ; accept_transfer(Kind, Constant, Stream(Bond), TransferResponse?, Link)
-            ; decline_transfer(Kind, Constant, Stream(Bond), TransferResponse?, Link)
-            ; transfer_accepted(Kind, Constant, Link)
-            ; transfer_declined_by(Kind, Constant, Stream(Bond), Link).
+            ; accept_transfer(Kind, Constant, Stream(Bond), TransferResponse?)
+            ; decline_transfer(Kind, Constant, Stream(Bond), TransferResponse?)
+            ; transfer_accepted(Kind, Constant)
+            ; transfer_declined_by(Kind, Constant, Stream(Bond)).
 
 %% The offer a swap responder carries: the proposer, the lot it wants, the
 %% bonds it offers.  The offer a transfer responder carries: the kind, the
@@ -145,9 +147,9 @@ TransferOffer ::= offer_transfer(Kind, Constant, Stream(Bond)).
 %% =============================================================================
 %% The vocabulary of the compiled agent's mediator, at this program's answer and
 %% context types, so that the plays can type the goals they spawn.  These are
-%% the types the canonical compilation emits into sovereign_agent.glp (programs/
-%% vglp/self.glp instantiated at Answer and Context); the compiled module's own
-%% definitions shadow these within it, and the two must agree.
+%% the types the canonical compilation emits into denominated/sovereign_agent.glp
+%% (programs/vglp/self.glp instantiated at Answer and Context); the compiled
+%% module's own definitions shadow these within it, and the two must agree.
 %% =============================================================================
 
 ReqId ::= req(Integer).
@@ -332,10 +334,10 @@ add_warranty(Q, T, [W|Rest], [W?|Rest1?]) :-
 add_warranty(Q, T, [], [dated(Q?, T?)]).
 
 %% =============================================================================
-%% Channels to counterparties
+%% Conversations with counterparties
 %% =============================================================================
 
-%% Whether a channel to Q is among the outputs.
+%% Whether a conversation with Q is open: Q's output entry is among the outputs.
 procedure has_peer(Constant?, Stream(OutputEntry)?, Stream(OutputEntry), Constant).
 has_peer(Q, [friend_output(K, Out?)|Rest], [friend_output(K?, Out)|Rest?], yes) :-
     Q? =?= K? | true.
@@ -344,34 +346,26 @@ has_peer(Q, [E|Rest], [E?|Rest1?], Known?) :-
     has_peer(Q?, Rest?, Rest1, Known).
 has_peer(_, [], [], no).
 
-%% Adopt a channel to Q: its write side becomes Q's output entry and its read
-%% side joins the network input.  An established link adopts nothing.
-procedure adopt(Link?, Constant?, Stream(OutputEntry)?, Stream(OutputEntry), Stream(NetInMsg)?, Stream(NetInMsg)).
-adopt(link(ch(In, Out?)), Q, Outs, Outs1?, NetIn, NetIn1?) :-
+%% Adopt the channel of a conversation with Q: its write side becomes Q's
+%% output entry and its read side joins the input from counterparties.
+procedure adopt(Constant?, PeerChannel?, Stream(OutputEntry)?, Stream(OutputEntry), Stream(PeerMsg)?, Stream(PeerMsg)).
+adopt(Q, ch(In, Out?), Outs, Outs1?, PeerIn, PeerIn1?) :-
     ground(Q?) |
     add_friend_output(Q?, Out, Outs?, Outs1),
-    merge(NetIn?, In?, NetIn1).
-adopt(linked, _, Outs, Outs?, NetIn, NetIn?).
-
-%% A channel held for a declined swap or transfer: its write side closes.  An
-%% established link stays.
-procedure drop_link(Link?).
-drop_link(link(ch(_, []))).
-drop_link(linked).
+    merge(PeerIn?, In?, PeerIn1).
 
 %% =============================================================================
 %% Results injected into the agent's input
 %% =============================================================================
 
-%% The counterparty's answer to a proposed swap, when it comes, with the link
-%% the proposal was made on.
-procedure inject_swap_result(SwapResponse?, Constant?, Link?, Stream(UserInMsg)?, Stream(UserInMsg)).
-inject_swap_result(swap_accept(Bonds), Q, Link, Ys, [swap_accepted(Q?, Bonds?, Link?)|Ys?]) :-
+%% The counterparty's answer to a proposed swap, when it comes.
+procedure inject_swap_result(SwapResponse?, Constant?, Stream(UserInMsg)?, Stream(UserInMsg)).
+inject_swap_result(swap_accept(Bonds), Q, Ys, [swap_accepted(Q?, Bonds?)|Ys?]) :-
     ground(Q?), ground(Bonds?) | true.
-inject_swap_result(swap_decline(Bonds), Q, Link, Ys, [swap_declined_by(Q?, Bonds?, Link?)|Ys?]) :-
+inject_swap_result(swap_decline(Bonds), Q, Ys, [swap_declined_by(Q?, Bonds?)|Ys?]) :-
     ground(Q?), ground(Bonds?) | true.
-inject_swap_result(R, Q, Link, [Y|Ys], [Y?|Ys1?]) :-
-    inject_swap_result(R?, Q?, Link?, Ys?, Ys1).
+inject_swap_result(R, Q, [Y|Ys], [Y?|Ys1?]) :-
+    inject_swap_result(R?, Q?, Ys?, Ys1).
 
 %% The payee's answer to a payment of K bonds, when it comes.
 procedure inject_pay_result(PayResponse?, Constant?, Integer?, Stream(UserInMsg)?, Stream(UserInMsg)).
@@ -395,31 +389,30 @@ inject_redeem_result(redeem_fiat(U), Q, Ys, [redeem_fiat_from(Q?, U?)|Ys?]) :-
 inject_redeem_result(R, Q, [Y|Ys], [Y?|Ys1?]) :-
     inject_redeem_result(R?, Q?, Ys?, Ys1).
 
-%% The receiver's answer to a proposed transfer, when it comes, with the link
-%% the proposal was made on.
-procedure inject_transfer_result(TransferResponse?, Kind?, Constant?, Link?, Stream(UserInMsg)?, Stream(UserInMsg)).
-inject_transfer_result(transfer_accept, Kind, Q, Link, Ys, [transfer_accepted(Kind?, Q?, Link?)|Ys?]) :-
+%% The receiver's answer to a proposed transfer, when it comes.
+procedure inject_transfer_result(TransferResponse?, Kind?, Constant?, Stream(UserInMsg)?, Stream(UserInMsg)).
+inject_transfer_result(transfer_accept, Kind, Q, Ys, [transfer_accepted(Kind?, Q?)|Ys?]) :-
     ground(Kind?), ground(Q?) | true.
-inject_transfer_result(transfer_decline(Bonds), Kind, Q, Link, Ys, [transfer_declined_by(Kind?, Q?, Bonds?, Link?)|Ys?]) :-
+inject_transfer_result(transfer_decline(Bonds), Kind, Q, Ys, [transfer_declined_by(Kind?, Q?, Bonds?)|Ys?]) :-
     ground(Kind?), ground(Q?), ground(Bonds?) | true.
-inject_transfer_result(R, Kind, Q, Link, [Y|Ys], [Y?|Ys1?]) :-
-    inject_transfer_result(R?, Kind?, Q?, Link?, Ys?, Ys1).
+inject_transfer_result(R, Kind, Q, [Y|Ys], [Y?|Ys1?]) :-
+    inject_transfer_result(R?, Kind?, Q?, Ys?, Ys1).
 
 %% The two bodies of the swap responder's accept clause: the acceptance, and
 %% the refusal the machine gives for a person who has not answered.  Each hands
-%% the agent the offer with the response writer and the link.
-procedure accept_answer(Constant?, Lot?, Stream(Bond)?, SwapResponse, Link?, Stream(UserInMsg)).
-accept_answer(From, Want, Offered, Resp?, Link, [accept_swap(From?, Want?, Offered?, Resp, Link?)]).
+%% the agent the offer with the response writer.
+procedure accept_answer(Constant?, Lot?, Stream(Bond)?, SwapResponse, Stream(UserInMsg)).
+accept_answer(From, Want, Offered, Resp?, [accept_swap(From?, Want?, Offered?, Resp)]).
 
-procedure decline_answer(Constant?, Stream(Bond)?, SwapResponse, Link?, Stream(UserInMsg)).
-decline_answer(From, Offered, Resp?, Link, [decline_swap(From?, Offered?, Resp, Link?)]).
+procedure decline_answer(Constant?, Stream(Bond)?, SwapResponse, Stream(UserInMsg)).
+decline_answer(From, Offered, Resp?, [decline_swap(From?, Offered?, Resp)]).
 
 %% The same for the transfer responder.
-procedure accept_transfer_answer(Kind?, Constant?, Stream(Bond)?, TransferResponse, Link?, Stream(UserInMsg)).
-accept_transfer_answer(Kind, From, Bonds, Resp?, Link, [accept_transfer(Kind?, From?, Bonds?, Resp, Link?)]).
+procedure accept_transfer_answer(Kind?, Constant?, Stream(Bond)?, TransferResponse, Stream(UserInMsg)).
+accept_transfer_answer(Kind, From, Bonds, Resp?, [accept_transfer(Kind?, From?, Bonds?, Resp)]).
 
-procedure decline_transfer_answer(Kind?, Constant?, Stream(Bond)?, TransferResponse, Link?, Stream(UserInMsg)).
-decline_transfer_answer(Kind, From, Bonds, Resp?, Link, [decline_transfer(Kind?, From?, Bonds?, Resp, Link?)]).
+procedure decline_transfer_answer(Kind?, Constant?, Stream(Bond)?, TransferResponse, Stream(UserInMsg)).
+decline_transfer_answer(Kind, From, Bonds, Resp?, [decline_transfer(Kind?, From?, Bonds?, Resp)]).
 
 %% Binding a declined swap's response: the offered bonds go back.
 procedure decline(SwapResponse, Stream(Bond)?).

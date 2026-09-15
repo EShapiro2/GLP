@@ -1,0 +1,47 @@
+%% miniapp.glp --- the denominated program as a mini-app of the Grassroots
+%% Super-App (Grassroots Social Graph paper, Section 3).
+%%
+%% sovereign(Id, Ui, Convs) is the goal the super-app activates by run/3, with
+%% exactly its two channels.  Ui is the channel to the super-app user
+%% interface: on it the mini-app shows the cards of its mediator and the
+%% screen of its agent, and receives the person's answers to the cards.  Convs
+%% is the channel to the social graph, on which the social graph hands the
+%% mini-app, at each invitation, one end of the root channel of a conversation
+%% with the execution of this program at a friend.  The mini-app holds
+%% nothing else --- no network entry, and no call to a predicate that reaches
+%% the network or the person --- so the program is certified.
+%%
+%% sovereign/4 is the same with the agent's calendar, a stream of dates, which
+%% on a device the clock writes and which the headless plays write themselves
+%% (../village.glp, ../credit_line.glp, plays.glp).  The super-app grants the
+%% two channels and no clock, so sovereign/3 gives the agent an empty
+%% calendar: its date stands at 0 and every bond of maturity 0 is a coin.
+
+imported procedure sovereign_agent#agent(Channel(Closed, Stream(AgentMsg))?, Constant?, Stream(UserInMsg)?, Stream(PeerMsg)?, Stream(Conversation)?, Stream(Integer)?, Stream(OutputEntry)?, Stream(Bond)?, Integer?, Stream(Warranty)?, Integer?, Slot(Reply_agent_1)?, Slot(Reply_agent_2)?, Slot(Reply_agent_3)?, Slot(Reply_agent_4)?, Slot(Reply_agent_5)?, Slot(Reply_agent_6)?, Slot(Reply_agent_7)?).
+imported procedure sovereign_agent#med(Channel(Stream(UserAnswer), Stream(Card))?, Channel(Stream(AgentMsg), Closed)?, TimerStream?, PendingList?, Integer?).
+
+%% The mini-app the super-app activates: no clock, so no date ever advances.
+exported procedure sovereign(Constant?, Channel(Stream(UserAnswer), Stream(Event))?, Stream(Conversation)?).
+sovereign(Id, Ui, Convs) :- sovereign(Id?, Ui?, Convs?, []).
+
+%% The agent with its mediator: the agent starts with no holdings, date 0, no
+%% warranty, serial 1, no conversation and its screen; the mediator's cards and
+%% the screen go to the person as one stream of events.
+exported procedure sovereign(Constant?, Channel(Stream(UserAnswer), Stream(Event))?, Stream(Conversation)?, Stream(Integer)?).
+sovereign(Id, ch(Answers, Events?), Convs, Cal) :-
+    ground(Id?) |
+    sovereign_agent # agent(ch([], Asks), Id?, [], [], Convs?, Cal?, [user_output(Screen)], [], 0, [], 1,
+                        none, none, none, none, none, none, none),
+    sovereign_agent # med(ch(Answers?, Cards), ch(Asks?, []), [], [], 0),
+    merge_events(Cards?, Screen?, Events).
+
+%% The cards and the screen, as one stream of events.  A pair carries one type,
+%% so each element is rebuilt at the event type.
+procedure merge_events(Stream(Card)?, Stream(ScreenMsg)?, Stream(Event)).
+merge_events([card(C, X, R)|Cs], Ms, [card(C?, X?, R?)|Es?]) :- merge_events(Cs?, Ms?, Es).
+merge_events([closed(R)|Cs], Ms, [closed(R?)|Es?]) :- merge_events(Cs?, Ms?, Es).
+merge_events(Cs, [msg(A, P, M)|Ms], [msg(A?, P?, M?)|Es?]) :- merge_events(Cs?, Ms?, Es).
+merge_events([], [msg(A, P, M)|Ms], [msg(A?, P?, M?)|Es?]) :- merge_events([], Ms?, Es).
+merge_events([card(C, X, R)|Cs], [], [card(C?, X?, R?)|Es?]) :- merge_events(Cs?, [], Es).
+merge_events([closed(R)|Cs], [], [closed(R?)|Es?]) :- merge_events(Cs?, [], Es).
+merge_events([], [], []).

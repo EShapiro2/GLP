@@ -7,9 +7,9 @@
 %% agreement provides for, and wills a release or a return when the agreed
 %% condition is met or fails --- for a date-based condition, by e's own date.
 %% In the plays the escrow program takes the place of e's person: the scripted
-%% person of village.glp asks it, at every transfer card, whether to accept,
-%% and, at every screen message, what acts it wills, which the person then
-%% performs on e's release and return forms as any person would.
+%% person (person.glp) asks it, at every transfer card, whether to accept, and,
+%% at every screen message, what acts it wills, which the person then performs
+%% on e's release and return forms as any person would.
 %%
 %% Two agreements.  A date-based escrow: the depositor deposits the agreed lot,
 %% and e releases it to the beneficiary once e's date has reached the release
