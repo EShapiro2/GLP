@@ -47,8 +47,8 @@ respond_swap(offer(From, Want, Offered), Resp?, [decline_swap(From?, Offered?, R
     ground(From?), ground(Want?), ground(Offered?) | true.
 
 %% Accept: the agent gives the wanted coins and takes the offered ones,
-%% declining itself when it does not hold the wanted coins.  Unanswered, the
-%% machine declines for the person.
+%% declining itself when it does not hold the wanted coins.  The else-branch is
+%% the person's decline.
 *(yes, From?, Want?, Offered?)
 respond_swap(offer(From, Want, Offered), Resp?, Ans?) :-
     ground(From?), ground(Want?), ground(Offered?) |

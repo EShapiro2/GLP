@@ -71,8 +71,8 @@ respond_swap(offer(From, Want, Offered), Resp?, [decline_swap(From?, Offered?, R
     ground(From?), ground(Want?), ground(Offered?) | true.
 
 %% Accept: the agent gives the wanted bonds and takes the offered ones,
-%% declining itself when it does not hold the wanted bonds.  Unanswered, the
-%% machine declines for the person.
+%% declining itself when it does not hold the wanted bonds.  The else-branch is
+%% the person's decline.
 *(yes, From?, Want?, Offered?)
 respond_swap(offer(From, Want, Offered), Resp?, Ans?) :-
     ground(From?), ground(Want?), ground(Offered?) |
@@ -92,8 +92,7 @@ procedure respond_transfer(TransferOffer?, TransferResponse, Stream(UserInMsg)).
 respond_transfer(offer_transfer(Kind, From, Bonds), Resp?, [decline_transfer(Kind?, From?, Bonds?, Resp)]) :-
     ground(Kind?), ground(From?), ground(Bonds?) | true.
 
-%% Accept: the bonds are taken.  Unanswered, the machine declines for the
-%% person.
+%% Accept: the bonds are taken.  The else-branch is the person's decline.
 *(yes, Kind?, From?, Bonds?)
 respond_transfer(offer_transfer(Kind, From, Bonds), Resp?, Ans?) :-
     ground(Kind?), ground(From?), ground(Bonds?) |

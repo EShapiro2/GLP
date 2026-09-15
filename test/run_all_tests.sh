@@ -2296,8 +2296,7 @@ echo ""
 # the mini-app entry coins/3 and the mini-app's own two plays --- and
 # programs/coins adds the six-agent village market of the paper's Section 5,
 # which stands in for the super-app (the conversations) and the persons.  The
-# run needs the reduction limit raised, and ends about a minute after its last
-# act, when the deadline timers of the answered swap cards expire.
+# run needs the reduction limit raised.
 # =============================================================================
 echo "=== Section N2: Coins program (Grassroots Currencies) ==="
 echo ""
@@ -2391,7 +2390,7 @@ echo ""
 # Grassroots Bonds paper, its canonical compilation bonds_agent.glp (emitted by
 # glpc :emit), the escrow programs, the seven-party village market of the
 # paper's Section 7, and the credit line of its Section 5.  As for N2 the runs
-# need the reduction limit raised and end about a minute after their last act.
+# need the reduction limit raised.
 # =============================================================================
 echo "=== Section N3: Bonds program (Grassroots Bonds) ==="
 echo ""
@@ -2673,7 +2672,7 @@ echo ""
 # community bank by a swap of coins for coins, and settles a presentation of
 # its own coin in the fiat currency itself; and the term credit line of the
 # bonds paper's Section 5.  As for N2 and N3 the runs need the reduction limit
-# raised and end about a minute after their last act.
+# raised.
 # =============================================================================
 echo "=== Section N4: Denominated program (Sovereign Grassroots Currencies) ==="
 echo ""
@@ -4202,6 +4201,31 @@ check "SG registry: the self-ending mini-app's artefact is certified" "endapp.gl
 check "SG registry: alice's execution ends of its own accord" "A = \[opened(bob), greeted(bob)\]" "$sg_reinvite"
 check "SG registry: the entry returns to idle and the second invitation is activated afresh" "B = \[opened(alice), greeted(alice), opened(alice), greeted(alice) | " "$sg_reinvite"
 check_not "SG registry no failed play" "→ failed" "$sg_reinvite"
+
+# The denominated currencies mini-app (programs/sovereign/denominated, Currencies'
+# own) hosted by the super-app: the fourth deliver/10 pair.  The super-app hosts
+# each mini-app by name --- its own end constructor, its own pair of registry
+# states, and its own structural copy of the mini-app's channel type in
+# social/graph/self.glp, since find_type/2 resolves the entry's declaration in
+# the caller's scope.  This play fences that copy rather than the acts, which
+# are the mini-app's own and are exercised in Section N4: run/3 admits the
+# mini-app only if the identity matches, so a constructor that drifts from
+# Currencies' own refuses it outright and both screens stay unbound.  Measured
+# on 2026-09-15 by dropping the maturity from redeem in the super-app's copy:
+# "[ABORT] _run/3: type identity mismatch for sovereign/3 in module denominated"
+# and the play failed.  Its own session, as the mini-app plays above are.
+sg_sovereign=$("$REPL_RUN" <<HEREDOC
+:artefact $GLP_DIR/programs/sovereign/denominated $SG_CORE
+$SG_CORE
+:limit 5000000
+play_sovereign(A, B).
+:quit
+HEREDOC
+2>&1)
+check "SG denominated: the mini-app's artefact is certified" "denominated.glpw --- certified under" "$sg_sovereign"
+check "SG denominated: run/3 activates it at alice and the conversation opens" "A = \[opened(bob) | " "$sg_sovereign"
+check "SG denominated: and at bob" "B = \[opened(alice) | " "$sg_sovereign"
+check_not "SG denominated no failed play" "→ failed" "$sg_sovereign"
 
 # The currency on two smartphones (paper Section 7): the same super-app, two
 # isolates with their own keys, hosting Currencies' mini-app from its certified
