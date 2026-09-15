@@ -469,3 +469,31 @@ fixed_payment :- loans # fixed_payment.
 imported procedure loans#interest_rate_swap.
 exported procedure interest_rate_swap.
 interest_rate_swap :- loans # interest_rate_swap.
+
+imported procedure options#option_exercised.
+exported procedure option_exercised.
+option_exercised :- options # option_exercised.
+
+imported procedure options#option_expired.
+exported procedure option_expired.
+option_expired :- options # option_expired.
+
+imported procedure credit_instruments#insurance_claimed.
+exported procedure insurance_claimed.
+insurance_claimed :- credit_instruments # insurance_claimed.
+
+imported procedure credit_instruments#insurance_expired.
+exported procedure insurance_expired.
+insurance_expired :- credit_instruments # insurance_expired.
+
+imported procedure credit_instruments#cds_event.
+exported procedure cds_event.
+cds_event :- credit_instruments # cds_event.
+
+imported procedure credit_instruments#cds_no_event.
+exported procedure cds_no_event.
+cds_no_event :- credit_instruments # cds_no_event.
+
+imported procedure credit_instruments#letter_of_credit.
+exported procedure letter_of_credit.
+letter_of_credit :- credit_instruments # letter_of_credit.

@@ -25,17 +25,16 @@
 %%   7. release          Bob repays nothing and the escrow agent releases the
 %%                       3 carol-coins to Alice
 %%
-%% 🔴 WHAT THE PAPER DOES NOT SAY, and what this play therefore supplies from
-%% the escrow agent's script.  Section 5 makes an event-based condition "the
-%% judgment of e, informed where needed by an oracle agreed by the parties",
-%% and the contract has no act by which an attestation reaches e: its five acts
-%% are mint, swap, pay, redeem and the three escrow transfers, and none of them
-%% carries an attestation.  So nothing in the program can tell the escrow agent
-%% that Bob has repaid or defaulted, and the order of the two outcomes here is
-%% the order of its script and not a consequence of what Bob did.  The
-%% date-based escrows (village.glp) and the credit line (credit_line.glp) do
-%% not need this: their conditions are the escrow agent's own date and the
-%% deposits it receives, both of which it sees.  Reported to the paper.
+%% WHERE THE JUDGEMENT COMES FROM, and why that is the specification rather
+%% than a stopgap (Udi, 2026-09-15).  An attestation is not an act of the
+%% contract.  The escrow agent judges from what it sees --- its own date and
+%% the deposits it holds --- and an outside event reaches it outside the
+%% contract, exactly as the payment of a fiat coin does.  Bob's default is such
+%% an event, so the escrow agent's judgement of it enters the program from its
+%% person: the order of the two outcomes here is the order of its script.  The
+%% date-based escrows (village.glp), the credit line (credit_line.glp) and the
+%% packaged exchange (loans.glp) need no script for their conditions, those
+%% being the agent's own date and the deposits it receives.
 %%
 %% Entry point: run/0, exported by self.glp as collateral/0.
 

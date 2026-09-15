@@ -27,10 +27,10 @@
 %%      deposits his other 3; Bob repays nothing and the agent releases them to
 %%      Alice
 %%
-%% 🔴 The judgement is the escrow agent's own, supplied here by its script:
-%% no act of the contract carries an attestation, so nothing in the program can
-%% tell the agent that Bob repaid or defaulted.  See collateral.glp, which
-%% carries the same note, and /Grassroots/GB/docs/instruments-2026-09-15.md.
+%% The judgement of the default is the escrow agent's own and enters the
+%% program from its person, an outside event reaching the agent outside the
+%% contract as the payment of a fiat coin does (Udi, 2026-09-15).  See
+%% collateral.glp, which carries the same note.
 
 imported procedure village#villager(Constant?, Script?, Stream(NetInMsg)?, Stream(NetOutMsg)).
 

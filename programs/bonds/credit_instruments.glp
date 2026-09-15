@@ -1,0 +1,156 @@
+%% credit_instruments.glp --- insurance, the credit default swap and the letter
+%% of credit, items 4, 5 and 6 of Appendix C of "Grassroots Bonds", each in the
+%% outcomes the paper gives.
+%%
+%% All three turn on an event the escrow agent adjudicates.  An attestation is
+%% not an act of the contract (Udi, 2026-09-15): the agent judges from what it
+%% sees --- its own date and the deposits it holds --- and an outside event
+%% reaches it outside the contract, as the payment of a fiat coin does.  So the
+%% claim, the credit event and the verification of delivery enter the program
+%% from the escrow agent's person, and the expiries turn on its own date, which
+%% it advances and its screen reports.  That is the specification.
+%%
+%% Entry points, exported by self.glp: insurance_claimed/0, insurance_expired/0,
+%% cds_event/0, cds_no_event/0, letter_of_credit/0.
+
+imported procedure village#villager(Constant?, Script?, Stream(NetInMsg)?, Stream(NetOutMsg)).
+
+%% =============================================================================
+%% Insurance (item 4): insurer Bob's reserve of 20, Alice's premium of 2
+%% =============================================================================
+
+exported procedure insurance_claimed.
+insurance_claimed :-
+    network3c(AOut?, BOut?, GOut?, AIn, BIn, GIn),
+    village # villager(alice,
+        [mint(2, 0), deposit(escrow, alice, 0, 2), accept_transfer(escrow)],
+        AIn?, AOut),
+    village # villager(bob,
+        [mint(20, 0), deposit(escrow, bob, 0, 20), accept_transfer(escrow)],
+        BIn?, BOut),
+    village # villager(escrow,
+        [accept_transfer(bob), accept_transfer(alice),
+         release(alice, bob, 0, 20),
+         release(bob, alice, 0, 2)],
+        GIn?, GOut).
+
+exported procedure insurance_expired.
+insurance_expired :-
+    network3c(AOut?, BOut?, GOut?, AIn, BIn, GIn),
+    village # villager(alice,
+        [mint(2, 0), deposit(escrow, alice, 0, 2)],
+        AIn?, AOut),
+    village # villager(bob,
+        [mint(20, 0), deposit(escrow, bob, 0, 20),
+         accept_transfer(escrow), accept_transfer(escrow)],
+        BIn?, BOut),
+    village # villager(escrow,
+        [accept_transfer(bob), accept_transfer(alice),
+         advance(31),
+         release(bob, alice, 0, 2),
+         return(bob, bob, 0, 20)],
+        GIn?, GOut).
+
+%% =============================================================================
+%% Credit default swap (item 5): Bob's reserve of 20, Alice's premium bonds of
+%% 1 at day 10 and 1 at day 20, against the default of a reference entity that
+%% is no party to the agreement
+%% =============================================================================
+
+exported procedure cds_event.
+cds_event :-
+    network3c(AOut?, BOut?, GOut?, AIn, BIn, GIn),
+    village # villager(alice,
+        [mint(1, 10), mint(1, 20),
+         deposit(escrow, alice, 10, 1), deposit(escrow, alice, 20, 1),
+         accept_transfer(escrow)],
+        AIn?, AOut),
+    village # villager(bob,
+        [mint(20, 0), deposit(escrow, bob, 0, 20),
+         accept_transfer(escrow), accept_transfer(escrow)],
+        BIn?, BOut),
+    village # villager(escrow,
+        [accept_transfer(bob), accept_transfer(alice), accept_transfer(alice),
+         release(bob, alice, 10, 1), release(bob, alice, 20, 1),
+         release(alice, bob, 0, 20)],
+        GIn?, GOut).
+
+exported procedure cds_no_event.
+cds_no_event :-
+    network3c(AOut?, BOut?, GOut?, AIn, BIn, GIn),
+    village # villager(alice,
+        [mint(1, 10), mint(1, 20),
+         deposit(escrow, alice, 10, 1), deposit(escrow, alice, 20, 1)],
+        AIn?, AOut),
+    village # villager(bob,
+        [mint(20, 0), deposit(escrow, bob, 0, 20),
+         accept_transfer(escrow), accept_transfer(escrow), accept_transfer(escrow)],
+        BIn?, BOut),
+    village # villager(escrow,
+        [accept_transfer(bob), accept_transfer(alice), accept_transfer(alice),
+         release(bob, alice, 10, 1), release(bob, alice, 20, 1),
+         advance(31),
+         return(bob, bob, 0, 20)],
+        GIn?, GOut).
+
+%% =============================================================================
+%% Letter of credit (item 6): the bank's 10 coins for seller Alice, reimbursed
+%% by buyer Bob in bob-bonds maturing day 30
+%% =============================================================================
+%%
+%% 🔴 WHERE THE PAPER IS WRONG.  The reimbursement is written {(q, cent^k_{q,d}),
+%% (b, empty)}, a transfer from the buyer to the bank with nothing coming back.
+%% That is no act of the contract: the only transfers it has are the three
+%% escrow ones, deposit, release and return, and the rest of its acts are mint,
+%% advance, swap, pay and redeem --- a pay carries only the payee's own coins,
+%% which bob-bonds are not, and a swap has two sides.  So the reimbursement is
+%% run here through the escrow agent, a deposit by the buyer released to the
+%% bank, which is the paper's own mechanism for a one-way transfer.  The paper
+%% should either say so or write the reimbursement as a swap.
+
+exported procedure letter_of_credit.
+letter_of_credit :-
+    network4c(KOut?, AOut?, BOut?, GOut?, KIn, AIn, BIn, GIn),
+    village # villager(bank,
+        [mint(10, 0), deposit(escrow, bank, 0, 10), accept_transfer(escrow)],
+        KIn?, KOut),
+    village # villager(alice,
+        [accept_transfer(escrow)],
+        AIn?, AOut),
+    village # villager(bob,
+        [mint(10, 30), deposit(escrow, bob, 30, 10)],
+        BIn?, BOut),
+    village # villager(escrow,
+        [accept_transfer(bank),
+         release(alice, bank, 0, 10),
+         accept_transfer(bob),
+         release(bank, bob, 30, 10)],
+        GIn?, GOut).
+
+%% --- The networks: first contacts, routed by addressee ---
+
+procedure route3c(Stream(NetOutMsg)?, Stream(NetInMsg), Stream(NetInMsg), Stream(NetInMsg)).
+route3c([msg(alice, C)|Rest], [msg(alice, C?)|A?], B?, G?) :- route3c(Rest?, A, B, G).
+route3c([msg(bob, C)|Rest], A?, [msg(bob, C?)|B?], G?) :- route3c(Rest?, A, B, G).
+route3c([msg(escrow, C)|Rest], A?, B?, [msg(escrow, C?)|G?]) :- route3c(Rest?, A, B, G).
+route3c([], [], [], []).
+
+procedure network3c(Stream(NetOutMsg)?, Stream(NetOutMsg)?, Stream(NetOutMsg)?, Stream(NetInMsg), Stream(NetInMsg), Stream(NetInMsg)).
+network3c(AOut, BOut, GOut, AIn?, BIn?, GIn?) :-
+    merge(AOut?, BOut?, AB),
+    merge(AB?, GOut?, All),
+    route3c(All?, AIn, BIn, GIn).
+
+procedure route4c(Stream(NetOutMsg)?, Stream(NetInMsg), Stream(NetInMsg), Stream(NetInMsg), Stream(NetInMsg)).
+route4c([msg(bank, C)|Rest], [msg(bank, C?)|K?], A?, B?, G?) :- route4c(Rest?, K, A, B, G).
+route4c([msg(alice, C)|Rest], K?, [msg(alice, C?)|A?], B?, G?) :- route4c(Rest?, K, A, B, G).
+route4c([msg(bob, C)|Rest], K?, A?, [msg(bob, C?)|B?], G?) :- route4c(Rest?, K, A, B, G).
+route4c([msg(escrow, C)|Rest], K?, A?, B?, [msg(escrow, C?)|G?]) :- route4c(Rest?, K, A, B, G).
+route4c([], [], [], [], []).
+
+procedure network4c(Stream(NetOutMsg)?, Stream(NetOutMsg)?, Stream(NetOutMsg)?, Stream(NetOutMsg)?, Stream(NetInMsg), Stream(NetInMsg), Stream(NetInMsg), Stream(NetInMsg)).
+network4c(KOut, AOut, BOut, GOut, KIn?, AIn?, BIn?, GIn?) :-
+    merge(KOut?, AOut?, KA),
+    merge(BOut?, GOut?, BG),
+    merge(KA?, BG?, All),
+    route4c(All?, KIn, AIn, BIn, GIn).

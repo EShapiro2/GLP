@@ -66,11 +66,10 @@ fixed_payment :-
 %% 20 and 30; Bob pays the floating leg, 2, 4 and 5 at the same dates, the
 %% amounts a reference rate gives.
 %%
-%% 🔴 The floating amounts are "attested by the interest-rate oracle", and no
-%% act of the contract carries an attestation, so the oracle is not in this run:
-%% the amounts are the ones the parties would have agreed once attested, and
-%% they are written into the agreement.  What runs is the exchange, not the
-%% attestation.  See collateral.glp and /Grassroots/GB/docs/instruments-2026-09-15.md.
+%% The floating amounts are "attested by the interest-rate oracle", and an
+%% attestation is not an act of the contract (Udi, 2026-09-15): it reaches the
+%% parties outside it.  So the amounts are written into the agreement as the
+%% ones attested, and what runs is the exchange.  See collateral.glp.
 
 exported procedure interest_rate_swap.
 interest_rate_swap :-

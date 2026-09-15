@@ -2531,6 +2531,102 @@ check_not "Bonds interest rate swap: no failed goal" "ERROR" "$n3_irs"
 check "Bonds interest rate swap: the fixed payer holds the floating leg" "tagged(alice, holdings(\[lot(bob, 10, 2), lot(bob, 20, 4), lot(bob, 30, 5)\]))" "$n3_irs"
 check "Bonds interest rate swap: the floating payer holds the fixed leg" "tagged(bob, holdings(\[lot(alice, 10, 3), lot(alice, 20, 3), lot(alice, 30, 3)\]))" "$n3_irs"
 check "Bonds interest rate swap: the escrow agent holds nothing at the end" "tagged(escrow, holdings(\[\]))" "$n3_irs"
+
+echo "--- Bonds option, exercised and expired (option_exercised, option_expired) ---"
+
+n3_optx=$("$REPL_RUN" <<HEREDOC
+$BONDS
+:limit 50000000
+option_exercised.
+:quit
+HEREDOC
+2>&1)
+
+check_not "Bonds option exercised: no failed goal" "ERROR" "$n3_optx"
+check "Bonds option exercised: the holder takes the underlying" "tagged(alice, holdings(\[lot(bob, 40, 10)\]))" "$n3_optx"
+check "Bonds option exercised: the writer takes the premium and the strike" "tagged(bob, holdings(\[lot(alice, 0, 10)\]))" "$n3_optx"
+check "Bonds option exercised: the escrow agent holds nothing at the end" "tagged(escrow, holdings(\[\]))" "$n3_optx"
+
+n3_opte=$("$REPL_RUN" <<HEREDOC
+$BONDS
+:limit 50000000
+option_expired.
+:quit
+HEREDOC
+2>&1)
+
+check_not "Bonds option expired: no failed goal" "ERROR" "$n3_opte"
+check "Bonds option expired: the escrow agent's own date passes the window" "tagged(escrow, date_advanced(41))" "$n3_opte"
+check "Bonds option expired: the strike goes back to the holder" "tagged(alice, holdings(\[lot(alice, 0, 8)\]))" "$n3_opte"
+check "Bonds option expired: the writer keeps the underlying and takes the premium" "tagged(bob, holdings(\[lot(bob, 40, 10), lot(alice, 0, 2)\]))" "$n3_opte"
+check "Bonds option expired: the escrow agent holds nothing at the end" "tagged(escrow, holdings(\[\]))" "$n3_opte"
+
+echo "--- Bonds insurance, claimed and expired (insurance_claimed, insurance_expired) ---"
+
+n3_insc=$("$REPL_RUN" <<HEREDOC
+$BONDS
+:limit 50000000
+insurance_claimed.
+:quit
+HEREDOC
+2>&1)
+
+check_not "Bonds insurance claimed: no failed goal" "ERROR" "$n3_insc"
+check "Bonds insurance claimed: the payout is the insurer's reserve" "tagged(alice, holdings(\[lot(bob, 0, 20)\]))" "$n3_insc"
+check "Bonds insurance claimed: the insurer keeps the premium" "tagged(bob, holdings(\[lot(alice, 0, 2)\]))" "$n3_insc"
+
+n3_inse=$("$REPL_RUN" <<HEREDOC
+$BONDS
+:limit 50000000
+insurance_expired.
+:quit
+HEREDOC
+2>&1)
+
+check_not "Bonds insurance expired: no failed goal" "ERROR" "$n3_inse"
+check "Bonds insurance expired: the insured holds nothing" "tagged(alice, holdings(\[\]))" "$n3_inse"
+check "Bonds insurance expired: the insurer takes the premium and its reserve back" "tagged(bob, holdings(\[lot(alice, 0, 2), lot(bob, 0, 20)\]))" "$n3_inse"
+
+echo "--- Bonds credit default swap, with and without the credit event ---"
+
+n3_cdse=$("$REPL_RUN" <<HEREDOC
+$BONDS
+:limit 50000000
+cds_event.
+:quit
+HEREDOC
+2>&1)
+
+check_not "Bonds CDS credit event: no failed goal" "ERROR" "$n3_cdse"
+check "Bonds CDS credit event: the protection buyer takes the reserve" "tagged(alice, holdings(\[lot(bob, 0, 20)\]))" "$n3_cdse"
+check "Bonds CDS credit event: the seller keeps the premium bonds" "tagged(bob, holdings(\[lot(alice, 10, 1), lot(alice, 20, 1)\]))" "$n3_cdse"
+
+n3_cdsn=$("$REPL_RUN" <<HEREDOC
+$BONDS
+:limit 50000000
+cds_no_event.
+:quit
+HEREDOC
+2>&1)
+
+check_not "Bonds CDS no credit event: no failed goal" "ERROR" "$n3_cdsn"
+check "Bonds CDS no credit event: the buyer holds nothing" "tagged(alice, holdings(\[\]))" "$n3_cdsn"
+check "Bonds CDS no credit event: the seller takes the premiums and its reserve back at expiry" "tagged(bob, holdings(\[lot(alice, 10, 1), lot(alice, 20, 1), lot(bob, 0, 20)\]))" "$n3_cdsn"
+
+echo "--- Bonds letter of credit (letter_of_credit) ---"
+
+n3_loc=$("$REPL_RUN" <<HEREDOC
+$BONDS
+:limit 50000000
+letter_of_credit.
+:quit
+HEREDOC
+2>&1)
+
+check_not "Bonds letter of credit: no failed goal" "ERROR" "$n3_loc"
+check "Bonds letter of credit: the seller is paid in the bank's coins" "tagged(alice, holdings(\[lot(bank, 0, 10)\]))" "$n3_loc"
+check "Bonds letter of credit: the bank holds the buyer's reimbursement bonds" "tagged(bank, holdings(\[lot(bob, 30, 10)\]))" "$n3_loc"
+check "Bonds letter of credit: the escrow agent holds nothing at the end" "tagged(escrow, holdings(\[\]))" "$n3_loc"
 echo ""
 
 # =============================================================================
