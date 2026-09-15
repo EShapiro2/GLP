@@ -832,3 +832,86 @@ act(answer(R, A), Id, Es, [answer(R?, A?) | As1?], Script, Open, Swaps, Screen?)
     cp(Id?, Es?, As1, Script?, Open?, Swaps?, sent(R?), Screen).
 act(wait, Id, Es, As?, Script, Open, Swaps, Screen?) :-
     cp(Id?, Es?, As, Script?, Open?, Swaps?, idle, Screen).
+
+%% =============================================================================
+%% play_reinvite: the registry's return from running to idle (Section 3,
+%% "Activation and joining").  alice installs the self-ending mini-app
+%% (../endapp, its artefact endapp.glpw beside this program), befriends bob and
+%% invites him; the two executions greet each other and ALICE'S ENDS of its own
+%% accord.  Her stream up to the social graph closes with it, her super-app
+%% returns her entry to idle, and she invites bob a second time: the mini-app
+%% is activated afresh by run/3, and the new conversation reaches bob's
+%% execution, which never ended.
+%%
+%% What the second pair of entries on bob's stream fences: without the return
+%% alice's entry would still say running, and the root channel of the second
+%% conversation would go to the execution that is gone.  Bob would still see it
+%% open --- his own entry is running and his execution is live --- but nothing
+%% would greet him, so the discriminating check is his SECOND greeted(alice).
+%%
+%% Expected: A = [opened(bob), greeted(bob)], closed, her execution having
+%% ended; B = [opened(alice), greeted(alice), opened(alice), greeted(alice) | _],
+%% → suspended (bob's execution and both persons stand).
+%% =============================================================================
+exported procedure play_reinvite(AppUiStream, AppUiStream).
+play_reinvite(AliceUi?, BobUi?) :-
+    crossbar2(AliceNetOut?, BobNetOut?, AliceNetIn, BobNetIn),
+    load_file("endapp.glpw", C),
+    certified(C?, _, CSig),
+    agent # agent(alice, AliceIn?, AliceNetIn?, [user_output(AliceOut), net_output(AliceNetOut)]),
+    tee(AliceUiRaw?, AliceUi, AliceSeen),
+    alice_reinvite(C?, CSig?, AliceUiRaw, AliceOut?, AliceSeen?, AliceIn),
+    agent # agent(bob, BobIn?, BobNetIn?, [user_output(BobOut), net_output(BobNetOut)]),
+    bob_reinvite(C?, CSig?, BobUi, BobOut?, BobIn).
+
+%% Alice's person: install the mini-app and cold-call bob.
+procedure alice_reinvite(Content?, String?, AppUiStream, AgentToUserStream?, AppUiStream?, UserInStream).
+alice_reinvite(M, CSig, Ui?, Outs, Seen,
+               [msg(person, alice, install(ping, M?, CSig?, Ui)),
+                msg(person, alice, connect(bob)) | Cmds?]) :-
+    alice_reinvite_wait(Outs?, Seen?, Cmds).
+
+%% Once connected, invite bob.
+procedure alice_reinvite_wait(AgentToUserStream?, AppUiStream?, UserInStream).
+alice_reinvite_wait([msg(agent, person, connected(bob)) | _], Seen,
+                    [msg(person, alice, invite(ping, bob)) | Cmds?]) :-
+    alice_after_end(Seen?, Cmds).
+alice_reinvite_wait([_ | Outs], Seen, Cmds?) :-
+    otherwise | alice_reinvite_wait(Outs?, Seen?, Cmds).
+alice_reinvite_wait([], _, []).
+
+%% Her mini-app's person stream has closed: the execution ended, so her entry
+%% has returned to idle.  Invite bob again, and leave her own stream open ---
+%% closing it would close her super-app, and the second execution with it.
+procedure alice_after_end(AppUiStream?, UserInStream).
+alice_after_end([], [msg(person, alice, invite(ping, bob)) | Cmds?]) :-
+    hold_person(Cmds).
+alice_after_end([_ | Seen], Cmds?) :-
+    otherwise | alice_after_end(Seen?, Cmds).
+
+%% Bob's person: install the mini-app and consent to BOTH invitations before
+%% either offer arrives, as bob_person consents once --- the two consents
+%% stack in the pending list and each offer takes one.
+procedure bob_reinvite(Content?, String?, AppUiStream, AgentToUserStream?, UserInStream).
+bob_reinvite(M, CSig, Ui?, Outs,
+             [msg(person, bob, install(ping, M?, CSig?, Ui)),
+              msg(person, bob, accept_invite(ping, alice)),
+              msg(person, bob, accept_invite(ping, alice)) | Cmds?]) :-
+    bob_reinvite_wait(Outs?, Cmds).
+
+%% Answer alice's cold call, and then leave his stream open: his execution is
+%% the one that must still be there when her second invitation arrives, and
+%% closing the stream would close his super-app and the execution with it.
+procedure bob_reinvite_wait(AgentToUserStream?, UserInStream).
+bob_reinvite_wait([msg(agent, person, befriend(alice, Resp?)) | _],
+                  [msg(person, bob, decision(yes, alice, response(Resp))) | Cmds?]) :-
+    hold_person(Cmds).
+bob_reinvite_wait([_ | Outs], Cmds?) :-
+    otherwise | bob_reinvite_wait(Outs?, Cmds).
+bob_reinvite_wait([], []).
+
+%% A person stream left open: the play ends suspended rather than closing a
+%% super-app that still hosts a running mini-app.  (hold_cmds/1 above is the
+%% child-safe platform's command stream and is a different type.)
+procedure hold_person(UserInStream).
+hold_person(X?) :- true.

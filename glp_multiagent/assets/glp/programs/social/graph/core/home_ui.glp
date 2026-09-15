@@ -1,0 +1,62 @@
+%% home_ui.glp --- the super-app with a LIVE person: the harness the Flutter
+%% agent runtime starts, as programs/coins/play_ui.glp is the currency's.
+%%
+%% superapp_ui(alice, Answers, NetIn) has the three arguments that runtime
+%% expects (Id, UserIn, NetIn): alice's answers arrive on the second, injected
+%% as ground terms by her taps on the constructs of home.vglp, and what her
+%% super-app shows her --- the mediator's cards and their closing, and what the
+%% super-app tells her --- leaves by send_to_user/1, one term to a line.  Her
+%% screen is therefore derived from the display declarations of home.vglp and
+%% from nothing else.
+%%
+%% Behind the screen is the real super-app: her commands go to agent/5, which
+%% installs, invites and befriends as it does in every play.  Bob is scripted
+%% and shares the network with her through a crossbar, so her Connect and
+%% Invite have someone to reach.  The mediator's vocabulary is the compiled
+%% module's own and is not named here: the imported declarations leave those
+%% positions untyped, since this harness only passes them along.
+%%
+%% This file is the harness of the app, not part of the super-app's contract.
+
+imported procedure home#home(_?, Constant?, AgentToUserStream?, Stream(UserInMsg), _?, _?, _?, _?).
+imported procedure home#med(_?, _?, _?, _?, Integer?).
+imported procedure agent#agent(Constant?, UserInStream?, NetInStream?, OutputsList?).
+
+exported procedure superapp_ui(Constant?, Stream(_)?, Stream(_)?).
+superapp_ui(alice, Answers, _) :-
+    crossbar(AliceNetOut?, BobNetOut?, AliceNetIn, BobNetIn),
+    agent # agent(alice, Cmds?, AliceNetIn?, [user_output(Outs), net_output(AliceNetOut)]),
+    tee_out(Outs?, Shown, Seen),
+    send_to_user(Shown?),
+    home # home(ch([], Asks), alice, Seen?, Cmds, none, none, none, none),
+    home # med(ch(Answers?, Cards), ch(Asks?, []), [], [], 0),
+    send_to_user(Cards?),
+    agent # agent(bob, BobIn?, BobNetIn?, [user_output(BobOut), net_output(BobNetOut)]),
+    bob_answers(BobOut?, BobIn).
+
+%% Bob, scripted: he consents to alice's request to connect and accepts
+%% whatever mini-app she invites him to, so her Connect and Invite have
+%% someone to reach.
+procedure bob_answers(AgentToUserStream?, UserInStream).
+bob_answers([msg(agent, person, befriend(From, Resp?)) | Outs],
+            [msg(person, bob, decision(yes, From?, response(Resp))),
+             msg(person, bob, accept_invite(ping, From?)) | Cmds?]) :-
+    ground(From?) |
+    bob_answers(Outs?, Cmds).
+bob_answers([_ | Outs], Cmds?) :- otherwise | bob_answers(Outs?, Cmds).
+bob_answers([], []).
+
+%% The network between the two, and the person's stream shown as well as read.
+procedure crossbar(NetOutStream?, NetOutStream?, NetInStream, NetInStream).
+crossbar(AOut, BOut, AIn?, BIn?) :-
+    merge(AOut?, BOut?, All),
+    route(All?, AIn, BIn).
+
+procedure route(NetOutStream?, NetInStream, NetInStream).
+route([msg(alice, C) | Rest], [msg(alice, C?) | A?], B?) :- route(Rest?, A, B).
+route([msg(bob, C) | Rest], A?, [msg(bob, C?) | B?]) :- route(Rest?, A, B).
+route([], [], []).
+
+procedure tee_out(AgentToUserStream?, AgentToUserStream, AgentToUserStream).
+tee_out([X | Xs], [X? | Ys?], [X? | Zs?]) :- ground(X?) | tee_out(Xs?, Ys, Zs).
+tee_out([], [], []).

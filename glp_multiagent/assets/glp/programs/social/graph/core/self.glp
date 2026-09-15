@@ -16,6 +16,10 @@
 procedure ping(Constant?, AppUiStream, SgChannel?).
 ping(_, [], _).
 
+imported procedure home_ui#superapp_ui(Constant?, Stream(_)?, Stream(_)?).
+exported procedure superapp_ui(Constant?, Stream(_)?, Stream(_)?).
+superapp_ui(Id, Answers, NetIn) :- home_ui # superapp_ui(Id?, Answers?, NetIn?).
+
 imported procedure superapp_plays#play_invite(AppUiStream, AppUiStream).
 exported procedure play_invite(AppUiStream, AppUiStream).
 play_invite(A?, B?) :- superapp_plays # play_invite(A, B).
@@ -56,3 +60,7 @@ play_cssn(A?, B?) :- superapp_plays # play_cssn(A, B).
 imported procedure superapp_plays#play_both(Stream(ScreenContent), Stream(ScreenContent), Stream(CsAppNotify), Stream(CsAppNotify)).
 exported procedure play_both(Stream(ScreenContent), Stream(ScreenContent), Stream(CsAppNotify), Stream(CsAppNotify)).
 play_both(A?, B?, C?, D?) :- superapp_plays # play_both(A, B, C, D).
+
+imported procedure superapp_plays#play_reinvite(AppUiStream, AppUiStream).
+exported procedure play_reinvite(AppUiStream, AppUiStream).
+play_reinvite(A?, B?) :- superapp_plays # play_reinvite(A, B).

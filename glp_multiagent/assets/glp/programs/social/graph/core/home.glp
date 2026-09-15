@@ -1,0 +1,125 @@
+%% Compiled from vGLP by the canonical compilation
+%% (vGLP, Definition "Canonical Compilation").  Do not edit: edit
+%% the .vglp source and compile again.
+
+%% --- the source's own types ---
+
+%% --- the types the compilation adds ---
+Xs_respond_friend_1 ::= xs_respond_friend_1(Constant).
+Reply_respond_friend_1 ::= then(Xs_respond_friend_1).
+Ctx_respond_friend_1 ::= ctx_respond_friend_1(Constant).
+Xs_respond_friend_2 ::= xs_respond_friend_2(Constant).
+Reply_respond_friend_2 ::= then(Xs_respond_friend_2).
+Ctx_respond_friend_2 ::= ctx_respond_friend_2(Constant).
+Xs_home_1 ::= xs_home_1(String).
+Reply_home_1 ::= then(Xs_home_1).
+Xs_home_2 ::= xs_home_2(String, Constant).
+Reply_home_2 ::= then(Xs_home_2).
+Xs_home_3 ::= xs_home_3(Constant, Constant).
+Reply_home_3 ::= then(Xs_home_3).
+Xs_home_4 ::= xs_home_4(Constant).
+Reply_home_4 ::= then(Xs_home_4).
+Answer ::= Xs_respond_friend_1 ; Xs_respond_friend_2 ; Xs_home_1 ; Xs_home_2 ; Xs_home_3 ; Xs_home_4.
+Escrow ::= esc_respond_friend_1(Reply_respond_friend_1?) ; esc_respond_friend_2(Reply_respond_friend_2?) ; esc_home_1(Reply_home_1?) ; esc_home_2(Reply_home_2?) ; esc_home_3(Reply_home_3?) ; esc_home_4(Reply_home_4?).
+Context ::= Ctx_respond_friend_1 ; Ctx_respond_friend_2 ; ctx_home_1 ; ctx_home_2 ; ctx_home_3 ; ctx_home_4.
+
+%% --- the mediator's vocabulary, instantiated ---
+ReqId ::= req(Integer).
+Slot(R) ::= none ; ask(R, ReqId).
+Deadline ::= deadline ; no_deadline.
+AgentMsg ::= ask(Constant, Context, Escrow, ReqId?, Deadline) ; abort(ReqId).
+Card ::= card(Constant, Context, ReqId) ; closed(ReqId).
+UserAnswer ::= answer(ReqId, Answer).
+PendingEntry ::= pending(ReqId, Escrow).
+PendingList ::= [] ; [PendingEntry | PendingList].
+Timeout ::= timeout(ReqId).
+TimerStream ::= [] ; [Timeout | TimerStream].
+
+%% --- the display declarations, carried through ---
+display home *(Key) : panel(apps), label("Trust a compiler"), field(Key, text), persistent.
+display home *(Name, App) : panel(apps), label("Install a mini-app"), field(Name, text), field(App, text), persistent.
+display home *(App, Friend) : panel(apps), label("Invite a friend"), field(App, peer), field(Friend, peer), persistent.
+display home *(Friend) : panel(apps), label("Connect"), field(Friend, peer), persistent.
+display respond_friend *(yes, From?) : panel(apps), label("Accept"), transient.
+display respond_friend *(no, From?) : panel(apps), label("Decline"), transient.
+display msg(agent, person, connected(Friend)) : panel(apps), view(friends).
+
+%% --- the compiled agent ---
+procedure respond_friend(Channel(Closed, Stream(AgentMsg))?, Constant?, Constant?, Response, Stream(UserInMsg), Slot(Reply_respond_friend_1)?, Slot(Reply_respond_friend_2)?).
+respond_friend(Med, Id, From, Resp?, [msg(person, Id?, decision(yes, From?, response(Resp)))], ask(then(xs_respond_friend_1(_)), _), S2) :- ground(Id?), ground(From?) | abort(S2?, Med?, Med1).
+respond_friend(Med, Id, From, A3?, A4?, none, S2) :- ground(Id?), ground(From?) | send(ask(respond_friend_1, ctx_respond_friend_1(From?), esc_respond_friend_1(R), Id1, no_deadline), Med?, Med1), respond_friend(Med1?, Id?, From?, A3, A4, ask(R?, Id1?), S2?).
+respond_friend(Med, Id, From, Resp?, [msg(person, Id?, decision(no, From?, response(Resp)))], S1, ask(then(xs_respond_friend_2(_)), _)) :- ground(Id?), ground(From?) | abort(S1?, Med?, Med1).
+respond_friend(Med, Id, From, A3?, A4?, S1, none) :- ground(Id?), ground(From?) | send(ask(respond_friend_2, ctx_respond_friend_2(From?), esc_respond_friend_2(R), Id1, no_deadline), Med?, Med1), respond_friend(Med1?, Id?, From?, A3, A4, S1?, ask(R?, Id1?)).
+
+exported procedure home(Channel(Closed, Stream(AgentMsg))?, Constant?, AgentToUserStream?, Stream(UserInMsg), Slot(Reply_home_1)?, Slot(Reply_home_2)?, Slot(Reply_home_3)?, Slot(Reply_home_4)?).
+home(Med, Id, Outs, Cmds?, ask(then(xs_home_1(Key)), _), S2, S3, S4) :- ground(Id?), ground(Key?) | abort(S2?, Med?, M1), abort(S3?, M1?, M2), abort(S4?, M2?, Med1), trust_act(Med1?, Key?, Id?, Outs?, Cmds).
+home(Med, Id, Outs, A3?, none, S2, S3, S4) :- ground(Id?) | send(ask(home_1, ctx_home_1, esc_home_1(R), Id1, no_deadline), Med?, Med1), home(Med1?, Id?, Outs?, A3, ask(R?, Id1?), S2?, S3?, S4?).
+home(Med, Id, Outs, Cmds?, S1, ask(then(xs_home_2(Name, App)), _), S3, S4) :- ground(Id?), ground(Name?), ground(App?) | abort(S1?, Med?, M1), abort(S3?, M1?, M2), abort(S4?, M2?, Med1), load_file(Name?, C), install_act(Med1?, C?, App?, Id?, Outs?, Cmds).
+home(Med, Id, Outs, A3?, S1, none, S3, S4) :- ground(Id?) | send(ask(home_2, ctx_home_2, esc_home_2(R), Id1, no_deadline), Med?, Med1), home(Med1?, Id?, Outs?, A3, S1?, ask(R?, Id1?), S3?, S4?).
+home(Med, Id, Outs, Cmds?, S1, S2, ask(then(xs_home_3(App, Friend)), _), S4) :- ground(Id?), ground(App?), ground(Friend?) | abort(S1?, Med?, M1), abort(S2?, M1?, M2), abort(S4?, M2?, Med1), invite_act(Med1?, App?, Friend?, Id?, Outs?, Cmds).
+home(Med, Id, Outs, A3?, S1, S2, none, S4) :- ground(Id?) | send(ask(home_3, ctx_home_3, esc_home_3(R), Id1, no_deadline), Med?, Med1), home(Med1?, Id?, Outs?, A3, S1?, S2?, ask(R?, Id1?), S4?).
+home(Med, Id, Outs, Cmds?, S1, S2, S3, ask(then(xs_home_4(Friend)), _)) :- ground(Id?), ground(Friend?) | abort(S1?, Med?, M1), abort(S2?, M1?, M2), abort(S3?, M2?, Med1), connect_act(Med1?, Friend?, Id?, Outs?, Cmds).
+home(Med, Id, Outs, A3?, S1, S2, S3, none) :- ground(Id?) | send(ask(home_4, ctx_home_4, esc_home_4(R), Id1, no_deadline), Med?, Med1), home(Med1?, Id?, Outs?, A3, S1?, S2?, S3?, ask(R?, Id1?)).
+home(Med, Id, [msg(agent, person, befriend(From, Resp?)) | Outs], Cmds?, S1, S2, S3, S4) :- ground(Id?), ground(From?) | abort(S1?, Med?, M1), abort(S2?, M1?, M2), abort(S3?, M2?, M3), abort(S4?, M3?, Med1), med_split(Med1?, Medb, Medr), respond_friend(Medb?, Id?, From?, Resp, Answer, none, none), merge(Answer?, Cmds1?, Cmds), home(Medr?, Id?, Outs?, Cmds1, none, none, none, none).
+home(Med, Id, [_ | Outs], Cmds?, S1, S2, S3, S4) :- ground(Id?), otherwise | abort(S1?, Med?, M1), abort(S2?, M1?, M2), abort(S3?, M2?, M3), abort(S4?, M3?, Med1), home(Med1?, Id?, Outs?, Cmds, none, none, none, none).
+home(Med, _, [], [], S1, S2, S3, S4) :- abort(S1?, Med?, M1), abort(S2?, M1?, M2), abort(S3?, M2?, M3), abort(S4?, M3?, Med1).
+
+procedure trust_act(Channel(Closed, Stream(AgentMsg))?, String?, Constant?, AgentToUserStream?, Stream(UserInMsg)).
+trust_act(Med, Key, Id, Outs, [msg(person, Id?, trust(Key?)) | Cmds?]) :- ground(Key?) | home(Med?, Id?, Outs?, Cmds, none, none, none, none).
+
+procedure invite_act(Channel(Closed, Stream(AgentMsg))?, Constant?, Constant?, Constant?, AgentToUserStream?, Stream(UserInMsg)).
+invite_act(Med, App, Friend, Id, Outs, [msg(person, Id?, invite(App?, Friend?)) | Cmds?]) :- ground(App?), ground(Friend?) | home(Med?, Id?, Outs?, Cmds, none, none, none, none).
+
+procedure connect_act(Channel(Closed, Stream(AgentMsg))?, Constant?, Constant?, AgentToUserStream?, Stream(UserInMsg)).
+connect_act(Med, Friend, Id, Outs, [msg(person, Id?, connect(Friend?)) | Cmds?]) :- ground(Friend?) | home(Med?, Id?, Outs?, Cmds, none, none, none, none).
+
+procedure install_act(Channel(Closed, Stream(AgentMsg))?, Content?, Constant?, Constant?, AgentToUserStream?, Stream(UserInMsg)).
+install_act(Med, M, App, Id, Outs, [msg(person, Id?, install(App?, M?, CSig?, Ui)) | Cmds?]) :- module(M?) | med_split(Med?, Medb, Medr), med_split(Medr?, Medb1, Medr1), creator_certification(Medb?, M?, CSig), hold_ui(Medb1?, Ui?), home(Medr1?, Id?, Outs?, Cmds, none, none, none, none).
+install_act(Med, S, _, Id, Outs, Cmds?) :- string(S?) | home(Med?, Id?, Outs?, Cmds, none, none, none, none).
+
+procedure creator_certification(Channel(Closed, Stream(AgentMsg))?, Content?, String).
+creator_certification(Med, M, CSig?) :- decompose_module(M?, _, Src, _), self_key(K), sign(creator_cert(Src?, [friendship, ending_a_friendship], grassroots), K?, CSig).
+
+procedure hold_ui(Channel(Closed, Stream(AgentMsg))?, AppUiStream?).
+hold_ui(Med, X) :- true.
+
+%% --- the mediator, and the pending table with the program's clauses ahead of the search clauses ---
+exported procedure med(Channel(Stream(UserAnswer), Stream(Card))?, Channel(Stream(AgentMsg), Closed)?, TimerStream?, PendingList?, Integer?).
+med(UserCh, AgentCh, Ts, Ps, N) :- receive(ask(C, Ctx, Esc, Id?, deadline), AgentCh?, AgentCh1), ground(C?), ground(Ctx?) | Id = req(N?), send(card(C?, Ctx?, req(N?)), UserCh?, UserCh1), N1 := (N? + 1), deadline(D), timer(req(N?), D?, T), merge(T?, Ts?, Ts1), med(UserCh1?, AgentCh1?, Ts1?, [pending(req(N?), Esc?) | Ps?], N1?).
+med(UserCh, AgentCh, Ts, Ps, N) :- receive(ask(C, Ctx, Esc, Id?, no_deadline), AgentCh?, AgentCh1), ground(C?), ground(Ctx?) | Id = req(N?), send(card(C?, Ctx?, req(N?)), UserCh?, UserCh1), N1 := (N? + 1), med(UserCh1?, AgentCh1?, Ts?, [pending(req(N?), Esc?) | Ps?], N1?).
+med(UserCh, AgentCh, Ts, Ps, N) :- receive(answer(ReqId, Vs), UserCh?, UserCh1), ground(ReqId?), ground(Vs?) | answer(ReqId?, Vs?, Ps?, Ps1), med(UserCh1?, AgentCh?, Ts?, Ps1?, N?).
+med(UserCh, AgentCh, [timeout(ReqId) | Ts], Ps, N) :- ground(ReqId?) | close(ReqId?, Ps?, Ps1), send(closed(ReqId?), UserCh?, UserCh1), med(UserCh1?, AgentCh?, Ts?, Ps1?, N?).
+med(UserCh, AgentCh, Ts, Ps, N) :- receive(abort(ReqId), AgentCh?, AgentCh1), ground(ReqId?) | drop(ReqId?, Ps?, Ps1), send(closed(ReqId?), UserCh?, UserCh1), med(UserCh1?, AgentCh1?, Ts?, Ps1?, N?).
+
+exported procedure timer(ReqId?, Number?, TimerStream).
+timer(ReqId, D, [timeout(ReqId?)]) :- wait_until(D?) | true.
+
+exported procedure deadline(Number).
+deadline(D?) :- now(T), D := (T? + 60000).
+
+exported procedure answer(ReqId?, Answer?, PendingList?, PendingList).
+answer(ReqId, xs_respond_friend_1(X1), [pending(Id, esc_respond_friend_1(R?)) | Ps], Ps?) :- (ReqId? =?= Id?) | R = then(xs_respond_friend_1(X1?)).
+answer(ReqId, xs_respond_friend_2(X1), [pending(Id, esc_respond_friend_2(R?)) | Ps], Ps?) :- (ReqId? =?= Id?) | R = then(xs_respond_friend_2(X1?)).
+answer(ReqId, xs_home_1(X1), [pending(Id, esc_home_1(R?)) | Ps], Ps?) :- (ReqId? =?= Id?) | R = then(xs_home_1(X1?)).
+answer(ReqId, xs_home_2(X1, X2), [pending(Id, esc_home_2(R?)) | Ps], Ps?) :- (ReqId? =?= Id?) | R = then(xs_home_2(X1?, X2?)).
+answer(ReqId, xs_home_3(X1, X2), [pending(Id, esc_home_3(R?)) | Ps], Ps?) :- (ReqId? =?= Id?) | R = then(xs_home_3(X1?, X2?)).
+answer(ReqId, xs_home_4(X1), [pending(Id, esc_home_4(R?)) | Ps], Ps?) :- (ReqId? =?= Id?) | R = then(xs_home_4(X1?)).
+answer(ReqId, Vs, [P | Ps], [P? | Ps1?]) :- otherwise | answer(ReqId?, Vs?, Ps?, Ps1).
+answer(_, _, [], []).
+
+exported procedure close(ReqId?, PendingList?, PendingList).
+close(ReqId, [P | Ps], [P? | Ps1?]) :- otherwise | close(ReqId?, Ps?, Ps1).
+close(_, [], []).
+
+exported procedure drop(ReqId?, PendingList?, PendingList).
+drop(ReqId, [pending(Id, _) | Ps], Ps?) :- (ReqId? =?= Id?) | true.
+drop(ReqId, [P | Ps], [P? | Ps1?]) :- otherwise | drop(ReqId?, Ps?, Ps1).
+drop(_, [], []).
+
+exported procedure(R) abort(Slot(R)?, Channel(Closed, Stream(AgentMsg))?, Channel(Closed, Stream(AgentMsg))).
+abort(none, Med, Med?).
+abort(ask(_, Id), Med, Med1?) :- ground(Id?) | send(abort(Id?), Med?, Med1).
+
+exported procedure med_split(Channel(Closed, Stream(AgentMsg))?, Channel(Closed, Stream(AgentMsg)), Channel(Closed, Stream(AgentMsg))).
+med_split(ch(_, Out?), ch([], O1), ch([], O2)) :- merge(O1?, O2?, Out).
+
