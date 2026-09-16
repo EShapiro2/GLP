@@ -27,7 +27,6 @@ Lives in `/Users/udi/Grassroots/GLP/glp_runtime/lib/multiagent/`:
 | `mad_context.dart`, `mad_helpers.dart` | Globalise / localise / variable threading |
 | `global_send.dart`, `global_writers_table.dart` | Outgoing variable management |
 | `variable_table.dart`, `message_queue.dart`, `payload_serializer.dart` | Per-isolate state |
-| `relay.glp` | GLP-side relay |
 | `repl_play_runner.dart` | REPL invocation |
 
 Tests: `/Users/udi/Grassroots/GLP/glp_runtime/test/multiagent/`.

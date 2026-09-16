@@ -6,7 +6,7 @@
 %% Query, Answer, and Platform types are defined in per-platform self.glp
 %% (gsg/, secure_gsg/, secure_bonds/).
 %%
-%% Architecture: /Users/udi/Grassroots/GLP/programs/SPM/docs/glp-architecture.md
+%% Architecture: /Users/udi/Grassroots/GLP/programs/SPM/docs/glp-architecture.md (deleted 2026-09-16)
 %% Status: types + procedure declarations only; clauses in network.glp,
 %% actor.glp, supervisor.glp.
 
