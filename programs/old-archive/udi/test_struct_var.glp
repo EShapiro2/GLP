@@ -1,4 +1,0 @@
-% Test structure with variable
-foo(bar(a)).
-
-test_struct(X?) :- foo(bar(X)).

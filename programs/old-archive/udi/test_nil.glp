@@ -1,3 +1,0 @@
-% Test nil representation fix
-% Simple test: X should unify with []
-test_nil(X) :- X = [].

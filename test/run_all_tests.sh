@@ -2962,7 +2962,8 @@ echo "--- The fixture's two single-isolate REPL boots load ---"
 # and until 2026-08-03 nothing tested them: they were two of the 35 files in
 # agent_roundtrip that no test named. Both load, so they are working routes and
 # stayed when the other 32 — which cannot load at all under the current language
-# — were retired to programs/archive/agent_roundtrip/. Tested here so that the
+# — were retired to programs/archive/agent_roundtrip/ (deleted 2026-09-16).
+# Tested here so that the
 # next person asking "does anything need this?" gets an answer from the suite
 # rather than from a filename search.
 for dglp_boot in play_dglp_boot play_ui_dglp_boot; do

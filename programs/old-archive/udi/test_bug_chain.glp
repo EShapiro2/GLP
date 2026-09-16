@@ -1,6 +1,0 @@
-% Minimal test case for variable chain bug
-% Simulates the failing pattern: W → R → W → [] chain
-
-reduce(qsort([],X9,[1|X15?]), true).
-
-test1 :- reduce(qsort([],A,[1|B?]), R).

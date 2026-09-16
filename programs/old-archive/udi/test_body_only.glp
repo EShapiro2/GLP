@@ -1,4 +1,0 @@
-% Test that builds nested structure in BODY and reads it back
-test_body(Z?) :- build_nested(X), read(X?), Z = done.
-
-build_nested(Conj?) :- Conj = (bar(a), baz(b)).

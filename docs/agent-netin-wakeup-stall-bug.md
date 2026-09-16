@@ -84,6 +84,6 @@ thing to force.
 
 ## Distinction from the `_w` / `receive/3` bug
 
-Unrelated to `docs/madglp-w-writer-return-bug.md`: this is single-isolate, the
+Unrelated to `docs/madglp-w-writer-return-bug.md` (deleted 2026-09-16): this is single-isolate, the
 channel is local (no `_w`), and the failure is a non-wakeup of a suspended goal,
 not a `receive/3` unification failure.

@@ -1,7 +1,0 @@
-% Test file that will produce a definitive failure
-
-% Predicate with only one specific clause
-only_a(a).
-
-% Test that will definitely fail
-test_real_fail :- only_a(b).

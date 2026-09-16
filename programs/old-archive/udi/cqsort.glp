@@ -1,2 +1,0 @@
-% Isolated test for qsort empty list clause
-clause(qsort([], Rest?, Rest), true).

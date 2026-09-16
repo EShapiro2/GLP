@@ -1,3 +1,0 @@
-test_simple_meta.glp
-test_simple(X)
-:quit

@@ -1,3 +1,0 @@
-% Test list/1 guard
-
-test_list(X) :- list(X?) | true.

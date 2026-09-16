@@ -1,7 +1,0 @@
-% Test mode conversion without guards
-% Pattern: caller passes writer, callee expects reader
-
-% Helper that unifies reader with writer
-helper(X?, X).
-
-% Expected: helper(a, Y) should bind Y to a

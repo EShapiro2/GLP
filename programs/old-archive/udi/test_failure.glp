@@ -1,7 +1,0 @@
-% Test file to verify failure stopping behavior
-
-% This predicate has no matching clause for non-nil input
-only_nil([]).
-
-% Test that spawns goals that will fail
-test_with_failure :- only_nil([1,2]), only_nil([]).

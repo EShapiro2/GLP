@@ -1,6 +1,0 @@
-% Minimal partition test case
-partition([X | Xs], A, Smaller?, [X? | Larger?]) :-
-    A? < X? | 
-    partition(Xs?, A?, Smaller, Larger).
-
-partition([], _, [], []).

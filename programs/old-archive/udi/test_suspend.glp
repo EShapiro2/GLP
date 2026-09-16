@@ -1,9 +1,0 @@
-% Test suspension/reactivation without :=
-% Uses pass-through to test if result propagates
-
-chain(0, zero).
-chain(N, R?) :-
-  N? > 0 |
-  link(N?, R).
-
-link(N, done(N?)).

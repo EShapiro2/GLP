@@ -1,9 +1,0 @@
-% Isolated test for reduce bug
-
-% Direct clause (for comparison)
-partition([X|Xs], A, Smaller?, [X?|Larger?]) :-
-    A? < X? | partition(Xs?, A?, Smaller, Larger).
-
-% Reduce clause (suspected bug)
-reduce(partition([X|Xs], A, Smaller?, [X?|Larger?]), partition(Xs?, A?, Smaller, Larger)) :-
-    A? < X? | true.

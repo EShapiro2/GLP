@@ -1,5 +1,0 @@
-% q.glp - Predicate q/1 that uses p/1
-%
-% Demonstrates predicate calls and variable passing
-
-q(X) :- p(X?).

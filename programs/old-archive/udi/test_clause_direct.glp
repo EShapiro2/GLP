@@ -1,5 +1,0 @@
-% Direct test of clause matching with merge
-clause(merge([], [], []), true).
-
-% Test: Can clause/2 match merge with all [] directly?
-test_direct(Body?) :- clause(merge([], [], []), Body).

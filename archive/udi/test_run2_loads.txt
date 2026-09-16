@@ -1,2 +1,0 @@
-run2.glp
-:quit

@@ -1,8 +1,0 @@
-% Direct test without metainterpreter
-% This should test if Y is shared in the body (q(Y), r(Y?,X))
-
-q(X) :- p(X?).
-p(X?) :- q(Y), r(Y?,X).
-p(a).
-q(a).
-r(a,b).

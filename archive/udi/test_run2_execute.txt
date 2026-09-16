@@ -1,3 +1,0 @@
-run2.glp
-run2(X)
-:quit

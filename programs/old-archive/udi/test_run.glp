@@ -1,5 +1,0 @@
-run(true).
-run((A,B)) :- run(A?), run(B?).
-run(A) :- otherwise | clause(A?,B), run(B?).
-
-clause(foo, bar).
