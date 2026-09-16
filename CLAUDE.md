@@ -52,6 +52,7 @@ Reorganised 2026-09-16 (Udi).  `README.md` carries the directory map; what moved
 | Currencies | `/Users/udi/Grassroots/GLP-worktrees/Currencies` | `Currencies` |
 | vGLP | `/Users/udi/Grassroots/GLP-worktrees/vGLP` | `vGLP` |
 | GLP-Networking-API | `/Users/udi/Grassroots/GLP-worktrees/GLP-Networking-API` | `GLP-Networking-API` |
+| GFWC | `/Users/udi/Grassroots/GLP-worktrees/GFWC` | `GFWC` |
 
 A project not listed has no worktree yet and asks Integration for one.
 
