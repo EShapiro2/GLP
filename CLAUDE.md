@@ -73,7 +73,7 @@ Loading a project: enter the directory path at the prompt; the project linker re
 
 | Suite | Command (from the worktree root) | Tests |
 |---|---|---|
-| Full suite (canonical) | `bash test/run_all_tests.sh` | 1803, all green, `KNOWN_RED` empty — at GLP `9f1284e5`, 2026-09-16 |
+| Full suite (canonical) | `bash test/run_all_tests.sh` | 1803, all green, `KNOWN_RED` empty — at GLP `49924054`, 2026-09-16 |
 | Dart unit tests alone | `cd glp_runtime && dart test` | glp_runtime only |
 | Flutter package alone | `cd glp_multiagent && flutter test` | glp_multiagent only |
 
@@ -117,7 +117,7 @@ When you hit a bug or unexpected behaviour: STOP; check the spec; report in this
 
 ## Flutter `glp_multiagent`
 
-🔴 `glp_multiagent/assets/glp/` is generated and gitignored: `bash tool/sync_glp_assets.sh` from `glp_multiagent/` rebuilds it from `programs/`, and it runs before any build.  Never commit the tree and never edit a file in it — edit the source under `programs/` and re-run the script.
+🔴 `glp_multiagent/assets/glp/` is generated and gitignored: `bash tool/sync_glp_assets.sh` from `glp_multiagent/` rebuilds it from `programs/`, and it runs before any build.  Never commit the tree and never edit a file in it — edit the source under `programs/` and re-run the script.  The suite runs it for you: Section Q generates the bundle before it runs, because without it `flutter test` dies building the asset bundle, the 61 `glp_multiagent` tests do not run, and before 2026-09-16 the suite still reported green.
 
 When modifying `glp_runtime` code that affects the Flutter app: `cd <worktree>/glp_multiagent && pkill -f "glp_multiagent" 2>/dev/null; flutter clean && flutter pub get && flutter build macos`.  `flutter clean` is required.  App log: `/Users/udi/Grassroots/tmp/glp_multiagent_trace.log`, cleared before each run.  iOS runs on the simulator; a physical phone is not needed (Udi, 2026-09-15).
 
