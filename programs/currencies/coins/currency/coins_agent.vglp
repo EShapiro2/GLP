@@ -47,13 +47,13 @@ respond_swap(offer(From, Want, Offered), Resp?, [decline_swap(From?, Offered?, R
     ground(From?), ground(Want?), ground(Offered?) | true.
 
 %% Accept: the agent gives the wanted coins and takes the offered ones,
-%% declining itself when it does not hold the wanted coins.  The else-branch is
-%% the person's decline.
+%% declining itself when it does not hold the wanted coins.  The person's
+%% decline is the sibling clause above, a volition-guarded clause of its own,
+%% and this clause has no else-branch: the card carries the one Decline.
 *(yes, From?, Want?, Offered?)
 respond_swap(offer(From, Want, Offered), Resp?, Ans?) :-
     ground(From?), ground(Want?), ground(Offered?) |
-    accept_answer(From?, Want?, Offered?, Resp, Ans)
- *(no) decline_answer(From?, Offered?, Resp, Ans).
+    accept_answer(From?, Want?, Offered?, Resp, Ans).
 
 %% =============================================================================
 %% The agent
