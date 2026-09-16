@@ -27,6 +27,34 @@ Ownership is Coordination Appendix B, `/Grassroots/Coordination/sections/B-code-
 - Never `git reset`, `git revert`, `git restore` or `git checkout -- <file>` on another session's work; never rewrite history on `main`.
 - Generated files are gitignored and rebuilt by their script, never committed.
 
+## The tree
+
+Reorganised 2026-09-16 (Udi).  `README.md` carries the directory map; what moved, and where a Code session must now look:
+
+| Was | Is |
+|---|---|
+| `programs/spm/` | `programs/social/spm/` |
+| `programs/currencies/` (the program) | `programs/currencies/bonds_v2/` |
+| `programs/coins/`, `programs/bonds/`, `programs/sovereign/` | `programs/currencies/coins/`, `.../bonds/`, `.../sovereign/` |
+| `programs/multiagent_tests/`, `programs/vglp_tests/` | `programs/tests/multiagent/`, `programs/tests/vglp/` |
+| `programs/social/linkprobe*/`, `probeapp/`, `runprobe/` and their boot files | `programs/tests/linkprobes/` |
+| `glp_runtime/test/programs/*` | `programs/tests/*` |
+| `glp_runtime/test/module/files/*.glp` | `programs/tests/module/` |
+
+`programs/social/`, `programs/currencies/` and `programs/tests/` are containers with no `self.glp`, so they add nothing to the ancestor scope chain.  `programs/archive/`, `programs/old-archive/`, `archive/`, `test/archive/`, `programs/plays/` and `programs/exercises/` were deleted in the same series: there is no archive in this repository, and nothing is to be archived into one.
+
+## Worktrees
+
+| Project | Worktree | Branch |
+|---|---|---|
+| IGLP | `/Users/udi/Grassroots/GLP-worktrees/IGLP` | `IGLP` |
+| GSG | `/Users/udi/Grassroots/GLP-worktrees/GSG` | `GSG` |
+| Currencies | `/Users/udi/Grassroots/GLP-worktrees/Currencies` | `Currencies` |
+| vGLP | `/Users/udi/Grassroots/GLP-worktrees/vGLP` | `vGLP` |
+| GLP-Networking-API | `/Users/udi/Grassroots/GLP-worktrees/GLP-Networking-API` | `GLP-Networking-API` |
+
+A project not listed has no worktree yet and asks Integration for one.
+
 ## Operating GLP
 
 ### REPL
@@ -45,7 +73,7 @@ Loading a project: enter the directory path at the prompt; the project linker re
 
 | Suite | Command (from the worktree root) | Tests |
 |---|---|---|
-| Full suite (canonical) | `bash test/run_all_tests.sh` | 1793, all green, `KNOWN_RED` empty — at GLP `96d13b7d`, 2026-09-15 |
+| Full suite (canonical) | `bash test/run_all_tests.sh` | 1803, all green, `KNOWN_RED` empty — at GLP `117e4f78`, 2026-09-16 |
 | Dart unit tests alone | `cd glp_runtime && dart test` | glp_runtime only |
 | Flutter package alone | `cd glp_multiagent && flutter test` | glp_multiagent only |
 
@@ -63,7 +91,9 @@ When you fix a bug, add a test that exercises the fix; when you add a feature, a
 
 ## Archiving
 
-🔴 **Live code never points to archived code (Udi, 2026-08-03).**  No file the suite loads, program another program calls, or path a live script or Dart source names may resolve into `programs/archive/` or `programs/old-archive/`.  Repointing a live reference at an archived path is the violation, not the remedy.  Before archiving anything, grep for every reference to it and count what breaks.
+🔴 **Live code never points to archived code (Udi, 2026-08-03).**  No file the suite loads, program another program calls, or path a live script or Dart source names may resolve into an archive.  Repointing a live reference at an archived path is the violation, not the remedy.  Before archiving anything, grep for every reference to it and count what breaks.
+
+The repository holds no archive: `programs/archive/`, `programs/old-archive/`, `archive/` and `test/archive/` were deleted on 2026-09-16, and nothing superseded is kept in the tree — git history is where it lives.  The rule above governs any archive a later decision creates.
 
 ## Spec-first development
 
