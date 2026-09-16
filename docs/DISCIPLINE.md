@@ -478,7 +478,7 @@ Examples:
 | Multiagent GLP | Multiagent implementation | `lib/multiagent/`, `glp_multiagent/`, `programs/multiagent/` |
 | Typed GLP | Type system | `lib/analysis/`; its specs live in the TGLP paper |
 | Book GLP | Book content | `programs/book/`, `programs/typed_book/` |
-| ICLP GLP | Paper | `GLP-ICLP-2026/` |
+| ICLP GLP | Paper | `GLP-Spec/` |
 
 ### 4.2 Cross-Project Changes
 
