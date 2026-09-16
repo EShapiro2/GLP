@@ -53,7 +53,7 @@ done
 # sources rather than copied --- the same :artefact the tests use, writing
 # <name>.glpw into the super-app's directory in the bundle.
 ( cd ../glp_runtime && for prog in ../programs/social/graph/pingapp \
-                                   ../programs/coins/currency \
+                                   ../programs/currencies/coins/currency \
                                    ../programs/cssn/childsafe; do
     printf ':artefact %s %s\n:quit\n' \
       "$prog" "../glp_multiagent/$DST/social/graph/core" | bin/glpc

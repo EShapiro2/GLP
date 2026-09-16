@@ -1,6 +1,6 @@
 %% play_village_headless.glp — the six-agent village market, headless.
 %%
-%% The GrassApp port of the currencies village (programs/currencies/play12),
+%% The GrassApp port of the currencies village (programs/currencies/bonds_v2/play12),
 %% which is the scenario of Grassroots-Bonds §8.2.  Six villagers — Alice
 %% (baker), Bob (farmer), Charlie (carpenter), Diana (doctor), Eve (teacher),
 %% Frank (fisherman) — exercise the seven operations of §8.2:

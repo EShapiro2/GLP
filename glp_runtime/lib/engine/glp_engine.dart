@@ -492,7 +492,7 @@ class GlpEngine {
     // so a module merged before the `self.glp` that defines a template it names
     // loses that template and its declaration keeps an unresolved type. In
     // discovery order — the directory walk's — that is what happened to every
-    // module in a subdirectory: `programs/spm/gsg/plays/play_befriend.glp:24`
+    // module in a subdirectory: `programs/social/spm/gsg/plays/play_befriend.glp:24`
     // names `UserEvent(V, Q, A)` from `gsg/self.glp` one level up, and the
     // program loaded but every goal posted to it failed the goal check with
     // `UnknownTypeError: UserEvent`. Shallower directories first, and a

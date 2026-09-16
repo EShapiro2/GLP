@@ -724,7 +724,7 @@ LinkResult checkedLinkedProgram(List<DiscoveredModule> modules,
 /// templates in separate maps. Keying this union by bare name dropped whichever
 /// arity the directory walk reached second, and every reference to the dropped
 /// one then failed to resolve in the linked program while the per-module check
-/// passed. That is what made `programs/spm/{cva,gsg,secure_gsg}` unloadable:
+/// passed. That is what made `programs/social/spm/{cva,gsg,secure_gsg}` unloadable:
 /// `cva/self.glp`'s `NetMsg(C)` displaced the arity-0 `NetMsg` of
 /// `programs/system/mad_predicates.glp`, which the root `self.glp` `-expose`s
 /// into every program, so `mad_predicates.glp:19`'s `NetStream` lost its element

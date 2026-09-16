@@ -219,12 +219,12 @@ PendingInv   ::= [] ; [Pending | PendingInv].
 Host ::= host(AppList, AttestList, PendingInv, Stream(String)).
 
 %% =============================================================================
-%% THE INTERFACE OF THE CURRENCY MINI-APP (programs/coins/currency), as the
+%% THE INTERFACE OF THE CURRENCY MINI-APP (programs/currencies/coins/currency), as the
 %% super-app declares it: coins(Id, Ui, Convs), Ui the mini-app's end of a
 %% channel of the mediator's cards and the person's answers, Convs the stream
 %% on which the social graph hands it its conversations, each a root channel
 %% of the currency protocol.  The definitions are Currencies' own
-%% (programs/coins/self.glp) written here again, since find_type/2 resolves a
+%% (programs/currencies/coins/self.glp) written here again, since find_type/2 resolves a
 %% declaration in the caller's scope and the identity is structural: the
 %% super-app carries the interface of every mini-app it hosts.  The names are
 %% the super-app's where they clash with the mediator's (CReqId).
@@ -281,10 +281,10 @@ Choice     ::= answer(CReqId, Answer) ; wait.
 
 %% =============================================================================
 %% THE INTERFACE OF THE DENOMINATED CURRENCIES MINI-APP
-%% (programs/sovereign/denominated), as the super-app declares it:
+%% (programs/currencies/sovereign/denominated), as the super-app declares it:
 %% sovereign(Id, Ui, Convs), the two granted channels its second and third
 %% arguments, as coins/3 has them.  The definitions are Currencies' own
-%% (programs/sovereign/self.glp), written here again for the reason the
+%% (programs/currencies/sovereign/self.glp), written here again for the reason the
 %% currency's are above and taken from that file rather than from their letter.
 %% The names are the super-app's, prefixed Sv throughout: EVERY one of them
 %% clashes with the currency's, the two mini-apps being hosted side by side and

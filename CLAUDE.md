@@ -87,6 +87,8 @@ When you hit a bug or unexpected behaviour: STOP; check the spec; report in this
 
 ## Flutter `glp_multiagent`
 
+🔴 `glp_multiagent/assets/glp/` is generated and gitignored: `bash tool/sync_glp_assets.sh` from `glp_multiagent/` rebuilds it from `programs/`, and it runs before any build.  Never commit the tree and never edit a file in it — edit the source under `programs/` and re-run the script.
+
 When modifying `glp_runtime` code that affects the Flutter app: `cd <worktree>/glp_multiagent && pkill -f "glp_multiagent" 2>/dev/null; flutter clean && flutter pub get && flutter build macos`.  `flutter clean` is required.  App log: `/Users/udi/Grassroots/tmp/glp_multiagent_trace.log`, cleared before each run.  iOS runs on the simulator; a physical phone is not needed (Udi, 2026-09-15).
 
 ## Environment

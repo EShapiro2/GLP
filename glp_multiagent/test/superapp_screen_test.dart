@@ -219,7 +219,7 @@ Future<String?> _writeArtefact(String repo, String core) async {
     'bash',
     [
       '-c',
-      "printf ':artefact $repo/coins/currency $core\n:quit\n' | bin/glpc"
+      "printf ':artefact $repo/currencies/coins/currency $core\n:quit\n' | bin/glpc"
     ],
     workingDirectory: runtime,
   );

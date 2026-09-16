@@ -9,8 +9,8 @@ set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
-POSITIVE_DIR="$PROJECT_DIR/test/programs/typechecker/positive"
-NEGATIVE_DIR="$PROJECT_DIR/test/programs/typechecker/negative"
+POSITIVE_DIR="$PROJECT_DIR/../programs/tests/typechecker/positive"
+NEGATIVE_DIR="$PROJECT_DIR/../programs/tests/typechecker/negative"
 
 pass=0
 fail=0

@@ -57,7 +57,7 @@ class ReplPlayRunner {
 
   // bondsFiles, bondsPlay12Files and cssnFiles are gone with the directories
   // they named — programs/book/bonds and programs/book/cssn, deleted 2026-08-02
-  // as stale copies of the live programs/currencies and programs/cssn. Their
+  // as stale copies of the live programs/currencies/bonds_v2 and programs/cssn. Their
   // four Flutter targets (main_bonds.dart, main_cssg.dart, main_cssg_groups.dart,
   // main_cssg_consent.dart) are retired rather than repointed, on Coordination's
   // ruling of 2026-08-02 10:24: the live directories are program directories and

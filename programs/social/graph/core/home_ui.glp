@@ -1,5 +1,5 @@
 %% home_ui.glp --- the super-app with a LIVE person: the harness the Flutter
-%% agent runtime starts, as programs/coins/play_ui.glp is the currency's.
+%% agent runtime starts, as programs/currencies/coins/play_ui.glp is the currency's.
 %%
 %% superapp_ui(alice, Answers, NetIn) has the three arguments that runtime
 %% expects (Id, UserIn, NetIn): alice's answers arrive on the second, injected

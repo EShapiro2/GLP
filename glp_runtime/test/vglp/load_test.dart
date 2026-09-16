@@ -170,11 +170,11 @@ ping(a).
     });
   });
 
-  group('the one-clause program of programs/vglp_tests', () {
+  group('the one-clause program of programs/tests/vglp', () {
     // Every procedure has one volition-guarded clause and no ordinary clause
     // beside it, save pick, which has one: the case the per-clause reply
     // types exist for.  Its plays run in Section VG of test/run_all_tests.sh.
-    const dir = '$_programs/vglp_tests/one_clause';
+    const dir = '$_programs/tests/vglp/one_clause';
 
     test('compiles on load and is well-typed, input coverage included', () {
       final modules = discoverProgram(dir, rootSelfGlpPath: _rootSelfGlp);

@@ -148,7 +148,7 @@ display respond *(Answer=yes, From?) : panel(inbox), label("Accept"), transient.
     // 2026-09-03, social/graph/core/home.vglp on 2026-09-09 and
     // sovereign/denominated/sovereign_agent.vglp on 2026-09-15.  Count them on
     // disc --- `find programs -name "*.vglp"`, less the one-clause fixture of
-    // programs/vglp_tests, which load_test covers.  Four of the paths moved on
+    // programs/tests/vglp, which load_test covers.  Four of the paths moved on
     // 2026-09-08, each source going with its .glp into the certified program of
     // a mini-app --- social/graph/core, coins/currency and cssn/childsafe ---
     // since a lone .vglp is compiled by the loader and must stand beside its
@@ -167,9 +167,9 @@ display respond *(Answer=yes, From?) : panel(inbox), label("Accept"), transient.
       'grassapp/grassapp_agent.vglp',
       'cssn/childsafe/agent.vglp',
       'cssn/childsafe/child_agent.vglp',
-      'coins/currency/coins_agent.vglp',
-      'bonds/bonds_agent.vglp',
-      'sovereign/denominated/sovereign_agent.vglp',
+      'currencies/coins/currency/coins_agent.vglp',
+      'currencies/bonds/bonds_agent.vglp',
+      'currencies/sovereign/denominated/sovereign_agent.vglp',
     ]) {
       test('$path parses as vGLP', () {
         final file = File('$_programs/$path');

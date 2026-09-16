@@ -14,7 +14,7 @@
 %% no global clock.
 %%
 %% The transaction predicates over these types live in currency_txn.glp (the
-%% top-level lift of the canonical programs/currencies/txn.glp).
+%% top-level lift of the canonical programs/currencies/bonds_v2/txn.glp).
 %%
 %% Polarity convention (typed-glp-manual §15B): a position that FORWARDS a
 %% writer through a structure carries `?` in the type (cold-call Response, the

@@ -1,10 +1,10 @@
 /// The currency mini-app on a live person's screen — one phone, one person,
 /// the interface derived from the program.
 ///
-/// `programs/coins` at `coins_ui/3`: alice's execution of Currencies' mini-app
+/// `programs/currencies/coins` at `coins_ui/3`: alice's execution of Currencies' mini-app
 /// with its mediator, and bob's, scripted, over one conversation. Nothing on
 /// this screen is written here — [coinsManifest] is the image of the display
-/// declarations of `programs/coins/currency/coins_agent.vglp`, and the shell
+/// declarations of `programs/currencies/coins/currency/coins_agent.vglp`, and the shell
 /// is [runVglpApp], which carries any compiled vGLP program.
 library;
 

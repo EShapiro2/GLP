@@ -3,7 +3,7 @@
 %% The directory holds the agent (agent.glp) and the super-app plays
 %% (superapp_plays.glp); the types are the parent's (../self.glp, an ancestor
 %% scope).  The certified mini-apps it hosts are programs of their own
-%% (../pingapp; programs/coins/currency), whose artefacts the REPL's :artefact
+%% (../pingapp; programs/currencies/coins/currency), whose artefacts the REPL's :artefact
 %% writes here, the one place the agent's load_file/2 resolves a name.  Loaded
 %% as part of ../ (the UI boot plays), agent is found by module name; under
 %% :boot (../../superapp_boot.glp) sg_init/3 runs one super-app per isolate.

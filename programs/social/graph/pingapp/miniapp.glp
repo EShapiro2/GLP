@@ -103,8 +103,8 @@ open_out(F, Id, Held, Held?, [hello(Id?) | Out2?], Out2) :- otherwise | true.
 %% --- the element carries the variable's writer, for the far side to assign,
 %% and the caller is given its reader.  The element is built HERE, at an
 %% output position: a fresh writer passed into a goal's input argument does
-%% not carry an assignment back across a link (programs/social/linkprobe
-%% beside programs/social/linkprobe3).
+%% not carry an assignment back across a link (programs/tests/linkprobes/linkprobe
+%% beside programs/tests/linkprobes/linkprobe3).
 procedure probe_on(Constant?, ConvList?, ConvList, String, Constant).
 probe_on(F, [conv(F1, [probe(W) | Out1?]) | Rest], [conv(F1?, Out1) | Rest?], W?, sent) :-
     F? =?= F1? | true.

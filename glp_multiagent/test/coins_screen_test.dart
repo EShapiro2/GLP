@@ -2,7 +2,7 @@
 /// derived from `coins_agent.vglp`'s display declarations and carried by the
 /// person channel of the compiled program.
 ///
-/// The whole path runs: `programs/coins` at `coins_ui/3` — alice's execution of
+/// The whole path runs: `programs/currencies/coins` at `coins_ui/3` — alice's execution of
 /// the mini-app with its mediator, and bob's, scripted, over one conversation —
 /// the cards arriving as ground terms, the person's taps on the derived
 /// constructs going back as `answer(req(N), xs_C(...))`, and the agent's screen
@@ -99,9 +99,9 @@ void main() {
     final agent = AgentRuntime(
       agentId: 'alice',
       glpSources: const [],
-      // programs/coins is a program: currency/ is the certified mini-app and
+      // programs/currencies/coins is a program: currency/ is the certified mini-app and
       // this directory adds the harness that runs it for a live person.
-      programDir: '$repo/coins',
+      programDir: '$repo/currencies/coins',
       goalLabel: 'coins_ui/3',
       rootSelfGlpPath: '$repo/self.glp',
       friends: const ['bob'],

@@ -43,8 +43,8 @@ BOOK="$GLP_DIR/programs/book"
 # it (single heap and two isolates). Moved out of book/ on 2026-08-02 and named
 # for what it exercises, not for the platform it borrows.
 AGENT_RT="$GLP_DIR/programs/tests/agent_roundtrip"
-TC_DIR="$GLP_RUNTIME/test/programs/typechecker"
-MODED="$GLP_RUNTIME/test/programs/moded_types"
+TC_DIR="$GLP_DIR/programs/tests/typechecker"
+MODED="$GLP_DIR/programs/tests/moded_types"
 
 cd "$GLP_RUNTIME"
 
@@ -2137,7 +2137,7 @@ echo ""
 echo "=== Section N: Currencies Modules ==="
 echo ""
 
-BONDS_V2="$GLP_DIR/programs/currencies"
+BONDS_V2="$GLP_DIR/programs/currencies/bonds_v2"
 
 # Loading
 n_load=$("$REPL_RUN" <<HEREDOC
@@ -2288,20 +2288,20 @@ check "Currencies credit line: at k_d=0 lender holds the full line plus interest
 echo ""
 
 # =============================================================================
-# Section N2: The coins program (programs/coins): the vGLP currency agent of
+# Section N2: The coins program (programs/currencies/coins): the vGLP currency agent of
 # the Grassroots Currencies paper as a mini-app of the Grassroots Super-App.
-# programs/coins/currency is the certified program --- the agent
+# programs/currencies/coins/currency is the certified program --- the agent
 # coins_agent.vglp, its canonical compilation coins_agent.glp (emitted by glpc
 # :emit; the .vglp beside it is skipped by the loader while the .glp stands),
 # the mini-app entry coins/3 and the mini-app's own two plays --- and
-# programs/coins adds the six-agent village market of the paper's Section 5,
+# programs/currencies/coins adds the six-agent village market of the paper's Section 5,
 # which stands in for the super-app (the conversations) and the persons.  The
 # run needs the reduction limit raised.
 # =============================================================================
 echo "=== Section N2: Coins program (Grassroots Currencies) ==="
 echo ""
 
-COINS="$GLP_DIR/programs/coins"
+COINS="$GLP_DIR/programs/currencies/coins"
 
 # The certified program: loads, type-checks, and carries the compiler's
 # certificate, since no entry point reaches the network or the person.
@@ -2335,7 +2335,7 @@ $COINS
 HEREDOC
 2>&1)
 check "Coins program: :emit re-emits coins_agent.glp" "wrote $COINS/currency/coins_agent.glp" "$n2_emit"
-n2_emit_diff=$(cd "$GLP_DIR" && git diff --stat -- programs/coins/currency/coins_agent.glp)
+n2_emit_diff=$(cd "$GLP_DIR" && git diff --stat -- programs/currencies/coins/currency/coins_agent.glp)
 check_not "Coins program: committed coins_agent.glp is the compiler's output" "coins_agent.glp" "$n2_emit_diff"
 
 echo "--- Coins village market (village) ---"
@@ -2386,7 +2386,7 @@ check "Coins mini-app play_swap: the counterparty's screen" "B = \[opened(alice)
 echo ""
 
 # =============================================================================
-# Section N3: The bonds program (programs/bonds): the vGLP bond agent of the
+# Section N3: The bonds program (programs/currencies/bonds): the vGLP bond agent of the
 # Grassroots Bonds paper, its canonical compilation bonds_agent.glp (emitted by
 # glpc :emit), the escrow programs, the seven-party village market of the
 # paper's Section 7, and the credit line of its Section 5.  As for N2 the runs
@@ -2395,7 +2395,7 @@ echo ""
 echo "=== Section N3: Bonds program (Grassroots Bonds) ==="
 echo ""
 
-BONDS="$GLP_DIR/programs/bonds"
+BONDS="$GLP_DIR/programs/currencies/bonds"
 
 n3_load=$("$REPL_RUN" <<HEREDOC
 $BONDS
@@ -2413,7 +2413,7 @@ $BONDS
 HEREDOC
 2>&1)
 check "Bonds program: :emit re-emits bonds_agent.glp" "wrote $BONDS/bonds_agent.glp" "$n3_emit"
-n3_emit_diff=$(cd "$GLP_DIR" && git diff --stat -- programs/bonds/bonds_agent.glp)
+n3_emit_diff=$(cd "$GLP_DIR" && git diff --stat -- programs/currencies/bonds/bonds_agent.glp)
 check_not "Bonds program: committed bonds_agent.glp is the compiler's output" "bonds_agent.glp" "$n3_emit_diff"
 
 echo "--- Bonds village market (village) ---"
@@ -2654,17 +2654,17 @@ check "Bonds letter of credit: the escrow agent holds nothing at the end" "tagge
 echo ""
 
 # =============================================================================
-# Section N4: The denominated program (programs/sovereign): the bond agent of
+# Section N4: The denominated program (programs/currencies/sovereign): the bond agent of
 # grassroots bonds with the denomination added, as the act schemas of
 # "Sovereign Grassroots Currencies" are the bonds schemas with the denomination
 # added --- cent(u, f, d) carrying f as its middle argument, every schema
 # carrying the one denomination variable f --- as a mini-app of the Grassroots
-# Super-App.  programs/sovereign/denominated is the certified program --- the
+# Super-App.  programs/currencies/sovereign/denominated is the certified program --- the
 # agent sovereign_agent.vglp, its canonical compilation sovereign_agent.glp
 # (emitted by glpc :emit; the .vglp beside it is skipped by the loader while
 # the .glp stands), the mini-app entry sovereign/3, the scripted person with
 # the escrow programs it answers by, and the mini-app's own two plays --- and
-# programs/sovereign adds the plays that stand in for the super-app: the
+# programs/currencies/sovereign adds the plays that stand in for the super-app: the
 # village market of the bonds paper denominated in one fiat currency, which
 # must end in exactly the holdings of the undenominated run with usd in every
 # lot; the same village with the central bank as an eighth party, which mints
@@ -2677,7 +2677,7 @@ echo ""
 echo "=== Section N4: Denominated program (Sovereign Grassroots Currencies) ==="
 echo ""
 
-SOV="$GLP_DIR/programs/sovereign"
+SOV="$GLP_DIR/programs/currencies/sovereign"
 SOVD="$SOV/denominated"
 
 # The certified program: loads, type-checks, and carries the compiler's
@@ -2710,7 +2710,7 @@ $SOV
 HEREDOC
 2>&1)
 check "Denominated program: :emit re-emits sovereign_agent.glp" "wrote $SOVD/sovereign_agent.glp" "$n4_emit"
-n4_emit_diff=$(cd "$GLP_DIR" && git diff --stat -- programs/sovereign/denominated/sovereign_agent.glp)
+n4_emit_diff=$(cd "$GLP_DIR" && git diff --stat -- programs/currencies/sovereign/denominated/sovereign_agent.glp)
 check_not "Denominated program: committed sovereign_agent.glp is the compiler's output" "sovereign_agent.glp" "$n4_emit_diff"
 
 echo "--- The denominated village market (village) ---"
@@ -2808,7 +2808,7 @@ echo ""
 
 # =============================================================================
 # Section VG: The canonical compilation on one-clause procedures
-# (programs/vglp_tests/one_clause): every procedure of responder.vglp has one
+# (programs/tests/vglp/one_clause): every procedure of responder.vglp has one
 # volition-guarded clause, the case the per-clause reply types exist for.  The
 # source compiles on load (no .glp beside it).  Three plays: the person's
 # answer reaches its clause; an answer of another clause's form leaves the
@@ -2825,7 +2825,7 @@ echo ""
 echo "=== Section VG: Canonical compilation, one-clause procedures ==="
 echo ""
 
-ONECLAUSE="$GLP_DIR/programs/vglp_tests/one_clause"
+ONECLAUSE="$GLP_DIR/programs/tests/vglp/one_clause"
 
 vg_load=$("$REPL_RUN" <<HEREDOC
 $ONECLAUSE
@@ -3015,7 +3015,7 @@ echo ""
 echo "=== Section J: SecureBonds ==="
 echo ""
 
-SECUREBONDS="$GLP_DIR/programs/currencies/secure"
+SECUREBONDS="$GLP_DIR/programs/currencies/bonds_v2/secure"
 
 # Loading
 sb_load=$("$REPL_RUN" <<HEREDOC
@@ -3099,13 +3099,13 @@ check "S3 constant instantiation" "Zc = \[\"a\", \"c\", \"b\", \"d\"\]" "$s3"
 # It asserted that play12 loads standalone. It does not and must not: play12/self.glp
 # exports no procedure, so the program has no entry points (modules.tex §Static
 # Linking, "Entry and the absence of a boot module"), and the play itself runs
-# from programs/currencies. Coordination ruled the old assertion wrong rather
+# from programs/currencies/bonds_v2. Coordination ruled the old assertion wrong rather
 # than Grassroots Currencies' to repair. What the check was FOR — the I-1
 # regression, an ancestor type failing to resolve through the directory load —
 # is kept: an UnknownType would still be wrong, and now so would a load.
 echo "--- S4: currencies/play12 is not a program (restated) ---"
 s4=$("$REPL_RUN" <<HEREDOC
-$GLP_DIR/programs/currencies/play12
+$GLP_DIR/programs/currencies/bonds_v2/play12
 :quit
 HEREDOC
 2>&1)
@@ -3307,7 +3307,7 @@ check "X8 goal succeeds" "succeeds" "$x8"
 # NetMsg/1 in the fixture and NetMsg/0 in programs/system/mad_predicates.glp,
 # which the root self.glp -expose's into EVERY program.  The linked program's
 # type definitions were keyed by bare name, so one arity was dropped and every
-# reference to it went unresolved: this is why programs/spm/{cva,gsg,secure_gsg}
+# reference to it went unresolved: this is why programs/social/spm/{cva,gsg,secure_gsg}
 # would not load.  The negative check is on mad_predicates' own NetStream, whose
 # element type is the arity-0 NetMsg that used to be the one displaced.
 echo "--- X9: one type name at two arities across an exposed boundary ---"
@@ -3326,25 +3326,25 @@ check "X9 goal succeeds" "succeeds" "$x9"
 # fixed; the goal is what X8's goal-check ordering fix made possible (every
 # goal used to fail with UnknownTypeError: UserEvent, a gsg/self.glp template
 # named by a module one directory below it).  Since 2026-09-07 the program is
-# programs/spm: the platform plays reach the CVA mediator as `cva # network`,
+# programs/social/spm: the platform plays reach the CVA mediator as `cva # network`,
 # which resolves only where cva/ is a module of the loaded program, so
 # spm/self.glp is the root and exports the plays as the entry points; cva/
 # still loads on its own.
 echo "--- X10: spm programs ---"
 x10c=$("$REPL_RUN" <<HEREDOC
-$GLP_DIR/programs/spm/cva
+$GLP_DIR/programs/social/spm/cva
 :quit
 HEREDOC
 2>&1)
 check "X10 spm/cva loads" "Loaded program" "$x10c"
 x10=$("$REPL_RUN" <<HEREDOC
-$GLP_DIR/programs/spm
+$GLP_DIR/programs/social/spm
 :quit
 HEREDOC
 2>&1)
 check "X10 spm loads" "Loaded program" "$x10"
 x10g=$("$REPL_RUN" <<HEREDOC
-$GLP_DIR/programs/spm
+$GLP_DIR/programs/social/spm
 play_befriend(A, B).
 :quit
 HEREDOC
@@ -3359,7 +3359,7 @@ echo ""
 # directory walk reached first became every module's: `inner/self.glp`'s two-
 # argument Lot was what `txn.glp` — a module of the program ABOVE it — was
 # checked against, and the program did not load.  Reported by Currencies Code
-# on 2026-09-03 against programs/currencies with programs/currencies/coins
+# on 2026-09-03 against programs/currencies/bonds_v2 with programs/currencies/bonds_v2/coins
 # under it.  Steps 3 and 4 of modules.tex §Compilation now rename each module's
 # types to `M:T` and resolve every reference to the nearest scope defining it,
 # so this holds whichever order the walk takes.  The goal is the second half:
@@ -3377,7 +3377,7 @@ check_not "X11 txn keeps its own directory's Lot" "uncovered alternative" "$x11"
 check "X11 goal succeeds" "succeeds" "$x11"
 
 # --- X12: a module's own type name is its own, whatever the walk order ---
-# `a_agent.glp` sorts before `self.glp`, the order that stopped programs/bonds
+# `a_agent.glp` sorts before `self.glp`, the order that stopped programs/currencies/bonds
 # loading (Currencies Code, 2026-09-03): the two definitions of `Answer` were
 # merged into one namespace and the first the filesystem listed won.
 echo "--- X12: a module's own type is its own ---"
@@ -3938,7 +3938,7 @@ echo ""
 # fix lands.
 
 # =============================================================================
-# SECTION MA: multiagent_tests program directories load under strict types
+# SECTION MA: tests/multiagent program directories load under strict types
 # =============================================================================
 # The twelve madGLP boot programs, converted 2026-08-02 from single boot files
 # into program directories: <name>_boot.glp keeps the boot clause alone and
@@ -3950,10 +3950,10 @@ echo ""
 # gates the thing the conversion was for, that each loads clean under strict
 # types.  A previous shape of this conversion had 8 of the 12 failing; all
 # twelve load here, so that split was the shape's and not the language's.
-echo "=== Section MA: multiagent_tests program directories ==="
+echo "=== Section MA: tests/multiagent program directories ==="
 echo ""
 
-for ma_dir in "$GLP_DIR"/programs/multiagent_tests/*/; do
+for ma_dir in "$GLP_DIR"/programs/tests/multiagent/*/; do
     ma_name=$(basename "$ma_dir")
     ma_out=$("$REPL_RUN" <<HEREDOC
 $ma_dir
@@ -3981,7 +3981,7 @@ done
 echo ""
 
 # =============================================================================
-# Section SG: SGSG's programs --- the SPM programs (programs/spm: the CVA
+# Section SG: SGSG's programs --- the SPM programs (programs/social/spm: the CVA
 # substrate, the social graph and its secure version, with Restore and
 # Unfriend), the super-app prototype (programs/grassapp, a program since
 # 2026-09-07), and the resource-bounded meta-interpreter of the SGSG paper's
@@ -3993,7 +3993,7 @@ echo "=== Section SG: SGSG programs (spm, grassapp, budget) ==="
 echo ""
 
 sg_spm=$("$REPL_RUN" <<HEREDOC
-$GLP_DIR/programs/spm
+$GLP_DIR/programs/social/spm
 :limit 1000000
 play_befriend(A1, B1).
 play_befriend_simultaneous(A2, B2).
@@ -4037,7 +4037,7 @@ rm -f "$SG_CORE"/*.glpw
 sg_core=$("$REPL_RUN" <<HEREDOC
 :artefact $GLP_DIR/programs/social/graph/pingapp $SG_CORE
 :artefact $GLP_DIR/programs/cssn $SG_CORE
-:artefact $GLP_DIR/programs/coins/currency $SG_CORE
+:artefact $GLP_DIR/programs/currencies/coins/currency $SG_CORE
 :artefact $GLP_DIR/programs/cssn/childsafe $SG_CORE
 $SG_CORE
 :limit 5000000
@@ -4097,7 +4097,7 @@ check_not "SG super-app hosts the child-safe platform: no failed play" "→ fail
 # handshakes open, both entries are activated by run/3 with their own
 # conversations, and the two protocols proceed over the one friendship.
 sg_two=$("$REPL_RUN" <<HEREDOC
-:artefact $GLP_DIR/programs/coins/currency $SG_CORE
+:artefact $GLP_DIR/programs/currencies/coins/currency $SG_CORE
 :artefact $GLP_DIR/programs/cssn/childsafe $SG_CORE
 $SG_CORE
 :limit 5000000
@@ -4114,7 +4114,7 @@ check_not "SG two mini-apps at once: no failed play" "→ failed" "$sg_two"
 # The same on two smartphones: one isolate per person, both mini-apps hosted by
 # each super-app, both protocols over the one friendship.
 sg_two_boot=$("$REPL_RUN" <<HEREDOC
-:artefact $GLP_DIR/programs/coins/currency $SG_CORE
+:artefact $GLP_DIR/programs/currencies/coins/currency $SG_CORE
 :artefact $GLP_DIR/programs/cssn/childsafe $SG_CORE
 :boot $GLP_DIR/programs/social/both_boot.glp $SG_CORE
 :quit
@@ -4155,7 +4155,7 @@ check "SG super-app on two smartphones: alice greeted" "\[alice\] greeted(bob)" 
 # in rounds and every one must be answered (IGLP, 2026-09-09).  A global name
 # does not cross a link as a term, which is why the request for an
 # introduction names the anchor by the constant the person consented to;
-# programs/social/docs/linkprobes.md holds the two-agent programs that fence
+# programs/tests/linkprobes/linkprobes.md holds the two-agent programs that fence
 # the runtime behaviour in.
 sg_warm=$("$REPL_RUN" <<HEREDOC
 :artefact $GLP_DIR/programs/social/graph/pingapp $SG_CORE
@@ -4203,7 +4203,7 @@ check "SG registry: alice's execution ends of its own accord" "A = \[opened(bob)
 check "SG registry: the entry returns to idle and the second invitation is activated afresh" "B = \[opened(alice), greeted(alice), opened(alice), greeted(alice) | " "$sg_reinvite"
 check_not "SG registry no failed play" "→ failed" "$sg_reinvite"
 
-# The denominated currencies mini-app (programs/sovereign/denominated, Currencies'
+# The denominated currencies mini-app (programs/currencies/sovereign/denominated, Currencies'
 # own) hosted by the super-app: the fourth deliver/10 pair.  The super-app hosts
 # each mini-app by name --- its own end constructor, its own pair of registry
 # states, and its own structural copy of the mini-app's channel type in
@@ -4216,7 +4216,7 @@ check_not "SG registry no failed play" "→ failed" "$sg_reinvite"
 # "[ABORT] _run/3: type identity mismatch for sovereign/3 in module denominated"
 # and the play failed.  Its own session, as the mini-app plays above are.
 sg_sovereign=$("$REPL_RUN" <<HEREDOC
-:artefact $GLP_DIR/programs/sovereign/denominated $SG_CORE
+:artefact $GLP_DIR/programs/currencies/sovereign/denominated $SG_CORE
 $SG_CORE
 :limit 5000000
 play_sovereign(A, B).
@@ -4233,7 +4233,7 @@ check_not "SG denominated no failed play" "→ failed" "$sg_sovereign"
 # artefact; the invitation and handshake cross the isolates and the swap of the
 # currency's own contract runs over the conversation the social graph delivered.
 sg_coins=$("$REPL_RUN" <<HEREDOC
-:artefact $GLP_DIR/programs/coins/currency $SG_CORE
+:artefact $GLP_DIR/programs/currencies/coins/currency $SG_CORE
 :boot $GLP_DIR/programs/social/coins_boot.glp $SG_CORE
 :quit
 HEREDOC

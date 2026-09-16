@@ -1,0 +1,765 @@
+%% secure_gsg/self.glp -- Secure Grassroots Social Graph: CVA types.
+%%
+%% Implements paper §8 (sections/secure-gsg-cva.tex): identity records
+%% transported on Befriend and stored in FMap; periodic re-broadcast via
+%% checkpoint cargo; Restore protocol (passive, carried entirely by
+%% Integrate checkpoint, §8.6); Replace cascade (vouch / new_identity /
+%% rebind, §8.7).
+%%
+%% Spec resolutions used: D (LastBroadcastDate), E (skeleton vs stub),
+%% F (S_p known out-of-band on Replace), O (Integrate checkpoint promotes
+%% stubs using carried IR).
+%%
+%% Sibling-directory types from gsg/self.glp are not transitively visible;
+%% redefining the essentials locally (Agent, NetMsg, InMsg, UserEvent,
+%% IdentityRecord).  Will be cleaned up with a parent programs/SPM/self.glp
+%% once that's introduced.
+
+
+%% =============================================================================
+%% SUBSTRATE ALIASES (redefined; see gsg/self.glp comment on visibility)
+%% =============================================================================
+
+Agent ::= Constant.
+
+NetMsg(C) ::= msg(Agent, Agent, C).
+InMsg(C) ::= msg(Agent, C).
+%% UserEvent extended with `await(Constant)` synchroniser (architecture
+%% §3.3 reply-variable sync); same pattern as gsg/self.glp.
+UserEvent(V, Q, A) ::= will(V) ; unwill(V) ; tick ; crash ; shutdown
+                     ; query(Q, A) ; await(Constant).
+IdentityRecord ::= ir(Stream(Agent), Integer).
+                %%   ^K (custodian set) ^σ (supermajority %, 51..100)
+
+%% =============================================================================
+%% CARGO (paper §8.2 + §8.5 + §8.7)
+%%
+%% Befriend cargos extended with sender's identity record.  Periodic
+%% checkpoint carries the snapshot of sender's friendships (paper §8.5).
+%% Replace cargos: vouch, new_identity, rebind (paper §8.7).
+%% =============================================================================
+
+%% FriendEpoch: (friend, epoch) pair carried in checkpoints and Replace L lists.
+FriendEpoch ::= fe(Agent, Integer).
+FriendList ::= [] ; [FriendEpoch | FriendList].
+
+SecureGsgCargo ::= friend_request(Integer, IdentityRecord)        %% paper §8.2
+                 ; accept(Integer, IdentityRecord)                 %% paper §8.2
+                 ; unfriend(Integer)                                %% paper §6.4
+                 ; stream_update(Agent, Integer)                   %% paper §6.5
+                 ; checkpoint(Integer, IdentityRecord, FriendList) %% paper §8.5
+                 %% Replace cargos (paper §8.7):
+                 ; vouch(Agent, Agent, FriendList)                 %% vouch(p, p', L_c)
+                 ; new_identity(Agent, Agent,                       %% paper §8.7
+                                Stream(Agent), IdentityRecord)
+                                %% ^old ^new   ^V (vouching set) ^IR_{p'}
+                 ; rebind(Integer, IdentityRecord,                  %% paper §8.7
+                          FriendList, FriendList).
+                          %% ^epoch ^IR_q     ^L_q (q's friends)  ^L_q^p (q's view of p's friends)
+
+%% =============================================================================
+%% PERSON VOLITIONS (paper §6.3 + §6.4 + §8.7)
+%% =============================================================================
+
+%% Each volition carries a Reply Constant (architecture §3.3) the agent
+%% binds to `ok` on protocol completion.  Same pattern as GsgVolition.
+SecureGsgVolition ::= discover(Agent, Constant)
+                    ; offer_friendship(Agent, Constant)
+                    ; accept_offer(Agent, Constant)
+                    ; end_friendship(Agent, Constant)
+                    ; vouch(Agent, Agent, Constant)              %% Vouch: vouch(p, p', Reply)
+                    ; announce_new_identity(Agent, IdentityRecord, Constant).
+                      %% Announce new identity at p': the replaced p, its
+                      %% identity record (K_p, σ_p), known to the person out
+                      %% of band (spec-issue F), and Reply.
+
+%% =============================================================================
+%% READ-ONLY QUERIES (extend GSG queries with secure-state observers)
+%% =============================================================================
+
+SecureGsgQuery ::= q_epoch(Agent)                  %% paper notation: epoch_p(q)
+                 ; q_fof_epoch(Agent, Agent)        %% epoch_p(q, f)
+                 ; q_known(Agent)
+                 ; q_ir(Agent)                      %% IR_p[q]: (K, σ) stored for q
+                 ; q_fmap_dom.
+
+SecureGsgAnswer ::= a_epoch(Integer)
+                  ; a_bool(Constant)
+                  ; a_ir(IdentityRecord)
+                  ; a_keys(Stream(Agent)).
+
+%% =============================================================================
+%% PLATFORM STATE (paper §8.1)
+%%
+%% Extends GSG's FMap with identity-record fields (K, σ) per entry.
+%% FMap entries are tagged so skeleton/stub/full status is explicit
+%% (spec-issue E resolution).
+%%
+%% Adds LastBroadcastDate to enforce "at most one re-broadcast per date"
+%% (spec-issue D resolution).
+%% =============================================================================
+
+%% Three FMap-entry kinds (paper §8.5 + §8.7):
+%%   full     -- (epoch, K, σ): live friendship record
+%%   skeleton -- (0, K, σ): installed by Integrate checkpoint from a sender
+%%               we don't yet record; identity record IS present (paper §8.5)
+%%   stub     -- (epoch, ⊥, ⊥): installed by Integrate rebind from a third
+%%               party's L_p; identity record absent until later rebind or
+%%               Integrate checkpoint promotion (spec-issue O)
+SecureFMapEntry ::= full(Agent, Integer, Stream(Agent), Integer)
+                    %%     ^q      ^epoch ^K              ^σ
+                  ; skeleton(Agent, Stream(Agent), Integer)
+                    %%        ^q     ^K              ^σ  (epoch implicit = 0)
+                  ; stub(Agent, Integer).
+                    %%   ^q     ^epoch  (K, σ both ⊥)
+
+SecureFMap ::= [] ; [SecureFMapEntry | SecureFMap].
+
+%% FoFMap unchanged from GSG (no IR carried at stream_update level, paper §8.4).
+FoFInnerEntry ::= fofe(Agent, Integer).
+FoFInner ::= [] ; [FoFInnerEntry | FoFInner].
+FoFEntry ::= fofb(Agent, FoFInner).
+FoFMap ::= [] ; [FoFEntry | FoFMap].
+
+%% Pending offers (architecture §3.3): same shape as gsg's, redefined here
+%% (sibling-directory types aren't transitively visible to the type checker).
+PendingOffer ::= pending_offer(Agent, Integer, Constant).
+PendingList ::= [] ; [PendingOffer | PendingList].
+
+%% Platform state: GSG's six fields + LastBroadcastDate (paper §8.5 spec
+%% issue D).  Pending threads offer round-trips like in gsg.
+%%
+%%   secure_gsg(Known, Volitions, Inbox, FMap, FoFMap, Pending, LastBroadcastDate)
+SecureGsgPlatform ::= secure_gsg(Stream(Agent),                   %% Known
+                                  Stream(SecureGsgVolition),      %% Volitions
+                                  Stream(InMsg(SecureGsgCargo)),  %% Inbox
+                                  SecureFMap,
+                                  FoFMap,
+                                  PendingList,                    %% Pending offers
+                                  Integer).                       %% LastBroadcastDate
+
+%% =============================================================================
+%% HELPERS (visible to sibling modules via ancestor scoping per spec §3.1).
+%% Mirrors gsg/self.glp structure, adapted for SecureFMap (full/skeleton/
+%% stub entries) and SecureGsgCargo (friend_request and accept carrying IR).
+%% =============================================================================
+
+%% bind_ok(R): bind a Constant writer to `ok` via head construction.
+exported procedure bind_ok(Constant).
+bind_ok(ok).
+
+%% =============================================================================
+%% KNOWN SET (paper §5.2 Discover).
+%% =============================================================================
+
+exported procedure is_known(Agent?, Stream(Agent)?, Constant).
+is_known(Q, [Q1 | _], true) :- Q? =?= Q1? | true.
+is_known(Q, [_ | Rest], B?) :- otherwise | is_known(Q?, Rest?, B).
+is_known(_, [], false).
+
+exported procedure add_known(Agent?, Stream(Agent)?, Stream(Agent)).
+add_known(Q, [Q1 | Rest], [Q1? | Rest?]) :- Q? =?= Q1? | true.
+add_known(Q, [Q1 | Rest], [Q1? | Rest1?]) :- otherwise | add_known(Q?, Rest?, Rest1).
+add_known(Q, [], [Q?]).
+
+%% =============================================================================
+%% SECURE EPOCH LOOKUP (paper §8.1).
+%% Returns epoch from any FMap entry kind; 0 if Q absent.
+%%   full(Q, E, K, σ)    -> E
+%%   skeleton(Q, K, σ)   -> 0 (paper: "skeleton at the inactive epoch 0")
+%%   stub(Q, E)          -> E
+%% =============================================================================
+
+exported procedure secure_epoch_of(Agent?, SecureFMap?, Integer).
+secure_epoch_of(Q, [full(Q1, E, _, _) | _], E?) :- Q? =?= Q1? | true.
+secure_epoch_of(Q, [skeleton(Q1, _, _) | _], 0) :- Q? =?= Q1? | true.
+secure_epoch_of(Q, [stub(Q1, E) | _], E?) :- Q? =?= Q1? | true.
+secure_epoch_of(Q, [_ | Rest], E?) :- otherwise | secure_epoch_of(Q?, Rest?, E).
+secure_epoch_of(_, [], 0).
+
+%% =============================================================================
+%% SECURE FMAP UPDATE (paper §8.2 Befriend extension): set FMap[Q] := full
+%% entry (E, K, σ).  Replaces existing entry of any kind, or appends new.
+%% =============================================================================
+
+exported procedure set_full_entry(Agent?, Integer?, Stream(Agent)?, Integer?,
+                                    SecureFMap?, SecureFMap).
+
+%% Match an existing full entry: replace.
+set_full_entry(Q, E, K, S, [full(Q1, _, _, _) | Rest],
+               [full(Q?, E?, K?, S?) | Rest?]) :-
+    Q? =?= Q1? | true.
+
+%% Match an existing skeleton entry: replace (promote to full).
+set_full_entry(Q, E, K, S, [skeleton(Q1, _, _) | Rest],
+               [full(Q?, E?, K?, S?) | Rest?]) :-
+    Q? =?= Q1? | true.
+
+%% Match an existing stub entry: replace (promote stub to full, spec-issue O).
+set_full_entry(Q, E, K, S, [stub(Q1, _) | Rest],
+               [full(Q?, E?, K?, S?) | Rest?]) :-
+    Q? =?= Q1? | true.
+
+%% No match at this entry: keep, recurse.
+set_full_entry(Q, E, K, S, [Other | Rest], [Other? | Rest1?]) :-
+    otherwise | set_full_entry(Q?, E?, K?, S?, Rest?, Rest1).
+
+%% End of list: append new full entry.
+set_full_entry(Q, E, K, S, [], [full(Q?, E?, K?, S?)]).
+
+%% =============================================================================
+%% SECURE BROADCAST stream_update(F, X) to every recipient in SecureFMap
+%% (paper §6.5 / §8.4 -- stream_update doesn't carry IR even in secure GSG).
+%% Same stream-threading convention as gsg/self.glp broadcast_update.
+%% =============================================================================
+
+exported procedure secure_broadcast_update(Agent?, Agent?, Integer?, SecureFMap?,
+                                            Stream(NetMsg(SecureGsgCargo)),
+                                            Stream(NetMsg(SecureGsgCargo))?).
+
+%% Recipient via full entry.
+secure_broadcast_update(From, F, X, [full(R, _, _, _) | Rest],
+                        [msg(From?, R?, stream_update(F?, X?)) | NewTail?],
+                        Cont) :-
+    ground(From?), ground(F?), ground(X?) |
+    secure_broadcast_update(From?, F?, X?, Rest?, NewTail, Cont?).
+
+%% Recipient via skeleton entry (still in Rec).
+secure_broadcast_update(From, F, X, [skeleton(R, _, _) | Rest],
+                        [msg(From?, R?, stream_update(F?, X?)) | NewTail?],
+                        Cont) :-
+    ground(From?), ground(F?), ground(X?) |
+    secure_broadcast_update(From?, F?, X?, Rest?, NewTail, Cont?).
+
+%% Recipient via stub entry (still in Rec).
+secure_broadcast_update(From, F, X, [stub(R, _) | Rest],
+                        [msg(From?, R?, stream_update(F?, X?)) | NewTail?],
+                        Cont) :-
+    ground(From?), ground(F?), ground(X?) |
+    secure_broadcast_update(From?, F?, X?, Rest?, NewTail, Cont?).
+
+%% Empty: alias arg 5 writer to arg 6 reader.
+secure_broadcast_update(_, _, _, [], Cont?, Cont).
+
+%% =============================================================================
+%% SECURE SEND SNAPSHOT to a new friend (paper §6.5 / §8.4): emit
+%% stream_update(F, E) for every F ≠ NewFriend in SecureFMap.
+%% =============================================================================
+
+exported procedure secure_send_snapshot(Agent?, Agent?, SecureFMap?,
+                                          Stream(NetMsg(SecureGsgCargo)),
+                                          Stream(NetMsg(SecureGsgCargo))?).
+
+%% Skip self (new friend's own entry).
+secure_send_snapshot(From, NewFriend, [full(F, _, _, _) | Rest], NetOut?, Cont) :-
+    F? =?= NewFriend? |
+    secure_send_snapshot(From?, NewFriend?, Rest?, NetOut, Cont?).
+secure_send_snapshot(From, NewFriend, [skeleton(F, _, _) | Rest], NetOut?, Cont) :-
+    F? =?= NewFriend? |
+    secure_send_snapshot(From?, NewFriend?, Rest?, NetOut, Cont?).
+secure_send_snapshot(From, NewFriend, [stub(F, _) | Rest], NetOut?, Cont) :-
+    F? =?= NewFriend? |
+    secure_send_snapshot(From?, NewFriend?, Rest?, NetOut, Cont?).
+
+%% Other friend via full: emit snapshot entry.
+secure_send_snapshot(From, NewFriend, [full(F, E, _, _) | Rest],
+                     [msg(From?, NewFriend?, stream_update(F?, E?)) | NewTail?],
+                     Cont) :-
+    ground(From?), ground(NewFriend?), ground(F?), ground(E?), otherwise |
+    secure_send_snapshot(From?, NewFriend?, Rest?, NewTail, Cont?).
+
+%% Other friend via skeleton: epoch is 0; emit stream_update(F, 0) (benign).
+secure_send_snapshot(From, NewFriend, [skeleton(F, _, _) | Rest],
+                     [msg(From?, NewFriend?, stream_update(F?, 0)) | NewTail?],
+                     Cont) :-
+    ground(From?), ground(NewFriend?), ground(F?), otherwise |
+    secure_send_snapshot(From?, NewFriend?, Rest?, NewTail, Cont?).
+
+%% Other friend via stub: emit with stored epoch.
+secure_send_snapshot(From, NewFriend, [stub(F, E) | Rest],
+                     [msg(From?, NewFriend?, stream_update(F?, E?)) | NewTail?],
+                     Cont) :-
+    ground(From?), ground(NewFriend?), ground(F?), ground(E?), otherwise |
+    secure_send_snapshot(From?, NewFriend?, Rest?, NewTail, Cont?).
+
+%% Empty: alias.
+secure_send_snapshot(_, _, [], Cont?, Cont).
+
+%% =============================================================================
+%% PENDING OFFERS + PASS 1-3 dispatch helpers (mirror gsg/self.glp).
+%% Friend_request now carries IR -- try_take_friend_request_from extracts
+%% both X and the carried IR (as KSet + Sigma).
+%% =============================================================================
+
+%% take_pending_offer: Integrate accept's helper.  Bind R via body
+%% `bind_ok(R)` rather than head literal (literal-vs-unbound-reader
+%% suspends per three-valued unification).
+exported procedure take_pending_offer(Agent?, Integer?, PendingList?, PendingList).
+take_pending_offer(Q, X, [pending_offer(Q1, X1, R) | Rest], Rest?) :-
+    Q? =?= Q1?, X? =?= X1? | bind_ok(R).
+take_pending_offer(Q, X, [Entry | Rest], [Entry? | Rest1?]) :-
+    otherwise | take_pending_offer(Q?, X?, Rest?, Rest1).
+take_pending_offer(_, _, [], []).
+
+%% try_take_accept_offer_vol: same as gsg's.
+exported procedure try_take_accept_offer_vol(Agent?, Stream(SecureGsgVolition)?,
+                                              Stream(SecureGsgVolition), Constant).
+try_take_accept_offer_vol(P, [accept_offer(P1, R) | Rest], Rest?, true) :-
+    P? =?= P1? | bind_ok(R).
+try_take_accept_offer_vol(P, [V | Rest], [V? | Rest1?], M?) :-
+    otherwise | try_take_accept_offer_vol(P?, Rest?, Rest1, M).
+try_take_accept_offer_vol(_, [], [], false).
+
+%% try_take_friend_request_from: extracts secure friend_request from Inbox.
+%% Returns the carried IR (KSet + Sigma) too so caller can install full entry.
+exported procedure try_take_friend_request_from(Agent?,
+                                                  Stream(InMsg(SecureGsgCargo))?,
+                                                  Stream(InMsg(SecureGsgCargo)),
+                                                  Constant, Integer,
+                                                  Stream(Agent), Integer).
+
+try_take_friend_request_from(P, [msg(P1, friend_request(X, ir(K, S))) | Rest],
+                             Rest?, true, X?, K?, S?) :-
+    P? =?= P1? | true.
+
+try_take_friend_request_from(P, [Other | Rest], [Other? | Rest1?],
+                             M?, X?, K?, S?) :-
+    otherwise | try_take_friend_request_from(P?, Rest?, Rest1, M, X, K, S).
+
+try_take_friend_request_from(_, [], [], false, 0, [], 0).
+
+%% classify_pending: PASS 3 -- 3-way dispatch for Resolve simultaneous
+%% offer (paper §6.3).
+PendingMatch ::= pm_resolve ; pm_ignore ; pm_none.
+
+exported procedure classify_pending(Agent?, Agent?, PendingList?,
+                                     PendingList, PendingMatch).
+classify_pending(Self, P, [pending_offer(P1, _, R) | Rest], Rest?, pm_resolve) :-
+    P? =?= P1?, P? @< Self? | bind_ok(R).
+classify_pending(Self, P, [pending_offer(P1, X, R) | Rest],
+                 [pending_offer(P1?, X?, R?) | Rest?], pm_ignore) :-
+    P? =?= P1?, Self? @< P? | true.
+classify_pending(Self, P, [Entry | Rest], [Entry? | Rest1?], M?) :-
+    otherwise | classify_pending(Self?, P?, Rest?, Rest1, M).
+classify_pending(_, _, [], [], pm_none).
+
+%% =============================================================================
+%% FOFMAP UPDATE (paper §6.5): set FoFMap[Q][F] := X.  Same shape as gsg.
+%% =============================================================================
+
+exported procedure set_fof_epoch(Agent?, Agent?, Integer?, FoFMap?, FoFMap).
+set_fof_epoch(Q, F, X, [fofb(Q1, Inner) | Rest], [fofb(Q1?, Inner1?) | Rest?]) :-
+    Q? =?= Q1? | fof_inner_set(F?, X?, Inner?, Inner1).
+set_fof_epoch(Q, F, X, [Entry | Rest], [Entry? | Rest1?]) :-
+    otherwise | set_fof_epoch(Q?, F?, X?, Rest?, Rest1).
+set_fof_epoch(Q, F, X, [], [fofb(Q?, [fofe(F?, X?)])]).
+
+exported procedure fof_inner_set(Agent?, Integer?, FoFInner?, FoFInner).
+fof_inner_set(F, X, [fofe(F1, _) | Rest], [fofe(F1?, X?) | Rest?]) :-
+    F? =?= F1? | true.
+fof_inner_set(F, X, [Entry | Rest], [Entry? | Rest1?]) :-
+    otherwise | fof_inner_set(F?, X?, Rest?, Rest1).
+fof_inner_set(F, X, [], [fofe(F?, X?)]).
+
+%% =============================================================================
+%% PASS B (paper §8.5 Periodic re-broadcast): build_friend_list,
+%% broadcast_checkpoint, absorb_fof_pairs.  PASS B-minimal scope: plumbing
+%% only (no skeleton install, no stub promotion, no direct heal -- those
+%% need fault scenarios and are deferred to the harness session).
+%% =============================================================================
+
+%% build_friend_list(SecureFMap?, FriendList): produce L = {(f, epoch_p(f))
+%% : f ∈ Rec_p} from FMap entries (paper §8.5).
+exported procedure build_friend_list(SecureFMap?, FriendList).
+build_friend_list([full(F, E, _, _) | Rest], [fe(F?, E?) | Rest1?]) :-
+    build_friend_list(Rest?, Rest1).
+build_friend_list([skeleton(F, _, _) | Rest], [fe(F?, 0) | Rest1?]) :-
+    build_friend_list(Rest?, Rest1).
+build_friend_list([stub(F, E) | Rest], [fe(F?, E?) | Rest1?]) :-
+    build_friend_list(Rest?, Rest1).
+build_friend_list([], []).
+
+%% broadcast_checkpoint(Id?, Date?, IR?, L?, SecureFMap?, NetOut, Cont):
+%% emit msg(Id, R, checkpoint(Date, IR, L)) to each recipient in FMap.
+%% Same stream-threading convention as secure_broadcast_update.
+exported procedure broadcast_checkpoint(Agent?, Integer?, IdentityRecord?,
+                                          FriendList?, SecureFMap?,
+                                          Stream(NetMsg(SecureGsgCargo)),
+                                          Stream(NetMsg(SecureGsgCargo))?).
+
+broadcast_checkpoint(Id, Date, IR, L, [full(R, _, _, _) | Rest],
+                     [msg(Id?, R?, checkpoint(Date?, IR?, L?)) | NewTail?], Cont) :-
+    ground(Id?), ground(Date?), ground(IR?), ground(L?) |
+    broadcast_checkpoint(Id?, Date?, IR?, L?, Rest?, NewTail, Cont?).
+broadcast_checkpoint(Id, Date, IR, L, [skeleton(R, _, _) | Rest],
+                     [msg(Id?, R?, checkpoint(Date?, IR?, L?)) | NewTail?], Cont) :-
+    ground(Id?), ground(Date?), ground(IR?), ground(L?) |
+    broadcast_checkpoint(Id?, Date?, IR?, L?, Rest?, NewTail, Cont?).
+broadcast_checkpoint(Id, Date, IR, L, [stub(R, _) | Rest],
+                     [msg(Id?, R?, checkpoint(Date?, IR?, L?)) | NewTail?], Cont) :-
+    ground(Id?), ground(Date?), ground(IR?), ground(L?) |
+    broadcast_checkpoint(Id?, Date?, IR?, L?, Rest?, NewTail, Cont?).
+broadcast_checkpoint(_, _, _, _, [], Cont?, Cont).
+
+%% absorb_fof_pairs(Self?, P?, L?, FoFMapIn?, FoFMapOut): Integrate
+%% checkpoint's third branch, for each (f, e) in L with f ≠ Self and
+%% epoch_r(p, f) < e, set FoFMap[P][f] := e and FoFMap[f][P] := e (preserving
+%% FoFMap Symmetry).
+exported procedure absorb_fof_pairs(Agent?, Agent?, FriendList?,
+                                      FoFMap?, FoFMap).
+
+%% Skip self-pair (paper: "for each (f, e) ∈ L with f ≠ r").
+absorb_fof_pairs(Self, P, [fe(F, _) | Rest], FoFMap, FoFMap1?) :-
+    Self? =?= F? |
+    absorb_fof_pairs(Self?, P?, Rest?, FoFMap?, FoFMap1).
+
+%% Non-self pair: where epoch_r(p, f) < e, update FoFMap[P][F] and the
+%% symmetric FoFMap[F][P] (the observer heal; absorb_step carries the guard).
+absorb_fof_pairs(Self, P, [fe(F, E) | Rest], FoFMap, FoFMap2?) :-
+    otherwise |
+    fof_epoch_of(P?, F?, FoFMap?, E0),
+    absorb_step(E0?, P?, F?, E?, FoFMap?, FoFMapMid),
+    absorb_fof_pairs(Self?, P?, Rest?, FoFMapMid?, FoFMap2).
+
+%% Empty: pass through (alias arg 4 writer to arg 5 reader).
+absorb_fof_pairs(_, _, [], FoFMap, FoFMap?).
+
+%% =============================================================================
+%% RESTORE (paper, Restore Protocol): the first two branches of Integrate
+%% checkpoint, and the epoch-order guard of the third.  Restore adds no
+%% transaction and no cargo of its own; a recipient that lost its state is
+%% rebuilt by the checkpoints its friends keep sending.
+%% =============================================================================
+
+%% install_sender(P?, K?, σ?, FMap?, FMap1): the first branch.  P ∉ dom(FMap):
+%% append skeleton(P, K, σ), the inactive epoch 0 carrying the sender's
+%% identity record.  FMap[P] a stub: promote it to full(P, E, K, σ),
+%% preserving its epoch (spec-issue O).  A full or skeleton entry: unchanged.
+exported procedure install_sender(Agent?, Stream(Agent)?, Integer?,
+                                   SecureFMap?, SecureFMap).
+install_sender(P, K, S, [stub(P1, E) | Rest], [full(P?, E?, K?, S?) | Rest?]) :-
+    P? =?= P1? | true.
+install_sender(P, _, _, [full(P1, E, K1, S1) | Rest],
+               [full(P1?, E?, K1?, S1?) | Rest?]) :-
+    P? =?= P1? | true.
+install_sender(P, _, _, [skeleton(P1, K1, S1) | Rest],
+               [skeleton(P1?, K1?, S1?) | Rest?]) :-
+    P? =?= P1? | true.
+install_sender(P, K, S, [Other | Rest], [Other? | Rest1?]) :-
+    otherwise | install_sender(P?, K?, S?, Rest?, Rest1).
+install_sender(P, K, S, [], [skeleton(P?, K?, S?)]).
+
+%% set_entry_epoch(P?, E?, FMap?, FMap1): FMap[P].epoch := E, preserving the
+%% identity-record fields --- the direct heal, and Unfriend inherited.  A
+%% skeleton healed to an epoch becomes a full entry; an absent P is unchanged.
+exported procedure set_entry_epoch(Agent?, Integer?, SecureFMap?, SecureFMap).
+set_entry_epoch(P, E, [full(P1, _, K, S) | Rest], [full(P1?, E?, K?, S?) | Rest?]) :-
+    P? =?= P1? | true.
+set_entry_epoch(P, E, [skeleton(P1, K, S) | Rest], [full(P1?, E?, K?, S?) | Rest?]) :-
+    P? =?= P1? | true.
+set_entry_epoch(P, E, [stub(P1, _) | Rest], [stub(P1?, E?) | Rest?]) :-
+    P? =?= P1? | true.
+set_entry_epoch(P, E, [Other | Rest], [Other? | Rest1?]) :-
+    otherwise | set_entry_epoch(P?, E?, Rest?, Rest1).
+set_entry_epoch(_, _, [], []).
+
+%% direct_heal(Self?, P?, L?, FMap?, FMap1): the second branch.  If (Self, E) ∈ L
+%% and epoch(P) < E, set FMap[P].epoch := E, preserving K and σ.
+exported procedure direct_heal(Agent?, Agent?, FriendList?, SecureFMap?, SecureFMap).
+direct_heal(Self, P, [fe(F, E) | _], FMap, FMap1?) :-
+    Self? =?= F? |
+    secure_epoch_of(P?, FMap?, E0),
+    heal_step(P?, E?, E0?, FMap?, FMap1).
+direct_heal(Self, P, [_ | Rest], FMap, FMap1?) :-
+    otherwise | direct_heal(Self?, P?, Rest?, FMap?, FMap1).
+direct_heal(_, _, [], FMap, FMap?).
+
+exported procedure heal_step(Agent?, Integer?, Integer?, SecureFMap?, SecureFMap).
+heal_step(P, E, E0, FMap, FMap1?) :-
+    E0? < E? | set_entry_epoch(P?, E?, FMap?, FMap1).
+heal_step(_, _, _, FMap, FMap?) :- otherwise | true.
+
+%% fof_epoch_of(Q?, F?, FoFMap?, E): epoch_r(q, f), 0 if unrecorded (as gsg).
+exported procedure fof_epoch_of(Agent?, Agent?, FoFMap?, Integer).
+fof_epoch_of(Q, F, [fofb(Q1, Inner) | _], E?) :-
+    Q? =?= Q1? | fof_inner_epoch(F?, Inner?, E).
+fof_epoch_of(Q, F, [_ | Rest], E?) :-
+    otherwise | fof_epoch_of(Q?, F?, Rest?, E).
+fof_epoch_of(_, _, [], 0).
+
+exported procedure fof_inner_epoch(Agent?, FoFInner?, Integer).
+fof_inner_epoch(F, [fofe(F1, E) | _], E?) :- F? =?= F1? | true.
+fof_inner_epoch(F, [_ | Rest], E?) :- otherwise | fof_inner_epoch(F?, Rest?, E).
+fof_inner_epoch(_, [], 0).
+
+%% absorb_step(E0?, P?, F?, E?, FoFMap?, FoFMap1): the third branch's guard,
+%% epoch_r(p, f) < e; then FoFMap[P][F] := E and FoFMap[F][P] := E.
+exported procedure absorb_step(Integer?, Agent?, Agent?, Integer?, FoFMap?, FoFMap).
+absorb_step(E0, P, F, E, FoFMap, FoFMap2?) :-
+    E0? < E? |
+    set_fof_epoch(P?, F?, E?, FoFMap?, FoFMap1),
+    set_fof_epoch(F?, P?, E?, FoFMap1?, FoFMap2).
+absorb_step(_, _, _, _, FoFMap, FoFMap?) :- otherwise | true.
+
+%% =============================================================================
+%% UNFRIEND, INHERITED: End friendship and Integrate unfriend modify only the
+%% epoch of the FMap entry, preserving K and σ.
+%% =============================================================================
+
+%% bump_epoch_secure(Q?, FMap?, FMap1, X): FMap[Q].epoch := epoch_p(q) + 1,
+%% X the new (even) epoch.
+exported procedure bump_epoch_secure(Agent?, SecureFMap?, SecureFMap, Integer).
+bump_epoch_secure(Q, FMap, FMap1?, X?) :-
+    secure_epoch_of(Q?, FMap?, E),
+    X := E? + 1,
+    set_entry_epoch(Q?, X?, FMap?, FMap1).
+
+%% secure_member(Q?, FMap?, B): q ∈ dom(FMap), any entry kind.
+exported procedure secure_member(Agent?, SecureFMap?, Constant).
+secure_member(Q, [full(Q1, _, _, _) | _], true) :- Q? =?= Q1? | true.
+secure_member(Q, [skeleton(Q1, _, _) | _], true) :- Q? =?= Q1? | true.
+secure_member(Q, [stub(Q1, _) | _], true) :- Q? =?= Q1? | true.
+secure_member(Q, [_ | Rest], B?) :- otherwise | secure_member(Q?, Rest?, B).
+secure_member(_, [], false).
+
+%% secure_ir_of(Q?, FMap?, IR): IR_p[q], the identity record stored for q;
+%% ir([], 0) where q is absent or a stub.
+exported procedure secure_ir_of(Agent?, SecureFMap?, IdentityRecord).
+secure_ir_of(Q, [full(Q1, _, K, S) | _], ir(K?, S?)) :- Q? =?= Q1? | true.
+secure_ir_of(Q, [skeleton(Q1, K, S) | _], ir(K?, S?)) :- Q? =?= Q1? | true.
+secure_ir_of(Q, [_ | Rest], IR?) :- otherwise | secure_ir_of(Q?, Rest?, IR).
+secure_ir_of(_, [], ir([], 0)).
+
+%% =============================================================================
+%% ENTRY POINTS (modules.tex, External access): the root self.glp exports each
+%% play by forwarding to the module that defines it, so a directory load of
+%% programs/social/spm/secure_gsg is a program whose plays an external goal can call.
+%% =============================================================================
+imported procedure play_secure_befriend # play_secure_befriend(Integer, Integer).
+exported procedure play_secure_befriend(Integer, Integer).
+play_secure_befriend(A?, B?) :- play_secure_befriend # play_secure_befriend(A, B).
+
+imported procedure play_secure_rebroadcast # play_secure_rebroadcast(Integer, Integer).
+exported procedure play_secure_rebroadcast(Integer, Integer).
+play_secure_rebroadcast(A?, B?) :- play_secure_rebroadcast # play_secure_rebroadcast(A, B).
+
+imported procedure play_secure_restore # play_secure_restore(Integer, Integer, Integer, IdentityRecord).
+exported procedure play_secure_restore(Integer, Integer, Integer, IdentityRecord).
+play_secure_restore(A?, Z?, B?, IR?) :- play_secure_restore # play_secure_restore(A, Z, B, IR).
+
+imported procedure play_secure_unfriend # play_secure_unfriend(Integer, Integer, IdentityRecord).
+exported procedure play_secure_unfriend(Integer, Integer, IdentityRecord).
+play_secure_unfriend(A?, B?, IR?) :- play_secure_unfriend # play_secure_unfriend(A, B, IR).
+
+imported procedure play_secure_replace # play_secure_replace(Constant, Integer, Integer, Integer, Integer).
+exported procedure play_secure_replace(Constant, Integer, Integer, Integer, Integer).
+play_secure_replace(R?, A?, B?, C?, D?) :- play_secure_replace # play_secure_replace(R, A, B, C, D).
+
+%% =============================================================================
+%% REPLACE (SPM, Replace Protocol): Vouch, Announce new identity, Integrate
+%% new identity, Integrate rebind.  The vouch messages are retained in the
+%% Inbox and never consumed, so the vouching set is recomputable at each
+%% announcement; a stub entry marks a friend of the replaced identity still to
+%% be notified, and every stub is notified at each announcement (a duplicate
+%% new_identity is harmless: Integrate new identity drops it once p is
+%% renamed).
+%% =============================================================================
+
+%% vouch_pairs(P?, FoFMap?, L): L_c = {(f, e) : f ∈ dom(FoFMap[P]), f ≠ P}.
+exported procedure vouch_pairs(Agent?, FoFMap?, FriendList).
+vouch_pairs(P, [fofb(P1, Inner) | _], L?) :- P? =?= P1? | inner_pairs_except(P?, Inner?, L).
+vouch_pairs(P, [_ | Rest], L?) :- otherwise | vouch_pairs(P?, Rest?, L).
+vouch_pairs(_, [], []).
+
+exported procedure inner_pairs_except(Agent?, FoFInner?, FriendList).
+inner_pairs_except(X, [fofe(F, _) | Rest], L?) :- X? =?= F? | inner_pairs_except(X?, Rest?, L).
+inner_pairs_except(X, [fofe(F, E) | Rest], [fe(F?, E?) | L?]) :- otherwise | inner_pairs_except(X?, Rest?, L).
+inner_pairs_except(_, [], []).
+
+%% inbox_has_vouch(C?, P?, P1?, Inbox?, B): whether custodian C's vouch for
+%% the replacement of P by P1 is in the Inbox.
+exported procedure inbox_has_vouch(Agent?, Agent?, Agent?, Stream(InMsg(SecureGsgCargo))?, Constant).
+inbox_has_vouch(C, P, P1, [msg(C1, vouch(P2, P3, _)) | _], true) :-
+    C? =?= C1?, P? =?= P2?, P1? =?= P3? | true.
+inbox_has_vouch(C, P, P1, [_ | Rest], B?) :- otherwise | inbox_has_vouch(C?, P?, P1?, Rest?, B).
+inbox_has_vouch(_, _, _, [], false).
+
+%% vouchers(K?, P?, P1?, Inbox?, V): the custodians in K that have vouched.
+exported procedure vouchers(Stream(Agent)?, Agent?, Agent?, Stream(InMsg(SecureGsgCargo))?, Stream(Agent)).
+vouchers([C | Cs], P, P1, Inbox, V?) :-
+    ground(Inbox?) |
+    inbox_has_vouch(C?, P?, P1?, Inbox?, B),
+    vouchers_step(B?, C?, Cs?, P?, P1?, Inbox?, V).
+vouchers([], _, _, _, []).
+
+exported procedure vouchers_step(Constant?, Agent?, Stream(Agent)?, Agent?, Agent?, Stream(InMsg(SecureGsgCargo))?, Stream(Agent)).
+vouchers_step(true, C, Cs, P, P1, Inbox, [C? | V?]) :- vouchers(Cs?, P?, P1?, Inbox?, V).
+vouchers_step(false, _, Cs, P, P1, Inbox, V?) :- vouchers(Cs?, P?, P1?, Inbox?, V).
+
+exported procedure count(Stream(Agent)?, Integer).
+count([_ | Xs], N?) :- count(Xs?, N0), N := N0? + 1.
+count([], 0).
+
+exported procedure is_member(Agent?, Stream(Agent)?, Constant).
+is_member(X, [Y | _], true) :- X? =?= Y? | true.
+is_member(X, [_ | Ys], B?) :- otherwise | is_member(X?, Ys?, B).
+is_member(_, [], false).
+
+%% subset(V?, K?, B): V ⊆ K.
+exported procedure subset(Stream(Agent)?, Stream(Agent)?, Constant).
+subset([X | Xs], K, B?) :- ground(K?) | is_member(X?, K?, M), subset_step(M?, Xs?, K?, B).
+subset([], _, true).
+
+exported procedure subset_step(Constant?, Stream(Agent)?, Stream(Agent)?, Constant).
+subset_step(true, Xs, K, B?) :- subset(Xs?, K?, B).
+subset_step(false, _, _, false).
+
+%% vouch_friends(P?, P1?, V?, Inbox?, Fs): the friends of P named by the
+%% vouches of the custodians in V.
+exported procedure vouch_friends(Agent?, Agent?, Stream(Agent)?, Stream(InMsg(SecureGsgCargo))?, Stream(Agent)).
+vouch_friends(P, P1, V, [msg(C, vouch(P2, P3, L)) | Rest], Fs?) :-
+    P? =?= P2?, P1? =?= P3?, ground(V?) |
+    is_member(C?, V?, M),
+    vouch_friends_step(M?, L?, P?, P1?, V?, Rest?, Fs).
+vouch_friends(P, P1, V, [_ | Rest], Fs?) :- otherwise | vouch_friends(P?, P1?, V?, Rest?, Fs).
+vouch_friends(_, _, _, [], []).
+
+exported procedure vouch_friends_step(Constant?, FriendList?, Agent?, Agent?, Stream(Agent)?, Stream(InMsg(SecureGsgCargo))?, Stream(Agent)).
+vouch_friends_step(true, [fe(F, _) | L], P, P1, V, Rest, [F? | Fs?]) :-
+    vouch_friends_step(true, L?, P?, P1?, V?, Rest?, Fs).
+vouch_friends_step(true, [], P, P1, V, Rest, Fs?) :- vouch_friends(P?, P1?, V?, Rest?, Fs).
+vouch_friends_step(false, _, P, P1, V, Rest, Fs?) :- vouch_friends(P?, P1?, V?, Rest?, Fs).
+
+%% install_stubs(Ws?, P?, P1?, FMap?, FMap1): a stub(w, 0) for each w ∉ {P, P1}
+%% not in dom(FMap): a friend of P still to be notified.
+exported procedure install_stubs(Stream(Agent)?, Agent?, Agent?, SecureFMap?, SecureFMap).
+install_stubs([W | Ws], P, P1, FMap, FMap1?) :-
+    ground(FMap?) |
+    stub_wanted(W?, P?, P1?, FMap?, B),
+    install_stub_step(B?, W?, Ws?, P?, P1?, FMap?, FMap1).
+install_stubs([], _, _, FMap, FMap?).
+
+exported procedure stub_wanted(Agent?, Agent?, Agent?, SecureFMap?, Constant).
+stub_wanted(W, P, _, _, false) :- W? =?= P? | true.
+stub_wanted(W, _, P1, _, false) :- W? =?= P1? | true.
+stub_wanted(W, _, _, FMap, B?) :- otherwise | secure_member(W?, FMap?, M), not_bool(M?, B).
+
+exported procedure not_bool(Constant?, Constant).
+not_bool(true, false).
+not_bool(false, true).
+
+exported procedure install_stub_step(Constant?, Agent?, Stream(Agent)?, Agent?, Agent?, SecureFMap?, SecureFMap).
+install_stub_step(true, W, Ws, P, P1, FMap, FMap1?) :-
+    append_entry(stub(W?, 0), FMap?, FMapMid),
+    install_stubs(Ws?, P?, P1?, FMapMid?, FMap1).
+install_stub_step(false, _, Ws, P, P1, FMap, FMap1?) :-
+    install_stubs(Ws?, P?, P1?, FMap?, FMap1).
+
+exported procedure append_entry(SecureFMapEntry?, SecureFMap?, SecureFMap).
+append_entry(E, [X | Rest], [X? | Rest1?]) :- append_entry(E?, Rest?, Rest1).
+append_entry(E, [], [E?]).
+
+%% announce_to_stubs(Id?, P?, V?, IR?, FMap?, NetOut, Cont): new_identity to
+%% every stub entry, the list passed through.
+exported procedure announce_to_stubs(Agent?, Agent?, Stream(Agent)?, IdentityRecord?, SecureFMap?,
+                                      Stream(NetMsg(SecureGsgCargo)), Stream(NetMsg(SecureGsgCargo))?).
+announce_to_stubs(Id, P, V, IR, [stub(W, _) | Rest],
+                  [msg(Id?, W?, new_identity(P?, Id?, V?, IR?)) | NewTail?], Cont) :-
+    ground(Id?), ground(P?), ground(V?), ground(IR?) |
+    announce_to_stubs(Id?, P?, V?, IR?, Rest?, NewTail, Cont?).
+announce_to_stubs(Id, P, V, IR, [_ | Rest], NetOut?, Cont) :-
+    otherwise | announce_to_stubs(Id?, P?, V?, IR?, Rest?, NetOut, Cont?).
+announce_to_stubs(_, _, _, _, [], Cont?, Cont).
+
+exported procedure bind_insufficient(Constant).
+bind_insufficient(insufficient).
+
+%% --- Integrate new identity ---
+
+%% remove_entry(P?, FMap?, FMap1): FMap without P's entry, of any kind.
+exported procedure remove_entry(Agent?, SecureFMap?, SecureFMap).
+remove_entry(P, [full(P1, _, _, _) | Rest], Rest?) :- P? =?= P1? | true.
+remove_entry(P, [skeleton(P1, _, _) | Rest], Rest?) :- P? =?= P1? | true.
+remove_entry(P, [stub(P1, _) | Rest], Rest?) :- P? =?= P1? | true.
+remove_entry(P, [E | Rest], [E? | Rest1?]) :- otherwise | remove_entry(P?, Rest?, Rest1).
+remove_entry(_, [], []).
+
+%% rename_fof(P?, P1?, FoFMap?, FoFMap1): P renamed to P1 as an outer key and
+%% as an inner key throughout, epochs preserved.
+exported procedure rename_fof(Agent?, Agent?, FoFMap?, FoFMap).
+rename_fof(P, P1, [fofb(Y, Inner) | Rest], [fofb(P1?, Inner1?) | Rest1?]) :-
+    P? =?= Y? |
+    rename_inner(P?, P1?, Inner?, Inner1),
+    rename_fof(P?, P1?, Rest?, Rest1).
+rename_fof(P, P1, [fofb(Y, Inner) | Rest], [fofb(Y?, Inner1?) | Rest1?]) :-
+    otherwise |
+    rename_inner(P?, P1?, Inner?, Inner1),
+    rename_fof(P?, P1?, Rest?, Rest1).
+rename_fof(_, _, [], []).
+
+exported procedure rename_inner(Agent?, Agent?, FoFInner?, FoFInner).
+rename_inner(P, P1, [fofe(F, E) | Rest], [fofe(P1?, E?) | Rest1?]) :-
+    P? =?= F? | rename_inner(P?, P1?, Rest?, Rest1).
+rename_inner(P, P1, [fofe(F, E) | Rest], [fofe(F?, E?) | Rest1?]) :-
+    otherwise | rename_inner(P?, P1?, Rest?, Rest1).
+rename_inner(_, _, [], []).
+
+%% friend_pairs_except(FMap?, A?, B?, L): {(f, epoch(f)) : f ∈ dom(FMap), f ∉ {A, B}}.
+exported procedure friend_pairs_except(SecureFMap?, Agent?, Agent?, FriendList).
+friend_pairs_except(FMap, A, B, L?) :-
+    build_friend_list(FMap?, L0),
+    pairs_except(L0?, A?, B?, L).
+
+exported procedure pairs_except(FriendList?, Agent?, Agent?, FriendList).
+pairs_except([fe(F, _) | Rest], A, B, L?) :- F? =?= A? | pairs_except(Rest?, A?, B?, L).
+pairs_except([fe(F, _) | Rest], A, B, L?) :- F? =?= B? | pairs_except(Rest?, A?, B?, L).
+pairs_except([fe(F, E) | Rest], A, B, [fe(F?, E?) | L?]) :- otherwise | pairs_except(Rest?, A?, B?, L).
+pairs_except([], _, _, []).
+
+%% fof_pairs_except(FoFMap?, Q?, A?, B?, L): {(w, e) : w ∈ dom(FoFMap[Q]), w ∉ {A, B}}.
+exported procedure fof_pairs_except(FoFMap?, Agent?, Agent?, Agent?, FriendList).
+fof_pairs_except([fofb(Y, Inner) | _], Q, A, B, L?) :-
+    Q? =?= Y? | inner_to_pairs(Inner?, Lin), pairs_except(Lin?, A?, B?, L).
+fof_pairs_except([_ | Rest], Q, A, B, L?) :- otherwise | fof_pairs_except(Rest?, Q?, A?, B?, L).
+fof_pairs_except([], _, _, _, []).
+
+exported procedure inner_to_pairs(FoFInner?, FriendList).
+inner_to_pairs([fofe(F, E) | Rest], [fe(F?, E?) | L?]) :- inner_to_pairs(Rest?, L).
+inner_to_pairs([], []).
+
+%% --- Integrate rebind ---
+
+%% rebind_entry(Q?, E?, K?, σ?, FMap?, FMap1): FMap[q] := (max(epoch(q), e), K, σ)
+%% where epoch(q) < e or the entry is a stub; unchanged otherwise.
+exported procedure rebind_entry(Agent?, Integer?, Stream(Agent)?, Integer?, SecureFMap?, SecureFMap).
+rebind_entry(Q, E, K, S, [full(Q1, E0, K0, S0) | Rest], [full(Q1?, E?, K?, S?) | Rest?]) :-
+    Q? =?= Q1?, E0? < E? | true.
+rebind_entry(Q, E, K, S, [full(Q1, E0, K0, S0) | Rest], [full(Q1?, E0?, K0?, S0?) | Rest?]) :-
+    Q? =?= Q1?, E0? >= E? | true.
+rebind_entry(Q, E, K, S, [skeleton(Q1, _, _) | Rest], [full(Q1?, E?, K?, S?) | Rest?]) :-
+    Q? =?= Q1? | true.
+rebind_entry(Q, E, K, S, [stub(Q1, E0) | Rest], [full(Q1?, E1?, K?, S?) | Rest?]) :-
+    Q? =?= Q1? | max_int(E0?, E?, E1).
+rebind_entry(Q, E, K, S, [Other | Rest], [Other? | Rest1?]) :-
+    otherwise | rebind_entry(Q?, E?, K?, S?, Rest?, Rest1).
+rebind_entry(Q, E, K, S, [], [full(Q?, E?, K?, S?)]).
+
+exported procedure max_int(Integer?, Integer?, Integer).
+max_int(A, B, A?) :- A? >= B? | true.
+max_int(A, B, B?) :- A? < B? | true.
+
+%% install_stubs_from(Lp?, Id?, Q?, FMap?, FMap1): for each (w, e'') in Lp with
+%% w ∉ {Id, Q} and w ∉ dom(FMap), the stub (w, e'').
+exported procedure install_stubs_from(FriendList?, Agent?, Agent?, SecureFMap?, SecureFMap).
+install_stubs_from([fe(W, E) | Rest], Id, Q, FMap, FMap1?) :-
+    ground(FMap?) |
+    stub_wanted(W?, Id?, Q?, FMap?, B),
+    install_stub_from_step(B?, W?, E?, Rest?, Id?, Q?, FMap?, FMap1).
+install_stubs_from([], _, _, FMap, FMap?).
+
+exported procedure install_stub_from_step(Constant?, Agent?, Integer?, FriendList?, Agent?, Agent?, SecureFMap?, SecureFMap).
+install_stub_from_step(true, W, E, Rest, Id, Q, FMap, FMap1?) :-
+    append_entry(stub(W?, E?), FMap?, FMapMid),
+    install_stubs_from(Rest?, Id?, Q?, FMapMid?, FMap1).
+install_stub_from_step(false, _, _, Rest, Id, Q, FMap, FMap1?) :-
+    install_stubs_from(Rest?, Id?, Q?, FMap?, FMap1).

@@ -1,7 +1,7 @@
 %% coins_boot.glp --- the currency on two smartphones (SGSG paper, Section 7):
 %% under the boot harness, one isolate per person, each with its own key pair,
 %% running the social graph of graph/core as its super-app and hosting
-%% Currencies' mini-app (programs/coins/currency).  Each person trusts the
+%% Currencies' mini-app (programs/currencies/coins/currency).  Each person trusts the
 %% bundled compiler's key, reads the certified artefact currency.glpw from
 %% graph/core with load_file/2 and installs it, giving the super-app one end of
 %% a channel of the mediator's cards and the person's answers; alice cold-calls
@@ -12,7 +12,7 @@
 %% currency's own swap, over the conversation the social graph delivered
 %% between two smartphones.  The program is graph/core, named as :boot's second
 %% argument:
-%%   :artefact programs/coins/currency programs/social/graph/core
+%%   :artefact programs/currencies/coins/currency programs/social/graph/core
 %%   :boot programs/social/coins_boot.glp programs/social/graph/core
 %% Expected on the persons' screens: [alice] opened(bob), [alice] minted(2),
 %% [bob] opened(alice), [bob] minted(2), [alice] swap_done(bob),

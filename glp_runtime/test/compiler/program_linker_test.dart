@@ -4,8 +4,8 @@
 /// aliasing (§3.4: exported root-level procedures only), and end-to-end
 /// compilation of the cssn program (a live multi-module platform that consumes
 /// the routing modules exposed from the root self.glp). Module-local
-/// name-collision handling is covered by the dedicated test/programs/linker_collision
-/// fixture; the nested-subprogram entry-alias rule by test/programs/linker_nested.
+/// name-collision handling is covered by the dedicated ../programs/tests/linker_collision
+/// fixture; the nested-subprogram entry-alias rule by ../programs/tests/linker_nested.
 library;
 
 import 'dart:io';
@@ -32,7 +32,7 @@ void main() {
   final cssnRoot = '../programs/cssn';
   // Dedicated minimal fixture: sole coverage of module-local name-collision
   // handling (two sibling modules each defining dup/1).
-  final collisionRoot = 'test/programs/linker_collision';
+  final collisionRoot = '../programs/tests/linker_collision';
   final rootSelfPath = rootSelfGlp.existsSync() ? rootSelfGlp.absolute.path : null;
 
   if (!Directory(cssnRoot).existsSync()) {
@@ -252,7 +252,7 @@ void main() {
   group('Module name-collision (dedicated fixture)', () {
     // Sole coverage of module-local name-collision handling: mod_a and mod_b
     // each define dup/1; linking must disambiguate into mod_a:dup and mod_b:dup
-    // with no bare collision. See test/programs/linker_collision/.
+    // with no bare collision. See ../programs/tests/linker_collision/.
     late Program linked;
 
     setUp(() {
@@ -295,8 +295,8 @@ void main() {
     // boot exports `run`, which calls `helper`; `dead` is never called. The
     // pure link transform keeps every renamed procedure; eliminateDeadCode
     // (the step-5 hand-off to the compiler) keeps only the reachable ones.
-    // See test/programs/linker_dce/.
-    const dceRoot = 'test/programs/linker_dce';
+    // See ../programs/tests/linker_dce/.
+    const dceRoot = '../programs/tests/linker_dce';
 
     test('pure link (linkAndResolveModules) keeps all renamed procedures, including dead ones', () {
       final modules = discoverProgram(dceRoot, rootSelfGlpPath: rootSelfPath);
@@ -355,9 +355,9 @@ void main() {
   group('Nested sub-program entry aliases (dedicated fixture)', () {
     // Sole coverage of the §3.4 nested-subprogram rule. Parent has root-level
     // `boot` (exported `play`) and nested `child/` (own self.glp) with `leaf`
-    // (exported `greet`). See test/programs/linker_nested/.
-    const nestedRoot = 'test/programs/linker_nested';
-    const nestedChild = 'test/programs/linker_nested/child';
+    // (exported `greet`). See ../programs/tests/linker_nested/.
+    const nestedRoot = '../programs/tests/linker_nested';
+    const nestedChild = '../programs/tests/linker_nested/child';
 
     test('whole subtree links; nested module present by prefixed name', () {
       final modules =

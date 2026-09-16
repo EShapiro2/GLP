@@ -1,5 +1,5 @@
 /// The path the app itself takes: `coins_ui/3` booted in an agent isolate the
-/// way `lib/main_coins.dart` boots it, over `programs/coins` resolved from the
+/// way `lib/main_coins.dart` boots it, over `programs/currencies/coins` resolved from the
 /// repo on disc, with the person's grants injected and her screen read back.
 ///
 /// The widget test beside this one drives the surface; this one holds the
@@ -44,7 +44,7 @@ void main() {
       InitAgent(
         agentId: 'alice',
         glpSources: const [],
-        programDir: '$repo/coins',
+        programDir: '$repo/currencies/coins',
         goalLabel: 'coins_ui/3',
         rootSelfGlpPath: '$repo/self.glp',
         friends: const ['bob'],

@@ -3,7 +3,7 @@
 %% Sections 3 and 5.5), played by two social-graph agents in one heap, the
 %% network a two-way crossbar for cold calls, and under :boot (../../superapp_boot.glp)
 %% by two isolates with their own keys.  The certified mini-apps are ../pingapp,
-%% of the one-way user-interface stream, and Currencies' ../../../coins/currency,
+%% of the one-way user-interface stream, and Currencies' ../../../currencies/coins/currency,
 %% of the cards-and-answers channel (play_coins); the super-app reads their
 %% artefacts with load_file/2.  The persons are scripted on the agents' person
 %% streams --- the mediator's cards for an invitation are vGLP's to add --- and
@@ -466,7 +466,7 @@ carol_warm_run([_ | Outs], Cmds?) :- otherwise | carol_warm_run(Outs?, Cmds).
 carol_warm_run([], []).
 
 %% =============================================================================
-%% play_coins(ScreenA, ScreenB): the currency mini-app (programs/coins/currency,
+%% play_coins(ScreenA, ScreenB): the currency mini-app (programs/currencies/coins/currency,
 %% its artefact currency.glpw beside this program) hosted by the super-app:
 %% alice and bob install it with its two certifications, alice befriends bob
 %% and invites him, and the handshake opens a root channel of the currency
@@ -917,7 +917,7 @@ procedure hold_person(UserInStream).
 hold_person(X?) :- true.
 
 %% =============================================================================
-%% play_sovereign: the denominated currencies mini-app (programs/sovereign/
+%% play_sovereign: the denominated currencies mini-app (programs/currencies/sovereign/
 %% denominated, its artefact denominated.glpw beside this program) hosted by
 %% the super-app.  alice and bob install it with its two certifications, alice
 %% befriends bob and invites him, the handshake opens a root channel of the

@@ -31,11 +31,11 @@ class GlpPaths {
   String get coreDir => '$graphDir/core';
   String get pingappDir => '$graphDir/pingapp';
 
-  /// The currency's program (Currencies): programs/coins, which holds the
+  /// The currency's program (Currencies): programs/currencies/coins, which holds the
   /// certified mini-app currency/ and the harness that runs it for a live
   /// person. Derived from the root self.glp so it cannot drift from the tree
   /// the engine is actually reading.
-  String get coinsDir => '${File(rootSelfGlp).parent.path}/coins';
+  String get coinsDir => '${File(rootSelfGlp).parent.path}/currencies/coins';
 }
 
 /// The bundled assets (relative to `assets/glp/`), in the tree the engine's

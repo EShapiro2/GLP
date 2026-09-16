@@ -1,5 +1,5 @@
 /// The currency mini-app's screen, the image of the display declarations of
-/// `programs/coins/currency/coins_agent.vglp`.
+/// `programs/currencies/coins/currency/coins_agent.vglp`.
 ///
 /// Nothing here is invented. Every element is derived from one declaration
 /// under vGLP's Definitions "Display Declaration", "Manifest" and "Canonical

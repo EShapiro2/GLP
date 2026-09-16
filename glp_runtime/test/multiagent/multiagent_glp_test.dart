@@ -7,7 +7,7 @@
 /// Execution is event-driven: boot, start, wait for protocol to settle, shutdown.
 ///
 /// Original IRMA tests: lib/multiagent/archive-irma-2026-01-30/tests/
-/// Converted GLP programs: programs/multiagent_tests/
+/// Converted GLP programs: programs/tests/multiagent/
 
 import 'dart:io';
 import 'package:test/test.dart';
@@ -86,51 +86,51 @@ void main() {
     }
 
     test('shared variable: agent1 sends, agent2 receives', () async {
-      await runGlpTest('programs/multiagent_tests/shared_variable_boot.glp');
+      await runGlpTest('programs/tests/multiagent/shared_variable_boot.glp');
     }, timeout: Timeout(Duration(seconds: 15)));
 
     test('imported reader: one-way list flow', () async {
-      await runGlpTest('programs/multiagent_tests/imported_reader_boot.glp');
+      await runGlpTest('programs/tests/multiagent/imported_reader_boot.glp');
     }, timeout: Timeout(Duration(seconds: 15)));
 
     test('reversed flow: agent2 sends to agent1', () async {
-      await runGlpTest('programs/multiagent_tests/reversed_flow_boot.glp');
+      await runGlpTest('programs/tests/multiagent/reversed_flow_boot.glp');
     }, timeout: Timeout(Duration(seconds: 15)));
 
     test('coop stream: producer + merge across agents', () async {
-      await runGlpTest('programs/multiagent_tests/coop_stream_boot.glp');
+      await runGlpTest('programs/tests/multiagent/coop_stream_boot.glp');
     }, timeout: Timeout(Duration(seconds: 15)));
 
     test('two-hop flow: agent1 -> agent2 -> agent1 round-trip', () async {
-      await runGlpTest('programs/multiagent_tests/two_hop_flow_boot.glp');
+      await runGlpTest('programs/tests/multiagent/two_hop_flow_boot.glp');
     }, timeout: Timeout(Duration(seconds: 15)));
 
     test('bidirectional exchange: symmetric send/receive', () async {
-      await runGlpTest('programs/multiagent_tests/bidirectional_exchange_boot.glp');
+      await runGlpTest('programs/tests/multiagent/bidirectional_exchange_boot.glp');
     }, timeout: Timeout(Duration(seconds: 15)));
 
     test('three-agent pipeline: produce -> transform -> consume', () async {
-      await runGlpTest('programs/multiagent_tests/three_agent_pipeline_boot.glp');
+      await runGlpTest('programs/tests/multiagent/three_agent_pipeline_boot.glp');
     }, timeout: Timeout(Duration(seconds: 15)));
 
     test('three-agent merge: two producers feed into one merger', () async {
-      await runGlpTest('programs/multiagent_tests/three_agent_merge_boot.glp');
+      await runGlpTest('programs/tests/multiagent/three_agent_merge_boot.glp');
     }, timeout: Timeout(Duration(seconds: 15)));
 
     test('distribute: one producer broadcasts to two consumers', () async {
-      await runGlpTest('programs/multiagent_tests/distribute_boot.glp');
+      await runGlpTest('programs/tests/multiagent/distribute_boot.glp');
     }, timeout: Timeout(Duration(seconds: 15)));
 
     test('minimal race: send unbound reader', () async {
-      await runGlpTest('programs/multiagent_tests/minimal_race_boot.glp');
+      await runGlpTest('programs/tests/multiagent/minimal_race_boot.glp');
     }, timeout: Timeout(Duration(seconds: 15)));
 
     test('send reader: send unbound reader, instantiate later', () async {
-      await runGlpTest('programs/multiagent_tests/send_reader_boot.glp');
+      await runGlpTest('programs/tests/multiagent/send_reader_boot.glp');
     }, timeout: Timeout(Duration(seconds: 15)));
 
     test('writer response: send writer, receiver writes back', () async {
-      await runGlpTest('programs/multiagent_tests/writer_response_boot.glp');
+      await runGlpTest('programs/tests/multiagent/writer_response_boot.glp');
     }, timeout: Timeout(Duration(seconds: 15)));
 
   });

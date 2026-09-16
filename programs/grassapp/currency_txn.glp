@@ -1,6 +1,6 @@
 %% currency_txn.glp — GrassApp's top-level lift of the currencies transaction core.
 %%
-%% A copy of programs/currencies/txn.glp (Grassroots-Bonds owned, and still the
+%% A copy of programs/currencies/bonds_v2/txn.glp (Grassroots-Bonds owned, and still the
 %% canonical owner of this logic).  The exports are the canonical file's, plus
 %% own_coins/4, which the agent calls directly and the canonical file does not
 %% export.  The agent calls all of them BARE: this directory's self.glp carries
@@ -11,7 +11,7 @@
 %% path produced does not arise.  Once GrassApp's entry point sets programDir,
 %% this lift can be replaced by importing currencies/txn.glp directly.
 %%
-%% KEEP IN SYNC with programs/currencies/txn.glp (same author owns both); the
+%% KEEP IN SYNC with programs/currencies/bonds_v2/txn.glp (same author owns both); the
 %% own_coins export is the one deliberate divergence.
 %%
 %% The pure, UI-agnostic bond-transaction predicates: maturity-aware holdings

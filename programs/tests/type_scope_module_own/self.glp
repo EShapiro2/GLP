@@ -4,7 +4,7 @@
 % module is checked against its own scope), and which of them the linked program
 % held used to depend on the order `Directory.listSync` returned the files in:
 % `a_agent.glp` sorts before `self.glp`, which is the order that failed for
-% programs/bonds (Currencies Code, 2026-09-03).  GREEN, and green in either order.
+% programs/currencies/bonds (Currencies Code, 2026-09-03).  GREEN, and green in either order.
 Answer ::= xs(Integer).
 imported procedure a_agent#step(Answer?, Integer).
 exported procedure play(Integer).

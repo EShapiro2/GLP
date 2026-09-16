@@ -1,7 +1,7 @@
 /// GrassApp village market: the six-agent scenario of Grassroots-Bonds §8.2.
 ///
 /// The headless gate for the phone-UI reproduction of the village market. It
-/// runs the GrassApp port of programs/currencies/play12 — Alice (baker), Bob
+/// runs the GrassApp port of programs/currencies/bonds_v2/play12 — Alice (baker), Bob
 /// (farmer), Charlie (carpenter), Diana (doctor), Eve (teacher), Frank
 /// (fisherman) — and checks that all seven operations of §8.2 actually occur
 /// and that the economy lands on the paper's closing balances.

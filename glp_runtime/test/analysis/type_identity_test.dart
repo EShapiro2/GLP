@@ -303,7 +303,7 @@ measure(_).
 
     test('a linked program has tables over its linked declarations', () {
       if (!hasRootScope) return;
-      const root = 'test/programs/linker_nested';
+      const root = '../programs/tests/linker_nested';
       if (!Directory(root).existsSync()) return;
       final modules = discoverProgram(root,
           rootSelfGlpPath: rootSelfGlp.absolute.path);
@@ -364,7 +364,7 @@ measure(_).
 
     test('a directory program: the two tables agree key for key', () {
       if (!hasRootScope) return;
-      const root = 'test/programs/interface_table';
+      const root = '../programs/tests/interface_table';
       if (!Directory(root).existsSync()) return;
       final r = bothPathsFor(root, single: false);
 
@@ -375,7 +375,7 @@ measure(_).
     test('an export reaching a root-scope type resolves the same on both paths',
         () {
       if (!hasRootScope) return;
-      const root = 'test/programs/interface_table';
+      const root = '../programs/tests/interface_table';
       if (!Directory(root).existsSync()) return;
       final r = bothPathsFor(root, single: false);
 
@@ -396,7 +396,7 @@ measure(_).
 
     test('a parameterised export carries no identity on either path', () {
       if (!hasRootScope) return;
-      const root = 'test/programs/interface_table';
+      const root = '../programs/tests/interface_table';
       if (!Directory(root).existsSync()) return;
       final r = bothPathsFor(root, single: false);
 
@@ -412,7 +412,7 @@ measure(_).
 
     test('a single-module program: every procedure is an entry point', () {
       if (!hasRootScope) return;
-      const target = 'test/programs/interface_table_single.glp';
+      const target = '../programs/tests/interface_table_single.glp';
       if (!File(target).existsSync()) return;
       final r = bothPathsFor(target, single: true);
 
@@ -427,7 +427,7 @@ measure(_).
 
     test('an export with no declaration is absent from every field', () {
       if (!hasRootScope) return;
-      const target = 'test/programs/interface_table_single.glp';
+      const target = '../programs/tests/interface_table_single.glp';
       if (!File(target).existsSync()) return;
       final r = bothPathsFor(target, single: true);
 
