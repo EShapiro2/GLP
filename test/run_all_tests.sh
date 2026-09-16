@@ -4353,10 +4353,33 @@ KNOWN_RED=()
 echo "=== Section Q: Dart unit tests (whole tree) ==="
 echo ""
 
+# glp_multiagent/assets/glp/ is generated and gitignored (2026-09-16), so a
+# fresh clone or a new worktree has none, and pubspec.yaml declares asset
+# directories that are not there.  `flutter test` then dies at "Failed to build
+# asset bundle" before running a single test, printing no count and no [E]
+# lines --- which the parsing below would read as zero passed and nothing red.
+# Generate them here rather than trusting every session to remember: the script
+# is idempotent and the tree it writes is gitignored, so it cannot move the
+# tree-change guard.
+if [ -f "$GLP_DIR/glp_multiagent/tool/sync_glp_assets.sh" ]; then
+    SYNC_RESULT=$(cd "$GLP_DIR/glp_multiagent" && bash tool/sync_glp_assets.sh 2>&1) || true
+    if printf '%s' "$SYNC_RESULT" | grep -q '^Synced GLP assets'; then
+        echo "  (the bundled GLP assets are generated)"
+    else
+        echo "  FAIL: sync_glp_assets.sh did not complete, so glp_multiagent's"
+        echo "        assets are missing or stale and its tests cannot run:"
+        printf '%s\n' "$SYNC_RESULT" | tail -5 | sed 's/^/        /'
+        FAIL=$((FAIL + 1))
+    fi
+else
+    echo "  FAIL: glp_multiagent/tool/sync_glp_assets.sh is missing"
+    FAIL=$((FAIL + 1))
+fi
+
 # `dart test` exits non-zero whenever anything is red — including a known-red
 # entry, which is not a suite failure — so every capture below is guarded
 # against `set -e` (line 24) rather than letting it abort the run.
-DART_TREE_RESULT=$(cd "$GLP_RUNTIME" && "$DART" test 2>&1) || true
+DART_TREE_RESULT=$(cd "$GLP_RUNTIME" && "$DART" test 2>&1) && DART_TREE_STATUS=0 || DART_TREE_STATUS=$?
 
 # Strip ANSI colour and CR so the reporter's in-place updates become lines.
 DART_TREE_CLEAN=$(printf '%s' "$DART_TREE_RESULT" | sed 's/\x1b\[[0-9;]*m//g' | tr '\r' '\n') || true
@@ -4383,7 +4406,7 @@ if ! command -v flutter >/dev/null 2>&1; then
     MA_PASSED=0
     MA_FAILS=""
 else
-    MA_RESULT=$(cd "$GLP_DIR/glp_multiagent" && flutter test 2>&1) || true
+    MA_RESULT=$(cd "$GLP_DIR/glp_multiagent" && flutter test 2>&1) && MA_STATUS=0 || MA_STATUS=$?
     MA_CLEAN=$(printf '%s' "$MA_RESULT" | sed 's/\x1b\[[0-9;]*m//g' | tr '\r' '\n') || true
 
     MA_PASSED=$(printf '%s' "$MA_CLEAN" | grep -oE '\+[0-9]+' | tail -1 | tr -d '+') || true
@@ -4397,6 +4420,26 @@ else
         | sed 's/ \[E\]$//' \
         | sed 's|^.*/glp_multiagent/test/|glp_multiagent/test/|' \
         | sort -u) || true
+fi
+
+# A runner that exits non-zero while naming no failing test did not run its
+# tests: it died before or during collection, so there are no [E] lines to
+# count and the tree would be scored on whatever partial "+N" the reporter had
+# printed.  That is a green suite over an unmeasured half --- the defect this
+# section exists to remove --- so it is a hard failure, as a missing flutter
+# is.  It is not enough to check the count: with the bundled assets absent
+# `flutter test` still prints partial counts before dying at "Failed to build
+# asset bundle", which scored the tree 744 instead of 804 and still reported
+# ALL TESTS PASSED (worktree against main, 2026-09-16).
+if [ "${DART_TREE_STATUS:-0}" -ne 0 ] && [ -z "$DART_TREE_FAILS" ]; then
+    echo "  FAIL: dart test exited $DART_TREE_STATUS naming no failing test, so glp_runtime/test/ did not run"
+    printf '%s\n' "$DART_TREE_CLEAN" | tail -5 | sed 's/^/        /'
+    FAIL=$((FAIL + 1))
+fi
+if [ "${MA_STATUS:-0}" -ne 0 ] && [ -z "$MA_FAILS" ]; then
+    echo "  FAIL: flutter test exited $MA_STATUS naming no failing test, so glp_multiagent/test/ did not run"
+    printf '%s\n' "$MA_CLEAN" | tail -5 | sed 's/^/        /'
+    FAIL=$((FAIL + 1))
 fi
 
 DART_TREE_PASSED=$((DART_TREE_PASSED + MA_PASSED))
