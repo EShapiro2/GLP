@@ -4,7 +4,7 @@
 %% crossings), and on the second she writes hello and probe(W) in ONE
 %% reduction, keeping W's reader; bob reads and assigns.  Expected:
 %% [bob] saw(ping), saw(chan), saw(midping), saw(root), saw(hello),
-%% saw(probe), [alice] got(hi).  See docs/linkprobes.md.
+%% saw(probe), [alice] got(hi).  See ../linkprobes.md.
 
 Inner ::= probe(String?) ; hello.
 InnerStream ::= [] ; [Inner | InnerStream].

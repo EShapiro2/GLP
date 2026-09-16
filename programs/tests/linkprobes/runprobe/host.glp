@@ -5,7 +5,7 @@
 %% with that end; the mini-app writes hello and a fresh probe and hands alice
 %% the probe's reader; bob reads his end and assigns it.  Activation is
 %% therefore not what stops the warm call.  Expected: [bob] saw(hello),
-%% saw(probe), [alice] got(hi).  See ../docs/linkprobes.md.
+%% saw(probe), [alice] got(hi).  See ../linkprobes.md.
 
 Inner ::= probe(String?) ; hello.
 InnerStream ::= [] ; [Inner | InnerStream].

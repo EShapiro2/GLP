@@ -4,7 +4,7 @@
 %% probe on the tail in a LATER reduction by matching that list at an input
 %% position, which is what the mini-app does with its conversations; bob reads
 %% and assigns.  Expected: [bob] saw(hello), saw(probe), [alice] got(hi).
-%% See docs/linkprobes.md.
+%% See ../linkprobes.md.
 
 Inner ::= probe(String?) ; hello.
 InnerStream ::= [] ; [Inner | InnerStream].

@@ -2,9 +2,12 @@
 %% makes the channel and only ONE end crosses, forwarded by the third agent.
 %% bob makes the channel and keeps one end; he sends the other to carol, who
 %% forwards it to alice; then bob and alice greet each other on it.  Beside
-%% ../linkprobe13, where carol makes the channel and both ends cross, and
-%% nothing passes.
-%% Expected: [alice] saw(hello_from(bob)) and [bob] saw(hello_from(alice)).
+%% ../linkprobe13, where carol makes the channel and both ends cross.  Here
+%% too the end reaches alice through carol, so that link is HELD, and this
+%% probe never calls authorise_link/2: nothing passes, which is the held link
+%% doing its work and not a defect (withdrawn as a bug report by SGSG Code,
+%% 2026-09-09).  What happens: no output, and the boot settles with three
+%% agents.  See ../linkprobes.md.
 
 Greeting ::= hello(Constant).
 GreetStream ::= [] ; [Greeting | GreetStream].

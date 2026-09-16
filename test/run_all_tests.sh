@@ -3840,6 +3840,108 @@ check "MB4 the twice-crossed end delivers the hand-over reduction's element" "\[
 check "MB4 and the element written into its tail afterwards" "\[bob\] saw(probe)" "$mb4"
 check "MB4 the holder's assignment comes back" "\[alice\] got(hi)" "$mb4"
 
+# MB5: the link probes (programs/tests/linkprobes, and linkprobes.md beside
+# them).  Eight `:boot` programs that fence in what crosses a link and what
+# does not: each is a cold call between isolates, after which one side writes
+# on a stream the other reads.  They differ in how many crossings the reader's
+# end made before it was read, and whether the elements were written in one
+# reduction or in two.  They were the evidence for the defect repaired on
+# 2026-09-08 in lib/runtime/heap_fcp.dart (fireBoundCallbacks), where a value
+# written into the tail of a stream whose reader had already crossed a link was
+# produced and never sent, and until now nothing in the suite loaded them: MB4
+# above covers the same repair on one program, and these cover the six shapes
+# that isolate it.  linkprobe13 and linkprobe14 are the pair in which the
+# channel is handed over by a third agent, so every link is held and neither
+# probe calls authorise_link/2: nothing passing is the correct behaviour, not a
+# defect (withdrawn by SGSG Code, 2026-09-09).
+LP_DIR="$GLP_DIR/programs/tests/linkprobes"
+rm -f "$LP_DIR"/runprobe/*.glpw
+
+lp7=$("$REPL_RUN" <<HEREDOC
+:boot $LP_DIR/linkprobe7_boot.glp $LP_DIR/linkprobe7
+:quit
+HEREDOC
+2>&1)
+check "MB5 linkprobe7 two crossings, both elements in one reduction: the boot settles" "Boot settled: 2 agents" "$lp7"
+check "MB5 linkprobe7 the twice-crossed end is read" "\[bob\] saw(root)" "$lp7"
+check "MB5 linkprobe7 both its elements arrive" "\[bob\] saw(probe)" "$lp7"
+check "MB5 linkprobe7 the holder's assignment comes back" "\[alice\] got(hi)" "$lp7"
+
+lp9=$("$REPL_RUN" <<HEREDOC
+:boot $LP_DIR/linkprobe9_boot.glp $LP_DIR/linkprobe9
+:quit
+HEREDOC
+2>&1)
+check "MB5 linkprobe9 one crossing, the write split: the greeting arrives" "\[bob\] saw(hello)" "$lp9"
+check "MB5 linkprobe9 and the element written into the tail later" "\[bob\] saw(probe)" "$lp9"
+check "MB5 linkprobe9 the holder's assignment comes back" "\[alice\] got(hi)" "$lp9"
+
+# linkprobe10 is the warm call's stop itself: linkprobe7's two crossings with
+# linkprobe9's later write.  Before the repair bob saw the greeting and nothing
+# after it.
+lp10=$("$REPL_RUN" <<HEREDOC
+:boot $LP_DIR/linkprobe10_boot.glp $LP_DIR/linkprobe10
+:quit
+HEREDOC
+2>&1)
+check "MB5 linkprobe10 two crossings and the write split: the greeting arrives" "\[bob\] saw(hello)" "$lp10"
+check "MB5 linkprobe10 and the element written into the tail afterwards" "\[bob\] saw(probe)" "$lp10"
+check "MB5 linkprobe10 the holder's assignment comes back" "\[alice\] got(hi)" "$lp10"
+
+# linkprobe11: the later element is ground, a second greeting carrying no
+# writer, so what linkprobe10 shows is the later write and not the writer in it.
+lp11=$("$REPL_RUN" <<HEREDOC
+:boot $LP_DIR/linkprobe11_boot.glp $LP_DIR/linkprobe11
+:quit
+HEREDOC
+2>&1)
+lp11_hellos=$(echo "$lp11" | grep -c "\[bob\] saw(hello)")
+check "MB5 linkprobe11 a ground later element crosses too: both greetings arrive" "^2$" "$lp11_hellos"
+
+# linkprobe12: the stream is left open after the probe, as a live
+# conversation's is, so the closing of the stream is not what carried it.
+lp12=$("$REPL_RUN" <<HEREDOC
+:boot $LP_DIR/linkprobe12_boot.glp $LP_DIR/linkprobe12
+:quit
+HEREDOC
+2>&1)
+check "MB5 linkprobe12 the later element crosses on a stream left open" "\[bob\] saw(probe)" "$lp12"
+check "MB5 linkprobe12 the holder's assignment comes back" "\[alice\] got(hi)" "$lp12"
+
+# runprobe: the writer is created by a mini-app that run/3 activated, from the
+# certified artefact beside the program --- activation is not what stops it.
+lpr=$("$REPL_RUN" <<HEREDOC
+:artefact $LP_DIR/probeapp $LP_DIR/runprobe
+:boot $LP_DIR/runprobe_boot.glp $LP_DIR/runprobe
+:quit
+HEREDOC
+2>&1)
+check "MB5 runprobe the mini-app's artefact is certified" "probeapp.glpw --- certified under" "$lpr"
+check "MB5 runprobe an activated mini-app's writer crosses: the greeting arrives" "\[bob\] saw(hello)" "$lpr"
+check "MB5 runprobe and the element it wrote into the tail" "\[bob\] saw(probe)" "$lpr"
+check "MB5 runprobe the holder's assignment comes back" "\[alice\] got(hi)" "$lpr"
+
+# linkprobe13 and linkprobe14: a channel handed over by a third agent.  Every
+# link so made is held, and neither probe calls authorise_link/2, so neither
+# greeting is delivered --- the held link doing its work, not a defect.
+lp13=$("$REPL_RUN" <<HEREDOC
+:boot $LP_DIR/linkprobe13_boot.glp $LP_DIR/linkprobe13
+:quit
+HEREDOC
+2>&1)
+check "MB5 linkprobe13 both ends of the channel cross: the boot settles" "Boot settled: 3 agents" "$lp13"
+check_not "MB5 linkprobe13 nothing passes on a held link neither side authorises" "saw(hello_from" "$lp13"
+
+lp14=$("$REPL_RUN" <<HEREDOC
+:boot $LP_DIR/linkprobe14_boot.glp $LP_DIR/linkprobe14
+:quit
+HEREDOC
+2>&1)
+check "MB5 linkprobe14 one end forwarded by a third agent: the boot settles" "Boot settled: 3 agents" "$lp14"
+check_not "MB5 linkprobe14 nothing passes on a held link neither side authorises" "saw(hello_from" "$lp14"
+
+rm -f "$LP_DIR"/runprobe/*.glpw
+
 echo ""
 # =============================================================================
 # SECTION SL: load_file/2 and the artefact on disc (:artefact)

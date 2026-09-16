@@ -6,10 +6,11 @@
 %% them greets the other on the end it was given and reports what it reads.
 %% This is the introduction of the social graph: the introducer makes the
 %% channel and hands an end to each of the two it introduces (core/agent.glp,
-%% "User introduces P to Q"), and it is where the warm call now stops --- alice
-%% reads bob's greeting and bob never reads alice's.
-%% Expected of a working runtime: [alice] saw(hello_from(bob)) and
-%% [bob] saw(hello_from(alice)).
+%% "User introduces P to Q").  Both links are therefore HELD, and this probe
+%% never calls authorise_link/2, so neither greeting is delivered: that is the
+%% held link doing its work and not a defect (withdrawn as a bug report by
+%% SGSG Code, 2026-09-09).  What happens: no output, and the boot settles with
+%% three agents.  See ../linkprobes.md.
 
 Greeting ::= hello(Constant).
 GreetStream ::= [] ; [Greeting | GreetStream].

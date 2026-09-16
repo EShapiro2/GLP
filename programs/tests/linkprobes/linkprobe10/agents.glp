@@ -1,12 +1,14 @@
-%% linkprobe10/agents.glp --- TWO CROSSINGS, the write split: FAILS, and this
-%% is the warm call's stop (SGSG item 9 / 17 (c)).  linkprobe7's two crossings
-%% with linkprobe9's later write: alice greets on the second channel, and in a
-%% LATER reduction puts probe(W) on the tail.  bob sees the greeting and
-%% nothing after it, so he never assigns and alice never gets the value.
-%% Expected of a working runtime: [bob] saw(hello), saw(probe), [alice]
-%% got(hi); what happens: saw(hello), then silence.  linkprobe11 shows the
-%% later element need not carry a writer, linkprobe12 that the closing of the
-%% stream is not it.  See docs/linkprobes.md.
+%% linkprobe10/agents.glp --- TWO CROSSINGS, the write split: this was the
+%% warm call's stop (SGSG item 9 / 17 (c)), and it works since the repair of
+%% 2026-09-08.  linkprobe7's two crossings with linkprobe9's later write:
+%% alice greets on the second channel, and in a LATER reduction puts probe(W)
+%% on the tail.  Before the repair bob saw the greeting and nothing after it,
+%% so he never assigned and alice never got the value: the later element was
+%% produced and never sent (glp_runtime/lib/runtime/heap_fcp.dart,
+%% fireBoundCallbacks).  Expected, and what happens: [bob] saw(hello),
+%% saw(probe), [alice] got(hi).  linkprobe11 shows the later element need not
+%% carry a writer, linkprobe12 that the closing of the stream is not it.
+%% See ../linkprobes.md.
 
 Inner ::= probe(String?) ; hello.
 InnerStream ::= [] ; [Inner | InnerStream].

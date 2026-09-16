@@ -1,8 +1,8 @@
 %% linkprobe12/agents.glp --- linkprobe10's second control: the stream is left
-%% OPEN after the probe, as a live conversation's is, and the probe still does
-%% not cross.  The closing of the stream is therefore not it.
-%% Expected of a working runtime: [bob] saw(probe), [alice] got(hi); what
-%% happens: neither.  See docs/linkprobes.md.
+%% OPEN after the probe, as a live conversation's is, and before the repair of
+%% 2026-09-08 the probe still did not cross.  The closing of the stream was
+%% therefore not it.  Expected, and what happens since the repair: [bob]
+%% saw(probe), [alice] got(hi).  See ../linkprobes.md.
 
 Inner ::= probe(String?) ; hello.
 InnerStream ::= [] ; [Inner | InnerStream].
