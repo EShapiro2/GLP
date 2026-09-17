@@ -30,6 +30,7 @@ GLP/
     │   └── spm/              # securing people and their machines (cva/, gsg/, secure_gsg/)
     ├── currencies/           # the grassroots currencies: bonds_v2/, coins/, bonds/, sovereign/
     ├── cssn/                 # the child-safe social network
+    ├── federation/           # the grassroots federation platform (GFWC)
     ├── grassapp/             # the GrassApp programs
     ├── jurix/                # legal contracts
     ├── vglp/                 # vGLP sources
