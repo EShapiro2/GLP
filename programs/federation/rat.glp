@@ -1,0 +1,78 @@
+% ---------------------------------------------------------------------------
+% Exact rationals.
+%
+% A share is n*w_v(u)/|P_v| and a ratio is S_v(x)/H_v(x) (Definitions "Weight,
+% Share, Seats" and "Account, Ratio"), and the comparisons the rules make on
+% them -- |A_v(u)| < floor(share_v(u)), and the least and the greatest ratio --
+% are exact.  GLP has Integer and Real only, so a rational is carried here as a
+% normalised pair of integers with a positive denominator, and every comparison
+% is by cross-multiplication rather than by division.
+% ---------------------------------------------------------------------------
+
+procedure iabs(Integer?, Integer).
+iabs(N, N?) :- N? >= 0 | true.
+iabs(N, M?) :- N? < 0 | M := 0 - N?.
+
+procedure gcd(Integer?, Integer?, Integer).
+gcd(A, 0, A?).
+gcd(A, B, G?) :- B? =\= 0, integer(A?), integer(B?) |
+    R := A? mod B?,
+    gcd(B?, R?, G).
+
+procedure rat_norm(Integer?, Integer?, Rat).
+rat_norm(N, D, rat(N1?, D1?)) :- integer(N?), integer(D?), D? > 0 |
+    iabs(N?, AN),
+    gcd(AN?, D?, G),
+    N1 := N? // G?,
+    D1 := D? // G?.
+
+exported procedure rat_make(Integer?, Integer?, Rat).
+rat_make(0, D, rat(0, 1)) :- integer(D?), D? =\= 0 | true.
+rat_make(N, D, R?) :- N? =\= 0, D? > 0, integer(N?), integer(D?) |
+    rat_norm(N?, D?, R).
+rat_make(N, D, R?) :- N? =\= 0, D? < 0, integer(N?), integer(D?) |
+    N1 := 0 - N?,
+    D1 := 0 - D?,
+    rat_norm(N1?, D1?, R).
+
+exported procedure rat_zero(Rat).
+rat_zero(rat(0, 1)).
+
+exported procedure rat_int(Integer?, Rat).
+rat_int(N, rat(N?, 1)).
+
+exported procedure rat_add(Rat?, Rat?, Rat).
+rat_add(rat(A, B), rat(C, D), R?) :-
+    integer(A?), integer(B?), integer(C?), integer(D?) |
+    AD := A? * D?,
+    CB := C? * B?,
+    N := AD? + CB?,
+    M := B? * D?,
+    rat_make(N?, M?, R).
+
+exported procedure rat_mul(Rat?, Rat?, Rat).
+rat_mul(rat(A, B), rat(C, D), R?) :-
+    integer(A?), integer(B?), integer(C?), integer(D?) |
+    N := A? * C?,
+    M := B? * D?,
+    rat_make(N?, M?, R).
+
+procedure int_cmp(Integer?, Integer?, Ord).
+int_cmp(X, Y, lt) :- X? < Y? | true.
+int_cmp(X, Y, eq) :- X? =:= Y? | true.
+int_cmp(X, Y, gt) :- X? > Y? | true.
+
+% Both denominators are positive, so cross-multiplication keeps the order.
+exported procedure rat_cmp(Rat?, Rat?, Ord).
+rat_cmp(rat(A, B), rat(C, D), O?) :-
+    integer(A?), integer(B?), integer(C?), integer(D?) |
+    AD := A? * D?,
+    CB := C? * B?,
+    int_cmp(AD?, CB?, O).
+
+% mod is non-negative for a positive divisor, so this floors in either sign.
+exported procedure rat_floor(Rat?, Integer).
+rat_floor(rat(A, B), F?) :- integer(A?), integer(B?), B? > 0 |
+    M := A? mod B?,
+    A1 := A? - M?,
+    F := A1? // B?.

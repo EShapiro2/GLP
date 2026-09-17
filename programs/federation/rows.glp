@@ -1,0 +1,160 @@
+% ---------------------------------------------------------------------------
+% The rows the tests run on.
+%
+% join_open and join_done are the Join of Figure 2 of
+% /Grassroots/GFWC/sections/introduction.tex at layer (5): the two communities,
+% a motion at each, and the wills.  In join_open one will stands at each
+% community, short of a supermajority, so the act is not decided and the motion
+% at f is open; in join_done a supermajority of each electorate has willed, so
+% the act is decided and the edge holds.  leave_done adds a Leave of the next
+% epoch over the whole of join_done, which supersedes it while every record
+% remains.  fed_moved is the row of a community whose Federate is decided, and
+% fed_child the row of the community that Federate forms.
+%
+% f = name(alice, [1, 1]) and g = name(bob, [1]), so f is the longer name and
+% f > g, which a Join requires.
+% ---------------------------------------------------------------------------
+
+imported procedure row#row_state(Rat?, Row?, Name?, State).
+imported procedure decide#decided_acts(Rat?, Row?, Arecs).
+
+% The supermajority threshold the tests run at.
+exported procedure theta(Rat).
+theta(rat(1, 2)).
+
+exported procedure name_named(Constant?, Name).
+name_named(f, name(alice, [1, 1])).
+name_named(g, name(bob, [1])).
+name_named(fed_child, name(bob, [1, 1])).
+
+exported procedure row_named(Constant?, Row).
+row_named(join_open,
+    [seat(plus, alice, uncoloured, 0, 0),
+     seat(plus, carol, uncoloured, 0, 1),
+     seat(plus, dave, uncoloured, 0, 2),
+     moved(motion(join(name(alice, [1, 1]), name(bob, [1])), name(alice, [1, 1]), [alice, carol, dave], 0)),
+     moved(motion(join(name(alice, [1, 1]), name(bob, [1])), name(bob, [1]), [bob, erin], 0)),
+     will(alice, motion(join(name(alice, [1, 1]), name(bob, [1])), name(alice, [1, 1]), [alice, carol, dave], 0)),
+     will(bob, motion(join(name(alice, [1, 1]), name(bob, [1])), name(bob, [1]), [bob, erin], 0))]).
+row_named(join_done,
+    [seat(plus, alice, uncoloured, 0, 0),
+     seat(plus, carol, uncoloured, 0, 1),
+     seat(plus, dave, uncoloured, 0, 2),
+     report(name(bob, [1]), [bob, erin], 12),
+     moved(motion(join(name(alice, [1, 1]), name(bob, [1])), name(alice, [1, 1]), [alice, carol, dave], 0)),
+     moved(motion(join(name(alice, [1, 1]), name(bob, [1])), name(bob, [1]), [bob, erin], 0)),
+     will(alice, motion(join(name(alice, [1, 1]), name(bob, [1])), name(alice, [1, 1]), [alice, carol, dave], 0)),
+     will(carol, motion(join(name(alice, [1, 1]), name(bob, [1])), name(alice, [1, 1]), [alice, carol, dave], 0)),
+     will(bob, motion(join(name(alice, [1, 1]), name(bob, [1])), name(bob, [1]), [bob, erin], 0)),
+     will(erin, motion(join(name(alice, [1, 1]), name(bob, [1])), name(bob, [1]), [bob, erin], 0))]).
+row_named(leave_done,
+    [seat(plus, alice, uncoloured, 0, 0),
+     seat(plus, carol, uncoloured, 0, 1),
+     seat(plus, dave, uncoloured, 0, 2),
+     report(name(bob, [1]), [bob, erin], 12),
+     moved(motion(join(name(alice, [1, 1]), name(bob, [1])), name(alice, [1, 1]), [alice, carol, dave], 0)),
+     moved(motion(join(name(alice, [1, 1]), name(bob, [1])), name(bob, [1]), [bob, erin], 0)),
+     will(alice, motion(join(name(alice, [1, 1]), name(bob, [1])), name(alice, [1, 1]), [alice, carol, dave], 0)),
+     will(carol, motion(join(name(alice, [1, 1]), name(bob, [1])), name(alice, [1, 1]), [alice, carol, dave], 0)),
+     will(bob, motion(join(name(alice, [1, 1]), name(bob, [1])), name(bob, [1]), [bob, erin], 0)),
+     will(erin, motion(join(name(alice, [1, 1]), name(bob, [1])), name(bob, [1]), [bob, erin], 0)),
+     moved(motion(leave(name(alice, [1, 1]), name(bob, [1])), name(alice, [1, 1]), [alice, carol, dave], 1)),
+     will(alice, motion(leave(name(alice, [1, 1]), name(bob, [1])), name(alice, [1, 1]), [alice, carol, dave], 1)),
+     will(dave, motion(leave(name(alice, [1, 1]), name(bob, [1])), name(alice, [1, 1]), [alice, carol, dave], 1))]).
+row_named(seat_dup,
+    [seat(plus, alice, uncoloured, 0, 0),
+     seat(plus, carol, uncoloured, 0, 1),
+     seat(plus, alice, col(name(bob, [1])), 5, 2)]).
+row_named(raise_gap,
+    [raise(0, 3, [sig(ag(alice), 3), sig(comm(name(bob, [1])), 3)], [et(ag(alice), rat(3, 1)), et(comm(name(bob, [1])), rat(3, 2))]),
+     raise(5, 9, [sig(ag(alice), 4)], [et(ag(alice), rat(4, 1))])]).
+row_named(raise_chain,
+    [raise(0, 3, [sig(ag(alice), 3)], [et(ag(alice), rat(3, 2))]),
+     raise(3, 7, [sig(ag(alice), 4)], [et(ag(alice), rat(4, 2))])]).
+row_named(fed_child,
+    [origin(federate(name(bob, [1])), motion(federate(name(bob, [1])), name(bob, [1]), [bob, erin], 0)),
+     seat(plus, bob, col(name(bob, [1])), 0, 0),
+     seat(plus, erin, col(name(bob, [1])), 0, 0)]).
+row_named(fed_moved,
+    [seat(plus, bob, uncoloured, 0, 0),
+     seat(plus, erin, uncoloured, 0, 1),
+     moved(motion(federate(name(bob, [1])), name(bob, [1]), [bob, erin], 0)),
+     will(bob, motion(federate(name(bob, [1])), name(bob, [1]), [bob, erin], 0)),
+     will(erin, motion(federate(name(bob, [1])), name(bob, [1]), [bob, erin], 0))]).
+row_named(rec_join,
+    [seat(plus, alice, uncoloured, 0, 0),
+     seat(plus, carol, uncoloured, 0, 1),
+     seat(plus, dave, uncoloured, 0, 2),
+     report(name(bob, [1]), [bob, erin], 12),
+     moved(motion(join(name(alice, [1, 1]), name(bob, [1])), name(alice, [1, 1]), [alice, carol, dave], 0)),
+     act(join(name(alice, [1, 1]), name(bob, [1])), [motion(join(name(alice, [1, 1]), name(bob, [1])), name(alice, [1, 1]), [alice, carol, dave], 0), motion(join(name(alice, [1, 1]), name(bob, [1])), name(bob, [1]), [bob, erin], 0)])]).
+row_named(dates,
+    [date(alice, 3),
+     date(alice, 7),
+     date(bob, 5)]).
+
+% The community each row belongs to.
+exported procedure row_community(Constant?, Name).
+row_community(join_open, name(alice, [1, 1])).
+row_community(join_done, name(alice, [1, 1])).
+row_community(leave_done, name(alice, [1, 1])).
+row_community(seat_dup, name(alice, [1, 1])).
+row_community(raise_gap, name(alice, [1, 1])).
+row_community(raise_chain, name(alice, [1, 1])).
+row_community(fed_child, name(bob, [1, 1])).
+row_community(fed_moved, name(bob, [1])).
+row_community(rec_join, name(alice, [1, 1])).
+row_community(dates, name(alice, [1, 1])).
+
+% The state of a named row at its own community, at the threshold one half.
+exported procedure state_named(Constant?, State).
+state_named(Nm, S?) :- ground(Nm?) |
+    row_named(Nm?, R),
+    row_community(Nm?, V),
+    state_named1(R?, V?, S).
+
+procedure state_named1(Row?, Name?, State).
+state_named1(R, V, S?) :- ground(R?), ground(V?) |
+    row # row_state(rat(1, 2), R?, V?, S).
+
+exported procedure decided_named(Constant?, Arecs).
+decided_named(Nm, A?) :- ground(Nm?) |
+    row_named(Nm?, R),
+    decided_named1(R?, A).
+
+procedure decided_named1(Row?, Arecs).
+decided_named1(R, A?) :- ground(R?) |
+    decide # decided_acts(rat(1, 2), R?, A).
+
+imported procedure row#agent_dates(Row?, Adates).
+imported procedure row#agent_date(Row?, Constant?, Integer).
+
+exported procedure adates_named(Constant?, Adates).
+adates_named(Nm, D?) :- ground(Nm?) |
+    row_named(Nm?, R),
+    adates_named1(R?, D).
+
+procedure adates_named1(Row?, Adates).
+adates_named1(R, D?) :- ground(R?) | row # agent_dates(R?, D).
+
+exported procedure adate_named(Constant?, Constant?, Integer).
+adate_named(Nm, Q, T?) :- ground(Nm?), ground(Q?) |
+    row_named(Nm?, R),
+    adate_named1(R?, Q?, T).
+
+procedure adate_named1(Row?, Constant?, Integer).
+adate_named1(R, Q, T?) :- ground(R?), ground(Q?) | row # agent_date(R?, Q?, T).
+
+imported procedure row#row_state_explicit(Row?, Name?, State).
+
+% The same row read by Definition "State of a Row" as it stands, its act
+% records taken as they are.
+exported procedure state_explicit_named(Constant?, State).
+state_explicit_named(Nm, S?) :- ground(Nm?) |
+    row_named(Nm?, R),
+    row_community(Nm?, V),
+    state_explicit_named1(R?, V?, S).
+
+procedure state_explicit_named1(Row?, Name?, State).
+state_explicit_named1(R, V, S?) :- ground(R?), ground(V?) |
+    row # row_state_explicit(R?, V?, S).

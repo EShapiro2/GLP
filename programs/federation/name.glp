@@ -1,0 +1,53 @@
+% ---------------------------------------------------------------------------
+% Community names and their order (Definition "Community Name, Order").
+% ---------------------------------------------------------------------------
+
+exported procedure name_is_agent(Name?, Ans).
+name_is_agent(name(_, []), yes).
+name_is_agent(name(_, [_|_]), no).
+
+exported procedure name_agent(Name?, Constant).
+name_agent(name(P, _), P?).
+
+% One more than the length of the list.
+exported procedure name_len(Name?, Integer).
+name_len(name(_, Is), N?) :- ground(Is?) |
+    ints_len(Is?, M),
+    N := M? + 1.
+
+exported procedure name_eq(Name?, Name?, Ans).
+name_eq(A, B, yes) :- A? =?= B? | true.
+name_eq(_, _, no) :- otherwise | true.
+
+% Lexicographic on two lists of equal length.
+procedure ints_gt(Ints?, Ints?, Ans).
+ints_gt([], [], no).
+ints_gt([], [_|_], no).
+ints_gt([_|_], [], yes).
+ints_gt([I|_], [J|_], yes) :- I? > J? | true.
+ints_gt([I|_], [J|_], no) :- I? < J? | true.
+ints_gt([I|Is], [J|Js], R?) :- I? =:= J?, ground(Is?), ground(Js?) |
+    ints_gt(Is?, Js?, R).
+
+procedure name_gt1(Integer?, Integer?, Constant?, Constant?, Ints?, Ints?, Ans).
+name_gt1(LI, LJ, _, _, _, _, yes) :- LI? > LJ? | true.
+name_gt1(LI, LJ, _, _, _, _, no) :- LI? < LJ? | true.
+name_gt1(LI, LJ, P, Q, _, _, no) :- LI? =:= LJ?, P? @< Q? | true.
+name_gt1(LI, LJ, P, Q, _, _, yes) :- LI? =:= LJ?, Q? @< P? | true.
+name_gt1(LI, LJ, P, Q, Is, Js, R?) :-
+    LI? =:= LJ?, P? =?= Q?, ground(Is?), ground(Js?) |
+    ints_gt(Is?, Js?, R).
+
+% f > g: f is the longer name, ties by < on the agents and then by the natural
+% order on the integers.
+exported procedure name_gt(Name?, Name?, Ans).
+name_gt(name(P, Is), name(Q, Js), R?) :-
+    ground(P?), ground(Q?), ground(Is?), ground(Js?) |
+    ints_len(Is?, LI),
+    ints_len(Js?, LJ),
+    name_gt1(LI?, LJ?, P?, Q?, Is?, Js?, R).
+
+% The name (v, i): v with i appended to its list.
+exported procedure name_extend(Name?, Integer?, Name).
+name_extend(name(P, Is), I, name(P?, Js?)) :- ground(Is?), integer(I?) |
+    ints_app(Is?, [I?], Js).

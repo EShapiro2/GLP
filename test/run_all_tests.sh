@@ -20,6 +20,7 @@
 #   N - Currencies Modules (project-directory loading, plays 1-12)
 #   O - Currencies Multi-Isolate Tests (dart test, one isolate per agent)
 #   P - Module Boundary Enforcement Tests (exported vs private procedures)
+#   GF - Grassroots federation records and the state they compute (GFWC)
 
 set -e
 
@@ -4327,6 +4328,204 @@ check "SG budget: the residual program" "Out2 = \[1, 2, 3, 4, 5\]" "$sg_budget"
 check "SG budget: residual counter of 100 under grants of 7" "L = 100" "$sg_budget"
 check "SG budget: meta-interpreted counter of 100 under grants of 7" "L2 = 100" "$sg_budget"
 check_not "SG budget no failed play" "→ failed" "$sg_budget"
+
+echo ""
+
+# =============================================================================
+# Section GF: Grassroots federation records and the state they compute
+# =============================================================================
+# /Grassroots/GFWC/sections/federation.tex, Sections 2.5 and 2.6: the records
+# of Definition "Record, Row" with the additions of Definition "Will, Contact,
+# Origin Record", the state of Definition "State of a Row" read with decided
+# acts in place of act records (Definition "State of a Row, Implied"), and the
+# decision of a motion and of an act.  programs/federation is GFWC's
+# (Coordination Appendix B, 2026-09-17).
+echo "=== Section GF: Grassroots federation records ==="
+
+FED="$GLP_DIR/programs/federation"
+
+# --- The Join of Figure 2 of sections/introduction.tex, at layer (5) --------
+# Two communities f = name(alice, [1, 1]) and g = name(bob, [1]), a motion at
+# each, and the wills.  Two of the three seats of f and both seats of g have
+# willed, a supermajority of each electorate at theta = 1/2, so the act is
+# decided and g is a child of f in the computed state.
+gf_join=$("$REPL_RUN" <<HEREDOC
+$FED
+decided_named(join_done, A).
+state_named(join_done, S).
+:quit
+HEREDOC
+2>&1)
+check "GF federation loads" "Loaded program" "$gf_join"
+check_not "GF no type error" "Error loading" "$gf_join"
+check "GF join: the act is decided on the motion at each community" \
+      "A = \[arec(join(name(alice, \[1, 1\]), name(bob, \[1\])), \[motion(join" "$gf_join"
+check "GF join: the decided act carries the motion at g" \
+      "name(bob, \[1\]), \[bob, erin\], 0)\])\]" "$gf_join"
+check "GF join: g is a child of f, and the report gives f its members" \
+      "S = state(\[name(bob, \[1\])\], \[\], \[bob, erin\]" "$gf_join"
+check "GF join: the assembly of f is its three seats" \
+      "\[st(alice, uncoloured, 0), st(carol, uncoloured, 0), st(dave, uncoloured, 0)\], 0, \[\], \[\])" "$gf_join"
+
+# --- The same, one will short at each community ----------------------------
+# Nothing is decided, so there is no edge; the motion moved at f is open, and
+# the motion relayed from g is not among f's open motions, its community being
+# g (Definition "State of a Row"(6)).
+gf_open=$("$REPL_RUN" <<HEREDOC
+$FED
+decided_named(join_open, A).
+state_named(join_open, S).
+:quit
+HEREDOC
+2>&1)
+check "GF open: one will at each decides nothing" "A = \[\]" "$gf_open"
+check "GF open: no edge" "S = state(\[\], \[\], \[\]" "$gf_open"
+check "GF open: the motion moved at f is open" \
+      "\[motion(join(name(alice, \[1, 1\]), name(bob, \[1\])), name(alice, \[1, 1\]), \[alice, carol, dave\], 0)\])" "$gf_open"
+check_not "GF open: the motion relayed from g is not f's open motion" \
+      "name(bob, \[1\]), \[bob, erin\], 0)\])$" "$gf_open"
+
+# --- A Leave of the next epoch ---------------------------------------------
+# The Leave is moved at epoch 1, one act record standing on the pair, and is
+# decided; it is then the sole head of the pair, so the edge is gone, while
+# every record of the Join remains in the row.
+gf_leave=$("$REPL_RUN" <<HEREDOC
+$FED
+decided_named(leave_done, A).
+state_named(leave_done, S).
+row_named(leave_done, R).
+:quit
+HEREDOC
+2>&1)
+check "GF leave: the Leave of epoch 1 is decided" \
+      "A = \[arec(leave(name(alice, \[1, 1\]), name(bob, \[1\])), \[motion(leave" "$gf_leave"
+check "GF leave: the Join of epoch 0 is decided still" \
+      "arec(join(name(alice, \[1, 1\]), name(bob, \[1\]))" "$gf_leave"
+check "GF leave: the edge is gone" "S = state(\[\], \[\], \[\]" "$gf_leave"
+check "GF leave: the Join motion remains in the row" \
+      "R = \[seat(plus, alice, uncoloured, 0, 0)" "$gf_leave"
+check "GF leave: the wills on the Join remain in the row" \
+      "will(carol, motion(join(" "$gf_leave"
+check "GF leave: the report remains in the row" \
+      "report(name(bob, \[1\]), \[bob, erin\], 12)" "$gf_leave"
+
+# --- A seat record of an agent who already holds a seat is ignored ---------
+# The seat records are taken in the order of (k, q); the third names alice,
+# who holds the seat added by the first, so it adds nothing (Definition
+# "State of a Row"(4)).
+gf_seat=$("$REPL_RUN" <<HEREDOC
+$FED
+state_named(seat_dup, S).
+:quit
+HEREDOC
+2>&1)
+check "GF seat: a second seat for a seated agent is ignored" \
+      "S = state(\[\], \[\], \[\], \[st(alice, uncoloured, 0), st(carol, uncoloured, 0)\]" "$gf_seat"
+
+# --- The accounts accrue only from a raise whose first date is the date -----
+# raise_gap holds raises (0, 3) and (5, 9): the first is taken and the second
+# is not, its first date not being the date reached.  raise_chain holds
+# (0, 3) and (3, 7), and both are taken.  The share-days are exact rationals.
+gf_raise=$("$REPL_RUN" <<HEREDOC
+$FED
+state_named(raise_gap, S1).
+state_named(raise_chain, S2).
+:quit
+HEREDOC
+2>&1)
+check "GF raise: the date is that of the raise taken" \
+      "S1 = state(\[\], \[\], \[\], \[\], 3, " "$gf_raise"
+check "GF raise: the accounts of the raise taken, and of no other" \
+      "\[acct(ag(alice), 3, rat(3, 1)), acct(comm(name(bob, \[1\])), 3, rat(3, 2))\]" "$gf_raise"
+check "GF raise: a chain of raises accrues each of them" \
+      "S2 = state(\[\], \[\], \[\], \[\], 7, \[acct(ag(alice), 7, rat(7, 2))\], \[\])" "$gf_raise"
+
+# --- A Federate: the origin record and the community it forms --------------
+# fed_child is the row of the community a Federate g forms, holding the origin
+# record and the seats of the electorate; g is its child.  fed_moved is the row
+# of g itself once its Federate is decided, and the community formed is its
+# parent.
+gf_fed=$("$REPL_RUN" <<HEREDOC
+$FED
+state_named(fed_child, S1).
+state_named(fed_moved, S2).
+:quit
+HEREDOC
+2>&1)
+check "GF federate: the origin record makes g a child of the community formed" \
+      "S1 = state(\[name(bob, \[1\])\], \[\], \[\], \[st(bob, col(name(bob, \[1\])), 0), st(erin, col(name(bob, \[1\])), 0)\]" "$gf_fed"
+check "GF federate: the community formed is a parent of the one that moved it" \
+      "S2 = state(\[\], \[name(bob, \[1, 1\])\], \[\]" "$gf_fed"
+
+# --- One row read by each of the two definitions ---------------------------
+# rec_join is a row of the layer of Definition "Grassroots Federation over
+# Records": it carries the act record of the Join and no wills.  Read as
+# Definition "State of a Row" stands, the edge holds; read by Definition
+# "State of a Row, Implied", nothing is decided and the motion is open.
+gf_two=$("$REPL_RUN" <<HEREDOC
+$FED
+state_explicit_named(rec_join, S1).
+state_named(rec_join, S2).
+:quit
+HEREDOC
+2>&1)
+check "GF readings: the act record gives the edge" \
+      "S1 = state(\[name(bob, \[1\])\], \[\], \[bob, erin\]" "$gf_two"
+check "GF readings: with no will the same row decides nothing" \
+      "S2 = state(\[\], \[\], \[\]" "$gf_two"
+
+# --- Dates, the order on names, and the supermajority ----------------------
+gf_misc=$("$REPL_RUN" <<HEREDOC
+$FED
+adates_named(dates, D).
+adate_named(dates, carol, T).
+name_gt(name(alice, [1, 1]), name(bob, [1]), A1).
+name_gt(name(bob, [1]), name(alice, [1, 1]), A2).
+name_gt(name(alice, [1]), name(bob, [1]), A3).
+name_gt(name(bob, [1]), name(alice, [1]), A4).
+supermajority(rat(1, 2), 2, 3, A5).
+supermajority(rat(1, 2), 1, 2, A6).
+supermajority(rat(2, 3), 2, 3, A7).
+:quit
+HEREDOC
+2>&1)
+check "GF date: the date of an agent is the greatest its row records" \
+      "D = \[adate(alice, 7), adate(bob, 5)\]" "$gf_misc"
+check "GF date: an agent the row has no date of is at zero" "T = 0" "$gf_misc"
+check "GF order: the longer name is the greater" "A1 = yes" "$gf_misc"
+check "GF order: and the shorter is not" "A2 = no" "$gf_misc"
+check "GF order: at equal length the agents decide it" "A3 = no" "$gf_misc"
+check "GF order: the other way round" "A4 = yes" "$gf_misc"
+check "GF supermajority: two of three at one half" "A5 = yes" "$gf_misc"
+check "GF supermajority: one of two at one half is not" "A6 = no" "$gf_misc"
+check "GF supermajority: two of three at two thirds is not" "A7 = no" "$gf_misc"
+
+# --- Exact rationals -------------------------------------------------------
+# A share and a ratio are rationals and their comparisons are exact, so they
+# are carried as normalised integer pairs and compared without division.
+gf_rat=$("$REPL_RUN" <<HEREDOC
+$FED
+rat_make(12, 18, R1).
+rat_make(5, -10, R2).
+rat_add(rat(1, 3), rat(1, 6), R3).
+rat_mul(rat(2, 3), rat(3, 8), R4).
+rat_cmp(rat(2, 3), rat(3, 4), O1).
+rat_cmp(rat(3, 4), rat(3, 4), O2).
+rat_cmp(rat(4, 5), rat(3, 4), O3).
+rat_floor(rat(7, 2), F1).
+rat_floor(rat(-7, 2), F2).
+:quit
+HEREDOC
+2>&1)
+check "GF rat: a rational is normalised" "R1 = rat(2, 3)" "$gf_rat"
+check "GF rat: the denominator is kept positive" "R2 = rat(-1, 2)" "$gf_rat"
+check "GF rat: addition" "R3 = rat(1, 2)" "$gf_rat"
+check "GF rat: multiplication" "R4 = rat(1, 4)" "$gf_rat"
+check "GF rat: less" "O1 = lt" "$gf_rat"
+check "GF rat: equal" "O2 = eq" "$gf_rat"
+check "GF rat: greater" "O3 = gt" "$gf_rat"
+check "GF rat: the floor of a positive rational" "F1 = 3" "$gf_rat"
+check "GF rat: the floor of a negative rational" "F2 = -4" "$gf_rat"
 
 echo ""
 

@@ -1,0 +1,262 @@
+% ---------------------------------------------------------------------------
+% Grassroots federation: the records of a community and the state they compute.
+%
+% The specification is /Grassroots/GFWC/sections/federation.tex, Sections 2.5
+% and 2.6.  No definition of it is restated here; each type and each procedure
+% names the definition it carries out.  This module decodes a row; it adds no
+% record and takes no transaction, those being Definition "Grassroots
+% Federation Implied Transactions".
+%
+% This file is the directory's shared scope: the records, the computed state,
+% the small procedures every module here needs, and the directory's entry
+% points.
+% ---------------------------------------------------------------------------
+
+% --- Answers and orders ----------------------------------------------------
+Ans ::= yes ; no.
+Ord ::= lt ; eq ; gt.
+
+% --- Community names (Definition "Community Name, Order") -------------------
+% An agent followed by a finite list of positive integers; an agent p is the
+% name name(p, []).
+Ints  ::= [] ; [Integer | Ints].
+Name  ::= name(Constant, Ints).
+Names ::= [] ; [Name | Names].
+
+Agents ::= [] ; [Constant | Agents].
+
+% --- Exact rationals -------------------------------------------------------
+% Normalised, denominator positive; see rat.glp.
+Rat ::= rat(Integer, Integer).
+
+% --- The acts (Definition "Federation, Motion, Electorate") -----------------
+Act ::= federate(Name) ; join(Name, Name) ; leave(Name, Name).
+
+% --- Records (Definition "Record, Row"; Definition "Will, Contact, Origin
+%     Record") -------------------------------------------------------------
+% motion(a, u, X, k) is the motion record of act a at community u with
+% electorate X and epoch k.
+Motion  ::= motion(Act, Name, Agents, Integer).
+Motions ::= [] ; [Motion | Motions].
+
+% What the maps of a raise record are maps from: an agent or a community name.
+Node  ::= ag(Constant) ; comm(Name).
+Sig   ::= sig(Node, Integer).
+Sigma ::= [] ; [Sig | Sigma].
+Et    ::= et(Node, Rat).
+Eta   ::= [] ; [Et | Eta].
+
+Colour ::= col(Name) ; uncoloured.
+Sign   ::= plus ; minus.
+
+Record ::= date(Constant, Integer)
+         ; raise(Integer, Integer, Sigma, Eta)
+         ; report(Name, Agents, Integer)
+         ; moved(Motion)
+         ; act(Act, Motions)
+         ; seat(Sign, Constant, Colour, Integer, Integer)
+         ; will(Constant, Motion)
+         ; origin(Act, Motion).
+Row ::= [] ; [Record | Row].
+
+% --- An act record, and a decided act, which take the same form ------------
+Arec  ::= arec(Act, Motions).
+Arecs ::= [] ; [Arec | Arecs].
+
+% --- The state a row computes (Definition "State of a Row") ----------------
+Seat  ::= st(Constant, Colour, Integer).
+Seats ::= [] ; [Seat | Seats].
+
+Acct  ::= acct(Node, Integer, Rat).
+Accts ::= [] ; [Acct | Accts].
+
+Adate  ::= adate(Constant, Integer).
+Adates ::= [] ; [Adate | Adates].
+
+% --- Working forms ---------------------------------------------------------
+% The seat and raise records of a row, as lists of their own, so that they can
+% be put in the order the definition folds them in.
+SeatRec   ::= sr(Sign, Constant, Colour, Integer, Integer).
+SeatRecs  ::= [] ; [SeatRec | SeatRecs].
+RaiseRec  ::= rr(Integer, Integer, Sigma, Eta).
+RaiseRecs ::= [] ; [RaiseRec | RaiseRecs].
+
+% The latest report of a child, and the date with the accounts the raise fold
+% arrives at.
+Rep ::= rep(Integer, Agents) ; norep.
+DA  ::= da(Integer, Accts).
+
+% state(children, parents, members, assembly, date, accounts, open motions)
+State ::= state(Names, Names, Agents, Seats, Integer, Accts, Motions).
+
+% ---------------------------------------------------------------------------
+% Answers
+% ---------------------------------------------------------------------------
+
+procedure and_ans(Ans?, Ans?, Ans).
+and_ans(yes, A, A?).
+and_ans(no, _, no).
+
+procedure or_ans(Ans?, Ans?, Ans).
+or_ans(yes, _, yes).
+or_ans(no, A, A?).
+
+procedure not_ans(Ans?, Ans).
+not_ans(yes, no).
+not_ans(no, yes).
+
+% ---------------------------------------------------------------------------
+% Arithmetic
+% ---------------------------------------------------------------------------
+
+procedure imax(Integer?, Integer?, Integer).
+imax(X, Y, X?) :- X? >= Y? | true.
+imax(X, Y, Y?) :- X? < Y? | true.
+
+% ---------------------------------------------------------------------------
+% Lists
+% ---------------------------------------------------------------------------
+
+procedure ints_app(Ints?, Ints?, Ints).
+ints_app([], T, T?).
+ints_app([X|Xs], T, [X?|R?]) :- ints_app(Xs?, T?, R).
+
+procedure ints_len(Ints?, Integer).
+ints_len([], 0).
+ints_len([_|Xs], N?) :- ints_len(Xs?, M), N := M? + 1.
+
+procedure agents_app(Agents?, Agents?, Agents).
+agents_app([], T, T?).
+agents_app([X|Xs], T, [X?|R?]) :- agents_app(Xs?, T?, R).
+
+procedure agents_len(Agents?, Integer).
+agents_len([], 0).
+agents_len([_|Xs], N?) :- agents_len(Xs?, M), N := M? + 1.
+
+procedure agents_member(Agents?, Constant?, Ans).
+agents_member([], _, no).
+agents_member([A|_], B, yes) :- A? =?= B? | true.
+agents_member([_|As], B, R?) :- otherwise, ground(As?), ground(B?) |
+    agents_member(As?, B?, R).
+
+procedure agents_add(Constant?, Agents?, Agents).
+agents_add(P, As, R?) :- ground(P?), ground(As?) |
+    agents_member(As?, P?, Y),
+    agents_add1(Y?, P?, As?, R).
+
+procedure agents_add1(Ans?, Constant?, Agents?, Agents).
+agents_add1(yes, _, As, As?).
+agents_add1(no, P, As, [P?|As?]).
+
+% The union of two sets of agents, the first taken in order.
+procedure agents_union(Agents?, Agents?, Agents).
+agents_union([], T, T?).
+agents_union([X|Xs], T, R?) :- ground(X?), ground(Xs?), ground(T?) |
+    agents_union(Xs?, T?, R1),
+    agents_add(X?, R1?, R).
+
+procedure motions_app(Motions?, Motions?, Motions).
+motions_app([], T, T?).
+motions_app([X|Xs], T, [X?|R?]) :- motions_app(Xs?, T?, R).
+
+procedure arecs_app(Arecs?, Arecs?, Arecs).
+arecs_app([], T, T?).
+arecs_app([X|Xs], T, [X?|R?]) :- arecs_app(Xs?, T?, R).
+
+procedure seats_app(Seats?, Seats?, Seats).
+seats_app([], T, T?).
+seats_app([X|Xs], T, [X?|R?]) :- seats_app(Xs?, T?, R).
+
+procedure names_app(Names?, Names?, Names).
+names_app([], T, T?).
+names_app([X|Xs], T, [X?|R?]) :- names_app(Xs?, T?, R).
+
+% ---------------------------------------------------------------------------
+% Entry points
+% ---------------------------------------------------------------------------
+% Each is forwarded to the module that defines it (manual 19.6).
+
+imported procedure row#row_state(Rat?, Row?, Name?, State).
+exported procedure row_state(Rat?, Row?, Name?, State).
+row_state(T, R, V, S?) :- row # row_state(T?, R?, V?, S).
+
+imported procedure row#row_state_explicit(Row?, Name?, State).
+exported procedure row_state_explicit(Row?, Name?, State).
+row_state_explicit(R, V, S?) :- row # row_state_explicit(R?, V?, S).
+
+imported procedure row#agent_date(Row?, Constant?, Integer).
+exported procedure agent_date(Row?, Constant?, Integer).
+agent_date(R, Q, T?) :- row # agent_date(R?, Q?, T).
+
+imported procedure row#agent_dates(Row?, Adates).
+exported procedure agent_dates(Row?, Adates).
+agent_dates(R, D?) :- row # agent_dates(R?, D).
+
+imported procedure decide#decided_acts(Rat?, Row?, Arecs).
+exported procedure decided_acts(Rat?, Row?, Arecs).
+decided_acts(T, R, A?) :- decide # decided_acts(T?, R?, A).
+
+imported procedure decide#motion_decided(Rat?, Row?, Motion?, Ans).
+exported procedure motion_decided(Rat?, Row?, Motion?, Ans).
+motion_decided(T, R, M, A?) :- decide # motion_decided(T?, R?, M?, A).
+
+imported procedure decide#supermajority(Rat?, Integer?, Integer?, Ans).
+exported procedure supermajority(Rat?, Integer?, Integer?, Ans).
+supermajority(T, K, N, A?) :- decide # supermajority(T?, K?, N?, A).
+
+imported procedure name#name_gt(Name?, Name?, Ans).
+exported procedure name_gt(Name?, Name?, Ans).
+name_gt(F, G, A?) :- name # name_gt(F?, G?, A).
+
+% --- The rows the tests run on --------------------------------------------
+
+imported procedure rows#row_named(Constant?, Row).
+exported procedure row_named(Constant?, Row).
+row_named(Nm, R?) :- rows # row_named(Nm?, R).
+
+imported procedure rows#name_named(Constant?, Name).
+exported procedure name_named(Constant?, Name).
+name_named(Nm, V?) :- rows # name_named(Nm?, V).
+
+% The state of a named row at its own community, at the threshold one half.
+imported procedure rows#state_named(Constant?, State).
+exported procedure state_named(Constant?, State).
+state_named(Nm, S?) :- rows # state_named(Nm?, S).
+
+imported procedure rows#decided_named(Constant?, Arecs).
+exported procedure decided_named(Constant?, Arecs).
+decided_named(Nm, A?) :- rows # decided_named(Nm?, A).
+
+imported procedure rows#adates_named(Constant?, Adates).
+exported procedure adates_named(Constant?, Adates).
+adates_named(Nm, D?) :- rows # adates_named(Nm?, D).
+
+imported procedure rows#adate_named(Constant?, Constant?, Integer).
+exported procedure adate_named(Constant?, Constant?, Integer).
+adate_named(Nm, Q, T?) :- rows # adate_named(Nm?, Q?, T).
+
+imported procedure rows#state_explicit_named(Constant?, State).
+exported procedure state_explicit_named(Constant?, State).
+state_explicit_named(Nm, S?) :- rows # state_explicit_named(Nm?, S).
+
+% --- Exact rationals ------------------------------------------------------
+
+imported procedure rat#rat_make(Integer?, Integer?, Rat).
+exported procedure rat_make(Integer?, Integer?, Rat).
+rat_make(N, D, R?) :- rat # rat_make(N?, D?, R).
+
+imported procedure rat#rat_add(Rat?, Rat?, Rat).
+exported procedure rat_add(Rat?, Rat?, Rat).
+rat_add(A, B, R?) :- rat # rat_add(A?, B?, R).
+
+imported procedure rat#rat_mul(Rat?, Rat?, Rat).
+exported procedure rat_mul(Rat?, Rat?, Rat).
+rat_mul(A, B, R?) :- rat # rat_mul(A?, B?, R).
+
+imported procedure rat#rat_cmp(Rat?, Rat?, Ord).
+exported procedure rat_cmp(Rat?, Rat?, Ord).
+rat_cmp(A, B, O?) :- rat # rat_cmp(A?, B?, O).
+
+imported procedure rat#rat_floor(Rat?, Integer).
+exported procedure rat_floor(Rat?, Integer).
+rat_floor(A, F?) :- rat # rat_floor(A?, F).
