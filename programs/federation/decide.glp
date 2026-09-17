@@ -1,0 +1,214 @@
+% ---------------------------------------------------------------------------
+% The decision of a motion and of an act (Definition "Will, Contact, Origin
+% Record").
+%
+% A motion record of electorate X is decided in a row when the agents whose
+% will records name it are a supermajority of X; an act is decided on motion
+% records of it in the row, one at each community it names for a Join or a
+% Federate and one at either for a Leave, each of them decided.  The decided
+% acts of a row are those tuples together with its origin records.
+% ---------------------------------------------------------------------------
+
+imported procedure name#name_eq(Name?, Name?, Ans).
+
+procedure gt_ans(Integer?, Integer?, Ans).
+gt_ans(X, Y, yes) :- X? > Y? | true.
+gt_ans(X, Y, no) :- X? =< Y? | true.
+
+% |X'| > theta |X|, by cross-multiplication; theta = TN/TD with TD positive.
+exported procedure supermajority(Rat?, Integer?, Integer?, Ans).
+supermajority(rat(TN, TD), K, N, R?) :-
+    integer(TN?), integer(TD?), integer(K?), integer(N?) |
+    L := K? * TD?,
+    M := TN? * N?,
+    gt_ans(L?, M?, R).
+
+procedure motion_electorate(Motion?, Agents).
+motion_electorate(motion(_, _, X, _), X?).
+
+exported procedure motion_act(Motion?, Act).
+motion_act(motion(A, _, _, _), A?).
+
+exported procedure motion_epoch(Motion?, Integer).
+motion_epoch(motion(_, _, _, K), K?).
+
+exported procedure motion_community(Motion?, Name).
+motion_community(motion(_, V, _, _), V?).
+
+% The agents whose wills in the row name this motion, without repetition.
+procedure willers(Row?, Motion?, Agents).
+willers([], _, []).
+willers([will(P, M1)|Rs], M, R?) :-
+    M1? =?= M?, ground(P?), ground(Rs?), ground(M?) |
+    willers(Rs?, M?, R1),
+    agents_add(P?, R1?, R).
+willers([_|Rs], M, R?) :- otherwise, ground(Rs?), ground(M?) |
+    willers(Rs?, M?, R).
+
+exported procedure motion_decided(Rat?, Row?, Motion?, Ans).
+motion_decided(T, Row, M, R?) :- ground(T?), ground(Row?), ground(M?) |
+    willers(Row?, M?, Ws),
+    motion_electorate(M?, X),
+    motion_decided1(Ws?, X?, T?, R).
+
+procedure motion_decided1(Agents?, Agents?, Rat?, Ans).
+motion_decided1(Ws, X, T, R?) :- ground(Ws?), ground(X?), ground(T?) |
+    agents_len(Ws?, K),
+    agents_len(X?, N),
+    supermajority(T?, K?, N?, R).
+
+% --- The motion records of a row, and the decided ones among them ----------
+
+exported procedure row_motions(Row?, Motions).
+row_motions([], []).
+row_motions([moved(M)|Rs], [M?|R?]) :- ground(M?), ground(Rs?) |
+    row_motions(Rs?, R).
+row_motions([_|Rs], R?) :- otherwise, ground(Rs?) |
+    row_motions(Rs?, R).
+
+procedure decided_motions(Rat?, Row?, Motions?, Motions).
+decided_motions(_, _, [], []).
+decided_motions(T, Row, [M|Ms], R?) :-
+    ground(T?), ground(Row?), ground(M?), ground(Ms?) |
+    motion_decided(T?, Row?, M?, A),
+    decided_motions1(A?, T?, Row?, M?, Ms?, R).
+
+procedure decided_motions1(Ans?, Rat?, Row?, Motion?, Motions?, Motions).
+decided_motions1(yes, T, Row, M, Ms, [M?|R?]) :-
+    ground(T?), ground(Row?), ground(Ms?) |
+    decided_motions(T?, Row?, Ms?, R).
+decided_motions1(no, T, Row, _, Ms, R?) :-
+    ground(T?), ground(Row?), ground(Ms?) |
+    decided_motions(T?, Row?, Ms?, R).
+
+% --- A Federate and a Leave are decided on one motion ---------------------
+% A Federate on the motion at the community it names; a Leave on a motion at
+% either of the two.  A Join needs one at each and is taken below.
+
+procedure motion_single_ok(Motion?, Ans).
+motion_single_ok(motion(federate(U), V, _, _), R?) :- ground(U?), ground(V?) |
+    name # name_eq(U?, V?, R).
+motion_single_ok(motion(leave(F, G), V, _, _), R?) :-
+    ground(F?), ground(G?), ground(V?) |
+    name # name_eq(F?, V?, A1),
+    name # name_eq(G?, V?, A2),
+    or_ans(A1?, A2?, R).
+motion_single_ok(motion(join(_, _), _, _, _), no).
+
+procedure single_of(Motion?, Arecs).
+single_of(M, R?) :- ground(M?) |
+    motion_single_ok(M?, A),
+    single_of1(A?, M?, R).
+
+procedure single_of1(Ans?, Motion?, Arecs).
+single_of1(yes, M, [arec(A?, [M?])]) :- ground(M?) | motion_act(M?, A).
+single_of1(no, _, []).
+
+procedure singles(Motions?, Arecs).
+singles([], []).
+singles([M|Ms], R?) :- ground(M?), ground(Ms?) |
+    single_of(M?, S),
+    singles(Ms?, R1),
+    arecs_app(S?, R1?, R).
+
+% --- A Join is decided on one motion at f and one at g --------------------
+
+procedure join_at_f(Motion?, Ans).
+join_at_f(motion(join(F, _), V, _, _), R?) :- ground(F?), ground(V?) |
+    name # name_eq(F?, V?, R).
+join_at_f(motion(federate(_), _, _, _), no).
+join_at_f(motion(leave(_, _), _, _, _), no).
+
+procedure is_partner(Act?, Motion?, Ans).
+is_partner(join(F, G), motion(join(F1, G1), V, _, _), R?) :-
+    ground(F?), ground(G?), ground(F1?), ground(G1?), ground(V?) |
+    name # name_eq(F?, F1?, A1),
+    name # name_eq(G?, G1?, A2),
+    name # name_eq(G?, V?, A3),
+    and_ans(A1?, A2?, B1),
+    and_ans(B1?, A3?, R).
+is_partner(_, _, no) :- otherwise | true.
+
+procedure partners(Act?, Motions?, Motions).
+partners(_, [], []).
+partners(A, [M|Ms], R?) :- ground(A?), ground(M?), ground(Ms?) |
+    is_partner(A?, M?, Y),
+    partners1(Y?, A?, M?, Ms?, R).
+
+procedure partners1(Ans?, Act?, Motion?, Motions?, Motions).
+partners1(yes, A, M, Ms, [M?|R?]) :- ground(A?), ground(Ms?) |
+    partners(A?, Ms?, R).
+partners1(no, A, _, Ms, R?) :- ground(A?), ground(Ms?) |
+    partners(A?, Ms?, R).
+
+procedure pair_up(Motion?, Motions?, Arecs).
+pair_up(_, [], []).
+pair_up(M, [P|Ps], [arec(A?, [M?, P?])|R?]) :-
+    ground(M?), ground(P?), ground(Ps?) |
+    motion_act(M?, A),
+    pair_up(M?, Ps?, R).
+
+procedure join_with(Motion?, Motions?, Arecs).
+join_with(M, All, R?) :- ground(M?), ground(All?) |
+    join_at_f(M?, A),
+    join_with1(A?, M?, All?, R).
+
+procedure join_with1(Ans?, Motion?, Motions?, Arecs).
+join_with1(no, _, _, []).
+join_with1(yes, M, All, R?) :- ground(M?), ground(All?) |
+    motion_act(M?, A),
+    join_with2(A?, M?, All?, R).
+
+procedure join_with2(Act?, Motion?, Motions?, Arecs).
+join_with2(A, M, All, R?) :- ground(A?), ground(M?), ground(All?) |
+    partners(A?, All?, Ps),
+    pair_up(M?, Ps?, R).
+
+procedure joins(Motions?, Motions?, Arecs).
+joins([], _, []).
+joins([M|Ms], All, R?) :- ground(M?), ground(Ms?), ground(All?) |
+    join_with(M?, All?, R1),
+    joins(Ms?, All?, R2),
+    arecs_app(R1?, R2?, R).
+
+% --- The origin records of a row -----------------------------------------
+
+procedure origins(Row?, Arecs).
+origins([], []).
+origins([origin(A, M)|Rs], [arec(A?, [M?])|R?]) :-
+    ground(A?), ground(M?), ground(Rs?) |
+    origins(Rs?, R).
+origins([_|Rs], R?) :- otherwise, ground(Rs?) |
+    origins(Rs?, R).
+
+% --- The decided acts ----------------------------------------------------
+
+exported procedure decided_acts(Rat?, Row?, Arecs).
+decided_acts(T, Row, R?) :- ground(T?), ground(Row?) |
+    row_motions(Row?, Ms),
+    decided_acts0(T?, Row?, Ms?, R).
+
+procedure decided_acts0(Rat?, Row?, Motions?, Arecs).
+decided_acts0(T, Row, Ms, R?) :- ground(T?), ground(Row?), ground(Ms?) |
+    decided_motions(T?, Row?, Ms?, Ds),
+    decided_acts1(Ds?, Row?, R).
+
+procedure decided_acts1(Motions?, Row?, Arecs).
+decided_acts1(Ds, Row, R?) :- ground(Ds?), ground(Row?) |
+    singles(Ds?, S),
+    joins(Ds?, Ds?, J),
+    origins(Row?, O),
+    arecs_app(S?, J?, R1),
+    arecs_app(R1?, O?, R).
+
+% --- The act records of a row (Definition "State of a Row", read as it
+%     stands, for the layer of Definition "Grassroots Federation over
+%     Records") ------------------------------------------------------------
+
+exported procedure explicit_acts(Row?, Arecs).
+explicit_acts([], []).
+explicit_acts([act(A, Ms)|Rs], [arec(A?, Ms?)|R?]) :-
+    ground(A?), ground(Ms?), ground(Rs?) |
+    explicit_acts(Rs?, R).
+explicit_acts([_|Rs], R?) :- otherwise, ground(Rs?) |
+    explicit_acts(Rs?, R).
