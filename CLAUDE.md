@@ -24,6 +24,7 @@ Ownership is Coordination Appendix B, `/Grassroots/Coordination/sections/B-code-
 - On a branch: `git add <files> && git commit -m "<message>" -- <files> && git push -u origin <project>`.  Single-line commit messages.  Never `git add -A`.
 - When a task is done: mail Integration in `Integration_inbox.md` — branch, commit, what it changes, which tests cover it, the suite result on the branch.  Integration merges into `main`, runs the full suite on `main`, pushes, and answers in your inbox.  A merge that fails the suite is not pushed; you are told what failed and repair it on your branch.
 - Before the next task: `git merge main` on your branch (after `git -C /Users/udi/Grassroots/GLP pull` by Integration; a worktree shares the clone's `.git`, so `main` is local).  On a conflict, STOP and report to Integration.
+- An owner may add its own test block to `test/run_all_tests.sh` on its branch (Udi, 2026-09-16).  The harness machinery is Integration's and changes only by request to it: the gates, Section Q, `KNOWN_RED`, the runner guards and the asset step.  Two owners adding blocks to that file will conflict, so merge `main` into your branch before you write one.
 - Never `git reset`, `git revert`, `git restore` or `git checkout -- <file>` on another session's work; never rewrite history on `main`.
 - Generated files are gitignored and rebuilt by their script, never committed.
 
@@ -79,6 +80,8 @@ Loading a project: enter the directory path at the prompt; the project linker re
 | Flutter package alone | `cd glp_multiagent && flutter test` | glp_multiagent only |
 
 `run_all_tests.sh` covers the whole Dart tree (Section Q), so it is the canonical gate; the package runs are for a faster loop, not for coverage.  🔴 **Section Q gates on the known-red list, not on all-green**: a test named in `KNOWN_RED` may be red without failing the suite, any other red fails it, and a listed test that starts passing also fails it.  When you fix a listed test, delete its entry in the same commit.  A count is quotable only with the commit it was taken at.
+
+🔴 **A red SG warm call is re-run once, and is a failure only if red twice** (Udi, 2026-09-16; Integration Cowork 2026-09-16 23:15 UTC).  Section SG's warm call --- "carol introduces bob to alice", "alice and bob befriend", "the held value reaches alice's execution" --- fails intermittently on a timing race in the multi-isolate boot that GSG Code diagnosed on 2026-09-15 (`GSG_inbox.md` 22:02 UTC, `anchor_friend/4`) and that GSG has open.  It is deliberately NOT in `KNOWN_RED`: it passes far more often than it fails, and Section Q fails the suite when a listed test passes, so an entry would turn a mostly-green test into a mostly-red suite.  Re-running once is not re-running until green --- a second red is a failure and is reported as one.  This rule is dated and goes when the race is fixed.
 
 Redirect output to `/Users/udi/Grassroots/tmp/<name>.txt 2>&1` and read the file; never `/tmp/`.  🔴 **Never run `run_all_tests.sh` concurrently with `dart test` or `flutter test`** — Section Q invokes both, and a parallel run contends on the Dart build lock and silently aborts the suite.
 
