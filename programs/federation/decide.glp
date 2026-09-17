@@ -23,7 +23,7 @@ supermajority(rat(TN, TD), K, N, R?) :-
     M := TN? * N?,
     gt_ans(L?, M?, R).
 
-procedure motion_electorate(Motion?, Agents).
+exported procedure motion_electorate(Motion?, Agents).
 motion_electorate(motion(_, _, X, _), X?).
 
 exported procedure motion_act(Motion?, Act).

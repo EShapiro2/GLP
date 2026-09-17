@@ -86,6 +86,45 @@ RaiseRecs ::= [] ; [RaiseRec | RaiseRecs].
 Rep ::= rep(Integer, Agents) ; norep.
 DA  ::= da(Integer, Accts).
 
+% --- What the rules of Maintain and a Raise read ---------------------------
+% A child of the community with the members it reports, and the context those
+% rules are computed in: the assembly size, the children, the members, the
+% assembly, the date and the accounts.
+ChildInfo  ::= ci(Name, Agents).
+ChildInfos ::= [] ; [ChildInfo | ChildInfos].
+FCtx ::= fctx(Integer, ChildInfos, Agents, Seats, Integer, Accts).
+
+% The seat a rule of Maintain adds or removes, and the answer where no rule
+% of it holds.
+MSeat ::= mseat(Sign, Constant, Colour, Integer) ; nochange.
+
+% --- The transactions (Definition "Grassroots Federation Implied
+%     Transactions") -------------------------------------------------------
+% A world is the rows of the names, with the date of each agent; a transaction
+% is a function from a world to a world, and answers blocked where its
+% precondition does not hold.
+CommRow  ::= cr(Name, Row).
+CommRows ::= [] ; [CommRow | CommRows].
+World    ::= world(CommRows, Adates).
+
+% theta, the assembly size n, and the term tau.
+Params ::= params(Rat, Integer, Integer).
+
+Txn ::= form(Constant)
+      ; advance(Constant, Integer)
+      ; date_at(Name, Constant)
+      ; raise_at(Name, Constant)
+      ; move(Act, Name, Constant)
+      ; maintain_at(Name, Constant)
+      ; report_at(Name, Name, Constant)
+      ; will_on(Constant, Motion, Name)
+      ; relay(Record, Name, Name, Constant)
+      ; establish(Name, Integer, Constant).
+Txns ::= [] ; [Txn | Txns].
+
+Outcome ::= ok(World) ; blocked.
+RunOut  ::= done(World) ; stuck(Integer, Txn).
+
 % state(children, parents, members, assembly, date, accounts, open motions)
 State ::= state(Names, Names, Agents, Seats, Integer, Accts, Motions).
 
@@ -238,6 +277,40 @@ adate_named(Nm, Q, T?) :- rows # adate_named(Nm?, Q?, T).
 imported procedure rows#state_explicit_named(Constant?, State).
 exported procedure state_explicit_named(Constant?, State).
 state_explicit_named(Nm, S?) :- rows # state_explicit_named(Nm?, S).
+
+% --- The transactions, and the runs the tests drive ------------------------
+
+imported procedure txn#apply(Params?, Txn?, World?, Outcome).
+exported procedure apply(Params?, Txn?, World?, Outcome).
+apply(Pr, T, W, O?) :- txn # apply(Pr?, T?, W?, O).
+
+imported procedure txn#apply_all(Params?, Txns?, World?, RunOut).
+exported procedure apply_all(Params?, Txns?, World?, RunOut).
+apply_all(Pr, Ts, W, R?) :- txn # apply_all(Pr?, Ts?, W?, R).
+
+imported procedure txn#guard_of(Txn?, Agents).
+exported procedure guard_of(Txn?, Agents).
+guard_of(T, G?) :- txn # guard_of(T?, G).
+
+imported procedure plays#play(Constant?, RunOut).
+exported procedure play(Constant?, RunOut).
+play(Nm, R?) :- plays # play(Nm?, R).
+
+imported procedure plays#play_row(Constant?, Name?, Row).
+exported procedure play_row(Constant?, Name?, Row).
+play_row(Nm, V, R?) :- plays # play_row(Nm?, V?, R).
+
+imported procedure plays#play_state(Constant?, Name?, State).
+exported procedure play_state(Constant?, Name?, State).
+play_state(Nm, V, S?) :- plays # play_state(Nm?, V?, S).
+
+imported procedure maintain#maintain_rule(FCtx?, Integer?, MSeat).
+exported procedure maintain_rule(FCtx?, Integer?, MSeat).
+maintain_rule(C, Tau, M?) :- maintain # maintain_rule(C?, Tau?, M).
+
+imported procedure fair#fcontext(Rat?, Integer?, Row?, Name?, FCtx).
+exported procedure fcontext(Rat?, Integer?, Row?, Name?, FCtx).
+fcontext(T, N, R, V, C?) :- fair # fcontext(T?, N?, R?, V?, C).
 
 % --- Exact rationals ------------------------------------------------------
 

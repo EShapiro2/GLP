@@ -4629,6 +4629,126 @@ check "GF rat: greater" "O3 = gt" "$gf_rat"
 check "GF rat: the floor of a positive rational" "F1 = 3" "$gf_rat"
 check "GF rat: the floor of a negative rational" "F2 = -4" "$gf_rat"
 
+# --- The transactions of Definition "Grassroots Federation Implied
+#     Transactions" ---------------------------------------------------------
+# Each is a function from a world -- the rows of the names with the date of
+# each agent -- to a world, its precondition read from the state the records of
+# one community compute.  The runs are programs/federation/plays.glp.
+
+# The Join of Figure 2 driven end to end: two Forms, the Move, Will and
+# Establish of a Federate, the Moves at both communities, the Wills of a
+# supermajority of each electorate, and the Relays between the two.
+gf_run=$("$REPL_RUN" <<HEREDOC
+$FED
+play(join_fig2, R).
+play_state(join_fig2, name(alice, [1]), S1).
+play_state(join_fig2, name(bob, []), S2).
+:quit
+HEREDOC
+2>&1)
+check "GF run: the Join of Figure 2 runs to the end" "R = done(" "$gf_run"
+check "GF run: b is a child of f, beside the community f federated" \
+      "S1 = state(\[name(alice, \[\]), name(bob, \[\])\], \[\]" "$gf_run"
+check "GF run: f is the seat of the Federate's electorate" \
+      "\[st(alice, col(name(alice, \[\])), 0)\]" "$gf_run"
+check "GF run: and f is a parent of b in b's own row" \
+      "S2 = state(\[\], \[name(alice, \[1\])\], \[bob\]" "$gf_run"
+
+# The Join stands decided at f alone; a Leave is moved there and willed, and
+# only then is the Join relayed to b.  The Leave carries the greater epoch, so
+# the edge is gone at both.
+gf_leave2=$("$REPL_RUN" <<HEREDOC
+$FED
+play(leave_after, R).
+play_state(leave_after, name(alice, [1]), S1).
+play_state(leave_after, name(bob, []), S2).
+:quit
+HEREDOC
+2>&1)
+check "GF run: the Leave after the Join runs to the end" "R = done(" "$gf_leave2"
+check "GF run: b is no longer a child of f" \
+      "S1 = state(\[name(alice, \[\])\], \[\]" "$gf_leave2"
+check "GF run: and f is no longer a parent of b" "S2 = state(\[\], \[\], \[bob\]" "$gf_leave2"
+
+# A Report carries the child's membership to its parent, and the Raise that
+# follows accrues for the member and for the child, which it can do only
+# because the report arrived.
+gf_rep=$("$REPL_RUN" <<HEREDOC
+$FED
+play_row(report_raise, name(bob, [1]), R).
+play_state(report_raise, name(bob, [1]), S).
+:quit
+HEREDOC
+2>&1)
+check "GF report: the child's membership reaches the parent's row" \
+      "report(name(bob, \[\]), \[bob\], 3)" "$gf_rep"
+check "GF report: the Raise that follows accrues for the member and the child" \
+      "raise(0, 5, \[sig(ag(bob), 5), sig(comm(name(bob, \[\])), 5)\], \[et(ag(bob), rat(5, 1)), et(comm(name(bob, \[\])), rat(5, 1))\])" "$gf_rep"
+check "GF report: the parent's date and accounts follow the raise" \
+      "5, \[acct(ag(bob), 5, rat(5, 1)), acct(comm(name(bob, \[\])), 5, rat(5, 1))\], \[\])" "$gf_rep"
+
+# Maintain (c): a child holds fewer seats than the floor of its share and has
+# members unseated, so the one of least ratio is seated, coloured by the child,
+# at the community's date.  erin's ratio is 2 and frank's is 1.
+gf_mc=$("$REPL_RUN" <<HEREDOC
+$FED
+play_row(maintain_c, name(alice, [1, 1]), R).
+play_state(maintain_c, name(alice, [1, 1]), S).
+:quit
+HEREDOC
+2>&1)
+check "GF maintain: the member of least ratio is seated" \
+      "seat(plus, frank, col(name(bob, \[1\])), 1, 2)" "$gf_mc"
+check "GF maintain: and the assembly carries the new seat" \
+      "st(frank, col(name(bob, \[1\])), 1)\]" "$gf_mc"
+
+# Maintain (g): no other rule holds and one seat has stood a full term, so it
+# is removed.
+gf_mg=$("$REPL_RUN" <<HEREDOC
+$FED
+play_row(maintain_g, name(alice, [1, 1]), R).
+play_state(maintain_g, name(alice, [1, 1]), S).
+:quit
+HEREDOC
+2>&1)
+check "GF maintain: the seat whose term has passed is removed" \
+      "seat(minus, bob, col(name(bob, \[1\])), 0, 1)" "$gf_mg"
+check "GF maintain: and the assembly is empty after it" \
+      "S = state(\[name(bob, \[1\])\], \[\], \[bob\], \[\], 3" "$gf_mg"
+
+# A transaction whose precondition fails answers blocked, and the run stops
+# there naming it.
+gf_block=$("$REPL_RUN" <<HEREDOC
+$FED
+play(join_twice, R1).
+play(will_outsider, R2).
+:quit
+HEREDOC
+2>&1)
+check "GF blocked: a Join moved again where the edge holds" \
+      "R1 = stuck(13, move(join(name(alice, \[1\]), name(bob, \[\])), name(alice, \[1\]), alice))" "$gf_block"
+check "GF blocked: a Will by an agent outside the electorate" \
+      "R2 = stuck(8, will_on(bob," "$gf_block"
+
+# The guards: a Form, a Move and a Will by their agent, every other by nobody.
+gf_guard=$("$REPL_RUN" <<HEREDOC
+$FED
+guard_of(form(alice), G1).
+guard_of(move(federate(name(alice, [])), name(alice, []), alice), G2).
+guard_of(will_on(alice, motion(federate(name(alice, [])), name(alice, []), [alice], 0), name(alice, [])), G3).
+guard_of(raise_at(name(alice, [1]), alice), G4).
+guard_of(relay(date(alice, 0), name(alice, []), name(bob, []), alice), G5).
+guard_of(maintain_at(name(alice, [1]), alice), G6).
+:quit
+HEREDOC
+2>&1)
+check "GF guard: a Form is guarded by its agent" "G1 = \[alice\]" "$gf_guard"
+check "GF guard: a Move is guarded by its agent" "G2 = \[alice\]" "$gf_guard"
+check "GF guard: a Will is guarded by its agent" "G3 = \[alice\]" "$gf_guard"
+check "GF guard: a Raise is guarded by nobody" "G4 = \[\]" "$gf_guard"
+check "GF guard: a Relay is guarded by nobody" "G5 = \[\]" "$gf_guard"
+check "GF guard: a Maintain is guarded by nobody" "G6 = \[\]" "$gf_guard"
+
 echo ""
 
 # Known-red tests.  One entry per line, matched against "<file>: <test name>".
