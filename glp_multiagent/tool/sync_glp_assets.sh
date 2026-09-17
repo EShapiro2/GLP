@@ -54,11 +54,12 @@ done
 # <name>.glpw into the super-app's directory in the bundle.
 ( cd ../glp_runtime && for prog in ../programs/social/graph/pingapp \
                                    ../programs/currencies/coins/currency \
-                                   ../programs/cssn/childsafe; do
+                                   ../programs/cssn/childsafe \
+                                   ../programs/currencies/sovereign/denominated; do
     printf ':artefact %s %s\n:quit\n' \
       "$prog" "../glp_multiagent/$DST/social/graph/core" | bin/glpc
   done ) | grep -E '(✓ Wrote|Artefact failed|Error:)' || true
-for a in pingapp currency childsafe; do
+for a in pingapp currency childsafe denominated; do
   test -s "$DST/social/graph/core/$a.glpw" \
     || { echo "sync_glp_assets: $a.glpw was not written" >&2; exit 1; }
 done

@@ -1,8 +1,8 @@
 %% linkprobe11/agents.glp --- linkprobe10's control: the later element is
-%% GROUND, a second greeting carrying no writer, and it does not cross either.
-%% What linkprobe10 shows is therefore the later write, not the writer in it.
-%% Expected of a working runtime: [bob] saw(hello) twice; what happens: once.
-%% See docs/linkprobes.md.
+%% GROUND, a second greeting carrying no writer, and before the repair of
+%% 2026-09-08 it did not cross either.  What linkprobe10 showed was therefore
+%% the later write, not the writer in it.  Expected, and what happens since
+%% the repair: [bob] saw(hello) twice.  See ../linkprobes.md.
 
 Inner ::= probe(String?) ; hello.
 InnerStream ::= [] ; [Inner | InnerStream].

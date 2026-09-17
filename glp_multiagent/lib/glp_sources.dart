@@ -102,6 +102,7 @@ const _bundledGlp = [
   'programs/social/graph/core/pingapp.glpw',
   'programs/social/graph/core/currency.glpw',
   'programs/social/graph/core/childsafe.glpw',
+  'programs/social/graph/core/denominated.glpw',
 ];
 
 Future<GlpPaths> resolveGlpPaths() async {
