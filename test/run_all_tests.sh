@@ -4898,6 +4898,47 @@ check "GF platform: and the community that federated has the new one as a parent
 
 echo ""
 
+# =============================================================================
+# Section JX: The Jurix checker and compiler (programs/jurix)
+# =============================================================================
+# programs/jurix decides whether a contract is syntactically grassroots and
+# compiles the schemas of one that is, against /Grassroots/Jurix; its checks
+# were written as programs/jurix/test_jurix.sh, which runs the same REPL binary
+# this suite does and prints one summary line.  The script stays the one place
+# those checks are written --- the paper's owner reads and runs it on its own,
+# and a copy here would go stale against it --- so this section runs it and
+# folds its two counts into the suite's, adding nothing of its own.
+echo "=== Section JX: Jurix checker and compiler ==="
+echo ""
+
+# `set -e` (line 25) and a non-zero exit from a red check would abort the run,
+# so the capture is guarded, as Section Q's are.
+JURIX_RESULT=$(bash "$GLP_DIR/programs/jurix/test_jurix.sh" 2>&1) && JURIX_STATUS=0 || JURIX_STATUS=$?
+JURIX_SUMMARY=$(printf '%s' "$JURIX_RESULT" | grep -oE '^=== [0-9]+ passed, [0-9]+ failed ===$' | tail -1) || true
+
+# No summary line means the script did not finish its checks --- a missing
+# file, a REPL that would not build, a syntax error --- and scoring it zero
+# would report a green suite over checks that never ran.  That is a failure of
+# the suite, not a skip.
+if [ -z "$JURIX_SUMMARY" ]; then
+    echo "  FAIL: programs/jurix/test_jurix.sh exited $JURIX_STATUS printing no summary, so its checks did not run"
+    printf '%s\n' "$JURIX_RESULT" | tail -5 | sed 's/^/        /'
+    FAIL=$((FAIL + 1))
+else
+    JURIX_PASSED=$(printf '%s' "$JURIX_SUMMARY" | awk '{print $2}')
+    JURIX_FAILED=$(printf '%s' "$JURIX_SUMMARY" | awk '{print $4}')
+    PASS=$((PASS + JURIX_PASSED))
+    FAIL=$((FAIL + JURIX_FAILED))
+    if [ "$JURIX_FAILED" -eq 0 ]; then
+        echo "  PASS: All $JURIX_PASSED jurix checks passed"
+    else
+        printf '%s\n' "$JURIX_RESULT" | grep -E '^  FAIL|^        ' | sed 's/^/  /'
+        echo "  FAIL: $JURIX_FAILED of $((JURIX_PASSED + JURIX_FAILED)) jurix checks failed"
+    fi
+fi
+
+echo ""
+
 # Known-red tests.  One entry per line, matched against "<file>: <test name>".
 # Each entry names the owning project and what blocks it.
 # Empty: nothing is known-red.  An entry names a test another project owns and
