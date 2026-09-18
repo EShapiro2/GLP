@@ -270,10 +270,16 @@ check "and keeps the verdict of Section 3" \
       "V = syntactically_grassroots" "$out"
 
 # The compiled form of a schema with community roles is Definition Compilation
-# of Appendix B, which the compiler does not print.
+# of Appendix B, which the compiler prints for a contract that meets the
+# conditions on the text and for no other.
 out=$(run 'compile_named(federation).')
-check "a contract with community roles is not compiled" \
-      "has community roles" "$(printf '%s' "$out" | tr '\n' ' ')"
+check "a contract with community roles is compiled" \
+      "begin{align" "$out"
+check_not "and not refused" "not compiled" "$out"
+
+out=$(run 'compile_named(gf_novolition).')
+check "a contract that fails the conditions of Appendix B is not compiled" \
+      "% not compiled: gf_novolition" "$(printf '%s' "$out" | tr '\n' ' ')"
 check_not "and no display is printed for it" "begin{align" "$out"
 
 echo "=== $PASS passed, $FAIL failed ==="

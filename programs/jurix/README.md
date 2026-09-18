@@ -30,8 +30,9 @@ traceable provenance (`definition:provenance`), volition
 are sets, given by `rooted_of` and `traceable_of`; the last two the contract
 meets or fails.  Openness and closure are proved of a contract in the paper,
 are not conditions on the text, and are neither decided nor claimed here.  The
-compiler does not print the compiled form of a schema with community roles:
-`compile_named` says so and prints no display.
+compiled form of a schema of such a contract is Definition Compilation of
+Appendix B (`definition:compile`), and its worked box, the display for
+`federate`, is the form printed.
 
 ## Running it
 
@@ -76,6 +77,23 @@ The compilation is defined for syntactically grassroots contracts (Section 5),
 so the compiler runs the checker first; `compile_named(sg_gossip).` prints
 that the contract is not compiled and nothing else, and `check_named` gives
 the faults.
+
+A contract with community roles compiles to the lines of Definition
+Compilation of Appendix B, one form for the whole contract, its party roles
+included: an assignment line per role and, where the role requires or forbids
+an atom, a proviso line, each over the agents `p` of the role's extent
+`ext_c(pi_i)`; `provided Theta` where the schema carries reach conditions;
+for every name term `sigma . y` of the schema, that it is an argument of no
+atom of the configuration; and the guard, the union of a part of each guarding
+role's extent larger than its threshold of it, which for a party role is `0`.
+`compile_schema(federation, federate).` prints the worked box of Appendix B
+token for token, and `test_jurix.sh` compares them.  A name variable and a
+threshold are named by a Greek letter, `zeta`, `xi`, `theta`, and printed as
+that letter's command; one guarding role is written `G`, several `G_{i}` by
+role index; the conditions of `Theta`, and the parts of a guard, are joined by
+"and" as the conjuncts of a proviso are.  A contract that fails the conditions
+of Appendix B is not compiled, as one that is not syntactically grassroots is
+not.
 
 Printing reaches the person, so the module's certificate is refused on load
 (`[CERTIFICATE REFUSED] jurix ... calls send_to_user/1`) and it carries no
@@ -185,7 +203,7 @@ and not both empty).
 | `volition.glp` | `def:volition` |
 | `community.glp` | the four conditions of Appendix B |
 | `check.glp` | `def:syntactically-grassroots`, the two halves together, and the conditions of Appendix B for a contract with community roles |
-| `compile.glp` | `def:compile`, printed as the LaTeX of Section 5.2 |
+| `compile.glp` | `def:compile`, printed as the LaTeX of Section 5.2, and `definition:compile`, printed as the worked box of Appendix B |
 | `contracts.glp` | the contracts to run on |
 
 ## Why it terminates
