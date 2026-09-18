@@ -60,6 +60,9 @@ Reorganised 2026-09-16 (Udi).  `README.md` carries the directory map; what moved
 | vGLP | `/Users/udi/Grassroots/GLP-worktrees/vGLP` | `vGLP` |
 | GLP-Networking-API | `/Users/udi/Grassroots/GLP-worktrees/GLP-Networking-API` | `GLP-Networking-API` |
 | GFWC | `/Users/udi/Grassroots/GLP-worktrees/GFWC` | `GFWC` |
+| Legal | `/Users/udi/Grassroots/GLP-worktrees/Legal` | `Legal` |
+| GLP-Spec | `/Users/udi/Grassroots/GLP-worktrees/GLP-Spec` | `GLP-Spec` |
+| IGLP, the sovereign manifest alone (Integration, 2026-09-18) | `/Users/udi/Grassroots/GLP-worktrees/IGLP-manifest` | `IGLP-manifest` |
 
 A project not listed has no worktree yet and asks Integration for one.
 
