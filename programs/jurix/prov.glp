@@ -14,8 +14,11 @@ atoms_preds([atom(Q, _)|Xs], T, [Q?|R?]) :- ground(Xs?), ground(T?) |
 
 procedure roles_preds(RoleSpecs?, Preds?, Preds).
 roles_preds([], T, T?).
-roles_preds([rs(_, P, M, K, N)|Rs], T, R?) :-
-    ground(P?), ground(M?), ground(K?), ground(N?), ground(Rs?), ground(T?) |
+roles_preds([RS|Rs], T, R?) :- ground(RS?), ground(Rs?), ground(T?) |
+    rs_add(RS?, P),
+    rs_del(RS?, M),
+    rs_keep(RS?, K),
+    rs_forb(RS?, N),
     roles_preds(Rs?, T?, R1),
     atoms_preds(N?, R1?, R2),
     atoms_preds(K?, R2?, R3),
@@ -24,7 +27,8 @@ roles_preds([rs(_, P, M, K, N)|Rs], T, R?) :-
 
 procedure contract_preds(Contract?, Preds?, Preds).
 contract_preds([], T, T?).
-contract_preds([schema(_, Rs)|Ss], T, R?) :- ground(Rs?), ground(Ss?), ground(T?) |
+contract_preds([S|Ss], T, R?) :- ground(S?), ground(Ss?), ground(T?) |
+    sch_roles(S?, Rs),
     contract_preds(Ss?, T?, R1),
     roles_preds(Rs?, R1?, R).
 
@@ -50,6 +54,8 @@ args_ok([], _, _, yes).
 args_ok([role(_)|As], All, E, R?) :- ground(As?), ground(All?), ground(E?) |
     args_ok(As?, All?, E?, R).
 args_ok([svar(_)|As], All, E, R?) :- ground(As?), ground(All?), ground(E?) |
+    args_ok(As?, All?, E?, R).
+args_ok([nterm(_)|As], All, E, R?) :- ground(As?), ground(All?), ground(E?) |
     args_ok(As?, All?, E?, R).
 args_ok([pvar(X)|As], All, E, R?) :- ground(X?), ground(As?), ground(All?), ground(E?) |
     any_req_names(All?, pvar(X?), E?, A),
@@ -78,8 +84,9 @@ roles_ok1(yes, Rs, Pd, All, E, R?) :- ground(Rs?), ground(Pd?), ground(All?), gr
 
 procedure roles_ok(RoleSpecs?, Constant?, RoleSpecs?, Preds?, Ans).
 roles_ok([], _, _, _, yes).
-roles_ok([rs(_, P, _, _, _)|Rs], Pd, All, E, R?) :-
-    ground(P?), ground(Rs?), ground(Pd?), ground(All?), ground(E?) |
+roles_ok([RS|Rs], Pd, All, E, R?) :-
+    ground(RS?), ground(Rs?), ground(Pd?), ground(All?), ground(E?) |
+    rs_add(RS?, P),
     plus_ok(P?, Pd?, All?, E?, A),
     roles_ok1(A?, Rs?, Pd?, All?, E?, R).
 
@@ -90,7 +97,8 @@ pred_ok1(yes, Pd, Ss, E, R?) :- ground(Pd?), ground(Ss?), ground(E?) |
 
 procedure pred_ok(Constant?, Contract?, Preds?, Ans).
 pred_ok(_, [], _, yes).
-pred_ok(Pd, [schema(_, Rs)|Ss], E, R?) :- ground(Rs?), ground(Ss?), ground(Pd?), ground(E?) |
+pred_ok(Pd, [S|Ss], E, R?) :- ground(S?), ground(Ss?), ground(Pd?), ground(E?) |
+    sch_roles(S?, Rs),
     roles_ok(Rs?, Pd?, Rs?, E?, A),
     pred_ok1(A?, Pd?, Ss?, E?, R).
 

@@ -6,9 +6,11 @@ schemas of a contract that is into their volition-guarded transactions,
 printed as the LaTeX of Section 5.2.
 
 The specification is the paper — *Formal Grassroots Social Contracts*
-(`/Grassroots/Jurix`, `main.tex`), Section 3.  Nothing of it is restated here or
-in the code: every procedure names the definition it decides, and the definition
-is read in the paper.  A contract is syntactically grassroots
+(`/Grassroots/Jurix`, `main.tex`), Section 3 for a contract whose roles are all
+party roles and Appendix B, `sections/13-community-roles.tex`, for one with
+community roles.  Nothing of either is restated here or in the code: every
+procedure names the definition it decides, and the definition is read in the
+paper.  A contract is syntactically grassroots
 (`def:syntactically-grassroots`) when it has an unobstructed
 (`def:unobstructed`) introductory act (`def:introduction`) and satisfies volition
 (`def:volition`), which rests on traceable provenance (`def:grounded`).  Section
@@ -19,6 +21,16 @@ the proviso and the guard of `def:compile`, and Section 5.2 is the form
 printed.  Section 5 defines the compilation for syntactically grassroots
 contracts, so the compiler runs the checker first and compiles nothing for a
 contract that fails.
+
+A contract with community roles is decided by the conditions on the text of
+Appendix B: which predicates are rooted (`definition:rooted`), which have
+traceable provenance (`definition:provenance`), volition
+(`definition:volition`) and cohesion (`definition:cohesive`).  The first two
+are sets, given by `rooted_of` and `traceable_of`; the last two the contract
+meets or fails.  Openness and closure are proved of a contract in the paper,
+are not conditions on the text, and are neither decided nor claimed here.  The
+compiler does not print the compiled form of a schema with community roles:
+`compile_named` says so and prints no display.
 
 ## Running it
 
@@ -71,6 +83,7 @@ signature.  It loads and runs as before.
 | `check(C, V)` | the verdict on the contract `C` |
 | `check_named(Name, V)` | the verdict on one of the contracts of `contracts.glp` |
 | `traceable_of(Name, E)` | its predicates of traceable provenance |
+| `rooted_of(Name, E)` | its rooted predicates, empty for a contract of Section 3 |
 | `contract_named(Name, C)` | the contract itself |
 | `compile_named(Name)` | prints the compiled form of every schema of it |
 | `compile_schema(Name, Schema)` | prints the compiled form of one schema |
@@ -78,9 +91,13 @@ signature.  It loads and runs as before.
 The names are `social_graph` and `currency`, the two the paper works through;
 `sg_chain`, which certifies and exercises volition above arity two; and the five
 broken contracts `sg_unguarded`, `sg_imposed`, `sg_gossip`, `sg_chain_cut`,
-`cur_no_mint`, `cur_loose_mint`.  Any other name is the empty contract.  A
-verdict is `syntactically_grassroots` or `not_grassroots(Faults)`, where each
-fault is one of
+`cur_no_mint`, `cur_loose_mint`.  `federation` is GFWC's five schemas
+(`/Grassroots/GFWC`, `sections/act-schemas.tex`), and `gf_unrooted`,
+`gf_untraceable`, `gf_uncohesive` and `gf_novolition` are it broken in one place
+each, one per condition of Appendix B.  Any other name is the empty contract.
+
+A verdict on a contract of Section 3 is `syntactically_grassroots` or
+`not_grassroots(Faults)`, where each fault is one of
 
     no_introductory_act
     obstructed(Schema, Role, Atom, unobtainable)
@@ -92,22 +109,46 @@ naming the schema, role and added atom that obstruct.  A `volition` fault names
 two roles the role graph does not join — the first role and the first one it
 does not reach — so at arity two it names the pair that has no edge.
 
+A verdict on a contract with community roles is `conditions_met` or
+`conditions_failed(Faults)`, where each fault is a `volition(Schema, Role,
+Role)` or a
+
+    cohesion(Schema, Role, Atom)
+
+naming the role and the added atom.  A `volition` fault there is raised only
+when the role graph is disconnected and some role of the schema is joined to no
+guarding role, and names the first role that role one does not reach.
+
 ## Writing a contract
 
 A contract is a GLP term: the list of its act schemas (`def:schema`).  Write it
 in a file of its own, or add a clause to `contracts.glp`.
 
-    Arg      ::= role(Integer) ; pvar(Constant) ; svar(Constant).
+    NameTerm ::= own(Integer) ; own_var(Constant) ; nvar(Constant)
+               ; ext(NameTerm, Constant).
+    Arg      ::= role(Integer) ; pvar(Constant) ; svar(Constant)
+               ; nterm(NameTerm).
     Atom     ::= atom(Predicate, [Arg, ...]).
-    RoleSpec ::= rs(Guard, Add, Del, Keep, Forb).
-    Schema   ::= schema(Name, [RoleSpec, ...]).
+    Guard    ::= guarded ; unguarded ; guarded_at(Constant).
+    RoleKind ::= seated(NameTerm, Predicate) ; constituent(NameTerm, Predicate).
+    RoleSpec ::= rs(Guard, Add, Del, Keep, Forb)
+               ; crs(RoleKind, Guard, Add, Del, Keep, Forb).
+    Reach    ::= reach(NameTerm, Predicate, NameTerm).
+    Schema   ::= schema(Name, [RoleSpec, ...])
+               ; cschema(Name, [Reach, ...], [RoleSpec, ...]).
     Contract ::= [Schema, ...].
 
 A role is named by its index, so `role(1)` is the schema's first role and the
 roles of `schema(Name, Rs)` are `role(1)` to `role(K)` for `K` the length of
 `Rs`; `pvar` is a party variable and `svar` a speech-act variable.  `Guard` is
-`guarded` or `unguarded`, recording the mark `?`, and `Add`, `Del`, `Keep`,
-`Forb` are the role's `+(i)`, `-(i)`, `=(i)` and `not(i)`.  Befriend, written in
+`guarded` or `unguarded`, recording the mark `?`, or `guarded_at(T)`, recording
+the mark `?_theta` with `T` naming the threshold; and `Add`, `Del`, `Keep`,
+`Forb` are the role's `+(i)`, `-(i)`, `=(i)` and `not(i)`.  A party role is
+written `rs` and a seated or constituent role `crs`; `own(I)` is the name term
+of the schema's `I`-th role, `own_var` that of a party variable, `nvar` a name
+variable and `ext` a name term extended by a speech-act variable.  A contract
+none of whose roles is a `crs` and none of whose schemas is a `cschema` is a
+contract of Section 3 and is decided as one.  Befriend, written in
 the paper
 
     befriend(p?, q?) :   not friend(q), +friend(q)    not friend(p), +friend(p)
@@ -130,7 +171,8 @@ and not both empty).
 | `unobstructed.glp` | `def:introduction` and `def:unobstructed` |
 | `prov.glp` | `def:grounded`, as a greatest fixpoint |
 | `volition.glp` | `def:volition` |
-| `check.glp` | `def:syntactically-grassroots`, the two halves together |
+| `community.glp` | the four conditions of Appendix B |
+| `check.glp` | `def:syntactically-grassroots`, the two halves together, and the conditions of Appendix B for a contract with community roles |
 | `compile.glp` | `def:compile`, printed as the LaTeX of Section 5.2 |
 | `contracts.glp` | the contracts to run on |
 

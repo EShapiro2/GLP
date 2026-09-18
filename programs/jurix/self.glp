@@ -10,20 +10,44 @@
 % directory's entry points.
 % ---------------------------------------------------------------------------
 
-% --- The syntax of a schema (def:schema) -----------------------------------
-% An argument is a role, named by its index in the schema, a party variable or
-% a speech-act variable.
-Arg   ::= role(Integer) ; pvar(Constant) ; svar(Constant).
+% --- The syntax of a schema (def:schema, definition:term, definition:role,
+% --- definition:schema) ----------------------------------------------------
+% A name term (definition:term): own(I) is <pi_I> and own_var(X) is <x>, nvar
+% is a name variable of Z, ext(Sigma, Y) is Sigma.y.
+NameTerm  ::= own(Integer) ; own_var(Constant) ; nvar(Constant)
+            ; ext(NameTerm, Constant).
+NameTerms ::= [] ; [NameTerm | NameTerms].
+
+% An argument is a role, named by its index in the schema, a party variable, a
+% speech-act variable or a name term.
+Arg   ::= role(Integer) ; pvar(Constant) ; svar(Constant) ; nterm(NameTerm).
 Args  ::= [] ; [Arg | Args].
 Atom  ::= atom(Constant, Args).
 Atoms ::= [] ; [Atom | Atoms].
 
-% rs(Guard, Add, Del, Keep, Forb) holds a role's four multisets in the order
-% +(i), -(i), =(i), not(i); Guard records the mark ?.
-Guard     ::= guarded ; unguarded.
-RoleSpec  ::= rs(Guard, Atoms, Atoms, Atoms, Atoms).
+% The base of an argument, of a name term and of a role (definition:term,
+% definition:role, definition:provenance).
+Base  ::= b_role(Integer) ; b_pvar(Constant) ; b_svar(Constant)
+        ; b_nvar(Constant).
+Bases ::= [] ; [Base | Bases].
+
+% rs(Guard, Add, Del, Keep, Forb) holds a party role's four multisets in the
+% order +(i), -(i), =(i), not(i); Guard records the mark ? and guarded_at(T)
+% the mark ?_theta of a seated or constituent role, T naming the threshold.
+% crs(Kind, Guard, Add, Del, Keep, Forb) is the same for a seated or a
+% constituent role (definition:role).
+Guard     ::= guarded ; unguarded ; guarded_at(Constant).
+RoleKind  ::= seated(NameTerm, Constant) ; constituent(NameTerm, Constant).
+RoleSpec  ::= rs(Guard, Atoms, Atoms, Atoms, Atoms)
+            ; crs(RoleKind, Guard, Atoms, Atoms, Atoms, Atoms).
 RoleSpecs ::= [] ; [RoleSpec | RoleSpecs].
-Schema    ::= schema(Constant, RoleSpecs).
+
+% A reach condition Sigma !~>_Rho Sigma' (definition:schema); a schema
+% carrying a finite set of them is written cschema.
+Reach     ::= reach(NameTerm, Constant, NameTerm).
+Reaches   ::= [] ; [Reach | Reaches].
+Schema    ::= schema(Constant, RoleSpecs)
+            ; cschema(Constant, Reaches, RoleSpecs).
 Contract  ::= [] ; [Schema | Contract].
 
 % --- The image of a binding (def:schema) -----------------------------------
@@ -51,9 +75,11 @@ Preds ::= [] ; [Constant | Preds].
 Cause ::= unobtainable ; blocked_by(Constant, Integer, Atom).
 Fault ::= no_introductory_act
         ; obstructed(Constant, Integer, Atom, Cause)
-        ; volition(Constant, Integer, Integer).
+        ; volition(Constant, Integer, Integer)
+        ; cohesion(Constant, Integer, Atom).
 Faults  ::= [] ; [Fault | Faults].
-Verdict ::= syntactically_grassroots ; not_grassroots(Faults).
+Verdict ::= syntactically_grassroots ; not_grassroots(Faults)
+          ; conditions_met ; conditions_failed(Faults).
 
 Block   ::= blocked(Constant, Integer, Atom) ; clear.
 Cand    ::= none ; some(Faults).
@@ -96,6 +122,18 @@ procedure atoms_app(Atoms?, Atoms?, Atoms).
 atoms_app([], T, T?).
 atoms_app([A|As], T, [A?|R?]) :- atoms_app(As?, T?, R).
 
+procedure preds_app(Preds?, Preds?, Preds).
+preds_app([], T, T?).
+preds_app([P|Ps], T, [P?|R?]) :- preds_app(Ps?, T?, R).
+
+procedure nterms_app(NameTerms?, NameTerms?, NameTerms).
+nterms_app([], T, T?).
+nterms_app([N|Ns], T, [N?|R?]) :- nterms_app(Ns?, T?, R).
+
+procedure bases_app(Bases?, Bases?, Bases).
+bases_app([], T, T?).
+bases_app([B|Bs], T, [B?|R?]) :- bases_app(Bs?, T?, R).
+
 procedure faults_app(Faults?, Faults?, Faults).
 faults_app([], T, T?).
 faults_app([F|Fs], T, [F?|R?]) :- faults_app(Fs?, T?, R).
@@ -125,6 +163,16 @@ procedure args_member(Args?, Arg?, Ans).
 args_member([], _, no).
 args_member([A|_], U, yes) :- A? =?= U? | true.
 args_member([_|As], U, R?) :- otherwise | args_member(As?, U?, R).
+
+procedure base_member(Bases?, Base?, Ans).
+base_member([], _, no).
+base_member([B|_], C, yes) :- B? =?= C? | true.
+base_member([_|Bs], C, R?) :- otherwise | base_member(Bs?, C?, R).
+
+procedure nt_member(NameTerms?, NameTerm?, Ans).
+nt_member([], _, no).
+nt_member([N|_], M, yes) :- N? =?= M? | true.
+nt_member([_|Ns], M, R?) :- otherwise | nt_member(Ns?, M?, R).
 
 procedure vals_member(Vals?, Val?, Ans).
 vals_member([], _, no).
@@ -212,6 +260,9 @@ kind_ok(pvar(_), undef, no).
 kind_ok(svar(_), person(_), no).
 kind_ok(svar(_), speech(_), yes).
 kind_ok(svar(_), undef, no).
+kind_ok(nterm(_), person(_), no).
+kind_ok(nterm(_), speech(_), no).
+kind_ok(nterm(_), undef, no).
 
 % subst_role_at(S, V, R): S sends a role to V.  Clause 2 of def:unobstructed
 % asks it of the other party; injectivity on the roles asks its negation.
@@ -230,6 +281,7 @@ procedure injective_ok(Arg?, Val?, Subst?, Ans).
 injective_ok(role(_), V, S, R?) :- ground(V?), ground(S?) | no_role_at(S?, V?, R).
 injective_ok(pvar(_), _, _, yes).
 injective_ok(svar(_), _, _, yes).
+injective_ok(nterm(_), _, _, yes).
 
 procedure match_bind(Ans?, Arg?, Val?, Subst?, MatchRes).
 match_bind(yes, A, V, S, match([bind(A?, V?)|S?])).
@@ -296,8 +348,11 @@ atoms_args([atom(_, As)|Xs], T, R?) :- ground(As?), ground(Xs?), ground(T?) |
 
 procedure rolespecs_args(RoleSpecs?, Args?, Args).
 rolespecs_args([], T, T?).
-rolespecs_args([rs(_, P, M, K, N)|Rs], T, R?) :-
-    ground(P?), ground(M?), ground(K?), ground(N?), ground(Rs?), ground(T?) |
+rolespecs_args([RS|Rs], T, R?) :- ground(RS?), ground(Rs?), ground(T?) |
+    rs_add(RS?, P),
+    rs_del(RS?, M),
+    rs_keep(RS?, K),
+    rs_forb(RS?, N),
     rolespecs_args(Rs?, T?, R1),
     atoms_args(N?, R1?, R2),
     atoms_args(K?, R2?, R3),
@@ -305,19 +360,44 @@ rolespecs_args([rs(_, P, M, K, N)|Rs], T, R?) :-
     atoms_args(P?, R4?, R).
 
 procedure schema_args(Schema?, Args).
-schema_args(schema(_, Rs), R?) :- ground(Rs?) | rolespecs_args(Rs?, [], R).
+schema_args(Sc, R?) :- ground(Sc?) |
+    sch_roles(Sc?, Rs),
+    rolespecs_args(Rs?, [], R).
+
+% The party and speech-act variables a name term carries (definition:term).
+procedure nt_pvars(NameTerm?, Args).
+nt_pvars(own(_), []).
+nt_pvars(own_var(X), [pvar(X?)]).
+nt_pvars(nvar(_), []).
+nt_pvars(ext(S, _), R?) :- ground(S?) | nt_pvars(S?, R).
+
+procedure nt_svars(NameTerm?, Args).
+nt_svars(own(_), []).
+nt_svars(own_var(_), []).
+nt_svars(nvar(_), []).
+nt_svars(ext(S, Y), R?) :- ground(S?), ground(Y?) |
+    nt_svars(S?, R1),
+    args_app(R1?, [svar(Y?)], R).
 
 procedure filter_pvars(Args?, Args).
 filter_pvars([], []).
 filter_pvars([pvar(X)|As], [pvar(X?)|R?]) :- filter_pvars(As?, R).
 filter_pvars([role(_)|As], R?) :- filter_pvars(As?, R).
 filter_pvars([svar(_)|As], R?) :- filter_pvars(As?, R).
+filter_pvars([nterm(S)|As], R?) :- ground(S?), ground(As?) |
+    nt_pvars(S?, Ps),
+    filter_pvars(As?, R1),
+    args_app(Ps?, R1?, R).
 
 procedure filter_svars(Args?, Args).
 filter_svars([], []).
 filter_svars([svar(X)|As], [svar(X?)|R?]) :- filter_svars(As?, R).
 filter_svars([role(_)|As], R?) :- filter_svars(As?, R).
 filter_svars([pvar(_)|As], R?) :- filter_svars(As?, R).
+filter_svars([nterm(S)|As], R?) :- ground(S?), ground(As?) |
+    nt_svars(S?, Ss),
+    filter_svars(As?, R1),
+    args_app(Ss?, R1?, R).
 
 procedure schema_pvars(Schema?, Args).
 schema_pvars(Sc, R?) :- ground(Sc?) |
@@ -341,11 +421,12 @@ role_args(I, K, [role(I?)|R?]) :- I? =< K?, integer(I?), integer(K?) |
 % Every variable of a schema: its roles, then its party and speech-act
 % variables in order of first occurrence.
 procedure schema_vars(Schema?, Args).
-schema_vars(schema(Nm, Rs), R?) :- ground(Nm?), ground(Rs?) |
+schema_vars(Sc, R?) :- ground(Sc?) |
+    sch_roles(Sc?, Rs),
     roles_len(Rs?, K),
     role_args(1, K?, RA),
-    schema_pvars(schema(Nm?, Rs?), PV),
-    schema_svars(schema(Nm?, Rs?), SV),
+    schema_pvars(Sc?, PV),
+    schema_svars(Sc?, SV),
     args_app(SV?, [], SV1),
     args_app(PV?, SV1?, PS),
     args_app(RA?, PS?, R).
@@ -362,6 +443,7 @@ procedure fresh_val(Arg?, Integer?, Val).
 fresh_val(role(_), N, person(N?)).
 fresh_val(pvar(_), N, person(N?)).
 fresh_val(svar(_), N, speech(N?)).
+fresh_val(nterm(_), _, undef).
 
 procedure complete1(Found?, Arg?, Args?, Subst?, Integer?, Subst).
 complete1(bound(_), _, As, S, N, R?) :- ground(As?), ground(S?), integer(N?) |
@@ -417,7 +499,9 @@ atoms_witness([atom(Q, As)|Xs], U, E, R?) :-
 % req_names(Role, U, E, R): the role requires an atom with predicate in E and
 % U among its arguments.
 procedure req_names(RoleSpec?, Arg?, Preds?, Ans).
-req_names(rs(_, _, M, K, _), U, E, R?) :- ground(M?), ground(K?), ground(U?), ground(E?) |
+req_names(RS, U, E, R?) :- ground(RS?), ground(U?), ground(E?) |
+    rs_del(RS?, M),
+    rs_keep(RS?, K),
     atoms_witness(M?, U?, E?, A1),
     atoms_witness(K?, U?, E?, A2),
     or_yes(A1?, A2?, R).
@@ -443,10 +527,150 @@ nth_rs([_|Xs], I, R?) :- I? > 1, integer(I?), ground(Xs?) |
     I1 := I? - 1,
     nth_rs(Xs?, I1?, R).
 
+procedure guard_marked(Guard?, Ans).
+guard_marked(guarded, yes).
+guard_marked(guarded_at(_), yes).
+guard_marked(unguarded, no).
+
 procedure all_guarded(RoleSpecs?, Ans).
 all_guarded([], yes).
-all_guarded([rs(guarded, _, _, _, _)|Rs], R?) :- ground(Rs?) | all_guarded(Rs?, R).
-all_guarded([rs(unguarded, _, _, _, _)|_], no).
+all_guarded([RS|Rs], R?) :- ground(RS?), ground(Rs?) |
+    rs_guard(RS?, G),
+    guard_marked(G?, A),
+    all_guarded1(A?, Rs?, R).
+
+procedure all_guarded1(Ans?, RoleSpecs?, Ans).
+all_guarded1(no, _, no).
+all_guarded1(yes, Rs, R?) :- ground(Rs?) | all_guarded(Rs?, R).
+
+% ---------------------------------------------------------------------------
+% Roles, bases and name terms (definition:term, definition:role)
+% ---------------------------------------------------------------------------
+% A schema is written schema(Name, Roles) where every role is a party role and
+% cschema(Name, Reaches, Roles) where it carries reach conditions; a role is
+% written rs(...) where it is a party role and crs(Kind, ...) where it is
+% seated or constituent.  The accessors below read either.
+
+procedure sch_name(Schema?, Constant).
+sch_name(schema(Nm, _), Nm?).
+sch_name(cschema(Nm, _, _), Nm?).
+
+procedure sch_roles(Schema?, RoleSpecs).
+sch_roles(schema(_, Rs), Rs?).
+sch_roles(cschema(_, _, Rs), Rs?).
+
+procedure sch_reaches(Schema?, Reaches).
+sch_reaches(schema(_, _), []).
+sch_reaches(cschema(_, Th, _), Th?).
+
+procedure rs_guard(RoleSpec?, Guard).
+rs_guard(rs(G, _, _, _, _), G?).
+rs_guard(crs(_, G, _, _, _, _), G?).
+
+procedure rs_add(RoleSpec?, Atoms).
+rs_add(rs(_, P, _, _, _), P?).
+rs_add(crs(_, _, P, _, _, _), P?).
+
+procedure rs_del(RoleSpec?, Atoms).
+rs_del(rs(_, _, M, _, _), M?).
+rs_del(crs(_, _, _, M, _, _), M?).
+
+procedure rs_keep(RoleSpec?, Atoms).
+rs_keep(rs(_, _, _, K, _), K?).
+rs_keep(crs(_, _, _, _, K, _), K?).
+
+procedure rs_forb(RoleSpec?, Atoms).
+rs_forb(rs(_, _, _, _, N), N?).
+rs_forb(crs(_, _, _, _, _, N), N?).
+
+% The atoms a role requires: =(i) u -(i) (definition:schema).
+procedure rs_req(RoleSpec?, Atoms).
+rs_req(RS, R?) :- ground(RS?) |
+    rs_del(RS?, M),
+    rs_keep(RS?, K),
+    atoms_app(K?, M?, R).
+
+procedure is_party_role(RoleSpec?, Ans).
+is_party_role(rs(_, _, _, _, _), yes).
+is_party_role(crs(_, _, _, _, _, _), no).
+
+procedure is_guarding(RoleSpec?, Ans).
+is_guarding(RS, R?) :- ground(RS?) |
+    rs_guard(RS?, G),
+    guard_marked(G?, R).
+
+procedure nt_base(NameTerm?, Base).
+nt_base(own(I), b_role(I?)).
+nt_base(own_var(X), b_pvar(X?)).
+nt_base(nvar(Z), b_nvar(Z?)).
+nt_base(ext(S, _), B?) :- ground(S?) | nt_base(S?, B).
+
+% The least rank of a name term (definition:mrk).
+procedure nt_mrk(NameTerm?, Integer).
+nt_mrk(own(_), 0).
+nt_mrk(own_var(_), 0).
+nt_mrk(nvar(_), 0).
+nt_mrk(ext(S, _), N?) :- ground(S?) | nt_mrk(S?, M), N := M? + 1.
+
+procedure arg_base(Arg?, Base).
+arg_base(role(I), b_role(I?)).
+arg_base(pvar(X), b_pvar(X?)).
+arg_base(svar(X), b_svar(X?)).
+arg_base(nterm(S), B?) :- ground(S?) | nt_base(S?, B).
+
+procedure role_base(RoleSpec?, Integer?, Base).
+role_base(rs(_, _, _, _, _), I, b_role(I?)).
+role_base(crs(seated(S, _), _, _, _, _, _), _, B?) :- ground(S?) | nt_base(S?, B).
+role_base(crs(constituent(S, _), _, _, _, _, _), _, B?) :- ground(S?) | nt_base(S?, B).
+
+procedure nth_base(RoleSpecs?, Integer?, Base).
+nth_base(Rs, I, B?) :- ground(Rs?), integer(I?) |
+    nth_rs(Rs?, I?, RS),
+    role_base(RS?, I?, B).
+
+% The name term of a seated or a constituent role; a party role has none.
+procedure rs_nterm(RoleSpec?, NameTerms).
+rs_nterm(rs(_, _, _, _, _), []).
+rs_nterm(crs(seated(S, _), _, _, _, _, _), [S?]).
+rs_nterm(crs(constituent(S, _), _, _, _, _, _), [S?]).
+
+% The predicate of a seated or a constituent role (definition:cohesive: a role
+% predicate of C).
+procedure rs_role_pred(RoleSpec?, Preds).
+rs_role_pred(rs(_, _, _, _, _), []).
+rs_role_pred(crs(seated(_, P), _, _, _, _, _), [P?]).
+rs_role_pred(crs(constituent(_, P), _, _, _, _, _), [P?]).
+
+% ---------------------------------------------------------------------------
+% Which language a contract is written in
+% ---------------------------------------------------------------------------
+% A contract all of whose roles are party roles and none of whose schemas
+% carries reach conditions is a contract of Section 3 and is decided as before.
+
+procedure roles_community1(Ans?, RoleSpecs?, Ans).
+roles_community1(yes, _, yes).
+roles_community1(no, Rs, R?) :- ground(Rs?) | roles_community(Rs?, R).
+
+procedure roles_community(RoleSpecs?, Ans).
+roles_community([], no).
+roles_community([RS|Rs], R?) :- ground(RS?), ground(Rs?) |
+    is_party_role(RS?, P),
+    flip(P?, A),
+    roles_community1(A?, Rs?, R).
+
+procedure sch_community(Schema?, Ans).
+sch_community(schema(_, Rs), R?) :- ground(Rs?) | roles_community(Rs?, R).
+sch_community(cschema(_, _, _), yes).
+
+procedure has_community1(Ans?, Contract?, Ans).
+has_community1(yes, _, yes).
+has_community1(no, Ss, R?) :- ground(Ss?) | has_community(Ss?, R).
+
+procedure has_community(Contract?, Ans).
+has_community([], no).
+has_community([S|Ss], R?) :- ground(S?), ground(Ss?) |
+    sch_community(S?, A),
+    has_community1(A?, Ss?, R).
 
 % ---------------------------------------------------------------------------
 % Entry points
@@ -467,6 +691,10 @@ check_named(Nm, V?) :- check # check_named(Nm?, V).
 imported procedure check#traceable_of(Constant?, Preds).
 exported procedure traceable_of(Constant?, Preds).
 traceable_of(Nm, E?) :- check # traceable_of(Nm?, E).
+
+imported procedure check#rooted_of(Constant?, Preds).
+exported procedure rooted_of(Constant?, Preds).
+rooted_of(Nm, E?) :- check # rooted_of(Nm?, E).
 
 imported procedure contracts#contract(Constant?, Contract).
 exported procedure contract_named(Constant?, Contract).

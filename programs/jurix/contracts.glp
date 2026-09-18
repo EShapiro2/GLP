@@ -289,4 +289,137 @@ contract(sg_chain_cut, C?) :- sg_chain_cut(C).
 contract(cssn, C?) :- cssn(C).
 contract(cur_no_mint, C?) :- cur_no_mint(C).
 contract(cur_loose_mint, C?) :- cur_loose_mint(C).
+contract(federation, C?) :- federation(C).
+contract(gf_unrooted, C?) :- gf_unrooted(C).
+contract(gf_untraceable, C?) :- gf_untraceable(C).
+contract(gf_uncohesive, C?) :- gf_uncohesive(C).
+contract(gf_novolition, C?) :- gf_novolition(C).
 contract(_, []) :- otherwise | true.
+
+% --- the contract of a grassroots federation -------------------------------
+% GFWC's five act schemas, /Grassroots/GFWC sections/act-schemas.tex, the
+% table of its Section 3.1, over the two predicates seat and child; written in
+% the language of Appendix B of /Grassroots/Jurix.  The supermajority
+% threshold is named theta and the decision that forms a community y, as the
+% paper writes them.
+procedure gf_form(Contract).
+gf_form([schema(form,
+       [rs(guarded, [atom(seat, [nterm(own(1))])], [], [], [])])]).
+
+procedure gf_federate(Contract).
+gf_federate([cschema(federate, [],
+       [crs(constituent(nvar(zeta), child), unguarded,
+            [atom(child, [nterm(ext(nvar(zeta), y)), nterm(nvar(zeta))])],
+            [], [], []),
+        crs(seated(nvar(zeta), seat), guarded_at(theta),
+            [atom(seat, [nterm(ext(nvar(zeta), y))])], [], [], [])])]).
+
+procedure gf_rest(Contract).
+gf_rest([cschema(join, [reach(nvar(xi), child, nvar(zeta))],
+       [crs(constituent(nvar(zeta), child), unguarded,
+            [atom(child, [nterm(nvar(zeta)), nterm(nvar(xi))])], [], [],
+            [atom(child, [nterm(nvar(zeta)), nterm(nvar(xi))])]),
+        crs(seated(nvar(zeta), seat), guarded_at(theta),
+            [atom(child, [nterm(nvar(zeta)), nterm(nvar(xi))])], [], [],
+            [atom(child, [nterm(nvar(zeta)), nterm(nvar(xi))])]),
+        crs(constituent(nvar(xi), child), unguarded,
+            [atom(child, [nterm(nvar(zeta)), nterm(nvar(xi))])], [], [],
+            [atom(child, [nterm(nvar(zeta)), nterm(nvar(xi))])]),
+        crs(seated(nvar(xi), seat), guarded_at(theta),
+            [atom(child, [nterm(nvar(zeta)), nterm(nvar(xi))])], [], [],
+            [atom(child, [nterm(nvar(zeta)), nterm(nvar(xi))])])]),
+     cschema(leave_1, [],
+       [crs(constituent(nvar(zeta), child), unguarded,
+            [], [atom(child, [nterm(nvar(zeta)), nterm(nvar(xi))])], [], []),
+        crs(seated(nvar(zeta), seat), guarded_at(theta),
+            [], [atom(child, [nterm(nvar(zeta)), nterm(nvar(xi))])], [], []),
+        crs(seated(nvar(xi), seat), unguarded,
+            [], [atom(child, [nterm(nvar(zeta)), nterm(nvar(xi))])], [], [])]),
+     cschema(leave_2, [],
+       [crs(constituent(nvar(zeta), child), unguarded,
+            [], [atom(child, [nterm(nvar(zeta)), nterm(nvar(xi))])], [], []),
+        crs(seated(nvar(zeta), seat), unguarded,
+            [], [atom(child, [nterm(nvar(zeta)), nterm(nvar(xi))])], [], []),
+        crs(seated(nvar(xi), seat), guarded_at(theta),
+            [], [atom(child, [nterm(nvar(zeta)), nterm(nvar(xi))])], [], [])])]).
+
+procedure gf_join(Contract?, Contract?, Contract?, Contract).
+gf_join(A, B, C, R?) :- ground(A?), ground(B?), ground(C?) |
+    contract_app(B?, C?, BC),
+    contract_app(A?, BC?, R).
+
+procedure federation(Contract).
+federation(C?) :-
+    gf_form(F),
+    gf_federate(D),
+    gf_rest(S),
+    gf_join(F?, D?, S?, C).
+
+% --- negative: the new community named without the decision that formed it --
+% federate seats the assembly in the name of the community itself, of least
+% rank zero and at no party role, so seat is not rooted.
+procedure gf_unrooted(Contract).
+gf_unrooted(C?) :-
+    gf_form(F),
+    gf_rest(S),
+    gf_join(F?,
+      [cschema(federate, [],
+         [crs(constituent(nvar(zeta), child), unguarded,
+              [atom(child, [nterm(ext(nvar(zeta), y)), nterm(nvar(zeta))])],
+              [], [], []),
+          crs(seated(nvar(zeta), seat), guarded_at(theta),
+              [atom(seat, [nterm(nvar(zeta))])], [], [], [])])], S?, C).
+
+% --- negative: an atom naming a community nothing traces -------------------
+% federate notes a community eta that is the name term of no role and that no
+% atom any role requires names, so note loses traceable provenance; seat and
+% child keep it.  note is the predicate of no role, so cohesion is untouched.
+procedure gf_untraceable(Contract).
+gf_untraceable(C?) :-
+    gf_form(F),
+    gf_rest(S),
+    gf_join(F?,
+      [cschema(federate, [],
+         [crs(constituent(nvar(zeta), child), unguarded,
+              [atom(child, [nterm(ext(nvar(zeta), y)), nterm(nvar(zeta))])],
+              [], [], []),
+          crs(seated(nvar(zeta), seat), guarded_at(theta),
+              [atom(note, [nterm(nvar(eta))]),
+               atom(seat, [nterm(ext(nvar(zeta), y))])], [], [], [])])], S?, C).
+
+% --- negative: a child atom of a community that is no role of the schema ----
+% federate records the new community as a child of eta, the name term of no
+% role of it, so cohesion fails at the constituent role.
+procedure gf_uncohesive(Contract).
+gf_uncohesive(C?) :-
+    gf_form(F),
+    gf_rest(S),
+    gf_join(F?,
+      [cschema(federate, [],
+         [crs(constituent(nvar(zeta), child), unguarded,
+              [atom(child, [nterm(nvar(eta)), nterm(nvar(zeta))])],
+              [], [], []),
+          crs(seated(nvar(zeta), seat), guarded_at(theta),
+              [atom(seat, [nterm(ext(nvar(zeta), y))])], [], [], [])])], S?, C).
+
+% --- negative: a join no assembly decides ----------------------------------
+% The four roles of join fall into the two communities and nothing joins them;
+% with no role guarding, neither part is joined to a guarding role.
+procedure gf_novolition(Contract).
+gf_novolition(C?) :-
+    gf_form(F),
+    gf_federate(D),
+    gf_join(F?, D?,
+      [cschema(join, [reach(nvar(xi), child, nvar(zeta))],
+         [crs(constituent(nvar(zeta), child), unguarded,
+              [atom(child, [nterm(nvar(zeta)), nterm(nvar(xi))])], [], [],
+              [atom(child, [nterm(nvar(zeta)), nterm(nvar(xi))])]),
+          crs(seated(nvar(zeta), seat), unguarded,
+              [atom(child, [nterm(nvar(zeta)), nterm(nvar(xi))])], [], [],
+              [atom(child, [nterm(nvar(zeta)), nterm(nvar(xi))])]),
+          crs(constituent(nvar(xi), child), unguarded,
+              [atom(child, [nterm(nvar(zeta)), nterm(nvar(xi))])], [], [],
+              [atom(child, [nterm(nvar(zeta)), nterm(nvar(xi))])]),
+          crs(seated(nvar(xi), seat), unguarded,
+              [atom(child, [nterm(nvar(zeta)), nterm(nvar(xi))])], [], [],
+              [atom(child, [nterm(nvar(zeta)), nterm(nvar(xi))])])])], C).

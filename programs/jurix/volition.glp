@@ -113,7 +113,9 @@ sv1(K, Nm, Rs, E, R?) :- K? >= 2, integer(K?), ground(Nm?), ground(Rs?), ground(
     sv2(A?, K?, Nm?, Rs?, E?, R).
 
 procedure schema_volition(Schema?, Preds?, Faults).
-schema_volition(schema(Nm, Rs), E, R?) :- ground(Nm?), ground(Rs?), ground(E?) |
+schema_volition(Sc, E, R?) :- ground(Sc?), ground(E?) |
+    sch_name(Sc?, Nm),
+    sch_roles(Sc?, Rs),
     roles_len(Rs?, K),
     sv1(K?, Nm?, Rs?, E?, R).
 

@@ -6,8 +6,11 @@
 #
 # The two contracts of /Grassroots/Jurix Sections 3.3 and 3.4, which Section 7
 # certifies by hand, and four contracts broken in one place each; then the
-# compilation of Section 5, against the two displays of Section 5.2.  Exits
-# non-zero if any check fails.
+# compilation of Section 5, against the two displays of Section 5.2; then the
+# contract of a grassroots federation, /Grassroots/GFWC sections/act-schemas.tex,
+# against the four conditions of Appendix B of /Grassroots/Jurix, and four
+# contracts broken in one place each against those.  Exits non-zero if any
+# check fails.
 
 set -u
 GLP_DIR="$(cd "$(dirname "$0")/../.." && pwd)"
@@ -199,6 +202,62 @@ check "an unguarded schema compiles to an empty guard" \
 out=$(run 'compile_schema(cssn, nosuch).')
 check "a schema the contract does not hold is reported" \
       "% no schema named" "$(printf '%s' "$out" | tr '\n' ' ')"
+
+
+# --- the contract of a grassroots federation (Appendix B) ------------------
+# GFWC's five schemas over seat and child, certified in its Section 3.2 by
+# hand against the four conditions of Appendix B; the checker returns the same.
+
+out=$(run 'check_named(federation, V).' 'rooted_of(federation, E).')
+check "the federation contract meets the conditions of Appendix B" \
+      "V = conditions_met" "$out"
+check "seat is rooted" "E = [seat]" "$out"
+
+out=$(run 'traceable_of(federation, E).')
+check "seat and child have traceable provenance" "E = [seat, child]" "$out"
+
+# Seating the assembly in the name of the community itself: the name argument
+# is of least rank zero and at no party role.
+out=$(run 'check_named(gf_unrooted, V).' 'rooted_of(gf_unrooted, E).')
+check "the community named without its decision: seat is not rooted" \
+      "E = []" "$out"
+check "and the two conditions on the text are still met" \
+      "V = conditions_met" "$out"
+
+# A note of a community that is the name term of no role and that no required
+# atom names: note loses traceable provenance, seat and child keep it.
+out=$(run 'check_named(gf_untraceable, V).' 'traceable_of(gf_untraceable, E).')
+check "a note nothing traces: seat and child keep traceable provenance" \
+      "E = [seat, child]" "$out"
+check_not "and note does not have it" "note" "$out"
+
+# Recording the new community as a child of a community that is the name term
+# of no role of the schema.
+out=$(run 'check_named(gf_uncohesive, V).')
+check "a child atom of no role of the schema fails cohesion" \
+      "cohesion(federate, 1, atom(child, [nterm(nvar(eta)), nterm(nvar(zeta))]))" \
+      "$out"
+
+# A join no assembly decides: the roles fall into the two communities, and
+# neither part holds a guarding role.
+out=$(run 'check_named(gf_novolition, V).')
+check "a join with no guarding role fails volition" \
+      "V = conditions_failed([volition(join, 1, 3)])" "$out"
+
+# Rootedness is a notion of Appendix B; a contract of Section 3 is not asked
+# about it, and keeps the verdict of def:syntactically-grassroots.
+out=$(run 'rooted_of(social_graph, E).' 'check_named(social_graph, V).')
+check "a contract of Section 3 is not asked which predicates are rooted" \
+      "E = []" "$out"
+check "and keeps the verdict of Section 3" \
+      "V = syntactically_grassroots" "$out"
+
+# The compiled form of a schema with community roles is Definition Compilation
+# of Appendix B, which the compiler does not print.
+out=$(run 'compile_named(federation).')
+check "a contract with community roles is not compiled" \
+      "has community roles" "$(printf '%s' "$out" | tr '\n' ' ')"
+check_not "and no display is printed for it" "begin{align" "$out"
 
 echo "=== $PASS passed, $FAIL failed ==="
 [ "$FAIL" -eq 0 ]

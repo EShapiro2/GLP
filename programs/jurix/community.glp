@@ -1,0 +1,616 @@
+% ---------------------------------------------------------------------------
+% The conditions on the text of a contract with community roles.
+%
+% Appendix B of /Grassroots/Jurix, sections/13-community-roles.tex, is the
+% specification and no definition of it is restated here; each procedure names
+% the definition it decides.  The four are definition:rooted,
+% definition:provenance, definition:volition and definition:cohesive.
+% Openness and closure are proved of a contract in the paper and are not
+% conditions on the text; nothing here decides or claims them.
+% ---------------------------------------------------------------------------
+
+% ---------------------------------------------------------------------------
+% The atoms and the predicates of a contract
+% ---------------------------------------------------------------------------
+
+procedure roles_atoms(RoleSpecs?, Atoms?, Atoms).
+roles_atoms([], T, T?).
+roles_atoms([RS|Rs], T, R?) :- ground(RS?), ground(Rs?), ground(T?) |
+    rs_add(RS?, P),
+    rs_del(RS?, M),
+    rs_keep(RS?, K),
+    rs_forb(RS?, N),
+    roles_atoms(Rs?, T?, R1),
+    atoms_app(N?, R1?, R2),
+    atoms_app(K?, R2?, R3),
+    atoms_app(M?, R3?, R4),
+    atoms_app(P?, R4?, R).
+
+procedure contract_atoms(Contract?, Atoms?, Atoms).
+contract_atoms([], T, T?).
+contract_atoms([S|Ss], T, R?) :- ground(S?), ground(Ss?), ground(T?) |
+    sch_roles(S?, Rs),
+    contract_atoms(Ss?, T?, R1),
+    roles_atoms(Rs?, R1?, R).
+
+procedure all_atoms(Contract?, Atoms).
+all_atoms(C, R?) :- ground(C?) | contract_atoms(C?, [], R).
+
+procedure atoms_preds(Atoms?, Preds?, Preds).
+atoms_preds([], T, T?).
+atoms_preds([atom(Q, _)|Xs], T, [Q?|R?]) :- ground(Xs?), ground(T?) |
+    atoms_preds(Xs?, T?, R).
+
+procedure all_preds(Contract?, Preds).
+all_preds(C, R?) :- ground(C?) |
+    all_atoms(C?, As),
+    atoms_preds(As?, [], P),
+    preds_dedup(P?, R).
+
+% The role predicates of C: the predicate of every seated and constituent role
+% of every schema (definition:cohesive).
+procedure roles_role_preds(RoleSpecs?, Preds?, Preds).
+roles_role_preds([], T, T?).
+roles_role_preds([RS|Rs], T, R?) :- ground(RS?), ground(Rs?), ground(T?) |
+    rs_role_pred(RS?, P),
+    roles_role_preds(Rs?, T?, R1),
+    preds_app(P?, R1?, R).
+
+procedure contract_role_preds(Contract?, Preds?, Preds).
+contract_role_preds([], T, T?).
+contract_role_preds([S|Ss], T, R?) :- ground(S?), ground(Ss?), ground(T?) |
+    sch_roles(S?, Rs),
+    contract_role_preds(Ss?, T?, R1),
+    roles_role_preds(Rs?, R1?, R).
+
+exported procedure role_preds(Contract?, Preds).
+role_preds(C, R?) :- ground(C?) |
+    contract_role_preds(C?, [], P),
+    preds_dedup(P?, R).
+
+% ---------------------------------------------------------------------------
+% The bases of a schema (definition:term, definition:role,
+% definition:provenance)
+% ---------------------------------------------------------------------------
+
+procedure role_bases(RoleSpecs?, Integer?, Bases).
+role_bases([], _, []).
+role_bases([RS|Rs], I, [B?|R?]) :- ground(RS?), ground(Rs?), integer(I?) |
+    role_base(RS?, I?, B),
+    I1 := I? + 1,
+    role_bases(Rs?, I1?, R).
+
+procedure args_bases(Args?, Bases?, Bases).
+args_bases([], T, T?).
+args_bases([A|As], T, [B?|R?]) :- ground(A?), ground(As?), ground(T?) |
+    arg_base(A?, B),
+    args_bases(As?, T?, R).
+
+% The bases of the arguments of the atoms of Phi_E among a list of atoms.
+procedure phi_bases1(Ans?, Args?, Bases?, Bases).
+phi_bases1(no, _, T, T?).
+phi_bases1(yes, As, T, R?) :- ground(As?), ground(T?) | args_bases(As?, T?, R).
+
+procedure phi_bases(Atoms?, Preds?, Bases?, Bases).
+phi_bases([], _, T, T?).
+phi_bases([atom(Q, As)|Xs], E, T, R?) :-
+    ground(Q?), ground(As?), ground(Xs?), ground(E?), ground(T?) |
+    pred_member(Q?, E?, M),
+    phi_bases(Xs?, E?, T?, R1),
+    phi_bases1(M?, As?, R1?, R).
+
+% The bases carried by the atoms of Phi_E the roles of a schema require.
+procedure req_bases(RoleSpecs?, Preds?, Bases?, Bases).
+req_bases([], _, T, T?).
+req_bases([RS|Rs], E, T, R?) :- ground(RS?), ground(Rs?), ground(E?), ground(T?) |
+    rs_req(RS?, Req),
+    req_bases(Rs?, E?, T?, R1),
+    phi_bases(Req?, E?, R1?, R).
+
+% ---------------------------------------------------------------------------
+% Rooted (definition:rooted)
+% ---------------------------------------------------------------------------
+% The name argument of an atom is its first argument, where the predicate has
+% arity one or two and that argument is a name term; an atom carrying no name
+% has none, and the definition asks nothing of it.
+
+procedure name_arg(Args?, NameTerms).
+name_arg([], []).
+name_arg([nterm(S)], [S?]).
+name_arg([nterm(S), _], [S?]).
+name_arg(As, []) :- otherwise, ground(As?) | true.
+
+procedure rooted_nt(NameTerm?, Integer?, Ans?, Integer?, Ans).
+rooted_nt(_, _, _, M, yes) :- M? >= 1 | true.
+rooted_nt(own(J), I, yes, M, yes) :- M? =:= 0, J? =:= I? | true.
+rooted_nt(S, _, _, M, no) :- otherwise, ground(S?), integer(M?) | true.
+
+procedure rooted_na(NameTerms?, Integer?, Ans?, Ans).
+rooted_na([], _, _, yes).
+rooted_na([S], I, Party, R?) :- ground(S?), integer(I?), ground(Party?) |
+    nt_mrk(S?, M),
+    rooted_nt(S?, I?, Party?, M?, R).
+rooted_na([_, _|_], _, _, yes).
+
+procedure rooted_atoms1(Ans?, Atoms?, Constant?, Integer?, Ans?, Ans).
+rooted_atoms1(no, _, _, _, _, no).
+rooted_atoms1(yes, Xs, Mu, I, Party, R?) :-
+    ground(Xs?), ground(Mu?), integer(I?), ground(Party?) |
+    rooted_atoms(Xs?, Mu?, I?, Party?, R).
+
+procedure rooted_atoms(Atoms?, Constant?, Integer?, Ans?, Ans).
+rooted_atoms([], _, _, _, yes).
+rooted_atoms([atom(Q, As)|Xs], Mu, I, Party, R?) :-
+    Q? =?= Mu?, ground(As?), ground(Xs?), integer(I?), ground(Party?) |
+    name_arg(As?, NA),
+    rooted_na(NA?, I?, Party?, A),
+    rooted_atoms1(A?, Xs?, Mu?, I?, Party?, R).
+rooted_atoms([atom(_, _)|Xs], Mu, I, Party, R?) :-
+    otherwise, ground(Xs?), ground(Mu?), integer(I?), ground(Party?) |
+    rooted_atoms(Xs?, Mu?, I?, Party?, R).
+
+procedure rooted_roles1(Ans?, RoleSpecs?, Integer?, Constant?, Ans).
+rooted_roles1(no, _, _, _, no).
+rooted_roles1(yes, Rs, I, Mu, R?) :- ground(Rs?), integer(I?), ground(Mu?) |
+    I1 := I? + 1,
+    rooted_roles(Rs?, I1?, Mu?, R).
+
+procedure rooted_roles(RoleSpecs?, Integer?, Constant?, Ans).
+rooted_roles([], _, _, yes).
+rooted_roles([RS|Rs], I, Mu, R?) :- ground(RS?), ground(Rs?), integer(I?), ground(Mu?) |
+    rs_add(RS?, P),
+    is_party_role(RS?, Party),
+    rooted_atoms(P?, Mu?, I?, Party?, A),
+    rooted_roles1(A?, Rs?, I?, Mu?, R).
+
+procedure rooted_schemas1(Ans?, Contract?, Constant?, Ans).
+rooted_schemas1(no, _, _, no).
+rooted_schemas1(yes, Ss, Mu, R?) :- ground(Ss?), ground(Mu?) |
+    rooted_schemas(Ss?, Mu?, R).
+
+procedure rooted_schemas(Contract?, Constant?, Ans).
+rooted_schemas([], _, yes).
+rooted_schemas([S|Ss], Mu, R?) :- ground(S?), ground(Ss?), ground(Mu?) |
+    sch_roles(S?, Rs),
+    rooted_roles(Rs?, 1, Mu?, A),
+    rooted_schemas1(A?, Ss?, Mu?, R).
+
+% Rootedness is a condition on a predicate of arity one, so only a predicate
+% every atom of which carries one argument is tested.
+procedure one_arg1(Integer?, Atoms?, Constant?, Ans).
+one_arg1(L, Xs, Mu, R?) :- L? =:= 1, ground(Xs?), ground(Mu?) | one_arg(Xs?, Mu?, R).
+one_arg1(L, _, _, no) :- otherwise, integer(L?) | true.
+
+procedure one_arg(Atoms?, Constant?, Ans).
+one_arg([], _, yes).
+one_arg([atom(Q, As)|Xs], Mu, R?) :- Q? =?= Mu?, ground(As?), ground(Xs?) |
+    args_len(As?, L),
+    one_arg1(L?, Xs?, Mu?, R).
+one_arg([atom(_, _)|Xs], Mu, R?) :- otherwise, ground(Xs?), ground(Mu?) |
+    one_arg(Xs?, Mu?, R).
+
+procedure rooted_pred(Ans?, Constant?, Contract?, Ans).
+rooted_pred(no, _, _, no).
+rooted_pred(yes, P, C, R?) :- ground(P?), ground(C?) | rooted_schemas(C?, P?, R).
+
+procedure rooted_filter1(Ans?, Constant?, Preds?, Contract?, Atoms?, Preds).
+rooted_filter1(yes, P, Ps, C, As, [P?|R?]) :-
+    ground(P?), ground(Ps?), ground(C?), ground(As?) |
+    rooted_filter(Ps?, C?, As?, R).
+rooted_filter1(no, _, Ps, C, As, R?) :- ground(Ps?), ground(C?), ground(As?) |
+    rooted_filter(Ps?, C?, As?, R).
+
+procedure rooted_filter(Preds?, Contract?, Atoms?, Preds).
+rooted_filter([], _, _, []).
+rooted_filter([P|Ps], C, As, R?) :-
+    ground(P?), ground(Ps?), ground(C?), ground(As?) |
+    one_arg(As?, P?, A1),
+    rooted_pred(A1?, P?, C?, A),
+    rooted_filter1(A?, P?, Ps?, C?, As?, R).
+
+exported procedure rooted(Contract?, Preds).
+rooted(C, R?) :- ground(C?) |
+    all_atoms(C?, As),
+    all_preds(C?, Ps),
+    rooted_filter(Ps?, C?, As?, R).
+
+% ---------------------------------------------------------------------------
+% Traceable provenance (definition:provenance)
+% ---------------------------------------------------------------------------
+% The largest set of predicates having it is a greatest fixpoint: start from
+% every predicate of the contract, drop those the definition rejects against
+% the set in hand, and repeat until nothing drops.
+
+procedure prov_arg1(Base?, Base?, Bases?, Bases?, Ans).
+prov_arg1(B, RB, _, _, yes) :- B? =?= RB? | true.
+prov_arg1(B, _, RBs, QBs, R?) :- otherwise, ground(B?), ground(RBs?), ground(QBs?) |
+    base_member(RBs?, B?, A1),
+    base_member(QBs?, B?, A2),
+    or_yes(A1?, A2?, R).
+
+procedure prov_args1(Ans?, Args?, Base?, Bases?, Bases?, Ans).
+prov_args1(no, _, _, _, _, no).
+prov_args1(yes, As, RB, RBs, QBs, R?) :-
+    ground(As?), ground(RB?), ground(RBs?), ground(QBs?) |
+    prov_args(As?, RB?, RBs?, QBs?, R).
+
+procedure prov_args(Args?, Base?, Bases?, Bases?, Ans).
+prov_args([], _, _, _, yes).
+prov_args([A|As], RB, RBs, QBs, R?) :-
+    ground(A?), ground(As?), ground(RB?), ground(RBs?), ground(QBs?) |
+    arg_base(A?, B),
+    prov_arg1(B?, RB?, RBs?, QBs?, A1),
+    prov_args1(A1?, As?, RB?, RBs?, QBs?, R).
+
+procedure prov_plus1(Ans?, Atoms?, Constant?, Base?, Bases?, Bases?, Ans).
+prov_plus1(no, _, _, _, _, _, no).
+prov_plus1(yes, Xs, Pd, RB, RBs, QBs, R?) :-
+    ground(Xs?), ground(Pd?), ground(RB?), ground(RBs?), ground(QBs?) |
+    prov_plus(Xs?, Pd?, RB?, RBs?, QBs?, R).
+
+procedure prov_plus(Atoms?, Constant?, Base?, Bases?, Bases?, Ans).
+prov_plus([], _, _, _, _, yes).
+prov_plus([atom(Q, As)|Xs], Pd, RB, RBs, QBs, R?) :-
+    Q? =?= Pd?, ground(As?), ground(Xs?), ground(RB?), ground(RBs?), ground(QBs?) |
+    prov_args(As?, RB?, RBs?, QBs?, A),
+    prov_plus1(A?, Xs?, Pd?, RB?, RBs?, QBs?, R).
+prov_plus([atom(_, _)|Xs], Pd, RB, RBs, QBs, R?) :-
+    otherwise, ground(Xs?), ground(Pd?), ground(RB?), ground(RBs?), ground(QBs?) |
+    prov_plus(Xs?, Pd?, RB?, RBs?, QBs?, R).
+
+procedure prov_roles1(Ans?, RoleSpecs?, Integer?, Constant?, Bases?, Bases?, Ans).
+prov_roles1(no, _, _, _, _, _, no).
+prov_roles1(yes, Rs, I, Pd, RBs, QBs, R?) :-
+    ground(Rs?), integer(I?), ground(Pd?), ground(RBs?), ground(QBs?) |
+    I1 := I? + 1,
+    prov_roles(Rs?, I1?, Pd?, RBs?, QBs?, R).
+
+procedure prov_roles(RoleSpecs?, Integer?, Constant?, Bases?, Bases?, Ans).
+prov_roles([], _, _, _, _, yes).
+prov_roles([RS|Rs], I, Pd, RBs, QBs, R?) :-
+    ground(RS?), ground(Rs?), integer(I?), ground(Pd?), ground(RBs?), ground(QBs?) |
+    rs_add(RS?, P),
+    role_base(RS?, I?, RB),
+    prov_plus(P?, Pd?, RB?, RBs?, QBs?, A),
+    prov_roles1(A?, Rs?, I?, Pd?, RBs?, QBs?, R).
+
+procedure prov_pred1(Ans?, Constant?, Contract?, Preds?, Ans).
+prov_pred1(no, _, _, _, no).
+prov_pred1(yes, Pd, Ss, E, R?) :- ground(Pd?), ground(Ss?), ground(E?) |
+    prov_pred(Pd?, Ss?, E?, R).
+
+procedure prov_pred(Constant?, Contract?, Preds?, Ans).
+prov_pred(_, [], _, yes).
+prov_pred(Pd, [S|Ss], E, R?) :-
+    ground(S?), ground(Ss?), ground(Pd?), ground(E?) |
+    sch_roles(S?, Rs),
+    role_bases(Rs?, 1, RBs),
+    req_bases(Rs?, E?, [], QBs),
+    prov_roles(Rs?, 1, Pd?, RBs?, QBs?, A),
+    prov_pred1(A?, Pd?, Ss?, E?, R).
+
+procedure tp_filter1(Ans?, Constant?, Preds?, Contract?, Preds?, Preds).
+tp_filter1(yes, P, Ps, C, E, [P?|R?]) :- ground(P?), ground(Ps?), ground(C?), ground(E?) |
+    tp_filter(Ps?, C?, E?, R).
+tp_filter1(no, _, Ps, C, E, R?) :- ground(Ps?), ground(C?), ground(E?) |
+    tp_filter(Ps?, C?, E?, R).
+
+procedure tp_filter(Preds?, Contract?, Preds?, Preds).
+tp_filter([], _, _, []).
+tp_filter([P|Ps], C, E, R?) :- ground(P?), ground(Ps?), ground(C?), ground(E?) |
+    prov_pred(P?, C?, E?, A),
+    tp_filter1(A?, P?, Ps?, C?, E?, R).
+
+procedure tp_loop2(Integer?, Integer?, Preds?, Contract?, Preds).
+tp_loop2(L1, L2, E1, _, E1?) :- L1? =:= L2? | true.
+tp_loop2(_, _, E1, C, R?) :- otherwise, ground(E1?), ground(C?) |
+    tp_loop(C?, E1?, R).
+
+procedure tp_loop1(Preds?, Preds?, Contract?, Preds).
+tp_loop1(E1, E, C, R?) :- ground(E1?), ground(E?), ground(C?) |
+    preds_len(E1?, L1),
+    preds_len(E?, L2),
+    tp_loop2(L1?, L2?, E1?, C?, R).
+
+procedure tp_loop(Contract?, Preds?, Preds).
+tp_loop(C, E, R?) :- ground(C?), ground(E?) |
+    tp_filter(E?, C?, E?, E1),
+    tp_loop1(E1?, E?, C?, R).
+
+exported procedure traceable(Contract?, Preds).
+traceable(C, E?) :- ground(C?) |
+    all_preds(C?, P0),
+    tp_loop(C?, P0?, E).
+
+% ---------------------------------------------------------------------------
+% Volition (definition:volition)
+% ---------------------------------------------------------------------------
+% An edge of the role graph: the two roles have the same base, or one of the
+% two requires an atom of traceable provenance an argument of which has the
+% base of the other.
+
+procedure same_base(Base?, Base?, Ans).
+same_base(B, C, yes) :- B? =?= C? | true.
+same_base(_, _, no) :- otherwise | true.
+
+procedure req_base_names(RoleSpec?, Base?, Preds?, Ans).
+req_base_names(RS, B, E, R?) :- ground(RS?), ground(B?), ground(E?) |
+    rs_req(RS?, Req),
+    phi_bases(Req?, E?, [], Bs),
+    base_member(Bs?, B?, R).
+
+procedure edge(Integer?, Integer?, RoleSpecs?, Preds?, Ans).
+edge(I, J, Rs, E, R?) :- integer(I?), integer(J?), ground(Rs?), ground(E?) |
+    nth_rs(Rs?, I?, RI),
+    nth_rs(Rs?, J?, RJ),
+    role_base(RI?, I?, BI),
+    role_base(RJ?, J?, BJ),
+    same_base(BI?, BJ?, A0),
+    req_base_names(RI?, BJ?, E?, A1),
+    req_base_names(RJ?, BI?, E?, A2),
+    or_yes(A1?, A2?, A12),
+    or_yes(A0?, A12?, R).
+
+procedure linked_any1(Ans?, Ints?, Integer?, RoleSpecs?, Preds?, Ans).
+linked_any1(yes, _, _, _, _, yes).
+linked_any1(no, Is, J, Rs, E, R?) :-
+    ground(Is?), integer(J?), ground(Rs?), ground(E?) |
+    linked_any(Is?, J?, Rs?, E?, R).
+
+procedure linked_any(Ints?, Integer?, RoleSpecs?, Preds?, Ans).
+linked_any([], _, _, _, no).
+linked_any([I|Is], J, Rs, E, R?) :-
+    integer(I?), integer(J?), ground(Is?), ground(Rs?), ground(E?) |
+    edge(I?, J?, Rs?, E?, A),
+    linked_any1(A?, Is?, J?, Rs?, E?, R).
+
+procedure conn_scan2(Ans?, Integer?, Ints?, Integer?, RoleSpecs?, Preds?, Ints).
+conn_scan2(yes, J, Reached, K, Rs, E, R?) :-
+    integer(J?), ground(Reached?), integer(K?), ground(Rs?), ground(E?) |
+    J1 := J? + 1,
+    conn_scan(J1?, [J?|Reached?], K?, Rs?, E?, R).
+conn_scan2(no, J, Reached, K, Rs, E, R?) :-
+    integer(J?), ground(Reached?), integer(K?), ground(Rs?), ground(E?) |
+    J1 := J? + 1,
+    conn_scan(J1?, Reached?, K?, Rs?, E?, R).
+
+procedure conn_scan1(Ans?, Integer?, Ints?, Integer?, RoleSpecs?, Preds?, Ints).
+conn_scan1(yes, J, Reached, K, Rs, E, R?) :-
+    integer(J?), ground(Reached?), integer(K?), ground(Rs?), ground(E?) |
+    J1 := J? + 1,
+    conn_scan(J1?, Reached?, K?, Rs?, E?, R).
+conn_scan1(no, J, Reached, K, Rs, E, R?) :-
+    integer(J?), ground(Reached?), integer(K?), ground(Rs?), ground(E?) |
+    linked_any(Reached?, J?, Rs?, E?, A),
+    conn_scan2(A?, J?, Reached?, K?, Rs?, E?, R).
+
+procedure conn_scan(Integer?, Ints?, Integer?, RoleSpecs?, Preds?, Ints).
+conn_scan(J, Reached, K, _, _, Reached?) :- J? > K? | true.
+conn_scan(J, Reached, K, Rs, E, R?) :-
+    J? =< K?, integer(J?), ground(Reached?), integer(K?), ground(Rs?), ground(E?) |
+    ints_member(Reached?, J?, M),
+    conn_scan1(M?, J?, Reached?, K?, Rs?, E?, R).
+
+procedure conn_loop2(Integer?, Integer?, Ints?, Integer?, RoleSpecs?, Preds?, Ints).
+conn_loop2(L1, L0, R1, _, _, _, R1?) :- L1? =:= L0? | true.
+conn_loop2(_, _, R1, K, Rs, E, R?) :-
+    otherwise, ground(R1?), integer(K?), ground(Rs?), ground(E?) |
+    conn_loop(R1?, K?, Rs?, E?, R).
+
+procedure conn_loop1(Ints?, Ints?, Integer?, RoleSpecs?, Preds?, Ints).
+conn_loop1(R1, R0, K, Rs, E, R?) :-
+    ground(R1?), ground(R0?), integer(K?), ground(Rs?), ground(E?) |
+    ints_len(R1?, L1),
+    ints_len(R0?, L0),
+    conn_loop2(L1?, L0?, R1?, K?, Rs?, E?, R).
+
+procedure conn_loop(Ints?, Integer?, RoleSpecs?, Preds?, Ints).
+conn_loop(Reached, K, Rs, E, R?) :-
+    ground(Reached?), integer(K?), ground(Rs?), ground(E?) |
+    conn_scan(1, Reached?, K?, Rs?, E?, R1),
+    conn_loop1(R1?, Reached?, K?, Rs?, E?, R).
+
+% The roles joined to the role I.
+procedure reached_from(Integer?, Integer?, RoleSpecs?, Preds?, Ints).
+reached_from(I, K, Rs, E, R?) :- integer(I?), integer(K?), ground(Rs?), ground(E?) |
+    conn_loop([I?], K?, Rs?, E?, R).
+
+procedure first_missing1(Ans?, Integer?, Integer?, Ints?, Missing).
+first_missing1(no, J, _, _, missing(J?)).
+first_missing1(yes, J, K, Reached, R?) :-
+    integer(J?), integer(K?), ground(Reached?) |
+    J1 := J? + 1,
+    first_missing(J1?, K?, Reached?, R).
+
+procedure first_missing(Integer?, Integer?, Ints?, Missing).
+first_missing(J, K, _, all_reached) :- J? > K? | true.
+first_missing(J, K, Reached, R?) :-
+    J? =< K?, integer(J?), integer(K?), ground(Reached?) |
+    ints_member(Reached?, J?, M),
+    first_missing1(M?, J?, K?, Reached?, R).
+
+% Is a guarding role among those reached?
+procedure guarded_in1(Ans?, Ints?, RoleSpecs?, Ans).
+guarded_in1(yes, _, _, yes).
+guarded_in1(no, Is, Rs, R?) :- ground(Is?), ground(Rs?) | guarded_in(Is?, Rs?, R).
+
+procedure guarded_in(Ints?, RoleSpecs?, Ans).
+guarded_in([], _, no).
+guarded_in([I|Is], Rs, R?) :- integer(I?), ground(Is?), ground(Rs?) |
+    nth_rs(Rs?, I?, RS),
+    is_guarding(RS?, A),
+    guarded_in1(A?, Is?, Rs?, R).
+
+% The first role joined to no guarding role.
+procedure first_unguarded1(Ans?, Integer?, Integer?, RoleSpecs?, Preds?, Missing).
+first_unguarded1(yes, J, K, Rs, E, R?) :-
+    integer(J?), integer(K?), ground(Rs?), ground(E?) |
+    J1 := J? + 1,
+    first_unguarded(J1?, K?, Rs?, E?, R).
+first_unguarded1(no, J, _, _, _, missing(J?)).
+
+procedure first_unguarded(Integer?, Integer?, RoleSpecs?, Preds?, Missing).
+first_unguarded(J, K, _, _, all_reached) :- J? > K? | true.
+first_unguarded(J, K, Rs, E, R?) :-
+    J? =< K?, integer(J?), integer(K?), ground(Rs?), ground(E?) |
+    reached_from(J?, K?, Rs?, E?, Reached),
+    guarded_in(Reached?, Rs?, A),
+    first_unguarded1(A?, J?, K?, Rs?, E?, R).
+
+procedure cv3(Missing?, Constant?, Integer?, Faults).
+cv3(all_reached, _, _, []).
+cv3(missing(_), Nm, J, [volition(Nm?, 1, J?)]).
+
+procedure cv2(Missing?, Integer?, Constant?, RoleSpecs?, Preds?, Faults).
+cv2(all_reached, _, _, _, _, []).
+cv2(missing(J), K, Nm, Rs, E, R?) :-
+    integer(J?), integer(K?), ground(Nm?), ground(Rs?), ground(E?) |
+    first_unguarded(1, K?, Rs?, E?, U),
+    cv3(U?, Nm?, J?, R).
+
+procedure cv1(Integer?, Constant?, RoleSpecs?, Preds?, Faults).
+cv1(K, _, _, _, []) :- K? < 2 | true.
+cv1(K, Nm, Rs, E, R?) :- K? >= 2, integer(K?), ground(Nm?), ground(Rs?), ground(E?) |
+    reached_from(1, K?, Rs?, E?, Reached),
+    first_missing(1, K?, Reached?, M),
+    cv2(M?, K?, Nm?, Rs?, E?, R).
+
+procedure schema_volition(Schema?, Preds?, Faults).
+schema_volition(Sc, E, R?) :- ground(Sc?), ground(E?) |
+    sch_name(Sc?, Nm),
+    sch_roles(Sc?, Rs),
+    roles_len(Rs?, K),
+    cv1(K?, Nm?, Rs?, E?, R).
+
+exported procedure volition_faults(Contract?, Preds?, Faults).
+volition_faults([], _, []).
+volition_faults([S|Ss], E, R?) :- ground(S?), ground(Ss?), ground(E?) |
+    schema_volition(S?, E?, F1),
+    volition_faults(Ss?, E?, F2),
+    faults_app(F1?, F2?, R).
+
+% ---------------------------------------------------------------------------
+% Cohesion (definition:cohesive)
+% ---------------------------------------------------------------------------
+
+procedure sch_nterms(RoleSpecs?, NameTerms?, NameTerms).
+sch_nterms([], T, T?).
+sch_nterms([RS|Rs], T, R?) :- ground(RS?), ground(Rs?), ground(T?) |
+    rs_nterm(RS?, N),
+    sch_nterms(Rs?, T?, R1),
+    nterms_app(N?, R1?, R).
+
+procedure coh_own(NameTerm?, Integer?, Ans?, Ans).
+coh_own(own(J), I, yes, yes) :- J? =:= I? | true.
+coh_own(S, _, _, no) :- otherwise, ground(S?) | true.
+
+procedure coh_strip(NameTerm?, Integer?, Ans?, NameTerms?, Ans).
+coh_strip(ext(S, _), I, Party, NTs, R?) :-
+    ground(S?), integer(I?), ground(Party?), ground(NTs?) |
+    coh_nt(S?, I?, Party?, NTs?, R).
+coh_strip(own(_), _, _, _, no).
+coh_strip(own_var(_), _, _, _, no).
+coh_strip(nvar(_), _, _, _, no).
+
+procedure coh_nt1(Ans?, NameTerm?, Integer?, Ans?, NameTerms?, Ans).
+coh_nt1(yes, _, _, _, _, yes).
+coh_nt1(no, S, I, Party, NTs, R?) :-
+    ground(S?), integer(I?), ground(Party?), ground(NTs?) |
+    coh_strip(S?, I?, Party?, NTs?, R).
+
+procedure coh_nt(NameTerm?, Integer?, Ans?, NameTerms?, Ans).
+coh_nt(S, I, Party, NTs, R?) :-
+    ground(S?), integer(I?), ground(Party?), ground(NTs?) |
+    nt_member(NTs?, S?, A1),
+    coh_own(S?, I?, Party?, A2),
+    or_yes(A1?, A2?, A),
+    coh_nt1(A?, S?, I?, Party?, NTs?, R).
+
+procedure coh_args1(Ans?, Args?, Integer?, Ans?, NameTerms?, Ans).
+coh_args1(no, _, _, _, _, no).
+coh_args1(yes, As, I, Party, NTs, R?) :-
+    ground(As?), integer(I?), ground(Party?), ground(NTs?) |
+    coh_args(As?, I?, Party?, NTs?, R).
+
+procedure coh_args(Args?, Integer?, Ans?, NameTerms?, Ans).
+coh_args([], _, _, _, yes).
+coh_args([nterm(S)|As], I, Party, NTs, R?) :-
+    ground(S?), ground(As?), integer(I?), ground(Party?), ground(NTs?) |
+    coh_nt(S?, I?, Party?, NTs?, A),
+    coh_args1(A?, As?, I?, Party?, NTs?, R).
+coh_args([A|As], I, Party, NTs, R?) :-
+    otherwise, ground(A?), ground(As?), integer(I?), ground(Party?), ground(NTs?) |
+    coh_args(As?, I?, Party?, NTs?, R).
+
+procedure coh_plus2(Ans?, Atom?, Atoms?, Preds?, Constant?, Integer?, Ans?,
+                    NameTerms?, Faults).
+coh_plus2(yes, _, Xs, RP, Nm, I, Party, NTs, R?) :-
+    ground(Xs?), ground(RP?), ground(Nm?), integer(I?), ground(Party?), ground(NTs?) |
+    coh_plus(Xs?, RP?, Nm?, I?, Party?, NTs?, R).
+coh_plus2(no, Phi, Xs, RP, Nm, I, Party, NTs, [cohesion(Nm?, I?, Phi?)|R?]) :-
+    ground(Phi?), ground(Xs?), ground(RP?), ground(Nm?), integer(I?),
+    ground(Party?), ground(NTs?) |
+    coh_plus(Xs?, RP?, Nm?, I?, Party?, NTs?, R).
+
+procedure coh_plus1(Ans?, Atom?, Atoms?, Preds?, Constant?, Integer?, Ans?,
+                    NameTerms?, Faults).
+coh_plus1(no, _, Xs, RP, Nm, I, Party, NTs, R?) :-
+    ground(Xs?), ground(RP?), ground(Nm?), integer(I?), ground(Party?), ground(NTs?) |
+    coh_plus(Xs?, RP?, Nm?, I?, Party?, NTs?, R).
+coh_plus1(yes, atom(Q, As), Xs, RP, Nm, I, Party, NTs, R?) :-
+    ground(Q?), ground(As?), ground(Xs?), ground(RP?), ground(Nm?), integer(I?),
+    ground(Party?), ground(NTs?) |
+    coh_args(As?, I?, Party?, NTs?, A),
+    coh_plus2(A?, atom(Q?, As?), Xs?, RP?, Nm?, I?, Party?, NTs?, R).
+
+procedure coh_plus(Atoms?, Preds?, Constant?, Integer?, Ans?, NameTerms?, Faults).
+coh_plus([], _, _, _, _, _, []).
+coh_plus([atom(Q, As)|Xs], RP, Nm, I, Party, NTs, R?) :-
+    ground(Q?), ground(As?), ground(Xs?), ground(RP?), ground(Nm?), integer(I?),
+    ground(Party?), ground(NTs?) |
+    pred_member(Q?, RP?, M),
+    coh_plus1(M?, atom(Q?, As?), Xs?, RP?, Nm?, I?, Party?, NTs?, R).
+
+procedure coh_roles(RoleSpecs?, Integer?, Preds?, Constant?, NameTerms?, Faults).
+coh_roles([], _, _, _, _, []).
+coh_roles([RS|Rs], I, RP, Nm, NTs, R?) :-
+    ground(RS?), ground(Rs?), integer(I?), ground(RP?), ground(Nm?), ground(NTs?) |
+    rs_add(RS?, P),
+    is_party_role(RS?, Party),
+    coh_plus(P?, RP?, Nm?, I?, Party?, NTs?, F1),
+    I1 := I? + 1,
+    coh_roles(Rs?, I1?, RP?, Nm?, NTs?, F2),
+    faults_app(F1?, F2?, R).
+
+procedure schema_cohesion(Schema?, Preds?, Faults).
+schema_cohesion(Sc, RP, R?) :- ground(Sc?), ground(RP?) |
+    sch_name(Sc?, Nm),
+    sch_roles(Sc?, Rs),
+    sch_nterms(Rs?, [], NTs),
+    coh_roles(Rs?, 1, RP?, Nm?, NTs?, R).
+
+procedure cohesion_on(Contract?, Preds?, Faults).
+cohesion_on([], _, []).
+cohesion_on([S|Ss], RP, R?) :- ground(S?), ground(Ss?), ground(RP?) |
+    schema_cohesion(S?, RP?, F1),
+    cohesion_on(Ss?, RP?, F2),
+    faults_app(F1?, F2?, R).
+
+exported procedure cohesion_faults(Contract?, Faults).
+cohesion_faults(C, R?) :- ground(C?) |
+    role_preds(C?, RP),
+    cohesion_on(C?, RP?, R).
+
+% ---------------------------------------------------------------------------
+% The two conditions a contract either meets or fails
+% ---------------------------------------------------------------------------
+% Volition and cohesion are conditions on the text that a contract passes or
+% fails; which predicates are rooted and which have traceable provenance are
+% the two sets, given by rooted/2 and traceable/2.
+
+exported procedure conditions(Contract?, Faults).
+conditions(C, R?) :- ground(C?) |
+    traceable(C?, E),
+    volition_faults(C?, E?, F1),
+    cohesion_faults(C?, F2),
+    faults_app(F1?, F2?, R).

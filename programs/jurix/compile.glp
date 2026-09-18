@@ -39,10 +39,18 @@ latex_role(I, T, R?) :- otherwise, integer(I?), ground(T?) | latex_role_n(I?, T?
 procedure latex_role_n(Constant?, Chunks?, Chunks).
 latex_role_n(I, T, ['\\mathit{p}_{', I?, '}'|T?]).
 
+% The compiled form of a schema with community roles is Appendix B's, and this
+% compiler does not print it: compile_named and compile_schema refuse such a
+% contract, and the clauses marking it below are what the type checker asks of
+% the display procedures over the extended language.
+procedure not_printed(Chunks?, Chunks).
+not_printed(T, ['% a schema with community roles is not compiled'|T?]).
+
 procedure latex_arg(Arg?, Chunks?, Chunks).
 latex_arg(role(I), T, R?) :- integer(I?), ground(T?) | latex_role(I?, T?, R).
 latex_arg(pvar(X), T, [X?|T?]).
 latex_arg(svar(X), T, [X?|T?]).
+latex_arg(nterm(_), T, R?) :- ground(T?) | not_printed(T?, R).
 
 procedure latex_args(Args?, Chunks?, Chunks).
 latex_args([], T, T?).
@@ -99,6 +107,7 @@ update_body(no, no, Add, Del, I, T, ['(c_{'|R?]) :-
     latex_role(I?, ['} \\setminus '|R2?], R).
 
 procedure latex_update(RoleSpec?, Integer?, Chunks?, Chunks).
+latex_update(crs(_, _, _, _, _, _), _, T, R?) :- ground(T?) | not_printed(T?, R).
 latex_update(rs(_, Add, Del, _, _), I, T, ['c\'_{'|R?]) :-
     ground(Add?), ground(Del?), integer(I?), ground(T?) |
     is_empty(Add?, AE),
@@ -142,6 +151,7 @@ forb_conj([A, B|As], I, T, [C?|T?]) :-
     latex_set([A?, B?|As?], [' \\cap c_{'|R1?], C).
 
 procedure role_conjs(RoleSpec?, Integer?, ChunkLists?, ChunkLists).
+role_conjs(crs(_, _, _, _, _, _), _, T, T?).
 role_conjs(rs(_, _, Del, Keep, Forb), I, T, R?) :-
     ground(Del?), ground(Keep?), ground(Forb?), integer(I?), ground(T?) |
     forb_conj(Forb?, I?, T?, T1),
@@ -173,12 +183,15 @@ latex_provided([C|Cs], T, ['\\text{provided } '|R?]) :-
 
 procedure guard_roles(RoleSpecs?, Integer?, Ints?, Ints).
 guard_roles([], _, T, T?).
-guard_roles([rs(guarded, _, _, _, _)|Rs], I, T, [I?|R?]) :-
-    ground(Rs?), integer(I?), ground(T?) |
+guard_roles([RS|Rs], I, T, R?) :- ground(RS?), ground(Rs?), integer(I?), ground(T?) |
+    is_guarding(RS?, A),
+    guard_roles1(A?, Rs?, I?, T?, R).
+
+procedure guard_roles1(Ans?, RoleSpecs?, Integer?, Ints?, Ints).
+guard_roles1(yes, Rs, I, T, [I?|R?]) :- ground(Rs?), integer(I?), ground(T?) |
     I1 := I? + 1,
     guard_roles(Rs?, I1?, T?, R).
-guard_roles([rs(unguarded, _, _, _, _)|Rs], I, T, R?) :-
-    ground(Rs?), integer(I?), ground(T?) |
+guard_roles1(no, Rs, I, T, R?) :- ground(Rs?), integer(I?), ground(T?) |
     I1 := I? + 1,
     guard_roles(Rs?, I1?, T?, R).
 
@@ -199,8 +212,15 @@ latex_guard([I|Is], T, ['\\text{guarded by } \\{'|R?]) :-
 % --- The display of one schema (Section 5.2) -------------------------------
 
 procedure latex_schema(Schema?, Chunks?, Chunks).
-latex_schema(schema(_, Rs), T, ['\\begin{align*}', '&'|R?]) :-
-    ground(Rs?), ground(T?) |
+latex_schema(Sc, T, R?) :- ground(Sc?), ground(T?) |
+    sch_community(Sc?, K),
+    latex_schema1(K?, Sc?, T?, R).
+
+procedure latex_schema1(Ans?, Schema?, Chunks?, Chunks).
+latex_schema1(yes, _, T, R?) :- ground(T?) | not_printed(T?, R).
+latex_schema1(no, Sc, T, ['\\begin{align*}', '&'|R?]) :-
+    ground(Sc?), ground(T?) |
+    sch_roles(Sc?, Rs),
     guard_roles(Rs?, 1, [], G),
     latex_guard(G?, ['\\end{align*}'|T?], R1),
     all_conjs(Rs?, 1, [], Cs),
@@ -211,10 +231,11 @@ latex_schema(schema(_, Rs), T, ['\\begin{align*}', '&'|R?]) :-
 % conditional TeX skips, and the whole output is pasted as it stands.
 procedure latex_contract(Contract?, Chunks?, Chunks).
 latex_contract([], T, T?).
-latex_contract([schema(Nm, Rs)|Ss], T, ['\\iffalse', Nm?, '\\fi'|R?]) :-
-    ground(Nm?), ground(Rs?), ground(Ss?), ground(T?) |
+latex_contract([S|Ss], T, ['\\iffalse', Nm?, '\\fi'|R?]) :-
+    ground(S?), ground(Ss?), ground(T?) |
+    sch_name(S?, Nm),
     latex_contract(Ss?, T?, R1),
-    latex_schema(schema(Nm?, Rs?), R1?, R).
+    latex_schema(S?, R1?, R).
 
 % --- Entry points ----------------------------------------------------------
 % The checker first: a contract that is not syntactically grassroots is not
@@ -233,6 +254,14 @@ emit_schema(found(S), _) :- ground(S?) |
 emit_schema(not_found, Sn) :- ground(Sn?) |
     send_to_user(['% no schema named', Sn?, 'in this contract.']).
 
+% A contract in the language of Appendix B is not compiled here.
+procedure not_compiled_community(Constant?).
+not_compiled_community(Nm) :- ground(Nm?) |
+    send_to_user(['% not compiled:', Nm?,
+                  'has community roles; the compiled form of such a schema is',
+                  'Definition Compilation of Appendix B, which this compiler',
+                  'does not print.']).
+
 procedure not_compiled(Constant?).
 not_compiled(Nm) :- ground(Nm?) |
     send_to_user(['% not compiled:', Nm?,
@@ -243,6 +272,8 @@ compile_on(syntactically_grassroots, _, C) :- ground(C?) |
     latex_contract(C?, [], L),
     send_to_user(L?).
 compile_on(not_grassroots(_), Nm, _) :- ground(Nm?) | not_compiled(Nm?).
+compile_on(conditions_met, Nm, _) :- ground(Nm?) | not_compiled_community(Nm?).
+compile_on(conditions_failed(_), Nm, _) :- ground(Nm?) | not_compiled_community(Nm?).
 
 procedure compile_checked(Constant?, Contract?).
 compile_checked(Nm, C) :- ground(Nm?), ground(C?) |
@@ -259,6 +290,8 @@ compile_s_on(syntactically_grassroots, _, Sn, C) :- ground(Sn?), ground(C?) |
     find_schema(C?, Sn?, S),
     emit_schema(S?, Sn?).
 compile_s_on(not_grassroots(_), Nm, _, _) :- ground(Nm?) | not_compiled(Nm?).
+compile_s_on(conditions_met, Nm, _, _) :- ground(Nm?) | not_compiled_community(Nm?).
+compile_s_on(conditions_failed(_), Nm, _, _) :- ground(Nm?) | not_compiled_community(Nm?).
 
 procedure compile_s_checked(Constant?, Constant?, Contract?).
 compile_s_checked(Nm, Sn, C) :- ground(Nm?), ground(Sn?), ground(C?) |

@@ -1,12 +1,28 @@
 % ---------------------------------------------------------------------------
-% The verdict: def:syntactically-grassroots of /Grassroots/Jurix, Section 3.
-% A contract passes when it has an unobstructed introductory act and satisfies
-% volition; the faults of both halves are reported together.
+% The verdict.
+%
+% A contract whose roles are all party roles is the contract of
+% /Grassroots/Jurix, Section 3, and is decided by
+% def:syntactically-grassroots: it passes when it has an unobstructed
+% introductory act and satisfies volition, and the faults of both halves are
+% reported together.
+%
+% A contract with community roles is a contract of Appendix B, and is decided
+% by the conditions on the text stated there: volition
+% (definition:volition) and cohesion (definition:cohesive), which it meets or
+% fails, together with the predicates that are rooted (definition:rooted) and
+% those of traceable provenance (definition:provenance), which are the two
+% sets rooted_of and traceable_of give.  Openness and closure are proved of a
+% contract in the paper, are not conditions on the text, and are neither
+% decided nor claimed here.
 % ---------------------------------------------------------------------------
 
 imported procedure unobstructed#intro_result(Contract?, Faults).
 imported procedure prov#traceable(Contract?, Preds).
 imported procedure volition#volition_faults(Contract?, Preds?, Faults).
+imported procedure community#conditions(Contract?, Faults).
+imported procedure community#traceable(Contract?, Preds).
+imported procedure community#rooted(Contract?, Preds).
 imported procedure contracts#contract(Constant?, Contract).
 
 procedure verdict(Faults?, Faults?, Verdict).
@@ -15,20 +31,57 @@ verdict([], [F|Fs], not_grassroots([F?|Fs?])).
 verdict([F|Fs], G, not_grassroots(R?)) :- ground(F?), ground(Fs?), ground(G?) |
     faults_app([F?|Fs?], G?, R).
 
-exported procedure check(Contract?, Verdict).
-check(C, V?) :- ground(C?) |
+procedure check_section3(Contract?, Verdict).
+check_section3(C, V?) :- ground(C?) |
     prov # traceable(C?, E),
     unobstructed # intro_result(C?, F1),
     volition # volition_faults(C?, E?, F2),
     verdict(F1?, F2?, V).
+
+procedure community_verdict(Faults?, Verdict).
+community_verdict([], conditions_met).
+community_verdict([F|Fs], conditions_failed([F?|Fs?])).
+
+procedure check_appendix(Contract?, Verdict).
+check_appendix(C, V?) :- ground(C?) |
+    community # conditions(C?, F),
+    community_verdict(F?, V).
+
+procedure check1(Ans?, Contract?, Verdict).
+check1(no, C, V?) :- ground(C?) | check_section3(C?, V).
+check1(yes, C, V?) :- ground(C?) | check_appendix(C?, V).
+
+exported procedure check(Contract?, Verdict).
+check(C, V?) :- ground(C?) |
+    has_community(C?, A),
+    check1(A?, C?, V).
 
 exported procedure check_named(Constant?, Verdict).
 check_named(Nm, V?) :- ground(Nm?) |
     contracts # contract(Nm?, C),
     check(C?, V).
 
-% The predicates of traceable provenance (def:grounded), for inspection.
+% The predicates of traceable provenance, for inspection: def:grounded for a
+% contract of Section 3 and definition:provenance for one with community
+% roles.
+procedure traceable1(Ans?, Contract?, Preds).
+traceable1(no, C, E?) :- ground(C?) | prov # traceable(C?, E).
+traceable1(yes, C, E?) :- ground(C?) | community # traceable(C?, E).
+
 exported procedure traceable_of(Constant?, Preds).
 traceable_of(Nm, E?) :- ground(Nm?) |
     contracts # contract(Nm?, C),
-    prov # traceable(C?, E).
+    has_community(C?, A),
+    traceable1(A?, C?, E).
+
+% The predicates that are rooted (definition:rooted).  Rootedness is a notion
+% of Appendix B; a contract of Section 3 is not asked about it.
+procedure rooted1(Ans?, Contract?, Preds).
+rooted1(no, _, []).
+rooted1(yes, C, E?) :- ground(C?) | community # rooted(C?, E).
+
+exported procedure rooted_of(Constant?, Preds).
+rooted_of(Nm, E?) :- ground(Nm?) |
+    contracts # contract(Nm?, C),
+    has_community(C?, A),
+    rooted1(A?, C?, E).

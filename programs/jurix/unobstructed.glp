@@ -51,9 +51,7 @@ is_intro(schema(_, [rs(_, P1, _, _, _), rs(_, P2, _, _, _)]), B, R?) :-
     atoms_name(P1?, B?, person(1), A1),
     atoms_name(P2?, B?, person(0), A2),
     both_yes(A1?, A2?, R).
-is_intro(schema(_, []), _, no).
-is_intro(schema(_, [_]), _, no).
-is_intro(schema(_, [_, _, _|_]), _, no).
+is_intro(Sc, _, no) :- otherwise, ground(Sc?) | true.
 
 procedure intro_keep(Ans?, Subst?, Substs?, Subst?, Schema?, Substs).
 intro_keep(yes, B, PAs, SB, Sc, [B?|R?]) :-
@@ -86,7 +84,7 @@ intro_bindings(Sc, R?) :- ground(Sc?) |
 
 procedure is_two_guarded(Schema?, Ans).
 is_two_guarded(schema(_, [rs(guarded, _, _, _, _), rs(guarded, _, _, _, _)]), yes).
-is_two_guarded(schema(_, _), no) :- otherwise | true.
+is_two_guarded(Sc, no) :- otherwise, ground(Sc?) | true.
 
 procedure iab1(Ans?, Schema?, Substs).
 iab1(no, _, []).
@@ -107,7 +105,7 @@ procedure unary_supplies(Schema?, GAtom?, Val?, Ans).
 unary_supplies(schema(_, [rs(guarded, P, [], [], [])]), G, V, R?) :-
     ground(P?), ground(G?), ground(V?) |
     some_match(P?, G?, [bind(role(1), V?)], R).
-unary_supplies(schema(_, _), _, _, no) :- otherwise | true.
+unary_supplies(Sc, _, _, no) :- otherwise, ground(Sc?) | true.
 
 procedure obtainable1(Ans?, Contract?, GAtom?, Val?, Ans).
 obtainable1(yes, _, _, _, yes).
@@ -173,16 +171,18 @@ role_blocks1(blocked(Nm, Jx, Psi), _, _, _, _, _, _, blocked(Nm?, Jx?, Psi?)).
 
 procedure role_blocks(RoleSpecs?, Integer?, Schema?, Ctx?, GAtom?, Val?, Block).
 role_blocks([], _, _, _, _, _, clear).
-role_blocks([rs(_, Plus, _, _, _)|Rs], J, Sc, Cx, G, P, R?) :-
-    ground(Plus?), ground(Rs?), integer(J?), ground(Sc?), ground(Cx?),
+role_blocks([RS|Rs], J, Sc, Cx, G, P, R?) :-
+    ground(RS?), ground(Rs?), integer(J?), ground(Sc?), ground(Cx?),
     ground(G?), ground(P?) |
+    rs_add(RS?, Plus),
     plus_blocks(Plus?, Plus?, J?, Sc?, Cx?, G?, P?, B),
     role_blocks1(B?, Rs?, J?, Sc?, Cx?, G?, P?, R).
 
 procedure schema_blocks(Schema?, Ctx?, GAtom?, Val?, Block).
-schema_blocks(schema(Nm, Rs), Cx, G, P, R?) :-
-    ground(Nm?), ground(Rs?), ground(Cx?), ground(G?), ground(P?) |
-    role_blocks(Rs?, 1, schema(Nm?, Rs?), Cx?, G?, P?, R).
+schema_blocks(Sc, Cx, G, P, R?) :-
+    ground(Sc?), ground(Cx?), ground(G?), ground(P?) |
+    sch_roles(Sc?, Rs),
+    role_blocks(Rs?, 1, Sc?, Cx?, G?, P?, R).
 
 procedure blocker1(Block?, Contract?, Ctx?, GAtom?, Val?, Block).
 blocker1(clear, Ss, Cx, G, P, R?) :-
@@ -248,9 +248,12 @@ unob_role1(V, Req, Forb, I, Nm, B, C, Cx, R?) :-
 % the one at I is 3 - I, and clause 2 is decided against the party there.
 procedure unob_roles(RoleSpecs?, Integer?, Constant?, Subst?, Contract?, Integer?, Faults).
 unob_roles([], _, _, _, _, _, []).
-unob_roles([rs(_, _, M, K, N)|Rs], I, Nm, B, C, Fb, R?) :-
-    ground(M?), ground(K?), ground(N?), ground(Rs?), integer(I?),
+unob_roles([RS|Rs], I, Nm, B, C, Fb, R?) :-
+    ground(RS?), ground(Rs?), integer(I?),
     ground(Nm?), ground(B?), ground(C?), integer(Fb?) |
+    rs_del(RS?, M),
+    rs_keep(RS?, K),
+    rs_forb(RS?, N),
     apply_arg(B?, role(I?), V),
     O := 3 - I?,
     apply_arg(B?, role(O?), OV),
@@ -263,9 +266,10 @@ unob_roles([rs(_, _, M, K, N)|Rs], I, Nm, B, C, Fb, R?) :-
 % unobstructed(Sc, B, C, Faults): the faults of def:unobstructed at the
 % introduction B; empty when it satisfies both clauses at every role.
 procedure unobstructed(Schema?, Subst?, Contract?, Faults).
-unobstructed(schema(Nm, Rs), B, C, R?) :-
-    ground(Nm?), ground(Rs?), ground(B?), ground(C?) |
-    fresh_base(schema(Nm?, Rs?), N),
+unobstructed(Sc, B, C, R?) :- ground(Sc?), ground(B?), ground(C?) |
+    sch_name(Sc?, Nm),
+    sch_roles(Sc?, Rs),
+    fresh_base(Sc?, N),
     unob_roles(Rs?, 1, Nm?, B?, C?, N?, R).
 
 % --- def:syntactically-grassroots, first half ------------------------------
