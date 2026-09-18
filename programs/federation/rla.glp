@@ -1,0 +1,350 @@
+% ---------------------------------------------------------------------------
+% The reconfigurable lattice agreement of Figure 2 of
+% [kuznetsov2020reconfigurable], "Reconfigurable universal construction: code
+% for process p", over the row lattice of one community (Definition
+% "Federation Platform" of /Grassroots/GFWC/sections/federation.tex).
+%
+% The local variables of that figure are the fields of Inst: seq_p, v_p, obj_p,
+% T_p and learnLB, with the round of requests in progress and the learnt row
+% L_v the platform keeps beside them.  The line numbers below are that
+% figure's.  A propose is not one step: lines 1 to 8 open it, the wait of line
+% 9 holds it, and lines 10 to 15 either return a state or open the next round.
+% The messages are the cargoes of the platform, each naming its community, one
+% instance of the algorithm running per community.
+% ---------------------------------------------------------------------------
+
+imported procedure lattice#row_join(Row?, Row?, Row).
+imported procedure lattice#row_eq(Row?, Row?, Ans).
+imported procedure lattice#ls_join(LState?, LState?, LState).
+imported procedure lattice#ls_sub(LState?, LState?, Ans).
+imported procedure lattice#config(Row?, Row).
+imported procedure lattice#confs_union(Confs?, Confs?, Confs).
+imported procedure lattice#confs_trim(Confs?, Row?, Confs).
+imported procedure lattice#confs_join(Confs?, Row?, Row).
+imported procedure lattice#confs_has(Confs?, Row?, Ans).
+imported procedure lattice#confs_members(Confs?, Name?, Agents).
+imported procedure lattice#queried(Row?, Confs?, Confs).
+imported procedure lattice#quorum_met(Rat?, Row?, Name?, Agents?, Ans).
+
+% ---------------------------------------------------------------------------
+% The fields of an instance
+% ---------------------------------------------------------------------------
+
+exported procedure inst_name(Inst?, Name).
+inst_name(inst(V, _, _, _, _, _, _, _), V?).
+
+exported procedure inst_seq(Inst?, Integer).
+inst_seq(inst(_, S, _, _, _, _, _, _), S?).
+
+exported procedure inst_state(Inst?, LState).
+inst_state(inst(_, _, S, _, _, _, _, _), S?).
+
+exported procedure inst_obj(Inst?, Row).
+inst_obj(inst(_, _, _, O, _, _, _, _), O?).
+
+exported procedure inst_confs(Inst?, Confs).
+inst_confs(inst(_, _, _, _, T, _, _, _), T?).
+
+exported procedure inst_lb(Inst?, LB).
+inst_lb(inst(_, _, _, _, _, B, _, _), B?).
+
+exported procedure inst_pend(Inst?, Pend).
+inst_pend(inst(_, _, _, _, _, _, P, _), P?).
+
+exported procedure inst_learnt(Inst?, Row).
+inst_learnt(inst(_, _, _, _, _, _, _, L), L?).
+
+exported procedure inst_set_learnt(Inst?, Row?, Inst).
+inst_set_learnt(inst(V, S, VP, O, T, B, P, _), L,
+                inst(V?, S?, VP?, O?, T?, B?, P?, L?)).
+
+procedure set_pend(Inst?, Pend?, Inst).
+set_pend(inst(V, S, VP, O, T, B, _, L), P,
+         inst(V?, S?, VP?, O?, T?, B?, P?, L?)).
+
+procedure clear_pend(Inst?, Inst).
+clear_pend(inst(V, S, VP, O, T, B, _, L),
+           inst(V?, S?, VP?, O?, T?, B?, nopend, L?)).
+
+exported procedure conf_of(LState?, Row).
+conf_of(ls(_, C), C?).
+
+exported procedure obj_of(LState?, Row).
+obj_of(ls(O, _), O?).
+
+% The instance an agent starts at a row it forms: v_p is that row with its
+% configuration, which is the initial one, obj_p is that row, T_p is empty and
+% the row is the learnt row.
+exported procedure inst_form(Name?, Row?, Inst).
+inst_form(V, R, inst(V?, 0, ls(R?, C?), R?, [], bot, nopend, R?)) :-
+    ground(V?), ground(R?) |
+    lattice # config(R?, C).
+
+% The instance an agent starts on first hearing of a community it did not
+% form: the bottom of the lattice, which lines 18 to 20 raise on the first
+% message.
+exported procedure inst_bottom(Name?, Inst).
+inst_bottom(V, inst(V?, 0, ls([], []), [], [], bot, nopend, [])).
+
+% ---------------------------------------------------------------------------
+% Equality of sets of configurations, which lines 10 and 12 compare
+% ---------------------------------------------------------------------------
+
+procedure confs_sub1(Ans?, Confs?, Confs?, Ans).
+confs_sub1(no, _, _, no).
+confs_sub1(yes, Us, T, A?) :- ground(Us?), ground(T?) | confs_sub(Us?, T?, A).
+
+procedure confs_sub(Confs?, Confs?, Ans).
+confs_sub([], _, yes).
+confs_sub([U|Us], T, A?) :- ground(U?), ground(Us?), ground(T?) |
+    lattice # confs_has(T?, U?, B),
+    confs_sub1(B?, Us?, T?, A).
+
+exported procedure confs_eq(Confs?, Confs?, Ans).
+confs_eq(A, B, R?) :- ground(A?), ground(B?) |
+    confs_sub(A?, B?, R1),
+    confs_sub(B?, A?, R2),
+    and_ans(R1?, R2?, R).
+
+% ---------------------------------------------------------------------------
+% Lines 18 to 20: updateState(v, sO, SC)
+% ---------------------------------------------------------------------------
+
+exported procedure update_state(Inst?, Triple?, Inst).
+update_state(inst(V, Sq, VP, Obj, T, B, Pd, L), tri(W, SO, SC), I1?) :-
+    ground(V?), integer(Sq?), ground(VP?), ground(Obj?), ground(T?),
+    ground(B?), ground(Pd?), ground(L?),
+    ground(W?), ground(SO?), ground(SC?) |
+    lattice # ls_join(VP?, W?, VP1),
+    lattice # row_join(Obj?, SO?, Obj1),
+    lattice # confs_union(T?, SC?, T2),
+    update_state1(VP1?, Obj1?, T2?, V?, Sq?, B?, Pd?, L?, I1).
+
+% The learnt row rises with the commit estimate: every committed state is a
+% state some proposal learnt, and the committed states are totally ordered
+% (Theorem 5.1 of [kuznetsov2020reconfigurable]), so the object component of
+% the commit estimate is the greatest row the agent knows to have been learnt
+% at the community.  This is what "the rows learnt at a community are what its
+% holders act on" and "no two holders hold incomparable learnt rows" of
+% subsection:lattice ask of L_v at a holder that did not itself propose.
+procedure update_state1(LState?, Row?, Confs?, Name?, Integer?, LB?, Pend?,
+                        Row?, Inst).
+update_state1(VP1, Obj1, T2, V, Sq, B, Pd, L,
+              inst(V?, Sq?, VP1?, Obj1?, T1?, B?, Pd?, L1?)) :-
+    ground(VP1?), ground(Obj1?), ground(T2?), ground(V?), integer(Sq?),
+    ground(B?), ground(Pd?), ground(L?) |
+    conf_of(VP1?, VC1),
+    lattice # confs_trim(T2?, VC1?, T1),
+    obj_of(VP1?, VO1),
+    lattice # row_join(L?, VO1?, L1).
+
+% ---------------------------------------------------------------------------
+% Lines 4 to 8: a round of requests
+% ---------------------------------------------------------------------------
+% The sequence number is raised, the commit estimate and the candidates are
+% archived, the configurations of line 7 are computed, and one request carries
+% the triple to the members of every one of them.
+
+exported procedure rla_round(Inst?, Inst, Agents, Cargo).
+rla_round(inst(V, Sq, VP, Obj, T, B, _, L), I1?, Rs?, Cg?) :-
+    ground(V?), integer(Sq?), ground(VP?), ground(Obj?), ground(T?),
+    ground(B?), ground(L?) |
+    Sq1 := Sq? + 1,
+    conf_of(VP?, VC),
+    lattice # queried(VC?, T?, Vs),
+    rla_round1(Vs?, V?, Sq1?, VP?, Obj?, T?, B?, L?, I1, Rs, Cg).
+
+procedure rla_round1(Confs?, Name?, Integer?, LState?, Row?, Confs?, LB?,
+                     Row?, Inst, Agents, Cargo).
+rla_round1(Vs, V, Sq1, VP, Obj, T, B, L,
+           inst(V?, Sq1?, VP?, Obj?, T?, B?, pend(Sq1?, VP?, Obj?, T?, Vs?, []), L?),
+           Rs?, cargo(req(Sq1?), V?, tri(VP?, Obj?, T?))) :-
+    ground(Vs?), ground(V?), integer(Sq1?), ground(VP?), ground(Obj?),
+    ground(T?), ground(B?), ground(L?) |
+    lattice # confs_members(Vs?, V?, Rs).
+
+% ---------------------------------------------------------------------------
+% Lines 1 to 8: propose(prop)
+% ---------------------------------------------------------------------------
+% The proposal is the row R with its configuration; line 1 merges it into the
+% tracked states, line 2 clears learnLB, and the first round follows.
+
+procedure prop_state(Inst?, Row?, Row?, Inst).
+prop_state(inst(V, Sq, VP, Obj, T, _, Pd, L), R, C, I1?) :-
+    ground(V?), integer(Sq?), ground(VP?), ground(Obj?), ground(T?),
+    ground(Pd?), ground(L?), ground(R?), ground(C?) |
+    update_state(inst(V?, Sq?, VP?, Obj?, T?, bot, Pd?, L?),
+                 tri(VP?, R?, [C?]), I1).
+
+exported procedure rla_propose(Inst?, Row?, Inst, Agents, Cargo).
+rla_propose(I, R, I2?, Rs?, Cg?) :- ground(I?), ground(R?) |
+    lattice # config(R?, C),
+    prop_state(I?, R?, C?, I1),
+    rla_round(I1?, I2, Rs, Cg).
+
+% ---------------------------------------------------------------------------
+% Line 9: the wait
+% ---------------------------------------------------------------------------
+% Either a greater committed configuration has arrived, or a quorum of every
+% queried configuration has responded with the round's sequence number.
+
+procedure quorums_all1(Ans?, Rat?, Confs?, Name?, Agents?, Ans).
+quorums_all1(no, _, _, _, _, no).
+quorums_all1(yes, Th, Us, V, Rs, A?) :-
+    ground(Th?), ground(Us?), ground(V?), ground(Rs?) |
+    quorums_all(Th?, Us?, V?, Rs?, A).
+
+procedure quorums_all(Rat?, Confs?, Name?, Agents?, Ans).
+quorums_all(_, [], _, _, yes).
+quorums_all(Th, [U|Us], V, Rs, A?) :-
+    ground(Th?), ground(U?), ground(Us?), ground(V?), ground(Rs?) |
+    lattice # quorum_met(Th?, U?, V?, Rs?, B),
+    quorums_all1(B?, Th?, Us?, V?, Rs?, A).
+
+procedure wait_over(Pend?, Rat?, Inst?, Ans).
+wait_over(nopend, _, _, no).
+wait_over(pend(_, OC, _, _, Vs, Rs), Th, I, A?) :-
+    ground(OC?), ground(Vs?), ground(Rs?), ground(Th?), ground(I?) |
+    inst_state(I?, VP),
+    inst_name(I?, V),
+    wait_over1(VP?, OC?, Vs?, Rs?, Th?, V?, A).
+
+procedure wait_over1(LState?, LState?, Confs?, Agents?, Rat?, Name?, Ans).
+wait_over1(VP, OC, Vs, Rs, Th, V, A?) :-
+    ground(VP?), ground(OC?), ground(Vs?), ground(Rs?), ground(Th?), ground(V?) |
+    conf_of(VP?, VC),
+    conf_of(OC?, OCC),
+    lattice # row_eq(VC?, OCC?, Same),
+    not_ans(Same?, Changed),
+    quorums_all(Th?, Vs?, V?, Rs?, All),
+    or_ans(Changed?, All?, A).
+
+exported procedure rla_wait_over(Rat?, Inst?, Ans).
+rla_wait_over(Th, I, A?) :- ground(Th?), ground(I?) |
+    inst_pend(I?, Pd),
+    wait_over(Pd?, Th?, I?, A).
+
+% ---------------------------------------------------------------------------
+% Lines 10 to 15: what follows the wait
+% ---------------------------------------------------------------------------
+% res_learn(I, s, yes) is the return of line 14, whose line 13 broadcasts the
+% committed state; res_learn(I, s, no) is the adoption of line 15; and
+% res_round is the next round.
+
+% (obj_p, the join of the commit estimate's configuration with T_p).
+procedure learn_state(Inst?, LState).
+learn_state(I, ls(Obj?, C?)) :- ground(I?) |
+    inst_obj(I?, Obj),
+    inst_state(I?, VP),
+    inst_confs(I?, T),
+    learn_state1(VP?, T?, C).
+
+procedure learn_state1(LState?, Confs?, Row).
+learn_state1(VP, T, C?) :- ground(VP?), ground(T?) |
+    conf_of(VP?, VC),
+    lattice # confs_join(T?, VC?, C).
+
+% Line 11.
+procedure set_lb1(LB?, Inst?, LState?, Inst).
+set_lb1(bot, inst(V, S, VP, O, T, _, P, L), X,
+        inst(V?, S?, VP?, O?, T?, lb(X?), P?, L?)).
+set_lb1(lb(_), I, _, I?).
+
+procedure set_lb(Inst?, LState?, Inst).
+set_lb(I, X, I1?) :- ground(I?), ground(X?) |
+    inst_lb(I?, B),
+    set_lb1(B?, I?, X?, I1).
+
+% Line 15.
+procedure lb_reached(LB?, Inst?, Ans).
+lb_reached(bot, _, no).
+lb_reached(lb(X), I, A?) :- ground(X?), ground(I?) |
+    inst_state(I?, VP),
+    lattice # ls_sub(X?, VP?, A).
+
+procedure resume15a(Ans?, Inst?, Res).
+resume15a(yes, I, res_learn(I1?, VP?, no)) :- ground(I?) |
+    inst_state(I?, VP),
+    clear_pend(I?, I1).
+resume15a(no, I, res_round(I1?, Rs?, Cg?)) :- ground(I?) |
+    rla_round(I?, I1, Rs, Cg).
+
+procedure resume15(Inst?, Res).
+resume15(I, R?) :- ground(I?) |
+    inst_lb(I?, B),
+    lb_reached(B?, I?, A),
+    resume15a(A?, I?, R).
+
+% Lines 12 to 14.
+procedure resume12(Ans?, LState?, Inst?, Res).
+resume12(yes, X, I, res_learn(I1?, X?, yes)) :- ground(I?) |
+    clear_pend(I?, I1).
+resume12(no, _, I, R?) :- ground(I?) | resume15(I?, R).
+
+% Lines 11 and 12.
+procedure resume11(Row?, Inst?, Res).
+resume11(OObj, I, R?) :- ground(OObj?), ground(I?) |
+    learn_state(I?, X),
+    set_lb(I?, X?, I1),
+    resume11a(OObj?, X?, I1?, R).
+
+procedure resume11a(Row?, LState?, Inst?, Res).
+resume11a(OObj, X, I, R?) :- ground(OObj?), ground(X?), ground(I?) |
+    inst_obj(I?, Obj),
+    lattice # row_eq(OObj?, Obj?, Same),
+    resume12(Same?, X?, I?, R).
+
+% Line 10.
+procedure resume10(Ans?, Row?, Inst?, Res).
+resume10(yes, OObj, I, R?) :- ground(OObj?), ground(I?) | resume11(OObj?, I?, R).
+resume10(no, _, I, R?) :- ground(I?) | resume15(I?, R).
+
+procedure resume(Pend?, Inst?, Res).
+resume(nopend, I, res_learn(I?, ls([], []), no)).
+resume(pend(_, OC, OObj, OT, _, _), I, R?) :-
+    ground(OC?), ground(OObj?), ground(OT?), ground(I?) |
+    inst_state(I?, VP),
+    inst_confs(I?, T),
+    resume1(VP?, OC?, OT?, T?, OObj?, I?, R).
+
+procedure resume1(LState?, LState?, Confs?, Confs?, Row?, Inst?, Res).
+resume1(VP, OC, OT, T, OObj, I, R?) :-
+    ground(VP?), ground(OC?), ground(OT?), ground(T?), ground(OObj?), ground(I?) |
+    conf_of(VP?, VC),
+    conf_of(OC?, OCC),
+    lattice # row_eq(VC?, OCC?, SameC),
+    confs_eq(OT?, T?, SameT),
+    and_ans(SameC?, SameT?, Stable),
+    resume10(Stable?, OObj?, I?, R).
+
+exported procedure rla_resume(Inst?, Res).
+rla_resume(I, R?) :- ground(I?) |
+    inst_pend(I?, Pd),
+    resume(Pd?, I?, R).
+
+% ---------------------------------------------------------------------------
+% Line 16 and the response tally of line 9
+% ---------------------------------------------------------------------------
+
+procedure note_resp1(Pend?, Constant?, Inst?, Inst).
+note_resp1(pend(S, OC, OO, OT, Vs, Rs), Q, I, I1?) :-
+    integer(S?), ground(OC?), ground(OO?), ground(OT?), ground(Vs?),
+    ground(Rs?), ground(Q?), ground(I?) |
+    agents_add(Q?, Rs?, Rs1),
+    set_pend(I?, pend(S?, OC?, OO?, OT?, Vs?, Rs1?), I1).
+note_resp1(nopend, _, I, I?).
+
+procedure note_resp(Pend?, Integer?, Constant?, Inst?, Inst).
+note_resp(nopend, _, _, I, I?).
+note_resp(pend(S, OC, OO, OT, Vs, Rs), Sq, Q, I, I1?) :-
+    S? =:= Sq?, ground(OC?), ground(OO?), ground(OT?), ground(Vs?),
+    ground(Rs?), ground(Q?), ground(I?) |
+    note_resp1(pend(S?, OC?, OO?, OT?, Vs?, Rs?), Q?, I?, I1).
+note_resp(pend(_, _, _, _, _, _), _, _, I, I?) :- otherwise, ground(I?) | true.
+
+% The response of the round's own sequence number is tallied; one of another
+% round is not, its state having been merged by line 16 all the same.
+exported procedure rla_note_resp(Inst?, Integer?, Constant?, Inst).
+rla_note_resp(I, Sq, Q, I1?) :- ground(I?), integer(Sq?), ground(Q?) |
+    inst_pend(I?, Pd),
+    note_resp(Pd?, Sq?, Q?, I?, I1).

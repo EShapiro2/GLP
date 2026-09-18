@@ -128,6 +128,85 @@ RunOut  ::= done(World) ; stuck(Integer, Txn).
 % state(children, parents, members, assembly, date, accounts, open motions)
 State ::= state(Names, Names, Agents, Seats, Integer, Accts, Motions).
 
+% --- The federation platform (Definition "Federation Platform"; Definition
+%     "Row Lattice, Configuration, Quorum") ---------------------------------
+% One instance of the reconfigurable lattice agreement of Figure 2 of
+% [kuznetsov2020reconfigurable] per community, over the row lattice of that
+% community.  A configuration is the set of seat records of a row, so a
+% configuration is itself a row; Confs is a set of configurations, T_p of that
+% figure, and ConfSets a set of those, the subsets line 7 takes.
+Confs    ::= [] ; [Row | Confs].
+ConfSets ::= [] ; [Confs | ConfSets].
+
+% A state of the reconfigurable lattice: the object component and the
+% configuration component.
+LState ::= ls(Row, Row).
+
+% learnLB, bottom until line 11 sets it.
+LB ::= bot ; lb(LState).
+
+% The triple (v_p, obj_p, T_p) that every message of Figure 2 carries.
+Triple ::= tri(LState, Row, Confs).
+
+% A round of requests in progress: its sequence number, the commit estimate
+% and the candidates lines 5 and 6 archive, the configurations line 7 queries
+% and the agents whose responses of that sequence number have arrived.
+Pend ::= nopend ; pend(Integer, LState, Row, Confs, Confs, Agents).
+
+% The variables of Figure 2 for one community at one agent -- seq_p, v_p,
+% obj_p, T_p, learnLB and the round in progress -- with the learnt row L_v the
+% platform keeps beside them.
+Inst  ::= inst(Name, Integer, LState, Row, Confs, LB, Pend, Row).
+Insts ::= [] ; [Inst | Insts].
+
+% The messages of Figure 2 as the cargoes of the platform, each naming the
+% community whose instance it belongs to.
+MsgKind ::= req(Integer) ; resp(Integer) ; commit.
+Cargo   ::= cargo(MsgKind, Name, Triple).
+PMsg    ::= pmsg(Constant, Constant, Cargo).
+PMsgs   ::= [] ; [PMsg | PMsgs].
+
+% A communicating volitional agent: its known peers, its outbox, its inbox,
+% its platform state -- the instances it runs -- its local date, and whether
+% it has crashed.
+Cva     ::= cva(Constant, Agents, PMsgs, PMsgs, Insts, Integer, Ans).
+Cvas    ::= [] ; [Cva | Cvas].
+PWorld  ::= pworld(Cvas).
+
+% The platform transactions: the lines of Figure 2 as they are taken at one
+% agent, with Discover, Communicate and Advance-date of the framework.  A
+% take is a transaction of Definition "Grassroots Federation Implied
+% Transactions" read at the agent's learnt rows: a Form or an Establish forms
+% a community, every other proposes its record.  A settle is not a transaction
+% of its own but the finite sequence of the Communicate, Receive and line 9 to
+% 15 transactions that are enabled, taken until none is; the integer bounds it.
+Step ::= take(Constant, Txn)
+       ; resume_at(Constant, Name)
+       ; receive_at(Constant)
+       ; communicate(Constant)
+       ; discover(Constant, Constant)
+       ; advance_date(Constant, Integer)
+       ; crash(Constant)
+       ; settle(Integer).
+Steps ::= [] ; [Step | Steps].
+
+% What lines 10 to 15 of Figure 2 arrive at: a state returned, the flag
+% saying whether line 13 broadcast it, or the next round with its recipients
+% and its request.
+Res ::= res_learn(Inst, LState, Ans) ; res_round(Inst, Agents, Cargo).
+
+CvaOpt  ::= nocva ; acva(Cva).
+InstOpt ::= noinst ; ainst(Inst).
+Added   ::= noadd ; add(Name, Record) ; formed(Name, Row).
+
+POutcome ::= pok(PWorld) ; pblocked.
+PRunOut  ::= pdone(PWorld) ; pstuck(Integer, Step).
+
+% What a run of the platform is read by: whether it ran to the end, the rows
+% two agents learnt at two communities, the acts decided in them, the states
+% they compute, and the messages left in flight.
+PReport ::= prep(Ans, Row, Row, Arecs, Arecs, State, State, Ints).
+
 % ---------------------------------------------------------------------------
 % Answers
 % ---------------------------------------------------------------------------
@@ -333,3 +412,40 @@ rat_cmp(A, B, O?) :- rat # rat_cmp(A?, B?, O).
 imported procedure rat#rat_floor(Rat?, Integer).
 exported procedure rat_floor(Rat?, Integer).
 rat_floor(A, F?) :- rat # rat_floor(A?, F).
+
+% --- The row lattice and its quorums (Definition "Row Lattice,
+%     Configuration, Quorum") ----------------------------------------------
+
+imported procedure lattice#row_join(Row?, Row?, Row).
+exported procedure row_join(Row?, Row?, Row).
+row_join(A, B, R?) :- lattice # row_join(A?, B?, R).
+
+imported procedure lattice#row_sub(Row?, Row?, Ans).
+exported procedure row_sub(Row?, Row?, Ans).
+row_sub(A, B, R?) :- lattice # row_sub(A?, B?, R).
+
+imported procedure lattice#config(Row?, Row).
+exported procedure config(Row?, Row).
+config(R, C?) :- lattice # config(R?, C).
+
+imported procedure lattice#config_members(Row?, Name?, Agents).
+exported procedure config_members(Row?, Name?, Agents).
+config_members(C, V, A?) :- lattice # config_members(C?, V?, A).
+
+imported procedure lattice#quorum_met(Rat?, Row?, Name?, Agents?, Ans).
+exported procedure quorum_met(Rat?, Row?, Name?, Agents?, Ans).
+quorum_met(T, C, V, Qs, A?) :- lattice # quorum_met(T?, C?, V?, Qs?, A).
+
+imported procedure lattice#queried(Row?, Confs?, Confs).
+exported procedure queried(Row?, Confs?, Confs).
+queried(C, T, V?) :- lattice # queried(C?, T?, V).
+
+% --- The federation platform (Definition "Federation Platform") ------------
+
+imported procedure runs#prun(Constant?, PRunOut).
+exported procedure prun(Constant?, PRunOut).
+prun(Nm, R?) :- runs # prun(Nm?, R).
+
+imported procedure runs#prun_report(Constant?, Constant?, Name?, Constant?, Name?, PReport).
+exported procedure prun_report(Constant?, Constant?, Name?, Constant?, Name?, PReport).
+prun_report(Nm, P1, V1, P2, V2, R?) :- runs # prun_report(Nm?, P1?, V1?, P2?, V2?, R).
