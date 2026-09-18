@@ -76,6 +76,38 @@ String formatTerm(GTerm t) {
   }
 }
 
+/// The scalars of a term, in order — a compound value presented as its parts
+/// rather than as its term.
+///
+/// A card's context may carry a value that is not a scalar: the sovereign
+/// mini-app's swap card carries a `Lot`, `lot(Issuer, Denomination, Maturity,
+/// K)`, and its transfer card a `Stream(Bond)`. The app's construct family has
+/// the text, string, number, date and peer widgets and no widget of a lot or
+/// of a list of bonds, and vGLP's display declarations declare no `context(Y,
+/// W)` item, so the default display determines none. The mediator therefore
+/// flattens, as `shapiro2026volition` Section 7 already records for the forms
+/// — it "flattens the agent's offer back to scalars for the card" (IGLP,
+/// 2026-09-18): a lot is presented as its four scalars, and a list of lots or
+/// bonds as one such group per element. No widget is added to the family and
+/// no declaration changes.
+///
+/// [scalarGroups] is the grouping: one group per element of a list, one group
+/// for anything else. [scalarsOf] is the group — the leaves of the term in
+/// order, the functors dropped.
+List<List<String>> scalarGroups(GTerm t) => switch (t) {
+      GList(:final items) => [for (final i in items) ...scalarGroups(i)],
+      _ => [scalarsOf(t)],
+    };
+
+/// The scalar leaves of a term, in order.
+List<String> scalarsOf(GTerm t) => switch (t) {
+      GAtom(:final name) => [name],
+      GInt(:final value) => ['$value'],
+      GString(:final value) => [value],
+      GStruct(:final args) => [for (final a in args) ...scalarsOf(a)],
+      GList(:final items) => [for (final i in items) ...scalarsOf(i)],
+    };
+
 /// Parse one ground term from [s], requiring the whole string to be consumed.
 ///
 /// Returns `null` when [s] is not a single well-formed ground term — e.g. log

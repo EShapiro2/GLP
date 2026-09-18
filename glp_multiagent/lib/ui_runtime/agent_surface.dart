@@ -265,6 +265,13 @@ class _AgentSurfaceState extends State<AgentSurface> {
   /// One inbox card of a compiled vGLP program: the context values in order —
   /// the default display, a card having no declaration that says how its
   /// context looks — and one button per open ask.
+  ///
+  /// A context value that is not a scalar is shown as its scalars and not as
+  /// its term (see [scalarGroups]): a lot as its four, a list of lots or bonds
+  /// as one such group per element. vGLP's Definition "Informed Offer"
+  /// requires the card to carry the content of the transaction its reduction
+  /// carries out — for a swap, what is wanted and what is offered — so the
+  /// card must show those values, and the term is not the value.
   Widget _clauseCard(InboxCard card) {
     return Card(
       margin: const EdgeInsets.fromLTRB(12, 6, 12, 6),
@@ -280,24 +287,7 @@ class _AgentSurfaceState extends State<AgentSurface> {
                   style: const TextStyle(
                       fontWeight: FontWeight.bold, fontSize: 15)),
             for (final name in card.desc.args)
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 2),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    SizedBox(
-                        width: 74,
-                        child: Text(name,
-                            style: const TextStyle(
-                                fontSize: 13,
-                                color: Colors.black54,
-                                fontWeight: FontWeight.w600))),
-                    Expanded(
-                        child: Text(formatTerm(card.fields[name]!),
-                            style: const TextStyle(fontSize: 13))),
-                  ],
-                ),
-              ),
+              ..._contextRows(name, card.fields[name]!),
             const SizedBox(height: 6),
             Row(
               mainAxisAlignment: MainAxisAlignment.end,
@@ -319,6 +309,41 @@ class _AgentSurfaceState extends State<AgentSurface> {
         ),
       ),
     );
+  }
+
+  /// One context value of a card, as its scalars: one row per group, the
+  /// argument's name against the first of them and the rows after it indented
+  /// under it (a list of bonds is one row per bond).
+  List<Widget> _contextRows(String name, GTerm value) {
+    final groups = scalarGroups(value);
+    return [
+      for (var i = 0; i < groups.length; i++)
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: 2),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              SizedBox(
+                  width: 74,
+                  child: Text(i == 0 ? name : '',
+                      style: const TextStyle(
+                          fontSize: 13,
+                          color: Colors.black54,
+                          fontWeight: FontWeight.w600))),
+              Expanded(
+                child: Wrap(
+                  spacing: 10,
+                  runSpacing: 2,
+                  children: [
+                    for (final s in groups[i])
+                      Text(s, style: const TextStyle(fontSize: 13)),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+    ];
   }
 
   /// One declared view. A balances view is its rows, key and amount; a list
