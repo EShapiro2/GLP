@@ -13,6 +13,7 @@ import 'dart:isolate';
 import 'dart:typed_data';
 
 import 'package:glp_runtime/engine/glp_engine.dart';
+import 'package:glp_runtime/analysis/type_checker/type_ast.dart' show TypeEnvironment;
 import 'package:glp_runtime/bytecode/runner.dart';
 import 'package:glp_runtime/engine_v2/interp.dart';
 import 'package:glp_runtime/runtime/terms.dart';
@@ -126,6 +127,7 @@ class AgentConfig {
   final List<String>? sharedSources; // Optional shared code files (e.g., social_agent.glp)
   final String? programDir; // Optional program directory for static linking
   final String rootSelfGlpPath; // Absolute path to programs/self.glp
+  final String? bootPath; // The boot file's path, for its own self.glp chain
   final SendPort mainPort;
   final SendPort? uiPort; // null for headless
   final TraceConfig traceConfig;
@@ -146,6 +148,7 @@ class AgentConfig {
     this.sharedSources,
     this.programDir,
     required this.rootSelfGlpPath,
+    this.bootPath,
     required this.mainPort,
     required this.keyPair,
     required this.directory,
@@ -348,6 +351,7 @@ class IsolateManager {
         sharedSources: config.sharedSources,
         programDir: config.programDir,
         rootSelfGlpPath: config.rootSelfGlpPath,
+        bootPath: config.bootPath,
         mainPort: _mainPort.sendPort,
         keyPair: keyPairs[directive.agentId]!,
         directory: _router.directory,
@@ -488,21 +492,33 @@ void _agentIsolateEntry(AgentConfig config) async {
   // A load/type-check failure here (e.g. UnknownTypeError) must be reported to
   // the manager, not left to kill the isolate silently — otherwise boot() hangs
   // forever waiting for Ready (Issue 19).
+  // Every source handed over here is loaded on top of what the engine already
+  // holds and is checked in that scope --- the linked program, the kernels
+  // enableMadGLP loaded, and the boot file's own ancestor chain where its path
+  // is known (IGLP, Implementation Notes, "The scope a boot source is checked
+  // in"). Under the synthetic names alone the check saw the bare root scope and
+  // refused send_to_net/1, agent/7 and ui_mediator/5, which the engine resolves.
+  TypeEnvironment bootScope() => config.bootPath != null
+      ? engine.scopeFor(config.bootPath!)
+      : engine.scope;
   try {
     if (config.programDir != null) {
       // Program-directory mode: static-link the program, then load boot source on top.
       engine.loadProgram(config.programDir!);
-      engine.loadSource(config.programSource, filename: 'program');
+      engine.loadSource(config.programSource,
+          filename: 'program', scope: bootScope());
       log('Program loaded via program linking (${config.programDir}) + boot source');
     } else {
       // Legacy mode: load shared source files and boot program sequentially.
       // Each file is loaded separately to preserve per-file -mode() directives.
       if (config.sharedSources != null) {
         for (var i = 0; i < config.sharedSources!.length; i++) {
-          engine.loadSource(config.sharedSources![i], filename: 'shared_$i');
+          engine.loadSource(config.sharedSources![i],
+              filename: 'shared_$i', scope: engine.scope);
         }
       }
-      engine.loadSource(config.programSource, filename: 'program');
+      engine.loadSource(config.programSource,
+          filename: 'program', scope: bootScope());
       log('Program loaded via GlpEngine (stdlib + madPredicates + user code)');
     }
   } catch (e, st) {
