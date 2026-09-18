@@ -41,19 +41,14 @@ display msg(agent, person, holdings(Lots)) : panel(coins), view(balances).
 
 procedure respond_swap(SwapOffer?, SwapResponse, Stream(UserInMsg)).
 
-%% Decline: the offered coins go back to the proposer.
-*(no, From?, Want?, Offered?)
-respond_swap(offer(From, Want, Offered), Resp?, [decline_swap(From?, Offered?, Resp)]) :-
-    ground(From?), ground(Want?), ground(Offered?) | true.
-
 %% Accept: the agent gives the wanted coins and takes the offered ones,
-%% declining itself when it does not hold the wanted coins.  The person's
-%% decline is the sibling clause above, a volition-guarded clause of its own,
-%% and this clause has no else-branch: the card carries the one Decline.
+%% declining itself when it does not hold the wanted coins.  The else-branch is
+%% the person's decline.
 *(yes, From?, Want?, Offered?)
 respond_swap(offer(From, Want, Offered), Resp?, Ans?) :-
     ground(From?), ground(Want?), ground(Offered?) |
-    accept_answer(From?, Want?, Offered?, Resp, Ans).
+    accept_answer(From?, Want?, Offered?, Resp, Ans)
+ *(no) decline_answer(From?, Offered?, Resp, Ans).
 
 %% =============================================================================
 %% The agent
