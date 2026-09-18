@@ -183,6 +183,10 @@ void main() {
         {'alice': '2'});
     expect(find.text('MINT'), findsNothing); // the form is not the panel
     expect(find.text('BALANCES'), findsOneWidget);
+    // The default display shows the message as its scalars, never as a term
+    // (vGLP Section 6.3).
+    expect(find.text('SCREEN'), findsOneWidget);
+    expect(find.text('minted(2)'), findsNothing);
     await _shot(tester, '/private/tmp/coins-minted.png');
 
     // The question stands again: answering consumed one ask and the goal posed
@@ -206,6 +210,9 @@ void main() {
     expect(card.asks.keys.toSet(), {'respond_swap_1'});
     expect(card.itemKey, 'bob');
     expect(formatTerm(card.fields['Want']!), 'lot(bob, 2)');
+    // The card shows the lot as its scalars, never as its term.
+    expect(find.text('lot(bob, 2)'), findsNothing);
+    expect(find.text('swap_done(bob)'), findsNothing);
     expect(find.widgetWithText(ElevatedButton, 'Accept'), findsOneWidget);
     expect(find.widgetWithText(OutlinedButton, 'Decline'), findsOneWidget);
     await _shot(tester, '/private/tmp/coins-card.png');

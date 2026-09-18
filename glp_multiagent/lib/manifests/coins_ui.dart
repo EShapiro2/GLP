@@ -18,8 +18,6 @@
 ///     field(Friend, peer), field(Amount, number), persistent.
 /// display agent *(Friend, WantCoin) : panel(coins), label("Redeem"),
 ///     field(Friend, peer), field(WantCoin, peer), persistent.
-/// display respond_swap *(no, From?, Want?, Offered?) : panel(coins),
-///     label("Decline"), transient.
 /// display respond_swap *(yes, From?, Want?, Offered?) : panel(coins),
 ///     label("Accept"), transient.
 /// display msg(agent, person, holdings(Lots)) : panel(coins), view(balances).

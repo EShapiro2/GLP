@@ -549,10 +549,13 @@ String chatAtom(String raw) {
   return s;
 }
 
-/// Substitute `{name}` placeholders in a template with formatted field values.
+/// Substitute `{name}` placeholders in a template with the field values as
+/// the person reads them — the default display of each ([displayText]), so a
+/// compound value substituted into a title or a notice is its scalars and
+/// never its term.
 String renderTemplate(String template, Map<String, GTerm> fields) {
   return template.replaceAllMapped(RegExp(r'\{(\w+)\}'), (m) {
     final t = fields[m.group(1)];
-    return t == null ? m.group(0)! : formatTerm(t);
+    return t == null ? m.group(0)! : displayText(t);
   });
 }
