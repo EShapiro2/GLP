@@ -12,11 +12,12 @@ community roles.  Nothing of either is restated here or in the code: every
 procedure names the definition it decides, and the definition is read in the
 paper.  A contract is syntactically grassroots
 (`def:syntactically-grassroots`) when it has an unobstructed
-(`def:unobstructed`) introductory act (`def:introduction`) and satisfies volition
-(`def:volition`), which rests on traceable provenance (`def:grounded`).  Section
-7 certifies the two contracts of Sections 3.3 and 3.4 by hand; the checker
-returns the same verdict for both, and the same sets of predicates of traceable
-provenance.  The compiler is Section 5: a schema compiles to the assignment,
+(`def:unobstructed`) introductory act (`def:introduction`), when the set of
+predicates occurring in it has traceable provenance (`def:grounded`), and when
+it satisfies volition (`def:volition`), which rests on traceable provenance
+too.  Section 7 certifies the two contracts of Sections 3.3 and 3.4 by hand;
+the checker returns the same verdict for both, and the same sets of predicates
+of traceable provenance.  The compiler is Section 5: a schema compiles to the assignment,
 the proviso and the guard of `def:compile`, and Section 5.2 is the form
 printed.  Section 5 defines the compilation for syntactically grassroots
 contracts, so the compiler runs the checker first and compiles nothing for a
@@ -46,6 +47,10 @@ and then a goal:
     ✓ Loaded program: /path/to/GLP/programs/jurix/
     GLP> check_named(social_graph, V).
     V = syntactically_grassroots
+
+The REPL stops a goal at 10000 reductions unless told otherwise, and CSSN's
+eighteen schemas take more: enter `:limit 1000000` before the goal, as the
+test script does.
 
 The tests are `bash programs/jurix/test_jurix.sh` from the repository root.
 
@@ -89,9 +94,10 @@ signature.  It loads and runs as before.
 | `compile_schema(Name, Schema)` | prints the compiled form of one schema |
 
 The names are `social_graph` and `currency`, the two the paper works through;
-`sg_chain`, which certifies and exercises volition above arity two; and the five
-broken contracts `sg_unguarded`, `sg_imposed`, `sg_gossip`, `sg_chain_cut`,
-`cur_no_mint`, `cur_loose_mint`.  `federation` is GFWC's five schemas
+`sg_chain`, which certifies and exercises volition above arity two; and the
+seven broken contracts `sg_unguarded`, `sg_imposed`, `sg_gossip`,
+`sg_chain_cut`, `sg_svar_loose`, `cur_no_mint`, `cur_loose_mint`.
+`federation` is GFWC's five schemas
 (`/Grassroots/GFWC`, `sections/act-schemas.tex`), and `gf_unrooted`,
 `gf_untraceable`, `gf_uncohesive` and `gf_novolition` are it broken in one place
 each, one per condition of Appendix B.  Any other name is the empty contract.
@@ -102,12 +108,18 @@ A verdict on a contract of Section 3 is `syntactically_grassroots` or
     no_introductory_act
     obstructed(Schema, Role, Atom, unobtainable)
     obstructed(Schema, Role, Atom, blocked_by(Schema, Role, Atom))
+    untraceable(Predicates)
     volition(Schema, Role, Role)
 
+in the order of the three conjuncts of `def:syntactically-grassroots`.
 `unobtainable` is clause 1 of `def:unobstructed` and `blocked_by` is clause 2,
-naming the schema, role and added atom that obstruct.  A `volition` fault names
-two roles the role graph does not join — the first role and the first one it
-does not reach — so at arity two it names the pair that has no edge.
+naming the schema, role and added atom that obstruct.  `untraceable` names the
+predicates of the contract outside the largest set having traceable provenance,
+the set `traceable_of` gives; the verdict is over the whole set and the faults
+both name what is missing and, through `traceable_of`, what has it.  A
+`volition` fault names two roles the role graph does not join — the first role
+and the first one it does not reach — so at arity two it names the pair that
+has no edge.
 
 A verdict on a contract with community roles is `conditions_met` or
 `conditions_failed(Faults)`, where each fault is a `volition(Schema, Role,

@@ -5,7 +5,8 @@
 #   bash programs/jurix/test_jurix.sh
 #
 # The two contracts of /Grassroots/Jurix Sections 3.3 and 3.4, which Section 7
-# certifies by hand, and four contracts broken in one place each; then the
+# certifies by hand, and contracts broken in one place each, one per way of
+# failing the three conjuncts of def:syntactically-grassroots; then the
 # compilation of Section 5, against the two displays of Section 5.2; then the
 # contract of a grassroots federation, /Grassroots/GFWC sections/act-schemas.tex,
 # against the four conditions of Appendix B of /Grassroots/Jurix, and four
@@ -62,7 +63,10 @@ compiled() { # compiled <contract> <schema> ; the display, whitespace removed
 run() {     # run <goal> ... ; loads the program, then posts each goal
   local goals=""
   for g in "$@"; do goals="$goals$g\n"; done
-  (cd "$GLP_DIR/glp_runtime" && printf "%b" "$JURIX\n$goals:quit\n" | bin/glpc 2>&1)
+  # The REPL's default reduction limit is 10000, which CSSN's eighteen
+  # schemas exceed; :limit is the REPL's knob for it.
+  (cd "$GLP_DIR/glp_runtime" \
+     && printf "%b" "$JURIX\n:limit 1000000\n$goals:quit\n" | bin/glpc 2>&1)
 }
 
 echo "=== jurix: the syntactically-grassroots checker ==="
@@ -128,13 +132,26 @@ check "no mint: the swap is unobtainable at role 1" \
 check "no mint: the swap is unobtainable at role 2" \
       "obstructed(swap, 2, atom(coin, [pvar(v)]), unobtainable)" "$out"
 
-# Minting a coin of another party's issue breaks provenance, and the acts
+# Minting a coin of another party's issue breaks provenance, which the verdict
+# names as the second conjunct of def:syntactically-grassroots, and the acts
 # guarded at one role that rest on it then fail volition.
 out=$(run 'check_named(cur_loose_mint, V).' 'traceable_of(cur_loose_mint, E).')
 check "loose mint: nothing has traceable provenance" "E = []" "$out"
+check "loose mint: the verdict names the coin as untraceable" \
+      "untraceable([coin])" "$out"
 check "loose mint: pay fails volition" "volition(pay, 1, 2)" "$out"
 check "loose mint: redeem fails volition" "volition(redeem, 1, 2)" "$out"
 check_not "loose mint: the swap is still unobstructed" "obstructed(swap" "$out"
+
+# A speech act carried into an item from a required atom that has no
+# traceable provenance: the clause of def:grounded on speech-act variables
+# drops item, and sent after it, while befriend stays unobstructed and every
+# schema satisfies volition.  The second conjunct alone rejects the contract.
+out=$(run 'check_named(sg_svar_loose, V).' 'traceable_of(sg_svar_loose, E).')
+check "a speech act from an untraceable record: only friend keeps provenance" \
+      "E = [friend]" "$out"
+check "and the verdict is the second conjunct alone" \
+      "V = not_grassroots([untraceable([item, sent, tagged])])" "$out"
 
 # CSSN's child-safe contract, eighteen schemas, transcribed from their entries
 # of 2026-08-15 20:35 and 21:40 and 2026-08-16 12:37 UTC in
