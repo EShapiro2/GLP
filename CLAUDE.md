@@ -1,13 +1,17 @@
 # Instructions for Claude Code (GLP)
 
-Read `/Grassroots/docs/claude.md` first; every rule there applies.  This file is Grassroots Integration's and carries what every Code session in this repository needs: the startup sequence and every GLP and Dart rule.  Working directory `/Users/udi/Grassroots/GLP` for Integration's Code session; `/Users/udi/Grassroots/GLP-worktrees/<project>` for every other.
+Read `/Grassroots/docs/claude.md` first; every rule there applies.  This file is Grassroots Integration's and carries what everyone who writes code in this repository needs: the startup sequence and every GLP and Dart rule.  Two read it: Integration Code, whose working directory is `/Users/udi/Grassroots/GLP`, and the subagent it spawns for a task, whose working directory is the `/Users/udi/Grassroots/GLP-worktrees/<project>` its brief names.
 
-## Read at session start, and nothing more
+## Read at the start, and nothing more
+
+Integration Code, at session start:
 
 1. `/Grassroots/docs/claude.md`.
-2. Your own project's `CLAUDE.md`.
+2. `/Grassroots/Integration/CLAUDE.md`.
 3. This file.
-4. `to_all_inbox.md`, then your own inbox from your last receipt forward.
+4. `to_all_inbox.md`, then `Integration_inbox.md` from its last receipt forward --- and again between tasks, being the one worker that does not wait to be told (`claude.md`, "Mail").
+
+A subagent, at the start of its task: the same 1 to 3 with the owning project's `CLAUDE.md` at 2, then the sections of the owning paper its task names.  It reads no inbox and leaves no receipt, having none.
 
 On demand, named by the task: `docs/DISCIPLINE.md` (development discipline), `docs/typed-glp-manual.md` (typed GLP), `docs/glp-cheat-sheet.md` ("GLP is NOT Prolog"), Coordination Appendix B (ownership), the reference specifications listed at the end.
 
@@ -17,13 +21,15 @@ Ownership is Coordination Appendix B, `/Grassroots/Coordination/sections/B-code-
 
 ## Branches, worktrees and merges
 
-🔴 **Each Code session works on its own branch, in its own worktree; only Integration merges to `main`** (Udi, 2026-09-16).
+🔴 **A task runs in its owner's worktree, on its owner's branch, carried out by a subagent of Integration Code** (Udi, 2026-09-17).  `claude.md` "Sessions" and "Code" define the arrangement; this section is how it is worked in this repository.  You are that subagent if your brief named a worktree; you are Integration Code if it did not.
 
-- The clone at `/Users/udi/Grassroots/GLP` stays on `main` and is Integration's Code session's; no other session edits, commits or runs in it.
-- Integration creates, once per project, `git -C /Users/udi/Grassroots/GLP worktree add /Users/udi/Grassroots/GLP-worktrees/<project> -b <project>`, and tells the project in its inbox.  A project's Code session works only in its worktree: `cd /Users/udi/Grassroots/GLP-worktrees/<project>`.
-- On a branch: `git add <files> && git commit -m "<message>" -- <files> && git push -u origin <project>`.  Single-line commit messages.  Never `git add -A`.
-- When a task is done: mail Integration in `Integration_inbox.md` — branch, commit, what it changes, which tests cover it, the suite result on the branch.  Integration merges into `main`, runs the full suite on `main`, pushes, and answers in your inbox.  A merge that fails the suite is not pushed; you are told what failed and repair it on your branch.
-- Before the next task: `git merge main` on your branch (after `git -C /Users/udi/Grassroots/GLP pull` by Integration; a worktree shares the clone's `.git`, so `main` is local).  On a conflict, STOP and report to Integration.
+- The clone at `/Users/udi/Grassroots/GLP` stays on `main` and is Integration Code's alone.  No subagent edits, commits or runs in it.
+- One worktree per project that owns code, made once by Integration Code: `git -C /Users/udi/Grassroots/GLP worktree add /Users/udi/Grassroots/GLP-worktrees/<project> -b <project>`.  A subagent works only in the one its brief names: `cd /Users/udi/Grassroots/GLP-worktrees/<project>`.
+- 🔴 **The subagent reads the owning paper named in its task and codes from it.**  Integration Code does not summarise the paper for it and does not specify: the owner's Cowork wrote the task from the paper, and the paper is the specification.
+- 🔴 **It edits only what its owner owns** (Coordination Appendix B), commits path-limited on the branch --- `git add <files> && git commit -m "<message>" -- <files>` --- and never `git add -A`.  Single-line commit messages.  `git merge main` first, so the branch carries the current gate.
+- 🔴 **It runs the tests its task names, and not the full suite.**  The full suite is run only by Integration Code, on `main`, one run at a time: two suites at once contend on the Dart build lock and neither is a gate.
+- 🔴 **A question or a paper fault ends the subagent.**  It reports and stops; Integration Code posts the question in the owner's inbox and spawns again when the answer is there.  A workaround in code is never the answer to a fault in the paper.
+- When the branch is ready, Integration Code merges it into `main`, runs the full suite there, pushes, and answers the owner in its inbox.  A merge that fails the suite is not pushed.  On a merge conflict, STOP and report.
 - An owner may add its own test block to `test/run_all_tests.sh` on its branch (Udi, 2026-09-16).  The harness machinery is Integration's and changes only by request to it: the gates, Section Q, `KNOWN_RED`, the runner guards and the asset step.  Two owners adding blocks to that file will conflict, so merge `main` into your branch before you write one.
 - Never `git reset`, `git revert`, `git restore` or `git checkout -- <file>` on another session's work; never rewrite history on `main`.
 - Generated files are gitignored and rebuilt by their script, never committed.
