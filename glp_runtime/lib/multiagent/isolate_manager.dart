@@ -82,6 +82,15 @@ class AgentIdle extends IsolateMessage {
   AgentIdle(this.agentId);
 }
 
+/// One line an agent sent to its person (`send_to_user/1`), forwarded to the
+/// manager so a harness can assert what a play produced rather than that it
+/// settled. Until 2026-09-18 the line was only printed inside the isolate.
+class AgentOutput extends IsolateMessage {
+  final String agentId;
+  final String line;
+  AgentOutput(this.agentId, this.line);
+}
+
 /// Sent by an agent isolate when handling a message throws.
 ///
 /// Without this an uncaught exception ends the isolate silently: the agent stops
@@ -204,6 +213,13 @@ class IsolateManager {
 
   /// What the agents have thrown, if anything.
   List<String> get faults => List.unmodifiable(_faults);
+
+  /// What each agent has sent to its person, in order of arrival.
+  final Map<String, List<String>> _outputs = {};
+
+  /// The lines [agentId] sent to its person so far (see [AgentOutput]).
+  List<String> outputOf(String agentId) =>
+      List.unmodifiable(_outputs[agentId] ?? const []);
 
   /// Whether every agent has finished every unit of work handed to it.
   ///
@@ -441,6 +457,9 @@ class IsolateManager {
     } else if (msg is AgentFaulted) {
       _recordFault(msg.agentId, msg.error);
 
+    } else if (msg is AgentOutput) {
+      _outputs.putIfAbsent(msg.agentId, () => []).add(msg.line);
+
     } else if (msg is RouterSend) {
       if (_traceConfig.glp && _isTracingAgent(msg.fromId)) {
         print('[${msg.fromId}] → send to ${msg.toId}');
@@ -622,8 +641,12 @@ void _agentIsolateEntry(AgentConfig config) async {
   args[arity - 1] = VarRef(netInArgReader);
 
   // What the agent sends to its person is printed under the agent's name, so
-  // a harness reading the process's output can tell whose line it is.
-  runtime.outputCallback = (text) => print('[$agentId] $text');
+  // a harness reading the process's output can tell whose line it is, and is
+  // forwarded to the manager, so a harness can assert it (IsolateManager.outputOf).
+  runtime.outputCallback = (text) {
+    print('[$agentId] $text');
+    config.mainPort.send(AgentOutput(agentId, text));
+  };
 
   // Spawn main goal. It carries the program's module value, as a REPL goal
   // does: self_module/1 returns it, sign/3 puts its source identity into a
