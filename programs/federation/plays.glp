@@ -3,16 +3,21 @@
 %
 % join_fig2 is the Join of Figure 2 of /Grassroots/GFWC/sections/introduction.tex
 % at layer (5), driven end to end by the transactions: two Forms, a Federate of
-% one of them --- its Move, its Will and its Establish --- the Moves at both
-% communities, the Wills of a supermajority of each electorate, and the Relays
-% between the two.  leave_after runs the same up to the point where the Join
-% stands decided at f alone, moves a Leave there, has it willed, and only then
-% relays the Join to b: the Leave is decided on a motion moved before the Join
-% was decided there, and its greater epoch carries the pair, so the edge is
-% gone at both.  report_raise carries a child's membership to its parent and
-% raises the parent on it.  maintain_c and maintain_g are rows a Maintain is
-% taken at: the first seats the member of a child of least ratio, the second
-% unseats a seat whose term has passed.
+% one of them --- its Move, its Will and its Establish --- the Move at g, its
+% Relay to f, the Move at f, which asks for it, the Wills of a supermajority of
+% each electorate, and the remaining Relays between the two.  leave_after runs
+% the same up to the point where the Join stands decided at f alone, moves a
+% Leave there, has it willed, and only then relays the Join to b: the Leave is
+% decided on a motion moved before the Join was decided there, and its greater
+% epoch carries the pair, so the edge is gone at both.  report_raise carries a
+% child's membership to its parent and raises the parent on it.  join_cycle
+% has a community move a Join of which it is the child on a community that
+% descends from it, and relay the motion there: the Move at the parent is
+% refused, the descendants the motion carries holding it.  report_chain
+% carries the report of a community to its parent and then the parent's to
+% the grandparent, whose descendants then hold both.  maintain_c and
+% maintain_g are rows a Maintain is taken at: the first seats the member of a
+% child of least ratio, the second unseats a seat whose term has passed.
 % ---------------------------------------------------------------------------
 
 imported procedure txn#apply_all(Params?, Txns?, World?, RunOut).
@@ -25,71 +30,107 @@ exported procedure txns(Constant?, Txns).
 txns(join_fig2,
     [form(alice),
      form(bob),
-     move(federate(name(alice, [])), name(alice, []), alice),
-     will_on(alice, motion(federate(name(alice, [])), name(alice, []), [alice], 0), name(alice, [])),
-     establish(name(alice, []), 0, alice),
-     move(join(name(alice, [1]), name(bob, [])), name(alice, [1]), alice),
-     move(join(name(alice, [1]), name(bob, [])), name(bob, []), bob),
-     will_on(alice, motion(join(name(alice, [1]), name(bob, [])), name(alice, [1]), [alice], 0), name(alice, [1])),
-     will_on(bob, motion(join(name(alice, [1]), name(bob, [])), name(bob, []), [bob], 0), name(bob, [])),
-     relay(moved(motion(join(name(alice, [1]), name(bob, [])), name(bob, []), [bob], 0)), name(bob, []), name(alice, [1]), bob),
-     relay(will(bob, motion(join(name(alice, [1]), name(bob, [])), name(bob, []), [bob], 0)), name(bob, []), name(alice, [1]), bob),
-     relay(moved(motion(join(name(alice, [1]), name(bob, [])), name(alice, [1]), [alice], 0)), name(alice, [1]), name(bob, []), alice),
-     relay(will(alice, motion(join(name(alice, [1]), name(bob, [])), name(alice, [1]), [alice], 0)), name(alice, [1]), name(bob, []), alice)]).
+     move(federate(name(alice, []), y1), name(alice, []), alice),
+     will_on(alice, motion(federate(name(alice, []), y1), name(alice, []), [alice], [], 0), name(alice, [])),
+     establish(name(alice, []), y1, alice),
+     move(join(name(alice, [y1]), name(bob, [])), name(bob, []), bob),
+     relay(moved(motion(join(name(alice, [y1]), name(bob, [])), name(bob, []), [bob], [], 0)), name(bob, []), name(alice, [y1]), bob, alice),
+     move(join(name(alice, [y1]), name(bob, [])), name(alice, [y1]), alice),
+     will_on(alice, motion(join(name(alice, [y1]), name(bob, [])), name(alice, [y1]), [alice], [], 0), name(alice, [y1])),
+     will_on(bob, motion(join(name(alice, [y1]), name(bob, [])), name(bob, []), [bob], [], 0), name(bob, [])),
+     relay(will(bob, motion(join(name(alice, [y1]), name(bob, [])), name(bob, []), [bob], [], 0)), name(bob, []), name(alice, [y1]), bob, alice),
+     relay(moved(motion(join(name(alice, [y1]), name(bob, [])), name(alice, [y1]), [alice], [], 0)), name(alice, [y1]), name(bob, []), alice, bob),
+     relay(will(alice, motion(join(name(alice, [y1]), name(bob, [])), name(alice, [y1]), [alice], [], 0)), name(alice, [y1]), name(bob, []), alice, bob)]).
 txns(leave_after,
     [form(alice),
      form(bob),
-     move(federate(name(alice, [])), name(alice, []), alice),
-     will_on(alice, motion(federate(name(alice, [])), name(alice, []), [alice], 0), name(alice, [])),
-     establish(name(alice, []), 0, alice),
-     move(join(name(alice, [1]), name(bob, [])), name(alice, [1]), alice),
-     move(join(name(alice, [1]), name(bob, [])), name(bob, []), bob),
-     will_on(alice, motion(join(name(alice, [1]), name(bob, [])), name(alice, [1]), [alice], 0), name(alice, [1])),
-     will_on(bob, motion(join(name(alice, [1]), name(bob, [])), name(bob, []), [bob], 0), name(bob, [])),
-     relay(moved(motion(join(name(alice, [1]), name(bob, [])), name(bob, []), [bob], 0)), name(bob, []), name(alice, [1]), bob),
-     relay(will(bob, motion(join(name(alice, [1]), name(bob, [])), name(bob, []), [bob], 0)), name(bob, []), name(alice, [1]), bob),
-     move(leave(name(alice, [1]), name(bob, [])), name(alice, [1]), alice),
-     will_on(alice, motion(leave(name(alice, [1]), name(bob, [])), name(alice, [1]), [alice], 1), name(alice, [1])),
-     relay(moved(motion(join(name(alice, [1]), name(bob, [])), name(alice, [1]), [alice], 0)), name(alice, [1]), name(bob, []), alice),
-     relay(will(alice, motion(join(name(alice, [1]), name(bob, [])), name(alice, [1]), [alice], 0)), name(alice, [1]), name(bob, []), alice),
-     relay(moved(motion(leave(name(alice, [1]), name(bob, [])), name(alice, [1]), [alice], 1)), name(alice, [1]), name(bob, []), alice),
-     relay(will(alice, motion(leave(name(alice, [1]), name(bob, [])), name(alice, [1]), [alice], 1)), name(alice, [1]), name(bob, []), alice)]).
+     move(federate(name(alice, []), y1), name(alice, []), alice),
+     will_on(alice, motion(federate(name(alice, []), y1), name(alice, []), [alice], [], 0), name(alice, [])),
+     establish(name(alice, []), y1, alice),
+     move(join(name(alice, [y1]), name(bob, [])), name(bob, []), bob),
+     relay(moved(motion(join(name(alice, [y1]), name(bob, [])), name(bob, []), [bob], [], 0)), name(bob, []), name(alice, [y1]), bob, alice),
+     move(join(name(alice, [y1]), name(bob, [])), name(alice, [y1]), alice),
+     will_on(alice, motion(join(name(alice, [y1]), name(bob, [])), name(alice, [y1]), [alice], [], 0), name(alice, [y1])),
+     will_on(bob, motion(join(name(alice, [y1]), name(bob, [])), name(bob, []), [bob], [], 0), name(bob, [])),
+     relay(will(bob, motion(join(name(alice, [y1]), name(bob, [])), name(bob, []), [bob], [], 0)), name(bob, []), name(alice, [y1]), bob, alice),
+     move(leave(name(alice, [y1]), name(bob, [])), name(alice, [y1]), alice),
+     will_on(alice, motion(leave(name(alice, [y1]), name(bob, [])), name(alice, [y1]), [alice], [], 1), name(alice, [y1])),
+     relay(moved(motion(join(name(alice, [y1]), name(bob, [])), name(alice, [y1]), [alice], [], 0)), name(alice, [y1]), name(bob, []), alice, bob),
+     relay(will(alice, motion(join(name(alice, [y1]), name(bob, [])), name(alice, [y1]), [alice], [], 0)), name(alice, [y1]), name(bob, []), alice, bob),
+     relay(moved(motion(leave(name(alice, [y1]), name(bob, [])), name(alice, [y1]), [alice], [], 1)), name(alice, [y1]), name(bob, []), alice, bob),
+     relay(will(alice, motion(leave(name(alice, [y1]), name(bob, [])), name(alice, [y1]), [alice], [], 1)), name(alice, [y1]), name(bob, []), alice, bob)]).
 txns(report_raise,
     [form(bob),
-     move(federate(name(bob, [])), name(bob, []), bob),
-     will_on(bob, motion(federate(name(bob, [])), name(bob, []), [bob], 0), name(bob, [])),
-     establish(name(bob, []), 0, bob),
-     report_at(name(bob, []), name(bob, [1]), bob),
+     move(federate(name(bob, []), y1), name(bob, []), bob),
+     will_on(bob, motion(federate(name(bob, []), y1), name(bob, []), [bob], [], 0), name(bob, [])),
+     establish(name(bob, []), y1, bob),
+     report_at(name(bob, []), name(bob, [y1]), bob),
      advance(bob, 5),
-     date_at(name(bob, [1]), bob),
-     raise_at(name(bob, [1]), bob)]).
+     date_at(name(bob, [y1]), bob),
+     raise_at(name(bob, [y1]), bob)]).
 txns(join_twice,
     [form(alice),
      form(bob),
-     move(federate(name(alice, [])), name(alice, []), alice),
-     will_on(alice, motion(federate(name(alice, [])), name(alice, []), [alice], 0), name(alice, [])),
-     establish(name(alice, []), 0, alice),
-     move(join(name(alice, [1]), name(bob, [])), name(alice, [1]), alice),
-     move(join(name(alice, [1]), name(bob, [])), name(bob, []), bob),
-     will_on(alice, motion(join(name(alice, [1]), name(bob, [])), name(alice, [1]), [alice], 0), name(alice, [1])),
-     will_on(bob, motion(join(name(alice, [1]), name(bob, [])), name(bob, []), [bob], 0), name(bob, [])),
-     relay(moved(motion(join(name(alice, [1]), name(bob, [])), name(bob, []), [bob], 0)), name(bob, []), name(alice, [1]), bob),
-     relay(will(bob, motion(join(name(alice, [1]), name(bob, [])), name(bob, []), [bob], 0)), name(bob, []), name(alice, [1]), bob),
-     relay(moved(motion(join(name(alice, [1]), name(bob, [])), name(alice, [1]), [alice], 0)), name(alice, [1]), name(bob, []), alice),
-     relay(will(alice, motion(join(name(alice, [1]), name(bob, [])), name(alice, [1]), [alice], 0)), name(alice, [1]), name(bob, []), alice),
-     move(join(name(alice, [1]), name(bob, [])), name(alice, [1]), alice)]).
+     move(federate(name(alice, []), y1), name(alice, []), alice),
+     will_on(alice, motion(federate(name(alice, []), y1), name(alice, []), [alice], [], 0), name(alice, [])),
+     establish(name(alice, []), y1, alice),
+     move(join(name(alice, [y1]), name(bob, [])), name(bob, []), bob),
+     relay(moved(motion(join(name(alice, [y1]), name(bob, [])), name(bob, []), [bob], [], 0)), name(bob, []), name(alice, [y1]), bob, alice),
+     move(join(name(alice, [y1]), name(bob, [])), name(alice, [y1]), alice),
+     will_on(alice, motion(join(name(alice, [y1]), name(bob, [])), name(alice, [y1]), [alice], [], 0), name(alice, [y1])),
+     will_on(bob, motion(join(name(alice, [y1]), name(bob, [])), name(bob, []), [bob], [], 0), name(bob, [])),
+     relay(will(bob, motion(join(name(alice, [y1]), name(bob, [])), name(bob, []), [bob], [], 0)), name(bob, []), name(alice, [y1]), bob, alice),
+     relay(moved(motion(join(name(alice, [y1]), name(bob, [])), name(alice, [y1]), [alice], [], 0)), name(alice, [y1]), name(bob, []), alice, bob),
+     relay(will(alice, motion(join(name(alice, [y1]), name(bob, [])), name(alice, [y1]), [alice], [], 0)), name(alice, [y1]), name(bob, []), alice, bob),
+     move(join(name(alice, [y1]), name(bob, [])), name(alice, [y1]), alice)]).
 txns(will_outsider,
     [form(alice),
      form(bob),
-     move(federate(name(alice, [])), name(alice, []), alice),
-     will_on(alice, motion(federate(name(alice, [])), name(alice, []), [alice], 0), name(alice, [])),
-     establish(name(alice, []), 0, alice),
-     move(join(name(alice, [1]), name(bob, [])), name(alice, [1]), alice),
-     move(join(name(alice, [1]), name(bob, [])), name(bob, []), bob),
-     will_on(alice, motion(join(name(alice, [1]), name(bob, [])), name(alice, [1]), [alice], 0), name(alice, [1])),
-     will_on(bob, motion(join(name(alice, [1]), name(bob, [])), name(alice, [1]), [alice], 0), name(alice, [1]))]).
-txns(maintain_c, [maintain_at(name(alice, [1, 1]), bob)]).
-txns(maintain_g, [maintain_at(name(alice, [1, 1]), bob)]).
+     move(federate(name(alice, []), y1), name(alice, []), alice),
+     will_on(alice, motion(federate(name(alice, []), y1), name(alice, []), [alice], [], 0), name(alice, [])),
+     establish(name(alice, []), y1, alice),
+     move(join(name(alice, [y1]), name(bob, [])), name(bob, []), bob),
+     relay(moved(motion(join(name(alice, [y1]), name(bob, [])), name(bob, []), [bob], [], 0)), name(bob, []), name(alice, [y1]), bob, alice),
+     move(join(name(alice, [y1]), name(bob, [])), name(alice, [y1]), alice),
+     will_on(alice, motion(join(name(alice, [y1]), name(bob, [])), name(alice, [y1]), [alice], [], 0), name(alice, [y1])),
+     will_on(bob, motion(join(name(alice, [y1]), name(bob, [])), name(alice, [y1]), [alice], [], 0), name(alice, [y1]))]).
+% alice forms her community a and federates it into f = a.y1; a reports to f,
+% so f's descendants hold a.  f moves Join a -> f, of which it is the child,
+% and the motion, carrying its descendants, is relayed to a; the Move at a,
+% which would make f a child of its own descendant, is refused.
+% join_cycle_moved is the same run stopped before that Move, so that the rows
+% can be read.
+txns(join_cycle,
+    [form(alice),
+     move(federate(name(alice, []), y1), name(alice, []), alice),
+     will_on(alice, motion(federate(name(alice, []), y1), name(alice, []), [alice], [], 0), name(alice, [])),
+     establish(name(alice, []), y1, alice),
+     report_at(name(alice, []), name(alice, [y1]), alice),
+     move(join(name(alice, []), name(alice, [y1])), name(alice, [y1]), alice),
+     relay(moved(motion(join(name(alice, []), name(alice, [y1])), name(alice, [y1]), [alice], [name(alice, [])], 0)), name(alice, [y1]), name(alice, []), alice, alice),
+     move(join(name(alice, []), name(alice, [y1])), name(alice, []), alice)]).
+txns(join_cycle_moved,
+    [form(alice),
+     move(federate(name(alice, []), y1), name(alice, []), alice),
+     will_on(alice, motion(federate(name(alice, []), y1), name(alice, []), [alice], [], 0), name(alice, [])),
+     establish(name(alice, []), y1, alice),
+     report_at(name(alice, []), name(alice, [y1]), alice),
+     move(join(name(alice, []), name(alice, [y1])), name(alice, [y1]), alice),
+     relay(moved(motion(join(name(alice, []), name(alice, [y1])), name(alice, [y1]), [alice], [name(alice, [])], 0)), name(alice, [y1]), name(alice, []), alice, alice)]).
+% bob forms b, federates it into f1 = b.y1 and f1 into f2 = f1.y2; b reports to
+% f1 and then f1 to f2, so that the descendants f2 computes hold f1 and b.
+txns(report_chain,
+    [form(bob),
+     move(federate(name(bob, []), y1), name(bob, []), bob),
+     will_on(bob, motion(federate(name(bob, []), y1), name(bob, []), [bob], [], 0), name(bob, [])),
+     establish(name(bob, []), y1, bob),
+     move(federate(name(bob, [y1]), y2), name(bob, [y1]), bob),
+     will_on(bob, motion(federate(name(bob, [y1]), y2), name(bob, [y1]), [bob], [], 0), name(bob, [y1])),
+     establish(name(bob, [y1]), y2, bob),
+     report_at(name(bob, []), name(bob, [y1]), bob),
+     report_at(name(bob, [y1]), name(bob, [y1, y2]), bob)]).
+txns(maintain_c, [maintain_at(name(alice, [y1, y2]), bob)]).
+txns(maintain_g, [maintain_at(name(alice, [y1, y2]), bob)]).
 
 exported procedure start(Constant?, World).
 start(join_fig2, world([], [])).
@@ -97,27 +138,30 @@ start(leave_after, world([], [])).
 start(report_raise, world([], [])).
 start(join_twice, world([], [])).
 start(will_outsider, world([], [])).
-start(maintain_c, world([cr(name(alice, [1, 1]),
-    [moved(motion(join(name(alice, [1, 1]), name(bob, [1])), name(alice, [1, 1]), [alice], 0)),
-     moved(motion(join(name(alice, [1, 1]), name(bob, [1])), name(bob, [1]), [bob], 0)),
-     will(alice, motion(join(name(alice, [1, 1]), name(bob, [1])), name(alice, [1, 1]), [alice], 0)),
-     will(bob, motion(join(name(alice, [1, 1]), name(bob, [1])), name(bob, [1]), [bob], 0)),
-     moved(motion(join(name(alice, [1, 1]), name(carol, [1])), name(alice, [1, 1]), [alice], 0)),
-     moved(motion(join(name(alice, [1, 1]), name(carol, [1])), name(carol, [1]), [carol], 0)),
-     will(alice, motion(join(name(alice, [1, 1]), name(carol, [1])), name(alice, [1, 1]), [alice], 0)),
-     will(carol, motion(join(name(alice, [1, 1]), name(carol, [1])), name(carol, [1]), [carol], 0)),
-     report(name(bob, [1]), [bob, erin, frank], 1),
-     report(name(carol, [1]), [carol], 1),
-     seat(plus, bob, col(name(bob, [1])), 0, 0),
-     seat(plus, carol, col(name(carol, [1])), 0, 1),
+start(join_cycle, world([], [])).
+start(join_cycle_moved, world([], [])).
+start(report_chain, world([], [])).
+start(maintain_c, world([cr(name(alice, [y1, y2]),
+    [moved(motion(join(name(alice, [y1, y2]), name(bob, [y1])), name(alice, [y1, y2]), [alice], [], 0)),
+     moved(motion(join(name(alice, [y1, y2]), name(bob, [y1])), name(bob, [y1]), [bob], [], 0)),
+     will(alice, motion(join(name(alice, [y1, y2]), name(bob, [y1])), name(alice, [y1, y2]), [alice], [], 0)),
+     will(bob, motion(join(name(alice, [y1, y2]), name(bob, [y1])), name(bob, [y1]), [bob], [], 0)),
+     moved(motion(join(name(alice, [y1, y2]), name(carol, [y1])), name(alice, [y1, y2]), [alice], [], 0)),
+     moved(motion(join(name(alice, [y1, y2]), name(carol, [y1])), name(carol, [y1]), [carol], [], 0)),
+     will(alice, motion(join(name(alice, [y1, y2]), name(carol, [y1])), name(alice, [y1, y2]), [alice], [], 0)),
+     will(carol, motion(join(name(alice, [y1, y2]), name(carol, [y1])), name(carol, [y1]), [carol], [], 0)),
+     report(name(bob, [y1]), [bob, erin, frank], [], 1),
+     report(name(carol, [y1]), [carol], [], 1),
+     seat(plus, bob, col(name(bob, [y1])), 0, 0),
+     seat(plus, carol, col(name(carol, [y1])), 0, 1),
      raise(0, 1, [sig(ag(erin), 2), sig(ag(frank), 1)], [et(ag(erin), rat(1, 1)), et(ag(frank), rat(1, 1))])])], [])).
-start(maintain_g, world([cr(name(alice, [1, 1]),
-    [moved(motion(join(name(alice, [1, 1]), name(bob, [1])), name(alice, [1, 1]), [alice], 0)),
-     moved(motion(join(name(alice, [1, 1]), name(bob, [1])), name(bob, [1]), [bob], 0)),
-     will(alice, motion(join(name(alice, [1, 1]), name(bob, [1])), name(alice, [1, 1]), [alice], 0)),
-     will(bob, motion(join(name(alice, [1, 1]), name(bob, [1])), name(bob, [1]), [bob], 0)),
-     report(name(bob, [1]), [bob], 1),
-     seat(plus, bob, col(name(bob, [1])), 0, 0),
+start(maintain_g, world([cr(name(alice, [y1, y2]),
+    [moved(motion(join(name(alice, [y1, y2]), name(bob, [y1])), name(alice, [y1, y2]), [alice], [], 0)),
+     moved(motion(join(name(alice, [y1, y2]), name(bob, [y1])), name(bob, [y1]), [bob], [], 0)),
+     will(alice, motion(join(name(alice, [y1, y2]), name(bob, [y1])), name(alice, [y1, y2]), [alice], [], 0)),
+     will(bob, motion(join(name(alice, [y1, y2]), name(bob, [y1])), name(bob, [y1]), [bob], [], 0)),
+     report(name(bob, [y1]), [bob], [], 1),
+     seat(plus, bob, col(name(bob, [y1])), 0, 0),
      raise(0, 3, [], [])])], [])).
 
 % theta, the assembly size and the term each run is taken at.
@@ -127,6 +171,9 @@ play_params(leave_after, params(rat(1, 2), 1, 3)).
 play_params(report_raise, params(rat(1, 2), 1, 3)).
 play_params(join_twice, params(rat(1, 2), 1, 3)).
 play_params(will_outsider, params(rat(1, 2), 1, 3)).
+play_params(join_cycle, params(rat(1, 2), 1, 3)).
+play_params(join_cycle_moved, params(rat(1, 2), 1, 3)).
+play_params(report_chain, params(rat(1, 2), 1, 3)).
 play_params(maintain_c, params(rat(1, 2), 4, 10)).
 play_params(maintain_g, params(rat(1, 2), 1, 2)).
 

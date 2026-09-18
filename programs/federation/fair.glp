@@ -29,7 +29,7 @@ child_infos([U|Us], Row, [ci(U?, Y?)|R?]) :-
     child_infos(Us?, Row?, R).
 
 procedure fcontext1(State?, Integer?, Row?, FCtx).
-fcontext1(state(Ch, _, Mem, Asm, D, Ac, _), N, Row,
+fcontext1(state(Ch, _, Mem, _, Asm, D, Ac, _), N, Row,
           fctx(N?, CI?, Mem?, Asm?, D?, Ac?)) :-
     ground(Ch?), ground(Mem?), ground(Asm?), integer(D?), ground(Ac?),
     integer(N?), ground(Row?) |

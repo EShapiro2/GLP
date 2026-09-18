@@ -16,12 +16,15 @@
 Ans ::= yes ; no.
 Ord ::= lt ; eq ; gt.
 
-% --- Community names (Definition "Community Name, Order") -------------------
-% An agent followed by a finite list of positive integers; an agent p is the
-% name name(p, []).
-Ints  ::= [] ; [Integer | Ints].
-Name  ::= name(Constant, Ints).
+% --- Community names (Definition "Community Name") --------------------------
+% An agent followed by the decision identities of the Federates that formed the
+% community, each a constant: an agent p is the name name(p, []), and the name
+% a Federate v by y forms is v with y appended.  Integers are kept apart, for
+% dates and counts.
+Ids   ::= [] ; [Constant | Ids].
+Name  ::= name(Constant, Ids).
 Names ::= [] ; [Name | Names].
+Ints  ::= [] ; [Integer | Ints].
 
 Agents ::= [] ; [Constant | Agents].
 
@@ -30,13 +33,14 @@ Agents ::= [] ; [Constant | Agents].
 Rat ::= rat(Integer, Integer).
 
 % --- The acts (Definition "Federation, Motion, Electorate") -----------------
-Act ::= federate(Name) ; join(Name, Name) ; leave(Name, Name).
+% federate(v, y) is Federate v by y, for y a decision identity.
+Act ::= federate(Name, Constant) ; join(Name, Name) ; leave(Name, Name).
 
-% --- Records (Definition "Record, Row"; Definition "Will, Contact, Origin
+% --- Records (Definition "Record, Row"; Definition "Will Record, Origin
 %     Record") -------------------------------------------------------------
-% motion(a, u, X, k) is the motion record of act a at community u with
-% electorate X and epoch k.
-Motion  ::= motion(Act, Name, Agents, Integer).
+% motion(a, u, X, Z, k) is the motion record of act a at community u with
+% electorate X, the descendants Z of u when it was moved, and epoch k.
+Motion  ::= motion(Act, Name, Agents, Names, Integer).
 Motions ::= [] ; [Motion | Motions].
 
 % What the maps of a raise record are maps from: an agent or a community name.
@@ -49,9 +53,11 @@ Eta   ::= [] ; [Et | Eta].
 Colour ::= col(Name) ; uncoloured.
 Sign   ::= plus ; minus.
 
+% report(u, Y, Z, k) is the report record of the child u with its members Y,
+% its descendants Z and the sequence k.
 Record ::= date(Constant, Integer)
          ; raise(Integer, Integer, Sigma, Eta)
-         ; report(Name, Agents, Integer)
+         ; report(Name, Agents, Names, Integer)
          ; moved(Motion)
          ; act(Act, Motions)
          ; seat(Sign, Constant, Colour, Integer, Integer)
@@ -81,9 +87,10 @@ SeatRecs  ::= [] ; [SeatRec | SeatRecs].
 RaiseRec  ::= rr(Integer, Integer, Sigma, Eta).
 RaiseRecs ::= [] ; [RaiseRec | RaiseRecs].
 
-% The latest report of a child, and the date with the accounts the raise fold
+% The latest report of a child --- its sequence, the members and the
+% descendants it reports --- and the date with the accounts the raise fold
 % arrives at.
-Rep ::= rep(Integer, Agents) ; norep.
+Rep ::= rep(Integer, Agents, Names) ; norep.
 DA  ::= da(Integer, Accts).
 
 % --- What the rules of Maintain and a Raise read ---------------------------
@@ -110,6 +117,8 @@ World    ::= world(CommRows, Adates).
 % theta, the assembly size n, and the term tau.
 Params ::= params(Rat, Integer, Integer).
 
+% relay(x, v, u, p, q) is Relay x from v to u by p, q; establish(u, y, p) is
+% Establish u.y by p, the community the Federate u by y decided at u forms.
 Txn ::= form(Constant)
       ; advance(Constant, Integer)
       ; date_at(Name, Constant)
@@ -118,15 +127,16 @@ Txn ::= form(Constant)
       ; maintain_at(Name, Constant)
       ; report_at(Name, Name, Constant)
       ; will_on(Constant, Motion, Name)
-      ; relay(Record, Name, Name, Constant)
-      ; establish(Name, Integer, Constant).
+      ; relay(Record, Name, Name, Constant, Constant)
+      ; establish(Name, Constant, Constant).
 Txns ::= [] ; [Txn | Txns].
 
 Outcome ::= ok(World) ; blocked.
 RunOut  ::= done(World) ; stuck(Integer, Txn).
 
-% state(children, parents, members, assembly, date, accounts, open motions)
-State ::= state(Names, Names, Agents, Seats, Integer, Accts, Motions).
+% state(children, parents, members, descendants, assembly, date, accounts,
+%       open motions)
+State ::= state(Names, Names, Agents, Names, Seats, Integer, Accts, Motions).
 
 % --- The federation platform (Definition "Federation Platform"; Definition
 %     "Row Lattice, Configuration, Quorum") ---------------------------------
@@ -159,17 +169,23 @@ Pend ::= nopend ; pend(Integer, LState, Row, Confs, Confs, Agents).
 Inst  ::= inst(Name, Integer, LState, Row, Confs, LB, Pend, Row).
 Insts ::= [] ; [Inst | Insts].
 
-% The messages of Figure 2 as the cargoes of the platform, each naming the
-% community whose instance it belongs to.
+% The cargoes of the platform: the messages of Figure 2, each naming the
+% community whose instance it belongs to, and a record of a community
+% disclosed by an agent holding its row to an agent it knows, which is the
+% half of a Relay that its discloser does.
 MsgKind ::= req(Integer) ; resp(Integer) ; commit.
-Cargo   ::= cargo(MsgKind, Name, Triple).
+Cargo   ::= cargo(MsgKind, Name, Triple) ; disclosed(Name, Record).
 PMsg    ::= pmsg(Constant, Constant, Cargo).
 PMsgs   ::= [] ; [PMsg | PMsgs].
 
+% A record disclosed to an agent: by whom, at which community, and the record.
+Disc  ::= disc(Constant, Name, Record).
+Discs ::= [] ; [Disc | Discs].
+
 % A communicating volitional agent: its known peers, its outbox, its inbox,
-% its platform state -- the instances it runs -- its local date, and whether
-% it has crashed.
-Cva     ::= cva(Constant, Agents, PMsgs, PMsgs, Insts, Integer, Ans).
+% its platform state -- the instances it runs -- its local date, whether it
+% has crashed, and the records disclosed to it.
+Cva     ::= cva(Constant, Agents, PMsgs, PMsgs, Insts, Integer, Ans, Discs).
 Cvas    ::= [] ; [Cva | Cvas].
 PWorld  ::= pworld(Cvas).
 
@@ -177,14 +193,18 @@ PWorld  ::= pworld(Cvas).
 % agent, with Discover, Communicate and Advance-date of the framework.  A
 % take is a transaction of Definition "Grassroots Federation Implied
 % Transactions" read at the agent's learnt rows: a Form or an Establish forms
-% a community, every other proposes its record.  A settle is not a transaction
-% of its own but the finite sequence of the Communicate, Receive and line 9 to
-% 15 transactions that are enabled, taken until none is; the integer bounds it.
+% a community, every other proposes its record; a Relay is proposed by the
+% agent q that receives the record, once it has been disclosed to q.  A
+% disclose is the disclosure: p sends q a record of a row p holds.  A settle
+% is not a transaction of its own but the finite sequence of the Communicate,
+% Receive and line 9 to 15 transactions that are enabled, taken until none is;
+% the integer bounds it.
 Step ::= take(Constant, Txn)
        ; resume_at(Constant, Name)
        ; receive_at(Constant)
        ; communicate(Constant)
        ; discover(Constant, Constant)
+       ; disclose(Constant, Constant, Record, Name)
        ; advance_date(Constant, Integer)
        ; crash(Constant)
        ; settle(Integer).
@@ -235,13 +255,9 @@ imax(X, Y, Y?) :- X? < Y? | true.
 % Lists
 % ---------------------------------------------------------------------------
 
-procedure ints_app(Ints?, Ints?, Ints).
-ints_app([], T, T?).
-ints_app([X|Xs], T, [X?|R?]) :- ints_app(Xs?, T?, R).
-
-procedure ints_len(Ints?, Integer).
-ints_len([], 0).
-ints_len([_|Xs], N?) :- ints_len(Xs?, M), N := M? + 1.
+procedure ids_app(Ids?, Ids?, Ids).
+ids_app([], T, T?).
+ids_app([X|Xs], T, [X?|R?]) :- ids_app(Xs?, T?, R).
 
 procedure agents_app(Agents?, Agents?, Agents).
 agents_app([], T, T?).
@@ -325,6 +341,10 @@ supermajority(T, K, N, A?) :- decide # supermajority(T?, K?, N?, A).
 imported procedure name#name_gt(Name?, Name?, Ans).
 exported procedure name_gt(Name?, Name?, Ans).
 name_gt(F, G, A?) :- name # name_gt(F?, G?, A).
+
+imported procedure name#name_extend(Name?, Constant?, Name).
+exported procedure name_extend(Name?, Constant?, Name).
+name_extend(V, Y, F?) :- name # name_extend(V?, Y?, F).
 
 % --- The rows the tests run on --------------------------------------------
 
