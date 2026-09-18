@@ -61,5 +61,5 @@ procedure sink(Stream(_)?).
 sink([_|Xs]) :- sink(Xs?).
 sink([]).
 
-procedure actor_dispatch(Constant?, Constant?, Channel(Stream(PersonNotify), Stream(PersonCmd))).
+procedure actor_dispatch(Constant?, Constant?, ActorChannel?).
 actor_dispatch(bob, 10, Ch) :- bob_p10(Ch?).
