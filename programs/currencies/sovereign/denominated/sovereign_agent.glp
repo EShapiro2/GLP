@@ -6,17 +6,11 @@
 
 %% --- the types the compilation adds ---
 Xs_respond_swap_1 ::= xs_respond_swap_1(Constant).
-Reply_respond_swap_1 ::= then(Xs_respond_swap_1).
+Reply_respond_swap_1 ::= then(Xs_respond_swap_1) ; else.
 Ctx_respond_swap_1 ::= ctx_respond_swap_1(Constant, Lot, Stream(Bond)).
-Xs_respond_swap_2 ::= xs_respond_swap_2(Constant).
-Reply_respond_swap_2 ::= then(Xs_respond_swap_2) ; else.
-Ctx_respond_swap_2 ::= ctx_respond_swap_2(Constant, Lot, Stream(Bond)).
 Xs_respond_transfer_1 ::= xs_respond_transfer_1(Constant).
-Reply_respond_transfer_1 ::= then(Xs_respond_transfer_1).
+Reply_respond_transfer_1 ::= then(Xs_respond_transfer_1) ; else.
 Ctx_respond_transfer_1 ::= ctx_respond_transfer_1(Kind, Constant, Stream(Bond)).
-Xs_respond_transfer_2 ::= xs_respond_transfer_2(Constant).
-Reply_respond_transfer_2 ::= then(Xs_respond_transfer_2) ; else.
-Ctx_respond_transfer_2 ::= ctx_respond_transfer_2(Kind, Constant, Stream(Bond)).
 Xs_agent_1 ::= xs_agent_1(Constant, Integer, Integer).
 Reply_agent_1 ::= then(Xs_agent_1).
 Xs_agent_2 ::= xs_agent_2(Constant, Constant, Constant, Integer, Integer, Constant, Integer, Integer).
@@ -31,9 +25,9 @@ Xs_agent_6 ::= xs_agent_6(Constant, Constant, Constant, Integer, Integer).
 Reply_agent_6 ::= then(Xs_agent_6).
 Xs_agent_7 ::= xs_agent_7(Constant, Constant, Constant, Integer, Integer).
 Reply_agent_7 ::= then(Xs_agent_7).
-Answer ::= Xs_respond_swap_1 ; Xs_respond_swap_2 ; Xs_respond_transfer_1 ; Xs_respond_transfer_2 ; Xs_agent_1 ; Xs_agent_2 ; Xs_agent_3 ; Xs_agent_4 ; Xs_agent_5 ; Xs_agent_6 ; Xs_agent_7.
-Escrow ::= esc_respond_swap_1(Reply_respond_swap_1?) ; esc_respond_swap_2(Reply_respond_swap_2?) ; esc_respond_transfer_1(Reply_respond_transfer_1?) ; esc_respond_transfer_2(Reply_respond_transfer_2?) ; esc_agent_1(Reply_agent_1?) ; esc_agent_2(Reply_agent_2?) ; esc_agent_3(Reply_agent_3?) ; esc_agent_4(Reply_agent_4?) ; esc_agent_5(Reply_agent_5?) ; esc_agent_6(Reply_agent_6?) ; esc_agent_7(Reply_agent_7?).
-Context ::= Ctx_respond_swap_1 ; Ctx_respond_swap_2 ; Ctx_respond_transfer_1 ; Ctx_respond_transfer_2 ; ctx_agent_1 ; ctx_agent_2 ; ctx_agent_3 ; ctx_agent_4 ; ctx_agent_5 ; ctx_agent_6 ; ctx_agent_7.
+Answer ::= Xs_respond_swap_1 ; Xs_respond_transfer_1 ; Xs_agent_1 ; Xs_agent_2 ; Xs_agent_3 ; Xs_agent_4 ; Xs_agent_5 ; Xs_agent_6 ; Xs_agent_7.
+Escrow ::= esc_respond_swap_1(Reply_respond_swap_1?) ; esc_respond_transfer_1(Reply_respond_transfer_1?) ; esc_agent_1(Reply_agent_1?) ; esc_agent_2(Reply_agent_2?) ; esc_agent_3(Reply_agent_3?) ; esc_agent_4(Reply_agent_4?) ; esc_agent_5(Reply_agent_5?) ; esc_agent_6(Reply_agent_6?) ; esc_agent_7(Reply_agent_7?).
+Context ::= Ctx_respond_swap_1 ; Ctx_respond_transfer_1 ; ctx_agent_1 ; ctx_agent_2 ; ctx_agent_3 ; ctx_agent_4 ; ctx_agent_5 ; ctx_agent_6 ; ctx_agent_7.
 
 %% --- the mediator's vocabulary, instantiated ---
 ReqId ::= req(Integer).
@@ -59,19 +53,15 @@ display respond_transfer *(yes, Kind?, From?, Bonds?) : panel(sovereign), label(
 display msg(agent, person, holdings(Lots)) : panel(sovereign), view(balances).
 
 %% --- the compiled agent ---
-procedure respond_swap(Channel(Closed, Stream(AgentMsg))?, SwapOffer?, SwapResponse, Stream(UserInMsg), Slot(Reply_respond_swap_1)?, Slot(Reply_respond_swap_2)?).
-respond_swap(Med, offer(From, Want, Offered), Resp?, [decline_swap(From?, Offered?, Resp)], ask(then(xs_respond_swap_1(_)), _), S2) :- ground(From?), ground(Want?), ground(Offered?) | abort(S2?, Med?, Med1).
-respond_swap(Med, offer(From, Want, Offered), A2?, A3?, none, S2) :- ground(From?), ground(Want?), ground(Offered?) | send(ask(respond_swap_1, ctx_respond_swap_1(From?, Want?, Offered?), esc_respond_swap_1(R), Id), Med?, Med1), respond_swap(Med1?, offer(From?, Want?, Offered?), A2, A3, ask(R?, Id?), S2?).
-respond_swap(Med, offer(From, Want, Offered), Resp?, Ans?, S1, ask(then(xs_respond_swap_2(_)), _)) :- ground(From?), ground(Want?), ground(Offered?) | abort(S1?, Med?, Med1), accept_answer(From?, Want?, Offered?, Resp, Ans).
-respond_swap(Med, offer(From, Want, Offered), Resp?, Ans?, S1, ask(else, _)) :- ground(From?), ground(Want?), ground(Offered?) | abort(S1?, Med?, Med1), decline_answer(From?, Offered?, Resp, Ans).
-respond_swap(Med, offer(From, Want, Offered), A2?, A3?, S1, none) :- ground(From?), ground(Want?), ground(Offered?) | send(ask(respond_swap_2, ctx_respond_swap_2(From?, Want?, Offered?), esc_respond_swap_2(R), Id), Med?, Med1), respond_swap(Med1?, offer(From?, Want?, Offered?), A2, A3, S1?, ask(R?, Id?)).
+procedure respond_swap(Channel(Closed, Stream(AgentMsg))?, SwapOffer?, SwapResponse, Stream(UserInMsg), Slot(Reply_respond_swap_1)?).
+respond_swap(Med, offer(From, Want, Offered), Resp?, Ans?, ask(then(xs_respond_swap_1(_)), _)) :- ground(From?), ground(Want?), ground(Offered?) | accept_answer(From?, Want?, Offered?, Resp, Ans).
+respond_swap(Med, offer(From, Want, Offered), Resp?, Ans?, ask(else, _)) :- ground(From?), ground(Want?), ground(Offered?) | decline_answer(From?, Offered?, Resp, Ans).
+respond_swap(Med, offer(From, Want, Offered), A2?, A3?, none) :- ground(From?), ground(Want?), ground(Offered?) | send(ask(respond_swap_1, ctx_respond_swap_1(From?, Want?, Offered?), esc_respond_swap_1(R), Id), Med?, Med1), respond_swap(Med1?, offer(From?, Want?, Offered?), A2, A3, ask(R?, Id?)).
 
-procedure respond_transfer(Channel(Closed, Stream(AgentMsg))?, TransferOffer?, TransferResponse, Stream(UserInMsg), Slot(Reply_respond_transfer_1)?, Slot(Reply_respond_transfer_2)?).
-respond_transfer(Med, offer_transfer(Kind, From, Bonds), Resp?, [decline_transfer(Kind?, From?, Bonds?, Resp)], ask(then(xs_respond_transfer_1(_)), _), S2) :- ground(Kind?), ground(From?), ground(Bonds?) | abort(S2?, Med?, Med1).
-respond_transfer(Med, offer_transfer(Kind, From, Bonds), A2?, A3?, none, S2) :- ground(Kind?), ground(From?), ground(Bonds?) | send(ask(respond_transfer_1, ctx_respond_transfer_1(Kind?, From?, Bonds?), esc_respond_transfer_1(R), Id), Med?, Med1), respond_transfer(Med1?, offer_transfer(Kind?, From?, Bonds?), A2, A3, ask(R?, Id?), S2?).
-respond_transfer(Med, offer_transfer(Kind, From, Bonds), Resp?, Ans?, S1, ask(then(xs_respond_transfer_2(_)), _)) :- ground(Kind?), ground(From?), ground(Bonds?) | abort(S1?, Med?, Med1), accept_transfer_answer(Kind?, From?, Bonds?, Resp, Ans).
-respond_transfer(Med, offer_transfer(Kind, From, Bonds), Resp?, Ans?, S1, ask(else, _)) :- ground(Kind?), ground(From?), ground(Bonds?) | abort(S1?, Med?, Med1), decline_transfer_answer(Kind?, From?, Bonds?, Resp, Ans).
-respond_transfer(Med, offer_transfer(Kind, From, Bonds), A2?, A3?, S1, none) :- ground(Kind?), ground(From?), ground(Bonds?) | send(ask(respond_transfer_2, ctx_respond_transfer_2(Kind?, From?, Bonds?), esc_respond_transfer_2(R), Id), Med?, Med1), respond_transfer(Med1?, offer_transfer(Kind?, From?, Bonds?), A2, A3, S1?, ask(R?, Id?)).
+procedure respond_transfer(Channel(Closed, Stream(AgentMsg))?, TransferOffer?, TransferResponse, Stream(UserInMsg), Slot(Reply_respond_transfer_1)?).
+respond_transfer(Med, offer_transfer(Kind, From, Bonds), Resp?, Ans?, ask(then(xs_respond_transfer_1(_)), _)) :- ground(Kind?), ground(From?), ground(Bonds?) | accept_transfer_answer(Kind?, From?, Bonds?, Resp, Ans).
+respond_transfer(Med, offer_transfer(Kind, From, Bonds), Resp?, Ans?, ask(else, _)) :- ground(Kind?), ground(From?), ground(Bonds?) | decline_transfer_answer(Kind?, From?, Bonds?, Resp, Ans).
+respond_transfer(Med, offer_transfer(Kind, From, Bonds), A2?, A3?, none) :- ground(Kind?), ground(From?), ground(Bonds?) | send(ask(respond_transfer_1, ctx_respond_transfer_1(Kind?, From?, Bonds?), esc_respond_transfer_1(R), Id), Med?, Med1), respond_transfer(Med1?, offer_transfer(Kind?, From?, Bonds?), A2, A3, ask(R?, Id?)).
 
 exported procedure agent(Channel(Closed, Stream(AgentMsg))?, Constant?, Stream(UserInMsg)?, Stream(PeerMsg)?, Stream(Conversation)?, Stream(Integer)?, Stream(OutputEntry)?, Stream(Bond)?, Integer?, Stream(Warranty)?, Integer?, Slot(Reply_agent_1)?, Slot(Reply_agent_2)?, Slot(Reply_agent_3)?, Slot(Reply_agent_4)?, Slot(Reply_agent_5)?, Slot(Reply_agent_6)?, Slot(Reply_agent_7)?).
 agent(Med, Id, UserIn, [msg(From, Id1, Act) | PeerIn], Convs, Cal, Outs, Holdings, Date, Ws, Serial, S1, S2, S3, S4, S5, S6, S7) :- (Id? =?= Id1?), ground(From?) | abort(S1?, Med?, M1), abort(S2?, M1?, M2), abort(S3?, M2?, M3), abort(S4?, M3?, M4), abort(S5?, M4?, M5), abort(S6?, M5?, M6), abort(S7?, M6?, Med1), on_act(Med1?, Act?, From?, Id?, UserIn?, PeerIn?, Convs?, Cal?, Outs?, Holdings?, Date?, Ws?, Serial?).
@@ -112,8 +102,8 @@ agent(Med, Id, UserIn, PeerIn, Convs, Cal, Outs, Holdings, Date, Ws, Serial, S1,
 procedure on_act(Channel(Closed, Stream(AgentMsg))?, PeerContent?, Constant?, Constant?, Stream(UserInMsg)?, Stream(PeerMsg)?, Stream(Conversation)?, Stream(Integer)?, Stream(OutputEntry)?, Stream(Bond)?, Integer?, Stream(Warranty)?, Integer?).
 on_act(Med, pay(Bonds, Resp?), From, Id, UserIn, PeerIn, Convs, Cal, Outs, Holdings, Date, Ws, Serial) :- ground(Bonds?) | own_coins(Id?, Date?, Bonds?, Own), take_payment(Med?, Own?, Id?, From?, Bonds?, Date?, Resp, UserIn?, PeerIn?, Convs?, Cal?, Outs?, Holdings?, Ws?, Serial?).
 on_act(Med, redeem(Bond, R, D1, Resp?), From, Id, UserIn, PeerIn, Convs, Cal, Outs, Holdings, Date, Ws, Serial) :- ground(Bond?), ground(R?), integer(D1?) | fulfil(Med?, Bond?, R?, D1?, Resp, Id?, From?, UserIn?, PeerIn?, Convs?, Cal?, Outs?, Holdings?, Date?, Ws?, Serial?).
-on_act(Med, swap(Want, Offered, Resp?), From, Id, UserIn, PeerIn, Convs, Cal, Outs, Holdings, Date, Ws, Serial) :- ground(Want?), ground(Offered?) | med_split(Med?, Medb, Medr), respond_swap(Medb?, offer(From?, Want?, Offered?), Resp, Ans, none, none), merge(Ans?, UserIn?, UserIn1), agent(Medr?, Id?, UserIn1?, PeerIn?, Convs?, Cal?, Outs?, Holdings?, Date?, Ws?, Serial?, none, none, none, none, none, none, none).
-on_act(Med, transfer(Kind, Bonds, Resp?), From, Id, UserIn, PeerIn, Convs, Cal, Outs, Holdings, Date, Ws, Serial) :- ground(Kind?), ground(Bonds?) | med_split(Med?, Medb, Medr), respond_transfer(Medb?, offer_transfer(Kind?, From?, Bonds?), Resp, Ans, none, none), merge(Ans?, UserIn?, UserIn1), agent(Medr?, Id?, UserIn1?, PeerIn?, Convs?, Cal?, Outs?, Holdings?, Date?, Ws?, Serial?, none, none, none, none, none, none, none).
+on_act(Med, swap(Want, Offered, Resp?), From, Id, UserIn, PeerIn, Convs, Cal, Outs, Holdings, Date, Ws, Serial) :- ground(Want?), ground(Offered?) | med_split(Med?, Medb, Medr), respond_swap(Medb?, offer(From?, Want?, Offered?), Resp, Ans, none), merge(Ans?, UserIn?, UserIn1), agent(Medr?, Id?, UserIn1?, PeerIn?, Convs?, Cal?, Outs?, Holdings?, Date?, Ws?, Serial?, none, none, none, none, none, none, none).
+on_act(Med, transfer(Kind, Bonds, Resp?), From, Id, UserIn, PeerIn, Convs, Cal, Outs, Holdings, Date, Ws, Serial) :- ground(Kind?), ground(Bonds?) | med_split(Med?, Medb, Medr), respond_transfer(Medb?, offer_transfer(Kind?, From?, Bonds?), Resp, Ans, none), merge(Ans?, UserIn?, UserIn1), agent(Medr?, Id?, UserIn1?, PeerIn?, Convs?, Cal?, Outs?, Holdings?, Date?, Ws?, Serial?, none, none, none, none, none, none, none).
 
 procedure take_payment(Channel(Closed, Stream(AgentMsg))?, Constant?, Constant?, Constant?, Stream(Bond)?, Integer?, PayResponse, Stream(UserInMsg)?, Stream(PeerMsg)?, Stream(Conversation)?, Stream(Integer)?, Stream(OutputEntry)?, Stream(Bond)?, Stream(Warranty)?, Integer?).
 take_payment(Med, yes, Id, From, Bonds, Date, pay_taken(Date?), UserIn, PeerIn, Convs, Cal, Outs, Holdings, Ws, Serial) :- ground(Bonds?) | append_bonds(Holdings?, Bonds?, Holdings1), count_bonds(Bonds?, 0, K), show(received(From?, K?), Outs?, Outs1), after_change(Med?, Id?, UserIn?, PeerIn?, Convs?, Cal?, Outs1?, Holdings1?, Date?, Ws?, Serial?).
@@ -183,9 +173,7 @@ med(UserCh, AgentCh, Ps, N) :- receive(abort(ReqId), AgentCh?, AgentCh1), ground
 
 exported procedure answer(ReqId?, Answer?, PendingList?, PendingList).
 answer(ReqId, xs_respond_swap_1(X1), [pending(Id, esc_respond_swap_1(R?)) | Ps], Ps?) :- (ReqId? =?= Id?) | R = then(xs_respond_swap_1(X1?)).
-answer(ReqId, xs_respond_swap_2(X1), [pending(Id, esc_respond_swap_2(R?)) | Ps], Ps?) :- (ReqId? =?= Id?) | R = then(xs_respond_swap_2(X1?)).
 answer(ReqId, xs_respond_transfer_1(X1), [pending(Id, esc_respond_transfer_1(R?)) | Ps], Ps?) :- (ReqId? =?= Id?) | R = then(xs_respond_transfer_1(X1?)).
-answer(ReqId, xs_respond_transfer_2(X1), [pending(Id, esc_respond_transfer_2(R?)) | Ps], Ps?) :- (ReqId? =?= Id?) | R = then(xs_respond_transfer_2(X1?)).
 answer(ReqId, xs_agent_1(X1, X2, X3), [pending(Id, esc_agent_1(R?)) | Ps], Ps?) :- (ReqId? =?= Id?) | R = then(xs_agent_1(X1?, X2?, X3?)).
 answer(ReqId, xs_agent_2(X1, X2, X3, X4, X5, X6, X7, X8), [pending(Id, esc_agent_2(R?)) | Ps], Ps?) :- (ReqId? =?= Id?) | R = then(xs_agent_2(X1?, X2?, X3?, X4?, X5?, X6?, X7?, X8?)).
 answer(ReqId, xs_agent_3(X1, X2, X3, X4), [pending(Id, esc_agent_3(R?)) | Ps], Ps?) :- (ReqId? =?= Id?) | R = then(xs_agent_3(X1?, X2?, X3?, X4?)).
@@ -197,8 +185,8 @@ answer(ReqId, Vs, [P | Ps], [P? | Ps1?]) :- otherwise | answer(ReqId?, Vs?, Ps?,
 answer(_, _, [], []).
 
 exported procedure close(ReqId?, PendingList?, PendingList).
-close(ReqId, [pending(Id, esc_respond_swap_2(R?)) | Ps], Ps?) :- (ReqId? =?= Id?) | R = else.
-close(ReqId, [pending(Id, esc_respond_transfer_2(R?)) | Ps], Ps?) :- (ReqId? =?= Id?) | R = else.
+close(ReqId, [pending(Id, esc_respond_swap_1(R?)) | Ps], Ps?) :- (ReqId? =?= Id?) | R = else.
+close(ReqId, [pending(Id, esc_respond_transfer_1(R?)) | Ps], Ps?) :- (ReqId? =?= Id?) | R = else.
 close(ReqId, [P | Ps], [P? | Ps1?]) :- otherwise | close(ReqId?, Ps?, Ps1).
 close(_, [], []).
 

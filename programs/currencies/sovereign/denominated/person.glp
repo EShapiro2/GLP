@@ -88,14 +88,14 @@ person(Id, [card(agent_7, _, R)|Es], As?, Cal?, Script, Todo, open(M, S, P, D, D
     try_step(Id?, Es?, As, Cal, Script?, Todo?, open(M?, S?, P?, D?, Dp?, Rl?, R?), Swaps?, Ts?, Pending?, Ag?, Seen?, Screen).
 
 %% The accept card of a proposed swap, kept until the script reaches it.
-person(Id, [card(respond_swap_2, ctx_respond_swap_2(From, _, _), R)|Es], As?, Cal?, Script, Todo, Open, Swaps, Ts, Pending, Ag, Seen, Screen?) :-
+person(Id, [card(respond_swap_1, ctx_respond_swap_1(From, _, _), R)|Es], As?, Cal?, Script, Todo, Open, Swaps, Ts, Pending, Ag, Seen, Screen?) :-
     ground(From?), ground(R?) |
     try_step(Id?, Es?, As, Cal, Script?, Todo?, Open?, [offer_card(From?, R?)|Swaps?], Ts?, Pending?, Ag?, Seen?, Screen).
 
 %% The accept card of a proposed transfer: under an agreement the escrow
 %% program answers it when its state allows, now or after a later change of
 %% state; under none it is kept until the script reaches it.
-person(Id, [card(respond_transfer_2, ctx_respond_transfer_2(Kind, From, Bonds), R)|Es], As?, Cal?, Script, Todo, Open, Swaps, Ts, Pending, Ag, Seen, Screen?) :-
+person(Id, [card(respond_transfer_1, ctx_respond_transfer_1(Kind, From, Bonds), R)|Es], As?, Cal?, Script, Todo, Open, Swaps, Ts, Pending, Ag, Seen, Screen?) :-
     ground(Kind?), ground(From?), ground(Bonds?), ground(R?) |
     tally(Bonds?, [], Lots),
     answer_transfers(Ag?, [transfer_card(Kind?, From?, Lots?, R?)|Ts?], As, Tail, Ts1, Ag1),
@@ -140,7 +140,7 @@ answer_transfers(Ag, [transfer_card(Kind, From, Lots, R)|Ts], As?, Tail?, Ts1?, 
 answer_transfers(Ag, [], As?, tail(As), [], Ag?).
 
 procedure on_offer(Constant?, Kind?, Constant?, Stream(Lot)?, ReqId?, TransferCards?, Stream(UserAnswer), AnswerTail, TransferCards, Agreement?, Agreement).
-on_offer(yes, _, _, _, R, Ts, [answer(R?, xs_respond_transfer_2(yes))|As?], Tail?, Ts1?, Ag, Ag1?) :-
+on_offer(yes, _, _, _, R, Ts, [answer(R?, xs_respond_transfer_1(yes))|As?], Tail?, Ts1?, Ag, Ag1?) :-
     ground(R?) |
     answer_transfers(Ag?, Ts?, As, Tail, Ts1, Ag1).
 on_offer(_, Kind, From, Lots, R, Ts, As?, Tail?, [transfer_card(Kind?, From?, Lots?, R?)|Ts1?], Ag, Ag1?) :-
@@ -272,7 +272,7 @@ pick(return(P, F, U, D, K), open(_, _, _, _, _, _, req(N)), Swaps, Ts, answer(re
 pick(advance(T), _, Swaps, Ts, calendar(T?), Swaps?, Ts?).
 pick(accept(From), _, Swaps, Ts, Choice?, Swaps1?, Ts?) :-
     ground(From?) |
-    find_offer(From?, Swaps?, xs_respond_swap_2(yes), Choice, Swaps1).
+    find_offer(From?, Swaps?, xs_respond_swap_1(yes), Choice, Swaps1).
 pick(accept_transfer(From), _, Swaps, Ts, Choice?, Swaps?, Ts1?) :-
     ground(From?) |
     find_transfer(From?, Ts?, Choice, Ts1).
@@ -287,7 +287,7 @@ find_offer(From, [C|Rest], A, Ch?, [C?|Rest1?]) :-
 find_offer(_, [], _, wait, []).
 
 procedure find_transfer(Constant?, TransferCards?, Choice, TransferCards).
-find_transfer(From, [transfer_card(_, F, _, R)|Rest], answer(R?, xs_respond_transfer_2(yes)), Rest?) :-
+find_transfer(From, [transfer_card(_, F, _, R)|Rest], answer(R?, xs_respond_transfer_1(yes)), Rest?) :-
     From? =?= F? | true.
 find_transfer(From, [C|Rest], Ch?, [C?|Rest1?]) :-
     otherwise |
