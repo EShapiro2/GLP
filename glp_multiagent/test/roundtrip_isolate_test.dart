@@ -16,9 +16,11 @@ import 'dart:isolate';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:glp_multiagent/isolate_protocol.dart';
 
-const _programs = '/Users/udi/Grassroots/GLP/programs';
-const _fixtureDir = '$_programs/tests/agent_roundtrip';
-const _sourceFiles = [
+import 'programs_dir.dart';
+
+final _programs = programsDir();
+final _fixtureDir = '$_programs/tests/agent_roundtrip';
+final _sourceFiles = [
   '$_fixtureDir/self.glp',
   '$_fixtureDir/typed_social_agent.glp',
   '$_fixtureDir/typed_ui_mediator.glp',
@@ -28,7 +30,7 @@ const _sourceFiles = [
 void main() {
   test('connect → accept → connected round-trips on both sides', () async {
     final sources = _sourceFiles.map((p) => File(p).readAsStringSync()).toList();
-    final rootSelf = File('$_programs/self.glp').absolute.path;
+    final rootSelf = '$_programs/self.glp';
 
     final reply = ReceivePort();
     final ports = <String, SendPort>{};
