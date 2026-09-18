@@ -1,0 +1,110 @@
+%% play_ui.glp --- the sovereign mini-app with a LIVE person: the person on the
+%% other end of the mini-app's channel is the app's user, not a script, and
+%% the live person is the central bank.
+%%
+%% sovereign_ui(cb, Answers, NetIn) is the entry the Flutter agent runtime
+%% starts, whose three arguments are (Id, UserIn, NetIn): the central bank's
+%% answers arrive on the second, injected as ground terms by its taps on the
+%% mini-app's constructs, and what its mini-app shows it --- the mediator's
+%% cards and their closing, and the screen --- leaves by send_to_user/1, one
+%% term to a line, which is what the app's UI runtime reads.  Its screen is
+%% therefore derived from the display declarations of
+%% denominated/sovereign_agent.vglp and from nothing else.  Its calendar is
+%% empty: its date stands at 0 and every bond of maturity 0 is a coin
+%% (denominated/miniapp.glp); a clock writes that stream when the app
+%% attaches one.
+%%
+%% The market is the sovereign market of village.glp cut to the parties of
+%% the four acts the paper rests on (SGC, "The Sovereign Market, as It
+%% Runs"): the central bank, Diana the community bank and Frank the
+%% household, over the three conversations those acts need --- cb-diana,
+%% diana-frank and frank-cb --- opened as village.glp opens them and handed
+%% to each party on its channel to the social graph.  Diana and Frank are
+%% scripted (denominated/person.glp), each writing its own calendar, as Bob
+%% is in the coins harness; their scripts are those of sovereign_market less
+%% the acts with the parties not present --- Bob, Eve and the escrow agent
+%% --- and Diana's gains the reverse swap.  The central bank performs its
+%% own acts by hand:
+%%
+%%   1. it mints 30 coins of its own on its Mint form;
+%%   2. it proposes the mutual credit line to Diana on its Swap form --- ten
+%%      of its coins for ten of hers, at par --- and Diana's script accepts;
+%%   3. Diana lends Frank 15 of her coins for 18 frank-bonds maturing day 28,
+%%      Frank pays her 3 and redeems 5 for his own bonds, and then redeems
+%%      one diana-coin for a central-bank coin she holds --- the chain
+%%      redemption frank -> diana -> cb, shown on the peers' logs, Diana
+%%      warranting her date in it;
+%%   4. Frank presents that coin to the central bank naming the reserved
+%%      issuer `fiat`, and the central bank's screen shows the unit of the
+%%      fiat currency paid, outside the contract.
+%%
+%% Then Diana proposes the reverse swap --- the 9 central-bank coins she now
+%% holds for 9 of her coins the central bank now holds --- which arrives at
+%% the central bank as the card of the swap responder, its Accept and the
+%% decline of its else-branch.  It comes after the chain redemption so that
+%% the four acts wait on no answer of the person's and the coin the chain
+%% redemption takes is not set aside for it.  All three executions are in
+%% one heap and the network is not used.
+%%
+%% This file is the harness of the app, not part of the currency: the
+%% certified program is denominated/, which this directory is not (see
+%% self.glp).
+
+imported procedure miniapp#sovereign(Constant?, Channel(Stream(UserAnswer), Stream(Event))?, Stream(Conversation)?, Stream(Integer)?).
+imported procedure person#person(Constant?, Stream(Event)?, Stream(UserAnswer), Stream(Integer), Script?, Agreement?, Stream(ScreenContent)).
+
+exported procedure sovereign_ui(Constant?, Stream(UserAnswer)?, Stream(_)?).
+sovereign_ui(cb, Answers, _) :-
+    market(ch(Answers?, Events)),
+    send_to_user(Events?).
+
+%% The market: the central bank's mini-app on the channel to its person, with
+%% an empty calendar, and the two scripted peers, over the three
+%% conversations.
+procedure market(Channel(Stream(UserAnswer), Stream(Event))?).
+market(Ui) :-
+    miniapp # sovereign(cb, Ui?, [conversation(diana, ch(HD?, DH)), conversation(frank, ch(HF?, FH))], []),
+    peer(diana, [mint(usd, 10, 0), accept(cb),
+                 mint(usd, 15, 0), swap(frank, usd, diana, 0, 15, frank, 28, 18),
+                 await(presented(frank, cb, 0)),
+                 swap(cb, usd, cb, 0, 9, diana, 0, 9)],
+         [conversation(cb, ch(DH?, HD)), conversation(frank, ch(DF?, FD))]),
+    peer(frank, [mint(usd, 18, 28), accept(diana),
+                 pay(diana, usd, 0, 3),
+                 redeem(diana, usd, 0, frank, 28), redeem(diana, usd, 0, frank, 28),
+                 redeem(diana, usd, 0, frank, 28), redeem(diana, usd, 0, frank, 28),
+                 redeem(diana, usd, 0, frank, 28),
+                 advance(28),
+                 redeem(diana, usd, 0, cb, 0),
+                 redeem(cb, usd, 0, fiat, 0)],
+         [conversation(diana, ch(FD?, DF)), conversation(cb, ch(FH?, HF))]).
+
+%% A scripted peer: its mini-app, its person on the other end of the channel
+%% writing its calendar, under no agreement, and its screen tagged and
+%% logged, so the run is observable in the app's trace while nothing of the
+%% peers' reaches the central bank's own screen: its manifest views the
+%% messages matching msg(agent, person, S) and nothing else.
+procedure peer(Constant?, Script?, Stream(Conversation)?).
+peer(Id, Script, Convs) :-
+    ground(Id?) |
+    miniapp # sovereign(Id?, ch(Answers?, Events), Convs?, Cal?),
+    person # person(Id?, Events?, Answers, Cal, Script?, none, Screen),
+    log_peer(Id?, Screen?).
+
+procedure log_peer(Constant?, Stream(ScreenContent)?).
+log_peer(Id, [M|Ms]) :- ground(M?) | send_to_user([tagged(Id?, M?)]), log_peer(Id?, Ms?).
+log_peer(_, []).
+
+%% The same market with the central bank's taps scripted too, for the test
+%% suite, which cannot tap: the central bank mints 30, proposes the line,
+%% waits for the fiat payment on its own screen, and then accepts Diana's
+%% reverse swap.  Its screen is logged as the peers' are, so the four acts
+%% of the paper are read off the log as tagged(cb, ...).
+exported procedure play_sovereign_ui.
+play_sovereign_ui :-
+    market(ch(Answers?, Events)),
+    person # person(cb, Events?, Answers, _,
+                    [mint(usd, 30, 0), swap(diana, usd, cb, 0, 10, diana, 0, 10),
+                     await(fiat_paid(frank, 1)), accept(diana)],
+                    none, Screen),
+    log_peer(cb, Screen?).

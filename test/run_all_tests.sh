@@ -2706,9 +2706,11 @@ echo ""
 # lot; the same village with the central bank as an eighth party, which mints
 # its own sovereign grassroots coins, opens a mutual credit line with the
 # community bank by a swap of coins for coins, and settles a presentation of
-# its own coin in the fiat currency itself; and the term credit line of the
-# bonds paper's Section 5.  As for N2 and N3 the runs need the reduction limit
-# raised.
+# its own coin in the fiat currency itself; the term credit line of the
+# bonds paper's Section 5; and the live-person harness sovereign_ui/3, the
+# same market cut to the central bank, the community bank and the household,
+# with the central bank on the app's screen.  As for N2 and N3 the runs need
+# the reduction limit raised.
 # =============================================================================
 echo "=== Section N4: Denominated program (Sovereign Grassroots Currencies) ==="
 echo ""
@@ -2795,6 +2797,59 @@ check "Sovereign market: the sovereign coin redeemed into fiat is back with its 
 check "Sovereign market: the community bank's holdings after the line and the redemption" "tagged(diana, holdings(\[lot(cb, usd, 0, 9), lot(bob, usd, 25, 24), lot(frank, usd, 28, 13), lot(diana, usd, 0, 9)\]))" "$n4_sov"
 check "Sovereign market: the household's holdings, one community-bank coin spent up the chain" "tagged(frank, holdings(\[lot(diana, usd, 0, 6), lot(eve, usd, 0, 10), lot(frank, usd, 28, 5), lot(frank, usd, 0, 5)\]))" "$n4_sov"
 check "Sovereign market: the four parties outside the sovereign layer are unmoved" "tagged(eve, holdings(\[lot(charlie, usd, 0, 4), lot(frank, usd, 0, 1), lot(alice, usd, 0, 2), lot(bob, usd, 0, 10)\]))" "$n4_sov"
+
+echo "--- The live-person harness (sovereign_ui): the central bank on the app's screen ---"
+
+# The entry the app starts, sovereign_ui/3 (programs/currencies/sovereign/play_ui.glp),
+# with no answers: the central bank's seven request cards and its two opened
+# conversations reach its screen by send_to_user/1, one term to a line, as
+# the app's UI runtime reads them, while the peers' screens are tagged and
+# nothing of theirs reaches the central bank's screen; with no tap the peers
+# mint and wait for the line.
+n4_ui=$("$REPL_RUN" <<HEREDOC
+$SOV
+:limit 50000000
+sovereign_ui(cb, [], []).
+:quit
+HEREDOC
+2>&1)
+
+check "Sovereign harness: no runtime error" "→ suspended" "$n4_ui"
+check_not "Sovereign harness: no failed goal" "ERROR" "$n4_ui"
+check "Sovereign harness: the central bank's Mint form stands" "card(agent_1, ctx_agent_1, req(" "$n4_ui"
+check "Sovereign harness: and its Return form, the seventh" "card(agent_7, ctx_agent_7, req(" "$n4_ui"
+check "Sovereign harness: its conversation with the community bank reaches its screen" "msg(agent, person, opened(diana))" "$n4_ui"
+check "Sovereign harness: and with the household" "msg(agent, person, opened(frank))" "$n4_ui"
+check "Sovereign harness: the peers' screens are tagged" "tagged(diana, minted(10, 0))" "$n4_ui"
+check_not "Sovereign harness: and nothing of theirs reaches the central bank's screen" "msg(agent, person, minted(10, 0))" "$n4_ui"
+
+# The same run with the central bank's taps scripted (play_sovereign_ui): the
+# four acts of the paper's appendix "The Sovereign Market, as It Runs" reach
+# its screen, and Diana's reverse swap arrives as the card of its swap
+# responder and is accepted.
+n4_uip=$("$REPL_RUN" <<HEREDOC
+$SOV
+:limit 50000000
+play_sovereign_ui.
+:quit
+HEREDOC
+2>&1)
+
+check "Sovereign harness, scripted: no runtime error" "→ suspended" "$n4_uip"
+check_not "Sovereign harness, scripted: no failed goal" "ERROR" "$n4_uip"
+check "Sovereign harness, scripted: act 1, the central bank mints its own coins" "tagged(cb, minted(30, 0))" "$n4_uip"
+check "Sovereign harness, scripted: and holds them" "tagged(cb, holdings(\[lot(cb, usd, 0, 30)\]))" "$n4_uip"
+check "Sovereign harness, scripted: act 2, the mutual credit line willed by the central bank" "tagged(cb, swap_done(diana))" "$n4_uip"
+check "Sovereign harness, scripted: and by the community bank" "tagged(diana, swap_done(cb))" "$n4_uip"
+check "Sovereign harness, scripted: each holds coins of the other" "tagged(cb, holdings(\[lot(cb, usd, 0, 20), lot(diana, usd, 0, 10)\]))" "$n4_uip"
+check "Sovereign harness, scripted: act 3, the chain redemption leaves the household holding a sovereign coin" "tagged(frank, redeemed(diana, cb, 0))" "$n4_uip"
+check "Sovereign harness, scripted: the community bank warrants her date in it" "tagged(frank, warranty(diana, 0))" "$n4_uip"
+check "Sovereign harness, scripted: and gives the coin out of the line" "tagged(diana, presented(frank, cb, 0))" "$n4_uip"
+check "Sovereign harness, scripted: the household's holdings with the sovereign coin" "tagged(frank, holdings(\[lot(diana, usd, 0, 6), lot(frank, usd, 28, 5), lot(cb, usd, 0, 1)\]))" "$n4_uip"
+check "Sovereign harness, scripted: act 4, the central bank pays a unit of the fiat currency" "tagged(cb, fiat_paid(frank, 1))" "$n4_uip"
+check "Sovereign harness, scripted: and the household receives it" "tagged(frank, fiat_received(cb, 1))" "$n4_uip"
+check "Sovereign harness, scripted: the coin redeemed into fiat is back with its issuer" "tagged(cb, holdings(\[lot(cb, usd, 0, 21), lot(diana, usd, 0, 10)\]))" "$n4_uip"
+check "Sovereign harness, scripted: the reverse swap, proposed by the community bank and accepted on the card" "tagged(cb, holdings(\[lot(cb, usd, 0, 30), lot(diana, usd, 0, 1)\]))" "$n4_uip"
 
 echo "--- The denominated credit line (credit_line), Proposition prop:credit-line ---"
 
