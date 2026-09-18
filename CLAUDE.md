@@ -62,6 +62,8 @@ Reorganised 2026-09-16 (Udi).  `README.md` carries the directory map; what moved
 | GFWC | `/Users/udi/Grassroots/GLP-worktrees/GFWC` | `GFWC` |
 | Legal | `/Users/udi/Grassroots/GLP-worktrees/Legal` | `Legal` |
 | GLP-Spec | `/Users/udi/Grassroots/GLP-worktrees/GLP-Spec` | `GLP-Spec` |
+| IGLP, the harness path fix alone (Udi, 2026-09-18) | `/Users/udi/Grassroots/GLP-worktrees/IGLP-harness` | `IGLP-harness` |
+| IGLP, the default-display rule alone (Udi, 2026-09-18) | `/Users/udi/Grassroots/GLP-worktrees/IGLP-display` | `IGLP-display` |
 
 A project not listed has no worktree yet and asks Integration for one.
 
