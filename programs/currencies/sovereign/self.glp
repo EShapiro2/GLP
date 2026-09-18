@@ -13,10 +13,11 @@
 %% (denominated/escrow.glp), and the plays that activate the mini-app by run/3
 %% (denominated/plays.glp) --- and this directory adds the plays that stand in
 %% for the super-app: the village market of the bonds paper denominated in one
-%% fiat currency, the same market with the central bank (village.glp), and the
-%% term credit line (credit_line.glp).  This file holds the types shared by all
-%% of them, and the helpers over holdings, dates and conversations that the
-%% agent calls.
+%% fiat currency, the same market with the central bank (village.glp), the
+%% term credit line (credit_line.glp), and the live-person harness, the
+%% sovereign market with the central bank on the app's screen (play_ui.glp).
+%% This file holds the types shared by all of them, and the helpers over
+%% holdings, dates and conversations that the agent calls.
 %%
 %% A bond is bond(Issuer, Denomination, Maturity, Serial): the atom
 %% cent(u, f, d) of the act schemas, the denomination its middle argument, with
@@ -440,3 +441,18 @@ sovereign_village :- village # sovereign_market.
 imported procedure credit_line#run.
 exported procedure credit_line.
 credit_line :- credit_line # run.
+
+%% =============================================================================
+%% Entry point: the mini-app on a live person's screen (play_ui.glp) --- the
+%% central bank's, over the sovereign market cut to the parties of the four
+%% acts the paper rests on; and the same run with its taps scripted, for the
+%% test suite
+%% =============================================================================
+
+imported procedure play_ui#sovereign_ui(Constant?, Stream(UserAnswer)?, Stream(_)?).
+exported procedure sovereign_ui(Constant?, Stream(UserAnswer)?, Stream(_)?).
+sovereign_ui(Id, Answers, NetIn) :- play_ui # sovereign_ui(Id?, Answers?, NetIn?).
+
+imported procedure play_ui#play_sovereign_ui.
+exported procedure play_sovereign_ui.
+play_sovereign_ui :- play_ui # play_sovereign_ui.
