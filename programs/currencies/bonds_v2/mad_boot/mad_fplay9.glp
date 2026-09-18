@@ -25,7 +25,7 @@ agent_init(Id, PlayNum, NetIn) :-
     tee(MedOut?, ActorIn, DispNotify),
     send_to_person_tagged(Id?, DispCmd?, DispNotify?).
 
-procedure tee(Stream(_)?, Stream(_), Stream(_)).
+procedure tee(Stream(X)?, Stream(X), Stream(X)).
 tee([X|Xs], [X?|Ys?], [X?|Zs?]) :- ground(X?) | tee(Xs?, Ys, Zs).
 tee([], [], []).
 
