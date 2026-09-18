@@ -48,6 +48,13 @@ class GlpPaths {
   /// person. Derived from the root self.glp so it cannot drift from the tree
   /// the engine is actually reading.
   String get coinsDir => '${File(rootSelfGlp).parent.path}/currencies/coins';
+
+  /// The sovereign currency's program (Currencies): programs/currencies/sovereign,
+  /// which holds the certified mini-app denominated/ — the compiled
+  /// denominated bond agent with its mediator — and, beside it, the plays that
+  /// run it. Derived from the root self.glp, as [coinsDir] is.
+  String get sovereignDir =>
+      '${File(rootSelfGlp).parent.path}/currencies/sovereign';
 }
 
 /// The bundled assets (relative to `assets/glp/`), in the tree the engine's

@@ -30,8 +30,10 @@
 /// sees, and Currencies named the writers on 2026-09-09 so that the forms
 /// label themselves. The clause names and answer functors are the compilation's — the
 /// four request clauses of `agent` are `agent_1` to `agent_4` in the order
-/// they are written, and the two of `respond_swap` are `respond_swap_1`
-/// (decline) and `respond_swap_2` (accept).
+/// they are written, and the one clause of `respond_swap` is `respond_swap_1`,
+/// the accept clause, whose reply type is
+/// `Reply_respond_swap_1 ::= then(Xs_respond_swap_1) ; else`: its else-branch
+/// is the decline.
 library;
 
 import '../ui_runtime/manifest.dart';
@@ -83,22 +85,19 @@ const _redeem = CommandDesc(
   ],
 );
 
-/// The two clauses of the swap responder, transient and sharing the context
-/// `ctx_respond_swap_j(From, Want, Offered)`: one card, a button each, and
-/// whichever the person taps the other ask is aborted by the reduction and
-/// retired by `closed`.
+/// The swap responder's one transient clause, its context
+/// `ctx_respond_swap_1(From, Want, Offered)`. Its question has one position,
+/// the ground `yes`, which the Accept button carries; `From`, `Want` and
+/// `Offered` are context and carry no field.
 ///
-/// The accept clause carries an else-branch, which until 2026-09-15 the
-/// mediator's deadline selected — the machine declining for a person who had
-/// not answered. With the deadline gone it is selected only by a decline, and
-/// this program does not need one: the decline is its own volition-guarded
-/// clause here, `respond_swap_1`, and a will for that sibling reaches the same
-/// answer (vGLP, Section "Elicitation"). So the card declares no
-/// [InboxDesc.elseBranch] and offers two buttons rather than a second decline
-/// that says what the first says. The else-branch of `coins_agent.vglp` is
-/// what is now redundant, and removing it is Currencies' and vGLP's.
+/// The clause's reply type is `Reply_respond_swap_1 ::= then(Xs) ; else`, so
+/// the card carries a decline: the runtime derives it from [elseBranch], and
+/// the person's tap grants `decline(ReqId)`, which selects the else-branch —
+/// the clause's own refusal, `decline_answer`, and the image of the
+/// transaction's else-effect.
 const _respondSwap = InboxDesc(
-  clauses: ['respond_swap_1', 'respond_swap_2'],
+  clauses: ['respond_swap_1'],
+  elseBranch: ['respond_swap_1'],
   args: ['From', 'Want', 'Offered'],
   itemKey: 'From',
   title: '',
@@ -106,16 +105,9 @@ const _respondSwap = InboxDesc(
     AnswerDesc(
       label: 'Accept',
       cmdCtor: '',
-      clause: 'respond_swap_2',
-      answerCtor: 'xs_respond_swap_2',
-      fill: [ConstFill(GAtom('yes'))],
-    ),
-    AnswerDesc(
-      label: 'Decline',
-      cmdCtor: '',
       clause: 'respond_swap_1',
       answerCtor: 'xs_respond_swap_1',
-      fill: [ConstFill(GAtom('no'))],
+      fill: [ConstFill(GAtom('yes'))],
     ),
   ],
 );
