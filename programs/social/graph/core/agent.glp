@@ -119,12 +119,18 @@ agent(Id, [msg(person, Id1, unfriend(Target))|UserIn], NetIn, Outs, Host) :-
     send_user(msg(agent, person, unfriended(Target?)), Outs2?, Outs3),
     agent(Id?, UserIn?, NetIn?, Outs3?, Host?).
 
-%% User introduces P to Q
+%% User introduces P to Q.  The mutual friend vouches for the identities of
+%% both, having a friend channel to each (Section 5.2, "Introductions via a
+%% mutual friend"), so the introduction proceeds only where P and Q each have a
+%% friend output entry.  That test is a procedure over the outputs list and GLP
+%% admits no procedure in a guard (Section 6.3), so it is a body goal and
+%% introduce_step/9 dispatches on its two answers; the setup channel is minted
+%% where the introduction proceeds.
 agent(Id, [msg(person, Id1, introduce(P, Q))|UserIn], NetIn, Outs, Host) :-
-    Id? =?= Id1?, ground(P?), ground(Q?), ~(P? =?= Q?), new_channel(PQCh, QPCh) |
-    send_friend(P?, msg(Id?, P?, intro(Q?, QPCh?)), Outs?, Outs1),
-    send_friend(Q?, msg(Id?, Q?, intro(P?, PQCh?)), Outs1?, Outs2),
-    agent(Id?, UserIn?, NetIn?, Outs2?, Host?).
+    Id? =?= Id1?, ground(P?), ground(Q?), ~(P? =?= Q?) |
+    anchor_friend(P?, Outs?, Outs1, FP),
+    anchor_friend(Q?, Outs1?, Outs2, FQ),
+    introduce_step(FP?, FQ?, Id?, P?, Q?, UserIn?, NetIn?, Outs2?, Host?).
 
 %% User accepts intro --- send ack, spawn peer-wait, inject result.  The
 %% consent is kept: the channel the introducer made reaches this agent through
@@ -413,14 +419,16 @@ agent(Id, UserIn, [pending_link(Name, S)|NetIn], Outs, host(Apps, Atts, Pend, Tr
     pending_step(Found?, Name?, S?, Id?, UserIn?, NetIn?, Outs?, Apps?, Atts?, Pend1?, Trusted?).
 
 %% A friend asks to be introduced to the anchor of a held name (the holder
-%% of a warm call): the anchor is found among this agent's own friends, and
-%% with the person's consent the two are introduced; otherwise the request
-%% waits for it.
+%% of a warm call): the requester and the anchor are both looked up among this
+%% agent's own friends --- the mutual friend has a friend channel to each
+%% (Section 5.2) --- and with the person's consent the two are introduced;
+%% otherwise the request waits for it.
 agent(Id, UserIn, [msg(From, Id1, request_intro(Anchor))|NetIn], Outs,
       host(Apps, Atts, Pend, Trusted)) :-
     Id? =?= Id1?, ground(From?), ground(Anchor?) |
-    anchor_friend(Anchor?, Outs?, Outs1, Found),
-    intro_request(Found?, Id?, From?, Anchor?, UserIn?, NetIn?, Outs1?,
+    anchor_friend(From?, Outs?, Outs1, Requester),
+    anchor_friend(Anchor?, Outs1?, Outs2, Found),
+    intro_request(Requester?, Found?, Id?, From?, Anchor?, UserIn?, NetIn?, Outs2?,
                   host(Apps?, Atts?, Pend?, Trusted?)).
 
 %% The warm call itself, from a new friend: the person must have consented to
@@ -1054,13 +1062,16 @@ anchor_friend(Anchor, [E | Rest], [E? | Rest1?], F?) :-
     otherwise | anchor_friend(Anchor?, Rest?, Rest1, F).
 anchor_friend(_, [], [], none).
 
-procedure intro_request(AnchorFriend?, Constant?, Constant?, Constant?, UserInStream?, NetInStream?, OutputsList?, Host?).
-intro_request(found(Anchor), Id, From, Anchor1, UserIn, NetIn, Outs, host(Apps, Atts, Pend, Trusted)) :-
+%% intro_request(Requester, Found, ...): the request proceeds only where the
+%% requester and the anchor are both friends of this agent (Section 5.2); where
+%% either is not, nothing is done beyond not introducing.
+procedure intro_request(AnchorFriend?, AnchorFriend?, Constant?, Constant?, Constant?, UserInStream?, NetInStream?, OutputsList?, Host?).
+intro_request(found(_), found(Anchor), Id, From, Anchor1, UserIn, NetIn, Outs, host(Apps, Atts, Pend, Trusted)) :-
     take_intro_consent(From?, Anchor?, Pend?, Pend1, C),
     intro_request_step(C?, Id?, From?, Anchor?, Anchor1?, UserIn?, NetIn?, Outs?,
                        host(Apps?, Atts?, Pend1?, Trusted?)).
-intro_request(none, Id, _, _, UserIn, NetIn, Outs, Host) :-
-    agent(Id?, UserIn?, NetIn?, Outs?, Host?).
+intro_request(_, _, Id, _, _, UserIn, NetIn, Outs, Host) :-
+    otherwise | agent(Id?, UserIn?, NetIn?, Outs?, Host?).
 
 procedure take_intro_consent(Constant?, Constant?, PendingInv?, PendingInv, Constant).
 take_intro_consent(R, A, [intro_consent(R1, A1) | Rest], Rest?, true) :-
@@ -1087,3 +1098,21 @@ intro_consent_step(true, Id, From, Anchor, UserIn, NetIn, Outs, Host) :-
     agent(Id?, [msg(person, Id?, introduce(From?, Anchor?)) | UserIn?], NetIn?, Outs?, Host?).
 intro_consent_step(false, Id, From, Anchor, UserIn, NetIn, Outs, host(Apps, Atts, Pend, Trusted)) :-
     agent(Id?, UserIn?, NetIn?, Outs?, host(Apps?, Atts?, [intro_consent(From?, Anchor?) | Pend?], Trusted?)).
+
+%% =============================================================================
+%% THE INTRODUCTION VIA A MUTUAL FRIEND (Section 5.2)
+%% =============================================================================
+
+%% introduce_step(FP, FQ, ...): the person-posted introduction, dispatched on
+%% the two lookups of the outputs list.  Where P and Q each have a friend
+%% output entry the mutual friend mints the setup channel and sends one half to
+%% each, tagged with the other's identity; where either does not, it does
+%% nothing beyond not introducing.
+procedure introduce_step(AnchorFriend?, AnchorFriend?, Constant?, Constant?, Constant?, UserInStream?, NetInStream?, OutputsList?, Host?).
+introduce_step(found(_), found(_), Id, P, Q, UserIn, NetIn, Outs, Host) :-
+    new_channel(PQCh, QPCh) |
+    send_friend(P?, msg(Id?, P?, intro(Q?, QPCh?)), Outs?, Outs1),
+    send_friend(Q?, msg(Id?, Q?, intro(P?, PQCh?)), Outs1?, Outs2),
+    agent(Id?, UserIn?, NetIn?, Outs2?, Host?).
+introduce_step(_, _, Id, _, _, UserIn, NetIn, Outs, Host) :-
+    otherwise | agent(Id?, UserIn?, NetIn?, Outs?, Host?).

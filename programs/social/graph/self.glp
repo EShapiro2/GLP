@@ -561,6 +561,34 @@ imported procedure boot#play_unfriend_absent.
 exported procedure play_unfriend_absent.
 play_unfriend_absent :- boot # play_unfriend_absent.
 
+imported procedure boot#play_introduce_both.
+exported procedure play_introduce_both.
+play_introduce_both :- boot # play_introduce_both.
+
+imported procedure boot#play_introduce_one.
+exported procedure play_introduce_one.
+play_introduce_one :- boot # play_introduce_one.
+
+imported procedure boot#play_introduce_other.
+exported procedure play_introduce_other.
+play_introduce_other :- boot # play_introduce_other.
+
+imported procedure boot#play_introduce_neither.
+exported procedure play_introduce_neither.
+play_introduce_neither :- boot # play_introduce_neither.
+
+imported procedure boot#play_request_intro_both.
+exported procedure play_request_intro_both.
+play_request_intro_both :- boot # play_request_intro_both.
+
+imported procedure boot#play_request_intro_stranger.
+exported procedure play_request_intro_stranger.
+play_request_intro_stranger :- boot # play_request_intro_stranger.
+
+imported procedure boot#play_request_intro_no_anchor.
+exported procedure play_request_intro_no_anchor.
+play_request_intro_no_anchor :- boot # play_request_intro_no_anchor.
+
 %% Live-UI boot (play_ui_boot.glp, a UIVE UI module): the Dart bridge enters
 %% the program at agent_init/3.
 imported procedure play_ui_boot#agent_init(Constant?, UserCmdStream?, NetInStream?).
