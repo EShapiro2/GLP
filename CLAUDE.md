@@ -9,7 +9,7 @@ Integration Code, at session start:
 1. `/Grassroots/docs/claude.md`.
 2. `/Grassroots/Integration/CLAUDE.md`.
 3. This file.
-4. `to_all_inbox.md`, then `Integration_inbox.md` from its last receipt forward --- and again between tasks, being the one worker that does not wait to be told (`claude.md`, "Mail").
+4. `to_all_inbox.md`, then `Integration-Code_inbox.md` from its last receipt forward --- and again between tasks, being the one worker that does not wait to be told (`claude.md`, "Mail").
 
 A subagent, at the start of its task: the same 1 to 3 with the owning project's `CLAUDE.md` at 2, then the sections of the owning paper its task names.  It reads no inbox and leaves no receipt, having none.
 
