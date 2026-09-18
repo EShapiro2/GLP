@@ -10,8 +10,8 @@
 # compilation of Section 5, against the two displays of Section 5.2; then the
 # contract of a grassroots federation, /Grassroots/GFWC sections/act-schemas.tex,
 # against the four conditions of Appendix B of /Grassroots/Jurix, and four
-# contracts broken in one place each against those.  Exits non-zero if any
-# check fails.
+# contracts broken in one place each against those; then the compilation of
+# Appendix B, against its worked box.  Exits non-zero if any check fails.
 
 set -u
 GLP_DIR="$(cd "$(dirname "$0")/../.." && pwd)"
@@ -281,6 +281,62 @@ out=$(run 'compile_named(gf_novolition).')
 check "a contract that fails the conditions of Appendix B is not compiled" \
       "% not compiled: gf_novolition" "$(printf '%s' "$out" | tr '\n' ' ')"
 check_not "and no display is printed for it" "begin{align" "$out"
+
+# --- the compilation of Appendix B (definition:compile) --------------------
+# The worked box of Appendix B, transcribed from
+# /Grassroots/Jurix/sections/13-community-roles.tex, is the display for
+# federate; compared with the whitespace removed, as the two displays of
+# Section 5.2 are, and without the full stop that closes the box's sentence.
+
+federate_box=$(cat <<'EOF' | squash
+\begin{align*}
+& c'_p := c_p \uplus \{\mathit{child}(\zeta\cdot y,\zeta)\} && (p\in\mathrm{ext}_c(\zeta^{\mathit{child}\ast})),\\
+& c'_p := c_p \uplus \{\mathit{seat}(\zeta\cdot y)\} && (p\in\mathrm{ext}_c(\zeta^{\mathit{seat}})),\\
+& \text{provided } \zeta\cdot y \text{ is an argument of no atom of } c,\\
+& \text{guarded by } G,\ G\subseteq\mathrm{ext}_c(\zeta^{\mathit{seat}}) \text{ with } |G|>\theta|\mathrm{ext}_c(\zeta^{\mathit{seat}})|
+\end{align*}
+EOF
+)
+check_eq "federate compiles to the worked box of Appendix B" \
+         "$federate_box" "$(compiled federation federate)"
+
+# The five schemas of the contract, in the one form of Appendix B.
+out=$(run 'compile_named(federation).')
+check_eq "the federation compiles to five displays" "5" \
+         "$(printf '%s' "$out" | grep -c 'begin{align')"
+
+# form: a party role in the form of Appendix B, over its extent, guarded by a
+# part of it larger than the threshold 0; no name term sigma.y, so no line on
+# freshness.
+form=$(compiled federation form)
+check "form ranges over the extent of its party role" \
+      "(p\\in\\mathrm{ext}_c(\\Alice))" "$form"
+check "form's guard is a part of that extent larger than 0 of it" \
+      "\\text{guardedby}G,\\G\\subseteq\\mathrm{ext}_c(\\Alice)\\text{with}|G|>0|\\mathrm{ext}_c(\\Alice)|" \
+      "$form"
+check_not "form forms no name and prints no freshness line" \
+      "noatomof" "$form"
+
+# join: an assignment line and a proviso line per role, the reach condition,
+# and a guard that is the union of two parts, each at its own threshold.
+join=$(compiled federation join)
+check_eq "join prints an assignment line per role" "4" \
+         "$(printf '%s' "$join" | grep -o "c'_p:=" | wc -l | tr -d ' ')"
+check_eq "join prints a proviso line per role" "4" \
+         "$(printf '%s' "$join" | grep -o '\\notinc_p' | wc -l | tr -d ' ')"
+check "join prints its reach condition" \
+      "\\text{provided}\\xi\\not\\rightsquigarrow_{\\mathit{child}}\\zeta" "$join"
+check "join's guard is the union of two parts" \
+      "\\text{guardedby}G_{2}\\cupG_{4},\\G_{2}\\subseteq\\mathrm{ext}_c(\\zeta^{\\mathit{seat}})\\text{with}|G_{2}|>\\theta|\\mathrm{ext}_c(\\zeta^{\\mathit{seat}})|\\text{and}G_{4}\\subseteq\\mathrm{ext}_c(\\xi^{\\mathit{seat}})\\text{with}|G_{4}|>\\theta|\\mathrm{ext}_c(\\xi^{\\mathit{seat}})|" \
+      "$join"
+
+# leave_1 and leave_2 differ only in which assembly guards.
+check "leave_1 is guarded by a supermajority of the parent's assembly" \
+      "\\text{guardedby}G,\\G\\subseteq\\mathrm{ext}_c(\\zeta^{\\mathit{seat}})" \
+      "$(compiled federation leave_1)"
+check "leave_2 is guarded by a supermajority of the child's assembly" \
+      "\\text{guardedby}G,\\G\\subseteq\\mathrm{ext}_c(\\xi^{\\mathit{seat}})" \
+      "$(compiled federation leave_2)"
 
 echo "=== $PASS passed, $FAIL failed ==="
 [ "$FAIL" -eq 0 ]
