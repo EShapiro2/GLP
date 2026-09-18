@@ -1,0 +1,19 @@
+%% A type definition naming a primitive is a definition, not an alias.
+%%
+%% TGLP appendix "Type Aliases": a simple alias is "a single alternative that
+%% is a type reference: an alias for a defined type, or for the dual of one",
+%% and "the referenced types must be defined---not aliases themselves, and not
+%% primitives".  `Key ::= String.` names the primitive String, so it is an
+%% ordinary type definition, whose automaton inherits String's (appendix "Type
+%% Automaton Construction"), and it survives into the environment of every
+%% module in its scope: code.glp's `Msg ::= msg(Key, _)` resolves it.
+%%
+%% Until 2026-09-18 the type checker erased it as an alias, and a module naming
+%% it in a type definition of its own failed with "Unresolved type: Key" in
+%% every linked program --- the root self.glp's own `Key ::= String.` first
+%% (IGLP, 2026-09-18).  Covered by glp_runtime/test/analysis/primitive_named_type_test.dart.
+Key ::= String.
+KeyStream ::= [] ; [Key | KeyStream].
+imported procedure code#go(KeyStream).
+exported procedure go(KeyStream).
+go(Ks?) :- code # go(Ks).

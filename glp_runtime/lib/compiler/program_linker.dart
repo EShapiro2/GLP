@@ -242,7 +242,8 @@ TypeEnvironment _vglpScope(File file, List<DiscoveredModule> modules,
   final modDir = _normPath(file.parent.path);
   for (final e in modules.where((m) => m.exposingDir != null)) {
     if (!_dirUnder(modDir, e.exposingDir!)) continue;
-    scope = _mergeExposed(scope, _exposedExportScope(e.ast, scope));
+    scope = _mergeExposed(scope, _exposedExportScope(e.ast, scope),
+        label: e.moduleName);
   }
   return scope;
 }
@@ -472,8 +473,9 @@ void _resolveExposes(List<DiscoveredModule> modules, String? programsDir,
     final modDir = _normPath(File(m.filePath).parent.path);
     for (final e in exposed) {
       if (!_dirUnder(modDir, e.exposingDir!)) continue;
-      m.ancestorScope =
-          _mergeExposed(m.ancestorScope, _exposedExportScope(e.ast, m.ancestorScope));
+      m.ancestorScope = _mergeExposed(
+          m.ancestorScope, _exposedExportScope(e.ast, m.ancestorScope),
+          label: e.moduleName);
     }
   }
 }
@@ -487,25 +489,34 @@ void _resolveExposes(List<DiscoveredModule> modules, String? programsDir,
 /// entirely and never drives call-site instantiation (Case B).  This is the
 /// behaviour the platform routers rely on before the per-platform copies are
 /// removed: the local monomorphic router shadows the exposed parameterised one.
-TypeEnvironment _mergeExposed(TypeEnvironment base, TypeEnvironment exposed) {
+///
+/// An exposed declaration's types are the exposing module's own: a type [base]
+/// also defines survives from [exposed] under `<label>:T`, the exposed
+/// declarations rewritten to it (TypeEnvironment.shadowedBy) --- as the linked
+/// program resolves an exposed declaration's types in the exposing module's
+/// scope ([renameDeclTypes] over the declaring file's [typeOwnersByModule]).
+TypeEnvironment _mergeExposed(TypeEnvironment base, TypeEnvironment exposed,
+    {String? label}) {
   bool definedNearer(String key) =>
       base.procedures.containsKey(key) || base.paramProcDecls.containsKey(key);
 
+  final ex = exposed.shadowedBy(base, ownLabel: label);
   final procedures = <String, ProcDecl>{...base.procedures};
-  for (final e in exposed.procedures.entries) {
+  for (final e in ex.procedures.entries) {
     if (!definedNearer(e.key)) procedures[e.key] = e.value;
   }
   final paramProcDecls = <String, ProcDecl>{...base.paramProcDecls};
-  for (final e in exposed.paramProcDecls.entries) {
+  for (final e in ex.paramProcDecls.entries) {
     if (!definedNearer(e.key)) paramProcDecls[e.key] = e.value;
   }
   final types = <String, TypeDef>{...base.types};
-  for (final e in exposed.types.entries) {
+  for (final e in ex.types.entries) {
     types.putIfAbsent(e.key, () => e.value);
   }
   return TypeEnvironment(types, procedures,
       paramProcDecls: paramProcDecls,
-      typeTemplates: {...base.typeTemplates, ...exposed.typeTemplates});
+      typeTemplates: {...base.typeTemplates, ...ex.typeTemplates},
+      typeOrigins: {...ex.originsUnder(label), ...base.typeOrigins});
 }
 
 /// A TypeEnvironment of a module's EXPORTED procedure declarations plus the
