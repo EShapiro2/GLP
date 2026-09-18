@@ -162,15 +162,15 @@ NetColdCall ::= friend_request(Constant, Response?).
 %% channel.  A per-kind entry (net_output below) types the stream at exactly
 %% this, so send_to_net/1, which reads msg(Constant, _), accepts it --- the
 %% split social/graph makes (its NetOutMsg / NetOutStream).
-NetOutMsg    ::= msg(Constant, NetColdCall).
+NetOutMsg    ::= msg(Key, NetColdCall).
 NetOutStream ::= [] ; [NetOutMsg | NetOutStream].
 
 %% The agent's network input: the cold calls of others, delivered by the
 %% network (or a headless play's router), and, once a friend channel is merged
 %% into it (handle_response), that friend's messages.  The shape social/graph
 %% gives its NetInMsg.
-NetInMsg     ::= msg(Constant, NetColdCall)
-               ; msg(Constant, Constant, FriendContent).
+NetInMsg     ::= msg(Key, NetColdCall)
+               ; msg(Key, Constant, FriendContent).
 NetInStream  ::= [] ; [NetInMsg | NetInStream].
 
 %% The agent's person input: the mediator's vocabulary (UserMsg, including the

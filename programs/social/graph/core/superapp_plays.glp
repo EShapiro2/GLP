@@ -269,7 +269,7 @@ certified_or_not(S, none) :- string(S?) | true.
 %% alice, whose execution reports got(hello_from_bob).  Every volition is the
 %% person's, given here in advance.  Nothing closes: the harness settles.
 %% =============================================================================
-exported procedure sg_init(Constant?, Constant?, NetInStream?).
+exported procedure sg_init(Key?, Constant?, NetInStream?).
 sg_init(alice, invite, NetIn) :-
     agent # agent(alice, AliceIn?, NetIn?, [user_output(Out), net_output(NetOut)]),
     send_to_net(NetOut?),
@@ -642,12 +642,12 @@ bob_cssn_run([], []).
 
 %% The person on the mini-app's own channel: told it is connected to the
 %% friend, it sends that friend one message of the platform.
-procedure cssn_greeter(Constant?, Channel(Stream(CsAppNotify), Stream(CsAppCmd))?, Stream(CsAppNotify)).
+procedure cssn_greeter(Key?, Channel(Stream(CsAppNotify), Stream(CsAppCmd))?, Stream(CsAppNotify)).
 cssn_greeter(F, ch(Notify, Cmds?), Seen?) :-
     ground(F?) |
     cg(F?, Notify?, Cmds, Seen).
 
-procedure cg(Constant?, Stream(CsAppNotify)?, Stream(CsAppCmd), Stream(CsAppNotify)).
+procedure cg(Key?, Stream(CsAppNotify)?, Stream(CsAppCmd), Stream(CsAppNotify)).
 cg(F, [connected(F1) | Ns], [send(F1?, hello) | Cmds?], [connected(F1?) | Seen?]) :-
     F? =?= F1? |
     cg_rest(Ns?, Cmds, Seen).
@@ -744,12 +744,12 @@ bob_both_run([], []).
 %% (mint on agent_1, swap on agent_2, accept on the respond_swap_1 card of the
 %% proposer) and is done when the screen shows its effect.
 %% =============================================================================
-procedure coin_person(Constant?, Channel(Stream(Event), Stream(UserAnswer))?, CoinScript?, Stream(ScreenContent)).
+procedure coin_person(Key?, Channel(Stream(Event), Stream(UserAnswer))?, CoinScript?, Stream(ScreenContent)).
 coin_person(Id, ch(Events, Answers?), Script, Screen?) :-
     ground(Id?) |
     cp(Id?, Events?, Answers, Script?, open(no_card, no_card), [], idle, Screen).
 
-procedure cp(Constant?, Stream(Event)?, Stream(UserAnswer), CoinScript?, OpenCards?, SwapCards?, Sent?, Stream(ScreenContent)).
+procedure cp(Key?, Stream(Event)?, Stream(UserAnswer), CoinScript?, OpenCards?, SwapCards?, Sent?, Stream(ScreenContent)).
 cp(Id, [card(agent_1, _, R) | Es], As?, Script, open(_, S), Swaps, P, Screen?) :-
     ground(R?) |
     try_step(Id?, Es?, As, Script?, open(R?, S?), Swaps?, P?, Screen).
@@ -797,13 +797,13 @@ done(swap(Q, _, _, _, _), swap_done(Q1), yes) :- Q? =?= Q1? | true.
 done(accept(Q), swap_done(Q1), yes) :- Q? =?= Q1? | true.
 done(_, _, no) :- otherwise | true.
 
-procedure advance(Constant?, Constant?, Stream(Event)?, Stream(UserAnswer), CoinStep?, CoinScript?, OpenCards?, SwapCards?, Sent?, Stream(ScreenContent)).
+procedure advance(Constant?, Key?, Stream(Event)?, Stream(UserAnswer), CoinStep?, CoinScript?, OpenCards?, SwapCards?, Sent?, Stream(ScreenContent)).
 advance(yes, Id, Es, As?, _, Script, Open, Swaps, _, Screen?) :-
     try_step(Id?, Es?, As, Script?, Open?, Swaps?, idle, Screen).
 advance(no, Id, Es, As?, Step, Script, Open, Swaps, P, Screen?) :-
     cp(Id?, Es?, As, [Step? | Script?], Open?, Swaps?, P?, Screen).
 
-procedure try_step(Constant?, Stream(Event)?, Stream(UserAnswer), CoinScript?, OpenCards?, SwapCards?, Sent?, Stream(ScreenContent)).
+procedure try_step(Key?, Stream(Event)?, Stream(UserAnswer), CoinScript?, OpenCards?, SwapCards?, Sent?, Stream(ScreenContent)).
 try_step(Id, Es, As?, [], Open, Swaps, P, Screen?) :-
     cp(Id?, Es?, As, [], Open?, Swaps?, P?, Screen).
 try_step(Id, Es, As?, [Step | Script], Open, Swaps, sent(R), Screen?) :-
@@ -820,13 +820,13 @@ pick(accept(From), _, Swaps, C?, Swaps1?) :-
     ground(From?) | find_swap(From?, Swaps?, C, Swaps1).
 pick(_, _, Swaps, wait, Swaps?) :- otherwise | true.
 
-procedure find_swap(Constant?, SwapCards?, Choice, SwapCards).
+procedure find_swap(Key?, SwapCards?, Choice, SwapCards).
 find_swap(From, [swap_card(F, R) | Rest], answer(R?, xs_respond_swap_1(yes)), Rest?) :-
     From? =?= F? | true.
 find_swap(From, [S | Rest], C?, [S? | Rest1?]) :- otherwise | find_swap(From?, Rest?, C, Rest1).
 find_swap(_, [], wait, []).
 
-procedure act(Choice?, Constant?, Stream(Event)?, Stream(UserAnswer), CoinScript?, OpenCards?, SwapCards?, Stream(ScreenContent)).
+procedure act(Choice?, Key?, Stream(Event)?, Stream(UserAnswer), CoinScript?, OpenCards?, SwapCards?, Stream(ScreenContent)).
 act(answer(R, A), Id, Es, [answer(R?, A?) | As1?], Script, Open, Swaps, Screen?) :-
     ground(R?) |
     cp(Id?, Es?, As1, Script?, Open?, Swaps?, sent(R?), Screen).
