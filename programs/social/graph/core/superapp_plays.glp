@@ -741,7 +741,7 @@ bob_both_run([], []).
 %% super-app's end of the currency's cards-and-answers channel, after
 %% Currencies' person.glp: the mediator reissues the request cards after every
 %% reduction, so a step is answered on the latest open card of its clause
-%% (mint on agent_1, swap on agent_2, accept on the respond_swap_2 card of the
+%% (mint on agent_1, swap on agent_2, accept on the respond_swap_1 card of the
 %% proposer) and is done when the screen shows its effect.
 %% =============================================================================
 procedure coin_person(Constant?, Channel(Stream(Event), Stream(UserAnswer))?, CoinScript?, Stream(ScreenContent)).
@@ -756,11 +756,11 @@ cp(Id, [card(agent_1, _, R) | Es], As?, Script, open(_, S), Swaps, P, Screen?) :
 cp(Id, [card(agent_2, _, R) | Es], As?, Script, open(M, _), Swaps, P, Screen?) :-
     ground(R?) |
     try_step(Id?, Es?, As, Script?, open(M?, R?), Swaps?, P?, Screen).
-cp(Id, [card(respond_swap_2, ctx_respond_swap_2(From, _, _), R) | Es], As?, Script, Open, Swaps, P, Screen?) :-
+cp(Id, [card(respond_swap_1, ctx_respond_swap_1(From, _, _), R) | Es], As?, Script, Open, Swaps, P, Screen?) :-
     ground(From?), ground(R?) |
     try_step(Id?, Es?, As, Script?, Open?, [swap_card(From?, R?) | Swaps?], P?, Screen).
 cp(Id, [card(L, _, _) | Es], As?, Script, Open, Swaps, P, Screen?) :-
-    ~(L? =?= agent_1), ~(L? =?= agent_2), ~(L? =?= respond_swap_2) |
+    ~(L? =?= agent_1), ~(L? =?= agent_2), ~(L? =?= respond_swap_1) |
     cp(Id?, Es?, As, Script?, Open?, Swaps?, P?, Screen).
 cp(Id, [closed(R) | Es], As?, Script, open(M, S), Swaps, P, Screen?) :-
     ground(R?) |
@@ -821,7 +821,7 @@ pick(accept(From), _, Swaps, C?, Swaps1?) :-
 pick(_, _, Swaps, wait, Swaps?) :- otherwise | true.
 
 procedure find_swap(Constant?, SwapCards?, Choice, SwapCards).
-find_swap(From, [swap_card(F, R) | Rest], answer(R?, xs_respond_swap_2(yes)), Rest?) :-
+find_swap(From, [swap_card(F, R) | Rest], answer(R?, xs_respond_swap_1(yes)), Rest?) :-
     From? =?= F? | true.
 find_swap(From, [S | Rest], C?, [S? | Rest1?]) :- otherwise | find_swap(From?, Rest?, C, Rest1).
 find_swap(_, [], wait, []).
