@@ -1,0 +1,260 @@
+% ---------------------------------------------------------------------------
+% The runs of the federation platform the tests drive (Definition "Federation
+% Platform").
+%
+% join_platform is the Join of Figure 2 of
+% /Grassroots/GFWC/sections/introduction.tex carried out by the platform with
+% messages: two communities of two agents each, the Discovers by which the
+% members of the two assemblies come to know one another, the Moves and the
+% Wills, each proposed at its community and learnt there, and the Relays that
+% carry the motions and the wills of each community to the other, ending with
+% the same six records learnt at both.
+%
+% concurrent_dates is two members of one community proposing a record each
+% without either round having finished, ending with both records in one learnt
+% row.
+%
+% crash_after_will is a supermajority of an assembly of three willing a
+% Federate, the third member crashing while the last will is still in flight,
+% and the act decided all the same on the quorum the other two form.
+%
+% A community here is founded, as an Establish founds one, on an origin record
+% and a seat for every member of the electorate; its first holders start the
+% instance of the community at that row, whose configuration is the initial
+% one.
+% ---------------------------------------------------------------------------
+
+imported procedure platform#papply_all(Params?, Steps?, PWorld?, PRunOut).
+imported procedure platform#pworld_learnt(PWorld?, Constant?, Name?, Row).
+imported procedure platform#pworld_traffic(PWorld?, Ints).
+imported procedure rla#inst_form(Name?, Row?, Inst).
+imported procedure platform#pworld_of(Agents?, PWorld).
+imported procedure row#row_state(Rat?, Row?, Name?, State).
+imported procedure decide#decided_acts(Rat?, Row?, Arecs).
+
+% ---------------------------------------------------------------------------
+% The communities and the records the runs name
+% ---------------------------------------------------------------------------
+
+% f, the parent, founded by the assembly [carol, dave] of name(carol, [1]);
+% g, the child, founded by the assembly [alice, bob] of name(alice, [1]);
+% h, an assembly of three, founded by [carol, dave, erin].
+procedure comm(Constant?, Name).
+comm(f, name(carol, [1, 1])).
+comm(g, name(alice, [1, 1])).
+comm(h, name(carol, [1, 1])).
+
+procedure founding_row(Constant?, Row).
+founding_row(f,
+    [origin(federate(name(carol, [1])),
+            motion(federate(name(carol, [1])), name(carol, [1]), [carol, dave], 0)),
+     seat(plus, carol, col(name(carol, [1])), 0, 0),
+     seat(plus, dave, col(name(carol, [1])), 0, 1)]).
+founding_row(g,
+    [origin(federate(name(alice, [1])),
+            motion(federate(name(alice, [1])), name(alice, [1]), [alice, bob], 0)),
+     seat(plus, alice, col(name(alice, [1])), 0, 0),
+     seat(plus, bob, col(name(alice, [1])), 0, 1)]).
+founding_row(h,
+    [origin(federate(name(carol, [1])),
+            motion(federate(name(carol, [1])), name(carol, [1]), [carol, dave, erin], 0)),
+     seat(plus, carol, col(name(carol, [1])), 0, 0),
+     seat(plus, dave, col(name(carol, [1])), 0, 1),
+     seat(plus, erin, col(name(carol, [1])), 0, 2)]).
+
+% ---------------------------------------------------------------------------
+% Building a world of founders
+% ---------------------------------------------------------------------------
+
+% An agent the founding of a community seated, holding the instance of it at
+% the row the founding gave it, with the peers it starts with.
+procedure founder(Constant?, Agents?, Name?, Row?, Cva).
+founder(P, Ps, V, R, cva(P?, Ps?, [], [], [I?], 0, no)) :-
+    ground(P?), ground(Ps?), ground(V?), ground(R?) |
+    rla # inst_form(V?, R?, I).
+
+procedure founders(Agents?, Agents?, Name?, Row?, Cvas).
+founders([], _, _, _, []).
+founders([P|Ps], All, V, R, [C?|Cs?]) :-
+    ground(P?), ground(Ps?), ground(All?), ground(V?), ground(R?) |
+    others(All?, P?, Others),
+    founder(P?, Others?, V?, R?, C),
+    founders(Ps?, All?, V?, R?, Cs).
+
+procedure others(Agents?, Constant?, Agents).
+others([], _, []).
+others([Q|Qs], P, R?) :- ground(Q?), ground(Qs?), ground(P?) |
+    same_const(Q?, P?, A),
+    others1(A?, Q?, Qs?, P?, R).
+
+procedure same_const(Constant?, Constant?, Ans).
+same_const(A, B, yes) :- A? =?= B? | true.
+same_const(A, B, no) :- otherwise, ground(A?), ground(B?) | true.
+
+procedure others1(Ans?, Constant?, Agents?, Constant?, Agents).
+others1(yes, _, Qs, P, R?) :- ground(Qs?), ground(P?) | others(Qs?, P?, R).
+others1(no, Q, Qs, P, [Q?|R?]) :- ground(Qs?), ground(P?) | others(Qs?, P?, R).
+
+procedure cvas_app(Cvas?, Cvas?, Cvas).
+cvas_app([], T, T?).
+cvas_app([X|Xs], T, [X?|R?]) :- ground(Xs?), ground(T?) | cvas_app(Xs?, T?, R).
+
+% ---------------------------------------------------------------------------
+% The runs
+% ---------------------------------------------------------------------------
+
+exported procedure pstart(Constant?, PWorld).
+pstart(join_platform, pworld(Cs?)) :-
+    comm(f, F),
+    comm(g, G),
+    founding_row(f, RF),
+    founding_row(g, RG),
+    founders([carol, dave], [carol, dave], F?, RF?, C1),
+    founders([alice, bob], [alice, bob], G?, RG?, C2),
+    cvas_app(C1?, C2?, Cs).
+pstart(no_discover, W?) :- pstart(join_platform, W).
+pstart(concurrent_dates, pworld(Cs?)) :-
+    comm(f, F),
+    founding_row(f, RF),
+    founders([carol, dave], [carol, dave], F?, RF?, Cs).
+pstart(form_federate, W?) :- platform # pworld_of([alice], W).
+pstart(crash_after_will, pworld(Cs?)) :-
+    comm(h, H),
+    founding_row(h, RH),
+    founders([carol, dave, erin], [carol, dave, erin], H?, RH?, Cs).
+
+% theta, the assembly size and the term.
+exported procedure prun_params(Constant?, Params).
+prun_params(join_platform, params(rat(1, 2), 2, 10)).
+prun_params(no_discover, params(rat(1, 2), 2, 10)).
+prun_params(concurrent_dates, params(rat(1, 2), 2, 10)).
+prun_params(crash_after_will, params(rat(1, 2), 3, 10)).
+prun_params(form_federate, params(rat(1, 2), 1, 10)).
+
+exported procedure psteps(Constant?, Steps).
+% The Join of Figure 2 of sections/introduction.tex.  Each member of each
+% assembly moves or wills the act, so Definition "Federation Platform" has it
+% will, with every member of the assembly of the other community, the Discover
+% by which the two come to know each other.
+psteps(join_platform,
+    [discover(carol, alice), discover(carol, bob),
+     discover(dave, alice), discover(dave, bob),
+     take(carol, move(join(name(carol, [1, 1]), name(alice, [1, 1])), name(carol, [1, 1]), carol)),
+     settle(400),
+     take(alice, move(join(name(carol, [1, 1]), name(alice, [1, 1])), name(alice, [1, 1]), alice)),
+     settle(400),
+     take(carol, will_on(carol, motion(join(name(carol, [1, 1]), name(alice, [1, 1])), name(carol, [1, 1]), [carol, dave], 0), name(carol, [1, 1]))),
+     settle(400),
+     take(dave, will_on(dave, motion(join(name(carol, [1, 1]), name(alice, [1, 1])), name(carol, [1, 1]), [carol, dave], 0), name(carol, [1, 1]))),
+     settle(400),
+     take(alice, will_on(alice, motion(join(name(carol, [1, 1]), name(alice, [1, 1])), name(alice, [1, 1]), [alice, bob], 0), name(alice, [1, 1]))),
+     settle(400),
+     take(bob, will_on(bob, motion(join(name(carol, [1, 1]), name(alice, [1, 1])), name(alice, [1, 1]), [alice, bob], 0), name(alice, [1, 1]))),
+     settle(400),
+     take(carol, relay(moved(motion(join(name(carol, [1, 1]), name(alice, [1, 1])), name(carol, [1, 1]), [carol, dave], 0)), name(carol, [1, 1]), name(alice, [1, 1]), carol)),
+     settle(400),
+     take(carol, relay(will(carol, motion(join(name(carol, [1, 1]), name(alice, [1, 1])), name(carol, [1, 1]), [carol, dave], 0)), name(carol, [1, 1]), name(alice, [1, 1]), carol)),
+     settle(400),
+     take(dave, relay(will(dave, motion(join(name(carol, [1, 1]), name(alice, [1, 1])), name(carol, [1, 1]), [carol, dave], 0)), name(carol, [1, 1]), name(alice, [1, 1]), dave)),
+     settle(400),
+     take(alice, relay(moved(motion(join(name(carol, [1, 1]), name(alice, [1, 1])), name(alice, [1, 1]), [alice, bob], 0)), name(alice, [1, 1]), name(carol, [1, 1]), alice)),
+     settle(400),
+     take(alice, relay(will(alice, motion(join(name(carol, [1, 1]), name(alice, [1, 1])), name(alice, [1, 1]), [alice, bob], 0)), name(alice, [1, 1]), name(carol, [1, 1]), alice)),
+     settle(400),
+     take(bob, relay(will(bob, motion(join(name(carol, [1, 1]), name(alice, [1, 1])), name(alice, [1, 1]), [alice, bob], 0)), name(alice, [1, 1]), name(carol, [1, 1]), bob)),
+     settle(400)]).
+% The same, with the Discovers left out: the first Relay is blocked, the
+% relaying agent knowing no member of the other community's assembly.
+psteps(no_discover,
+    [take(carol, move(join(name(carol, [1, 1]), name(alice, [1, 1])), name(carol, [1, 1]), carol)),
+     settle(400),
+     take(alice, move(join(name(carol, [1, 1]), name(alice, [1, 1])), name(alice, [1, 1]), alice)),
+     settle(400),
+     take(carol, relay(moved(motion(join(name(carol, [1, 1]), name(alice, [1, 1])), name(carol, [1, 1]), [carol, dave], 0)), name(carol, [1, 1]), name(alice, [1, 1]), carol))]).
+% Two members of one community propose a record each, neither round having
+% finished when the other opens.
+psteps(concurrent_dates,
+    [advance_date(carol, 5),
+     advance_date(dave, 7),
+     take(carol, date_at(name(carol, [1, 1]), carol)),
+     take(dave, date_at(name(carol, [1, 1]), dave)),
+     settle(600)]).
+% A supermajority of three wills a Federate; the third member crashes while
+% the last will is still in flight.
+psteps(crash_after_will,
+    [take(carol, move(federate(name(carol, [1, 1])), name(carol, [1, 1]), carol)),
+     settle(400),
+     take(carol, will_on(carol, motion(federate(name(carol, [1, 1])), name(carol, [1, 1]), [carol, dave, erin], 0), name(carol, [1, 1]))),
+     settle(400),
+     take(dave, will_on(dave, motion(federate(name(carol, [1, 1])), name(carol, [1, 1]), [carol, dave, erin], 0), name(carol, [1, 1]))),
+     crash(erin),
+     settle(400)]).
+
+% One agent forms its own community on the platform, moves a Federate there,
+% wills it --- being alone its own supermajority --- and establishes the
+% community the Federate forms, whose instance it starts at the row the
+% Establish forms.
+psteps(form_federate,
+    [take(alice, form(alice)),
+     settle(400),
+     take(alice, move(federate(name(alice, [])), name(alice, []), alice)),
+     settle(400),
+     take(alice, will_on(alice, motion(federate(name(alice, [])), name(alice, []), [alice], 0), name(alice, []))),
+     settle(400),
+     take(alice, establish(name(alice, []), 0, alice)),
+     settle(400)]).
+
+exported procedure prun(Constant?, PRunOut).
+prun(Nm, R?) :- ground(Nm?) |
+    psteps(Nm?, Ss),
+    pstart(Nm?, W),
+    prun_params(Nm?, Pr),
+    prun1(Pr?, Ss?, W?, R).
+
+procedure prun1(Params?, Steps?, PWorld?, PRunOut).
+prun1(Pr, Ss, W, R?) :- ground(Pr?), ground(Ss?), ground(W?) |
+    platform # papply_all(Pr?, Ss?, W?, R).
+
+procedure out_pworld(PRunOut?, PWorld).
+out_pworld(pdone(W), W?).
+out_pworld(pstuck(_, _), pworld([])).
+
+procedure prun_state1(Row?, Name?, State).
+prun_state1(R, V, S?) :- ground(R?), ground(V?) |
+    row # row_state(rat(1, 2), R?, V?, S).
+
+procedure prun_decided1(Row?, Arecs).
+prun_decided1(R, A?) :- ground(R?) | decide # decided_acts(rat(1, 2), R?, A).
+
+% One run, read once: the whole of what the tests assert, so that a run is
+% taken once for a group of checks and not once for each of them.
+exported procedure prun_report(Constant?, Constant?, Name?, Constant?, Name?,
+                               PReport).
+prun_report(Nm, P1, V1, P2, V2, R?) :-
+    ground(Nm?), ground(P1?), ground(V1?), ground(P2?), ground(V2?) |
+    prun(Nm?, O),
+    prun_report1(O?, P1?, V1?, P2?, V2?, R).
+
+procedure prun_report1(PRunOut?, Constant?, Name?, Constant?, Name?, PReport).
+prun_report1(O, P1, V1, P2, V2, R?) :-
+    ground(O?), ground(P1?), ground(V1?), ground(P2?), ground(V2?) |
+    run_done(O?, D),
+    out_pworld(O?, W),
+    prun_report2(D?, W?, P1?, V1?, P2?, V2?, R).
+
+procedure run_done(PRunOut?, Ans).
+run_done(pdone(_), yes).
+run_done(pstuck(_, _), no).
+
+procedure prun_report2(Ans?, PWorld?, Constant?, Name?, Constant?, Name?,
+                       PReport).
+prun_report2(D, W, P1, V1, P2, V2, prep(D?, L1?, L2?, A1?, A2?, S1?, S2?, T?)) :-
+    ground(D?), ground(W?), ground(P1?), ground(V1?), ground(P2?), ground(V2?) |
+    platform # pworld_learnt(W?, P1?, V1?, L1),
+    platform # pworld_learnt(W?, P2?, V2?, L2),
+    prun_decided1(L1?, A1),
+    prun_decided1(L2?, A2),
+    prun_state1(L1?, V1?, S1),
+    prun_state1(L2?, V2?, S2),
+    platform # pworld_traffic(W?, T).
+

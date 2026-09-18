@@ -1,0 +1,229 @@
+% ---------------------------------------------------------------------------
+% The row lattice, its configurations and their quorums (Definition "Row
+% Lattice, Configuration, Quorum" of /Grassroots/GFWC/sections/federation.tex).
+%
+% The rows of a community under inclusion, with union as join; the
+% configuration of a row is its set of seat records, its members are the
+% assembly that set of seat records computes, and its quorums are the
+% supermajorities of those members.  Proposition "Intersection" is why two
+% quorums of one configuration meet.
+%
+% The sets of configurations here are T_p of Figure 2 of
+% [kuznetsov2020reconfigurable]: a set of configuration states, joined,
+% trimmed against the commit estimate, and taken by subsets at line 7.
+% ---------------------------------------------------------------------------
+
+imported procedure row#assembly(Row?, Name?, Seats).
+imported procedure fair#seat_agents(Seats?, Agents).
+imported procedure decide#supermajority(Rat?, Integer?, Integer?, Ans).
+
+% ---------------------------------------------------------------------------
+% The lattice of rows: inclusion, and union as join
+% ---------------------------------------------------------------------------
+
+exported procedure row_has(Row?, Record?, Ans).
+row_has([], _, no).
+row_has([X|_], Y, yes) :- X? =?= Y? | true.
+row_has([_|Xs], Y, R?) :- otherwise, ground(Xs?), ground(Y?) |
+    row_has(Xs?, Y?, R).
+
+procedure row_snoc(Row?, Record?, Row).
+row_snoc([], X, [X?]).
+row_snoc([Y|Ys], X, [Y?|R?]) :- ground(Ys?), ground(X?) | row_snoc(Ys?, X?, R).
+
+procedure row_add1(Ans?, Row?, Record?, Row).
+row_add1(yes, R, _, R?).
+row_add1(no, R, X, R1?) :- ground(R?), ground(X?) | row_snoc(R?, X?, R1).
+
+% The row with the record in it, at the end where it was absent.
+exported procedure row_add(Row?, Record?, Row).
+row_add(R, X, R1?) :- ground(R?), ground(X?) |
+    row_has(R?, X?, A),
+    row_add1(A?, R?, X?, R1).
+
+% The join of the lattice: the union, the first row kept in its order.
+exported procedure row_join(Row?, Row?, Row).
+row_join(R, [], R?).
+row_join(R, [X|Xs], R2?) :- ground(R?), ground(X?), ground(Xs?) |
+    row_add(R?, X?, R1),
+    row_join(R1?, Xs?, R2).
+
+procedure row_sub1(Ans?, Row?, Row?, Ans).
+row_sub1(no, _, _, no).
+row_sub1(yes, Xs, R, A?) :- ground(Xs?), ground(R?) | row_sub(Xs?, R?, A).
+
+% The order of the lattice.
+exported procedure row_sub(Row?, Row?, Ans).
+row_sub([], _, yes).
+row_sub([X|Xs], R, A?) :- ground(X?), ground(Xs?), ground(R?) |
+    row_has(R?, X?, B),
+    row_sub1(B?, Xs?, R?, A).
+
+exported procedure row_eq(Row?, Row?, Ans).
+row_eq(R1, R2, A?) :- ground(R1?), ground(R2?) |
+    row_sub(R1?, R2?, A1),
+    row_sub(R2?, R1?, A2),
+    and_ans(A1?, A2?, A).
+
+% The order and the join of the product lattice, state by state.
+exported procedure ls_join(LState?, LState?, LState).
+ls_join(ls(O1, C1), ls(O2, C2), ls(O?, C?)) :-
+    ground(O1?), ground(C1?), ground(O2?), ground(C2?) |
+    row_join(O1?, O2?, O),
+    row_join(C1?, C2?, C).
+
+exported procedure ls_sub(LState?, LState?, Ans).
+ls_sub(ls(O1, C1), ls(O2, C2), A?) :-
+    ground(O1?), ground(C1?), ground(O2?), ground(C2?) |
+    row_sub(O1?, O2?, A1),
+    row_sub(C1?, C2?, A2),
+    and_ans(A1?, A2?, A).
+
+exported procedure ls_conf(LState?, Row).
+ls_conf(ls(_, C), C?).
+
+exported procedure ls_obj(LState?, Row).
+ls_obj(ls(O, _), O?).
+
+% ---------------------------------------------------------------------------
+% The configuration of a row, its members and its quorums
+% ---------------------------------------------------------------------------
+
+% The set of seat records of a row.
+exported procedure config(Row?, Row).
+config([], []).
+config([seat(S, Q, Y, D, K)|Rs], [seat(S?, Q?, Y?, D?, K?)|R?]) :-
+    ground(S?), ground(Q?), ground(Y?), integer(D?), integer(K?), ground(Rs?) |
+    config(Rs?, R).
+config([_|Rs], R?) :- otherwise, ground(Rs?) | config(Rs?, R).
+
+% The state a row proposes: the row with its configuration.
+exported procedure row_state_pair(Row?, LState).
+row_state_pair(R, ls(R?, C?)) :- ground(R?) | config(R?, C).
+
+% The members of a configuration at a community: the assembly its seat
+% records compute (Definition "State of a Row"(4)).
+exported procedure config_members(Row?, Name?, Agents).
+config_members(C, V, A?) :- ground(C?), ground(V?) |
+    row # assembly(C?, V?, S),
+    fair # seat_agents(S?, A).
+
+procedure agents_meet(Agents?, Agents?, Agents).
+agents_meet([], _, []).
+agents_meet([X|Xs], Ys, R?) :- ground(X?), ground(Xs?), ground(Ys?) |
+    agents_member(Ys?, X?, A),
+    agents_meet1(A?, X?, Xs?, Ys?, R).
+
+procedure agents_meet1(Ans?, Constant?, Agents?, Agents?, Agents).
+agents_meet1(yes, X, Xs, Ys, [X?|R?]) :- ground(Xs?), ground(Ys?) |
+    agents_meet(Xs?, Ys?, R).
+agents_meet1(no, _, Xs, Ys, R?) :- ground(Xs?), ground(Ys?) |
+    agents_meet(Xs?, Ys?, R).
+
+procedure quorum_met1(Agents?, Agents?, Rat?, Ans).
+quorum_met1(Both, Ms, T, A?) :- ground(Both?), ground(Ms?), ground(T?) |
+    agents_len(Both?, K),
+    agents_len(Ms?, N),
+    decide # supermajority(T?, K?, N?, A).
+
+% Whether the given agents hold a quorum of the configuration: whether those
+% of them that are its members are a supermajority of its members.
+exported procedure quorum_met(Rat?, Row?, Name?, Agents?, Ans).
+quorum_met(T, C, V, Qs, A?) :- ground(T?), ground(C?), ground(V?), ground(Qs?) |
+    config_members(C?, V?, Ms),
+    agents_meet(Ms?, Qs?, Both),
+    quorum_met1(Both?, Ms?, T?, A).
+
+% ---------------------------------------------------------------------------
+% Sets of configurations: T_p and the queried configurations V of Figure 2
+% ---------------------------------------------------------------------------
+
+exported procedure confs_has(Confs?, Row?, Ans).
+confs_has([], _, no).
+confs_has([U|Us], C, A?) :- ground(U?), ground(Us?), ground(C?) |
+    row_eq(U?, C?, B),
+    confs_has1(B?, Us?, C?, A).
+
+procedure confs_has1(Ans?, Confs?, Row?, Ans).
+confs_has1(yes, _, _, yes).
+confs_has1(no, Us, C, A?) :- ground(Us?), ground(C?) | confs_has(Us?, C?, A).
+
+procedure confs_snoc(Confs?, Row?, Confs).
+confs_snoc([], C, [C?]).
+confs_snoc([U|Us], C, [U?|R?]) :- ground(Us?), ground(C?) | confs_snoc(Us?, C?, R).
+
+procedure confs_add1(Ans?, Confs?, Row?, Confs).
+confs_add1(yes, T, _, T?).
+confs_add1(no, T, C, T1?) :- ground(T?), ground(C?) | confs_snoc(T?, C?, T1).
+
+exported procedure confs_add(Confs?, Row?, Confs).
+confs_add(T, C, T1?) :- ground(T?), ground(C?) |
+    confs_has(T?, C?, A),
+    confs_add1(A?, T?, C?, T1).
+
+exported procedure confs_union(Confs?, Confs?, Confs).
+confs_union(T, [], T?).
+confs_union(T, [U|Us], R?) :- ground(T?), ground(U?), ground(Us?) |
+    confs_add(T?, U?, T1),
+    confs_union(T1?, Us?, R).
+
+% {u in T | u not included in C}, line 20 of Figure 2.
+exported procedure confs_trim(Confs?, Row?, Confs).
+confs_trim([], _, []).
+confs_trim([U|Us], C, R?) :- ground(U?), ground(Us?), ground(C?) |
+    row_sub(U?, C?, A),
+    confs_trim1(A?, U?, Us?, C?, R).
+
+procedure confs_trim1(Ans?, Row?, Confs?, Row?, Confs).
+confs_trim1(yes, _, Us, C, R?) :- ground(Us?), ground(C?) | confs_trim(Us?, C?, R).
+confs_trim1(no, U, Us, C, [U?|R?]) :- ground(Us?), ground(C?) |
+    confs_trim(Us?, C?, R).
+
+% The join of a set of configurations with a base configuration.
+exported procedure confs_join(Confs?, Row?, Row).
+confs_join([], C, C?).
+confs_join([U|Us], C, R?) :- ground(U?), ground(Us?), ground(C?) |
+    row_join(C?, U?, C1),
+    confs_join(Us?, C1?, R).
+
+procedure cons_each(Confs?, ConfSets?, ConfSets).
+cons_each(_, [], []).
+cons_each(X, [S|Ss], [R1?|R?]) :- ground(X?), ground(S?), ground(Ss?) |
+    confs_snoc(S?, X?, R1),
+    cons_each(X?, Ss?, R).
+
+procedure confsets_app(ConfSets?, ConfSets?, ConfSets).
+confsets_app([], T, T?).
+confsets_app([X|Xs], T, [X?|R?]) :- ground(Xs?), ground(T?) |
+    confsets_app(Xs?, T?, R).
+
+% Every subset of a set of configurations.
+exported procedure confs_subsets(Confs?, ConfSets).
+confs_subsets([], [[]]).
+confs_subsets([X|Xs], R?) :- ground(X?), ground(Xs?) |
+    confs_subsets(Xs?, Ss),
+    cons_each(X?, Ss?, With),
+    confsets_app(Ss?, With?, R).
+
+procedure queried1(ConfSets?, Row?, Confs?, Confs).
+queried1([], _, Acc, Acc?).
+queried1([S|Ss], C, Acc, V?) :- ground(S?), ground(Ss?), ground(C?), ground(Acc?) |
+    confs_join(S?, C?, U),
+    confs_add(Acc?, U?, Acc1),
+    queried1(Ss?, C?, Acc1?, V).
+
+% Line 7 of Figure 2: the configurations a round queries, one for every join
+% of the commit estimate's configuration with a subset of the input
+% configurations.
+exported procedure queried(Row?, Confs?, Confs).
+queried(C, T, V?) :- ground(C?), ground(T?) |
+    confs_subsets(T?, Ss),
+    queried1(Ss?, C?, [], V).
+
+% The members of every configuration in a set, without repetition.
+exported procedure confs_members(Confs?, Name?, Agents).
+confs_members([], _, []).
+confs_members([U|Us], V, R?) :- ground(U?), ground(Us?), ground(V?) |
+    config_members(U?, V?, As),
+    confs_members(Us?, V?, R1),
+    agents_union(As?, R1?, R).

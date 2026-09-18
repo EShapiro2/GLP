@@ -1,0 +1,825 @@
+% ---------------------------------------------------------------------------
+% The federation platform (Definition "Federation Platform" of
+% /Grassroots/GFWC/sections/federation.tex).
+%
+% The CVA platform of [keidar2026ivmat]: an agent holds known peers, an
+% outbox, an inbox, a platform state and a local date; two agents come to know
+% each other by Discover, a message moves from an outbox to an inbox by
+% Communicate, and Advance-date moves a date.  The platform state of an agent
+% is, for each community it acts in, the variables of Figure 2 of
+% [kuznetsov2020reconfigurable] for the row lattice of that community, and its
+% learnt row; the lines of that figure are its platform transactions and that
+% figure's messages are its cargoes.
+%
+% An agent proposes a record at a community by proposing its learnt row with
+% the record added, for the record that a transaction of Definition
+% "Grassroots Federation Implied Transactions" at its learnt rows adds; txn.glp
+% is that definition and is what computes the record here.  A Form or an
+% Establish starts the instance of the community it forms at the row the
+% transaction forms, whose configuration is the initial one.
+% ---------------------------------------------------------------------------
+
+imported procedure name#name_eq(Name?, Name?, Ans).
+imported procedure lattice#row_join(Row?, Row?, Row).
+imported procedure lattice#row_has(Row?, Record?, Ans).
+imported procedure rla#inst_name(Inst?, Name).
+imported procedure rla#inst_learnt(Inst?, Row).
+imported procedure rla#inst_state(Inst?, LState).
+imported procedure rla#inst_obj(Inst?, Row).
+imported procedure rla#inst_confs(Inst?, Confs).
+imported procedure rla#inst_pend(Inst?, Pend).
+imported procedure rla#inst_set_learnt(Inst?, Row?, Inst).
+imported procedure rla#inst_form(Name?, Row?, Inst).
+imported procedure rla#inst_bottom(Name?, Inst).
+imported procedure rla#obj_of(LState?, Row).
+imported procedure rla#rla_propose(Inst?, Row?, Inst, Agents, Cargo).
+imported procedure rla#rla_wait_over(Rat?, Inst?, Ans).
+imported procedure rla#rla_resume(Inst?, Res).
+imported procedure rla#rla_note_resp(Inst?, Integer?, Constant?, Inst).
+imported procedure rla#update_state(Inst?, Triple?, Inst).
+imported procedure txn#apply(Params?, Txn?, World?, Outcome).
+
+% ---------------------------------------------------------------------------
+% The agents of the world
+% ---------------------------------------------------------------------------
+
+procedure cvas_find1(Ans?, Cva?, Cvas?, Constant?, CvaOpt).
+cvas_find1(yes, C, _, _, acva(C?)).
+cvas_find1(no, _, Cs, P, R?) :- ground(Cs?), ground(P?) | cvas_find(Cs?, P?, R).
+
+exported procedure cvas_find(Cvas?, Constant?, CvaOpt).
+cvas_find([], _, nocva).
+cvas_find([cva(Q, Ps, O, I, Is, D, X)|Cs], P, R?) :-
+    ground(Q?), ground(Ps?), ground(O?), ground(I?), ground(Is?), integer(D?),
+    ground(X?), ground(Cs?), ground(P?) |
+    eq_const(Q?, P?, A),
+    cvas_find1(A?, cva(Q?, Ps?, O?, I?, Is?, D?, X?), Cs?, P?, R).
+
+procedure eq_const(Constant?, Constant?, Ans).
+eq_const(A, B, yes) :- A? =?= B? | true.
+eq_const(A, B, no) :- otherwise, ground(A?), ground(B?) | true.
+
+procedure cvas_put1(Ans?, Cva?, Cvas?, Constant?, Cva?, Cvas).
+cvas_put1(yes, _, Cs, _, N, [N?|Cs?]).
+cvas_put1(no, C, Cs, P, N, [C?|R?]) :- ground(Cs?), ground(P?), ground(N?) |
+    cvas_put(Cs?, P?, N?, R).
+
+exported procedure cvas_put(Cvas?, Constant?, Cva?, Cvas).
+cvas_put([], _, N, [N?]).
+cvas_put([cva(Q, Ps, O, I, Is, D, X)|Cs], P, N, R?) :-
+    ground(Q?), ground(Ps?), ground(O?), ground(I?), ground(Is?), integer(D?),
+    ground(X?), ground(Cs?), ground(P?), ground(N?) |
+    eq_const(Q?, P?, A),
+    cvas_put1(A?, cva(Q?, Ps?, O?, I?, Is?, D?, X?), Cs?, P?, N?, R).
+
+exported procedure pworld_cva(PWorld?, Constant?, CvaOpt).
+pworld_cva(pworld(Cs), P, R?) :- ground(Cs?), ground(P?) | cvas_find(Cs?, P?, R).
+
+exported procedure pworld_put(PWorld?, Constant?, Cva?, PWorld).
+pworld_put(pworld(Cs), P, N, pworld(Cs1?)) :- ground(Cs?), ground(P?), ground(N?) |
+    cvas_put(Cs?, P?, N?, Cs1).
+
+% --- The fields of an agent ------------------------------------------------
+
+exported procedure cva_name(Cva?, Constant).
+cva_name(cva(P, _, _, _, _, _, _), P?).
+
+exported procedure cva_peers(Cva?, Agents).
+cva_peers(cva(_, Ps, _, _, _, _, _), Ps?).
+
+exported procedure cva_out(Cva?, PMsgs).
+cva_out(cva(_, _, O, _, _, _, _), O?).
+
+exported procedure cva_in(Cva?, PMsgs).
+cva_in(cva(_, _, _, I, _, _, _), I?).
+
+exported procedure cva_insts(Cva?, Insts).
+cva_insts(cva(_, _, _, _, Is, _, _), Is?).
+
+exported procedure cva_date(Cva?, Integer).
+cva_date(cva(_, _, _, _, _, D, _), D?).
+
+exported procedure cva_crashed(Cva?, Ans).
+cva_crashed(cva(_, _, _, _, _, _, X), X?).
+
+procedure cva_set_out(Cva?, PMsgs?, Cva).
+cva_set_out(cva(P, Ps, _, I, Is, D, X), O, cva(P?, Ps?, O?, I?, Is?, D?, X?)).
+
+procedure cva_set_in(Cva?, PMsgs?, Cva).
+cva_set_in(cva(P, Ps, O, _, Is, D, X), I, cva(P?, Ps?, O?, I?, Is?, D?, X?)).
+
+procedure cva_set_insts(Cva?, Insts?, Cva).
+cva_set_insts(cva(P, Ps, O, I, _, D, X), Is, cva(P?, Ps?, O?, I?, Is?, D?, X?)).
+
+procedure cva_set_peers(Cva?, Agents?, Cva).
+cva_set_peers(cva(P, _, O, I, Is, D, X), Ps, cva(P?, Ps?, O?, I?, Is?, D?, X?)).
+
+procedure cva_set_date(Cva?, Integer?, Cva).
+cva_set_date(cva(P, Ps, O, I, Is, _, X), D, cva(P?, Ps?, O?, I?, Is?, D?, X?)).
+
+procedure cva_set_crashed(Cva?, Ans?, Cva).
+cva_set_crashed(cva(P, Ps, O, I, Is, D, _), X, cva(P?, Ps?, O?, I?, Is?, D?, X?)).
+
+% --- The instances an agent runs ------------------------------------------
+
+procedure insts_find1(Ans?, Inst?, Insts?, Name?, InstOpt).
+insts_find1(yes, I, _, _, ainst(I?)).
+insts_find1(no, _, Is, V, R?) :- ground(Is?), ground(V?) | insts_find(Is?, V?, R).
+
+exported procedure insts_find(Insts?, Name?, InstOpt).
+insts_find([], _, noinst).
+insts_find([I|Is], V, R?) :- ground(I?), ground(Is?), ground(V?) |
+    rla # inst_name(I?, U),
+    name # name_eq(U?, V?, A),
+    insts_find1(A?, I?, Is?, V?, R).
+
+procedure insts_put1(Ans?, Inst?, Insts?, Name?, Inst?, Insts).
+insts_put1(yes, _, Is, _, N, [N?|Is?]).
+insts_put1(no, I, Is, V, N, [I?|R?]) :- ground(Is?), ground(V?), ground(N?) |
+    insts_put(Is?, V?, N?, R).
+
+exported procedure insts_put(Insts?, Name?, Inst?, Insts).
+insts_put([], _, N, [N?]).
+insts_put([I|Is], V, N, R?) :- ground(I?), ground(Is?), ground(V?), ground(N?) |
+    rla # inst_name(I?, U),
+    name # name_eq(U?, V?, A),
+    insts_put1(A?, I?, Is?, V?, N?, R).
+
+exported procedure cva_inst(Cva?, Name?, InstOpt).
+cva_inst(C, V, R?) :- ground(C?), ground(V?) |
+    cva_insts(C?, Is),
+    insts_find(Is?, V?, R).
+
+exported procedure cva_put_inst(Cva?, Name?, Inst?, Cva).
+cva_put_inst(C, V, N, C1?) :- ground(C?), ground(V?), ground(N?) |
+    cva_insts(C?, Is),
+    insts_put(Is?, V?, N?, Is1),
+    cva_set_insts(C?, Is1?, C1).
+
+% ---------------------------------------------------------------------------
+% Sending: a message reaches a known peer, and an agent is its own peer
+% ---------------------------------------------------------------------------
+
+procedure msgs_snoc(PMsgs?, PMsg?, PMsgs).
+msgs_snoc([], M, [M?]).
+msgs_snoc([X|Xs], M, [X?|R?]) :- ground(Xs?), ground(M?) | msgs_snoc(Xs?, M?, R).
+
+procedure known1(Ans?, Agents?, Constant?, Ans).
+known1(yes, _, _, yes).
+known1(no, Ps, Q, A?) :- ground(Ps?), ground(Q?) | agents_member(Ps?, Q?, A).
+
+% A message may be put in the outbox for a known peer, and for the agent
+% itself, its own messages of Figure 2 arriving as any other.
+procedure known(Cva?, Constant?, Ans).
+known(C, Q, A?) :- ground(C?), ground(Q?) |
+    cva_name(C?, P),
+    eq_const(P?, Q?, Self),
+    cva_peers(C?, Ps),
+    known1(Self?, Ps?, Q?, A).
+
+procedure all_known1(Ans?, Cva?, Agents?, Ans).
+all_known1(no, _, _, no).
+all_known1(yes, C, Qs, A?) :- ground(C?), ground(Qs?) | all_known(C?, Qs?, A).
+
+procedure all_known(Cva?, Agents?, Ans).
+all_known(_, [], yes).
+all_known(C, [Q|Qs], A?) :- ground(C?), ground(Q?), ground(Qs?) |
+    known(C?, Q?, B),
+    all_known1(B?, C?, Qs?, A).
+
+% One cargo to each of the recipients, appended to the outbox in their order.
+procedure send_all(Cva?, Agents?, Cargo?, Cva).
+send_all(C, [], _, C?).
+send_all(C, [Q|Qs], Cg, C1?) :- ground(C?), ground(Q?), ground(Qs?), ground(Cg?) |
+    cva_name(C?, P),
+    cva_out(C?, O),
+    msgs_snoc(O?, pmsg(P?, Q?, Cg?), O1),
+    cva_set_out(C?, O1?, C2),
+    send_all(C2?, Qs?, Cg?, C1).
+
+% ---------------------------------------------------------------------------
+% The learnt rows an agent reads its transactions at
+% ---------------------------------------------------------------------------
+
+procedure learnt_rows(Insts?, CommRows).
+learnt_rows([], []).
+learnt_rows([I|Is], [cr(V?, L?)|R?]) :- ground(I?), ground(Is?) |
+    rla # inst_name(I?, V),
+    rla # inst_learnt(I?, L),
+    learnt_rows(Is?, R).
+
+exported procedure cva_world(Cva?, World).
+cva_world(C, world(Cs?, [adate(P?, D?)])) :- ground(C?) |
+    cva_name(C?, P),
+    cva_date(C?, D),
+    cva_insts(C?, Is),
+    learnt_rows(Is?, Cs).
+
+procedure rows_lookup1(Ans?, Row?, CommRows?, Name?, Row).
+rows_lookup1(yes, R, _, _, R?).
+rows_lookup1(no, _, Cs, V, R?) :- ground(Cs?), ground(V?) | rows_lookup(Cs?, V?, R).
+
+procedure rows_lookup(CommRows?, Name?, Row).
+rows_lookup([], _, []).
+rows_lookup([cr(U, R)|Cs], V, R1?) :- ground(U?), ground(R?), ground(Cs?), ground(V?) |
+    name # name_eq(U?, V?, A),
+    rows_lookup1(A?, R?, Cs?, V?, R1).
+
+procedure row_diff1(Ans?, Record?, Row?, Row?, Row).
+row_diff1(yes, _, Xs, R0, R?) :- ground(Xs?), ground(R0?) | row_diff(Xs?, R0?, R).
+row_diff1(no, X, Xs, R0, [X?|R?]) :- ground(Xs?), ground(R0?) | row_diff(Xs?, R0?, R).
+
+procedure row_diff(Row?, Row?, Row).
+row_diff([], _, []).
+row_diff([X|Xs], R0, R?) :- ground(X?), ground(Xs?), ground(R0?) |
+    lattice # row_has(R0?, X?, A),
+    row_diff1(A?, X?, Xs?, R0?, R).
+
+procedure rows_hasname1(Ans?, CommRows?, Name?, Ans).
+rows_hasname1(yes, _, _, yes).
+rows_hasname1(no, Cs, V, A?) :- ground(Cs?), ground(V?) | rows_hasname(Cs?, V?, A).
+
+procedure rows_hasname(CommRows?, Name?, Ans).
+rows_hasname([], _, no).
+rows_hasname([cr(U, _)|Cs], V, A?) :- ground(U?), ground(Cs?), ground(V?) |
+    name # name_eq(U?, V?, B),
+    rows_hasname1(B?, Cs?, V?, A).
+
+procedure added_rec1(Row?, Name?, CommRows?, CommRows?, Added).
+added_rec1([], _, Cs, Old, A?) :- ground(Cs?), ground(Old?) | added_rec(Cs?, Old?, A).
+added_rec1([X|_], V, _, _, add(V?, X?)).
+
+procedure added_rec2(Ans?, Name?, Row?, CommRows?, CommRows?, Added).
+added_rec2(no, V, R1, _, _, formed(V?, R1?)).
+added_rec2(yes, V, R1, Cs, Old, A?) :-
+    ground(V?), ground(R1?), ground(Cs?), ground(Old?) |
+    rows_lookup(Old?, V?, R0),
+    row_diff(R1?, R0?, D),
+    added_rec1(D?, V?, Cs?, Old?, A).
+
+% What a transaction did between two worlds: a community formed with its row,
+% or a community's row gained a record.
+procedure added_rec(CommRows?, CommRows?, Added).
+added_rec([], _, noadd).
+added_rec([cr(V, R1)|Cs], Old, A?) :-
+    ground(V?), ground(R1?), ground(Cs?), ground(Old?) |
+    rows_hasname(Old?, V?, H),
+    added_rec2(H?, V?, R1?, Cs?, Old?, A).
+
+procedure out_added(Outcome?, CommRows?, Added).
+out_added(blocked, _, noadd).
+out_added(ok(world(Cs, _)), Old, A?) :- ground(Cs?), ground(Old?) |
+    added_rec(Cs?, Old?, A).
+
+% ---------------------------------------------------------------------------
+% Proposing a record at a community
+% ---------------------------------------------------------------------------
+% The transaction is taken at the agent's learnt rows; the record it adds is
+% proposed at the community whose row gains it, as the learnt row of that
+% community with the record added.
+
+procedure do_propose5(Cva?, Name?, Inst?, Agents?, Cargo?, Constant?,
+                      PWorld?, POutcome).
+do_propose5(C, V, I1, Rs, Cg, P, W, R?) :-
+    ground(C?), ground(V?), ground(I1?), ground(Rs?), ground(Cg?),
+    ground(P?), ground(W?) |
+    all_known(C?, Rs?, K),
+    do_propose6(K?, C?, V?, I1?, Rs?, Cg?, P?, W?, R).
+
+procedure do_propose6(Ans?, Cva?, Name?, Inst?, Agents?, Cargo?, Constant?,
+                      PWorld?, POutcome).
+do_propose6(no, _, _, _, _, _, _, _, pblocked).
+do_propose6(yes, C, V, I1, Rs, Cg, P, W, pok(W1?)) :-
+    ground(C?), ground(V?), ground(I1?), ground(Rs?), ground(Cg?),
+    ground(P?), ground(W?) |
+    cva_put_inst(C?, V?, I1?, C1),
+    send_all(C1?, Rs?, Cg?, C2),
+    pworld_put(W?, P?, C2?, W1).
+
+procedure do_propose4(Pend?, Cva?, Name?, Inst?, Row?, Constant?, PWorld?,
+                      POutcome).
+do_propose4(pend(_, _, _, _, _, _), _, _, _, _, _, _, pblocked).
+do_propose4(nopend, C, V, I, X, P, W, R?) :-
+    ground(C?), ground(V?), ground(I?), ground(X?), ground(P?), ground(W?) |
+    rla # inst_learnt(I?, L),
+    do_propose4a(L?, X?, C?, V?, I?, P?, W?, R).
+
+procedure do_propose4a(Row?, Row?, Cva?, Name?, Inst?, Constant?, PWorld?,
+                       POutcome).
+do_propose4a(L, X, C, V, I, P, W, R?) :-
+    ground(L?), ground(X?), ground(C?), ground(V?), ground(I?), ground(P?),
+    ground(W?) |
+    lattice # row_join(L?, X?, Prop),
+    rla # rla_propose(I?, Prop?, I1, Rs, Cg),
+    do_propose5(C?, V?, I1?, Rs?, Cg?, P?, W?, R).
+
+procedure do_propose3(InstOpt?, Cva?, Name?, Record?, Constant?, PWorld?,
+                      POutcome).
+do_propose3(noinst, _, _, _, _, _, pblocked).
+do_propose3(ainst(I), C, V, X, P, W, R?) :-
+    ground(I?), ground(C?), ground(V?), ground(X?), ground(P?), ground(W?) |
+    rla # inst_pend(I?, Pd),
+    do_propose4(Pd?, C?, V?, I?, [X?], P?, W?, R).
+
+% A Form and an Establish form a community; every other transaction of
+% Definition "Grassroots Federation Implied Transactions" adds a record to the
+% row of a community, which is the record that is proposed there.  A Relay or
+% a Report into a community whose row the agent does not hold adds a row to
+% its own reading and forms nothing: the agent does not act in that community,
+% and the transaction is blocked.
+procedure txn_forms(Txn?, Ans).
+txn_forms(form(_), yes).
+txn_forms(establish(_, _, _), yes).
+txn_forms(advance(_, _), no).
+txn_forms(date_at(_, _), no).
+txn_forms(raise_at(_, _), no).
+txn_forms(move(_, _, _), no).
+txn_forms(maintain_at(_, _), no).
+txn_forms(report_at(_, _, _), no).
+txn_forms(will_on(_, _, _), no).
+txn_forms(relay(_, _, _, _), no).
+
+procedure do_propose2a(Ans?, Name?, Record?, Cva?, Constant?, PWorld?, POutcome).
+do_propose2a(yes, _, _, _, _, _, pblocked).
+do_propose2a(no, V, X, C, P, W, R?) :-
+    ground(V?), ground(X?), ground(C?), ground(P?), ground(W?) |
+    cva_inst(C?, V?, IO),
+    do_propose3(IO?, C?, V?, X?, P?, W?, R).
+
+% The instance of the community a Form or an Establish forms is started at the
+% row the transaction forms, whose configuration is the initial one.
+procedure do_propose2b(Ans?, Name?, Row?, Cva?, Constant?, PWorld?, POutcome).
+do_propose2b(no, _, _, _, _, _, pblocked).
+do_propose2b(yes, V, Rw, C, P, W, pok(W1?)) :-
+    ground(V?), ground(Rw?), ground(C?), ground(P?), ground(W?) |
+    rla # inst_form(V?, Rw?, I),
+    cva_put_inst(C?, V?, I?, C1),
+    pworld_put(W?, P?, C1?, W1).
+
+procedure do_propose2(Added?, Ans?, Cva?, Constant?, PWorld?, POutcome).
+do_propose2(noadd, _, _, _, _, pblocked).
+do_propose2(add(V, X), Frm, C, P, W, R?) :-
+    ground(V?), ground(X?), ground(Frm?), ground(C?), ground(P?), ground(W?) |
+    do_propose2a(Frm?, V?, X?, C?, P?, W?, R).
+do_propose2(formed(V, Rw), Frm, C, P, W, R?) :-
+    ground(V?), ground(Rw?), ground(Frm?), ground(C?), ground(P?), ground(W?) |
+    do_propose2b(Frm?, V?, Rw?, C?, P?, W?, R).
+
+procedure do_propose1(Params?, Txn?, Cva?, Constant?, PWorld?, POutcome).
+do_propose1(Pr, T, C, P, W, R?) :-
+    ground(Pr?), ground(T?), ground(C?), ground(P?), ground(W?) |
+    cva_world(C?, Wd),
+    do_propose1a(Pr?, T?, Wd?, C?, P?, W?, R).
+
+procedure do_propose1a(Params?, Txn?, World?, Cva?, Constant?, PWorld?,
+                       POutcome).
+do_propose1a(Pr, T, world(Cs, Ds), C, P, W, R?) :-
+    ground(Pr?), ground(T?), ground(Cs?), ground(Ds?), ground(C?), ground(P?),
+    ground(W?) |
+    txn # apply(Pr?, T?, world(Cs?, Ds?), O),
+    out_added(O?, Cs?, A),
+    txn_forms(T?, Frm),
+    do_propose2(A?, Frm?, C?, P?, W?, R).
+
+exported procedure do_propose(Params?, Constant?, Txn?, PWorld?, POutcome).
+do_propose(Pr, P, T, W, R?) :- ground(Pr?), ground(P?), ground(T?), ground(W?) |
+    pworld_cva(W?, P?, CO),
+    do_propose0(CO?, Pr?, P?, T?, W?, R).
+
+procedure do_propose0(CvaOpt?, Params?, Constant?, Txn?, PWorld?, POutcome).
+do_propose0(nocva, _, _, _, _, pblocked).
+do_propose0(acva(C), Pr, P, T, W, R?) :-
+    ground(C?), ground(Pr?), ground(P?), ground(T?), ground(W?) |
+    cva_crashed(C?, X),
+    do_propose0a(X?, Pr?, P?, T?, C?, W?, R).
+
+procedure do_propose0a(Ans?, Params?, Constant?, Txn?, Cva?, PWorld?, POutcome).
+do_propose0a(yes, _, _, _, _, _, pblocked).
+do_propose0a(no, Pr, P, T, C, W, R?) :-
+    ground(Pr?), ground(P?), ground(T?), ground(C?), ground(W?) |
+    do_propose1(Pr?, T?, C?, P?, W?, R).
+
+% ---------------------------------------------------------------------------
+% Lines 9 to 15: the wait, and what follows it
+% ---------------------------------------------------------------------------
+% A round whose wait is over either returns a state, having broadcast it at
+% line 13, adopts the commit estimate at line 15, or opens the next round.
+
+procedure res_apply(Res?, Cva?, Name?, Constant?, PWorld?, POutcome).
+res_apply(res_round(I1, Rs, Cg), C, V, P, W, R?) :-
+    ground(I1?), ground(Rs?), ground(Cg?), ground(C?), ground(V?), ground(P?),
+    ground(W?) |
+    do_propose5(C?, V?, I1?, Rs?, Cg?, P?, W?, R).
+res_apply(res_learn(I1, X, B), C, V, P, W, R?) :-
+    ground(I1?), ground(X?), ground(B?), ground(C?), ground(V?), ground(P?),
+    ground(W?) |
+    rla # obj_of(X?, L),
+    rla # inst_set_learnt(I1?, L?, I2),
+    res_learnt(B?, X?, C?, V?, I2?, P?, W?, R).
+
+% Line 13: the committed state goes to the agent's known peers, which is the
+% reliable broadcast of [kuznetsov2020reconfigurable] on a CVA.
+procedure res_learnt(Ans?, LState?, Cva?, Name?, Inst?, Constant?, PWorld?,
+                     POutcome).
+res_learnt(no, _, C, V, I2, P, W, pok(W1?)) :-
+    ground(C?), ground(V?), ground(I2?), ground(P?), ground(W?) |
+    cva_put_inst(C?, V?, I2?, C1),
+    pworld_put(W?, P?, C1?, W1).
+res_learnt(yes, X, C, V, I2, P, W, pok(W1?)) :-
+    ground(X?), ground(C?), ground(V?), ground(I2?), ground(P?), ground(W?) |
+    cva_put_inst(C?, V?, I2?, C1),
+    rla # obj_of(X?, L),
+    cva_peers(C1?, Ps),
+    send_all(C1?, Ps?, cargo(commit, V?, tri(X?, L?, [])), C2),
+    pworld_put(W?, P?, C2?, W1).
+
+procedure do_resume3(Ans?, Cva?, Name?, Inst?, Constant?, PWorld?, POutcome).
+do_resume3(no, _, _, _, _, _, pblocked).
+do_resume3(yes, C, V, I, P, W, R?) :-
+    ground(C?), ground(V?), ground(I?), ground(P?), ground(W?) |
+    rla # rla_resume(I?, Rs),
+    res_apply(Rs?, C?, V?, P?, W?, R).
+
+procedure do_resume2(InstOpt?, Rat?, Cva?, Name?, Constant?, PWorld?, POutcome).
+do_resume2(noinst, _, _, _, _, _, pblocked).
+do_resume2(ainst(I), Th, C, V, P, W, R?) :-
+    ground(I?), ground(Th?), ground(C?), ground(V?), ground(P?), ground(W?) |
+    rla # rla_wait_over(Th?, I?, A),
+    do_resume3(A?, C?, V?, I?, P?, W?, R).
+
+procedure do_resume1(Ans?, Rat?, Cva?, Name?, Constant?, PWorld?, POutcome).
+do_resume1(yes, _, _, _, _, _, pblocked).
+do_resume1(no, Th, C, V, P, W, R?) :-
+    ground(Th?), ground(C?), ground(V?), ground(P?), ground(W?) |
+    cva_inst(C?, V?, IO),
+    do_resume2(IO?, Th?, C?, V?, P?, W?, R).
+
+procedure do_resume0(CvaOpt?, Rat?, Constant?, Name?, PWorld?, POutcome).
+do_resume0(nocva, _, _, _, _, pblocked).
+do_resume0(acva(C), Th, P, V, W, R?) :-
+    ground(C?), ground(Th?), ground(P?), ground(V?), ground(W?) |
+    cva_crashed(C?, X),
+    do_resume1(X?, Th?, C?, V?, P?, W?, R).
+
+exported procedure do_resume(Rat?, Constant?, Name?, PWorld?, POutcome).
+do_resume(Th, P, V, W, R?) :- ground(Th?), ground(P?), ground(V?), ground(W?) |
+    pworld_cva(W?, P?, CO),
+    do_resume0(CO?, Th?, P?, V?, W?, R).
+
+% ---------------------------------------------------------------------------
+% Lines 16 and 17: receiving a message
+% ---------------------------------------------------------------------------
+% The tracked states are merged, a response of the round's own sequence number
+% is tallied, and a request is answered to its sender.
+
+procedure inst_or_bottom(InstOpt?, Name?, Inst).
+inst_or_bottom(ainst(I), _, I?).
+inst_or_bottom(noinst, V, I?) :- ground(V?) | rla # inst_bottom(V?, I).
+
+procedure triple_of(Inst?, Triple).
+triple_of(I, tri(S?, O?, T?)) :- ground(I?) |
+    rla # inst_state(I?, S),
+    rla # inst_obj(I?, O),
+    rla # inst_confs(I?, T).
+
+procedure recv_kind(MsgKind?, Constant?, Name?, Inst?, Cva?, Constant?,
+                    PWorld?, POutcome).
+recv_kind(commit, _, V, I1, C, P, W, pok(W1?)) :-
+    ground(V?), ground(I1?), ground(C?), ground(P?), ground(W?) |
+    cva_put_inst(C?, V?, I1?, C1),
+    pworld_put(W?, P?, C1?, W1).
+recv_kind(resp(S), From, V, I1, C, P, W, pok(W1?)) :-
+    integer(S?), ground(From?), ground(V?), ground(I1?), ground(C?),
+    ground(P?), ground(W?) |
+    rla # rla_note_resp(I1?, S?, From?, I2),
+    cva_put_inst(C?, V?, I2?, C1),
+    pworld_put(W?, P?, C1?, W1).
+recv_kind(req(S), From, V, I1, C, P, W, R?) :-
+    integer(S?), ground(From?), ground(V?), ground(I1?), ground(C?),
+    ground(P?), ground(W?) |
+    cva_put_inst(C?, V?, I1?, C1),
+    known(C1?, From?, K),
+    recv_req(K?, S?, From?, V?, I1?, C1?, P?, W?, R).
+
+procedure recv_req(Ans?, Integer?, Constant?, Name?, Inst?, Cva?, Constant?,
+                   PWorld?, POutcome).
+recv_req(no, _, _, _, _, _, _, _, pblocked).
+recv_req(yes, S, From, V, I1, C1, P, W, pok(W1?)) :-
+    integer(S?), ground(From?), ground(V?), ground(I1?), ground(C1?),
+    ground(P?), ground(W?) |
+    triple_of(I1?, Tr),
+    send_all(C1?, [From?], cargo(resp(S?), V?, Tr?), C2),
+    pworld_put(W?, P?, C2?, W1).
+
+procedure recv_msg(PMsg?, PMsgs?, Cva?, Constant?, PWorld?, POutcome).
+recv_msg(pmsg(From, _, cargo(K, V, Tr)), Rest, C, P, W, R?) :-
+    ground(From?), ground(K?), ground(V?), ground(Tr?), ground(Rest?),
+    ground(C?), ground(P?), ground(W?) |
+    cva_set_in(C?, Rest?, C0),
+    cva_inst(C0?, V?, IO),
+    inst_or_bottom(IO?, V?, I0),
+    rla # update_state(I0?, Tr?, I1),
+    recv_kind(K?, From?, V?, I1?, C0?, P?, W?, R).
+
+procedure do_receive2(PMsgs?, Cva?, Constant?, PWorld?, POutcome).
+do_receive2([], _, _, _, pblocked).
+do_receive2([M|Ms], C, P, W, R?) :-
+    ground(M?), ground(Ms?), ground(C?), ground(P?), ground(W?) |
+    recv_msg(M?, Ms?, C?, P?, W?, R).
+
+procedure do_receive1(Ans?, Cva?, Constant?, PWorld?, POutcome).
+do_receive1(yes, _, _, _, pblocked).
+do_receive1(no, C, P, W, R?) :- ground(C?), ground(P?), ground(W?) |
+    cva_in(C?, In),
+    do_receive2(In?, C?, P?, W?, R).
+
+procedure do_receive0(CvaOpt?, Constant?, PWorld?, POutcome).
+do_receive0(nocva, _, _, pblocked).
+do_receive0(acva(C), P, W, R?) :- ground(C?), ground(P?), ground(W?) |
+    cva_crashed(C?, X),
+    do_receive1(X?, C?, P?, W?, R).
+
+exported procedure do_receive(Constant?, PWorld?, POutcome).
+do_receive(P, W, R?) :- ground(P?), ground(W?) |
+    pworld_cva(W?, P?, CO),
+    do_receive0(CO?, P?, W?, R).
+
+% ---------------------------------------------------------------------------
+% Communicate: a message moves from an outbox to an inbox
+% ---------------------------------------------------------------------------
+
+procedure msg_to(PMsg?, Constant).
+msg_to(pmsg(_, Q, _), Q?).
+
+procedure do_comm3(CvaOpt?, PMsg?, Constant?, PWorld?, POutcome).
+do_comm3(nocva, _, _, _, pblocked).
+do_comm3(acva(D), M, Q, W1, pok(W2?)) :-
+    ground(D?), ground(M?), ground(Q?), ground(W1?) |
+    cva_in(D?, In),
+    msgs_snoc(In?, M?, In1),
+    cva_set_in(D?, In1?, D1),
+    pworld_put(W1?, Q?, D1?, W2).
+
+% The sender's outbox is written back before the recipient is read, so that a
+% message an agent sends to itself does not restore the outbox it came from.
+procedure do_comm2b(Constant?, PMsg?, PWorld?, POutcome).
+do_comm2b(Q, M, W1, R?) :- ground(Q?), ground(M?), ground(W1?) |
+    pworld_cva(W1?, Q?, DO),
+    do_comm3(DO?, M?, Q?, W1?, R).
+
+procedure do_comm2a(Constant?, PMsg?, Cva?, Constant?, PWorld?, POutcome).
+do_comm2a(Q, M, C0, P, W, R?) :-
+    ground(Q?), ground(M?), ground(C0?), ground(P?), ground(W?) |
+    pworld_put(W?, P?, C0?, W1),
+    do_comm2b(Q?, M?, W1?, R).
+
+procedure do_comm2(PMsgs?, Cva?, Constant?, PWorld?, POutcome).
+do_comm2([], _, _, _, pblocked).
+do_comm2([M|Ms], C, P, W, R?) :-
+    ground(M?), ground(Ms?), ground(C?), ground(P?), ground(W?) |
+    cva_set_out(C?, Ms?, C0),
+    msg_to(M?, Q),
+    do_comm2a(Q?, M?, C0?, P?, W?, R).
+
+procedure do_comm1(CvaOpt?, Constant?, PWorld?, POutcome).
+do_comm1(nocva, _, _, pblocked).
+do_comm1(acva(C), P, W, R?) :- ground(C?), ground(P?), ground(W?) |
+    cva_out(C?, O),
+    do_comm2(O?, C?, P?, W?, R).
+
+% Communicate is willed by nobody and delivers whatever is in an outbox, a
+% crashed agent's outbox included.
+exported procedure do_communicate(Constant?, PWorld?, POutcome).
+do_communicate(P, W, R?) :- ground(P?), ground(W?) |
+    pworld_cva(W?, P?, CO),
+    do_comm1(CO?, P?, W?, R).
+
+% ---------------------------------------------------------------------------
+% Discover, Advance-date and a crash
+% ---------------------------------------------------------------------------
+
+procedure disc2(Cva?, Cva?, Constant?, Constant?, PWorld?, POutcome).
+disc2(C, D, P, Q, W, pok(W2?)) :-
+    ground(C?), ground(D?), ground(P?), ground(Q?), ground(W?) |
+    cva_peers(C?, Ps),
+    agents_add(Q?, Ps?, Ps1),
+    cva_set_peers(C?, Ps1?, C1),
+    cva_peers(D?, Qs),
+    agents_add(P?, Qs?, Qs1),
+    cva_set_peers(D?, Qs1?, D1),
+    pworld_put(W?, P?, C1?, W1),
+    pworld_put(W1?, Q?, D1?, W2).
+
+procedure disc1(CvaOpt?, CvaOpt?, Constant?, Constant?, PWorld?, POutcome).
+disc1(nocva, _, _, _, _, pblocked).
+disc1(acva(C), DO, P, Q, W, R?) :-
+    ground(C?), ground(DO?), ground(P?), ground(Q?), ground(W?) |
+    disc1b(DO?, C?, P?, Q?, W?, R).
+
+procedure disc1b(CvaOpt?, Cva?, Constant?, Constant?, PWorld?, POutcome).
+disc1b(nocva, _, _, _, _, pblocked).
+disc1b(acva(D), C, P, Q, W, R?) :-
+    ground(C?), ground(D?), ground(P?), ground(Q?), ground(W?) |
+    cva_crashed(C?, X1),
+    cva_crashed(D?, X2),
+    or_ans(X1?, X2?, X),
+    disc1a(X?, C?, D?, P?, Q?, W?, R).
+
+procedure disc1a(Ans?, Cva?, Cva?, Constant?, Constant?, PWorld?, POutcome).
+disc1a(yes, _, _, _, _, _, pblocked).
+disc1a(no, C, D, P, Q, W, R?) :-
+    ground(C?), ground(D?), ground(P?), ground(Q?), ground(W?) |
+    disc2(C?, D?, P?, Q?, W?, R).
+
+% Discover, willed by both agents.
+exported procedure do_discover(Constant?, Constant?, PWorld?, POutcome).
+do_discover(P, Q, W, R?) :- ground(P?), ground(Q?), ground(W?) |
+    pworld_cva(W?, P?, CO),
+    pworld_cva(W?, Q?, DO),
+    disc1(CO?, DO?, P?, Q?, W?, R).
+
+procedure adv1(Cva?, Integer?, Constant?, PWorld?, POutcome).
+adv1(C, T, P, W, R?) :- ground(C?), integer(T?), ground(P?), ground(W?) |
+    cva_date(C?, D),
+    adv1a(D?, T?, C?, P?, W?, R).
+
+procedure adv1a(Integer?, Integer?, Cva?, Constant?, PWorld?, POutcome).
+adv1a(D, T, C, P, W, pok(W1?)) :- T? > D?, ground(C?), ground(P?), ground(W?) |
+    cva_set_date(C?, T?, C1),
+    pworld_put(W?, P?, C1?, W1).
+adv1a(D, T, _, _, _, pblocked) :- T? =< D? | true.
+
+procedure adv0(CvaOpt?, Integer?, Constant?, PWorld?, POutcome).
+adv0(nocva, _, _, _, pblocked).
+adv0(acva(C), T, P, W, R?) :- ground(C?), integer(T?), ground(P?), ground(W?) |
+    cva_crashed(C?, X),
+    adv0a(X?, C?, T?, P?, W?, R).
+
+procedure adv0a(Ans?, Cva?, Integer?, Constant?, PWorld?, POutcome).
+adv0a(yes, _, _, _, _, pblocked).
+adv0a(no, C, T, P, W, R?) :- ground(C?), integer(T?), ground(P?), ground(W?) |
+    adv1(C?, T?, P?, W?, R).
+
+exported procedure do_advance_date(Constant?, Integer?, PWorld?, POutcome).
+do_advance_date(P, T, W, R?) :- ground(P?), integer(T?), ground(W?) |
+    pworld_cva(W?, P?, CO),
+    adv0(CO?, T?, P?, W?, R).
+
+procedure crash1(CvaOpt?, Constant?, PWorld?, POutcome).
+crash1(nocva, _, _, pblocked).
+crash1(acva(C), P, W, pok(W1?)) :- ground(C?), ground(P?), ground(W?) |
+    cva_set_crashed(C?, yes, C1),
+    pworld_put(W?, P?, C1?, W1).
+
+% A crash: the agent takes no step of its algorithm thereafter.
+exported procedure do_crash(Constant?, PWorld?, POutcome).
+do_crash(P, W, R?) :- ground(P?), ground(W?) |
+    pworld_cva(W?, P?, CO),
+    crash1(CO?, P?, W?, R).
+
+% ---------------------------------------------------------------------------
+% A step of the platform, and a run of them
+% ---------------------------------------------------------------------------
+
+exported procedure pstep(Params?, Step?, PWorld?, POutcome).
+pstep(Pr, take(P, T), W, R?) :- ground(Pr?), ground(P?), ground(T?), ground(W?) |
+    do_propose(Pr?, P?, T?, W?, R).
+pstep(params(Th, _, _), resume_at(P, V), W, R?) :-
+    ground(Th?), ground(P?), ground(V?), ground(W?) |
+    do_resume(Th?, P?, V?, W?, R).
+pstep(_, receive_at(P), W, R?) :- ground(P?), ground(W?) | do_receive(P?, W?, R).
+pstep(_, communicate(P), W, R?) :- ground(P?), ground(W?) |
+    do_communicate(P?, W?, R).
+pstep(_, discover(P, Q), W, R?) :- ground(P?), ground(Q?), ground(W?) |
+    do_discover(P?, Q?, W?, R).
+pstep(_, advance_date(P, T), W, R?) :- ground(P?), integer(T?), ground(W?) |
+    do_advance_date(P?, T?, W?, R).
+pstep(_, crash(P), W, R?) :- ground(P?), ground(W?) | do_crash(P?, W?, R).
+pstep(Pr, settle(N), W, R?) :- ground(Pr?), integer(N?), ground(W?) |
+    do_settle(Pr?, N?, W?, R).
+
+procedure pat1(POutcome?, Params?, Step?, Steps?, Integer?, PRunOut).
+pat1(pblocked, _, S, _, I, pstuck(I?, S?)).
+pat1(pok(W), Pr, _, Ss, I, R?) :-
+    ground(W?), ground(Pr?), ground(Ss?), integer(I?) |
+    I1 := I? + 1,
+    pat(Pr?, Ss?, I1?, W?, R).
+
+procedure pat(Params?, Steps?, Integer?, PWorld?, PRunOut).
+pat(_, [], _, W, pdone(W?)).
+pat(Pr, [S|Ss], I, W, R?) :-
+    ground(Pr?), ground(S?), ground(Ss?), integer(I?), ground(W?) |
+    pstep(Pr?, S?, W?, O),
+    pat1(O?, Pr?, S?, Ss?, I?, R).
+
+exported procedure papply_all(Params?, Steps?, PWorld?, PRunOut).
+papply_all(Pr, Ss, W, R?) :- ground(Pr?), ground(Ss?), ground(W?) |
+    pat(Pr?, Ss?, 0, W?, R).
+
+% ---------------------------------------------------------------------------
+% Reading a world
+% ---------------------------------------------------------------------------
+
+procedure learnt1(CvaOpt?, Name?, Row).
+learnt1(nocva, _, []).
+learnt1(acva(C), V, R?) :- ground(C?), ground(V?) |
+    cva_inst(C?, V?, IO),
+    learnt2(IO?, R).
+
+procedure learnt2(InstOpt?, Row).
+learnt2(noinst, []).
+learnt2(ainst(I), R?) :- ground(I?) | rla # inst_learnt(I?, R).
+
+% The row an agent has learnt at a community.
+exported procedure pworld_learnt(PWorld?, Constant?, Name?, Row).
+pworld_learnt(W, P, V, R?) :- ground(W?), ground(P?), ground(V?) |
+    pworld_cva(W?, P?, CO),
+    learnt1(CO?, V?, R).
+
+% A world of agents, each with no peer, no message, no instance and date zero.
+procedure fresh(Agents?, Cvas).
+fresh([], []).
+fresh([P|Ps], [cva(P?, [], [], [], [], 0, no)|R?]) :- ground(P?), ground(Ps?) |
+    fresh(Ps?, R).
+
+exported procedure pworld_of(Agents?, PWorld).
+pworld_of(Ps, pworld(Cs?)) :- ground(Ps?) | fresh(Ps?, Cs).
+
+% ---------------------------------------------------------------------------
+% Settling: taking the platform transactions that are enabled until none is
+% ---------------------------------------------------------------------------
+% A settle is not a transaction of its own: it is the finite sequence of
+% Communicate transactions and of lines 16, 17 and 9 to 15 that are enabled,
+% taken in a fixed order of the agents until none of them is enabled.  It is
+% blocked where the budget runs out with one still enabled.
+
+exported procedure pworld_cvas(PWorld?, Cvas).
+pworld_cvas(pworld(Cs), Cs?).
+
+procedure inst_resumes(Insts?, Constant?, Steps).
+inst_resumes([], _, []).
+inst_resumes([I|Is], P, [resume_at(P?, V?)|R?]) :-
+    ground(I?), ground(Is?), ground(P?) |
+    rla # inst_name(I?, V),
+    inst_resumes(Is?, P?, R).
+
+procedure steps_app(Steps?, Steps?, Steps).
+steps_app([], T, T?).
+steps_app([X|Xs], T, [X?|R?]) :- ground(Xs?), ground(T?) | steps_app(Xs?, T?, R).
+
+procedure cand_steps(Cvas?, Steps).
+cand_steps([], []).
+cand_steps([C|Cs], R?) :- ground(C?), ground(Cs?) |
+    cva_name(C?, P),
+    cva_insts(C?, Is),
+    inst_resumes(Is?, P?, Rs),
+    cand_steps(Cs?, R1),
+    cand_steps1(P?, Rs?, R1?, R).
+
+procedure cand_steps1(Constant?, Steps?, Steps?, Steps).
+cand_steps1(P, Rs, R1, [communicate(P?), receive_at(P?)|R2?]) :-
+    ground(P?), ground(Rs?), ground(R1?) |
+    steps_app(Rs?, R1?, R2).
+
+procedure try_steps1(POutcome?, Params?, Steps?, PWorld?, POutcome).
+try_steps1(pok(W1), _, _, _, pok(W1?)).
+try_steps1(pblocked, Pr, Ss, W, R?) :- ground(Pr?), ground(Ss?), ground(W?) |
+    try_steps(Pr?, Ss?, W?, R).
+
+procedure try_steps(Params?, Steps?, PWorld?, POutcome).
+try_steps(_, [], _, pblocked).
+try_steps(Pr, [S|Ss], W, R?) :-
+    ground(Pr?), ground(S?), ground(Ss?), ground(W?) |
+    pstep(Pr?, S?, W?, O),
+    try_steps1(O?, Pr?, Ss?, W?, R).
+
+procedure settle1(POutcome?, Params?, Integer?, PWorld?, POutcome).
+settle1(pblocked, _, _, W, pok(W?)).
+settle1(pok(W1), Pr, N, _, R?) :- ground(W1?), ground(Pr?), integer(N?) |
+    N1 := N? - 1,
+    do_settle(Pr?, N1?, W1?, R).
+
+exported procedure do_settle(Params?, Integer?, PWorld?, POutcome).
+do_settle(_, N, _, pblocked) :- N? =< 0 | true.
+do_settle(Pr, N, W, R?) :- N? > 0, ground(Pr?), ground(W?) |
+    pworld_cvas(W?, Cs),
+    cand_steps(Cs?, Ss),
+    try_steps(Pr?, Ss?, W?, O),
+    settle1(O?, Pr?, N?, W?, R).
+
+% The messages waiting at each agent: its outbox length then its inbox length.
+procedure msgs_len(PMsgs?, Integer).
+msgs_len([], 0).
+msgs_len([_|Xs], N?) :- msgs_len(Xs?, M), N := M? + 1.
+
+procedure traffic(Cvas?, Ints).
+traffic([], []).
+traffic([C|Cs], [O?, I?|R?]) :- ground(C?), ground(Cs?) |
+    cva_out(C?, Ob),
+    msgs_len(Ob?, O),
+    cva_in(C?, Ib),
+    msgs_len(Ib?, I),
+    traffic(Cs?, R).
+
+exported procedure pworld_traffic(PWorld?, Ints).
+pworld_traffic(pworld(Cs), R?) :- ground(Cs?) | traffic(Cs?, R).
