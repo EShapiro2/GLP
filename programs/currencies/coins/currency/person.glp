@@ -50,7 +50,7 @@ person(Id, [card(agent_4, _, R)|Es], As?, Script, open(M, S, P, _), Swaps, Pendi
     try_step(Id?, Es?, As, Script?, open(M?, S?, P?, R?), Swaps?, Pending?, Screen).
 
 %% The accept card of a proposed swap, kept until the script reaches it.
-person(Id, [card(respond_swap_2, ctx_respond_swap_2(From, _, _), R)|Es], As?, Script, Open, Swaps, Pending, Screen?) :-
+person(Id, [card(respond_swap_1, ctx_respond_swap_1(From, _, _), R)|Es], As?, Script, Open, Swaps, Pending, Screen?) :-
     ground(From?), ground(R?) |
     try_step(Id?, Es?, As, Script?, Open?, [swap_card(From?, R?)|Swaps?], Pending?, Screen).
 
@@ -132,7 +132,7 @@ pick(accept(From), _, Swaps, Choice?, Swaps1?) :-
 pick(_, _, Swaps, wait, Swaps?) :- otherwise | true.
 
 procedure find_swap(Constant?, SwapCards?, Choice, SwapCards).
-find_swap(From, [swap_card(F, R)|Rest], answer(R?, xs_respond_swap_2(yes)), Rest?) :-
+find_swap(From, [swap_card(F, R)|Rest], answer(R?, xs_respond_swap_1(yes)), Rest?) :-
     From? =?= F? | true.
 find_swap(From, [S|Rest], C?, [S?|Rest1?]) :-
     otherwise |
