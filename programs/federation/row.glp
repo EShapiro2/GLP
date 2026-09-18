@@ -10,7 +10,7 @@
 % ---------------------------------------------------------------------------
 
 imported procedure name#name_eq(Name?, Name?, Ans).
-imported procedure name#name_extend(Name?, Integer?, Name).
+imported procedure name#name_extend(Name?, Constant?, Name).
 imported procedure name#name_is_agent(Name?, Ans).
 imported procedure name#name_agent(Name?, Constant).
 imported procedure rat#rat_add(Rat?, Rat?, Rat).
@@ -36,19 +36,23 @@ motions_max_epoch([M|Ms], N?) :- ground(M?), ground(Ms?) |
 procedure arec_epoch(Arec?, Integer).
 arec_epoch(arec(_, Ms), N?) :- ground(Ms?) | motions_max_epoch(Ms?, N).
 
-% The community a Federate forms: (u, k+1) for k the epoch of its motion.
-procedure fed_parent(Name?, Motions?, Name).
-fed_parent(U, Ms, P?) :- ground(U?), ground(Ms?) |
-    motions_max_epoch(Ms?, K),
-    fed_parent1(U?, K?, P).
+% The community a Federate u by y forms: u.y (Definition "Community Name").
+procedure fed_name(Name?, Constant?, Name).
+fed_name(U, Y, F?) :- ground(U?), ground(Y?) | name # name_extend(U?, Y?, F).
 
-procedure fed_parent1(Name?, Integer?, Name).
-fed_parent1(U, K, P?) :- ground(U?), integer(K?) |
-    K1 := K? + 1,
-    name # name_extend(U?, K1?, P).
+procedure const_eq(Constant?, Constant?, Ans).
+const_eq(A, B, yes) :- A? =?= B? | true.
+const_eq(A, B, no) :- otherwise, ground(A?), ground(B?) | true.
 
-% Is this act record on the pair f -> u?  A Federate u sits on the pair from
-% the community it forms to u.
+% The same Federate: of one community by one identity.
+procedure same_fed(Name?, Constant?, Name?, Constant?, Ans).
+same_fed(U1, Y1, U, Y, R?) :- ground(U1?), ground(Y1?), ground(U?), ground(Y?) |
+    name # name_eq(U1?, U?, A1),
+    const_eq(Y1?, Y?, A2),
+    and_ans(A1?, A2?, R).
+
+% Is this act record on the pair f -> u?  A Federate u by y sits on the pair
+% from the community u.y it forms to u.
 procedure arec_on_pair(Arec?, Name?, Name?, Ans).
 arec_on_pair(arec(join(F1, G1), _), F, U, R?) :-
     ground(F1?), ground(G1?), ground(F?), ground(U?) |
@@ -60,16 +64,12 @@ arec_on_pair(arec(leave(F1, G1), _), F, U, R?) :-
     name # name_eq(F1?, F?, A1),
     name # name_eq(G1?, U?, A2),
     and_ans(A1?, A2?, R).
-arec_on_pair(arec(federate(U1), Ms), F, U, R?) :-
-    ground(U1?), ground(Ms?), ground(F?), ground(U?) |
+arec_on_pair(arec(federate(U1, Y1), _), F, U, R?) :-
+    ground(U1?), ground(Y1?), ground(F?), ground(U?) |
     name # name_eq(U1?, U?, A1),
-    arec_on_pair1(A1?, U1?, Ms?, F?, R).
-
-procedure arec_on_pair1(Ans?, Name?, Motions?, Name?, Ans).
-arec_on_pair1(no, _, _, _, no).
-arec_on_pair1(yes, U1, Ms, F, R?) :- ground(U1?), ground(Ms?), ground(F?) |
-    fed_parent(U1?, Ms?, P),
-    name # name_eq(P?, F?, R).
+    fed_name(U1?, Y1?, F1),
+    name # name_eq(F1?, F?, A2),
+    and_ans(A1?, A2?, R).
 
 % ---------------------------------------------------------------------------
 % Heads (Definition "State of a Row"(1))
@@ -129,8 +129,9 @@ edge_from_heads([A|As], R?) :- ground(A?), ground(As?) |
 
 % ---------------------------------------------------------------------------
 % What a transaction reads of a pair: whether the edge holds, and the epoch a
-% Move takes --- one more than the greatest epoch of an act record on the pair
-% or of that Federate, and 0 where there is none.
+% Move takes --- one more than the greatest epoch of an act record on the pair,
+% and 0 where there is none; the epoch of a Federate is 0, a Federate naming
+% the community it forms.
 % ---------------------------------------------------------------------------
 
 exported procedure edge_holds(Arecs?, Name?, Name?, Ans).
@@ -149,32 +150,31 @@ pair_epoch(As, F, G, R?) :- ground(As?), ground(F?), ground(G?) |
     on_pair_only(As?, F?, G?, Ps),
     epoch_after(Ps?, R).
 
-procedure fed_acts1(Ans?, Name?, Motions?, Arecs?, Name?, Arecs).
-fed_acts1(yes, U1, Ms, As, U, [arec(federate(U1?), Ms?)|R?]) :-
-    ground(As?), ground(U?) |
-    fed_acts(As?, U?, R).
-fed_acts1(no, _, _, As, U, R?) :- ground(As?), ground(U?) | fed_acts(As?, U?, R).
-
-exported procedure fed_acts(Arecs?, Name?, Arecs).
-fed_acts([], _, []).
-fed_acts([arec(federate(U1), Ms)|As], U, R?) :-
-    ground(U1?), ground(Ms?), ground(As?), ground(U?) |
-    name # name_eq(U1?, U?, A),
-    fed_acts1(A?, U1?, Ms?, As?, U?, R).
-fed_acts([_|As], U, R?) :- otherwise, ground(As?), ground(U?) | fed_acts(As?, U?, R).
-
-exported procedure federate_epoch(Arecs?, Name?, Integer).
-federate_epoch(As, U, R?) :- ground(As?), ground(U?) |
-    fed_acts(As?, U?, Ps),
-    epoch_after(Ps?, R).
-
 exported procedure act_epoch(Arecs?, Act?, Integer).
 act_epoch(As, join(F, G), R?) :- ground(As?), ground(F?), ground(G?) |
     pair_epoch(As?, F?, G?, R).
 act_epoch(As, leave(F, G), R?) :- ground(As?), ground(F?), ground(G?) |
     pair_epoch(As?, F?, G?, R).
-act_epoch(As, federate(U), R?) :- ground(As?), ground(U?) |
-    federate_epoch(As?, U?, R).
+act_epoch(_, federate(_, _), 0).
+
+% The motions on which the Federate u by y is decided among the act records:
+% those of every act record of that Federate.
+exported procedure fed_decided(Arecs?, Name?, Constant?, Motions).
+fed_decided([], _, _, []).
+fed_decided([arec(federate(U1, Y1), Ms)|As], U, Y, R?) :-
+    ground(U1?), ground(Y1?), ground(Ms?), ground(As?), ground(U?), ground(Y?) |
+    same_fed(U1?, Y1?, U?, Y?, A),
+    fed_decided1(A?, Ms?, As?, U?, Y?, R).
+fed_decided([_|As], U, Y, R?) :- otherwise, ground(As?), ground(U?), ground(Y?) |
+    fed_decided(As?, U?, Y?, R).
+
+procedure fed_decided1(Ans?, Motions?, Arecs?, Name?, Constant?, Motions).
+fed_decided1(yes, Ms, As, U, Y, R?) :-
+    ground(Ms?), ground(As?), ground(U?), ground(Y?) |
+    fed_decided(As?, U?, Y?, R1),
+    motions_app(Ms?, R1?, R).
+fed_decided1(no, _, As, U, Y, R?) :- ground(As?), ground(U?), ground(Y?) |
+    fed_decided(As?, U?, Y?, R).
 
 % ---------------------------------------------------------------------------
 % Children and parents (Definition "State of a Row"(1))
@@ -216,13 +216,9 @@ arec_target(arec(join(F, G), _), V, R?) :- ground(F?), ground(G?), ground(V?) |
 arec_target(arec(leave(F, G), _), V, R?) :- ground(F?), ground(G?), ground(V?) |
     name # name_eq(F?, V?, A),
     name_if(A?, G?, R).
-arec_target(arec(federate(U), Ms), V, R?) :- ground(U?), ground(Ms?), ground(V?) |
-    fed_parent(U?, Ms?, P),
-    arec_target1(P?, U?, V?, R).
-
-procedure arec_target1(Name?, Name?, Name?, Names).
-arec_target1(P, U, V, R?) :- ground(P?), ground(U?), ground(V?) |
-    name # name_eq(P?, V?, A),
+arec_target(arec(federate(U, Y), _), V, R?) :- ground(U?), ground(Y?), ground(V?) |
+    fed_name(U?, Y?, F),
+    name # name_eq(F?, V?, A),
     name_if(A?, U?, R).
 
 procedure arec_source(Arec?, Name?, Names).
@@ -232,13 +228,13 @@ arec_source(arec(join(F, G), _), V, R?) :- ground(F?), ground(G?), ground(V?) |
 arec_source(arec(leave(F, G), _), V, R?) :- ground(F?), ground(G?), ground(V?) |
     name # name_eq(G?, V?, A),
     name_if(A?, F?, R).
-arec_source(arec(federate(U), Ms), V, R?) :- ground(U?), ground(Ms?), ground(V?) |
+arec_source(arec(federate(U, Y), _), V, R?) :- ground(U?), ground(Y?), ground(V?) |
     name # name_eq(U?, V?, A),
-    arec_source1(A?, U?, Ms?, R).
+    arec_source1(A?, U?, Y?, R).
 
-procedure arec_source1(Ans?, Name?, Motions?, Names).
+procedure arec_source1(Ans?, Name?, Constant?, Names).
 arec_source1(no, _, _, []).
-arec_source1(yes, U, Ms, [P?]) :- ground(U?), ground(Ms?) | fed_parent(U?, Ms?, P).
+arec_source1(yes, U, Y, [F?]) :- ground(U?), ground(Y?) | fed_name(U?, Y?, F).
 
 procedure targets(Arecs?, Name?, Names).
 targets([], _, []).
@@ -293,34 +289,40 @@ keep_parents1(no, _, Fs, As, V, R?) :- ground(Fs?), ground(As?), ground(V?) |
     keep_parents(Fs?, As?, V?, R).
 
 % ---------------------------------------------------------------------------
-% Members (Definition "State of a Row"(2))
+% Members and descendants (Definition "State of a Row"(2))
 % ---------------------------------------------------------------------------
+% The latest report of a child is its report record of the greatest sequence.
+% The members of v are the union of the members reported over the children
+% with a latest report, together with v itself where v is an agent; its
+% descendants are the union of each such child with the descendants it
+% reports.
 
-procedure rep_max(Rep?, Integer?, Agents?, Rep).
-rep_max(norep, K, Y, rep(K?, Y?)).
-rep_max(rep(K1, Y1), K, _, rep(K1?, Y1?)) :- K1? >= K? | true.
-rep_max(rep(K1, _), K, Y, rep(K?, Y?)) :- K1? < K?, ground(Y?) | true.
+procedure rep_max(Rep?, Integer?, Agents?, Names?, Rep).
+rep_max(norep, K, Y, Z, rep(K?, Y?, Z?)).
+rep_max(rep(K1, Y1, Z1), K, _, _, rep(K1?, Y1?, Z1?)) :- K1? >= K? | true.
+rep_max(rep(K1, _, _), K, Y, Z, rep(K?, Y?, Z?)) :-
+    K1? < K?, ground(Y?), ground(Z?) | true.
 
 procedure best_report(Row?, Name?, Rep).
 best_report([], _, norep).
-best_report([report(U1, Y, K)|Rs], U, R?) :-
-    ground(U1?), ground(Y?), integer(K?), ground(Rs?), ground(U?) |
+best_report([report(U1, Y, Z, K)|Rs], U, R?) :-
+    ground(U1?), ground(Y?), ground(Z?), integer(K?), ground(Rs?), ground(U?) |
     name # name_eq(U1?, U?, A),
-    best_report1(A?, Y?, K?, Rs?, U?, R).
+    best_report1(A?, Y?, Z?, K?, Rs?, U?, R).
 best_report([_|Rs], U, R?) :- otherwise, ground(Rs?), ground(U?) |
     best_report(Rs?, U?, R).
 
-procedure best_report1(Ans?, Agents?, Integer?, Row?, Name?, Rep).
-best_report1(no, _, _, Rs, U, R?) :- ground(Rs?), ground(U?) |
+procedure best_report1(Ans?, Agents?, Names?, Integer?, Row?, Name?, Rep).
+best_report1(no, _, _, _, Rs, U, R?) :- ground(Rs?), ground(U?) |
     best_report(Rs?, U?, R).
-best_report1(yes, Y, K, Rs, U, R?) :-
-    ground(Y?), integer(K?), ground(Rs?), ground(U?) |
+best_report1(yes, Y, Z, K, Rs, U, R?) :-
+    ground(Y?), ground(Z?), integer(K?), ground(Rs?), ground(U?) |
     best_report(Rs?, U?, R1),
-    rep_max(R1?, K?, Y?, R).
+    rep_max(R1?, K?, Y?, Z?, R).
 
 procedure members_add(Rep?, Agents?, Agents).
 members_add(norep, T, T?).
-members_add(rep(_, Y), T, R?) :- ground(Y?), ground(T?) | agents_union(Y?, T?, R).
+members_add(rep(_, Y, _), T, R?) :- ground(Y?), ground(T?) | agents_union(Y?, T?, R).
 
 procedure members_of(Names?, Row?, Agents).
 members_of([], _, []).
@@ -333,7 +335,7 @@ members_of([U|Us], Row, R?) :- ground(U?), ground(Us?), ground(Row?) |
 % child, and none where it has made none.
 procedure rep_agents(Rep?, Agents).
 rep_agents(norep, []).
-rep_agents(rep(_, Y), Y?).
+rep_agents(rep(_, Y, _), Y?).
 
 exported procedure child_report(Row?, Name?, Rep).
 child_report(Row, U, R?) :- ground(Row?), ground(U?) | best_report(Row?, U?, R).
@@ -346,12 +348,46 @@ child_members(Row, U, R?) :- ground(Row?), ground(U?) |
 exported procedure members(Row?, Name?, Names?, Agents).
 members(Row, V, Ch, R?) :- ground(Row?), ground(V?), ground(Ch?) |
     name # name_is_agent(V?, A),
-    members1(A?, Row?, V?, Ch?, R).
+    members_of(Ch?, Row?, R1),
+    members1(A?, V?, R1?, R).
 
-procedure members1(Ans?, Row?, Name?, Names?, Agents).
-members1(yes, _, V, _, [P?]) :- ground(V?) | name # name_agent(V?, P).
-members1(no, Row, _, Ch, R?) :- ground(Row?), ground(Ch?) |
-    members_of(Ch?, Row?, R).
+procedure members1(Ans?, Name?, Agents?, Agents).
+members1(no, _, R, R?).
+members1(yes, V, R1, R?) :- ground(V?), ground(R1?) |
+    name # name_agent(V?, P),
+    agents_add(P?, R1?, R).
+
+% The union of two sets of names, the first taken in order.
+procedure names_union(Names?, Names?, Names).
+names_union([], T, T?).
+names_union([X|Xs], T, R?) :- ground(X?), ground(Xs?), ground(T?) |
+    names_union(Xs?, T?, R1),
+    names_addfront(X?, R1?, R).
+
+procedure names_addfront(Name?, Names?, Names).
+names_addfront(N, Ns, R?) :- ground(N?), ground(Ns?) |
+    names_member(Ns?, N?, Y),
+    names_addfront1(Y?, N?, Ns?, R).
+
+procedure names_addfront1(Ans?, Name?, Names?, Names).
+names_addfront1(yes, _, Ns, Ns?).
+names_addfront1(no, N, Ns, [N?|Ns?]).
+
+procedure desc_add(Rep?, Name?, Names?, Names).
+desc_add(norep, _, T, T?).
+desc_add(rep(_, _, Z), U, T, R?) :- ground(Z?), ground(U?), ground(T?) |
+    names_union([U?|Z?], T?, R).
+
+procedure desc_of(Names?, Row?, Names).
+desc_of([], _, []).
+desc_of([U|Us], Row, R?) :- ground(U?), ground(Us?), ground(Row?) |
+    best_report(Row?, U?, Rp),
+    desc_of(Us?, Row?, R1),
+    desc_add(Rp?, U?, R1?, R).
+
+% The descendants of the community, given its children.
+exported procedure descendants(Row?, Names?, Names).
+descendants(Row, Ch, R?) :- ground(Row?), ground(Ch?) | desc_of(Ch?, Row?, R).
 
 % ---------------------------------------------------------------------------
 % The assembly (Definition "State of a Row"(4))
@@ -551,10 +587,11 @@ arec_touches(A, join(F, G), R?) :- ground(A?), ground(F?), ground(G?) |
     arec_on_pair(A?, F?, G?, R).
 arec_touches(A, leave(F, G), R?) :- ground(A?), ground(F?), ground(G?) |
     arec_on_pair(A?, F?, G?, R).
-arec_touches(arec(federate(U1), _), federate(U), R?) :- ground(U1?), ground(U?) |
-    name # name_eq(U1?, U?, R).
-arec_touches(arec(join(_, _), _), federate(_), no).
-arec_touches(arec(leave(_, _), _), federate(_), no).
+arec_touches(arec(federate(U1, Y1), _), federate(U, Y), R?) :-
+    ground(U1?), ground(Y1?), ground(U?), ground(Y?) |
+    same_fed(U1?, Y1?, U?, Y?, R).
+arec_touches(arec(join(_, _), _), federate(_, _), no).
+arec_touches(arec(leave(_, _), _), federate(_, _), no).
 
 procedure any_touch_ge1(Ans?, Integer?, Integer?, Arecs?, Act?, Ans).
 any_touch_ge1(yes, E, K, _, _, yes) :- E? >= K? | true.
@@ -649,10 +686,11 @@ agent_dates(Row, R?) :- ground(Row?) |
 % ---------------------------------------------------------------------------
 
 procedure row_state_on1(Row?, Name?, Arecs?, Names?, State).
-row_state_on1(Row, V, As, Ch, state(Ch?, Pa?, Mem?, Asm?, D?, Ac?, Mo?)) :-
+row_state_on1(Row, V, As, Ch, state(Ch?, Pa?, Mem?, Ds?, Asm?, D?, Ac?, Mo?)) :-
     ground(Row?), ground(V?), ground(As?), ground(Ch?) |
     parents(As?, V?, Pa),
     members(Row?, V?, Ch?, Mem),
+    descendants(Row?, Ch?, Ds),
     assembly(Row?, V?, Asm),
     date_accounts(Row?, DA),
     da_parts(DA?, D, Ac),
