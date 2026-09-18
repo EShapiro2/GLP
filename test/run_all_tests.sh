@@ -3790,7 +3790,7 @@ check "RM9 an activated module reaches a root-scope procedure in its body" "Z = 
 echo ""
 # =============================================================================
 # SECTION SK: Identity, signature and the certificate (self_key/1, sign/3,
-# signed/4, signed/2, decompose_module/4; the OS-privileged refusal)
+# signature/2, decompose_module/4; the OS-privileged refusal)
 # =============================================================================
 # GLP-Spec appendix-guards, "Identity and signature" and "Module as a value";
 # Secure GLP core.tex §The Seam; IGLP code format §Program Artefact and
@@ -3810,19 +3810,19 @@ HEREDOC
 2>&1)
 check "SK1 madGLP mode enters for a directory load" "madGLP mode on: agent alice" "$sk1"
 check "SK1 self_key assigns the person's key" "K = [0-9a-f]\{64\}" "$sk1"
-check "SK1 sign then signed round-trips the term under the signer's key and module identity" "R = signed([0-9a-f]\{64\}, [0-9a-f]\{64\}, hello(world))" "$sk1"
+check "SK1 sign then signature round-trips the term as signed(K, H, T) under the signer's key and module identity" "R = signed([0-9a-f]\{64\}, [0-9a-f]\{64\}, hello(world))" "$sk1"
 
 # The key the signed term carries is self_key's answer, and the module identity
 # is this program's source identity, which decompose_module also reports.
 sk2=$("$REPL_RUN" <<HEREDOC
 $GLP_DIR/programs/tests/sign_probe
-self_key(K), signer(a_term, K1).
+self_key(K), sign(a_term, K?, S), signer(S?, K1).
 identities(K, S, C).
 :quit
 HEREDOC
 2>&1)
-sk2_keys=$(echo "$sk2" | grep "^K1\{0,1\} = " | grep -o "[0-9a-f]\{64\}" | sort -u | wc -l | tr -d ' ')
-check "SK2 signed/2 assigns the signer, and it is self_key's answer" "1" "$sk2_keys"
+sk2_keys=$(echo "$sk2" | grep "K1\{0,1\} = " | grep -o "[0-9a-f]\{64\}" | sort -u | wc -l | tr -d ' ')
+check "SK2 signature/2 matched as signed(K, _, _) gives the signer, and it is self_key's answer" "1" "$sk2_keys"
 check "SK2 decompose_module assigns the compiler's key" "K = [0-9a-f]\{64\}" "$sk2"
 check "SK2 decompose_module assigns the source identity" "S = [0-9a-f]\{64\}" "$sk2"
 check "SK2 decompose_module assigns the compiled identity" "C = [0-9a-f]\{64\}" "$sk2"
@@ -3836,14 +3836,19 @@ HEREDOC
 2>&1)
 check "SK3 sign under another person's key is an error" "_sign/3: the runtime holds no private key for" "$sk3"
 
-# signed/4 on a string that is not a signed term does not hold.
+# signature/2 on a term that is not a verified signed term answers unsigned: a
+# value the caller matches and not a failure, so the goal succeeds and the
+# caller takes its unsigned branch.
 sk4=$("$REPL_RUN" <<HEREDOC
 $GLP_DIR/programs/tests/sign_probe
-signed("00ff", K, H, T).
+signer("00ff", K).
+signer(foo(bar), K).
 :quit
 HEREDOC
 2>&1)
-check "SK4 signed/4 on a non-signed term fails" "→ failed" "$sk4"
+sk4_unsigned=$(echo "$sk4" | grep -c "K = unsigned" | tr -d ' ')
+check "SK4 signature/2 on a hex string that is no signed term, and on a term that is no string, answers unsigned" "2" "$sk4_unsigned"
+check_not "SK4 unsigned is a value, not a failure: neither goal fails" "→ failed" "$sk4"
 
 # The certificate: a mini-app calling nothing that reaches the network or the
 # person is certified; one that does is refused, naming the offending calls,

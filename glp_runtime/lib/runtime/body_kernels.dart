@@ -36,8 +36,10 @@ enum BodyKernelResult {
 
   /// The predicate the kernel realises does not hold of its arguments: the
   /// goal fails, as a goal with no matching clause does, and the computation
-  /// goes on (IGLP: a reduction succeeds, suspends, or fails). `signed/4` on a
-  /// string that is not a signed term is the case.
+  /// goes on (IGLP: a reduction succeeds, suspends, or fails). No kernel
+  /// returns it at present: `'_signature'/2` answers `unsigned` on a term that
+  /// is not a verified signed term, since a predicate that failed on a forgery
+  /// could not refuse one and carry on.
   fail,
 }
 
@@ -116,7 +118,7 @@ void registerStandardBodyKernels(BodyKernelRegistry registry) {
   // runtime's, so none of these needs madGLP mode.
   registry.register('_self_key', 1, selfKeyKernel);
   registry.register('_sign', 3, signKernel);
-  registry.register('_signed', 4, signedKernel);
+  registry.register('_signature', 2, signatureKernel);
   registry.register('_decompose_module', 4, decomposeModuleKernel);
   registry.register('_load_file', 2, loadFileKernel);
 
@@ -910,7 +912,7 @@ String _bytesToHex(List<int> bytes) {
 }
 
 // =============================================================================
-// SIGNATURE KERNELS — '_self_key'/1, '_sign'/3, '_signed'/4,
+// SIGNATURE KERNELS — '_self_key'/1, '_sign'/3, '_signature'/2,
 // '_decompose_module'/4 (GLP-Spec appendix-guards, "Identity and signature"
 // and "Module as a value"; Secure GLP core.tex §The Seam; IGLP code format
 // §Offer and Handshake Messages, "Signed content", and §Program Artefact)
@@ -1018,28 +1020,48 @@ BodyKernelResult signKernel(GlpRuntime rt, List<Object?> args) {
   return _bindResult(rt, args[2], ConstTerm(_hexOf(signed)));
 }
 
-/// '_signed'(S?, Key, Hash, T) — take a signed term apart: the signer's key,
-/// the source identity of the module under which the signature was made, and
-/// the term signed, where S is a signed term whose signature verifies under
-/// the key it carries. Neither key is taken as input — a reader learns who
-/// signed — and the signing module is not run. Where S is not a signed term
-/// the predicate does not hold: the goal fails.
-BodyKernelResult signedKernel(GlpRuntime rt, List<Object?> args) {
-  if (args.length != 4) {
-    print('[ABORT] _signed/4: expected 4 arguments, got ${args.length}');
+/// '_signature'(S?, Signature) — take a signed term apart and report what it
+/// finds. Signature is `signed(Key, Hash, T)` — the signer's key, the source
+/// identity of the module under which the signature was made, and the term
+/// signed — where S is a signed term whose signature verifies under the key it
+/// carries, and the constant `unsigned` otherwise: S not a string, not a hex
+/// byte string, not a signed term, or one whose signature does not verify.
+/// Neither key is taken as input — a reader learns who signed — and the signing
+/// module is not run. `unsigned` is a value and not a failure, so the caller
+/// discriminates by matching (GLP-Spec appendix-guards, "Identity and
+/// signature"): a predicate that failed on a forgery could not refuse one and
+/// carry on. The kernel aborts only on a malformed call — the wrong arity, or a
+/// first argument that is not known — as the other kernels do.
+BodyKernelResult signatureKernel(GlpRuntime rt, List<Object?> args) {
+  if (args.length != 2) {
+    print('[ABORT] _signature/2: expected 2 arguments, got ${args.length}');
     return BodyKernelResult.abort;
   }
-  final hex = _groundString(rt, args[0]);
-  if (hex == null) {
-    print('[ABORT] _signed/4: first argument is not a ground string, got '
-        '${_deref(rt, args[0])}');
+  final s = _deref(rt, args[0]);
+  if (s == null || s is VarRef) {
+    print('[ABORT] _signature/2: first argument is not known');
     return BodyKernelResult.abort;
+  }
+  return _bindResult(rt, args[1], _signatureOf(s));
+}
+
+/// The constant `unsigned`: the Signature of what is not a verified signed term.
+Term get _unsigned => ConstTerm('unsigned');
+
+/// The Signature of the known term [s]: `signed(Key, Hash, T)` where [s] is a
+/// signed term whose signature verifies under the key it carries, `unsigned`
+/// otherwise.
+Term _signatureOf(Object s) {
+  final String hex;
+  if (s is ConstTerm && s.value is String) {
+    hex = s.value as String;
+  } else if (s is String) {
+    hex = s;
+  } else {
+    return _unsigned;
   }
   final bytes = _bytesOfHex(hex);
-  if (bytes == null) {
-    print('[FAIL] _signed/4: not a signed term: not a hex byte string');
-    return BodyKernelResult.fail;
-  }
+  if (bytes == null) return _unsigned;
 
   final PubKey signer;
   final Uint8List signature;
@@ -1053,28 +1075,20 @@ BodyKernelResult signedKernel(GlpRuntime rt, List<Object?> args) {
     content = Uint8List.sublistView(bytes, r.offset);
     final sig = decodeTermFromBytes(Uint8List.fromList(content));
     if (sig is! WStruct || sig.functor != 'sig' || sig.args.length != 2) {
-      throw WireFormatException('signed content is not sig/2');
+      return _unsigned; // the signed content is not sig/2
     }
     final h = sig.args[0];
     if (h is! WConst || h.constant is! WBlob) {
-      throw WireFormatException('signed content carries no module identity');
+      return _unsigned; // the signed content carries no module identity
     }
     hSrc = (h.constant as WBlob).value;
     term = PayloadCodec.wireToTerm(sig.args[1]);
-  } catch (e) {
-    print('[FAIL] _signed/4: not a signed term: $e');
-    return BodyKernelResult.fail;
+  } catch (_) {
+    return _unsigned; // not a signed term
   }
-  if (!PersonIdentity.verify(signer, content, signature)) {
-    print('[FAIL] _signed/4: the signature does not verify under the key the '
-        'signed term carries');
-    return BodyKernelResult.fail;
-  }
-  final r1 = _bindResult(rt, args[1], ConstTerm(signer.hex));
-  if (r1 != BodyKernelResult.success) return r1;
-  final r2 = _bindResult(rt, args[2], ConstTerm(_hexOf(hSrc)));
-  if (r2 != BodyKernelResult.success) return r2;
-  return _bindResult(rt, args[3], term);
+  if (!PersonIdentity.verify(signer, content, signature)) return _unsigned;
+  return StructTerm(
+      'signed', [ConstTerm(signer.hex), ConstTerm(_hexOf(hSrc)), term]);
 }
 
 /// '_decompose_module'(Module?, Key, Hash, Hash) — take a module value apart:
