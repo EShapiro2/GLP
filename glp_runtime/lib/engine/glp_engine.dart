@@ -426,7 +426,7 @@ class GlpEngine {
     }
 
     // Make this module's declarations available to the REPL goal checker.
-    _extendGoalCheckEnv(module);
+    _extendGoalCheckEnv(module, label: moduleInfo.name);
 
     return true;
   }
@@ -514,7 +514,8 @@ class GlpEngine {
     for (final m in ordered) {
       _extendGoalCheckEnv(m.ast,
           typesFillGapsOnly:
-              _normDir(File(m.filePath).parent.path) != _normDir(programRoot));
+              _normDir(File(m.filePath).parent.path) != _normDir(programRoot),
+          label: m.moduleName);
     }
 
     return true;
@@ -1131,9 +1132,10 @@ class GlpEngine {
 
   /// Extend the goal-check environment with a loaded module's declarations, so
   /// goals referencing its procedures can be type-checked.
-  void _extendGoalCheckEnv(Module module, {bool typesFillGapsOnly = false}) {
+  void _extendGoalCheckEnv(Module module,
+      {bool typesFillGapsOnly = false, String? label}) {
     _goalCheckEnv = mergeModuleIntoScope(_ensureGoalCheckBaseEnv(), module,
-        typesFillGapsOnly: typesFillGapsOnly);
+        typesFillGapsOnly: typesFillGapsOnly, label: label);
   }
 
   /// A directory path for comparison: absolute, `..` and `.` segments resolved

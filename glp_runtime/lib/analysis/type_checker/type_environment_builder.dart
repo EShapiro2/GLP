@@ -77,6 +77,10 @@ void setRootScopeEnvironmentSource(String source) {
   _rootScopeEnvironmentSource = source;
 }
 
+/// Whether [source] is the text the root scope environment is built from.
+bool isRootScopeEnvironmentSource(String source) =>
+    source == (_rootScopeEnvironmentSource ?? rootScopeTypes);
+
 /// Build TypeEnvironment from root scope
 TypeEnvironment buildRootScopeEnvironment() {
   final source = _rootScopeEnvironmentSource ?? rootScopeTypes;
@@ -105,9 +109,12 @@ TypeEnvironment buildRootScopeEnvironment() {
 
   final env = _buildEnvironmentFromModule(expandedModule, checkRedefinitions: false, resolveAliasesNow: true);
   rootScopeTypeDefs = Map<String, TypeDef>.unmodifiable(env.types);
+  // The root's types are defined in the root: the prefix one is kept under
+  // once a descendant scope defines its name (TypeEnvironment.merge).
   return TypeEnvironment(env.types, env.procedures,
       paramProcDecls: env.paramProcDecls,
-      typeTemplates: rootScopeTemplates);
+      typeTemplates: rootScopeTemplates,
+      typeOrigins: {for (final t in env.types.keys) t: 'root'});
 }
 
 /// Build TypeEnvironment from a parsed Module
@@ -162,7 +169,12 @@ TypeEnvironment buildTypeEnvironment(ast.Module module,
       typeTemplates: templates, paramProcDecls: paramProcDecls);
 
   return TypeEnvironment(types, procedures,
-      paramProcDecls: paramProcDecls, typeTemplates: templates);
+      paramProcDecls: paramProcDecls,
+      typeTemplates: templates,
+      typeOrigins: {
+        for (final e in merged.typeOrigins.entries)
+          if (types.containsKey(e.key)) e.key: e.value
+      });
 }
 
 /// Build TypeEnvironment from Module's type definitions and procedure declarations

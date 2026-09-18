@@ -1,0 +1,28 @@
+%% A declaration's types are the declaring scope's.
+%%
+%% TGLP "Compilation", third step: every type T of every .glp file, self.glp
+%% files included, is renamed to M:T, "two sibling modules have distinct
+%% scopes, so two same-named types defined in them are two types, which one
+%% flat namespace would otherwise make one, checking a module against a
+%% definition it cannot see"; fourth step: every type reference resolves "to
+%% the renamed type of the nearest scope defining it".  This self.glp's
+%% `procedure tally(Stream(Answer)?, Stream(Integer))` therefore means THIS
+%% Answer --- authorise ; refuse --- in every module of the directory, however
+%% a module defines an Answer of its own: caller.glp does, and its own Answer
+%% is what its own declarations mean.  The root self.glp's `self_key(Key)` is
+%% the root's Key in the same way, whatever caller.glp calls Key.
+%%
+%% Until 2026-09-18 the per-module check merged the scope chain into one flat
+%% name map, so a module's Answer replaced the one its ancestor's declaration
+%% named: programs/social/graph/core/agent.glp:925's `authorise_link(L,
+%% authorise)` was rejected against social/graph/self.glp's Answer (IGLP,
+%% 2026-09-18).  Covered by glp_runtime/test/analysis/scoped_declaration_test.dart;
+%% the rejected direction is ../scoped_declaration_reject/.
+Answer ::= authorise ; refuse.
+procedure tally(Stream(Answer)?, Stream(Integer)).
+tally([], []).
+tally([authorise | As], [1 | Ts?]) :- tally(As?, Ts).
+tally([refuse | As], [0 | Ts?]) :- tally(As?, Ts).
+imported procedure caller#go(Stream(Integer)).
+exported procedure go(Stream(Integer)).
+go(Ts?) :- caller # go(Ts).
