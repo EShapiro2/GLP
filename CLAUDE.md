@@ -81,7 +81,7 @@ Loading a project: enter the directory path at the prompt; the project linker re
 
 | Suite | Command (from the worktree root) | Tests |
 |---|---|---|
-| Full suite (canonical) | `bash test/run_all_tests.sh` | 1889, all green, `KNOWN_RED` empty — at GLP `71529d4d`, 2026-09-18 |
+| Full suite (canonical) | `bash test/run_all_tests.sh` | 1921, all green, `KNOWN_RED` empty — at GLP `7e511314`, 2026-09-18 |
 | Dart unit tests alone | `cd glp_runtime && dart test` | glp_runtime only |
 | Flutter package alone | `cd glp_multiagent && flutter test` | glp_multiagent only |
 
