@@ -242,13 +242,24 @@ List<ast.Clause> extractClauses(ast.Module module) {
 }
 
 /// Check if a type definition is a simple alias (single type reference)
-/// 
-/// Per spec (type-environment.md v0.8):
-/// Simple aliases have a single alternative that is a TypeRef or PrimitiveModeAlt:
+///
+/// TGLP appendix "Type Aliases": "A simple alias has a single alternative
+/// that is a type reference: an alias for a defined type, or for the dual of
+/// one. ... The referenced types must be defined---not aliases themselves,
+/// and not primitives."
 /// - Output ::= _.         (alias for primitive wildcard)
-/// - Input ::= _?.          (alias for primitive wildcard complement)  
+/// - Input ::= _?.          (alias for primitive wildcard complement)
 /// - MyList ::= List.       (alias for defined type)
 /// - MyStream ::= Stream?.  (alias for complement of defined type)
+///
+/// NOT a simple alias:
+/// - Key ::= String.        (references a primitive: an ordinary type
+///                           definition, whose automaton inherits String's)
+///
+/// Until 2026-09-18 a single `TypeRef` counted whatever it named, so the root
+/// `self.glp`'s `Key ::= String.` was erased from every environment and a
+/// descendant module's `NetMsg ::= msg(Key, _)` failed with "Unresolved type:
+/// Key" in every linked program (IGLP, 2026-09-18).
 bool _isSimpleAlias(TypeDef def) {
   if (def.alternatives.length != 1) return false;
 
@@ -257,8 +268,9 @@ bool _isSimpleAlias(TypeDef def) {
   // Single PrimitiveModeAlt (_ or _?) = simple alias
   if (alt is PrimitiveModeAlt) return true;
 
-  // Single TypeRef (T or T?) = simple alias
-  if (alt is TypeRef) return true;
+  // Single TypeRef to a defined type (T or T?) = simple alias; a reference
+  // to a primitive type is a definition, not an alias.
+  if (alt is TypeRef) return !TypeRef.builtins.contains(alt.name);
 
   return false;
 }

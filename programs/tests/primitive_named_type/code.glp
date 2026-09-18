@@ -1,0 +1,14 @@
+%% The module's own type definition names Key, defined one scope up as
+%% `Key ::= String.` --- which is a definition, not an alias, and so is there
+%% to be named (see ../self.glp).
+Msg ::= msg(Key, _).
+MsgStream ::= [] ; [Msg | MsgStream].
+exported procedure go(KeyStream).
+go(Ks?) :- keys([msg('a', 1), msg('b', 2)], Ks), self_key(K), show(K?).
+%% self_key/1 produces the root's Key; a Key is a String, so show/1 takes it
+%% (TGLP "Type Automaton Construction": Key's transitions are String's).
+procedure show(String?).
+show(_).
+procedure keys(MsgStream?, KeyStream).
+keys([], []).
+keys([msg(K, _) | Ms], [K? | Ks?]) :- keys(Ms?, Ks).
