@@ -68,6 +68,7 @@ Reorganised 2026-09-16 (Udi).  `README.md` carries the directory map; what moved
 | IGLP, the two checker faults alone (IGLP, 2026-09-18) | `/Users/udi/Grassroots/GLP-worktrees/IGLP-checker` | `IGLP-checker` |
 | IGLP, `main_sovereign.dart` boots the harness' person (IGLP, 2026-09-18) | `/Users/udi/Grassroots/GLP-worktrees/IGLP-sovereign-boot` | `IGLP-sovereign-boot` |
 | IGLP, the `signature/2` kernel and probe (IGLP, 2026-09-18) | `/Users/udi/Grassroots/GLP-worktrees/IGLP-signature` | `IGLP-signature` |
+| IGLP, its part of the `Key` mirror sweep (IGLP, 2026-09-18) | `/Users/udi/Grassroots/GLP-worktrees/IGLP-key` | `IGLP-key` |
 
 A project not listed has no worktree yet and asks Integration for one.
 
