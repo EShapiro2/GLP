@@ -45,17 +45,30 @@ Constant ::= Number ; String ; Module.
 % identity, a signed term the byte string sign/3 produces; all three are
 % carried as hex strings.  Each names a structure String already denotes, and
 % is declared all the same: it says what a value is for, and localises a change
-% of representation to one definition.  GlobalName, Answer, Compiled and
-% Content, the catalogue's other four, are GLP-Spec's to add with the retyping
-% of authorise_link/2 (GLP-Spec_inbox.md 2026-08-04 14:10, items 1--3).
+% of representation to one definition.
 Key ::= String.
 SignedTerm ::= String.
 Hash ::= String.
 
+% The global name of a link end, which the runtime reports when it holds a link
+% and authorise_link/2 answers (GLP-Spec appendix-guards, "Held links"): the
+% reader or writer end anchored at the agent named by Key, at an index.  Root
+% scope since 2026-09-18; programs/system/mad_predicates.glp defined it before.
+GlobalName ::= '_r'(Key, Integer) ; '_w'(Key, Integer).
+
+% The answer authorise_link/2 gives to a held link (GLP-Spec appendix-guards,
+% "Held links").
+Answer ::= authorise ; refuse.
+
+% What compile/2 assigns (GLP-Spec appendix-guards, "Compilation and file
+% reading"): the compiled module, or the stream of diagnostics that rejected
+% the program.  compile/2 itself is not yet implemented.
+Compiled ::= module(Module) ; error(Stream(String)).
+
 % What load_file/2 assigns (GLP-Spec appendix-guards, "Compilation and file
 % reading"): the module a file holds where it is a certified compiled program,
 % and its text otherwise, the caller discriminating with the string and module
-% guards.  Compiled, the catalogue's type for compile/2, waits with compile/2.
+% guards.
 Content ::= String ; Module.
 
 % Arithmetic expressions
@@ -651,8 +664,9 @@ signed(S, K?) :- known(S?) | '_signed'(S?, K, _, _).
 %% authorise_link/2 - answer a pending_link(Link, Sender) report (Definition
 %% authorise_link Predicate).  L is the reported link's global name in its
 %% ground presentation, A is authorise or refuse.  On authorise the runtime
-%% releases what it held; on refuse it drops the link.
-procedure authorise_link(_?, _?).
+%% releases what it held; on refuse it drops the link.  The declaration is the
+%% catalogue's seam row.
+procedure authorise_link(GlobalName?, Answer?).
 authorise_link(L, A) :- known(A?) | '_authorise_link'(L?, A?).
 
 % =============================================================================
@@ -669,9 +683,9 @@ authorise_link(L, A) :- known(A?) | '_authorise_link'(L?, A?).
 % '_place_remove'(_?) — which was all the catalogue settled when they were
 % written: its system-predicate table then gave a name and a description and
 % carried no signature column, so the arity was the catalogue's and the argument
-% types followed the kernel, as authorise_link/2 does.  The table has
-% carried a signature column since 2026-08-01, so trust_declare/2 below takes its
-% declaration from that column instead.
+% types followed the kernel, as authorise_link/2's did until 2026-09-18.  The
+% table has carried a signature column since 2026-08-01, so trust_declare/2 below
+% takes its declaration from that column instead.
 %
 % 🔴 Two clauses depart from the paper, and only where SRSW forces it.  The paper
 % writes peer_address(P, A) and place_declare(P, R, E) with the output variable a
