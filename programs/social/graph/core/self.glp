@@ -49,6 +49,23 @@ imported procedure superapp_plays#play_install(String?, Constant?, Stream(Consta
 exported procedure play_install(String?, Constant?, Stream(Constant)).
 play_install(N, App, I?) :- superapp_plays # play_install(N?, App?, I).
 
+%% The super-app's refusal of a forgery at each of its four sites (Section 6.1).
+imported procedure superapp_plays#play_forged_cert(Stream(Constant)).
+exported procedure play_forged_cert(Stream(Constant)).
+play_forged_cert(I?) :- superapp_plays # play_forged_cert(I).
+
+imported procedure superapp_plays#play_forged_invite(AgentToUserStream).
+exported procedure play_forged_invite(AgentToUserStream).
+play_forged_invite(O?) :- superapp_plays # play_forged_invite(O).
+
+imported procedure superapp_plays#play_forged_join(AgentToUserStream).
+exported procedure play_forged_join(AgentToUserStream).
+play_forged_join(O?) :- superapp_plays # play_forged_join(O).
+
+imported procedure superapp_plays#play_forged_root(AgentToUserStream).
+exported procedure play_forged_root(AgentToUserStream).
+play_forged_root(O?) :- superapp_plays # play_forged_root(O).
+
 imported procedure superapp_plays#play_coins(Stream(ScreenContent), Stream(ScreenContent)).
 exported procedure play_coins(Stream(ScreenContent), Stream(ScreenContent)).
 play_coins(A?, B?) :- superapp_plays # play_coins(A, B).

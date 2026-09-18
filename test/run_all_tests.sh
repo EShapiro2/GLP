@@ -4230,6 +4230,9 @@ check_not "SG spm no failed play" "→ failed" "$sg_spm"
 # person) and loads as text, which the super-app does not install.  The
 # artefacts are written in the session that runs the plays: a certificate is
 # accepted under a key the person trusts, and the REPL's key is that person's.
+# The four forgery plays present, at each of the super-app's four sites that
+# take a signed term apart, a term that is not a signed term, and show the
+# refusal taken: nothing delivered, and the super-app carries on (Section 6.1).
 SG_CORE="$GLP_DIR/programs/social/graph/core"
 rm -f "$SG_CORE"/*.glpw
 sg_core=$("$REPL_RUN" <<HEREDOC
@@ -4244,6 +4247,10 @@ play_load("currency.glpw", K2, Key2).
 play_install("cssn.glpw", cssn, I1).
 play_install("currency.glpw", currency, I2).
 play_install("pingapp.glpw", ping, I3).
+play_forged_cert(I4).
+play_forged_invite(F1).
+play_forged_join(F2).
+play_forged_root(F3).
 play_attest(S, K, H, T).
 play_invite(A, B).
 play_invite_declined(A2, B2).
@@ -4261,6 +4268,10 @@ check "SG super-app: load_file gives currency's artefact as a Module" "K2 = modu
 check "SG super-app: the super-app installs no text" "I1 = \[\]" "$sg_core"
 check "SG super-app: the super-app installs the certified currency" "I2 = \[currency\]" "$sg_core"
 check "SG super-app: the super-app installs the certified pingapp" "I3 = \[ping\]" "$sg_core"
+check "SG super-app refuses a forgery: a certification that is not a signed term installs nothing" "I4 = \[\]" "$sg_core"
+check "SG super-app refuses a forgery: an invitation that is not a signed term delivers nothing, and the next message arrives" "F1 = \[msg(agent, person, received(alice, hello))\]" "$sg_core"
+check "SG super-app refuses a forgery: an undertaking that is not a signed term creates no root channel, and the next message arrives" "F2 = \[msg(agent, person, received(bob, hello))\]" "$sg_core"
+check "SG super-app refuses a forgery: a root channel under an undertaking that is not a signed term is not accepted, and the next message arrives" "F3 = \[msg(agent, person, received(alice, hello))\]" "$sg_core"
 check "SG super-app: the attestation minted at befriend_commit" "T = attest(alice, bob)" "$sg_core"
 check "SG super-app: signed under the person's key" "K = [0-9a-f]\{64\}" "$sg_core"
 check "SG super-app: invitation, handshake, activation: alice greeted" "A = \[opened(bob), greeted(bob)\]" "$sg_core"

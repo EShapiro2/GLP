@@ -132,7 +132,16 @@ play_attest(S?, K?, H?, T?) :-
     alice_attest(AliceOut?, S, AliceIn),
     agent # agent(bob, BobIn?, BobNetIn?, [user_output(BobOut), net_output(BobNetOut)]),
     bob_answer(BobOut?, BobIn),
-    signed(S?, K, H, T).
+    signature(S?, Sg),
+    attested(Sg?, K, H, T).
+
+%% attested(Sg, K, H, T): the attestation taken apart, the play matching
+%% signed(K, H, T) and exercising no refusal; the unsigned clause, which the
+%% checker requires of every alternative of Signature, assigns the three the
+%% constant unsigned, and the play's checks never reach it.
+procedure attested(Signature?, String, String, _).
+attested(signed(K, H, T), K?, H?, T?).
+attested(unsigned, unsigned, unsigned, unsigned).
 
 procedure alice_attest(AgentToUserStream?, String, UserInStream).
 alice_attest(Outs, S?, [msg(person, alice, connect(bob)) | Cmds?]) :-
@@ -252,6 +261,91 @@ play_install(N, App, Installed?) :-
 procedure certified_or_not(Content?, String).
 certified_or_not(M, CSig?) :- module(M?) | certified(M?, _, CSig).
 certified_or_not(S, none) :- string(S?) | true.
+
+%% =============================================================================
+%% The super-app's refusal of a forgery (SGSG paper, Section 6.1): at each of
+%% the four sites that take a signed term apart --- the creator's
+%% certification at installation, the invitation, the invitee's undertaking
+%% and the inviter's undertaking with the root channel --- a term that is not
+%% a signed term is presented, the constant forged, which signature/2 reports
+%% as unsigned, and the play shows the refusal taken: nothing is delivered for
+%% it and the super-app carries on with the next message.  Each site is fed
+%% directly, the person's or the friend's stream standing in for the channel
+%% the term would have crossed; a forgery is refused before the friend or the
+%% mini-app is looked up, so no friendship and no installation is set up.
+%%
+%% play_forged_cert(Installed): alice installs pingapp's certified artefact
+%% under a creator's certification that is not a signed term.
+%% Expected: Installed = [] --- against play_install("pingapp.glpw", ping, I),
+%% I = [ping], the same artefact under the play's own certification;
+%% → succeeds.
+%% =============================================================================
+exported procedure play_forged_cert(Stream(Constant)).
+play_forged_cert(Installed?) :-
+    load_file("pingapp.glpw", C),
+    agent # agent(alice, [msg(person, alice, install(ping, C?, forged, Ui)),
+                          msg(person, alice, installed(Installed))],
+                  [], [user_output(Out), net_output(NetOut)]),
+    sink(Ui?), sink(Out?), sink(NetOut?).
+
+%% play_forged_invite(Out): bob's super-app receives from alice an invitation
+%% that is not a signed term, and then a text.
+%% Expected: Out = [msg(agent, person, received(alice, hello))] --- the offer
+%% was refused, nothing was delivered for it, and the text that followed
+%% arrived; → succeeds.
+exported procedure play_forged_invite(AgentToUserStream).
+play_forged_invite(Out?) :-
+    agent # agent(bob, BobIn?,
+                  [msg(alice, bob, invite(ping, src, t, forged)),
+                   msg(alice, bob, text(hello))],
+                  [user_output(BobOut), net_output(NetOut)]),
+    until_received(BobOut?, Out, BobIn),
+    sink(NetOut?).
+
+%% play_forged_join(Out): alice's super-app, the inviter, receives from bob an
+%% undertaking that is not a signed term, and then a text.
+%% Expected: Out = [msg(agent, person, received(bob, hello))] --- the join
+%% was refused, no root channel was created, and the text that followed
+%% arrived; → succeeds.
+exported procedure play_forged_join(AgentToUserStream).
+play_forged_join(Out?) :-
+    agent # agent(alice, AliceIn?,
+                  [msg(bob, alice, join(ping, src, t, forged)),
+                   msg(bob, alice, text(hello))],
+                  [user_output(AliceOut), net_output(NetOut)]),
+    until_received(AliceOut?, Out, AliceIn),
+    sink(NetOut?).
+
+%% play_forged_root(Out): bob's super-app, the invitee, receives from alice
+%% one end of a root channel under an undertaking that is not a signed term,
+%% and then a text.
+%% Expected: Out = [msg(agent, person, received(alice, hello))] --- the end
+%% was not accepted, nothing was delivered, and the text that followed
+%% arrived; → succeeds.
+exported procedure play_forged_root(AgentToUserStream).
+play_forged_root(Out?) :-
+    root_end(End),
+    agent # agent(bob, BobIn?,
+                  [msg(alice, bob, root(ping, src, t, forged, End?)),
+                   msg(alice, bob, text(hello))],
+                  [user_output(BobOut), net_output(NetOut)]),
+    until_received(BobOut?, Out, BobIn),
+    sink(NetOut?).
+
+%% until_received(Outs, Seen, Cmds): the person watching the super-app's
+%% stream copies everything delivered up to the first text received, at which
+%% the person's stream closes.
+procedure until_received(AgentToUserStream?, AgentToUserStream, UserInStream).
+until_received([msg(agent, person, received(F, Text)) | _],
+               [msg(agent, person, received(F?, Text?))], []).
+until_received([M | Outs], [M? | Seen?], Cmds?) :-
+    otherwise | until_received(Outs?, Seen, Cmds).
+until_received([], [], []).
+
+%% root_end(End): one end of a fresh root channel of the test mini-app's
+%% protocol, as root_ends/3 makes it, the other end dropped.
+procedure root_end(RootEnd).
+root_end(ping_end(E?)) :- new_channel(E, _) | true.
 
 %% =============================================================================
 %% The warm call on three smartphones (../../superapp3_boot.glp): alice, bob
