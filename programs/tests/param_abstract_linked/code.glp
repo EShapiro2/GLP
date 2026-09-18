@@ -1,0 +1,10 @@
+%% programs/tests/param_abstract_linked/code.glp --- see self.glp.
+
+exported procedure run(_?).
+run(Xs) :- pass(Xs?, _).
+
+%% pass/2 copies a stream; X is a variable at every parameter position, so the
+%% abstract instance certifies it for every instantiation.
+procedure(X) pass(Stream(X)?, Stream(X)).
+pass([X|Xs], [X?|Ys?]) :- pass(Xs?, Ys).
+pass([], []).

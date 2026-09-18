@@ -862,20 +862,22 @@ TypeCheckResult _checkModuleImpl(ast.Module module, {List<ast.Procedure>? transf
   // A parameterized procedure that did NOT take the abstract route inspects a
   // type parameter (a functor/constant at a parameter position) or uses a
   // parameter as a type-definition alternative, so it has no well-typing of its
-  // own and acquires one only per instantiation. Loaded standalone (single
-  // file/REPL) with no collected instantiation, there is nothing to certify, so
-  // it is rejected: the abstract-parameter route is the sole means of certifying
-  // a parametric procedure outside a program (typed-program.md "Modular Checking
-  // via Abstract Parameters", sec:abstract-parameters). There is no wildcard
-  // fallback — checking it under the wildcard `_` declaration is unsound. Within
-  // a program (program linker) an instantiation supplies the verdict; a callerless
-  // procedure there goes unchecked, not rejected (typed-program.md "Programs and
-  // Modules").
-  // The linked-program check (program linker) passes rejectUninstantiatedInspecting
-  // = false: it checks the whole program as one flattened module, where a
-  // callerless parametric procedure goes unchecked, not rejected (typed-program.md
-  // "Programs and Modules"). The standalone reject below is for single-file/REPL
-  // loads only.
+  // own and acquires one only per instantiation. With no instantiation there is
+  // nothing to certify, and the program is rejected: "Where a program contains
+  // a parameterised procedure that no call in it instantiates and that is not
+  // parametrically well-typed, compilation rejects the program"
+  // (parameterized-types.tex sec:abstract-parameters). There is no wildcard
+  // fallback — checking it under the wildcard `_` declaration is unsound. This
+  // holds for a module loaded on its own and for the linked program, which is
+  // the object checked (modules.tex §Compilation) and in which every call is
+  // local. The one caller passing rejectUninstantiatedInspecting = false is step
+  // 2 of linking, the per-module check (program_linker.dart,
+  // checkModulesIndependently): a call in ANOTHER module of the program may
+  // instantiate the procedure, so the module alone cannot decide and the linked
+  // check decides. Until 2026-09-18 the linked check passed false too and a
+  // warning stood here in place of the rejection, printed as a `[TYPE] ...
+  // unchecked` line, so a program pronounced well-typed could carry clauses
+  // nothing had checked.
   final instantiatedKeys = <String>{
     for (final ir in instResults) ir.inst.procKey,
   };
@@ -890,72 +892,15 @@ TypeCheckResult _checkModuleImpl(ast.Module module, {List<ast.Procedure>? transf
     final decl = entry.value;
     errors.add(TypeError(
       'Parameterized procedure ${decl.name}/${decl.arity} inspects a type '
-      'parameter (or uses a parameter as a type-definition alternative) and has '
-      'no instantiation, so it has no standalone well-typing. Declare a concrete '
-      'element type for the inspected argument, or load it within a program that '
-      'instantiates it (typed-program.md "Modular Checking via Abstract '
-      'Parameters").',
+      'parameter (or uses a parameter as a type-definition alternative) and no '
+      'call in the program instantiates it, so it is not parametrically '
+      'well-typed and has no well-typing: compilation rejects the program '
+      '(parameterized-types.tex sec:abstract-parameters). Give the inspected '
+      'argument a concrete element type, at the declaration or at a call.',
       decl.line,
       decl.column,
       '${decl.name}/${decl.arity}',
     ));
-  }
-
-  // Program mode (rejectUninstantiatedInspecting == false), the same procedures
-  // seen from inside a program. Until 2026-08-03 this said NOTHING about them,
-  // and that silence is the defect: an inspecting parametric procedure with no
-  // instantiation is checked by nothing, yet the program it sits in is
-  // pronounced well-typed. It is how typed_actors.glp shipped two clauses
-  // passing a raw Response where UserContent.decision demands a PendingValue —
-  // an untagged value at a tagged-union position, which the checker rejects at
-  // once when the same clauses are declared concretely.
-  //
-  // 🔴 THIS IS AN ERROR DOWNGRADED TO A WARNING, AND THE DOWNGRADE IS INTERIM.
-  // Do not read it as the intended design. Measured 2026-08-03: as an error it
-  // refuses ALL 54 program directories under programs/, because root
-  // programs/self.glp exposes the four social/graph/routing modules into every
-  // program and their procedures are parameter-inspecting — so the check would
-  // have nowhere to stand. It goes to error when the concrete-type work in
-  // social/graph/routing is done (SGSG's; known-issues Issue 20 holds the
-  // measurement and the per-owner split). Restoring it is one edit here:
-  // errors.add(TypeError(...)) in place of warnings.add.
-  //
-  // The reason to record this rather than leave it: TGLP's request of
-  // 2026-08-01 20:45 — still open as Task A step 5 — is precisely that a type
-  // error must FAIL the load rather than print a warning and proceed, since a
-  // program that runs unchecked has none of the guarantee the type system
-  // offers. This warning is a second instance of exactly that, and an
-  // unremarkable warning becomes permanent by being unremarkable.
-  //
-  // A second hole stays open behind it and no warning covers it: a goal posted
-  // at RUNTIME is not checked at all. It closes when run(Goal, Type, Module) is
-  // implemented — GLP-Spec specifies it, IGLP implements it, it is not built.
-  //
-  // The paper does license the unchecked STATE — "a procedure with no caller in
-  // its program goes unchecked" (parameterized-types.tex
-  // sec:abstract-parameters), and a concrete initial goal (def:program) may
-  // still instantiate one. What it does not license is the silence: until
-  // 2026-08-03 "well-typed" covered, without a word, code that nothing had
-  // checked.
-  if (!rejectUninstantiatedInspecting) {
-    for (final entry in typeEnv.paramProcDecls.entries) {
-      final key = entry.key;
-      if (cert.certifiedKeys.contains(key)) continue; // abstract route — verdict given
-      final cls = clausesByKey[key];
-      if (cls == null || cls.isEmpty) continue; // defined outside this unit
-      if (instantiatedKeys.contains(key)) continue; // checked per instantiation
-      final decl = entry.value;
-      warnings.add(TypeWarning(
-        'Parameterized procedure ${decl.name}/${decl.arity} inspects a type '
-        'parameter and no call in this program instantiates it, so its clauses '
-        'are checked by nothing. Give the inspected argument a concrete element '
-        'type, at the declaration or at a call site, to have it checked '
-        '(parameterized-types.tex sec:programs-and-modules).',
-        decl.line,
-        decl.column,
-        '${decl.name}/${decl.arity}',
-      ));
-    }
   }
 
   return TypeCheckResult(errors, warnings);

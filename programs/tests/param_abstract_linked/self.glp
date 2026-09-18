@@ -1,0 +1,15 @@
+%% programs/tests/param_abstract_linked/self.glp
+%%
+%% A program whose one parameterised procedure inspects none of its parameters:
+%% it is parametrically well-typed (TGLP parameterized-types.tex
+%% sec:abstract-parameters), certified once by its abstract instance, and no
+%% call need instantiate it --- run/1 is declared `_?` and supplies no element
+%% type, exactly as in param_unchecked/, whose tagger/1 inspects its parameter
+%% and is rejected.  The two together are the rule: an uninstantiated
+%% parameterised procedure is rejected where it inspects a parameter and kept
+%% where it does not.
+
+imported procedure code#run(_?).
+
+exported procedure run(_?).
+run(Xs) :- code # run(Xs?).
