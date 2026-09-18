@@ -8,7 +8,7 @@
 /// out of the bundle at first run.  Three lists say which mini-apps those are
 /// --- the script's `for prog in` program directories, the script's `for a in`
 /// assertion that each artefact was written, and the `.glpw` entries of
-/// `_bundledGlp` --- and a mini-app added to one and not the others is either
+/// `bundledGlp` --- and a mini-app added to one and not the others is either
 /// built and never shipped or shipped and never built.  That is what happened
 /// to the denominated mini-app (Currencies Code, 2026-09-16): it was in none of
 /// the three, the suite proved it in the repo because Section SG builds its
@@ -18,7 +18,7 @@
 /// The three files are read as text on purpose.  A test that runs the script
 /// and inspects what it wrote proves the script against itself: the `for a in`
 /// assertion would pass on exactly the artefacts the `for prog in` list built,
-/// whatever either list says, and `_bundledGlp` would not be consulted at all.
+/// whatever either list says, and `bundledGlp` would not be consulted at all.
 library;
 
 import 'dart:io';
@@ -52,7 +52,7 @@ Set<String> _writtenAssertions(String script) {
   return m!.group(1)!.trim().split(RegExp(r'\s+')).where((w) => w.isNotEmpty).toSet();
 }
 
-/// The artefacts `_bundledGlp` copies out of the bundle, by mini-app name.
+/// The artefacts `bundledGlp` copies out of the bundle, by mini-app name.
 Set<String> _bundledArtefacts(String sources) => RegExp(r"'([^']*\.glpw)'")
     .allMatches(sources)
     .map((m) => _basename(m.group(1)!).replaceAll('.glpw', ''))
@@ -77,7 +77,7 @@ void main() {
             'mini-apps its `for prog in` list builds: built $built, '
             'asserted $asserted');
     expect(bundled, equals(built),
-        reason: 'the `.glpw` entries of _bundledGlp in $_sources do not name '
+        reason: 'the `.glpw` entries of bundledGlp in $_sources do not name '
             'the mini-apps $_script builds: built $built, bundled $bundled');
   });
 }

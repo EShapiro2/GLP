@@ -9,10 +9,22 @@
 /// app's Documents directory (a real path) preserving the `programs/.../`
 /// tree — and the engine is pointed there. Same files, one loader, no forked
 /// program.
+///
+/// Which of the two the loader takes is decided by the platform and by nothing
+/// else. It used to be decided by which directory happened to exist, and an
+/// iOS Simulator build runs on the Mac's own filesystem: the repo path is
+/// there, so the simulator read the repo and never opened its bundle. What it
+/// then ran was whichever artefacts a suite run had last left in the clone,
+/// which did not include the denominated mini-app, and the super-app's
+/// `load_file/2` aborted with the home agent dead after it (Currencies,
+/// 2026-09-17). A filesystem test cannot tell a sandboxed build from a desktop
+/// one, so it is not asked: on iOS and Android the bundle branch is taken
+/// outright, and neither desktop path is consulted.
 library;
 
 import 'dart:io';
 
+import 'package:flutter/foundation.dart' show visibleForTesting;
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:path_provider/path_provider.dart';
 
@@ -41,7 +53,11 @@ class GlpPaths {
 /// The bundled assets (relative to `assets/glp/`), in the tree the engine's
 /// ancestor-scope walk expects. Keep in sync with tool/sync_glp_assets.sh and
 /// pubspec.yaml.
-const _bundledGlp = [
+///
+/// Public so that the sandboxed-branch test asserts over the list the loader
+/// actually copies rather than over a transcription of it.
+@visibleForTesting
+const bundledGlp = [
   'programs/self.glp',
   // lib modules the root self.glp exposes (-expose(social#graph#routing#...)).
   'programs/social/graph/routing/output.glp',
@@ -105,7 +121,20 @@ const _bundledGlp = [
   'programs/social/graph/core/denominated.glpw',
 ];
 
-Future<GlpPaths> resolveGlpPaths() async {
+/// The platforms whose filesystem is sandboxed away from the repo, so that the
+/// bundle is the only source there. It holds for the simulator as much as for
+/// the device — the simulator's app is the sandboxed build, whatever the host
+/// it runs on — and any later sandboxed platform is added here.
+bool get _platformIsSandboxed => Platform.isIOS || Platform.isAndroid;
+
+/// Where the engine is to read the GLP sources.
+///
+/// [sandboxed] overrides the platform test, so that a test running on a
+/// desktop host can exercise the branch the phone takes; omitted, the real
+/// platform decides.
+Future<GlpPaths> resolveGlpPaths({bool? sandboxed}) async {
+  if (sandboxed ?? _platformIsSandboxed) return _fromBundle();
+
   // Desktop dev: the repo is reachable on disk — read it directly.
   final rel = Directory('../programs/grassapp');
   if (rel.existsSync()) {
@@ -119,10 +148,16 @@ Future<GlpPaths> resolveGlpPaths() async {
         '$repo/self.glp');
   }
 
-  // Sandboxed (iOS): copy the bundled assets into Documents and use that tree.
+  // A desktop build with no repo on disk — a released macOS app — carries the
+  // same bundle and reads it.
+  return _fromBundle();
+}
+
+/// Copy the bundled assets into Documents and point the engine at that tree.
+Future<GlpPaths> _fromBundle() async {
   final docs = await getApplicationDocumentsDirectory();
   final base = '${docs.path}/glp/programs';
-  for (final a in _bundledGlp) {
+  for (final a in bundledGlp) {
     // Byte-for-byte, not as text: a `.glpw` opens with the magic `GLPW` and
     // fixed-width little-endian fields and is not UTF-8, so loadString fails
     // on it (currency.glpw at byte 24). Bytes carry the `.glp` sources
