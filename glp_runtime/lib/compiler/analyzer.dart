@@ -279,7 +279,6 @@ class Analyzer {
   AnnotatedProgram analyze(Program program, {
     bool generateReduce = false,
     List<ProcDecl>? procDeclarations,
-    bool skipGlobalSRSW = false,
   }) {
     // Build procedure declaration lookup map
     _procDecls = {};
@@ -293,11 +292,15 @@ class Analyzer {
     // This must happen BEFORE partial evaluation, because partial eval removes defined guards.
     // Guard readers (like X? in send(X?, Ch?, Ch1)) must be counted for SRSW pairing.
     //
-    // skipGlobalSRSW: Linked programs skip this check because each module was already
-    // type-checked independently, and the generated alias clauses use a forwarding
-    // pattern (writer pass-through for output args) that doesn't satisfy SRSW locally
-    // but is safe at the program level.
-    if (!skipGlobalSRSW) {
+    // Every program that reaches here is checked, a linked program included:
+    // it is the object checked (TGLP modules.tex §Compilation), and its alias
+    // clauses satisfy SRSW by construction — each argument threaded at its
+    // declared polarity, a writer in the head and its paired reader in the body
+    // at each consumed argument, a reader in the head and its paired writer in
+    // the body at each produced one (program_linker.dart, _makeAliasClause).
+    // Until 2026-09-18 a `skipGlobalSRSW` flag let a linked program bypass the
+    // pass on the claim that the aliases could not satisfy it.
+    {
       final allViolations = <String>[];
       for (final proc in program.procedures) {
         final violations = _collectSRSWViolationsForProcedure(proc);

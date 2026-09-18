@@ -436,7 +436,7 @@ class GlpEngine {
           linkProgram(modules,
               rootDir: File(name).parent.path, singleModulePath: name);
       program = _compiler.compileProgram(linked.program,
-          procDeclarations: linked.procDeclarations, skipGlobalSRSW: false);
+          procDeclarations: linked.procDeclarations);
       // This unit's module value — its artefact: h(M) + code.
       moduleValue = _moduleValueOf(_baseName(name), program, linked, modules,
           directory: File(name).parent.absolute.path);
