@@ -4,8 +4,12 @@
 % A contract whose roles are all party roles is the contract of
 % /Grassroots/Jurix, Section 3, and is decided by
 % def:syntactically-grassroots: it passes when it has an unobstructed
-% introductory act and satisfies volition, and the faults of both halves are
-% reported together.
+% introductory act, when the set of predicates occurring in it has traceable
+% provenance, and when it satisfies volition; the faults of the three
+% conjuncts are reported together, in that order.  The second conjunct is
+% decided from the largest set of predicates having traceable provenance,
+% which traceable_of gives: the fault names the predicates of the contract
+% outside it.
 %
 % A contract with community roles is a contract of Appendix B, and is decided
 % by the conditions on the text stated there: volition
@@ -19,24 +23,34 @@
 
 imported procedure unobstructed#intro_result(Contract?, Faults).
 imported procedure prov#traceable(Contract?, Preds).
+imported procedure prov#all_preds(Contract?, Preds).
 imported procedure volition#volition_faults(Contract?, Preds?, Faults).
 imported procedure community#conditions(Contract?, Faults).
 imported procedure community#traceable(Contract?, Preds).
 imported procedure community#rooted(Contract?, Preds).
 imported procedure contracts#contract(Constant?, Contract).
 
-procedure verdict(Faults?, Faults?, Verdict).
-verdict([], [], syntactically_grassroots).
-verdict([], [F|Fs], not_grassroots([F?|Fs?])).
-verdict([F|Fs], G, not_grassroots(R?)) :- ground(F?), ground(Fs?), ground(G?) |
-    faults_app([F?|Fs?], G?, R).
+procedure verdict(Faults?, Verdict).
+verdict([], syntactically_grassroots).
+verdict([F|Fs], not_grassroots([F?|Fs?])).
+
+% The second conjunct of def:syntactically-grassroots: every predicate of the
+% contract is in the largest set having traceable provenance.
+procedure untraceable_faults(Preds?, Faults).
+untraceable_faults([], []).
+untraceable_faults([P|Ps], [untraceable([P?|Ps?])]).
 
 procedure check_section3(Contract?, Verdict).
 check_section3(C, V?) :- ground(C?) |
     prov # traceable(C?, E),
+    prov # all_preds(C?, Ps),
+    preds_diff(Ps?, E?, Missing),
+    untraceable_faults(Missing?, FT),
     unobstructed # intro_result(C?, F1),
     volition # volition_faults(C?, E?, F2),
-    verdict(F1?, F2?, V).
+    faults_app(FT?, F2?, F23),
+    faults_app(F1?, F23?, F),
+    verdict(F?, V).
 
 procedure community_verdict(Faults?, Verdict).
 community_verdict([], conditions_met).

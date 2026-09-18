@@ -220,6 +220,27 @@ rooted(C, R?) :- ground(C?) |
 % The largest set of predicates having it is a greatest fixpoint: start from
 % every predicate of the contract, drop those the definition rejects against
 % the set in hand, and repeat until nothing drops.
+%
+% Each argument of an added atom of Phi_E is put to the definition's two
+% clauses.  The first is on its base: that of the role, of some role, or of
+% some argument of a required atom of Phi_E.  The second is on a speech-act
+% variable: an argument of such a required atom, or occurring in no atom
+% required at a role.  A speech-act variable's base is itself, so the first
+% clause already asks of it what the second clause's first disjunct asks.
+
+% The speech-act variables occurring in the atoms the roles require.
+procedure req_args(RoleSpecs?, Args?, Args).
+req_args([], T, T?).
+req_args([RS|Rs], T, R?) :- ground(RS?), ground(Rs?), ground(T?) |
+    rs_req(RS?, Req),
+    req_args(Rs?, T?, R1),
+    atoms_args(Req?, R1?, R).
+
+procedure req_svars(RoleSpecs?, Args).
+req_svars(Rs, R?) :- ground(Rs?) |
+    req_args(Rs?, [], As),
+    filter_svars(As?, SV),
+    args_dedup(SV?, R).
 
 procedure prov_arg1(Base?, Base?, Bases?, Bases?, Ans).
 prov_arg1(B, RB, _, _, yes) :- B? =?= RB? | true.
@@ -228,51 +249,65 @@ prov_arg1(B, _, RBs, QBs, R?) :- otherwise, ground(B?), ground(RBs?), ground(QBs
     base_member(QBs?, B?, A2),
     or_yes(A1?, A2?, R).
 
-procedure prov_args1(Ans?, Args?, Base?, Bases?, Bases?, Ans).
-prov_args1(no, _, _, _, _, no).
-prov_args1(yes, As, RB, RBs, QBs, R?) :-
-    ground(As?), ground(RB?), ground(RBs?), ground(QBs?) |
-    prov_args(As?, RB?, RBs?, QBs?, R).
+% prov_arg2(A, QBs, SV, R): the second clause.  b_svar(Y) is among the bases
+% of the arguments of the required atoms of Phi_E exactly when Y is an
+% argument of one of them.
+procedure prov_arg2(Arg?, Bases?, Args?, Ans).
+prov_arg2(svar(Y), QBs, SV, R?) :- ground(Y?), ground(QBs?), ground(SV?) |
+    base_member(QBs?, b_svar(Y?), A1),
+    args_member(SV?, svar(Y?), A2),
+    flip(A2?, A3),
+    or_yes(A1?, A3?, R).
+prov_arg2(role(_), _, _, yes).
+prov_arg2(pvar(_), _, _, yes).
+prov_arg2(nterm(_), _, _, yes).
 
-procedure prov_args(Args?, Base?, Bases?, Bases?, Ans).
-prov_args([], _, _, _, yes).
-prov_args([A|As], RB, RBs, QBs, R?) :-
-    ground(A?), ground(As?), ground(RB?), ground(RBs?), ground(QBs?) |
+procedure prov_args1(Ans?, Args?, Base?, PCtx?, Ans).
+prov_args1(no, _, _, _, no).
+prov_args1(yes, As, RB, Cx, R?) :- ground(As?), ground(RB?), ground(Cx?) |
+    prov_args(As?, RB?, Cx?, R).
+
+procedure prov_args(Args?, Base?, PCtx?, Ans).
+prov_args([], _, _, yes).
+prov_args([A|As], RB, pctx(RBs, QBs, SV), R?) :-
+    ground(A?), ground(As?), ground(RB?), ground(RBs?), ground(QBs?), ground(SV?) |
     arg_base(A?, B),
     prov_arg1(B?, RB?, RBs?, QBs?, A1),
-    prov_args1(A1?, As?, RB?, RBs?, QBs?, R).
+    prov_arg2(A?, QBs?, SV?, A2),
+    both_yes(A1?, A2?, A12),
+    prov_args1(A12?, As?, RB?, pctx(RBs?, QBs?, SV?), R).
 
-procedure prov_plus1(Ans?, Atoms?, Constant?, Base?, Bases?, Bases?, Ans).
-prov_plus1(no, _, _, _, _, _, no).
-prov_plus1(yes, Xs, Pd, RB, RBs, QBs, R?) :-
-    ground(Xs?), ground(Pd?), ground(RB?), ground(RBs?), ground(QBs?) |
-    prov_plus(Xs?, Pd?, RB?, RBs?, QBs?, R).
+procedure prov_plus1(Ans?, Atoms?, Constant?, Base?, PCtx?, Ans).
+prov_plus1(no, _, _, _, _, no).
+prov_plus1(yes, Xs, Pd, RB, Cx, R?) :-
+    ground(Xs?), ground(Pd?), ground(RB?), ground(Cx?) |
+    prov_plus(Xs?, Pd?, RB?, Cx?, R).
 
-procedure prov_plus(Atoms?, Constant?, Base?, Bases?, Bases?, Ans).
-prov_plus([], _, _, _, _, yes).
-prov_plus([atom(Q, As)|Xs], Pd, RB, RBs, QBs, R?) :-
-    Q? =?= Pd?, ground(As?), ground(Xs?), ground(RB?), ground(RBs?), ground(QBs?) |
-    prov_args(As?, RB?, RBs?, QBs?, A),
-    prov_plus1(A?, Xs?, Pd?, RB?, RBs?, QBs?, R).
-prov_plus([atom(_, _)|Xs], Pd, RB, RBs, QBs, R?) :-
-    otherwise, ground(Xs?), ground(Pd?), ground(RB?), ground(RBs?), ground(QBs?) |
-    prov_plus(Xs?, Pd?, RB?, RBs?, QBs?, R).
+procedure prov_plus(Atoms?, Constant?, Base?, PCtx?, Ans).
+prov_plus([], _, _, _, yes).
+prov_plus([atom(Q, As)|Xs], Pd, RB, Cx, R?) :-
+    Q? =?= Pd?, ground(As?), ground(Xs?), ground(RB?), ground(Cx?) |
+    prov_args(As?, RB?, Cx?, A),
+    prov_plus1(A?, Xs?, Pd?, RB?, Cx?, R).
+prov_plus([atom(_, _)|Xs], Pd, RB, Cx, R?) :-
+    otherwise, ground(Xs?), ground(Pd?), ground(RB?), ground(Cx?) |
+    prov_plus(Xs?, Pd?, RB?, Cx?, R).
 
-procedure prov_roles1(Ans?, RoleSpecs?, Integer?, Constant?, Bases?, Bases?, Ans).
-prov_roles1(no, _, _, _, _, _, no).
-prov_roles1(yes, Rs, I, Pd, RBs, QBs, R?) :-
-    ground(Rs?), integer(I?), ground(Pd?), ground(RBs?), ground(QBs?) |
+procedure prov_roles1(Ans?, RoleSpecs?, Integer?, Constant?, PCtx?, Ans).
+prov_roles1(no, _, _, _, _, no).
+prov_roles1(yes, Rs, I, Pd, Cx, R?) :-
+    ground(Rs?), integer(I?), ground(Pd?), ground(Cx?) |
     I1 := I? + 1,
-    prov_roles(Rs?, I1?, Pd?, RBs?, QBs?, R).
+    prov_roles(Rs?, I1?, Pd?, Cx?, R).
 
-procedure prov_roles(RoleSpecs?, Integer?, Constant?, Bases?, Bases?, Ans).
-prov_roles([], _, _, _, _, yes).
-prov_roles([RS|Rs], I, Pd, RBs, QBs, R?) :-
-    ground(RS?), ground(Rs?), integer(I?), ground(Pd?), ground(RBs?), ground(QBs?) |
+procedure prov_roles(RoleSpecs?, Integer?, Constant?, PCtx?, Ans).
+prov_roles([], _, _, _, yes).
+prov_roles([RS|Rs], I, Pd, Cx, R?) :-
+    ground(RS?), ground(Rs?), integer(I?), ground(Pd?), ground(Cx?) |
     rs_add(RS?, P),
     role_base(RS?, I?, RB),
-    prov_plus(P?, Pd?, RB?, RBs?, QBs?, A),
-    prov_roles1(A?, Rs?, I?, Pd?, RBs?, QBs?, R).
+    prov_plus(P?, Pd?, RB?, Cx?, A),
+    prov_roles1(A?, Rs?, I?, Pd?, Cx?, R).
 
 procedure prov_pred1(Ans?, Constant?, Contract?, Preds?, Ans).
 prov_pred1(no, _, _, _, no).
@@ -286,7 +321,8 @@ prov_pred(Pd, [S|Ss], E, R?) :-
     sch_roles(S?, Rs),
     role_bases(Rs?, 1, RBs),
     req_bases(Rs?, E?, [], QBs),
-    prov_roles(Rs?, 1, Pd?, RBs?, QBs?, A),
+    req_svars(Rs?, SV),
+    prov_roles(Rs?, 1, Pd?, pctx(RBs?, QBs?, SV?), A),
     prov_pred1(A?, Pd?, Ss?, E?, R).
 
 procedure tp_filter1(Ans?, Constant?, Preds?, Contract?, Preds?, Preds).

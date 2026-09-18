@@ -75,6 +75,7 @@ Preds ::= [] ; [Constant | Preds].
 Cause ::= unobtainable ; blocked_by(Constant, Integer, Atom).
 Fault ::= no_introductory_act
         ; obstructed(Constant, Integer, Atom, Cause)
+        ; untraceable(Preds)
         ; volition(Constant, Integer, Integer)
         ; cohesion(Constant, Integer, Atom).
 Faults  ::= [] ; [Fault | Faults].
@@ -84,6 +85,11 @@ Verdict ::= syntactically_grassroots ; not_grassroots(Faults)
 Block   ::= blocked(Constant, Integer, Atom) ; clear.
 Cand    ::= none ; some(Faults).
 Missing ::= missing(Integer) ; all_reached.
+
+% --- What definition:provenance is decided against, for one schema --------
+% The bases of its roles, the bases of the arguments of the atoms of Phi_E it
+% requires, and the speech-act variables occurring in any atom it requires.
+PCtx ::= pctx(Bases, Bases, Args).
 
 % --- The LaTeX of a compiled schema (def:compile, Section 5.2) -------------
 % GLP has no string concatenation, so a display is carried as its tokens and
@@ -206,6 +212,17 @@ preds_dedup([], []).
 preds_dedup([P|Ps], [P?|R?]) :- ground(P?), ground(Ps?) |
     preds_remove(Ps?, P?, Ps1),
     preds_dedup(Ps1?, R).
+
+% preds_diff(Ps, E, R): the members of Ps not in E, in the order of Ps.
+procedure preds_diff1(Ans?, Constant?, Preds?, Preds?, Preds).
+preds_diff1(yes, _, Ps, E, R?) :- ground(Ps?), ground(E?) | preds_diff(Ps?, E?, R).
+preds_diff1(no, P, Ps, E, [P?|R?]) :- ground(Ps?), ground(E?) | preds_diff(Ps?, E?, R).
+
+procedure preds_diff(Preds?, Preds?, Preds).
+preds_diff([], _, []).
+preds_diff([P|Ps], E, R?) :- ground(P?), ground(Ps?), ground(E?) |
+    pred_member(P?, E?, A),
+    preds_diff1(A?, P?, Ps?, E?, R).
 
 % ---------------------------------------------------------------------------
 % Substitutions
@@ -516,6 +533,28 @@ any_req_names([], _, _, no).
 any_req_names([RS|Rs], U, E, R?) :- ground(RS?), ground(Rs?), ground(U?), ground(E?) |
     req_names(RS?, U?, E?, A),
     any_req_names1(A?, Rs?, U?, E?, R).
+
+% req_occurs(Role, Y, R): the speech-act variable Y occurs in an atom the role
+% requires, whatever its predicate -- as an argument or inside a name-term
+% argument (def:grounded, definition:provenance: "occurs in no atom required
+% at a role").
+procedure req_occurs(RoleSpec?, Arg?, Ans).
+req_occurs(RS, Y, R?) :- ground(RS?), ground(Y?) |
+    rs_req(RS?, Req),
+    atoms_args(Req?, [], As),
+    filter_svars(As?, SV),
+    args_member(SV?, Y?, R).
+
+procedure any_req_occurs1(Ans?, RoleSpecs?, Arg?, Ans).
+any_req_occurs1(yes, _, _, yes).
+any_req_occurs1(no, Rs, Y, R?) :- ground(Rs?), ground(Y?) |
+    any_req_occurs(Rs?, Y?, R).
+
+procedure any_req_occurs(RoleSpecs?, Arg?, Ans).
+any_req_occurs([], _, no).
+any_req_occurs([RS|Rs], Y, R?) :- ground(RS?), ground(Rs?), ground(Y?) |
+    req_occurs(RS?, Y?, A),
+    any_req_occurs1(A?, Rs?, Y?, R).
 
 % nth_rs(Rs, I, R): the I-th role of a schema, counting from one.  The empty
 % case is out of range and cannot arise; it answers with a role that requires
