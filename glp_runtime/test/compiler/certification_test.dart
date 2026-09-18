@@ -39,7 +39,7 @@ void main() {
         () {
       expect(root, isNot(contains('sign/3')));
       expect(root, isNot(contains('self_key/1')));
-      expect(root, isNot(contains('signed/4')));
+      expect(root, isNot(contains('signature/2')));
       expect(root, isNot(contains('merge/3')));
     });
   });
