@@ -34,8 +34,7 @@ String _hex(List<int> b) =>
 /// SimulationNetworkClient bound as its GlpNetwork under the same pair, and
 /// send_to_user/1 captured into [out].
 GlpEngine _agent(String id, PersonIdentity identity, List<String> out) {
-  final engine = GlpEngine(rootSelfGlpPath: _rootSelf, identity: identity)
-    ..strictTypes = false;
+  final engine = GlpEngine(rootSelfGlpPath: _rootSelf, identity: identity);
   engine.enableMadGLP(agentId: id);
   engine.runtime.outputCallback = (line) => out.add(line);
 

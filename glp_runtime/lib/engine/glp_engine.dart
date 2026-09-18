@@ -155,9 +155,6 @@ class GlpEngine {
   /// Enable debug output
   bool debugOutput = false;
 
-  /// When true, type errors abort program loading (default: true)
-  bool strictTypes = true;
-
   /// Path to the root self.glp (programs/self.glp) for the type scope chain.
   late final String _rootSelfGlpPath;
 
@@ -372,12 +369,22 @@ class GlpEngine {
           transformedProcedures: transformedAst.procedures,
           ancestorScope: ancestorScope);
       if (!typeResult.isWellTyped) {
-        final errors = typeResult.errors.map((e) => '  ${e.message} at line ${e.line}').join('\n');
-        if (strictTypes) {
-          throw Exception('Type checking failed:\n$errors');
-        }
-        // Non-strict mode: print warning and continue
-        print('[TYPE WARNING] Type errors found:\n$errors');
+        final errors = typeResult.errors
+            .map((e) => '  ${e.message} at line ${e.line}')
+            .join('\n');
+        // The object typechecked is the object compiled, and no diagnostic on a
+        // load path is a warning: a program that does not check does not run.
+        // This branch printed '[TYPE WARNING] Type errors found' and carried on
+        // whenever `strictTypes` was off, which is how the multi-isolate loaders
+        // (multiagent/isolate_manager.dart, multiagent/agent_runtime.dart) ran
+        // programs the checker had rejected. There is no flag now: the load
+        // fails here, naming the errors, and nothing runs.
+        throw CompileError(
+          'Type checking failed for \'$name\':\n$errors',
+          typeResult.errors.first.line,
+          typeResult.errors.first.column,
+          phase: 'typecheck',
+        );
       }
     }
 
@@ -1053,11 +1060,10 @@ class GlpEngine {
     // Implementation Notes, "The tables"): every procedure declared in the
     // linked program's scope, root scope included, keyed as the compiled module
     // carries it. `find_type/2` reads it from the calling goal's module value.
-    // Built over the same flat module the program was type-checked as. A
-    // program loaded with strictTypes off may carry type errors the checker
-    // waved through; the table construction is not waved through, so a failure
-    // there leaves the module without a table (find_type then errs on every
-    // key) rather than failing a load that succeeded before.
+    // Built over the same flat module the program was type-checked as. The
+    // table is not part of the type check and its construction can fail on a
+    // program the checker passed, so a failure here leaves the module without a
+    // table (find_type then errs on every key) rather than failing the load.
     TypeIdentityTables? declaredTypes;
     try {
       declaredTypes = linkedTypeIdentityTables(modules, linked);

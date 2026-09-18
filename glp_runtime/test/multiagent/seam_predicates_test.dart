@@ -139,8 +139,7 @@ String _hex(int seed) =>
 /// A madGLP engine with [network] bound as its GlpNetwork, capturing `_output`.
 GlpEngine _engine(List<String> out, GlpNetwork network) {
   final engine =
-      GlpEngine(rootSelfGlpPath: File('../programs/self.glp').absolute.path)
-        ..strictTypes = false;
+      GlpEngine(rootSelfGlpPath: File('../programs/self.glp').absolute.path);
   engine.enableMadGLP(agentId: 'alice');
   engine.runtime.outputCallback = out.add;
   engine.madContext!.network = network;

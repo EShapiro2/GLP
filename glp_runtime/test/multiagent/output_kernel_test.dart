@@ -9,7 +9,8 @@ void main() {
     late List<String> outputLines;
 
     setUp(() {
-      engine = GlpEngine(rootSelfGlpPath: File('../programs/self.glp').absolute.path)..strictTypes = false;
+      engine = GlpEngine(
+          rootSelfGlpPath: File('../programs/self.glp').absolute.path);
       outputLines = [];
       engine.runtime.outputCallback = (line) => outputLines.add(line);
     });
@@ -53,7 +54,8 @@ test :- '_output'([a, b, c]).
     late List<String> outputLines;
 
     setUp(() {
-      engine = GlpEngine(rootSelfGlpPath: File('../programs/self.glp').absolute.path)..strictTypes = false;
+      engine = GlpEngine(
+          rootSelfGlpPath: File('../programs/self.glp').absolute.path);
       outputLines = [];
       engine.runtime.outputCallback = (line) => outputLines.add(line);
     });

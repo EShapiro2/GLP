@@ -6,9 +6,9 @@
 /// (fisherman) — and checks that all seven operations of §8.2 actually occur
 /// and that the economy lands on the paper's closing balances.
 ///
-/// It loads exactly the way the app does — GlpEngine with strictTypes = false
-/// and loadSource per file, no programDir — so a pass here also exercises the
-/// app's load path, not just the GLP logic.
+/// It loads exactly the way the app does — GlpEngine and loadSource per file,
+/// no programDir — so a pass here also exercises the app's load path, not just
+/// the GLP logic.
 
 import 'dart:io';
 
@@ -25,7 +25,6 @@ void main() {
     // the run off mid-economy. The currencies REPL harness uses the same
     // headroom for this scenario (:limit 5000000).
     final engine = GlpEngine(rootSelfGlpPath: '$repo/programs/self.glp')
-      ..strictTypes = false
       ..maxCycles = 5000000;
 
     // programs/grassapp is a program (SGSG, d27e4d6a): loaded as one, its

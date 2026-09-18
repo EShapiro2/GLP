@@ -32,8 +32,7 @@ int _nonInternalCount(List<Object> ops) =>
 
 void _checkProgram(String name, String source) {
   test('$name: artefact round-trips and reconstructs faithfully', () {
-    final engine = GlpEngine(rootSelfGlpPath: '../programs/self.glp')
-      ..strictTypes = false;
+    final engine = GlpEngine(rootSelfGlpPath: '../programs/self.glp');
     engine.loadSource(source, filename: name);
     final ops0 = engine.combinedProgram.ops.cast<Object>();
 

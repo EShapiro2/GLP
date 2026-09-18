@@ -183,8 +183,7 @@ class AgentRuntime {
     // Use GlpEngine — the ONE way to run GLP programs.
     final engine = GlpEngine(
         rootSelfGlpPath: rootSelfGlpPath,
-        identity: PersonIdentity(kp.pub, kp.priv))
-      ..strictTypes = false;
+        identity: PersonIdentity(kp.pub, kp.priv));
 
     // Enable madGLP mode (loads madPredicates + creates MadContext)
     engine.enableMadGLP(agentId: agentIdLower);

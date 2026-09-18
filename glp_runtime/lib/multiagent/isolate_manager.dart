@@ -472,14 +472,14 @@ void _agentIsolateEntry(AgentConfig config) async {
   log('Starting isolate');
 
   // Create GlpEngine — the ONE way to run GLP programs.
-  // Non-strict types: actor code may have type warnings that shouldn't be fatal.
   // The engine holds the agent's key pair as the person's identity from
   // construction, so the certificate its compiler writes, self_key/1 and
   // sign/3 are under the key the networking layer below is given.
+  // The load refuses a program that does not typecheck: this isolate ran with
+  // the checker's errors printed as warnings until 2026-09-18.
   final engine = GlpEngine(
       rootSelfGlpPath: config.rootSelfGlpPath,
-      identity: PersonIdentity(config.keyPair.pub, config.keyPair.priv))
-    ..strictTypes = false;
+      identity: PersonIdentity(config.keyPair.pub, config.keyPair.priv));
 
   // Enable madGLP mode (loads madPredicates + creates MadContext)
   engine.enableMadGLP(agentId: agentId);
