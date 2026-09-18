@@ -34,14 +34,14 @@ FriendContent ::= response(Response)
                 ; text(Constant)
                 ; trade_propose(Stream(Lot), Stream(Bond), TradeResponse?)
                 ; escrow_offer(Constant, EscrowBenResult).
-FriendMsg     ::= msg(Constant, Constant, FriendContent).
+FriendMsg     ::= msg(Key, Key, FriendContent).
 FriendChannel ::= ch(Stream(FriendMsg), Stream(FriendMsg)?).
 
 Response ::= accept(FriendChannel) ; no.
 Decision ::= yes ; no.
 
 %% Network content (2-arg cold-call: msg(Dest, Content))
-NetColdCall ::= intro(Constant, Response?).
+NetColdCall ::= intro(Key, Response?).
 
 %% =============================================================================
 %% AGENT <-> MEDIATOR INTERFACE
@@ -51,16 +51,16 @@ NetColdCall ::= intro(Constant, Response?).
 PersonContent ::= mint(Constant, Constant)
               ; balance
               ; done
-              ; connect(Constant)
-              ; decision(Decision, Constant, PendingValue)
+              ; connect(Key)
+              ; decision(Decision, Key, PendingValue)
               ; response(Response)
-              ; trade(Constant, Stream(Lot), Stream(Lot))
-              ; redeem(Constant, Stream(Lot), Stream(Lot))
+              ; trade(Key, Stream(Lot), Stream(Lot))
+              ; redeem(Key, Stream(Lot), Stream(Lot))
               ; advance_date(Constant)
-              ; accept_trade(Constant, PendingValue)
-              ; reject_trade(Constant, PendingValue)
-              ; deposit_escrow(Constant, Stream(Lot), Constant)
-              ; cancel_escrow(Constant, PendingValue).
+              ; accept_trade(Key, PendingValue)
+              ; reject_trade(Key, PendingValue)
+              ; deposit_escrow(Key, Stream(Lot), Constant)
+              ; cancel_escrow(Key, PendingValue).
 
 %% Pending values stored by mediator
 PendingValue ::= response(Response?)
@@ -72,51 +72,51 @@ PendingValue ::= response(Response?)
 AgentContent ::= minted(Constant, Constant)
                ; date_advanced(Constant)
                ; balance_report(Stream(Bond))
-               ; befriend(Constant, Response?)
-               ; connected(Constant)
+               ; befriend(Key, Response?)
+               ; connected(Key)
                ; rejected
-               ; rejected(Constant)
-               ; trade_proposed(Constant, Stream(Lot), TradeResponse?, Stream(Bond))
-               ; trade_completed(Constant)
-               ; trade_failed(Constant)
-               ; trade_returned(Constant)
-               ; escrow_deposited(Constant, Constant, EscrowCancel?)
-               ; escrow_received(Constant, Constant)
-               ; escrow_released(Constant)
-               ; escrow_cancelled(Constant)
-               ; escrow_expired(Constant)
-               ; escrow_returned(Constant)
-               ; escrow_failed(Constant)
-               ; trade_returned_menu(Constant, Stream(Bond)).
+               ; rejected(Key)
+               ; trade_proposed(Key, Stream(Lot), TradeResponse?, Stream(Bond))
+               ; trade_completed(Key)
+               ; trade_failed(Key)
+               ; trade_returned(Key)
+               ; escrow_deposited(Key, Constant, EscrowCancel?)
+               ; escrow_received(Key, Constant)
+               ; escrow_released(Key)
+               ; escrow_cancelled(Key)
+               ; escrow_expired(Key)
+               ; escrow_returned(Key)
+               ; escrow_failed(Key)
+               ; trade_returned_menu(Key, Stream(Bond)).
 
 %% Precise message types for agent <-> mediator channel
-AgentToPersonMsg     ::= msg(Constant, Constant, AgentContent).
-MediatorToAgentMsg ::= msg(Constant, Constant, PersonContent).
+AgentToPersonMsg     ::= msg(Key, Key, AgentContent).
+MediatorToAgentMsg ::= msg(Key, Key, PersonContent).
 
 %% =============================================================================
 %% AGENT INPUT TYPES
 %% =============================================================================
 
 %% Network input message (cold-calls + friend messages)
-NetInMsg ::= msg(Constant, NetColdCall)
-           ; msg(Constant, Constant, FriendContent).
+NetInMsg ::= msg(Key, NetColdCall)
+           ; msg(Key, Key, FriendContent).
 
 %% Agent input stream (from mediator + injected results)
-PersonInMsg ::= msg(Constant, Constant, PersonContent)
-            ; trade_complete(Constant, Stream(Bond))
-            ; trade_returned_bonds(Constant, Stream(Bond))
-            ; escrow_ben_released(Constant, Stream(Bond))
-            ; escrow_ben_cancelled(Constant)
-            ; escrow_dep_expired(Constant)
-            ; escrow_dep_returned(Constant, Stream(Bond))
-            ; trade_returned_bonds_menu(Constant, Stream(Bond), Stream(Bond)).
+PersonInMsg ::= msg(Key, Key, PersonContent)
+            ; trade_complete(Key, Stream(Bond))
+            ; trade_returned_bonds(Key, Stream(Bond))
+            ; escrow_ben_released(Key, Stream(Bond))
+            ; escrow_ben_cancelled(Key)
+            ; escrow_dep_expired(Key)
+            ; escrow_dep_returned(Key, Stream(Bond))
+            ; trade_returned_bonds_menu(Key, Stream(Bond), Stream(Bond)).
 
 %% =============================================================================
 %% AGENT OUTPUT TYPES
 %% =============================================================================
 
 %% Network output stream — cold calls the agent emits on its net entry.
-NetOutMsg    ::= msg(Constant, NetColdCall).
+NetOutMsg    ::= msg(Key, NetColdCall).
 NetOutStream ::= [] ; [NetOutMsg | NetOutStream].
 
 %% Transport union carried by the simulated network switches (network2/network6).
@@ -148,36 +148,36 @@ ReqId ::= req(Constant).
 PersonCmd ::= mint(Constant, Constant)
           ; balance
           ; done
-          ; connect(Constant)
-          ; decision(Decision, Constant, ReqId)
-          ; trade(Constant, Stream(Lot), Stream(Lot))
-          ; redeem(Constant, Stream(Lot), Stream(Lot))
+          ; connect(Key)
+          ; decision(Decision, Key, ReqId)
+          ; trade(Key, Stream(Lot), Stream(Lot))
+          ; redeem(Key, Stream(Lot), Stream(Lot))
           ; advance_date(Constant)
-          ; accept_trade(Constant, ReqId)
-          ; reject_trade(Constant, ReqId)
-          ; deposit_escrow(Constant, Stream(Lot), Constant)
-          ; cancel_escrow(Constant, ReqId).
+          ; accept_trade(Key, ReqId)
+          ; reject_trade(Key, ReqId)
+          ; deposit_escrow(Key, Stream(Lot), Constant)
+          ; cancel_escrow(Key, ReqId).
 
 %% Mediator -> Person notifications
 PersonNotify ::= minted(Constant, Constant)
              ; date_advanced(Constant)
              ; balance_report(Stream(Bond))
-             ; befriend(Constant, ReqId)
-             ; connected(Constant)
+             ; befriend(Key, ReqId)
+             ; connected(Key)
              ; rejected
-             ; rejected(Constant)
-             ; trade_proposed(Constant, Stream(Lot), ReqId)
-             ; trade_completed(Constant)
-             ; trade_failed(Constant)
-             ; trade_returned(Constant)
-             ; escrow_deposited(Constant, Constant, ReqId)
-             ; escrow_received(Constant, Constant)
-             ; escrow_released(Constant)
-             ; escrow_cancelled(Constant)
-             ; escrow_expired(Constant)
-             ; escrow_returned(Constant)
-             ; escrow_failed(Constant)
-             ; trade_returned_menu(Constant, Stream(Bond)).
+             ; rejected(Key)
+             ; trade_proposed(Key, Stream(Lot), ReqId)
+             ; trade_completed(Key)
+             ; trade_failed(Key)
+             ; trade_returned(Key)
+             ; escrow_deposited(Key, Constant, ReqId)
+             ; escrow_received(Key, Constant)
+             ; escrow_released(Key)
+             ; escrow_cancelled(Key)
+             ; escrow_expired(Key)
+             ; escrow_returned(Key)
+             ; escrow_failed(Key)
+             ; trade_returned_menu(Key, Stream(Bond)).
 
 %% Channel aliases for readability
 PersonChannel  ::= ch(Stream(PersonCmd), Stream(PersonNotify)?).
@@ -193,7 +193,7 @@ PendingEntry ::= pending(ReqId, PendingValue).
 %% NARRATIVE TYPES (for village scenario actors)
 %% =============================================================================
 
-NarrativeItem ::= friend(Constant)
+NarrativeItem ::= friend(Key)
                 ; say(Constant)
                 ; act(Constant)
                 ; event(Constant).
@@ -241,7 +241,7 @@ bind_trade_decline(trade_decline(Bonds?), Bonds).
 %% INJECT_TRADE_RESULT — Inject trade response into PersonIn
 %% =============================================================================
 
-procedure inject_trade_result(TradeResponse?, Constant?, Stream(PersonInMsg)?, Stream(PersonInMsg)).
+procedure inject_trade_result(TradeResponse?, Key?, Stream(PersonInMsg)?, Stream(PersonInMsg)).
 inject_trade_result(trade_accept(TheirBonds), From, Ys,
     [trade_complete(From?, TheirBonds?)|Ys?]) :-
     ground(From?), ground(TheirBonds?) | true.
@@ -285,7 +285,7 @@ escrow(_, _, Bonds, cancel,
 %% INJECT_ESCROW_BEN_RESULT — Monitor beneficiary's escrow outcome
 %% =============================================================================
 
-procedure inject_escrow_ben_result(EscrowBenResult?, Constant?, Stream(PersonInMsg)?, Stream(PersonInMsg)).
+procedure inject_escrow_ben_result(EscrowBenResult?, Key?, Stream(PersonInMsg)?, Stream(PersonInMsg)).
 inject_escrow_ben_result(escrow_bonds(Bonds), From, Ys,
     [escrow_ben_released(From?, Bonds?)|Ys?]) :-
     ground(From?), ground(Bonds?) | true.
@@ -299,7 +299,7 @@ inject_escrow_ben_result(Resp, From, [Y|Ys], [Y?|Ys1?]) :-
 %% INJECT_ESCROW_DEP_RESULT — Monitor depositor's escrow outcome
 %% =============================================================================
 
-procedure inject_escrow_dep_result(EscrowDepResult?, Constant?, Stream(PersonInMsg)?, Stream(PersonInMsg)).
+procedure inject_escrow_dep_result(EscrowDepResult?, Key?, Stream(PersonInMsg)?, Stream(PersonInMsg)).
 inject_escrow_dep_result(escrow_bonds(Bonds), Target, Ys,
     [escrow_dep_returned(Target?, Bonds?)|Ys?]) :-
     ground(Target?), ground(Bonds?) | true.
