@@ -15,7 +15,7 @@
 %% constructs: he mints 2, accepts the swap alice proposes through her Swap
 %% form, and then proposes the reverse swap himself --- the 2 alice-coins he
 %% now holds for the 2 bob-coins she now holds --- which arrives at her as the
-%% card of the swap responder, its two sibling clauses her Accept and Decline.
+%% card of the swap responder, its accept clause her Accept and its else-branch her Decline.
 %% Both executions are in one heap and the network is not used.
 %%
 %% This file is the harness of the app, not part of the currency: the certified

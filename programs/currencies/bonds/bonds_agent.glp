@@ -46,9 +46,7 @@ display agent *(Q, D, R, D1) : panel(bonds), label("Redeem"), field(Q, peer), fi
 display agent *(E, U, D, K) : panel(bonds), label("Deposit"), field(E, peer), field(U, peer), field(D, date), field(K, number), persistent.
 display agent *(Q, U, D, K) : panel(bonds), label("Release"), field(Q, peer), field(U, peer), field(D, date), field(K, number), persistent.
 display agent *(P, U, D, K) : panel(bonds), label("Return"), field(P, peer), field(U, peer), field(D, date), field(K, number), persistent.
-display respond_swap *(no, From?, Want?, Offered?) : panel(bonds), label("Decline"), transient.
 display respond_swap *(yes, From?, Want?, Offered?) : panel(bonds), label("Accept"), transient.
-display respond_transfer *(no, Kind?, From?, Bonds?) : panel(bonds), label("Decline"), transient.
 display respond_transfer *(yes, Kind?, From?, Bonds?) : panel(bonds), label("Accept"), transient.
 display msg(agent, person, holdings(Lots)) : panel(bonds), view(balances).
 
