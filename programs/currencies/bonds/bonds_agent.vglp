@@ -49,11 +49,6 @@ display msg(agent, person, holdings(Lots)) : panel(bonds), view(balances).
 
 procedure respond_swap(SwapOffer?, Link?, SwapResponse, Stream(UserInMsg)).
 
-%% Decline: the offered bonds go back to the proposer.
-*(no, From?, Want?, Offered?)
-respond_swap(offer(From, Want, Offered), Link, Resp?, [decline_swap(From?, Offered?, Resp, Link?)]) :-
-    ground(From?), ground(Want?), ground(Offered?) | true.
-
 %% Accept: the agent gives the wanted bonds and takes the offered ones,
 %% declining itself when it does not hold the wanted bonds.  The else-branch is
 %% the person's decline.
@@ -70,11 +65,6 @@ respond_swap(offer(From, Want, Offered), Link, Resp?, Ans?) :-
 %% =============================================================================
 
 procedure respond_transfer(TransferOffer?, Link?, TransferResponse, Stream(UserInMsg)).
-
-%% Decline: the bonds go back to the giver.
-*(no, Kind?, From?, Bonds?)
-respond_transfer(offer_transfer(Kind, From, Bonds), Link, Resp?, [decline_transfer(Kind?, From?, Bonds?, Resp, Link?)]) :-
-    ground(Kind?), ground(From?), ground(Bonds?) | true.
 
 %% Accept: the bonds are taken.  The else-branch is the person's decline.
 *(yes, Kind?, From?, Bonds?)
