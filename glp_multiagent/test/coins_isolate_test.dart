@@ -113,12 +113,11 @@ void main() {
     await until(() => balances() == 'bob=2');
     expect(balances(), 'bob=2');
 
-    // Bob proposes the reverse swap: one card, both sibling asks. The second
-    // ask joins the card a message after the first, so wait for the pair.
-    await until(() => r.inbox.length == 1 && r.inbox.single.asks.length == 2);
+    // Bob proposes the reverse swap: one card, the responder's one ask.
+    await until(() => r.inbox.length == 1);
     expect(r.inbox.length, 1);
     final card = r.inbox.single;
-    expect(card.asks.keys.toSet(), {'respond_swap_1', 'respond_swap_2'});
+    expect(card.asks.keys.toSet(), {'respond_swap_1'});
     r.answerCard(card, card.liveAnswers.firstWhere((a) => a.label == 'Accept'));
     await grant();
     await until(() => balances() == 'alice=2');
