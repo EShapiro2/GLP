@@ -148,6 +148,24 @@ cur_no_mint([schema(swap,
        [rs(guarded,   [atom(coin, [pvar(r)])], [atom(coin, [role(2)])], [], []),
         rs(unguarded, [atom(coin, [role(2)])], [atom(coin, [pvar(r)])], [], [])])]).
 
+% --- negative: a speech act carried over from an untraceable record --------
+% note(p?; x, u) : +tagged(x, u)      tag(p?; x, u) : tagged(x, u), +item(x, p, p)
+% u is named by no atom note requires, so tagged loses traceable provenance;
+% the x that tag adds in an item occurs in a required atom, tagged(x, u), but
+% in none of traceable provenance, so item loses it too under the clause of
+% def:grounded on speech-act variables, and sent after it.  Befriend stays
+% unobstructed and every schema satisfies volition, so what rejects the
+% contract is the second conjunct of def:syntactically-grassroots alone.
+procedure sg_svar_loose(Contract).
+sg_svar_loose(C?) :-
+    sg(S),
+    contract_app(S?,
+      [schema(note,
+         [rs(guarded, [atom(tagged, [svar(x), pvar(u)])], [], [], [])]),
+       schema(tag,
+         [rs(guarded, [atom(item, [svar(x), role(1), role(1)])], [],
+                      [atom(tagged, [svar(x), pvar(u)])], [])])], C).
+
 % --- negative: minting a coin of somebody else's issue ---------------------
 % mint(p?; u) : +coin(u), where u is named by no atom mint requires.  coin
 % loses traceable provenance (def:grounded), and pay and redeem, guarded at
@@ -286,6 +304,7 @@ contract(sg_imposed, C?) :- sg_imposed(C).
 contract(sg_gossip, C?) :- sg_gossip(C).
 contract(sg_chain, C?) :- sg_chain(C).
 contract(sg_chain_cut, C?) :- sg_chain_cut(C).
+contract(sg_svar_loose, C?) :- sg_svar_loose(C).
 contract(cssn, C?) :- cssn(C).
 contract(cur_no_mint, C?) :- cur_no_mint(C).
 contract(cur_loose_mint, C?) :- cur_loose_mint(C).

@@ -101,7 +101,7 @@ person(Id, [card(respond_transfer_1, ctx_respond_transfer_1(Kind, From, Bonds), 
     answer_transfers(Ag?, [transfer_card(Kind?, From?, Lots?, R?)|Ts?], As, Tail, Ts1, Ag1),
     then_step(Tail?, Id?, Es?, Cal, Script?, Todo?, Open?, Swaps?, Ts1?, Pending?, Ag1?, Seen?, Screen).
 
-%% Any other card --- the decline of a swap or a transfer --- is left.
+%% Any other card is left; the agent sends none, every card it sends being caught above.
 person(Id, [card(_, _, _)|Es], As?, Cal?, Script, Todo, Open, Swaps, Ts, Pending, Ag, Seen, Screen?) :-
     otherwise |
     person(Id?, Es?, As, Cal, Script?, Todo?, Open?, Swaps?, Ts?, Pending?, Ag?, Seen?, Screen).

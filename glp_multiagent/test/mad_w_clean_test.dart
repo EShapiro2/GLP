@@ -17,14 +17,14 @@ import 'dart:isolate';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:glp_multiagent/isolate_protocol.dart';
 
+import 'programs_dir.dart';
+
 void main() {
   test('_w matches the nested head; receive/3 commits on a constant at Out',
       () async {
-    final probe = File(
-            '/Users/udi/Grassroots/GLP/programs/tests/mad_w_clean.glp')
-        .readAsStringSync();
-    final rootSelf =
-        File('/Users/udi/Grassroots/GLP/programs/self.glp').absolute.path;
+    final programs = programsDir();
+    final probe = File('$programs/tests/mad_w_clean.glp').readAsStringSync();
+    final rootSelf = '$programs/self.glp';
 
     final reply = ReceivePort();
     final ports = <String, SendPort>{};

@@ -1,5 +1,5 @@
 % ---------------------------------------------------------------------------
-% The decision of a motion and of an act (Definition "Will, Contact, Origin
+% The decision of a motion and of an act (Definition "Will Record, Origin
 % Record").
 %
 % A motion record of electorate X is decided in a row when the agents whose
@@ -24,16 +24,19 @@ supermajority(rat(TN, TD), K, N, R?) :-
     gt_ans(L?, M?, R).
 
 exported procedure motion_electorate(Motion?, Agents).
-motion_electorate(motion(_, _, X, _), X?).
+motion_electorate(motion(_, _, X, _, _), X?).
 
 exported procedure motion_act(Motion?, Act).
-motion_act(motion(A, _, _, _), A?).
+motion_act(motion(A, _, _, _, _), A?).
 
 exported procedure motion_epoch(Motion?, Integer).
-motion_epoch(motion(_, _, _, K), K?).
+motion_epoch(motion(_, _, _, _, K), K?).
 
 exported procedure motion_community(Motion?, Name).
-motion_community(motion(_, V, _, _), V?).
+motion_community(motion(_, V, _, _, _), V?).
+
+exported procedure motion_descendants(Motion?, Names).
+motion_descendants(motion(_, _, _, Z, _), Z?).
 
 % The agents whose wills in the row name this motion, without repetition.
 procedure willers(Row?, Motion?, Agents).
@@ -86,14 +89,14 @@ decided_motions1(no, T, Row, _, Ms, R?) :-
 % either of the two.  A Join needs one at each and is taken below.
 
 procedure motion_single_ok(Motion?, Ans).
-motion_single_ok(motion(federate(U), V, _, _), R?) :- ground(U?), ground(V?) |
+motion_single_ok(motion(federate(U, _), V, _, _, _), R?) :- ground(U?), ground(V?) |
     name # name_eq(U?, V?, R).
-motion_single_ok(motion(leave(F, G), V, _, _), R?) :-
+motion_single_ok(motion(leave(F, G), V, _, _, _), R?) :-
     ground(F?), ground(G?), ground(V?) |
     name # name_eq(F?, V?, A1),
     name # name_eq(G?, V?, A2),
     or_ans(A1?, A2?, R).
-motion_single_ok(motion(join(_, _), _, _, _), no).
+motion_single_ok(motion(join(_, _), _, _, _, _), no).
 
 procedure single_of(Motion?, Arecs).
 single_of(M, R?) :- ground(M?) |
@@ -114,13 +117,13 @@ singles([M|Ms], R?) :- ground(M?), ground(Ms?) |
 % --- A Join is decided on one motion at f and one at g --------------------
 
 procedure join_at_f(Motion?, Ans).
-join_at_f(motion(join(F, _), V, _, _), R?) :- ground(F?), ground(V?) |
+join_at_f(motion(join(F, _), V, _, _, _), R?) :- ground(F?), ground(V?) |
     name # name_eq(F?, V?, R).
-join_at_f(motion(federate(_), _, _, _), no).
-join_at_f(motion(leave(_, _), _, _, _), no).
+join_at_f(motion(federate(_, _), _, _, _, _), no).
+join_at_f(motion(leave(_, _), _, _, _, _), no).
 
 procedure is_partner(Act?, Motion?, Ans).
-is_partner(join(F, G), motion(join(F1, G1), V, _, _), R?) :-
+is_partner(join(F, G), motion(join(F1, G1), V, _, _, _), R?) :-
     ground(F?), ground(G?), ground(F1?), ground(G1?), ground(V?) |
     name # name_eq(F?, F1?, A1),
     name # name_eq(G?, G1?, A2),

@@ -42,7 +42,7 @@
 %% The types, and the helpers over holdings, dates and conversations, are
 %% self.glp's.
 
-%% The seven request clauses of agent and the two clauses of each responder,
+%% The seven request clauses of agent and the accept clause of each responder,
 %% as the app renders them.
 display agent *(F, K, D) : panel(sovereign), label("Mint"), field(F, text), field(K, number), field(D, date), persistent.
 display agent *(Q, F, U, D, K, V, D1, K1) : panel(sovereign), label("Swap"), field(Q, peer), field(F, text), field(U, peer), field(D, date), field(K, number), field(V, peer), field(D1, date), field(K1, number), persistent.
@@ -51,9 +51,7 @@ display agent *(Q, F, D, R, D1) : panel(sovereign), label("Redeem"), field(Q, pe
 display agent *(E, F, U, D, K) : panel(sovereign), label("Deposit"), field(E, peer), field(F, text), field(U, peer), field(D, date), field(K, number), persistent.
 display agent *(Q, F, U, D, K) : panel(sovereign), label("Release"), field(Q, peer), field(F, text), field(U, peer), field(D, date), field(K, number), persistent.
 display agent *(P, F, U, D, K) : panel(sovereign), label("Return"), field(P, peer), field(F, text), field(U, peer), field(D, date), field(K, number), persistent.
-display respond_swap *(no, From?, Want?, Offered?) : panel(sovereign), label("Decline"), transient.
 display respond_swap *(yes, From?, Want?, Offered?) : panel(sovereign), label("Accept"), transient.
-display respond_transfer *(no, Kind?, From?, Bonds?) : panel(sovereign), label("Decline"), transient.
 display respond_transfer *(yes, Kind?, From?, Bonds?) : panel(sovereign), label("Accept"), transient.
 display msg(agent, person, holdings(Lots)) : panel(sovereign), view(balances).
 

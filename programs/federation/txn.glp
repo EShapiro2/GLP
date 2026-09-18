@@ -9,10 +9,15 @@
 % hold.  There is no message passing and no lattice agreement here; the
 % platform is the layer below.  guard_of/2 carries the guard each transaction
 % has: a Form, a Move and a Will by their agent, every other by nobody.
+%
+% A Relay is two-sided: p, holding the row the record is copied from,
+% discloses it, and q, holding the row it is copied into, makes it.  Its two
+% halves are exported apart, relay_from/5 and relay_into/6, so that the
+% platform reads the first at the learnt row of p and the second at that of q.
 % ---------------------------------------------------------------------------
 
 imported procedure name#name_eq(Name?, Name?, Ans).
-imported procedure name#name_extend(Name?, Integer?, Name).
+imported procedure name#name_extend(Name?, Constant?, Name).
 imported procedure name#name_is_agent(Name?, Ans).
 imported procedure row#assembly(Row?, Name?, Seats).
 imported procedure row#agent_date(Row?, Constant?, Integer).
@@ -22,10 +27,11 @@ imported procedure row#motion_open(Motion?, Arecs?, Ans).
 imported procedure row#parents(Arecs?, Name?, Names).
 imported procedure row#children(Arecs?, Name?, Names).
 imported procedure row#members(Row?, Name?, Names?, Agents).
+imported procedure row#descendants(Row?, Names?, Names).
 imported procedure row#child_members(Row?, Name?, Agents).
-imported procedure row#fed_acts(Arecs?, Name?, Arecs).
+imported procedure row#fed_decided(Arecs?, Name?, Constant?, Motions).
 imported procedure decide#decided_acts(Rat?, Row?, Arecs).
-imported procedure decide#motion_epoch(Motion?, Integer).
+imported procedure decide#row_motions(Row?, Motions).
 imported procedure decide#supermajority(Rat?, Integer?, Integer?, Ans).
 imported procedure fair#fcontext(Rat?, Integer?, Row?, Name?, FCtx).
 imported procedure fair#seat_agents(Seats?, Agents).
@@ -145,7 +151,7 @@ assembly_of1(S, A?) :- ground(S?) | fair # seat_agents(S?, A).
 
 % Does the act name this community?
 procedure act_names(Act?, Name?, Ans).
-act_names(federate(U), V, R?) :- ground(U?), ground(V?) | name # name_eq(U?, V?, R).
+act_names(federate(U, _), V, R?) :- ground(U?), ground(V?) | name # name_eq(U?, V?, R).
 act_names(join(F, G), V, R?) :- ground(F?), ground(G?), ground(V?) |
     name # name_eq(F?, V?, A1),
     name # name_eq(G?, V?, A2),
@@ -168,7 +174,7 @@ guard_of(date_at(_, _), []).
 guard_of(raise_at(_, _), []).
 guard_of(maintain_at(_, _), []).
 guard_of(report_at(_, _, _), []).
-guard_of(relay(_, _, _, _), []).
+guard_of(relay(_, _, _, _, _), []).
 guard_of(establish(_, _, _), []).
 
 % ---------------------------------------------------------------------------
@@ -411,34 +417,105 @@ do_raise(params(Th, N, _), V, P, W, R?) :-
 % ---------------------------------------------------------------------------
 % Move a at v by p
 % ---------------------------------------------------------------------------
+% The motion is (a, v, A(v), D_v, k), for k the epoch of the pair or Federate
+% of a in R(v); it must be open in R(v) and not be there already, and the pair
+% must be as the act asks: no edge for a Join, the edge for a Leave.  At this
+% layer a Move of a Join f -> g at f asks besides that a motion of the Join at
+% g, of that epoch, be in R(f) with descendants that do not hold f (Definition
+% "Grassroots Federation Implied Transactions").
 
 procedure edge_ok(Arecs?, Act?, Ans).
-edge_ok(_, federate(_), yes).
+edge_ok(_, federate(_, _), yes).
 edge_ok(Acts, join(F, G), R?) :- ground(Acts?), ground(F?), ground(G?) |
     row # edge_holds(Acts?, F?, G?, A),
     not_ans(A?, R).
 edge_ok(Acts, leave(F, G), R?) :- ground(Acts?), ground(F?), ground(G?) |
     row # edge_holds(Acts?, F?, G?, R).
 
-procedure do_move6(Ans?, Integer?, Agents?, Row?, Act?, Name?, World?, Outcome).
-do_move6(yes, _, _, _, _, _, _, blocked).
-do_move6(no, K, As, Row, A, V, W, ok(W1?)) :-
-    integer(K?), ground(As?), ground(Row?), ground(A?), ground(V?), ground(W?) |
-    world_put(W?, V?, [moved(motion(A?, V?, As?, K?))|Row?], W1).
+% One motion of a Join f -> g at g of epoch k whose descendants do not hold f.
+procedure relayed_one(Act?, Name?, Names?, Integer?, Name?, Name?, Integer?, Ans).
+relayed_one(join(F1, G1), U, Z, K1, F, G, K, R?) :-
+    K1? =:= K?, ground(F1?), ground(G1?), ground(U?), ground(Z?),
+    ground(F?), ground(G?) |
+    name # name_eq(F1?, F?, A1),
+    name # name_eq(G1?, G?, A2),
+    name # name_eq(U?, G?, A3),
+    names_in(Z?, F?, In),
+    not_ans(In?, A4),
+    and_ans(A1?, A2?, B1),
+    and_ans(B1?, A3?, B2),
+    and_ans(B2?, A4?, R).
+relayed_one(_, _, _, _, _, _, _, no) :- otherwise | true.
 
-procedure do_move5(Ans?, Integer?, Agents?, Row?, Act?, Name?, World?, Outcome).
-do_move5(no, _, _, _, _, _, _, blocked).
-do_move5(yes, K, As, Row, A, V, W, R?) :-
-    integer(K?), ground(As?), ground(Row?), ground(A?), ground(V?), ground(W?) |
-    row_member(Row?, moved(motion(A?, V?, As?, K?)), B),
-    do_move6(B?, K?, As?, Row?, A?, V?, W?, R).
+procedure relayed_of1(Ans?, Motions?, Name?, Name?, Integer?, Ans).
+relayed_of1(yes, _, _, _, _, yes).
+relayed_of1(no, Ms, F, G, K, R?) :- ground(Ms?), ground(F?), ground(G?), integer(K?) |
+    relayed_of(Ms?, F?, G?, K?, R).
+
+procedure relayed_of(Motions?, Name?, Name?, Integer?, Ans).
+relayed_of([], _, _, _, no).
+relayed_of([motion(A, U, _, Z, K1)|Ms], F, G, K, R?) :-
+    ground(A?), ground(U?), ground(Z?), integer(K1?), ground(Ms?),
+    ground(F?), ground(G?), integer(K?) |
+    relayed_one(A?, U?, Z?, K1?, F?, G?, K?, A1),
+    relayed_of1(A1?, Ms?, F?, G?, K?, R).
+
+procedure relayed_ok1(Ans?, Name?, Name?, Integer?, Row?, Ans).
+relayed_ok1(no, _, _, _, _, yes).
+relayed_ok1(yes, F, G, K, Row, R?) :-
+    ground(F?), ground(G?), integer(K?), ground(Row?) |
+    decide # row_motions(Row?, Ms),
+    relayed_of(Ms?, F?, G?, K?, R).
+
+% Where a is Join f -> g and v = f: a motion of the Join at g, of epoch k, is in
+% R(f) with descendants that do not hold f.  Elsewhere nothing more is asked.
+procedure relayed_ok(Act?, Name?, Integer?, Row?, Ans).
+relayed_ok(join(F, G), V, K, Row, R?) :-
+    ground(F?), ground(G?), ground(V?), integer(K?), ground(Row?) |
+    name # name_eq(F?, V?, AtF),
+    relayed_ok1(AtF?, F?, G?, K?, Row?, R).
+relayed_ok(leave(_, _), _, _, _, yes).
+relayed_ok(federate(_, _), _, _, _, yes).
+
+procedure do_move6(Ans?, Motion?, Row?, Name?, World?, Outcome).
+do_move6(no, _, _, _, _, blocked).
+do_move6(yes, M, Row, V, W, ok(W1?)) :-
+    ground(M?), ground(Row?), ground(V?), ground(W?) |
+    world_put(W?, V?, [moved(M?)|Row?], W1).
+
+procedure do_move5a(Motion?, Act?, Name?, Integer?, Row?, Arecs?, World?, Outcome).
+do_move5a(M, A, V, K, Row, Acts, W, R?) :-
+    ground(M?), ground(A?), ground(V?), integer(K?), ground(Row?), ground(Acts?),
+    ground(W?) |
+    row # motion_open(M?, Acts?, Op),
+    row_member(Row?, moved(M?), Dup),
+    not_ans(Dup?, NotDup),
+    relayed_ok(A?, V?, K?, Row?, Rl),
+    and_ans(Op?, NotDup?, B1),
+    and_ans(B1?, Rl?, B),
+    do_move6(B?, M?, Row?, V?, W?, R).
+
+procedure do_move5(Ans?, Integer?, Names?, Agents?, Row?, Arecs?, Act?, Name?, World?, Outcome).
+do_move5(no, _, _, _, _, _, _, _, _, blocked).
+do_move5(yes, K, Dv, As, Row, Acts, A, V, W, R?) :-
+    integer(K?), ground(Dv?), ground(As?), ground(Row?), ground(Acts?),
+    ground(A?), ground(V?), ground(W?) |
+    do_move5a(motion(A?, V?, As?, Dv?, K?), A?, V?, K?, Row?, Acts?, W?, R).
+
+procedure do_move4a(Names?, Ans?, Integer?, Agents?, Row?, Arecs?, Act?, Name?, World?, Outcome).
+do_move4a(Ch, B, K, As, Row, Acts, A, V, W, R?) :-
+    ground(Ch?), ground(B?), integer(K?), ground(As?), ground(Row?),
+    ground(Acts?), ground(A?), ground(V?), ground(W?) |
+    row # descendants(Row?, Ch?, Dv),
+    do_move5(B?, K?, Dv?, As?, Row?, Acts?, A?, V?, W?, R).
 
 procedure do_move4(Arecs?, Agents?, Row?, Act?, Name?, World?, Outcome).
 do_move4(Acts, As, Row, A, V, W, R?) :-
     ground(Acts?), ground(As?), ground(Row?), ground(A?), ground(V?), ground(W?) |
     edge_ok(Acts?, A?, B),
     row # act_epoch(Acts?, A?, K),
-    do_move5(B?, K?, As?, Row?, A?, V?, W?, R).
+    row # children(Acts?, V?, Ch),
+    do_move4a(Ch?, B?, K?, As?, Row?, Acts?, A?, V?, W?, R).
 
 procedure do_move3(Ans?, Agents?, Row?, Rat?, Act?, Name?, World?, Outcome).
 do_move3(no, _, _, _, _, _, _, blocked).
@@ -530,47 +607,61 @@ do_maintain(params(Th, N, Tau), V, P, W, R?) :-
 % ---------------------------------------------------------------------------
 % Report v to f by p
 % ---------------------------------------------------------------------------
+% p holds v, f is a parent of v in R(v) with a row, and the latest report of v
+% at f does not carry the members and the descendants of v; the record added
+% carries them, with the number of records in R(v) as its sequence.
 
-procedure rep_same(Rep?, Agents?, Ans).
-rep_same(norep, _, no).
-rep_same(rep(_, Y), Z, yes) :- Y? =?= Z? | true.
-rep_same(rep(_, _), _, no) :- otherwise | true.
+procedure rep_same(Rep?, Agents?, Names?, Ans).
+rep_same(norep, _, _, no).
+rep_same(rep(_, Y, Z), Y1, Z1, yes) :- Y? =?= Y1?, Z? =?= Z1? | true.
+rep_same(rep(_, _, _), _, _, no) :- otherwise | true.
 
-procedure do_report6(Row?, Row?, Agents?, Name?, Name?, World?, Outcome).
-do_report6(RowV, RowF, Mem, V, F, W, ok(W1?)) :-
-    ground(RowV?), ground(RowF?), ground(Mem?), ground(V?), ground(F?), ground(W?) |
-    row_len(RowV?, K),
-    do_report7(K?, RowF?, Mem?, V?, F?, W?, W1).
-
-procedure do_report7(Integer?, Row?, Agents?, Name?, Name?, World?, World).
-do_report7(K, RowF, Mem, V, F, W, W1?) :-
-    integer(K?), ground(RowF?), ground(Mem?), ground(V?), ground(F?), ground(W?) |
-    world_put(W?, F?, [report(V?, Mem?, K?)|RowF?], W1).
-
-procedure do_report5(Ans?, Row?, Row?, Agents?, Name?, Name?, World?, Outcome).
-do_report5(yes, _, _, _, _, _, _, blocked).
-do_report5(no, RowV, RowF, Mem, V, F, W, R?) :-
-    ground(RowV?), ground(RowF?), ground(Mem?), ground(V?), ground(F?), ground(W?) |
-    do_report6(RowV?, RowF?, Mem?, V?, F?, W?, R).
-
-procedure do_report4(Agents?, Row?, Name?, Name?, World?, Outcome).
-do_report4(Mem, RowV, V, F, W, R?) :-
-    ground(Mem?), ground(RowV?), ground(V?), ground(F?), ground(W?) |
-    world_row(W?, F?, RowF),
-    do_report4a(RowF?, Mem?, RowV?, V?, F?, W?, R).
-
-procedure do_report4a(Row?, Agents?, Row?, Name?, Name?, World?, Outcome).
-do_report4a(RowF, Mem, RowV, V, F, W, R?) :-
-    ground(RowF?), ground(Mem?), ground(RowV?), ground(V?), ground(F?), ground(W?) |
-    row # child_report(RowF?, V?, Rep),
-    do_report4b(Rep?, RowF?, Mem?, RowV?, V?, F?, W?, R).
-
-procedure do_report4b(Rep?, Row?, Agents?, Row?, Name?, Name?, World?, Outcome).
-do_report4b(Rep, RowF, Mem, RowV, V, F, W, R?) :-
-    ground(Rep?), ground(RowF?), ground(Mem?), ground(RowV?), ground(V?),
+procedure do_report6(Row?, Row?, Agents?, Names?, Name?, Name?, World?, Outcome).
+do_report6(RowV, RowF, Mem, Dv, V, F, W, ok(W1?)) :-
+    ground(RowV?), ground(RowF?), ground(Mem?), ground(Dv?), ground(V?),
     ground(F?), ground(W?) |
-    rep_same(Rep?, Mem?, A),
-    do_report5(A?, RowV?, RowF?, Mem?, V?, F?, W?, R).
+    row_len(RowV?, K),
+    do_report7(K?, RowF?, Mem?, Dv?, V?, F?, W?, W1).
+
+procedure do_report7(Integer?, Row?, Agents?, Names?, Name?, Name?, World?, World).
+do_report7(K, RowF, Mem, Dv, V, F, W, W1?) :-
+    integer(K?), ground(RowF?), ground(Mem?), ground(Dv?), ground(V?),
+    ground(F?), ground(W?) |
+    world_put(W?, F?, [report(V?, Mem?, Dv?, K?)|RowF?], W1).
+
+procedure do_report5(Ans?, Row?, Row?, Agents?, Names?, Name?, Name?, World?, Outcome).
+do_report5(yes, _, _, _, _, _, _, _, blocked).
+do_report5(no, RowV, RowF, Mem, Dv, V, F, W, R?) :-
+    ground(RowV?), ground(RowF?), ground(Mem?), ground(Dv?), ground(V?),
+    ground(F?), ground(W?) |
+    do_report6(RowV?, RowF?, Mem?, Dv?, V?, F?, W?, R).
+
+procedure do_report4(Agents?, Names?, Row?, Name?, Name?, World?, Outcome).
+do_report4(Mem, Dv, RowV, V, F, W, R?) :-
+    ground(Mem?), ground(Dv?), ground(RowV?), ground(V?), ground(F?), ground(W?) |
+    world_has(W?, F?, H),
+    do_report4h(H?, Mem?, Dv?, RowV?, V?, F?, W?, R).
+
+procedure do_report4h(Ans?, Agents?, Names?, Row?, Name?, Name?, World?, Outcome).
+do_report4h(no, _, _, _, _, _, _, blocked).
+do_report4h(yes, Mem, Dv, RowV, V, F, W, R?) :-
+    ground(Mem?), ground(Dv?), ground(RowV?), ground(V?), ground(F?), ground(W?) |
+    world_row(W?, F?, RowF),
+    do_report4a(RowF?, Mem?, Dv?, RowV?, V?, F?, W?, R).
+
+procedure do_report4a(Row?, Agents?, Names?, Row?, Name?, Name?, World?, Outcome).
+do_report4a(RowF, Mem, Dv, RowV, V, F, W, R?) :-
+    ground(RowF?), ground(Mem?), ground(Dv?), ground(RowV?), ground(V?),
+    ground(F?), ground(W?) |
+    row # child_report(RowF?, V?, Rep),
+    do_report4b(Rep?, RowF?, Mem?, Dv?, RowV?, V?, F?, W?, R).
+
+procedure do_report4b(Rep?, Row?, Agents?, Names?, Row?, Name?, Name?, World?, Outcome).
+do_report4b(Rep, RowF, Mem, Dv, RowV, V, F, W, R?) :-
+    ground(Rep?), ground(RowF?), ground(Mem?), ground(Dv?), ground(RowV?),
+    ground(V?), ground(F?), ground(W?) |
+    rep_same(Rep?, Mem?, Dv?, A),
+    do_report5(A?, RowV?, RowF?, Mem?, Dv?, V?, F?, W?, R).
 
 procedure do_report3(Ans?, Arecs?, Row?, Name?, Name?, World?, Outcome).
 do_report3(no, _, _, _, _, _, blocked).
@@ -583,7 +674,8 @@ procedure do_report3a(Names?, Row?, Name?, Name?, World?, Outcome).
 do_report3a(Ch, RowV, V, F, W, R?) :-
     ground(Ch?), ground(RowV?), ground(V?), ground(F?), ground(W?) |
     row # members(RowV?, V?, Ch?, Mem),
-    do_report4(Mem?, RowV?, V?, F?, W?, R).
+    row # descendants(RowV?, Ch?, Dv),
+    do_report4(Mem?, Dv?, RowV?, V?, F?, W?, R).
 
 procedure do_report2a(Arecs?, Row?, Name?, Name?, World?, Outcome).
 do_report2a(Acts, RowV, V, F, W, R?) :-
@@ -672,7 +764,7 @@ do_will2(Acts, P, M, V, Row, W, R?) :-
     do_will3(A?, P?, M?, V?, Row?, W?, R).
 
 procedure motion_names_here(Motion?, Name?, Ans).
-motion_names_here(motion(A, _, _, _), V, R?) :- ground(A?), ground(V?) |
+motion_names_here(motion(A, _, _, _, _), V, R?) :- ground(A?), ground(V?) |
     act_names(A?, V?, R).
 
 procedure do_will1(Ans?, Rat?, Constant?, Motion?, Name?, Row?, World?, Outcome).
@@ -695,11 +787,14 @@ do_will0(Row, Th, P, M, V, W, R?) :-
     do_will1(A?, Th?, P?, M?, V?, Row?, W?, R).
 
 % ---------------------------------------------------------------------------
-% Relay x from v to u by p
+% Relay x from v to u by p, q
 % ---------------------------------------------------------------------------
+% p holds v and q holds u, both communities have rows, x is a motion or will
+% record on an act naming both, in R(v) and not in R(u); the record is added
+% to R(u).
 
 % A motion or will record on an act naming both communities.
-procedure relay_ok(Record?, Name?, Name?, Ans).
+exported procedure relay_ok(Record?, Name?, Name?, Ans).
 relay_ok(moved(M), V, U, R?) :- ground(M?), ground(V?), ground(U?) |
     motion_names_here(M?, V?, A1),
     motion_names_here(M?, U?, A2),
@@ -710,73 +805,60 @@ relay_ok(will(_, M), V, U, R?) :- ground(M?), ground(V?), ground(U?) |
     and_ans(A1?, A2?, R).
 relay_ok(_, _, _, no) :- otherwise | true.
 
-procedure do_relay4(Ans?, Record?, Name?, Row?, World?, Outcome).
-do_relay4(yes, _, _, _, _, blocked).
-do_relay4(no, X, U, RowU, W, ok(W1?)) :-
+% The discloser's half: p holds v with R(v), which holds x.
+exported procedure relay_from(Record?, Name?, Constant?, Row?, Ans).
+relay_from(X, V, P, RowV, R?) :-
+    ground(X?), ground(V?), ground(P?), ground(RowV?) |
+    assembly_of(RowV?, V?, As),
+    agents_member(As?, P?, A1),
+    row_member(RowV?, X?, A2),
+    and_ans(A1?, A2?, R).
+
+% The maker's half: q holds u with R(u), which does not hold x, and x is on an
+% act naming both v and u.
+exported procedure relay_into(Record?, Name?, Name?, Constant?, Row?, Ans).
+relay_into(X, V, U, Q, RowU, R?) :-
+    ground(X?), ground(V?), ground(U?), ground(Q?), ground(RowU?) |
+    assembly_of(RowU?, U?, As),
+    agents_member(As?, Q?, A1),
+    row_member(RowU?, X?, In),
+    not_ans(In?, A2),
+    relay_ok(X?, V?, U?, A3),
+    and_ans(A1?, A2?, B),
+    and_ans(B?, A3?, R).
+
+procedure do_relay2(Ans?, Record?, Name?, Row?, World?, Outcome).
+do_relay2(no, _, _, _, _, blocked).
+do_relay2(yes, X, U, RowU, W, ok(W1?)) :-
     ground(X?), ground(U?), ground(RowU?), ground(W?) |
     world_put(W?, U?, [X?|RowU?], W1).
 
-procedure do_relay3(Ans?, Record?, Name?, World?, Outcome).
-do_relay3(no, _, _, _, blocked).
-do_relay3(yes, X, U, W, R?) :- ground(X?), ground(U?), ground(W?) |
-    world_row(W?, U?, RowU),
-    do_relay3a(RowU?, X?, U?, W?, R).
-
-procedure do_relay3a(Row?, Record?, Name?, World?, Outcome).
-do_relay3a(RowU, X, U, W, R?) :- ground(RowU?), ground(X?), ground(U?), ground(W?) |
-    row_member(RowU?, X?, A),
-    do_relay4(A?, X?, U?, RowU?, W?, R).
-
-procedure do_relay2(Ans?, Record?, Name?, Name?, World?, Outcome).
-do_relay2(no, _, _, _, _, blocked).
-do_relay2(yes, X, V, U, W, R?) :- ground(X?), ground(V?), ground(U?), ground(W?) |
-    relay_ok(X?, V?, U?, A),
-    do_relay3(A?, X?, U?, W?, R).
-
-procedure do_relay1(Ans?, Record?, Name?, Name?, Row?, World?, Outcome).
-do_relay1(no, _, _, _, _, _, blocked).
-do_relay1(yes, X, V, U, RowV, W, R?) :-
-    ground(X?), ground(V?), ground(U?), ground(RowV?), ground(W?) |
-    row_member(RowV?, X?, A),
-    do_relay2(A?, X?, V?, U?, W?, R).
-
-procedure do_relay(Record?, Name?, Name?, Constant?, World?, Outcome).
-do_relay(X, V, U, P, W, R?) :-
-    ground(X?), ground(V?), ground(U?), ground(P?), ground(W?) |
+procedure do_relay1(Ans?, Record?, Name?, Name?, Constant?, Constant?, World?, Outcome).
+do_relay1(no, _, _, _, _, _, _, blocked).
+do_relay1(yes, X, V, U, P, Q, W, R?) :-
+    ground(X?), ground(V?), ground(U?), ground(P?), ground(Q?), ground(W?) |
     world_row(W?, V?, RowV),
-    do_relay0(RowV?, X?, V?, U?, P?, W?, R).
+    world_row(W?, U?, RowU),
+    relay_from(X?, V?, P?, RowV?, A1),
+    relay_into(X?, V?, U?, Q?, RowU?, A2),
+    and_ans(A1?, A2?, A),
+    do_relay2(A?, X?, U?, RowU?, W?, R).
 
-procedure do_relay0(Row?, Record?, Name?, Name?, Constant?, World?, Outcome).
-do_relay0(RowV, X, V, U, P, W, R?) :-
-    ground(RowV?), ground(X?), ground(V?), ground(U?), ground(P?), ground(W?) |
-    assembly_of(RowV?, V?, As),
-    do_relay0a(As?, P?, X?, V?, U?, RowV?, W?, R).
-
-procedure do_relay0a(Agents?, Constant?, Record?, Name?, Name?, Row?, World?, Outcome).
-do_relay0a(As, P, X, V, U, RowV, W, R?) :-
-    ground(As?), ground(P?), ground(X?), ground(V?), ground(U?),
-    ground(RowV?), ground(W?) |
-    agents_member(As?, P?, A),
-    do_relay1(A?, X?, V?, U?, RowV?, W?, R).
+procedure do_relay(Record?, Name?, Name?, Constant?, Constant?, World?, Outcome).
+do_relay(X, V, U, P, Q, W, R?) :-
+    ground(X?), ground(V?), ground(U?), ground(P?), ground(Q?), ground(W?) |
+    world_has(W?, V?, H1),
+    world_has(W?, U?, H2),
+    and_ans(H1?, H2?, H),
+    do_relay1(H?, X?, V?, U?, P?, Q?, W?, R).
 
 % ---------------------------------------------------------------------------
-% Establish (u, k+1) by p
+% Establish u.y by p
 % ---------------------------------------------------------------------------
-
-% The decided Federate of u on a motion of the given epoch, if there is one.
-procedure fed_at_epoch(Arecs?, Integer?, Motions).
-fed_at_epoch([], _, []).
-fed_at_epoch([arec(_, [M])|As], K, R?) :- ground(M?), ground(As?), integer(K?) |
-    decide # motion_epoch(M?, K1),
-    fed_at_epoch1(K1?, K?, M?, As?, R).
-fed_at_epoch([_|As], K, R?) :- otherwise, ground(As?), integer(K?) |
-    fed_at_epoch(As?, K?, R).
-
-procedure fed_at_epoch1(Integer?, Integer?, Motion?, Arecs?, Motions).
-fed_at_epoch1(K1, K, M, As, [M?|R?]) :- K1? =:= K?, ground(As?) |
-    fed_at_epoch(As?, K?, R).
-fed_at_epoch1(K1, K, _, As, R?) :- K1? =\= K?, ground(As?) |
-    fed_at_epoch(As?, K?, R).
+% p holds u and is in the electorate of the motion m on which Federate u by y
+% is decided in R(u), and u.y has no row; the row of u.y is the origin record
+% (Federate u by y, m) and a seat coloured u, at date 0, for every agent of
+% the electorate.
 
 procedure seats_for(Agents?, Name?, Row).
 seats_for([], _, []).
@@ -784,76 +866,71 @@ seats_for([Q|Qs], U, [seat(plus, Q?, col(U?), 0, 0)|R?]) :-
     ground(Q?), ground(Qs?), ground(U?) |
     seats_for(Qs?, U?, R).
 
-procedure do_est5(Ans?, Motion?, Name?, Name?, World?, Outcome).
-do_est5(yes, _, _, _, _, blocked).
-do_est5(no, M, U, F, W, ok(W1?)) :- ground(M?), ground(U?), ground(F?), ground(W?) |
-    decide # motion_electorate(M?, X),
-    do_est6(X?, M?, U?, F?, W?, W1).
-
-procedure do_est6(Agents?, Motion?, Name?, Name?, World?, World).
-do_est6(X, M, U, F, W, W1?) :- ground(X?), ground(M?), ground(U?), ground(F?), ground(W?) |
+procedure do_est5(Ans?, Motion?, Agents?, Name?, Constant?, Name?, World?, Outcome).
+do_est5(yes, _, _, _, _, _, _, blocked).
+do_est5(no, M, X, U, Y, F, W, ok(W1?)) :-
+    ground(M?), ground(X?), ground(U?), ground(Y?), ground(F?), ground(W?) |
     seats_for(X?, U?, Ss),
-    do_est7(Ss?, M?, U?, F?, W?, W1).
+    do_est6(Ss?, M?, U?, Y?, F?, W?, W1).
 
-procedure do_est7(Row?, Motion?, Name?, Name?, World?, World).
-do_est7(Ss, M, U, F, W, W1?) :- ground(Ss?), ground(M?), ground(U?), ground(F?), ground(W?) |
-    world_put(W?, F?, [origin(federate(U?), M?)|Ss?], W1).
+procedure do_est6(Row?, Motion?, Name?, Constant?, Name?, World?, World).
+do_est6(Ss, M, U, Y, F, W, W1?) :-
+    ground(Ss?), ground(M?), ground(U?), ground(Y?), ground(F?), ground(W?) |
+    world_put(W?, F?, [origin(federate(U?, Y?), M?)|Ss?], W1).
 
-procedure do_est4(Motion?, Name?, Integer?, World?, Outcome).
-do_est4(M, U, K, W, R?) :- ground(M?), ground(U?), integer(K?), ground(W?) |
-    K1 := K? + 1,
-    do_est4a(K1?, M?, U?, W?, R).
+procedure do_est4(Ans?, Motion?, Agents?, Name?, Constant?, World?, Outcome).
+do_est4(no, _, _, _, _, _, blocked).
+do_est4(yes, M, X, U, Y, W, R?) :-
+    ground(M?), ground(X?), ground(U?), ground(Y?), ground(W?) |
+    name # name_extend(U?, Y?, F),
+    do_est4a(F?, M?, X?, U?, Y?, W?, R).
 
-procedure do_est4a(Integer?, Motion?, Name?, World?, Outcome).
-do_est4a(K1, M, U, W, R?) :- integer(K1?), ground(M?), ground(U?), ground(W?) |
-    name # name_extend(U?, K1?, F),
-    do_est4b(F?, M?, U?, W?, R).
-
-procedure do_est4b(Name?, Motion?, Name?, World?, Outcome).
-do_est4b(F, M, U, W, R?) :- ground(F?), ground(M?), ground(U?), ground(W?) |
+procedure do_est4a(Name?, Motion?, Agents?, Name?, Constant?, World?, Outcome).
+do_est4a(F, M, X, U, Y, W, R?) :-
+    ground(F?), ground(M?), ground(X?), ground(U?), ground(Y?), ground(W?) |
     world_has(W?, F?, A),
-    do_est5(A?, M?, U?, F?, W?, R).
+    do_est5(A?, M?, X?, U?, Y?, F?, W?, R).
 
-procedure do_est3(Motions?, Name?, Integer?, World?, Outcome).
-do_est3([], _, _, _, blocked).
-do_est3([M|_], U, K, W, R?) :- ground(M?), ground(U?), integer(K?), ground(W?) |
-    do_est4(M?, U?, K?, W?, R).
+% The first motion on which the Federate is decided; p must be of its electorate.
+procedure do_est3(Motions?, Name?, Constant?, Constant?, World?, Outcome).
+do_est3([], _, _, _, _, blocked).
+do_est3([M|_], U, Y, P, W, R?) :-
+    ground(M?), ground(U?), ground(Y?), ground(P?), ground(W?) |
+    decide # motion_electorate(M?, X),
+    agents_member(X?, P?, A),
+    do_est4(A?, M?, X?, U?, Y?, W?, R).
 
-procedure do_est2(Ans?, Row?, Rat?, Name?, Integer?, World?, Outcome).
-do_est2(no, _, _, _, _, _, blocked).
-do_est2(yes, RowU, Th, U, K, W, R?) :-
-    ground(RowU?), ground(Th?), ground(U?), integer(K?), ground(W?) |
+procedure do_est2(Ans?, Row?, Rat?, Name?, Constant?, Constant?, World?, Outcome).
+do_est2(no, _, _, _, _, _, _, blocked).
+do_est2(yes, RowU, Th, U, Y, P, W, R?) :-
+    ground(RowU?), ground(Th?), ground(U?), ground(Y?), ground(P?), ground(W?) |
     decide # decided_acts(Th?, RowU?, Acts),
-    do_est2a(Acts?, U?, K?, W?, R).
+    do_est2a(Acts?, U?, Y?, P?, W?, R).
 
-procedure do_est2a(Arecs?, Name?, Integer?, World?, Outcome).
-do_est2a(Acts, U, K, W, R?) :- ground(Acts?), ground(U?), integer(K?), ground(W?) |
-    row # fed_acts(Acts?, U?, Fs),
-    do_est2b(Fs?, U?, K?, W?, R).
+procedure do_est2a(Arecs?, Name?, Constant?, Constant?, World?, Outcome).
+do_est2a(Acts, U, Y, P, W, R?) :-
+    ground(Acts?), ground(U?), ground(Y?), ground(P?), ground(W?) |
+    row # fed_decided(Acts?, U?, Y?, Ms),
+    do_est3(Ms?, U?, Y?, P?, W?, R).
 
-procedure do_est2b(Arecs?, Name?, Integer?, World?, Outcome).
-do_est2b(Fs, U, K, W, R?) :- ground(Fs?), ground(U?), integer(K?), ground(W?) |
-    fed_at_epoch(Fs?, K?, Ms),
-    do_est3(Ms?, U?, K?, W?, R).
-
-procedure do_est1(Row?, Rat?, Name?, Integer?, Constant?, World?, Outcome).
-do_est1(RowU, Th, U, K, P, W, R?) :-
-    ground(RowU?), ground(Th?), ground(U?), integer(K?), ground(P?), ground(W?) |
+procedure do_est1(Row?, Rat?, Name?, Constant?, Constant?, World?, Outcome).
+do_est1(RowU, Th, U, Y, P, W, R?) :-
+    ground(RowU?), ground(Th?), ground(U?), ground(Y?), ground(P?), ground(W?) |
     assembly_of(RowU?, U?, As),
-    do_est1a(As?, P?, RowU?, Th?, U?, K?, W?, R).
+    do_est1a(As?, P?, RowU?, Th?, U?, Y?, W?, R).
 
-procedure do_est1a(Agents?, Constant?, Row?, Rat?, Name?, Integer?, World?, Outcome).
-do_est1a(As, P, RowU, Th, U, K, W, R?) :-
+procedure do_est1a(Agents?, Constant?, Row?, Rat?, Name?, Constant?, World?, Outcome).
+do_est1a(As, P, RowU, Th, U, Y, W, R?) :-
     ground(As?), ground(P?), ground(RowU?), ground(Th?), ground(U?),
-    integer(K?), ground(W?) |
+    ground(Y?), ground(W?) |
     agents_member(As?, P?, A),
-    do_est2(A?, RowU?, Th?, U?, K?, W?, R).
+    do_est2(A?, RowU?, Th?, U?, Y?, P?, W?, R).
 
-procedure do_establish(Params?, Name?, Integer?, Constant?, World?, Outcome).
-do_establish(params(Th, _, _), U, K, P, W, R?) :-
-    ground(Th?), ground(U?), integer(K?), ground(P?), ground(W?) |
+procedure do_establish(Params?, Name?, Constant?, Constant?, World?, Outcome).
+do_establish(params(Th, _, _), U, Y, P, W, R?) :-
+    ground(Th?), ground(U?), ground(Y?), ground(P?), ground(W?) |
     world_row(W?, U?, RowU),
-    do_est1(RowU?, Th?, U?, K?, P?, W?, R).
+    do_est1(RowU?, Th?, U?, Y?, P?, W?, R).
 
 % ---------------------------------------------------------------------------
 % Applying a transaction, and a run of them
@@ -878,12 +955,12 @@ apply(Pr, report_at(V, F, P), W, R?) :-
 apply(Pr, will_on(P, M, V), W, R?) :-
     ground(Pr?), ground(P?), ground(M?), ground(V?), ground(W?) |
     do_will(Pr?, P?, M?, V?, W?, R).
-apply(_, relay(X, V, U, P), W, R?) :-
-    ground(X?), ground(V?), ground(U?), ground(P?), ground(W?) |
-    do_relay(X?, V?, U?, P?, W?, R).
-apply(Pr, establish(U, K, P), W, R?) :-
-    ground(Pr?), ground(U?), integer(K?), ground(P?), ground(W?) |
-    do_establish(Pr?, U?, K?, P?, W?, R).
+apply(_, relay(X, V, U, P, Q), W, R?) :-
+    ground(X?), ground(V?), ground(U?), ground(P?), ground(Q?), ground(W?) |
+    do_relay(X?, V?, U?, P?, Q?, W?, R).
+apply(Pr, establish(U, Y, P), W, R?) :-
+    ground(Pr?), ground(U?), ground(Y?), ground(P?), ground(W?) |
+    do_establish(Pr?, U?, Y?, P?, W?, R).
 
 procedure apply_at1(Outcome?, Params?, Txn?, Txns?, Integer?, RunOut).
 apply_at1(blocked, _, T, _, I, stuck(I?, T?)).
