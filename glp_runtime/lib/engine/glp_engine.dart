@@ -364,18 +364,31 @@ class GlpEngine {
 
     // Ancestor self.glp chain per modules.tex §Scope construction, anchored at
     // the hierarchy root (programs/) — the same discoverSelfChain bound as the
-    // linker and directory loads. Reused below for the goal-check environment.
+    // linker and directory loads. Used below for the goal-check environment.
     List<String> chain = const [];
+    List<DiscoveredModule>? discovered;
     if (isRealFile) {
       chain = discoverSelfChain(
           targetFile: name,
           rootDir: File(name).parent.path,
           programsDir: File(_rootSelfGlpPath).parent.absolute.path);
+      // The module as the linker discovers it: its ancestor scope with the
+      // `-expose`d modules of the directories on its chain merged in
+      // (modules.tex, "The -expose directive": an exposed module's exported
+      // procedures are in the directory's scope as if defined in its self.glp).
+      // The check below and the linker further down share this one discovery.
+      discovered = discoverSingleModule(name, rootSelfGlpPath: _rootSelfGlpPath);
     }
     TypeEnvironment? ancestorScope = scope;
-    if (ancestorScope == null && chain.isNotEmpty) {
-      ancestorScope =
-          buildAncestorScope(chain: chain, rootSelfGlpPath: _rootSelfGlpPath);
+    if (ancestorScope == null && discovered != null) {
+      // Until 2026-09-18 this was buildAncestorScope(chain) — the self.glp
+      // chain alone, without the exposes — so a module calling a procedure its
+      // directory's self.glp exposes (agent/4 of programs/tests/agent_roundtrip,
+      // send_to_net/1 of system/mad_predicates, exposed by the root) was
+      // refused as undefined by the check while the linker resolved it.
+      ancestorScope = discovered
+          .firstWhere((m) => m.filePath == name, orElse: () => discovered!.first)
+          .ancestorScope;
     }
 
     // Type check if program has procedure declarations. (Single-file/REPL
@@ -418,8 +431,7 @@ class GlpEngine {
     final BytecodeProgram program;
     rt.ModuleTerm? moduleValue;
     if (isRealFile) {
-      final modules =
-          discoverSingleModule(name, rootSelfGlpPath: _rootSelfGlpPath);
+      final modules = discovered!;
       final linked =
           linkProgram(modules,
               rootDir: File(name).parent.path, singleModulePath: name);

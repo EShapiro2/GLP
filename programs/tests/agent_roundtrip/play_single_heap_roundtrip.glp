@@ -27,12 +27,18 @@ pipe([], []).
 %% Bob's scripted user: bob's FIRST notify is the befriend inbox card; accept it
 %% (emit exactly one decision — a closed command list), then collect the rest
 %% (connected(alice)) via _output. Ground guards relax the forwarded readers.
+%% The third clause takes every other notify: the declared input is the whole
+%% of UserNotify and every alternative of it must be accepted by some clause
+%% (TGLP, input-path acceptance); it surfaces the notify and keeps waiting.
 procedure bob_user(Stream(UserNotify)?, Stream(UserCmd)).
 bob_user([befriend(Who, Req)|Ns], [decision(yes, Who?, Req?)]) :-
     ground(Who?), ground(Req?) |
     send_to_user([bob_got(befriend(Who?, Req?))]),
     collect(bob, Ns?).
 bob_user([], []).
+bob_user([N|Ns], Cmds?) :- otherwise |
+    send_to_user([got(bob, N?)]),
+    bob_user(Ns?, Cmds).
 
 %% Alice's scripted user: surface notifies (connected(bob) is the goal).
 procedure alice_user(Stream(UserNotify)?).

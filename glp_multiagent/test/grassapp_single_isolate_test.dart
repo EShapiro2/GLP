@@ -23,10 +23,14 @@ void main() {
     final reply = ReceivePort();
     SendPort? bob;
     final out = <String>[];
+    // An agent error is the test's failure, not a line among the output: until
+    // 2026-09-18 it went into `out`, which nothing inspected for it, and a load
+    // refused by the type checker showed as a 30 s timeout.
+    final errors = <String>[];
     reply.listen((m) {
       if (m is AgentReady) bob = m.commandPort;
       else if (m is AgentOutput) out.add(m.line);
-      else if (m is AgentError) out.add('[ERROR] ${m.error}');
+      else if (m is AgentError) errors.add(m.error);
     });
 
     await Isolate.spawn(
@@ -47,6 +51,10 @@ void main() {
         {Duration t = const Duration(seconds: 15)}) async {
       final end = DateTime.now().add(t);
       while (DateTime.now().isBefore(end)) {
+        if (errors.isNotEmpty) {
+          reply.close();
+          fail('Bob reported an error: ${errors.first}');
+        }
         if (out.any((l) => l.contains(s))) return true;
         await Future<void>.delayed(const Duration(milliseconds: 50));
       }
