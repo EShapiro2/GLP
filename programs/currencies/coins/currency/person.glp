@@ -54,7 +54,7 @@ person(Id, [card(respond_swap_1, ctx_respond_swap_1(From, _, _), R)|Es], As?, Sc
     ground(From?), ground(R?) |
     try_step(Id?, Es?, As, Script?, Open?, [swap_card(From?, R?)|Swaps?], Pending?, Screen).
 
-%% Any other card --- the decline of a swap --- is left.
+%% Any other card is left; the agent sends none, every card it sends being caught above.
 person(Id, [card(_, _, _)|Es], As?, Script, Open, Swaps, Pending, Screen?) :-
     otherwise |
     person(Id?, Es?, As, Script?, Open?, Swaps?, Pending?, Screen).
