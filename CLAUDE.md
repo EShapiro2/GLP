@@ -62,7 +62,6 @@ Reorganised 2026-09-16 (Udi).  `README.md` carries the directory map; what moved
 | GFWC | `/Users/udi/Grassroots/GLP-worktrees/GFWC` | `GFWC` |
 | Legal | `/Users/udi/Grassroots/GLP-worktrees/Legal` | `Legal` |
 | GLP-Spec | `/Users/udi/Grassroots/GLP-worktrees/GLP-Spec` | `GLP-Spec` |
-| IGLP, the sovereign manifest alone (Integration, 2026-09-18) | `/Users/udi/Grassroots/GLP-worktrees/IGLP-manifest` | `IGLP-manifest` |
 
 A project not listed has no worktree yet and asks Integration for one.
 
@@ -84,7 +83,7 @@ Loading a project: enter the directory path at the prompt; the project linker re
 
 | Suite | Command (from the worktree root) | Tests |
 |---|---|---|
-| Full suite (canonical) | `bash test/run_all_tests.sh` | 1979, all green, `KNOWN_RED` empty — at GLP `9a062fdb`, 2026-09-18 |
+| Full suite (canonical) | `bash test/run_all_tests.sh` | 1995, all green, `KNOWN_RED` empty — at GLP `f5aa77f9`, 2026-09-18 |
 | Dart unit tests alone | `cd glp_runtime && dart test` | glp_runtime only |
 | Flutter package alone | `cd glp_multiagent && flutter test` | glp_multiagent only |
 
