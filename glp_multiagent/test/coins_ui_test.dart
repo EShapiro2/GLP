@@ -5,8 +5,9 @@
 /// manifest derived from `coins_agent.vglp`'s display declarations: a card
 /// matched by the value of its first argument with its context destructured; a
 /// nested answer `answer(Id, xs_C(...))`; and standing cards — a persistent
-/// clause's form bound to the latest card of that clause, and sibling clauses
-/// of equal context drawn as one card, each button answering its own ReqId.
+/// clause's form bound to the latest card of that clause. The swap card is one
+/// clause, `respond_swap_1`, whose else-branch earns it a decline the manifest
+/// does not write.
 library;
 
 import 'package:flutter_test/flutter_test.dart';
@@ -44,7 +45,7 @@ void main() {
 
     test('a transient clause opens a card, its context destructured', () {
       r.handleLine(
-          'card(respond_swap_2, ctx_respond_swap_2(alice, lot(bob, 2), '
+          'card(respond_swap_1, ctx_respond_swap_1(alice, lot(bob, 2), '
           '[coin(alice, 1), coin(alice, 2)]), req(7))');
       final card = r.inbox.single;
       expect(card.panel.id, 'coins');
@@ -83,11 +84,12 @@ void main() {
 
     test('a card button grants the ground term of its own clause', () {
       r.handleLine(
-          'card(respond_swap_2, ctx_respond_swap_2(alice, lot(bob, 2), []), '
+          'card(respond_swap_1, ctx_respond_swap_1(alice, lot(bob, 2), []), '
           'req(7))');
       final card = r.inbox.single;
       r.answerCard(card, _answer(card, 'Accept'));
-      expect(sent, ['answer(req(7), xs_respond_swap_2(yes))']);
+      expect(sent, ['answer(req(7), xs_respond_swap_1(yes))']);
+      expect(r.inbox, isEmpty);
     });
   });
 
@@ -121,43 +123,36 @@ void main() {
     });
   });
 
-  group('sibling clauses of equal context are one card', () {
+  group('the swap card is one clause, an Accept and its else-branch decline',
+      () {
     const ctx = 'alice, lot(bob, 2), [coin(alice, 1)]';
 
     setUp(() {
       r.handleLine('card(respond_swap_1, ctx_respond_swap_1($ctx), req(5))');
-      r.handleLine('card(respond_swap_2, ctx_respond_swap_2($ctx), req(6))');
     });
 
-    test('one card, two asks, a button each', () {
+    test('one card, one ask, an Accept and a Decline', () {
       final card = r.inbox.single;
-      expect(card.asks.length, 2);
+      expect(card.asks.keys.toSet(), {'respond_swap_1'});
       expect(card.liveAnswers.map((a) => a.label), ['Accept', 'Decline']);
     });
 
-    test('each button answers its own ReqId', () {
+    test('the decline grants decline(Id) on the card\'s own ReqId', () {
       final card = r.inbox.single;
       r.answerCard(card, _answer(card, 'Decline'));
-      expect(sent, ['answer(req(5), xs_respond_swap_1(no))']);
+      expect(sent, ['decline(req(5))']);
       expect(r.inbox, isEmpty);
     });
 
     test('a different context is a different card', () {
       r.handleLine(
-          'card(respond_swap_2, ctx_respond_swap_2(charlie, lot(bob, 1), []), '
+          'card(respond_swap_1, ctx_respond_swap_1(charlie, lot(bob, 1), []), '
           'req(8))');
       expect(r.inbox.length, 2);
       expect(r.inbox.map((c) => c.itemKey).toSet(), {'alice', 'charlie'});
     });
 
-    test('an aborted sibling stops being offered; the card stands', () {
-      r.handleLine('closed(req(5))');
-      final card = r.inbox.single;
-      expect(card.liveAnswers.map((a) => a.label), ['Accept']);
-    });
-
-    test('closing both asks retires the card with them', () {
-      r.handleLine('closed(req(6))');
+    test('closed(Id) retires the card with its one ask', () {
       r.handleLine('closed(req(5))');
       expect(r.inbox, isEmpty);
     });

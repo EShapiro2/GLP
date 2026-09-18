@@ -122,8 +122,8 @@ agent(Id, [msg(person, Id1, unfriend(Target))|UserIn], NetIn, Outs, Host) :-
 %% User introduces P to Q.  The mutual friend vouches for the identities of
 %% both, having a friend channel to each (Section 5.2, "Introductions via a
 %% mutual friend"), so the introduction proceeds only where P and Q each have a
-%% friend output entry.  That test is a procedure over the outputs list and GLP
-%% admits no procedure in a guard (Section 6.3), so it is a body goal and
+%% friend output entry.  That test is a procedure over the outputs list and a GLP
+%% guard admits no procedure with a body (Section 6.3), so it is a body goal and
 %% introduce_step/9 dispatches on its two answers; the setup channel is minted
 %% where the introduction proceeds.
 agent(Id, [msg(person, Id1, introduce(P, Q))|UserIn], NetIn, Outs, Host) :-

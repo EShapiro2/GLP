@@ -200,10 +200,10 @@ void main() {
             .map((k, v) => MapEntry(k, formatTerm(v))),
         {'bob': '2'});
 
-    // --- The card: bob proposes the reverse swap, and both sibling clauses
-    // are one card with a button each, each answering its own ReqId. ---------
+    // --- The card: bob proposes the reverse swap, and the responder's one
+    // clause is one card, an Accept and the decline its else-branch earns. ---
     final card = r.inbox.single;
-    expect(card.asks.keys.toSet(), {'respond_swap_1', 'respond_swap_2'});
+    expect(card.asks.keys.toSet(), {'respond_swap_1'});
     expect(card.itemKey, 'bob');
     expect(formatTerm(card.fields['Want']!), 'lot(bob, 2)');
     expect(find.widgetWithText(ElevatedButton, 'Accept'), findsOneWidget);

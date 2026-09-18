@@ -260,8 +260,8 @@ ScreenContent ::= holdings(Stream(Lot))
                 ; lacking(Constant, Integer)
                 ; no_conversation(Constant).
 CReqId ::= req(Integer).
-Answer ::= xs_respond_swap_1(Constant) ; xs_respond_swap_2(Constant) ; xs_agent_1(Integer) ; xs_agent_2(Constant, Constant, Integer, Constant, Integer) ; xs_agent_3(Constant, Integer) ; xs_agent_4(Constant, Constant).
-Context ::= ctx_respond_swap_1(Constant, Lot, Stream(Coin)) ; ctx_respond_swap_2(Constant, Lot, Stream(Coin)) ; ctx_agent_1 ; ctx_agent_2 ; ctx_agent_3 ; ctx_agent_4.
+Answer ::= xs_respond_swap_1(Constant) ; xs_agent_1(Integer) ; xs_agent_2(Constant, Constant, Integer, Constant, Integer) ; xs_agent_3(Constant, Integer) ; xs_agent_4(Constant, Constant).
+Context ::= ctx_respond_swap_1(Constant, Lot, Stream(Coin)) ; ctx_agent_1 ; ctx_agent_2 ; ctx_agent_3 ; ctx_agent_4.
 UserAnswer ::= answer(CReqId, Answer) ; decline(CReqId).
 Event ::= card(Constant, Context, CReqId)
         ; closed(CReqId)
@@ -340,8 +340,8 @@ SvScreenContent ::= holdings(Stream(SvLot))
                   ; fiat_received(Constant, Integer)
                   ; no_conversation(Constant).
 SvReqId ::= req(Integer).
-SvAnswer ::= xs_respond_swap_1(Constant) ; xs_respond_swap_2(Constant) ; xs_respond_transfer_1(Constant) ; xs_respond_transfer_2(Constant) ; xs_agent_1(Constant, Integer, Integer) ; xs_agent_2(Constant, Constant, Constant, Integer, Integer, Constant, Integer, Integer) ; xs_agent_3(Constant, Constant, Integer, Integer) ; xs_agent_4(Constant, Constant, Integer, Constant, Integer) ; xs_agent_5(Constant, Constant, Constant, Integer, Integer) ; xs_agent_6(Constant, Constant, Constant, Integer, Integer) ; xs_agent_7(Constant, Constant, Constant, Integer, Integer).
-SvContext ::= ctx_respond_swap_1(Constant, SvLot, Stream(SvBond)) ; ctx_respond_swap_2(Constant, SvLot, Stream(SvBond)) ; ctx_respond_transfer_1(SvKind, Constant, Stream(SvBond)) ; ctx_respond_transfer_2(SvKind, Constant, Stream(SvBond)) ; ctx_agent_1 ; ctx_agent_2 ; ctx_agent_3 ; ctx_agent_4 ; ctx_agent_5 ; ctx_agent_6 ; ctx_agent_7.
+SvAnswer ::= xs_respond_swap_1(Constant) ; xs_respond_transfer_1(Constant) ; xs_agent_1(Constant, Integer, Integer) ; xs_agent_2(Constant, Constant, Constant, Integer, Integer, Constant, Integer, Integer) ; xs_agent_3(Constant, Constant, Integer, Integer) ; xs_agent_4(Constant, Constant, Integer, Constant, Integer) ; xs_agent_5(Constant, Constant, Constant, Integer, Integer) ; xs_agent_6(Constant, Constant, Constant, Integer, Integer) ; xs_agent_7(Constant, Constant, Constant, Integer, Integer).
+SvContext ::= ctx_respond_swap_1(Constant, SvLot, Stream(SvBond)) ; ctx_respond_transfer_1(SvKind, Constant, Stream(SvBond)) ; ctx_agent_1 ; ctx_agent_2 ; ctx_agent_3 ; ctx_agent_4 ; ctx_agent_5 ; ctx_agent_6 ; ctx_agent_7.
 SvUserAnswer ::= answer(SvReqId, SvAnswer) ; decline(SvReqId).
 SvEvent ::= card(Constant, SvContext, SvReqId)
           ; closed(SvReqId)
