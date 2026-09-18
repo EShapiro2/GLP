@@ -19,9 +19,10 @@
 %% RESPONDERS. An arriving offer spawns a responder goal — respond_coldcall,
 %% respond_intro — one goal per offer, so offers pend concurrently and are
 %% answered in any order.  The responder carries the offer and the escrowed
-%% writer or channel; its volition-guarded sibling clauses (accept/decline)
-%% are the person's choice, and the chosen clause acts — injecting its answer
-%% or result, through a merge, into the agent's UserIn.
+%% writer or channel; its one volition-guarded clause is the acceptance, its
+%% else-branch the refusal, taken when the person wills no answer, and the
+%% branch taken acts — injecting its answer or result, through a merge, into
+%% the agent's UserIn.
 %%
 %% Correspondence to the implementation (clause for clause):
 %%   - a *(X1..Xk) Request clause  ->  a UserCmd constructor over X1..Xk, a mediator
@@ -29,8 +30,8 @@
 %%     connect/1, unfriend/1, send/2, introduce/2;
 %%   - a responder goal, spawned per arriving offer  ->  a pending-table entry
 %%     req(N) in the mediator, rendered as an inbox card;
-%%   - a responder's volition-guarded clause  ->  the UserCmds decision/3
-%%     (cold call) and accept_intro/2, reject_intro/2 (introduction) routing the
+%%   - a responder's then-branch and else-branch  ->  the UserCmds decision/3
+%%     (cold call, yes and no) and accept_intro/2, reject_intro/2 (introduction) routing the
 %%     escrowed writer or channel back to the agent; the agent's decision clause
 %%     below, and respond_intro's accept body, match the deployed clauses modulo
 %%     the msg(person, Id, ...) wrapper and the channel(...) escrow packing.
@@ -96,31 +97,32 @@ IntroOffer    ::= offer(Constant).
 
 procedure respond_coldcall(ColdCallOffer?, Response, UserInStream).
 
-%% Accept a friend offer.
+%% Accept a friend offer.  The else-branch is the refusal, taken when the
+%% person wills no answer: the caller is answered no, which bind_response
+%% acts on.
 *(Answer=yes, From?)
 respond_coldcall(offer(From), Resp?, [decision(Answer?, From?, response(Resp))]) :-
-    ground(From?) | true.
-
-%% Decline.
-*(Answer=no, From?)
-respond_coldcall(offer(From), Resp?, [decision(Answer?, From?, response(Resp))]) :-
-    ground(From?) | true.
+    ground(From?) | true
+ *(no) true.
 
 procedure respond_intro(Constant?, IntroOffer?, IntroChannel?, UserInStream).
 
 %% Accept an introduction: ack on the setup channel, await the peer, inject
-%% the result.
+%% the result.  The else-branch is the refusal, taken when the person wills
+%% no answer: nack on the setup channel, which closes it, and nothing
+%% injected.  The two branches share the head and the guard, so the ack is
+%% sent in the then-branch and the nack is built by decline_intro.
 *(Answer=yes, Other?)
 respond_intro(Id, offer(Other), Ch, Ans?) :-
-    ground(Id?), ground(Other?),
-    send(ack(Id?), Ch?, Ch1) |
+    ground(Id?), ground(Other?) |
+    send(ack(Id?), Ch?, Ch1),
     intro_await_peer(Other?, Ch1?, Result),
-    inject_intro_result(Result?, [], Ans).
+    inject_intro_result(Result?, [], Ans)
+ *(no) decline_intro(Ch?, Ans).
 
-%% Reject: nack on the setup channel, closing it.
-*(Answer=no, Other?)
-respond_intro(_, offer(Other), ch(_ChIn, [nack|[]]), []) :-
-    ground(Other?) | true.
+%% The refusal's effect, as the head of a refusal clause built it.
+procedure decline_intro(IntroChannel?, UserInStream).
+decline_intro(ch(_, [nack|[]]), []).
 
 %% =============================================================================
 %% AGENT/4
