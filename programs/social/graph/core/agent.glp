@@ -1048,7 +1048,7 @@ warm_call_step(false, Id, _, _, UserIn, NetIn, Outs, Host) :-
 %% anchor_friend(Parts, Outs, Outs1, F): the friend whose identity the name's
 %% anchor is, the outputs passed through.
 procedure anchor_friend(Constant?, OutputsList?, OutputsList, AnchorFriend).
-anchor_friend(Anchor, [friend_output(K, Out?) | Rest], [friend_output(K?, Out) | Rest1?], found(K?)) :-
+anchor_friend(Anchor, [friend_output(K, Out?) | Rest], [friend_output(K?, Out) | Rest?], found(K?)) :-
     Anchor? =?= K? | true.
 anchor_friend(Anchor, [E | Rest], [E? | Rest1?], F?) :-
     otherwise | anchor_friend(Anchor?, Rest?, Rest1, F).
