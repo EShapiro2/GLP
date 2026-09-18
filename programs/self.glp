@@ -50,6 +50,13 @@ Key ::= String.
 SignedTerm ::= String.
 Hash ::= String.
 
+% What signature/2 assigns (GLP-Spec appendix-guards, "Identity and
+% signature"): signed(Key, Hash, Term) where its argument is a signed term whose
+% signature verifies --- the signer's key, the identity of the module under
+% which the signature was made, and the term signed --- and unsigned otherwise.
+% The caller discriminates by matching.
+Signature ::= signed(Key, Hash, _) ; unsigned.
+
 % The global name of a link end, which the runtime reports when it holds a link
 % and authorise_link/2 answers (GLP-Spec appendix-guards, "Held links"): the
 % reader or writer end anchored at the agent named by Key, at an index.  Root
@@ -219,7 +226,7 @@ procedure '_place_remove'(_?).
 % Signature (GLP-Spec appendix-guards, the Signature kernel rows)
 procedure '_self_key'(Key).
 procedure '_sign'(_?, Key?, SignedTerm).
-procedure '_signed'(_?, Key, Hash, _).
+procedure '_signature'(_?, Signature).
 
 % Modules as values
 procedure '_self_module'(Module).
@@ -628,7 +635,7 @@ procedure load_file(String?, Content).
 load_file(N, C?) :- ground(N?) | '_load_file'(N?, C).
 
 % =============================================================================
-% IDENTITY, SIGNATURE AND HELD LINKS (self_key/1, sign/3, signed/4, signed/2,
+% IDENTITY, SIGNATURE AND HELD LINKS (self_key/1, sign/3, signature/2,
 % authorise_link/2)
 % =============================================================================
 % The wrappers of GLP-Spec appendix-guards, "Identity and signature", over the
@@ -650,16 +657,14 @@ self_key(K?) :- '_self_key'(K).
 procedure sign(_?, Key?, SignedTerm).
 sign(T, K, S?) :- ground(T?), known(K?) | '_sign'(T?, K?, S).
 
-%% signed/4 - take a signed term apart, assigning the signer's key, the
-%% identity of the module under which the signature was made, and the term
-%% signed; holds only where Signed is a signed term whose signature verifies.
-procedure signed(_?, Key, Hash, _).
-signed(S, K?, H?, T?) :- known(S?) | '_signed'(S?, K, H, T).
-
-%% signed/2 - the signer alone, for a reader that needs to know who signed and
-%% not what.
-procedure signed(_?, Key).
-signed(S, K?) :- known(S?) | '_signed'(S?, K, _, _).
+%% signature/2 - signature(Signed, Signature) takes a signed term apart and
+%% reports what it finds: signed(Key, Hash, Term) where Signed is a signed term
+%% whose signature verifies, giving the signer's key, the identity of the module
+%% under which the signature was made, and the term signed; unsigned otherwise.
+%% It holds on a forgery, so a caller can refuse one and carry on.  Replaces
+%% signed/4 and signed/2 (GLP-Spec appendix-guards, GLP-ICLP-2026 6d38a0f).
+procedure signature(_?, Signature).
+signature(S, R?) :- known(S?) | '_signature'(S?, R).
 
 %% authorise_link/2 - answer a pending_link(Link, Sender) report (Definition
 %% authorise_link Predicate).  L is the reported link's global name in its
