@@ -396,3 +396,87 @@ play_unfriend_absent :-
     agent # agent(alice, [msg(person, alice, unfriend(carol))], [],
                   [friend_output(bob, _), user_output(AliceOut)]),
     send_to_user(AliceOut?).
+
+%% =============================================================================
+%% INTRODUCTION — the mutual friend's two friend channels (paper Section 5.2)
+%% =============================================================================
+
+%% report_intro(Tag, Stream): what reached a friend's channel, reported without
+%% the setup channel --- send_to_user prints a ground term and the channel the
+%% introducer mints is unbound at this end.
+procedure report_intro(Constant?, FriendStream?).
+report_intro(Tag, [msg(From, To, intro(Other, _)) | _]) :-
+    send_to_user([intro_sent(Tag?, From?, To?, Other?)]).
+report_intro(Tag, [_ | _]) :-
+    otherwise | send_to_user([other_msg(Tag?)]).
+report_intro(Tag, []) :-
+    send_to_user([no_intro(Tag?)]).
+
+%% Both introduced parties are friends of alice: the introduction goes out on
+%% both friend channels, each tagged with the other's identity.
+exported procedure play_introduce_both.
+play_introduce_both :-
+    agent # agent(alice, [msg(person, alice, introduce(bob, carol))], [],
+                  [friend_output(bob, ToBob), friend_output(carol, ToCarol),
+                   user_output(AliceOut)]),
+    report_intro(to_bob, ToBob?),
+    report_intro(to_carol, ToCarol?),
+    send_to_user(AliceOut?).
+
+%% Only bob is a friend: "the mutual friend vouches for the identities of both,
+%% having a friend channel to each", so no introduction is made and nothing is
+%% written on bob's channel.
+exported procedure play_introduce_one.
+play_introduce_one :-
+    agent # agent(alice, [msg(person, alice, introduce(bob, carol))], [],
+                  [friend_output(bob, ToBob), user_output(AliceOut)]),
+    report_intro(to_bob, ToBob?),
+    send_to_user(AliceOut?).
+
+%% Only carol is a friend: the same, and nothing is written on carol's channel.
+exported procedure play_introduce_other.
+play_introduce_other :-
+    agent # agent(alice, [msg(person, alice, introduce(bob, carol))], [],
+                  [friend_output(carol, ToCarol), user_output(AliceOut)]),
+    report_intro(to_carol, ToCarol?),
+    send_to_user(AliceOut?).
+
+%% Neither is a friend: no introduction, and dave's channel is untouched.
+exported procedure play_introduce_neither.
+play_introduce_neither :-
+    agent # agent(alice, [msg(person, alice, introduce(bob, carol))], [],
+                  [friend_output(dave, ToDave), user_output(AliceOut)]),
+    report_intro(to_dave, ToDave?),
+    send_to_user(AliceOut?).
+
+%% A friend asks to be introduced to the anchor of a held name and the person
+%% consents (Section 5.2, the warm call's introduction): the requester and the
+%% anchor are both alice's friends, so the introduction goes out on both.
+exported procedure play_request_intro_both.
+play_request_intro_both :-
+    agent # agent(alice, [msg(person, alice, allow_intro(bob, carol))],
+                  [msg(bob, alice, request_intro(carol))],
+                  [friend_output(bob, ToBob), friend_output(carol, ToCarol),
+                   user_output(AliceOut)]),
+    report_intro(req_to_bob, ToBob?),
+    report_intro(req_to_carol, ToCarol?),
+    send_to_user(AliceOut?).
+
+%% The requester is not alice's friend: alice has no friend channel to him, so
+%% the request is not taken up and the consent introduces nobody.
+exported procedure play_request_intro_stranger.
+play_request_intro_stranger :-
+    agent # agent(alice, [msg(person, alice, allow_intro(bob, carol))],
+                  [msg(bob, alice, request_intro(carol))],
+                  [friend_output(carol, ToCarol), user_output(AliceOut)]),
+    report_intro(req_to_carol, ToCarol?),
+    send_to_user(AliceOut?).
+
+%% The anchor is not alice's friend: the same, from the other side.
+exported procedure play_request_intro_no_anchor.
+play_request_intro_no_anchor :-
+    agent # agent(alice, [msg(person, alice, allow_intro(bob, carol))],
+                  [msg(bob, alice, request_intro(carol))],
+                  [friend_output(bob, ToBob), user_output(AliceOut)]),
+    report_intro(req_to_bob, ToBob?),
+    send_to_user(AliceOut?).

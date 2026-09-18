@@ -1662,6 +1662,41 @@ HEREDOC
 2>&1)
 check "SG unfriend_absent no-op succeeds" "succeeds\|suspended" "$g_uf_abs"
 
+# Introduction via a mutual friend (paper Section 5.2): "The mutual friend
+# vouches for the identities of both, having a friend channel to each", so the
+# introduction proceeds only where both introduced parties have a friend output
+# entry.  The test is a procedure over the outputs list and GLP admits no
+# procedure in a guard (Section 6.3), so it is a body goal and the clause
+# dispatches on its answers.  Both sites are covered: the person-posted
+# introduce/2, and request_intro over the friend channel, which until
+# 2026-09-18 looked up the anchor and not the requester.  Where either party is
+# not a friend nothing is done beyond not introducing --- the paper says no
+# more, so the code decides no more.
+echo "--- Introduction: both parties must be friends (play_introduce_*) ---"
+
+g_intro=$("$REPL_RUN" <<HEREDOC
+$SGSIM
+play_introduce_both.
+play_introduce_one.
+play_introduce_other.
+play_introduce_neither.
+play_request_intro_both.
+play_request_intro_stranger.
+play_request_intro_no_anchor.
+:quit
+HEREDOC
+2>&1)
+check "SG introduce: both friends --- the intro reaches P" "intro_sent(to_bob, alice, bob, carol)" "$g_intro"
+check "SG introduce: both friends --- the intro reaches Q" "intro_sent(to_carol, alice, carol, bob)" "$g_intro"
+check "SG introduce: only P a friend --- nothing on P's channel" "no_intro(to_bob)" "$g_intro"
+check "SG introduce: only Q a friend --- nothing on Q's channel" "no_intro(to_carol)" "$g_intro"
+check "SG introduce: neither a friend --- nothing on any channel" "no_intro(to_dave)" "$g_intro"
+check "SG request_intro: requester and anchor both friends --- introduced to the requester" "intro_sent(req_to_bob, alice, bob, carol)" "$g_intro"
+check "SG request_intro: requester and anchor both friends --- introduced to the anchor" "intro_sent(req_to_carol, alice, carol, bob)" "$g_intro"
+check "SG request_intro: the requester is no friend --- not introduced" "no_intro(req_to_carol)" "$g_intro"
+check "SG request_intro: the anchor is no friend --- not introduced" "no_intro(req_to_bob)" "$g_intro"
+check_not "SG introduce: no failed play" "→ failed" "$g_intro"
+
 echo ""
 
 # Section H (old-gen CSSN Modules) retired in A5 — CSSN v2 coverage is Section K.
