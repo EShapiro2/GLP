@@ -76,30 +76,64 @@ String formatTerm(GTerm t) {
   }
 }
 
-/// The scalars of a term, in order — a compound value presented as its parts
-/// rather than as its term.
+/// The default display of a value — vGLP (`shapiro2026volition`, Section
+/// 6.3, the ruling of 2026-09-18): "A value of a compound type has no widget
+/// of its own: under default display it renders as its arguments, in order,
+/// each by the widget of its type, and a list as one such group per element,
+/// a term never being shown to the person."
 ///
-/// A card's context may carry a value that is not a scalar: the sovereign
-/// mini-app's swap card carries a `Lot`, `lot(Issuer, Denomination, Maturity,
-/// K)`, and its transfer card a `Stream(Bond)`. The app's construct family has
-/// the text, string, number, date and peer widgets and no widget of a lot or
-/// of a list of bonds, and vGLP's display declarations declare no `context(Y,
-/// W)` item, so the default display determines none. The mediator therefore
-/// flattens, as `shapiro2026volition` Section 7 already records for the forms
-/// — it "flattens the agent's offer back to scalars for the card" (IGLP,
-/// 2026-09-18): a lot is presented as its four scalars, and a list of lots or
-/// bonds as one such group per element. No widget is added to the family and
-/// no declaration changes.
+/// This is the rule's one implementation, and every place a value reaches the
+/// screen without a widget of its own goes through it: a card's context
+/// values, the panel's list, a declared view's rows and keys, a template's
+/// substitutions, a bubble's text. The construct family has the text, string,
+/// number, date and peer widgets and no widget of a lot, a coin or a list of
+/// bonds, and a display declaration declares no `context(Y, W)` item for
+/// them, so the default display is what shows them. No widget is added to
+/// the family and no declaration changes.
 ///
-/// [scalarGroups] is the grouping: one group per element of a list, one group
-/// for anything else. [scalarsOf] is the group — the leaves of the term in
-/// order, the functors dropped.
-List<List<String>> scalarGroups(GTerm t) => switch (t) {
-      GList(:final items) => [for (final i in items) ...scalarGroups(i)],
-      _ => [scalarsOf(t)],
-    };
+/// [scalarGroups] is the rendering as rows. A scalar is one cell; a compound
+/// is its arguments in order, each rendered in turn, so a compound of scalars
+/// is one row; a list ends the row before it and is one row per element. So
+/// `lot(alice, usd, 0, 2)` is one row of four, `[bond(bob, usd, 30, 7),
+/// bond(bob, usd, 30, 8)]` two rows of four, and `menu(bob, [lot(alice, 3),
+/// lot(carol, 2)])` the row `bob` and then a row per lot. No functor appears,
+/// and an empty list contributes no row.
+List<List<String>> scalarGroups(GTerm t) {
+  final rows = <List<String>>[];
+  var row = <String>[];
+  void flush() {
+    if (row.isNotEmpty) {
+      rows.add(row);
+      row = <String>[];
+    }
+  }
 
-/// The scalar leaves of a term, in order.
+  void walk(GTerm t) {
+    switch (t) {
+      case GAtom(:final name):
+        row.add(name);
+      case GInt(:final value):
+        row.add('$value');
+      case GString(:final value):
+        row.add(value);
+      case GStruct(:final args):
+        args.forEach(walk);
+      case GList(:final items):
+        flush();
+        for (final i in items) {
+          walk(i);
+          flush();
+        }
+    }
+  }
+
+  walk(t);
+  flush();
+  return rows;
+}
+
+/// The scalar leaves of a term, in order — the functors dropped and the
+/// rows of [scalarGroups] run together.
 List<String> scalarsOf(GTerm t) => switch (t) {
       GAtom(:final name) => [name],
       GInt(:final value) => ['$value'],
@@ -107,6 +141,19 @@ List<String> scalarsOf(GTerm t) => switch (t) {
       GStruct(:final args) => [for (final a in args) ...scalarsOf(a)],
       GList(:final items) => [for (final i in items) ...scalarsOf(i)],
     };
+
+/// The default display of a value where the screen has one line of text for
+/// it — a template's `{name}`, a tile's title or trailing figure: the rows of
+/// [scalarGroups], the cells of a row a space apart and the rows a comma
+/// apart. A scalar is itself; a `String` is its text, not the quoted literal
+/// [formatTerm] writes for the boundary.
+String displayText(GTerm t) =>
+    scalarGroups(t).map((row) => row.join(' ')).join(', ');
+
+/// The default display of a stored key — a value the runtime keyed a row by,
+/// as [formatTerm] wrote it. The row's identity stays the formatted term;
+/// what the person reads is [displayText] of the value it names.
+String displayKey(String key) => displayText(tryParseTerm(key) ?? GAtom(key));
 
 /// Parse one ground term from [s], requiring the whole string to be consumed.
 ///
