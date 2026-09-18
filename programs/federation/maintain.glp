@@ -1,0 +1,501 @@
+% ---------------------------------------------------------------------------
+% The rules of Maintain: conditions (a) to (g) of Maintain in Definition
+% "Grassroots Federation Machine Transactions", in their order.
+%
+% The first condition that holds decides, ties among agents broken by the order
+% on agents and among communities by the order on names.  The answer is the
+% seat the rule adds or removes; the transaction that calls it writes the seat
+% record.  (c) to (g) are the two addition rules and the three removal rules of
+% the greedy fair protocol, additions first; (a) and (b) unseat an agent who
+% has left the community and a seat whose colour has left it.
+% ---------------------------------------------------------------------------
+
+imported procedure name#name_eq(Name?, Name?, Ans).
+imported procedure name#name_gt(Name?, Name?, Ans).
+imported procedure rat#rat_cmp(Rat?, Rat?, Ord).
+imported procedure rat#rat_floor(Rat?, Integer).
+imported procedure fair#ratio_of(FCtx?, Node?, Rat).
+imported procedure fair#share_u(FCtx?, Name?, Rat).
+imported procedure fair#coloured_seats(Seats?, Colour?, Seats).
+imported procedure fair#seat_agents(Seats?, Agents).
+imported procedure fair#ctx_children(FCtx?, Names).
+imported procedure fair#ctx_members(FCtx?, Agents).
+imported procedure fair#ctx_assembly(FCtx?, Seats).
+imported procedure fair#ctx_date(FCtx?, Integer).
+imported procedure fair#ctx_size(FCtx?, Integer).
+
+% ---------------------------------------------------------------------------
+% Choosing under the tie-breaks
+% ---------------------------------------------------------------------------
+
+% The least agent under the order on agents.
+procedure least_agent(Constant?, Agents?, Constant).
+least_agent(P, [], P?).
+least_agent(P, [Q|Qs], R?) :- ground(P?), ground(Q?), ground(Qs?) |
+    least_agent(Q?, Qs?, S),
+    least_agent1(P?, S?, R).
+
+procedure least_agent1(Constant?, Constant?, Constant).
+least_agent1(P, Q, P?) :- P? @< Q? | true.
+least_agent1(P, Q, Q?) :- otherwise, ground(P?) | true.
+
+% The least name under the order on names: the one no other is not greater
+% than.
+procedure least_name(Name?, Names?, Name).
+least_name(N, [], N?).
+least_name(N, [M|Ms], R?) :- ground(N?), ground(M?), ground(Ms?) |
+    least_name(M?, Ms?, S),
+    least_name1(N?, S?, R).
+
+procedure least_name1(Name?, Name?, Name).
+least_name1(N, M, R?) :- ground(N?), ground(M?) |
+    name # name_gt(M?, N?, A),
+    least_name2(A?, N?, M?, R).
+
+procedure least_name2(Ans?, Name?, Name?, Name).
+least_name2(yes, N, _, N?).
+least_name2(no, _, M, M?).
+
+% The agent of least ratio, ties by the order on agents; and of greatest.
+procedure least_ratio(FCtx?, Constant?, Agents?, Constant).
+least_ratio(_, P, [], P?).
+least_ratio(C, P, [Q|Qs], R?) :-
+    ground(C?), ground(P?), ground(Q?), ground(Qs?) |
+    least_ratio(C?, Q?, Qs?, S),
+    pick_ratio(lt, C?, P?, S?, R).
+
+procedure greatest_ratio(FCtx?, Constant?, Agents?, Constant).
+greatest_ratio(_, P, [], P?).
+greatest_ratio(C, P, [Q|Qs], R?) :-
+    ground(C?), ground(P?), ground(Q?), ground(Qs?) |
+    greatest_ratio(C?, Q?, Qs?, S),
+    pick_ratio(gt, C?, P?, S?, R).
+
+% pick_ratio(Want, C, P, Q, R): P if its ratio stands in the relation Want to
+% Q's, Q if the other way, and the lesser agent where they are equal.
+procedure pick_ratio(Ord?, FCtx?, Constant?, Constant?, Constant).
+pick_ratio(W, C, P, Q, R?) :- ground(W?), ground(C?), ground(P?), ground(Q?) |
+    fair # ratio_of(C?, ag(P?), RP),
+    fair # ratio_of(C?, ag(Q?), RQ),
+    pick_ratio1(W?, RP?, RQ?, P?, Q?, R).
+
+procedure pick_ratio1(Ord?, Rat?, Rat?, Constant?, Constant?, Constant).
+pick_ratio1(W, RP, RQ, P, Q, R?) :-
+    ground(W?), ground(RP?), ground(RQ?), ground(P?), ground(Q?) |
+    rat # rat_cmp(RP?, RQ?, O),
+    pick_ratio2(O?, W?, P?, Q?, R).
+
+procedure pick_ratio2(Ord?, Ord?, Constant?, Constant?, Constant).
+pick_ratio2(eq, _, P, Q, R?) :- ground(P?), ground(Q?) | least_agent1(P?, Q?, R).
+pick_ratio2(O, W, P, Q, P?) :- O? =?= W?, ground(Q?) | true.
+pick_ratio2(O, W, P, Q, Q?) :- otherwise, ground(O?), ground(W?), ground(P?) | true.
+
+% ---------------------------------------------------------------------------
+% Small set operations
+% ---------------------------------------------------------------------------
+
+procedure agents_diff(Agents?, Agents?, Agents).
+agents_diff([], _, []).
+agents_diff([P|Ps], B, R?) :- ground(P?), ground(Ps?), ground(B?) |
+    agents_member(B?, P?, A),
+    agents_diff1(A?, P?, Ps?, B?, R).
+
+procedure agents_diff1(Ans?, Constant?, Agents?, Agents?, Agents).
+agents_diff1(yes, _, Ps, B, R?) :- ground(Ps?), ground(B?) | agents_diff(Ps?, B?, R).
+agents_diff1(no, P, Ps, B, [P?|R?]) :- ground(Ps?), ground(B?) |
+    agents_diff(Ps?, B?, R).
+
+procedure seats_len(Seats?, Integer).
+seats_len([], 0).
+seats_len([_|Ss], N?) :- seats_len(Ss?, M), N := M? + 1.
+
+procedure seat_of(Seats?, Constant?, Seat).
+seat_of([], P, st(P?, uncoloured, 0)).
+seat_of([st(Q, Y, D)|_], P, st(Q?, Y?, D?)) :- Q? =?= P? | true.
+seat_of([_|Ss], P, R?) :- otherwise, ground(Ss?), ground(P?) | seat_of(Ss?, P?, R).
+
+procedure imin(Integer?, Integer?, Integer).
+imin(X, Y, X?) :- X? =< Y? | true.
+imin(X, Y, Y?) :- X? > Y? | true.
+
+% ---------------------------------------------------------------------------
+% (a) a seat held by an agent who is not a member, the community having members
+% ---------------------------------------------------------------------------
+
+procedure strangers(Seats?, Agents?, Agents).
+strangers([], _, []).
+strangers([st(Q, _, _)|Ss], Mem, R?) :- ground(Q?), ground(Ss?), ground(Mem?) |
+    agents_member(Mem?, Q?, A),
+    strangers1(A?, Q?, Ss?, Mem?, R).
+
+procedure strangers1(Ans?, Constant?, Seats?, Agents?, Agents).
+strangers1(yes, _, Ss, Mem, R?) :- ground(Ss?), ground(Mem?) | strangers(Ss?, Mem?, R).
+strangers1(no, Q, Ss, Mem, [Q?|R?]) :- ground(Ss?), ground(Mem?) |
+    strangers(Ss?, Mem?, R).
+
+procedure rule_a(FCtx?, MSeat).
+rule_a(C, R?) :- ground(C?) |
+    fair # ctx_assembly(C?, Asm),
+    fair # ctx_members(C?, Mem),
+    rule_a1(Asm?, Mem?, R).
+
+procedure rule_a1(Seats?, Agents?, MSeat).
+rule_a1(_, [], nochange).
+rule_a1(Asm, [M|Ms], R?) :- ground(Asm?), ground(M?), ground(Ms?) |
+    strangers(Asm?, [M?|Ms?], Qs),
+    rule_a2(Qs?, Asm?, R).
+
+procedure rule_a2(Agents?, Seats?, MSeat).
+rule_a2([], _, nochange).
+rule_a2([Q|Qs], Asm, R?) :- ground(Q?), ground(Qs?), ground(Asm?) |
+    least_agent(Q?, Qs?, P),
+    drop_seat(P?, Asm?, R).
+
+procedure drop_seat(Constant?, Seats?, MSeat).
+drop_seat(P, Asm, R?) :- ground(P?), ground(Asm?) |
+    seat_of(Asm?, P?, S),
+    drop_seat1(S?, R).
+
+procedure drop_seat1(Seat?, MSeat).
+drop_seat1(st(Q, Y, D), mseat(minus, Q?, Y?, D?)).
+
+% ---------------------------------------------------------------------------
+% (b) a seat coloured by a community that is not a child
+% ---------------------------------------------------------------------------
+
+procedure stray_colours(Seats?, Names?, Names).
+stray_colours([], _, []).
+stray_colours([st(_, col(Y), _)|Ss], Ch, R?) :- ground(Y?), ground(Ss?), ground(Ch?) |
+    names_member_x(Ch?, Y?, A),
+    stray_colours1(A?, Y?, Ss?, Ch?, R).
+stray_colours([st(_, uncoloured, _)|Ss], Ch, R?) :- ground(Ss?), ground(Ch?) |
+    stray_colours(Ss?, Ch?, R).
+
+procedure stray_colours1(Ans?, Name?, Seats?, Names?, Names).
+stray_colours1(yes, _, Ss, Ch, R?) :- ground(Ss?), ground(Ch?) |
+    stray_colours(Ss?, Ch?, R).
+stray_colours1(no, Y, Ss, Ch, [Y?|R?]) :- ground(Ss?), ground(Ch?) |
+    stray_colours(Ss?, Ch?, R).
+
+procedure names_member_x(Names?, Name?, Ans).
+names_member_x([], _, no).
+names_member_x([A|As], B, R?) :- ground(A?), ground(As?), ground(B?) |
+    name # name_eq(A?, B?, Y),
+    names_member_x1(Y?, As?, B?, R).
+
+procedure names_member_x1(Ans?, Names?, Name?, Ans).
+names_member_x1(yes, _, _, yes).
+names_member_x1(no, As, B, R?) :- ground(As?), ground(B?) | names_member_x(As?, B?, R).
+
+procedure rule_b(FCtx?, MSeat).
+rule_b(C, R?) :- ground(C?) |
+    fair # ctx_assembly(C?, Asm),
+    fair # ctx_children(C?, Ch),
+    rule_b1(Asm?, Ch?, R).
+
+procedure rule_b1(Seats?, Names?, MSeat).
+rule_b1(Asm, Ch, R?) :- ground(Asm?), ground(Ch?) |
+    stray_colours(Asm?, Ch?, Ys),
+    rule_b2(Ys?, Asm?, R).
+
+procedure rule_b2(Names?, Seats?, MSeat).
+rule_b2([], _, nochange).
+rule_b2([Y|Ys], Asm, R?) :- ground(Y?), ground(Ys?), ground(Asm?) |
+    least_name(Y?, Ys?, U),
+    rule_b3(U?, Asm?, R).
+
+procedure rule_b3(Name?, Seats?, MSeat).
+rule_b3(U, Asm, R?) :- ground(U?), ground(Asm?) |
+    fair # coloured_seats(Asm?, col(U?), Ss),
+    rule_b4(Ss?, Asm?, R).
+
+procedure rule_b4(Seats?, Seats?, MSeat).
+rule_b4([], _, nochange).
+rule_b4([S|Ss], Asm, R?) :- ground(S?), ground(Ss?), ground(Asm?) |
+    fair # seat_agents([S?|Ss?], Qs),
+    rule_b5(Qs?, Asm?, R).
+
+procedure rule_b5(Agents?, Seats?, MSeat).
+rule_b5([], _, nochange).
+rule_b5([Q|Qs], Asm, R?) :- ground(Q?), ground(Qs?), ground(Asm?) |
+    least_agent(Q?, Qs?, P),
+    drop_seat(P?, Asm?, R).
+
+% ---------------------------------------------------------------------------
+% (c) a child holding fewer seats than its share, with a member unseated
+% ---------------------------------------------------------------------------
+
+% The members of a child that hold no seat of the community.
+procedure unseated_of(FCtx?, Name?, Agents).
+unseated_of(C, U, R?) :- ground(C?), ground(U?) |
+    child_members_of(C?, U?, Y),
+    fair # ctx_assembly(C?, Asm),
+    unseated_of1(Y?, Asm?, R).
+
+procedure unseated_of1(Agents?, Seats?, Agents).
+unseated_of1(Y, Asm, R?) :- ground(Y?), ground(Asm?) |
+    fair # seat_agents(Asm?, As),
+    agents_diff(Y?, As?, R).
+
+imported procedure fair#ci_members(ChildInfos?, Name?, Agents).
+
+procedure child_members_of(FCtx?, Name?, Agents).
+child_members_of(fctx(_, CI, _, _, _, _), U, R?) :- ground(CI?), ground(U?) |
+    fair # ci_members(CI?, U?, R).
+
+% |A_v(u)| against the floor of its share.
+procedure seats_vs_share(FCtx?, Name?, Ord).
+seats_vs_share(C, U, R?) :- ground(C?), ground(U?) |
+    fair # ctx_assembly(C?, Asm),
+    fair # share_u(C?, U?, Sh),
+    seats_vs_share1(Asm?, U?, Sh?, R).
+
+procedure seats_vs_share1(Seats?, Name?, Rat?, Ord).
+seats_vs_share1(Asm, U, Sh, R?) :- ground(Asm?), ground(U?), ground(Sh?) |
+    fair # coloured_seats(Asm?, col(U?), Ss),
+    rat # rat_floor(Sh?, F),
+    seats_vs_share2(Ss?, F?, R).
+
+procedure seats_vs_share2(Seats?, Integer?, Ord).
+seats_vs_share2(Ss, F, R?) :- ground(Ss?), integer(F?) |
+    seats_len(Ss?, K),
+    int_ord(K?, F?, R).
+
+procedure int_ord(Integer?, Integer?, Ord).
+int_ord(X, Y, lt) :- X? < Y? | true.
+int_ord(X, Y, eq) :- X? =:= Y? | true.
+int_ord(X, Y, gt) :- X? > Y? | true.
+
+procedure under_children(FCtx?, Names?, Names).
+under_children(_, [], []).
+under_children(C, [U|Us], R?) :- ground(C?), ground(U?), ground(Us?) |
+    seats_vs_share(C?, U?, O),
+    unseated_of(C?, U?, Q),
+    under_children1(O?, Q?, U?, Us?, C?, R).
+
+procedure under_children1(Ord?, Agents?, Name?, Names?, FCtx?, Names).
+under_children1(lt, [Q|Qs], U, Us, C, [U?|R?]) :-
+    ground(Q?), ground(Qs?), ground(Us?), ground(C?) |
+    under_children(C?, Us?, R).
+under_children1(_, _, _, Us, C, R?) :- otherwise, ground(Us?), ground(C?) |
+    under_children(C?, Us?, R).
+
+procedure rule_c(FCtx?, MSeat).
+rule_c(C, R?) :- ground(C?) |
+    fair # ctx_children(C?, Ch),
+    rule_c1(Ch?, C?, R).
+
+procedure rule_c1(Names?, FCtx?, MSeat).
+rule_c1(Ch, C, R?) :- ground(Ch?), ground(C?) |
+    under_children(C?, Ch?, Us),
+    rule_c2(Us?, C?, R).
+
+procedure rule_c2(Names?, FCtx?, MSeat).
+rule_c2([], _, nochange).
+rule_c2([U|Us], C, R?) :- ground(U?), ground(Us?), ground(C?) |
+    least_name(U?, Us?, W),
+    rule_c3(W?, C?, R).
+
+procedure rule_c3(Name?, FCtx?, MSeat).
+rule_c3(W, C, R?) :- ground(W?), ground(C?) |
+    unseated_of(C?, W?, Qs),
+    rule_c4(Qs?, W?, C?, R).
+
+procedure rule_c4(Agents?, Name?, FCtx?, MSeat).
+rule_c4([], _, _, nochange).
+rule_c4([Q|Qs], W, C, R?) :- ground(Q?), ground(Qs?), ground(W?), ground(C?) |
+    least_ratio(C?, Q?, Qs?, P),
+    rule_c5(P?, W?, C?, R).
+
+procedure rule_c5(Constant?, Name?, FCtx?, MSeat).
+rule_c5(P, W, C, mseat(plus, P?, col(W?), D?)) :- ground(P?), ground(W?), ground(C?) |
+    fair # ctx_date(C?, D).
+
+% ---------------------------------------------------------------------------
+% (d) the assembly is short of its size
+% ---------------------------------------------------------------------------
+
+procedure rule_d(FCtx?, MSeat).
+rule_d(C, R?) :- ground(C?) |
+    fair # ctx_assembly(C?, Asm),
+    fair # ctx_members(C?, Mem),
+    fair # ctx_size(C?, N),
+    rule_d1(Asm?, Mem?, N?, C?, R).
+
+procedure rule_d1(Seats?, Agents?, Integer?, FCtx?, MSeat).
+rule_d1(Asm, Mem, N, C, R?) :-
+    ground(Asm?), ground(Mem?), integer(N?), ground(C?) |
+    seats_len(Asm?, K),
+    agents_len(Mem?, M),
+    rule_d2(K?, M?, N?, Mem?, Asm?, C?, R).
+
+procedure rule_d2(Integer?, Integer?, Integer?, Agents?, Seats?, FCtx?, MSeat).
+rule_d2(K, M, N, Mem, Asm, C, R?) :-
+    integer(K?), integer(M?), integer(N?), ground(Mem?), ground(Asm?), ground(C?) |
+    imin(M?, N?, L),
+    rule_d3(K?, L?, Mem?, Asm?, C?, R).
+
+procedure rule_d3(Integer?, Integer?, Agents?, Seats?, FCtx?, MSeat).
+rule_d3(K, L, Mem, Asm, C, R?) :- K? < L?, ground(Mem?), ground(Asm?), ground(C?) |
+    fair # seat_agents(Asm?, As),
+    rule_d4(Mem?, As?, C?, R).
+rule_d3(K, L, _, _, _, nochange) :- K? >= L? | true.
+
+procedure rule_d4(Agents?, Agents?, FCtx?, MSeat).
+rule_d4(Mem, As, C, R?) :- ground(Mem?), ground(As?), ground(C?) |
+    agents_diff(Mem?, As?, Qs),
+    rule_d5(Qs?, C?, R).
+
+procedure rule_d5(Agents?, FCtx?, MSeat).
+rule_d5([], _, nochange).
+rule_d5([Q|Qs], C, R?) :- ground(Q?), ground(Qs?), ground(C?) |
+    least_ratio(C?, Q?, Qs?, P),
+    rule_d6(P?, C?, R).
+
+procedure rule_d6(Constant?, FCtx?, MSeat).
+rule_d6(P, C, mseat(plus, P?, uncoloured, D?)) :- ground(P?), ground(C?) |
+    fair # ctx_date(C?, D).
+
+% ---------------------------------------------------------------------------
+% (e) a child holding more seats than its share
+% ---------------------------------------------------------------------------
+
+procedure over_children(FCtx?, Names?, Names).
+over_children(_, [], []).
+over_children(C, [U|Us], R?) :- ground(C?), ground(U?), ground(Us?) |
+    seats_vs_share(C?, U?, O),
+    over_children1(O?, U?, Us?, C?, R).
+
+procedure over_children1(Ord?, Name?, Names?, FCtx?, Names).
+over_children1(gt, U, Us, C, [U?|R?]) :- ground(Us?), ground(C?) |
+    over_children(C?, Us?, R).
+over_children1(O, _, Us, C, R?) :- otherwise, ground(O?), ground(Us?), ground(C?) |
+    over_children(C?, Us?, R).
+
+procedure rule_e(FCtx?, MSeat).
+rule_e(C, R?) :- ground(C?) |
+    fair # ctx_children(C?, Ch),
+    rule_e1(Ch?, C?, R).
+
+procedure rule_e1(Names?, FCtx?, MSeat).
+rule_e1(Ch, C, R?) :- ground(Ch?), ground(C?) |
+    over_children(C?, Ch?, Us),
+    rule_e2(Us?, C?, R).
+
+procedure rule_e2(Names?, FCtx?, MSeat).
+rule_e2([], _, nochange).
+rule_e2([U|Us], C, R?) :- ground(U?), ground(Us?), ground(C?) |
+    least_name(U?, Us?, W),
+    rule_e3(W?, C?, R).
+
+procedure rule_e3(Name?, FCtx?, MSeat).
+rule_e3(W, C, R?) :- ground(W?), ground(C?) |
+    fair # ctx_assembly(C?, Asm),
+    rule_e4(W?, Asm?, C?, R).
+
+procedure rule_e4(Name?, Seats?, FCtx?, MSeat).
+rule_e4(W, Asm, C, R?) :- ground(W?), ground(Asm?), ground(C?) |
+    fair # coloured_seats(Asm?, col(W?), Ss),
+    drop_greatest(Ss?, Asm?, C?, R).
+
+procedure drop_greatest(Seats?, Seats?, FCtx?, MSeat).
+drop_greatest([], _, _, nochange).
+drop_greatest([S|Ss], Asm, C, R?) :- ground(S?), ground(Ss?), ground(Asm?), ground(C?) |
+    fair # seat_agents([S?|Ss?], Qs),
+    drop_greatest1(Qs?, Asm?, C?, R).
+
+procedure drop_greatest1(Agents?, Seats?, FCtx?, MSeat).
+drop_greatest1([], _, _, nochange).
+drop_greatest1([Q|Qs], Asm, C, R?) :- ground(Q?), ground(Qs?), ground(Asm?), ground(C?) |
+    greatest_ratio(C?, Q?, Qs?, P),
+    drop_seat(P?, Asm?, R).
+
+% ---------------------------------------------------------------------------
+% (f) the assembly is over its size
+% ---------------------------------------------------------------------------
+
+procedure rule_f(FCtx?, MSeat).
+rule_f(C, R?) :- ground(C?) |
+    fair # ctx_assembly(C?, Asm),
+    fair # ctx_size(C?, N),
+    rule_f1(Asm?, N?, C?, R).
+
+procedure rule_f1(Seats?, Integer?, FCtx?, MSeat).
+rule_f1(Asm, N, C, R?) :- ground(Asm?), integer(N?), ground(C?) |
+    seats_len(Asm?, K),
+    rule_f2(K?, N?, Asm?, C?, R).
+
+procedure rule_f2(Integer?, Integer?, Seats?, FCtx?, MSeat).
+rule_f2(K, N, Asm, C, R?) :- K? > N?, ground(Asm?), ground(C?) |
+    fair # coloured_seats(Asm?, uncoloured, Ss),
+    drop_greatest(Ss?, Asm?, C?, R).
+rule_f2(K, N, _, _, nochange) :- K? =< N? | true.
+
+% ---------------------------------------------------------------------------
+% (g) a seat whose term has passed
+% ---------------------------------------------------------------------------
+
+procedure rule_g(FCtx?, Integer?, MSeat).
+rule_g(C, Tau, R?) :- ground(C?), integer(Tau?) |
+    fair # ctx_assembly(C?, Asm),
+    fair # ctx_date(C?, D),
+    rule_g1(Asm?, D?, Tau?, R).
+
+procedure rule_g1(Seats?, Integer?, Integer?, MSeat).
+rule_g1(Asm, D, Tau, R?) :- ground(Asm?), integer(D?), integer(Tau?) |
+    expired_agents(Asm?, D?, Tau?, Qs),
+    rule_g2(Qs?, Asm?, R).
+
+procedure expired_agents(Seats?, Integer?, Integer?, Agents).
+expired_agents([], _, _, []).
+expired_agents([st(Q, _, S)|Ss], D, Tau, R?) :-
+    integer(D?), integer(S?), integer(Tau?), ground(Q?), ground(Ss?) |
+    Gap := D? - S?,
+    expired_agents1(Gap?, Tau?, Q?, Ss?, D?, R).
+
+procedure expired_agents1(Integer?, Integer?, Constant?, Seats?, Integer?, Agents).
+expired_agents1(Gap, Tau, Q, Ss, D, [Q?|R?]) :-
+    Gap? >= Tau?, ground(Q?), ground(Ss?), integer(D?) |
+    expired_agents(Ss?, D?, Tau?, R).
+expired_agents1(Gap, Tau, _, Ss, D, R?) :-
+    Gap? < Tau?, ground(Ss?), integer(D?) |
+    expired_agents(Ss?, D?, Tau?, R).
+
+procedure rule_g2(Agents?, Seats?, MSeat).
+rule_g2([], _, nochange).
+rule_g2([Q|Qs], Asm, R?) :- ground(Q?), ground(Qs?), ground(Asm?) |
+    least_agent(Q?, Qs?, P),
+    drop_seat(P?, Asm?, R).
+
+% ---------------------------------------------------------------------------
+% The first condition that holds
+% ---------------------------------------------------------------------------
+
+exported procedure maintain_rule(FCtx?, Integer?, MSeat).
+maintain_rule(C, Tau, R?) :- ground(C?), integer(Tau?) |
+    rule_a(C?, A),
+    next_rule(A?, C?, Tau?, b, R).
+
+procedure next_rule(MSeat?, FCtx?, Integer?, Constant?, MSeat).
+next_rule(mseat(S, Q, Y, D), _, _, _, mseat(S?, Q?, Y?, D?)).
+next_rule(nochange, C, Tau, K, R?) :- ground(C?), integer(Tau?), ground(K?) |
+    try_rule(K?, C?, Tau?, R).
+
+procedure try_rule(Constant?, FCtx?, Integer?, MSeat).
+try_rule(b, C, Tau, R?) :- ground(C?), integer(Tau?) |
+    rule_b(C?, A),
+    next_rule(A?, C?, Tau?, c, R).
+try_rule(c, C, Tau, R?) :- ground(C?), integer(Tau?) |
+    rule_c(C?, A),
+    next_rule(A?, C?, Tau?, d, R).
+try_rule(d, C, Tau, R?) :- ground(C?), integer(Tau?) |
+    rule_d(C?, A),
+    next_rule(A?, C?, Tau?, e, R).
+try_rule(e, C, Tau, R?) :- ground(C?), integer(Tau?) |
+    rule_e(C?, A),
+    next_rule(A?, C?, Tau?, f, R).
+try_rule(f, C, Tau, R?) :- ground(C?), integer(Tau?) |
+    rule_f(C?, A),
+    next_rule(A?, C?, Tau?, g, R).
+try_rule(g, C, Tau, R?) :- ground(C?), integer(Tau?) |
+    rule_g(C?, Tau?, R).

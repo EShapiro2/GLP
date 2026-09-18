@@ -1,0 +1,232 @@
+% ---------------------------------------------------------------------------
+% Weights, shares, seats and ratios (Definitions "Weight, Share, Seats" and
+% "Account, Ratio"), at the state a row computes.
+%
+% A weight, a share and a ratio are exact rationals; nothing here divides and
+% every comparison is by rat_cmp.  The context fctx/6 holds what the rules of
+% Maintain and the raise of a community read: the assembly size, the children
+% with the members each of them reports, the members of the community, its
+% assembly, its date and its accounts.
+% ---------------------------------------------------------------------------
+
+imported procedure row#row_state(Rat?, Row?, Name?, State).
+imported procedure row#child_members(Row?, Name?, Agents).
+imported procedure name#name_eq(Name?, Name?, Ans).
+imported procedure rat#rat_make(Integer?, Integer?, Rat).
+imported procedure rat#rat_add(Rat?, Rat?, Rat).
+imported procedure rat#rat_mul(Rat?, Rat?, Rat).
+imported procedure rat#rat_cmp(Rat?, Rat?, Ord).
+
+% ---------------------------------------------------------------------------
+% The context
+% ---------------------------------------------------------------------------
+
+procedure child_infos(Names?, Row?, ChildInfos).
+child_infos([], _, []).
+child_infos([U|Us], Row, [ci(U?, Y?)|R?]) :-
+    ground(U?), ground(Us?), ground(Row?) |
+    row # child_members(Row?, U?, Y),
+    child_infos(Us?, Row?, R).
+
+procedure fcontext1(State?, Integer?, Row?, FCtx).
+fcontext1(state(Ch, _, Mem, Asm, D, Ac, _), N, Row,
+          fctx(N?, CI?, Mem?, Asm?, D?, Ac?)) :-
+    ground(Ch?), ground(Mem?), ground(Asm?), integer(D?), ground(Ac?),
+    integer(N?), ground(Row?) |
+    child_infos(Ch?, Row?, CI).
+
+exported procedure fcontext(Rat?, Integer?, Row?, Name?, FCtx).
+fcontext(T, N, Row, V, C?) :-
+    ground(T?), integer(N?), ground(Row?), ground(V?) |
+    row # row_state(T?, Row?, V?, S),
+    fcontext2(S?, N?, Row?, C).
+
+procedure fcontext2(State?, Integer?, Row?, FCtx).
+fcontext2(S, N, Row, C?) :- ground(S?), integer(N?), ground(Row?) |
+    fcontext1(S?, N?, Row?, C).
+
+exported procedure ctx_children(FCtx?, Names).
+ctx_children(fctx(_, CI, _, _, _, _), R?) :- ground(CI?) | ci_names(CI?, R).
+
+procedure ci_names(ChildInfos?, Names).
+ci_names([], []).
+ci_names([ci(U, _)|Cs], [U?|R?]) :- ground(U?), ground(Cs?) | ci_names(Cs?, R).
+
+exported procedure ctx_members(FCtx?, Agents).
+ctx_members(fctx(_, _, Mem, _, _, _), Mem?).
+
+exported procedure ctx_assembly(FCtx?, Seats).
+ctx_assembly(fctx(_, _, _, Asm, _, _), Asm?).
+
+exported procedure ctx_date(FCtx?, Integer).
+ctx_date(fctx(_, _, _, _, D, _), D?).
+
+exported procedure ctx_size(FCtx?, Integer).
+ctx_size(fctx(N, _, _, _, _, _), N?).
+
+% The members of the assembly.
+exported procedure seat_agents(Seats?, Agents).
+seat_agents([], []).
+seat_agents([st(Q, _, _)|Ss], [Q?|R?]) :- ground(Q?), ground(Ss?) |
+    seat_agents(Ss?, R).
+
+% The seats of a given colour.
+exported procedure coloured_seats(Seats?, Colour?, Seats).
+coloured_seats([], _, []).
+coloured_seats([st(Q, Y1, D)|Ss], Y, [st(Q?, Y1?, D?)|R?]) :-
+    Y1? =?= Y?, ground(Q?), integer(D?), ground(Ss?) |
+    coloured_seats(Ss?, Y?, R).
+coloured_seats([_|Ss], Y, R?) :- otherwise, ground(Ss?), ground(Y?) |
+    coloured_seats(Ss?, Y?, R).
+
+% ---------------------------------------------------------------------------
+% Weight, share and seats (Definition "Weight, Share, Seats")
+% ---------------------------------------------------------------------------
+
+exported procedure ci_members(ChildInfos?, Name?, Agents).
+ci_members([], _, []).
+ci_members([ci(U1, Y)|Cs], U, R?) :- ground(U1?), ground(Y?), ground(Cs?), ground(U?) |
+    name # name_eq(U1?, U?, A),
+    ci_members1(A?, Y?, Cs?, U?, R).
+
+procedure ci_members1(Ans?, Agents?, ChildInfos?, Name?, Agents).
+ci_members1(yes, Y, _, _, Y?).
+ci_members1(no, _, Cs, U, R?) :- ground(Cs?), ground(U?) | ci_members(Cs?, U?, R).
+
+% |{u' in Ch(v) : p in P_u'}|, the number of children of v that p belongs to.
+procedure deg(ChildInfos?, Constant?, Integer).
+deg([], _, 0).
+deg([ci(_, Y)|Cs], P, N?) :- ground(Y?), ground(Cs?), ground(P?) |
+    agents_member(Y?, P?, A),
+    deg1(A?, Cs?, P?, N).
+
+procedure deg1(Ans?, ChildInfos?, Constant?, Integer).
+deg1(yes, Cs, P, N?) :- ground(Cs?), ground(P?) |
+    deg(Cs?, P?, M),
+    N := M? + 1.
+deg1(no, Cs, P, N?) :- ground(Cs?), ground(P?) | deg(Cs?, P?, N).
+
+% w_v(u) = sum over p in P_u of 1/deg(p).
+procedure weight_sum(Agents?, ChildInfos?, Rat).
+weight_sum([], _, rat(0, 1)).
+weight_sum([P|Ps], CI, R?) :- ground(P?), ground(Ps?), ground(CI?) |
+    deg(CI?, P?, K),
+    weight_sum(Ps?, CI?, R1),
+    weight_add(K?, R1?, R).
+
+procedure weight_add(Integer?, Rat?, Rat).
+weight_add(0, R, R?).
+weight_add(K, R, S?) :- K? > 0, ground(R?) |
+    rat # rat_make(1, K?, W),
+    rat # rat_add(R?, W?, S).
+
+exported procedure weight_u(FCtx?, Name?, Rat).
+weight_u(fctx(_, CI, _, _, _, _), U, R?) :- ground(CI?), ground(U?) |
+    ci_members(CI?, U?, Y),
+    weight_sum1(Y?, CI?, R).
+
+procedure weight_sum1(Agents?, ChildInfos?, Rat).
+weight_sum1(Y, CI, R?) :- ground(Y?), ground(CI?) | weight_sum(Y?, CI?, R).
+
+% share_v(u) = n w_v(u) / |P_v|, and 0 where v has no members.
+exported procedure share_u(FCtx?, Name?, Rat).
+share_u(fctx(N, CI, Mem, A, D, Ac), U, R?) :-
+    integer(N?), ground(CI?), ground(Mem?), ground(A?), integer(D?),
+    ground(Ac?), ground(U?) |
+    agents_len(Mem?, M),
+    share_u1(M?, N?, fctx(N?, CI?, Mem?, A?, D?, Ac?), U?, R).
+
+procedure share_u1(Integer?, Integer?, FCtx?, Name?, Rat).
+share_u1(0, _, _, _, rat(0, 1)).
+share_u1(M, N, C, U, R?) :- M? > 0, integer(N?), ground(C?), ground(U?) |
+    weight_u(C?, U?, W),
+    share_u2(W?, N?, M?, R).
+
+procedure share_u2(Rat?, Integer?, Integer?, Rat).
+share_u2(W, N, M, R?) :- ground(W?), integer(N?), M? > 0 |
+    rat # rat_make(N?, M?, Q),
+    rat # rat_mul(W?, Q?, R).
+
+% share_v(p) = min(n/|P_v|, 1), and 0 where v has no members.
+exported procedure share_p(FCtx?, Rat).
+share_p(fctx(N, _, Mem, _, _, _), R?) :- integer(N?), ground(Mem?) |
+    agents_len(Mem?, M),
+    share_p1(M?, N?, R).
+
+procedure share_p1(Integer?, Integer?, Rat).
+share_p1(0, _, rat(0, 1)).
+share_p1(M, N, R?) :- M? > 0, integer(N?) |
+    rat # rat_make(N?, M?, Q),
+    share_p2(Q?, R).
+
+procedure share_p2(Rat?, Rat).
+share_p2(Q, R?) :- ground(Q?) |
+    rat # rat_cmp(Q?, rat(1, 1), O),
+    share_p3(O?, Q?, R).
+
+procedure share_p3(Ord?, Rat?, Rat).
+share_p3(lt, Q, Q?).
+share_p3(eq, Q, Q?).
+share_p3(gt, _, rat(1, 1)).
+
+% seats_v(p) = 1 if p is in the assembly, 0 otherwise.
+exported procedure seats_p(FCtx?, Constant?, Integer).
+seats_p(fctx(_, _, _, Asm, _, _), P, N?) :- ground(Asm?), ground(P?) |
+    seat_agents(Asm?, As),
+    seats_p1(As?, P?, N).
+
+procedure seats_p1(Agents?, Constant?, Integer).
+seats_p1(As, P, N?) :- ground(As?), ground(P?) |
+    agents_member(As?, P?, A),
+    ans_int(A?, N).
+
+procedure ans_int(Ans?, Integer).
+ans_int(yes, 1).
+ans_int(no, 0).
+
+% seats_v(u) = |A(v) intersect P_u|.
+exported procedure seats_u(FCtx?, Name?, Integer).
+seats_u(fctx(_, CI, _, Asm, _, _), U, N?) :- ground(CI?), ground(Asm?), ground(U?) |
+    ci_members(CI?, U?, Y),
+    seats_u1(Y?, Asm?, N).
+
+procedure seats_u1(Agents?, Seats?, Integer).
+seats_u1(Y, Asm, N?) :- ground(Y?), ground(Asm?) |
+    seat_agents(Asm?, As),
+    count_common(Y?, As?, N).
+
+procedure count_common(Agents?, Agents?, Integer).
+count_common([], _, 0).
+count_common([P|Ps], As, N?) :- ground(P?), ground(Ps?), ground(As?) |
+    agents_member(As?, P?, A),
+    count_common1(A?, Ps?, As?, N).
+
+procedure count_common1(Ans?, Agents?, Agents?, Integer).
+count_common1(yes, Ps, As, N?) :- ground(Ps?), ground(As?) |
+    count_common(Ps?, As?, M),
+    N := M? + 1.
+count_common1(no, Ps, As, N?) :- ground(Ps?), ground(As?) |
+    count_common(Ps?, As?, N).
+
+% ---------------------------------------------------------------------------
+% The ratio (Definition "Account, Ratio")
+% ---------------------------------------------------------------------------
+% ratio_v(x) = S_v(x)/H_v(x) where H_v(x) > 0, and 0 otherwise; carried as an
+% exact rational, so that the least and the greatest are read by rat_cmp.
+
+procedure account_of(Accts?, Node?, Acct).
+account_of([], X, acct(X?, 0, rat(0, 1))).
+account_of([acct(X1, S, H)|_], X, acct(X1?, S?, H?)) :- X1? =?= X? | true.
+account_of([_|As], X, R?) :- otherwise, ground(As?), ground(X?) |
+    account_of(As?, X?, R).
+
+exported procedure ratio_of(FCtx?, Node?, Rat).
+ratio_of(fctx(_, _, _, _, _, Ac), X, R?) :- ground(Ac?), ground(X?) |
+    account_of(Ac?, X?, A),
+    ratio_of1(A?, R).
+
+procedure ratio_of1(Acct?, Rat).
+ratio_of1(acct(_, S, rat(A, B)), R?) :- integer(S?), A? > 0, integer(B?) |
+    N := S? * B?,
+    rat # rat_make(N?, A?, R).
+ratio_of1(acct(_, _, rat(A, _)), rat(0, 1)) :- A? =< 0 | true.

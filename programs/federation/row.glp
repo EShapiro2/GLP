@@ -128,6 +128,55 @@ edge_from_heads([A|As], R?) :- ground(A?), ground(As?) |
     not_ans(L?, R).
 
 % ---------------------------------------------------------------------------
+% What a transaction reads of a pair: whether the edge holds, and the epoch a
+% Move takes --- one more than the greatest epoch of an act record on the pair
+% or of that Federate, and 0 where there is none.
+% ---------------------------------------------------------------------------
+
+exported procedure edge_holds(Arecs?, Name?, Name?, Ans).
+edge_holds(As, F, G, R?) :- ground(As?), ground(F?), ground(G?) |
+    heads(As?, F?, G?, H),
+    edge_from_heads(H?, R).
+
+procedure epoch_after(Arecs?, Integer).
+epoch_after([], 0).
+epoch_after([A|As], R?) :- ground(A?), ground(As?) |
+    max_epoch([A?|As?], K),
+    R := K? + 1.
+
+exported procedure pair_epoch(Arecs?, Name?, Name?, Integer).
+pair_epoch(As, F, G, R?) :- ground(As?), ground(F?), ground(G?) |
+    on_pair_only(As?, F?, G?, Ps),
+    epoch_after(Ps?, R).
+
+procedure fed_acts1(Ans?, Name?, Motions?, Arecs?, Name?, Arecs).
+fed_acts1(yes, U1, Ms, As, U, [arec(federate(U1?), Ms?)|R?]) :-
+    ground(As?), ground(U?) |
+    fed_acts(As?, U?, R).
+fed_acts1(no, _, _, As, U, R?) :- ground(As?), ground(U?) | fed_acts(As?, U?, R).
+
+exported procedure fed_acts(Arecs?, Name?, Arecs).
+fed_acts([], _, []).
+fed_acts([arec(federate(U1), Ms)|As], U, R?) :-
+    ground(U1?), ground(Ms?), ground(As?), ground(U?) |
+    name # name_eq(U1?, U?, A),
+    fed_acts1(A?, U1?, Ms?, As?, U?, R).
+fed_acts([_|As], U, R?) :- otherwise, ground(As?), ground(U?) | fed_acts(As?, U?, R).
+
+exported procedure federate_epoch(Arecs?, Name?, Integer).
+federate_epoch(As, U, R?) :- ground(As?), ground(U?) |
+    fed_acts(As?, U?, Ps),
+    epoch_after(Ps?, R).
+
+exported procedure act_epoch(Arecs?, Act?, Integer).
+act_epoch(As, join(F, G), R?) :- ground(As?), ground(F?), ground(G?) |
+    pair_epoch(As?, F?, G?, R).
+act_epoch(As, leave(F, G), R?) :- ground(As?), ground(F?), ground(G?) |
+    pair_epoch(As?, F?, G?, R).
+act_epoch(As, federate(U), R?) :- ground(As?), ground(U?) |
+    federate_epoch(As?, U?, R).
+
+% ---------------------------------------------------------------------------
 % Children and parents (Definition "State of a Row"(1))
 % ---------------------------------------------------------------------------
 
@@ -279,6 +328,20 @@ members_of([U|Us], Row, R?) :- ground(U?), ground(Us?), ground(Row?) |
     best_report(Row?, U?, Rp),
     members_of(Us?, Row?, R1),
     members_add(Rp?, R1?, R).
+
+% The members a row records for one of its children: the latest report of that
+% child, and none where it has made none.
+procedure rep_agents(Rep?, Agents).
+rep_agents(norep, []).
+rep_agents(rep(_, Y), Y?).
+
+exported procedure child_report(Row?, Name?, Rep).
+child_report(Row, U, R?) :- ground(Row?), ground(U?) | best_report(Row?, U?, R).
+
+exported procedure child_members(Row?, Name?, Agents).
+child_members(Row, U, R?) :- ground(Row?), ground(U?) |
+    best_report(Row?, U?, Rp),
+    rep_agents(Rp?, R).
 
 exported procedure members(Row?, Name?, Names?, Agents).
 members(Row, V, Ch, R?) :- ground(Row?), ground(V?), ground(Ch?) |
