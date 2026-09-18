@@ -15,16 +15,18 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:glp_runtime/engine/glp_engine.dart';
 
+import 'programs_dir.dart';
+
 void main() {
   test('GrassApp village market: the seven operations of §8.2', () async {
-    const repo = '/Users/udi/Grassroots/GLP';
-    const dir = '$repo/programs/grassapp';
+    final programs = programsDir();
+    final dir = '$programs/grassapp';
 
     // Six agents publishing balances to each other is far more reduction-heavy
     // than the small plays: the scheduler's default budget (1000 cycles) cuts
     // the run off mid-economy. The currencies REPL harness uses the same
     // headroom for this scenario (:limit 5000000).
-    final engine = GlpEngine(rootSelfGlpPath: '$repo/programs/self.glp')
+    final engine = GlpEngine(rootSelfGlpPath: '$programs/self.glp')
       ..strictTypes = false
       ..maxCycles = 5000000;
 

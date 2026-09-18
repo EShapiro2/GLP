@@ -9,7 +9,10 @@ import 'dart:isolate';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:glp_multiagent/isolate_protocol.dart';
 
-const _fixture = '/Users/udi/Grassroots/GLP/programs/tests/agent_roundtrip';
+import 'programs_dir.dart';
+
+final _programs = programsDir();
+final _fixture = '$_programs/tests/agent_roundtrip';
 
 void main() {
   test('scenario auto-drives bob inbox; accept -> connected (single isolate)',
@@ -40,8 +43,7 @@ void main() {
         agentId: 'bob',
         glpSources: sources,
         glpSourcePaths: paths,
-        rootSelfGlpPath:
-            File('/Users/udi/Grassroots/GLP/programs/self.glp').absolute.path,
+        rootSelfGlpPath: '$_programs/self.glp',
         friends: const ['alice', 'charlie'],
         replyPort: reply.sendPort,
         deferStart: false,

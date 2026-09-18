@@ -3,13 +3,15 @@
 /// surface `unfriended(charlie)` — the "Integrate unfriend" path, end-to-end
 /// through both agents and both mediators.
 import 'dart:async';
-import 'dart:io';
 import 'dart:isolate';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:glp_multiagent/isolate_protocol.dart';
 
-const _ga = '/Users/udi/Grassroots/GLP/programs/grassapp';
+import 'programs_dir.dart';
+
+final _programs = programsDir();
+final _ga = '$_programs/grassapp';
 
 void main() {
   test('charlie pays then unfriends Bob → unfriended(charlie) reaches Bob',
@@ -37,8 +39,7 @@ void main() {
         programDir: _ga,
         // The boot play's entry point (SGSG, 8412aae7).
         goalLabel: 'scenario_init/3',
-        rootSelfGlpPath:
-            File('/Users/udi/Grassroots/GLP/programs/self.glp').absolute.path,
+        rootSelfGlpPath: '$_programs/self.glp',
         friends: const ['alice', 'charlie'],
         replyPort: reply.sendPort,
         deferStart: false,
