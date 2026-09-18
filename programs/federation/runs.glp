@@ -27,7 +27,6 @@
 imported procedure platform#papply_all(Params?, Steps?, PWorld?, PRunOut).
 imported procedure platform#pworld_learnt(PWorld?, Constant?, Name?, Row).
 imported procedure platform#pworld_traffic(PWorld?, Ints).
-imported procedure platform#pworld_peers(PWorld?, Constant?, Agents).
 imported procedure rla#inst_form(Name?, Row?, Inst).
 imported procedure platform#pworld_of(Agents?, PWorld).
 imported procedure row#row_state(Rat?, Row?, Name?, State).

@@ -20,7 +20,6 @@
 % ---------------------------------------------------------------------------
 
 imported procedure name#name_eq(Name?, Name?, Ans).
-imported procedure name#name_extend(Name?, Integer?, Name).
 imported procedure lattice#row_join(Row?, Row?, Row).
 imported procedure lattice#row_has(Row?, Record?, Ans).
 imported procedure rla#inst_name(Inst?, Name).
@@ -39,11 +38,6 @@ imported procedure rla#rla_resume(Inst?, Res).
 imported procedure rla#rla_note_resp(Inst?, Integer?, Constant?, Inst).
 imported procedure rla#update_state(Inst?, Triple?, Inst).
 imported procedure txn#apply(Params?, Txn?, World?, Outcome).
-imported procedure decide#decided_acts(Rat?, Row?, Arecs).
-imported procedure decide#motion_decided(Rat?, Row?, Motion?, Ans).
-imported procedure row#assembly(Row?, Name?, Seats).
-imported procedure row#federate_epoch(Arecs?, Name?, Integer).
-imported procedure fair#seat_agents(Seats?, Agents).
 
 % ---------------------------------------------------------------------------
 % The agents of the world
