@@ -43,9 +43,9 @@ display msg(agent, person, connected(Friend)) : panel(apps), view(friends).
 
 %% --- the compiled agent ---
 procedure respond_friend(Channel(Closed, Stream(AgentMsg))?, Constant?, Constant?, Response, Stream(UserInMsg), Slot(Reply_respond_friend_1)?, Slot(Reply_respond_friend_2)?).
-respond_friend(Med, Id, From, Resp?, [msg(person, Id?, decision(yes, From?, response(Resp)))], ask(then(xs_respond_friend_1(_)), _), S2) :- ground(Id?), ground(From?) | abort(S2?, Med?, Med1).
+respond_friend(Med, Id, From, Resp?, [msg(person, Id?, decision(yes, From?, response(Resp)))], ask(then(xs_respond_friend_1(_)), _), S2) :- ground(Id?), ground(From?) | abort(S2?, Med?, _).
 respond_friend(Med, Id, From, A3?, A4?, none, S2) :- ground(Id?), ground(From?) | send(ask(respond_friend_1, ctx_respond_friend_1(From?), esc_respond_friend_1(R), Id1), Med?, Med1), respond_friend(Med1?, Id?, From?, A3, A4, ask(R?, Id1?), S2?).
-respond_friend(Med, Id, From, Resp?, [msg(person, Id?, decision(no, From?, response(Resp)))], S1, ask(then(xs_respond_friend_2(_)), _)) :- ground(Id?), ground(From?) | abort(S1?, Med?, Med1).
+respond_friend(Med, Id, From, Resp?, [msg(person, Id?, decision(no, From?, response(Resp)))], S1, ask(then(xs_respond_friend_2(_)), _)) :- ground(Id?), ground(From?) | abort(S1?, Med?, _).
 respond_friend(Med, Id, From, A3?, A4?, S1, none) :- ground(Id?), ground(From?) | send(ask(respond_friend_2, ctx_respond_friend_2(From?), esc_respond_friend_2(R), Id1), Med?, Med1), respond_friend(Med1?, Id?, From?, A3, A4, S1?, ask(R?, Id1?)).
 
 exported procedure home(Channel(Closed, Stream(AgentMsg))?, Constant?, AgentToUserStream?, Stream(UserInMsg), Slot(Reply_home_1)?, Slot(Reply_home_2)?, Slot(Reply_home_3)?, Slot(Reply_home_4)?).
@@ -59,7 +59,7 @@ home(Med, Id, Outs, Cmds?, S1, S2, S3, ask(then(xs_home_4(Friend)), _)) :- groun
 home(Med, Id, Outs, A3?, S1, S2, S3, none) :- ground(Id?) | send(ask(home_4, ctx_home_4, esc_home_4(R), Id1), Med?, Med1), home(Med1?, Id?, Outs?, A3, S1?, S2?, S3?, ask(R?, Id1?)).
 home(Med, Id, [msg(agent, person, befriend(From, Resp?)) | Outs], Cmds?, S1, S2, S3, S4) :- ground(Id?), ground(From?) | abort(S1?, Med?, M1), abort(S2?, M1?, M2), abort(S3?, M2?, M3), abort(S4?, M3?, Med1), med_split(Med1?, Medb, Medr), respond_friend(Medb?, Id?, From?, Resp, Answer, none, none), merge(Answer?, Cmds1?, Cmds), home(Medr?, Id?, Outs?, Cmds1, none, none, none, none).
 home(Med, Id, [_ | Outs], Cmds?, S1, S2, S3, S4) :- ground(Id?), otherwise | abort(S1?, Med?, M1), abort(S2?, M1?, M2), abort(S3?, M2?, M3), abort(S4?, M3?, Med1), home(Med1?, Id?, Outs?, Cmds, none, none, none, none).
-home(Med, _, [], [], S1, S2, S3, S4) :- abort(S1?, Med?, M1), abort(S2?, M1?, M2), abort(S3?, M2?, M3), abort(S4?, M3?, Med1).
+home(Med, _, [], [], S1, S2, S3, S4) :- abort(S1?, Med?, M1), abort(S2?, M1?, M2), abort(S3?, M2?, M3), abort(S4?, M3?, _).
 
 procedure trust_act(Channel(Closed, Stream(AgentMsg))?, String?, Constant?, AgentToUserStream?, Stream(UserInMsg)).
 trust_act(Med, Key, Id, Outs, [msg(person, Id?, trust(Key?)) | Cmds?]) :- ground(Key?) | home(Med?, Id?, Outs?, Cmds, none, none, none, none).
@@ -75,10 +75,10 @@ install_act(Med, M, App, Id, Outs, [msg(person, Id?, install(App?, M?, CSig?, Ui
 install_act(Med, S, _, Id, Outs, Cmds?) :- string(S?) | home(Med?, Id?, Outs?, Cmds, none, none, none, none).
 
 procedure creator_certification(Channel(Closed, Stream(AgentMsg))?, Content?, String).
-creator_certification(Med, M, CSig?) :- decompose_module(M?, _, Src, _), self_key(K), sign(creator_cert(Src?, [friendship, ending_a_friendship], grassroots), K?, CSig).
+creator_certification(_, M, CSig?) :- decompose_module(M?, _, Src, _), self_key(K), sign(creator_cert(Src?, [friendship, ending_a_friendship], grassroots), K?, CSig).
 
 procedure hold_ui(Channel(Closed, Stream(AgentMsg))?, AppUiStream?).
-hold_ui(Med, X) :- true.
+hold_ui(_, X) :- true.
 
 %% --- the mediator, and the pending table with the program's clauses ahead of the search clauses ---
 exported procedure med(Channel(Stream(UserAnswer), Stream(Card))?, Channel(Stream(AgentMsg), Closed)?, PendingList?, Integer?).

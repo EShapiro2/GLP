@@ -39,8 +39,8 @@ display msg(agent, person, holdings(Lots)) : panel(coins), view(balances).
 
 %% --- the compiled agent ---
 procedure respond_swap(Channel(Closed, Stream(AgentMsg))?, SwapOffer?, SwapResponse, Stream(UserInMsg), Slot(Reply_respond_swap_1)?).
-respond_swap(Med, offer(From, Want, Offered), Resp?, Ans?, ask(then(xs_respond_swap_1(_)), _)) :- ground(From?), ground(Want?), ground(Offered?) | accept_answer(From?, Want?, Offered?, Resp, Ans).
-respond_swap(Med, offer(From, Want, Offered), Resp?, Ans?, ask(else, _)) :- ground(From?), ground(Want?), ground(Offered?) | decline_answer(From?, Offered?, Resp, Ans).
+respond_swap(_, offer(From, Want, Offered), Resp?, Ans?, ask(then(xs_respond_swap_1(_)), _)) :- ground(From?), ground(Want?), ground(Offered?) | accept_answer(From?, Want?, Offered?, Resp, Ans).
+respond_swap(_, offer(From, Want, Offered), Resp?, Ans?, ask(else, _)) :- ground(From?), ground(Want?), ground(Offered?) | decline_answer(From?, Offered?, Resp, Ans).
 respond_swap(Med, offer(From, Want, Offered), A2?, A3?, none) :- ground(From?), ground(Want?), ground(Offered?) | send(ask(respond_swap_1, ctx_respond_swap_1(From?, Want?, Offered?), esc_respond_swap_1(R), Id), Med?, Med1), respond_swap(Med1?, offer(From?, Want?, Offered?), A2, A3, ask(R?, Id?)).
 
 exported procedure agent(Channel(Closed, Stream(AgentMsg))?, Constant?, Stream(UserInMsg)?, Stream(PeerMsg)?, Stream(Conversation)?, Stream(OutputEntry)?, Stream(Coin)?, Integer?, Slot(Reply_agent_1)?, Slot(Reply_agent_2)?, Slot(Reply_agent_3)?, Slot(Reply_agent_4)?).
