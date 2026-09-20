@@ -109,7 +109,11 @@ CompiledProgram compileProgram(ast.Module module, MediatorSource mediator,
 /// of, and nothing the bridge would render by it.  It is an error in the
 /// source, and the compilation says so instead of carrying the declaration
 /// verbatim into the compiled program, which is what `:emit` and the load both
-/// did until 2026-09-20.
+/// did until 2026-09-20.  A declaration may also carry a clause index, naming
+/// "the n-th of several clauses of p with that volition guard" (same
+/// definition), so the match is by predicate, guard and index: an index beyond
+/// the number of clauses of the predicate with that guard names no clause
+/// either.
 void checkDisplayDecls(ast.Module module) {
   final guardsOf = <String, List<String>>{};
   final predicates = <String>{};
@@ -129,22 +133,33 @@ void checkDisplayDecls(ast.Module module) {
     final p = d.predicate!;
     final guard = printVolitionGuard(d.guard!);
     final have = guardsOf[p] ?? const <String>[];
-    if (have.contains(guard)) continue;
+    // The declaration names the n-th of the clauses of p with that guard where
+    // it carries an index, and one such clause where it does not.
+    final matching = have.where((g) => g == guard).length;
+    final wanted = d.index ?? 1;
+    if (matching >= wanted) continue;
 
+    final subject =
+        'display $p $guard${d.index == null ? '' : ' ${d.index}'}';
     final String missing;
     if (!predicates.contains(p)) {
       missing = 'the program has no procedure $p';
     } else if (have.isEmpty) {
       missing = 'no clause of $p carries a volition guard';
-    } else {
+    } else if (matching == 0) {
       missing = 'the volition-guarded clauses of $p carry '
           '${have.toSet().join(', ')}';
+    } else {
+      missing = '$p has $matching '
+          '${matching == 1 ? 'clause' : 'clauses'} with that volition guard';
     }
     throw CompileError(
-        'The display declaration "display $p $guard : ..." names no clause: '
+        'The display declaration "$subject : ..." names no clause: '
         '$missing.  A display declaration is for a volition-guarded clause and '
         'names that clause\'s volition guard, an else-branch having none of its '
-        'own (vGLP, Definition "Display Declaration, Default Display").',
+        'own, and its clause index the n-th of several clauses of the '
+        'predicate with that guard (vGLP, Definition "Display Declaration, '
+        'Default Display").',
         d.line,
         d.column,
         phase: 'analyzer');

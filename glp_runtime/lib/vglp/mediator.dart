@@ -219,7 +219,10 @@ String printTypeDef(TypeDef d) {
 
 /// A display declaration as GLP source, carried into the compiled program
 /// unchanged (vGLP, Definition "Display Declaration, Default Display").  Atoms
-/// are printed bare and string literals quoted, as the source had them.
+/// are printed bare and string literals quoted, as the source had them.  A
+/// clause-form declaration carrying a clause index keeps it between its guard
+/// and the colon, that being what names the clause where several of the
+/// predicate share the guard.
 String printDisplayDecl(ast.DisplayDecl d) {
   final items = d.items
       .map((i) => i.args.isEmpty
@@ -227,7 +230,9 @@ String printDisplayDecl(ast.DisplayDecl d) {
           : '${i.name}(${i.args.map(_termSource).join(', ')})')
       .join(', ');
   if (d.isClauseForm) {
-    return 'display ${d.predicate} ${printVolitionGuard(d.guard!)} : $items.';
+    final index = d.index == null ? '' : ' ${d.index}';
+    return 'display ${d.predicate} ${printVolitionGuard(d.guard!)}$index '
+        ': $items.';
   }
   return 'display ${_termSource(d.pattern!)} : $items.';
 }

@@ -641,12 +641,27 @@ class Parser {
 
     String? predicate;
     VolitionGuard? guard;
+    int? index;
     Term? pattern;
 
     if (_check(TokenType.STAR)) {
-      // Clause form: display p *(...) : ...
+      // Clause form: display p *(...) : ...  or, for the n-th of several
+      // clauses of p with that volition guard, display p *(...) n : ...
       predicate = nameToken.lexeme;
       guard = _parseVolitionGuardOpt(inDisplay: true);
+      if (_check(TokenType.NUMBER)) {
+        final nToken = _advance();
+        final n = nToken.literal;
+        if (n is! int || n < 1) {
+          throw CompileError(
+            'The clause index of a display declaration is the position of the '
+            'clause among those of $predicate with that volition guard, '
+            'counted from 1, and "${nToken.lexeme}" is not such a position '
+            '(vGLP, Definition "Display Declaration, Default Display").',
+            nToken.line, nToken.column, phase: 'parser');
+        }
+        index = n;
+      }
     } else {
       // Message form: display m : ...  — m a term, possibly with arguments.
       final args = <Term>[];
@@ -685,8 +700,9 @@ class Parser {
 
     _consume(TokenType.DOT, 'Expected "." at end of display declaration');
 
-    return DisplayDecl(predicate: predicate, guard: guard, pattern: pattern,
-        items: items, line: start.line, column: start.column);
+    return DisplayDecl(predicate: predicate, guard: guard, index: index,
+        pattern: pattern, items: items,
+        line: start.line, column: start.column);
   }
 
   // Clause: Head :- Guards | Body.

@@ -219,6 +219,49 @@ note(offer(From), [decided(no)]) :- ground(From?) | true.
       expect(message, contains('names no clause'));
     });
 
+    // "display p *(...) n : ..." names "the n-th of several clauses of p with
+    // that volition guard" (vGLP, Definition "Display Declaration, Default
+    // Display"), so the match is by predicate, guard and index.
+    const twoOfOneGuard = '''
+Offer    ::= offer(Constant).
+Decision ::= yes ; no.
+OutMsg   ::= decided(Decision).
+Out      ::= [] ; [OutMsg | Out].
+
+procedure respond(Offer?, Out).
+*(Answer=yes, From?)
+respond(offer(From), [decided(Answer?)]) :- ground(From?) | true.
+*(Answer=yes, From?)
+respond(offer(From), [decided(Answer?)]) :- constant(From?) | true.
+''';
+
+    test('an index of 1 names the sole clause of that guard, and the compiled '
+        'declaration carries it', () {
+      final out = compile('$src'
+          'display respond *(Answer=yes, From?) 1 : label("Accept").\n');
+      expect(out.source,
+          contains('display respond *(Answer=yes, From?) 1 : '
+              'label("Accept").'));
+    });
+
+    test('an index naming the second of two clauses of one guard compiles', () {
+      final out = compile('$twoOfOneGuard'
+          'display respond *(Answer=yes, From?) 2 : label("Accept").\n');
+      expect(out.source,
+          contains('display respond *(Answer=yes, From?) 2 : '
+              'label("Accept").'));
+    });
+
+    test('an index beyond the clauses of that guard is rejected, and the '
+        'message counts what the program has', () {
+      final message =
+          rejection('display respond *(Answer=yes, From?) 2 : label("Accept").');
+      expect(message, contains('display respond *(Answer=yes, From?) 2'));
+      expect(message, contains('names no clause'));
+      expect(message,
+          contains('respond has 1 clause with that volition guard'));
+    });
+
     test('one for a procedure with no volition-guarded clause is rejected', () {
       final message =
           rejection('display note *(Answer=yes, From?) : label("Note").');
