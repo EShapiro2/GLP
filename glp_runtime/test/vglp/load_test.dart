@@ -248,7 +248,7 @@ respond(offer(From), [answered(no, From?)]) :- ground(From?) | true.
       // router's M position.  :emit must see the same scope as the load, or
       // it fails on a source the load compiles.
       write('self.glp', '''
-Note      ::= msg(Constant, Constant).
+Note      ::= msg(Key, Constant).
 Ent       ::= net_output(Stream(Note)).
 Decision  ::= yes ; no.
 Offer     ::= offer(Constant).
@@ -267,7 +267,7 @@ greet(offer(From), Outs, Outs1?) :-
           rootSelfGlpPath: File(_rootSelfGlp).absolute.path);
       expect(written, hasLength(1));
       final emitted = File(written.single).readAsStringSync();
-      expect(emitted, contains('Xs_greet_1 ::= xs_greet_1(Constant).'));
+      expect(emitted, contains('Xs_greet_1 ::= xs_greet_1(Key).'));
       // And the load compiles the same source.
       final m = discoverProgram(fixture.path, rootSelfGlpPath: _rootSelfGlp)
           .firstWhere((m) => m.moduleName == 'greeter');
