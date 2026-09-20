@@ -129,9 +129,9 @@ class TypeChecker {
   /// instantiation needs them: the parameters a call's arguments do not settle
   /// are fixed by the equations of the callee's own clauses (TGLP
   /// def:instantiation, well_typed_clause.dart _solveFromCalleeClauses).
-  final List<ast.Clause>? Function(String procKey)? definingClauses;
+  final wtc.CalleeClauses? callee;
 
-  TypeChecker(this.typeEnv, {this.collector, this.definingClauses})
+  TypeChecker(this.typeEnv, {this.collector, this.callee})
       : dfa = buildProgramDFA(typeEnv);
 
   /// Check a program (list of clauses) against declared types
@@ -307,7 +307,7 @@ class TypeChecker {
       final result = wtc.checkClauseFromAst(clause, dfa, typeEnv,
           collector: collector,
           activeInstantiations: activeInstantiations,
-          definingClauses: definingClauses);
+          callee: callee);
 
       if (!result.isWellTyped) {
         // Convert ClauseErrors to TypeErrors
@@ -802,7 +802,8 @@ TypeCheckResult _checkModuleImpl(ast.Module module, {List<ast.Procedure>? transf
       byKey.putIfAbsent('${c.head.functor}/${c.head.arity}', () => []).add(c);
     }
     final checker = TypeChecker(typeEnv,
-        collector: collector, definingClauses: (k) => byKey[k]);
+        collector: collector,
+        callee: wtc.CalleeClauses((k) => byKey[k], verifyInstantiation));
     final result = checker.check(clauses);
 
     // Phase A (modular checking via abstract parameters), per module: certify
@@ -836,7 +837,8 @@ TypeCheckResult _checkModuleImpl(ast.Module module, {List<ast.Procedure>? transf
     byKey.putIfAbsent('${c.head.functor}/${c.head.arity}', () => []).add(c);
   }
   final checker = TypeChecker(typeEnv,
-      collector: localCollector, definingClauses: (k) => byKey[k]);
+      collector: localCollector,
+      callee: wtc.CalleeClauses((k) => byKey[k], verifyInstantiation));
   final result = checker.check(clauses);
 
   final errors = <TypeError>[...result.errors];
@@ -929,6 +931,26 @@ TypeCheckResult _checkModuleImpl(ast.Module module, {List<ast.Procedure>? transf
 // =============================================================================
 // Per-instantiation checking, closed under calls (clause-template rule)
 // =============================================================================
+
+/// The two conditions TGLP def:instantiation places on the callee: the clauses
+/// of the called procedure are well-typed by the expanded declaration, and every
+/// input path of that declaration is accepted by some clause
+/// (def:input-accepting-clause).  [checkSingleProcedure] is exactly those two —
+/// covariance and contravariance — so a candidate is put to it and adopted only
+/// if it comes back clean.  No collector and no callee are supplied: this
+/// verifies the candidate, it does not pursue the instantiations the body
+/// induces, which the closure does once the candidate is adopted.
+bool verifyInstantiation(
+    ProcDecl decl, TypeEnvironment env, List<ast.Clause> clauses) {
+  try {
+    return TypeChecker(env)
+        .checkSingleProcedure(decl, clauses)
+        .errors
+        .isEmpty;
+  } on Object {
+    return false;
+  }
+}
 
 /// The check result for one parameterized-procedure instantiation.
 class InstantiationCheckResult {
@@ -1144,7 +1166,9 @@ List<InstantiationCheckResult> checkInstantiationsClosed(
       final active = {...pending.active, inst.procKey: inst.monoDecl};
       final sub = wtc.InstantiationCollector();
       final res = TypeChecker(focusedEnv,
-              collector: sub, definingClauses: definingClauses)
+              collector: sub,
+              callee:
+                  wtc.CalleeClauses(definingClauses, verifyInstantiation))
           .checkSingleProcedure(inst.monoDecl, defining,
               activeInstantiations: active);
       // A parametric procedure certified by Phase A (abstract-instance check) is
@@ -1153,6 +1177,21 @@ List<InstantiationCheckResult> checkInstantiationsClosed(
       // instantiations its calls induce are discovered and checked below.
       if (!certifiedKeys.contains(inst.procKey)) {
         results.add(InstantiationCheckResult(inst, res));
+      }
+
+      // A check adds to its focused environment the types it built for the
+      // parameters the callee's heads fix (well_typed_clause.dart
+      // _thetaFromHeads).  They are monomorphic definitions the closure
+      // discovered, like the ones materialized below, so they accumulate here
+      // too: a later round rebuilds each focused environment from the
+      // instantiation's own, which predates them, and a materialized type may
+      // carry one as an argument, leaving the round a reference it cannot
+      // resolve.
+      for (final e in focusedEnv.types.entries) {
+        if (!inst.env.types.containsKey(e.key) &&
+            !extraTypes.containsKey(e.key)) {
+          extraTypes[e.key] = e.value;
+        }
       }
 
       // Enqueue the instantiations this body induces (recorded into [sub]),

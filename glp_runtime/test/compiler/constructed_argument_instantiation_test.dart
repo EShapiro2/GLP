@@ -14,6 +14,13 @@
 /// the other must be dual (def:well-typed-clause 3(a)), and that is the
 /// equation.
 ///
+/// Where no equation reaches a parameter, coverage selects the map: def:instantiation
+/// ends "...and every input path of that declaration is accepted by some clause of
+/// q", so the map carries exactly the constructors the callee's heads match at that
+/// position --- a map carrying an alternative no clause matches leaves an input path
+/// unaccepted, and one missing an alternative a head matches makes that head
+/// inconsistent.  The last two tests are that rule and its failure.
+///
 /// Until 2026-09-20 only a variable argument bound a parameter, so a call
 /// passing a constructed term induced no instantiation and the first two
 /// programs below were rejected as carrying a parameter-inspecting procedure
@@ -57,6 +64,27 @@ void main() {
         return s.contains('No transition for bad(1,1)') &&
             s.contains('from state Msg?');
       }, 'names the argument and the type the parameter is bound to')),
+    );
+    expect(engine.loadedPrograms.containsKey('__program__'), isFalse);
+  });
+
+  test('a parameter no equation reaches is the constructors its callee\'s heads match',
+      () {
+    final dir =
+        Directory('../programs/tests/param_theta_covered').absolute.path;
+    expect(engine.loadProgram(dir), isTrue);
+  });
+
+  test('a map leaving an input path unaccepted is not an instantiation', () {
+    final dir =
+        Directory('../programs/tests/param_theta_uncovered').absolute.path;
+    expect(
+      () => engine.loadProgram(dir),
+      throwsA(predicate((e) {
+        final s = e.toString();
+        return s.contains('code:pick/3') &&
+            s.contains('no call in the program instantiates it');
+      }, 'names the procedure no map instantiates')),
     );
     expect(engine.loadedPrograms.containsKey('__program__'), isFalse);
   });

@@ -1,0 +1,11 @@
+%% See self.glp.  pick/3 inspects R --- its heads match a/1 there --- so it is
+%% not parametrically well-typed and is checked only at an instantiation.
+
+exported procedure go(Stream(Kind)?, Constant).
+go(Xs, N?) :- pick(a(one), Xs?, N).
+
+procedure(R, S) pick(R?, Stream(S)?, Constant).
+pick(a(N), [p|_], N?).
+pick(a(N), [q|_], N?).
+pick(a(N), [r|_], N?).
+pick(a(N), [], N?).
