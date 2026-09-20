@@ -1,0 +1,11 @@
+%% One type parameter passed two constructed arguments whose types have
+%% different automata (TGLP parameterized-types.tex sec:param-procedures): "Two
+%% bindings for one parameter conflict when the types they supply have different
+%% type automata".  f(A?) binds X to f(Constant); g(B?) is then checked against
+%% it and has no transition for g/1, so the program is rejected.  Negative
+%% fixture.
+
+imported procedure code#go(Constant?, Constant?).
+
+exported procedure run(Constant?, Constant?).
+run(A, B) :- code # go(A?, B?).

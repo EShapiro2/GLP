@@ -1,0 +1,7 @@
+%% See self.glp.
+
+exported procedure go(Constant?, Constant?).
+go(A, B) :- both(f(A?), g(B?)).
+
+procedure(X) both(X?, X?).
+both(_, _).

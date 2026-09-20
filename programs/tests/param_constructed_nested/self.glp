@@ -1,0 +1,15 @@
+%% A parameter binds through a term inside a term (TGLP
+%% parameterized-types.tex sec:param-procedures).  The call passes w(i(N?)): the
+%% inner i(N?) is itself a constructed argument, so its type is i(Constant), and
+%% the outer term's is w(i(Constant)) --- the automaton of Wrap, which the
+%% router's clause requires.  Nothing here is a variable of type Wrap, so the
+%% instantiation exists only because a constructed term carries a type.
+
+Inner ::= i(Constant).
+Wrap  ::= w(Inner).
+Entry ::= out(Stream(Wrap)?) ; log(Stream(Constant)?).
+
+imported procedure code#emit(Constant?, Stream(Entry)?, Stream(Entry)).
+
+exported procedure run(Constant?, Stream(Entry)?, Stream(Entry)).
+run(N, Outs, Outs1?) :- code # emit(N?, Outs?, Outs1).

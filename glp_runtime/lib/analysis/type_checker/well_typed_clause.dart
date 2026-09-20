@@ -1161,14 +1161,17 @@ ProcDecl? _inferConcreteDecl(
     // element type needed to instantiate the type parameter. Without this the
     // common case — a polymorphic parameter passed a reader — failed inference
     // and the body's polarity obligation was never re-checked (Issue 14).
-    String? actualTypeName;
-    if (actualArg is ast.VarTerm) {
-      final info =
-          callerVarTypes[actualArg.name] ?? callerVarTypes['${actualArg.name}?'];
-      if (info != null) {
-        actualTypeName = info.typeState.baseName;
-      }
-    }
+    //
+    // An argument that is a constructed term carries a type of its own --- "the
+    // concrete type at the call site of an argument that is a variable is its
+    // declared type, and of an argument that is a constructed term the type of
+    // the term itself---its functor, the types of its constants and the declared
+    // types of its variables---so a constructed argument instantiates a
+    // parameter exactly as a variable does" (TGLP parameterized-types.tex
+    // sec:param-procedures, Udi 2026-09-20) --- which [_callSiteTypeName] builds
+    // and names.
+    final actualTypeName = _callSiteTypeName(
+        actualArg, declaredType.isInputMode, callerVarTypes, dfa, env);
     if (actualTypeName == null) continue;
 
     // Match declared type against actual type to extract bindings
@@ -1224,6 +1227,130 @@ ProcDecl? _inferConcreteDecl(
       exported: paramTemplate.exported,
       imported: paramTemplate.imported,
       modulePath: paramTemplate.modulePath);
+}
+
+/// The concrete type an actual argument imposes at a call site, named so that
+/// it can be looked up in [env] and [dfa].
+///
+/// TGLP parameterized-types.tex sec:param-procedures: "The concrete type at the
+/// call site of an argument that is a variable is its declared type, and of an
+/// argument that is a constructed term the type of the term itself---its
+/// functor, the types of its constants and the declared types of its
+/// variables---so a constructed argument instantiates a parameter exactly as a
+/// variable does."
+///
+/// A variable's declared type is read polarity-agnostically, from whichever half
+/// of its SRSW pair was recorded: both halves report the same
+/// [DFAState.baseName].  A constructed term's own type is built and named by
+/// [_termTypeName].  Any other argument --- a bare constant, a list, `_` ---
+/// leaves the parameter unbound, as before: the sentence above gives the type of
+/// a variable and of a constructed term, and of nothing else.
+///
+/// [consumedPosition] is the mode of the declaration position the argument
+/// stands at (`M?` against `M`), which [_termTypeName] needs to write the term's
+/// readers and writers as modes of the type it builds.
+String? _callSiteTypeName(
+  ast.Term arg,
+  bool consumedPosition,
+  Map<String, VariableTypeInfo> callerVarTypes,
+  ProgramDFA dfa,
+  TypeEnvironment env,
+) {
+  if (arg is ast.VarTerm) {
+    final info = callerVarTypes[arg.name] ?? callerVarTypes['${arg.name}?'];
+    return info?.typeState.baseName;
+  }
+  if (arg is ast.StructTerm) {
+    return _termTypeName(arg, consumedPosition, callerVarTypes, dfa, env);
+  }
+  return null;
+}
+
+/// Build, register and name the type of the constructed term [term].
+///
+/// The type has one alternative, [term]'s functor over the types of its
+/// arguments: a constant's type is `Constant` (the type of the constants, root
+/// `self.glp`: `Constant ::= Number ; String ; Module`), a variable's is its
+/// declared type, and a nested term's is built by this function again.  The name
+/// is derived from that structure alone, so two calls whose terms build the same
+/// type name it the same and are one instantiation, and it begins with `$`,
+/// which no GLP type name does.  A declared type with the same automaton is the
+/// same type by structural identity (sec:param-procedures) and needs no name
+/// here: nothing downstream compares type names, `sameBaseType` and `isSubtype`
+/// comparing automata.
+///
+/// Modes.  The type is written in produce polarity, as a declaration writes it,
+/// and the declaration position supplies the rest: a field is `T?` exactly when
+/// the term's variable there is a reader and the position produces, or a writer
+/// and the position consumes ([consumedPosition]).  So `msg(agent, person, C?)`
+/// at `M?` with `C` of type `ScreenContent` builds
+/// `msg(Constant, Constant, ScreenContent)`, whose automaton is that of a
+/// `ScreenMsg ::= msg(Constant, Constant, ScreenContent).` declared anywhere ---
+/// type identity being structural (sec:param-procedures), that is one type and
+/// not two, whether or not any declared type has that automaton.
+///
+/// Returns null, leaving the parameter unbound as before, when a variable in the
+/// term has no type recorded yet, when an argument is one this function does not
+/// type (a list, `_`), or when a type it would reference is not in [dfa].
+String? _termTypeName(
+  ast.StructTerm term,
+  bool consumedPosition,
+  Map<String, VariableTypeInfo> callerVarTypes,
+  ProgramDFA dfa,
+  TypeEnvironment env,
+) {
+  if (term.args.isEmpty) return null; // not a constructed term
+  final argTypes = <TypeExpr>[];
+  final argNames = <String>[];
+  for (final arg in term.args) {
+    if (arg is ast.VarTerm) {
+      final info = callerVarTypes[arg.name] ?? callerVarTypes['${arg.name}?'];
+      if (info == null) return null;
+      final dual = arg.isReader != consumedPosition;
+      final base = info.typeState.baseName;
+      if (!dfa.states.containsKey(dual ? '$base?' : base)) return null;
+      argTypes.add(TypeRef(base, term.line, term.column, isInput: dual));
+      argNames.add(dual ? '$base?' : base);
+    } else if (arg is ast.ConstTerm) {
+      if (!dfa.states.containsKey('Constant')) return null;
+      argTypes.add(TypeRef('Constant', term.line, term.column));
+      argNames.add('Constant');
+    } else if (arg is ast.UnderscoreTerm) {
+      final dual = arg.isReader != consumedPosition;
+      argTypes.add(PrimitiveModeAlt(dual, term.line, term.column));
+      argNames.add(dual ? '_?' : '_');
+    } else if (arg is ast.StructTerm) {
+      final nested =
+          _termTypeName(arg, consumedPosition, callerVarTypes, dfa, env);
+      if (nested == null) return null;
+      argTypes.add(TypeRef(nested, term.line, term.column));
+      argNames.add(nested);
+    } else {
+      return null; // a list, or anything else this function does not type
+    }
+  }
+
+  // The name is the expanded-monomorphic form the rest of the checker already
+  // uses, `T<A,B>`: top-level commas inside `<>` are what [_splitTypeArgs] and
+  // param_expansion's `_splitTopLevelArgs` split on, so a name built any other
+  // way (parentheses, say) is mis-split where a materialized type carries this
+  // one as an argument --- `Stream<$card<Constant,Context,$req<Integer>>>`.
+  final name = '\$${term.functor}<${argNames.join(',')}>';
+  var def = env.types[name];
+  if (def == null) {
+    def = TypeDef(
+        name,
+        [StructAlt(term.functor, argTypes, term.line, term.column)],
+        term.line,
+        term.column);
+    try {
+      env.types[name] = def;
+    } on UnsupportedError {
+      return null; // an unmodifiable environment takes no fresh definition
+    }
+  }
+  addTypeToProgramDFA(dfa, def, env.types);
+  return name;
 }
 
 /// Match a declared type expression against an actual type name to infer

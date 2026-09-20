@@ -1126,6 +1126,22 @@ List<InstantiationCheckResult> checkInstantiationsClosed(
       final res = TypeChecker(focusedEnv, collector: sub).checkSingleProcedure(
           inst.monoDecl, defining,
           activeInstantiations: active);
+
+      // A check adds to its focused environment the types built from the
+      // constructed arguments of the calls in this body (well_typed_clause.dart
+      // _termTypeName, TGLP sec:param-procedures).  They are monomorphic
+      // definitions the closure discovered, exactly like the ones materialized
+      // below, so they accumulate here too: a later round rebuilds each focused
+      // environment from the instantiation's own, which predates them, and a
+      // materialized type may reference one --- `Slot<$abort(ReqId)>` over
+      // `$abort(ReqId)` in the coins program --- leaving the round with a
+      // reference it cannot resolve.
+      for (final e in focusedEnv.types.entries) {
+        if (!inst.env.types.containsKey(e.key) &&
+            !extraTypes.containsKey(e.key)) {
+          extraTypes[e.key] = e.value;
+        }
+      }
       // A parametric procedure certified by Phase A (abstract-instance check) is
       // well-typed at every instantiation by lem:parametricity, so its concrete
       // instantiation is not re-reported here; its body is still traversed so the
