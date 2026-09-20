@@ -14,13 +14,13 @@ alice_wait(V) :- ground(V?) | send_to_user([delivered(V?)]).
 %% bob: receives the end from alice and forwards it to carol, re-exporting
 %% alice's name rather than anchoring a new link (Definition Globalize).
 exported procedure bob_init(_?, _?).
-bob_init(_, [msg(_, w(W)) | _]) :-
+bob_init(_, [msg(_, w(W?)) | _]) :-
     send_to_net([msg(carol, w(W))]).
 
 %% carol: the holder.  Binds the forwarded end, then answers the report her
 %% runtime makes when it holds the assignment.
 exported procedure carol_init(_?, _?).
-carol_init(_, [msg(_, w(W)) | In]) :-
+carol_init(_, [msg(_, w(W?)) | In]) :-
     W = hello_from_carol,
     answer_reports(carol, In?).
 
