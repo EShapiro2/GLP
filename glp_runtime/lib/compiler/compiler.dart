@@ -8,28 +8,24 @@ import 'result.dart';
 import 'ast.dart' show Program, Procedure, Clause, Atom, Goal, Guard, Term, VarTerm, StructTerm, UnderscoreTerm, CompileMode;
 import '../analysis/type_checker/type_ast.dart' show ProcDecl;
 import 'package:glp_runtime/bytecode/runner.dart' show BytecodeProgram;
-import '../analysis/type_checker/type_checker.dart' show checkModule;
 
 // Re-export for users of this module
 export 'package:glp_runtime/bytecode/runner.dart' show BytecodeProgram;
 export 'result.dart' show CompilationResult;
-export 'compiler.dart' show CompileOptions;
-
-/// Compilation options
-class CompileOptions {
-  /// Enable type checking
-  final bool typeCheck;
-
-  /// Abort compilation on type errors (only applies if typeCheck is true)
-  final bool strictTypes;
-
-  const CompileOptions({
-    this.typeCheck = false,
-    this.strictTypes = false,
-  });
-}
 
 /// Main GLP compiler
+///
+/// The compiler takes no options.  Until 2026-09-20 a `CompileOptions` carried
+/// `typeCheck` and `strictTypes`, and the block they guarded ran the module
+/// check here, printed `[TYPE ERROR]` per error and carried on whenever
+/// `strictTypes` was off; nothing anywhere constructed the options with
+/// `typeCheck` true, so the block never ran either.  The same object is
+/// typechecked and then compiled, and no diagnostic on a load path is a
+/// warning: a program that does not check does not run (Coordination #1,
+/// 2026-09-18).  The block is therefore deleted rather than repaired, and the
+/// options with it; the loaders check the module and refuse it, and a caller
+/// of this compiler gets no switch that would let a compiled object go
+/// unchecked.
 class GlpCompiler {
   final Lexer Function(String) _createLexer;
   final Parser Function(List<Token>) _createParser;
@@ -47,14 +43,13 @@ class GlpCompiler {
         _createCodegen = createCodegen ?? (() => CodeGenerator());
 
   /// Compile GLP source to bytecode program
-  BytecodeProgram compile(String source, [CompileOptions? options]) {
-    final result = compileWithMetadata(source, options);
+  BytecodeProgram compile(String source) {
+    final result = compileWithMetadata(source);
     return result.program;
   }
 
   /// Compile GLP source to bytecode program with variable metadata
-  CompilationResult compileWithMetadata(String source, [CompileOptions? options]) {
-    final opts = options ?? const CompileOptions();
+  CompilationResult compileWithMetadata(String source) {
     try {
       // Phase 1: Lexical analysis
       // Note: Main lexer now handles type declarations (::= and procedure)
@@ -67,46 +62,6 @@ class GlpCompiler {
 
       // Convert Module to Program for analyzer
       final ast = Program(module.procedures, module.line, module.column);
-
-      // Phase 2.4: Apply partial evaluation (defined guard expansion) BEFORE type checking
-      // This transforms clauses to unfold unit clause guards, which affects coverage checking
-      final partialEvaluator = PartialEvaluator();
-      final transformedAst = partialEvaluator.transformDefinedGuards(ast);
-
-      // Phase 2.5: Type checking (optional)
-      if (opts.typeCheck) {
-        try {
-          // Use checkModule with transformed procedures
-          // This ensures type checking sees the expanded guards
-          final typeResult = checkModule(module, transformedProcedures: transformedAst.procedures);
-
-          // Report type errors and warnings
-          if (typeResult.errors.isNotEmpty) {
-            for (final error in typeResult.errors) {
-              print('[TYPE ERROR] ${error.message} at line ${error.line}');
-            }
-            if (opts.strictTypes) {
-              throw CompileError(
-                'Type checking failed with ${typeResult.errors.length} error(s)',
-                typeResult.errors.first.line,
-                typeResult.errors.first.column,
-              );
-            }
-          }
-
-          if (typeResult.warnings.isNotEmpty) {
-            for (final warning in typeResult.warnings) {
-              print('[TYPE WARNING] ${warning.message} at line ${warning.line}');
-            }
-          }
-        } catch (e) {
-          if (opts.strictTypes) {
-            rethrow;
-          }
-          // In non-strict mode, just print the error and continue
-          print('[TYPE CHECK] Failed: $e');
-        }
-      }
 
       // Generate reduce/2 for all files except system-mode code (stdlib)
       final generateReduce = module.compileMode != CompileMode.system;
