@@ -227,19 +227,26 @@ String printDisplayDecl(ast.DisplayDecl d) {
           : '${i.name}(${i.args.map(_termSource).join(', ')})')
       .join(', ');
   if (d.isClauseForm) {
-    final g = d.guard!;
-    final positions = <String>[
-      for (final q in g.question)
-        q.writer == null
-            ? _termSource(q.value!)
-            : (q.value == null || q.value is ast.UnderscoreTerm
-                ? q.writer!.name
-                : '${q.writer!.name}=${_termSource(q.value!)}'),
-      for (final c in g.context) '${c.name}?',
-    ];
-    return 'display ${d.predicate} *(${positions.join(', ')}) : $items.';
+    return 'display ${d.predicate} ${printVolitionGuard(d.guard!)} : $items.';
   }
   return 'display ${_termSource(d.pattern!)} : $items.';
+}
+
+/// A volition guard as GLP source, `*(X=T, ..., Y?, ...)`, as its source wrote
+/// it.  A display declaration names its clause's volition guard (vGLP,
+/// Definition "Display Declaration, Default Display"), so this is also the form
+/// in which a declaration's guard is matched against a clause's.
+String printVolitionGuard(ast.VolitionGuard g) {
+  final positions = <String>[
+    for (final q in g.question)
+      q.writer == null
+          ? _termSource(q.value!)
+          : (q.value == null || q.value is ast.UnderscoreTerm
+              ? q.writer!.name
+              : '${q.writer!.name}=${_termSource(q.value!)}'),
+    for (final c in g.context) '${c.name}?',
+  ];
+  return '*(${positions.join(', ')})';
 }
 
 String _termSource(ast.Term t) {

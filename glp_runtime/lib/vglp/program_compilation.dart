@@ -20,6 +20,7 @@ import 'dart:io';
 import '../compiler/ast.dart' as ast;
 import '../compiler/lexer.dart';
 import '../compiler/parser.dart';
+import '../compiler/error.dart';
 import '../compiler/glp_printer.dart';
 import '../analysis/type_checker/type_ast.dart';
 import 'clause_compilation.dart';
@@ -52,6 +53,7 @@ class CompiledProgram {
 /// [ancestors] is the same thing for a caller with no loader.
 CompiledProgram compileProgram(ast.Module module, MediatorSource mediator,
     {List<ast.Module> ancestors = const [], TypeEnvironment? scope}) {
+  checkDisplayDecls(module);
   final types = compileTypes(module, ancestors: ancestors, scope: scope);
   final med = instantiate(mediator);
 
@@ -94,6 +96,59 @@ CompiledProgram compileProgram(ast.Module module, MediatorSource mediator,
       _emit(module, types, med, compiled, compiledDecls, pending),
       types,
       compiled);
+}
+
+/// Every clause-form display declaration of [module] names a volition-guarded
+/// clause the module has, or the compilation rejects the source.
+///
+/// A display declaration is "for a volition-guarded clause of predicate p with
+/// volition guard *(...)", and it "names its clause's volition guard, so an
+/// else-branch has none of its own" (vGLP, Definition "Display Declaration,
+/// Default Display").  A declaration whose predicate and guard no clause of the
+/// module carries therefore names no clause: there is nothing it is the display
+/// of, and nothing the bridge would render by it.  It is an error in the
+/// source, and the compilation says so instead of carrying the declaration
+/// verbatim into the compiled program, which is what `:emit` and the load both
+/// did until 2026-09-20.
+void checkDisplayDecls(ast.Module module) {
+  final guardsOf = <String, List<String>>{};
+  final predicates = <String>{};
+  for (final p in module.procedures) {
+    predicates.add(p.name);
+    for (final c in p.clauses) {
+      if (c.volitionGuard != null) {
+        guardsOf
+            .putIfAbsent(p.name, () => <String>[])
+            .add(printVolitionGuard(c.volitionGuard!));
+      }
+    }
+  }
+
+  for (final d in module.displayDecls) {
+    if (!d.isClauseForm) continue;
+    final p = d.predicate!;
+    final guard = printVolitionGuard(d.guard!);
+    final have = guardsOf[p] ?? const <String>[];
+    if (have.contains(guard)) continue;
+
+    final String missing;
+    if (!predicates.contains(p)) {
+      missing = 'the program has no procedure $p';
+    } else if (have.isEmpty) {
+      missing = 'no clause of $p carries a volition guard';
+    } else {
+      missing = 'the volition-guarded clauses of $p carry '
+          '${have.toSet().join(', ')}';
+    }
+    throw CompileError(
+        'The display declaration "display $p $guard : ..." names no clause: '
+        '$missing.  A display declaration is for a volition-guarded clause and '
+        'names that clause\'s volition guard, an else-branch having none of its '
+        'own (vGLP, Definition "Display Declaration, Default Display").',
+        d.line,
+        d.column,
+        phase: 'analyzer');
+  }
 }
 
 String _emit(ast.Module module, CompiledTypes types, InstantiatedMediator med,
