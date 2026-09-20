@@ -1,12 +1,31 @@
-%% roundtrip(T, R): R = signed(K, H, T1) where K is the key the signature
-%% carries, H the source identity it was made under, and T1 the term signed.
-exported procedure roundtrip(_?, _).
-roundtrip(T, R?) :- self_key(K), sign(T?, K?, S), signed(S?, K1, H, T1),
-    R = signed(K1?, H?, T1?).
+%% The signature seam (GLP-Spec appendix-guards, "Identity and signature"):
+%% signature/2 assigns signed(K, H, T) where its argument is a signed term
+%% whose signature verifies, and unsigned otherwise --- a value and not a
+%% failure, so each caller below matches its result and takes an unsigned
+%% branch.
 
-%% signer(T, K): the signer alone, by signed/2.
-exported procedure signer(_?, Key).
-signer(T, K?) :- self_key(K0), sign(T?, K0?, S), signed(S?, K).
+%% roundtrip(T, R): sign T under this person's key and take the signed term
+%% apart again.  R = signed(K, H, T1) where K is the key the signature carries,
+%% H the source identity it was made under, and T1 the term signed; unsigned
+%% where the signed term does not verify.
+exported procedure roundtrip(_?, _).
+roundtrip(T, R?) :- self_key(K), sign(T?, K?, S), signature(S?, Sig),
+    result(Sig?, R).
+
+procedure result(Signature?, _).
+result(signed(K, H, T), R?) :- R = signed(K?, H?, T?).
+result(unsigned, R?) :- R = unsigned.
+
+%% signer(S, K): the signer of the signed term S alone, by matching
+%% signed(K, _, _) --- who signed and not what --- and unsigned where S is not
+%% a signed term whose signature verifies: not a string, not a hex byte string,
+%% tampered with, or signed under a key it does not carry.
+exported procedure signer(_?, _).
+signer(S, K?) :- signature(S?, Sig), who(Sig?, K).
+
+procedure who(Signature?, _).
+who(signed(K, _, _), K1?) :- K1 = K?.
+who(unsigned, K?) :- K = unsigned.
 
 %% identities(K, S, C): the compiler's key and the two identities of this
 %% program's own module value.

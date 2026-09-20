@@ -1,14 +1,18 @@
-/// Tests for the signature kernels — self_key/1, sign/3, signed/4, signed/2
+/// Tests for the signature kernels — self_key/1, sign/3, signature/2
 /// (GLP-Spec appendix-guards, "Identity and signature"; IGLP code format
 /// §Offer and Handshake Messages, "Signed content") — and the
 /// valid_attestation/4 guard of the networking seam.
 ///
-/// An agent signs attest(PkA, PkB) under its own key; signed/4 gives back the
-/// signer, the source identity of the signing module and the term; a tampered
-/// signed term does not hold; sign signs under no key but the person's; sign
-/// suspends until its input is ground and resumes on binding; a signed term
-/// produced by one agent is read at another. The guard is fed a raw Ed25519
-/// signature made in Dart over the canonical bytes, which is what it checks.
+/// An agent signs attest(PkA, PkB) under its own key; signature/2 gives back
+/// signed(K, H, T) — the signer, the source identity of the signing module and
+/// the term — where the signed term verifies, and the constant unsigned
+/// otherwise, a value the caller matches and not a failure: a tampered
+/// signature, altered content, a hex string that is no signed term and a term
+/// that is no string each answer unsigned, and the kernel aborts only on a
+/// malformed call. sign signs under no key but the person's; sign suspends
+/// until its input is ground and resumes on binding; a signed term produced by
+/// one agent is read at another. The guard is fed a raw Ed25519 signature made
+/// in Dart over the canonical bytes, which is what it checks.
 ///
 /// Keys and signed terms are lowercase-hex string constants. The runtime holds
 /// the person's identity from construction; the networking layer is given the
@@ -22,6 +26,7 @@ import 'package:test/test.dart';
 import 'package:glp_runtime/engine/glp_engine.dart';
 import 'package:glp_runtime/multiagent/identity.dart';
 import 'package:glp_runtime/multiagent/simulation_network.dart';
+import 'package:glp_runtime/runtime/body_kernels.dart';
 import 'package:glp_runtime/runtime/terms.dart';
 import 'package:glp_runtime/wire/artefact.dart';
 
@@ -58,17 +63,37 @@ Directory _load(GlpEngine engine, String source) {
   return dir;
 }
 
+/// A program that signs `hello` and emits the signed term, and one that takes
+/// any term through signature/2 and emits the signer and the term where it is
+/// a verified signed term, and `unsigned` otherwise.
+const String _makeAndCheck = '''
+procedure make.
+make :- self_key(K), sign(hello, K?, S), send_to_user([S?]).
+procedure check(_?).
+check(S) :- signature(S?, Sig), report(Sig?).
+procedure report(Signature?).
+report(signed(K, _, T)) :- send_to_user([K?, T?]).
+report(unsigned) :- send_to_user([unsigned]).
+''';
+
+/// [signed] with the hex digit at [at] flipped.
+String _flip(String signed, int at) =>
+    signed.replaceRange(at, at + 1, signed[at] == '0' ? '1' : '0');
+
 void main() {
-  group('sign/3, signed/4, signed/2, self_key/1', () {
-    test('round-trip: signed/4 gives the signer, the module identity and the '
-        'term', () async {
+  group('sign/3, signature/2, self_key/1', () {
+    test('round-trip: signature/2 gives signed(K, H, T) — the signer, the '
+        'module identity and the term', () async {
       final out = <String>[];
       final a = PersonIdentity.generate();
       final engine = _agent('alice', a, out);
       final dir = _load(engine, '''
 procedure round_trip.
-round_trip :- self_key(K), sign(attest(pka, pkb), K?, S),
-    signed(S?, K1, H, T), send_to_user([K1?, H?, T?]).
+round_trip :- self_key(K), sign(attest(pka, pkb), K?, S), signature(S?, Sig),
+    report(Sig?).
+procedure report(Signature?).
+report(signed(K, H, T)) :- send_to_user([K?, H?, T?]).
+report(unsigned) :- send_to_user([unsigned]).
 ''');
       try {
         final result = await engine.runGoal('round_trip');
@@ -84,14 +109,17 @@ round_trip :- self_key(K), sign(attest(pka, pkb), K?, S),
       }
     });
 
-    test('signed/2 gives the signer alone, and it is self_key\'s answer',
-        () async {
+    test('matching signed(K, _, _) gives the signer alone, and it is '
+        'self_key\'s answer', () async {
       final out = <String>[];
       final a = PersonIdentity.generate();
       final engine = _agent('alice', a, out);
       final dir = _load(engine, '''
 procedure who.
-who :- self_key(K), sign(hello, K?, S), signed(S?, K1), send_to_user([K1?]).
+who :- self_key(K), sign(hello, K?, S), signature(S?, Sig), signer(Sig?).
+procedure signer(Signature?).
+signer(signed(K, _, _)) :- send_to_user([K?]).
+signer(unsigned) :- send_to_user([unsigned]).
 ''');
       try {
         final result = await engine.runGoal('who');
@@ -120,31 +148,89 @@ under_other :- sign(hello, '${b.pub.hex}', S), send_to_user([S?]).
       }
     });
 
-    test('a tampered signed term does not hold: signed/4 fails', () async {
+    test('a tampered signature answers unsigned: a value, not a failure',
+        () async {
       final out = <String>[];
       final a = PersonIdentity.generate();
       final engine = _agent('alice', a, out);
-      final dir = _load(engine, '''
-procedure make.
-make :- self_key(K), sign(hello, K?, S), send_to_user([S?]).
-procedure check(_?).
-check(S) :- signed(S?, K, _, _), send_to_user([K?]).
-''');
+      final dir = _load(engine, _makeAndCheck);
       try {
         await engine.runGoal('make');
         final signed = out.single;
         out.clear();
         // Flip one hex digit of the signature (the bytes after the 32-byte
         // key and its 1-byte length: offset 2 + 64 hex chars).
-        final at = 2 + 64 + 4;
-        final tampered = signed.replaceRange(
-            at, at + 1, signed[at] == '0' ? '1' : '0');
+        final tampered = _flip(signed, 2 + 64 + 4);
         final result = await engine.runGoal("check('$tampered')");
-        expect(result.succeeded, isFalse);
-        expect(out, isEmpty);
+        expect(result.succeeded, isTrue);
+        expect(out, ['unsigned']);
       } finally {
         dir.deleteSync(recursive: true);
       }
+    });
+
+    test('altered content answers unsigned: the signature no longer covers it',
+        () async {
+      final out = <String>[];
+      final a = PersonIdentity.generate();
+      final engine = _agent('alice', a, out);
+      final dir = _load(engine, _makeAndCheck);
+      try {
+        await engine.runGoal('make');
+        final signed = out.single;
+        out.clear();
+        // Flip the last hex digit: inside e(sig(HSrc, hello)), the signed
+        // content, which still decodes as a term.
+        final forged = _flip(signed, signed.length - 1);
+        final result = await engine.runGoal("check('$forged')");
+        expect(result.succeeded, isTrue);
+        expect(out, ['unsigned']);
+      } finally {
+        dir.deleteSync(recursive: true);
+      }
+    });
+
+    test('a term that is no signed term answers unsigned: a hex string, a '
+        'string that is not hex, a compound, a number', () async {
+      final out = <String>[];
+      final a = PersonIdentity.generate();
+      final engine = _agent('alice', a, out);
+      final dir = _load(engine, _makeAndCheck);
+      try {
+        for (final goal in [
+          "check('00ff')",
+          'check(hello)',
+          'check(foo(bar))',
+          'check(42)',
+        ]) {
+          out.clear();
+          final result = await engine.runGoal(goal);
+          expect(result.succeeded, isTrue, reason: goal);
+          expect(out, ['unsigned'], reason: goal);
+        }
+      } finally {
+        dir.deleteSync(recursive: true);
+      }
+    });
+
+    test('the kernel aborts only on a malformed call: the wrong arity, or a '
+        'first argument that is not known', () {
+      final a = PersonIdentity.generate();
+      final rt = _agent('alice', a, <String>[]).runtime;
+      expect(signatureKernel(rt, []), BodyKernelResult.abort);
+      expect(signatureKernel(rt, [ConstTerm('00ff')]), BodyKernelResult.abort);
+      final (_, unknown) = rt.heap.allocateVariable();
+      final (w1, _) = rt.heap.allocateVariable();
+      expect(signatureKernel(rt, [VarRef(unknown), VarRef(w1)]),
+          BodyKernelResult.abort);
+      // A known argument that is no signed term is not a malformed call: the
+      // kernel succeeds and assigns unsigned.
+      final (w2, r2) = rt.heap.allocateVariable();
+      expect(signatureKernel(rt, [ConstTerm('00ff'), VarRef(w2)]),
+          BodyKernelResult.success);
+      final v = rt.heap.getValue(r2);
+      expect(v, isA<ConstTerm>());
+      expect((v as ConstTerm).value, 'unsigned');
     });
 
     test('cross-agent: alice signs, bob reads the signer', () async {
@@ -159,10 +245,7 @@ make :- self_key(K), sign(attest(pka, pkb), K?, S), send_to_user([S?]).
 ''');
       final bobOut = <String>[];
       final bob = _agent('bob', b, bobOut);
-      final bobDir = _load(bob, '''
-procedure check(_?).
-check(S) :- signed(S?, K, _, T), send_to_user([K?, T?]).
-''');
+      final bobDir = _load(bob, _makeAndCheck);
       try {
         await alice.runGoal('make');
         final signed = aliceOut.single;

@@ -77,6 +77,10 @@ void setRootScopeEnvironmentSource(String source) {
   _rootScopeEnvironmentSource = source;
 }
 
+/// Whether [source] is the text the root scope environment is built from.
+bool isRootScopeEnvironmentSource(String source) =>
+    source == (_rootScopeEnvironmentSource ?? rootScopeTypes);
+
 /// Build TypeEnvironment from root scope
 TypeEnvironment buildRootScopeEnvironment() {
   final source = _rootScopeEnvironmentSource ?? rootScopeTypes;
@@ -105,9 +109,12 @@ TypeEnvironment buildRootScopeEnvironment() {
 
   final env = _buildEnvironmentFromModule(expandedModule, checkRedefinitions: false, resolveAliasesNow: true);
   rootScopeTypeDefs = Map<String, TypeDef>.unmodifiable(env.types);
+  // The root's types are defined in the root: the prefix one is kept under
+  // once a descendant scope defines its name (TypeEnvironment.merge).
   return TypeEnvironment(env.types, env.procedures,
       paramProcDecls: env.paramProcDecls,
-      typeTemplates: rootScopeTemplates);
+      typeTemplates: rootScopeTemplates,
+      typeOrigins: {for (final t in env.types.keys) t: 'root'});
 }
 
 /// Build TypeEnvironment from a parsed Module
@@ -162,7 +169,12 @@ TypeEnvironment buildTypeEnvironment(ast.Module module,
       typeTemplates: templates, paramProcDecls: paramProcDecls);
 
   return TypeEnvironment(types, procedures,
-      paramProcDecls: paramProcDecls, typeTemplates: templates);
+      paramProcDecls: paramProcDecls,
+      typeTemplates: templates,
+      typeOrigins: {
+        for (final e in merged.typeOrigins.entries)
+          if (types.containsKey(e.key)) e.key: e.value
+      });
 }
 
 /// Build TypeEnvironment from Module's type definitions and procedure declarations
@@ -242,13 +254,24 @@ List<ast.Clause> extractClauses(ast.Module module) {
 }
 
 /// Check if a type definition is a simple alias (single type reference)
-/// 
-/// Per spec (type-environment.md v0.8):
-/// Simple aliases have a single alternative that is a TypeRef or PrimitiveModeAlt:
+///
+/// TGLP appendix "Type Aliases": "A simple alias has a single alternative
+/// that is a type reference: an alias for a defined type, or for the dual of
+/// one. ... The referenced types must be defined---not aliases themselves,
+/// and not primitives."
 /// - Output ::= _.         (alias for primitive wildcard)
-/// - Input ::= _?.          (alias for primitive wildcard complement)  
+/// - Input ::= _?.          (alias for primitive wildcard complement)
 /// - MyList ::= List.       (alias for defined type)
 /// - MyStream ::= Stream?.  (alias for complement of defined type)
+///
+/// NOT a simple alias:
+/// - Key ::= String.        (references a primitive: an ordinary type
+///                           definition, whose automaton inherits String's)
+///
+/// Until 2026-09-18 a single `TypeRef` counted whatever it named, so the root
+/// `self.glp`'s `Key ::= String.` was erased from every environment and a
+/// descendant module's `NetMsg ::= msg(Key, _)` failed with "Unresolved type:
+/// Key" in every linked program (IGLP, 2026-09-18).
 bool _isSimpleAlias(TypeDef def) {
   if (def.alternatives.length != 1) return false;
 
@@ -257,8 +280,9 @@ bool _isSimpleAlias(TypeDef def) {
   // Single PrimitiveModeAlt (_ or _?) = simple alias
   if (alt is PrimitiveModeAlt) return true;
 
-  // Single TypeRef (T or T?) = simple alias
-  if (alt is TypeRef) return true;
+  // Single TypeRef to a defined type (T or T?) = simple alias; a reference
+  // to a primitive type is a definition, not an alias.
+  if (alt is TypeRef) return !TypeRef.builtins.contains(alt.name);
 
   return false;
 }

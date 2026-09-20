@@ -1,0 +1,13 @@
+%% The rejected direction of ../scoped_declaration/: a module's own type of a
+%% name an ancestor declaration also uses does not change what that
+%% declaration means, so a constant of the module's own Answer passed to this
+%% self.glp's tally/2 is rejected, and the root's Key produced by self_key/1
+%% is not a value of keyed.glp's Key.  See ../scoped_declaration/self.glp.
+Answer ::= authorise ; refuse.
+procedure tally(Stream(Answer)?, Stream(Integer)).
+tally([], []).
+tally([authorise | As], [1 | Ts?]) :- tally(As?, Ts).
+tally([refuse | As], [0 | Ts?]) :- tally(As?, Ts).
+imported procedure caller#go(Stream(Integer)).
+exported procedure go(Stream(Integer)).
+go(Ts?) :- caller # go(Ts).

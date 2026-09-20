@@ -1,0 +1,4 @@
+%% yes is this module's Answer, not ../self.glp's: tally/2 rejects it.
+Answer ::= yes ; no.
+exported procedure go(Stream(Integer)).
+go(Ts?) :- tally([yes, no], Ts).

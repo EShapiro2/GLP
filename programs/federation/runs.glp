@@ -5,10 +5,14 @@
 % join_platform is the Join of Figure 2 of
 % /Grassroots/GFWC/sections/introduction.tex carried out by the platform with
 % messages: two communities of two agents each, the Discovers by which the
-% members of the two assemblies come to know one another, the Moves and the
-% Wills, each proposed at its community and learnt there, and the Relays that
-% carry the motions and the wills of each community to the other, ending with
-% the same six records learnt at both.
+% members of the two assemblies come to know one another, the Move at g, its
+% disclosure to a member of f and the Relay that member proposes at f, the
+% Move at f, the Wills, each proposed at its community and learnt there, and
+% the disclosures and Relays that carry the remaining motion and the wills of
+% each community to the other, ending with the same six records learnt at
+% both.  no_discover leaves the Discovers out, and the first disclosure is
+% blocked; no_disclose leaves a disclosure out, and the Relay that would
+% propose the record is blocked.
 %
 % concurrent_dates is two members of one community proposing a record each
 % without either round having finished, ending with both records in one learnt
@@ -36,31 +40,31 @@ imported procedure decide#decided_acts(Rat?, Row?, Arecs).
 % The communities and the records the runs name
 % ---------------------------------------------------------------------------
 
-% f, the parent, founded by the assembly [carol, dave] of name(carol, [1]);
-% g, the child, founded by the assembly [alice, bob] of name(alice, [1]);
+% f, the parent, founded by the assembly [carol, dave] of name(carol, [y1]);
+% g, the child, founded by the assembly [alice, bob] of name(alice, [y1]);
 % h, an assembly of three, founded by [carol, dave, erin].
 procedure comm(Constant?, Name).
-comm(f, name(carol, [1, 1])).
-comm(g, name(alice, [1, 1])).
-comm(h, name(carol, [1, 1])).
+comm(f, name(carol, [y1, y2])).
+comm(g, name(alice, [y1, y2])).
+comm(h, name(carol, [y1, y2])).
 
 procedure founding_row(Constant?, Row).
 founding_row(f,
-    [origin(federate(name(carol, [1])),
-            motion(federate(name(carol, [1])), name(carol, [1]), [carol, dave], 0)),
-     seat(plus, carol, col(name(carol, [1])), 0, 0),
-     seat(plus, dave, col(name(carol, [1])), 0, 1)]).
+    [origin(federate(name(carol, [y1]), y2),
+            motion(federate(name(carol, [y1]), y2), name(carol, [y1]), [carol, dave], [], 0)),
+     seat(plus, carol, col(name(carol, [y1])), 0, 0),
+     seat(plus, dave, col(name(carol, [y1])), 0, 1)]).
 founding_row(g,
-    [origin(federate(name(alice, [1])),
-            motion(federate(name(alice, [1])), name(alice, [1]), [alice, bob], 0)),
-     seat(plus, alice, col(name(alice, [1])), 0, 0),
-     seat(plus, bob, col(name(alice, [1])), 0, 1)]).
+    [origin(federate(name(alice, [y1]), y2),
+            motion(federate(name(alice, [y1]), y2), name(alice, [y1]), [alice, bob], [], 0)),
+     seat(plus, alice, col(name(alice, [y1])), 0, 0),
+     seat(plus, bob, col(name(alice, [y1])), 0, 1)]).
 founding_row(h,
-    [origin(federate(name(carol, [1])),
-            motion(federate(name(carol, [1])), name(carol, [1]), [carol, dave, erin], 0)),
-     seat(plus, carol, col(name(carol, [1])), 0, 0),
-     seat(plus, dave, col(name(carol, [1])), 0, 1),
-     seat(plus, erin, col(name(carol, [1])), 0, 2)]).
+    [origin(federate(name(carol, [y1]), y2),
+            motion(federate(name(carol, [y1]), y2), name(carol, [y1]), [carol, dave, erin], [], 0)),
+     seat(plus, carol, col(name(carol, [y1])), 0, 0),
+     seat(plus, dave, col(name(carol, [y1])), 0, 1),
+     seat(plus, erin, col(name(carol, [y1])), 0, 2)]).
 
 % ---------------------------------------------------------------------------
 % Building a world of founders
@@ -69,7 +73,7 @@ founding_row(h,
 % An agent the founding of a community seated, holding the instance of it at
 % the row the founding gave it, with the peers it starts with.
 procedure founder(Constant?, Agents?, Name?, Row?, Cva).
-founder(P, Ps, V, R, cva(P?, Ps?, [], [], [I?], 0, no)) :-
+founder(P, Ps, V, R, cva(P?, Ps?, [], [], [I?], 0, no, [])) :-
     ground(P?), ground(Ps?), ground(V?), ground(R?) |
     rla # inst_form(V?, R?, I).
 
@@ -113,6 +117,7 @@ pstart(join_platform, pworld(Cs?)) :-
     founders([alice, bob], [alice, bob], G?, RG?, C2),
     cvas_app(C1?, C2?, Cs).
 pstart(no_discover, W?) :- pstart(join_platform, W).
+pstart(no_disclose, W?) :- pstart(join_platform, W).
 pstart(concurrent_dates, pworld(Cs?)) :-
     comm(f, F),
     founding_row(f, RF),
@@ -127,6 +132,7 @@ pstart(crash_after_will, pworld(Cs?)) :-
 exported procedure prun_params(Constant?, Params).
 prun_params(join_platform, params(rat(1, 2), 2, 10)).
 prun_params(no_discover, params(rat(1, 2), 2, 10)).
+prun_params(no_disclose, params(rat(1, 2), 2, 10)).
 prun_params(concurrent_dates, params(rat(1, 2), 2, 10)).
 prun_params(crash_after_will, params(rat(1, 2), 3, 10)).
 prun_params(form_federate, params(rat(1, 2), 1, 10)).
@@ -135,58 +141,77 @@ exported procedure psteps(Constant?, Steps).
 % The Join of Figure 2 of sections/introduction.tex.  Each member of each
 % assembly moves or wills the act, so Definition "Federation Platform" has it
 % will, with every member of the assembly of the other community, the Discover
-% by which the two come to know each other.
+% by which the two come to know each other.  A record crosses by a disclosure
+% from a member of the one assembly to a member of the other, who proposes it.
 psteps(join_platform,
     [discover(carol, alice), discover(carol, bob),
      discover(dave, alice), discover(dave, bob),
-     take(carol, move(join(name(carol, [1, 1]), name(alice, [1, 1])), name(carol, [1, 1]), carol)),
+     take(alice, move(join(name(carol, [y1, y2]), name(alice, [y1, y2])), name(alice, [y1, y2]), alice)),
      settle(400),
-     take(alice, move(join(name(carol, [1, 1]), name(alice, [1, 1])), name(alice, [1, 1]), alice)),
+     disclose(alice, carol, moved(motion(join(name(carol, [y1, y2]), name(alice, [y1, y2])), name(alice, [y1, y2]), [alice, bob], [], 0)), name(alice, [y1, y2])),
      settle(400),
-     take(carol, will_on(carol, motion(join(name(carol, [1, 1]), name(alice, [1, 1])), name(carol, [1, 1]), [carol, dave], 0), name(carol, [1, 1]))),
+     take(carol, relay(moved(motion(join(name(carol, [y1, y2]), name(alice, [y1, y2])), name(alice, [y1, y2]), [alice, bob], [], 0)), name(alice, [y1, y2]), name(carol, [y1, y2]), alice, carol)),
      settle(400),
-     take(dave, will_on(dave, motion(join(name(carol, [1, 1]), name(alice, [1, 1])), name(carol, [1, 1]), [carol, dave], 0), name(carol, [1, 1]))),
+     take(carol, move(join(name(carol, [y1, y2]), name(alice, [y1, y2])), name(carol, [y1, y2]), carol)),
      settle(400),
-     take(alice, will_on(alice, motion(join(name(carol, [1, 1]), name(alice, [1, 1])), name(alice, [1, 1]), [alice, bob], 0), name(alice, [1, 1]))),
+     take(carol, will_on(carol, motion(join(name(carol, [y1, y2]), name(alice, [y1, y2])), name(carol, [y1, y2]), [carol, dave], [], 0), name(carol, [y1, y2]))),
      settle(400),
-     take(bob, will_on(bob, motion(join(name(carol, [1, 1]), name(alice, [1, 1])), name(alice, [1, 1]), [alice, bob], 0), name(alice, [1, 1]))),
+     take(dave, will_on(dave, motion(join(name(carol, [y1, y2]), name(alice, [y1, y2])), name(carol, [y1, y2]), [carol, dave], [], 0), name(carol, [y1, y2]))),
      settle(400),
-     take(carol, relay(moved(motion(join(name(carol, [1, 1]), name(alice, [1, 1])), name(carol, [1, 1]), [carol, dave], 0)), name(carol, [1, 1]), name(alice, [1, 1]), carol)),
+     take(alice, will_on(alice, motion(join(name(carol, [y1, y2]), name(alice, [y1, y2])), name(alice, [y1, y2]), [alice, bob], [], 0), name(alice, [y1, y2]))),
      settle(400),
-     take(carol, relay(will(carol, motion(join(name(carol, [1, 1]), name(alice, [1, 1])), name(carol, [1, 1]), [carol, dave], 0)), name(carol, [1, 1]), name(alice, [1, 1]), carol)),
+     take(bob, will_on(bob, motion(join(name(carol, [y1, y2]), name(alice, [y1, y2])), name(alice, [y1, y2]), [alice, bob], [], 0), name(alice, [y1, y2]))),
      settle(400),
-     take(dave, relay(will(dave, motion(join(name(carol, [1, 1]), name(alice, [1, 1])), name(carol, [1, 1]), [carol, dave], 0)), name(carol, [1, 1]), name(alice, [1, 1]), dave)),
+     disclose(alice, carol, will(alice, motion(join(name(carol, [y1, y2]), name(alice, [y1, y2])), name(alice, [y1, y2]), [alice, bob], [], 0)), name(alice, [y1, y2])),
      settle(400),
-     take(alice, relay(moved(motion(join(name(carol, [1, 1]), name(alice, [1, 1])), name(alice, [1, 1]), [alice, bob], 0)), name(alice, [1, 1]), name(carol, [1, 1]), alice)),
+     take(carol, relay(will(alice, motion(join(name(carol, [y1, y2]), name(alice, [y1, y2])), name(alice, [y1, y2]), [alice, bob], [], 0)), name(alice, [y1, y2]), name(carol, [y1, y2]), alice, carol)),
      settle(400),
-     take(alice, relay(will(alice, motion(join(name(carol, [1, 1]), name(alice, [1, 1])), name(alice, [1, 1]), [alice, bob], 0)), name(alice, [1, 1]), name(carol, [1, 1]), alice)),
+     disclose(bob, carol, will(bob, motion(join(name(carol, [y1, y2]), name(alice, [y1, y2])), name(alice, [y1, y2]), [alice, bob], [], 0)), name(alice, [y1, y2])),
      settle(400),
-     take(bob, relay(will(bob, motion(join(name(carol, [1, 1]), name(alice, [1, 1])), name(alice, [1, 1]), [alice, bob], 0)), name(alice, [1, 1]), name(carol, [1, 1]), bob)),
+     take(carol, relay(will(bob, motion(join(name(carol, [y1, y2]), name(alice, [y1, y2])), name(alice, [y1, y2]), [alice, bob], [], 0)), name(alice, [y1, y2]), name(carol, [y1, y2]), bob, carol)),
+     settle(400),
+     disclose(carol, alice, moved(motion(join(name(carol, [y1, y2]), name(alice, [y1, y2])), name(carol, [y1, y2]), [carol, dave], [], 0)), name(carol, [y1, y2])),
+     settle(400),
+     take(alice, relay(moved(motion(join(name(carol, [y1, y2]), name(alice, [y1, y2])), name(carol, [y1, y2]), [carol, dave], [], 0)), name(carol, [y1, y2]), name(alice, [y1, y2]), carol, alice)),
+     settle(400),
+     disclose(carol, alice, will(carol, motion(join(name(carol, [y1, y2]), name(alice, [y1, y2])), name(carol, [y1, y2]), [carol, dave], [], 0)), name(carol, [y1, y2])),
+     settle(400),
+     take(alice, relay(will(carol, motion(join(name(carol, [y1, y2]), name(alice, [y1, y2])), name(carol, [y1, y2]), [carol, dave], [], 0)), name(carol, [y1, y2]), name(alice, [y1, y2]), carol, alice)),
+     settle(400),
+     disclose(dave, alice, will(dave, motion(join(name(carol, [y1, y2]), name(alice, [y1, y2])), name(carol, [y1, y2]), [carol, dave], [], 0)), name(carol, [y1, y2])),
+     settle(400),
+     take(alice, relay(will(dave, motion(join(name(carol, [y1, y2]), name(alice, [y1, y2])), name(carol, [y1, y2]), [carol, dave], [], 0)), name(carol, [y1, y2]), name(alice, [y1, y2]), dave, alice)),
      settle(400)]).
-% The same, with the Discovers left out: the first Relay is blocked, the
-% relaying agent knowing no member of the other community's assembly.
+% The same, with the Discovers left out: the first disclosure is blocked, the
+% disclosing agent knowing no member of the other community's assembly.
 psteps(no_discover,
-    [take(carol, move(join(name(carol, [1, 1]), name(alice, [1, 1])), name(carol, [1, 1]), carol)),
+    [take(alice, move(join(name(carol, [y1, y2]), name(alice, [y1, y2])), name(alice, [y1, y2]), alice)),
      settle(400),
-     take(alice, move(join(name(carol, [1, 1]), name(alice, [1, 1])), name(alice, [1, 1]), alice)),
+     disclose(alice, carol, moved(motion(join(name(carol, [y1, y2]), name(alice, [y1, y2])), name(alice, [y1, y2]), [alice, bob], [], 0)), name(alice, [y1, y2]))]).
+% The same, with the disclosure left out: the Relay is blocked, nothing
+% having been disclosed to the agent that would propose it.
+psteps(no_disclose,
+    [discover(carol, alice), discover(carol, bob),
+     discover(dave, alice), discover(dave, bob),
+     take(alice, move(join(name(carol, [y1, y2]), name(alice, [y1, y2])), name(alice, [y1, y2]), alice)),
      settle(400),
-     take(carol, relay(moved(motion(join(name(carol, [1, 1]), name(alice, [1, 1])), name(carol, [1, 1]), [carol, dave], 0)), name(carol, [1, 1]), name(alice, [1, 1]), carol))]).
+     take(carol, relay(moved(motion(join(name(carol, [y1, y2]), name(alice, [y1, y2])), name(alice, [y1, y2]), [alice, bob], [], 0)), name(alice, [y1, y2]), name(carol, [y1, y2]), alice, carol))]).
 % Two members of one community propose a record each, neither round having
 % finished when the other opens.
 psteps(concurrent_dates,
     [advance_date(carol, 5),
      advance_date(dave, 7),
-     take(carol, date_at(name(carol, [1, 1]), carol)),
-     take(dave, date_at(name(carol, [1, 1]), dave)),
+     take(carol, date_at(name(carol, [y1, y2]), carol)),
+     take(dave, date_at(name(carol, [y1, y2]), dave)),
      settle(600)]).
 % A supermajority of three wills a Federate; the third member crashes while
 % the last will is still in flight.
 psteps(crash_after_will,
-    [take(carol, move(federate(name(carol, [1, 1])), name(carol, [1, 1]), carol)),
+    [take(carol, move(federate(name(carol, [y1, y2]), y3), name(carol, [y1, y2]), carol)),
      settle(400),
-     take(carol, will_on(carol, motion(federate(name(carol, [1, 1])), name(carol, [1, 1]), [carol, dave, erin], 0), name(carol, [1, 1]))),
+     take(carol, will_on(carol, motion(federate(name(carol, [y1, y2]), y3), name(carol, [y1, y2]), [carol, dave, erin], [], 0), name(carol, [y1, y2]))),
      settle(400),
-     take(dave, will_on(dave, motion(federate(name(carol, [1, 1])), name(carol, [1, 1]), [carol, dave, erin], 0), name(carol, [1, 1]))),
+     take(dave, will_on(dave, motion(federate(name(carol, [y1, y2]), y3), name(carol, [y1, y2]), [carol, dave, erin], [], 0), name(carol, [y1, y2]))),
      crash(erin),
      settle(400)]).
 
@@ -197,11 +222,11 @@ psteps(crash_after_will,
 psteps(form_federate,
     [take(alice, form(alice)),
      settle(400),
-     take(alice, move(federate(name(alice, [])), name(alice, []), alice)),
+     take(alice, move(federate(name(alice, []), y1), name(alice, []), alice)),
      settle(400),
-     take(alice, will_on(alice, motion(federate(name(alice, [])), name(alice, []), [alice], 0), name(alice, []))),
+     take(alice, will_on(alice, motion(federate(name(alice, []), y1), name(alice, []), [alice], [], 0), name(alice, []))),
      settle(400),
-     take(alice, establish(name(alice, []), 0, alice)),
+     take(alice, establish(name(alice, []), y1, alice)),
      settle(400)]).
 
 exported procedure prun(Constant?, PRunOut).
@@ -257,4 +282,3 @@ prun_report2(D, W, P1, V1, P2, V2, prep(D?, L1?, L2?, A1?, A2?, S1?, S2?, T?)) :
     prun_state1(L1?, V1?, S1),
     prun_state1(L2?, V2?, S2),
     platform # pworld_traffic(W?, T).
-

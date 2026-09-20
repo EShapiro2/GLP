@@ -181,8 +181,8 @@ agent(Id, [msg(From, Id1, response(Resp))|UserIn], NetIn, Outs, host(Apps, Atts,
 %% Install a certified mini-app.  The compiler's certificate is accepted when
 %% its key is one the person trusts (Section 6.4), and the creator's
 %% certification must be signed over this source identity with the checker's
-%% verdict that the contract is grassroots.  signed/4 does not hold on a
-%% forged certification, so a forged one fails the verifying goal outright.
+%% verdict that the contract is grassroots.  signature/2 assigns unsigned on a
+%% forged certification, and the super-app refuses to install it (Section 6.1).
 agent(Id, [msg(person, Id1, install(App, M, CSig, Ui?))|UserIn], NetIn, Outs,
       host(Apps, Atts, Pend, Trusted)) :-
     Id? =?= Id1?, ground(App?), ground(Trusted?) |
@@ -369,14 +369,14 @@ agent(Id, UserIn, [msg(From, Id1, intro(Other, Ch))|NetIn], Outs,
 
 %% An offer from a friend: the invitation must be the social graph's signature
 %% over the offered source identity and this agent.  Where the person has
-%% consented already, join; otherwise the offer waits for the person.
+%% consented already, join; otherwise the offer waits for the person.  A term
+%% that is not a signed term is refused (Section 6.1; invite_signed/11).
 agent(Id, UserIn, [msg(From, Id1, invite(App, Src, T, InvSig))|NetIn], Outs,
       host(Apps, Atts, Pend, Trusted)) :-
     Id? =?= Id1?, ground(From?), ground(App?) |
-    signed(InvSig?, _, _, Inv),
-    invite_check(Inv?, Src?, Id?, Ok),
-    offer_step(Ok?, Id?, From?, App?, Src?, T?, InvSig?, UserIn?, NetIn?, Outs?,
-               host(Apps?, Atts?, Pend?, Trusted?)).
+    signature(InvSig?, Sg),
+    invite_signed(Sg?, Id?, From?, App?, Src?, T?, InvSig?, UserIn?, NetIn?, Outs?,
+                  host(Apps?, Atts?, Pend?, Trusted?)).
 
 %% The invitee joins: its undertaking must be signed over the source identity,
 %% and the mini-app installed here must have that identity and that root
@@ -386,12 +386,9 @@ agent(Id, UserIn, [msg(From, Id1, invite(App, Src, T, InvSig))|NetIn], Outs,
 agent(Id, UserIn, [msg(From, Id1, join(App, Src, T, U))|NetIn], Outs,
       host(Apps, Atts, Pend, Trusted)) :-
     Id? =?= Id1?, ground(From?), ground(App?) |
-    signed(U?, _, _, Und),
-    undertaking_check(Und?, Src?, Ok0),
-    app_module(App?, Apps?, Apps1, L),
-    join_verify(Ok0?, L?, App?, Src?, T?, Ok),
-    root_step(Ok?, Id?, From?, App?, Src?, T?, UserIn?, NetIn?, Outs?,
-              Apps1?, Atts?, Pend?, Trusted?).
+    signature(U?, Sg),
+    join_signed(Sg?, Id?, From?, App?, Src?, T?, UserIn?, NetIn?, Outs?,
+                Apps?, Atts?, Pend?, Trusted?).
 
 %% The root channel arrives with the inviter's undertaking: verify it and the
 %% two identities against the mini-app installed here; on success hand the end
@@ -400,12 +397,9 @@ agent(Id, UserIn, [msg(From, Id1, join(App, Src, T, U))|NetIn], Outs,
 agent(Id, UserIn, [msg(From, Id1, root(App, Src, T, Up, End))|NetIn], Outs,
       host(Apps, Atts, Pend, Trusted)) :-
     Id? =?= Id1?, ground(From?), ground(App?) |
-    signed(Up?, _, _, Und),
-    undertaking_check(Und?, Src?, Ok0),
-    app_module(App?, Apps?, Apps1, L),
-    join_verify(Ok0?, L?, App?, Src?, T?, Ok),
-    accept_root_step(Ok?, Id?, From?, App?, T?, End?, UserIn?, NetIn?, Outs?,
-                     Apps1?, Atts?, Pend?, Trusted?).
+    signature(Up?, Sg),
+    root_signed(Sg?, Id?, From?, App?, Src?, T?, End?, UserIn?, NetIn?, Outs?,
+                Apps?, Atts?, Pend?, Trusted?).
 
 %% The runtime reports a held link: an end that reached this agent under an
 %% anchor other than the sender, or, at the anchor, a value that came from the
@@ -478,9 +472,16 @@ key_trusted(_, [], false).
 
 procedure creator_check(Constant?, String?, String?, Constant).
 creator_check(true, CSig, Src, V?) :-
-    signed(CSig?, _, _, Cert),
-    cert_check(Cert?, Src?, V).
+    signature(CSig?, Sg),
+    cert_signed(Sg?, Src?, V).
 creator_check(false, _, _, refused).
+
+%% cert_signed(Sg, Src, V): the certification taken apart.  Where it verifies
+%% it is read by its shape; where it is unsigned --- a forgery --- the
+%% installation is refused, as under a key the person does not trust.
+procedure cert_signed(Signature?, String?, Constant).
+cert_signed(signed(_, _, Cert), Src, V?) :- cert_check(Cert?, Src?, V).
+cert_signed(unsigned, _, refused).
 
 %% The signed term is untyped; the certification is read by its shape.
 procedure cert_check(_?, String?, Constant).
@@ -613,6 +614,17 @@ decline_step(offer(_, _, _), Id, App, From, UserIn, NetIn, Outs, Host) :-
     send_friend(From?, msg(Id?, From?, decline(App?)), Outs?, Outs1),
     agent(Id?, UserIn?, NetIn?, Outs1?, Host?).
 
+%% invite_signed(Sg, ...): the invitation taken apart.  Where it verifies it
+%% is checked and the offer proceeds; where it is unsigned --- a forgery ---
+%% the offer is refused by the path an invitation that does not check takes,
+%% and nothing is delivered (Section 6.1).
+procedure invite_signed(Signature?, Constant?, Constant?, Constant?, String?, Constant?, String?, UserInStream?, NetInStream?, OutputsList?, Host?).
+invite_signed(signed(_, _, Inv), Id, From, App, Src, T, InvSig, UserIn, NetIn, Outs, Host) :-
+    invite_check(Inv?, Src?, Id?, Ok),
+    offer_step(Ok?, Id?, From?, App?, Src?, T?, InvSig?, UserIn?, NetIn?, Outs?, Host?).
+invite_signed(unsigned, Id, From, App, Src, T, InvSig, UserIn, NetIn, Outs, Host) :-
+    offer_step(false, Id?, From?, App?, Src?, T?, InvSig?, UserIn?, NetIn?, Outs?, Host?).
+
 %% The signed invitation is untyped; it must name the offered source identity
 %% and this agent.
 procedure invite_check(_?, String?, Constant?, Constant).
@@ -677,6 +689,21 @@ identity_match(_, _, _, _, _, refused) :- otherwise | true.
 
 %% --- The inviter, on the invitee's undertaking: the root channel ---
 
+%% join_signed(Sg, ...): the invitee's undertaking taken apart.  Where it
+%% verifies it is checked against the mini-app installed here and the root
+%% channel is created; where it is unsigned --- a forgery --- the join is
+%% refused and no root channel is created (Section 6.1).
+procedure join_signed(Signature?, Constant?, Constant?, Constant?, String?, Constant?, UserInStream?, NetInStream?, OutputsList?, AppList?, AttestList?, PendingInv?, Stream(String)?).
+join_signed(signed(_, _, Und), Id, From, App, Src, T, UserIn, NetIn, Outs, Apps, Atts, Pend, Trusted) :-
+    undertaking_check(Und?, Src?, Ok0),
+    app_module(App?, Apps?, Apps1, L),
+    join_verify(Ok0?, L?, App?, Src?, T?, Ok),
+    root_step(Ok?, Id?, From?, App?, Src?, T?, UserIn?, NetIn?, Outs?,
+              Apps1?, Atts?, Pend?, Trusted?).
+join_signed(unsigned, Id, From, App, Src, T, UserIn, NetIn, Outs, Apps, Atts, Pend, Trusted) :-
+    root_step(refused, Id?, From?, App?, Src?, T?, UserIn?, NetIn?, Outs?,
+              Apps?, Atts?, Pend?, Trusted?).
+
 procedure root_step(Verdict?, Constant?, Constant?, Constant?, String?, Constant?, UserInStream?, NetInStream?, OutputsList?, AppList?, AttestList?, PendingInv?, Stream(String)?).
 root_step(ok(M), Id, From, App, Src, T, UserIn, NetIn, Outs, Apps, Atts, Pend, Trusted) :-
     ground(App?) |
@@ -700,6 +727,21 @@ root_ends(cssn, cssn_end(Mine?), cssn_end(Theirs?)) :- new_channel(Mine, Theirs)
 root_ends(sovereign, sovereign_end(Mine?), sovereign_end(Theirs?)) :- new_channel(Mine, Theirs) | true.
 
 %% --- The invitee, on the root channel ---
+
+%% root_signed(Sg, ...): the inviter's undertaking taken apart.  Where it
+%% verifies it is checked against the mini-app installed here and the end is
+%% accepted; where it is unsigned --- a forgery --- no end is accepted and
+%% nothing is delivered (Section 6.1).
+procedure root_signed(Signature?, Constant?, Constant?, Constant?, String?, Constant?, RootEnd?, UserInStream?, NetInStream?, OutputsList?, AppList?, AttestList?, PendingInv?, Stream(String)?).
+root_signed(signed(_, _, Und), Id, From, App, Src, T, End, UserIn, NetIn, Outs, Apps, Atts, Pend, Trusted) :-
+    undertaking_check(Und?, Src?, Ok0),
+    app_module(App?, Apps?, Apps1, L),
+    join_verify(Ok0?, L?, App?, Src?, T?, Ok),
+    accept_root_step(Ok?, Id?, From?, App?, T?, End?, UserIn?, NetIn?, Outs?,
+                     Apps1?, Atts?, Pend?, Trusted?).
+root_signed(unsigned, Id, From, App, _, T, End, UserIn, NetIn, Outs, Apps, Atts, Pend, Trusted) :-
+    accept_root_step(refused, Id?, From?, App?, T?, End?, UserIn?, NetIn?, Outs?,
+                     Apps?, Atts?, Pend?, Trusted?).
 
 procedure accept_root_step(Verdict?, Constant?, Constant?, Constant?, Constant?, RootEnd?, UserInStream?, NetInStream?, OutputsList?, AppList?, AttestList?, PendingInv?, Stream(String)?).
 accept_root_step(ok(M), Id, From, App, T, End, UserIn, NetIn, Outs, Apps, Atts, Pend, Trusted) :-

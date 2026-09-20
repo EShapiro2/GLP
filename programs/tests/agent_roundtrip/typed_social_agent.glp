@@ -74,7 +74,7 @@ send_net(Msg, [E|Rest], [E?|Rest1?]) :-
     send_net(Msg?, Rest?, Rest1).
 send_net(_, [], []).
 
-procedure send_friend(Constant?, FriendMsg?, OutputsList?, OutputsList).
+procedure send_friend(Key?, FriendMsg?, OutputsList?, OutputsList).
 send_friend(Name, Msg, [friend_output(K, [Msg?|Out1?])|Rest],
             [friend_output(K?, Out1)|Rest?]) :-
     Name? =?= K? | true.
@@ -83,7 +83,7 @@ send_friend(Name, Msg, [E|Rest], [E?|Rest1?]) :-
     send_friend(Name?, Msg?, Rest?, Rest1).
 send_friend(_, _, [], []).
 
-procedure add_friend_output(Constant?, FriendStream, OutputsList?, OutputsList).
+procedure add_friend_output(Key?, FriendStream, OutputsList?, OutputsList).
 add_friend_output(Name, Out?, Outs, [friend_output(Name?, Out)|Outs?]).
 
 %% =============================================================================

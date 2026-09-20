@@ -1,0 +1,8 @@
+%% self_key/1 is declared in the root self.glp over the root's Key, a String;
+%% this module's Key is k(Integer), and the root's value is not one of it, so
+%% use/1 below cannot take what self_key/1 produced.
+Key ::= k(Integer).
+exported procedure held(Integer?).
+held(_) :- self_key(K), use(K?).
+procedure use(Key?).
+use(_).

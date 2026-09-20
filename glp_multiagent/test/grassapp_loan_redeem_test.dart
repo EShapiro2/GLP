@@ -23,13 +23,15 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:glp_runtime/engine/glp_engine.dart';
 
+import 'programs_dir.dart';
+
 void main() {
   test('GrassApp: loan then maturity-gated redemption on local clocks',
       () async {
-    const repo = '/Users/udi/Grassroots/GLP';
-    const dir = '$repo/programs/grassapp';
+    final programs = programsDir();
+    final dir = '$programs/grassapp';
 
-    final engine = GlpEngine(rootSelfGlpPath: '$repo/programs/self.glp');
+    final engine = GlpEngine(rootSelfGlpPath: '$programs/self.glp');
 
     // programs/grassapp is a program (SGSG, d27e4d6a): loaded as one, its
     // self.glp exports the play as an entry point.

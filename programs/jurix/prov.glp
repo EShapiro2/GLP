@@ -32,29 +32,42 @@ contract_preds([S|Ss], T, R?) :- ground(S?), ground(Ss?), ground(T?) |
     contract_preds(Ss?, T?, R1),
     roles_preds(Rs?, R1?, R).
 
-procedure all_preds(Contract?, Preds).
+% The predicates occurring in a contract, in order of first occurrence.
+exported procedure all_preds(Contract?, Preds).
 all_preds(C, R?) :- ground(C?) |
     contract_preds(C?, [], P),
     preds_dedup(P?, R).
 
 % --- one pass -------------------------------------------------------------
-% args_ok(As, All, E, R): every argument of an added atom that is a role or a
-% party variable meets def:grounded.  A role meets it outright, since the
-% argument in question is one of the schema's own roles; a speech-act variable
-% is not in R + X and is not asked about; a party variable needs a required
-% atom of Phi_E naming it, at some role of the same schema.
+% args_ok(As, All, E, R): every argument of an added atom meets def:grounded.
+% A role meets it outright, since the argument in question is one of the
+% schema's own roles; a party variable needs a required atom of Phi_E naming
+% it, at some role of the same schema; and a speech-act variable is an
+% argument of such a required atom or occurs in no atom required at a role of
+% the schema, whatever its predicate.  A name term does not occur in a schema
+% of Section 3.
 
 procedure args_ok1(Ans?, Args?, RoleSpecs?, Preds?, Ans).
 args_ok1(no, _, _, _, no).
 args_ok1(yes, As, All, E, R?) :- ground(As?), ground(All?), ground(E?) |
     args_ok(As?, All?, E?, R).
 
+% svar_ok(All, Y, E, R): Y is an argument of a required atom of Phi_E, or
+% occurs in no required atom.
+procedure svar_ok(RoleSpecs?, Arg?, Preds?, Ans).
+svar_ok(All, Y, E, R?) :- ground(All?), ground(Y?), ground(E?) |
+    any_req_names(All?, Y?, E?, A1),
+    any_req_occurs(All?, Y?, A2),
+    flip(A2?, A3),
+    or_yes(A1?, A3?, R).
+
 procedure args_ok(Args?, RoleSpecs?, Preds?, Ans).
 args_ok([], _, _, yes).
 args_ok([role(_)|As], All, E, R?) :- ground(As?), ground(All?), ground(E?) |
     args_ok(As?, All?, E?, R).
-args_ok([svar(_)|As], All, E, R?) :- ground(As?), ground(All?), ground(E?) |
-    args_ok(As?, All?, E?, R).
+args_ok([svar(X)|As], All, E, R?) :- ground(X?), ground(As?), ground(All?), ground(E?) |
+    svar_ok(All?, svar(X?), E?, A),
+    args_ok1(A?, As?, All?, E?, R).
 args_ok([nterm(_)|As], All, E, R?) :- ground(As?), ground(All?), ground(E?) |
     args_ok(As?, All?, E?, R).
 args_ok([pvar(X)|As], All, E, R?) :- ground(X?), ground(As?), ground(All?), ground(E?) |

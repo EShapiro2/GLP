@@ -275,6 +275,91 @@ class ProcDecl {
   String toString() => '${_visibilityPrefix}procedure $qualifiedName(${argTypes.join(', ')}).';
 }
 
+/// [expr] with every type name in [rename] replaced by its value, in the name
+/// of a reference and in its type arguments, through every constructor. A
+/// name in [typeParams] is a type parameter, names no type and is left alone.
+TypeExpr renameTypeRefs(
+    TypeExpr expr, Map<String, String> rename, Set<String> typeParams) {
+  if (expr is TypeRef) {
+    final args = [
+      for (final a in expr.typeArgs) renameTypeRefs(a, rename, typeParams)
+    ];
+    final name = typeParams.contains(expr.name)
+        ? expr.name
+        : (rename[expr.name] ?? expr.name);
+    return TypeRef(name, expr.line, expr.column,
+        isInput: expr.isInput, typeArgs: args);
+  }
+  if (expr is StructAlt) {
+    return StructAlt(
+        expr.functor,
+        [for (final a in expr.args) renameTypeRefs(a, rename, typeParams)],
+        expr.line,
+        expr.column);
+  }
+  if (expr is ListConsAlt) {
+    return ListConsAlt(renameTypeRefs(expr.head, rename, typeParams),
+        renameTypeRefs(expr.tail, rename, typeParams), expr.line, expr.column);
+  }
+  if (expr is DiffListAlt) {
+    return DiffListAlt(renameTypeRefs(expr.content, rename, typeParams),
+        renameTypeRefs(expr.hole, rename, typeParams), expr.line, expr.column);
+  }
+  return expr; // ConstantAlt, ListNilAlt, PrimitiveModeAlt: no type name
+}
+
+/// Whether two type definitions are the same text: the same parameters and
+/// the same alternatives in order, positions aside.
+bool sameTypeDef(TypeDef a, TypeDef b) {
+  if (a.typeParams.length != b.typeParams.length) return false;
+  for (var i = 0; i < a.typeParams.length; i++) {
+    if (a.typeParams[i] != b.typeParams[i]) return false;
+  }
+  if (a.alternatives.length != b.alternatives.length) return false;
+  for (var i = 0; i < a.alternatives.length; i++) {
+    if (!sameTypeExpr(a.alternatives[i], b.alternatives[i])) return false;
+  }
+  return true;
+}
+
+/// Whether two type expressions are the same text, positions aside.
+bool sameTypeExpr(TypeExpr a, TypeExpr b) {
+  if (a is TypeRef) {
+    if (b is! TypeRef || a.name != b.name || a.isInput != b.isInput) {
+      return false;
+    }
+    if (a.typeArgs.length != b.typeArgs.length) return false;
+    for (var i = 0; i < a.typeArgs.length; i++) {
+      if (!sameTypeExpr(a.typeArgs[i], b.typeArgs[i])) return false;
+    }
+    return true;
+  }
+  if (a is PrimitiveModeAlt) {
+    return b is PrimitiveModeAlt && a.isInput == b.isInput;
+  }
+  if (a is ConstantAlt) return b is ConstantAlt && a.value == b.value;
+  if (a is ListNilAlt) return b is ListNilAlt;
+  if (a is ListConsAlt) {
+    return b is ListConsAlt &&
+        sameTypeExpr(a.head, b.head) &&
+        sameTypeExpr(a.tail, b.tail);
+  }
+  if (a is StructAlt) {
+    if (b is! StructAlt || a.functor != b.functor) return false;
+    if (a.args.length != b.args.length) return false;
+    for (var i = 0; i < a.args.length; i++) {
+      if (!sameTypeExpr(a.args[i], b.args[i])) return false;
+    }
+    return true;
+  }
+  if (a is DiffListAlt) {
+    return b is DiffListAlt &&
+        sameTypeExpr(a.content, b.content) &&
+        sameTypeExpr(a.hole, b.hole);
+  }
+  return false;
+}
+
 /// The type environment: all type definitions and procedure declarations in a module
 class TypeEnvironment {
   final Map<String, TypeDef> types;
@@ -286,21 +371,137 @@ class TypeEnvironment {
   /// Passed to downstream expansions so they can expand references
   /// to templates defined in ancestor scopes.
   final Map<String, TypeDef> typeTemplates;
+  /// The scope each type in [types] was defined in: the label its layer was
+  /// merged under ([merge]'s `label`), and so the prefix it is kept under once
+  /// a nearer scope defines its name ([shadowedBy]). A type with no entry came
+  /// in unlabelled and is kept under `outer:`.
+  final Map<String, String> typeOrigins;
 
   TypeEnvironment(this.types, this.procedures, {
       Map<String, ProcDecl>? paramProcDecls,
       this.typeTemplates = const {},
+      this.typeOrigins = const {},
   }) : paramProcDecls = paramProcDecls ?? {};
 
   factory TypeEnvironment.empty() => TypeEnvironment({}, {});
 
-  /// Merge another environment into this one
-  TypeEnvironment merge(TypeEnvironment other) {
+  /// The merge `E ⊔ E'` of TGLP Definition "Root, Scope", [other] being `E'`:
+  /// its definitions shadow this environment's by name.
+  ///
+  /// A type name both define is two types --- "two same-named types defined
+  /// in them are two types, which one flat namespace would otherwise make one,
+  /// checking a module against a definition it cannot see" (TGLP
+  /// "Compilation", third step) --- and a declaration's types are those of the
+  /// scope it was declared in. So this environment's definition of the name is
+  /// not dropped: it is kept under `<origin>:T`, every reference to it in this
+  /// environment's types, declarations and templates is rewritten to that
+  /// name ([shadowedBy]), and [other]'s definition takes the bare name.
+  /// [label] is the scope [other]'s types are recorded as defined in.
+  ///
+  /// Until 2026-09-18 the merge was a flat overwrite, so the root `self.glp`'s
+  /// `procedure authorise_link(GlobalName?, Answer?)` read a descendant's
+  /// `Answer` wherever one was defined, and `social/graph/core/agent.glp`'s
+  /// `authorise_link(L, authorise)` was rejected against
+  /// `social/graph/self.glp`'s `Answer` (IGLP, 2026-09-18).
+  TypeEnvironment merge(TypeEnvironment other, {String? label}) {
+    final kept = shadowedBy(other);
     return TypeEnvironment(
-      {...types, ...other.types},
-      {...procedures, ...other.procedures},
-      paramProcDecls: {...paramProcDecls, ...other.paramProcDecls},
-      typeTemplates: {...typeTemplates, ...other.typeTemplates},
+      {...kept.types, ...other.types},
+      {...kept.procedures, ...other.procedures},
+      paramProcDecls: {...kept.paramProcDecls, ...other.paramProcDecls},
+      typeTemplates: {...kept.typeTemplates, ...other.typeTemplates},
+      typeOrigins: {...kept.typeOrigins, ...other.originsUnder(label)},
+    );
+  }
+
+  /// [typeOrigins] with every type of this environment that has no origin
+  /// recorded under [label]; [typeOrigins] itself when [label] is null.
+  Map<String, String> originsUnder(String? label) => label == null
+      ? typeOrigins
+      : {for (final t in types.keys) t: typeOrigins[t] ?? label};
+
+  /// This environment as it survives beside [winner], whose definitions take
+  /// the bare names: each type both define --- as different definitions; two
+  /// equal definitions are one type, type identity being structural, and
+  /// either serves --- is kept under `<origin>:T`, and every reference to it
+  /// in this environment's types, declarations and templates is rewritten to
+  /// that name. [ownLabel] is the origin of a type of this environment that
+  /// has none recorded. This environment itself when nothing is shadowed.
+  TypeEnvironment shadowedBy(TypeEnvironment winner, {String? ownLabel}) {
+    final rename = <String, String>{};
+    final taken = <String>{...types.keys, ...winner.types.keys};
+    // Whether two definitions differ can turn on a rename made here --- an
+    // expansion instance `Stream<Answer>` of two different `Answer`s reads
+    // the same until its `Answer` is rewritten --- so the set is closed by
+    // iteration.
+    var grew = true;
+    while (grew) {
+      grew = false;
+      for (final name in types.keys) {
+        if (rename.containsKey(name)) continue;
+        final theirs = winner.types[name];
+        if (theirs == null) continue;
+        if (sameTypeDef(_renameTypeDef(types[name]!, rename), theirs)) continue;
+        final origin = typeOrigins[name] ?? ownLabel ?? 'outer';
+        var fresh = '$origin:$name';
+        for (var k = 2;
+            taken.contains(fresh) || rename.containsValue(fresh);
+            k++) {
+          fresh = '$origin$k:$name';
+        }
+        rename[name] = fresh;
+        grew = true;
+      }
+    }
+    if (rename.isEmpty) return this;
+    return TypeEnvironment(
+      {
+        for (final e in types.entries)
+          rename[e.key] ?? e.key: _renameTypeDef(e.value, rename)
+      },
+      {
+        for (final e in procedures.entries)
+          e.key: _renameProcDecl(e.value, rename)
+      },
+      paramProcDecls: {
+        for (final e in paramProcDecls.entries)
+          e.key: _renameProcDecl(e.value, rename)
+      },
+      typeTemplates: {
+        for (final e in typeTemplates.entries)
+          e.key: _renameTypeDef(e.value, rename)
+      },
+      typeOrigins: {
+        for (final e in typeOrigins.entries) rename[e.key] ?? e.key: e.value
+      },
+    );
+  }
+
+  static TypeDef _renameTypeDef(TypeDef td, Map<String, String> rename) {
+    if (rename.isEmpty) return td;
+    final params = td.typeParams.toSet();
+    return TypeDef(
+      rename[td.name] ?? td.name,
+      [for (final alt in td.alternatives) renameTypeRefs(alt, rename, params)],
+      td.line,
+      td.column,
+      typeParams: td.typeParams,
+    );
+  }
+
+  static ProcDecl _renameProcDecl(ProcDecl d, Map<String, String> rename) {
+    if (rename.isEmpty) return d;
+    final params = d.typeParams.toSet();
+    return ProcDecl(
+      d.name,
+      [for (final t in d.argTypes) renameTypeRefs(t, rename, params)],
+      d.line,
+      d.column,
+      typeParams: d.typeParams,
+      isBuiltin: d.isBuiltin,
+      exported: d.exported,
+      imported: d.imported,
+      modulePath: d.modulePath,
     );
   }
   

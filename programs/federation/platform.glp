@@ -16,12 +16,17 @@
 % "Grassroots Federation Implied Transactions" at its learnt rows adds; txn.glp
 % is that definition and is what computes the record here.  A Form or an
 % Establish starts the instance of the community it forms at the row the
-% transaction forms, whose configuration is the initial one.
+% transaction forms, whose configuration is the initial one.  A Relay is the
+% proposal at u, by an agent q the learnt row of u seats, of a record q has
+% received from an agent p it knows: p discloses the record, a cargo of its
+% own that changes no learnt row, and q proposes it.
 % ---------------------------------------------------------------------------
 
 imported procedure name#name_eq(Name?, Name?, Ans).
 imported procedure lattice#row_join(Row?, Row?, Row).
 imported procedure lattice#row_has(Row?, Record?, Ans).
+imported procedure txn#relay_from(Record?, Name?, Constant?, Row?, Ans).
+imported procedure txn#relay_into(Record?, Name?, Name?, Constant?, Row?, Ans).
 imported procedure rla#inst_name(Inst?, Name).
 imported procedure rla#inst_learnt(Inst?, Row).
 imported procedure rla#inst_state(Inst?, LState).
@@ -49,11 +54,11 @@ cvas_find1(no, _, Cs, P, R?) :- ground(Cs?), ground(P?) | cvas_find(Cs?, P?, R).
 
 exported procedure cvas_find(Cvas?, Constant?, CvaOpt).
 cvas_find([], _, nocva).
-cvas_find([cva(Q, Ps, O, I, Is, D, X)|Cs], P, R?) :-
+cvas_find([cva(Q, Ps, O, I, Is, D, X, Ds)|Cs], P, R?) :-
     ground(Q?), ground(Ps?), ground(O?), ground(I?), ground(Is?), integer(D?),
-    ground(X?), ground(Cs?), ground(P?) |
+    ground(X?), ground(Ds?), ground(Cs?), ground(P?) |
     eq_const(Q?, P?, A),
-    cvas_find1(A?, cva(Q?, Ps?, O?, I?, Is?, D?, X?), Cs?, P?, R).
+    cvas_find1(A?, cva(Q?, Ps?, O?, I?, Is?, D?, X?, Ds?), Cs?, P?, R).
 
 procedure eq_const(Constant?, Constant?, Ans).
 eq_const(A, B, yes) :- A? =?= B? | true.
@@ -66,11 +71,11 @@ cvas_put1(no, C, Cs, P, N, [C?|R?]) :- ground(Cs?), ground(P?), ground(N?) |
 
 exported procedure cvas_put(Cvas?, Constant?, Cva?, Cvas).
 cvas_put([], _, N, [N?]).
-cvas_put([cva(Q, Ps, O, I, Is, D, X)|Cs], P, N, R?) :-
+cvas_put([cva(Q, Ps, O, I, Is, D, X, Ds)|Cs], P, N, R?) :-
     ground(Q?), ground(Ps?), ground(O?), ground(I?), ground(Is?), integer(D?),
-    ground(X?), ground(Cs?), ground(P?), ground(N?) |
+    ground(X?), ground(Ds?), ground(Cs?), ground(P?), ground(N?) |
     eq_const(Q?, P?, A),
-    cvas_put1(A?, cva(Q?, Ps?, O?, I?, Is?, D?, X?), Cs?, P?, N?, R).
+    cvas_put1(A?, cva(Q?, Ps?, O?, I?, Is?, D?, X?, Ds?), Cs?, P?, N?, R).
 
 exported procedure pworld_cva(PWorld?, Constant?, CvaOpt).
 pworld_cva(pworld(Cs), P, R?) :- ground(Cs?), ground(P?) | cvas_find(Cs?, P?, R).
@@ -82,43 +87,73 @@ pworld_put(pworld(Cs), P, N, pworld(Cs1?)) :- ground(Cs?), ground(P?), ground(N?
 % --- The fields of an agent ------------------------------------------------
 
 exported procedure cva_name(Cva?, Constant).
-cva_name(cva(P, _, _, _, _, _, _), P?).
+cva_name(cva(P, _, _, _, _, _, _, _), P?).
 
 exported procedure cva_peers(Cva?, Agents).
-cva_peers(cva(_, Ps, _, _, _, _, _), Ps?).
+cva_peers(cva(_, Ps, _, _, _, _, _, _), Ps?).
 
 exported procedure cva_out(Cva?, PMsgs).
-cva_out(cva(_, _, O, _, _, _, _), O?).
+cva_out(cva(_, _, O, _, _, _, _, _), O?).
 
 exported procedure cva_in(Cva?, PMsgs).
-cva_in(cva(_, _, _, I, _, _, _), I?).
+cva_in(cva(_, _, _, I, _, _, _, _), I?).
 
 exported procedure cva_insts(Cva?, Insts).
-cva_insts(cva(_, _, _, _, Is, _, _), Is?).
+cva_insts(cva(_, _, _, _, Is, _, _, _), Is?).
 
 exported procedure cva_date(Cva?, Integer).
-cva_date(cva(_, _, _, _, _, D, _), D?).
+cva_date(cva(_, _, _, _, _, D, _, _), D?).
 
 exported procedure cva_crashed(Cva?, Ans).
-cva_crashed(cva(_, _, _, _, _, _, X), X?).
+cva_crashed(cva(_, _, _, _, _, _, X, _), X?).
+
+exported procedure cva_discs(Cva?, Discs).
+cva_discs(cva(_, _, _, _, _, _, _, Ds), Ds?).
 
 procedure cva_set_out(Cva?, PMsgs?, Cva).
-cva_set_out(cva(P, Ps, _, I, Is, D, X), O, cva(P?, Ps?, O?, I?, Is?, D?, X?)).
+cva_set_out(cva(P, Ps, _, I, Is, D, X, Ds), O,
+            cva(P?, Ps?, O?, I?, Is?, D?, X?, Ds?)).
 
 procedure cva_set_in(Cva?, PMsgs?, Cva).
-cva_set_in(cva(P, Ps, O, _, Is, D, X), I, cva(P?, Ps?, O?, I?, Is?, D?, X?)).
+cva_set_in(cva(P, Ps, O, _, Is, D, X, Ds), I,
+           cva(P?, Ps?, O?, I?, Is?, D?, X?, Ds?)).
 
 procedure cva_set_insts(Cva?, Insts?, Cva).
-cva_set_insts(cva(P, Ps, O, I, _, D, X), Is, cva(P?, Ps?, O?, I?, Is?, D?, X?)).
+cva_set_insts(cva(P, Ps, O, I, _, D, X, Ds), Is,
+              cva(P?, Ps?, O?, I?, Is?, D?, X?, Ds?)).
 
 procedure cva_set_peers(Cva?, Agents?, Cva).
-cva_set_peers(cva(P, _, O, I, Is, D, X), Ps, cva(P?, Ps?, O?, I?, Is?, D?, X?)).
+cva_set_peers(cva(P, _, O, I, Is, D, X, Ds), Ps,
+              cva(P?, Ps?, O?, I?, Is?, D?, X?, Ds?)).
 
 procedure cva_set_date(Cva?, Integer?, Cva).
-cva_set_date(cva(P, Ps, O, I, Is, _, X), D, cva(P?, Ps?, O?, I?, Is?, D?, X?)).
+cva_set_date(cva(P, Ps, O, I, Is, _, X, Ds), D,
+             cva(P?, Ps?, O?, I?, Is?, D?, X?, Ds?)).
 
 procedure cva_set_crashed(Cva?, Ans?, Cva).
-cva_set_crashed(cva(P, Ps, O, I, Is, D, _), X, cva(P?, Ps?, O?, I?, Is?, D?, X?)).
+cva_set_crashed(cva(P, Ps, O, I, Is, D, _, Ds), X,
+                cva(P?, Ps?, O?, I?, Is?, D?, X?, Ds?)).
+
+procedure cva_set_discs(Cva?, Discs?, Cva).
+cva_set_discs(cva(P, Ps, O, I, Is, D, X, _), Ds,
+              cva(P?, Ps?, O?, I?, Is?, D?, X?, Ds?)).
+
+% --- The records disclosed to an agent ------------------------------------
+
+exported procedure discs_has(Discs?, Disc?, Ans).
+discs_has([], _, no).
+discs_has([X|_], Y, yes) :- X? =?= Y? | true.
+discs_has([_|Xs], Y, R?) :- otherwise, ground(Xs?), ground(Y?) |
+    discs_has(Xs?, Y?, R).
+
+procedure discs_add1(Ans?, Disc?, Discs?, Discs).
+discs_add1(yes, _, Ds, Ds?).
+discs_add1(no, X, Ds, [X?|Ds?]).
+
+procedure discs_add(Disc?, Discs?, Discs).
+discs_add(X, Ds, R?) :- ground(X?), ground(Ds?) |
+    discs_has(Ds?, X?, A),
+    discs_add1(A?, X?, Ds?, R).
 
 % --- The instances an agent runs ------------------------------------------
 
@@ -323,10 +358,10 @@ do_propose3(ainst(I), C, V, X, P, W, R?) :-
 
 % A Form and an Establish form a community; every other transaction of
 % Definition "Grassroots Federation Implied Transactions" adds a record to the
-% row of a community, which is the record that is proposed there.  A Relay or
-% a Report into a community whose row the agent does not hold adds a row to
-% its own reading and forms nothing: the agent does not act in that community,
-% and the transaction is blocked.
+% row of a community, which is the record that is proposed there.  A Report
+% into a community whose row the agent does not hold adds a row to its own
+% reading and forms nothing: the agent does not act in that community, and the
+% transaction is blocked.
 procedure txn_forms(Txn?, Ans).
 txn_forms(form(_), yes).
 txn_forms(establish(_, _, _), yes).
@@ -337,7 +372,13 @@ txn_forms(move(_, _, _), no).
 txn_forms(maintain_at(_, _), no).
 txn_forms(report_at(_, _, _), no).
 txn_forms(will_on(_, _, _), no).
-txn_forms(relay(_, _, _, _), no).
+txn_forms(relay(_, _, _, _, _), no).
+
+% A Relay is proposed by its maker q on a record disclosed to it, not read at
+% its own learnt rows alone, so it takes its own path below.
+procedure txn_relays(Txn?, Ans).
+txn_relays(relay(_, _, _, _, _), yes).
+txn_relays(_, no) :- otherwise | true.
 
 procedure do_propose2a(Ans?, Name?, Record?, Cva?, Constant?, PWorld?, POutcome).
 do_propose2a(yes, _, _, _, _, _, pblocked).
@@ -393,11 +434,65 @@ do_propose0(acva(C), Pr, P, T, W, R?) :-
     cva_crashed(C?, X),
     do_propose0a(X?, Pr?, P?, T?, C?, W?, R).
 
+procedure do_propose0b(Ans?, Params?, Constant?, Txn?, Cva?, PWorld?, POutcome).
+do_propose0b(no, Pr, P, T, C, W, R?) :-
+    ground(Pr?), ground(P?), ground(T?), ground(C?), ground(W?) |
+    do_propose1(Pr?, T?, C?, P?, W?, R).
+do_propose0b(yes, _, P, T, C, W, R?) :-
+    ground(P?), ground(T?), ground(C?), ground(W?) |
+    do_prelay(T?, C?, P?, W?, R).
+
 procedure do_propose0a(Ans?, Params?, Constant?, Txn?, Cva?, PWorld?, POutcome).
 do_propose0a(yes, _, _, _, _, _, pblocked).
 do_propose0a(no, Pr, P, T, C, W, R?) :-
     ground(Pr?), ground(P?), ground(T?), ground(C?), ground(W?) |
-    do_propose1(Pr?, T?, C?, P?, W?, R).
+    txn_relays(T?, Rl),
+    do_propose0b(Rl?, Pr?, P?, T?, C?, W?, R).
+
+% ---------------------------------------------------------------------------
+% A Relay: q proposes at u a record disclosed to it
+% ---------------------------------------------------------------------------
+% The maker's half of a Relay (Definition "Grassroots Federation Implied
+% Transactions"): the record was disclosed to q by p, whom q knows; q holds u
+% with its learnt row, which does not hold the record; and the record is on an
+% act naming both communities.  The proposal at u is then that of any record.
+
+procedure do_prelay3(Ans?, Record?, Name?, Inst?, Cva?, Constant?, PWorld?, POutcome).
+do_prelay3(no, _, _, _, _, _, _, pblocked).
+do_prelay3(yes, X, U, I, C, Q, W, R?) :-
+    ground(X?), ground(U?), ground(I?), ground(C?), ground(Q?), ground(W?) |
+    do_propose3(ainst(I?), C?, U?, X?, Q?, W?, R).
+
+procedure do_prelay2(InstOpt?, Record?, Name?, Name?, Cva?, Constant?, PWorld?, POutcome).
+do_prelay2(noinst, _, _, _, _, _, _, pblocked).
+do_prelay2(ainst(I), X, V, U, C, Q, W, R?) :-
+    ground(I?), ground(X?), ground(V?), ground(U?), ground(C?), ground(Q?),
+    ground(W?) |
+    rla # inst_learnt(I?, L),
+    txn # relay_into(X?, V?, U?, Q?, L?, A),
+    do_prelay3(A?, X?, U?, I?, C?, Q?, W?, R).
+
+procedure do_prelay1(Ans?, Record?, Name?, Name?, Cva?, Constant?, PWorld?, POutcome).
+do_prelay1(no, _, _, _, _, _, _, pblocked).
+do_prelay1(yes, X, V, U, C, Q, W, R?) :-
+    ground(X?), ground(V?), ground(U?), ground(C?), ground(Q?), ground(W?) |
+    cva_inst(C?, U?, IO),
+    do_prelay2(IO?, X?, V?, U?, C?, Q?, W?, R).
+
+% The proposer is q; q knows p; and p disclosed the record at v to q.
+procedure do_prelay(Txn?, Cva?, Constant?, PWorld?, POutcome).
+do_prelay(relay(X, V, U, P, Q), C, Me, W, R?) :-
+    ground(X?), ground(V?), ground(U?), ground(P?), ground(Q?), ground(C?),
+    ground(Me?), ground(W?) |
+    eq_const(Q?, Me?, A1),
+    cva_peers(C?, Ps),
+    agents_member(Ps?, P?, A2),
+    cva_discs(C?, Ds),
+    discs_has(Ds?, disc(P?, V?, X?), A3),
+    and_ans(A1?, A2?, B1),
+    and_ans(B1?, A3?, B),
+    do_prelay1(B?, X?, V?, U?, C?, Me?, W?, R).
+do_prelay(_, _, _, _, pblocked) :- otherwise | true.
 
 % ---------------------------------------------------------------------------
 % Lines 9 to 15: the wait, and what follows it
@@ -511,6 +606,8 @@ recv_req(yes, S, From, V, I1, C1, P, W, pok(W1?)) :-
     send_all(C1?, [From?], cargo(resp(S?), V?, Tr?), C2),
     pworld_put(W?, P?, C2?, W1).
 
+% A disclosed record is kept with its discloser and its community; it changes
+% no instance and no learnt row.
 procedure recv_msg(PMsg?, PMsgs?, Cva?, Constant?, PWorld?, POutcome).
 recv_msg(pmsg(From, _, cargo(K, V, Tr)), Rest, C, P, W, R?) :-
     ground(From?), ground(K?), ground(V?), ground(Tr?), ground(Rest?),
@@ -520,6 +617,14 @@ recv_msg(pmsg(From, _, cargo(K, V, Tr)), Rest, C, P, W, R?) :-
     inst_or_bottom(IO?, V?, I0),
     rla # update_state(I0?, Tr?, I1),
     recv_kind(K?, From?, V?, I1?, C0?, P?, W?, R).
+recv_msg(pmsg(From, _, disclosed(V, X)), Rest, C, P, W, pok(W1?)) :-
+    ground(From?), ground(V?), ground(X?), ground(Rest?), ground(C?),
+    ground(P?), ground(W?) |
+    cva_set_in(C?, Rest?, C0),
+    cva_discs(C0?, Ds),
+    discs_add(disc(From?, V?, X?), Ds?, Ds1),
+    cva_set_discs(C0?, Ds1?, C1),
+    pworld_put(W?, P?, C1?, W1).
 
 procedure do_receive2(PMsgs?, Cva?, Constant?, PWorld?, POutcome).
 do_receive2([], _, _, _, pblocked).
@@ -638,6 +743,58 @@ do_discover(P, Q, W, R?) :- ground(P?), ground(Q?), ground(W?) |
     pworld_cva(W?, Q?, DO),
     disc1(CO?, DO?, P?, Q?, W?, R).
 
+% ---------------------------------------------------------------------------
+% Disclosure: p sends q a record of a row p holds
+% ---------------------------------------------------------------------------
+% The discloser's half of a Relay: p holds v with its learnt row, the record
+% is in that row, and q is a known peer of p; the record goes to q as a cargo
+% of its own.  It changes no learnt row and is willed by nobody: the volition
+% is the Discover by which p and q came to know each other.
+
+procedure discl3(Ans?, Cva?, Constant?, Constant?, Record?, Name?, PWorld?, POutcome).
+discl3(no, _, _, _, _, _, _, pblocked).
+discl3(yes, C, P, Q, X, V, W, pok(W1?)) :-
+    ground(C?), ground(P?), ground(Q?), ground(X?), ground(V?), ground(W?) |
+    send_all(C?, [Q?], disclosed(V?, X?), C1),
+    pworld_put(W?, P?, C1?, W1).
+
+procedure discl2(InstOpt?, Cva?, Constant?, Constant?, Record?, Name?, PWorld?, POutcome).
+discl2(noinst, _, _, _, _, _, _, pblocked).
+discl2(ainst(I), C, P, Q, X, V, W, R?) :-
+    ground(I?), ground(C?), ground(P?), ground(Q?), ground(X?), ground(V?),
+    ground(W?) |
+    rla # inst_learnt(I?, L),
+    txn # relay_from(X?, V?, P?, L?, A),
+    discl3(A?, C?, P?, Q?, X?, V?, W?, R).
+
+procedure discl1(Ans?, Cva?, Constant?, Constant?, Record?, Name?, PWorld?, POutcome).
+discl1(no, _, _, _, _, _, _, pblocked).
+discl1(yes, C, P, Q, X, V, W, R?) :-
+    ground(C?), ground(P?), ground(Q?), ground(X?), ground(V?), ground(W?) |
+    cva_inst(C?, V?, IO),
+    discl2(IO?, C?, P?, Q?, X?, V?, W?, R).
+
+procedure discl0a(Ans?, Cva?, Constant?, Constant?, Record?, Name?, PWorld?, POutcome).
+discl0a(yes, _, _, _, _, _, _, pblocked).
+discl0a(no, C, P, Q, X, V, W, R?) :-
+    ground(C?), ground(P?), ground(Q?), ground(X?), ground(V?), ground(W?) |
+    cva_peers(C?, Ps),
+    agents_member(Ps?, Q?, K),
+    discl1(K?, C?, P?, Q?, X?, V?, W?, R).
+
+procedure discl0(CvaOpt?, Constant?, Constant?, Record?, Name?, PWorld?, POutcome).
+discl0(nocva, _, _, _, _, _, pblocked).
+discl0(acva(C), P, Q, X, V, W, R?) :-
+    ground(C?), ground(P?), ground(Q?), ground(X?), ground(V?), ground(W?) |
+    cva_crashed(C?, Cr),
+    discl0a(Cr?, C?, P?, Q?, X?, V?, W?, R).
+
+exported procedure do_disclose(Constant?, Constant?, Record?, Name?, PWorld?, POutcome).
+do_disclose(P, Q, X, V, W, R?) :-
+    ground(P?), ground(Q?), ground(X?), ground(V?), ground(W?) |
+    pworld_cva(W?, P?, CO),
+    discl0(CO?, P?, Q?, X?, V?, W?, R).
+
 procedure adv1(Cva?, Integer?, Constant?, PWorld?, POutcome).
 adv1(C, T, P, W, R?) :- ground(C?), integer(T?), ground(P?), ground(W?) |
     cva_date(C?, D),
@@ -692,6 +849,9 @@ pstep(_, communicate(P), W, R?) :- ground(P?), ground(W?) |
     do_communicate(P?, W?, R).
 pstep(_, discover(P, Q), W, R?) :- ground(P?), ground(Q?), ground(W?) |
     do_discover(P?, Q?, W?, R).
+pstep(_, disclose(P, Q, X, V), W, R?) :-
+    ground(P?), ground(Q?), ground(X?), ground(V?), ground(W?) |
+    do_disclose(P?, Q?, X?, V?, W?, R).
 pstep(_, advance_date(P, T), W, R?) :- ground(P?), integer(T?), ground(W?) |
     do_advance_date(P?, T?, W?, R).
 pstep(_, crash(P), W, R?) :- ground(P?), ground(W?) | do_crash(P?, W?, R).
@@ -736,10 +896,11 @@ pworld_learnt(W, P, V, R?) :- ground(W?), ground(P?), ground(V?) |
     pworld_cva(W?, P?, CO),
     learnt1(CO?, V?, R).
 
-% A world of agents, each with no peer, no message, no instance and date zero.
+% A world of agents, each with no peer, no message, no instance, date zero and
+% nothing disclosed to it.
 procedure fresh(Agents?, Cvas).
 fresh([], []).
-fresh([P|Ps], [cva(P?, [], [], [], [], 0, no)|R?]) :- ground(P?), ground(Ps?) |
+fresh([P|Ps], [cva(P?, [], [], [], [], 0, no, [])|R?]) :- ground(P?), ground(Ps?) |
     fresh(Ps?, R).
 
 exported procedure pworld_of(Agents?, PWorld).

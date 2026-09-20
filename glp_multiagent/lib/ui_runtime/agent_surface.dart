@@ -250,6 +250,14 @@ class _AgentSurfaceState extends State<AgentSurface> {
   // the default display, a list of everything the others leave. A card here is
   // not pinned to a row: this panel has none, so the card is the paper's inbox
   // card itself, its content the context and its buttons the sibling clauses.
+  //
+  // Every value this surface shows without a widget of its own — a card's
+  // context, a message of the panel's list, a view's rows and keys, a
+  // template's substitutions, a bubble's text — is shown by the default
+  // display of vGLP Section 6.3 (see [scalarGroups]): a compound as its
+  // arguments in order, a list as one group per element, and never as a term.
+  // [formatTerm] is kept for the boundary and for a row's identity, not for
+  // what the person reads.
 
   Widget _screenPanel(Panel p) {
     final cards = _r.inbox.where((c) => c.panel.id == p.id).toList();
@@ -267,7 +275,7 @@ class _AgentSurfaceState extends State<AgentSurface> {
   /// context looks — and one button per open ask.
   ///
   /// A context value that is not a scalar is shown as its scalars and not as
-  /// its term (see [scalarGroups]): a lot as its four, a list of lots or bonds
+  /// its term (see [_valueRows]): a lot as its four, a list of lots or bonds
   /// as one such group per element. vGLP's Definition "Informed Offer"
   /// requires the card to carry the content of the transaction its reduction
   /// carries out — for a swap, what is wanted and what is offered — so the
@@ -287,7 +295,7 @@ class _AgentSurfaceState extends State<AgentSurface> {
                   style: const TextStyle(
                       fontWeight: FontWeight.bold, fontSize: 15)),
             for (final name in card.desc.args)
-              ..._contextRows(name, card.fields[name]!),
+              ..._valueRows(card.fields[name]!, name: name),
             const SizedBox(height: 6),
             Row(
               mainAxisAlignment: MainAxisAlignment.end,
@@ -311,10 +319,13 @@ class _AgentSurfaceState extends State<AgentSurface> {
     );
   }
 
-  /// One context value of a card, as its scalars: one row per group, the
-  /// argument's name against the first of them and the rows after it indented
-  /// under it (a list of bonds is one row per bond).
-  List<Widget> _contextRows(String name, GTerm value) {
+  /// One value under default display, as its rows of scalars ([scalarGroups]):
+  /// one row per group, the rows after the first indented under it (a list of
+  /// bonds is one row per bond; `menu(Q, Lots)` is the row `Q` and a row per
+  /// lot). With a [name] — a card's context argument — the name stands against
+  /// the first row; without one — a message of the panel's list — the rows
+  /// stand alone. One builder for both, so the rule is one.
+  List<Widget> _valueRows(GTerm value, {String? name}) {
     final groups = scalarGroups(value);
     return [
       for (var i = 0; i < groups.length; i++)
@@ -323,13 +334,16 @@ class _AgentSurfaceState extends State<AgentSurface> {
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              SizedBox(
-                  width: 74,
-                  child: Text(i == 0 ? name : '',
-                      style: const TextStyle(
-                          fontSize: 13,
-                          color: Colors.black54,
-                          fontWeight: FontWeight.w600))),
+              if (name != null)
+                SizedBox(
+                    width: 74,
+                    child: Text(i == 0 ? name : '',
+                        style: const TextStyle(
+                            fontSize: 13,
+                            color: Colors.black54,
+                            fontWeight: FontWeight.w600)))
+              else if (i > 0)
+                const SizedBox(width: 16),
               Expanded(
                 child: Wrap(
                   spacing: 10,
@@ -347,7 +361,8 @@ class _AgentSurfaceState extends State<AgentSurface> {
   }
 
   /// One declared view. A balances view is its rows, key and amount; a list
-  /// view — which the default display is — the messages in the order they came.
+  /// view — which the default display is — the messages in the order they
+  /// came, each shown as its scalars by [_valueRows] and never as its term.
   List<Widget> _viewSection(ScreenView v) {
     final rows = <Widget>[];
     switch (v.kind) {
@@ -360,9 +375,9 @@ class _AgentSurfaceState extends State<AgentSurface> {
             rows.add(ListTile(
               dense: true,
               leading: const Icon(Icons.toll, color: _accent),
-              title: Text(e.key,
+              title: Text(displayKey(e.key),
                   style: const TextStyle(fontWeight: FontWeight.w600)),
-              trailing: Text(formatTerm(e.value),
+              trailing: Text(displayText(e.value),
                   style: const TextStyle(
                       fontSize: 16, fontWeight: FontWeight.bold)),
             ));
@@ -376,8 +391,11 @@ class _AgentSurfaceState extends State<AgentSurface> {
           for (final t in items) {
             rows.add(Padding(
               padding: const EdgeInsets.fromLTRB(18, 3, 18, 3),
-              child: Text(formatTerm(t),
-                  style: const TextStyle(fontSize: 13, height: 1.3)),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: _valueRows(t),
+              ),
             ));
           }
         }
@@ -387,7 +405,7 @@ class _AgentSurfaceState extends State<AgentSurface> {
           rows.add(_viewEmpty('no friends yet'));
         } else {
           for (final p in people) {
-            final name = formatTerm(p);
+            final name = displayText(p);
             rows.add(ListTile(
               dense: true,
               leading: CircleAvatar(
@@ -409,8 +427,8 @@ class _AgentSurfaceState extends State<AgentSurface> {
         for (final e in convs.entries) {
           rows.add(ListTile(
               dense: true,
-              title: Text(e.key),
-              subtitle: Text(e.value.map(formatTerm).join(', '))));
+              title: Text(displayKey(e.key)),
+              subtitle: Text(e.value.map(displayText).join(', '))));
         }
     }
     return [_viewHeading(v.label), ...rows];
@@ -572,18 +590,20 @@ class _AgentSurfaceState extends State<AgentSurface> {
 
   /// One list row. When [card] is non-null the row carries a per-item alert and
   /// tapping it opens the accept/decline sheet; otherwise tapping runs [onOpen]
-  /// (drill into holdings or a conversation), if any.
+  /// (drill into holdings or a conversation), if any. [name] is the row's key,
+  /// a formatted term; the person reads its default display ([displayKey]).
   Widget _personTile(String name, InboxCard? card,
       {String? titleOverride, String? subtitle, VoidCallback? onOpen}) {
     final alerting = card != null;
+    final shown = displayKey(name);
     return ListTile(
       leading: CircleAvatar(
         backgroundColor: _accent.shade100,
-        child: Text(_initial(name),
+        child: Text(_initial(shown),
             style: const TextStyle(
                 color: Colors.black87, fontWeight: FontWeight.bold)),
       ),
-      title: Text(titleOverride ?? _cap(name),
+      title: Text(titleOverride ?? _cap(shown),
           style: const TextStyle(fontWeight: FontWeight.w600)),
       subtitle: alerting
           ? Text(renderTemplate(card.desc.title, card.fields),
@@ -617,7 +637,8 @@ class _AgentSurfaceState extends State<AgentSurface> {
         elevation: 0,
         leading: BackButton(onPressed: () => setState(() => _openItem = null)),
         titleSpacing: 0,
-        title: Text(isSelf ? 'Your wallet' : "${_cap(person)}'s coins",
+        title: Text(
+            isSelf ? 'Your wallet' : "${_cap(displayKey(person))}'s coins",
             style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
       ),
       body: Column(
@@ -724,12 +745,14 @@ class _AgentSurfaceState extends State<AgentSurface> {
 
   Widget _escrowTile(WalletView w, String who, GTerm entry) {
     final s = (entry is GStruct && entry.args.length >= 3) ? entry : null;
+    // The issuer is compared with the phone's owner, so it stays the key.
     final issuer = s == null ? '' : formatTerm(s.args[0]);
-    final amount = s == null ? '' : formatTerm(s.args[2]);
-    final release = (s != null && s.args.length > 3) ? formatTerm(s.args[3]) : null;
+    final amount = s == null ? '' : displayText(s.args[2]);
+    final release =
+        (s != null && s.args.length > 3) ? displayText(s.args[3]) : null;
     return ListTile(
       leading: const Icon(Icons.lock_clock, color: _accent),
-      title: Text('$amount ${_coinShort(issuer, w)} → ${_cap(who)}',
+      title: Text('$amount ${_coinShort(issuer, w)} → ${_cap(displayKey(who))}',
           style: const TextStyle(fontWeight: FontWeight.w600)),
       subtitle: Text(release == null ? 'in escrow' : 'releases $release'),
     );
@@ -742,8 +765,8 @@ class _AgentSurfaceState extends State<AgentSurface> {
       leading: Icon(dated ? Icons.schedule : Icons.toll, color: _accent),
       title: Text(_coinLabel(issuer, w),
           style: const TextStyle(fontWeight: FontWeight.w600)),
-      subtitle: dated ? Text('matures $maturity') : null,
-      trailing: Text(formatTerm(amount),
+      subtitle: dated ? Text('matures ${displayKey(maturity)}') : null,
+      trailing: Text(displayText(amount),
           style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
     );
   }
@@ -754,16 +777,18 @@ class _AgentSurfaceState extends State<AgentSurface> {
     return holds.entries.map((e) {
       final (issuer, maturity) = _splitHolding(e.key);
       final dated = maturity != null && maturity != '0';
-      final short = '${formatTerm(e.value)} ${_coinShort(issuer, w)}';
-      return dated ? '$short (matures $maturity)' : short;
+      final short = '${displayText(e.value)} ${_coinShort(issuer, w)}';
+      return dated ? '$short (matures ${displayKey(maturity)})' : short;
     }).join(', ');
   }
 
+  /// [coin] is a holdings key, compared with the phone's owner as the key and
+  /// read by the person as its default display.
   String _coinLabel(String coin, WalletView w) =>
-      coin == _self ? 'Your coins' : "${_cap(coin)}'s coins";
+      coin == _self ? 'Your coins' : "${_cap(displayKey(coin))}'s coins";
 
   String _coinShort(String coin, WalletView w) =>
-      coin == _self ? 'yours' : "${_cap(coin)}'s";
+      coin == _self ? 'yours' : "${_cap(displayKey(coin))}'s";
 
   // === Chat drill-down: bubbles + input =====================================
 
@@ -777,7 +802,7 @@ class _AgentSurfaceState extends State<AgentSurface> {
         elevation: 0,
         leading: BackButton(onPressed: () => setState(() => _openItem = null)),
         titleSpacing: 0,
-        title: Text(_cap(peer),
+        title: Text(_cap(displayKey(peer)),
             style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
       ),
       body: Column(
@@ -796,11 +821,12 @@ class _AgentSurfaceState extends State<AgentSurface> {
 
   Widget _bubble(GTerm m) {
     // Stored as out(text[,tick]) / in(text). Chat texts are plain atoms with
-    // `_` for spaces (see chatAtom); render them as prose.
+    // `_` for spaces (see chatAtom); render them as prose. The tick is not
+    // shown: it selects an icon, so it stays the key.
     final s = m is GStruct ? m : GStruct('in', [m]);
     final outgoing = s.functor == 'out';
     final text =
-        s.args.isNotEmpty ? formatTerm(s.args[0]).replaceAll('_', ' ') : '';
+        s.args.isNotEmpty ? displayText(s.args[0]).replaceAll('_', ' ') : '';
     final tick = outgoing && s.args.length > 1 ? formatTerm(s.args[1]) : null;
     return Align(
       alignment: outgoing ? Alignment.centerRight : Alignment.centerLeft,
@@ -873,7 +899,7 @@ class _AgentSurfaceState extends State<AgentSurface> {
     final m = msgs.last;
     final s = m is GStruct ? m : GStruct('in', [m]);
     return s.args.isNotEmpty
-        ? formatTerm(s.args[0]).replaceAll('_', ' ')
+        ? displayText(s.args[0]).replaceAll('_', ' ')
         : '';
   }
 
@@ -950,10 +976,11 @@ class _AgentSurfaceState extends State<AgentSurface> {
     // others' on the left labeled with the author.
     final s =
         (m is GStruct && m.functor == 'grp' && m.args.length == 2) ? m : null;
+    // The author is compared with the phone's owner, so it stays the key.
     final author = s != null ? formatTerm(s.args[0]) : '';
     final text = s != null
-        ? formatTerm(s.args[1]).replaceAll('_', ' ')
-        : formatTerm(m).replaceAll('_', ' ');
+        ? displayText(s.args[1]).replaceAll('_', ' ')
+        : displayText(m).replaceAll('_', ' ');
     final outgoing = author == widget.agentId.toLowerCase();
     return Align(
       alignment: outgoing ? Alignment.centerRight : Alignment.centerLeft,
@@ -971,7 +998,7 @@ class _AgentSurfaceState extends State<AgentSurface> {
           mainAxisSize: MainAxisSize.min,
           children: [
             if (!outgoing)
-              Text(_cap(author),
+              Text(_cap(displayKey(author)),
                   style: const TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.bold,
@@ -1020,23 +1047,24 @@ class _AgentSurfaceState extends State<AgentSurface> {
     );
   }
 
-  /// A group's display name: `group_id(creator, name)` → the name; else the key.
+  /// A group's display name: `group_id(creator, name)` → the name; else the
+  /// key's default display.
   String _groupName(String key) {
     final t = tryParseTerm(key);
     if (t is GStruct && t.functor == 'group_id' && t.args.length == 2) {
-      return _cap(formatTerm(t.args[1]));
+      return _cap(displayText(t.args[1]));
     }
-    return key;
+    return displayKey(key);
   }
 
   String _lastGroupText(List<GTerm> msgs) {
     final m = msgs.last;
     if (m is GStruct && m.functor == 'grp' && m.args.length == 2) {
-      final who = _cap(formatTerm(m.args[0]));
-      final text = formatTerm(m.args[1]).replaceAll('_', ' ');
+      final who = _cap(displayText(m.args[0]));
+      final text = displayText(m.args[1]).replaceAll('_', ' ');
       return '$who: $text';
     }
-    return formatTerm(m).replaceAll('_', ' ');
+    return displayText(m).replaceAll('_', ' ');
   }
 
   // === Compose forms — the "+" (Request-shaped clauses) =====================

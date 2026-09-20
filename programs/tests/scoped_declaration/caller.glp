@@ -1,0 +1,14 @@
+%% This module's Answer and Key shadow ../self.glp's Answer and the root
+%% self.glp's Key for THIS module's text: own/2 below means yes ; no.  The
+%% ancestors' declarations keep meaning their own: tally/2 accepts authorise
+%% and refuse, and self_key/1 produces the root's Key, a String.
+Answer ::= yes ; no.
+Key ::= k(Integer).
+exported procedure go(Stream(Integer)).
+go(Ts?) :- own(yes, One), self_key(K), keep(K?, One?),
+    tally([authorise, refuse, authorise], Ts).
+procedure own(Answer?, Integer).
+own(yes, 1).
+own(no, 0).
+procedure keep(String?, Integer?).
+keep(_, _).

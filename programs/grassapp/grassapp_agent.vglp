@@ -37,10 +37,13 @@
 %% RESPONDERS.  An arriving offer spawns a responder goal — respond_coldcall,
 %% respond_trade, respond_group_invite — one goal per offer, so offers pend
 %% concurrently and are answered in any order.  The responder carries the offer
-%% and the response writer (or, for a group invitation, the setup channel); its
-%% volition-guarded sibling clauses (accept/decline) are the person's choice, and
-%% the chosen clause injects its answer, through a merge, into the agent's UserIn,
-%% where an ordinary agent clause carries it out on the agent's current state.
+%% and the response writer (or, for a group invitation, the setup channel).
+%% respond_trade's volition-guarded sibling clauses (accept/decline) are the
+%% person's choice; respond_coldcall and respond_group_invite have one clause
+%% each, the acceptance, whose else-branch is the refusal, taken when the person
+%% wills no answer.  The clause or branch taken injects its answer, through a
+%% merge, into the agent's UserIn, where an ordinary agent clause carries it out
+%% on the agent's current state.
 %% respond_escrow_cancel is a responder with one clause and no sibling: the person
 %% may cancel an escrow they opened, or leave it to run to its release.
 %%
@@ -56,8 +59,8 @@
 %%     pay(Friend, GiveSpec);
 %%   - a responder goal, spawned per arriving offer  ->  a pending-table entry
 %%     req(N) in the mediator, rendered as an inbox card;
-%%   - a responder's volition-guarded clause, injecting its answer through the
-%%     merge into UserIn  ->  the UserCmds decision/3, accept_trade/2,
+%%   - a responder's volition-guarded clause, or a branch of it, injecting its
+%%     answer through the merge into UserIn  ->  the UserCmds decision/3, accept_trade/2,
 %%     reject_trade/2, accept_group/2, reject_group/2 and cancel_escrow/2 routing
 %%     the escrowed writer back to the agent; the agent's answer clauses below
 %%     match the deployed ones modulo the msg(person, Id, ...) wrapper and the
@@ -71,7 +74,7 @@
 %% Three deployed clauses have no counterpart here, and each is a compilation
 %% artefact rather than a step of the program: the agent/7 shim, which opens the
 %% date stream for the plays and tests; the reject_group clause, because here the
-%% declining responder writes the nack on the setup channel itself; and the
+%% responder's else-branch writes the nack on the setup channel itself; and the
 %% cancel_escrow clause, because here the cancelling responder binds the cancel
 %% signal itself.  Each exists in the deployed program only because an answer has
 %% to reach the agent as a command through the mediator.
@@ -149,15 +152,13 @@ EscrowOffer      ::= offer(Constant).
 
 procedure respond_coldcall(ColdCallOffer?, Response, Stream(X)).
 
-%% Accept a friend offer.
+%% Accept a friend offer.  The else-branch is the refusal, taken when the
+%% person wills no answer: the caller is answered no, which bind_response
+%% acts on.
 *(Answer=yes, From?)
 respond_coldcall(offer(From), Resp?, [decision(Answer?, From?, response(Resp))]) :-
-    ground(From?) | true.
-
-%% Decline.
-*(Answer=no, From?)
-respond_coldcall(offer(From), Resp?, [decision(Answer?, From?, response(Resp))]) :-
-    ground(From?) | true.
+    ground(From?) | true
+ *(no) true.
 
 procedure respond_trade(TradeOffer?, TradeResponse, Stream(X)).
 
@@ -177,16 +178,21 @@ respond_trade(offer(From, WantSpec, OfferedBonds), TradeResp?,
 procedure respond_group_invite(Constant?, GroupInviteOffer?, Channel(Stream(GroupSetupResponse), Stream(Handshake))?, Stream(X)).
 
 %% Accept a group invitation: ack on the setup channel, hand the read side to
-%% the agent to await the group channel from the hub.
+%% the agent to await the group channel from the hub.  The else-branch is the
+%% refusal, taken when the person wills no answer: nack on the setup channel,
+%% which closes it, and nothing injected.  The two branches share the head, so
+%% each builds its answer in its body.
 *(yes, GroupId?)
-respond_group_invite(Id, offer(GroupId), ch(ChRead, [ack(Id?)|[]]),
-    [accept_group(GroupId?, ChRead?)]) :-
-    ground(Id?), ground(GroupId?) | true.
+respond_group_invite(Id, offer(GroupId), Ch, Ans?) :-
+    ground(Id?), ground(GroupId?) |
+    accept_group_invite(Id?, GroupId?, Ch?, Ans)
+ *(no) decline_group_invite(Ch?, Ans).
 
-%% Decline: nack on the setup channel, closing it.
-*(no, GroupId?)
-respond_group_invite(_, offer(GroupId), ch(_ChRead, [nack|[]]), []) :-
-    ground(GroupId?) | true.
+%% The two answers, as the heads of the two clauses built them.
+procedure accept_group_invite(Constant?, GroupId?, Channel(Stream(GroupSetupResponse), Stream(Handshake))?, Stream(X)).
+accept_group_invite(Id, GroupId, ch(ChRead, [ack(Id?)|[]]), [accept_group(GroupId?, ChRead?)]).
+procedure decline_group_invite(Channel(Stream(GroupSetupResponse), Stream(Handshake))?, Stream(X)).
+decline_group_invite(ch(_, [nack|[]]), []).
 
 procedure respond_escrow_cancel(EscrowOffer?, EscrowCancel).
 

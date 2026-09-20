@@ -5,12 +5,13 @@
 #   bash programs/jurix/test_jurix.sh
 #
 # The two contracts of /Grassroots/Jurix Sections 3.3 and 3.4, which Section 7
-# certifies by hand, and four contracts broken in one place each; then the
+# certifies by hand, and contracts broken in one place each, one per way of
+# failing the three conjuncts of def:syntactically-grassroots; then the
 # compilation of Section 5, against the two displays of Section 5.2; then the
 # contract of a grassroots federation, /Grassroots/GFWC sections/act-schemas.tex,
 # against the four conditions of Appendix B of /Grassroots/Jurix, and four
-# contracts broken in one place each against those.  Exits non-zero if any
-# check fails.
+# contracts broken in one place each against those; then the compilation of
+# Appendix B, against its worked box.  Exits non-zero if any check fails.
 
 set -u
 GLP_DIR="$(cd "$(dirname "$0")/../.." && pwd)"
@@ -62,7 +63,10 @@ compiled() { # compiled <contract> <schema> ; the display, whitespace removed
 run() {     # run <goal> ... ; loads the program, then posts each goal
   local goals=""
   for g in "$@"; do goals="$goals$g\n"; done
-  (cd "$GLP_DIR/glp_runtime" && printf "%b" "$JURIX\n$goals:quit\n" | bin/glpc 2>&1)
+  # The REPL's default reduction limit is 10000, which CSSN's eighteen
+  # schemas exceed; :limit is the REPL's knob for it.
+  (cd "$GLP_DIR/glp_runtime" \
+     && printf "%b" "$JURIX\n:limit 1000000\n$goals:quit\n" | bin/glpc 2>&1)
 }
 
 echo "=== jurix: the syntactically-grassroots checker ==="
@@ -128,13 +132,26 @@ check "no mint: the swap is unobtainable at role 1" \
 check "no mint: the swap is unobtainable at role 2" \
       "obstructed(swap, 2, atom(coin, [pvar(v)]), unobtainable)" "$out"
 
-# Minting a coin of another party's issue breaks provenance, and the acts
+# Minting a coin of another party's issue breaks provenance, which the verdict
+# names as the second conjunct of def:syntactically-grassroots, and the acts
 # guarded at one role that rest on it then fail volition.
 out=$(run 'check_named(cur_loose_mint, V).' 'traceable_of(cur_loose_mint, E).')
 check "loose mint: nothing has traceable provenance" "E = []" "$out"
+check "loose mint: the verdict names the coin as untraceable" \
+      "untraceable([coin])" "$out"
 check "loose mint: pay fails volition" "volition(pay, 1, 2)" "$out"
 check "loose mint: redeem fails volition" "volition(redeem, 1, 2)" "$out"
 check_not "loose mint: the swap is still unobstructed" "obstructed(swap" "$out"
+
+# A speech act carried into an item from a required atom that has no
+# traceable provenance: the clause of def:grounded on speech-act variables
+# drops item, and sent after it, while befriend stays unobstructed and every
+# schema satisfies volition.  The second conjunct alone rejects the contract.
+out=$(run 'check_named(sg_svar_loose, V).' 'traceable_of(sg_svar_loose, E).')
+check "a speech act from an untraceable record: only friend keeps provenance" \
+      "E = [friend]" "$out"
+check "and the verdict is the second conjunct alone" \
+      "V = not_grassroots([untraceable([item, sent, tagged])])" "$out"
 
 # CSSN's child-safe contract, eighteen schemas, transcribed from their entries
 # of 2026-08-15 20:35 and 21:40 and 2026-08-16 12:37 UTC in
@@ -253,11 +270,73 @@ check "and keeps the verdict of Section 3" \
       "V = syntactically_grassroots" "$out"
 
 # The compiled form of a schema with community roles is Definition Compilation
-# of Appendix B, which the compiler does not print.
+# of Appendix B, which the compiler prints for a contract that meets the
+# conditions on the text and for no other.
 out=$(run 'compile_named(federation).')
-check "a contract with community roles is not compiled" \
-      "has community roles" "$(printf '%s' "$out" | tr '\n' ' ')"
+check "a contract with community roles is compiled" \
+      "begin{align" "$out"
+check_not "and not refused" "not compiled" "$out"
+
+out=$(run 'compile_named(gf_novolition).')
+check "a contract that fails the conditions of Appendix B is not compiled" \
+      "% not compiled: gf_novolition" "$(printf '%s' "$out" | tr '\n' ' ')"
 check_not "and no display is printed for it" "begin{align" "$out"
+
+# --- the compilation of Appendix B (definition:compile) --------------------
+# The worked box of Appendix B, transcribed from
+# /Grassroots/Jurix/sections/13-community-roles.tex, is the display for
+# federate; compared with the whitespace removed, as the two displays of
+# Section 5.2 are, and without the full stop that closes the box's sentence.
+
+federate_box=$(cat <<'EOF' | squash
+\begin{align*}
+& c'_p := c_p \uplus \{\mathit{child}(\zeta\cdot y,\zeta)\} && (p\in\mathrm{ext}_c(\zeta^{\mathit{child}\ast})),\\
+& c'_p := c_p \uplus \{\mathit{seat}(\zeta\cdot y)\} && (p\in\mathrm{ext}_c(\zeta^{\mathit{seat}})),\\
+& \text{provided } \zeta\cdot y \text{ is an argument of no atom of } c,\\
+& \text{guarded by } G,\ G\subseteq\mathrm{ext}_c(\zeta^{\mathit{seat}}) \text{ with } |G|>\theta|\mathrm{ext}_c(\zeta^{\mathit{seat}})|
+\end{align*}
+EOF
+)
+check_eq "federate compiles to the worked box of Appendix B" \
+         "$federate_box" "$(compiled federation federate)"
+
+# The five schemas of the contract, in the one form of Appendix B.
+out=$(run 'compile_named(federation).')
+check_eq "the federation compiles to five displays" "5" \
+         "$(printf '%s' "$out" | grep -c 'begin{align')"
+
+# form: a party role in the form of Appendix B, over its extent, guarded by a
+# part of it larger than the threshold 0; no name term sigma.y, so no line on
+# freshness.
+form=$(compiled federation form)
+check "form ranges over the extent of its party role" \
+      "(p\\in\\mathrm{ext}_c(\\Alice))" "$form"
+check "form's guard is a part of that extent larger than 0 of it" \
+      "\\text{guardedby}G,\\G\\subseteq\\mathrm{ext}_c(\\Alice)\\text{with}|G|>0|\\mathrm{ext}_c(\\Alice)|" \
+      "$form"
+check_not "form forms no name and prints no freshness line" \
+      "noatomof" "$form"
+
+# join: an assignment line and a proviso line per role, the reach condition,
+# and a guard that is the union of two parts, each at its own threshold.
+join=$(compiled federation join)
+check_eq "join prints an assignment line per role" "4" \
+         "$(printf '%s' "$join" | grep -o "c'_p:=" | wc -l | tr -d ' ')"
+check_eq "join prints a proviso line per role" "4" \
+         "$(printf '%s' "$join" | grep -o '\\notinc_p' | wc -l | tr -d ' ')"
+check "join prints its reach condition" \
+      "\\text{provided}\\xi\\not\\rightsquigarrow_{\\mathit{child}}\\zeta" "$join"
+check "join's guard is the union of two parts" \
+      "\\text{guardedby}G_{2}\\cupG_{4},\\G_{2}\\subseteq\\mathrm{ext}_c(\\zeta^{\\mathit{seat}})\\text{with}|G_{2}|>\\theta|\\mathrm{ext}_c(\\zeta^{\\mathit{seat}})|\\text{and}G_{4}\\subseteq\\mathrm{ext}_c(\\xi^{\\mathit{seat}})\\text{with}|G_{4}|>\\theta|\\mathrm{ext}_c(\\xi^{\\mathit{seat}})|" \
+      "$join"
+
+# leave_1 and leave_2 differ only in which assembly guards.
+check "leave_1 is guarded by a supermajority of the parent's assembly" \
+      "\\text{guardedby}G,\\G\\subseteq\\mathrm{ext}_c(\\zeta^{\\mathit{seat}})" \
+      "$(compiled federation leave_1)"
+check "leave_2 is guarded by a supermajority of the child's assembly" \
+      "\\text{guardedby}G,\\G\\subseteq\\mathrm{ext}_c(\\xi^{\\mathit{seat}})" \
+      "$(compiled federation leave_2)"
 
 echo "=== $PASS passed, $FAIL failed ==="
 [ "$FAIL" -eq 0 ]

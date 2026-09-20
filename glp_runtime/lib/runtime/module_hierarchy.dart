@@ -120,8 +120,12 @@ List<String> discoverSelfChain({
 /// is that subtree's business and not the goal's. (Reported by Currencies Code,
 /// 2026-09-03, against the linked program; the goal check took the deeper
 /// definition the same way.)
+///
+/// [label] is the scope the module's types are recorded as defined in
+/// ([TypeEnvironment.typeOrigins]): the prefix a definition is kept under
+/// once a nearer scope defines its name, in either direction of shadowing.
 TypeEnvironment mergeModuleIntoScope(TypeEnvironment env, ast.Module module,
-    {bool typesFillGapsOnly = false}) {
+    {bool typesFillGapsOnly = false, String? label}) {
   final templates = <String, TypeDef>{};
   for (final td in module.typeDefs) {
     if (td.isParameterized) {
@@ -132,21 +136,44 @@ TypeEnvironment mergeModuleIntoScope(TypeEnvironment env, ast.Module module,
       knownTypeNames: env.types.keys.toSet(),
       externalTemplates: env.typeTemplates);
   final moduleEnv = buildScopeFromModule(expanded);
-  final merged = env.merge(TypeEnvironment(moduleEnv.types, moduleEnv.procedures,
-      paramProcDecls: moduleEnv.paramProcDecls, typeTemplates: templates));
-  if (!typesFillGapsOnly) return merged;
+  final layer = TypeEnvironment(moduleEnv.types, moduleEnv.procedures,
+      paramProcDecls: moduleEnv.paramProcDecls, typeTemplates: templates);
+  if (!typesFillGapsOnly) return env.merge(layer, label: label);
+  // The module under the scope rather than over it: its types and its
+  // declarations fill gaps, and a type the scope already defines survives
+  // from the module under `<label>:T`, the module's own declarations meaning
+  // it (TypeEnvironment.shadowedBy) --- a declaration's types are those of
+  // the scope it was declared in, whichever way the shadowing runs. Its
+  // declarations fill gaps for the same reason its types do: "the procedures
+  // that may be posted are exactly the entry points" (TGLP "Compilation",
+  // entry and the absence of a boot module), the program root's exports, so
+  // a descendant's procedure of the same name and arity as one in the root's
+  // scope is not what a goal names. Until 2026-09-18 it shadowed the root's
+  // declaration while its types were read as the root's, which passed a goal
+  // against a declaration of the same shape and would have rejected any other.
+  final under = layer.shadowedBy(env, ownLabel: label);
   return TypeEnvironment(
-      {...merged.types, ...env.types}, merged.procedures,
-      paramProcDecls: merged.paramProcDecls,
-      typeTemplates: {...merged.typeTemplates, ...env.typeTemplates});
+      {...under.types, ...env.types},
+      {...under.procedures, ...env.procedures},
+      paramProcDecls: {...under.paramProcDecls, ...env.paramProcDecls},
+      typeTemplates: {...under.typeTemplates, ...env.typeTemplates},
+      typeOrigins: {...under.originsUnder(label), ...env.typeOrigins});
 }
 
 /// Merge a self.glp file into a scope environment: parse, then
-/// [mergeModuleIntoScope].
+/// [mergeModuleIntoScope], labelled by the directory the `self.glp` is the
+/// scope of --- the name the linker gives that module.
 TypeEnvironment mergeSelfGlpFileIntoScope(TypeEnvironment env, String path) {
   final source = File(path).readAsStringSync();
   final module = Parser(Lexer(source).tokenize()).parseModule();
-  return mergeModuleIntoScope(env, module);
+  return mergeModuleIntoScope(env, module, label: _directoryLabel(path));
+}
+
+/// The last segment of the directory holding [path].
+String _directoryLabel(String path) {
+  final dir = File(path).absolute.parent.path;
+  final parts = dir.split(Platform.pathSeparator).where((p) => p.isNotEmpty);
+  return parts.isEmpty ? dir : parts.last;
 }
 
 /// Build the ancestor scope for a self.glp chain (root-first order).
@@ -170,7 +197,15 @@ TypeEnvironment buildAncestorScope({
     final f = File(rootSelfGlpPath);
     if (f.existsSync()) {
       rootSelf = f;
-      env = mergeSelfGlpFileIntoScope(env, f.path);
+      // The root self.glp is one layer, d_1 of every scope (TGLP Definition
+      // "Root, Scope"), and the root-scope environment already is it when it
+      // was built from this file's text: layering the file again would make
+      // every type of the root a second definition of itself. It is layered
+      // here only when the root-scope environment was built from something
+      // else.
+      if (!isRootScopeEnvironmentSource(f.readAsStringSync())) {
+        env = mergeSelfGlpFileIntoScope(env, f.path);
+      }
     }
   }
   for (final selfGlpPath in chain) {

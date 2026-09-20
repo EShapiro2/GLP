@@ -11,8 +11,8 @@
 % remains.  fed_moved is the row of a community whose Federate is decided, and
 % fed_child the row of the community that Federate forms.
 %
-% f = name(alice, [1, 1]) and g = name(bob, [1]), so f is the longer name and
-% f > g, which a Join requires.
+% f = name(alice, [y1, y2]) and g = name(bob, [y1]): a community name is an
+% agent followed by the identities of the decisions that formed it.
 % ---------------------------------------------------------------------------
 
 imported procedure row#row_state(Rat?, Row?, Name?, State).
@@ -23,71 +23,71 @@ exported procedure theta(Rat).
 theta(rat(1, 2)).
 
 exported procedure name_named(Constant?, Name).
-name_named(f, name(alice, [1, 1])).
-name_named(g, name(bob, [1])).
-name_named(fed_child, name(bob, [1, 1])).
+name_named(f, name(alice, [y1, y2])).
+name_named(g, name(bob, [y1])).
+name_named(fed_child, name(bob, [y1, y2])).
 
 exported procedure row_named(Constant?, Row).
 row_named(join_open,
     [seat(plus, alice, uncoloured, 0, 0),
      seat(plus, carol, uncoloured, 0, 1),
      seat(plus, dave, uncoloured, 0, 2),
-     moved(motion(join(name(alice, [1, 1]), name(bob, [1])), name(alice, [1, 1]), [alice, carol, dave], 0)),
-     moved(motion(join(name(alice, [1, 1]), name(bob, [1])), name(bob, [1]), [bob, erin], 0)),
-     will(alice, motion(join(name(alice, [1, 1]), name(bob, [1])), name(alice, [1, 1]), [alice, carol, dave], 0)),
-     will(bob, motion(join(name(alice, [1, 1]), name(bob, [1])), name(bob, [1]), [bob, erin], 0))]).
+     moved(motion(join(name(alice, [y1, y2]), name(bob, [y1])), name(alice, [y1, y2]), [alice, carol, dave], [], 0)),
+     moved(motion(join(name(alice, [y1, y2]), name(bob, [y1])), name(bob, [y1]), [bob, erin], [name(bob, [])], 0)),
+     will(alice, motion(join(name(alice, [y1, y2]), name(bob, [y1])), name(alice, [y1, y2]), [alice, carol, dave], [], 0)),
+     will(bob, motion(join(name(alice, [y1, y2]), name(bob, [y1])), name(bob, [y1]), [bob, erin], [name(bob, [])], 0))]).
 row_named(join_done,
     [seat(plus, alice, uncoloured, 0, 0),
      seat(plus, carol, uncoloured, 0, 1),
      seat(plus, dave, uncoloured, 0, 2),
-     report(name(bob, [1]), [bob, erin], 12),
-     moved(motion(join(name(alice, [1, 1]), name(bob, [1])), name(alice, [1, 1]), [alice, carol, dave], 0)),
-     moved(motion(join(name(alice, [1, 1]), name(bob, [1])), name(bob, [1]), [bob, erin], 0)),
-     will(alice, motion(join(name(alice, [1, 1]), name(bob, [1])), name(alice, [1, 1]), [alice, carol, dave], 0)),
-     will(carol, motion(join(name(alice, [1, 1]), name(bob, [1])), name(alice, [1, 1]), [alice, carol, dave], 0)),
-     will(bob, motion(join(name(alice, [1, 1]), name(bob, [1])), name(bob, [1]), [bob, erin], 0)),
-     will(erin, motion(join(name(alice, [1, 1]), name(bob, [1])), name(bob, [1]), [bob, erin], 0))]).
+     report(name(bob, [y1]), [bob, erin], [name(bob, [])], 12),
+     moved(motion(join(name(alice, [y1, y2]), name(bob, [y1])), name(alice, [y1, y2]), [alice, carol, dave], [], 0)),
+     moved(motion(join(name(alice, [y1, y2]), name(bob, [y1])), name(bob, [y1]), [bob, erin], [name(bob, [])], 0)),
+     will(alice, motion(join(name(alice, [y1, y2]), name(bob, [y1])), name(alice, [y1, y2]), [alice, carol, dave], [], 0)),
+     will(carol, motion(join(name(alice, [y1, y2]), name(bob, [y1])), name(alice, [y1, y2]), [alice, carol, dave], [], 0)),
+     will(bob, motion(join(name(alice, [y1, y2]), name(bob, [y1])), name(bob, [y1]), [bob, erin], [name(bob, [])], 0)),
+     will(erin, motion(join(name(alice, [y1, y2]), name(bob, [y1])), name(bob, [y1]), [bob, erin], [name(bob, [])], 0))]).
 row_named(leave_done,
     [seat(plus, alice, uncoloured, 0, 0),
      seat(plus, carol, uncoloured, 0, 1),
      seat(plus, dave, uncoloured, 0, 2),
-     report(name(bob, [1]), [bob, erin], 12),
-     moved(motion(join(name(alice, [1, 1]), name(bob, [1])), name(alice, [1, 1]), [alice, carol, dave], 0)),
-     moved(motion(join(name(alice, [1, 1]), name(bob, [1])), name(bob, [1]), [bob, erin], 0)),
-     will(alice, motion(join(name(alice, [1, 1]), name(bob, [1])), name(alice, [1, 1]), [alice, carol, dave], 0)),
-     will(carol, motion(join(name(alice, [1, 1]), name(bob, [1])), name(alice, [1, 1]), [alice, carol, dave], 0)),
-     will(bob, motion(join(name(alice, [1, 1]), name(bob, [1])), name(bob, [1]), [bob, erin], 0)),
-     will(erin, motion(join(name(alice, [1, 1]), name(bob, [1])), name(bob, [1]), [bob, erin], 0)),
-     moved(motion(leave(name(alice, [1, 1]), name(bob, [1])), name(alice, [1, 1]), [alice, carol, dave], 1)),
-     will(alice, motion(leave(name(alice, [1, 1]), name(bob, [1])), name(alice, [1, 1]), [alice, carol, dave], 1)),
-     will(dave, motion(leave(name(alice, [1, 1]), name(bob, [1])), name(alice, [1, 1]), [alice, carol, dave], 1))]).
+     report(name(bob, [y1]), [bob, erin], [name(bob, [])], 12),
+     moved(motion(join(name(alice, [y1, y2]), name(bob, [y1])), name(alice, [y1, y2]), [alice, carol, dave], [], 0)),
+     moved(motion(join(name(alice, [y1, y2]), name(bob, [y1])), name(bob, [y1]), [bob, erin], [name(bob, [])], 0)),
+     will(alice, motion(join(name(alice, [y1, y2]), name(bob, [y1])), name(alice, [y1, y2]), [alice, carol, dave], [], 0)),
+     will(carol, motion(join(name(alice, [y1, y2]), name(bob, [y1])), name(alice, [y1, y2]), [alice, carol, dave], [], 0)),
+     will(bob, motion(join(name(alice, [y1, y2]), name(bob, [y1])), name(bob, [y1]), [bob, erin], [name(bob, [])], 0)),
+     will(erin, motion(join(name(alice, [y1, y2]), name(bob, [y1])), name(bob, [y1]), [bob, erin], [name(bob, [])], 0)),
+     moved(motion(leave(name(alice, [y1, y2]), name(bob, [y1])), name(alice, [y1, y2]), [alice, carol, dave], [name(bob, [y1]), name(bob, [])], 1)),
+     will(alice, motion(leave(name(alice, [y1, y2]), name(bob, [y1])), name(alice, [y1, y2]), [alice, carol, dave], [name(bob, [y1]), name(bob, [])], 1)),
+     will(dave, motion(leave(name(alice, [y1, y2]), name(bob, [y1])), name(alice, [y1, y2]), [alice, carol, dave], [name(bob, [y1]), name(bob, [])], 1))]).
 row_named(seat_dup,
     [seat(plus, alice, uncoloured, 0, 0),
      seat(plus, carol, uncoloured, 0, 1),
-     seat(plus, alice, col(name(bob, [1])), 5, 2)]).
+     seat(plus, alice, col(name(bob, [y1])), 5, 2)]).
 row_named(raise_gap,
-    [raise(0, 3, [sig(ag(alice), 3), sig(comm(name(bob, [1])), 3)], [et(ag(alice), rat(3, 1)), et(comm(name(bob, [1])), rat(3, 2))]),
+    [raise(0, 3, [sig(ag(alice), 3), sig(comm(name(bob, [y1])), 3)], [et(ag(alice), rat(3, 1)), et(comm(name(bob, [y1])), rat(3, 2))]),
      raise(5, 9, [sig(ag(alice), 4)], [et(ag(alice), rat(4, 1))])]).
 row_named(raise_chain,
     [raise(0, 3, [sig(ag(alice), 3)], [et(ag(alice), rat(3, 2))]),
      raise(3, 7, [sig(ag(alice), 4)], [et(ag(alice), rat(4, 2))])]).
 row_named(fed_child,
-    [origin(federate(name(bob, [1])), motion(federate(name(bob, [1])), name(bob, [1]), [bob, erin], 0)),
-     seat(plus, bob, col(name(bob, [1])), 0, 0),
-     seat(plus, erin, col(name(bob, [1])), 0, 0)]).
+    [origin(federate(name(bob, [y1]), y2), motion(federate(name(bob, [y1]), y2), name(bob, [y1]), [bob, erin], [name(bob, [])], 0)),
+     seat(plus, bob, col(name(bob, [y1])), 0, 0),
+     seat(plus, erin, col(name(bob, [y1])), 0, 0)]).
 row_named(fed_moved,
     [seat(plus, bob, uncoloured, 0, 0),
      seat(plus, erin, uncoloured, 0, 1),
-     moved(motion(federate(name(bob, [1])), name(bob, [1]), [bob, erin], 0)),
-     will(bob, motion(federate(name(bob, [1])), name(bob, [1]), [bob, erin], 0)),
-     will(erin, motion(federate(name(bob, [1])), name(bob, [1]), [bob, erin], 0))]).
+     moved(motion(federate(name(bob, [y1]), y2), name(bob, [y1]), [bob, erin], [name(bob, [])], 0)),
+     will(bob, motion(federate(name(bob, [y1]), y2), name(bob, [y1]), [bob, erin], [name(bob, [])], 0)),
+     will(erin, motion(federate(name(bob, [y1]), y2), name(bob, [y1]), [bob, erin], [name(bob, [])], 0))]).
 row_named(rec_join,
     [seat(plus, alice, uncoloured, 0, 0),
      seat(plus, carol, uncoloured, 0, 1),
      seat(plus, dave, uncoloured, 0, 2),
-     report(name(bob, [1]), [bob, erin], 12),
-     moved(motion(join(name(alice, [1, 1]), name(bob, [1])), name(alice, [1, 1]), [alice, carol, dave], 0)),
-     act(join(name(alice, [1, 1]), name(bob, [1])), [motion(join(name(alice, [1, 1]), name(bob, [1])), name(alice, [1, 1]), [alice, carol, dave], 0), motion(join(name(alice, [1, 1]), name(bob, [1])), name(bob, [1]), [bob, erin], 0)])]).
+     report(name(bob, [y1]), [bob, erin], [name(bob, [])], 12),
+     moved(motion(join(name(alice, [y1, y2]), name(bob, [y1])), name(alice, [y1, y2]), [alice, carol, dave], [], 0)),
+     act(join(name(alice, [y1, y2]), name(bob, [y1])), [motion(join(name(alice, [y1, y2]), name(bob, [y1])), name(alice, [y1, y2]), [alice, carol, dave], [], 0), motion(join(name(alice, [y1, y2]), name(bob, [y1])), name(bob, [y1]), [bob, erin], [name(bob, [])], 0)])]).
 row_named(dates,
     [date(alice, 3),
      date(alice, 7),
@@ -95,16 +95,16 @@ row_named(dates,
 
 % The community each row belongs to.
 exported procedure row_community(Constant?, Name).
-row_community(join_open, name(alice, [1, 1])).
-row_community(join_done, name(alice, [1, 1])).
-row_community(leave_done, name(alice, [1, 1])).
-row_community(seat_dup, name(alice, [1, 1])).
-row_community(raise_gap, name(alice, [1, 1])).
-row_community(raise_chain, name(alice, [1, 1])).
-row_community(fed_child, name(bob, [1, 1])).
-row_community(fed_moved, name(bob, [1])).
-row_community(rec_join, name(alice, [1, 1])).
-row_community(dates, name(alice, [1, 1])).
+row_community(join_open, name(alice, [y1, y2])).
+row_community(join_done, name(alice, [y1, y2])).
+row_community(leave_done, name(alice, [y1, y2])).
+row_community(seat_dup, name(alice, [y1, y2])).
+row_community(raise_gap, name(alice, [y1, y2])).
+row_community(raise_chain, name(alice, [y1, y2])).
+row_community(fed_child, name(bob, [y1, y2])).
+row_community(fed_moved, name(bob, [y1])).
+row_community(rec_join, name(alice, [y1, y2])).
+row_community(dates, name(alice, [y1, y2])).
 
 % The state of a named row at its own community, at the threshold one half.
 exported procedure state_named(Constant?, State).

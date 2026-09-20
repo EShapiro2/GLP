@@ -14,12 +14,10 @@
 %% TYPE DEFINITIONS
 %% =============================================================================
 
-%% Network message: msg(Destination, Content)
-NetMsg ::= msg(Constant, _).
+%% Network message: msg(Destination, Content), the destination an agent's Key.
+%% GlobalName is the root self.glp's (a predefined type since 2026-09-18).
+NetMsg ::= msg(Key, _).
 NetStream ::= [] ; [NetMsg|NetStream].
-
-%% Global name for cross-isolate communication
-GlobalName ::= '_w'(Constant, Integer) ; '_r'(Constant, Integer).
 
 %% =============================================================================
 %% send_to_net/1 - Process network output stream
@@ -50,5 +48,5 @@ send_to_net([]).
 %%
 %% The '_send'/3 kernel handles both cases based on the index.
 
-procedure global_send(NetMsg?, GlobalName?, Constant?).
+procedure global_send(NetMsg?, GlobalName?, Key?).
 global_send(T, G, Q) :- known(T?) | '_send'(T?, G?, Q?).

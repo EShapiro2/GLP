@@ -111,7 +111,7 @@ FriendStream  ::= [] ; [FriendMsg | FriendStream].
 FriendChannel ::= ch(FriendStream, FriendStream?).
 
 %% Network output stream — cold calls the agent emits on its '_net' entry.
-NetOutMsg    ::= msg(Constant, NetColdCall).
+NetOutMsg    ::= msg(Key, NetColdCall).
 NetOutStream ::= [] ; [NetOutMsg | NetOutStream].
 
 %% Intro result — written by intro_await_peer, injected into UserIn
@@ -510,8 +510,8 @@ UserInMsg    ::= msg(Constant, Constant, UserContent)
                ; app_ended(Constant).
 UserInStream ::= [] ; [UserInMsg | UserInStream].
 
-NetInMsg     ::= msg(Constant, NetColdCall)
-               ; msg(Constant, Constant, FriendContent)
+NetInMsg     ::= msg(Key, NetColdCall)
+               ; msg(Key, Constant, FriendContent)
                %% The runtime's report of a held link (Section 5.2; madGLP).
                ; pending_link(_, Constant).
 NetInStream  ::= [] ; [NetInMsg | NetInStream].

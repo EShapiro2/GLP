@@ -27,29 +27,26 @@
 /// display msg(agent, person, holdings(Lots)) : panel(sovereign), view(balances).
 /// ```
 ///
-/// Two things this manifest takes from vGLP's ruling of 2026-09-18 rather than
-/// from the sources as they stand on disc today, and which the re-emission of
-/// `sovereign_agent.vglp` (Currencies') carries:
-///
-/// 1. **The clause names.** The ruling takes the hand-written decline siblings
-///    out of both responders — where the transaction a clause implements has
-///    an else-effect, the clause's else-branch is its image and no decline
-///    sibling is written beside it — and the compilation numbers a procedure's
-///    volition-guarded clauses in textual order. So the accept clause of each
-///    responder is `respond_swap_1` and `respond_transfer_1`, each with
-///    `Reply_C ::= then(Xs_C) ; else`, and its card carries one Accept and the
-///    decline the runtime derives from [InboxDesc.elseBranch]. The compiled
-///    program on disc still numbers them `_2`.
-///
-/// 2. **The field labels.** The declarations on disc use the two-argument
-///    `field(X, W)`, under which each label is the writer's name and the Swap
-///    form reads Q, F, U, D, K, V, D1, K1. The three-argument `field(X, W, L)`
-///    is the remedy, and the strings below are Currencies', read off the
-///    derivation's list of what each position is.
-///
-/// The clause names and answer functors are the compilation's: the seven
-/// request clauses of `agent` are `agent_1` to `agent_7` in the order they are
+/// The clause names and answer functors are the compilation's, and the source
+/// and its compilation on disc carry them since Currencies' re-emission of
+/// `sovereign_agent.vglp` under vGLP's ruling of 2026-09-18: the hand-written
+/// decline siblings are out of both responders — where the transaction a
+/// clause implements has an else-effect, the clause's else-branch is its
+/// image, no decline sibling is written beside it, and an else-branch has no
+/// display declaration of its own — and the compilation numbers a procedure's
+/// volition-guarded clauses in textual order. So the accept clause of each
+/// responder is `respond_swap_1` and `respond_transfer_1`, each with
+/// `Reply_C ::= then(Xs_C) ; else`, and its card carries one Accept and the
+/// decline the runtime derives from [InboxDesc.elseBranch]; the seven request
+/// clauses of `agent` are `agent_1` to `agent_7` in the order they are
 /// written, Mint to Return.
+///
+/// One thing this manifest takes from the ruling rather than from the source
+/// as it stands on disc today: **the field labels.** The declarations on disc
+/// use the two-argument `field(X, W)`, under which each label is the writer's
+/// name and the Swap form reads Q, F, U, D, K, V, D1, K1. The three-argument
+/// `field(X, W, L)` is the remedy, and the strings below are Currencies', read
+/// off the derivation's list of what each position is.
 library;
 
 import '../ui_runtime/manifest.dart';

@@ -65,6 +65,10 @@ Reorganised 2026-09-16 (Udi).  `README.md` carries the directory map; what moved
 | IGLP, the harness path fix alone (Udi, 2026-09-18) | `/Users/udi/Grassroots/GLP-worktrees/IGLP-harness` | `IGLP-harness` |
 | IGLP, the default-display rule alone (Udi, 2026-09-18) | `/Users/udi/Grassroots/GLP-worktrees/IGLP-display` | `IGLP-display` |
 | Currencies, the twelve `bonds_v2/mad_boot` repairs alone (Udi, 2026-09-18) | `/Users/udi/Grassroots/GLP-worktrees/Currencies-bonds-boot` | `Currencies-bonds-boot` |
+| IGLP, the two checker faults alone (IGLP, 2026-09-18) | `/Users/udi/Grassroots/GLP-worktrees/IGLP-checker` | `IGLP-checker` |
+| IGLP, `main_sovereign.dart` boots the harness' person (IGLP, 2026-09-18) | `/Users/udi/Grassroots/GLP-worktrees/IGLP-sovereign-boot` | `IGLP-sovereign-boot` |
+| IGLP, the `signature/2` kernel and probe (IGLP, 2026-09-18) | `/Users/udi/Grassroots/GLP-worktrees/IGLP-signature` | `IGLP-signature` |
+| IGLP, its part of the `Key` mirror sweep (IGLP, 2026-09-18) | `/Users/udi/Grassroots/GLP-worktrees/IGLP-key` | `IGLP-key` |
 
 A project not listed has no worktree yet and asks Integration for one.
 
@@ -86,7 +90,7 @@ Loading a project: enter the directory path at the prompt; the project linker re
 
 | Suite | Command (from the worktree root) | Tests |
 |---|---|---|
-| Full suite (canonical) | `bash test/run_all_tests.sh` | 1995, all green, `KNOWN_RED` empty — at GLP `f5aa77f9`, 2026-09-18 |
+| Full suite (canonical) | `bash test/run_all_tests.sh` | 2071, all green, `KNOWN_RED` empty — at GLP `94d9980e`, 2026-09-18 |
 | Dart unit tests alone | `cd glp_runtime && dart test` | glp_runtime only |
 | Flutter package alone | `cd glp_multiagent && flutter test` | glp_multiagent only |
 

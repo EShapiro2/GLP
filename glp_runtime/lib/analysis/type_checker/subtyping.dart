@@ -83,10 +83,33 @@ bool _isSubtype(
     return automB != null && automB.acceptedPrimitives.contains(stateA.baseName);
   }
 
-  // A defined type is never below a primitive: a primitive has no alternatives
-  // to accept it.  This keeps the relation directional — `Constant` is not a
-  // subtype of `Integer`.
-  if (stateB.isPrimitiveType) return false;
+  // A defined type against a primitive: below it exactly when its automaton is
+  // the primitive's — its bare type-name alternatives reach that primitive and
+  // no other, and its start state has no transition of its own, so that every
+  // transition it has is inherited from the primitive (TGLP appendix "Type
+  // Automaton Construction", type definition transitions: "If A_j references
+  // another type S ... transitions are inherited from S").  `Key ::= String.`
+  // is below `String`, as `String` is below it by the case above.  A type with
+  // alternatives of its own is below no primitive, which keeps the relation
+  // directional — `Constant` is not a subtype of `Integer`, and a constant
+  // alternative (`Ack ::= ok ; error.`) is not taken as a value of one here.
+  //
+  // Until 2026-09-18 no defined type was below a primitive, which was
+  // unobservable while `Key ::= String.` was erased as an alias (IGLP,
+  // 2026-09-18: type_environment_builder.dart `_isSimpleAlias`); once it is a
+  // type, a `Key` produced by `self_key/1` and consumed at a `String?`
+  // position (programs/social/graph/core/agent.glp:81) needs this case.
+  if (stateB.isPrimitiveType) {
+    final automA = dfa.getAutomaton(stateA.name);
+    if (automA.acceptedPrimitives.length != 1 ||
+        !automA.acceptedPrimitives.contains(stateB.baseName)) {
+      return false;
+    }
+    for (final entry in automA.transitions.entries) {
+      if (entry.key.$1 == stateA) return false;
+    }
+    return true;
+  }
 
   // User-defined types: check transitions (spec 4.1)
   final automA = dfa.getAutomaton(stateA.name);

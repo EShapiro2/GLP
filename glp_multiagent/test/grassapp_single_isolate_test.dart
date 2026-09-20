@@ -8,7 +8,10 @@ import 'dart:isolate';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:glp_multiagent/isolate_protocol.dart';
 
-const _fixture = '/Users/udi/Grassroots/GLP/programs/tests/agent_roundtrip';
+import 'programs_dir.dart';
+
+final _programs = programsDir();
+final _fixture = '$_programs/tests/agent_roundtrip';
 
 void main() {
   test('accept a friend → actor messages Bob → received reaches Bob', () async {
@@ -39,8 +42,7 @@ void main() {
         agentId: 'Bob',
         glpSources: sources,
         glpSourcePaths: paths,
-        rootSelfGlpPath:
-            File('/Users/udi/Grassroots/GLP/programs/self.glp').absolute.path,
+        rootSelfGlpPath: '$_programs/self.glp',
         friends: const ['alice', 'charlie'],
         replyPort: reply.sendPort,
         deferStart: false,
