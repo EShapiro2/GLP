@@ -1,25 +1,28 @@
-%% A constructed argument instantiates a type parameter (TGLP
-%% parameterized-types.tex sec:param-procedures): "The concrete type at the call
-%% site of an argument that is a variable is its declared type, and of an
-%% argument that is a constructed term the type of the term itself---its functor,
-%% the types of its constants and the declared types of its variables---so a
-%% constructed argument instantiates a parameter exactly as a variable does."
+%% A call whose argument is a constructed term, and the parameter the callee's
+%% own clauses fix (TGLP parameterized-types.tex def:instantiation): "A map
+%% $\theta$ from those parameters to types of the program is an instantiation of
+%% $A$ if $C$ and the clauses of $q$ are well-typed when $q$'s declaration is
+%% replaced by its expansion under $\theta$."
 %%
 %% The shape is the paper's own, programs/currencies/coins/self.glp show/3:
-%% `send_user(msg(agent, person, C?), Outs?, Outs1)` against
-%% `procedure(M, Ent) send_user(M?, Stream(Ent)?, Stream(Ent))`, where the two
-%% constants bind M's first two positions to Constant and the variable C its
-%% third to Content, so M is msg(Constant, Constant, Content) --- the automaton
-%% of Msg, which is what the router's own clause requires --- and Ent is Entry.
-%% Until 2026-09-20 only an argument that was a variable bound a parameter, no
-%% instantiation of send_user/3 arose, and the program was rejected as carrying a
+%% `send_user(msg(agent, person, bye(N?)), Outs?, Outs1)` against
+%% `procedure(M, Ent) send_user(M?, Stream(Ent)?, Stream(Ent))`.  The call fixes
+%% Ent to Entry, from the variable Outs; nothing in the call fixes M, and the
+%% constructed term does not --- it is one alternative of Content at one
+%% position, narrower than the stream carries.  M is fixed by the callee's own
+%% head pair (Msg, Msg?), which condition 3(a) of def:well-typed-clause requires
+%% to be dual, to the element type of the stream Entry carries: Msg.  The term is
+%% then checked against `Msg?` at the call, which admits it.
+%%
+%% Until 2026-09-20 only a variable argument bound a parameter, no instantiation
+%% of send_user/3 arose, and the program was rejected as carrying a
 %% parameter-inspecting procedure nothing instantiates.
 
 Content ::= hello ; bye(Constant).
 Msg     ::= msg(Constant, Constant, Content).
 Entry   ::= out(Stream(Msg)?) ; log(Stream(Constant)?).
 
-imported procedure code#show(Content?, Stream(Entry)?, Stream(Entry)).
+imported procedure code#show(Constant?, Stream(Entry)?, Stream(Entry)).
 
-exported procedure run(Content?, Stream(Entry)?, Stream(Entry)).
-run(C, Outs, Outs1?) :- code # show(C?, Outs?, Outs1).
+exported procedure run(Constant?, Stream(Entry)?, Stream(Entry)).
+run(N, Outs, Outs1?) :- code # show(N?, Outs?, Outs1).

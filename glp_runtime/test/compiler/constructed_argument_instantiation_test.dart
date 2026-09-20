@@ -1,19 +1,25 @@
-/// A constructed argument instantiates a type parameter.
+/// A call whose argument is a constructed term, and the parameter the callee's
+/// own clauses fix.
 ///
-/// TGLP (parameterized-types.tex sec:param-procedures): "The concrete type at
-/// the call site of an argument that is a variable is its declared type, and of
-/// an argument that is a constructed term the type of the term itself---its
-/// functor, the types of its constants and the declared types of its
-/// variables---so a constructed argument instantiates a parameter exactly as a
-/// variable does."  And: "Two bindings for one parameter conflict when the
-/// types they supply have different type automata".
+/// TGLP (parameterized-types.tex def:instantiation): "A map \theta from those
+/// parameters to types of the program is an instantiation of A if C and the
+/// clauses of q are well-typed (Definition "Well-Typed Clause") when q's
+/// declaration is replaced by its expansion under \theta."
 ///
-/// Until 2026-09-20 only an argument that was a variable bound a parameter, so a
-/// call passing a constructed term induced no instantiation: the first two
+/// A variable argument constrains the parameter by an equation; a constructed
+/// term constrains it by containment, its type having to be admitted by whatever
+/// the parameter is bound to.  Where the call's own arguments leave a parameter
+/// open, the callee's clauses fix it: a variable pair of the callee's head that
+/// the declaration types by the parameter on one side and by a concrete type on
+/// the other must be dual (def:well-typed-clause 3(a)), and that is the
+/// equation.
+///
+/// Until 2026-09-20 only a variable argument bound a parameter, so a call
+/// passing a constructed term induced no instantiation and the first two
 /// programs below were rejected as carrying a parameter-inspecting procedure
-/// nothing instantiates, and the third --- two constructed arguments whose types
-/// have different automata at one parameter --- loaded, nothing having bound the
-/// parameter to compare the second against.
+/// nothing instantiates.  Between fbd9040 and e56c303 the term's own type was
+/// the binding, which is one alternative of the union the callee's clauses
+/// require and broke duality in the callee's head.
 library;
 
 import 'dart:io';
@@ -28,20 +34,19 @@ void main() {
         GlpEngine(rootSelfGlpPath: File('../programs/self.glp').absolute.path);
   });
 
-  test('a constructed argument instantiates the parameter, the paper\'s shape',
-      () {
+  test('a constructed argument at a parameter the callee\'s clauses fix', () {
     final dir =
         Directory('../programs/tests/param_constructed_arg').absolute.path;
     expect(engine.loadProgram(dir), isTrue);
   });
 
-  test('a parameter binds through a term inside a term', () {
+  test('a term inside a term at a parameter position', () {
     final dir =
         Directory('../programs/tests/param_constructed_nested').absolute.path;
     expect(engine.loadProgram(dir), isTrue);
   });
 
-  test('two constructed arguments with different automata at one parameter are rejected',
+  test('a constructed argument the parameter\'s binding does not admit is rejected',
       () {
     final dir =
         Directory('../programs/tests/param_constructed_conflict').absolute.path;
@@ -49,9 +54,9 @@ void main() {
       () => engine.loadProgram(dir),
       throwsA(predicate((e) {
         final s = e.toString();
-        return s.contains('No transition for g(1,1)') &&
-            s.contains(r'$f<Constant>?');
-      }, 'names the second argument and the type the first bound')),
+        return s.contains('No transition for bad(1,1)') &&
+            s.contains('from state Msg?');
+      }, 'names the argument and the type the parameter is bound to')),
     );
     expect(engine.loadedPrograms.containsKey('__program__'), isFalse);
   });

@@ -124,7 +124,15 @@ class TypeChecker {
   /// concrete instantiation (typed-program.md "Programs and Modules").
   final wtc.InstantiationCollector? collector;
 
-  TypeChecker(this.typeEnv, {this.collector}) : dfa = buildProgramDFA(typeEnv);
+  /// The defining clauses of a procedure, by "name/arity", or null where the
+  /// procedure is defined outside the unit being checked.  Call-site
+  /// instantiation needs them: the parameters a call's arguments do not settle
+  /// are fixed by the equations of the callee's own clauses (TGLP
+  /// def:instantiation, well_typed_clause.dart _solveFromCalleeClauses).
+  final List<ast.Clause>? Function(String procKey)? definingClauses;
+
+  TypeChecker(this.typeEnv, {this.collector, this.definingClauses})
+      : dfa = buildProgramDFA(typeEnv);
 
   /// Check a program (list of clauses) against declared types
   ///
@@ -297,7 +305,9 @@ class TypeChecker {
 
     try {
       final result = wtc.checkClauseFromAst(clause, dfa, typeEnv,
-          collector: collector, activeInstantiations: activeInstantiations);
+          collector: collector,
+          activeInstantiations: activeInstantiations,
+          definingClauses: definingClauses);
 
       if (!result.isWellTyped) {
         // Convert ClauseErrors to TypeErrors
@@ -787,7 +797,12 @@ TypeCheckResult _checkModuleImpl(ast.Module module, {List<ast.Procedure>? transf
   // Program mode: the caller (program linker) supplies a collector and runs the
   // cross-module instantiation closure itself.
   if (collector != null) {
-    final checker = TypeChecker(typeEnv, collector: collector);
+    final byKey = <String, List<ast.Clause>>{};
+    for (final c in clauses) {
+      byKey.putIfAbsent('${c.head.functor}/${c.head.arity}', () => []).add(c);
+    }
+    final checker = TypeChecker(typeEnv,
+        collector: collector, definingClauses: (k) => byKey[k]);
     final result = checker.check(clauses);
 
     // Phase A (modular checking via abstract parameters), per module: certify
@@ -816,7 +831,12 @@ TypeCheckResult _checkModuleImpl(ast.Module module, {List<ast.Procedure>? transf
   // polymorphic-polarity soundness gap, known-issues Issue 14); a procedure
   // that is never instantiated has no well-typing and is not checked.
   final localCollector = wtc.InstantiationCollector();
-  final checker = TypeChecker(typeEnv, collector: localCollector);
+  final byKey = <String, List<ast.Clause>>{};
+  for (final c in clauses) {
+    byKey.putIfAbsent('${c.head.functor}/${c.head.arity}', () => []).add(c);
+  }
+  final checker = TypeChecker(typeEnv,
+      collector: localCollector, definingClauses: (k) => byKey[k]);
   final result = checker.check(clauses);
 
   final errors = <TypeError>[...result.errors];
@@ -1123,25 +1143,10 @@ List<InstantiationCheckResult> checkInstantiationsClosed(
       // therefore records no new instantiation into [sub].
       final active = {...pending.active, inst.procKey: inst.monoDecl};
       final sub = wtc.InstantiationCollector();
-      final res = TypeChecker(focusedEnv, collector: sub).checkSingleProcedure(
-          inst.monoDecl, defining,
-          activeInstantiations: active);
-
-      // A check adds to its focused environment the types built from the
-      // constructed arguments of the calls in this body (well_typed_clause.dart
-      // _termTypeName, TGLP sec:param-procedures).  They are monomorphic
-      // definitions the closure discovered, exactly like the ones materialized
-      // below, so they accumulate here too: a later round rebuilds each focused
-      // environment from the instantiation's own, which predates them, and a
-      // materialized type may reference one --- `Slot<$abort(ReqId)>` over
-      // `$abort(ReqId)` in the coins program --- leaving the round with a
-      // reference it cannot resolve.
-      for (final e in focusedEnv.types.entries) {
-        if (!inst.env.types.containsKey(e.key) &&
-            !extraTypes.containsKey(e.key)) {
-          extraTypes[e.key] = e.value;
-        }
-      }
+      final res = TypeChecker(focusedEnv,
+              collector: sub, definingClauses: definingClauses)
+          .checkSingleProcedure(inst.monoDecl, defining,
+              activeInstantiations: active);
       // A parametric procedure certified by Phase A (abstract-instance check) is
       // well-typed at every instantiation by lem:parametricity, so its concrete
       // instantiation is not re-reported here; its body is still traversed so the
