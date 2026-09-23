@@ -47,11 +47,11 @@ boot_chan_late :- consumer(ch(S?, closed)), feeder(S).
 %% named continuation used in the body. Same late-feed. If this fires otherwise
 %% (anon_otherwise) where boot_chan_late suspends+matches, the unbound Out is the
 %% trigger for receive-guard failing instead of suspending.
-procedure consumer_anon(Channel(Stream(Item), W)?).
+procedure(W) consumer_anon(Channel(Stream(Item), W)?).
 consumer_anon(Ch) :- receive(it(_, R?), Ch?, Ch1) | stash([keep(R)]), dropch(Ch1?), send_to_user([anon_matched]).
 consumer_anon(_)  :- otherwise | send_to_user([anon_otherwise]).
 
-procedure dropch(Channel(Stream(Item), W)?).
+procedure(W) dropch(Channel(Stream(Item), W)?).
 dropch(_).
 
 exported procedure boot_anon_late.
