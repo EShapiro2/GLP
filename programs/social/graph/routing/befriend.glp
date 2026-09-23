@@ -1,8 +1,8 @@
 
 %% Cross-lib dependency: the output routers (exposed at the root for platforms,
 %% but a sibling lib module is reached by explicit import + qualified call).
-imported procedure output#send_user(M?, Stream(Ent)?, Stream(Ent)).
-imported procedure output#add_friend_output(Constant?, Stream(M), Stream(Ent)?, Stream(Ent)).
+imported procedure(M, Ent) output#send_user(M?, Stream(Ent)?, Stream(Ent)).
+imported procedure(M, Ent) output#add_friend_output(Constant?, Stream(M), Stream(Ent)?, Stream(Ent)).
 
 %% Idempotent befriend commit with smaller-name tie-break and fresh-friend-channel
 %% conveyance (CSSN Issue 16), lifted from social/network and generalised so all
