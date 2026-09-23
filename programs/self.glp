@@ -771,9 +771,9 @@ close_when_done(done, Ref) :-
     is_mutual_ref(Ref?) |
     close_mutual_reference(Ref?).
 
-% The mutual-reference wrappers carry permissive (`_`) system-builtin types so
-% that typed application modules can call them without a local declaration: a
-% mutual reference is an opaque runtime value with no GLP type of its own.
+% The mutual-reference wrappers let a typed application module call the kernels
+% without a local declaration.  A mutual reference is a value of the primitive type
+% MutualRef, which no program writes as a literal: the runtime produces it.
 procedure(X) stream_append(X?, MutualRef?, MutualRef).
 stream_append(Value, RefIn, RefOut?) :-
     is_mutual_ref(RefIn?) |
