@@ -138,6 +138,21 @@ void main() {
       expect(text, contains('receive(ask(C, Ctx, Esc, Id?), AgentCh?, AgentCh1)'));
     });
 
+    test('the routing clause routes the answer and closes the card', () {
+      // The Definition closes an ANSWERED ask on the person channel as it
+      // closes a declined and an aborted one, so a reader of that channel
+      // other than the one that answered is told that the ask is over.
+      final medProc = med.procedures.firstWhere((p) => p.name == 'med');
+      final text = printProcedures([medProc]);
+      expect(text, contains('receive(answer(ReqId, Vs), UserCh?, UserCh1)'));
+      expect(text, contains('answer(ReqId?, Vs?, Ps?, Ps1)'));
+      expect(
+          text,
+          contains('answer(ReqId?, Vs?, Ps?, Ps1), '
+              'send(closed(ReqId?), UserCh1?, UserCh2), '
+              'med(UserCh2?, AgentCh?, Ps1?, N?)'));
+    });
+
     test('the decline clause selects the else-branch and closes the card', () {
       final medProc = med.procedures.firstWhere((p) => p.name == 'med');
       final text = printProcedures([medProc]);

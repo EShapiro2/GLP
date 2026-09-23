@@ -36,12 +36,16 @@ med(UserCh, AgentCh, Ps, N) :-
         [pending(req(N?), Esc?) | Ps?], N1?).
 
 %% Routing: the person's answer selects the then-branch and supplies the
-%% answer's values.  An answer not of its clause's form finds no entry.
+%% answer's values, and the ask is closed on the person channel as a declined
+%% and an aborted one are, so a reader of that channel other than the one that
+%% answered is told that the ask is over.  An answer not of its clause's form
+%% finds no entry.
 med(UserCh, AgentCh, Ps, N) :-
     receive(answer(ReqId, Vs), UserCh?, UserCh1),
     ground(ReqId?), ground(Vs?) |
     answer(ReqId?, Vs?, Ps?, Ps1),
-    med(UserCh1?, AgentCh?, Ps1?, N?).
+    send(closed(ReqId?), UserCh1?, UserCh2),
+    med(UserCh2?, AgentCh?, Ps1?, N?).
 
 %% Decline: the person says they do not will the reduction, and the
 %% else-branch of the ask's clause is selected.  It needs no clock.
