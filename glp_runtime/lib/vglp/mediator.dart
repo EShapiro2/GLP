@@ -207,8 +207,13 @@ String _sourceName(String name) {
 String printProcDecl(ProcDecl d) {
   final prefix = d.exported ? 'exported ' : (d.imported ? 'imported ' : '');
   final params = d.typeParams.isEmpty ? '' : '(${d.typeParams.join(', ')})';
+  // The question parameters follow the argument list (vGLP, Section
+  // "Volition-Guarded GLP"), and the compiled program carries the procedure
+  // declarations of its source (Definition "Canonical Compilation").
+  final question =
+      d.questionParams.isEmpty ? '' : ' *(${d.questionParams.join(', ')})';
   return '${prefix}procedure$params ${d.name}'
-      '(${d.argTypes.map(typeSource).join(', ')}).';
+      '(${d.argTypes.map(typeSource).join(', ')})$question.';
 }
 
 /// A type definition as GLP source.

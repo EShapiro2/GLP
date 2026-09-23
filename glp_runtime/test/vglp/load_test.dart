@@ -229,7 +229,17 @@ respond(offer(From), [answered(no, From?)]) :- ground(From?) | true.
       final emitted = File(written.single).readAsStringSync();
       expect(emitted, startsWith(compiledHeader));
       expect(emitted, contains('procedure med('));
-      expect(emitted, isNot(contains('*(')));
+      // No volition-guarded CLAUSE survives the compilation: GLP is vGLP
+      // without them.  The procedure declarations do survive, question
+      // parameters and all (vGLP, Definition "Canonical Compilation": the
+      // compiled program carries the procedure declarations of M), so the only
+      // `*(` left is the one on respond's declaration.
+      expect(
+          emitted
+              .split('\n')
+              .where((l) => l.contains('*(') && !l.startsWith('procedure ')),
+          isEmpty);
+      expect(emitted, contains('*(Answer).'));
     });
 
     test('it re-emits its own output', () {

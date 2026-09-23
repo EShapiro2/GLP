@@ -161,6 +161,16 @@ CompiledTypes compileTypes(ast.Module module,
 /// in the order of the compiled head, the j-th typed `Slot(Reply_Cj)` by its
 /// own clause's reply type.  Both are input positions: the caller supplies
 /// the channel it holds and the slots the goal carries.
+///
+/// The question parameters are carried through unchanged.  "The compiled
+/// program carries the type definitions and procedure declarations of M with
+/// those the compilation adds" (vGLP, Definition "Canonical Compilation"), and
+/// a procedure declaration of M carries its question parameters (Section
+/// "Volition-Guarded GLP"), so the compiled declaration carries them too --- as
+/// the display declarations are carried, and read in the compiled program by
+/// whatever reads them there.  The compiled program has no volition guard left
+/// to match them against, which is why checkQuestionParameters is the source's
+/// check and not the compiled module's.
 List<ProcDecl> _rewriteDeclarations(ast.Module module) {
   final slots = <String, int>{
     for (final p in module.procedures)
@@ -188,6 +198,7 @@ List<ProcDecl> _rewriteDeclarations(ast.Module module) {
       d.line,
       d.column,
       typeParams: d.typeParams,
+      questionParams: d.questionParams,
       isBuiltin: d.isBuiltin,
       exported: d.exported,
       imported: d.imported,

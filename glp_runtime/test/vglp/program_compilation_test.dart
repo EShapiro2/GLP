@@ -339,6 +339,31 @@ Out      ::= [] ; [OutMsg | Out].
       expect(message, contains('no volition guard of the procedure names'));
     });
 
+    test('the compiled declaration carries the parameters through', () {
+      final out = compile('${types}'
+          'procedure respond(Offer?, Out) *(Answer, Other).\n'
+          '*(Answer=yes, From?)\n'
+          'respond(offer(From), [decided(Answer?)]) :- ground(From?) | true.\n'
+          '*(Other=no, From?)\n'
+          'respond(offer(From), [decided(Other?)]) :- constant(From?) | true.\n');
+      expect(out.types.procDecls.firstWhere((d) => d.name == 'respond')
+          .questionParams, ['Answer', 'Other']);
+      expect(out.source, contains('*(Answer, Other).'));
+      // And the emitted text parses back as GLP, list and all.
+      expect(() => Parser(Lexer(out.source).tokenize()).parseModule(),
+          returnsNormally);
+    });
+
+    test('a procedure whose guards name no writer carries no list', () {
+      final out = compile('${types}'
+          'procedure respond(Offer?, Out).\n'
+          '*(yes, From?)\n'
+          'respond(offer(From), [decided(no)]) :- ground(From?) | true.\n');
+      expect(out.types.procDecls.firstWhere((d) => d.name == 'respond')
+          .questionParams, isEmpty);
+      expect(out.source, isNot(contains(') *(')));
+    });
+
     test('two positions of one type in one clause are two parameters', () {
       // "a swap's give amount and its want amount" (same sentence).  The
       // runnable fixture is programs/tests/vglp/question_parameters.
