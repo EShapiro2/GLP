@@ -193,6 +193,15 @@ class RunnerContext {
   Object? currentStructure;           // Current structure being traversed
   final Map<int, Object?> clauseVars = {}; // Clause variable bindings (varIndex → value)
 
+  // Clause-variable index for the next anonymous variable an `unify_void`
+  // creates. Each occurrence of an anonymous variable is a variable of its own
+  // that nothing else in the clause names, so it gets an index nothing else
+  // can hold: indices run downwards from -3, below the structure sentinels -1
+  // and -2, while codegen's clause variables and temp registers are all
+  // non-negative. It is never reset, so two occurrences never share an index.
+  int _nextVoidVar = -3;
+  int freshVoidVar() => _nextVoidVar--;
+
   // Parent structure stack for nested structure building (supports arbitrary depth)
   final List<_ParentContext> parentStack = [];
 
@@ -1279,19 +1288,45 @@ mixin OpExecutors {
     return StepOutcome.advance;
   }
 
-  /// `unify_void` (0x22): skip (READ) or create fresh unbound (WRITE) [count]
-  /// structure positions.
+  /// `unify_void` (0x22): skip (READ) or create a fresh unbound writer (WRITE)
+  /// at [count] structure positions.
+  ///
+  /// An anonymous variable is a fresh writer with no paired reader (TGLP
+  /// typed-glp.tex, "Anonymous variables"), and at a produced position of a
+  /// clause head complementation (def:moded-head) makes `_?` exactly that. So
+  /// WRITE puts a fresh writer in the slot, as `glp_engine.dart`'s
+  /// `_anonymousWriter` does for `_` in a goal argument. It used to leave the
+  /// slot `null`, which `_convertTentativeToStruct` turned into
+  /// `ConstTerm(null)`: that closes a stream the clause left open, and the
+  /// payload serializer refuses it across a link.
+  ///
+  /// Each position is one occurrence, so each gets a clause-variable index of
+  /// its own that nothing else in the clause names, and the placement is
+  /// `unify_variable`'s in writer mode --- head (`_TentativeStruct`) and body
+  /// (`StructTerm`) alike, the body arm completing the structure and unwinding
+  /// the parent stack when the last position is filled. The body arm used to
+  /// do nothing at all and left `S` where it was, so a body structure holding
+  /// a `_` never completed.
   StepOutcome execUnifyVoid(RunnerContext cx, int count) {
-    if (cx.mode == UnifyMode.write) {
-      if (cx.currentStructure is _TentativeStruct) {
-        final struct = cx.currentStructure as _TentativeStruct;
-        for (var i = 0; i < count && cx.S < struct.args.length; i++) {
-          struct.args[cx.S] = null; // void / unbound
-          cx.S++;
-        }
-      }
-    } else {
+    if (cx.mode != UnifyMode.write) {
       cx.S += count;
+      return StepOutcome.advance;
+    }
+    for (var i = 0; i < count; i++) {
+      // Re-read each time: completing a structure clears it, restores a parent
+      // or switches back to READ mode.
+      if (cx.mode != UnifyMode.write) break;
+      final struct = cx.currentStructure;
+      final int arity;
+      if (struct is _TentativeStruct) {
+        arity = struct.args.length;
+      } else if (struct is StructTerm) {
+        arity = struct.args.length;
+      } else {
+        break;
+      }
+      if (cx.S >= arity) break;
+      execUnifyVariable(cx, cx.freshVoidVar(), false);
     }
     return StepOutcome.advance;
   }
