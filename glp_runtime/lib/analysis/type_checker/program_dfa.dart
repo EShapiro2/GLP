@@ -60,17 +60,29 @@ class DFAState {
   /// root-`self.glp` type `Constant`.
   bool get isModuleType => baseName == 'Module';
 
+  /// True for the `MutualRef` type state (either complement or not).
+  /// A mutual reference is an opaque handle on the tail of a stream; `MutualRef`
+  /// is a primitive (TGLP sec:type-declarations) and, unlike `Module`, is NOT an
+  /// alternative of the root-`self.glp` type `Constant` --- it holds the writer
+  /// of a stream tail, so it is neither ground nor a constant type.
+  bool get isMutualRefType => baseName == 'MutualRef';
+
   /// True for `_FINAL_` (anonymous final for constant/literal matches)
   bool get isAnonymousFinal => baseName == '_FINAL_';
 
   // Fix 3.2: Computed properties for type classification
-  /// True for the primitive types: `_`, Integer, Real, String, Module.
+  /// True for the primitive types: `_`, Integer, Real, String, Module, MutualRef.
   /// `Number` and `Constant` are NOT primitive — they are unions defined in the
-  /// root `self.glp` (TGLP appendix "GLP Language Primitives"), so they behave
+  /// root `self.glp` (TGLP sec:type-declarations), so they behave
   /// as ordinary defined types here and their relation to the primitives comes
   /// out of their definitions.
   bool get isPrimitiveType =>
-      isWildcard || isIntegerType || isRealType || isStringType || isModuleType;
+      isWildcard ||
+      isIntegerType ||
+      isRealType ||
+      isStringType ||
+      isModuleType ||
+      isMutualRefType;
 
   /// True for user-defined types (not primitive, not procedure, not anonymous final)
   bool get isUserDefinedType =>
@@ -237,6 +249,8 @@ ProgramDFA buildProgramDFA(TypeEnvironment env) {
   states['String?'] = DFAState('String', isDual: true, isFinal: false);
   states['Module'] = DFAState('Module', isDual: false, isFinal: false);
   states['Module?'] = DFAState('Module', isDual: true, isFinal: false);
+  states['MutualRef'] = DFAState('MutualRef', isDual: false, isFinal: false);
+  states['MutualRef?'] = DFAState('MutualRef', isDual: true, isFinal: false);
   states['_FINAL_'] = DFAState('_FINAL_', isDual: false, isFinal: true);
 
   // Create automata for system types
@@ -250,6 +264,8 @@ ProgramDFA buildProgramDFA(TypeEnvironment env) {
   automata['String?'] = _primitiveTypeAutomaton(states['String?']!, states['_FINAL_']!);
   automata['Module'] = _primitiveTypeAutomaton(states['Module']!, states['_FINAL_']!);
   automata['Module?'] = _primitiveTypeAutomaton(states['Module?']!, states['_FINAL_']!);
+  automata['MutualRef'] = _primitiveTypeAutomaton(states['MutualRef']!, states['_FINAL_']!);
+  automata['MutualRef?'] = _primitiveTypeAutomaton(states['MutualRef?']!, states['_FINAL_']!);
 
   // Create states for ALL defined types FIRST
   // (Automata may reference other types, so all states must exist before building automata)
@@ -496,6 +512,9 @@ DFAState _resolveTypeExpr(
     if (typeExpr.name == 'Module') {
       return finalIsComplement ? states['Module?']! : states['Module']!;
     }
+    if (typeExpr.name == 'MutualRef') {
+      return finalIsComplement ? states['MutualRef?']! : states['MutualRef']!;
+    }
 
     final targetName = typeExpr.name;
     final targetState = finalIsComplement ? states['$targetName?'] : states[targetName];
@@ -594,16 +613,21 @@ String _getFullTypeName(TypeExpr typeExpr) {
 bool isConstantType(DFAState state, Map<String, TypeDef> types) {
   if (state.isWildcard) return false;
   if (state.isProcedure) return false;
+  // `MutualRef` is a primitive and is NOT one of the four the definition names:
+  // "a mutual reference holds the writer of a stream tail, so it is neither
+  // ground nor a constant type" (TGLP sec:type-declarations).
+  if (state.isMutualRefType) return false;
   // `_FINAL_` is where a constant alternative's path ends: a constant.
   if (state.isAnonymousFinal) return true;
-  // Integer, Real, String, Module --- the wildcard is already out.
+  // Integer, Real, String, Module --- the wildcard and MutualRef are already out.
   if (state.isPrimitiveType) return true;
   return _isConstantTypeNamed(state.baseName, types, <String>{});
 }
 
 bool _isConstantTypeNamed(
     String name, Map<String, TypeDef> types, Set<String> assumed) {
-  if (TypeRef.builtins.contains(name)) return true;
+  if (TypeRef.constantPrimitives.contains(name)) return true;
+  if (TypeRef.builtins.contains(name)) return false; // MutualRef, and only it
   if (!assumed.add(name)) return true; // already on the walk: no new alternative
   final def = types[name];
   if (def == null) return false; // a name with no definition answers for nothing
@@ -753,6 +777,15 @@ LeafConsistencyResult checkLeafConsistency(
   // leaf reaches here.
   if (state.isModuleType) {
     return LeafConsistencyResult.inconsistent('Module type requires a module term');
+  }
+
+  // Row 9 of the consistency table: a mutual reference term matches MutualRef,
+  // and nothing else does.  Like a module term it is produced by the runtime and
+  // is never written as a literal, so no source leaf reaches here either; a
+  // literal at a `MutualRef` position is refused by this line.
+  if (state.isMutualRefType) {
+    return LeafConsistencyResult.inconsistent(
+        'MutualRef type requires a mutual reference term');
   }
 
   // Case 2c: At wildcard state

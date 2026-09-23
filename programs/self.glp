@@ -135,7 +135,7 @@ procedure =..(_, Stream(_)?).      % Compose: Stream? → Compound
 procedure ..=(Stream(_), _?).      % Decompose: Compound? → Stream
 
 % MWM (Mutual Write Merge) runtime guard
-procedure is_mutual_ref(_?).
+procedure is_mutual_ref(MutualRef?).
 
 % =============================================================================
 % BODY KERNELS (no clauses - implemented by runtime)
@@ -211,9 +211,9 @@ procedure '_now'(Integer).
 procedure '_random'(Integer?, Integer?, Integer, Integer).
 
 % MWM (Mutual Write Merge)
-procedure '_allocate_mutual_reference'(_, _).
-procedure '_stream_append'(_?, _?, _).
-procedure '_close_mutual_reference'(_?).
+procedure(X) '_allocate_mutual_reference'(MutualRef, Stream(X)).
+procedure(X) '_stream_append'(MutualRef?, X?, MutualRef).
+procedure '_close_mutual_reference'(MutualRef?).
 
 % Network
 procedure '_send'(_?, _?, _?).
@@ -774,12 +774,12 @@ close_when_done(done, Ref) :-
 % The mutual-reference wrappers carry permissive (`_`) system-builtin types so
 % that typed application modules can call them without a local declaration: a
 % mutual reference is an opaque runtime value with no GLP type of its own.
-procedure stream_append(_?, _?, _).
+procedure(X) stream_append(X?, MutualRef?, MutualRef).
 stream_append(Value, RefIn, RefOut?) :-
     is_mutual_ref(RefIn?) |
     '_stream_append'(RefIn?, Value?, RefOut).
 
-procedure close_mutual_reference(_?).
+procedure close_mutual_reference(MutualRef?).
 close_mutual_reference(Ref) :-
     is_mutual_ref(Ref?) |
     '_close_mutual_reference'(Ref?).
@@ -787,5 +787,5 @@ close_mutual_reference(Ref) :-
 % allocate_mutual_reference/2 — system wrapper for the allocation kernel, so
 % application modules can build a mutual reference without naming the reserved
 % '_allocate_mutual_reference' kernel.
-procedure allocate_mutual_reference(_, _).
+procedure(X) allocate_mutual_reference(MutualRef, Stream(X)).
 allocate_mutual_reference(Ref?, Out?) :- '_allocate_mutual_reference'(Ref, Out).

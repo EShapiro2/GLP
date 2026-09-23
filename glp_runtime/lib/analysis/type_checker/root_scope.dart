@@ -20,6 +20,7 @@ const Set<String> predefinedTypeNames = {
   'Real',     // Primitive builtin
   'String',   // Primitive builtin
   'Module',   // Primitive builtin
+  'MutualRef', // Primitive builtin
   'Number',   // Root self.glp union: Integer ; Real
   'Constant', // Root self.glp union: Number ; String ; Module
   'Exp',      // Root self.glp union: arithmetic expressions

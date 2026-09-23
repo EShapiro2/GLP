@@ -68,10 +68,20 @@ class TypeRef extends TypeExpr {
   }
 
   /// The primitive types (not defined via ::=, implemented by the runtime).
-  /// TGLP appendix "GLP Language Primitives": Integer, Real, String, Module.
+  /// TGLP sec:type-declarations: "The primitive types are Integer, Real, String,
+  /// Module and MutualRef, the last an opaque handle on the tail of a stream,
+  /// through which mwm/2 appends in constant time."
   /// Number, Constant and Exp are NOT here — they are unions defined in the
-  /// root self.glp.
-  static const builtins = {'Integer', 'Real', 'String', 'Module'};
+  /// root self.glp — and `MutualRef` is not among THEM either: "a mutual
+  /// reference holds the writer of a stream tail, so it is neither ground nor a
+  /// constant type" (see [constantPrimitives]).
+  static const builtins = {'Integer', 'Real', 'String', 'Module', 'MutualRef'};
+
+  /// The primitive types Definition (Constant Type) names: "each of its
+  /// alternatives is a constant, one of the primitive types Integer, Real,
+  /// String and Module, or a constant type".  `MutualRef` is a primitive and is
+  /// not one of these.
+  static const constantPrimitives = {'Integer', 'Real', 'String', 'Module'};
 
   /// System types (defined via ::= but not redefinable by user)
   static const systemTypes = {'Any', 'List'};
