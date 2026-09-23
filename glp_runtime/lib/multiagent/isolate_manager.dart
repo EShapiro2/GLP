@@ -644,7 +644,7 @@ void _agentIsolateEntry(AgentConfig config) async {
     try {
     if (msg is Start) {
       // Initial drain+flush: kicks off the agent's goal
-      scheduler.drainWithStatus(debug: engine.debugTrace);
+      _drain(scheduler, agentId, engine.debugTrace);
       ctx.flushMessages();
       config.mainPort.send(AgentIdle(agentId));
 
@@ -663,7 +663,7 @@ void _agentIsolateEntry(AgentConfig config) async {
       }
 
       // Drain activated goals and flush any response messages
-      scheduler.drainWithStatus(debug: engine.debugTrace);
+      _drain(scheduler, agentId, engine.debugTrace);
       ctx.flushMessages();
       config.mainPort.send(AgentIdle(agentId));
 
@@ -682,5 +682,21 @@ void _agentIsolateEntry(AgentConfig config) async {
       config.mainPort.send(AgentFaulted(agentId, '$e'));
       config.mainPort.send(AgentIdle(agentId));
     }
+  }
+}
+
+/// One event's reduction in an agent isolate: reduce until quiescent, the
+/// queue empty and nothing runnable. One [Scheduler.drainWithStatus] stops at
+/// its cycle cap with goals still queued, so this agent's drain is
+/// [Scheduler.drainToQuiescence], as the single-isolate runtime's is. Its cap
+/// is a safety net against a program that never quiesces: reaching it is
+/// reported, never passed over, because everything after a half-run means
+/// something other than what it says.
+void _drain(Scheduler scheduler, String agentId, bool debug) {
+  final result = scheduler.drainToQuiescence(debug: debug);
+  if (result.status == ExecutionStatus.capped) {
+    print('[$agentId] ERROR: the program did not quiesce: stopped after '
+        '${result.goalsRan.length} goals with ${scheduler.rt.gq.length} '
+        'still queued');
   }
 }

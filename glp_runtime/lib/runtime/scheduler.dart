@@ -8,6 +8,7 @@ enum ExecutionStatus {
   succeeded,  // All goals completed successfully
   failed,     // A goal failed (no matching clause)
   suspended,  // Goals remain suspended (waiting on unbound readers)
+  capped,     // The cycle cap stopped the drain with goals still queued
 }
 
 /// Result from drain operation
@@ -330,8 +331,17 @@ class Scheduler {
     // failed goals, so a run with a non-empty F is a failed run.
     final hasFailed = rt.failedGoals.length > failedAtEntry;
 
+    // A drain that exits with goals still queued stopped at its cap, and that
+    // is its own outcome: what is left is runnable, not suspended, and the run
+    // is not quiescent. Reading it as `suspended` called a half-run a settled
+    // one, which is how a boot of 1010 goals reported itself finished at 1000.
+    // It outranks the other outcomes here because it says the drain did not
+    // end: F is recovered cumulatively by whoever drains again
+    // ([drainToQuiescence], [drainAsyncWithStatus]), so a failure is not lost.
     final ExecutionStatus status;
-    if (hasFailed) {
+    if (rt.gq.length > 0) {
+      status = ExecutionStatus.capped;
+    } else if (hasFailed) {
       status = ExecutionStatus.failed;
     } else if (userSuspendedGoals.isNotEmpty) {
       status = ExecutionStatus.suspended;
@@ -350,6 +360,47 @@ class Scheduler {
         : <int>{};
 
     return DrainResult(ran, status, suspendedList, blockingReaders);
+  }
+
+  /// Reduce until quiescent: the queue empty and nothing runnable.
+  ///
+  /// One [drainWithStatus] need not reach quiescence — it stops at its own
+  /// cycle cap with goals still queued, which is [ExecutionStatus.capped] — so
+  /// this repeats it until it does. [chunk] is how many cycles one such drain
+  /// takes and is invisible in the result.
+  ///
+  /// [maxCycles] is a safety net against a program that never quiesces, not a
+  /// budget a run may silently exceed: a run that reaches it returns `capped`
+  /// with its queue non-empty, and its caller reports that. F is cumulative
+  /// across the drains this call makes, so a goal that failed in any of them
+  /// fails the whole, whatever the last drain returned.
+  DrainResult drainToQuiescence({int maxCycles = 1000000, int chunk = 1000, bool debug = false, bool showBindings = true, bool debugOutput = false}) {
+    final ran = <int>[];
+    final failedAtEntry = rt.failedGoals.length;
+    var last = DrainResult(const [], ExecutionStatus.succeeded, const []);
+
+    while (ran.length < maxCycles) {
+      final left = maxCycles - ran.length;
+      final result = drainWithStatus(
+        maxCycles: chunk < left ? chunk : left,
+        debug: debug,
+        showBindings: showBindings,
+        debugOutput: debugOutput,
+      );
+      ran.addAll(result.goalsRan);
+      last = result;
+      if (result.status != ExecutionStatus.capped) break;
+      // A capped drain that ran nothing cannot be resumed — the queue reports
+      // work it will not hand over — and looping on it would never end.
+      if (result.goalsRan.isEmpty) break;
+    }
+
+    final status = rt.gq.length > 0
+        ? ExecutionStatus.capped
+        : (rt.failedGoals.length > failedAtEntry
+            ? ExecutionStatus.failed
+            : last.status);
+    return DrainResult(ran, status, last.suspendedGoals, last.blockingReaders);
   }
 
   /// Legacy drain for backward compatibility
