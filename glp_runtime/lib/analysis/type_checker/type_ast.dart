@@ -217,10 +217,18 @@ class TypeDef {
 /// Parameterized procedure declarations have non-empty typeParams:
 ///   procedure gethead(Stream(X)?, X).  → typeParams: ['X']
 /// These are templates instantiated per call site by the type checker.
+///
+/// A declaration also carries its QUESTION PARAMETERS after its argument list,
+/// `procedure p(...) *(X1, ..., Xm).`, "being every writer that a volition
+/// guard of the procedure names, each of them once" (vGLP, sections/vglp.tex,
+/// Section "Volition-Guarded GLP").  They are names, not types: "a volition
+/// guard's writers are matched to them by name".  A procedure no volition
+/// guard names writers of carries none, and [questionParams] is empty.
 class ProcDecl {
   final String name;
   final List<TypeExpr> argTypes;  // TypeRef or PrimitiveModeAlt
   final List<String> typeParams;  // e.g., ['X'] for parameterized proc decls, [] for monomorphic
+  final List<String> questionParams;  // the writers of the procedure's volition guards, by name
   final int line;
   final int column;
   final bool isBuiltin;  // True if implemented in Dart runtime (no GLP clauses)
@@ -228,7 +236,7 @@ class ProcDecl {
   final bool imported;   // True if declared with 'imported procedure'
   final String? modulePath;  // For imported procedures: module path (e.g., 'social' or 'ui#actors'), null for ancestor scope
 
-  ProcDecl(this.name, this.argTypes, this.line, this.column, {this.typeParams = const [], this.isBuiltin = false, this.exported = false, this.imported = false, this.modulePath});
+  ProcDecl(this.name, this.argTypes, this.line, this.column, {this.typeParams = const [], this.questionParams = const [], this.isBuiltin = false, this.exported = false, this.imported = false, this.modulePath});
 
   bool get isParameterized => typeParams.isNotEmpty;
 
@@ -271,8 +279,15 @@ class ProcDecl {
     return name;
   }
 
+  /// The question-parameter list as source, ` *(X1, ..., Xm)`, or the empty
+  /// string where the procedure has none.
+  String get _questionParamList =>
+      questionParams.isEmpty ? '' : ' *(${questionParams.join(', ')})';
+
   @override
-  String toString() => '${_visibilityPrefix}procedure $qualifiedName(${argTypes.join(', ')}).';
+  String toString() =>
+      '${_visibilityPrefix}procedure $qualifiedName(${argTypes.join(', ')})'
+      '$_questionParamList.';
 }
 
 /// [expr] with every type name in [rename] replaced by its value, in the name

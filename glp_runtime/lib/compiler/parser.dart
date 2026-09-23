@@ -1888,6 +1888,14 @@ class Parser {
   /// with no parameters is written without a list.
   /// Spec: Moded-Types, sections/parameterized-types.tex, Parameterised
   /// Procedure Declarations and the paragraph Declaration parameters.
+  ///
+  /// After the argument list the declaration may carry its QUESTION
+  /// PARAMETERS, `procedure p(...) *(X1, ..., Xm).` (vGLP, sections/vglp.tex,
+  /// Section "Volition-Guarded GLP").  They are writers, named and not typed,
+  /// and a procedure whose volition guards name no writer carries no list.
+  /// Admitted in a .glp source as well as a .vglp one: the compiled program
+  /// carries the procedure declarations of its source (vGLP, Definition
+  /// "Canonical Compilation"), so GLP must parse what the compilation emits.
   ProcDecl _parseProcDeclaration() {
     // Check for 'exported' or 'imported' keyword before 'procedure'
     bool exported = false;
@@ -2011,9 +2019,54 @@ class Parser {
     }
     // If no LPAREN, argTypes remains empty (nullary procedure)
 
+    final questionParams = _parseQuestionParamsOpt(name);
+
     _consume(TokenType.DOT, 'Expected "." after procedure declaration');
 
-    return ProcDecl(name, argTypes, line, column, typeParams: typeParams, exported: exported, imported: imported, modulePath: modulePath);
+    return ProcDecl(name, argTypes, line, column, typeParams: typeParams, questionParams: questionParams, exported: exported, imported: imported, modulePath: modulePath);
+  }
+
+  /// The question-parameter list of a procedure declaration, `*(X1, ..., Xm)`
+  /// after the argument list, or the empty list where there is none (vGLP,
+  /// sections/vglp.tex, Section "Volition-Guarded GLP").
+  ///
+  /// Each parameter is a writer, so an anonymous variable, a reader and a term
+  /// are all refused here and not left to the checker: the list names writers
+  /// a volition guard of the procedure names, and nothing else is one.  A name
+  /// twice is refused by the same sentence, the parameters being every such
+  /// writer "each of them once".
+  List<String> _parseQuestionParamsOpt(String name) {
+    if (!_check(TokenType.STAR)) return const [];
+    _advance();
+    _consume(TokenType.LPAREN,
+        'Expected "(" after "*" in the question parameters of $name');
+    final params = <String>[];
+    do {
+      if (!_check(TokenType.VARIABLE)) {
+        final shown = _check(TokenType.READER)
+            ? '${_peek().lexeme}?'
+            : _peek().lexeme;
+        throw CompileError(
+          'A question parameter of $name is a writer of one of its volition '
+          'guards, and "$shown" is not a writer (vGLP, Section '
+          '"Volition-Guarded GLP": the question parameters are "every writer '
+          'that a volition guard of the procedure names, each of them once").',
+          _peek().line, _peek().column, phase: 'parser');
+      }
+      final token = _advance();
+      if (params.contains(token.lexeme)) {
+        throw CompileError(
+          'The question parameter "${token.lexeme}" of $name is named twice, '
+          'and the question parameters are every writer a volition guard of '
+          'the procedure names, EACH OF THEM ONCE (vGLP, Section '
+          '"Volition-Guarded GLP").',
+          token.line, token.column, phase: 'parser');
+      }
+      params.add(token.lexeme);
+    } while (_match(TokenType.COMMA));
+    _consume(TokenType.RPAREN,
+        'Expected ")" after the question parameters of $name');
+    return params;
   }
 
   /// Parse a procedure argument type: TypeName, TypeName?, _, _?,

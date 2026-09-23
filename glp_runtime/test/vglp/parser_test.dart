@@ -11,6 +11,7 @@ import 'package:glp_runtime/compiler/lexer.dart';
 import 'package:glp_runtime/compiler/parser.dart';
 import 'package:glp_runtime/compiler/ast.dart';
 import 'package:glp_runtime/compiler/error.dart';
+import 'package:glp_runtime/analysis/type_checker/type_ast.dart';
 
 void main() {
   Module parse(String source, {bool vglp = true}) =>
@@ -128,6 +129,64 @@ respond_coldcall(offer(From), Resp?,
           'Z := X? * (Y? + 1).');
       expect(c.elseBranch, isNull);
       expect(c.body!.single.functor, ':=');
+    });
+  });
+
+  group('the question parameters of a procedure declaration', () {
+    // vGLP, sections/vglp.tex, Section "Volition-Guarded GLP": "A procedure
+    // declaration carries its question parameters after its argument list,
+    // procedure p(...) *(X1, ..., Xm)., being every writer that a volition
+    // guard of the procedure names, each of them once".
+    ProcDecl decl(String source, {bool vglp = true}) =>
+        parse(source, vglp: vglp).procDeclarations.single;
+
+    test('the list follows the argument list and names writers', () {
+      final d = decl('procedure mint(Constant?, Constant) *(K, Maturity).\n'
+          'mint(A, b) :- true | true.');
+      expect(d.questionParams, ['K', 'Maturity']);
+    });
+
+    test('a declaration with no list carries no question parameters', () {
+      final d = decl('procedure plain(Constant?, Constant).\n'
+          'plain(A, b) :- true | true.');
+      expect(d.questionParams, isEmpty);
+    });
+
+    test('the list follows a type-parameter list and "exported" alike', () {
+      final d = decl('exported procedure(X) q(Stream(X)?, Constant) *(A).\n'
+          'q(S, c) :- true | true.');
+      expect(d.typeParams, ['X']);
+      expect(d.questionParams, ['A']);
+      expect(d.exported, isTrue);
+    });
+
+    test('a reader is not a writer and is refused', () {
+      expect(
+          () => decl('procedure t(Constant?, Constant) *(K?).\n'
+              't(A, b) :- true | true.'),
+          throwsA(isA<CompileError>().having((e) => e.message, 'message',
+              contains('"K?" is not a writer'))));
+    });
+
+    test('a name twice is refused: each of them once', () {
+      expect(
+          () => decl('procedure s(Constant?, Constant) *(K, K).\n'
+              's(A, b) :- true | true.'),
+          throwsA(isA<CompileError>().having((e) => e.message, 'message',
+              contains('named twice'))));
+    });
+
+    test('a .glp source takes the list too, being what the compilation emits',
+        () {
+      final d = decl('procedure mint(Constant?, Constant) *(K).\n'
+          'mint(A, b) :- true | true.', vglp: false);
+      expect(d.questionParams, ['K']);
+    });
+
+    test('the declaration prints its list back', () {
+      final d = decl('procedure mint(Constant?, Constant) *(K, Maturity).\n'
+          'mint(A, b) :- true | true.');
+      expect(d.toString(), 'procedure mint(Constant?, Constant) *(K, Maturity).');
     });
   });
 
