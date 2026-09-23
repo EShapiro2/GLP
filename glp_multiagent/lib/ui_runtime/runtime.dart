@@ -74,9 +74,11 @@ class ActivityStore {
   /// escrowed bonds are precisely those the holder no longer holds.
   final Map<String, Map<String, GTerm>> escrow = {};
 
-  /// A declared balances view: `balances[viewStore][key]` is an amount. A
-  /// snapshot REPLACES what the view held — the program tallies its whole
-  /// state after every change, so a key no longer reported is no longer held.
+  /// A declared balances view: `balances[viewStore][key]` is an amount, the
+  /// key the formatted term naming what is counted — every argument of the
+  /// reported item but the last. A snapshot REPLACES what the view held — the
+  /// program tallies its whole state after every change, so a key no longer
+  /// reported is no longer held.
   final Map<String, Map<String, GTerm>> balances = {};
 }
 
@@ -268,14 +270,25 @@ class UiRuntime {
         if (content == null) continue;
         switch (v.kind) {
           case ViewKind.balances:
-            // A tally of pairs `f(Key, Amount)`, replacing what was held.
+            // A tally of items `f(K1, ..., Kn, Amount)`, replacing what was
+            // held. What is counted is named by every argument but the last,
+            // and the last is how many of it are held: a coins lot
+            // `lot(alice, 2)` is named by its issuer, a sovereign lot
+            // `lot(cb, usd, 0, 30)` by its issuer, its denomination and its
+            // maturity together. The row's identity is that name as a term —
+            // the one argument where there is one, and the item's own
+            // constructor over them where there are several — so two lots of
+            // one thing are one row; the person reads its default display,
+            // the arguments in order ([displayKey]).
             final rows = <String, GTerm>{};
             if (content is GList) {
               for (final item in content.items) {
-                final (_, itemArgs) = ctorArgs(item);
-                if (itemArgs.length == 2) {
-                  rows[formatTerm(itemArgs[0])] = itemArgs[1];
-                }
+                final (ctor, itemArgs) = ctorArgs(item);
+                if (itemArgs.length < 2) continue;
+                final named = itemArgs.sublist(0, itemArgs.length - 1);
+                final key =
+                    named.length == 1 ? named.first : GStruct(ctor, named);
+                rows[formatTerm(key)] = itemArgs.last;
               }
             }
             store.balances[v.store] = rows;

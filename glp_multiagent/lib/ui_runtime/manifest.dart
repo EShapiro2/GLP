@@ -529,8 +529,11 @@ enum ViewKind { list, thread, balances, friends }
 ///
 /// A friends view's content is one person per message, accumulated without
 /// repetition — the program announces a friendship as it is made, so the view
-/// is the set of them.  A balances view's content is a list of pairs
-/// `f(Key, Amount)`, one row each, and it REPLACES what the view held: the program tallies its whole state
+/// is the set of them.  A balances view's content is a list of items
+/// `f(K1, ..., Kn, Amount)`, one row each: what is counted is named by every
+/// argument but the last, and the last is how many of it are held, so a
+/// two-place coins lot and a four-place sovereign lot are both rows of the one
+/// view. It REPLACES what the view held: the program tallies its whole state
 /// after every change, so a key no longer reported is a key no longer held. A
 /// list view appends. No constructor of any program is named here or in the
 /// runtime: the declaration's pattern is what selects the view.

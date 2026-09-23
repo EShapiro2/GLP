@@ -184,6 +184,22 @@ void main() {
         lines,
         anyElement(
             contains('msg(agent, person, holdings([lot(cb, usd, 0, 30)]))')));
+    // And that holdings message is a row of the balances view the manifest
+    // declares: the bond is named by every argument of the lot but the last —
+    // its issuer, its denomination and its maturity — and the last is how many
+    // of it are held.
+    expect(
+        r.store.balances['balances']!
+            .map((k, v) => MapEntry(k, formatTerm(v))),
+        {'lot(cb, usd, 0)': '30'});
+    // The person reads that row on the screen: the bond by its default
+    // display, the arguments in order, and the count beside it. The lot is
+    // never shown as its term (vGLP, Definition "Display Declaration").
+    expect(find.text('BALANCES'), findsOneWidget);
+    final row = find.widgetWithText(ListTile, 'cb usd 0');
+    expect(row, findsOneWidget);
+    expect(find.descendant(of: row, matching: find.text('30')), findsOneWidget);
+    expect(find.text('lot(cb, usd, 0, 30)'), findsNothing);
     // Answering consumed one ask and the goal posed the next: the form stands
     // again, with a fresh ReqId.
     expect(r.standing.containsKey('agent_1'), isTrue);
