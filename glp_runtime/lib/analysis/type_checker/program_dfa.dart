@@ -558,68 +558,64 @@ String _getFullTypeName(TypeExpr typeExpr) {
 }
 
 // ============================================================================
-// Ground types (TGLP typed-glp.tex, "Readers of ground types")
+// Constant types (TGLP typed-glp.tex, "Readers of constant types")
 // ============================================================================
 
-/// Whether [state]'s type ADMITS ONLY GROUND TERMS: TGLP `typed-glp.tex`,
-/// \mypara{Readers of ground types} --- "A type admits only ground terms if
-/// every path of it ends at a constant or at one of `Integer`, `Real`, `String`
-/// and `Module`, with no wildcard and no mode inversion on the way."
+/// Whether [state]'s type is a CONSTANT TYPE: TGLP `typed-glp.tex`,
+/// Definition (Constant Type) --- "A type is a constant type if each of its
+/// alternatives is a constant, one of the primitive types `Integer`, `Real`,
+/// `String` and `Module`, or a constant type."
 ///
-/// The walk is the type automaton's (appendix "Type Automaton Construction").
-/// A transition out of the state is a step of a path of the type; a constant
-/// alternative is a transition of arity 0 to `_FINAL_`, which is where that path
-/// ends; a bare type-name alternative is not a transition but is inherited into
-/// the naming state, so an alternative that names a primitive arrives as a
-/// member of [Automaton.acceptedPrimitives] --- and each of the four is one of
-/// the four the sentence names, so a path ending in one ends where it may.  A
-/// cycle is a set of paths already being walked and adds no new ending, so
-/// `Nat ::= 0 ; s(Nat).` admits only ground terms.
+/// This is the test the definition is, alternative by alternative, and not a
+/// condition on paths: "No alternative of a constant type carries a functor, so
+/// every term assigned to a variable of such a type is a constant, and a
+/// constant contains no variable" (Proposition "Readers of Constant Types").  So
+/// a structure alternative, a cons alternative and a difference-list alternative
+/// each disqualify outright, and no argument of them is examined --- a producer
+/// binds a functor before its arguments, so `point(3, X)` is a value of
+/// `point(Integer, Integer)` and carries a writer.
 ///
-/// The mode is read off the state: a dual state's automaton carries `↓` on every
-/// label of a path with no inversion, a non-dual state's `↑`, so a label whose
-/// mode is not the state's is the inversion the sentence excludes.
+/// Until 2026-09-23 this was a path condition --- every path ending at a
+/// constant or a primitive, with no wildcard and no mode inversion --- under
+/// which `Stream(Integer)` qualified, since every path of it ends at `[]` or at
+/// `Integer`.  The paper replaced the sentence with the definition above on that
+/// measurement.
 ///
-/// [types] supplies the one path the automaton does not carry: a TOP-LEVEL
-/// wildcard alternative, `Msg ::= started ; halted ; _.`, for which
-/// `_addTypeTransitions` adds no transition, `_` being a leaf and not a
-/// constructor.  Reading it off the definition keeps the wildcard excluded
-/// wherever it is written; a nested one --- `Signature ::= signed(Key, Hash, _)`
-/// --- is an ordinary transition to `_` and is caught by the walk.
-bool admitsOnlyGroundTerms(
-        DFAState state, ProgramDFA dfa, Map<String, TypeDef> types) =>
-    _admitsOnlyGroundTerms(state, dfa, types, <String>{});
-
-bool _admitsOnlyGroundTerms(DFAState state, ProgramDFA dfa,
-    Map<String, TypeDef> types, Set<String> assumed) {
-  // `_` and `_?`: the wildcard the sentence excludes.  Tested before
-  // [DFAState.isPrimitiveType], which counts it among the primitives.
+/// A WILDCARD alternative is none of the three the definition admits, so a type
+/// carrying one is not a constant type however it is written --- at the top
+/// level, where `_addTypeTransitions` records no transition for it
+/// (`Msg ::= started ; halted ; _.`), or inside a type a bare alternative names.
+/// [types] is where the alternatives are read, so both are seen.
+///
+/// The four primitive types are constant types themselves; the wildcard states
+/// `_` and `_?` are not, and neither is a procedure state, which is no type of a
+/// variable occurrence.  A bare alternative naming another type is followed, and
+/// a cycle among such alternatives adds no alternative of its own.
+bool isConstantType(DFAState state, Map<String, TypeDef> types) {
   if (state.isWildcard) return false;
-  // A path that ended at a constant, and the four primitive types: the two
-  // endings the sentence admits.
-  if (state.isAnonymousFinal) return true;
-  if (state.isPrimitiveType) return true;
-  // A procedure state is no type of a variable occurrence.
   if (state.isProcedure) return false;
-  // Coinductive: a state already on the walk contributes no path the walk has
-  // not taken.
-  if (!assumed.add(state.name)) return true;
+  // `_FINAL_` is where a constant alternative's path ends: a constant.
+  if (state.isAnonymousFinal) return true;
+  // Integer, Real, String, Module --- the wildcard is already out.
+  if (state.isPrimitiveType) return true;
+  return _isConstantTypeNamed(state.baseName, types, <String>{});
+}
 
-  final def = types[state.baseName];
+bool _isConstantTypeNamed(
+    String name, Map<String, TypeDef> types, Set<String> assumed) {
+  if (TypeRef.builtins.contains(name)) return true;
+  if (!assumed.add(name)) return true; // already on the walk: no new alternative
+  final def = types[name];
   if (def == null) return false; // a name with no definition answers for nothing
   for (final alt in def.alternatives) {
-    if (alt is PrimitiveModeAlt) return false; // the path the automaton drops
-  }
-
-  final automaton = dfa.automata[state.name];
-  if (automaton == null) return false;
-  final expected = state.isDual ? Mode.consume : Mode.produce;
-  for (final entry in automaton.transitions.entries) {
-    final (from, label) = entry.key;
-    if (from != state) continue;
-    if (label.arity == 0) continue; // a constant alternative ends its path here
-    if (label.mode != expected) return false; // a mode inversion on the way
-    if (!_admitsOnlyGroundTerms(entry.value, dfa, types, assumed)) return false;
+    if (alt is ConstantAlt || alt is ListNilAlt) continue; // a constant
+    if (alt is TypeRef && !alt.isParameterized) {
+      if (_isConstantTypeNamed(alt.name, types, assumed)) continue;
+      return false;
+    }
+    // A structure, a cons, a difference list, a wildcard, or a parameterised
+    // reference expansion left behind: none is one of the three.
+    return false;
   }
   return true;
 }

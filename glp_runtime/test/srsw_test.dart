@@ -74,19 +74,21 @@ foo(X) :- otherwise | bar.
   });
 
   // ===========================================================================
-  // Readers of ground types (TGLP typed-glp.tex, "Readers of ground types"):
-  // "A reader whose type admits only ground terms may occur more than once in a
-  // clause, its paired writer occurring once ... and the relaxation holds
-  // wherever the occurrences sit --- in the head, nested within an argument, or
-  // in the body."  The question is decided from the type automaton, at every
-  // occurrence, and not from a list of five type names read at the top-level
-  // type of a head argument.
+  // Readers of constant types (TGLP typed-glp.tex, "Readers of constant types").
+  // Definition (Constant Type): "A type is a constant type if each of its
+  // alternatives is a constant, one of the primitive types Integer, Real, String
+  // and Module, or a constant type."  Proposition "Readers of Constant Types"
+  // licenses several occurrences of such a reader, its paired writer occurring
+  // once, and the relaxation "holds wherever the occurrences sit --- in the head,
+  // nested within an argument, or in the body".  The question is asked of the
+  // type each occurrence has, and not of a list of five type names read at the
+  // top-level type of a head argument.
   // ===========================================================================
 
   test('a reader twice at a user-defined union of constants loads', () {
-    // `Colour ::= red ; green ; blue.` qualifies exactly as `String` does: every
-    // path of it ends at a constant, with no wildcard and no mode inversion.
-    // The old list of five names held no user-defined type, so this was refused.
+    // `Colour ::= red ; green ; blue.` qualifies exactly as `String` does: each
+    // of its alternatives is a constant.  The old list of five names held no
+    // user-defined type, so this was refused.
     final program = GlpCompiler().compile('''
 Colour ::= red ; green ; blue.
 procedure paint(Colour?, Colour, Colour).
@@ -97,7 +99,9 @@ paint(C, C?, C?).
 
   test('a reader twice at a nested Integer position loads', () {
     // `X` sits inside `p(...)`, not at the top level of a head argument, so the
-    // type name read off the declaration was `Pair` and never `Integer`.
+    // type name read off the declaration was `Pair` and never `Integer`.  `Pair`
+    // is no constant type --- it carries a functor --- but the OCCURRENCE's type
+    // is `Integer`, and that is what the relaxation is asked of.
     final program = GlpCompiler().compile('''
 Pair ::= p(Integer, Integer).
 procedure dup(Pair?, Integer, Integer).
@@ -121,14 +125,33 @@ go(R?) :- src(N), use(N?, N?, R).
     expect(program, isNotNull);
   });
 
-  test('a reader twice at a type that is not ground is still refused', () {
-    // `Stream ::= [] ; [_|Stream].` has a wildcard on the way, so it admits more
-    // than ground terms and licenses nothing.
+  test('a reader twice at a type carrying a functor is refused', () {
+    // `Stream ::= [] ; [_|Stream].` has a cons alternative, which carries a
+    // functor, so it is no constant type and licenses nothing.
     expect(
         () => GlpCompiler().compile('''
 Stream ::= [] ; [_|Stream].
 procedure share(Stream?, Stream, Stream).
 share(S, S?, S?).
+'''),
+        throwsException);
+  });
+
+  test('a reader twice at a stream of a constant element is refused', () {
+    // `IntStream ::= [] ; [Integer|IntStream].` ends every path at `[]` or at
+    // `Integer`, with no wildcard and no mode inversion, so the ground-type
+    // sentence of TGLP b32934d admitted it and this LOADED --- measured
+    // 2026-09-23.  A producer binds a functor before its arguments, so a cons
+    // cell is a value carrying a writer in its tail: the paper replaced that
+    // sentence with Definition (Constant Type), under which a cons alternative
+    // disqualifies the type outright.
+    expect(
+        () => GlpCompiler().compile('''
+IntStream ::= [] ; [Integer|IntStream].
+procedure share(IntStream?, IntStream?, IntStream?).
+share(_, _, _).
+procedure split(IntStream?).
+split(S) :- share(S?, S?, S?).
 '''),
         throwsException);
   });

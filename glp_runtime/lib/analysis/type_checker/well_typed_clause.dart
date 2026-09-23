@@ -507,12 +507,12 @@ ClauseCheckResult checkClauseFromAst(
 }
 
 /// The base names of the variables of [clause] whose type at some occurrence
-/// admits only ground terms (TGLP `typed-glp.tex`, \mypara{Readers of ground
-/// types}): "A reader whose type admits only ground terms may occur more than
-/// once in a clause, its paired writer occurring once: a ground value contains
-/// no writer, so no occurrence of it produces a second one ... and the
-/// relaxation holds wherever the occurrences sit --- in the head, nested within
-/// an argument, or in the body."
+/// is a CONSTANT TYPE (TGLP `typed-glp.tex`, \mypara{Readers of constant
+/// types}).  Proposition "Readers of Constant Types" licenses several
+/// occurrences of such a reader, its paired writer occurring once, and the
+/// relaxation "holds wherever the occurrences sit --- in the head, nested within
+/// an argument, or in the body --- since it rests on what the term is and not on
+/// where it is read."
 ///
 /// So the question is asked of EVERY occurrence, and of the type the occurrence
 /// has (Definition "Type Assignment": the state the automaton reaches by the
@@ -520,9 +520,9 @@ ClauseCheckResult checkClauseFromAst(
 /// head argument.  A head occurrence's type comes off the moded head
 /// (Definition "Moded Head"), a body occurrence's off the produced moded term of
 /// its unit goal, and a guard's off the guard atom, guards being type-checked as
-/// a conjunction with the body.  One occurrence carrying a ground-admitting type
+/// a conjunction with the body.  One occurrence carrying a constant type
 /// settles it: the type of any occurrence bounds the values the variable may
-/// carry, and a bound admitting only ground terms makes the value ground.
+/// carry, and a constant type bounds them to constants.
 ///
 /// The key is the BASE name --- the moded head carries `X` at the key `X?` and
 /// `X?` at the key `X` (Definition "Moded Head", step 2), and SRSW counts a
@@ -531,7 +531,7 @@ ClauseCheckResult checkClauseFromAst(
 /// Errors are not collected: this is asked of clauses the checker has passed or
 /// will reject on its own, and an occurrence whose path is inconsistent simply
 /// yields no type and licenses nothing.
-Set<String> groundTypedVariables(
+Set<String> constantTypedVariables(
     ast.Clause clause, ProgramDFA dfa, TypeEnvironment env) {
   final procDecl = env.getProcedure(clause.head.functor, clause.head.args.length);
   if (procDecl == null) return const {};
@@ -548,12 +548,12 @@ Set<String> groundTypedVariables(
     guardAtoms: guardGoals,
   );
 
-  final ground = <String>{};
+  final constant = <String>{};
   void take(Map<String, VariableTypeInfo> types) {
     for (final entry in types.entries) {
-      if (!admitsOnlyGroundTerms(entry.value.typeState, dfa, env.types)) continue;
+      if (!isConstantType(entry.value.typeState, env.types)) continue;
       final key = entry.key;
-      ground.add(key.endsWith('?') ? key.substring(0, key.length - 1) : key);
+      constant.add(key.endsWith('?') ? key.substring(0, key.length - 1) : key);
     }
   }
 
@@ -564,7 +564,7 @@ Set<String> groundTypedVariables(
     take(_bodyAtomVariableTypes(atom, dfa, env));
   }
 
-  return ground;
+  return constant;
 }
 
 /// The types [atom]'s variable occurrences have, as a body unit goal: the
