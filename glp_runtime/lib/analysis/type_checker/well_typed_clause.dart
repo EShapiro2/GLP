@@ -421,6 +421,105 @@ ClauseCheckResult checkClauseFromAst(
       callee: callee);
 }
 
+/// The base names of the variables of [clause] whose type at some occurrence
+/// admits only ground terms (TGLP `typed-glp.tex`, \mypara{Readers of ground
+/// types}): "A reader whose type admits only ground terms may occur more than
+/// once in a clause, its paired writer occurring once: a ground value contains
+/// no writer, so no occurrence of it produces a second one ... and the
+/// relaxation holds wherever the occurrences sit --- in the head, nested within
+/// an argument, or in the body."
+///
+/// So the question is asked of EVERY occurrence, and of the type the occurrence
+/// has (Definition "Type Assignment": the state the automaton reaches by the
+/// path from the root to that position), not of the top-level type name of a
+/// head argument.  A head occurrence's type comes off the moded head
+/// (Definition "Moded Head"), a body occurrence's off the produced moded term of
+/// its unit goal, and a guard's off the guard atom, guards being type-checked as
+/// a conjunction with the body.  One occurrence carrying a ground-admitting type
+/// settles it: the type of any occurrence bounds the values the variable may
+/// carry, and a bound admitting only ground terms makes the value ground.
+///
+/// The key is the BASE name --- the moded head carries `X` at the key `X?` and
+/// `X?` at the key `X` (Definition "Moded Head", step 2), and SRSW counts a
+/// variable and its pair together.
+///
+/// Errors are not collected: this is asked of clauses the checker has passed or
+/// will reject on its own, and an occurrence whose path is inconsistent simply
+/// yields no type and licenses nothing.
+Set<String> groundTypedVariables(
+    ast.Clause clause, ProgramDFA dfa, TypeEnvironment env) {
+  final procDecl = env.getProcedure(clause.head.functor, clause.head.args.length);
+  if (procDecl == null) return const {};
+
+  final head = ast.Goal(
+      clause.head.functor, clause.head.args, clause.line, clause.column);
+  final guardGoals = [
+    for (final g in clause.guards ?? const <ast.Guard>[])
+      ast.Goal(g.predicate, g.args, g.line, g.column)
+  ];
+  final typedClause = TypedClause(
+    head: head,
+    bodyAtoms: [...guardGoals, ...(clause.body ?? const <ast.Goal>[])],
+    guardAtoms: guardGoals,
+  );
+
+  final ground = <String>{};
+  void take(Map<String, VariableTypeInfo> types) {
+    for (final entry in types.entries) {
+      if (!admitsOnlyGroundTerms(entry.value.typeState, dfa, env.types)) continue;
+      final key = entry.key;
+      ground.add(key.endsWith('?') ? key.substring(0, key.length - 1) : key);
+    }
+  }
+
+  final (headResult, _) = _checkHeadWithTerm(typedClause, procDecl, dfa, env);
+  take(headResult.variableTypes);
+
+  for (final atom in typedClause.bodyAtoms) {
+    take(_bodyAtomVariableTypes(atom, dfa, env));
+  }
+
+  return ground;
+}
+
+/// The types [atom]'s variable occurrences have, as a body unit goal: the
+/// produced moded term of the goal, checked per argument against the declaration
+/// in scope (Definition "Well-Typed Clause" condition 2).
+///
+/// The declaration in scope is the MONOMORPHIC one, which for a parameterised
+/// procedure is its wildcard instantiation (param_expansion.dart, step 5): every
+/// position the type parameter does not reach keeps its declared type, and every
+/// position it does reach becomes `_`, which admits more than ground terms and so
+/// licenses nothing.  That is what this is for --- call-site instantiation is the
+/// closure's, and a call to a parameterised procedure contributes no variable
+/// type at all in the pass that runs before it (the inferred instantiation names
+/// types this DFA has not materialised), so asking the closure here would answer
+/// nothing where the wildcard declaration answers `Integer` for
+/// `measure(Stream(X)?, Integer, Stream(X))`'s second argument.
+Map<String, VariableTypeInfo> _bodyAtomVariableTypes(
+    ast.Goal atom, ProgramDFA dfa, TypeEnvironment env) {
+  if (atom is ast.SpawnGoal) {
+    return _bodyAtomVariableTypes(atom.innerGoal, dfa, env);
+  }
+  // A remote goal and a builtin goal contribute no type here; nothing is
+  // relaxed on them.
+  if (atom is ast.RemoteGoal) return const {};
+  if (isBuiltinGoal(atom.functor)) return const {};
+
+  final procDecl = env.getProcedure(atom.functor, atom.arity);
+  if (procDecl == null || procDecl.arity != atom.arity) return const {};
+  try {
+    final term = producedTerm(atom, procDecl, typeEnv: env);
+    return _checkModedTermPerArg(term, procDecl, dfa).variableTypes;
+  } on ArityMismatchError {
+    return const {};
+  } on UnknownTypeError {
+    return const {};
+  } on StateError {
+    return const {};
+  }
+}
+
 /// Check if a goal is well-typed in the given environment.
 ///
 /// Specification: TGLP `sections/glp-semantics.tex` (Well-Typed Outcomes):

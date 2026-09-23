@@ -2,6 +2,8 @@ import 'ast.dart';
 import 'error.dart';
 import 'partial_evaluator.dart' show getRootScopeUnitClauses;
 import '../analysis/type_checker/type_ast.dart';
+import '../analysis/type_checker/program_dfa.dart' show ProgramDFA, buildProgramDFA, UnknownTypeError;
+import '../analysis/type_checker/well_typed_clause.dart' show groundTypedVariables;
 
 /// Variable information for semantic analysis
 class VariableInfo {
@@ -68,9 +70,9 @@ class VariableTable {
   bool _hasGroundGuard = false;
   final Set<String> _groundedVars = {};
 
-  // Track variables with constant types (type-based SRSW relaxation)
-  // Per paper Section 5.2.1: If a variable's type is a constant type,
-  // multiple readers are allowed since constants contain no writers.
+  // The variables an occurrence of which has a type that admits only ground
+  // terms (TGLP typed-glp.tex, "Readers of ground types"): such a reader may
+  // occur more than once in the clause, ITS PAIRED WRITER OCCURRING ONCE.
   final Set<String> _typeGroundedVars = {};
 
   /// Record a writer occurrence.
@@ -114,18 +116,28 @@ class VariableTable {
 
   bool isGrounded(String varName) => _groundedVars.contains(varName);
 
-  /// Mark a variable as having a constant type (Integer, Real, Number, String, Constant).
-  /// This allows multiple reader occurrences per paper Section 5.2.1.
+  /// Mark a variable whose type at some occurrence admits only ground terms
+  /// (TGLP typed-glp.tex, "Readers of ground types").
   void markTypeGrounded(String varName) {
     _typeGroundedVars.add(varName);
   }
 
   bool isTypeGrounded(String varName) => _typeGroundedVars.contains(varName);
 
-  /// Check if variable allows multiple occurrences (either guard-grounded or type-grounded)
-  /// Per spec: both writer and reader may appear multiple times when grounded
-  bool allowsMultipleOccurrences(String varName) =>
+  /// Whether the READER may occur more than once.  Two relaxations reach here
+  /// and both license it: a groundness-implying guard (TGLP glp.tex
+  /// rem:guards-srsw) and a type that admits only ground terms (typed-glp.tex,
+  /// "Readers of ground types").
+  bool allowsMultipleReaders(String varName) =>
       isGrounded(varName) || isTypeGrounded(varName);
+
+  /// Whether the WRITER may occur more than once.  Only the guard does: "if the
+  /// success of a guard implies that X? is bound to a ground term, then both X
+  /// and X? may occur multiple times" (rem:guards-srsw).  The type-based
+  /// relaxation is of the reader alone --- "A reader whose type admits only
+  /// ground terms may occur more than once in a clause, ITS PAIRED WRITER
+  /// OCCURRING ONCE" (typed-glp.tex) --- so it does not reach this one.
+  bool allowsMultipleWriters(String varName) => isGrounded(varName);
 
   /// Verify SRSW constraints and return list of violations (empty if valid)
   /// 
@@ -143,24 +155,24 @@ class VariableTable {
       // Each occurrence denotes a fresh writer with no paired reader
       if (info.isAnonymous) continue;
 
-      // Check writer occurrences (multiple writers require grounded or constant type)
-      // Per spec: when grounded, both writer and reader may appear multiple times
-      if (info.writerOccurrences > 1 && !allowsMultipleOccurrences(info.name)) {
+      // Check writer occurrences: only a groundness-implying guard licenses
+      // more than one (TGLP glp.tex rem:guards-srsw).
+      if (info.writerOccurrences > 1 && !allowsMultipleWriters(info.name)) {
         final line = info.firstOccurrence?.line ?? 0;
         violations.add(
-          'Line $line: Writer variable "${info.name}" occurs ${info.writerOccurrences} times without ground guard or constant type'
+          'Line $line: Writer variable "${info.name}" occurs ${info.writerOccurrences} times without a groundness-implying guard'
         );
       }
 
-      // Check reader occurrences (multiple readers require grounded or constant type)
-      // Per SPEC_GUIDE.md: "Guard occurrences do not count toward SRSW satisfaction."
-      // Use readerOccurrencesHeadBody (not readerOccurrences) for SRSW validation.
-      // Per paper Section 5.2.1: constant types (Integer, Real, Number, String) allow
-      // multiple readers since they contain no writers.
-      if (info.readerOccurrencesHeadBody > 1 && !allowsMultipleOccurrences(info.name)) {
+      // Check reader occurrences.  Guard occurrences do not count toward SRSW
+      // satisfaction, so the count is readerOccurrencesHeadBody.  A reader may
+      // occur more than once under either relaxation: a groundness-implying
+      // guard, or a type that admits only ground terms (TGLP typed-glp.tex,
+      // "Readers of ground types").
+      if (info.readerOccurrencesHeadBody > 1 && !allowsMultipleReaders(info.name)) {
         final line = info.firstOccurrence?.line ?? 0;
         violations.add(
-          'Line $line: Reader variable "${info.name}?" occurs ${info.readerOccurrencesHeadBody} times without ground guard or constant type'
+          'Line $line: Reader variable "${info.name}?" occurs ${info.readerOccurrencesHeadBody} times without a groundness-implying guard or a type that admits only ground terms'
         );
       }
 
@@ -195,7 +207,7 @@ class VariableTable {
       final firstVar = _vars.values.firstWhere(
         (v) {
           if (v.writerOccurrences > 1) return true;
-          if (v.readerOccurrences > 1 && !allowsMultipleOccurrences(v.name)) return true;
+          if (v.readerOccurrences > 1 && !allowsMultipleReaders(v.name)) return true;
           if (v.writerOccurrences == 0) return true;
           if (v.readerOccurrences == 0 && v.writerOccurrences > 0) return true;
           return false;
@@ -259,34 +271,28 @@ class AnnotatedClause {
   String toString() => 'AnnotatedClause(guards=$hasGuards, body=$hasBody, vars=${varTable.getAllVars().length})';
 }
 
-/// Constant types that allow multiple reader occurrences (per paper Section 5.2.1)
-const _constantTypes = {'Integer', 'Real', 'Number', 'String', 'Constant'};
-
-/// Check if a type name is a constant type
-bool _isConstantType(String? typeName) {
-  return typeName != null && _constantTypes.contains(typeName);
-}
-
 /// Semantic analyzer for GLP programs
 class Analyzer {
   final PartialEvaluator _partialEvaluator = PartialEvaluator();
 
-  /// Procedure declarations for type-based SRSW relaxation (optional)
-  Map<String, ProcDecl> _procDecls = {};
+  /// The scope the program is checked in.  The SRSW relaxation of a typed
+  /// program is decided on the type each occurrence has (TGLP typed-glp.tex,
+  /// "Readers of ground types"), and a type has a definition only in a scope,
+  /// so without one no clause carries the relaxation.
+  TypeEnvironment? _typeEnv;
+  ProgramDFA? _dfa;
+  bool _dfaBuilt = false;
 
   Analyzer();
 
   AnnotatedProgram analyze(Program program, {
     bool generateReduce = false,
     List<ProcDecl>? procDeclarations,
+    TypeEnvironment? typeEnv,
   }) {
-    // Build procedure declaration lookup map
-    _procDecls = {};
-    if (procDeclarations != null) {
-      for (final decl in procDeclarations) {
-        _procDecls[decl.key] = decl;
-      }
-    }
+    _typeEnv = typeEnv;
+    _dfa = null;
+    _dfaBuilt = false;
 
     // STEP 1: Run SRSW validation on the ORIGINAL program
     // This must happen BEFORE partial evaluation, because partial eval removes defined guards.
@@ -342,9 +348,6 @@ class Analyzer {
     for (final clause in proc.clauses) {
       final varTable = VariableTable();
 
-      // Type-based SRSW relaxation: mark head variables with constant types
-      _markConstantTypeVars(clause.head, proc.name, proc.arity, varTable);
-
       // Analyze head
       _analyzeAtom(clause.head, varTable);
 
@@ -363,12 +366,25 @@ class Analyzer {
       }
 
       // Collect SRSW violations
-      final violations = varTable.collectSRSWViolations();
+      final violations = _srswViolations(clause, varTable);
       final contextViolations = violations.map((v) => '${proc.name}/${proc.arity}: $v').toList();
       allViolations.addAll(contextViolations);
     }
 
     return allViolations;
+  }
+
+  /// The clause's SRSW violations, the relaxations of a typed program applied.
+  ///
+  /// The type-based relaxation is consulted only where the counts have
+  /// something to answer for: it costs a walk of the clause against the type
+  /// automaton, and a clause with no multiple occurrence has nothing to relax.
+  List<String> _srswViolations(Clause clause, VariableTable varTable) {
+    var violations = varTable.collectSRSWViolations();
+    if (violations.isEmpty) return violations;
+    if (!_markGroundTypedVars(clause, varTable)) return violations;
+    violations = varTable.collectSRSWViolations();
+    return violations;
   }
 
   /// Generate reduce/2 clauses for all procedures in the program
@@ -553,11 +569,6 @@ class Analyzer {
       Clause clause, String procName, int procArity, {bool skipSRSW = false}) {
     final varTable = VariableTable();
 
-    // Type-based SRSW relaxation: mark head variables with constant types
-    // Per paper Section 5.2.1: If a variable's type is a constant type,
-    // multiple readers are allowed since constants contain no writers.
-    _markConstantTypeVars(clause.head, procName, procArity, varTable);
-
     // Analyze head
     _analyzeAtom(clause.head, varTable);
 
@@ -578,7 +589,7 @@ class Analyzer {
     }
 
     // Collect SRSW violations (unless skipped for auto-generated clauses)
-    final violations = skipSRSW ? <String>[] : varTable.collectSRSWViolations();
+    final violations = skipSRSW ? <String>[] : _srswViolations(clause, varTable);
     final contextViolations = violations.map((v) => '$procName/$procArity: $v').toList();
 
     // Assign register indices (even if there are violations, for partial analysis)
@@ -831,35 +842,49 @@ class Analyzer {
     }
   }
 
-  /// Mark head variables with constant types as type-grounded.
-  /// This implements type-based SRSW relaxation per paper Section 5.2.1.
-  void _markConstantTypeVars(Atom head, String procName, int procArity, VariableTable varTable) {
-    final key = '$procName/$procArity';
-    final procDecl = _procDecls[key];
-    if (procDecl == null) return;
-
-    // Walk through head arguments and check their types from procDecl
-    for (int i = 0; i < head.args.length && i < procDecl.argTypes.length; i++) {
-      final typeName = procDecl.getTypeName(i);
-      if (_isConstantType(typeName)) {
-        // Mark all variables at this position as type-grounded
-        _markVarsInTermAsTypeGrounded(head.args[i], varTable);
-      }
+  /// Mark the clause's variables an occurrence of which has a type that admits
+  /// only ground terms, and answer whether any was marked.
+  ///
+  /// The question is decided from the TYPE AUTOMATON, at every occurrence
+  /// (TGLP typed-glp.tex, "Readers of ground types": "the relaxation holds
+  /// wherever the occurrences sit --- in the head, nested within an argument, or
+  /// in the body"), so a body variable read twice, a head variable at a nested
+  /// `Integer` position and a head argument whose type is a user-defined union
+  /// of constants are one case and not three.  Until 2026-09-23 the decision was
+  /// a fixed list of five type NAMES --- Integer, Real, Number, String, Constant
+  /// --- consulted at the top-level type name of a head argument alone, so
+  /// `Colour ::= red ; green ; blue.` did not qualify where `String` did, and
+  /// nothing nested and nothing in the body qualified at all.
+  bool _markGroundTypedVars(Clause clause, VariableTable varTable) {
+    final env = _typeEnv;
+    if (env == null) return false;
+    final dfa = _programDfa(env);
+    if (dfa == null) return false;
+    final Set<String> ground;
+    try {
+      ground = groundTypedVariables(clause, dfa, env);
+    } on UnknownTypeError {
+      // A type the scope does not carry: the type checker reports it; nothing
+      // is relaxed on a type that cannot be resolved.
+      return false;
     }
+    if (ground.isEmpty) return false;
+    for (final name in ground) {
+      varTable.markTypeGrounded(name);
+    }
+    return true;
   }
 
-  /// Recursively mark all variables in a term as type-grounded.
-  void _markVarsInTermAsTypeGrounded(Term term, VariableTable varTable) {
-    if (term is VarTerm) {
-      varTable.markTypeGrounded(term.name);
-    } else if (term is StructTerm) {
-      for (final arg in term.args) {
-        _markVarsInTermAsTypeGrounded(arg, varTable);
-      }
-    } else if (term is ListTerm) {
-      if (term.head != null) _markVarsInTermAsTypeGrounded(term.head!, varTable);
-      if (term.tail != null) _markVarsInTermAsTypeGrounded(term.tail!, varTable);
+  /// The program DFA of [env], built once per [analyze].
+  ProgramDFA? _programDfa(TypeEnvironment env) {
+    if (_dfaBuilt) return _dfa;
+    _dfaBuilt = true;
+    try {
+      _dfa = buildProgramDFA(env);
+    } on UnknownTypeError {
+      _dfa = null;
     }
+    return _dfa;
   }
 }
 

@@ -558,6 +558,73 @@ String _getFullTypeName(TypeExpr typeExpr) {
 }
 
 // ============================================================================
+// Ground types (TGLP typed-glp.tex, "Readers of ground types")
+// ============================================================================
+
+/// Whether [state]'s type ADMITS ONLY GROUND TERMS: TGLP `typed-glp.tex`,
+/// \mypara{Readers of ground types} --- "A type admits only ground terms if
+/// every path of it ends at a constant or at one of `Integer`, `Real`, `String`
+/// and `Module`, with no wildcard and no mode inversion on the way."
+///
+/// The walk is the type automaton's (appendix "Type Automaton Construction").
+/// A transition out of the state is a step of a path of the type; a constant
+/// alternative is a transition of arity 0 to `_FINAL_`, which is where that path
+/// ends; a bare type-name alternative is not a transition but is inherited into
+/// the naming state, so an alternative that names a primitive arrives as a
+/// member of [Automaton.acceptedPrimitives] --- and each of the four is one of
+/// the four the sentence names, so a path ending in one ends where it may.  A
+/// cycle is a set of paths already being walked and adds no new ending, so
+/// `Nat ::= 0 ; s(Nat).` admits only ground terms.
+///
+/// The mode is read off the state: a dual state's automaton carries `↓` on every
+/// label of a path with no inversion, a non-dual state's `↑`, so a label whose
+/// mode is not the state's is the inversion the sentence excludes.
+///
+/// [types] supplies the one path the automaton does not carry: a TOP-LEVEL
+/// wildcard alternative, `Msg ::= started ; halted ; _.`, for which
+/// `_addTypeTransitions` adds no transition, `_` being a leaf and not a
+/// constructor.  Reading it off the definition keeps the wildcard excluded
+/// wherever it is written; a nested one --- `Signature ::= signed(Key, Hash, _)`
+/// --- is an ordinary transition to `_` and is caught by the walk.
+bool admitsOnlyGroundTerms(
+        DFAState state, ProgramDFA dfa, Map<String, TypeDef> types) =>
+    _admitsOnlyGroundTerms(state, dfa, types, <String>{});
+
+bool _admitsOnlyGroundTerms(DFAState state, ProgramDFA dfa,
+    Map<String, TypeDef> types, Set<String> assumed) {
+  // `_` and `_?`: the wildcard the sentence excludes.  Tested before
+  // [DFAState.isPrimitiveType], which counts it among the primitives.
+  if (state.isWildcard) return false;
+  // A path that ended at a constant, and the four primitive types: the two
+  // endings the sentence admits.
+  if (state.isAnonymousFinal) return true;
+  if (state.isPrimitiveType) return true;
+  // A procedure state is no type of a variable occurrence.
+  if (state.isProcedure) return false;
+  // Coinductive: a state already on the walk contributes no path the walk has
+  // not taken.
+  if (!assumed.add(state.name)) return true;
+
+  final def = types[state.baseName];
+  if (def == null) return false; // a name with no definition answers for nothing
+  for (final alt in def.alternatives) {
+    if (alt is PrimitiveModeAlt) return false; // the path the automaton drops
+  }
+
+  final automaton = dfa.automata[state.name];
+  if (automaton == null) return false;
+  final expected = state.isDual ? Mode.consume : Mode.produce;
+  for (final entry in automaton.transitions.entries) {
+    final (from, label) = entry.key;
+    if (from != state) continue;
+    if (label.arity == 0) continue; // a constant alternative ends its path here
+    if (label.mode != expected) return false; // a mode inversion on the way
+    if (!_admitsOnlyGroundTerms(entry.value, dfa, types, assumed)) return false;
+  }
+  return true;
+}
+
+// ============================================================================
 // Leaf Consistency Checking (Definition 4.3)
 // ============================================================================
 

@@ -72,4 +72,64 @@ foo(X) :- otherwise | bar.
         reason: 'otherwise does not ground X, so X has no reader');
     print('✅ Guard-only readers without groundness correctly rejected');
   });
+
+  // ===========================================================================
+  // Readers of ground types (TGLP typed-glp.tex, "Readers of ground types"):
+  // "A reader whose type admits only ground terms may occur more than once in a
+  // clause, its paired writer occurring once ... and the relaxation holds
+  // wherever the occurrences sit --- in the head, nested within an argument, or
+  // in the body."  The question is decided from the type automaton, at every
+  // occurrence, and not from a list of five type names read at the top-level
+  // type of a head argument.
+  // ===========================================================================
+
+  test('a reader twice at a user-defined union of constants loads', () {
+    // `Colour ::= red ; green ; blue.` qualifies exactly as `String` does: every
+    // path of it ends at a constant, with no wildcard and no mode inversion.
+    // The old list of five names held no user-defined type, so this was refused.
+    final program = GlpCompiler().compile('''
+Colour ::= red ; green ; blue.
+procedure paint(Colour?, Colour, Colour).
+paint(C, C?, C?).
+''');
+    expect(program, isNotNull);
+  });
+
+  test('a reader twice at a nested Integer position loads', () {
+    // `X` sits inside `p(...)`, not at the top level of a head argument, so the
+    // type name read off the declaration was `Pair` and never `Integer`.
+    final program = GlpCompiler().compile('''
+Pair ::= p(Integer, Integer).
+procedure dup(Pair?, Integer, Integer).
+dup(p(X, _), X?, X?).
+''');
+    expect(program, isNotNull);
+  });
+
+  test('a body variable read twice loads', () {
+    // Both occurrences are in the body: nothing about the head decides them.
+    final program = GlpCompiler().compile('''
+procedure src(Integer).
+src(1).
+
+procedure use(Integer?, Integer?, Integer).
+use(_, _, 0).
+
+procedure go(Integer).
+go(R?) :- src(N), use(N?, N?, R).
+''');
+    expect(program, isNotNull);
+  });
+
+  test('a reader twice at a type that is not ground is still refused', () {
+    // `Stream ::= [] ; [_|Stream].` has a wildcard on the way, so it admits more
+    // than ground terms and licenses nothing.
+    expect(
+        () => GlpCompiler().compile('''
+Stream ::= [] ; [_|Stream].
+procedure share(Stream?, Stream, Stream).
+share(S, S?, S?).
+'''),
+        throwsException);
+  });
 }
