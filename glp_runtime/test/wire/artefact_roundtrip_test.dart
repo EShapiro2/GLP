@@ -85,7 +85,7 @@ classify(N, nonpositive) :- N? =< 0 | true.
 
     _checkProgram('append', '''
 List(X) ::= [] ; [X | List(X)].
-procedure append(List(X)?, List(X)?, List(X)).
+procedure(X) append(List(X)?, List(X)?, List(X)).
 append([], Ys, Ys?).
 append([X|Xs], Ys, [X?|Zs?]) :- append(Xs?, Ys?, Zs).
 ''');
