@@ -18,7 +18,7 @@ Job ::= paint(Colour) ; stop.
 
 imported procedure worker#run_jobs(Stream(Job)?, Stream(Colour)).
 imported procedure worker#serve(Channel(Stream(Job), Stream(Colour))?).
-imported procedure(X) worker#drain(Stream(X)?).
+imported procedure worker#drain(Stream(X)?).
 
 exported procedure run_jobs(Stream(Job)?, Stream(Colour)).
 run_jobs(Js, Cs?) :- worker # run_jobs(Js?, Cs).
@@ -26,5 +26,5 @@ run_jobs(Js, Cs?) :- worker # run_jobs(Js?, Cs).
 exported procedure serve(Channel(Stream(Job), Stream(Colour))?).
 serve(Ch) :- worker # serve(Ch?).
 
-exported procedure(X) drain(Stream(X)?).
+exported procedure drain(Stream(X)?).
 drain(Xs) :- worker # drain(Xs?).

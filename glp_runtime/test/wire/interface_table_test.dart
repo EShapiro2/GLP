@@ -137,7 +137,7 @@ void main() {
     });
 
     test('accepts a parameterized declaration', () {
-      final iface = parse('exported procedure(X) head(Stream(X)?, X).\n');
+      final iface = parse('exported procedure head(Stream(X)?, X).\n');
       final d = iface.procDeclarations.single;
       expect(d.argTypes[0].toString(), 'Stream(X)?');
     });

@@ -252,7 +252,7 @@ mix(_, _).
     test('a parameterised declaration has no identity', () {
       final tables = tablesOf('''
 List2(X) ::= [] ; [X | List2(X)].
-procedure(X) head(List2(X)?, X).
+procedure head(List2(X)?, X).
 head(_, _).
 ''');
       expect(tables.parametric, contains('head/2'));
