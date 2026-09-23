@@ -42,9 +42,9 @@
 //     what structural compatibility asks for: two declarations with the same
 //     argument types are compatible whatever they are called.
 //   - A parameterised declaration has no type identity.  It is a template, not
-//     a type (typed-glp-manual §17.7: it is checked once per instantiation);
-//     `find_type` on one is an error.  Such keys are collected in
-//     [TypeIdentityTables.parametric] and appear in neither table.
+//     a type (TGLP "Parameterised Procedure Declarations": it is checked once
+//     per instantiation); `find_type` on one is an error.  Such keys are
+//     collected in [TypeIdentityTables.parametric] and appear in neither table.
 
 library;
 

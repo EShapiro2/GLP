@@ -109,7 +109,7 @@ class OccurrenceClassifier {
   /// Recursively collect variable occurrences from a term using syntactic annotations
   void _collectVariables(Term term, List<Occurrence> out) {
     if (term is VarTerm) {
-      // Skip named anonymous variables (Section 9 of typed-glp-manual)
+      // Skip named anonymous variables (TGLP "Anonymous variables", under SRSW Relaxations)
       // Variables starting with _ are anonymous and exempt from SRSW
       if (term.name.startsWith('_')) {
         return;
