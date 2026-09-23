@@ -1,0 +1,26 @@
+%% A linked program whose IMPORTED declaration names type parameters
+%% (TGLP modules.tex, "Cross-module type checking"): "Where the imported
+%% declaration names type parameters, as an exported one may, the call
+%% instantiates them as a local call does: a parameter the importing module
+%% holds open stays open across the module boundary and is fixed at the call,
+%% the clauses of the called procedure being those of the linked program."
+%%
+%% `tie` is held open here --- imported and re-exported over the bare parameter
+%% Y --- and `go/2` fixes it to Colour at the call.  The program is its own
+%% root, so it names no root-scope type and the fixture turns on nothing but
+%% the parameter list crossing the boundary.
+%%
+%% Until the linker carried a declaration's parameter list, the renamed
+%% `worker:tie/2` and the entry-point alias `tie/2` reached the linked check
+%% with no parameters, and Y was refused there as an undefined type --- while
+%% worker.glp on its own was accepted, the list being parsed and seen.
+
+Colour ::= red ; green ; blue.
+
+imported procedure(Y) worker#tie(Y, Y?).
+
+exported procedure(Y) tie(Y, Y?).
+tie(A?, B) :- worker # tie(A, B?).
+
+exported procedure go(Colour, Colour?).
+go(C?, D) :- tie(C, D?).

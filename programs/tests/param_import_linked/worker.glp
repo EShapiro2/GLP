@@ -1,0 +1,5 @@
+%% See self.glp.  tie/2 carries its argument through and inspects nothing, so
+%% its abstract instance certifies it for every instantiation.
+
+exported procedure(Y) tie(Y, Y?).
+tie(A?, A).

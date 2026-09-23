@@ -790,7 +790,9 @@ Module linkedFlatModule(List<DiscoveredModule> modules, LinkResult linked,
     final rd = rootEnv.paramProcDecls[bareKey] ?? rootEnv.procedures[bareKey];
     if (rd != null) {
       procDecls.add(ProcDecl(p.name, rd.argTypes, rd.line, rd.column,
-          exported: rd.exported, isBuiltin: rd.isBuiltin));
+          typeParams: rd.typeParams,
+          exported: rd.exported,
+          isBuiltin: rd.isBuiltin));
       declKeys.add(key);
     }
   }
@@ -1138,12 +1140,16 @@ LinkResult linkAndResolveModules(List<DiscoveredModule> modules,
         // it in the per-module check.
         if (decl != null) {
           aliasDecls.add(ProcDecl(proc.name, decl.argTypes, decl.line,
-              decl.column, exported: decl.exported, isBuiltin: decl.isBuiltin));
+              decl.column,
+              typeParams: decl.typeParams,
+              exported: decl.exported,
+              isBuiltin: decl.isBuiltin));
           aliasCheckedDecls.add(ProcDecl(
               proc.name,
               renameDeclTypes(decl, typeOwners[declFile ?? mod.filePath]!),
               decl.line,
               decl.column,
+              typeParams: decl.typeParams,
               exported: decl.exported,
               isBuiltin: decl.isBuiltin));
         }
@@ -1185,6 +1191,7 @@ LinkResult linkAndResolveModules(List<DiscoveredModule> modules,
         decl.argTypes,
         decl.line,
         decl.column,
+        typeParams: decl.typeParams,
         isBuiltin: decl.isBuiltin,
         exported: keepBare,
       ));
@@ -1195,6 +1202,7 @@ LinkResult linkAndResolveModules(List<DiscoveredModule> modules,
         renameDeclTypes(decl, owners),
         decl.line,
         decl.column,
+        typeParams: decl.typeParams,
         isBuiltin: decl.isBuiltin,
         exported: keepBare,
       ));
