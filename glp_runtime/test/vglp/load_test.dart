@@ -51,7 +51,7 @@ respond(O, As?) :- responder # respond(O?, As).
 ''';
 
   const responderVglp = '''
-procedure respond(Offer?, AnswerStream).
+procedure respond(Offer?, AnswerStream) *(Answer).
 
 *(Answer=yes, From?)
 respond(offer(From), [answered(Answer?, From?)]) :-
@@ -130,7 +130,7 @@ respond(offer(From), [answered(Answer?, From?)]) :-
     // otherwise clause exists for: without it the slot position accepts only
     // its own clause's answer, and coverage rejects the procedure.
     const oneClauseVglp = '''
-procedure respond(Offer?, AnswerStream).
+procedure respond(Offer?, AnswerStream) *(Answer).
 
 *(Answer=yes, From?)
 respond(offer(From), [answered(Answer?, From?)]) :-
@@ -257,7 +257,7 @@ exported procedure greet(Offer?, Stream(Ent)?, Stream(Ent)).
 greet(O, Outs, Outs1?) :- greeter # greet(O?, Outs?, Outs1).
 ''');
       write('greeter.vglp', '''
-procedure greet(Offer?, Stream(Ent)?, Stream(Ent)).
+procedure greet(Offer?, Stream(Ent)?, Stream(Ent)) *(Target).
 *(Target)
 greet(offer(From), Outs, Outs1?) :-
     ground(From?) |

@@ -87,6 +87,7 @@ CompiledTypes compileTypes(ast.Module module,
   final contextAlts = <TypeExpr>[];
 
   for (final proc in module.procedures) {
+    final paramTypes = _questionParameterTypes(proc, env);
     var j = 0;
     for (final c in proc.clauses) {
       if (!c.isVolitionGuarded) continue;
@@ -109,7 +110,7 @@ CompiledTypes compileTypes(ast.Module module,
                 for (final pos in q)
                   pos.writer == null
                       ? _typeOfValue(pos.value!, c)
-                      : _typeOfVariable(pos.writer!.name, c, env, name)
+                      : paramTypes[pos.writer!.name]!
               ], c.line, c.column)
       ], c.line, c.column);
       added.add(answer);
@@ -263,6 +264,66 @@ TypeExpr _typeOfValue(ast.Term value, ast.Clause c) {
     return TypeRef('Constant', c.line, c.column);
   }
   return PrimitiveModeAlt(false, c.line, c.column);
+}
+
+/// The type of each question parameter of [proc]: one per name the procedure's
+/// volition guards name, resolved once for the whole procedure.
+///
+/// "An answer writer occurs only in the volition guard and is typed by the
+/// declared type of the position its reader occupies, SO A NAME HAS ONE TYPE
+/// THROUGHOUT THE PROCEDURE, and two positions of one type in one clause are
+/// two parameters" (vGLP, sections/vglp.tex, Section "Volition-Guarded GLP").
+/// The name is the procedure's question parameter and not the clause's, so the
+/// type is resolved over every clause that names it: a clause in which the
+/// reader occupies no declared position takes the type its siblings give, and
+/// two clauses that give one name two types are a source error, the name
+/// having one type.
+///
+/// Two positions of one type in one clause are two names and two entries here
+/// --- a swap's give amount and its want amount --- and nothing merges them.
+Map<String, TypeExpr> _questionParameterTypes(
+    ast.Procedure proc, TypeEnvironment env) {
+  // The clauses that name each writer, in source order.
+  final namedIn = <String, List<ast.Clause>>{};
+  var j = 0;
+  final clauseName = <ast.Clause, String>{};
+  for (final c in proc.clauses) {
+    if (!c.isVolitionGuarded) continue;
+    j++;
+    clauseName[c] = '${proc.name}_$j';
+    for (final pos in c.volitionGuard!.question) {
+      final w = pos.writer;
+      if (w == null) continue;
+      namedIn.putIfAbsent(w.name, () => <ast.Clause>[]).add(c);
+    }
+  }
+
+  final out = <String, TypeExpr>{};
+  for (final entry in namedIn.entries) {
+    final variable = entry.key;
+    final found = <String, (TypeExpr, String)>{};
+    StateError? unresolved;
+    for (final c in entry.value) {
+      try {
+        final t = _typeOfVariable(variable, c, env, clauseName[c]!);
+        found.putIfAbsent(t.toString(), () => (t, clauseName[c]!));
+      } on StateError catch (e) {
+        unresolved ??= e;
+      }
+    }
+    if (found.isEmpty) throw unresolved!;
+    if (found.length > 1) {
+      throw StateError(
+          'The question parameter "$variable" of ${proc.name}/${proc.arity} is '
+          'typed ${found.values.map((v) => '${v.$1} by ${v.$2}').join(' and ')}'
+          '.  A name has one type throughout the procedure, being typed by the '
+          'declared type of the position its reader occupies (vGLP, Section '
+          '"Volition-Guarded GLP"); two positions of one type are two '
+          'parameters, and two types of one name are an error in the source.');
+    }
+    out[variable] = found.values.single.$1;
+  }
+  return out;
 }
 
 /// The type of the answer writer or context reader [variable] of clause [c].

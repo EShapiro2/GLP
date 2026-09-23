@@ -55,7 +55,7 @@ UserInMsg      ::= msg(Constant, Constant, UserContent)
 UserInStream   ::= [] ; [UserInMsg | UserInStream].
 ColdCallOffer  ::= offer(Constant).
 
-procedure respond(ColdCallOffer?, Response, UserInStream).
+procedure respond(ColdCallOffer?, Response, UserInStream) *(Answer).
 *(Answer=yes, From?)
 respond(offer(From), Resp?, [decision(Answer?, From?, response(Resp))]) :-
     ground(From?) | true
@@ -174,7 +174,7 @@ Decision ::= yes ; no.
 OutMsg   ::= decided(Decision).
 Out      ::= [] ; [OutMsg | Out].
 
-procedure respond(Offer?, Out).
+procedure respond(Offer?, Out) *(Answer).
 *(Answer=yes, From?)
 respond(offer(From), [decided(Answer?)]) :- ground(From?) | true
 *(no) true.
@@ -228,7 +228,7 @@ Decision ::= yes ; no.
 OutMsg   ::= decided(Decision).
 Out      ::= [] ; [OutMsg | Out].
 
-procedure respond(Offer?, Out).
+procedure respond(Offer?, Out) *(Answer).
 *(Answer=yes, From?)
 respond(offer(From), [decided(Answer?)]) :- ground(From?) | true.
 *(Answer=yes, From?)
@@ -293,6 +293,88 @@ respond(offer(From), [decided(Answer?)]) :- constant(From?) | true.
       expect(out.source,
           contains('display msg(agent, person, hello) : panel(inbox), '
               'view(list).'));
+    });
+  });
+
+  group('the question parameters of a procedure declaration', () {
+    // vGLP, sections/vglp.tex, Section "Volition-Guarded GLP": the question
+    // parameters are "every writer that a volition guard of the procedure
+    // names, each of them once; a volition guard's writers are matched to them
+    // by name".  EVERY writer, so an undeclared guard writer is refused; every
+    // writer A GUARD NAMES, so a declared parameter no guard names is refused.
+    const types = '''
+Offer    ::= offer(Constant).
+Decision ::= yes ; no.
+OutMsg   ::= decided(Decision).
+Out      ::= [] ; [OutMsg | Out].
+''';
+
+    String rejection(String source) {
+      try {
+        compile(source);
+      } on CompileError catch (e) {
+        return e.toString();
+      }
+      fail('the source compiled, and its question parameters do not match its '
+          'volition guards.');
+    }
+
+    test('a guard writer the declaration does not name is rejected, by name',
+        () {
+      final message = rejection('${types}'
+          'procedure respond(Offer?, Out).\n'
+          '*(Answer=yes, From?)\n'
+          'respond(offer(From), [decided(Answer?)]) :- ground(From?) | true.\n');
+      expect(message, contains('names the writer "Answer"'));
+      expect(message, contains('the declaration of respond/2 does not'));
+      expect(message, contains('*(Answer)'));
+    });
+
+    test('a declared parameter no guard names is rejected, by name', () {
+      final message = rejection('${types}'
+          'procedure respond(Offer?, Out) *(Answer, Amount).\n'
+          '*(Answer=yes, From?)\n'
+          'respond(offer(From), [decided(Answer?)]) :- ground(From?) | true.\n');
+      expect(message, contains('names the question parameter "Amount"'));
+      expect(message, contains('no volition guard of the procedure names'));
+    });
+
+    test('two positions of one type in one clause are two parameters', () {
+      // "a swap's give amount and its want amount" (same sentence).  The
+      // runnable fixture is programs/tests/vglp/question_parameters.
+      final out = compile('''
+Lot   ::= lot(Constant, Integer).
+Trade ::= trade(Constant, Constant, Lot, Lot).
+
+procedure swap(Constant?, Stream(Trade)) *(Friend, GiveCoin, GiveAmount, WantCoin, WantAmount).
+*(Friend, GiveCoin, GiveAmount, WantCoin, WantAmount)
+swap(Id, [trade(Id?, Friend?, lot(GiveCoin?, GiveAmount?),
+                lot(WantCoin?, WantAmount?))]) :-
+    ground(Id?) | true.
+''');
+      expect(out.source, contains('Xs_swap_1 ::= '
+          'xs_swap_1(Constant, Constant, Integer, Constant, Integer).'));
+    });
+
+    test('a name two clauses type differently is rejected', () {
+      expect(
+          () => compile('''
+Lot   ::= lot(Constant, Integer).
+Trade ::= trade(Constant, Lot).
+Note  ::= note(Constant, Constant).
+Out   ::= [] ; [Note | Out].
+
+procedure post(Constant?, Stream(Trade)) *(Amount).
+*(Amount)
+post(Id, [trade(Id?, lot(gb, Amount?))]) :- ground(Id?) | true.
+
+procedure mention(Constant?, Out) *(Amount).
+*(Amount)
+mention(Id, [note(Id?, Amount?)]) :- ground(Id?) | true.
+'''),
+          returnsNormally,
+          reason: 'two procedures, two names: one type throughout THE '
+              'PROCEDURE, not throughout the program');
     });
   });
 

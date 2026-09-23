@@ -8,18 +8,18 @@
 %% decline its card; greet has none, so its reply type has no else; pick also
 %% has an ordinary clause, which aborts the open ask when it reduces the goal.
 
-procedure respond(Offer?, Stream(Decision)).
+procedure respond(Offer?, Stream(Decision)) *(Answer).
 *(Answer=yes, From?)
 respond(offer(From), [decided(Answer?, From?)]) :-
     ground(From?) | true
 *(no) true.
 
-procedure greet(Offer?, Stream(Decision)).
+procedure greet(Offer?, Stream(Decision)) *(Name).
 *(Name, From?)
 greet(offer(From), [greeted(Name?, From?)]) :-
     ground(From?), ground(Name?) | true.
 
-procedure pick(Stream(Constant)?, Offer?, Stream(Decision)).
+procedure pick(Stream(Constant)?, Offer?, Stream(Decision)) *(Choice).
 pick([go | _], offer(From), [picked(From?)]) :-
     ground(From?) | true.
 *(Choice, From?)

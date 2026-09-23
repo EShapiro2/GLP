@@ -1,0 +1,52 @@
+%% self.glp — the question-parameters program of programs/tests/vglp: the types
+%% its one volition-guarded clause is typed by, the mirror of the vocabulary the
+%% canonical compilation emits into swap.glp, and one play.
+%%
+%% The clause is a swap, which is the case the paper names: "two positions of
+%% one type in one clause are two parameters --- a swap's give amount and its
+%% want amount" (vGLP, sections/vglp.tex, Section "Volition-Guarded GLP").
+%% GiveAmount and WantAmount are both Integer and stay two parameters, at two
+%% positions of the clause's answer type, xs_swap_1(Constant, Constant,
+%% Integer, Constant, Integer).
+
+Lot   ::= lot(Constant, Integer).
+Trade ::= trade(Constant, Constant, Lot, Lot).
+Report ::= traded(Stream(Trade)).
+
+%% --- the compiled vocabulary, mirrored ---
+ReqId ::= req(Integer).
+Xs_swap_1 ::= xs_swap_1(Constant, Constant, Integer, Constant, Integer).
+Reply_swap_1 ::= then(Xs_swap_1).
+Answer ::= Xs_swap_1.
+Escrow ::= esc_swap_1(Reply_swap_1?).
+Context ::= ctx_swap_1.
+Slot(R) ::= none ; ask(R, ReqId).
+AgentMsg ::= ask(Constant, Context, Escrow, ReqId?) ; abort(ReqId).
+Card ::= card(Constant, Context, ReqId) ; closed(ReqId).
+UserAnswer ::= answer(ReqId, Answer) ; decline(ReqId).
+PendingEntry ::= pending(ReqId, Escrow).
+PendingList ::= [] ; [PendingEntry | PendingList].
+
+imported procedure swap#swap(Channel(Closed, Stream(AgentMsg))?, Constant?, Stream(Trade), Slot(Reply_swap_1)?).
+imported procedure swap#med(Channel(Stream(UserAnswer), Stream(Card))?, Channel(Stream(AgentMsg), Closed)?, PendingList?, Integer?).
+
+%% --- the play ---
+
+%% The person answers the swap's card with five values, two of them amounts:
+%% the then-branch reduces and the trade carries each at its own position.
+exported procedure play_swap.
+play_swap :-
+    swap # swap(ch([], Asks), alice, Ts, none),
+    swap # med(ch(Answers?, Cards), ch(Asks?, []), [], 0),
+    person_answer(Cards?, Answers),
+    report(Ts?).
+
+procedure person_answer(Stream(Card)?, Stream(UserAnswer)).
+person_answer([card(swap_1, ctx_swap_1, R) | _],
+              [answer(R?, xs_swap_1(bob, gb, 5, gc, 7))]) :-
+    ground(R?) | true.
+person_answer([_ | Cs], As?) :- otherwise | person_answer(Cs?, As).
+person_answer([], []).
+
+procedure report(Stream(Trade)?).
+report(Ts) :- ground(Ts?) | send_to_user([traded(Ts?)]).

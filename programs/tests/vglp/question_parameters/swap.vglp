@@ -1,0 +1,16 @@
+%% swap.vglp — one procedure, one volition-guarded clause, five question
+%% parameters, two of them of one type.
+%%
+%% The declaration carries the parameters after the argument list, "being every
+%% writer that a volition guard of the procedure names, each of them once"
+%% (vGLP, sections/vglp.tex, Section "Volition-Guarded GLP"), and each writer
+%% is typed by the declared type of the position its reader occupies: Friend,
+%% GiveCoin and WantCoin by Constant, GiveAmount and WantAmount by Integer.
+%% The two Integers are two parameters and two positions of the answer type,
+%% and nothing merges them.
+
+procedure swap(Constant?, Stream(Trade)) *(Friend, GiveCoin, GiveAmount, WantCoin, WantAmount).
+*(Friend, GiveCoin, GiveAmount, WantCoin, WantAmount)
+swap(Id, [trade(Id?, Friend?, lot(GiveCoin?, GiveAmount?),
+                lot(WantCoin?, WantAmount?))]) :-
+    ground(Id?) | true.

@@ -54,6 +54,7 @@ class CompiledProgram {
 CompiledProgram compileProgram(ast.Module module, MediatorSource mediator,
     {List<ast.Module> ancestors = const [], TypeEnvironment? scope}) {
   checkDisplayDecls(module);
+  checkQuestionParameters(module);
   final types = compileTypes(module, ancestors: ancestors, scope: scope);
   final med = instantiate(mediator);
 
@@ -96,6 +97,87 @@ CompiledProgram compileProgram(ast.Module module, MediatorSource mediator,
       _emit(module, types, med, compiled, compiledDecls, pending),
       types,
       compiled);
+}
+
+/// The question parameters of each procedure of [module] are exactly the
+/// writers its volition guards name, or the compilation rejects the source.
+///
+/// "A procedure declaration carries its question parameters after its argument
+/// list, procedure p(...) *(X1, ..., Xm)., being every writer that a volition
+/// guard of the procedure names, each of them once; a volition guard's writers
+/// are matched to them by name" (vGLP, sections/vglp.tex, Section
+/// "Volition-Guarded GLP").  EVERY writer, so a guard writer the declaration
+/// does not name is refused; every writer A VOLITION GUARD NAMES, so a
+/// declared parameter no guard of the procedure names is refused as well.
+/// Each of them once is the parser's, the list being where the repetition
+/// would be.
+///
+/// The check is vGLP's: a GLP program has no volition guards, and the
+/// declarations the compilation carries into the compiled program keep their
+/// parameters with no guard left to match them against (Definition "Canonical
+/// Compilation": the compiled program carries the procedure declarations of
+/// M).  It is therefore run here, on the source, and not on the module the
+/// compilation emits.
+///
+/// A procedure with no declaration is passed over: compileProgram refuses it
+/// by itself, and with its own message.
+void checkQuestionParameters(ast.Module module) {
+  final declsByKey = <String, ProcDecl>{
+    for (final d in module.procDeclarations) '${d.name}/${d.arity}': d
+  };
+
+  for (final proc in module.procedures) {
+    final decl = declsByKey['${proc.name}/${proc.arity}'];
+    if (decl == null) continue;
+
+    // The writers the procedure's volition guards name, in source order, each
+    // once, with the line of the first guard that names each.
+    final namedAt = <String, int>{};
+    for (final c in proc.clauses) {
+      final g = c.volitionGuard;
+      if (g == null) continue;
+      for (final pos in g.question) {
+        final w = pos.writer;
+        if (w == null) continue;  // an anonymous writer names nothing
+        namedAt.putIfAbsent(w.name, () => g.line);
+      }
+    }
+
+    final declared = decl.questionParams;
+    final subject = '${proc.name}/${proc.arity}';
+    final list = declared.isEmpty
+        ? 'no question parameters'
+        : '*(${declared.join(', ')})';
+
+    for (final entry in namedAt.entries) {
+      if (declared.contains(entry.key)) continue;
+      throw CompileError(
+          'The volition guard names the writer "${entry.key}", which the '
+          'declaration of $subject does not: it carries $list.  The question '
+          'parameters of a procedure are EVERY writer a volition guard of it '
+          'names, each of them once, and a guard\'s writers are matched to '
+          'them by name (vGLP, Section "Volition-Guarded GLP").  Write '
+          '"procedure ${proc.name}(...) '
+          '*(${([...declared, ...namedAt.keys.where((k) => !declared.contains(k))]).join(', ')}).".',
+          entry.value,
+          0,
+          phase: 'analyzer');
+    }
+
+    for (final param in declared) {
+      if (namedAt.containsKey(param)) continue;
+      throw CompileError(
+          'The declaration of $subject names the question parameter '
+          '"$param", which no volition guard of the procedure names'
+          '${namedAt.isEmpty ? '' : ': its guards name '
+              '${namedAt.keys.join(', ')}'}.  The question parameters are '
+          'every writer a volition guard of the procedure names, and nothing '
+          'besides (vGLP, Section "Volition-Guarded GLP").',
+          decl.line,
+          decl.column,
+          phase: 'analyzer');
+    }
+  }
 }
 
 /// Every clause-form display declaration of [module] names a volition-guarded
