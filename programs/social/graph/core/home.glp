@@ -83,7 +83,7 @@ hold_ui(Med, X) :- true.
 %% --- the mediator, and the pending table with the program's clauses ahead of the search clauses ---
 exported procedure med(Channel(Stream(UserAnswer), Stream(Card))?, Channel(Stream(AgentMsg), Closed)?, PendingList?, Integer?).
 med(UserCh, AgentCh, Ps, N) :- receive(ask(C, Ctx, Esc, Id?), AgentCh?, AgentCh1), ground(C?), ground(Ctx?) | Id = req(N?), send(card(C?, Ctx?, req(N?)), UserCh?, UserCh1), N1 := (N? + 1), med(UserCh1?, AgentCh1?, [pending(req(N?), Esc?) | Ps?], N1?).
-med(UserCh, AgentCh, Ps, N) :- receive(answer(ReqId, Vs), UserCh?, UserCh1), ground(ReqId?), ground(Vs?) | answer(ReqId?, Vs?, Ps?, Ps1), med(UserCh1?, AgentCh?, Ps1?, N?).
+med(UserCh, AgentCh, Ps, N) :- receive(answer(ReqId, Vs), UserCh?, UserCh1), ground(ReqId?), ground(Vs?) | answer(ReqId?, Vs?, Ps?, Ps1), send(closed(ReqId?), UserCh1?, UserCh2), med(UserCh2?, AgentCh?, Ps1?, N?).
 med(UserCh, AgentCh, Ps, N) :- receive(decline(ReqId), UserCh?, UserCh1), ground(ReqId?) | close(ReqId?, Ps?, Ps1), send(closed(ReqId?), UserCh1?, UserCh2), med(UserCh2?, AgentCh?, Ps1?, N?).
 med(UserCh, AgentCh, Ps, N) :- receive(abort(ReqId), AgentCh?, AgentCh1), ground(ReqId?) | drop(ReqId?, Ps?, Ps1), send(closed(ReqId?), UserCh?, UserCh1), med(UserCh1?, AgentCh1?, Ps1?, N?).
 
