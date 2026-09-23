@@ -420,7 +420,11 @@ ClauseCheckResult checkClause(
             }
           } else {
             headBodyPairTypes.putIfAbsent(varKey, () => newInfo);
-            headBodyPairLocations.putIfAbsent(varKey, () => 'body atom $i');
+            // The body goal is named, not just numbered: a 3(b) refusal is
+            // almost always a DECLARATION at fault, and the reader has to know
+            // which procedure's declaration to look at.
+            headBodyPairLocations.putIfAbsent(
+                varKey, () => '${atom.functor}/${atom.arity} (body atom $i)');
           }
         }
       } else {
