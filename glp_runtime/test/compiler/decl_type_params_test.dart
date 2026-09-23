@@ -5,14 +5,26 @@
 // "Parameterised Procedure Declarations" and the paragraph "Declaration
 // parameters".
 
+import 'dart:io';
 import 'package:test/test.dart';
 import 'package:glp_runtime/compiler/lexer.dart';
 import 'package:glp_runtime/compiler/parser.dart';
 import 'package:glp_runtime/compiler/error.dart';
+import 'package:glp_runtime/analysis/type_checker/type_checker.dart';
+import 'package:glp_runtime/analysis/type_checker/type_environment_builder.dart'
+    show setRootScopeEnvironmentSource;
 
 void main() {
   List<dynamic> declsOf(String source) =>
       Parser(Lexer(source).tokenize()).parseModule().procDeclarations;
+
+  // The checker groups below read the root scope, for Stream and the other
+  // templates every declaration names.  buildRootScopeEnvironment has no
+  // source of its own, so a test that does not set one sees no root type.
+  setUpAll(() {
+    setRootScopeEnvironmentSource(
+        File('../programs/self.glp').readAsStringSync());
+  });
 
   group('declaration parameter list', () {
     test('procedure(X) names one parameter', () {
@@ -88,6 +100,95 @@ void main() {
     test('a lowercase parameter name is rejected', () {
       expect(() => declsOf('procedure(x) p(Stream(x)?).'),
           throwsA(isA<CompileError>()));
+    });
+  });
+
+  // The rule the list makes possible: "The parameters of a procedure
+  // declaration are exactly those its parameter list names.  An undefined type
+  // name occurring in a declaration and not in its parameter list is an error,
+  // so a misspelt type name is rejected rather than read as a parameter"
+  // (parameterized-types.tex, "Declaration parameters").  Until 2026-09-23 a
+  // declaration naming no parameters fell back to inferring them from its
+  // undefined names, so `pass(Strem?, Strem)` declared a procedure over an
+  // unconstrained type instead of being rejected.
+  group('an undefined type name not in the parameter list', () {
+    dynamic check(String source) =>
+        checkModule(Parser(Lexer(source).tokenize()).parseModule());
+
+    Matcher namesUndefined(String type, String proc) => throwsA(predicate((e) {
+          final s = e.toString();
+          return s.contains('undefined type "$type"') &&
+              s.contains('in the declaration of $proc') &&
+              s.contains('Declaration parameters');
+        }, 'names $type in the declaration of $proc'));
+
+    test('is refused when the declaration names no parameters', () {
+      expect(() => check('procedure pass(Strem?, Strem).\npass(A?, A).'),
+          namesUndefined('Strem', 'pass/2'));
+    });
+
+    test('is refused when the declaration names other parameters', () {
+      expect(() => check('procedure(X) pass(Strem?, Strem).\npass(A?, A).'),
+          namesUndefined('Strem', 'pass/2'));
+    });
+
+    test('is refused inside a template instantiation', () {
+      expect(
+          () => check('procedure copy(Stream(Strem)?, Stream(Strem)).\n'
+              'copy([], []).'),
+          namesUndefined('Strem', 'copy/2'));
+    });
+
+    test('is refused on an exported declaration', () {
+      expect(
+          () => check('exported procedure pass(Strem?, Strem).\npass(A?, A).'),
+          namesUndefined('Strem', 'pass/2'));
+    });
+
+    test('the message says the declaration names none, and how to name it', () {
+      expect(
+          () => check('procedure pass(Strem?, Strem).\npass(A?, A).'),
+          throwsA(predicate((e) {
+            final s = e.toString();
+            return s.contains('the declaration names no type parameters') &&
+                s.contains('procedure(Strem) pass(...)');
+          }, 'says no list is named and gives the remedy')));
+    });
+
+    test('the message names the list when there is one', () {
+      expect(
+          () => check('procedure(X) pass(Strem?, Strem).\npass(A?, A).'),
+          throwsA(predicate((e) =>
+              e.toString().contains('its type parameters are X'),
+              'names the declared parameters')));
+    });
+  });
+
+  group('a type name the parameter list names', () {
+    dynamic check(String source) =>
+        checkModule(Parser(Lexer(source).tokenize()).parseModule());
+
+    test('is accepted bare, tying two arguments to one type', () {
+      expect(check('procedure(X) ptie(X, X?).\nptie(A?, A).').isWellTyped, isTrue);
+    });
+
+    test('is accepted within a template instantiation', () {
+      expect(
+          check('procedure(X) pcopy(Stream(X)?, Stream(X)).\n'
+                  'pcopy([], []).\n'
+                  'pcopy([A|As], [A?|Bs?]) :- pcopy(As?, Bs).')
+              .isWellTyped,
+          isTrue);
+    });
+
+    test('a defined type needs no list', () {
+      expect(
+          check('Msg ::= text(String) ; stop.\n'
+                  'procedure pmsgs(Stream(Msg)?, Stream(Msg)).\n'
+                  'pmsgs([], []).\n'
+                  'pmsgs([A|As], [A?|Bs?]) :- pmsgs(As?, Bs).')
+              .isWellTyped,
+          isTrue);
     });
   });
 }

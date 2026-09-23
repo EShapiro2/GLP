@@ -680,67 +680,13 @@ Set<String> _declKnownTypes(Map<String, TypeDef> templates,
 /// are the same declaration up to renaming, so no rule reading either alone
 /// tells them apart.
 ///
-/// TRANSITIONAL, until every declaration in the tree carries its list.  A
-/// declaration that names its parameters gets the rule above, and its undefined
-/// names are rejected.  A declaration that names none falls back to the
-/// inference the rule replaces, because the strict reading applied to an
-/// unswept tree rejects root self.glp's `=(X, X?)` and every load with it.  The
-/// sweep is per owner (GLP-Spec's root self.glp, SGSG's routers under
-/// social/graph/routing, IGLP's fixtures under programs/tests/); when it is
-/// done, delete [_inferProcTypeParamsTransitional] and its two helpers and call
-/// [_checkDeclTypeNames] unconditionally.
+/// A declaration that names none has none, so every undefined name in it is an
+/// error: the inference that read such a name as a parameter is gone, and with
+/// it the reading under which a typo declared a procedure over an unconstrained
+/// type.
 List<String> _procTypeParams(ProcDecl pd, Set<String> knownTypes) {
-  if (pd.typeParams.isNotEmpty) {
-    _checkDeclTypeNames(pd, knownTypes);
-    return pd.typeParams;
-  }
-  return _inferProcTypeParamsTransitional(pd, knownTypes);
-}
-
-/// The inference the named parameter list replaces: a type parameter is a name
-/// that is not a known defined type and either appears as a bare typeArg inside
-/// a TypeRef with typeArgs (X in `Stream(X)`), or appears as a bare top-level
-/// argument type (M in `p(M?, Stream(Ent)?)`).
-///
-/// It cannot separate a parameter from a typo, which is why the paper replaced
-/// it.  Reached only by a declaration that names no parameters; see
-/// [_procTypeParams] for what removes it.
-List<String> _inferProcTypeParamsTransitional(ProcDecl pd, Set<String> knownTypes) {
-  final candidates = <String>{};
-  // Names appearing as typeArgs of any TypeRef with typeArgs (inner positions).
-  for (final arg in pd.argTypes) {
-    _collectInnerTypeParamCandidates(arg, knownTypes, candidates);
-  }
-  // Bare top-level argument names that are not known types.
-  for (final arg in pd.argTypes) {
-    if (arg is TypeRef && arg.typeArgs.isEmpty && !knownTypes.contains(arg.name)) {
-      candidates.add(arg.name);
-    }
-  }
-  return candidates.toList();
-}
-
-/// Collect type parameter names from inside parameterized type refs.
-/// A candidate is a bare TypeRef name that appears as a typeArg of any
-/// TypeRef with typeArgs, and is not a known type.
-void _collectInnerTypeParamCandidates(TypeExpr expr,
-    Set<String> knownTypes, Set<String> candidates) {
-  if (expr is TypeRef) {
-    if (expr.typeArgs.isNotEmpty) {
-      // Check each typeArg for bare unknown names
-      for (final arg in expr.typeArgs) {
-        if (arg is TypeRef && arg.typeArgs.isEmpty && !knownTypes.contains(arg.name)) {
-          candidates.add(arg.name);
-        }
-        // Recurse into nested type args
-        _collectInnerTypeParamCandidates(arg, knownTypes, candidates);
-      }
-    }
-    return;
-  }
-  for (final c in _typeExprChildren(expr)) {
-    _collectInnerTypeParamCandidates(c, knownTypes, candidates);
-  }
+  _checkDeclTypeNames(pd, knownTypes);
+  return pd.typeParams;
 }
 
 /// Reject an undefined type name occurring in [pd] and not in its parameter
