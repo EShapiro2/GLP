@@ -292,8 +292,7 @@ close_req(R, R1, no_card) :- R? =?= R1? | true.
 close_req(_, R1, R1?) :- otherwise | true.
 
 procedure close_pending(ReqId?, Pending?, Pending).
-close_pending(R, sent(R1, _), idle) :- R? =?= R1? | true.
-close_pending(_, P, P?) :- otherwise | true.
+close_pending(_, P, P?).
 
 %% The messages the screen has shown and no wait has consumed.
 procedure note(ScreenContent?, Stream(ScreenContent)?, Stream(ScreenContent)).
