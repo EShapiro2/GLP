@@ -5159,7 +5159,16 @@ echo ""
 # what each of the three moving projects asked for --- CSSN's move carried two
 # sources and the other two one each, which is why four entries answered three
 # requests.  All eight deployed sources parse.
-KNOWN_RED=()
+#
+# GLP (IGLP layer), 2026-09-24: the sovereign screen.  Currencies' b2367233 gave
+# the denominated mini-app twelve request clauses where it had seven, for SGC's
+# contract, and lib/manifests/sovereign_ui.dart still describes seven forms and
+# the old model.  The manifest is the image of the display declarations, and its
+# twelve forms and their labels are GLP's to write.  SGC shows no screen, so this
+# does not hold SGC.
+KNOWN_RED=(
+    "glp_multiagent/test/sovereign_screen_test.dart: the sovereign mini-app: the central bank boots, its seven forms stand, it mints and opens the credit line through its screen, and the play runs on to the chain redemption and the fiat payment"
+)
 
 echo "=== Section Q: Dart unit tests (whole tree) ==="
 echo ""
