@@ -58,11 +58,15 @@ med(UserCh, AgentCh, Ps, N) :-
 
 %% Abort: another clause reduced the goal, so the ask is closed unanswered and
 %% neither branch is selected: the entry is dropped with its reply unbound.
+%% The person is told `aborted` and not `closed` (Udi, 2026-09-24), so that
+%% they can tell an act that took effect from one that came to nothing: the
+%% answer and the decline bind the reply and their card is merely no longer
+%% open, while an aborted ask carries no reduction at all.
 med(UserCh, AgentCh, Ps, N) :-
     receive(abort(ReqId), AgentCh?, AgentCh1),
     ground(ReqId?) |
     drop(ReqId?, Ps?, Ps1),
-    send(closed(ReqId?), UserCh?, UserCh1),
+    send(aborted(ReqId?), UserCh?, UserCh1),
     med(UserCh1?, AgentCh1?, Ps1?, N?).
 
 %% ---------------------------------------------------------------------------

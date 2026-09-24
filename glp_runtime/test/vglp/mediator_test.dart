@@ -170,6 +170,24 @@ void main() {
       expect(text, isNot(contains(':= req(')));
     });
 
+    test('an aborted ask is aborted on the person channel, a closed one closed',
+        () {
+      // Udi, 2026-09-24: the person can tell an act that took effect from one
+      // that came to nothing. answer/4 and close/3 BIND the reply, so their
+      // card is merely no longer open and carries `closed`; drop/3 consumes
+      // the entry unbound, so its card carries `aborted`.
+      final medProc = med.procedures.firstWhere((p) => p.name == 'med');
+      final text = printProcedures([medProc]);
+      expect(
+          text,
+          contains('drop(ReqId?, Ps?, Ps1), '
+              'send(aborted(ReqId?), UserCh?, UserCh1)'));
+      expect(text, isNot(contains('drop(ReqId?, Ps?, Ps1), send(closed(')));
+      // Exactly one clause aborts; the answer and the decline both close.
+      expect('send(aborted('.allMatches(text).length, 1);
+      expect('send(closed('.allMatches(text).length, 2);
+    });
+
     test('the abort clause drops the entry unbound, the decline closes it', () {
       final medProc = med.procedures.firstWhere((p) => p.name == 'med');
       final text = printProcedures([medProc]);
