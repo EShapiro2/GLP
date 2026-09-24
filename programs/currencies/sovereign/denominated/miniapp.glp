@@ -15,9 +15,10 @@
 %% on a device the clock writes and which the headless plays write themselves
 %% (../village.glp, ../credit_line.glp, plays.glp).  The super-app grants the
 %% two channels and no clock, so sovereign/3 gives the agent an empty
-%% calendar: its date stands at 0 and every bond of maturity 0 is a coin.
+%% calendar: its date stands at 0, so a bond it mints matures on a date
+%% later than 0, and no bond of its own is mature by its date.
 
-imported procedure sovereign_agent#agent(Channel(Closed, Stream(AgentMsg))?, Constant?, Stream(UserInMsg)?, Stream(PeerMsg)?, Stream(Conversation)?, Stream(Integer)?, Stream(OutputEntry)?, Stream(Bond)?, Integer?, Stream(Warranty)?, Integer?, Slot(Reply_agent_1)?, Slot(Reply_agent_2)?, Slot(Reply_agent_3)?, Slot(Reply_agent_4)?, Slot(Reply_agent_5)?, Slot(Reply_agent_6)?, Slot(Reply_agent_7)?).
+imported procedure sovereign_agent#agent(Channel(Closed, Stream(AgentMsg))?, Constant?, Stream(UserInMsg)?, Stream(PeerMsg)?, Stream(Conversation)?, Stream(Integer)?, Stream(OutputEntry)?, Stream(Instrument)?, Integer?, Stream(Warranty)?, Stream(Acceptance)?, Integer?, Slot(Reply_agent_1)?, Slot(Reply_agent_2)?, Slot(Reply_agent_3)?, Slot(Reply_agent_4)?, Slot(Reply_agent_5)?, Slot(Reply_agent_6)?, Slot(Reply_agent_7)?, Slot(Reply_agent_8)?, Slot(Reply_agent_9)?, Slot(Reply_agent_10)?, Slot(Reply_agent_11)?, Slot(Reply_agent_12)?).
 imported procedure sovereign_agent#med(Channel(Stream(UserAnswer), Stream(Card))?, Channel(Stream(AgentMsg), Closed)?, PendingList?, Integer?).
 
 %% The mini-app the super-app activates: no clock, so no date ever advances.
@@ -25,13 +26,13 @@ exported procedure sovereign(Constant?, Channel(Stream(UserAnswer), Stream(Event
 sovereign(Id, Ui, Convs) :- sovereign(Id?, Ui?, Convs?, []).
 
 %% The agent with its mediator: the agent starts with no holdings, date 0, no
-%% warranty, serial 1, no conversation and its screen; the mediator's cards and
-%% the screen go to the person as one stream of events.
+%% warranty, no acceptance, serial 1, no conversation and its screen; the
+%% mediator's cards and the screen go to the person as one stream of events.
 exported procedure sovereign(Constant?, Channel(Stream(UserAnswer), Stream(Event))?, Stream(Conversation)?, Stream(Integer)?).
 sovereign(Id, ch(Answers, Events?), Convs, Cal) :-
     ground(Id?) |
-    sovereign_agent # agent(ch([], Asks), Id?, [], [], Convs?, Cal?, [user_output(Screen)], [], 0, [], 1,
-                        none, none, none, none, none, none, none),
+    sovereign_agent # agent(ch([], Asks), Id?, [], [], Convs?, Cal?, [user_output(Screen)], [], 0, [], [], 1,
+                        none, none, none, none, none, none, none, none, none, none, none, none),
     sovereign_agent # med(ch(Answers?, Cards), ch(Asks?, []), [], 0),
     merge_events(Cards?, Screen?, Events).
 
