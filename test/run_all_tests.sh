@@ -2464,19 +2464,21 @@ HEREDOC
 
 check "Bonds village: no runtime error" "→ suspended" "$n3_run"
 check_not "Bonds village: no failed goal" "ERROR" "$n3_run"
-check "Bonds village: Alice's holdings" "tagged(alice, holdings(\[lot(bob, 0, 5), lot(alice, 0, 8), lot(charlie, 0, 15), lot(frank, 0, 4)\]))" "$n3_run"
-check "Bonds village: Bob's holdings" "tagged(bob, holdings(\[lot(alice, 0, 10), lot(diana, 0, 20)\]))" "$n3_run"
-check "Bonds village: Charlie's holdings" "tagged(charlie, holdings(\[lot(alice, 0, 10), lot(eve, 0, 10), lot(charlie, 0, 6)\]))" "$n3_run"
-check "Bonds village: Diana's holdings" "tagged(diana, holdings(\[lot(bob, 25, 24), lot(frank, 28, 13), lot(diana, 0, 8)\]))" "$n3_run"
-check "Bonds village: Eve's holdings" "tagged(eve, holdings(\[lot(charlie, 0, 4), lot(frank, 0, 1), lot(alice, 0, 2), lot(bob, 0, 10)\]))" "$n3_run"
-check "Bonds village: Frank's holdings" "tagged(frank, holdings(\[lot(diana, 0, 7), lot(eve, 0, 10), lot(frank, 28, 5), lot(frank, 0, 5)\]))" "$n3_run"
+check "Bonds village: Alice's holdings" "tagged(alice, holdings(\[lot(bob, now, 5), lot(alice, now, 8), lot(charlie, now, 15), lot(frank, now, 4)\]))" "$n3_run"
+check "Bonds village: Bob's holdings" "tagged(bob, holdings(\[lot(alice, now, 10), lot(diana, now, 20)\]))" "$n3_run"
+check "Bonds village: Charlie's holdings" "tagged(charlie, holdings(\[lot(alice, now, 10), lot(eve, now, 10), lot(charlie, now, 6)\]))" "$n3_run"
+check "Bonds village: Diana's holdings" "tagged(diana, holdings(\[lot(bob, 25, 24), lot(frank, 28, 12), lot(diana, now, 8), lot(frank, now, 1)\]))" "$n3_run"
+check "Bonds village: Eve's holdings" "tagged(eve, holdings(\[lot(charlie, now, 4), lot(frank, now, 1), lot(alice, now, 2), lot(bob, now, 10)\]))" "$n3_run"
+check "Bonds village: Frank's holdings" "tagged(frank, holdings(\[lot(diana, now, 7), lot(eve, now, 10), lot(frank, 28, 5), lot(frank, now, 5)\]))" "$n3_run"
 check "Bonds village: the escrow agent holds nothing at the end" "tagged(escrow, holdings(\[\]))" "$n3_run"
-check "Bonds village: a payment of immature bonds is refused by the issuer's date" "tagged(bob, refused_payment(diana, 4))" "$n3_run"
+check "Bonds village: a bond presented before its issuer's date reaches its maturity is returned by the issuer" "tagged(frank, not_mature_for(diana, 28))" "$n3_run"
+check "Bonds village: and the bearer holds it back" "tagged(diana, not_mature(frank, 28))" "$n3_run"
 check "Bonds village: Bob's bonds mature by his own calendar" "tagged(bob, date_advanced(25))" "$n3_run"
 check "Bonds village: the redemption takes back an immature bond" "tagged(frank, redeemed(diana, frank, 28))" "$n3_run"
-check "Bonds village: the issuer's date is recorded at the counterparty" "tagged(frank, warranty(diana, 0))" "$n3_run"
+check "Bonds village: once mature by its issuer's date, the bond is taken for a coin" "tagged(diana, matured(frank, 28))" "$n3_run"
+check "Bonds village: and the issuer's date is recorded at the bearer" "tagged(diana, warranty(frank, 28))" "$n3_run"
 check "Bonds village: the escrow agent's date reaches the release date" "tagged(escrow, date_advanced(30))" "$n3_run"
-check "Bonds village: the escrow releases to the beneficiary" "tagged(frank, received_transfer(release, escrow, \[lot(frank, 0, 5)\]))" "$n3_run"
+check "Bonds village: the escrow releases to the beneficiary" "tagged(frank, received_transfer(release, escrow, \[lot(frank, now, 5)\]))" "$n3_run"
 
 echo "--- Bonds credit line (credit_line), Proposition prop:credit-line ---"
 
@@ -2490,13 +2492,13 @@ HEREDOC
 
 check "Bonds credit line: no runtime error" "→ suspended" "$n3_cl"
 check_not "Bonds credit line: no failed goal" "ERROR" "$n3_cl"
-check "Bonds credit line: establishment, the escrow holds the limit" "tagged(escrow, holdings(\[lot(alice, 0, 20)\]))" "$n3_cl"
-check "Bonds credit line: draw, the escrow holds the undrawn coins" "tagged(escrow, holdings(\[lot(alice, 0, 12)\]))" "$n3_cl"
+check "Bonds credit line: establishment, the escrow holds the limit" "tagged(escrow, holdings(\[lot(alice, now, 20)\]))" "$n3_cl"
+check "Bonds credit line: draw, the escrow holds the undrawn coins" "tagged(escrow, holdings(\[lot(alice, now, 12)\]))" "$n3_cl"
 check "Bonds credit line: draw, the lender holds the principal for the amount drawn" "tagged(alice, holdings(\[lot(bob, 25, 8), lot(bob, 20, 2)\]))" "$n3_cl"
-check "Bonds credit line: partial repayment restores capacity" "tagged(escrow, holdings(\[lot(alice, 0, 15)\]))" "$n3_cl"
+check "Bonds credit line: partial repayment restores capacity" "tagged(escrow, holdings(\[lot(alice, now, 15)\]))" "$n3_cl"
 check "Bonds credit line: expiry judged by the escrow agent's own date" "tagged(escrow, date_advanced(25))" "$n3_cl"
-check "Bonds credit line: at expiry the undrawn coins return to the lender" "tagged(alice, received_transfer(return, escrow, \[lot(alice, 0, 20)\]))" "$n3_cl"
-check "Bonds credit line: at expiry with nothing drawn the lender holds its coins and no principal bond" "tagged(alice, holdings(\[lot(bob, 20, 2), lot(alice, 0, 20)\]))" "$n3_cl"
+check "Bonds credit line: at expiry the undrawn coins return to the lender" "tagged(alice, received_transfer(return, escrow, \[lot(alice, now, 20)\]))" "$n3_cl"
+check "Bonds credit line: at expiry with nothing drawn the lender holds its coins and no principal bond" "tagged(alice, holdings(\[lot(bob, 20, 2), lot(alice, now, 20)\]))" "$n3_cl"
 check "Bonds credit line: the borrower holds its principal bonds back" "tagged(bob, holdings(\[lot(bob, 25, 8)\]))" "$n3_cl"
 check "Bonds credit line: the escrow holds nothing at the end" "tagged(escrow, holdings(\[\]))" "$n3_cl"
 
@@ -2512,11 +2514,11 @@ HEREDOC
 
 check "Bonds collateral: no runtime error" "→ suspended" "$n3_col"
 check_not "Bonds collateral: no failed goal" "ERROR" "$n3_col"
-check "Bonds collateral: the borrower posts coins that are not its own" "tagged(escrow, received_transfer(deposit, bob, \[lot(carol, 0, 3)\]))" "$n3_col"
-check "Bonds collateral: on fulfilment the collateral is returned to the borrower" "tagged(bob, received_transfer(return, escrow, \[lot(carol, 0, 3)\]))" "$n3_col"
-check "Bonds collateral: on default it is released to the lender" "tagged(alice, received_transfer(release, escrow, \[lot(carol, 0, 3)\]))" "$n3_col"
-check "Bonds collateral: the repaid lender holds its coins back and the interest bond" "tagged(alice, holdings(\[lot(bob, 20, 1), lot(alice, 0, 5), lot(bob, 30, 6), lot(carol, 0, 3)\]))" "$n3_col"
-check "Bonds collateral: the borrower holds the bonds it redeemed back and the returned collateral" "tagged(bob, holdings(\[lot(bob, 20, 5), lot(carol, 0, 3), lot(alice, 0, 5)\]))" "$n3_col"
+check "Bonds collateral: the borrower posts coins that are not its own" "tagged(escrow, received_transfer(deposit, bob, \[lot(carol, now, 3)\]))" "$n3_col"
+check "Bonds collateral: on fulfilment the collateral is returned to the borrower" "tagged(bob, received_transfer(return, escrow, \[lot(carol, now, 3)\]))" "$n3_col"
+check "Bonds collateral: on default it is released to the lender" "tagged(alice, received_transfer(release, escrow, \[lot(carol, now, 3)\]))" "$n3_col"
+check "Bonds collateral: the repaid lender holds its coins back and the coupon bond" "tagged(alice, holdings(\[lot(bob, 20, 1), lot(alice, now, 5), lot(bob, 30, 6), lot(carol, now, 3)\]))" "$n3_col"
+check "Bonds collateral: the borrower holds the bonds it redeemed back and the returned collateral" "tagged(bob, holdings(\[lot(bob, 20, 5), lot(carol, now, 3), lot(alice, now, 5)\]))" "$n3_col"
 check "Bonds collateral: the escrow agent holds nothing at the end" "tagged(escrow, holdings(\[\]))" "$n3_col"
 
 echo "--- Bonds forward contract (forward) ---"
@@ -2544,11 +2546,11 @@ HEREDOC
 2>&1)
 
 check_not "Bonds guarantee: no failed goal" "ERROR" "$n3_gtee"
-check "Bonds guarantee: the guarantor deposits its own bonds" "tagged(escrow, received_transfer(deposit, gary, \[lot(gary, 0, 3)\]))" "$n3_gtee"
-check "Bonds guarantee: on fulfilment they are returned to the guarantor" "tagged(gary, received_transfer(return, escrow, \[lot(gary, 0, 3)\]))" "$n3_gtee"
-check "Bonds guarantee: on default they are released to the lender" "tagged(alice, received_transfer(release, escrow, \[lot(gary, 0, 3)\]))" "$n3_gtee"
-check "Bonds guarantee: the lender holds the guarantor's bonds and the defaulted loan's" "tagged(alice, holdings(\[lot(bob, 20, 1), lot(alice, 0, 5), lot(bob, 30, 6), lot(gary, 0, 3)\]))" "$n3_gtee"
-check "Bonds guarantee: the guarantor is left with what it did not forfeit" "tagged(gary, holdings(\[lot(gary, 0, 3)\]))" "$n3_gtee"
+check "Bonds guarantee: the guarantor deposits its own bonds" "tagged(escrow, received_transfer(deposit, gary, \[lot(gary, now, 3)\]))" "$n3_gtee"
+check "Bonds guarantee: on fulfilment they are returned to the guarantor" "tagged(gary, received_transfer(return, escrow, \[lot(gary, now, 3)\]))" "$n3_gtee"
+check "Bonds guarantee: on default they are released to the lender" "tagged(alice, received_transfer(release, escrow, \[lot(gary, now, 3)\]))" "$n3_gtee"
+check "Bonds guarantee: the lender holds the guarantor's bonds and the defaulted loan's" "tagged(alice, holdings(\[lot(bob, 20, 1), lot(alice, now, 5), lot(bob, 30, 6), lot(gary, now, 3)\]))" "$n3_gtee"
+check "Bonds guarantee: the guarantor is left with what it did not forfeit" "tagged(gary, holdings(\[lot(gary, now, 3)\]))" "$n3_gtee"
 check "Bonds guarantee: the escrow agent holds nothing at the end" "tagged(escrow, holdings(\[\]))" "$n3_gtee"
 
 echo "--- Bonds packaged exchange: balloon and fixed-payment loans ---"
@@ -2563,7 +2565,7 @@ HEREDOC
 
 check_not "Bonds balloon loan: no failed goal" "ERROR" "$n3_bal"
 check "Bonds balloon loan: the lender holds the interest bonds and the principal" "tagged(alice, holdings(\[lot(bob, 10, 1), lot(bob, 20, 1), lot(bob, 30, 10)\]))" "$n3_bal"
-check "Bonds balloon loan: the borrower holds the coins lent" "tagged(bob, holdings(\[lot(alice, 0, 10)\]))" "$n3_bal"
+check "Bonds balloon loan: the borrower holds the coins lent" "tagged(bob, holdings(\[lot(alice, now, 10)\]))" "$n3_bal"
 check "Bonds balloon loan: the escrow agent holds nothing at the end" "tagged(escrow, holdings(\[\]))" "$n3_bal"
 
 n3_fix=$("$REPL_RUN" <<HEREDOC
@@ -2576,7 +2578,7 @@ HEREDOC
 
 check_not "Bonds fixed-payment loan: no failed goal" "ERROR" "$n3_fix"
 check "Bonds fixed-payment loan: the lender holds the three equal payments" "tagged(alice, holdings(\[lot(bob, 10, 4), lot(bob, 20, 4), lot(bob, 30, 4)\]))" "$n3_fix"
-check "Bonds fixed-payment loan: the borrower holds the coins lent" "tagged(bob, holdings(\[lot(alice, 0, 9)\]))" "$n3_fix"
+check "Bonds fixed-payment loan: the borrower holds the coins lent" "tagged(bob, holdings(\[lot(alice, now, 9)\]))" "$n3_fix"
 check "Bonds fixed-payment loan: the escrow agent holds nothing at the end" "tagged(escrow, holdings(\[\]))" "$n3_fix"
 
 n3_irs=$("$REPL_RUN" <<HEREDOC
@@ -2604,7 +2606,7 @@ HEREDOC
 
 check_not "Bonds option exercised: no failed goal" "ERROR" "$n3_optx"
 check "Bonds option exercised: the holder takes the underlying" "tagged(alice, holdings(\[lot(bob, 40, 10)\]))" "$n3_optx"
-check "Bonds option exercised: the writer takes the premium and the strike" "tagged(bob, holdings(\[lot(alice, 0, 10)\]))" "$n3_optx"
+check "Bonds option exercised: the writer takes the premium and the strike" "tagged(bob, holdings(\[lot(alice, now, 10)\]))" "$n3_optx"
 check "Bonds option exercised: the escrow agent holds nothing at the end" "tagged(escrow, holdings(\[\]))" "$n3_optx"
 
 n3_opte=$("$REPL_RUN" <<HEREDOC
@@ -2617,8 +2619,8 @@ HEREDOC
 
 check_not "Bonds option expired: no failed goal" "ERROR" "$n3_opte"
 check "Bonds option expired: the escrow agent's own date passes the window" "tagged(escrow, date_advanced(41))" "$n3_opte"
-check "Bonds option expired: the strike goes back to the holder" "tagged(alice, holdings(\[lot(alice, 0, 8)\]))" "$n3_opte"
-check "Bonds option expired: the writer keeps the underlying and takes the premium" "tagged(bob, holdings(\[lot(bob, 40, 10), lot(alice, 0, 2)\]))" "$n3_opte"
+check "Bonds option expired: the strike goes back to the holder" "tagged(alice, holdings(\[lot(alice, now, 8)\]))" "$n3_opte"
+check "Bonds option expired: the writer keeps the underlying and takes the premium" "tagged(bob, holdings(\[lot(bob, 40, 10), lot(alice, now, 2)\]))" "$n3_opte"
 check "Bonds option expired: the escrow agent holds nothing at the end" "tagged(escrow, holdings(\[\]))" "$n3_opte"
 
 echo "--- Bonds insurance, claimed and expired (insurance_claimed, insurance_expired) ---"
@@ -2632,8 +2634,8 @@ HEREDOC
 2>&1)
 
 check_not "Bonds insurance claimed: no failed goal" "ERROR" "$n3_insc"
-check "Bonds insurance claimed: the payout is the insurer's reserve" "tagged(alice, holdings(\[lot(bob, 0, 20)\]))" "$n3_insc"
-check "Bonds insurance claimed: the insurer keeps the premium" "tagged(bob, holdings(\[lot(alice, 0, 2)\]))" "$n3_insc"
+check "Bonds insurance claimed: the payout is the insurer's reserve" "tagged(alice, holdings(\[lot(bob, now, 20)\]))" "$n3_insc"
+check "Bonds insurance claimed: the insurer keeps the premium" "tagged(bob, holdings(\[lot(alice, now, 2)\]))" "$n3_insc"
 
 n3_inse=$("$REPL_RUN" <<HEREDOC
 $BONDS
@@ -2645,7 +2647,7 @@ HEREDOC
 
 check_not "Bonds insurance expired: no failed goal" "ERROR" "$n3_inse"
 check "Bonds insurance expired: the insured holds nothing" "tagged(alice, holdings(\[\]))" "$n3_inse"
-check "Bonds insurance expired: the insurer takes the premium and its reserve back" "tagged(bob, holdings(\[lot(alice, 0, 2), lot(bob, 0, 20)\]))" "$n3_inse"
+check "Bonds insurance expired: the insurer takes the premium and its reserve back" "tagged(bob, holdings(\[lot(alice, now, 2), lot(bob, now, 20)\]))" "$n3_inse"
 
 echo "--- Bonds credit default swap, with and without the credit event ---"
 
@@ -2658,7 +2660,7 @@ HEREDOC
 2>&1)
 
 check_not "Bonds CDS credit event: no failed goal" "ERROR" "$n3_cdse"
-check "Bonds CDS credit event: the protection buyer takes the reserve" "tagged(alice, holdings(\[lot(bob, 0, 20)\]))" "$n3_cdse"
+check "Bonds CDS credit event: the protection buyer takes the reserve" "tagged(alice, holdings(\[lot(bob, now, 20)\]))" "$n3_cdse"
 check "Bonds CDS credit event: the seller keeps the premium bonds" "tagged(bob, holdings(\[lot(alice, 10, 1), lot(alice, 20, 1)\]))" "$n3_cdse"
 
 n3_cdsn=$("$REPL_RUN" <<HEREDOC
@@ -2671,7 +2673,7 @@ HEREDOC
 
 check_not "Bonds CDS no credit event: no failed goal" "ERROR" "$n3_cdsn"
 check "Bonds CDS no credit event: the buyer holds nothing" "tagged(alice, holdings(\[\]))" "$n3_cdsn"
-check "Bonds CDS no credit event: the seller takes the premiums and its reserve back at expiry" "tagged(bob, holdings(\[lot(alice, 10, 1), lot(alice, 20, 1), lot(bob, 0, 20)\]))" "$n3_cdsn"
+check "Bonds CDS no credit event: the seller takes the premiums and its reserve back at expiry" "tagged(bob, holdings(\[lot(alice, 10, 1), lot(alice, 20, 1), lot(bob, now, 20)\]))" "$n3_cdsn"
 
 echo "--- Bonds letter of credit (letter_of_credit) ---"
 
@@ -2684,7 +2686,7 @@ HEREDOC
 2>&1)
 
 check_not "Bonds letter of credit: no failed goal" "ERROR" "$n3_loc"
-check "Bonds letter of credit: the seller is paid in the bank's coins" "tagged(alice, holdings(\[lot(bank, 0, 10)\]))" "$n3_loc"
+check "Bonds letter of credit: the seller is paid in the bank's coins" "tagged(alice, holdings(\[lot(bank, now, 10)\]))" "$n3_loc"
 check "Bonds letter of credit: the bank holds the buyer's reimbursement bonds" "tagged(bank, holdings(\[lot(bob, 30, 10)\]))" "$n3_loc"
 check "Bonds letter of credit: the escrow agent holds nothing at the end" "tagged(escrow, holdings(\[\]))" "$n3_loc"
 echo ""
@@ -2703,10 +2705,11 @@ echo ""
 # programs/currencies/sovereign adds the plays that stand in for the super-app: the
 # village market of the bonds paper denominated in one fiat currency, which
 # must end in exactly the holdings of the undenominated run with usd in every
-# lot; the same village with the central bank as an eighth party, which mints
-# its own sovereign grassroots coins, opens a mutual credit line with the
-# community bank by a swap of coins for coins, and settles a presentation of
-# its own coin in the fiat currency itself; the term credit line of the
+# lot; the same village with the central bank as an eighth party, exercising
+# all twelve transactions of the contract --- mint in both forms, advance,
+# swap, accept, pay, payout, spend, redeem, mature, deposit, release and
+# return --- with the fiat unit for a sovereign coin paid to the central bank
+# handed over by its person outside the contract; the term credit line of the
 # bonds paper's Section 5; and the live-person harness sovereign_ui/3, the
 # same market cut to the central bank, the community bank and the household,
 # with the central bank on the app's screen.  As for N2 and N3 the runs need
@@ -2764,14 +2767,15 @@ HEREDOC
 check "Denominated village: no runtime error" "→ suspended" "$n4_run"
 check_not "Denominated village: no failed goal" "ERROR" "$n4_run"
 check "Denominated village: the conversations open" "tagged(frank, opened(escrow))" "$n4_run"
-check "Denominated village: Alice's holdings, denominated" "tagged(alice, holdings(\[lot(bob, usd, 0, 5), lot(alice, usd, 0, 8), lot(charlie, usd, 0, 15), lot(frank, usd, 0, 4)\]))" "$n4_run"
-check "Denominated village: Bob's holdings, denominated" "tagged(bob, holdings(\[lot(alice, usd, 0, 10), lot(diana, usd, 0, 20)\]))" "$n4_run"
-check "Denominated village: Charlie's holdings, denominated" "tagged(charlie, holdings(\[lot(alice, usd, 0, 10), lot(eve, usd, 0, 10), lot(charlie, usd, 0, 6)\]))" "$n4_run"
-check "Denominated village: Diana's holdings, denominated" "tagged(diana, holdings(\[lot(bob, usd, 25, 24), lot(frank, usd, 28, 13), lot(diana, usd, 0, 8)\]))" "$n4_run"
-check "Denominated village: Eve's holdings, denominated" "tagged(eve, holdings(\[lot(charlie, usd, 0, 4), lot(frank, usd, 0, 1), lot(alice, usd, 0, 2), lot(bob, usd, 0, 10)\]))" "$n4_run"
-check "Denominated village: Frank's holdings, denominated" "tagged(frank, holdings(\[lot(diana, usd, 0, 7), lot(eve, usd, 0, 10), lot(frank, usd, 28, 5), lot(frank, usd, 0, 5)\]))" "$n4_run"
+check "Denominated village: Alice's holdings, denominated" "tagged(alice, holdings(\[lot(bob, usd, now, 5), lot(alice, usd, now, 8), lot(charlie, usd, now, 15), lot(frank, usd, now, 4)\]))" "$n4_run"
+check "Denominated village: Bob's holdings, denominated" "tagged(bob, holdings(\[lot(alice, usd, now, 10), lot(diana, usd, now, 20)\]))" "$n4_run"
+check "Denominated village: Charlie's holdings, denominated" "tagged(charlie, holdings(\[lot(alice, usd, now, 10), lot(eve, usd, now, 10), lot(charlie, usd, now, 6)\]))" "$n4_run"
+check "Denominated village: Diana's holdings, denominated" "tagged(diana, holdings(\[lot(bob, usd, 25, 24), lot(frank, usd, 28, 12), lot(diana, usd, now, 8), lot(frank, usd, now, 1)\]))" "$n4_run"
+check "Denominated village: Eve's holdings, denominated" "tagged(eve, holdings(\[lot(charlie, usd, now, 4), lot(frank, usd, now, 1), lot(alice, usd, now, 2), lot(bob, usd, now, 10)\]))" "$n4_run"
+check "Denominated village: Frank's holdings, denominated" "tagged(frank, holdings(\[lot(diana, usd, now, 7), lot(eve, usd, now, 10), lot(frank, usd, 28, 5), lot(frank, usd, now, 5)\]))" "$n4_run"
 check "Denominated village: the escrow agent holds nothing at the end" "tagged(escrow, holdings(\[\]))" "$n4_run"
-check "Denominated village: a payment of immature bonds is still refused by the issuer's date" "tagged(bob, refused_payment(diana, 4))" "$n4_run"
+check "Denominated village: a bond presented before its issuer's date reaches its maturity is still returned" "tagged(diana, not_mature(frank, 28))" "$n4_run"
+check "Denominated village: and taken for a coin once it has, the issuer's date recorded at the bearer" "tagged(diana, warranty(frank, 28))" "$n4_run"
 
 echo "--- The sovereign market (sovereign_village) ---"
 
@@ -2785,23 +2789,42 @@ HEREDOC
 
 check "Sovereign market: no runtime error" "→ suspended" "$n4_sov"
 check_not "Sovereign market: no failed goal" "ERROR" "$n4_sov"
-check "Sovereign market: the central bank mints its own coins" "tagged(cb, minted(30, 0))" "$n4_sov"
+check "Sovereign market: the central bank mints its own coins" "tagged(cb, minted(30, now))" "$n4_sov"
 check "Sovereign market: the mutual credit line is willed by the central bank" "tagged(cb, swap_done(diana))" "$n4_sov"
 check "Sovereign market: and by the community bank" "tagged(diana, swap_done(cb))" "$n4_sov"
-check "Sovereign market: the central bank holds the community bank's coins" "tagged(cb, holdings(\[lot(cb, usd, 0, 20), lot(diana, usd, 0, 10)\]))" "$n4_sov"
-check "Sovereign market: chain redemption --- the household takes a sovereign coin for a community-bank coin" "tagged(frank, redeemed(diana, cb, 0))" "$n4_sov"
-check "Sovereign market: and the community bank gives it out of the credit line" "tagged(diana, presented(frank, cb, 0))" "$n4_sov"
-check "Sovereign market: the fiat interface --- the sovereign pays a unit of the fiat currency" "tagged(cb, fiat_paid(frank, 1))" "$n4_sov"
-check "Sovereign market: and the household receives it" "tagged(frank, fiat_received(cb, 1))" "$n4_sov"
-check "Sovereign market: the sovereign coin redeemed into fiat is back with its issuer" "tagged(cb, holdings(\[lot(cb, usd, 0, 21), lot(diana, usd, 0, 10)\]))" "$n4_sov"
-check "Sovereign market: the community bank's holdings after the line and the redemption" "tagged(diana, holdings(\[lot(cb, usd, 0, 9), lot(bob, usd, 25, 24), lot(frank, usd, 28, 13), lot(diana, usd, 0, 9)\]))" "$n4_sov"
-check "Sovereign market: the household's holdings, one community-bank coin spent up the chain" "tagged(frank, holdings(\[lot(diana, usd, 0, 6), lot(eve, usd, 0, 10), lot(frank, usd, 28, 5), lot(frank, usd, 0, 5)\]))" "$n4_sov"
-check "Sovereign market: the four parties outside the sovereign layer are unmoved" "tagged(eve, holdings(\[lot(charlie, usd, 0, 4), lot(frank, usd, 0, 1), lot(alice, usd, 0, 2), lot(bob, usd, 0, 10)\]))" "$n4_sov"
+check "Sovereign market: the central bank holds the community bank's coins" "tagged(cb, holdings(\[lot(cb, usd, now, 20), lot(diana, usd, now, 10)\]))" "$n4_sov"
+check "Sovereign market: chain redemption --- the household takes a sovereign coin for a community-bank coin" "tagged(frank, redeemed(diana, cb, now))" "$n4_sov"
+check "Sovereign market: and the community bank gives it out of the credit line" "tagged(diana, presented(frank, cb, now))" "$n4_sov"
+check "Sovereign market: fiat fulfilment --- the household pays the sovereign coin to its issuer" "tagged(frank, paid(cb, 1))" "$n4_sov"
+check "Sovereign market: and the central bank takes it" "tagged(cb, received(frank, 1))" "$n4_sov"
+check "Sovereign market: and the central bank's person hands over the fiat unit, outside the contract" "tagged(cb, fiat_handed(frank, 1))" "$n4_sov"
+check "Sovereign market: the sovereign coin paid for fiat is back with its issuer" "tagged(cb, holdings(\[lot(cb, usd, now, 21), lot(diana, usd, now, 10)\]))" "$n4_sov"
+check "Sovereign market: accept --- the farmer, holding a sovereign coin, accepts up to 5 in payment" "tagged(bob, accepted(cb, usd, 5))" "$n4_sov"
+check "Sovereign market: and the household, holding one, accepts up to 5" "tagged(frank, accepted(cb, usd, 5))" "$n4_sov"
+check "Sovereign market: payout --- the central bank pays the household 4 of its own coins" "tagged(cb, paid_out(frank, 4))" "$n4_sov"
+check "Sovereign market: and the household takes them against 4 of its acceptances" "tagged(frank, received_from(cb, cb, 4))" "$n4_sov"
+check "Sovereign market: leaving 1" "tagged(frank, acceptances(\[accepting(cb, usd, 1)\]))" "$n4_sov"
+check "Sovereign market: spend --- the household pays 3 sovereign coins to the farmer, whom it holds no conversation with" "tagged(frank, spent_at(bob, cb, 3))" "$n4_sov"
+check "Sovereign market: and the farmer takes them against 3 of its acceptances" "tagged(bob, received_from(frank, cb, 3))" "$n4_sov"
+check "Sovereign market: leaving 2" "tagged(bob, acceptances(\[accepting(cb, usd, 2)\]))" "$n4_sov"
+check "Sovereign market: and the issuer countersigns and records the spend" "tagged(cb, countersigned(frank, bob, 3))" "$n4_sov"
+check "Sovereign market: mature --- a bond presented before its issuer's date reaches its maturity is returned" "tagged(diana, not_mature(frank, 28))" "$n4_sov"
+check "Sovereign market: and taken for a coin once it has" "tagged(diana, matured(frank, 28))" "$n4_sov"
+check "Sovereign market: the issuer's date recorded at the bearer" "tagged(diana, warranty(frank, 28))" "$n4_sov"
+check "Sovereign market: one escrow released" "tagged(frank, received_transfer(release, escrow, \[lot(frank, usd, now, 5)\]))" "$n4_sov"
+check "Sovereign market: and another returned" "tagged(frank, received_transfer(return, escrow, \[lot(eve, usd, now, 2)\]))" "$n4_sov"
+check "Sovereign market: the central bank's final holdings" "tagged(cb, holdings(\[lot(cb, usd, now, 17), lot(diana, usd, now, 10)\]))" "$n4_sov"
+check "Sovereign market: the community bank's final holdings" "tagged(diana, holdings(\[lot(cb, usd, now, 7), lot(bob, usd, 25, 24), lot(diana, usd, now, 11), lot(frank, usd, 28, 12), lot(frank, usd, now, 1)\]))" "$n4_sov"
+check "Sovereign market: the farmer's final holdings" "tagged(bob, holdings(\[lot(alice, usd, now, 10), lot(diana, usd, now, 18), lot(cb, usd, now, 5)\]))" "$n4_sov"
+check "Sovereign market: the household's final holdings" "tagged(frank, holdings(\[lot(diana, usd, now, 6), lot(eve, usd, now, 10), lot(frank, usd, 28, 5), lot(frank, usd, now, 5), lot(cb, usd, now, 1)\]))" "$n4_sov"
+check "Sovereign market: the escrow agent holds nothing at the end" "tagged(escrow, holdings(\[\]))" "$n4_sov"
+check "Sovereign market: the household's holdings, one community-bank coin spent up the chain and the sovereign coin paid back" "tagged(frank, holdings(\[lot(diana, usd, now, 6), lot(eve, usd, now, 10), lot(frank, usd, 28, 5), lot(frank, usd, now, 5)\]))" "$n4_sov"
+check "Sovereign market: the four parties outside the sovereign layer are unmoved" "tagged(eve, holdings(\[lot(charlie, usd, now, 4), lot(frank, usd, now, 1), lot(alice, usd, now, 2), lot(bob, usd, now, 10)\]))" "$n4_sov"
 
 echo "--- The live-person harness (sovereign_ui): the central bank on the app's screen ---"
 
 # The entry the app starts, sovereign_ui/3 (programs/currencies/sovereign/play_ui.glp),
-# with no answers: the central bank's seven request cards and its two opened
+# with no answers: the central bank's twelve request cards and its two opened
 # conversations reach its screen by send_to_user/1, one term to a line, as
 # the app's UI runtime reads them, while the peers' screens are tagged and
 # nothing of theirs reaches the central bank's screen; with no tap the peers
@@ -2816,17 +2839,18 @@ HEREDOC
 
 check "Sovereign harness: no runtime error" "→ suspended" "$n4_ui"
 check_not "Sovereign harness: no failed goal" "ERROR" "$n4_ui"
-check "Sovereign harness: the central bank's Mint form stands" "card(agent_1, ctx_agent_1, req(" "$n4_ui"
-check "Sovereign harness: and its Return form, the seventh" "card(agent_7, ctx_agent_7, req(" "$n4_ui"
+check "Sovereign harness: the central bank's Mint coins form stands" "card(agent_1, ctx_agent_1, req(" "$n4_ui"
+check "Sovereign harness: and its Return form, the twelfth" "card(agent_12, ctx_agent_12, req(" "$n4_ui"
 check "Sovereign harness: its conversation with the community bank reaches its screen" "msg(agent, person, opened(diana))" "$n4_ui"
 check "Sovereign harness: and with the household" "msg(agent, person, opened(frank))" "$n4_ui"
-check "Sovereign harness: the peers' screens are tagged" "tagged(diana, minted(10, 0))" "$n4_ui"
-check_not "Sovereign harness: and nothing of theirs reaches the central bank's screen" "msg(agent, person, minted(10, 0))" "$n4_ui"
+check "Sovereign harness: the peers' screens are tagged" "tagged(diana, minted(10, now))" "$n4_ui"
+check_not "Sovereign harness: and nothing of theirs reaches the central bank's screen" "msg(agent, person, minted(10, now))" "$n4_ui"
 
-# The same run with the central bank's taps scripted (play_sovereign_ui): the
-# four acts of the paper's appendix "The Sovereign Market, as It Runs" reach
-# its screen, and Diana's reverse swap arrives as the card of its swap
-# responder and is accepted.
+# The same run with the central bank's taps scripted (play_sovereign_ui): its
+# four acts --- the mint, the mutual credit line, the chain redemption on the
+# peers' logs, and the payment of its coin back to it for a fiat unit handed
+# over outside the contract --- reach its screen, and Diana's reverse swap
+# arrives as the card of its swap responder and is accepted.
 n4_uip=$("$REPL_RUN" <<HEREDOC
 $SOV
 :limit 50000000
@@ -2837,19 +2861,19 @@ HEREDOC
 
 check "Sovereign harness, scripted: no runtime error" "→ suspended" "$n4_uip"
 check_not "Sovereign harness, scripted: no failed goal" "ERROR" "$n4_uip"
-check "Sovereign harness, scripted: act 1, the central bank mints its own coins" "tagged(cb, minted(30, 0))" "$n4_uip"
-check "Sovereign harness, scripted: and holds them" "tagged(cb, holdings(\[lot(cb, usd, 0, 30)\]))" "$n4_uip"
+check "Sovereign harness, scripted: act 1, the central bank mints its own coins" "tagged(cb, minted(30, now))" "$n4_uip"
+check "Sovereign harness, scripted: and holds them" "tagged(cb, holdings(\[lot(cb, usd, now, 30)\]))" "$n4_uip"
 check "Sovereign harness, scripted: act 2, the mutual credit line willed by the central bank" "tagged(cb, swap_done(diana))" "$n4_uip"
 check "Sovereign harness, scripted: and by the community bank" "tagged(diana, swap_done(cb))" "$n4_uip"
-check "Sovereign harness, scripted: each holds coins of the other" "tagged(cb, holdings(\[lot(cb, usd, 0, 20), lot(diana, usd, 0, 10)\]))" "$n4_uip"
-check "Sovereign harness, scripted: act 3, the chain redemption leaves the household holding a sovereign coin" "tagged(frank, redeemed(diana, cb, 0))" "$n4_uip"
-check "Sovereign harness, scripted: the community bank warrants her date in it" "tagged(frank, warranty(diana, 0))" "$n4_uip"
-check "Sovereign harness, scripted: and gives the coin out of the line" "tagged(diana, presented(frank, cb, 0))" "$n4_uip"
-check "Sovereign harness, scripted: the household's holdings with the sovereign coin" "tagged(frank, holdings(\[lot(diana, usd, 0, 6), lot(frank, usd, 28, 5), lot(cb, usd, 0, 1)\]))" "$n4_uip"
-check "Sovereign harness, scripted: act 4, the central bank pays a unit of the fiat currency" "tagged(cb, fiat_paid(frank, 1))" "$n4_uip"
-check "Sovereign harness, scripted: and the household receives it" "tagged(frank, fiat_received(cb, 1))" "$n4_uip"
-check "Sovereign harness, scripted: the coin redeemed into fiat is back with its issuer" "tagged(cb, holdings(\[lot(cb, usd, 0, 21), lot(diana, usd, 0, 10)\]))" "$n4_uip"
-check "Sovereign harness, scripted: the reverse swap, proposed by the community bank and accepted on the card" "tagged(cb, holdings(\[lot(cb, usd, 0, 30), lot(diana, usd, 0, 1)\]))" "$n4_uip"
+check "Sovereign harness, scripted: each holds coins of the other" "tagged(cb, holdings(\[lot(cb, usd, now, 20), lot(diana, usd, now, 10)\]))" "$n4_uip"
+check "Sovereign harness, scripted: act 3, the chain redemption leaves the household holding a sovereign coin" "tagged(frank, redeemed(diana, cb, now))" "$n4_uip"
+check_not "Sovereign harness, scripted: a redemption warrants no date" "tagged(frank, warranty(" "$n4_uip"
+check "Sovereign harness, scripted: and gives the coin out of the line" "tagged(diana, presented(frank, cb, now))" "$n4_uip"
+check "Sovereign harness, scripted: the household's holdings with the sovereign coin" "tagged(frank, holdings(\[lot(diana, usd, now, 6), lot(frank, usd, 28, 5), lot(cb, usd, now, 1)\]))" "$n4_uip"
+check "Sovereign harness, scripted: act 4, the household pays the sovereign coin to the central bank" "tagged(frank, paid(cb, 1))" "$n4_uip"
+check "Sovereign harness, scripted: and the central bank's person hands over the fiat unit, outside the contract" "tagged(cb, fiat_handed(frank, 1))" "$n4_uip"
+check "Sovereign harness, scripted: the coin paid for fiat is back with its issuer" "tagged(cb, holdings(\[lot(cb, usd, now, 21), lot(diana, usd, now, 10)\]))" "$n4_uip"
+check "Sovereign harness, scripted: the reverse swap, proposed by the community bank and accepted on the card" "tagged(cb, holdings(\[lot(cb, usd, now, 30), lot(diana, usd, now, 1)\]))" "$n4_uip"
 
 echo "--- The denominated credit line (credit_line), Proposition prop:credit-line ---"
 
@@ -2863,12 +2887,12 @@ HEREDOC
 
 check "Denominated credit line: no runtime error" "→ suspended" "$n4_cl"
 check_not "Denominated credit line: no failed goal" "ERROR" "$n4_cl"
-check "Denominated credit line: establishment, the escrow agent holds the limit" "tagged(escrow, holdings(\[lot(alice, usd, 0, 20)\]))" "$n4_cl"
-check "Denominated credit line: the draw is a packaged exchange, both lots held at once" "tagged(escrow, holdings(\[lot(alice, usd, 0, 20), lot(bob, usd, 25, 8), lot(bob, usd, 20, 2)\]))" "$n4_cl"
-check "Denominated credit line: drawn 8, the escrow agent holds the undrawn coins" "tagged(escrow, holdings(\[lot(alice, usd, 0, 12)\]))" "$n4_cl"
-check "Denominated credit line: the borrower holds the coins lent" "tagged(bob, holdings(\[lot(alice, usd, 0, 8)\]))" "$n4_cl"
-check "Denominated credit line: at expiry the undrawn coins return to the lender" "tagged(alice, received_transfer(return, escrow, \[lot(alice, usd, 0, 20)\]))" "$n4_cl"
-check "Denominated credit line: at expiry with nothing drawn the lender holds its coins and no principal bond" "tagged(alice, holdings(\[lot(bob, usd, 20, 2), lot(alice, usd, 0, 20)\]))" "$n4_cl"
+check "Denominated credit line: establishment, the escrow agent holds the limit" "tagged(escrow, holdings(\[lot(alice, usd, now, 20)\]))" "$n4_cl"
+check "Denominated credit line: the draw is a packaged exchange, both lots held at once" "tagged(escrow, holdings(\[lot(alice, usd, now, 20), lot(bob, usd, 25, 8), lot(bob, usd, 20, 2)\]))" "$n4_cl"
+check "Denominated credit line: drawn 8, the escrow agent holds the undrawn coins" "tagged(escrow, holdings(\[lot(alice, usd, now, 12)\]))" "$n4_cl"
+check "Denominated credit line: the borrower holds the coins lent" "tagged(bob, holdings(\[lot(alice, usd, now, 8)\]))" "$n4_cl"
+check "Denominated credit line: at expiry the undrawn coins return to the lender" "tagged(alice, received_transfer(return, escrow, \[lot(alice, usd, now, 20)\]))" "$n4_cl"
+check "Denominated credit line: at expiry with nothing drawn the lender holds its coins and no principal bond" "tagged(alice, holdings(\[lot(bob, usd, 20, 2), lot(alice, usd, now, 20)\]))" "$n4_cl"
 check "Denominated credit line: the escrow agent holds nothing at the end" "tagged(escrow, holdings(\[\]))" "$n4_cl"
 
 echo "--- The denominated mini-app's own plays (play_mint, play_swap) ---"
@@ -2882,7 +2906,7 @@ HEREDOC
 2>&1)
 
 check_not "Denominated mini-app play_mint: no failed goal" "ERROR" "$n4_pm"
-check "Denominated mini-app play_mint: alice mints 3 of her own" "S = \[minted(3, 0), holdings(\[lot(alice, usd, 0, 3)\])" "$n4_pm"
+check "Denominated mini-app play_mint: alice mints 3 of her own" "S = \[minted(3, now), holdings(\[lot(alice, usd, now, 3)\])" "$n4_pm"
 
 n4_ps=$("$REPL_RUN" <<HEREDOC
 $SOVD
@@ -2893,8 +2917,8 @@ HEREDOC
 2>&1)
 
 check_not "Denominated mini-app play_swap: no failed goal" "ERROR" "$n4_ps"
-check "Denominated mini-app play_swap: the proposer's screen, her conversation opened and the swap done" "A = \[opened(bob), minted(2, 0), holdings(\[lot(alice, usd, 0, 2)\]), holdings(\[\]), swap_done(bob), holdings(\[lot(bob, usd, 0, 2)\])" "$n4_ps"
-check "Denominated mini-app play_swap: the counterparty's screen" "B = \[opened(alice), minted(2, 0), holdings(\[lot(bob, usd, 0, 2)\]), swap_done(alice), holdings(\[lot(alice, usd, 0, 2)\])" "$n4_ps"
+check "Denominated mini-app play_swap: the proposer's screen, her conversation opened and the swap done" "A = \[opened(bob), minted(2, now), holdings(\[lot(alice, usd, now, 2)\]), holdings(\[\]), swap_done(bob), holdings(\[lot(bob, usd, now, 2)\])" "$n4_ps"
+check "Denominated mini-app play_swap: the counterparty's screen" "B = \[opened(alice), minted(2, now), holdings(\[lot(bob, usd, now, 2)\]), swap_done(alice), holdings(\[lot(alice, usd, now, 2)\])" "$n4_ps"
 echo ""
 
 # =============================================================================
