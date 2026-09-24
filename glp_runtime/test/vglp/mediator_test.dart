@@ -138,6 +138,21 @@ void main() {
       expect(text, contains('receive(ask(C, Ctx, Esc, Id?), AgentCh?, AgentCh1)'));
     });
 
+    test('the routing clause routes the answer and closes the card', () {
+      // The Definition closes an ANSWERED ask on the person channel as it
+      // closes a declined and an aborted one, so a reader of that channel
+      // other than the one that answered is told that the ask is over.
+      final medProc = med.procedures.firstWhere((p) => p.name == 'med');
+      final text = printProcedures([medProc]);
+      expect(text, contains('receive(answer(ReqId, Vs), UserCh?, UserCh1)'));
+      expect(text, contains('answer(ReqId?, Vs?, Ps?, Ps1)'));
+      expect(
+          text,
+          contains('answer(ReqId?, Vs?, Ps?, Ps1), '
+              'send(closed(ReqId?), UserCh1?, UserCh2), '
+              'med(UserCh2?, AgentCh?, Ps1?, N?)'));
+    });
+
     test('the decline clause selects the else-branch and closes the card', () {
       final medProc = med.procedures.firstWhere((p) => p.name == 'med');
       final text = printProcedures([medProc]);
@@ -153,6 +168,24 @@ void main() {
       final text = printProcedures(med.procedures);
       expect(text, contains('Id = req(N?)'));
       expect(text, isNot(contains(':= req(')));
+    });
+
+    test('an aborted ask is aborted on the person channel, a closed one closed',
+        () {
+      // Udi, 2026-09-24: the person can tell an act that took effect from one
+      // that came to nothing. answer/4 and close/3 BIND the reply, so their
+      // card is merely no longer open and carries `closed`; drop/3 consumes
+      // the entry unbound, so its card carries `aborted`.
+      final medProc = med.procedures.firstWhere((p) => p.name == 'med');
+      final text = printProcedures([medProc]);
+      expect(
+          text,
+          contains('drop(ReqId?, Ps?, Ps1), '
+              'send(aborted(ReqId?), UserCh?, UserCh1)'));
+      expect(text, isNot(contains('drop(ReqId?, Ps?, Ps1), send(closed(')));
+      // Exactly one clause aborts; the answer and the decline both close.
+      expect('send(aborted('.allMatches(text).length, 1);
+      expect('send(closed('.allMatches(text).length, 2);
     });
 
     test('the abort clause drops the entry unbound, the decline closes it', () {

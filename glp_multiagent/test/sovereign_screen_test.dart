@@ -13,11 +13,14 @@
 /// screen and nothing of the peers' on it. Then the central bank's own two of
 /// the harness's four acts go through the derived forms: the mint of 30 on
 /// the Mint form, and the mutual credit line on the Swap form, which Diana's
-/// script accepts. The peers' two acts and Diana's reverse swap are the
-/// harness's scripted play, which the suite reads off the log
-/// (`test/run_all_tests.sh`, Section N4, `play_sovereign_ui`). Nothing is
-/// simulated and no term is hand-fed; the screen's own mechanics over
-/// hand-fed lines are `sovereign_ui_test.dart`'s.
+/// script accepts. On that answer the harness's scripted play runs on to its
+/// end — the peers' two acts, and Diana's reverse swap arriving as a card —
+/// because each event reduces until quiescent and not until a cycle cap. So
+/// all four acts of the paper's appendix are read off this one boot, and the
+/// suite's own reading of them is the REPL's (`test/run_all_tests.sh`,
+/// Section N4, `play_sovereign_ui`). Nothing is simulated and no term is
+/// hand-fed; the screen's own mechanics over hand-fed lines are
+/// `sovereign_ui_test.dart`'s.
 ///
 /// The values booted are those of `main_sovereign.dart`, whose `VglpProgram`
 /// is built inside its `main`: `person: 'cb'`,
@@ -41,7 +44,8 @@ import 'programs_dir.dart';
 void main() {
   testWidgets(
       'the sovereign mini-app: the central bank boots, its seven forms stand, '
-      'and it mints and opens the credit line through its screen',
+      'it mints and opens the credit line through its screen, and the play '
+      'runs on to the chain redemption and the fiat payment',
       (tester) async {
     tester.view.physicalSize = const Size(600, 1200);
     tester.view.devicePixelRatio = 1.0;
@@ -184,6 +188,22 @@ void main() {
         lines,
         anyElement(
             contains('msg(agent, person, holdings([lot(cb, usd, 0, 30)]))')));
+    // And that holdings message is a row of the balances view the manifest
+    // declares: the bond is named by every argument of the lot but the last —
+    // its issuer, its denomination and its maturity — and the last is how many
+    // of it are held.
+    expect(
+        r.store.balances['balances']!
+            .map((k, v) => MapEntry(k, formatTerm(v))),
+        {'lot(cb, usd, 0)': '30'});
+    // The person reads that row on the screen: the bond by its default
+    // display, the arguments in order, and the count beside it. The lot is
+    // never shown as its term (vGLP, Definition "Display Declaration").
+    expect(find.text('BALANCES'), findsOneWidget);
+    final row = find.widgetWithText(ListTile, 'cb usd 0');
+    expect(row, findsOneWidget);
+    expect(find.descendant(of: row, matching: find.text('30')), findsOneWidget);
+    expect(find.text('lot(cb, usd, 0, 30)'), findsNothing);
     // Answering consumed one ask and the goal posed the next: the form stands
     // again, with a fresh ReqId.
     expect(r.standing.containsKey('agent_1'), isTrue);
@@ -197,6 +217,31 @@ void main() {
     expect(sends, isEmpty);
     expect(screen(), contains('swap_done(diana)'));
     expect(lines, anyElement(contains('tagged(diana, swap_done(cb))')));
-    expect(r.inbox, isEmpty);
+
+    // --- Acts 3 and 4 are the harness's scripted play, and they run on the
+    // central bank's own answer to act 2: each event reduces until quiescent,
+    // so the play is not left standing mid-run. Act 3 is the chain redemption
+    // frank -> diana -> cb, Diana warranting her date in it, after which Frank
+    // holds a sovereign coin (SGC, "The Sovereign Market, as It Runs").
+    expect(lines, anyElement(contains('tagged(frank, redeemed(diana, cb, 0))')));
+    expect(lines, anyElement(contains('tagged(frank, warranty(diana, 0))')));
+    expect(lines, anyElement(contains('tagged(diana, presented(frank, cb, 0))')));
+
+    // Act 4 is on the central bank's own screen: Frank presents that coin and
+    // is paid one unit of the fiat currency, outside the contract.
+    expect(screen(), contains('fiat_paid(frank, 1)'));
+    expect(lines, anyElement(contains('tagged(frank, fiat_received(cb, 1))')));
+
+    // The coin is back with its issuer, and the balances view carries the two
+    // four-place lots the central bank ends on: twenty-one of its own and the
+    // ten of Diana's the credit line gave it.
+    expect(
+        r.store.balances['balances']!
+            .map((k, v) => MapEntry(k, formatTerm(v))),
+        {'lot(cb, usd, 0)': '21', 'lot(diana, usd, 0)': '10'});
+
+    // And Diana's reverse swap then arrives as the card of the swap responder,
+    // an Accept and the decline of its else-branch, awaiting the person.
+    expect(r.inbox.single.asks.keys.toSet(), {'respond_swap_1'});
   }, timeout: const Timeout(Duration(minutes: 3)));
 }

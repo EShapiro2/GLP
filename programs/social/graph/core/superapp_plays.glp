@@ -601,6 +601,7 @@ procedure screen_events(Stream(Event)?, Stream(ScreenContent)).
 screen_events([msg(_, _, X) | Es], [X? | Screen?]) :- ground(X?) | screen_events(Es?, Screen).
 screen_events([card(_, _, _) | Es], Screen?) :- screen_events(Es?, Screen).
 screen_events([closed(_) | Es], Screen?) :- screen_events(Es?, Screen).
+screen_events([aborted(_) | Es], Screen?) :- screen_events(Es?, Screen).
 screen_events([], []).
 
 procedure alice_coins_person(Content?, String?, Channel(Stream(UserAnswer), Stream(Event))?, AgentToUserStream?, UserInStream).
@@ -861,7 +862,13 @@ cp(Id, [closed(R) | Es], As?, Script, open(M, S), Swaps, P, Screen?) :-
     close_req(R?, M?, M1),
     close_req(R?, S?, S1),
     close_swap(R?, Swaps?, Swaps1),
-    close_sent(R?, P?, P1),
+    try_step(Id?, Es?, As, Script?, open(M1?, S1?), Swaps1?, P?, Screen).
+cp(Id, [aborted(R) | Es], As?, Script, open(M, S), Swaps, P, Screen?) :-
+    ground(R?) |
+    close_req(R?, M?, M1),
+    close_req(R?, S?, S1),
+    close_swap(R?, Swaps?, Swaps1),
+    abort_sent(R?, P?, P1),
     try_step(Id?, Es?, As, Script?, open(M1?, S1?), Swaps1?, P1?, Screen).
 cp(Id, [msg(_, _, X) | Es], As?, [Step | Script], Open, Swaps, P, [X? | Screen?]) :-
     ground(X?), ground(Step?) |
@@ -881,9 +888,12 @@ close_swap(R, [swap_card(_, R1) | Rest], Rest?) :- R? =?= R1? | true.
 close_swap(R, [S | Rest], [S? | Rest1?]) :- otherwise | close_swap(R?, Rest?, Rest1).
 close_swap(_, [], []).
 
-procedure close_sent(CReqId?, Sent?, Sent).
-close_sent(R, sent(R1), idle) :- R? =?= R1? | true.
-close_sent(_, P, P?) :- otherwise | true.
+%% An aborted card returns the step to idle: its answer reached no goal, so the
+%% step is the person's to make again.  A closed card leaves it alone --- the
+%% person's act took effect and a person answers an ask once (Udi, 2026-09-24).
+procedure abort_sent(CReqId?, Sent?, Sent).
+abort_sent(R, sent(R1), idle) :- R? =?= R1? | true.
+abort_sent(_, P, P?) :- otherwise | true.
 
 procedure done(CoinStep?, ScreenContent?, Constant).
 done(mint(K), minted(K1), yes) :- K? =:= K1? | true.
@@ -1056,6 +1066,7 @@ procedure sv_screen_events(Stream(SvEvent)?, Stream(SvScreenContent)).
 sv_screen_events([msg(_, _, X) | Es], [X? | Screen?]) :- ground(X?) | sv_screen_events(Es?, Screen).
 sv_screen_events([card(_, _, _) | Es], Screen?) :- sv_screen_events(Es?, Screen).
 sv_screen_events([closed(_) | Es], Screen?) :- sv_screen_events(Es?, Screen).
+sv_screen_events([aborted(_) | Es], Screen?) :- sv_screen_events(Es?, Screen).
 sv_screen_events([], []).
 
 procedure alice_sv_person(Content?, String?, Channel(Stream(SvUserAnswer), Stream(SvEvent))?, AgentToUserStream?, UserInStream).

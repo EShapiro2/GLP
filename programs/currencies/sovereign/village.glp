@@ -1,18 +1,21 @@
 %% village.glp --- the village market of Section 7 of "Grassroots Bonds:
 %% Financing by the People, for the People", denominated in one fiat currency,
-%% on the compiled denominated agent.
+%% on the compiled denominated agent; and the same market with the central
+%% bank as an eighth party, the sovereign market of "Sovereign Grassroots
+%% Currencies", Appendix C.
 %%
 %% Six villagers --- Alice (baker), Bob (farmer), Charlie (carpenter), Diana
 %% (doctor), Eve (teacher), Frank (fisherman) --- and an escrow agent perform
 %% the seven operations of Section 7.1, each an act of the contract:
 %%
 %%   1. symmetric mutual credit   Alice-Bob 15, Alice-Charlie 15, Charlie-Eve 10,
-%%                                Eve-Frank 10, all coins (maturity 0)
+%%                                Eve-Frank 10, all coins
 %%   2. loans                     Diana gives Bob 20 diana-coins for 24 bob-bonds
 %%                                maturing day 25, and Frank 15 for 18 frank-bonds
 %%                                maturing day 28
 %%   3. pay                       Bob pays Alice 5, Eve pays Charlie 6, Frank pays
-%%                                Diana 3, Eve pays Alice 3
+%%                                Diana 3, Eve pays Alice 3, each in coins of the
+%%                                payee
 %%   4. portfolio swap            Eve gives Charlie 5 frank-coins for 5 alice-coins
 %%   5. escrow                    Charlie deposits 5 frank-coins with the escrow
 %%                                agent for Frank, released to Frank when the
@@ -21,10 +24,13 @@
 %%                                time, taking back his own bonds maturing day 28
 %%   7. sale of debt              Alice sells 10 bob-coins to Eve for 4 frank-coins
 %%
-%% Shown once, before Bob's date reaches day 25: Diana pays Bob 4 of his bonds
-%% maturing day 25, and Bob's agent returns them, as they are not yet his coins
-%% by his own date.  Bob's date then advances to 25 and Frank's to 28, by their
-%% own calendars, which the play drives.
+%% What dates add is shown once, on Frank's bonds: before Frank's date reaches
+%% day 28, Diana presents one of the frank-bonds she holds for a frank-coin,
+%% and Frank's agent returns it, as it is not mature by his date; Frank's date
+%% then advances to 28 by his own calendar, and once he has presented his
+%% first diana-coin, Diana presents a frank-bond again and takes a frank-coin
+%% for it, Frank warranting his date.  Bob's date advances to 25 by his own
+%% calendar.  The play drives the calendars.
 %%
 %% Each party runs the mini-app (denominated/miniapp.glp): the compiled agent
 %% with its mediator, activated with its channel to the person, its
@@ -53,30 +59,32 @@ imported procedure person#person(Constant?, Stream(Event)?, Stream(UserAnswer), 
 %% =============================================================================
 
 procedure script(Constant?, Script).
-script(alice, [mint(usd, 15, 0), swap(bob, usd, alice, 0, 15, bob, 0, 15),
-               mint(usd, 15, 0), swap(charlie, usd, alice, 0, 15, charlie, 0, 15),
-               swap(eve, usd, bob, 0, 10, frank, 0, 4)]).
-script(bob, [mint(usd, 15, 0), accept(alice), mint(usd, 24, 25), accept(diana),
-             pay(alice, usd, 0, 5), await(refused_payment(diana, 4)), advance(25)]).
-script(charlie, [mint(usd, 15, 0), accept(alice), mint(usd, 10, 0),
-                 swap(eve, usd, charlie, 0, 10, eve, 0, 10), accept(eve),
-                 deposit(escrow, usd, frank, 0, 5)]).
-script(diana, [mint(usd, 20, 0), swap(bob, usd, diana, 0, 20, bob, 25, 24),
-               mint(usd, 15, 0), swap(frank, usd, diana, 0, 15, frank, 28, 18),
-               pay(bob, usd, 25, 4)]).
-script(eve, [mint(usd, 10, 0), accept(charlie), mint(usd, 10, 0),
-             swap(frank, usd, eve, 0, 10, frank, 0, 10),
-             pay(charlie, usd, 0, 6), swap(charlie, usd, frank, 0, 5, alice, 0, 5),
-             pay(alice, usd, 0, 3), accept(alice)]).
-script(frank, [mint(usd, 18, 28), accept(diana), mint(usd, 10, 0), accept(eve),
-               pay(diana, usd, 0, 3),
-               redeem(diana, usd, 0, frank, 28), redeem(diana, usd, 0, frank, 28),
-               redeem(diana, usd, 0, frank, 28), redeem(diana, usd, 0, frank, 28),
-               redeem(diana, usd, 0, frank, 28),
-               accept_transfer(escrow), advance(28)]).
+script(alice, [mint(usd, 15), swap(bob, usd, alice, now, 15, bob, now, 15),
+               mint(usd, 15), swap(charlie, usd, alice, now, 15, charlie, now, 15),
+               swap(eve, usd, bob, now, 10, frank, now, 4)]).
+script(bob, [mint(usd, 15), accept(alice), mint(usd, 24, 25), accept(diana),
+             pay(alice, usd, 5), advance(25)]).
+script(charlie, [mint(usd, 15), accept(alice), mint(usd, 10),
+                 swap(eve, usd, charlie, now, 10, eve, now, 10), accept(eve),
+                 deposit(escrow, usd, frank, now, 5)]).
+script(diana, [mint(usd, 20), swap(bob, usd, diana, now, 20, bob, 25, 24),
+               mint(usd, 15), swap(frank, usd, diana, now, 15, frank, 28, 18),
+               mature(frank, usd, 28),
+               await(presented(frank, frank, 28)), mature(frank, usd, 28)]).
+script(eve, [mint(usd, 10), accept(charlie), mint(usd, 10),
+             swap(frank, usd, eve, now, 10, frank, now, 10),
+             pay(charlie, usd, 6), swap(charlie, usd, frank, now, 5, alice, now, 5),
+             pay(alice, usd, 3), accept(alice)]).
+script(frank, [mint(usd, 18, 28), accept(diana), mint(usd, 10), accept(eve),
+               pay(diana, usd, 3),
+               await(not_mature_for(diana, 28)), advance(28),
+               redeem(diana, usd, frank, 28), redeem(diana, usd, frank, 28),
+               redeem(diana, usd, frank, 28), redeem(diana, usd, frank, 28),
+               redeem(diana, usd, frank, 28),
+               accept_transfer(escrow)]).
 %% The escrow agent's calendar: its date reaches day 30 once the deposit is
 %% held.  Its acts are the escrow program's.
-script(escrow, [await(received_transfer(deposit, charlie, [lot(frank, usd, 0, 5)])),
+script(escrow, [await(received_transfer(deposit, charlie, [lot(frank, usd, now, 5)])),
                 advance(30)]).
 
 %% =============================================================================
@@ -106,31 +114,45 @@ market :-
     villager(frank, SF?, [conversation(diana, ch(FD?, DF)), conversation(eve, ch(FE?, EF)),
                           conversation(escrow, ch(FG?, GF))]),
     script(escrow, SG),
-    escrow_agent(escrow, SG?, dated_escrow(charlie, frank, lot(frank, usd, 0, 5), 30, awaiting, 0),
+    escrow_agent(escrow, SG?, dated_escrow(charlie, frank, lot(frank, usd, now, 5), 30, awaiting, 0),
                  [conversation(charlie, ch(GC?, CG)), conversation(frank, ch(GF?, FG))]).
 
 %% =============================================================================
 %% The sovereign market: the same village, denominated in one fiat currency,
-%% with the central bank as an eighth party and Diana as the community bank.
+%% with the central bank as an eighth party and Diana as the community bank,
+%% exercising all twelve transactions of the contract.
 %% =============================================================================
 %%
-%% The central bank mints its own sovereign grassroots coins and opens a mutual
-%% credit line with the community bank --- a swap of its coins for coins of the
-%% counterparty's own issue, at par, on demand and without interest, willed by
-%% both.  Nothing distinguishes it from any other party: it runs the same
-%% agent under the same eight schemas, and no clause names it.
+%% Nothing distinguishes the central bank from any other party: it runs the
+%% same agent under the same twelve schemas, and no clause names it.  Beside
+%% the village's operations --- which carry mint in both its forms, advance,
+%% swap, pay, redeem, mature, deposit and release --- the market adds:
 %%
-%% Then two redemptions Diana's credit line makes possible:
+%%   mint, swap    the central bank mints 30 coins of its own and opens a
+%%                 mutual credit line with the community bank, a swap of 10
+%%                 of its coins for 10 of hers, at par, willed by both
+%%   redeem        chain redemption: Bob, then Frank, a household, each holding
+%%                 diana-coins, presents one to Diana and takes a central-bank
+%%                 coin out of the line --- the path frank -> diana -> cb; Bob
+%%                 does so twice, accepting central-bank coins in between
+%%   accept        Bob, the farmer, holding a central-bank coin, accepts up to
+%%                 5 of them in payment; and Frank, holding one, accepts up to 5
+%%   pay           Frank pays the central-bank coin he took to its issuer, and
+%%                 the central bank's person hands him one unit of the fiat
+%%                 currency, outside the contract: the fiat fulfilment of
+%%                 clause 8, whose on-contract part is the payment
+%%   payout        the central bank pays Frank 4 of its own coins, and 4 of his
+%%                 acceptances are spent
+%%   spend         Frank spends 3 central-bank coins at Bob's farm, through the
+%%                 central bank, which countersigns and records the payment;
+%%                 Frank and Bob hold no conversation, the issuer connecting
+%%                 them, and 3 of Bob's acceptances are spent
+%%   deposit,      Frank deposits 2 eve-coins with the escrow agent for Charlie,
+%%   return        for a boat repair; the escrow agent judges the repair not
+%%                 done --- an outside event, which reaches it from its person
+%%                 --- and returns them to Frank
 %%
-%%   chain redemption   Frank, a household, holds Diana-coins and Diana holds
-%%                      central-bank coins, so the liquidity graph has the path
-%%                      frank -> diana -> cb and one redemption along it leaves
-%%                      Frank holding a sovereign grassroots coin.
-%%   the fiat interface Frank presents that coin to the central bank naming the
-%%                      reserved issuer `fiat`, and is paid one unit of the
-%%                      fiat currency, outside the operations of the currency.
-%%
-%% Eleven conversations: the village's nine, and cb-diana and cb-frank.
+%% Twelve conversations: the village's nine, and cb-diana, cb-frank and cb-bob.
 %%
 %% Entry point: sovereign_market/0, exported by self.glp as sovereign_village/0.
 
@@ -140,7 +162,8 @@ sovereign_market :-
     villager(alice, SA?, [conversation(bob, ch(AB?, BA)), conversation(charlie, ch(AC?, CA)),
                           conversation(eve, ch(AE?, EA))]),
     sov_script(bob, SB),
-    villager(bob, SB?, [conversation(alice, ch(BA?, AB)), conversation(diana, ch(BD?, DB))]),
+    villager(bob, SB?, [conversation(alice, ch(BA?, AB)), conversation(diana, ch(BD?, DB)),
+                        conversation(cb, ch(BH?, HB))]),
     sov_script(charlie, SC),
     villager(charlie, SC?, [conversation(alice, ch(CA?, AC)), conversation(eve, ch(CE?, EC)),
                             conversation(escrow, ch(CG?, GC))]),
@@ -154,29 +177,48 @@ sovereign_market :-
     villager(frank, SF?, [conversation(diana, ch(FD?, DF)), conversation(eve, ch(FE?, EF)),
                           conversation(escrow, ch(FG?, GF)), conversation(cb, ch(FH?, HF))]),
     sov_script(cb, SH),
-    villager(cb, SH?, [conversation(diana, ch(HD?, DH)), conversation(frank, ch(HF?, FH))]),
+    villager(cb, SH?, [conversation(diana, ch(HD?, DH)), conversation(frank, ch(HF?, FH)),
+                       conversation(bob, ch(HB?, BH))]),
     sov_script(escrow, SG),
-    escrow_agent(escrow, SG?, dated_escrow(charlie, frank, lot(frank, usd, 0, 5), 30, awaiting, 0),
+    escrow_agent(escrow, SG?, dated_escrow(charlie, frank, lot(frank, usd, now, 5), 30, awaiting, 0),
                  [conversation(charlie, ch(GC?, CG)), conversation(frank, ch(GF?, FG))]).
 
 %% The scripts of the sovereign market: the village's, with the central bank's
-%% added, the community bank minting the coins its credit line gives and
-%% accepting the line first, and the household redeeming along the chain and
-%% then at the interface.
+%% added; the community bank minting the coins its credit line gives and
+%% accepting the line first, and waiting for Bob's two presentations before
+%% lending to Frank; Bob taking central-bank coins along the chain and
+%% accepting them; the household taking one along the chain, accepting them,
+%% paying it to its issuer for a fiat unit, taking the payout and spending at
+%% Bob's; and the second escrow, deposited and returned.
 procedure sov_script(Constant?, Script).
-sov_script(cb, [mint(usd, 30, 0), swap(diana, usd, cb, 0, 10, diana, 0, 10)]).
-sov_script(diana, [mint(usd, 10, 0), accept(cb),
-                   mint(usd, 20, 0), swap(bob, usd, diana, 0, 20, bob, 25, 24),
-                   mint(usd, 15, 0), swap(frank, usd, diana, 0, 15, frank, 28, 18),
-                   pay(bob, usd, 25, 4)]).
-sov_script(frank, [mint(usd, 18, 28), accept(diana), mint(usd, 10, 0), accept(eve),
-                   pay(diana, usd, 0, 3),
-                   redeem(diana, usd, 0, frank, 28), redeem(diana, usd, 0, frank, 28),
-                   redeem(diana, usd, 0, frank, 28), redeem(diana, usd, 0, frank, 28),
-                   redeem(diana, usd, 0, frank, 28),
-                   accept_transfer(escrow), advance(28),
-                   redeem(diana, usd, 0, cb, 0),
-                   redeem(cb, usd, 0, fiat, 0)]).
+sov_script(cb, [mint(usd, 30), swap(diana, usd, cb, now, 10, diana, now, 10),
+                await(received(frank, 1)), fiat(frank, 1),
+                payout(frank, usd, 4)]).
+sov_script(diana, [mint(usd, 10), accept(cb),
+                   mint(usd, 20), swap(bob, usd, diana, now, 20, bob, 25, 24),
+                   await(presented(bob, cb, now)), await(presented(bob, cb, now)),
+                   mint(usd, 15), swap(frank, usd, diana, now, 15, frank, 28, 18),
+                   mature(frank, usd, 28),
+                   await(presented(frank, frank, 28)), mature(frank, usd, 28)]).
+sov_script(bob, [mint(usd, 15), accept(alice), mint(usd, 24, 25), accept(diana),
+                 redeem(diana, usd, cb, now), accept_coins(usd, cb, 5),
+                 redeem(diana, usd, cb, now),
+                 pay(alice, usd, 5), advance(25)]).
+sov_script(frank, [mint(usd, 18, 28), accept(diana), mint(usd, 10), accept(eve),
+                   pay(diana, usd, 3),
+                   await(not_mature_for(diana, 28)), advance(28),
+                   redeem(diana, usd, frank, 28), redeem(diana, usd, frank, 28),
+                   redeem(diana, usd, frank, 28), redeem(diana, usd, frank, 28),
+                   redeem(diana, usd, frank, 28),
+                   accept_transfer(escrow),
+                   deposit(escrow, usd, eve, now, 2), accept_transfer(escrow),
+                   redeem(diana, usd, cb, now), accept_coins(usd, cb, 5),
+                   pay(cb, usd, 1),
+                   await(received_from(cb, cb, 4)),
+                   spend(bob, cb, usd, 3)]).
+sov_script(escrow, [await(received_transfer(deposit, charlie, [lot(frank, usd, now, 5)])),
+                    advance(30),
+                    accept_transfer(frank), return(frank, usd, eve, now, 2)]).
 sov_script(P, S?) :- otherwise | script(P?, S).
 
 %% One villager: the mini-app, activated with its channel to the person, its

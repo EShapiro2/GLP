@@ -10,17 +10,20 @@
 %% (village.glp, credit_line.glp), and the helpers over holdings, dates and
 %% channels that the agent calls.
 %%
-%% A bond is bond(Issuer, Maturity, Serial): the atom cent(u, d) of the act
-%% schemas, with the serial a practical implementation gives each bond.  A
-%% party's holdings are a multiset of bonds, Stream(Bond).  A lot is k bonds of
-%% one issuer and maturity, lot(Issuer, Maturity, K): the cent^k_{u,d} of
-%% Section 3.4.  A warranty dated(Issuer, Date) is the pair (q, d*_q) of the
-%% definition: the issuer's warranty of its date, recorded at the counterparty
-%% of a payment or a redemption.
+%% A coin and a bond are two instruments.  A coin is coin(Issuer, Serial), a
+%% unit of its issuer's debt due now, carrying no date: the atom cent(u, bot)
+%% of the act schemas.  A bond is bond(Issuer, Maturity, Serial), such a unit
+%% due at its maturity date: the atom cent(u, d).  The serial is the one a
+%% practical implementation gives each instrument.  A party's holdings are a
+%% multiset of instruments, Stream(Instrument).  A lot is k instruments of one
+%% issuer, kind and maturity, lot(Issuer, Due, K), its due `now` for coins and
+%% the maturity date for bonds: the cent^k_{u,*} of Section 3.4.  A warranty
+%% dated(Issuer, Date) is the pair (q, d*_q) of Mature: the issuer's warranty
+%% of its date, recorded at the bearer of a bond it took for a coin.
 
-Bond     ::= bond(Constant, Integer, Integer).
-Lot      ::= lot(Constant, Integer, Integer).
-Warranty ::= dated(Constant, Integer).
+Instrument ::= coin(Constant, Integer) ; bond(Constant, Integer, Integer).
+Lot        ::= lot(Constant, Constant, Integer).
+Warranty   ::= dated(Constant, Integer).
 
 %% The three escrow transfers of clause 7: a deposit by the depositor with the
 %% escrow agent, a release by the escrow agent to the beneficiary, a return by
@@ -28,32 +31,39 @@ Warranty ::= dated(Constant, Integer).
 %% both participants, and the kind is what the receiver's card shows.
 Kind ::= deposit ; release ; return.
 
-%% The counterparty's answer to a swap: the bonds it gives, or the offered bonds
+%% The counterparty's answer to a swap: the instruments it gives, or the
+%% offered instruments returned.
+SwapResponse ::= swap_accept(Stream(Instrument)) ; swap_decline(Stream(Instrument)).
+
+%% The payee's answer to a payment: the coins taken, or returned because they
+%% are not the payee's own coins.  No date is read and none is warranted.
+PayResponse ::= pay_taken ; pay_returned(Stream(Instrument)).
+
+%% The issuer's answer to a presentation of its coin: the instrument taken in
+%% exchange; the presented coin returned with the lots the issuer holds, its
+%% own apart, for the bearer to choose among; or what was presented returned
+%% because it is not the issuer's coin.  No date is read and none is
+%% warranted.
+RedeemResponse ::= redeem_give(Instrument)
+                 ; redeem_menu(Instrument, Stream(Lot))
+                 ; redeem_declined(Instrument).
+
+%% The issuer's answer to a matured bond presented to it: a coin of its own
+%% for it, with its date --- the warranty of clause 2 --- or the bond
+%% returned, because it is not mature by the issuer's date.
+MatureResponse ::= mature_give(Instrument, Integer) ; mature_declined(Instrument).
+
+%% The receiver's answer to an escrow transfer: taken, or the instruments
 %% returned.
-SwapResponse ::= swap_accept(Stream(Bond)) ; swap_decline(Stream(Bond)).
-
-%% The payee's answer to a payment: the bonds taken, with the payee's date ---
-%% the issuer's warranty --- or the bonds returned, because they are not the
-%% payee's own coins by its own date.
-PayResponse ::= pay_taken(Integer) ; pay_returned(Stream(Bond)).
-
-%% The issuer's answer to a presentation: the bond taken in exchange, with the
-%% issuer's date; the presented bond returned with the lots the issuer holds,
-%% its own apart, for the bearer to choose among; or the bond returned because
-%% it is not the issuer's coin by the issuer's date.
-RedeemResponse ::= redeem_give(Bond, Integer)
-                 ; redeem_menu(Bond, Stream(Lot))
-                 ; redeem_declined(Bond).
-
-%% The receiver's answer to an escrow transfer: taken, or the bonds returned.
-TransferResponse ::= transfer_accept ; transfer_decline(Stream(Bond)).
+TransferResponse ::= transfer_accept ; transfer_decline(Stream(Instrument)).
 
 %% What one agent sends another: the bilateral acts of Section 3.4.  A position
 %% that forwards a writer carries ? in the type (typed-glp-manual, 15B).
-PeerContent ::= pay(Stream(Bond), PayResponse?)
-              ; swap(Lot, Stream(Bond), SwapResponse?)
-              ; redeem(Bond, Constant, Integer, RedeemResponse?)
-              ; transfer(Kind, Stream(Bond), TransferResponse?).
+PeerContent ::= pay(Stream(Instrument), PayResponse?)
+              ; swap(Lot, Stream(Instrument), SwapResponse?)
+              ; redeem(Instrument, Constant, Constant, RedeemResponse?)
+              ; mature(Instrument, MatureResponse?)
+              ; transfer(Kind, Stream(Instrument), TransferResponse?).
 PeerMsg     ::= msg(Constant, Constant, PeerContent).
 PeerChannel ::= ch(Stream(PeerMsg), Stream(PeerMsg)?).
 
@@ -69,8 +79,8 @@ NetInMsg  ::= msg(Constant, NetCall)
 %% established channel.
 Link ::= link(PeerChannel) ; linked.
 
-%% Whether a bond was found in the holdings.
-Found ::= found(Bond) ; not_found.
+%% Whether an instrument was found in the holdings.
+Found ::= found(Instrument) ; not_found.
 
 %% The agent's outputs: the screen, the network, and a channel per
 %% counterparty, keyed by its name.  The routers send_user, send_net,
@@ -80,14 +90,15 @@ OutputEntry ::= user_output(Stream(ScreenMsg)?)
               ; net_output(Stream(NetOutMsg)?)
               ; friend_output(Constant, Stream(PeerMsg)?).
 
-%% The screen: the holdings, tallied by issuer and maturity, after every change
-%% of them; the date after every advance; each warranty as it is recorded; and
-%% what each act came to.
+%% The screen: the holdings, tallied by issuer and due, after every change of
+%% them; the date after every advance; each warranty as it is recorded; and
+%% what each act came to.  A due is `now` for coins and the maturity date for
+%% bonds.
 ScreenContent ::= holdings(Stream(Lot))
                 ; date_advanced(Integer)
                 ; warranty(Constant, Integer)
-                ; minted(Integer, Integer)
-                ; paying(Constant, Integer, Integer)
+                ; minted(Integer, Constant)
+                ; paying(Constant, Integer)
                 ; paid(Constant, Integer)
                 ; not_accepted(Constant, Integer)
                 ; received(Constant, Integer)
@@ -96,40 +107,46 @@ ScreenContent ::= holdings(Stream(Lot))
                 ; swap_declined(Constant)
                 ; swap_failed(Constant)
                 ; declined(Constant)
-                ; redeemed(Constant, Constant, Integer)
+                ; redeemed(Constant, Constant, Constant)
                 ; menu(Constant, Stream(Lot))
                 ; refused(Constant)
-                ; presented(Constant, Constant, Integer)
-                ; unfulfilled(Constant, Constant, Integer)
+                ; presented(Constant, Constant, Constant)
+                ; unfulfilled(Constant, Constant, Constant)
+                ; matured(Constant, Integer)
+                ; not_mature(Constant, Integer)
+                ; matured_for(Constant, Integer)
+                ; not_mature_for(Constant, Integer)
                 ; offered_transfer(Kind, Constant, Lot)
                 ; transferred(Kind, Constant)
                 ; transfer_declined(Kind, Constant)
                 ; received_transfer(Kind, Constant, Stream(Lot))
                 ; declined_transfer(Kind, Constant)
-                ; lacking(Constant, Integer, Integer).
+                ; lacking(Constant, Constant, Integer).
 ScreenMsg ::= msg(Constant, Constant, ScreenContent).
 
 %% The agent's own input: the answers its responders inject, and the results
 %% of the acts it proposed.
-UserInMsg ::= accept_swap(Constant, Lot, Stream(Bond), SwapResponse?, Link)
-            ; decline_swap(Constant, Stream(Bond), SwapResponse?, Link)
-            ; swap_accepted(Constant, Stream(Bond), Link)
-            ; swap_declined_by(Constant, Stream(Bond), Link)
-            ; pay_taken_by(Constant, Integer, Integer)
-            ; pay_returned_by(Constant, Stream(Bond))
-            ; redeem_given(Constant, Bond, Integer)
-            ; redeem_menu_from(Constant, Bond, Stream(Lot))
-            ; redeem_declined_by(Constant, Bond)
-            ; accept_transfer(Kind, Constant, Stream(Bond), TransferResponse?, Link)
-            ; decline_transfer(Kind, Constant, Stream(Bond), TransferResponse?, Link)
+UserInMsg ::= accept_swap(Constant, Lot, Stream(Instrument), SwapResponse?, Link)
+            ; decline_swap(Constant, Stream(Instrument), SwapResponse?, Link)
+            ; swap_accepted(Constant, Stream(Instrument), Link)
+            ; swap_declined_by(Constant, Stream(Instrument), Link)
+            ; pay_taken_by(Constant, Integer)
+            ; pay_returned_by(Constant, Stream(Instrument))
+            ; redeem_given(Constant, Constant, Constant, Instrument)
+            ; redeem_menu_from(Constant, Instrument, Stream(Lot))
+            ; redeem_declined_by(Constant, Instrument)
+            ; matured_by(Constant, Integer, Instrument, Integer)
+            ; not_matured_by(Constant, Instrument)
+            ; accept_transfer(Kind, Constant, Stream(Instrument), TransferResponse?, Link)
+            ; decline_transfer(Kind, Constant, Stream(Instrument), TransferResponse?, Link)
             ; transfer_accepted(Kind, Constant, Link)
-            ; transfer_declined_by(Kind, Constant, Stream(Bond), Link).
+            ; transfer_declined_by(Kind, Constant, Stream(Instrument), Link).
 
 %% The offer a swap responder carries: the proposer, the lot it wants, the
-%% bonds it offers.  The offer a transfer responder carries: the kind, the
-%% giver, the bonds.
-SwapOffer     ::= offer(Constant, Lot, Stream(Bond)).
-TransferOffer ::= offer_transfer(Kind, Constant, Stream(Bond)).
+%% instruments it offers.  The offer a transfer responder carries: the kind,
+%% the giver, the instruments.
+SwapOffer     ::= offer(Constant, Lot, Stream(Instrument)).
+TransferOffer ::= offer_transfer(Kind, Constant, Stream(Instrument)).
 
 %% =============================================================================
 %% The vocabulary of the compiled agent's mediator, at this program's answer and
@@ -142,7 +159,7 @@ TransferOffer ::= offer_transfer(Kind, Constant, Stream(Bond)).
 ReqId ::= req(Integer).
 Slot(R) ::= none ; ask(R, ReqId).
 AgentMsg ::= ask(Constant, Context, Escrow, ReqId?) ; abort(ReqId).
-Card ::= card(Constant, Context, ReqId) ; closed(ReqId).
+Card ::= card(Constant, Context, ReqId) ; closed(ReqId) ; aborted(ReqId).
 UserAnswer ::= answer(ReqId, Answer) ; decline(ReqId).
 PendingEntry ::= pending(ReqId, Escrow).
 PendingList ::= [] ; [PendingEntry | PendingList].
@@ -152,27 +169,31 @@ PendingList ::= [] ; [PendingEntry | PendingList].
 %% the alternatives written out, which the compiled module names.
 Xs_respond_swap_1 ::= xs_respond_swap_1(Constant).
 Reply_respond_swap_1 ::= then(Xs_respond_swap_1) ; else.
-Ctx_respond_swap_1 ::= ctx_respond_swap_1(Constant, Lot, Stream(Bond)).
+Ctx_respond_swap_1 ::= ctx_respond_swap_1(Constant, Lot, Stream(Instrument)).
 Xs_respond_transfer_1 ::= xs_respond_transfer_1(Constant).
 Reply_respond_transfer_1 ::= then(Xs_respond_transfer_1) ; else.
-Ctx_respond_transfer_1 ::= ctx_respond_transfer_1(Kind, Constant, Stream(Bond)).
-Xs_agent_1 ::= xs_agent_1(Integer, Integer).
+Ctx_respond_transfer_1 ::= ctx_respond_transfer_1(Kind, Constant, Stream(Instrument)).
+Xs_agent_1 ::= xs_agent_1(Integer).
 Reply_agent_1 ::= then(Xs_agent_1).
-Xs_agent_2 ::= xs_agent_2(Constant, Constant, Integer, Integer, Constant, Integer, Integer).
+Xs_agent_2 ::= xs_agent_2(Integer, Integer).
 Reply_agent_2 ::= then(Xs_agent_2).
-Xs_agent_3 ::= xs_agent_3(Constant, Integer, Integer).
+Xs_agent_3 ::= xs_agent_3(Constant, Constant, Constant, Integer, Constant, Constant, Integer).
 Reply_agent_3 ::= then(Xs_agent_3).
-Xs_agent_4 ::= xs_agent_4(Constant, Integer, Constant, Integer).
+Xs_agent_4 ::= xs_agent_4(Constant, Integer).
 Reply_agent_4 ::= then(Xs_agent_4).
-Xs_agent_5 ::= xs_agent_5(Constant, Constant, Integer, Integer).
+Xs_agent_5 ::= xs_agent_5(Constant, Constant, Constant).
 Reply_agent_5 ::= then(Xs_agent_5).
-Xs_agent_6 ::= xs_agent_6(Constant, Constant, Integer, Integer).
+Xs_agent_6 ::= xs_agent_6(Constant, Integer).
 Reply_agent_6 ::= then(Xs_agent_6).
-Xs_agent_7 ::= xs_agent_7(Constant, Constant, Integer, Integer).
+Xs_agent_7 ::= xs_agent_7(Constant, Constant, Constant, Integer).
 Reply_agent_7 ::= then(Xs_agent_7).
-Answer ::= xs_respond_swap_1(Constant) ; xs_respond_transfer_1(Constant) ; xs_agent_1(Integer, Integer) ; xs_agent_2(Constant, Constant, Integer, Integer, Constant, Integer, Integer) ; xs_agent_3(Constant, Integer, Integer) ; xs_agent_4(Constant, Integer, Constant, Integer) ; xs_agent_5(Constant, Constant, Integer, Integer) ; xs_agent_6(Constant, Constant, Integer, Integer) ; xs_agent_7(Constant, Constant, Integer, Integer).
-Escrow ::= esc_respond_swap_1(Reply_respond_swap_1?) ; esc_respond_transfer_1(Reply_respond_transfer_1?) ; esc_agent_1(Reply_agent_1?) ; esc_agent_2(Reply_agent_2?) ; esc_agent_3(Reply_agent_3?) ; esc_agent_4(Reply_agent_4?) ; esc_agent_5(Reply_agent_5?) ; esc_agent_6(Reply_agent_6?) ; esc_agent_7(Reply_agent_7?).
-Context ::= ctx_respond_swap_1(Constant, Lot, Stream(Bond)) ; ctx_respond_transfer_1(Kind, Constant, Stream(Bond)) ; ctx_agent_1 ; ctx_agent_2 ; ctx_agent_3 ; ctx_agent_4 ; ctx_agent_5 ; ctx_agent_6 ; ctx_agent_7.
+Xs_agent_8 ::= xs_agent_8(Constant, Constant, Constant, Integer).
+Reply_agent_8 ::= then(Xs_agent_8).
+Xs_agent_9 ::= xs_agent_9(Constant, Constant, Constant, Integer).
+Reply_agent_9 ::= then(Xs_agent_9).
+Answer ::= xs_respond_swap_1(Constant) ; xs_respond_transfer_1(Constant) ; xs_agent_1(Integer) ; xs_agent_2(Integer, Integer) ; xs_agent_3(Constant, Constant, Constant, Integer, Constant, Constant, Integer) ; xs_agent_4(Constant, Integer) ; xs_agent_5(Constant, Constant, Constant) ; xs_agent_6(Constant, Integer) ; xs_agent_7(Constant, Constant, Constant, Integer) ; xs_agent_8(Constant, Constant, Constant, Integer) ; xs_agent_9(Constant, Constant, Constant, Integer).
+Escrow ::= esc_respond_swap_1(Reply_respond_swap_1?) ; esc_respond_transfer_1(Reply_respond_transfer_1?) ; esc_agent_1(Reply_agent_1?) ; esc_agent_2(Reply_agent_2?) ; esc_agent_3(Reply_agent_3?) ; esc_agent_4(Reply_agent_4?) ; esc_agent_5(Reply_agent_5?) ; esc_agent_6(Reply_agent_6?) ; esc_agent_7(Reply_agent_7?) ; esc_agent_8(Reply_agent_8?) ; esc_agent_9(Reply_agent_9?).
+Context ::= ctx_respond_swap_1(Constant, Lot, Stream(Instrument)) ; ctx_respond_transfer_1(Kind, Constant, Stream(Instrument)) ; ctx_agent_1 ; ctx_agent_2 ; ctx_agent_3 ; ctx_agent_4 ; ctx_agent_5 ; ctx_agent_6 ; ctx_agent_7 ; ctx_agent_8 ; ctx_agent_9.
 
 %% =============================================================================
 %% The plays' vocabulary: what a person sees, and the agreements the escrow
@@ -182,20 +203,25 @@ Context ::= ctx_respond_swap_1(Constant, Lot, Stream(Bond)) ; ctx_respond_transf
 %% What a person sees: the cards and their closing, and the screen.
 Event ::= card(Constant, Context, ReqId)
         ; closed(ReqId)
+        ; aborted(ReqId)
         ; msg(Constant, Constant, ScreenContent).
 
 %% A script: the person's acts, in order.  A step is an answer to one of the
-%% agent's seven request cards; an advance of the calendar, which in a headless
-%% run the play drives; an acceptance of a swap or of a transfer the named party
-%% proposes; or a wait for a screen message.
-Step ::= mint(Integer, Integer)
+%% agent's nine request cards --- mint(K) the Mint coins card and mint(K, D)
+%% the Mint bonds card; an advance of the calendar, which in a headless run
+%% the play drives; an acceptance of a swap or of a transfer the named party
+%% proposes; or a wait for a screen message.  A due is `now` for coins and the
+%% maturity date for bonds.
+Step ::= mint(Integer)
+       ; mint(Integer, Integer)
        ; advance(Integer)
-       ; swap(Constant, Constant, Integer, Integer, Constant, Integer, Integer)
-       ; pay(Constant, Integer, Integer)
-       ; redeem(Constant, Integer, Constant, Integer)
-       ; deposit(Constant, Constant, Integer, Integer)
-       ; release(Constant, Constant, Integer, Integer)
-       ; return(Constant, Constant, Integer, Integer)
+       ; swap(Constant, Constant, Constant, Integer, Constant, Constant, Integer)
+       ; pay(Constant, Integer)
+       ; redeem(Constant, Constant, Constant)
+       ; mature(Constant, Integer)
+       ; deposit(Constant, Constant, Constant, Integer)
+       ; release(Constant, Constant, Constant, Integer)
+       ; return(Constant, Constant, Constant, Integer)
        ; accept(Constant)
        ; accept_transfer(Constant)
        ; await(ScreenContent).
@@ -206,8 +232,8 @@ Script ::= [] ; [Step | Script].
 %% date-based escrow --- the depositor, the beneficiary, the lot, the date of
 %% the escrow agent at which it releases, its phase, and the escrow agent's
 %% date; or a credit line --- the lender, the borrower, the limit, the expiry,
-%% the date of the interest bonds, the drawn amount, the principal of a draw
-%% deposited and awaiting its interest lot (0 when none), its phase, and the
+%% the date of the coupon bonds, the drawn amount, the principal of a draw
+%% deposited and awaiting its coupon lot (0 when none), its phase, and the
 %% escrow agent's date; or a packaged exchange --- the two parties, the lots
 %% each owes, the lots deposited so far, its phase, and the escrow agent's
 %% date.  The packaged
@@ -226,8 +252,17 @@ Phase ::= awaiting ; deposited ; released ; opening ; open ; closed.
 %% Holdings
 %% =============================================================================
 
+%% K fresh coins of Issuer, serials from Serial up.
+procedure create_coins(Constant?, Integer?, Integer?, Stream(Instrument)).
+create_coins(Issuer, K, Serial, [coin(Issuer?, Serial?)|Rest?]) :-
+    K? > 0 |
+    K1 := K? - 1,
+    S1 := Serial? + 1,
+    create_coins(Issuer?, K1?, S1?, Rest).
+create_coins(_, 0, _, []).
+
 %% K fresh bonds of Issuer maturing at D, serials from Serial up.
-procedure create_bonds(Constant?, Integer?, Integer?, Integer?, Stream(Bond)).
+procedure create_bonds(Constant?, Integer?, Integer?, Integer?, Stream(Instrument)).
 create_bonds(Issuer, D, K, Serial, [bond(Issuer?, D?, Serial?)|Rest?]) :-
     K? > 0 |
     K1 := K? - 1,
@@ -235,69 +270,97 @@ create_bonds(Issuer, D, K, Serial, [bond(Issuer?, D?, Serial?)|Rest?]) :-
     create_bonds(Issuer?, D?, K1?, S1?, Rest).
 create_bonds(_, _, 0, _, []).
 
-procedure append_bonds(Stream(Bond)?, Stream(Bond)?, Stream(Bond)).
-append_bonds([B|Bs], Ys, [B?|Zs?]) :- append_bonds(Bs?, Ys?, Zs).
-append_bonds([], Ys, Ys?).
+procedure append_instruments(Stream(Instrument)?, Stream(Instrument)?, Stream(Instrument)).
+append_instruments([X|Xs], Ys, [X?|Zs?]) :- append_instruments(Xs?, Ys?, Zs).
+append_instruments([], Ys, Ys?).
 
-%% K bonds of Issuer maturing at D out of the holdings: ok, with the bonds and
-%% the rest; or fail --- the precondition cent^k_{u,d} in c_p of Section 3.4
-%% does not hold --- with the bonds found and the rest, which the caller puts
+%% K instruments of Issuer and due D out of the holdings --- coins where D is
+%% `now`, bonds maturing at D otherwise: ok, with the instruments and the
+%% rest; or fail --- the precondition cent^k_{u,*} in c_p of Section 3.4 does
+%% not hold --- with the instruments found and the rest, which the caller puts
 %% back together.
-procedure select_bonds(Constant?, Integer?, Integer?, Stream(Bond)?, Constant, Stream(Bond), Stream(Bond)).
-select_bonds(_, _, 0, Hs, ok, [], Hs?).
-select_bonds(Issuer, D, K, [bond(I, M, S)|Rest], Status?, [bond(I?, M?, S?)|Sel?], Rem?) :-
-    K? > 0, Issuer? =?= I?, D? =:= M? |
+procedure select_instruments(Constant?, Constant?, Integer?, Stream(Instrument)?, Constant, Stream(Instrument), Stream(Instrument)).
+select_instruments(_, _, 0, Hs, ok, [], Hs?).
+select_instruments(Issuer, D, K, [coin(I, S)|Rest], Status?, [coin(I?, S?)|Sel?], Rem?) :-
+    K? > 0, Issuer? =?= I?, D? =?= now |
     K1 := K? - 1,
-    select_bonds(Issuer?, D?, K1?, Rest?, Status, Sel, Rem).
-select_bonds(Issuer, D, K, [B|Rest], Status?, Sel?, [B?|Rem?]) :-
+    select_instruments(Issuer?, D?, K1?, Rest?, Status, Sel, Rem).
+select_instruments(Issuer, D, K, [bond(I, M, S)|Rest], Status?, [bond(I?, M?, S?)|Sel?], Rem?) :-
+    K? > 0, Issuer? =?= I?, D? =?= M? |
+    K1 := K? - 1,
+    select_instruments(Issuer?, D?, K1?, Rest?, Status, Sel, Rem).
+select_instruments(Issuer, D, K, [X|Rest], Status?, Sel?, [X?|Rem?]) :-
     otherwise |
-    select_bonds(Issuer?, D?, K?, Rest?, Status, Sel, Rem).
-select_bonds(_, _, K, [], fail, [], []) :- K? > 0 | true.
+    select_instruments(Issuer?, D?, K?, Rest?, Status, Sel, Rem).
+select_instruments(_, _, K, [], fail, [], []) :- K? > 0 | true.
+
+%% One instrument of Issuer and due D out of the holdings, or not_found with
+%% the holdings intact.
+procedure take_instrument(Constant?, Constant?, Stream(Instrument)?, Found, Stream(Instrument)).
+take_instrument(Issuer, D, [coin(I, S)|Rest], found(coin(I?, S?)), Rest?) :-
+    Issuer? =?= I?, D? =?= now | true.
+take_instrument(Issuer, D, [bond(I, M, S)|Rest], found(bond(I?, M?, S?)), Rest?) :-
+    Issuer? =?= I?, D? =?= M? | true.
+take_instrument(Issuer, D, [X|Rest], Found?, [X?|Rem?]) :-
+    otherwise |
+    take_instrument(Issuer?, D?, Rest?, Found, Rem).
+take_instrument(_, _, [], not_found, []).
 
 %% One bond of Issuer maturing at D out of the holdings, or not_found with the
 %% holdings intact.
-procedure take_bond(Constant?, Integer?, Stream(Bond)?, Found, Stream(Bond)).
+procedure take_bond(Constant?, Integer?, Stream(Instrument)?, Found, Stream(Instrument)).
 take_bond(Issuer, D, [bond(I, M, S)|Rest], found(bond(I?, M?, S?)), Rest?) :-
     Issuer? =?= I?, D? =:= M? | true.
-take_bond(Issuer, D, [B|Rest], Found?, [B?|Rem?]) :-
+take_bond(Issuer, D, [X|Rest], Found?, [X?|Rem?]) :-
     otherwise |
     take_bond(Issuer?, D?, Rest?, Found, Rem).
 take_bond(_, _, [], not_found, []).
 
-%% Whether every bond is a coin of the holder: issued by it, and mature by its
-%% own date --- the issuer's date test d <= d*_q of pay and redeem.
-procedure own_coins(Constant?, Integer?, Stream(Bond)?, Constant).
-own_coins(Id, Date, [bond(I, M, _)|Rest], R?) :-
-    Id? =?= I?, M? =< Date? |
-    own_coins(Id?, Date?, Rest?, R).
-own_coins(_, _, [bond(_, _, _)|_], no) :- otherwise | true.
-own_coins(_, _, [], yes).
+%% Whether every instrument is a coin of the holder: what a payee takes as a
+%% payment of its own coins.
+procedure own_coins(Constant?, Stream(Instrument)?, Constant).
+own_coins(Id, [coin(I, _)|Rest], R?) :-
+    Id? =?= I? |
+    own_coins(Id?, Rest?, R).
+own_coins(_, [_|_], no) :- otherwise | true.
+own_coins(_, [], yes).
 
-procedure count_bonds(Stream(Bond)?, Integer?, Integer).
-count_bonds([_|Bs], N, M?) :- N1 := N? + 1, count_bonds(Bs?, N1?, M).
-count_bonds([], N, N?).
+procedure count_instruments(Stream(Instrument)?, Integer?, Integer).
+count_instruments([_|Xs], N, M?) :- N1 := N? + 1, count_instruments(Xs?, N1?, M).
+count_instruments([], N, N?).
 
-%% The holdings tallied by issuer and maturity, in order of first appearance.
-procedure tally(Stream(Bond)?, Stream(Lot)?, Stream(Lot)).
+%% The holdings tallied by issuer and due, in order of first appearance.
+procedure tally(Stream(Instrument)?, Stream(Lot)?, Stream(Lot)).
+tally([coin(I, _)|Rest], Acc, Lots?) :-
+    ground(I?) |
+    tally_add(I?, now, Acc?, Acc1),
+    tally(Rest?, Acc1?, Lots).
 tally([bond(I, M, _)|Rest], Acc, Lots?) :-
     ground(I?), integer(M?) |
     tally_add(I?, M?, Acc?, Acc1),
     tally(Rest?, Acc1?, Lots).
 tally([], Acc, Acc?).
 
-procedure tally_add(Constant?, Integer?, Stream(Lot)?, Stream(Lot)).
-tally_add(I, M, [lot(I2, M2, N)|Rest], [lot(I2?, M2?, N1?)|Rest?]) :-
-    I? =?= I2?, M? =:= M2? |
+procedure tally_add(Constant?, Constant?, Stream(Lot)?, Stream(Lot)).
+tally_add(I, D, [lot(I2, D2, N)|Rest], [lot(I2?, D2?, N1?)|Rest?]) :-
+    I? =?= I2?, D? =?= D2? |
     N1 := N? + 1.
-tally_add(I, M, [L|Rest], [L?|Rest1?]) :- otherwise | tally_add(I?, M?, Rest?, Rest1).
-tally_add(I, M, [], [lot(I?, M?, 1)]).
+tally_add(I, D, [L|Rest], [L?|Rest1?]) :- otherwise | tally_add(I?, D?, Rest?, Rest1).
+tally_add(I, D, [], [lot(I?, D?, 1)]).
 
-%% The lots held, the holder's own apart: what an issuer discloses to a bearer
-%% whose presentation it cannot fulfil as named.
-procedure menu_of(Constant?, Stream(Bond)?, Stream(Lot)?, Stream(Lot)).
+%% The lots held, the holder's own apart, coins and bonds: what an issuer
+%% discloses to a bearer whose presentation it cannot fulfil as named.
+procedure menu_of(Constant?, Stream(Instrument)?, Stream(Lot)?, Stream(Lot)).
+menu_of(Id, [coin(I, _)|Rest], Acc, Menu?) :-
+    Id? =?= I? |
+    menu_of(Id?, Rest?, Acc?, Menu).
 menu_of(Id, [bond(I, _, _)|Rest], Acc, Menu?) :-
     Id? =?= I? |
     menu_of(Id?, Rest?, Acc?, Menu).
+menu_of(Id, [coin(I, _)|Rest], Acc, Menu?) :-
+    otherwise |
+    tally_add(I?, now, Acc?, Acc1),
+    menu_of(Id?, Rest?, Acc1?, Menu).
 menu_of(Id, [bond(I, M, _)|Rest], Acc, Menu?) :-
     otherwise |
     tally_add(I?, M?, Acc?, Acc1),
@@ -309,7 +372,7 @@ menu_of(_, [], Acc, Acc?).
 %% =============================================================================
 
 %% The warranties with the pair (Issuer, Date) added: the set union
-%% w'_p = w_p + {(q, d*_q)} of pay and redeem.
+%% w'_p = w_p + {(q, d*_q)} of mature.
 procedure add_warranty(Constant?, Integer?, Stream(Warranty)?, Stream(Warranty)).
 add_warranty(Q, T, [dated(Q1, T1)|Rest], [dated(Q1?, T1?)|Rest?]) :-
     Q? =?= Q1?, T? =:= T1? | true.
@@ -353,69 +416,79 @@ drop_link(linked).
 %% The counterparty's answer to a proposed swap, when it comes, with the link
 %% the proposal was made on.
 procedure inject_swap_result(SwapResponse?, Constant?, Link?, Stream(UserInMsg)?, Stream(UserInMsg)).
-inject_swap_result(swap_accept(Bonds), Q, Link, Ys, [swap_accepted(Q?, Bonds?, Link?)|Ys?]) :-
-    ground(Q?), ground(Bonds?) | true.
-inject_swap_result(swap_decline(Bonds), Q, Link, Ys, [swap_declined_by(Q?, Bonds?, Link?)|Ys?]) :-
-    ground(Q?), ground(Bonds?) | true.
+inject_swap_result(swap_accept(Given), Q, Link, Ys, [swap_accepted(Q?, Given?, Link?)|Ys?]) :-
+    ground(Q?), ground(Given?) | true.
+inject_swap_result(swap_decline(Given), Q, Link, Ys, [swap_declined_by(Q?, Given?, Link?)|Ys?]) :-
+    ground(Q?), ground(Given?) | true.
 inject_swap_result(R, Q, Link, [Y|Ys], [Y?|Ys1?]) :-
     inject_swap_result(R?, Q?, Link?, Ys?, Ys1).
 
-%% The payee's answer to a payment of K bonds, when it comes.
+%% The payee's answer to a payment of K coins, when it comes.
 procedure inject_pay_result(PayResponse?, Constant?, Integer?, Stream(UserInMsg)?, Stream(UserInMsg)).
-inject_pay_result(pay_taken(T), Q, K, Ys, [pay_taken_by(Q?, K?, T?)|Ys?]) :-
-    ground(Q?), integer(T?) | true.
-inject_pay_result(pay_returned(Bonds), Q, _, Ys, [pay_returned_by(Q?, Bonds?)|Ys?]) :-
-    ground(Q?), ground(Bonds?) | true.
+inject_pay_result(pay_taken, Q, K, Ys, [pay_taken_by(Q?, K?)|Ys?]) :-
+    ground(Q?) | true.
+inject_pay_result(pay_returned(Coins), Q, _, Ys, [pay_returned_by(Q?, Coins?)|Ys?]) :-
+    ground(Q?), ground(Coins?) | true.
 inject_pay_result(R, Q, K, [Y|Ys], [Y?|Ys1?]) :-
     inject_pay_result(R?, Q?, K?, Ys?, Ys1).
 
-%% The issuer's answer to a presentation, when it comes.
-procedure inject_redeem_result(RedeemResponse?, Constant?, Stream(UserInMsg)?, Stream(UserInMsg)).
-inject_redeem_result(redeem_give(B, T), Q, Ys, [redeem_given(Q?, B?, T?)|Ys?]) :-
-    ground(Q?), ground(B?), integer(T?) | true.
-inject_redeem_result(redeem_menu(B, Menu), Q, Ys, [redeem_menu_from(Q?, B?, Menu?)|Ys?]) :-
-    ground(Q?), ground(B?), ground(Menu?) | true.
-inject_redeem_result(redeem_declined(B), Q, Ys, [redeem_declined_by(Q?, B?)|Ys?]) :-
-    ground(Q?), ground(B?) | true.
-inject_redeem_result(R, Q, [Y|Ys], [Y?|Ys1?]) :-
-    inject_redeem_result(R?, Q?, Ys?, Ys1).
+%% The issuer's answer to a presentation for an instrument of R due D1, when
+%% it comes.
+procedure inject_redeem_result(RedeemResponse?, Constant?, Constant?, Constant?, Stream(UserInMsg)?, Stream(UserInMsg)).
+inject_redeem_result(redeem_give(X), Q, R, D1, Ys, [redeem_given(Q?, R?, D1?, X?)|Ys?]) :-
+    ground(Q?), ground(X?) | true.
+inject_redeem_result(redeem_menu(Coin, Menu), Q, _, _, Ys, [redeem_menu_from(Q?, Coin?, Menu?)|Ys?]) :-
+    ground(Q?), ground(Coin?), ground(Menu?) | true.
+inject_redeem_result(redeem_declined(Coin), Q, _, _, Ys, [redeem_declined_by(Q?, Coin?)|Ys?]) :-
+    ground(Q?), ground(Coin?) | true.
+inject_redeem_result(Resp, Q, R, D1, [Y|Ys], [Y?|Ys1?]) :-
+    inject_redeem_result(Resp?, Q?, R?, D1?, Ys?, Ys1).
+
+%% The issuer's answer to a bond maturing at D presented to it, when it comes.
+procedure inject_mature_result(MatureResponse?, Constant?, Integer?, Stream(UserInMsg)?, Stream(UserInMsg)).
+inject_mature_result(mature_give(Coin, T), Q, D, Ys, [matured_by(Q?, D?, Coin?, T?)|Ys?]) :-
+    ground(Q?), ground(Coin?), integer(T?) | true.
+inject_mature_result(mature_declined(Bond), Q, _, Ys, [not_matured_by(Q?, Bond?)|Ys?]) :-
+    ground(Q?), ground(Bond?) | true.
+inject_mature_result(Resp, Q, D, [Y|Ys], [Y?|Ys1?]) :-
+    inject_mature_result(Resp?, Q?, D?, Ys?, Ys1).
 
 %% The receiver's answer to a proposed transfer, when it comes, with the link
 %% the proposal was made on.
 procedure inject_transfer_result(TransferResponse?, Kind?, Constant?, Link?, Stream(UserInMsg)?, Stream(UserInMsg)).
 inject_transfer_result(transfer_accept, Kind, Q, Link, Ys, [transfer_accepted(Kind?, Q?, Link?)|Ys?]) :-
     ground(Kind?), ground(Q?) | true.
-inject_transfer_result(transfer_decline(Bonds), Kind, Q, Link, Ys, [transfer_declined_by(Kind?, Q?, Bonds?, Link?)|Ys?]) :-
-    ground(Kind?), ground(Q?), ground(Bonds?) | true.
+inject_transfer_result(transfer_decline(Given), Kind, Q, Link, Ys, [transfer_declined_by(Kind?, Q?, Given?, Link?)|Ys?]) :-
+    ground(Kind?), ground(Q?), ground(Given?) | true.
 inject_transfer_result(R, Kind, Q, Link, [Y|Ys], [Y?|Ys1?]) :-
     inject_transfer_result(R?, Kind?, Q?, Link?, Ys?, Ys1).
 
 %% The two bodies of the swap responder's accept clause: the acceptance, and
 %% the refusal the machine gives for a person who has not answered.  Each hands
 %% the agent the offer with the response writer and the link.
-procedure accept_answer(Constant?, Lot?, Stream(Bond)?, SwapResponse, Link?, Stream(UserInMsg)).
+procedure accept_answer(Constant?, Lot?, Stream(Instrument)?, SwapResponse, Link?, Stream(UserInMsg)).
 accept_answer(From, Want, Offered, Resp?, Link, [accept_swap(From?, Want?, Offered?, Resp, Link?)]).
 
-procedure decline_answer(Constant?, Stream(Bond)?, SwapResponse, Link?, Stream(UserInMsg)).
+procedure decline_answer(Constant?, Stream(Instrument)?, SwapResponse, Link?, Stream(UserInMsg)).
 decline_answer(From, Offered, Resp?, Link, [decline_swap(From?, Offered?, Resp, Link?)]).
 
 %% The same for the transfer responder.
-procedure accept_transfer_answer(Kind?, Constant?, Stream(Bond)?, TransferResponse, Link?, Stream(UserInMsg)).
-accept_transfer_answer(Kind, From, Bonds, Resp?, Link, [accept_transfer(Kind?, From?, Bonds?, Resp, Link?)]).
+procedure accept_transfer_answer(Kind?, Constant?, Stream(Instrument)?, TransferResponse, Link?, Stream(UserInMsg)).
+accept_transfer_answer(Kind, From, Given, Resp?, Link, [accept_transfer(Kind?, From?, Given?, Resp, Link?)]).
 
-procedure decline_transfer_answer(Kind?, Constant?, Stream(Bond)?, TransferResponse, Link?, Stream(UserInMsg)).
-decline_transfer_answer(Kind, From, Bonds, Resp?, Link, [decline_transfer(Kind?, From?, Bonds?, Resp, Link?)]).
+procedure decline_transfer_answer(Kind?, Constant?, Stream(Instrument)?, TransferResponse, Link?, Stream(UserInMsg)).
+decline_transfer_answer(Kind, From, Given, Resp?, Link, [decline_transfer(Kind?, From?, Given?, Resp, Link?)]).
 
-%% Binding a declined swap's response: the offered bonds go back.
-procedure decline(SwapResponse, Stream(Bond)?).
-decline(swap_decline(Bonds?), Bonds).
+%% Binding a declined swap's response: the offered instruments go back.
+procedure decline(SwapResponse, Stream(Instrument)?).
+decline(swap_decline(Given?), Given).
 
-%% Binding a transfer's response: taken, or the bonds go back.
+%% Binding a transfer's response: taken, or the instruments go back.
 procedure take_transfer(TransferResponse).
 take_transfer(transfer_accept).
 
-procedure decline_transfer_resp(TransferResponse, Stream(Bond)?).
-decline_transfer_resp(transfer_decline(Bonds?), Bonds).
+procedure decline_transfer_resp(TransferResponse, Stream(Instrument)?).
+decline_transfer_resp(transfer_decline(Given?), Given).
 
 %% =============================================================================
 %% The screen, and the outputs

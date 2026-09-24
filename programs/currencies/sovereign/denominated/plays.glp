@@ -11,26 +11,26 @@
 imported procedure person#person(Constant?, Stream(Event)?, Stream(UserAnswer), Stream(Integer), Script?, Agreement?, Stream(ScreenContent)).
 
 %% play_mint(Screen): alice, alone, mints 3 coins of her own.
-%% Expected: Screen = [minted(3, 0), holdings([lot(alice, usd, 0, 3)]) | _].
+%% Expected: Screen = [minted(3, now), holdings([lot(alice, usd, now, 3)]) | _].
 exported procedure play_mint(Stream(ScreenContent)).
 play_mint(Screen?) :-
     self_module(M),
     find_type(sovereign/3, T),
     run(sovereign(alice, ch(Answers?, Events), []), T?, M?),
-    person # person(alice, Events?, Answers, _, [mint(usd, 3, 0)], none, Screen).
+    person # person(alice, Events?, Answers, _, [mint(usd, 3)], none, Screen).
 
 %% play_swap(ScreenA, ScreenB): alice and bob with one conversation between
 %% their two executions; each mints 2, alice offers her 2 for bob's 2, and bob
 %% accepts.
-%% Expected: ScreenA = [opened(bob), minted(2, 0), holdings([lot(alice, usd, 0, 2)]),
-%%   holdings([]), swap_done(bob), holdings([lot(bob, usd, 0, 2)]) | _],
-%%   ScreenB = [opened(alice), minted(2, 0), holdings([lot(bob, usd, 0, 2)]),
-%%   swap_done(alice), holdings([lot(alice, usd, 0, 2)]) | _].
+%% Expected: ScreenA = [opened(bob), minted(2, now), holdings([lot(alice, usd, now, 2)]),
+%%   holdings([]), swap_done(bob), holdings([lot(bob, usd, now, 2)]) | _],
+%%   ScreenB = [opened(alice), minted(2, now), holdings([lot(bob, usd, now, 2)]),
+%%   swap_done(alice), holdings([lot(alice, usd, now, 2)]) | _].
 exported procedure play_swap(Stream(ScreenContent), Stream(ScreenContent)).
 play_swap(ScreenA?, ScreenB?) :-
     self_module(M),
     find_type(sovereign/3, T),
     run(sovereign(alice, ch(AnswersA?, EventsA), [conversation(bob, ch(AB?, BA))]), T?, M?),
-    person # person(alice, EventsA?, AnswersA, _, [mint(usd, 2, 0), swap(bob, usd, alice, 0, 2, bob, 0, 2)], none, ScreenA),
+    person # person(alice, EventsA?, AnswersA, _, [mint(usd, 2), swap(bob, usd, alice, now, 2, bob, now, 2)], none, ScreenA),
     run(sovereign(bob, ch(AnswersB?, EventsB), [conversation(alice, ch(BA?, AB))]), T?, M?),
-    person # person(bob, EventsB?, AnswersB, _, [mint(usd, 2, 0), accept(alice)], none, ScreenB).
+    person # person(bob, EventsB?, AnswersB, _, [mint(usd, 2), accept(alice)], none, ScreenB).

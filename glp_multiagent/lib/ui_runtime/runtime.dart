@@ -74,9 +74,11 @@ class ActivityStore {
   /// escrowed bonds are precisely those the holder no longer holds.
   final Map<String, Map<String, GTerm>> escrow = {};
 
-  /// A declared balances view: `balances[viewStore][key]` is an amount. A
-  /// snapshot REPLACES what the view held — the program tallies its whole
-  /// state after every change, so a key no longer reported is no longer held.
+  /// A declared balances view: `balances[viewStore][key]` is an amount, the
+  /// key the formatted term naming what is counted — every argument of the
+  /// reported item but the last. A snapshot REPLACES what the view held — the
+  /// program tallies its whole state after every change, so a key no longer
+  /// reported is no longer held.
   final Map<String, Map<String, GTerm>> balances = {};
 }
 
@@ -149,7 +151,9 @@ class UiRuntime {
     // constructor and arity — `card`/3 is one constructor for every clause of
     // the program — so these two come first and consume what they recognise.
     if (ctor == cardCtor && args.length == 3 && _handleCard(args)) return;
-    if (ctor == closedCtor && args.length == 1 && _handleClosed(args[0])) return;
+    if ((ctor == closedCtor || ctor == abortedCtor) &&
+        args.length == 1 &&
+        _handleClosed(args[0])) return;
 
     // A notify may retire pending cards as well as land as a card or an
     // activity of its own — an escrow expiring both removes its cancel offer
@@ -222,9 +226,12 @@ class UiRuntime {
     return true;
   }
 
-  /// `closed(req(N))`: the mediator retired that ask — the person declined it,
-  /// or another clause reduced the goal and aborted it. The ask
-  /// goes from whatever holds it; a card left with no ask is gone.
+  /// `closed(req(N))` or `aborted(req(N))`: the mediator retired that ask. The
+  /// two differ in what became of the person's act — `closed` says it took
+  /// effect, `aborted` that another clause reduced the goal and it came to
+  /// nothing (Udi, 2026-09-24) — and the card goes either way, so the surface
+  /// treats them alike. The ask goes from whatever holds it; a card left with
+  /// no ask is gone.
   bool _handleClosed(GTerm reqId) {
     final key = formatTerm(reqId);
     var changed = false;
@@ -268,14 +275,25 @@ class UiRuntime {
         if (content == null) continue;
         switch (v.kind) {
           case ViewKind.balances:
-            // A tally of pairs `f(Key, Amount)`, replacing what was held.
+            // A tally of items `f(K1, ..., Kn, Amount)`, replacing what was
+            // held. What is counted is named by every argument but the last,
+            // and the last is how many of it are held: a coins lot
+            // `lot(alice, 2)` is named by its issuer, a sovereign lot
+            // `lot(cb, usd, 0, 30)` by its issuer, its denomination and its
+            // maturity together. The row's identity is that name as a term —
+            // the one argument where there is one, and the item's own
+            // constructor over them where there are several — so two lots of
+            // one thing are one row; the person reads its default display,
+            // the arguments in order ([displayKey]).
             final rows = <String, GTerm>{};
             if (content is GList) {
               for (final item in content.items) {
-                final (_, itemArgs) = ctorArgs(item);
-                if (itemArgs.length == 2) {
-                  rows[formatTerm(itemArgs[0])] = itemArgs[1];
-                }
+                final (ctor, itemArgs) = ctorArgs(item);
+                if (itemArgs.length < 2) continue;
+                final named = itemArgs.sublist(0, itemArgs.length - 1);
+                final key =
+                    named.length == 1 ? named.first : GStruct(ctor, named);
+                rows[formatTerm(key)] = itemArgs.last;
               }
             }
             store.balances[v.store] = rows;
@@ -534,6 +552,7 @@ class UiRuntime {
 /// compiled program — they are the compilation's, not any application's.
 const String cardCtor = 'card';
 const String closedCtor = 'closed';
+const String abortedCtor = 'aborted';
 const String answerCtor = 'answer';
 const String declineCtor = 'decline';
 

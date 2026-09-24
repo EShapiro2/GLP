@@ -62,6 +62,10 @@ class ExecutionResult {
   bool get succeeded => status == ExecutionStatus.succeeded;
   bool get failed => status == ExecutionStatus.failed;
   bool get suspended => status == ExecutionStatus.suspended;
+
+  /// The cycle limit stopped the run with goals still queued: the query did
+  /// not finish, and none of the three above is what it did.
+  bool get capped => status == ExecutionStatus.capped;
 }
 
 /// Module info for tracking loaded modules
@@ -862,6 +866,7 @@ class GlpEngine {
 
     var allSucceeded = true;
     var anySuspended = false;
+    var anyCapped = false;
 
     for (final goal in goals) {
       final functor = goal.functor;
@@ -920,6 +925,8 @@ class GlpEngine {
       // continued; failure now does too, and the query is reported failed.
       if (result.status == ExecutionStatus.failed) {
         allSucceeded = false;
+      } else if (result.status == ExecutionStatus.capped) {
+        anyCapped = true;
       } else if (result.status == ExecutionStatus.suspended) {
         anySuspended = true;
       }
@@ -938,9 +945,15 @@ class GlpEngine {
       }
     }
 
+    // A conjunct the cycle limit stopped did not finish, so the conjunction
+    // did not either: it is reported as what it is and never as succeeded.
     final status = !allSucceeded
         ? ExecutionStatus.failed
-        : (anySuspended ? ExecutionStatus.suspended : ExecutionStatus.succeeded);
+        : (anyCapped
+            ? ExecutionStatus.capped
+            : (anySuspended
+                ? ExecutionStatus.suspended
+                : ExecutionStatus.succeeded));
 
     return ExecutionResult(
       status: status,

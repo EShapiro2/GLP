@@ -5,7 +5,8 @@
 %% the two must agree), and three plays.  Section VG of test/run_all_tests.sh
 %% runs them: an answer reaches its clause, a mismatched answer leaves the
 %% pending table as it is, and a clause reducing a goal with an open ask
-%% drops the ask and closes its card.
+%% drops the ask and reports its card ABORTED --- aborted and not closed,
+%% since the ask carries no reduction at all (Udi, 2026-09-24).
 
 Offer    ::= offer(Constant).
 Decision ::= decided(Constant, Constant) ; greeted(Constant, Constant) ; picked(Constant).
@@ -27,7 +28,7 @@ Escrow ::= esc_respond_1(Reply_respond_1?) ; esc_greet_1(Reply_greet_1?) ; esc_p
 Context ::= Ctx_respond_1 ; Ctx_greet_1 ; Ctx_pick_1.
 Slot(R) ::= none ; ask(R, ReqId).
 AgentMsg ::= ask(Constant, Context, Escrow, ReqId?) ; abort(ReqId).
-Card ::= card(Constant, Context, ReqId) ; closed(ReqId).
+Card ::= card(Constant, Context, ReqId) ; closed(ReqId) ; aborted(ReqId).
 UserAnswer ::= answer(ReqId, Answer) ; decline(ReqId).
 PendingEntry ::= pending(ReqId, Escrow).
 PendingList ::= [] ; [PendingEntry | PendingList].
@@ -88,7 +89,8 @@ person_mismatch([_ | Cs], As?) :- otherwise | person_mismatch(Cs?, As).
 person_mismatch([], []).
 
 %% pick's card is open when go arrives; the ordinary clause reduces the goal,
-%% aborts the ask, and the mediator drops the entry and closes the card.
+%% aborts the ask, and the mediator drops the entry and reports the card
+%% aborted.
 exported procedure play_abort.
 play_abort :-
     responder # pick(ch([], Asks), Go?, offer(bob), D, none),
@@ -98,16 +100,16 @@ play_abort :-
 procedure person_abort(Stream(Card)?, Stream(UserAnswer), Stream(Constant), Stream(Decision)?).
 person_abort([card(pick_1, ctx_pick_1(From), R) | Cs], [], [go], D) :-
     ground(From?), ground(R?) |
-    seen_closed(Cs?, R?, D?).
+    seen_aborted(Cs?, R?, D?).
 person_abort([_ | Cs], As?, Go?, D) :- otherwise | person_abort(Cs?, As, Go, D?).
 person_abort([], [], [], _).
 
-procedure seen_closed(Stream(Card)?, ReqId?, Stream(Decision)?).
-seen_closed([closed(R1) | _], R, D) :-
+procedure seen_aborted(Stream(Card)?, ReqId?, Stream(Decision)?).
+seen_aborted([aborted(R1) | _], R, D) :-
     R? =?= R1?, ground(D?) |
-    send_to_user([tagged(abort, closed(R?), D?)]).
-seen_closed([_ | Cs], R, D) :- otherwise | seen_closed(Cs?, R?, D?).
-seen_closed([], _, _).
+    send_to_user([tagged(abort, aborted(R?), D?)]).
+seen_aborted([_ | Cs], R, D) :- otherwise | seen_aborted(Cs?, R?, D?).
+seen_aborted([], _, _).
 
 procedure report(Constant?, Stream(Decision)?).
 report(Tag, D) :- ground(D?) | send_to_user([tagged(Tag?, D?)]).

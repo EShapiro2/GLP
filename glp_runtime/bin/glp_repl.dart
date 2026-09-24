@@ -366,6 +366,8 @@ void _printStatus(ExecutionStatus status) {
       print('→ failed');
     case ExecutionStatus.suspended:
       print('→ suspended');
+    case ExecutionStatus.capped:
+      print('→ capped (the cycle limit stopped the run with goals still queued)');
   }
 }
 

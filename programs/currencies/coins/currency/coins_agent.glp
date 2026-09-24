@@ -24,7 +24,7 @@ Context ::= Ctx_respond_swap_1 ; ctx_agent_1 ; ctx_agent_2 ; ctx_agent_3 ; ctx_a
 ReqId ::= req(Integer).
 Slot(R) ::= none ; ask(R, ReqId).
 AgentMsg ::= ask(Constant, Context, Escrow, ReqId?) ; abort(ReqId).
-Card ::= card(Constant, Context, ReqId) ; closed(ReqId).
+Card ::= card(Constant, Context, ReqId) ; closed(ReqId) ; aborted(ReqId).
 UserAnswer ::= answer(ReqId, Answer) ; decline(ReqId).
 PendingEntry ::= pending(ReqId, Escrow).
 PendingList ::= [] ; [PendingEntry | PendingList].
@@ -116,9 +116,9 @@ after_change(Med, Id, UserIn, PeerIn, Convs, Outs, Holdings, Serial) :- ground(H
 %% --- the mediator, and the pending table with the program's clauses ahead of the search clauses ---
 exported procedure med(Channel(Stream(UserAnswer), Stream(Card))?, Channel(Stream(AgentMsg), Closed)?, PendingList?, Integer?).
 med(UserCh, AgentCh, Ps, N) :- receive(ask(C, Ctx, Esc, Id?), AgentCh?, AgentCh1), ground(C?), ground(Ctx?) | Id = req(N?), send(card(C?, Ctx?, req(N?)), UserCh?, UserCh1), N1 := (N? + 1), med(UserCh1?, AgentCh1?, [pending(req(N?), Esc?) | Ps?], N1?).
-med(UserCh, AgentCh, Ps, N) :- receive(answer(ReqId, Vs), UserCh?, UserCh1), ground(ReqId?), ground(Vs?) | answer(ReqId?, Vs?, Ps?, Ps1), med(UserCh1?, AgentCh?, Ps1?, N?).
+med(UserCh, AgentCh, Ps, N) :- receive(answer(ReqId, Vs), UserCh?, UserCh1), ground(ReqId?), ground(Vs?) | answer(ReqId?, Vs?, Ps?, Ps1), send(closed(ReqId?), UserCh1?, UserCh2), med(UserCh2?, AgentCh?, Ps1?, N?).
 med(UserCh, AgentCh, Ps, N) :- receive(decline(ReqId), UserCh?, UserCh1), ground(ReqId?) | close(ReqId?, Ps?, Ps1), send(closed(ReqId?), UserCh1?, UserCh2), med(UserCh2?, AgentCh?, Ps1?, N?).
-med(UserCh, AgentCh, Ps, N) :- receive(abort(ReqId), AgentCh?, AgentCh1), ground(ReqId?) | drop(ReqId?, Ps?, Ps1), send(closed(ReqId?), UserCh?, UserCh1), med(UserCh1?, AgentCh1?, Ps1?, N?).
+med(UserCh, AgentCh, Ps, N) :- receive(abort(ReqId), AgentCh?, AgentCh1), ground(ReqId?) | drop(ReqId?, Ps?, Ps1), send(aborted(ReqId?), UserCh?, UserCh1), med(UserCh1?, AgentCh1?, Ps1?, N?).
 
 exported procedure answer(ReqId?, Answer?, PendingList?, PendingList).
 answer(ReqId, xs_respond_swap_1(X1), [pending(Id, esc_respond_swap_1(R?)) | Ps], Ps?) :- (ReqId? =?= Id?) | R = then(xs_respond_swap_1(X1?)).

@@ -102,6 +102,12 @@ class AgentRuntime {
   // Enable GLP trace output
   bool glpTraceEnabled = true;
 
+  /// The safety net on one event's reduction: how many goals it may run before
+  /// the runtime declares the program non-quiescent and stops. It is not a
+  /// budget an event may quietly exceed — reaching it is reported as an error
+  /// and leaves the queue non-empty — and no program that quiesces reaches it.
+  int maxQuiescenceCycles = 200000;
+
   AgentRuntime({
     required this.agentId,
     required this.glpSources,
@@ -440,6 +446,12 @@ class AgentRuntime {
   ///
   /// Per agent-runtime-spec.md Section 3: one drain (run all runnable goals
   /// until quiescent), one flush (send all queued outbound messages).
+  ///
+  /// Quiescent is the queue empty and nothing runnable. One
+  /// [Scheduler.drainWithStatus] does not reach it — it stops at its cycle cap
+  /// with goals still queued — so the drain is [Scheduler.drainToQuiescence],
+  /// which repeats it until the queue is empty. The cap left behind is
+  /// [maxQuiescenceCycles], a net and not a budget.
   Future<String?> runUntilQuiescent() async {
     return _runUntilQuiescent();
   }
@@ -453,9 +465,22 @@ class AgentRuntime {
 
     try {
       // Per spec: drain all runnable goals, then flush outbound messages.
-      final result = _scheduler!.drainWithStatus(debug: glpTraceEnabled);
+      final result = _scheduler!.drainToQuiescence(
+          maxCycles: maxQuiescenceCycles, debug: glpTraceEnabled);
       _log('RUN: status=${result.status}, goals=${result.goalsRan.length}');
       goalCount += result.goalsRan.length;
+
+      if (result.status == ExecutionStatus.capped) {
+        // The net caught something, which for a program that quiesces it never
+        // does. Say so where the person and the log both see it, and say what
+        // is left standing: a run stopped here is half a run, and nothing that
+        // follows it means what it says.
+        _output('[ERROR] The program did not quiesce: stopped after '
+            '${result.goalsRan.length} goals with ${_runtime!.gq.length} '
+            'still queued (the limit is $maxQuiescenceCycles).');
+        _log('RUN: CAPPED after ${result.goalsRan.length} goals, '
+            'GQ=${_runtime!.gq.length}');
+      }
 
       final messagesFlushed = _ctx!.flushMessages();
       if (messagesFlushed > 0) {

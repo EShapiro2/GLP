@@ -17,7 +17,7 @@
 %%   2. collateral       Bob deposits 3 carol-coins with the escrow agent
 %%   3. fulfilment       Bob redeems his 5 alice-coins from Alice, taking back
 %%                       a bob-bond each time; Alice is left holding the one
-%%                       interest bond
+%%                       coupon bond
 %%   4. return           the escrow agent returns the 3 carol-coins to Bob
 %%   5. loan, defaulted  Alice gives Bob 5 more alice-coins for 6 bob-bonds
 %%                       maturing day 30
@@ -44,32 +44,32 @@ exported procedure run.
 run :-
     network4(AOut?, BOut?, COut?, GOut?, AIn, BIn, CIn, GIn),
     village # villager(alice,
-        [mint(5, 0), swap(bob, alice, 0, 5, bob, 20, 6),
+        [mint(5), swap(bob, alice, now, 5, bob, 20, 6),
          await(presented(bob, bob, 20)), await(presented(bob, bob, 20)),
          await(presented(bob, bob, 20)), await(presented(bob, bob, 20)),
          await(presented(bob, bob, 20)),
-         mint(5, 0), swap(bob, alice, 0, 5, bob, 30, 6),
+         mint(5), swap(bob, alice, now, 5, bob, 30, 6),
          accept_transfer(escrow)],
         AIn?, AOut),
     village # villager(bob,
-        [mint(6, 0), accept(carol),
+        [mint(6), accept(carol),
          mint(6, 20), accept(alice),
-         deposit(escrow, carol, 0, 3),
-         redeem(alice, 0, bob, 20), redeem(alice, 0, bob, 20),
-         redeem(alice, 0, bob, 20), redeem(alice, 0, bob, 20),
-         redeem(alice, 0, bob, 20),
+         deposit(escrow, carol, now, 3),
+         redeem(alice, bob, 20), redeem(alice, bob, 20),
+         redeem(alice, bob, 20), redeem(alice, bob, 20),
+         redeem(alice, bob, 20),
          accept_transfer(escrow),
          mint(6, 30), accept(alice),
-         deposit(escrow, carol, 0, 3)],
+         deposit(escrow, carol, now, 3)],
         BIn?, BOut),
     village # villager(carol,
-        [mint(6, 0), swap(bob, carol, 0, 6, bob, 0, 6)],
+        [mint(6), swap(bob, carol, now, 6, bob, now, 6)],
         CIn?, COut),
     village # villager(escrow,
         [accept_transfer(bob),
-         return(bob, carol, 0, 3),
+         return(bob, carol, now, 3),
          accept_transfer(bob),
-         release(alice, carol, 0, 3)],
+         release(alice, carol, now, 3)],
         GIn?, GOut).
 
 %% --- The network: first contacts, routed by addressee ---

@@ -37,7 +37,7 @@ exported procedure option_exercised.
 option_exercised :-
     network3o(AOut?, BOut?, GOut?, AIn, BIn, GIn),
     village # villager(alice,
-        [mint(10, 0), deposit(escrow, alice, 0, 2), deposit(escrow, alice, 0, 8),
+        [mint(10), deposit(escrow, alice, now, 2), deposit(escrow, alice, now, 8),
          accept_transfer(escrow)],
         AIn?, AOut),
     village # villager(bob,
@@ -47,15 +47,15 @@ option_exercised :-
     village # villager(escrow,
         [accept_transfer(alice), accept_transfer(alice), accept_transfer(bob),
          release(alice, bob, 40, 10),
-         release(bob, alice, 0, 2),
-         release(bob, alice, 0, 8)],
+         release(bob, alice, now, 2),
+         release(bob, alice, now, 8)],
         GIn?, GOut).
 
 exported procedure option_expired.
 option_expired :-
     network3o(AOut?, BOut?, GOut?, AIn, BIn, GIn),
     village # villager(alice,
-        [mint(10, 0), deposit(escrow, alice, 0, 2), deposit(escrow, alice, 0, 8),
+        [mint(10), deposit(escrow, alice, now, 2), deposit(escrow, alice, now, 8),
          accept_transfer(escrow)],
         AIn?, AOut),
     village # villager(bob,
@@ -66,8 +66,8 @@ option_expired :-
         [accept_transfer(alice), accept_transfer(alice), accept_transfer(bob),
          advance(41),
          return(bob, bob, 40, 10),
-         release(bob, alice, 0, 2),
-         return(alice, alice, 0, 8)],
+         release(bob, alice, now, 2),
+         return(alice, alice, now, 8)],
         GIn?, GOut).
 
 %% --- The network: first contacts, routed by addressee ---

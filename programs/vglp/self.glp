@@ -31,8 +31,11 @@ Slot(R) ::= none ; ask(R, ReqId).
 AgentMsg(E, X) ::= ask(Constant, X, E, ReqId?)
                  ; abort(ReqId).
 
-%% Mediator to person: the card of an open ask, and its removal.
-Card(X) ::= card(Constant, X, ReqId) ; closed(ReqId).
+%% Mediator to person: the card of an open ask, and its removal --- `closed`
+%% where the person's act took effect, the answer and the decline alike, and
+%% `aborted` where another clause reduced the goal and the ask carries no
+%% reduction at all (Udi, 2026-09-24).
+Card(X) ::= card(Constant, X, ReqId) ; closed(ReqId) ; aborted(ReqId).
 
 %% Person to mediator: the grant of a construct's tap or submission.  A decline
 %% is the person saying that they do not will the reduction, and it selects the

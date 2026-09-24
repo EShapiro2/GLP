@@ -265,6 +265,7 @@ Context ::= ctx_respond_swap_1(Constant, Lot, Stream(Coin)) ; ctx_agent_1 ; ctx_
 UserAnswer ::= answer(CReqId, Answer) ; decline(CReqId).
 Event ::= card(Constant, Context, CReqId)
         ; closed(CReqId)
+        ; aborted(CReqId)
         ; msg(Constant, Constant, ScreenContent).
 
 %% A person's script for the currency (core/superapp_plays.glp): its acts in
@@ -288,63 +289,86 @@ Choice     ::= answer(CReqId, Answer) ; wait.
 %% currency's are above and taken from that file rather than from their letter.
 %% The names are the super-app's, prefixed Sv throughout: EVERY one of them
 %% clashes with the currency's, the two mini-apps being hosted side by side and
-%% a bond not being a coin.  Structurally the channel is the currency's with a
-%% different payload and one act more --- a bond in place of a coin, pay
-%% carrying a response writer because the payee warrants its date, redeem
-%% carrying a maturity as well as an issuer, and transfer, the deposit, release
-%% and return of the paper's clause 7.
+%% an instrument not being the currency's coin.  Structurally the channel is the
+%% currency's with a different payload and more acts --- an instrument, a coin
+%% or a bond, in place of the currency's coin; pay carrying a response writer;
+%% payout new, and spend and spent, the two legs of a spend through the issuer
+%% of the coins spent; redeem carrying the issuer and due of the instrument
+%% wanted; mature new, a bond presented to its issuer; transfer, the deposit,
+%% release and return of the contract's clause 9; and the currency's return
+%% gone.
 %% =============================================================================
-SvBond     ::= bond(Constant, Constant, Integer, Integer).
-SvLot      ::= lot(Constant, Constant, Integer, Integer).
+SvInstrument ::= coin(Constant, Constant, Integer) ; bond(Constant, Constant, Integer, Integer).
+SvLot        ::= lot(Constant, Constant, Constant, Integer).
+SvAccepting  ::= accepting(Constant, Constant, Integer).
 SvKind ::= deposit ; release ; return.
-SvSwapResponse ::= swap_accept(Stream(SvBond)) ; swap_decline(Stream(SvBond)).
-SvPayResponse ::= pay_taken(Integer) ; pay_returned(Stream(SvBond)).
-SvRedeemResponse ::= redeem_give(SvBond, Integer)
-                   ; redeem_menu(SvBond, Stream(SvLot))
-                   ; redeem_declined(SvBond)
-                   ; redeem_fiat(Integer).
-SvTransferResponse ::= transfer_accept ; transfer_decline(Stream(SvBond)).
-SvContent ::= pay(Stream(SvBond), SvPayResponse?)
-            ; swap(SvLot, Stream(SvBond), SvSwapResponse?)
-            ; redeem(SvBond, Constant, Integer, SvRedeemResponse?)
-            ; transfer(SvKind, Stream(SvBond), SvTransferResponse?).
+SvSwapResponse ::= swap_accept(Stream(SvInstrument)) ; swap_decline(Stream(SvInstrument)).
+SvPayResponse ::= pay_taken ; pay_returned(Stream(SvInstrument)).
+SvRedeemResponse ::= redeem_give(SvInstrument)
+                   ; redeem_menu(SvInstrument, Stream(SvLot))
+                   ; redeem_declined(SvInstrument).
+SvMatureResponse ::= mature_give(SvInstrument, Integer) ; mature_declined(SvInstrument).
+SvTransferResponse ::= transfer_accept ; transfer_decline(Stream(SvInstrument)).
+SvContent ::= pay(Stream(SvInstrument), SvPayResponse?)
+            ; payout(Constant, Stream(SvInstrument), SvPayResponse?)
+            ; spend(Constant, Constant, Stream(SvInstrument), SvPayResponse?)
+            ; spent(Constant, Constant, Stream(SvInstrument), SvPayResponse?)
+            ; swap(SvLot, Stream(SvInstrument), SvSwapResponse?)
+            ; redeem(SvInstrument, Constant, Constant, SvRedeemResponse?)
+            ; mature(SvInstrument, SvMatureResponse?)
+            ; transfer(SvKind, Stream(SvInstrument), SvTransferResponse?).
 SvMsg     ::= msg(Constant, Constant, SvContent).
 SvChannel ::= ch(Stream(SvMsg), Stream(SvMsg)?).
 SvConversation ::= conversation(Constant, SvChannel).
 SvScreenContent ::= holdings(Stream(SvLot))
+                  ; acceptances(Stream(SvAccepting))
                   ; opened(Constant)
                   ; date_advanced(Integer)
                   ; warranty(Constant, Integer)
-                  ; minted(Integer, Integer)
-                  ; paying(Constant, Integer, Integer)
+                  ; minted(Integer, Constant)
+                  ; accepted(Constant, Constant, Integer)
+                  ; not_held(Constant, Constant)
+                  ; paying(Constant, Integer)
                   ; paid(Constant, Integer)
+                  ; paying_out(Constant, Integer)
+                  ; paid_out(Constant, Integer)
+                  ; spending(Constant, Constant, Integer)
+                  ; spent_at(Constant, Constant, Integer)
                   ; not_accepted(Constant, Integer)
                   ; received(Constant, Integer)
                   ; refused_payment(Constant, Integer)
+                  ; received_from(Constant, Constant, Integer)
+                  ; refused_from(Constant, Constant, Integer)
+                  ; countersigned(Constant, Constant, Integer)
+                  ; spend_returned(Constant, Constant, Integer)
                   ; swap_done(Constant)
                   ; swap_declined(Constant)
                   ; swap_failed(Constant)
                   ; declined(Constant)
-                  ; redeemed(Constant, Constant, Integer)
+                  ; redeemed(Constant, Constant, Constant)
                   ; menu(Constant, Stream(SvLot))
                   ; refused(Constant)
-                  ; presented(Constant, Constant, Integer)
-                  ; unfulfilled(Constant, Constant, Integer)
+                  ; presented(Constant, Constant, Constant)
+                  ; unfulfilled(Constant, Constant, Constant)
+                  ; matured(Constant, Integer)
+                  ; not_mature(Constant, Integer)
+                  ; matured_for(Constant, Integer)
+                  ; not_mature_for(Constant, Integer)
                   ; offered_transfer(SvKind, Constant, SvLot)
                   ; transferred(SvKind, Constant)
                   ; transfer_declined(SvKind, Constant)
                   ; received_transfer(SvKind, Constant, Stream(SvLot))
                   ; declined_transfer(SvKind, Constant)
-                  ; lacking(Constant, Integer, Integer)
-                  ; fiat_paid(Constant, Integer)
-                  ; fiat_received(Constant, Integer)
-                  ; no_conversation(Constant).
+                  ; lacking(Constant, Constant, Integer)
+                  ; no_conversation(Constant)
+                  ; fiat_handed(Constant, Integer).
 SvReqId ::= req(Integer).
-SvAnswer ::= xs_respond_swap_1(Constant) ; xs_respond_transfer_1(Constant) ; xs_agent_1(Constant, Integer, Integer) ; xs_agent_2(Constant, Constant, Constant, Integer, Integer, Constant, Integer, Integer) ; xs_agent_3(Constant, Constant, Integer, Integer) ; xs_agent_4(Constant, Constant, Integer, Constant, Integer) ; xs_agent_5(Constant, Constant, Constant, Integer, Integer) ; xs_agent_6(Constant, Constant, Constant, Integer, Integer) ; xs_agent_7(Constant, Constant, Constant, Integer, Integer).
-SvContext ::= ctx_respond_swap_1(Constant, SvLot, Stream(SvBond)) ; ctx_respond_transfer_1(SvKind, Constant, Stream(SvBond)) ; ctx_agent_1 ; ctx_agent_2 ; ctx_agent_3 ; ctx_agent_4 ; ctx_agent_5 ; ctx_agent_6 ; ctx_agent_7.
+SvAnswer ::= xs_respond_swap_1(Constant) ; xs_respond_transfer_1(Constant) ; xs_agent_1(Constant, Integer) ; xs_agent_2(Constant, Integer, Integer) ; xs_agent_3(Constant, Constant, Constant, Constant, Integer, Constant, Constant, Integer) ; xs_agent_4(Constant, Constant, Integer) ; xs_agent_5(Constant, Constant, Integer) ; xs_agent_6(Constant, Constant, Integer) ; xs_agent_7(Constant, Constant, Constant, Integer) ; xs_agent_8(Constant, Constant, Constant, Constant) ; xs_agent_9(Constant, Constant, Integer) ; xs_agent_10(Constant, Constant, Constant, Constant, Integer) ; xs_agent_11(Constant, Constant, Constant, Constant, Integer) ; xs_agent_12(Constant, Constant, Constant, Constant, Integer).
+SvContext ::= ctx_respond_swap_1(Constant, SvLot, Stream(SvInstrument)) ; ctx_respond_transfer_1(SvKind, Constant, Stream(SvInstrument)) ; ctx_agent_1 ; ctx_agent_2 ; ctx_agent_3 ; ctx_agent_4 ; ctx_agent_5 ; ctx_agent_6 ; ctx_agent_7 ; ctx_agent_8 ; ctx_agent_9 ; ctx_agent_10 ; ctx_agent_11 ; ctx_agent_12.
 SvUserAnswer ::= answer(SvReqId, SvAnswer) ; decline(SvReqId).
 SvEvent ::= card(Constant, SvContext, SvReqId)
           ; closed(SvReqId)
+          ; aborted(SvReqId)
           ; msg(Constant, Constant, SvScreenContent).
 
 %% =============================================================================
