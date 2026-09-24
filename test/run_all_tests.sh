@@ -569,8 +569,10 @@ producer(1, [X1, X2, X3 | Xs?]), consumer([X1?, X2?, X3? | Xs]).
 HEREDOC
 2>&1)
 
-check "bounded buffer consumer-first suspends (not fails)" "suspended" "$a19bb_cons"
-check "bounded buffer producer-first suspends" "suspended" "$a19bb_prod"
+check "bounded buffer consumer-first runs to the cycle limit" "capped" "$a19bb_cons"
+check_not "bounded buffer consumer-first does not fail" "→ failed" "$a19bb_cons"
+check "bounded buffer producer-first runs to the cycle limit" "capped" "$a19bb_prod"
+check_not "bounded buffer producer-first does not fail" "→ failed" "$a19bb_prod"
 
 # --- A20: Channel guards ---
 # new_channel/send/receive are prelude defined guards, unfolded by the PE.
