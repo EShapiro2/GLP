@@ -37,9 +37,16 @@
 /// message no view matches, so the holdings and the cards are those of
 /// `coinsManifest`; the test checks this against a runtime under
 /// `coinsManifest` fed the same lines.
+///
+/// The phones are cut below the balances, at Currencies' request of
+/// 2026-09-24: each shell is laid out as tall as the longest list, four rows,
+/// and one row's height under it, measured from the layout, and closes its
+/// lower edge with the bezel and corner radius of its upper edge, so the +
+/// button at the foot of the screen falls outside it.
 library;
 
 import 'dart:io';
+import 'dart:math' as math;
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
@@ -119,38 +126,51 @@ Future<void> _loadFonts() async {
   await mi.load();
 }
 
+/// The height of the screen within the shell of `coins_screen_test.dart`: its
+/// 740 points less the 10-point bezel above and below.
+const _screen = 720.0;
+
 /// The phone shell of `coins_screen_test.dart`, which took the Swap form and
-/// the proposal card already in the paper: same size, same bezel, same theme.
-Widget _phone(Widget surface) => Container(
+/// the proposal card already in the paper: the same width, bezel, corner radius
+/// and theme, and within it the same screen, laid out [_screen] points tall.
+/// The shell there is 740 points tall; a shorter [height] shows the top of that
+/// screen, and the shell closes its lower edge as its upper edge is closed.
+Widget _phone(Widget surface, {required double height}) => Container(
       width: 360,
-      height: 740,
+      height: height,
       padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
           color: Colors.black, borderRadius: BorderRadius.circular(40)),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(30),
-        child: Container(
-          color: Colors.white,
-          child: MaterialApp(
-            debugShowCheckedModeBanner: false,
-            theme: ThemeData(
-                fontFamily: 'AppFont',
-                useMaterial3: true,
-                colorScheme: ColorScheme.fromSeed(seedColor: Colors.green),
-                elevatedButtonTheme: ElevatedButtonThemeData(
-                    style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.green,
-                        foregroundColor: Colors.white))),
-            home: surface,
+        child: OverflowBox(
+          alignment: Alignment.topCenter,
+          minHeight: _screen,
+          maxHeight: _screen,
+          child: Container(
+            color: Colors.white,
+            child: MaterialApp(
+              debugShowCheckedModeBanner: false,
+              theme: ThemeData(
+                  fontFamily: 'AppFont',
+                  useMaterial3: true,
+                  colorScheme: ColorScheme.fromSeed(seedColor: Colors.green),
+                  elevatedButtonTheme: ElevatedButtonThemeData(
+                      style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.green,
+                          foregroundColor: Colors.white))),
+              home: surface,
+            ),
           ),
         ),
       ),
     );
 
-Widget _cell(_Villager v, UiRuntime r) => Column(
+Widget _cell(_Villager v, UiRuntime r, double height) => Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        _phone(AgentSurface(agentId: v.id, runtime: r, muteNotices: true)),
+        _phone(AgentSurface(agentId: v.id, runtime: r, muteNotices: true),
+            height: height),
         const SizedBox(height: 10),
         Text(v.name,
             style: const TextStyle(
@@ -228,36 +248,77 @@ void main() {
       runtimes[v.id] = r;
     }
 
-    Widget row(Iterable<_Villager> vs) => Row(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            for (final v in vs) ...[
-              if (v != vs.first) const SizedBox(width: 18),
-              _cell(v, runtimes[v.id]!),
-            ]
-          ],
-        );
-
-    await tester.pumpWidget(Directionality(
-      textDirection: TextDirection.ltr,
-      child: Center(
-        child: RepaintBoundary(
-          child: Column(
+    Widget grid(double height) {
+      Widget row(Iterable<_Villager> vs) => Row(
             mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              row(_villagers.sublist(0, 3)),
-              const SizedBox(height: 24),
-              row(_villagers.sublist(3, 6)),
+              for (final v in vs) ...[
+                if (v != vs.first) const SizedBox(width: 18),
+                _cell(v, runtimes[v.id]!, height),
+              ]
             ],
+          );
+      return Directionality(
+        textDirection: TextDirection.ltr,
+        child: Center(
+          child: RepaintBoundary(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                row(_villagers.sublist(0, 3)),
+                const SizedBox(height: 24),
+                row(_villagers.sublist(3, 6)),
+              ],
+            ),
           ),
         ),
-      ),
-    ));
+      );
+    }
+
+    Finder surfaceOf(_Villager v) =>
+        find.byWidgetPredicate((w) => w is AgentSurface && w.agentId == v.id);
+
+    // The cut, measured from the layout: the phones laid out 740 points tall,
+    // as in `coins_screen_test.dart`, and each balance row found on each
+    // screen.  The shell is cut one row's height below the lowest last row.
+    await tester.pumpWidget(grid(740));
+    await tester.pumpAndSettle();
+    final rowHeights = <double>{};
+    var balancesEnd = 0.0;
+    for (final v in _villagers) {
+      final top = tester.getRect(surfaceOf(v)).top;
+      final rows =
+          find.descendant(of: surfaceOf(v), matching: find.byType(ListTile));
+      expect(rows, findsNWidgets(_expected[v.id]!.length),
+          reason: '${v.id}: a balance row per holding');
+      for (var i = 0; i < _expected[v.id]!.length; i++) {
+        final rect = tester.getRect(rows.at(i));
+        rowHeights.add(rect.height);
+        balancesEnd = math.max(balancesEnd, rect.bottom - top);
+      }
+    }
+    expect(rowHeights, hasLength(1), reason: 'the balance rows differ in height');
+    final rowHeight = rowHeights.single;
+    final height = (balancesEnd + rowHeight + 20).ceilToDouble();
+    // ignore: avoid_print
+    print('[cut] the balances end $balancesEnd points down the screen, a row '
+        'is $rowHeight points, so the phone is $height points tall');
+
+    await tester.pumpWidget(grid(height));
     await tester.pumpAndSettle();
     // Every phone shows its BALANCES view, and none shows a SCREEN view.
     expect(find.text('BALANCES'), findsNWidgets(_villagers.length));
     expect(find.text('SCREEN'), findsNothing);
+    // The + button stands at the foot of the 720-point screen, below the
+    // shell's lower edge, so no phone shows it.
+    for (final v in _villagers) {
+      final screenBottom = tester.getRect(surfaceOf(v)).top + height - 20;
+      final plus = tester.getRect(find.descendant(
+          of: surfaceOf(v), matching: find.byType(FloatingActionButton)));
+      expect(plus.top, greaterThanOrEqualTo(screenBottom),
+          reason: '${v.id}: the + button shows above the cut');
+    }
 
     final boundary = tester.renderObject<RenderRepaintBoundary>(
         find.byType(RepaintBoundary).first);
