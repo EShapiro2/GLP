@@ -18,23 +18,25 @@
 /// through the app's own path.  Nothing is fed to a surface that its agent did
 /// not send, and no screen is copied from another.
 ///
-/// 🔴 THE FIGURE IS NOT READY TO SHIP, AND THE FAULT IS NOT THIS FILE'S TO FIX.
-/// Under `village_ui/3` the app is a passive observer: `village.glp:97--104`
-/// tees the villager's events to the app AND to the scripted person, and the
-/// person's answers go back on `Answers`, which the app never sees
-/// (`self.glp:325`, `village_ui(Id, _, _)`, discards the app's own answer
-/// stream).  The mediator emits `closed(ReqId)` for an ask it ABORTS and none
-/// for an ask that is FULFILLED --- the interface that gave the answer retires
-/// its own card, as `coins_screen_test.dart` does on Accept --- so an observing
-/// app is never told, and every `respond_swap_1` card the scripted person
-/// accepted stands open on the screen for ever.  Measured here: Alice and Diana
-/// have no `accept` in their scripts and their screens are clean; Bob, Charlie,
-/// Eve and Frank have two each and carry two stale cards each, which bury the
-/// balances view.  The holdings below are right in all six; the screens are not.
-/// Either `village.glp` routes the app's own `Answers` into the villager it
-/// names, or the mediator emits `closed(ReqId)` on a fulfilled ask as it does
-/// on an aborted one --- the first is Currencies', the second vGLP's, and
-/// neither is decided here.
+/// The image this test writes is the figure.  Under `village_ui/3` the app
+/// observes and does not answer: `village.glp`'s `villager/4` sends the named
+/// villager's events through `tee/3` to the app and to the scripted person,
+/// and the person's answers go to the mediator and not to the app.  The
+/// mediator sends `closed(ReqId)` when an ask is answered or declined and
+/// `aborted(ReqId)` when it is aborted (`coins_agent.glp`, `med/4`), so the
+/// app retires every card the scripted person answered, and the test requires
+/// that no card stands on any phone at the end of the run.
+///
+/// The SCREEN view is suppressed in this test, at Currencies' request of
+/// 2026-09-24: it shows each screen message by its arguments with the functor
+/// dropped, and GC makes no claim about it.  Each phone is rendered from
+/// [_balancesOnly], a manifest local to this test: `coinsManifest`'s one panel
+/// with that view left out, and the same forms, the same card and the same
+/// BALANCES view.  No library code is changed.  The runtime handles cards,
+/// `closed` and `aborted` before it tries any view, and ignores a screen
+/// message no view matches, so the holdings and the cards are those of
+/// `coinsManifest`; the test checks this against a runtime under
+/// `coinsManifest` fed the same lines.
 library;
 
 import 'dart:io';
@@ -46,6 +48,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:glp_multiagent/manifests/coins_ui.dart';
 import 'package:glp_multiagent/ui_runtime/agent_surface.dart';
+import 'package:glp_multiagent/ui_runtime/manifest.dart';
 import 'package:glp_multiagent/ui_runtime/runtime.dart';
 import 'package:glp_multiagent/ui_runtime/term.dart';
 import 'package:glp_runtime/multiagent/agent_runtime.dart';
@@ -77,6 +80,31 @@ const _expected = <String, Map<String, String>>{
   'eve': {'charlie': '4', 'frank': '1', 'alice': '2', 'bob': '10'},
   'frank': {'diana': '7', 'eve': '10', 'frank': '5'},
 };
+
+/// `coinsManifest` with its SCREEN view, the list view of the default display,
+/// left out, and every other element of it kept as the same object: the
+/// panel's id and name, its four forms, its swap card and its BALANCES view.
+final Manifest _balancesOnly = () {
+  final p = coinsManifest.panels.single;
+  return Manifest(
+    title: coinsManifest.title,
+    panels: [
+      Panel(
+        id: p.id,
+        name: p.name,
+        friends: p.friends,
+        wallet: p.wallet,
+        chat: p.chat,
+        groups: p.groups,
+        commands: p.commands,
+        inbox: p.inbox,
+        views: [for (final v in p.views) if (v.store != 'screen') v],
+      ),
+    ],
+    activity: coinsManifest.activity,
+    state: coinsManifest.state,
+  );
+}();
 
 Future<void> _loadFonts() async {
   Future<void> add(FontLoader l, String p) async =>
@@ -163,14 +191,32 @@ void main() {
       agent.onLog = (_, __) {};
       agent.onSendMadMessage = (_, __) async {};
 
-      final r = UiRuntime(manifest: coinsManifest, onSend: (_) {});
+      final r = UiRuntime(manifest: _balancesOnly, onSend: (_) {});
+      // The same lines under the app's manifest, SCREEN view included, so that
+      // the test shows that leaving the view out changes no holding and no card.
+      final full = UiRuntime(manifest: coinsManifest, onSend: (_) {});
       await tester.runAsync(() => agent.initialize());
       // A run that did not quiesce is half a run and its screen means nothing.
       expect(lines.where((l) => l.contains('[ERROR]')), isEmpty,
           reason: '${v.id}: the market did not run to the end');
       for (final l in lines) {
-        if (l.startsWith('< ')) r.handleLine(l.substring(2));
+        if (l.startsWith('< ')) {
+          r.handleLine(l.substring(2));
+          full.handleLine(l.substring(2));
+        }
       }
+      String state(UiRuntime x) => [
+            x.store.balances.map((s, b) =>
+                MapEntry(s, b.map((k, a) => MapEntry(k, formatTerm(a))))),
+            [
+              for (final c in x.inbox)
+                '${c.itemKey} ${c.asks.map((k, a) => MapEntry(k, formatTerm(a)))}'
+            ],
+            x.standing.map((k, a) => MapEntry(k, formatTerm(a))),
+          ].toString();
+      expect(state(r), state(full),
+          reason: '${v.id}: leaving the SCREEN view out changed the holdings '
+              'or the cards');
       // The screen is the agent's report of its own holdings, and it is
       // Currencies' list: the figure is checked against it, never fitted to it.
       expect(
@@ -209,6 +255,9 @@ void main() {
       ),
     ));
     await tester.pumpAndSettle();
+    // Every phone shows its BALANCES view, and none shows a SCREEN view.
+    expect(find.text('BALANCES'), findsNWidgets(_villagers.length));
+    expect(find.text('SCREEN'), findsNothing);
 
     final boundary = tester.renderObject<RenderRepaintBoundary>(
         find.byType(RepaintBoundary).first);
@@ -219,18 +268,16 @@ void main() {
     });
     File('/private/tmp/village-market-coins.png').writeAsBytesSync(bytes!);
 
-    // The stale-card census, so that a run of this test says out loud why the
-    // image it just wrote is not the figure.  See the fault at the head of
-    // this file.
-    final stale = {
+    // The stale-card census: a card the app did not retire would stand above
+    // the BALANCES view, so the figure requires none on any phone.
+    final census = {
       for (final v in _villagers) v.name: runtimes[v.id]!.inbox.length
-    }..removeWhere((_, n) => n == 0);
-    if (stale.isNotEmpty) {
-      // ignore: avoid_print
-      print('[NOT THE FIGURE] cards answered by the scripted person and never '
-          'retired on the app\'s screen: $stale --- village.glp:97--104 tees '
-          'the events to the app but not the answers, and a fulfilled ask '
-          'carries no closed(ReqId).');
-    }
+    };
+    // ignore: avoid_print
+    print('[stale cards] $census');
+    final stale = {...census}..removeWhere((_, n) => n == 0);
+    expect(stale, isEmpty,
+        reason: 'cards the app never retired: $stale --- the image just '
+            'written is not the figure');
   }, timeout: const Timeout(Duration(minutes: 15)));
 }
