@@ -23,32 +23,32 @@ exported procedure insurance_claimed.
 insurance_claimed :-
     network3c(AOut?, BOut?, GOut?, AIn, BIn, GIn),
     village # villager(alice,
-        [mint(2, 0), deposit(escrow, alice, 0, 2), accept_transfer(escrow)],
+        [mint(2), deposit(escrow, alice, now, 2), accept_transfer(escrow)],
         AIn?, AOut),
     village # villager(bob,
-        [mint(20, 0), deposit(escrow, bob, 0, 20), accept_transfer(escrow)],
+        [mint(20), deposit(escrow, bob, now, 20), accept_transfer(escrow)],
         BIn?, BOut),
     village # villager(escrow,
         [accept_transfer(bob), accept_transfer(alice),
-         release(alice, bob, 0, 20),
-         release(bob, alice, 0, 2)],
+         release(alice, bob, now, 20),
+         release(bob, alice, now, 2)],
         GIn?, GOut).
 
 exported procedure insurance_expired.
 insurance_expired :-
     network3c(AOut?, BOut?, GOut?, AIn, BIn, GIn),
     village # villager(alice,
-        [mint(2, 0), deposit(escrow, alice, 0, 2)],
+        [mint(2), deposit(escrow, alice, now, 2)],
         AIn?, AOut),
     village # villager(bob,
-        [mint(20, 0), deposit(escrow, bob, 0, 20),
+        [mint(20), deposit(escrow, bob, now, 20),
          accept_transfer(escrow), accept_transfer(escrow)],
         BIn?, BOut),
     village # villager(escrow,
         [accept_transfer(bob), accept_transfer(alice),
          advance(31),
-         release(bob, alice, 0, 2),
-         return(bob, bob, 0, 20)],
+         release(bob, alice, now, 2),
+         return(bob, bob, now, 20)],
         GIn?, GOut).
 
 %% =============================================================================
@@ -66,13 +66,13 @@ cds_event :-
          accept_transfer(escrow)],
         AIn?, AOut),
     village # villager(bob,
-        [mint(20, 0), deposit(escrow, bob, 0, 20),
+        [mint(20), deposit(escrow, bob, now, 20),
          accept_transfer(escrow), accept_transfer(escrow)],
         BIn?, BOut),
     village # villager(escrow,
         [accept_transfer(bob), accept_transfer(alice), accept_transfer(alice),
          release(bob, alice, 10, 1), release(bob, alice, 20, 1),
-         release(alice, bob, 0, 20)],
+         release(alice, bob, now, 20)],
         GIn?, GOut).
 
 exported procedure cds_no_event.
@@ -83,14 +83,14 @@ cds_no_event :-
          deposit(escrow, alice, 10, 1), deposit(escrow, alice, 20, 1)],
         AIn?, AOut),
     village # villager(bob,
-        [mint(20, 0), deposit(escrow, bob, 0, 20),
+        [mint(20), deposit(escrow, bob, now, 20),
          accept_transfer(escrow), accept_transfer(escrow), accept_transfer(escrow)],
         BIn?, BOut),
     village # villager(escrow,
         [accept_transfer(bob), accept_transfer(alice), accept_transfer(alice),
          release(bob, alice, 10, 1), release(bob, alice, 20, 1),
          advance(31),
-         return(bob, bob, 0, 20)],
+         return(bob, bob, now, 20)],
         GIn?, GOut).
 
 %% =============================================================================
@@ -112,7 +112,7 @@ exported procedure letter_of_credit.
 letter_of_credit :-
     network4c(KOut?, AOut?, BOut?, GOut?, KIn, AIn, BIn, GIn),
     village # villager(bank,
-        [mint(10, 0), deposit(escrow, bank, 0, 10), accept_transfer(escrow)],
+        [mint(10), deposit(escrow, bank, now, 10), accept_transfer(escrow)],
         KIn?, KOut),
     village # villager(alice,
         [accept_transfer(escrow)],
@@ -122,7 +122,7 @@ letter_of_credit :-
         BIn?, BOut),
     village # villager(escrow,
         [accept_transfer(bank),
-         release(alice, bank, 0, 10),
+         release(alice, bank, now, 10),
          accept_transfer(bob),
          release(bank, bob, 30, 10)],
         GIn?, GOut).
