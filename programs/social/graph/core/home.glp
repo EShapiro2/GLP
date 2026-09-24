@@ -27,7 +27,7 @@ Context ::= Ctx_respond_friend_1 ; Ctx_respond_friend_2 ; ctx_home_1 ; ctx_home_
 ReqId ::= req(Integer).
 Slot(R) ::= none ; ask(R, ReqId).
 AgentMsg ::= ask(Constant, Context, Escrow, ReqId?) ; abort(ReqId).
-Card ::= card(Constant, Context, ReqId) ; closed(ReqId).
+Card ::= card(Constant, Context, ReqId) ; closed(ReqId) ; aborted(ReqId).
 UserAnswer ::= answer(ReqId, Answer) ; decline(ReqId).
 PendingEntry ::= pending(ReqId, Escrow).
 PendingList ::= [] ; [PendingEntry | PendingList].
@@ -85,7 +85,7 @@ exported procedure med(Channel(Stream(UserAnswer), Stream(Card))?, Channel(Strea
 med(UserCh, AgentCh, Ps, N) :- receive(ask(C, Ctx, Esc, Id?), AgentCh?, AgentCh1), ground(C?), ground(Ctx?) | Id = req(N?), send(card(C?, Ctx?, req(N?)), UserCh?, UserCh1), N1 := (N? + 1), med(UserCh1?, AgentCh1?, [pending(req(N?), Esc?) | Ps?], N1?).
 med(UserCh, AgentCh, Ps, N) :- receive(answer(ReqId, Vs), UserCh?, UserCh1), ground(ReqId?), ground(Vs?) | answer(ReqId?, Vs?, Ps?, Ps1), send(closed(ReqId?), UserCh1?, UserCh2), med(UserCh2?, AgentCh?, Ps1?, N?).
 med(UserCh, AgentCh, Ps, N) :- receive(decline(ReqId), UserCh?, UserCh1), ground(ReqId?) | close(ReqId?, Ps?, Ps1), send(closed(ReqId?), UserCh1?, UserCh2), med(UserCh2?, AgentCh?, Ps1?, N?).
-med(UserCh, AgentCh, Ps, N) :- receive(abort(ReqId), AgentCh?, AgentCh1), ground(ReqId?) | drop(ReqId?, Ps?, Ps1), send(closed(ReqId?), UserCh?, UserCh1), med(UserCh1?, AgentCh1?, Ps1?, N?).
+med(UserCh, AgentCh, Ps, N) :- receive(abort(ReqId), AgentCh?, AgentCh1), ground(ReqId?) | drop(ReqId?, Ps?, Ps1), send(aborted(ReqId?), UserCh?, UserCh1), med(UserCh1?, AgentCh1?, Ps1?, N?).
 
 exported procedure answer(ReqId?, Answer?, PendingList?, PendingList).
 answer(ReqId, xs_respond_friend_1(X1), [pending(Id, esc_respond_friend_1(R?)) | Ps], Ps?) :- (ReqId? =?= Id?) | R = then(xs_respond_friend_1(X1?)).
