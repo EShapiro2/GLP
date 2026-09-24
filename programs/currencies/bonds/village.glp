@@ -137,10 +137,12 @@ escrow_agent(Id, Script, Ag, NetIn, NetOut?) :-
 procedure merge_events(Stream(Card)?, Stream(ScreenMsg)?, Stream(Event)).
 merge_events([card(C, X, R)|Cs], Ms, [card(C?, X?, R?)|Es?]) :- merge_events(Cs?, Ms?, Es).
 merge_events([closed(R)|Cs], Ms, [closed(R?)|Es?]) :- merge_events(Cs?, Ms?, Es).
+merge_events([aborted(R)|Cs], Ms, [aborted(R?)|Es?]) :- merge_events(Cs?, Ms?, Es).
 merge_events(Cs, [msg(A, P, M)|Ms], [msg(A?, P?, M?)|Es?]) :- merge_events(Cs?, Ms?, Es).
 merge_events([], [msg(A, P, M)|Ms], [msg(A?, P?, M?)|Es?]) :- merge_events([], Ms?, Es).
 merge_events([card(C, X, R)|Cs], [], [card(C?, X?, R?)|Es?]) :- merge_events(Cs?, [], Es).
 merge_events([closed(R)|Cs], [], [closed(R?)|Es?]) :- merge_events(Cs?, [], Es).
+merge_events([aborted(R)|Cs], [], [aborted(R?)|Es?]) :- merge_events(Cs?, [], Es).
 merge_events([], [], []).
 
 %% --- The network: first contacts, routed by addressee ---
@@ -225,12 +227,23 @@ person(Id, [card(_, _, _)|Es], As?, Cal?, Script, Todo, Open, Swaps, Ts, Pending
     otherwise |
     person(Id?, Es?, As, Cal, Script?, Todo?, Open?, Swaps?, Ts?, Pending?, Ag?, Seen?).
 
-%% A card closed: the answer out to it, if any, reached no goal, and the card is
-%% no longer open.
+%% A card closed: the person's act took effect --- their answer selected the
+%% then-branch, their decline the else-branch --- and the card is no longer
+%% open.  A step in flight is left alone: it leaves sent(R, Src) when the
+%% screen shows its effect, and a person answers an ask once.
 person(Id, [closed(R)|Es], As?, Cal?, Script, Todo, Open, Swaps, Ts, Pending, Ag, Seen) :-
     ground(R?) |
     close_open(R?, Open?, Open1),
     close_pending(R?, Pending?, Pending1),
+    try_step(Id?, Es?, As, Cal, Script?, Todo?, Open1?, Swaps?, Ts?, Pending1?, Ag?, Seen?).
+
+%% A card aborted: another clause reduced the goal, so the ask carries no
+%% reduction and the answer out to it, if any, reached no goal.  The card is
+%% retired as a closed one is, and the step is re-armed.
+person(Id, [aborted(R)|Es], As?, Cal?, Script, Todo, Open, Swaps, Ts, Pending, Ag, Seen) :-
+    ground(R?) |
+    close_open(R?, Open?, Open1),
+    abort_pending(R?, Pending?, Pending1),
     try_step(Id?, Es?, As, Cal, Script?, Todo?, Open1?, Swaps?, Ts?, Pending1?, Ag?, Seen?).
 
 %% The screen: logged and noted; the escrow program reacts; the step in flight
@@ -291,8 +304,16 @@ procedure close_req(ReqId?, OpenReq?, OpenReq).
 close_req(R, R1, no_card) :- R? =?= R1? | true.
 close_req(_, R1, R1?) :- otherwise | true.
 
+%% A closed card leaves the step in flight as it is: closed says the card is no
+%% longer open and nothing about whether the answer took effect.
 procedure close_pending(ReqId?, Pending?, Pending).
 close_pending(_, P, P?).
+
+%% An aborted card returns the step to idle: its answer reached no goal, so the
+%% step is the person's to make again.
+procedure abort_pending(ReqId?, Pending?, Pending).
+abort_pending(R, sent(R1, _), idle) :- R? =?= R1? | true.
+abort_pending(_, P, P?) :- otherwise | true.
 
 %% The messages the screen has shown and no wait has consumed.
 procedure note(ScreenContent?, Stream(ScreenContent)?, Stream(ScreenContent)).
