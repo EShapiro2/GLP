@@ -2904,7 +2904,7 @@ echo ""
 # source compiles on load (no .glp beside it).  Three plays: the person's
 # answer reaches its clause; an answer of another clause's form leaves the
 # pending table as it is; a clause reducing a goal with an open ask drops the
-# ask and closes its card; and the person's decline selects the else-branch,
+# ask and reports its card aborted; and the person's decline selects the else-branch,
 # which is the fourth play.  They end at once: the deadline went on 2026-09-15
 # (Udi), so nothing waits out a wall-clock minute for a person who is not at
 # the phone.  play_decline is the only play that reduces an else clause, and
@@ -2960,7 +2960,7 @@ play_abort.
 HEREDOC
 2>&1)
 check_not "One-clause: abort, no failed goal" "ERROR" "$vg_abort"
-check "One-clause: the reducing clause drops the open ask and its card is closed" "tagged(abort, closed(req(0)), \[picked(bob)\])" "$vg_abort"
+check "One-clause: the reducing clause drops the open ask and its card is aborted" "tagged(abort, aborted(req(0)), \[picked(bob)\])" "$vg_abort"
 echo ""
 
 # =============================================================================

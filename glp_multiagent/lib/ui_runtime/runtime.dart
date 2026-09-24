@@ -151,7 +151,9 @@ class UiRuntime {
     // constructor and arity — `card`/3 is one constructor for every clause of
     // the program — so these two come first and consume what they recognise.
     if (ctor == cardCtor && args.length == 3 && _handleCard(args)) return;
-    if (ctor == closedCtor && args.length == 1 && _handleClosed(args[0])) return;
+    if ((ctor == closedCtor || ctor == abortedCtor) &&
+        args.length == 1 &&
+        _handleClosed(args[0])) return;
 
     // A notify may retire pending cards as well as land as a card or an
     // activity of its own — an escrow expiring both removes its cancel offer
@@ -224,9 +226,12 @@ class UiRuntime {
     return true;
   }
 
-  /// `closed(req(N))`: the mediator retired that ask — the person declined it,
-  /// or another clause reduced the goal and aborted it. The ask
-  /// goes from whatever holds it; a card left with no ask is gone.
+  /// `closed(req(N))` or `aborted(req(N))`: the mediator retired that ask. The
+  /// two differ in what became of the person's act — `closed` says it took
+  /// effect, `aborted` that another clause reduced the goal and it came to
+  /// nothing (Udi, 2026-09-24) — and the card goes either way, so the surface
+  /// treats them alike. The ask goes from whatever holds it; a card left with
+  /// no ask is gone.
   bool _handleClosed(GTerm reqId) {
     final key = formatTerm(reqId);
     var changed = false;
@@ -547,6 +552,7 @@ class UiRuntime {
 /// compiled program — they are the compilation's, not any application's.
 const String cardCtor = 'card';
 const String closedCtor = 'closed';
+const String abortedCtor = 'aborted';
 const String answerCtor = 'answer';
 const String declineCtor = 'decline';
 

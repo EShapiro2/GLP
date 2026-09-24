@@ -105,7 +105,7 @@ SwapOffer ::= offer(Constant, Lot, Stream(Coin)).
 ReqId ::= req(Integer).
 Slot(R) ::= none ; ask(R, ReqId).
 AgentMsg ::= ask(Constant, Context, Escrow, ReqId?) ; abort(ReqId).
-Card ::= card(Constant, Context, ReqId) ; closed(ReqId).
+Card ::= card(Constant, Context, ReqId) ; closed(ReqId) ; aborted(ReqId).
 UserAnswer ::= answer(ReqId, Answer) ; decline(ReqId).
 PendingEntry ::= pending(ReqId, Escrow).
 PendingList ::= [] ; [PendingEntry | PendingList].
@@ -132,6 +132,7 @@ Context ::= ctx_respond_swap_1(Constant, Lot, Stream(Coin)) ; ctx_agent_1 ; ctx_
 %% interface: the mediator's cards and their closing, and the screen.
 Event ::= card(Constant, Context, ReqId)
         ; closed(ReqId)
+        ; aborted(ReqId)
         ; msg(Constant, Constant, ScreenContent).
 
 %% A person's script (currency/person.glp): its acts, in order.  A step is an

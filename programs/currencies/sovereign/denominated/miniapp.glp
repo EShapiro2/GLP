@@ -40,8 +40,10 @@ sovereign(Id, ch(Answers, Events?), Convs, Cal) :-
 procedure merge_events(Stream(Card)?, Stream(ScreenMsg)?, Stream(Event)).
 merge_events([card(C, X, R)|Cs], Ms, [card(C?, X?, R?)|Es?]) :- merge_events(Cs?, Ms?, Es).
 merge_events([closed(R)|Cs], Ms, [closed(R?)|Es?]) :- merge_events(Cs?, Ms?, Es).
+merge_events([aborted(R)|Cs], Ms, [aborted(R?)|Es?]) :- merge_events(Cs?, Ms?, Es).
 merge_events(Cs, [msg(A, P, M)|Ms], [msg(A?, P?, M?)|Es?]) :- merge_events(Cs?, Ms?, Es).
 merge_events([], [msg(A, P, M)|Ms], [msg(A?, P?, M?)|Es?]) :- merge_events([], Ms?, Es).
 merge_events([card(C, X, R)|Cs], [], [card(C?, X?, R?)|Es?]) :- merge_events(Cs?, [], Es).
 merge_events([closed(R)|Cs], [], [closed(R?)|Es?]) :- merge_events(Cs?, [], Es).
+merge_events([aborted(R)|Cs], [], [aborted(R?)|Es?]) :- merge_events(Cs?, [], Es).
 merge_events([], [], []).

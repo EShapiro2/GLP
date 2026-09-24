@@ -156,7 +156,7 @@ TransferOffer ::= offer_transfer(Kind, Constant, Stream(Bond)).
 ReqId ::= req(Integer).
 Slot(R) ::= none ; ask(R, ReqId).
 AgentMsg ::= ask(Constant, Context, Escrow, ReqId?) ; abort(ReqId).
-Card ::= card(Constant, Context, ReqId) ; closed(ReqId).
+Card ::= card(Constant, Context, ReqId) ; closed(ReqId) ; aborted(ReqId).
 UserAnswer ::= answer(ReqId, Answer) ; decline(ReqId).
 PendingEntry ::= pending(ReqId, Escrow).
 PendingList ::= [] ; [PendingEntry | PendingList].
@@ -196,6 +196,7 @@ Context ::= ctx_respond_swap_1(Constant, Lot, Stream(Bond)) ; ctx_respond_transf
 %% What a person sees: the cards and their closing, and the screen.
 Event ::= card(Constant, Context, ReqId)
         ; closed(ReqId)
+        ; aborted(ReqId)
         ; msg(Constant, Constant, ScreenContent).
 
 %% A script: the person's acts, in order.  A step is an answer to one of the
