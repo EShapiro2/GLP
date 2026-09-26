@@ -58,13 +58,13 @@ display msg(agent, person, holdings(Lots)) : panel(bonds), view(balances).
 
 %% --- the compiled agent ---
 procedure respond_swap(Channel(Closed, Stream(AgentMsg))?, SwapOffer?, Link?, SwapResponse, Stream(UserInMsg), Slot(Reply_respond_swap_1)?).
-respond_swap(Med, offer(From, Want, Offered), Link, Resp?, Ans?, ask(then(xs_respond_swap_1(_)), _)) :- ground(From?), ground(Want?), ground(Offered?) | accept_answer(From?, Want?, Offered?, Resp, Link?, Ans).
-respond_swap(Med, offer(From, Want, Offered), Link, Resp?, Ans?, ask(else, _)) :- ground(From?), ground(Want?), ground(Offered?) | decline_answer(From?, Offered?, Resp, Link?, Ans).
+respond_swap(_, offer(From, Want, Offered), Link, Resp?, Ans?, ask(then(xs_respond_swap_1(_)), _)) :- ground(From?), ground(Want?), ground(Offered?) | accept_answer(From?, Want?, Offered?, Resp, Link?, Ans).
+respond_swap(_, offer(From, Want, Offered), Link, Resp?, Ans?, ask(else, _)) :- ground(From?), ground(Want?), ground(Offered?) | decline_answer(From?, Offered?, Resp, Link?, Ans).
 respond_swap(Med, offer(From, Want, Offered), Link, A3?, A4?, none) :- ground(From?), ground(Want?), ground(Offered?) | send(ask(respond_swap_1, ctx_respond_swap_1(From?, Want?, Offered?), esc_respond_swap_1(R), Id), Med?, Med1), respond_swap(Med1?, offer(From?, Want?, Offered?), Link?, A3, A4, ask(R?, Id?)).
 
 procedure respond_transfer(Channel(Closed, Stream(AgentMsg))?, TransferOffer?, Link?, TransferResponse, Stream(UserInMsg), Slot(Reply_respond_transfer_1)?).
-respond_transfer(Med, offer_transfer(Kind, From, Given), Link, Resp?, Ans?, ask(then(xs_respond_transfer_1(_)), _)) :- ground(Kind?), ground(From?), ground(Given?) | accept_transfer_answer(Kind?, From?, Given?, Resp, Link?, Ans).
-respond_transfer(Med, offer_transfer(Kind, From, Given), Link, Resp?, Ans?, ask(else, _)) :- ground(Kind?), ground(From?), ground(Given?) | decline_transfer_answer(Kind?, From?, Given?, Resp, Link?, Ans).
+respond_transfer(_, offer_transfer(Kind, From, Given), Link, Resp?, Ans?, ask(then(xs_respond_transfer_1(_)), _)) :- ground(Kind?), ground(From?), ground(Given?) | accept_transfer_answer(Kind?, From?, Given?, Resp, Link?, Ans).
+respond_transfer(_, offer_transfer(Kind, From, Given), Link, Resp?, Ans?, ask(else, _)) :- ground(Kind?), ground(From?), ground(Given?) | decline_transfer_answer(Kind?, From?, Given?, Resp, Link?, Ans).
 respond_transfer(Med, offer_transfer(Kind, From, Given), Link, A3?, A4?, none) :- ground(Kind?), ground(From?), ground(Given?) | send(ask(respond_transfer_1, ctx_respond_transfer_1(Kind?, From?, Given?), esc_respond_transfer_1(R), Id), Med?, Med1), respond_transfer(Med1?, offer_transfer(Kind?, From?, Given?), Link?, A3, A4, ask(R?, Id?)).
 
 exported procedure agent(Channel(Closed, Stream(AgentMsg))?, Constant?, Stream(UserInMsg)?, Stream(NetInMsg)?, Stream(Integer)?, Stream(OutputEntry)?, Stream(Instrument)?, Integer?, Stream(Warranty)?, Integer?, Slot(Reply_agent_1)?, Slot(Reply_agent_2)?, Slot(Reply_agent_3)?, Slot(Reply_agent_4)?, Slot(Reply_agent_5)?, Slot(Reply_agent_6)?, Slot(Reply_agent_7)?, Slot(Reply_agent_8)?, Slot(Reply_agent_9)?).
@@ -141,16 +141,16 @@ propose_swap(Med, ok, Id, Q, _, Want, Give, Rest, UserIn, NetIn, Cal, Outs, Date
 propose_swap(Med, fail, Id, Q, lot(U, D, K), _, Give, Rest, UserIn, NetIn, Cal, Outs, Date, Ws, Serial) :- append_instruments(Give?, Rest?, Orig), show(lacking(U?, D?, K?), Outs?, Outs1), agent(Med?, Id?, UserIn?, NetIn?, Cal?, Outs1?, Orig?, Date?, Ws?, Serial?, none, none, none, none, none, none, none, none, none).
 
 procedure send_swap(Channel(Closed, Stream(AgentMsg))?, Constant?, Constant?, Constant?, Lot?, Stream(Instrument)?, Stream(OutputEntry)?, Stream(OutputEntry), Stream(UserInMsg)?, Stream(UserInMsg)).
-send_swap(Med, yes, Id, Q, Want, Give, Outs, Outs1?, UserIn, UserIn1?) :- ground(Q?) | send_friend(Q?, msg(Id?, Q?, swap(Want?, Give?, Resp)), Outs?, Outs1), inject_swap_result(Resp?, Q?, linked, UserIn?, UserIn1).
-send_swap(Med, no, Id, Q, Want, Give, Outs, Outs1?, UserIn, UserIn1?) :- ground(Q?), new_channel(TheirEnd, MyEnd) | send_net(msg(Q?, call(Id?, swap(Want?, Give?, Resp), TheirEnd?)), Outs?, Outs1), inject_swap_result(Resp?, Q?, link(MyEnd?), UserIn?, UserIn1).
+send_swap(_, yes, Id, Q, Want, Give, Outs, Outs1?, UserIn, UserIn1?) :- ground(Q?) | send_friend(Q?, msg(Id?, Q?, swap(Want?, Give?, Resp)), Outs?, Outs1), inject_swap_result(Resp?, Q?, linked, UserIn?, UserIn1).
+send_swap(_, no, Id, Q, Want, Give, Outs, Outs1?, UserIn, UserIn1?) :- ground(Q?), new_channel(TheirEnd, MyEnd) | send_net(msg(Q?, call(Id?, swap(Want?, Give?, Resp), TheirEnd?)), Outs?, Outs1), inject_swap_result(Resp?, Q?, link(MyEnd?), UserIn?, UserIn1).
 
 procedure propose_transfer(Channel(Closed, Stream(AgentMsg))?, Constant?, Kind?, Constant?, Constant?, Lot?, Stream(Instrument)?, Stream(Instrument)?, Stream(UserInMsg)?, Stream(NetInMsg)?, Stream(Integer)?, Stream(OutputEntry)?, Integer?, Stream(Warranty)?, Integer?).
 propose_transfer(Med, ok, Kind, Id, Q, Lot, Give, Rest, UserIn, NetIn, Cal, Outs, Date, Ws, Serial) :- ground(Kind?), ground(Q?), ground(Lot?), ground(Give?) | med_split(Med?, Medb, Medr), has_peer(Q?, Outs?, Outs1, Known), send_transfer(Medb?, Known?, Kind?, Id?, Q?, Give?, Outs1?, Outs2, UserIn?, UserIn1), show(offered_transfer(Kind?, Q?, Lot?), Outs2?, Outs3), after_change(Medr?, Id?, UserIn1?, NetIn?, Cal?, Outs3?, Rest?, Date?, Ws?, Serial?).
 propose_transfer(Med, fail, _, Id, _, lot(U, D, K), Give, Rest, UserIn, NetIn, Cal, Outs, Date, Ws, Serial) :- append_instruments(Give?, Rest?, Orig), show(lacking(U?, D?, K?), Outs?, Outs1), agent(Med?, Id?, UserIn?, NetIn?, Cal?, Outs1?, Orig?, Date?, Ws?, Serial?, none, none, none, none, none, none, none, none, none).
 
 procedure send_transfer(Channel(Closed, Stream(AgentMsg))?, Constant?, Kind?, Constant?, Constant?, Stream(Instrument)?, Stream(OutputEntry)?, Stream(OutputEntry), Stream(UserInMsg)?, Stream(UserInMsg)).
-send_transfer(Med, yes, Kind, Id, Q, Give, Outs, Outs1?, UserIn, UserIn1?) :- ground(Kind?), ground(Q?) | send_friend(Q?, msg(Id?, Q?, transfer(Kind?, Give?, Resp)), Outs?, Outs1), inject_transfer_result(Resp?, Kind?, Q?, linked, UserIn?, UserIn1).
-send_transfer(Med, no, Kind, Id, Q, Give, Outs, Outs1?, UserIn, UserIn1?) :- ground(Kind?), ground(Q?), new_channel(TheirEnd, MyEnd) | send_net(msg(Q?, call(Id?, transfer(Kind?, Give?, Resp), TheirEnd?)), Outs?, Outs1), inject_transfer_result(Resp?, Kind?, Q?, link(MyEnd?), UserIn?, UserIn1).
+send_transfer(_, yes, Kind, Id, Q, Give, Outs, Outs1?, UserIn, UserIn1?) :- ground(Kind?), ground(Q?) | send_friend(Q?, msg(Id?, Q?, transfer(Kind?, Give?, Resp)), Outs?, Outs1), inject_transfer_result(Resp?, Kind?, Q?, linked, UserIn?, UserIn1).
+send_transfer(_, no, Kind, Id, Q, Give, Outs, Outs1?, UserIn, UserIn1?) :- ground(Kind?), ground(Q?), new_channel(TheirEnd, MyEnd) | send_net(msg(Q?, call(Id?, transfer(Kind?, Give?, Resp), TheirEnd?)), Outs?, Outs1), inject_transfer_result(Resp?, Kind?, Q?, link(MyEnd?), UserIn?, UserIn1).
 
 procedure do_pay(Channel(Closed, Stream(AgentMsg))?, Constant?, Constant?, Constant?, Integer?, Stream(Instrument)?, Stream(Instrument)?, Stream(UserInMsg)?, Stream(NetInMsg)?, Stream(Integer)?, Stream(OutputEntry)?, Integer?, Stream(Warranty)?, Integer?).
 do_pay(Med, ok, Id, Q, K, Give, Rest, UserIn, NetIn, Cal, Outs, Date, Ws, Serial) :- ground(Q?) | med_split(Med?, Medb, Medr), has_peer(Q?, Outs?, Outs1, Known), send_owed(Medb?, Known?, Id?, Q?, pay(Give?, Resp), Outs1?, Outs2, NetIn?, NetIn1), inject_pay_result(Resp?, Q?, K?, UserIn?, UserIn1), show(paying(Q?, K?), Outs2?, Outs3), after_change(Medr?, Id?, UserIn1?, NetIn1?, Cal?, Outs3?, Rest?, Date?, Ws?, Serial?).
@@ -165,8 +165,8 @@ do_mature(Med, found(Bond), Id, Q, D, Rest, UserIn, NetIn, Cal, Outs, Date, Ws, 
 do_mature(Med, not_found, Id, Q, D, Holdings, UserIn, NetIn, Cal, Outs, Date, Ws, Serial) :- show(lacking(Q?, D?, 1), Outs?, Outs1), agent(Med?, Id?, UserIn?, NetIn?, Cal?, Outs1?, Holdings?, Date?, Ws?, Serial?, none, none, none, none, none, none, none, none, none).
 
 procedure send_owed(Channel(Closed, Stream(AgentMsg))?, Constant?, Constant?, Constant?, PeerContent?, Stream(OutputEntry)?, Stream(OutputEntry), Stream(NetInMsg)?, Stream(NetInMsg)).
-send_owed(Med, yes, Id, Q, Act, Outs, Outs1?, NetIn, NetIn?) :- send_friend(Q?, msg(Id?, Q?, Act?), Outs?, Outs1).
-send_owed(Med, no, Id, Q, Act, Outs, Outs2?, NetIn, NetIn1?) :- ground(Q?), new_channel(TheirEnd, MyEnd) | send_net(msg(Q?, call(Id?, Act?, TheirEnd?)), Outs?, Outs1), adopt(link(MyEnd?), Q?, Outs1?, Outs2, NetIn?, NetIn1).
+send_owed(_, yes, Id, Q, Act, Outs, Outs1?, NetIn, NetIn?) :- send_friend(Q?, msg(Id?, Q?, Act?), Outs?, Outs1).
+send_owed(_, no, Id, Q, Act, Outs, Outs2?, NetIn, NetIn1?) :- ground(Q?), new_channel(TheirEnd, MyEnd) | send_net(msg(Q?, call(Id?, Act?, TheirEnd?)), Outs?, Outs1), adopt(link(MyEnd?), Q?, Outs1?, Outs2, NetIn?, NetIn1).
 
 procedure after_change(Channel(Closed, Stream(AgentMsg))?, Constant?, Stream(UserInMsg)?, Stream(NetInMsg)?, Stream(Integer)?, Stream(OutputEntry)?, Stream(Instrument)?, Integer?, Stream(Warranty)?, Integer?).
 after_change(Med, Id, UserIn, NetIn, Cal, Outs, Holdings, Date, Ws, Serial) :- ground(Holdings?) | tally(Holdings?, [], Lots), show(holdings(Lots?), Outs?, Outs1), agent(Med?, Id?, UserIn?, NetIn?, Cal?, Outs1?, Holdings?, Date?, Ws?, Serial?, none, none, none, none, none, none, none, none, none).
