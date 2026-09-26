@@ -72,4 +72,87 @@ foo(X) :- otherwise | bar.
         reason: 'otherwise does not ground X, so X has no reader');
     print('✅ Guard-only readers without groundness correctly rejected');
   });
+
+  // ===========================================================================
+  // Readers of constant types (TGLP typed-glp.tex, "Readers of constant types").
+  // Definition (Constant Type): "A type is a constant type if each of its
+  // alternatives is a constant, one of the primitive types Integer, Real, String
+  // and Module, or a constant type."  Proposition "Readers of Constant Types"
+  // licenses several occurrences of such a reader, its paired writer occurring
+  // once, and the relaxation "holds wherever the occurrences sit --- in the head,
+  // nested within an argument, or in the body".  The question is asked of the
+  // type each occurrence has, and not of a list of five type names read at the
+  // top-level type of a head argument.
+  // ===========================================================================
+
+  test('a reader twice at a user-defined union of constants loads', () {
+    // `Colour ::= red ; green ; blue.` qualifies exactly as `String` does: each
+    // of its alternatives is a constant.  The old list of five names held no
+    // user-defined type, so this was refused.
+    final program = GlpCompiler().compile('''
+Colour ::= red ; green ; blue.
+procedure paint(Colour?, Colour, Colour).
+paint(C, C?, C?).
+''');
+    expect(program, isNotNull);
+  });
+
+  test('a reader twice at a nested Integer position loads', () {
+    // `X` sits inside `p(...)`, not at the top level of a head argument, so the
+    // type name read off the declaration was `Pair` and never `Integer`.  `Pair`
+    // is no constant type --- it carries a functor --- but the OCCURRENCE's type
+    // is `Integer`, and that is what the relaxation is asked of.
+    final program = GlpCompiler().compile('''
+Pair ::= p(Integer, Integer).
+procedure dup(Pair?, Integer, Integer).
+dup(p(X, _), X?, X?).
+''');
+    expect(program, isNotNull);
+  });
+
+  test('a body variable read twice loads', () {
+    // Both occurrences are in the body: nothing about the head decides them.
+    final program = GlpCompiler().compile('''
+procedure src(Integer).
+src(1).
+
+procedure use(Integer?, Integer?, Integer).
+use(_, _, 0).
+
+procedure go(Integer).
+go(R?) :- src(N), use(N?, N?, R).
+''');
+    expect(program, isNotNull);
+  });
+
+  test('a reader twice at a type carrying a functor is refused', () {
+    // `Stream ::= [] ; [_|Stream].` has a cons alternative, which carries a
+    // functor, so it is no constant type and licenses nothing.
+    expect(
+        () => GlpCompiler().compile('''
+Stream ::= [] ; [_|Stream].
+procedure share(Stream?, Stream, Stream).
+share(S, S?, S?).
+'''),
+        throwsException);
+  });
+
+  test('a reader twice at a stream of a constant element is refused', () {
+    // `IntStream ::= [] ; [Integer|IntStream].` ends every path at `[]` or at
+    // `Integer`, with no wildcard and no mode inversion, so the ground-type
+    // sentence of TGLP b32934d admitted it and this LOADED --- measured
+    // 2026-09-23.  A producer binds a functor before its arguments, so a cons
+    // cell is a value carrying a writer in its tail: the paper replaced that
+    // sentence with Definition (Constant Type), under which a cons alternative
+    // disqualifies the type outright.
+    expect(
+        () => GlpCompiler().compile('''
+IntStream ::= [] ; [Integer|IntStream].
+procedure share(IntStream?, IntStream?, IntStream?).
+share(_, _, _).
+procedure split(IntStream?).
+split(S) :- share(S?, S?, S?).
+'''),
+        throwsException);
+  });
 }

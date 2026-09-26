@@ -20,6 +20,7 @@ import 'moded_head.dart';
 import 'well_typed_term.dart';
 import 'program_dfa.dart';
 import 'subtyping.dart';
+import 'meet.dart';
 import 'type_ast.dart';
 import 'root_scope.dart';
 import 'param_expansion.dart';
@@ -202,6 +203,30 @@ class ClauseDualityError extends ClauseError {
   String toString() => message;
 }
 
+/// Error: a guard atom tests a head occurrence at a type it cannot have.
+///
+/// TGLP typed-glp.tex, "Type checking of guards": the guard atom is well-typed
+/// if the MEET of the occurrence's type and the type declared for the position
+/// it occupies in the guard is non-empty.  An empty meet is a guard that can
+/// never succeed --- no term is of both types --- and this is where it is named.
+class GuardMeetError extends ClauseError {
+  final String variableKey;
+  final String guardFunctor;
+  final DFAState occurrenceType;
+  final DFAState guardType;
+
+  GuardMeetError(this.variableKey, this.guardFunctor, this.occurrenceType,
+      this.guardType);
+
+  @override
+  String get message =>
+      'Guard $guardFunctor tests $variableKey at ${guardType.name}, which has no '
+      'term in common with its type ${occurrenceType.name}: the meet is empty';
+
+  @override
+  String toString() => message;
+}
+
 /// Error: undefined procedure
 class UndefinedProcedureError extends ClauseError {
   final String procedureName;
@@ -295,6 +320,26 @@ ClauseCheckResult checkClause(
   ModedTerm? constructedModedHead;
   final constructedModedBodyAtoms = <ModedTerm>[];
 
+  // The body side of each head/body variable pair of condition 3(b).
+  //
+  // The head's variable types below are read off the MODED head, whose step 2
+  // (def:moded-head) has already replaced every head variable by its paired
+  // variable.  A source head occurrence `X?` is therefore recorded here under
+  // the key `X`, and a source head occurrence `X` under the key `X?` --- which
+  // is the very key its body partner carries.  So a head/body pair of
+  // def:well-typed-clause condition 3 is ONE key in this map, not two, and it
+  // is the keys that collide, below, that are those pairs.
+  final headBodyPairTypes = <String, VariableTypeInfo>{};
+  final headBodyPairLocations = <String, String>{};
+
+  // A head occurrence a guard atom has NARROWED, by the key the head carries it
+  // under.  "A guard atom that tests the type of a head occurrence narrows it
+  // ... the occurrence has that meet as its type in the body, where condition 3
+  // of Definition (Well-Typed Clause) is applied to it" (TGLP typed-glp.tex,
+  // "Type checking of guards").  So it is this type, not the head's own, that
+  // condition 3(b) compares against the body below.
+  final narrowedByGuard = <String, VariableTypeInfo>{};
+
   // Look up procedure declaration for head
   final procDecl = env.getProcedure(clause.headFunctor, clause.headArity);
   if (procDecl == null) {
@@ -343,10 +388,44 @@ ClauseCheckResult checkClause(
       final newInfo = entry.value;
 
       if (allVariableTypes.containsKey(varKey)) {
-        final existing = allVariableTypes[varKey]!;
-        // Same variable at different positions - types must match
-        if (existing.typeState.name != newInfo.typeState.name) {
-          // This will be caught by complementarity check below
+        // A key the head already carries is this occurrence's partner in the
+        // head, by the complementation above: keep the body side for condition
+        // 3(b).  Until 2026-09-23 it was dropped here, on the comment that the
+        // complementarity check below would catch it; that check pairs `X` with
+        // `X?` and never sees a head/body pair, so condition 3(b) went
+        // unchecked entirely and `held2(N?) :- self_key(N).` --- an `Integer`
+        // handed out where the body produces a `Key` --- loaded.
+        //
+        // A key an EARLIER BODY ATOM carries is not a pair: it is the same
+        // source form occurring twice in the body, which SRSW admits only under
+        // a relaxation and which condition 3 does not speak of.
+        if (variableLocations[varKey] == 'head') {
+          if (i < clause.guardAtoms.length) {
+            // A GUARD atom: it narrows the occurrence rather than being
+            // measured against it.  S is the type the occurrence has so far ---
+            // the head's, or what an earlier guard already narrowed it to --- and
+            // T is the type declared for the position it occupies in this guard.
+            final have = narrowedByGuard[varKey] ?? allVariableTypes[varKey]!;
+            final met =
+                meetOfTypes(have.typeState, newInfo.typeState, dfa, env);
+            if (met == null) {
+              errors.add(GuardMeetError(
+                  varKey, atom.functor, have.typeState, newInfo.typeState));
+            } else {
+              narrowedByGuard[varKey] = VariableTypeInfo(
+                typeState: met,
+                mode: have.mode,
+                isReader: have.isReader,
+              );
+            }
+          } else {
+            headBodyPairTypes.putIfAbsent(varKey, () => newInfo);
+            // The body goal is named, not just numbered: a 3(b) refusal is
+            // almost always a DECLARATION at fault, and the reader has to know
+            // which procedure's declaration to look at.
+            headBodyPairLocations.putIfAbsent(
+                varKey, () => '${atom.functor}/${atom.arity} (body atom $i)');
+          }
         }
       } else {
         allVariableTypes[varKey] = newInfo;
@@ -362,6 +441,16 @@ ClauseCheckResult checkClause(
     dfa,
   );
   errors.addAll(dualityErrors);
+
+  // Step 4: condition 3(b) of def:well-typed-clause on the head/body pairs,
+  // applied to the type a guard narrowed the head occurrence to where one did.
+  errors.addAll(_checkHeadBodyPairs(
+    {...allVariableTypes, ...narrowedByGuard},
+    variableLocations,
+    headBodyPairTypes,
+    headBodyPairLocations,
+    dfa,
+  ));
 
   return ClauseCheckResult(
     isWellTyped: errors.isEmpty,
@@ -419,6 +508,105 @@ ClauseCheckResult checkClauseFromAst(
   return checkClause(typedClause, dfa, env, collector: collector,
       activeInstantiations: activeInstantiations,
       callee: callee);
+}
+
+/// The base names of the variables of [clause] whose type at some occurrence
+/// is a CONSTANT TYPE (TGLP `typed-glp.tex`, \mypara{Readers of constant
+/// types}).  Proposition "Readers of Constant Types" licenses several
+/// occurrences of such a reader, its paired writer occurring once, and the
+/// relaxation "holds wherever the occurrences sit --- in the head, nested within
+/// an argument, or in the body --- since it rests on what the term is and not on
+/// where it is read."
+///
+/// So the question is asked of EVERY occurrence, and of the type the occurrence
+/// has (Definition "Type Assignment": the state the automaton reaches by the
+/// path from the root to that position), not of the top-level type name of a
+/// head argument.  A head occurrence's type comes off the moded head
+/// (Definition "Moded Head"), a body occurrence's off the produced moded term of
+/// its unit goal, and a guard's off the guard atom, guards being type-checked as
+/// a conjunction with the body.  One occurrence carrying a constant type
+/// settles it: the type of any occurrence bounds the values the variable may
+/// carry, and a constant type bounds them to constants.
+///
+/// The key is the BASE name --- the moded head carries `X` at the key `X?` and
+/// `X?` at the key `X` (Definition "Moded Head", step 2), and SRSW counts a
+/// variable and its pair together.
+///
+/// Errors are not collected: this is asked of clauses the checker has passed or
+/// will reject on its own, and an occurrence whose path is inconsistent simply
+/// yields no type and licenses nothing.
+Set<String> constantTypedVariables(
+    ast.Clause clause, ProgramDFA dfa, TypeEnvironment env) {
+  final procDecl = env.getProcedure(clause.head.functor, clause.head.args.length);
+  if (procDecl == null) return const {};
+
+  final head = ast.Goal(
+      clause.head.functor, clause.head.args, clause.line, clause.column);
+  final guardGoals = [
+    for (final g in clause.guards ?? const <ast.Guard>[])
+      ast.Goal(g.predicate, g.args, g.line, g.column)
+  ];
+  final typedClause = TypedClause(
+    head: head,
+    bodyAtoms: [...guardGoals, ...(clause.body ?? const <ast.Goal>[])],
+    guardAtoms: guardGoals,
+  );
+
+  final constant = <String>{};
+  void take(Map<String, VariableTypeInfo> types) {
+    for (final entry in types.entries) {
+      if (!isConstantType(entry.value.typeState, env.types)) continue;
+      final key = entry.key;
+      constant.add(key.endsWith('?') ? key.substring(0, key.length - 1) : key);
+    }
+  }
+
+  final (headResult, _) = _checkHeadWithTerm(typedClause, procDecl, dfa, env);
+  take(headResult.variableTypes);
+
+  for (final atom in typedClause.bodyAtoms) {
+    take(_bodyAtomVariableTypes(atom, dfa, env));
+  }
+
+  return constant;
+}
+
+/// The types [atom]'s variable occurrences have, as a body unit goal: the
+/// produced moded term of the goal, checked per argument against the declaration
+/// in scope (Definition "Well-Typed Clause" condition 2).
+///
+/// The declaration in scope is the MONOMORPHIC one, which for a parameterised
+/// procedure is its wildcard instantiation (param_expansion.dart, step 5): every
+/// position the type parameter does not reach keeps its declared type, and every
+/// position it does reach becomes `_`, which admits more than ground terms and so
+/// licenses nothing.  That is what this is for --- call-site instantiation is the
+/// closure's, and a call to a parameterised procedure contributes no variable
+/// type at all in the pass that runs before it (the inferred instantiation names
+/// types this DFA has not materialised), so asking the closure here would answer
+/// nothing where the wildcard declaration answers `Integer` for
+/// `measure(Stream(X)?, Integer, Stream(X))`'s second argument.
+Map<String, VariableTypeInfo> _bodyAtomVariableTypes(
+    ast.Goal atom, ProgramDFA dfa, TypeEnvironment env) {
+  if (atom is ast.SpawnGoal) {
+    return _bodyAtomVariableTypes(atom.innerGoal, dfa, env);
+  }
+  // A remote goal and a builtin goal contribute no type here; nothing is
+  // relaxed on them.
+  if (atom is ast.RemoteGoal) return const {};
+  if (isBuiltinGoal(atom.functor)) return const {};
+
+  final procDecl = env.getProcedure(atom.functor, atom.arity);
+  if (procDecl == null || procDecl.arity != atom.arity) return const {};
+  try {
+    final term = producedTerm(atom, procDecl, typeEnv: env);
+    return _checkModedTermPerArg(term, procDecl, dfa).variableTypes;
+  } on ArityMismatchError {
+    return const {};
+  } on UnknownTypeError {
+    return const {};
+  } on StateError {
+    return const {};
+  }
 }
 
 /// Check if a goal is well-typed in the given environment.
@@ -1108,6 +1296,77 @@ List<ClauseDualityError> _checkClauseDuality(
           ));
         }
       }
+    }
+  }
+
+  return errors;
+}
+
+/// Condition 3(b) of def:well-typed-clause-subtyping on the head/body pairs:
+/// "if one occurs in the head and the other in the body, the dual of the type of
+/// the head occurrence is a subtype of the dual of the type of the body
+/// occurrence."  Equality --- condition 3(b) of the base def:well-typed-clause,
+/// "they have the same type" --- is strictly stronger, so nothing that reading
+/// admits is refused here.
+///
+/// The two occurrences carry the same mode (sec:subtyping), so both types are
+/// output or both are input, and dualising turns the one case into the other:
+///
+/// * At a CONSUMED position the types are `T?` and `U?`, their duals `T` and
+///   `U`, and the condition is `T <: U` --- what the head occurrence receives is
+///   within what the body occurrence accepts.
+/// * At a PRODUCED position the types are `T` and `U`, their duals `T?` and
+///   `U?`, and `A? <: B?` is `B <: A` (sec:subtyping, "Subtyping extends to
+///   input types by complementation"), so the condition is `U <: T` --- what the
+///   body occurrence produces is within what the head occurrence hands out.
+///
+/// [headTypes] / [headLocations] are the clause's variable types, in which the
+/// head's entries hold the key; [bodyTypes] / [bodyLocations] are the body side
+/// of each pair, collected in [checkClause] where the body key met the head's.
+List<ClauseDualityError> _checkHeadBodyPairs(
+  Map<String, VariableTypeInfo> headTypes,
+  Map<String, String> headLocations,
+  Map<String, VariableTypeInfo> bodyTypes,
+  Map<String, String> bodyLocations,
+  ProgramDFA dfa,
+) {
+  final errors = <ClauseDualityError>[];
+
+  for (final entry in bodyTypes.entries) {
+    final varKey = entry.key;
+    final bodyInfo = entry.value;
+    final headInfo = headTypes[varKey];
+    if (headInfo == null) continue;
+
+    // A base name with no state of its own has no type to compare; the type
+    // error, if there is one, is the term check's to report.
+    final headBase = dfa.states[headInfo.typeState.baseName];
+    final bodyBase = dfa.states[bodyInfo.typeState.baseName];
+    if (headBase == null || bodyBase == null) continue;
+    if (headBase.isDual || bodyBase.isDual) continue;
+
+    // Consumed: T <: U.  Produced: U <: T.
+    final consumed = headInfo.typeState.isDual;
+    final (sub, sup) =
+        consumed ? (headBase, bodyBase) : (bodyBase, headBase);
+
+    if (!isSubtype(sub, sup, dfa)) {
+      final baseName =
+          varKey.endsWith('?') ? varKey.substring(0, varKey.length - 1) : varKey;
+      errors.add(ClauseDualityError(
+        baseName,
+        headInfo,
+        bodyInfo,
+        headLocations[varKey] ?? 'head',
+        bodyLocations[varKey] ?? 'body',
+        consumed
+            ? 'Variables across head/body: the head occurrence receives '
+                '${headBase.name}, which is not within what the body occurrence '
+                'accepts (${bodyBase.name})'
+            : 'Variables across head/body: the body occurrence produces '
+                '${bodyBase.name}, which is not within what the head occurrence '
+                'hands out (${headBase.name})',
+      ));
     }
   }
 

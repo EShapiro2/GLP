@@ -6,7 +6,8 @@ import 'error.dart';
 import 'token.dart';
 import 'result.dart';
 import 'ast.dart' show Program, Procedure, Clause, Atom, Goal, Guard, Term, VarTerm, StructTerm, UnderscoreTerm, CompileMode;
-import '../analysis/type_checker/type_ast.dart' show ProcDecl;
+import '../analysis/type_checker/type_ast.dart' show ProcDecl, TypeEnvironment;
+import '../analysis/type_checker/type_checker.dart' show buildModuleTypeEnvironment;
 import 'package:glp_runtime/bytecode/runner.dart' show BytecodeProgram;
 
 // Re-export for users of this module
@@ -43,13 +44,20 @@ class GlpCompiler {
         _createCodegen = createCodegen ?? (() => CodeGenerator());
 
   /// Compile GLP source to bytecode program
-  BytecodeProgram compile(String source) {
-    final result = compileWithMetadata(source);
+  BytecodeProgram compile(String source, {TypeEnvironment? typeEnv}) {
+    final result = compileWithMetadata(source, typeEnv: typeEnv);
     return result.program;
   }
 
-  /// Compile GLP source to bytecode program with variable metadata
-  CompilationResult compileWithMetadata(String source) {
+  /// Compile GLP source to bytecode program with variable metadata.
+  ///
+  /// [typeEnv] is the scope the source was type-checked in.  The SRSW
+  /// relaxations of a typed program are decided on the type each occurrence has
+  /// (TGLP typed-glp.tex, "Readers of ground types"), so the analyzer is given
+  /// the same scope the checker used.  With none, the source's own declarations
+  /// on the root scope are built here, which is what a source with no ancestor
+  /// chain --- REPL text, the root `self.glp` --- is checked in.
+  CompilationResult compileWithMetadata(String source, {TypeEnvironment? typeEnv}) {
     try {
       // Phase 1: Lexical analysis
       // Note: Main lexer now handles type declarations (::= and procedure)
@@ -73,6 +81,7 @@ class GlpCompiler {
         ast,
         generateReduce: generateReduce,
         procDeclarations: module.procDeclarations,
+        typeEnv: typeEnv ?? buildModuleTypeEnvironment(module),
       );
 
       // Phase 4: Code generation
@@ -92,7 +101,10 @@ class GlpCompiler {
   /// Skips lexing, parsing, type checking, and _select generation.
   ///
   /// [procDeclarations] should contain renamed declarations (e.g., from
-  /// [linkProgram]) for SRSW type-based relaxation.
+  /// [linkProgram]).  [typeEnv] is the scope the linked program was checked in
+  /// (the flat module's, [linkedProgramEnvironment]): the SRSW relaxations of a
+  /// typed program are decided on the type each occurrence has, so the analyzer
+  /// is given the same scope the checker used.
   ///
   /// The flat program is the object checked, and every clause in it satisfies
   /// SRSW, the linker's alias clauses included (TGLP modules.tex §Compilation).
@@ -101,12 +113,13 @@ class GlpCompiler {
   /// linked program, and nothing else performed the check, so a directory
   /// program was compiled and run with no SRSW check at all.
   BytecodeProgram compileProgram(Program ast,
-      {List<ProcDecl>? procDeclarations}) {
+      {List<ProcDecl>? procDeclarations, TypeEnvironment? typeEnv}) {
     final analyzer = _createAnalyzer();
     final annotated = analyzer.analyze(
       ast,
       generateReduce: true,
       procDeclarations: procDeclarations ?? [],
+      typeEnv: typeEnv,
     );
 
     final codegen = _createCodegen();

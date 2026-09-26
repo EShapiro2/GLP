@@ -71,11 +71,29 @@ class LinkResult {
   /// that nothing calls is still declared.
   final List<ProcDecl> scopeDeclarations;
 
+  /// The scope the linked program was CHECKED in --- the flat module's
+  /// environment ([linkedProgramEnvironment]) --- where the result came from
+  /// [checkedLinkedProgram], and null where it came from [linkProgram] alone.
+  /// The compiler is given it so that the SRSW relaxations of a typed program
+  /// are decided on the same types the checker decided by (TGLP typed-glp.tex,
+  /// "Readers of ground types").
+  final TypeEnvironment? checkedEnv;
+
   LinkResult(this.program, this.procDeclarations,
-      {List<ProcDecl>? checkedDeclarations, List<ProcDecl>? scopeDeclarations})
+      {List<ProcDecl>? checkedDeclarations, List<ProcDecl>? scopeDeclarations,
+      this.checkedEnv})
       : checkedDeclarations = checkedDeclarations ?? procDeclarations,
         scopeDeclarations =
             scopeDeclarations ?? checkedDeclarations ?? procDeclarations;
+
+  /// This result with [checkedEnv] set.
+  LinkResult withCheckedEnv(TypeEnvironment env) => LinkResult(
+        program,
+        procDeclarations,
+        checkedDeclarations: checkedDeclarations,
+        scopeDeclarations: scopeDeclarations,
+        checkedEnv: env,
+      );
 }
 
 /// Walk the program directory tree and discover all modules.
@@ -701,8 +719,13 @@ LinkResult checkedLinkedProgram(List<DiscoveredModule> modules,
     throw Exception('Type checking failed for linked program:\n$errors');
   }
 
-  return linked;
+  return linked.withCheckedEnv(linkedProgramEnvironment(flat));
 }
+
+/// The scope the linked program is checked in: the flat module's own
+/// environment, built exactly as [checkModule] builds it.
+TypeEnvironment linkedProgramEnvironment(Module flat) =>
+    buildModuleTypeEnvironment(flat);
 
 /// The single flat Module the linked program is type-checked and compiled as:
 /// the linked program's procedures, every module's own type definitions, and the

@@ -765,7 +765,14 @@ TypeCheckResult checkModule(ast.Module module, {List<ast.Procedure>? transformed
   }
 }
 
-TypeCheckResult _checkModuleImpl(ast.Module module, {List<ast.Procedure>? transformedProcedures, TypeEnvironment? ancestorScope, wtc.InstantiationCollector? collector, Set<String>? certifiedKeys, bool rejectUninstantiatedInspecting = true}) {
+/// The scope [module] is checked in: its own definitions on top of
+/// [ancestorScope] (the root scope where none is given), the parameterised types
+/// expanded.  The environment [checkModule] builds, and the one the compiler
+/// asks the SRSW relaxations of a typed program from (analyzer.dart,
+/// [Analyzer.analyze]) --- one build, so the types the checker decides by and
+/// the types the relaxation decides by are the same types.
+TypeEnvironment buildModuleTypeEnvironment(ast.Module module,
+    {TypeEnvironment? ancestorScope}) {
   // Build base environment first so we know all type names for expansion.
   // This avoids mistaking root scope type names for type parameters.
   final baseEnv = ancestorScope ?? buildRootScopeEnvironment();
@@ -784,12 +791,16 @@ TypeCheckResult _checkModuleImpl(ast.Module module, {List<ast.Procedure>? transf
   // type-changing procedure). buildTypeEnvironment resolves their simple-alias
   // references, so a template expanded after this point cannot name an alias
   // the build erased.
-  final typeEnv = buildTypeEnvironment(expandedModule,
+  return buildTypeEnvironment(expandedModule,
       ancestorScope: baseEnv,
       typeTemplates: {
         for (final td in module.typeDefs)
           if (td.isParameterized) td.name: td,
       });
+}
+
+TypeCheckResult _checkModuleImpl(ast.Module module, {List<ast.Procedure>? transformedProcedures, TypeEnvironment? ancestorScope, wtc.InstantiationCollector? collector, Set<String>? certifiedKeys, bool rejectUninstantiatedInspecting = true}) {
+  final typeEnv = buildModuleTypeEnvironment(module, ancestorScope: ancestorScope);
 
   // Extract clauses - from transformed procedures if provided, otherwise from module
   final clauses = <ast.Clause>[];

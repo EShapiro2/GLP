@@ -439,8 +439,12 @@ class GlpEngine {
       final linked =
           linkProgram(modules,
               rootDir: File(name).parent.path, singleModulePath: name);
+      // The object compiled is the LINKED program, so the scope its SRSW
+      // relaxations are decided in is the flat module's, not the single
+      // module's: the two name their types differently (step-3 renaming).
       program = _compiler.compileProgram(linked.program,
-          procDeclarations: linked.procDeclarations);
+          procDeclarations: linked.procDeclarations,
+          typeEnv: linkedProgramEnvironment(linkedFlatModule(modules, linked)));
       // This unit's module value — its artefact: h(M) + code.
       moduleValue = _moduleValueOf(_baseName(name), program, linked, modules,
           directory: File(name).parent.absolute.path);
@@ -524,6 +528,7 @@ class GlpEngine {
     final program = _compiler.compileProgram(
       linked.program,
       procDeclarations: linked.procDeclarations,
+      typeEnv: linked.checkedEnv,
     );
     _loadedPrograms['__program__'] = program;
 
