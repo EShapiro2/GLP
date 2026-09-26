@@ -1,0 +1,49 @@
+% An anonymous variable is a fresh writer with no paired reader (TGLP
+% typed-glp.tex, "Anonymous variables"), and at a produced position of a clause
+% head complementation makes `_?` exactly that.  `unknown/1` on the slot an
+% anonymous variable leaves therefore reports it unbound, as a genuinely
+% unbound tail is and as a closed list is not.  Expected, one goal per driver:
+% unbound_tail(G?, A) gives A = open (and suspends), closed_tail(A) gives
+% A = other, anon_head(A) gives A = open, anon_body(A) gives A = open.
+Elem ::= hello(Constant).
+Stream ::= [] ; [Elem | Stream].
+Chan ::= ch(Stream, Stream?).
+Answer ::= open ; other.
+
+% probe(S, A): is the tail of S unbound?
+procedure probe(Stream?, Answer).
+probe([], other).
+probe([hello(_) | T], open) :- unknown(T?) | true.
+probe([hello(_) | _], other) :- otherwise | true.
+
+% A control: the tail is a writer whose producer is suspended, so it is
+% genuinely unbound.
+procedure more(Constant?, Stream).
+more(go, []).
+
+procedure emit(Constant?, Stream).
+emit(Go, [hello(me) | T?]) :- more(Go?, T).
+
+exported procedure unbound_tail(Constant?, Answer).
+unbound_tail(Go, A?) :- emit(Go?, S), probe(S?, A).
+
+% A control: a closed list, whose tail is bound to [].
+procedure closed(Stream).
+closed([hello(me) | []]).
+
+exported procedure closed_tail(Answer).
+closed_tail(A?) :- closed(S), probe(S?, A).
+
+% `_?` at a produced position of a clause head: the stream is left open.
+procedure say(Constant?, Stream).
+say(Me, [hello(Me?) | _?]).
+
+exported procedure anon_head(Answer).
+anon_head(A?) :- say(me, S), probe(S?, A).
+
+% `_` at a produced position inside a term the body constructs.
+procedure look(Chan?, Answer).
+look(ch(In, _?), A?) :- probe(In?, A).
+
+exported procedure anon_body(Answer).
+anon_body(A?) :- say(me, S), look(ch(S?, _), A).
