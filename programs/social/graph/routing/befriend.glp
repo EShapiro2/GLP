@@ -1,8 +1,8 @@
 
 %% Cross-lib dependency: the output routers (exposed at the root for platforms,
 %% but a sibling lib module is reached by explicit import + qualified call).
-imported procedure output#send_user(M?, Stream(Ent)?, Stream(Ent)).
-imported procedure output#add_friend_output(Constant?, Stream(M), Stream(Ent)?, Stream(Ent)).
+imported procedure(M, Ent) output#send_user(M?, Stream(Ent)?, Stream(Ent)).
+imported procedure(M, Ent) output#add_friend_output(Constant?, Stream(M), Stream(Ent)?, Stream(Ent)).
 
 %% Idempotent befriend commit with smaller-name tie-break and fresh-friend-channel
 %% conveyance (CSSN Issue 16), lifted from social/network and generalised so all
@@ -24,7 +24,7 @@ imported procedure output#add_friend_output(Constant?, Stream(M), Stream(Ent)?, 
 Decision ::= yes ; no.
 
 %% Walk Outs, binding Decision to yes iff friend(Other) is already present.
-procedure already_friend(Constant?, Stream(Ent)?, Stream(Ent), Decision).
+procedure(Ent) already_friend(Constant?, Stream(Ent)?, Stream(Ent), Decision).
 already_friend(Other, [friend_output(O, Out?)|Rest], [friend_output(O?, Out)|Rest?], yes) :-
     Other? =?= O? | true.
 already_friend(Other, [E|Rest], [E?|Rest1?], Decision?) :-
@@ -33,7 +33,7 @@ already_friend(_, [], [], no).
 
 %% Remove a friend_output by friend id (no-op if absent).  Exported: platforms'
 %% unfriend handlers call it, and await_friend_channel uses it.
-exported procedure close_friend(Constant?, Stream(Ent)?, Stream(Ent)).
+exported procedure(Ent) close_friend(Constant?, Stream(Ent)?, Stream(Ent)).
 close_friend(_, [], []).
 close_friend(Name, [friend_output(K, [])|Rest], Rest?) :-
     Name? =?= K? | true.
@@ -41,7 +41,7 @@ close_friend(Name, [E|Rest], [E?|Rest1?]) :-
     otherwise | close_friend(Name?, Rest?, Rest1).
 
 %% Top-level befriend commit.  Ch is the post-handshake SETUP channel.
-exported procedure befriend_commit(Constant?, Constant?, Channel(Stream(C), Stream(C))?,
+exported procedure(C, Ent, NIM) befriend_commit(Constant?, Constant?, Channel(Stream(C), Stream(C))?,
                           Stream(Ent)?, Stream(Ent), Stream(NIM)?, Stream(NIM)).
 
 %% Smaller-name side: I decide.  Test already_friend then dispatch.
@@ -56,7 +56,7 @@ befriend_commit(_, Other, Ch, Outs, Outs1?, NetIn, NetIn1?) :-
     await_friend_channel(Other?, Ch?, Outs?, Outs1, NetIn?, NetIn1).
 
 %% Smaller-name dispatch on whether friend(Other) is already present.
-procedure smaller_dispatch(Decision?, Constant?, Channel(Stream(C), Stream(C))?,
+procedure(C, Ent, NIM) smaller_dispatch(Decision?, Constant?, Channel(Stream(C), Stream(C))?,
                            Stream(Ent)?, Stream(Ent), Stream(NIM)?, Stream(NIM)).
 
 %% Already friend: suppress.  Close the setup write end to []; the larger-name
@@ -73,7 +73,7 @@ smaller_dispatch(no, Other, ch(_, [friend_channel(PeerEnd?)|[]]), Outs, Outs2?, 
     merge(NetIn?, FIn?, NetIn1).
 
 %% Larger-name side: read the setup channel's read end.
-procedure await_friend_channel(Constant?, Channel(Stream(C), Stream(C))?,
+procedure(C, Ent, NIM) await_friend_channel(Constant?, Channel(Stream(C), Stream(C))?,
                           Stream(Ent)?, Stream(Ent), Stream(NIM)?, Stream(NIM)).
 
 %% Friend channel conveyed: adopt it — install its write end and merge its read
