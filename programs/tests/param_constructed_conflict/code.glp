@@ -1,0 +1,11 @@
+%% See self.glp.
+
+exported procedure go(Constant?, Stream(Entry)?, Stream(Entry)).
+go(N, Outs, Outs1?) :- send2(m(N?), bad(N?), Outs?, Outs1).
+
+procedure(M, Ent) send2(M?, M?, Stream(Ent)?, Stream(Ent)).
+send2(A, B, [out([A?, B?|Out1?])|Rest], [out(Out1)|Rest?]).
+send2(A, B, [E|Rest], [E?|Rest1?]) :-
+    otherwise |
+    send2(A?, B?, Rest?, Rest1).
+send2(_, _, [], []).

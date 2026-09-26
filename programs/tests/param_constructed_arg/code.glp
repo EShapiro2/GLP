@@ -1,0 +1,13 @@
+%% See self.glp.  send_user/3 inspects its Ent parameter (its clauses match
+%% out/1), so it is not parametrically well-typed and is checked only at the
+%% instantiation the call below supplies.
+
+exported procedure show(Constant?, Stream(Entry)?, Stream(Entry)).
+show(N, Outs, Outs1?) :- send_user(msg(agent, person, bye(N?)), Outs?, Outs1).
+
+procedure(M, Ent) send_user(M?, Stream(Ent)?, Stream(Ent)).
+send_user(Msg, [out([Msg?|Out1?])|Rest], [out(Out1)|Rest?]).
+send_user(Msg, [E|Rest], [E?|Rest1?]) :-
+    otherwise |
+    send_user(Msg?, Rest?, Rest1).
+send_user(_, [], []).

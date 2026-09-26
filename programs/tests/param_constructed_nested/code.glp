@@ -1,0 +1,11 @@
+%% See self.glp.
+
+exported procedure emit(Constant?, Stream(Entry)?, Stream(Entry)).
+emit(N, Outs, Outs1?) :- send_user(w(i(N?)), Outs?, Outs1).
+
+procedure(M, Ent) send_user(M?, Stream(Ent)?, Stream(Ent)).
+send_user(Msg, [out([Msg?|Out1?])|Rest], [out(Out1)|Rest?]).
+send_user(Msg, [E|Rest], [E?|Rest1?]) :-
+    otherwise |
+    send_user(Msg?, Rest?, Rest1).
+send_user(_, [], []).

@@ -1,0 +1,15 @@
+%% A term inside a term at a parameter position (TGLP parameterized-types.tex
+%% def:instantiation).  The call passes w(i(N?)) where nothing in it is a
+%% variable of type Wrap, so the call fixes only Ent; M is fixed by the callee's
+%% own head pair (Msg, Msg?) to Wrap, the element type of the stream Entry
+%% carries, and the whole nested term --- the inner i(N?) included --- is then
+%% checked against `Wrap?` at the call, which admits it.
+
+Inner ::= i(Constant).
+Wrap  ::= w(Inner).
+Entry ::= out(Stream(Wrap)?) ; log(Stream(Constant)?).
+
+imported procedure code#emit(Constant?, Stream(Entry)?, Stream(Entry)).
+
+exported procedure run(Constant?, Stream(Entry)?, Stream(Entry)).
+run(N, Outs, Outs1?) :- code # emit(N?, Outs?, Outs1).

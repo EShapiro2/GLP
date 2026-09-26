@@ -3052,25 +3052,26 @@ check_not "cross-module project not loaded green" "Loaded program: .*cross_modul
 
 echo ""
 
-echo "--- A param-inspecting procedure no call instantiates is named at load ---"
+echo "--- A param-inspecting procedure no call instantiates is rejected at load ---"
 # The complement of the case above: there, an instantiation arises across the
 # seam and the callee's clauses are checked at it. Here run/1's declaration is
-# `_?`, so the call supplies no element type, no instantiation of tagger/1
-# arises, and its clauses are checked by nothing (parameterized-types.tex
-# sec:programs-and-modules). The program is still well-typed --- the paper
-# licenses an uninstantiated procedure going unchecked --- so the load succeeds;
-# what it must NOT do is stay silent, which until 2026-08-03 it did. That
-# silence is why typed_actors.glp carried an untagged value at a tagged-union
-# position for months (GLP 54dd7020); the same clause declared concretely is
-# rejected at once, which is tagged_union_untagged_neg.glp in NEGATIVE_FILES.
+# `_?`, so the call supplies no element type and no instantiation of tagger/1
+# arises; tagger/1 inspects its parameter, so it is not parametrically
+# well-typed and has no well-typing, and the program is rejected
+# (parameterized-types.tex sec:abstract-parameters, TGLP 4f7027b). From
+# 2026-08-03 to 2026-09-18 the load succeeded and printed a `[TYPE] ...
+# unchecked in this program` line instead: the silence that let typed_actors.glp
+# carry an untagged value at a tagged-union position for months (GLP 54dd7020)
+# had become a warning, and a warning is not a refusal. The same clause declared
+# concretely is tagged_union_untagged_neg.glp in NEGATIVE_FILES.
 output=$("$REPL_RUN" <<HEREDOC
 $GLP_DIR/programs/tests/param_unchecked/
 :quit
 HEREDOC
 2>&1)
-check "uninstantiated param-inspect reported at load" "unchecked in this program" "$output"
-check "the report names the procedure" "code:tagger/1" "$output"
-check "program with an unchecked procedure still loads" "Loaded program: .*param_unchecked" "$output"
+check "uninstantiated param-inspect rejected at load" "no call in the program instantiates it" "$output"
+check "the rejection names the procedure" "code:tagger/1" "$output"
+check_not "program with an uninstantiated inspecting procedure does not load" "Loaded program: .*param_unchecked" "$output"
 
 echo ""
 

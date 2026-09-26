@@ -583,12 +583,14 @@ List<String> _ancestorSelfGlpFiles(String rootDir, String programsDir) {
 ///
 /// - A parameterised procedure with no instantiation in its own module is not
 ///   rejected here — [checkModule] is called with
-///   `rejectUninstantiatedInspecting: false`. A procedure that never inspects a
+///   `rejectUninstantiatedInspecting: false`, since a call in another module of
+///   the program may instantiate it. A procedure that never inspects a
 ///   parameter is certified once for all instantiations by the abstract-
 ///   parameter route (parameterized-types.tex §Modular Checking via Abstract
 ///   Parameters), which [checkModule] runs regardless; one that does inspect a
 ///   parameter has no well-typing of its own and acquires one only per
-///   instantiation, which the linked check supplies.
+///   instantiation, which the linked check supplies — or, where no call in the
+///   program supplies one, the linked check rejects the program.
 /// - Defined guards are unfolded per module before checking, as on the
 ///   single-file path (`GlpEngine.loadSource`): guard unfolding precedes type
 ///   checking, so input coverage is checked on the unfolded head.
@@ -638,8 +640,11 @@ void checkModulesIndependently(List<DiscoveredModule> modules) {
 /// through parametric intermediaries — which a per-module check, stopping at the
 /// `#` boundary, does not. Renaming makes procedure names unambiguous across
 /// modules and type identity is structural, so no merged-environment juggling is
-/// needed. A parameterised procedure with no instantiation goes unchecked, not
-/// rejected (typed-program.md "Programs and Modules").
+/// needed. A parameterised procedure that inspects a parameter and that no call
+/// in the program instantiates is not parametrically well-typed and has no
+/// well-typing, and the program is rejected (parameterized-types.tex
+/// sec:abstract-parameters); one that inspects none keeps its certificate from
+/// the abstract instance and is not.
 ///
 /// This is the SECOND of the two checks the paper specifies. Step 2 — each
 /// module against its ancestor scope — runs first, in
@@ -649,7 +654,7 @@ void checkModulesIndependently(List<DiscoveredModule> modules) {
 ///
 /// Throws on type errors with details.
 LinkResult checkedLinkedProgram(List<DiscoveredModule> modules,
-    {required String rootDir, bool rejectUninstantiated = false}) {
+    {required String rootDir}) {
   // Step 2 (modules.tex §Static Linking): after discovery, before renaming,
   // each module is type-checked independently against its ancestor scope. The
   // linked check below is an addition to it, not a replacement.
@@ -673,17 +678,20 @@ LinkResult checkedLinkedProgram(List<DiscoveredModule> modules,
   final pe = PartialEvaluator();
   final transformed = pe.transformDefinedGuards(linked.program);
 
-  // rejectUninstantiatedInspecting: false — at load time the program's concrete
-  // initial goals (def:program) are not yet known, and they are what instantiate
-  // the parametric entry procedures and routers. A parametric procedure left
-  // uninstantiated here is bound by the goal at run; rejecting it at load would
-  // refuse every program whose routers are instantiated only through its goals.
-  // The free-type-parameter (no-linked-program) check belongs where the goal
-  // completes the program, not here.
+  // The flat program is the object checked, and every call in it is local, so
+  // a parameterised procedure no call in it instantiates is one no call in the
+  // program instantiates: where it inspects a parameter it is not parametrically
+  // well-typed and the program is rejected (parameterized-types.tex
+  // sec:abstract-parameters). A goal posted at run time is not a call in the
+  // program. Until 2026-09-18 this passed false and printed a `[TYPE] N
+  // parameterized procedure(s) unchecked in this program` line instead, so a
+  // program pronounced well-typed carried clauses nothing had checked — which is
+  // how typed_actors.glp carried an untagged value at a tagged-union position
+  // for months (found 2026-08-03).
   final result = checkModule(
     flat,
     transformedProcedures: transformed.procedures,
-    rejectUninstantiatedInspecting: rejectUninstantiated,
+    rejectUninstantiatedInspecting: true,
   );
 
   if (!result.isWellTyped) {
@@ -691,30 +699,6 @@ LinkResult checkedLinkedProgram(List<DiscoveredModule> modules,
         .map((e) => '  ${e.message} at line ${e.line}')
         .join('\n');
     throw Exception('Type checking failed for linked program:\n$errors');
-  }
-
-  // What the verdict above does NOT cover. A parameterised procedure that
-  // inspects a type parameter and that no call in this program instantiates is
-  // checked by nothing (parameterized-types.tex sec:programs-and-modules), and
-  // until 2026-08-03 a program said so nowhere: it printed a clean verdict and
-  // the unchecked clauses were indistinguishable from checked ones. That is how
-  // typed_actors.glp carried an untagged value at a tagged-union position for
-  // months. One line, naming them, so the gap is visible at the point the
-  // program is pronounced well-typed rather than only to whoever reads the
-  // checker.
-  //
-  // 🔴 A line printed, not a load refused, and that is INTERIM — see the
-  // downgrade note at the check itself in analysis/type_checker/type_checker.dart.
-  // It becomes a refusal when social/graph/routing carries concrete types.
-  // Runtime-posted goals stay unchecked either way until run(Goal, Type, Module)
-  // is implemented.
-  final unchecked = [
-    for (final w in result.warnings)
-      if (w.procedure != null) w.procedure!
-  ]..sort();
-  if (unchecked.isNotEmpty) {
-    print('[TYPE] ${unchecked.length} parameterized procedure(s) unchecked in '
-        'this program — no instantiation: ${unchecked.join(', ')}');
   }
 
   return linked;

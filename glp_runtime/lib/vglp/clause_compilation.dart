@@ -187,10 +187,14 @@ Clause _compileOrdinary(Clause c, Procedure proc, int m,
   final med = names.fresh(_medStem);
   final slots = List.generate(m, (k) => names.fresh('$_slotStem${k + 1}'));
 
-  final head = _extendHead(c.head, med, slots.map((s) => _w(s)).toList());
+  final sourceBody = c.body ?? const <Goal>[];
+  final bodyTakes = _bodyTakesChannel(sourceBody, isProcedureOfM);
+
+  final head = _extendHead(c.head, _medHead(med, c, slots.isNotEmpty || bodyTakes),
+      slots.map((s) => _w(s)).toList());
   final body = <Goal>[];
-  final medIn = _abortsInto(body, slots, med, names);
-  body.addAll(_compileBody(c.body ?? const [], medIn, names,
+  final medIn = _abortsInto(body, slots, med, names, c, consumed: bodyTakes);
+  body.addAll(_compileBody(sourceBody, medIn, names,
       isProcedureOfM: isProcedureOfM, slotCountOf: slotCountOf));
 
   return Clause(head,
@@ -223,10 +227,14 @@ Clause _compileAnswer(Clause c, Procedure proc, int m, int j, String name,
     for (var k = 0; k < m; k++) if (k != j - 1) slots[k]
   ];
 
-  final head = _extendHead(c.head, med, slotArgs);
+  final sourceBody = c.body ?? const <Goal>[];
+  final bodyTakes = _bodyTakesChannel(sourceBody, isProcedureOfM);
+
+  final head = _extendHead(
+      c.head, _medHead(med, c, passed.isNotEmpty || bodyTakes), slotArgs);
   final body = <Goal>[];
-  final medIn = _abortsInto(body, passed, med, names);
-  body.addAll(_compileBody(c.body ?? const [], medIn, names,
+  final medIn = _abortsInto(body, passed, med, names, c, consumed: bodyTakes);
+  body.addAll(_compileBody(sourceBody, medIn, names,
       isProcedureOfM: isProcedureOfM, slotCountOf: slotCountOf));
 
   return Clause(head,
@@ -270,7 +278,6 @@ Clause _compileElse(Clause c, Procedure proc, int m, int j,
   final substHead = Atom(c.head.functor,
       c.head.args.map((t) => _substTerm(t, subst)).toList(),
       c.head.line, c.head.column);
-  final head = _extendHead(substHead, med, slotArgs);
   final guards = [
     for (final g in c.guards ?? const <Guard>[])
       Guard(g.predicate, g.args.map((t) => _substTerm(t, subst)).toList(),
@@ -282,8 +289,12 @@ Clause _compileElse(Clause c, Procedure proc, int m, int j,
           g.line, g.column)
   ];
 
+  final bodyTakes = _bodyTakesChannel(elseBody, isProcedureOfM);
+  final head = _extendHead(
+      substHead, _medHead(med, c, passed.isNotEmpty || bodyTakes), slotArgs);
+
   final body = <Goal>[];
-  final medIn = _abortsInto(body, passed, med, names);
+  final medIn = _abortsInto(body, passed, med, names, c, consumed: bodyTakes);
   body.addAll(_compileBody(elseBody, medIn, names,
       isProcedureOfM: isProcedureOfM, slotCountOf: slotCountOf));
 
@@ -396,7 +407,7 @@ Clause _compileAsk(Clause c, Procedure proc, ProcDecl decl, int m, int j,
 /// The split is `med_split/3`, whose two branches' message streams merge into
 /// the parent's — the "standard stream technique" the Definition uses without
 /// comment.  For r such goals it emits r-1 splits, chained.
-List<Goal> _compileBody(List<Goal> body, String med, _NameSource names,
+List<Goal> _compileBody(List<Goal> body, String? med, _NameSource names,
     {required bool Function(String, int) isProcedureOfM,
     required int Function(String, int) slotCountOf}) {
   final indices = <int>[];
@@ -413,9 +424,11 @@ List<Goal> _compileBody(List<Goal> body, String med, _NameSource names,
     return [for (final g in body) if (!_isTrue(g)) g];
   }
 
-  // One channel per calling goal, chained off `med`.
+  // One channel per calling goal, chained off `med`, which the caller gives
+  // exactly when the body takes it — the same test as `indices` above, made by
+  // _bodyTakesChannel before the head is built.
   final channels = <String>[];
-  var current = med;
+  var current = med!;
   for (var t = 0; t < indices.length; t++) {
     if (t == indices.length - 1) {
       channels.add(current);
@@ -462,25 +475,50 @@ List<Goal> _nonEmpty(List<Goal> body, Clause c) =>
 /// they cannot share a list; abort/3 is generic in the slot's reply type and
 /// takes them one at a time.  With no slots to abort the chain is the
 /// identity, so it is omitted.
-String _abortsInto(List<Goal> body, List<String> slots,
-    String med, _NameSource names) {
-  if (slots.isEmpty) return med;
-  final med1 = names.fresh('${_medStem}1');
+///
+/// [consumed] is whether the body takes the channel the chain hands on.  Where
+/// it does not — a guarded unit clause, or a body of built-in goals alone —
+/// the chain's last output is the anonymous writer `_` and the function
+/// returns null: the channel ends in this clause, and `_` is GLP's writer with
+/// no paired reader (TGLP, "SRSW Relaxations"), where a named `Med1` would be
+/// a writer the clause never reads and the clause would violate SRSW.
+String? _abortsInto(List<Goal> body, List<String> slots, String med,
+    _NameSource names, Clause c, {required bool consumed}) {
+  if (slots.isEmpty) return consumed ? med : null;
+  final med1 = consumed ? names.fresh('${_medStem}1') : null;
   var from = med;
   for (var i = 0; i < slots.length; i++) {
-    final to = i == slots.length - 1 ? med1 : names.fresh('M${i + 1}');
-    body.add(Goal('abort', [_r(slots[i]), _r(from), _w(to)], 0, 0));
-    from = to;
+    final last = i == slots.length - 1;
+    final Term to = last
+        ? (med1 == null ? _anon(c) : _w(med1))
+        : _w(names.fresh('M${i + 1}'));
+    body.add(Goal('abort', [_r(slots[i]), _r(from), to], 0, 0));
+    if (!last) from = (to as VarTerm).name;
   }
   return med1;
 }
+
+/// Whether the body takes the mediator channel: the Definition splits it among
+/// the body goals that call procedures of M, and built-in goals carry nothing,
+/// so a body with no such goal reads it nowhere.
+bool _bodyTakesChannel(
+        List<Goal> body, bool Function(String, int) isProcedureOfM) =>
+    body.any((g) => isProcedureOfM(g.functor, g.args.length));
+
+/// The mediator argument of a compiled head: the writer `Med` where the clause
+/// reads it — in the abort chain or in a body goal — and the anonymous writer
+/// `_` where it reads it nowhere, that being GLP's writer with no paired
+/// reader (TGLP, "SRSW Relaxations").  A named writer there is a writer with
+/// no reader, which is the SRSW violation the compilation emitted until now.
+Term _medHead(String med, Clause c, bool isRead) =>
+    isRead ? _w(med) : _anon(c);
 
 // ---------------------------------------------------------------------------
 // Pieces of the compiled terms
 // ---------------------------------------------------------------------------
 
-Atom _extendHead(Atom head, String med, List<Term> slotArgs) =>
-    Atom(head.functor, [_w(med), ...head.args, ...slotArgs],
+Atom _extendHead(Atom head, Term med, List<Term> slotArgs) =>
+    Atom(head.functor, [med, ...head.args, ...slotArgs],
         head.line, head.column);
 
 Term _ask(Term reply, Term id) => StructTerm('ask', [reply, id], 0, 0);

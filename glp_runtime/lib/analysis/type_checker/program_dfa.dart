@@ -292,6 +292,33 @@ ProgramDFA buildProgramDFA(TypeEnvironment env) {
   return ProgramDFA(states, automata);
 }
 
+/// Add one monomorphic type definition to an existing [dfa], in place.
+///
+/// Parameterised-type expansion (TGLP parameterized-types.tex
+/// sec:param-expansion) generates a fresh monomorphic type definition for each
+/// instantiation and adds it to the environment.  The type a parameter is bound
+/// to by the constructors of the callee's heads (def:instantiation) is such a
+/// definition, and it is discovered while a clause is being checked rather than
+/// at the declaration-driven expansion, so it is added here instead of being
+/// built into the DFA from the start.
+///
+/// The addition is purely additive --- the two states `T` and `T?` and their two
+/// automata, under a name nothing else uses --- so every state and automaton
+/// already in [dfa] is left as it was, and a second call for the same name is a
+/// no-op.  [types] must already carry [typeDef] under its own name, so a
+/// self-referential alternative and [primitiveClosure] resolve.
+void addTypeToProgramDFA(
+    ProgramDFA dfa, TypeDef typeDef, Map<String, TypeDef> types) {
+  final typeName = typeDef.name;
+  if (dfa.automata.containsKey(typeName)) return;
+  dfa.states[typeName] = DFAState(typeName, isDual: false, isFinal: false);
+  dfa.states['$typeName?'] = DFAState(typeName, isDual: true, isFinal: false);
+  dfa.automata[typeName] =
+      _buildTypeAutomaton(typeDef, dfa.states, types, isDual: false);
+  dfa.automata['$typeName?'] =
+      _buildTypeAutomaton(typeDef, dfa.states, types, isDual: true);
+}
+
 /// Create a final automaton (no transitions).
 Automaton _finalAutomaton(DFAState state) {
   return Automaton(state, {});

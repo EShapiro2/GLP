@@ -13,6 +13,7 @@ import 'dart:isolate';
 import 'dart:typed_data';
 
 import 'package:glp_runtime/engine/glp_engine.dart';
+import 'package:glp_runtime/analysis/type_checker/type_ast.dart' show TypeEnvironment;
 import 'package:glp_runtime/bytecode/runner.dart';
 import 'package:glp_runtime/engine_v2/interp.dart';
 import 'package:glp_runtime/runtime/terms.dart';
@@ -81,6 +82,15 @@ class AgentIdle extends IsolateMessage {
   AgentIdle(this.agentId);
 }
 
+/// One line an agent sent to its person (`send_to_user/1`), forwarded to the
+/// manager so a harness can assert what a play produced rather than that it
+/// settled. Until 2026-09-18 the line was only printed inside the isolate.
+class AgentOutput extends IsolateMessage {
+  final String agentId;
+  final String line;
+  AgentOutput(this.agentId, this.line);
+}
+
 /// Sent by an agent isolate when handling a message throws.
 ///
 /// Without this an uncaught exception ends the isolate silently: the agent stops
@@ -126,6 +136,7 @@ class AgentConfig {
   final List<String>? sharedSources; // Optional shared code files (e.g., social_agent.glp)
   final String? programDir; // Optional program directory for static linking
   final String rootSelfGlpPath; // Absolute path to programs/self.glp
+  final String? bootPath; // The boot file's path, for its own self.glp chain
   final SendPort mainPort;
   final SendPort? uiPort; // null for headless
   final TraceConfig traceConfig;
@@ -146,6 +157,7 @@ class AgentConfig {
     this.sharedSources,
     this.programDir,
     required this.rootSelfGlpPath,
+    this.bootPath,
     required this.mainPort,
     required this.keyPair,
     required this.directory,
@@ -201,6 +213,13 @@ class IsolateManager {
 
   /// What the agents have thrown, if anything.
   List<String> get faults => List.unmodifiable(_faults);
+
+  /// What each agent has sent to its person, in order of arrival.
+  final Map<String, List<String>> _outputs = {};
+
+  /// The lines [agentId] sent to its person so far (see [AgentOutput]).
+  List<String> outputOf(String agentId) =>
+      List.unmodifiable(_outputs[agentId] ?? const []);
 
   /// Whether every agent has finished every unit of work handed to it.
   ///
@@ -348,6 +367,7 @@ class IsolateManager {
         sharedSources: config.sharedSources,
         programDir: config.programDir,
         rootSelfGlpPath: config.rootSelfGlpPath,
+        bootPath: config.bootPath,
         mainPort: _mainPort.sendPort,
         keyPair: keyPairs[directive.agentId]!,
         directory: _router.directory,
@@ -437,6 +457,9 @@ class IsolateManager {
     } else if (msg is AgentFaulted) {
       _recordFault(msg.agentId, msg.error);
 
+    } else if (msg is AgentOutput) {
+      _outputs.putIfAbsent(msg.agentId, () => []).add(msg.line);
+
     } else if (msg is RouterSend) {
       if (_traceConfig.glp && _isTracingAgent(msg.fromId)) {
         print('[${msg.fromId}] → send to ${msg.toId}');
@@ -472,14 +495,14 @@ void _agentIsolateEntry(AgentConfig config) async {
   log('Starting isolate');
 
   // Create GlpEngine — the ONE way to run GLP programs.
-  // Non-strict types: actor code may have type warnings that shouldn't be fatal.
   // The engine holds the agent's key pair as the person's identity from
   // construction, so the certificate its compiler writes, self_key/1 and
   // sign/3 are under the key the networking layer below is given.
+  // The load refuses a program that does not typecheck: this isolate ran with
+  // the checker's errors printed as warnings until 2026-09-18.
   final engine = GlpEngine(
       rootSelfGlpPath: config.rootSelfGlpPath,
-      identity: PersonIdentity(config.keyPair.pub, config.keyPair.priv))
-    ..strictTypes = false;
+      identity: PersonIdentity(config.keyPair.pub, config.keyPair.priv));
 
   // Enable madGLP mode (loads madPredicates + creates MadContext)
   engine.enableMadGLP(agentId: agentId);
@@ -488,21 +511,33 @@ void _agentIsolateEntry(AgentConfig config) async {
   // A load/type-check failure here (e.g. UnknownTypeError) must be reported to
   // the manager, not left to kill the isolate silently — otherwise boot() hangs
   // forever waiting for Ready (Issue 19).
+  // Every source handed over here is loaded on top of what the engine already
+  // holds and is checked in that scope --- the linked program, the kernels
+  // enableMadGLP loaded, and the boot file's own ancestor chain where its path
+  // is known (IGLP, Implementation Notes, "The scope a boot source is checked
+  // in"). Under the synthetic names alone the check saw the bare root scope and
+  // refused send_to_net/1, agent/7 and ui_mediator/5, which the engine resolves.
+  TypeEnvironment bootScope() => config.bootPath != null
+      ? engine.scopeFor(config.bootPath!)
+      : engine.scope;
   try {
     if (config.programDir != null) {
       // Program-directory mode: static-link the program, then load boot source on top.
       engine.loadProgram(config.programDir!);
-      engine.loadSource(config.programSource, filename: 'program');
+      engine.loadSource(config.programSource,
+          filename: 'program', scope: bootScope());
       log('Program loaded via program linking (${config.programDir}) + boot source');
     } else {
       // Legacy mode: load shared source files and boot program sequentially.
       // Each file is loaded separately to preserve per-file -mode() directives.
       if (config.sharedSources != null) {
         for (var i = 0; i < config.sharedSources!.length; i++) {
-          engine.loadSource(config.sharedSources![i], filename: 'shared_$i');
+          engine.loadSource(config.sharedSources![i],
+              filename: 'shared_$i', scope: engine.scope);
         }
       }
-      engine.loadSource(config.programSource, filename: 'program');
+      engine.loadSource(config.programSource,
+          filename: 'program', scope: bootScope());
       log('Program loaded via GlpEngine (stdlib + madPredicates + user code)');
     }
   } catch (e, st) {
@@ -606,8 +641,12 @@ void _agentIsolateEntry(AgentConfig config) async {
   args[arity - 1] = VarRef(netInArgReader);
 
   // What the agent sends to its person is printed under the agent's name, so
-  // a harness reading the process's output can tell whose line it is.
-  runtime.outputCallback = (text) => print('[$agentId] $text');
+  // a harness reading the process's output can tell whose line it is, and is
+  // forwarded to the manager, so a harness can assert it (IsolateManager.outputOf).
+  runtime.outputCallback = (text) {
+    print('[$agentId] $text');
+    config.mainPort.send(AgentOutput(agentId, text));
+  };
 
   // Spawn main goal. It carries the program's module value, as a REPL goal
   // does: self_module/1 returns it, sign/3 puts its source identity into a

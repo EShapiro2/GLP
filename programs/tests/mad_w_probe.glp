@@ -29,7 +29,18 @@
 %% Run via glp_multiagent/test/mad_w_probe_test.dart (two isolates).
 
 
-procedure agent_init(Constant?, Stream(X)?, Stream(X)?).
+%% What crosses: a bare writer of Done wrapped in w/1, addressed as msg/2; what
+%% bob forwards onto its channel: the same writer wrapped in wrapped/1.  A `?`
+%% at a type position is where a writer travels inside a value.  Typed
+%% concretely since 2026-09-18: over parameters, bob_producer/2 and
+%% bob_consumer/1 inspected them and no call instantiated them, so their
+%% clauses were checked by nothing (TGLP, sec:abstract-parameters).
+Done     ::= done.
+Probe    ::= w(Done?).
+ProbeMsg ::= msg(Constant, Probe).
+Carried  ::= wrapped(Done?).
+
+procedure agent_init(Constant?, Stream(_)?, Stream(ProbeMsg)?).
 
 %% Alice: transmit a fresh writer to bob, wrapped in w/1.
 agent_init(alice, _, _) :-
@@ -44,12 +55,12 @@ agent_init(bob, _, NetIn) :-
     bob_consumer(ch(S?, _)).
 
 %% Capture the _w reader, forward it as a writer onto the channel stream S.
-procedure bob_producer(Stream(X)?, Stream(Y)).
+procedure bob_producer(Stream(ProbeMsg)?, Stream(Carried)).
 bob_producer([msg(_, w(W?)) | _], [wrapped(W)]) :- send_to_user([bob_produced]).
 bob_producer([], []) :- send_to_user([bob_empty]).
 
 %% Pull it back with receive/3 into a nested reader pattern.
-procedure bob_consumer(Channel(Stream(Z), W)?).
+procedure bob_consumer(Channel(Stream(Carried), Constant)?).
 bob_consumer(Ch) :- receive(wrapped(Y?), Ch?, Ch1) | send_to_user([bob_ch_matched]), fill(Y), drop(Ch1?).
 bob_consumer(_) :- otherwise | send_to_user([bob_ch_otherwise]).
 

@@ -1,0 +1,17 @@
+%% The other half of the rule (TGLP parameterized-types.tex def:instantiation,
+%% dddf684): a map is an instantiation only if every input path of the expanded
+%% declaration is accepted by some clause of the callee.  This is
+%% param_theta_covered with pick/3's r and [] clauses gone, so the map the heads
+%% build for R --- a(Constant), the same one --- leaves the input paths of
+%% Stream(Kind)? through r and [] unaccepted.  It is therefore not an
+%% instantiation, the call has none, and the program is rejected.  Negative
+%% fixture; it is the shape social/graph/routing/intro.glp shows, where
+%% intro_await_peer's clauses accept ack and nack and leave friend_channel and []
+%% unaccepted.
+
+Kind ::= p ; q ; r.
+
+imported procedure code#go(Stream(Kind)?, Constant).
+
+exported procedure run(Stream(Kind)?, Constant).
+run(Xs, N?) :- code # go(Xs?, N).

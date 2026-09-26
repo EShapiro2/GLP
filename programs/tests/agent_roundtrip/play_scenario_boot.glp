@@ -18,8 +18,12 @@
 %% --- In-heap crossbar: route each agent's `_net` output to the addressed
 %% agent's `_net` input. Merge all outputs, then filter per recipient. ---
 
-procedure(M) crossbar(Stream(M)?, Stream(M)?, Stream(M)?,
-                   Stream(M), Stream(M), Stream(M)).
+%% Typed at what flows: each agent's `_net` output (NetOutStream, the cold
+%% calls) in, each agent's `_net` input (NetInStream) out.  Declared over a
+%% parameter M until 2026-09-18, route/4 inspected M and no call instantiated
+%% it, so its clauses were checked by nothing (TGLP, sec:abstract-parameters).
+procedure crossbar(Stream(NetOutMsg)?, Stream(NetOutMsg)?, Stream(NetOutMsg)?,
+                   Stream(NetInMsg), Stream(NetInMsg), Stream(NetInMsg)).
 crossbar(AOut, BOut, COut, AIn?, BIn?, CIn?) :-
     merge(AOut?, BOut?, AB),
     merge(AB?, COut?, All),
@@ -27,7 +31,7 @@ crossbar(AOut, BOut, COut, AIn?, BIn?, CIn?) :-
 
 %% route: demux the merged stream — each msg(R, _) goes to exactly R's output;
 %% the two non-target outputs are pure holes (?) filled by the recursion.
-procedure(M) route(Stream(M)?, Stream(M), Stream(M), Stream(M)).
+procedure route(Stream(NetOutMsg)?, Stream(NetInMsg), Stream(NetInMsg), Stream(NetInMsg)).
 route([msg(alice, C) | Rest], [msg(alice, C?) | A?], B?, Ch?) :-
     route(Rest?, A, B, Ch).
 route([msg(bob, C) | Rest], A?, [msg(bob, C?) | B?], Ch?) :-

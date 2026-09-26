@@ -1,0 +1,14 @@
+%% programs/tests/srsw_linked_neg/self.glp
+%%
+%% Negative fixture for SRSW on a linked program (TGLP modules.tex
+%% sec:compilation): the flat program is the object checked, and every clause
+%% in it satisfies SRSW, the alias clauses of the fifth step included.  This
+%% directory is a program whose one module, m.glp, has a clause with an
+%% unwritten reader in a head output argument; the type check admits it (a
+%% reader at an output position is the pass-through form) and only the SRSW
+%% pass names it.  Until 2026-09-18 a directory program skipped that pass and
+%% this program loaded.
+
+imported procedure m#p(Stream(Integer)).
+exported procedure p(Stream(Integer)).
+p(Xs?) :- m # p(Xs).

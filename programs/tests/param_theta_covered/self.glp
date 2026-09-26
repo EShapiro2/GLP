@@ -1,0 +1,24 @@
+%% Coverage selects the map (TGLP parameterized-types.tex def:instantiation, as
+%% amended dddf684): "...and every input path of that declaration is accepted by
+%% some clause of $q$ (Definition "Input-Accepting Clause")."  A map carrying an
+%% alternative no clause of the callee matches leaves an input path unaccepted,
+%% and one missing an alternative a head matches makes that head inconsistent, so
+%% the map carries exactly the constructors the callee's heads match there.
+%%
+%% Nothing in the call fixes R: the argument is a constructed term, which
+%% constrains by containment and does not bind.  R is built from pick/3's own
+%% heads --- a(Constant), the field type coming from the other occurrence of N
+%% --- and S is fixed by the equation the variable Xs gives.  The map is then put
+%% to the whole of def:instantiation, coverage included, and pick/3's four
+%% clauses accept every input path of Stream(Kind)? --- p, q, r and [].
+%% param_theta_uncovered is this program with the last two clauses gone.
+%%
+%% Until 2026-09-20 R was reached by nothing and the program was rejected as
+%% carrying a parameter-inspecting procedure nothing instantiates.
+
+Kind ::= p ; q ; r.
+
+imported procedure code#go(Stream(Kind)?, Constant).
+
+exported procedure run(Stream(Kind)?, Constant).
+run(Xs, N?) :- code # go(Xs?, N).

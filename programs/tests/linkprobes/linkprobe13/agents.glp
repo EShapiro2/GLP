@@ -31,10 +31,7 @@ carol_init(_, _) :-
 
 %% put(S, C): the channel's end on the stream the friend already holds.
 procedure put(OuterStream, GreetChannel?).
-put([chan(C?) | T?], C) :- hold_outer(T).
-
-procedure hold_outer(OuterStream).
-hold_outer(X?) :- true.
+put([chan(C?) | _?], C).
 
 exported procedure alice_init(_?, _?).
 alice_init(_, [msg(_, stream(S)) | _]) :- await(alice, S?).
@@ -54,10 +51,7 @@ greet(Me, ch(In, Out?)) :-
     listen(In?).
 
 procedure say(Constant?, GreetStream).
-say(Me, [hello(Me?) | T?]) :- hold(T).
-
-procedure hold(GreetStream).
-hold(X?) :- true.
+say(Me, [hello(Me?) | _?]).
 
 procedure listen(GreetStream?).
 listen([hello(Who) | In]) :- ground(Who?) | send_to_user([saw(hello_from(Who?))]), listen(In?).

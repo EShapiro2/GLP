@@ -8,6 +8,7 @@ import 'dart:io';
 
 import 'package:test/test.dart';
 import 'package:glp_runtime/compiler/lexer.dart';
+import 'package:glp_runtime/compiler/error.dart';
 import 'package:glp_runtime/compiler/parser.dart';
 import 'package:glp_runtime/vglp/mediator.dart';
 import 'package:glp_runtime/vglp/program_compilation.dart';
@@ -15,6 +16,21 @@ import 'package:glp_runtime/analysis/type_checker/type_environment_builder.dart'
     show setRootScopeEnvironmentSource;
 
 const _programs = '../programs';
+
+/// The deployed `.vglp` sources, by which both groups below go: the paths of
+/// `find programs -name "*.vglp"`, less the one-clause fixture of
+/// programs/tests/vglp, which load_test covers.  One list, so that a source
+/// added to the tree is added once.
+const _deployedVglp = [
+  'social/graph/core/agent.vglp',
+  'social/graph/core/home.vglp',
+  'grassapp/grassapp_agent.vglp',
+  'cssn/childsafe/agent.vglp',
+  'cssn/childsafe/child_agent.vglp',
+  'currencies/coins/currency/coins_agent.vglp',
+  'currencies/bonds/bonds_agent.vglp',
+  'currencies/sovereign/denominated/sovereign_agent.vglp',
+];
 
 void main() {
   final rootSelfGlp = File('$_programs/self.glp');
@@ -142,6 +158,144 @@ display respond *(Answer=yes, From?) : panel(inbox), label("Accept"), transient.
     });
   });
 
+  // A display declaration is "for a volition-guarded clause of predicate p with
+  // volition guard *(...)" and "names its clause's volition guard, so an
+  // else-branch has none of its own" (vGLP, Definition "Display Declaration,
+  // Default Display").  One naming a guard no clause of the program has names
+  // no clause, and the compilation rejects the source instead of carrying the
+  // declaration through: until 2026-09-20 both `:emit` and the load carried
+  // coins' `display respond_swap *(no, From?, Want?, Offered?)` verbatim after
+  // the clause of that guard was gone, with no diagnostic (reported by vGLP,
+  // 2026-09-18).
+  group('a display declaration names a clause of the program', () {
+    const src = '''
+Offer    ::= offer(Constant).
+Decision ::= yes ; no.
+OutMsg   ::= decided(Decision).
+Out      ::= [] ; [OutMsg | Out].
+
+procedure respond(Offer?, Out).
+*(Answer=yes, From?)
+respond(offer(From), [decided(Answer?)]) :- ground(From?) | true
+*(no) true.
+
+procedure note(Offer?, Out).
+note(offer(From), [decided(no)]) :- ground(From?) | true.
+''';
+
+    String rejection(String decl) {
+      try {
+        compile('$src$decl\n');
+      } on CompileError catch (e) {
+        return e.toString();
+      }
+      fail('"$decl" was compiled, and it names no clause of the program.');
+    }
+
+    test('one that names its clause\'s guard compiles', () {
+      final out = compile('$src'
+          'display respond *(Answer=yes, From?) : label("Accept"), transient.\n');
+      expect(out.source, contains('display respond *(Answer=yes, From?) : '
+          'label("Accept"), transient.'));
+    });
+
+    test('one whose guard no clause carries is rejected, and the message names '
+        'the declaration and what the program has instead', () {
+      final message =
+          rejection('display respond *(Answer=no, From?) : label("Decline").');
+      expect(message, contains('display respond *(Answer=no, From?)'));
+      expect(message, contains('names no clause'));
+      expect(message,
+          contains('the volition-guarded clauses of respond carry '
+              '*(Answer=yes, From?)'));
+    });
+
+    test('an else-branch is no clause of its own, so its answer is not a guard '
+        'a declaration may name', () {
+      // The clause above has the else-branch *(no): the reported case, where
+      // `display respond_swap *(no, ...)` outlived its clause.
+      final message = rejection('display respond *(no) : label("Decline").');
+      expect(message, contains('display respond *(no)'));
+      expect(message, contains('names no clause'));
+    });
+
+    // "display p *(...) n : ..." names "the n-th of several clauses of p with
+    // that volition guard" (vGLP, Definition "Display Declaration, Default
+    // Display"), so the match is by predicate, guard and index.
+    const twoOfOneGuard = '''
+Offer    ::= offer(Constant).
+Decision ::= yes ; no.
+OutMsg   ::= decided(Decision).
+Out      ::= [] ; [OutMsg | Out].
+
+procedure respond(Offer?, Out).
+*(Answer=yes, From?)
+respond(offer(From), [decided(Answer?)]) :- ground(From?) | true.
+*(Answer=yes, From?)
+respond(offer(From), [decided(Answer?)]) :- constant(From?) | true.
+''';
+
+    test('an index of 1 names the sole clause of that guard, and the compiled '
+        'declaration carries it', () {
+      final out = compile('$src'
+          'display respond *(Answer=yes, From?) 1 : label("Accept").\n');
+      expect(out.source,
+          contains('display respond *(Answer=yes, From?) 1 : '
+              'label("Accept").'));
+    });
+
+    test('an index naming the second of two clauses of one guard compiles', () {
+      final out = compile('$twoOfOneGuard'
+          'display respond *(Answer=yes, From?) 2 : label("Accept").\n');
+      expect(out.source,
+          contains('display respond *(Answer=yes, From?) 2 : '
+              'label("Accept").'));
+    });
+
+    test('an index beyond the clauses of that guard is rejected, and the '
+        'message counts what the program has', () {
+      final message =
+          rejection('display respond *(Answer=yes, From?) 2 : label("Accept").');
+      expect(message, contains('display respond *(Answer=yes, From?) 2'));
+      expect(message, contains('names no clause'));
+      expect(message,
+          contains('respond has 1 clause with that volition guard'));
+    });
+
+    test('one for a procedure with no volition-guarded clause is rejected', () {
+      final message =
+          rejection('display note *(Answer=yes, From?) : label("Note").');
+      expect(message, contains('no clause of note carries a volition guard'));
+    });
+
+    test('one for a procedure the program does not define is rejected', () {
+      final message = rejection('display greet *(Name) : label("Greet").');
+      expect(message, contains('the program has no procedure greet'));
+    });
+
+    // The sources on disc: this is the check that would have caught the coins
+    // declaration, and it is run over each source whether or not that source
+    // compiles yet.
+    for (final path in _deployedVglp) {
+      test('$path declares the displays of its own clauses', () {
+        final file = File('$_programs/$path');
+        expect(file.existsSync(), isTrue, reason: '$path is not on disc');
+        checkDisplayDecls(
+            Parser(Lexer(file.readAsStringSync()).tokenize(), vglp: true)
+                .parseModule());
+      });
+    }
+
+    test('the message form names a pattern, not a clause, and is untouched',
+        () {
+      final out = compile('$src'
+          'display msg(agent, person, hello) : panel(inbox), view(list).\n');
+      expect(out.source,
+          contains('display msg(agent, person, hello) : panel(inbox), '
+              'view(list).'));
+    });
+  });
+
   group('the deployed sources', () {
     // EIGHT, and a list written from memory misses one: cssn/child_agent.vglp
     // arrived on 2026-08-16, coins_agent.vglp and bonds_agent.vglp on
@@ -161,16 +315,7 @@ display respond *(Answer=yes, From?) : panel(inbox), label("Accept"), transient.
     // being with their owners — social/graph and grassapp SGSG's, the two cssn
     // sources CSSN's.  Each parse test becomes the compilation test as its
     // source is repaired.
-    for (final path in [
-      'social/graph/core/agent.vglp',
-      'social/graph/core/home.vglp',
-      'grassapp/grassapp_agent.vglp',
-      'cssn/childsafe/agent.vglp',
-      'cssn/childsafe/child_agent.vglp',
-      'currencies/coins/currency/coins_agent.vglp',
-      'currencies/bonds/bonds_agent.vglp',
-      'currencies/sovereign/denominated/sovereign_agent.vglp',
-    ]) {
+    for (final path in _deployedVglp) {
       test('$path parses as vGLP', () {
         final file = File('$_programs/$path');
         expect(file.existsSync(), isTrue, reason: '$path is not on disc');

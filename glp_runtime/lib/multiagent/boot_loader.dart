@@ -66,6 +66,14 @@ class BootConfig {
   /// Absolute path to programs/self.glp
   String rootSelfGlpPath;
 
+  /// The boot file's path, where it was loaded from one ([BootLoader.loadFile])
+  /// or the caller knows it. The boot source is checked in the scope the engine
+  /// holds plus the boot file's own ancestor self.glp chain (IGLP,
+  /// Implementation Notes, "The scope a boot source is checked in"), and the
+  /// chain is discovered from this path; without it the boot source is checked
+  /// in the engine's scope alone.
+  String? bootPath;
+
   BootConfig({
     required this.directives,
     required this.fullSource,
@@ -73,6 +81,7 @@ class BootConfig {
     this.sharedSources,
     this.programDir,
     this.rootSelfGlpPath = '',
+    this.bootPath,
   });
 }
 
@@ -101,7 +110,7 @@ class BootLoader {
   /// Load from file path (convenience method)
   BootConfig loadFile(String filePath) {
     final file = _readFile(filePath);
-    return load(file);
+    return load(file)..bootPath = filePath;
   }
 
   /// Parse the boot clause and extract spawn directives.

@@ -48,6 +48,40 @@ void main() {
       expect(d.items.single.args, isEmpty);
     });
 
+    test('no clause index is declared where none is written', () {
+      final d = only('display pay *(Amount) : field(Amount, number).\n'
+          '*(Amount) pay(Amount) :- ground(Amount?) | true.');
+      expect(d.index, isNull);
+    });
+
+    test('a clause index between the guard and the colon names the n-th of '
+        'several clauses of the predicate with that guard', () {
+      final d = only('display pay *(Amount) 2 : field(Amount, number).\n'
+          '*(Amount) pay(Amount) :- ground(Amount?) | true.\n'
+          '*(Amount) pay(Amount) :- number(Amount?) | true.');
+      expect(d.index, 2);
+      expect(d.predicate, 'pay');
+      expect(d.items.single.name, 'field');
+    });
+
+    test('the index survives into the printed declaration', () {
+      final d = only('display pay *(Amount) 2 : field(Amount, number).\n'
+          '*(Amount) pay(Amount) :- ground(Amount?) | true.\n'
+          '*(Amount) pay(Amount) :- number(Amount?) | true.');
+      expect(d.toString(),
+          'display pay *(Amount) 2 : field(Amount, "number").');
+    });
+
+    test('an index of zero is a parse error, the count starting at 1', () {
+      expect(() => parse('display pay *(Amount) 0 : field(Amount, number).'),
+          throwsA(isA<CompileError>()));
+    });
+
+    test('a non-integer index is a parse error', () {
+      expect(() => parse('display pay *(Amount) 1.5 : field(Amount, number).'),
+          throwsA(isA<CompileError>()));
+    });
+
     test('the guard is what tells sibling clauses apart', () {
       final ds = parse('display r *(Answer=yes, From?) : label("Accept").\n'
               'display r *(Answer=no, From?) : label("Decline").\n'

@@ -122,8 +122,7 @@ void main() async {
       }
       try {
         final compiler = GlpEngine(
-            rootSelfGlpPath: rootSelfGlpPath, identity: engine.identity)
-          ..strictTypes = engine.strictTypes;
+            rootSelfGlpPath: rootSelfGlpPath, identity: engine.identity);
         compiler.loadProgram(progDir);
         final module = compiler.appModule!;
         final artefact = module.artefact as Artefact;
@@ -228,12 +227,6 @@ void main() async {
     if (trimmed == ':debug' || trimmed == ':d') {
       engine.debugOutput = !engine.debugOutput;
       print('Debug output ${engine.debugOutput ? "enabled" : "disabled"}');
-      continue;
-    }
-
-    if (trimmed == ':strict' || trimmed == ':s') {
-      engine.strictTypes = !engine.strictTypes;
-      print('Strict type checking ${engine.strictTypes ? "enabled" : "disabled"}');
       continue;
     }
 
@@ -383,7 +376,6 @@ void _printHelp() {
   print('  :clear, :c             Clear loaded programs (keep stdlib)');
   print('  :trace, :t             Toggle trace output (reductions)');
   print('  :debug, :d             Toggle DEBUG output');
-  print('  :strict, :s            Toggle strict type checking (default: on)');
   print('  :limit <n>             Set goal reduction limit to <n>');
   print('  :bytecode, :bc         Show loaded bytecode');
   print('  :emit <dir>            Write the compiled GLP beside each .vglp');
@@ -393,7 +385,7 @@ void _printHelp() {
   print('');
   print('Type Checking:');
   print('  Programs with procedure declarations are type-checked');
-  print('  Type errors abort loading by default (use :strict to toggle)');
+  print('  Type errors abort loading: a program that does not check does not run');
   print('');
   print('Examples:');
   print('  GLP> merge.glp                        # Load typed program');

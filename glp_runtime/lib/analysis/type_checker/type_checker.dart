@@ -124,7 +124,15 @@ class TypeChecker {
   /// concrete instantiation (typed-program.md "Programs and Modules").
   final wtc.InstantiationCollector? collector;
 
-  TypeChecker(this.typeEnv, {this.collector}) : dfa = buildProgramDFA(typeEnv);
+  /// The defining clauses of a procedure, by "name/arity", or null where the
+  /// procedure is defined outside the unit being checked.  Call-site
+  /// instantiation needs them: the parameters a call's arguments do not settle
+  /// are fixed by the equations of the callee's own clauses (TGLP
+  /// def:instantiation, well_typed_clause.dart _solveFromCalleeClauses).
+  final wtc.CalleeClauses? callee;
+
+  TypeChecker(this.typeEnv, {this.collector, this.callee})
+      : dfa = buildProgramDFA(typeEnv);
 
   /// Check a program (list of clauses) against declared types
   ///
@@ -137,14 +145,18 @@ class TypeChecker {
 
     // =======================================================================
     // Phase 0: Validate clause terms (anonymous variable restrictions)
-    // Per spec: clause-validation.md - reject _? everywhere, reject _ in bodies
+    // TGLP sections/typed-glp.tex "Anonymous variables": an anonymous reader
+    // is accepted at a produced position of a clause head and nowhere else.
     // =======================================================================
     for (final clause in clauses) {
       try {
-        // Validate head arguments
-        for (final arg in clause.head.args) {
-          validateClauseHead(arg);
-        }
+        // Validate the head against its declaration, which gives each
+        // position its mode (TGLP Definition "Moded Head").
+        validateClauseHead(
+          clause.head,
+          typeEnv.getProcedure(clause.head.functor, clause.head.arity),
+          typeEnv,
+        );
         // Validate guard arguments
         if (clause.guards != null) {
           for (final guard in clause.guards!) {
@@ -297,7 +309,9 @@ class TypeChecker {
 
     try {
       final result = wtc.checkClauseFromAst(clause, dfa, typeEnv,
-          collector: collector, activeInstantiations: activeInstantiations);
+          collector: collector,
+          activeInstantiations: activeInstantiations,
+          callee: callee);
 
       if (!result.isWellTyped) {
         // Convert ClauseErrors to TypeErrors
@@ -787,7 +801,13 @@ TypeCheckResult _checkModuleImpl(ast.Module module, {List<ast.Procedure>? transf
   // Program mode: the caller (program linker) supplies a collector and runs the
   // cross-module instantiation closure itself.
   if (collector != null) {
-    final checker = TypeChecker(typeEnv, collector: collector);
+    final byKey = <String, List<ast.Clause>>{};
+    for (final c in clauses) {
+      byKey.putIfAbsent('${c.head.functor}/${c.head.arity}', () => []).add(c);
+    }
+    final checker = TypeChecker(typeEnv,
+        collector: collector,
+        callee: wtc.CalleeClauses((k) => byKey[k], verifyInstantiation));
     final result = checker.check(clauses);
 
     // Phase A (modular checking via abstract parameters), per module: certify
@@ -816,7 +836,13 @@ TypeCheckResult _checkModuleImpl(ast.Module module, {List<ast.Procedure>? transf
   // polymorphic-polarity soundness gap, known-issues Issue 14); a procedure
   // that is never instantiated has no well-typing and is not checked.
   final localCollector = wtc.InstantiationCollector();
-  final checker = TypeChecker(typeEnv, collector: localCollector);
+  final byKey = <String, List<ast.Clause>>{};
+  for (final c in clauses) {
+    byKey.putIfAbsent('${c.head.functor}/${c.head.arity}', () => []).add(c);
+  }
+  final checker = TypeChecker(typeEnv,
+      collector: localCollector,
+      callee: wtc.CalleeClauses((k) => byKey[k], verifyInstantiation));
   final result = checker.check(clauses);
 
   final errors = <TypeError>[...result.errors];
@@ -862,20 +888,22 @@ TypeCheckResult _checkModuleImpl(ast.Module module, {List<ast.Procedure>? transf
   // A parameterized procedure that did NOT take the abstract route inspects a
   // type parameter (a functor/constant at a parameter position) or uses a
   // parameter as a type-definition alternative, so it has no well-typing of its
-  // own and acquires one only per instantiation. Loaded standalone (single
-  // file/REPL) with no collected instantiation, there is nothing to certify, so
-  // it is rejected: the abstract-parameter route is the sole means of certifying
-  // a parametric procedure outside a program (typed-program.md "Modular Checking
-  // via Abstract Parameters", sec:abstract-parameters). There is no wildcard
-  // fallback — checking it under the wildcard `_` declaration is unsound. Within
-  // a program (program linker) an instantiation supplies the verdict; a callerless
-  // procedure there goes unchecked, not rejected (typed-program.md "Programs and
-  // Modules").
-  // The linked-program check (program linker) passes rejectUninstantiatedInspecting
-  // = false: it checks the whole program as one flattened module, where a
-  // callerless parametric procedure goes unchecked, not rejected (typed-program.md
-  // "Programs and Modules"). The standalone reject below is for single-file/REPL
-  // loads only.
+  // own and acquires one only per instantiation. With no instantiation there is
+  // nothing to certify, and the program is rejected: "Where a program contains
+  // a parameterised procedure that no call in it instantiates and that is not
+  // parametrically well-typed, compilation rejects the program"
+  // (parameterized-types.tex sec:abstract-parameters). There is no wildcard
+  // fallback — checking it under the wildcard `_` declaration is unsound. This
+  // holds for a module loaded on its own and for the linked program, which is
+  // the object checked (modules.tex §Compilation) and in which every call is
+  // local. The one caller passing rejectUninstantiatedInspecting = false is step
+  // 2 of linking, the per-module check (program_linker.dart,
+  // checkModulesIndependently): a call in ANOTHER module of the program may
+  // instantiate the procedure, so the module alone cannot decide and the linked
+  // check decides. Until 2026-09-18 the linked check passed false too and a
+  // warning stood here in place of the rejection, printed as a `[TYPE] ...
+  // unchecked` line, so a program pronounced well-typed could carry clauses
+  // nothing had checked.
   final instantiatedKeys = <String>{
     for (final ir in instResults) ir.inst.procKey,
   };
@@ -890,72 +918,15 @@ TypeCheckResult _checkModuleImpl(ast.Module module, {List<ast.Procedure>? transf
     final decl = entry.value;
     errors.add(TypeError(
       'Parameterized procedure ${decl.name}/${decl.arity} inspects a type '
-      'parameter (or uses a parameter as a type-definition alternative) and has '
-      'no instantiation, so it has no standalone well-typing. Declare a concrete '
-      'element type for the inspected argument, or load it within a program that '
-      'instantiates it (typed-program.md "Modular Checking via Abstract '
-      'Parameters").',
+      'parameter (or uses a parameter as a type-definition alternative) and no '
+      'call in the program instantiates it, so it is not parametrically '
+      'well-typed and has no well-typing: compilation rejects the program '
+      '(parameterized-types.tex sec:abstract-parameters). Give the inspected '
+      'argument a concrete element type, at the declaration or at a call.',
       decl.line,
       decl.column,
       '${decl.name}/${decl.arity}',
     ));
-  }
-
-  // Program mode (rejectUninstantiatedInspecting == false), the same procedures
-  // seen from inside a program. Until 2026-08-03 this said NOTHING about them,
-  // and that silence is the defect: an inspecting parametric procedure with no
-  // instantiation is checked by nothing, yet the program it sits in is
-  // pronounced well-typed. It is how typed_actors.glp shipped two clauses
-  // passing a raw Response where UserContent.decision demands a PendingValue —
-  // an untagged value at a tagged-union position, which the checker rejects at
-  // once when the same clauses are declared concretely.
-  //
-  // 🔴 THIS IS AN ERROR DOWNGRADED TO A WARNING, AND THE DOWNGRADE IS INTERIM.
-  // Do not read it as the intended design. Measured 2026-08-03: as an error it
-  // refuses ALL 54 program directories under programs/, because root
-  // programs/self.glp exposes the four social/graph/routing modules into every
-  // program and their procedures are parameter-inspecting — so the check would
-  // have nowhere to stand. It goes to error when the concrete-type work in
-  // social/graph/routing is done (SGSG's; known-issues Issue 20 holds the
-  // measurement and the per-owner split). Restoring it is one edit here:
-  // errors.add(TypeError(...)) in place of warnings.add.
-  //
-  // The reason to record this rather than leave it: TGLP's request of
-  // 2026-08-01 20:45 — still open as Task A step 5 — is precisely that a type
-  // error must FAIL the load rather than print a warning and proceed, since a
-  // program that runs unchecked has none of the guarantee the type system
-  // offers. This warning is a second instance of exactly that, and an
-  // unremarkable warning becomes permanent by being unremarkable.
-  //
-  // A second hole stays open behind it and no warning covers it: a goal posted
-  // at RUNTIME is not checked at all. It closes when run(Goal, Type, Module) is
-  // implemented — GLP-Spec specifies it, IGLP implements it, it is not built.
-  //
-  // The paper does license the unchecked STATE — "a procedure with no caller in
-  // its program goes unchecked" (parameterized-types.tex
-  // sec:abstract-parameters), and a concrete initial goal (def:program) may
-  // still instantiate one. What it does not license is the silence: until
-  // 2026-08-03 "well-typed" covered, without a word, code that nothing had
-  // checked.
-  if (!rejectUninstantiatedInspecting) {
-    for (final entry in typeEnv.paramProcDecls.entries) {
-      final key = entry.key;
-      if (cert.certifiedKeys.contains(key)) continue; // abstract route — verdict given
-      final cls = clausesByKey[key];
-      if (cls == null || cls.isEmpty) continue; // defined outside this unit
-      if (instantiatedKeys.contains(key)) continue; // checked per instantiation
-      final decl = entry.value;
-      warnings.add(TypeWarning(
-        'Parameterized procedure ${decl.name}/${decl.arity} inspects a type '
-        'parameter and no call in this program instantiates it, so its clauses '
-        'are checked by nothing. Give the inspected argument a concrete element '
-        'type, at the declaration or at a call site, to have it checked '
-        '(parameterized-types.tex sec:programs-and-modules).',
-        decl.line,
-        decl.column,
-        '${decl.name}/${decl.arity}',
-      ));
-    }
   }
 
   return TypeCheckResult(errors, warnings);
@@ -964,6 +935,26 @@ TypeCheckResult _checkModuleImpl(ast.Module module, {List<ast.Procedure>? transf
 // =============================================================================
 // Per-instantiation checking, closed under calls (clause-template rule)
 // =============================================================================
+
+/// The two conditions TGLP def:instantiation places on the callee: the clauses
+/// of the called procedure are well-typed by the expanded declaration, and every
+/// input path of that declaration is accepted by some clause
+/// (def:input-accepting-clause).  [checkSingleProcedure] is exactly those two —
+/// covariance and contravariance — so a candidate is put to it and adopted only
+/// if it comes back clean.  No collector and no callee are supplied: this
+/// verifies the candidate, it does not pursue the instantiations the body
+/// induces, which the closure does once the candidate is adopted.
+bool verifyInstantiation(
+    ProcDecl decl, TypeEnvironment env, List<ast.Clause> clauses) {
+  try {
+    return TypeChecker(env)
+        .checkSingleProcedure(decl, clauses)
+        .errors
+        .isEmpty;
+  } on Object {
+    return false;
+  }
+}
 
 /// The check result for one parameterized-procedure instantiation.
 class InstantiationCheckResult {
@@ -1178,15 +1169,33 @@ List<InstantiationCheckResult> checkInstantiationsClosed(
       // therefore records no new instantiation into [sub].
       final active = {...pending.active, inst.procKey: inst.monoDecl};
       final sub = wtc.InstantiationCollector();
-      final res = TypeChecker(focusedEnv, collector: sub).checkSingleProcedure(
-          inst.monoDecl, defining,
-          activeInstantiations: active);
+      final res = TypeChecker(focusedEnv,
+              collector: sub,
+              callee:
+                  wtc.CalleeClauses(definingClauses, verifyInstantiation))
+          .checkSingleProcedure(inst.monoDecl, defining,
+              activeInstantiations: active);
       // A parametric procedure certified by Phase A (abstract-instance check) is
       // well-typed at every instantiation by lem:parametricity, so its concrete
       // instantiation is not re-reported here; its body is still traversed so the
       // instantiations its calls induce are discovered and checked below.
       if (!certifiedKeys.contains(inst.procKey)) {
         results.add(InstantiationCheckResult(inst, res));
+      }
+
+      // A check adds to its focused environment the types it built for the
+      // parameters the callee's heads fix (well_typed_clause.dart
+      // _thetaFromHeads).  They are monomorphic definitions the closure
+      // discovered, like the ones materialized below, so they accumulate here
+      // too: a later round rebuilds each focused environment from the
+      // instantiation's own, which predates them, and a materialized type may
+      // carry one as an argument, leaving the round a reference it cannot
+      // resolve.
+      for (final e in focusedEnv.types.entries) {
+        if (!inst.env.types.containsKey(e.key) &&
+            !extraTypes.containsKey(e.key)) {
+          extraTypes[e.key] = e.value;
+        }
       }
 
       // Enqueue the instantiations this body induces (recorded into [sub]),

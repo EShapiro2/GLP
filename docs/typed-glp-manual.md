@@ -571,7 +571,7 @@ After guard unfolding the two heads are `ch([M|In], Out?)` and `ch([], [])`, whi
 
 ### 9.1 Definition
 
-An anonymous variable is any variable whose name begins with `_` (e.g., `_`, `_In?`, `_Out`). Anonymous writers may appear in the head, denoting a fresh writer with no paired reader, so that a value assigned to it is discarded. This provides a controlled exception to the SRSW restriction, allowing a process to abandon an input (e.g. an input stream) they are no longer interested in.  Only anonymous writers are permitted in clause positions; `_?` (anonymous reader) is not allowed.
+An anonymous variable is any variable whose name begins with `_` (e.g., `_`, `_In?`, `_Out`). Anonymous writers may appear in the head, denoting a fresh writer with no paired reader, so that a value assigned to it is discarded. This provides a controlled exception to the SRSW restriction, allowing a process to abandon an input (e.g. an input stream) they are no longer interested in.  TGLP's "Anonymous variables", under SRSW Relaxations, governs anonymous variables in clauses and is the authority.
 
 ### 9.3 Examples
 

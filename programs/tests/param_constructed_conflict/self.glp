@@ -1,0 +1,19 @@
+%% A constructed argument constrains the parameter by containment, and a
+%% constructed argument the binding does not admit is rejected (TGLP
+%% parameterized-types.tex def:instantiation: an instantiation is a map under
+%% which the caller's clause and the callee's clauses are well-typed).
+%%
+%% send2/4 takes two arguments at one parameter M.  The callee's own head pair
+%% (A, A?) fixes M to Msg, the element type of the stream Entry carries.  The
+%% caller passes m(N?), which Msg admits, and bad(N?), which it does not: the
+%% caller's clause is not well-typed under the only map the equations allow, so
+%% no map makes both clauses well-typed and the program is rejected.  Negative
+%% fixture.
+
+Msg   ::= m(Constant).
+Entry ::= out(Stream(Msg)?) ; log(Stream(Constant)?).
+
+imported procedure code#go(Constant?, Stream(Entry)?, Stream(Entry)).
+
+exported procedure run(Constant?, Stream(Entry)?, Stream(Entry)).
+run(N, Outs, Outs1?) :- code # go(N?, Outs?, Outs1).

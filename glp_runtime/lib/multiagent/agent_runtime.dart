@@ -18,6 +18,7 @@ import 'package:glp_runtime/compiler/ast.dart' as ast;
 import 'package:glp_runtime/bytecode/runner.dart';
 import 'package:glp_runtime/engine_v2/interp.dart';
 import 'package:glp_runtime/engine/glp_engine.dart';
+import 'package:glp_runtime/analysis/type_checker/type_ast.dart' show TypeEnvironment;
 import 'package:glp_runtime/runtime/runtime.dart';
 import 'package:glp_runtime/runtime/machine_state.dart';
 import 'package:glp_runtime/runtime/scheduler.dart';
@@ -189,20 +190,30 @@ class AgentRuntime {
     // Use GlpEngine — the ONE way to run GLP programs.
     final engine = GlpEngine(
         rootSelfGlpPath: rootSelfGlpPath,
-        identity: PersonIdentity(kp.pub, kp.priv))
-      ..strictTypes = false;
+        identity: PersonIdentity(kp.pub, kp.priv));
 
     // Enable madGLP mode (loads madPredicates + creates MadContext)
     engine.enableMadGLP(agentId: agentIdLower);
 
     // Load program: either program-linked or individual source files.
+    //
+    // Each source is loaded on top of what the engine already holds and is
+    // checked in that scope --- the linked program, the kernels enableMadGLP
+    // loaded, the sources before it, and its own ancestor self.glp chain where
+    // its path is known (IGLP, Implementation Notes, "The scope a boot source
+    // is checked in"). Under a synthetic name alone the check saw the bare root
+    // scope and refused send_to_net/1, which the engine resolves.
+    TypeEnvironment scopeOf(int i) => i < glpSourcePaths.length
+        ? engine.scopeFor(glpSourcePaths[i])
+        : engine.scope;
     if (programDir != null) {
       // Program mode: load linked program, then boot source(s) on top.
       _log('INIT: Loading program from $programDir');
       engine.loadProgram(programDir!);
       _log('INIT: Program loaded, loading ${glpSources.length} boot source(s)');
       for (var i = 0; i < glpSources.length; i++) {
-        engine.loadSource(glpSources[i], filename: 'source_$i');
+        engine.loadSource(glpSources[i],
+            filename: 'source_$i', scope: scopeOf(i));
       }
       // Diagnostic: check key labels
       final program = engine.combinedProgram;
@@ -218,7 +229,7 @@ class AgentRuntime {
       for (var i = 0; i < glpSources.length; i++) {
         final name =
             i < glpSourcePaths.length ? glpSourcePaths[i] : 'source_$i';
-        engine.loadSource(glpSources[i], filename: name);
+        engine.loadSource(glpSources[i], filename: name, scope: scopeOf(i));
       }
       _log('INIT: Program loaded via GlpEngine (stdlib + madPredicates + ${glpSources.length} source files)');
     }

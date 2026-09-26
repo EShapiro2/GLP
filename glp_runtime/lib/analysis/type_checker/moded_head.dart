@@ -186,12 +186,15 @@ ModedTerm _buildModedSubterm(ast.Term term, Mode mode, TypeExpr? expectedType, T
   }
 
   if (term is ast.UnderscoreTerm) {
-    // Bug 4 fix: Each anonymous variable must be treated as a FRESH writer
-    // Paper Remark 3.1: "Each occurrence denotes a fresh writer with no paired reader,
-    // providing a controlled exception to the SRSW restriction."
-    // Generate unique name to ensure each _ is independent
+    // Each anonymous variable is fresh and independent, so it gets a unique
+    // name (TGLP "Anonymous variables": "Each occurrence denotes a fresh
+    // writer with no paired reader").  It keeps its source form: `_` is the
+    // writer, and `_?`, the output placeholder a clause head's produced
+    // position carries, is the reader that complementation (step 2) turns
+    // into that fresh writer.
     final uniqueName = _freshAnonVarName();
-    return ModedVariable(uniqueName, isReader: false, structuralMode: mode);
+    return ModedVariable(uniqueName,
+        isReader: term.isReader, structuralMode: mode);
   }
 
   throw InvalidHeadError('Unknown term type: ${term.runtimeType}');
@@ -380,9 +383,11 @@ ModedTerm _buildOpaqueModedTerm(ast.Term term, Mode mode) {
   }
 
   if (term is ast.UnderscoreTerm) {
-    // Each anonymous variable is a fresh writer (paper Remark 3.1)
+    // Each anonymous variable is fresh, and keeps its source form: `_` the
+    // writer, `_?` the output placeholder (TGLP "Anonymous variables").
     final uniqueName = _freshAnonVarName();
-    return ModedVariable(uniqueName, isReader: false, structuralMode: mode);
+    return ModedVariable(uniqueName,
+        isReader: term.isReader, structuralMode: mode);
   }
 
   if (term is ast.ListTerm) {

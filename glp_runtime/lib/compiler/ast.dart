@@ -117,7 +117,9 @@ class DisplayItem extends AstNode {
 /// and its volition guard —
 ///
 ///     display p *(...) : panel(N), label(L), field(X, W), persistent.
+///     display p *(...) n : panel(N), label(L), field(X, W), persistent.
 ///
+/// the second "for the n-th of several clauses of p with that volition guard",
 /// and for a message pattern of the person channel —
 ///
 ///     display m : panel(N), view(K).
@@ -131,12 +133,17 @@ class DisplayDecl extends AstNode {
   final String? predicate;
   final VolitionGuard? guard;
 
+  /// Clause form, second variant: the clause's ordinal among the clauses of
+  /// [predicate] carrying [guard], counted from 1, and null where the
+  /// declaration names no ordinal.
+  final int? index;
+
   /// Message form: the pattern of the person-channel message.
   final Term? pattern;
 
   final List<DisplayItem> items;
 
-  DisplayDecl({this.predicate, this.guard, this.pattern,
+  DisplayDecl({this.predicate, this.guard, this.index, this.pattern,
       required this.items, required int line, required int column})
       : super(line, column);
 
@@ -144,7 +151,8 @@ class DisplayDecl extends AstNode {
 
   @override
   String toString() => isClauseForm
-      ? 'display $predicate $guard : ${items.join(", ")}.'
+      ? 'display $predicate $guard${index == null ? '' : ' $index'} : '
+          '${items.join(", ")}.'
       : 'display $pattern : ${items.join(", ")}.';
 }
 

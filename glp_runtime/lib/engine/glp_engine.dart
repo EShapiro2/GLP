@@ -148,6 +148,12 @@ class GlpEngine {
   /// checked against this env before it runs; see [_checkGoalWellTyped].
   TypeEnvironment? _goalCheckEnv;
 
+  /// The self.glp files [_goalCheckEnv] carries as scope-chain entries, by
+  /// absolute path. [scopeFor] layers a file's own ancestor chain on the scope
+  /// and skips these, so a self.glp the program's chain already contributed is
+  /// not merged a second time over the program's own modules.
+  final Set<String> _scopeSelfGlps = {};
+
   int _goalId = 1;
 
   /// Max execution cycles (default 10000)
@@ -158,9 +164,6 @@ class GlpEngine {
 
   /// Enable debug output
   bool debugOutput = false;
-
-  /// When true, type errors abort program loading (default: true)
-  bool strictTypes = true;
 
   /// Path to the root self.glp (programs/self.glp) for the type scope chain.
   late final String _rootSelfGlpPath;
@@ -230,6 +233,7 @@ class GlpEngine {
     _loadedModules.clear();
     // Re-seed lazily to root scope + root self.glp on next goal check.
     _goalCheckEnv = null;
+    _scopeSelfGlps.clear();
 
     // Restore root self.glp
     if (rootSelf != null) {
@@ -288,7 +292,21 @@ class GlpEngine {
   ///
   /// Returns true if successful.
   /// Throws on parse/compile errors.
-  bool loadSource(String source, {String? filename}) {
+  ///
+  /// With [scope], the module is type-checked in that scope instead of the
+  /// ancestor self.glp chain of [filename]. This is the boot-source case
+  /// (IGLP, Implementation Notes, "The scope a boot source is checked in"): a
+  /// boot source is loaded on top of a program already in the engine, so it is
+  /// checked in the scope the engine holds when it is handed over --- the
+  /// linked program, the kernels the runtime has loaded, and the boot file's
+  /// own ancestor chain --- which the loaders obtain from [scope] and
+  /// [scopeFor]. A check that sees the ancestor chain alone refuses calls the
+  /// engine resolves, a kernel loaded a moment earlier among them; and under a
+  /// synthetic name there is no chain at all, so until 2026-09-18 a boot source
+  /// was checked in the bare root scope and `send_to_net/1` was undefined in it.
+  /// [scope] decides what the source is checked against; whether [filename] is
+  /// a real file still decides how it is compiled (linker or direct).
+  bool loadSource(String source, {String? filename, TypeEnvironment? scope}) {
     final name = filename ?? '_source_';
 
     // Parse to get Module AST for type checking
@@ -350,18 +368,31 @@ class GlpEngine {
 
     // Ancestor self.glp chain per modules.tex §Scope construction, anchored at
     // the hierarchy root (programs/) — the same discoverSelfChain bound as the
-    // linker and directory loads. Reused below for the goal-check environment.
+    // linker and directory loads. Used below for the goal-check environment.
     List<String> chain = const [];
+    List<DiscoveredModule>? discovered;
     if (isRealFile) {
       chain = discoverSelfChain(
           targetFile: name,
           rootDir: File(name).parent.path,
           programsDir: File(_rootSelfGlpPath).parent.absolute.path);
+      // The module as the linker discovers it: its ancestor scope with the
+      // `-expose`d modules of the directories on its chain merged in
+      // (modules.tex, "The -expose directive": an exposed module's exported
+      // procedures are in the directory's scope as if defined in its self.glp).
+      // The check below and the linker further down share this one discovery.
+      discovered = discoverSingleModule(name, rootSelfGlpPath: _rootSelfGlpPath);
     }
-    TypeEnvironment? ancestorScope;
-    if (chain.isNotEmpty) {
-      ancestorScope =
-          buildAncestorScope(chain: chain, rootSelfGlpPath: _rootSelfGlpPath);
+    TypeEnvironment? ancestorScope = scope;
+    if (ancestorScope == null && discovered != null) {
+      // Until 2026-09-18 this was buildAncestorScope(chain) — the self.glp
+      // chain alone, without the exposes — so a module calling a procedure its
+      // directory's self.glp exposes (agent/4 of programs/tests/agent_roundtrip,
+      // send_to_net/1 of system/mad_predicates, exposed by the root) was
+      // refused as undefined by the check while the linker resolved it.
+      ancestorScope = discovered
+          .firstWhere((m) => m.filePath == name, orElse: () => discovered!.first)
+          .ancestorScope;
     }
 
     // Type check if program has procedure declarations. (Single-file/REPL
@@ -376,12 +407,22 @@ class GlpEngine {
           transformedProcedures: transformedAst.procedures,
           ancestorScope: ancestorScope);
       if (!typeResult.isWellTyped) {
-        final errors = typeResult.errors.map((e) => '  ${e.message} at line ${e.line}').join('\n');
-        if (strictTypes) {
-          throw Exception('Type checking failed:\n$errors');
-        }
-        // Non-strict mode: print warning and continue
-        print('[TYPE WARNING] Type errors found:\n$errors');
+        final errors = typeResult.errors
+            .map((e) => '  ${e.message} at line ${e.line}')
+            .join('\n');
+        // The object typechecked is the object compiled, and no diagnostic on a
+        // load path is a warning: a program that does not check does not run.
+        // This branch printed '[TYPE WARNING] Type errors found' and carried on
+        // whenever `strictTypes` was off, which is how the multi-isolate loaders
+        // (multiagent/isolate_manager.dart, multiagent/agent_runtime.dart) ran
+        // programs the checker had rejected. There is no flag now: the load
+        // fails here, naming the errors, and nothing runs.
+        throw CompileError(
+          'Type checking failed for \'$name\':\n$errors',
+          typeResult.errors.first.line,
+          typeResult.errors.first.column,
+          phase: 'typecheck',
+        );
       }
     }
 
@@ -394,13 +435,12 @@ class GlpEngine {
     final BytecodeProgram program;
     rt.ModuleTerm? moduleValue;
     if (isRealFile) {
-      final modules =
-          discoverSingleModule(name, rootSelfGlpPath: _rootSelfGlpPath);
+      final modules = discovered!;
       final linked =
           linkProgram(modules,
               rootDir: File(name).parent.path, singleModulePath: name);
       program = _compiler.compileProgram(linked.program,
-          procDeclarations: linked.procDeclarations, skipGlobalSRSW: false);
+          procDeclarations: linked.procDeclarations);
       // This unit's module value — its artefact: h(M) + code.
       moduleValue = _moduleValueOf(_baseName(name), program, linked, modules,
           directory: File(name).parent.absolute.path);
@@ -425,6 +465,7 @@ class GlpEngine {
       var goalEnv = _ensureGoalCheckBaseEnv();
       for (final selfGlpPath in chain) {
         goalEnv = mergeSelfGlpFileIntoScope(goalEnv, selfGlpPath);
+        _scopeSelfGlps.add(File(selfGlpPath).absolute.path);
       }
       _goalCheckEnv = goalEnv;
     }
@@ -433,6 +474,30 @@ class GlpEngine {
     _extendGoalCheckEnv(module, label: moduleInfo.name);
 
     return true;
+  }
+
+  /// The scope the engine holds: the root scope, the root self.glp, every
+  /// kernel and unit loaded so far, and the linked program with its ancestor
+  /// chain --- the environment a goal posted to the engine is checked in, and
+  /// the one a boot source is checked in (see [loadSource]).
+  TypeEnvironment get scope => _ensureGoalCheckBaseEnv();
+
+  /// [scope] with the ancestor self.glp chain of the file at [path] layered on
+  /// it: the boot file's own chain, per the Implementation Notes. A self.glp
+  /// the scope already carries as a chain entry is not merged again, so a boot
+  /// file under the program root adds nothing and one in a deeper directory
+  /// adds that directory's self.glp.
+  TypeEnvironment scopeFor(String path) {
+    var env = scope;
+    final chain = discoverSelfChain(
+        targetFile: path,
+        rootDir: File(path).parent.path,
+        programsDir: File(_rootSelfGlpPath).parent.absolute.path);
+    for (final selfGlpPath in chain) {
+      if (_scopeSelfGlps.contains(File(selfGlpPath).absolute.path)) continue;
+      env = mergeSelfGlpFileIntoScope(env, selfGlpPath);
+    }
+    return env;
   }
 
   /// Load an entire program directory via static linking.
@@ -486,6 +551,7 @@ class GlpEngine {
         rootDir: programRoot,
         programsDir: File(_rootSelfGlpPath).parent.absolute.path)) {
       goalEnv = mergeSelfGlpFileIntoScope(goalEnv, selfGlpPath);
+      _scopeSelfGlps.add(File(selfGlpPath).absolute.path);
     }
     _goalCheckEnv = goalEnv;
 
@@ -1067,11 +1133,10 @@ class GlpEngine {
     // Implementation Notes, "The tables"): every procedure declared in the
     // linked program's scope, root scope included, keyed as the compiled module
     // carries it. `find_type/2` reads it from the calling goal's module value.
-    // Built over the same flat module the program was type-checked as. A
-    // program loaded with strictTypes off may carry type errors the checker
-    // waved through; the table construction is not waved through, so a failure
-    // there leaves the module without a table (find_type then errs on every
-    // key) rather than failing a load that succeeded before.
+    // Built over the same flat module the program was type-checked as. The
+    // table is not part of the type check and its construction can fail on a
+    // program the checker passed, so a failure here leaves the module without a
+    // table (find_type then errs on every key) rather than failing the load.
     TypeIdentityTables? declaredTypes;
     try {
       declaredTypes = linkedTypeIdentityTables(modules, linked);
@@ -1138,8 +1203,12 @@ class GlpEngine {
   /// Seed (once) and return the base goal-check environment: the root scope
   /// plus root self.glp (buildAncestorScope with an empty chain).
   TypeEnvironment _ensureGoalCheckBaseEnv() {
-    _goalCheckEnv ??=
-        buildAncestorScope(chain: const [], rootSelfGlpPath: _rootSelfGlpPath);
+    if (_goalCheckEnv == null) {
+      _goalCheckEnv = buildAncestorScope(
+          chain: const [], rootSelfGlpPath: _rootSelfGlpPath);
+      final rootSelf = File(_rootSelfGlpPath);
+      if (rootSelf.existsSync()) _scopeSelfGlps.add(rootSelf.absolute.path);
+    }
     return _goalCheckEnv!;
   }
 
