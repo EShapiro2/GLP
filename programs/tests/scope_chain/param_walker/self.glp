@@ -3,7 +3,7 @@
 %% parameter E.  (Pass-through clause variable named Ent to avoid clashing with
 %% the type parameter E.)
 
-procedure put(Constant?, Constant?, Stream(E)?, Stream(E)).
+procedure(E) put(Constant?, Constant?, Stream(E)?, Stream(E)).
 put(Key, Msg, [output(K, [Msg?|Out1?])|Rest], [output(K?, Out1)|Rest?]) :-
     Key? =?= K? | true.
 put(Key, Msg, [Ent|Rest], [Ent?|Rest1?]) :-

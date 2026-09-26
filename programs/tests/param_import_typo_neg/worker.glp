@@ -1,0 +1,4 @@
+%% See self.glp.  tie/2 names Y; Strem is a misspelt type name, not a parameter.
+
+exported procedure(Y) tie(Y, Strem?).
+tie(A?, A).

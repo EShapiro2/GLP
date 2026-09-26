@@ -11,5 +11,5 @@
 exported procedure run(_?).
 run(Ch) :- tagger(Ch?).
 
-procedure tagger(Channel(X, Y)?).
+procedure(X, Y) tagger(Channel(X, Y)?).
 tagger(ch([m(R?)|In], [o(R)|Out?])) :- tagger(ch(In?, Out)).

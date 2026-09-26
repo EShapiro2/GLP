@@ -128,8 +128,21 @@ String _printTypeDef(TypeDef td) {
 String _printProcDecl(ProcDecl d) {
   final args = d.argTypes.map((t) => t.toString()).join(', ');
   final prefix = d.exported ? 'exported ' : '';
-  return '${prefix}procedure ${d.name}($args).';
+  return '${prefix}procedure${_printTypeParams(d)} ${d.name}($args).';
 }
+
+/// A declaration's type-parameter list, as the source writes it after the
+/// keyword (parameterized-types.tex, "Parameterised Procedure Declarations"),
+/// and empty where it names none.
+///
+/// The print must denote the declaration it printed: `Parser.parseInterface`
+/// reads this text back, and a parameter dropped from it returns an undefined
+/// type name, which a declaration naming no parameters is refused for
+/// (parameterized-types.tex, "Declaration parameters"). No identity turns on
+/// it — the identity is the hash of the automaton, and a parameterised
+/// declaration carries none at all (Implementation Notes, "The tables").
+String _printTypeParams(ProcDecl d) =>
+    d.typeParams.isNotEmpty ? '(${d.typeParams.join(', ')})' : '';
 
 /// The declaration text an artefact's interface table carries for one export
 /// (§5, interface table: "per export a string name, clen arity, and string
@@ -141,7 +154,7 @@ String _printProcDecl(ProcDecl d) {
 /// not a reliable witness of what the table already asserts.
 String exportDeclarationText(ProcDecl d) {
   final args = d.argTypes.map((t) => t.toString()).join(', ');
-  return 'exported procedure ${d.name}($args).';
+  return 'exported procedure${_printTypeParams(d)} ${d.name}($args).';
 }
 
 /// The type-definition string an artefact's interface table carries: the type

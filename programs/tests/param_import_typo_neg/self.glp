@@ -1,0 +1,18 @@
+%% NEGATIVE.  Carrying a declaration's parameter list through the linker does
+%% not make every undefined name in it a parameter: the parameters are exactly
+%% those the list names (TGLP parameterized-types.tex, "Declaration
+%% parameters"), on the linked path as on the per-module one.
+%%
+%% worker.glp's tie/2 names Y and writes Strem at its second argument, so Strem
+%% is neither a defined type nor a parameter, and the linked program is
+%% rejected naming Strem.  param_import_linked is this program spelt right.
+
+Colour ::= red ; green ; blue.
+
+imported procedure(Y) worker#tie(Y, Y?).
+
+exported procedure(Y) tie(Y, Y?).
+tie(A?, B) :- worker # tie(A, B?).
+
+exported procedure go(Colour, Colour?).
+go(C?, D) :- tie(C, D?).

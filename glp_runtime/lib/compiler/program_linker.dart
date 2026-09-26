@@ -427,12 +427,24 @@ void _resolveExposes(List<DiscoveredModule> modules, String? programsDir,
   final collectedFiles = <String>{};
   // exposingDir(norm) -> exported sig -> exposed module name (collision check)
   final perDirSig = <String, Map<String, String>>{};
+  // exposingDir(norm) -> the type definitions of the modules exposing there.
+  // An exposed declaration is read "as if defined in its self.glp"
+  // (modules.tex, "The -expose directive"), so its type names resolve in the
+  // EXPOSING module's scope, which by Definition (Root, Scope) carries that
+  // module's own definitions. The lift below checks the exposed declarations
+  // against the scope of the module receiving them, and a self.glp's own
+  // ancestor scope excludes itself, so without this a type the exposing
+  // self.glp defines is undefined at the very declaration that names it.
+  final perDirExposerTypeDefs = <String, List<TypeDef>>{};
 
   while (pending.isNotEmpty) {
     final exposer = pending.removeLast();
     final exposerDir = File(exposer.filePath).parent.path;
     final exposingDirNorm = _normPath(exposerDir);
     final sigMap = perDirSig.putIfAbsent(exposingDirNorm, () => {});
+    perDirExposerTypeDefs
+        .putIfAbsent(exposingDirNorm, () => <TypeDef>[])
+        .addAll(exposer.ast.typeDefs);
 
     for (final path in exposer.ast.exposes) {
       final rel = path.split('#').join(Platform.pathSeparator);
@@ -492,7 +504,9 @@ void _resolveExposes(List<DiscoveredModule> modules, String? programsDir,
     for (final e in exposed) {
       if (!_dirUnder(modDir, e.exposingDir!)) continue;
       m.ancestorScope = _mergeExposed(
-          m.ancestorScope, _exposedExportScope(e.ast, m.ancestorScope),
+          m.ancestorScope,
+          _exposedExportScope(e.ast, m.ancestorScope,
+              exposerTypeDefs: perDirExposerTypeDefs[e.exposingDir!] ?? const []),
           label: e.moduleName);
     }
   }
@@ -544,7 +558,18 @@ TypeEnvironment _mergeExposed(TypeEnvironment base, TypeEnvironment exposed,
 /// templates (`Stream`, `Channel`, …), so the exposed signatures' parameterised
 /// types are recognised and routed to `paramProcDecls` (exactly as an ordinary
 /// ancestor `self.glp` would be processed).
-TypeEnvironment _exposedExportScope(Module m, TypeEnvironment base) {
+///
+/// [exposerTypeDefs] adds the definitions of the module that exposed [m].  An
+/// exposed declaration is read "as if defined in its `self.glp`", so its type
+/// names resolve in the exposing module's scope, which carries that module's
+/// own definitions (Definition (Root, Scope): the scope of M ends in M).
+/// [base] is the scope of the module RECEIVING the lift, and a `self.glp`'s own
+/// ancestor scope excludes itself, so a type the exposing `self.glp` defines is
+/// otherwise undefined at the very declaration naming it.  They are made known
+/// here and not merged into the returned scope: what `-expose` lifts is the
+/// exposed module's procedures and the types their signatures carry.
+TypeEnvironment _exposedExportScope(Module m, TypeEnvironment base,
+    {List<TypeDef> exposerTypeDefs = const []}) {
   final exported = m.procDeclarations.where((d) => d.exported).toList();
   final synthetic = Module(
     typeDefs: m.typeDefs,
@@ -553,8 +578,15 @@ TypeEnvironment _exposedExportScope(Module m, TypeEnvironment base) {
     column: m.column,
   );
   final expanded = expandParameterizedTypes(synthetic,
-      knownTypeNames: base.types.keys.toSet(),
-      externalTemplates: base.typeTemplates);
+      knownTypeNames: {
+        ...base.types.keys,
+        for (final td in exposerTypeDefs) td.name,
+      },
+      externalTemplates: {
+        ...base.typeTemplates,
+        for (final td in exposerTypeDefs)
+          if (td.typeParams.isNotEmpty) td.name: td,
+      });
   return buildScopeFromModule(expanded);
 }
 
@@ -813,7 +845,9 @@ Module linkedFlatModule(List<DiscoveredModule> modules, LinkResult linked,
     final rd = rootEnv.paramProcDecls[bareKey] ?? rootEnv.procedures[bareKey];
     if (rd != null) {
       procDecls.add(ProcDecl(p.name, rd.argTypes, rd.line, rd.column,
-          exported: rd.exported, isBuiltin: rd.isBuiltin));
+          typeParams: rd.typeParams,
+          exported: rd.exported,
+          isBuiltin: rd.isBuiltin));
       declKeys.add(key);
     }
   }
@@ -1161,12 +1195,16 @@ LinkResult linkAndResolveModules(List<DiscoveredModule> modules,
         // it in the per-module check.
         if (decl != null) {
           aliasDecls.add(ProcDecl(proc.name, decl.argTypes, decl.line,
-              decl.column, exported: decl.exported, isBuiltin: decl.isBuiltin));
+              decl.column,
+              typeParams: decl.typeParams,
+              exported: decl.exported,
+              isBuiltin: decl.isBuiltin));
           aliasCheckedDecls.add(ProcDecl(
               proc.name,
               renameDeclTypes(decl, typeOwners[declFile ?? mod.filePath]!),
               decl.line,
               decl.column,
+              typeParams: decl.typeParams,
               exported: decl.exported,
               isBuiltin: decl.isBuiltin));
         }
@@ -1208,6 +1246,7 @@ LinkResult linkAndResolveModules(List<DiscoveredModule> modules,
         decl.argTypes,
         decl.line,
         decl.column,
+        typeParams: decl.typeParams,
         isBuiltin: decl.isBuiltin,
         exported: keepBare,
       ));
@@ -1218,6 +1257,7 @@ LinkResult linkAndResolveModules(List<DiscoveredModule> modules,
         renameDeclTypes(decl, owners),
         decl.line,
         decl.column,
+        typeParams: decl.typeParams,
         isBuiltin: decl.isBuiltin,
         exported: keepBare,
       ));
