@@ -341,8 +341,14 @@ ClauseCheckResult checkClause(
   // is the very key its body partner carries.  So a head/body pair of
   // def:well-typed-clause condition 3 is ONE key in this map, not two, and it
   // is the keys that collide, below, that are those pairs.
-  final headBodyPairTypes = <String, VariableTypeInfo>{};
-  final headBodyPairLocations = <String, String>{};
+  //
+  // EVERY body occurrence is kept, not the first.  Condition 3 is "for every
+  // variable pair X and X? in C", and a reader of a constant type may occur
+  // more than once (TGLP typed-glp.tex, SRSW*), so each of its body occurrences
+  // is a pair with the head's and is compared with it.  Until 2026-09-27 only
+  // the first was kept (putIfAbsent), and a second occurrence at a type the
+  // head's is not within went unchecked.
+  final headBodyPairs = <String, List<(VariableTypeInfo, String)>>{};
 
   // A head occurrence a guard atom has NARROWED, by the key the head carries it
   // under.  "A guard atom that tests the type of a head occurrence narrows it
@@ -441,12 +447,11 @@ ClauseCheckResult checkClause(
               );
             }
           } else {
-            headBodyPairTypes.putIfAbsent(varKey, () => newInfo);
             // The body goal is named, not just numbered: a 3(b) refusal is
             // almost always a DECLARATION at fault, and the reader has to know
             // which procedure's declaration to look at.
-            headBodyPairLocations.putIfAbsent(
-                varKey, () => '${atom.functor}/${atom.arity} (body atom $i)');
+            headBodyPairs.putIfAbsent(varKey, () => []).add(
+                (newInfo, '${atom.functor}/${atom.arity} (body atom $i)'));
           }
         }
       } else {
@@ -469,8 +474,7 @@ ClauseCheckResult checkClause(
   errors.addAll(_checkHeadBodyPairs(
     {...allVariableTypes, ...narrowedByGuard},
     variableLocations,
-    headBodyPairTypes,
-    headBodyPairLocations,
+    headBodyPairs,
     dfa,
   ));
 
@@ -1448,56 +1452,73 @@ List<ClauseDualityError> _checkClauseDuality(
 ///   body occurrence produces is within what the head occurrence hands out.
 ///
 /// [headTypes] / [headLocations] are the clause's variable types, in which the
-/// head's entries hold the key; [bodyTypes] / [bodyLocations] are the body side
-/// of each pair, collected in [checkClause] where the body key met the head's.
+/// head's entries hold the key; [bodyOccurrences] holds, for each key, the body
+/// side of EVERY pair it is in --- each body occurrence with the body goal it
+/// sits in --- collected in [checkClause] where the body key met the head's.
+/// Each is compared with the head's: condition 3 is "for every variable pair",
+/// and a reader of a constant type may occur in the body more than once
+/// (SRSW*).
 List<ClauseDualityError> _checkHeadBodyPairs(
   Map<String, VariableTypeInfo> headTypes,
   Map<String, String> headLocations,
-  Map<String, VariableTypeInfo> bodyTypes,
-  Map<String, String> bodyLocations,
+  Map<String, List<(VariableTypeInfo, String)>> bodyOccurrences,
   ProgramDFA dfa,
 ) {
   final errors = <ClauseDualityError>[];
 
-  for (final entry in bodyTypes.entries) {
-    final varKey = entry.key;
-    final bodyInfo = entry.value;
-    final headInfo = headTypes[varKey];
-    if (headInfo == null) continue;
-
-    // A base name with no state of its own has no type to compare; the type
-    // error, if there is one, is the term check's to report.
-    final headBase = dfa.states[headInfo.typeState.baseName];
-    final bodyBase = dfa.states[bodyInfo.typeState.baseName];
-    if (headBase == null || bodyBase == null) continue;
-    if (headBase.isDual || bodyBase.isDual) continue;
-
-    // Consumed: T <: U.  Produced: U <: T.
-    final consumed = headInfo.typeState.isDual;
-    final (sub, sup) =
-        consumed ? (headBase, bodyBase) : (bodyBase, headBase);
-
-    if (!isSubtype(sub, sup, dfa)) {
-      final baseName =
-          varKey.endsWith('?') ? varKey.substring(0, varKey.length - 1) : varKey;
-      errors.add(ClauseDualityError(
-        baseName,
-        headInfo,
-        bodyInfo,
-        headLocations[varKey] ?? 'head',
-        bodyLocations[varKey] ?? 'body',
-        consumed
-            ? 'Variables across head/body: the head occurrence receives '
-                '${headBase.name}, which is not within what the body occurrence '
-                'accepts (${bodyBase.name})'
-            : 'Variables across head/body: the body occurrence produces '
-                '${bodyBase.name}, which is not within what the head occurrence '
-                'hands out (${headBase.name})',
-      ));
+  for (final entry in bodyOccurrences.entries) {
+    for (final (bodyInfo, bodyLocation) in entry.value) {
+      errors.addAll(_checkHeadBodyPair(
+          entry.key, headTypes[entry.key], headLocations, bodyInfo,
+          bodyLocation, dfa));
     }
   }
 
   return errors;
+}
+
+/// Condition 3(b) on one head/body pair: the head's occurrence of [varKey]
+/// against one body occurrence, [bodyInfo] at [bodyLocation].
+List<ClauseDualityError> _checkHeadBodyPair(
+  String varKey,
+  VariableTypeInfo? headInfo,
+  Map<String, String> headLocations,
+  VariableTypeInfo bodyInfo,
+  String bodyLocation,
+  ProgramDFA dfa,
+) {
+  if (headInfo == null) return const [];
+
+  // A base name with no state of its own has no type to compare; the type
+  // error, if there is one, is the term check's to report.
+  final headBase = dfa.states[headInfo.typeState.baseName];
+  final bodyBase = dfa.states[bodyInfo.typeState.baseName];
+  if (headBase == null || bodyBase == null) return const [];
+  if (headBase.isDual || bodyBase.isDual) return const [];
+
+  // Consumed: T <: U.  Produced: U <: T.
+  final consumed = headInfo.typeState.isDual;
+  final (sub, sup) = consumed ? (headBase, bodyBase) : (bodyBase, headBase);
+  if (isSubtype(sub, sup, dfa)) return const [];
+
+  final baseName =
+      varKey.endsWith('?') ? varKey.substring(0, varKey.length - 1) : varKey;
+  return [
+    ClauseDualityError(
+      baseName,
+      headInfo,
+      bodyInfo,
+      headLocations[varKey] ?? 'head',
+      bodyLocation,
+      consumed
+          ? 'Variables across head/body: the head occurrence receives '
+              '${headBase.name}, which is not within what the body occurrence '
+              'accepts (${bodyBase.name})'
+          : 'Variables across head/body: the body occurrence produces '
+              '${bodyBase.name}, which is not within what the head occurrence '
+              'hands out (${headBase.name})',
+    )
+  ];
 }
 
 /// Check if writer and reader types are dual
