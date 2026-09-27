@@ -16,8 +16,17 @@
 // alpha is kept as a binary heap on (activation time, goal identifier).  The
 // scheduler (runtime/scheduler.dart) takes the Release; the byte interpreter
 // (engine_v2/interp.dart, `spawn_rated`) makes goals pending.
+//
+// Agents (Definition "Simulation Program": the compilation of M runs at each
+// agent a).  A goal of the run is at an agent or at none: the run declaration
+// creates the agents 1..N, the caller places each agent's initial goal at it
+// (GlpEngine.runGoal, `agents:`), and every goal a Reduce spawns is at its
+// parent's agent --- rated or not, and through its Release, which keeps the
+// goal.  A goal at no agent is the harness's: the network of the lifted
+// system, say, whose reductions are no agent's Reduce and are not logged.
 
 import 'draws.dart' as draws;
+import 'log.dart';
 import 'population.dart';
 
 /// One pending goal: a member of the domain of alpha.
@@ -42,6 +51,26 @@ class PendingGoal {
 
   bool before(PendingGoal o) =>
       time < o.time || (time == o.time && lineage < o.lineage);
+}
+
+/// A person goal as person/2 spawned it (lib/sglp/person.dart): at [agent],
+/// of the person procedure [procedure] that the agent's kind [kind] declares
+/// for the interactive type [type], handed [seed], for the asked goal whose
+/// identifier is [askedLineage].
+class PersonSpawn {
+  final int agent;
+  final String type;
+  final String kind;
+  final String procedure;
+  final int seed;
+  final int askedLineage;
+  final int goalId;
+  PersonSpawn(this.agent, this.type, this.kind, this.procedure, this.seed,
+      this.askedLineage, this.goalId);
+
+  @override
+  String toString() =>
+      'person($agent, $type, $kind:$procedure, seed $seed, goal $goalId)';
 }
 
 /// A Release as it was taken: the time the clock advanced to, and the goal.
@@ -93,8 +122,26 @@ class SimState {
   /// reduced goal's procedure and the clock.  Null unless a harness sets it.
   void Function(String signature, int goalId, double clock)? onReduce;
 
+  /// Called at each person goal person/2 spawns.  Null unless a harness sets
+  /// it.
+  void Function(PersonSpawn)? onPerson;
+
+  /// The run's log (Definition "Interface Variable, Log"), where the engine
+  /// was given somewhere to write it; null otherwise, and then nothing tracks
+  /// the interface variables.
+  SimLog? log;
+
+  /// The goal the machine is reducing now, set by the scheduler around each
+  /// reduction and by a Release that reduces a kernel goal: the Reduce whose
+  /// assignments the log attributes to that goal's agent.  Null between
+  /// reductions.
+  int? reducing;
+
   /// The identifier of each goal of the run that has one: its lineage.
   final Map<int, int> _lineage = {};
+
+  /// The agent of each goal of the run that is at one.
+  final Map<int, int> _agent = {};
 
   final List<PendingGoal> _heap = [];
 
@@ -111,15 +158,56 @@ class SimState {
   void setLineage(int goalId, int lineage) => _lineage[goalId] = lineage;
 
   /// Name the [ordinal]-th goal [childId] spawned by the reduction of
-  /// [parentId], and return its identifier.
+  /// [parentId], and return its identifier.  The child is at its parent's
+  /// agent.
   int nameChild(int parentId, int childId, int ordinal) {
     final l = draws.childLineage(lineageOf(parentId), ordinal);
     _lineage[childId] = l;
+    inherit(parentId, childId);
     return l;
   }
 
-  /// Forget a goal that has been reduced: nothing asks its identifier again.
-  void forget(int goalId) => _lineage.remove(goalId);
+  /// Forget a goal that has been reduced: nothing asks its identifier or its
+  /// agent again.
+  void forget(int goalId) {
+    _lineage.remove(goalId);
+    _agent.remove(goalId);
+  }
+
+  // ----------------------------------------------------------------- agents
+
+  /// The agent goal [goalId] is at, or null if it is at none.
+  int? agentOf(int? goalId) => goalId == null ? null : _agent[goalId];
+
+  /// Place goal [goalId] at [agent]: an initial goal, or a person goal.
+  void placeAt(int goalId, int agent) => _agent[goalId] = agent;
+
+  /// Goal [childId], put to the machine by the reduction of [parentId], is at
+  /// the parent's agent.
+  void inherit(int? parentId, int childId) {
+    final a = parentId == null ? null : _agent[parentId];
+    if (a != null) {
+      _agent[childId] = a;
+    } else {
+      _agent.remove(childId);
+    }
+  }
+
+  /// The agent of the Reduce the machine is making now, or null.
+  int? get reducingAgent => agentOf(reducing);
+
+  /// The machine begins a Reduce of goal [goalId].
+  void beginReduce(int goalId) {
+    reducing = goalId;
+    log?.beginReduce();
+  }
+
+  /// The Reduce begun by [beginReduce] is done: the log takes its
+  /// assignments, at its goal's agent.
+  void endReduce() {
+    log?.endReduce(reducingAgent);
+    reducing = null;
+  }
 
   // ---------------------------------------------------------------- pending
 

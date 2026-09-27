@@ -59,6 +59,11 @@ class GlpRuntime {
   /// signature carrying a goal handle.
   GoalId? currentGoalId;
 
+  /// The body position of the call a body kernel is running for, set with
+  /// [currentGoalId]: with the calling goal's identifier it names a goal the
+  /// kernel spawns in an sGLP run (person/2, lib/sglp/person.dart).
+  int? currentSpawnOrdinal;
+
   // Timer tracking for wait() guards
   int _pendingTimers = 0;
   int get pendingTimers => _pendingTimers;

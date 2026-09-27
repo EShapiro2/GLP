@@ -1,0 +1,11 @@
+%% One kind: a lefty picks left, after a day on average.
+
+procedure drop(Ack?).
+drop(_).
+
+person lefty.
+Pick? =::= lefty_pick.
+procedure lefty_pick(Pick, Integer?).
+lefty_pick(P?, _) :- lefty_do(P) @ 1/day.
+procedure lefty_do(Pick).
+lefty_do(pick(left, A)) :- drop(A?).

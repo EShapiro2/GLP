@@ -293,12 +293,16 @@ class Scheduler {
           suspendedGoals.remove(goalId);
         },
       );
+      // An sGLP run: the goal being reduced, whose agent's Reduce this is
+      // (the log, lib/sglp/log.dart).
+      rt.sim?.beginReduce(act.id);
       final result = runner.runWithStatus(cx);
 
       // An sGLP run: report the reduction, with the clock, to a harness that
       // asked; and forget the identifier of a goal that is gone.
       final sim = rt.sim;
       if (sim != null) {
+        sim.endReduce();
         if (hadReduction) sim.onReduce?.call(procName, act.id, sim.clock);
         if (result == RunResult.terminated) sim.forget(act.id);
       }

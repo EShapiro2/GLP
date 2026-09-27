@@ -1,0 +1,15 @@
+%% sGLP person/2 is not in the scope of a program that declares no
+%% population (svGLP, sections/sglp.tex; programs/system/sglp.glp): this
+%% program has the asking clause of ../person_asks.glp and no kind and no run
+%% declaration, so the call of person/2 is to an undefined procedure and the
+%% load is refused.
+
+Choice ::= left ; right.
+Ack    ::= ok(Integer).
+Pick   ::= pick(Choice, Ack?).
+
+procedure ask(Integer?, Choice).
+ask(N, C?) :- person('Pick?', X), ask1(N?, C, X?).
+
+procedure ask1(Integer?, Choice, Pick?).
+ask1(N, C?, pick(C, ok(N?))).

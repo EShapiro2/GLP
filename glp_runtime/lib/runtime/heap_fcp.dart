@@ -71,6 +71,12 @@ class HeapFCP {
   /// Keyed by writerAddr
   final Map<int, void Function(Term)> _bindCallbacks = {};
 
+  /// An observer of every assignment the heap makes: the writer at
+  /// `writerAddr` given a value ([bindWriter]) or a reader ([bindWriterToReader],
+  /// the value then a [VarRef] to the reader).  Called after the cell is
+  /// written.  An sGLP run's log sets it (lib/sglp/log.dart); null otherwise.
+  void Function(int writerAddr, Term value)? onAssign;
+
   /// writerAddr -> readerAddr for every paired variable from allocateVariable().
   /// The writer cell's pointer to its reader is destroyed when the writer binds
   /// (single content slot), so this index preserves the link for bound writers
@@ -393,6 +399,7 @@ class HeapFCP {
     // Bind to value
     cell.content = value;
     cell.tag = CellTag.ValueTag;
+    onAssign?.call(writerAddr, value);
 
     // Notify external observer if registered
     if (fireCallback) {
@@ -517,6 +524,7 @@ class HeapFCP {
     // Store pointer to reader (creates variable chain)
     writerCell.content = Pointer(readerAddr);
     // Tag remains WrtTag
+    onAssign?.call(writerAddr, VarRef(readerAddr));
 
     // An external callback follows the chain like the suspensions do
     final callback = _bindCallbacks.remove(writerAddr);

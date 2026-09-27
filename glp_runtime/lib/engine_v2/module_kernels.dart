@@ -184,6 +184,8 @@ BodyKernelResult _activate(
   rt.setGoalEnv(newGoalId, CallEnv(args: slots));
   rt.setGoalProgram(newGoalId, key);
   rt.setGoalModule(newGoalId, module);
+  // An sGLP run: the posted goal is at its poster's agent.
+  rt.sim?.inherit(rt.currentGoalId, newGoalId);
   rt.gq.enqueue(GoalRef(newGoalId, entry));
   return BodyKernelResult.success;
 }

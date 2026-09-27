@@ -554,6 +554,7 @@ class ByteRunner with OpExecutors implements GoalRunner {
         // Expose the calling goal to the kernel (self_module and friends): the
         // (rt, args) signature carries no goal handle.
         cx.rt.currentGoalId = cx.goalId;
+        cx.rt.currentSpawnOrdinal = ordinal;
         final result = kernel(cx.rt, args);
         if (result == BodyKernelResult.abort) {
           print('ERROR: Body kernel ${symbol.name}/$arity aborted');
@@ -738,8 +739,13 @@ class ByteRunner with OpExecutors implements GoalRunner {
         release = () {
           inherit(parentProgram);
           rt.currentGoalId = newGoalId;
+          rt.currentSpawnOrdinal = 0;
+          // The Release enables the goal's Reduce, taken here: its
+          // assignments are its agent's (the log, lib/sglp/log.dart).
+          sim.beginReduce(newGoalId);
           final result =
               kernel(rt, [for (var i = 0; i < arity; i++) args[i]]);
+          sim.endReduce();
           if (result == BodyKernelResult.abort) {
             print('ERROR: Body kernel ${symbol.name}/$arity aborted');
             rt.failedGoals.add(call);

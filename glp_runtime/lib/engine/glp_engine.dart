@@ -52,6 +52,8 @@ import 'package:glp_runtime/sglp/population.dart'
     show Population, PopulationModule, checkPopulation, declaresPopulation,
         populationOf;
 import 'package:glp_runtime/sglp/draws.dart' show rootLineage;
+import 'package:glp_runtime/sglp/log.dart' show SimLog;
+import 'package:glp_runtime/sglp/person.dart' show registerSglpKernels;
 
 /// Result of running a goal
 class ExecutionResult {
@@ -191,6 +193,13 @@ class GlpEngine {
   /// or listens to them.
   void Function(SimState)? onSimulationStart;
 
+  /// Where an sGLP run of a program with a run declaration writes its log
+  /// (svGLP, sections/sglp.tex, Definition "Interface Variable, Log"): each
+  /// entry, one line without its line end, in the order of the run
+  /// (lib/sglp/log.dart gives the format).  Null: no log is kept, and no
+  /// interface variable is tracked.
+  void Function(String line)? onSimulationLog;
+
   /// The state of the current, or last, sGLP run: its clock is the simulated
   /// time.  Null if no goal has started one.
   SimState? get simulation => _runtime.sim;
@@ -253,6 +262,7 @@ class GlpEngine {
 
     registerStandardPredicates(_runtime.systemPredicates);
     registerModuleKernels(_runtime);
+    registerSglpKernels(_runtime);
     _loadRootSelf();
   }
 
@@ -403,6 +413,14 @@ class GlpEngine {
     if (chain.isNotEmpty) {
       ancestorScope =
           buildAncestorScope(chain: chain, rootSelfGlpPath: _rootSelfGlpPath);
+    }
+    // sGLP: a module that declares a population imports sGLP's system module
+    // (person/2), as the linker gives it to a program that does
+    // (program_linker.dart, _addSglpSystemModule).
+    if (module.kinds.isNotEmpty || module.runDecl != null) {
+      ancestorScope = withSglpSystemScope(
+          ancestorScope ?? buildRootScopeEnvironment(),
+          File(_rootSelfGlpPath).parent.absolute.path);
     }
 
     // Type check if program has procedure declarations. (Single-file/REPL
@@ -603,6 +621,7 @@ class GlpEngine {
   void _beginSimulation() {
     if (!isSimulation) {
       _runtime.sim = null;
+      _runtime.heap.onAssign = null;
       return;
     }
     final pop = _population;
@@ -611,6 +630,20 @@ class GlpEngine {
       horizon: pop?.untilSeconds,
       population: pop,
     );
+    // The log: of a run with a population, whose agents have interactive
+    // variables, where there is somewhere to write it.
+    final emit = onSimulationLog;
+    if (pop != null && emit != null) {
+      final log = SimLog(
+        heap: _runtime.heap,
+        emit: emit,
+        clock: () => sim.clock,
+      );
+      sim.log = log;
+      _runtime.heap.onAssign = log.onAssign;
+    } else {
+      _runtime.heap.onAssign = null;
+    }
     _runtime.sim = sim;
     onSimulationStart?.call(sim);
   }
@@ -618,7 +651,18 @@ class GlpEngine {
   /// Run a goal and return the result
   ///
   /// [goalText] is the goal to run, e.g., "merge([1,2],[a,b],X)"
-  Future<ExecutionResult> runGoal(String goalText) async {
+  ///
+  /// [agents] places the goal's conjuncts at agents of an sGLP run (svGLP,
+  /// sections/sglp.tex, Definition "Simulation Program"): the loaded program
+  /// has a run declaration of N agents, [goalText] is a conjunction of as many
+  /// conjuncts as [agents] has entries, and the i-th conjunct is at agent
+  /// `agents[i]`, one of 1..N, or at no agent where it is null.  Every agent
+  /// 1..N has a conjunct: each agent's initial goal is placed at it, and every
+  /// goal a Reduce spawns is at its parent's agent.  A conjunct at no agent
+  /// --- the network, say --- is no agent's, and its reductions are not
+  /// logged.  The conjuncts share their variables, as any posted conjunction's
+  /// do.
+  Future<ExecutionResult> runGoal(String goalText, {List<int?>? agents}) async {
     try {
       // Parse the goal
       var trimmed = goalText.trim();
@@ -637,9 +681,10 @@ class GlpEngine {
         );
       }
 
-      // Check if this is a conjunction
-      if (_isConjunction(trimmed)) {
-        return await _runConjunction(trimmed);
+      // Check if this is a conjunction.  A placed goal is posted as one,
+      // whatever its number of conjuncts.
+      if (agents != null || _isConjunction(trimmed)) {
+        return await _runConjunction(trimmed, agents: agents);
       }
 
       return await _runSingleGoal(trimmed);
@@ -891,6 +936,9 @@ class GlpEngine {
 
     final (runner, goalEntry) =
         _runnerForQuery(program, procedureLabel);
+    // person/2 finds the person procedures in the code of the asking goal's
+    // program, through the runtime's runners.
+    if (_runtime.sim != null) _runtime.runners['main'] = runner;
     final scheduler = Scheduler(rt: _runtime, runners: {'main': runner});
     scheduler.resetDisplayNumbering();
     scheduler.setQueryVarNames(queryVarWriters);
@@ -924,7 +972,8 @@ class GlpEngine {
     );
   }
 
-  Future<ExecutionResult> _runConjunction(String trimmed) async {
+  Future<ExecutionResult> _runConjunction(String trimmed,
+      {List<int?>? agents}) async {
     final parseInput = '_conj_wrapper_ :- $trimmed.';
     final lexer = Lexer(parseInput);
     final tokens = lexer.tokenize();
@@ -948,6 +997,12 @@ class GlpEngine {
 
     final goals =
         clause.body!.map((g) => Atom(g.functor, g.args, g.line, g.column)).toList();
+    if (agents != null) {
+      final refusal = _placementRefusal(agents, goals.length);
+      if (refusal != null) {
+        return ExecutionResult(status: ExecutionStatus.failed, error: refusal);
+      }
+    }
     final program = combinedProgram;
     final queryVarWriters = <String, int>{};
     final varNameToId = <String, int>{};
@@ -964,10 +1019,13 @@ class GlpEngine {
     var anyCapped = false;
 
     // sGLP: the conjuncts together are the run's initial goal.  They are put
-    // to the machine one at a time, each drained before the next, and no
-    // Release is taken until the last is in: before then the machine is not
-    // quiescent in the run's configuration, which holds them all.
+    // to the machine together and run by one drain (below), and no Release is
+    // taken until the last is in: before then the machine is not quiescent in
+    // the run's configuration, which holds them all.
     _beginSimulation();
+    // person/2 finds the person procedures in the code of the asking goal's
+    // program, through the runtime's runners.
+    if (_runtime.sim != null) _runtime.runners['main'] = runner;
     var conjunct = 0;
 
     for (final goal in goals) {
@@ -1013,10 +1071,19 @@ class GlpEngine {
       if (sim != null) {
         sim.setLineage(_goalId, rootLineage(conjunct));
         sim.releaseEnabled = conjunct == goals.length - 1;
+        final agent = agents?[conjunct];
+        if (agent != null) sim.placeAt(_goalId, agent);
       }
       conjunct++;
       _runtime.gq.enqueue(GoalRef(_goalId, goalEntry));
       _goalId++;
+
+      // An sGLP run's conjuncts are its initial configuration, put to the
+      // machine together and run by one drain: its status is the run's.
+      // Drained one at a time, a conjunct that suspends until a later one is
+      // in --- an agent's goal waiting on the network, say --- would leave the
+      // run reported suspended when it is done.
+      if (sim != null && conjunct < goals.length) continue;
 
       final result = await scheduler.drainAsyncWithStatus(
         maxCycles: maxCycles,
@@ -1073,6 +1140,77 @@ class GlpEngine {
       status: status,
       bindings: bindings,
     );
+  }
+
+  /// Why [agents] cannot place a conjunction of [conjuncts] conjuncts, or null
+  /// if it can: the loaded program declares a run of N agents, [agents] has
+  /// one entry per conjunct, each an agent of 1..N or null, and every agent
+  /// has a conjunct.
+  String? _placementRefusal(List<int?> agents, int conjuncts) {
+    final pop = _population;
+    if (pop == null) {
+      return 'A goal is placed at agents only in a program with a run '
+          'declaration, which creates them; the loaded program has none';
+    }
+    if (agents.length != conjuncts) {
+      return 'The placement names ${agents.length} agent'
+          '${agents.length == 1 ? '' : 's'} for $conjuncts conjunct'
+          '${conjuncts == 1 ? '' : 's'}; it names one per conjunct';
+    }
+    final placed = <int>{};
+    for (final a in agents) {
+      if (a == null) continue;
+      if (a < 1 || a > pop.agents) {
+        return 'The placement names agent $a; the run declares agents 1 to '
+            '${pop.agents}';
+      }
+      placed.add(a);
+    }
+    if (placed.length != pop.agents) {
+      final missing = [
+        for (var a = 1; a <= pop.agents; a++)
+          if (!placed.contains(a)) a
+      ];
+      return 'The run declares ${pop.agents} agents, each with its initial '
+          'goal placed at it, and the placement places none at '
+          '${missing.length > 5 ? '${missing.take(5).join(', ')}, ...' : missing.join(', ')}';
+    }
+    return null;
+  }
+
+  /// The placement a caller writes: comma-separated entries without spaces,
+  /// each an agent `a`, a range `a..b` (one conjunct per agent, in order), or
+  /// `-` (a conjunct at no agent).  `1..3,-` places the first three conjuncts
+  /// at agents 1, 2 and 3 and the fourth at none.  Throws a [FormatException]
+  /// on anything else.
+  static List<int?> parsePlacement(String spec) {
+    final out = <int?>[];
+    for (final item in spec.split(',')) {
+      final e = item.trim();
+      if (e == '-') {
+        out.add(null);
+        continue;
+      }
+      final range = RegExp(r'^(\d+)\.\.(\d+)$').firstMatch(e);
+      if (range != null) {
+        final from = int.parse(range.group(1)!);
+        final to = int.parse(range.group(2)!);
+        if (from > to) {
+          throw FormatException('an empty range of agents: $e');
+        }
+        for (var a = from; a <= to; a++) {
+          out.add(a);
+        }
+        continue;
+      }
+      final a = int.tryParse(e);
+      if (a == null) {
+        throw FormatException(
+            'not an agent, a range a..b of agents or -: "$e"');
+      }
+      out.add(a);
+    }
+    return out;
   }
 
   bool _isConjunction(String query) {
