@@ -335,6 +335,33 @@ void addTypeToProgramDFA(
       _buildTypeAutomaton(typeDef, dfa.states, types, isDual: true);
 }
 
+/// Add several monomorphic type definitions to an existing [dfa], in place,
+/// where they may refer to one another --- `Stream<Box<Msg>>` and `Box<Msg>`,
+/// materialized together for one instantiation.  Every state is registered
+/// before any automaton is built, so an alternative naming another of [defs]
+/// resolves whichever is built first; a definition [dfa] already holds, and a
+/// state it already holds, are left as they are.  [types] must already carry
+/// every one of [defs] under its own name.
+void addTypesToProgramDFA(
+    ProgramDFA dfa, Iterable<TypeDef> defs, Map<String, TypeDef> types) {
+  final fresh = [
+    for (final d in defs)
+      if (!dfa.automata.containsKey(d.name)) d
+  ];
+  for (final d in fresh) {
+    dfa.states.putIfAbsent(
+        d.name, () => DFAState(d.name, isDual: false, isFinal: false));
+    dfa.states.putIfAbsent(
+        '${d.name}?', () => DFAState(d.name, isDual: true, isFinal: false));
+  }
+  for (final d in fresh) {
+    dfa.automata[d.name] =
+        _buildTypeAutomaton(d, dfa.states, types, isDual: false);
+    dfa.automata['${d.name}?'] =
+        _buildTypeAutomaton(d, dfa.states, types, isDual: true);
+  }
+}
+
 /// Create a final automaton (no transitions).
 Automaton _finalAutomaton(DFAState state) {
   return Automaton(state, {});

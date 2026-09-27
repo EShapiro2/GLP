@@ -1417,6 +1417,12 @@ NEGATIVE_FILES=(
     # top-level arguments are fixed by the template, so a transposed writer and
     # reader is rejected without waiting for the element type.
     "$GLP_DIR/programs/tests/param_call_mode_neg.glp"
+    # TGLP parameterized-types.tex "Multiple parameters": X cannot be both
+    # Integer and String.  The call fixes X = Integer and names
+    # Channel<Integer,Integer>, a type no declaration names; the calling clause
+    # is checked by that expansion (def:instantiation), which until 2026-09-27
+    # it was not, and the file loaded.
+    "$GLP_DIR/programs/tests/param_conflict_neg.glp"
 
     # Mis-declared with a bare type parameter where a concrete type belongs: a
     # constant/functor sits at the parameter position, so they inspect the

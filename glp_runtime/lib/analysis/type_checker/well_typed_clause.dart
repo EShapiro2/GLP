@@ -876,6 +876,11 @@ WellTypedResult _checkBodyAtom(
     ]), null);
   }
 
+  // The environment the call's arguments are checked in: [env], unless the
+  // call's instantiation needs types [env] cannot be given (see
+  // [_buildDeclTypes]).
+  var checkEnv = env;
+
   // Case B: Call-site instantiation for parameterized procedures.
   // If a parameterized template exists, try to infer type param bindings
   // from the caller's variable types and create a concrete proc decl.
@@ -907,16 +912,19 @@ WellTypedResult _checkBodyAtom(
         collector?.record(
             CollectedInstantiation(inferredDecl.key, inferredDecl, env, dfa));
         procDecl = inferredDecl;
-        // The inferred instantiation may reference types that arise only through
-        // the closure (e.g. Stream<Box<Msg>> from a type-changing procedure) and
-        // are not yet materialized in this DFA. Skip the per-argument check this
-        // round; the instantiation has been recorded, so the closure materializes
-        // the types and re-checks against the complete DFA.
-        final present = inferredDecl.argTypes
-            .every((t) => dfa.automata.containsKey(getFullTypeName(t)));
-        if (!present) {
-          return (_checkArgumentModes(atom, inferredDecl, env), null);
-        }
+        // The inferred instantiation may name types that arise only through the
+        // closure (e.g. Stream<Box<Msg>> from a type-changing procedure, or
+        // Stream<NetInMsg> where the caller's stream is a named list) and are
+        // not yet built.  They are built here, before the call's arguments are
+        // checked: TGLP def:instantiation makes the CALLER's clause part of what
+        // the instantiation must make well-typed ("C and the clauses of q are
+        // well-typed when q's declaration is replaced by its expansion under
+        // theta"), so the call is checked by that expansion and not by the
+        // modes alone.  Until 2026-09-27 the modes alone were checked here and
+        // the calling clause was never checked again once the closure had built
+        // the types, so typed_social_agent.glp's agent/4 handed handle_response/6
+        // a Constant where it takes a Key, unrefused.
+        checkEnv = _buildDeclTypes(inferredDecl, dfa, env);
       } else {
         // Inference failed (e.g. caller uses monomorphic types instead of the
         // parameterized form). The element type is the closure's to supply, and
@@ -934,7 +942,7 @@ WellTypedResult _checkBodyAtom(
 
   // Build produced term (no variable flip for body atoms)
   try {
-    final modedAtomTerm = producedTerm(atom, procDecl, typeEnv: env);
+    final modedAtomTerm = producedTerm(atom, procDecl, typeEnv: checkEnv);
 
     // Check each argument against its declared type's automaton
     final result = _checkModedTermPerArg(modedAtomTerm, procDecl, dfa);
@@ -947,6 +955,42 @@ WellTypedResult _checkBodyAtom(
       ),
     ]), null);
   }
+}
+
+/// Build, in [env] and [dfa], the monomorphic types [decl] names that neither
+/// holds yet: the expansions (TGLP parameterized-types.tex sec:param-expansion)
+/// of the template instantiations an inferred instantiation of a call names,
+/// nested ones included, so that the call is checked by the declaration the
+/// instantiation produces (def:instantiation).  Returns the environment to
+/// check the call in: [env] itself, grown by the new definitions, or --- where
+/// [env]'s map of types cannot grow --- an environment extending it by them.
+/// A name no template builds is left unbuilt, and the argument check names it.
+TypeEnvironment _buildDeclTypes(
+    ProcDecl decl, ProgramDFA dfa, TypeEnvironment env) {
+  final needed = <String>{};
+  for (final t in decl.argTypes) {
+    var n = getFullTypeName(t);
+    if (n.endsWith('?')) n = n.substring(0, n.length - 1);
+    if (n.contains('<') && !dfa.automata.containsKey(n)) needed.add(n);
+  }
+  if (needed.isEmpty) return env;
+  final built = materializeInstantiations(
+      needed, env.typeTemplates, {...env.types.keys});
+  if (built.isEmpty) return env;
+  var into = env;
+  try {
+    env.types.addAll(built);
+  } on UnsupportedError {
+    into = TypeEnvironment(
+      {...env.types, ...built},
+      env.procedures,
+      paramProcDecls: env.paramProcDecls,
+      typeTemplates: env.typeTemplates,
+      typeOrigins: env.typeOrigins,
+    );
+  }
+  addTypesToProgramDFA(dfa, built.values, into.types);
+  return into;
 }
 
 /// Condition 2 of `def:well-typed-clause` (`sections/well-typing.tex`) restricted
@@ -972,10 +1016,12 @@ WellTypedResult _checkBodyAtom(
 /// that walked every path reported 29 such rejections across `social/graph`,
 /// `cssn` and `social_graph_simulated_ui`, every one of them false.
 ///
-/// This runs at the three points where the full per-argument check cannot: when
-/// call-site inference binds no parameter, when no caller variable types are
-/// available, and when the inferred instantiation names types this DFA has not
-/// materialised. Until 2026-08-02 all three returned success, so a call to the
+/// This runs at the two points where the full per-argument check cannot: when
+/// call-site inference binds no parameter, and when no caller variable types are
+/// available.  (It ran at a third until 2026-09-27, where the inferred
+/// instantiation named types not yet built; they are built there now, and the
+/// call is checked by the instantiation --- [_buildDeclTypes].)  Until 2026-08-02
+/// every such point returned success, so a call to the
 /// root scope's `merge`, `send`, `receive` or `new_channel` with a writer and a
 /// reader transposed was passed in silence — the error class
 /// `sections/introduction.tex` gives as the paper's motivating example, and the
@@ -1038,9 +1084,10 @@ WellTypedResult _checkArgumentModes(
 /// forwarding clause, the call is fixed at that abstract type --- and the call
 /// is checked by the expansion under it.  The callee's clauses are not this
 /// module's, so none are consulted and no instantiation is recorded: the
-/// linked program, where the call is local, checks them.  Where the caller's
-/// arguments do not fix the instantiation, or it names a type this DFA has not
-/// materialised, only the modes the template fixes are checked here and the
+/// linked program, where the call is local, checks them.  The types the
+/// instantiation names are built first where this DFA lacks them
+/// ([_buildDeclTypes]).  Where the caller's arguments do not fix the
+/// instantiation, only the modes the template fixes are checked here and the
 /// rest is the linked program's, as a local call's is the closure's.
 (WellTypedResult, ModedTerm?) _checkRemoteGoal(
   ast.RemoteGoal remote,
@@ -1082,11 +1129,13 @@ WellTypedResult _checkArgumentModes(
     if (callerVarTypes != null && callerVarTypes.isNotEmpty) {
       final inferred = _inferConcreteDecl(
           paramTemplate, innerGoal, callerVarTypes, dfa, env, null);
-      if (inferred != null &&
-          inferred.argTypes
-              .every((t) => dfa.automata.containsKey(getFullTypeName(t)))) {
+      if (inferred != null) {
+        // The types the instantiation names are built before the call is
+        // checked by it, as for a local call (_checkBodyAtomWithTerm).
+        final checkEnv = _buildDeclTypes(inferred, dfa, env);
         try {
-          final modedAtomTerm = producedTerm(innerGoal, inferred, typeEnv: env);
+          final modedAtomTerm =
+              producedTerm(innerGoal, inferred, typeEnv: checkEnv);
           return (
             _checkModedTermPerArg(modedAtomTerm, inferred, dfa),
             modedAtomTerm
