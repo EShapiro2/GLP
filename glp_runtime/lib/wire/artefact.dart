@@ -55,6 +55,20 @@ const List<int> artefactMagic = [0x47, 0x4C, 0x50, 0x57];
 /// does not support.
 const int wireFormatVersion = 2;
 
+/// The instruction-set version this implementation writes in an artefact's
+/// header (IGLP, Code Format appendix, "Format Versioning": new instructions
+/// enter by instruction-set version).  `glp-isa-2` adds opcode 0x54
+/// `spawn_rated` (proc, arity, rate), the instruction of the stochastic
+/// extension of GLP (svGLP, sections/sglp.tex), which a runtime that does not
+/// offer the extension never emits; `glp-isa-1` is the set before it.
+const String glpIsaVersion = 'glp-isa-2';
+
+/// The instruction-set versions this runtime loads: its own and every earlier
+/// one.  Opcode and name assignments are append-only, so a newer runtime runs
+/// older artefacts unchanged, and an older one refuses a newer version at
+/// adoption (a runtime at `glp-isa-1` loads `{'glp-isa-1'}` alone).
+const Set<String> runtimeIsaVersions = {'glp-isa-1', glpIsaVersion};
+
 /// An exported procedure recorded in the interface table.
 class ArtefactExport {
   final String name;
@@ -605,11 +619,14 @@ class ArtefactLoader {
   /// identity equals the offer. Step 2 derives the type automata from the
   /// interface text the artefact carries; the derivation is the type system's
   /// (TGLP) and the result is the loaded module's `exportedTypes`.
+  ///
+  /// [supportedIsaVersions] are the instruction-set versions of the loading
+  /// runtime, by default this one's ([runtimeIsaVersions]).
   LoadedModule load(
     Uint8List artefactBytes, {
     required Uint8List offeredHM,
     Set<int> supportedWireVersions = const {wireFormatVersion},
-    Set<String>? supportedIsaVersions,
+    Set<String> supportedIsaVersions = runtimeIsaVersions,
   }) {
     final art = Artefact.fromBytes(artefactBytes); // checks magic + wire version
     if (!supportedWireVersions.contains(wireFormatVersion)) {
@@ -635,16 +652,16 @@ class ArtefactLoader {
     if (!_bytesEqual(cert.hSrc, offeredHM)) {
       throw WireFormatException('h(M) mismatch with the adoption offer');
     }
+    // Refuse an unsupported instruction-set version: the last check of step
+    // 1, before the cache, so that a runtime refuses what it cannot run
+    // whatever it has loaded before.
+    if (!supportedIsaVersions.contains(art.isaVersion)) {
+      throw WireFormatException('unsupported ISA version: ${art.isaVersion}');
+    }
     // Cache/dedup by compiled identity.
     final key = _hex(id);
     final cached = _byId[key];
     if (cached != null) return cached;
-
-    // Refuse an unsupported ISA version.
-    if (supportedIsaVersions != null &&
-        !supportedIsaVersions.contains(art.isaVersion)) {
-      throw WireFormatException('unsupported ISA version: ${art.isaVersion}');
-    }
     // 2. Derive the type automata from the interface table's declaration text.
     //    Text that will not parse is a failsafe refusal, as an unknown symbol
     //    name is (§versioning): the interface is what the load-time check

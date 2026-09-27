@@ -1,0 +1,11 @@
+%% sGLP test (i), first half: a rated goal is not reduced before its Release
+%% (svGLP, sections/sglp.tex, Definition "sGLP Transition System").
+%% run(Y) spawns the rated goal finish(Y) and nothing else; the machine is
+%% then quiescent, finish(Y) is released at its activation time, and only
+%% then reduces, binding Y.
+
+procedure run(Integer).
+run(Y?) :- finish(Y) @ 1/second.
+
+procedure finish(Integer).
+finish(1).

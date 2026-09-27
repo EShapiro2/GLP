@@ -20,7 +20,12 @@ library;
 
 import 'dart:typed_data';
 import 'package:glp_runtime/wire/artefact.dart'
-    show artefactMagic, wireFormatVersion, ArtefactExport, Certificate;
+    show
+        artefactMagic,
+        wireFormatVersion,
+        runtimeIsaVersions,
+        ArtefactExport,
+        Certificate;
 import 'package:glp_runtime/wire/codec.dart';
 
 /// A symbol-table entry in the loaded image. A `proc` operand indexes the
@@ -120,7 +125,13 @@ class CodeImage {
 
   /// Parse a §cf artefact byte string into a runnable image WITHOUT decoding
   /// procedure bodies. Framing matches `Artefact.toBytes` (§cf-artefact).
-  static CodeImage fromArtefactBytes(Uint8List bytes) {
+  ///
+  /// An instruction-set version not in [supportedIsaVersions] --- by default
+  /// this runtime's, [runtimeIsaVersions] --- is refused (IGLP, Code Format
+  /// appendix, "Loader" and "Format Versioning"): an older runtime refuses a
+  /// newer version rather than misexecute an instruction it does not know.
+  static CodeImage fromArtefactBytes(Uint8List bytes,
+      {Set<String> supportedIsaVersions = runtimeIsaVersions}) {
     final r = WireReader(bytes);
     // 1. Header
     for (final b in artefactMagic) {
@@ -131,6 +142,9 @@ class CodeImage {
       throw WireFormatException('unsupported code-format version: $ver');
     }
     final isaVersion = r.string();
+    if (!supportedIsaVersions.contains(isaVersion)) {
+      throw WireFormatException('unsupported ISA version: $isaVersion');
+    }
     final moduleName = r.string();
     // 2. Interface table
     final typeDefsText = r.string();

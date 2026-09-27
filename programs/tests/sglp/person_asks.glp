@@ -1,0 +1,65 @@
+%% sGLP person/2 and the log (svGLP, sections/sglp.tex, Definitions
+%% "Simulation Program" and "Interface Variable, Log", at svGLP 52ca276).
+%%
+%% ask/2 is the canonical compilation of a volitional procedure whose
+%% interactive type is Pick in reader mode: the person writes the pick, and
+%% the program acknowledges it with the agent's number,
+%%
+%%     procedure (Pick?)*ask(Integer?, Choice).
+%%     (pick(C, ok(N?)))*ask(N, C?).
+%%
+%% its asking clause calling person('Pick?', X) where the canonical
+%% compilation calls construct(Pick?, X).  agent(N, K, Cs) asks its person K
+%% times, one after the other, and collects the choices; each of the three
+%% agents is placed at itself, agent(1, 2, Cs1) at agent 1 and so on.
+%%
+%% The kinds are one dimension of two: a lefty picks left nine times in ten,
+%% a righty right nine times in ten, each after a day on average.
+%%
+%% The interactive type is in reader mode because person/2's declaration,
+%% procedure(X) person(Constant?, X), types its second argument as a writer:
+%% the reader X? that the asking clause of a writer-mode type passes is
+%% refused by the checker, which does not instantiate X to the input type.
+
+Choice ::= left ; right.
+Ack    ::= ok(Integer).
+Pick   ::= pick(Choice, Ack?).
+
+%% The asking clause of ask/2.
+procedure ask(Integer?, Choice).
+ask(N, C?) :- person('Pick?', X), ask1(N?, C, X?).
+
+%% ask/2's clause, with the interactive variable added: it takes the person's
+%% choice and acknowledges it with N.
+procedure ask1(Integer?, Choice, Pick?).
+ask1(N, C?, pick(C, ok(N?))).
+
+procedure agent(Integer?, Integer?, Stream(Choice)).
+agent(_, 0, []).
+agent(N, K, Cs?) :- K? > 0, ground(N?) |
+    ask(N?, C), next(N?, K?, C?, Cs).
+
+procedure next(Integer?, Integer?, Choice?, Stream(Choice)).
+next(N, K, C, [C?|Cs?]) :- ground(C?) | K1 := K? - 1, agent(N?, K1?, Cs).
+
+%% The person reads the acknowledgement and does nothing with it.
+procedure drop(Ack?).
+drop(_).
+
+person lefty.
+Pick? =::= lefty_pick.
+procedure lefty_pick(Pick, Integer?).
+lefty_pick(P?, S) :- random(S?, 10, K, _), lefty_do(K?, P) @ 1/day.
+procedure lefty_do(Integer?, Pick).
+lefty_do(K, pick(left, A)) :- K? =< 9 | drop(A?).
+lefty_do(K, pick(right, A)) :- K? > 9 | drop(A?).
+
+person righty.
+Pick? =::= righty_pick.
+procedure righty_pick(Pick, Integer?).
+righty_pick(P?, S) :- random(S?, 10, K, _), righty_do(K?, P) @ 1/day.
+procedure righty_do(Integer?, Pick).
+righty_do(K, pick(right, A)) :- K? =< 9 | drop(A?).
+righty_do(K, pick(left, A)) :- K? > 9 | drop(A?).
+
+run 3 agents [ hand ~ (lefty : 0.5 ; righty : 0.5) ] until 1 year seed 11.

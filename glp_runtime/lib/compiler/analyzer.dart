@@ -1505,6 +1505,10 @@ class PartialEvaluator {
 
   /// Apply substitution to a Goal
   Goal _applySubstitutionToGoal(Goal goal, Map<String, Term> subst) {
+    // A rated goal (sGLP, Goal @ Rate) keeps its rate.
+    if (goal is RatedGoal) {
+      return goal.withInner(_applySubstitutionToGoal(goal.innerGoal, subst));
+    }
     return Goal(
       goal.functor,
       goal.args.map((a) => _applySubstitution(a, subst)).toList(),

@@ -1,0 +1,9 @@
+%% The asking clause of a volitional procedure of the reader-mode
+%% interactive type Pick?, and its clause with the interactive variable
+%% added (see ../person_asks.glp).
+
+exported procedure ask(Integer?, Choice).
+ask(N, C?) :- person('Pick?', X), ask1(N?, C, X?).
+
+procedure ask1(Integer?, Choice, Pick?).
+ask1(N, C?, pick(C, ok(N?))).

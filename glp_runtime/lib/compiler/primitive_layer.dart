@@ -115,6 +115,10 @@ void _checkGoal(Goal goal) {
     _checkGoal(goal.innerGoal);
     return;
   }
+  if (goal is RatedGoal) {
+    _checkGoal(goal.innerGoal);
+    return;
+  }
   _checkName(goal.functor, goal.line, goal.column, 'calls');
 }
 

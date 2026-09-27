@@ -93,6 +93,12 @@ class OccurrenceClassifier {
       return;
     }
 
+    // A rated goal (sGLP) likewise: the rate carries no variable
+    if (goal is RatedGoal) {
+      _classifyGoal(goal.innerGoal, out);
+      return;
+    }
+
     // Collect variables from all arguments using syntactic annotations
     for (final arg in goal.args) {
       _collectVariables(arg, out);

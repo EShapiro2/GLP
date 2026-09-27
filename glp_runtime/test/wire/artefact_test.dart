@@ -24,7 +24,7 @@ Uint8List _hm() => Uint8List.fromList(List<int>.generate(32, (i) => i));
 final PersonIdentity _compiler = PersonIdentity.generate();
 
 Artefact _sample({PersonIdentity? signer}) => Artefact(
-      isaVersion: '2.16.3',
+      isaVersion: glpIsaVersion,
       hM: _hm(),
       moduleName: 'demo',
       typeDefsText: 'Stream(X) ::= [] ; [X | Stream(X)].',
@@ -88,7 +88,7 @@ void main() {
     test('parsed fields, symbol kinds and the certificate survive the '
         'round-trip', () {
       final a2 = Artefact.fromBytes(_sample().toBytes());
-      expect(a2.isaVersion, '2.16.3');
+      expect(a2.isaVersion, glpIsaVersion);
       expect(a2.moduleName, 'demo');
       expect(a2.hM, _hm());
       expect(a2.certificate.agent, _compiler.pub.bytes);
@@ -147,7 +147,7 @@ void main() {
     test('a module no one certifies carries its identities under no '
         'signature', () {
       final a = Artefact(
-        isaVersion: '2.16.3',
+        isaVersion: glpIsaVersion,
         hM: _hm(),
         moduleName: 'demo',
         typeDefsText: '',
@@ -214,7 +214,7 @@ void main() {
 
     test('rejects a module that carries no certificate', () {
       final a = Artefact(
-        isaVersion: '2.16.3',
+        isaVersion: glpIsaVersion,
         hM: _hm(),
         moduleName: 'demo',
         typeDefsText: '',
@@ -274,7 +274,7 @@ void main() {
 
     test('interface text that does not parse is a failsafe refusal', () {
       final broken = Artefact(
-        isaVersion: '2.16.3',
+        isaVersion: glpIsaVersion,
         hM: _hm(),
         moduleName: 'demo',
         typeDefsText: 'Stream(X) ::= [] ; [X | Stream(X)].',

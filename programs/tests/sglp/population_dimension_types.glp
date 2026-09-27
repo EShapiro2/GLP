@@ -1,0 +1,20 @@
+%% sGLP population check, negative: a dimension whose kinds differ in the
+%% interactive types they declare --- "lefty" declares Menu and "responder"
+%% declares Card, and the run puts both in the dimension "approach".
+
+Menu ::= menu(Choice?).
+Choice ::= left ; right.
+Card ::= card(YesNo?).
+YesNo ::= yes ; no.
+
+person lefty.
+Menu =::= lefty_menu.
+procedure lefty_menu(Menu?, Integer?).
+lefty_menu(menu(left), _).
+
+person responder.
+Card =::= responder_card.
+procedure responder_card(Card?, Integer?).
+responder_card(card(yes), _).
+
+run 10 agents [ approach ~ (lefty : 0.5 ; responder : 0.5) ] until 1 day seed 1.

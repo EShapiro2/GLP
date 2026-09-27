@@ -204,6 +204,17 @@ const Set<String> builtinProcedures = {
   '_load_file/2',
   // I/O
   '_output/1',
+
+  // ---------------------------------------------------------------------------
+  // sGLP (svGLP, sections/sglp.tex), outside the language and its catalogue
+  // ---------------------------------------------------------------------------
+  // person/2, the one entry point of a simulation's asking clause (GLP, 2026-09-27):
+  // declared clause-less in programs/system/sglp.glp, not in the root, and in
+  // scope only in a program that declares a population (program_linker.dart,
+  // sglpSystemModulePath).  A kernel and not a wrapper around one, so that it
+  // runs in the Ask's own reduction: it registers the interactive variable
+  // before any other goal can assign it (lib/sglp/person.dart).
+  'person/2',
 };
 
 /// Check if a type name is predefined

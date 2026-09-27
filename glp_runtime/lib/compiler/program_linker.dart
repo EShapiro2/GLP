@@ -15,6 +15,7 @@ import 'lexer.dart';
 import 'parser.dart';
 import 'partial_evaluator.dart';
 import 'primitive_layer.dart';
+import '../analysis/type_checker/root_scope.dart' show isBuiltinProcedure;
 import '../analysis/type_checker/type_ast.dart';
 import '../analysis/type_checker/param_expansion.dart';
 import '../analysis/type_checker/type_checker.dart';
@@ -385,8 +386,93 @@ void _addAncestorContextAndExposes(List<DiscoveredModule> modules,
     }
   }
 
+  _addSglpSystemModule(modules, rootAbsPath, programsDir, rootSelfGlpPath);
+
   _resolveExposes(modules, programsDir, rootSelfGlpPath,
       extraExposers: extraExposers);
+}
+
+// ============================================================================
+// sGLP (svGLP, sections/sglp.tex): the stochastic extension's system module.
+// ============================================================================
+
+/// sGLP's system module, `programs/system/sglp.glp`: person/2, the entry point
+/// of a simulation's asking clause (GLP, 2026-09-27: one entry point, in
+/// `programs/system/`, not in the root and not in the catalogue).
+String sglpSystemModulePath(String programsDir) =>
+    '$programsDir${Platform.pathSeparator}system'
+    '${Platform.pathSeparator}sglp.glp';
+
+/// True if a module of [modules] declares a population: a kind or a run.
+bool _declaresPopulation(Iterable<DiscoveredModule> modules) =>
+    modules.any((m) => m.ast.kinds.isNotEmpty || m.ast.runDecl != null);
+
+/// A program that declares a population imports sGLP's system module: it
+/// joins the program as a module exposed at the program's root, so its
+/// exports are in the scope of every module of the program, as a root
+/// `self.glp`'s `-expose` would put them.  A program that declares none does
+/// not import it, and cannot call person/2.
+void _addSglpSystemModule(List<DiscoveredModule> modules, String rootAbsPath,
+    String? programsDir, String? rootSelfGlpPath) {
+  if (programsDir == null || !_declaresPopulation(modules)) return;
+  final file = File(sglpSystemModulePath(programsDir));
+  if (!file.existsSync()) {
+    throw Exception('sGLP: the program declares a population, and sGLP\'s '
+        'system module ${file.path} is missing');
+  }
+  final ast = Parser(Lexer(file.readAsStringSync()).tokenize()).parseModule();
+  enforcePrimitiveLayer(file.path, ast, rootSelfGlpPath);
+  final chain = discoverSelfChain(
+    targetFile: file.absolute.path,
+    rootDir: file.parent.path,
+    programsDir: programsDir,
+  );
+  modules.add(DiscoveredModule(
+    filePath: file.path,
+    moduleName: _moduleNameFromFilename('sglp.glp'),
+    ast: ast,
+    ancestorScope:
+        buildAncestorScope(chain: chain, rootSelfGlpPath: rootSelfGlpPath),
+    exposingDir: _normPath(rootAbsPath),
+  ));
+}
+
+/// [scope] with sGLP's system module's exports added, for a module that
+/// declares a population and is checked on its own, before it is linked (the
+/// single-module load, GlpEngine.loadSource).
+TypeEnvironment withSglpSystemScope(TypeEnvironment scope, String programsDir) {
+  final file = File(sglpSystemModulePath(programsDir));
+  if (!file.existsSync()) return scope;
+  final ast = Parser(Lexer(file.readAsStringSync()).tokenize()).parseModule();
+  return _mergeExposed(scope, _exposedExportScope(ast, scope), label: 'sglp');
+}
+
+/// A declaration of [m] that names a runtime kernel and has no clauses in
+/// [m]: a codeless procedure, which a call reaches by its bare name, as it
+/// reaches a kernel the root `self.glp` declares.
+bool _isCodelessKernel(Module m, ProcDecl d) =>
+    isBuiltinProcedure('${d.name}/${d.arity}') &&
+    !m.procedures.any((p) => p.name == d.name && p.arity == d.arity);
+
+/// The person procedures a program's kinds declare, as the linked program
+/// names them (`M:p/2`, bare in the loaded module of a single-module
+/// program).  person/2 spawns them by name at run time, so no call reaches
+/// them in the program's text, and dead-code elimination keeps them as it
+/// keeps the entry points.
+Set<String> _personProcedureRoots(
+    List<DiscoveredModule> modules, String? singleModulePath) {
+  final singleNorm =
+      singleModulePath != null ? _normPath(singleModulePath) : null;
+  final roots = <String>{};
+  for (final m in modules) {
+    final bare = singleNorm != null && _normPath(m.filePath) == singleNorm;
+    for (final k in m.ast.kinds) {
+      for (final d in k.personDecls) {
+        roots.add(bare ? '${d.procedure}/2' : '${m.moduleName}:${d.procedure}/2');
+      }
+    }
+  }
+  return roots;
 }
 
 /// Normalize a path: absolute, `..`/`.` resolved, no trailing slash.
@@ -845,6 +931,16 @@ Module linkedFlatModule(List<DiscoveredModule> modules, LinkResult linked,
     ...(allDeclarations ? linked.scopeDeclarations : linked.checkedDeclarations)
   ];
   final declKeys = {for (final d in procDecls) d.key};
+  // A kernel an exposed module declares clause-less (sGLP's person/2) is
+  // called by its bare name in the linked program, and declared by that name,
+  // as a root-scope kernel is by the root scope.
+  for (final m in modules) {
+    if (m.exposingDir == null) continue;
+    for (final d in m.ast.procDeclarations) {
+      if (!d.exported || !_isCodelessKernel(m.ast, d)) continue;
+      if (declKeys.add(d.key)) procDecls.add(d);
+    }
+  }
   for (final p in linked.program.procedures) {
     final key = '${p.name}/${p.arity}';
     if (declKeys.contains(key)) continue;
@@ -915,7 +1011,8 @@ LinkResult linkProgram(List<DiscoveredModule> modules,
   if (singleModulePath == null) {
     _requireEntryPoints(modules, linked, rootDir);
   }
-  return eliminateDeadCode(linked);
+  return eliminateDeadCode(linked,
+      roots: _personProcedureRoots(modules, singleModulePath));
 }
 
 /// A directory with no entry points is not a program (modules.tex §Static
@@ -1036,6 +1133,9 @@ LinkResult linkAndResolveModules(List<DiscoveredModule> modules,
       if (!_dirUnder(modDirNorm, em.exposingDir!)) continue;
       for (final d in em.ast.procDeclarations) {
         if (!d.exported) continue;
+        // A kernel an exposed module declares clause-less (sGLP's person/2)
+        // is called by its bare name, as a root-scope kernel is.
+        if (_isCodelessKernel(em.ast, d)) continue;
         procs.putIfAbsent('${d.name}/${d.arity}', () => em.moduleName);
       }
     }
@@ -1300,7 +1400,11 @@ LinkResult linkAndResolveModules(List<DiscoveredModule> modules,
 /// single module's are every one of its own procedures. Every other procedure
 /// carries a renamed `M:p` name, so the unprefixed aliases are exactly the
 /// entry points.
-LinkResult eliminateDeadCode(LinkResult linked) {
+///
+/// [roots] are further procedures to keep, with what they call: the person
+/// procedures of an sGLP program's kinds, which person/2 spawns by name.
+LinkResult eliminateDeadCode(LinkResult linked,
+    {Set<String> roots = const {}}) {
   final procedures = linked.program.procedures;
 
   final byFullName = <String, Procedure>{};
@@ -1338,6 +1442,10 @@ LinkResult eliminateDeadCode(LinkResult linked) {
       collectFromGoal(g.innerGoal);
       return;
     }
+    if (g is RatedGoal) {
+      collectFromGoal(g.innerGoal);
+      return;
+    }
     // Body calls carry resolved names: M:p for local/ancestor procedures (exact
     // match keeps the target), unqualified for root-scope calls (no procedure
     // here — left to the separately merged root self.glp).
@@ -1348,6 +1456,7 @@ LinkResult eliminateDeadCode(LinkResult linked) {
   for (final p in procedures) {
     if (!p.name.contains(':')) markFull('${p.name}/${p.arity}');
   }
+  roots.forEach(markFull);
   while (work.isNotEmpty) {
     final proc = byFullName[work.removeLast()]!;
     for (final clause in proc.clauses) {
@@ -1424,6 +1533,17 @@ Goal _resolveGoal(Goal goal, String moduleName, Set<String> localSigs,
       );
     }
     // Dynamic dispatch — can't resolve statically, leave as-is
+    return goal;
+  }
+
+  // RatedGoal (sGLP, Goal @ Rate): resolve the inner goal, keep the rate
+  if (goal is RatedGoal) {
+    final resolvedInner = _resolveGoal(
+        goal.innerGoal, moduleName, localSigs, ancestorSelfProcs,
+        keepLocalBare: keepLocalBare);
+    if (!identical(resolvedInner, goal.innerGoal)) {
+      return goal.withInner(resolvedInner);
+    }
     return goal;
   }
 

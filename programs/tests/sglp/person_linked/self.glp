@@ -1,0 +1,18 @@
+%% sGLP person/2 through the linker (svGLP, sections/sglp.tex, Definition
+%% "Simulation Program"): a directory program whose asking clause, in
+%% asker.glp, calls person/2, and whose kinds, in kinds.glp, name person
+%% procedures nothing in the program calls.  The program declares a
+%% population, so the linker puts sGLP's system module in its scope; person/2
+%% stays a bare call to the runtime's kernel; and the person procedures
+%% survive dead-code elimination, since person/2 spawns them by name.
+
+Choice ::= left ; right.
+Ack    ::= ok(Integer).
+Pick   ::= pick(Choice, Ack?).
+
+imported procedure asker#ask(Integer?, Choice).
+
+exported procedure start(Integer?, Choice).
+start(N, C?) :- asker # ask(N?, C).
+
+run 2 agents [ hand ~ (lefty : 1.0) ] until 1 week seed 5.

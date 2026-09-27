@@ -1,0 +1,15 @@
+%% sGLP test (ii): a Release is taken only where the machine is quiescent
+%% (svGLP, sections/sglp.tex, Definition "sGLP Transition System").  run/2
+%% spawns a rated goal and a busy countdown of 10000 reductions; however fast
+%% the rate, the countdown runs to rest at simulated time 0 before the rated
+%% goal is released.
+
+procedure run(Integer, Integer).
+run(Y?, Z?) :- finish(Y) @ 1000/second, count(10000, Z).
+
+procedure count(Integer?, Integer).
+count(0, 0).
+count(N, Z?) :- N? > 0 | N1 := N? - 1, count(N1?, Z).
+
+procedure finish(Integer).
+finish(1).

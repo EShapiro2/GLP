@@ -1,0 +1,18 @@
+%% Two kinds of one dimension for self.glp's run declaration.  answer/2
+%% precedes the first kind, so it is of neither kind's section.
+
+Card ::= card(YesNo?).
+YesNo ::= yes ; no.
+
+procedure answer(Integer?, Card?).
+answer(_, card(yes)).
+
+person quick.
+Card =::= quick_card.
+procedure quick_card(Card?, Integer?).
+quick_card(C, S) :- answer(S?, C?) @ 1/minute.
+
+person slow.
+Card =::= slow_card.
+procedure slow_card(Card?, Integer?).
+slow_card(C, S) :- answer(S?, C?) @ 1/day.

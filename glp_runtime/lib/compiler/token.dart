@@ -58,6 +58,7 @@ enum TokenType {
 
   // Type declarations
   COLONCOLONEQ,   // ::= (type definition)
+  EQCOLONCOLONEQ, // =::= (sGLP person declaration: T =::= p)
   PROCEDURE,      // procedure (keyword)
 
   // End of file

@@ -34,6 +34,7 @@ GLP/
     ├── grassapp/             # the GrassApp programs
     ├── jurix/                # legal contracts
     ├── vglp/                 # vGLP sources
+    ├── svglp/                # sGLP simulation: program, kinds, run declaration (svGLP)
     └── tests/                # the suite's program fixtures (linkprobes/, multiagent/, vglp/, module/, …)
 ```
 
