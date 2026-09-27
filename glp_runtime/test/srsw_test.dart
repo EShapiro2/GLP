@@ -155,4 +155,49 @@ split(S) :- share(S?, S?, S?).
 '''),
         throwsException);
   });
+
+  // ===========================================================================
+  // Negated guards (TGLP glp.tex, Remark "Guards and SRSW"; typed-glp.tex, "Type
+  // checking of guards", 30d8ac2).  Only a guard whose SUCCESS implies that X?
+  // is ground licenses several occurrences of X and X?.  `~g` succeeds where
+  // `g` fails, so `~ground(X?)` succeeds exactly where X? is not ground and
+  // `~integer(X?)` where it is anything but an integer: neither implies
+  // groundness, and "a negated guard narrows nothing".  Until 2026-09-27 the
+  // analyzer marked a negated guard's argument grounded as the positive
+  // guard's, and both of the refused clauses below loaded.
+  // ===========================================================================
+
+  test('ground/1 licenses a reader twice in the body', () {
+    final program = GlpCompiler().compile('''
+procedure pair(_?, _?, _).
+pair(_, _, done).
+procedure k(_?, _).
+k(X, Y?) :- ground(X?) | pair(X?, X?, Y).
+''');
+    expect(program, isNotNull);
+  });
+
+  test('~ground/1 licenses no reader twice in the body', () {
+    expect(
+        () => GlpCompiler().compile('''
+procedure pair(_?, _?, _).
+pair(_, _, done).
+procedure k(_?, _).
+k(X, Y?) :- ~ground(X?) | pair(X?, X?, Y).
+'''),
+        throwsA(predicate((e) => e.toString().contains('SRSW'),
+            'an SRSW violation')));
+  });
+
+  test('~integer/1 licenses no reader twice in the body', () {
+    expect(
+        () => GlpCompiler().compile('''
+procedure pair(_?, _?, _).
+pair(_, _, done).
+procedure k(_?, _).
+k(X, Y?) :- ~integer(X?) | pair(X?, X?, Y).
+'''),
+        throwsA(predicate((e) => e.toString().contains('SRSW'),
+            'an SRSW violation')));
+  });
 }

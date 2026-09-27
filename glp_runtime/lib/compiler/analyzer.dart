@@ -665,6 +665,22 @@ class Analyzer {
       // Note: defined guards (unit clauses) cannot be negated - this would require
       // checking if the guard predicate is a user-defined unit clause, which we
       // defer to runtime or codegen phase for now
+
+      // A NEGATED guard licenses no repeated occurrence.  TGLP glp.tex, Remark
+      // "Guards and SRSW": "if the success of a guard implies that X? is bound
+      // to a ground term, then both X and X? may occur multiple times in the
+      // clause".  `~g` succeeds where `g` fails (GLP-Spec appendix-guards), so
+      // its success implies no groundness --- `~ground(X?)` succeeds exactly
+      // where X? is not ground, and `~integer(X?)` where it is anything but an
+      // integer --- and "A negated guard narrows nothing" (TGLP typed-glp.tex,
+      // "Type checking of guards", 30d8ac2).  So its arguments are analysed as
+      // any guard's are and nothing is marked grounded.  Until 2026-09-27 a
+      // negated guard marked its argument grounded exactly as the positive one
+      // did, and `~ground(X?)` licensed several reads of X?.
+      for (final arg in guard.args) {
+        _analyzeTerm(arg, varTable, inHeadOrBody: false);
+      }
+      return;
     }
 
     // Special handling for ground/1

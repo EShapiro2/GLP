@@ -1503,6 +1503,10 @@ SRSW_FILES=(
     # known/1 does not imply groundness, so it licenses no multiple occurrence
     # (glp.tex Remark "Guards and SRSW").
     "$GLP_DIR/programs/tests/srsw/known_not_ground.glp"
+    # A negated guard's success implies no groundness, so ~ground(X?) licenses
+    # no multiple occurrence either (same Remark; TGLP typed-glp.tex, "A negated
+    # guard narrows nothing").
+    "$GLP_DIR/programs/tests/srsw/negated_ground_not_ground.glp"
 )
 
 for f in "${SRSW_FILES[@]}"; do
