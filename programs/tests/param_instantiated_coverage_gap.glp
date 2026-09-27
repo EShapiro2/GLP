@@ -4,12 +4,12 @@
 %%
 %% Same pdrop/1 as param_free_not_checked.glp (a parameterized procedure with a
 %% coverage gap: no clause for the empty stream []), here additionally INSTANTIATED
-%% at X := Msg by go/1.  pdrop does not inspect its parameter, so it takes the
-%% ABSTRACT ROUTE: the abstract-instance check (def:parametrically-well-typed) runs
-%% contravariance on pdrop(Stream<$abstract_X>?) and finds [] uncovered, so the
-%% file is REJECTED.  The instantiation by go/1 no longer changes the verdict —
-%% under the abstract route the gap is caught whether or not pdrop is instantiated
-%% (the per-instantiation re-check of pdrop is suppressed once it is certified).
+%% at X := Msg by go/1.  pdrop does not inspect its parameter, so the abstract
+%% route is tried first: the abstract-instance check (def:parametrically-well-typed)
+%% runs contravariance on pdrop(Stream<$abstract_X>?) and finds [] uncovered, so
+%% pdrop is not parametrically well-typed and "is checked per instantiation"
+%% (sec:abstract-parameters).  At X := Msg the gap is the same --- [] of
+%% Stream<Msg> is uncovered --- so the file is REJECTED there.
 %%
 %% Paired with param_free_not_checked.glp (same pdrop, never instantiated, also
 %% rejected): this file confirms that an instantiation present alongside the gap

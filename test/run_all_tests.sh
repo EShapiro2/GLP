@@ -1392,17 +1392,17 @@ NEGATIVE_FILES=(
     # the enclosing instantiation, so the type-changing recursion is rejected.
     "$GLP_DIR/programs/tests/monomorphic_recursion.glp"
 
-    # --- Abstract-parameter routing matrix, case (ii): a clean parametric proc
-    # (no parameter inspection) with a COVERAGE GAP takes the abstract route and is
-    # rejected against its abstract instance pdrop(Stream<$abstract_X>?) — [] is
-    # uncovered — even though it is never instantiated. (Paper Decision 1: coverage
-    # is part of def:parametrically-well-typed.) Filename retained for continuity;
-    # see the file header.
+    # --- Abstract-parameter routing matrix, case (ii): a parametric proc (no
+    # parameter inspection) with a COVERAGE GAP fails its abstract instance
+    # pdrop(Stream<$abstract_X>?) — [] is uncovered — so it is not parametrically
+    # well-typed, and no call instantiates it, so it is rejected
+    # (sec:abstract-parameters). Filename retained for continuity; see the file
+    # header.
     "$GLP_DIR/programs/tests/param_free_not_checked.glp"
 
-    # --- Abstract-parameter routing: same clean pdrop gap, also instantiated by
-    # go/1. The abstract route catches the gap whether or not pdrop is instantiated;
-    # the instantiation does not mask it.
+    # --- Abstract-parameter routing: same pdrop gap, also instantiated by go/1.
+    # Failing its abstract instance, pdrop is checked per instantiation, and at
+    # X := Msg the gap is the same; the instantiation does not mask it.
     "$GLP_DIR/programs/tests/param_instantiated_coverage_gap.glp"
 
     # --- Abstract-parameter routing matrix, case (iii): a parametric proc that

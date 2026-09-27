@@ -896,14 +896,17 @@ TypeCheckResult _checkModuleImpl(ast.Module module, {List<ast.Procedure>? transf
     warnings.addAll(ir.result.warnings);
   }
 
-  // A parameterized procedure that did NOT take the abstract route inspects a
-  // type parameter (a functor/constant at a parameter position) or uses a
-  // parameter as a type-definition alternative, so it has no well-typing of its
-  // own and acquires one only per instantiation. With no instantiation there is
-  // nothing to certify, and the program is rejected: "Where a program contains
-  // a parameterised procedure that no call in it instantiates and that is not
-  // parametrically well-typed, compilation rejects the program"
-  // (parameterized-types.tex sec:abstract-parameters). There is no wildcard
+  // A parameterized procedure the abstract route did not certify inspects a
+  // type parameter (a functor/constant at a parameter position), uses a
+  // parameter as a type-definition alternative, or has an abstract instance
+  // that is not well-typed; in each case it is not parametrically well-typed,
+  // has no well-typing of its own, and acquires one only per instantiation.
+  // With no instantiation there is nothing to certify, and the program is
+  // rejected: "Where a program contains a parameterised procedure that no call
+  // in it instantiates and that is not parametrically well-typed, compilation
+  // rejects the program" (parameterized-types.tex sec:abstract-parameters).
+  // One that IS instantiated has been checked at each instantiation by the
+  // closure above, and stands or falls there. There is no wildcard
   // fallback — checking it under the wildcard `_` declaration is unsound. This
   // holds for a module loaded on its own and for the linked program, which is
   // the object checked (modules.tex §Compilation) and in which every call is
@@ -927,6 +930,20 @@ TypeCheckResult _checkModuleImpl(ast.Module module, {List<ast.Procedure>? transf
     if (cls == null || cls.isEmpty) continue; // defined outside this unit
     if (instantiatedKeys.contains(key)) continue; // checked per instantiation
     final decl = entry.value;
+    final abstractErrors = cert.abstractInstanceErrors[key];
+    if (abstractErrors != null) {
+      errors.add(TypeError(
+        'Parameterized procedure ${decl.name}/${decl.arity} is not '
+        'parametrically well-typed --- its abstract instance is not '
+        'well-typed: ${abstractErrors.first.message} --- and no call in the '
+        'program instantiates it, so it has no well-typing: compilation '
+        'rejects the program (parameterized-types.tex sec:abstract-parameters).',
+        decl.line,
+        decl.column,
+        '${decl.name}/${decl.arity}',
+      ));
+      continue;
+    }
     errors.add(TypeError(
       'Parameterized procedure ${decl.name}/${decl.arity} inspects a type '
       'parameter (or uses a parameter as a type-definition alternative) and no '
@@ -984,15 +1001,21 @@ class _Pending {
 }
 
 /// The outcome of Phase A (modular checking via abstract parameters): the
-/// verdict reported for the certified parametric procedures, plus the set of
-/// procedure keys that were certified (so the per-instantiation closure can
-/// suppress re-reporting them — lem:parametricity carries the abstract-instance
-/// verdict to every instantiation).
+/// warnings of the certified parametric procedures, the set of procedure keys
+/// that were certified (so the per-instantiation closure can suppress
+/// re-reporting them — lem:parametricity carries the abstract-instance verdict
+/// to every instantiation), and, for each procedure that inspects no parameter
+/// but whose abstract instance is not well-typed, the errors that instance
+/// gave.  Such a procedure is not parametrically well-typed and is checked per
+/// instantiation; the errors are kept only to say why, should no call in the
+/// program instantiate it.
 class ParametricCertification {
   final List<TypeError> errors;
   final List<TypeWarning> warnings;
   final Set<String> certifiedKeys;
-  ParametricCertification(this.errors, this.warnings, this.certifiedKeys);
+  final Map<String, List<TypeError>> abstractInstanceErrors;
+  ParametricCertification(this.errors, this.warnings, this.certifiedKeys,
+      [this.abstractInstanceErrors = const {}]);
 }
 
 /// Phase A — modular checking via abstract parameters
@@ -1010,11 +1033,24 @@ class ParametricCertification {
 ///  - otherwise → abstract route: a FULL check (covariance + input coverage)
 ///    against the abstract instance, run by seeding it into the per-instantiation
 ///    closure so body-induced types are materialized and monomorphic recursion is
-///    enforced. Only the seeded instantiation's verdict is reported; the callee
+///    enforced. Only the seeded instantiation's verdict is read; the callee
 ///    instantiations it induces are filtered out (they belong to the program
-///    closure / their own certification). The key is certified whether the check
-///    passes or fails (Decision 1: the abstract route is a commitment), so the
-///    closure does not re-check it at each instantiation (lem:parametricity).
+///    closure / their own certification).  Where that verdict is clean the
+///    procedure is parametrically well-typed (def:parametrically-well-typed) and
+///    is certified, so the closure does not re-check it at each instantiation
+///    (lem:parametricity).  Where it is not, the procedure is NOT certified and
+///    nothing is reported here: the abstract instance is one way to certify, not
+///    the only one, and a procedure that fails it "is checked per instantiation"
+///    like one that inspects a parameter (TGLP parameterized-types.tex,
+///    sec:abstract-parameters).  The program is rejected only where the
+///    procedure is both uninstantiated and not parametrically well-typed, which
+///    is the caller's to decide once the closure has run; the abstract
+///    instance's errors are returned for that caller to say why.  Until
+///    2026-09-27 a failed abstract instance was reported and the key certified
+///    regardless ("Decision 1: the abstract route is a commitment"), so a
+///    procedure well-typed at every instantiation its program makes ---
+///    `handle_response/6` of `tests/agent_roundtrip` at `X = NetInMsg` --- was
+///    refused.
 ///
 /// [definingClauses] returns the defining clauses for a "name/arity", or null if
 /// the procedure is defined outside the checked unit (then it is not certified
@@ -1026,6 +1062,7 @@ ParametricCertification certifyParametricProcedures(
   final errors = <TypeError>[];
   final warnings = <TypeWarning>[];
   final certified = <String>{};
+  final failed = <String, List<TypeError>>{};
   final templates = typeEnv.typeTemplates;
   final knownMono = typeEnv.types.keys.toSet();
 
@@ -1052,11 +1089,9 @@ ParametricCertification certifyParametricProcedures(
     // is caught — which a single-shot check would miss. We report ONLY the seeded
     // instantiation's own verdict; the callee instantiations it induces belong to
     // the program closure (and to their own certification), so they are filtered
-    // out here. Per Decision 1, the abstract route is a commitment: if the
-    // abstract instance fails, the procedure is rejected regardless of whether it
-    // is ever instantiated. The key is certified either way, so the main closure
+    // out here.  A clean verdict certifies the procedure, and the main closure
     // never re-reports it (lem:parametricity carries the verdict to every
-    // instantiation).
+    // instantiation); any other leaves it to be checked per instantiation.
     final ai = buildAbstractInstance(paramDecl, paramDecl.typeParams, templates,
         knownMonoTypes: knownMono);
     final aiEnv = TypeEnvironment(
@@ -1071,16 +1106,23 @@ ParametricCertification certifyParametricProcedures(
     seed.record(inst);
     final results = checkInstantiationsClosed(seed, definingClauses);
     final seedSigKey = '${inst.procKey}#${inst.signature}';
+    final seedErrors = <TypeError>[];
+    final seedWarnings = <TypeWarning>[];
     for (final r in results) {
       if ('${r.inst.procKey}#${r.inst.signature}' == seedSigKey) {
-        errors.addAll(r.result.errors);
-        warnings.addAll(r.result.warnings);
+        seedErrors.addAll(r.result.errors);
+        seedWarnings.addAll(r.result.warnings);
       }
     }
-    certified.add(key);
+    if (seedErrors.isEmpty) {
+      warnings.addAll(seedWarnings);
+      certified.add(key);
+    } else {
+      failed[key] = seedErrors;
+    }
   }
 
-  return ParametricCertification(errors, warnings, certified);
+  return ParametricCertification(errors, warnings, certified, failed);
 }
 
 /// Close the parameterized-procedure instantiation set under calls and check
