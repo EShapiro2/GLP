@@ -1,3 +1,19 @@
+%% recv2x2 — disambiguation probe for Issue 13's receive/3 otherwise-strand.
+%% 2x2: channel Out bound (closed) vs unbound (_); receive continuation
+%% discarded (_) vs named-and-used (Ch1).  Single heap, plain local writer,
+%% late-feed (consumer's receive runs first on an unbound stream, feeder binds
+%% it later) — the shape that mirrors mad_w_probe / boot_anon_late.
+
+Resp       ::= ok ; no.
+Item       ::= it(Constant, Resp?).
+ItemStream ::= [] ; [Item | ItemStream].
+Closed     ::= closed.
+PendList   ::= [] ; [Pend | PendList].
+Pend       ::= keep(Resp?).
+%% The directory programs/tests/recv2x2 reduced to one file: its self.glp types above,
+%% its probe.glp below, bodies and declarations unchanged.  A negative fixture:
+%% boot_b_outfed and boot_d_outfed hand-build ch(S?, OutW?), a reader at the
+%% Out position, and the checker rejects both (probe.glp:59,63 in the directory).
 
 procedure feeder(ItemStream).
 feeder([it(bob, _)]).

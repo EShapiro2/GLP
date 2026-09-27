@@ -1440,6 +1440,13 @@ NEGATIVE_FILES=(
     "$AGENT_RT/channel.glp"
     "$BOOK/streams/producers_consumers/cooperative.glp"
     "$BOOK/streams/producers_consumers/merge_dynamic.glp"
+
+    # The recv2x2 probe directory reduced to one file, bodies and declarations
+    # unchanged: boot_b_outfed and boot_d_outfed hand-build ch(S?, OutW?), a
+    # reader at the Out position, and each is rejected with "Variable mode
+    # mismatch: reader requires ↓ (consume), got ↑ (produce)" on the path
+    # (ch/2, 0, input) → (OutW?, 2, output).
+    "$GLP_DIR/programs/tests/recv2x2_neg.glp"
 )
 
 # Build REPL input with :clear between each negative file
