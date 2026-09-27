@@ -823,7 +823,8 @@ WellTypedResult _checkBodyAtom(
 
   // Handle RemoteGoal (M # proc(...)) - type-check against imported declaration
   if (atom is ast.RemoteGoal) {
-    return _checkRemoteGoal(atom, atomIndex, dfa, env);
+    return _checkRemoteGoal(atom, atomIndex, dfa, env,
+        callerVarTypes: callerVarTypes);
   }
 
   // Skip builtin goals (true, otherwise, :=)
@@ -995,12 +996,30 @@ WellTypedResult _checkArgumentModes(
 /// declaration in the local TypeEnvironment, not the remote module.
 ///
 /// Dynamic dispatch (variable module) is skipped — can't resolve at compile time.
+///
+/// An imported declaration that names type parameters is checked as a local
+/// call to a parameterised procedure is, and never at its wildcard copy.  TGLP
+/// `modules.tex`, "Cross-module type checking": "Where the imported declaration
+/// names type parameters, as an exported one may, the call instantiates them as
+/// a local call does (Definition (Instantiation)): a parameter the importing
+/// module holds open stays open across the module boundary and is fixed at the
+/// call, the clauses of the called procedure being those of the linked
+/// program."  So the call's instantiation is inferred from [callerVarTypes] ---
+/// where the caller holds a parameter open, as in the abstract instance of a
+/// forwarding clause, the call is fixed at that abstract type --- and the call
+/// is checked by the expansion under it.  The callee's clauses are not this
+/// module's, so none are consulted and no instantiation is recorded: the
+/// linked program, where the call is local, checks them.  Where the caller's
+/// arguments do not fix the instantiation, or it names a type this DFA has not
+/// materialised, only the modes the template fixes are checked here and the
+/// rest is the linked program's, as a local call's is the closure's.
 (WellTypedResult, ModedTerm?) _checkRemoteGoal(
   ast.RemoteGoal remote,
   int atomIndex,
   ProgramDFA dfa,
-  TypeEnvironment env,
-) {
+  TypeEnvironment env, {
+  Map<String, VariableTypeInfo>? callerVarTypes,
+}) {
   // Dynamic dispatch (variable module) — skip type checking
   if (remote.isDynamic) {
     return (WellTypedResult.success({}), null);
@@ -1026,6 +1045,36 @@ WellTypedResult _checkArgumentModes(
 
   // Look up: 'modulePath#goalFunctor/arity'
   final qualifiedKey = '$modulePath#$goalFunctor/$goalArity';
+
+  // A parameterised import: instantiate at the call, never the wildcard copy
+  // env.procedures holds for it (param_expansion.dart, step 5).
+  final paramTemplate = env.paramProcDecls[qualifiedKey];
+  if (paramTemplate != null) {
+    if (callerVarTypes != null && callerVarTypes.isNotEmpty) {
+      final inferred = _inferConcreteDecl(
+          paramTemplate, innerGoal, callerVarTypes, dfa, env, null);
+      if (inferred != null &&
+          inferred.argTypes
+              .every((t) => dfa.automata.containsKey(getFullTypeName(t)))) {
+        try {
+          final modedAtomTerm = producedTerm(innerGoal, inferred, typeEnv: env);
+          return (
+            _checkModedTermPerArg(modedAtomTerm, inferred, dfa),
+            modedAtomTerm
+          );
+        } on ArityMismatchError catch (e) {
+          return (WellTypedResult.failure([
+            InconsistentPathError(
+              ModedPath([PathStep(symbol: e.message, argIndex: 0, mode: Mode.produce)]),
+              e.message,
+            ),
+          ]), null);
+        }
+      }
+    }
+    return (_checkArgumentModes(innerGoal, paramTemplate, env), null);
+  }
+
   final procDecl = env.procedures[qualifiedKey];
 
   if (procDecl == null) {
