@@ -43,6 +43,11 @@ untraceable_faults([P|Ps], [untraceable([P?|Ps?])]).
 procedure check_section3(Contract?, Verdict).
 check_section3(C, V?) :- ground(C?) |
     prov # traceable(C?, E),
+    section3_verdict(C?, E?, V).
+
+% E is read by two conjuncts, so it is taken ground in a head of its own.
+procedure section3_verdict(Contract?, Preds?, Verdict).
+section3_verdict(C, E, V?) :- ground(C?), ground(E?) |
     prov # all_preds(C?, Ps),
     preds_diff(Ps?, E?, Missing),
     untraceable_faults(Missing?, FT),
@@ -82,11 +87,15 @@ procedure traceable1(Ans?, Contract?, Preds).
 traceable1(no, C, E?) :- ground(C?) | prov # traceable(C?, E).
 traceable1(yes, C, E?) :- ground(C?) | community # traceable(C?, E).
 
+procedure traceable_in(Contract?, Preds).
+traceable_in(C, E?) :- ground(C?) |
+    has_community(C?, A),
+    traceable1(A?, C?, E).
+
 exported procedure traceable_of(Constant?, Preds).
 traceable_of(Nm, E?) :- ground(Nm?) |
     contracts # contract(Nm?, C),
-    has_community(C?, A),
-    traceable1(A?, C?, E).
+    traceable_in(C?, E).
 
 % The predicates that are rooted (definition:rooted).  Rootedness is a notion
 % of Appendix B; a contract of Section 3 is not asked about it.
@@ -94,8 +103,12 @@ procedure rooted1(Ans?, Contract?, Preds).
 rooted1(no, _, []).
 rooted1(yes, C, E?) :- ground(C?) | community # rooted(C?, E).
 
+procedure rooted_in(Contract?, Preds).
+rooted_in(C, E?) :- ground(C?) |
+    has_community(C?, A),
+    rooted1(A?, C?, E).
+
 exported procedure rooted_of(Constant?, Preds).
 rooted_of(Nm, E?) :- ground(Nm?) |
     contracts # contract(Nm?, C),
-    has_community(C?, A),
-    rooted1(A?, C?, E).
+    rooted_in(C?, E).

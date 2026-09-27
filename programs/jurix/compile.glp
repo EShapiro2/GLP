@@ -175,10 +175,14 @@ procedure latex_update_at(RoleSpec?, Chunks?, Chunks?, Chunks).
 latex_update_at(RS, S, T, ['c\'_'|R?]) :- ground(RS?), ground(S?), ground(T?) |
     rs_add(RS?, Add),
     rs_del(RS?, Del),
+    update_rhs(Add?, Del?, S?, T?, R1),
+    chunks_app(S?, [' := '|R1?], R).
+
+procedure update_rhs(Atoms?, Atoms?, Chunks?, Chunks?, Chunks).
+update_rhs(Add, Del, S, T, R?) :- ground(Add?), ground(Del?), ground(S?), ground(T?) |
     is_empty(Add?, AE),
     is_empty(Del?, DE),
-    update_body(AE?, DE?, Add?, Del?, S?, T?, R1),
-    chunks_app(S?, [' := '|R1?], R).
+    update_body(AE?, DE?, Add?, Del?, S?, T?, R).
 
 % The subscript of a party role in Section 5.2: {\Alice}.
 procedure latex_sub(Integer?, Chunks).
@@ -288,6 +292,10 @@ procedure latex_schema_s3(Schema?, Chunks?, Chunks).
 latex_schema_s3(Sc, T, ['\\begin{align*}', '&'|R?]) :-
     ground(Sc?), ground(T?) |
     sch_roles(Sc?, Rs),
+    latex_s3_roles(Rs?, T?, R).
+
+procedure latex_s3_roles(RoleSpecs?, Chunks?, Chunks).
+latex_s3_roles(Rs, T, R?) :- ground(Rs?), ground(T?) |
     guard_roles(Rs?, 1, [], G),
     latex_guard(G?, ['\\end{align*}'|T?], R1),
     all_conjs(Rs?, 1, [], Cs),
@@ -484,9 +492,13 @@ procedure latex_schema_app(Schema?, Chunks?, Chunks).
 latex_schema_app(Sc, T, ['\\begin{align*}'|R?]) :- ground(Sc?), ground(T?) |
     sch_roles(Sc?, Rs),
     sch_reaches(Sc?, Th),
+    sch_ext_terms(Sc?, Es),
+    latex_app_roles(Rs?, Th?, Es?, T?, R).
+
+procedure latex_app_roles(RoleSpecs?, Reaches?, NameTerms?, Chunks?, Chunks).
+latex_app_roles(Rs, Th, Es, T, R?) :- ground(Rs?), ground(Th?), ground(Es?), ground(T?) |
     guard_roles(Rs?, 1, [], G),
     guard_line(G?, Rs?, GL),
-    sch_ext_terms(Sc?, Es),
     fresh_lines(Es?, [GL?], L4),
     reach_line(Th?, L4?, L3),
     proviso_lines(Rs?, 1, L3?, L2),

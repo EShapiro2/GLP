@@ -175,6 +175,12 @@ role_blocks([RS|Rs], J, Sc, Cx, G, P, R?) :-
     ground(RS?), ground(Rs?), integer(J?), ground(Sc?), ground(Cx?),
     ground(G?), ground(P?) |
     rs_add(RS?, Plus),
+    role_blocks_plus(Plus?, Rs?, J?, Sc?, Cx?, G?, P?, R).
+
+procedure role_blocks_plus(Atoms?, RoleSpecs?, Integer?, Schema?, Ctx?, GAtom?, Val?, Block).
+role_blocks_plus(Plus, Rs, J, Sc, Cx, G, P, R?) :-
+    ground(Plus?), ground(Rs?), integer(J?), ground(Sc?), ground(Cx?),
+    ground(G?), ground(P?) |
     plus_blocks(Plus?, Plus?, J?, Sc?, Cx?, G?, P?, B),
     role_blocks1(B?, Rs?, J?, Sc?, Cx?, G?, P?, R).
 

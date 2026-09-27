@@ -319,6 +319,10 @@ prov_pred(_, [], _, yes).
 prov_pred(Pd, [S|Ss], E, R?) :-
     ground(S?), ground(Ss?), ground(Pd?), ground(E?) |
     sch_roles(S?, Rs),
+    prov_pred_roles(Rs?, Pd?, Ss?, E?, R).
+
+procedure prov_pred_roles(RoleSpecs?, Constant?, Contract?, Preds?, Ans).
+prov_pred_roles(Rs, Pd, Ss, E, R?) :- ground(Rs?), ground(Pd?), ground(Ss?), ground(E?) |
     role_bases(Rs?, 1, RBs),
     req_bases(Rs?, E?, [], QBs),
     req_svars(Rs?, SV),
@@ -379,8 +383,18 @@ procedure edge(Integer?, Integer?, RoleSpecs?, Preds?, Ans).
 edge(I, J, Rs, E, R?) :- integer(I?), integer(J?), ground(Rs?), ground(E?) |
     nth_rs(Rs?, I?, RI),
     nth_rs(Rs?, J?, RJ),
+    edge_roles(I?, J?, RI?, RJ?, E?, R).
+
+procedure edge_roles(Integer?, Integer?, RoleSpec?, RoleSpec?, Preds?, Ans).
+edge_roles(I, J, RI, RJ, E, R?) :-
+    integer(I?), integer(J?), ground(RI?), ground(RJ?), ground(E?) |
     role_base(RI?, I?, BI),
     role_base(RJ?, J?, BJ),
+    edge_bases(RI?, RJ?, BI?, BJ?, E?, R).
+
+procedure edge_bases(RoleSpec?, RoleSpec?, Base?, Base?, Preds?, Ans).
+edge_bases(RI, RJ, BI, BJ, E, R?) :-
+    ground(RI?), ground(RJ?), ground(BI?), ground(BJ?), ground(E?) |
     same_base(BI?, BJ?, A0),
     req_base_names(RI?, BJ?, E?, A1),
     req_base_names(RJ?, BI?, E?, A2),
@@ -515,6 +529,10 @@ procedure schema_volition(Schema?, Preds?, Faults).
 schema_volition(Sc, E, R?) :- ground(Sc?), ground(E?) |
     sch_name(Sc?, Nm),
     sch_roles(Sc?, Rs),
+    volition_roles(Nm?, Rs?, E?, R).
+
+procedure volition_roles(Constant?, RoleSpecs?, Preds?, Faults).
+volition_roles(Nm, Rs, E, R?) :- ground(Nm?), ground(Rs?), ground(E?) |
     roles_len(Rs?, K),
     cv1(K?, Nm?, Rs?, E?, R).
 
@@ -622,6 +640,10 @@ procedure schema_cohesion(Schema?, Preds?, Faults).
 schema_cohesion(Sc, RP, R?) :- ground(Sc?), ground(RP?) |
     sch_name(Sc?, Nm),
     sch_roles(Sc?, Rs),
+    cohesion_roles(Nm?, Rs?, RP?, R).
+
+procedure cohesion_roles(Constant?, RoleSpecs?, Preds?, Faults).
+cohesion_roles(Nm, Rs, RP, R?) :- ground(Nm?), ground(Rs?), ground(RP?) |
     sch_nterms(Rs?, [], NTs),
     coh_roles(Rs?, 1, RP?, Nm?, NTs?, R).
 

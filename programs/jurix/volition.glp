@@ -116,6 +116,10 @@ procedure schema_volition(Schema?, Preds?, Faults).
 schema_volition(Sc, E, R?) :- ground(Sc?), ground(E?) |
     sch_name(Sc?, Nm),
     sch_roles(Sc?, Rs),
+    volition_roles(Nm?, Rs?, E?, R).
+
+procedure volition_roles(Constant?, RoleSpecs?, Preds?, Faults).
+volition_roles(Nm, Rs, E, R?) :- ground(Nm?), ground(Rs?), ground(E?) |
     roles_len(Rs?, K),
     sv1(K?, Nm?, Rs?, E?, R).
 
