@@ -223,7 +223,17 @@ class Scheduler {
     // counted, so only what this drain adds bears on its status.
     final failedAtEntry = rt.failedGoals.length;
 
-    while (rt.gq.length > 0 && cycles < maxCycles) {
+    while (cycles < maxCycles) {
+      // Release (sGLP; svGLP, sections/sglp.tex, Definition "sGLP Transition
+      // System"): where the machine is quiescent --- nothing in its queue, so
+      // no Reduce of a goal that is not pending is enabled --- the pending
+      // goal of least activation time is released, the clock advancing to its
+      // time.  A goal waiting on a wall-clock timer (wait/1) makes the machine
+      // not quiescent: its Reduce becomes enabled with no transition taken.
+      if (rt.gq.length == 0) {
+        if (!_releaseAtQuiescence()) break;
+        continue;
+      }
       final act = rt.gq.dequeue();
       if (act == null) break;
       ran.add(act.id);
@@ -285,6 +295,14 @@ class Scheduler {
       );
       final result = runner.runWithStatus(cx);
 
+      // An sGLP run: report the reduction, with the clock, to a harness that
+      // asked; and forget the identifier of a goal that is gone.
+      final sim = rt.sim;
+      if (sim != null) {
+        if (hadReduction) sim.onReduce?.call(procName, act.id, sim.clock);
+        if (result == RunResult.terminated) sim.forget(act.id);
+      }
+
       // Track suspended goals (always, not just in debug mode)
       if (result == RunResult.suspended) {
         // Track this suspended goal
@@ -339,11 +357,14 @@ class Scheduler {
     // end: F is recovered cumulatively by whoever drains again
     // ([drainToQuiescence], [drainAsyncWithStatus]), so a failure is not lost.
     final ExecutionStatus status;
-    if (rt.gq.length > 0) {
+    if (rt.gq.length > 0 || _releasable) {
       status = ExecutionStatus.capped;
     } else if (hasFailed) {
       status = ExecutionStatus.failed;
-    } else if (userSuspendedGoals.isNotEmpty) {
+    } else if (userSuspendedGoals.isNotEmpty || (rt.sim?.hasPending ?? false)) {
+      // A pending goal (sGLP) the run did not release --- its time lies past
+      // the run's `until` --- is a goal of the configuration that is not
+      // runnable now, as a suspended one is.
       status = ExecutionStatus.suspended;
     } else {
       status = ExecutionStatus.succeeded;
@@ -395,12 +416,25 @@ class Scheduler {
       if (result.goalsRan.isEmpty) break;
     }
 
-    final status = rt.gq.length > 0
+    final status = rt.gq.length > 0 || _releasable
         ? ExecutionStatus.capped
         : (rt.failedGoals.length > failedAtEntry
             ? ExecutionStatus.failed
             : last.status);
     return DrainResult(ran, status, last.suspendedGoals, last.blockingReaders);
+  }
+
+  /// True where the machine holds a pending goal it would release at
+  /// quiescence: a drain that ends with one has stopped at its cap, not at
+  /// rest.
+  bool get _releasable => rt.pendingTimers <= 0 && (rt.sim?.canRelease ?? false);
+
+  /// Take a Release if the quiescent machine has one to take.  The caller has
+  /// found the queue empty.
+  bool _releaseAtQuiescence() {
+    if (!_releasable) return false;
+    rt.sim!.release();
+    return true;
   }
 
   /// Legacy drain for backward compatibility

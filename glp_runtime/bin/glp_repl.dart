@@ -347,6 +347,15 @@ void main() async {
       // Print status
       _printStatus(result.status);
 
+      // An sGLP run: the simulated time it reached (svGLP, sections/sglp.tex).
+      final sim = engine.simulation;
+      if (sim != null) {
+        final next = sim.nextActivation;
+        print('Simulated time: ${sim.clock} s after ${sim.releases} '
+            'release${sim.releases == 1 ? '' : 's'}'
+            '${next == null ? '' : '; ${sim.pendingCount} pending, the next at $next s'}');
+      }
+
       if (result.error != null) {
         print('Error: ${result.error}');
       }

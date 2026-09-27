@@ -478,6 +478,19 @@ class CodeGenerator {
         continue;
       }
 
+      // A rated goal (sGLP, Goal @ Rate): its goal's arguments, then
+      // spawn_rated, which makes the goal pending until its Release.
+      if (goal is RatedGoal) {
+        final innerGoal = goal.innerGoal;
+        for (int j = 0; j < innerGoal.args.length; j++) {
+          _generatePutArgument(innerGoal.args[j], j, varTable, ctx);
+        }
+        final procedureLabel = '${innerGoal.functor}/${innerGoal.arity}';
+        ctx.emit(bc.SpawnRated(
+            procedureLabel, innerGoal.arity, goal.ratePerSecond));
+        continue;
+      }
+
       // Special handling for SpawnGoal (Goal@AgentId)
       // In dGLP mode, ignore the @AgentId annotation and just run the inner goal
       if (goal is SpawnGoal) {

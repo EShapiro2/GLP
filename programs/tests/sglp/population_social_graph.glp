@@ -1,0 +1,67 @@
+%% sGLP population syntax and its checks, positive (svGLP, sections/sglp.tex,
+%% "Simulating a vGLP Program" and "Example: The Kinds of the Social Graph",
+%% at svGLP 52ca276).  The types are those of the social-graph program of
+%% sections/example.tex; the kinds and the run declaration are the paper's,
+%% with two changes the GLP implementation needs: `:- true |` is written
+%% `:-`, since GLP rejects `true` as a guard, and one_of is a stand-in, the
+%% paper's drawing from length/2 and nth/3 that are not in this file's scope.
+%% The checks: each person procedure is declared p(T°, Integer?), the kinds of
+%% each dimension declare the same interactive types, and each dimension's
+%% probabilities sum to one.
+
+Peer    ::= Constant.
+YesNo   ::= yes ; no.
+Peers   ::= [] ; [Peer | Peers].
+Choice  ::= same(Peer) ; other(Peer).
+Menu    ::= menu(Peers, Peers, Choice?).
+Card    ::= card(Peer, YesNo?).
+
+%% One of a list: a stand-in for the paper's, which draws uniformly with
+%% length/2, random/4 and nth/3.
+procedure one_of(Peers?, Integer?, Peer).
+one_of([P|_], _, P?).
+one_of([], _, nobody).
+
+person homophile.
+Menu =::= homophile_menu.
+procedure homophile_menu(Menu?, Integer?).
+homophile_menu(M, S) :-
+    random(S?, 100, K, S1), homophile_pick(K?, S1?, M?) @ 1/week.
+procedure homophile_pick(Integer?, Integer?, Menu?).
+homophile_pick(K, S, menu(Ss, _, same(P?))) :-
+    K? =< 98, ground(Ss?) | one_of(Ss?, S?, P).
+homophile_pick(K, S, menu(_, Os, other(P?))) :-
+    K? > 98, ground(Os?) | one_of(Os?, S?, P).
+
+person indifferent.
+Menu =::= indifferent_menu.
+procedure indifferent_menu(Menu?, Integer?).
+indifferent_menu(M, S) :-
+    random(S?, 100, K, S1), indifferent_pick(K?, S1?, M?) @ 2/week.
+procedure indifferent_pick(Integer?, Integer?, Menu?).
+indifferent_pick(K, S, menu(Ss, _, same(P?))) :-
+    K? =< 50, ground(Ss?) | one_of(Ss?, S?, P).
+indifferent_pick(K, S, menu(_, Os, other(P?))) :-
+    K? > 50, ground(Os?) | one_of(Os?, S?, P).
+
+person wary.
+Card =::= wary_card.
+procedure wary_card(Card?, Integer?).
+wary_card(C, S) :-
+    random(S?, 100, K, _), wary_answer(K?, C?) @ 1/day.
+procedure wary_answer(Integer?, Card?).
+wary_answer(K, card(_, yes)) :- K? =< 20 | true.
+wary_answer(K, card(_, no))  :- K? > 20  | true.
+
+person sociable.
+Card =::= sociable_card.
+procedure sociable_card(Card?, Integer?).
+sociable_card(C, S) :-
+    random(S?, 100, K, _), sociable_answer(K?, C?) @ 1/hour.
+procedure sociable_answer(Integer?, Card?).
+sociable_answer(K, card(_, yes)) :- K? =< 90 | true.
+sociable_answer(K, card(_, no))  :- K? > 90  | true.
+
+run 1000 agents [ approach ~ (homophile : 0.6 ; indifferent : 0.4),
+                  response ~ (wary : 0.7 ; sociable : 0.3) ]
+    until 5 years seed 20260927.

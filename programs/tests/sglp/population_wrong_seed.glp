@@ -1,0 +1,12 @@
+%% sGLP population check, negative: a person procedure whose second argument
+%% is not the seed, Integer?.
+
+Menu ::= menu(Choice?).
+Choice ::= left ; right.
+
+person picker.
+Menu =::= pick_menu.
+procedure pick_menu(Menu?, Integer).
+pick_menu(menu(left), 1).
+
+run 10 agents [ approach ~ (picker : 1.0) ] until 1 day seed 1.

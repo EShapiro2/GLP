@@ -496,6 +496,17 @@ class ByteRunner with OpExecutors implements GoalRunner {
             continue;
           }
 
+        case Opcode.spawnRated:
+          {
+            final procIndex = r.clen();
+            final arity = r.clen();
+            final rate = r.f64();
+            final result = _spawnRated(cx, procIndex, arity, rate);
+            if (result != null) return result;
+            pc = after();
+            continue;
+          }
+
         case Opcode.requeue:
           {
             final procIndex = r.clen();
@@ -525,6 +536,9 @@ class ByteRunner with OpExecutors implements GoalRunner {
   /// (advance).
   RunResult? _spawn(RunnerContext cx, int procIndex, int arity) {
     if (!cx.inBody) return null;
+
+    // The body position of this goal, which names it in an sGLP run.
+    final ordinal = cx.spawnOrdinal++;
 
     final symbol = image.symbolAt(procIndex);
 
@@ -563,7 +577,7 @@ class ByteRunner with OpExecutors implements GoalRunner {
       // activated module (run/2, run/3, a module read from a file) reaches it
       // through the runtime's root runner, registered by the engine as
       // `__root__`. The goal is spawned there, its PC in the root's code.
-      if (_spawnInRoot(cx, symbol.name, arity)) {
+      if (_spawnInRoot(cx, symbol.name, arity, ordinal: ordinal)) {
         cx.argSlots.clear();
         return null;
       }
@@ -589,6 +603,7 @@ class ByteRunner with OpExecutors implements GoalRunner {
     final newEnv = CallEnv(args: Map<int, Term>.from(cx.argSlots));
     final newGoalId = cx.rt.nextGoalId++;
     final newGoalRef = GoalRef(newGoalId, symbol.codeOffset);
+    cx.rt.sim?.nameChild(cx.goalId, newGoalId, ordinal);
 
     // Format the spawned goal for the reduction trace.
     final args = <String>[];
@@ -629,7 +644,7 @@ class ByteRunner with OpExecutors implements GoalRunner {
   /// argument slots as its arguments and this goal's module value inherited.
   /// True where the root runner has the procedure; false where it has not or
   /// no root runner is registered, and nothing was spawned.
-  bool _spawnInRoot(RunnerContext cx, String name, int arity) {
+  bool _spawnInRoot(RunnerContext cx, String name, int arity, {int? ordinal}) {
     final root = cx.rt.runners['__root__'];
     if (root is! ByteRunner) return false;
     final sig = '$name/$arity';
@@ -638,6 +653,7 @@ class ByteRunner with OpExecutors implements GoalRunner {
 
     final newEnv = CallEnv(args: Map<int, Term>.from(cx.argSlots));
     final newGoalId = cx.rt.nextGoalId++;
+    cx.rt.sim?.nameChild(cx.goalId, newGoalId, ordinal ?? cx.spawnOrdinal++);
 
     final args = <String>[];
     for (var i = 0; i < 10; i++) {
@@ -657,6 +673,104 @@ class ByteRunner with OpExecutors implements GoalRunner {
       cx.rt.infrastructureGoalIds.add(newGoalId);
     }
     return true;
+  }
+
+  /// Spawn a rated goal (`spawn_rated`; sGLP, svGLP sections/sglp.tex,
+  /// Definition "sGLP Transition System", Machine): the goal is made as
+  /// [_spawn] makes it, from this reduction's argument slots, and is PENDING
+  /// --- kept by the run's [SimState] with activation time the clock plus a
+  /// delay drawn from the exponential with [ratePerSecond], and put in the
+  /// machine's queue only at its Release (runtime/scheduler.dart).  A pending
+  /// goal is not in the queue, so it is not reduced.
+  ///
+  /// Outside an sGLP run (no [GlpRuntime.sim]: an agent isolate, a harness
+  /// that drains the runtime itself) there is no clock to release it at, and
+  /// the goal fails with a diagnostic, as a goal with no procedure does.
+  RunResult? _spawnRated(
+      RunnerContext cx, int procIndex, int arity, double ratePerSecond) {
+    if (!cx.inBody) return null;
+    final ordinal = cx.spawnOrdinal++;
+    final rt = cx.rt;
+    final symbol = image.symbolAt(procIndex);
+    final call = _callText(symbol.name, arity, cx);
+    final sim = rt.sim;
+    if (sim == null) {
+      rt.failedGoals.add(call);
+      print('ERROR: a rated goal outside an sGLP run, failed: $call @ '
+          '$ratePerSecond/second');
+      cx.argSlots.clear();
+      return null;
+    }
+
+    final args = Map<int, Term>.from(cx.argSlots);
+    cx.argSlots.clear();
+    final newGoalId = rt.nextGoalId++;
+    final lineage = sim.nameChild(cx.goalId, newGoalId, ordinal);
+    final parentProgram = rt.getGoalProgram(cx.goalId);
+    final parentModule = rt.getGoalModule(cx.goalId);
+    final infrastructure = rt.infrastructureGoalIds.contains(cx.goalId);
+    cx.spawnedGoals.add('$call @ $ratePerSecond/second');
+
+    void inherit(Object? program) {
+      rt.setGoalEnv(newGoalId, CallEnv(args: args));
+      if (program != null) rt.setGoalProgram(newGoalId, program);
+      rt.setGoalModule(newGoalId, parentModule);
+      if (infrastructure) rt.infrastructureGoalIds.add(newGoalId);
+    }
+
+    final void Function() release;
+    if (symbol.compiled) {
+      final entry = symbol.codeOffset;
+      release = () {
+        inherit(parentProgram);
+        rt.gq.enqueue(GoalRef(newGoalId, entry));
+      };
+    } else {
+      final kernel = rt.bodyKernels.lookup(symbol.name, arity);
+      final root = rt.runners['__root__'];
+      final rootEntry = root is ByteRunner
+          ? root.image.entryOffsetOf('${symbol.name}/$arity')
+          : null;
+      if (kernel != null) {
+        // A kernel goal is reduced by running the kernel: released, it is
+        // reduced at once, the configuration having just ceased to be
+        // quiescent.
+        release = () {
+          inherit(parentProgram);
+          rt.currentGoalId = newGoalId;
+          final result =
+              kernel(rt, [for (var i = 0; i < arity; i++) args[i]]);
+          if (result == BodyKernelResult.abort) {
+            print('ERROR: Body kernel ${symbol.name}/$arity aborted');
+            rt.failedGoals.add(call);
+          } else if (result == BodyKernelResult.fail) {
+            rt.failedGoals.add(call);
+            print('ERROR: goal failed: $call');
+          }
+          sim.forget(newGoalId);
+        };
+      } else if (rootEntry != null) {
+        release = () {
+          inherit('__root__');
+          rt.gq.enqueue(GoalRef(newGoalId, rootEntry));
+        };
+      } else {
+        // No procedure: the goal fails now, as [_spawn]'s does.
+        sim.forget(newGoalId);
+        rt.failedGoals.add(call);
+        print('ERROR: no procedure for goal, failed: $call');
+        return null;
+      }
+    }
+
+    sim.addPending(
+      goalId: newGoalId,
+      lineage: lineage,
+      ratePerSecond: ratePerSecond,
+      signature: symbol.signature,
+      release: release,
+    );
+    return null;
   }
 
   /// A goal's call text — `name(arg, ...)`, or `name/arity` when it has no
@@ -718,6 +832,10 @@ class ByteRunner with OpExecutors implements GoalRunner {
     cx.argSlots.clear();
     cx.spawnedGoals.clear();
     cx.goalHead = newHeadGoalStr;
+    // The tail-called goal is the reduction's last body goal, under the same
+    // engine id: name it so in an sGLP run.
+    cx.rt.sim?.nameChild(cx.goalId, cx.goalId, cx.spawnOrdinal);
+    cx.spawnOrdinal = 0;
 
     // Reset clause state for the new procedure.
     cx.sigmaHat.clear();

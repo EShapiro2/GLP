@@ -1,0 +1,13 @@
+%% sGLP population check, negative: a person procedure of the wrong type.
+%% Menu is in writer mode, so its dual is Menu? and its person procedure is
+%% declared procedure p(Menu?, Integer?); this one is declared with Menu.
+
+Menu ::= menu(Choice?).
+Choice ::= left ; right.
+
+person picker.
+Menu =::= pick_menu.
+procedure pick_menu(Menu, Integer?).
+pick_menu(M?, _) :- M = menu(left).
+
+run 10 agents [ approach ~ (picker : 1.0) ] until 1 day seed 1.

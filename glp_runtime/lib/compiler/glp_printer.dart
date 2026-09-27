@@ -88,6 +88,11 @@ class GlpPrinter {
       return '${printGoal(goal.innerGoal)}@${goal.agentId}';
     }
 
+    // Handle rated goals (sGLP, Goal @ Rate)
+    if (goal is RatedGoal) {
+      return '${printGoal(goal.innerGoal)} @ ${goal.rateText}';
+    }
+
     if (goal.args.isEmpty) {
       return goal.functor;
     }

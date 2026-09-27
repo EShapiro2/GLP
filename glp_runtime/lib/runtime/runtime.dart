@@ -13,6 +13,7 @@ import 'package:glp_runtime/multiagent/identity.dart' show PersonIdentity;
 import 'package:glp_runtime/bytecode/runner.dart'
     show CallEnv, GoalRunner;
 import 'package:glp_runtime/runtime/glp_activation.dart' show GlpChannelHandle;
+import 'package:glp_runtime/sglp/simulation.dart' show SimState;
 
 class GlpRuntime {
   final HeapFCP heap;
@@ -84,6 +85,12 @@ class GlpRuntime {
   // scheduler folds this into the run's status without stopping the drain.
   // Recorded as the text of the failed goal, which is what a diagnostic needs.
   final List<String> failedGoals = [];
+
+  /// The sGLP run this machine is in (svGLP, sections/sglp.tex): the
+  /// simulated clock, the pending goals and the seed.  Null outside one, and
+  /// a rated goal spawned there fails.  The engine installs it for each goal
+  /// it posts to a program with rated goals or a run declaration.
+  SimState? sim;
 
   // madGLP context (set when running in multiagent mode)
   // Used by '_cold_send' kernel to access globalization infrastructure

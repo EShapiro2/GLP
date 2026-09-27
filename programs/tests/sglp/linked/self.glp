@@ -1,0 +1,15 @@
+%% sGLP through the linker (svGLP, sections/sglp.tex): a directory program
+%% whose entry point spawns a rated local goal and a rated cross-module goal,
+%% M # p(...) @ r, and whose run declaration names the kinds another module
+%% of the program declares.  The linker renames the goal inside each rate,
+%% and the population is checked across the program's modules.
+
+imported procedure clock#tock(Integer).
+
+exported procedure run(Integer, Integer).
+run(X?, Y?) :- tick(X) @ 2/minute, clock # tock(Y) @ 1/minute.
+
+procedure tick(Integer).
+tick(1).
+
+run 4 agents [ response ~ (quick : 0.25 ; slow : 0.75) ] until 1 hour seed 7.

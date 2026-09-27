@@ -1278,6 +1278,10 @@ LinkResult eliminateDeadCode(LinkResult linked) {
       collectFromGoal(g.innerGoal);
       return;
     }
+    if (g is RatedGoal) {
+      collectFromGoal(g.innerGoal);
+      return;
+    }
     // Body calls carry resolved names: M:p for local/ancestor procedures (exact
     // match keeps the target), unqualified for root-scope calls (no procedure
     // here — left to the separately merged root self.glp).
@@ -1364,6 +1368,17 @@ Goal _resolveGoal(Goal goal, String moduleName, Set<String> localSigs,
       );
     }
     // Dynamic dispatch — can't resolve statically, leave as-is
+    return goal;
+  }
+
+  // RatedGoal (sGLP, Goal @ Rate): resolve the inner goal, keep the rate
+  if (goal is RatedGoal) {
+    final resolvedInner = _resolveGoal(
+        goal.innerGoal, moduleName, localSigs, ancestorSelfProcs,
+        keepLocalBare: keepLocalBare);
+    if (!identical(resolvedInner, goal.innerGoal)) {
+      return goal.withInner(resolvedInner);
+    }
     return goal;
   }
 

@@ -216,6 +216,11 @@ class RunnerContext {
   // Track spawned goals for display
   final List<String> spawnedGoals = [];
 
+  /// The position of the next goal this reduction spawns in its body, from 0:
+  /// with the reduced goal's identifier it names the spawned goal in an sGLP
+  /// run (lib/sglp/draws.dart, childLineage).
+  int spawnOrdinal = 0;
+
   // Track reduction for trace output
   String? goalHead;  // Formatted head goal for trace (mutable for tail calls)
   String? goalProcName;  // Procedure name for delayed head formatting

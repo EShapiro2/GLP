@@ -46,6 +46,12 @@ import 'package:glp_runtime/analysis/type_checker/type_identity.dart'
 import 'package:glp_runtime/multiagent/identity.dart' show PersonIdentity;
 import 'package:glp_runtime/compiler/certification.dart'
     show privilegedRootNames, privilegedCalls;
+import 'package:glp_runtime/bytecode/opcodes.dart' show SpawnRated;
+import 'package:glp_runtime/sglp/simulation.dart' show SimState;
+import 'package:glp_runtime/sglp/population.dart'
+    show Population, PopulationModule, checkPopulation, declaresPopulation,
+        populationOf;
+import 'package:glp_runtime/sglp/draws.dart' show rootLineage;
 
 /// Result of running a goal
 class ExecutionResult {
@@ -162,6 +168,39 @@ class GlpEngine {
   /// When true, type errors abort program loading (default: true)
   bool strictTypes = true;
 
+  // ------------------------------------------------------------------ sGLP
+  // (svGLP, sections/sglp.tex).  A goal posted to a program with a rated goal
+  // or a run declaration starts an sGLP run: the engine installs a fresh
+  // [SimState] --- clock 0, no pending goal, the run's seed --- on the runtime
+  // before the goal is put to the machine, and the scheduler releases pending
+  // goals at quiescence.  A program with neither runs exactly as before.
+
+  /// A loaded program spawns a rated goal somewhere.
+  bool _hasRatedGoals = false;
+
+  /// The run declaration of the loaded program, checked; null if none.
+  Population? _population;
+  Population? get population => _population;
+
+  /// The seed of an sGLP run whose program declares no run.  A run
+  /// declaration's seed takes its place.
+  int simulationSeed = 0;
+
+  /// Called with each sGLP run's state as it is installed, before its goal
+  /// is put to the machine --- where a harness sets a bound on its Releases
+  /// or listens to them.
+  void Function(SimState)? onSimulationStart;
+
+  /// The state of the current, or last, sGLP run: its clock is the simulated
+  /// time.  Null if no goal has started one.
+  SimState? get simulation => _runtime.sim;
+
+  /// The simulated time of the current, or last, sGLP run.
+  double? get simulatedTime => _runtime.sim?.clock;
+
+  /// True if a goal posted now starts an sGLP run.
+  bool get isSimulation => _hasRatedGoals || _population != null;
+
   /// Path to the root self.glp (programs/self.glp) for the type scope chain.
   late final String _rootSelfGlpPath;
 
@@ -228,6 +267,8 @@ class GlpEngine {
     // Clear everything
     _loadedPrograms.clear();
     _loadedModules.clear();
+    _hasRatedGoals = false;
+    _population = null;
     // Re-seed lazily to root scope + root self.glp on next goal check.
     _goalCheckEnv = null;
 
@@ -385,6 +426,11 @@ class GlpEngine {
       }
     }
 
+    // sGLP: the kinds and the run declaration, checked (svGLP, sections/
+    // sglp.tex, Definition "Dual, Person Procedure, ..., Population").
+    final population = _checkedPopulation(
+        [PopulationModule(_baseName(name), module)]);
+
     // Compile. A self-contained module on disk goes through the linker (step-3
     // renaming, singleModulePath marks the loaded module so all its procedures
     // are entry points) and compileProgram — the same compiler entry as a
@@ -412,6 +458,7 @@ class GlpEngine {
       _loadedModuleValues[name] = moduleValue;
       _appModule = moduleValue;
     }
+    _noteSimulation(program, population);
 
     final moduleInfo = _extractModuleInfo(source, program, name);
     _loadedModules[moduleInfo.name] = moduleInfo;
@@ -456,11 +503,17 @@ class GlpEngine {
     // returns it for compilation only if well-typed, else throws. There is no
     // other path to a compiled program.
     final linked = checkedLinkedProgram(modules, rootDir: programDir);
+    // sGLP: the kinds and the run declaration, checked across the program's
+    // modules, as a run declaration may name kinds another module declares.
+    final population = _checkedPopulation([
+      for (final m in modules) PopulationModule(m.moduleName, m.ast)
+    ]);
     final program = _compiler.compileProgram(
       linked.program,
       procDeclarations: linked.procDeclarations,
     );
     _loadedPrograms['__program__'] = program;
+    _noteSimulation(program, population);
 
     // The program's module value — its artefact (h(M) + code): the value
     // `self_module` returns and a friend adopts.
@@ -523,6 +576,43 @@ class GlpEngine {
     }
 
     return true;
+  }
+
+  /// The population [modules] declare, after the checks of its kinds and run
+  /// declaration; null where they declare none.  A failed check fails the
+  /// load, as a type error does.
+  Population? _checkedPopulation(List<PopulationModule> modules) {
+    if (!declaresPopulation(modules)) return null;
+    final errors = checkPopulation(modules);
+    if (errors.isNotEmpty) {
+      throw Exception('sGLP population check failed:\n'
+          '${errors.map((e) => '  $e').join('\n')}');
+    }
+    return populationOf(modules);
+  }
+
+  /// Record what a loaded program makes of a posted goal: an sGLP run if it
+  /// spawns a rated goal or declares a run.
+  void _noteSimulation(BytecodeProgram program, Population? population) {
+    if (program.ops.any((op) => op is SpawnRated)) _hasRatedGoals = true;
+    if (population != null) _population = population;
+  }
+
+  /// Start an sGLP run for a goal about to be posted, if the loaded program
+  /// makes one: a fresh clock and pending set, and the run's seed.
+  void _beginSimulation() {
+    if (!isSimulation) {
+      _runtime.sim = null;
+      return;
+    }
+    final pop = _population;
+    final sim = SimState(
+      seed: pop?.seed ?? simulationSeed,
+      horizon: pop?.untilSeconds,
+      population: pop,
+    );
+    _runtime.sim = sim;
+    onSimulationStart?.call(sim);
   }
 
   /// Run a goal and return the result
@@ -669,6 +759,7 @@ class GlpEngine {
   bool _containsRemoteGoal(Goal g) {
     if (g is RemoteGoal) return true;
     if (g is SpawnGoal) return _containsRemoteGoal(g.innerGoal);
+    if (g is RatedGoal) return _containsRemoteGoal(g.innerGoal);
     return false;
   }
 
@@ -794,6 +885,10 @@ class GlpEngine {
       }
     }
 
+    // sGLP: the posted goal is the run's initial goal.
+    _beginSimulation();
+    _runtime.sim?.setLineage(_goalId, rootLineage(0));
+
     final (runner, goalEntry) =
         _runnerForQuery(program, procedureLabel);
     final scheduler = Scheduler(rt: _runtime, runners: {'main': runner});
@@ -868,6 +963,13 @@ class GlpEngine {
     var anySuspended = false;
     var anyCapped = false;
 
+    // sGLP: the conjuncts together are the run's initial goal.  They are put
+    // to the machine one at a time, each drained before the next, and no
+    // Release is taken until the last is in: before then the machine is not
+    // quiescent in the run's configuration, which holds them all.
+    _beginSimulation();
+    var conjunct = 0;
+
     for (final goal in goals) {
       final functor = goal.functor;
       final arity = goal.args.length;
@@ -907,6 +1009,12 @@ class GlpEngine {
 
       scheduler.setQueryVarNames(queryVarWriters);
       final goalEntry = image.entryOffsetOf(procedureLabel)!;
+      final sim = _runtime.sim;
+      if (sim != null) {
+        sim.setLineage(_goalId, rootLineage(conjunct));
+        sim.releaseEnabled = conjunct == goals.length - 1;
+      }
+      conjunct++;
       _runtime.gq.enqueue(GoalRef(_goalId, goalEntry));
       _goalId++;
 
@@ -928,7 +1036,13 @@ class GlpEngine {
       } else if (result.status == ExecutionStatus.capped) {
         anyCapped = true;
       } else if (result.status == ExecutionStatus.suspended) {
-        anySuspended = true;
+        // sGLP: before the last conjunct no Release is taken, so a drain that
+        // stops with pending goals and no suspended one has not ended the
+        // run: the pending goals are the last drain's to release.
+        final pendingOnly = result.suspendedGoals.isEmpty &&
+            (_runtime.sim?.hasPending ?? false) &&
+            !(_runtime.sim?.releaseEnabled ?? true);
+        if (!pendingOnly) anySuspended = true;
       }
     }
 
