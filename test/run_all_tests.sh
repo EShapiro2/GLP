@@ -1878,9 +1878,9 @@ fplay14.
 HEREDOC
 2>&1)
 check "CSSN v2 fplay14 succeeds" "succeeds\|suspended" "$k_fp14"
-fp14_alice_introduces=$(echo "$k_fp14" | grep -c "tagged(alice, cmd(child_introduce(carol, bob, dave))")
-fp14_carol_connected=$(echo "$k_fp14" | grep -c "tagged(carol, notify(connected(dave))")
-fp14_dave_connected=$(echo "$k_fp14" | grep -c "tagged(dave, notify(connected(carol))")
+fp14_alice_introduces=$(echo "$k_fp14" | grep -c "tagged(alice, cmd(child_introduce(carol, bob, dave))" || true)
+fp14_carol_connected=$(echo "$k_fp14" | grep -c "tagged(carol, notify(connected(dave))" || true)
+fp14_dave_connected=$(echo "$k_fp14" | grep -c "tagged(dave, notify(connected(carol))" || true)
 if [ "$fp14_alice_introduces" = "2" ]; then
     echo "  PASS: CSSN v2 fplay14 alice issued two child_introduces"
     PASS=$((PASS + 1))
@@ -1915,10 +1915,10 @@ fplay15.
 HEREDOC
 2>&1)
 check "CSSN v2 fplay15 succeeds" "succeeds\|suspended" "$k_fp15"
-fp15_alice_connect=$(echo "$k_fp15" | grep -c "tagged(alice, cmd(connect(bob))")
-fp15_bob_connect=$(echo "$k_fp15" | grep -c "tagged(bob, cmd(connect(alice))")
-fp15_alice_connected=$(echo "$k_fp15" | grep -c "tagged(alice, notify(connected(bob))")
-fp15_bob_connected=$(echo "$k_fp15" | grep -c "tagged(bob, notify(connected(alice))")
+fp15_alice_connect=$(echo "$k_fp15" | grep -c "tagged(alice, cmd(connect(bob))" || true)
+fp15_bob_connect=$(echo "$k_fp15" | grep -c "tagged(bob, cmd(connect(alice))" || true)
+fp15_alice_connected=$(echo "$k_fp15" | grep -c "tagged(alice, notify(connected(bob))" || true)
+fp15_bob_connected=$(echo "$k_fp15" | grep -c "tagged(bob, notify(connected(alice))" || true)
 if [ "$fp15_alice_connect" = "1" ] && [ "$fp15_bob_connect" = "1" ]; then
     echo "  PASS: CSSN v2 fplay15 both agents issued connect"
     PASS=$((PASS + 1))
@@ -1967,7 +1967,7 @@ check "CSSN v3 fplay13 act 7 ending the parenting is owed and given" "tagged(bob
 check "CSSN v3 fplay13 act 7 no parent on record is what being an adult is" "tagged(eve, event(No parent on record, so an adult))" "$k_fp13"
 check "CSSN v3 fplay13 act 5 a member joining late is owed what was posted before" "tagged(carol, notify(group_received(group_id(frank, study), dave, Hi from Dave!)))" "$k_fp13"
 check "CSSN v3 fplay13 act 7 befriending with no parent among the guards" "tagged(eve, friend(frank))" "$k_fp13"
-fp13_narr=$(echo "$k_fp13" | grep -cE "tagged\((alice|bob|frank|carol|dave|eve), (act|event|friend|say)\(")
+fp13_narr=$(echo "$k_fp13" | grep -cE "tagged\((alice|bob|frank|carol|dave|eve), (act|event|friend|say)\(" || true)
 if [ "$fp13_narr" = "85" ]; then
     echo "  PASS: CSSN v3 fplay13 narrative is 85 lines"
     PASS=$((PASS + 1))
@@ -2014,7 +2014,7 @@ check "CSSN v3 fplay17 the member on the list at the post receives it" "tagged(b
 check "CSSN v3 fplay17 the late joiner is owed it too" "tagged(carol, notify(group_received(group_id(alice, late_join), alice, Posted before Carol joined)))" "$k_fp17"
 check "CSSN v3 fplay17 a member joining after two posts is owed the first" "tagged(dave, notify(group_received(group_id(alice, late_join), alice, Posted before Carol joined)))" "$k_fp17"
 check "CSSN v3 fplay17 and the second" "tagged(dave, notify(group_received(group_id(alice, late_join), alice, Posted before Dave joined)))" "$k_fp17"
-fp17_bob=$(echo "$k_fp17" | grep -c "tagged(bob, notify(group_received(group_id(alice, late_join), alice, Posted before Carol joined)))")
+fp17_bob=$(echo "$k_fp17" | grep -c "tagged(bob, notify(group_received(group_id(alice, late_join), alice, Posted before Carol joined)))" || true)
 if [ "$fp17_bob" = "1" ]; then
     echo "  PASS: CSSN v3 fplay17 no member receives the post twice"
     PASS=$((PASS + 1))
@@ -3880,7 +3880,7 @@ signer(foo(bar), K).
 :quit
 HEREDOC
 2>&1)
-sk4_unsigned=$(echo "$sk4" | grep -c "K = unsigned" | tr -d ' ')
+sk4_unsigned=$(echo "$sk4" | grep -c "K = unsigned" | tr -d ' ' || true)
 check "SK4 signature/2 on a hex string that is no signed term, and on a term that is no string, answers unsigned" "2" "$sk4_unsigned"
 check_not "SK4 unsigned is a value, not a failure: neither goal fails" "→ failed" "$sk4"
 
@@ -4025,7 +4025,7 @@ lp11=$("$REPL_RUN" <<HEREDOC
 :quit
 HEREDOC
 2>&1)
-lp11_hellos=$(echo "$lp11" | grep -c "\[bob\] saw(hello)")
+lp11_hellos=$(echo "$lp11" | grep -c "\[bob\] saw(hello)" || true)
 check "MB5 linkprobe11 a ground later element crosses too: both greetings arrive" "^2$" "$lp11_hellos"
 
 # linkprobe12: the stream is left open after the probe, as a live
