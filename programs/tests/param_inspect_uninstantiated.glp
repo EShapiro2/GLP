@@ -23,6 +23,6 @@
 %% Run (from /Users/udi/Grassroots/GLP/glp_runtime/):
 %%   printf 'load ../programs/tests/param_inspect_uninstantiated.glp\n:quit\n' | bin/glpc
 
-procedure pskip(Stream(X)?).
+procedure(X) pskip(Stream(X)?).
 pskip([done|Xs]) :- pskip(Xs?).
 pskip([]).

@@ -26,7 +26,7 @@ postorder(tree(X, L, R), Xs?) :-
 postorder(void, []).
 
 %% append for use in traversals
-procedure append(Stream(X)?, Stream(X)?, Stream(X)).
+procedure(X) append(Stream(X)?, Stream(X)?, Stream(X)).
 append([], Ys, Ys?).
 append([X|Xs], Ys, [X?|Zs?]) :- append(Xs?, Ys?, Zs).
 

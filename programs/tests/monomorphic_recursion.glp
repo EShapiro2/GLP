@@ -22,12 +22,12 @@ Msg ::= m.
 Box(X) ::= box(X).
 
 %% Type-changing: input element X, output element box(X) — one Box deeper.
-procedure wrap(Stream(X)?, Stream(Box(X))).
+procedure(X) wrap(Stream(X)?, Stream(Box(X))).
 wrap([E|In], [box(E?)|Out?]) :- wrap(In?, Out).
 wrap([], []).
 
 %% Recursive driver: ploop@Msg would call ploop@Box(Msg) — polymorphic recursion.
-procedure ploop(Stream(X)?).
+procedure(X) ploop(Stream(X)?).
 ploop(S) :- wrap(S?, W), ploop(W?).
 ploop([]).
 

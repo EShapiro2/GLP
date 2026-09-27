@@ -18,7 +18,7 @@ tally([tick|Ts], [tick|Us?]) :- tally(Ts?, Us).
 tally([tock|Ts], [tock|Us?]) :- tally(Ts?, Us).
 tally([], []).
 
-procedure copy(Stream(X)?).
+procedure(X) copy(Stream(X)?).
 copy([_|Xs]) :- copy(Xs?).
 copy([]).
 

@@ -20,7 +20,7 @@
 
 Msg ::= a ; b.
 
-procedure pdrop(Stream(X)?).
+procedure(X) pdrop(Stream(X)?).
 pdrop([_|Xs]) :- pdrop(Xs?).
 
 procedure go(Stream(Msg)?).

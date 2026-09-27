@@ -29,5 +29,5 @@
 %% Run (from /Users/udi/Grassroots/GLP/glp_runtime/):
 %%   printf 'load ../programs/tests/param_free_not_checked.glp\n:quit\n' | bin/glpc
 
-procedure pdrop(Stream(X)?).
+procedure(X) pdrop(Stream(X)?).
 pdrop([_|Xs]) :- pdrop(Xs?).
