@@ -2,7 +2,7 @@
 %% agent/4 <-> ui_mediator/5 <-> ui_actor/2 <-> send_to_net.  All three come from
 %% the parent directory through -expose.
 
-exported procedure agent_init(_?, _?).
+exported procedure agent_init(Key?, NetInStream?).
 agent_init(Id, NetIn) :-
     ground(Id?) |
     send_to_net(NetOut?),

@@ -7,18 +7,14 @@
 %% therefore not what stops the warm call.  Expected: [bob] saw(hello),
 %% saw(probe), [alice] got(hi).  See ../linkprobes.md.
 
-Inner ::= probe(String?) ; hello.
-InnerStream ::= [] ; [Inner | InnerStream].
-InnerChannel ::= ch(InnerStream, InnerStream?).
-NetContent ::= call ; chan(InnerChannel).
-NetMsg ::= msg(Constant, NetContent).
-NetStream ::= [] ; [NetMsg | NetStream].
+%% The channel and network types are in self.glp, which names NetStream at
+%% alice_init/2's interface.
 
 %% The mini-app's entry, declared here for find_type/2 (never run here).
 procedure pa(InnerChannel?, String).
 pa(_, _?).
 
-exported procedure alice_init(_?, _?).
+exported procedure alice_init(_?, NetStream?).
 alice_init(_, In) :-
     send_to_net([msg(bob, call)]),
     alice_wait(In?).

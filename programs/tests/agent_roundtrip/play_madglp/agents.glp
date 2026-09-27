@@ -2,7 +2,7 @@
 %% agent/4 <-> actor <-> send_to_net.  agent/4 and alice_actor/1, bob_actor/1
 %% and charlie_actor/1 come from the parent directory through -expose.
 
-exported procedure agent_init(_?, _?).
+exported procedure agent_init(Key?, NetInStream?).
 agent_init(Id, NetIn) :-
     ground(Id?) |
     send_to_net(NetOut?),

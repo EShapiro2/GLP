@@ -3318,7 +3318,7 @@ $GLP_DIR/test/fixtures/outside_hierarchy/m.glp
 :quit
 HEREDOC
 2>&1)
-check "S10 outside-hierarchy file load rejected" "no standalone well-typing" "$s10"
+check "S10 outside-hierarchy file load rejected" "not parametrically well-typed and has no well-typing" "$s10"
 
 echo ""
 

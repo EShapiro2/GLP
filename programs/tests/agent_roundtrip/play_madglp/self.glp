@@ -8,7 +8,7 @@
 %% agent/4 and the three actor scripts come from the parent directory's
 %% -expose, not from copies.
 
-imported procedure agents#agent_init(_?, _?).
+imported procedure agents#agent_init(Key?, NetInStream?).
 
-exported procedure agent_init(_?, _?).
+exported procedure agent_init(Key?, NetInStream?).
 agent_init(Id, In) :- agents # agent_init(Id?, In?).

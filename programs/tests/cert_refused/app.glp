@@ -1,4 +1,4 @@
-exported procedure leak(Stream(_)?).
+exported procedure leak(NetStream?).
 leak(S) :- send_to_net(S?).
 
 exported procedure shout(Stream(_)?).

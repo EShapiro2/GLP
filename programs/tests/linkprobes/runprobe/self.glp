@@ -1,7 +1,19 @@
 %% runprobe/self.glp --- program interface for ../runprobe_boot.glp.
-imported procedure host#alice_init(_?, _?).
+
+%% The channel and network types, here and not in host.glp: alice_init/2 reads
+%% the network stream at this interface too, and a type two modules use is
+%% defined at their lowest common ancestor (TGLP modules.tex, Scope
+%% construction).
+Inner ::= probe(String?) ; hello.
+InnerStream ::= [] ; [Inner | InnerStream].
+InnerChannel ::= ch(InnerStream, InnerStream?).
+NetContent ::= call ; chan(InnerChannel).
+NetMsg ::= msg(Constant, NetContent).
+NetStream ::= [] ; [NetMsg | NetStream].
+
+imported procedure host#alice_init(_?, NetStream?).
 imported procedure host#bob_init(_?, _?).
-exported procedure alice_init(_?, _?).
+exported procedure alice_init(_?, NetStream?).
 alice_init(Id, In) :- host # alice_init(Id?, In?).
 exported procedure bob_init(_?, _?).
 bob_init(Id, In) :- host # bob_init(Id?, In?).

@@ -67,5 +67,5 @@ bob_consumer(_) :- otherwise | send_to_user([bob_ch_otherwise]).
 procedure drop(_?).
 drop(_).
 
-procedure fill(_).
+procedure fill(Done).
 fill(done).
