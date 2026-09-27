@@ -568,6 +568,18 @@ TypeEnvironment _mergeExposed(TypeEnvironment base, TypeEnvironment exposed,
 /// otherwise undefined at the very declaration naming it.  They are made known
 /// here and not merged into the returned scope: what `-expose` lifts is the
 /// exposed module's procedures and the types their signatures carry.
+///
+/// The known names of the lift are both scopes', the root's among [base] and
+/// the exposing module's in [exposerTypeDefs] --- not the latter instead of the
+/// former --- and each enters as what it is: a monomorphic definition as a
+/// known type name, a parameterised one as a template, exactly as [base]
+/// carries them (`types` against `typeTemplates`).  A template entered as a
+/// known monomorphic name makes the expansion collapse a wildcard instance of
+/// it to the bare name (`Stream(_)` to `Stream`, param_expansion.dart), which
+/// no scope defines: that is how a lifted `Stream(C)`, `C` a parameter, became
+/// "Unresolved type: Stream" wherever the root `self.glp` both defines `Stream`
+/// and exposes the declaration.  A parameter of the lifted declaration is in
+/// neither and stays bare (parameterized-types.tex, "Declaration parameters").
 TypeEnvironment _exposedExportScope(Module m, TypeEnvironment base,
     {List<TypeDef> exposerTypeDefs = const []}) {
   final exported = m.procDeclarations.where((d) => d.exported).toList();
@@ -580,7 +592,8 @@ TypeEnvironment _exposedExportScope(Module m, TypeEnvironment base,
   final expanded = expandParameterizedTypes(synthetic,
       knownTypeNames: {
         ...base.types.keys,
-        for (final td in exposerTypeDefs) td.name,
+        for (final td in exposerTypeDefs)
+          if (td.typeParams.isEmpty) td.name,
       },
       externalTemplates: {
         ...base.typeTemplates,

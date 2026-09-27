@@ -1,0 +1,2 @@
+exported procedure(C) swap(Pair(C)?, Pair(C)).
+swap(pair(X, Y), pair(Y?, X?)).
