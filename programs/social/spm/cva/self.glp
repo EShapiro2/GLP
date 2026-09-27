@@ -112,6 +112,6 @@ ReaderList(C) ::= [] ; [Stream(NetMsg(C)) | ReaderList(C)].
 %% network.glp; this self.glp forwards `network` so a caller's `cva # network`
 %% resolves by entering cva/ through its self.glp. network.glp is unchanged.
 %% =============================================================================
-imported procedure network#network(NetEndList(C)?).
-exported procedure network(NetEndList(C)?).
+imported procedure(C) network#network(NetEndList(C)?).
+exported procedure(C) network(NetEndList(C)?).
 network(N) :- network # network(N?).

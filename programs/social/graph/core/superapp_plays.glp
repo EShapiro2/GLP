@@ -22,7 +22,7 @@ route2([msg(alice, C) | Rest], [msg(alice, C?) | A?], B?) :- route2(Rest?, A, B)
 route2([msg(bob, C) | Rest], A?, [msg(bob, C?) | B?]) :- route2(Rest?, A, B).
 route2([], [], []).
 
-procedure tee(Stream(X)?, Stream(X), Stream(X)).
+procedure(X) tee(Stream(X)?, Stream(X), Stream(X)).
 tee([X|Xs], [X?|Ys?], [X?|Zs?]) :- ground(X?) | tee(Xs?, Ys, Zs).
 tee([], [], []).
 
@@ -179,7 +179,7 @@ play_invite_timed(Ms?) :-
     bob_person(C?, CSig?, yes, BobUiRaw, BobOut?, BobSeen?, BobIn),
     opened_at(BobUi?, T0?, Ms).
 
-procedure sink(Stream(X)?).
+procedure(X) sink(Stream(X)?).
 sink([_ | Xs]) :- sink(Xs?).
 sink([]).
 

@@ -28,7 +28,7 @@ send(X, ch(In, [X?|Out?]), ch(In?, Out)).
 receive(X?, ch([X|In], Out?), ch(In?, Out)).
 new_channel(ch(Xs?, Ys), ch(Ys?, Xs)).
 
-procedure merge(Stream(X)?, Stream(X)?, Stream(X)).
+procedure(X) merge(Stream(X)?, Stream(X)?, Stream(X)).
 merge([X|Xs], Ys, [X?|Zs?]) :- merge(Ys?, Xs?, Zs).
 merge(Xs, [Y|Ys], [Y?|Zs?]) :- merge(Xs?, Ys?, Zs).
 merge([], Ys, Ys?).
