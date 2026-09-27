@@ -40,7 +40,8 @@ import 'package:glp_runtime/wire/flattening.dart'
         exportDeclarationText,
         hashOfPrint,
         interfaceTypeDefsText;
-import 'package:glp_runtime/wire/artefact.dart' show Artefact, ArtefactExport;
+import 'package:glp_runtime/wire/artefact.dart'
+    show Artefact, ArtefactExport, glpIsaVersion;
 import 'package:glp_runtime/analysis/type_checker/type_identity.dart'
     show TypeIdentityTables;
 import 'package:glp_runtime/multiagent/identity.dart' show PersonIdentity;
@@ -1309,7 +1310,7 @@ class GlpEngine {
       ops: program.ops.cast<Object>(),
       hM: hM,
       moduleName: moduleName,
-      isaVersion: 'glp-isa-1',
+      isaVersion: glpIsaVersion,
       typeDefsText:
           interfaceTypeDefsText(exportDecls: exportDecls, typeDefs: typeDefs),
       exports: exports,

@@ -45,7 +45,7 @@ CodeImage codeImageFromProgram(BytecodeProgram prog,
     ops: prog.ops.cast<Object>(),
     hM: Uint8List(32),
     moduleName: moduleName,
-    isaVersion: 'glp-isa-1',
+    isaVersion: glpIsaVersion,
     typeDefsText: '',
     exports: const [],
   );
