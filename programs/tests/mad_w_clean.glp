@@ -18,8 +18,8 @@
 %% The second report is about the channel, not about `_w`. receive/3's unit
 %% clause is receive(X?, ch([X|In], Out?), ch(In?, Out)): the Out position is a
 %% READER there, so a constant at Out lets the guard succeed. mad_w_probe.glp
-%% supplies an unassigned writer there instead and reports bob_ch_otherwise.
-%% That is what these two fixtures distinguish.
+%% supplies an unassigned writer there instead, which is assigned the head's
+%% reader, and it matches as well.
 %%
 %% Run via glp_multiagent/test/mad_w_clean_test.dart (two isolates).
 

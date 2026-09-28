@@ -6,7 +6,8 @@
 /// head w(W?) and is the admissibility the fixture exists to show; and
 /// bob_ch_matched, which is receive/3 committing because this fixture supplies
 /// ch(S?, closed) — a constant where receive/3's unit clause reads.
-/// mad_w_probe_test.dart is the same file with a writer at Out, and does not.
+/// mad_w_probe_test.dart is the same file with a writer at Out, which is
+/// assigned the head's reader, and matches as well.
 ///
 /// Each outcome is asserted singly. The old disjunction matched||otherwise was
 /// vacuous: one of bob_consumer's two clauses always fires.

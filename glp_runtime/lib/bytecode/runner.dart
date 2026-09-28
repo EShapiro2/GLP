@@ -801,8 +801,11 @@ GuardResult _evaluateGuard(String predicateName, List<Object?> args, RunnerConte
 
     // Control guards
     case 'otherwise':
-      // This is handled by the compiler - should not reach runtime
-      return GuardResult.success;
+      // Unreachable: execGuard routes a generic call of otherwise/0 to
+      // execOtherwise (0x46), the one rule for it.  Reaching here is a fault.
+      throw StateError(
+          'otherwise/${args.length} reached the guard evaluator; otherwise '
+          'takes no arguments and is decided by execOtherwise (0x46)');
 
     // Time guards
     case 'wait':
@@ -1834,6 +1837,17 @@ mixin OpExecutors {
   /// anything else→nextClause (suspension already handled).
   StepOutcome execGuard(
       RunnerContext cx, String predicateName, int arity, bool negated) {
+    // A generic guard call of `otherwise` --- hand-assembled bytecode, or an
+    // artefact whose encoder did not use 0x46 --- takes 0x46's rule and no
+    // other: it succeeds if all previous clauses for this procedure fail
+    // (GLP-Spec appendix-guards.tex), so it waits while any of them suspends.
+    // It cannot be negated (the analyzer refuses ~otherwise).
+    if (predicateName == 'otherwise' && arity == 0) {
+      if (negated) {
+        throw StateError('~otherwise: otherwise cannot be negated');
+      }
+      return execOtherwise(cx);
+    }
     final args = <Object?>[];
     final unboundReaders = <int>{};
     for (var i = 0; i < arity; i++) {

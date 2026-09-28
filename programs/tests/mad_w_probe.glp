@@ -12,19 +12,16 @@
 %%                        This is the `_w` admissibility the file was built to
 %%                        test, and it holds. The social-graph failure that
 %%                        prompted the probe is elsewhere.
-%%   bob_ch_otherwise  => receive/3 did not commit, so the second clause fired.
+%%   bob_ch_matched    => receive/3 committed once S was bound.
 %%
 %% The second report is about the channel, not about `_w`. receive/3 is a
-%% defined guard whose unit clause is receive(X?, ch([X|In], Out?), ch(In?, Out)):
-%% the Out position is a READER there. This file supplies an unassigned writer
-%% at Out — ch(S?, _) — and the guard does not succeed. mad_w_clean.glp is this
-%% file with ch(S?, closed) at that one line, and it reports bob_ch_matched.
-%% That single line is the whole difference between them, and it is what these
-%% two fixtures distinguish.
-%%
-%% Whether receive/3 should suspend or fail on an unassigned writer at Out, and
-%% whether otherwise firing behind it is the specified outcome, is GLP-Spec's
-%% (receive/3's unit clause and otherwise's semantics). Nothing here waits on it.
+%% defined guard whose unit clause is receive(X?, ch([X|In], Out?), ch(In?, Out)),
+%% so the unfolded head is bob_consumer(ch([wrapped(Y?)|PE1], PE2?)). This file
+%% supplies an unassigned writer at Out --- ch(S?, _) --- and by GLP-Spec
+%% "Writer MGU" that writer is assigned PE2?, so the guard succeeds once S is
+%% bound. Until then the first clause suspends on S?, and `otherwise` waits
+%% with it: it succeeds only if all previous clauses fail (GLP-Spec
+%% appendix-guards.tex). So bob_ch_otherwise is not an outcome of this file.
 %%
 %% Run via glp_multiagent/test/mad_w_probe_test.dart (two isolates).
 
