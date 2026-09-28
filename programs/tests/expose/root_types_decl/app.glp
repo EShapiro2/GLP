@@ -1,0 +1,6 @@
+exported procedure(Z) pass(NetStream?, Z?).
+pass(_, _).
+
+exported procedure count(NetStream?, Integer).
+count([], 0).
+count([msg(_, _) | S], N?) :- count(S?, M), N := M? + 1.

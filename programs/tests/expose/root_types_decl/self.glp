@@ -1,0 +1,14 @@
+%% IGLP probe: a self.glp declaration naming a type the root exposes.  The root
+%% self.glp's -expose(system#mad_predicates) lifts NetStream into every scope
+%% (TGLP modules.tex, "The -expose directive"), so the named-parameter
+%% declarations below resolve it, and the unnamed ones take it as the type it
+%% is and not as a parameter.  Run by test/compiler/exposed_root_types_test.dart.
+
+imported procedure(Z) app#pass(NetStream?, Z?).
+imported procedure app#count(NetStream?, Integer).
+
+exported procedure(Z) pass(NetStream?, Z?).
+pass(S, Z) :- app # pass(S?, Z?).
+
+exported procedure count(NetStream?, Integer).
+count(S, N?) :- app # count(S?, N).

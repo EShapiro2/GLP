@@ -17,7 +17,6 @@ import 'partial_evaluator.dart';
 import 'primitive_layer.dart';
 import '../analysis/type_checker/root_scope.dart' show isBuiltinProcedure;
 import '../analysis/type_checker/type_ast.dart';
-import '../analysis/type_checker/param_expansion.dart';
 import '../analysis/type_checker/type_checker.dart';
 import '../analysis/type_checker/type_identity.dart';
 import '../runtime/module_hierarchy.dart';
@@ -261,7 +260,7 @@ TypeEnvironment _vglpScope(File file, List<DiscoveredModule> modules,
   final modDir = _normPath(file.parent.path);
   for (final e in modules.where((m) => m.exposingDir != null)) {
     if (!_dirUnder(modDir, e.exposingDir!)) continue;
-    scope = _mergeExposed(scope, _exposedExportScope(e.ast, scope),
+    scope = _mergeExposed(scope, exposedExportScope(e.ast, scope),
         label: e.moduleName);
   }
   return scope;
@@ -444,7 +443,7 @@ TypeEnvironment withSglpSystemScope(TypeEnvironment scope, String programsDir) {
   final file = File(sglpSystemModulePath(programsDir));
   if (!file.existsSync()) return scope;
   final ast = Parser(Lexer(file.readAsStringSync()).tokenize()).parseModule();
-  return _mergeExposed(scope, _exposedExportScope(ast, scope), label: 'sglp');
+  return _mergeExposed(scope, exposedExportScope(ast, scope), label: 'sglp');
 }
 
 /// A declaration of [m] that names a runtime kernel and has no clauses in
@@ -591,7 +590,7 @@ void _resolveExposes(List<DiscoveredModule> modules, String? programsDir,
       if (!_dirUnder(modDir, e.exposingDir!)) continue;
       m.ancestorScope = _mergeExposed(
           m.ancestorScope,
-          _exposedExportScope(e.ast, m.ancestorScope,
+          exposedExportScope(e.ast, m.ancestorScope,
               exposerTypeDefs: perDirExposerTypeDefs[e.exposingDir!] ?? const []),
           label: e.moduleName);
     }
@@ -635,58 +634,6 @@ TypeEnvironment _mergeExposed(TypeEnvironment base, TypeEnvironment exposed,
       paramProcDecls: paramProcDecls,
       typeTemplates: {...base.typeTemplates, ...ex.typeTemplates},
       typeOrigins: {...ex.originsUnder(label), ...base.typeOrigins});
-}
-
-/// A TypeEnvironment of a module's EXPORTED procedure declarations plus the
-/// types it defines, for type-checking exposed signatures in the subtree.
-///
-/// [base] supplies the exposing subtree's known type names and parameterised
-/// templates (`Stream`, `Channel`, …), so the exposed signatures' parameterised
-/// types are recognised and routed to `paramProcDecls` (exactly as an ordinary
-/// ancestor `self.glp` would be processed).
-///
-/// [exposerTypeDefs] adds the definitions of the module that exposed [m].  An
-/// exposed declaration is read "as if defined in its `self.glp`", so its type
-/// names resolve in the exposing module's scope, which carries that module's
-/// own definitions (Definition (Root, Scope): the scope of M ends in M).
-/// [base] is the scope of the module RECEIVING the lift, and a `self.glp`'s own
-/// ancestor scope excludes itself, so a type the exposing `self.glp` defines is
-/// otherwise undefined at the very declaration naming it.  They are made known
-/// here and not merged into the returned scope: what `-expose` lifts is the
-/// exposed module's procedures and the types their signatures carry.
-///
-/// The known names of the lift are both scopes', the root's among [base] and
-/// the exposing module's in [exposerTypeDefs] --- not the latter instead of the
-/// former --- and each enters as what it is: a monomorphic definition as a
-/// known type name, a parameterised one as a template, exactly as [base]
-/// carries them (`types` against `typeTemplates`).  A template entered as a
-/// known monomorphic name makes the expansion collapse a wildcard instance of
-/// it to the bare name (`Stream(_)` to `Stream`, param_expansion.dart), which
-/// no scope defines: that is how a lifted `Stream(C)`, `C` a parameter, became
-/// "Unresolved type: Stream" wherever the root `self.glp` both defines `Stream`
-/// and exposes the declaration.  A parameter of the lifted declaration is in
-/// neither and stays bare (parameterized-types.tex, "Declaration parameters").
-TypeEnvironment _exposedExportScope(Module m, TypeEnvironment base,
-    {List<TypeDef> exposerTypeDefs = const []}) {
-  final exported = m.procDeclarations.where((d) => d.exported).toList();
-  final synthetic = Module(
-    typeDefs: m.typeDefs,
-    procDeclarations: exported,
-    line: m.line,
-    column: m.column,
-  );
-  final expanded = expandParameterizedTypes(synthetic,
-      knownTypeNames: {
-        ...base.types.keys,
-        for (final td in exposerTypeDefs)
-          if (td.typeParams.isEmpty) td.name,
-      },
-      externalTemplates: {
-        ...base.typeTemplates,
-        for (final td in exposerTypeDefs)
-          if (td.typeParams.isNotEmpty) td.name: td,
-      });
-  return buildScopeFromModule(expanded);
 }
 
 /// Collect `self.glp` files in ancestor directories ABOVE [rootDir], walking up

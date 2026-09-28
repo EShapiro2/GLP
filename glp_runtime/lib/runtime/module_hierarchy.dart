@@ -163,10 +163,120 @@ TypeEnvironment mergeModuleIntoScope(TypeEnvironment env, ast.Module module,
 /// Merge a self.glp file into a scope environment: parse, then
 /// [mergeModuleIntoScope], labelled by the directory the `self.glp` is the
 /// scope of --- the name the linker gives that module.
+///
+/// The types the `self.glp`'s `-expose` directives lift are in [env] before
+/// the `self.glp` is merged ([liftExposedTypes]), so its own declarations and
+/// every later layer resolve them.
 TypeEnvironment mergeSelfGlpFileIntoScope(TypeEnvironment env, String path) {
   final source = File(path).readAsStringSync();
   final module = Parser(Lexer(source).tokenize()).parseModule();
-  return mergeModuleIntoScope(env, module, label: _directoryLabel(path));
+  final lifted = liftExposedTypes(env, module, File(path).parent.path);
+  return mergeModuleIntoScope(lifted, module, label: _directoryLabel(path));
+}
+
+/// [env] with the types that [exposer]'s `-expose` directives lift into the
+/// scope of its directory [exposerDir].
+///
+/// TGLP modules.tex, "The -expose directive": `-expose(M).` "lifts the
+/// exported procedures of module M (and the types their signatures carry) into
+/// that directory's scope, as if defined in its self.glp".  A scope is layered
+/// one `self.glp` at a time (Definition (Root, Scope)), and a layer's
+/// declarations, and those of every layer after it, are expanded against the
+/// types known when it is merged; so a type an ancestor exposes --- the root's
+/// `-expose(system#mad_predicates)` gives every scope `NetStream` --- must be
+/// known then, or a declaration naming it is refused as naming an undefined
+/// type, or, naming no parameters, reads it as one.
+///
+/// Only the types are lifted here.  The exposed procedures, their collisions
+/// and their entry-point status are the linker's (program_linker.dart,
+/// `_resolveExposes`), which lifts them into each module of the exposing
+/// subtree with the same [exposedExportScope], so the two agree on every type
+/// they share.  A type [env] already defines is not replaced: a definition
+/// nearer the use site shadows an exposed one.  A module path whose file is
+/// missing lifts nothing here; the linker reports it.
+TypeEnvironment liftExposedTypes(
+    TypeEnvironment env, ast.Module exposer, String exposerDir) {
+  if (exposer.exposes.isEmpty) return env;
+  var types = env.types;
+  var origins = env.typeOrigins;
+  for (final path in exposer.exposes) {
+    final file =
+        File('${ppath.joinAll([exposerDir, ...path.split('#')])}.glp');
+    if (!file.existsSync()) continue;
+    final exposed = Parser(Lexer(file.readAsStringSync()).tokenize())
+        .parseModule();
+    final lifted = exposedExportScope(exposed,
+        TypeEnvironment(types, env.procedures,
+            paramProcDecls: env.paramProcDecls,
+            typeTemplates: env.typeTemplates,
+            typeOrigins: origins),
+        exposerTypeDefs: exposer.typeDefs);
+    final label = ppath.basenameWithoutExtension(file.path);
+    final added = <String, TypeDef>{
+      for (final e in lifted.types.entries)
+        if (!types.containsKey(e.key)) e.key: e.value,
+    };
+    if (added.isEmpty) continue;
+    types = {...types, ...added};
+    origins = {...origins, for (final t in added.keys) t: label};
+  }
+  if (identical(types, env.types)) return env;
+  return TypeEnvironment(types, env.procedures,
+      paramProcDecls: env.paramProcDecls,
+      typeTemplates: env.typeTemplates,
+      typeOrigins: origins);
+}
+
+/// A TypeEnvironment of a module's EXPORTED procedure declarations plus the
+/// types it defines, for type-checking exposed signatures in the subtree.
+///
+/// [base] supplies the exposing subtree's known type names and parameterised
+/// templates (`Stream`, `Channel`, …), so the exposed signatures' parameterised
+/// types are recognised and routed to `paramProcDecls` (exactly as an ordinary
+/// ancestor `self.glp` would be processed).
+///
+/// [exposerTypeDefs] adds the definitions of the module that exposed [m].  An
+/// exposed declaration is read "as if defined in its `self.glp`", so its type
+/// names resolve in the exposing module's scope, which carries that module's
+/// own definitions (Definition (Root, Scope): the scope of M ends in M).
+/// [base] is the scope of the module RECEIVING the lift, and a `self.glp`'s own
+/// ancestor scope excludes itself, so a type the exposing `self.glp` defines is
+/// otherwise undefined at the very declaration naming it.  They are made known
+/// here and not merged into the returned scope: what `-expose` lifts is the
+/// exposed module's procedures and the types their signatures carry.
+///
+/// The known names of the lift are both scopes', the root's among [base] and
+/// the exposing module's in [exposerTypeDefs] --- not the latter instead of the
+/// former --- and each enters as what it is: a monomorphic definition as a
+/// known type name, a parameterised one as a template, exactly as [base]
+/// carries them (`types` against `typeTemplates`).  A template entered as a
+/// known monomorphic name makes the expansion collapse a wildcard instance of
+/// it to the bare name (`Stream(_)` to `Stream`, param_expansion.dart), which
+/// no scope defines: that is how a lifted `Stream(C)`, `C` a parameter, became
+/// "Unresolved type: Stream" wherever the root `self.glp` both defines `Stream`
+/// and exposes the declaration.  A parameter of the lifted declaration is in
+/// neither and stays bare (parameterized-types.tex, "Declaration parameters").
+TypeEnvironment exposedExportScope(ast.Module m, TypeEnvironment base,
+    {List<TypeDef> exposerTypeDefs = const []}) {
+  final exported = m.procDeclarations.where((d) => d.exported).toList();
+  final synthetic = ast.Module(
+    typeDefs: m.typeDefs,
+    procDeclarations: exported,
+    line: m.line,
+    column: m.column,
+  );
+  final expanded = expandParameterizedTypes(synthetic,
+      knownTypeNames: {
+        ...base.types.keys,
+        for (final td in exposerTypeDefs)
+          if (td.typeParams.isEmpty) td.name,
+      },
+      externalTemplates: {
+        ...base.typeTemplates,
+        for (final td in exposerTypeDefs)
+          if (td.typeParams.isNotEmpty) td.name: td,
+      });
+  return buildScopeFromModule(expanded);
 }
 
 /// The last segment of the directory holding [path].
@@ -203,8 +313,15 @@ TypeEnvironment buildAncestorScope({
       // every type of the root a second definition of itself. It is layered
       // here only when the root-scope environment was built from something
       // else.
-      if (!isRootScopeEnvironmentSource(f.readAsStringSync())) {
+      final source = f.readAsStringSync();
+      if (!isRootScopeEnvironmentSource(source)) {
         env = mergeSelfGlpFileIntoScope(env, f.path);
+      } else {
+        // The root-scope environment realises the root's definitions but not
+        // its `-expose` directives, which are d_1's as much as its
+        // definitions are (modules.tex, "The -expose directive").
+        env = liftExposedTypes(
+            env, Parser(Lexer(source).tokenize()).parseModule(), f.parent.path);
       }
     }
   }
