@@ -350,6 +350,10 @@ ClauseCheckResult checkClause(
   // head's is not within went unchecked.
   final headBodyPairs = <String, List<(VariableTypeInfo, String)>>{};
 
+  // Every body occurrence of each key whose first occurrence is in the body,
+  // for condition 3(a) on every body/body pair ([_checkBodyBodyPairs]).
+  final bodyOccurrences = <String, List<(VariableTypeInfo, String)>>{};
+
   // A head occurrence a guard atom has NARROWED, by the key the head carries it
   // under.  "A guard atom that tests the type of a head occurrence narrows it
   // ... the occurrence has that meet as its type in the body, where condition 3
@@ -426,9 +430,14 @@ ClauseCheckResult checkClause(
         // unchecked entirely and `held2(N?) :- self_key(N).` --- an `Integer`
         // handed out where the body produces a `Key` --- loaded.
         //
-        // A key an EARLIER BODY ATOM carries is not a pair: it is the same
-        // source form occurring twice in the body, which SRSW admits only under
-        // a relaxation and which condition 3 does not speak of.
+        // A key an EARLIER BODY ATOM carries is the same source form occurring
+        // again in the body, which SRSW admits only under a relaxation (a
+        // reader of a constant type, SRSW*).  It is no pair with the earlier
+        // occurrence, but it is one with the body occurrence of its partner,
+        // so it is kept for condition 3(a) ([_checkBodyBodyPairs]).
+        if (variableLocations[varKey] != 'head') {
+          bodyOccurrences[varKey]?.add((newInfo, 'body atom $i'));
+        }
         if (variableLocations[varKey] == 'head') {
           if (i < clause.guardAtoms.length) {
             // A GUARD atom: it narrows the occurrence rather than being
@@ -459,6 +468,7 @@ ClauseCheckResult checkClause(
       } else {
         allVariableTypes[varKey] = newInfo;
         variableLocations[varKey] = 'body atom $i';
+        bodyOccurrences[varKey] = [(newInfo, 'body atom $i')];
       }
     }
   }
@@ -470,6 +480,7 @@ ClauseCheckResult checkClause(
     dfa,
   );
   errors.addAll(dualityErrors);
+  errors.addAll(_checkBodyBodyPairs(bodyOccurrences, dfa));
 
   // Step 4: condition 3(b) of def:well-typed-clause on the head/body pairs,
   // applied to the type a guard narrowed the head occurrence to where one did.
@@ -676,6 +687,7 @@ ClauseCheckResult checkGoal(
   final allVariableTypes = <String, VariableTypeInfo>{};
   final variableLocations = <String, String>{};
   final constructedModedBodyAtoms = <ModedTerm>[];
+  final bodyOccurrences = <String, List<(VariableTypeInfo, String)>>{};
 
   // Condition 2: each unit goal's produced moded term is well-typed by D.
   for (int i = 0; i < goalAtoms.length; i++) {
@@ -698,6 +710,9 @@ ClauseCheckResult checkGoal(
     for (final entry in atomResult.variableTypes.entries) {
       allVariableTypes.putIfAbsent(entry.key, () => entry.value);
       variableLocations.putIfAbsent(entry.key, () => 'body atom $i');
+      bodyOccurrences
+          .putIfAbsent(entry.key, () => [])
+          .add((entry.value, 'body atom $i'));
     }
   }
 
@@ -709,6 +724,7 @@ ClauseCheckResult checkGoal(
     dfa,
   );
   errors.addAll(dualityErrors);
+  errors.addAll(_checkBodyBodyPairs(bodyOccurrences, dfa));
 
   return ClauseCheckResult(
     isWellTyped: errors.isEmpty,
@@ -1388,23 +1404,9 @@ List<ClauseDualityError> _checkClauseDuality(
             ));
           }
         } else {
-          // Both in body: require subtyping S <: T (Definition 4.8)
-          // Writer X has output type S. Reader X? has dual type T?.
-          // Need: S <: T (both output types).
-          final writerOutputState = writerInfo.typeState; // S (output, not dual)
-          final readerDualState = readerInfo.typeState;   // T? (dual)
-          final readerOutputState = dfa.getState(readerDualState.baseName); // T (output)
-          final isSub = isSubtype(writerOutputState, readerOutputState, dfa);
-          if (!isSub) {
-            errors.add(ClauseDualityError(
-              baseName,
-              writerInfo,
-              readerInfo,
-              writerLoc,
-              readerLoc,
-              'Body variable pair: writer type ${writerOutputState.name} is not a subtype of ${readerOutputState.name}',
-            ));
-          }
+          final e = _bodyBodyPairError(
+              baseName, writerInfo, readerInfo, writerLoc, readerLoc, dfa);
+          if (e != null) errors.add(e);
         }
       } else {
         // One in head, one in body: a DIRECTED subtyping check, not equality.
@@ -1442,6 +1444,68 @@ List<ClauseDualityError> _checkClauseDuality(
     }
   }
 
+  return errors;
+}
+
+/// Condition 3(a) on one body/body pair: both in body, so subtyping S <: T
+/// (Definition 4.8).  Writer X has output type S; reader X? has dual type T?.
+/// Need S <: T, both output types.  Null when the pair is well-typed.
+ClauseDualityError? _bodyBodyPairError(
+  String baseName,
+  VariableTypeInfo writerInfo,
+  VariableTypeInfo readerInfo,
+  String writerLoc,
+  String readerLoc,
+  ProgramDFA dfa,
+) {
+  final writerOutputState = writerInfo.typeState; // S (output, not dual)
+  final readerDualState = readerInfo.typeState;   // T? (dual)
+  final readerOutputState = dfa.getState(readerDualState.baseName); // T (output)
+  if (isSubtype(writerOutputState, readerOutputState, dfa)) return null;
+  return ClauseDualityError(
+    baseName,
+    writerInfo,
+    readerInfo,
+    writerLoc,
+    readerLoc,
+    'Body variable pair: writer type ${writerOutputState.name} is not a subtype of ${readerOutputState.name}',
+  );
+}
+
+/// Condition 3(a) on EVERY body/body pair, where [_checkClauseDuality] sees
+/// the first body occurrence of each key only.
+///
+/// TGLP def:well-typed-clause condition 3 is "for every variable pair X and X?
+/// in C", and a reader of a constant type may occur in the body more than once
+/// (TGLP typed-glp.tex, SRSW*), so each body occurrence of X? is a pair with
+/// the body occurrence of X and is compared with it.  [bodyOccurrences] holds,
+/// for each key whose first occurrence is in the body, every body occurrence in
+/// order, with the body atom it sits in; the pair of the two first occurrences
+/// is [_checkClauseDuality]'s and is skipped here.  Until 2026-09-29 the later
+/// occurrences were dropped (putIfAbsent), and a second `X?` at a type `X` is
+/// not within went unchecked.
+List<ClauseDualityError> _checkBodyBodyPairs(
+  Map<String, List<(VariableTypeInfo, String)>> bodyOccurrences,
+  ProgramDFA dfa,
+) {
+  final errors = <ClauseDualityError>[];
+  for (final entry in bodyOccurrences.entries) {
+    final writerKey = entry.key;
+    if (writerKey.endsWith('?')) continue;
+    final readers = bodyOccurrences['$writerKey?'];
+    if (readers == null) continue;
+    final writers = entry.value;
+    for (var w = 0; w < writers.length; w++) {
+      for (var r = 0; r < readers.length; r++) {
+        if (w == 0 && r == 0) continue;
+        final (writerInfo, writerLoc) = writers[w];
+        final (readerInfo, readerLoc) = readers[r];
+        final e = _bodyBodyPairError(
+            writerKey, writerInfo, readerInfo, writerLoc, readerLoc, dfa);
+        if (e != null) errors.add(e);
+      }
+    }
+  }
   return errors;
 }
 
