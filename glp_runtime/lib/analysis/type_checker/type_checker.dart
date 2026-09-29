@@ -1185,7 +1185,11 @@ List<InstantiationCheckResult> checkInstantiationsClosed(
       // well-typed at every instantiation by lem:parametricity, so its concrete
       // instantiation is not re-reported here; its body is still traversed so the
       // instantiations its calls induce are discovered and checked below.
-      if (!certifiedKeys.contains(inst.procKey)) {
+      // Except where the instantiation binds a parameter to an input type: the
+      // lemma's sigma replaces a parameter "by a type of the same mode", so it
+      // certifies nothing there, and the clauses are checked at the binding as
+      // Definition (Instantiation) requires (parameterized-types.tex).
+      if (!certifiedKeys.contains(inst.procKey) || inst.bindsInputType) {
         results.add(InstantiationCheckResult(inst, res));
       }
 

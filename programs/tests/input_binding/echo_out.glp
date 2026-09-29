@@ -1,0 +1,12 @@
+%% A parameter bound to an output type at a bare occurrence (TGLP,
+%% parameterized-types.tex, Definition "Instantiation"): echo(D, C?) binds
+%% X = Choice, and echo's clause is well-typed at echo(Choice, Choice?).
+%% Fixture of glp_runtime/test/analysis/input_binding_test.dart.
+
+Choice ::= yes ; no.
+
+procedure(X) echo(X, X?).
+echo(X?, X).
+
+procedure go(Choice, Choice?).
+go(D?, C) :- echo(D, C?).

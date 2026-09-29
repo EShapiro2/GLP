@@ -236,8 +236,12 @@ Map<String, TypeDef> materializeInstantiations(
     if (template.typeParams.length != argNames.length) continue;
     final subst = <String, TypeExpr>{};
     for (var i = 0; i < argNames.length; i++) {
-      subst[template.typeParams[i]] = TypeRef(argNames[i], 0, 0);
-      work.add(argNames[i]); // materialize nested instantiations too
+      // An argument written `T?` is the input type T?, not a type named "T?".
+      final a = argNames[i];
+      subst[template.typeParams[i]] = a != '_?' && a.endsWith('?')
+          ? TypeRef(a.substring(0, a.length - 1), 0, 0, isInput: true)
+          : TypeRef(a, 0, 0);
+      work.add(a); // materialize nested instantiations too
     }
     final alts = template.alternatives
         .map((a) => _substituteToExpandedNames(a, subst, templates, work))
@@ -501,9 +505,13 @@ TypeExpr _substituteToExpandedNames(TypeExpr expr, Map<String, TypeExpr> subst,
   if (expr is TypeRef) {
     if (expr.typeArgs.isEmpty && subst.containsKey(expr.name)) {
       final r = subst[expr.name]!;
+      // The involution, as in [_substituteTypeExpr].
       if (expr.isInput && r is TypeRef) {
         return TypeRef(r.name, r.line, r.column,
-            isInput: true, typeArgs: r.typeArgs);
+            isInput: !r.isInput, typeArgs: r.typeArgs);
+      }
+      if (expr.isInput && r is PrimitiveModeAlt) {
+        return PrimitiveModeAlt(!r.isInput, r.line, r.column);
       }
       return r;
     }
@@ -911,13 +919,17 @@ TypeExpr _substituteTypeExpr(TypeExpr expr, Map<String, TypeExpr> substitution,
     // If this is a type parameter, substitute it
     if (substitution.containsKey(expr.name) && expr.typeArgs.isEmpty) {
       final replacement = substitution[expr.name]!;
-      // Apply isInput from the original reference
+      // `X?` is the complement of what `X` is bound to, and complementation is
+      // an involution, (T?)? = T (TGLP appendix-type-automaton.tex, Definition
+      // "Dual Type Automaton"): a parameter bound to an input type complements
+      // to its output type, as any type does.
       if (expr.isInput && replacement is TypeRef) {
         return TypeRef(replacement.name, replacement.line, replacement.column,
-            isInput: true, typeArgs: replacement.typeArgs);
+            isInput: !replacement.isInput, typeArgs: replacement.typeArgs);
       }
       if (expr.isInput && replacement is PrimitiveModeAlt) {
-        return PrimitiveModeAlt(true, replacement.line, replacement.column);
+        return PrimitiveModeAlt(
+            !replacement.isInput, replacement.line, replacement.column);
       }
       return replacement;
     }
