@@ -1015,33 +1015,43 @@ class GlpEngine {
     final scheduler = Scheduler(rt: _runtime, runners: {'main': runner});
     scheduler.resetDisplayNumbering();
 
-    var allSucceeded = true;
-    var anySuspended = false;
-    var anyCapped = false;
-
-    // sGLP: the conjuncts together are the run's initial goal.  They are put
-    // to the machine together and run by one drain (below), and no Release is
-    // taken until the last is in: before then the machine is not quiescent in
-    // the run's configuration, which holds them all.
+    // The conjuncts together are the run's initial goal, its resolvent G_0
+    // (GLP-Spec glp.tex, Definition "Transition System ..."; IGLP dglp.tex,
+    // the dGLP configuration): they are put to the machine together and run
+    // by one drain to quiescence, and the conjunction's status is that of the
+    // whole run there, as madGLP reports it for an agent, which reduces its
+    // whole resolvent, FIFO, until quiescent (IGLP madglp.tex, "Each madGLP
+    // agent executes its local resolvent with FIFO scheduling").  Drained one
+    // conjunct at a time and the statuses aggregated, a conjunct that waits
+    // on a later one, p(X?) before q(X), was reported suspended although the
+    // run then completed it; and a conjunct that never quiesces starved every
+    // conjunct after it.  sGLP: no Release is taken until the last conjunct
+    // is in, which one drain after all of them gives by construction.
     _beginSimulation();
     // person/2 finds the person procedures in the code of the asking goal's
     // program, through the runtime's runners.
     if (_runtime.sim != null) _runtime.runners['main'] = runner;
     var conjunct = 0;
 
+    // Every conjunct is found before any is put to the machine, so a refused
+    // conjunction leaves nothing queued behind it.
+    final entryLabels = _replEntryPointLabels();
     for (final goal in goals) {
-      final functor = goal.functor;
-      final arity = goal.args.length;
-      final args = goal.args;
-
-      final procedureLabel = '$functor/$arity';
-      final entryPC = program.labels[procedureLabel];
-      if (entryPC == null || !_replEntryPointLabels().contains(procedureLabel)) {
+      final procedureLabel = '${goal.functor}/${goal.args.length}';
+      if (program.labels[procedureLabel] == null ||
+          !entryLabels.contains(procedureLabel)) {
         return ExecutionResult(
           status: ExecutionStatus.failed,
           error: 'Predicate $procedureLabel not found',
         );
       }
+    }
+
+    for (final goal in goals) {
+      final functor = goal.functor;
+      final arity = goal.args.length;
+      final args = goal.args;
+      final procedureLabel = '$functor/$arity';
 
       final argSlots = <int, rt.Term>{};
       for (int i = 0; i < args.length; i++) {
@@ -1071,48 +1081,25 @@ class GlpEngine {
       final sim = _runtime.sim;
       if (sim != null) {
         sim.setLineage(_goalId, rootLineage(conjunct));
-        sim.releaseEnabled = conjunct == goals.length - 1;
         final agent = agents?[conjunct];
         if (agent != null) sim.placeAt(_goalId, agent);
       }
       conjunct++;
       _runtime.gq.enqueue(GoalRef(_goalId, goalEntry));
       _goalId++;
-
-      // An sGLP run's conjuncts are its initial configuration, put to the
-      // machine together and run by one drain: its status is the run's.
-      // Drained one at a time, a conjunct that suspends until a later one is
-      // in --- an agent's goal waiting on the network, say --- would leave the
-      // run reported suspended when it is done.
-      if (sim != null && conjunct < goals.length) continue;
-
-      final result = await scheduler.drainAsyncWithStatus(
-        maxCycles: maxCycles,
-        debug: debugTrace,
-        showBindings: false,
-        debugOutput: debugOutput,
-      );
-
-      // A failed conjunct does not end the query. The conjuncts of a posted
-      // goal are one resolvent of independent goals, and Fail advances the
-      // queue and continues (dGLP/madGLP Reduce): stopping here was the same
-      // defect as the scheduler's break, one level up, and it was what dropped
-      // the siblings of a failed conjunct at the REPL. Suspension already
-      // continued; failure now does too, and the query is reported failed.
-      if (result.status == ExecutionStatus.failed) {
-        allSucceeded = false;
-      } else if (result.status == ExecutionStatus.capped) {
-        anyCapped = true;
-      } else if (result.status == ExecutionStatus.suspended) {
-        // sGLP: before the last conjunct no Release is taken, so a drain that
-        // stops with pending goals and no suspended one has not ended the
-        // run: the pending goals are the last drain's to release.
-        final pendingOnly = result.suspendedGoals.isEmpty &&
-            (_runtime.sim?.hasPending ?? false) &&
-            !(_runtime.sim?.releaseEnabled ?? true);
-        if (!pendingOnly) anySuspended = true;
-      }
     }
+
+    // One drain, to quiescence or the cycle limit, over the whole run.  Its
+    // status is the run's: failed if a goal of the run failed (Fail advances
+    // the queue and the run continues, dGLP/madGLP Reduce), capped if the
+    // limit stopped it with goals still queued, suspended if a goal of the run
+    // waits at quiescence, and succeeded otherwise.
+    final result = await scheduler.drainAsyncWithStatus(
+      maxCycles: maxCycles,
+      debug: debugTrace,
+      showBindings: false,
+      debugOutput: debugOutput,
+    );
 
     // Collect bindings
     final bindings = <String, rt.Term?>{};
@@ -1127,18 +1114,8 @@ class GlpEngine {
       }
     }
 
-    // A conjunct the cycle limit stopped did not finish, so the conjunction
-    // did not either: it is reported as what it is and never as succeeded.
-    final status = !allSucceeded
-        ? ExecutionStatus.failed
-        : (anyCapped
-            ? ExecutionStatus.capped
-            : (anySuspended
-                ? ExecutionStatus.suspended
-                : ExecutionStatus.succeeded));
-
     return ExecutionResult(
-      status: status,
+      status: result.status,
       bindings: bindings,
     );
   }
