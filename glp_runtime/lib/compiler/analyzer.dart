@@ -693,10 +693,14 @@ class Analyzer {
       }
     }
 
-    // Type-checking guards implicitly test groundness
-    // Per spec: type tests require bound values, which are ground by definition
+    // Type-checking guards whose success implies the argument is ground: the
+    // catalogue's "Ground: yes" (GLP-Spec appendix-guards.tex; TGLP glp.tex,
+    // Remark "Guards and SRSW").  `compound` and `list` are "Ground: no" ---
+    // `compound(f(X?))` and `list([X?])` succeed with X? unbound --- and mark
+    // nothing (GLP, 2026-09-28).  `atom` and `tuple` are not in the catalogue;
+    // they are kept as they were until the language decides them.
     // Note: var/nonvar removed (don't guarantee groundness), float removed (not implemented)
-    final typeCheckOps = ['number', 'integer', 'atom', 'string', 'list', 'tuple', 'compound', 'constant'];
+    final typeCheckOps = ['number', 'integer', 'atom', 'string', 'tuple', 'constant'];
     if (typeCheckOps.contains(guard.predicate) && guard.args.length == 1) {
       final arg = guard.args[0];
       if (arg is VarTerm) {
@@ -714,6 +718,10 @@ class Analyzer {
     }
 
     // is_mutual_ref/1 guard marks argument as ground (MutualRefTerm can be read multiple times)
+    // The catalogue gives it "Ground: no" (GLP-Spec appendix-guards.tex) and
+    // TGLP typed-glp.tex makes MutualRef no constant type, but the root
+    // self.glp's mwm_main/2 and mwm1/4 read Ref? twice on this mark alone; it
+    // stays until that is decided (GLP, 2026-09-29).
     if (guard.predicate == 'is_mutual_ref' && guard.args.length == 1) {
       final arg = guard.args[0];
       if (arg is VarTerm) {
@@ -721,14 +729,10 @@ class Analyzer {
       }
     }
 
-    // unknown/1 guard marks argument as ground for SRSW purposes
-    // Unbound variables are safe to read multiple times (always return same reference)
-    if (guard.predicate == 'unknown' && guard.args.length == 1) {
-      final arg = guard.args[0];
-      if (arg is VarTerm) {
-        varTable.markGrounded(arg.name);
-      }
-    }
+    // `unknown` marks nothing: the catalogue gives it "Ground: no" (GLP-Spec
+    // appendix-guards.tex) --- it succeeds on an unbound variable --- so it
+    // licenses no repeated occurrence (TGLP glp.tex, Remark "Guards and SRSW";
+    // GLP, 2026-09-28).  Until 2026-09-29 it marked its argument grounded.
 
     // wait_until/1 guard marks argument as ground (requires ground timestamp)
     // wait_until(T?) succeeds only if T is a ground number (timestamp in ms)

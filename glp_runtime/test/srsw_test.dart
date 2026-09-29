@@ -200,4 +200,36 @@ k(X, Y?) :- ~integer(X?) | pair(X?, X?, Y).
         throwsA(predicate((e) => e.toString().contains('SRSW'),
             'an SRSW violation')));
   });
+
+  // ===========================================================================
+  // Guards the catalogue gives "Ground: no" (GLP-Spec appendix-guards.tex):
+  // `compound(f(X?))`, `list([X?])` and `unknown(X?)` succeed with X? unbound,
+  // so none implies groundness and none licenses several occurrences of X?
+  // (TGLP glp.tex, Remark "Guards and SRSW").  Until 2026-09-29 the analyzer
+  // marked all three grounded, and each refused clause below loaded.
+  // ===========================================================================
+
+  for (final g in ['compound', 'list', 'unknown']) {
+    test('$g/1 licenses no reader twice in the body', () {
+      expect(
+          () => GlpCompiler().compile('''
+procedure pair(_?, _?, _).
+pair(_, _, done).
+procedure k(_?, _).
+k(X, Y?) :- $g(X?) | pair(X?, X?, Y).
+'''),
+          throwsA(predicate((e) => e.toString().contains('SRSW'),
+              'an SRSW violation')));
+    });
+  }
+
+  test('integer/1, "Ground: yes", still licenses a reader twice', () {
+    final program = GlpCompiler().compile('''
+procedure pair(_?, _?, _).
+pair(_, _, done).
+procedure k(_?, _).
+k(X, Y?) :- integer(X?) | pair(X?, X?, Y).
+''');
+    expect(program, isNotNull);
+  });
 }
