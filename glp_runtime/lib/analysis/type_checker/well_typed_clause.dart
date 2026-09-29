@@ -1268,7 +1268,8 @@ WellTypedResult _checkModedTermPerArg(
       } else if (result.variableAssignment != null) {
         final varKey = path.leaf.symbol;
         if (variableTypes.containsKey(varKey)) {
-          if (variableTypes[varKey]!.typeState.name != result.variableAssignment!.typeState.name) {
+          if (!sameOccurrenceType(
+              variableTypes[varKey]!, result.variableAssignment!, dfa)) {
             errors.add(InconsistentVariableError(varKey, variableTypes[varKey]!, result.variableAssignment!));
           }
         } else {

@@ -102,6 +102,19 @@ class InconsistentPathError extends WellTypedError {
   String toString() => message;
 }
 
+/// Whether two occurrences of one variable in one term have the same type.
+///
+/// Type identity is structural: two types with the same type automaton are one
+/// type, whatever their names or defining modules (TGLP parameterized-types.tex,
+/// after Definition (Instantiation); modules.tex).  So the two occurrences are
+/// compared by their automata --- the same polarity and output types that are
+/// structurally one ([sameBaseType]) --- and not by the names of their states.
+bool sameOccurrenceType(
+    VariableTypeInfo a, VariableTypeInfo b, ProgramDFA dfa) =>
+    a.typeState.name == b.typeState.name ||
+    (a.typeState.isDual == b.typeState.isDual &&
+        sameBaseType(a.typeState.baseName, b.typeState.baseName, dfa));
+
 /// Error: same variable has different types at different occurrences
 class InconsistentVariableError extends WellTypedError {
   final String variableName;
@@ -198,7 +211,7 @@ WellTypedResult checkModedTerm(ModedTerm term, Automaton automaton, ProgramDFA d
       if (variableTypes.containsKey(varKey)) {
         // Same variable appears multiple times - types must match
         final existing = variableTypes[varKey]!;
-        if (existing.typeState.name != result.variableAssignment!.typeState.name) {
+        if (!sameOccurrenceType(existing, result.variableAssignment!, dfa)) {
           errors.add(InconsistentVariableError(
               varKey, existing, result.variableAssignment!));
         }
