@@ -4,10 +4,12 @@
 /// Alice MAD-sends a bare writer wrapped in w/1 to bob. Two things are pinned:
 /// bob_produced, which is the `_w`-backed reader matching the nested clause
 /// head w(W?) and is the admissibility the fixture exists to show; and
-/// bob_ch_matched, which is receive/3 committing because this fixture supplies
-/// ch(S?, closed) — a constant where receive/3's unit clause reads.
+/// bob_ch_otherwise, which is receive/3 not committing because this fixture
+/// supplies ch(S?, closed) — a constant where receive/3's unit clause has the
+/// reader Out?, and a term against a head reader is "fail" (GLP-Spec
+/// appendix-term-matching.tex, Definition Term Matching, column Reader X2?).
 /// mad_w_probe_test.dart is the same file with a writer at Out, which is
-/// assigned the head's reader, and matches as well.
+/// assigned the head's reader, and matches.
 ///
 /// Each outcome is asserted singly. The old disjunction matched||otherwise was
 /// vacuous: one of bob_consumer's two clauses always fires.
@@ -21,7 +23,7 @@ import 'package:glp_multiagent/isolate_protocol.dart';
 import 'programs_dir.dart';
 
 void main() {
-  test('_w matches the nested head; receive/3 commits on a constant at Out',
+  test('_w matches the nested head; receive/3 fails on a constant at Out',
       () async {
     final programs = programsDir();
     final probe = File('$programs/tests/mad_w_clean.glp').readAsStringSync();
@@ -78,7 +80,7 @@ void main() {
     // reading the other is a race.
     await waitUntil(() =>
         out['bob']!.any((l) => l.contains('bob_produced')) &&
-        out['bob']!.any((l) => l.contains('bob_ch_matched')));
+        out['bob']!.any((l) => l.contains('bob_ch_otherwise')));
     final produced = out['bob']!.any((l) => l.contains('bob_produced'));
     final matched = out['bob']!.any((l) => l.contains('bob_ch_matched'));
     final otherwise = out['bob']!.any((l) => l.contains('bob_ch_otherwise'));
@@ -95,9 +97,10 @@ void main() {
 
     expect(produced, isTrue,
         reason: 'the `_w`-backed reader matched the nested head w(W?)');
-    expect(matched, isTrue,
-        reason: 'receive/3 commits with a constant at Out');
-    expect(otherwise, isFalse,
+    expect(otherwise, isTrue,
+        reason: 'a constant at receive/3\'s head reader Out? fails, so '
+            'bob_consumer\'s otherwise clause fires');
+    expect(matched, isFalse,
         reason: 'ch(S?, closed) is the clean file; ch(S?, _) is mad_w_probe');
   });
 }
