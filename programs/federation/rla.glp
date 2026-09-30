@@ -285,6 +285,11 @@ resume12(no, _, I, R?) :- ground(I?) | resume15(I?, R).
 procedure resume11(Row?, Inst?, Res).
 resume11(OObj, I, R?) :- ground(OObj?), ground(I?) |
     learn_state(I?, X),
+    resume11lb(OObj?, X?, I?, R).
+
+% The state of line 11, read here once it is known.
+procedure resume11lb(Row?, LState?, Inst?, Res).
+resume11lb(OObj, X, I, R?) :- ground(OObj?), ground(X?), ground(I?) |
     set_lb(I?, X?, I1),
     resume11a(OObj?, X?, I1?, R).
 
