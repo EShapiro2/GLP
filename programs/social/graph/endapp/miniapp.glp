@@ -29,7 +29,7 @@
 exported procedure ping(Constant?, AppUiStream, SgChannel?).
 ping(Id, Ui?, ch(Down, Up?)) :-
     ground(Id?) |
-    loop(Id?, Down?, Ev?, Ui, Up, []).
+    loop(Id?, Down?, [], Ui, Up, []).
 
 %% loop(Id, Down, Ev, Ui, Up, Convs): Down the social graph's stream, Ev the
 %% events of the conversations' readers (merged), Ui the person's stream, Up
