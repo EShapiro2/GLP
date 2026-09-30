@@ -186,7 +186,7 @@ confs_join([U|Us], C, R?) :- ground(U?), ground(Us?), ground(C?) |
     row_join(C?, U?, C1),
     confs_join(Us?, C1?, R).
 
-procedure cons_each(Confs?, ConfSets?, ConfSets).
+procedure cons_each(Row?, ConfSets?, ConfSets).
 cons_each(_, [], []).
 cons_each(X, [S|Ss], [R1?|R?]) :- ground(X?), ground(S?), ground(Ss?) |
     confs_snoc(S?, X?, R1),
