@@ -1,0 +1,18 @@
+%% A parameter bound to an input type at a bare occurrence (TGLP,
+%% parameterized-types.tex, Definition "Instantiation"): echo(C?, D) is
+%% well-typed at X = Choice? and at no output binding, so X = Choice? is the
+%% binding considered.  The definition also asks that the clauses of echo be
+%% well-typed at echo(Choice?, Choice), and echo(X?, X) is not: its moded head
+%% has the writer X at the consumed position 1 (well-typing.tex, Definitions
+%% "Moded Head" and "Consistent Paths"), and Lemma "Parametricity" certifies
+%% a parameter replaced by a type of the same mode only.  So the program is
+%% refused at echo's head, not at the call.
+%% Fixture of glp_runtime/test/analysis/input_binding_test.dart.
+
+Choice ::= yes ; no.
+
+procedure(X) echo(X, X?).
+echo(X?, X).
+
+procedure go(Choice?, Choice).
+go(C, D?) :- echo(C?, D).

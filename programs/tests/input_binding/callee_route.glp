@@ -1,0 +1,23 @@
+%% A parameter the call binds to an input type, and a parameter the callee's
+%% clauses fix, in one instantiation (TGLP, parameterized-types.tex,
+%% Definition "Instantiation": a map under which the caller's clause and the
+%% clauses of the callee are well-typed).  The reader C? at X binds X to
+%% Choice?, the caller's clause admitting no other polarity there; D occurs
+%% first in this call, so nothing in go fixes M, and pass's clause does: the
+%% pair A, A? must be dual, and with A at Choice? that makes the type at M?
+%% Choice, so M is Choice?.  The instantiation is pass(Choice?, Choice), under
+%% which pass(A, A?) is well-typed.  Probing pass's clause with X at its output
+%% type instead gives M = Choice, and pass(Choice?, Choice?) makes neither
+%% clause well-typed.
+%% Fixture of glp_runtime/test/analysis/input_binding_callee_test.dart.
+
+Choice ::= yes ; no.
+
+procedure(X, M) pass(X, M?).
+pass(A, A?).
+
+procedure use(Choice?, Choice).
+use(C, C?).
+
+procedure go(Choice?, Choice).
+go(C, E?) :- pass(C?, D), use(D?, E).
