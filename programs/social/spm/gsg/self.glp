@@ -14,17 +14,14 @@
 
 %% =============================================================================
 %% TERMINOLOGY ALIASES (paper notation → GLP types)
-%%   Agent : paper's Π-membership (also defined in cva/self.glp; redefined
-%%           here because sibling-directory types aren't transitively
-%%           visible to the type checker).
+%%   Agent : paper's Π-membership, defined once in ../self.glp, the lowest
+%%           common ancestor of cva/, gsg/ and secure_gsg/.
 %%
 %% Paper notation "epoch" maps to `Integer` directly throughout — the alias
 %% `Epoch ::= Integer` was tried but fails SRSW's constant-type relaxation
 %% (aliases don't inherit relaxation; see typed-glp-manual §3.5).  Using
 %% Integer directly preserves multi-reader use for body-bound epoch values.
 %% =============================================================================
-
-Agent ::= Constant.
 
 %% CVA substrate types redefined here.  Sibling-directory types from
 %% cva/self.glp are not transitively visible to the type checker when
@@ -40,7 +37,7 @@ InMsg(C) ::= msg(Agent, C).
 %% both (SRSW constant-type relaxation permits multi-occurrence).
 UserEvent(V, Q, A) ::= will(V) ; unwill(V) ; tick ; crash ; shutdown
                      ; query(Q, A) ; await(Constant).
-IdentityRecord ::= ir(Stream(Agent), Integer).
+%% IdentityRecord is defined once in ../self.glp.
 
 %% =============================================================================
 %% CARGO (paper §6.2 Messages)
