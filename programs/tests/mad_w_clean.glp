@@ -4,8 +4,9 @@
 %%
 %% No agent/4, no mediator, no UI. Alice MAD-sends a bare writer (wrapped in
 %% w/1) to Bob. Bob's producer matches it against the nested READER pattern
-%% w(W?) and forwards it onto a local channel stream; Bob's consumer pulls it
-%% back off the channel into the nested reader pattern wrapped(Y?), in its head.
+%% w(W?) and forwards it onto a local channel stream; Bob's consumer tries to
+%% pull it back off the channel into the nested reader pattern wrapped(Y?), in
+%% its head.
 %%
 %% What it reports, and what each report means:
 %%
@@ -13,14 +14,17 @@
 %%                       This is the `_w` admissibility the file was built to
 %%                       test, and it holds. The social-graph failure that
 %%                       prompted the probe is elsewhere.
-%%   bob_ch_matched   => bob_consumer committed, because Out carries a constant.
+%%   bob_ch_otherwise => bob_consumer does not commit, because Out carries a
+%%                       constant.
 %%
 %% The second report is about the channel, not about `_w`. bob_consumer's head
 %% is ch([wrapped(Y?)|In], Out?), the form receive/3's unit clause
 %% receive(X?, ch([X|In], Out?), ch(In?, Out)) unfolds to: the Out position is a
-%% READER there, so a constant at Out lets the clause commit. mad_w_probe.glp
-%% supplies an unassigned writer there instead, which is assigned the head's
-%% reader, and it matches as well.
+%% READER there, and a constant against a head reader is "fail" (GLP-Spec
+%% appendix-term-matching.tex, Definition Term Matching, row Term, column
+%% Reader X2?), so the clause fails and bob_consumer's otherwise clause fires.
+%% mad_w_probe.glp supplies an unassigned writer there instead, which is
+%% assigned the head's reader, and it matches.
 %%
 %% Run via glp_multiagent/test/mad_w_clean_test.dart (two isolates).
 

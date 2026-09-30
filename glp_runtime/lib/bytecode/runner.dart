@@ -336,6 +336,24 @@ Term? _getArg(RunnerContext cx, int slot) {
 /// arriving bare inside a delivered structure is as ground as a constant.
 bool _isGroundValue(Object? v) => v is Term && v is! VarRef;
 
+/// Whether the goal subterm at [addr] is a writer still unbound: the one goal
+/// subterm a head reader matches.  GLP-Spec appendix-term-matching.tex,
+/// Definition "Term Matching", column "Reader X2?": a goal writer X1 is
+/// assigned the head's reader (X1 := X2?); a goal reader X1? is "fail"; a goal
+/// term f1/n1 is "fail".  glp.tex Definition "Writer MGU" agrees, the mgu being
+/// a writers substitution, which leaves a reader as it is.  A goal subterm is
+/// taken as the goal holds it: a writer or reader already bound stands for its
+/// value, a term or a reader, and fails with it.
+bool _isUnboundWriterCell(RunnerContext cx, int addr) {
+  final heap = cx.rt.heap;
+  if (!heap.isWriter(addr)) return false;
+  final content = heap.cells[addr].content;
+  // An imported writer: its cell holds the variable's entry until it is bound.
+  if (content is VariableEntry) return content.boundValue == null;
+  final end = heap.derefAddr(addr);
+  return end is VarRef && end.addr == addr;
+}
+
 (Object?, Set<int>) _dereferenceWithTracking(Object? term, RunnerContext cx) {
   final unboundReaders = <int>{};
 
@@ -2009,8 +2027,9 @@ mixin OpExecutors {
 
   /// `head_variable` (read/write): in WRITE mode place the clause var (new
   /// placeholder or existing binding) into the structure being built; in READ
-  /// mode extract the value at S and unify with the clause var (first
-  /// occurrence stores, later occurrence must match).
+  /// mode extract the value at S and unify with the clause var (a writer: first
+  /// occurrence stores, later occurrence must match; a reader: an unbound goal
+  /// writer is assigned it, and anything else fails).
   StepOutcome execHeadVariable(RunnerContext cx, int varIndex, bool isReader) {
     if (cx.mode == UnifyMode.write) {
       if (cx.currentStructure is _TentativeStruct) {
@@ -2036,7 +2055,34 @@ mixin OpExecutors {
         if (cx.S < struct.args.length) {
           final value = struct.args[cx.S];
           final existingValue = cx.clauseVars[varIndex];
-          if (existingValue != null) {
+          if (isReader) {
+            // A head reader at this subterm: an unbound goal writer is
+            // assigned it; a goal reader and a goal term fail
+            // (appendix-term-matching.tex, column "Reader X2?"; see
+            // _isUnboundWriterCell), as unify_variable has it.
+            if (value is! VarRef || !_isUnboundWriterCell(cx, value.addr)) {
+              return StepOutcome.nextClause;
+            }
+            if (existingValue == null) {
+              cx.clauseVars[varIndex] = value.addr;
+            } else if (existingValue is VarRef) {
+              cx.sigmaHat[value.addr] = cx.rt.heap.isWriter(existingValue.addr)
+                  ? VarRef(cx.rt.heap.pairedReaderAddr(existingValue.addr))
+                  : existingValue;
+            } else if (existingValue is int) {
+              cx.sigmaHat[value.addr] =
+                  VarRef(cx.rt.heap.pairedReaderAddr(existingValue));
+            } else if (_isGroundValue(existingValue)) {
+              cx.sigmaHat[value.addr] = existingValue;
+            } else {
+              // A placeholder the WRITE arm above left in a structure built
+              // for a goal writer: the variable takes its cell now, and the
+              // placeholder resolves to it at commit.
+              final (writerAddr, readerAddr) = cx.rt.heap.allocateVariable();
+              cx.clauseVars[varIndex] = VarRef(writerAddr);
+              cx.sigmaHat[value.addr] = VarRef(readerAddr);
+            }
+          } else if (existingValue != null) {
             if (existingValue != value) {
               return StepOutcome.nextClause;
             }
@@ -2696,12 +2742,13 @@ mixin OpExecutors {
               final existingValue = cx.clauseVars[varIndex];
 
               if (isReaderMode) {
-                // UnifyReader READ mode logic
-                if (value is VarRef && cx.rt.heap.isReader(value.addr)) {
-                  // Spec §12.2 Case 2 / §6.3: Reader × Reader = FAIL
-                  // A writers substitution cannot make two readers equal.
+                // UnifyReader READ mode logic: the head has a reader at this
+                // subterm.  An unbound goal writer is assigned it; a goal
+                // reader and a goal term fail (appendix-term-matching.tex,
+                // column "Reader X2?"; see _isUnboundWriterCell).
+                if (value is! VarRef || !_isUnboundWriterCell(cx, value.addr)) {
                   return StepOutcome.nextClause;
-                } else if (value is VarRef && cx.rt.heap.isWriter(value.addr)) {
+                } else {
                   // Query has writer, clause expects reader
                   if (existingValue != null) {
                     // Xi already allocated from previous writer occurrence
@@ -2729,14 +2776,6 @@ mixin OpExecutors {
                     cx.clauseVars[varIndex] = value.addr;
                     cx.S++;
                   }
-                } else if (_isGroundValue(value)) {
-                  // Query has ground term, clause expects reader
-                  final (writerAddr, _) = cx.rt.heap.allocateVariable();
-                  cx.sigmaHat[writerAddr] = value;
-                  cx.clauseVars[varIndex] = writerAddr;
-                  cx.S++;
-                } else {
-                  return StepOutcome.nextClause;
                 }
               } else {
                 // UnifyWriter READ mode logic
@@ -2873,8 +2912,8 @@ mixin OpExecutors {
 
   /// `get_variable` (load goal arg argSlot into clause var). Writer mode binds
   /// the goal writer/reader/term to the clause var (or to its earlier-occurrence
-  /// writer via σ̂w); reader mode has the clause reader observe the goal writer,
-  /// failing on reader×reader. Null arg or reader×reader → next clause.
+  /// writer via σ̂w); reader mode has the clause reader observe an unbound goal
+  /// writer, failing on a goal reader or term. Null arg or fail → next clause.
   StepOutcome execGetVariable(
       RunnerContext cx, int varIndex, int argSlot, bool isReaderMode) {
     final arg = _getArg(cx, argSlot);
@@ -2964,59 +3003,47 @@ mixin OpExecutors {
             }
           }
         } else {
-          // GetReaderVariable logic: Load argument into clause READER variable
+          // GetReaderVariable logic: the head has a reader here.  An unbound
+          // goal writer is assigned it; a goal reader and a goal term fail
+          // (appendix-term-matching.tex, column "Reader X2?"; see
+          // _isUnboundWriterCell).
           final existing = cx.clauseVars[varIndex];
 
-          if (arg is VarRef && cx.rt.heap.isWriter(arg.addr)) {
-            // Goal writer → head reader (clause observes goal's variable)
-            if (existing != null) {
-              // clauseVars already has a value (from earlier occurrence like UnifyVariable)
-              // Bind the writer arg to the READER of that value
-              // BUG FIX: When existing is a writer VarRef, convert to reader
-              if (existing is VarRef && cx.rt.heap.isWriter(existing.addr)) {
-                // existing is a writer - bind to its reader
-                // Per spec v3.2: use readerForWriter() instead of +1 arithmetic
-                cx.sigmaHat[arg.addr] = VarRef(cx.rt.heap.pairedReaderAddr(existing.addr));  // reader addr
-              } else if (existing is int) {
-                // existing is bare writer addr - bind to reader of it
-                // Per spec v3.2: use readerForWriter() instead of +1 arithmetic
-                cx.sigmaHat[arg.addr] = VarRef(cx.rt.heap.pairedReaderAddr(existing));  // reader addr
-              } else {
-                // existing is already a reader or a term - use as-is
-                cx.sigmaHat[arg.addr] = existing;
-              }
-            } else {
-              // First occurrence: head reader observes goal writer
-              // Store the goal's writer addr so clause can read through it
-              // No sigmaHat binding needed - goal owns the writer
-              cx.clauseVars[varIndex] = arg.addr;
-            }
-          } else if (arg is VarRef && cx.rt.heap.isReader(arg.addr)) {
-            // Spec §12.2 Case 2: Reader × Reader = FAIL
-            // A writers substitution cannot make two readers equal (CGLP Definition 5).
+          if (arg is! VarRef || !_isUnboundWriterCell(cx, arg.addr)) {
             return StepOutcome.nextClause;
-          } else if (arg is ConstTerm) {
-            if (existing == null) {
-              cx.clauseVars[varIndex] = arg;
+          }
+          // Goal writer → head reader (clause observes goal's variable)
+          if (existing != null) {
+            // clauseVars already has a value (from earlier occurrence like UnifyVariable)
+            // Bind the writer arg to the READER of that value
+            // BUG FIX: When existing is a writer VarRef, convert to reader
+            if (existing is VarRef && cx.rt.heap.isWriter(existing.addr)) {
+              // existing is a writer - bind to its reader
+              // Per spec v3.2: use readerForWriter() instead of +1 arithmetic
+              cx.sigmaHat[arg.addr] = VarRef(cx.rt.heap.pairedReaderAddr(existing.addr));  // reader addr
+            } else if (existing is int) {
+              // existing is bare writer addr - bind to reader of it
+              // Per spec v3.2: use readerForWriter() instead of +1 arithmetic
+              cx.sigmaHat[arg.addr] = VarRef(cx.rt.heap.pairedReaderAddr(existing));  // reader addr
+            } else {
+              // existing is already a reader or a term - use as-is
+              cx.sigmaHat[arg.addr] = existing;
             }
-          } else if (arg is StructTerm) {
-            if (existing == null) {
-              cx.clauseVars[varIndex] = arg;
-            }
-          } else if (arg is Term) {
-            // Handle other Term types (e.g., MutualRefTerm)
-            if (existing == null) {
-              cx.clauseVars[varIndex] = arg;
-            }
+          } else {
+            // First occurrence: head reader observes goal writer
+            // Store the goal's writer addr so clause can read through it
+            // No sigmaHat binding needed - goal owns the writer
+            cx.clauseVars[varIndex] = arg.addr;
           }
         }
     return StepOutcome.advance;
   }
 
   /// `get_value` (unify goal arg argSlot with the already-bound clause var).
-  /// Writer mode unifies/binds via σ̂w; reader mode binds the goal writer to the
-  /// stored value, suspends (U) on an unbound stored reader, or compares. Null
-  /// arg, unset clause var, or any mismatch → next clause.
+  /// Writer mode unifies/binds via σ̂w; reader mode binds an unbound goal
+  /// writer to the stored value's reader (suspending (U) on an unbound stored
+  /// reader) and fails on a goal reader or term. Null arg, unset clause var, or
+  /// any mismatch → next clause.
   StepOutcome execGetValue(
       RunnerContext cx, int varIndex, int argSlot, bool isReaderMode) {
 
@@ -3119,48 +3146,42 @@ mixin OpExecutors {
             }
           }
         } else {
-          // GetReaderValue logic: Unify argument with clause READER variable
-          if (arg is VarRef && cx.rt.heap.isWriter(arg.addr)) {
-            // Goal has writer, head has reader - bind goal writer to stored value
-            if (storedValue is VarRef) {
-              // storedValue is a reader/writer reference - bind goal writer to it.
-              //
-              // The clause variable is held by its WRITER address whenever an
-              // earlier head argument bound it as a writer — `g(_, r(D?), D,
-              // D?)` reaches this reader occurrence with `D` already stored as
-              // its writer. A writer is never bound to a writer (the writer mgu
-              // binds writers to terms and to readers), and what a reader
-              // occurrence denotes is the variable's READER: pair it across.
-              // Reported by Currencies Code, 2026-09-03, as "the engine binds an
-              // output term's reader to a fresh writer when the variable is bound
-              // by a later head argument"; the commit's WxW check caught it as
-              // `WxW violation in commit`.
-              cx.sigmaHat[arg.addr] = cx.rt.heap.isWriter(storedValue.addr)
-                  ? VarRef(cx.rt.heap.pairedReaderAddr(storedValue.addr))
-                  : storedValue;
-            } else if (storedValue is int) {
-              // storedValue is a reader addr - use abstraction methods for imported reader support
-              if (cx.rt.heap.isReaderBound(storedValue)) {
-                final readerValue = cx.rt.heap.getReaderValue(storedValue);
-                cx.sigmaHat[arg.addr] = readerValue;
-              } else {
-                cx.U.add(storedValue); return StepOutcome.nextClause;
-              }
-            } else if (storedValue is Term) {
-              cx.sigmaHat[arg.addr] = storedValue;
+          // GetReaderValue logic: the head has a reader here, whose variable an
+          // earlier head argument holds.  An unbound goal writer is assigned
+          // the reader; a goal reader and a goal term fail, whatever the
+          // earlier argument bound the variable to: `q(X, X?)` fails on
+          // `q(1, 2)` and on `q(1, 1)` alike (appendix-term-matching.tex,
+          // column "Reader X2?"; see _isUnboundWriterCell).
+          if (arg is! VarRef || !_isUnboundWriterCell(cx, arg.addr)) {
+            return StepOutcome.nextClause;
+          }
+          // Goal has writer, head has reader - bind goal writer to stored value
+          if (storedValue is VarRef) {
+            // storedValue is a reader/writer reference - bind goal writer to it.
+            //
+            // The clause variable is held by its WRITER address whenever an
+            // earlier head argument bound it as a writer — `g(_, r(D?), D,
+            // D?)` reaches this reader occurrence with `D` already stored as
+            // its writer. A writer is never bound to a writer (the writer mgu
+            // binds writers to terms and to readers), and what a reader
+            // occurrence denotes is the variable's READER: pair it across.
+            // Reported by Currencies Code, 2026-09-03, as "the engine binds an
+            // output term's reader to a fresh writer when the variable is bound
+            // by a later head argument"; the commit's WxW check caught it as
+            // `WxW violation in commit`.
+            cx.sigmaHat[arg.addr] = cx.rt.heap.isWriter(storedValue.addr)
+                ? VarRef(cx.rt.heap.pairedReaderAddr(storedValue.addr))
+                : storedValue;
+          } else if (storedValue is int) {
+            // storedValue is a reader addr - use abstraction methods for imported reader support
+            if (cx.rt.heap.isReaderBound(storedValue)) {
+              final readerValue = cx.rt.heap.getReaderValue(storedValue);
+              cx.sigmaHat[arg.addr] = readerValue;
+            } else {
+              cx.U.add(storedValue); return StepOutcome.nextClause;
             }
-          } else if (arg is VarRef && cx.rt.heap.isReader(arg.addr)) {
-            // Use tryWriterForReader for imported reader support
-            final wid = cx.rt.heap.tryWriterForReader(arg.addr);
-            // For imported readers (wid == null), compare reader addresses directly
-            final compareTo = wid ?? arg.addr;
-            if (storedValue is int && compareTo != storedValue) {
-              return StepOutcome.nextClause;
-            }
-          } else if (_isGroundValue(arg)) {
-            if (storedValue != arg) {
-              return StepOutcome.nextClause;
-            }
+          } else if (storedValue is Term) {
+            cx.sigmaHat[arg.addr] = storedValue;
           }
         }
     return StepOutcome.advance;

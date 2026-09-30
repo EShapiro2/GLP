@@ -4,11 +4,13 @@
 /// Alice MAD-sends a bare writer wrapped in w/1 to bob. Two things are pinned:
 /// bob_produced, which is the `_w`-backed reader matching the nested clause
 /// head w(W?) and is the admissibility the fixture exists to show; and
-/// bob_ch_matched, which is receive/3 committing once S is bound: this fixture
-/// supplies ch(S?, _), and by GLP-Spec "Writer MGU" the writer at Out is
-/// assigned the head's reader. `otherwise` does not fire behind it, since it
-/// succeeds only if all previous clauses fail (appendix-guards.tex), and the
-/// first clause suspends until S is bound and then commits.
+/// bob_ch_matched, which is bob_consumer's first clause committing once S is
+/// bound: its head is ch([wrapped(Y?)|In], Out?), the form receive/3's unit
+/// clause unfolds to, this fixture supplies ch(S?, _), and by GLP-Spec "Writer
+/// MGU" the writer at Out is assigned the head's reader. `otherwise` does not
+/// fire behind it, since it succeeds only if all previous clauses fail
+/// (appendix-guards.tex), and the first clause suspends until S is bound and
+/// then commits.
 ///
 /// Each outcome is asserted singly. The old disjunction matched||otherwise was
 /// vacuous: one of bob_consumer's two clauses always fires.
@@ -22,7 +24,7 @@ import 'package:glp_multiagent/isolate_protocol.dart';
 import 'programs_dir.dart';
 
 void main() {
-  test('_w matches the nested head; receive/3 commits with a writer at Out',
+  test('_w matches the nested head; the channel head commits with a writer at Out',
       () async {
     final programs = programsDir();
     final probe = File('$programs/tests/mad_w_probe.glp').readAsStringSync();
@@ -99,8 +101,8 @@ void main() {
     expect(produced, isTrue,
         reason: 'the `_w`-backed reader matched the nested head w(W?)');
     expect(matched, isTrue,
-        reason: 'the writer at Out is assigned the head reader PE2? (Writer '
-            'MGU), so receive/3 commits once S is bound');
+        reason: 'the writer at Out is assigned the head reader Out? (Writer '
+            'MGU), so bob_consumer commits once S is bound');
     expect(otherwise, isFalse,
         reason: 'otherwise waits while the first clause suspends, and that '
             'clause then commits');
