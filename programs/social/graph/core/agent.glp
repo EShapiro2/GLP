@@ -902,7 +902,7 @@ twc_step(false, Parts, W, Rest, [warm_consent(W?) | Rest1?], C?) :-
 %% person consented to --- never by the held link's global name, which is a
 %% name of a variable and is not a term at the friend that receives it.  The
 %% name stays here, where authorise_link/2 will take it.
-procedure warm_step(WarmConsent?, Constant?, Constant?, _?, Constant?, UserInStream?, NetInStream?, OutputsList?, Host?).
+procedure warm_step(WarmConsent?, Constant?, Constant?, GlobalName?, Constant?, UserInStream?, NetInStream?, OutputsList?, Host?).
 warm_step(yes(Anchor), Id, App, Name, Via, UserIn, NetIn, Outs, host(Apps, Atts, Pend, Trusted)) :-
     send_friend(Via?, msg(Id?, Via?, request_intro(Anchor?)), Outs?, Outs1),
     agent(Id?, UserIn?, NetIn?, Outs1?,
@@ -922,7 +922,7 @@ take_warm_wait(Who, [warm_wait(App, Name, Via) | Rest], Pend1?, W?) :-
 take_warm_wait(Who, [P | Rest], [P? | Rest1?], W?) :- otherwise | take_warm_wait(Who?, Rest?, Rest1, W).
 take_warm_wait(_, [], [], none).
 
-procedure tww_step(Constant?, Constant?, Constant?, _?, Constant?, PendingInv?, PendingInv, WarmWait).
+procedure tww_step(Constant?, Constant?, Constant?, GlobalName?, Constant?, PendingInv?, PendingInv, WarmWait).
 tww_step(true, _, App, Name, Via, Rest, Rest?, wait(App?, Name?, Via?)).
 tww_step(false, Who, App, Name, Via, Rest, [warm_wait(App?, Name?, Via?) | Rest1?], W?) :-
     take_warm_wait(Who?, Rest?, Rest1, W).
@@ -945,7 +945,7 @@ warm_after_commit(Id, Friend, [_ | Rest], Outs, Outs1?) :-
     otherwise | warm_after_commit(Id?, Friend?, Rest?, Outs?, Outs1).
 warm_after_commit(_, _, [], Outs, Outs?).
 
-procedure wac_step(Constant?, Constant?, Constant?, Constant?, _?, PendingInv?, OutputsList?, OutputsList).
+procedure wac_step(Constant?, Constant?, Constant?, Constant?, GlobalName?, PendingInv?, OutputsList?, OutputsList).
 wac_step(true, Id, Friend, App, _, _, Outs, Outs1?) :-
     send_friend(Friend?, msg(Id?, Friend?, warm_call(App?)), Outs?, Outs1).
 wac_step(false, Id, Friend, _, _, Rest, Outs, Outs1?) :-
@@ -963,7 +963,7 @@ release_held(App, From, [P | Rest], [P? | Rest1?]) :-
     otherwise | release_held(App?, From?, Rest?, Rest1).
 release_held(_, _, [], []).
 
-procedure rh_step(Constant?, Constant?, Constant?, _?, PendingInv?, PendingInv).
+procedure rh_step(Constant?, Constant?, Constant?, GlobalName?, PendingInv?, PendingInv).
 rh_step(true, _, _, Name, Rest, Rest?) :- authorise_link(Name?, authorise).
 rh_step(false, App, From, Name, Rest, [warm(App?, Name?) | Rest1?]) :-
     release_held(App?, From?, Rest?, Rest1).
@@ -1059,7 +1059,7 @@ rbs(_, [], []).
 %% channel and each of the two it introduces receives its end FROM the
 %% introducer, so both ends are held; the consent to the introduction is what
 %% releases them, and it is kept, since one introduction holds several links.
-procedure pending_step(Constant?, _?, Constant?, Constant?, UserInStream?, NetInStream?, OutputsList?, AppList?, AttestList?, PendingInv?, Stream(String)?).
+procedure pending_step(Constant?, GlobalName?, Constant?, Constant?, UserInStream?, NetInStream?, OutputsList?, AppList?, AttestList?, PendingInv?, Stream(String)?).
 pending_step(true, Name, _, Id, UserIn, NetIn, Outs, Apps, Atts, Pend, Trusted) :-
     authorise_link(Name?, authorise),
     agent(Id?, UserIn?, NetIn?, Outs?, host(Apps?, Atts?, Pend?, Trusted?)).
@@ -1074,7 +1074,7 @@ pending_step(false, Name, S, Id, UserIn, NetIn, Outs, Apps, Atts, Pend, Trusted)
           host(Apps1?, Atts?, [held(Name?, S?) | Pend?], Trusted?)).
 
 %% forward_pending(Name, S, Apps, Apps1): the report to every running mini-app.
-procedure forward_pending(_?, Constant?, AppList?, AppList).
+procedure forward_pending(GlobalName?, Constant?, AppList?, AppList).
 forward_pending(Name, S, [app(A, M, C, running(Sg?)) | Rest], [app(A?, M?, C?, running(Sg1)) | Rest1?]) :-
     ground(Name?) |
     push_down(pending_link(Name?, S?), Sg, Sg1?),

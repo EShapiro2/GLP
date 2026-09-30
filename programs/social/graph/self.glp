@@ -143,9 +143,9 @@ RootChannel ::= ch(PingStream, PingStream?).
 %% (Section 5.2: an end that reached this agent under another anchor, named,
 %% and the friend that forwarded it); up it the mini-app asks for a warm call
 %% to the link's anchor through that friend.
-SgToApp       ::= conversation(Constant, RootChannel) ; pending_link(_, Constant).
+SgToApp       ::= conversation(Constant, RootChannel) ; pending_link(GlobalName, Constant).
 SgToAppStream ::= [] ; [SgToApp | SgToAppStream].
-AppToSg       ::= warm_call(_, Constant).
+AppToSg       ::= warm_call(GlobalName, Constant).
 AppToSgStream ::= [] ; [AppToSg | AppToSgStream].
 SgChannel     ::= ch(SgToAppStream, AppToSgStream?).
 
@@ -157,7 +157,7 @@ ConvEnd  ::= conv(Constant, PingStream?).
 ConvList ::= [] ; [ConvEnd | ConvList].
 HeldProbe ::= held(String?).
 HeldList  ::= [] ; [HeldProbe | HeldList].
-WarmWait  ::= none ; wait(Constant, _, Constant).
+WarmWait  ::= none ; wait(Constant, GlobalName, Constant).
 AnchorFriend ::= none ; found(Constant).
 
 %% (ii) The channel to the super-app user interface: what the mini-app shows
@@ -206,15 +206,15 @@ Pending      ::= offered(Constant, Constant, String, Constant, String)
                %% requester to an anchor, or a request (requester, name)
                %% waiting for it.  A name is never taken apart into an agent:
                %% its anchor is only ever compared with an agent at hand.
-               ; warm(Constant, _)
-               ; warm_wait(Constant, _, Constant)
+               ; warm(Constant, GlobalName)
+               ; warm_wait(Constant, GlobalName, Constant)
                ; warm_consent(Constant)
                ; warm_ok(Constant)
                ; intro_consent(Constant, Constant)
                ; intro_wait(Constant, Constant)
                ; intro_ok(Constant)
                ; intro_via(Constant, Constant)
-               ; held(_, Constant).
+               ; held(GlobalName, Constant).
 PendingInv   ::= [] ; [Pending | PendingInv].
 Host ::= host(AppList, AttestList, PendingInv, Stream(String)).
 
@@ -537,7 +537,7 @@ UserInStream ::= [] ; [UserInMsg | UserInStream].
 NetInMsg     ::= msg(Key, NetColdCall)
                ; msg(Key, Constant, FriendContent)
                %% The runtime's report of a held link (Section 5.2; madGLP).
-               ; pending_link(_, Constant).
+               ; pending_link(GlobalName, Constant).
 NetInStream  ::= [] ; [NetInMsg | NetInStream].
 
 %% Pending entries
