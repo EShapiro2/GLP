@@ -273,12 +273,18 @@ run_done(pstuck(_, _), no).
 
 procedure prun_report2(Ans?, PWorld?, Constant?, Name?, Constant?, Name?,
                        PReport).
-prun_report2(D, W, P1, V1, P2, V2, prep(D?, L1?, L2?, A1?, A2?, S1?, S2?, T?)) :-
+prun_report2(D, W, P1, V1, P2, V2, R?) :-
     ground(D?), ground(W?), ground(P1?), ground(V1?), ground(P2?), ground(V2?) |
     platform # pworld_learnt(W?, P1?, V1?, L1),
     platform # pworld_learnt(W?, P2?, V2?, L2),
+    platform # pworld_traffic(W?, T),
+    prun_report3(D?, L1?, L2?, V1?, V2?, T?, R).
+
+% The two learnt rows, read here once they are known.
+procedure prun_report3(Ans?, Row?, Row?, Name?, Name?, Ints?, PReport).
+prun_report3(D, L1, L2, V1, V2, T, prep(D?, L1?, L2?, A1?, A2?, S1?, S2?, T?)) :-
+    ground(L1?), ground(L2?), ground(V1?), ground(V2?) |
     prun_decided1(L1?, A1),
     prun_decided1(L2?, A2),
     prun_state1(L1?, V1?, S1),
-    prun_state1(L2?, V2?, S2),
-    platform # pworld_traffic(W?, T).
+    prun_state1(L2?, V2?, S2).

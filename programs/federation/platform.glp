@@ -520,9 +520,15 @@ res_learnt(no, _, C, V, I2, P, W, pok(W1?)) :-
     ground(C?), ground(V?), ground(I2?), ground(P?), ground(W?) |
     cva_put_inst(C?, V?, I2?, C1),
     pworld_put(W?, P?, C1?, W1).
-res_learnt(yes, X, C, V, I2, P, W, pok(W1?)) :-
+res_learnt(yes, X, C, V, I2, P, W, R?) :-
     ground(X?), ground(C?), ground(V?), ground(I2?), ground(P?), ground(W?) |
     cva_put_inst(C?, V?, I2?, C1),
+    res_learnt1(X?, C1?, V?, P?, W?, R).
+
+% The agent with the instance put back, read here once it is known.
+procedure res_learnt1(LState?, Cva?, Name?, Constant?, PWorld?, POutcome).
+res_learnt1(X, C1, V, P, W, pok(W1?)) :-
+    ground(X?), ground(C1?), ground(V?), ground(P?), ground(W?) |
     rla # obj_of(X?, L),
     cva_peers(C1?, Ps),
     send_all(C1?, Ps?, cargo(commit, V?, tri(X?, L?, [])), C2),
@@ -593,6 +599,14 @@ recv_kind(req(S), From, V, I1, C, P, W, R?) :-
     integer(S?), ground(From?), ground(V?), ground(I1?), ground(C?),
     ground(P?), ground(W?) |
     cva_put_inst(C?, V?, I1?, C1),
+    recv_req0(S?, From?, V?, I1?, C1?, P?, W?, R).
+
+% The agent with the instance put back, read here once it is known.
+procedure recv_req0(Integer?, Constant?, Name?, Inst?, Cva?, Constant?,
+                    PWorld?, POutcome).
+recv_req0(S, From, V, I1, C1, P, W, R?) :-
+    integer(S?), ground(From?), ground(V?), ground(I1?), ground(C1?),
+    ground(P?), ground(W?) |
     known(C1?, From?, K),
     recv_req(K?, S?, From?, V?, I1?, C1?, P?, W?, R).
 
@@ -613,14 +627,30 @@ recv_msg(pmsg(From, _, cargo(K, V, Tr)), Rest, C, P, W, R?) :-
     ground(From?), ground(K?), ground(V?), ground(Tr?), ground(Rest?),
     ground(C?), ground(P?), ground(W?) |
     cva_set_in(C?, Rest?, C0),
+    recv_msg1(From?, K?, V?, Tr?, C0?, P?, W?, R).
+recv_msg(pmsg(From, _, disclosed(V, X)), Rest, C, P, W, R?) :-
+    ground(From?), ground(V?), ground(X?), ground(Rest?), ground(C?),
+    ground(P?), ground(W?) |
+    cva_set_in(C?, Rest?, C0),
+    recv_msg2(From?, V?, X?, C0?, P?, W?, R).
+
+% The agent with the message taken from its inbox, read here once it is known:
+% a message of the algorithm, and a disclosed record.
+procedure recv_msg1(Constant?, MsgKind?, Name?, Triple?, Cva?, Constant?,
+                    PWorld?, POutcome).
+recv_msg1(From, K, V, Tr, C0, P, W, R?) :-
+    ground(From?), ground(K?), ground(V?), ground(Tr?), ground(C0?),
+    ground(P?), ground(W?) |
     cva_inst(C0?, V?, IO),
     inst_or_bottom(IO?, V?, I0),
     rla # update_state(I0?, Tr?, I1),
     recv_kind(K?, From?, V?, I1?, C0?, P?, W?, R).
-recv_msg(pmsg(From, _, disclosed(V, X)), Rest, C, P, W, pok(W1?)) :-
-    ground(From?), ground(V?), ground(X?), ground(Rest?), ground(C?),
-    ground(P?), ground(W?) |
-    cva_set_in(C?, Rest?, C0),
+
+procedure recv_msg2(Constant?, Name?, Record?, Cva?, Constant?, PWorld?,
+                    POutcome).
+recv_msg2(From, V, X, C0, P, W, pok(W1?)) :-
+    ground(From?), ground(V?), ground(X?), ground(C0?), ground(P?),
+    ground(W?) |
     cva_discs(C0?, Ds),
     discs_add(disc(From?, V?, X?), Ds?, Ds1),
     cva_set_discs(C0?, Ds1?, C1),

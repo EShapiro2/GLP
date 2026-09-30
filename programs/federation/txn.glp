@@ -839,6 +839,14 @@ do_relay1(yes, X, V, U, P, Q, W, R?) :-
     ground(X?), ground(V?), ground(U?), ground(P?), ground(Q?), ground(W?) |
     world_row(W?, V?, RowV),
     world_row(W?, U?, RowU),
+    do_relay1a(X?, V?, U?, P?, Q?, RowV?, RowU?, W?, R).
+
+% The two rows, read here once they are known.
+procedure do_relay1a(Record?, Name?, Name?, Constant?, Constant?, Row?, Row?,
+                     World?, Outcome).
+do_relay1a(X, V, U, P, Q, RowV, RowU, W, R?) :-
+    ground(X?), ground(V?), ground(U?), ground(P?), ground(Q?), ground(RowV?),
+    ground(RowU?), ground(W?) |
     relay_from(X?, V?, P?, RowV?, A1),
     relay_into(X?, V?, U?, Q?, RowU?, A2),
     and_ans(A1?, A2?, A),
@@ -897,6 +905,12 @@ do_est3([], _, _, _, _, blocked).
 do_est3([M|_], U, Y, P, W, R?) :-
     ground(M?), ground(U?), ground(Y?), ground(P?), ground(W?) |
     decide # motion_electorate(M?, X),
+    do_est3a(X?, M?, U?, Y?, P?, W?, R).
+
+% The electorate, read here once it is known.
+procedure do_est3a(Agents?, Motion?, Name?, Constant?, Constant?, World?, Outcome).
+do_est3a(X, M, U, Y, P, W, R?) :-
+    ground(X?), ground(M?), ground(U?), ground(Y?), ground(P?), ground(W?) |
     agents_member(X?, P?, A),
     do_est4(A?, M?, X?, U?, Y?, W?, R).
 

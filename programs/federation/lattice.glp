@@ -131,6 +131,11 @@ quorum_met1(Both, Ms, T, A?) :- ground(Both?), ground(Ms?), ground(T?) |
 exported procedure quorum_met(Rat?, Row?, Name?, Agents?, Ans).
 quorum_met(T, C, V, Qs, A?) :- ground(T?), ground(C?), ground(V?), ground(Qs?) |
     config_members(C?, V?, Ms),
+    quorum_met0(Ms?, Qs?, T?, A).
+
+% The members of the configuration, read here once they are known.
+procedure quorum_met0(Agents?, Agents?, Rat?, Ans).
+quorum_met0(Ms, Qs, T, A?) :- ground(Ms?), ground(Qs?), ground(T?) |
     agents_meet(Ms?, Qs?, Both),
     quorum_met1(Both?, Ms?, T?, A).
 
@@ -186,7 +191,7 @@ confs_join([U|Us], C, R?) :- ground(U?), ground(Us?), ground(C?) |
     row_join(C?, U?, C1),
     confs_join(Us?, C1?, R).
 
-procedure cons_each(Confs?, ConfSets?, ConfSets).
+procedure cons_each(Row?, ConfSets?, ConfSets).
 cons_each(_, [], []).
 cons_each(X, [S|Ss], [R1?|R?]) :- ground(X?), ground(S?), ground(Ss?) |
     confs_snoc(S?, X?, R1),
@@ -202,6 +207,11 @@ exported procedure confs_subsets(Confs?, ConfSets).
 confs_subsets([], [[]]).
 confs_subsets([X|Xs], R?) :- ground(X?), ground(Xs?) |
     confs_subsets(Xs?, Ss),
+    confs_subsets1(X?, Ss?, R).
+
+% The subsets without X, read here once they are known, and those with it.
+procedure confs_subsets1(Row?, ConfSets?, ConfSets).
+confs_subsets1(X, Ss, R?) :- ground(X?), ground(Ss?) |
     cons_each(X?, Ss?, With),
     confsets_app(Ss?, With?, R).
 
