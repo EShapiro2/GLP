@@ -9,6 +9,18 @@
 %% own self.glp (modules.tex, External access).  Each platform directory still
 %% loads on its own (suite Section X10), with its plays dropped as dead code.
 
+%% The agent and the identity record are common to cva/, gsg/ and secure_gsg/,
+%% and are defined once, here, at the lowest common ancestor of the modules
+%% that use them (TGLP modules.tex, Scope construction); until 2026-09-30 each
+%% of the three carried a copy.  IR_p = (K_p, sigma_p), intrinsic and immutable
+%% per agent and surviving a crash: K the identity custodians, sigma the
+%% supermajority threshold as an integer percentage in 51..100 --- what a
+%% supermajority of custodians authorises a replacement against (SGSG paper,
+%% Section 5.3).  play_secure_restore/4 and play_secure_unfriend/3 below carry
+%% it.
+Agent ::= Constant.
+IdentityRecord ::= ir(Stream(Agent), Integer).
+
 imported procedure gsg # play_befriend(Integer, Integer).
 exported procedure play_befriend(Integer, Integer).
 play_befriend(A?, B?) :- gsg # play_befriend(A, B).

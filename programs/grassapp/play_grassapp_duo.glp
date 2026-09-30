@@ -32,7 +32,7 @@ agent_init(Id, UserIn, NetIn) :-
     send_to_user(UserOut?).
 
 %% --- Scripted actor: same agent, a script instead of a live user -------------
-exported procedure actor_init(Constant?, Constant?, NetInStream?).
+exported procedure actor_init(Constant?, Key?, NetInStream?).
 actor_init(Id, Target, NetIn) :-
     ground(Id?), ground(Target?) |
     send_to_net(NetOut?),
@@ -44,7 +44,7 @@ actor_init(Id, Target, NetIn) :-
 %% --- Actor script -------------------------------------------------------------
 
 %% Cold-call the local human, then court them.
-procedure duo_actor(Constant?, Constant?, Stream(UserNotify)?, Stream(UserCmd)).
+procedure duo_actor(Constant?, Key?, Stream(UserNotify)?, Stream(UserCmd)).
 duo_actor(Me, Target, Ns, [connect(Target?) | Cs?]) :-
     ground(Me?), ground(Target?) |
     duo_courter(Me?, Target?, Ns?, Cs).

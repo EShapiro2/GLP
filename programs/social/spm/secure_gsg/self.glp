@@ -11,16 +11,14 @@
 %% stubs using carried IR).
 %%
 %% Sibling-directory types from gsg/self.glp are not transitively visible;
-%% redefining the essentials locally (Agent, NetMsg, InMsg, UserEvent,
-%% IdentityRecord).  Will be cleaned up with a parent programs/SPM/self.glp
-%% once that's introduced.
+%% redefining the essentials locally (NetMsg, InMsg, UserEvent).  Agent and
+%% IdentityRecord are defined once in the parent ../self.glp, the lowest common
+%% ancestor of cva/, gsg/ and secure_gsg/.
 
 
 %% =============================================================================
 %% SUBSTRATE ALIASES (redefined; see gsg/self.glp comment on visibility)
 %% =============================================================================
-
-Agent ::= Constant.
 
 NetMsg(C) ::= msg(Agent, Agent, C).
 InMsg(C) ::= msg(Agent, C).
@@ -28,8 +26,8 @@ InMsg(C) ::= msg(Agent, C).
 %% §3.3 reply-variable sync); same pattern as gsg/self.glp.
 UserEvent(V, Q, A) ::= will(V) ; unwill(V) ; tick ; crash ; shutdown
                      ; query(Q, A) ; await(Constant).
-IdentityRecord ::= ir(Stream(Agent), Integer).
-                %%   ^K (custodian set) ^σ (supermajority %, 51..100)
+%% IdentityRecord, ir(K, sigma) --- K the custodian set, sigma the
+%% supermajority percentage in 51..100 --- is defined once in ../self.glp.
 
 %% =============================================================================
 %% CARGO (paper §8.2 + §8.5 + §8.7)

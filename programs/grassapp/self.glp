@@ -131,7 +131,7 @@ AgentContent ::= befriend(Constant, Response?)
 %% mediator -> agent (mediator's reply to a user action): the compose commands
 %% and the sibling choices, plus response(Response) — the injected-result
 %% vocabulary (inject_msg), which the mediator itself never sends.
-UserContent ::= connect(Constant)
+UserContent ::= connect(Key)
               ; unfriend(Constant)
               ; decision(Decision, Constant, PendingValue)
               ; send(Constant, Constant)
@@ -241,7 +241,7 @@ OutputsList ::= [] ; [OutputEntry|OutputsList].
 ReqId ::= req(Constant).
 
 %% User -> Mediator (ground commands from Dart).
-UserCmd     ::= connect(Constant)
+UserCmd     ::= connect(Key)
               ; unfriend(Constant)
               ; decision(Decision, Constant, ReqId)
               ; send(Constant, Constant)
@@ -317,8 +317,8 @@ imported procedure play_grassapp_duo # agent_init(Constant?, Stream(UserCmd)?, N
 exported procedure agent_init(Constant?, Stream(UserCmd)?, NetInStream?).
 agent_init(Id, UserIn, NetIn) :- play_grassapp_duo # agent_init(Id?, UserIn?, NetIn?).
 
-imported procedure play_grassapp_duo # actor_init(Constant?, Constant?, NetInStream?).
-exported procedure actor_init(Constant?, Constant?, NetInStream?).
+imported procedure play_grassapp_duo # actor_init(Constant?, Key?, NetInStream?).
+exported procedure actor_init(Constant?, Key?, NetInStream?).
 actor_init(Id, Target, NetIn) :- play_grassapp_duo # actor_init(Id?, Target?, NetIn?).
 
 imported procedure play_grassapp_boot # scenario_init(Constant?, Stream(UserCmd)?, NetInStream?).

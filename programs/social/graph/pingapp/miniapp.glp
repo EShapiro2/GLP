@@ -25,7 +25,7 @@
 exported procedure ping(Constant?, AppUiStream, SgChannel?).
 ping(Id, Ui?, ch(Down, Up?)) :-
     ground(Id?) |
-    loop(Id?, Down?, Ev?, Ui, Up, [], []).
+    loop(Id?, Down?, [], Ui, Up, [], []).
 
 %% loop(Id, Down, Ev, Ui, Up, Convs, Held): Down the social graph's stream,
 %% Ev the events of the conversations' readers (merged), Ui the person's
@@ -97,7 +97,7 @@ talk(_, _, [], []).
 %% the caller keeps the writer of the rest, Out2.
 procedure open_out(Constant?, Constant?, HeldList?, HeldList, PingStream, PingStream?).
 open_out(bob, Id, [held(W?) | Held], Held?, [hello(Id?), probe(W) | Out2?], Out2).
-open_out(F, Id, Held, Held?, [hello(Id?) | Out2?], Out2) :- otherwise | true.
+open_out(_, Id, Held, Held?, [hello(Id?) | Out2?], Out2) :- otherwise | true.
 
 %% probe_on(F, Convs, Convs1, V): put a fresh probe on the conversation with F
 %% --- the element carries the variable's writer, for the far side to assign,
