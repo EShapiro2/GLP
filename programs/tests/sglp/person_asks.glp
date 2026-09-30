@@ -16,10 +16,11 @@
 %% The kinds are one dimension of two: a lefty picks left nine times in ten,
 %% a righty right nine times in ten, each after a day on average.
 %%
-%% The interactive type is in reader mode because person/2's declaration,
-%% procedure(X) person(Constant?, X), types its second argument as a writer:
-%% the reader X? that the asking clause of a writer-mode type passes is
-%% refused by the checker, which does not instantiate X to the input type.
+%% The interactive type is in reader mode, so the asking clause passes
+%% person/2 the writer X and person's parameter binds to the output type Pick.
+%% Writer-mode types, whose asking clause passes the reader X? and binds the
+%% parameter to the input type, are person_asks_writer.glp and
+%% person_asks_coins.glp.
 
 Choice ::= left ; right.
 Ack    ::= ok(Integer).

@@ -1,0 +1,14 @@
+%% Complementation is an involution, (T?)? = T (TGLP,
+%% appendix-type-automaton.tex, Definition "Dual Type Automaton"), in the
+%% expansion of a template instantiated at an input type: Swap(Choice?)
+%% expands to sw(Choice), so f produces at position 1 of sw the choice g makes.
+%% Fixture of glp_runtime/test/analysis/input_binding_test.dart.
+
+Choice ::= yes ; no.
+Swap(X) ::= sw(X?).
+
+procedure f(Swap(Choice?)).
+f(sw(X?)) :- g(X).
+
+procedure g(Choice).
+g(yes).
