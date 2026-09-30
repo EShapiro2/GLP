@@ -271,7 +271,7 @@ Event ::= card(Constant, Context, CReqId)
 %% A person's script for the currency (core/superapp_plays.glp): its acts in
 %% order; a step is answered on the mediator's latest open card for its
 %% clause and is done when the screen shows its effect.
-CoinStep   ::= mint(Integer) ; swap(Constant, Constant, Integer, Constant, Integer) ; accept(Constant).
+CoinStep   ::= mint(Integer) ; swap(Constant, Constant, Integer, Constant, Integer) ; accept(Key).
 CoinScript ::= [] ; [CoinStep | CoinScript].
 OpenReq    ::= no_card ; req(Integer).
 OpenCards  ::= open(OpenReq, OpenReq).
