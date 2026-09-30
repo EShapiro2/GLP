@@ -94,7 +94,7 @@ Loading a project: enter the directory path at the prompt; the project linker re
 | Dart unit tests alone | `cd glp_runtime && dart test` | glp_runtime only |
 | Flutter package alone | `cd glp_multiagent && flutter test` | glp_multiagent only |
 
-`run_all_tests.sh` covers the whole Dart tree (Section Q), so it is the canonical gate; the package runs are for a faster loop, not for coverage.  🔴 **Section Q gates on the known-red list, not on all-green**: a test named in `KNOWN_RED` may be red without failing the suite, any other red fails it, and a listed test that starts passing also fails it.  When you fix a listed test, delete its entry in the same commit.  A count is quotable only with the commit it was taken at.
+`run_all_tests.sh` covers the whole Dart tree (Section Q), so it is the canonical gate; the package runs are for a faster loop, not for coverage.  🔴 **Section Q gates on the known-red list, not on all-green**: a test named in `KNOWN_RED` may be red without failing the suite, any other red fails it, and a listed test that starts passing also fails it.  When you fix a listed test, delete its entry in the same commit.  REPL checks (`check`, `check_not`) have their own list, `KNOWN_RED_CHECKS`, entered by the check's name with the same rot guard and a separate count in the totals.  A count is quotable only with the commit it was taken at.
 
 Section SG's warm call failed intermittently from 2026-09-15 to 2026-09-18 on `anchor_friend/4`, whose first clause passed an unbound tail; a rule gave it one re-run, and the rule went with the fix at `11625f89`.
 

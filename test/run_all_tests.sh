@@ -69,25 +69,60 @@ echo ""
 PASS=0
 FAIL=0
 
+# Known-red REPL checks: the counterpart, for check/check_not, of Section Q's
+# KNOWN_RED list of Dart tests.  An entry is a check's name exactly as it is
+# passed to check or check_not, with its owner in the comment above it.  A
+# listed check that fails is reported KNOWN RED and does not fail the suite; a
+# listed check that passes fails it (the rot guard), so the entry is deleted in
+# the commit that turns it green.  Udi's rulings put a dormant project's
+# failures here, since no session exists to repair them.
+KNOWN_RED_CHECKS=(
+)
+KR_CHECKS=0
+
+_known_red_check() {
+    local name="$1" known
+    for known in "${KNOWN_RED_CHECKS[@]}"; do
+        [ "$name" = "$known" ] && return 0
+    done
+    return 1
+}
+
+_check_pass() {
+    if _known_red_check "$1"; then
+        echo "  FAIL: known-red check now PASSES — remove it from KNOWN_RED_CHECKS: $1"
+        FAIL=$((FAIL + 1))
+    else
+        echo "  PASS: $1"
+        PASS=$((PASS + 1))
+    fi
+}
+
+_check_fail() {
+    if _known_red_check "$1"; then
+        echo "  KNOWN RED (not a new failure): $1 ($2)"
+        KR_CHECKS=$((KR_CHECKS + 1))
+    else
+        echo "  FAIL: $1 ($2)"
+        FAIL=$((FAIL + 1))
+    fi
+}
+
 check() {
     local name="$1" pattern="$2" source="$3"
     if echo "$source" | grep -q "$pattern"; then
-        echo "  PASS: $name"
-        PASS=$((PASS + 1))
+        _check_pass "$name"
     else
-        echo "  FAIL: $name (expected: $pattern)"
-        FAIL=$((FAIL + 1))
+        _check_fail "$name" "expected: $pattern"
     fi
 }
 
 check_not() {
     local name="$1" pattern="$2" source="$3"
     if echo "$source" | grep -q "$pattern"; then
-        echo "  FAIL: $name (should NOT match: $pattern)"
-        FAIL=$((FAIL + 1))
+        _check_fail "$name" "should NOT match: $pattern"
     else
-        echo "  PASS: $name"
-        PASS=$((PASS + 1))
+        _check_pass "$name"
     fi
 }
 
@@ -1892,25 +1927,19 @@ fp14_alice_introduces=$(echo "$k_fp14" | grep -c "tagged(alice, cmd(child_introd
 fp14_carol_connected=$(echo "$k_fp14" | grep -c "tagged(carol, notify(connected(dave))" || true)
 fp14_dave_connected=$(echo "$k_fp14" | grep -c "tagged(dave, notify(connected(carol))" || true)
 if [ "$fp14_alice_introduces" = "2" ]; then
-    echo "  PASS: CSSN v2 fplay14 alice issued two child_introduces"
-    PASS=$((PASS + 1))
+    _check_pass "CSSN v2 fplay14 alice issued two child_introduces"
 else
-    echo "  FAIL: CSSN v2 fplay14 alice issued $fp14_alice_introduces child_introduces (expected 2)"
-    FAIL=$((FAIL + 1))
+    _check_fail "CSSN v2 fplay14 alice issued two child_introduces" "CSSN v2 fplay14 alice issued $fp14_alice_introduces child_introduces (expected 2)"
 fi
 if [ "$fp14_carol_connected" = "1" ]; then
-    echo "  PASS: CSSN v2 fplay14 carol connected(dave) emitted exactly once"
-    PASS=$((PASS + 1))
+    _check_pass "CSSN v2 fplay14 carol connected(dave) emitted exactly once"
 else
-    echo "  FAIL: CSSN v2 fplay14 carol connected(dave) emitted $fp14_carol_connected times (expected 1)"
-    FAIL=$((FAIL + 1))
+    _check_fail "CSSN v2 fplay14 carol connected(dave) emitted exactly once" "CSSN v2 fplay14 carol connected(dave) emitted $fp14_carol_connected times (expected 1)"
 fi
 if [ "$fp14_dave_connected" = "1" ]; then
-    echo "  PASS: CSSN v2 fplay14 dave connected(carol) emitted exactly once"
-    PASS=$((PASS + 1))
+    _check_pass "CSSN v2 fplay14 dave connected(carol) emitted exactly once"
 else
-    echo "  FAIL: CSSN v2 fplay14 dave connected(carol) emitted $fp14_dave_connected times (expected 1)"
-    FAIL=$((FAIL + 1))
+    _check_fail "CSSN v2 fplay14 dave connected(carol) emitted exactly once" "CSSN v2 fplay14 dave connected(carol) emitted $fp14_dave_connected times (expected 1)"
 fi
 
 # fplay15: Idempotent befriend commit — simultaneous bilateral cold-call.
@@ -1930,25 +1959,19 @@ fp15_bob_connect=$(echo "$k_fp15" | grep -c "tagged(bob, cmd(connect(alice))" ||
 fp15_alice_connected=$(echo "$k_fp15" | grep -c "tagged(alice, notify(connected(bob))" || true)
 fp15_bob_connected=$(echo "$k_fp15" | grep -c "tagged(bob, notify(connected(alice))" || true)
 if [ "$fp15_alice_connect" = "1" ] && [ "$fp15_bob_connect" = "1" ]; then
-    echo "  PASS: CSSN v2 fplay15 both agents issued connect"
-    PASS=$((PASS + 1))
+    _check_pass "CSSN v2 fplay15 both agents issued connect"
 else
-    echo "  FAIL: CSSN v2 fplay15 connects: alice=$fp15_alice_connect bob=$fp15_bob_connect (expected 1 each)"
-    FAIL=$((FAIL + 1))
+    _check_fail "CSSN v2 fplay15 both agents issued connect" "CSSN v2 fplay15 connects: alice=$fp15_alice_connect bob=$fp15_bob_connect (expected 1 each)"
 fi
 if [ "$fp15_alice_connected" = "1" ]; then
-    echo "  PASS: CSSN v2 fplay15 alice connected(bob) emitted exactly once"
-    PASS=$((PASS + 1))
+    _check_pass "CSSN v2 fplay15 alice connected(bob) emitted exactly once"
 else
-    echo "  FAIL: CSSN v2 fplay15 alice connected(bob) emitted $fp15_alice_connected times (expected 1)"
-    FAIL=$((FAIL + 1))
+    _check_fail "CSSN v2 fplay15 alice connected(bob) emitted exactly once" "CSSN v2 fplay15 alice connected(bob) emitted $fp15_alice_connected times (expected 1)"
 fi
 if [ "$fp15_bob_connected" = "1" ]; then
-    echo "  PASS: CSSN v2 fplay15 bob connected(alice) emitted exactly once"
-    PASS=$((PASS + 1))
+    _check_pass "CSSN v2 fplay15 bob connected(alice) emitted exactly once"
 else
-    echo "  FAIL: CSSN v2 fplay15 bob connected(alice) emitted $fp15_bob_connected times (expected 1)"
-    FAIL=$((FAIL + 1))
+    _check_fail "CSSN v2 fplay15 bob connected(alice) emitted exactly once" "CSSN v2 fplay15 bob connected(alice) emitted $fp15_bob_connected times (expected 1)"
 fi
 
 # fplay13: the village scenario's seven acts.  The actors are order-independent —
@@ -1979,11 +2002,9 @@ check "CSSN v3 fplay13 act 5 a member joining late is owed what was posted befor
 check "CSSN v3 fplay13 act 7 befriending with no parent among the guards" "tagged(eve, friend(frank))" "$k_fp13"
 fp13_narr=$(echo "$k_fp13" | grep -cE "tagged\((alice|bob|frank|carol|dave|eve), (act|event|friend|say)\(" || true)
 if [ "$fp13_narr" = "85" ]; then
-    echo "  PASS: CSSN v3 fplay13 narrative is 85 lines"
-    PASS=$((PASS + 1))
+    _check_pass "CSSN v3 fplay13 narrative is 85 lines"
 else
-    echo "  FAIL: CSSN v3 fplay13 narrative is $fp13_narr lines (expected 85)"
-    FAIL=$((FAIL + 1))
+    _check_fail "CSSN v3 fplay13 narrative is 85 lines" "CSSN v3 fplay13 narrative is $fp13_narr lines (expected 85)"
 fi
 
 # fplay16: the two acts of the child-safe social graph — becoming parent and
@@ -2026,22 +2047,18 @@ check "CSSN v3 fplay17 a member joining after two posts is owed the first" "tagg
 check "CSSN v3 fplay17 and the second" "tagged(dave, notify(group_received(group_id(alice, late_join), alice, Posted before Dave joined)))" "$k_fp17"
 fp17_bob=$(echo "$k_fp17" | grep -c "tagged(bob, notify(group_received(group_id(alice, late_join), alice, Posted before Carol joined)))" || true)
 if [ "$fp17_bob" = "1" ]; then
-    echo "  PASS: CSSN v3 fplay17 no member receives the post twice"
-    PASS=$((PASS + 1))
+    _check_pass "CSSN v3 fplay17 no member receives the post twice"
 else
-    echo "  FAIL: CSSN v3 fplay17 bob received the post $fp17_bob times (expected 1)"
-    FAIL=$((FAIL + 1))
+    _check_fail "CSSN v3 fplay17 no member receives the post twice" "CSSN v3 fplay17 bob received the post $fp17_bob times (expected 1)"
 fi
 # The catch-up hands the posts over in the order they were made, so Dave's first
 # line is the earlier post and his second the later one.
 fp17_dave_order=$(echo "$k_fp17" | grep "tagged(dave, notify(group_received(group_id(alice, late_join)" | head -2 | tr '\n' '|')
 case "$fp17_dave_order" in
     *"Posted before Carol joined"*"Posted before Dave joined"*)
-        echo "  PASS: CSSN v3 fplay17 the catch-up is in the order the posts were made"
-        PASS=$((PASS + 1)) ;;
+        _check_pass "CSSN v3 fplay17 the catch-up is in the order the posts were made" ;;
     *)
-        echo "  FAIL: CSSN v3 fplay17 catch-up order was: $fp17_dave_order"
-        FAIL=$((FAIL + 1)) ;;
+        _check_fail "CSSN v3 fplay17 the catch-up is in the order the posts were made" "CSSN v3 fplay17 catch-up order was: $fp17_dave_order" ;;
 esac
 
 # fplay18: a child that is a parent.  Becoming a parent asks nothing of the party
@@ -5355,6 +5372,9 @@ fi
 
 echo "======================================"
 echo "Total: $TOTAL | Passed: $PASS | Failed: $FAIL"
+if [ $KR_CHECKS -gt 0 ]; then
+    echo "Known red, REPL checks (KNOWN_RED_CHECKS, not counted above): $KR_CHECKS"
+fi
 echo "======================================"
 
 if [ $TREE_MOVED -eq 1 ]; then
