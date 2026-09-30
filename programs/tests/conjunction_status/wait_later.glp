@@ -14,3 +14,16 @@ p(no).
 procedure q(Choice).
 q(yes).
 
+
+%% A variable first met as a reader inside a list or a structure, bound by a
+%% later conjunct: r([X?]), q(X) and s(pair(X?)), q(X) report X = yes, as
+%% p(X?), q(X) does.  GLP's task of 2026-09-30 14:31 UTC.
+
+procedure r(Stream(Choice)?).
+r([]).
+r([C|Cs]) :- p(C?), r(Cs?).
+
+Pair ::= pair(Choice).
+
+procedure s(Pair?).
+s(pair(C)) :- p(C?).

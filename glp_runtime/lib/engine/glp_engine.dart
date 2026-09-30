@@ -1443,9 +1443,12 @@ class GlpEngine {
         final (writerId, readerId) = runtime.heap.allocateVariable();
         varNameToId[baseName] = writerId;
 
-        if (!arg.isReader) {
-          queryVarWriters[baseName] = writerId;
-        }
+        // A goal variable is reported whichever occurrence meets it first,
+        // writer or reader: the outcome of the run gives every variable of
+        // the initial goal its value (GLP-Spec glp.tex, Definition "cGLP
+        // Proper Run, Outcome"), read at its writer.  One met only as a
+        // reader is never bound and is reported unbound.
+        queryVarWriters[baseName] = writerId;
 
         argSlots[argSlot] = rt.VarRef(arg.isReader ? readerId : writerId);
       }
@@ -1494,9 +1497,12 @@ class GlpEngine {
         final (writerId, readerId) = runtime.heap.allocateVariable();
         varNameToId[baseName] = writerId;
 
-        if (!arg.isReader) {
-          queryVarWriters[baseName] = writerId;
-        }
+        // A goal variable is reported whichever occurrence meets it first,
+        // writer or reader: the outcome of the run gives every variable of
+        // the initial goal its value (GLP-Spec glp.tex, Definition "cGLP
+        // Proper Run, Outcome"), read at its writer.  One met only as a
+        // reader is never bound and is reported unbound.
+        queryVarWriters[baseName] = writerId;
 
         argSlots[argSlot] = rt.VarRef(arg.isReader ? readerId : writerId);
       }
@@ -1550,9 +1556,8 @@ class GlpEngine {
         } else {
           final (writerId, readerId) = runtime.heap.allocateVariable();
           varNameToId[baseName] = writerId;
-          if (!arg.isReader) {
-            queryVarWriters[baseName] = writerId;
-          }
+          // Reported whichever occurrence meets it first (_setupArgument).
+          queryVarWriters[baseName] = writerId;
           argTerms.add(rt.VarRef(arg.isReader ? readerId : writerId));
         }
       } else if (arg is ListTerm) {
@@ -1625,9 +1630,8 @@ class GlpEngine {
         } else {
           final (writerId, readerId) = runtime.heap.allocateVariable();
           varNameToId[baseName] = writerId;
-          if (!arg.isReader) {
-            queryVarWriters[baseName] = writerId;
-          }
+          // Reported whichever occurrence meets it first (_setupArgument).
+          queryVarWriters[baseName] = writerId;
           argTerms.add(arg.isReader ? rt.VarRef(readerId) : rt.VarRef(writerId));
         }
       } else if (arg is ListTerm) {
@@ -1686,9 +1690,8 @@ class GlpEngine {
       } else {
         final (writerId, readerId) = runtime.heap.allocateVariable();
         varNameToId[baseName] = writerId;
-        if (!head.isReader) {
-          queryVarWriters[baseName] = writerId;
-        }
+        // Reported whichever occurrence meets it first (_setupArgument).
+        queryVarWriters[baseName] = writerId;
         headTerm = rt.VarRef(head.isReader ? readerId : writerId);
       }
     } else if (head is ListTerm) {
@@ -1712,9 +1715,8 @@ class GlpEngine {
       } else {
         final (writerId, readerId) = runtime.heap.allocateVariable();
         varNameToId[baseName] = writerId;
-        if (!tail.isReader) {
-          queryVarWriters[baseName] = writerId;
-        }
+        // Reported whichever occurrence meets it first (_setupArgument).
+        queryVarWriters[baseName] = writerId;
         tailTerm = rt.VarRef(tail.isReader ? readerId : writerId);
       }
     } else {
@@ -1750,9 +1752,8 @@ class GlpEngine {
       } else {
         final (writerId, readerId) = runtime.heap.allocateVariable();
         varNameToId[baseName] = writerId;
-        if (!head.isReader) {
-          queryVarWriters[baseName] = writerId;
-        }
+        // Reported whichever occurrence meets it first (_setupArgument).
+        queryVarWriters[baseName] = writerId;
         headTerm = head.isReader ? rt.VarRef(readerId) : rt.VarRef(writerId);
       }
     } else if (head is ListTerm) {
@@ -1777,9 +1778,8 @@ class GlpEngine {
       } else {
         final (writerId, readerId) = runtime.heap.allocateVariable();
         varNameToId[baseName] = writerId;
-        if (!tail.isReader) {
-          queryVarWriters[baseName] = writerId;
-        }
+        // Reported whichever occurrence meets it first (_setupArgument).
+        queryVarWriters[baseName] = writerId;
         tailTerm = tail.isReader ? rt.VarRef(readerId) : rt.VarRef(writerId);
       }
     } else {
