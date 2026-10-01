@@ -208,7 +208,7 @@ UserMsg  ::= msg(Constant, Constant, UserContent).    %% mediator -> agent
 %% AgentMsg and send_to_net/1 read the network entry at msg(Constant, _).
 OutputContent ::= response(Response)
                 ; text(Constant)
-                ; intro(Constant, FriendChannel)
+                ; intro(Constant, FriendChannel?)
                 ; coins(Stream(Bond))
                 ; balances(Stream(Bond))
                 ; trade_propose(Stream(Lot), Stream(Bond), TradeResponse?)
