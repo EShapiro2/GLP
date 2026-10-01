@@ -4,10 +4,7 @@
 // Spec: vGLP at 16b3b54 --- sections/vglp.tex, Definition "Guarded Clause,
 // Volitional Procedure, Interactive Type, Interactive Term, Ordinary Clause,
 // Procedure, vGLP Program"; sections/elicitation.tex, Definition "Canonical
-// Compilation".  In a program that declares a population, sGLP's
-// sections/simulation.tex, Definition "Simulation Program", and
-// sections/implementation.tex: the asking clause calls person(T, X) where the
-// canonical compilation calls construct(T, X).
+// Compilation".
 //
 // The syntax:
 //
@@ -44,9 +41,7 @@
 //
 // THE CONSTRUCT.  T is passed as the constant naming the moded interactive
 // type as written, 'Menu' or 'Menu?', which is how sGLP's person declarations
-// name it (ast.dart, PersonDecl.typeKey).  In a program that declares a
-// population the goal is person(T, X), sGLP's system module's entry point
-// (programs/system/sglp.glp); elsewhere construct(T, X), the construct
+// name it (ast.dart, PersonDecl.typeKey).  construct(T, X) is the construct
 // process, which is Part 2's runtime and not declared here.
 
 import '../compiler/ast.dart';
@@ -59,10 +54,6 @@ import '../analysis/type_checker/type_ast.dart'
     show ProcDecl, TypeExpr;
 import 'mediator.dart' show printTypeDef, typeSource;
 import 'program_compilation.dart' show compiledHeader;
-
-/// The goal the asking clause calls in place of the construct process, in a
-/// program that declares a population (sGLP, Definition "Simulation Program").
-const personGoal = 'person';
 
 /// The construct process of an interactive type (vGLP, Definition "Canonical
 /// Compilation").
@@ -108,10 +99,7 @@ class CanonicalProgram {
   final Module module;
   final List<VolitionalProcedure> volitional;
 
-  /// Whether the asking clauses call person/2 rather than construct/2.
-  final bool population;
-
-  CanonicalProgram(this.source, this.module, this.volitional, this.population);
+  CanonicalProgram(this.source, this.module, this.volitional);
 }
 
 /// Whether [tokens] are a vGLP program in the paper's syntax: some declaration
@@ -136,20 +124,11 @@ bool isPaperSyntax(List<Token> tokens) {
 /// [isPaperSyntax] of a source's text.
 bool isPaperSyntaxSource(String text) => isPaperSyntax(Lexer(text).tokenize());
 
-/// Whether a source in the paper's syntax declares a population: a profile
-/// (`person <name>.`) or a run declaration.
-bool declaresPopulation(String text) {
-  final m = _parse(text).module;
-  return m.kinds.isNotEmpty || m.runDecl != null;
-}
-
 /// Compile [text], a vGLP program in the paper's syntax, by the canonical
-/// compilation.  [population] says that the program declares a population
-/// in another of its modules; one the source declares itself counts too.
-CanonicalProgram compileCanonical(String text, {bool population = false}) {
+/// compilation.
+CanonicalProgram compileCanonical(String text) {
   final parsed = _parse(text);
   final m = parsed.module;
-  final inPopulation = population || m.kinds.isNotEmpty || m.runDecl != null;
 
   _checkNoOldDesign(m);
 
@@ -215,8 +194,8 @@ CanonicalProgram compileCanonical(String text, {bool population = false}) {
       continue;
     }
     final decl = declsByKey[p.signature]!;
-    out.add(_Emitted(_askingDeclaration(decl, v), _askingClause(decl, v,
-        inPopulation ? personGoal : constructGoal), p.signature));
+    out.add(_Emitted(_askingDeclaration(decl, v),
+        _askingClause(decl, v, constructGoal), p.signature));
     out.add(_Emitted(
         ProcDecl(v.guardedName, decl.argTypes, decl.line, decl.column,
             typeParams: decl.typeParams),
@@ -233,8 +212,7 @@ CanonicalProgram compileCanonical(String text, {bool population = false}) {
 
   final source = _emit(m, out, bare);
   final module = Parser(Lexer(source).tokenize()).parseModule();
-  return CanonicalProgram(
-      source, module, volitional.values.toList(), inPopulation);
+  return CanonicalProgram(source, module, volitional.values.toList());
 }
 
 // ---------------------------------------------------------------------------
@@ -587,8 +565,7 @@ ProcDecl _askingDeclaration(ProcDecl decl, VolitionalProcedure v) => ProcDecl(
 ///
 /// S'_l the reader of S_l at an input position and the writer at an output
 /// position, the head carrying the pair's other end; X and X? exchanged where
-/// T is in writer mode; person(T, X) in place of construct(T, X) in a program
-/// that declares a population.
+/// T is in writer mode.
 Procedure _askingClause(ProcDecl decl, VolitionalProcedure v, String goal) {
   final l = decl.line, c = decl.column;
   final head = <Term>[];

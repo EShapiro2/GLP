@@ -1098,7 +1098,7 @@ TypeEnvironment _buildDeclTypes(
 /// a parameter to any type of the program, an input type included
 /// (`typed-glp.tex`, "Type Declarations": `Stream?` is a type), complementation
 /// being an involution, $(T?)? = T$ (`appendix-type-automaton.tex`, Definition
-/// "Dual Type Automaton").  So `person(Constant?, X)` takes a writer at 2 where
+/// "Dual Type Automaton").  So `procedure(X) p(Constant?, X)` takes a writer at 2 where
 /// `X` is bound to an output type and a reader where it is bound to an input
 /// type, and neither is fixed by the template: the mode there is decided with
 /// the binding, in [_inferConcreteDecl], or by the atoms that type the variable.

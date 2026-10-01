@@ -54,7 +54,6 @@ import 'package:glp_runtime/sglp/population.dart'
         populationOf;
 import 'package:glp_runtime/sglp/draws.dart' show rootLineage;
 import 'package:glp_runtime/sglp/log.dart' show SimLog;
-import 'package:glp_runtime/sglp/person.dart' show registerSglpKernels;
 
 /// Result of running a goal
 class ExecutionResult {
@@ -266,7 +265,6 @@ class GlpEngine {
 
     registerStandardPredicates(_runtime.systemPredicates);
     registerModuleKernels(_runtime);
-    registerSglpKernels(_runtime);
     _loadRootSelf();
   }
 
@@ -445,14 +443,6 @@ class GlpEngine {
       ancestorScope = discovered
           .firstWhere((m) => m.filePath == name, orElse: () => discovered!.first)
           .ancestorScope;
-    }
-    // sGLP: a module that declares a population imports sGLP's system module
-    // (person/2), as the linker gives it to a program that does
-    // (program_linker.dart, _addSglpSystemModule).
-    if (module.kinds.isNotEmpty || module.runDecl != null) {
-      ancestorScope = withSglpSystemScope(
-          ancestorScope ?? buildRootScopeEnvironment(),
-          File(_rootSelfGlpPath).parent.absolute.path);
     }
 
     // Type check if program has procedure declarations. (Single-file/REPL
@@ -1008,9 +998,6 @@ class GlpEngine {
 
     final (runner, goalEntry) =
         _runnerForQuery(program, procedureLabel);
-    // person/2 finds the person procedures in the code of the asking goal's
-    // program, through the runtime's runners.
-    if (_runtime.sim != null) _runtime.runners['main'] = runner;
     final scheduler = Scheduler(rt: _runtime, runners: {'main': runner});
     scheduler.resetDisplayNumbering();
     scheduler.setQueryVarNames(queryVarWriters);
@@ -1099,9 +1086,6 @@ class GlpEngine {
     // conjunct after it.  sGLP: no Release is taken until the last conjunct
     // is in, which one drain after all of them gives by construction.
     _beginSimulation();
-    // person/2 finds the person procedures in the code of the asking goal's
-    // program, through the runtime's runners.
-    if (_runtime.sim != null) _runtime.runners['main'] = runner;
     var conjunct = 0;
 
     // Every conjunct is found before any is put to the machine, so a refused

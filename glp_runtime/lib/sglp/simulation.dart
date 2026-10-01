@@ -53,26 +53,6 @@ class PendingGoal {
       time < o.time || (time == o.time && lineage < o.lineage);
 }
 
-/// A person goal as person/2 spawned it (lib/sglp/person.dart): at [agent],
-/// of the person procedure [procedure] that the agent's kind [kind] declares
-/// for the interactive type [type], handed [seed], for the asked goal whose
-/// identifier is [askedLineage].
-class PersonSpawn {
-  final int agent;
-  final String type;
-  final String kind;
-  final String procedure;
-  final int seed;
-  final int askedLineage;
-  final int goalId;
-  PersonSpawn(this.agent, this.type, this.kind, this.procedure, this.seed,
-      this.askedLineage, this.goalId);
-
-  @override
-  String toString() =>
-      'person($agent, $type, $kind:$procedure, seed $seed, goal $goalId)';
-}
-
 /// A Release as it was taken: the time the clock advanced to, and the goal.
 class ReleaseRecord {
   final double time;
@@ -121,10 +101,6 @@ class SimState {
   /// Called at each reduction the machine makes in this run, with the
   /// reduced goal's procedure and the clock.  Null unless a harness sets it.
   void Function(String signature, int goalId, double clock)? onReduce;
-
-  /// Called at each person goal person/2 spawns.  Null unless a harness sets
-  /// it.
-  void Function(PersonSpawn)? onPerson;
 
   /// The run's log (Definition "Interface Variable, Log"), where the engine
   /// was given somewhere to write it; null otherwise, and then nothing tracks
