@@ -23,6 +23,7 @@ import '../analysis/type_checker/type_identity.dart';
 import '../runtime/module_hierarchy.dart';
 import '../analysis/type_checker/type_environment_builder.dart';
 import '../vglp/mediator.dart';
+import '../vglp/canonical.dart' show isPaperSyntaxSource;
 import '../vglp/program_compilation.dart';
 
 /// A discovered module in the program tree.
@@ -187,35 +188,45 @@ List<DiscoveredModule> _discoverGlpModules(
 /// compiled agent is its own change, not a side effect of loading it.  A
 /// directory whose program is written in vGLP alone has no such file, and its
 /// sources compile and run.
+///
+/// A source in the paper's syntax compiles by the canonical compilation of
+/// vGLP at 16b3b54; one in the old syntax keeps its old compilation against
+/// the generic mediator, and is not compiled where the mediator is missing, as
+/// before (compileVglpSource).
 void _addVglpModules(List<DiscoveredModule> modules, Directory root,
     String? programsDir, String? rootSelfGlpPath) {
   final vglpFiles = root
       .listSync(recursive: true)
       .whereType<File>()
       .where((f) => f.path.endsWith('.vglp'))
-      .toList();
+      .where((f) {
+    final filename = f.path.split(Platform.pathSeparator).last;
+    final stem = filename.substring(0, filename.length - '.vglp'.length);
+    // the hand-written module stands
+    return !File('${f.parent.path}${Platform.pathSeparator}$stem.glp')
+        .existsSync();
+  }).toList();
   if (vglpFiles.isEmpty) return;
 
   final mediator = _mediatorSource(programsDir);
-  if (mediator == null) return;
+  final texts = {for (final f in vglpFiles) f.path: f.readAsStringSync()};
 
   for (final file in vglpFiles) {
     final filename = file.path.split(Platform.pathSeparator).last;
     final stem = filename.substring(0, filename.length - '.vglp'.length);
-    if (File('${file.parent.path}${Platform.pathSeparator}$stem.glp')
-        .existsSync()) {
-      continue;  // the hand-written module stands
-    }
+    final text = texts[file.path]!;
+    final paper = isPaperSyntaxSource(text);
+    if (!paper && mediator == null) continue;
 
     final ancestorScope =
         _vglpScope(file, modules, root, programsDir, rootSelfGlpPath);
 
-    final source = Parser(Lexer(file.readAsStringSync()).tokenize(), vglp: true)
-        .parseModule();
-    final compiled =
-        compileProgram(source, mediator, scope: ancestorScope);
+    final compiledSource = compileVglpSource(text,
+        mediator: mediator,
+        scope: ancestorScope,
+        path: file.path);
     final compiledAst =
-        Parser(Lexer(compiled.source).tokenize()).parseModule();
+        Parser(Lexer(compiledSource).tokenize()).parseModule();
 
     modules.add(DiscoveredModule(
       filePath: file.path,
@@ -1764,13 +1775,10 @@ List<String> emitVglpSources(String rootDir,
     void Function(String message)? onSkip}) {
   final root = Directory(rootDir).absolute;
   final programsDir = File(rootSelfGlpPath).parent.absolute.path;
+  // A source in the old syntax compiles against the generic mediator, and
+  // emitCompiledVglp refuses it where the mediator is missing; one in the
+  // paper's syntax needs none.
   final mediator = _mediatorSource(programsDir);
-  if (mediator == null) {
-    throw StateError(
-        'The generic mediator source is not at $programsDir/vglp: the '
-        'canonical compilation emits the mediator into every compiled program '
-        'and reads it from there.');
-  }
 
   final modules = _discoverGlpModules(root, programsDir, rootSelfGlpPath);
   return emitCompiledVglp(root.path, mediator,

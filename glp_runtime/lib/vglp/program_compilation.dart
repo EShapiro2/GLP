@@ -22,6 +22,7 @@ import '../compiler/lexer.dart';
 import '../compiler/parser.dart';
 import '../compiler/glp_printer.dart';
 import '../analysis/type_checker/type_ast.dart';
+import 'canonical.dart';
 import 'clause_compilation.dart';
 import 'mediator.dart';
 import 'types.dart';
@@ -167,6 +168,28 @@ String _emit(ast.Module module, CompiledTypes types, InstantiatedMediator med,
   return b.toString();
 }
 
+/// Compile the text of a `.vglp` source to the text of its GLP module.
+///
+/// A source in the paper's syntax --- `procedure (T)*p(...)`, `(A)*p(...)` ---
+/// compiles by the canonical compilation of vGLP at 16b3b54 (canonical.dart).
+/// A source in the old syntax, with volition guards `*(...)`, keeps
+/// its old compilation, against the generic [mediator], until its owner ports
+/// it (vGLP's code task of 2026-10-01, item 6); it has none to compile against
+/// where [mediator] is null.
+String compileVglpSource(String text,
+    {MediatorSource? mediator, TypeEnvironment? scope, String? path}) {
+  if (isPaperSyntaxSource(text)) {
+    return compileCanonical(text).source;
+  }
+  if (mediator == null) {
+    throw StateError('${path ?? 'The source'} is in the old syntax, and the '
+        'generic mediator source it compiles against is missing');
+  }
+  final module =
+      Parser(Lexer(text).tokenize(), vglp: true).parseModule();
+  return compileProgram(module, mediator, scope: scope).source;
+}
+
 /// Emit the compiled GLP beside each `.vglp` source under [rootDir], and return
 /// the paths written.
 ///
@@ -178,7 +201,7 @@ String _emit(ast.Module module, CompiledTypes types, InstantiatedMediator med,
 /// and a `<stem>.glp` that exists and does not carry the compiler's header is
 /// left alone and reported: switching a deployed program onto its compiled
 /// agent is its own change.
-List<String> emitCompiledVglp(String rootDir, MediatorSource mediator,
+List<String> emitCompiledVglp(String rootDir, MediatorSource? mediator,
     {required TypeEnvironment Function(String vglpPath) scopeFor,
     void Function(String message)? onSkip}) {
   final root = Directory(rootDir);
@@ -190,7 +213,8 @@ List<String> emitCompiledVglp(String rootDir, MediatorSource mediator,
   final sources = root
       .listSync(recursive: true)
       .whereType<File>()
-      .where((f) => f.path.endsWith('.vglp'));
+      .where((f) => f.path.endsWith('.vglp'))
+      .toList();
 
   for (final file in sources) {
     final target = '${file.path.substring(0, file.path.length - 5)}.glp';
@@ -201,11 +225,13 @@ List<String> emitCompiledVglp(String rootDir, MediatorSource mediator,
       continue;
     }
 
-    final module = Parser(Lexer(file.readAsStringSync()).tokenize(), vglp: true)
-        .parseModule();
-    final compiled =
-        compileProgram(module, mediator, scope: scopeFor(file.path));
-    existing.writeAsStringSync(compiled.source);
+    final text = file.readAsStringSync();
+    existing.writeAsStringSync(compileVglpSource(text,
+        mediator: mediator,
+        // The old compilation reads types off the checker in this scope; the
+        // canonical compilation is syntactic and needs none.
+        scope: isPaperSyntaxSource(text) ? null : scopeFor(file.path),
+        path: file.path));
     written.add(target);
   }
   return written;
