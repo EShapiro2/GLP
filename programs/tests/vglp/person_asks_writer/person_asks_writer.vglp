@@ -1,0 +1,117 @@
+%% The vGLP source of programs/tests/sglp/person_asks_writer.glp: sGLP's
+%% Grassroots Social Graph, sections/example.tex, whose vGLP program gives the
+%% two volitional procedures.  Its canonical compilation (vGLP at 16b3b54,
+%% sections/elicitation.tex, Definition "Canonical Compilation") in a program
+%% that declares a population, the asking clauses calling person('Menu', X?)
+%% and person('Card', X?) (sGLP, sections/simulation.tex, Definition
+%% "Simulation Program"), is that fixture up to the names of the asking clauses
+%% and of the (n+1)-ary procedures.  The rest --- the agent, start/5, one_of,
+%% length and nth, the profiles and the run --- is the fixture's, whose header
+%% says what it supplies that the paper does not.
+%%
+%% Menu and Card are in writer mode: the program writes the menu and the card,
+%% and hands the person the choice and the yes or no.
+
+Peer    ::= Constant.
+YesNo   ::= yes ; no.
+Peers   ::= [] ; [Peer | Peers].
+Choice  ::= same(Peer) ; other(Peer).
+Menu    ::= menu(Peers, Peers, Choice?).
+Card    ::= card(Peer, YesNo?).
+Content ::= offer(Peer) ; reply(Peer, YesNo).
+Msg     ::= msg(Peer, Content).
+
+%% Show the person both lists, and hand them the choice.
+procedure (Menu)*ask(Peers?, Peers?, Choice).
+(menu(Ss?, Os?, C))*ask(Ss, Os, C?).
+
+%% Show the person who offers, and hand them yes or no.
+procedure (Card)*respond(Peer?, YesNo).
+(card(From?, A))*respond(From, A?).
+
+%% The person picked a peer: offer, and ask again.
+procedure agent(Peer?, Peers?, Peers?, Choice?,
+                Stream(Msg)?, Stream(Msg)).
+agent(Id, Ss, Os, same(To), NetIn, [msg(To?, offer(Id?))|Outs?]) :-
+    ground(Id?), ground(Ss?), ground(Os?), ground(To?) |
+    ask(Ss?, Os?, Pick),
+    agent(Id?, Ss?, Os?, Pick?, NetIn?, Outs).
+agent(Id, Ss, Os, other(To), NetIn, [msg(To?, offer(Id?))|Outs?]) :-
+    ground(Id?), ground(Ss?), ground(Os?), ground(To?) |
+    ask(Ss?, Os?, Pick),
+    agent(Id?, Ss?, Os?, Pick?, NetIn?, Outs).
+
+%% An offer arrives: put it to the person, and reply.
+agent(Id, Ss, Os, Pick, [msg(_, offer(From))|NetIn],
+      [msg(From?, reply(Id?, A?))|Outs?]) :-
+    ground(Id?), ground(From?) |
+    respond(From?, A),
+    agent(Id?, Ss?, Os?, Pick?, NetIn?, Outs).
+
+%% A reply to my offer arrives.
+agent(Id, Ss, Os, Pick, [msg(_, reply(_, _))|NetIn], Outs?) :-
+    agent(Id?, Ss?, Os?, Pick?, NetIn?, Outs).
+
+%% The initial goal of an agent: ask the first menu.
+procedure start(Peer?, Peers?, Peers?, Stream(Msg)?, Stream(Msg)).
+start(Id, Ss, Os, NetIn, Outs?) :- ground(Ss?), ground(Os?) |
+    ask(Ss?, Os?, P), agent(Id?, Ss?, Os?, P?, NetIn?, Outs).
+
+%% One of a list, drawn uniformly (sglp.tex, which writes the declaration
+%% without its parameter list; TGLP, "Declaration parameters", requires it).
+procedure(X) one_of(Stream(X)?, Integer?, X).
+one_of(Xs, S, X?) :- ground(Xs?) |
+    length(Xs?, N), random(S?, N?, K, _), nth(K?, Xs?, X).
+
+%% length and nth, which the paper calls GLP and does not give.
+procedure(X) length(Stream(X)?, Integer).
+length([], 0).
+length([_|Xs], N?) :- length(Xs?, N1), N := N1? + 1.
+
+procedure(X) nth(Integer?, OpenStream(X)?, X).
+nth(1, [X|_], X?).
+nth(K, [_|Xs], X?) :- K? > 1 | K1 := K? - 1, nth(K1?, Xs?, X).
+
+person homophile.
+Menu =::= homophile_menu.
+procedure homophile_menu(Menu?, Integer?).
+homophile_menu(M, S) :-
+    random(S?, 100, K, S1), homophile_pick(K?, S1?, M?) @ 1/week.
+procedure homophile_pick(Integer?, Integer?, Menu?).
+homophile_pick(K, S, menu(Ss, _, same(P?))) :-
+    K? =< 98, ground(Ss?) | one_of(Ss?, S?, P).
+homophile_pick(K, S, menu(_, Os, other(P?))) :-
+    K? > 98, ground(Os?) | one_of(Os?, S?, P).
+
+person indifferent.
+Menu =::= indifferent_menu.
+procedure indifferent_menu(Menu?, Integer?).
+indifferent_menu(M, S) :-
+    random(S?, 100, K, S1), indifferent_pick(K?, S1?, M?) @ 2/week.
+procedure indifferent_pick(Integer?, Integer?, Menu?).
+indifferent_pick(K, S, menu(Ss, _, same(P?))) :-
+    K? =< 50, ground(Ss?) | one_of(Ss?, S?, P).
+indifferent_pick(K, S, menu(_, Os, other(P?))) :-
+    K? > 50, ground(Os?) | one_of(Os?, S?, P).
+
+person wary.
+Card =::= wary_card.
+procedure wary_card(Card?, Integer?).
+wary_card(C, S) :-
+    random(S?, 100, K, _), wary_answer(K?, C?) @ 1/day.
+procedure wary_answer(Integer?, Card?).
+wary_answer(K, card(_, yes)) :- K? =< 20 | true.
+wary_answer(K, card(_, no))  :- K? > 20  | true.
+
+person sociable.
+Card =::= sociable_card.
+procedure sociable_card(Card?, Integer?).
+sociable_card(C, S) :-
+    random(S?, 100, K, _), sociable_answer(K?, C?) @ 1/hour.
+procedure sociable_answer(Integer?, Card?).
+sociable_answer(K, card(_, yes)) :- K? =< 90 | true.
+sociable_answer(K, card(_, no))  :- K? > 90  | true.
+
+run 2 agents [ approach ~ (homophile : 0.6 ; indifferent : 0.4),
+               response ~ (wary : 0.7 ; sociable : 0.3) ]
+    until 1 week seed 20260927.
