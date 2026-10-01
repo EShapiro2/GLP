@@ -211,7 +211,7 @@ open_three([1, 2, 3 | Tail?]) :- hold(Tail).
 
 %% hold(X): hold a writer and never bind it.
 procedure hold(Stream(Integer)).
-hold(X?) :- true.
+hold(_?) :- true.
 
 %% play_clean(Out, Rs): the residual counter on a closed stream under grants of
 %% 2, the control stream never written: clean termination, the request stream
