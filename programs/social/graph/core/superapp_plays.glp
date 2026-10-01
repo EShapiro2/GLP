@@ -595,7 +595,7 @@ procedure screen_of(Channel(Stream(Event), Stream(UserAnswer))?, Stream(ScreenCo
 screen_of(ch(Events, Answers?), Screen?) :- hold_answers(Answers), screen_events(Events?, Screen).
 
 procedure hold_answers(Stream(UserAnswer)).
-hold_answers(X?) :- true.
+hold_answers(_?) :- true.
 
 procedure screen_events(Stream(Event)?, Stream(ScreenContent)).
 screen_events([msg(_, _, X) | Es], [X? | Screen?]) :- ground(X?) | screen_events(Es?, Screen).
@@ -758,7 +758,7 @@ procedure cssn_onlooker(Channel(Stream(CsAppNotify), Stream(CsAppCmd))?, Stream(
 cssn_onlooker(ch(Notify, Cmds?), Seen?) :- hold_cmds(Cmds), pass_notify(Notify?, Seen).
 
 procedure hold_cmds(Stream(CsAppCmd)).
-hold_cmds(X?) :- true.
+hold_cmds(_?) :- true.
 
 procedure pass_notify(Stream(CsAppNotify)?, Stream(CsAppNotify)).
 pass_notify([N | Ns], [N? | Seen?]) :- ground(N?) | pass_notify(Ns?, Seen).
@@ -1018,7 +1018,7 @@ bob_reinvite_wait([], []).
 %% super-app that still hosts a running mini-app.  (hold_cmds/1 above is the
 %% child-safe platform's command stream and is a different type.)
 procedure hold_person(UserInStream).
-hold_person(X?) :- true.
+hold_person(_?) :- true.
 
 %% =============================================================================
 %% play_sovereign: the denominated currencies mini-app (programs/currencies/sovereign/

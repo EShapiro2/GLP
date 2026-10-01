@@ -117,7 +117,7 @@ report(sent, [probed(carol) | Ui2?], Ui2).
 report(none, [no_conv(carol) | Ui2?], Ui2).
 
 procedure hold_value(String).
-hold_value(X?) :- true.
+hold_value(_?) :- true.
 
 %% forward(W, Convs, Convs1, Held, Held1): carol forwards the probe's end to bob
 %% where that conversation is open, else holds it.
