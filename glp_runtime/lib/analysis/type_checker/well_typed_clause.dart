@@ -895,10 +895,13 @@ WellTypedResult _checkBodyAtom(
 }) {
   // A rated goal (sGLP, Goal @ Rate) is typed as its goal: the rate is not an
   // argument and adds nothing to the goal's type (svGLP, sections/sglp.tex).
+  // So it gets callee-clause solving as any goal does, and [callee] is passed
+  // on; until 2026-10-01 it was not (GLP, 2026-10-01).
   if (atom is ast.RatedGoal) {
     return _checkBodyAtomWithTerm(atom.innerGoal, atomIndex, dfa, env,
         callerVarTypes: callerVarTypes, collector: collector,
-        activeInstantiations: activeInstantiations);
+        activeInstantiations: activeInstantiations,
+        callee: callee);
   }
 
   // Handle SpawnGoal (Goal@Agent) - type-check the inner goal
