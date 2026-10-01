@@ -17,7 +17,7 @@ Xs_home_2 ::= xs_home_2(String, Constant).
 Reply_home_2 ::= then(Xs_home_2).
 Xs_home_3 ::= xs_home_3(Constant, Constant).
 Reply_home_3 ::= then(Xs_home_3).
-Xs_home_4 ::= xs_home_4(Constant).
+Xs_home_4 ::= xs_home_4(Key).
 Reply_home_4 ::= then(Xs_home_4).
 Answer ::= Xs_respond_friend_1 ; Xs_respond_friend_2 ; Xs_home_1 ; Xs_home_2 ; Xs_home_3 ; Xs_home_4.
 Escrow ::= esc_respond_friend_1(Reply_respond_friend_1?) ; esc_respond_friend_2(Reply_respond_friend_2?) ; esc_home_1(Reply_home_1?) ; esc_home_2(Reply_home_2?) ; esc_home_3(Reply_home_3?) ; esc_home_4(Reply_home_4?).
@@ -67,14 +67,14 @@ trust_act(Med, Key, Id, Outs, [msg(person, Id?, trust(Key?)) | Cmds?]) :- ground
 procedure invite_act(Channel(Closed, Stream(AgentMsg))?, Constant?, Constant?, Constant?, AgentToUserStream?, Stream(UserInMsg)).
 invite_act(Med, App, Friend, Id, Outs, [msg(person, Id?, invite(App?, Friend?)) | Cmds?]) :- ground(App?), ground(Friend?) | home(Med?, Id?, Outs?, Cmds, none, none, none, none).
 
-procedure connect_act(Channel(Closed, Stream(AgentMsg))?, Constant?, Constant?, AgentToUserStream?, Stream(UserInMsg)).
+procedure connect_act(Channel(Closed, Stream(AgentMsg))?, Key?, Constant?, AgentToUserStream?, Stream(UserInMsg)).
 connect_act(Med, Friend, Id, Outs, [msg(person, Id?, connect(Friend?)) | Cmds?]) :- ground(Friend?) | home(Med?, Id?, Outs?, Cmds, none, none, none, none).
 
 procedure install_act(Channel(Closed, Stream(AgentMsg))?, Content?, Constant?, Constant?, AgentToUserStream?, Stream(UserInMsg)).
 install_act(Med, M, App, Id, Outs, [msg(person, Id?, install(App?, M?, CSig?, Ui)) | Cmds?]) :- module(M?) | med_split(Med?, Medb, Medr), med_split(Medr?, Medb1, Medr1), creator_certification(Medb?, M?, CSig), hold_ui(Medb1?, Ui?), home(Medr1?, Id?, Outs?, Cmds, none, none, none, none).
 install_act(Med, S, _, Id, Outs, Cmds?) :- string(S?) | home(Med?, Id?, Outs?, Cmds, none, none, none, none).
 
-procedure creator_certification(Channel(Closed, Stream(AgentMsg))?, Content?, String).
+procedure creator_certification(Channel(Closed, Stream(AgentMsg))?, Module?, String).
 creator_certification(_, M, CSig?) :- decompose_module(M?, _, Src, _), self_key(K), sign(creator_cert(Src?, [friendship, ending_a_friendship], grassroots), K?, CSig).
 
 procedure hold_ui(Channel(Closed, Stream(AgentMsg))?, AppUiStream?).

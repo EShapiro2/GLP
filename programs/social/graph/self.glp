@@ -23,7 +23,7 @@ PendingValue ::= response(Response?) ; channel(IntroChannel) ; error.
 %% --- Content types for messages ---
 
 %% Content carried inside user-to-agent messages (msg(person, Id, Content))
-UserContent ::= connect(Constant)
+UserContent ::= connect(Key)
               ; decision(Decision, Constant, PendingValue)
               ; send(Constant, Constant)
               ; introduce(Constant, Constant)
@@ -168,8 +168,8 @@ AppUi       ::= opened(Constant) ; greeted(Constant) ; got(String)
 AppUiStream ::= [] ; [AppUi | AppUiStream].
 
 %% Answers of the host's lookups and checks.
-AppLookup ::= found(Content) ; missing.
-Verdict   ::= ok(Content) ; refused.
+AppLookup ::= found(Module) ; missing.
+Verdict   ::= ok(Module) ; refused.
 Offer     ::= none ; offer(String, Constant, String).
 
 %% The creator's certification, signed over the source identity together with
@@ -188,7 +188,7 @@ AppStatus ::= idle(AppUiStream?) ; running(SgToAppStream?)
             ; idle_coins(Channel(Stream(UserAnswer), Stream(Event))) ; running_coins(Stream(Conversation)?)
             ; idle_cssn(Channel(Stream(CsAppCmd), Stream(CsAppNotify))) ; running_cssn(Stream(CsConversation)?)
             ; idle_sovereign(Channel(Stream(SvUserAnswer), Stream(SvEvent))) ; running_sovereign(Stream(SvConversation)?).
-App       ::= app(Constant, Content, String, AppStatus).
+App       ::= app(Constant, Module, String, AppStatus).
 AppList   ::= [] ; [App | AppList].
 Attest     ::= att(Constant, String).
 AttestList ::= [] ; [Attest | AttestList].

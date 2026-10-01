@@ -37,8 +37,8 @@ imported procedure superapp_plays#play_invite_timed(Integer).
 exported procedure play_invite_timed(Integer).
 play_invite_timed(Ms?) :- superapp_plays # play_invite_timed(Ms).
 
-imported procedure superapp_plays#sg_init(Constant?, Constant?, NetInStream?).
-exported procedure sg_init(Constant?, Constant?, NetInStream?).
+imported procedure superapp_plays#sg_init(Key?, Constant?, NetInStream?).
+exported procedure sg_init(Key?, Constant?, NetInStream?).
 sg_init(Id, Role, NetIn) :- superapp_plays # sg_init(Id?, Role?, NetIn?).
 
 imported procedure superapp_plays#play_load(String?, Constant, String).

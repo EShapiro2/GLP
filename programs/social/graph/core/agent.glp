@@ -187,7 +187,7 @@ agent(Id, [msg(person, Id1, install(App, M, CSig, Ui?))|UserIn], NetIn, Outs,
       host(Apps, Atts, Pend, Trusted)) :-
     Id? =?= Id1?, ground(App?), ground(Trusted?) |
     verify_install(M?, CSig?, Trusted?, V),
-    install_step(V?, App?, M?, CSig?, Ui, Apps?, Apps1),
+    install_step(V?, App?, CSig?, Ui, Apps?, Apps1),
     agent(Id?, UserIn?, NetIn?, Outs?, host(Apps1?, Atts?, Pend?, Trusted?)).
 
 %% Install a certified mini-app of the currency's interface: its
@@ -196,7 +196,7 @@ agent(Id, [msg(person, Id1, install_coins(App, M, CSig, Ui))|UserIn], NetIn, Out
       host(Apps, Atts, Pend, Trusted)) :-
     Id? =?= Id1?, ground(App?), ground(Trusted?) |
     verify_install(M?, CSig?, Trusted?, V),
-    install_coins_step(V?, App?, M?, CSig?, Ui?, Apps?, Apps1),
+    install_coins_step(V?, App?, CSig?, Ui?, Apps?, Apps1),
     agent(Id?, UserIn?, NetIn?, Outs?, host(Apps1?, Atts?, Pend?, Trusted?)).
 
 %% Install a certified mini-app of the denominated currencies' interface: its
@@ -206,7 +206,7 @@ agent(Id, [msg(person, Id1, install_sovereign(App, M, CSig, Ui))|UserIn], NetIn,
       host(Apps, Atts, Pend, Trusted)) :-
     Id? =?= Id1?, ground(App?), ground(Trusted?) |
     verify_install(M?, CSig?, Trusted?, V),
-    install_sovereign_step(V?, App?, M?, CSig?, Ui?, Apps?, Apps1),
+    install_sovereign_step(V?, App?, CSig?, Ui?, Apps?, Apps1),
     agent(Id?, UserIn?, NetIn?, Outs?, host(Apps1?, Atts?, Pend?, Trusted?)).
 
 %% Install a certified mini-app of the child-safe platform's interface: its
@@ -215,7 +215,7 @@ agent(Id, [msg(person, Id1, install_cssn(App, M, CSig, Ui))|UserIn], NetIn, Outs
       host(Apps, Atts, Pend, Trusted)) :-
     Id? =?= Id1?, ground(App?), ground(Trusted?) |
     verify_install(M?, CSig?, Trusted?, V),
-    install_cssn_step(V?, App?, M?, CSig?, Ui?, Apps?, Apps1),
+    install_cssn_step(V?, App?, CSig?, Ui?, Apps?, Apps1),
     agent(Id?, UserIn?, NetIn?, Outs?, host(Apps1?, Atts?, Pend?, Trusted?)).
 
 %% Invite a friend to the instance of a mini-app: over the friend channel, the
@@ -457,12 +457,12 @@ agent(_, _, [], Outs, Host) :- close_outputs(Outs?), close_host(Host?).
 %% (a forged artefact is its text), the compiler's key must be trusted, and the
 %% creator's certification signed over the module's source identity with the
 %% verdict grassroots.
-procedure verify_install(Content?, String?, Stream(String)?, Constant).
+procedure verify_install(Content?, String?, Stream(String)?, Verdict).
 verify_install(M, CSig, Trusted, V?) :-
     module(M?) |
     decompose_module(M?, CK, Src, _),
     key_trusted(CK?, Trusted?, T),
-    creator_check(T?, CSig?, Src?, V).
+    creator_check(T?, CSig?, Src?, M?, V).
 verify_install(_, _, _, refused) :- otherwise | true.
 
 procedure key_trusted(String?, Stream(String)?, Constant).
@@ -470,39 +470,39 @@ key_trusted(K, [K1 | _], true) :- K? =?= K1? | true.
 key_trusted(K, [_ | Ks], T?) :- otherwise | key_trusted(K?, Ks?, T).
 key_trusted(_, [], false).
 
-procedure creator_check(Constant?, String?, String?, Constant).
-creator_check(true, CSig, Src, V?) :-
+procedure creator_check(Constant?, String?, String?, Module?, Verdict).
+creator_check(true, CSig, Src, M, V?) :-
     signature(CSig?, Sg),
-    cert_signed(Sg?, Src?, V).
-creator_check(false, _, _, refused).
+    cert_signed(Sg?, Src?, M?, V).
+creator_check(false, _, _, _, refused).
 
 %% cert_signed(Sg, Src, V): the certification taken apart.  Where it verifies
 %% it is read by its shape; where it is unsigned --- a forgery --- the
 %% installation is refused, as under a key the person does not trust.
-procedure cert_signed(Signature?, String?, Constant).
-cert_signed(signed(_, _, Cert), Src, V?) :- cert_check(Cert?, Src?, V).
-cert_signed(unsigned, _, refused).
+procedure cert_signed(Signature?, String?, Module?, Verdict).
+cert_signed(signed(_, _, Cert), Src, M, V?) :- cert_check(Cert?, Src?, M?, V).
+cert_signed(unsigned, _, _, refused).
 
 %% The signed term is untyped; the certification is read by its shape.
-procedure cert_check(_?, String?, Constant).
-cert_check(creator_cert(Src1, _, grassroots), Src, ok) :- Src? =?= Src1? | true.
-cert_check(_, _, refused) :- otherwise | true.
+procedure cert_check(_?, String?, Module?, Verdict).
+cert_check(creator_cert(Src1, _, grassroots), Src, M, ok(M?)) :- Src? =?= Src1? | true.
+cert_check(_, _, _, refused) :- otherwise | true.
 
-procedure install_step(Constant?, Constant?, Content?, String?, AppUiStream, AppList?, AppList).
-install_step(ok, App, M, CSig, Ui?, Apps, [app(App?, M?, CSig?, idle(Ui)) | Apps?]).
-install_step(refused, _, _, _, [], Apps, Apps?).
+procedure install_step(Verdict?, Constant?, String?, AppUiStream, AppList?, AppList).
+install_step(ok(M), App, CSig, Ui?, Apps, [app(App?, M?, CSig?, idle(Ui)) | Apps?]).
+install_step(refused, _, _, [], Apps, Apps?).
 
-procedure install_coins_step(Constant?, Constant?, Content?, String?, Channel(Stream(UserAnswer), Stream(Event))?, AppList?, AppList).
-install_coins_step(ok, App, M, CSig, Ui, Apps, [app(App?, M?, CSig?, idle_coins(Ui?)) | Apps?]).
-install_coins_step(refused, _, _, _, _, Apps, Apps?).
+procedure install_coins_step(Verdict?, Constant?, String?, Channel(Stream(UserAnswer), Stream(Event))?, AppList?, AppList).
+install_coins_step(ok(M), App, CSig, Ui, Apps, [app(App?, M?, CSig?, idle_coins(Ui?)) | Apps?]).
+install_coins_step(refused, _, _, _, Apps, Apps?).
 
-procedure install_sovereign_step(Constant?, Constant?, Content?, String?, Channel(Stream(SvUserAnswer), Stream(SvEvent))?, AppList?, AppList).
-install_sovereign_step(ok, App, M, CSig, Ui, Apps, [app(App?, M?, CSig?, idle_sovereign(Ui?)) | Apps?]).
-install_sovereign_step(refused, _, _, _, _, Apps, Apps?).
+procedure install_sovereign_step(Verdict?, Constant?, String?, Channel(Stream(SvUserAnswer), Stream(SvEvent))?, AppList?, AppList).
+install_sovereign_step(ok(M), App, CSig, Ui, Apps, [app(App?, M?, CSig?, idle_sovereign(Ui?)) | Apps?]).
+install_sovereign_step(refused, _, _, _, Apps, Apps?).
 
-procedure install_cssn_step(Constant?, Constant?, Content?, String?, Channel(Stream(CsAppCmd), Stream(CsAppNotify))?, AppList?, AppList).
-install_cssn_step(ok, App, M, CSig, Ui, Apps, [app(App?, M?, CSig?, idle_cssn(Ui?)) | Apps?]).
-install_cssn_step(refused, _, _, _, _, Apps, Apps?).
+procedure install_cssn_step(Verdict?, Constant?, String?, Channel(Stream(CsAppCmd), Stream(CsAppNotify))?, AppList?, AppList).
+install_cssn_step(ok(M), App, CSig, Ui, Apps, [app(App?, M?, CSig?, idle_cssn(Ui?)) | Apps?]).
+install_cssn_step(refused, _, _, _, Apps, Apps?).
 
 %% app_idle(App, Apps, Apps1): the mini-app's entry returns from running to
 %% idle.  The user-interface writer the entry held at installation went to the
@@ -543,7 +543,7 @@ app_module(_, [], [], missing).
 %% identities(App, M, Src, T): the mini-app's source identity, from its
 %% certificate, and the type identity of its entry in this scope --- ping/3, or
 %% coins/3 for the currency.
-procedure identities(Constant?, Content?, String, Constant).
+procedure identities(Constant?, Module?, String, Constant).
 identities(App, M, Src?, T?) :-
     decompose_module(M?, _, Src, _),
     app_kind(App?, K),
@@ -683,7 +683,7 @@ join_verify(true, found(M), App, Src, T, Ok?) :-
     identity_match(Src?, Src1?, T?, T1?, M?, Ok).
 join_verify(_, _, _, _, _, refused) :- otherwise | true.
 
-procedure identity_match(String?, String?, Constant?, Constant?, Content?, Verdict).
+procedure identity_match(String?, String?, Constant?, Constant?, Module?, Verdict).
 identity_match(Src, Src1, T, T1, M, ok(M?)) :- Src? =?= Src1?, T? =?= T1? | true.
 identity_match(_, _, _, _, _, refused) :- otherwise | true.
 
@@ -759,7 +759,7 @@ accept_root_step(refused, Id, _, _, _, _, UserIn, NetIn, Outs, Apps, Atts, Pend,
 %% channel.  An idle mini-app is activated first by run/3 under the type
 %% identity of its entry, with exactly its two channels: the user-interface
 %% channel held since installation, and the social-graph channel.
-procedure deliver(Constant?, Constant?, RootEnd?, Constant?, Constant?, Content?, AppList?, AppList, UserInStream?, UserInStream).
+procedure deliver(Constant?, Constant?, RootEnd?, Constant?, Constant?, Module?, AppList?, AppList, UserInStream?, UserInStream).
 deliver(App, Friend, ping_end(End), Id, T, M, [app(A, M1, C, idle(Ui?)) | Rest],
         [app(A?, M1?, C?, running(Sg1)) | Rest?], UserIn, UserIn1?) :-
     App? =?= A? |

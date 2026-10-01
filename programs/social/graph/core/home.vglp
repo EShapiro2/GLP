@@ -97,7 +97,7 @@ procedure invite_act(Constant?, Constant?, Constant?, AgentToUserStream?, Stream
 invite_act(App, Friend, Id, Outs, [msg(person, Id?, invite(App?, Friend?)) | Cmds?]) :-
     ground(App?), ground(Friend?) | home(Id?, Outs?, Cmds).
 
-procedure connect_act(Constant?, Constant?, AgentToUserStream?, Stream(UserInMsg)).
+procedure connect_act(Key?, Constant?, AgentToUserStream?, Stream(UserInMsg)).
 connect_act(Friend, Id, Outs, [msg(person, Id?, connect(Friend?)) | Cmds?]) :-
     ground(Friend?) | home(Id?, Outs?, Cmds).
 
@@ -116,7 +116,7 @@ install_act(S, _, Id, Outs, Cmds?) :-
 
 %% The creator's certification, signed here over the mini-app's source identity
 %% and the acts of its contract, as the super-app's plays sign it.
-procedure creator_certification(Content?, String).
+procedure creator_certification(Module?, String).
 creator_certification(M, CSig?) :-
     decompose_module(M?, _, Src, _),
     self_key(K),
