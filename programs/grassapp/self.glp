@@ -28,7 +28,7 @@ Response ::= accept(FriendChannel) ; no.
 Bond ::= bond(Constant, Constant, Constant).
 
 %% A trade line item: Count bonds of Issuer at Maturity.
-Lot ::= lot(Constant, Constant, Constant).
+Lot ::= lot(Constant, Constant, Integer).
 
 %% A trade counterparty's answer (writer flows proposer -> responder -> proposer).
 %% decline_menu returns the offered bonds plus the issuer's redemption menu.

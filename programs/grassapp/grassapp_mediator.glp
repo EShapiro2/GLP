@@ -19,8 +19,10 @@
 %% speak SCALAR single-lot commands (pay/4, trade/7, redeem/7, deposit_escrow/5),
 %% because a compose
 %% form carries only scalar fields.  This mediator builds the Stream(Lot) the
-%% agent consumes, and flattens the agent's single-lot trade_proposed back to
-%% scalars for the offer card.  Multi-lot portfolios are Milestone 2.
+%% agent consumes, converting the amount the person answers, a Constant, to the
+%% lot's count, an Integer (a lot is a quantity of a coin, GSG Section 7); and
+%% it flattens the agent's single-lot trade_proposed back to scalars for the
+%% offer card.  Multi-lot portfolios are Milestone 2.
 
 
 exported procedure ui_mediator(Constant?,
@@ -297,8 +299,9 @@ ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
 
 ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
     receive(pay(Friend, Coin, Maturity, Amount), UserCh?, UserCh1),
-    ground(Id?), ground(Friend?), ground(Coin?), ground(Maturity?), ground(Amount?) |
-    send(msg(person, Id?, pay(Friend?, [lot(Coin?, Maturity?, Amount?)])),
+    ground(Id?), ground(Friend?), ground(Coin?), ground(Maturity?), number(Amount?) |
+    Count := integer(Amount?),
+    send(msg(person, Id?, pay(Friend?, [lot(Coin?, Maturity?, Count?)])),
          AgentCh?, AgentCh1),
     ui_mediator(Id?, AgentCh1?, UserCh1?, Ps?, N?).
 
@@ -308,11 +311,13 @@ ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
     receive(trade(Target, GiveCoin, GiveMat, GiveAmt, WantCoin, WantMat, WantAmt),
             UserCh?, UserCh1),
     ground(Id?), ground(Target?),
-    ground(GiveCoin?), ground(GiveMat?), ground(GiveAmt?),
-    ground(WantCoin?), ground(WantMat?), ground(WantAmt?) |
+    ground(GiveCoin?), ground(GiveMat?), number(GiveAmt?),
+    ground(WantCoin?), ground(WantMat?), number(WantAmt?) |
+    GiveCount := integer(GiveAmt?),
+    WantCount := integer(WantAmt?),
     send(msg(person, Id?,
-             trade(Target?, [lot(GiveCoin?, GiveMat?, GiveAmt?)],
-                            [lot(WantCoin?, WantMat?, WantAmt?)])),
+             trade(Target?, [lot(GiveCoin?, GiveMat?, GiveCount?)],
+                            [lot(WantCoin?, WantMat?, WantCount?)])),
          AgentCh?, AgentCh1),
     ui_mediator(Id?, AgentCh1?, UserCh1?, Ps?, N?).
 
@@ -322,11 +327,13 @@ ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
     receive(redeem(Target, GiveCoin, GiveMat, GiveAmt, WantCoin, WantMat, WantAmt),
             UserCh?, UserCh1),
     ground(Id?), ground(Target?),
-    ground(GiveCoin?), ground(GiveMat?), ground(GiveAmt?),
-    ground(WantCoin?), ground(WantMat?), ground(WantAmt?) |
+    ground(GiveCoin?), ground(GiveMat?), number(GiveAmt?),
+    ground(WantCoin?), ground(WantMat?), number(WantAmt?) |
+    GiveCount := integer(GiveAmt?),
+    WantCount := integer(WantAmt?),
     send(msg(person, Id?,
-             redeem(Target?, [lot(GiveCoin?, GiveMat?, GiveAmt?)],
-                             [lot(WantCoin?, WantMat?, WantAmt?)])),
+             redeem(Target?, [lot(GiveCoin?, GiveMat?, GiveCount?)],
+                             [lot(WantCoin?, WantMat?, WantCount?)])),
          AgentCh?, AgentCh1),
     ui_mediator(Id?, AgentCh1?, UserCh1?, Ps?, N?).
 
@@ -351,9 +358,10 @@ ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
     receive(deposit_escrow(Target, Coin, Maturity, Amount, ReleaseTime),
             UserCh?, UserCh1),
     ground(Id?), ground(Target?),
-    ground(Coin?), ground(Maturity?), ground(Amount?), ground(ReleaseTime?) |
+    ground(Coin?), ground(Maturity?), number(Amount?), ground(ReleaseTime?) |
+    Count := integer(Amount?),
     send(msg(person, Id?,
-             deposit_escrow(Target?, [lot(Coin?, Maturity?, Amount?)], ReleaseTime?)),
+             deposit_escrow(Target?, [lot(Coin?, Maturity?, Count?)], ReleaseTime?)),
          AgentCh?, AgentCh1),
     ui_mediator(Id?, AgentCh1?, UserCh1?, Ps?, N?).
 
