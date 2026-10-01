@@ -132,6 +132,59 @@ class GlpRuntime {
   /// Get the wait reader for a goal (if any)
   int? getWaitReader(int goalId) => _waitReaders[goalId];
 
+  // when_idle (GLP-Spec appendix-guards.tex at e3a8d52, the time guards):
+  // "when_idle suspends while the machine has a Reduce or a Communicate to
+  // make, and succeeds when it has none."  A goal suspends on it as on wait/1:
+  // on the reader of a fresh variable, whose writer the scheduler binds when
+  // the machine is idle (Scheduler.drainWithStatus), which re-tries the goal.
+  // Keyed by goal, in the order the goals first suspended on it.
+  final Map<int, ({int writer, int reader})> _idleWaits = {};
+
+  /// The machine has no Reduce to make: nothing is in its queue.  The goal
+  /// whose guard asks has been taken from the queue, so its own reduction is
+  /// not counted.  This is the idleness at which the scheduler takes a
+  /// Release, and it is the engine's alone: the queued messages of a madGLP
+  /// agent, flushed after the drain, are not seen here.
+  bool get isIdle => gq.length == 0;
+
+  /// The reader goal [goalId] suspends on while it waits on when_idle: the
+  /// one it already waits on, or a fresh one, the goal then joining the end
+  /// of the goals that wait.
+  int idleReader(int goalId) {
+    final w = _idleWaits[goalId];
+    if (w != null) return w.reader;
+    final (writer, reader) = heap.allocateVariable();
+    _idleWaits[goalId] = (writer: writer, reader: reader);
+    return reader;
+  }
+
+  /// Goal [goalId] has passed when_idle: it no longer waits on it.
+  void clearIdleWait(int goalId) => _idleWaits.remove(goalId);
+
+  /// Some goal may be waiting on when_idle.  An entry whose goal has since
+  /// been re-tried by another reader and gone on is counted until
+  /// [wakeIdle] passes over it.
+  bool get hasIdleWaits => _idleWaits.isNotEmpty;
+
+  /// Re-try one goal that waits on when_idle, the one that has waited
+  /// longest: bind the writer of the reader it suspended on, which puts it
+  /// back in the queue.  One at a time, since the goal re-tried may make work
+  /// for the machine, and then the next is not idle.  An entry whose goal was
+  /// re-tried by another of its readers wakes nothing (its suspension record
+  /// is disarmed) and is passed over.  True if a goal was re-tried.
+  bool wakeIdle() {
+    while (_idleWaits.isNotEmpty) {
+      final goalId = _idleWaits.keys.first;
+      final w = _idleWaits.remove(goalId)!;
+      final reactivated = heap.bindWriterConst(w.writer, 0);
+      for (final goalRef in reactivated) {
+        enqueueReactivatedGoal(goalRef);
+      }
+      if (reactivated.isNotEmpty) return true;
+    }
+    return false;
+  }
+
   GlpRuntime({HeapFCP? heap, GoalQueue? gq, SystemPredicateRegistry? systemPredicates, BodyKernelRegistry? bodyKernels})
       : heap = heap ?? HeapFCP(),
         gq = gq ?? GoalQueue(),

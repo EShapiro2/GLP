@@ -115,6 +115,7 @@ procedure valid_attestation(Constant?, Constant?, Constant?, Constant?).
 % Time guards
 procedure wait(Number?).
 procedure wait_until(Number?).
+procedure when_idle.
 
 % Arithmetic comparison guards
 procedure <(Exp?, Exp?).

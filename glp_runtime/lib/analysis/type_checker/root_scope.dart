@@ -51,6 +51,7 @@ const Set<String> predefinedProcedureNames = {
   // Time guards (fundamental - implemented by runtime)
   'wait',
   'wait_until',
+  'when_idle',
   // Comparison guards (fundamental - implemented by runtime)
   '<',
   '>',
@@ -109,6 +110,7 @@ const Set<String> builtinProcedures = {
   // Time guards
   'wait/1',
   'wait_until/1',
+  'when_idle/0',
   // Arithmetic comparison guards
   '</2',
   '>/2',

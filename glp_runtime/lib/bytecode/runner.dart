@@ -908,6 +908,20 @@ GuardResult _evaluateGuard(String predicateName, List<Object?> args, RunnerConte
       cx.U.add(readerAddrWU);
       return GuardResult.failure;
 
+    case 'when_idle':
+      // GLP-Spec appendix-guards.tex (e3a8d52), the time guards: "when_idle
+      // suspends while the machine has a Reduce or a Communicate to make, and
+      // succeeds when it has none."  The engine's idleness decides it: its
+      // queue empty, this goal having been taken from it.  Otherwise the goal
+      // suspends on a reader the scheduler assigns when the queue empties
+      // (GlpRuntime.wakeIdle), and is re-tried then.
+      if (cx.rt.isIdle) {
+        cx.rt.clearIdleWait(cx.goalId);
+        return GuardResult.success;
+      }
+      cx.U.add(cx.rt.idleReader(cx.goalId));
+      return GuardResult.suspend;
+
     case '=?=':
       // Ground equality test
       // Semantics:

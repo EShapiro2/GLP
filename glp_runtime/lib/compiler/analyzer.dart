@@ -635,7 +635,7 @@ class Analyzer {
     // Control
     'otherwise',
     // Time
-    'wait', 'wait_until',
+    'wait', 'wait_until', 'when_idle',
     // Attestation guard (succeed/fail only; negation unspecified — seam spec §4)
     'valid_attestation',
   };

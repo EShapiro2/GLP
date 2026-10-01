@@ -230,7 +230,13 @@ class Scheduler {
       // goal of least activation time is released, the clock advancing to its
       // time.  A goal waiting on a wall-clock timer (wait/1) makes the machine
       // not quiescent: its Reduce becomes enabled with no transition taken.
+      //
+      // when_idle (GLP-Spec appendix-guards.tex, e3a8d52): whenever the queue
+      // empties, the goal that has waited longest on when_idle is re-tried,
+      // one at a time; its guard succeeds, the machine having no Reduce to
+      // make, and what it does may give the machine work before the next.
       if (rt.gq.length == 0) {
+        if (rt.wakeIdle()) continue;
         if (!_releaseAtQuiescence()) break;
         continue;
       }
@@ -360,8 +366,10 @@ class Scheduler {
     // It outranks the other outcomes here because it says the drain did not
     // end: F is recovered cumulatively by whoever drains again
     // ([drainToQuiescence], [drainAsyncWithStatus]), so a failure is not lost.
+    // A goal waiting on when_idle at the cap would be re-tried next: the drain
+    // stopped at its cap too.
     final ExecutionStatus status;
-    if (rt.gq.length > 0 || _releasable) {
+    if (rt.gq.length > 0 || _releasable || rt.hasIdleWaits) {
       status = ExecutionStatus.capped;
     } else if (hasFailed) {
       status = ExecutionStatus.failed;
@@ -420,7 +428,7 @@ class Scheduler {
       if (result.goalsRan.isEmpty) break;
     }
 
-    final status = rt.gq.length > 0 || _releasable
+    final status = rt.gq.length > 0 || _releasable || rt.hasIdleWaits
         ? ExecutionStatus.capped
         : (rt.failedGoals.length > failedAtEntry
             ? ExecutionStatus.failed
