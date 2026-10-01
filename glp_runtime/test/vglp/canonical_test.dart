@@ -432,11 +432,12 @@ q(X) :- p(0, X?).
       'person_asks.vglp',
       'person_asks_writer.vglp',
       'person_asks_coins.vglp',
-      'questions.vglp'
+      'questions.vglp',
+      'graph.vglp'
     };
     String base(File f) => f.path.split(Platform.pathSeparator).last;
 
-    test('the nine old sources are not in the paper\'s syntax, the four new '
+    test('the nine old sources are not in the paper\'s syntax, the five new '
         'ones are', () {
       final old = sources.where((f) => !paper.contains(base(f))).toList();
       expect(old, hasLength(9), reason: old.map((f) => f.path).join('\n'));
@@ -445,7 +446,7 @@ q(X) :- p(0, X?).
             reason: f.path);
       }
       final fresh = sources.where((f) => paper.contains(base(f))).toList();
-      expect(fresh, hasLength(4));
+      expect(fresh, hasLength(5));
       for (final f in fresh) {
         expect(isPaperSyntaxSource(f.readAsStringSync()), isTrue,
             reason: f.path);
