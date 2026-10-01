@@ -651,6 +651,27 @@ bool isConstantType(DFAState state, Map<String, TypeDef> types) {
   return _isConstantTypeNamed(state.baseName, types, <String>{});
 }
 
+/// Whether a reader whose occurrence has [state]'s type may occur more than
+/// once in a clause, its paired writer occurring once.  Two types license it.
+/// A constant type ([isConstantType]; TGLP `typed-glp.tex`, Proposition
+/// "Readers of Constant Types").  And `MutualRef`: "A reader of type
+/// `MutualRef` may also occur more than once: the writer a mutual reference
+/// holds is the runtime's, no program can reach it, and every write through it
+/// is a kernel's, so no occurrence of the reader gives a program a second
+/// writer" (`typed-glp.tex`, TGLP 350eb7d).
+///
+/// `MutualRef` stays no constant type --- [isConstantType] answers no for it ---
+/// and the licence is the reader's alone, as the constant type's is.  Until
+/// 2026-10-01 the repeated `Ref?` of a mutual reference was licensed instead by
+/// a grounding mark on the guard `is_mutual_ref/1`, which the catalogue gives
+/// "Ground: no" (GLP-Spec `appendix-guards.tex`).
+bool licensesRepeatedReader(DFAState state, Map<String, TypeDef> types) {
+  if (state.isWildcard) return false;
+  if (state.isProcedure) return false;
+  if (state.isMutualRefType) return true;
+  return isConstantType(state, types);
+}
+
 bool _isConstantTypeNamed(
     String name, Map<String, TypeDef> types, Set<String> assumed) {
   if (TypeRef.constantPrimitives.contains(name)) return true;

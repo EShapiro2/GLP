@@ -28,6 +28,7 @@ import 'package:glp_runtime/compiler/partial_evaluator.dart'
     show setRootScopeUnitClauseSource;
 import 'package:glp_runtime/compiler/program_linker.dart';
 import 'package:glp_runtime/engine/glp_engine.dart';
+import 'package:glp_runtime/runtime/terms.dart' as rt;
 
 void main() {
   final rootSelfGlp = File('../programs/self.glp');
@@ -121,6 +122,99 @@ procedure use_held(Held?, MutualRef).
 use_held(H, R?) :- is_mutual_ref(H?) | take_ref(H?, R).
 ''');
       expect(result.errors.map((e) => e.message).toList(), isEmpty);
+    });
+  });
+
+  // TGLP typed-glp.tex (350eb7d): "A reader of type MutualRef may also occur
+  // more than once: the writer a mutual reference holds is the runtime's, no
+  // program can reach it, and every write through it is a kernel's, so no
+  // occurrence of the reader gives a program a second writer."  The licence is
+  // the occurrence's TYPE, and is the reader's alone.  `is_mutual_ref/1` is
+  // "Ground: no" in the catalogue (GLP-Spec appendix-guards.tex) and marks
+  // nothing; until 2026-10-01 it marked its argument grounded, which licensed a
+  // repeated writer too.
+  group('a reader of MutualRef may occur more than once', () {
+    String refusal(String source) {
+      try {
+        GlpEngine(rootSelfGlpPath: rootSelfPath).loadSource(source);
+      } catch (e) {
+        return e.toString();
+      }
+      return '';
+    }
+
+    test('a reader declared MutualRef? read twice in the body loads, no guard',
+        () {
+      expect(refusal('''
+procedure take(MutualRef?).
+take(_).
+procedure twice(MutualRef?).
+twice(R) :- take(R?), take(R?).
+'''), isEmpty);
+    });
+
+    test('the same clause at `_?` is refused: the licence is the type', () {
+      expect(refusal('''
+procedure take(_?).
+take(_).
+procedure twice(_?).
+twice(R) :- take(R?), take(R?).
+'''), contains('Reader variable "R?" occurs 2 times'));
+    });
+
+    test('is_mutual_ref narrows `_?` to MutualRef?, and the type licenses it',
+        () {
+      // A guard atom that tests a head occurrence narrows it to the meet, and
+      // the occurrence has that type in the body (TGLP typed-glp.tex, "Type
+      // checking of guards"); the meet of `_?` and `MutualRef?` is `MutualRef?`.
+      // This is the shape of p99/self.glp's mm_start/2 and mm_subs/4.
+      expect(refusal('''
+-mode(system).
+procedure take(_?).
+take(_).
+procedure twice(_?).
+twice(R) :- is_mutual_ref(R?) | take(R?), take(R?).
+'''), isEmpty);
+    });
+
+    test('is_mutual_ref grounds nothing: a repeated WRITER is refused', () {
+      // The grounding mark licensed both X and X? (TGLP glp.tex, Remark "Guards
+      // and SRSW"); the type licence is the reader's alone.  `ground/1`, which
+      // is "Ground: yes", still licenses the writer.
+      expect(refusal('''
+-mode(system).
+procedure two(MutualRef?, MutualRef?).
+two(R, R) :- is_mutual_ref(R?) | true.
+'''), contains('Writer variable "R" occurs 2 times'));
+      expect(refusal('''
+procedure two(_?, _?).
+two(R, R) :- ground(R?) | true.
+'''), isEmpty);
+    });
+
+    test("the root's mwm/2 runs, its Ref declared MutualRef?", () async {
+      final engine = GlpEngine(rootSelfGlpPath: rootSelfPath);
+      for (final decl in const [
+        'procedure(X) mwm_main(MwmInput(X)?, MutualRef?).',
+        'procedure(X) mwm1(MwmInput(X)?, MutualRef?, Done?, Done).',
+        'procedure(X) mwm_copy(Stream(X)?, MutualRef?, Done?, Done).',
+        'procedure close_when_done(Done?, MutualRef?).',
+      ]) {
+        expect(rootSource, contains(decl));
+      }
+      final r = await engine.runGoal('mwm([merge([1,2,3]), merge([a,b])], Out)');
+      expect(r.succeeded, isTrue, reason: '${r.error}');
+      // Each input stream's order is kept and the two are interleaved.
+      final heap = engine.runtime.heap;
+      final out = <Object?>[];
+      var cur = heap.dereference(r.bindings['Out']!);
+      while (cur is rt.StructTerm && cur.functor == '.') {
+        final x = heap.dereference(cur.args[0]);
+        out.add(x is rt.ConstTerm ? x.value : x);
+        cur = heap.dereference(cur.args[1]);
+      }
+      expect(out.whereType<int>(), [1, 2, 3]);
+      expect(out.whereType<String>(), ['a', 'b']);
     });
   });
 }

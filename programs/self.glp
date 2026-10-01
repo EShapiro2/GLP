@@ -746,27 +746,27 @@ mwm(In, Out?) :-
     mwm_main(In?, Ref?).
 
 % Intermediate predicate whose guard admits the multiple Ref? occurrences below.
-procedure(X) mwm_main(MwmInput(X)?, _?).
+procedure(X) mwm_main(MwmInput(X)?, MutualRef?).
 mwm_main(In, Ref) :-
     is_mutual_ref(Ref?) |
     mwm1(In?, Ref?, done, Done),
     close_when_done(Done?, Ref?).
 
-procedure(X) mwm1(MwmInput(X)?, _?, Done?, Done).
+procedure(X) mwm1(MwmInput(X)?, MutualRef?, Done?, Done).
 mwm1([merge(Xs)|Streams], Ref, L, R?) :-
     is_mutual_ref(Ref?) |
     mwm_copy(Xs?, Ref?, L?, M),
     mwm1(Streams?, Ref?, M?, R).
 mwm1([], _, L, L?).
 
-procedure(X) mwm_copy(Stream(X)?, _?, Done?, Done).
+procedure(X) mwm_copy(Stream(X)?, MutualRef?, Done?, Done).
 mwm_copy([X|Xs], Ref, L, R?) :-
     is_mutual_ref(Ref?) |
     stream_append(X?, Ref?, Ref1),
     mwm_copy(Xs?, Ref1?, L?, R).
 mwm_copy([], _, L, L?).
 
-procedure close_when_done(Done?, _?).
+procedure close_when_done(Done?, MutualRef?).
 close_when_done(done, Ref) :-
     is_mutual_ref(Ref?) |
     close_mutual_reference(Ref?).

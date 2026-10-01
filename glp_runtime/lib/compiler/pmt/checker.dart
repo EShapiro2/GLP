@@ -146,8 +146,7 @@ class PmtChecker {
   ///
   /// Guards that imply groundness (matching analyzer.dart):
   /// - ground/1: explicit groundness
-  /// - Type guards (arity 1): number, integer, float, atom, string, list, tuple, compound, var, nonvar
-  /// - is_mutual_ref/1
+  /// - Type guards (arity 1): number, integer, float, string, list, compound, var, nonvar
   /// - unknown/1
   /// - Comparison guards (arity 2): <, >, =<, >=, =:=, =\=
   /// - =?=/2: ground equality
@@ -158,9 +157,9 @@ class PmtChecker {
 
     // Type-checking guards (arity 1)
     const typeCheckOps = {
-      'ground', 'number', 'integer', 'float', 'atom', 'string',
-      'list', 'tuple', 'compound', 'var', 'nonvar',
-      'is_mutual_ref', 'unknown',
+      'ground', 'number', 'integer', 'float', 'string',
+      'list', 'compound', 'var', 'nonvar',
+      'unknown',
     };
 
     // Comparison guards (arity 2)
