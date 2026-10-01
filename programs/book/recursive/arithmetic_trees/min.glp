@@ -9,8 +9,8 @@ procedure minimum(Nat?, Nat?, Nat).
 minimum(N1, N2, Out?) :- compound(N1?), compound(N2?) | min_check(N1?, N2?, Out).
 
 procedure min_check(Nat?, Nat?, Nat).
-min_check(N1, N2, N1?) :- compound(N1?), compound(N2?) | lesseq(N1?, N2?).
-min_check(N1, N2, N2?) :- compound(N1?), compound(N2?) | lesseq(N2?, N1?).
+min_check(N1, N2, N1?) :- compound(N1?), ground(N1?), compound(N2?) | lesseq(N1?, N2?).
+min_check(N1, N2, N2?) :- compound(N1?), compound(N2?), ground(N2?) | lesseq(N2?, N1?).
 
 procedure lesseq(Nat?, Nat?).
 lesseq(0, X) :- natural_number(X?).
@@ -23,8 +23,8 @@ natural_number(s(X)) :- natural_number(X?).
 %% reduce clauses for metainterpreter
 procedure reduce(_?, _).
 reduce(minimum(N1, N2, Out?), min_check(N1?, N2?, Out)) :- compound(N1?), compound(N2?) | true.
-reduce(min_check(N1, N2, N1?), lesseq(N1?, N2?)) :- compound(N1?), compound(N2?) | true.
-reduce(min_check(N1, N2, N2?), lesseq(N2?, N1?)) :- compound(N1?), compound(N2?) | true.
+reduce(min_check(N1, N2, N1?), lesseq(N1?, N2?)) :- compound(N1?), ground(N1?), compound(N2?) | true.
+reduce(min_check(N1, N2, N2?), lesseq(N2?, N1?)) :- compound(N1?), compound(N2?), ground(N2?) | true.
 reduce(lesseq(0, X), natural_number(X?)).
 reduce(lesseq(s(X), s(Y)), lesseq(X?, Y?)).
 reduce(natural_number(0), true).
