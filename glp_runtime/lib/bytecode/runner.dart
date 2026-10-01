@@ -748,7 +748,9 @@ GuardResult _evaluateGuard(String predicateName, List<Object?> args, RunnerConte
       return GuardResult.failure;
 
     case 'is_mutual_ref':
-      // Succeeds if X is a MutualRefTerm (enables SRSW multiple reads)
+      // Succeeds if X is a MutualRefTerm.  It grounds nothing ("Ground: no",
+      // GLP-Spec appendix-guards.tex); a repeated reader of a mutual reference
+      // is licensed by its type, MutualRef (TGLP typed-glp.tex, 350eb7d).
       if (args.isEmpty) return GuardResult.failure;
       final val = getValue(args[0]);
       if (val is MutualRefTerm) {

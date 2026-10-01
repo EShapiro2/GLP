@@ -587,7 +587,27 @@ ClauseCheckResult checkClauseFromAst(
 /// will reject on its own, and an occurrence whose path is inconsistent simply
 /// yields no type and licenses nothing.
 Set<String> constantTypedVariables(
-    ast.Clause clause, ProgramDFA dfa, TypeEnvironment env) {
+        ast.Clause clause, ProgramDFA dfa, TypeEnvironment env) =>
+    _variablesTypedAtSomeOccurrence(
+        clause, dfa, env, (state) => isConstantType(state, env.types));
+
+/// The base names of the variables of [clause] a reader of which may occur
+/// more than once by the type of some occurrence ([licensesRepeatedReader]): a
+/// constant type, as [constantTypedVariables] asks, or `MutualRef` --- "A
+/// reader of type `MutualRef` may also occur more than once" (TGLP
+/// `typed-glp.tex`, 350eb7d).  Each occurrence's type is asked as there: the
+/// head's off the moded head, a body goal's off its produced moded term, and a
+/// guard's off the guard atom, so `is_mutual_ref(Ref?)` --- declared
+/// `procedure is_mutual_ref(MutualRef?)` --- gives the occurrence it tests the
+/// type `MutualRef?` it narrows it to ("Type checking of guards").  This is what
+/// the analyzer's SRSW check asks.
+Set<String> repeatableReaderVariables(
+        ast.Clause clause, ProgramDFA dfa, TypeEnvironment env) =>
+    _variablesTypedAtSomeOccurrence(
+        clause, dfa, env, (state) => licensesRepeatedReader(state, env.types));
+
+Set<String> _variablesTypedAtSomeOccurrence(ast.Clause clause, ProgramDFA dfa,
+    TypeEnvironment env, bool Function(DFAState) qualifies) {
   final procDecl = env.getProcedure(clause.head.functor, clause.head.args.length);
   if (procDecl == null) return const {};
 
@@ -606,12 +626,12 @@ Set<String> constantTypedVariables(
     guardAtoms: guardGoals,
   );
 
-  final constant = <String>{};
+  final licensed = <String>{};
   void take(Map<String, VariableTypeInfo> types) {
     for (final entry in types.entries) {
-      if (!isConstantType(entry.value.typeState, env.types)) continue;
+      if (!qualifies(entry.value.typeState)) continue;
       final key = entry.key;
-      constant.add(key.endsWith('?') ? key.substring(0, key.length - 1) : key);
+      licensed.add(key.endsWith('?') ? key.substring(0, key.length - 1) : key);
     }
   }
 
@@ -622,7 +642,7 @@ Set<String> constantTypedVariables(
     take(_bodyAtomVariableTypes(atom, dfa, env));
   }
 
-  return constant;
+  return licensed;
 }
 
 /// The types [atom]'s variable occurrences have, as a body unit goal: the

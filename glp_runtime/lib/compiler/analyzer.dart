@@ -3,7 +3,7 @@ import 'error.dart';
 import 'partial_evaluator.dart' show getRootScopeUnitClauses;
 import '../analysis/type_checker/type_ast.dart';
 import '../analysis/type_checker/program_dfa.dart' show ProgramDFA, buildProgramDFA, UnknownTypeError;
-import '../analysis/type_checker/well_typed_clause.dart' show constantTypedVariables;
+import '../analysis/type_checker/well_typed_clause.dart' show repeatableReaderVariables;
 
 /// Variable information for semantic analysis
 class VariableInfo {
@@ -70,10 +70,12 @@ class VariableTable {
   bool _hasGroundGuard = false;
   final Set<String> _groundedVars = {};
 
-  // The variables an occurrence of which has a CONSTANT TYPE (TGLP
-  // typed-glp.tex, "Readers of constant types"): such a reader may occur more
-  // than once in the clause, ITS PAIRED WRITER OCCURRING ONCE.
-  final Set<String> _constantTypedVars = {};
+  // The variables an occurrence of which has a type licensing a repeated
+  // reader: a CONSTANT TYPE (TGLP typed-glp.tex, "Readers of constant types")
+  // or `MutualRef` ("A reader of type MutualRef may also occur more than
+  // once", typed-glp.tex, 350eb7d).  Such a reader may occur more than once in
+  // the clause, ITS PAIRED WRITER OCCURRING ONCE.
+  final Set<String> _typeLicensedVars = {};
 
   /// Record a writer occurrence.
   /// [inHeadOrBody]: true if in head or body (counts toward SRSW), false if in guard
@@ -116,27 +118,31 @@ class VariableTable {
 
   bool isGrounded(String varName) => _groundedVars.contains(varName);
 
-  /// Mark a variable whose type at some occurrence is a constant type
-  /// (TGLP typed-glp.tex, Definition "Constant Type").
-  void markConstantTyped(String varName) {
-    _constantTypedVars.add(varName);
+  /// Mark a variable whose type at some occurrence licenses a repeated reader:
+  /// a constant type (TGLP typed-glp.tex, Definition "Constant Type") or
+  /// `MutualRef` (typed-glp.tex, 350eb7d).
+  void markTypeLicensed(String varName) {
+    _typeLicensedVars.add(varName);
   }
 
-  bool isConstantTyped(String varName) => _constantTypedVars.contains(varName);
+  bool isTypeLicensed(String varName) => _typeLicensedVars.contains(varName);
 
   /// Whether the READER may occur more than once.  Two relaxations reach here
   /// and both license it: a groundness-implying guard (TGLP glp.tex
-  /// rem:guards-srsw) and a constant type (typed-glp.tex, Proposition "Readers
-  /// of Constant Types").
+  /// rem:guards-srsw) and the type of an occurrence --- a constant type
+  /// (typed-glp.tex, Proposition "Readers of Constant Types") or `MutualRef`
+  /// ("A reader of type MutualRef may also occur more than once").
   bool allowsMultipleReaders(String varName) =>
-      isGrounded(varName) || isConstantTyped(varName);
+      isGrounded(varName) || isTypeLicensed(varName);
 
   /// Whether the WRITER may occur more than once.  Only the guard does: "if the
   /// success of a guard implies that X? is bound to a ground term, then both X
   /// and X? may occur multiple times" (rem:guards-srsw).  The type-based
   /// relaxation is of the reader alone --- SRSW* is SRSW "with that same
   /// permission, its paired writer occurring once" (typed-glp.tex, before
-  /// Proposition "Readers of Constant Types") --- so it does not reach this one.
+  /// Proposition "Readers of Constant Types"), and of `MutualRef` it is "a
+  /// reader of type MutualRef may also occur more than once" --- so it does not
+  /// reach this one.
   bool allowsMultipleWriters(String varName) => isGrounded(varName);
 
   /// Verify SRSW constraints and return list of violations (empty if valid)
@@ -167,12 +173,12 @@ class VariableTable {
       // Check reader occurrences.  Guard occurrences do not count toward SRSW
       // satisfaction, so the count is readerOccurrencesHeadBody.  A reader may
       // occur more than once under either relaxation: a groundness-implying
-      // guard, or a constant type (TGLP typed-glp.tex, "Readers of constant
-      // types").
+      // guard, or the type of an occurrence --- a constant type or MutualRef
+      // (TGLP typed-glp.tex, "Readers of constant types").
       if (info.readerOccurrencesHeadBody > 1 && !allowsMultipleReaders(info.name)) {
         final line = info.firstOccurrence?.line ?? 0;
         violations.add(
-          'Line $line: Reader variable "${info.name}?" occurs ${info.readerOccurrencesHeadBody} times without a groundness-implying guard or a constant type'
+          'Line $line: Reader variable "${info.name}?" occurs ${info.readerOccurrencesHeadBody} times without a groundness-implying guard or a constant or MutualRef type'
         );
       }
 
@@ -382,7 +388,7 @@ class Analyzer {
   List<String> _srswViolations(Clause clause, VariableTable varTable) {
     var violations = varTable.collectSRSWViolations();
     if (violations.isEmpty) return violations;
-    if (!_markConstantTypedVars(clause, varTable)) return violations;
+    if (!_markTypeLicensedVars(clause, varTable)) return violations;
     violations = varTable.collectSRSWViolations();
     return violations;
   }
@@ -717,17 +723,14 @@ class Analyzer {
       }
     }
 
-    // is_mutual_ref/1 guard marks argument as ground (MutualRefTerm can be read multiple times)
-    // The catalogue gives it "Ground: no" (GLP-Spec appendix-guards.tex) and
-    // TGLP typed-glp.tex makes MutualRef no constant type, but the root
-    // self.glp's mwm_main/2 and mwm1/4 read Ref? twice on this mark alone; it
-    // stays until that is decided (GLP, 2026-09-29).
-    if (guard.predicate == 'is_mutual_ref' && guard.args.length == 1) {
-      final arg = guard.args[0];
-      if (arg is VarTerm) {
-        varTable.markGrounded(arg.name);
-      }
-    }
+    // `is_mutual_ref` marks nothing: the catalogue gives it "Ground: no"
+    // (GLP-Spec appendix-guards.tex).  A repeated `Ref?` is licensed by the
+    // occurrence's TYPE --- "A reader of type MutualRef may also occur more than
+    // once" (TGLP typed-glp.tex, 350eb7d) --- in [_markTypeLicensedVars], where
+    // the guard's own occurrence has the `MutualRef?` it narrows `Ref?` to.
+    // Until 2026-10-01 it marked its argument grounded, which licensed a
+    // repeated WRITER as well, and the root self.glp's mwm_main/2 and mwm1/4
+    // read Ref? twice on that mark alone (GLP, 2026-10-01).
 
     // `unknown` marks nothing: the catalogue gives it "Ground: no" (GLP-Spec
     // appendix-guards.tex) --- it succeeds on an unbound variable --- so it
@@ -862,7 +865,9 @@ class Analyzer {
     }
   }
 
-  /// Mark the clause's variables an occurrence of which has a CONSTANT TYPE,
+  /// Mark the clause's variables an occurrence of which has a type licensing a
+  /// repeated reader --- a CONSTANT TYPE, or `MutualRef` ("A reader of type
+  /// MutualRef may also occur more than once", TGLP typed-glp.tex, 350eb7d) ---
   /// and answer whether any was marked.
   ///
   /// The question is asked of the type each occurrence has, at every occurrence
@@ -876,22 +881,22 @@ class Analyzer {
   /// --- consulted at the top-level type name of a head argument alone, so
   /// `Colour ::= red ; green ; blue.` did not qualify where `String` did, and
   /// nothing nested and nothing in the body qualified at all.
-  bool _markConstantTypedVars(Clause clause, VariableTable varTable) {
+  bool _markTypeLicensedVars(Clause clause, VariableTable varTable) {
     final env = _typeEnv;
     if (env == null) return false;
     final dfa = _programDfa(env);
     if (dfa == null) return false;
-    final Set<String> constant;
+    final Set<String> licensed;
     try {
-      constant = constantTypedVariables(clause, dfa, env);
+      licensed = repeatableReaderVariables(clause, dfa, env);
     } on UnknownTypeError {
       // A type the scope does not carry: the type checker reports it; nothing
       // is relaxed on a type that cannot be resolved.
       return false;
     }
-    if (constant.isEmpty) return false;
-    for (final name in constant) {
-      varTable.markConstantTyped(name);
+    if (licensed.isEmpty) return false;
+    for (final name in licensed) {
+      varTable.markTypeLicensed(name);
     }
     return true;
   }
