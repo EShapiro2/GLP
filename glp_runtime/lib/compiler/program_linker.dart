@@ -23,7 +23,7 @@ import '../analysis/type_checker/type_identity.dart';
 import '../runtime/module_hierarchy.dart';
 import '../analysis/type_checker/type_environment_builder.dart';
 import '../vglp/mediator.dart';
-import '../vglp/canonical.dart' show isPaperSyntaxSource;
+import '../vglp/canonical.dart' show isPaperSyntaxSource, declaresPopulation;
 import '../vglp/program_compilation.dart';
 
 /// A discovered module in the program tree.
@@ -192,7 +192,10 @@ List<DiscoveredModule> _discoverGlpModules(
 /// A source in the paper's syntax compiles by the canonical compilation of
 /// vGLP at 16b3b54; one in the old syntax keeps its old compilation against
 /// the generic mediator, and is not compiled where the mediator is missing, as
-/// before (compileVglpSource).
+/// before (compileVglpSource).  Where the program declares a population, in a
+/// `.glp` module or in a `.vglp` source, the asking clauses call person(T, X)
+/// and sGLP's system module joins the program, as it does for a population a
+/// `.glp` module declares (_addSglpSystemModule).
 void _addVglpModules(List<DiscoveredModule> modules, Directory root,
     String? programsDir, String? rootSelfGlpPath) {
   final vglpFiles = root
@@ -210,6 +213,13 @@ void _addVglpModules(List<DiscoveredModule> modules, Directory root,
 
   final mediator = _mediatorSource(programsDir);
   final texts = {for (final f in vglpFiles) f.path: f.readAsStringSync()};
+  final vglpPopulation = texts.values
+      .any((t) => isPaperSyntaxSource(t) && declaresPopulation(t));
+  if (vglpPopulation) {
+    _addSglpSystemModule(modules, root.absolute.path, programsDir,
+        rootSelfGlpPath, declared: true);
+  }
+  final population = vglpPopulation || _declaresPopulation(modules);
 
   for (final file in vglpFiles) {
     final filename = file.path.split(Platform.pathSeparator).last;
@@ -224,6 +234,7 @@ void _addVglpModules(List<DiscoveredModule> modules, Directory root,
     final compiledSource = compileVglpSource(text,
         mediator: mediator,
         scope: ancestorScope,
+        populationDeclared: population,
         path: file.path);
     final compiledAst =
         Parser(Lexer(compiledSource).tokenize()).parseModule();
@@ -405,10 +416,18 @@ bool _declaresPopulation(Iterable<DiscoveredModule> modules) =>
 /// exports are in the scope of every module of the program, as a root
 /// `self.glp`'s `-expose` would put them.  A program that declares none does
 /// not import it, and cannot call person/2.
+///
+/// [declared]: a `.vglp` source of the program declares the population, which
+/// [modules], the `.glp` modules, do not show (_addVglpModules).
 void _addSglpSystemModule(List<DiscoveredModule> modules, String rootAbsPath,
-    String? programsDir, String? rootSelfGlpPath) {
-  if (programsDir == null || !_declaresPopulation(modules)) return;
+    String? programsDir, String? rootSelfGlpPath, {bool declared = false}) {
+  if (programsDir == null || !(declared || _declaresPopulation(modules))) {
+    return;
+  }
   final file = File(sglpSystemModulePath(programsDir));
+  if (modules.any((m) => _normPath(m.filePath) == _normPath(file.path))) {
+    return;  // already joined
+  }
   if (!file.existsSync()) {
     throw Exception('sGLP: the program declares a population, and sGLP\'s '
         'system module ${file.path} is missing');
@@ -1784,5 +1803,6 @@ List<String> emitVglpSources(String rootDir,
   return emitCompiledVglp(root.path, mediator,
       scopeFor: (vglpPath) =>
           _vglpScope(File(vglpPath), modules, root, programsDir, rootSelfGlpPath),
+      populationDeclared: _declaresPopulation(modules),
       onSkip: onSkip);
 }
