@@ -1000,9 +1000,8 @@ class PartialEvaluator {
 
       if (concreteArg != null) {
         switch (guard.predicate) {
-          case 'tuple':
           case 'compound':
-            // tuple(structure) always succeeds
+            // compound(structure) always succeeds
             return concreteArg is StructTerm;
           case 'list':
           case 'is_list':
@@ -1013,8 +1012,6 @@ class PartialEvaluator {
           case 'number':
             return concreteArg is ConstTerm &&
                 (concreteArg.value is int || concreteArg.value is double);
-          case 'atom':
-            return concreteArg is ConstTerm && concreteArg.value is String;
           case 'ground':
             // If argument is fully concrete (no variables), ground succeeds
             return _isGround(concreteArg);

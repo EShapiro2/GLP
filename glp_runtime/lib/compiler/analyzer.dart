@@ -619,8 +619,8 @@ class Analyzer {
   // Guards that can be negated with ~
   static const _negatableGuards = {
     // Type guards
-    'ground', 'known', 'unknown', 'integer', 'number', 'atom', 'string',
-    'constant', 'compound', 'tuple', 'list', 'is_list', 'module',
+    'ground', 'known', 'unknown', 'integer', 'number', 'string',
+    'constant', 'compound', 'list', 'is_list', 'module',
     'is_mutual_ref', 'no_readers',
     // Equality
     '=?=',
@@ -703,10 +703,11 @@ class Analyzer {
     // catalogue's "Ground: yes" (GLP-Spec appendix-guards.tex; TGLP glp.tex,
     // Remark "Guards and SRSW").  `compound` and `list` are "Ground: no" ---
     // `compound(f(X?))` and `list([X?])` succeed with X? unbound --- and mark
-    // nothing (GLP, 2026-09-28).  `atom` and `tuple` are not in the catalogue;
-    // they are kept as they were until the language decides them.
+    // nothing (GLP, 2026-09-28).  `atom` and `tuple` are not in the catalogue
+    // and are not guards: removed from the runtime on 2026-10-01 (GLP, approved
+    // by Udi), with this table, the negatable set and the partial evaluator.
     // Note: var/nonvar removed (don't guarantee groundness), float removed (not implemented)
-    final typeCheckOps = ['number', 'integer', 'atom', 'string', 'tuple', 'constant'];
+    final typeCheckOps = ['number', 'integer', 'string', 'constant'];
     if (typeCheckOps.contains(guard.predicate) && guard.args.length == 1) {
       final arg = guard.args[0];
       if (arg is VarTerm) {
