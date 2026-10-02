@@ -696,14 +696,24 @@ class PartialEvaluator {
 
     // Handle underscore on either side - always succeeds, no binding
     if (_isUnderscore(callArg) || _isUnderscore(unitArg)) {
+      // Except a writer against a writer: `_` is a writer of its own (GLP-Spec
+      // glp.tex, Remark "Anonymous Variables"), and a call writer against a
+      // head writer fails (appendix-term-matching.tex, row "Writer X1", column
+      // "Writer X2").  Until 2026-10-02 it was passed over.
+      if (_isWriterOccurrence(callArg) && _isWriterOccurrence(unitArg)) {
+        return UnifyFail('Writer $callArg cannot match the head writer $unitArg');
+      }
       return null; // success, continue
     }
 
     // Case: call arg is writer (VarTerm, not reader)
     if (callArg is VarTerm && !callArg.isReader) {
       if (unitArg is VarTerm && !unitArg.isReader) {
-        // Writer vs Writer: alias unit writer to call writer
-        subst[unitArg.name] = callArg;
+        // Call writer vs head writer: FAIL.  GLP-Spec appendix-term-matching.tex,
+        // Definition "Term Matching": row "Writer X1", column "Writer X2".
+        // Until 2026-10-02 the unit writer was aliased to the call writer.
+        return UnifyFail(
+            'Writer ${callArg.name} cannot match the head writer ${unitArg.name}');
       } else if (unitArg is VarTerm && unitArg.isReader) {
         // Writer vs Reader in unit clause - unusual but handle it
         // The reader refers to a writer that should be aliased
@@ -854,6 +864,11 @@ class PartialEvaluator {
     // For now, accept other combinations (variables get resolved later)
     return null;
   }
+
+  /// A writer occurrence, named or anonymous (`_`).
+  bool _isWriterOccurrence(Term term) =>
+      (term is VarTerm && !term.isReader) ||
+      (term is UnderscoreTerm && !term.isReader);
 
   bool _isUnderscore(Term term) {
     return term is UnderscoreTerm || (term is VarTerm && term.name == '_');
