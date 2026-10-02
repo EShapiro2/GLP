@@ -620,7 +620,7 @@ class Analyzer {
   static const _negatableGuards = {
     // Type guards
     'ground', 'known', 'unknown', 'integer', 'number', 'string',
-    'constant', 'compound', 'list', 'is_list', 'module',
+    'constant', 'compound', 'list', 'module',
     'is_mutual_ref', 'no_readers',
     // Equality
     '=?=',
