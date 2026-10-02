@@ -4058,75 +4058,20 @@ mixin OpExecutors {
     return StepOutcome.advance;
   }
 
-  /// `head_list` (match arg against a `[H|T]` cons cell — like
-  /// head_structure for `'[|]'`/2). Bound list → READ mode; unbound writer →
-  /// WRITE mode building a tentative cons; unbound reader → suspend (Si, two
-  /// phase); non-list → next clause.
-  StepOutcome execHeadList(RunnerContext cx, int argSlot) {
-        // Match list structure [H|T] with argument
-        // Equivalent to HeadStructure('[|]', 2, op.argSlot)
-        final arg = _getArg(cx, argSlot);
-        if (arg == null) return StepOutcome.advance;
-
-        // Per spec v2.16.3 Section 12.0.1: Handle VarRef pointing to ValueTag cell
-        if (arg is VarRef && cx.rt.heap.isValue(arg.addr)) {
-          final value = cx.rt.heap.getValue(arg.addr);
-          // Check for list structure (functor '.' or '[|]')
-          if (value is StructTerm && (value.functor == '.' || value.functor == '[|]') && value.args.length == 2) {
-            cx.currentStructure = value;
-            cx.S = 0;
-            cx.mode = UnifyMode.read;
-            return StepOutcome.advance;
-          } else {
-            // Not a list structure - fail
-            return StepOutcome.nextClause;
-          }
-        }
-
-        if (arg is VarRef && cx.rt.heap.isWriter(arg.addr)) {
-          // Writer: create tentative structure in σ̂w
-          if (cx.rt.heap.isFullyBound(arg.addr)) {
-            // Already bound - check if it's a list structure
-            final value = cx.rt.heap.getValue(arg.addr);
-            if (value is StructTerm && value.functor == '[|]' && value.args.length == 2) {
-              cx.currentStructure = value;
-              cx.S = 0;
-              cx.mode = UnifyMode.read;
-            } else {
-              return StepOutcome.nextClause;
-            }
-          } else {
-            // Unbound writer - create tentative structure
-            final struct = StructTerm('[|]', []);
-            cx.sigmaHat[arg.addr] = struct;
-            cx.currentStructure = struct;
-            cx.S = 0;
-            cx.mode = UnifyMode.write;
-          }
-        } else if (arg is VarRef && cx.rt.heap.isReader(arg.addr)) {
-          // Reader: check if bound, else add to Si (two-phase)
-          // Use abstraction methods that work for both local and imported readers
-          final bound = cx.rt.heap.isReaderBound(arg.addr);
-          final value = bound ? cx.rt.heap.getReaderValue(arg.addr) : null;
-
-          if (!bound) {
-            // Unbound reader - add to Si, skip the pattern under it, and
-            // continue ([_skipped])
-            final suspendOnVar = _finalUnboundVar(cx, arg.addr);
-            cx.Si.add(suspendOnVar);
-            _skipSubterm(cx);
-            return StepOutcome.advance;
-          } else {
-            // Bound reader - check if it's a list structure
-            if (value is StructTerm && value.functor == '[|]' && value.args.length == 2) {
-              cx.currentStructure = value;
-              cx.S = 0;
-              cx.mode = UnifyMode.read;
-            } else {
-              return StepOutcome.nextClause;
-            }
-          }
-        }
-    return StepOutcome.advance;
-  }
+  /// `head_list` (0x13): match the argument against a list cell, which is the
+  /// structure `'.'/2` (IGLP code-format-fragment.tex: "Lists are structures:
+  /// a cell is the structure '.'/2; the empty list is the constant nil"), so
+  /// it is `head_structure` for `'.'/2` at [argSlot] and does what that does,
+  /// by the table's column "Term f2/n2" (GLP-Spec appendix-term-matching.tex,
+  /// Definition "Term Matching"): a goal writer is assigned a tentative cell of
+  /// two slots, which the head's elements fill (X1 := T2); a goal reader
+  /// unbound suspends, the pattern under it skipped; a goal cell is matched in
+  /// READ mode; anything else fails (GLP #3 Cowork, 2026-10-02 17:12 UTC, 2).
+  /// No compiler of this tree emits it, a list in a head compiling to
+  /// head_structure `'.'/2`; an artefact may carry it.  Until 2026-10-02 it
+  /// gave an unbound goal writer a `'[|]'` cell with no slots, so the first
+  /// element placed in it threw, and matched a bound list only as `'[|]'/2`,
+  /// which is no list cell.
+  StepOutcome execHeadList(RunnerContext cx, int argSlot) =>
+      execHeadStructure(cx, '.', 2, argSlot);
 }
