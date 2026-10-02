@@ -223,9 +223,9 @@ class SuspensionSet extends SetBase<int> {
 /// suspended on (GLP-Spec appendix-term-matching.tex, row "Reader X1?", column
 /// "Term f2/n2": "suspend on X1?") and the pattern under it is SKIPPED, not
 /// read against whatever structure the traversal last held: its positions match
-/// nothing and fail nothing, and a clause variable first met in it is UNKNOWN
-/// ([RunnerContext.unknownVars]).  The rest of the head is still matched, so a
-/// later mismatch fails the clause.
+/// nothing and fail nothing, and a clause variable whose writer occurrence lies
+/// in it, and has no value yet, is UNKNOWN ([RunnerContext.unknownVars]).  The
+/// rest of the head is still matched, so a later mismatch fails the clause.
 class _SkippedSubterm {
   const _SkippedSubterm();
   @override
@@ -251,21 +251,28 @@ class RunnerContext {
   final SuspensionSet U = SuspensionSet(); // goal-level suspension set (reader IDs)
   bool inBody = false;
 
-  /// The clause variables first met inside a skipped subterm ([_skipped]):
-  /// their value is unknown, so a guard over one is undecided --- neither
-  /// success nor failure --- and is passed by, and a later occurrence matches
-  /// whatever it meets.  The clause cannot commit, its suspension set being
-  /// non-empty; what is still asked of it is whether it fails.
+  /// The UNKNOWN clause variables: those whose writer occurrence lies inside a
+  /// skipped subterm ([_skipped]) and that had no value when it was met.  The
+  /// writer occurrence is the one that gives a head variable its value, the
+  /// subterm of the goal it is matched against (appendix-term-matching.tex,
+  /// column "Writer X2", "X2 := T1"), and under a suspended reader that
+  /// subterm is not there yet; a reader occurrence gives none, so a variable
+  /// met there only as a reader is not unknown, and takes its value from its
+  /// writer occurrence elsewhere.  An unknown variable stays unknown for the
+  /// rest of the clause attempt: a later occurrence never gives it a value,
+  /// and fails only where the table fails whatever the variable --- a head
+  /// reader against a goal reader or a goal term (column "Reader X2?") ---
+  /// and a guard over it is undecided, neither success nor failure, and is
+  /// passed by.  The clause cannot commit, its suspension set being non-empty;
+  /// what is still asked of it is whether it fails.
   final Set<int> unknownVars = <int>{};
 
   /// Set while a generic guard's arguments are built if one of them is an
   /// unknown variable ([unknownVars]): the guard is undecided and is passed by.
   bool guardUndecided = false;
 
-  /// Whether clause variable [varIndex] is unknown: unset, its first
-  /// occurrence lying in a skipped subterm.
-  bool isUnknown(int varIndex) =>
-      clauseVars[varIndex] == null && unknownVars.contains(varIndex);
+  /// Whether clause variable [varIndex] is unknown ([unknownVars]).
+  bool isUnknown(int varIndex) => unknownVars.contains(varIndex);
 
   // WAM-style structure traversal state
   UnifyMode mode = UnifyMode.read;   // Current unification mode
@@ -440,6 +447,32 @@ bool _isUnboundWriterCell(RunnerContext cx, int addr) {
   if (content is VariableEntry) return content.boundValue == null;
   final end = heap.derefAddr(addr);
   return end is VarRef && end.addr == addr;
+}
+
+/// Whether clause variable [varIndex] has no value yet in this clause attempt,
+/// so that its writer occurrence met in a skipped subterm makes it unknown
+/// ([RunnerContext.unknownVars]): it is unset, or a placeholder, or a writer
+/// that neither the heap nor the tentative substitution binds --- the goal's
+/// writer, which an earlier reader occurrence was assigned, or a fresh one an
+/// earlier occurrence placed in a structure built for a goal writer.  Either
+/// writer would take its value from the writer occurrence that lies in the
+/// skipped subterm.  A term or a reader is a value.
+bool _hasNoValue(RunnerContext cx, int varIndex) {
+  final v = cx.clauseVars[varIndex];
+  if (v == null || v is _ClauseVar) return true;
+  final int? w = v is int ? v : (v is VarRef ? v.addr : null);
+  if (w == null || !cx.rt.heap.isWriter(w)) return false;
+  return !cx.sigmaHat.containsKey(w) && _isUnboundWriterCell(cx, w);
+}
+
+/// What a structure slot holds for an occurrence of an unknown variable
+/// ([RunnerContext.unknownVars]) --- in a structure built for a goal writer, or
+/// for a guard's argument: a fresh variable, of the occurrence's polarity, that
+/// the clause does not keep, so the unknown variable stays unknown.  The
+/// structure is never committed, the clause's suspension set being non-empty.
+VarRef _unknownPlaceholder(RunnerContext cx, bool isReader) {
+  final (writerAddr, readerAddr) = cx.rt.heap.allocateVariable();
+  return VarRef(isReader ? readerAddr : writerAddr);
 }
 
 (Object?, Set<int>) _dereferenceWithTracking(Object? term, RunnerContext cx) {
@@ -1732,7 +1765,7 @@ mixin OpExecutors {
   /// unbound writer→fail (nextClause). ~ground(X) inverts the ground/fail ends;
   /// the unbound-reader case still suspends.
   StepOutcome execGround(RunnerContext cx, int varIndex, bool negated) {
-    // A variable met only in a skipped subterm is unknown: undecided, passed by.
+    // An unknown variable ([RunnerContext.unknownVars]): undecided, passed by.
     if (cx.isUnknown(varIndex)) return StepOutcome.advance;
     final value = cx.clauseVars[varIndex];
     if (value == null) return StepOutcome.nextClause; // missing var → fail
@@ -1819,7 +1852,7 @@ mixin OpExecutors {
   /// unbound reader→suspend; unbound writer→fail. ~known(X) inverts bound/writer
   /// ends. Unlike ground, only X itself is inspected, not its sub-terms.
   StepOutcome execKnown(RunnerContext cx, int varIndex, bool negated) {
-    // A variable met only in a skipped subterm is unknown: undecided, passed by.
+    // An unknown variable ([RunnerContext.unknownVars]): undecided, passed by.
     if (cx.isUnknown(varIndex)) return StepOutcome.advance;
     final value = cx.clauseVars[varIndex];
     if (value == null) return StepOutcome.nextClause; // missing var → fail
@@ -1894,7 +1927,7 @@ mixin OpExecutors {
   /// none→advance; some→suspend on them (never fails). ~no_readers(X): some
   /// readers→advance; none→fail. Missing var counts as no readers.
   StepOutcome execNoReaders(RunnerContext cx, int varIndex, bool negated) {
-    // A variable met only in a skipped subterm is unknown: undecided, passed by.
+    // An unknown variable ([RunnerContext.unknownVars]): undecided, passed by.
     if (cx.isUnknown(varIndex)) return StepOutcome.advance;
     final value = cx.clauseVars[varIndex];
     if (value == null) {
@@ -1973,7 +2006,7 @@ mixin OpExecutors {
   /// compare (negation inverts the equal/not-equal ends).
   StepOutcome execGroundEqual(
       RunnerContext cx, int leftVarIndex, int rightVarIndex, bool negated) {
-    // A variable met only in a skipped subterm is unknown: undecided, passed by.
+    // An unknown variable ([RunnerContext.unknownVars]): undecided, passed by.
     if (cx.isUnknown(leftVarIndex) || cx.isUnknown(rightVarIndex)) {
       return StepOutcome.advance;
     }
@@ -2005,7 +2038,7 @@ mixin OpExecutors {
   /// `unknown` (0x43): succeed iff the clause variable is currently unbound (no
   /// σ̂w tentative binding and not heap-bound). A dispatch test; never suspends.
   StepOutcome execUnknown(RunnerContext cx, int varIndex) {
-    // A variable met only in a skipped subterm is unknown: undecided, passed by.
+    // An unknown variable ([RunnerContext.unknownVars]): undecided, passed by.
     if (cx.isUnknown(varIndex)) return StepOutcome.advance;
     final term = cx.clauseVars[varIndex];
     if (term is VarRef) {
@@ -2034,10 +2067,10 @@ mixin OpExecutors {
       }
       return execOtherwise(cx);
     }
-    // An argument built from a variable met only in a skipped subterm: the
-    // guard is undecided, and is passed by --- the clause, suspended on the
-    // reader that subterm lay under, cannot commit, and what is still asked of
-    // it is whether a later match or guard fails.
+    // An argument built from an unknown variable ([RunnerContext.unknownVars]):
+    // the guard is undecided, and is passed by --- the clause, suspended on the
+    // reader its writer occurrence lay under, cannot commit, and what is still
+    // asked of it is whether a later match or guard fails.
     if (cx.guardUndecided) {
       cx.guardUndecided = false;
       return StepOutcome.advance;
@@ -2189,13 +2222,19 @@ mixin OpExecutors {
   /// placeholder or existing binding) into the structure being built; in READ
   /// mode extract the value at S and unify with the clause var (a writer: first
   /// occurrence stores, later occurrence must match; a reader: an unbound goal
-  /// writer is assigned it, and anything else fails).
+  /// writer is assigned it, and anything else fails).  An unknown variable
+  /// ([RunnerContext.unknownVars]) is given no value by any of these.
   StepOutcome execHeadVariable(RunnerContext cx, int varIndex, bool isReader) {
     if (cx.mode == UnifyMode.write) {
       if (cx.currentStructure is _TentativeStruct) {
         final struct = cx.currentStructure as _TentativeStruct;
         final existingValue = cx.clauseVars[varIndex];
-        if (existingValue != null) {
+        if (cx.isUnknown(varIndex)) {
+          // An unknown variable placed in a structure built for a goal
+          // writer: it stays unknown, the slot holding a fresh variable the
+          // clause does not keep --- the clause cannot commit.
+          struct.args[cx.S] = _unknownPlaceholder(cx, isReader);
+        } else if (existingValue != null) {
           if (isReader && existingValue is int) {
             struct.args[cx.S] =
                 VarRef(cx.rt.heap.pairedReaderAddr(existingValue));
@@ -2211,9 +2250,13 @@ mixin OpExecutors {
       }
     } else {
       if (cx.currentStructure is _SkippedSubterm) {
-        // Under a suspended goal reader: nothing to match.  A variable first
-        // met here is unknown ([RunnerContext.unknownVars]).
-        if (cx.clauseVars[varIndex] == null) cx.unknownVars.add(varIndex);
+        // Under a suspended goal reader: nothing to match.  A writer
+        // occurrence of a variable with no value yet makes it unknown
+        // ([RunnerContext.unknownVars]); a reader occurrence gives no value
+        // and leaves the variable as it is.
+        if (!isReader && _hasNoValue(cx, varIndex)) {
+          cx.unknownVars.add(varIndex);
+        }
         return StepOutcome.advance;
       }
       if (cx.currentStructure is StructTerm) {
@@ -2229,7 +2272,10 @@ mixin OpExecutors {
             if (value is! VarRef || !_isUnboundWriterCell(cx, value.addr)) {
               return StepOutcome.nextClause;
             }
-            if (existingValue == null) {
+            if (cx.isUnknown(varIndex)) {
+              // The goal writer would be assigned the reader of an unknown
+              // variable: no fail, and nothing the clause keeps.
+            } else if (existingValue == null) {
               cx.clauseVars[varIndex] = value.addr;
             } else if (existingValue is VarRef) {
               cx.sigmaHat[value.addr] = cx.rt.heap.isWriter(existingValue.addr)
@@ -2248,6 +2294,10 @@ mixin OpExecutors {
               cx.clauseVars[varIndex] = VarRef(writerAddr);
               cx.sigmaHat[value.addr] = VarRef(readerAddr);
             }
+          } else if (cx.isUnknown(varIndex)) {
+            // A later writer occurrence of an unknown variable: what it meets
+            // is matched against a value not yet there, so it is undecided,
+            // and gives the variable no value.
           } else if (existingValue != null) {
             if (existingValue != value) {
               return StepOutcome.nextClause;
@@ -2655,7 +2705,8 @@ mixin OpExecutors {
   /// `unify_variable` (variable at the current S subterm). WRITE mode places
   /// the clause var (fresh or existing, mode-adjusted) into the structure being
   /// built, completing/popping nested structures on the parent stack. READ mode
-  /// unifies it with the subterm per the reader/writer match rules.
+  /// unifies it with the subterm per the reader/writer match rules.  An unknown
+  /// variable ([RunnerContext.unknownVars]) is given no value by any of these.
   StepOutcome execUnifyVariable(
       RunnerContext cx, int varIndex, bool isReaderMode) {
 
@@ -2666,7 +2717,15 @@ mixin OpExecutors {
             final struct = cx.currentStructure as _TentativeStruct;
             final clauseVarValue = cx.clauseVars[varIndex];
 
-            if (clauseVarValue is VarRef) {
+            if (cx.isUnknown(varIndex)) {
+              // An unknown variable placed in a structure built for a goal
+              // writer: it stays unknown, the slot holding a fresh variable
+              // the clause does not keep --- the clause cannot commit.  It
+              // was given a fresh variable here as at a first occurrence,
+              // and a guard over it then failed on an unbound writer instead
+              // of being undecided (f1(same(To), out(To?)) :- ground(To?)).
+              struct.args[cx.S] = _unknownPlaceholder(cx, isReaderMode);
+            } else if (clauseVarValue is VarRef) {
               // Subsequent use: clauseVarValue holds an addr
               final addr = clauseVarValue.addr;
 
@@ -2735,7 +2794,13 @@ mixin OpExecutors {
             final struct = cx.currentStructure as StructTerm;
             final clauseVarValue = cx.clauseVars[varIndex];
 
-            if (clauseVarValue is VarRef) {
+            if (!cx.inBody && cx.isUnknown(varIndex)) {
+              // A guard argument's structure holding an unknown variable
+              // ([RunnerContext.unknownVars]): the guard is undecided
+              // ([execGuard]), and the variable stays unknown.
+              cx.guardUndecided = true;
+              struct.args[cx.S] = _unknownPlaceholder(cx, isReaderMode);
+            } else if (clauseVarValue is VarRef) {
               // Subsequent use: clauseVarValue holds an addr
               final addr = clauseVarValue.addr;
 
@@ -2783,15 +2848,6 @@ mixin OpExecutors {
                 // Writer mode: use ground term directly
                 struct.args[cx.S] = clauseVarValue;
               }
-            } else if (clauseVarValue == null &&
-                !cx.inBody &&
-                cx.unknownVars.contains(varIndex)) {
-              // A guard argument's structure holding an unknown variable, met
-              // only in a skipped subterm: the guard is undecided
-              // ([execGuard]), and the variable stays unknown.
-              cx.guardUndecided = true;
-              final (writerAddr, readerAddr) = cx.rt.heap.allocateVariable();
-              struct.args[cx.S] = VarRef(isReaderMode ? readerAddr : writerAddr);
             } else if (clauseVarValue == null) {
               // First occurrence - allocate fresh variable
               final (writerAddr, readerAddr) = cx.rt.heap.allocateVariable();
@@ -2909,9 +2965,16 @@ mixin OpExecutors {
         } else {
           // READ mode: Unify with value at S position
           if (cx.currentStructure is _SkippedSubterm) {
-            // Under a suspended goal reader: nothing to match.  A variable
-            // first met here is unknown ([RunnerContext.unknownVars]).
-            if (cx.clauseVars[varIndex] == null) cx.unknownVars.add(varIndex);
+            // Under a suspended goal reader: nothing to match.  A writer
+            // occurrence of a variable with no value yet makes it unknown
+            // ([RunnerContext.unknownVars]); a reader occurrence gives no
+            // value and leaves the variable as it is, to take its value from
+            // its writer occurrence --- marked unknown here, a variable met
+            // only as a reader stayed unknown and a guard over it was passed
+            // by, so a clause that fails suspended.
+            if (!isReaderMode && _hasNoValue(cx, varIndex)) {
+              cx.unknownVars.add(varIndex);
+            }
             return StepOutcome.advance;
           }
           if (cx.currentStructure is StructTerm) {
@@ -2935,7 +2998,14 @@ mixin OpExecutors {
                   return StepOutcome.nextClause;
                 } else {
                   // Query has writer, clause expects reader
-                  if (existingValue != null) {
+                  if (cx.isUnknown(varIndex)) {
+                    // The goal writer would be assigned the reader of an
+                    // unknown variable: no fail, and nothing the clause keeps.
+                    // It was stored here as at a first occurrence, and a guard
+                    // over the variable then failed on the goal's unbound
+                    // writer instead of being undecided.
+                    cx.S++;
+                  } else if (existingValue != null) {
                     // Xi already allocated from previous writer occurrence
                     // Bind query writer to existing value (per spec 8.2)
                     if (_isGroundValue(existingValue)) {
@@ -2964,7 +3034,12 @@ mixin OpExecutors {
                 }
               } else {
                 // UnifyWriter READ mode logic
-                if (existingValue is int || (existingValue is VarRef && cx.rt.heap.isWriter(existingValue.addr))) {
+                if (cx.isUnknown(varIndex)) {
+                  // A later writer occurrence of an unknown variable: what it
+                  // meets is matched against a value not yet there, so it is
+                  // undecided, and gives the variable no value.
+                  cx.S++;
+                } else if (existingValue is int || (existingValue is VarRef && cx.rt.heap.isWriter(existingValue.addr))) {
                   // Clause variable is a fresh variable addr from previous UnifyReader
                   final clauseVarAddr = existingValue is int ? existingValue : (existingValue as VarRef).addr;
 
@@ -3103,6 +3178,9 @@ mixin OpExecutors {
   /// the goal writer/reader/term to the clause var (or to its earlier-occurrence
   /// writer via σ̂w); reader mode has the clause reader observe an unbound goal
   /// writer, failing on a goal reader or term. Null arg or fail → next clause.
+  /// It is the first occurrence among the head's arguments, and may follow one
+  /// inside a structure; an unknown variable ([RunnerContext.unknownVars]) met
+  /// there is given no value.
   StepOutcome execGetVariable(
       RunnerContext cx, int varIndex, int argSlot, bool isReaderMode) {
     final arg = _getArg(cx, argSlot);
@@ -3111,6 +3189,10 @@ mixin OpExecutors {
     }
 
         if (!isReaderMode) {
+          // A later writer occurrence of an unknown variable: what it meets is
+          // matched against a value not yet there, so it is undecided, and
+          // gives the variable no value.
+          if (cx.isUnknown(varIndex)) return StepOutcome.advance;
           // GetWriterVariable logic: Load argument into clause WRITER variable
           // IMPORTANT: Check if clauseVars[varIndex] already has a writer from
           // an earlier occurrence (e.g., inside a structure via UnifyVariable).
@@ -3202,7 +3284,13 @@ mixin OpExecutors {
             return StepOutcome.nextClause;
           }
           // Goal writer → head reader (clause observes goal's variable)
-          if (existing != null) {
+          if (cx.isUnknown(varIndex)) {
+            // The goal writer would be assigned the reader of an unknown
+            // variable: no fail, and nothing the clause keeps.  It was stored
+            // here as at a first occurrence, and a guard over the variable
+            // then failed on the goal's unbound writer instead of being
+            // undecided (f7(same(To), To?) :- ground(To?)).
+          } else if (existing != null) {
             // clauseVars already has a value (from earlier occurrence like UnifyVariable)
             // Bind the writer arg to the READER of that value
             // BUG FIX: When existing is a writer VarRef, convert to reader
@@ -3231,9 +3319,10 @@ mixin OpExecutors {
   /// `get_value` (unify goal arg argSlot with the already-bound clause var).
   /// Writer mode unifies/binds via σ̂w; reader mode binds an unbound goal
   /// writer to the stored value's reader (suspending (Si) on an unbound stored
-  /// reader) and fails on a goal reader or term. A variable first met in a
-  /// skipped subterm is unknown and matches. Null arg, unset clause var, or
-  /// any mismatch → next clause.
+  /// reader) and fails on a goal reader or term. An unknown variable
+  /// ([RunnerContext.unknownVars]) is given no value and fails only where the
+  /// table fails whatever the variable. Null arg, unset clause var, or any
+  /// mismatch → next clause.
   StepOutcome execGetValue(
       RunnerContext cx, int varIndex, int argSlot, bool isReaderMode) {
 
@@ -3242,20 +3331,20 @@ mixin OpExecutors {
           return StepOutcome.nextClause;
         }
 
-        var storedValue = cx.clauseVars[varIndex];
-        if (storedValue == null) {
-          if (!cx.unknownVars.contains(varIndex)) return StepOutcome.nextClause;
-          // The variable was first met in a skipped subterm and is unknown:
-          // nothing to match it with, so this occurrence fails only where the
-          // table fails it whatever the variable --- a head reader against a
-          // goal reader or term (appendix-term-matching.tex, column "Reader
-          // X2?").
+        if (cx.isUnknown(varIndex)) {
+          // The variable is unknown: nothing to match it with, so this
+          // occurrence fails only where the table fails it whatever the
+          // variable --- a head reader against a goal reader or term
+          // (appendix-term-matching.tex, column "Reader X2?").
           if (isReaderMode &&
               (arg is! VarRef || !_isUnboundWriterCell(cx, arg.addr))) {
             return StepOutcome.nextClause;
           }
           return StepOutcome.advance;
         }
+
+        var storedValue = cx.clauseVars[varIndex];
+        if (storedValue == null) return StepOutcome.nextClause;
 
         if (!isReaderMode) {
           // GetWriterValue logic: Unify argument with clause WRITER variable
@@ -3542,14 +3631,13 @@ mixin OpExecutors {
   /// needed so every CallEnv argument is a VarRef.
   StepOutcome execPutVariable(
       RunnerContext cx, int varIndex, int argSlot, bool isReaderMode) {
-        // A guard's argument (before commit) that is an unknown variable, met
-        // only in a skipped subterm: the guard is undecided ([execGuard]), and
-        // the variable stays unknown --- the slot gets a fresh variable that
-        // the clause does not keep.
+        // A guard's argument (before commit) that is an unknown variable
+        // ([RunnerContext.unknownVars]): the guard is undecided ([execGuard]),
+        // and the variable stays unknown --- the slot gets a fresh variable
+        // that the clause does not keep.
         if (!cx.inBody && cx.isUnknown(varIndex)) {
           cx.guardUndecided = true;
-          final (writerAddr, readerAddr) = cx.rt.heap.allocateVariable();
-          cx.argSlots[argSlot] = VarRef(isReaderMode ? readerAddr : writerAddr);
+          cx.argSlots[argSlot] = _unknownPlaceholder(cx, isReaderMode);
           return StepOutcome.advance;
         }
         final value = cx.clauseVars[varIndex];
