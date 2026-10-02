@@ -324,7 +324,6 @@ class Analyzer {
   Analyzer();
 
   AnnotatedProgram analyze(Program program, {
-    bool generateReduce = false,
     List<ProcDecl>? procDeclarations,
     TypeEnvironment? typeEnv,
   }) {
@@ -362,21 +361,22 @@ class Analyzer {
     // After SRSW validation passes, we can safely transform defined guards.
     final transformed = _partialEvaluator.transformDefinedGuards(program);
 
-    // STEP 3: Auto-generate reduce/2 clauses for metainterpretation
-    // Generated for all files by default, except those declaring -mode(system)
-    final withReduce = generateReduce
-        ? _generateReduceClauses(transformed)
-        : transformed;
+    // No reduce/2 clauses are generated: a program that needs reduce/2 writes
+    // it, as the book's meta-interpreters do.  Until 2026-10-02 every module
+    // but a system one, and every linked program, had reduce(H, B) clauses
+    // generated here for each of its clauses, after the SRSW pass and the type
+    // check, so neither saw them --- and the object compiled was not the object
+    // checked (Coordination #1, 2026-09-18).
 
-    // STEP 4: Annotate clauses (register assignment) on the transformed program
+    // STEP 3: Annotate clauses (register assignment) on the transformed program
     // SRSW already validated, so skip SRSW checking here
     final annotatedProcs = <AnnotatedProcedure>[];
-    for (final proc in withReduce.procedures) {
+    for (final proc in transformed.procedures) {
       final (annotatedProc, _) = _analyzeProcedureCollectingErrors(proc, skipSRSW: true);
       annotatedProcs.add(annotatedProc);
     }
 
-    return AnnotatedProgram(withReduce, annotatedProcs);
+    return AnnotatedProgram(transformed, annotatedProcs);
   }
 
   /// Collect SRSW violations for a procedure (for early validation before partial eval)
@@ -423,126 +423,6 @@ class Analyzer {
     if (!_markTypeLicensedVars(clause, varTable)) return violations;
     violations = varTable.collectSRSWViolations();
     return violations;
-  }
-
-  /// Generate reduce/2 clauses for all procedures in the program
-  /// Each source clause generates a corresponding reduce/2 clause:
-  /// - H.           -> reduce(H, true).
-  /// - H :- B.      -> reduce(H, B).
-  /// - H :- G | B.  -> reduce(H, B) :- G | true.
-  Program _generateReduceClauses(Program program) {
-    // Don't generate reduce for reduce/2 itself (avoid infinite recursion)
-    final sourceClauses = <Clause>[];
-    for (final proc in program.procedures) {
-      if (proc.name == 'reduce' && proc.arity == 2) continue;
-      sourceClauses.addAll(proc.clauses);
-    }
-
-    if (sourceClauses.isEmpty) {
-      return program; // Nothing to generate
-    }
-
-    // Generate reduce/2 clauses
-    final reduceClauses = <Clause>[];
-    for (final clause in sourceClauses) {
-      reduceClauses.add(_generateReduceClause(clause));
-    }
-
-    // Check if reduce/2 already exists (user-defined)
-    final existingReduceIdx = program.procedures.indexWhere(
-      (p) => p.name == 'reduce' && p.arity == 2
-    );
-
-    final newProcedures = List<Procedure>.from(program.procedures);
-
-    if (existingReduceIdx >= 0) {
-      // Append to existing reduce/2
-      final existing = newProcedures[existingReduceIdx];
-      final mergedClauses = [...existing.clauses, ...reduceClauses];
-      newProcedures[existingReduceIdx] = Procedure(
-        'reduce', 2, mergedClauses,
-        existing.line, existing.column
-      );
-    } else {
-      // Create new reduce/2 procedure
-      final firstClause = reduceClauses.first;
-      newProcedures.add(Procedure(
-        'reduce', 2, reduceClauses,
-        firstClause.line, firstClause.column
-      ));
-    }
-
-    return Program(newProcedures, program.line, program.column);
-  }
-
-  /// Generate a single reduce/2 clause from a source clause
-  Clause _generateReduceClause(Clause source) {
-    final head = source.head;
-    final guards = source.guards;
-    final body = source.body;
-    final line = head.line;
-    final col = head.column;
-
-    // Convert head atom to term for reduce/2
-    final headTerm = _atomToTerm(head);
-
-    // Body term for reduce/2: 'true' for facts, original body for rules
-    Term bodyTerm;
-    if (body == null || body.isEmpty) {
-      bodyTerm = ConstTerm('true', line, col);
-    } else {
-      bodyTerm = _goalsToTerm(body, line, col);
-    }
-
-    // reduce(Head, Body)
-    final reduceHead = Atom('reduce', [headTerm, bodyTerm], line, col);
-
-    // If original had guards, keep them with 'true' body
-    // reduce(H, B) :- G | true.
-    List<Goal>? reduceBody;
-    if (guards != null && guards.isNotEmpty) {
-      reduceBody = [Goal('true', [], line, col)];
-    }
-
-    return Clause(
-      reduceHead,
-      guards: guards,
-      body: reduceBody,
-      line: line,
-      column: col,
-    );
-  }
-
-  /// Convert an Atom to a Term (StructTerm or ConstTerm for 0-arity)
-  Term _atomToTerm(Atom atom) {
-    if (atom.args.isEmpty) {
-      return ConstTerm(atom.functor, atom.line, atom.column);
-    }
-    return StructTerm(atom.functor, atom.args, atom.line, atom.column);
-  }
-
-  /// Convert a list of goals to a single term (conjunction)
-  Term _goalsToTerm(List<Goal> goals, int line, int col) {
-    if (goals.isEmpty) {
-      return ConstTerm('true', line, col);
-    }
-    if (goals.length == 1) {
-      return _goalToTerm(goals.first);
-    }
-    // Right-associative conjunction: (A, (B, C))
-    var result = _goalToTerm(goals.last);
-    for (var i = goals.length - 2; i >= 0; i--) {
-      result = StructTerm(',', [_goalToTerm(goals[i]), result], line, col);
-    }
-    return result;
-  }
-
-  /// Convert a Goal to a Term
-  Term _goalToTerm(Goal goal) {
-    if (goal.args.isEmpty) {
-      return ConstTerm(goal.functor, goal.line, goal.column);
-    }
-    return StructTerm(goal.functor, goal.args, goal.line, goal.column);
   }
 
   AnnotatedProcedure _analyzeProcedure(Procedure proc) {
@@ -602,7 +482,8 @@ class Analyzer {
   }
 
   /// Analyze clause and collect SRSW violations instead of throwing
-  /// [skipSRSW]: if true, skip SRSW validation (used for auto-generated reduce/2 clauses)
+  /// [skipSRSW]: if true, skip SRSW validation (the program's was validated
+  /// before partial evaluation)
   (AnnotatedClause, List<String>) _analyzeClauseCollectingErrors(
       Clause clause, String procName, int procArity, {bool skipSRSW = false}) {
     final varTable = VariableTable();
