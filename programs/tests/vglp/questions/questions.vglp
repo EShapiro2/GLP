@@ -1,16 +1,17 @@
-%% Questions in both modes (vGLP at 16b3b54, sections/vglp.tex, the fragments
+%% Questions in both modes (vGLP at db03e2d, sections/vglp.tex, the fragments
 %% of the currency agent after Definition "Guarded Clause, Volitional
 %% Procedure, ..."; sections/elicitation.tex, Definition "Canonical
-%% Compilation").  Each asking clause calls construct(T, X), the construct
-%% process: the agent's question is Request in reader mode, the responder's
+%% Compilation").  Each asking clause sends its ask, ask(T, X, W?), on the ask
+%% stream: the agent's question is Request in reader mode, the responder's
 %% Card in writer mode, and the agent's message clause, whose interactive term
-%% is `_`, closes the question it drops.
+%% is `_`, drops the reader and binds the handle to withdraw.
 %%
 %% The paper elides the agent's other arguments and its other requests; here
 %% the agent carries its identifier, its network input and a stream of the
-%% texts it posts, and a request is to post a text or to quit.  The construct
-%% process is the interactive runtime's, not yet on disc, so the compiled
-%% program is not run.
+%% texts it posts, and a request is to post a text or to quit.  The program
+%% has two interactive types, so the asks' union has two alternatives of the
+%% functor ask/3, which TGLP refuses ("Two alternatives with the same functor
+%% are not allowed", TGLP typed-glp.tex): the compiled program does not load.
 
 Peer     ::= Constant.
 Request  ::= post(String) ; quit.

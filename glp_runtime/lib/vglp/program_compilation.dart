@@ -171,7 +171,7 @@ String _emit(ast.Module module, CompiledTypes types, InstantiatedMediator med,
 /// Compile the text of a `.vglp` source to the text of its GLP module.
 ///
 /// A source in the paper's syntax --- `procedure (T)*p(...)`, `(A)*p(...)` ---
-/// compiles by the canonical compilation of vGLP at 4cab2ff (canonical.dart).
+/// compiles by the canonical compilation of vGLP at db03e2d (canonical.dart).
 /// A source in the old syntax, with volition guards `*(...)`, keeps
 /// its old compilation, against the generic [mediator], until its owner ports
 /// it (vGLP's code task of 2026-10-01, item 6); it has none to compile against
