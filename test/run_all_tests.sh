@@ -1107,6 +1107,22 @@ HEREDOC
 check "Ackermann A(1,1) = 3" "A11 = s(s(s(0)))" "$a34"
 check "Ackermann A(2,1) = 5" "A21 = s(s(s(s(s(0)))))" "$a34"
 
+# --- A35: Minimum on Peano numerals (book/recursive/arithmetic_trees) ---
+# The program committed to min_check's first clause and then failed in its body,
+# the lesseq test sitting in the body where Concurrent Prolog had it in a deep
+# guard GLP has not; minimum(s(s(0)), s(0), M) failed.  Now the flat standard
+# form, which decides by the head alone.
+echo "--- A35: Minimum ---"
+a35=$("$REPL_RUN" <<HEREDOC
+$BOOK/recursive/arithmetic_trees/min.glp
+minimum(s(s(0)), s(0), M21).
+minimum(0, s(0), M01).
+:quit
+HEREDOC
+2>&1)
+check "Minimum of 2 and 1 is 1" "M21 = s(0)" "$a35"
+check "Minimum of 0 and 1 is 0" "M01 = 0" "$a35"
+
 SECTION_A_PASS=$PASS
 SECTION_A_FAIL=$FAIL
 
