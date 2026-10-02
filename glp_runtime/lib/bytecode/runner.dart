@@ -1558,11 +1558,13 @@ mixin OpExecutors {
   /// at [count] structure positions.
   ///
   /// An anonymous variable is a fresh writer with no paired reader (TGLP
-  /// typed-glp.tex, "Anonymous variables"), and at a produced position of a
-  /// clause head complementation (def:moded-head) makes `_?` exactly that. So
-  /// WRITE puts a fresh writer in the slot, as `glp_engine.dart`'s
-  /// `_anonymousWriter` does for `_` in a goal argument. It used to leave the
-  /// slot `null`, which `_convertTentativeToStruct` turned into
+  /// typed-glp.tex, "Anonymous variables"), so WRITE puts a fresh writer in
+  /// the slot, as `glp_engine.dart`'s `_anonymousWriter` does for `_` in a
+  /// goal argument.  This is `_`'s instruction alone: a head `_?`, "an output
+  /// the clause never produces", is a head reader of a variable of its own and
+  /// compiles to `unify_variable` in reader mode, which fails on a goal term
+  /// or reader and in WRITE places a reader (codegen, 2026-10-02).  It used
+  /// to leave the slot `null`, which `_convertTentativeToStruct` turned into
   /// `ConstTerm(null)`: that closes a stream the clause left open, and the
   /// payload serializer refuses it across a link.
   ///
