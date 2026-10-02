@@ -1,0 +1,45 @@
+%% The Grassroots Social Graph in sGLP, in the translated form, written by hand
+%% (sGLP's paper, the repository svGLP-Stochastic-Volitional-GLP at d2f64b6,
+%% Section 5, "Example: The Grassroots Social Graph"; Section 4, "The
+%% transformation"): this directory's interface and the vGLP program's types.
+%%
+%%   graph.glp    the compiled social-graph program with the person channel
+%%                threaded through it, its four profiles translated, one_of,
+%%                length and nth;
+%%   harness.glp  the run: the initial goals of the run declaration;
+%%   run.sh       a run through the REPL, its log and its friendship graph;
+%%   friendship.awk  the friendship graph from a run's log.
+%%
+%% The run is a program of programs/sglp, the directory above, whose person
+%% process (person.glp) calls the four person procedures exported here; load
+%% programs/sglp and call social_graph/4 there.
+
+%% The vGLP program's types, verbatim (graph.vglp at GLP 723d1602).
+Peer    ::= Constant.
+YesNo   ::= yes ; no.
+Peers   ::= [] ; [Peer | Peers].
+Choice  ::= same(Peer) ; other(Peer).
+Menu    ::= menu(Peers, Peers, Choice?).
+Card    ::= card(Peer, YesNo?).
+Content ::= offer(Peer) ; reply(Peer, YesNo).
+Msg     ::= msg(Peer, Content).
+
+imported procedure graph#homophile_menu(Menu?, Integer?, MutualRef?).
+imported procedure graph#indifferent_menu(Menu?, Integer?, MutualRef?).
+imported procedure graph#wary_card(Card?, Integer?, MutualRef?).
+imported procedure graph#sociable_card(Card?, Integer?, MutualRef?).
+imported procedure harness#run(Integer?, Number?, Span?, Integer?).
+
+%% The person procedures of the four profiles, for the person process.
+exported procedure homophile_menu(Menu?, Integer?, MutualRef?).
+homophile_menu(M, S, Mon) :- graph # homophile_menu(M?, S?, Mon?).
+exported procedure indifferent_menu(Menu?, Integer?, MutualRef?).
+indifferent_menu(M, S, Mon) :- graph # indifferent_menu(M?, S?, Mon?).
+exported procedure wary_card(Card?, Integer?, MutualRef?).
+wary_card(C, S, Mon) :- graph # wary_card(C?, S?, Mon?).
+exported procedure sociable_card(Card?, Integer?, MutualRef?).
+sociable_card(C, S, Mon) :- graph # sociable_card(C?, S?, Mon?).
+
+%% run(Agents?, Count?, Unit?, Seed?): the run, harness.glp.
+exported procedure run(Integer?, Number?, Span?, Integer?).
+run(N, C, U, Seed) :- harness # run(N?, C?, U?, Seed?).

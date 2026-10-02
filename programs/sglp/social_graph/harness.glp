@@ -1,0 +1,149 @@
+%% The run of the Grassroots Social Graph: the initial goals its run declaration
+%% becomes (sGLP's paper, the repository svGLP-Stochastic-Volitional-GLP at
+%% d2f64b6: Section 4, "The run"; Section 5; Appendix B), written by hand.
+%%
+%%   run 1000 agents [ approach ~ (homophile : 0.6 ; indifferent : 0.4),
+%%                     response ~ (wary : 0.7 ; sociable : 0.3) ]
+%%       until 5 years seed 20260927.
+%%
+%% run(N, C, U, Seed) runs it with N agents until C Us from Seed: the whole
+%% population in one machine, as the guard when_idle requires (Section 4, "The
+%% guard").  Its goals:
+%%
+%%   at each agent a of 1..N, its start goal --- the compiled start/6, with a,
+%%   its two lists in increasing order (agents 1..N/2 are of one sex and the
+%%   rest of the other; the first list is the other agents of a's sex, the
+%%   second the agents of the other sex), its input and output streams and its
+%%   person channel --- and its person process, with its stochastic person and
+%%   its seed, reading that channel;
+%%   at no agent, the network --- the root's mwm/2 merging the agents' output
+%%   streams, and a balanced tree of deliver/4 goals handing each message to the
+%%   input stream of the agent it names --- the monitor, with the run's seed and
+%%   the horizon in seconds, and the log's sink.
+%%
+%% In one machine a goal is at agent a by being one of a's: its start goal, its
+%% person process, and the goals they spawn; no goal carries a place.
+%%
+%% The draws (Appendix B).  The monitor draws from the run's seed.  The
+%% population's draws are from a second generator, started at the first value
+%% drawn from the run's seed, split into blocks of 4096 consecutive draws:
+%% agent a's block is the a-th.  Its first two draws pick a's profile in each
+%% dimension by the run declaration's mix (K of 1..100: homophile for K =< 60,
+%% wary for K =< 70), and the seed they leave is its person process's seed, the
+%% start of its own generator.  An agent's draws stay within its block while it
+%% answers fewer than about 4090 questions; past that they run into the next
+%% agent's.
+%%
+%% The log's sink: the run's log is the output stream of a mutual reference that
+%% every person process and the monitor append to; the harness hands it to the
+%% root's send_to_user/1, which prints each entry, ground, on its own line, and
+%% run.sh writes those lines to the log file it is given, tab-separated.
+
+imported procedure graph#start(Peer?, Peers?, Peers?, Stream(Msg)?, Stream(Msg),
+                               MutualRef?).
+
+exported procedure run(Integer?, Number?, Span?, Integer?).
+run(N, C, U, Seed) :-
+    N? >= 2, N? mod 2 =:= 0 |
+    span(U?, Secs),
+    H := C? * Secs?,
+    allocate_mutual_reference(Mon, Requests),
+    allocate_mutual_reference(Log, Entries),
+    send_to_user(Entries?),
+    monitor(Requests?, Seed?, H?, Log?),
+    random(Seed?, 2147483646, Base, _),
+    Half := N? // 2,
+    tree(1, N?, Net?, Ins, []),
+    mwm(Merges?, Net),
+    agents(1, Half?, N?, Base?, Ins?, Merges, Mon?, Log?).
+
+%% agents(A?, Half?, N?, Block?, Ins?, Merges, Mon?, Log?): agents A..N, Half
+%% being N/2, Block the start of A's block, Ins their input streams in order,
+%% Merges their output streams for mwm/2.
+procedure agents(Integer?, Integer?, Integer?, Integer?, Stream(Stream(Msg))?,
+                 MwmInput(Msg), MutualRef?, MutualRef?).
+agents(A, H, N, B, [In|Ins], [merge(Out?)|Ms?], Mon, Log) :-
+    A? =< N? |
+    peers(A?, H?, N?, Ss, Os),
+    random(B?, 100, K1, B1),
+    random(B1?, 100, K2, Seed),
+    approach(K1?, Ap),
+    response(K2?, Re),
+    allocate_mutual_reference(Ch, Questions),
+    graph # start(A?, Ss?, Os?, In?, Out, Ch?),
+    person(A?, profiles(Ap?, Re?), Mon?, Seed?, Log?, Questions?),
+    skip(4096, B?, B2),
+    A1 := A? + 1,
+    agents(A1?, H?, N?, B2?, Ins?, Ms, Mon?, Log?).
+agents(A, _, N, _, [], [], _, _) :-
+    A? > N? | true.
+
+%% The run declaration's mixes: approach ~ (homophile : 0.6 ; indifferent :
+%% 0.4), response ~ (wary : 0.7 ; sociable : 0.3), K drawn from 1..100.
+procedure approach(Integer?, Approach).
+approach(K, homophile) :- K? =< 60 | true.
+approach(K, indifferent) :- K? > 60 | true.
+procedure response(Integer?, Response).
+response(K, wary) :- K? =< 70 | true.
+response(K, sociable) :- K? > 70 | true.
+
+%% skip(J?, S?, S1): S1 is the seed J draws after S.
+procedure skip(Integer?, Integer?, Integer).
+skip(0, S, S?).
+skip(J, S, S1?) :-
+    J? > 0 |
+    random(S?, 1, _, S2),
+    J1 := J? - 1,
+    skip(J1?, S2?, S1).
+
+%% peers(A?, H?, N?, Ss, Os): Ss the other agents of A's sex, Os the agents of
+%% the other sex, in increasing order; agents 1..H are of one sex, H = N/2.
+procedure peers(Integer?, Integer?, Integer?, Stream(Integer), Stream(Integer)).
+peers(A, H, N, Ss?, Os?) :-
+    A? =< H? |
+    H1 := H? + 1,
+    range(1, H?, A?, Ss),
+    range(H1?, N?, 0, Os).
+peers(A, H, N, Ss?, Os?) :-
+    A? > H? |
+    H1 := H? + 1,
+    range(H1?, N?, A?, Ss),
+    range(1, H?, 0, Os).
+
+%% range(Lo?, Hi?, Skip?, L): L is Lo..Hi without Skip.
+procedure range(Integer?, Integer?, Integer?, Stream(Integer)).
+range(Lo, Hi, _, []) :-
+    Lo? > Hi? | true.
+range(Lo, Hi, Skip, L?) :-
+    Lo? =< Hi?, Lo? =:= Skip? |
+    Lo1 := Lo? + 1,
+    range(Lo1?, Hi?, Skip?, L).
+range(Lo, Hi, Skip, [Lo?|L?]) :-
+    Lo? =< Hi?, Lo? =\= Skip? |
+    Lo1 := Lo? + 1,
+    range(Lo1?, Hi?, Skip?, L).
+
+%% The network.  tree(Lo?, Hi?, Ms?, Ins, Rest?): a balanced tree of deliver/4
+%% goals over agents Lo..Hi routing the messages Ms, Ins being the input streams
+%% of agents Lo..Hi in order, followed by Rest.
+procedure tree(Integer?, Integer?, Stream(Msg)?, Stream(Stream(Msg)),
+               Stream(Stream(Msg))?).
+tree(Lo, Hi, Ms, [Ms?|Rest?], Rest) :-
+    Lo? =:= Hi? | true.
+tree(Lo, Hi, Ms, Ins?, Rest) :-
+    Lo? < Hi? |
+    Mid := (Lo? + Hi?) // 2,
+    Mid1 := Mid? + 1,
+    deliver(Ms?, Mid?, L, R),
+    tree(Lo?, Mid?, L?, Ins, Ins1?),
+    tree(Mid1?, Hi?, R?, Ins1, Rest?).
+
+%% deliver(Ms?, Mid?, Ls, Hs) sends each message of Ms addressed to an agent
+%% numbered Mid or less to Ls, and each other to Hs (graph.vglp at GLP
+%% 723d1602).
+procedure deliver(Stream(Msg)?, Integer?, Stream(Msg), Stream(Msg)).
+deliver([msg(To, C)|Ms], Mid, [msg(To?, C?)|Ls?], Hs?) :-
+    To? =< Mid? | deliver(Ms?, Mid?, Ls, Hs).
+deliver([msg(To, C)|Ms], Mid, Ls?, [msg(To?, C?)|Hs?]) :-
+    To? > Mid? | deliver(Ms?, Mid?, Ls, Hs).
+deliver([], _, [], []).

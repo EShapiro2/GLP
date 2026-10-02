@@ -5265,6 +5265,39 @@ fi
 
 echo ""
 
+# =============================================================================
+# Section SGLP: sGLP in GLP (programs/sglp)
+# =============================================================================
+# programs/sglp/test_sglp.sh holds sGLP's checks of its programs --- the monitor
+# over when_idle, the law of its releases, the social graph's runs --- against
+# sGLP's paper, and prints one summary line; this section runs it and folds its
+# two counts into the suite's, as Section JX does jurix's.  Its runs take some
+# minutes.
+echo "=== Section SGLP: sGLP in GLP ==="
+echo ""
+
+SGLP_RESULT=$(bash "$GLP_DIR/programs/sglp/test_sglp.sh" 2>&1) && SGLP_STATUS=0 || SGLP_STATUS=$?
+SGLP_SUMMARY=$(printf '%s' "$SGLP_RESULT" | grep -oE '^=== [0-9]+ passed, [0-9]+ failed ===$' | tail -1) || true
+
+if [ -z "$SGLP_SUMMARY" ]; then
+    echo "  FAIL: programs/sglp/test_sglp.sh exited $SGLP_STATUS printing no summary, so its checks did not run"
+    printf '%s\n' "$SGLP_RESULT" | tail -5 | sed 's/^/        /'
+    FAIL=$((FAIL + 1))
+else
+    SGLP_PASSED=$(printf '%s' "$SGLP_SUMMARY" | awk '{print $2}')
+    SGLP_FAILED=$(printf '%s' "$SGLP_SUMMARY" | awk '{print $4}')
+    PASS=$((PASS + SGLP_PASSED))
+    FAIL=$((FAIL + SGLP_FAILED))
+    if [ "$SGLP_FAILED" -eq 0 ]; then
+        echo "  PASS: All $SGLP_PASSED sGLP checks passed"
+    else
+        printf '%s\n' "$SGLP_RESULT" | grep -E '^  FAIL|^        ' | sed 's/^/  /'
+        echo "  FAIL: $SGLP_FAILED of $((SGLP_PASSED + SGLP_FAILED)) sGLP checks failed"
+    fi
+fi
+
+echo ""
+
 # Known-red tests.  One entry per line, matched against "<file>: <test name>".
 # Each entry names the owning project and what blocks it.
 # Empty: nothing is known-red.  An entry names a test another project owns and

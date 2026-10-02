@@ -1,0 +1,68 @@
+%% Test (ii) of sGLP in GLP (sGLP's code task of 2026-10-02 00:06 UTC, item 6;
+%% sGLP's paper at d2f64b6, Section 2, Proposition "Time to the Next Release";
+%% Section 4, "The monitor"): with m pending requests of rates r_1..r_m and
+%% nothing else, the times between releases are exponential with rate
+%% R = r_1 + ... + r_m.
+%%
+%%   law(K, S)   S = stats(K, Mean, Var), the mean and variance of the first K
+%%               times between releases, the first from 0
+%%
+%% Four goals, of rates 1/second, 2/second, 30/minute and 3600/hour, R = 4.5
+%% per second: each request of the monitor (programs/sglp/monitor.glp, exposed
+%% by programs/sglp/self.glp) is pending until released, and a released goal
+%% reads the clock and requests again at once, so four are pending throughout.
+%% An exponential with rate 4.5 has mean 1/4.5 and variance 1/4.5^2; the
+%% horizon, 3000 s, gives some 13500 releases.
+
+Stats ::= stats(Integer, Number, Number).
+
+exported procedure law(Integer?, Stats).
+law(K, S?) :-
+    allocate_mutual_reference(Mon, Requests),
+    allocate_mutual_reference(Times, Ts),
+    allocate_mutual_reference(Log, _),
+    monitor(Requests?, 20260927, 3000, Log?),
+    pending(Mon?, Times?, 1/second),
+    pending(Mon?, Times?, 2/second),
+    pending(Mon?, Times?, 30/minute),
+    pending(Mon?, Times?, 3600/hour),
+    stats(Ts?, K?, 0, 0, 0, 0, S).
+
+%% pending(Mon?, Times?, R?): a goal of rate R, translated as the
+%% transformation translates G @ R, G being released/4.
+procedure pending(MutualRef?, MutualRef?, Rate?).
+pending(Mon, Times, R) :-
+    ground(R?) |
+    stream_append(rated(R?, Tok), Mon?, Mon1),
+    released(Tok?, Mon1?, Times?, R?).
+
+%% released(go, Mon?, Times?, R?): read the clock, record it, and be pending
+%% again.
+procedure released(Token?, MutualRef?, MutualRef?, Rate?).
+released(go, Mon, Times, R) :-
+    ground(R?) |
+    stream_append(time(T), Mon?, Mon1),
+    stream_append(T?, Times?, _),
+    pending(Mon1?, Times?, R?).
+
+%% stats(Ts?, K?, Prev?, N?, Sum?, SumSq?, S): the first K differences of the
+%% release times Ts, Prev the time before the next.
+procedure stats(Stream(Number)?, Integer?, Number?, Integer?, Number?, Number?,
+                Stats).
+stats([T|Ts], K, Prev, N, Sum, Sq, S?) :-
+    N? < K?, number(T?) |
+    D := T? - Prev?,
+    N1 := N? + 1,
+    add(D?, Sum?, Sq?, Sum1, Sq1),
+    stats(Ts?, K?, T?, N1?, Sum1?, Sq1?, S).
+stats(_, K, _, N, Sum, Sq, stats(N?, Mean?, Var?)) :-
+    N? >= K? |
+    Mean := Sum? / N?,
+    Var := Sq? / N? - Mean? * Mean?.
+
+%% add(D?, Sum?, Sq?, Sum1, Sq1): Sum1 = Sum + D, Sq1 = Sq + D^2.
+procedure add(Number?, Number?, Number?, Number, Number).
+add(D, Sum, Sq, Sum1?, Sq1?) :-
+    number(D?) |
+    Sum1 := Sum? + D?,
+    Sq1 := Sq? + D? * D?.

@@ -1,0 +1,122 @@
+%% The person process of an sGLP run and the construct process of the compiled
+%% program in a simulation (sGLP's paper, the repository
+%% svGLP-Stochastic-Volitional-GLP at d2f64b6: Section 4, "The person process"
+%% and "The log"; Section 3, Definition "Simulation Program"; Appendix B).
+%%
+%% construct(T, X, Ch) is sGLP's construct process in a simulation: called by
+%% the compiled program's asking clause with the interactive type T, as a
+%% constant, and the person's end X of the question's interactive variable, it
+%% appends question(T, X) to the agent's person channel Ch, a mutual reference
+%% whose output stream the agent's person process reads.
+%%
+%% person(A, P, Mon, S, Log, Qs) is the person process of agent A: one goal per
+%% agent, holding A, its stochastic person P (one profile per dimension, drawn
+%% by the harness), the monitor's reference Mon, its seed S and the log's
+%% reference Log, and reading its questions Qs.  For each question it draws the
+%% next seed S1 of its own generator and spawns the goal of the person procedure
+%% its profile declares for T, with the question, S1 and Mon.  Each clause below
+%% is one person declaration of one profile (Section 4, "The transformation":
+%% "A person declaration T =::= p becomes a clause of the person process"); the
+%% transformation will write them, and these are its output by hand, for the
+%% social graph's four profiles (programs/sglp/social_graph).
+%%
+%% The log.  The person process writes one line per answer: when the person
+%% procedure's goal has assigned the answer, it reads the clock from the monitor
+%% by time(T), answered at once, and appends entry(T, A, Type, Term) to the log,
+%% Term the question's term with the answer in place.  To see the answer it
+%% must hold it: the person goal is given the question's term with a fresh
+%% variable at the answer's position, and the person process waits on that
+%% variable being ground and then passes the answer on to the program's
+%% variable (answer_menu/7, answer_card/6).  Everything the log records crosses
+%% the person process (Section 4, "The log").
+%%
+%% The interactive types below are the social graph's, written again here for
+%% the declarations of its person procedures that this module imports; type
+%% identity is structural.
+
+Peer        ::= Constant.
+YesNo       ::= yes ; no.
+Peers       ::= [] ; [Peer | Peers].
+Choice      ::= same(Peer) ; other(Peer).
+Menu        ::= menu(Peers, Peers, Choice?).
+Card        ::= card(Peer, YesNo?).
+
+%% A question on the person channel: the interactive type as a constant, and
+%% the person's end of the variable.
+QType       ::= 'Menu' ; 'Card'.
+Interactive ::= Menu ; Card.
+Question    ::= question(QType, Interactive).
+
+%% A stochastic person: one profile per dimension of the run declaration.
+Approach    ::= homophile ; indifferent.
+Response    ::= wary ; sociable.
+Profiles    ::= profiles(Approach, Response).
+
+%% What the person process sends the monitor, and what it writes to the log.
+Clocked     ::= time(Number?).
+Shown       ::= menu(Peers, Peers, Choice) ; card(Peer, YesNo).
+Entry       ::= entry(Number, Integer, QType, Shown).
+
+imported procedure social_graph#homophile_menu(Menu?, Integer?, MutualRef?).
+imported procedure social_graph#indifferent_menu(Menu?, Integer?, MutualRef?).
+imported procedure social_graph#wary_card(Card?, Integer?, MutualRef?).
+imported procedure social_graph#sociable_card(Card?, Integer?, MutualRef?).
+
+%% construct(T?, X?, Ch?): hand the person process the question.
+exported procedure construct(QType?, Interactive?, MutualRef?).
+construct(T, X, Ch) :-
+    stream_append(question(T?, X?), Ch?, _).
+
+%% person(Agent?, Profiles?, Mon?, Seed?, Log?, Questions?)
+exported procedure person(Integer?, Profiles?, MutualRef?, Integer?,
+                          MutualRef?, Stream(Question)?).
+%% homophile: Menu =::= homophile_menu.
+person(A, profiles(homophile, R), Mon, Seed, Log,
+       [question('Menu', menu(Ss, Os, C?))|Qs]) :-
+    ground(Ss?), ground(Os?) |
+    random(Seed?, 1, _, S),
+    social_graph # homophile_menu(menu(Ss?, Os?, C1), S?, Mon?),
+    answer_menu(A?, Ss?, Os?, C1?, C, Mon?, Log?),
+    person(A?, profiles(homophile, R?), Mon?, S?, Log?, Qs?).
+%% indifferent: Menu =::= indifferent_menu.
+person(A, profiles(indifferent, R), Mon, Seed, Log,
+       [question('Menu', menu(Ss, Os, C?))|Qs]) :-
+    ground(Ss?), ground(Os?) |
+    random(Seed?, 1, _, S),
+    social_graph # indifferent_menu(menu(Ss?, Os?, C1), S?, Mon?),
+    answer_menu(A?, Ss?, Os?, C1?, C, Mon?, Log?),
+    person(A?, profiles(indifferent, R?), Mon?, S?, Log?, Qs?).
+%% wary: Card =::= wary_card.
+person(A, profiles(P, wary), Mon, Seed, Log,
+       [question('Card', card(From, Y?))|Qs]) :-
+    ground(From?) |
+    random(Seed?, 1, _, S),
+    social_graph # wary_card(card(From?, Y1), S?, Mon?),
+    answer_card(A?, From?, Y1?, Y, Mon?, Log?),
+    person(A?, profiles(P?, wary), Mon?, S?, Log?, Qs?).
+%% sociable: Card =::= sociable_card.
+person(A, profiles(P, sociable), Mon, Seed, Log,
+       [question('Card', card(From, Y?))|Qs]) :-
+    ground(From?) |
+    random(Seed?, 1, _, S),
+    social_graph # sociable_card(card(From?, Y1), S?, Mon?),
+    answer_card(A?, From?, Y1?, Y, Mon?, Log?),
+    person(A?, profiles(P?, sociable), Mon?, S?, Log?, Qs?).
+person(_, _, _, _, _, []).
+
+%% answer_menu(A?, Ss?, Os?, C1?, C, Mon?, Log?): once the person goal has
+%% assigned its choice C1, pass it on to the program's C and log it.
+procedure answer_menu(Integer?, Peers?, Peers?, Choice?, Choice, MutualRef?,
+                      MutualRef?).
+answer_menu(A, Ss, Os, C1, C1?, Mon, Log) :-
+    ground(C1?) |
+    stream_append(time(T), Mon?, _),
+    stream_append(entry(T?, A?, 'Menu', menu(Ss?, Os?, C1?)), Log?, _).
+
+%% answer_card(A?, From?, Y1?, Y, Mon?, Log?): once the person goal has
+%% assigned its answer Y1, pass it on to the program's Y and log it.
+procedure answer_card(Integer?, Peer?, YesNo?, YesNo, MutualRef?, MutualRef?).
+answer_card(A, From, Y1, Y1?, Mon, Log) :-
+    ground(Y1?) |
+    stream_append(time(T), Mon?, _),
+    stream_append(entry(T?, A?, 'Card', card(From?, Y1?)), Log?, _).

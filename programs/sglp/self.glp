@@ -1,0 +1,41 @@
+%% programs/sglp: sGLP in GLP, as the stochastic pi-calculus was in FCP (sGLP's
+%% paper, the repository svGLP-Stochastic-Volitional-GLP at d2f64b6, Section 4).
+%%
+%%   monitor.glp    the monitor, over the guard when_idle;
+%%   person.glp     the person process, and the construct process of a compiled
+%%                  program in a simulation;
+%%   social_graph/  the Grassroots Social Graph in the translated form, its
+%%                  harness and its run script;
+%%   tests/         the tests of the suite's sGLP block (test_sglp.sh).
+%%
+%% Both modules are exposed to the subtree: the translated programs call
+%% construct/3, and their harnesses spawn the monitor and the person processes.
+%% A run of the social graph is a call of social_graph/4 with this directory
+%% loaded (social_graph/run.sh).
+-expose(monitor).
+-expose(person).
+
+%% The horizon of a run declaration, `until <number> <unit>`: the unit singular
+%% or plural (Appendix B).
+Span ::= TimeUnit ; seconds ; minutes ; hours ; days ; weeks ; years.
+
+%% span(U?, S): S is the number of seconds in one U, a year being 365.25 days.
+procedure span(Span?, Integer).
+span(second, 1).
+span(seconds, 1).
+span(minute, 60).
+span(minutes, 60).
+span(hour, 3600).
+span(hours, 3600).
+span(day, 86400).
+span(days, 86400).
+span(week, 604800).
+span(weeks, 604800).
+span(year, 31557600).
+span(years, 31557600).
+
+%% social_graph(Agents?, Count?, Unit?, Seed?): the social graph's run with
+%% Agents agents until Count Units from seed Seed (social_graph/harness.glp).
+imported procedure social_graph#run(Integer?, Number?, Span?, Integer?).
+exported procedure social_graph(Integer?, Number?, Span?, Integer?).
+social_graph(N, C, U, Seed) :- social_graph # run(N?, C?, U?, Seed?).
