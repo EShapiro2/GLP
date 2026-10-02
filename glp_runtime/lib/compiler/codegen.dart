@@ -336,8 +336,18 @@ class CodeGenerator {
       }
 
     } else if (term is UnderscoreTerm) {
-      // Anonymous variable as direct head argument: just ignore it
-      // No instruction needed - the argument is simply not extracted
+      if (term.isReader) {
+        // `_?`: "an output the clause never produces" (TGLP typed-glp.tex,
+        // "Anonymous variables"), the placeholder `Out?` of a variable whose
+        // writer occurs nowhere in the clause --- a head reader of a variable
+        // of its own.  So the table's column "Reader X2?" matches it
+        // (GLP-Spec appendix-term-matching.tex, Definition "Term Matching"):
+        // a goal writer is assigned it, a goal reader and a goal term fail.
+        // It was compiled as `_` is, to nothing, so `p(_, _?)` took `p(1, 2)`.
+        ctx.emit(bcv2.GetVariable(ctx.allocateTemp(), argSlot, isReader: true));
+      }
+      // `_`: a head writer whose value is discarded; the argument is simply
+      // not extracted.
     }
   }
 
@@ -409,8 +419,17 @@ class CodeGenerator {
       }
 
     } else if (term is UnderscoreTerm) {
-      // Anonymous variable in structure
-      ctx.emit(bc.UnifyVoid(count: 1));
+      if (term.isReader) {
+        // `_?` in a head structure: a head reader of a variable of its own, as
+        // at an argument above.  unify_void, which `_` compiles to, passes
+        // over whatever the goal holds here, and in a structure built for a
+        // goal writer places a fresh writer where the clause's output
+        // placeholder stands.
+        ctx.emit(bcv2.UnifyVariable(ctx.allocateTemp(), isReader: true));
+      } else {
+        // `_` in a head structure: a fresh writer, its value discarded.
+        ctx.emit(bc.UnifyVoid(count: 1));
+      }
     }
   }
 

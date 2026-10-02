@@ -1187,6 +1187,19 @@ class PartialEvaluator {
     Map<String, Term> subst,
     Set<String> suspSet
   ) {
+    // A unit clause's `_?` (or `_X?`) is a head reader of a variable of its
+    // own: at a produced head position it "denotes an output the clause never
+    // produces" (TGLP typed-glp.tex, "Anonymous variables").  The table's
+    // column "Reader X2?" matches it as the named head readers below: a call
+    // writer is assigned it, and the unfolding names it nowhere; a call reader
+    // or term fails.  It was passed over as `_` is, so pick(A?, 2) reduced
+    // against pick(1, _?).
+    if (_isAnonymousReader(unitArg)) {
+      return _isWriterTerm(callArg)
+          ? null
+          : UnifyFail(_anonymousReaderMismatch(callArg));
+    }
+
     // Handle underscore on either side - always succeeds, no binding
     if (_isAnonymous(callArg) || _isAnonymous(unitArg)) {
       return null; // success, continue
@@ -1353,6 +1366,27 @@ class PartialEvaluator {
   bool _isAnonymous(Term term) {
     return term is UnderscoreTerm || (term is VarTerm && term.name.startsWith('_'));
   }
+
+  /// An anonymous variable at a reader occurrence, `_?` or `_X?`.
+  bool _isAnonymousReader(Term term) =>
+      (term is UnderscoreTerm && term.isReader) ||
+      (term is VarTerm && term.isReader && term.name.startsWith('_'));
+
+  /// A writer occurrence, named or anonymous.
+  bool _isWriterTerm(Term term) =>
+      (term is UnderscoreTerm && !term.isReader) ||
+      (term is VarTerm && !term.isReader);
+
+  /// Why [callArg], a call reader or term, cannot match a unit clause's `_?`.
+  String _anonymousReaderMismatch(Term callArg) => switch (callArg) {
+        ConstTerm(:final value) =>
+          'Constant $value cannot match the head reader _?',
+        StructTerm(:final functor) =>
+          'Structure $functor cannot match the head reader _?',
+        ListTerm() => 'List cannot match the head reader _?',
+        VarTerm(:final name) => 'Reader $name? cannot match the head reader _?',
+        _ => 'Reader _? cannot match the head reader _?',
+      };
 
   /// Resolve substitution chains.
   /// If σ = {X → Y, Y → f(Z)}, result is {X → f(Z), Y → f(Z)}
