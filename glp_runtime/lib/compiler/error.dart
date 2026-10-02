@@ -14,12 +14,18 @@ class CompileError implements Exception {
   final String? source;
   final ErrorCategory? category;
 
+  /// [category] is kept as given; without one, it is the category of [phase],
+  /// named by the phase that raised the error (`lexer`, `parser`, `analyzer`,
+  /// `codegen`).  A caller passing an error on gives its category, not a
+  /// phase: GlpCompiler passed the category's name as the phase until
+  /// 2026-10-02, which no phase is named, and lost every category but codegen.
   CompileError(
     this.message,
     this.line,
     this.column,
-    {this.source, String? phase}
-  ) : category = phase != null ? _categoryFromPhase(phase) : null;
+    {this.source, String? phase, ErrorCategory? category}
+  ) : category =
+          category ?? (phase != null ? _categoryFromPhase(phase) : null);
 
   static ErrorCategory? _categoryFromPhase(String phase) {
     switch (phase) {

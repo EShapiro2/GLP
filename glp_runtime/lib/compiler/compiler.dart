@@ -90,8 +90,11 @@ class GlpCompiler {
 
       return result;
     } on CompileError catch (e) {
-      // Rethrow with source context
-      throw CompileError(e.message, e.line, e.column, source: source, phase: e.category?.toString().split('.').last);
+      // Rethrow with source context, and with the error's category.  The
+      // category's name was passed as the phase until 2026-10-02 ('lexical',
+      // 'syntax', 'semantic'), which CompileError does not map, so a lexical,
+      // syntax or semantic error from the compiler came back with none.
+      throw CompileError(e.message, e.line, e.column, source: source, category: e.category);
     }
   }
 
