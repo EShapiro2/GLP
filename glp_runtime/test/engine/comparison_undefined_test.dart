@@ -7,9 +7,11 @@
 /// evaluate to numbers (appendix-guards.tex, "Arithmetic comparison guards"),
 /// and every arithmetic operator needs a value of each of its operands, so an
 /// operand with none in any instance --- a quotient or remainder by zero, a
-/// bound term that is no number, an unbound writer --- leaves no instance
-/// that succeeds.  Until 2026-10-02 the comparison waited on the readers
-/// beside it: `cz(X, yes) :- X? / 0 > 1 | true.`, `otherwise` beneath,
+/// quotient or remainder of an operand that is no integer, `//` and `mod`
+/// taking integers only (026515d), a bound term that is no number, an unbound
+/// writer --- leaves no instance that succeeds.  Until 2026-10-02 the
+/// comparison waited on the readers beside it: `cz(X, yes) :- X? / 0 > 1 |
+/// true.`, `otherwise` beneath,
 /// suspended `cz(Q?, R)`, and `X? > 1 / 0` waited on `X?` before the right
 /// operand was evaluated (Integration, 2026-10-02 17:06 UTC, S3; GLP #3
 /// Cowork, 17:12 UTC: "S1, S2, S3: yes, each a task, compliance").  A
@@ -55,6 +57,26 @@ cn(_, no) :- otherwise | true.
 procedure cs(_?, _?, Constant).
 cs(X, Y, yes) :- X? + Y? > 1 | true.
 cs(_, _, no) :- otherwise | true.
+
+procedure ch(Number?, Constant).
+ch(X, yes) :- X? mod 0.5 =:= 1 | true.
+ch(_, no) :- otherwise | true.
+
+procedure cq(Number?, Constant).
+cq(X, yes) :- X? // 2.5 > 1 | true.
+cq(_, no) :- otherwise | true.
+
+procedure co(Number?, Constant).
+co(X, yes) :- X? mod 2 =:= 1 | true.
+co(_, no) :- otherwise | true.
+
+procedure cv(Number?, Constant).
+cv(X, yes) :- X? // 2 > 2 | true.
+cv(_, no) :- otherwise | true.
+
+procedure cx(Number?, Number?, Constant).
+cx(X, Y, yes) :- X? // Y? > 1 | true.
+cx(_, _, no) :- otherwise | true.
 ''';
 
 const _ok = ExecutionStatus.succeeded;
@@ -113,5 +135,37 @@ void main() {
     _runs('cw(0, R)', _ok, r: 'no');
     _runs('cn(3, R)', _ok, r: 'yes');
     _runs('cn(0, R)', _ok, r: 'no');
+  });
+
+  // `//` and `mod` take integers only, an operand that is no integer having
+  // no value (GLP-Spec appendix-guards.tex, 026515d: "an argument with no
+  // value --- a zero divisor, a non-integer under // or mod, an argument
+  // outside a function's domain --- fails the guard"; GLP #3 Cowork,
+  // 2026-10-02 20:58 UTC, "20:10" B, S3's rule).  Until 2026-10-02 `//`
+  // divided reals and `mod` truncated its operands: ch(5, R) threw
+  // IntegerDivisionByZeroException, 0.5 truncating to 0, cq(5, R), co(7.5, R)
+  // and cv(7.5, R) gave R = yes, and ch(Q?, R) and cq(Q?, R) waited on Q?.
+  group('an operand of // or mod that is no integer: the clause fails', () {
+    _runs('ch(5, R)', _ok, r: 'no');
+    _runs('ch(Q?, R)', _ok, r: 'no');
+    _runs('cq(5, R)', _ok, r: 'no');
+    _runs('cq(Q?, R)', _ok, r: 'no');
+    _runs('co(7.5, R)', _ok, r: 'no');
+    _runs('cv(7.5, R)', _ok, r: 'no');
+    _runs('cv(8.0, R)', _ok, r: 'no');
+    // The real a reader of the goal, bound after the clause waited on it.
+    _runs('cx(Q?, 2, R), Q = 7.5', _ok, r: 'no');
+    _runs('cx(7, Q?, R), Q = 2.0', _ok, r: 'no');
+  });
+
+  group('integer operands of // and mod: decided as before', () {
+    _runs('co(7, R)', _ok, r: 'yes');
+    _runs('co(8, R)', _ok, r: 'no');
+    _runs('cv(7, R)', _ok, r: 'yes');
+    _runs('cv(5, R)', _ok, r: 'no');
+    _runs('co(Q?, R)', _waits);
+    _runs('co(Q?, R), Q = 7', _ok, r: 'yes');
+    _runs('cx(7, Q?, R)', _waits);
+    _runs('cx(7, Q?, R), Q = 2', _ok, r: 'yes');
   });
 }
