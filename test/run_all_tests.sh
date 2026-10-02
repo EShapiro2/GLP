@@ -81,6 +81,8 @@ KNOWN_RED_CHECKS=(
 # its failures on `gap` stand here until CSSN wakes, and nobody repairs its
 # files.  Section K entire, and the SG checks that need the `cssn` or
 # `childsafe` artefact, measured at gap 2c18023e.
+    "SG two mini-apps at once: bob connected and greeted under it"
+    "SG two mini-apps on two smartphones: and its message arrives"
     "CSSN mini-app loads as a program"
     "CSSN mini-app: its certificate carries the compiler's key"
     "CSSN mini-app: run/3 activates it, and adopting the conversation is the friendship"
@@ -5349,6 +5351,20 @@ echo ""
 KNOWN_RED=(
     # CSSN, dormant (Udi, 2026-09-28): program_linker_test's three, on CSSN's
     # program, and cssn_v2_isolate_test's thirteen, measured at gap 2c18023e.
+    # CSSN's guard negation refused by the parser since GLP's 15ba4b7e (the
+    # language has no ~G): twelve more, measured at gap 8b8cc800.
+    "test/compiler/program_linker_test.dart: Program discovery discovers all modules in cssn"
+    "test/compiler/program_linker_test.dart: Program discovery excludes self.glp from modules"
+    "test/compiler/program_linker_test.dart: Program discovery excludes boot_direct.glp from modules"
+    "test/compiler/program_linker_test.dart: Program discovery modules have correct ancestor scopes"
+    "test/compiler/program_linker_test.dart: Linking procedures are renamed with module prefix"
+    "test/compiler/program_linker_test.dart: Linking cross-module calls are resolved"
+    "test/compiler/program_linker_test.dart: Linking local calls are resolved"
+    "test/compiler/program_linker_test.dart: Linking prelude calls are preserved unprefixed"
+    "test/compiler/program_linker_test.dart: Linking entry-point aliases exist for the root self.glp forwarded entries"
+    "test/compiler/program_linker_test.dart: Linking entry point alias calls renamed procedure"
+    "test/vglp/program_compilation_test.dart: the deployed sources cssn/childsafe/agent.vglp parses as vGLP"
+    "test/vglp/program_compilation_test.dart: the deployed sources cssn/childsafe/child_agent.vglp parses as vGLP"
     "test/compiler/program_linker_test.dart: End-to-end compilation fplay1 produces correct output"
     "test/compiler/program_linker_test.dart: End-to-end compilation linked program compiles to bytecode"
     "test/compiler/program_linker_test.dart: Type checking all modules type-check successfully"
