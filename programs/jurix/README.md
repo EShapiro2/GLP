@@ -23,13 +23,15 @@ printed.  Section 5 defines the compilation for syntactically grassroots
 contracts, so the compiler runs the checker first and compiles nothing for a
 contract that fails.
 
-A contract with community roles is decided by the conditions on the text of
-Section 8: which predicates are rooted (`definition:rooted`), which have
-traceable provenance (`definition:provenance`), volition
-(`definition:volition`) and cohesion (`definition:cohesive`).  The first two
-are sets, given by `rooted_of` and `traceable_of`; the last two the contract
-meets or fails.  Openness and closure are proved of a contract in the paper,
-are not conditions on the text, and are neither decided nor claimed here.  The
+A contract with community roles is decided by the three conditions on the
+text of Section 8, each of which it meets or fails: that the set of predicates
+occurring in it has traceable provenance (`definition:provenance`), volition
+(`definition:volition`) and cohesion (`definition:cohesive`).  The first rests
+on the largest set of predicates having traceable provenance, which
+`traceable_of` gives.  Rootedness (`definition:rooted`) is no condition on the
+text; `rooted_of` gives the predicates that are rooted.  Openness and closure
+are proved of a contract in the paper, are not conditions on the text, and are
+neither decided nor claimed here.  The
 compiled form of a schema of such a contract is Definition Compilation of
 Section 8 (`definition:compile`), and its worked box, the display for
 `federate`, is the form printed.
@@ -119,9 +121,11 @@ seven broken contracts `sg_unguarded`, `sg_imposed`, `sg_gossip`,
 `sg_chain_cut`, `sg_svar_loose`, `cur_no_mint`, `cur_loose_mint`.
 `federation` is GFWC's five schemas
 (`/Grassroots/GFWC`, `sections/schemas.tex`), whose roles are one party role
-and seated roles, none of them a constituent role; `gf_unrooted`,
-`gf_untraceable`, `gf_uncohesive` and `gf_novolition` are it broken in one place
-each, one per condition the checker decides.  `sv_signed`, `sv_loose`,
+and seated roles, none of them a constituent role; `gf_untraceable`,
+`gf_uncohesive` and `gf_novolition` are it broken in one place each, one per
+condition, the one atom `gf_uncohesive` breaks costing `seat` its traceable
+provenance as well, and `gf_unrooted` is it with `seat` not rooted, which is
+no condition, so that it meets the three.  `sv_signed`, `sv_loose`,
 `sv_in_name_loose` and `sv_in_name_carried` are small contracts on the
 speech-act variables of `definition:provenance`, and `sg_relay` is the social
 graph with two schemas on volition by connected component, all in the language
@@ -147,12 +151,15 @@ and the first one it does not reach — so at arity two it names the pair that
 has no edge.
 
 A verdict on a contract with community roles is `conditions_met` or
-`conditions_failed(Faults)`, where each fault is a `volition(Schema, Role,
-Role)` or a
+`conditions_failed(Faults)`, where each fault is an `untraceable(Predicates)`,
+a `volition(Schema, Role, Role)` or a
 
     cohesion(Schema, Role, Atom)
 
-naming the role and the added atom.  A `volition` fault there is raised only
+naming the role and the added atom, in the order of the three conditions.
+`untraceable` names the predicates of the contract outside the largest set
+having traceable provenance, as for a contract of Section 3.  A `volition`
+fault there is raised only
 when the role graph is disconnected and some connected component of it holds no
 guarding role, and names the first role that role one does not reach.
 
@@ -208,7 +215,7 @@ and not both empty).
 | `unobstructed.glp` | `def:introduction` and `def:unobstructed` |
 | `prov.glp` | `def:grounded`, as a greatest fixpoint |
 | `volition.glp` | `def:volition` |
-| `community.glp` | the four conditions of Section 8 |
+| `community.glp` | the three conditions of Section 8, and the rooted predicates |
 | `check.glp` | `def:syntactically-grassroots`, the two halves together, and the conditions of Section 8 for a contract with community roles |
 | `compile.glp` | `def:compile`, printed as the LaTeX of Section 5.2, and `definition:compile`, printed as the worked box of Section 8 |
 | `contracts.glp` | the contracts to run on |

@@ -386,7 +386,9 @@ gf_unrooted(C?) :-
 % --- negative: an atom naming a community nothing traces -------------------
 % federate notes a community eta that is the name term of no role and that no
 % atom any role requires names, so note loses traceable provenance; seat and
-% child keep it.  note is the predicate of no role, so cohesion is untouched.
+% child keep it, and the set of predicates occurring in the contract lacks it,
+% the contract's one fault.  note is the predicate of no role, so cohesion is
+% untouched.
 procedure gf_untraceable(Contract).
 gf_untraceable(C?) :-
     gf_form(F),
@@ -404,7 +406,8 @@ gf_untraceable(C?) :-
 % seat is the one role predicate of the contract, every role being a party
 % or a seated role, so cohesion asks its question of seat atoms alone
 % (definition:cohesive), and a child atom naming eta would break nothing.
-% The same atom costs seat its traceable provenance and its rootedness.
+% The same atom costs seat its traceable provenance, which the verdict names
+% before the cohesion fault, and its rootedness.
 procedure gf_uncohesive(Contract).
 gf_uncohesive(C?) :-
     gf_form(F),

@@ -12,13 +12,16 @@
 % outside it.
 %
 % A contract with community roles is a contract of Section 8, and is decided
-% by the conditions on the text stated there: volition
-% (definition:volition) and cohesion (definition:cohesive), which it meets or
-% fails, together with the predicates that are rooted (definition:rooted) and
-% those of traceable provenance (definition:provenance), which are the two
-% sets rooted_of and traceable_of give.  Openness and closure are proved of a
-% contract in the paper, are not conditions on the text, and are neither
-% decided nor claimed here.
+% by the three conditions on the text stated there: traceable provenance of
+% the set of predicates occurring in it (definition:provenance), volition
+% (definition:volition) and cohesion (definition:cohesive), each of which it
+% meets or fails; the faults of the three are reported together, in that
+% order.  The first is decided from the largest set of predicates having
+% traceable provenance, which traceable_of gives, as for a contract of Section
+% 3.  Rootedness (definition:rooted) is no condition on the text, and
+% rooted_of gives the predicates that are rooted.  Openness and closure are
+% proved of a contract in the paper, are not conditions on the text, and are
+% neither decided nor claimed here.
 % ---------------------------------------------------------------------------
 
 imported procedure unobstructed#intro_result(Contract?, Faults).
