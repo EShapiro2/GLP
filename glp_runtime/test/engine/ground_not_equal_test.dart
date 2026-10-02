@@ -1,11 +1,15 @@
-/// =?\= (GLP-Spec appendix-guards.tex at 9064202): "=?\= succeeds if both
-/// arguments are ground and differ, and suspends where =?= suspends", with
-/// Ground "yes (both)".  Its success needs both arguments ground, so it
-/// suspends where an unbound reader stands in either --- also where a
-/// difference is already in sight --- and fails where an unbound writer does,
-/// which no assignment to readers grounds (glp.tex, Guards: a guard suspends
-/// where an instance under a readers substitution would succeed, and fails
-/// where none would).
+/// =?\= (GLP-Spec appendix-guards.tex at 30e382c): "=?\= succeeds where =?=
+/// fails, fails where it succeeds, and suspends where it suspends", =?=
+/// succeeding "if both arguments are ground and equal", failing "as soon as
+/// the two differ at a pair of ground subterms", and suspending otherwise; the
+/// catalogue gives it Ground "yes (both)".  So a pair of ground subterms that
+/// differ makes it succeed, whatever readers stand beside the pair, and where
+/// no pair differs an unbound reader suspends it.  Where no pair differs and an
+/// unbound writer stands in an argument it fails, as before 30e382c: the
+/// appendix's "suspends otherwise" and glp.tex's Guards (a guard fails where no
+/// instance under a readers substitution succeeds) read differently there, and
+/// the paper is to settle it.  test/engine/ground_equality_test.dart takes
+/// both guards case by case.
 ///
 /// Fixtures: programs/tests/typed/test_ground_not_equal.glp, and
 /// programs/tests/typed/test_ground_equal.glp for =?= beside it.
@@ -105,11 +109,13 @@ void main() {
     });
   });
 
-  group('success needs both arguments ground', () {
-    test('a difference in sight does not decide it: an unbound reader '
-        'suspends it', () async {
+  group('a pair of ground subterms that differ decides it; where none does, '
+      'an unbound reader suspends it', () {
+    test('a difference at a pair of ground subterms decides it, unbound '
+        'readers beside it', () async {
       final r = await _run('neq_only(f(a, Z?), f(b, W?), R)');
-      expect(r.status, ExecutionStatus.suspended);
+      expect(r.status, ExecutionStatus.succeeded, reason: '${r.error}');
+      expect(_v(r.bindings['R']), 'not_equal');
     });
 
     test('nested in a structure against a constant, the generic guard call',
@@ -118,22 +124,28 @@ void main() {
       expect(r.status, ExecutionStatus.suspended);
     });
 
-    test('once the readers are assigned, it succeeds', () async {
+    test('it succeeds as well where the readers beside the pair are assigned',
+        () async {
       final r = await _run(
           'neq_only(f(a, Z?), f(b, W?), R), test_neq(c, c, Z), test_neq(c, d, W)');
       expect(r.status, ExecutionStatus.succeeded, reason: '${r.error}');
       expect(_v(r.bindings['R']), 'not_equal');
     });
 
-    test('an unbound writer fails it: no assignment to readers grounds it',
-        () async {
+    test('an unbound writer: a pair of ground subterms that differ beside it '
+        'decides it; with none, it fails', () async {
       final r = await _run('neq_only(f(a, W), f(b, c), R)');
-      expect(r.status, ExecutionStatus.failed);
+      expect(r.status, ExecutionStatus.succeeded, reason: '${r.error}');
+      expect(_v(r.bindings['R']), 'not_equal');
+      // No pair differs: the answer ground_equal gave before 30e382c, which
+      // the paper is to settle (the library comment).
       final s = await _run('test_neq_stop(f(W), R)');
       expect(s.status, ExecutionStatus.succeeded, reason: '${s.error}');
       expect(_v(s.bindings['R']), 'stopped');
     });
 
+    // No pair differs: the answer ground_equal gave before 30e382c, which the
+    // paper is to settle (the library comment).
     test('an unbound writer fails it beside an unbound reader, as ground_equal '
         'takes the writer first', () async {
       final r = await _run('neq_only(X?, f(W), R)');

@@ -430,16 +430,16 @@ provide_default(X, _, Default?) :- unknown(X?) | true.
 
 Tests whether two terms are ground and equal.
 
-**Semantics** (three-valued):
+**Semantics** (three-valued; GLP-Spec appendix-guards.tex, 30e382c): "`=?=` succeeds if both arguments are ground and equal, fails as soon as the two differ at a pair of ground subterms, and suspends otherwise."  The runtime traverses the two jointly, as term matching does: two constants, or two subterms that clash in functor or arity, both ground, are a pair of ground subterms; a pair with a variable in it, or a clash where a side is not ground, is not, and nothing below it is compared.
 
-| X | Y | Result |
-|---|---|--------|
-| ground | ground, X = Y | succeed |
-| ground | ground, X ≠ Y | fail |
-| unbound reader | any | suspend |
-| any | unbound reader | suspend |
-| unbound writer | any | fail |
-| any | unbound writer | fail |
+| X and Y | Result |
+|---|---|
+| both ground and equal | succeed |
+| differ at a pair of ground subterms, whatever variables stand elsewhere | fail |
+| no pair differs; an unbound reader stands in either, and no unbound writer | suspend on the readers |
+| no pair differs; an unbound writer stands in either | fail, as before 30e382c: the appendix's "suspends otherwise" and glp.tex's Guards (a guard fails where no instance under a readers substitution succeeds) read differently here, and the paper is to settle it |
+
+So `f(a, X?) =?= f(b, Z?)` fails, and `f(a, X?) =?= f(a, b)` suspends.
 
 **Usage**: Pattern matching where equality must be tested explicitly.
 
@@ -458,7 +458,7 @@ The guard `Key =?= K?` succeeds when `Key` and `K` are both ground and equal. If
 
 `procedure =?\=(_?, _?).` Ground: yes (both).
 
-`=?\=` succeeds if both arguments are ground and differ, and suspends where `=?=` suspends. (GLP-Spec appendix-guards.tex, 9064202.)
+`=?\=` succeeds where `=?=` fails, fails where it succeeds, and suspends where it suspends. (GLP-Spec appendix-guards.tex, 30e382c.)  So `f(a, Z?) =?\= f(b, W?)` succeeds.  Where no pair of ground subterms differs and an unbound writer stands in either argument it fails, as `=?=` does there (above).
 
 ---
 

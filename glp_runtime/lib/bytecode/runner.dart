@@ -1063,59 +1063,16 @@ GuardResult _evaluateGuard(String predicateName, List<Object?> args, RunnerConte
       return GuardResult.suspend;
 
     case '=?=':
-      // Ground equality test
-      // Semantics:
-      // - Unbound reader: suspend (handled by caller via _dereferenceWithTracking)
-      // - Unbound writer: fail
-      // - Both ground and equal: succeed
-      // - Both ground and not equal: fail
-      if (args.length < 2) return GuardResult.failure;
-      final left = args[0];
-      final right = args[1];
-
-      // Check for unbound writers (VarRef that reached here is unbound writer)
-      // Unbound readers would have caused suspension in caller
-      if (left is VarRef || right is VarRef) {
-        return GuardResult.failure;  // Unbound writer → fail
-      }
-
-      // Both ground - check structural equality
-      final result = _termsEqual(left, right, cx);
-      return result ? GuardResult.success : GuardResult.failure;
-
     case '=?\\=':
-      // GLP-Spec appendix-guards.tex (9064202): "=?\= succeeds if both
-      // arguments are ground and differ, and suspends where =?= suspends";
-      // Ground "yes (both)".  Success needs both arguments ground, so an
-      // unbound reader anywhere in either suspends the guard --- a difference
-      // found first does not decide it, as it decides =?= --- and an unbound
-      // writer, which no assignment to readers grounds, fails it (glp.tex,
-      // Guards: a guard suspends where an instance under a readers substitution
-      // would succeed, and fails where none would).  The rule of ground_equal
-      // (0x45) with the comparison inverted, decided here for every X =?\= Y:
-      // 0x45 carries no negated operand (IGLP code-format-fragment.tex,
-      // 9b45225), so =?\= is the generic guard call whatever its operands, and
-      // [execGuard] leaves its readers to this case, which takes the writer
-      // first, as 0x45 does.  A top-level value here is dereferenced, so a bare
-      // int is a number and is ground, not a variable address.
+      // The ground equality guards (GLP-Spec appendix-guards.tex, 30e382c),
+      // decided as ground_equal (0x45) decides =?= ([_groundEqualityGuard]).
+      // =?\= has no instruction of its own (IGLP code-format-fragment.tex,
+      // 9b45225), so every =?\= comes here, and every =?= with an operand that
+      // is not a variable; [execGuard] leaves their unbound readers to the
+      // decision.
       if (args.length < 2) return GuardResult.failure;
-      final neReaders = <int>{};
-      final neVisited = <int>{};
-      var neWriter = false;
-      for (final operand in [args[0], args[1]]) {
-        if ((operand is Term || operand is _TentativeStruct) &&
-            _unboundOfEqualityOperand(operand, cx, neReaders, neVisited)) {
-          neWriter = true;
-        }
-      }
-      if (neWriter) return GuardResult.failure;
-      if (neReaders.isNotEmpty) {
-        cx.U.addAll(neReaders);
-        return GuardResult.suspend;
-      }
-      return _termsEqual(args[0], args[1], cx)
-          ? GuardResult.failure
-          : GuardResult.success;
+      return _groundEqualityGuard(predicateName, _equalityOperand(args[0]),
+          _equalityOperand(args[1]), cx);
 
     // Attestation guard (madGLP, seam spec §4).
     // valid_attestation(Signer?, PkA?, PkB?, Sig?) holds iff Sig is Signer's
@@ -1187,162 +1144,202 @@ GuardResult _evaluateGuard(String predicateName, List<Object?> args, RunnerConte
   }
 }
 
-bool _termsEqual(Object? a, Object? b, RunnerContext cx, [Set<(int, int)>? visited]) {
-  visited ??= <(int, int)>{};
+/// What the ground equality guards decide of their two arguments, `=?=` and
+/// `=?\=` alike (GLP-Spec appendix-guards.tex, 30e382c): "=?= succeeds if both
+/// arguments are ground and equal, fails as soon as the two differ at a pair of
+/// ground subterms, and suspends otherwise.  =?\= succeeds where =?= fails,
+/// fails where it succeeds, and suspends where it suspends."
+/// [_decideGroundEquality] decides it, for ground_equal (0x45) and the generic
+/// guard call alike, and [_groundEqualityGuard] reads it for each guard.
+enum _GroundEquality {
+  /// Both arguments are ground and equal: `=?=` succeeds, `=?\=` fails.
+  equal,
 
-  // Handle null
-  if (a == null && b == null) return true;
-  if (a == null || b == null) return false;
+  /// The two differ at a pair of ground subterms, whatever variables stand
+  /// elsewhere in either: `=?=` fails, `=?\=` succeeds.
+  differ,
 
-  // Unwrap ConstTerm
-  if (a is ConstTerm) a = a.value;
-  if (b is ConstTerm) b = b.value;
+  /// No pair of ground subterms differs, and an unbound reader stands in one
+  /// or the other and no unbound writer does: each suspends on the readers.
+  undecided,
 
-  // Dereference VarRefs with cycle detection
-  if (a is VarRef) {
-    final aAddr = a.addr;
-    Object? aDeref;
-    if (cx.rt.heap.isReader(aAddr)) {
-      // Use abstraction methods for imported reader support
-      final writerAddr = cx.rt.heap.tryWriterForReader(aAddr);
-      if (writerAddr != null && cx.sigmaHat.containsKey(writerAddr)) {
-        aDeref = cx.sigmaHat[writerAddr];
-      } else if (cx.rt.heap.isReaderBound(aAddr)) {
-        aDeref = cx.rt.heap.getReaderValue(aAddr);
-      } else {
-        return false; // Unbound - can't compare
-      }
-    } else {
-      if (cx.sigmaHat.containsKey(aAddr)) {
-        aDeref = cx.sigmaHat[aAddr];
-      } else if (cx.rt.heap.isFullyBound(aAddr)) {
-        aDeref = cx.rt.heap.getValue(aAddr);
-      } else {
-        return false; // Unbound writer
-      }
-    }
-
-    // If b is also a VarRef, check for cycle
-    if (b is VarRef) {
-      final bAddr = b.addr;
-      final pair = (aAddr, bAddr);
-      if (visited.contains(pair)) {
-        return true; // Cycle detected at corresponding positions - equal
-      }
-      visited.add(pair);
-    }
-
-    return _termsEqual(aDeref, b, cx, visited);
-  }
-  if (b is VarRef) {
-    final bAddr = b.addr;
-    Object? bDeref;
-    if (cx.rt.heap.isReader(bAddr)) {
-      // Use abstraction methods for imported reader support
-      final writerAddr = cx.rt.heap.tryWriterForReader(bAddr);
-      if (writerAddr != null && cx.sigmaHat.containsKey(writerAddr)) {
-        bDeref = cx.sigmaHat[writerAddr];
-      } else if (cx.rt.heap.isReaderBound(bAddr)) {
-        bDeref = cx.rt.heap.getReaderValue(bAddr);
-      } else {
-        return false;
-      }
-    } else {
-      if (cx.sigmaHat.containsKey(bAddr)) {
-        bDeref = cx.sigmaHat[bAddr];
-      } else if (cx.rt.heap.isFullyBound(bAddr)) {
-        bDeref = cx.rt.heap.getValue(bAddr);
-      } else {
-        return false;
-      }
-    }
-    return _termsEqual(a, bDeref, cx, visited);
-  }
-
-  // Simple values (numbers, strings)
-  if (a is num && b is num) return a == b;
-  if (a is String && b is String) return a == b;
-
-  // Structures
-  if (a is StructTerm && b is StructTerm) {
-    if (a.functor != b.functor) return false;
-    if (a.args.length != b.args.length) return false;
-    for (int i = 0; i < a.args.length; i++) {
-      if (!_termsEqual(a.args[i], b.args[i], cx, visited)) return false;
-    }
-    return true;
-  }
-
-  // Default: use Dart equality
-  return a == b;
+  /// No pair of ground subterms differs, and an unbound writer stands in one
+  /// or the other, which no assignment to readers grounds.  Each fails, as
+  /// ground_equal did before 30e382c: the appendix's "suspends otherwise"
+  /// reaches this case, and glp.tex, Guards, fails a guard that no instance
+  /// under a readers substitution satisfies; the paper is to settle which.
+  writer,
 }
 
-/// The unbound variables of an operand of the ground equality guards, `=?=`
-/// and `=?\=` (GLP-Spec appendix-guards.tex): every unbound reader reached is
-/// added to [readers], and the result is whether an unbound writer was reached.
-/// [term] is a heap term, a tentative structure, or a bare variable address (an
-/// int), as a clause variable may hold; [visited] is shared by the two operands.
-bool _unboundOfEqualityOperand(
-    Object? term, RunnerContext cx, Set<int> readers, Set<int> visited) {
-  var hasUnboundWriter = false;
+/// An unbound variable met by [_decideGroundEquality]: its heap address, and
+/// whether it is a reader.
+class _UnboundVariable {
+  final int addr;
+  final bool isReader;
+  const _UnboundVariable(this.addr, this.isReader);
+}
 
-  void collect(Object? term) {
-    if (term is VarRef && cx.rt.heap.isWriter(term.addr)) {
-      final writerAddr = term.addr;
-      if (visited.contains(writerAddr)) return;
-      visited.add(writerAddr);
-      final sigmaBinding = cx.sigmaHat[writerAddr];
-      if (sigmaBinding != null) {
-        collect(sigmaBinding);
-      } else if (!cx.rt.heap.isFullyBound(writerAddr)) {
-        hasUnboundWriter = true;
-      } else {
-        collect(cx.rt.heap.getValue(writerAddr));
-      }
-    } else if (term is VarRef && cx.rt.heap.isReader(term.addr)) {
-      final readerAddr = term.addr;
-      if (visited.contains(readerAddr)) return;
-      visited.add(readerAddr);
-      final sigmaBinding = cx.sigmaHat[readerAddr];
-      if (sigmaBinding != null) {
-        collect(sigmaBinding);
-      } else if (!cx.rt.heap.isReaderBound(readerAddr)) {
-        readers.add(readerAddr);
-      } else {
-        collect(cx.rt.heap.getReaderValue(readerAddr));
-      }
-    } else if (term is StructTerm) {
-      for (final arg in term.args) {
-        collect(arg);
-      }
-    } else if (term is _TentativeStruct) {
-      for (final arg in term.args) {
-        collect(arg);
-      }
-    } else if (term is int) {
-      if (visited.contains(term)) return;
-      visited.add(term);
-      final sigmaBinding = cx.sigmaHat[term];
-      if (sigmaBinding != null) {
-        collect(sigmaBinding);
-      } else if (cx.rt.heap.isWriter(term)) {
-        if (!cx.rt.heap.isFullyBound(term)) {
-          hasUnboundWriter = true;
+/// The arguments of a compound value, a heap structure or a tentative one;
+/// null for any other value.
+List<Object?>? _compoundArgs(Object? value) => value is StructTerm
+    ? value.args
+    : (value is _TentativeStruct ? value.args : null);
+
+/// The functor of a compound value ([_compoundArgs]).
+String? _compoundFunctor(Object? value) => value is StructTerm
+    ? value.functor
+    : (value is _TentativeStruct ? value.functor : null);
+
+/// What a constant compares by: a [ConstTerm]'s value, any other value itself.
+Object? _constantValue(Object? value) =>
+    value is ConstTerm ? value.value : value;
+
+/// A guard argument as [execGuard] gives it, dereferenced, for
+/// [_decideGroundEquality]: a constant comes unwrapped there, so it is wrapped
+/// again, an int being a number and not a variable's address.
+Object? _equalityOperand(Object? value) =>
+    value is Term || value is _TentativeStruct ? value : ConstTerm(value);
+
+/// Decide [left] =?= [right] ([_GroundEquality]), and give the unbound readers
+/// of the two, on which an undecided guard suspends.  The two are traversed
+/// jointly, as term matching traverses a goal and a head (GLP-Spec
+/// appendix-term-matching.tex): a pair of compounds of one functor and arity is
+/// descended into; a pair of constants, or a pair that clashes in functor or
+/// arity with both of it ground, is a pair of ground subterms, and differs or
+/// does not; a pair with a variable in it, or one that clashes where a side is
+/// not ground, is not, nor is any pair below it.  A difference decides it,
+/// whatever else stands in either argument.  A value is a heap term, a
+/// tentative structure or a bare variable address (an int), as a clause
+/// variable may hold; a constant at the top of a generic guard's argument
+/// comes wrapped ([_equalityOperand]).
+(_GroundEquality, Set<int>) _decideGroundEquality(
+    Object? left, Object? right, RunnerContext cx) {
+  final heap = cx.rt.heap;
+  final readers = <int>{};
+  var writer = false;
+  var differ = false;
+  final walked = <(Object, Object)>{};
+
+  // [term] with the bindings of its variables followed, tentative (σ̂w) before
+  // the heap: a value, or the unbound variable a chain ends at.  A constant
+  // stays in its ConstTerm, so that what this gives is given back unchanged,
+  // and no number is taken for a variable's address.
+  Object? resolve(Object? term) {
+    var t = term;
+    final seen = <int>{};
+    while (true) {
+      if (t is ConstTerm) return t;
+      final int? addr = t is VarRef ? t.addr : (t is int ? t : null);
+      if (addr == null) return t;
+      if (!seen.add(addr)) return _UnboundVariable(addr, heap.isReader(addr));
+      if (heap.isReader(addr)) {
+        final writerAddr = heap.tryWriterForReader(addr);
+        if (writerAddr != null && cx.sigmaHat.containsKey(writerAddr)) {
+          t = cx.sigmaHat[writerAddr];
+        } else if (heap.isReaderBound(addr)) {
+          t = heap.getReaderValue(addr);
         } else {
-          collect(cx.rt.heap.getValue(term));
+          return _UnboundVariable(addr, true);
         }
+      } else if (cx.sigmaHat.containsKey(addr)) {
+        t = cx.sigmaHat[addr];
+      } else if (heap.isFullyBound(addr)) {
+        t = heap.getValue(addr);
       } else {
-        if (!cx.rt.heap.isReaderBound(term)) {
-          readers.add(term);
-        } else {
-          collect(cx.rt.heap.getReaderValue(term));
-        }
+        return _UnboundVariable(addr, false);
       }
     }
   }
 
-  collect(term);
-  return hasUnboundWriter;
+  // Whether [term] is ground; each unbound variable met is noted, a reader in
+  // [readers] and a writer in [writer].
+  bool scan(Object? term) {
+    var ground = true;
+    final visited = <Object>{};
+    void go(Object? t) {
+      while (true) {
+        final value = resolve(t);
+        if (value is _UnboundVariable) {
+          ground = false;
+          if (value.isReader) {
+            readers.add(value.addr);
+          } else {
+            writer = true;
+          }
+          return;
+        }
+        final args = _compoundArgs(value);
+        if (args == null || args.isEmpty || !visited.add(value!)) return;
+        for (var i = 0; i < args.length - 1; i++) {
+          go(args[i]);
+        }
+        t = args.last;
+      }
+    }
+
+    go(term);
+    return ground;
+  }
+
+  void walk(Object? a, Object? b) {
+    while (!differ) {
+      final va = resolve(a);
+      final vb = resolve(b);
+      if (va is _UnboundVariable || vb is _UnboundVariable) {
+        scan(va);
+        scan(vb);
+        return;
+      }
+      final argsA = _compoundArgs(va);
+      final argsB = _compoundArgs(vb);
+      if (argsA == null && argsB == null) {
+        if (_constantValue(va) != _constantValue(vb)) differ = true;
+        return;
+      }
+      if (argsA == null ||
+          argsB == null ||
+          _compoundFunctor(va) != _compoundFunctor(vb) ||
+          argsA.length != argsB.length) {
+        // A clash: a pair of ground subterms that differ if both are ground.
+        final groundA = scan(va);
+        final groundB = scan(vb);
+        if (groundA && groundB) differ = true;
+        return;
+      }
+      if (argsA.isEmpty || !walked.add((va!, vb!))) return;
+      for (var i = 0; i < argsA.length - 1 && !differ; i++) {
+        walk(argsA[i], argsB[i]);
+      }
+      a = argsA.last;
+      b = argsB.last;
+    }
+  }
+
+  walk(left, right);
+  if (differ) return (_GroundEquality.differ, const <int>{});
+  if (writer) return (_GroundEquality.writer, const <int>{});
+  if (readers.isNotEmpty) return (_GroundEquality.undecided, readers);
+  return (_GroundEquality.equal, const <int>{});
+}
+
+/// [guard], `=?=` or `=?\=`, on [left] and [right], as [_decideGroundEquality]
+/// decides them: success, failure, or suspension on the readers it adds to the
+/// goal's suspension set.
+GuardResult _groundEqualityGuard(
+    String guard, Object? left, Object? right, RunnerContext cx) {
+  final (decision, readers) = _decideGroundEquality(left, right, cx);
+  final negated = guard == '=?\\=';
+  switch (decision) {
+    case _GroundEquality.equal:
+      return negated ? GuardResult.failure : GuardResult.success;
+    case _GroundEquality.differ:
+      return negated ? GuardResult.success : GuardResult.failure;
+    case _GroundEquality.undecided:
+      cx.U.addAll(readers);
+      return GuardResult.suspend;
+    case _GroundEquality.writer:
+      return GuardResult.failure;
+  }
 }
 
 
@@ -1973,8 +1970,10 @@ mixin OpExecutors {
     return StepOutcome.nextClause; // suspend (never fails)
   }
 
-  /// `ground_equal` (0x45): X =?= Y. Unbound writer in either → fail; unbound
-  /// readers → suspend on them; both ground → compare.
+  /// `ground_equal` (0x45): X =?= Y, decided as every ground equality guard is
+  /// ([_decideGroundEquality]): it fails at a pair of ground subterms that
+  /// differ, suspends on the unbound readers where none differs, and succeeds
+  /// where both are ground and equal.
   StepOutcome execGroundEqual(
       RunnerContext cx, int leftVarIndex, int rightVarIndex) {
     // An unknown variable ([RunnerContext.unknownVars]): undecided, passed by.
@@ -1984,24 +1983,9 @@ mixin OpExecutors {
     final leftValue = cx.clauseVars[leftVarIndex];
     final rightValue = cx.clauseVars[rightVarIndex];
     if (leftValue == null || rightValue == null) return StepOutcome.nextClause;
-
-    final unboundReaders = <int>{};
-    final visited = <int>{};
-    final leftWriter =
-        _unboundOfEqualityOperand(leftValue, cx, unboundReaders, visited);
-    final rightWriter =
-        _unboundOfEqualityOperand(rightValue, cx, unboundReaders, visited);
-    final hasUnboundWriter = leftWriter || rightWriter;
-
-    if (hasUnboundWriter) return StepOutcome.nextClause; // fail
-    if (unboundReaders.isNotEmpty) {
-      cx.U.addAll(unboundReaders);
-      return StepOutcome.nextClause; // suspend
-    }
-    final (leftDeref, _) = _dereferenceWithTracking(leftValue, cx);
-    final (rightDeref, _) =
-        _dereferenceWithTracking(rightValue, cx);
-    return _termsEqual(leftDeref, rightDeref, cx)
+    // A suspension's readers are already in cx.U ([_groundEqualityGuard]).
+    return _groundEqualityGuard('=?=', leftValue, rightValue, cx) ==
+            GuardResult.success
         ? StepOutcome.advance
         : StepOutcome.nextClause;
   }
@@ -2022,7 +2006,7 @@ mixin OpExecutors {
 
   /// `guard` (0x40): a generic guard-predicate call. Gather the [arity] args from
   /// argSlots/clauseVars, dereferencing and tracking unbound readers; if any are
-  /// unbound (except for `unknown` and `=?\=`), suspend on them. Otherwise
+  /// unbound (except for `unknown`, `=?=` and `=?\=`), suspend on them. Otherwise
   /// evaluate via the runtime guard table. success→advance, anything
   /// else→nextClause (suspension already handled).
   StepOutcome execGuard(RunnerContext cx, String predicateName, int arity) {
@@ -2063,10 +2047,12 @@ mixin OpExecutors {
       }
     }
 
-    // `=?\=` decides its unbound readers itself, after its unbound writers, as
-    // ground_equal (0x45) does for =?= ([_evaluateGuard]).
+    // The ground equality guards decide their unbound readers themselves, as
+    // ground_equal (0x45) does ([_groundEqualityGuard]): a pair of ground
+    // subterms that differ decides them whatever readers stand beside it.
     if (unboundReaders.isNotEmpty &&
         predicateName != 'unknown' &&
+        predicateName != '=?=' &&
         predicateName != '=?\\=') {
       cx.U.addAll(unboundReaders);
       return StepOutcome.nextClause; // suspend
