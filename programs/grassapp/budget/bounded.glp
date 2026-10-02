@@ -53,7 +53,7 @@ count([], _, []).
 
 %% (b) As the meta-interpreter runs it: one reduce clause per clause of (a).
 procedure reduce(_?, _).
-reduce(count([_|Xs], N, [N1?|Out?]), count(Xs?, N1?, Out)) :- N1 := N? + 1.
+reduce(count([_|Xs], N, [N1?|Out?]), count(Xs?, N2?, Out)) :- integer(N?) | N1 := N? + 1, N2 := N? + 1.
 reduce(count([], _, []), true).
 
 %% (c) The residual program: bounded/3 partially evaluated against (a).  Each
