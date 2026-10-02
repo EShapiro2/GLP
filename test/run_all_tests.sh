@@ -527,16 +527,20 @@ check "guard_compare" "succeeds" "$a12"
 check "guard_known_valid" "Ygr = hello" "$a12"
 
 # --- A13: Ground equal, ground not-equal ---
-# GLP-Spec appendix-guards.tex (30e382c): "=?= succeeds if both arguments are
-# ground and equal, fails as soon as the two differ at a pair of ground
-# subterms, and suspends otherwise.  =?\= succeeds where =?= fails, fails where
-# it succeeds, and suspends where it suspends."  test (both operands variables)
-# takes the ground equality instruction; test_ab (a structure operand),
-# test_neq and test_neq_stop take the generic guard call, the ground equality
-# instruction having no negated operand (IGLP, 9b45225).  So
-# f(a, Zq?) =?\= f(b, Wq?) succeeds and f(a, Ze1?) =?= f(b, We1?) fails, a and
-# b differing, and where no pair of ground subterms differs an unbound reader
-# suspends either guard.
+# GLP-Spec appendix-guards.tex (bbff21d): "=?= succeeds if both arguments are
+# ground and equal.  =?\= succeeds if no readers substitution makes them ground
+# and equal."  Each suspends and fails by glp.tex, Guards: "A guard suspends if
+# it does not succeed but some instance of it under a readers substitution
+# would succeed.  A guard fails if no such instance exists."  test (both
+# operands variables) takes the ground equality instruction; test_ab (a
+# structure operand), test_neq and test_neq_stop take the generic guard call,
+# the ground equality instruction having no negated operand (IGLP, 9b45225).
+# So where the two clash, or an unbound writer stands in either, =?= fails and
+# =?\= succeeds, whatever readers stand elsewhere --- f(a, Zq?) =?\= f(b, Wq?),
+# f(Wq3) =?\= f(c), f(Xq4?) =?\= g(Yq4?), [a | Tq6?] =?\= [] --- and where a
+# readers substitution makes them ground and equal but they are not both
+# ground, each suspends: f(Xq7?) =?\= f(Yq7?) (GLP #3 Cowork, 2026-10-02 13:09
+# UTC).
 echo "--- A13: Ground equal and ground not-equal ---"
 a13=$("$REPL_RUN" <<HEREDOC
 $TYPED/test_ground_equal.glp
@@ -563,6 +567,14 @@ test(f(a, Ze2?), f(a, b), Re2).
 test_ab(f(a, b), Re3).
 test_ab(f(Ze4?, c), Re4).
 test_ab(f(Ze5?, b), Re5).
+test(f(We6), f(c), Re6).
+test_neq(f(Wq3), f(c), Rq12).
+test(f(Xe7?), g(Ye7?), Re7).
+test_neq(f(Xq4?), g(Yq4?), Rq13).
+test([a|Te8?], [], Re8).
+test_neq([a|Tq6?], [], Rq14).
+neq_only(f(Xq7?), f(Yq7?), Rq15).
+test_ab(f(a, We9), Re9).
 :quit
 HEREDOC
 2>&1)
@@ -582,13 +594,21 @@ check "=?\\= on differing lists" "Rq6 = not_equal" "$a13"
 check "=?\\= against a constant, differing" "Rq7 = go_on" "$a13"
 check "=?\\= against a constant, equal, fails" "Rq8 = stopped" "$a13"
 check "=?\\= grounds both readers" "Rq9 = pair(a, a, b, b)" "$a13"
-check "=?\\= succeeds at a pair of ground subterms that differ" "Rq10 = not_equal" "$a13"
-check "=?\\= suspends where no pair of ground subterms differs" "Rq11 = <unbound>" "$a13"
-check "=?= fails at a pair of ground subterms that differ" "Re1 = not_equal" "$a13"
-check "=?= suspends where no pair of ground subterms differs" "Re2 = <unbound>" "$a13"
+check "=?\\= succeeds at two constants that differ, readers beside them" "Rq10 = not_equal" "$a13"
+check "=?\\= suspends where a readers substitution makes them ground and equal" "Rq11 = <unbound>" "$a13"
+check "=?= fails at two constants that differ, readers beside them" "Re1 = not_equal" "$a13"
+check "=?= suspends where a readers substitution makes them ground and equal" "Re2 = <unbound>" "$a13"
 check "=?= against a structure, equal" "Re3 = equal" "$a13"
-check "=?= against a structure fails at a differing pair beside a reader" "Re4 = not_equal" "$a13"
+check "=?= against a structure fails at two constants that differ beside a reader" "Re4 = not_equal" "$a13"
 check "=?= against a structure suspends on a nested reader" "Re5 = <unbound>" "$a13"
+check "=?= fails on an unbound writer, which no readers substitution grounds" "Re6 = not_equal" "$a13"
+check "=?\\= succeeds on an unbound writer" "Rq12 = not_equal" "$a13"
+check "=?= fails at a clash of functor, neither side ground" "Re7 = not_equal" "$a13"
+check "=?\\= succeeds at a clash of functor, neither side ground" "Rq13 = not_equal" "$a13"
+check "=?= fails on a list cell with an unbound tail against the empty list" "Re8 = not_equal" "$a13"
+check "=?\\= succeeds on a list cell with an unbound tail against the empty list" "Rq14 = not_equal" "$a13"
+check "=?\\= suspends on two readers in structures that agree" "Rq15 = <unbound>" "$a13"
+check "=?= against a structure fails on an unbound writer" "Re9 = not_equal" "$a13"
 
 # --- A14: Circular terms ---
 echo "--- A14: Circular term tests ---"

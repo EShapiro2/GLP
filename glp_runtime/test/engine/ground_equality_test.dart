@@ -1,7 +1,14 @@
-/// =?= and =?\= by GLP-Spec appendix-guards.tex at 30e382c: "=?= succeeds if
-/// both arguments are ground and equal, fails as soon as the two differ at a
-/// pair of ground subterms, and suspends otherwise.  =?\= succeeds where =?=
-/// fails, fails where it succeeds, and suspends where it suspends."
+/// =?= and =?\= by GLP-Spec at bbff21d.  Each guard states its success
+/// condition and nothing else (appendix-guards.tex): "=?= succeeds if both
+/// arguments are ground and equal.  =?\= succeeds if no readers substitution
+/// makes them ground and equal."  Suspension and failure follow from the guard
+/// semantics (glp.tex, Guards): "A guard suspends if it does not succeed but
+/// some instance of it under a readers substitution would succeed.  A guard
+/// fails if no such instance exists."  So where both are ground and equal =?=
+/// succeeds and =?\= fails; where no readers substitution makes them ground
+/// and equal --- a clash, or an unbound writer, whatever readers stand
+/// elsewhere --- =?= fails and =?\= succeeds; and where one does but they are
+/// not both ground, each suspends.
 ///
 /// One decision serves both guards on both paths (runner.dart,
 /// `_decideGroundEquality`): ground_equal (0x45), which =?= compiles to where
@@ -11,13 +18,6 @@
 /// suspension suspends it: `eq` (=?=, 0x45) and `ne` (=?\=) on the two
 /// arguments, and `eq_r` and `ne_r`, which compare w(Left) with w(Right), the
 /// right operand built in the guard (the generic guard call for =?=).
-///
-/// Where no pair of ground subterms differs and an unbound writer stands in an
-/// argument, the guards appendix's "suspends otherwise" and glp.tex's Guards (a
-/// guard fails where no instance under a readers substitution succeeds) read
-/// differently; the runtime keeps ground_equal's former answer there, a failure
-/// of each guard, until the paper settles it, and no case below asks it
-/// (test/engine/ground_not_equal_test.dart pins that answer).
 library;
 
 import 'dart:io';
@@ -49,6 +49,18 @@ ne_ab(X, yes) :- X? =?\= f(a, b) | true.
 
 exported procedure give(_?, _).
 give(V, V?).
+
+exported procedure occ(_?, Constant).
+occ(X, yes) :- X? =?= f(X?) | true.
+
+exported procedure nocc(_?, Constant).
+nocc(X, yes) :- X? =?\= f(X?) | true.
+
+exported procedure twice(_?, _?, Constant).
+twice(X, Y, yes) :- Y? =?= f(X?, X?) | true.
+
+exported procedure ntwice(_?, _?, Constant).
+ntwice(X, Y, yes) :- Y? =?\= f(X?, X?) | true.
 ''';
 
 const _ok = ExecutionStatus.succeeded;
@@ -102,11 +114,13 @@ void main() {
   });
 
   group(
-      'a pair of ground subterms that differ decides it, whatever else stands '
-      'in either', () {
-    _case('unbound readers beside the pair', 'f(a, X?)', 'f(b, Z?)',
+      'no readers substitution makes them ground and equal, whatever readers '
+      'stand elsewhere: =?= fails and =?\\= succeeds', () {
+    _case('unbound readers beside two constants that differ', 'f(a, X?)',
+        'f(b, Z?)',
         eq: _fails, ne: _ok);
-    _case('unbound readers before the pair', 'f(X?, a)', 'f(Y?, b)',
+    _case('unbound readers before two constants that differ', 'f(X?, a)',
+        'f(Y?, b)',
         eq: _fails, ne: _ok);
     _case('deep in nested structures', 'f(g(X?), h(1, [a, b]))',
         'f(g(Y?), h(1, [a, c]))',
@@ -119,16 +133,71 @@ void main() {
     _case('two ground subterms that clash in functor', 'f(X?, g(a))',
         'f(Y?, k(a))',
         eq: _fails, ne: _ok);
-    _case('an unbound writer beside the pair', 'f(a, W)', 'f(b, c)',
+    // GLP #3 Cowork, 2026-10-02 13:09 UTC: a clash where a side is not ground
+    // decides it as well, no readers substitution unifying the two.
+    _case('a clash of functor where neither side is ground', 'f(X?)', 'g(Y?)',
+        eq: _fails, ne: _ok);
+    _case('a list cell with an unbound tail against the empty list',
+        '[a | T?]', '[]',
+        eq: _fails, ne: _ok);
+    _case('a clash of arity where neither side is ground', 'f(X?)',
+        'f(Y?, Z?)',
+        eq: _fails, ne: _ok);
+    _case('an unbound reader against a structure of another functor',
+        'f(X?, a)', 'g(b)',
         eq: _fails, ne: _ok);
   });
 
-  group('no pair of ground subterms differs: an unbound reader suspends it',
-      () {
+  group(
+      'an unbound writer, which no readers substitution grounds: =?= fails and '
+      '=?\\= succeeds', () {
+    // GLP #3 Cowork, 2026-10-02 13:09 UTC: "f(W) =?= f(c) fails --- no
+    // readers substitution grounds a writer --- and =?\= succeeds on it".
+    _case('an unbound writer where the rest agrees', 'f(W)', 'f(c)',
+        eq: _fails, ne: _ok);
+    _case('an unbound writer on the right', 'f(c)', 'f(W)',
+        eq: _fails, ne: _ok);
+    _case('an unbound writer beside two constants that differ', 'f(a, W)',
+        'f(b, c)',
+        eq: _fails, ne: _ok);
+    _case('an unbound writer beside an unbound reader', 'X?', 'f(W)',
+        eq: _fails, ne: _ok);
+    _case('an unbound writer and its own reader', 'f(W)', 'f(W?)',
+        eq: _fails, ne: _ok);
+  });
+
+  group(
+      'no readers substitution makes them ground and equal, a reader standing '
+      'twice', () {
+    test('a reader that would have to stand for a term containing itself',
+        () async {
+      expect(await _status('occ(X?, R)'), _fails, reason: '=?=');
+      expect(await _status('nocc(X?, R)'), _ok, reason: '=?\\=');
+    });
+
+    test('a reader that would have to stand for two different terms',
+        () async {
+      expect(await _status('twice(X?, f(a, b), R)'), _fails, reason: '=?=');
+      expect(await _status('ntwice(X?, f(a, b), R)'), _ok, reason: '=?\\=');
+    });
+
+    test('a reader twice where one term will do: each suspends', () async {
+      expect(await _status('twice(X?, f(a, a), R)'), _waits, reason: '=?=');
+      expect(await _status('ntwice(X?, f(a, a), R)'), _waits,
+          reason: '=?\\=');
+    });
+  });
+
+  group(
+      'not both ground, and some readers substitution makes them ground and '
+      'equal: each suspends', () {
     _case('an unbound reader on the left', 'X?', 'a', eq: _waits, ne: _waits);
     _case('an unbound reader on the right', 'a', 'Y?',
         eq: _waits, ne: _waits);
     _case('two unbound readers', 'X?', 'Y?', eq: _waits, ne: _waits);
+    // GLP #3 Cowork, 2026-10-02 13:09 UTC: "f(X?) =?\= f(Y?) suspends".
+    _case('two unbound readers in structures that agree', 'f(X?)', 'f(Y?)',
+        eq: _waits, ne: _waits);
     // A number is a constant, never a variable's address.
     _case('an unbound reader against a number', 'X?', '2',
         eq: _waits, ne: _waits);
@@ -141,14 +210,10 @@ void main() {
         eq: _waits, ne: _waits);
     _case('a reader against a structure', 'f(X?, b)', 'f(g(a), b)',
         eq: _waits, ne: _waits);
+    _case('a reader against a structure holding a reader', 'f(X?, b)',
+        'f(g(Y?), b)',
+        eq: _waits, ne: _waits);
     _case('a list whose tail is unbound', '[1, 2 | T?]', '[1, 2, 3]',
-        eq: _waits, ne: _waits);
-    // A pair that clashes where a side is not ground is no pair of ground
-    // subterms, and nothing below it is compared: no pair differs.
-    _case('a clash of functor where neither side is ground', 'f(X?)', 'g(Y?)',
-        eq: _waits, ne: _waits);
-    _case('a list cell with an unbound tail against the empty list',
-        '[a | T?]', '[]',
         eq: _waits, ne: _waits);
   });
 

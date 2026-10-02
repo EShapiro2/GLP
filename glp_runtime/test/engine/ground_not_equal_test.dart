@@ -1,15 +1,13 @@
-/// =?\= (GLP-Spec appendix-guards.tex at 30e382c): "=?\= succeeds where =?=
-/// fails, fails where it succeeds, and suspends where it suspends", =?=
-/// succeeding "if both arguments are ground and equal", failing "as soon as
-/// the two differ at a pair of ground subterms", and suspending otherwise; the
-/// catalogue gives it Ground "yes (both)".  So a pair of ground subterms that
-/// differ makes it succeed, whatever readers stand beside the pair, and where
-/// no pair differs an unbound reader suspends it.  Where no pair differs and an
-/// unbound writer stands in an argument it fails, as before 30e382c: the
-/// appendix's "suspends otherwise" and glp.tex's Guards (a guard fails where no
-/// instance under a readers substitution succeeds) read differently there, and
-/// the paper is to settle it.  test/engine/ground_equality_test.dart takes
-/// both guards case by case.
+/// =?\= by GLP-Spec at bbff21d: "=?\= succeeds if no readers substitution
+/// makes them ground and equal" (appendix-guards.tex), and it suspends and
+/// fails by the guard semantics (glp.tex, Guards): "A guard suspends if it does
+/// not succeed but some instance of it under a readers substitution would
+/// succeed.  A guard fails if no such instance exists."  So it succeeds where
+/// the two clash or an unbound writer stands in either, whatever readers stand
+/// elsewhere, fails where both are ground and equal, and suspends where they
+/// are not but some readers substitution makes them so.  The catalogue gives it
+/// Ground "yes (both)".  test/engine/ground_equality_test.dart takes =?= and
+/// =?\= case by case.
 ///
 /// Fixtures: programs/tests/typed/test_ground_not_equal.glp, and
 /// programs/tests/typed/test_ground_equal.glp for =?= beside it.
@@ -87,7 +85,7 @@ void main() {
     });
   });
 
-  group('=?\\= suspends where =?= suspends', () {
+  group('=?\\= suspends where some readers substitution makes them equal', () {
     test('an unbound reader on the left', () async {
       final r = await _run('neq_only(X?, a, R)');
       expect(r.status, ExecutionStatus.suspended);
@@ -107,21 +105,28 @@ void main() {
       final r = await _run('test_neq_stop(X?, R)');
       expect(r.status, ExecutionStatus.suspended);
     });
+
+    // "f(X?) =?\= f(Y?) suspends" (GLP #3 Cowork, 2026-10-02 13:09 UTC).
+    test('two unbound readers in structures that agree', () async {
+      final r = await _run('neq_only(f(X?), f(Y?), R)');
+      expect(r.status, ExecutionStatus.suspended);
+    });
   });
 
-  group('a pair of ground subterms that differ decides it; where none does, '
-      'an unbound reader suspends it', () {
-    test('a difference at a pair of ground subterms decides it, unbound '
-        'readers beside it', () async {
+  group('no readers substitution makes them ground and equal: it succeeds, '
+      'whatever readers stand elsewhere', () {
+    test('two constants that differ decide it, unbound readers beside them',
+        () async {
       final r = await _run('neq_only(f(a, Z?), f(b, W?), R)');
       expect(r.status, ExecutionStatus.succeeded, reason: '${r.error}');
       expect(_v(r.bindings['R']), 'not_equal');
     });
 
-    test('nested in a structure against a constant, the generic guard call',
-        () async {
+    test('a structure with a reader in it against a constant, the generic '
+        'guard call: a clash', () async {
       final r = await _run('test_neq_stop(f(Z?), R)');
-      expect(r.status, ExecutionStatus.suspended);
+      expect(r.status, ExecutionStatus.succeeded, reason: '${r.error}');
+      expect(_v(r.bindings['R']), 'go_on');
     });
 
     test('it succeeds as well where the readers beside the pair are assigned',
@@ -132,29 +137,41 @@ void main() {
       expect(_v(r.bindings['R']), 'not_equal');
     });
 
-    test('an unbound writer: a pair of ground subterms that differ beside it '
-        'decides it; with none, it fails', () async {
+    // An unbound writer, which no readers substitution grounds: "f(W) =?= f(c)
+    // fails ... and =?\= succeeds on it" (GLP #3 Cowork, 2026-10-02 13:09 UTC).
+    // Until bbff21d =?\= failed where no pair of ground subterms differed and
+    // a writer stood in either, held for the paper.
+    test('an unbound writer decides it, beside two constants that differ or '
+        'where the rest agrees', () async {
       final r = await _run('neq_only(f(a, W), f(b, c), R)');
       expect(r.status, ExecutionStatus.succeeded, reason: '${r.error}');
       expect(_v(r.bindings['R']), 'not_equal');
-      // No pair differs: the answer ground_equal gave before 30e382c, which
-      // the paper is to settle (the library comment).
+      final w = await _run('neq_only(f(W), f(c), R)');
+      expect(w.status, ExecutionStatus.succeeded, reason: '${w.error}');
+      expect(_v(w.bindings['R']), 'not_equal');
       final s = await _run('test_neq_stop(f(W), R)');
       expect(s.status, ExecutionStatus.succeeded, reason: '${s.error}');
-      expect(_v(s.bindings['R']), 'stopped');
+      expect(_v(s.bindings['R']), 'go_on');
     });
 
-    // No pair differs: the answer ground_equal gave before 30e382c, which the
-    // paper is to settle (the library comment).
-    test('an unbound writer fails it beside an unbound reader, as ground_equal '
-        'takes the writer first', () async {
+    test('an unbound writer decides it beside an unbound reader', () async {
       final r = await _run('neq_only(X?, f(W), R)');
-      expect(r.status, ExecutionStatus.failed);
-      // =?= beside it, ground_equal (0x45): it fails too, and otherwise takes
-      // the call.
+      expect(r.status, ExecutionStatus.succeeded, reason: '${r.error}');
+      expect(_v(r.bindings['R']), 'not_equal');
+      // =?= beside it, ground_equal (0x45): it fails, and otherwise takes the
+      // call.
       final eq = await _run('test(X?, f(W), R)');
       expect(eq.status, ExecutionStatus.succeeded, reason: '${eq.error}');
       expect(_v(eq.bindings['R']), 'not_equal');
+    });
+
+    test('a clash where neither side is ground decides it', () async {
+      final r = await _run('neq_only(f(X?), g(Y?), R)');
+      expect(r.status, ExecutionStatus.succeeded, reason: '${r.error}');
+      expect(_v(r.bindings['R']), 'not_equal');
+      final l = await _run('neq_only([a | T?], [], R)');
+      expect(l.status, ExecutionStatus.succeeded, reason: '${l.error}');
+      expect(_v(l.bindings['R']), 'not_equal');
     });
   });
 

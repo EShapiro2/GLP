@@ -30,7 +30,7 @@ Guards are pure tests with **three-valued semantics** (success/suspend/fail) tha
 
 ## No Guard Negation
 
-A guard is a conjunction of guard predicates (GLP-Spec glp.tex, Definition "Guarded Clause"), and GLP has no guard negation: it left the language on 2026-10-01 (GLP-Spec 98913b4), and the parser refuses `~G` as a syntax error.  A clause for the cases the clauses before it do not take is guarded by `otherwise` (see the `lookup` example under `X =?= Y`); two ground terms that differ are tested by `X =?\= Y`.
+A guard is a conjunction of guard predicates (GLP-Spec glp.tex, Definition "Guarded Clause"), and GLP has no guard negation: it left the language on 2026-10-01 (GLP-Spec 98913b4), and the parser refuses `~G` as a syntax error.  A clause for the cases the clauses before it do not take is guarded by `otherwise` (see the `lookup` example under `X =?= Y`); that no readers substitution makes two terms ground and equal is tested by `X =?\= Y`.
 
 ---
 
@@ -430,16 +430,15 @@ provide_default(X, _, Default?) :- unknown(X?) | true.
 
 Tests whether two terms are ground and equal.
 
-**Semantics** (three-valued; GLP-Spec appendix-guards.tex, 30e382c): "`=?=` succeeds if both arguments are ground and equal, fails as soon as the two differ at a pair of ground subterms, and suspends otherwise."  The runtime traverses the two jointly, as term matching does: two constants, or two subterms that clash in functor or arity, both ground, are a pair of ground subterms; a pair with a variable in it, or a clash where a side is not ground, is not, and nothing below it is compared.
+**Semantics** (three-valued; GLP-Spec appendix-guards.tex, bbff21d): "`=?=` succeeds if both arguments are ground and equal."  It suspends and fails by the guard semantics (glp.tex, Guards): "A guard suspends if it does not succeed but some instance of it under a readers substitution would succeed. A guard fails if no such instance exists."  The runtime decides whether some readers substitution makes the two ground and equal by unifying them with readers alone assigned (`runner.dart`, `_decideGroundEquality`): none does where they clash in a constant, a functor or an arity, where an unbound writer stands in either, which no readers substitution grounds, or where a reader would have to stand for two different terms or for a term containing itself, whatever readers stand elsewhere.
 
 | X and Y | Result |
 |---|---|
 | both ground and equal | succeed |
-| differ at a pair of ground subterms, whatever variables stand elsewhere | fail |
-| no pair differs; an unbound reader stands in either, and no unbound writer | suspend on the readers |
-| no pair differs; an unbound writer stands in either | fail, as before 30e382c: the appendix's "suspends otherwise" and glp.tex's Guards (a guard fails where no instance under a readers substitution succeeds) read differently here, and the paper is to settle it |
+| not both ground, and some readers substitution makes them ground and equal | suspend on the unbound readers |
+| no readers substitution makes them ground and equal | fail |
 
-So `f(a, X?) =?= f(b, Z?)` fails, and `f(a, X?) =?= f(a, b)` suspends.
+So `f(a, X?) =?= f(b, Z?)`, `f(X?) =?= g(Y?)`, `[a | T?] =?= []` and `f(W) =?= f(c)` fail, and `f(a, X?) =?= f(a, b)` suspends.
 
 **Usage**: Pattern matching where equality must be tested explicitly.
 
@@ -458,7 +457,7 @@ The guard `Key =?= K?` succeeds when `Key` and `K` are both ground and equal. If
 
 `procedure =?\=(_?, _?).` Ground: yes (both).
 
-`=?\=` succeeds where `=?=` fails, fails where it succeeds, and suspends where it suspends. (GLP-Spec appendix-guards.tex, 30e382c.)  So `f(a, Z?) =?\= f(b, W?)` succeeds.  Where no pair of ground subterms differs and an unbound writer stands in either argument it fails, as `=?=` does there (above).
+**Semantics** (GLP-Spec appendix-guards.tex, bbff21d): "`=?\=` succeeds if no readers substitution makes them ground and equal."  It suspends and fails by the guard semantics, as `=?=` does (above): it fails where both are ground and equal, and suspends on the unbound readers where they are not but some readers substitution makes them so.  So `f(a, Z?) =?\= f(b, W?)`, `f(X?) =?\= g(Y?)`, `[a | T?] =?\= []` and `f(W) =?\= f(c)` succeed, and `f(X?) =?\= f(Y?)` suspends.
 
 ---
 

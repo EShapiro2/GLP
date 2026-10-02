@@ -1031,7 +1031,7 @@ GuardResult _evaluateGuard(String predicateName, List<Object?> args, RunnerConte
 
     case '=?=':
     case '=?\\=':
-      // The ground equality guards (GLP-Spec appendix-guards.tex, 30e382c),
+      // The ground equality guards (GLP-Spec appendix-guards.tex, bbff21d),
       // decided as ground_equal (0x45) decides =?= ([_groundEqualityGuard]).
       // =?\= has no instruction of its own (IGLP code-format-fragment.tex,
       // 9b45225), so every =?\= comes here, and every =?= with an operand that
@@ -1112,38 +1112,51 @@ GuardResult _evaluateGuard(String predicateName, List<Object?> args, RunnerConte
 }
 
 /// What the ground equality guards decide of their two arguments, `=?=` and
-/// `=?\=` alike (GLP-Spec appendix-guards.tex, 30e382c): "=?= succeeds if both
-/// arguments are ground and equal, fails as soon as the two differ at a pair of
-/// ground subterms, and suspends otherwise.  =?\= succeeds where =?= fails,
-/// fails where it succeeds, and suspends where it suspends."
-/// [_decideGroundEquality] decides it, for ground_equal (0x45) and the generic
-/// guard call alike, and [_groundEqualityGuard] reads it for each guard.
+/// `=?\=` alike.  A guard predicate states its success condition and nothing
+/// else (GLP-Spec appendix-guards.tex, bbff21d): "=?= succeeds if both
+/// arguments are ground and equal.  =?\= succeeds if no readers substitution
+/// makes them ground and equal."  Suspension and failure follow from the guard
+/// semantics (glp.tex, Guards): "A guard suspends if it does not succeed but
+/// some instance of it under a readers substitution would succeed.  A guard
+/// fails if no such instance exists."  So one question decides both guards,
+/// whether some readers substitution makes the two ground and equal
+/// ([_decideGroundEquality], for ground_equal (0x45) and the generic guard call
+/// alike), and [_groundEqualityGuard] reads its answer for each.
 enum _GroundEquality {
-  /// Both arguments are ground and equal: `=?=` succeeds, `=?\=` fails.
+  /// Both are ground and equal.  `=?=` succeeds.  `=?\=` fails: a readers
+  /// substitution leaves ground terms as they are, so its every instance is the
+  /// guard itself, which the empty substitution makes ground and equal.
   equal,
 
-  /// The two differ at a pair of ground subterms, whatever variables stand
-  /// elsewhere in either: `=?=` fails, `=?\=` succeeds.
-  differ,
+  /// Not both ground, and some readers substitution makes them ground and
+  /// equal: no unbound writer stands in either, and the two unify with readers
+  /// alone assigned.  Each guard suspends, on the unbound readers of the two.
+  /// `=?=` does not succeed, and its instance under that substitution does.
+  /// `=?\=` does not succeed either, and its instance under a substitution
+  /// assigning one of the readers a term with a fresh writer in it, which no
+  /// readers substitution grounds, does.
+  unifiable,
 
-  /// No pair of ground subterms differs, and an unbound reader stands in one
-  /// or the other and no unbound writer does: each suspends on the readers.
-  undecided,
-
-  /// No pair of ground subterms differs, and an unbound writer stands in one
-  /// or the other, which no assignment to readers grounds.  Each fails, as
-  /// ground_equal did before 30e382c: the appendix's "suspends otherwise"
-  /// reaches this case, and glp.tex, Guards, fails a guard that no instance
-  /// under a readers substitution satisfies; the paper is to settle which.
-  writer,
+  /// No readers substitution makes them ground and equal: an unbound writer
+  /// stands in one or the other, which no readers substitution grounds, or the
+  /// two do not unify with readers alone assigned --- two constants that
+  /// differ, a clash of functor or arity, a reader that would have to stand
+  /// for two different terms or for a term containing itself --- whatever
+  /// stands elsewhere in either.  `=?=` fails, no instance of it succeeding.
+  /// `=?\=` succeeds.
+  never,
 }
 
-/// An unbound variable met by [_decideGroundEquality]: its heap address, and
-/// whether it is a reader.
+/// An unbound variable met by [_decideGroundEquality]: [key], the variable ---
+/// the address of the writer cell its chain of bindings ends at, or its own
+/// cell's address for a variable of another agent ---; whether the occurrence
+/// met is a reader ([isReader]: a reader cell, or a bound writer whose chain
+/// ends at a reader); and [readerAddr], the reader a suspension waits on.
 class _UnboundVariable {
-  final int addr;
+  final int key;
   final bool isReader;
-  const _UnboundVariable(this.addr, this.isReader);
+  final int readerAddr;
+  const _UnboundVariable(this.key, this.isReader, this.readerAddr);
 }
 
 /// The arguments of a compound value, a heap structure or a tentative one;
@@ -1167,25 +1180,44 @@ Object? _constantValue(Object? value) =>
 Object? _equalityOperand(Object? value) =>
     value is Term || value is _TentativeStruct ? value : ConstTerm(value);
 
-/// Decide [left] =?= [right] ([_GroundEquality]), and give the unbound readers
-/// of the two, on which an undecided guard suspends.  The two are traversed
-/// jointly, as term matching traverses a goal and a head (GLP-Spec
-/// appendix-term-matching.tex): a pair of compounds of one functor and arity is
-/// descended into; a pair of constants, or a pair that clashes in functor or
-/// arity with both of it ground, is a pair of ground subterms, and differs or
-/// does not; a pair with a variable in it, or one that clashes where a side is
-/// not ground, is not, nor is any pair below it.  A difference decides it,
-/// whatever else stands in either argument.  A value is a heap term, a
-/// tentative structure or a bare variable address (an int), as a clause
-/// variable may hold; a constant at the top of a generic guard's argument
-/// comes wrapped ([_equalityOperand]).
+/// Decide whether some readers substitution makes [left] and [right] ground
+/// and equal ([_GroundEquality]), and give the unbound readers of the two, on
+/// which each guard suspends where it does.
+///
+/// The two are unified with readers alone assigned, traversed jointly as term
+/// matching traverses a goal and a head (GLP-Spec appendix-term-matching.tex),
+/// the assignments kept here and never applied: two compounds of one functor
+/// and arity are descended into, two constants compared, an unbound reader
+/// assigned the value it meets or aliased to the reader it meets, and anything
+/// else is a clash.  A clash, or an unbound writer met, decides `never`
+/// whatever stands elsewhere in either; so does a mutual reference, which holds
+/// the writer of a stream tail and is "neither ground nor a constant type"
+/// (TGLP typed-glp.tex).  Where the two unify, the values the readers were
+/// assigned are scanned for the variables in them: a writer decides `never`,
+/// and so does a reader that would stand for a term containing itself (the
+/// occurs check).  Then no unbound reader met is `equal`, and some is
+/// `unifiable`.
+///
+/// A value is a heap term, a tentative structure or a bare variable address
+/// (an int), as a clause variable may hold; a constant at the top of a generic
+/// guard's argument comes wrapped ([_equalityOperand]).  Any other value --- a
+/// module, or a placeholder of the head --- is compared as a constant, by
+/// equality.
 (_GroundEquality, Set<int>) _decideGroundEquality(
     Object? left, Object? right, RunnerContext cx) {
   final heap = cx.rt.heap;
-  final readers = <int>{};
-  var writer = false;
-  var differ = false;
-  final walked = <(Object, Object)>{};
+  const never = (_GroundEquality.never, <int>{});
+
+  // The unbound readers met, by key, each with the address suspended on.
+  final readers = <int, int>{};
+  // The assignments to readers that make the two equal: a reader's key to the
+  // value it stands for, or to the unbound reader it is aliased to.
+  final assigned = <int, Object?>{};
+  // An assigned reader's key to the keys of the readers in what it was
+  // assigned, for the occurs check.
+  final contains = <int, Set<int>>{};
+  // The compound values assigned to readers, scanned once the two unify.
+  final assignedCompounds = <(int, Object?)>[];
 
   // [term] with the bindings of its variables followed, tentative (σ̂w) before
   // the heap: a value, or the unbound variable a chain ends at.  A constant
@@ -1195,98 +1227,160 @@ Object? _equalityOperand(Object? value) =>
     var t = term;
     final seen = <int>{};
     while (true) {
-      if (t is ConstTerm) return t;
       final int? addr = t is VarRef ? t.addr : (t is int ? t : null);
       if (addr == null) return t;
-      if (!seen.add(addr)) return _UnboundVariable(addr, heap.isReader(addr));
-      if (heap.isReader(addr)) {
-        final writerAddr = heap.tryWriterForReader(addr);
-        if (writerAddr != null && cx.sigmaHat.containsKey(writerAddr)) {
-          t = cx.sigmaHat[writerAddr];
-        } else if (heap.isReaderBound(addr)) {
-          t = heap.getReaderValue(addr);
-        } else {
-          return _UnboundVariable(addr, true);
-        }
-      } else if (cx.sigmaHat.containsKey(addr)) {
-        t = cx.sigmaHat[addr];
-      } else if (heap.isFullyBound(addr)) {
-        t = heap.getValue(addr);
-      } else {
-        return _UnboundVariable(addr, false);
+      final isReaderCell = heap.isReader(addr);
+      if (!seen.add(addr)) return _UnboundVariable(addr, isReaderCell, addr);
+      final writerAddr = isReaderCell ? heap.tryWriterForReader(addr) : addr;
+      if (writerAddr != null && cx.sigmaHat.containsKey(writerAddr)) {
+        t = cx.sigmaHat[writerAddr];
+        continue;
       }
+      final end = heap.derefAddr(addr);
+      if (end is VarRef) {
+        // An unbound variable of this heap, its writer cell at the chain's end.
+        // The occurrence met is a writer only where it is that cell itself: a
+        // reader cell, or a bound writer, whose chain ends there met a reader.
+        final v = end.addr;
+        if (v != addr && cx.sigmaHat.containsKey(v)) {
+          t = cx.sigmaHat[v];
+          continue;
+        }
+        if (v == addr) return _UnboundVariable(v, false, addr);
+        return _UnboundVariable(
+            v, true, isReaderCell ? addr : heap.pairedReaderAddr(v));
+      }
+      // A variable of another agent, unbound here.
+      if (end is VariableEntry) {
+        return _UnboundVariable(addr, isReaderCell, addr);
+      }
+      return end;
     }
   }
 
-  // Whether [term] is ground; each unbound variable met is noted, a reader in
-  // [readers] and a writer in [writer].
-  bool scan(Object? term) {
-    var ground = true;
-    final visited = <Object>{};
-    void go(Object? t) {
-      while (true) {
-        final value = resolve(t);
-        if (value is _UnboundVariable) {
-          ground = false;
-          if (value.isReader) {
-            readers.add(value.addr);
-          } else {
-            writer = true;
+  // [term] resolved ([resolve]), and an unbound reader the assignments above
+  // give a value or an alias followed to what it stands for.
+  Object? resolveAssigned(Object? term) {
+    var value = resolve(term);
+    while (value is _UnboundVariable &&
+        value.isReader &&
+        assigned.containsKey(value.key)) {
+      value = resolve(assigned[value.key]);
+    }
+    return value;
+  }
+
+  void noteReader(_UnboundVariable v) =>
+      readers.putIfAbsent(v.key, () => v.readerAddr);
+
+  // Unify [a] with [b], readers alone assigned: false at a clash, an unbound
+  // writer or a mutual reference, which decide `never`.
+  bool unify(Object? a, Object? b) {
+    final pairs = <(Object?, Object?)>[(a, b)];
+    final walked = <(Object, Object)>{};
+    while (pairs.isNotEmpty) {
+      final (x, y) = pairs.removeLast();
+      final vx = resolveAssigned(x);
+      final vy = resolveAssigned(y);
+      if (vx is MutualRefTerm || vy is MutualRefTerm) return false;
+      if (vx is _UnboundVariable || vy is _UnboundVariable) {
+        for (final v in [vx, vy]) {
+          if (v is! _UnboundVariable) continue;
+          if (!v.isReader) return false;
+          noteReader(v);
+        }
+        if (vx is _UnboundVariable && vy is _UnboundVariable) {
+          if (vx.key != vy.key) {
+            assigned[vx.key] = vy;
+            contains[vx.key] = {vy.key};
           }
-          return;
+          continue;
         }
-        final args = _compoundArgs(value);
-        if (args == null || args.isEmpty || !visited.add(value!)) return;
-        for (var i = 0; i < args.length - 1; i++) {
-          go(args[i]);
+        final (reader, value) = vx is _UnboundVariable
+            ? (vx, vy)
+            : (vy as _UnboundVariable, vx);
+        assigned[reader.key] = value;
+        if (_compoundArgs(value) != null) {
+          assignedCompounds.add((reader.key, value));
         }
-        t = args.last;
+        continue;
+      }
+      final argsX = _compoundArgs(vx);
+      final argsY = _compoundArgs(vy);
+      if (argsX == null && argsY == null) {
+        if (_constantValue(vx) != _constantValue(vy)) return false;
+        continue;
+      }
+      if (argsX == null ||
+          argsY == null ||
+          _compoundFunctor(vx) != _compoundFunctor(vy) ||
+          argsX.length != argsY.length) {
+        return false;
+      }
+      if (argsX.isEmpty || !walked.add((vx!, vy!))) continue;
+      for (var i = argsX.length - 1; i >= 0; i--) {
+        pairs.add((argsX[i], argsY[i]));
       }
     }
-
-    go(term);
-    return ground;
+    return true;
   }
 
-  void walk(Object? a, Object? b) {
-    while (!differ) {
-      final va = resolve(a);
-      final vb = resolve(b);
-      if (va is _UnboundVariable || vb is _UnboundVariable) {
-        scan(va);
-        scan(vb);
-        return;
+  // The variables in [value], assigned to the reader [key]: false at an
+  // unbound writer or a mutual reference; each reader met is noted, as
+  // contained in what [key] stands for.
+  bool scan(int key, Object? value) {
+    final terms = <Object?>[value];
+    final visited = <Object>{};
+    while (terms.isNotEmpty) {
+      final v = resolve(terms.removeLast());
+      if (v is MutualRefTerm) return false;
+      if (v is _UnboundVariable) {
+        if (!v.isReader) return false;
+        noteReader(v);
+        (contains[key] ??= <int>{}).add(v.key);
+        continue;
       }
-      final argsA = _compoundArgs(va);
-      final argsB = _compoundArgs(vb);
-      if (argsA == null && argsB == null) {
-        if (_constantValue(va) != _constantValue(vb)) differ = true;
-        return;
-      }
-      if (argsA == null ||
-          argsB == null ||
-          _compoundFunctor(va) != _compoundFunctor(vb) ||
-          argsA.length != argsB.length) {
-        // A clash: a pair of ground subterms that differ if both are ground.
-        final groundA = scan(va);
-        final groundB = scan(vb);
-        if (groundA && groundB) differ = true;
-        return;
-      }
-      if (argsA.isEmpty || !walked.add((va!, vb!))) return;
-      for (var i = 0; i < argsA.length - 1 && !differ; i++) {
-        walk(argsA[i], argsB[i]);
-      }
-      a = argsA.last;
-      b = argsB.last;
+      final args = _compoundArgs(v);
+      if (args == null || args.isEmpty || !visited.add(v!)) continue;
+      terms.addAll(args);
     }
+    return true;
   }
 
-  walk(left, right);
-  if (differ) return (_GroundEquality.differ, const <int>{});
-  if (writer) return (_GroundEquality.writer, const <int>{});
-  if (readers.isNotEmpty) return (_GroundEquality.undecided, readers);
-  return (_GroundEquality.equal, const <int>{});
+  // Whether some assigned reader stands, through the assignments, for a term
+  // containing itself: a cycle in [contains].
+  bool occurs() {
+    final state = <int, bool>{}; // false: on the path; true: done
+    for (final start in contains.keys) {
+      if (state[start] == true) continue;
+      state[start] = false;
+      final path = <(int, Iterator<int>)>[(start, contains[start]!.iterator)];
+      while (path.isNotEmpty) {
+        final (node, next) = path.last;
+        if (!next.moveNext()) {
+          state[node] = true;
+          path.removeLast();
+          continue;
+        }
+        final k = next.current;
+        final s = state[k];
+        if (s == false) return true;
+        if (s == null) {
+          state[k] = false;
+          path.add((k, (contains[k] ?? const <int>{}).iterator));
+        }
+      }
+    }
+    return false;
+  }
+
+  if (!unify(left, right)) return never;
+  for (final (key, value) in assignedCompounds) {
+    if (!scan(key, value)) return never;
+  }
+  if (readers.isEmpty) return (_GroundEquality.equal, const <int>{});
+  if (occurs()) return never;
+  return (_GroundEquality.unifiable, readers.values.toSet());
 }
 
 /// [guard], `=?=` or `=?\=`, on [left] and [right], as [_decideGroundEquality]
@@ -1299,13 +1393,11 @@ GuardResult _groundEqualityGuard(
   switch (decision) {
     case _GroundEquality.equal:
       return negated ? GuardResult.failure : GuardResult.success;
-    case _GroundEquality.differ:
+    case _GroundEquality.never:
       return negated ? GuardResult.success : GuardResult.failure;
-    case _GroundEquality.undecided:
+    case _GroundEquality.unifiable:
       cx.Si.addAll(readers);
       return GuardResult.suspend;
-    case _GroundEquality.writer:
-      return GuardResult.failure;
   }
 }
 
@@ -1938,9 +2030,9 @@ mixin OpExecutors {
   }
 
   /// `ground_equal` (0x45): X =?= Y, decided as every ground equality guard is
-  /// ([_decideGroundEquality]): it fails at a pair of ground subterms that
-  /// differ, suspends on the unbound readers where none differs, and succeeds
-  /// where both are ground and equal.
+  /// ([_decideGroundEquality]): it succeeds where both are ground and equal,
+  /// suspends on the unbound readers where they are not but some readers
+  /// substitution makes them so, and fails where none does.
   StepOutcome execGroundEqual(
       RunnerContext cx, int leftVarIndex, int rightVarIndex) {
     // An unknown variable ([RunnerContext.unknownVars]): undecided, passed by.
@@ -2016,8 +2108,8 @@ mixin OpExecutors {
     }
 
     // The ground equality guards decide their unbound readers themselves, as
-    // ground_equal (0x45) does ([_groundEqualityGuard]): a pair of ground
-    // subterms that differ decides them whatever readers stand beside it.
+    // ground_equal (0x45) does ([_groundEqualityGuard]): a clash, or an unbound
+    // writer, decides them whatever readers stand beside it.
     if (unboundReaders.isNotEmpty &&
         predicateName != 'unknown' &&
         predicateName != '=?=' &&

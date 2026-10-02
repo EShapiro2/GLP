@@ -1,6 +1,8 @@
 % test_ground_equal.glp - Ground equality guard (GLP-Spec appendix-guards.tex,
-% 30e382c): "=?= succeeds if both arguments are ground and equal, fails as soon
-% as the two differ at a pair of ground subterms, and suspends otherwise."
+% bbff21d): "=?= succeeds if both arguments are ground and equal."  It suspends
+% and fails by glp.tex, Guards: "A guard suspends if it does not succeed but
+% some instance of it under a readers substitution would succeed.  A guard
+% fails if no such instance exists."
 
 exported procedure test(_?, _?, Constant).
 test(X, Y, equal) :- X? =?= Y? | true.
