@@ -13,7 +13,13 @@ enum ExecutionStatus {
 
 /// Result from drain operation
 class DrainResult {
-  final List<int> goalsRan;
+  /// How many goals the drain took from the queue and tried, which is what
+  /// its callers count against a cycle cap and report.  The drain keeps no
+  /// record of which goals they were: until 2026-10-02 this was a list of
+  /// their ids, kept for the whole of a REPL goal's run and copied by
+  /// [Scheduler.drainAsyncWithStatus], eight bytes a try.  A caller that
+  /// wants the ids hands the drain a list for them ([Scheduler.drain]).
+  final int goalsRun;
   final ExecutionStatus status;
   final Set<int> blockingReaders;  // addresses of readers causing suspension (per spec 8.4)
 
@@ -23,12 +29,12 @@ class DrainResult {
   /// a drain whose caller does not read it formats none of them.
   late final List<String> suspendedGoals = _suspendedGoals();
 
-  DrainResult(this.goalsRan, this.status, List<String> suspendedGoals, [this.blockingReaders = const {}])
+  DrainResult(this.goalsRun, this.status, List<String> suspendedGoals, [this.blockingReaders = const {}])
       : _suspendedGoals = (() => suspendedGoals);
 
   /// A result whose suspended goals are formatted by [suspendedGoals] when the
   /// list is first read.
-  DrainResult.deferred(this.goalsRan, this.status, List<String> Function() suspendedGoals, [this.blockingReaders = const {}])
+  DrainResult.deferred(this.goalsRun, this.status, List<String> Function() suspendedGoals, [this.blockingReaders = const {}])
       : _suspendedGoals = suspendedGoals;
 }
 
@@ -226,8 +232,10 @@ class Scheduler {
     }
   }
 
-  DrainResult drainWithStatus({int maxCycles = 1000, bool debug = false, bool showBindings = true, bool debugOutput = false}) {
-    final ran = <int>[];
+  /// Reduce goals from the queue, at most [maxCycles] of them.  Their number
+  /// is the result's [DrainResult.goalsRun]; [goalIds], when given, has the
+  /// id of each appended as it is taken.
+  DrainResult drainWithStatus({int maxCycles = 1000, bool debug = false, bool showBindings = true, bool debugOutput = false, List<int>? goalIds}) {
     // Track suspended goals by ID, each with the means to its text.
     final suspendedGoals = <int, String Function()>{};
     var cycles = 0;
@@ -253,7 +261,7 @@ class Scheduler {
       // The goal taken waits on nothing: it leaves the runtime's suspended
       // map, whichever way it was woken (GlpRuntime.goalTaken).
       rt.goalTaken(act);
-      ran.add(act.id);
+      goalIds?.add(act.id);
       final env = rt.getGoalEnv(act.id);
       final program = rt.getGoalProgram(act.id);
       var runner = runners[program];
@@ -396,7 +404,7 @@ class Scheduler {
         ? rt.suspended.keys.toSet()
         : <int>{};
 
-    return DrainResult.deferred(ran, status, suspendedList, blockingReaders);
+    return DrainResult.deferred(cycles, status, suspendedList, blockingReaders);
   }
 
   /// Reduce until quiescent: the queue empty and nothing runnable.
@@ -412,24 +420,24 @@ class Scheduler {
   /// across the drains this call makes, so a goal that failed in any of them
   /// fails the whole, whatever the last drain returned.
   DrainResult drainToQuiescence({int maxCycles = 1000000, int chunk = 1000, bool debug = false, bool showBindings = true, bool debugOutput = false}) {
-    final ran = <int>[];
+    var run = 0;
     final failedAtEntry = rt.failedGoals.length;
-    var last = DrainResult(const [], ExecutionStatus.succeeded, const []);
+    var last = DrainResult(0, ExecutionStatus.succeeded, const []);
 
-    while (ran.length < maxCycles) {
-      final left = maxCycles - ran.length;
+    while (run < maxCycles) {
+      final left = maxCycles - run;
       final result = drainWithStatus(
         maxCycles: chunk < left ? chunk : left,
         debug: debug,
         showBindings: showBindings,
         debugOutput: debugOutput,
       );
-      ran.addAll(result.goalsRan);
+      run += result.goalsRun;
       last = result;
       if (result.status != ExecutionStatus.capped) break;
       // A capped drain that ran nothing cannot be resumed — the queue reports
       // work it will not hand over — and looping on it would never end.
-      if (result.goalsRan.isEmpty) break;
+      if (result.goalsRun == 0) break;
     }
 
     final status = rt.gq.length > 0 || (rt.hasIdleWaits && rt.isIdle)
@@ -438,7 +446,7 @@ class Scheduler {
             ? ExecutionStatus.failed
             : last.status);
     final lastResult = last;
-    return DrainResult.deferred(ran, status, () => lastResult.suspendedGoals,
+    return DrainResult.deferred(run, status, () => lastResult.suspendedGoals,
         lastResult.blockingReaders);
   }
 
@@ -461,16 +469,16 @@ class Scheduler {
   /// the drains, so a goal that failed in any of them fails the whole.
   DrainResult drainAndSend(void Function() send,
       {int maxCycles = 1000000, bool debug = false}) {
-    final ran = <int>[];
+    var run = 0;
     final failedAtEntry = rt.failedGoals.length;
     DrainResult last;
     while (true) {
-      last = drainToQuiescence(maxCycles: maxCycles - ran.length, debug: debug);
-      ran.addAll(last.goalsRan);
+      last = drainToQuiescence(maxCycles: maxCycles - run, debug: debug);
+      run += last.goalsRun;
       send();
       if (last.status == ExecutionStatus.capped) break;
       if (!(rt.hasIdleWaits && rt.isIdle)) break;
-      if (ran.length >= maxCycles) break;
+      if (run >= maxCycles) break;
     }
 
     final status = rt.gq.length > 0 || (rt.hasIdleWaits && rt.isIdle)
@@ -479,18 +487,21 @@ class Scheduler {
             ? ExecutionStatus.failed
             : last.status);
     final lastResult = last;
-    return DrainResult.deferred(ran, status, () => lastResult.suspendedGoals,
+    return DrainResult.deferred(run, status, () => lastResult.suspendedGoals,
         lastResult.blockingReaders);
   }
 
-  /// Legacy drain for backward compatibility
+  /// Legacy drain for backward compatibility: the ids of the goals it ran,
+  /// in the order it ran them.
   List<int> drain({int maxCycles = 1000, bool debug = false, bool showBindings = true, bool debugOutput = false}) {
-    return drainWithStatus(maxCycles: maxCycles, debug: debug, showBindings: showBindings, debugOutput: debugOutput).goalsRan;
+    final ran = <int>[];
+    drainWithStatus(maxCycles: maxCycles, debug: debug, showBindings: showBindings, debugOutput: debugOutput, goalIds: ran);
+    return ran;
   }
 
-  /// Async drain that waits for pending timers to fire.
-  Future<DrainResult> drainAsyncWithStatus({int maxCycles = 1000, bool debug = false, bool showBindings = true, bool debugOutput = false}) async {
-    final ran = <int>[];
+  /// Async drain that waits for pending timers to fire.  [goalIds], when
+  /// given, has the id of each goal run appended, as [drainWithStatus]'s.
+  Future<DrainResult> drainAsyncWithStatus({int maxCycles = 1000, bool debug = false, bool showBindings = true, bool debugOutput = false, List<int>? goalIds}) async {
     final failedAtEntry = rt.failedGoals.length;
     var totalCycles = 0;
     ExecutionStatus lastStatus = ExecutionStatus.succeeded;
@@ -504,9 +515,9 @@ class Scheduler {
         debug: debug,
         showBindings: showBindings,
         debugOutput: debugOutput,
+        goalIds: goalIds,
       );
-      ran.addAll(result.goalsRan);
-      totalCycles += result.goalsRan.length;
+      totalCycles += result.goalsRun;
       lastStatus = result.status;
       lastSuspended = () => result.suspendedGoals;
       lastBlockingReaders = result.blockingReaders;
@@ -535,12 +546,14 @@ class Scheduler {
     final status = rt.failedGoals.length > failedAtEntry
         ? ExecutionStatus.failed
         : lastStatus;
-    return DrainResult.deferred(ran, status, lastSuspended, lastBlockingReaders);
+    return DrainResult.deferred(totalCycles, status, lastSuspended, lastBlockingReaders);
   }
 
-  /// Legacy async drain for backward compatibility
+  /// Legacy async drain for backward compatibility: the ids of the goals it
+  /// ran, in the order it ran them.
   Future<List<int>> drainAsync({int maxCycles = 1000, bool debug = false, bool showBindings = true, bool debugOutput = false}) async {
-    final result = await drainAsyncWithStatus(maxCycles: maxCycles, debug: debug, showBindings: showBindings, debugOutput: debugOutput);
-    return result.goalsRan;
+    final ran = <int>[];
+    await drainAsyncWithStatus(maxCycles: maxCycles, debug: debug, showBindings: showBindings, debugOutput: debugOutput, goalIds: ran);
+    return ran;
   }
 }

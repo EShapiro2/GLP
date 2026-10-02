@@ -75,7 +75,7 @@ w(a, _).
 
     final result = sched.drainWithStatus();
     expect(result.status, ExecutionStatus.succeeded);
-    expect(result.goalsRan, hasLength(2),
+    expect(result.goalsRun, 2,
         reason: 'p, its tail call r run in its turn, and the q it spawned');
     expect(trace, isEmpty);
   });

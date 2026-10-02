@@ -737,7 +737,7 @@ void _drainAndSend(
   final result = scheduler.drainAndSend(send, debug: debug);
   if (result.status == ExecutionStatus.capped) {
     print('[$agentId] ERROR: the program did not quiesce: stopped after '
-        '${result.goalsRan.length} goals with ${scheduler.rt.gq.length} '
+        '${result.goalsRun} goals with ${scheduler.rt.gq.length} '
         'still queued');
   }
 }

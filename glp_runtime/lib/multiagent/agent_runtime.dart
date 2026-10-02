@@ -485,8 +485,8 @@ class AgentRuntime {
           () => messagesFlushed += _ctx!.flushMessages(),
           maxCycles: maxQuiescenceCycles,
           debug: glpTraceEnabled);
-      _log('RUN: status=${result.status}, goals=${result.goalsRan.length}');
-      goalCount += result.goalsRan.length;
+      _log('RUN: status=${result.status}, goals=${result.goalsRun}');
+      goalCount += result.goalsRun;
 
       if (result.status == ExecutionStatus.capped) {
         // The net caught something, which for a program that quiesces it never
@@ -494,9 +494,9 @@ class AgentRuntime {
         // is left standing: a run stopped here is half a run, and nothing that
         // follows it means what it says.
         _output('[ERROR] The program did not quiesce: stopped after '
-            '${result.goalsRan.length} goals with ${_runtime!.gq.length} '
+            '${result.goalsRun} goals with ${_runtime!.gq.length} '
             'still queued (the limit is $maxQuiescenceCycles).');
-        _log('RUN: CAPPED after ${result.goalsRan.length} goals, '
+        _log('RUN: CAPPED after ${result.goalsRun} goals, '
             'GQ=${_runtime!.gq.length}');
       }
 
