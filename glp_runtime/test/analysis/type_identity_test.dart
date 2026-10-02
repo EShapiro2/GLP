@@ -425,26 +425,20 @@ measure(_).
       expect(r.derived.exported, equals(r.compiled.exported));
     });
 
-    test('an export with no declaration is absent from every field', () {
+    test('a single-file load of a self.glp tables the types it defines', () {
       if (!hasRootScope) return;
-      const target = '../programs/tests/interface_table_single.glp';
+      const target = '../programs/tests/agent_roundtrip/self.glp';
       if (!File(target).existsSync()) return;
-      final r = bothPathsFor(target, single: true);
-
-      // `nudge/1` has clauses and no declaration, so its interface text is
-      // empty and it contributes no types.  The compiled path tables
-      // declarations, so an undeclared procedure is in none of the four fields;
-      // the derived path matches it.  `unresolved` is the narrower case of a
-      // declaration naming a type the scope does not define.
-      final texts = {
-        for (final e in r.art.exports) '${e.name}/${e.arity}': e.declarationText
-      };
-      expect(texts['nudge/1'], isEmpty);
-      for (final t in [r.derived, r.compiled]) {
-        expect(t.exported, isNot(contains('nudge/1')));
-        expect(t.parametric, isNot(contains('nudge/1')));
-        expect(t.unresolved, isNot(contains('nudge/1')));
-      }
+      // The modules it exposes name its types --- typed_social_agent's
+      // inject_msg/5 names Response --- and see them as a module of the
+      // directory sees its self.glp (modules.tex, Definition "Root, Scope").
+      // Until 2026-10-02 the loaded self.glp was no ancestor scope of the
+      // modules it exposes, Response stayed unrenamed and undefined in the
+      // flat module, and the tables were not built; a table that cannot be
+      // built now fails the load, so the load succeeding is the check.
+      final engine = GlpEngine(rootSelfGlpPath: rootSelfGlp.absolute.path);
+      expect(engine.loadFile(target), isTrue);
+      expect(engine.appModule!.declaredTypes, isA<TypeIdentityTables>());
     });
 
     test('an empty interface derives an empty table', () {

@@ -392,10 +392,13 @@ class GlpEngine {
           .ancestorScope;
     }
 
-    // Type check if program has procedure declarations. (Single-file/REPL
-    // semantics: a parametric procedure inspecting its parameter with no
-    // instantiation is rejected — checkModule's default.)
-    if (module.procDeclarations.isNotEmpty) {
+    // Type check, every source: a module with no procedure declarations is
+    // checked like any other, and a clause of it then defines a procedure with
+    // no declaration, which is an error (TGLP Definition "Typed GLP Program",
+    // condition 1).  Until 2026-10-02 such a module was compiled and run with
+    // no check.  (Single-file/REPL semantics: a parametric procedure inspecting
+    // its parameter with no instantiation is rejected — checkModule's default.)
+    {
       final ast = Program(module.procedures, module.line, module.column);
       final partialEvaluator = PartialEvaluator();
       final transformedAst = partialEvaluator.transformDefinedGuards(ast);
@@ -448,6 +451,7 @@ class GlpEngine {
     } else {
       program = _compiler.compile(source);
     }
+    _refuseRedefinitionByLaterLoad(name, program);
     _loadedPrograms[name] = program;
     if (moduleValue != null) {
       _loadedModuleValues[name] = moduleValue;
@@ -475,6 +479,42 @@ class GlpEngine {
     _extendGoalCheckEnv(module, label: moduleInfo.name);
 
     return true;
+  }
+
+  /// A later load that defines a procedure an earlier load defines is an
+  /// error, not a definition the earlier one shadows: [combinedProgram] keeps
+  /// the first label of each name, so until 2026-10-02 the later load's
+  /// procedure of that name was never run and nothing said so.  A program is
+  /// one compiled module (TGLP modules.tex, Compilation), and a goal names its
+  /// procedure by the plain name an entry point carries, so it is the plain
+  /// names that clash; a renamed `M:p` is a module's own.  The root self.glp
+  /// is no earlier load --- every program may shadow it (TGLP
+  /// appendix-root-self.tex) --- and a load under the name of an earlier one
+  /// replaces it.
+  void _refuseRedefinitionByLaterLoad(String name, BytecodeProgram program) {
+    final internal = RegExp(r'_c\d+$');
+    Set<String> plainProcedures(BytecodeProgram p) => {
+          for (final l in p.labels.keys)
+            if (l.contains('/') &&
+                !l.contains(':') &&
+                !l.endsWith('_end') &&
+                !internal.hasMatch(l))
+              l
+        };
+    final mine = plainProcedures(program);
+    for (final e in _loadedPrograms.entries) {
+      if (e.key == '__root_self__' || e.key == name) continue;
+      final clash = mine.intersection(plainProcedures(e.value));
+      if (clash.isEmpty) continue;
+      throw CompileError(
+        "'$name' defines ${(clash.toList()..sort()).join(', ')}, which the "
+        "earlier load '${e.key}' defines: a later load of a same-named "
+        'procedure is an error, not shadowed by the earlier one',
+        0,
+        0,
+        phase: 'loader',
+      );
+    }
   }
 
   /// The scope the engine holds: the root scope, the root self.glp, every
@@ -527,6 +567,7 @@ class GlpEngine {
       procDeclarations: linked.procDeclarations,
       typeEnv: linked.checkedEnv,
     );
+    _refuseRedefinitionByLaterLoad('__program__', program);
     _loadedPrograms['__program__'] = program;
 
     // The program's module value — its artefact (h(M) + code): the value
@@ -753,9 +794,12 @@ class GlpEngine {
 
   /// Type-check a REPL goal against the loaded program's declarations.
   ///
-  /// Returns null if the goal is well-typed (or cannot be parsed/checked here,
-  /// in which case the execution path reports the parse problem). Returns a
-  /// specific error message if the goal is ill-typed.
+  /// Returns null if the goal is well-typed, and an error message if it is
+  /// ill-typed or does not parse as a clause body: the check is never skipped
+  /// (TGLP modules.tex, Type-Compatible Attestation Between Agents: the initial
+  /// goal "is type-checked before execution as a body goal").  Until
+  /// 2026-10-02 a goal that did not parse here passed the check, and the
+  /// execution path reported what it made of it.
   ///
   /// The goal is parsed as a clause body so single goals and conjunctions are
   /// handled uniformly; a guard (if the user wrote one) is a body goal for
@@ -774,7 +818,7 @@ class GlpEngine {
       final parser = Parser(tokens);
       final parsed = parser.parse();
       if (parsed.procedures.isEmpty || parsed.procedures[0].clauses.isEmpty) {
-        return null;
+        return 'Goal does not parse as a clause body: $trimmed';
       }
       final clause = parsed.procedures[0].clauses[0];
       atoms = [
@@ -782,11 +826,12 @@ class GlpEngine {
           Goal(g.predicate, g.args, g.line, g.column),
         ...?clause.body,
       ];
-    } catch (_) {
-      // A parse error surfaces in the execution path with its own message.
-      return null;
+    } on CompileError catch (e) {
+      return 'Goal does not parse as a clause body: ${e.message}';
     }
-    if (atoms.isEmpty) return null;
+    if (atoms.isEmpty) {
+      return 'Goal does not parse as a clause body: $trimmed';
+    }
 
     final env = _ensureGoalCheckBaseEnv();
     final dfa = tdfa.buildProgramDFA(env);
@@ -1135,15 +1180,17 @@ class GlpEngine {
     // Implementation Notes, "The tables"): every procedure declared in the
     // linked program's scope, root scope included, keyed as the compiled module
     // carries it. `find_type/2` reads it from the calling goal's module value.
-    // Built over the same flat module the program was type-checked as. The
-    // table is not part of the type check and its construction can fail on a
-    // program the checker passed, so a failure here leaves the module without a
-    // table (find_type then errs on every key) rather than failing the load.
-    TypeIdentityTables? declaredTypes;
+    // Built over the same flat module the program was type-checked as.  A
+    // table that cannot be built is an error and the module does not load:
+    // until 2026-10-02 the failure was a [TYPE WARNING] and the module loaded
+    // without a table, find_type then erring on every key.
+    final TypeIdentityTables declaredTypes;
     try {
       declaredTypes = linkedTypeIdentityTables(modules, linked);
     } catch (e) {
-      print('[TYPE WARNING] $moduleName: type-identity tables not built: $e');
+      throw CompileError(
+          '$moduleName: the type-identity tables cannot be built: $e', 0, 0,
+          phase: 'typecheck');
     }
     return rt.ModuleTerm(artefact,
         name: moduleName, declaredTypes: declaredTypes, directory: directory);

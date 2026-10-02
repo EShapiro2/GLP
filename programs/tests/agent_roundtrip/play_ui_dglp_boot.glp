@@ -2,8 +2,11 @@
 %%
 %% Full stack: network3 ↔ agent/4 ↔ ui_mediator ↔ ui_actor
 %%
-%% network3 and play are untyped (no procedure declarations)
-%% since they call cross-file agent/4 and ui_mediator/5.
+%% network3 and play are declared, as every procedure is (TGLP Definition
+%% "Typed GLP Program", condition 1); the agent, the mediator and the actors
+%% they call are in scope through this directory's self.glp, which exposes
+%% their modules.  network3 reads every NetInMsg, the friend messages among
+%% them, though an agent's net_output carries the cold calls alone.
 %%
 %% Usage:
 %%   load typed_social_agent.glp
@@ -20,6 +23,9 @@
 %% =============================================================================
 
 %% --- Cold-call routing (2-arg msg) ---
+
+procedure network3(Channel(NetInStream, NetInStream)?, Channel(NetInStream, NetInStream)?,
+    Channel(NetInStream, NetInStream)?).
 
 network3(ch([msg(bob, X)|AliceIn], AliceOut?),
          ch(BobIn, [msg(bob, X?)|BobOut?]),
@@ -90,6 +96,11 @@ network3(ch([], []), ch([], []), ch([], [])).
 %% PLAY - dGLP entry point with UI mediator
 %% =============================================================================
 
+%% play/0 reaches each actor through ui_actor/2, the one procedure
+%% typed_ui_actors.glp exports; alice_ui_actor/1 and its kin are private to
+%% that module, which the agent_roundtrip self.glp exposes (TGLP modules.tex,
+%% The -expose directive).
+procedure play.
 play :-
     network3(ch(AliceNetOut?, AliceNetIn),
              ch(BobNetOut?, BobNetIn),
@@ -100,18 +111,18 @@ play :-
           [user_output(AliceAgentToUser), net_output(AliceNetOut)]),
     ui_mediator(alice, ch(AliceAgentToUser?, AliceAgentIn),
                 ch(AliceUserOut?, AliceUserIn), [], 1),
-    alice_ui_actor(ch(AliceUserIn?, AliceUserOut)),
+    ui_actor(alice, ch(AliceUserIn?, AliceUserOut)),
 
     %% Bob: agent ↔ mediator ↔ ui_actor
     agent(bob, BobAgentIn?, BobNetIn?,
           [user_output(BobAgentToUser), net_output(BobNetOut)]),
     ui_mediator(bob, ch(BobAgentToUser?, BobAgentIn),
                 ch(BobUserOut?, BobUserIn), [], 1),
-    bob_ui_actor(ch(BobUserIn?, BobUserOut)),
+    ui_actor(bob, ch(BobUserIn?, BobUserOut)),
 
     %% Charlie: agent ↔ mediator ↔ ui_actor
     agent(charlie, CharlieAgentIn?, CharlieNetIn?,
           [user_output(CharlieAgentToUser), net_output(CharlieNetOut)]),
     ui_mediator(charlie, ch(CharlieAgentToUser?, CharlieAgentIn),
                 ch(CharlieUserOut?, CharlieUserIn), [], 1),
-    charlie_ui_actor(ch(CharlieUserIn?, CharlieUserOut)).
+    ui_actor(charlie, ch(CharlieUserIn?, CharlieUserOut)).

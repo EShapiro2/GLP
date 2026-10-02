@@ -1784,6 +1784,11 @@ echo ""
 GUARD_NEG_DIR="$GLP_DIR/programs/tests/guards_invalid"
 guard_cases=(
     "true_in_guard.glp|\"true\" is not a guard"
+    # false and fail are defined nowhere, as a guard or in a body: each is an
+    # unknown guard predicate, refused at compile time, the type checker
+    # finding no declaration of it (weeding round three, item 11).
+    "false_in_guard.glp|Undefined procedure: false/0"
+    "fail_in_guard.glp|Undefined procedure: fail/0"
     # GLP has no guard negation: the parser refuses ~d(X?) as a syntax error.
     "negated_defined_guard.glp|[syntax] \"~\" is not GLP syntax"
 )

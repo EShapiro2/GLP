@@ -178,6 +178,29 @@ void main() {
               'scheduler to route the goal to');
     });
 
+    test('run keys the module\'s runner by its compiled identity', () {
+      // "Artefacts are cached and deduplicated by compiled identity" (IGLP
+      // code-format-fragment.tex, Loader, step 4): the SHA-256 of the body,
+      // not the source identity h(M), which two compilations of one source
+      // share.
+      final rt = GlpRuntime();
+      registerModuleKernels(rt);
+
+      final module = projectModule;
+      final artefact = projectModule.artefact as Artefact;
+      final (sig, _) = firstRunnableEntry(artefact);
+      final boot = bootGoalFor(rt, sig);
+      expect(rt.bodyKernels.lookup('_run', 2)!(rt, [boot.goal, module]),
+          equals(BodyKernelResult.success));
+
+      String hex(Uint8List b) =>
+          b.map((x) => x.toRadixString(16).padLeft(2, '0')).join();
+      final key = rt.getGoalProgram(rt.gq.items.last.id);
+      expect(key, equals('module:${hex(artefact.compiledIdentity)}'));
+      expect(hex(artefact.compiledIdentity), isNot(equals(hex(artefact.hM))));
+      expect(rt.runners[key], isNotNull);
+    });
+
     test('run then self_module round-trips the same module value', () {
       final rt = GlpRuntime();
       registerModuleKernels(rt);

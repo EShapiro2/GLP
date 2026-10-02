@@ -5,7 +5,7 @@ import 'codegen.dart';
 import 'error.dart';
 import 'token.dart';
 import 'result.dart';
-import 'ast.dart' show Program, Procedure, Clause, Atom, Goal, Guard, Term, VarTerm, StructTerm, UnderscoreTerm, CompileMode;
+import 'ast.dart' show Program, Procedure, Clause, Atom, Goal, Guard, Term, VarTerm, StructTerm, UnderscoreTerm;
 import '../analysis/type_checker/type_ast.dart' show ProcDecl, TypeEnvironment;
 import '../analysis/type_checker/type_checker.dart' show buildModuleTypeEnvironment;
 import 'package:glp_runtime/bytecode/runner.dart' show BytecodeProgram;
@@ -71,15 +71,11 @@ class GlpCompiler {
       // Convert Module to Program for analyzer
       final ast = Program(module.procedures, module.line, module.column);
 
-      // Generate reduce/2 for all files except system-mode code (stdlib)
-      final generateReduce = module.compileMode != CompileMode.system;
-
-      // Phase 3: Semantic analysis (with reduce generation flag and proc declarations)
-      // Pass proc declarations for type-based SRSW relaxation
+      // Phase 3: Semantic analysis.  Pass proc declarations for type-based SRSW
+      // relaxation.
       final analyzer = _createAnalyzer();
       final annotatedAst = analyzer.analyze(
         ast,
-        generateReduce: generateReduce,
         procDeclarations: module.procDeclarations,
         typeEnv: typeEnv ?? buildModuleTypeEnvironment(module),
       );
@@ -120,7 +116,6 @@ class GlpCompiler {
     final analyzer = _createAnalyzer();
     final annotated = analyzer.analyze(
       ast,
-      generateReduce: true,
       procDeclarations: procDeclarations ?? [],
       typeEnv: typeEnv,
     );

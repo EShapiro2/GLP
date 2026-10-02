@@ -286,7 +286,11 @@ class SimulationNetworkClient extends GlpNetwork {
 
   PubKey? _pub;
   Uint8List? _priv;
-  TrustLevel _trust = TrustLevel.closed;
+
+  /// The cold-call trust level of each proximity medium, both closed until set.
+  final Map<ProximityMedium, TrustLevel> _trust = {
+    for (final m in ProximityMedium.values) m: TrustLevel.closed,
+  };
 
   SimulationNetworkClient({
     required this.selfId,
@@ -352,15 +356,15 @@ class SimulationNetworkClient extends GlpNetwork {
       ];
 
   @override
-  void setTrustLevel(TrustLevel level) {
+  void setTrustLevel(ProximityMedium medium, TrustLevel level) {
     // Trust is enforced router-side in the simulation; record locally so
     // getIdentity-style queries stay consistent. The harness sets the router's
     // level at boot.
-    _trust = level;
+    _trust[medium] = level;
   }
 
-  /// This client's locally-recorded trust level.
-  TrustLevel get trustLevel => _trust;
+  /// This client's locally-recorded trust level for [medium].
+  TrustLevel trustLevelOf(ProximityMedium medium) => _trust[medium]!;
 
   // --- IP (unsupported in simulation, spec §2/§8) ---
 

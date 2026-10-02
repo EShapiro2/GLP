@@ -20,7 +20,8 @@ import 'terms.dart';
 import 'machine_state.dart' show GoalRef;
 import 'package:glp_runtime/multiagent/mad_context.dart';
 import 'package:glp_runtime/multiagent/mad_helpers.dart' show GlobalName;
-import 'package:glp_runtime/multiagent/glp_network.dart' show GlpNetwork, PubKey;
+import 'package:glp_runtime/multiagent/glp_network.dart'
+    show GlpNetwork, ProximityMedium, PubKey, TrustLevel;
 import 'package:glp_runtime/multiagent/identity.dart' show PersonIdentity;
 import 'package:glp_runtime/wire/artefact.dart' show Artefact;
 import 'package:glp_runtime/wire/codec.dart';
@@ -127,6 +128,7 @@ void registerStandardBodyKernels(BodyKernelRegistry registry) {
   registry.register('_punch_udp', 1, punchUdpKernel);
   registry.register('_place_declare', 3, placeDeclareKernel);
   registry.register('_place_remove', 1, placeRemoveKernel);
+  registry.register('_trust_declare', 2, trustDeclareKernel);
 
   // Module-as-value: producer half. (`_run`/2 — the consumer — is registered by
   // the engine from engine_v2/module_kernels.dart, where CodeImage is in scope.)
@@ -1210,10 +1212,10 @@ BodyKernelResult loadFileKernel(GlpRuntime rt, List<Object?> args) {
 // NETWORKING SEAM KERNELS (Definition Seam Predicates)
 // =============================================================================
 //
-// The four kernels behind peer_address/2, punch_udp/1, place_declare/3 and
-// place_remove/1. Each reaches the networking layer through MadContext.network,
-// a GlpNetwork; the layer functions are GLP-Networking-API's, specified with
-// the seam contract. Their effects lie outside the madGLP transition system, as
+// The five kernels behind peer_address/2, punch_udp/1, place_declare/3,
+// place_remove/1 and trust_declare/2. Each reaches the networking layer through
+// MadContext.network, a GlpNetwork; the layer functions are
+// GLP-Networking-API's, specified with the seam contract. Their effects lie outside the madGLP transition system, as
 // sign's and self_module's do.
 //
 // Each GLP wrapper gates its arguments on ground/1, so they are ground here.
@@ -1371,6 +1373,50 @@ BodyKernelResult placeRemoveKernel(GlpRuntime rt, List<Object?> args) {
     seam.ctx.removePlace(place);
   } on UnsupportedError catch (e) {
     print('[ABORT] \'_place_remove\'/1: ${e.message}');
+    return BodyKernelResult.abort;
+  }
+  return BodyKernelResult.success;
+}
+
+/// '_trust_declare'(M?, L?) — set the cold-call trust level of proximity medium
+/// M, ble or lan, to L, open or closed, and assign nothing (IGLP, Definition
+/// Seam Predicates; GLP-Networking-API, System Predicates: "Both levels are
+/// closed until declared, and a further declaration of a medium replaces the
+/// level then standing"). A medium or level the layer does not have is a
+/// violated precondition, and so an abort.
+BodyKernelResult trustDeclareKernel(GlpRuntime rt, List<Object?> args) {
+  if (args.length != 2) {
+    print('[ABORT] \'_trust_declare\'/2: expected 2 arguments, got ${args.length}');
+    return BodyKernelResult.abort;
+  }
+  final seam = _seamContext(rt, '\'_trust_declare\'/2');
+  if (seam == null) return BodyKernelResult.abort;
+
+  final medium = switch (_groundString(rt, args[0])) {
+    'ble' => ProximityMedium.ble,
+    'lan' => ProximityMedium.lan,
+    _ => null,
+  };
+  if (medium == null) {
+    print('[ABORT] \'_trust_declare\'/2: first argument (M) must be ble or '
+        'lan, got ${_deref(rt, args[0])}');
+    return BodyKernelResult.abort;
+  }
+  final level = switch (_groundString(rt, args[1])) {
+    'open' => TrustLevel.open,
+    'closed' => TrustLevel.closed,
+    _ => null,
+  };
+  if (level == null) {
+    print('[ABORT] \'_trust_declare\'/2: second argument (L) must be open or '
+        'closed, got ${_deref(rt, args[1])}');
+    return BodyKernelResult.abort;
+  }
+
+  try {
+    seam.network.setTrustLevel(medium, level);
+  } on UnsupportedError catch (e) {
+    print('[ABORT] \'_trust_declare\'/2: ${e.message}');
     return BodyKernelResult.abort;
   }
   return BodyKernelResult.success;

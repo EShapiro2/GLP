@@ -89,8 +89,10 @@ void main() {
     });
 
     test('accepts a _-prefixed constant in argument position', () {
-      // '_user' in data position — a message tag, not a call.
-      final f = fixture('user.glp', "p('_user').\n");
+      // '_user' in data position — a message tag, not a call.  p/1 is
+      // declared: a procedure with no declaration is refused (TGLP Definition
+      // "Typed GLP Program", condition 1), which is not what this tests.
+      final f = fixture('user.glp', "procedure p(_).\np('_user').\n");
       expect(engine.loadFile(f.path), isTrue);
     });
 
@@ -99,7 +101,7 @@ void main() {
       // call-position rule `'_w'(a, b)` here builds a term and calls nothing,
       // so it is data and unrestricted — the same licence that keeps the 242
       // '_net' lines green.
-      final f = fixture('w.glp', "p(t('_w'(a, b))).\n");
+      final f = fixture('w.glp', "procedure p(_).\np(t('_w'(a, b))).\n");
       expect(engine.loadFile(f.path), isTrue);
     });
   });

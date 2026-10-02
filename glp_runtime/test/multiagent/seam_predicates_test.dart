@@ -1,20 +1,23 @@
-/// Tests for the four networking seam kernels — '_peer_address'/2,
-/// '_punch_udp'/1, '_place_declare'/3 and '_place_remove'/1 — and the declared
-/// place's event stream.
+/// Tests for the five networking seam kernels — '_peer_address'/2,
+/// '_punch_udp'/1, '_place_declare'/3, '_place_remove'/1 and
+/// '_trust_declare'/2 — and the declared place's event stream.
 ///
 /// Covers IGLP Definition "Seam Predicates": peer_address assigns the address at
 /// which the layer observes a peer; punch_udp opens a path to an address and
 /// returns nothing; place_declare declares a place and assigns a stream of that
 /// agent's own entered, exited, unobservable and observable events, fed
 /// serializer-fashion so one declaration yields one stream however many events
-/// follow; place_remove ends the declaration. The stream is closed in exactly
+/// follow; place_remove ends the declaration; trust_declare sets a proximity
+/// medium's cold-call trust level. The stream is closed in exactly
 /// two cases — place_remove and a superseding declaration — and an event for a
 /// place removed or superseded is dropped. A declaration the layer refuses is
 /// neither closing case: E receives unobservable, the declaration stands, and
 /// observable follows if the layer later begins reporting.
 ///
 /// The layer functions are GLP-Networking-API's. The simulation realization
-/// provides none of the four (their paper, §Not provided).
+/// provides none of the first four (their paper, §Not provided), and holds a
+/// trust level per medium (their paper, Simulation Realization, Discovery and
+/// trust).
 
 import 'dart:io';
 import 'dart:typed_data';
@@ -44,6 +47,9 @@ class _SeamNetwork extends GlpNetwork {
   /// Addresses punched, in order.
   final List<String> punched = [];
 
+  /// Trust levels set, in order, with their media.
+  final List<(ProximityMedium, TrustLevel)> trusted = [];
+
   /// Whether the platform accepts a declaration.
   bool accepts = true;
 
@@ -56,6 +62,10 @@ class _SeamNetwork extends GlpNetwork {
 
   @override
   void punchUdp(String address) => punched.add(address);
+
+  @override
+  void setTrustLevel(ProximityMedium medium, TrustLevel level) =>
+      trusted.add((medium, level));
 
   @override
   Future<bool> declarePlace(String place, double radiusMetres) {
@@ -93,8 +103,6 @@ class _SeamNetwork extends GlpNetwork {
       throw UnimplementedError();
   @override
   List<DiscoveredPeer> getPeers() => const [];
-  @override
-  void setTrustLevel(TrustLevel level) {}
   @override
   String getPublicAddress() => throw UnimplementedError();
   @override
@@ -352,9 +360,45 @@ go :- place_declare(home, 100, _), place_remove(home).
       expect(network.declared, [('home', 100.0)]);
       expect(network.removed, ['home']);
     });
+
+    test("trust_declare sets each medium's level at the layer", () async {
+      final out = <String>[];
+      final network = _SeamNetwork();
+      final engine = _engine(out, network);
+      engine.loadSource('''
+-mode(system).
+procedure go.
+go :- trust_declare(ble, open), trust_declare(lan, closed).
+''');
+      final result = await engine.runGoal('go');
+      expect(result.succeeded, isTrue);
+      expect(
+          network.trusted,
+          unorderedEquals([
+            (ProximityMedium.ble, TrustLevel.open),
+            (ProximityMedium.lan, TrustLevel.closed),
+          ]));
+    });
+
+    test('trust_declare of a medium the layer does not have aborts', () async {
+      final out = <String>[];
+      final network = _SeamNetwork();
+      final engine = _engine(out, network);
+      engine.loadSource('''
+-mode(system).
+procedure go.
+go :- trust_declare(wifi, open).
+''');
+      final result = await engine.runGoal('go');
+      expect(result.succeeded, isFalse,
+          reason: "the kernel aborts, and the goal that called it fails");
+      expect(network.trusted, isEmpty);
+    });
   });
 
-  group('simulation realization provides none of the four (§Not provided)', () {
+  group(
+      'simulation realization: none of the first four (§Not provided), '
+      'a trust level per medium (Discovery and trust)', () {
     SimulationNetworkClient client() => SimulationNetworkClient(
           selfId: 'alice',
           directory: NetworkDirectory(),
@@ -375,6 +419,16 @@ go :- place_declare(home, 100, _), place_remove(home).
       expect(() => c.declarePlace('home', 100.0), throwsUnsupportedError);
       expect(() => c.removePlace('home'), throwsUnsupportedError);
       expect(fired, 0);
+    });
+
+    test("setTrustLevel holds each medium's level, both closed until set", () {
+      final c = client();
+      expect(c.trustLevelOf(ProximityMedium.ble), TrustLevel.closed);
+      expect(c.trustLevelOf(ProximityMedium.lan), TrustLevel.closed);
+      c.setTrustLevel(ProximityMedium.ble, TrustLevel.open);
+      expect(c.trustLevelOf(ProximityMedium.ble), TrustLevel.open);
+      expect(c.trustLevelOf(ProximityMedium.lan), TrustLevel.closed,
+          reason: 'the two media are declared independently');
     });
   });
 }
