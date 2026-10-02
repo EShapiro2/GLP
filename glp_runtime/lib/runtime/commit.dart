@@ -12,7 +12,7 @@ class CommitOps {
   /// - Suspensions are on writer cells
   static List<GoalRef> applySigmaHatFCP({
     required HeapFCP heap,
-    required Map<int, Object?> sigmaHat,
+    required Map<HeapCell, Object?> sigmaHat,
   }) {
     final activations = <GoalRef>[];
 
@@ -30,7 +30,7 @@ class CommitOps {
     }
 
     // Collect writers that need callbacks fired after all bindings complete
-    final writersWithCallbacks = <int>[];
+    final writersWithCallbacks = <HeapCell>[];
 
     for (final entry in sigmaHat.entries) {
       final varId = entry.key;  // This is writerAddr
@@ -71,8 +71,7 @@ class CommitOps {
     // Re-dereference all bound cells that contain VarRef
     // This handles dependencies in σ̂w (e.g., W1002→V1005, W1005→value)
     for (final varId in sigmaHat.keys) {
-      final wAddr = varId;
-      final cell = heap.cells[wAddr];
+      final cell = varId;
 
       // Only process if still WrtTag with Pointer content (bound to another var)
       if (cell.tag == CellTag.WrtTag && cell.content is Pointer) {
@@ -118,13 +117,13 @@ class CommitOps {
   /// 
   /// Per IGLP app:in-heap (Suspension):
   /// Suspensions are stored on writer cells
-  static void _forwardSuspensions(HeapFCP heap, SuspensionListNode? list, int targetWriterAddr) {
+  static void _forwardSuspensions(HeapFCP heap, SuspensionListNode? list, HeapCell targetWriterAddr) {
     var current = list;
 
     while (current != null) {
       if (current.armed) {
         final newNode = SuspensionListNode(current.record);
-        final targetCell = heap.cells[targetWriterAddr];
+        final targetCell = targetWriterAddr;
         if (targetCell.content is SuspensionListNode) {
           newNode.next = targetCell.content as SuspensionListNode;
         }

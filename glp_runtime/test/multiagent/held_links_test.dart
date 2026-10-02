@@ -16,13 +16,14 @@ import 'package:glp_runtime/runtime/runtime.dart';
 import 'package:glp_runtime/runtime/terms.dart';
 import 'package:glp_runtime/multiagent/mad_context.dart';
 import 'package:glp_runtime/multiagent/mad_helpers.dart';
+import 'package:glp_runtime/runtime/heap_fcp.dart' show HeapCell, CellTag;
 
 typedef _Msg = ({String from, String to, List<int> payload});
 
 class _Net {
   final Map<String, MadContext> agents = {};
   final Map<String, GlpRuntime> runtimes = {};
-  final Map<String, int> netIn = {};
+  final Map<String, HeapCell> netIn = {};
   final List<_Msg> queue = [];
   final List<_Msg> deliveryLog = [];
 
@@ -123,7 +124,7 @@ void _expectGroundName(Term term, String anchor, int index, bool isWriter) {
 /// Build the three-agent forwarded-reader setup: charlie anchors a reader and
 /// exports it to bob, who forwards it to alice in a cold-call. Returns the
 /// anchored reader name and charlie's writer.
-({GlobalName rn, int restW}) _forwardedReader(_Net net) {
+({GlobalName rn, HeapCell restW}) _forwardedReader(_Net net) {
   final ctxBob = net.agents['bob']!;
   final ctxCharlie = net.agents['charlie']!;
   final bobRt = net.runtimes['bob']!;
@@ -154,7 +155,7 @@ void _expectGroundName(Term term, String anchor, int index, bool isWriter) {
 
 /// Build the forwarded-writer setup: p anchors a writer and exports it to q,
 /// who forwards it to r. Returns r's imported writer address.
-int _forwardedWriter(_Net net) {
+HeapCell _forwardedWriter(_Net net) {
   final pRt = net.runtimes['p']!;
   final qRt = net.runtimes['q']!;
   final rRt = net.runtimes['r']!;

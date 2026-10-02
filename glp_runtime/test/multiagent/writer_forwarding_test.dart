@@ -18,6 +18,7 @@ import 'package:glp_runtime/runtime/runtime.dart';
 import 'package:glp_runtime/runtime/terms.dart';
 import 'package:glp_runtime/multiagent/mad_context.dart';
 import 'package:glp_runtime/multiagent/mad_helpers.dart';
+import 'package:glp_runtime/runtime/heap_fcp.dart' show HeapCell, CellTag;
 import 'package:glp_runtime/wire/codec.dart'
     show wireMsgKindValue, wireMsgKindRequest, wireMsgKindAcknowledgement;
 
@@ -45,7 +46,7 @@ class _Net {
 
   /// Create the permanent index-0 serializer entry; returns the network-input
   /// writer address (the root of the agent's network input stream).
-  int bootSerializer(String id) {
+  HeapCell bootSerializer(String id) {
     final (netIn, _) = runtimes[id]!.heap.allocateVariable();
     agents[id]!.wp.initializeSerializerEntry(netIn);
     return netIn;
@@ -94,7 +95,7 @@ class _Net {
 }
 
 /// The n-th element of the list rooted at heap address [addr].
-Term _streamElement(GlpRuntime rt, int addr, int n) {
+Term _streamElement(GlpRuntime rt, HeapCell addr, int n) {
   Object? cell = rt.heap.derefAddr(addr);
   for (var i = 0; i < n; i++) {
     cell = rt.heap.derefAddr(((cell as StructTerm).args[1] as VarRef).addr);
@@ -103,7 +104,7 @@ Term _streamElement(GlpRuntime rt, int addr, int n) {
 }
 
 /// The variable carried by the n-th cold-call message on [netIn].
-int _importedVar(GlpRuntime rt, int netIn, int n) =>
+HeapCell _importedVar(GlpRuntime rt, HeapCell netIn, int n) =>
     ((_streamElement(rt, netIn, n) as StructTerm).args[0] as VarRef).addr;
 
 /// An agent holds nothing of a link it has left: no imported-writer record, no

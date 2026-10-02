@@ -16,6 +16,7 @@ import 'package:glp_runtime/wire/artefact.dart' show Artefact, glpIsaVersion;
 import 'package:glp_runtime/wire/payload_codec.dart';
 import 'package:glp_runtime/wire/codec.dart';
 import 'package:test/test.dart';
+import 'package:glp_runtime/runtime/heap_fcp.dart' show HeapCell, CellTag;
 
 /// A globalized term: a structure carrying a writer and a reader global name.
 Term _globalized() => StructTerm('msg', [
@@ -23,6 +24,13 @@ Term _globalized() => StructTerm('msg', [
       StructTerm('_r', [ConstTerm('alice'), ConstTerm(4)]),
       ConstTerm('hello'),
     ]);
+
+/// A cell of serial number [id], the same cell for the same number: the
+/// indexed heap's address as these tests named it (MEASUREMENT BUILD
+/// GLP-mem-obj, where a variable is its cell).
+final _cells = <int, HeapCell>{};
+HeapCell _c(int id) =>
+    _cells.putIfAbsent(id, () => HeapCell(null, CellTag.WrtTag, id));
 
 void main() {
   group('global names ride as tag-2 variables', () {
@@ -92,7 +100,7 @@ void main() {
     });
 
     test('serializeAgentMessage rejects a non-ground term', () {
-      expect(() => PayloadCodec.serializeAgentMessage(StructTerm('m', [VarRef(5)])),
+      expect(() => PayloadCodec.serializeAgentMessage(StructTerm('m', [VarRef(_c(5))])),
           throwsA(isA<WireFormatException>()));
     });
   });

@@ -8,6 +8,7 @@ library;
 
 import 'package:glp_runtime/runtime/runtime.dart';
 import 'package:glp_runtime/runtime/terms.dart';
+import 'package:glp_runtime/runtime/heap_fcp.dart' show HeapCell;
 import 'package:glp_runtime/runtime/machine_state.dart';
 import 'package:glp_runtime/multiagent/message_queue.dart';
 import 'package:glp_runtime/multiagent/global_send.dart';
@@ -147,7 +148,7 @@ class MadContext {
   ///
   /// Checks for global_send goals watching this writer's reader and fires
   /// them if found (IGLP Definition global_send Predicate).
-  void onWriterBound(int writerId, Term value) {
+  void onWriterBound(HeapCell writerId, Term value) {
     _trace('[MAD $agentId] onWriterBound: writerId=$writerId, value=$value');
     _fireGlobalSendGoalIfExists(writerId, value);
     _flushReports();
@@ -188,7 +189,7 @@ class MadContext {
   ///
   /// When a writer is bound, its paired reader becomes "known". If there's
   /// a global_send goal watching that reader, fire it now.
-  void _fireGlobalSendGoalIfExists(int writerAddr, Term value) {
+  void _fireGlobalSendGoalIfExists(HeapCell writerAddr, Term value) {
     // Check if there's a global_send goal watching this writer's reader
     final result = globalSendRegistry.onWriterBound(
       writerAddr: writerAddr,
@@ -513,7 +514,7 @@ class MadContext {
 
   /// The current tail writer of each declared place's event stream, by place
   /// name. A place is in this map exactly while its declaration stands.
-  final Map<String, int> _placeStreamWriters = {};
+  final Map<String, HeapCell> _placeStreamWriters = {};
 
   /// Which declaration of each place is the standing one. Incremented on every
   /// [declarePlace], so an answer the layer returns late can be told from the
@@ -537,7 +538,7 @@ class MadContext {
   ///
   /// Where the layer refuses, the declaration stands and its stream carries
   /// `unobservable`.
-  void declarePlace(String place, double radiusMetres, int streamWriterAddr) {
+  void declarePlace(String place, double radiusMetres, HeapCell streamWriterAddr) {
     final network = this.network;
     if (network == null) {
       throw StateError('no GlpNetwork bound to agent $agentId');
@@ -1184,7 +1185,7 @@ class MadContext {
   /// The madGLP model is push-based: assignments are sent when writers are bound,
   /// not when readers request. However, for compatibility with the UI, we log
   /// blocking readers.
-  void processSuspension(Set<int> blockingReaders) {
+  void processSuspension(Set<HeapCell> blockingReaders) {
     // In madGLP, suspension means we're waiting for assignments to arrive
     // The push model means we don't send read requests - we just wait
     for (final readerId in blockingReaders) {

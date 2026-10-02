@@ -48,12 +48,12 @@ class GlpRuntime {
   // Wait state tracking for wait() guards
   // Maps goalId to the reader ID that the timer will signal
   // When goal resumes, we check if this reader is bound (timer fired)
-  final Map<int, int> _waitReaders = <int, int>{};
+  final Map<int, HeapCell> _waitReaders = <int, HeapCell>{};
 
   // Suspension tracking for scheduler-IRMA integration (spec section 8.4)
   // Maps reader varId -> Set<GoalRef> of goals blocked on that reader
   // Updated by suspendGoalFCP, cleared when goals reactivate
-  final Map<int, Set<GoalRef>> suspended = <int, Set<GoalRef>>{};
+  final Map<HeapCell, Set<GoalRef>> suspended = <HeapCell, Set<GoalRef>>{};
 
   // The readers each goal in [suspended] waits on, its suspension set W: the
   // index by which a goal reactivated leaves [suspended] at the cost of its
@@ -61,7 +61,7 @@ class GlpRuntime {
   // Definition "dGLP Transition System").  Until 2026-10-02 it left by a
   // visit to every entry of [suspended], so a wakeup cost in the number of
   // goals suspended.
-  final Map<GoalRef, Set<int>> _suspendedOn = <GoalRef, Set<int>>{};
+  final Map<GoalRef, Set<HeapCell>> _suspendedOn = <GoalRef, Set<HeapCell>>{};
 
   // F — the failed goals of the dGLP and madGLP Reduce transactions. A reduction
   // has three outcomes; a goal that fails joins F and the agent goes on reducing
@@ -98,12 +98,12 @@ class GlpRuntime {
   }
 
   /// Set wait state for a goal
-  void setWaitReader(int goalId, int readerId) {
+  void setWaitReader(int goalId, HeapCell readerId) {
     _waitReaders[goalId] = readerId;
   }
 
   /// Get the wait reader for a goal (if any)
-  int? getWaitReader(int goalId) => _waitReaders[goalId];
+  HeapCell? getWaitReader(int goalId) => _waitReaders[goalId];
 
   // when_idle (GLP-Spec appendix-guards.tex at e3a8d52, the time guards):
   // "when_idle suspends while the machine has a Reduce or a Communicate to
@@ -111,7 +111,7 @@ class GlpRuntime {
   // on the reader of a fresh variable, whose writer the scheduler binds when
   // the machine is idle (Scheduler.drainWithStatus), which re-tries the goal.
   // Keyed by goal, in the order the goals first suspended on it.
-  final Map<int, ({int writer, int reader})> _idleWaits = {};
+  final Map<int, ({HeapCell writer, HeapCell reader})> _idleWaits = {};
 
   /// The machine has no Reduce and no Communicate to make (IGLP eadadcd,
   /// Implementation Notes, "The when_idle Guard": "The guard succeeds when
@@ -130,7 +130,7 @@ class GlpRuntime {
   /// The reader goal [goalId] suspends on while it waits on when_idle: the
   /// one it already waits on, or a fresh one, the goal then joining the end
   /// of the goals that wait.
-  int idleReader(int goalId) {
+  HeapCell idleReader(int goalId) {
     final w = _idleWaits[goalId];
     if (w != null) return w.reader;
     final (writer, reader) = heap.allocateVariable();
@@ -183,7 +183,7 @@ class GlpRuntime {
 
   /// Commit writer bindings using FCP-exact semantics
   /// sigmaHat: Map from varId to tentative value
-  List<GoalRef> commitSigmaHat(Map<int, Object?> sigmaHat) {
+  List<GoalRef> commitSigmaHat(Map<HeapCell, Object?> sigmaHat) {
     final acts = CommitOps.applySigmaHatFCP(
       heap: heap,
       sigmaHat: sigmaHat,
@@ -196,7 +196,7 @@ class GlpRuntime {
   void suspendGoalFCP({
     required int goalId,
     required int kappa,
-    required Set<int> readerVarIds,
+    required Set<HeapCell> readerVarIds,
   }) {
     // Track which readers have this goal suspended (spec section 8.4)
     final goalRef = GoalRef(goalId, kappa);
@@ -204,7 +204,7 @@ class GlpRuntime {
       suspended.putIfAbsent(readerId, () => <GoalRef>{}).add(goalRef);
     }
     if (readerVarIds.isNotEmpty) {
-      _suspendedOn.putIfAbsent(goalRef, () => <int>{}).addAll(readerVarIds);
+      _suspendedOn.putIfAbsent(goalRef, () => <HeapCell>{}).addAll(readerVarIds);
     }
 
     SuspendOps.suspendGoalFCP(

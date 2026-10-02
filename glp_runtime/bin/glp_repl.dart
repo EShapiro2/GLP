@@ -16,6 +16,7 @@ import 'package:glp_runtime/multiagent/isolate_manager.dart'
     show IsolateManager;
 import 'package:glp_runtime/runtime/scheduler.dart';
 import 'package:glp_runtime/runtime/terms.dart' as rt;
+import 'package:glp_runtime/runtime/heap_fcp.dart' show HeapCell;
 
 void main() async {
   final gitCommit = await _getGitCommit();
@@ -408,10 +409,10 @@ void _printHelp() {
   print('');
 }
 
-String _formatTerm(rt.Term? term, [GlpEngine? engine, Set<int>? path]) {
+String _formatTerm(rt.Term? term, [GlpEngine? engine, Set<HeapCell>? path]) {
   if (term == null) return '[]';
 
-  path ??= <int>{};
+  path ??= <HeapCell>{};
 
   if (term is rt.ConstTerm) {
     if (term.value == null || term.value == 'nil') return '[]';

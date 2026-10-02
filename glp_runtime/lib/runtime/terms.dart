@@ -1,3 +1,5 @@
+import 'package:glp_runtime/runtime/heap_fcp.dart' show HeapCell;
+
 abstract class Term {}
 
 class ConstTerm implements Term {
@@ -25,24 +27,25 @@ class StructTerm implements Term {
 /// MUST NOT: Code must not assume reader_addr == writer_addr + 1 or
 /// derive reader/writer identity from address parity.
 class VarRef implements Term {
-  /// The heap address of this variable reference
-  final int addr;
+  /// The cell of this variable occurrence: the cell itself, not an address
+  /// into an indexed heap (MEASUREMENT BUILD GLP-mem-obj).
+  final HeapCell addr;
 
   VarRef(this.addr);
 
   // NOTE: isReader and varId computed properties have been REMOVED: the
   // cell's tag gives its polarity (IGLP app:in-heap, Variable pairs). Use
-  // heap.isReader(addr) to check type and raw addr as the identifier.
+  // heap.isReader(addr) to check type and the cell as the identifier.
 
   @override
   String toString() => 'Var@$addr';
 
   @override
   bool operator ==(Object other) =>
-      other is VarRef && other.addr == addr;
+      other is VarRef && identical(other.addr, addr);
 
   @override
-  int get hashCode => addr.hashCode;
+  int get hashCode => addr.id;
 }
 
 /// Mutable reference to an unbound writer - enables O(1) stream append
@@ -60,7 +63,7 @@ class VarRef implements Term {
 ///
 /// _currentWriterAddr holds the heap address of the current unbound tail writer.
 class MutualRefTerm implements Term {
-  int _currentWriterAddr;  // heap address of current unbound tail writer
+  HeapCell _currentWriterAddr;  // the cell of the current unbound tail writer
   final int id;            // unique ID for this MutualRef
 
   static int _nextId = 0;
@@ -68,8 +71,8 @@ class MutualRefTerm implements Term {
   MutualRefTerm(this._currentWriterAddr) : id = _nextId++;
 
   /// Get/set the current writer address
-  int get currentWriterAddr => _currentWriterAddr;
-  set currentWriterAddr(int addr) => _currentWriterAddr = addr;
+  HeapCell get currentWriterAddr => _currentWriterAddr;
+  set currentWriterAddr(HeapCell addr) => _currentWriterAddr = addr;
 
   @override
   String toString() => 'MutualRef#$id(@$_currentWriterAddr)';

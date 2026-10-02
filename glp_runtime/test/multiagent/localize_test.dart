@@ -10,6 +10,14 @@ import 'package:test/test.dart';
 import 'package:glp_runtime/multiagent/global_writers_table.dart';
 import 'package:glp_runtime/multiagent/imported_writer_records.dart';
 import 'package:glp_runtime/multiagent/mad_helpers.dart';
+import 'package:glp_runtime/runtime/heap_fcp.dart' show HeapCell, CellTag;
+
+/// A cell of serial number [id], the same cell for the same number: the
+/// indexed heap's address as these tests named it (MEASUREMENT BUILD
+/// GLP-mem-obj, where a variable is its cell).
+final _cells = <int, HeapCell>{};
+HeapCell _c(int id) =>
+    _cells.putIfAbsent(id, () => HeapCell(null, CellTag.WrtTag, id));
 
 void main() {
   group('Localize', () {
@@ -20,10 +28,10 @@ void main() {
       final globalNames = [GlobalName.writer('p', 5)];
 
       var nextAddr = 100;
-      (int, int) allocateAddr() {
+      (HeapCell, HeapCell) allocateAddr() {
         final w = nextAddr++;
         final r = nextAddr++;
-        return (w, r);
+        return (_c(w), _c(r));
       }
 
       // When: localize at agent q
@@ -39,8 +47,8 @@ void main() {
       // Then:
       //   - creates fresh pair (Y_q, Y_q?)
       expect(result.freshPairs.length, 1);
-      expect(result.freshPairs[0].writerAddr, 100);
-      expect(result.freshPairs[0].readerAddr, 101);
+      expect(result.freshPairs[0].writerAddr, _c(100));
+      expect(result.freshPairs[0].readerAddr, _c(101));
 
       //   - term gets Y_q (the writer)
       // Spec Section 5.2: "replace _w(p, i) with Y_q (the writer)"
@@ -50,7 +58,7 @@ void main() {
       //   - readerAddr is actually the writer address (used as onBind key)
       // Spec Section 5.2: "spawn global_send(Y_q?, _w(p,i), p)"
       expect(result.spawns.length, 1);
-      expect(result.spawns[0].readerAddr, 100); // writer addr for onBind
+      expect(result.spawns[0].readerAddr, _c(100)); // writer addr for onBind
       expect(result.spawns[0].globalName, GlobalName.writer('p', 5));
       expect(result.spawns[0].destAgent, 'p');
 
@@ -67,10 +75,10 @@ void main() {
       final globalNames = [GlobalName.reader('p', 3)];
 
       var nextAddr = 200;
-      (int, int) allocateAddr() {
+      (HeapCell, HeapCell) allocateAddr() {
         final w = nextAddr++;
         final r = nextAddr++;
-        return (w, r);
+        return (_c(w), _c(r));
       }
 
       // When: localize at agent q
@@ -86,15 +94,15 @@ void main() {
       // Then:
       //   - creates fresh pair (Z_q, Z_q?)
       expect(result.freshPairs.length, 1);
-      expect(result.freshPairs[0].writerAddr, 200);
-      expect(result.freshPairs[0].readerAddr, 201);
+      expect(result.freshPairs[0].writerAddr, _c(200));
+      expect(result.freshPairs[0].readerAddr, _c(201));
 
       //   - entry (Z_q, p, 3) added to table
       // Spec Section 5.2: "add entry (Z_q, p, i)"
       expect(table.localizeEntryCount, 1);
       final entry = table.findByRemote('p', 3);
       expect(entry, isNotNull);
-      expect(entry!.writerAddr, 200);
+      expect(entry!.writerAddr, _c(200));
       expect(entry.remoteAgent, 'p');
       expect(entry.remoteIndex, 3);
 
@@ -117,10 +125,10 @@ void main() {
       ];
 
       var nextAddr = 300;
-      (int, int) allocateAddr() {
+      (HeapCell, HeapCell) allocateAddr() {
         final w = nextAddr++;
         final r = nextAddr++;
-        return (w, r);
+        return (_c(w), _c(r));
       }
 
       // When: localize at agent q
@@ -141,7 +149,7 @@ void main() {
 
       //   - spawn info for Y_q's gs: global_send(Y_q?, _w(p,1), p)
       expect(result.spawns.length, 1);
-      expect(result.spawns[0].readerAddr, 300); // First pair's writer address
+      expect(result.spawns[0].readerAddr, _c(300)); // First pair's writer address
       expect(result.spawns[0].globalName, GlobalName.writer('p', 1));
       expect(result.spawns[0].destAgent, 'p');
 
@@ -149,7 +157,7 @@ void main() {
       expect(table.localizeEntryCount, 1);
       final entry = table.findByRemote('p', 2);
       expect(entry, isNotNull);
-      expect(entry!.writerAddr, 302); // Second pair's writer address
+      expect(entry!.writerAddr, _c(302)); // Second pair's writer address
 
       // Spec Section 5.3: Globalize-Localize Correspondence
     });
