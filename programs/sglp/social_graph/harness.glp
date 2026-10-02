@@ -20,8 +20,8 @@
 %%   its two lists in increasing order (agents 1..N/2 are of one sex and the
 %%   rest of the other; the first list is the other agents of a's sex, the
 %%   second the agents of the other sex), its input and output streams and its
-%%   person channel --- and its person process, with its stochastic person and
-%%   its seed, reading that channel;
+%%   person channel, spawned once both lists are built --- and its person
+%%   process, with its stochastic person and its seed, reading that channel;
 %%   at no agent, the network --- the root's mwm/2 merging the agents' output
 %%   streams, and a balanced tree of deliver/4 goals handing each message to the
 %%   input stream of the agent it names --- the monitor, with the run's seed and
@@ -71,13 +71,13 @@ procedure agents(Integer?, Integer?, Integer?, Integer?, Integer?, Integer?,
                  Stream(Stream(Msg))?, MwmInput(Msg), MutualRef?, MutualRef?).
 agents(A, H, N, B, Hom, Wary, [In|Ins], [merge(Out?)|Ms?], Mon, Log) :-
     A? =< N? |
-    peers(A?, H?, N?, Ss, Os),
+    peers(A?, H?, N?, Ss, Os, Done),
     random(B?, 100, K1, B1),
     random(B1?, 100, K2, Seed),
     approach(K1?, Hom?, Ap),
     response(K2?, Wary?, Re),
     allocate_mutual_reference(Ch, Questions),
-    graph # start(A?, Ss?, Os?, In?, Out, Ch?),
+    start_when(Done?, A?, Ss?, Os?, In?, Out, Ch?),
     person(A?, profiles(Ap?, Re?), Mon?, Seed?, Log?, Questions?),
     skip(4096, B?, B2),
     A1 := A? + 1,
@@ -155,32 +155,51 @@ skip(J, S, S1?) :-
     J1 := J? - 1,
     skip(J1?, S2?, S1).
 
-%% peers(A?, H?, N?, Ss, Os): Ss the other agents of A's sex, Os the agents of
-%% the other sex, in increasing order; agents 1..H are of one sex, H = N/2.
-procedure peers(Integer?, Integer?, Integer?, Stream(Integer), Stream(Integer)).
-peers(A, H, N, Ss?, Os?) :-
+%% peers(A?, H?, N?, Ss, Os, D): Ss the other agents of A's sex, Os the agents
+%% of the other sex, in increasing order, and D done once both are built;
+%% agents 1..H are of one sex, H = N/2.
+procedure peers(Integer?, Integer?, Integer?, Stream(Integer), Stream(Integer),
+                Done).
+peers(A, H, N, Ss?, Os?, D?) :-
     A? =< H? |
     H1 := H? + 1,
-    range(1, H?, A?, Ss),
-    range(H1?, N?, 0, Os).
-peers(A, H, N, Ss?, Os?) :-
+    range(1, H?, A?, Ss, D1),
+    range(H1?, N?, 0, Os, D2),
+    both(D1?, D2?, D).
+peers(A, H, N, Ss?, Os?, D?) :-
     A? > H? |
     H1 := H? + 1,
-    range(H1?, N?, A?, Ss),
-    range(1, H?, 0, Os).
+    range(H1?, N?, A?, Ss, D1),
+    range(1, H?, 0, Os, D2),
+    both(D1?, D2?, D).
 
-%% range(Lo?, Hi?, Skip?, L): L is Lo..Hi without Skip.
-procedure range(Integer?, Integer?, Integer?, Stream(Integer)).
-range(Lo, Hi, _, []) :-
+%% both(D1?, D2?, D): D is done once D1 and D2 are.
+procedure both(Done?, Done?, Done).
+both(done, done, done).
+
+%% start_when(D?, A?, Ss?, Os?, In?, Out, Ch?): agent A's start goal,
+%% graph#start, spawned once D is done, its lists Ss and Os built, so that
+%% start/6's guards ground(Ss?) and ground(Os?) walk each list once, where,
+%% spawned with the lists still growing, they re-walked them from the head at
+%% every new element (sGLP's code task of 2026-10-02 20:58 UTC, S3).
+procedure start_when(Done?, Peer?, Peers?, Peers?, Stream(Msg)?, Stream(Msg),
+                     MutualRef?).
+start_when(done, A, Ss, Os, In, Out?, Ch) :-
+    graph # start(A?, Ss?, Os?, In?, Out, Ch?).
+
+%% range(Lo?, Hi?, Skip?, L, D): L is Lo..Hi without Skip, and D done once L
+%% is built.
+procedure range(Integer?, Integer?, Integer?, Stream(Integer), Done).
+range(Lo, Hi, _, [], done) :-
     Lo? > Hi? | true.
-range(Lo, Hi, Skip, L?) :-
+range(Lo, Hi, Skip, L?, D?) :-
     Lo? =< Hi?, Lo? =:= Skip? |
     Lo1 := Lo? + 1,
-    range(Lo1?, Hi?, Skip?, L).
-range(Lo, Hi, Skip, [Lo?|L?]) :-
+    range(Lo1?, Hi?, Skip?, L, D).
+range(Lo, Hi, Skip, [Lo?|L?], D?) :-
     Lo? =< Hi?, Lo? =\= Skip? |
     Lo1 := Lo? + 1,
-    range(Lo1?, Hi?, Skip?, L).
+    range(Lo1?, Hi?, Skip?, L, D).
 
 %% The network.  tree(Lo?, Hi?, Ms?, Ins, Rest?): a balanced tree of deliver/4
 %% goals over agents Lo..Hi routing the messages Ms, Ins being the input streams
