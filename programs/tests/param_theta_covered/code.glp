@@ -1,5 +1,6 @@
 %% See self.glp.  pick/3 inspects R --- its heads match a/1 there --- so it is
-%% not parametrically well-typed and is checked only at an instantiation.
+%% not parametrically well-typed, and the call below, which supplies no type
+%% for R, is refused.
 
 exported procedure go(Stream(Kind)?, Constant).
 go(Xs, N?) :- pick(a(one), Xs?, N).

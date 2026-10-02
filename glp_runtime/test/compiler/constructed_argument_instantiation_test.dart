@@ -1,32 +1,30 @@
-/// A call whose argument is a constructed term, and the parameter the callee's
-/// own clauses fix.
+/// A call whose argument at a parameter is a constructed term, which names no
+/// type.
 ///
-/// TGLP (parameterized-types.tex def:instantiation): "A map \theta from those
-/// parameters to types of the program is an instantiation of A if C and the
-/// clauses of q are well-typed (Definition "Well-Typed Clause") when q's
-/// declaration is replaced by its expansion under \theta."
+/// TGLP 8a58729, appendix-implementation-notes.tex, "The instantiation of a
+/// call": "the checker reads the sites of a call over the whole clause, ... and
+/// tries for each parameter the types those sites supply, taking one under
+/// which every site is well-typed with subtyping.  A type no site supplies is
+/// not tried, so a call whose instantiations all lie strictly between the types
+/// its sites supply is refused, and a site is to name the type.  A call for
+/// which no instantiation is found is refused unless its callee is
+/// parametrically well-typed (Section~\ref{sec:abstract-parameters}), in which
+/// case the call is checked with the callee's parameters open."
 ///
-/// A variable argument constrains the parameter by an equation; a constructed
-/// term constrains it by containment, its type having to be admitted by whatever
-/// the parameter is bound to.  Where the call's own arguments leave a parameter
-/// open, the callee's clauses fix it: a variable pair of the callee's head that
-/// the declaration types by the parameter on one side and by a concrete type on
-/// the other must be dual (def:well-typed-clause 3(a)), and that is the
-/// equation.
+/// A constructed term constrains a parameter by containment and supplies no
+/// type for it.  In each program below a parameter is reached by constructed
+/// terms alone and the callee inspects a parameter, so it is not parametrically
+/// well-typed: the call is refused, naming the parameter no site supplies.  A
+/// constructed argument the binding its sites supply does not admit is in
+/// test/analysis/type_checker/call_instantiation_test.dart.
 ///
-/// Where no equation reaches a parameter, coverage selects the map: def:instantiation
-/// ends "...and every input path of that declaration is accepted by some clause of
-/// q", so the map carries exactly the constructors the callee's heads match at that
-/// position --- a map carrying an alternative no clause matches leaves an input path
-/// unaccepted, and one missing an alternative a head matches makes that head
-/// inconsistent.  The last two tests are that rule and its failure.
-///
-/// Until 2026-09-20 only a variable argument bound a parameter, so a call
-/// passing a constructed term induced no instantiation and the first two
-/// programs below were rejected as carrying a parameter-inspecting procedure
-/// nothing instantiates.  Between fbd9040 and e56c303 the term's own type was
-/// the binding, which is one alternative of the union the callee's clauses
-/// require and broke duality in the callee's head.
+/// From 2026-09-20 to 2026-10-02 the checker tried types no site supplies: a
+/// parameter the call left open was fixed by the callee's own head pair (TGLP
+/// e56c303), or built from the constructors the callee's heads match, coverage
+/// selecting it (TGLP dddf684), and the first, second and fourth programs
+/// loaded.  Before 2026-09-20 only a variable argument bound a parameter, and
+/// they were rejected as carrying a parameter-inspecting procedure nothing
+/// instantiates.
 library;
 
 import 'dart:io';
@@ -41,51 +39,56 @@ void main() {
         GlpEngine(rootSelfGlpPath: File('../programs/self.glp').absolute.path);
   });
 
-  test('a constructed argument at a parameter the callee\'s clauses fix', () {
+  Matcher refusal(String callee, String call, String param) => throwsA(
+          predicate((e) {
+        final s = e.toString();
+        return s.contains('No instantiation of $callee is found for the call '
+                '$call: no site of the call supplies a type for $param') &&
+            s.contains('$callee is not parametrically well-typed, so the call '
+                'is refused');
+      }, 'refuses the call, naming the parameter no site supplies'));
+
+  test('a constructed argument at a parameter only the callee\'s clauses '
+      'relate to a supplied one is refused', () {
     final dir =
         Directory('../programs/tests/param_constructed_arg').absolute.path;
-    expect(engine.loadProgram(dir), isTrue);
-  });
-
-  test('a term inside a term at a parameter position', () {
-    final dir =
-        Directory('../programs/tests/param_constructed_nested').absolute.path;
-    expect(engine.loadProgram(dir), isTrue);
-  });
-
-  test('a constructed argument the parameter\'s binding does not admit is rejected',
-      () {
-    final dir =
-        Directory('../programs/tests/param_constructed_conflict').absolute.path;
     expect(
-      () => engine.loadProgram(dir),
-      throwsA(predicate((e) {
-        final s = e.toString();
-        return s.contains('No transition for bad(1,1)') &&
-            s.contains('from state Msg?');
-      }, 'names the argument and the type the parameter is bound to')),
-    );
+        () => engine.loadProgram(dir),
+        refusal('send_user/3',
+            'send_user(msg("agent", "person", bye(N?)), Outs?, Outs1)', 'M'));
     expect(engine.loadedPrograms.containsKey('__program__'), isFalse);
   });
 
-  test('a parameter no equation reaches is the constructors its callee\'s heads match',
-      () {
+  test('a term inside a term at a parameter position is refused', () {
     final dir =
-        Directory('../programs/tests/param_theta_covered').absolute.path;
-    expect(engine.loadProgram(dir), isTrue);
+        Directory('../programs/tests/param_constructed_nested').absolute.path;
+    expect(() => engine.loadProgram(dir),
+        refusal('send_user/3', 'send_user(w(i(N?)), Outs?, Outs1)', 'M'));
+    expect(engine.loadedPrograms.containsKey('__program__'), isFalse);
   });
 
-  test('a map leaving an input path unaccepted is not an instantiation', () {
+  test('two constructed arguments at one parameter are refused', () {
+    final dir =
+        Directory('../programs/tests/param_constructed_conflict').absolute.path;
+    expect(() => engine.loadProgram(dir),
+        refusal('send2/4', 'send2(m(N?), bad(N?), Outs?, Outs1)', 'M'));
+    expect(engine.loadedPrograms.containsKey('__program__'), isFalse);
+  });
+
+  test('a parameter the callee inspects, reached by a constructed argument '
+      'alone, is refused', () {
+    final dir =
+        Directory('../programs/tests/param_theta_covered').absolute.path;
+    expect(() => engine.loadProgram(dir),
+        refusal('pick/3', 'pick(a("one"), Xs?, N)', 'R'));
+    expect(engine.loadedPrograms.containsKey('__program__'), isFalse);
+  });
+
+  test('and so is the same call where the callee\'s clauses cover less', () {
     final dir =
         Directory('../programs/tests/param_theta_uncovered').absolute.path;
-    expect(
-      () => engine.loadProgram(dir),
-      throwsA(predicate((e) {
-        final s = e.toString();
-        return s.contains('code:pick/3') &&
-            s.contains('no call in the program instantiates it');
-      }, 'names the procedure no map instantiates')),
-    );
+    expect(() => engine.loadProgram(dir),
+        refusal('pick/3', 'pick(a("one"), Xs?, N)', 'R'));
     expect(engine.loadedPrograms.containsKey('__program__'), isFalse);
   });
 }

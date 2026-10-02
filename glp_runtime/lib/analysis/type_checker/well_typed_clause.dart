@@ -314,6 +314,14 @@ class TypedClause {
 /// 3. All variable pairs (X, X?) across head and body are complementary
 ///
 /// Fix 5.1: Returns constructed moded terms for inspection
+///
+/// [isParametric] says whether the procedure of a "name/arity" key is
+/// parametrically well-typed (TGLP parameterized-types.tex, Definition
+/// "Parametrically Well-Typed").  A call to a parameterised procedure for which
+/// no instantiation is found is refused unless it is (TGLP
+/// appendix-implementation-notes.tex, "The instantiation of a call").  Null
+/// takes every callee to be, and checks every such call with the callee's
+/// parameters open.
 ClauseCheckResult checkClause(
   TypedClause clause,
   ProgramDFA dfa,
@@ -321,6 +329,7 @@ ClauseCheckResult checkClause(
   InstantiationCollector? collector,
   Map<String, ProcDecl> activeInstantiations = const {},
   CalleeClauses? callee,
+  bool Function(String procKey)? isParametric,
 }) {
   final errors = <ClauseError>[];
   final allVariableTypes = <String, VariableTypeInfo>{};
@@ -373,6 +382,15 @@ ClauseCheckResult checkClause(
     ]);
   }
 
+  // The instantiation of each call to a parameterised procedure, read over the
+  // whole clause before any goal is checked, the body goals in no order (TGLP
+  // appendix-implementation-notes.tex, "The instantiation of a call";
+  // [_instantiateCalls]).  It types the head for itself, and Step 1 types it
+  // again, which numbers the clause's anonymous variables from the start as
+  // before.
+  final plans = _instantiateCalls(clause, procDecl, dfa, env,
+      activeInstantiations: activeInstantiations, callee: callee);
+
   // Step 1: Check head well-typing
   final (headResult, modedHeadTerm) = _checkHeadWithTerm(clause, procDecl, dfa, env);
   constructedModedHead = modedHeadTerm;
@@ -396,6 +414,7 @@ ClauseCheckResult checkClause(
         callerVarTypes: allVariableTypes, collector: collector,
         activeInstantiations: activeInstantiations,
         callee: callee,
+        plan: plans[i],
         onUninstantiated: (call, template) =>
             uninstantiated.add((i, call, template)));
 
@@ -482,13 +501,18 @@ ClauseCheckResult checkClause(
     dfa,
   ));
 
-  // Step 5: a call to a parameterised procedure no instantiation was inferred
-  // for is refused where no map of the callee's parameters can make it
-  // well-typed (TGLP parameterized-types.tex, Definition "Instantiation").  Its
-  // arguments are compared with the other occurrence of each variable in the
-  // clause, as condition 3 pairs them: a head occurrence (the type a guard
-  // narrowed it to, where one did) under 3(b), a body occurrence of the other
-  // polarity under 3(a).
+  // Step 5: a call to a parameterised procedure for which no instantiation is
+  // found, some parameter being supplied no type by any of its sites, "is
+  // refused unless its callee is parametrically well-typed (Section
+  // sec:abstract-parameters), in which case the call is checked with the
+  // callee's parameters open" (TGLP appendix-implementation-notes.tex, "The
+  // instantiation of a call").  Checked with the parameters open, it is
+  // refused where no map of them can make it well-typed (TGLP
+  // parameterized-types.tex, Definition "Instantiation"): its arguments are
+  // compared with the other occurrence of each variable in the clause, as
+  // condition 3 pairs them: a head occurrence (the type a guard narrowed it
+  // to, where one did) under 3(b), a body occurrence of the other polarity
+  // under 3(a).
   List<(VariableTypeInfo, bool)> partnersOf(String name, bool reader) {
     final own = reader ? '$name?' : name;
     final other = reader ? name : '$name?';
@@ -503,6 +527,21 @@ ClauseCheckResult checkClause(
     ];
   }
   for (final (i, call, template) in uninstantiated) {
+    final plan = plans[i];
+    if (plan?.refutation != null) {
+      // Types were supplied, none fitting every site, and no map of the
+      // parameters can make the call well-typed ([_instantiateCalls]).
+      errors.add(BodyAtomError(call.functor, i,
+          [NoInstantiationError(call, template, plan!.refutation!)]));
+      continue;
+    }
+    if (plan != null &&
+        isParametric != null &&
+        !isParametric(template.key)) {
+      errors.add(BodyAtomError(call.functor, i,
+          [UninstantiatedCallError(call, template, plan.unsupplied)]));
+      continue;
+    }
     final reason = _noInstantiationReason(call, template, partnersOf, env);
     if (reason != null) {
       errors.add(BodyAtomError(
@@ -532,6 +571,7 @@ ClauseCheckResult checkClauseFromAst(
   InstantiationCollector? collector,
   Map<String, ProcDecl> activeInstantiations = const {},
   CalleeClauses? callee,
+  bool Function(String procKey)? isParametric,
 }) {
   // Convert ast.Clause to TypedClause
   // Note: ast.Clause.head is Atom, but Goal has same structure
@@ -565,7 +605,8 @@ ClauseCheckResult checkClauseFromAst(
 
   return checkClause(typedClause, dfa, env, collector: collector,
       activeInstantiations: activeInstantiations,
-      callee: callee);
+      callee: callee,
+      isParametric: isParametric);
 }
 
 /// The guard meet errors of [clause]'s DEFINED guards, the clause taken as
@@ -967,6 +1008,12 @@ WellTypedResult _checkBodyAtom(
 /// no instantiation is inferred, with the callee's template; the caller asks of
 /// it, once the clause is typed, whether any instantiation can exist
 /// ([_noInstantiationReason]).
+///
+/// [plan] is the instantiation [_instantiateCalls] read for the call over the
+/// whole clause, which a clause check gives for every call to a parameterised
+/// procedure; with none --- a goal ([checkGoal]), a guard as written
+/// ([definedGuardMeetErrors]) --- the instantiation is inferred from
+/// [callerVarTypes], the occurrences typed before the call.
 (WellTypedResult, ModedTerm?) _checkBodyAtomWithTerm(
   ast.Goal atom,
   int atomIndex,
@@ -976,6 +1023,7 @@ WellTypedResult _checkBodyAtom(
   InstantiationCollector? collector,
   Map<String, ProcDecl> activeInstantiations = const {},
   CalleeClauses? callee,
+  _CallPlan? plan,
   void Function(ast.Goal call, ProcDecl template)? onUninstantiated,
 }) {
   // Handle SpawnGoal (Goal@Agent) - type-check the inner goal
@@ -985,13 +1033,14 @@ WellTypedResult _checkBodyAtom(
         callerVarTypes: callerVarTypes, collector: collector,
         activeInstantiations: activeInstantiations,
         callee: callee,
+        plan: plan,
         onUninstantiated: onUninstantiated);
   }
 
   // Handle RemoteGoal (M # proc(...)) - type-check against imported declaration
   if (atom is ast.RemoteGoal) {
     return _checkRemoteGoal(atom, atomIndex, dfa, env,
-        callerVarTypes: callerVarTypes);
+        callerVarTypes: callerVarTypes, plan: plan);
   }
 
   // Skip builtin goals (true, otherwise, :=)
@@ -1035,6 +1084,27 @@ WellTypedResult _checkBodyAtom(
       // exactly the rejection of polymorphic recursion. Nothing is recorded, so
       // recursion induces no instantiation.
       procDecl = enclosing;
+    } else if (plan != null) {
+      // The instantiation read over the whole clause ([_instantiateCalls]).
+      final decl = plan.decl;
+      if (decl == null) {
+        // Some parameter is supplied no type by any site of the call, so no
+        // instantiation is found.  The modes the template fixes are checked
+        // here; the clause check refuses the call unless its callee is
+        // parametrically well-typed, and checks it with the callee's
+        // parameters open where it is ([checkClause], Step 5).
+        onUninstantiated?.call(atom, paramTemplate);
+        return (_checkArgumentModes(atom, paramTemplate, env), null);
+      }
+      // Clause-template rule: the instantiation is recorded, so that the
+      // callee's defining clauses are checked by it (Phase 2 / instantiation
+      // closure), and the call's own arguments are checked by the declaration
+      // it produces, its types built first (TGLP def:instantiation; see the
+      // inference below).
+      collector?.record(CollectedInstantiation(decl.key, decl, env, dfa,
+          bindsInputType: plan.bindsInputType));
+      procDecl = decl;
+      checkEnv = _buildDeclTypes(decl, dfa, env);
     } else if (callerVarTypes != null && callerVarTypes.isNotEmpty) {
       final inferred = _inferConcreteDecl(
           paramTemplate, atom, callerVarTypes, dfa, env, callee);
@@ -1252,12 +1322,17 @@ WellTypedResult _checkArgumentModes(
 /// instantiation, only the modes the template fixes are checked here and the
 /// rest is the linked program's, where the call is local and is refused if no
 /// instantiation can make it well-typed ([_noInstantiationReason]).
+///
+/// In a clause the instantiation is the one [_instantiateCalls] read over the
+/// whole clause, [plan]; with none --- a goal --- it is inferred from
+/// [callerVarTypes].
 (WellTypedResult, ModedTerm?) _checkRemoteGoal(
   ast.RemoteGoal remote,
   int atomIndex,
   ProgramDFA dfa,
   TypeEnvironment env, {
   Map<String, VariableTypeInfo>? callerVarTypes,
+  _CallPlan? plan,
 }) {
   // Flatten nested RemoteGoals to extract full module path and actual goal.
   // Example: ui#actors # render(X?) parses as RemoteGoal(ui, RemoteGoal(actors, render(X?)))
@@ -1280,31 +1355,33 @@ WellTypedResult _checkArgumentModes(
   // env.procedures holds for it (param_expansion.dart, step 5).
   final paramTemplate = env.paramProcDecls[qualifiedKey];
   if (paramTemplate != null) {
-    if (callerVarTypes != null && callerVarTypes.isNotEmpty) {
-      final inference = _inferConcreteDecl(
-          paramTemplate, innerGoal, callerVarTypes, dfa, env, null);
-      if (inference != null) {
-        // No instantiation is recorded here, so whether it binds an input type
-        // is the linked program's to act on, where the call is local.
-        final (inferred, _) = inference;
-        // The types the instantiation names are built before the call is
-        // checked by it, as for a local call (_checkBodyAtomWithTerm).
-        final checkEnv = _buildDeclTypes(inferred, dfa, env);
-        try {
-          final modedAtomTerm =
-              producedTerm(innerGoal, inferred, typeEnv: checkEnv);
-          return (
-            _checkModedTermPerArg(modedAtomTerm, inferred, dfa),
-            modedAtomTerm
-          );
-        } on ArityMismatchError catch (e) {
-          return (WellTypedResult.failure([
-            InconsistentPathError(
-              ModedPath([PathStep(symbol: e.message, argIndex: 0, mode: Mode.produce)]),
-              e.message,
-            ),
-          ]), null);
-        }
+    final ProcDecl? inferred = plan != null
+        ? plan.decl
+        : (callerVarTypes != null && callerVarTypes.isNotEmpty)
+            ? _inferConcreteDecl(
+                    paramTemplate, innerGoal, callerVarTypes, dfa, env, null)
+                ?.$1
+            : null;
+    if (inferred != null) {
+      // No instantiation is recorded here, so whether it binds an input type
+      // is the linked program's to act on, where the call is local.
+      // The types the instantiation names are built before the call is
+      // checked by it, as for a local call (_checkBodyAtomWithTerm).
+      final checkEnv = _buildDeclTypes(inferred, dfa, env);
+      try {
+        final modedAtomTerm =
+            producedTerm(innerGoal, inferred, typeEnv: checkEnv);
+        return (
+          _checkModedTermPerArg(modedAtomTerm, inferred, dfa),
+          modedAtomTerm
+        );
+      } on ArityMismatchError catch (e) {
+        return (WellTypedResult.failure([
+          InconsistentPathError(
+            ModedPath([PathStep(symbol: e.message, argIndex: 0, mode: Mode.produce)]),
+            e.message,
+          ),
+        ]), null);
       }
     }
     return (_checkArgumentModes(innerGoal, paramTemplate, env), null);
@@ -1925,10 +2002,692 @@ String? _noInstantiationReason(
 }
 
 
+// =============================================================================
+// The instantiation of a call, read over the whole clause
+// =============================================================================
+//
+// TGLP appendix-implementation-notes.tex, "The instantiation of a call"
+// (8a58729):
+//
+//   "Definition~\ref{def:instantiation} asks that an instantiation exist and
+//    orders nothing; the checker reads the sites of a call over the whole
+//    clause, the body goals in no order, and tries for each parameter the types
+//    those sites supply, taking one under which every site is well-typed with
+//    subtyping.  A type no site supplies is not tried, so a call whose
+//    instantiations all lie strictly between the types its sites supply is
+//    refused, and a site is to name the type.  A call for which no
+//    instantiation is found is refused unless its callee is parametrically
+//    well-typed (Section~\ref{sec:abstract-parameters}), in which case the call
+//    is checked with the callee's parameters open."
+//
+// A SITE of a call is an occurrence of a variable in it at a position a
+// parameter of the callee reaches.  The type it SUPPLIES for a parameter is the
+// type its partner in the clause --- the other occurrence condition 3 of
+// Definition "Well-Typed Clause with Subtyping" pairs it with --- has at the
+// parameter's position: the head's occurrence of the same key under 3(b) (the
+// type a guard narrowed it to, where one did), or a body occurrence of the
+// other polarity under 3(a), whose dual stands at the call's polarity.  A
+// variable inside a term that stands at a parameter itself is a site whose
+// type the binding decides, and supplies nothing: it names no type.  A site is
+// WELL-TYPED WITH SUBTYPING under a binding when its pair satisfies that
+// condition 3.
+
+/// The checker's reading of one call to a parameterised procedure in a clause
+/// ([_instantiateCalls]).
+class _CallPlan {
+  /// The declaration the call is checked by: the expansion under the
+  /// instantiation found, or --- where every parameter is supplied types and
+  /// none of them makes every site well-typed --- the expansion under the
+  /// supplied types leaving the fewest sites ill-typed, at which the call is
+  /// refused by the sites they do not fit.  Null where some parameter is
+  /// supplied no type.
+  final ProcDecl? decl;
+
+  /// Whether [decl] binds a parameter to an input type
+  /// ([CollectedInstantiation.bindsInputType]).
+  final bool bindsInputType;
+
+  /// Whether every parameter was supplied types and none of them made every
+  /// site well-typed ([decl] is then the expansion under the first).
+  final bool conflict;
+
+  /// The parameters no site of the call supplies a type for, where [decl] is
+  /// null; empty where types were supplied and none gives a declaration this
+  /// scope can build.
+  final List<String> unsupplied;
+
+  /// Where every parameter was supplied types, none of them making every site
+  /// well-typed, and no map of the parameters can make the call well-typed
+  /// either: the argument no expansion admits ([_noInstantiationReason]), by
+  /// which the call is refused; [decl] is then null.
+  final String? refutation;
+
+  const _CallPlan(this.decl, this.bindsInputType,
+      {this.conflict = false, this.unsupplied = const [], this.refutation});
+}
+
+/// Error: a call to a parameterised procedure for which no instantiation is
+/// found, and whose callee is not parametrically well-typed.
+///
+/// TGLP appendix-implementation-notes.tex, "The instantiation of a call": "A
+/// type no site supplies is not tried ... A call for which no instantiation is
+/// found is refused unless its callee is parametrically well-typed".
+class UninstantiatedCallError extends WellTypedError {
+  final ast.Goal call;
+  final ProcDecl callee;
+  final List<String> unsupplied;
+
+  UninstantiatedCallError(this.call, this.callee, this.unsupplied);
+
+  @override
+  String get message {
+    final what = unsupplied.isEmpty
+        ? 'no type its sites supply gives a declaration this scope can build'
+        : 'no site of the call supplies a type for ${unsupplied.join(', ')}';
+    return 'No instantiation of ${callee.key} is found for the call $call: '
+        '$what, and a type no site supplies is not tried; ${callee.key} is not '
+        'parametrically well-typed, so the call is refused (TGLP '
+        'appendix-implementation-notes.tex, "The instantiation of a call"; '
+        'parameterized-types.tex, Definition "Instantiation")';
+  }
+
+  @override
+  String toString() => message;
+}
+
+/// A call to a parameterised procedure: the goal itself --- the inner goal of
+/// a spawn or a remote goal --- the callee's template, and whether the call is
+/// a remote goal, whose callee's clauses are another module's.
+class _ParamCall {
+  final ast.Goal goal;
+  final ProcDecl template;
+  final bool remote;
+  _ParamCall(this.goal, this.template, this.remote);
+}
+
+/// [atom] as a call to a parameterised procedure the clause is to instantiate,
+/// or null: not a call to one, or a recursive call, which is checked at the
+/// enclosing instantiation ([activeInstantiations]) and induces none.
+_ParamCall? _parametricCall(ast.Goal atom, TypeEnvironment env,
+    Map<String, ProcDecl> activeInstantiations) {
+  var goal = atom;
+  while (goal is ast.SpawnGoal) {
+    goal = goal.innerGoal;
+  }
+  if (goal is ast.RemoteGoal) {
+    final parts = <String>[];
+    ast.Goal inner = goal;
+    while (inner is ast.RemoteGoal) {
+      parts.add(inner.staticModuleName);
+      inner = inner.goal;
+    }
+    final template = env.paramProcDecls[
+        '${parts.join('#')}#${inner.functor}/${inner.arity}'];
+    if (template == null || template.arity != inner.arity) return null;
+    return _ParamCall(inner, template, true);
+  }
+  if (isBuiltinGoal(goal.functor)) return null;
+  final decl = env.getProcedure(goal.functor, goal.arity);
+  if (decl == null) return null;
+  final template = env.paramProcDecls[decl.key];
+  if (template == null ||
+      template.arity != goal.arity ||
+      activeInstantiations.containsKey(decl.key)) {
+    return null;
+  }
+  return _ParamCall(goal, template, false);
+}
+
+/// A parameterised declaration with each parameter an abstract type standing
+/// for it ([_paramProbePrefix]), in a DFA holding those types and the template
+/// instantiations they name: the automaton a call's sites are read in.
+class _Probe {
+  final ProcDecl decl;
+  final ProgramDFA dfa;
+
+  /// The abstract type standing for each parameter, to the parameter.
+  final Map<String, String> paramOf;
+
+  _Probe(this.decl, this.dfa, this.paramOf);
+}
+
+/// The probes built in an environment, by template: a probe names only the
+/// template's own types, which an environment's growth does not change.
+final Expando<Map<String, _Probe?>> _probes = Expando('callProbes');
+
+_Probe? _probeOf(ProcDecl template, TypeEnvironment env) {
+  final cache = _probes[env] ??= <String, _Probe?>{};
+  final key = '${template.modulePath}|${template.name}/${template.arity}|'
+      '${template.typeParams.join(',')}|${template.argTypes.join(',')}';
+  if (cache.containsKey(key)) return cache[key];
+  final probeOf = {
+    for (final tp in template.typeParams) tp: '$_paramProbePrefix$tp'
+  };
+  final paramOf = {for (final e in probeOf.entries) e.value: e.key};
+  final decl = ProcDecl(
+    template.name,
+    [for (final t in template.argTypes) _substituteTypeParams(t, probeOf)],
+    template.line,
+    template.column,
+    exported: template.exported,
+    imported: template.imported,
+    modulePath: template.modulePath,
+  );
+  final probeTypes = <String, TypeDef>{
+    for (final n in paramOf.keys) n: TypeDef(n, const [], 0, 0)
+  };
+  final needed = <String>{};
+  for (final t in decl.argTypes) {
+    var n = getFullTypeName(t);
+    if (n.endsWith('?')) n = n.substring(0, n.length - 1);
+    if (n.contains('<') && !env.types.containsKey(n)) needed.add(n);
+  }
+  _Probe? probe;
+  try {
+    if (needed.isNotEmpty) {
+      probeTypes.addAll(materializeInstantiations(
+          needed, env.typeTemplates, {...env.types.keys, ...paramOf.keys}));
+    }
+    probe = _Probe(
+        decl,
+        buildProgramDFA(TypeEnvironment(
+          {...env.types, ...probeTypes},
+          env.procedures,
+          paramProcDecls: env.paramProcDecls,
+          typeTemplates: env.typeTemplates,
+          typeOrigins: env.typeOrigins,
+        )),
+        paramOf);
+  } on UnknownTypeError {
+    probe = null; // a type the declaration names is not in scope
+  }
+  cache[key] = probe;
+  return probe;
+}
+
+/// Whether some parameter of [probe] is reached from [state].
+bool _reachesParam(DFAState state, _Probe probe) {
+  final seen = <String>{};
+  bool walk(DFAState s) {
+    if (probe.paramOf.containsKey(s.baseName)) return true;
+    if (!seen.add(s.name)) return false;
+    final automaton = probe.dfa.automata[s.name];
+    if (automaton == null) return false;
+    for (final e in automaton.transitions.entries) {
+      if (e.key.$1 == s && walk(e.value)) return true;
+    }
+    return false;
+  }
+
+  return walk(state);
+}
+
+/// The variable keys of [term]: `X` for a writer, `X?` for a reader.
+Iterable<String> _termVarKeys(ast.Term term) sync* {
+  if (term is ast.VarTerm) {
+    yield '${term.name}${term.isReader ? '?' : ''}';
+  } else if (term is ast.StructTerm) {
+    for (final a in term.args) {
+      yield* _termVarKeys(a);
+    }
+  } else if (term is ast.ListTerm) {
+    if (term.head != null) yield* _termVarKeys(term.head!);
+    if (term.tail != null) yield* _termVarKeys(term.tail!);
+  }
+}
+
+/// The sites of [goal], in the order they stand in it: each variable
+/// occurrence at a position a parameter reaches, by its key, with the probe
+/// state of that position --- null for a variable inside a term that stands at
+/// a parameter itself, which supplies nothing.
+Map<String, DFAState?> _sitesOf(ast.Goal goal, _Probe probe) {
+  final out = <String, DFAState?>{};
+  void walk(ast.Term term, DFAState state) {
+    if (!_reachesParam(state, probe)) return;
+    if (term is ast.VarTerm) {
+      out.putIfAbsent('${term.name}${term.isReader ? '?' : ''}', () => state);
+      return;
+    }
+    if (probe.paramOf.containsKey(state.baseName)) {
+      for (final k in _termVarKeys(term)) {
+        out.putIfAbsent(k, () => null);
+      }
+      return;
+    }
+    final automaton = probe.dfa.automata[state.name];
+    if (automaton == null) return;
+    if (term is ast.StructTerm) {
+      for (var i = 0; i < term.args.length; i++) {
+        final next =
+            _stepTo(automaton, state, term.functor, term.args.length, i + 1);
+        if (next != null) walk(term.args[i], next);
+      }
+    } else if (term is ast.ListTerm && !term.isNil) {
+      final h = _stepTo(automaton, state, '[|]', 2, 1);
+      final t = _stepTo(automaton, state, '[|]', 2, 2);
+      if (h != null && term.head != null) walk(term.head!, h);
+      if (t != null && term.tail != null) walk(term.tail!, t);
+    }
+  }
+
+  for (var i = 0; i < probe.decl.arity && i < goal.args.length; i++) {
+    final start = probe.dfa.states[getFullTypeName(probe.decl.argTypes[i])];
+    if (start != null) walk(goal.args[i], start);
+  }
+  return out;
+}
+
+/// The types the partner type [actual] supplies for the parameters of [probe]
+/// at a site whose probe state is [state]: walking the two automata together,
+/// label by label, [actual] in the clause's [dfa], each parameter reached is
+/// given the type [actual] has there, as an input type where the two stand at
+/// opposite polarities.  The wildcard names no type of the program, and is not
+/// supplied: binding a parameter to it is the unsound reading
+/// (parameterized-types.tex, sec:programs-and-modules).
+void _supplied(DFAState state, DFAState actual, _Probe probe, ProgramDFA dfa,
+    void Function(String param, String type) emit,
+    [Set<String>? seen]) {
+  final visited = seen ?? <String>{};
+  if (!visited.add('${state.name}|${actual.name}')) return;
+  final param = probe.paramOf[state.baseName];
+  if (param != null) {
+    if (actual.isWildcard ||
+        actual.isAnonymousFinal ||
+        probe.paramOf.containsKey(actual.baseName) ||
+        actual.baseName.startsWith(_openParamPrefix)) {
+      return;
+    }
+    emit(param,
+        state.isDual != actual.isDual ? '${actual.baseName}?' : actual.baseName);
+    return;
+  }
+  if (!_reachesParam(state, probe)) return;
+  final declared = probe.dfa.automata[state.name];
+  final given = dfa.automata[actual.name];
+  if (declared == null || given == null) return;
+  for (final e in declared.transitions.entries) {
+    final (from, label) = e.key;
+    if (from != state) continue;
+    final next = given.transition(actual, label);
+    if (next != null) _supplied(e.value, next, probe, dfa, emit, visited);
+  }
+}
+
+/// Every binding of [params] to the types [supply] holds for each, in order:
+/// the first parameter's first type first.
+Iterable<Map<String, String>> _bindingsOf(
+    List<String> params, Map<String, List<String>> supply) sync* {
+  if (params.isEmpty) {
+    yield const {};
+    return;
+  }
+  final rest = params.sublist(1);
+  for (final type in supply[params.first]!) {
+    for (final more in _bindingsOf(rest, supply)) {
+      yield {params.first: type, ...more};
+    }
+  }
+}
+
+/// How a site's partner stands to it: the head's occurrence of the same key
+/// (condition 3(b)), the head's occurrence of the other key, or a body
+/// occurrence of the other key (condition 3(a)).
+enum _Partner { headSame, headOther, body }
+
+String _otherKey(String key) =>
+    key.endsWith('?') ? key.substring(0, key.length - 1) : '$key?';
+
+/// Whether the pair of the call's occurrence [key], typed [own], with
+/// [partner] satisfies condition 3 of Definition "Well-Typed Clause with
+/// Subtyping", as the clause check asks it ([_checkHeadBodyPair],
+/// [_checkClauseDuality], [_bodyBodyPairError]).
+bool _pairHolds(String key, VariableTypeInfo own, VariableTypeInfo partner,
+    _Partner kind, ProgramDFA dfa) {
+  try {
+    switch (kind) {
+      case _Partner.headSame:
+        return _checkHeadBodyPair(key, partner, const {}, own, 'body', dfa)
+            .isEmpty;
+      case _Partner.headOther:
+        final other = _otherKey(key);
+        return _checkClauseDuality(
+                {key: own, other: partner}, {key: 'body', other: 'head'}, dfa)
+            .isEmpty;
+      case _Partner.body:
+        final base = key.endsWith('?') ? key.substring(0, key.length - 1) : key;
+        final error = key.endsWith('?')
+            ? _bodyBodyPairError(base, partner, own, 'body', 'body', dfa)
+            : _bodyBodyPairError(base, own, partner, 'body', 'body', dfa);
+        return error == null;
+    }
+  } on StateError {
+    return false;
+  }
+}
+
+/// A binding of a call's parameters, with what it gives the call: the
+/// declaration it produces, the call's variable types by that declaration,
+/// how many of its sites are not well-typed with subtyping, and whether the
+/// call's goal is well-typed (condition 2).
+class _Binding {
+  final ProcDecl decl;
+  final bool bindsInputType;
+  final Map<String, VariableTypeInfo> types;
+  final int failingSites;
+  final bool goalHolds;
+  _Binding(this.decl, this.bindsInputType, this.types, this.failingSites,
+      this.goalHolds);
+
+  bool get sitesHold => failingSites == 0;
+}
+
+/// What one round of [_instantiateCalls] reads for a call: the binding taken
+/// (every site well-typed), the binding under which the fewest sites are not
+/// --- the first such in the order the types are supplied ---, whether every
+/// site's partner is typed, and the parameters supplied no type.
+class _Reading {
+  final _Binding? taken;
+  final _Binding? nearest;
+  final bool complete;
+  final List<String> unsupplied;
+  _Reading(this.taken, this.nearest, this.complete, this.unsupplied);
+}
+
+/// The instantiation of each call to a parameterised procedure in [clause],
+/// read over the whole clause, by body-atom index (TGLP
+/// appendix-implementation-notes.tex, "The instantiation of a call").
+///
+/// The occurrences the rest of the clause types are read first, as the clause
+/// check types them: the moded head, a guard's narrowing of a head occurrence,
+/// and every body goal that is not such a call.  Then in rounds, each call
+/// read against the same occurrences, so that no goal's place in the body
+/// decides anything: a call whose every site's partner is typed, and which a
+/// binding of the types its sites supply makes well-typed at every site, takes
+/// that binding; failing any, a call some of whose sites' partners are still
+/// untyped --- they stand in another such call --- takes one making every
+/// typed site well-typed.  The variable types the binding gives the call are
+/// then typed occurrences for the rounds after.  Where several bindings serve,
+/// the first under which the call's goal is well-typed and --- where more than
+/// one is and the callee's clauses are this unit's --- the callee's clauses
+/// are well-typed and cover the declaration (Definition "Instantiation") is
+/// taken, in the order the sites supply the types.
+///
+/// A call every parameter of which is supplied types, none of them making
+/// every site well-typed, is checked at the supplied types that leave the
+/// fewest sites ill-typed (the first such, in the order the types are
+/// supplied), and refused by the sites they do not fit --- the verdict the
+/// checker gave such a call before this reading, at the types its first site
+/// supplied.  A call some parameter of which is supplied no type gets no
+/// declaration, and [checkClause] refuses it unless its callee is
+/// parametrically well-typed.
+Map<int, _CallPlan> _instantiateCalls(
+  TypedClause clause,
+  ProcDecl procDecl,
+  ProgramDFA dfa,
+  TypeEnvironment env, {
+  Map<String, ProcDecl> activeInstantiations = const {},
+  CalleeClauses? callee,
+}) {
+  final calls = <int, _ParamCall>{};
+  for (var i = 0; i < clause.bodyAtoms.length; i++) {
+    final call =
+        _parametricCall(clause.bodyAtoms[i], env, activeInstantiations);
+    if (call != null) calls[i] = call;
+  }
+  if (calls.isEmpty) return const {};
+
+  // The occurrences the rest of the clause types.  A body occurrence of a key
+  // the head carries is the head's pair (3(b)), and a guard's narrows the
+  // head's (TGLP typed-glp.tex, "Type checking of guards"), as in
+  // [checkClause]; every other body occurrence is kept with its atom.
+  final (headResult, _) = _checkHeadWithTerm(clause, procDecl, dfa, env);
+  final head = headResult.variableTypes;
+  final narrowed = <String, VariableTypeInfo>{};
+  final body = <String, List<(VariableTypeInfo, int)>>{};
+  void take(int i, Map<String, VariableTypeInfo> types) {
+    for (final e in types.entries) {
+      if (!head.containsKey(e.key)) {
+        body.putIfAbsent(e.key, () => []).add((e.value, i));
+      } else if (i < clause.guardAtoms.length) {
+        final have = narrowed[e.key] ?? head[e.key]!;
+        final met = meetOfTypes(have.typeState, e.value.typeState, dfa, env);
+        if (met != null) {
+          narrowed[e.key] = VariableTypeInfo(
+              typeState: met, mode: have.mode, isReader: have.isReader);
+        }
+      }
+    }
+  }
+
+  for (var i = 0; i < clause.bodyAtoms.length; i++) {
+    if (calls.containsKey(i)) continue;
+    final (result, _) = _checkBodyAtomWithTerm(clause.bodyAtoms[i], i, dfa, env,
+        activeInstantiations: activeInstantiations);
+    take(i, result.variableTypes);
+  }
+
+  final probes = <int, _Probe?>{
+    for (final e in calls.entries) e.key: _probeOf(e.value.template, env)
+  };
+  final sites = <int, Map<String, DFAState?>>{
+    for (final e in calls.entries)
+      e.key: probes[e.key] == null
+          ? const <String, DFAState?>{}
+          : _sitesOf(e.value.goal, probes[e.key]!)
+  };
+  final keys = <int, Set<String>>{
+    for (final e in calls.entries)
+      e.key: {for (final a in e.value.goal.args) ..._termVarKeys(a)}
+  };
+
+  // The partners of the call at [i]'s occurrence [key], typed.
+  List<(VariableTypeInfo, _Partner)> partnersOf(int i, String key) {
+    final own = head[key];
+    if (own != null) return [(narrowed[key] ?? own, _Partner.headSame)];
+    final other = _otherKey(key);
+    return [
+      if (head[other] != null) (head[other]!, _Partner.headOther),
+      for (final (info, j) in body[other] ?? const <(VariableTypeInfo, int)>[])
+        if (j != i) (info, _Partner.body),
+    ];
+  }
+
+  _Binding? bind(_ParamCall call, int i, Map<String, String> binding) {
+    final decl = _concreteDecl(call.template, binding, const {});
+    bool built() => decl.argTypes.every((t) {
+          var n = getFullTypeName(t);
+          if (n.endsWith('?')) n = n.substring(0, n.length - 1);
+          return dfa.automata.containsKey(n);
+        });
+    final checkEnv = _buildDeclTypes(decl, dfa, env);
+    if (!built()) return null;
+    final WellTypedResult result;
+    try {
+      result = _checkModedTermPerArg(
+          producedTerm(call.goal, decl, typeEnv: checkEnv), decl, dfa);
+    } on ArityMismatchError {
+      return null;
+    } on UnknownTypeError {
+      return null;
+    } on StateError {
+      return null;
+    }
+    var failing = 0;
+    for (final key in sites[i]!.keys) {
+      final own = result.variableTypes[key];
+      if (own == null) continue; // untyped by this binding: the goal's to say
+      for (final (partner, kind) in partnersOf(i, key)) {
+        if (!_pairHolds(key, own, partner, kind, dfa)) {
+          failing++;
+          break;
+        }
+      }
+    }
+    return _Binding(decl, binding.values.any((t) => t.endsWith('?')),
+        result.variableTypes, failing, result.isWellTyped);
+  }
+
+  _Reading read(int i, Set<int> pending) {
+    final call = calls[i]!;
+    final probe = probes[i];
+    final params = call.template.typeParams;
+    // A site's partner in another call still to be read is not typed yet.
+    var complete = true;
+    for (final key in sites[i]!.keys) {
+      if (head.containsKey(key)) continue;
+      final other = _otherKey(key);
+      if (pending.any((j) => j != i && keys[j]!.contains(other))) {
+        complete = false;
+        break;
+      }
+    }
+    // The types the sites supply, per parameter, in the order the sites
+    // stand in the call: a site's head partner first, then its body partners,
+    // whose supplies are ordered by name, so that no goal's place decides.
+    final supply = {for (final tp in params) tp: <String>[]};
+    void add(String param, String type) {
+      final have = supply[param];
+      if (have == null) return;
+      if (have.any((t) => t == type || _sameBinding(t, type, dfa))) return;
+      have.add(type);
+    }
+
+    if (probe != null) {
+      for (final site in sites[i]!.entries) {
+        final state = site.value;
+        if (state == null) continue;
+        final fromBody = <(String, String)>[];
+        for (final (partner, kind) in partnersOf(i, site.key)) {
+          final actual = kind == _Partner.headSame
+              ? partner.typeState
+              : partner.typeState.dual;
+          if (kind == _Partner.body) {
+            _supplied(state, actual, probe, dfa, (p, t) => fromBody.add((p, t)));
+          } else {
+            _supplied(state, actual, probe, dfa, add);
+          }
+        }
+        fromBody.sort((a, b) => '${a.$1} ${a.$2}'.compareTo('${b.$1} ${b.$2}'));
+        for (final (p, t) in fromBody) {
+          add(p, t);
+        }
+      }
+    }
+    final unsupplied = [
+      for (final tp in params)
+        if (supply[tp]!.isEmpty) tp
+    ];
+    if (unsupplied.isNotEmpty) {
+      return _Reading(null, null, complete, unsupplied);
+    }
+
+    _Binding? nearest;
+    final serving = <_Binding>[];
+    for (final binding in _bindingsOf(params, supply)) {
+      final b = bind(call, i, binding);
+      if (b == null) continue;
+      if (nearest == null || b.failingSites < nearest.failingSites) {
+        nearest = b;
+      }
+      if (b.sitesHold) serving.add(b);
+    }
+    _Binding? taken;
+    if (serving.isNotEmpty) {
+      final wellTyped = serving.where((b) => b.goalHolds).toList();
+      if (wellTyped.length > 1 && !call.remote && callee != null) {
+        final defining = callee.of(call.template.key);
+        if (defining != null && defining.isNotEmpty) {
+          for (final b in wellTyped) {
+            final verifyEnv = TypeEnvironment(
+              {...env.types},
+              {...env.procedures, b.decl.key: b.decl},
+              paramProcDecls: env.paramProcDecls,
+              typeTemplates: env.typeTemplates,
+              typeOrigins: env.typeOrigins,
+            );
+            if (callee.verify(b.decl, verifyEnv, defining)) {
+              taken = b;
+              break;
+            }
+          }
+        }
+      }
+      taken ??= wellTyped.isNotEmpty ? wellTyped.first : serving.first;
+    }
+    return _Reading(taken, nearest, complete, const []);
+  }
+
+  final plans = <int, _CallPlan>{};
+  final pending = calls.keys.toSet();
+  var last = <int, _Reading>{};
+  while (pending.isNotEmpty) {
+    final readings = {for (final i in pending) i: read(i, pending)};
+    last = readings;
+    List<int> where(bool Function(_Reading r) test) => [
+          for (final e in readings.entries)
+            if (test(e.value)) e.key
+        ];
+    var decided = where((r) => r.taken != null && r.complete);
+    if (decided.isEmpty) decided = where((r) => r.taken != null);
+    if (decided.isEmpty) {
+      decided = where((r) => r.nearest != null && r.complete);
+    }
+    if (decided.isEmpty) decided = where((r) => r.nearest != null);
+    if (decided.isEmpty) break;
+    for (final i in decided) {
+      final r = readings[i]!;
+      final call = calls[i]!;
+      if (r.taken == null && !call.remote) {
+        // No supplied type makes every site well-typed.  Where no map of the
+        // parameters can make the call well-typed either, the call is refused
+        // by the argument no expansion admits, as a call with no instantiation
+        // is ([checkClause], Step 5).
+        final refutation = _noInstantiationReason(
+            call.goal,
+            call.template,
+            (name, reader) {
+              final own = reader ? '$name?' : name;
+              final other = reader ? name : '$name?';
+              final h = head[own];
+              return [
+                if (h != null) (narrowed[own] ?? h, true),
+                for (final (info, j)
+                    in body[other] ?? const <(VariableTypeInfo, int)>[])
+                  if (j != i) (info, false),
+              ];
+            },
+            env);
+        if (refutation != null) {
+          plans[i] = _CallPlan(null, false, refutation: refutation);
+          pending.remove(i);
+          continue;
+        }
+      }
+      final b = r.taken ?? r.nearest!;
+      plans[i] = _CallPlan(b.decl, b.bindsInputType, conflict: r.taken == null);
+      take(i, b.types);
+      pending.remove(i);
+    }
+  }
+  for (final i in pending) {
+    plans[i] =
+        _CallPlan(null, false, unsupplied: last[i]?.unsupplied ?? const []);
+  }
+  return plans;
+}
+
 /// Infer a concrete proc decl by matching a parameterized template against
 /// the actual argument types at a call site.
 ///
 /// Returns null if inference fails (e.g., no matching variable types found).
+///
+/// A clause's calls are not instantiated here but by [_instantiateCalls],
+/// which reads them over the whole clause and tries only the types their sites
+/// supply (TGLP appendix-implementation-notes.tex, "The instantiation of a
+/// call").  This inference, from the occurrences typed before the call and the
+/// callee's own clauses ([_solveFromCalleeClauses], [_thetaFromHeads]), serves
+/// what that paragraph does not speak of: a goal ([checkGoal]) and a defined
+/// guard as written ([definedGuardMeetErrors]).
 ///
 /// The inferred map is an instantiation (TGLP `parameterized-types.tex`,
 /// Definition "Instantiation"): it sends each parameter to a type of the
@@ -2136,6 +2895,11 @@ const String _paramProbePrefix = r'$param_';
 
 /// Read from the clauses of [paramTemplate]'s procedure the equations that fix
 /// the parameters [bindings] does not yet carry.
+///
+/// For a goal and a guard as written only ([_inferConcreteDecl]): in a clause a
+/// type no site of the call supplies is not tried (TGLP
+/// appendix-implementation-notes.tex, "The instantiation of a call"), and a
+/// type read off the callee's clauses is not one a site supplies.
 ///
 /// TGLP parameterized-types.tex def:instantiation: "A map $\theta$ from those
 /// parameters to types of the program is an instantiation of $A$ if $C$ and the
@@ -2403,6 +3167,11 @@ bool _sameBinding(String a, String b, ProgramDFA dfa) {
 
 /// Build, for each parameter no equation fixes, the type the callee's heads
 /// require, and adopt it if it verifies.
+///
+/// For a goal and a guard as written only ([_inferConcreteDecl]): in a clause a
+/// type no site of the call supplies is not tried (TGLP
+/// appendix-implementation-notes.tex, "The instantiation of a call"), and a
+/// type built from the callee's heads is not one a site supplies.
 ///
 /// TGLP parameterized-types.tex def:instantiation ends "...and every input path
 /// of that declaration is accepted by some clause of $q$", and coverage is what
@@ -3002,9 +3771,17 @@ TypeExpr _substituteTypeParams(TypeExpr expr, Map<String, String> bindings,
       final newArgs = expr.typeArgs
           .map((a) => _substituteTypeParams(a, bindings, input))
           .toList();
-      // Check if all args are now concrete (no more type params)
+      // Check if all args are now concrete (no more type params).  The
+      // wildcard is a concrete argument: the expansion names `Stream(_)`
+      // `Stream<_>` (param_expansion.dart, _expandedName).  Until 2026-10-02 it
+      // was not taken for one, so no instantiation of a declaration carrying
+      // `Stream(_)` beside a parameter could be built, and the call went
+      // uninstantiated.
       final allConcrete = newArgs.every((a) =>
-          a is TypeRef && a.typeArgs.isEmpty && !bindings.containsKey(a.name));
+          (a is TypeRef &&
+              a.typeArgs.isEmpty &&
+              !bindings.containsKey(a.name)) ||
+          a is PrimitiveModeAlt);
       if (allConcrete) {
         // Create expanded name: Stream<AgentMsg>, or Stream<Menu?> where the
         // argument is an input type, as the expansion names it

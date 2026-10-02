@@ -1,21 +1,20 @@
-%% A call whose argument is a constructed term, and the parameter the callee's
-%% own clauses fix (TGLP parameterized-types.tex def:instantiation): "A map
-%% $\theta$ from those parameters to types of the program is an instantiation of
-%% $A$ if $C$ and the clauses of $q$ are well-typed when $q$'s declaration is
-%% replaced by its expansion under $\theta$."
+%% A call whose argument at a parameter is a constructed term, the callee's
+%% clauses relating that parameter to another: refused (TGLP 8a58729,
+%% appendix-implementation-notes.tex, "The instantiation of a call": "A type no
+%% site supplies is not tried ... A call for which no instantiation is found is
+%% refused unless its callee is parametrically well-typed").
 %%
-%% The shape is the paper's own, programs/currencies/coins/self.glp show/3:
+%% The shape is programs/currencies/coins/self.glp's show/3:
 %% `send_user(msg(agent, person, bye(N?)), Outs?, Outs1)` against
-%% `procedure(M, Ent) send_user(M?, Stream(Ent)?, Stream(Ent))`.  The call fixes
-%% Ent to Entry, from the variable Outs; nothing in the call fixes M, and the
-%% constructed term does not --- it is one alternative of Content at one
-%% position, narrower than the stream carries.  M is fixed by the callee's own
-%% head pair (Msg, Msg?), which condition 3(a) of def:well-typed-clause requires
-%% to be dual, to the element type of the stream Entry carries: Msg.  The term is
-%% then checked against `Msg?` at the call, which admits it.
+%% `procedure(M, Ent) send_user(M?, Stream(Ent)?, Stream(Ent))`.  The variable
+%% Outs supplies Ent = Entry; the constructed term names no type, so no site
+%% supplies M; and send_user/3 inspects Ent (its clauses match out/1), so it is
+%% not parametrically well-typed.  The call is refused, naming M.  Negative
+%% fixture.
 %%
-%% Until 2026-09-20 only a variable argument bound a parameter, no instantiation
-%% of send_user/3 arose, and the program was rejected as carrying a
+%% From 2026-09-20 (TGLP e56c303) to 2026-10-02 the checker read M off the
+%% callee's own head pair (Msg, Msg?), which condition 3(a) requires to be dual,
+%% and the program loaded; before 2026-09-20 it was rejected as carrying a
 %% parameter-inspecting procedure nothing instantiates.
 
 Content ::= hello ; bye(Constant).
