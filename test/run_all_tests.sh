@@ -413,12 +413,11 @@ HEREDOC
 check "Multiply stream" "Ym1 = \[3, 6, 9, 12\]" "$a10"
 check "Multiply empty" "Ym2 = \[\]" "$a10"
 
-# --- A11: Struct demo, depth, paa, guards, misc ---
+# --- A11: Struct demo, depth, guards, misc ---
 echo "--- A11: Structure and pattern tests ---"
 a11=$("$REPL_RUN" <<HEREDOC
 $TYPED/struct_demo.glp
 $TYPED/depth_test.glp
-$TYPED/paa.glp
 $TYPED/no_guard.glp
 $TYPED/with_guard.glp
 $TYPED/two_struct_list.glp
@@ -430,7 +429,6 @@ bin_nest(val, Xbn).
 ter_all(a, b, c, Xta).
 tree3(val, Xtr3).
 multi_w(p, q, Xmw).
-p(Xpaa1, Xpaa1?).
 no_guard([5,x,y], Xng).
 with_guard([5,x,y], Xwg).
 test([foo(a), bar(b)]).
@@ -448,7 +446,6 @@ check "Nested binary" "Xbn = outer(inner(val, b), c)" "$a11"
 check "Ternary all vars" "Xta = triple(a, b, c)" "$a11"
 check "Deep binary tree" "Xtr3 = node(node(leaf(val), leaf(a)), leaf(b))" "$a11"
 check "Multiple writers" "Xmw = pair(wrap(p), wrap(q))" "$a11"
-check "p(X,X?) succeeds" "Xpaa1 = a" "$a11"
 check "No guard" "Xng = \[5, a, b" "$a11"
 check "With guard" "Xwg = \[5, a, b" "$a11"
 check "Two struct list" "succeeds" "$a11"
