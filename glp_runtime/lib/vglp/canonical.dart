@@ -57,10 +57,18 @@
 //     cannot each be an alternative of their own); each procedure that
 //     reaches a question declared with Stream(Ask) added, the asking clause
 //     with the source declaration's argument types and it, and q with the
-//     argument of T in its mode, the handle and it.
+//     argument of T in its mode, the handle and it;
+//   - the dispatcher and the construct processes (Part 2): the dispatcher's
+//     generic source, programs/vglp/dispatcher.glp, its names made fresh
+//     against the program's (dispatcher.dart), and the clause of construct/5
+//     of each interactive type with the clauses it calls, typed at the type
+//     (constructs.dart).  Without the generic source the compilation emits
+//     neither, which only a test of the first half asks for.
 //
-// Not here: the initial goal and the dispatcher on its ask stream and the
-// person channel (item F.5, with Part 2).
+// The initial goal and the dispatcher on its ask stream and the person channel
+// are spawned by whatever spawns the initial goal --- the bridge for the app, a
+// play or the REPL in a test (vGLP #4 Cowork, 2026-10-02 08:26 UTC, item 5):
+// the compiled program exports dispatch/3 for it.
 //
 // THE NAMES.  The asking clause takes the source name, q_a = q, so a call of
 // q in a body is already the call of its asking clause; the (n+3)-ary
@@ -82,7 +90,18 @@ import '../compiler/lexer.dart';
 import '../compiler/parser.dart';
 import '../compiler/token.dart';
 import '../analysis/type_checker/type_ast.dart'
-    show ConstantAlt, ProcDecl, StructAlt, TypeDef, TypeExpr, TypeRef;
+    show
+        ConstantAlt,
+        ProcDecl,
+        StructAlt,
+        TypeDef,
+        TypeEnvironment,
+        TypeExpr,
+        TypeRef;
+import '../analysis/type_checker/type_environment_builder.dart'
+    show buildRootScopeEnvironment;
+import 'constructs.dart';
+import 'dispatcher.dart';
 import 'mediator.dart' show printTypeDef, typeSource;
 import 'program_compilation.dart' show compiledHeader;
 
@@ -140,7 +159,10 @@ class VolitionalProcedure {
 /// The canonical compilation of one source: the GLP module's text, the module
 /// it parses to, the volitional procedures it compiled, the procedures that
 /// reach a question by their source signature p/n, the names of the three
-/// types it adds, and the functor of each moded interactive type in Question.
+/// types it adds, the functor of each moded interactive type in Question, and
+/// --- where the dispatcher's generic source was given --- the names of the
+/// dispatcher's entry point and of the construct processes, and the widget of
+/// each interactive type.
 class CanonicalProgram {
   final String source;
   final Module module;
@@ -154,9 +176,23 @@ class CanonicalProgram {
   /// written: 'Request?' request_r.
   final Map<String, String> functors;
 
+  /// dispatch/3, the dispatcher's entry point, as emitted; null without the
+  /// generic source.
+  final String? dispatchName;
+
+  /// construct/5, as emitted; null without the generic source.
+  final String? constructName;
+
+  /// The widget term of each interactive type, by the type as written.
+  final Map<String, String> widgets;
+
   CanonicalProgram(this.source, this.module, this.volitional, this.reaching,
       this.askType, this.handleType,
-      {required this.questionType, required this.functors});
+      {required this.questionType,
+      required this.functors,
+      this.dispatchName,
+      this.constructName,
+      this.widgets = const {}});
 }
 
 /// The functor the compilation gives a moded interactive type in Question
@@ -200,7 +236,14 @@ bool isPaperSyntaxSource(String text) => isPaperSyntax(Lexer(text).tokenize());
 
 /// Compile [text], a vGLP program in the paper's syntax, by the canonical
 /// compilation.
-CanonicalProgram compileCanonical(String text) {
+///
+/// [dispatcher] is the generic source of the dispatcher and the construct
+/// processes, programs/vglp/dispatcher.glp; without it the compilation emits
+/// neither.  [scope] is the source's scope, whose types the construct
+/// processes are built from where the source does not define them; without
+/// it, the root's.
+CanonicalProgram compileCanonical(String text,
+    {DispatcherSource? dispatcher, TypeEnvironment? scope}) {
   final parsed = _parse(text);
   final m = parsed.module;
 
@@ -323,11 +366,133 @@ CanonicalProgram compileCanonical(String text) {
       if (!defined.contains(d.key)) d
   ];
 
-  final source = _emit(m, added.typeDefs, out, bare);
+  // Part 2: the dispatcher and the construct processes.
+  final elicitation = dispatcher == null
+      ? null
+      : _elicitation(dispatcher, m, volitional.values.toList(), added,
+          typeNames, taken, scope);
+
+  final source = _emit(m, added.typeDefs, out, bare, elicitation);
   final module = Parser(Lexer(source).tokenize()).parseModule();
   return CanonicalProgram(source, module, volitional.values.toList(),
       reaching, added.ask, added.handle,
-      questionType: added.question, functors: functors);
+      questionType: added.question,
+      functors: functors,
+      dispatchName: elicitation?.dispatchName,
+      constructName: elicitation?.constructName,
+      widgets: elicitation?.widgets ?? const {});
+}
+
+// ---------------------------------------------------------------------------
+// Part 2: the dispatcher and the construct processes
+// ---------------------------------------------------------------------------
+
+/// What the compilation emits of the dispatcher's generic source and the
+/// construct processes.
+class _Elicitation {
+  final List<TypeDef> typeDefs;
+  final List<ProcDecl> procDecls;
+  final List<Procedure> procedures;
+  final String constructs;
+  final String dispatchName;
+  final String constructName;
+  final Map<String, String> widgets;
+
+  _Elicitation(this.typeDefs, this.procDecls, this.procedures, this.constructs,
+      this.dispatchName, this.constructName, this.widgets);
+}
+
+_Elicitation _elicitation(
+    DispatcherSource dispatcher,
+    Module m,
+    List<VolitionalProcedure> volitional,
+    _AddedTypes added,
+    Set<String> typeNames,
+    Set<String> taken,
+    TypeEnvironment? scope) {
+  // Every name is fresh against the program's and against the names the
+  // compilation has already given.
+  final procTaken = {...taken};
+  final typeTaken = {...typeNames, added.ask, added.handle, added.question};
+  String freshProc(String stem) => _fresh(stem, procTaken);
+  String freshType(String stem) => _freshType(stem, typeTaken);
+
+  final params = added.params;
+  TypeRef ref(String name) =>
+      TypeRef(name, 0, 0, typeArgs: [for (final p in params) TypeRef(p, 0, 0)]);
+  final constructName = freshProc(constructHook);
+  final inst = instantiateDispatcher(dispatcher,
+      supplied: {
+        askTypeRef: ref(added.ask),
+        questionTypeRef: ref(added.question),
+        handleTypeRef: TypeRef(added.handle, 0, 0),
+      },
+      params: params,
+      freshType: freshType,
+      freshProc: freshProc,
+      constructName: constructName);
+
+  final generic = GenericNames(
+    run: inst.proc('run'),
+    shown: inst.proc('shown'),
+    thread: inst.proc('thread'),
+    allDone: inst.proc('all_done'),
+    allFormed: inst.proc('all_formed'),
+    formString: inst.proc('form_string'),
+    formInteger: inst.proc('form_integer'),
+    formNumber: inst.proc('form_number'),
+    formConstant: inst.proc('form_constant'),
+    formModule: inst.proc('form_module'),
+    formAny: inst.proc('form_any'),
+    formedType: inst.type('Formed'),
+    doneType: inst.type('Done'),
+    drawType: inst.type('Draw'),
+  );
+
+  // The source's own types first, then its scope's, then the root's.
+  final own = {for (final td in m.typeDefs) td.name: td};
+  final outer = scope ?? buildRootScopeEnvironment();
+  TypeDef? resolve(String name) =>
+      own[name] ?? outer.typeTemplates[name] ?? outer.types[name];
+
+  final types = <InteractiveType>[];
+  final seen = <String>{};
+  for (final v in volitional) {
+    if (!seen.add(typeSource(v.interactiveType))) continue;
+    types.add(InteractiveType(v.interactiveType, v.readerMode, v.functor,
+        v.typeParams, v.line, v.column));
+  }
+  final constructs = buildConstructs(
+    types: types,
+    constructName: constructName,
+    questionType: added.question,
+    handleType: added.handle,
+    generic: generic,
+    resolve: resolve,
+    declared: const {},
+    fresh: freshProc,
+  );
+
+  // The generic procedures emitted: those reached from the dispatcher's entry
+  // point and from those the construct processes call.
+  final reached =
+      reachableGeneric(dispatcher, [dispatchEntry, ...GenericNames.used]);
+  final emittedNames = {for (final g in reached) inst.procNames[g]!};
+  return _Elicitation(
+    inst.typeDefs,
+    [
+      for (final d in inst.procDecls)
+        if (emittedNames.contains(d.name)) d
+    ],
+    [
+      for (final p in inst.procedures)
+        if (emittedNames.contains(p.name)) p
+    ],
+    constructs.source,
+    inst.proc(dispatchEntry),
+    constructName,
+    constructs.widgets,
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -1047,7 +1212,7 @@ class _Emitted {
 }
 
 String _emit(Module m, List<TypeDef> added, List<_Emitted> procs,
-    List<ProcDecl> bare) {
+    List<ProcDecl> bare, _Elicitation? elicitation) {
   final b = StringBuffer();
   final printer = SourcePrinter();
   b.write(compiledHeader);
@@ -1073,6 +1238,33 @@ String _emit(Module m, List<TypeDef> added, List<_Emitted> procs,
     }
     b.writeln();
   }
+  if (elicitation == null) return b.toString();
+
+  // The dispatcher and what the construct processes share, from
+  // programs/vglp/dispatcher.glp; then the construct process of each
+  // interactive type.
+  b.writeln('%% --- the dispatcher (programs/vglp/dispatcher.glp) ---');
+  b.writeln();
+  for (final td in elicitation.typeDefs) {
+    b.writeln(printTypeDef(td));
+  }
+  b.writeln();
+  final decls = <String, List<ProcDecl>>{};
+  for (final d in elicitation.procDecls) {
+    decls.putIfAbsent(d.name, () => []).add(d);
+  }
+  for (final p in elicitation.procedures) {
+    for (final d in decls[p.name] ?? const <ProcDecl>[]) {
+      if (d.arity == p.arity) b.writeln(printDeclaration(d));
+    }
+    for (final c in p.clauses) {
+      b.writeln(printer.printClause(c));
+    }
+    b.writeln();
+  }
+  b.writeln('%% --- the construct process of each interactive type ---');
+  b.writeln();
+  b.write(elicitation.constructs);
   return b.toString();
 }
 

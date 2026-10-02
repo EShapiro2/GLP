@@ -171,15 +171,18 @@ String _emit(ast.Module module, CompiledTypes types, InstantiatedMediator med,
 /// Compile the text of a `.vglp` source to the text of its GLP module.
 ///
 /// A source in the paper's syntax --- `procedure (T)*p(...)`, `(A)*p(...)` ---
-/// compiles by the canonical compilation of vGLP at db03e2d (canonical.dart).
-/// A source in the old syntax, with volition guards `*(...)`, keeps
-/// its old compilation, against the generic [mediator], until its owner ports
-/// it (vGLP's code task of 2026-10-01, item 6); it has none to compile against
-/// where [mediator] is null.
+/// compiles by the canonical compilation of vGLP at db03e2d (canonical.dart),
+/// against the dispatcher's generic source in the [mediator]'s directory and
+/// in its [scope].  A source in the old syntax, with volition guards `*(...)`,
+/// keeps its old compilation, against the generic [mediator], until its owner
+/// ports it (vGLP's code task of 2026-10-01, item 6); it has none to compile
+/// against where [mediator] is null.
 String compileVglpSource(String text,
     {MediatorSource? mediator, TypeEnvironment? scope, String? path}) {
   if (isPaperSyntaxSource(text)) {
-    return compileCanonical(text).source;
+    return compileCanonical(text,
+            dispatcher: mediator?.dispatcher, scope: scope)
+        .source;
   }
   if (mediator == null) {
     throw StateError('${path ?? 'The source'} is in the old syntax, and the '
@@ -229,8 +232,8 @@ List<String> emitCompiledVglp(String rootDir, MediatorSource? mediator,
     existing.writeAsStringSync(compileVglpSource(text,
         mediator: mediator,
         // The old compilation reads types off the checker in this scope; the
-        // canonical compilation is syntactic and needs none.
-        scope: isPaperSyntaxSource(text) ? null : scopeFor(file.path),
+        // canonical compilation builds the construct processes from it.
+        scope: scopeFor(file.path),
         path: file.path));
     written.add(target);
   }
