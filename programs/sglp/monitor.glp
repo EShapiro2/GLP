@@ -1,0 +1,118 @@
+%% The monitor of an sGLP run (sGLP's paper, the repository
+%% svGLP-Stochastic-Volitional-GLP at d2f64b6: Section 4, "The guard" and "The
+%% monitor"; Appendix B, "Implementation Notes"; the semantics it implements,
+%% Section 2, Definition "sGLP Transition System").
+%%
+%% A goal holding the simulated clock in seconds, the pending requests in a
+%% priority queue by activation time, the run's seed and the horizon.  Its input
+%% is the output stream of a mutual reference (the root's
+%% allocate_mutual_reference/2, the wrapper of '_allocate_mutual_reference', as
+%% the root's mwm/2 uses it), on which every person process and person goal
+%% appends with stream_append/3.  Two requests:
+%%
+%%   rated(N/U, Tok)  a goal of rate N per U is pending on the token Tok.  The
+%%                    monitor draws its delay from the exponential distribution
+%%                    with that rate and queues (Clock + delay, Tok): the first
+%%                    reaction method, the activation time drawn when the goal
+%%                    is spawned (Section 2).
+%%   time(T)          T is the clock, answered at once.
+%%
+%% The release clause is guarded by when_idle (GLP-Spec, the time guards: it
+%% suspends while the machine has a Reduce or a Communicate to make): when the
+%% machine rests, every request sent has arrived, so the queue is that of the
+%% configuration, and the monitor sets the clock to the least activation time
+%% and binds that request's token to go --- Release.  The clock moves only
+%% there.  The monitor stops when the least activation time is past the horizon
+%% (the horizon is inclusive) or the queue is empty with the machine at rest,
+%% and its last act appends clock(T) to the log, T the time of its last Release.
+%% The clauses are in the order the task gives: the requests first, when_idle
+%% last.
+%%
+%% Each delay: K is drawn uniform from 1..2147483646 by random/4 from the
+%% monitor's seed, threaded through its draws (Appendix B); U = K/2147483647 is
+%% uniform on the open interval (0, 1); the delay is -ln(U)/r seconds, r the
+%% rate per second, a year being 365.25 days (Appendix B).  Ties in activation
+%% time are released in the order queued, by a sequence number.  The queue is a
+%% skew heap keyed by (activation time, sequence number).
+
+TimeUnit ::= second ; minute ; hour ; day ; week ; year.
+Rate     ::= /(Number, TimeUnit).
+Token    ::= go.
+Request  ::= rated(Rate, Token?) ; time(Number?).
+Queue    ::= nil ; node(Number, Integer, Token?, Queue, Queue).
+Clock    ::= clock(Number).
+
+%% monitor(Requests?, Seed?, Horizon?, Log?): the clock at 0, the queue empty,
+%% the horizon in seconds, Log the log's mutual reference.
+exported procedure monitor(Stream(Request)?, Integer?, Number?, MutualRef?).
+monitor(In, Seed, Horizon, Log) :-
+    monitor(In?, 0, nil, Seed?, 0, Horizon?, Log?).
+
+%% monitor(Requests?, Clock?, Queue?, Seed?, Seq?, Horizon?, Log?)
+procedure monitor(Stream(Request)?, Number?, Queue?, Integer?, Integer?,
+                  Number?, MutualRef?).
+%% A request: draw its delay and queue it.
+monitor([rated(R, Tok?)|In], Clock, Q, Seed, Seq, Horizon, Log) :-
+    random(Seed?, 2147483646, K, Seed1),
+    delay(R?, K?, D),
+    T := Clock? + D?,
+    Seq1 := Seq? + 1,
+    qmerge(node(T?, Seq?, Tok, nil, nil), Q?, Q1),
+    monitor(In?, Clock?, Q1?, Seed1?, Seq1?, Horizon?, Log?).
+%% The clock, at once.
+monitor([time(Clock?)|In], Clock, Q, Seed, Seq, Horizon, Log) :-
+    monitor(In?, Clock?, Q?, Seed?, Seq?, Horizon?, Log?).
+%% Release: the machine at rest, the least activation time within the horizon.
+monitor(In, _, node(T, _, go, L, R), Seed, Seq, Horizon, Log) :-
+    when_idle, T? =< Horizon? |
+    qmerge(L?, R?, Q),
+    monitor(In?, T?, Q?, Seed?, Seq?, Horizon?, Log?).
+%% Stop: the least activation time is past the horizon.
+monitor(_, Clock, node(T, _, _?, _, _), _, _, Horizon, Log) :-
+    when_idle, T? > Horizon? |
+    stream_append(clock(Clock?), Log?, _).
+%% Stop: nothing is pending.
+monitor(_, Clock, nil, _, _, _, Log) :-
+    when_idle |
+    stream_append(clock(Clock?), Log?, _).
+
+%% delay(N/U?, K?, D): D = -ln(K/2147483647) / (N per U), in seconds.
+procedure delay(Rate?, Integer?, Number).
+delay(N/U, K, D?) :-
+    number(N?), N? > 0 |
+    seconds(U?, S),
+    P := K? / 2147483647,
+    L := ln(P?),
+    D := neg(L?) * S? / N?.
+
+%% seconds(U?, S): S is the number of seconds in one U.
+procedure seconds(TimeUnit?, Integer).
+seconds(second, 1).
+seconds(minute, 60).
+seconds(hour, 3600).
+seconds(day, 86400).
+seconds(week, 604800).
+seconds(year, 31557600).
+
+%% qmerge(Q1?, Q2?, Q): the skew-heap merge of Q1 and Q2, least
+%% (activation time, sequence number) at the root.  Each node holds its
+%% request's token writer and passes it on.
+procedure qmerge(Queue?, Queue?, Queue).
+qmerge(nil, Q, Q?).
+qmerge(node(T, S, K?, L, R), nil, node(T?, S?, K, L?, R?)).
+qmerge(node(T1, S1, K1?, L1, R1), node(T2, S2, K2?, L2, R2),
+       node(T1?, S1?, K1, M?, L1?)) :-
+    T1? < T2? |
+    qmerge(R1?, node(T2?, S2?, K2, L2?, R2?), M).
+qmerge(node(T1, S1, K1?, L1, R1), node(T2, S2, K2?, L2, R2),
+       node(T1?, S1?, K1, M?, L1?)) :-
+    T1? =:= T2?, S1? < S2? |
+    qmerge(R1?, node(T2?, S2?, K2, L2?, R2?), M).
+qmerge(node(T1, S1, K1?, L1, R1), node(T2, S2, K2?, L2, R2),
+       node(T2?, S2?, K2, M?, L2?)) :-
+    T2? < T1? |
+    qmerge(R2?, node(T1?, S1?, K1, L1?, R1?), M).
+qmerge(node(T1, S1, K1?, L1, R1), node(T2, S2, K2?, L2, R2),
+       node(T2?, S2?, K2, M?, L2?)) :-
+    T2? =:= T1?, S2? < S1? |
+    qmerge(R2?, node(T1?, S1?, K1, L1?, R1?), M).

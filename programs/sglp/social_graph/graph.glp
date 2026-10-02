@@ -1,0 +1,145 @@
+%% The Grassroots Social Graph in the translated form, written by hand: what
+%% the transformation of sGLP's paper (the repository
+%% svGLP-Stochastic-Volitional-GLP at d2f64b6, Section 4, "The transformation"
+%% and "The person process") will produce from graph.vglp at GLP 723d1602 (the
+%% paper's Section 5).  The types are the directory's (self.glp).
+%%
+%% 1. The compiled program: vGLP's canonical compilation as the fixture
+%%    programs/tests/sglp/person_asks_writer.glp had it at GLP 723d1602 --- the
+%%    asking clause of each volitional procedure spawns the construct process
+%%    with its question's interactive type and the person's end of the
+%%    variable, and calls the procedure's clause, renamed, with the program's
+%%    end; Menu and Card are in writer mode, so the construct process takes
+%%    X? and the clause X --- with construct in place of the fixture's person,
+%%    and one argument added: the person channel, a mutual reference that
+%%    reaches the agent's person process, threaded through start/5, agent/6,
+%%    ask/3 and respond/2 to the construct process (construct/3,
+%%    programs/sglp/person.glp).
+%% 2. The four profiles: each person procedure takes the monitor's reference as
+%%    a third argument; each rated goal G @ r becomes the request rated(r, Tok)
+%%    appended to the monitor's reference, followed by G with Tok? as an added
+%%    first argument, whose clauses take the goal when Tok is go.
+%% 3. one_of, length and nth, ordinary GLP: nth's clause for the end of the
+%%    list in the form that checks, nth(_, [], _?) (TGLP, "Anonymous
+%%    variables": an output the clause never produces).
+%%
+%% A trailing %+ marks a line the transformation adds or changes, and names what
+%% it adds: Ch, the person channel; Mon, the monitor's reference; @ r, the
+%% request that replaces the rate; Tok? and go, the token.  The rest is the
+%% source (graph.vglp) as vGLP's compilation gives it.
+
+%% ---------------------------------------------------------------------------
+%% 1. The compiled program
+%% ---------------------------------------------------------------------------
+
+%% (Menu)*ask(Peers?, Peers?, Choice): the asking clause and the clause.
+procedure ask(Peers?, Peers?, Choice, MutualRef?).                      %+ Ch
+ask(Ss, Os, C?, Ch) :- construct('Menu', X?, Ch?), ask1(Ss?, Os?, C, X). %+ Ch
+procedure ask1(Peers?, Peers?, Choice, Menu).
+ask1(Ss, Os, C?, menu(Ss?, Os?, C)).
+
+%% (Card)*respond(Peer?, YesNo): the asking clause and the clause.
+procedure respond(Peer?, YesNo, MutualRef?).                            %+ Ch
+respond(From, A?, Ch) :- construct('Card', X?, Ch?), respond1(From?, A, X). %+ Ch
+procedure respond1(Peer?, YesNo, Card).
+respond1(From, A?, card(From?, A)).
+
+procedure agent(Peer?, Peers?, Peers?, Choice?,
+                Stream(Msg)?, Stream(Msg), MutualRef?).                 %+ Ch
+
+%% The person picked a peer: offer, and ask again.
+agent(Id, Ss, Os, same(To), NetIn, [msg(To?, offer(Id?))|Outs?], Ch) :-   %+ Ch
+    ground(Id?), ground(Ss?), ground(Os?), ground(To?) |
+    ask(Ss?, Os?, Pick, Ch?),                                           %+ Ch?
+    agent(Id?, Ss?, Os?, Pick?, NetIn?, Outs, Ch?).                     %+ Ch?
+agent(Id, Ss, Os, other(To), NetIn, [msg(To?, offer(Id?))|Outs?], Ch) :-  %+ Ch
+    ground(Id?), ground(Ss?), ground(Os?), ground(To?) |
+    ask(Ss?, Os?, Pick, Ch?),                                           %+ Ch?
+    agent(Id?, Ss?, Os?, Pick?, NetIn?, Outs, Ch?).                     %+ Ch?
+
+%% An offer arrives: put it to the person, and reply.
+agent(Id, Ss, Os, Pick, [msg(_, offer(From))|NetIn],
+      [msg(From?, reply(Id?, A?))|Outs?], Ch) :-                        %+ Ch
+    ground(Id?), ground(From?) |
+    respond(From?, A, Ch?),                                             %+ Ch?
+    agent(Id?, Ss?, Os?, Pick?, NetIn?, Outs, Ch?).                     %+ Ch?
+
+%% A reply to my offer arrives.
+agent(Id, Ss, Os, Pick, [msg(_, reply(_, _))|NetIn], Outs?, Ch) :-       %+ Ch
+    agent(Id?, Ss?, Os?, Pick?, NetIn?, Outs, Ch?).                     %+ Ch?
+
+%% The initial goal of an agent: ask the first menu.
+exported procedure start(Peer?, Peers?, Peers?, Stream(Msg)?, Stream(Msg),
+                         MutualRef?).                                   %+ Ch
+start(Id, Ss, Os, NetIn, Outs?, Ch) :- ground(Ss?), ground(Os?) |        %+ Ch
+    ask(Ss?, Os?, Pick, Ch?),                                           %+ Ch?
+    agent(Id?, Ss?, Os?, Pick?, NetIn?, Outs, Ch?).                     %+ Ch?
+
+%% ---------------------------------------------------------------------------
+%% 2. The profiles
+%% ---------------------------------------------------------------------------
+
+%% person homophile.  Menu =::= homophile_menu.
+exported procedure homophile_menu(Menu?, Integer?, MutualRef?).         %+ Mon
+homophile_menu(M, S, Mon) :-                                            %+ Mon
+    random(S?, 100, K, S1),
+    stream_append(rated(1/week, Tok), Mon?, _),                         %+ @ 1/week
+    homophile_pick(Tok?, K?, S1?, M?).                                  %+ Tok?
+procedure homophile_pick(Token?, Integer?, Integer?, Menu?).            %+ Token?
+homophile_pick(go, K, S, menu(Ss, _, same(P?))) :-                      %+ go
+    K? =< 98, ground(Ss?) | one_of(Ss?, S?, P).
+homophile_pick(go, K, S, menu(_, Os, other(P?))) :-                     %+ go
+    K? > 98, ground(Os?) | one_of(Os?, S?, P).
+
+%% person indifferent.  Menu =::= indifferent_menu.
+exported procedure indifferent_menu(Menu?, Integer?, MutualRef?).       %+ Mon
+indifferent_menu(M, S, Mon) :-                                          %+ Mon
+    random(S?, 100, K, S1),
+    stream_append(rated(2/week, Tok), Mon?, _),                         %+ @ 2/week
+    indifferent_pick(Tok?, K?, S1?, M?).                                %+ Tok?
+procedure indifferent_pick(Token?, Integer?, Integer?, Menu?).          %+ Token?
+indifferent_pick(go, K, S, menu(Ss, _, same(P?))) :-                    %+ go
+    K? =< 50, ground(Ss?) | one_of(Ss?, S?, P).
+indifferent_pick(go, K, S, menu(_, Os, other(P?))) :-                   %+ go
+    K? > 50, ground(Os?) | one_of(Os?, S?, P).
+
+%% person wary.  Card =::= wary_card.
+exported procedure wary_card(Card?, Integer?, MutualRef?).              %+ Mon
+wary_card(C, S, Mon) :-                                                 %+ Mon
+    random(S?, 100, K, _),
+    stream_append(rated(1/day, Tok), Mon?, _),                          %+ @ 1/day
+    wary_answer(Tok?, K?, C?).                                          %+ Tok?
+procedure wary_answer(Token?, Integer?, Card?).                         %+ Token?
+wary_answer(go, K, card(_, yes)) :- K? =< 20 | true.                    %+ go
+wary_answer(go, K, card(_, no))  :- K? > 20  | true.                    %+ go
+
+%% person sociable.  Card =::= sociable_card.
+exported procedure sociable_card(Card?, Integer?, MutualRef?).          %+ Mon
+sociable_card(C, S, Mon) :-                                             %+ Mon
+    random(S?, 100, K, _),
+    stream_append(rated(1/hour, Tok), Mon?, _),                         %+ @ 1/hour
+    sociable_answer(Tok?, K?, C?).                                      %+ Tok?
+procedure sociable_answer(Token?, Integer?, Card?).                     %+ Token?
+sociable_answer(go, K, card(_, yes)) :- K? =< 90 | true.                %+ go
+sociable_answer(go, K, card(_, no))  :- K? > 90  | true.                %+ go
+
+%% ---------------------------------------------------------------------------
+%% 3. one_of, length, nth
+%% ---------------------------------------------------------------------------
+
+%% one_of(Xs?, S?, X): X is drawn uniformly from Xs by random from the seed S.
+procedure(X) one_of(Stream(X)?, Integer?, X).
+one_of(Xs, S, X?) :- ground(Xs?) |
+    length(Xs?, N), random(S?, N?, K, _), nth(K?, Xs?, X).
+
+%% length(Xs?, N): N is the number of elements of Xs.
+procedure(X) length(Stream(X)?, Integer).
+length([], 0).
+length([_|Xs], N?) :- length(Xs?, N1), N := N1? + 1.
+
+%% nth(K?, Xs?, X): X is the K-th element of Xs, counting from 1.  Past the
+%% end of Xs nothing is assigned to X.
+procedure(X) nth(Integer?, Stream(X)?, X).
+nth(1, [X|_], X?).
+nth(K, [_|Xs], X?) :- K? > 1 | K1 := K? - 1, nth(K1?, Xs?, X).
+nth(_, [], _?).
