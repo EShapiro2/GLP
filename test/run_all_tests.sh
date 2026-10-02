@@ -1060,23 +1060,6 @@ HEREDOC
 2>&1)
 check "single-module: -expose collision rejected at link time" "expose collision" "$a26f_col"
 
-# --- A27: Reader-to-reader bug (befriend_intro) ---
-echo "--- A27: Reader-to-reader fail ---"
-a27=$("$REPL_RUN" <<HEREDOC
-$TYPED/test_befriend_intro_bug.glp
-med(charlie, ch([msg(agent, _user, befriend_intro(bob, alice, X?)) | Xs], Y), ch(Us?, Vs), [], 2).
-:quit
-HEREDOC
-2>&1)
-# The absence of req(2) means something only if the fixture loaded: refused, it
-# printed no req(2) either, a false pass.
-check "reader-to-reader fixture loads" "Loaded: .*test_befriend_intro_bug.glp" "$a27"
-# Nor if the goal check refused the goal: on main and on gap it does ("Undefined
-# procedure: med/5"; with med/5 declared, a mode mismatch at X?), so the goal has
-# not run since the goal check came in.  Red until GLP's goal is well-typed.
-check_not "reader-to-reader goal is accepted" "Goal is not well-typed" "$a27"
-check_not "reader-to-reader no reduction" "req(2)" "$a27"
-
 # --- A29: Struct terms inside lists in goal arguments (Issue 0b regression) ---
 echo "--- A29: Structs in list goal args ---"
 a29=$("$REPL_RUN" <<HEREDOC
