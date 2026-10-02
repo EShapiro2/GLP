@@ -1,6 +1,6 @@
 /// Tests for Localize operation
 ///
-/// Derived from madGLP-spec.md Section 5.2: Localize
+/// Derived from IGLP Definition Localize.
 ///
 /// Given agent q, remote agent p, and globalized term T_p↑, localization
 /// produces T_q↓ with fresh local pairs, spawns global_send goals for _w

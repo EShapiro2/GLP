@@ -46,7 +46,7 @@ const Set<String> predefinedProcedureNames = {
   'known',
   'unknown',
   'no_readers',
-  // Attestation guard (madGLP, seam spec §4)
+  // Attestation guard (madGLP)
   'valid_attestation',
   // Time guards (fundamental - implemented by runtime)
   'wait',
@@ -107,7 +107,7 @@ const Set<String> builtinProcedures = {
   'known/1',
   'unknown/1',
   'no_readers/1',
-  // Attestation guard (madGLP, seam spec §4)
+  // Attestation guard (madGLP)
   'valid_attestation/4',
   // Time guards
   'wait/1',

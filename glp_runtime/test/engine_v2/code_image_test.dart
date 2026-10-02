@@ -5,7 +5,6 @@ library;
 import 'dart:typed_data';
 import 'package:test/test.dart';
 import 'package:glp_runtime/bytecode/opcodes.dart';
-import 'package:glp_runtime/bytecode/opcodes_v2.dart' as bcv2;
 import 'package:glp_runtime/wire/artefact.dart';
 import 'package:glp_runtime/wire/instruction_codec.dart' show decodeCode;
 import 'package:glp_runtime/engine_v2/code_image.dart';
@@ -16,8 +15,8 @@ void main() {
   // name at load).
   final ops = <Object>[
     Label('p/2'),
-    bcv2.GetVariable(0, 0, isReader: false),
-    bcv2.GetVariable(1, 1, isReader: false),
+    GetVariable(0, 0, isReader: false),
+    GetVariable(1, 1, isReader: false),
     Spawn('helper/1', 1),
     Proceed(),
     Label('r/1'),

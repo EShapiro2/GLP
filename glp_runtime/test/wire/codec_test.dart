@@ -1,4 +1,4 @@
-/// S1 — wire codec (§§wf-primitives, wf-terms).
+/// S1 — wire codec (§§cf-primitives, cf-terms).
 ///
 /// Round-trip identity over every tag; ground-term canonicality; clen
 /// one-value-one-encoding.

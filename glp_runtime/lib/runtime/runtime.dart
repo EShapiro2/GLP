@@ -1,54 +1,32 @@
-import 'dart:io';
-import 'dart:ffi' as ffi;
-
 import 'machine_state.dart';
 import 'heap_fcp.dart';
 import 'suspend_ops.dart';
 import 'commit.dart';
-import 'abandon.dart';
 import 'fairness.dart';
-import 'system_predicates.dart';
 import 'body_kernels.dart';
 import 'package:glp_runtime/multiagent/identity.dart' show PersonIdentity;
 import 'package:glp_runtime/multiagent/mad_context.dart' show MadContext;
 import 'package:glp_runtime/bytecode/runner.dart'
     show CallEnv, GoalRunner;
-import 'package:glp_runtime/runtime/glp_activation.dart' show GlpChannelHandle;
 
 class GlpRuntime {
   final HeapFCP heap;
   final GoalQueue gq;
-  final SystemPredicateRegistry systemPredicates;
   final BodyKernelRegistry bodyKernels;
 
   /// Shared runners map: program key → GoalRunner (object or byte loop).
   /// Used by the Scheduler to find the runner for a goal's program.
   /// Runtime-registered runners (extension point; used by `run/2` to route a
-  /// launched goal to its module's ByteRunner; also the seam the retired
-  /// dynamic-dispatch path once used).
+  /// launched goal to its module's ByteRunner).
   final Map<Object?, GoalRunner> runners = {};
-
-  /// GLP channel handles: module name → GlpChannelHandle. Read by the runner's
-  /// Distribute/Transmit opcodes to route RPCs via GLP channels. Currently
-  /// unpopulated — the dynamic-dispatch path that registered handles was retired.
-  final Map<String, GlpChannelHandle> glpChannels = {};
 
   final Map<GoalId, int> _budgets = <GoalId, int>{};
   final Map<GoalId, CallEnv> _goalEnvs = <GoalId, CallEnv>{};
   final Map<GoalId, Object?> _goalPrograms = <GoalId, Object?>{};
-  final Map<GoalId, Object?> _goalModuleContexts = <GoalId, Object?>{};  // Module context for RPC;
   /// Per-goal module VALUE — the ModuleTerm whose code the goal's PC indexes
   /// into. The `self_module`/`run` substrate: every goal carries its module,
-  /// spawned goals inherit it. Distinct from _goalModuleContexts (RPC routing).
+  /// spawned goals inherit it.
   final Map<GoalId, Object?> _goalModules = <GoalId, Object?>{};
-
-  // File handle management
-  final Map<int, RandomAccessFile> _fileHandles = <int, RandomAccessFile>{};
-  int _nextFileHandle = 1;
-
-  // FFI/Dynamic library management
-  final Map<int, ffi.DynamicLibrary> _libraries = <int, ffi.DynamicLibrary>{};
-  int _nextLibraryHandle = 1;
 
   // Goal ID counter for spawn
   int nextGoalId = 10000;  // Start at 10000 to avoid collisions with test goal IDs
@@ -82,10 +60,6 @@ class GlpRuntime {
   // visit to every entry of [suspended], so a wakeup cost in the number of
   // goals suspended.
   final Map<GoalRef, Set<int>> _suspendedOn = <GoalRef, Set<int>>{};
-
-  // Infrastructure goal IDs (spec §3.4): serve goals spawned by auto-activation.
-  // Their suspension does not affect user goal status determination.
-  final Set<int> infrastructureGoalIds = {};
 
   // F — the failed goals of the dGLP and madGLP Reduce transactions. A reduction
   // has three outcomes; a goal that fails joins F and the agent goes on reducing
@@ -189,10 +163,9 @@ class GlpRuntime {
     return false;
   }
 
-  GlpRuntime({HeapFCP? heap, GoalQueue? gq, SystemPredicateRegistry? systemPredicates, BodyKernelRegistry? bodyKernels})
+  GlpRuntime({HeapFCP? heap, GoalQueue? gq, BodyKernelRegistry? bodyKernels})
       : heap = heap ?? HeapFCP(),
         gq = gq ?? GoalQueue(),
-        systemPredicates = systemPredicates ?? SystemPredicateRegistry(),
         bodyKernels = bodyKernels ?? _createDefaultBodyKernels();
 
   /// Create body kernel registry with standard kernels registered
@@ -211,18 +184,6 @@ class GlpRuntime {
     );
     _enqueueAll(acts);
     return acts;
-  }
-
-  /// Legacy commit method (deprecated - for backward compatibility)
-  /// TODO: Remove after runner.dart updated to use commitSigmaHat
-  List<GoalRef> commitWriters(Iterable<int> writerIds) {
-    throw UnimplementedError('Legacy commitWriters deprecated - use commitSigmaHat');
-  }
-
-  /// Legacy abandon method (deprecated)
-  /// TODO: Remove after runner.dart updated
-  List<GoalRef> abandonWriter(int writerId) {
-    throw UnimplementedError('Legacy abandonWriter deprecated - FCP has no abandon');
   }
 
   /// Suspend goal using FCP-exact shared suspension records
@@ -274,14 +235,6 @@ class GlpRuntime {
 
   Object? getGoalProgram(GoalId g) => _goalPrograms[g];
 
-  /// Set module context for a goal (for distribute/transmit handlers)
-  void setGoalModuleContext(GoalId g, Object? ctx) {
-    _goalModuleContexts[g] = ctx;
-  }
-
-  /// Get module context for a goal
-  Object? getGoalModuleContext(GoalId g) => _goalModuleContexts[g];
-
   /// Set the module VALUE a goal runs (its ModuleTerm) — read back by
   /// `self_module`, inherited by spawned children.
   void setGoalModule(GoalId g, Object? module) {
@@ -325,74 +278,5 @@ class GlpRuntime {
       goals.remove(goal);
       if (goals.isEmpty) suspended.remove(readerId);
     }
-  }
-
-  // File handle management methods
-
-  /// Allocate a new file handle and register the file
-  int allocateFileHandle(RandomAccessFile file) {
-    final handle = _nextFileHandle++;
-    _fileHandles[handle] = file;
-    return handle;
-  }
-
-  /// Get file by handle
-  RandomAccessFile? getFile(int handle) => _fileHandles[handle];
-
-  /// Check if handle is valid
-  bool isValidHandle(int handle) => _fileHandles.containsKey(handle);
-
-  /// Close and remove file handle
-  void closeFileHandle(int handle) {
-    final file = _fileHandles.remove(handle);
-    if (file != null) {
-      try {
-        file.closeSync();
-      } catch (e) {
-        // Ignore close errors
-      }
-    }
-  }
-
-  /// Close all open file handles (cleanup)
-  void closeAllFiles() {
-    for (final file in _fileHandles.values) {
-      try {
-        file.closeSync();
-      } catch (e) {
-        // Ignore close errors
-      }
-    }
-    _fileHandles.clear();
-  }
-
-  // FFI/Dynamic library management methods
-
-  /// Load a dynamic library and allocate handle
-  int loadLibrary(String path) {
-    try {
-      final lib = ffi.DynamicLibrary.open(path);
-      final handle = _nextLibraryHandle++;
-      _libraries[handle] = lib;
-      return handle;
-    } catch (e) {
-      throw Exception('Failed to load library $path: $e');
-    }
-  }
-
-  /// Get library by handle
-  ffi.DynamicLibrary? getLibrary(int handle) => _libraries[handle];
-
-  /// Check if library handle is valid
-  bool isValidLibrary(int handle) => _libraries.containsKey(handle);
-
-  /// Close library handle (note: DynamicLibrary doesn't have close method)
-  void closeLibrary(int handle) {
-    _libraries.remove(handle);
-  }
-
-  /// Close all libraries
-  void closeAllLibraries() {
-    _libraries.clear();
   }
 }

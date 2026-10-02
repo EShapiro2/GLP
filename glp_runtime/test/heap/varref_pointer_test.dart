@@ -1,6 +1,7 @@
 /// Tests for VarRef structure with Pointer Architecture
 ///
-/// For spec: docs/heap-pointer-architecture-spec.md v3.0
+/// For spec: IGLP app:in-heap (Heap: Variables, Dereferencing,
+/// Binding, Suspension)
 ///
 /// In the new architecture, VarRef has only an addr field.
 /// The cell's tag determines whether it's a reader or writer.

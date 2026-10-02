@@ -10,7 +10,6 @@ own GLP program and uses its own execution backend and agent topology.
 | Entry point | App | Agents | Backend | Status |
 |---|---|---|---|---|
 | `lib/main.dart` | Interactive SG | Alice, Bob, Charlie | Multi-window (`desktop_multi_window`) | Working |
-| `lib/main_cssg.dart` | CSSN group plays (REPL) | Alice, Bob, Carol, Dave | REPL subprocess | Working |
 
 `main_sg_mad.dart`, `main_cssg_mad.dart` and `main_cssg_mad_modules.dart` were
 retired on 2026-08-01: each named a program directory that no longer exists
@@ -26,13 +25,6 @@ commands (`connect`, `decision`, `send`, `introduce`, `accept_intro`) in each
 agent's text field.  Uses `desktop_multi_window` plugin and `MadRouter` for
 cross-window message routing.  Full 10-step introduction protocol verified
 working.
-
-### CSSN group plays — REPL (`main_cssg.dart`)
-
-Single-window app with four read-only panels (Alice, Bob, Carol, Dave).
-Runs plays 8–10 by spawning a `glp_repl` subprocess.  Tagged output is parsed
-and routed to the correct panel.  Uses `ReplPlayRunner` from `glp_runtime`,
-naming its own file list — the runner has no default one.
 
 ## Shared infrastructure
 
@@ -59,10 +51,11 @@ sends network messages, so no message can be dropped due to a missing target.
 
 ## GLP source files
 
-Each app names its own.  `main_cssg.dart` runs `programs/book/cssn`;
-`main.dart` and the grassapp apps take theirs from `lib/glp_sources.dart`.  The
-table that stood here listed `programs/typed_book/cssg`, a directory that has
-not existed for some time.
+Each app names its own.  `main.dart` and the grassapp apps take theirs from
+`lib/glp_sources.dart`.  The apps that ran plays by spawning a `glp_repl`
+subprocess --- `main_cssg.dart`, retired on 2026-08-02, and
+`main_cssn_village.dart`, deleted on 2026-10-02 with the `ReplPlayRunner` it
+ran on --- are in git.
 
 ## Known Issues
 

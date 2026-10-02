@@ -1711,8 +1711,6 @@ echo ""
 GUARD_NEG_DIR="$GLP_DIR/programs/tests/guards_invalid"
 guard_cases=(
     "true_in_guard.glp|\"true\" is not a guard"
-    "false_in_guard.glp|\"false\" is not a guard"
-    "fail_in_guard.glp|\"fail\" is not a guard"
     # GLP has no guard negation: the parser refuses ~d(X?) as a syntax error.
     "negated_defined_guard.glp|[syntax] \"~\" is not GLP syntax"
 )

@@ -1,7 +1,7 @@
 /// Helper types and operations for madGLP
 ///
 /// Provides Globalize and Localize operations as specified in
-/// madGLP-spec.md Sections 5.1 and 5.2.
+/// IGLP Definitions Globalize and Localize.
 ///
 /// These operations transform terms between local and global representations
 /// for inter-agent communication.
@@ -22,7 +22,7 @@ enum GlobalNameType {
 
 /// Global variable name: `_w(p, i)` or `_r(p, i)`
 ///
-/// See: madGLP-spec.md Section 2
+/// See: IGLP Definition Global Variable Name (app:global-variable-names)
 class GlobalName {
   final GlobalNameType type;
   final String agent;
@@ -58,7 +58,7 @@ class GlobalName {
 ///
 /// Represents the goal: `global_send(readerAddr, globalName, destAgent)`
 ///
-/// See: madGLP-spec.md Section 4
+/// See: IGLP Definition global_send Predicate (app:global-send)
 class GlobalSendSpawn {
   /// Address of the reader to watch (the ? end of the variable pair)
   final int readerAddr;
@@ -117,7 +117,7 @@ class TermVar {
 
 /// Result of a Globalize operation
 ///
-/// See: madGLP-spec.md Section 5.1
+/// See: IGLP Definition Globalize
 class GlobalizeResult {
   /// Global names substituted for variables, in order of occurrence
   final List<GlobalName> globalNames;
@@ -159,7 +159,7 @@ class FreshPair {
 
 /// Result of a Localize operation
 ///
-/// See: madGLP-spec.md Section 5.2
+/// See: IGLP Definition Localize
 class LocalizeResult {
   /// Fresh variable pairs created, one per global name
   final List<FreshPair> freshPairs;

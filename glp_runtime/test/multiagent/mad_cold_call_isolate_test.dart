@@ -10,7 +10,7 @@
 /// - handleMadAssignment instead of handleAssignment
 /// - onWriterBound triggers message sending (push-based)
 ///
-/// Scenario (per madGLP-spec.md Section 10.2):
+/// Scenario:
 /// 1. Alice creates response variable Resp (writer) and Resp? (reader)
 /// 2. Alice globalizes Resp (writer) to send to Bob -> creates entry (Resp, bob) at index 1
 /// 3. Bob localizes _w(alice,1) -> gets writer, spawns global_send

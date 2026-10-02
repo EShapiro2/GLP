@@ -138,12 +138,6 @@ class ByteRunner with OpExecutors implements GoalRunner {
     Object? constant(WireReader r) => valueOfWireConst(decodeConstantPayload(r));
 
     while (pc < code.length) {
-      if (cx.reductionBudget != null &&
-          cx.reductionsUsed >= cx.reductionBudget!) {
-        return RunResult.outOfReductions;
-      }
-      cx.reductionsUsed++;
-
       final opStart = pc;
       final r = WireReader(Uint8List.sublistView(code, pc));
       final opcode = r.u8();
@@ -611,10 +605,6 @@ class ByteRunner with OpExecutors implements GoalRunner {
 
     cx.rt.gq.enqueue(newGoalRef);
 
-    if (cx.rt.infrastructureGoalIds.contains(cx.goalId)) {
-      cx.rt.infrastructureGoalIds.add(newGoalId);
-    }
-
     cx.argSlots.clear();
     return null;
   }
@@ -650,9 +640,6 @@ class ByteRunner with OpExecutors implements GoalRunner {
     cx.rt.setGoalProgram(newGoalId, '__root__');
     cx.rt.setGoalModule(newGoalId, cx.rt.getGoalModule(cx.goalId));
     cx.rt.gq.enqueue(GoalRef(newGoalId, entry));
-    if (cx.rt.infrastructureGoalIds.contains(cx.goalId)) {
-      cx.rt.infrastructureGoalIds.add(newGoalId);
-    }
     return true;
   }
 

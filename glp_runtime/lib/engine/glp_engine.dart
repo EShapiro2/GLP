@@ -17,13 +17,13 @@ import 'package:glp_runtime/compiler/lexer.dart';
 import 'package:glp_runtime/compiler/ast.dart';
 import 'package:glp_runtime/compiler/primitive_layer.dart';
 import 'package:glp_runtime/compiler/error.dart' show CompileError;
+import 'package:glp_runtime/bytecode/opcodes.dart' show Op;
 import 'package:glp_runtime/bytecode/runner.dart';
 import 'package:glp_runtime/engine_v2/interp.dart';
 import 'package:glp_runtime/engine_v2/module_kernels.dart';
 import 'package:glp_runtime/runtime/runtime.dart';
 import 'package:glp_runtime/runtime/machine_state.dart';
 import 'package:glp_runtime/runtime/scheduler.dart';
-import 'package:glp_runtime/runtime/system_predicates_impl.dart';
 import 'package:glp_runtime/runtime/terms.dart' as rt;
 import 'package:glp_runtime/compiler/partial_evaluator.dart';
 import 'package:glp_runtime/analysis/type_checker/type_checker.dart';
@@ -73,7 +73,6 @@ class ExecutionResult {
 class ModuleInfo {
   final String name;
   final BytecodeProgram program;
-  final List<String> imports;
   final bool hasExports;
   final Set<String> exportedLabels;  // e.g., {'append/3', 'member/2'}
 
@@ -82,7 +81,7 @@ class ModuleInfo {
   /// Only explicitly declared modules have export-boundary filtering.
   final bool isTopLevel;
 
-  ModuleInfo({required this.name, required this.program, required this.imports, required this.hasExports, this.exportedLabels = const {}, this.isTopLevel = false});
+  ModuleInfo({required this.name, required this.program, required this.hasExports, this.exportedLabels = const {}, this.isTopLevel = false});
 }
 
 /// madGLP system predicates (embedded).
@@ -94,7 +93,8 @@ const String _madPredicatesSource = r'''
 -mode(system).  %% Uses reserved constants like '_w' and '_send'
 
 %% madGLP System Predicates
-%% See: madGLP-spec.md Section 4 and Section 12
+%% See: IGLP Definition global_send Predicate and Remark Network Output
+%% Processing
 
 %% send_to_net/1 - Process network output stream
 procedure send_to_net(Stream(_)?).
@@ -120,7 +120,7 @@ global_send(T, G, Q) :- known(T?) | '_send'(T?, G?, Q?).
 %% procedure.
 
 %% valid_attestation/4 is a guard, not a wrapped body kernel — it is built into
-%% the runtime guard machinery (seam spec §4 rework note); no GLP wrapper here.
+%% the runtime guard machinery; no GLP wrapper here.
 ''';
 
 /// GLP Engine - the embeddable core for running GLP programs
@@ -216,7 +216,6 @@ class GlpEngine {
     }
     _privilegedRootNames = privilegedRootNames(rootSources);
 
-    registerStandardPredicates(_runtime.systemPredicates);
     registerModuleKernels(_runtime);
     _loadRootSelf();
   }
@@ -328,7 +327,7 @@ class GlpEngine {
     // self.glp's internal call to a same-named procedure. Every procedure of the
     // module is an entry point (§Static Linking), reached by an unqualified
     // alias that shadows the root self.glp for a posted goal (see
-    // combinedProgram). There is no dynamic-dispatch activation (path retired).
+    // combinedProgram).
     //
     // The two internal sources — the madGLP prelude and the root self.glp — are
     // loaded by name rather than from the program hierarchy and cross-call
@@ -342,12 +341,10 @@ class GlpEngine {
     // A source that is not self-contained is not a program at all: def:program
     // (modules.tex) admits a self-contained module or a directory with a
     // self.glp, and a loose source carrying an unresolved M#p is neither. Reject
-    // it here rather than let it fall through to the direct compile path below,
-    // which is what remains of the retired dynamic-dispatch path: that path
-    // emits the retired Distribute instruction and the load appears to succeed,
-    // failing only at run time as "WireFormatException: instruction not in the
-    // wire ISA: Distribute". Composing several modules is by directory program;
-    // composing several apps is by module values posted with run/2.
+    // it here, naming the cause and the remedy, rather than let it fall through
+    // to the direct compile path below, whose code generator refuses an
+    // unresolved M#p without either. Composing several modules is by directory
+    // program; composing several apps is by module values posted with run/2.
     //
     // The test covers source text as well as a real file: the per-isolate
     // loaders (multiagent/agent_runtime.dart, multiagent/isolate_manager.dart)
@@ -664,16 +661,17 @@ class GlpEngine {
   ///
   /// Module export boundaries (spec §4.1: private procedures visible only
   /// within their module and descendants) are enforced separately, at REPL
-  /// entry-point lookup sites, via [_replEntryPointLabels]. Cross-module
-  /// calls go through `Distribute`/`Transmit`, not `prog.labels`, so the
-  /// boundary is not weakened by leaving `labels` unfiltered.
+  /// entry-point lookup sites, via [_replEntryPointLabels]. A cross-module
+  /// call is resolved by the linker, and only to a procedure its qualifier
+  /// exports (TGLP modules.tex, Compilation, fourth step), so the boundary is
+  /// not weakened by leaving `labels` unfiltered.
   BytecodeProgram get combinedProgram {
     // Root self.glp goes LAST so its primitives are the FALLBACK: label
     // indexing keeps the first occurrence, so a loaded module's own definition
     // (e.g. its merge/3) shadows the root's primitive of the same name (manual
     // §19.6: a module's definition shadows every ancestor's; modules.tex
     // §Static Linking step 3). Other loaded programs keep their insertion order.
-    final allOps = <dynamic>[];
+    final allOps = <Op>[];
     for (final entry in _loadedPrograms.entries) {
       if (entry.key == '__root_self__') continue;
       allOps.addAll(entry.value.ops);
@@ -868,14 +866,6 @@ class GlpEngine {
       _runtime.setGoalModule(_goalId, _appModule);
     }
 
-    final module = _findModuleForProcedure(procedureLabel);
-    if (module != null) {
-      final modCtx = _buildModuleContext(module, program);
-      if (modCtx != null) {
-        _runtime.setGoalModuleContext(_goalId, modCtx);
-      }
-    }
-
     final (runner, goalEntry) =
         _runnerForQuery(program, procedureLabel);
     final scheduler = Scheduler(rt: _runtime, runners: {'main': runner});
@@ -992,14 +982,6 @@ class GlpEngine {
       // code) — read back by `self_module`.
       if (_appModule != null) {
         _runtime.setGoalModule(_goalId, _appModule);
-      }
-
-      final module = _findModuleForProcedure(procedureLabel);
-      if (module != null) {
-        final modCtx = _buildModuleContext(module, program);
-        if (modCtx != null) {
-          _runtime.setGoalModuleContext(_goalId, modCtx);
-        }
       }
 
       scheduler.setQueryVarNames(queryVarWriters);
@@ -1175,18 +1157,6 @@ class GlpEngine {
     }
     const isTopLevel = true;
 
-    // Extract imported module names from `imported procedure Module#Proc(...)` declarations.
-    // The order of unique module names determines the import index (1-based),
-    // matching the compiler's ImportTable.addImport() order.
-    final imports = <String>[];
-    final importPattern = RegExp(r'imported\s+procedure\s+(\w+)#');
-    for (final match in importPattern.allMatches(source)) {
-      final moduleName = match.group(1)!;
-      if (!imports.contains(moduleName)) {
-        imports.add(moduleName);
-      }
-    }
-
     // Detect exported procedures from `exported procedure` declarations.
     // Extract functor names, then find matching labels in the compiled program.
     final exportedLabels = <String>{};
@@ -1202,7 +1172,7 @@ class GlpEngine {
     }
     final hasExports = exportedLabels.isNotEmpty;
 
-    return ModuleInfo(name: name, program: program, imports: imports, hasExports: hasExports, exportedLabels: exportedLabels, isTopLevel: isTopLevel);
+    return ModuleInfo(name: name, program: program, hasExports: hasExports, exportedLabels: exportedLabels, isTopLevel: isTopLevel);
   }
 
   String _moduleNameFromFilename(String filename) {
@@ -1242,38 +1212,6 @@ class GlpEngine {
       n = n.substring(0, n.length - 1);
     }
     return n;
-  }
-
-  ModuleInfo? _findModuleForProcedure(String procedureLabel) {
-    for (final module in _loadedModules.values) {
-      if (module.program.labels.containsKey(procedureLabel)) {
-        return module;
-      }
-    }
-    return null;
-  }
-
-  ReplModuleContext? _buildModuleContext(
-      ModuleInfo module, BytecodeProgram combinedProg) {
-    if (module.imports.isEmpty) {
-      return null;
-    }
-
-    final imports = <int, ReplModuleTarget>{};
-    for (int i = 0; i < module.imports.length; i++) {
-      final importName = module.imports[i];
-      final target = _loadedModules[importName];
-      if (target != null) {
-        imports[i + 1] = ReplModuleTarget(target.name, target.program);
-      }
-    }
-
-    return ReplModuleContext(
-      moduleName: module.name,
-      imports: imports,
-      combinedProgram: combinedProg,
-      programKey: 'main',
-    );
   }
 
   void _setupArgument(

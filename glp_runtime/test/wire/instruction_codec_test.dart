@@ -8,7 +8,6 @@ library;
 
 import 'dart:typed_data';
 import 'package:glp_runtime/bytecode/opcodes.dart';
-import 'package:glp_runtime/bytecode/opcodes_v2.dart' as opv2;
 import 'package:glp_runtime/wire/codec.dart';
 import 'package:glp_runtime/wire/instruction_codec.dart';
 import 'package:test/test.dart';
@@ -74,12 +73,12 @@ void main() {
     });
 
     test('head_variable: polarity then varIndex', () {
-      expect(_enc(opv2.HeadVariable(3, isReader: false)), [0x14, 0x00, 0x03]);
-      expect(_enc(opv2.HeadVariable(3, isReader: true)), [0x14, 0x01, 0x03]);
+      expect(_enc(HeadVariable(3, isReader: false)), [0x14, 0x00, 0x03]);
+      expect(_enc(HeadVariable(3, isReader: true)), [0x14, 0x01, 0x03]);
     });
 
     test('get_variable: polarity, varIndex, argSlot', () {
-      expect(_enc(opv2.GetVariable(1, 2, isReader: false)),
+      expect(_enc(GetVariable(1, 2, isReader: false)),
           [0x15, 0x00, 0x01, 0x02]);
     });
 
@@ -106,13 +105,6 @@ void main() {
       expect(_enc(NoReaders(5)), [0x44, 0x05]);
       expect(_enc(GroundEqual(1, 2)), [0x45, 0x01, 0x02]);
     });
-
-    test('retired distribute/transmit are not in the wire ISA', () {
-      expect(() => _enc(Distribute(3, 'm', 2)),
-          throwsA(isA<WireFormatException>()));
-      expect(() => _enc(Transmit(1, 'm', 2)),
-          throwsA(isA<WireFormatException>()));
-    });
   });
 
   group('round-trip (byte idempotence) over every opcode', () {
@@ -128,21 +120,21 @@ void main() {
       HeadNil(0),
       HeadStructure('foo', 3, 2),
       HeadList(1),
-      opv2.HeadVariable(5, isReader: true),
-      opv2.GetVariable(1, 2, isReader: false),
-      opv2.GetValue(2, 3, isReader: true),
-      opv2.UnifyVariable(4, isReader: false),
+      HeadVariable(5, isReader: true),
+      GetVariable(1, 2, isReader: false),
+      GetValue(2, 3, isReader: true),
+      UnifyVariable(4, isReader: false),
       UnifyConstant('hello'),
       UnifyVoid(count: 3),
       UnifyStructure('bar', 2),
       Push(6),
       Pop(6),
-      opv2.PutVariable(1, 0, isReader: true),
+      PutVariable(1, 0, isReader: true),
       PutConstant(3.14, 1),
       PutNil(2),
       PutList(3),
       PutStructure('baz', 1, 0),
-      opv2.SetVariable(7, isReader: false),
+      SetVariable(7, isReader: false),
       SetConstant(true),
       Allocate(4),
       Deallocate(),
@@ -151,7 +143,7 @@ void main() {
       Guard('guard_ok', 1),
       Ground(2),
       Known(3),
-      opv2.Unknown(4),
+      Unknown(4),
       NoReaders(5),
       GroundEqual(1, 2),
       Otherwise(),
@@ -160,8 +152,7 @@ void main() {
     ];
 
     test('corpus covers every wire opcode', () {
-      // 40 wire opcodes: 42 in the original table minus the retired
-      // distribute/transmit (0x52–0x53), now reserved.
+      // 40 wire opcodes, IGLP's opcode table (code-format-fragment.tex).
       expect(corpus.length, 40);
     });
 
@@ -182,8 +173,8 @@ void main() {
       final g = _dec(_enc(Guard('guard_ok', 1))) as Guard;
       expect(g.procedureLabel, 'guard_ok'); // bare name restored from the signature
       expect(g.arity, 1);
-      final hv = _dec(_enc(opv2.HeadVariable(5, isReader: true)))
-          as opv2.HeadVariable;
+      final hv = _dec(_enc(HeadVariable(5, isReader: true)))
+          as HeadVariable;
       expect(hv.varIndex, 5);
       expect(hv.isReader, isTrue);
       final hc = _dec(_enc(HeadConstant(42, 1))) as HeadConstant;

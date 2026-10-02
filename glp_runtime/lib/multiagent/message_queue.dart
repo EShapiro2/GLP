@@ -3,7 +3,8 @@
 /// Manages outbound messages from an agent to other agents.
 /// Messages are queued per destination with FIFO ordering.
 ///
-/// Specification: /docs/ma/madGLP-spec.md Section 6.1
+/// Specification: IGLP Definition madGLP Local State (M_p, the outgoing
+/// messages).
 library;
 
 import 'dart:collection';

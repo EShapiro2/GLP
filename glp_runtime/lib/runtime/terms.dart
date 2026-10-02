@@ -17,7 +17,7 @@ class StructTerm implements Term {
 
 /// Variable reference - holds heap address only
 ///
-/// Per irmaGLP-spec.md Section 3.2.1:
+/// Per IGLP app:in-heap, Variable pairs:
 /// A variable's reader/writer identity is determined by its heap cell tag
 /// (RoTag or WrtTag), NOT by address arithmetic. Use heap.isWriter(addr)
 /// or heap.isReader(addr) to check.
@@ -30,9 +30,9 @@ class VarRef implements Term {
 
   VarRef(this.addr);
 
-  // NOTE: isReader and varId computed properties have been REMOVED per
-  // irmaGLP-spec.md Section 3.2.1. Use heap.isReader(addr) to check type
-  // and raw addr as the identifier.
+  // NOTE: isReader and varId computed properties have been REMOVED: the
+  // cell's tag gives its polarity (IGLP app:in-heap, Variable pairs). Use
+  // heap.isReader(addr) to check type and raw addr as the identifier.
 
   @override
   String toString() => 'Var@$addr';
@@ -58,7 +58,6 @@ class VarRef implements Term {
 ///
 /// SRSW: MutualRefTerm is treated as ground (can be read multiple times)
 ///
-/// Per heap-pointer-architecture-spec.md v3.0:
 /// _currentWriterAddr holds the heap address of the current unbound tail writer.
 class MutualRefTerm implements Term {
   int _currentWriterAddr;  // heap address of current unbound tail writer

@@ -1286,12 +1286,6 @@ LinkResult eliminateDeadCode(LinkResult linked) {
   }
 
   void collectFromGoal(Goal g) {
-    if (g is RemoteGoal) {
-      // A static M' # p was already rewritten to a Goal by _resolveGoal; a
-      // residual RemoteGoal is dynamic — record its target by base name.
-      markBase('${g.goal.functor}/${g.goal.arity}');
-      return;
-    }
     if (g is SpawnGoal) {
       collectFromGoal(g.innerGoal);
       return;
@@ -1369,18 +1363,12 @@ Goal _resolveGoal(Goal goal, String moduleName, Set<String> localSigs,
     {bool keepLocalBare = false}) {
   // RemoteGoal: M' # p(...) → M':p(...)
   if (goal is RemoteGoal) {
-    final targetModule = goal.staticModuleName;
-    if (targetModule != null) {
-      // Static dispatch: replace with renamed goal
-      return Goal(
-        '$targetModule:${goal.goal.functor}',
-        goal.goal.args,
-        goal.line,
-        goal.column,
-      );
-    }
-    // Dynamic dispatch — can't resolve statically, leave as-is
-    return goal;
+    return Goal(
+      '${goal.staticModuleName}:${goal.goal.functor}',
+      goal.goal.args,
+      goal.line,
+      goal.column,
+    );
   }
 
   // SpawnGoal: resolve inner goal, keep wrapper

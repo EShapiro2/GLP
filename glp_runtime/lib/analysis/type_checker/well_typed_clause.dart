@@ -1234,8 +1234,6 @@ WellTypedResult _checkArgumentModes(
 /// Per spec Section 5.1: type checking is local — we look up the imported
 /// declaration in the local TypeEnvironment, not the remote module.
 ///
-/// Dynamic dispatch (variable module) is skipped — can't resolve at compile time.
-///
 /// An imported declaration that names type parameters is checked as a local
 /// call to a parameterised procedure is, and never at its wildcard copy.  TGLP
 /// `modules.tex`, "Cross-module type checking": "Where the imported declaration
@@ -1261,11 +1259,6 @@ WellTypedResult _checkArgumentModes(
   TypeEnvironment env, {
   Map<String, VariableTypeInfo>? callerVarTypes,
 }) {
-  // Dynamic dispatch (variable module) — skip type checking
-  if (remote.isDynamic) {
-    return (WellTypedResult.success({}), null);
-  }
-
   // Flatten nested RemoteGoals to extract full module path and actual goal.
   // Example: ui#actors # render(X?) parses as RemoteGoal(ui, RemoteGoal(actors, render(X?)))
   // We need: modulePath = "ui#actors", innerGoal = render(X?)
@@ -1273,11 +1266,7 @@ WellTypedResult _checkArgumentModes(
   ast.Goal innerGoal = remote;
   while (innerGoal is ast.RemoteGoal) {
     final rg = innerGoal as ast.RemoteGoal;
-    if (rg.isDynamic) {
-      // If any part of the path is dynamic, skip type checking
-      return (WellTypedResult.success({}), null);
-    }
-    pathParts.add(rg.staticModuleName!);
+    pathParts.add(rg.staticModuleName);
     innerGoal = rg.goal;
   }
   final modulePath = pathParts.join('#');

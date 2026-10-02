@@ -5,18 +5,14 @@ import 'dart:typed_data' show Uint8List;
 import 'package:glp_runtime/multiagent/mad_context.dart' show MadContext;
 import 'package:glp_runtime/multiagent/glp_network.dart' show PubKey;
 import 'package:glp_runtime/runtime/runtime.dart';
-import 'package:glp_runtime/runtime/machine_state.dart';
 import 'package:glp_runtime/runtime/terms.dart';
 import 'package:glp_runtime/runtime/commit.dart';
-import 'package:glp_runtime/runtime/cells.dart';
-import 'package:glp_runtime/runtime/system_predicates.dart';
 import 'package:glp_runtime/runtime/body_kernels.dart';
 import 'package:glp_runtime/multiagent/variable_table.dart' show VariableEntry;
 import 'opcodes.dart';
-import 'opcodes_v2.dart' as opv2;
 import 'package:glp_runtime/engine_v2/step_outcome.dart';
 
-enum RunResult { terminated, suspended, yielded, outOfReductions }
+enum RunResult { terminated, suspended, yielded }
 
 /// A runner that executes one goal's [RunnerContext] to a [RunResult]. The
 /// scheduler holds runners behind this interface so a goal can be driven by the
@@ -32,28 +28,6 @@ abstract interface class GoalRunner {
   String? procNameForPc(int pc);
 }
 
-/// Module target for REPL imports
-class ReplModuleTarget {
-  final String name;
-  final BytecodeProgram program;
-  ReplModuleTarget(this.name, this.program);
-}
-
-/// Simple module context for REPL (synchronous goal spawning)
-class ReplModuleContext {
-  final String moduleName;
-  final Map<int, ReplModuleTarget> imports;  // importIndex (1-based) -> target
-  final BytecodeProgram? combinedProgram;    // Combined program for entry point lookup
-  final String programKey;                    // Key for scheduler's runners map
-
-  ReplModuleContext({
-    required this.moduleName,
-    required this.imports,
-    this.combinedProgram,
-    this.programKey = 'main',
-  });
-}
-
 /// Unification mode for structure traversal (WAM-style)
 enum UnifyMode { read, write }
 
@@ -67,10 +41,10 @@ enum GuardResult {
 typedef LabelName = String;
 
 class BytecodeProgram {
-  final List<dynamic> ops;  // Can hold both v1 (Op) and v2 (OpV2) instructions
+  final List<Op> ops;  // The instruction objects (opcodes.dart), labels among them
   final Map<LabelName, int> labels;
   BytecodeProgram(this.ops) : labels = _indexLabels(ops);
-  static Map<LabelName, int> _indexLabels(List<dynamic> ops) {
+  static Map<LabelName, int> _indexLabels(List<Op> ops) {
     final m = <LabelName,int>{};
     for (var i = 0; i < ops.length; i++) {
       final op = ops[i];
@@ -99,22 +73,22 @@ class BytecodeProgram {
   }
 
   String _instructionToString(dynamic op) {
-    // Handle v2 PutVariable (the critical one for debugging)
-    if (op is opv2.PutVariable) {
+    // PutVariable (the critical one for debugging)
+    if (op is PutVariable) {
       final mode = op.isReader ? 'reader' : 'writer';
       return 'PutVariable(X${op.varIndex} → A${op.argSlot}, $mode)';
     }
 
-    // Handle other v2 instructions
-    if (op is opv2.HeadVariable) {
+    // The other variable instructions
+    if (op is HeadVariable) {
       final mode = op.isReader ? 'reader' : 'writer';
       return 'HeadVariable(X${op.varIndex}, $mode)';
     }
-    if (op is opv2.UnifyVariable) {
+    if (op is UnifyVariable) {
       final mode = op.isReader ? 'reader' : 'writer';
       return 'UnifyVariable(X${op.varIndex}, $mode)';
     }
-    if (op is opv2.SetVariable) {
+    if (op is SetVariable) {
       final mode = op.isReader ? 'reader' : 'writer';
       return 'SetVariable(X${op.varIndex}, $mode)';
     }
@@ -300,15 +274,9 @@ class RunnerContext {
   // Guard argument building mode (for pre-commit structure building)
   int? guardArgSlot;  // Target argSlot when building structure for guard argument
 
-  // Reduction budget (null = unlimited)
-  int? reductionBudget;
-  int reductionsUsed = 0;
-
   // Environment frames for permanent variables (Y registers)
   EnvironmentFrame? E;  // Current environment pointer
   int? CP;              // Continuation pointer (return address)
-
-  final void Function(GoalRef)? onActivation; // host log hook
 
   // Track spawned goals for display
   final List<String> spawnedGoals = [];
@@ -354,23 +322,17 @@ class RunnerContext {
   // Custom term formatter for consistent variable naming
   final String Function(Term, {bool markReaders})? termFormatter;
 
-  // Module context for distribute/transmit handlers (Phase 5 integration)
-  final Object? moduleContext;
-
   RunnerContext({
     required this.rt,
     required this.goalId,
     required this.kappa,
     CallEnv? env,
-    this.onActivation,
-    this.reductionBudget,
     this.goalHead,
     this.goalProcName,
     this.onReduction,
     this.showBindings = true,
     this.debugOutput = false,
     this.termFormatter,
-    this.moduleContext,
   }) : env = env ?? CallEnv();
 
   void clearClause() {
@@ -879,21 +841,6 @@ GuardResult _evaluateGuard(String predicateName, List<Object?> args, RunnerConte
       }
       return GuardResult.failure;
 
-    case 'list':
-      // Succeeds if X is a list ([] or [H|T])
-      // Per spec: list(X?) - Succeeds if X is a list
-      if (args.isEmpty) return GuardResult.failure;
-      final val = getValue(args[0]);
-      // Empty list: ConstTerm with 'nil' or null
-      if (val is ConstTerm && (val.value == 'nil' || val.value == null)) {
-        return GuardResult.success;
-      }
-      // Cons cell: StructTerm with functor '.'
-      if (val is StructTerm && val.functor == '.') {
-        return GuardResult.success;
-      }
-      return GuardResult.failure;
-
     case 'module':
       // Succeeds if X is a ModuleTerm (ground module reference)
       if (args.isEmpty) return GuardResult.failure;
@@ -1137,7 +1084,7 @@ GuardResult _evaluateGuard(String predicateName, List<Object?> args, RunnerConte
           ? GuardResult.failure
           : GuardResult.success;
 
-    // Attestation guard (madGLP, seam spec §4).
+    // Attestation guard (madGLP).
     // valid_attestation(Signer?, PkA?, PkB?, Sig?) holds iff Sig is Signer's
     // valid Ed25519 signature over the canonical serialization of attest(PkA,
     // PkB). Inputs are lowercase-hex string constants (keys 64 chars, signature
@@ -1772,7 +1719,6 @@ mixin OpExecutors {
     );
     for (final a in acts) {
       cx.rt.gq.enqueue(a);
-      if (cx.onActivation != null) cx.onActivation!(a);
     }
     cx.sigmaHat.clear();
     cx.argSlots.clear();
@@ -2859,7 +2805,6 @@ mixin OpExecutors {
                   final acts = cx.rt.heap.bindWriterStruct(targetWriterAddr, struct.functor, struct.args);
                   for (final a in acts) {
                     cx.rt.gq.enqueue(a);
-                    if (cx.onActivation != null) cx.onActivation!(a);
                   }
                 }
 
@@ -2890,7 +2835,6 @@ mixin OpExecutors {
                       final acts = cx.rt.heap.bindWriterStruct(currentWriterAddrInt, parentStruct.functor, parentStruct.args);
                       for (final a in acts) {
                         cx.rt.gq.enqueue(a);
-                        if (cx.onActivation != null) cx.onActivation!(a);
                       }
 
                       // Check for more ancestors
@@ -3514,7 +3458,6 @@ mixin OpExecutors {
               final acts = cx.rt.heap.bindWriterStruct(targetWriterAddr, struct.functor, struct.args);
               for (final a in acts) {
                 cx.rt.gq.enqueue(a);
-                if (cx.onActivation != null) cx.onActivation!(a);
               }
 
               // SetWriter-specific: Store VarRef in argSlots ONLY if no parent
@@ -3558,7 +3501,6 @@ mixin OpExecutors {
                   final acts = cx.rt.heap.bindWriterStruct(currentWriterAddrInt, parentStruct.functor, parentStruct.args);
                   for (final a in acts) {
                     cx.rt.gq.enqueue(a);
-                    if (cx.onActivation != null) cx.onActivation!(a);
                   }
 
                   // Check for more ancestors
@@ -3710,7 +3652,6 @@ mixin OpExecutors {
               final acts = cx.rt.heap.bindWriterStruct(targetWriterAddrInt, struct.functor, struct.args);
               for (final a in acts) {
                 cx.rt.gq.enqueue(a);
-                if (cx.onActivation != null) cx.onActivation!(a);
               }
             }
 
@@ -3744,7 +3685,6 @@ mixin OpExecutors {
                   final acts = cx.rt.heap.bindWriterStruct(currentWriterAddrInt, parentStruct.functor, parentStruct.args);
                   for (final a in acts) {
                     cx.rt.gq.enqueue(a);
-                    if (cx.onActivation != null) cx.onActivation!(a);
                   }
 
                   // Check for more ancestors

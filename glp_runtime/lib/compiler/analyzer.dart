@@ -363,7 +363,7 @@ class Analyzer {
     final transformed = _partialEvaluator.transformDefinedGuards(program);
 
     // STEP 3: Auto-generate reduce/2 clauses for metainterpretation
-    // Generated for all files by default, except those with -stdlib. declaration
+    // Generated for all files by default, except those declaring -mode(system)
     final withReduce = generateReduce
         ? _generateReduceClauses(transformed)
         : transformed;
@@ -653,8 +653,6 @@ class Analyzer {
   // Body-only constructs that are NOT valid guards
   static const _invalidInGuardPosition = {
     'true',   // true is body-only, not a guard
-    'false',  // false is body-only
-    'fail',   // fail is body-only
   };
 
   void _analyzeGuard(Guard guard, VariableTable varTable) {
@@ -760,8 +758,8 @@ class Analyzer {
     }
 
     // valid_attestation/4 guard marks all four inputs as grounded: it suspends
-    // until every input is ground, so a holding clause has them all ground
-    // (seam spec §4). Allows multiple reader occurrences of the key/sig inputs.
+    // until every input is ground, so a holding clause has them all ground.
+    // Allows multiple reader occurrences of the key/sig inputs.
     if (guard.predicate == 'valid_attestation' && guard.args.length == 4) {
       for (final arg in guard.args) {
         if (arg is VarTerm) {

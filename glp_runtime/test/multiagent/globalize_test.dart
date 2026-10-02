@@ -1,6 +1,6 @@
 /// Tests for Globalize operation
 ///
-/// Derived from madGLP-spec.md Section 5.1: Globalize
+/// Derived from IGLP Definition Globalize.
 ///
 /// Given agent p, remote agent q, and term T, globalization produces T_p↑
 /// with global names substituted for variables, creates table entries for

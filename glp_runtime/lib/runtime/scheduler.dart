@@ -282,9 +282,6 @@ class Scheduler {
       // Check if this is a query wrapper goal (skip display)
       final isQueryWrapper = procName.startsWith('query__');
 
-      // Get module context if set for this goal
-      final moduleContext = rt.getGoalModuleContext(act.id);
-
       // Create context, with the reduction callback for the trace when the
       // drain is traced.  Whether the goal reduced is the context's [reduced],
       // set at each reduction traced or not: until 2026-10-02 it was the
@@ -300,7 +297,6 @@ class Scheduler {
         goalProcName: procName,
         showBindings: showBindings,
         debugOutput: debugOutput,
-        moduleContext: moduleContext,
         termFormatter: (term, {bool markReaders = true}) => _formatTerm(term, markReaders: markReaders),
         onReduction: debug
             ? (goalId, head, body) {
@@ -360,12 +356,8 @@ class Scheduler {
       cycles++;
     }
 
-    // Determine final status
-    // Per spec §3.4: exclude infrastructure goals (serve goals from auto-activation)
-    // from status determination — their suspension is normal steady state
-    final userSuspendedGoals = Map<int, String Function()>.from(suspendedGoals)
-      ..removeWhere((goalId, _) => rt.infrastructureGoalIds.contains(goalId));
-
+    // Determine final status.
+    //
     // A goal that joined F during this drain makes the run's status failed,
     // without having stopped the drain: the agent kept reducing the rest of its
     // queue, which is what the Reduce transactions require. The outcome of a run
@@ -388,13 +380,13 @@ class Scheduler {
       status = ExecutionStatus.capped;
     } else if (hasFailed) {
       status = ExecutionStatus.failed;
-    } else if (userSuspendedGoals.isNotEmpty) {
+    } else if (suspendedGoals.isNotEmpty) {
       status = ExecutionStatus.suspended;
     } else {
       status = ExecutionStatus.succeeded;
     }
 
-    List<String> suspendedList() => userSuspendedGoals.values.map((g) =>
+    List<String> suspendedList() => suspendedGoals.values.map((g) =>
       g().replaceAllMapped(RegExp(r'(\w+)/\d+\('), (m) => '${m.group(1)}(')
     ).toList();
 
@@ -491,14 +483,6 @@ class Scheduler {
         lastResult.blockingReaders);
   }
 
-  /// Legacy drain for backward compatibility: the ids of the goals it ran,
-  /// in the order it ran them.
-  List<int> drain({int maxCycles = 1000, bool debug = false, bool showBindings = true, bool debugOutput = false}) {
-    final ran = <int>[];
-    drainWithStatus(maxCycles: maxCycles, debug: debug, showBindings: showBindings, debugOutput: debugOutput, goalIds: ran);
-    return ran;
-  }
-
   /// Async drain that waits for pending timers to fire.  [goalIds], when
   /// given, has the id of each goal run appended, as [drainWithStatus]'s.
   ///
@@ -567,13 +551,5 @@ class Scheduler {
         ? ExecutionStatus.failed
         : lastStatus;
     return DrainResult.deferred(totalCycles, status, lastSuspended, lastBlockingReaders);
-  }
-
-  /// Legacy async drain for backward compatibility: the ids of the goals it
-  /// ran, in the order it ran them.
-  Future<List<int>> drainAsync({int maxCycles = 1000, bool debug = false, bool showBindings = true, bool debugOutput = false}) async {
-    final ran = <int>[];
-    await drainAsyncWithStatus(maxCycles: maxCycles, debug: debug, showBindings: showBindings, debugOutput: debugOutput, goalIds: ran);
-    return ran;
   }
 }

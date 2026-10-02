@@ -31,7 +31,8 @@ void main() {
     rt.gq.enqueue(GoalRef(1, image.entryOffsetOf('loop/0')!));
     rt.gq.enqueue(GoalRef(2, image.entryOffsetOf('loop/0')!));
 
-    final ran = sched.drain(maxCycles: 2);
+    final ran = <int>[];
+    sched.drainWithStatus(maxCycles: 2, goalIds: ran);
     expect(ran, [1, 2],
         reason: 'goal 1 yields after its tail budget, then goal 2 runs');
   });

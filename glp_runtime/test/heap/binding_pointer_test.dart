@@ -1,6 +1,7 @@
 /// Tests for binding operations with Pointer Architecture Heap
 ///
-/// For spec: docs/heap-pointer-architecture-spec.md v3.0
+/// For spec: IGLP app:in-heap (Heap: Variables, Dereferencing,
+/// Binding, Suspension)
 ///
 /// Tests the various binding scenarios:
 /// - bindWriter: bind writer to ground value

@@ -1,6 +1,6 @@
 /// Tests for the simulation networking realization.
 ///
-/// Covers docs/ma/networking-seam-spec.md v0.2 Section 3 and the router-level
+/// Covers IGLP app:in-networking (Simulation realisation) and the router-level
 /// parts of Section 7: adjacency cut/restore (§7.2), reverse-order delivery
 /// (§7.3), and trust level (§7.4). The full-stack baseline (§7.1) and plays
 /// (§7.5) are exercised by the isolate test suites.

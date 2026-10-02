@@ -1,6 +1,6 @@
 /// Tests for madGLP error handling
 ///
-/// Derived from madGLP-spec.md Section 12: Invariants (negative cases)
+/// Negative cases of the madGLP machinery.
 ///
 /// These tests verify proper error handling when invariants are violated
 /// or edge cases are encountered.
