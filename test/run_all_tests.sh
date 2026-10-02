@@ -254,16 +254,21 @@ check "runA empty merge" "X2 = \[\]" "$a1"
 
 # --- A2: Append, Reverse, Copy ---
 echo "--- A2: Append, Reverse, Copy ---"
+# Each program runs its goals and is cleared before the next loads: the three
+# each define append/3 or reduce/2, and a later load of a name an earlier load
+# defines is refused (GLP weeding round three, item 14).
 a2=$("$REPL_RUN" <<HEREDOC
 $BOOK/recursive/list_processing/append.glp
-$BOOK/recursive/list_processing/reverse.glp
-$BOOK/recursive/list_processing/copy.glp
 append([a,b], [c,d], Zs).
 append([], [x,y], Zs2).
 append([a,b], [], Zs3).
+:clear
+$BOOK/recursive/list_processing/reverse.glp
 reverse([a,b,c], Ys).
 reverse([], Ys2).
 reverse([x], Ys3).
+:clear
+$BOOK/recursive/list_processing/copy.glp
 copy([a,b,c], Yc).
 copy([], Yc2).
 :quit
@@ -368,24 +373,29 @@ check "OR all zeros" "OutO2 = \[zero, zero\]" "$a8"
 
 # --- A9: Arithmetic (sum, fib, factorial, hanoi, primes, inner_product) ---
 echo "--- A9: Arithmetic programs ---"
+# Each program runs its goals and is cleared before the next loads, as in A2.
 a9=$("$REPL_RUN" <<HEREDOC
 $BOOK/recursive/list_processing/inner_product.glp
-$BOOK/recursive/arithmetic_trees/fibonacci.glp
-$BOOK/recursive/arithmetic_trees/factorial.glp
-$BOOK/recursive/arithmetic_trees/hanoi.glp
-$BOOK/recursive/arithmetic_trees/primes.glp
 inner_product([1,2,3], [4,5,6], Sipf).
+:clear
+$BOOK/recursive/arithmetic_trees/fibonacci.glp
 fib(0, Ff0).
 fib(1, Ff1).
 fib(3, Ff3).
 fib(10, Ff10).
+:clear
+$BOOK/recursive/arithmetic_trees/factorial.glp
 factorial(1, Fac1).
 factorial(2, Fac2).
 factorial(3, Fac3).
 factorial(5, Fac5).
+:clear
+$BOOK/recursive/arithmetic_trees/hanoi.glp
 hanoi(0, a, c, Mh0).
 hanoi(1, a, c, Mh1).
 hanoi(2, a, c, Mh2).
+:clear
+$BOOK/recursive/arithmetic_trees/primes.glp
 primes(20, Ps20).
 primes(10, Ps10).
 :quit
