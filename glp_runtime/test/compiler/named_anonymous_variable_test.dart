@@ -128,6 +128,17 @@ String _show(GlpEngine engine, Term? t) {
 }
 
 void main() {
+  // Written as a writer at a produced head position, where TGLP writes `_?`,
+  // the anonymous variable is refused as `_` is there, and the refusal names
+  // it as written: each occurrence has a fresh name, and a named one keeps
+  // its name in it.
+  test('out(_R) is refused, naming _R', () {
+    final engine =
+        GlpEngine(rootSelfGlpPath: File('../programs/self.glp').absolute.path);
+    expect(() => engine.loadSource('procedure out(Integer).\nout(_R).\n'),
+        throwsA(predicate((Object e) => '$e'.contains('(_R#1?'))));
+  });
+
   for (final MapEntry(key: name, value: (source, goals)) in _cases.entries) {
     group(name, () {
       test('loads', () => _load(source));

@@ -28,10 +28,11 @@ void resetAnonVarCounter() {
 }
 
 /// Generate a unique name for an anonymous variable.
-/// Returns names like "_#1", "_#2", etc.
-String _freshAnonVarName() {
+/// Returns names like "_#1", "_#2", etc.; a named anonymous variable gives its
+/// name as [stem], "_R#3", so that a diagnostic names what was written.
+String _freshAnonVarName([String stem = '_']) {
   _anonVarCounter++;
-  return '_#$_anonVarCounter';
+  return '$stem#$_anonVarCounter';
 }
 
 /// A clause variable as a moded variable.  A named anonymous variable, `_X` or
@@ -41,7 +42,7 @@ String _freshAnonVarName() {
 /// does, and two occurrences of one name are two variables, as codegen
 /// compiles them.  Until 2026-10-02 they were typed as one variable.
 ModedVariable _modedVariable(ast.VarTerm term, Mode mode) => ModedVariable(
-    term.name.startsWith('_') ? _freshAnonVarName() : term.name,
+    term.name.startsWith('_') ? _freshAnonVarName(term.name) : term.name,
     isReader: term.isReader,
     structuralMode: mode);
 
