@@ -57,14 +57,18 @@ const int wireFormatVersion = 2;
 
 /// The instruction-set version this implementation writes in an artefact's
 /// header (IGLP, Code Format appendix, "Format Versioning": new instructions
-/// enter by instruction-set version): the opcode table of the appendix at
-/// 8c1d5e2.  `glp-isa-2`, the version that added opcode 0x54 `spawn_rated`
-/// for sGLP's engine extension, went with the extension (IGLP 8c1d5e2).
-const String glpIsaVersion = 'glp-isa-1';
+/// enter by instruction-set version).  "Removing an operand from an assigned
+/// opcode, or an opcode, is an instruction-set version change after which the
+/// runtime refuses the versions before it; the current version is glp-isa-3"
+/// (IGLP eadadcd).  `glp-isa-2` added opcode 0x54 `spawn_rated` for sGLP's
+/// engine extension, and the opcode went with the extension (IGLP 8c1d5e2).
+const String glpIsaVersion = 'glp-isa-3';
 
 /// The instruction-set versions this runtime loads: its own alone.  "A loader
 /// refuses an artefact whose ... instruction-set version it does not support"
-/// (IGLP, "Format Versioning"), so an artefact at `glp-isa-2` is refused.
+/// (IGLP, "Format Versioning"), and the runtime refuses the versions before
+/// the current one (IGLP eadadcd), so an artefact at `glp-isa-1` or
+/// `glp-isa-2` is refused.
 const Set<String> runtimeIsaVersions = {glpIsaVersion};
 
 /// An exported procedure recorded in the interface table.
