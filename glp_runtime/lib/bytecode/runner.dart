@@ -1,5 +1,5 @@
 import 'dart:async' show Timer;
-import 'dart:collection' show SetBase;
+import 'dart:collection' show Queue, SetBase;
 import 'dart:typed_data' show Uint8List;
 
 import 'package:glp_runtime/multiagent/mad_context.dart' show MadContext;
@@ -468,10 +468,13 @@ Object? _guardReaderOperand(RunnerContext cx, Object? value) {
 }
 
 /// The unbound variables of a guard argument: the unbound readers met, and
-/// whether an unbound writer was ([_termVariables]).
+/// whether an unbound writer was, and a mutual reference, which "holds the
+/// writer of a stream tail, so it is neither ground nor a constant type" (TGLP
+/// typed-glp.tex) ([_termVariables]).
 class _TermVariables {
   final Set<int> readers = <int>{};
   bool writer = false;
+  bool mutualRef = false;
 }
 
 /// The unbound variables of [term], a guard argument --- a clause variable's
@@ -517,9 +520,23 @@ _TermVariables _termVariables(RunnerContext cx, Object? term) {
       if (seenStructs.add(t)) pending.addAll(t.args);
     } else if (t is _TentativeStruct) {
       if (seenStructs.add(t)) pending.addAll(t.args);
+    } else if (t is MutualRefTerm) {
+      out.mutualRef = true;
     }
   }
   return out;
+}
+
+/// ground/1 on [arg], the argument the generic guard call built
+/// ([OpExecutors.execGuard]), decided as the ground instruction (0x41) decides
+/// a variable: an unbound writer or a mutual reference fails it, no readers
+/// substitution grounding either; unbound readers leave it undecided
+/// ([_undecidedMember]); with none, it succeeds.
+GuardResult _groundGuard(RunnerContext cx, Object? arg) {
+  final vars = _termVariables(cx, _equalityOperand(arg));
+  if (vars.writer || vars.mutualRef) return GuardResult.failure;
+  if (vars.readers.isNotEmpty) return _undecidedMember(cx, vars.readers);
+  return GuardResult.success;
 }
 
 /// What a structure slot holds for an occurrence of unknown variable
@@ -712,16 +729,18 @@ Object? _variableAt(RunnerContext cx, int addr) {
 /// clause's.  An occurrence is a reader where its chain passes a reader: one
 /// that does not start at the unbound writer cell it ends at, a writer being
 /// bound to a reader or a term and never to a writer.  The goal is searched
-/// until every one is found.
+/// breadth first, until every one is found: a guard waits on readers the head
+/// matched, near the top of the goal's arguments, whatever lies deeper in
+/// them.
 Set<Object> _readersOfGoal(RunnerContext cx, Set<Object> variables) {
   final heap = cx.rt.heap;
   final found = <Object>{};
   if (variables.isEmpty) return found;
-  final pending = <Object?>[...cx.env.argBySlot.values];
+  final pending = Queue<Object?>.of(cx.env.argBySlot.values);
   final seen = <int>{};
   final seenStructs = Set<StructTerm>.identity();
   while (pending.isNotEmpty && found.length < variables.length) {
-    final t = pending.removeLast();
+    final t = pending.removeFirst();
     if (t is VarRef) {
       final addr = t.addr;
       if (!seen.add(addr)) continue;
@@ -950,8 +969,13 @@ GuardResult _evaluateGuard(String predicateName, List<Object?> args, RunnerConte
 
     // Type guards
     case 'ground':
-      // Already checked for unbound readers in caller
-      return GuardResult.success;
+      // A term built in the guard, decided as ground (0x41) decides a
+      // variable ([_groundGuard]).  Until 2026-10-02 this succeeded on any
+      // term, the caller having looked for unbound readers at its top alone:
+      // ground(h(Z?)) succeeded with Z? unbound, ground(h(W)) with W an
+      // unbound writer, and ground(h(M?)) on a mutual reference.
+      if (args.isEmpty) return GuardResult.failure;
+      return _groundGuard(cx, args[0]);
 
     case 'known':
       // Check if argument is not a variable
@@ -2040,10 +2064,11 @@ mixin OpExecutors {
   }
 
   /// `ground` (0x41): three-valued, on what X? stands for
-  /// ([_guardReaderOperand]).  ground(X?): ground→advance; an unbound
-  /// writer→fail (nextClause); unbound readers and no writer→undecided on
-  /// them ([_guardUndecided]: suspended on the goal's, the next member tried,
-  /// or failed on one the clause alone holds).
+  /// ([_guardReaderOperand]), as the generic guard call decides a term
+  /// ([_groundGuard]).  ground(X?): ground→advance; an unbound writer or a
+  /// mutual reference→fail (nextClause); unbound readers and neither→undecided
+  /// on them ([_guardUndecided]: suspended on the goal's, the next member
+  /// tried, or failed on one the clause alone holds).
   StepOutcome execGround(RunnerContext cx, int varIndex) {
     // An unknown variable ([RunnerContext.unknownVars]) stands for any term,
     // some making the guard succeed and some not: undecided, passed by.
@@ -2051,7 +2076,10 @@ mixin OpExecutors {
     final value = cx.clauseVars[varIndex];
     if (value == null) return StepOutcome.nextClause; // missing var → fail
     final vars = _termVariables(cx, _guardReaderOperand(cx, value));
-    if (vars.writer) return StepOutcome.nextClause; // fail
+    // A mutual reference is not ground (TGLP typed-glp.tex): until 2026-10-02
+    // the instruction passed it by as a constant, and ground(M?) succeeded
+    // where M? =?= M? fails.
+    if (vars.writer || vars.mutualRef) return StepOutcome.nextClause; // fail
     if (vars.readers.isNotEmpty) return _guardUndecided(cx, vars.readers);
     return StepOutcome.advance; // ground → succeed
   }

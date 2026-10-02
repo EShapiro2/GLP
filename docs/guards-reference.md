@@ -116,7 +116,9 @@ copy(X, Y, Z) :- compound(X?) |
 **Semantics**:
 - Success: X? is ground (no unbound variables anywhere)
 - Suspend: X? contains unbound readers of the goal (waiting for values)
-- Fail: X? contains unbound writers, or a reader the clause alone holds (see Overview)
+- Fail: X? contains unbound writers, or a mutual reference, which "holds the writer of a stream tail, so it is neither ground nor a constant type" (TGLP typed-glp.tex), or a reader the clause alone holds (see Overview)
+
+The argument may be a term built in the guard, `ground(h(X?))`, decided as a variable is.  Until 2026-10-02 the ground instruction passed a mutual reference as ground, where `=?=` fails on one, and a term argument succeeded whatever it held.
 
 **Why the argument must be a reader**: Guards use three-valued semantics where unbound variables cause suspension (waiting for a value). If the argument were a writer, an unbound variable would cause immediate failure rather than suspension, defeating the purpose of patient synchronization.
 
