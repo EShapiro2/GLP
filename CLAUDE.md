@@ -24,7 +24,7 @@ Ownership is Coordination Appendix B, `/Grassroots/Coordination/sections/B-code-
 🔴 **A task runs in its owner's worktree, on its owner's branch, carried out by a subagent of Integration Code** (Udi, 2026-09-17).  `claude.md` "Sessions" and "Code" define the arrangement; this section is how it is worked in this repository.  You are that subagent if your brief named a worktree; you are Integration Code if it did not.
 
 - The clone at `/Users/udi/Grassroots/GLP` stays on `main` and is Integration Code's alone.  No subagent edits, commits or runs in it.
-- One worktree per project that owns code, made once by Integration Code: `git -C /Users/udi/Grassroots/GLP worktree add /Users/udi/Grassroots/GLP-worktrees/<project> -b <project>`.  A subagent works only in the one its brief names: `cd /Users/udi/Grassroots/GLP-worktrees/<project>`.
+- One worktree per task, made by Integration Code, named after its branch (`GSG-gap`, `GLP-unsglp`) and made off the branch its task names: `git -C /Users/udi/Grassroots/GLP worktree add /Users/udi/Grassroots/GLP-worktrees/<branch> -b <branch> <base>`.  A subagent works only in the one its brief names: `cd /Users/udi/Grassroots/GLP-worktrees/<branch>`.
 - 🔴 **The subagent reads the owning paper named in its task and codes from it.**  Integration Code does not summarise the paper for it and does not specify: the owner's Cowork wrote the task from the paper, and the paper is the specification.
 - 🔴 **It edits only what its owner owns** (Coordination Appendix B), commits path-limited on the branch --- `git add <files> && git commit -m "<message>" -- <files>` --- and never `git add -A`.  Single-line commit messages.  `git merge main` first, so the branch carries the current gate.
 - 🔴 **It runs the tests its task names, and not the full suite.**  The full suite is run only by Integration Code, on `main`, one run at a time: two suites at once contend on the Dart build lock and neither is a gate.
@@ -52,25 +52,7 @@ Reorganised 2026-09-16 (Udi).  `README.md` carries the directory map; what moved
 
 ## Worktrees
 
-| Project | Worktree | Branch |
-|---|---|---|
-| IGLP | `/Users/udi/Grassroots/GLP-worktrees/IGLP` | `IGLP` |
-| GSG | `/Users/udi/Grassroots/GLP-worktrees/GSG` | `GSG` |
-| Currencies | `/Users/udi/Grassroots/GLP-worktrees/Currencies` | `Currencies` |
-| vGLP | `/Users/udi/Grassroots/GLP-worktrees/vGLP` | `vGLP` |
-| GLP-Networking-API | `/Users/udi/Grassroots/GLP-worktrees/GLP-Networking-API` | `GLP-Networking-API` |
-| GFWC | `/Users/udi/Grassroots/GLP-worktrees/GFWC` | `GFWC` |
-| Legal | `/Users/udi/Grassroots/GLP-worktrees/Legal` | `Legal` |
-| GLP-Spec | `/Users/udi/Grassroots/GLP-worktrees/GLP-Spec` | `GLP-Spec` |
-| IGLP, the harness path fix alone (Udi, 2026-09-18) | `/Users/udi/Grassroots/GLP-worktrees/IGLP-harness` | `IGLP-harness` |
-| IGLP, the default-display rule alone (Udi, 2026-09-18) | `/Users/udi/Grassroots/GLP-worktrees/IGLP-display` | `IGLP-display` |
-| Currencies, the twelve `bonds_v2/mad_boot` repairs alone (Udi, 2026-09-18) | `/Users/udi/Grassroots/GLP-worktrees/Currencies-bonds-boot` | `Currencies-bonds-boot` |
-| IGLP, the two checker faults alone (IGLP, 2026-09-18) | `/Users/udi/Grassroots/GLP-worktrees/IGLP-checker` | `IGLP-checker` |
-| IGLP, `main_sovereign.dart` boots the harness' person (IGLP, 2026-09-18) | `/Users/udi/Grassroots/GLP-worktrees/IGLP-sovereign-boot` | `IGLP-sovereign-boot` |
-| IGLP, the `signature/2` kernel and probe (IGLP, 2026-09-18) | `/Users/udi/Grassroots/GLP-worktrees/IGLP-signature` | `IGLP-signature` |
-| IGLP, its part of the `Key` mirror sweep (IGLP, 2026-09-18) | `/Users/udi/Grassroots/GLP-worktrees/IGLP-key` | `IGLP-key` |
-
-A project not listed has no worktree yet and asks Integration for one.
+The list of worktrees is `git -C /Users/udi/Grassroots/GLP worktree list`.  A worktree is named after its branch, and the branch's task is in `Integration-Code_inbox.md`.
 
 ## Operating GLP
 
