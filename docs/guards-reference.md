@@ -30,6 +30,8 @@ Guards are pure tests with **three-valued semantics** (success/suspend/fail) tha
 
 **A guard over an unknown variable** --- one whose writer occurrence in the head lies under a goal reader the head suspends on, its value not yet given --- is decided by the same decision, the variable standing for any term: it fails the clause where no term makes it succeed, and is otherwise passed by, the clause waiting on the goal reader (GLP #3 Cowork, 2026-10-02 15:31 UTC, B).  With `pu(f(X), Y, yes) :- X? =?= Y? | true.` and `pu(_, _, no) :- otherwise | true.`, `pu(P?, g(W), R)` gives `R = no`, `g(W)` holding a writer; until 2026-10-02 it waited on `P?`.
 
+**A guard's argument may be a term of any depth** --- `Z? =?= g(f(c))`, `X? + Y? * 2 > 3`, `X? =?= [a, b]` --- built as a body goal's argument is, by `put_structure` and the `set_*` and `unify_*` instructions that fill it, a structure nested in it pushing the one it is nested in, into a structure held for the guard call alone, nothing bound on the heap (`runner.dart`, `execPutStructure`, `_completeGuardStructure`).  Until 2026-10-02 a nested structure overwrote the one it was nested in and `set_*` acted in the body alone, so the guard was decided on a term never completed: `t6(Z, Y?) :- Z? =?= g(f(c)) | Y = ok.` failed `t6(g(f(c)), Y)` (GLP #3 Cowork, 2026-10-02 17:12 UTC, S1).
+
 ---
 
 ## No Guard Negation

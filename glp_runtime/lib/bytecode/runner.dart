@@ -1779,6 +1779,35 @@ StructTerm _convertTentativeToStruct(_TentativeStruct tentative, RunnerContext c
   return StructTerm(tentative.functor, termArgs);
 }
 
+/// A guard argument's structure being built (before commit) where its last
+/// position has just been filled: placed where it goes --- in its parent, a
+/// structure built for the same argument and waiting on
+/// [RunnerContext.parentStack], whose next position it fills, or, the
+/// outermost, in the guard's argument slot --- and each parent completed in
+/// turn that it fills.  The structures are terms held for the guard call
+/// alone, nothing bound on the heap, as in the body each nested structure is
+/// placed in its parent ([OpExecutors.execPutStructure]).
+void _completeGuardStructure(RunnerContext cx) {
+  var struct = cx.currentStructure as StructTerm;
+  while (cx.S >= struct.args.length) {
+    if (cx.parentStack.isEmpty) {
+      cx.argSlots[cx.guardArgSlot!] = struct;
+      cx.currentStructure = null;
+      cx.mode = UnifyMode.read;
+      cx.S = 0;
+      cx.guardArgSlot = null;
+      return;
+    }
+    final parent = cx.parentStack.removeLast();
+    final parentStruct = parent.structure as StructTerm;
+    parentStruct.args[parent.s] = struct;
+    cx.currentStructure = parentStruct;
+    cx.S = parent.s + 1;
+    cx.mode = parent.mode;
+    struct = parentStruct;
+  }
+}
+
 /// PC-agnostic opcode semantics, shared by the object loop (`runWithStatus`)
 /// and the direct byte loop (`engine_v2/interp.dart`). Each method holds one
 /// opcode's semantics ONCE and returns a [StepOutcome] the caller maps to its
@@ -1996,6 +2025,19 @@ mixin OpExecutors {
   /// it allocates a writer for the structure (nesting pushes the parent onto
   /// `parentStack`); pre-commit (guard-arg building) it builds without heap
   /// allocation into `guardArgSlot`. Set*/Unify* fill the positions.
+  ///
+  /// A guard's argument is built as a body's is --- a structure nested in it
+  /// pushes its parent, is filled by the set_* and unify_* instructions that
+  /// follow, and is placed in the parent when complete --- into a tentative
+  /// structure: a term held for the guard call alone, nothing bound on the
+  /// heap ([_completeGuardStructure]; IGLP Implementation Notes, "Clause
+  /// try": "The tentative substitution reaches the heap only at commit").  It
+  /// is nested where a guard argument is being built ([RunnerContext
+  /// .guardArgSlot] set), the structure state the head left behind being no
+  /// parent of it.  Until 2026-10-02 a nested structure overwrote its parent,
+  /// and the set_* instructions filling it acted in the body alone, so
+  /// `Z? =?= g(f(c))`, `X? + Y? * 2 > 3` and `X? =?= [a, b]` were decided on
+  /// a term never completed (GLP #3 Cowork, 2026-10-02 17:12 UTC, S1).
   StepOutcome execPutStructure(
       RunnerContext cx, String functor, int arity, int argSlot) {
     if (cx.inBody) {
@@ -2025,7 +2067,18 @@ mixin OpExecutors {
       cx.S = 0;
       cx.mode = UnifyMode.write;
     } else {
-      cx.guardArgSlot = argSlot;
+      if (cx.guardArgSlot != null) {
+        // Nested in the guard argument being built: its parent waits on the
+        // stack for it.
+        cx.parentStack.add(_ParentContext(
+          structure: cx.currentStructure,
+          s: cx.S,
+          mode: cx.mode,
+          writerId: null,
+        ));
+      } else {
+        cx.guardArgSlot = argSlot;
+      }
       cx.currentStructure =
           StructTerm(functor, List<Term>.filled(arity, ConstTerm(null)));
       cx.S = 0;
@@ -2852,11 +2905,7 @@ mixin OpExecutors {
 
         if (cx.S >= struct.args.length) {
           if (cx.guardArgSlot != null) {
-            cx.argSlots[cx.guardArgSlot!] = struct;
-            cx.currentStructure = null;
-            cx.mode = UnifyMode.read;
-            cx.S = 0;
-            cx.guardArgSlot = null;
+            _completeGuardStructure(cx);
           } else {
             final targetWriterId = cx.clauseVars[-1];
             if (targetWriterId is int) {
@@ -3086,13 +3135,10 @@ mixin OpExecutors {
             if (cx.S >= struct.args.length) {
               // Check if we're in guard argument building mode (pre-commit)
               if (cx.guardArgSlot != null) {
-                // Guard argument mode: store structure directly in argSlots
-                // No heap binding needed - just temporary for guard call
-                cx.argSlots[cx.guardArgSlot!] = struct;
-                cx.currentStructure = null;
-                cx.mode = UnifyMode.read;
-                cx.S = 0;
-                cx.guardArgSlot = null;
+                // Guard argument mode: a term for the guard call alone, placed
+                // in its parent or its argument slot, no heap binding
+                // ([_completeGuardStructure]).
+                _completeGuardStructure(cx);
               } else {
                 // BODY phase: bind to heap writer
                 final targetValue = cx.clauseVars[-1];
@@ -3728,8 +3774,17 @@ mixin OpExecutors {
   /// `set_variable` (place a clause var into the BODY structure being built).
   /// Mode-adjusts the existing binding (or allocates fresh), and on completion
   /// binds the target writer, restoring/completing parent structures up the
-  /// stack and storing the result reader into the target arg slot.
+  /// stack and storing the result reader into the target arg slot.  Before
+  /// commit it fills a structure nested in a guard's argument, as
+  /// `unify_variable` fills the argument's own positions there
+  /// ([OpExecutors.execPutStructure]); until 2026-10-02 it did nothing there.
   StepOutcome execSetVariable(RunnerContext cx, int varIndex, bool isReaderMode) {
+        if (!cx.inBody &&
+            cx.guardArgSlot != null &&
+            cx.mode == UnifyMode.write &&
+            cx.currentStructure is StructTerm) {
+          return execUnifyVariable(cx, varIndex, isReaderMode);
+        }
 
         if (cx.inBody && cx.mode == UnifyMode.write && cx.currentStructure is StructTerm) {
           // Check what value exists in clause variables
@@ -3962,7 +4017,16 @@ mixin OpExecutors {
   /// `set_constant` (place a constant into the BODY structure being built).
   /// On completion binds the target writer and restores/completes parent
   /// structures up the stack, storing the result reader into the target slot.
+  /// Before commit it fills a structure nested in a guard's argument, as
+  /// `unify_constant` fills the argument's own positions there
+  /// ([OpExecutors.execPutStructure]); until 2026-10-02 it did nothing there.
   StepOutcome execSetConstant(RunnerContext cx, Object? opValue) {
+        if (!cx.inBody &&
+            cx.guardArgSlot != null &&
+            cx.mode == UnifyMode.write &&
+            cx.currentStructure is StructTerm) {
+          return execUnifyConstant(cx, opValue);
+        }
         if (cx.inBody && cx.mode == UnifyMode.write && cx.currentStructure is StructTerm) {
           // Store ConstTerm in current structure at position S
           final struct = cx.currentStructure as StructTerm;
