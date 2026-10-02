@@ -6,9 +6,14 @@
 %%                     response ~ (wary : 0.7 ; sociable : 0.3) ]
 %%       until 5 years seed 20260927.
 %%
-%% run(N, C, U, Seed) runs it with N agents until C Us from Seed: the whole
-%% population in one machine, as the guard when_idle requires (Section 4, "The
-%% guard").  Its goals:
+%% run(N, C, U, Seed, Hom, Wary) runs it with N agents until C Us from Seed, the
+%% mix given by Hom and Wary, integers 0..100 (sGLP's code task of 2026-10-02
+%% 15:23 UTC, item 1): an agent's first draw K, of 1..100, makes it homophile
+%% for K =< Hom and indifferent otherwise, its second wary for K =< Wary and
+%% sociable otherwise, so 0 is none and 100 is all; the run declaration's mix is
+%% Hom 60 and Wary 70, which programs/sglp/self.glp's social_graph/4 passes.  The
+%% whole population is in one machine, as the guard when_idle requires (Section
+%% 4, "The guard").  Its goals:
 %%
 %%   at each agent a of 1..N, its start goal --- the compiled start/6, with a,
 %%   its two lists in increasing order (agents 1..N/2 are of one sex and the
@@ -28,11 +33,11 @@
 %% population's draws are from a second generator, started at the first value
 %% drawn from the run's seed, split into blocks of 4096 consecutive draws:
 %% agent a's block is the a-th.  Its first two draws pick a's profile in each
-%% dimension by the run declaration's mix (K of 1..100: homophile for K =< 60,
-%% wary for K =< 70), and the seed they leave is its person process's seed, the
-%% start of its own generator.  An agent's draws stay within its block while it
-%% answers fewer than about 4090 questions; past that they run into the next
-%% agent's.
+%% dimension by the mix (K of 1..100: homophile for K =< Hom, wary for K =<
+%% Wary), and the seed they leave is its person process's seed, the start of its
+%% own generator, whatever the mix.  An agent's draws stay within its block
+%% while it answers fewer than about 4090 questions; past that they run into
+%% the next agent's.
 %%
 %% The log's sink: the run's log is the output stream of a mutual reference that
 %% every person process and the monitor append to; the harness hands it to the
@@ -42,9 +47,10 @@
 imported procedure graph#start(Peer?, Peers?, Peers?, Stream(Msg)?, Stream(Msg),
                                MutualRef?).
 
-exported procedure run(Integer?, Number?, Span?, Integer?).
-run(N, C, U, Seed) :-
-    N? >= 2, N? mod 2 =:= 0 |
+exported procedure run(Integer?, Number?, Span?, Integer?, Integer?, Integer?).
+run(N, C, U, Seed, Hom, Wary) :-
+    N? >= 2, N? mod 2 =:= 0,
+    Hom? >= 0, Hom? =< 100, Wary? >= 0, Wary? =< 100 |
     span(U?, Secs),
     H := C? * Secs?,
     allocate_mutual_reference(Mon, Requests),
@@ -55,37 +61,82 @@ run(N, C, U, Seed) :-
     Half := N? // 2,
     tree(1, N?, Net?, Ins, []),
     mwm(Merges?, Net),
-    agents(1, Half?, N?, Base?, Ins?, Merges, Mon?, Log?).
+    agents(1, Half?, N?, Base?, Hom?, Wary?, Ins?, Merges, Mon?, Log?).
 
-%% agents(A?, Half?, N?, Block?, Ins?, Merges, Mon?, Log?): agents A..N, Half
-%% being N/2, Block the start of A's block, Ins their input streams in order,
-%% Merges their output streams for mwm/2.
-procedure agents(Integer?, Integer?, Integer?, Integer?, Stream(Stream(Msg))?,
-                 MwmInput(Msg), MutualRef?, MutualRef?).
-agents(A, H, N, B, [In|Ins], [merge(Out?)|Ms?], Mon, Log) :-
+%% agents(A?, Half?, N?, Block?, Hom?, Wary?, Ins?, Merges, Mon?, Log?): agents
+%% A..N, Half being N/2, Block the start of A's block, Hom and Wary the mix, Ins
+%% their input streams in order, Merges their output streams for mwm/2.
+procedure agents(Integer?, Integer?, Integer?, Integer?, Integer?, Integer?,
+                 Stream(Stream(Msg))?, MwmInput(Msg), MutualRef?, MutualRef?).
+agents(A, H, N, B, Hom, Wary, [In|Ins], [merge(Out?)|Ms?], Mon, Log) :-
     A? =< N? |
     peers(A?, H?, N?, Ss, Os),
     random(B?, 100, K1, B1),
     random(B1?, 100, K2, Seed),
-    approach(K1?, Ap),
-    response(K2?, Re),
+    approach(K1?, Hom?, Ap),
+    response(K2?, Wary?, Re),
     allocate_mutual_reference(Ch, Questions),
     graph # start(A?, Ss?, Os?, In?, Out, Ch?),
     person(A?, profiles(Ap?, Re?), Mon?, Seed?, Log?, Questions?),
     skip(4096, B?, B2),
     A1 := A? + 1,
-    agents(A1?, H?, N?, B2?, Ins?, Ms, Mon?, Log?).
-agents(A, _, N, _, [], [], _, _) :-
+    agents(A1?, H?, N?, B2?, Hom?, Wary?, Ins?, Ms, Mon?, Log?).
+agents(A, _, N, _, _, _, [], [], _, _) :-
     A? > N? | true.
 
-%% The run declaration's mixes: approach ~ (homophile : 0.6 ; indifferent :
-%% 0.4), response ~ (wary : 0.7 ; sociable : 0.3), K drawn from 1..100.
-procedure approach(Integer?, Approach).
-approach(K, homophile) :- K? =< 60 | true.
-approach(K, indifferent) :- K? > 60 | true.
-procedure response(Integer?, Response).
-response(K, wary) :- K? =< 70 | true.
-response(K, sociable) :- K? > 70 | true.
+%% The mixes: approach ~ (homophile : Hom/100 ; indifferent : 1 - Hom/100),
+%% response ~ (wary : Wary/100 ; sociable : 1 - Wary/100), K drawn from 1..100;
+%% the run declaration's are Hom 60 and Wary 70.
+procedure approach(Integer?, Integer?, Approach).
+approach(K, Hom, homophile) :- K? =< Hom? | true.
+approach(K, Hom, indifferent) :- K? > Hom? | true.
+procedure response(Integer?, Integer?, Response).
+response(K, Wary, wary) :- K? =< Wary? | true.
+response(K, Wary, sociable) :- K? > Wary? | true.
+
+%% The population's draw (sGLP's code task of 2026-10-02 15:44 UTC).
+%% draw(N?, Seed?, Hom?, Wary?, D): D is draw(Homophile, Indifferent, Wary,
+%% Sociable), the numbers of agents of 1..N of each profile in each dimension
+%% in the run of N agents from Seed with the mix Hom and Wary, without running
+%% it: each agent's two draws from its block, as agents/10 draws them, decided
+%% by approach/3 and response/3.  run.sh calls it in a REPL session of its own,
+%% so that the run's machine is the same with it as without, and its log the
+%% same.  tally/10 draws as agents/10 does, and a change to the one is a change
+%% to the other.
+exported procedure draw(Integer?, Integer?, Integer?, Integer?, Draw).
+draw(N, Seed, Hom, Wary, D?) :-
+    N? >= 2, N? mod 2 =:= 0,
+    Hom? >= 0, Hom? =< 100, Wary? >= 0, Wary? =< 100 |
+    random(Seed?, 2147483646, Base, _),
+    tally(1, N?, Base?, Hom?, Wary?, 0, 0, 0, 0, D).
+
+%% tally(A?, N?, Block?, Hom?, Wary?, H?, I?, W?, S?, D): agents A..N, Block
+%% the start of A's block, added to H homophile, I indifferent, W wary and S
+%% sociable agents before A.
+procedure tally(Integer?, Integer?, Integer?, Integer?, Integer?, Integer?,
+                Integer?, Integer?, Integer?, Draw).
+tally(A, N, B, Hom, Wary, H, I, W, S, D?) :-
+    A? =< N? |
+    random(B?, 100, K1, B1),
+    random(B1?, 100, K2, _),
+    approach(K1?, Hom?, Ap),
+    response(K2?, Wary?, Re),
+    add_approach(Ap?, H?, I?, H1, I1),
+    add_response(Re?, W?, S?, W1, S1),
+    skip(4096, B?, B2),
+    A1 := A? + 1,
+    tally(A1?, N?, B2?, Hom?, Wary?, H1?, I1?, W1?, S1?, D).
+tally(A, N, _, _, _, H, I, W, S, draw(H?, I?, W?, S?)) :-
+    A? > N? | true.
+
+%% add_approach(Ap?, H?, I?, H1, I1) and add_response(Re?, W?, S?, W1, S1):
+%% one agent of the profile added to its count.
+procedure add_approach(Approach?, Integer?, Integer?, Integer, Integer).
+add_approach(homophile, H, I, H1?, I?) :- H1 := H? + 1.
+add_approach(indifferent, H, I, H?, I1?) :- I1 := I? + 1.
+procedure add_response(Response?, Integer?, Integer?, Integer, Integer).
+add_response(wary, W, S, W1?, S?) :- W1 := W? + 1.
+add_response(sociable, W, S, W?, S1?) :- S1 := S? + 1.
 
 %% skip(J?, S?, S1): S1 is the seed J draws after S.
 procedure skip(Integer?, Integer?, Integer).
