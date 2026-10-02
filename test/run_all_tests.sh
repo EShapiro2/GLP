@@ -525,12 +525,16 @@ check "guard_compare" "succeeds" "$a12"
 check "guard_known_valid" "Ygr = hello" "$a12"
 
 # --- A13: Ground equal, ground not-equal ---
-# =?\= is the negation of =?= (GLP-Spec appendix-guards.tex, 9064202): "=?\=
-# succeeds if both arguments are ground and differ, and suspends where =?=
-# suspends."  Both test_neq (both operands variables) and test_neq_stop (one a
-# constant) take the generic guard call, the ground equality instruction having
-# no negated operand (IGLP, 9b45225).
-# Success needs both arguments ground, so f(a, Zq?) =?\= f(b, Wq?) suspends.
+# GLP-Spec appendix-guards.tex (30e382c): "=?= succeeds if both arguments are
+# ground and equal, fails as soon as the two differ at a pair of ground
+# subterms, and suspends otherwise.  =?\= succeeds where =?= fails, fails where
+# it succeeds, and suspends where it suspends."  test (both operands variables)
+# takes the ground equality instruction; test_ab (a structure operand),
+# test_neq and test_neq_stop take the generic guard call, the ground equality
+# instruction having no negated operand (IGLP, 9b45225).  So
+# f(a, Zq?) =?\= f(b, Wq?) succeeds and f(a, Ze1?) =?= f(b, We1?) fails, a and
+# b differing, and where no pair of ground subterms differs an unbound reader
+# suspends either guard.
 echo "--- A13: Ground equal and ground not-equal ---"
 a13=$("$REPL_RUN" <<HEREDOC
 $TYPED/test_ground_equal.glp
@@ -551,6 +555,12 @@ test_neq_stop(go, Rq7).
 test_neq_stop(stop, Rq8).
 neq_pair(a, b, Rq9).
 neq_only(f(a, Zq?), f(b, Wq?), Rq10).
+neq_only(f(a, Zq2?), f(a, b), Rq11).
+test(f(a, Ze1?), f(b, We1?), Re1).
+test(f(a, Ze2?), f(a, b), Re2).
+test_ab(f(a, b), Re3).
+test_ab(f(Ze4?, c), Re4).
+test_ab(f(Ze5?, b), Re5).
 :quit
 HEREDOC
 2>&1)
@@ -570,7 +580,13 @@ check "=?\\= on differing lists" "Rq6 = not_equal" "$a13"
 check "=?\\= against a constant, differing" "Rq7 = go_on" "$a13"
 check "=?\\= against a constant, equal, fails" "Rq8 = stopped" "$a13"
 check "=?\\= grounds both readers" "Rq9 = pair(a, a, b, b)" "$a13"
-check "=?\\= on non-ground terms suspends" "suspended" "$a13"
+check "=?\\= succeeds at a pair of ground subterms that differ" "Rq10 = not_equal" "$a13"
+check "=?\\= suspends where no pair of ground subterms differs" "Rq11 = <unbound>" "$a13"
+check "=?= fails at a pair of ground subterms that differ" "Re1 = not_equal" "$a13"
+check "=?= suspends where no pair of ground subterms differs" "Re2 = <unbound>" "$a13"
+check "=?= against a structure, equal" "Re3 = equal" "$a13"
+check "=?= against a structure fails at a differing pair beside a reader" "Re4 = not_equal" "$a13"
+check "=?= against a structure suspends on a nested reader" "Re5 = <unbound>" "$a13"
 
 # --- A14: Circular terms ---
 echo "--- A14: Circular term tests ---"
