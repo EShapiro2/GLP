@@ -235,6 +235,16 @@ class RunnerContext {
   String? goalProcName;  // Procedure name for delayed head formatting
   final void Function(int goalId, String head, String body)? onReduction;
 
+  /// Set at each reduction of this run --- its proceed, and each tail call ---
+  /// whether or not the run is traced: the scheduler reads it after the run to
+  /// tell a goal that reduced from one that failed.
+  bool reduced = false;
+
+  /// Whether this run keeps the reduction trace.  The scheduler passes
+  /// [onReduction] and [goalHead] only when it traces, and a goal is formatted
+  /// only for the trace, so a run that is not traced formats no goal.
+  bool get tracing => onReduction != null && goalHead != null;
+
   /// Re-format the goal head from current env state (after σ̂ applied to heap).
   /// This shows bound values instead of unbound variable names.
   String reformatHead() {
@@ -1208,7 +1218,8 @@ mixin OpExecutors {
   /// `proceed` (0x05): the clause body has been launched (or the goal is a
   /// fact); fire the reduction trace callback, then terminate this goal run.
   StepOutcome execProceed(RunnerContext cx) {
-    if (cx.onReduction != null && cx.goalHead != null) {
+    cx.reduced = true;
+    if (cx.tracing) {
       final body = cx.spawnedGoals.isEmpty ? 'true' : cx.spawnedGoals.join(', ');
       cx.onReduction!(cx.goalId, cx.reformatHead(), body);
     }

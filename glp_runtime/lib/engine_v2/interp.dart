@@ -606,17 +606,19 @@ class ByteRunner with OpExecutors implements GoalRunner {
     final newGoalRef = GoalRef(newGoalId, symbol.codeOffset);
     cx.rt.sim?.nameChild(cx.goalId, newGoalId, ordinal);
 
-    // Format the spawned goal for the reduction trace.
-    final args = <String>[];
-    for (var i = 0; i < 10; i++) {
-      final term = newEnv.arg(i);
-      if (term == null) break;
-      args.add(cx.termFormatter != null
-          ? cx.termFormatter!(term)
-          : term.toString());
+    // Format the spawned goal for the reduction trace, where the run keeps one.
+    if (cx.tracing) {
+      final args = <String>[];
+      for (var i = 0; i < 10; i++) {
+        final term = newEnv.arg(i);
+        if (term == null) break;
+        args.add(cx.termFormatter != null
+            ? cx.termFormatter!(term)
+            : term.toString());
+      }
+      cx.spawnedGoals.add(
+          args.isEmpty ? symbol.name : '${symbol.name}(${args.join(', ')})');
     }
-    cx.spawnedGoals.add(
-        args.isEmpty ? symbol.name : '${symbol.name}(${args.join(', ')})');
 
     cx.rt.setGoalEnv(newGoalId, newEnv);
 
@@ -656,15 +658,17 @@ class ByteRunner with OpExecutors implements GoalRunner {
     final newGoalId = cx.rt.nextGoalId++;
     cx.rt.sim?.nameChild(cx.goalId, newGoalId, ordinal ?? cx.spawnOrdinal++);
 
-    final args = <String>[];
-    for (var i = 0; i < 10; i++) {
-      final term = newEnv.arg(i);
-      if (term == null) break;
-      args.add(cx.termFormatter != null
-          ? cx.termFormatter!(term)
-          : term.toString());
+    if (cx.tracing) {
+      final args = <String>[];
+      for (var i = 0; i < 10; i++) {
+        final term = newEnv.arg(i);
+        if (term == null) break;
+        args.add(cx.termFormatter != null
+            ? cx.termFormatter!(term)
+            : term.toString());
+      }
+      cx.spawnedGoals.add(args.isEmpty ? name : '$name(${args.join(', ')})');
     }
-    cx.spawnedGoals.add(args.isEmpty ? name : '$name(${args.join(', ')})');
 
     cx.rt.setGoalEnv(newGoalId, newEnv);
     cx.rt.setGoalProgram(newGoalId, '__root__');
@@ -816,28 +820,32 @@ class ByteRunner with OpExecutors implements GoalRunner {
     }
     final entryByte = symbol.codeOffset;
 
-    // Format the requeued goal for the reduction trace.
-    final args = <String>[];
-    for (var i = 0; i < 10; i++) {
-      final term = cx.argSlots[i];
-      if (term == null) break;
-      args.add(cx.termFormatter != null
-          ? cx.termFormatter!(term)
-          : term.toString());
-    }
-    final newHeadGoalStr =
-        args.isEmpty ? symbol.name : '${symbol.name}(${args.join(', ')})';
-    cx.spawnedGoals.add(newHeadGoalStr);
+    // Format the requeued goal for the reduction trace, where the run keeps
+    // one; the reduction is recorded either way.
+    final tracing = cx.tracing;
+    String? newHeadGoalStr;
+    if (tracing) {
+      final args = <String>[];
+      for (var i = 0; i < 10; i++) {
+        final term = cx.argSlots[i];
+        if (term == null) break;
+        args.add(cx.termFormatter != null
+            ? cx.termFormatter!(term)
+            : term.toString());
+      }
+      newHeadGoalStr =
+          args.isEmpty ? symbol.name : '${symbol.name}(${args.join(', ')})';
+      cx.spawnedGoals.add(newHeadGoalStr);
 
-    if (cx.onReduction != null && cx.goalHead != null) {
       final body = cx.spawnedGoals.join(', ');
       cx.onReduction!(cx.goalId, cx.reformatHead(), body);
     }
+    cx.reduced = true;
 
     cx.env.update(Map<int, Term>.from(cx.argSlots));
     cx.argSlots.clear();
     cx.spawnedGoals.clear();
-    cx.goalHead = newHeadGoalStr;
+    if (tracing) cx.goalHead = newHeadGoalStr;
     // The tail-called goal is the reduction's last body goal, under the same
     // engine id: name it so in an sGLP run.
     cx.rt.sim?.nameChild(cx.goalId, cx.goalId, cx.spawnOrdinal);

@@ -1004,7 +1004,6 @@ class PartialEvaluator {
             // compound(structure) always succeeds
             return concreteArg is StructTerm;
           case 'list':
-          case 'is_list':
             // list([...]) always succeeds
             return concreteArg is ListTerm;
           case 'integer':

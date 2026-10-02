@@ -20,7 +20,6 @@ Rewritten 2026-09-16 with the tree reorganisation; every file named here exists.
 | [`glp-arithmetic-spec.md`](glp-arithmetic-spec.md) | Arithmetic via `:=` |
 | [`glp-io-spec.md`](glp-io-spec.md) | I/O |
 | [`parser-spec.md`](parser-spec.md) | Parser |
-| [`mutual-ref-spec.md`](mutual-ref-spec.md) | Mutual references |
 | [`glp-wire-format-spec.md`](glp-wire-format-spec.md) | Wire format |
 | [`heap/heap-pointer-architecture-spec.md`](heap/heap-pointer-architecture-spec.md) | Heap pointer architecture (FCP-style) |
 | [`ma/madGLP-spec.md`](ma/madGLP-spec.md) | Multi-agent GLP |
