@@ -18,9 +18,9 @@
 %%
 %% This file is the harness of the app, not part of the super-app's contract.
 
-imported procedure home#home(_?, Constant?, AgentToUserStream?, Stream(UserInMsg), _?, _?, _?, _?).
+imported procedure home#home(_?, Key?, AgentToUserStream?, Stream(UserInMsg), _?, _?, _?, _?).
 imported procedure home#med(_?, _?, _?, Integer?).
-imported procedure agent#agent(Constant?, UserInStream?, NetInStream?, OutputsList?).
+imported procedure agent#agent(Key?, UserInStream?, NetInStream?, OutputsList?).
 
 exported procedure superapp_ui(Constant?, Stream(_)?, Stream(_)?).
 superapp_ui(alice, Answers, _) :-

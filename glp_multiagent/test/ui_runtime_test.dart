@@ -40,7 +40,7 @@ void main() {
 
     setUp(() {
       sent = [];
-      r = UiRuntime(manifest: grassrootsManifest, onSend: sent.add);
+      r = UiRuntime(manifest: grassrootsManifest, onSend: (t) => sent.add(formatTerm(t)));
     });
 
     test('befriend card belongs to the Friends panel, keyed by the offerer', () {
@@ -235,7 +235,7 @@ void main() {
 
     setUp(() {
       sent = [];
-      r = UiRuntime(manifest: manifest, onSend: sent.add);
+      r = UiRuntime(manifest: manifest, onSend: (t) => sent.add(formatTerm(t)));
       r.handleLine('card(offer_1, ctx_offer_1(alice), req(1))');
       r.handleLine('card(offer_2, ctx_offer_2(alice), req(2))');
     });

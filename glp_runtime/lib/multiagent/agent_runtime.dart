@@ -1,24 +1,26 @@
-/// AgentRuntime — encapsulates GLP agent runtime for UI integration.
+/// AgentRuntime — the host of one agent for the UI.
 ///
-/// Extracted from glp_multiagent/lib/main.dart.
 /// Uses GlpEngine (the ONE way to run GLP programs) for compilation,
 /// MadContext for madGLP messaging, and Scheduler for execution.
 ///
-/// Boot approach: GlpEngine loads stdlib, enableMadGLP loads madPredicates,
-/// starts agent_init(Id, UserIn, NetIn). Network output goes through
-/// send_to_net → global_send → MadContext. User output goes through
-/// send_to_user → _output/1 kernel → outputCallback.
+/// Boot: GlpEngine loads the root scope, enableMadGLP loads the madGLP
+/// predicates, and the agent's one program is loaded --- a program is one
+/// compiled value (GSG, Section 4, "Compiled programs as values"), and several
+/// sources are not co-loaded into one engine.  The entry goal [goalLabel] is
+/// then posted with the agent's id, the person's input stream where the entry
+/// takes one, and the network input stream.  The person's acts arrive as
+/// ground terms and never as text (GSG, Appendix "The Prototype's Screens",
+/// and Section 3, "What the super-app grants a mini-app", (ib)).  Network
+/// output goes through send_to_net → global_send → MadContext; output to the
+/// person through send_to_user → the _output/1 kernel → [onOutput].
 library;
 
+import 'dart:io';
 import 'dart:typed_data';
 
-import 'package:glp_runtime/compiler/parser.dart';
-import 'package:glp_runtime/compiler/lexer.dart';
-import 'package:glp_runtime/compiler/ast.dart' as ast;
 import 'package:glp_runtime/bytecode/runner.dart';
 import 'package:glp_runtime/engine_v2/interp.dart';
 import 'package:glp_runtime/engine/glp_engine.dart';
-import 'package:glp_runtime/analysis/type_checker/type_ast.dart' show TypeEnvironment;
 import 'package:glp_runtime/runtime/runtime.dart';
 import 'package:glp_runtime/runtime/machine_state.dart';
 import 'package:glp_runtime/runtime/scheduler.dart';
@@ -32,24 +34,19 @@ import 'package:glp_runtime/multiagent/simulation_network.dart';
 /// Agent runtime encapsulating GLP execution, madGLP context, and I/O.
 ///
 /// Usage:
-/// 1. Create with agent ID and GLP source
+/// 1. Create with the agent's id and the path of its one program
 /// 2. Set callbacks: onOutput, onLog, onSendMadMessage
 /// 3. Call initialize() to compile and start
-/// 4. Call injectUserInput(text) for user commands
+/// 4. Call injectUserInput(act) with each of the person's acts, a ground term
 /// 5. Call onMadMessageReceived(from, payload) for network messages
 class AgentRuntime {
   final String agentId;
-  final List<String> glpSources;
 
-  /// Optional real filesystem paths for [glpSources], in the same order. When
-  /// provided, each source is loaded under its real path so the type checker's
-  /// self.glp ancestor-scope discovery resolves shared types defined in a
-  /// program-local self.glp. Without it, sources load under synthetic names
-  /// ('source_$i') and a split self.glp cannot be found.
-  final List<String> glpSourcePaths;
+  /// The path of the one program the agent runs: a directory with a self.glp,
+  /// linked whole, or a self-contained module file (TGLP, def:program).
+  final String program;
 
   final String rootSelfGlpPath;
-  final List<String> friends;
 
   /// Entry-point goal label, e.g. 'agent_init/3', 'agent_init_play/3',
   /// 'parent_init/4', 'child_init/3'.
@@ -58,11 +55,6 @@ class AgentRuntime {
   /// Extra arguments inserted between Id (arg 0) and NetIn (last arg).
   /// For example, ['carol', '4'] for parent_init(alice, carol, 4, NetIn).
   final List<String> extraArgs;
-
-  /// Optional program directory for static linking.
-  /// When set, the engine calls loadProgram(programDir) first, then loads
-  /// glpSources on top (typically just the madGLP boot source).
-  final String? programDir;
 
   // Callbacks set by UI layer
   void Function(String line)? onOutput;
@@ -111,13 +103,10 @@ class AgentRuntime {
 
   AgentRuntime({
     required this.agentId,
-    required this.glpSources,
-    this.glpSourcePaths = const [],
+    required this.program,
     required this.rootSelfGlpPath,
-    this.friends = const [],
     this.goalLabel = 'agent_init/3',
     this.extraArgs = const [],
-    this.programDir,
     this.keyPair,
     NetworkDirectory? directory,
   }) : directory = directory ?? NetworkDirectory();
@@ -195,43 +184,27 @@ class AgentRuntime {
     // Enable madGLP mode (loads madPredicates + creates MadContext)
     engine.enableMadGLP(agentId: agentIdLower);
 
-    // Load program: either program-linked or individual source files.
-    //
-    // Each source is loaded on top of what the engine already holds and is
-    // checked in that scope --- the linked program, the kernels enableMadGLP
-    // loaded, the sources before it, and its own ancestor self.glp chain where
-    // its path is known (IGLP, Implementation Notes, "The scope a boot source
-    // is checked in"). Under a synthetic name alone the check saw the bare root
-    // scope and refused send_to_net/1, which the engine resolves.
-    TypeEnvironment scopeOf(int i) => i < glpSourcePaths.length
-        ? engine.scopeFor(glpSourcePaths[i])
-        : engine.scope;
-    if (programDir != null) {
-      // Program mode: load linked program, then boot source(s) on top.
-      _log('INIT: Loading program from $programDir');
-      engine.loadProgram(programDir!);
-      _log('INIT: Program loaded, loading ${glpSources.length} boot source(s)');
-      for (var i = 0; i < glpSources.length; i++) {
-        engine.loadSource(glpSources[i],
-            filename: 'source_$i', scope: scopeOf(i));
-      }
+    // Load the one program (TGLP, def:program).  A directory with a self.glp
+    // is linked whole.  A self-contained module file is checked in the scope
+    // the engine holds --- the kernels enableMadGLP loaded among it --- with
+    // the file's own ancestor self.glp chain (IGLP, Implementation Notes, "The
+    // scope a boot source is checked in"): the chain alone refuses
+    // send_to_net/1, which the engine resolves.
+    if (FileSystemEntity.isDirectorySync(program)) {
+      _log('INIT: Loading program from $program');
+      engine.loadProgram(program);
       // Diagnostic: check key labels
-      final program = engine.combinedProgram;
+      final linked = engine.combinedProgram;
       final keyLabels = ['parent_init/4', 'child_init/3', 'agent/4', 'ui_mediator/5', 'merge/3', 'tee/3'];
       for (final key in keyLabels) {
-        final pc = program.labels[key];
+        final pc = linked.labels[key];
         _log('INIT: Label $key -> ${pc != null ? "PC=$pc" : "NOT FOUND"}');
       }
-      _log('INIT: Program loaded via program linking ($programDir) + ${glpSources.length} boot source(s), ${program.labels.length} labels');
+      _log('INIT: Program loaded via program linking ($program), ${linked.labels.length} labels');
     } else {
-      // Legacy mode: load each source file separately. Use the real path as
-      // the filename when available so self.glp ancestor-scope discovery works.
-      for (var i = 0; i < glpSources.length; i++) {
-        final name =
-            i < glpSourcePaths.length ? glpSourcePaths[i] : 'source_$i';
-        engine.loadSource(glpSources[i], filename: name, scope: scopeOf(i));
-      }
-      _log('INIT: Program loaded via GlpEngine (stdlib + madPredicates + ${glpSources.length} source files)');
+      engine.loadSource(File(program).readAsStringSync(),
+          filename: program, scope: engine.scopeFor(program));
+      _log('INIT: Program loaded from the module $program');
     }
 
     _runtime = engine.runtime;
@@ -290,8 +263,8 @@ class AgentRuntime {
 
     // Get combined program and create scheduler. Run the agent on the byte
     // interpreter over a CodeImage of the program, entry as a byte offset.
-    final program = engine.combinedProgram;
-    final image = codeImageFromProgram(program);
+    final combined = engine.combinedProgram;
+    final image = codeImageFromProgram(combined);
     final GoalRunner runner = ByteRunner(image);
     _scheduler = Scheduler(rt: _runtime!, runners: {'main': runner},
       traceSink: (line) => _log('GLP: $line'));
@@ -301,7 +274,7 @@ class AgentRuntime {
     // Args are always: [Id, ...extraArgs, NetIn].
     // For backward compatibility, agent_init/3 also gets UserIn before NetIn.
     final entryPC =
-        image != null ? image.entryOffsetOf(goalLabel) : program.labels[goalLabel];
+        image != null ? image.entryOffsetOf(goalLabel) : combined.labels[goalLabel];
     _log('INIT: $goalLabel entryPC=$entryPC');
     if (entryPC == null) {
       _output('[ERROR] Predicate $goalLabel not found');
@@ -343,13 +316,15 @@ class AgentRuntime {
     heap.bindVariable(netWriter, rt.VarRef(netInReader));
     args[argIdx++] = rt.VarRef(netReader);
 
+    // The goal's id is the runtime's next, as every goal's is.
+    final goalId = _runtime!.nextGoalId++;
     final env = CallEnv(args: args);
-    _runtime!.setGoalEnv(1, env);
-    _runtime!.setGoalProgram(1, 'main');
+    _runtime!.setGoalEnv(goalId, env);
+    _runtime!.setGoalProgram(goalId, 'main');
     // The goal carries the program's module value, as an isolate-booted goal
     // and a REPL goal do: self_module/1 and sign/3 read it.
-    _runtime!.setGoalModule(1, engine.appModule);
-    _runtime!.gq.enqueue(GoalRef(1, entryPC));
+    _runtime!.setGoalModule(goalId, engine.appModule);
+    _runtime!.gq.enqueue(GoalRef(goalId, entryPC));
 
     final argsDesc = [agentIdLower, ...extraArgs, 'NetIn'].join(', ');
     final goalName = goalLabel.split('/').first;
@@ -362,35 +337,28 @@ class AgentRuntime {
 
     _initialized = true;
     updateStats();
-
-    final firstFriend = friends.isNotEmpty ? friends.first.toLowerCase() : 'friend';
-    _output('[INIT] Ready! Commands:');
-    _output('  connect($firstFriend)         - cold-call $firstFriend');
-    _output('  send($firstFriend, hello)     - send text message');
-    _output('  decision(yes, $firstFriend, 1) - accept befriend (req ID from output)');
-    _output('  introduce(alice, charlie)     - introduce two friends');
   }
 
   // =========================================================================
   // USER INPUT
   // =========================================================================
 
-  /// Inject user input text.
-  Future<void> injectUserInput(String text) async {
-    _log('USER_INPUT: $text');
-    if (text.isEmpty || _userInput == null || _runtime == null) {
-      _log('USER_INPUT: early return (empty or not initialized)');
+  /// Inject the person's act, a ground term, into the person's input stream.
+  /// The person acts through the user interface, and the acts arrive as
+  /// ground terms, never as text (GSG, Appendix "The Prototype's Screens",
+  /// and Section 3, "What the super-app grants a mini-app", (ib)).
+  Future<void> injectUserInput(rt.Term act) async {
+    final shown = formatTerm(act);
+    _log('USER_INPUT: $shown');
+    if (_userInput == null || _runtime == null) {
+      _log('USER_INPUT: early return (not initialized)');
       return;
     }
 
-    _output('> $text');
+    _output('> $shown');
 
     try {
-      // Parse as GLP term and inject into user input stream
-      final term = parseTerm(text);
-      _log('USER_INPUT: parsed -> ${formatTerm(term)}');
-
-      final activations = _userInput!.inject(term);
+      final activations = _userInput!.inject(act);
       _log('USER_INPUT: ${activations.length} activations');
       for (final goal in activations) {
         _runtime!.gq.enqueue(goal);
@@ -516,55 +484,6 @@ class AgentRuntime {
   // =========================================================================
   // TERM UTILITIES
   // =========================================================================
-
-  rt.Term parseTerm(String termStr) {
-    final parseInput = '_temp_($termStr).';
-    final lexer = Lexer(parseInput);
-    final tokens = lexer.tokenize();
-    final parser = Parser(tokens);
-    final parsedAst = parser.parse();
-
-    if (parsedAst.procedures.isEmpty || parsedAst.procedures[0].clauses.isEmpty) {
-      throw Exception('Could not parse term');
-    }
-
-    final clause = parsedAst.procedures[0].clauses[0];
-    if (clause.head.args.isEmpty) {
-      throw Exception('No term to inject');
-    }
-
-    return _astToRuntimeTerm(clause.head.args[0]);
-  }
-
-  rt.Term _astToRuntimeTerm(ast.Term astTerm) {
-    if (astTerm is ast.ConstTerm) {
-      return rt.ConstTerm(astTerm.value);
-    } else if (astTerm is ast.VarTerm) {
-      final (writerAddr, readerAddr) = _runtime!.heap.allocateVariable();
-      return rt.VarRef(astTerm.isReader ? readerAddr : writerAddr);
-    } else if (astTerm is ast.StructTerm) {
-      final args = astTerm.args.map(_astToRuntimeTerm).toList();
-      return rt.StructTerm(astTerm.functor, args);
-    } else if (astTerm is ast.ListTerm) {
-      return _astListToRuntimeTerm(astTerm);
-    }
-    throw Exception('Unknown AST term type: ${astTerm.runtimeType}');
-  }
-
-  rt.Term _astListToRuntimeTerm(ast.ListTerm list) {
-    if (list.isNil) {
-      return rt.ConstTerm('nil');
-    }
-
-    final head = _astToRuntimeTerm(list.head!);
-    final tail = list.tail is ast.ListTerm
-        ? _astListToRuntimeTerm(list.tail as ast.ListTerm)
-        : list.tail != null
-            ? _astToRuntimeTerm(list.tail!)
-            : rt.ConstTerm('nil');
-
-    return rt.StructTerm('.', [head, tail]);
-  }
 
   rt.Term derefTerm(rt.Term term) {
     if (_runtime == null) return term;

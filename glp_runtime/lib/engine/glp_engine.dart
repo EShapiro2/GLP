@@ -155,8 +155,6 @@ class GlpEngine {
   /// not merged a second time over the program's own modules.
   final Set<String> _scopeSelfGlps = {};
 
-  int _goalId = 1;
-
   /// Max execution cycles (default 10000)
   int maxCycles = 10000;
 
@@ -346,11 +344,12 @@ class GlpEngine {
     // unresolved M#p without either. Composing several modules is by directory
     // program; composing several apps is by module values posted with run/2.
     //
-    // The test covers source text as well as a real file: the per-isolate
-    // loaders (multiagent/agent_runtime.dart, multiagent/isolate_manager.dart)
-    // hand boot sources to `loadSource` under a synthetic name, and a `#` call
-    // in one reached the run-time WireFormatException by exactly the route this
-    // rejection was written to close.
+    // The test covers source text as well as a real file: the multi-isolate
+    // loader (multiagent/isolate_manager.dart) hands a boot source to
+    // `loadSource` under a synthetic name --- as multiagent/agent_runtime.dart
+    // did until it came to load one program and no boot source beside it ---
+    // and a `#` call in one reached the run-time WireFormatException by exactly
+    // the route this rejection was written to close.
     if (!selfContained) {
       throw CompileError(
         "'$name' is not a program: it ${_notSelfContainedCause(module)}. By "
@@ -393,10 +392,13 @@ class GlpEngine {
           .ancestorScope;
     }
 
-    // Type check if program has procedure declarations. (Single-file/REPL
-    // semantics: a parametric procedure inspecting its parameter with no
-    // instantiation is rejected — checkModule's default.)
-    if (module.procDeclarations.isNotEmpty) {
+    // Type check, every source: a module with no procedure declarations is
+    // checked like any other, and a clause of it then defines a procedure with
+    // no declaration, which is an error (TGLP Definition "Typed GLP Program",
+    // condition 1).  Until 2026-10-02 such a module was compiled and run with
+    // no check.  (Single-file/REPL semantics: a parametric procedure inspecting
+    // its parameter with no instantiation is rejected — checkModule's default.)
+    {
       final ast = Program(module.procedures, module.line, module.column);
       final partialEvaluator = PartialEvaluator();
       final transformedAst = partialEvaluator.transformDefinedGuards(ast);
@@ -449,6 +451,7 @@ class GlpEngine {
     } else {
       program = _compiler.compile(source);
     }
+    _refuseRedefinitionByLaterLoad(name, program);
     _loadedPrograms[name] = program;
     if (moduleValue != null) {
       _loadedModuleValues[name] = moduleValue;
@@ -476,6 +479,42 @@ class GlpEngine {
     _extendGoalCheckEnv(module, label: moduleInfo.name);
 
     return true;
+  }
+
+  /// A later load that defines a procedure an earlier load defines is an
+  /// error, not a definition the earlier one shadows: [combinedProgram] keeps
+  /// the first label of each name, so until 2026-10-02 the later load's
+  /// procedure of that name was never run and nothing said so.  A program is
+  /// one compiled module (TGLP modules.tex, Compilation), and a goal names its
+  /// procedure by the plain name an entry point carries, so it is the plain
+  /// names that clash; a renamed `M:p` is a module's own.  The root self.glp
+  /// is no earlier load --- every program may shadow it (TGLP
+  /// appendix-root-self.tex) --- and a load under the name of an earlier one
+  /// replaces it.
+  void _refuseRedefinitionByLaterLoad(String name, BytecodeProgram program) {
+    final internal = RegExp(r'_c\d+$');
+    Set<String> plainProcedures(BytecodeProgram p) => {
+          for (final l in p.labels.keys)
+            if (l.contains('/') &&
+                !l.contains(':') &&
+                !l.endsWith('_end') &&
+                !internal.hasMatch(l))
+              l
+        };
+    final mine = plainProcedures(program);
+    for (final e in _loadedPrograms.entries) {
+      if (e.key == '__root_self__' || e.key == name) continue;
+      final clash = mine.intersection(plainProcedures(e.value));
+      if (clash.isEmpty) continue;
+      throw CompileError(
+        "'$name' defines ${(clash.toList()..sort()).join(', ')}, which the "
+        "earlier load '${e.key}' defines: a later load of a same-named "
+        'procedure is an error, not shadowed by the earlier one',
+        0,
+        0,
+        phase: 'loader',
+      );
+    }
   }
 
   /// The scope the engine holds: the root scope, the root self.glp, every
@@ -528,6 +567,7 @@ class GlpEngine {
       procDeclarations: linked.procDeclarations,
       typeEnv: linked.checkedEnv,
     );
+    _refuseRedefinitionByLaterLoad('__program__', program);
     _loadedPrograms['__program__'] = program;
 
     // The program's module value — its artefact (h(M) + code): the value
@@ -754,9 +794,12 @@ class GlpEngine {
 
   /// Type-check a REPL goal against the loaded program's declarations.
   ///
-  /// Returns null if the goal is well-typed (or cannot be parsed/checked here,
-  /// in which case the execution path reports the parse problem). Returns a
-  /// specific error message if the goal is ill-typed.
+  /// Returns null if the goal is well-typed, and an error message if it is
+  /// ill-typed or does not parse as a clause body: the check is never skipped
+  /// (TGLP modules.tex, Type-Compatible Attestation Between Agents: the initial
+  /// goal "is type-checked before execution as a body goal").  Until
+  /// 2026-10-02 a goal that did not parse here passed the check, and the
+  /// execution path reported what it made of it.
   ///
   /// The goal is parsed as a clause body so single goals and conjunctions are
   /// handled uniformly; a guard (if the user wrote one) is a body goal for
@@ -765,13 +808,17 @@ class GlpEngine {
   String? _checkGoalWellTyped(String trimmed) {
     final List<Goal> atoms;
     try {
-      final parseInput = '_glp_query_ :- $trimmed.';
+      // The head's name is quoted: an unquoted name beginning with `_` is an
+      // anonymous variable (GLP-Spec appendix-guards.tex, "Naming and
+      // admission of body kernels"), and as one the clause did not parse and
+      // the check was passed by.
+      final parseInput = "'_glp_query_' :- $trimmed.";
       final lexer = Lexer(parseInput);
       final tokens = lexer.tokenize();
       final parser = Parser(tokens);
       final parsed = parser.parse();
       if (parsed.procedures.isEmpty || parsed.procedures[0].clauses.isEmpty) {
-        return null;
+        return 'Goal does not parse as a clause body: $trimmed';
       }
       final clause = parsed.procedures[0].clauses[0];
       atoms = [
@@ -779,11 +826,12 @@ class GlpEngine {
           Goal(g.predicate, g.args, g.line, g.column),
         ...?clause.body,
       ];
-    } catch (_) {
-      // A parse error surfaces in the execution path with its own message.
-      return null;
+    } on CompileError catch (e) {
+      return 'Goal does not parse as a clause body: ${e.message}';
     }
-    if (atoms.isEmpty) return null;
+    if (atoms.isEmpty) {
+      return 'Goal does not parse as a clause body: $trimmed';
+    }
 
     final env = _ensureGoalCheckBaseEnv();
     final dfa = tdfa.buildProgramDFA(env);
@@ -857,13 +905,15 @@ class GlpEngine {
           _runtime, args[i], i, argSlots, queryVarWriters, varNameToId);
     }
 
+    // The goal's id is the runtime's next, as every goal's is.
+    final goalId = _runtime.nextGoalId++;
     final env = CallEnv(args: argSlots);
-    _runtime.setGoalEnv(_goalId, env);
-    _runtime.setGoalProgram(_goalId, 'main');
+    _runtime.setGoalEnv(goalId, env);
+    _runtime.setGoalProgram(goalId, 'main');
     // The goal carries its module value — the loaded app's artefact (h(M) +
     // code) — read back by `self_module`.
     if (_appModule != null) {
-      _runtime.setGoalModule(_goalId, _appModule);
+      _runtime.setGoalModule(goalId, _appModule);
     }
 
     final (runner, goalEntry) =
@@ -872,8 +922,7 @@ class GlpEngine {
     scheduler.resetDisplayNumbering();
     scheduler.setQueryVarNames(queryVarWriters);
 
-    _runtime.gq.enqueue(GoalRef(_goalId, goalEntry));
-    _goalId++;
+    _runtime.gq.enqueue(GoalRef(goalId, goalEntry));
 
     final result = await scheduler.drainAsyncWithStatus(
       maxCycles: maxCycles,
@@ -903,7 +952,9 @@ class GlpEngine {
   }
 
   Future<ExecutionResult> _runConjunction(String trimmed) async {
-    final parseInput = '_conj_wrapper_ :- $trimmed.';
+    // Quoted, as in _checkGoalWellTyped: unquoted, the head's name is an
+    // anonymous variable, and the conjunction does not parse.
+    final parseInput = "'_conj_wrapper_' :- $trimmed.";
     final lexer = Lexer(parseInput);
     final tokens = lexer.tokenize();
     final parser = Parser(tokens);
@@ -975,19 +1026,20 @@ class GlpEngine {
             _runtime, args[i], i, argSlots, queryVarWriters, varNameToId);
       }
 
+      // Each conjunct's id is the runtime's next, as every goal's is.
+      final goalId = _runtime.nextGoalId++;
       final env = CallEnv(args: argSlots);
-      _runtime.setGoalEnv(_goalId, env);
-      _runtime.setGoalProgram(_goalId, 'main');
+      _runtime.setGoalEnv(goalId, env);
+      _runtime.setGoalProgram(goalId, 'main');
       // The goal carries its module value — the loaded app's artefact (h(M) +
       // code) — read back by `self_module`.
       if (_appModule != null) {
-        _runtime.setGoalModule(_goalId, _appModule);
+        _runtime.setGoalModule(goalId, _appModule);
       }
 
       scheduler.setQueryVarNames(queryVarWriters);
       final goalEntry = image.entryOffsetOf(procedureLabel)!;
-      _runtime.gq.enqueue(GoalRef(_goalId, goalEntry));
-      _goalId++;
+      _runtime.gq.enqueue(GoalRef(goalId, goalEntry));
     }
 
     // One drain, to quiescence or the cycle limit, over the whole run.  Its
@@ -1128,15 +1180,17 @@ class GlpEngine {
     // Implementation Notes, "The tables"): every procedure declared in the
     // linked program's scope, root scope included, keyed as the compiled module
     // carries it. `find_type/2` reads it from the calling goal's module value.
-    // Built over the same flat module the program was type-checked as. The
-    // table is not part of the type check and its construction can fail on a
-    // program the checker passed, so a failure here leaves the module without a
-    // table (find_type then errs on every key) rather than failing the load.
-    TypeIdentityTables? declaredTypes;
+    // Built over the same flat module the program was type-checked as.  A
+    // table that cannot be built is an error and the module does not load:
+    // until 2026-10-02 the failure was a [TYPE WARNING] and the module loaded
+    // without a table, find_type then erring on every key.
+    final TypeIdentityTables declaredTypes;
     try {
       declaredTypes = linkedTypeIdentityTables(modules, linked);
     } catch (e) {
-      print('[TYPE WARNING] $moduleName: type-identity tables not built: $e');
+      throw CompileError(
+          '$moduleName: the type-identity tables cannot be built: $e', 0, 0,
+          phase: 'typecheck');
     }
     return rt.ModuleTerm(artefact,
         name: moduleName, declaredTypes: declaredTypes, directory: directory);

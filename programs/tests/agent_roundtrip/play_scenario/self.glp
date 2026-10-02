@@ -1,0 +1,10 @@
+%% play_scenario/ — program interface.
+%%
+%% The entry point the Flutter agent runtime posts is exported here and
+%% forwarded to agents.glp.  agent/4 and ui_mediator/5 come from the parent
+%% directory's -expose, not from copies.
+
+imported procedure agents#agent_init(Key?, Stream(UserCmd)?, NetInStream?).
+
+exported procedure agent_init(Key?, Stream(UserCmd)?, NetInStream?).
+agent_init(Id, UserIn, NetIn) :- agents # agent_init(Id?, UserIn?, NetIn?).

@@ -22,7 +22,7 @@ void main() {
 
   setUp(() {
     sent = [];
-    r = UiRuntime(manifest: coinsManifest, onSend: sent.add);
+    r = UiRuntime(manifest: coinsManifest, onSend: (t) => sent.add(formatTerm(t)));
   });
 
   /// The four asks the compiled agent poses as soon as it runs, in the order

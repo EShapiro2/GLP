@@ -53,9 +53,9 @@ w(a, _).
   }
 
   // A goal's arguments are heap variables: a value is passed as the reader
-  // of a writer bound to it.
-  void post(GlpRuntime rt, CodeImage image, int id, String proc,
-      List<Term> args) {
+  // of a writer bound to it.  Its id is the runtime's next, as every goal's is.
+  void post(GlpRuntime rt, CodeImage image, String proc, List<Term> args) {
+    final id = rt.nextGoalId++;
     rt.setGoalEnv(id, CallEnv(args: {for (var i = 0; i < args.length; i++) i: args[i]}));
     rt.gq.enqueue(GoalRef(id, image.entryOffsetOf(proc)!));
   }
@@ -71,7 +71,7 @@ w(a, _).
   test('a drain that is not traced formats no goal', () {
     final trace = <String>[];
     final (sched, rt, image) = setUp(trace);
-    post(rt, image, 1, 'p/2', [unformattable(rt), unformattable(rt)]);
+    post(rt, image, 'p/2', [unformattable(rt), unformattable(rt)]);
 
     final result = sched.drainWithStatus();
     expect(result.status, ExecutionStatus.succeeded);
@@ -84,7 +84,7 @@ w(a, _).
       () {
     final trace = <String>[];
     final (sched, rt, image) = setUp(trace);
-    post(rt, image, 1, 'p/2', [unformattable(rt), unformattable(rt)]);
+    post(rt, image, 'p/2', [unformattable(rt), unformattable(rt)]);
 
     expect(() => sched.drainWithStatus(debug: true), throwsStateError);
   });
@@ -93,7 +93,7 @@ w(a, _).
     final trace = <String>[];
     final (sched, rt, image) = setUp(trace);
     final (_, reader) = rt.heap.allocateVariable();
-    post(rt, image, 1, 'w/2', [VarRef(reader), unformattable(rt)]);
+    post(rt, image, 'w/2', [VarRef(reader), unformattable(rt)]);
 
     final result = sched.drainWithStatus();
     expect(result.status, ExecutionStatus.suspended);
@@ -106,8 +106,8 @@ w(a, _).
       final trace = <String>[];
       final (sched, rt, image) = setUp(trace);
       final (_, reader) = rt.heap.allocateVariable();
-      post(rt, image, 1, 'w/2', [bound(rt, 'b'), bound(rt, 'c')]);
-      post(rt, image, 2, 'w/2', [VarRef(reader), bound(rt, 'c')]);
+      post(rt, image, 'w/2', [bound(rt, 'b'), bound(rt, 'c')]);
+      post(rt, image, 'w/2', [VarRef(reader), bound(rt, 'c')]);
       final result = sched.drainWithStatus(debug: debug);
       expect(result.status, ExecutionStatus.failed);
       return (List.of(rt.failedGoals), result.suspendedGoals);

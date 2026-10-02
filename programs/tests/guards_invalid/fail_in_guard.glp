@@ -1,0 +1,8 @@
+%% Invalid-guard fixture.  fail is defined nowhere, as a guard or in a body:
+%% it is no guard predicate of the catalogue (GLP-Spec appendix-guards.tex) and
+%% no unit clause defines it, so in guard position it is an unknown guard and
+%% the clause is refused at compile time.  The procedure is declared, so it is
+%% the guard that is refused and not the clause of an undeclared procedure
+%% (TGLP Definition "Typed GLP Program").
+procedure bad_guard(_).
+bad_guard(X?) :- fail | X = done.

@@ -47,10 +47,10 @@
 %% certified program is denominated/, which this directory is not (see
 %% self.glp).
 
-imported procedure miniapp#sovereign(Constant?, Channel(Stream(UserAnswer), Stream(Event))?, Stream(Conversation)?, Stream(Integer)?).
-imported procedure person#person(Constant?, Stream(Event)?, Stream(UserAnswer), Stream(Integer), Script?, Agreement?, Stream(ScreenContent)).
+imported procedure miniapp#sovereign(Key?, Channel(Stream(UserAnswer), Stream(Event))?, Stream(Conversation)?, Stream(Integer)?).
+imported procedure person#person(Key?, Stream(Event)?, Stream(UserAnswer), Stream(Integer), Script?, Agreement?, Stream(ScreenContent)).
 
-exported procedure sovereign_ui(Constant?, Stream(UserAnswer)?, Stream(_)?).
+exported procedure sovereign_ui(Key?, Stream(UserAnswer)?, Stream(_)?).
 sovereign_ui(cb, Answers, _) :-
     market(ch(Answers?, Events)),
     send_to_user(Events?).
@@ -81,14 +81,14 @@ market(Ui) :-
 %% logged, so the run is observable in the app's trace while nothing of the
 %% peers' reaches the central bank's own screen: its manifest views the
 %% messages matching msg(agent, person, S) and nothing else.
-procedure peer(Constant?, Script?, Stream(Conversation)?).
+procedure peer(Key?, Script?, Stream(Conversation)?).
 peer(Id, Script, Convs) :-
     ground(Id?) |
     miniapp # sovereign(Id?, ch(Answers?, Events), Convs?, Cal?),
     person # person(Id?, Events?, Answers, Cal, Script?, none, Screen),
     log_peer(Id?, Screen?).
 
-procedure log_peer(Constant?, Stream(ScreenContent)?).
+procedure log_peer(Key?, Stream(ScreenContent)?).
 log_peer(Id, [M|Ms]) :- ground(M?) | send_to_user([tagged(Id?, M?)]), log_peer(Id?, Ms?).
 log_peer(_, []).
 

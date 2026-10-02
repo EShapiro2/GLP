@@ -38,6 +38,7 @@ import 'mad_router.dart';
 import 'manifests/grassapp_ui.dart';
 import 'ui_runtime/agent_surface.dart';
 import 'ui_runtime/runtime.dart';
+import 'ui_runtime/term.dart';
 
 // =============================================================================
 // ROLE / CAST
@@ -245,7 +246,7 @@ class _DuoScreenState extends State<DuoScreen> {
     final human = AgentState(_cast.human);
     human.ui = UiRuntime(
       manifest: grassrootsManifest,
-      onSend: (text) => human.commandPort?.send(UserInput(text)),
+      onSend: (cmd) => human.commandPort?.send(UserInput(cmd)),
     );
     human.ui!.onChange = () => setState(() {});
     _agents[_cast.human] = human;
@@ -265,10 +266,8 @@ class _DuoScreenState extends State<DuoScreen> {
         agentIsolateEntry,
         InitAgent(
           agentId: _cast.human,
-          glpSources: const [],
-          programDir: programDir,
+          program: programDir,
           rootSelfGlpPath: glp.rootSelfGlp,
-          friends: const [],
           replyPort: _replyPort.sendPort,
           goalLabel: 'agent_init/3',
           deferStart: true,
@@ -278,10 +277,8 @@ class _DuoScreenState extends State<DuoScreen> {
           agentIsolateEntry,
           InitAgent(
             agentId: entry.key,
-            glpSources: const [],
-            programDir: programDir,
+            program: programDir,
             rootSelfGlpPath: glp.rootSelfGlp,
-            friends: const [],
             replyPort: _replyPort.sendPort,
             goalLabel: 'actor_init/3',
             extraArgs: [entry.value],
@@ -310,7 +307,7 @@ class _DuoScreenState extends State<DuoScreen> {
           agent.commandPort?.send(StartAgent());
         }
         final human = _agents[_cast.human];
-        human?.commandPort?.send(UserInput('balance'));
+        human?.commandPort?.send(UserInput(const GAtom('balance')));
       }
       setState(() {});
     } else if (msg is AgentOutput) {

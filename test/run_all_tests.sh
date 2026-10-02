@@ -254,16 +254,21 @@ check "runA empty merge" "X2 = \[\]" "$a1"
 
 # --- A2: Append, Reverse, Copy ---
 echo "--- A2: Append, Reverse, Copy ---"
+# Each program runs its goals and is cleared before the next loads: the three
+# each define append/3 or reduce/2, and a later load of a name an earlier load
+# defines is refused (GLP weeding round three, item 14).
 a2=$("$REPL_RUN" <<HEREDOC
 $BOOK/recursive/list_processing/append.glp
-$BOOK/recursive/list_processing/reverse.glp
-$BOOK/recursive/list_processing/copy.glp
 append([a,b], [c,d], Zs).
 append([], [x,y], Zs2).
 append([a,b], [], Zs3).
+:clear
+$BOOK/recursive/list_processing/reverse.glp
 reverse([a,b,c], Ys).
 reverse([], Ys2).
 reverse([x], Ys3).
+:clear
+$BOOK/recursive/list_processing/copy.glp
 copy([a,b,c], Yc).
 copy([], Yc2).
 :quit
@@ -368,24 +373,29 @@ check "OR all zeros" "OutO2 = \[zero, zero\]" "$a8"
 
 # --- A9: Arithmetic (sum, fib, factorial, hanoi, primes, inner_product) ---
 echo "--- A9: Arithmetic programs ---"
+# Each program runs its goals and is cleared before the next loads, as in A2.
 a9=$("$REPL_RUN" <<HEREDOC
 $BOOK/recursive/list_processing/inner_product.glp
-$BOOK/recursive/arithmetic_trees/fibonacci.glp
-$BOOK/recursive/arithmetic_trees/factorial.glp
-$BOOK/recursive/arithmetic_trees/hanoi.glp
-$BOOK/recursive/arithmetic_trees/primes.glp
 inner_product([1,2,3], [4,5,6], Sipf).
+:clear
+$BOOK/recursive/arithmetic_trees/fibonacci.glp
 fib(0, Ff0).
 fib(1, Ff1).
 fib(3, Ff3).
 fib(10, Ff10).
+:clear
+$BOOK/recursive/arithmetic_trees/factorial.glp
 factorial(1, Fac1).
 factorial(2, Fac2).
 factorial(3, Fac3).
 factorial(5, Fac5).
+:clear
+$BOOK/recursive/arithmetic_trees/hanoi.glp
 hanoi(0, a, c, Mh0).
 hanoi(1, a, c, Mh1).
 hanoi(2, a, c, Mh2).
+:clear
+$BOOK/recursive/arithmetic_trees/primes.glp
 primes(20, Ps20).
 primes(10, Ps10).
 :quit
@@ -527,12 +537,20 @@ check "guard_compare" "succeeds" "$a12"
 check "guard_known_valid" "Ygr = hello" "$a12"
 
 # --- A13: Ground equal, ground not-equal ---
-# =?\= is the negation of =?= (GLP-Spec appendix-guards.tex, 9064202): "=?\=
-# succeeds if both arguments are ground and differ, and suspends where =?=
-# suspends."  Both test_neq (both operands variables) and test_neq_stop (one a
-# constant) take the generic guard call, the ground equality instruction having
-# no negated operand (IGLP, 9b45225).
-# Success needs both arguments ground, so f(a, Zq?) =?\= f(b, Wq?) suspends.
+# GLP-Spec appendix-guards.tex (bbff21d): "=?= succeeds if both arguments are
+# ground and equal.  =?\= succeeds if no readers substitution makes them ground
+# and equal."  Each suspends and fails by glp.tex, Guards: "A guard suspends if
+# it does not succeed but some instance of it under a readers substitution
+# would succeed.  A guard fails if no such instance exists."  test (both
+# operands variables) takes the ground equality instruction; test_ab (a
+# structure operand), test_neq and test_neq_stop take the generic guard call,
+# the ground equality instruction having no negated operand (IGLP, 9b45225).
+# So where the two clash, or an unbound writer stands in either, =?= fails and
+# =?\= succeeds, whatever readers stand elsewhere --- f(a, Zq?) =?\= f(b, Wq?),
+# f(Wq3) =?\= f(c), f(Xq4?) =?\= g(Yq4?), [a | Tq6?] =?\= [] --- and where a
+# readers substitution makes them ground and equal but they are not both
+# ground, each suspends: f(Xq7?) =?\= f(Yq7?) (GLP #3 Cowork, 2026-10-02 13:09
+# UTC).
 echo "--- A13: Ground equal and ground not-equal ---"
 a13=$("$REPL_RUN" <<HEREDOC
 $TYPED/test_ground_equal.glp
@@ -551,8 +569,21 @@ test_neq([1,2,3], [1,2,3], Rq5).
 test_neq([1,2], [1,3], Rq6).
 test_neq_stop(go, Rq7).
 test_neq_stop(stop, Rq8).
-neq_pair(a, b, Rq9).
 neq_only(f(a, Zq?), f(b, Wq?), Rq10).
+neq_only(f(a, Zq2?), f(a, b), Rq11).
+test(f(a, Ze1?), f(b, We1?), Re1).
+test(f(a, Ze2?), f(a, b), Re2).
+test_ab(f(a, b), Re3).
+test_ab(f(Ze4?, c), Re4).
+test_ab(f(Ze5?, b), Re5).
+test(f(We6), f(c), Re6).
+test_neq(f(Wq3), f(c), Rq12).
+test(f(Xe7?), g(Ye7?), Re7).
+test_neq(f(Xq4?), g(Yq4?), Rq13).
+test([a|Te8?], [], Re8).
+test_neq([a|Tq6?], [], Rq14).
+neq_only(f(Xq7?), f(Yq7?), Rq15).
+test_ab(f(a, We9), Re9).
 :quit
 HEREDOC
 2>&1)
@@ -571,8 +602,21 @@ check "=?\\= on equal lists fails" "Rq5 = equal" "$a13"
 check "=?\\= on differing lists" "Rq6 = not_equal" "$a13"
 check "=?\\= against a constant, differing" "Rq7 = go_on" "$a13"
 check "=?\\= against a constant, equal, fails" "Rq8 = stopped" "$a13"
-check "=?\\= grounds both readers" "Rq9 = pair(a, a, b, b)" "$a13"
-check "=?\\= on non-ground terms suspends" "suspended" "$a13"
+check "=?\\= succeeds at two constants that differ, readers beside them" "Rq10 = not_equal" "$a13"
+check "=?\\= suspends where a readers substitution makes them ground and equal" "Rq11 = <unbound>" "$a13"
+check "=?= fails at two constants that differ, readers beside them" "Re1 = not_equal" "$a13"
+check "=?= suspends where a readers substitution makes them ground and equal" "Re2 = <unbound>" "$a13"
+check "=?= against a structure, equal" "Re3 = equal" "$a13"
+check "=?= against a structure fails at two constants that differ beside a reader" "Re4 = not_equal" "$a13"
+check "=?= against a structure suspends on a nested reader" "Re5 = <unbound>" "$a13"
+check "=?= fails on an unbound writer, which no readers substitution grounds" "Re6 = not_equal" "$a13"
+check "=?\\= succeeds on an unbound writer" "Rq12 = not_equal" "$a13"
+check "=?= fails at a clash of functor, neither side ground" "Re7 = not_equal" "$a13"
+check "=?\\= succeeds at a clash of functor, neither side ground" "Rq13 = not_equal" "$a13"
+check "=?= fails on a list cell with an unbound tail against the empty list" "Re8 = not_equal" "$a13"
+check "=?\\= succeeds on a list cell with an unbound tail against the empty list" "Rq14 = not_equal" "$a13"
+check "=?\\= suspends on two readers in structures that agree" "Rq15 = <unbound>" "$a13"
+check "=?= against a structure fails on an unbound writer" "Re9 = not_equal" "$a13"
 
 # --- A14: Circular terms ---
 echo "--- A14: Circular term tests ---"
@@ -1016,6 +1060,13 @@ med(charlie, ch([msg(agent, _user, befriend_intro(bob, alice, X?)) | Xs], Y), ch
 :quit
 HEREDOC
 2>&1)
+# The absence of req(2) means something only if the fixture loaded: refused, it
+# printed no req(2) either, a false pass.
+check "reader-to-reader fixture loads" "Loaded: .*test_befriend_intro_bug.glp" "$a27"
+# Nor if the goal check refused the goal: on main and on gap it does ("Undefined
+# procedure: med/5"; with med/5 declared, a mode mismatch at X?), so the goal has
+# not run since the goal check came in.  Red until GLP's goal is well-typed.
+check_not "reader-to-reader goal is accepted" "Goal is not well-typed" "$a27"
 check_not "reader-to-reader no reduction" "req(2)" "$a27"
 
 # --- A29: Struct terms inside lists in goal arguments (Issue 0b regression) ---
@@ -1658,6 +1709,12 @@ SRSW_FILES=(
     # known/1 does not imply groundness, so it licenses no multiple occurrence
     # (glp.tex Remark "Guards and SRSW").
     "$GLP_DIR/programs/tests/srsw/known_not_ground.glp"
+    # Nor does =?\=, Ground "no" (GLP-Spec appendix-guards.tex, bbff21d): A13's
+    # neq_pair, which read each argument twice after it, until 2026-10-02.
+    "$GLP_DIR/programs/tests/srsw/neq_not_ground.glp"
+    # And no guard licenses a repeated writer: "X occurs once, as ever" (glp.tex
+    # Remark "Guards and SRSW", bbff21d), integer/1 here.
+    "$GLP_DIR/programs/tests/srsw/ground_writer_once.glp"
 )
 
 for f in "${SRSW_FILES[@]}"; do
@@ -1679,6 +1736,17 @@ check "SO: a writer occurring twice" "Writer variable \"X\" occurs 2 times" "$sr
 check "SO: a reader occurring twice" "Reader variable \"Y?\" occurs 2 times" "$srsw_multi"
 check "pairing: a variable with no reader" "Variable \"Z\" has no reader" "$srsw_multi"
 check "pairing: a variable with no writer" "Variable \"Y\" has no writer" "$srsw_multi"
+
+# =?\= grounds nothing (GLP-Spec appendix-guards.tex, bbff21d): a reader twice
+# after it is refused, and the diagnostic names it.
+srsw_neq=$(echo -e "$GLP_DIR/programs/tests/srsw/neq_not_ground.glp\n:quit" | "$REPL_RUN" 2>&1)
+check "=?\\= grounds nothing: a reader twice after it is refused" "Reader variable \"X?\" occurs 2 times" "$srsw_neq"
+
+# No guard licenses a repeated writer (glp.tex Remark "Guards and SRSW",
+# bbff21d): the writer twice under integer/1 is refused, and the diagnostic
+# says so.
+srsw_wonce=$(echo -e "$GLP_DIR/programs/tests/srsw/ground_writer_once.glp\n:quit" | "$REPL_RUN" 2>&1)
+check "a writer twice under a groundness-implying guard is refused" "Writer variable \"X\" occurs 2 times; a writer occurs once, whatever the guards" "$srsw_wonce"
 
 # merge_with_reader: the one entry of this section that is rejected by the SRSW
 # pass rather than by the type checker, so it is the only test that speaks for
@@ -1716,6 +1784,11 @@ echo ""
 GUARD_NEG_DIR="$GLP_DIR/programs/tests/guards_invalid"
 guard_cases=(
     "true_in_guard.glp|\"true\" is not a guard"
+    # false and fail are defined nowhere, as a guard or in a body: each is an
+    # unknown guard predicate, refused at compile time, the type checker
+    # finding no declaration of it (weeding round three, item 11).
+    "false_in_guard.glp|Undefined procedure: false/0"
+    "fail_in_guard.glp|Undefined procedure: fail/0"
     # GLP has no guard negation: the parser refuses ~d(X?) as a syntax error.
     "negated_defined_guard.glp|[syntax] \"~\" is not GLP syntax"
 )
@@ -2411,7 +2484,10 @@ HEREDOC
 2>&1)
 
 check "Currencies fplay10 succeeds" "succeeds" "$n_fp10"
-check "Currencies fplay10 escrow" "escrow" "$n_fp10"
+# The escrow's release as the play prints it on main 76cf9059: a bare "escrow"
+# also matched the load's own refusal text (inject_escrow_dep_result), a false
+# pass while bonds_v2 was refused (Currencies #7 Cowork, 2026-10-02 13:40 UTC).
+check "Currencies fplay10 escrow" "notify(escrow_released(alice))" "$n_fp10"
 
 n_fp11=$("$REPL_RUN" <<HEREDOC
 $BONDS_V2

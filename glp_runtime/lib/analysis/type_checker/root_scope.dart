@@ -2,7 +2,8 @@
 //
 // Predefined type and procedure definitions for GLP.
 // These are prepended to every module before parsing.
-// Redefinition of predefined types/procedures is an error.
+// A module may redefine any of them: the root self.glp is shadowable like any
+// other scope (TGLP appendix-root-self.tex).
 //
 // Specification: docs/modules/type-environment.md
 // Paper Reference: Section 8 (Root scope)
@@ -12,9 +13,12 @@
 /// live in programs/self.glp and are loaded via the scope chain.
 const String rootScopeTypes = '';
 
-/// Names of predefined types that cannot be redefined by user modules
-/// Note: Only fundamental primitive types are protected.
-/// Library-level types (DiffList, Channel) can be redefined by user programs.
+/// Names of the primitive types and the root self.glp's basic types.  A union
+/// of them is a type definition and not a union alias, and a union alias keeps
+/// a reference to one as it stands (type_environment_builder.dart,
+/// _isUnionAlias and _resolveAliases).  Until 2026-10-02 they were also names a
+/// module checked with no ancestor scope could not redefine; the root is
+/// shadowable like any other scope (TGLP appendix-root-self.tex).
 const Set<String> predefinedTypeNames = {
   'Integer',  // Primitive builtin
   'Real',     // Primitive builtin
@@ -26,50 +30,6 @@ const Set<String> predefinedTypeNames = {
   'Exp',      // Root self.glp union: arithmetic expressions
   'Stream',   // Fundamental collection type
   'OpenStream', // Non-empty stream
-  // Note: DiffList, Channel are NOT protected - they are library-level
-};
-
-/// Names of predefined procedures that cannot be redefined by user modules
-/// Note: Only truly fundamental guards/operations are protected.
-/// Library-level operations (channels, diff-lists) can be redefined by user programs.
-const Set<String> predefinedProcedureNames = {
-  // Type guards (fundamental - implemented by runtime)
-  'integer',
-  'number',
-  'string',
-  'constant',
-  'compound',
-  'list',
-  'module',
-  // Groundness guards (fundamental - implemented by runtime)
-  'ground',
-  'known',
-  'unknown',
-  'no_readers',
-  // Attestation guard (madGLP)
-  'valid_attestation',
-  // Time guards (fundamental - implemented by runtime)
-  'wait',
-  'wait_until',
-  'when_idle',
-  // Comparison guards (fundamental - implemented by runtime)
-  '<',
-  '>',
-  '=<',
-  '>=',
-  '=:=',
-  '=\\=',
-  // Lexicographic comparison of ground constants
-  '@<',
-  // Equality (fundamental)
-  '=?=',
-  // Ground inequality, the negation of =?= (GLP-Spec appendix-guards.tex, 9064202)
-  '=?\\=',
-  // Univ operations (fundamental)
-  '=..',
-  '..=',
-  // Note: dl_append, dl_to_list, new_channel, send, receive
-  // are NOT protected - they are library-level and can be redefined
 };
 
 /// Built-in goals that don't need type checking
@@ -82,9 +42,8 @@ const Set<String> builtinGoals = {
   ':=',
 };
 
-/// True builtins: procedures implemented in Dart runtime with NO GLP clauses.
-/// These are distinct from predefinedProcedureNames which includes procedures
-/// with root scope clauses (like new_channel).
+/// True builtins: procedures implemented in Dart runtime with NO GLP clauses,
+/// unlike the root self.glp's procedures defined by clauses (new_channel, send).
 /// Keyed by "name/arity" for precise matching.
 const Set<String> builtinProcedures = {
   // This set is what the runtime implements, in Dart, and nothing else. It does
@@ -145,9 +104,10 @@ const Set<String> builtinProcedures = {
   // The signatures are GLP-Spec's `appendix-guards.tex` body-kernel table, which
   // is the authority. Its Network group's four — `'_peer_address'`,
   // `'_punch_udp'`, `'_place_declare'` and `'_place_remove'` — were registered
-  // by `9d5e0dd9` and are listed here as of 2026-08-03; the comment that said
-  // the table was ahead of the code was true when written and stale by the time
-  // it was read. Until they were listed, root `programs/self.glp` could not
+  // by `9d5e0dd9` and are listed here as of 2026-08-03, and the fifth,
+  // `'_trust_declare'`, in weeding round three (B4, 2026-10-02); the comment
+  // that said the table was ahead of the code was true when written and stale
+  // by the time it was read. Until they were listed, root `programs/self.glp` could not
   // declare them at all: parser.dart admits a clause-less root declaration only
   // for a name in this set, so declaring them there took every load in the tree
   // with it. The declarations are GLP-Spec's and follow these entries.
@@ -197,6 +157,7 @@ const Set<String> builtinProcedures = {
   '_punch_udp/1',
   '_place_declare/3',
   '_place_remove/1',
+  '_trust_declare/2',
   // Signature
   '_self_key/1',
   '_sign/3',
@@ -217,9 +178,6 @@ bool isPredefinedType(String name) => predefinedTypeNames.contains(name);
 
 /// Check if a goal name is a builtin that doesn't need type checking
 bool isBuiltinGoal(String name) => builtinGoals.contains(name);
-
-/// Check if a procedure name/arity is predefined
-bool isPredefinedProcedure(String name) => predefinedProcedureNames.contains(name);
 
 /// Check if a procedure (name/arity) is a true builtin (implemented in Dart, no GLP clauses)
 bool isBuiltinProcedure(String nameArity) => builtinProcedures.contains(nameArity);

@@ -1,0 +1,9 @@
+%% Negative SRSW fixture.  glp.tex Remark "Guards and SRSW" (GLP-Spec
+%% bbff21d): "if the success of a guard implies that X? is bound to a ground
+%% term, then X? may occur multiple times in the clause; X occurs once, as
+%% ever."  So the writer X in the head and again in the body is refused under
+%% integer/1, a groundness-implying guard; until 2026-10-02 the guard licensed
+%% it.  Its positive counterpart, X? twice under the same guard, is
+%% srsw/ground_guard_multi_ok.glp.
+procedure w(Integer?, _).
+w(X, Y?) :- integer(X?) | Y = s(X).

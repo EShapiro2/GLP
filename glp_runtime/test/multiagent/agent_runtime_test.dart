@@ -13,10 +13,11 @@ import 'package:glp_runtime/multiagent/glp_network.dart';
 import 'package:glp_runtime/multiagent/simulation_network.dart';
 
 /// A minimal 2-agent play: agent `a` cold-calls `b` with `ping`; `b` receives
-/// it on its network input and emits `got(ping)` to its user output.
+/// it on its network input and emits `got(ping)` to its user output.  Each
+/// agent runs it as its one program, a module file (TGLP, def:program); it
+/// declares no `-mode(system)`, which only the primitive layer may
+/// (TGLP, app:system-mode) and which it never needed.
 const String _play = r'''
--mode(system).
-
 procedure a_init(_?, _?).
 a_init(_, _) :- send_to_net([msg(b, ping)]).
 
@@ -27,6 +28,14 @@ b_init(_, [msg(_, M) | _]) :- send_to_user([got(M?)]).
 void main() {
   group('AgentRuntime madGLP message path (Issue 8)', () {
     late String root;
+    late Directory dir;
+    late String play;
+    setUpAll(() {
+      dir = Directory.systemTemp.createTempSync('glp_agent_runtime_');
+      play = '${dir.path}/play.glp';
+      File(play).writeAsStringSync(_play);
+    });
+    tearDownAll(() => dir.deleteSync(recursive: true));
     setUp(() {
       root = File('../programs/self.glp').absolute.path;
     });
@@ -40,7 +49,7 @@ void main() {
       AgentRuntime mk(String id, String goal) {
         final a = AgentRuntime(
           agentId: id,
-          glpSources: const [_play],
+          program: play,
           rootSelfGlpPath: root,
           goalLabel: goal,
         );
@@ -86,7 +95,7 @@ void main() {
         () async {
       final agent = AgentRuntime(
         agentId: 'a',
-        glpSources: const [_play],
+        program: play,
         rootSelfGlpPath: root,
         goalLabel: 'a_init/2',
       );

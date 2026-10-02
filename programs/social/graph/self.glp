@@ -17,14 +17,14 @@
 %% commit by the shared lib befriend_commit (CSSN Issue 16).
 Response ::= accept(IntroChannel) ; no.
 Decision ::= yes ; no.
-Handshake ::= ack(Constant) ; nack.
+Handshake ::= ack(Key) ; nack.
 PendingValue ::= response(Response?) ; channel(IntroChannel) ; error.
 
 %% --- Content types for messages ---
 
 %% Content carried inside user-to-agent messages (msg(person, Id, Content))
 UserContent ::= connect(Key)
-              ; decision(Decision, Constant, PendingValue)
+              ; decision(Decision, Key, PendingValue)
               ; send(Constant, Constant)
               ; introduce(Constant, Constant)
               ; accept_intro(Constant, PendingValue)
@@ -44,7 +44,7 @@ UserContent ::= connect(Key)
               ; install_cssn(Constant, Content, String, Channel(Stream(CsAppCmd), Stream(CsAppNotify)))
               ; install_sovereign(Constant, Content, String, Channel(Stream(SvUserAnswer), Stream(SvEvent)))
               ; invite(Constant, Constant)
-              ; accept_invite(Constant, Constant)
+              ; accept_invite(Constant, Key)
               ; decline_invite(Constant, Constant)
               ; attestation(Constant, String?)
               %% trust: the person trusts a compiler's key (Section 6.4); the
@@ -59,7 +59,7 @@ UserContent ::= connect(Key)
               ; allow_intro(Constant, Constant).
 
 %% Content carried inside agent-to-user messages (msg(agent, person, Content))
-AgentContent ::= befriend(Constant, Response?)
+AgentContent ::= befriend(Key, Response?)
                ; befriend_intro(Constant, Constant, IntroChannel)
                ; connected(Constant)
                ; rejected
@@ -68,7 +68,7 @@ AgentContent ::= befriend(Constant, Response?)
                ; received(Constant, Constant).
 
 %% Network content (2-arg cold-call: msg(Dest, Content))
-NetColdCall ::= intro(Constant, Response?).
+NetColdCall ::= intro(Key, Response?).
 
 %% Friend-to-friend content (3-arg: msg(From, To, Content))
 FriendContent ::= response(Response)
@@ -99,14 +99,14 @@ FriendContent ::= response(Response)
 
 %% Setup channel content: ack/nack handshake plus the fresh-friend-channel
 %% conveyance the shared lib befriend_commit uses to install the friend channel.
-IntroContent ::= ack(Constant) ; nack ; friend_channel(FriendChannel).
+IntroContent ::= ack(Key) ; nack ; friend_channel(FriendChannel).
 
 %% Intro channel (handshake protocol)
 IntroStream  ::= [] ; [IntroContent | IntroStream].
 IntroChannel ::= ch(IntroStream, IntroStream?).
 
 %% Friend messages and channels
-FriendMsg     ::= msg(Constant, Constant, FriendContent).
+FriendMsg     ::= msg(Key, Key, FriendContent).
 FriendStream  ::= [] ; [FriendMsg | FriendStream].
 FriendChannel ::= ch(FriendStream, FriendStream?).
 
@@ -229,39 +229,39 @@ Host ::= host(AppList, AttestList, PendingInv, Stream(String)).
 %% super-app carries the interface of every mini-app it hosts.  The names are
 %% the super-app's where they clash with the mediator's (CReqId).
 %% =============================================================================
-Coin ::= coin(Constant, Integer).
-Lot  ::= lot(Constant, Integer).
+Coin ::= coin(Key, Integer).
+Lot  ::= lot(Key, Integer).
 SwapResponse ::= swap_accept(Stream(Coin)) ; swap_decline(Stream(Coin)).
 RedeemResponse ::= redeem_give(Coin)
-                 ; redeem_menu(Coin, Stream(Constant))
+                 ; redeem_menu(Coin, Stream(Key))
                  ; redeem_declined(Coin).
 PeerContent ::= pay(Stream(Coin))
               ; swap(Lot, Stream(Coin), SwapResponse?)
-              ; redeem(Coin, Constant, RedeemResponse?)
+              ; redeem(Coin, Key, RedeemResponse?)
               ; return(Stream(Coin)).
-PeerMsg     ::= msg(Constant, Constant, PeerContent).
+PeerMsg     ::= msg(Key, Key, PeerContent).
 PeerChannel ::= ch(Stream(PeerMsg), Stream(PeerMsg)?).
-Conversation ::= conversation(Constant, PeerChannel).
+Conversation ::= conversation(Key, PeerChannel).
 ScreenContent ::= holdings(Stream(Lot))
-                ; opened(Constant)
+                ; opened(Key)
                 ; minted(Integer)
-                ; paid(Constant, Integer)
-                ; received(Constant, Integer)
-                ; returned(Constant, Integer)
-                ; swap_done(Constant)
-                ; swap_declined(Constant)
-                ; swap_failed(Constant)
-                ; declined(Constant)
-                ; redeemed(Constant, Constant)
-                ; menu(Constant, Stream(Constant))
-                ; presented(Constant, Constant)
-                ; unfulfilled(Constant, Constant)
-                ; refused(Constant)
-                ; lacking(Constant, Integer)
-                ; no_conversation(Constant).
+                ; paid(Key, Integer)
+                ; received(Key, Integer)
+                ; returned(Key, Integer)
+                ; swap_done(Key)
+                ; swap_declined(Key)
+                ; swap_failed(Key)
+                ; declined(Key)
+                ; redeemed(Key, Key)
+                ; menu(Key, Stream(Key))
+                ; presented(Key, Key)
+                ; unfulfilled(Key, Key)
+                ; refused(Key)
+                ; lacking(Key, Integer)
+                ; no_conversation(Key).
 CReqId ::= req(Integer).
-Answer ::= xs_respond_swap_1(Constant) ; xs_agent_1(Integer) ; xs_agent_2(Constant, Constant, Integer, Constant, Integer) ; xs_agent_3(Constant, Integer) ; xs_agent_4(Constant, Constant).
-Context ::= ctx_respond_swap_1(Constant, Lot, Stream(Coin)) ; ctx_agent_1 ; ctx_agent_2 ; ctx_agent_3 ; ctx_agent_4.
+Answer ::= xs_respond_swap_1(Constant) ; xs_agent_1(Integer) ; xs_agent_2(Key, Key, Integer, Key, Integer) ; xs_agent_3(Key, Integer) ; xs_agent_4(Key, Key).
+Context ::= ctx_respond_swap_1(Key, Lot, Stream(Coin)) ; ctx_agent_1 ; ctx_agent_2 ; ctx_agent_3 ; ctx_agent_4.
 UserAnswer ::= answer(CReqId, Answer) ; decline(CReqId).
 Event ::= card(Constant, Context, CReqId)
         ; closed(CReqId)
@@ -271,11 +271,11 @@ Event ::= card(Constant, Context, CReqId)
 %% A person's script for the currency (core/superapp_plays.glp): its acts in
 %% order; a step is answered on the mediator's latest open card for its
 %% clause and is done when the screen shows its effect.
-CoinStep   ::= mint(Integer) ; swap(Constant, Constant, Integer, Constant, Integer) ; accept(Key).
+CoinStep   ::= mint(Integer) ; swap(Key, Key, Integer, Key, Integer) ; accept(Key).
 CoinScript ::= [] ; [CoinStep | CoinScript].
 OpenReq    ::= no_card ; req(Integer).
 OpenCards  ::= open(OpenReq, OpenReq).
-SwapCard   ::= swap_card(Constant, CReqId).
+SwapCard   ::= swap_card(Key, CReqId).
 SwapCards  ::= [] ; [SwapCard | SwapCards].
 Sent       ::= idle ; sent(CReqId).
 Choice     ::= answer(CReqId, Answer) ; wait.
@@ -298,9 +298,9 @@ Choice     ::= answer(CReqId, Answer) ; wait.
 %% release and return of the contract's clause 9; and the currency's return
 %% gone.
 %% =============================================================================
-SvInstrument ::= coin(Constant, Constant, Integer) ; bond(Constant, Constant, Integer, Integer).
-SvLot        ::= lot(Constant, Constant, Constant, Integer).
-SvAccepting  ::= accepting(Constant, Constant, Integer).
+SvInstrument ::= coin(Key, Constant, Integer) ; bond(Key, Constant, Integer, Integer).
+SvLot        ::= lot(Key, Constant, Constant, Integer).
+SvAccepting  ::= accepting(Key, Constant, Integer).
 SvKind ::= deposit ; release ; return.
 SvSwapResponse ::= swap_accept(Stream(SvInstrument)) ; swap_decline(Stream(SvInstrument)).
 SvPayResponse ::= pay_taken ; pay_returned(Stream(SvInstrument)).
@@ -311,60 +311,60 @@ SvMatureResponse ::= mature_give(SvInstrument, Integer) ; mature_declined(SvInst
 SvTransferResponse ::= transfer_accept ; transfer_decline(Stream(SvInstrument)).
 SvContent ::= pay(Stream(SvInstrument), SvPayResponse?)
             ; payout(Constant, Stream(SvInstrument), SvPayResponse?)
-            ; spend(Constant, Constant, Stream(SvInstrument), SvPayResponse?)
-            ; spent(Constant, Constant, Stream(SvInstrument), SvPayResponse?)
+            ; spend(Key, Constant, Stream(SvInstrument), SvPayResponse?)
+            ; spent(Key, Constant, Stream(SvInstrument), SvPayResponse?)
             ; swap(SvLot, Stream(SvInstrument), SvSwapResponse?)
-            ; redeem(SvInstrument, Constant, Constant, SvRedeemResponse?)
+            ; redeem(SvInstrument, Key, Constant, SvRedeemResponse?)
             ; mature(SvInstrument, SvMatureResponse?)
             ; transfer(SvKind, Stream(SvInstrument), SvTransferResponse?).
-SvMsg     ::= msg(Constant, Constant, SvContent).
+SvMsg     ::= msg(Key, Key, SvContent).
 SvChannel ::= ch(Stream(SvMsg), Stream(SvMsg)?).
-SvConversation ::= conversation(Constant, SvChannel).
+SvConversation ::= conversation(Key, SvChannel).
 SvScreenContent ::= holdings(Stream(SvLot))
                   ; acceptances(Stream(SvAccepting))
-                  ; opened(Constant)
+                  ; opened(Key)
                   ; date_advanced(Integer)
-                  ; warranty(Constant, Integer)
+                  ; warranty(Key, Integer)
                   ; minted(Integer, Constant)
-                  ; accepted(Constant, Constant, Integer)
-                  ; not_held(Constant, Constant)
-                  ; paying(Constant, Integer)
-                  ; paid(Constant, Integer)
-                  ; paying_out(Constant, Integer)
-                  ; paid_out(Constant, Integer)
-                  ; spending(Constant, Constant, Integer)
-                  ; spent_at(Constant, Constant, Integer)
-                  ; not_accepted(Constant, Integer)
-                  ; received(Constant, Integer)
-                  ; refused_payment(Constant, Integer)
-                  ; received_from(Constant, Constant, Integer)
-                  ; refused_from(Constant, Constant, Integer)
-                  ; countersigned(Constant, Constant, Integer)
-                  ; spend_returned(Constant, Constant, Integer)
-                  ; swap_done(Constant)
-                  ; swap_declined(Constant)
-                  ; swap_failed(Constant)
-                  ; declined(Constant)
-                  ; redeemed(Constant, Constant, Constant)
-                  ; menu(Constant, Stream(SvLot))
-                  ; refused(Constant)
-                  ; presented(Constant, Constant, Constant)
-                  ; unfulfilled(Constant, Constant, Constant)
-                  ; matured(Constant, Integer)
-                  ; not_mature(Constant, Integer)
-                  ; matured_for(Constant, Integer)
-                  ; not_mature_for(Constant, Integer)
-                  ; offered_transfer(SvKind, Constant, SvLot)
-                  ; transferred(SvKind, Constant)
-                  ; transfer_declined(SvKind, Constant)
-                  ; received_transfer(SvKind, Constant, Stream(SvLot))
-                  ; declined_transfer(SvKind, Constant)
-                  ; lacking(Constant, Constant, Integer)
-                  ; no_conversation(Constant)
-                  ; fiat_handed(Constant, Integer).
+                  ; accepted(Key, Constant, Integer)
+                  ; not_held(Key, Constant)
+                  ; paying(Key, Integer)
+                  ; paid(Key, Integer)
+                  ; paying_out(Key, Integer)
+                  ; paid_out(Key, Integer)
+                  ; spending(Key, Key, Integer)
+                  ; spent_at(Key, Key, Integer)
+                  ; not_accepted(Key, Integer)
+                  ; received(Key, Integer)
+                  ; refused_payment(Key, Integer)
+                  ; received_from(Key, Key, Integer)
+                  ; refused_from(Key, Key, Integer)
+                  ; countersigned(Key, Key, Integer)
+                  ; spend_returned(Key, Key, Integer)
+                  ; swap_done(Key)
+                  ; swap_declined(Key)
+                  ; swap_failed(Key)
+                  ; declined(Key)
+                  ; redeemed(Key, Key, Constant)
+                  ; menu(Key, Stream(SvLot))
+                  ; refused(Key)
+                  ; presented(Key, Key, Constant)
+                  ; unfulfilled(Key, Key, Constant)
+                  ; matured(Key, Integer)
+                  ; not_mature(Key, Integer)
+                  ; matured_for(Key, Integer)
+                  ; not_mature_for(Key, Integer)
+                  ; offered_transfer(SvKind, Key, SvLot)
+                  ; transferred(SvKind, Key)
+                  ; transfer_declined(SvKind, Key)
+                  ; received_transfer(SvKind, Key, Stream(SvLot))
+                  ; declined_transfer(SvKind, Key)
+                  ; lacking(Key, Constant, Integer)
+                  ; no_conversation(Key)
+                  ; fiat_handed(Key, Integer).
 SvReqId ::= req(Integer).
-SvAnswer ::= xs_respond_swap_1(Constant) ; xs_respond_transfer_1(Constant) ; xs_agent_1(Constant, Integer) ; xs_agent_2(Constant, Integer, Integer) ; xs_agent_3(Constant, Constant, Constant, Constant, Integer, Constant, Constant, Integer) ; xs_agent_4(Constant, Constant, Integer) ; xs_agent_5(Constant, Constant, Integer) ; xs_agent_6(Constant, Constant, Integer) ; xs_agent_7(Constant, Constant, Constant, Integer) ; xs_agent_8(Constant, Constant, Constant, Constant) ; xs_agent_9(Constant, Constant, Integer) ; xs_agent_10(Constant, Constant, Constant, Constant, Integer) ; xs_agent_11(Constant, Constant, Constant, Constant, Integer) ; xs_agent_12(Constant, Constant, Constant, Constant, Integer).
-SvContext ::= ctx_respond_swap_1(Constant, SvLot, Stream(SvInstrument)) ; ctx_respond_transfer_1(SvKind, Constant, Stream(SvInstrument)) ; ctx_agent_1 ; ctx_agent_2 ; ctx_agent_3 ; ctx_agent_4 ; ctx_agent_5 ; ctx_agent_6 ; ctx_agent_7 ; ctx_agent_8 ; ctx_agent_9 ; ctx_agent_10 ; ctx_agent_11 ; ctx_agent_12.
+SvAnswer ::= xs_respond_swap_1(Constant) ; xs_respond_transfer_1(Constant) ; xs_agent_1(Constant, Integer) ; xs_agent_2(Constant, Integer, Integer) ; xs_agent_3(Key, Constant, Key, Constant, Integer, Key, Constant, Integer) ; xs_agent_4(Constant, Key, Integer) ; xs_agent_5(Key, Constant, Integer) ; xs_agent_6(Key, Constant, Integer) ; xs_agent_7(Key, Key, Constant, Integer) ; xs_agent_8(Key, Constant, Key, Constant) ; xs_agent_9(Key, Constant, Integer) ; xs_agent_10(Key, Constant, Key, Constant, Integer) ; xs_agent_11(Key, Constant, Key, Constant, Integer) ; xs_agent_12(Key, Constant, Key, Constant, Integer).
+SvContext ::= ctx_respond_swap_1(Key, SvLot, Stream(SvInstrument)) ; ctx_respond_transfer_1(SvKind, Key, Stream(SvInstrument)) ; ctx_agent_1 ; ctx_agent_2 ; ctx_agent_3 ; ctx_agent_4 ; ctx_agent_5 ; ctx_agent_6 ; ctx_agent_7 ; ctx_agent_8 ; ctx_agent_9 ; ctx_agent_10 ; ctx_agent_11 ; ctx_agent_12.
 SvUserAnswer ::= answer(SvReqId, SvAnswer) ; decline(SvReqId).
 SvEvent ::= card(Constant, SvContext, SvReqId)
           ; closed(SvReqId)
@@ -499,7 +499,7 @@ UserCmd ::= decision(Decision, Key, ReqId)
           ; unfriend(Constant).
 
 %% Mediator -> User
-UserNotify ::= befriend(Constant, ReqId)
+UserNotify ::= befriend(Key, ReqId)
              ; befriend_intro(Constant, Constant, ReqId)
              ; connected(Constant)
              ; rejected
@@ -523,7 +523,7 @@ MediatorToAgentStream ::= [] ; [MediatorToAgentMsg | MediatorToAgentStream].
 AgentChannel          ::= ch(AgentToUserStream, MediatorToAgentStream?).
 
 %% Agent input types
-UserInMsg    ::= msg(Constant, Constant, UserContent)
+UserInMsg    ::= msg(Constant, Key, UserContent)
                ; intro_result(Constant, IntroChannel)
                ; intro_rejected(Constant)
                %% A running mini-app's request up its social-graph channel.
@@ -535,7 +535,7 @@ UserInMsg    ::= msg(Constant, Constant, UserContent)
 UserInStream ::= [] ; [UserInMsg | UserInStream].
 
 NetInMsg     ::= msg(Key, NetColdCall)
-               ; msg(Key, Constant, FriendContent)
+               ; msg(Key, Key, FriendContent)
                %% The runtime's report of a held link (Section 5.2; madGLP).
                ; pending_link(GlobalName, Constant).
 NetInStream  ::= [] ; [NetInMsg | NetInStream].

@@ -17,5 +17,4 @@ void main() => runVglpApp(VglpProgram(
       directory: (glp) => glp.coinsDir,
       goalLabel: 'coins_ui/3',
       manifest: coinsManifest,
-      friends: const ['bob'],
     ));

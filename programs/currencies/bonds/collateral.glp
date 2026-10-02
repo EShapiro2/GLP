@@ -38,7 +38,7 @@
 %%
 %% Entry point: run/0, exported by self.glp as collateral/0.
 
-imported procedure village#villager(Constant?, Script?, Stream(NetInMsg)?, Stream(NetOutMsg)).
+imported procedure village#villager(Key?, Script?, Stream(NetInMsg)?, Stream(NetOutMsg)).
 
 exported procedure run.
 run :-

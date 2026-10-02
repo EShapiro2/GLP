@@ -10,7 +10,7 @@
 %%
 %% Bodies are unchanged from the platform sources.
 
-exported procedure(C, IR) intro_await_peer(Constant?, Channel(Stream(C), Stream(C))?, IR).
+exported procedure(C, IR) intro_await_peer(Key?, Channel(Stream(C), Stream(C))?, IR).
 intro_await_peer(Other, ch([ack(_)|ChIn], ChOut?),
                  intro_result(Other?, ch(ChIn?, ChOut))).
 intro_await_peer(Other, ch([nack|_], []),

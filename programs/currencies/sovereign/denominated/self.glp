@@ -11,8 +11,8 @@
 %% super-app installs and activates by run/3.  Loaded as part of ../ (the
 %% village and credit-line plays), its modules are found by name.
 
-imported procedure miniapp#sovereign(Constant?, Channel(Stream(UserAnswer), Stream(Event))?, Stream(Conversation)?).
-exported procedure sovereign(Constant?, Channel(Stream(UserAnswer), Stream(Event))?, Stream(Conversation)?).
+imported procedure miniapp#sovereign(Key?, Channel(Stream(UserAnswer), Stream(Event))?, Stream(Conversation)?).
+exported procedure sovereign(Key?, Channel(Stream(UserAnswer), Stream(Event))?, Stream(Conversation)?).
 sovereign(Id, Ui, Convs) :- miniapp # sovereign(Id?, Ui?, Convs?).
 
 imported procedure plays#play_mint(Stream(ScreenContent)).

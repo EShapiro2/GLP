@@ -1,5 +1,6 @@
 import 'package:glp_runtime/bytecode/opcodes.dart' as bc;
-import 'package:glp_runtime/bytecode/runner.dart' show BytecodeProgram;
+import 'package:glp_runtime/bytecode/runner.dart'
+    show BytecodeProgram, runtimeGuards;
 import 'ast.dart';
 import 'analyzer.dart';
 import 'error.dart';
@@ -422,7 +423,23 @@ class CodeGenerator {
       }
     }
 
-    // Generic guard predicate call (runtime evaluation)
+    // Generic guard predicate call (runtime evaluation).  A guard that is not
+    // one the runtime evaluates is refused here, at compile time: defined
+    // guards were unfolded before code generation (GLP-Spec appendix-guards
+    // .tex, Defined guard predicates), so what reaches here names a guard
+    // predicate of the catalogue or nothing.  Until 2026-10-02 the runtime
+    // printed a [WARN] for an unknown guard and failed the clause.
+    final signature = '${guard.predicate}/${guard.args.length}';
+    if (!runtimeGuards.contains(signature)) {
+      throw CompileError(
+        'Unknown guard predicate $signature: no guard of the catalogue '
+            '(GLP-Spec appendix-guards.tex) has that name and arity, and no '
+            'unit clause defines it as a guard',
+        guard.line,
+        guard.column,
+        phase: 'codegen',
+      );
+    }
     // Setup arguments, then call guard
     for (int i = 0; i < guard.args.length; i++) {
       _generatePutArgument(guard.args[i], i, varTable, ctx);

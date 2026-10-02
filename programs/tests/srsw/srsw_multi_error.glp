@@ -1,14 +1,23 @@
 % Test file with multiple SRSW violations
 % This file should report ALL violations, not just the first one
+%
+% Each procedure is declared, with the wildcard at each position in the mode
+% its head uses it, so the file is a typed program (TGLP Definition "Typed GLP
+% Program", condition 1) and is refused by the SRSW pass, which is its subject,
+% not by the type checker for an undeclared procedure.
 
 % Violation 1: X appears twice as writer
+procedure bad1(_?, _?).
 bad1(X, X) :- true.
 
 % Violation 2: Y? appears twice without ground guard
+procedure bad2(_, _).
 bad2(Y?, Y?) :- true.
 
 % Violation 3: Z has no reader
+procedure bad3(_?).
 bad3(Z) :- true.
 
 % This one is correct
+procedure good(_?, _).
 good(A, A?) :- true.

@@ -11,13 +11,13 @@
 %% nothing else --- no network entry, and no call to a predicate that reaches
 %% the network or the person --- so the program is certified.
 
-imported procedure coins_agent#agent(Channel(Closed, Stream(AgentMsg))?, Constant?, Stream(UserInMsg)?, Stream(PeerMsg)?, Stream(Conversation)?, Stream(OutputEntry)?, Stream(Coin)?, Integer?, Slot(Reply_agent_1)?, Slot(Reply_agent_2)?, Slot(Reply_agent_3)?, Slot(Reply_agent_4)?).
+imported procedure coins_agent#agent(Channel(Closed, Stream(AgentMsg))?, Key?, Stream(UserInMsg)?, Stream(PeerMsg)?, Stream(Conversation)?, Stream(OutputEntry)?, Stream(Coin)?, Integer?, Slot(Reply_agent_1)?, Slot(Reply_agent_2)?, Slot(Reply_agent_3)?, Slot(Reply_agent_4)?).
 imported procedure coins_agent#med(Channel(Stream(UserAnswer), Stream(Card))?, Channel(Stream(AgentMsg), Closed)?, PendingList?, Integer?).
 
 %% The agent with its mediator: the agent starts with no holdings, serial 1, no
 %% conversation and its screen; the mediator's cards and the screen go to the
 %% person as one stream of events.
-exported procedure coins(Constant?, Channel(Stream(UserAnswer), Stream(Event))?, Stream(Conversation)?).
+exported procedure coins(Key?, Channel(Stream(UserAnswer), Stream(Event))?, Stream(Conversation)?).
 coins(Id, ch(Answers, Events?), Convs) :-
     ground(Id?) |
     coins_agent # agent(ch([], Asks), Id?, [], [], Convs?, [user_output(Screen)], [], 1,

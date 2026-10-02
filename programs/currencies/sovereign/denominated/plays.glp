@@ -8,7 +8,7 @@
 %% does not end --- the agent's request clauses pend perpetually --- so a
 %% play's result is read off a partial stream.
 
-imported procedure person#person(Constant?, Stream(Event)?, Stream(UserAnswer), Stream(Integer), Script?, Agreement?, Stream(ScreenContent)).
+imported procedure person#person(Key?, Stream(Event)?, Stream(UserAnswer), Stream(Integer), Script?, Agreement?, Stream(ScreenContent)).
 
 %% play_mint(Screen): alice, alone, mints 3 coins of her own.
 %% Expected: Screen = [minted(3, now), holdings([lot(alice, usd, now, 3)]) | _].

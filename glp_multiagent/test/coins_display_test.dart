@@ -25,7 +25,7 @@ void main() {
 
   setUp(() {
     sent = [];
-    r = UiRuntime(manifest: coinsManifest, onSend: sent.add);
+    r = UiRuntime(manifest: coinsManifest, onSend: (t) => sent.add(formatTerm(t)));
   });
 
   group('a compound under default display shows its scalars', () {

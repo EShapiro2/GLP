@@ -25,10 +25,10 @@ Decision ::= yes ; no.
 Response ::= accept(FriendChannel) ; no.
 
 %% A currency unit: a bond issued by Issuer, maturing at Maturity, serial Serial.
-Bond ::= bond(Constant, Constant, Constant).
+Bond ::= bond(Key, Constant, Constant).
 
 %% A trade line item: Count bonds of Issuer at Maturity.
-Lot ::= lot(Constant, Constant, Integer).
+Lot ::= lot(Key, Constant, Integer).
 
 %% A trade counterparty's answer (writer flows proposer -> responder -> proposer).
 %% decline_menu returns the offered bonds plus the issuer's redemption menu.
@@ -60,7 +60,7 @@ FriendContent ::= response(Response)
                 ; group_leave(GroupId, Constant)
                 ; group_removed(GroupId)
                 ; unfriend.
-FriendMsg     ::= msg(Constant, Constant, FriendContent).
+FriendMsg     ::= msg(Key, Key, FriendContent).
 FriendStream  ::= [] ; [FriendMsg | FriendStream].
 FriendChannel ::= ch(FriendStream, FriendStream?).
 
@@ -69,7 +69,7 @@ FriendChannel ::= ch(FriendStream, FriendStream?).
 %% invite conveys a fresh setup channel; the invitee acks and receives the group
 %% channel on it (the same handshake shape as befriending).
 GroupId   ::= group_id(Constant, Constant).
-Handshake ::= ack(Constant) ; nack.
+Handshake ::= ack(Key) ; nack.
 
 %% Group channel content — messages, a member leaving, a member removed.
 GroupContent ::= group_msg(GroupId, Constant, Constant)
@@ -170,7 +170,7 @@ NetOutStream ::= [] ; [NetOutMsg | NetOutStream].
 %% into it (handle_response), that friend's messages.  The shape social/graph
 %% gives its NetInMsg.
 NetInMsg     ::= msg(Key, NetColdCall)
-               ; msg(Key, Constant, FriendContent).
+               ; msg(Key, Key, FriendContent).
 NetInStream  ::= [] ; [NetInMsg | NetInStream].
 
 %% The agent's person input: the mediator's vocabulary (UserMsg, including the
@@ -178,7 +178,7 @@ NetInStream  ::= [] ; [NetInMsg | NetInStream].
 %% concurrent goals inject into it --- a filled or declined trade, an escrow's
 %% outcome at either end, a group join.  The shape social/graph gives its
 %% UserInMsg.
-UserInMsg    ::= msg(Constant, Constant, UserContent)
+UserInMsg    ::= msg(Constant, Key, UserContent)
                ; trade_complete(Constant, Stream(Bond))
                ; trade_returned_bonds(Constant, Stream(Bond))
                ; trade_returned_bonds_menu(Constant, Stream(Bond), Stream(Bond))

@@ -7,6 +7,7 @@ import 'dart:isolate';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:glp_multiagent/isolate_protocol.dart';
+import 'package:glp_multiagent/ui_runtime/term.dart';
 
 import 'programs_dir.dart';
 
@@ -20,11 +21,15 @@ void main() {
     final reply = ReceivePort();
     SendPort? bob;
     final out = <String>[];
+    // Bob's first stats follow his initialisation, the initial run included.
+    var started = false;
     reply.listen((m) {
       if (m is AgentReady) {
         bob = m.commandPort;
       } else if (m is AgentOutput) {
         out.add(m.line);
+      } else if (m is AgentStats) {
+        started = true;
       } else if (m is AgentError) {
         out.add('[ERROR] ${m.error}');
       }
@@ -35,12 +40,10 @@ void main() {
       InitAgent(
         agentId: 'Bob',
         // programs/grassapp is a program (SGSG, d27e4d6a): loaded as one.
-        glpSources: const [],
-        programDir: _ga,
+        program: _ga,
         // The boot play's entry point (SGSG, 8412aae7).
         goalLabel: 'scenario_init/3',
         rootSelfGlpPath: '$_programs/self.glp',
-        friends: const ['alice', 'charlie'],
         replyPort: reply.sendPort,
         deferStart: false,
       ),
@@ -70,13 +73,18 @@ void main() {
       return null;
     }
 
-    await waitFor('Ready! Commands');
+    final end = DateTime.now().add(const Duration(seconds: 20));
+    while (!started && DateTime.now().isBefore(end)) {
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+    }
 
     // Accept both cold-call friend offers, then let the actors run.
+    GTerm accept(String who, String req) => GStruct('decision',
+        [const GAtom('yes'), GAtom(who), tryParseTerm(req)!]);
     final aliceReq = await reqFor('alice');
-    bob?.send(UserInput('decision(yes, alice, $aliceReq)'));
+    if (aliceReq != null) bob?.send(UserInput(accept('alice', aliceReq)));
     final charlieReq = await reqFor('charlie');
-    bob?.send(UserInput('decision(yes, charlie, $charlieReq)'));
+    if (charlieReq != null) bob?.send(UserInput(accept('charlie', charlieReq)));
 
     final connected = await waitFor('connected(charlie)');
     // Charlie pays Bob then unfriends him; Bob's UI surfaces the removal.

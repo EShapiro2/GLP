@@ -16,6 +16,7 @@ import 'mode.dart';
 import 'type_environment_builder.dart';
 import 'well_typed_clause.dart' as wtc;
 import 'clause_validation.dart';
+import 'root_scope.dart' show isBuiltinProcedure;
 import '../../compiler/ast.dart' as ast;
 import '../../compiler/lexer.dart';
 import '../../compiler/parser.dart';
@@ -224,31 +225,33 @@ class TypeChecker {
 
       final procClauses = procedureClauses[key];
 
-      if (procClauses == null || procClauses.isEmpty) {
-        // Skip warning for builtins (implemented in Dart, no GLP clauses)
-        if (!procDecl.isBuiltin) {
-          warnings.add(TypeWarning(
-            'Procedure ${procDecl.name}/${procDecl.arity} declared but not defined',
-            procDecl.line,
-            procDecl.column,
-          ));
-        }
-        continue;
-      }
+      // A declaration in scope with no clause here is defined elsewhere --- an
+      // ancestor self.glp, an exposed module --- or is a codeless kernel.  A
+      // declaration of the unit's own with no clause is the unit's error, and
+      // [declaredWithoutClauses] reports it where the unit is known.
+      if (procClauses == null || procClauses.isEmpty) continue;
 
       final procResult = _checkProcedure(procDecl, procClauses);
       errors.addAll(procResult.errors);
       warnings.addAll(procResult.warnings);
     }
 
-    // Warn about undefined procedures (clauses without type declarations)
+    // A procedure with clauses and no declaration in scope is an error: "Every
+    // procedure in Cs has exactly one type declaration in D" (TGLP typed-glp.tex,
+    // Definition "Typed GLP Program", condition 1).  Until 2026-10-02 this was a
+    // warning every loader discarded, and the procedure's clauses were never
+    // checked.
     for (final entry in procedureClauses.entries) {
-      if (!typeEnv.procedures.containsKey(entry.key)) {
+      if (!typeEnv.procedures.containsKey(entry.key) &&
+          !typeEnv.paramProcDecls.containsKey(entry.key)) {
         final firstClause = entry.value.first;
-        warnings.add(TypeWarning(
-          'Procedure ${entry.key} has no type declaration',
+        errors.add(TypeError(
+          'Procedure ${entry.key} has no type declaration: every procedure of '
+          'a typed GLP program has exactly one (TGLP Definition "Typed GLP '
+          'Program", condition 1)',
           firstClause.line,
           firstClause.column,
+          _clauseToString(firstClause),
         ));
       }
     }
@@ -848,6 +851,35 @@ TypeEnvironment buildModuleTypeEnvironment(ast.Module module,
       });
 }
 
+/// The declarations of [module]'s own that no clause of [clauses] defines,
+/// each an error: "Every procedure declared in D is defined by at least one
+/// clause in Cs" (TGLP typed-glp.tex, Definition "Typed GLP Program", condition
+/// 2).  The exceptions are an `imported` declaration, which types a call to
+/// another module's procedure, and a codeless kernel bound at load --- a body
+/// kernel or builtin guard the runtime implements and the artefact names with
+/// no code (IGLP code-format-fragment.tex, Symbol table, kind 1 codeless), the
+/// set [isBuiltinProcedure] holds.  Until 2026-10-02 the condition was a
+/// warning no loader read, raised for every declaration in scope.
+List<TypeError> declaredWithoutClauses(
+    ast.Module module, List<ast.Clause> clauses) {
+  final defined = <String>{
+    for (final c in clauses) '${c.head.functor}/${c.head.arity}'
+  };
+  return [
+    for (final d in module.procDeclarations)
+      if (!d.imported && !defined.contains(d.key) && !isBuiltinProcedure(d.key))
+        TypeError(
+          'Procedure ${d.key} is declared and has no clauses: every declared '
+          'procedure is defined by at least one clause (TGLP Definition '
+          '"Typed GLP Program", condition 2), and ${d.key} is no codeless '
+          'kernel bound at load',
+          d.line,
+          d.column,
+          d.key,
+        ),
+  ];
+}
+
 TypeCheckResult _checkModuleImpl(ast.Module module, {List<ast.Procedure>? transformedProcedures, TypeEnvironment? ancestorScope, wtc.InstantiationCollector? collector, Set<String>? certifiedKeys, bool rejectUninstantiatedInspecting = true}) {
   final typeEnv = buildModuleTypeEnvironment(module, ancestorScope: ancestorScope);
 
@@ -857,6 +889,7 @@ TypeCheckResult _checkModuleImpl(ast.Module module, {List<ast.Procedure>? transf
   for (final proc in procedures) {
     clauses.addAll(proc.clauses);
   }
+  final undefinedDeclarations = declaredWithoutClauses(module, clauses);
 
   // Program mode: the caller (program linker) supplies a collector and runs the
   // cross-module instantiation closure itself.
@@ -889,7 +922,12 @@ TypeCheckResult _checkModuleImpl(ast.Module module, {List<ast.Procedure>? transf
             definedGuardKeys(
                 ast.Program(module.procedures, module.line, module.column)));
     return TypeCheckResult(
-      [...result.errors, ...guardErrors, ...cert.errors],
+      [
+        ...undefinedDeclarations,
+        ...result.errors,
+        ...guardErrors,
+        ...cert.errors
+      ],
       [...result.warnings, ...cert.warnings],
     );
   }
@@ -926,7 +964,7 @@ TypeCheckResult _checkModuleImpl(ast.Module module, {List<ast.Procedure>? transf
       isParametric: isParametric);
   final result = checker.check(clauses);
 
-  final errors = <TypeError>[...result.errors];
+  final errors = <TypeError>[...undefinedDeclarations, ...result.errors];
   final warnings = <TypeWarning>[...result.warnings];
 
   // The defined guards: the partial evaluator unfolded them before [check]

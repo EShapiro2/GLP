@@ -30,8 +30,8 @@
 %%
 %% Entry point: run/0, exported by self.glp as credit_line/0.
 
-imported procedure village#villager(Constant?, Script?, Stream(Conversation)?).
-imported procedure village#escrow_agent(Constant?, Script?, Agreement?, Stream(Conversation)?).
+imported procedure village#villager(Key?, Script?, Stream(Conversation)?).
+imported procedure village#escrow_agent(Key?, Script?, Agreement?, Stream(Conversation)?).
 
 exported procedure run.
 run :-

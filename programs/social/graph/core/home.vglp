@@ -27,7 +27,7 @@ display msg(agent, person, connected(Friend)) : panel(apps), view(friends).
 %% so several pend at once and are answered in any order.
 %% =============================================================================
 
-procedure respond_friend(Constant?, Constant?, Response, Stream(UserInMsg)).
+procedure respond_friend(Key?, Key?, Response, Stream(UserInMsg)).
 
 *(yes, From?)
 respond_friend(Id, From, Resp?, [msg(person, Id?, decision(yes, From?, response(Resp)))]) :-
@@ -44,7 +44,7 @@ respond_friend(Id, From, Resp?, [msg(person, Id?, decision(no, From?, response(R
 %% home(Id, Outs, Cmds): the person's commands to their super-app, willed
 %% through the constructs above; Outs is what the super-app tells the person,
 %% on which a friend's request to connect raises its card.
-exported procedure home(Constant?, AgentToUserStream?, Stream(UserInMsg)).
+exported procedure home(Key?, AgentToUserStream?, Stream(UserInMsg)).
 
 %% Trust a compiler's key: what its certificate signs is then installable.
 *(Key)
@@ -89,22 +89,22 @@ home(Id, [_ | Outs], Cmds?) :-
 home(_, [], []).
 
 %% The willed acts, each the command it puts on the person's stream.
-procedure trust_act(String?, Constant?, AgentToUserStream?, Stream(UserInMsg)).
+procedure trust_act(String?, Key?, AgentToUserStream?, Stream(UserInMsg)).
 trust_act(Key, Id, Outs, [msg(person, Id?, trust(Key?)) | Cmds?]) :-
     ground(Key?) | home(Id?, Outs?, Cmds).
 
-procedure invite_act(Constant?, Constant?, Constant?, AgentToUserStream?, Stream(UserInMsg)).
+procedure invite_act(Constant?, Constant?, Key?, AgentToUserStream?, Stream(UserInMsg)).
 invite_act(App, Friend, Id, Outs, [msg(person, Id?, invite(App?, Friend?)) | Cmds?]) :-
     ground(App?), ground(Friend?) | home(Id?, Outs?, Cmds).
 
-procedure connect_act(Key?, Constant?, AgentToUserStream?, Stream(UserInMsg)).
+procedure connect_act(Key?, Key?, AgentToUserStream?, Stream(UserInMsg)).
 connect_act(Friend, Id, Outs, [msg(person, Id?, connect(Friend?)) | Cmds?]) :-
     ground(Friend?) | home(Id?, Outs?, Cmds).
 
 %% install_act(Content, App, Id, Outs, Cmds): a certified artefact is installed
 %% under the person's name for it; anything else is not installed, and the
 %% person's stream carries on.
-procedure install_act(Content?, Constant?, Constant?, AgentToUserStream?, Stream(UserInMsg)).
+procedure install_act(Content?, Constant?, Key?, AgentToUserStream?, Stream(UserInMsg)).
 install_act(M, App, Id, Outs, [msg(person, Id?, install(App?, M?, CSig?, Ui)) | Cmds?]) :-
     module(M?) |
     creator_certification(M?, CSig),

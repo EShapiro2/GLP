@@ -24,6 +24,10 @@ enum Transport { ble, ip }
 /// from, agents it has never contacted. [open] accepts cold-calls from anyone.
 enum TrustLevel { open, closed }
 
+/// A proximity medium. "A level is held per ProximityMedium" (paper, Trust
+/// levels): each medium has its own cold-call [TrustLevel].
+enum ProximityMedium { ble, lan }
+
 /// A 32-byte Ed25519 public key, with value equality and a hex string form.
 ///
 /// This is the network-level identity of an agent. Symbolic agent identifiers
@@ -170,8 +174,11 @@ abstract class GlpNetwork {
   /// Fires when a new peer is discovered.
   void Function(DiscoveredPeer p)? onPeerDiscovered;
 
-  /// Set the trust level governing first contact.
-  void setTrustLevel(TrustLevel level);
+  /// Set the cold-call trust level of proximity medium [medium] to [level]:
+  /// "GLP sets one medium's level with setTrustLevel(medium, level); until set,
+  /// both levels are Closed" (paper, Trust levels). Backs `trust_declare/2`
+  /// (IGLP, Definition Seam Predicates).
+  void setTrustLevel(ProximityMedium medium, TrustLevel level);
 
   // --- IP (Section 4) — UnsupportedError in SimulationNetwork ---
 
@@ -189,10 +196,11 @@ abstract class GlpNetwork {
 
   // --- Seam predicates (paper Section 5) ---
   //
-  // The five functions behind the four networking seam predicates
-  // `peer_address/2`, `punch_udp/1`, `place_declare/3` and `place_remove/1`
-  // (IGLP, Definition Seam Predicates). GLP code decides who acts, when, and
-  // whether; each function performs only the mechanism.
+  // The five functions below and [setTrustLevel] above are the six behind the
+  // five networking seam predicates `peer_address/2`, `punch_udp/1`,
+  // `place_declare/3`, `place_remove/1` and `trust_declare/2` (IGLP,
+  // Definition Seam Predicates). GLP code decides who acts, when, and whether;
+  // each function performs only the mechanism.
 
   /// The address at which this layer observes peer [pk], or null if none is
   /// observed. Backs `peer_address/2`.

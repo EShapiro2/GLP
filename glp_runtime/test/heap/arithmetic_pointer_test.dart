@@ -292,7 +292,7 @@ void main() {
         0: VarRef(resultWriter),
       });
 
-      final goalId = 1;
+      final goalId = rt.nextGoalId++;
       rt.setGoalEnv(goalId, env);
 
       final entryPc = image.entryOffsetOf('compute_sum/1');

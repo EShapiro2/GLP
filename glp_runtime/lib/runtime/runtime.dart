@@ -28,8 +28,10 @@ class GlpRuntime {
   /// spawned goals inherit it.
   final Map<GoalId, Object?> _goalModules = <GoalId, Object?>{};
 
-  // Goal ID counter for spawn
-  int nextGoalId = 10000;  // Start at 10000 to avoid collisions with test goal IDs
+  /// The goal-id counter.  Every goal takes its id from it --- a spawned goal,
+  /// a goal run/2 or run/3 activates, a REPL goal, the goal an agent's host
+  /// posts at boot --- so no two goals share one.
+  int nextGoalId = 1;
 
   /// The goal currently being reduced. The interpreter sets this immediately
   /// before invoking a body kernel, so a kernel (e.g. `self_module`) can reach
