@@ -2,13 +2,14 @@
 //
 // The canonical compilation of a vGLP program in the paper's syntax, in both
 // modes.
-// Spec: vGLP at 16b3b54 --- sections/vglp.tex, Definition "Guarded Clause,
+// Spec: vGLP at 4cab2ff --- sections/vglp.tex, Definition "Guarded Clause,
 // Volitional Procedure, Interactive Type, Interactive Term, Ordinary Clause,
 // Procedure, vGLP Program"; sections/elicitation.tex, Definition "Canonical
 // Compilation".  vGLP's code task of 2026-10-01, Part 1, tests (ii) and (iii).
 //
 // (ii) A reader-mode question and a writer-mode one compile to
-//     construct(T, X), and a (_) clause emits close.
+//     construct(T, X), and a (_) clause emits withdraw, not the root's
+//     close/1.
 // (iii) The nine .vglp sources in the old syntax are not in the paper's, and
 //     keep their old compilation.
 
@@ -53,14 +54,15 @@ void main() {
               ':- ground(From?) | decide(Answer?, From?, Resp).'));
     });
 
-    test('a (_) clause is given a fresh writer and the body goal close of '
-        'its reader', () {
+    test('a (_) clause is given a fresh writer and the body goal withdraw of '
+        'its reader, and the root\'s close/1 is not called', () {
       expect(
           q,
           contains('agent1(Id, [msg(Id1, friend_request(From, Resp?)) | NetIn], '
               'Outs?, A) :- (Id? =?= Id1?), ground(From?) | '
               'respond_coldcall(offer(From?), Resp), agent(Id?, NetIn?, Outs), '
-              'close(A?).'));
+              'withdraw(A?).'));
+      expect(q, isNot(contains('close(')));
     });
 
     test('no "true |" in an asking clause', () {
@@ -101,8 +103,8 @@ procedure (T?)*p(Integer?).
 (_)*p(0).
 (_)*p(N) :- N? > 0 | true.
 ''');
-      expect(s, contains('p1(0, A) :- close(A?).'));
-      expect(s, contains('p1(N, A) :- (N? > 0) | close(A?).'));
+      expect(s, contains('p1(0, A) :- withdraw(A?).'));
+      expect(s, contains('p1(N, A) :- (N? > 0) | withdraw(A?).'));
     });
 
     test('the fresh writer of a (_) clause is fresh in the clause', () {
@@ -111,7 +113,7 @@ T ::= t.
 procedure (T?)*p(Integer?, Integer).
 (_)*p(A, A?).
 ''');
-      expect(s, contains('p1(A, A?, A1) :- close(A1?).'));
+      expect(s, contains('p1(A, A?, A1) :- withdraw(A1?).'));
     });
 
     test('a nullary volitional procedure, and exported, and a parameter '

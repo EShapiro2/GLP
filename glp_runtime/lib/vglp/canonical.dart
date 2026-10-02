@@ -1,7 +1,7 @@
 // glp_runtime/lib/vglp/canonical.dart
 //
 // The canonical compilation of a vGLP program written in the paper's syntax.
-// Spec: vGLP at 16b3b54 --- sections/vglp.tex, Definition "Guarded Clause,
+// Spec: vGLP at 4cab2ff --- sections/vglp.tex, Definition "Guarded Clause,
 // Volitional Procedure, Interactive Type, Interactive Term, Ordinary Clause,
 // Procedure, vGLP Program"; sections/elicitation.tex, Definition "Canonical
 // Compilation".
@@ -25,7 +25,7 @@
 //   - for each volitional procedure q of interactive type T, its clauses as
 //     guarded clauses of arity n+1, their calls replaced likewise, a clause
 //     with the interactive term `_` given a fresh writer A in its place and the
-//     body goal close(A?);
+//     body goal withdraw(A?);
 //   - the asking clause
 //         q_a(S1, ..., Sn) :- construct(T, X), q(S1', ..., Sn', X?).
 //     S'_l the reader of S_l at an input position and the writer at an output
@@ -58,8 +58,12 @@ import 'program_compilation.dart' show compiledHeader;
 const constructGoal = 'construct';
 
 /// The built-in that closes a question (vGLP, Definition "Guarded Clause,
-/// ...": "The built-in goal close(X?) succeeds on any argument").
-const closeGoal = 'close';
+/// ...": "The built-in goal withdraw(X?) succeeds on any argument; its use is
+/// to close a question").  It is vGLP's built-in, not the root's close/1,
+/// which stays.  The runtime implements it (sections/elicitation.tex, the
+/// paragraph before Definition "Canonical Compilation"), and that runtime is
+/// Part 2's, so withdraw/1 is not declared here.
+const withdrawGoal = 'withdraw';
 
 /// One volitional procedure of the source, and the names the compilation
 /// gives it.
@@ -584,7 +588,7 @@ Procedure _askingClause(ProcDecl decl, VolitionalProcedure v, String goal) {
 
 /// The clauses of q as guarded clauses of arity n+1, named q1; a clause whose
 /// interactive term is `_` is given a fresh writer A in its place and the body
-/// goal close(A?).
+/// goal withdraw(A?).
 Procedure _guardedProcedure(Procedure p, VolitionalProcedure v) {
   final clauses = <Clause>[];
   for (final c in p.clauses) {
@@ -597,8 +601,8 @@ Procedure _guardedProcedure(Procedure p, VolitionalProcedure v) {
         ...args.sublist(0, args.length - 1),
         VarTerm(a, false, last.line, last.column),
       ];
-      final close = Goal(closeGoal, [VarTerm(a, true, last.line, last.column)],
-          last.line, last.column);
+      final withdraw = Goal(withdrawGoal,
+          [VarTerm(a, true, last.line, last.column)], last.line, last.column);
       // A body that is the single goal `true` is the guarded unit clause's
       // idiom, and is empty.
       final rest = (body == null ||
@@ -607,7 +611,7 @@ Procedure _guardedProcedure(Procedure p, VolitionalProcedure v) {
                   body.first.args.isEmpty))
           ? const <Goal>[]
           : body;
-      body = [...rest, close];
+      body = [...rest, withdraw];
     }
     clauses.add(Clause(Atom(v.guardedName, args, c.head.line, c.head.column),
         guards: c.guards, body: body, line: c.line, column: c.column));
