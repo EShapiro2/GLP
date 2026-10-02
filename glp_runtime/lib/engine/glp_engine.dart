@@ -644,6 +644,16 @@ class GlpEngine {
     _runtime.madContext = madContext;
   }
 
+  /// In madGLP mode, the Sends that end a goal's run (IGLP, Definition madGLP
+  /// Send; Implementation Notes, "Event-driven execution"): the outbox's
+  /// messages placed on the channel [MadContext.onMessageReady] gives, which
+  /// whoever enters the mode provides (the REPL's `:mad`).  Null outside it.
+  void Function()? get _sends {
+    final ctx = madContext;
+    if (ctx == null) return null;
+    return () => ctx.flushMessages();
+  }
+
   /// Get the combined bytecode program from all loaded sources.
   ///
   /// Returns the unfiltered merged program: every loaded label is present in
@@ -880,6 +890,7 @@ class GlpEngine {
       debug: debugTrace,
       showBindings: false,
       debugOutput: debugOutput,
+      send: _sends,
     );
 
     // Collect bindings
@@ -1007,6 +1018,7 @@ class GlpEngine {
       debug: debugTrace,
       showBindings: false,
       debugOutput: debugOutput,
+      send: _sends,
     );
 
     // Collect bindings

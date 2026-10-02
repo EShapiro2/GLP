@@ -501,7 +501,16 @@ class Scheduler {
 
   /// Async drain that waits for pending timers to fire.  [goalIds], when
   /// given, has the id of each goal run appended, as [drainWithStatus]'s.
-  Future<DrainResult> drainAsyncWithStatus({int maxCycles = 1000, bool debug = false, bool showBindings = true, bool debugOutput = false, List<int>? goalIds}) async {
+  ///
+  /// With [send] the drain is a madGLP agent's (IGLP, Implementation Notes,
+  /// "Event-driven execution": the agent "reduces until quiescent ... and
+  /// then performs its Sends"): each drain is followed by the Sends, which
+  /// [send] makes, and the drain is made again while a goal waits on
+  /// when_idle on the machine the Sends leave idle, as [drainAndSend]'s is
+  /// for the agents.  The REPL's goal in madGLP mode is drained so
+  /// (GlpEngine.runGoal); until 2026-10-02 it made no Sends, and a goal there
+  /// waiting on when_idle waited for as long as a message sat in the outbox.
+  Future<DrainResult> drainAsyncWithStatus({int maxCycles = 1000, bool debug = false, bool showBindings = true, bool debugOutput = false, List<int>? goalIds, void Function()? send}) async {
     final failedAtEntry = rt.failedGoals.length;
     var totalCycles = 0;
     ExecutionStatus lastStatus = ExecutionStatus.succeeded;
@@ -521,6 +530,17 @@ class Scheduler {
       lastStatus = result.status;
       lastSuspended = () => result.suspendedGoals;
       lastBlockingReaders = result.blockingReaders;
+
+      // The Sends, and the drain again while they leave the machine idle with
+      // a goal waiting on when_idle, which it re-tries; at the cap the run
+      // stopped with that goal still to re-try ([drainAndSend]).
+      if (send != null) {
+        send();
+        if (rt.hasIdleWaits && rt.isIdle) {
+          if (totalCycles < maxCycles) continue;
+          lastStatus = ExecutionStatus.capped;
+        }
+      }
 
       // A failed drain does not end the computation either: a pending timer is
       // a class that becomes enabled, so the configuration is not terminal and

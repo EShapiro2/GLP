@@ -12,6 +12,7 @@
 library;
 
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 
@@ -263,6 +264,68 @@ void main() {
         await manager.shutdown();
       }
     }, timeout: Timeout(Duration(seconds: 60)));
+  });
+
+  group("the REPL's madGLP mode performs its Sends", () {
+    // GLP #3 Cowork, 2026-10-02 08:40 UTC, H: the REPL's :mad mode made no
+    // Sends, so a goal there waiting on when_idle waited for as long as a
+    // message sat in the outbox, which was for good.  Fixture:
+    // programs/tests/mad_repl_when_idle.glp, whose ping/1 cold-calls b and
+    // leaves idle/1 waiting on when_idle.
+    final fixture =
+        File('../programs/tests/mad_repl_when_idle.glp').absolute.path;
+
+    /// An engine in madGLP mode as agent a, the outbox wired to [channel] if
+    /// one is given, with the fixture loaded.
+    GlpEngine madEngine(void Function(String destination)? channel) {
+      final engine = GlpEngine(
+          rootSelfGlpPath: File('../programs/self.glp').absolute.path);
+      engine.enableMadGLP(agentId: 'a');
+      if (channel != null) {
+        engine.madContext!.onMessageReady = (to, message) => channel(to);
+      }
+      expect(engine.loadFile(fixture), isTrue);
+      return engine;
+    }
+
+    test(
+        "a goal's run ends with the Sends, and the goal waiting on when_idle "
+        'passes after them', () async {
+      final sent = <String>[];
+      final engine = madEngine(sent.add);
+      final r = await engine.runGoal('ping(X)');
+      expect(r.status, ExecutionStatus.succeeded, reason: '${r.error}');
+      expect(_v(r.bindings['X']), 'idle');
+      expect(sent, ['b']);
+      expect(engine.madContext!.mp.isEmpty, isTrue);
+    });
+
+    test('with no channel to send on, the message stays and the goal waits',
+        () async {
+      final engine = madEngine(null);
+      final r = await engine.runGoal('ping(X)');
+      expect(r.status, ExecutionStatus.suspended);
+      expect(r.bindings['X'], isNull);
+      expect(engine.madContext!.mp.hasSendable, isTrue);
+    });
+
+    test(
+        'the REPL itself: :mad wires the outbox to its channel, where the '
+        'message reaches no router and is reported, and then the goal passes',
+        () async {
+      final repl = await Process.start(
+          Platform.resolvedExecutable, ['bin/glp_repl.dart']);
+      repl.stdin.write(':mad a\n$fixture\nping(X).\n:quit\n');
+      await repl.stdin.close();
+      final err = repl.stderr.transform(utf8.decoder).join();
+      final out = await repl.stdout.transform(utf8.decoder).join();
+      await repl.exitCode;
+      final dropped =
+          out.indexOf('[MAD a] message to b dropped: no router in the REPL');
+      expect(dropped, isNonNegative, reason: '$out\n${await err}');
+      expect(out.indexOf('X = idle'), greaterThan(dropped), reason: out);
+      expect(out, contains('→ succeeds'));
+    }, timeout: Timeout(Duration(minutes: 3)));
   });
 
   group('the declaration', () {
