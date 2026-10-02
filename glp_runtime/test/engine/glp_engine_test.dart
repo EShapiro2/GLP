@@ -97,5 +97,27 @@ set(b, X?) :- X := 2.
       expect(result.status, isNot(ExecutionStatus.failed));
       print('X = ${result.bindings['X']}, Y = ${result.bindings['Y']}');
     });
+
+    test('a goal that does not parse as a body is refused by the goal check',
+        () async {
+      // The initial goal "is type-checked before execution as a body goal"
+      // (TGLP modules.tex, Type-Compatible Attestation Between Agents), so a
+      // goal that is not one is refused there; until 2026-10-02 the check was
+      // skipped for it.
+      final result = await engine.runGoal('p(');
+      expect(result.failed, isTrue);
+      expect(result.error, contains('does not parse as a clause body'));
+    });
+
+    test('a later load of a loaded procedure name is an error', () {
+      const source = 'procedure q(_?).\nq(_).\n';
+      expect(engine.loadSource(source, filename: 'first_load'), isTrue);
+      expect(
+          () => engine.loadSource(source, filename: 'second_load'),
+          throwsA(predicate((e) => e.toString().contains(
+              'a later load of a same-named procedure is an error'))));
+      // A load under the name of an earlier one replaces it.
+      expect(engine.loadSource(source, filename: 'first_load'), isTrue);
+    });
   });
 }
