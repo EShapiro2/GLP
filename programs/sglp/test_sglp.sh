@@ -1,7 +1,8 @@
 #!/bin/bash
 # Tests of sGLP in GLP (programs/sglp) against sGLP's paper (the repository
 # svGLP-Stochastic-Volitional-GLP at d2f64b6) and its code tasks of 2026-10-02
-# 00:06 UTC, item 6, 15:23 UTC, items 1 and 3, and 15:44 UTC.
+# 00:06 UTC, item 6, 15:23 UTC, items 1 and 3, 15:24 UTC, item 4, and 15:44
+# UTC.
 #
 #   bash programs/sglp/test_sglp.sh
 #
@@ -35,6 +36,13 @@
 #       for (iv) is the profiles the log of (iv) shows, each agent's read from
 #       its menus' other-sex share and its cards' yes share; at 0 and 0 and at
 #       100 and 100, the draws of (v) are none and all.
+# (viii) circulation.awk (the task of 15:24 UTC, item 4), checked by hand: on
+#       tests/circulation/four.log, a fixed log of four agents over three
+#       simulated months --- six swaps proposed, four accepted and two
+#       declined; six pays, taking part of a holding, more than a holding,
+#       all of one and of coins not held; an answer at a month's end exactly;
+#       the clock --- it prints tests/circulation/four.expected, the twelve
+#       months and the totals computed by hand from the log.
 #
 # Prints one line per check and a summary line, "=== P passed, F failed ===";
 # exits non-zero if any check fails.  The runs of (iii) and (iv) take some
@@ -187,6 +195,13 @@ grep -q '^draw homophile 0 indifferent 100 wary 0 sociable 100$' "$WORK/m0-0.out
 check "at 0 and 0 the draw is no homophile and no wary agent" $?
 grep -q '^draw homophile 100 indifferent 0 wary 100 sociable 0$' "$WORK/m100-100.out"
 check "at 100 and 100 the draw is every agent homophile and wary" $?
+
+echo "--- (viii) circulation.awk on a fixed four-agent log"
+awk -f "$HERE/coins/circulation.awk" "$HERE/tests/circulation/four.log" > "$WORK/four.out" 2>&1
+cmp -s "$WORK/four.out" "$HERE/tests/circulation/four.expected"
+st=$?
+check "circulation.awk on tests/circulation/four.log prints the months and totals computed by hand" $st
+[ "$st" -eq 0 ] || diff "$WORK/four.out" "$HERE/tests/circulation/four.expected" | sed 's/^/        /'
 
 echo ""
 echo "=== $PASS passed, $FAIL failed ==="

@@ -5361,8 +5361,9 @@ echo ""
 # Section SGLP: sGLP in GLP (programs/sglp)
 # =============================================================================
 # programs/sglp/test_sglp.sh holds sGLP's checks of its programs --- the monitor
-# over when_idle, the law of its releases, the social graph's runs --- against
-# sGLP's paper, and prints one summary line; this section runs it and folds its
+# over when_idle, the law of its releases, the social graph's runs, the
+# circulation's replay on a fixed log --- against sGLP's paper, and prints one
+# summary line; this section runs it and folds its
 # two counts into the suite's, as Section JX does jurix's.  Its runs take some
 # minutes.
 echo "=== Section SGLP: sGLP in GLP ==="
