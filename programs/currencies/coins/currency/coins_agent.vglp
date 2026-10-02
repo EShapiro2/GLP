@@ -267,7 +267,7 @@ propose_swap(ok, Id, Q, _, Want, Give, Rest, UserIn, PeerIn, Convs, Outs, Serial
     ground(Q?), ground(Want?), ground(Give?) |
     has_peer(Q?, Outs?, Outs1, Known),
     send_swap(Known?, Id?, Q?, Want?, Give?, Rest?, UserIn?, PeerIn?, Convs?, Outs1?, Serial?).
-propose_swap(fail, Id, Q, lot(U, K), _, Give, Rest, UserIn, PeerIn, Convs, Outs, Serial) :-
+propose_swap(fail, Id, _, lot(U, K), _, Give, Rest, UserIn, PeerIn, Convs, Outs, Serial) :-
     append_coins(Give?, Rest?, Orig),
     show(lacking(U?, K?), Outs?, Outs1),
     agent(Id?, UserIn?, PeerIn?, Convs?, Outs1?, Orig?, Serial?).

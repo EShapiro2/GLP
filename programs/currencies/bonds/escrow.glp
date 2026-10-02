@@ -60,7 +60,7 @@ accepts(credit_line(P, Q, K, T, D1, Kd, Pd, Ph, Date), _, _, _, no,
 %% distinguished, and no instrument of the paper gives a party such a pair.
 accepts(packaged(P, Q, Xs, Ys, Got, Ph, Date), deposit, From, [L], V?,
         packaged(P?, Q?, Xs?, Ys?, Got?, Ph?, Date?)) :-
-    ground(From?), ground(L?) |
+    ground(From?), ground(L?), ground(Xs?), ground(Ys?), ground(Got?) |
     packaged_accepts(P?, Q?, Xs?, Ys?, Got?, From?, L?, V).
 accepts(packaged(P, Q, Xs, Ys, Got, Ph, Date), _, _, _, no,
         packaged(P?, Q?, Xs?, Ys?, Got?, Ph?, Date?)) :-
@@ -181,11 +181,11 @@ line_expire(P, Q, K, T, D1, Kd, Pd, T1, [],
 
 procedure packaged_accepts(Constant?, Constant?, Stream(Lot)?, Stream(Lot)?, Stream(Lot)?, Constant?, Lot?, Constant).
 packaged_accepts(P, _, Xs, _, Got, From, L, V?) :-
-    P? =?= From? |
+    P? =?= From?, ground(L?) |
     lot_member(L?, Xs?, In),
     owed(In?, L?, Got?, V).
 packaged_accepts(_, Q, _, Ys, Got, From, L, V?) :-
-    Q? =?= From? |
+    Q? =?= From?, ground(L?) |
     lot_member(L?, Ys?, In),
     owed(In?, L?, Got?, V).
 packaged_accepts(_, _, _, _, _, _, _, no) :- otherwise | true.
@@ -204,7 +204,7 @@ same_lot(lot(U, D, K), lot(U1, D1, K1), yes) :- U? =?= U1?, D? =?= D1?, K? =:= K
 same_lot(lot(_, _, _), lot(_, _, _), no) :- otherwise | true.
 
 procedure lot_member(Lot?, Stream(Lot)?, Constant).
-lot_member(L, [M|Rest], V?) :- same_lot(L?, M?, Same), member_step(Same?, L?, Rest?, V).
+lot_member(L, [M|Rest], V?) :- ground(L?) | same_lot(L?, M?, Same), member_step(Same?, L?, Rest?, V).
 lot_member(_, [], no).
 
 procedure member_step(Constant?, Lot?, Stream(Lot)?, Constant).
@@ -217,13 +217,13 @@ add_lot(L, [], [L?]).
 
 procedure packaged_check(Constant?, Constant?, Stream(Lot)?, Stream(Lot)?, Stream(Lot)?, Phase?, Integer?, Script, Agreement).
 packaged_check(P, Q, Xs, Ys, Got, Ph, Date, Steps?, Ag?) :-
-    ground(Got?) |
+    ground(Got?), ground(Xs?), ground(Ys?) |
     all_in(Xs?, Got?, HaveX),
     all_in(Ys?, Got?, HaveY),
     packaged_release(HaveX?, HaveY?, P?, Q?, Xs?, Ys?, Got?, Ph?, Date?, Steps, Ag).
 
 procedure all_in(Stream(Lot)?, Stream(Lot)?, Constant).
-all_in([L|Rest], Got, V?) :- lot_member(L?, Got?, In), all_in_step(In?, Rest?, Got?, V).
+all_in([L|Rest], Got, V?) :- ground(Got?) | lot_member(L?, Got?, In), all_in_step(In?, Rest?, Got?, V).
 all_in([], _, yes).
 
 procedure all_in_step(Constant?, Stream(Lot)?, Stream(Lot)?, Constant).

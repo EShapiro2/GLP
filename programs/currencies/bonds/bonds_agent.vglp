@@ -466,7 +466,7 @@ propose_swap(ok, Id, Q, _, Want, Give, Rest, UserIn, NetIn, Cal, Outs, Date, Ws,
     has_peer(Q?, Outs?, Outs1, Known),
     send_swap(Known?, Id?, Q?, Want?, Give?, Outs1?, Outs2, UserIn?, UserIn1),
     after_change(Id?, UserIn1?, NetIn?, Cal?, Outs2?, Rest?, Date?, Ws?, Serial?).
-propose_swap(fail, Id, Q, lot(U, D, K), _, Give, Rest, UserIn, NetIn, Cal, Outs, Date, Ws, Serial) :-
+propose_swap(fail, Id, _, lot(U, D, K), _, Give, Rest, UserIn, NetIn, Cal, Outs, Date, Ws, Serial) :-
     append_instruments(Give?, Rest?, Orig),
     show(lacking(U?, D?, K?), Outs?, Outs1),
     agent(Id?, UserIn?, NetIn?, Cal?, Outs1?, Orig?, Date?, Ws?, Serial?).

@@ -138,7 +138,7 @@ fill_swap(Med, fail, Id, From, swap_decline(Offered?), Give, Offered, Rest, Link
 
 procedure propose_swap(Channel(Closed, Stream(AgentMsg))?, Constant?, Constant?, Constant?, Lot?, Lot?, Stream(Instrument)?, Stream(Instrument)?, Stream(UserInMsg)?, Stream(NetInMsg)?, Stream(Integer)?, Stream(OutputEntry)?, Integer?, Stream(Warranty)?, Integer?).
 propose_swap(Med, ok, Id, Q, _, Want, Give, Rest, UserIn, NetIn, Cal, Outs, Date, Ws, Serial) :- ground(Q?), ground(Want?), ground(Give?) | med_split(Med?, Medb, Medr), has_peer(Q?, Outs?, Outs1, Known), send_swap(Medb?, Known?, Id?, Q?, Want?, Give?, Outs1?, Outs2, UserIn?, UserIn1), after_change(Medr?, Id?, UserIn1?, NetIn?, Cal?, Outs2?, Rest?, Date?, Ws?, Serial?).
-propose_swap(Med, fail, Id, Q, lot(U, D, K), _, Give, Rest, UserIn, NetIn, Cal, Outs, Date, Ws, Serial) :- append_instruments(Give?, Rest?, Orig), show(lacking(U?, D?, K?), Outs?, Outs1), agent(Med?, Id?, UserIn?, NetIn?, Cal?, Outs1?, Orig?, Date?, Ws?, Serial?, none, none, none, none, none, none, none, none, none).
+propose_swap(Med, fail, Id, _, lot(U, D, K), _, Give, Rest, UserIn, NetIn, Cal, Outs, Date, Ws, Serial) :- append_instruments(Give?, Rest?, Orig), show(lacking(U?, D?, K?), Outs?, Outs1), agent(Med?, Id?, UserIn?, NetIn?, Cal?, Outs1?, Orig?, Date?, Ws?, Serial?, none, none, none, none, none, none, none, none, none).
 
 procedure send_swap(Channel(Closed, Stream(AgentMsg))?, Constant?, Constant?, Constant?, Lot?, Stream(Instrument)?, Stream(OutputEntry)?, Stream(OutputEntry), Stream(UserInMsg)?, Stream(UserInMsg)).
 send_swap(_, yes, Id, Q, Want, Give, Outs, Outs1?, UserIn, UserIn1?) :- ground(Q?) | send_friend(Q?, msg(Id?, Q?, swap(Want?, Give?, Resp)), Outs?, Outs1), inject_swap_result(Resp?, Q?, linked, UserIn?, UserIn1).
