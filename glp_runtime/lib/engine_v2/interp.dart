@@ -562,11 +562,12 @@ class ByteRunner with OpExecutors implements GoalRunner {
       // computation. So the parent goes on spawning the rest of its body and
       // proceeds, and this goal joins F.
       //
-      // The diagnostic carries the call's arguments, not the signature alone:
-      // abort/1 is undefined, so the := domain errors the root self.glp still
-      // sends to it (sqrt's, ln's, log's, asin's and acos's) arrive here, and
-      // the argument is the whole content of the fault. A zero divisor does
-      // not: '_div', '_idiv' and '_mod' abort on it themselves.
+      // The diagnostic carries the call's arguments, not the signature alone.
+      // No := domain error arrives here: a body kernel whose precondition
+      // fails aborts (GLP-Spec appendix-guards), so '_div', '_idiv', '_mod',
+      // '_sqrt', '_ln', '_log10', '_asin' and '_acos' abort themselves, and
+      // the root self.glp sends nothing to the undefined abort/1, as its
+      // domain-error clauses did until 2026-10-02.
       final call = _callText(symbol.name, arity, cx);
       cx.rt.failedGoals.add(call);
       print('ERROR: no procedure for goal, failed: $call');

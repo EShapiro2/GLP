@@ -382,13 +382,11 @@ Result? := abs(X) :-
   X1 := X?,
   Result := abs(X1?).
 
-% Square root
+% Square root.  A negative argument is '_sqrt''s to abort on: a body kernel
+% whose precondition fails aborts (GLP-Spec appendix-guards).
 Result? := sqrt(X) :-
-  number(X?), X? >= 0 |
+  number(X?) |
   '_sqrt'(X?, Result).
-_ := sqrt(X) :-
-  number(X?), X? < 0 |
-  abort("Square root of negative number").
 Result? := sqrt(X) :-
   otherwise |
   X1 := X?,
@@ -430,25 +428,19 @@ Result? := exp(X) :-
   X1 := X?,
   Result := exp(X1?).
 
-% Natural logarithm
+% Natural logarithm.  A non-positive argument is '_ln''s to abort on.
 Result? := ln(X) :-
-  number(X?), X? > 0 |
+  number(X?) |
   '_ln'(X?, Result).
-_ := ln(X) :-
-  number(X?), X? =< 0 |
-  abort("Natural logarithm of non-positive number").
 Result? := ln(X) :-
   otherwise |
   X1 := X?,
   Result := ln(X1?).
 
-% Base-10 logarithm
+% Base-10 logarithm.  A non-positive argument is '_log10''s to abort on.
 Result? := log(X) :-
-  number(X?), X? > 0 |
+  number(X?) |
   '_log10'(X?, Result).
-_ := log(X) :-
-  number(X?), X? =< 0 |
-  abort("Logarithm of non-positive number").
 Result? := log(X) :-
   otherwise |
   X1 := X?,
@@ -464,31 +456,19 @@ Result? := pow(X, Y) :-
   Y1 := Y?,
   Result := pow(X1?, Y1?).
 
-% Arc sine
+% Arc sine.  An argument outside [-1, 1] is '_asin''s to abort on.
 Result? := asin(X) :-
-  number(X?), X? >= -1, X? =< 1 |
+  number(X?) |
   '_asin'(X?, Result).
-_ := asin(X) :-
-  number(X?), X? < -1 |
-  abort("Arc sine domain error: argument must be in [-1, 1]").
-_ := asin(X) :-
-  number(X?), X? > 1 |
-  abort("Arc sine domain error: argument must be in [-1, 1]").
 Result? := asin(X) :-
   otherwise |
   X1 := X?,
   Result := asin(X1?).
 
-% Arc cosine
+% Arc cosine.  An argument outside [-1, 1] is '_acos''s to abort on.
 Result? := acos(X) :-
-  number(X?), X? >= -1, X? =< 1 |
+  number(X?) |
   '_acos'(X?, Result).
-_ := acos(X) :-
-  number(X?), X? < -1 |
-  abort("Arc cosine domain error: argument must be in [-1, 1]").
-_ := acos(X) :-
-  number(X?), X? > 1 |
-  abort("Arc cosine domain error: argument must be in [-1, 1]").
 Result? := acos(X) :-
   otherwise |
   X1 := X?,
