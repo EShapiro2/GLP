@@ -88,12 +88,24 @@ class ByteRunner with OpExecutors implements GoalRunner {
   }
 
   /// First clause-control opcode strictly after [fromStart], or the code end if
-  /// none — scans the next clause boundary in the code section.
-  int _nextClauseByte(int fromStart) {
-    for (final co in _controlOffsets) {
-      if (co > fromStart) return co;
+  /// none: the next clause boundary in the code section, found by binary
+  /// search in [_controlOffsets], which is ascending.  Until 2026-10-02 the
+  /// list was walked from its start at every clause that failed or suspended,
+  /// so a clause try cost in the number of clauses linked before it: the
+  /// linked sGLP program has 429 boundaries, `:=/2` starts at the 315th and
+  /// has some forty clauses, and the walk was half the run's time.
+  int nextClauseByte(int fromStart) {
+    final offs = _controlOffsets;
+    var lo = 0, hi = offs.length;
+    while (lo < hi) {
+      final mid = (lo + hi) >> 1;
+      if (offs[mid] > fromStart) {
+        hi = mid;
+      } else {
+        lo = mid + 1;
+      }
     }
-    return image.code.length;
+    return lo < offs.length ? offs[lo] : image.code.length;
   }
 
   /// Byte-loop routing for `StepOutcome.nextClause`: leave the clause (clear its
@@ -110,20 +122,26 @@ class ByteRunner with OpExecutors implements GoalRunner {
   int _applyNextClauseByte(RunnerContext cx, int opStart) {
     if (cx.U.touched) cx.U.addAll(cx.Si);
     cx.clearClause();
-    return _nextClauseByte(opStart);
+    return nextClauseByte(opStart);
   }
 
   void run(RunnerContext cx) {
     runWithStatus(cx);
   }
 
-  @override
-  String? procNameForPc(int pc) {
+  /// The signature of the first compiled symbol at each entry offset, made
+  /// once: [procNameForPc] is asked for every goal the scheduler takes, and
+  /// walked the symbol table each time until 2026-10-02.
+  late final Map<int, String> _procNameByPc = () {
+    final m = <int, String>{};
     for (final s in image.symbols) {
-      if (s.compiled && s.codeOffset == pc) return s.signature;
+      if (s.compiled) m.putIfAbsent(s.codeOffset, () => s.signature);
     }
-    return null;
-  }
+    return m;
+  }();
+
+  @override
+  String? procNameForPc(int pc) => _procNameByPc[pc];
 
   RunResult runWithStatus(RunnerContext cx) {
     final code = image.code;
