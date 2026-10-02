@@ -441,8 +441,13 @@ class CodeGenerator {
       return;
     }
 
-    // Ground equality guard: X =?= Y
-    if (guard.predicate == '=?=' && guard.args.length == 2) {
+    // Ground equality guard: X =?= Y; and X =?\= Y, its negation, which is the
+    // same instruction with the outcome inverted --- "=?\= succeeds if both
+    // arguments are ground and differ, and suspends where =?= suspends"
+    // (GLP-Spec appendix-guards.tex, 9064202).  An operand that is not a
+    // variable takes the generic guard call below.
+    if ((guard.predicate == '=?=' || guard.predicate == '=?\\=') &&
+        guard.args.length == 2) {
       final leftArg = guard.args[0];
       final rightArg = guard.args[1];
       if (leftArg is VarTerm && rightArg is VarTerm) {
@@ -452,7 +457,7 @@ class CodeGenerator {
           ctx.emit(bc.GroundEqual(
             leftInfo.registerIndex!,
             rightInfo.registerIndex!,
-            negated: guard.negated,
+            negated: guard.negated != (guard.predicate == '=?\\='),
           ));
           return;
         }

@@ -638,6 +638,9 @@ class Analyzer {
     'wait', 'wait_until', 'when_idle',
     // Attestation guard (succeed/fail only; negation unspecified — seam spec §4)
     'valid_attestation',
+    // Ground inequality: =?\= came with GLP-Spec 9064202, after guard negation
+    // left the language (98913b4), and is itself the negation of =?=.
+    '=?\\=',
   };
 
   // Body-only constructs that are NOT valid guards
@@ -767,9 +770,12 @@ class Analyzer {
       }
     }
 
-    // Ground equality guard marks both arguments as grounded
-    // =?= succeeds only if both arguments are ground and equal
-    if (guard.predicate == '=?=' && guard.args.length == 2) {
+    // Ground equality guards mark both arguments as grounded
+    // =?= succeeds only if both arguments are ground and equal, and =?\= only
+    // if both are ground and differ: Ground "yes (both)" for each (GLP-Spec
+    // appendix-guards.tex, 9064202)
+    if ((guard.predicate == '=?=' || guard.predicate == '=?\\=') &&
+        guard.args.length == 2) {
       for (final arg in guard.args) {
         if (arg is VarTerm) {
           varTable.markGrounded(arg.name);

@@ -959,7 +959,7 @@ class Parser {
         _check(TokenType.LESS_EQUAL) || _check(TokenType.GREATER_EQUAL) ||
         _check(TokenType.EQUALS) || _check(TokenType.ARITH_EQUAL) ||
         _check(TokenType.ARITH_NOT_EQUAL) || _check(TokenType.GROUND_EQUAL) ||
-        _check(TokenType.AT_LESS)) {
+        _check(TokenType.GROUND_NOT_EQUAL) || _check(TokenType.AT_LESS)) {
       final opToken = _advance();
       final right = _parseExpression(6);
 
@@ -1917,7 +1917,7 @@ class Parser {
     //              'merge' → modulePath=null, name='merge'
     String? modulePath;
 
-    // Procedure name can be atom or operator (<, >, =<, >=, =:=, =\=, =?=, =, @<)
+    // Procedure name can be atom or operator (<, >, =<, >=, =:=, =\=, =?=, =?\=, =, @<)
     Token nameToken;
     if (_check(TokenType.ATOM)) {
       nameToken = _advance();
@@ -1934,6 +1934,8 @@ class Parser {
     } else if (_check(TokenType.ARITH_NOT_EQUAL)) {
       nameToken = _advance();
     } else if (_check(TokenType.GROUND_EQUAL)) {
+      nameToken = _advance();
+    } else if (_check(TokenType.GROUND_NOT_EQUAL)) {
       nameToken = _advance();
     } else if (_check(TokenType.AT_LESS)) {
       nameToken = _advance();

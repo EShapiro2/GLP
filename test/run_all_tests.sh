@@ -524,23 +524,32 @@ check "guard_int" "succeeds" "$a12"
 check "guard_compare" "succeeds" "$a12"
 check "guard_known_valid" "Ygr = hello" "$a12"
 
-# --- A13: Ground equal, guard negation ---
-echo "--- A13: Ground equal and guard negation ---"
+# --- A13: Ground equal, ground not-equal ---
+# =?\= is the negation of =?= (GLP-Spec appendix-guards.tex, 9064202): "=?\=
+# succeeds if both arguments are ground and differ, and suspends where =?=
+# suspends."  test_neq takes the ground equality instruction inverted (both
+# operands variables), test_neq_stop the generic guard call (one a constant).
+# Success needs both arguments ground, so f(a, Zq?) =?\= f(b, Wq?) suspends.
+echo "--- A13: Ground equal and ground not-equal ---"
 a13=$("$REPL_RUN" <<HEREDOC
 $TYPED/test_ground_equal.glp
-$TYPED/test_guard_negation.glp
+$TYPED/test_ground_not_equal.glp
 test(a, a, R1).
 test(a, b, R2).
 test(foo(1,2), foo(1,2), R3).
 test(foo(1,2), foo(1,3), R4).
 test([1,2,3], [1,2,3], R5).
 test([1,2], [1,3], R6).
-test_neg_int(5, Rn1).
-test_neg_int(hello, Rn2).
-test_neg_number(3.14, Rn3).
-test_neg_number(hello, Rn4).
-test_neg_eq(5, 5, Rn5).
-test_neg_eq(5, 3, Rn6).
+test_neq(a, a, Rq1).
+test_neq(a, b, Rq2).
+test_neq(foo(1,2), foo(1,2), Rq3).
+test_neq(foo(1,2), foo(1,3), Rq4).
+test_neq([1,2,3], [1,2,3], Rq5).
+test_neq([1,2], [1,3], Rq6).
+test_neq_stop(go, Rq7).
+test_neq_stop(stop, Rq8).
+neq_pair(a, b, Rq9).
+neq_only(f(a, Zq?), f(b, Wq?), Rq10).
 :quit
 HEREDOC
 2>&1)
@@ -551,12 +560,16 @@ check "equal structs" "R3 = equal" "$a13"
 check "not equal structs" "R4 = not_equal" "$a13"
 check "equal lists" "R5 = equal" "$a13"
 check "not equal lists" "R6 = not_equal" "$a13"
-check "neg int is_int" "Rn1 = is_int" "$a13"
-check "neg int not_int" "Rn2 = not_int" "$a13"
-check "neg number is_num" "Rn3 = is_num" "$a13"
-check "neg number not_num" "Rn4 = not_num" "$a13"
-check "neg eq equal" "Rn5 = eq" "$a13"
-check "neg eq not equal" "Rn6 = neq" "$a13"
+check "=?\\= on equal atoms fails" "Rq1 = equal" "$a13"
+check "=?\\= on differing atoms" "Rq2 = not_equal" "$a13"
+check "=?\\= on equal structs fails" "Rq3 = equal" "$a13"
+check "=?\\= on differing structs" "Rq4 = not_equal" "$a13"
+check "=?\\= on equal lists fails" "Rq5 = equal" "$a13"
+check "=?\\= on differing lists" "Rq6 = not_equal" "$a13"
+check "=?\\= against a constant, differing" "Rq7 = go_on" "$a13"
+check "=?\\= against a constant, equal, fails" "Rq8 = stopped" "$a13"
+check "=?\\= grounds both readers" "Rq9 = pair(a, a, b, b)" "$a13"
+check "=?\\= on non-ground terms suspends" "suspended" "$a13"
 
 # --- A14: Circular terms ---
 echo "--- A14: Circular term tests ---"
@@ -724,8 +737,6 @@ test_no_readers(foo(1, bar(2)), Rnr2).
 test_no_readers(f(Wnr), Rnr3).
 test_no_readers([1,2|Tnr], Rnr4).
 test_no_readers(g(Ynr?), Rnr5).
-test_neg_no_readers(h(Znr?), Rnr6).
-test_neg_no_readers(7, Rnr7).
 test_no_readers(f(_), Rnr8).
 test_no_readers(foo(1, bar(_)), Rnr9).
 :quit
@@ -737,8 +748,6 @@ check "no_readers ground compound" "Rnr2 = ok" "$a20b"
 check "no_readers writer inside term" "Rnr3 = ok" "$a20b"
 check "no_readers writer tail" "Rnr4 = ok" "$a20b"
 check "no_readers reader suspends" "suspended" "$a20b"
-check "~no_readers finds reader" "Rnr6 = has_readers" "$a20b"
-check "~no_readers on ground falls through" "Rnr7 = none" "$a20b"
 # An anonymous writer inside a goal argument.  Until 2026-08-02 the REPL goal
 # path had no UnderscoreTerm branch and threw "Unsupported struct argument
 # type", while a NAMED writer in the same position (Rnr3 above) worked.
@@ -1006,16 +1015,6 @@ HEREDOC
 2>&1)
 check_not "reader-to-reader no reduction" "req(2)" "$a27"
 
-# --- A28: Module guard ---
-echo "--- A28: Module guard ---"
-a28=$("$REPL_RUN" <<HEREDOC
-$TYPED/module_guard.glp
-test_not_module(42, Rm1).
-:quit
-HEREDOC
-2>&1)
-check "module guard ~module(42)" "Rm1 = not_module" "$a28"
-
 # --- A29: Struct terms inside lists in goal arguments (Issue 0b regression) ---
 echo "--- A29: Structs in list goal args ---"
 a29=$("$REPL_RUN" <<HEREDOC
@@ -1266,9 +1265,6 @@ POSITIVE_FILES=(
     "$TC_DIR/positive/subtyping/integer_below_number_and_constant.glp"
     "$TC_DIR/positive/subtyping/int_list_to_constant_list.glp"
     "$TC_DIR/positive/subtyping/constant_union_to_constant.glp"
-
-    # --- module guard test ---
-    "$TYPED/module_guard.glp"
 
     # --- parameterized types ---
     "$TYPED/param_stream_integer.glp"
@@ -1691,7 +1687,6 @@ guard_cases=(
     "true_in_guard.glp|\"true\" is not a guard"
     "false_in_guard.glp|\"false\" is not a guard"
     "fail_in_guard.glp|\"fail\" is not a guard"
-    "negated_arithmetic.glp|Guard \"<\" cannot be negated"
     "negated_defined_guard.glp|Defined guard \"d\" cannot be negated"
 )
 

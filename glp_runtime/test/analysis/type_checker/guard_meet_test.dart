@@ -97,9 +97,10 @@ bad(S, T?) :- an_integer(S?) | a_string(S?, T).
     test('~g on an occurrence whose meet with g\'s type is empty is well-typed',
         () {
       // `Integer?` and `Module?` share no term: `is_module(X?)` would be
-      // refused, and `~is_module(X?)` succeeds always.  The module_guard.glp
-      // shape (A28, B), which was refused as an empty meet; `Verdict` stands
-      // for its `Constant`, which is the root scope's and not in scope here.
+      // refused, and `~is_module(X?)` succeeds always.  The shape of
+      // module_guard.glp, which was refused as an empty meet (the fixture was
+      // deleted on 2026-10-02 with guard negation); `Verdict` stands for its
+      // `Constant`, which is the root scope's and not in scope here.
       final result = checkSource('''
 Verdict ::= not_module.
 
