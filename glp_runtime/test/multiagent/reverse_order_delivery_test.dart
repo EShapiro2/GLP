@@ -75,12 +75,12 @@ import 'package:glp_runtime/multiagent/simulation_network.dart';
   return (bobRt: bobRt, bobNetIn: bobNetIn);
 }
 
-/// Build a 2-agent router (alice, bob), both Open, recording nothing.
+/// Build a 2-agent router (alice, bob), both Open over BLE, recording nothing.
 SimulationRouter _router() {
   final r = SimulationRouter();
   for (final id in ['alice', 'bob']) {
     r.register(id, generateKeyPair().pub);
-    r.setTrustLevel(id, TrustLevel.open);
+    r.setTrustLevel(id, ProximityMedium.ble, TrustLevel.open);
   }
   r.onConnectivity = (_, __, ___, ____) {};
   return r;
