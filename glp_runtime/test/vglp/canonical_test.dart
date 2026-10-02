@@ -148,6 +148,54 @@ ask1(_).
       expect(c.source, contains('ask1_1(N, t) :- ground(N?) | ask1(N?).'));
     });
 
+    group('the anonymous variable as the interactive term, by the mode of '
+        'the interactive type', () {
+      Matcher refusal(String clause, int line) => throwsA(isA<CompileError>()
+          .having((e) => e.message, 'message',
+              allOf(contains('The clause $clause '), contains('writer mode')))
+          .having((e) => e.line, 'line', line));
+
+      test('in reader mode, (_) compiles, withdrawing the question', () {
+        final s = compile('''
+YesNo ::= yes ; no.
+procedure (YesNo?)*ask(Integer?, Integer).
+(yes)*ask(N, N?).
+(_)*ask(_, 0).
+''');
+        expect(s, contains('ask1(N, N?, yes).'));
+        expect(s, contains('ask1(_, 0, A) :- withdraw(A?).'));
+      });
+
+      test('in writer mode, (_) is a compile error naming the clause', () {
+        expect(() => compile('''
+YesNo ::= yes ; no.
+Note ::= note(YesNo).
+procedure (Note)*tell(YesNo?).
+(note(A?))*tell(A).
+(_)*tell(no).
+'''), refusal('(_)*tell(no)', 5));
+      });
+
+      test('in writer mode, (_?), the anonymous output, is refused as well', () {
+        expect(() => compile('''
+YesNo ::= yes ; no.
+Note ::= note(YesNo).
+procedure (Note)*tell(YesNo?).
+(_?)*tell(no).
+'''), refusal('(_?)*tell(no)', 4));
+      });
+
+      test('in writer mode, a nullary procedure\'s (_) clause is named too',
+          () {
+        expect(() => compile('''
+Note ::= note.
+procedure (Note)*tell.
+(note)*tell.
+(_)*tell :- true | true.
+'''), refusal('(_)*tell', 4));
+      });
+    });
+
     group('is refused', () {
       void refused(String source, String why) => expect(
           () => compileCanonical(source),

@@ -12,7 +12,9 @@
 //     (A)*p(S1, ..., Sn) :- G | B.
 //
 // T is the interactive type, in writer or reader mode as an argument type is;
-// A, the interactive term, is a term of type T, a variable or `_`.  The clause
+// A, the interactive term, is a term of type T, possibly a variable, or `_`,
+// the anonymous variable, if T is in reader mode; in writer mode, where the
+// program writes the output, the anonymous variable is refused.  The clause
 // "is the guarded clause p(S1, ..., Sn, A) :- G | B, of arity n+1" (Definition
 // "Guarded Clause, ..."), so the front end reads it as exactly that: a token
 // rewrite puts A after the last argument, and T after the last argument type,
@@ -181,6 +183,7 @@ CanonicalProgram compileCanonical(String text) {
     }
   }
   _checkNoAskedCall(m, volitional);
+  _checkNoAnonymousOutput(m, volitional);
 
   // The compiled procedures, each with its declaration, in source order; a
   // volitional procedure becomes its asking clause and its (n+1)-ary
@@ -497,6 +500,49 @@ void _checkNoAskedCall(Module m, Map<String, VolitionalProcedure> volitional) {
       }
     }
   }
+}
+
+/// The interactive term is "a term of type T, possibly a variable, or the
+/// anonymous variable if T is in reader mode" (Definition "Guarded Clause,
+/// ..."): "In writer mode the program writes the output, and a clause closes
+/// a question inside it by withdraw on the question's reader; the anonymous
+/// variable, which would leave the output unwritten, is not allowed there."
+/// It is refused written `_`, and written `_?`, TGLP's anonymous output, the
+/// interactive term's position being a produced one in writer mode.
+void _checkNoAnonymousOutput(
+    Module m, Map<String, VolitionalProcedure> volitional) {
+  for (final v in volitional.values) {
+    if (v.readerMode) continue;
+    for (final p in m.procedures) {
+      if (p.signature != '${v.name}/${v.arity + 1}') continue;
+      for (final c in p.clauses) {
+        final a = c.head.args.last;
+        if (a is! UnderscoreTerm) continue;
+        throw CompileError(
+            'The clause ${_asWritten(c, v)} has the anonymous variable as its '
+            'interactive term, and the interactive type ${v.typeConstant} of '
+            '${v.name}/${v.arity} is in writer mode: there the program writes '
+            'the output, and a clause closes a question inside it by '
+            'withdraw on the question\'s reader; the anonymous variable, which '
+            'would leave the output unwritten, is not allowed (vGLP, '
+            'Definition "Guarded Clause, ...")',
+            c.line, c.column, phase: 'analyzer');
+      }
+    }
+  }
+}
+
+/// The head of a clause of a volitional procedure as the source writes it,
+/// `(A)*p(S1, ..., Sn)`.
+String _asWritten(Clause c, VolitionalProcedure v) {
+  final printer = SourcePrinter();
+  final args = c.head.args;
+  final a = args.last;
+  final term = a is UnderscoreTerm
+      ? (a.isReader ? '_?' : '_')
+      : printer.printTerm(a);
+  final rest = args.sublist(0, args.length - 1).map(printer.printTerm);
+  return '($term)*${v.name}${rest.isEmpty ? '' : '(${rest.join(', ')})'}';
 }
 
 /// The calls a body makes, a rated or placed goal by its inner goal.
