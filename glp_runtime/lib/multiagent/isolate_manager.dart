@@ -19,7 +19,7 @@ import 'package:glp_runtime/engine_v2/interp.dart';
 import 'package:glp_runtime/runtime/terms.dart';
 import 'package:glp_runtime/runtime/scheduler.dart';
 import 'package:glp_runtime/runtime/machine_state.dart';
-import 'package:glp_runtime/multiagent/payload_serializer.dart';
+import 'package:glp_runtime/wire/payload_codec.dart' show PayloadCodec;
 import 'package:glp_runtime/multiagent/boot_loader.dart';
 import 'package:glp_runtime/multiagent/glp_network.dart';
 import 'package:glp_runtime/multiagent/identity.dart' show PersonIdentity;
@@ -425,8 +425,7 @@ class IsolateManager {
     }
 
     // Serialize the message
-    final serializer = PayloadSerializer(agentId);
-    final payload = serializer.serializeAgentMessage(message);
+    final payload = PayloadCodec.serializeAgentMessage(message);
     port.send(UIEvent(agentId, payload));
   }
 

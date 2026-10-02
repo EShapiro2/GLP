@@ -153,7 +153,8 @@ void main() {
       //    localize() creates LocalizeEntry (Z_q, p, 5) and immediately delivers
       //    the held assignment, binding Z_q to 42.
       final content = StructTerm('_r', [ConstTerm('p'), ConstTerm(5)]);
-      final carrier = StructTerm('.', [content, ConstTerm('#serializer:q:0')]);
+      final carrier = StructTerm(
+          '.', [content, StructTerm('_w', [ConstTerm('q'), ConstTerm(0)])]);
       ctx.handleMadAssignment(
         globalName: GlobalName.writer('q', 0),
         value: carrier,

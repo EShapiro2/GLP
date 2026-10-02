@@ -4,9 +4,9 @@
 /// not `_w`/`_r` structures. No original-creator ids, no paired-reader field,
 /// no serializer string marker — the serializer tail is the variable `_w(q,0)`.
 ///
-/// These exercise the canonical codec path (`PayloadCodec`) directly. The
-/// switched-on multiagent/isolate suites are run separately with
-/// GLP_WIRE_CANONICAL=1.
+/// These exercise the canonical codec (`PayloadCodec`) directly; it is the
+/// one encoding of madGLP payloads, which the multiagent and isolate suites run
+/// over.
 library;
 
 import 'dart:typed_data';
