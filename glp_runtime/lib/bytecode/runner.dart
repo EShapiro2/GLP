@@ -1,4 +1,5 @@
 import 'dart:async' show Timer;
+import 'dart:collection' show SetBase;
 import 'dart:typed_data' show Uint8List;
 
 import 'package:glp_runtime/multiagent/mad_context.dart' show MadContext;
@@ -177,6 +178,69 @@ class _ParentContext {
   });
 }
 
+/// The goal's suspension set U: the readers the goal suspends on when no
+/// clause selects it (IGLP Implementation Notes, "Clause try").  It notes
+/// whether the current clause attempt added to it, [touched], and that is how
+/// a clause that suspended is told from one that failed: a reader is added here
+/// where a guard or the commit suspends, and never where a match fails.  A
+/// clause that meets a mismatch fails, whatever it suspended on before
+/// (GLP-Spec appendix-term-matching.tex, Definition "Term Matching": "The writer
+/// mgu is the union of all writer assignments if no fail was encountered and
+/// the suspension set is empty"), so its own suspension set Si reaches U only
+/// when it suspended ([ByteRunner]'s `_applyNextClauseByte`).
+class SuspensionSet extends SetBase<int> {
+  final Set<int> _readers = <int>{};
+
+  /// Whether a reader was added since the clause attempt began.
+  bool touched = false;
+
+  @override
+  bool add(int value) {
+    touched = true;
+    return _readers.add(value);
+  }
+
+  @override
+  bool contains(Object? element) => _readers.contains(element);
+
+  @override
+  int? lookup(Object? element) => _readers.lookup(element);
+
+  @override
+  bool remove(Object? value) => _readers.remove(value);
+
+  @override
+  Iterator<int> get iterator => _readers.iterator;
+
+  @override
+  int get length => _readers.length;
+
+  @override
+  Set<int> toSet() => _readers.toSet();
+}
+
+/// The subterm a head pattern meets at an unbound goal reader.  The reader is
+/// suspended on (GLP-Spec appendix-term-matching.tex, row "Reader X1?", column
+/// "Term f2/n2": "suspend on X1?") and the pattern under it is SKIPPED, not
+/// read against whatever structure the traversal last held: its positions match
+/// nothing and fail nothing, and a clause variable first met in it is UNKNOWN
+/// ([RunnerContext.unknownVars]).  The rest of the head is still matched, so a
+/// later mismatch fails the clause.
+class _SkippedSubterm {
+  const _SkippedSubterm();
+  @override
+  String toString() => 'skipped';
+}
+
+const _skipped = _SkippedSubterm();
+
+/// Enter [_skipped] for the subterm under an unbound goal reader.
+void _skipSubterm(RunnerContext cx) {
+  cx.currentStructure = _skipped;
+  cx.mode = UnifyMode.read;
+  cx.S = 0;
+}
+
 class RunnerContext {
   final GlpRuntime rt;
   final int goalId;
@@ -184,8 +248,24 @@ class RunnerContext {
   final CallEnv env;
   final Map<int, Object?> sigmaHat = <int, Object?>{}; // σ̂w: tentative writer bindings
   final Set<int> Si = <int>{};       // clause-level preliminary suspension set
-  final Set<int> U = <int>{};        // goal-level suspension set (reader IDs)
+  final SuspensionSet U = SuspensionSet(); // goal-level suspension set (reader IDs)
   bool inBody = false;
+
+  /// The clause variables first met inside a skipped subterm ([_skipped]):
+  /// their value is unknown, so a guard over one is undecided --- neither
+  /// success nor failure --- and is passed by, and a later occurrence matches
+  /// whatever it meets.  The clause cannot commit, its suspension set being
+  /// non-empty; what is still asked of it is whether it fails.
+  final Set<int> unknownVars = <int>{};
+
+  /// Set while a generic guard's arguments are built if one of them is an
+  /// unknown variable ([unknownVars]): the guard is undecided and is passed by.
+  bool guardUndecided = false;
+
+  /// Whether clause variable [varIndex] is unknown: unset, its first
+  /// occurrence lying in a skipped subterm.
+  bool isUnknown(int varIndex) =>
+      clauseVars[varIndex] == null && unknownVars.contains(varIndex);
 
   // WAM-style structure traversal state
   UnifyMode mode = UnifyMode.read;   // Current unification mode
@@ -283,6 +363,9 @@ class RunnerContext {
   void clearClause() {
     sigmaHat.clear();
     Si.clear();
+    U.touched = false;
+    unknownVars.clear();
+    guardUndecided = false;
     inBody = false;
     mode = UnifyMode.read;
     S = 0;
@@ -1437,25 +1520,28 @@ mixin OpExecutors {
     return StepOutcome.advance;
   }
 
-  /// `commit` (0x04): two-phase HEAD resolution then apply σ̂w. First resolve Si
-  /// against σ̂w; any reader whose writer is not tentatively bound stays
-  /// unresolved → the clause cannot commit, return [StepOutcome.nextClause].
-  /// Otherwise convert tentative structures to terms, apply the writer bindings
-  /// to the heap (waking suspended goals), reset to BODY phase, and advance.
+  /// `commit` (0x04): a clause whose suspension set Si is non-empty cannot
+  /// commit --- its readers go to U and [StepOutcome.nextClause] is returned ---
+  /// and otherwise the tentative structures are converted to terms, the writer
+  /// bindings applied to the heap (waking suspended goals), and BODY entered.
+  ///
+  /// GLP-Spec appendix-term-matching.tex, Definition "Term Matching": a goal
+  /// reader against a head term is "suspend on X1?", and "the writer mgu is the
+  /// union of all writer assignments if no fail was encountered and the
+  /// suspension set is empty".  Until 2026-10-02 a resolution pass first
+  /// removed from Si every reader whose paired writer the same head's tentative
+  /// substitution binds (IGLP Implementation Notes, "Clause try"), and the
+  /// clause committed although the pattern at that reader was never matched
+  /// against the value: `e1(Y?, Y)` reduced with `e1(f(2), f(1))`, and
+  /// `e3(Y?, Y)` with `e3(2, 1)`.  The table is implemented as written here;
+  /// whether the resolution pass is the language's is put to GLP (GLP
+  /// 2026-10-01 23:58 UTC item 4, the open edge).
   StepOutcome execCommit(RunnerContext cx) {
-    final resolvedSi = <int>{};
-    for (final readerAddr in cx.Si) {
-      final writerAddr = cx.rt.heap.tryWriterForReader(readerAddr);
-      if (writerAddr == null || !cx.sigmaHat.containsKey(writerAddr)) {
-        resolvedSi.add(readerAddr);
-      }
-    }
-    if (resolvedSi.isNotEmpty) {
-      cx.U.addAll(resolvedSi);
+    if (cx.Si.isNotEmpty) {
+      cx.U.addAll(cx.Si);
       cx.Si.clear();
       return StepOutcome.nextClause;
     }
-    cx.Si.clear();
 
     // Convert tentative structures to real Terms before committing.
     final convertedSigmaHat = <int, Object?>{};
@@ -1538,6 +1624,8 @@ mixin OpExecutors {
   /// unbound writer→fail (nextClause). ~ground(X) inverts the ground/fail ends;
   /// the unbound-reader case still suspends.
   StepOutcome execGround(RunnerContext cx, int varIndex, bool negated) {
+    // A variable met only in a skipped subterm is unknown: undecided, passed by.
+    if (cx.isUnknown(varIndex)) return StepOutcome.advance;
     final value = cx.clauseVars[varIndex];
     if (value == null) return StepOutcome.nextClause; // missing var → fail
 
@@ -1623,6 +1711,8 @@ mixin OpExecutors {
   /// unbound reader→suspend; unbound writer→fail. ~known(X) inverts bound/writer
   /// ends. Unlike ground, only X itself is inspected, not its sub-terms.
   StepOutcome execKnown(RunnerContext cx, int varIndex, bool negated) {
+    // A variable met only in a skipped subterm is unknown: undecided, passed by.
+    if (cx.isUnknown(varIndex)) return StepOutcome.advance;
     final value = cx.clauseVars[varIndex];
     if (value == null) return StepOutcome.nextClause; // missing var → fail
 
@@ -1696,6 +1786,8 @@ mixin OpExecutors {
   /// none→advance; some→suspend on them (never fails). ~no_readers(X): some
   /// readers→advance; none→fail. Missing var counts as no readers.
   StepOutcome execNoReaders(RunnerContext cx, int varIndex, bool negated) {
+    // A variable met only in a skipped subterm is unknown: undecided, passed by.
+    if (cx.isUnknown(varIndex)) return StepOutcome.advance;
     final value = cx.clauseVars[varIndex];
     if (value == null) {
       return negated ? StepOutcome.nextClause : StepOutcome.advance;
@@ -1773,6 +1865,10 @@ mixin OpExecutors {
   /// equal/not-equal ends).
   StepOutcome execGroundEqual(
       RunnerContext cx, int leftVarIndex, int rightVarIndex, bool negated) {
+    // A variable met only in a skipped subterm is unknown: undecided, passed by.
+    if (cx.isUnknown(leftVarIndex) || cx.isUnknown(rightVarIndex)) {
+      return StepOutcome.advance;
+    }
     final leftValue = cx.clauseVars[leftVarIndex];
     final rightValue = cx.clauseVars[rightVarIndex];
     if (leftValue == null || rightValue == null) return StepOutcome.nextClause;
@@ -1855,6 +1951,8 @@ mixin OpExecutors {
   /// `unknown` (0x43): succeed iff the clause variable is currently unbound (no
   /// σ̂w tentative binding and not heap-bound). A dispatch test; never suspends.
   StepOutcome execUnknown(RunnerContext cx, int varIndex) {
+    // A variable met only in a skipped subterm is unknown: undecided, passed by.
+    if (cx.isUnknown(varIndex)) return StepOutcome.advance;
     final term = cx.clauseVars[varIndex];
     if (term is VarRef) {
       if (cx.sigmaHat.containsKey(term.addr)) return StepOutcome.nextClause;
@@ -1881,6 +1979,14 @@ mixin OpExecutors {
         throw StateError('~otherwise: otherwise cannot be negated');
       }
       return execOtherwise(cx);
+    }
+    // An argument built from a variable met only in a skipped subterm: the
+    // guard is undecided, and is passed by --- the clause, suspended on the
+    // reader that subterm lay under, cannot commit, and what is still asked of
+    // it is whether a later match or guard fails.
+    if (cx.guardUndecided) {
+      cx.guardUndecided = false;
+      return StepOutcome.advance;
     }
     final args = <Object?>[];
     final unboundReaders = <int>{};
@@ -2050,6 +2156,12 @@ mixin OpExecutors {
         cx.S++;
       }
     } else {
+      if (cx.currentStructure is _SkippedSubterm) {
+        // Under a suspended goal reader: nothing to match.  A variable first
+        // met here is unknown ([RunnerContext.unknownVars]).
+        if (cx.clauseVars[varIndex] == null) cx.unknownVars.add(varIndex);
+        return StepOutcome.advance;
+      }
       if (cx.currentStructure is StructTerm) {
         final struct = cx.currentStructure as StructTerm;
         if (cx.S < struct.args.length) {
@@ -2168,7 +2280,8 @@ mixin OpExecutors {
   /// `head_structure` (match arg against a functor/arity). For a clause var or a
   /// goal arg: bound writer/reader matching the functor → READ mode over it;
   /// unbound writer → WRITE mode building a tentative struct in σ̂w; unbound
-  /// reader → suspend (Si); mismatch → next clause.
+  /// reader → suspend (Si) and skip the pattern under it ([_skipped]);
+  /// mismatch → next clause.
   StepOutcome execHeadStructure(
       RunnerContext cx, String functor, int arity, int argSlot) {
     // A clause/temp register (not a top-level argument slot) iff it is not one of
@@ -2240,6 +2353,7 @@ mixin OpExecutors {
         final bound = cx.rt.heap.isReaderBound(rid);
         if (!bound) {
           cx.Si.add(rid);
+          _skipSubterm(cx);
           return StepOutcome.advance;
         }
         final rawValue = cx.rt.heap.getReaderValue(rid);
@@ -2302,6 +2416,7 @@ mixin OpExecutors {
         if (value is VarRef) {
           if (cx.rt.heap.isReader(value.addr)) {
             cx.Si.add(value.addr);
+            _skipSubterm(cx);
             return StepOutcome.advance;
           } else {
             final struct =
@@ -2334,6 +2449,7 @@ mixin OpExecutors {
     if (arg is VarRef && cx.rt.heap.isReader(arg.addr)) {
       if (!cx.rt.heap.isReaderBound(arg.addr)) {
         cx.Si.add(_finalUnboundVar(cx, arg.addr));
+        _skipSubterm(cx);
         return StepOutcome.advance;
       }
 
@@ -2613,6 +2729,15 @@ mixin OpExecutors {
                 // Writer mode: use ground term directly
                 struct.args[cx.S] = clauseVarValue;
               }
+            } else if (clauseVarValue == null &&
+                !cx.inBody &&
+                cx.unknownVars.contains(varIndex)) {
+              // A guard argument's structure holding an unknown variable, met
+              // only in a skipped subterm: the guard is undecided
+              // ([execGuard]), and the variable stays unknown.
+              cx.guardUndecided = true;
+              final (writerAddr, readerAddr) = cx.rt.heap.allocateVariable();
+              struct.args[cx.S] = VarRef(isReaderMode ? readerAddr : writerAddr);
             } else if (clauseVarValue == null) {
               // First occurrence - allocate fresh variable
               final (writerAddr, readerAddr) = cx.rt.heap.allocateVariable();
@@ -2729,6 +2854,12 @@ mixin OpExecutors {
           }
         } else {
           // READ mode: Unify with value at S position
+          if (cx.currentStructure is _SkippedSubterm) {
+            // Under a suspended goal reader: nothing to match.  A variable
+            // first met here is unknown ([RunnerContext.unknownVars]).
+            if (cx.clauseVars[varIndex] == null) cx.unknownVars.add(varIndex);
+            return StepOutcome.advance;
+          }
           if (cx.currentStructure is StructTerm) {
             final struct = cx.currentStructure as StructTerm;
             if (cx.S < struct.args.length) {
@@ -2835,8 +2966,9 @@ mixin OpExecutors {
 
   /// `unify_structure` (nested structure at the current S subterm). READ mode:
   /// match the subterm functor/arity, entering it (or mode-converting an unbound
-  /// writer to WRITE, or suspending an unbound reader via U). WRITE mode: create
-  /// the nested tentative struct in the parent and descend into it.
+  /// writer to WRITE, or suspending on an unbound reader (Si) and skipping the
+  /// pattern under it). WRITE mode: create the nested tentative struct in the
+  /// parent and descend into it.
   StepOutcome execUnifyStructure(RunnerContext cx, String functor, int arity) {
         if (cx.mode == UnifyMode.read) {
           // READ mode: Match structure at args[S]
@@ -2887,10 +3019,13 @@ mixin OpExecutors {
                 cx.currentStructure = nested;
                 cx.S = 0;
               } else if (value is VarRef && cx.rt.heap.isReader(value.addr)) {
-                // Unbound reader where structure expected
-                // Following three-valued unification: suspend on unbound reader
-                cx.U.add(value.addr);
-                return StepOutcome.nextClause;
+                // Unbound reader where structure expected: suspend on it and
+                // skip the pattern under it, matching the rest of the head
+                // (appendix-term-matching.tex: "suspend on X1?"; a fail
+                // anywhere is a fail).  Until 2026-10-02 the clause was
+                // abandoned here, so a later mismatch was never seen.
+                cx.Si.add(value.addr);
+                _skipSubterm(cx);
               } else {
                 // Mismatch - fail to next clause
                 return StepOutcome.nextClause;
@@ -3041,8 +3176,9 @@ mixin OpExecutors {
 
   /// `get_value` (unify goal arg argSlot with the already-bound clause var).
   /// Writer mode unifies/binds via σ̂w; reader mode binds an unbound goal
-  /// writer to the stored value's reader (suspending (U) on an unbound stored
-  /// reader) and fails on a goal reader or term. Null arg, unset clause var, or
+  /// writer to the stored value's reader (suspending (Si) on an unbound stored
+  /// reader) and fails on a goal reader or term. A variable first met in a
+  /// skipped subterm is unknown and matches. Null arg, unset clause var, or
   /// any mismatch → next clause.
   StepOutcome execGetValue(
       RunnerContext cx, int varIndex, int argSlot, bool isReaderMode) {
@@ -3054,7 +3190,17 @@ mixin OpExecutors {
 
         var storedValue = cx.clauseVars[varIndex];
         if (storedValue == null) {
-          return StepOutcome.nextClause;
+          if (!cx.unknownVars.contains(varIndex)) return StepOutcome.nextClause;
+          // The variable was first met in a skipped subterm and is unknown:
+          // nothing to match it with, so this occurrence fails only where the
+          // table fails it whatever the variable --- a head reader against a
+          // goal reader or term (appendix-term-matching.tex, column "Reader
+          // X2?").
+          if (isReaderMode &&
+              (arg is! VarRef || !_isUnboundWriterCell(cx, arg.addr))) {
+            return StepOutcome.nextClause;
+          }
+          return StepOutcome.advance;
         }
 
         if (!isReaderMode) {
@@ -3178,7 +3324,10 @@ mixin OpExecutors {
               final readerValue = cx.rt.heap.getReaderValue(storedValue);
               cx.sigmaHat[arg.addr] = readerValue;
             } else {
-              cx.U.add(storedValue); return StepOutcome.nextClause;
+              // Suspend on it and match the rest of the head (a fail anywhere
+              // is a fail).  Until 2026-10-02 the clause was abandoned here,
+              // so a later mismatch was never seen.
+              cx.Si.add(storedValue);
             }
           } else if (storedValue is Term) {
             cx.sigmaHat[arg.addr] = storedValue;
@@ -3339,6 +3488,16 @@ mixin OpExecutors {
   /// needed so every CallEnv argument is a VarRef.
   StepOutcome execPutVariable(
       RunnerContext cx, int varIndex, int argSlot, bool isReaderMode) {
+        // A guard's argument (before commit) that is an unknown variable, met
+        // only in a skipped subterm: the guard is undecided ([execGuard]), and
+        // the variable stays unknown --- the slot gets a fresh variable that
+        // the clause does not keep.
+        if (!cx.inBody && cx.isUnknown(varIndex)) {
+          cx.guardUndecided = true;
+          final (writerAddr, readerAddr) = cx.rt.heap.allocateVariable();
+          cx.argSlots[argSlot] = VarRef(isReaderMode ? readerAddr : writerAddr);
+          return StepOutcome.advance;
+        }
         final value = cx.clauseVars[varIndex];
 
         if (value is VarRef) {
@@ -3563,9 +3722,11 @@ mixin OpExecutors {
           final value = bound ? cx.rt.heap.getReaderValue(arg.addr) : null;
 
           if (!bound) {
-            // Unbound reader - add to Si and continue (two-phase)
+            // Unbound reader - add to Si, skip the pattern under it, and
+            // continue ([_skipped])
             final suspendOnVar = _finalUnboundVar(cx, arg.addr);
             cx.Si.add(suspendOnVar);
+            _skipSubterm(cx);
             return StepOutcome.advance;
           } else {
             // Bound reader - check if it's a list structure
