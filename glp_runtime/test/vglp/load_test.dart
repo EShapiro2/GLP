@@ -196,6 +196,72 @@ ping(a).
     });
   });
 
+  group('a source in the paper\'s syntax, compiled with its ask streams', () {
+    // vGLP's task of 2026-10-02 00:13 UTC, item F: the canonical compilation
+    // of db03e2d, typed.  The ask stream's element type is the union over the
+    // program's interactive types of their asks, ask(Constant, T, Handle), so
+    // a program with one interactive type is the one TGLP's checker can type:
+    // two or more give two alternatives of the functor ask/3, which TGLP
+    // refuses.
+    const entrySelfGlp = '''
+exported procedure ping(Constant).
+ping(a).
+''';
+
+    test('one interactive type in reader mode, a (_) clause and a merge: the '
+        'compiled program is well-typed, input coverage included', () {
+      write('self.glp', entrySelfGlp);
+      write('agent.vglp', '''
+Peer     ::= Constant.
+Request  ::= post(String) ; quit.
+Msg      ::= msg(Peer, String).
+
+procedure (Request?)*agent(Peer?, Stream(Msg)?, Stream(String)).
+(post(Text))*agent(Id, NetIn, [Text?|Outs?]) :-
+    ground(Id?) | agent(Id?, NetIn?, Outs).
+(quit)*agent(_, _, []).
+(_)*agent(Id, [msg(Id1, T)|NetIn], [T?|Outs?]) :-
+    Id? =?= Id1?, ground(T?) |
+    agent(Id?, NetIn?, Outs).
+
+procedure two(Peer?, Peer?, Stream(Msg)?, Stream(Msg)?, Stream(String),
+    Stream(String)).
+two(A, B, NA, NB, OA?, OB?) :- agent(A?, NA?, OA), agent(B?, NB?, OB).
+''');
+      final modules =
+          discoverProgram(fixture.path, rootSelfGlpPath: _rootSelfGlp);
+      final agent = modules.firstWhere((m) => m.moduleName == 'agent');
+      expect(agent.ast.procedures.map((p) => '${p.name}/${p.arity}'),
+          containsAll(['agent/4', 'agent1/6', 'two/7']));
+      expect(() => typeCheckProgram(modules, rootDir: fixture.path),
+          returnsNormally);
+    });
+
+    test('one interactive type in writer mode, the responder of Section 3: '
+        'well-typed', () {
+      write('self.glp', entrySelfGlp);
+      write('responder.vglp', '''
+Peer     ::= Constant.
+Offer    ::= offer(Peer).
+Response ::= accept(Peer) ; refuse(Peer).
+YesNo    ::= yes ; no.
+Card     ::= card(Peer, YesNo?).
+
+procedure (Card)*respond_coldcall(Offer?, Response).
+(card(From?, Answer))*respond_coldcall(offer(From), Resp?) :-
+    ground(From?) | decide(Answer?, From?, Resp).
+
+procedure decide(YesNo?, Peer?, Response).
+decide(yes, From, accept(From?)).
+decide(no, From, refuse(From?)).
+''');
+      final modules =
+          discoverProgram(fixture.path, rootSelfGlpPath: _rootSelfGlp);
+      expect(() => typeCheckProgram(modules, rootDir: fixture.path),
+          returnsNormally);
+    });
+  });
+
   group('a .vglp source beside a .glp of its name', () {
     test('the hand-written module stands and the .vglp is not compiled', () {
       write('self.glp', selfGlp);

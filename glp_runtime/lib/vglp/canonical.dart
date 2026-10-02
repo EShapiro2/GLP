@@ -20,30 +20,55 @@
 // rewrite puts A after the last argument, and T after the last argument type,
 // and the ordinary GLP parser reads the result.
 //
-// The compilation, by the Definition:
+// The compilation, by the Definition (vGLP's code task of 2026-10-02 00:13
+// UTC, item F):
 //
-//   - every ordinary clause, each call q(S1, ..., Sn) of a volitional
-//     procedure q in its body replaced by q_a(S1, ..., Sn);
+//   - a procedure REACHES A QUESTION if it is volitional or a clause of it
+//     calls a procedure that does, the least fixpoint over the program's
+//     calls; each such procedure has one more argument, last, its ASK STREAM;
+//   - in a clause of such a procedure, each body call of a procedure that
+//     reaches a question is given a fresh writer as its ask stream and the
+//     head carries D?, D the clause's ask stream: one such call is given D
+//     itself, more are merged into D by merge goals, and with none the head
+//     carries [] in place of D?;
+//   - every ordinary clause so extended, each call q(S1, ..., Sn) of a
+//     volitional procedure q in its body replaced by q_a(S1, ..., Sn);
 //   - for each volitional procedure q of interactive type T, its clauses as
-//     guarded clauses of arity n+1, their calls replaced likewise; a clause
-//     with the interactive term `_` keeps it there, dropping the reader, and
-//     no goal is added: there is no built-in (vGLP's code task of 2026-10-02
-//     00:13 UTC, item B');
+//     guarded clauses of arity n+1, with the HANDLE added after the
+//     interactive term --- withdraw in a clause whose interactive term is the
+//     anonymous variable, `_` or `_Name`, and the anonymous variable in every
+//     other --- then extended, and their calls replaced likewise.  The handle
+//     is at a produced head position, where TGLP writes the anonymous
+//     variable `_?` (TGLP, "Anonymous variables"); `_` is refused there.  A
+//     clause whose interactive term is the anonymous variable keeps it, and
+//     no goal is added: there is no built-in (item B');
 //   - the asking clause
-//         q_a(S1, ..., Sn) :- construct(T, X), q(S1', ..., Sn', X?).
+//         q_a(S1, ..., Sn, [ask(T, X, W?) | D?]) :- q(S1', ..., Sn', X?, W, D).
 //     S'_l the reader of S_l at an input position and the writer at an output
-//     position, X and X? exchanged where T is in writer mode;
-//   - typed: the asking clause declared with the source declaration's argument
-//     types, q with the argument of T added in its mode.
+//     position, the head carrying the pair's other end; X and X? exchanged
+//     where T is in writer mode;
+//   - typed: the types of the source; the handle's, Handle ::= withdraw; the
+//     ask stream's element, the union over the program's interactive types of
+//     their asks, Ask ::= ask(Constant, T1, Handle) ; ... ; each procedure that
+//     reaches a question declared with Stream(Ask) added, the asking clause
+//     with the source declaration's argument types and it, and q with the
+//     argument of T in its mode, the handle and it.  TGLP requires the
+//     alternatives of a type to be distinguished by their top-level functor
+//     ("Two alternatives with the same functor are not allowed", TGLP
+//     typed-glp.tex), so the union of two or more asks is refused by the
+//     checker: the program that loads has one interactive type.
+//
+// Not here: the initial goal and the dispatcher on its ask stream and the
+// person channel (item F.5, with Part 2).
 //
 // THE NAMES.  The asking clause takes the source name, q_a = q, so a call of
-// q in a body, and in an initial goal, is already the call of its asking
-// clause; the (n+1)-ary procedure takes `q1`, made fresh against every name the
-// program uses.
+// q in a body is already the call of its asking clause; the (n+3)-ary
+// procedure takes `q1`, made fresh against every name the program uses, and
+// the two types the compilation adds take `Ask` and `Handle`, made fresh
+// against the program's types.
 //
-// THE CONSTRUCT.  T is passed as the constant naming the moded interactive
-// type as written, 'Menu' or 'Menu?'.  construct(T, X) is the construct
-// process, which is Part 2's runtime and not declared here.
+// THE ASK.  T is the constant naming the moded interactive type as written,
+// 'Menu' or 'Menu?'.
 
 import '../compiler/ast.dart';
 import '../compiler/error.dart';
@@ -52,13 +77,21 @@ import '../compiler/lexer.dart';
 import '../compiler/parser.dart';
 import '../compiler/token.dart';
 import '../analysis/type_checker/type_ast.dart'
-    show ProcDecl, TypeExpr;
+    show ConstantAlt, ProcDecl, StructAlt, TypeDef, TypeExpr, TypeRef;
 import 'mediator.dart' show printTypeDef, typeSource;
 import 'program_compilation.dart' show compiledHeader;
 
-/// The construct process of an interactive type (vGLP, Definition "Canonical
-/// Compilation").
-const constructGoal = 'construct';
+/// The functor of the ask a goal of a volitional procedure sends on its ask
+/// stream, ask(T, X, W?) (vGLP, Definition "Canonical Compilation").
+const askFunctor = 'ask';
+
+/// What a clause whose interactive term is the anonymous variable binds the
+/// handle to (vGLP, Definition "Canonical Compilation").
+const withdrawHandle = 'withdraw';
+
+/// The goal that merges two ask streams into one (vGLP, Definition "Canonical
+/// Compilation": "merge goals merge them"), the root's merge/3.
+const mergeGoal = 'merge';
 
 /// One volitional procedure of the source, and the names the compilation
 /// gives it.
@@ -90,13 +123,19 @@ class VolitionalProcedure {
 }
 
 /// The canonical compilation of one source: the GLP module's text, the module
-/// it parses to, and the volitional procedures it compiled.
+/// it parses to, the volitional procedures it compiled, the procedures that
+/// reach a question by their source signature p/n, and the names of the two
+/// types it adds.
 class CanonicalProgram {
   final String source;
   final Module module;
   final List<VolitionalProcedure> volitional;
+  final Set<String> reaching;
+  final String askType;
+  final String handleType;
 
-  CanonicalProgram(this.source, this.module, this.volitional);
+  CanonicalProgram(this.source, this.module, this.volitional, this.reaching,
+      this.askType, this.handleType);
 }
 
 /// Whether [tokens] are a vGLP program in the paper's syntax: some declaration
@@ -178,26 +217,44 @@ CanonicalProgram compileCanonical(String text) {
   _checkNoAskedCall(m, volitional);
   _checkNoAnonymousOutput(m, volitional);
 
-  // The compiled procedures, each with its declaration, in source order; a
-  // volitional procedure becomes its asking clause and its (n+1)-ary
-  // procedure.
+  // The (n+1)-ary procedures of the volitional procedures, by their parsed
+  // signature q/(n+1).
   final askedProcs = {
     for (final v in volitional.values) '${v.name}/${v.arity + 1}': v
   };
+  final reaching = _reaching(m, volitional, askedProcs);
+
+  // The types the compilation adds.
+  final typeNames = {for (final td in m.typeDefs) td.name};
+  final added = _addedTypes(volitional.values, declsByKey,
+      ask: _freshType('Ask', typeNames), handle: _freshType('Handle', typeNames));
+
+  // The compiled procedures, each with its declaration, in source order; a
+  // volitional procedure becomes its asking clause and its (n+3)-ary
+  // procedure, and a procedure that reaches a question is extended.
   final out = <_Emitted>[];
   for (final p in m.procedures) {
     final v = askedProcs[p.signature];
     if (v == null) {
-      out.add(_Emitted(declsByKey[p.signature], p));
+      final decl = declsByKey[p.signature];
+      if (!reaching.contains(p.signature)) {
+        out.add(_Emitted(decl, p));
+        continue;
+      }
+      out.add(_Emitted(
+          decl == null ? null : _withAskStream(decl, decl.name, const [], added),
+          Procedure(p.name, p.arity + 1, [
+            for (final c in p.clauses)
+              _extended(c, p.name, c.head.args, reaching)
+          ], p.line, p.column)));
       continue;
     }
     final decl = declsByKey[p.signature]!;
+    out.add(_Emitted(_askingDeclaration(decl, v, added), _askingClause(decl, v)));
     out.add(_Emitted(
-        _askingDeclaration(decl, v), _askingClause(decl, v, constructGoal)));
-    out.add(_Emitted(
-        ProcDecl(v.guardedName, decl.argTypes, decl.line, decl.column,
-            typeParams: decl.typeParams),
-        _guardedProcedure(p, v)));
+        _withAskStream(decl, v.guardedName,
+            [TypeRef(added.handle, decl.line, decl.column)], added),
+        _guardedProcedure(p, v, reaching)));
   }
   // Declarations with no clauses of their own: imported procedures, and
   // declarations of procedures the runtime implements.
@@ -207,9 +264,10 @@ CanonicalProgram compileCanonical(String text) {
       if (!defined.contains(d.key)) d
   ];
 
-  final source = _emit(m, out, bare);
+  final source = _emit(m, added.typeDefs, out, bare);
   final module = Parser(Lexer(source).tokenize()).parseModule();
-  return CanonicalProgram(source, module, volitional.values.toList());
+  return CanonicalProgram(source, module, volitional.values.toList(),
+      reaching, added.ask, added.handle);
 }
 
 // ---------------------------------------------------------------------------
@@ -582,23 +640,180 @@ String _fresh(String stem, Set<String> taken) {
   return name;
 }
 
+
+/// A type name, [stem] or `stem_N`, fresh against [taken].
+String _freshType(String stem, Set<String> taken) {
+  var name = stem;
+  var n = 1;
+  while (taken.contains(name)) {
+    name = '${stem}_$n';
+    n++;
+  }
+  taken.add(name);
+  return name;
+}
+
+// ---------------------------------------------------------------------------
+// Reaching a question
+// ---------------------------------------------------------------------------
+
+/// The procedures that reach a question, by their source signature p/n: "A
+/// procedure of M reaches a question if it is volitional or a clause of it
+/// calls a procedure that does" (Definition "Canonical Compilation"), the
+/// least fixpoint over the program's calls.  A volitional procedure is named
+/// by its source arity, which is the arity of its calls.  A remote call
+/// M # p(...) calls no procedure of the program.
+Set<String> _reaching(Module m, Map<String, VolitionalProcedure> volitional,
+    Map<String, VolitionalProcedure> askedProcs) {
+  final reaching = {for (final v in volitional.values) '${v.name}/${v.arity}'};
+  var changed = true;
+  while (changed) {
+    changed = false;
+    for (final p in m.procedures) {
+      if (askedProcs.containsKey(p.signature) ||
+          reaching.contains(p.signature)) {
+        continue;
+      }
+      final calls = p.clauses.expand((c) => _calls(c.body ?? const []));
+      if (calls.any((g) => reaching.contains('${g.functor}/${g.args.length}'))) {
+        reaching.add(p.signature);
+        changed = true;
+      }
+    }
+  }
+  return reaching;
+}
+
+/// Whether the body goal [g] calls a procedure that reaches a question: a
+/// placed goal by its inner goal, and a remote goal never.
+bool _callsReaching(Goal g, Set<String> reaching) {
+  if (g is RemoteGoal) return false;
+  final call = g is SpawnGoal ? g.innerGoal : g;
+  return reaching.contains('${call.functor}/${call.args.length}');
+}
+
+/// The body goal [g] with [stream] added as its last argument, a placed goal
+/// to its inner goal.
+Goal _withStream(Goal g, Term stream) {
+  if (g is SpawnGoal) {
+    final inner = g.innerGoal;
+    return SpawnGoal(
+        Goal(inner.functor, [...inner.args, stream], inner.line, inner.column),
+        g.agentId,
+        g.line,
+        g.column);
+  }
+  return Goal(g.functor, [...g.args, stream], g.line, g.column);
+}
+
+// ---------------------------------------------------------------------------
+// The types the compilation adds
+// ---------------------------------------------------------------------------
+
+/// The handle's type, [handle] ::= withdraw, and the ask stream's element,
+/// [ask], the union over the program's interactive types of their asks:
+/// ask(Constant, T, Handle) for each interactive type T as written, in its
+/// mode.  An interactive type that names a type parameter of its procedure
+/// gives the ask type that parameter, and each declaration with an ask stream
+/// takes it.
+class _AddedTypes {
+  final String ask;
+  final String handle;
+  final List<String> params;
+  final List<TypeExpr> interactiveTypes;
+
+  _AddedTypes(this.ask, this.handle, this.params, this.interactiveTypes);
+
+  /// Stream(Ask), the type of an ask stream.
+  TypeRef stream(int l, int c) => TypeRef('Stream', l, c, typeArgs: [
+        TypeRef(ask, l, c, typeArgs: [for (final p in params) TypeRef(p, l, c)])
+      ]);
+
+  /// A declaration's type parameters with the ask type's added.
+  List<String> paramsFor(List<String> own) =>
+      [...own, for (final p in params) if (!own.contains(p)) p];
+
+  List<TypeDef> get typeDefs => [
+        TypeDef(handle, [ConstantAlt(withdrawHandle, 0, 0)], 0, 0),
+        TypeDef(
+            ask,
+            [
+              for (final t in interactiveTypes)
+                StructAlt(askFunctor, [
+                  TypeRef('Constant', 0, 0),
+                  t,
+                  TypeRef(handle, 0, 0),
+                ], 0, 0)
+            ],
+            0,
+            0,
+            typeParams: params),
+      ];
+}
+
+_AddedTypes _addedTypes(Iterable<VolitionalProcedure> volitional,
+    Map<String, ProcDecl> declsByKey,
+    {required String ask, required String handle}) {
+  final types = <TypeExpr>[];
+  final seen = <String>{};
+  final params = <String>[];
+  void collect(TypeExpr t, List<String> own) {
+    if (t is TypeRef) {
+      if (own.contains(t.name) && !params.contains(t.name)) params.add(t.name);
+      for (final a in t.typeArgs) {
+        collect(a, own);
+      }
+    }
+  }
+
+  for (final v in volitional) {
+    final decl = declsByKey['${v.name}/${v.arity + 1}']!;
+    final t = v.interactiveType;
+    collect(t, decl.typeParams);
+    if (seen.add(typeSource(t))) types.add(t);
+  }
+  return _AddedTypes(ask, handle, params, types);
+}
+
 // ---------------------------------------------------------------------------
 // The compiled procedures
 // ---------------------------------------------------------------------------
 
-/// The asking clause's declaration: the source declaration's argument types.
-ProcDecl _askingDeclaration(ProcDecl decl, VolitionalProcedure v) => ProcDecl(
-    v.askingName, decl.argTypes.sublist(0, v.arity), decl.line, decl.column,
-    typeParams: decl.typeParams, exported: decl.exported);
+/// A procedure's declaration with [extra] argument types and then the ask
+/// stream, Stream(Ask), added.
+ProcDecl _withAskStream(ProcDecl decl, String name, List<TypeExpr> extra,
+        _AddedTypes added, {bool? exported}) =>
+    ProcDecl(
+        name,
+        [...decl.argTypes, ...extra, added.stream(decl.line, decl.column)],
+        decl.line,
+        decl.column,
+        typeParams: added.paramsFor(decl.typeParams),
+        exported: exported ?? decl.exported);
+
+/// The asking clause's declaration: the source declaration's argument types
+/// and the ask stream.
+ProcDecl _askingDeclaration(
+        ProcDecl decl, VolitionalProcedure v, _AddedTypes added) =>
+    ProcDecl(
+        v.askingName,
+        [
+          ...decl.argTypes.sublist(0, v.arity),
+          added.stream(decl.line, decl.column)
+        ],
+        decl.line,
+        decl.column,
+        typeParams: added.paramsFor(decl.typeParams),
+        exported: decl.exported);
 
 /// The asking clause
 ///
-///     q(S1, ..., Sn) :- construct(T, X), q1(S1', ..., Sn', X?).
+///     q(S1, ..., Sn, [ask(T, X, W?) | D?]) :- q1(S1', ..., Sn', X?, W, D).
 ///
 /// S'_l the reader of S_l at an input position and the writer at an output
 /// position, the head carrying the pair's other end; X and X? exchanged where
 /// T is in writer mode.
-Procedure _askingClause(ProcDecl decl, VolitionalProcedure v, String goal) {
+Procedure _askingClause(ProcDecl decl, VolitionalProcedure v) {
   final l = decl.line, c = decl.column;
   final head = <Term>[];
   final passed = <Term>[];
@@ -608,31 +823,131 @@ Procedure _askingClause(ProcDecl decl, VolitionalProcedure v, String goal) {
     head.add(VarTerm(s, !input, l, c));
     passed.add(VarTerm(s, input, l, c));
   }
-  final clause = Clause(Atom(v.askingName, head, l, c),
+  final ask = StructTerm(askFunctor, [
+    ConstTerm(v.typeConstant, l, c),
+    VarTerm('X', !v.readerMode, l, c),
+    VarTerm('W', true, l, c),
+  ], l, c);
+  final clause = Clause(
+      Atom(v.askingName, [...head, ListTerm(ask, VarTerm('D', true, l, c), l, c)],
+          l, c),
       body: [
-        Goal(goal, [
-          ConstTerm(v.typeConstant, l, c),
-          VarTerm('X', !v.readerMode, l, c),
-        ], l, c),
-        Goal(v.guardedName, [...passed, VarTerm('X', v.readerMode, l, c)],
-            l, c),
+        Goal(
+            v.guardedName,
+            [
+              ...passed,
+              VarTerm('X', v.readerMode, l, c),
+              VarTerm('W', false, l, c),
+              VarTerm('D', false, l, c),
+            ],
+            l,
+            c),
       ],
       line: l,
       column: c);
-  return Procedure(v.askingName, v.arity, [clause], l, c);
+  return Procedure(v.askingName, v.arity + 1, [clause], l, c);
 }
 
-/// The clauses of q as guarded clauses of arity n+1, named q1.  A clause whose
-/// interactive term is `_` keeps it at the interactive position, where it
-/// drops the reader, and no goal is added (vGLP's code task of 2026-10-02
-/// 00:13 UTC, item B': no built-in).
-Procedure _guardedProcedure(Procedure p, VolitionalProcedure v) {
+/// The clauses of q as guarded clauses of arity n+1, named q1, with the handle
+/// added after the interactive term and then extended (Definition "Canonical
+/// Compilation").  A clause whose interactive term is the anonymous variable
+/// keeps it at the interactive position, where it drops the reader, and no
+/// goal is added (item B': no built-in).
+Procedure _guardedProcedure(
+    Procedure p, VolitionalProcedure v, Set<String> reaching) {
   final clauses = [
     for (final c in p.clauses)
-      Clause(Atom(v.guardedName, c.head.args, c.head.line, c.head.column),
-          guards: c.guards, body: c.body, line: c.line, column: c.column)
+      _extended(c, v.guardedName, [...c.head.args, _handle(c.head.args.last)],
+          reaching)
   ];
-  return Procedure(v.guardedName, v.arity + 1, clauses, p.line, p.column);
+  return Procedure(v.guardedName, v.arity + 3, clauses, p.line, p.column);
+}
+
+/// The handle in the head of a clause whose interactive term is [a]: withdraw
+/// where [a] is `_`, and the anonymous variable in every other clause, written
+/// `_?`, TGLP's anonymous output, the handle's being a produced position.
+Term _handle(Term a) => a is UnderscoreTerm && !a.isReader
+    ? ConstTerm(withdrawHandle, a.line, a.column)
+    : UnderscoreTerm(a.line, a.column, isReader: true);
+
+/// A clause of a procedure that reaches a question, named [name], its head's
+/// arguments [headArgs] and then its ask stream (Definition "Canonical
+/// Compilation"): each body call of a procedure that reaches a question is
+/// given a fresh writer as its ask stream, and the head carries D?, D the
+/// clause's ask stream --- the one such call given D itself, more merged into
+/// D by merge goals, a chain of them after the body's own goals --- and []
+/// in place of D? where there is none.
+Clause _extended(
+    Clause c, String name, List<Term> headArgs, Set<String> reaching) {
+  final body = c.body ?? const <Goal>[];
+  final l = c.head.line, col = c.head.column;
+  final k = body.where((g) => _callsReaching(g, reaching)).length;
+  if (k == 0) {
+    return Clause(
+        Atom(name, [...headArgs, ListTerm(null, null, l, col)], l, col),
+        guards: c.guards,
+        body: c.body,
+        line: c.line,
+        column: c.column);
+  }
+  final fresh = _FreshVariables(c);
+  final d = fresh.next('D');
+  final streams = k == 1 ? [d] : [for (var i = 0; i < k; i++) fresh.next('D')];
+  var i = 0;
+  final extended = <Goal>[
+    for (final g in body)
+      _callsReaching(g, reaching)
+          ? _withStream(g, VarTerm(streams[i++], false, g.line, g.column))
+          : g
+  ];
+  var merged = streams.first;
+  for (var j = 1; j < k; j++) {
+    final into = j == k - 1 ? d : fresh.next('D');
+    extended.add(Goal(mergeGoal, [
+      VarTerm(merged, true, l, col),
+      VarTerm(streams[j], true, l, col),
+      VarTerm(into, false, l, col),
+    ], l, col));
+    merged = into;
+  }
+  return Clause(Atom(name, [...headArgs, VarTerm(d, true, l, col)], l, col),
+      guards: c.guards, body: extended, line: c.line, column: c.column);
+}
+
+/// Variable names fresh against a clause's.
+class _FreshVariables {
+  final Set<String> _taken = {};
+
+  _FreshVariables(Clause c) {
+    void scan(Term t) {
+      if (t is VarTerm) _taken.add(t.name);
+      if (t is StructTerm) t.args.forEach(scan);
+      if (t is ListTerm) {
+        if (t.head != null) scan(t.head!);
+        if (t.tail != null) scan(t.tail!);
+      }
+    }
+
+    c.head.args.forEach(scan);
+    for (final g in c.guards ?? const <Guard>[]) {
+      g.args.forEach(scan);
+    }
+    for (final g in c.body ?? const <Goal>[]) {
+      g.args.forEach(scan);
+    }
+  }
+
+  /// [stem] if it is fresh, else the first of stem1, stem2, ... that is.
+  String next(String stem) {
+    var name = stem;
+    var n = 1;
+    while (_taken.contains(name)) {
+      name = '$stem$n';
+      n++;
+    }
+    _taken.add(name);
+    return name;
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -645,13 +960,18 @@ class _Emitted {
   _Emitted(this.decl, this.procedure);
 }
 
-String _emit(Module m, List<_Emitted> procs, List<ProcDecl> bare) {
+String _emit(Module m, List<TypeDef> added, List<_Emitted> procs,
+    List<ProcDecl> bare) {
   final b = StringBuffer();
   final printer = SourcePrinter();
   b.write(compiledHeader);
   b.writeln();
 
   for (final td in m.typeDefs) {
+    b.writeln(printTypeDef(td));
+  }
+  b.writeln();
+  for (final td in added) {
     b.writeln(printTypeDef(td));
   }
   b.writeln();
@@ -669,6 +989,7 @@ String _emit(Module m, List<_Emitted> procs, List<ProcDecl> bare) {
   }
   return b.toString();
 }
+
 
 /// A procedure declaration as GLP source, an imported one with its module
 /// path.
