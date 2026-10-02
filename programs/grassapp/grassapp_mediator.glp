@@ -25,7 +25,7 @@
 %% the offer card.  Multi-lot portfolios are Milestone 2.
 
 
-exported procedure ui_mediator(Constant?,
+exported procedure ui_mediator(Key?,
                       Channel(Stream(AgentMsg), Stream(UserMsg))?,
                       Channel(Stream(UserCmd), Stream(UserNotify))?,
                       PendingList?, Constant?).

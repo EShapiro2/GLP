@@ -12,8 +12,8 @@
 %% Names are suffixed `_esc` so this play can coexist with the other plays if
 %% they are ever loaded together (grassapp files share one flat scope).
 
-imported procedure grassapp_agent # agent(Constant?, UserInStream?, NetInStream?, OutputsList?, Stream(Bond)?, Constant?, Constant?).
-imported procedure grassapp_mediator # ui_mediator(Constant?,
+imported procedure grassapp_agent # agent(Key?, UserInStream?, NetInStream?, OutputsList?, Stream(Bond)?, Constant?, Constant?).
+imported procedure grassapp_mediator # ui_mediator(Key?,
                       Channel(Stream(AgentMsg), Stream(UserMsg))?,
                       Channel(Stream(UserCmd), Stream(UserNotify))?,
                       PendingList?, Constant?).

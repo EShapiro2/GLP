@@ -14,8 +14,8 @@
 %%
 %% Requires: self.glp, grassapp_agent.glp, grassapp_mediator.glp
 
-imported procedure grassapp_agent # agent(Constant?, UserInStream?, NetInStream?, OutputsList?, Stream(Bond)?, Constant?, Constant?).
-imported procedure grassapp_mediator # ui_mediator(Constant?,
+imported procedure grassapp_agent # agent(Key?, UserInStream?, NetInStream?, OutputsList?, Stream(Bond)?, Constant?, Constant?).
+imported procedure grassapp_mediator # ui_mediator(Key?,
                       Channel(Stream(AgentMsg), Stream(UserMsg))?,
                       Channel(Stream(UserCmd), Stream(UserNotify))?,
                       PendingList?, Constant?).

@@ -34,12 +34,12 @@ merge(Xs, [Y|Ys], [Y?|Zs?]) :- merge(Xs?, Ys?, Zs).
 merge([], Ys, Ys?).
 merge(Xs, [], Xs?).
 
-procedure lookup_send(Constant?, OutputMsg?, OutputsList?, OutputsList).
+procedure lookup_send(Key?, OutputMsg?, OutputsList?, OutputsList).
 lookup_send(Key, Msg, Outs, Outs1?) :-
     ground(Key?) |
     lookup_send_step(Key?, Msg?, Outs?, Outs1).
 
-procedure lookup_send_step(Constant?, OutputMsg?, OutputsList?, OutputsList).
+procedure lookup_send_step(Key?, OutputMsg?, OutputsList?, OutputsList).
 lookup_send_step(Key, Msg, [output(K, [Msg?|Out1?])|Rest], [output(K?, Out1)|Rest?]) :-
     Key? =?= K? | true.
 lookup_send_step(Key, Msg, [person_output(Out?)|Rest], [person_output(Out)|Rest1?]) :-
@@ -78,7 +78,7 @@ inject_msg(Resp, Target, Ys, [response(Target?, Resp?)|Ys?]) :-
 inject_msg(Resp, Target, [Y|Ys], [Y?|Ys1?]) :-
     inject_msg(Resp?, Target?, Ys?, Ys1).
 
-procedure add_output(Constant?, OutputStream, OutputsList?, OutputsList).
+procedure add_output(Key?, OutputStream, OutputsList?, OutputsList).
 add_output(Name, Out?, Outs, [output(Name?, Out)|Outs?]).
 
 procedure close_outputs(OutputsList?).
@@ -92,14 +92,14 @@ close_outputs([]).
 %% RESPONSE HANDLING (holdings-agnostic; does not call agent)
 %% =============================================================================
 
-procedure bind_response(Decision?, Constant?, Response, OutputsList?, OutputsList, NetInStream?, NetInStream).
+procedure bind_response(Decision?, Key?, Response, OutputsList?, OutputsList, NetInStream?, NetInStream).
 bind_response(yes, From, accept(RetCh?), Outs, Outs1?, In, In1?) :-
     new_channel(RetCh, LocalCh) |
     handle_response(accept(LocalCh?), From?, Outs?, Outs1, In?, In1).
 bind_response(no, _, no, Outs, Outs1?, In, In?) :-
     send_person(msg(agent, person, rejected), Outs?, Outs1).
 
-procedure handle_response(Response?, Constant?, OutputsList?, OutputsList, NetInStream?, NetInStream).
+procedure handle_response(Response?, Key?, OutputsList?, OutputsList, NetInStream?, NetInStream).
 handle_response(accept(ch(FIn, FOut?)), From, Outs, Outs2?, In, In1?) :-
     ground(From?) |
     add_output(From?, FOut, Outs?, Outs1),
@@ -113,7 +113,7 @@ handle_response(no, From, Outs, Outs1?, In, In?) :-
 %% UNFRIEND (paper §4: End friend / Integrate unfriend)
 %% =============================================================================
 
-procedure end_friend(Constant?, Constant?, OutputsList?, OutputsList).
+procedure end_friend(Key?, Key?, OutputsList?, OutputsList).
 end_friend(Key, Id, [output(K, [msg(Id?, Key?, unfriend)])|Rest], Rest?) :-
     Key? =?= K? | true.
 end_friend(Key, Id, [person_output(Out?)|Rest], [person_output(Out)|Rest1?]) :-
@@ -127,7 +127,7 @@ end_friend(Key, Id, [output(K, Out?)|Rest], [output(K?, Out)|Rest1?]) :-
     end_friend(Key?, Id?, Rest?, Rest1).
 end_friend(_, _, [], []).
 
-procedure drop_friend(Constant?, OutputsList?, OutputsList).
+procedure drop_friend(Key?, OutputsList?, OutputsList).
 drop_friend(Key, [output(K, [])|Rest], Rest?) :-
     Key? =?= K? | true.
 drop_friend(Key, [person_output(Out?)|Rest], [person_output(Out)|Rest1?]) :-
@@ -182,7 +182,7 @@ emit_balances(Self, Holdings, Outs, Outs2?) :-
 
 %% Publish my holdings to every friend (so their wallet shows my currency).
 %% person/network outputs pass through untouched; any other key is a friend.
-procedure publish_balances(Constant?, Stream(Bond)?, OutputsList?, OutputsList).
+procedure publish_balances(Key?, Stream(Bond)?, OutputsList?, OutputsList).
 publish_balances(Self, Holdings, [person_output(S?)|Rest], [person_output(S)|Rest1?]) :-
     ground(Self?), ground(Holdings?) |
     publish_balances(Self?, Holdings?, Rest?, Rest1).
@@ -231,12 +231,12 @@ inject_trade_result(R, From, [Y|Ys], [Y?|Ys1?]) :-
 
 %% --- Proposer: trade (the maturity-carrying swap; a loan is its instance) ---
 
-procedure do_trade(Key?, Constant?, Lot?, Lot?, Stream(Bond)?, Constant?, Constant?, UserInStream?, NetInStream?, OutputsList?, Stream(Constant)).
+procedure do_trade(Key?, Key?, Lot?, Lot?, Stream(Bond)?, Constant?, Constant?, UserInStream?, NetInStream?, OutputsList?, Stream(Constant)).
 do_trade(Id, Target, GiveSpec, WantSpec, Holdings, NextSerial, Clock, UserIn, NetIn, Outs, DateW?) :-
     select_bonds_by_spec([GiveSpec?], Holdings?, Status, Selected, Remaining),
     do_trade_result(Status?, Id?, Target?, WantSpec?, Selected?, Remaining?, NextSerial?, Clock?, UserIn?, NetIn?, Outs?, DateW).
 
-procedure do_trade_result(Constant?, Key?, Constant?, Lot?, Stream(Bond)?, Stream(Bond)?, Constant?, Constant?, UserInStream?, NetInStream?, OutputsList?, Stream(Constant)).
+procedure do_trade_result(Constant?, Key?, Key?, Lot?, Stream(Bond)?, Stream(Bond)?, Constant?, Constant?, UserInStream?, NetInStream?, OutputsList?, Stream(Constant)).
 do_trade_result(ok, Id, Target, WantSpec, Selected, Remaining, NextSerial, Clock, UserIn, NetIn, Outs, DateW?) :-
     lookup_send(Target?, msg(Id?, Target?, trade_propose(WantSpec?, Selected?, TradeResp)), Outs?, Outs1),
     inject_trade_result(TradeResp?, Target?, UserIn?, UserIn1),
@@ -251,14 +251,14 @@ do_trade_result(fail, Id, Target, _, Selected, Remaining, NextSerial, Clock, Use
 %% issuer's call, tested against the issuer's own date on receipt
 %% (classify_trade -> redemption).  The redeemer does not test maturity.
 
-procedure do_redeem(Key?, Constant?, Lot?, Lot?, Stream(Bond)?, Constant?, Constant?, UserInStream?, NetInStream?, OutputsList?, Stream(Constant)).
+procedure do_redeem(Key?, Key?, Lot?, Lot?, Stream(Bond)?, Constant?, Constant?, UserInStream?, NetInStream?, OutputsList?, Stream(Constant)).
 do_redeem(Id, Target, GiveSpec, WantSpec, Holdings, NextSerial, Clock, UserIn, NetIn, Outs, DateW?) :-
     select_bonds_by_spec([GiveSpec?], Holdings?, Status, Selected, Remaining),
     do_trade_result(Status?, Id?, Target?, WantSpec?, Selected?, Remaining?, NextSerial?, Clock?, UserIn?, NetIn?, Outs?, DateW).
 
 %% --- Proposer: pay (mature coins of the payee, handed over unilaterally) ---
 
-procedure do_pay(Constant?, Key?, Constant?, Stream(Bond)?, Stream(Bond)?, Constant?, Constant?, UserInStream?, NetInStream?, OutputsList?, Stream(Constant)).
+procedure do_pay(Constant?, Key?, Key?, Stream(Bond)?, Stream(Bond)?, Constant?, Constant?, UserInStream?, NetInStream?, OutputsList?, Stream(Constant)).
 do_pay(ok, Id, Friend, Selected, Remaining, NextSerial, Clock, UserIn, NetIn, Outs, DateW?) :-
     lookup_send(Friend?, msg(Id?, Friend?, coins(Selected?)), Outs?, Outs1),
     after_change(Id?, Remaining?, NextSerial?, Clock?, UserIn?, NetIn?, Outs1?, DateW).
@@ -271,7 +271,7 @@ do_pay(fail, Id, Friend, Selected, Remaining, NextSerial, Clock, UserIn, NetIn, 
 %% own_coins says `yes` iff every offered bond is a coin of Id; then Id takes
 %% them.  Otherwise it is not a Pay (Pay carries only the recipient's own coins)
 %% but an unsolicited swap, so Id returns the whole lot to the payer unchanged.
-procedure take_payment(Constant?, Key?, Constant?, Stream(Bond)?, Stream(Bond)?, Constant?, Constant?, UserInStream?, NetInStream?, OutputsList?, Stream(Constant)).
+procedure take_payment(Constant?, Key?, Key?, Stream(Bond)?, Stream(Bond)?, Constant?, Constant?, UserInStream?, NetInStream?, OutputsList?, Stream(Constant)).
 take_payment(yes, Id, _, Bonds, Holdings, NextSerial, Clock, UserIn, NetIn, Outs, DateW?) :-
     append(Holdings?, Bonds?, NewHoldings),
     after_change(Id?, NewHoldings?, NextSerial?, Clock?, UserIn?, NetIn?, Outs?, DateW).
@@ -281,7 +281,7 @@ take_payment(no, Id, From, Bonds, Holdings, NextSerial, Clock, UserIn, NetIn, Ou
 
 %% --- Responder: fill an accepted trade ---
 
-procedure handle_trade_fill(Constant?, Key?, Constant?, TradeResponse, Stream(Bond)?, Stream(Bond)?, Stream(Bond)?, Constant?, Constant?, UserInStream?, NetInStream?, OutputsList?, Stream(Constant)).
+procedure handle_trade_fill(Constant?, Key?, Key?, TradeResponse, Stream(Bond)?, Stream(Bond)?, Stream(Bond)?, Constant?, Constant?, UserInStream?, NetInStream?, OutputsList?, Stream(Constant)).
 handle_trade_fill(ok, Id, From, trade_accept(Selected?), OfferedBonds, Selected, Remaining, NextSerial, Clock, UserIn, NetIn, Outs, DateW?) :-
     append(Remaining?, OfferedBonds?, NewHoldings),
     send_person(msg(agent, person, trade_completed(From?)), Outs?, Outs1),
@@ -293,7 +293,7 @@ handle_trade_fill(fail, Id, From, trade_decline(OfferedBonds?), OfferedBonds, Se
 
 %% --- Responder: classify an incoming proposal ---
 
-procedure trade_dispatch(Constant?, Key?, Constant?, Lot?, Stream(Bond)?, TradeResponse,
+procedure trade_dispatch(Constant?, Key?, Key?, Lot?, Stream(Bond)?, TradeResponse,
     Stream(Bond)?, Constant?, Constant?, UserInStream?, NetInStream?, OutputsList?, Stream(Constant)).
 
 %% Redemption — the issuer must fulfil: auto-accept with the requested bonds,
@@ -311,7 +311,7 @@ trade_dispatch(normal, Id, From, WantSpec, OfferedBonds, TradeResp?,
         Outs?, Outs1),
     agent(Id?, UserIn?, NetIn?, Outs1?, Holdings?, NextSerial?, Clock?, DateW).
 
-procedure redemption_result(Constant?, Key?, Constant?, TradeResponse, Stream(Bond)?,
+procedure redemption_result(Constant?, Key?, Key?, TradeResponse, Stream(Bond)?,
     Stream(Bond)?, Stream(Bond)?, Constant?, Constant?, UserInStream?, NetInStream?, OutputsList?, Stream(Constant)).
 redemption_result(ok, Id, From, trade_accept(Selected?), OfferedBonds, Selected, Remaining,
     NextSerial, Clock, UserIn, NetIn, Outs, DateW?) :-
@@ -323,7 +323,7 @@ redemption_result(fail, Id, From, trade_decline_menu(OfferedBonds?, Menu?), Offe
     append(Selected?, Remaining?, OrigHoldings),
     redemption_reject(Id?, From?, OrigHoldings?, Menu, NextSerial?, Clock?, UserIn?, NetIn?, Outs?, DateW).
 
-procedure redemption_reject(Key?, Constant?, Stream(Bond)?, Stream(Bond),
+procedure redemption_reject(Key?, Key?, Stream(Bond)?, Stream(Bond),
     Constant?, Constant?, UserInStream?, NetInStream?, OutputsList?, Stream(Constant)).
 redemption_reject(Id, From, OrigHoldings, Menu?, NextSerial, Clock, UserIn, NetIn, Outs, DateW?) :-
     ground(OrigHoldings?) |
@@ -381,14 +381,14 @@ procedure lot_scalars(Lot?, Key, Constant, Integer).
 lot_scalars(lot(I, M, A), I?, M?, A?).
 
 %% Depositor: select the bonds, then open the escrow (or report failure).
-procedure do_deposit_escrow(Key?, Constant?, Lot?, Constant?, Stream(Bond)?, Constant?, Constant?, UserInStream?, NetInStream?, OutputsList?).
+procedure do_deposit_escrow(Key?, Key?, Lot?, Constant?, Stream(Bond)?, Constant?, Constant?, UserInStream?, NetInStream?, OutputsList?).
 do_deposit_escrow(Id, Target, GiveSpec, ReleaseTime, Holdings, NextSerial, Clock, UserIn, NetIn, Outs) :-
     ground(GiveSpec?) |
     lot_scalars(GiveSpec?, Coin, Maturity, Amount),
     select_bonds_by_spec([GiveSpec?], Holdings?, Status, Selected, Remaining),
     do_deposit_escrow_result(Status?, Id?, Target?, ReleaseTime?, Coin?, Maturity?, Amount?, Selected?, Remaining?, NextSerial?, Clock?, UserIn?, NetIn?, Outs?).
 
-procedure do_deposit_escrow_result(Constant?, Key?, Constant?, Constant?, Constant?, Constant?, Constant?, Stream(Bond)?, Stream(Bond)?, Constant?, Constant?, UserInStream?, NetInStream?, OutputsList?).
+procedure do_deposit_escrow_result(Constant?, Key?, Key?, Constant?, Constant?, Constant?, Constant?, Stream(Bond)?, Stream(Bond)?, Constant?, Constant?, UserInStream?, NetInStream?, OutputsList?).
 do_deposit_escrow_result(ok, Id, Target, ReleaseTime, Coin, Maturity, Amount, Selected, Remaining, NextSerial, Clock, UserIn, NetIn, Outs) :-
     ground(Coin?), ground(Maturity?), ground(Amount?) |
     escrow(ReleaseTime?, EscrowDates?, Selected?, CancelSignal?, BenResult, DepResult),
