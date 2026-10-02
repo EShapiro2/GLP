@@ -256,30 +256,5 @@ void main() {
 
       expect(() => runPE(source), returnsNormally);
     });
-
-    test('rejects negated defined guard', () {
-      // Defined guards cannot be negated
-      const source = '''
-        procedure my_guard(_).
-        my_guard(foo).
-
-        procedure test(_).
-        test(X?) :- ~my_guard(X?) | process(X?).
-
-        procedure process(_).
-        process(X?) :- true.
-      ''';
-
-      expect(
-        () => runPE(source),
-        throwsA(
-          isA<CompileError>().having(
-            (e) => e.message,
-            'message',
-            contains('cannot be negated'),
-          ),
-        ),
-      );
-    });
   });
 }

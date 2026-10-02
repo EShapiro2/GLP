@@ -135,12 +135,6 @@ class ByteRunner with OpExecutors implements GoalRunner {
       return p == 1;
     }
 
-    bool neg(WireReader r) {
-      final n = r.u8();
-      if (n != 0 && n != 1) throw WireFormatException('negated not 0/1: $n');
-      return n == 1;
-    }
-
     Object? constant(WireReader r) => valueOfWireConst(decodeConstantPayload(r));
 
     while (pc < code.length) {
@@ -419,10 +413,8 @@ class ByteRunner with OpExecutors implements GoalRunner {
           {
             final sig = image.symbolAt(r.clen()).signature;
             final arity = r.clen();
-            final negated = neg(r);
             final name = sig.substring(0, sig.lastIndexOf('/'));
-            if (execGuard(cx, name, arity, negated).kind ==
-                StepKind.nextClause) {
+            if (execGuard(cx, name, arity).kind == StepKind.nextClause) {
               pc = _applyNextClauseByte(cx, opStart);
               continue;
             }
@@ -433,9 +425,7 @@ class ByteRunner with OpExecutors implements GoalRunner {
         case Opcode.ground:
           {
             final varIndex = r.clen();
-            final negated = neg(r);
-            if (execGround(cx, varIndex, negated).kind ==
-                StepKind.nextClause) {
+            if (execGround(cx, varIndex).kind == StepKind.nextClause) {
               pc = _applyNextClauseByte(cx, opStart);
               continue;
             }
@@ -446,8 +436,7 @@ class ByteRunner with OpExecutors implements GoalRunner {
         case Opcode.known:
           {
             final varIndex = r.clen();
-            final negated = neg(r);
-            if (execKnown(cx, varIndex, negated).kind == StepKind.nextClause) {
+            if (execKnown(cx, varIndex).kind == StepKind.nextClause) {
               pc = _applyNextClauseByte(cx, opStart);
               continue;
             }
@@ -469,9 +458,7 @@ class ByteRunner with OpExecutors implements GoalRunner {
         case Opcode.noReaders:
           {
             final varIndex = r.clen();
-            final negated = neg(r);
-            if (execNoReaders(cx, varIndex, negated).kind ==
-                StepKind.nextClause) {
+            if (execNoReaders(cx, varIndex).kind == StepKind.nextClause) {
               pc = _applyNextClauseByte(cx, opStart);
               continue;
             }
@@ -483,9 +470,7 @@ class ByteRunner with OpExecutors implements GoalRunner {
           {
             final l = r.clen();
             final rr = r.clen();
-            final negated = neg(r);
-            if (execGroundEqual(cx, l, rr, negated).kind ==
-                StepKind.nextClause) {
+            if (execGroundEqual(cx, l, rr).kind == StepKind.nextClause) {
               pc = _applyNextClauseByte(cx, opStart);
               continue;
             }

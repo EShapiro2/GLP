@@ -1351,14 +1351,12 @@ Guard _resolveGuard(Guard guard, String moduleName, Set<String> localSigs,
     // Loaded module keeps bare names: a local guard stays bare.
     if (keepLocalBare) return guard;
     return Guard('$moduleName:${guard.predicate}', guard.args,
-        guard.line, guard.column,
-        negated: guard.negated);
+        guard.line, guard.column);
   }
   final ancestorModule = ancestorSelfProcs[sig];
   if (ancestorModule != null) {
     return Guard('$ancestorModule:${guard.predicate}', guard.args,
-        guard.line, guard.column,
-        negated: guard.negated);
+        guard.line, guard.column);
   }
   return guard;
 }

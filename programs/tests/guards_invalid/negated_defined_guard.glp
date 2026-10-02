@@ -1,6 +1,8 @@
-%% Invalid-guard fixture.  A defined guard is a user unit-clause procedure
-%% unfolded into the head by partial evaluation; negating it would require
-%% negation as failure over that procedure, which GLP does not have.
+%% Invalid-guard fixture.  GLP has no guard negation: a guard is a conjunction
+%% of guard predicates (GLP-Spec glp.tex, Definition "Guarded Clause"), and
+%% guard negation left the language on 2026-10-01 (GLP-Spec 98913b4).  So
+%% ~d(X?) below is refused by the parser, as a syntax error, before the defined
+%% guard d/1 is ever looked at.
 Res ::= yes ; no.
 
 procedure d(Integer?).

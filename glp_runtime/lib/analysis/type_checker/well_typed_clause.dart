@@ -217,9 +217,6 @@ class ClauseDualityError extends ClauseError {
 /// if the MEET of the occurrence's type and the type declared for the position
 /// it occupies in the guard is non-empty.  An empty meet is a guard that can
 /// never succeed --- no term is of both types --- and this is where it is named.
-/// A NEGATED guard is never refused so: its empty meet means that it succeeds
-/// always ("A negated guard narrows nothing", the same passage), and
-/// [checkClause] passes it by.
 class GuardMeetError extends ClauseError {
   final String variableKey;
   final String guardFunctor;
@@ -295,20 +292,11 @@ class TypedClause {
   /// Guard atoms as AST Goals (optional, not currently checked)
   final List<ast.Goal> guardAtoms;
 
-  /// The indices into [guardAtoms] of the NEGATED guards, `~g`.  A goal carries
-  /// no negation, so it is kept here: TGLP typed-glp.tex, "Type checking of
-  /// guards", "A negated guard narrows nothing."
-  final Set<int> negatedGuards;
-
   TypedClause({
     required this.head,
     this.bodyAtoms = const [],
     this.guardAtoms = const [],
-    this.negatedGuards = const {},
   });
-
-  /// Whether body atom [i] is a negated guard.
-  bool isNegatedGuard(int i) => i < guardAtoms.length && negatedGuards.contains(i);
 
   String get headFunctor => head.functor;
   int get headArity => head.arity;
@@ -411,16 +399,6 @@ ClauseCheckResult checkClause(
     if (!atomResult.isWellTyped) {
       errors.add(BodyAtomError(atom.functor, i, atomResult.errors));
     }
-
-    // A NEGATED guard narrows nothing.  "`~g` succeeds where g fails, which
-    // tells what the value is not, and the type a clause may rely on is what it
-    // is; so the occurrence keeps its type in the body, and the guard atom is
-    // well-typed whatever the tested type, an empty meet meaning that the guard
-    // succeeds always rather than that the clause is ill-typed" (TGLP
-    // typed-glp.tex, "Type checking of guards").  So the type its position
-    // declares is given to no occurrence --- no narrowing of a head occurrence,
-    // no refusal for an empty meet, and no type for any other.
-    if (clause.isNegatedGuard(i)) continue;
 
     // Merge variable types with consistency checking
     for (final entry in atomResult.variableTypes.entries) {
@@ -525,12 +503,9 @@ ClauseCheckResult checkClauseFromAst(
   final head = ast.Goal(clause.head.functor, clause.head.args, clause.line, clause.column);
 
   // Convert guards to goals (guards are procedure calls for type checking).
-  // A goal carries no negation, so the negated guards are kept by index.
   final guardGoals = <ast.Goal>[];
-  final negatedGuards = <int>{};
   if (clause.guards != null) {
     for (final guard in clause.guards!) {
-      if (guard.negated) negatedGuards.add(guardGoals.length);
       // Convert Guard to Goal - same structure
       guardGoals.add(ast.Goal(guard.predicate, guard.args, guard.line, guard.column));
     }
@@ -546,7 +521,6 @@ ClauseCheckResult checkClauseFromAst(
     head: head,
     bodyAtoms: allBodyAtoms,
     guardAtoms: guardGoals,
-    negatedGuards: negatedGuards,
   );
 
   // Check if procedure is declared
@@ -575,13 +549,11 @@ ClauseCheckResult checkClauseFromAst(
 /// 2026-10-02 `p(A) :- close(A?) | true.` with `A` at `Request?` was refused
 /// only for the head the unfolding wrote, `p(ch([], []))`, and not against
 /// `close(Channel(Closed, Closed)?)` (GLP 2026-10-01 23:58 UTC item 5).
-///
-/// A negated defined guard is left out: the partial evaluator refuses it.
 List<GuardMeetError> definedGuardMeetErrors(ast.Clause clause,
     Set<String> definedGuards, ProgramDFA dfa, TypeEnvironment env) {
   final guards = [
     for (final g in clause.guards ?? const <ast.Guard>[])
-      if (!g.negated && definedGuards.contains('${g.predicate}/${g.args.length}'))
+      if (definedGuards.contains('${g.predicate}/${g.args.length}'))
         ast.Goal(g.predicate, g.args, g.line, g.column)
   ];
   if (guards.isEmpty) return const [];
@@ -670,12 +642,9 @@ Set<String> _variablesTypedAtSomeOccurrence(ast.Clause clause, ProgramDFA dfa,
 
   final head = ast.Goal(
       clause.head.functor, clause.head.args, clause.line, clause.column);
-  // A NEGATED guard is left out: it tells what the value is not, and gives no
-  // occurrence a type (TGLP typed-glp.tex, "Type checking of guards": "A
-  // negated guard narrows nothing"), so it licenses nothing here either.
   final guardGoals = [
     for (final g in clause.guards ?? const <ast.Guard>[])
-      if (!g.negated) ast.Goal(g.predicate, g.args, g.line, g.column)
+      ast.Goal(g.predicate, g.args, g.line, g.column)
   ];
   final typedClause = TypedClause(
     head: head,

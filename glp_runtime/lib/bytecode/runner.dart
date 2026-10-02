@@ -61,8 +61,7 @@ enum UnifyMode { read, write }
 enum GuardResult {
   success,  // Guard succeeded, continue with clause
   failure,  // Guard failed, try next clause
-  suspend,  // Guard blocked on unbound readers (already added to cx.U);
-            // negation-invariant — execGuard suspends without inverting
+  suspend,  // Guard blocked on unbound readers (already added to cx.U)
 }
 
 typedef LabelName = String;
@@ -1093,10 +1092,12 @@ GuardResult _evaluateGuard(String predicateName, List<Object?> args, RunnerConte
       // writer, which no assignment to readers grounds, fails it (glp.tex,
       // Guards: a guard suspends where an instance under a readers substitution
       // would succeed, and fails where none would).  The rule of ground_equal
-      // (0x45) with the comparison inverted: execGroundEqual decides X =?\= Y
-      // where both operands are clause variables, and this case where one is
-      // not.  A top-level value here is dereferenced, so a bare int is a
-      // number and is ground, not a variable address.
+      // (0x45) with the comparison inverted, decided here for every X =?\= Y:
+      // 0x45 carries no negated operand (IGLP code-format-fragment.tex,
+      // 9b45225), so =?\= is the generic guard call whatever its operands, and
+      // [execGuard] leaves its readers to this case, which takes the writer
+      // first, as 0x45 does.  A top-level value here is dereferenced, so a bare
+      // int is a number and is ground, not a variable address.
       if (args.length < 2) return GuardResult.failure;
       final neReaders = <int>{};
       final neVisited = <int>{};
@@ -1759,12 +1760,11 @@ mixin OpExecutors {
     return StepOutcome.advance;
   }
 
-  /// `ground` (0x41): three-valued, with negation. Collect the term's unbound
-  /// readers and note any unbound writer. ground(X): ground→advance; unbound
-  /// readers (no writer)→suspend on them (nextClause with readers added to U);
-  /// unbound writer→fail (nextClause). ~ground(X) inverts the ground/fail ends;
-  /// the unbound-reader case still suspends.
-  StepOutcome execGround(RunnerContext cx, int varIndex, bool negated) {
+  /// `ground` (0x41): three-valued. Collect the term's unbound readers and note
+  /// any unbound writer. ground(X): ground→advance; unbound readers (no
+  /// writer)→suspend on them (nextClause with readers added to U); unbound
+  /// writer→fail (nextClause).
+  StepOutcome execGround(RunnerContext cx, int varIndex) {
     // An unknown variable ([RunnerContext.unknownVars]): undecided, passed by.
     if (cx.isUnknown(varIndex)) return StepOutcome.advance;
     final value = cx.clauseVars[varIndex];
@@ -1831,35 +1831,26 @@ mixin OpExecutors {
       collectUnbound(value);
     }
 
-    if (negated) {
-      if (hasUnboundWriter) return StepOutcome.advance; // not ground → succeed
-      if (unboundReaders.isNotEmpty) {
-        cx.U.addAll(unboundReaders);
-        return StepOutcome.nextClause; // suspend
-      }
-      return StepOutcome.nextClause; // ground → fail
-    } else {
-      if (hasUnboundWriter) return StepOutcome.nextClause; // fail
-      if (unboundReaders.isNotEmpty) {
-        cx.U.addAll(unboundReaders);
-        return StepOutcome.nextClause; // suspend
-      }
-      return StepOutcome.advance; // ground → succeed
+    if (hasUnboundWriter) return StepOutcome.nextClause; // fail
+    if (unboundReaders.isNotEmpty) {
+      cx.U.addAll(unboundReaders);
+      return StepOutcome.nextClause; // suspend
     }
+    return StepOutcome.advance; // ground → succeed
   }
 
-  /// `known` (0x42): three-valued, with negation. known(X): bound→advance;
-  /// unbound reader→suspend; unbound writer→fail. ~known(X) inverts bound/writer
-  /// ends. Unlike ground, only X itself is inspected, not its sub-terms.
-  StepOutcome execKnown(RunnerContext cx, int varIndex, bool negated) {
+  /// `known` (0x42): three-valued. known(X): bound→advance; unbound
+  /// reader→suspend; unbound writer→fail. Unlike ground, only X itself is
+  /// inspected, not its sub-terms.
+  StepOutcome execKnown(RunnerContext cx, int varIndex) {
     // An unknown variable ([RunnerContext.unknownVars]): undecided, passed by.
     if (cx.isUnknown(varIndex)) return StepOutcome.advance;
     final value = cx.clauseVars[varIndex];
     if (value == null) return StepOutcome.nextClause; // missing var → fail
 
+    // An unbound writer is neither known nor waited on: it fails below.
     bool isKnown = false;
     int? unboundReader;
-    bool isUnboundWriter = false;
 
     if (value is int) {
       if (cx.sigmaHat.containsKey(value)) {
@@ -1867,8 +1858,6 @@ mixin OpExecutors {
       } else if (cx.rt.heap.isWriter(value)) {
         if (cx.rt.heap.isFullyBound(value)) {
           isKnown = true;
-        } else {
-          isUnboundWriter = true;
         }
       } else {
         final writerAddr = cx.rt.heap.tryWriterForReader(value);
@@ -1885,8 +1874,6 @@ mixin OpExecutors {
         isKnown = true;
       } else if (cx.rt.heap.isFullyBound(value.addr)) {
         isKnown = true;
-      } else {
-        isUnboundWriter = true;
       }
     } else if (value is VarRef && cx.rt.heap.isReader(value.addr)) {
       final readerAddr = value.addr;
@@ -1906,33 +1893,22 @@ mixin OpExecutors {
       isKnown = true; // constant or structure
     }
 
-    if (negated) {
-      if (isUnboundWriter) return StepOutcome.advance; // unknown → succeed
-      if (unboundReader != null) {
-        cx.U.add(unboundReader);
-        return StepOutcome.nextClause; // suspend
-      }
-      return StepOutcome.nextClause; // known → fail
-    } else {
-      if (isKnown) return StepOutcome.advance;
-      if (unboundReader != null) {
-        cx.U.add(unboundReader);
-        return StepOutcome.nextClause; // suspend
-      }
-      return StepOutcome.nextClause; // unbound writer → fail
+    if (isKnown) return StepOutcome.advance;
+    if (unboundReader != null) {
+      cx.U.add(unboundReader);
+      return StepOutcome.nextClause; // suspend
     }
+    return StepOutcome.nextClause; // unbound writer → fail
   }
 
   /// `no_readers` (0x44): collect the term's unbound readers. no_readers(X):
-  /// none→advance; some→suspend on them (never fails). ~no_readers(X): some
-  /// readers→advance; none→fail. Missing var counts as no readers.
-  StepOutcome execNoReaders(RunnerContext cx, int varIndex, bool negated) {
+  /// none→advance; some→suspend on them (never fails). Missing var counts as
+  /// no readers.
+  StepOutcome execNoReaders(RunnerContext cx, int varIndex) {
     // An unknown variable ([RunnerContext.unknownVars]): undecided, passed by.
     if (cx.isUnknown(varIndex)) return StepOutcome.advance;
     final value = cx.clauseVars[varIndex];
-    if (value == null) {
-      return negated ? StepOutcome.nextClause : StepOutcome.advance;
-    }
+    if (value == null) return StepOutcome.advance;
 
     final readers = <int>{};
     final visited = <int>{};
@@ -1992,20 +1968,15 @@ mixin OpExecutors {
       collectReaders(value);
     }
 
-    if (negated) {
-      return readers.isNotEmpty ? StepOutcome.advance : StepOutcome.nextClause;
-    } else {
-      if (readers.isEmpty) return StepOutcome.advance;
-      cx.U.addAll(readers);
-      return StepOutcome.nextClause; // suspend (never fails)
-    }
+    if (readers.isEmpty) return StepOutcome.advance;
+    cx.U.addAll(readers);
+    return StepOutcome.nextClause; // suspend (never fails)
   }
 
-  /// `ground_equal` (0x45): X =?= Y, and X =?\= Y when negated. Unbound writer
-  /// in either → fail; unbound readers → suspend on them; both ground →
-  /// compare (negation inverts the equal/not-equal ends).
+  /// `ground_equal` (0x45): X =?= Y. Unbound writer in either → fail; unbound
+  /// readers → suspend on them; both ground → compare.
   StepOutcome execGroundEqual(
-      RunnerContext cx, int leftVarIndex, int rightVarIndex, bool negated) {
+      RunnerContext cx, int leftVarIndex, int rightVarIndex) {
     // An unknown variable ([RunnerContext.unknownVars]): undecided, passed by.
     if (cx.isUnknown(leftVarIndex) || cx.isUnknown(rightVarIndex)) {
       return StepOutcome.advance;
@@ -2030,9 +2001,9 @@ mixin OpExecutors {
     final (leftDeref, _) = _dereferenceWithTracking(leftValue, cx);
     final (rightDeref, _) =
         _dereferenceWithTracking(rightValue, cx);
-    final areEqual = _termsEqual(leftDeref, rightDeref, cx);
-    final success = negated ? !areEqual : areEqual;
-    return success ? StepOutcome.advance : StepOutcome.nextClause;
+    return _termsEqual(leftDeref, rightDeref, cx)
+        ? StepOutcome.advance
+        : StepOutcome.nextClause;
   }
 
   /// `unknown` (0x43): succeed iff the clause variable is currently unbound (no
@@ -2051,20 +2022,15 @@ mixin OpExecutors {
 
   /// `guard` (0x40): a generic guard-predicate call. Gather the [arity] args from
   /// argSlots/clauseVars, dereferencing and tracking unbound readers; if any are
-  /// unbound (except for `unknown`), suspend on them. Otherwise evaluate via the
-  /// runtime guard table; negation inverts success/fail. success→advance,
-  /// anything else→nextClause (suspension already handled).
-  StepOutcome execGuard(
-      RunnerContext cx, String predicateName, int arity, bool negated) {
+  /// unbound (except for `unknown` and `=?\=`), suspend on them. Otherwise
+  /// evaluate via the runtime guard table. success→advance, anything
+  /// else→nextClause (suspension already handled).
+  StepOutcome execGuard(RunnerContext cx, String predicateName, int arity) {
     // A generic guard call of `otherwise` --- hand-assembled bytecode, or an
     // artefact whose encoder did not use 0x46 --- takes 0x46's rule and no
     // other: it succeeds if all previous clauses for this procedure fail
     // (GLP-Spec appendix-guards.tex), so it waits while any of them suspends.
-    // It cannot be negated (the analyzer refuses ~otherwise).
     if (predicateName == 'otherwise' && arity == 0) {
-      if (negated) {
-        throw StateError('~otherwise: otherwise cannot be negated');
-      }
       return execOtherwise(cx);
     }
     // An argument built from an unknown variable ([RunnerContext.unknownVars]):
@@ -2097,25 +2063,17 @@ mixin OpExecutors {
       }
     }
 
-    if (unboundReaders.isNotEmpty && predicateName != 'unknown') {
+    // `=?\=` decides its unbound readers itself, after its unbound writers, as
+    // ground_equal (0x45) does for =?= ([_evaluateGuard]).
+    if (unboundReaders.isNotEmpty &&
+        predicateName != 'unknown' &&
+        predicateName != '=?\\=') {
       cx.U.addAll(unboundReaders);
       return StepOutcome.nextClause; // suspend
     }
 
-    var result = _evaluateGuard(predicateName, args, cx);
-    if (result == GuardResult.suspend) {
-      // Blocked on unbound readers (already added to cx.U by _evaluateGuard).
-      // Suspension is negation-invariant: ~G on an undecidable G also suspends.
-      return StepOutcome.nextClause;
-    }
-    if (negated) {
-      if (result == GuardResult.success) {
-        result = GuardResult.failure;
-      } else if (result == GuardResult.failure) {
-        result = GuardResult.success;
-      }
-    }
-    return result == GuardResult.success
+    // A suspension's readers are already in cx.U (_evaluateGuard added them).
+    return _evaluateGuard(predicateName, args, cx) == GuardResult.success
         ? StepOutcome.advance
         : StepOutcome.nextClause;
   }

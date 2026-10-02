@@ -102,18 +102,16 @@ class GlpPrinter {
 
   /// Print a guard
   String printGuard(Guard guard) {
-    final prefix = guard.negated ? '~' : '';
-
     if (guard.args.isEmpty) {
-      return '$prefix${guard.predicate}';
+      return guard.predicate;
     }
 
     // Handle special infix operators
     if (_isInfixGuardOperator(guard.predicate) && guard.args.length == 2) {
-      return '$prefix(${printTerm(guard.args[0])} ${guard.predicate} ${printTerm(guard.args[1])})';
+      return '(${printTerm(guard.args[0])} ${guard.predicate} ${printTerm(guard.args[1])})';
     }
 
-    return '$prefix${guard.predicate}(${guard.args.map(printTerm).join(', ')})';
+    return '${guard.predicate}(${guard.args.map(printTerm).join(', ')})';
   }
 
   /// Print a term

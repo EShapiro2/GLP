@@ -361,7 +361,6 @@ class PartialEvaluator {
         g.args.map((a) => _applyRenaming(a, renaming)).toList(),
         g.line,
         g.column,
-        negated: g.negated,
       )).toList();
     }
 
@@ -458,15 +457,6 @@ class PartialEvaluator {
 
         if (unitClauses.containsKey(key)) {
           // This is a defined guard - reduce it
-          if (guard.negated) {
-            throw CompileError(
-              'Defined guard "${guard.predicate}" cannot be negated',
-              guard.line,
-              guard.column,
-              phase: 'analyzer'
-            );
-          }
-
           // Rename unit clause variables to fresh names
           final renamedArgs = _renameUnitClauseVars(unitClauses[key]!);
 
@@ -959,7 +949,6 @@ class PartialEvaluator {
       guard.args.map((a) => _applySubstitution(a, subst)).toList(),
       guard.line,
       guard.column,
-      negated: guard.negated,
     );
   }
 

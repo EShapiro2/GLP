@@ -52,7 +52,7 @@ enum TokenType {
 
   // Special
   UNDERSCORE,     // _ (anonymous variable)
-  TILDE,          // ~ (guard negation)
+  TILDE,          // ~ : no GLP construct; the parser refuses it (GLP has no guard negation)
   HASH,           // # (module operator: Module # Goal)
   BACKSLASH,      // \ (difference list operator: H\T)
   AT,             // @ (isolate spawn operator: Goal@Agent)
