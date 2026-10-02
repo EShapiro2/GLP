@@ -130,6 +130,8 @@ procedure @<(Constant?, Constant?).
 
 % Equality guard
 procedure =?=(_?, _?).
+% Inequality guard, the negation of =?= (GLP-Spec appendix-guards.tex, 9064202)
+procedure =?\=(_?, _?).
 
 % Univ operations (term ↔ list conversion)
 procedure =..(_, Stream(_)?).      % Compose: Stream? → Compound

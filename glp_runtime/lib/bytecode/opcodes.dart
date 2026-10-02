@@ -211,16 +211,17 @@ class NoReaders implements Op {
 /// - SUSPEND: Either term contains unbound readers (add to Si)
 /// - FAILURE: Both terms ground but not equal
 /// Left-to-right evaluation order: checks X first, then Y.
-/// If negated: inverts success/failure (suspend unchanged)
+/// If negated: inverts success/failure (suspend unchanged) --- X =?\= Y, the
+/// negation of =?= (GLP-Spec appendix-guards.tex, 9064202), compiles to it.
 class GroundEqual implements Op {
   final int leftVarIndex;   // clause variable index for left operand
   final int rightVarIndex;  // clause variable index for right operand
-  final bool negated;       // true if ~(X =?= Y)
+  final bool negated;       // true for X =?\= Y
   GroundEqual(this.leftVarIndex, this.rightVarIndex, {this.negated = false});
 
   @override
-  String toString() => negated 
-      ? '~(X$leftVarIndex =?= X$rightVarIndex)' 
+  String toString() => negated
+      ? 'X$leftVarIndex =?\\= X$rightVarIndex'
       : 'X$leftVarIndex =?= X$rightVarIndex';
 }
 

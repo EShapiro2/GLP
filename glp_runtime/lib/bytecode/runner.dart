@@ -1049,6 +1049,38 @@ GuardResult _evaluateGuard(String predicateName, List<Object?> args, RunnerConte
       final result = _termsEqual(left, right, cx);
       return result ? GuardResult.success : GuardResult.failure;
 
+    case '=?\\=':
+      // GLP-Spec appendix-guards.tex (9064202): "=?\= succeeds if both
+      // arguments are ground and differ, and suspends where =?= suspends";
+      // Ground "yes (both)".  Success needs both arguments ground, so an
+      // unbound reader anywhere in either suspends the guard --- a difference
+      // found first does not decide it, as it decides =?= --- and an unbound
+      // writer, which no assignment to readers grounds, fails it (glp.tex,
+      // Guards: a guard suspends where an instance under a readers substitution
+      // would succeed, and fails where none would).  The rule of ground_equal
+      // (0x45) with the comparison inverted: execGroundEqual decides X =?\= Y
+      // where both operands are clause variables, and this case where one is
+      // not.  A top-level value here is dereferenced, so a bare int is a
+      // number and is ground, not a variable address.
+      if (args.length < 2) return GuardResult.failure;
+      final neReaders = <int>{};
+      final neVisited = <int>{};
+      var neWriter = false;
+      for (final operand in [args[0], args[1]]) {
+        if ((operand is Term || operand is _TentativeStruct) &&
+            _unboundOfEqualityOperand(operand, cx, neReaders, neVisited)) {
+          neWriter = true;
+        }
+      }
+      if (neWriter) return GuardResult.failure;
+      if (neReaders.isNotEmpty) {
+        cx.U.addAll(neReaders);
+        return GuardResult.suspend;
+      }
+      return _termsEqual(args[0], args[1], cx)
+          ? GuardResult.failure
+          : GuardResult.success;
+
     // Attestation guard (madGLP, seam spec §4).
     // valid_attestation(Signer?, PkA?, PkB?, Sig?) holds iff Sig is Signer's
     // valid Ed25519 signature over the canonical serialization of attest(PkA,
@@ -1207,6 +1239,74 @@ bool _termsEqual(Object? a, Object? b, RunnerContext cx, [Set<(int, int)>? visit
 
   // Default: use Dart equality
   return a == b;
+}
+
+/// The unbound variables of an operand of the ground equality guards, `=?=`
+/// and `=?\=` (GLP-Spec appendix-guards.tex): every unbound reader reached is
+/// added to [readers], and the result is whether an unbound writer was reached.
+/// [term] is a heap term, a tentative structure, or a bare variable address (an
+/// int), as a clause variable may hold; [visited] is shared by the two operands.
+bool _unboundOfEqualityOperand(
+    Object? term, RunnerContext cx, Set<int> readers, Set<int> visited) {
+  var hasUnboundWriter = false;
+
+  void collect(Object? term) {
+    if (term is VarRef && cx.rt.heap.isWriter(term.addr)) {
+      final writerAddr = term.addr;
+      if (visited.contains(writerAddr)) return;
+      visited.add(writerAddr);
+      final sigmaBinding = cx.sigmaHat[writerAddr];
+      if (sigmaBinding != null) {
+        collect(sigmaBinding);
+      } else if (!cx.rt.heap.isFullyBound(writerAddr)) {
+        hasUnboundWriter = true;
+      } else {
+        collect(cx.rt.heap.getValue(writerAddr));
+      }
+    } else if (term is VarRef && cx.rt.heap.isReader(term.addr)) {
+      final readerAddr = term.addr;
+      if (visited.contains(readerAddr)) return;
+      visited.add(readerAddr);
+      final sigmaBinding = cx.sigmaHat[readerAddr];
+      if (sigmaBinding != null) {
+        collect(sigmaBinding);
+      } else if (!cx.rt.heap.isReaderBound(readerAddr)) {
+        readers.add(readerAddr);
+      } else {
+        collect(cx.rt.heap.getReaderValue(readerAddr));
+      }
+    } else if (term is StructTerm) {
+      for (final arg in term.args) {
+        collect(arg);
+      }
+    } else if (term is _TentativeStruct) {
+      for (final arg in term.args) {
+        collect(arg);
+      }
+    } else if (term is int) {
+      if (visited.contains(term)) return;
+      visited.add(term);
+      final sigmaBinding = cx.sigmaHat[term];
+      if (sigmaBinding != null) {
+        collect(sigmaBinding);
+      } else if (cx.rt.heap.isWriter(term)) {
+        if (!cx.rt.heap.isFullyBound(term)) {
+          hasUnboundWriter = true;
+        } else {
+          collect(cx.rt.heap.getValue(term));
+        }
+      } else {
+        if (!cx.rt.heap.isReaderBound(term)) {
+          readers.add(term);
+        } else {
+          collect(cx.rt.heap.getReaderValue(term));
+        }
+      }
+    }
+  }
+
+  collect(term);
+  return hasUnboundWriter;
 }
 
 
@@ -1866,9 +1966,9 @@ mixin OpExecutors {
     }
   }
 
-  /// `ground_equal` (0x45): X =?= Y. Unbound writer in either → fail; unbound
-  /// readers → suspend on them; both ground → compare (negation inverts the
-  /// equal/not-equal ends).
+  /// `ground_equal` (0x45): X =?= Y, and X =?\= Y when negated. Unbound writer
+  /// in either → fail; unbound readers → suspend on them; both ground →
+  /// compare (negation inverts the equal/not-equal ends).
   StepOutcome execGroundEqual(
       RunnerContext cx, int leftVarIndex, int rightVarIndex, bool negated) {
     // A variable met only in a skipped subterm is unknown: undecided, passed by.
@@ -1881,65 +1981,11 @@ mixin OpExecutors {
 
     final unboundReaders = <int>{};
     final visited = <int>{};
-    bool hasUnboundWriter = false;
-
-    void collectUnbound(Object? term) {
-      if (term is VarRef && cx.rt.heap.isWriter(term.addr)) {
-        final writerAddr = term.addr;
-        if (visited.contains(writerAddr)) return;
-        visited.add(writerAddr);
-        final sigmaBinding = cx.sigmaHat[writerAddr];
-        if (sigmaBinding != null) {
-          collectUnbound(sigmaBinding);
-        } else if (!cx.rt.heap.isFullyBound(writerAddr)) {
-          hasUnboundWriter = true;
-        } else {
-          collectUnbound(cx.rt.heap.getValue(writerAddr));
-        }
-      } else if (term is VarRef && cx.rt.heap.isReader(term.addr)) {
-        final readerAddr = term.addr;
-        if (visited.contains(readerAddr)) return;
-        visited.add(readerAddr);
-        final sigmaBinding = cx.sigmaHat[readerAddr];
-        if (sigmaBinding != null) {
-          collectUnbound(sigmaBinding);
-        } else if (!cx.rt.heap.isReaderBound(readerAddr)) {
-          unboundReaders.add(readerAddr);
-        } else {
-          collectUnbound(cx.rt.heap.getReaderValue(readerAddr));
-        }
-      } else if (term is StructTerm) {
-        for (final arg in term.args) {
-          collectUnbound(arg);
-        }
-      } else if (term is _TentativeStruct) {
-        for (final arg in term.args) {
-          collectUnbound(arg);
-        }
-      } else if (term is int) {
-        if (visited.contains(term)) return;
-        visited.add(term);
-        final sigmaBinding = cx.sigmaHat[term];
-        if (sigmaBinding != null) {
-          collectUnbound(sigmaBinding);
-        } else if (cx.rt.heap.isWriter(term)) {
-          if (!cx.rt.heap.isFullyBound(term)) {
-            hasUnboundWriter = true;
-          } else {
-            collectUnbound(cx.rt.heap.getValue(term));
-          }
-        } else {
-          if (!cx.rt.heap.isReaderBound(term)) {
-            unboundReaders.add(term);
-          } else {
-            collectUnbound(cx.rt.heap.getReaderValue(term));
-          }
-        }
-      }
-    }
-
-    collectUnbound(leftValue);
-    collectUnbound(rightValue);
+    final leftWriter =
+        _unboundOfEqualityOperand(leftValue, cx, unboundReaders, visited);
+    final rightWriter =
+        _unboundOfEqualityOperand(rightValue, cx, unboundReaders, visited);
+    final hasUnboundWriter = leftWriter || rightWriter;
 
     if (hasUnboundWriter) return StepOutcome.nextClause; // fail
     if (unboundReaders.isNotEmpty) {

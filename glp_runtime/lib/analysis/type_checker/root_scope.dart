@@ -63,6 +63,8 @@ const Set<String> predefinedProcedureNames = {
   '@<',
   // Equality (fundamental)
   '=?=',
+  // Ground inequality, the negation of =?= (GLP-Spec appendix-guards.tex, 9064202)
+  '=?\\=',
   // Univ operations (fundamental)
   '=..',
   '..=',
@@ -122,6 +124,8 @@ const Set<String> builtinProcedures = {
   '@</2',
   // Structural equality guard
   '=?=/2',
+  // Ground inequality guard, the negation of =?= (GLP-Spec 9064202)
+  '=?\\=/2',
   // Univ operations
   '=../2',
   '..=/2',

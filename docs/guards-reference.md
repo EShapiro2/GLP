@@ -513,6 +513,13 @@ The guard `Key =?= K?` succeeds when `Key` and `K` are both ground and equal. If
 
 **Why not multiple head writers**: GLP maintains the SO invariant via SRSW syntactic restriction (one writer per variable). Instead of implicit equality via multiple head occurrences, use `=?=` for explicit, visible equality testing.
 
+### ✅ `X =?\= Y`
+**The negation of `=?=`**
+
+`procedure =?\=(_?, _?).` Ground: yes (both).
+
+`=?\=` succeeds if both arguments are ground and differ, and suspends where `=?=` suspends. (GLP-Spec appendix-guards.tex, 9064202.)
+
 ---
 
 ## What Can Appear in Guard Position
@@ -521,7 +528,7 @@ The guard `Key =?= K?` succeeds when `Key` and `K` are both ground and equal. If
 
 The partial evaluator validates all guards at compile time. Guards fall into exactly two categories:
 
-1. **Builtin guards** — Implemented in the Dart runtime with NO GLP clauses. These include type guards (`integer/1`, `number/1`, `ground/1`, etc.), comparison guards (`</2`, `>/2`, etc.), and equality guards (`=?=/2`). Builtin guards are kept as-is by the partial evaluator.
+1. **Builtin guards** — Implemented in the Dart runtime with NO GLP clauses. These include type guards (`integer/1`, `number/1`, `ground/1`, etc.), comparison guards (`</2`, `>/2`, etc.), and equality guards (`=?=/2`, `=?\=/2`). Builtin guards are kept as-is by the partial evaluator.
 
 2. **Single-unit-clause procedures** — User-defined procedures with exactly one clause, no guards, and no body. These are unfolded at compile time by the partial evaluator.
 

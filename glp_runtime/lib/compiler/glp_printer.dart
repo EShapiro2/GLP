@@ -222,7 +222,7 @@ class GlpPrinter {
       ':=', '=', '\\=', '=..',
       '+', '-', '*', '/', '//', 'mod',
       '<', '>', '=<', '>=', '=:=', '=\\=',
-      '=?=',
+      '=?=', '=?\\=',
     };
     return infixOps.contains(functor);
   }
@@ -230,7 +230,7 @@ class GlpPrinter {
   /// Check if a guard predicate is infix
   bool _isInfixGuardOperator(String predicate) {
     const infixGuards = {
-      '<', '>', '=<', '>=', '=:=', '=\\=', '=?=',
+      '<', '>', '=<', '>=', '=:=', '=\\=', '=?=', '=?\\=',
     };
     return infixGuards.contains(predicate);
   }

@@ -1,0 +1,21 @@
+% test_ground_not_equal.glp - the guard =?\=, the negation of =?= (GLP-Spec
+% appendix-guards.tex, 9064202): "=?\= succeeds if both arguments are ground
+% and differ, and suspends where =?= suspends."  Ground: yes (both).
+
+% Both operands variables: the ground equality instruction, inverted.
+exported procedure test_neq(_?, _?, Constant).
+test_neq(X, Y, not_equal) :- X? =?\= Y? | true.
+test_neq(_, _, equal) :- otherwise | true.
+
+% An operand that is not a variable: the generic guard call.
+exported procedure test_neq_stop(_?, Constant).
+test_neq_stop(X, go_on) :- X? =?\= stop | true.
+test_neq_stop(_, stopped) :- otherwise | true.
+
+% =?\= alone, so that its failure fails the call and its suspension suspends it.
+exported procedure neq_only(_?, _?, Constant).
+neq_only(X, Y, not_equal) :- X? =?\= Y? | true.
+
+% Ground: yes (both) --- each reader may occur more than once in the clause.
+exported procedure neq_pair(_?, _?, _).
+neq_pair(X, Y, pair(X?, X?, Y?, Y?)) :- X? =?\= Y? | true.

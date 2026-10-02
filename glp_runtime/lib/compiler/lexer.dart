@@ -115,7 +115,15 @@ class Lexer {
             final lexeme = source.substring(_current - 3, _current);
             return Token(TokenType.GROUND_EQUAL, lexeme, startLine, startColumn);
           }
-          throw CompileError('Expected "=" after "=?"', startLine, startColumn, phase: 'lexer');
+          // =?\= : the negation of =?= (GLP-Spec appendix-guards.tex, 9064202).
+          if (_match('\\')) {
+            if (_match('=')) {
+              final lexeme = source.substring(_current - 4, _current);
+              return Token(TokenType.GROUND_NOT_EQUAL, lexeme, startLine, startColumn);
+            }
+            throw CompileError('Expected "=" after "=?\\"', startLine, startColumn, phase: 'lexer');
+          }
+          throw CompileError('Expected "=" or "\\=" after "=?"', startLine, startColumn, phase: 'lexer');
         }
         return _makeToken(TokenType.EQUALS, startLine, startColumn);
 
