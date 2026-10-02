@@ -4,7 +4,6 @@ import 'error.dart';
 import '../analysis/type_checker/type_ast.dart';
 import '../analysis/type_checker/type_conversion.dart';
 import '../analysis/type_checker/root_scope.dart' show builtinProcedures;
-import '../sglp/time_units.dart' show secondsOfUnit, timeUnitNames;
 
 /// Parser for GLP source code
 class Parser {
@@ -185,53 +184,13 @@ class Parser {
     // Track which procedures we've seen clauses for (signature -> first Procedure)
     final seenProcedures = <String, Procedure>{};
 
-    // sGLP population declarations (svGLP, sections/sglp.tex, "Simulating a
-    // vGLP Program"): the kinds, each running from its `person <name>.` to the
-    // next kind, the run declaration or the end of the file, and the run.
-    final kinds = <KindDecl>[];
-    KindDecl? currentKind;
-    RunDecl? runDecl;
-
     while (!_isAtEnd()) {
       // Check for procedure declaration: 'procedure ...' or 'exported procedure ...' or 'imported procedure ...'
       final isProcedureDecl = _check(TokenType.PROCEDURE) ||
           (_check(TokenType.ATOM) && (_peek().lexeme == 'exported' || _peek().lexeme == 'imported') &&
            _current + 1 < tokens.length && tokens[_current + 1].type == TokenType.PROCEDURE);
 
-      if (_atKindDecl()) {
-        _noPendingBefore(pendingProcDecl, 'A kind declaration', _peek());
-        pendingProcDecl = null;
-        final kind = _parseKindDecl();
-        if (kinds.any((k) => k.name == kind.name)) {
-          throw CompileError('The kind "${kind.name}" is declared twice',
-              kind.line, kind.column, phase: 'parser');
-        }
-        kinds.add(kind);
-        currentKind = kind;
-      } else if (_atRunDecl()) {
-        _noPendingBefore(pendingProcDecl, 'A run declaration', _peek());
-        pendingProcDecl = null;
-        final run = _parseRunDecl();
-        if (runDecl != null) {
-          throw CompileError(
-              'A second run declaration; the first is at line ${runDecl.line}',
-              run.line, run.column, phase: 'parser');
-        }
-        runDecl = run;
-        currentKind = null;
-      } else if (_atPersonDecl()) {
-        _noPendingBefore(pendingProcDecl, 'A person declaration', _peek());
-        pendingProcDecl = null;
-        final at = _peek();
-        final decl = _parsePersonDecl();
-        if (currentKind == null) {
-          throw CompileError(
-            'The person declaration "$decl" stands outside a kind: it follows '
-            '"person <name>." and precedes the kind\'s program',
-            at.line, at.column, phase: 'parser');
-        }
-        currentKind.personDecls.add(decl);
-      } else if (_atDisplayDecl()) {
+      if (_atDisplayDecl()) {
         // A display declaration is a declaration, not a clause, so it does not
         // break the run of clauses a pending procedure declaration is waiting
         // for; it may stand anywhere a type definition may.
@@ -255,7 +214,6 @@ class Parser {
         }
         final decl = _parseProcDeclaration();
         procDeclarations.add(decl);
-        currentKind?.procedureSigs.add(decl.key);
         // Imported procedures are declaration-only — no clauses expected
         if (!decl.imported) {
           pendingProcDecl = decl;
@@ -325,7 +283,6 @@ class Parser {
 
           seenProcedures[sig] = proc;
           procedures.add(proc);
-          currentKind?.procedureSigs.add(sig);
         }
       } else if (_check(TokenType.ATOM) || (vglp && _check(TokenType.STAR))) {
         // Clause starting with an atom (procedure name), or with the volition
@@ -368,7 +325,6 @@ class Parser {
 
         seenProcedures[sig] = proc;
         procedures.add(proc);
-        currentKind?.procedureSigs.add(sig);
       } else {
         // Unexpected token
         throw CompileError(
@@ -401,175 +357,9 @@ class Parser {
       compileMode: compileMode,
       exposes: exposes,
       displayDecls: displayDecls,
-      kinds: kinds,
-      runDecl: runDecl,
       line: 1,
       column: 1,
     );
-  }
-
-  // ==========================================================================
-  // sGLP population declarations (svGLP, sections/sglp.tex, "Simulating a
-  // vGLP Program"):
-  //
-  //   <person_declaration> ::= <type> =::= <procedure_name> .
-  //   <kind>               ::= person <name> . <person_declarations> <program>
-  //   <run>                ::= run <integer> agents [ <mix_list> ]
-  //                            until <time> seed <integer> .
-  //   <mix_list>           ::= <mix> | <mix> , <mix_list>
-  //   <mix>                ::= <dimension> ~ ( <name> : <probability> ; ... )
-  //
-  // The paper writes <time> as `5 years`: a positive number and a time unit,
-  // singular or plural.
-  // ==========================================================================
-
-  /// A declaration that is not a clause may not stand between a procedure
-  /// declaration and its clauses, unless the declaration needs none.
-  void _noPendingBefore(ProcDecl? pending, String what, Token at) {
-    if (pending == null) return;
-    final pendingSig = '${pending.name}/${pending.argTypes.length}';
-    if (!builtinProcedures.contains(pendingSig) && !pending.imported) {
-      throw CompileError(
-        '$what cannot appear between procedure declaration and its clauses.\n'
-        '  Procedure "${pending.name}" declared at line ${pending.line} needs clauses.',
-        at.line,
-        at.column,
-        phase: 'parser'
-      );
-    }
-  }
-
-  /// `person <name> .` --- the head of a kind.  A clause of a procedure named
-  /// `person` has a parenthesis or a `:-` after the name, so the two differ.
-  bool _atKindDecl() {
-    if (!_check(TokenType.ATOM) || _peek().lexeme != 'person') return false;
-    return _current + 2 < tokens.length &&
-        tokens[_current + 1].type == TokenType.ATOM &&
-        tokens[_current + 2].type == TokenType.DOT;
-  }
-
-  /// `run <integer> agents ...` --- a clause of a procedure named `run` has a
-  /// parenthesis after the name, never a number.
-  bool _atRunDecl() {
-    if (!_check(TokenType.ATOM) || _peek().lexeme != 'run') return false;
-    return _current + 1 < tokens.length &&
-        tokens[_current + 1].type == TokenType.NUMBER;
-  }
-
-  /// `T =::= p .` --- a type, with its arguments and its mode, then `=::=`.
-  bool _atPersonDecl() {
-    if (!_check(TokenType.VARIABLE) && !_check(TokenType.READER)) return false;
-    var i = _current + 1;
-    if (i < tokens.length && tokens[i].type == TokenType.LPAREN) {
-      var depth = 0;
-      for (; i < tokens.length; i++) {
-        final t = tokens[i].type;
-        if (t == TokenType.LPAREN) depth++;
-        if (t == TokenType.RPAREN) {
-          depth--;
-          if (depth == 0) {
-            i++;
-            break;
-          }
-        }
-        if (t == TokenType.DOT || t == TokenType.EOF) return false;
-      }
-    }
-    if (i < tokens.length && tokens[i].type == TokenType.QUESTION) i++;
-    return i < tokens.length && tokens[i].type == TokenType.EQCOLONCOLONEQ;
-  }
-
-  KindDecl _parseKindDecl() {
-    final start = _advance(); // 'person'
-    final name = _consume(TokenType.ATOM, 'Expected the kind\'s name after "person"');
-    _consume(TokenType.DOT, 'Expected "." after "person ${name.lexeme}"');
-    return KindDecl(name.lexeme, start.line, start.column);
-  }
-
-  PersonDecl _parsePersonDecl() {
-    final start = _peek();
-    final type = _parseProcArgType();
-    if (type is! TypeRef) {
-      throw CompileError(
-        'A person declaration names an interactive type, not "$type"',
-        start.line, start.column, phase: 'parser');
-    }
-    _consume(TokenType.EQCOLONCOLONEQ, 'Expected "=::=" in a person declaration');
-    final proc = _consume(TokenType.ATOM,
-        'Expected the person procedure\'s name after "=::="');
-    _consume(TokenType.DOT, 'Expected "." after a person declaration');
-    return PersonDecl(type, proc.lexeme, start.line, start.column);
-  }
-
-  RunDecl _parseRunDecl() {
-    final start = _advance(); // 'run'
-    final nToken = _consume(TokenType.NUMBER, 'Expected the number of agents after "run"');
-    if (nToken.literal is! int || (nToken.literal as int) < 1) {
-      throw CompileError(
-        'The number of agents of a run is a positive integer, not ${nToken.lexeme}',
-        nToken.line, nToken.column, phase: 'parser');
-    }
-    _expectWord('agents', 'after the number of agents of a run');
-    _consume(TokenType.LBRACKET, 'Expected "[" before the dimensions of a run');
-    final mixes = <MixDecl>[_parseMix()];
-    while (_match(TokenType.COMMA)) {
-      mixes.add(_parseMix());
-    }
-    _consume(TokenType.RBRACKET, 'Expected "]" after the dimensions of a run');
-    _expectWord('until', 'after the dimensions of a run');
-    final tToken = _consume(TokenType.NUMBER, 'Expected a time after "until"');
-    final tValue = (tToken.literal as num).toDouble();
-    final unitToken = _consume(TokenType.ATOM,
-        'Expected a time unit ($timeUnitNames) after "until ${tToken.lexeme}"');
-    final unitSeconds = secondsOfUnit(unitToken.lexeme, allowPlural: true);
-    if (unitSeconds == null) {
-      throw CompileError(
-        'Unknown time unit "${unitToken.lexeme}" after "until"; the units are '
-        '$timeUnitNames',
-        unitToken.line, unitToken.column, phase: 'parser');
-    }
-    if (!(tValue > 0) || tValue.isInfinite) {
-      throw CompileError('The time of a run is positive, not ${tToken.lexeme}',
-          tToken.line, tToken.column, phase: 'parser');
-    }
-    _expectWord('seed', 'after the time of a run');
-    final seedToken = _consume(TokenType.NUMBER, 'Expected an integer after "seed"');
-    if (seedToken.literal is! int) {
-      throw CompileError('The seed of a run is an integer, not ${seedToken.lexeme}',
-          seedToken.line, seedToken.column, phase: 'parser');
-    }
-    _consume(TokenType.DOT, 'Expected "." after a run declaration');
-    return RunDecl(
-        nToken.literal as int,
-        mixes,
-        '${tToken.lexeme} ${unitToken.lexeme}',
-        tValue * unitSeconds,
-        seedToken.literal as int,
-        start.line,
-        start.column);
-  }
-
-  MixDecl _parseMix() {
-    final dim = _consume(TokenType.ATOM, 'Expected a dimension\'s name in a run');
-    _consume(TokenType.TILDE, 'Expected "~" after the dimension "${dim.lexeme}"');
-    _consume(TokenType.LPAREN, 'Expected "(" before the kinds of "${dim.lexeme}"');
-    final entries = <MixEntry>[];
-    do {
-      final kind = _consume(TokenType.ATOM, 'Expected a kind\'s name in "${dim.lexeme}"');
-      _consume(TokenType.COLON, 'Expected ":" and a probability after "${kind.lexeme}"');
-      final p = _consume(TokenType.NUMBER, 'Expected a probability after "${kind.lexeme} :"');
-      entries.add(MixEntry(kind.lexeme, (p.literal as num).toDouble(), kind.line, kind.column));
-    } while (_match(TokenType.SEMICOLON));
-    _consume(TokenType.RPAREN, 'Expected ")" after the kinds of "${dim.lexeme}"');
-    return MixDecl(dim.lexeme, entries, dim.line, dim.column);
-  }
-
-  void _expectWord(String word, String where) {
-    if (!_check(TokenType.ATOM) || _peek().lexeme != word) {
-      throw CompileError('Expected "$word" $where', _peek().line, _peek().column,
-          phase: 'parser');
-    }
-    _advance();
   }
 
   /// Parse an interface section: type definitions and procedure declarations
@@ -927,11 +717,6 @@ class Parser {
       if (_match(TokenType.PIPE)) {
         // Everything before | were guards - convert Goal to Guard
         guards = predicates.map((g) {
-          if (g is RatedGoal) {
-            throw CompileError(
-              'A rated goal "$g" is a body goal and cannot stand before "|"',
-              g.line, g.column, phase: 'parser');
-          }
           // Detect negated guards (functor starts with ~)
           final isNegated = g.functor.startsWith('~');
           final actualFunctor = isNegated ? g.functor.substring(1) : g.functor;
@@ -1087,7 +872,7 @@ class Parser {
         }
         final moduleTerm = VarTerm(varToken.lexeme, isReader, varToken.line, varToken.column);
         final innerGoal = _parseGoal();
-        return _remoteGoal(moduleTerm, innerGoal, varToken.line, varToken.column);
+        return RemoteGoal(moduleTerm, innerGoal, varToken.line, varToken.column);
       }
     }
 
@@ -1130,7 +915,7 @@ class Parser {
         }
         final moduleTerm = ConstTerm(functorToken.lexeme, functorToken.line, functorToken.column);
         final innerGoal = _parseGoal();
-        return _remoteGoal(moduleTerm, innerGoal, functorToken.line, functorToken.column);
+        return RemoteGoal(moduleTerm, innerGoal, functorToken.line, functorToken.column);
       }
 
       // Check if followed by = (e.g., foo = bar, or foo(a) = X)
@@ -1156,9 +941,10 @@ class Parser {
       final functor = negated ? '~${functorToken.lexeme}' : functorToken.lexeme;
       final goal = Goal(functor, args, negated ? negLine : functorToken.line, negated ? negColumn : functorToken.column);
 
-      // Check for spawn annotation Goal@AgentId, or sGLP's rate Goal @ Rate
+      // Check for spawn annotation: Goal@AgentId
       if (_match(TokenType.AT)) {
-        return _parseAtSuffix(goal, functorToken);
+        final agentToken = _consume(TokenType.ATOM, 'Expected agent identifier after @');
+        return SpawnGoal(goal, agentToken.lexeme, functorToken.line, functorToken.column);
       }
 
       return goal;
@@ -1283,7 +1069,7 @@ class Parser {
       if (_match(TokenType.HASH)) {
         final moduleTerm = VarTerm(varToken.lexeme, isReader, varToken.line, varToken.column);
         final innerGoal = _parseGoal();
-        return _remoteGoal(moduleTerm, innerGoal, varToken.line, varToken.column);
+        return RemoteGoal(moduleTerm, innerGoal, varToken.line, varToken.column);
       } else if (_match(TokenType.ASSIGN)) {
         // Parse as ':='(Var, Expr)
         final varTerm = VarTerm(varToken.lexeme, isReader, varToken.line, varToken.column);
@@ -1343,7 +1129,7 @@ class Parser {
       }
       final moduleTerm = ConstTerm(functorToken.lexeme, functorToken.line, functorToken.column);
       final innerGoal = _parseGoal();
-      return _remoteGoal(moduleTerm, innerGoal, functorToken.line, functorToken.column);
+      return RemoteGoal(moduleTerm, innerGoal, functorToken.line, functorToken.column);
     }
 
     // Check if this is followed by =.. (e.g., foo(a,b) =.. L)
@@ -1356,63 +1142,13 @@ class Parser {
 
     final goal = Goal(functorToken.lexeme, args, functorToken.line, functorToken.column);
 
-    // Check for spawn annotation Goal@AgentId, or sGLP's rate Goal @ Rate
+    // Check for spawn annotation: Goal@AgentId
     if (_match(TokenType.AT)) {
-      return _parseAtSuffix(goal, functorToken);
+      final agentToken = _consume(TokenType.ATOM, 'Expected agent identifier after @');
+      return SpawnGoal(goal, agentToken.lexeme, functorToken.line, functorToken.column);
     }
 
     return goal;
-  }
-
-  /// `M # G`.  Where G carries a rate, `M # p(...) @ r`, the rate is the
-  /// remote goal's: the result is the rated goal of `M # p(...)`.
-  Goal _remoteGoal(Term moduleTerm, Goal innerGoal, int line, int column) {
-    if (innerGoal is RatedGoal) {
-      return innerGoal.withInner(
-          RemoteGoal(moduleTerm, innerGoal.innerGoal, line, column));
-    }
-    return RemoteGoal(moduleTerm, innerGoal, line, column);
-  }
-
-  /// What follows `@` after a body goal: an agent identifier (`Goal@AgentId`,
-  /// the spawn annotation) or, where a number follows, sGLP's rate (svGLP,
-  /// sections/sglp.tex, Definition "Rated Goal"):
-  ///
-  ///   <rate>      ::= <positive_real> / <time_unit>
-  ///   <time_unit> ::= second | minute | hour | day | week | year
-  Goal _parseAtSuffix(Goal goal, Token functorToken) {
-    if (_check(TokenType.NUMBER) || _check(TokenType.MINUS)) {
-      final numToken = _peek();
-      if (_check(TokenType.MINUS)) {
-        throw CompileError(
-          'A rate is a positive real per unit of time, as in "@ 1/week"',
-          numToken.line, numToken.column, phase: 'parser');
-      }
-      _advance();
-      final value = (numToken.literal as num).toDouble();
-      if (!(value > 0) || value.isInfinite) {
-        throw CompileError(
-          'A rate is a positive real per unit of time, as in "@ 1/week"; '
-          'got ${numToken.lexeme}',
-          numToken.line, numToken.column, phase: 'parser');
-      }
-      _consume(TokenType.SLASH,
-          'Expected "/" and a time unit after the rate ${numToken.lexeme}');
-      final unitToken = _consume(TokenType.ATOM,
-          'Expected a time unit ($timeUnitNames) after "/" in a rate');
-      final seconds = secondsOfUnit(unitToken.lexeme);
-      if (seconds == null) {
-        throw CompileError(
-          'Unknown time unit "${unitToken.lexeme}" in a rate; the units are '
-          '$timeUnitNames',
-          unitToken.line, unitToken.column, phase: 'parser');
-      }
-      return RatedGoal(goal, '${numToken.lexeme}/${unitToken.lexeme}',
-          value / seconds, functorToken.line, functorToken.column);
-    }
-    final agentToken = _consume(
-        TokenType.ATOM, 'Expected agent identifier or a rate after @');
-    return SpawnGoal(goal, agentToken.lexeme, functorToken.line, functorToken.column);
   }
 
   // Guard: same as Goal but marked as guard

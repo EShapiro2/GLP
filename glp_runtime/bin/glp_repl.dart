@@ -42,9 +42,6 @@ void main() async {
   print('Loaded root self.glp');
   print('');
 
-  // The file an sGLP run's log goes to (`:log <file>`), or null.
-  _LogFile? logFile;
-
   while (true) {
     stdout.write('GLP> ');
     final input = stdin.readLineSync();
@@ -52,7 +49,6 @@ void main() async {
     if (input == null) {
       // End of input: leave the process, not just the loop — after a :boot the
       // VM would otherwise wait on whatever the harness left behind.
-      logFile?.close();
       exit(0);
     }
 
@@ -67,34 +63,8 @@ void main() async {
 
     // Handle commands
     if (trimmed == ':quit' || trimmed == ':q') {
-      logFile?.close();
       print('Goodbye!');
       exit(0);
-    }
-
-    // `:log <file>`: every later sGLP run writes its log to <file>, emptied
-    // now (svGLP, sections/sglp.tex, Definition "Interface Variable, Log";
-    // format in lib/sglp/log.dart).  `:log off` stops it.
-    if (trimmed == ':log' || trimmed.startsWith(':log ')) {
-      final arg = trimmed.substring(4).trim();
-      logFile?.close();
-      logFile = null;
-      engine.onSimulationLog = null;
-      if (arg.isEmpty) {
-        print('Usage: :log <file> | :log off');
-      } else if (arg == 'off') {
-        print('sGLP log off');
-      } else {
-        try {
-          final f = _LogFile(arg);
-          logFile = f;
-          engine.onSimulationLog = f.add;
-          print('sGLP log to $arg');
-        } catch (e) {
-          print('Error: cannot write the log to $arg: $e');
-        }
-      }
-      continue;
     }
 
     if (trimmed == ':help' || trimmed == ':h') {
@@ -350,35 +320,9 @@ void main() async {
       }
     }
 
-    // `:at <placement> <goal>`: post the goal with its conjuncts placed at
-    // the agents of the loaded program's run declaration (svGLP, sections/
-    // sglp.tex, Definition "Simulation Program"): the placement is one entry
-    // per conjunct, comma-separated without spaces --- an agent `a`, a range
-    // `a..b` of agents, or `-` for a conjunct at no agent --- and every agent
-    // has one.  `:at 1..3,- g(1), g(2), g(3), net(...)` places g(a) at a and
-    // net(...) at none.
-    List<int?>? placement;
-    var goalText = trimmed;
-    if (trimmed.startsWith(':at ')) {
-      final rest = trimmed.substring(4).trim();
-      final space = rest.indexOf(' ');
-      if (space < 0) {
-        print('Usage: :at <placement> <goal>');
-        continue;
-      }
-      try {
-        placement = GlpEngine.parsePlacement(rest.substring(0, space));
-      } on FormatException catch (e) {
-        print('Error: ${e.message}');
-        continue;
-      }
-      goalText = rest.substring(space + 1).trim();
-    }
-
     // Run goal
     try {
-      final result = await engine.runGoal(goalText, agents: placement);
-      logFile?.flush();
+      final result = await engine.runGoal(trimmed);
 
       // Print bindings
       if (result.bindings.isNotEmpty) {
@@ -395,15 +339,6 @@ void main() async {
 
       // Print status
       _printStatus(result.status);
-
-      // An sGLP run: the simulated time it reached (svGLP, sections/sglp.tex).
-      final sim = engine.simulation;
-      if (sim != null) {
-        final next = sim.nextActivation;
-        print('Simulated time: ${sim.clock} s after ${sim.releases} '
-            'release${sim.releases == 1 ? '' : 's'}'
-            '${next == null ? '' : '; ${sim.pendingCount} pending, the next at $next s'}');
-      }
 
       if (result.error != null) {
         print('Error: ${result.error}');
@@ -446,9 +381,6 @@ void _printHelp() {
   print('  :emit <dir>            Write the compiled GLP beside each .vglp');
   print('  :mad <agent>           Enter madGLP mode as <agent> (seam predicates run)');
   print('  :boot <f>_boot.glp     Run a multi-agent boot program (one isolate per agent)');
-  print('  :at <placement> <goal> Post an sGLP goal, its conjuncts placed at agents');
-  print('                         (placement: a, a..b or -, comma-separated)');
-  print('  :log <file> | :log off Write each sGLP run\'s log to <file>');
   print('  :artefact <dir> [<to>] Write a program directory\'s certified artefact (<to>/<name>.glpw)');
   print('');
   print('Type Checking:');
@@ -580,29 +512,4 @@ Future<String?> _getGitCommit() async {
     // Git not available or not a git repo
   }
   return null;
-}
-
-/// The file an sGLP run's log is written to: entries buffered and written in
-/// blocks, synchronously, so that the REPL's exit loses none.
-class _LogFile {
-  final RandomAccessFile _file;
-  final StringBuffer _buffer = StringBuffer();
-
-  _LogFile(String path) : _file = File(path).openSync(mode: FileMode.write);
-
-  void add(String line) {
-    _buffer.writeln(line);
-    if (_buffer.length > 1 << 20) flush();
-  }
-
-  void flush() {
-    if (_buffer.isEmpty) return;
-    _file.writeStringSync(_buffer.toString());
-    _buffer.clear();
-  }
-
-  void close() {
-    flush();
-    _file.closeSync();
-  }
 }

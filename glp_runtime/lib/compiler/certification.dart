@@ -62,8 +62,6 @@ Iterable<Goal> _bodyGoals(Clause c) sync* {
 Iterable<Goal> _flatten(Goal g) sync* {
   if (g is SpawnGoal) {
     yield* _flatten(g.innerGoal);
-  } else if (g is RatedGoal) {
-    yield* _flatten(g.innerGoal);
   } else if (g is RemoteGoal) {
     yield* _flatten(g.goal);
   } else {

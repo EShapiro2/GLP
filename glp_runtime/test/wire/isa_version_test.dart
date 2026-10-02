@@ -1,121 +1,97 @@
 /// The instruction-set version of the code format.
 ///
-/// Specification: IGLP, Code Format appendix at 877691b
-/// (sections/code-format-fragment.tex): `0x54 spawn_rated` (proc, arity,
-/// rate) is the instruction of the stochastic extension of GLP, which a
-/// runtime not offering the extension never emits, and its arrival is an
-/// instruction-set version change carried in the artefact header; the loader
-/// refuses an unsupported instruction-set version, "an older runtime rejects
-/// a newer instruction-set version at adoption", and "a newer runtime runs
-/// older artefacts unchanged".
+/// Specification: IGLP, Code Format appendix at 8c1d5e2
+/// (sections/code-format-fragment.tex), "Format Versioning": the header
+/// carries the instruction-set version, a string, and "A loader refuses an
+/// artefact whose code-format version or instruction-set version it does not
+/// support"; "an older runtime rejects a newer instruction-set version at
+/// adoption".  The opcode table has no 0x54: `spawn_rated`, the instruction of
+/// sGLP's engine extension, left the code format with the extension at
+/// 8c1d5e2, and with it `glp-isa-2`, the version that carried it.  This
+/// runtime writes and loads `glp-isa-1`, the version before the extension, and
+/// refuses an artefact at `glp-isa-2`.
 library;
 
 import 'dart:typed_data';
 
-import 'package:glp_runtime/bytecode/opcodes.dart';
 import 'package:glp_runtime/compiler/compiler.dart';
 import 'package:glp_runtime/engine_v2/code_image.dart';
 import 'package:glp_runtime/engine_v2/interp.dart' show codeImageFromProgram;
 import 'package:glp_runtime/multiagent/identity.dart';
 import 'package:glp_runtime/wire/artefact.dart';
 import 'package:glp_runtime/wire/codec.dart';
+import 'package:glp_runtime/wire/instruction_codec.dart';
 import 'package:test/test.dart';
 
 Uint8List _hm() => Uint8List.fromList(List<int>.generate(32, (i) => 7 * i));
 
 final PersonIdentity _compiler = PersonIdentity.generate();
 
-/// A program with a rated goal, compiled: it holds a spawn_rated.
-List<Object> _ratedOps() => GlpCompiler()
-    .compile('''
+const String _source = '''
 procedure p(Integer?).
-p(X) :- q(X?) @ 1/week.
+p(X) :- q(X?).
 procedure q(Integer?).
 q(_).
-''')
-    .ops
-    .cast<Object>();
+''';
 
-/// The certified artefact of [_ratedOps] at instruction-set version [isa].
+/// The certified artefact of [_source] at instruction-set version [isa].
 Uint8List _artefact(String isa) => Artefact.fromCompiled(
-      ops: _ratedOps(),
+      ops: GlpCompiler().compile(_source).ops.cast<Object>(),
       hM: _hm(),
-      moduleName: 'rated',
+      moduleName: 'p',
       isaVersion: isa,
       signer: _compiler,
     ).toBytes();
 
-/// A runtime at the instruction-set version before spawn_rated.
-const Set<String> _oldRuntime = {'glp-isa-1'};
+Matcher _refused(String isa) => throwsA(isA<WireFormatException>()
+    .having((e) => e.message, 'message', 'unsupported ISA version: $isa'));
 
 void main() {
-  test('this implementation writes glp-isa-2, the version with spawn_rated, '
-      'and loads it and every earlier version', () {
-    expect(glpIsaVersion, 'glp-isa-2');
-    expect(runtimeIsaVersions, {'glp-isa-1', 'glp-isa-2'});
-    expect(_ratedOps().whereType<SpawnRated>(), hasLength(1));
-    final a = Artefact.fromBytes(_artefact(glpIsaVersion));
-    expect(a.isaVersion, glpIsaVersion);
+  test('this implementation writes glp-isa-1 and loads glp-isa-1 alone', () {
+    expect(glpIsaVersion, 'glp-isa-1');
+    expect(runtimeIsaVersions, {'glp-isa-1'});
+    final bytes = _artefact(glpIsaVersion);
+    expect(Artefact.fromBytes(bytes).isaVersion, 'glp-isa-1');
+    expect(ArtefactLoader().load(bytes, offeredHM: _hm()).artefact.isaVersion,
+        'glp-isa-1');
+    expect(CodeImage.fromArtefactBytes(bytes).isaVersion, 'glp-isa-1');
     // The engine's own image of a compiled program is at the version too.
-    final img = codeImageFromProgram(GlpCompiler().compile('''
-procedure p(Integer?).
-p(X) :- q(X?) @ 1/week.
-procedure q(Integer?).
-q(_).
-'''));
-    expect(img.isaVersion, glpIsaVersion);
+    expect(codeImageFromProgram(GlpCompiler().compile(_source)).isaVersion,
+        'glp-isa-1');
   });
 
-  group('an artefact at the new version is refused by a runtime at the old',
-      () {
+  group('an artefact at glp-isa-2 is refused', () {
     test('by the loader, at adoption', () {
-      expect(
-          () => ArtefactLoader().load(_artefact(glpIsaVersion),
-              offeredHM: _hm(), supportedIsaVersions: _oldRuntime),
-          throwsA(isA<WireFormatException>().having((e) => e.message,
-              'message', 'unsupported ISA version: glp-isa-2')));
+      expect(() => ArtefactLoader().load(_artefact('glp-isa-2'),
+          offeredHM: _hm()), _refused('glp-isa-2'));
     });
 
     test('by the code image a runtime runs', () {
-      expect(
-          () => CodeImage.fromArtefactBytes(_artefact(glpIsaVersion),
-              supportedIsaVersions: _oldRuntime),
-          throwsA(isA<WireFormatException>().having((e) => e.message,
-              'message', 'unsupported ISA version: glp-isa-2')));
+      expect(() => CodeImage.fromArtefactBytes(_artefact('glp-isa-2')),
+          _refused('glp-isa-2'));
     });
 
     test('whatever the loader has loaded before', () {
+      // A loader told it supports glp-isa-2 takes the artefact and caches
+      // it; at this runtime's versions the same loader refuses it all the
+      // same, the check standing before the cache.
       final loader = ArtefactLoader();
-      final bytes = _artefact(glpIsaVersion);
-      expect(loader.load(bytes, offeredHM: _hm()), isNotNull);
+      final bytes = _artefact('glp-isa-2');
       expect(
-          () => loader.load(bytes,
-              offeredHM: _hm(), supportedIsaVersions: _oldRuntime),
-          throwsA(isA<WireFormatException>()));
+          loader.load(bytes,
+              offeredHM: _hm(), supportedIsaVersions: const {'glp-isa-2'}),
+          isNotNull);
+      expect(() => loader.load(bytes, offeredHM: _hm()), _refused('glp-isa-2'));
     });
   });
 
-  test('a runtime at the new version runs an artefact at the old unchanged, '
-      'and refuses one newer than its own', () {
-    final old = Artefact(
-      isaVersion: 'glp-isa-1',
-      hM: _hm(),
-      moduleName: 'old',
-      typeDefsText: '',
-      exports: const [],
-      symbols: [
-        ArtefactSymbol.compiled('q', 1, <Object>[ClauseTry(), Commit(), Proceed()]),
-      ],
-      signer: _compiler,
-    ).toBytes();
-    expect(ArtefactLoader().load(old, offeredHM: _hm()).artefact.isaVersion,
-        'glp-isa-1');
-    expect(CodeImage.fromArtefactBytes(old).isaVersion, 'glp-isa-1');
-
-    final newer = _artefact('glp-isa-3');
-    expect(() => ArtefactLoader().load(newer, offeredHM: _hm()),
-        throwsA(isA<WireFormatException>()));
-    expect(() => CodeImage.fromArtefactBytes(newer),
-        throwsA(isA<WireFormatException>()));
+  test('0x54 is no opcode: an instruction carrying it is refused, not run',
+      () {
+    final r = WireReader(Uint8List.fromList([0x54, 0x00, 0x01]));
+    expect(
+        () => decodeInstruction(r,
+            procNameOf: (i) => 'p/1', ctargetLabelOf: (i) => '#$i'),
+        throwsA(isA<WireFormatException>().having(
+            (e) => e.message, 'message', 'unknown opcode: 0x54')));
   });
 }

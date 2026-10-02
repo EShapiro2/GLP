@@ -31,39 +31,4 @@ void main() {
     expect(r.status, ExecutionStatus.succeeded, reason: '${r.error}');
     expect(r.bindings['E'].toString(), contains('yes'));
   });
-
-  ratedGoalGetsCalleeSolving();
-}
-
-// A RATED goal (sGLP, Goal @ Rate) is typed as its goal (svGLP,
-// sections/sglp.tex), so it gets callee-clause solving as any goal does: the
-// RatedGoal branch of _checkBodyAtomWithTerm passes `callee` on.  Until
-// 2026-10-01 it did not, and the instantiation of a rated call was solved
-// without the callee's clauses.  GLP's task of 2026-10-01 13:06 UTC, 3(c).
-void ratedGoalGetsCalleeSolving() {
-  test('a rated goal is solved with the callee\'s clauses, as the same goal '
-      'unrated is', () {
-    String verdict(String call) {
-      try {
-        GlpEngine(rootSelfGlpPath: _root).loadSource('''
-Choice ::= yes ; no.
-
-procedure(X, M) pass(X, M?).
-pass(A, A?).
-
-procedure use(Choice?, Choice).
-use(C, C?).
-
-procedure go(Choice?, Choice).
-go(C, E?) :- $call, use(D?, E).
-''');
-        return 'loads';
-      } catch (e) {
-        return '$e';
-      }
-    }
-
-    expect(verdict('pass(C?, D)'), 'loads');
-    expect(verdict('pass(C?, D) @ 1/day'), 'loads');
-  });
 }

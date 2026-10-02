@@ -13,7 +13,6 @@ import 'package:glp_runtime/multiagent/identity.dart' show PersonIdentity;
 import 'package:glp_runtime/bytecode/runner.dart'
     show CallEnv, GoalRunner;
 import 'package:glp_runtime/runtime/glp_activation.dart' show GlpChannelHandle;
-import 'package:glp_runtime/sglp/simulation.dart' show SimState;
 
 class GlpRuntime {
   final HeapFCP heap;
@@ -59,11 +58,6 @@ class GlpRuntime {
   /// signature carrying a goal handle.
   GoalId? currentGoalId;
 
-  /// The body position of the call a body kernel is running for, set with
-  /// [currentGoalId]: with the calling goal's identifier it names a goal the
-  /// kernel spawns in an sGLP run (person/2, lib/sglp/person.dart).
-  int? currentSpawnOrdinal;
-
   // Timer tracking for wait() guards
   int _pendingTimers = 0;
   int get pendingTimers => _pendingTimers;
@@ -90,12 +84,6 @@ class GlpRuntime {
   // scheduler folds this into the run's status without stopping the drain.
   // Recorded as the text of the failed goal, which is what a diagnostic needs.
   final List<String> failedGoals = [];
-
-  /// The sGLP run this machine is in (svGLP, sections/sglp.tex): the
-  /// simulated clock, the pending goals and the seed.  Null outside one, and
-  /// a rated goal spawned there fails.  The engine installs it for each goal
-  /// it posts to a program with rated goals or a run declaration.
-  SimState? sim;
 
   // madGLP context (set when running in multiagent mode)
   // Used by '_cold_send' kernel to access globalization infrastructure
@@ -142,9 +130,8 @@ class GlpRuntime {
 
   /// The machine has no Reduce to make: nothing is in its queue.  The goal
   /// whose guard asks has been taken from the queue, so its own reduction is
-  /// not counted.  This is the idleness at which the scheduler takes a
-  /// Release, and it is the engine's alone: the queued messages of a madGLP
-  /// agent, flushed after the drain, are not seen here.
+  /// not counted.  This idleness is the engine's alone: the queued messages
+  /// of a madGLP agent, flushed after the drain, are not seen here.
   bool get isIdle => gq.length == 0;
 
   /// The reader goal [goalId] suspends on while it waits on when_idle: the
