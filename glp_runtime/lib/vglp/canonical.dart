@@ -1,7 +1,7 @@
 // glp_runtime/lib/vglp/canonical.dart
 //
 // The canonical compilation of a vGLP program written in the paper's syntax.
-// Spec: vGLP at 4cab2ff --- sections/vglp.tex, Definition "Guarded Clause,
+// Spec: vGLP at db03e2d --- sections/vglp.tex, Definition "Guarded Clause,
 // Volitional Procedure, Interactive Type, Interactive Term, Ordinary Clause,
 // Procedure, vGLP Program"; sections/elicitation.tex, Definition "Canonical
 // Compilation".
@@ -13,8 +13,8 @@
 //
 // T is the interactive type, in writer or reader mode as an argument type is;
 // A, the interactive term, is a term of type T, possibly a variable, or `_`,
-// the anonymous variable, if T is in reader mode; in writer mode, where the
-// program writes the output, the anonymous variable is refused.  The clause
+// the anonymous variable, if T is in reader mode; in writer mode, which would
+// leave the output unwritten, the anonymous variable is refused.  The clause
 // "is the guarded clause p(S1, ..., Sn, A) :- G | B, of arity n+1" (Definition
 // "Guarded Clause, ..."), so the front end reads it as exactly that: a token
 // rewrite puts A after the last argument, and T after the last argument type,
@@ -25,9 +25,10 @@
 //   - every ordinary clause, each call q(S1, ..., Sn) of a volitional
 //     procedure q in its body replaced by q_a(S1, ..., Sn);
 //   - for each volitional procedure q of interactive type T, its clauses as
-//     guarded clauses of arity n+1, their calls replaced likewise, a clause
-//     with the interactive term `_` given a fresh writer A in its place and the
-//     body goal withdraw(A?);
+//     guarded clauses of arity n+1, their calls replaced likewise; a clause
+//     with the interactive term `_` keeps it there, dropping the reader, and
+//     no goal is added: there is no built-in (vGLP's code task of 2026-10-02
+//     00:13 UTC, item B');
 //   - the asking clause
 //         q_a(S1, ..., Sn) :- construct(T, X), q(S1', ..., Sn', X?).
 //     S'_l the reader of S_l at an input position and the writer at an output
@@ -58,14 +59,6 @@ import 'program_compilation.dart' show compiledHeader;
 /// The construct process of an interactive type (vGLP, Definition "Canonical
 /// Compilation").
 const constructGoal = 'construct';
-
-/// The built-in that closes a question (vGLP, Definition "Guarded Clause,
-/// ...": "The built-in goal withdraw(X?) succeeds on any argument; its use is
-/// to close a question").  It is vGLP's built-in, not the root's close/1,
-/// which stays.  The runtime implements it (sections/elicitation.tex, the
-/// paragraph before Definition "Canonical Compilation"), and that runtime is
-/// Part 2's, so withdraw/1 is not declared here.
-const withdrawGoal = 'withdraw';
 
 /// One volitional procedure of the source, and the names the compilation
 /// gives it.
@@ -504,11 +497,12 @@ void _checkNoAskedCall(Module m, Map<String, VolitionalProcedure> volitional) {
 
 /// The interactive term is "a term of type T, possibly a variable, or the
 /// anonymous variable if T is in reader mode" (Definition "Guarded Clause,
-/// ..."): "In writer mode the program writes the output, and a clause closes
-/// a question inside it by withdraw on the question's reader; the anonymous
-/// variable, which would leave the output unwritten, is not allowed there."
-/// It is refused written `_`, and written `_?`, TGLP's anonymous output, the
-/// interactive term's position being a produced one in writer mode.
+/// ..."): "In writer mode the anonymous variable, which would leave the output
+/// unwritten, is not allowed; there the program closes a question inside its
+/// output by dropping the question's reader and, where the type provides for
+/// it, by writing more of the output".  It is refused written `_`, and written
+/// `_?`, TGLP's anonymous output, the interactive term's position being a
+/// produced one in writer mode.
 void _checkNoAnonymousOutput(
     Module m, Map<String, VolitionalProcedure> volitional) {
   for (final v in volitional.values) {
@@ -521,11 +515,12 @@ void _checkNoAnonymousOutput(
         throw CompileError(
             'The clause ${_asWritten(c, v)} has the anonymous variable as its '
             'interactive term, and the interactive type ${v.typeConstant} of '
-            '${v.name}/${v.arity} is in writer mode: there the program writes '
-            'the output, and a clause closes a question inside it by '
-            'withdraw on the question\'s reader; the anonymous variable, which '
-            'would leave the output unwritten, is not allowed (vGLP, '
-            'Definition "Guarded Clause, ...")',
+            '${v.name}/${v.arity} is in writer mode, where the anonymous '
+            'variable, which would leave the output unwritten, is not allowed: '
+            'there the program closes a question inside its output by dropping '
+            'the question\'s reader and, where the type provides for it, by '
+            'writing more of the output (vGLP, Definition "Guarded Clause, '
+            '...")',
             c.line, c.column, phase: 'analyzer');
       }
     }
@@ -627,64 +622,17 @@ Procedure _askingClause(ProcDecl decl, VolitionalProcedure v, String goal) {
   return Procedure(v.askingName, v.arity, [clause], l, c);
 }
 
-/// The clauses of q as guarded clauses of arity n+1, named q1; a clause whose
-/// interactive term is `_` is given a fresh writer A in its place and the body
-/// goal withdraw(A?).
+/// The clauses of q as guarded clauses of arity n+1, named q1.  A clause whose
+/// interactive term is `_` keeps it at the interactive position, where it
+/// drops the reader, and no goal is added (vGLP's code task of 2026-10-02
+/// 00:13 UTC, item B': no built-in).
 Procedure _guardedProcedure(Procedure p, VolitionalProcedure v) {
-  final clauses = <Clause>[];
-  for (final c in p.clauses) {
-    var args = c.head.args;
-    var body = c.body;
-    final last = args.last;
-    if (last is UnderscoreTerm && !last.isReader) {
-      final a = _freshVariable('A', c);
-      args = [
-        ...args.sublist(0, args.length - 1),
-        VarTerm(a, false, last.line, last.column),
-      ];
-      final withdraw = Goal(withdrawGoal,
-          [VarTerm(a, true, last.line, last.column)], last.line, last.column);
-      // A body that is the single goal `true` is the guarded unit clause's
-      // idiom, and is empty.
-      final rest = (body == null ||
-              (body.length == 1 &&
-                  body.first.functor == 'true' &&
-                  body.first.args.isEmpty))
-          ? const <Goal>[]
-          : body;
-      body = [...rest, withdraw];
-    }
-    clauses.add(Clause(Atom(v.guardedName, args, c.head.line, c.head.column),
-        guards: c.guards, body: body, line: c.line, column: c.column));
-  }
+  final clauses = [
+    for (final c in p.clauses)
+      Clause(Atom(v.guardedName, c.head.args, c.head.line, c.head.column),
+          guards: c.guards, body: c.body, line: c.line, column: c.column)
+  ];
   return Procedure(v.guardedName, v.arity + 1, clauses, p.line, p.column);
-}
-
-/// A variable name the clause does not use.
-String _freshVariable(String stem, Clause c) {
-  final taken = <String>{};
-  void scan(Term t) {
-    if (t is VarTerm) taken.add(t.name);
-    if (t is StructTerm) t.args.forEach(scan);
-    if (t is ListTerm) {
-      if (t.head != null) scan(t.head!);
-      if (t.tail != null) scan(t.tail!);
-    }
-  }
-
-  c.head.args.forEach(scan);
-  for (final g in c.guards ?? const <Guard>[]) {
-    g.args.forEach(scan);
-  }
-  for (final g in c.body ?? const <Goal>[]) {
-    g.args.forEach(scan);
-  }
-  if (!taken.contains(stem)) return stem;
-  var n = 1;
-  while (taken.contains('$stem$n')) {
-    n++;
-  }
-  return '$stem$n';
 }
 
 // ---------------------------------------------------------------------------

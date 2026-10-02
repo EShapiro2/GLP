@@ -2,14 +2,15 @@
 //
 // The canonical compilation of a vGLP program in the paper's syntax, in both
 // modes.
-// Spec: vGLP at 4cab2ff --- sections/vglp.tex, Definition "Guarded Clause,
+// Spec: vGLP at db03e2d --- sections/vglp.tex, Definition "Guarded Clause,
 // Volitional Procedure, Interactive Type, Interactive Term, Ordinary Clause,
 // Procedure, vGLP Program"; sections/elicitation.tex, Definition "Canonical
 // Compilation".  vGLP's code task of 2026-10-01, Part 1, tests (ii) and (iii).
 //
 // (ii) A reader-mode question and a writer-mode one compile to
-//     construct(T, X), and a (_) clause emits withdraw, not the root's
-//     close/1.
+//     construct(T, X), and a (_) clause keeps the anonymous variable at its
+//     interactive position and adds no goal: no built-in, neither withdraw
+//     nor the root's close/1 (vGLP's code task of 2026-10-02 00:13 UTC, B').
 // (iii) The nine .vglp sources in the old syntax are not in the paper's, and
 //     keep their old compilation.
 
@@ -55,15 +56,16 @@ void main() {
               ':- ground(From?) | decide(Answer?, From?, Resp).'));
     });
 
-    test('a (_) clause is given a fresh writer and the body goal withdraw of '
-        'its reader, and the root\'s close/1 is not called', () {
+    test('a (_) clause keeps the anonymous variable at its interactive '
+        'position and adds no goal: neither withdraw nor the root\'s close/1 '
+        'is called', () {
       expect(
           q,
           contains('agent1(Id, [msg(Id1, friend_request(From, Resp?)) | NetIn], '
-              'Outs?, A) :- (Id? =?= Id1?), ground(From?) | '
-              'respond_coldcall(offer(From?), Resp), agent(Id?, NetIn?, Outs), '
-              'withdraw(A?).'));
+              'Outs?, _) :- (Id? =?= Id1?), ground(From?) | '
+              'respond_coldcall(offer(From?), Resp), agent(Id?, NetIn?, Outs).'));
       expect(q, isNot(contains('close(')));
+      expect(q, isNot(contains('withdraw')));
     });
 
     test('no "true |" in an asking clause', () {
@@ -104,17 +106,19 @@ procedure (T?)*p(Integer?).
 (_)*p(0).
 (_)*p(N) :- N? > 0 | true.
 ''');
-      expect(s, contains('p1(0, A) :- withdraw(A?).'));
-      expect(s, contains('p1(N, A) :- (N? > 0) | withdraw(A?).'));
+      expect(s, contains('p1(0, _).'));
+      expect(s, contains('p1(N, _) :- (N? > 0) | true.'));
+      expect(s, isNot(contains('withdraw')));
     });
 
-    test('the fresh writer of a (_) clause is fresh in the clause', () {
+    test('a (_) clause adds no variable to the clause', () {
       final s = compile('''
 T ::= t.
 procedure (T?)*p(Integer?, Integer).
 (_)*p(A, A?).
 ''');
-      expect(s, contains('p1(A, A?, A1) :- withdraw(A1?).'));
+      expect(s, contains('p1(A, A?, _).'));
+      expect(s, isNot(contains('A1')));
     });
 
     test('a nullary volitional procedure, and exported, and a parameter '
@@ -183,7 +187,7 @@ q(_, _?).
               allOf(contains('The clause $clause '), contains('writer mode')))
           .having((e) => e.line, 'line', line));
 
-      test('in reader mode, (_) compiles, withdrawing the question', () {
+      test('in reader mode, (_) compiles, dropping the reader', () {
         final s = compile('''
 YesNo ::= yes ; no.
 procedure (YesNo?)*ask(Integer?, Integer).
@@ -191,7 +195,7 @@ procedure (YesNo?)*ask(Integer?, Integer).
 (_)*ask(_, 0).
 ''');
         expect(s, contains('ask1(N, N?, yes).'));
-        expect(s, contains('ask1(_, 0, A) :- withdraw(A?).'));
+        expect(s, contains('ask1(_, 0, _).'));
       });
 
       test('in writer mode, (_) is a compile error naming the clause', () {
