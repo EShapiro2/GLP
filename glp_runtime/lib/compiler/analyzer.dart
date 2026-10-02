@@ -715,23 +715,13 @@ class Analyzer {
     // licenses no repeated occurrence (TGLP glp.tex, Remark "Guards and SRSW";
     // GLP, 2026-09-28).  Until 2026-09-29 it marked its argument grounded.
 
-    // wait_until/1 guard marks argument as ground (requires ground timestamp)
-    // wait_until(T?) succeeds only if T is a ground number (timestamp in ms)
-    if (guard.predicate == 'wait_until' && guard.args.length == 1) {
-      final arg = guard.args[0];
-      if (arg is VarTerm) {
-        varTable.markGrounded(arg.name);
-      }
-    }
-
-    // wait/1 guard marks argument as ground (requires ground duration)
-    // wait(D?) succeeds only if D is a ground number (duration in ms)
-    if (guard.predicate == 'wait' && guard.args.length == 1) {
-      final arg = guard.args[0];
-      if (arg is VarTerm) {
-        varTable.markGrounded(arg.name);
-      }
-    }
+    // `wait` and `wait_until` mark nothing: the catalogue's time-guard table
+    // has no Ground column (GLP-Spec appendix-guards.tex, Time guards), so
+    // neither licenses a repeated occurrence (TGLP glp.tex, Remark "Guards and
+    // SRSW").  A repeated `D?` of type Number is licensed by its type, a
+    // constant type, as any reader of one is (TGLP typed-glp.tex, "Readers of
+    // constant types").  Until 2026-10-02 each marked its argument grounded,
+    // which licensed a repeated writer as well.
 
     // Comparison guards implicitly test groundness of both operands
     // Per spec: comparison guards require both operands to be bound numeric values,
