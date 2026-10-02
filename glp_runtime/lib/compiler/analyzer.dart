@@ -653,8 +653,6 @@ class Analyzer {
   // Body-only constructs that are NOT valid guards
   static const _invalidInGuardPosition = {
     'true',   // true is body-only, not a guard
-    'false',  // false is body-only
-    'fail',   // fail is body-only
   };
 
   void _analyzeGuard(Guard guard, VariableTable varTable) {

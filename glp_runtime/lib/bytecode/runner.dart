@@ -841,21 +841,6 @@ GuardResult _evaluateGuard(String predicateName, List<Object?> args, RunnerConte
       }
       return GuardResult.failure;
 
-    case 'list':
-      // Succeeds if X is a list ([] or [H|T])
-      // Per spec: list(X?) - Succeeds if X is a list
-      if (args.isEmpty) return GuardResult.failure;
-      final val = getValue(args[0]);
-      // Empty list: ConstTerm with 'nil' or null
-      if (val is ConstTerm && (val.value == 'nil' || val.value == null)) {
-        return GuardResult.success;
-      }
-      // Cons cell: StructTerm with functor '.'
-      if (val is StructTerm && val.functor == '.') {
-        return GuardResult.success;
-      }
-      return GuardResult.failure;
-
     case 'module':
       // Succeeds if X is a ModuleTerm (ground module reference)
       if (args.isEmpty) return GuardResult.failure;
