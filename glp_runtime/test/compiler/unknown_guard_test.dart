@@ -28,11 +28,13 @@ void main() {
         _refusedWith('Unknown guard predicate integer/2'));
   });
 
-  test('no_readers/1 on a term is refused, the runtime taking a variable only',
-      () {
+  // no_readers/1 on a term is a guard the runtime evaluates (GLP #3 Cowork,
+  // 2026-10-02 15:31 UTC, B9; no_readers_guard_test.dart), where this test
+  // asserted codegen's refusal of it before the two branches met.
+  test('no_readers/1 on a term compiles, the runtime evaluating it', () {
     expect(
-        () => GlpCompiler().compile('p(X, Y?) :- no_readers(f(X?)) | Y = a.\n'),
-        _refusedWith('no_readers/1 is evaluated on a variable argument only'));
+        GlpCompiler().compile('p(X, Y?) :- no_readers(f(X?)) | Y = a.\n'),
+        isA<BytecodeProgram>());
   });
 
   test('a catalogue guard compiles', () {

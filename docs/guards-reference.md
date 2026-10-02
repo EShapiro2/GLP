@@ -612,7 +612,7 @@ befriend_commit(Id, Other, ...) :- otherwise | ...        % larger-named side
 ```
 
 **Implementation in tables**:
-- `root_scope.dart`'s `predefinedProcedureNames` and `builtinProcedures` sets include `@<` and `@</2`.
+- `root_scope.dart`'s `builtinProcedures` set includes `@</2` (the redefinition protection's `predefinedProcedureNames` went with weeding round three).
 - `analyzer.dart`'s `comparisonOps` (groundness inference) includes `@<`.
 - `runner.dart`'s guard switch implements the lex comparison via the local `evalConst` helper.
 - `lexer.dart` tokenizes `@<` as `TokenType.AT_LESS` (distinct from `@` followed by `<`).

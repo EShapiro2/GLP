@@ -776,7 +776,7 @@ const Set<String> runtimeGuards = {
   '</2', '>/2', '=</2', '>=/2', '=:=/2', '=\\=/2', '@</2',
   'ground/1', 'known/1', 'integer/1', 'string/1', 'constant/1', 'number/1',
   'list/1', 'compound/1', 'module/1', 'is_mutual_ref/1', 'unknown/1',
-  'otherwise/0', 'wait/1', 'wait_until/1', 'when_idle/0',
+  'otherwise/0', 'wait/1', 'wait_until/1', 'when_idle/0', 'no_readers/1',
   '=?=/2', '=?\\=/2', 'valid_attestation/4',
 };
 

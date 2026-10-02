@@ -432,12 +432,9 @@ class CodeGenerator {
     final signature = '${guard.predicate}/${guard.args.length}';
     if (!runtimeGuards.contains(signature)) {
       throw CompileError(
-        signature == 'no_readers/1'
-            ? 'no_readers/1 is evaluated on a variable argument only; its '
-                'argument here is a term, which the runtime does not evaluate'
-            : 'Unknown guard predicate $signature: no guard of the catalogue '
-                '(GLP-Spec appendix-guards.tex) has that name and arity, and no '
-                'unit clause defines it as a guard',
+        'Unknown guard predicate $signature: no guard of the catalogue '
+            '(GLP-Spec appendix-guards.tex) has that name and arity, and no '
+            'unit clause defines it as a guard',
         guard.line,
         guard.column,
         phase: 'codegen',

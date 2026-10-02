@@ -568,16 +568,19 @@ guard_add(Temp1?, 10, Temp2) % Guard kernel
 X? < Temp2?                  % Guard predicate
 ```
 
-### 8.3 Safe Division
+### 8.3 Division
+
+As the root `programs/self.glp` has it.  A zero divisor is the kernel's to abort on: a body kernel either succeeds or aborts (GLP-Spec, the guards appendix), so `X := 1/0` prints `[ABORT] div/3: division by zero` and the goal fails; no clause of `:=` guards against zero.
 
 ```glp
-%% Division (real result) - from paper, Appendix A
-Result? := X / Y :- number(X?), number(Y?), Y? =\= 0 |
-    '_div'(X?, Y?, Result).
-_ := X / Y :- number(X?), number(Y?), Y? =:= 0 |
-    abort("Division by zero").
-Result? := X / Y :- otherwise |
-    X1 := X?, Y1 := Y?, Result := X1? / Y1?.
+Result? := X / Y :-
+  number(X?), number(Y?) |
+  '_div'(X?, Y?, Result).
+Result? := X / Y :-
+  otherwise |
+  X1 := X?,
+  Y1 := Y?,
+  Result := X1? / Y1?.
 ```
 
 ---
