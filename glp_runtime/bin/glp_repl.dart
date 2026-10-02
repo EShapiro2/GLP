@@ -5,6 +5,7 @@
 library;
 
 import 'dart:io';
+import 'dart:typed_data';
 import 'package:glp_runtime/compiler/program_linker.dart' show emitVglpSources;
 import 'package:glp_runtime/engine/glp_engine.dart';
 import 'package:glp_runtime/multiagent/simulation_network.dart'
@@ -205,15 +206,31 @@ void main() async {
       final agent = parts[1].toLowerCase();
       engine.enableMadGLP(agentId: agent);
       final directory = NetworkDirectory()..register(agent, engine.identity.pub);
+      void dropped(String toId) =>
+          print('[MAD $agent] message to $toId dropped: no router in the REPL');
       final network = SimulationNetworkClient(
         selfId: agent,
         directory: directory,
-        sendToRouter: (toId, payload) {
-          print('[MAD $agent] message to $toId dropped: no router in the REPL');
-        },
+        sendToRouter: (toId, payload) => dropped(toId),
       );
       network.putIdentity(engine.identity.pub, engine.identity.priv);
       engine.madContext!.network = network;
+      // The Sends (IGLP, Definition madGLP Send) place each message of the
+      // outbox on the channel to its destination, as an agent's do
+      // (ctx.onMessageReady → network.send), and a goal's run in this mode
+      // ends with them (GlpEngine.runGoal), so a goal waiting on when_idle is
+      // not held by a message that would never leave.  Until 2026-10-02 the
+      // outbox was wired to nothing and kept every message.  The REPL has no
+      // router, so a message goes nowhere, and is reported; one to an agent
+      // the directory does not hold has no channel at all.
+      engine.madContext!.onMessageReady = (destination, message) {
+        final pk = directory.pkOf(destination);
+        if (pk == null) {
+          dropped(destination);
+        } else {
+          network.send(pk, Uint8List.fromList(message.payload));
+        }
+      };
       print('madGLP mode on: agent $agent, key ${engine.identity.pub.hex}');
       continue;
     }

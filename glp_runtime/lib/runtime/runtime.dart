@@ -75,6 +75,14 @@ class GlpRuntime {
   // Updated by suspendGoalFCP, cleared when goals reactivate
   final Map<int, Set<GoalRef>> suspended = <int, Set<GoalRef>>{};
 
+  // The readers each goal in [suspended] waits on, its suspension set W: the
+  // index by which a goal reactivated leaves [suspended] at the cost of its
+  // own readers (dGLP Reduce, S' = S \ {(G, W) : G ∈ R}; IGLP dglp.tex,
+  // Definition "dGLP Transition System").  Until 2026-10-02 it left by a
+  // visit to every entry of [suspended], so a wakeup cost in the number of
+  // goals suspended.
+  final Map<GoalRef, Set<int>> _suspendedOn = <GoalRef, Set<int>>{};
+
   // Infrastructure goal IDs (spec §3.4): serve goals spawned by auto-activation.
   // Their suspension does not affect user goal status determination.
   final Set<int> infrastructureGoalIds = {};
@@ -228,6 +236,9 @@ class GlpRuntime {
     for (final readerId in readerVarIds) {
       suspended.putIfAbsent(readerId, () => <GoalRef>{}).add(goalRef);
     }
+    if (readerVarIds.isNotEmpty) {
+      _suspendedOn.putIfAbsent(goalRef, () => <int>{}).addAll(readerVarIds);
+    }
 
     SuspendOps.suspendGoalFCP(
       heap: heap,
@@ -294,17 +305,25 @@ class GlpRuntime {
     _removeFromSuspended(goal);
   }
 
-  /// Remove a goal from all entries in the suspended map
+  /// [goal] is taken from the queue to be tried, so it waits on nothing: it
+  /// leaves [suspended], as a goal reactivated does (dGLP Reduce, S' = S \
+  /// {(G, W) : G ∈ R}).  The goals a commit's bindings wake are put in the
+  /// queue by the runner itself and not through [enqueueReactivatedGoal], and
+  /// until 2026-10-02 such a goal stayed in [suspended] for the rest of the
+  /// run: after 30 days of sGLP's social graph the map held 464,267 goals, 631
+  /// of them suspended.
+  void goalTaken(GoalRef goal) => _removeFromSuspended(goal);
+
+  /// Remove a goal from every entry of [suspended] it is in: those of the
+  /// readers it waits on, which [_suspendedOn] holds.
   void _removeFromSuspended(GoalRef goal) {
-    final toRemove = <int>[];
-    for (final entry in suspended.entries) {
-      entry.value.remove(goal);
-      if (entry.value.isEmpty) {
-        toRemove.add(entry.key);
-      }
-    }
-    for (final key in toRemove) {
-      suspended.remove(key);
+    final readers = _suspendedOn.remove(goal);
+    if (readers == null) return;
+    for (final readerId in readers) {
+      final goals = suspended[readerId];
+      if (goals == null) continue;
+      goals.remove(goal);
+      if (goals.isEmpty) suspended.remove(readerId);
     }
   }
 

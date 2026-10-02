@@ -114,7 +114,7 @@ void main() async {
 
   print('\n=== Result ===');
   print('Status: ${result.status}');
-  print('Goals ran: ${result.goalsRan}');
+  print('Goals run: ${result.goalsRun}');
   print('Suspended goals: ${result.suspendedGoals}');
   print('Blocking readers: ${result.blockingReaders}');
 }

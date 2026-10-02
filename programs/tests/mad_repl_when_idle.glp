@@ -1,0 +1,22 @@
+%% The REPL's madGLP mode performs its Sends (IGLP, Definition madGLP Send;
+%% Implementation Notes, "Event-driven execution": the agent "reduces until
+%% quiescent ... and then performs its Sends", and "The when_idle Guard": the
+%% guard succeeds when the run queue is empty and the outbox holds no message
+%% that can be sent).
+%%
+%%   :mad a
+%%   ../programs/tests/mad_repl_when_idle.glp
+%%   ping(X).
+%%
+%% prints "[MAD a] message to b dropped: no router in the REPL" and X = idle.
+%% ping/1 cold-calls b and leaves idle/1 waiting on when_idle while the cold
+%% call is in the outbox; the Sends empty it, and idle/1 passes.  The REPL has
+%% no router, so the message goes nowhere, and it says so.
+
+Idle ::= idle.
+
+procedure ping(Idle).
+ping(X?) :- send_to_net([msg(b, ping)]), idle(X).
+
+procedure idle(Idle).
+idle(X?) :- when_idle | X = idle.
