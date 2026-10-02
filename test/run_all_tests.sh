@@ -3287,8 +3287,8 @@ echo ""
 echo "--- A param-inspecting procedure no call instantiates is rejected at load ---"
 # The complement of the case above: there, an instantiation arises across the
 # seam and the callee's clauses are checked at it. Here run/1's declaration is
-# `_?`, so the call supplies no element type and no instantiation of tagger/1
-# arises; tagger/1 inspects its parameter, so it is not parametrically
+# `Channel(_, _)?`, so the call supplies no element type and no instantiation
+# of tagger/1 arises; tagger/1 inspects its parameter, so it is not parametrically
 # well-typed and has no well-typing, and the program is rejected
 # (parameterized-types.tex sec:abstract-parameters, TGLP 4f7027b). From
 # 2026-08-03 to 2026-09-18 the load succeeded and printed a `[TYPE] ...
@@ -3301,8 +3301,11 @@ $GLP_DIR/programs/tests/param_unchecked/
 :quit
 HEREDOC
 2>&1)
-check "uninstantiated param-inspect rejected at load" "no call in the program instantiates it" "$output"
-check "the rejection names the procedure" "code:tagger/1" "$output"
+# The refusal's words since the instantiation of a call by TGLP cc4a891
+# (GLP-inst, merged at b9e0bfb3): the call is refused, naming what no site
+# supplies and the callee that is not parametrically well-typed.
+check "uninstantiated param-inspect rejected at load" "no site of the call supplies a type for X, Y" "$output"
+check "the rejection names the procedure" "tagger/1 is not parametrically well-typed" "$output"
 check_not "program with an uninstantiated inspecting procedure does not load" "Loaded program: .*param_unchecked" "$output"
 
 echo ""
