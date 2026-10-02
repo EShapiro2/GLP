@@ -7,7 +7,6 @@
 ///
 /// Operand kinds (§4.1):
 ///  - polarity: u8 (0 writer, 1 reader)
-///  - negated:  u8 (0 plain, 1 negated guard)
 ///  - varIndex/argSlot/arity/count/slots/regIndex: clen
 ///  - constant: the §3.1 constant payload (u8 tag + payload)
 ///  - functor:  string
@@ -95,7 +94,6 @@ void encodeInstruction(
 }) {
   void constant(Object? v) => encodeConstantPayload(w, wireConstFromValue(v));
   void pol(bool isReader) => w.u8(isReader ? 1 : 0);
-  void neg(bool negated) => w.u8(negated ? 1 : 0);
 
   if (op is Label) {
     throw WireFormatException(
@@ -209,27 +207,22 @@ void encodeInstruction(
     // name/arity, so build the signature from the guard's name and arity.
     w.clen(procIndexOf('${op.procedureLabel}/${op.arity}'));
     w.clen(op.arity);
-    neg(op.negated);
   } else if (op is Ground) {
     w.u8(Opcode.ground);
     w.clen(op.varIndex);
-    neg(op.negated);
   } else if (op is Known) {
     w.u8(Opcode.known);
     w.clen(op.varIndex);
-    neg(op.negated);
   } else if (op is opv2.Unknown) {
     w.u8(Opcode.unknown);
     w.clen(op.varIndex);
   } else if (op is NoReaders) {
     w.u8(Opcode.noReaders);
     w.clen(op.varIndex);
-    neg(op.negated);
   } else if (op is GroundEqual) {
     w.u8(Opcode.groundEqual);
     w.clen(op.leftVarIndex);
     w.clen(op.rightVarIndex);
-    neg(op.negated);
   } else if (op is Otherwise) {
     w.u8(Opcode.otherwise);
   } else if (op is Spawn) {
@@ -261,12 +254,6 @@ Object decodeInstruction(
     final p = r.u8();
     if (p != 0 && p != 1) throw WireFormatException('polarity not 0/1: $p');
     return p == 1;
-  }
-
-  bool neg() {
-    final n = r.u8();
-    if (n != 0 && n != 1) throw WireFormatException('negated not 0/1: $n');
-    return n == 1;
   }
 
   Object? constant() => valueOfWireConst(decodeConstantPayload(r));
@@ -354,22 +341,19 @@ Object decodeInstruction(
       final arity = r.clen();
       // Strip the /arity the symbol table carries back to the bare guard name.
       final name = sig.substring(0, sig.lastIndexOf('/'));
-      return Guard(name, arity, negated: neg());
+      return Guard(name, arity);
     case Opcode.ground:
-      final varIndex = r.clen();
-      return Ground(varIndex, negated: neg());
+      return Ground(r.clen());
     case Opcode.known:
-      final varIndex = r.clen();
-      return Known(varIndex, negated: neg());
+      return Known(r.clen());
     case Opcode.unknown:
       return opv2.Unknown(r.clen());
     case Opcode.noReaders:
-      final varIndex = r.clen();
-      return NoReaders(varIndex, negated: neg());
+      return NoReaders(r.clen());
     case Opcode.groundEqual:
       final l = r.clen();
       final rr = r.clen();
-      return GroundEqual(l, rr, negated: neg());
+      return GroundEqual(l, rr);
     case Opcode.otherwise:
       return Otherwise();
     case Opcode.spawn:

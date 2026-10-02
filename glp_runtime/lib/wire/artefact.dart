@@ -61,7 +61,9 @@ const int wireFormatVersion = 2;
 /// opcode, or an opcode, is an instruction-set version change after which the
 /// runtime refuses the versions before it; the current version is glp-isa-3"
 /// (IGLP eadadcd).  `glp-isa-2` added opcode 0x54 `spawn_rated` for sGLP's
-/// engine extension, and the opcode went with the extension (IGLP 8c1d5e2).
+/// engine extension, and the opcode went with the extension (IGLP 8c1d5e2);
+/// the guard instructions 0x40, 0x41, 0x42, 0x44 and 0x45 lost their
+/// `negated` operand with guard negation (IGLP 9b45225).
 const String glpIsaVersion = 'glp-isa-3';
 
 /// The instruction-set versions this runtime loads: its own alone.  "A loader

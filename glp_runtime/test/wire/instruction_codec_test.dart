@@ -89,11 +89,8 @@ void main() {
           [0x12, 0x01, 0x66, 0x02, 0x00]);
     });
 
-    test('guard: proc index, arity, negated', () {
-      expect(_enc(Guard('guard_ok', 1, negated: false)),
-          [0x40, 0x02, 0x01, 0x00]);
-      expect(_enc(Guard('guard_ok', 1, negated: true)),
-          [0x40, 0x02, 0x01, 0x01]);
+    test('guard: proc index, arity', () {
+      expect(_enc(Guard('guard_ok', 1)), [0x40, 0x02, 0x01]);
     });
 
     test('spawn / requeue: proc index, arity', () {
@@ -101,8 +98,13 @@ void main() {
       expect(_enc(Requeue('q/2', 2)), [0x51, 0x01, 0x02]);
     });
 
-    test('ground: varIndex, negated', () {
-      expect(_enc(Ground(4, negated: true)), [0x41, 0x04, 0x01]);
+    test('ground, known, no_readers: varIndex; ground_equal: two varIndex', () {
+      // The guard instructions carry no negated operand (IGLP
+      // code-format-fragment.tex, the opcode table, 9b45225).
+      expect(_enc(Ground(4)), [0x41, 0x04]);
+      expect(_enc(Known(3)), [0x42, 0x03]);
+      expect(_enc(NoReaders(5)), [0x44, 0x05]);
+      expect(_enc(GroundEqual(1, 2)), [0x45, 0x01, 0x02]);
     });
 
     test('retired distribute/transmit are not in the wire ISA', () {
@@ -146,12 +148,12 @@ void main() {
       Deallocate(),
       PutBoundConst('nil', 1),
       PutBoundNil(2),
-      Guard('guard_ok', 1, negated: true),
-      Ground(2, negated: false),
-      Known(3, negated: true),
+      Guard('guard_ok', 1),
+      Ground(2),
+      Known(3),
       opv2.Unknown(4),
-      NoReaders(5, negated: false),
-      GroundEqual(1, 2, negated: true),
+      NoReaders(5),
+      GroundEqual(1, 2),
       Otherwise(),
       Spawn('p/1', 1),
       Requeue('q/2', 2),
@@ -177,10 +179,9 @@ void main() {
       final s = _dec(_enc(Spawn('p/1', 1))) as Spawn;
       expect(s.procedureLabel, 'p/1');
       expect(s.arity, 1);
-      final g = _dec(_enc(Guard('guard_ok', 1, negated: true))) as Guard;
+      final g = _dec(_enc(Guard('guard_ok', 1))) as Guard;
       expect(g.procedureLabel, 'guard_ok'); // bare name restored from the signature
       expect(g.arity, 1);
-      expect(g.negated, isTrue);
       final hv = _dec(_enc(opv2.HeadVariable(5, isReader: true)))
           as opv2.HeadVariable;
       expect(hv.varIndex, 5);

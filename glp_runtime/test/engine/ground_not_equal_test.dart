@@ -133,6 +133,17 @@ void main() {
       expect(s.status, ExecutionStatus.succeeded, reason: '${s.error}');
       expect(_v(s.bindings['R']), 'stopped');
     });
+
+    test('an unbound writer fails it beside an unbound reader, as ground_equal '
+        'takes the writer first', () async {
+      final r = await _run('neq_only(X?, f(W), R)');
+      expect(r.status, ExecutionStatus.failed);
+      // =?= beside it, ground_equal (0x45): it fails too, and otherwise takes
+      // the call.
+      final eq = await _run('test(X?, f(W), R)');
+      expect(eq.status, ExecutionStatus.succeeded, reason: '${eq.error}');
+      expect(_v(eq.bindings['R']), 'not_equal');
+    });
   });
 
   group('Ground: yes (both) --- =?\\= grounds both arguments for SRSW', () {
@@ -171,26 +182,26 @@ k(X, Y, Z?) :- known(X?), known(Y?) | quad(X?, X?, Y?, Y?, Z).
   });
 
   group('compilation', () {
-    test('two variable operands: ground_equal (0x45), inverted', () {
+    // ground_equal (0x45) carries no negated operand (IGLP
+    // code-format-fragment.tex, 9b45225), so =?\= is the generic guard call,
+    // by name, whatever its operands.
+    test('two variable operands: the generic guard call, =?\\= by name', () {
       final program = GlpCompiler().compile(r'''
 procedure ne(_?, _?, _).
 ne(X, Y, yes) :- X? =?\= Y? | true.
 ''');
-      final ops = program.ops.whereType<bc.GroundEqual>().toList();
-      expect(ops, isNotEmpty);
-      expect(ops.every((o) => o.negated), isTrue);
-      expect(ops.every((o) => '$o'.contains(r'=?\=')), isTrue);
-      expect(program.ops.whereType<bc.Guard>(), isEmpty);
+      final guards = program.ops.whereType<bc.Guard>().toList();
+      expect(guards.map((g) => g.procedureLabel), contains(r'=?\='));
+      expect(program.ops.whereType<bc.GroundEqual>(), isEmpty);
     });
 
-    test('=?= beside it: the same instruction, not inverted', () {
+    test('=?= beside it: two variable operands are ground_equal (0x45)', () {
       final program = GlpCompiler().compile(r'''
 procedure eq(_?, _?, _).
 eq(X, Y, yes) :- X? =?= Y? | true.
 ''');
-      final ops = program.ops.whereType<bc.GroundEqual>().toList();
-      expect(ops, isNotEmpty);
-      expect(ops.every((o) => !o.negated), isTrue);
+      expect(program.ops.whereType<bc.GroundEqual>(), isNotEmpty);
+      expect(program.ops.whereType<bc.Guard>(), isEmpty);
     });
 
     test('a constant operand: the generic guard call, =?\\= by name', () {
@@ -200,17 +211,6 @@ ne(X, yes) :- X? =?\= stop | true.
 ''');
       final guards = program.ops.whereType<bc.Guard>().toList();
       expect(guards.map((g) => g.procedureLabel), contains(r'=?\='));
-      expect(guards.every((g) => !g.negated), isTrue);
-    });
-
-    test('it cannot be negated', () {
-      expect(
-          () => GlpCompiler().compile(r'''
-procedure ne(_?, _?, _).
-ne(X, Y, yes) :- ~(X? =?\= Y?) | true.
-'''),
-          throwsA(predicate((e) => e.toString().contains('cannot be negated'),
-              'a refusal of the negation')));
     });
   });
 

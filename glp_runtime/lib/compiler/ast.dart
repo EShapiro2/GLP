@@ -209,12 +209,11 @@ class Goal extends AstNode {
 class Guard extends AstNode {
   final String predicate;
   final List<Term> args;
-  final bool negated;  // true if ~G (guard negation)
 
-  Guard(this.predicate, this.args, int line, int column, {this.negated = false}) : super(line, column);
+  Guard(this.predicate, this.args, int line, int column) : super(line, column);
 
   @override
-  String toString() => negated ? '~$predicate(${args.join(", ")})' : '$predicate(${args.join(", ")})';
+  String toString() => '$predicate(${args.join(", ")})';
 }
 
 // Terms (expressions)

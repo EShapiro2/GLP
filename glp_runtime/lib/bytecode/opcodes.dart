@@ -166,30 +166,24 @@ class UnifyStructure implements Op {
 
 /// Guard predicate call: execute guard without side effects
 /// If succeeds: continue; If fails: try next clause; If suspends: suspend entire goal
-/// If negated: invert success/fail result (suspend unchanged)
 class Guard implements Op {
   final LabelName procedureLabel;  // guard predicate entry
   final int arity;                  // number of arguments
-  final bool negated;               // true if ~G (guard negation)
-  Guard(this.procedureLabel, this.arity, {this.negated = false});
+  Guard(this.procedureLabel, this.arity);
 }
 
 /// Ground test: test if variable contains no unbound variables
 /// Succeed if X is ground, fail otherwise. Pure test, no side effects.
-/// If negated: succeed if X is NOT ground (contains unbound variables)
 class Ground implements Op {
   final int varIndex;  // clause variable index to test
-  final bool negated;  // true if ~ground(X)
-  Ground(this.varIndex, {this.negated = false});
+  Ground(this.varIndex);
 }
 
 /// Known test: test if variable is not an unbound variable
 /// Succeed if X is not a variable, fail otherwise. Pure test operation.
-/// If negated: succeed if X IS an unbound variable
 class Known implements Op {
   final int varIndex;  // clause variable index to test
-  final bool negated;  // true if ~known(X)
-  Known(this.varIndex, {this.negated = false});
+  Known(this.varIndex);
 }
 
 /// NoReaders test: test if term contains no readers
@@ -197,11 +191,9 @@ class Known implements Op {
 /// - SUCCESS: Term contains no readers (ground terms and/or writers only)
 /// - SUSPEND: Term contains readers (even bound ones need to be traversed)
 /// - FAILURE: Never fails (per spec)
-/// If negated: ~no_readers(X) succeeds if X contains readers
 class NoReaders implements Op {
   final int varIndex;  // clause variable index to test
-  final bool negated;  // true if ~no_readers(X)
-  NoReaders(this.varIndex, {this.negated = false});
+  NoReaders(this.varIndex);
 }
 
 /// Ground equality test: X =?= Y
@@ -211,18 +203,13 @@ class NoReaders implements Op {
 /// - SUSPEND: Either term contains unbound readers (add to Si)
 /// - FAILURE: Both terms ground but not equal
 /// Left-to-right evaluation order: checks X first, then Y.
-/// If negated: inverts success/failure (suspend unchanged) --- X =?\= Y, the
-/// negation of =?= (GLP-Spec appendix-guards.tex, 9064202), compiles to it.
 class GroundEqual implements Op {
   final int leftVarIndex;   // clause variable index for left operand
   final int rightVarIndex;  // clause variable index for right operand
-  final bool negated;       // true for X =?\= Y
-  GroundEqual(this.leftVarIndex, this.rightVarIndex, {this.negated = false});
+  GroundEqual(this.leftVarIndex, this.rightVarIndex);
 
   @override
-  String toString() => negated
-      ? 'X$leftVarIndex =?\\= X$rightVarIndex'
-      : 'X$leftVarIndex =?= X$rightVarIndex';
+  String toString() => 'X$leftVarIndex =?= X$rightVarIndex';
 }
 
 /// Spawn new goal for procedure P with arguments in A1-An

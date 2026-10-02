@@ -2,7 +2,8 @@
 % appendix-guards.tex, 9064202): "=?\= succeeds if both arguments are ground
 % and differ, and suspends where =?= suspends."  Ground: yes (both).
 
-% Both operands variables: the ground equality instruction, inverted.
+% Both operands variables: the generic guard call as well, the ground equality
+% instruction having no negated operand (IGLP, 9b45225).
 exported procedure test_neq(_?, _?, Constant).
 test_neq(X, Y, not_equal) :- X? =?\= Y? | true.
 test_neq(_, _, equal) :- otherwise | true.

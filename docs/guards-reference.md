@@ -1,6 +1,6 @@
 # GLP Guards Quick Reference
 
-**Last Updated**: 2026-03-06
+**Last Updated**: 2026-10-02
 
 ---
 
@@ -28,69 +28,9 @@ Guards are pure tests with **three-valued semantics** (success/suspend/fail) tha
 
 ---
 
-## Guard Negation (`~G`)
+## No Guard Negation
 
-**Syntax**: `~G` where G is an atomic built-in guard
-
-**Semantics**: `~G` succeeds iff G fails. Suspension behavior follows from the standard guard definition (a guard suspends if there exists an assignment to its readers that makes it succeed).
-
-**Restrictions**:
-- Only atomic built-in guards can be negated
-- Defined guards (unit clauses) cannot be negated
-- Compound guards cannot be negated (no `~(A, B)`)
-- Double negation `~~G` is syntactically forbidden (formally equivalent to G, but forbidden in syntax)
-
-### Negatable Guards
-
-These guards can be negated with `~`:
-
-| Guard | Description | `~` Negation |
-|-------|-------------|--------------|
-| `ground(X?)` | Test if X contains no variables | `~ground(X?)` succeeds if X is not ground |
-| `known(X?)` | Test if X is bound | `~known(X?)` succeeds if X is unbound |
-| `unknown(X?)` | Test if X is unbound | `~unknown(X?)` succeeds if X is bound |
-| `integer(X?)` | Test for integer type | `~integer(X?)` succeeds if X is not an integer |
-| `number(X?)` | Test for numeric type | `~number(X?)` succeeds if X is not a number |
-| `string(X?)` | Test for string type | `~string(X?)` succeeds if X is not a string |
-| `constant(X?)` | Test for constant | `~constant(X?)` succeeds if X is not a constant |
-| `compound(X?)` | Test for compound term | `~compound(X?)` succeeds if X is not compound |
-| `list(X?)` | Test for list type | `~list(X?)` succeeds if X is not a list |
-| `module(X?)` | Test for module term | `~module(X?)` succeeds if X is not a module |
-| `is_mutual_ref(X?)` | Test for mutual reference | `~is_mutual_ref(X?)` succeeds if X is not a mutual ref |
-| `no_readers(X?)` | Test for no readers in term | `~no_readers(X?)` succeeds if X contains readers |
-| `X =?= Y` | Ground equality test | `~(X =?= Y)` succeeds if X and Y are not equal |
-
-### Non-Negatable Guards
-
-These guards cannot be negated (due to type-error semantics or special behavior):
-
-| Guard | Reason |
-|-------|--------|
-| `<`, `>`, `=<`, `>=` | Type error on non-numeric operands |
-| `=:=`, `=\=` | Type error on non-numeric operands |
-| `@<` | Type error on non-constant operands |
-| `otherwise` | Special clause-ordering semantics |
-| `wait`, `wait_until` | Time-based control flow |
-
-### Examples
-
-```prolog
-% Negation of type guards
-handle(X, Y) :- ~integer(X?) | handle_non_integer(X?, Y).
-handle(X, Y) :- integer(X?) | handle_integer(X?, Y).
-
-% Negation of ground
-process(X, Y) :- ~ground(X?) | wait_for_binding(X?, Y).
-process(X, Y) :- ground(X?) | process_ground(X?, Y).
-
-% Negation of equality
-lookup(Key, [(K,V)|_], V?) :- Key =?= K? | true.
-lookup(Key, [(K,_)|Rest], V?) :- ~(Key =?= K?) | lookup(Key?, Rest?, Value).
-```
-
-### Design Rationale
-
-In GLP, guards have **input-only variables** - they test but don't bind. This makes success and failure symmetric definitive outcomes. Neither produces bindings, both are final decisions. This symmetry enables clean negation semantics where `~G` simply inverts the success/fail outcome while preserving suspension behavior.
+A guard is a conjunction of guard predicates (GLP-Spec glp.tex, Definition "Guarded Clause"), and GLP has no guard negation: it left the language on 2026-10-01 (GLP-Spec 98913b4), and the parser refuses `~G` as a syntax error.  A clause for the cases the clauses before it do not take is guarded by `otherwise` (see the `lookup` example under `X =?= Y`); two ground terms that differ are tested by `X =?\= Y`.
 
 ---
 
@@ -468,7 +408,7 @@ handle(X, Y) :- otherwise | process_other(X?, Y).
 - Success: X? is an unbound variable (reader or writer)
 - Fail: X? is bound to any value (constant, compound, list)
 
-**Logical Definition**: `unknown(X)` ≡ `~known(X)`. The guard succeeds when dereferencing X leads to an unbound variable.
+**Logical Definition**: The guard succeeds when dereferencing X leads to an unbound variable, reader or writer, and fails otherwise.
 
 **Note**: Unlike most guards, `unknown(X?)` does NOT suspend — it either succeeds (unbound) or fails (bound). An unbound reader succeeds immediately rather than suspending, because the purpose is to test for unboundness.
 
@@ -640,7 +580,7 @@ factorial(N, 1) :- integer(N?), N? =< 0 | true.
 - Suspend: Either operand is unbound reader
 - Fail: Both bound and not numerically equal
 
-**Note on `=\=`**: The arithmetic inequality guard `=\=` is **redundant** once guard negation (`~`) is implemented. It becomes equivalent to `~(X =:= Y)`. Use `~(X? =:= Y?)` for arithmetic inequality.
+**Note on `=\=`**: Arithmetic inequality is its own guard, `X =\= Y`, beside `=:=` in the catalogue (GLP-Spec appendix-guards.tex): success where both operands evaluate to numbers that differ.
 
 ---
 
@@ -662,11 +602,8 @@ befriend_commit(Id, Other, ...) :- Id? @< Other? | ...   % smaller-named side
 befriend_commit(Id, Other, ...) :- otherwise | ...        % larger-named side
 ```
 
-**Negation**: Non-negatable (same rationale as arithmetic comparisons — `~(X @< Y)` would conflate "X is not lex-smaller" with "type error", so negation is forbidden).
-
 **Implementation in tables**:
 - `root_scope.dart`'s `predefinedProcedureNames` and `builtinProcedures` sets include `@<` and `@</2`.
-- `analyzer.dart`'s `_nonNegatableGuards` includes `@<`.
 - `analyzer.dart`'s `comparisonOps` (groundness inference) includes `@<`.
 - `runner.dart`'s guard switch implements the lex comparison via the local `evalConst` helper.
 - `lexer.dart` tokenizes `@<` as `TokenType.AT_LESS` (distinct from `@` followed by `<`).
@@ -826,8 +763,6 @@ test_known_fail :-
 
 **Mechanism**: On the first call, `wait` allocates a reader/writer pair, starts a timer, and adds the reader to the suspension set. When the timer fires, it binds the writer, which reactivates the goal via the ROQ. On resume, the guard checks if the timer has fired and succeeds.
 
-**Non-Negatable**: `wait` is a control flow guard, not a pure test. Negation is not meaningful.
-
 **Example**:
 ```prolog
 % Wait 100ms before proceeding
@@ -846,8 +781,6 @@ delayed_action(Result?) :- wait(100) | Result = done.
 - Timestamp is unbound reader: suspend (handled by caller)
 
 **Mechanism**: Like `wait`, uses a reader/writer pair and a Dart timer. Computes `remaining = timestamp - now`, starts a timer for that duration, and suspends the goal on the reader. When the timer fires, the writer is bound, reactivating the goal via the ROQ. On resume, the guard re-checks `now >= timestamp` and succeeds.
-
-**Non-Negatable**: Time-based control flow guard.
 
 **Example**:
 ```prolog

@@ -281,7 +281,7 @@ Clause _compileElse(Clause c, Procedure proc, int m, int j,
   final guards = [
     for (final g in c.guards ?? const <Guard>[])
       Guard(g.predicate, g.args.map((t) => _substTerm(t, subst)).toList(),
-          g.line, g.column, negated: g.negated)
+          g.line, g.column)
   ];
   final elseBody = [
     for (final g in c.elseBranch!.body)

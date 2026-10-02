@@ -421,7 +421,7 @@ class CodeGenerator {
       if (arg is VarTerm) {
         final varInfo = varTable.getVar(arg.name);
         if (varInfo != null) {
-          ctx.emit(bc.Ground(varInfo.registerIndex!, negated: guard.negated));
+          ctx.emit(bc.Ground(varInfo.registerIndex!));
           return;
         }
       }
@@ -432,7 +432,7 @@ class CodeGenerator {
       if (arg is VarTerm) {
         final varInfo = varTable.getVar(arg.name);
         if (varInfo != null) {
-          ctx.emit(bc.Known(varInfo.registerIndex!, negated: guard.negated));
+          ctx.emit(bc.Known(varInfo.registerIndex!));
           return;
         }
       }
@@ -443,25 +443,23 @@ class CodeGenerator {
       if (arg is VarTerm) {
         final varInfo = varTable.getVar(arg.name);
         if (varInfo != null) {
-          ctx.emit(bc.NoReaders(varInfo.registerIndex!, negated: guard.negated));
+          ctx.emit(bc.NoReaders(varInfo.registerIndex!));
           return;
         }
       }
     }
 
     if (guard.predicate == 'otherwise' && guard.args.isEmpty) {
-      // 'otherwise' cannot be negated (enforced by analyzer)
       ctx.emit(bc.Otherwise());
       return;
     }
 
-    // Ground equality guard: X =?= Y; and X =?\= Y, its negation, which is the
-    // same instruction with the outcome inverted --- "=?\= succeeds if both
-    // arguments are ground and differ, and suspends where =?= suspends"
-    // (GLP-Spec appendix-guards.tex, 9064202).  An operand that is not a
-    // variable takes the generic guard call below.
-    if ((guard.predicate == '=?=' || guard.predicate == '=?\\=') &&
-        guard.args.length == 2) {
+    // Ground equality guard: X =?= Y with both operands variables is the
+    // ground equality instruction (0x45).  An operand that is not a variable
+    // takes the generic guard call below.  So does X =?\= Y, whatever its
+    // operands: 0x45 has no negated operand (IGLP code-format-fragment.tex,
+    // 9b45225), and =?\= is called by name, a builtin guard of the runtime.
+    if (guard.predicate == '=?=' && guard.args.length == 2) {
       final leftArg = guard.args[0];
       final rightArg = guard.args[1];
       if (leftArg is VarTerm && rightArg is VarTerm) {
@@ -471,7 +469,6 @@ class CodeGenerator {
           ctx.emit(bc.GroundEqual(
             leftInfo.registerIndex!,
             rightInfo.registerIndex!,
-            negated: guard.negated != (guard.predicate == '=?\\='),
           ));
           return;
         }
@@ -484,7 +481,7 @@ class CodeGenerator {
       _generatePutArgument(guard.args[i], i, varTable, ctx);
     }
 
-    ctx.emit(bc.Guard(guard.predicate, guard.args.length, negated: guard.negated));
+    ctx.emit(bc.Guard(guard.predicate, guard.args.length));
   }
 
   void _generateBody(List<Goal> goals, VariableTable varTable, CodeGenContext ctx) {

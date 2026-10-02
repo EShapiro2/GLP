@@ -3,7 +3,7 @@
 %%
 %% Allows dynamic addition of new streams via merge(Ws) messages.
 %% Creates a self-organizing merge tree.
-%% Uses guard X =\= Y which succeeds if arguments are not unifiable.
+%% A merge(Ws) message is taken by the first two clauses, ahead of the forwarding ones.
 
 procedure(X) merger(Stream(X)?, Stream(X)?, Stream(X)).
 merger(Ws, Xs, Out?) :- merge(Ws?, Xs?, Out).
@@ -14,13 +14,13 @@ merge([merge(Ws)|Xs], Ys, Zs?) :-
 merge(Xs, [merge(Ws)|Ys], Zs?) :-
    merger(Ws?, Ys?, Ys1), merge(Xs?, Ys1?, Zs).
 merge([X|Xs], Ys, [X?|Zs?]) :-
-    compound(X?), ~(X? =?= merge(W?)) | merge(Ys?, Xs?, Zs).
+    compound(X?) | merge(Ys?, Xs?, Zs).
 merge([X|Xs], Ys, [X?|Zs?]) :-
     atom(X?) | merge(Ys?, Xs?, Zs).
 merge([X|Xs], Ys, [X?|Zs?]) :-
     number(X?) | merge(Ys?, Xs?, Zs).
 merge(Xs, [Y|Ys], [Y?|Zs?]) :-
-    compound(Y?), ~(Y? =?= merge(V?)) | merge(Xs?, Ys?, Zs).
+    compound(Y?) | merge(Xs?, Ys?, Zs).
 merge(Xs, [Y|Ys], [Y?|Zs?]) :-
     atom(Y?) | merge(Xs?, Ys?, Zs).
 merge(Xs, [Y|Ys], [Y?|Zs?]) :-

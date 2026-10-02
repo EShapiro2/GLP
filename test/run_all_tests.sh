@@ -525,8 +525,9 @@ check "guard_known_valid" "Ygr = hello" "$a12"
 # --- A13: Ground equal, ground not-equal ---
 # =?\= is the negation of =?= (GLP-Spec appendix-guards.tex, 9064202): "=?\=
 # succeeds if both arguments are ground and differ, and suspends where =?=
-# suspends."  test_neq takes the ground equality instruction inverted (both
-# operands variables), test_neq_stop the generic guard call (one a constant).
+# suspends."  Both test_neq (both operands variables) and test_neq_stop (one a
+# constant) take the generic guard call, the ground equality instruction having
+# no negated operand (IGLP, 9b45225).
 # Success needs both arguments ground, so f(a, Zq?) =?\= f(b, Wq?) suspends.
 echo "--- A13: Ground equal and ground not-equal ---"
 a13=$("$REPL_RUN" <<HEREDOC
@@ -1653,10 +1654,6 @@ SRSW_FILES=(
     # known/1 does not imply groundness, so it licenses no multiple occurrence
     # (glp.tex Remark "Guards and SRSW").
     "$GLP_DIR/programs/tests/srsw/known_not_ground.glp"
-    # A negated guard's success implies no groundness, so ~ground(X?) licenses
-    # no multiple occurrence either (same Remark; TGLP typed-glp.tex, "A negated
-    # guard narrows nothing").
-    "$GLP_DIR/programs/tests/srsw/negated_ground_not_ground.glp"
 )
 
 for f in "${SRSW_FILES[@]}"; do
@@ -1717,7 +1714,8 @@ guard_cases=(
     "true_in_guard.glp|\"true\" is not a guard"
     "false_in_guard.glp|\"false\" is not a guard"
     "fail_in_guard.glp|\"fail\" is not a guard"
-    "negated_defined_guard.glp|Defined guard \"d\" cannot be negated"
+    # GLP has no guard negation: the parser refuses ~d(X?) as a syntax error.
+    "negated_defined_guard.glp|[syntax] \"~\" is not GLP syntax"
 )
 
 for case in "${guard_cases[@]}"; do
