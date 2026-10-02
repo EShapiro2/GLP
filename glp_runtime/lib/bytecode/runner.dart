@@ -157,7 +157,7 @@ class _ParentContext {
 /// a clause that suspended is told from one that failed: a reader is added here
 /// where the commit suspends, and never where a match or a guard fails --- a
 /// guard member that suspends puts its readers in Si, as a head match does
-/// ([_guardSuspends]).  A clause that meets a mismatch fails, whatever it
+/// ([_guardUndecided]).  A clause that meets a mismatch fails, whatever it
 /// suspended on before
 /// (GLP-Spec appendix-term-matching.tex, Definition "Term Matching": "The writer
 /// mgu is the union of all writer assignments if no fail was encountered and
@@ -241,6 +241,12 @@ class RunnerContext {
   /// passed by.  The clause cannot commit, its suspension set being non-empty;
   /// what is still asked of it is whether it fails.
   final Set<int> unknownVars = <int>{};
+
+  /// The writer cells of the variables that stand for unknown variables
+  /// ([unknownVars]) where an occurrence is placed ([_unknownPlaceholder]): a
+  /// guard decision meeting one meets an unknown variable, which stands for
+  /// any term, and not a variable the clause alone holds ([_undecidedMember]).
+  final Set<int> unknownKeys = <int>{};
 
   /// Set while a generic guard's arguments are built if one of them is an
   /// unknown variable ([unknownVars]): the guard is undecided and is passed by.
@@ -340,6 +346,7 @@ class RunnerContext {
     Si.clear();
     U.touched = false;
     unknownVars.clear();
+    unknownKeys.clear();
     guardUndecided = false;
     inBody = false;
     mode = UnifyMode.read;
@@ -428,6 +435,87 @@ bool _hasNoValue(RunnerContext cx, int varIndex) {
   return !cx.sigmaHat.containsKey(w) && _isUnboundWriterCell(cx, w);
 }
 
+/// What a guard's reader occurrence X? stands for, clause variable X holding
+/// [value].  A guard argument is a reader (GLP-Spec glp.tex, Definition
+/// "Guarded Clause": "Guard arguments are readers paired to head writers"),
+/// and ground (0x41), known (0x42), no_readers (0x44) and ground_equal (0x45)
+/// name the variable alone.  A variable held as a writer that neither the heap
+/// nor the tentative substitution binds --- a fresh one of the head, in a
+/// structure it gives a goal writer, or the goal's writer a head reader was
+/// matched against --- is that variable, and X? is its reader, as put_variable
+/// gives it to the generic guard call; anything else is what X? stands for.
+/// Until 2026-10-02 these instructions read the writer itself, and
+/// no_readers(X?) over the fresh X of hn(f(X), yes) succeeded, a writer
+/// holding no reader.
+Object? _guardReaderOperand(RunnerContext cx, Object? value) {
+  final heap = cx.rt.heap;
+  final int? w = value is int ? value : (value is VarRef ? value.addr : null);
+  if (w == null || !heap.isWriter(w) || cx.sigmaHat.containsKey(w)) {
+    return value;
+  }
+  // A variable of another agent has no reader here; a bound writer stands
+  // for its value.
+  if (heap.cells[w].content is VariableEntry || heap.isFullyBound(w)) {
+    return value;
+  }
+  return VarRef(heap.pairedReaderAddr(w));
+}
+
+/// The unbound variables of a guard argument: the unbound readers met, and
+/// whether an unbound writer was ([_termVariables]).
+class _TermVariables {
+  final Set<int> readers = <int>{};
+  bool writer = false;
+}
+
+/// The unbound variables of [term], a guard argument --- a clause variable's
+/// value, a variable's address at the top, or a term --- its bindings
+/// followed, the tentative ones (σ̂) before the heap's, a reader's through its
+/// writer as a writer's.  Until 2026-10-02 the collectors of ground (0x41) and
+/// no_readers (0x44) looked a reader's address up in σ̂, whose keys are
+/// writers, and so missed what the head had tentatively bound its writer to.
+_TermVariables _termVariables(RunnerContext cx, Object? term) {
+  final heap = cx.rt.heap;
+  final out = _TermVariables();
+  // A bare int is a variable's address at the top only: inside a tentative
+  // structure it is a constant.
+  final pending = <Object?>[term is int ? VarRef(term) : term];
+  final visited = <int>{};
+  final seenStructs = Set<Object>.identity();
+  while (pending.isNotEmpty) {
+    final t = pending.removeLast();
+    if (t is VarRef) {
+      final addr = t.addr;
+      if (!visited.add(addr)) continue;
+      if (heap.isReader(addr)) {
+        final w = heap.tryWriterForReader(addr);
+        if (w != null && cx.sigmaHat.containsKey(w)) {
+          pending.add(cx.sigmaHat[w]);
+        } else if (heap.isReaderBound(addr)) {
+          pending.add(heap.getReaderValue(addr));
+        } else {
+          out.readers.add(addr);
+        }
+      } else if (heap.isWriter(addr)) {
+        if (cx.sigmaHat.containsKey(addr)) {
+          pending.add(cx.sigmaHat[addr]);
+        } else if (heap.isFullyBound(addr)) {
+          pending.add(heap.getValue(addr));
+        } else {
+          out.writer = true;
+        }
+      } else if (heap.isValue(addr)) {
+        pending.add(heap.getValue(addr));
+      }
+    } else if (t is StructTerm) {
+      if (seenStructs.add(t)) pending.addAll(t.args);
+    } else if (t is _TentativeStruct) {
+      if (seenStructs.add(t)) pending.addAll(t.args);
+    }
+  }
+  return out;
+}
+
 /// What a structure slot holds for an occurrence of an unknown variable
 /// ([RunnerContext.unknownVars]) --- in a structure built for a goal writer, or
 /// for a guard's argument: a fresh variable, of the occurrence's polarity, that
@@ -435,6 +523,7 @@ bool _hasNoValue(RunnerContext cx, int varIndex) {
 /// structure is never committed, the clause's suspension set being non-empty.
 VarRef _unknownPlaceholder(RunnerContext cx, bool isReader) {
   final (writerAddr, readerAddr) = cx.rt.heap.allocateVariable();
+  cx.unknownKeys.add(writerAddr);
   return VarRef(isReader ? readerAddr : writerAddr);
 }
 
@@ -520,20 +609,127 @@ VarRef _unknownPlaceholder(RunnerContext cx, bool isReader) {
   return (result, unboundReaders);
 }
 
-/// A guard member that suspends on [readers]: they go to the clause's
-/// suspension set Si, and the next member is tried.  "A guard conjunction
-/// succeeds if all members succeed; it suspends if any member suspends and none
-/// fail; it fails if any member fails" (GLP-Spec glp.tex, Guards), whatever the
-/// order of its members: a member that fails leaves the clause, its Si with it
-/// (the drivers' next clause, [SuspensionSet.touched] unset), and a clause whose
-/// Si is non-empty at commit suspends ([OpExecutors.execCommit]).  Until
-/// 2026-10-02 a member that suspended added its readers to the goal's U and
-/// left the clause, so a later member that fails was never tried:
-/// c1(N, M) :- N? > 5, M? > 5 suspended c1(X?, 3), where the same guards
-/// swapped failed it (GLP #3 Cowork, 2026-10-02 08:40 UTC, G).
-StepOutcome _guardSuspends(RunnerContext cx, Iterable<int> readers) {
-  cx.Si.addAll(readers);
-  return StepOutcome.advance;
+/// A guard member left undecided on [readers], as [_undecidedMember] decides
+/// it: suspended, its readers of the goal in the clause's suspension set Si and
+/// the next member tried, or failed.  "A guard conjunction succeeds if all
+/// members succeed; it suspends if any member suspends and none fail; it fails
+/// if any member fails" (GLP-Spec glp.tex, Guards), whatever the order of its
+/// members: a member that fails leaves the clause, its Si with it (the drivers'
+/// next clause, [SuspensionSet.touched] unset), and a clause whose Si is
+/// non-empty at commit suspends ([OpExecutors.execCommit]).  Until 2026-10-02 a
+/// member that suspended added its readers to the goal's U and left the clause,
+/// so a later member that fails was never tried: c1(N, M) :- N? > 5, M? > 5
+/// suspended c1(X?, 3), where the same guards swapped failed it (GLP #3
+/// Cowork, 2026-10-02 08:40 UTC, G).
+StepOutcome _guardUndecided(RunnerContext cx, Iterable<int> readers) =>
+    _undecidedMember(cx, readers) == GuardResult.failure
+        ? StepOutcome.nextClause
+        : StepOutcome.advance;
+
+/// A guard member that does not succeed, where some instance of it under a
+/// readers substitution would (GLP-Spec glp.tex, Guards): it suspends, or it
+/// fails, by whose readers [readers] are --- the unbound readers it was decided
+/// on.  [negated] is `=?\=`'s, whose success is that no readers substitution
+/// makes its two arguments ground and equal, and [unknown] that the decision
+/// met an unknown variable besides [readers] ([RunnerContext.unknownVars]).
+///
+/// "If a GLP goal A cannot be reduced now, but there is a readers substitution
+/// σ such that Aσ can be reduced, such readers are identified, the goal A
+/// suspends on these readers" (glp.tex): a goal suspends on its own readers,
+/// those it holds ([_readersOfGoal]), and no readers substitution binds a
+/// variable the clause alone holds --- a fresh one of the head, in a structure
+/// it gives a goal writer, or the clause's own output (GLP #3 Cowork,
+/// 2026-10-02 15:31 UTC, A).  So the member waits on the goal's readers among
+/// [readers], and fails where waiting cannot decide it:
+///
+/// - Every guard but `=?\=` succeeds only where each of [readers] is bound:
+///   one the clause alone holds stays unbound in every instance, and the
+///   member fails.
+/// - `=?\=` succeeds in an instance assigning a reader of the goal a term with
+///   a fresh writer in it, which no readers substitution grounds, and fails
+///   where [readers] hold none of the goal's.
+///
+/// An unknown variable --- its writer occurrence under a goal reader the head
+/// suspends on, its value the goal's subterm there, not yet given --- stands
+/// for any term ([RunnerContext.unknownKeys]): it is a variable of the goal,
+/// and adds no reader to Si, the clause already suspending on the goal reader
+/// above it.  Until 2026-10-02 the member waited on every one of [readers],
+/// and a goal whose clause guarded a variable it alone held waited for ever:
+/// hq(f(X), Y, yes) :- X? =?= w(Y?) | true and hw(f(X), Y, yes) :- X? =?\= Y? |
+/// true held hq(W, b, R) and hw(W, b, R).
+GuardResult _undecidedMember(RunnerContext cx, Iterable<int> readers,
+    {bool negated = false, bool unknown = false}) {
+  var metUnknown = unknown;
+  // Each reader not of an unknown variable, by the variable it stands for.
+  final variableOf = <int, Object>{};
+  for (final r in readers) {
+    final v = _variableAt(cx, r);
+    if (v == null) continue;
+    if (v is int && cx.unknownKeys.contains(v)) {
+      metUnknown = true;
+    } else {
+      variableOf[r] = v;
+    }
+  }
+  final ofGoal = _readersOfGoal(cx, variableOf.values.toSet());
+  final waitOn = [
+    for (final e in variableOf.entries)
+      if (ofGoal.contains(e.value)) e.key,
+  ];
+  final heldByClause = waitOn.length < variableOf.length;
+  if (negated ? (waitOn.isEmpty && !metUnknown) : heldByClause) {
+    return GuardResult.failure;
+  }
+  cx.Si.addAll(waitOn);
+  return GuardResult.suspend;
+}
+
+/// The variable the occurrence at [addr] stands for, its bindings on the heap
+/// followed: the address of the unbound writer cell its chain ends at, or the
+/// entry of a variable of another agent; null where the chain ends at a value.
+Object? _variableAt(RunnerContext cx, int addr) {
+  final end = cx.rt.heap.derefAddr(addr);
+  if (end is VarRef) return end.addr;
+  if (end is VariableEntry) return end;
+  return null;
+}
+
+/// Which of [variables] --- each as [_variableAt] gives it --- the goal holds a
+/// reader of: a reader reachable from the goal's arguments through the
+/// bindings on the heap, the tentative ones (σ̂) aside, they being the
+/// clause's.  An occurrence is a reader where its chain passes a reader: one
+/// that does not start at the unbound writer cell it ends at, a writer being
+/// bound to a reader or a term and never to a writer.  The goal is searched
+/// until every one is found.
+Set<Object> _readersOfGoal(RunnerContext cx, Set<Object> variables) {
+  final heap = cx.rt.heap;
+  final found = <Object>{};
+  if (variables.isEmpty) return found;
+  final pending = <Object?>[...cx.env.argBySlot.values];
+  final seen = <int>{};
+  final seenStructs = Set<StructTerm>.identity();
+  while (pending.isNotEmpty && found.length < variables.length) {
+    final t = pending.removeLast();
+    if (t is VarRef) {
+      final addr = t.addr;
+      if (!seen.add(addr)) continue;
+      final end = heap.derefAddr(addr);
+      if (end is VarRef) {
+        if (end.addr != addr && variables.contains(end.addr)) {
+          found.add(end.addr);
+        }
+      } else if (end is VariableEntry) {
+        final isItsWriter = heap.isWriter(addr) &&
+            heap.cells[addr].content is VariableEntry;
+        if (!isItsWriter && variables.contains(end)) found.add(end);
+      } else {
+        pending.add(end);
+      }
+    } else if (t is StructTerm) {
+      if (seenStructs.add(t)) pending.addAll(t.args);
+    }
+  }
+  return found;
 }
 
 GuardResult _evaluateGuard(String predicateName, List<Object?> args, RunnerContext cx) {
@@ -638,14 +834,13 @@ GuardResult _evaluateGuard(String predicateName, List<Object?> args, RunnerConte
     return null;
   }
 
-  // A guard operand failed to evaluate: suspend if unbound readers blocked the
-  // evaluation (guards-reference: comparison guards suspend on unbound reader
-  // operands), fail otherwise (bound but non-numeric — a type error).
+  // A guard operand failed to evaluate: undecided if unbound readers blocked
+  // the evaluation (guards-reference: comparison guards suspend on unbound
+  // reader operands), suspending on the goal's and failing on one the clause
+  // alone holds ([_undecidedMember]); fail otherwise (bound but non-numeric —
+  // a type error).
   GuardResult blockedOrFail() {
-    if (blockedReaders.isNotEmpty) {
-      cx.Si.addAll(blockedReaders);
-      return GuardResult.suspend;
-    }
+    if (blockedReaders.isNotEmpty) return _undecidedMember(cx, blockedReaders);
     return GuardResult.failure;
   }
 
@@ -963,9 +1158,10 @@ GuardResult _evaluateGuard(String predicateName, List<Object?> args, RunnerConte
         cx.rt.decrementPendingTimers();
       });
 
-      // Suspend on the timer's reader ([_guardSuspends]).  Until 2026-10-02
-      // the reader went to U and the guard reported failure, U telling the
-      // clause's suspension from a failure.
+      // Suspend on the timer's reader, which the runtime binds: it is no
+      // reader of the guard's argument ([_guardUndecided] decides those).
+      // Until 2026-10-02 the reader went to U and the guard reported failure,
+      // U telling the clause's suspension from a failure.
       cx.Si.add(readerAddr);
       return GuardResult.suspend;
 
@@ -1130,11 +1326,12 @@ enum _GroundEquality {
 
   /// Not both ground, and some readers substitution makes them ground and
   /// equal: no unbound writer stands in either, and the two unify with readers
-  /// alone assigned.  Each guard suspends, on the unbound readers of the two.
-  /// `=?=` does not succeed, and its instance under that substitution does.
-  /// `=?\=` does not succeed either, and its instance under a substitution
-  /// assigning one of the readers a term with a fresh writer in it, which no
-  /// readers substitution grounds, does.
+  /// alone assigned.  Neither guard succeeds, and each is decided on the
+  /// unbound readers of the two by whose readers they are ([_undecidedMember]):
+  /// `=?=`'s instance under that substitution succeeds, where it binds only
+  /// readers of the goal; `=?\=`'s instance under a substitution assigning one
+  /// of the goal's readers a term with a fresh writer in it, which no readers
+  /// substitution grounds, does.
   unifiable,
 
   /// No readers substitution makes them ground and equal: an unbound writer
@@ -1384,8 +1581,10 @@ Object? _equalityOperand(Object? value) =>
 }
 
 /// [guard], `=?=` or `=?\=`, on [left] and [right], as [_decideGroundEquality]
-/// decides them: success, failure, or suspension on the readers it adds to the
-/// clause's suspension set Si, the next member tried ([_guardSuspends]).
+/// decides them: success, failure, or, where neither, as [_undecidedMember]
+/// decides the member on their unbound readers --- suspension on the goal's,
+/// which it adds to the clause's suspension set Si, the next member tried
+/// ([_guardUndecided]), or failure.
 GuardResult _groundEqualityGuard(
     String guard, Object? left, Object? right, RunnerContext cx) {
   final (decision, readers) = _decideGroundEquality(left, right, cx);
@@ -1396,8 +1595,7 @@ GuardResult _groundEqualityGuard(
     case _GroundEquality.never:
       return negated ? GuardResult.success : GuardResult.failure;
     case _GroundEquality.unifiable:
-      cx.Si.addAll(readers);
-      return GuardResult.suspend;
+      return _undecidedMember(cx, readers, negated: negated);
   }
 }
 
@@ -1725,7 +1923,7 @@ mixin OpExecutors {
   /// and otherwise the tentative structures are converted to terms, the writer
   /// bindings applied to the heap (waking suspended goals), and BODY entered.
   /// Si holds the readers the head match suspended on and those of the guard
-  /// members that suspended, no member having failed ([_guardSuspends]).
+  /// members that suspended, no member having failed ([_guardUndecided]).
   ///
   /// GLP-Spec appendix-term-matching.tex, Definition "Term Matching": a goal
   /// reader against a head term is "suspend on X1?", and "the writer mgu is the
@@ -1819,92 +2017,32 @@ mixin OpExecutors {
     return StepOutcome.advance;
   }
 
-  /// `ground` (0x41): three-valued. Collect the term's unbound readers and note
-  /// any unbound writer. ground(X): ground→advance; unbound readers (no
-  /// writer)→suspend on them (readers to Si, and the next member is tried:
-  /// [_guardSuspends]); unbound writer→fail (nextClause).
+  /// `ground` (0x41): three-valued, on what X? stands for
+  /// ([_guardReaderOperand]).  ground(X?): ground→advance; an unbound
+  /// writer→fail (nextClause); unbound readers and no writer→undecided on
+  /// them ([_guardUndecided]: suspended on the goal's, the next member tried,
+  /// or failed on one the clause alone holds).
   StepOutcome execGround(RunnerContext cx, int varIndex) {
     // An unknown variable ([RunnerContext.unknownVars]): undecided, passed by.
     if (cx.isUnknown(varIndex)) return StepOutcome.advance;
     final value = cx.clauseVars[varIndex];
     if (value == null) return StepOutcome.nextClause; // missing var → fail
-
-    final unboundReaders = <int>{};
-    final visited = <int>{};
-    bool hasUnboundWriter = false;
-
-    void collectUnbound(Object? term) {
-      if (term is VarRef && cx.rt.heap.isWriter(term.addr)) {
-        final writerAddr = term.addr;
-        if (visited.contains(writerAddr)) return;
-        visited.add(writerAddr);
-        final sigmaBinding = cx.sigmaHat[writerAddr];
-        if (sigmaBinding != null) {
-          collectUnbound(sigmaBinding);
-        } else if (!cx.rt.heap.isFullyBound(writerAddr)) {
-          hasUnboundWriter = true;
-        } else {
-          collectUnbound(cx.rt.heap.getValue(writerAddr));
-        }
-      } else if (term is VarRef && cx.rt.heap.isReader(term.addr)) {
-        final readerAddr = term.addr;
-        if (visited.contains(readerAddr)) return;
-        visited.add(readerAddr);
-        final sigmaBinding = cx.sigmaHat[readerAddr];
-        if (sigmaBinding != null) {
-          collectUnbound(sigmaBinding);
-        } else if (!cx.rt.heap.isReaderBound(readerAddr)) {
-          unboundReaders.add(readerAddr);
-        } else {
-          collectUnbound(cx.rt.heap.getReaderValue(readerAddr));
-        }
-      } else if (term is StructTerm) {
-        for (final arg in term.args) {
-          collectUnbound(arg);
-        }
-      } else if (term is _TentativeStruct) {
-        for (final arg in term.args) {
-          collectUnbound(arg);
-        }
-      }
-    }
-
-    if (value is int) {
-      final sigmaBinding = cx.sigmaHat[value];
-      if (sigmaBinding != null) {
-        collectUnbound(sigmaBinding);
-      } else if (cx.rt.heap.isWriter(value)) {
-        if (!cx.rt.heap.isFullyBound(value)) {
-          hasUnboundWriter = true;
-        } else {
-          collectUnbound(cx.rt.heap.getValue(value));
-        }
-      } else {
-        if (!cx.rt.heap.isReaderBound(value)) {
-          unboundReaders.add(value);
-        } else {
-          collectUnbound(cx.rt.heap.getReaderValue(value));
-        }
-      }
-    } else {
-      collectUnbound(value);
-    }
-
-    if (hasUnboundWriter) return StepOutcome.nextClause; // fail
-    if (unboundReaders.isNotEmpty) {
-      return _guardSuspends(cx, unboundReaders); // suspend
-    }
+    final vars = _termVariables(cx, _guardReaderOperand(cx, value));
+    if (vars.writer) return StepOutcome.nextClause; // fail
+    if (vars.readers.isNotEmpty) return _guardUndecided(cx, vars.readers);
     return StepOutcome.advance; // ground → succeed
   }
 
-  /// `known` (0x42): three-valued. known(X): bound→advance; unbound
-  /// reader→suspend; unbound writer→fail. Unlike ground, only X itself is
-  /// inspected, not its sub-terms.
+  /// `known` (0x42): three-valued, on what X? stands for
+  /// ([_guardReaderOperand]).  known(X?): bound→advance; unbound
+  /// reader→undecided ([_guardUndecided]); unbound writer→fail. Unlike ground,
+  /// only X itself is inspected, not its sub-terms.
   StepOutcome execKnown(RunnerContext cx, int varIndex) {
     // An unknown variable ([RunnerContext.unknownVars]): undecided, passed by.
     if (cx.isUnknown(varIndex)) return StepOutcome.advance;
-    final value = cx.clauseVars[varIndex];
-    if (value == null) return StepOutcome.nextClause; // missing var → fail
+    final raw = cx.clauseVars[varIndex];
+    if (raw == null) return StepOutcome.nextClause; // missing var → fail
+    final value = _guardReaderOperand(cx, raw);
 
     // An unbound writer is neither known nor waited on: it fails below.
     bool isKnown = false;
@@ -1953,86 +2091,34 @@ mixin OpExecutors {
 
     if (isKnown) return StepOutcome.advance;
     if (unboundReader != null) {
-      return _guardSuspends(cx, [unboundReader]); // suspend
+      return _guardUndecided(cx, [unboundReader]);
     }
     return StepOutcome.nextClause; // unbound writer → fail
   }
 
-  /// `no_readers` (0x44): collect the term's unbound readers. no_readers(X):
-  /// none→advance; some→suspend on them (never fails). Missing var counts as
-  /// no readers.
+  /// `no_readers` (0x44): the unbound readers of what X? stands for
+  /// ([_guardReaderOperand], [_termVariables]).  no_readers(X?): none→advance;
+  /// some→undecided on them ([_guardUndecided]: suspended on the goal's, or
+  /// failed on one the clause alone holds).  Missing var counts as no readers.
   StepOutcome execNoReaders(RunnerContext cx, int varIndex) {
     // An unknown variable ([RunnerContext.unknownVars]): undecided, passed by.
     if (cx.isUnknown(varIndex)) return StepOutcome.advance;
     final value = cx.clauseVars[varIndex];
     if (value == null) return StepOutcome.advance;
-
-    final readers = <int>{};
-    final visited = <int>{};
-
-    void collectReaders(Object? term) {
-      if (term is VarRef && cx.rt.heap.isReader(term.addr)) {
-        final readerAddr = term.addr;
-        if (visited.contains(readerAddr)) return;
-        visited.add(readerAddr);
-        final sigmaBinding = cx.sigmaHat[readerAddr];
-        if (sigmaBinding != null) {
-          collectReaders(sigmaBinding);
-        } else if (cx.rt.heap.isReaderBound(readerAddr)) {
-          collectReaders(cx.rt.heap.getReaderValue(readerAddr));
-        } else {
-          readers.add(readerAddr);
-        }
-      } else if (term is VarRef && cx.rt.heap.isWriter(term.addr)) {
-        final writerAddr = term.addr;
-        if (visited.contains(writerAddr)) return;
-        visited.add(writerAddr);
-        final sigmaBinding = cx.sigmaHat[writerAddr];
-        if (sigmaBinding != null) {
-          collectReaders(sigmaBinding);
-        } else if (cx.rt.heap.isFullyBound(writerAddr)) {
-          collectReaders(cx.rt.heap.getValue(writerAddr));
-        }
-      } else if (term is StructTerm) {
-        for (final arg in term.args) {
-          collectReaders(arg);
-        }
-      } else if (term is _TentativeStruct) {
-        for (final arg in term.args) {
-          collectReaders(arg);
-        }
-      }
-    }
-
-    if (value is int) {
-      final sigmaBinding = cx.sigmaHat[value];
-      if (sigmaBinding != null) {
-        collectReaders(sigmaBinding);
-      } else if (cx.rt.heap.isWriter(value)) {
-        if (cx.rt.heap.isFullyBound(value)) {
-          collectReaders(cx.rt.heap.getValue(value));
-        }
-      } else {
-        if (visited.contains(value)) {
-          // already visited
-        } else if (cx.rt.heap.isReaderBound(value)) {
-          collectReaders(cx.rt.heap.getReaderValue(value));
-        } else {
-          readers.add(value);
-        }
-      }
-    } else {
-      collectReaders(value);
-    }
-
+    final readers =
+        _termVariables(cx, _guardReaderOperand(cx, value)).readers;
     if (readers.isEmpty) return StepOutcome.advance;
-    return _guardSuspends(cx, readers); // suspend (never fails)
+    return _guardUndecided(cx, readers);
   }
 
-  /// `ground_equal` (0x45): X =?= Y, decided as every ground equality guard is
-  /// ([_decideGroundEquality]): it succeeds where both are ground and equal,
-  /// suspends on the unbound readers where they are not but some readers
-  /// substitution makes them so, and fails where none does.
+  /// `ground_equal` (0x45): X? =?= Y?, decided as every ground equality guard
+  /// is ([_decideGroundEquality]), on what X? and Y? stand for
+  /// ([_guardReaderOperand]): it succeeds where both are ground and equal,
+  /// fails where no readers substitution makes them so, and is otherwise
+  /// undecided ([_undecidedMember]).  Until 2026-10-02 it read a fresh
+  /// variable's writer, and he(f(X), Y, yes) :- X? =?= Y? | true failed
+  /// he(W, b, R) on an unbound writer, where the generic guard call suspended
+  /// on the reader.
   StepOutcome execGroundEqual(
       RunnerContext cx, int leftVarIndex, int rightVarIndex) {
     // An unknown variable ([RunnerContext.unknownVars]): undecided, passed by.
@@ -2043,8 +2129,9 @@ mixin OpExecutors {
     final rightValue = cx.clauseVars[rightVarIndex];
     if (leftValue == null || rightValue == null) return StepOutcome.nextClause;
     // A suspension's readers are in cx.Si ([_groundEqualityGuard]), and the
-    // next member is tried as after a success ([_guardSuspends]).
-    return _groundEqualityGuard('=?=', leftValue, rightValue, cx) ==
+    // next member is tried as after a success ([_guardUndecided]).
+    return _groundEqualityGuard('=?=', _guardReaderOperand(cx, leftValue),
+                _guardReaderOperand(cx, rightValue), cx) ==
             GuardResult.failure
         ? StepOutcome.nextClause
         : StepOutcome.advance;
@@ -2066,9 +2153,10 @@ mixin OpExecutors {
 
   /// `guard` (0x40): a generic guard-predicate call. Gather the [arity] args from
   /// argSlots/clauseVars, dereferencing and tracking unbound readers; if any are
-  /// unbound (except for `unknown`, `=?=` and `=?\=`), suspend on them. Otherwise
-  /// evaluate via the runtime guard table. success→advance; suspension→advance,
-  /// its readers in Si ([_guardSuspends]); failure→nextClause.
+  /// unbound (except for `unknown`, `=?=` and `=?\=`), the guard is undecided
+  /// on them ([_guardUndecided]). Otherwise evaluate via the runtime guard
+  /// table. success→advance; suspension→advance, its readers in Si;
+  /// failure→nextClause.
   StepOutcome execGuard(RunnerContext cx, String predicateName, int arity) {
     // A generic guard call of `otherwise` --- hand-assembled bytecode, or an
     // artefact whose encoder did not use 0x46 --- takes 0x46's rule and no
@@ -2114,11 +2202,11 @@ mixin OpExecutors {
         predicateName != 'unknown' &&
         predicateName != '=?=' &&
         predicateName != '=?\\=') {
-      return _guardSuspends(cx, unboundReaders); // suspend
+      return _guardUndecided(cx, unboundReaders);
     }
 
     // A suspension's readers are already in cx.Si (_evaluateGuard added them),
-    // and the next member is tried as after a success ([_guardSuspends]).
+    // and the next member is tried as after a success ([_guardUndecided]).
     return _evaluateGuard(predicateName, args, cx) == GuardResult.failure
         ? StepOutcome.nextClause
         : StepOutcome.advance;
