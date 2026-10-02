@@ -1,9 +1,11 @@
 %% run/1's declaration says `Channel(_, _)?`, so the call below hands tagger/1
 %% no element type and no instantiation of tagger/1 arises.  tagger/1 inspects its stream
 %% element (it matches m/1 and builds o/1), so it has no well-typing of its own
-%% and acquires one only per instantiation --- of which there is none.  Nothing
-%% can check the clause, so compilation rejects the program (TGLP
-%% parameterized-types.tex sec:abstract-parameters); the untagged R sitting at
+%% and acquires one only per instantiation --- of which there is none.  The
+%% call is refused, no site of it supplying a type for X or Y (TGLP
+%% appendix-implementation-notes.tex, "The instantiation of a call"), and
+%% nothing could check the clause in any case (TGLP parameterized-types.tex
+%% sec:abstract-parameters); the untagged R sitting at
 %% o/1's tagged-union position is what would otherwise go unnoticed: declared
 %% concretely, the checker rejects it at once, which is
 %% programs/tests/typed/tagged_union_untagged_neg.glp.

@@ -8,6 +8,11 @@
 ///
 /// Until 2026-09-18 the linked check printed a `[TYPE] N parameterized
 /// procedure(s) unchecked in this program` line and loaded the program.
+///
+/// Since 2026-10-02 the call that leaves the procedure uninstantiated is itself
+/// refused, in the module's own check: no site of it supplies a type for the
+/// parameters, and the callee is not parametrically well-typed (TGLP
+/// appendix-implementation-notes.tex, "The instantiation of a call").
 library;
 
 import 'dart:io';
@@ -29,9 +34,12 @@ void main() {
       () => engine.loadProgram(dir),
       throwsA(predicate((e) {
         final s = e.toString();
-        return s.contains('code:tagger/1') &&
-            s.contains('no call in the program instantiates it');
-      }, 'names the procedure and the missing instantiation')),
+        return s.contains(
+                'No instantiation of tagger/1 is found for the call '
+                'tagger(Ch?): no site of the call supplies a type for X, Y') &&
+            s.contains('tagger/1 is not parametrically well-typed, so the '
+                'call is refused');
+      }, 'refuses the call, naming the parameters no site supplies')),
     );
     expect(engine.loadedPrograms.containsKey('__program__'), isFalse);
   });
