@@ -7,4 +7,5 @@
 %% this because shared helpers (e.g. merge/3) were lifted to the root self.glp,
 %% leaving no module-local duplicates — hence this minimal dedicated fixture.
 
+procedure dup(String?).
 dup(a).
