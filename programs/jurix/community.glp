@@ -425,7 +425,10 @@ traceable(C, E?) :- ground(C?) |
 % two requires an atom of traceable provenance an argument of which has the
 % base of the other.  cv1 asks the definition's first disjunct, that the role
 % graph is connected; first_unguarded asks the second, that every connected
-% component of it holds a guarding role.
+% component of it holds a guarding role.  For a contract whose roles are all
+% party roles this is def:volition of Section 3 (Section 8, after its
+% Definition Volition), and check.glp decides Section 3's volition with
+% volition_faults too.
 
 procedure same_base(Base?, Base?, Ans).
 same_base(B, C, yes) :- B? =?= C? | true.

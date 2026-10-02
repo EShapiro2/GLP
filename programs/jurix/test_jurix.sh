@@ -117,9 +117,11 @@ check_not "befriend is not blocked by itself" \
       "blocked_by(befriend" "$out"
 check_not "gossip itself satisfies volition" "volition(gossip" "$out"
 
-# Volition above arity two is connectedness of the role graph, not a test on
-# every pair: a schema of arity four guarded at one role, whose role graph is
-# the path 1-2-3-4, passes; cutting one edge of the path splits it.
+# Volition above arity two is connectedness of the role graph, or a guarding
+# role in every connected component of it, not a test on every pair: a schema
+# of arity four guarded at one role, whose role graph is the path 1-2-3-4,
+# passes; cutting one edge of the path splits it, and the half {3,4} holds no
+# guarding role.
 out=$(run 'check_named(sg_chain, V).')
 check "a path role graph at arity four certifies" \
       "V = syntactically_grassroots" "$out"
@@ -127,6 +129,14 @@ check "a path role graph at arity four certifies" \
 out=$(run 'check_named(sg_chain_cut, V).')
 check "cutting an edge of the path fails volition" \
       "V = not_grassroots([volition(chain, 1, 3)])" "$out"
+
+# Volition is one condition in Sections 3 and 8 (Jurix 7652554): tri(p?, q, r?)
+# is guarded neither in all its roles nor connected, its role graph falling
+# into {1,2} and {3}, each holding a guarding role, so it meets def:volition
+# as it meets definition:volition as a cschema (sg_tri_cschema, below).
+out=$(run 'check_named(sg_tri, V).')
+check "a guarding role in every connected component meets volition in Section 3" \
+      "V = syntactically_grassroots" "$out"
 
 # No mint: the swap requires at each role a coin no act of arity one supplies.
 out=$(run 'check_named(cur_no_mint, V).')
@@ -317,6 +327,12 @@ check "and a component holding none fails it" \
       "V = conditions_failed([volition(relay_unguarded, 1, 4)])" "$out"
 check "the social graph keeps its traceable provenance in Section 8" \
       "E = [friend, item, sent, chained, noted]" "$out"
+
+# sg_tri with tri written as a cschema, in the language of Section 8: the
+# same verdict as in Section 3, volition being one condition in both.
+out=$(run 'check_named(sg_tri_cschema, V).')
+check "tri as a cschema meets the conditions of Section 8, as it does in Section 3" \
+      "V = conditions_met" "$out"
 
 # Rootedness is a notion of Section 8; a contract of Section 3 is not asked
 # about it, and keeps the verdict of def:syntactically-grassroots.

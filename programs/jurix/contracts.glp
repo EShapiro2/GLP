@@ -120,7 +120,8 @@ sg_chain(C?) :-
           rs(unguarded, [atom(chained, [role(3)])], [], [], [])])], C).
 
 % --- negative: the same schema with one edge of the path removed -----------
-% Role 2 requires nothing, so the role graph falls into {1,2} and {3,4}.
+% Role 2 requires nothing, so the role graph falls into {1,2} and {3,4}, and
+% {3,4} holds no guarding role.
 procedure sg_chain_cut(Contract).
 sg_chain_cut(C?) :-
     sg(S),
@@ -132,6 +133,31 @@ sg_chain_cut(C?) :-
           rs(unguarded, [atom(chained, [role(4)])], [],
                         [atom(friend, [role(4)])], []),
           rs(unguarded, [atom(chained, [role(3)])], [], [], [])])], C).
+
+% --- volition by connected component, in Section 3 as in Section 8 ---------
+% tri(p?, q, r?) :  +chained(q)    friend(p), +chained(p)    +chained(p)
+% q requires friend(p), which joins roles 1 and 2, and nothing joins role 3,
+% so the role graph falls into {1,2} and {3}, each holding a guarding role:
+% tri is neither guarded in all its roles nor connected, and meets
+% def:volition.  sg_tri_cschema is the same contract with tri written as a
+% cschema, in the language of Section 8, where it meets definition:volition.
+procedure tri_roles(RoleSpecs).
+tri_roles([rs(guarded,   [atom(chained, [role(2)])], [], [], []),
+           rs(unguarded, [atom(chained, [role(1)])], [],
+                         [atom(friend, [role(1)])], []),
+           rs(guarded,   [atom(chained, [role(1)])], [], [], [])]).
+
+procedure sg_tri(Contract).
+sg_tri(C?) :-
+    sg(S),
+    tri_roles(Rs),
+    contract_app(S?, [schema(tri, Rs?)], C).
+
+procedure sg_tri_cschema(Contract).
+sg_tri_cschema(C?) :-
+    sg(S),
+    tri_roles(Rs),
+    contract_app(S?, [cschema(tri, [], Rs?)], C).
 
 % --- negative: the currency without mint -----------------------------------
 % The swap is still an introductory act, and each role requires a coin of its
@@ -304,6 +330,8 @@ contract(sg_imposed, C?) :- sg_imposed(C).
 contract(sg_gossip, C?) :- sg_gossip(C).
 contract(sg_chain, C?) :- sg_chain(C).
 contract(sg_chain_cut, C?) :- sg_chain_cut(C).
+contract(sg_tri, C?) :- sg_tri(C).
+contract(sg_tri_cschema, C?) :- sg_tri_cschema(C).
 contract(sg_svar_loose, C?) :- sg_svar_loose(C).
 contract(cssn, C?) :- cssn(C).
 contract(cur_no_mint, C?) :- cur_no_mint(C).
