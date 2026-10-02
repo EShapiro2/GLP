@@ -1,13 +1,9 @@
-import 'dart:io';
-import 'dart:ffi' as ffi;
-
 import 'machine_state.dart';
 import 'heap_fcp.dart';
 import 'suspend_ops.dart';
 import 'commit.dart';
 import 'abandon.dart';
 import 'fairness.dart';
-import 'system_predicates.dart';
 import 'body_kernels.dart';
 import 'package:glp_runtime/multiagent/identity.dart' show PersonIdentity;
 import 'package:glp_runtime/multiagent/mad_context.dart' show MadContext;
@@ -18,7 +14,6 @@ import 'package:glp_runtime/runtime/glp_activation.dart' show GlpChannelHandle;
 class GlpRuntime {
   final HeapFCP heap;
   final GoalQueue gq;
-  final SystemPredicateRegistry systemPredicates;
   final BodyKernelRegistry bodyKernels;
 
   /// Shared runners map: program key → GoalRunner (object or byte loop).
@@ -41,14 +36,6 @@ class GlpRuntime {
   /// into. The `self_module`/`run` substrate: every goal carries its module,
   /// spawned goals inherit it. Distinct from _goalModuleContexts (RPC routing).
   final Map<GoalId, Object?> _goalModules = <GoalId, Object?>{};
-
-  // File handle management
-  final Map<int, RandomAccessFile> _fileHandles = <int, RandomAccessFile>{};
-  int _nextFileHandle = 1;
-
-  // FFI/Dynamic library management
-  final Map<int, ffi.DynamicLibrary> _libraries = <int, ffi.DynamicLibrary>{};
-  int _nextLibraryHandle = 1;
 
   // Goal ID counter for spawn
   int nextGoalId = 10000;  // Start at 10000 to avoid collisions with test goal IDs
@@ -189,10 +176,9 @@ class GlpRuntime {
     return false;
   }
 
-  GlpRuntime({HeapFCP? heap, GoalQueue? gq, SystemPredicateRegistry? systemPredicates, BodyKernelRegistry? bodyKernels})
+  GlpRuntime({HeapFCP? heap, GoalQueue? gq, BodyKernelRegistry? bodyKernels})
       : heap = heap ?? HeapFCP(),
         gq = gq ?? GoalQueue(),
-        systemPredicates = systemPredicates ?? SystemPredicateRegistry(),
         bodyKernels = bodyKernels ?? _createDefaultBodyKernels();
 
   /// Create body kernel registry with standard kernels registered
@@ -325,74 +311,5 @@ class GlpRuntime {
       goals.remove(goal);
       if (goals.isEmpty) suspended.remove(readerId);
     }
-  }
-
-  // File handle management methods
-
-  /// Allocate a new file handle and register the file
-  int allocateFileHandle(RandomAccessFile file) {
-    final handle = _nextFileHandle++;
-    _fileHandles[handle] = file;
-    return handle;
-  }
-
-  /// Get file by handle
-  RandomAccessFile? getFile(int handle) => _fileHandles[handle];
-
-  /// Check if handle is valid
-  bool isValidHandle(int handle) => _fileHandles.containsKey(handle);
-
-  /// Close and remove file handle
-  void closeFileHandle(int handle) {
-    final file = _fileHandles.remove(handle);
-    if (file != null) {
-      try {
-        file.closeSync();
-      } catch (e) {
-        // Ignore close errors
-      }
-    }
-  }
-
-  /// Close all open file handles (cleanup)
-  void closeAllFiles() {
-    for (final file in _fileHandles.values) {
-      try {
-        file.closeSync();
-      } catch (e) {
-        // Ignore close errors
-      }
-    }
-    _fileHandles.clear();
-  }
-
-  // FFI/Dynamic library management methods
-
-  /// Load a dynamic library and allocate handle
-  int loadLibrary(String path) {
-    try {
-      final lib = ffi.DynamicLibrary.open(path);
-      final handle = _nextLibraryHandle++;
-      _libraries[handle] = lib;
-      return handle;
-    } catch (e) {
-      throw Exception('Failed to load library $path: $e');
-    }
-  }
-
-  /// Get library by handle
-  ffi.DynamicLibrary? getLibrary(int handle) => _libraries[handle];
-
-  /// Check if library handle is valid
-  bool isValidLibrary(int handle) => _libraries.containsKey(handle);
-
-  /// Close library handle (note: DynamicLibrary doesn't have close method)
-  void closeLibrary(int handle) {
-    _libraries.remove(handle);
-  }
-
-  /// Close all libraries
-  void closeAllLibraries() {
-    _libraries.clear();
   }
 }

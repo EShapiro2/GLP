@@ -23,7 +23,6 @@ import 'package:glp_runtime/engine_v2/module_kernels.dart';
 import 'package:glp_runtime/runtime/runtime.dart';
 import 'package:glp_runtime/runtime/machine_state.dart';
 import 'package:glp_runtime/runtime/scheduler.dart';
-import 'package:glp_runtime/runtime/system_predicates_impl.dart';
 import 'package:glp_runtime/runtime/terms.dart' as rt;
 import 'package:glp_runtime/compiler/partial_evaluator.dart';
 import 'package:glp_runtime/analysis/type_checker/type_checker.dart';
@@ -216,7 +215,6 @@ class GlpEngine {
     }
     _privilegedRootNames = privilegedRootNames(rootSources);
 
-    registerStandardPredicates(_runtime.systemPredicates);
     registerModuleKernels(_runtime);
     _loadRootSelf();
   }

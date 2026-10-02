@@ -9,7 +9,6 @@ import 'package:glp_runtime/runtime/machine_state.dart';
 import 'package:glp_runtime/runtime/terms.dart';
 import 'package:glp_runtime/runtime/commit.dart';
 import 'package:glp_runtime/runtime/cells.dart';
-import 'package:glp_runtime/runtime/system_predicates.dart';
 import 'package:glp_runtime/runtime/body_kernels.dart';
 import 'package:glp_runtime/multiagent/variable_table.dart' show VariableEntry;
 import 'opcodes.dart';
