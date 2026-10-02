@@ -98,7 +98,7 @@ class ByteRunner with OpExecutors implements GoalRunner {
 
   /// Byte-loop routing for `StepOutcome.nextClause`: leave the clause (clear its
   /// state) and return the next clause's byte offset.  A clause that SUSPENDED
-  /// --- a guard or the commit added readers to U ([SuspensionSet.touched]) ---
+  /// --- the commit added readers to U ([SuspensionSet.touched]) ---
   /// also gives U its own suspension set Si; one that FAILED gives nothing,
   /// whatever it suspended on before failing: "The writer mgu is the union of
   /// all writer assignments if no fail was encountered and the suspension set
