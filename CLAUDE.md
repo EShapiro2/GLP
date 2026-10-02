@@ -84,13 +84,13 @@ Non-interactive use, no approval prompt needed (no heredoc, which needs approval
 cd <worktree>/glp_runtime && printf 'load ../programs/path/to/file.glp\ngoal.\n:quit\n' | bin/glpc
 ```
 
-Loading a project: enter the directory path at the prompt; the project linker resolves all `M # goal(...)` cross-module calls at compile time.  REPL commands: `:quit`, `:trace`, `:debug`, `:limit N`, `:activate <module>`, `:emit <dir>`.
+Loading a project: enter the directory path at the prompt; the project linker resolves all `M # goal(...)` cross-module calls at compile time.  REPL commands: `:quit`, `:trace`, `:debug`, `:limit N`, `:emit <dir>`.
 
 ### Test suites
 
 | Suite | Command (from the worktree root) | Tests |
 |---|---|---|
-| Full suite (canonical) | `bash test/run_all_tests.sh` | 2071, all green, `KNOWN_RED` empty — at GLP `94d9980e`, 2026-09-18 |
+| Full suite (canonical) | `bash test/run_all_tests.sh` | 2199 passed, 0 failed, `KNOWN_RED` one entry (`glp_multiagent/test/sovereign_screen_test.dart`, GLP's) — at GLP `723d1602`, 2026-10-01 |
 | Dart unit tests alone | `cd glp_runtime && dart test` | glp_runtime only |
 | Flutter package alone | `cd glp_multiagent && flutter test` | glp_multiagent only |
 

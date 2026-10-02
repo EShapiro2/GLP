@@ -2,3 +2,5 @@
 # Created by `dart pub`
 .dart_tool/
 bin/glp_repl_exe
+bin/glp_repl
+build/
