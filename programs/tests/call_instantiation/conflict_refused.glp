@@ -1,0 +1,6 @@
+%% The merge's sites supply Integer and String, and neither makes every site
+%% well-typed: refused, by the site the binding leaving the fewest sites
+%% ill-typed does not fit (B's Stream<String> is not within Stream<Integer>),
+%% whichever input the merge takes first.
+procedure bad(Stream(Integer)?, Stream(String)?, Stream(Integer)).
+bad(A, B, C?) :- merge(B?, A?, C).

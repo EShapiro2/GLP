@@ -1,0 +1,36 @@
+%% A stream of a subtype merged into a stream of its supertype through the
+%% root's procedure(X) merge(Stream(X)?, Stream(X)?, Stream(X)), every
+%% alternative of FriendMsg an alternative of NetInMsg, X bound to the
+%% supertype (TGLP parameterized-types.tex, after Definition "Instantiation";
+%% appendix-implementation-notes.tex, "The instantiation of a call").  The
+%% shapes of GSG's merges: routing/befriend.glp:73, :87 and grassapp_agent.glp
+%% :103 (the friend stream read from the head, the network input first or
+%% second), :415 (the subtype stream written by an earlier goal, merged first),
+%% and a merge inside an instantiated parameterised procedure (befriend's
+%% smaller_dispatch/7 and await_friend_channel/6).
+FriendContent ::= text(String) ; ping.
+FriendMsg ::= msg(Key, Constant, FriendContent).
+NetColdCall ::= intro(Constant).
+NetInMsg ::= msg(Key, NetColdCall)
+           ; msg(Key, Constant, FriendContent)
+           ; pending_link(Constant, Constant).
+Setup ::= friend_stream(Stream(FriendMsg)).
+
+procedure join(Stream(NetInMsg)?, Stream(FriendMsg)?, Stream(NetInMsg)).
+join(NetIn, FIn, NetIn1?) :- merge(NetIn?, FIn?, NetIn1).
+
+procedure join_first(Stream(NetInMsg)?, Stream(FriendMsg)?, Stream(NetInMsg)).
+join_first(NetIn, FIn, NetIn1?) :- merge(FIn?, NetIn?, NetIn1).
+
+procedure hub(Stream(FriendMsg)).
+hub([msg("k", c, ping)]).
+
+procedure join_hub(Stream(NetInMsg)?, Stream(NetInMsg)).
+join_hub(NetIn, NetIn1?) :- hub(Hub), merge(Hub?, NetIn?, NetIn1).
+
+procedure(C, NIM) adopt(Stream(C)?, Stream(NIM)?, Stream(NIM)).
+adopt([friend_stream(FIn)|_], NetIn, NetIn1?) :- merge(NetIn?, FIn?, NetIn1).
+adopt([], NetIn, NetIn?).
+
+procedure join_setup(Stream(Setup)?, Stream(NetInMsg)?, Stream(NetInMsg)).
+join_setup(S, NetIn, NetIn1?) :- adopt(S?, NetIn?, NetIn1).
