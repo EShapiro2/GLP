@@ -18,10 +18,10 @@ list_to_bst(Xs, node(Mid?, L?, R?)) :-
 %% split_at(Stream, N, Left, Mid, Right) - split list at position N
 procedure split_at(NonEmptyList(X)?, Number?, Stream(X), X, Stream(X)).
 split_at([X|Xs], 0, [], X?, Xs?).
-split_at([X|Xs], N, [X?|Left?], Mid?, Right?) :-
+split_at([X, Y|Xs], N, [X?|Left?], Mid?, Right?) :-
     N? > 0 |
     N1 := N? - 1,
-    split_at(Xs?, N1?, Left, Mid, Right).
+    split_at([Y?|Xs?], N1?, Left, Mid, Right).
 
 %% Helper: length with accumulator
 procedure length(Stream(X)?, Number).
