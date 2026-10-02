@@ -5,8 +5,11 @@
 %% well-typed at echo(Choice?, Choice), and echo(X?, X) is not: its moded head
 %% has the writer X at the consumed position 1 (well-typing.tex, Definitions
 %% "Moded Head" and "Consistent Paths"), and Lemma "Parametricity" certifies
-%% a parameter replaced by a type of the same mode only.  So the program is
-%% refused at echo's head, not at the call.
+%% a parameter replaced by a type of the same mode only.  So no binding makes
+%% the clause and echo's clauses well-typed, and the call is refused (TGLP
+%% appendix-implementation-notes.tex, "The instantiation of a call", cc4a891),
+%% echo's head named at the binding; until 2026-10-02 the program was refused
+%% at echo's head alone.
 %% Fixture of glp_runtime/test/analysis/input_binding_test.dart.
 
 Choice ::= yes ; no.

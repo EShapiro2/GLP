@@ -1,0 +1,46 @@
+%% The goals of a posted conjunction in no order.  TGLP
+%% appendix-implementation-notes.tex, "The instantiation of a call" (cc4a891):
+%% "the checker reads the sites of a call over the whole clause, the body goals
+%% in no order, and a posted goal, checked as a body
+%% (Section~\ref{sec:runtime-boundary}), the same way".  The goal
+%% friends(F), merge(F?, A?, C), net(A), drain(C?, D) merges a Stream(FriendMsg)
+%% into a Stream(NetInMsg), every alternative of FriendMsg one of NetInMsg: X
+%% is bound to the supertype.  Until 2026-10-02 a goal's calls were
+%% instantiated in order, merge at the X = FriendMsg F gave it, and the goal was
+%% refused for A's Stream(NetInMsg).
+FriendContent ::= text(String) ; ping.
+FriendMsg ::= msg(Key, Constant, FriendContent).
+NetColdCall ::= intro(Constant).
+NetInMsg ::= msg(Key, NetColdCall)
+           ; msg(Key, Constant, FriendContent)
+           ; pending_link(Constant, Constant).
+
+procedure friends(Stream(FriendMsg)).
+friends([msg("k", c, ping)]).
+
+procedure net(Stream(NetInMsg)).
+net([pending_link(a, b)]).
+
+procedure drain(Stream(NetInMsg)?, Stream(NetInMsg)).
+drain(Xs, Xs?).
+
+%% A procedure that inspects its parameters, for a posted goal that supplies
+%% no type for one: copy([msg(a, b)], Ys) is refused, FM having no type
+%% supplied or fixed and copy/2 not parametrically well-typed.
+Msg ::= msg(Constant, Constant).
+procedure(FM, NIM) copy(Stream(FM)?, Stream(NIM)).
+copy([msg(K, I)|Xs], [msg(K?, I?)|Ys?]) :- copy(Xs?, Ys).
+copy([], []).
+
+%% A call in the program instantiates copy/2, which a parameter-inspecting
+%% procedure needs (TGLP parameterized-types.tex, sec:abstract-parameters).
+procedure copied(Stream(Msg)?, Stream(Msg)).
+copied(Xs, Ys?) :- copy(Xs?, Ys).
+
+%% copy(Xs?, Ys), src(Xs), sink(Ys?) runs: src supplies FM, sink NIM.
+procedure src(Stream(Msg)).
+src([msg(a, b)]).
+
+procedure sink(Stream(Msg)?).
+sink([]).
+sink([_|Xs]) :- sink(Xs?).

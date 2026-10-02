@@ -1,0 +1,13 @@
+%% A parameter left open beside one bound.  TGLP
+%% appendix-implementation-notes.tex, "The instantiation of a call" (cc4a891):
+%% "A parameter for which no type is supplied or fixed is left open where the
+%% callee is parametrically well-typed (Section~\ref{sec:abstract-parameters}),
+%% the call checked with it open".  pair_up/3 inspects neither parameter, so it
+%% is parametrically well-typed; the constant foo names no type, so X is left
+%% open; N and Out supply Y = Integer, and the call is checked at it with X
+%% open.  go(5, Out) gives Out = [5].
+procedure(X, Y) pair_up(X?, Y?, Stream(Y)).
+pair_up(_, B, [B?]).
+
+procedure go(Integer?, Stream(Integer)).
+go(N, Out?) :- pair_up(foo, N?, Out).

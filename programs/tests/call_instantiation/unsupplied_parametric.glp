@@ -1,0 +1,9 @@
+%% No site of the call supplies a type for X, but len/2 is parametrically
+%% well-typed, so the call is checked with its parameter open and loads (TGLP
+%% appendix-implementation-notes.tex, "The instantiation of a call").
+%% go(N) gives N = 2.
+procedure(X) len(Stream(X)?, Integer).
+len([], 0).
+len([_|Xs], N?) :- len(Xs?, M), N := M? + 1.
+procedure go(Integer).
+go(N?) :- len([a, b], N).

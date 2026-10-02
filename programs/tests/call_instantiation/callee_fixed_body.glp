@@ -1,0 +1,22 @@
+%% A type the callee's clauses fix, by a body pair.  TGLP
+%% appendix-implementation-notes.tex, "The instantiation of a call" (cc4a891):
+%% "For each parameter it tries the types the sites supply and the types the
+%% callee's clauses fix for it---a head occurrence of the parameter paired by
+%% condition 3 with a body occurrence of a concrete type".  The call's m(N?)
+%% names no type, so no site supplies M; tag/3's head occurrence X, at M?, is
+%% paired with X? in wrap/2's body goal, at Msg?, which fixes M = Msg.  K is
+%% supplied by the head's K, Kind.  tag/3 matches a and b at K, so it is not
+%% parametrically well-typed, and the call loads only by the type its clauses
+%% fix.  go(c, a, Out) gives Out = [m(c)].
+Msg  ::= m(Constant).
+Kind ::= a ; b.
+
+procedure(M, K) tag(M?, K?, Stream(Msg)).
+tag(X, a, Out?) :- wrap(X?, Out).
+tag(X, b, Out?) :- wrap(X?, Out).
+
+procedure wrap(Msg?, Stream(Msg)).
+wrap(X, [X?]).
+
+procedure go(Constant?, Kind?, Stream(Msg)).
+go(N, K, Out?) :- tag(m(N?), K?, Out).

@@ -1,0 +1,8 @@
+%% A constructed argument the binding its sites supply does not admit.  The
+%% network input supplies X = NetInMsg, and [bad(1)] stands where
+%% Stream<NetInMsg>? is read: refused, naming the term and the state (a
+%% constructed term constrains the binding by containment and supplies none).
+NetInMsg ::= msg(Key, Constant) ; pending_link(Constant, Constant).
+
+procedure join_bad(Stream(NetInMsg)?, Stream(NetInMsg)).
+join_bad(NetIn, NetIn1?) :- merge([bad(1)], NetIn?, NetIn1).

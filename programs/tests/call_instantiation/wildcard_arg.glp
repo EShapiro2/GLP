@@ -1,0 +1,11 @@
+%% A declaration carrying Stream(_) beside a parameter: the instantiation the
+%% sites supply, X = Msg, is built with Stream<_> as the expansion names it.
+%% Until 2026-10-02 no instantiation of tag/3 could be built, and the program
+%% was refused as carrying a parameter-inspecting procedure nothing
+%% instantiates.  go([msg(a, b)], Y) gives Y = [msg(a, b)].
+Msg ::= msg(Constant, Constant).
+procedure(X) tag(Stream(X)?, Stream(_), Stream(X)).
+tag([msg(A, B)|Xs], Ws?, [msg(A?, B?)|Ys?]) :- tag(Xs?, Ws, Ys).
+tag([], [], []).
+procedure go(Stream(Msg)?, Stream(Msg)).
+go(Xs, Ys?) :- tag(Xs?, _, Ys).

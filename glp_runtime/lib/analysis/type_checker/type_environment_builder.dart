@@ -69,6 +69,11 @@ void setRootScopeEnvironmentSource(String source) {
 bool isRootScopeEnvironmentSource(String source) =>
     source == (_rootScopeEnvironmentSource ?? rootScopeTypes);
 
+/// The text the root scope environment is built from, the root `self.glp`, or
+/// null where none was set.  Its clauses are what the root's parameterised
+/// procedures are certified by (type_checker.dart, rootProcedureIsParametric).
+String? rootScopeEnvironmentSource() => _rootScopeEnvironmentSource;
+
 /// Build TypeEnvironment from root scope
 TypeEnvironment buildRootScopeEnvironment() {
   final source = _rootScopeEnvironmentSource ?? rootScopeTypes;

@@ -128,12 +128,24 @@ class TypeChecker {
 
   /// The defining clauses of a procedure, by "name/arity", or null where the
   /// procedure is defined outside the unit being checked.  Call-site
-  /// instantiation needs them: the parameters a call's arguments do not settle
-  /// are fixed by the equations of the callee's own clauses (TGLP
-  /// def:instantiation, well_typed_clause.dart _solveFromCalleeClauses).
+  /// instantiation reads them twice: the types they fix for a parameter are
+  /// tried beside the types the sites of the call supply, and a binding is
+  /// taken only where they are well-typed by the declaration it produces and
+  /// accept its every input path (TGLP appendix-implementation-notes.tex, "The
+  /// instantiation of a call"; def:instantiation; well_typed_clause.dart,
+  /// _instantiateCalls).
   final wtc.CalleeClauses? callee;
 
-  TypeChecker(this.typeEnv, {this.collector, this.callee})
+  /// Whether the procedure of a "name/arity" key is parametrically well-typed
+  /// (TGLP parameterized-types.tex, Definition "Parametrically Well-Typed"): a
+  /// parameter of a call for which no type is supplied or fixed is left open
+  /// where the callee is, the call checked with it open, and the call is
+  /// refused where it is not (appendix-implementation-notes.tex, "The
+  /// instantiation of a call", cc4a891; well_typed_clause.dart,
+  /// [wtc.checkClause]).  Null takes every callee to be.
+  final bool Function(String procKey)? isParametric;
+
+  TypeChecker(this.typeEnv, {this.collector, this.callee, this.isParametric})
       : dfa = buildProgramDFA(typeEnv);
 
   /// Check a program (list of clauses) against declared types
@@ -352,7 +364,8 @@ class TypeChecker {
       final result = wtc.checkClauseFromAst(clause, dfa, typeEnv,
           collector: collector,
           activeInstantiations: activeInstantiations,
-          callee: callee);
+          callee: callee,
+          isParametric: isParametric);
 
       if (!result.isWellTyped) {
         // Convert ClauseErrors to TypeErrors
@@ -887,9 +900,22 @@ TypeCheckResult _checkModuleImpl(ast.Module module, {List<ast.Procedure>? transf
     for (final c in clauses) {
       byKey.putIfAbsent('${c.head.functor}/${c.head.arity}', () => []).add(c);
     }
+
+    // Phase A (modular checking via abstract parameters), per module: certify
+    // each parametric procedure that takes the abstract route, against this
+    // module's own defining clauses. The certified keys accumulate into the
+    // caller-supplied set so the program-level closure suppresses re-reporting.
+    // Certified first: a call to a parameterised procedure for which no
+    // instantiation is found is refused unless the callee is parametrically
+    // well-typed (TGLP appendix-implementation-notes.tex, "The instantiation of
+    // a call"), so the clause check below asks it.
+    final cert = certifyParametricProcedures(typeEnv, (procKey) => byKey[procKey]);
+    certifiedKeys?.addAll(cert.certifiedKeys);
+
     final checker = TypeChecker(typeEnv,
         collector: collector,
-        callee: wtc.CalleeClauses((k) => byKey[k], verifyInstantiation));
+        callee: wtc.CalleeClauses((k) => byKey[k], verifyInstantiation),
+        isParametric: _parametricIn(byKey, cert.certifiedKeys));
     final result = checker.check(clauses);
     final guardErrors = transformedProcedures == null
         ? const <TypeError>[]
@@ -897,20 +923,6 @@ TypeCheckResult _checkModuleImpl(ast.Module module, {List<ast.Procedure>? transf
             module.procedures.expand((p) => p.clauses),
             definedGuardKeys(
                 ast.Program(module.procedures, module.line, module.column)));
-
-    // Phase A (modular checking via abstract parameters), per module: certify
-    // each parametric procedure that takes the abstract route, against this
-    // module's own defining clauses. The certified keys accumulate into the
-    // caller-supplied set so the program-level closure suppresses re-reporting.
-    final clausesByKey = <String, List<ast.Clause>>{};
-    for (final c in clauses) {
-      clausesByKey
-          .putIfAbsent('${c.head.functor}/${c.head.arity}', () => [])
-          .add(c);
-    }
-    final cert =
-        certifyParametricProcedures(typeEnv, (procKey) => clausesByKey[procKey]);
-    certifiedKeys?.addAll(cert.certifiedKeys);
     return TypeCheckResult(
       [
         ...undefinedDeclarations,
@@ -933,9 +945,25 @@ TypeCheckResult _checkModuleImpl(ast.Module module, {List<ast.Procedure>? transf
   for (final c in clauses) {
     byKey.putIfAbsent('${c.head.functor}/${c.head.arity}', () => []).add(c);
   }
+
+  // Phase A: modular checking via abstract parameters. Certify each parametric
+  // procedure that takes the abstract route by checking it once against its
+  // abstract instance; the certified keys are then suppressed in the closure.
+  // See certifyParametricProcedures (typed-program.md "Modular Checking via
+  // Abstract Parameters").  Certified before the clauses are checked: a call to
+  // a parameterised procedure for which no instantiation is found is refused
+  // unless the callee is parametrically well-typed (TGLP
+  // appendix-implementation-notes.tex, "The instantiation of a call").
+  final cert = certifyParametricProcedures(
+    typeEnv,
+    (procKey) => byKey[procKey],
+  );
+  final isParametric = _parametricIn(byKey, cert.certifiedKeys);
+
   final checker = TypeChecker(typeEnv,
       collector: localCollector,
-      callee: wtc.CalleeClauses((k) => byKey[k], verifyInstantiation));
+      callee: wtc.CalleeClauses((k) => byKey[k], verifyInstantiation),
+      isParametric: isParametric);
   final result = checker.check(clauses);
 
   final errors = <TypeError>[...undefinedDeclarations, ...result.errors];
@@ -971,15 +999,7 @@ TypeCheckResult _checkModuleImpl(ast.Module module, {List<ast.Procedure>? transf
         .add(c);
   }
 
-  // Phase A: modular checking via abstract parameters. Certify each parametric
-  // procedure that takes the abstract route by checking it once against its
-  // abstract instance; the certified keys are then suppressed in the closure.
-  // See certifyParametricProcedures (typed-program.md "Modular Checking via
-  // Abstract Parameters").
-  final cert = certifyParametricProcedures(
-    typeEnv,
-    (procKey) => clausesByKey[procKey],
-  );
+  // Phase A's verdicts (certified above, before the clauses were checked).
   errors.addAll(cert.errors);
   warnings.addAll(cert.warnings);
 
@@ -996,6 +1016,7 @@ TypeCheckResult _checkModuleImpl(ast.Module module, {List<ast.Procedure>? transf
     certifiedKeys: cert.certifiedKeys,
     writtenClauses: (procKey) => writtenByKey[procKey],
     definedGuards: definedGuards,
+    isParametric: isParametric,
   );
   for (final ir in instResults) {
     errors.addAll(ir.result.errors);
@@ -1078,11 +1099,19 @@ TypeCheckResult _checkModuleImpl(ast.Module module, {List<ast.Procedure>? transf
 /// if it comes back clean.  No collector and no callee are supplied: this
 /// verifies the candidate, it does not pursue the instantiations the body
 /// induces, which the closure does once the candidate is adopted.
+///
+/// A recursive call in the clauses is checked at the candidate itself, as the
+/// closure checks it: "recursion is monomorphic: a call to a procedure already
+/// being instantiated on the current cycle is checked at that instantiation
+/// rather than inducing a new one" (TGLP parameterized-types.tex, after
+/// Definition "Instantiation").  Until 2026-10-02 the recursive call was read
+/// as a fresh call here and given an instantiation of its own.
 bool verifyInstantiation(
     ProcDecl decl, TypeEnvironment env, List<ast.Clause> clauses) {
   try {
     return TypeChecker(env)
-        .checkSingleProcedure(decl, clauses)
+        .checkSingleProcedure(decl, clauses,
+            activeInstantiations: {decl.key: decl})
         .errors
         .isEmpty;
   } on Object {
@@ -1161,31 +1190,81 @@ class ParametricCertification {
 /// [definingClauses] returns the defining clauses for a "name/arity", or null if
 /// the procedure is defined outside the checked unit (then it is not certified
 /// here).
+///
+/// A call in an abstract instance for which no instantiation is found is
+/// refused unless its callee is parametrically well-typed (TGLP
+/// appendix-implementation-notes.tex, "The instantiation of a call"), which is
+/// what this decides for the procedures of the unit.  So each procedure taking
+/// the abstract route is presumed parametrically well-typed while the abstract
+/// instances are checked, and where one asked of that way is not certified,
+/// they are checked again with it no longer presumed, until what is presumed
+/// of every procedure asked of is what is certified.  Presuming fewer refuses
+/// more, so the certified set only shrinks, and the rounds end.  A procedure
+/// outside the unit is answered by [rootProcedureIsParametric].
 ParametricCertification certifyParametricProcedures(
   TypeEnvironment typeEnv,
   List<ast.Clause>? Function(String procKey) definingClauses,
+) {
+  final templates = typeEnv.typeTemplates;
+  final knownMono = typeEnv.types.keys.toSet();
+
+  // Structural routing: a parameter-inspecting clause or a parameter used as a
+  // type-definition alternative routes to the per-instantiation closure; the
+  // rest take the abstract route.
+  final route = <String>[];
+  for (final entry in typeEnv.paramProcDecls.entries) {
+    final paramDecl = entry.value;
+    final clauses = definingClauses(entry.key);
+    if (clauses == null || clauses.isEmpty) {
+      continue; // defined outside the checked unit (or never defined)
+    }
+    if (procInspectsParameter(clauses, paramDecl, paramDecl.typeParams, templates) ||
+        paramUsedAsTypeAlternative(paramDecl, templates)) {
+      continue;
+    }
+    route.add(entry.key);
+  }
+
+  var presumed = route.toSet();
+  while (true) {
+    final asked = <String>{};
+    bool isParametric(String key) {
+      final clauses = definingClauses(key);
+      if (clauses == null || clauses.isEmpty) {
+        return rootProcedureIsParametric(key);
+      }
+      asked.add(key);
+      return presumed.contains(key);
+    }
+
+    final cert = _certifyAbstractRoute(typeEnv, definingClauses, route,
+        knownMono, isParametric);
+    if (asked.every(
+        (k) => !presumed.contains(k) || cert.certifiedKeys.contains(k))) {
+      return cert;
+    }
+    presumed = cert.certifiedKeys;
+  }
+}
+
+/// One round of [certifyParametricProcedures]: the abstract instance of each
+/// procedure on [route] checked, a call for which no instantiation is found
+/// asking [isParametric] of its callee.
+ParametricCertification _certifyAbstractRoute(
+  TypeEnvironment typeEnv,
+  List<ast.Clause>? Function(String procKey) definingClauses,
+  List<String> route,
+  Set<String> knownMono,
+  bool Function(String procKey) isParametric,
 ) {
   final errors = <TypeError>[];
   final warnings = <TypeWarning>[];
   final certified = <String>{};
   final failed = <String, List<TypeError>>{};
   final templates = typeEnv.typeTemplates;
-  final knownMono = typeEnv.types.keys.toSet();
 
-  for (final entry in typeEnv.paramProcDecls.entries) {
-    final key = entry.key;
-    final paramDecl = entry.value;
-    final clauses = definingClauses(key);
-    if (clauses == null || clauses.isEmpty) {
-      continue; // defined outside the checked unit (or never defined)
-    }
-
-    // Structural routing: a parameter-inspecting clause or a parameter used as a
-    // type-definition alternative routes to the per-instantiation closure.
-    if (procInspectsParameter(clauses, paramDecl, paramDecl.typeParams, templates) ||
-        paramUsedAsTypeAlternative(paramDecl, templates)) {
-      continue;
-    }
+  for (final key in route) {
+    final paramDecl = typeEnv.paramProcDecls[key]!;
 
     // Abstract route: build the abstract instance and check it by seeding it
     // into the per-instantiation closure. The closure materializes any
@@ -1210,7 +1289,8 @@ ParametricCertification certifyParametricProcedures(
         key, ai.decl, aiEnv, buildProgramDFA(aiEnv));
     final seed = wtc.InstantiationCollector();
     seed.record(inst);
-    final results = checkInstantiationsClosed(seed, definingClauses);
+    final results = checkInstantiationsClosed(seed, definingClauses,
+        isParametric: isParametric);
     final seedSigKey = '${inst.procKey}#${inst.signature}';
     final seedErrors = <TypeError>[];
     final seedWarnings = <TypeWarning>[];
@@ -1229,6 +1309,87 @@ ParametricCertification certifyParametricProcedures(
   }
 
   return ParametricCertification(errors, warnings, certified, failed);
+}
+
+/// Whether the procedure of a "name/arity" key is parametrically well-typed,
+/// for the clause checks of a unit whose defining clauses are [clausesByKey]
+/// and whose certified procedures are [certified]: one the unit defines is
+/// parametrically well-typed if it is certified; one it does not is answered
+/// by [rootProcedureIsParametric].
+bool Function(String procKey) _parametricIn(
+        Map<String, List<ast.Clause>> clausesByKey, Set<String> certified) =>
+    (key) {
+      final clauses = clausesByKey[key];
+      if (clauses == null || clauses.isEmpty) {
+        return rootProcedureIsParametric(key);
+      }
+      return certified.contains(key);
+    };
+
+/// The certification of the root `self.glp`'s parameterised procedures, by the
+/// source it was made from.
+class _RootCertification {
+  final String source;
+  final Set<String> defined; // the parameterised procedures it defines
+  final Set<String> certified; // those parametrically well-typed
+  _RootCertification(this.source, this.defined, this.certified);
+}
+
+_RootCertification? _rootCertification;
+bool _certifyingRoot = false;
+
+/// Whether the root `self.glp`'s parameterised procedure [procKey] is
+/// parametrically well-typed (TGLP parameterized-types.tex, Definition
+/// "Parametrically Well-Typed").
+///
+/// A unit's calls to a root-scope procedure --- `merge/3`, `send/3`,
+/// `stream_append/3` --- reach clauses that are not the unit's, so the unit's
+/// own certification cannot answer for them.  The root's procedures are
+/// certified here once, by their abstract instances against the root's own
+/// clauses, in the root scope ([buildRootScopeEnvironment]), and the answer
+/// kept while the root's source stands.  A key the root does not define with
+/// clauses --- a kernel, a procedure of another module --- is not decided here
+/// and answers true: the call is then checked with the callee's parameters
+/// open, as a call is where the checked unit cannot see its callee's clauses,
+/// and the linked program, where every call but the root's is local, decides.
+bool rootProcedureIsParametric(String procKey) {
+  final source = rootScopeEnvironmentSource();
+  if (source == null || source.isEmpty) return true;
+  var cert = _rootCertification;
+  if (cert == null || !identical(cert.source, source)) {
+    if (_certifyingRoot) return true; // asked while the root itself is certified
+    _certifyingRoot = true;
+    try {
+      cert = _certifyRoot(source);
+    } finally {
+      _certifyingRoot = false;
+    }
+    _rootCertification = cert;
+  }
+  if (!cert.defined.contains(procKey)) return true;
+  return cert.certified.contains(procKey);
+}
+
+_RootCertification _certifyRoot(String source) {
+  try {
+    final module = Parser(Lexer(source).tokenize()).parseModule();
+    final env = buildRootScopeEnvironment();
+    final byKey = <String, List<ast.Clause>>{};
+    for (final proc in module.procedures) {
+      for (final c in proc.clauses) {
+        byKey.putIfAbsent('${c.head.functor}/${c.head.arity}', () => []).add(c);
+      }
+    }
+    final defined = {
+      for (final key in env.paramProcDecls.keys)
+        if (byKey[key]?.isNotEmpty ?? false) key
+    };
+    final cert = certifyParametricProcedures(env, (k) => byKey[k]);
+    return _RootCertification(source, defined, cert.certifiedKeys);
+  } on Object {
+    // A root that cannot be certified decides nothing here.
+    return _RootCertification(source, const {}, const {});
+  }
 }
 
 /// Close the parameterized-procedure instantiation set under calls and check
@@ -1259,6 +1420,7 @@ List<InstantiationCheckResult> checkInstantiationsClosed(
   Set<String> certifiedKeys = const {},
   List<ast.Clause>? Function(String procKey)? writtenClauses,
   Set<String> definedGuards = const {},
+  bool Function(String procKey)? isParametric,
 }) {
   // Types that arise only through the closure (e.g. Stream<Box<Msg>> from a
   // type-changing procedure) are not produced by the initial declaration-driven
@@ -1333,7 +1495,8 @@ List<InstantiationCheckResult> checkInstantiationsClosed(
       var res = TypeChecker(focusedEnv,
               collector: sub,
               callee:
-                  wtc.CalleeClauses(definingClauses, verifyInstantiation))
+                  wtc.CalleeClauses(definingClauses, verifyInstantiation),
+              isParametric: isParametric)
           .checkSingleProcedure(inst.monoDecl, defining,
               activeInstantiations: active);
       // The defined guards of the clauses as written, at this instantiation
@@ -1362,8 +1525,8 @@ List<InstantiationCheckResult> checkInstantiationsClosed(
       }
 
       // A check adds to its focused environment the types it built for the
-      // parameters the callee's heads fix (well_typed_clause.dart
-      // _thetaFromHeads).  They are monomorphic definitions the closure
+      // instantiations its calls name (well_typed_clause.dart
+      // _buildDeclTypes).  They are monomorphic definitions the closure
       // discovered, like the ones materialized below, so they accumulate here
       // too: a later round rebuilds each focused environment from the
       // instantiation's own, which predates them, and a materialized type may

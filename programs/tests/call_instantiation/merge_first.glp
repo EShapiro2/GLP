@@ -1,0 +1,8 @@
+%% The order probe, merge first: the body of copy_first.glp in the other
+%% order.  Loads; go([msg(a, b)], [], C) gives C = [msg(a, b)].
+Msg ::= msg(Constant, Constant).
+procedure(FM, NIM) copy(Stream(FM)?, Stream(NIM)).
+copy([msg(K, I)|Xs], [msg(K?, I?)|Ys?]) :- copy(Xs?, Ys).
+copy([], []).
+procedure go(Stream(Msg)?, Stream(Msg)?, Stream(Msg)).
+go(A, B, C?) :- merge(B?, A1?, C), copy(A?, A1).

@@ -149,6 +149,19 @@ class GlpEngine {
   /// checked against this env before it runs; see [_checkGoalWellTyped].
   TypeEnvironment? _goalCheckEnv;
 
+  /// The defining clauses, defined guards unfolded, of the procedures the units
+  /// loaded so far define, by the "name/arity" the goal-check environment
+  /// declares them under, the internal sources excepted: a posted goal's
+  /// calls read their callee's clauses as a clause's calls do --- the types
+  /// they fix for a parameter are tried, and a binding is to make them
+  /// well-typed (TGLP appendix-implementation-notes.tex, "The instantiation of
+  /// a call", cc4a891; [_checkGoalWellTyped]).
+  final Map<String, List<Clause>> _goalClauses = {};
+
+  /// Whether a procedure of [_goalClauses] is parametrically well-typed, asked
+  /// once per key and load ([_goalProcedureIsParametric]).
+  final Map<String, bool> _goalParametric = {};
+
   /// The self.glp files [_goalCheckEnv] carries as scope-chain entries, by
   /// absolute path. [scopeFor] layers a file's own ancestor chain on the scope
   /// and skips these, so a self.glp the program's chain already contributed is
@@ -398,10 +411,12 @@ class GlpEngine {
     // condition 1).  Until 2026-10-02 such a module was compiled and run with
     // no check.  (Single-file/REPL semantics: a parametric procedure inspecting
     // its parameter with no instantiation is rejected — checkModule's default.)
+    final List<Procedure> checkedProcedures;
     {
       final ast = Program(module.procedures, module.line, module.column);
       final partialEvaluator = PartialEvaluator();
       final transformedAst = partialEvaluator.transformDefinedGuards(ast);
+      checkedProcedures = transformedAst.procedures;
 
       final typeResult = checkModule(module,
           transformedProcedures: transformedAst.procedures,
@@ -475,10 +490,53 @@ class GlpEngine {
       _goalCheckEnv = goalEnv;
     }
 
-    // Make this module's declarations available to the REPL goal checker.
+    // Make this module's declarations available to the REPL goal checker,
+    // and its clauses to the reading of a goal's calls.
     _extendGoalCheckEnv(module, label: moduleInfo.name);
+    if (!isInternal) _addGoalClauses(checkedProcedures);
 
     return true;
+  }
+
+  /// Add the clauses of [procedures] to [_goalClauses], over what an earlier
+  /// load gave a key unless [fillGapsOnly], as [_extendGoalCheckEnv] layers
+  /// the declarations.
+  void _addGoalClauses(List<Procedure> procedures, {bool fillGapsOnly = false}) {
+    final byKey = <String, List<Clause>>{};
+    for (final p in procedures) {
+      for (final c in p.clauses) {
+        byKey.putIfAbsent('${c.head.functor}/${c.head.arity}', () => []).add(c);
+      }
+    }
+    for (final e in byKey.entries) {
+      if (fillGapsOnly && _goalClauses.containsKey(e.key)) continue;
+      _goalClauses[e.key] = e.value;
+    }
+    _goalParametric.clear();
+  }
+
+  /// Whether the procedure a posted goal calls by [key] is parametrically
+  /// well-typed (TGLP parameterized-types.tex, Definition "Parametrically
+  /// Well-Typed"): a call some parameter of which has no type supplied or
+  /// fixed for it is refused unless it is (appendix-implementation-notes.tex,
+  /// "The instantiation of a call").  A loaded procedure is certified by its
+  /// abstract instance against its own clauses in the goal-check environment;
+  /// any other is answered by [rootProcedureIsParametric].
+  bool _goalProcedureIsParametric(String key) {
+    final clauses = _goalClauses[key];
+    if (clauses == null || clauses.isEmpty) {
+      return rootProcedureIsParametric(key);
+    }
+    return _goalParametric[key] ??= () {
+      try {
+        return certifyParametricProcedures(_ensureGoalCheckBaseEnv(),
+                (k) => k == key ? clauses : null)
+            .certifiedKeys
+            .contains(key);
+      } on Object {
+        return false;
+      }
+    }();
   }
 
   /// A later load that defines a procedure an earlier load defines is an
@@ -625,10 +683,16 @@ class GlpEngine {
     // entry points, so it is checked in the ROOT's scope (Currencies Code,
     // 2026-09-03 — the same shadowing that stopped the linked program loading).
     for (final m in ordered) {
+      final descendant =
+          _normDir(File(m.filePath).parent.path) != _normDir(programRoot);
       _extendGoalCheckEnv(m.ast,
-          typesFillGapsOnly:
-              _normDir(File(m.filePath).parent.path) != _normDir(programRoot),
-          label: m.moduleName);
+          typesFillGapsOnly: descendant, label: m.moduleName);
+      _addGoalClauses(
+          PartialEvaluator()
+              .transformDefinedGuards(
+                  Program(m.ast.procedures, m.ast.line, m.ast.column))
+              .procedures,
+          fillGapsOnly: descendant);
     }
 
     return true;
@@ -835,7 +899,9 @@ class GlpEngine {
 
     final env = _ensureGoalCheckBaseEnv();
     final dfa = tdfa.buildProgramDFA(env);
-    final result = wtc.checkGoal(atoms, dfa, env);
+    final result = wtc.checkGoal(atoms, dfa, env,
+        callee: wtc.CalleeClauses((k) => _goalClauses[k], verifyInstantiation),
+        isParametric: _goalProcedureIsParametric);
     if (result.isWellTyped) return null;
 
     final detail = result.errors.map((e) => '  ${e.message}').join('\n');

@@ -97,9 +97,14 @@ go(S, R?) :- first(S?, R).
   test('a named type of another polarity is read at that polarity, and refused',
       () {
     // ch(MsgStream?, MsgStream?) is Channel<MsgStream?,MsgStream>: its first
-    // argument is an input type, which no Stream(C) is, and its second fixes
-    // C = Msg; the call then hands a BadChannel where the instance accepts
-    // Channel<Stream<Msg>,Stream<Msg>>, and condition 3(b) refuses it.
+    // argument is an input type, which no Stream(C) is, and its second
+    // supplies C = Msg.  Under C = Msg the call hands a BadChannel where the
+    // instance accepts Channel<Stream<Msg>,Stream<Msg>>, and no map of C does
+    // better, so the call is refused by the argument no expansion admits (TGLP
+    // appendix-implementation-notes.tex, "The instantiation of a call";
+    // parameterized-types.tex, Definition "Instantiation").  Until 2026-10-02
+    // the call was checked at C = Msg and refused by condition 3(b), "BadChannel,
+    // which is not within ... Channel<Stream<Msg>,Stream<Msg>>".
     final engine = _engine();
     expect(
         () => engine.loadSource('''
@@ -111,7 +116,9 @@ procedure go(BadChannel?, Result).
 go(Ch, R?) :- peek(Ch?, R).
 ''', filename: 'bad_channel.glp'),
         throwsA(predicate((e) =>
-            '$e'.contains('BadChannel, which is not within') &&
-            '$e'.contains('Channel<Stream<Msg>,Stream<Msg>>'))));
+            '$e'.contains(
+                'No instantiation of peek/2 for the call peek(Ch?, R)') &&
+            '$e'.contains('holds BadChannel, which no expansion of '
+                'Channel(Stream(C), Stream(C))? accepts'))));
   });
 }

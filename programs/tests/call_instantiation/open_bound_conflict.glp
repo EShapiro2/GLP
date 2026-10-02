@@ -1,0 +1,13 @@
+%% open_bound.glp with the output a Stream(String): N supplies Y = Integer and
+%% Out Y = String, and neither serves with X open --- under Y = Integer the call
+%% produces a Stream(Integer) where the head hands out a Stream(String), under
+%% Y = String it reads N's Integer at String? --- so the bindings conflict and
+%% the call is refused (TGLP appendix-implementation-notes.tex, "The
+%% instantiation of a call", cc4a891).  Until 2026-10-02 a call some parameter
+%% of which no site supplied was checked with every parameter open, each
+%% relation alone, and this loaded.
+procedure(X, Y) pair_up(X?, Y?, Stream(Y)).
+pair_up(_, B, [B?]).
+
+procedure go(Integer?, Stream(String)).
+go(N, Out?) :- pair_up(foo, N?, Out).

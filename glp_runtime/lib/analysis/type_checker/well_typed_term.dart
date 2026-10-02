@@ -239,21 +239,46 @@ WellTypedResult checkModedTerm(ModedTerm term, Automaton automaton, ProgramDFA d
 /// 2. Leaf consistency: variable/constant at leaf matches DFA state
 ///
 /// Fix 4.1: Switches automata at type boundaries when entering user-defined types
+///
+/// [open] names base types that stand for type parameters left open
+/// (well_typed_clause.dart, a call checked with its callee's parameters open:
+/// TGLP appendix-implementation-notes.tex, "The instantiation of a call").  A
+/// path that reaches one is consistent whatever lies at or below it, since a
+/// map could bind the parameter to a type admitting it, and a variable at one
+/// is typed by it.  Empty by default, which is Definition "Consistent Paths"
+/// itself.
 PathCheckResult checkPathAgainstAutomaton(
   ModedPath path,
   Automaton automaton,
-  ProgramDFA dfa,
-) {
+  ProgramDFA dfa, {
+  Set<String> open = const {},
+}) {
   var state = automaton.startState;
   var currentAutomaton = automaton;  // Track current automaton for type switching
 
+  // At an open parameter, the subterm at step [i] holds whatever it is.
+  PathCheckResult? atOpen(int i) {
+    if (open.isEmpty || !open.contains(state.baseName)) return null;
+    final leaf = path.leaf;
+    if (i == path.length - 1 && leaf.isVariable) {
+      return PathCheckResult.consistent(VariableTypeInfo(
+        typeState: state,
+        mode: leaf.isReader ? Mode.consume : Mode.produce,
+        isReader: leaf.isReader,
+      ));
+    }
+    return PathCheckResult.consistent();
+  }
+
   // Handle single-step paths (just a variable or constant at root)
   if (path.length == 1) {
-    return _checkLeafConsistencyForPath(path.leaf, state, dfa);
+    return atOpen(0) ?? _checkLeafConsistencyForPath(path.leaf, state, dfa);
   }
 
   // Traverse path, following automaton transitions
   for (int i = 0; i < path.length - 1; i++) {
+    final opened = atOpen(i);
+    if (opened != null) return opened;
     final step = path.steps[i];
     final nextStep = path.steps[i + 1];
 
@@ -305,7 +330,8 @@ PathCheckResult checkPathAgainstAutomaton(
   }
 
   // Check leaf consistency
-  return _checkLeafConsistencyForPath(path.leaf, state, dfa);
+  return atOpen(path.length - 1) ??
+      _checkLeafConsistencyForPath(path.leaf, state, dfa);
 }
 
 // =============================================================================

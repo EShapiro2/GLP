@@ -1,0 +1,14 @@
+%% No site of the call supplies a type for FM: the first argument is a
+%% constructed term, which names no type.  copy/2's clauses fix none --- the
+%% msg/2 its head matches at FM is no occurrence of FM --- and copy/2 inspects
+%% its parameters, so it is not parametrically well-typed: the call is refused
+%% (TGLP appendix-implementation-notes.tex, "The instantiation of a call",
+%% cc4a891: "A parameter for which no type is supplied or fixed is left open
+%% where the callee is parametrically well-typed ...; otherwise the call is
+%% refused").
+Msg ::= msg(Constant, Constant).
+procedure(FM, NIM) copy(Stream(FM)?, Stream(NIM)).
+copy([msg(K, I)|Xs], [msg(K?, I?)|Ys?]) :- copy(Xs?, Ys).
+copy([], []).
+procedure go(Stream(Msg)).
+go(Ys?) :- copy([msg(a, b)], Ys).

@@ -1,14 +1,15 @@
-%% A constructed argument constrains the parameter by containment, and a
-%% constructed argument the binding does not admit is rejected (TGLP
-%% parameterized-types.tex def:instantiation: an instantiation is a map under
-%% which the caller's clause and the callee's clauses are well-typed).
+%% Two constructed arguments at one parameter M, neither naming a type: no site
+%% supplies M, and send2/4's head pairs (A, A?) and (B, B?) fix M = Msg, the
+%% element type of the stream out/1 carries (TGLP cc4a891,
+%% appendix-implementation-notes.tex, "The instantiation of a call").  Msg does
+%% not admit bad(N?), and no other type is supplied or fixed, so the bindings
+%% conflict and the call is refused, naming bad(N?).  Negative fixture.
 %%
-%% send2/4 takes two arguments at one parameter M.  The callee's own head pair
-%% (A, A?) fixes M to Msg, the element type of the stream Entry carries.  The
-%% caller passes m(N?), which Msg admits, and bad(N?), which it does not: the
-%% caller's clause is not well-typed under the only map the equations allow, so
-%% no map makes both clauses well-typed and the program is rejected.  Negative
-%% fixture.
+%% From 2026-09-20 to 2026-10-02 the same head pair fixed M and the call was
+%% refused for bad(N?) at it; on 2026-10-02 (TGLP 8a58729) a type no site
+%% supplied was not tried and the call was refused naming M.  A constructed
+%% argument the binding its sites supply does not admit is
+%% programs/tests/call_instantiation/constructed_not_admitted.glp.
 
 Msg   ::= m(Constant).
 Entry ::= out(Stream(Msg)?) ; log(Stream(Constant)?).
