@@ -4131,7 +4131,11 @@ echo ""
 # end reports pending_link and authorises, and the value is delivered (IGLP
 # madglp-spec \S Held Links).  MB2: a module value shipped from one agent to
 # another is activated there by run/3 under the type identity find_type/2
-# gives (GLP-Spec appendix-guards, "Dynamic activation").
+# gives (GLP-Spec appendix-guards, "Dynamic activation"): a certified
+# mini-app, hello/1 alone (programs/tests/mad_ship_hello), which :artefact
+# writes beside alice's program and alice reads with load_file/2, since the
+# machine activates no program whose certificate does not verify (GSG
+# s6-security.tex, G1).
 echo "=== Section MB: multi-agent boot programs (:boot) ==="
 
 mb1=$("$REPL_RUN" <<HEREDOC
@@ -4144,11 +4148,21 @@ check "MB1 the holder's assignment is held and reported, from the forwarding fri
 check "MB1 the anchor's incoming assignment is held and reported, from the holder" "\[alice\] held(alice, _w(alice, [0-9]*), carol)" "$mb1"
 check "MB1 both ends authorised, the value is delivered at the anchor" "\[alice\] delivered(hello_from_carol)" "$mb1"
 
+# MB2's artefact is a build output, ignored by git, written before the boot and
+# removed after it, as Section SL's are.  Until 2026-10-02 alice shipped her
+# own program, which calls send_to_net/1 and send_to_user/1 and is refused a
+# certificate, and since B6 (e5da7ccb) bob's run/3 refused to activate it
+# (GLP #3 Cowork, 2026-10-02 20:58 UTC, "20:31" item 2).
+MB_SHIP="$GLP_DIR/programs/tests/mad_ship_module"
+rm -f "${MB_SHIP:?}"/*.glpw
 mb2=$("$REPL_RUN" <<HEREDOC
+:artefact $GLP_DIR/programs/tests/mad_ship_hello $MB_SHIP
 :boot $GLP_DIR/programs/tests/mad_ship_module_boot.glp
 :quit
 HEREDOC
 2>&1)
+rm -f "${MB_SHIP:?}"/*.glpw
+check "MB2 :artefact writes the certified mini-app beside alice's program" "Wrote $MB_SHIP/mad_ship_hello.glpw --- certified under [0-9a-f]\{64\}" "$mb2"
 check "MB2 the boot settles with two agents" "Boot settled: 2 agents" "$mb2"
 check "MB2 a shipped module value is activated by run/3 under find_type's identity" "\[bob\] ran(\[done\])" "$mb2"
 

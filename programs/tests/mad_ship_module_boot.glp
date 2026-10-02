@@ -1,12 +1,18 @@
 %% mad_ship_module_boot.glp — a module value shipped from one agent to another
-%% and activated there by run/3 (IGLP \S Self-Module; GLP-Spec appendix-guards,
-%% "Dynamic activation").
+%% and activated there by run/3 (GLP-Spec appendix-guards, "Compilation and
+%% file reading" and "Dynamic activation").
 %%
-%% alice obtains her own module value with self_module/1 and sends it to bob in
-%% a message; bob receives it as a value of type Module, obtains the type
-%% identity of hello/1 in his own scope with find_type/2, and activates the
-%% shipped module with run/3 under that identity, posting hello(Z) to it.  The
-%% agent code is the program directory mad_ship_module/.
+%% alice reads a certified mini-app, hello/1 alone, from the artefact
+%% mad_ship_hello.glpw beside her program with load_file/2, and sends its
+%% module value to bob in a message; bob receives it as a value of type
+%% Module, obtains the type identity of hello/1 in his own scope with
+%% find_type/2, and activates the shipped module with run/3 under that
+%% identity, posting hello(Z) to it.  The machine activates no program whose
+%% certificate does not verify (GSG s6-security.tex, G1), so what is shipped is
+%% a certified mini-app and not alice's own program.  The agent code is the
+%% program directory mad_ship_module/; the mini-app is mad_ship_hello/, whose
+%% artefact the REPL's :artefact writes into mad_ship_module/ before the boot
+%% (harness Section MB, MB2).
 
 procedure boot.
 boot :-

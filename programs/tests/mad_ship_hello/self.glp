@@ -1,0 +1,10 @@
+%% mad_ship_hello/self.glp --- the certified mini-app harness MB2 ships:
+%% hello/1 alone.  It calls no predicate reaching the network or the person,
+%% so the trusted compiler certifies it (GSG s6-security.tex, G1), and the
+%% machine activates it.  :artefact writes it as mad_ship_hello.glpw beside
+%% alice's program, mad_ship_module/, before the boot of
+%% ../mad_ship_module_boot.glp; alice reads it there with load_file/2 and ships
+%% it to bob.
+
+exported procedure hello(Stream(Constant)).
+hello([done]).
