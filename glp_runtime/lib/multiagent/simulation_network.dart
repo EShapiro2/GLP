@@ -1,6 +1,6 @@
 /// SimulationNetwork — the simulation realization of [GlpNetwork].
 ///
-/// Per `docs/ma/networking-seam-spec.md` v0.2 Section 3. Two classes:
+/// Per IGLP app:in-networking, Simulation realisation. Two classes:
 ///
 /// - [SimulationRouter] (main isolate): owns the identifier–key directory, the
 ///   adjacency relation, per-pair queues, trust levels, and messageId

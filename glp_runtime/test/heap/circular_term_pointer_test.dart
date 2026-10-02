@@ -1,7 +1,8 @@
 /// Tests for circular term handling with Pointer Architecture Heap
 ///
 /// Adapted from: test/circular_term_test.dart
-/// For spec: docs/heap-pointer-architecture-spec.md v3.0
+/// For spec: IGLP app:in-heap (Heap: Variables, Dereferencing,
+/// Binding, Suspension)
 ///
 /// Circular terms can form through cross-goal communication when two goals
 /// share variables and bind them in ways that create cycles. These tests

@@ -6,7 +6,7 @@ import 'terms.dart';
 class CommitOps {
   /// Apply tentative writer substitution σ̂w (FCP-exact two-cell semantics)
   /// 
-  /// Per heap-pointer-architecture-spec.md v3.0:
+  /// Per IGLP app:in-heap (Variable pairs; Suspension):
   /// - VarRef has only addr field
   /// - Use heap.isWriter/isReader to check cell type
   /// - Suspensions are on writer cells
@@ -116,7 +116,7 @@ class CommitOps {
 
   /// Forward suspension list to target writer
   /// 
-  /// Per heap-pointer-architecture-spec.md v3.0:
+  /// Per IGLP app:in-heap (Suspension):
   /// Suspensions are stored on writer cells
   static void _forwardSuspensions(HeapFCP heap, SuspensionListNode? list, int targetWriterAddr) {
     var current = list;

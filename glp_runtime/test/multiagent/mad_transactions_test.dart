@@ -2,7 +2,8 @@
 ///
 /// Validates end-to-end message flow using the push-based model.
 ///
-/// See: madGLP-spec.md Sections 8.1-8.4
+/// See: IGLP Definitions madGLP Reduce, Send and Receive Transaction
+/// (app:madglp-local-states-transitions).
 
 import 'package:test/test.dart';
 import 'package:glp_runtime/runtime/runtime.dart';

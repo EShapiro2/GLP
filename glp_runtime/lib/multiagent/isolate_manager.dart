@@ -6,7 +6,7 @@
 ///
 /// Termination is external: the caller shuts down isolates when done.
 ///
-/// See: docs/ma/agent-runtime-spec.md
+/// See: IGLP app:in-execution (Agent Execution and Boot).
 
 import 'dart:async';
 import 'dart:isolate';
@@ -38,8 +38,8 @@ class Ready extends IsolateMessage {
 /// Signal to start execution
 class Start extends IsolateMessage {}
 
-/// Agent → router: an outbound send. Per seam spec v0.2 §4/§6 the wire carries
-/// opaque payload bytes only — no MessageType.
+/// Agent → router: an outbound send. The wire carries opaque payload bytes
+/// only, no MessageType (IGLP app:in-networking, The contract; Payloads).
 class RouterSend extends IsolateMessage {
   final String fromId;
   final String toId;
@@ -140,8 +140,9 @@ class AgentConfig {
   final SendPort? uiPort; // null for headless
   final TraceConfig traceConfig;
 
-  /// This agent's Ed25519 key pair (seam spec §4). The agent installs it on its
-  /// GlpNetwork via putIdentity.
+  /// This agent's Ed25519 key pair: its identity is its public key, held with
+  /// its private key by the networking layer (IGLP app:in-networking, The
+  /// contract). The agent installs it on its GlpNetwork via putIdentity.
   final ({PubKey pub, Uint8List priv}) keyPair;
 
   /// The shared identifier–key directory, published to every adapter (§4).
@@ -173,7 +174,8 @@ class IsolateManager {
   final ReceivePort _mainPort = ReceivePort();
 
   /// The simulation router: owns the directory, adjacency, trust, queues, and
-  /// messageId assignment, and routes all inter-agent traffic (seam spec §3).
+  /// messageId assignment, and routes all inter-agent traffic (IGLP
+  /// app:in-networking, Simulation realisation).
   final SimulationRouter _router = SimulationRouter();
 
   /// Trace configuration (set via boot)
@@ -310,7 +312,8 @@ class IsolateManager {
     final expectedCount = config.directives.length;
 
     // 1. Generate an Ed25519 key pair per agent and populate the directory
-    //    (seam spec §3 Boot). The boot harness sets trust Open for the plays.
+    //    (IGLP app:in-networking, Simulation realisation). The boot harness
+    //    sets trust Open for the plays.
     final keyPairs = <String, ({PubKey pub, Uint8List priv})>{};
     for (final directive in config.directives) {
       final kp = generateKeyPair();
@@ -393,13 +396,15 @@ class IsolateManager {
     await readyCompleter.future;
   }
 
-  /// Harness control: visible disconnection of a pair (seam spec §3, §7.2).
+  /// Harness control: visible disconnection of a pair (IGLP app:in-networking,
+  /// Simulation realisation).
   void cut(String a, String b) => _router.cut(a, b);
 
   /// Harness control: reverse a [cut], flushing queued messages in order.
   void restore(String a, String b) => _router.restore(a, b);
 
-  /// Harness control: invisible delay of a pair's delivery (seam spec §3).
+  /// Harness control: invisible delay of a pair's delivery (IGLP
+  /// app:in-networking, Simulation realisation).
   void holdDelivery(String a, String b) => _router.holdDelivery(a, b);
 
   /// Harness control: release a [holdDelivery], flushing in reverse order.
@@ -558,7 +563,8 @@ void _agentIsolateEntry(AgentConfig config) async {
         config.mainPort.send(RouterSend(agentId, toId, payload)),
   );
   network.putIdentity(config.keyPair.pub, config.keyPair.priv);
-  // Back the seam predicates and the valid_attestation/4 guard (seam spec §4).
+  // Back the seam predicates (IGLP Definition Seam Predicates) and the
+  // valid_attestation/4 guard.
   ctx.network = network;
 
   // Outgoing (spec §4): ctx.onMessageReady(destId, msg) → network.send.

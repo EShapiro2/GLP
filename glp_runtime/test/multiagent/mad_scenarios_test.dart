@@ -1,9 +1,10 @@
 /// End-to-End madGLP Scenario Tests
 ///
 /// Validates the complete madGLP implementation with realistic multi-agent
-/// scenarios from the spec Section 10.
-///
-/// See: madGLP-spec.md Sections 5.4, 10.1-10.3
+/// scenarios.  Their group names number the sections of the retired
+/// madGLP-spec.md; the client-monitor and friend-mediated introduction
+/// scenarios and both ends of a pair exported are IGLP app:madglp-trace
+/// (Detailed madGLP Example Traces) and Lemma Both Ends Exported.
 
 import 'package:test/test.dart';
 import 'package:glp_runtime/runtime/runtime.dart';

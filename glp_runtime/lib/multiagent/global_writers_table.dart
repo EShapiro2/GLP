@@ -4,7 +4,7 @@
 /// Each entry maps a global name to the local writer that will be assigned
 /// when a message arrives.
 ///
-/// See: docs/ma/madGLP-spec.md Section 3
+/// See: IGLP Definitions Global Writers Table Entry and Global Writers Table (app:global-writers-table).
 library;
 
 /// Entry created by Globalize (when exporting a writer)
@@ -60,10 +60,11 @@ class LocalizeEntry {
 /// - GlobalizeEntry: created by Globalize, direct index lookup
 /// - LocalizeEntry: created by Localize, search by (agent, index)
 ///
-/// Index 0 is reserved for the network input serializer (spec Section 4.1).
+/// Index 0 is reserved for the network input serializer (IGLP Definition
+/// Index-0 Serializer).
 /// This entry is permanent and supports many-to-one cold-call reception.
 ///
-/// See: docs/ma/madGLP-spec.md Section 3
+/// See: IGLP Definitions Global Writers Table Entry and Global Writers Table (app:global-writers-table).
 class GlobalWritersTable {
   /// Agent ID that owns this table
   final String agentId;

@@ -1,6 +1,6 @@
 /// Tests for GlobalWritersTable
 ///
-/// Derived from madGLP-spec.md Section 3: Global Writers Table
+/// Derived from IGLP Definitions Global Writers Table Entry and Global Writers Table (app:global-writers-table).
 ///
 /// The global writers table tracks local writers that await incoming
 /// assignments from remote agents. Two entry types:

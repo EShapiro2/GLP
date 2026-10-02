@@ -1,4 +1,4 @@
-/// Reverse-order delivery test (seam spec v0.2 §7.3 / Issue 7).
+/// Reverse-order delivery test (IGLP app:in-networking, Early messages).
 ///
 /// Wires two MadContexts (alice, bob) through one SimulationRouter with the real
 /// serialize-on-send / deserialize-on-deliver seam glue. alice cold-calls bob

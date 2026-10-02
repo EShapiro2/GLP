@@ -93,7 +93,8 @@ const String _madPredicatesSource = r'''
 -mode(system).  %% Uses reserved constants like '_w' and '_send'
 
 %% madGLP System Predicates
-%% See: madGLP-spec.md Section 4 and Section 12
+%% See: IGLP Definition global_send Predicate and Remark Network Output
+%% Processing
 
 %% send_to_net/1 - Process network output stream
 procedure send_to_net(Stream(_)?).
@@ -119,7 +120,7 @@ global_send(T, G, Q) :- known(T?) | '_send'(T?, G?, Q?).
 %% procedure.
 
 %% valid_attestation/4 is a guard, not a wrapped body kernel — it is built into
-%% the runtime guard machinery (seam spec §4 rework note); no GLP wrapper here.
+%% the runtime guard machinery; no GLP wrapper here.
 ''';
 
 /// GLP Engine - the embeddable core for running GLP programs

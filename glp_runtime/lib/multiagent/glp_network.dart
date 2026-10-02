@@ -1,15 +1,16 @@
 /// GlpNetwork — the one Dart interface madGLP uses to talk to networking.
 ///
-/// Transcribes the GLP Networking API paper (Sections 2–3) per
-/// `docs/ma/networking-seam-spec.md` v0.2. Two realizations exist behind this
-/// interface: `SimulationNetwork` (this repo, wraps the isolate transport) and
-/// the real BLE/IP layer (Dan's). Integration is a backend swap.
+/// Transcribes the GLP Networking API paper (Sections 2–3) and the contract of
+/// IGLP app:in-networking (One interface; The contract). Two realizations
+/// exist behind this interface: `SimulationNetwork` (this repo, wraps the
+/// isolate transport) and the real BLE/IP layer (Dan's). Integration is a
+/// backend swap.
 ///
 /// Callbacks are settable fields, matching `MadContext.onMessageReady` house
-/// style. `sign`/`verify` are synchronous (spec §2): their future callers are
+/// style. `sign`/`verify` are synchronous: their future callers are
 /// the GLP body kernels, and Ed25519 signing is pure CPU work.
 ///
-/// See: docs/ma/networking-seam-spec.md Section 2.
+/// See: IGLP app:in-networking, One interface and The contract.
 library;
 
 import 'dart:typed_data';

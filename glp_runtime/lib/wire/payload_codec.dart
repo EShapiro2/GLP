@@ -1,8 +1,8 @@
 /// The madGLP payloads over the wire codec: an assignment message in the
 /// canonical encoding (IGLP app:in-networking, "Payloads").
 ///
-/// Normative source: the IGLP paper appendix `app:wire-format`, §§wf-primitives,
-/// wf-terms. Variables travel as global names per Definition Globalize: a tag-2
+/// Normative source: the IGLP paper appendix `app:code-format`, §§cf-primitives,
+/// cf-terms. Variables travel as global names per Definition Globalize: a tag-2
 /// variable with a u8 polarity (0 writer `_w(p,i)`, 1 reader `_r(p,i)`), the
 /// agent, and a clen index. There is no original-creator identifier, no
 /// paired-reader field, and no serializer string marker — the serializer

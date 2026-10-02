@@ -1,6 +1,6 @@
 /// Tests for global_send goal mechanism
 ///
-/// Derived from madGLP-spec.md Section 4: The global_send Predicate
+/// Derived from IGLP Definition global_send Predicate.
 ///
 /// The global_send mechanism watches a reader and sends its value to a
 /// remote agent when it becomes known (bound to a non-variable term).

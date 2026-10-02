@@ -1,7 +1,7 @@
 /// GLP instruction encoding (D3 wire format, §4).
 ///
-/// Normative source: the IGLP paper appendix `app:wire-format`,
-/// §wf-instructions. An encoded instruction is a u8 opcode followed by its
+/// Normative source: the IGLP paper appendix `app:code-format`,
+/// §cf-instructions. An encoded instruction is a u8 opcode followed by its
 /// operands in the order the opcode table lists. Instruction *semantics* are the
 /// companion GLP paper's; this assigns bytes.
 ///

@@ -758,8 +758,8 @@ class Analyzer {
     }
 
     // valid_attestation/4 guard marks all four inputs as grounded: it suspends
-    // until every input is ground, so a holding clause has them all ground
-    // (seam spec §4). Allows multiple reader occurrences of the key/sig inputs.
+    // until every input is ground, so a holding clause has them all ground.
+    // Allows multiple reader occurrences of the key/sig inputs.
     if (guard.predicate == 'valid_attestation' && guard.args.length == 4) {
       for (final arg in guard.args) {
         if (arg is VarTerm) {

@@ -3,7 +3,7 @@
 /// Provides agent-level context for multiagent GLP communication.
 /// Each agent has W_p (global writers table) and M_p (message queue).
 ///
-/// Specification: /docs/ma/madGLP-spec.md
+/// Specification: IGLP app:madglp-spec (madGLP Specification).
 library;
 
 import 'package:glp_runtime/runtime/runtime.dart';
@@ -52,7 +52,7 @@ class MadContext {
   MessageDeliveryCallback? onMessageReady;
 
   /// The agent's networking layer (set at boot). Backs the `sign/2` body kernel
-  /// and the `valid_attestation/4` guard (seam spec §4): the layer holds the
+  /// and the `valid_attestation/4` guard: the layer holds the
   /// private key and provides real Ed25519 `sign`/`verify`.
   GlpNetwork? network;
 
@@ -67,8 +67,8 @@ class MadContext {
   /// When set, MAD debug output goes through this callback instead of print().
   void Function(String)? traceSink;
 
-  /// Hold table for early `_r(p, i)` assignments (Issue 7 / madGLP-spec §8.3,
-  /// Early Messages). An assignment `_r(p, i) := T` arriving before its
+  /// Hold table for early `_r(p, i)` assignments (IGLP app:in-networking,
+  /// Early messages). An assignment `_r(p, i) := T` arriving before its
   /// `LocalizeEntry` exists — possible under any non-FIFO transport — is stored
   /// here keyed by (remoteAgent, remoteIndex) and delivered when `localize()`
   /// creates the matching entry. Only the `_r` case needs holding: `_w(p, i)`
@@ -146,7 +146,7 @@ class MadContext {
   /// Called when a writer is bound to a value
   ///
   /// Checks for global_send goals watching this writer's reader and fires
-  /// them if found (per madGLP-spec.md Section 4).
+  /// them if found (IGLP Definition global_send Predicate).
   void onWriterBound(int writerId, Term value) {
     _trace('[MAD $agentId] onWriterBound: writerId=$writerId, value=$value');
     _fireGlobalSendGoalIfExists(writerId, value);

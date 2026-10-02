@@ -1,10 +1,11 @@
 /// FCP Two-Cell Heap with Pointer Architecture
 ///
-/// Per heap-pointer-architecture-spec.md v3.0:
-/// - Reader cells point TO writer cells
-/// - Writer cells contain: null (unbound), SuspensionListNode (waiting), or Pointer (bound to var)
+/// The heap of IGLP app:in-heap (Heap: Variables, Dereferencing, Binding,
+/// Suspension):
+/// - A variable pair is a writer cell and a reader cell, each a tagged
+///   reference; unbound, the two point to each other
 /// - Suspensions live on writer cells, not reader cells
-/// - ValueTag indicates bound to ground value
+/// - A writer bound to a value becomes a value cell (ValueTag)
 library;
 
 import 'package:glp_runtime/runtime/terms.dart';
@@ -57,10 +58,10 @@ class WriterContent {
 
 /// FCP Two-Cell Heap with Pointer-Based Variable Identity
 /// 
-/// Per heap-pointer-architecture-spec.md v3.0:
+/// Per IGLP app:in-heap:
 /// - allocateVariable() returns (writerAddr, readerAddr) tuple
-/// - Reader cell points TO writer cell
-/// - Writer cell contains null (unbound), SuspensionListNode, or Pointer (chain)
+/// - Unbound, the writer and reader cells point to each other; a writer bound
+///   to a reader holds a Pointer, extending the dereference chain
 /// - Suspensions are stored on writer cells
 class HeapFCP {
   final List<HeapCell> cells = [];

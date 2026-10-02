@@ -1084,7 +1084,7 @@ GuardResult _evaluateGuard(String predicateName, List<Object?> args, RunnerConte
           ? GuardResult.failure
           : GuardResult.success;
 
-    // Attestation guard (madGLP, seam spec §4).
+    // Attestation guard (madGLP).
     // valid_attestation(Signer?, PkA?, PkB?, Sig?) holds iff Sig is Signer's
     // valid Ed25519 signature over the canonical serialization of attest(PkA,
     // PkB). Inputs are lowercase-hex string constants (keys 64 chars, signature
