@@ -254,7 +254,20 @@ class CodeGenerator {
     }
   }
 
+  /// A named anonymous variable, `_X` or `_X?`, as the `_` or `_?` it is: TGLP
+  /// typed-glp.tex, "Anonymous variables": "An anonymous variable is any
+  /// variable whose name begins with `_` ... Each occurrence denotes a fresh
+  /// writer with no paired reader".  The analyzer keeps no register for one,
+  /// so it is compiled where `_` is, each occurrence a variable of its own.
+  /// Until 2026-10-02 it was looked up as a named variable and refused,
+  /// "Undefined variable: _X".
+  static Term _anonymousAsUnderscore(Term term) =>
+      term is VarTerm && term.name.startsWith('_')
+          ? UnderscoreTerm(term.line, term.column, isReader: term.isReader)
+          : term;
+
   void _generateHeadArgument(Term term, int argSlot, VariableTable varTable, CodeGenContext ctx) {
+    term = _anonymousAsUnderscore(term);
     if (term is VarTerm) {
       // Get variable register index
       final varInfo = varTable.getVar(term.name);
@@ -330,6 +343,7 @@ class CodeGenerator {
 
   void _generateStructureElement(Term term, VariableTable varTable, CodeGenContext ctx, {required bool inHead}) {
     // Called during structure traversal (S register in use)
+    term = _anonymousAsUnderscore(term);
 
     if (term is VarTerm) {
       final varInfo = varTable.getVar(term.name);
@@ -550,6 +564,7 @@ class CodeGenerator {
   }
 
   void _generatePutArgument(Term term, int argSlot, VariableTable varTable, CodeGenContext ctx) {
+    term = _anonymousAsUnderscore(term);
     if (term is VarTerm) {
       final varInfo = varTable.getVar(term.name);
       if (varInfo == null) {
@@ -592,6 +607,7 @@ class CodeGenerator {
   // Helper for building structure elements INSIDE argument structures
   // This is different from _generateStructureElement which is for HEAD/GUARD unification
   void _generateArgumentStructureElement(Term term, VariableTable varTable, CodeGenContext ctx) {
+    term = _anonymousAsUnderscore(term);
     if (term is VarTerm) {
       final varInfo = varTable.getVar(term.name);
       if (varInfo == null) {
@@ -646,6 +662,7 @@ class CodeGenerator {
   // Helper for building structure elements in BODY phase
   // This handles both ground and non-ground structures (with variables)
   void _generateStructureElementInBody(Term term, VariableTable varTable, CodeGenContext ctx) {
+    term = _anonymousAsUnderscore(term);
     if (term is VarTerm) {
       // Variable in structure - emit as variable reference, not constant
       final varInfo = varTable.getVar(term.name);
