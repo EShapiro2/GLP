@@ -5457,6 +5457,11 @@ KNOWN_RED=(
     "test/multiagent/cssn_v2_isolate_test.dart: CSSN v2 Multi-Isolate fplay7 runs across isolates (4 agents)"
     "test/multiagent/cssn_v2_isolate_test.dart: CSSN v2 Multi-Isolate fplay8 runs across isolates (2 adults)"
     "test/multiagent/cssn_v2_isolate_test.dart: CSSN v2 Multi-Isolate fplay9 runs across isolates (3 agents)"
+    # CSSN, dormant (Udi, 2026-10-01, to Integration Code: "Ignore CSSN stuff
+    # till I ask differently"): the sandboxed-bundle test, which fails only on
+    # CSSN's childsafe.glpw, refused at its source and so not in the bundle
+    # ("Unable to load asset: .../core/childsafe.glpw"), measured at gap 5d39387f.
+    "glp_multiagent/test/glp_sources_platform_test.dart: a sandboxed build reads its bundle, never a desktop path"
     "glp_multiagent/test/sovereign_screen_test.dart: the sovereign mini-app: the central bank boots, its seven forms stand, it mints and opens the credit line through its screen, and the play runs on to the chain redemption and the fiat payment"
 )
 
