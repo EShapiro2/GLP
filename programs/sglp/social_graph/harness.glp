@@ -1,10 +1,11 @@
 %% The run of the Grassroots Social Graph: the initial goals its run declaration
 %% becomes (sGLP's paper, the repository svGLP-Stochastic-Volitional-GLP at
-%% d2f64b6: Section 4, "The run"; Section 5; Appendix B), written by hand.
+%% d2f64b6: Section 4, "The run"; Section 5; Appendix B), written by hand; the
+%% declaration as Section 5 has it at c7d0b2f:
 %%
-%%   run 1000 agents [ approach ~ (homophile : 0.6 ; indifferent : 0.4),
-%%                     response ~ (wary : 0.7 ; sociable : 0.3) ]
-%%       until 5 years seed 20260927.
+%%   run 100 agents [ approach ~ (homophile : 0.6 ; indifferent : 0.4),
+%%                    response ~ (wary : 0.7 ; sociable : 0.3) ]
+%%       until 1 year seed 20260927.
 %%
 %% run(N, C, U, Seed, Hom, Wary) runs it with N agents until C Us from Seed, the
 %% mix given by Hom and Wary, integers 0..100 (sGLP's code task of 2026-10-02
