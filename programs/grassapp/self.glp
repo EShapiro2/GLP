@@ -25,7 +25,7 @@ Decision ::= yes ; no.
 Response ::= accept(FriendChannel) ; no.
 
 %% A currency unit: a bond issued by Issuer, maturing at Maturity, serial Serial.
-Bond ::= bond(Key, Constant, Constant).
+Bond ::= bond(Key, Constant, Integer).
 
 %% A trade line item: Count bonds of Issuer at Maturity.
 Lot ::= lot(Key, Constant, Integer).
@@ -135,7 +135,7 @@ UserContent ::= connect(Key)
               ; decision(Decision, Key, PendingValue)
               ; send(Key, Constant)
               ; balance
-              ; mint(Constant, Constant)
+              ; mint(Integer, Constant)
               ; advance_date(Constant)
               ; pay(Key, Lot)
               ; trade(Key, Lot, Lot)
@@ -245,7 +245,7 @@ UserCmd     ::= connect(Key)
               ; unfriend(Key)
               ; decision(Decision, Key, ReqId)
               ; send(Key, Constant)
-              ; mint(Constant, Constant)
+              ; mint(Integer, Constant)
               ; advance_date(Constant)
               ; balance
               ; pay(Key, Key, Constant, Constant)
