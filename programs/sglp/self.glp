@@ -10,8 +10,8 @@
 %%
 %% Both modules are exposed to the subtree: the translated programs call
 %% construct/3, and their harnesses spawn the monitor and the person processes.
-%% A run of the social graph is a call of social_graph/4 with this directory
-%% loaded (social_graph/run.sh).
+%% A run of the social graph is a call of social_graph/4, or of social_graph/6
+%% for another mix, with this directory loaded (social_graph/run.sh).
 -expose(monitor).
 -expose(person).
 
@@ -35,7 +35,31 @@ span(year, 31557600).
 span(years, 31557600).
 
 %% social_graph(Agents?, Count?, Unit?, Seed?): the social graph's run with
-%% Agents agents until Count Units from seed Seed (social_graph/harness.glp).
-imported procedure social_graph#run(Integer?, Number?, Span?, Integer?).
+%% Agents agents until Count Units from seed Seed, with the run declaration's
+%% mix, homophile 0.6 and wary 0.7 (social_graph/harness.glp).
+%% social_graph(Agents?, Count?, Unit?, Seed?, Hom?, Wary?): the same run with
+%% the mix given by Hom and Wary, integers 0..100: an agent is homophile for its
+%% first draw K =< Hom and wary for its second K =< Wary, K of 1..100, so 0 is
+%% none and 100 is all (sGLP's code task of 2026-10-02 15:23 UTC, item 1).
+imported procedure social_graph#run(Integer?, Number?, Span?, Integer?,
+                                    Integer?, Integer?).
 exported procedure social_graph(Integer?, Number?, Span?, Integer?).
-social_graph(N, C, U, Seed) :- social_graph # run(N?, C?, U?, Seed?).
+social_graph(N, C, U, Seed) :- social_graph # run(N?, C?, U?, Seed?, 60, 70).
+exported procedure social_graph(Integer?, Number?, Span?, Integer?, Integer?,
+                                Integer?).
+social_graph(N, C, U, Seed, Hom, Wary) :-
+    social_graph # run(N?, C?, U?, Seed?, Hom?, Wary?).
+
+%% The population's draw: how many agents of each profile in each dimension.
+Draw ::= draw(Integer, Integer, Integer, Integer).
+
+%% social_graph_draw(Agents?, Seed?, Hom?, Wary?, D): D is draw(Homophile,
+%% Indifferent, Wary, Sociable), the numbers of agents of each profile in the
+%% run of social_graph/6 with those arguments, computed without running it
+%% (social_graph/harness.glp; sGLP's code task of 2026-10-02 15:44 UTC).
+imported procedure social_graph#draw(Integer?, Integer?, Integer?, Integer?,
+                                     Draw).
+exported procedure social_graph_draw(Integer?, Integer?, Integer?, Integer?,
+                                     Draw).
+social_graph_draw(N, Seed, Hom, Wary, D?) :-
+    social_graph # draw(N?, Seed?, Hom?, Wary?, D).

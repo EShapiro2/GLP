@@ -8,11 +8,13 @@
 %%                length and nth;
 %%   harness.glp  the run: the initial goals of the run declaration;
 %%   run.sh       a run through the REPL, its log and its friendship graph;
-%%   friendship.awk  the friendship graph from a run's log.
+%%   friendship.awk  the friendship graph from a run's log, at its end and at
+%%                the end of each month.
 %%
 %% The run is a program of programs/sglp, the directory above, whose person
 %% process (person.glp) calls the four person procedures exported here; load
-%% programs/sglp and call social_graph/4 there.
+%% programs/sglp and call social_graph/4 there, or social_graph/6 for another
+%% mix.
 
 %% The vGLP program's types, verbatim (graph.vglp at GLP 723d1602).
 Peer    ::= Constant.
@@ -28,7 +30,9 @@ imported procedure graph#homophile_menu(Menu?, Integer?, MutualRef?).
 imported procedure graph#indifferent_menu(Menu?, Integer?, MutualRef?).
 imported procedure graph#wary_card(Card?, Integer?, MutualRef?).
 imported procedure graph#sociable_card(Card?, Integer?, MutualRef?).
-imported procedure harness#run(Integer?, Number?, Span?, Integer?).
+imported procedure harness#run(Integer?, Number?, Span?, Integer?, Integer?,
+                               Integer?).
+imported procedure harness#draw(Integer?, Integer?, Integer?, Integer?, Draw).
 
 %% The person procedures of the four profiles, for the person process.
 exported procedure homophile_menu(Menu?, Integer?, MutualRef?).
@@ -40,6 +44,12 @@ wary_card(C, S, Mon) :- graph # wary_card(C?, S?, Mon?).
 exported procedure sociable_card(Card?, Integer?, MutualRef?).
 sociable_card(C, S, Mon) :- graph # sociable_card(C?, S?, Mon?).
 
-%% run(Agents?, Count?, Unit?, Seed?): the run, harness.glp.
-exported procedure run(Integer?, Number?, Span?, Integer?).
-run(N, C, U, Seed) :- harness # run(N?, C?, U?, Seed?).
+%% run(Agents?, Count?, Unit?, Seed?, Hom?, Wary?): the run, harness.glp, with
+%% the mix given by Hom and Wary, integers 0..100.
+exported procedure run(Integer?, Number?, Span?, Integer?, Integer?, Integer?).
+run(N, C, U, Seed, Hom, Wary) :- harness # run(N?, C?, U?, Seed?, Hom?, Wary?).
+
+%% draw(Agents?, Seed?, Hom?, Wary?, D): the population's draw in that run,
+%% harness.glp, without running it.
+exported procedure draw(Integer?, Integer?, Integer?, Integer?, Draw).
+draw(N, Seed, Hom, Wary, D?) :- harness # draw(N?, Seed?, Hom?, Wary?, D).
