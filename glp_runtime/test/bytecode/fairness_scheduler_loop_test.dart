@@ -28,12 +28,14 @@ void main() {
     final runner = ByteRunner(image);
     final sched = Scheduler(rt: rt, runner: runner);
 
-    rt.gq.enqueue(GoalRef(1, image.entryOffsetOf('loop/0')!));
-    rt.gq.enqueue(GoalRef(2, image.entryOffsetOf('loop/0')!));
+    final first = rt.nextGoalId++;
+    final second = rt.nextGoalId++;
+    rt.gq.enqueue(GoalRef(first, image.entryOffsetOf('loop/0')!));
+    rt.gq.enqueue(GoalRef(second, image.entryOffsetOf('loop/0')!));
 
     final ran = <int>[];
     sched.drainWithStatus(maxCycles: 2, goalIds: ran);
-    expect(ran, [1, 2],
-        reason: 'goal 1 yields after its tail budget, then goal 2 runs');
+    expect(ran, [first, second],
+        reason: 'the first goal yields after its tail budget, then the second runs');
   });
 }

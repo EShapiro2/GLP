@@ -155,8 +155,6 @@ class GlpEngine {
   /// not merged a second time over the program's own modules.
   final Set<String> _scopeSelfGlps = {};
 
-  int _goalId = 1;
-
   /// Max execution cycles (default 10000)
   int maxCycles = 10000;
 
@@ -857,13 +855,15 @@ class GlpEngine {
           _runtime, args[i], i, argSlots, queryVarWriters, varNameToId);
     }
 
+    // The goal's id is the runtime's next, as every goal's is.
+    final goalId = _runtime.nextGoalId++;
     final env = CallEnv(args: argSlots);
-    _runtime.setGoalEnv(_goalId, env);
-    _runtime.setGoalProgram(_goalId, 'main');
+    _runtime.setGoalEnv(goalId, env);
+    _runtime.setGoalProgram(goalId, 'main');
     // The goal carries its module value — the loaded app's artefact (h(M) +
     // code) — read back by `self_module`.
     if (_appModule != null) {
-      _runtime.setGoalModule(_goalId, _appModule);
+      _runtime.setGoalModule(goalId, _appModule);
     }
 
     final (runner, goalEntry) =
@@ -872,8 +872,7 @@ class GlpEngine {
     scheduler.resetDisplayNumbering();
     scheduler.setQueryVarNames(queryVarWriters);
 
-    _runtime.gq.enqueue(GoalRef(_goalId, goalEntry));
-    _goalId++;
+    _runtime.gq.enqueue(GoalRef(goalId, goalEntry));
 
     final result = await scheduler.drainAsyncWithStatus(
       maxCycles: maxCycles,
@@ -975,19 +974,20 @@ class GlpEngine {
             _runtime, args[i], i, argSlots, queryVarWriters, varNameToId);
       }
 
+      // Each conjunct's id is the runtime's next, as every goal's is.
+      final goalId = _runtime.nextGoalId++;
       final env = CallEnv(args: argSlots);
-      _runtime.setGoalEnv(_goalId, env);
-      _runtime.setGoalProgram(_goalId, 'main');
+      _runtime.setGoalEnv(goalId, env);
+      _runtime.setGoalProgram(goalId, 'main');
       // The goal carries its module value — the loaded app's artefact (h(M) +
       // code) — read back by `self_module`.
       if (_appModule != null) {
-        _runtime.setGoalModule(_goalId, _appModule);
+        _runtime.setGoalModule(goalId, _appModule);
       }
 
       scheduler.setQueryVarNames(queryVarWriters);
       final goalEntry = image.entryOffsetOf(procedureLabel)!;
-      _runtime.gq.enqueue(GoalRef(_goalId, goalEntry));
-      _goalId++;
+      _runtime.gq.enqueue(GoalRef(goalId, goalEntry));
     }
 
     // One drain, to quiescence or the cycle limit, over the whole run.  Its

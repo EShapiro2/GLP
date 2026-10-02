@@ -343,13 +343,15 @@ class AgentRuntime {
     heap.bindVariable(netWriter, rt.VarRef(netInReader));
     args[argIdx++] = rt.VarRef(netReader);
 
+    // The goal's id is the runtime's next, as every goal's is.
+    final goalId = _runtime!.nextGoalId++;
     final env = CallEnv(args: args);
-    _runtime!.setGoalEnv(1, env);
-    _runtime!.setGoalProgram(1, 'main');
+    _runtime!.setGoalEnv(goalId, env);
+    _runtime!.setGoalProgram(goalId, 'main');
     // The goal carries the program's module value, as an isolate-booted goal
     // and a REPL goal do: self_module/1 and sign/3 read it.
-    _runtime!.setGoalModule(1, engine.appModule);
-    _runtime!.gq.enqueue(GoalRef(1, entryPC));
+    _runtime!.setGoalModule(goalId, engine.appModule);
+    _runtime!.gq.enqueue(GoalRef(goalId, entryPC));
 
     final argsDesc = [agentIdLower, ...extraArgs, 'NetIn'].join(', ');
     final goalName = goalLabel.split('/').first;

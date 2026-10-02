@@ -83,11 +83,12 @@ ExecutionStatus _post(String proc, List<Term> Function(GlpRuntime rt) argsOf) {
   final image = codeImageFromProgram(GlpCompiler().compile(_untyped));
   final sched = Scheduler(rt: rt, runner: ByteRunner(image));
   final args = argsOf(rt);
+  final id = rt.nextGoalId++;
   rt.setGoalEnv(
-    1,
+    id,
     CallEnv(args: {for (var i = 0; i < args.length; i++) i: args[i]}),
   );
-  rt.gq.enqueue(GoalRef(1, image.entryOffsetOf(proc)!));
+  rt.gq.enqueue(GoalRef(id, image.entryOffsetOf(proc)!));
   return sched.drainWithStatus().status;
 }
 

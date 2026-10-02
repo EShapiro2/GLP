@@ -644,13 +644,15 @@ void _agentIsolateEntry(AgentConfig config) async {
     config.mainPort.send(AgentOutput(agentId, text));
   };
 
-  // Spawn main goal. It carries the program's module value, as a REPL goal
-  // does: self_module/1 returns it, sign/3 puts its source identity into a
-  // signed term, and every goal spawned from it inherits it.
-  runtime.setGoalEnv(1, CallEnv(args: args));
-  runtime.setGoalProgram(1, 'main');
-  runtime.setGoalModule(1, engine.appModule);
-  runtime.gq.enqueue(GoalRef(1, goalPC));
+  // Spawn main goal, its id from the runtime's counter as every goal's is. It
+  // carries the program's module value, as a REPL goal does: self_module/1
+  // returns it, sign/3 puts its source identity into a signed term, and every
+  // goal spawned from it inherits it.
+  final goalId = runtime.nextGoalId++;
+  runtime.setGoalEnv(goalId, CallEnv(args: args));
+  runtime.setGoalProgram(goalId, 'main');
+  runtime.setGoalModule(goalId, engine.appModule);
+  runtime.gq.enqueue(GoalRef(goalId, goalPC));
   log('Spawned ${config.goalFunctor}/$arity');
 
   // Create scheduler for this engine
