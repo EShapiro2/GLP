@@ -1,31 +1,16 @@
 %% min.glp - The minimum of two numbers (AoP 3.7)
 %% minimum(N1,N2,Min) :- The minimum of natural numbers N1 and N2 is Min.
-%% Note: Uses lesseq check before binding result.
 
 %% Type definitions (Peano numerals)
 Nat ::= 0 ; s(Nat).
 
 procedure minimum(Nat?, Nat?, Nat).
-minimum(N1, N2, Out?) :- compound(N1?), compound(N2?) | min_check(N1?, N2?, Out).
-
-procedure min_check(Nat?, Nat?, Nat).
-min_check(N1, N2, N1?) :- compound(N1?), ground(N1?), compound(N2?) | lesseq(N1?, N2?).
-min_check(N1, N2, N2?) :- compound(N1?), compound(N2?), ground(N2?) | lesseq(N2?, N1?).
-
-procedure lesseq(Nat?, Nat?).
-lesseq(0, X) :- natural_number(X?).
-lesseq(s(X), s(Y)) :- lesseq(X?, Y?).
-
-procedure natural_number(Nat?).
-natural_number(0).
-natural_number(s(X)) :- natural_number(X?).
+minimum(0, _, 0).
+minimum(s(_), 0, 0).
+minimum(s(X), s(Y), s(Z?)) :- minimum(X?, Y?, Z).
 
 %% reduce clauses for metainterpreter
 procedure reduce(_?, _).
-reduce(minimum(N1, N2, Out?), min_check(N1?, N2?, Out)) :- compound(N1?), compound(N2?) | true.
-reduce(min_check(N1, N2, N1?), lesseq(N1?, N2?)) :- compound(N1?), ground(N1?), compound(N2?) | true.
-reduce(min_check(N1, N2, N2?), lesseq(N2?, N1?)) :- compound(N1?), compound(N2?), ground(N2?) | true.
-reduce(lesseq(0, X), natural_number(X?)).
-reduce(lesseq(s(X), s(Y)), lesseq(X?, Y?)).
-reduce(natural_number(0), true).
-reduce(natural_number(s(X)), natural_number(X?)).
+reduce(minimum(0, _, 0), true).
+reduce(minimum(s(_), 0, 0), true).
+reduce(minimum(s(X), s(Y), s(Z?)), minimum(X?, Y?, Z)).

@@ -3,11 +3,11 @@
 %% Note: Uses ground guard to allow comparison
 
 %% Procedure type declarations
-procedure member(X?, OpenStream(X)?).
+procedure(X) member(X?, OpenStream(X)?).
 member(X, [H|_]) :- ground(X?), ground(H?), X? =:= H? | true.
-member(X, [_|Xs]) :- member(X?, Xs?).
+member(X, [_, Y|Ys]) :- member(X?, [Y?|Ys?]).
 
 %% Metainterpreter support
 procedure reduce(_?, _).
 reduce(member(X, [H|_]), true) :- X? =:= H? | true.
-reduce(member(X, [_|Xs]), member(X?, Xs?)).
+reduce(member(X, [_, Y|Ys]), member(X?, [Y?|Ys?])).

@@ -1091,6 +1091,38 @@ check "random single draw next seed" "NS = 705894" "$a33"
 check "random threaded triple reproduces" "R = rt(808, 250, 74)" "$a33"
 check "random N<1 fails at guard" "→ failed" "$a33"
 
+# --- A34: Ackermann on Peano numerals (book/recursive/arithmetic_trees) ---
+# Clause 3's guard was compound(M?), ground(M?): compound refused M = 0, so
+# ackermann(s(0), s(0), A) failed, and every goal that reaches it with it.
+# ground(M?) alone licenses the second read of M? (GLP-Spec glp.tex, Remark
+# "Guards and SRSW": compound does not imply groundness, ground does).
+echo "--- A34: Ackermann ---"
+a34=$("$REPL_RUN" <<HEREDOC
+$BOOK/recursive/arithmetic_trees/ackermann.glp
+ackermann(s(0), s(0), A11).
+ackermann(s(s(0)), s(0), A21).
+:quit
+HEREDOC
+2>&1)
+check "Ackermann A(1,1) = 3" "A11 = s(s(s(0)))" "$a34"
+check "Ackermann A(2,1) = 5" "A21 = s(s(s(s(s(0)))))" "$a34"
+
+# --- A35: Minimum on Peano numerals (book/recursive/arithmetic_trees) ---
+# The program committed to min_check's first clause and then failed in its body,
+# the lesseq test sitting in the body where Concurrent Prolog had it in a deep
+# guard GLP has not; minimum(s(s(0)), s(0), M) failed.  Now the flat standard
+# form, which decides by the head alone.
+echo "--- A35: Minimum ---"
+a35=$("$REPL_RUN" <<HEREDOC
+$BOOK/recursive/arithmetic_trees/min.glp
+minimum(s(s(0)), s(0), M21).
+minimum(0, s(0), M01).
+:quit
+HEREDOC
+2>&1)
+check "Minimum of 2 and 1 is 1" "M21 = s(0)" "$a35"
+check "Minimum of 0 and 1 is 0" "M01 = 0" "$a35"
+
 SECTION_A_PASS=$PASS
 SECTION_A_FAIL=$FAIL
 
