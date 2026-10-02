@@ -45,8 +45,9 @@ boot_chan_late :- consumer(ch(S?, closed)), feeder(S).
 
 %% Mirror mad_w_probe EXACTLY: channel with an UNBOUND (`_`) Out, polymorphic,
 %% named continuation used in the body. Same late-feed. If this fires otherwise
-%% (anon_otherwise) where boot_chan_late suspends+matches, the unbound Out is the
-%% trigger for the head match failing instead of suspending.
+%% (anon_otherwise) where boot_chan_late fails: a goal term against a head
+%% reader, the unbound Out is the trigger for the head match failing instead of
+%% suspending.
 procedure(W) consumer_anon(Channel(Stream(Item), W)?).
 consumer_anon(ch([it(_, R?)|In], Out?)) :- stash([keep(R)]), dropch(ch(In?, Out)), send_to_user([anon_matched]).
 consumer_anon(_)  :- otherwise | send_to_user([anon_otherwise]).
