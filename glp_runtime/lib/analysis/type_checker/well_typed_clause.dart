@@ -389,7 +389,9 @@ ClauseCheckResult checkClause(
   // again, which numbers the clause's anonymous variables from the start as
   // before.
   final plans = _instantiateCalls(clause, procDecl, dfa, env,
-      activeInstantiations: activeInstantiations, callee: callee);
+      activeInstantiations: activeInstantiations,
+      callee: callee,
+      isParametric: isParametric);
 
   // Step 1: Check head well-typing
   final (headResult, modedHeadTerm) = _checkHeadWithTerm(clause, procDecl, dfa, env);
@@ -520,16 +522,20 @@ ClauseCheckResult checkClause(
 
   // A call to a parameterised procedure for which no instantiation is found,
   // some parameter having no type supplied by a site or fixed by the callee's
-  // clauses, is refused unless its callee is parametrically well-typed
-  // (Section sec:abstract-parameters), in which case the call is checked with
-  // the callee's parameters open (TGLP appendix-implementation-notes.tex, "The
-  // instantiation of a call").  Checked with the parameters open, it is
-  // refused where no map of them can make it well-typed (TGLP
-  // parameterized-types.tex, Definition "Instantiation"): its arguments are
-  // compared with the other occurrence of each variable in the clause, as
-  // condition 3 pairs them: a head occurrence (the type a guard narrowed it
-  // to, where one did) under 3(b), a body occurrence of the other polarity
-  // under 3(a).
+  // clauses: "A parameter for which no type is supplied or fixed is left open
+  // where the callee is parametrically well-typed (Section
+  // sec:abstract-parameters), the call checked with it open ...; otherwise the
+  // call is refused" (TGLP appendix-implementation-notes.tex, "The
+  // instantiation of a call", cc4a891).  [_instantiateCalls] has read each
+  // such call: refused where its callee is not parametrically well-typed;
+  // else checked with those parameters open, the others at the types tried
+  // for them, and refused where no map of the open ones can make it
+  // well-typed (TGLP parameterized-types.tex, Definition "Instantiation"),
+  // its arguments compared with the other occurrence of each variable in the
+  // clause as condition 3 pairs them: a head occurrence (the type a guard
+  // narrowed it to, where one did) under 3(b), a body occurrence of the other
+  // polarity under 3(a).  A call with no reading --- none is, in a clause ---
+  // is asked so here.
   List<(VariableTypeInfo, bool)> partnersOf(String name, bool reader) {
     final own = reader ? '$name?' : name;
     final other = reader ? name : '$name?';
@@ -545,25 +551,32 @@ ClauseCheckResult checkClause(
   }
   for (final (i, call, template) in uninstantiated) {
     final plan = plans[i];
-    if (plan?.refutation != null) {
-      // Types were supplied, none fitting every site, and no map of the
-      // parameters can make the call well-typed ([_instantiateCalls]).
-      errors.add(BodyAtomError(call.functor, i,
-          [NoInstantiationError(call, template, plan!.refutation!)]));
+    if (plan == null) {
+      if (isParametric != null && !isParametric(template.key)) {
+        errors.add(BodyAtomError(call.functor, i,
+            [UninstantiatedCallError(call, template, template.typeParams)]));
+        continue;
+      }
+      final reason = _noInstantiationReason(call, template, partnersOf, env);
+      if (reason != null) {
+        errors.add(BodyAtomError(
+            call.functor, i, [NoInstantiationError(call, template, reason)]));
+      }
       continue;
     }
-    if (plan != null &&
-        isParametric != null &&
-        !isParametric(template.key)) {
+    if (plan.refutation != null) {
+      // No map of the parameters can make the call well-typed
+      // ([_instantiateCalls]).
+      errors.add(BodyAtomError(call.functor, i,
+          [NoInstantiationError(call, template, plan.refutation!)]));
+      continue;
+    }
+    if (plan.conflict != null) continue; // named above
+    if (plan.refused) {
       errors.add(BodyAtomError(call.functor, i,
           [UninstantiatedCallError(call, template, plan.unsupplied)]));
-      continue;
     }
-    final reason = _noInstantiationReason(call, template, partnersOf, env);
-    if (reason != null) {
-      errors.add(BodyAtomError(
-          call.functor, i, [NoInstantiationError(call, template, reason)]));
-    }
+    // Otherwise left open, and well-typed so ([_instantiateCalls]).
   }
 
   return ClauseCheckResult(
@@ -1925,38 +1938,52 @@ const String _openParamPrefix = r'$open_';
 /// hold at once is not asked here, so this refuses no call that has an
 /// instantiation and may pass one that has none.
 ///
-/// A bare parameter of the declaration, `X` or `X?`, is skipped (any type, at
-/// either polarity, may stand there), as is a declaration reaching a template
-/// that has a parameter as an alternative: an open parameter there would hide
-/// alternatives a map adds, so the open relation would no longer be weaker than
-/// every expansion's.
+/// [bound] binds some parameters to types --- those a call's sites supply or
+/// its callee's clauses fix ([_instantiateCalls]) --- and only the rest are
+/// left open: "A parameter for which no type is supplied or fixed is left open
+/// where the callee is parametrically well-typed, the call checked with it
+/// open" (TGLP appendix-implementation-notes.tex, "The instantiation of a
+/// call", cc4a891).  Empty, every parameter is open.
+///
+/// A bare open parameter of the declaration, `X` or `X?`, is skipped (any
+/// type, at either polarity, may stand there), as is a declaration reaching a
+/// template that has a parameter as an alternative: an open parameter there
+/// would hide alternatives a map adds, so the open relation would no longer be
+/// weaker than every expansion's.
 String? _noInstantiationReason(
   ast.Goal call,
   ProcDecl template,
   List<(VariableTypeInfo, bool)> Function(String name, bool reader) partnersOf,
-  TypeEnvironment env,
-) {
+  TypeEnvironment env, {
+  Map<String, String> bound = const {},
+}) {
   if (paramUsedAsTypeAlternative(template, env.typeTemplates)) return null;
+  final open = [
+    for (final tp in template.typeParams)
+      if (!bound.containsKey(tp)) tp
+  ];
 
   // The argument positions there is anything to compare at.
   final positions = <(int, List<(VariableTypeInfo, bool)>)>[];
   for (var i = 0; i < template.arity && i < call.args.length; i++) {
     final arg = call.args[i];
     if (arg is! ast.VarTerm) continue;
-    if (_isBareParameter(template.argTypes[i], template.typeParams)) continue;
+    if (_isBareParameter(template.argTypes[i], open)) continue;
     final partners = partnersOf(arg.name, arg.isReader);
     if (partners.isNotEmpty) positions.add((i, partners));
   }
   if (positions.isEmpty) return null;
 
-  // The declaration with each parameter an open type, and the types it names.
-  final openOf = {
-    for (final tp in template.typeParams) tp: '$_openParamPrefix$tp'
-  };
+  // The declaration with each bound parameter at its type and each other an
+  // open type, and the types it names.
+  final openOf = {for (final tp in open) tp: '$_openParamPrefix$tp'};
   final openNames = openOf.values.toSet();
   final openDecl = ProcDecl(
     template.name,
-    [for (final t in template.argTypes) _substituteTypeParams(t, openOf)],
+    [
+      for (final t in template.argTypes)
+        _substituteTypeParams(t, {...bound, ...openOf})
+    ],
     template.line,
     template.column,
     exported: template.exported,
@@ -2101,12 +2128,25 @@ class _CallPlan {
   /// null.
   final String? refutation;
 
+  /// Where some parameter has no type supplied or fixed for it and the callee
+  /// is not parametrically well-typed: the call is refused
+  /// ([UninstantiatedCallError]); [decl] is then null.
+  final bool refused;
+
+  /// Where some parameter has no type supplied or fixed for it and the callee
+  /// is parametrically well-typed: the binding of the other parameters under
+  /// which the call, checked with those [unsupplied] open, is well-typed
+  /// ([_noInstantiationReason]); [decl] is then null.
+  final Map<String, String>? openUnder;
+
   const _CallPlan(this.goal, this.template, this.decl, this.bindsInputType,
       {this.conflict,
       this.tried = const {},
       this.calleeRead = false,
       this.unsupplied = const [],
-      this.refutation});
+      this.refutation,
+      this.refused = false,
+      this.openUnder});
 }
 
 /// Error: a call to a parameterised procedure for which no instantiation is
@@ -2543,6 +2583,7 @@ Map<int, _CallPlan> _instantiateCalls(
   TypeEnvironment env, {
   Map<String, ProcDecl> activeInstantiations = const {},
   CalleeClauses? callee,
+  bool Function(String procKey)? isParametric,
 }) {
   final calls = <int, _ParamCall>{};
   for (var i = 0; i < clause.bodyAtoms.length; i++) {
@@ -2762,6 +2803,24 @@ Map<int, _CallPlan> _instantiateCalls(
     return _Reading(taken, nearest, complete, const [], tried);
   }
 
+  // The partners of the call at [i]'s argument variable [name], of the
+  // polarity [reader], as [_noInstantiationReason] asks them: the head's
+  // occurrence of the same key (true), and the body occurrences of the other
+  // polarity (false).
+  List<(VariableTypeInfo, bool)> Function(String, bool) openPartnersOf(
+          int i) =>
+      (name, reader) {
+        final own = reader ? '$name?' : name;
+        final other = reader ? name : '$name?';
+        final h = head[own];
+        return [
+          if (h != null) (narrowed[own] ?? h, true),
+          for (final (info, j)
+              in body[other] ?? const <(VariableTypeInfo, int)>[])
+            if (j != i) (info, false),
+        ];
+      };
+
   final plans = <int, _CallPlan>{};
   final pending = calls.keys.toSet();
   var last = <int, _Reading>{};
@@ -2788,20 +2847,7 @@ Map<int, _CallPlan> _instantiateCalls(
         // expansion admits, as a call with no instantiation is ([checkClause],
         // Step 5).
         final refutation = _noInstantiationReason(
-            call.goal,
-            call.template,
-            (name, reader) {
-              final own = reader ? '$name?' : name;
-              final other = reader ? name : '$name?';
-              final h = head[own];
-              return [
-                if (h != null) (narrowed[own] ?? h, true),
-                for (final (info, j)
-                    in body[other] ?? const <(VariableTypeInfo, int)>[])
-                  if (j != i) (info, false),
-              ];
-            },
-            env);
+            call.goal, call.template, openPartnersOf(i), env);
         if (refutation != null) {
           plans[i] = _CallPlan(call.goal, call.template, null, false,
               refutation: refutation, tried: r.tried);
@@ -2818,11 +2864,67 @@ Map<int, _CallPlan> _instantiateCalls(
       pending.remove(i);
     }
   }
+  // The calls some parameter of which has no type supplied or fixed for it,
+  // read against every occurrence the rounds typed: "A parameter for which no
+  // type is supplied or fixed is left open where the callee is parametrically
+  // well-typed (Section sec:abstract-parameters), the call checked with it
+  // open ...; otherwise the call is refused" (cc4a891).  The other parameters
+  // take the types tried for them, the first binding under which the call,
+  // checked with the rest open, is well-typed; none serving, the bindings
+  // conflict and the call is refused.  A remote goal's callee is another
+  // module's: the linked program, where the call is local, decides it.
   for (final i in pending) {
     final call = calls[i]!;
-    plans[i] = _CallPlan(call.goal, call.template, null, false,
-        unsupplied: last[i]?.unsupplied ?? const [],
-        tried: last[i]?.tried ?? const {});
+    final params = call.template.typeParams;
+    final tried = last[i]?.tried ?? {for (final tp in params) tp: <String>[]};
+    final open = [
+      for (final tp in params)
+        if (tried[tp]?.isEmpty ?? true) tp
+    ];
+    if (isParametric != null && !isParametric(call.template.key)) {
+      plans[i] = _CallPlan(call.goal, call.template, null, false,
+          unsupplied: open, tried: tried, refused: true);
+      continue;
+    }
+    if (call.remote) {
+      plans[i] = _CallPlan(call.goal, call.template, null, false,
+          unsupplied: open, tried: tried, openUnder: const {});
+      continue;
+    }
+    final boundParams = [
+      for (final tp in params)
+        if (!open.contains(tp)) tp
+    ];
+    Map<String, String>? openUnder;
+    String? firstReason;
+    for (final binding in _bindingsOf(boundParams, tried)) {
+      final reason = _noInstantiationReason(
+          call.goal, call.template, openPartnersOf(i), env,
+          bound: binding);
+      if (reason == null) {
+        openUnder = binding;
+        break;
+      }
+      final under = [
+        for (final e in binding.entries) '${e.key} = ${e.value}'
+      ].join(', ');
+      firstReason ??= binding.isEmpty
+          ? reason
+          : 'under $under with ${open.join(', ')} open, $reason';
+    }
+    if (openUnder != null) {
+      plans[i] = _CallPlan(call.goal, call.template, null, false,
+          unsupplied: open, tried: tried, openUnder: openUnder);
+    } else if (boundParams.isEmpty) {
+      plans[i] = _CallPlan(call.goal, call.template, null, false,
+          unsupplied: open, tried: tried, refutation: firstReason);
+    } else {
+      plans[i] = _CallPlan(call.goal, call.template, null, false,
+          unsupplied: open,
+          tried: tried,
+          conflict: firstReason,
+          calleeRead: definingOf(call) != null);
+    }
   }
   return plans;
 }

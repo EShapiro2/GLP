@@ -138,11 +138,11 @@ class TypeChecker {
 
   /// Whether the procedure of a "name/arity" key is parametrically well-typed
   /// (TGLP parameterized-types.tex, Definition "Parametrically Well-Typed"): a
-  /// call to a parameterised procedure for which no instantiation is found is
-  /// refused unless it is, and checked with the callee's parameters open where
-  /// it is (appendix-implementation-notes.tex, "The instantiation of a call";
-  /// well_typed_clause.dart, [wtc.checkClause]).  Null takes every callee to
-  /// be.
+  /// parameter of a call for which no type is supplied or fixed is left open
+  /// where the callee is, the call checked with it open, and the call is
+  /// refused where it is not (appendix-implementation-notes.tex, "The
+  /// instantiation of a call", cc4a891; well_typed_clause.dart,
+  /// [wtc.checkClause]).  Null takes every callee to be.
   final bool Function(String procKey)? isParametric;
 
   TypeChecker(this.typeEnv, {this.collector, this.callee, this.isParametric})
