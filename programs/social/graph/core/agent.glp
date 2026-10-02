@@ -556,7 +556,7 @@ entry_type(ping, T?) :- find_type(ping/3, T).
 entry_type(sovereign, T?) :- find_type(sovereign/3, T).
 
 %% The currency's entry, declared here for find_type/2 (never run).
-procedure coins(Constant?, Channel(Stream(UserAnswer), Stream(Event))?, Stream(Conversation)?).
+procedure coins(Key?, Channel(Stream(UserAnswer), Stream(Event))?, Stream(Conversation)?).
 coins(_, _, _).
 
 %% The child-safe platform's entry, likewise.
@@ -566,7 +566,7 @@ cssn(_, _, _).
 %% The denominated currencies' entry, likewise.  Currencies' miniapp.glp also
 %% exports sovereign/4, the same with the agent's calendar; that fourth
 %% argument is the headless plays', and run/3 activates the three.
-procedure sovereign(Constant?, Channel(Stream(SvUserAnswer), Stream(SvEvent))?, Stream(SvConversation)?).
+procedure sovereign(Key?, Channel(Stream(SvUserAnswer), Stream(SvEvent))?, Stream(SvConversation)?).
 sovereign(_, _, _).
 
 %% --- The inviter ---
@@ -732,7 +732,7 @@ root_ends(sovereign, sovereign_end(Mine?), sovereign_end(Theirs?)) :- new_channe
 %% verifies it is checked against the mini-app installed here and the end is
 %% accepted; where it is unsigned --- a forgery --- no end is accepted and
 %% nothing is delivered (Section 6.1).
-procedure root_signed(Signature?, Key?, Constant?, Constant?, String?, Constant?, RootEnd?, UserInStream?, NetInStream?, OutputsList?, AppList?, AttestList?, PendingInv?, Stream(String)?).
+procedure root_signed(Signature?, Key?, Key?, Constant?, String?, Constant?, RootEnd?, UserInStream?, NetInStream?, OutputsList?, AppList?, AttestList?, PendingInv?, Stream(String)?).
 root_signed(signed(_, _, Und), Id, From, App, Src, T, End, UserIn, NetIn, Outs, Apps, Atts, Pend, Trusted) :-
     undertaking_check(Und?, Src?, Ok0),
     app_module(App?, Apps?, Apps1, L),
@@ -743,7 +743,7 @@ root_signed(unsigned, Id, From, App, _, T, End, UserIn, NetIn, Outs, Apps, Atts,
     accept_root_step(refused, Id?, From?, App?, T?, End?, UserIn?, NetIn?, Outs?,
                      Apps?, Atts?, Pend?, Trusted?).
 
-procedure accept_root_step(Verdict?, Key?, Constant?, Constant?, Constant?, RootEnd?, UserInStream?, NetInStream?, OutputsList?, AppList?, AttestList?, PendingInv?, Stream(String)?).
+procedure accept_root_step(Verdict?, Key?, Key?, Constant?, Constant?, RootEnd?, UserInStream?, NetInStream?, OutputsList?, AppList?, AttestList?, PendingInv?, Stream(String)?).
 accept_root_step(ok(M), Id, From, App, T, End, UserIn, NetIn, Outs, Apps, Atts, Pend, Trusted) :-
     deliver(App?, From?, End?, Id?, T?, M?, Apps?, Apps1, UserIn?, UserIn1),
     release_held(App?, From?, Pend?, Pend1),
@@ -759,7 +759,7 @@ accept_root_step(refused, Id, _, _, _, _, UserIn, NetIn, Outs, Apps, Atts, Pend,
 %% channel.  An idle mini-app is activated first by run/3 under the type
 %% identity of its entry, with exactly its two channels: the user-interface
 %% channel held since installation, and the social-graph channel.
-procedure deliver(Constant?, Constant?, RootEnd?, Constant?, Constant?, Module?, AppList?, AppList, UserInStream?, UserInStream).
+procedure deliver(Constant?, Key?, RootEnd?, Key?, Constant?, Module?, AppList?, AppList, UserInStream?, UserInStream).
 deliver(App, Friend, ping_end(End), Id, T, M, [app(A, M1, C, idle(Ui?)) | Rest],
         [app(A?, M1?, C?, running(Sg1)) | Rest?], UserIn, UserIn1?) :-
     App? =?= A? |
@@ -830,13 +830,13 @@ inject_requests(App, [], Ys, [app_ended(App?) | Ys?]) :- ground(App?) | true.
 procedure open_conv(Constant?, RootChannel?, SgToAppStream, SgToAppStream?).
 open_conv(Friend, End, [conversation(Friend?, End?) | Sg1?], Sg1).
 
-procedure open_conv_coins(Constant?, PeerChannel?, Stream(Conversation), Stream(Conversation)?).
+procedure open_conv_coins(Key?, PeerChannel?, Stream(Conversation), Stream(Conversation)?).
 open_conv_coins(Friend, End, [conversation(Friend?, End?) | Convs1?], Convs1).
 
 procedure open_conv_cssn(Constant?, CsChannel?, Stream(CsConversation), Stream(CsConversation)?).
 open_conv_cssn(Friend, End, [conversation(Friend?, End?) | Convs1?], Convs1).
 
-procedure open_conv_sovereign(Constant?, SvChannel?, Stream(SvConversation), Stream(SvConversation)?).
+procedure open_conv_sovereign(Key?, SvChannel?, Stream(SvConversation), Stream(SvConversation)?).
 open_conv_sovereign(Friend, End, [conversation(Friend?, End?) | Convs1?], Convs1).
 
 %% --- Attestations (Section 5.5) ---

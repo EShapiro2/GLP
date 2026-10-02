@@ -25,10 +25,10 @@ Decision ::= yes ; no.
 Response ::= accept(FriendChannel) ; no.
 
 %% A currency unit: a bond issued by Issuer, maturing at Maturity, serial Serial.
-Bond ::= bond(Constant, Constant, Constant).
+Bond ::= bond(Key, Constant, Constant).
 
 %% A trade line item: Count bonds of Issuer at Maturity.
-Lot ::= lot(Constant, Constant, Integer).
+Lot ::= lot(Key, Constant, Integer).
 
 %% A trade counterparty's answer (writer flows proposer -> responder -> proposer).
 %% decline_menu returns the offered bonds plus the issuer's redemption menu.

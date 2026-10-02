@@ -154,7 +154,7 @@ tally_bonds([bond(I, M, _)|Rest], Acc, Tally?) :-
     tally_bonds(Rest?, Acc1?, Tally).
 tally_bonds([], Acc, Acc?).
 
-procedure tally_add(Constant?, Constant?, Stream(Lot)?, Stream(Lot)).
+procedure tally_add(Key?, Constant?, Stream(Lot)?, Stream(Lot)).
 tally_add(I, M, [lot(I2, M2, N)|Rest], [lot(I2?, M2?, N1?)|Rest?]) :-
     I? =?= I2?, M? =?= M2? | N1 := N? + 1.
 tally_add(I, M, [L|Rest], [L?|Rest1?]) :-
@@ -377,7 +377,7 @@ inject_escrow_dep_result(R, Target, [Y|Ys], [Y?|Ys1?]) :-
 %% The escrowed bonds leave Holdings, so no balance_report can describe them.
 %% Both sides therefore carry the lot scalars, and the wallet can show what is
 %% locked (Grassroots-Bonds §5; the Escrow section of the Currencies panel).
-procedure lot_scalars(Lot?, Constant, Constant, Integer).
+procedure lot_scalars(Lot?, Key, Constant, Integer).
 lot_scalars(lot(I, M, A), I?, M?, A?).
 
 %% Depositor: select the bonds, then open the escrow (or report failure).

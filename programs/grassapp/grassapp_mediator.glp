@@ -420,7 +420,7 @@ ui_mediator(_, ch([], []), ch([], []), _, _).
 %% Flatten the want-spec, one lot, to scalars for the offer card (multi-lot
 %% display is Milestone 2).  The lot stays escrowed in the pending table, so
 %% accept_trade replays it.
-procedure first_lot(Lot?, Constant, Constant, Integer).
+procedure first_lot(Lot?, Key, Constant, Integer).
 first_lot(lot(I, M, A), I?, M?, A?).
 
 procedure lookup_pending(ReqId?, PendingValue, PendingList?, PendingList).
