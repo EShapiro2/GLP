@@ -338,39 +338,31 @@ Result? := X * Y :-
   Y1 := Y?,
   Result := X1? * Y1?.
 
-% Division (always returns float)
+% Division (always returns float).  A zero divisor is '_div''s to abort on: a
+% body kernel either succeeds or aborts (GLP-Spec appendix-guards).
 Result? := X / Y :-
-  number(X?), number(Y?), Y? =\= 0 |
+  number(X?), number(Y?) |
   '_div'(X?, Y?, Result).
-_ := X / Y :-
-  number(X?), number(Y?), Y? =:= 0 |
-  abort("Division by zero").
 Result? := X / Y :-
   otherwise |
   X1 := X?,
   Y1 := Y?,
   Result := X1? / Y1?.
 
-% Integer division
+% Integer division.  A zero divisor is '_idiv''s to abort on.
 Result? := X // Y :-
-  integer(X?), integer(Y?), Y? =\= 0 |
+  integer(X?), integer(Y?) |
   '_idiv'(X?, Y?, Result).
-_ := X // Y :-
-  integer(X?), integer(Y?), Y? =:= 0 |
-  abort("Integer division by zero").
 Result? := X // Y :-
   otherwise |
   X1 := X?,
   Y1 := Y?,
   Result := X1? // Y1?.
 
-% Modulo
+% Modulo.  A zero divisor is '_mod''s to abort on.
 Result? := X mod Y :-
-  integer(X?), integer(Y?), Y? =\= 0 |
+  integer(X?), integer(Y?) |
   '_mod'(X?, Y?, Result).
-_ := X mod Y :-
-  integer(X?), integer(Y?), Y? =:= 0 |
-  abort("Modulo by zero").
 Result? := X mod Y :-
   otherwise |
   X1 := X?,
@@ -584,8 +576,10 @@ random(Seed, N, Value?, NextSeed?) :-
 % UNIV (=../2, ..=/2)
 % =============================================================================
 
-% Composition: list → tuple
+% Composition: list → tuple.  The empty list composes no term, and
+% '_list_to_tuple' aborts on it.
 X? =.. [Y|Ys] :- list(Ys?) | '_list_to_tuple'([Y?|Ys?], X).
+X? =.. [] :- '_list_to_tuple'([], X).
 
 % Decomposition: compound → list
 Y? ..= X :- compound(X?) | '_tuple_to_list'(X?, Y).
