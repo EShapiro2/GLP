@@ -28,6 +28,32 @@ const _programs = '../programs';
 String _vglp(String name) =>
     File('$_programs/tests/vglp/$name/$name.vglp').readAsStringSync();
 
+/// The .vglp sources under [dir], walked one directory at a time.  Not the
+/// fixtures other tests write under programs/ and remove, <stem>_<pid>_<time>/,
+/// which run beside this one: a recursive listing that meets one as it is
+/// removed throws, and failed the load of this file (2026-10-02, beside
+/// load_test.dart's vglp_load_fixture_*).  A directory gone before it is
+/// listed is skipped for the same reason.
+List<File> _vglpSources(Directory dir) {
+  final found = <File>[];
+  List<FileSystemEntity> entries;
+  try {
+    entries = dir.listSync(followLinks: false);
+  } on FileSystemException {
+    return found;
+  }
+  for (final e in entries) {
+    final name = e.path.split(Platform.pathSeparator).last;
+    if (e is Directory) {
+      if (RegExp(r'_\d+_\d+$').hasMatch(name)) continue;
+      found.addAll(_vglpSources(e));
+    } else if (e is File && name.endsWith('.vglp')) {
+      found.add(e);
+    }
+  }
+  return found;
+}
+
 void main() {
   group('(ii) a reader-mode question and a writer-mode one', () {
     late String q;
@@ -287,14 +313,7 @@ q(X) :- p(0, X?).
   });
 
   group('(iii) the old syntax keeps its old compilation', () {
-    final sources = Directory(_programs)
-        .listSync(recursive: true)
-        .whereType<File>()
-        .where((f) => f.path.endsWith('.vglp'))
-        // Not the fixtures another test writes under programs/ and removes,
-        // <stem>_<pid>_<time>/, which run beside this one.
-        .where((f) => !RegExp(r'_\d+_\d+[/\\]').hasMatch(f.path))
-        .toList();
+    final sources = _vglpSources(Directory(_programs));
     final paper = {'questions.vglp'};
     String base(File f) => f.path.split(Platform.pathSeparator).last;
 
