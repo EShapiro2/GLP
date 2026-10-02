@@ -36,12 +36,10 @@
 // THE NAMES.  The asking clause takes the source name, q_a = q, so a call of
 // q in a body, and in an initial goal, is already the call of its asking
 // clause; the (n+1)-ary procedure takes `q1`, made fresh against every name the
-// program uses.  These are the names of Integration's hand-compiled fixtures,
-// programs/tests/sglp/person_asks*.glp.
+// program uses.
 //
 // THE CONSTRUCT.  T is passed as the constant naming the moded interactive
-// type as written, 'Menu' or 'Menu?', which is how sGLP's person declarations
-// name it (ast.dart, PersonDecl.typeKey).  construct(T, X) is the construct
+// type as written, 'Menu' or 'Menu?'.  construct(T, X) is the construct
 // process, which is Part 2's runtime and not declared here.
 
 import '../compiler/ast.dart';
@@ -190,17 +188,16 @@ CanonicalProgram compileCanonical(String text) {
   for (final p in m.procedures) {
     final v = askedProcs[p.signature];
     if (v == null) {
-      out.add(_Emitted(declsByKey[p.signature], p, p.signature));
+      out.add(_Emitted(declsByKey[p.signature], p));
       continue;
     }
     final decl = declsByKey[p.signature]!;
-    out.add(_Emitted(_askingDeclaration(decl, v),
-        _askingClause(decl, v, constructGoal), p.signature));
+    out.add(_Emitted(
+        _askingDeclaration(decl, v), _askingClause(decl, v, constructGoal)));
     out.add(_Emitted(
         ProcDecl(v.guardedName, decl.argTypes, decl.line, decl.column,
             typeParams: decl.typeParams),
-        _guardedProcedure(p, v),
-        p.signature));
+        _guardedProcedure(p, v)));
   }
   // Declarations with no clauses of their own: imported procedures, and
   // declarations of procedures the runtime implements.
@@ -531,11 +528,6 @@ Set<String> _namesUsed(Module m) {
       }
     }
   }
-  for (final k in m.kinds) {
-    for (final d in k.personDecls) {
-      names.add(d.procedure);
-    }
-  }
   return names;
 }
 
@@ -657,11 +649,7 @@ String _freshVariable(String stem, Clause c) {
 class _Emitted {
   final ProcDecl? decl;
   final Procedure procedure;
-
-  /// The signature of the source procedure it compiles, by which its profile,
-  /// if any, is found.
-  final String sourceSig;
-  _Emitted(this.decl, this.procedure, this.sourceSig);
+  _Emitted(this.decl, this.procedure);
 }
 
 String _emit(Module m, List<_Emitted> procs, List<ProcDecl> bare) {
@@ -675,46 +663,16 @@ String _emit(Module m, List<_Emitted> procs, List<ProcDecl> bare) {
   }
   b.writeln();
 
-  bool inKind(String sig) => m.kinds.any((k) => k.procedureSigs.contains(sig));
-
-  void declaration(ProcDecl d) => b.writeln(printDeclaration(d));
-  void procedure(_Emitted e) {
-    if (e.decl != null) declaration(e.decl!);
+  for (final d in bare) {
+    b.writeln(printDeclaration(d));
+  }
+  if (bare.isNotEmpty) b.writeln();
+  for (final e in procs) {
+    if (e.decl != null) b.writeln(printDeclaration(e.decl!));
     for (final c in e.procedure.clauses) {
       b.writeln(printer.printClause(c));
     }
     b.writeln();
-  }
-
-  for (final d in bare) {
-    if (!inKind(d.key)) declaration(d);
-  }
-  if (bare.any((d) => !inKind(d.key))) b.writeln();
-  for (final e in procs) {
-    if (!inKind(e.sourceSig)) procedure(e);
-  }
-
-  for (final k in m.kinds) {
-    b.writeln('person ${k.name}.');
-    for (final d in k.personDecls) {
-      b.writeln('${d.typeKey} =::= ${d.procedure}.');
-    }
-    for (final d in bare) {
-      if (k.procedureSigs.contains(d.key)) declaration(d);
-    }
-    for (final e in procs) {
-      if (k.procedureSigs.contains(e.sourceSig)) procedure(e);
-    }
-  }
-
-  final r = m.runDecl;
-  if (r != null) {
-    final mixes = [
-      for (final x in r.mixes)
-        '${x.dimension} ~ (${x.entries.map((e) => '${e.kind} : ${e.probability}').join(' ; ')})'
-    ];
-    b.writeln('run ${r.agents} agents [ ${mixes.join(', ')} ] '
-        'until ${r.untilText} seed ${r.seed}.');
   }
   return b.toString();
 }
