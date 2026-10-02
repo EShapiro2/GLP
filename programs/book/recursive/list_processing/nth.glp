@@ -2,7 +2,7 @@
 %% Source: Standard GLP list operations
 
 %% Procedure type declarations
-procedure nth(Number?, OpenStream(X)?, X).
+procedure(X) nth(Number?, OpenStream(X)?, X).
 nth(1, [X|_], X?).
 nth(N, [_, Y|Ys], X?) :- N? > 1 | N1 := N? - 1, nth(N1?, [Y?|Ys?], X).
 

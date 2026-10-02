@@ -15,7 +15,7 @@ Chain ::= chain(Stream(_)?, Stream(_)).
 ShotList ::= [] ; [_ | ShotList].
 
 %% External procedure declarations (no clauses in this file)
-procedure merge(Stream(X)?, Stream(X)?, Stream(X)).
+procedure(X) merge(Stream(X)?, Stream(X)?, Stream(X)).
 
 procedure run(_?, Chain).
 run(true, chain(Chain, Chain?)).                 %% halt - close circuit

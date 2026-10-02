@@ -3,7 +3,7 @@
 %% Note: Uses ground guard to allow comparison
 
 %% Procedure type declarations
-procedure member(X?, OpenStream(X)?).
+procedure(X) member(X?, OpenStream(X)?).
 member(X, [H|_]) :- ground(X?), ground(H?), X? =:= H? | true.
 member(X, [_, Y|Ys]) :- member(X?, [Y?|Ys?]).
 
