@@ -231,12 +231,12 @@ inject_trade_result(R, From, [Y|Ys], [Y?|Ys1?]) :-
 
 %% --- Proposer: trade (the maturity-carrying swap; a loan is its instance) ---
 
-procedure do_trade(Constant?, Constant?, Stream(Lot)?, Stream(Lot)?, Stream(Bond)?, Constant?, Constant?, UserInStream?, NetInStream?, OutputsList?, Stream(Constant)).
+procedure do_trade(Constant?, Constant?, Lot?, Lot?, Stream(Bond)?, Constant?, Constant?, UserInStream?, NetInStream?, OutputsList?, Stream(Constant)).
 do_trade(Id, Target, GiveSpec, WantSpec, Holdings, NextSerial, Clock, UserIn, NetIn, Outs, DateW?) :-
-    select_bonds_by_spec(GiveSpec?, Holdings?, Status, Selected, Remaining),
+    select_bonds_by_spec([GiveSpec?], Holdings?, Status, Selected, Remaining),
     do_trade_result(Status?, Id?, Target?, WantSpec?, Selected?, Remaining?, NextSerial?, Clock?, UserIn?, NetIn?, Outs?, DateW).
 
-procedure do_trade_result(Constant?, Constant?, Constant?, Stream(Lot)?, Stream(Bond)?, Stream(Bond)?, Constant?, Constant?, UserInStream?, NetInStream?, OutputsList?, Stream(Constant)).
+procedure do_trade_result(Constant?, Constant?, Constant?, Lot?, Stream(Bond)?, Stream(Bond)?, Constant?, Constant?, UserInStream?, NetInStream?, OutputsList?, Stream(Constant)).
 do_trade_result(ok, Id, Target, WantSpec, Selected, Remaining, NextSerial, Clock, UserIn, NetIn, Outs, DateW?) :-
     lookup_send(Target?, msg(Id?, Target?, trade_propose(WantSpec?, Selected?, TradeResp)), Outs?, Outs1),
     inject_trade_result(TradeResp?, Target?, UserIn?, UserIn1),
@@ -251,9 +251,9 @@ do_trade_result(fail, Id, Target, _, Selected, Remaining, NextSerial, Clock, Use
 %% issuer's call, tested against the issuer's own date on receipt
 %% (classify_trade -> redemption).  The redeemer does not test maturity.
 
-procedure do_redeem(Constant?, Constant?, Stream(Lot)?, Stream(Lot)?, Stream(Bond)?, Constant?, Constant?, UserInStream?, NetInStream?, OutputsList?, Stream(Constant)).
+procedure do_redeem(Constant?, Constant?, Lot?, Lot?, Stream(Bond)?, Constant?, Constant?, UserInStream?, NetInStream?, OutputsList?, Stream(Constant)).
 do_redeem(Id, Target, GiveSpec, WantSpec, Holdings, NextSerial, Clock, UserIn, NetIn, Outs, DateW?) :-
-    select_bonds_by_spec(GiveSpec?, Holdings?, Status, Selected, Remaining),
+    select_bonds_by_spec([GiveSpec?], Holdings?, Status, Selected, Remaining),
     do_trade_result(Status?, Id?, Target?, WantSpec?, Selected?, Remaining?, NextSerial?, Clock?, UserIn?, NetIn?, Outs?, DateW).
 
 %% --- Proposer: pay (mature coins of the payee, handed over unilaterally) ---
@@ -293,7 +293,7 @@ handle_trade_fill(fail, Id, From, trade_decline(OfferedBonds?), OfferedBonds, Se
 
 %% --- Responder: classify an incoming proposal ---
 
-procedure trade_dispatch(Constant?, Constant?, Constant?, Stream(Lot)?, Stream(Bond)?, TradeResponse,
+procedure trade_dispatch(Constant?, Constant?, Constant?, Lot?, Stream(Bond)?, TradeResponse,
     Stream(Bond)?, Constant?, Constant?, UserInStream?, NetInStream?, OutputsList?, Stream(Constant)).
 
 %% Payment — auto-accept (proposer gives, wants nothing).
@@ -307,7 +307,7 @@ trade_dispatch(payment, Id, From, _, OfferedBonds, trade_accept([]),
 %% or decline with a menu of what it does hold.
 trade_dispatch(redemption, Id, From, WantSpec, OfferedBonds, TradeResp?,
     Holdings, NextSerial, Clock, UserIn, NetIn, Outs, DateW?) :-
-    select_bonds_by_spec(WantSpec?, Holdings?, Status, Selected, Remaining),
+    select_bonds_by_spec([WantSpec?], Holdings?, Status, Selected, Remaining),
     redemption_result(Status?, Id?, From?, TradeResp, OfferedBonds?, Selected?, Remaining?,
         NextSerial?, Clock?, UserIn?, NetIn?, Outs?, DateW).
 
@@ -384,17 +384,15 @@ inject_escrow_dep_result(R, Target, [Y|Ys], [Y?|Ys1?]) :-
 %% The escrowed bonds leave Holdings, so no balance_report can describe them.
 %% Both sides therefore carry the lot scalars, and the wallet can show what is
 %% locked (Grassroots-Bonds §5; the Escrow section of the Currencies panel).
-procedure lot_scalars(Stream(Lot)?, Constant, Constant, Constant).
-lot_scalars([lot(I, M, A) | _], I?, M?, A?).
-%% An empty spec names no lot; answer as lookup_pending answers a miss.
-lot_scalars([], error, error, error).
+procedure lot_scalars(Lot?, Constant, Constant, Integer).
+lot_scalars(lot(I, M, A), I?, M?, A?).
 
 %% Depositor: select the bonds, then open the escrow (or report failure).
-procedure do_deposit_escrow(Constant?, Constant?, Stream(Lot)?, Constant?, Stream(Bond)?, Constant?, Constant?, UserInStream?, NetInStream?, OutputsList?).
+procedure do_deposit_escrow(Constant?, Constant?, Lot?, Constant?, Stream(Bond)?, Constant?, Constant?, UserInStream?, NetInStream?, OutputsList?).
 do_deposit_escrow(Id, Target, GiveSpec, ReleaseTime, Holdings, NextSerial, Clock, UserIn, NetIn, Outs) :-
     ground(GiveSpec?) |
     lot_scalars(GiveSpec?, Coin, Maturity, Amount),
-    select_bonds_by_spec(GiveSpec?, Holdings?, Status, Selected, Remaining),
+    select_bonds_by_spec([GiveSpec?], Holdings?, Status, Selected, Remaining),
     do_deposit_escrow_result(Status?, Id?, Target?, ReleaseTime?, Coin?, Maturity?, Amount?, Selected?, Remaining?, NextSerial?, Clock?, UserIn?, NetIn?, Outs?).
 
 procedure do_deposit_escrow_result(Constant?, Constant?, Constant?, Constant?, Constant?, Constant?, Constant?, Stream(Bond)?, Stream(Bond)?, Constant?, Constant?, UserInStream?, NetInStream?, OutputsList?).
@@ -541,7 +539,7 @@ agent(Id, [msg(person, Id1, balance)|UserIn], NetIn, Outs, Holdings, NextSerial,
 %% of its OWN bonds paid to it are mature (classify_payment, take_payment).
 agent(Id, [msg(person, Id1, pay(Friend, GiveSpec))|UserIn], NetIn, Outs, Holdings, NextSerial, Clock, DateW?) :-
     Id? =?= Id1?, ground(Friend?), ground(GiveSpec?) |
-    select_bonds_by_spec(GiveSpec?, Holdings?, Status, Selected, Remaining),
+    select_bonds_by_spec([GiveSpec?], Holdings?, Status, Selected, Remaining),
     do_pay(Status?, Id?, Friend?, Selected?, Remaining?, NextSerial?, Clock?, UserIn?, NetIn?, Outs?, DateW).
 
 %% Trade: the maturity-carrying swap (a loan is its instance).
@@ -557,7 +555,7 @@ agent(Id, [msg(person, Id1, redeem(Target, GiveSpec, WantSpec))|UserIn], NetIn, 
 %% Accept a trade a friend proposed: give the want-bonds, take the offered ones.
 agent(Id, [msg(person, Id1, accept_trade(From, trade_pending(TradeResp?, WantSpec, OfferedBonds)))|UserIn], NetIn, Outs, Holdings, NextSerial, Clock, DateW?) :-
     Id? =?= Id1?, ground(From?), ground(WantSpec?), ground(OfferedBonds?) |
-    select_bonds_by_spec(WantSpec?, Holdings?, Status, Selected, Remaining),
+    select_bonds_by_spec([WantSpec?], Holdings?, Status, Selected, Remaining),
     handle_trade_fill(Status?, Id?, From?, TradeResp, OfferedBonds?, Selected?, Remaining?, NextSerial?, Clock?, UserIn?, NetIn?, Outs?, DateW).
 
 %% Reject a trade a friend proposed.
@@ -743,7 +741,7 @@ agent(Id, UserIn, [msg(From, Id1, coins(Bonds))|NetIn], Outs, Holdings, NextSeri
 %% A friend proposes a trade (or presents my own bonds for redemption).
 agent(Id, UserIn, [msg(From, Id1, trade_propose(WantSpec, OfferedBonds, TradeResp?))|NetIn], Outs, Holdings, NextSerial, Clock, DateW?) :-
     Id? =?= Id1?, ground(From?), ground(WantSpec?), ground(OfferedBonds?) |
-    classify_trade(Id?, Clock?, WantSpec?, OfferedBonds?, TradeClass),
+    classify_trade(Id?, Clock?, [WantSpec?], OfferedBonds?, TradeClass),
     trade_dispatch(TradeClass?, Id?, From?, WantSpec?, OfferedBonds?, TradeResp,
         Holdings?, NextSerial?, Clock?, UserIn?, NetIn?, Outs?, DateW).
 

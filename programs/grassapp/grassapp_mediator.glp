@@ -18,11 +18,11 @@
 %% Scalar boundary: the UI — and the scripted actors that stand in for people —
 %% speak SCALAR single-lot commands (pay/4, trade/7, redeem/7, deposit_escrow/5),
 %% because a compose
-%% form carries only scalar fields.  This mediator builds the Stream(Lot) the
-%% agent consumes, converting the amount the person answers, a Constant, to the
-%% lot's count, an Integer (a lot is a quantity of a coin, GSG Section 7); and
-%% it flattens the agent's single-lot trade_proposed back to scalars for the
-%% offer card.  Multi-lot portfolios are Milestone 2.
+%% form carries only scalar fields.  This mediator builds the one Lot of each
+%% spec the agent consumes, converting the amount the person answers, a
+%% Constant, to the lot's count, an Integer (a lot is a quantity of a coin, GSG
+%% Section 7); and it flattens the agent's trade_proposed back to scalars for
+%% the offer card.  Multi-lot portfolios are Milestone 2.
 
 
 exported procedure ui_mediator(Constant?,
@@ -301,7 +301,7 @@ ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
     receive(pay(Friend, Coin, Maturity, Amount), UserCh?, UserCh1),
     ground(Id?), ground(Friend?), ground(Coin?), ground(Maturity?), number(Amount?) |
     Count := integer(Amount?),
-    send(msg(person, Id?, pay(Friend?, [lot(Coin?, Maturity?, Count?)])),
+    send(msg(person, Id?, pay(Friend?, lot(Coin?, Maturity?, Count?))),
          AgentCh?, AgentCh1),
     ui_mediator(Id?, AgentCh1?, UserCh1?, Ps?, N?).
 
@@ -316,8 +316,8 @@ ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
     GiveCount := integer(GiveAmt?),
     WantCount := integer(WantAmt?),
     send(msg(person, Id?,
-             trade(Target?, [lot(GiveCoin?, GiveMat?, GiveCount?)],
-                            [lot(WantCoin?, WantMat?, WantCount?)])),
+             trade(Target?, lot(GiveCoin?, GiveMat?, GiveCount?),
+                            lot(WantCoin?, WantMat?, WantCount?))),
          AgentCh?, AgentCh1),
     ui_mediator(Id?, AgentCh1?, UserCh1?, Ps?, N?).
 
@@ -332,8 +332,8 @@ ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
     GiveCount := integer(GiveAmt?),
     WantCount := integer(WantAmt?),
     send(msg(person, Id?,
-             redeem(Target?, [lot(GiveCoin?, GiveMat?, GiveCount?)],
-                             [lot(WantCoin?, WantMat?, WantCount?)])),
+             redeem(Target?, lot(GiveCoin?, GiveMat?, GiveCount?),
+                             lot(WantCoin?, WantMat?, WantCount?))),
          AgentCh?, AgentCh1),
     ui_mediator(Id?, AgentCh1?, UserCh1?, Ps?, N?).
 
@@ -361,7 +361,7 @@ ui_mediator(Id, AgentCh, UserCh, Ps, N) :-
     ground(Coin?), ground(Maturity?), number(Amount?), ground(ReleaseTime?) |
     Count := integer(Amount?),
     send(msg(person, Id?,
-             deposit_escrow(Target?, [lot(Coin?, Maturity?, Count?)], ReleaseTime?)),
+             deposit_escrow(Target?, lot(Coin?, Maturity?, Count?), ReleaseTime?)),
          AgentCh?, AgentCh1),
     ui_mediator(Id?, AgentCh1?, UserCh1?, Ps?, N?).
 
@@ -427,13 +427,11 @@ ui_mediator(_, ch([], []), ch([], []), _, _).
 %% PENDING MANAGEMENT
 %% =============================================================================
 
-%% Flatten a single-lot want-spec to scalars for the offer card (M1b single-lot;
-%% multi-lot display is Milestone 2).  The whole Stream(Lot) stays escrowed in the
-%% pending table, so accept_trade still replays the real lots.
-procedure first_lot(Stream(Lot)?, Constant, Constant, Constant).
-first_lot([lot(I, M, A) | _], I?, M?, A?).
-%% An empty spec names no lot; answer as lookup_pending below answers a miss.
-first_lot([], error, error, error).
+%% Flatten the want-spec, one lot, to scalars for the offer card (multi-lot
+%% display is Milestone 2).  The lot stays escrowed in the pending table, so
+%% accept_trade replays it.
+procedure first_lot(Lot?, Constant, Constant, Integer).
+first_lot(lot(I, M, A), I?, M?, A?).
 
 procedure lookup_pending(ReqId?, PendingValue, PendingList?, PendingList).
 lookup_pending(ReqId, Val?,

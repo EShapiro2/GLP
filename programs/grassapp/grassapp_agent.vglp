@@ -52,8 +52,8 @@
 %%     mediator's pass-through, and the agent clause matching
 %%     msg(person, Id, cmd(X1..Xk));
 %%   - for the currency requests the mediator is not a pass-through: the compose
-%%     form carries scalar fields and the mediator packs them into the Stream(Lot)
-%%     the deployed agent consumes.  That packing is part of the compilation, so
+%%     form carries scalar fields and the mediator packs them into the Lot the
+%%     deployed agent consumes.  That packing is part of the compilation, so
 %%     the question here carries the scalars the form does — this is why Pay is
 %%     *(Friend, Coin, Maturity, Amount) and the deployed clause matches
 %%     pay(Friend, GiveSpec);
@@ -141,7 +141,7 @@ OutputsList ::= [] ; [OutputEntry|OutputsList].
 
 %% The offers the responders carry: the question the pending reduction poses.
 ColdCallOffer    ::= offer(Constant).
-TradeOffer       ::= offer(Constant, Stream(Lot), Stream(Bond)).
+TradeOffer       ::= offer(Constant, Lot, Stream(Bond)).
 GroupInviteOffer ::= offer(GroupId).
 EscrowOffer      ::= offer(Constant).
 
@@ -210,7 +210,7 @@ respond_escrow_cancel(offer(Target), Answer?) :-
 %% Classify an incoming proposal.  Payment and redemption are settled by the
 %% program; only the normal trade is a question for the person, and it spawns a
 %% responder rather than sending the offer to the mediator.
-procedure trade_dispatch(Constant?, Constant?, Constant?, Stream(Lot)?, Stream(Bond)?, TradeResponse,
+procedure trade_dispatch(Constant?, Constant?, Constant?, Lot?, Stream(Bond)?, TradeResponse,
     Stream(Bond)?, Constant?, Constant?, Stream(X)?, Stream(X)?, OutputsList?, Stream(Constant)).
 
 %% Payment — auto-accept (proposer gives, wants nothing).
@@ -224,7 +224,7 @@ trade_dispatch(payment, Id, From, _, OfferedBonds, trade_accept([]),
 %% or decline with a menu of what it does hold.
 trade_dispatch(redemption, Id, From, WantSpec, OfferedBonds, TradeResp?,
     Holdings, NextSerial, Clock, UserIn, NetIn, Outs, DateW?) :-
-    select_bonds_by_spec(WantSpec?, Holdings?, Status, Selected, Remaining),
+    select_bonds_by_spec([WantSpec?], Holdings?, Status, Selected, Remaining),
     redemption_result(Status?, Id?, From?, TradeResp, OfferedBonds?, Selected?, Remaining?,
         NextSerial?, Clock?, UserIn?, NetIn?, Outs?, DateW).
 
@@ -293,7 +293,7 @@ agent(Id, UserIn, [msg(From, Id1, coins(Bonds))|NetIn], Outs, Holdings, NextSeri
 %% A friend proposes a trade (or presents my own bonds for redemption).
 agent(Id, UserIn, [msg(From, Id1, trade_propose(WantSpec, OfferedBonds, TradeResp?))|NetIn], Outs, Holdings, NextSerial, Clock, DateW?) :-
     Id? =?= Id1?, ground(From?), ground(WantSpec?), ground(OfferedBonds?) |
-    classify_trade(Id?, Clock?, WantSpec?, OfferedBonds?, TradeClass),
+    classify_trade(Id?, Clock?, [WantSpec?], OfferedBonds?, TradeClass),
     trade_dispatch(TradeClass?, Id?, From?, WantSpec?, OfferedBonds?, TradeResp,
         Holdings?, NextSerial?, Clock?, UserIn?, NetIn?, Outs?, DateW).
 
@@ -367,7 +367,7 @@ agent(Id, [decision(Dec, From, response(Resp?))|UserIn], NetIn, Outs, Holdings, 
 %% want-bonds, take the offered ones.
 agent(Id, [accept_trade(From, WantSpec, OfferedBonds, TradeResp?)|UserIn], NetIn, Outs, Holdings, NextSerial, Clock, DateW?) :-
     ground(Id?), ground(From?), ground(WantSpec?), ground(OfferedBonds?) |
-    select_bonds_by_spec(WantSpec?, Holdings?, Status, Selected, Remaining),
+    select_bonds_by_spec([WantSpec?], Holdings?, Status, Selected, Remaining),
     handle_trade_fill(Status?, Id?, From?, TradeResp, OfferedBonds?, Selected?, Remaining?, NextSerial?, Clock?, UserIn?, NetIn?, Outs?, DateW).
 
 %% The person declined a proposed trade.
@@ -499,8 +499,8 @@ agent(Id, UserIn, NetIn, Outs, Holdings, NextSerial, Clock, DateW?) :-
     ground(Id?), ground(Friend?),
     ground(GiveCoin?), ground(GiveMaturity?), ground(GiveAmount?),
     ground(WantCoin?), ground(WantMaturity?), ground(WantAmount?) |
-    do_trade(Id?, Friend?, [lot(GiveCoin?, GiveMaturity?, GiveAmount?)],
-             [lot(WantCoin?, WantMaturity?, WantAmount?)],
+    do_trade(Id?, Friend?, lot(GiveCoin?, GiveMaturity?, GiveAmount?),
+             lot(WantCoin?, WantMaturity?, WantAmount?),
              Holdings?, NextSerial?, Clock?, UserIn?, NetIn?, Outs?, DateW).
 
 %% Redeem: present a friend's bonds and name what I want back; the issuer must
@@ -510,8 +510,8 @@ agent(Id, UserIn, NetIn, Outs, Holdings, NextSerial, Clock, DateW?) :-
     ground(Id?), ground(Friend?),
     ground(GiveCoin?), ground(GiveMaturity?), ground(GiveAmount?),
     ground(WantCoin?), ground(WantMaturity?), ground(WantAmount?) |
-    do_redeem(Id?, Friend?, [lot(GiveCoin?, GiveMaturity?, GiveAmount?)],
-              [lot(WantCoin?, WantMaturity?, WantAmount?)],
+    do_redeem(Id?, Friend?, lot(GiveCoin?, GiveMaturity?, GiveAmount?),
+              lot(WantCoin?, WantMaturity?, WantAmount?),
               Holdings?, NextSerial?, Clock?, UserIn?, NetIn?, Outs?, DateW).
 
 %% Deposit an escrow: lock bonds for a friend until ReleaseTime, cancellable
@@ -520,7 +520,7 @@ agent(Id, UserIn, NetIn, Outs, Holdings, NextSerial, Clock, DateW?) :-
 agent(Id, UserIn, NetIn, Outs, Holdings, NextSerial, Clock, []) :-
     ground(Id?), ground(Friend?),
     ground(Coin?), ground(Maturity?), ground(Amount?), ground(ReleaseTime?) |
-    do_deposit_escrow(Id?, Friend?, [lot(Coin?, Maturity?, Amount?)], ReleaseTime?,
+    do_deposit_escrow(Id?, Friend?, lot(Coin?, Maturity?, Amount?), ReleaseTime?,
                       Holdings?, NextSerial?, Clock?, UserIn?, NetIn?, Outs?).
 
 %% --- Volitional: social transactions the person originates ---
