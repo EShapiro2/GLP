@@ -19,9 +19,8 @@ reduce(P, G, Time, reduction(G?, Tbody?)) :-     %% reduce (with budget)
     ~(G? =?= true), ~(G? =?= (_, _)),
     clause(G?, P?, Body) |
     reduce(P?, Body?, New_t?, Tbody).
-reduce(P, G, Time, what_now(Mode?)) :-           %% wait for command
+reduce(P, G, 0, what_now(Mode?)) :-              %% wait for command
     ground(G?),
-    Time? = 0,
     ~(G? =?= true), ~(G? =?= (_, _)) |
     next(P?, G?, Mode).
 
