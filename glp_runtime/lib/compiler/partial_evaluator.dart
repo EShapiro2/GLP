@@ -49,15 +49,8 @@ Map<String, List<Term>> getRootScopeUnitClauses() {
     if (proc.clauses.length != 1) continue;
     final clause = proc.clauses.first;
     if (clause.guards != null && clause.guards!.isNotEmpty) continue;
-    if (clause.body != null && clause.body!.isNotEmpty) {
-      if (clause.body!.length == 1 &&
-          clause.body![0].functor == 'true' &&
-          clause.body![0].args.isEmpty) {
-        // Body is just `true`
-      } else {
-        continue;
-      }
-    }
+    // A clause whose body is `true` is not a unit clause and defines no guard.
+    if (clause.body != null && clause.body!.isNotEmpty) continue;
     unitClauses['${proc.name}/${proc.arity}'] = clause.head.args;
   }
 
@@ -147,7 +140,11 @@ class PartialEvaluator {
 
   /// Collect unit clauses from program.
   /// Returns map from "name/arity" to list of head arguments.
-  /// A unit clause has exactly one clause, no guards, and no body (or body is just `true`).
+  /// A unit clause has exactly one clause, no guards and no body: "a unit
+  /// clause p(T1,...,Tn). defines a guard predicate" (GLP-Spec
+  /// appendix-guards.tex, Defined guard predicates).  A clause whose body is
+  /// `true` has a body, so it is not one and defines no guard; until
+  /// 2026-10-02 it counted as one.
   Map<String, List<Term>> _collectUnitClauses(Program program) {
     final Map<String, List<Term>> unitClauses = {};
 
@@ -160,17 +157,8 @@ class PartialEvaluator {
       // Must have no guards
       if (clause.guards != null && clause.guards!.isNotEmpty) continue;
 
-      // Must have no body, or body is empty, or body is just `true`
-      if (clause.body != null && clause.body!.isNotEmpty) {
-        // Check if body is just `true`
-        if (clause.body!.length == 1 &&
-            clause.body![0].functor == 'true' &&
-            clause.body![0].args.isEmpty) {
-          // Body is just `true`, this is a unit clause
-        } else {
-          continue; // Has real body goals
-        }
-      }
+      // Must have no body
+      if (clause.body != null && clause.body!.isNotEmpty) continue;
 
       // This is a unit clause
       final key = '${proc.name}/${proc.arity}';

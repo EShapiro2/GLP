@@ -951,7 +951,9 @@ class PartialEvaluator {
 
   /// Collect unit clauses from program.
   /// Returns map from "name/arity" to list of head arguments.
-  /// A unit clause has exactly one clause, no guards, and no body (or body is just `true`).
+  /// A unit clause has exactly one clause, no guards and no body (GLP-Spec
+  /// appendix-guards.tex, Defined guard predicates); a clause whose body is
+  /// `true` is not one and defines no guard (until 2026-10-02 it counted).
   Map<String, List<Term>> _collectUnitClauses(Program program) {
     final Map<String, List<Term>> unitClauses = {};
 
@@ -964,17 +966,8 @@ class PartialEvaluator {
       // Must have no guards
       if (clause.guards != null && clause.guards!.isNotEmpty) continue;
 
-      // Must have no body, or body is empty, or body is just `true`
-      if (clause.body != null && clause.body!.isNotEmpty) {
-        // Check if body is just `true`
-        if (clause.body!.length == 1 &&
-            clause.body![0].functor == 'true' &&
-            clause.body![0].args.isEmpty) {
-          // Body is just `true`, this is a unit clause
-        } else {
-          continue; // Has real body goals
-        }
-      }
+      // Must have no body
+      if (clause.body != null && clause.body!.isNotEmpty) continue;
 
       // This is a unit clause
       final key = '${proc.name}/${proc.arity}';
