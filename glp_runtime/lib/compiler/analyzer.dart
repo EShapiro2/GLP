@@ -19,6 +19,10 @@ class VariableInfo {
   int writerOccurrencesHeadBody = 0;
   int readerOccurrencesHeadBody = 0;
 
+  // Writer occurrences in the clause head alone.  A writer occurring twice in
+  // the head is refused whatever the guards ([VariableTable.collectSRSWViolations]).
+  int writerOccurrencesHead = 0;
+
   // First occurrence location
   AstNode? firstOccurrence;
 
@@ -77,17 +81,26 @@ class VariableTable {
   // the clause, ITS PAIRED WRITER OCCURRING ONCE.
   final Set<String> _typeLicensedVars = {};
 
+  /// The head of the clause this table was built from, which a diagnostic
+  /// names.
+  Atom? head;
+
   /// Record a writer occurrence.
   /// [inHeadOrBody]: true if in head or body (counts toward SRSW), false if in guard
+  /// [inHead]: true if in the clause head
   /// Anonymous variables (names starting with '_') are not tracked for SRSW.
-  void recordWriterOccurrence(String name, AstNode node, {bool inHeadOrBody = true}) {
+  void recordWriterOccurrence(String name, AstNode node,
+      {bool inHeadOrBody = true, bool inHead = false}) {
     // Skip anonymous variables - they don't participate in SRSW
     if (name.startsWith('_')) return;
-    
+
     final info = _vars.putIfAbsent(name, () => VariableInfo(name, true));
     info.writerOccurrences++;
     if (inHeadOrBody) {
       info.writerOccurrencesHeadBody++;
+    }
+    if (inHead) {
+      info.writerOccurrencesHead++;
     }
     info.firstOccurrence ??= node;
   }
@@ -142,7 +155,10 @@ class VariableTable {
   /// permission, its paired writer occurring once" (typed-glp.tex, before
   /// Proposition "Readers of Constant Types"), and of `MutualRef` it is "a
   /// reader of type MutualRef may also occur more than once" --- so it does not
-  /// reach this one.
+  /// reach this one.  Nor does the guard license a second occurrence in the
+  /// HEAD: the head is matched before the guard is tried, and a writer
+  /// occurring twice there is refused whatever the guards (GLP-Spec glp.tex,
+  /// Definition "GLP Program"; [collectSRSWViolations]).
   bool allowsMultipleWriters(String varName) => isGrounded(varName);
 
   /// Verify SRSW constraints and return list of violations (empty if valid)
@@ -161,9 +177,25 @@ class VariableTable {
       // Each occurrence denotes a fresh writer with no paired reader
       if (info.isAnonymous) continue;
 
-      // Check writer occurrences: only a groundness-implying guard licenses
-      // more than one (TGLP glp.tex rem:guards-srsw).
-      if (info.writerOccurrences > 1 && !allowsMultipleWriters(info.name)) {
+      // Check writer occurrences.  A writer occurring twice in the HEAD is an
+      // SRSW violation whatever the guards: SRSW requires SO, "every variable
+      // occurs in it at most once" (GLP-Spec glp.tex, Definitions
+      // "Single-Occurrence (SO) Invariant" and "GLP Program"), and the guard
+      // is tried only after the head is matched, by term matching, which is
+      // defined for terms that jointly satisfy SO (appendix-term-matching.tex).
+      // GLP's ruling (GLP #3 Cowork, 2026-10-02 08:40 UTC, G).  Until
+      // 2026-10-02 a groundness-implying guard licensed it, and the second
+      // occurrence's get_variable overwrote the first: h1(same(To), To) :-
+      // ground(To?) | true reduced h1(same(4), 3).  Elsewhere in the clause
+      // only a groundness-implying guard licenses more than one (TGLP glp.tex
+      // rem:guards-srsw).
+      if (info.writerOccurrencesHead > 1) {
+        final line = head?.line ?? info.firstOccurrence?.line ?? 0;
+        final clause = head != null ? ' of the clause $head' : '';
+        violations.add(
+          'Line $line: Writer variable "${info.name}" occurs ${info.writerOccurrencesHead} times in the head$clause'
+        );
+      } else if (info.writerOccurrences > 1 && !allowsMultipleWriters(info.name)) {
         final line = info.firstOccurrence?.line ?? 0;
         violations.add(
           'Line $line: Writer variable "${info.name}" occurs ${info.writerOccurrences} times without a groundness-implying guard'
@@ -604,9 +636,11 @@ class Analyzer {
     return (AnnotatedClause(clause, varTable, hasGuards: hasGuards, hasBody: hasBody), contextViolations);
   }
 
+  /// Analyze a clause head.
   void _analyzeAtom(Atom atom, VariableTable varTable) {
+    varTable.head = atom;
     for (final arg in atom.args) {
-      _analyzeTerm(arg, varTable);
+      _analyzeTerm(arg, varTable, inHead: true);
     }
   }
 
@@ -770,7 +804,9 @@ class Analyzer {
   /// Analyze a term, recording variable occurrences.
   /// [inHeadOrBody]: true if analyzing head or body (counts for SRSW),
   ///                 false if analyzing guards (does not count for SRSW)
-  void _analyzeTerm(Term term, VariableTable varTable, {bool inHeadOrBody = true}) {
+  /// [inHead]: true if analyzing the clause head
+  void _analyzeTerm(Term term, VariableTable varTable,
+      {bool inHeadOrBody = true, bool inHead = false}) {
     if (term is VarTerm) {
       // Skip anonymous variables (names starting with '_') - exempt from SRSW
       // Each occurrence denotes a fresh writer with no paired reader
@@ -779,18 +815,21 @@ class Analyzer {
       if (term.isReader) {
         varTable.recordReaderOccurrence(term.name, term, inHeadOrBody: inHeadOrBody);
       } else {
-        varTable.recordWriterOccurrence(term.name, term, inHeadOrBody: inHeadOrBody);
+        varTable.recordWriterOccurrence(term.name, term,
+            inHeadOrBody: inHeadOrBody, inHead: inHead);
       }
     } else if (term is StructTerm) {
       for (final arg in term.args) {
-        _analyzeTerm(arg, varTable, inHeadOrBody: inHeadOrBody);
+        _analyzeTerm(arg, varTable, inHeadOrBody: inHeadOrBody, inHead: inHead);
       }
     } else if (term is ListTerm) {
       if (term.head != null) {
-        _analyzeTerm(term.head!, varTable, inHeadOrBody: inHeadOrBody);
+        _analyzeTerm(term.head!, varTable,
+            inHeadOrBody: inHeadOrBody, inHead: inHead);
       }
       if (term.tail != null) {
-        _analyzeTerm(term.tail!, varTable, inHeadOrBody: inHeadOrBody);
+        _analyzeTerm(term.tail!, varTable,
+            inHeadOrBody: inHeadOrBody, inHead: inHead);
       }
     }
     // A ConstTerm reached here is in argument position, and therefore data.
