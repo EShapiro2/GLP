@@ -15,10 +15,21 @@ enum ExecutionStatus {
 class DrainResult {
   final List<int> goalsRan;
   final ExecutionStatus status;
-  final List<String> suspendedGoals;
   final Set<int> blockingReaders;  // addresses of readers causing suspension (per spec 8.4)
 
-  DrainResult(this.goalsRan, this.status, this.suspendedGoals, [this.blockingReaders = const {}]);
+  final List<String> Function() _suspendedGoals;
+
+  /// The goals the drain left suspended, as text, made when it is first read:
+  /// a drain whose caller does not read it formats none of them.
+  late final List<String> suspendedGoals = _suspendedGoals();
+
+  DrainResult(this.goalsRan, this.status, List<String> suspendedGoals, [this.blockingReaders = const {}])
+      : _suspendedGoals = (() => suspendedGoals);
+
+  /// A result whose suspended goals are formatted by [suspendedGoals] when the
+  /// list is first read.
+  DrainResult.deferred(this.goalsRan, this.status, List<String> Function() suspendedGoals, [this.blockingReaders = const {}])
+      : _suspendedGoals = suspendedGoals;
 }
 
 class Scheduler {
@@ -217,7 +228,8 @@ class Scheduler {
 
   DrainResult drainWithStatus({int maxCycles = 1000, bool debug = false, bool showBindings = true, bool debugOutput = false}) {
     final ran = <int>[];
-    final suspendedGoals = <int, String>{}; // Track suspended goals by ID
+    // Track suspended goals by ID, each with the means to its text.
+    final suspendedGoals = <int, String Function()>{};
     var cycles = 0;
     // F at entry: a goal that failed in an earlier drain has already been
     // counted, so only what this drain adds bears on its status.
@@ -253,21 +265,25 @@ class Scheduler {
       }
       // Find procedure name from PC for trace
       final procName = runner.procNameForPc(act.pc) ?? '?';
-      final goalStr = _formatGoal(act.id, procName, env);
+      // The goal's text is made only where it is read: the trace, when the
+      // drain is traced; F, when the goal fails; and the suspended list, when
+      // a caller reads it.  Until 2026-10-02 every goal was formatted before
+      // its reduction, traced or not, so a reduction cost time in the size of
+      // its goal's terms (d43543ee, 2025-11-09).
+      final goalStr = debug ? _formatGoal(act.id, procName, env) : null;
 
       // Check if this is a query wrapper goal (skip display)
       final isQueryWrapper = procName.startsWith('query__');
 
-      // Track if reduction occurs
-      var hadReduction = false;
-
       // Get module context if set for this goal
       final moduleContext = rt.getGoalModuleContext(act.id);
 
-      // Create context with reduction callback for trace
-      // NOTE: Always set onReduction callback to track hadReduction correctly!
-      // Otherwise hadReduction stays false even when goal reduces, causing
-      // false "failure" detection when debug=false. Bug found 2026-01-31.
+      // Create context, with the reduction callback for the trace when the
+      // drain is traced.  Whether the goal reduced is the context's [reduced],
+      // set at each reduction traced or not: until 2026-10-02 it was the
+      // callback that recorded it, which is why the callback was always set
+      // and every goal was formatted for it (the bug of 2026-01-31, a goal
+      // that reduced read as failed when the callback was not set).
       final cx = RunnerContext(
         rt: rt,
         goalId: act.id,
@@ -279,30 +295,28 @@ class Scheduler {
         debugOutput: debugOutput,
         moduleContext: moduleContext,
         termFormatter: (term, {bool markReaders = true}) => _formatTerm(term, markReaders: markReaders),
-        onReduction: (goalId, head, body) {
-          // Skip query wrapper goals
-          if (head.contains('query__')) {
-            hadReduction = true;
-            suspendedGoals.remove(goalId);
-            return;
-          }
-          // Print reduction when it occurs (at Commit) - only when debug=true
-          if (debug) {
-            // Strip /arity suffix from procedure names for standard GLP syntax
-            final cleanHead = head.replaceAllMapped(RegExp(r'(\w+)/\d+\('), (m) => '${m.group(1)}(');
-            final cleanBody = body.replaceAllMapped(RegExp(r'(\w+)/\d+\('), (m) => '${m.group(1)}(');
-            // No goal ID prefix - clean output
-            _trace('$cleanHead :- $cleanBody');
-          }
-          hadReduction = true;
-          // Remove from suspended list if it reduced
-          suspendedGoals.remove(goalId);
-        },
+        onReduction: debug
+            ? (goalId, head, body) {
+                // Skip query wrapper goals
+                if (head.contains('query__')) return;
+                // Print reduction when it occurs (at Commit)
+                // Strip /arity suffix from procedure names for standard GLP syntax
+                final cleanHead = head.replaceAllMapped(RegExp(r'(\w+)/\d+\('), (m) => '${m.group(1)}(');
+                final cleanBody = body.replaceAllMapped(RegExp(r'(\w+)/\d+\('), (m) => '${m.group(1)}(');
+                // No goal ID prefix - clean output
+                _trace('$cleanHead :- $cleanBody');
+              }
+            : null,
       );
       // An sGLP run: the goal being reduced, whose agent's Reduce this is
       // (the log, lib/sglp/log.dart).
       rt.sim?.beginReduce(act.id);
       final result = runner.runWithStatus(cx);
+
+      // Track if reduction occurred; a goal that reduced leaves the suspended
+      // list.
+      final hadReduction = cx.reduced;
+      if (hadReduction) suspendedGoals.remove(act.id);
 
       // An sGLP run: report the reduction, with the clock, to a harness that
       // asked; and forget the identifier of a goal that is gone.
@@ -315,11 +329,14 @@ class Scheduler {
 
       // Track suspended goals (always, not just in debug mode)
       if (result == RunResult.suspended) {
-        // Track this suspended goal
-        suspendedGoals[act.id] = goalStr;
+        // Track this suspended goal: its text is the traced one, or is made
+        // when the suspended list is read.
+        suspendedGoals[act.id] = goalStr != null
+            ? () => goalStr
+            : () => _formatGoal(act.id, procName, env);
         // Show suspension if debug and no reduction
         if (debug && !hadReduction && !isQueryWrapper) {
-          final cleanGoal = goalStr.replaceAllMapped(RegExp(r'(\w+)/\d+\('), (m) => '${m.group(1)}(');
+          final cleanGoal = goalStr!.replaceAllMapped(RegExp(r'(\w+)/\d+\('), (m) => '${m.group(1)}(');
           _trace('$cleanGoal → suspended');
         }
       } else if (result == RunResult.terminated) {
@@ -327,7 +344,7 @@ class Scheduler {
         if (!hadReduction && !isQueryWrapper) {
           // Terminated without reduction = failed.
           if (debug) {
-            final cleanGoal = goalStr.replaceAllMapped(RegExp(r'(\w+)/\d+\('), (m) => '${m.group(1)}(');
+            final cleanGoal = goalStr!.replaceAllMapped(RegExp(r'(\w+)/\d+\('), (m) => '${m.group(1)}(');
             _trace('$cleanGoal → failed');
           }
           // Fail, per the dGLP and madGLP Reduce transactions: Q' = Q_r,
@@ -335,8 +352,10 @@ class Scheduler {
           // dequeued — and the run continues. A failed goal makes the
           // configuration terminal only when no class is enabled in it, which
           // one failure among many active goals is not. The drain therefore
-          // keeps reducing; F alone decides the run's status, below.
-          rt.failedGoals.add(goalStr);
+          // keeps reducing; F alone decides the run's status, below.  A goal
+          // that failed made no binding, so its text now is its text before
+          // the run.
+          rt.failedGoals.add(goalStr ?? _formatGoal(act.id, procName, env));
           suspendedGoals.remove(act.id);
         } else {
           // Goal terminated successfully (with reduction) - remove from suspended list
@@ -349,7 +368,7 @@ class Scheduler {
     // Determine final status
     // Per spec §3.4: exclude infrastructure goals (serve goals from auto-activation)
     // from status determination — their suspension is normal steady state
-    final userSuspendedGoals = Map<int, String>.from(suspendedGoals)
+    final userSuspendedGoals = Map<int, String Function()>.from(suspendedGoals)
       ..removeWhere((goalId, _) => rt.infrastructureGoalIds.contains(goalId));
 
     // A goal that joined F during this drain makes the run's status failed,
@@ -382,8 +401,8 @@ class Scheduler {
       status = ExecutionStatus.succeeded;
     }
 
-    final suspendedList = userSuspendedGoals.values.map((g) =>
-      g.replaceAllMapped(RegExp(r'(\w+)/\d+\('), (m) => '${m.group(1)}(')
+    List<String> suspendedList() => userSuspendedGoals.values.map((g) =>
+      g().replaceAllMapped(RegExp(r'(\w+)/\d+\('), (m) => '${m.group(1)}(')
     ).toList();
 
     // Per spec section 8.4: collect blocking readers from runtime's suspended set
@@ -392,7 +411,7 @@ class Scheduler {
         ? rt.suspended.keys.toSet()
         : <int>{};
 
-    return DrainResult(ran, status, suspendedList, blockingReaders);
+    return DrainResult.deferred(ran, status, suspendedList, blockingReaders);
   }
 
   /// Reduce until quiescent: the queue empty and nothing runnable.
@@ -433,7 +452,9 @@ class Scheduler {
         : (rt.failedGoals.length > failedAtEntry
             ? ExecutionStatus.failed
             : last.status);
-    return DrainResult(ran, status, last.suspendedGoals, last.blockingReaders);
+    final lastResult = last;
+    return DrainResult.deferred(ran, status, () => lastResult.suspendedGoals,
+        lastResult.blockingReaders);
   }
 
   /// True where the machine holds a pending goal it would release at
@@ -460,7 +481,7 @@ class Scheduler {
     final failedAtEntry = rt.failedGoals.length;
     var totalCycles = 0;
     ExecutionStatus lastStatus = ExecutionStatus.succeeded;
-    List<String> lastSuspended = [];
+    List<String> Function() lastSuspended = () => [];
     Set<int> lastBlockingReaders = {};
 
     while (totalCycles < maxCycles) {
@@ -474,7 +495,7 @@ class Scheduler {
       ran.addAll(result.goalsRan);
       totalCycles += result.goalsRan.length;
       lastStatus = result.status;
-      lastSuspended = result.suspendedGoals;
+      lastSuspended = () => result.suspendedGoals;
       lastBlockingReaders = result.blockingReaders;
 
       // A failed drain does not end the computation either: a pending timer is
@@ -501,7 +522,7 @@ class Scheduler {
     final status = rt.failedGoals.length > failedAtEntry
         ? ExecutionStatus.failed
         : lastStatus;
-    return DrainResult(ran, status, lastSuspended, lastBlockingReaders);
+    return DrainResult.deferred(ran, status, lastSuspended, lastBlockingReaders);
   }
 
   /// Legacy async drain for backward compatibility
