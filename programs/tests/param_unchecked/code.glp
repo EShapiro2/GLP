@@ -1,5 +1,5 @@
-%% run/1's declaration says `_?`, so the call below hands tagger/1 no element
-%% type and no instantiation of tagger/1 arises.  tagger/1 inspects its stream
+%% run/1's declaration says `Channel(_, _)?`, so the call below hands tagger/1
+%% no element type and no instantiation of tagger/1 arises.  tagger/1 inspects its stream
 %% element (it matches m/1 and builds o/1), so it has no well-typing of its own
 %% and acquires one only per instantiation --- of which there is none.  Nothing
 %% can check the clause, so compilation rejects the program (TGLP
@@ -8,7 +8,7 @@
 %% concretely, the checker rejects it at once, which is
 %% programs/tests/typed/tagged_union_untagged_neg.glp.
 
-exported procedure run(_?).
+exported procedure run(Channel(_, _)?).
 run(Ch) :- tagger(Ch?).
 
 procedure(X, Y) tagger(Channel(X, Y)?).

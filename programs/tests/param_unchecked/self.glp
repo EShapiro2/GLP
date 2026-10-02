@@ -6,6 +6,11 @@
 %% program` line, the regression test for the silence found that day:
 %% typed_actors.glp had carried an untagged value at a tagged-union position for
 %% months, and the checker's verdict on the program that contained it was clean.
+%% Until 2026-10-02 run/1 was declared `_?`, which no expansion of tagger/1's
+%% Channel(X, Y)? accepts, so that call had no instantiation either (TGLP
+%% parameterized-types.tex, Definition "Instantiation") and was refused for it
+%% first; `Channel(_, _)?` supplies no element type and leaves this fixture its
+%% one refusal.
 
 Inner ::= a ; b.
 Outer ::= wrap(Inner?) ; err.
@@ -13,7 +18,7 @@ Outer ::= wrap(Inner?) ; err.
 InMsg  ::= m(Inner?).
 OutMsg ::= o(Outer).
 
-imported procedure code#run(_?).
+imported procedure code#run(Channel(_, _)?).
 
-exported procedure run(_?).
+exported procedure run(Channel(_, _)?).
 run(Ch) :- code # run(Ch?).

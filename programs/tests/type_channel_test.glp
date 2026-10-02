@@ -16,5 +16,3 @@ procedure handle_response(Response?, Stream(Msg)?, Stream(Msg)).
 handle_response(accept(ch(FIn, FOut)), In, In1) :-
     merge(In?, FIn?, In1).
 handle_response(no, In, In?).
-
-procedure(X) merge(Stream(X)?, Stream(X)?, Stream(X)).
