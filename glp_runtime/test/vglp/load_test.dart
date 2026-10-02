@@ -198,11 +198,11 @@ ping(a).
 
   group('a source in the paper\'s syntax, compiled with its ask streams', () {
     // vGLP's task of 2026-10-02 00:13 UTC, item F: the canonical compilation
-    // of db03e2d, typed.  The ask stream's element type is the union over the
-    // program's interactive types of their asks, ask(Constant, T, Handle), so
-    // a program with one interactive type is the one TGLP's checker can type:
-    // two or more give two alternatives of the functor ask/3, which TGLP
-    // refuses.
+    // of db03e2d, typed.  The ask stream's element type is one ask/3 over the
+    // union of the questions, each moded interactive type inside a functor of
+    // its own, Ask ::= ask(Constant, Question, Handle) (vGLP #4 Cowork,
+    // 2026-10-02 08:26 UTC, Q1), so a program with two or more interactive
+    // types is typed as one with one is.
     const entrySelfGlp = '''
 exported procedure ping(Constant).
 ping(a).
@@ -233,6 +233,46 @@ two(A, B, NA, NB, OA?, OB?) :- agent(A?, NA?, OA), agent(B?, NB?, OB).
       final agent = modules.firstWhere((m) => m.moduleName == 'agent');
       expect(agent.ast.procedures.map((p) => '${p.name}/${p.arity}'),
           containsAll(['agent/4', 'agent1/6', 'two/7']));
+      expect(() => typeCheckProgram(modules, rootDir: fixture.path),
+          returnsNormally);
+    });
+
+    test('two interactive types, one in each mode, the agent of Section 1 '
+        'and the responder of Section 3: well-typed', () {
+      write('self.glp', entrySelfGlp);
+      write('agent.vglp', '''
+Peer     ::= Constant.
+Request  ::= post(String) ; quit.
+Offer    ::= offer(Peer).
+Response ::= accept(Peer) ; refuse(Peer).
+YesNo    ::= yes ; no.
+Card     ::= card(Peer, YesNo?).
+Content  ::= friend_request(Peer, Response?).
+Msg      ::= msg(Peer, Content).
+
+procedure (Request?)*agent(Peer?, Stream(Msg)?, Stream(String)).
+(post(Text))*agent(Id, NetIn, [Text?|Outs?]) :-
+    ground(Id?) | agent(Id?, NetIn?, Outs).
+(quit)*agent(_, _, []).
+(_)*agent(Id, [msg(Id1, friend_request(From, Resp?))|NetIn], Outs?) :-
+    Id? =?= Id1?, ground(From?) |
+    respond_coldcall(offer(From?), Resp),
+    agent(Id?, NetIn?, Outs).
+
+procedure (Card)*respond_coldcall(Offer?, Response).
+(card(From?, Answer))*respond_coldcall(offer(From), Resp?) :-
+    ground(From?) | decide(Answer?, From?, Resp).
+
+procedure decide(YesNo?, Peer?, Response).
+decide(yes, From, accept(From?)).
+decide(no, From, refuse(From?)).
+''');
+      final modules =
+          discoverProgram(fixture.path, rootSelfGlpPath: _rootSelfGlp);
+      final agent = modules.firstWhere((m) => m.moduleName == 'agent');
+      expect(
+          agent.ast.typeDefs.map((d) => d.toString()),
+          contains('Question ::= request_r(Request?) ; card_w(Card).'));
       expect(() => typeCheckProgram(modules, rootDir: fixture.path),
           returnsNormally);
     });

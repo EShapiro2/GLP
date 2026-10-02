@@ -68,8 +68,8 @@ void main() {
         'its interactive variable, and the asked goal gets the reader', () {
       expect(
           q,
-          contains("agent(S1, S2, S3?, [ask('Request?', X, W?) | D?]) :- "
-              'agent1(S1?, S2?, S3, X?, W, D).'));
+          contains("agent(S1, S2, S3?, [ask('Request?', request_r(X), W?) | "
+              'D?]) :- agent1(S1?, S2?, S3, X?, W, D).'));
       expect(
           q,
           contains('procedure agent(Peer?, Stream(Msg)?, Stream(String), '
@@ -89,8 +89,8 @@ void main() {
         'the asked goal gets the writer', () {
       expect(
           q,
-          contains("respond_coldcall(S1, S2?, [ask('Card', X?, W?) | D?]) :- "
-              'respond_coldcall1(S1?, S2, X, W, D).'));
+          contains("respond_coldcall(S1, S2?, [ask('Card', card_w(X?), W?) | "
+              'D?]) :- respond_coldcall1(S1?, S2, X, W, D).'));
       expect(
           q,
           contains('procedure respond_coldcall1(Offer?, Response, Card, '
@@ -120,13 +120,13 @@ void main() {
       expect(q, contains('decide(no, From, refuse(From?)).'));
     });
 
-    test('the types the compilation adds: the handle\'s, and the asks\' union '
-        'over the interactive types as written', () {
+    test('the types the compilation adds: the handle\'s, the questions, one '
+        'functor per moded interactive type wrapping it as written, and one '
+        'ask/3 over their union', () {
       expect(q, contains('Handle ::= withdraw.'));
-      expect(
-          q,
-          contains('Ask ::= ask(Constant, Request?, Handle) ; '
-              'ask(Constant, Card, Handle).'));
+      expect(q,
+          contains('Question ::= request_r(Request?) ; card_w(Card).'));
+      expect(q, contains('Ask ::= ask(Constant, Question, Handle).'));
     });
 
     test('no construct goal, and no "true |" in an asking clause', () {
@@ -155,15 +155,17 @@ send_all(_, [], []).
 ''');
       expect(
           s,
-          contains("chat(S1, S2?, [ask('Stream(String)?', X, W?) | D?]) :- "
-              'chat1(S1?, S2, X?, W, D).'));
+          contains("chat(S1, S2?, [ask('Stream(String)?', "
+              'stream_string_r(X), W?) | D?]) :- chat1(S1?, S2, X?, W, D).'));
       expect(
           s,
           contains('procedure chat1(Peer?, Stream(Msg), Stream(String)?, '
               'Handle, Stream(Ask)).'));
       expect(s, contains('chat1(Peer, Out?, Ms, _?, []) :- ground(Peer?) | '
           'send_all(Peer?, Ms?, Out).'));
-      expect(s, contains('Ask ::= ask(Constant, Stream(String)?, Handle).'));
+      expect(s,
+          contains('Question ::= stream_string_r(Stream(String)?).'));
+      expect(s, contains('Ask ::= ask(Constant, Question, Handle).'));
     });
 
     test('a (_) unit clause, and a (_) clause whose body is true', () {
@@ -201,7 +203,7 @@ procedure(X) (Box(X)?)*take(X).
       // The ask type takes the parameter an interactive type names, and every
       // declaration with an ask stream takes it with it.
       expect(s, contains('exported procedure(X) go(Stream(Ask(X))).'));
-      expect(s, contains("go([ask('T?', X, W?) | D?]) :- go1(X?, W, D)."));
+      expect(s, contains("go([ask('T?', t_r(X), W?) | D?]) :- go1(X?, W, D)."));
       expect(s, contains('procedure(X) go1(T?, Handle, Stream(Ask(X))).'));
       expect(s, contains('go1(t, _?, []).'));
       expect(s, contains('procedure(X) take(X, Stream(Ask(X))).'));
@@ -209,12 +211,10 @@ procedure(X) (Box(X)?)*take(X).
           contains('procedure(X) take1(X, Box(X)?, Handle, Stream(Ask(X))).'));
       expect(
           s,
-          contains("take(S1?, [ask('Box(X)?', X, W?) | D?]) :- "
+          contains("take(S1?, [ask('Box(X)?', box_x_r(X), W?) | D?]) :- "
               'take1(S1, X?, W, D).'));
-      expect(
-          s,
-          contains('Ask(X) ::= ask(Constant, T?, Handle) ; '
-              'ask(Constant, Box(X)?, Handle).'));
+      expect(s, contains('Question(X) ::= t_r(T?) ; box_x_r(Box(X)?).'));
+      expect(s, contains('Ask(X) ::= ask(Constant, Question(X), Handle).'));
     });
 
     test('the (n+1)-ary procedure\'s name is fresh against the program\'s', () {
@@ -228,7 +228,7 @@ ask1(_).
       expect(c.volitional.single.guardedName, 'ask1_1');
       expect(
           c.source,
-          contains("ask(S1, [ask('T?', X, W?) | D?]) :- "
+          contains("ask(S1, [ask('T?', t_r(X), W?) | D?]) :- "
               'ask1_1(S1?, X?, W, D).'));
       expect(c.source,
           contains('ask1_1(N, t, _?, []) :- ground(N?) | ask1(N?).'));
@@ -484,7 +484,7 @@ p(N) :- lib # q(N?).
     });
 
     test('an interactive type shared by two procedures is one alternative of '
-        'the asks\' union', () {
+        'the questions\' union', () {
       final s = compileCanonical('''
 T ::= t.
 procedure (T?)*p(Integer?).
@@ -492,20 +492,25 @@ procedure (T?)*p(Integer?).
 procedure (T?)*q(Integer?).
 (t)*q(_).
 ''').source;
-      expect(s, contains('Ask ::= ask(Constant, T?, Handle).'));
+      expect(s, contains('Question ::= t_r(T?).'));
+      expect(s, contains('Ask ::= ask(Constant, Question, Handle).'));
     });
 
     test('the types it adds are named fresh against the program\'s', () {
       final c = compileCanonical('''
 Ask ::= a.
 Handle ::= h.
+Question ::= q.
 procedure (Ask?)*p(Handle?).
 (a)*p(_).
 ''');
       expect(c.askType, 'Ask_1');
       expect(c.handleType, 'Handle_1');
+      expect(c.questionType, 'Question_1');
       expect(c.source, contains('Handle_1 ::= withdraw.'));
-      expect(c.source, contains('Ask_1 ::= ask(Constant, Ask?, Handle_1).'));
+      expect(c.source, contains('Question_1 ::= ask_r(Ask?).'));
+      expect(c.source,
+          contains('Ask_1 ::= ask(Constant, Question_1, Handle_1).'));
       expect(c.source,
           contains('procedure p1(Handle?, Ask?, Handle_1, Stream(Ask_1)).'));
     });

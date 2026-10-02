@@ -43,20 +43,21 @@
 //     clause whose interactive term is the anonymous variable keeps it, and
 //     no goal is added: there is no built-in (item B');
 //   - the asking clause
-//         q_a(S1, ..., Sn, [ask(T, X, W?) | D?]) :- q(S1', ..., Sn', X?, W, D).
+//         q_a(S1, ..., Sn, [ask(T, t(X), W?) | D?]) :- q(S1', ..., Sn', X?, W, D).
 //     S'_l the reader of S_l at an input position and the writer at an output
 //     position, the head carrying the pair's other end; X and X? exchanged
-//     where T is in writer mode;
+//     where T is in writer mode; t the functor of T in Question (below);
 //   - typed: the types of the source; the handle's, Handle ::= withdraw; the
-//     ask stream's element, the union over the program's interactive types of
-//     their asks, Ask ::= ask(Constant, T1, Handle) ; ... ; each procedure that
+//     questions, Question ::= t1(T1) ; ... ; tk(Tk), one functor per moded
+//     interactive type, each type as written in its mode; the ask stream's
+//     element, Ask ::= ask(Constant, Question, Handle), one ask/3 over the
+//     union of those functors (vGLP #4 Cowork, 2026-10-02 08:26 UTC, Q1: TGLP
+//     refuses two alternatives of one functor, "Two alternatives with the
+//     same functor are not allowed", typed-glp.tex, so the asks of two types
+//     cannot each be an alternative of their own); each procedure that
 //     reaches a question declared with Stream(Ask) added, the asking clause
 //     with the source declaration's argument types and it, and q with the
-//     argument of T in its mode, the handle and it.  TGLP requires the
-//     alternatives of a type to be distinguished by their top-level functor
-//     ("Two alternatives with the same functor are not allowed", TGLP
-//     typed-glp.tex), so the union of two or more asks is refused by the
-//     checker: the program that loads has one interactive type.
+//     argument of T in its mode, the handle and it.
 //
 // Not here: the initial goal and the dispatcher on its ask stream and the
 // person channel (item F.5, with Part 2).
@@ -64,11 +65,15 @@
 // THE NAMES.  The asking clause takes the source name, q_a = q, so a call of
 // q in a body is already the call of its asking clause; the (n+3)-ary
 // procedure takes `q1`, made fresh against every name the program uses, and
-// the two types the compilation adds take `Ask` and `Handle`, made fresh
-// against the program's types.
+// the three types the compilation adds take `Ask`, `Handle` and `Question`,
+// made fresh against the program's types.
 //
 // THE ASK.  T is the constant naming the moded interactive type as written,
-// 'Menu' or 'Menu?'.
+// 'Menu' or 'Menu?'; t is the type as written, each name with its first
+// letter lowercased, the names joined by `_`, then `_r` in reader mode and
+// `_w` in writer mode: menu_r, menu_w (questionFunctorStem); two moded types
+// giving the same t are told apart by `_2`, `_3`, ... in the order of their
+// declarations.
 
 import '../compiler/ast.dart';
 import '../compiler/error.dart';
@@ -112,8 +117,18 @@ class VolitionalProcedure {
   /// The name of the (n+1)-ary procedure, the clauses of q.
   final String guardedName;
 
+  /// The type parameters of the procedure's declaration.
+  final List<String> typeParams;
+
+  /// The functor of T in Question, set once every interactive type of the
+  /// program is known.
+  late final String functor;
+
+  final int line, column;
+
   VolitionalProcedure(this.name, this.arity, this.interactiveType,
-      this.readerMode, this.guardedName);
+      this.readerMode, this.guardedName, this.typeParams, this.line,
+      this.column);
 
   /// The name of the asking clause.
   String get askingName => name;
@@ -124,8 +139,8 @@ class VolitionalProcedure {
 
 /// The canonical compilation of one source: the GLP module's text, the module
 /// it parses to, the volitional procedures it compiled, the procedures that
-/// reach a question by their source signature p/n, and the names of the two
-/// types it adds.
+/// reach a question by their source signature p/n, the names of the three
+/// types it adds, and the functor of each moded interactive type in Question.
 class CanonicalProgram {
   final String source;
   final Module module;
@@ -133,9 +148,32 @@ class CanonicalProgram {
   final Set<String> reaching;
   final String askType;
   final String handleType;
+  final String questionType;
+
+  /// The functor of each moded interactive type in Question, by the type as
+  /// written: 'Request?' request_r.
+  final Map<String, String> functors;
 
   CanonicalProgram(this.source, this.module, this.volitional, this.reaching,
-      this.askType, this.handleType);
+      this.askType, this.handleType,
+      {required this.questionType, required this.functors});
+}
+
+/// The functor the compilation gives a moded interactive type in Question
+/// (vGLP #4 Cowork, 2026-10-02 08:26 UTC, Q1): the type as written, each name
+/// with its first letter lowercased, the names joined by `_` in prefix order,
+/// then `_r` in reader mode and `_w` in writer mode --- `Request?` gives
+/// request_r, `Card` card_w, `Stream(String)?` stream_string_r.  The caller
+/// makes two that coincide distinct.
+String questionFunctorStem(TypeExpr t, bool readerMode) =>
+    '${_functorStem(t)}_${readerMode ? 'r' : 'w'}';
+
+String _functorStem(TypeExpr t) {
+  if (t is TypeRef) {
+    final head = '${t.name[0].toLowerCase()}${t.name.substring(1)}';
+    return [head, for (final a in t.typeArgs) _functorStem(a)].join('_');
+  }
+  return 'any';
 }
 
 /// Whether [tokens] are a vGLP program in the paper's syntax: some declaration
@@ -185,8 +223,27 @@ CanonicalProgram compileCanonical(String text) {
     }
     final t = decl.argTypes.last;
     final guarded = _fresh('${v.name}1', taken);
-    volitional[sig] = VolitionalProcedure(
-        v.name, v.arity, t, decl.isInputArg(v.arity), guarded);
+    volitional[sig] = VolitionalProcedure(v.name, v.arity, t,
+        decl.isInputArg(v.arity), guarded, decl.typeParams, v.line, v.column);
+  }
+
+  // The functor of each moded interactive type in Question, in the order of
+  // the declarations; two that coincide told apart (vGLP #4 Cowork,
+  // 2026-10-02 08:26 UTC, Q1).
+  final functors = <String, String>{};
+  final functorsTaken = <String>{};
+  for (final v in volitional.values) {
+    final written = typeSource(v.interactiveType);
+    final f = functors.putIfAbsent(written, () {
+      final stem = questionFunctorStem(v.interactiveType, v.readerMode);
+      var name = stem;
+      for (var n = 2; functorsTaken.contains(name); n++) {
+        name = '${stem}_$n';
+      }
+      functorsTaken.add(name);
+      return name;
+    });
+    v.functor = f;
   }
 
   // Every clause written (A)*p is of a procedure declared (T)*p, and every
@@ -227,7 +284,9 @@ CanonicalProgram compileCanonical(String text) {
   // The types the compilation adds.
   final typeNames = {for (final td in m.typeDefs) td.name};
   final added = _addedTypes(volitional.values, declsByKey,
-      ask: _freshType('Ask', typeNames), handle: _freshType('Handle', typeNames));
+      ask: _freshType('Ask', typeNames),
+      handle: _freshType('Handle', typeNames),
+      question: _freshType('Question', typeNames));
 
   // The compiled procedures, each with its declaration, in source order; a
   // volitional procedure becomes its asking clause and its (n+3)-ary
@@ -267,7 +326,8 @@ CanonicalProgram compileCanonical(String text) {
   final source = _emit(m, added.typeDefs, out, bare);
   final module = Parser(Lexer(source).tokenize()).parseModule();
   return CanonicalProgram(source, module, volitional.values.toList(),
-      reaching, added.ask, added.handle);
+      reaching, added.ask, added.handle,
+      questionType: added.question, functors: functors);
 }
 
 // ---------------------------------------------------------------------------
@@ -711,23 +771,31 @@ Goal _withStream(Goal g, Term stream) {
 // The types the compilation adds
 // ---------------------------------------------------------------------------
 
-/// The handle's type, [handle] ::= withdraw, and the ask stream's element,
-/// [ask], the union over the program's interactive types of their asks:
-/// ask(Constant, T, Handle) for each interactive type T as written, in its
-/// mode.  An interactive type that names a type parameter of its procedure
-/// gives the ask type that parameter, and each declaration with an ask stream
-/// takes it.
+/// The handle's type, [handle] ::= withdraw; the questions, [question], one
+/// alternative per moded interactive type, its functor wrapping the type as
+/// written in its mode, t(T); and the ask stream's element, [ask],
+/// ask(Constant, Question, Handle), one ask/3 over the union of the functors
+/// (vGLP #4 Cowork, 2026-10-02 08:26 UTC, Q1).  An interactive type that names
+/// a type parameter of its procedure gives Question and Ask that parameter,
+/// and each declaration with an ask stream takes it.
 class _AddedTypes {
   final String ask;
   final String handle;
+  final String question;
   final List<String> params;
-  final List<TypeExpr> interactiveTypes;
 
-  _AddedTypes(this.ask, this.handle, this.params, this.interactiveTypes);
+  /// Each moded interactive type, once, with its functor.
+  final List<(TypeExpr, String)> interactiveTypes;
+
+  _AddedTypes(this.ask, this.handle, this.question, this.params,
+      this.interactiveTypes);
+
+  List<TypeRef> _paramRefs(int l, int c) =>
+      [for (final p in params) TypeRef(p, l, c)];
 
   /// Stream(Ask), the type of an ask stream.
   TypeRef stream(int l, int c) => TypeRef('Stream', l, c, typeArgs: [
-        TypeRef(ask, l, c, typeArgs: [for (final p in params) TypeRef(p, l, c)])
+        TypeRef(ask, l, c, typeArgs: _paramRefs(l, c))
       ]);
 
   /// A declaration's type parameters with the ask type's added.
@@ -737,14 +805,21 @@ class _AddedTypes {
   List<TypeDef> get typeDefs => [
         TypeDef(handle, [ConstantAlt(withdrawHandle, 0, 0)], 0, 0),
         TypeDef(
+            question,
+            [
+              for (final (t, f) in interactiveTypes) StructAlt(f, [t], 0, 0)
+            ],
+            0,
+            0,
+            typeParams: params),
+        TypeDef(
             ask,
             [
-              for (final t in interactiveTypes)
-                StructAlt(askFunctor, [
-                  TypeRef('Constant', 0, 0),
-                  t,
-                  TypeRef(handle, 0, 0),
-                ], 0, 0)
+              StructAlt(askFunctor, [
+                TypeRef('Constant', 0, 0),
+                TypeRef(question, 0, 0, typeArgs: _paramRefs(0, 0)),
+                TypeRef(handle, 0, 0),
+              ], 0, 0)
             ],
             0,
             0,
@@ -754,8 +829,8 @@ class _AddedTypes {
 
 _AddedTypes _addedTypes(Iterable<VolitionalProcedure> volitional,
     Map<String, ProcDecl> declsByKey,
-    {required String ask, required String handle}) {
-  final types = <TypeExpr>[];
+    {required String ask, required String handle, required String question}) {
+  final types = <(TypeExpr, String)>[];
   final seen = <String>{};
   final params = <String>[];
   void collect(TypeExpr t, List<String> own) {
@@ -771,9 +846,9 @@ _AddedTypes _addedTypes(Iterable<VolitionalProcedure> volitional,
     final decl = declsByKey['${v.name}/${v.arity + 1}']!;
     final t = v.interactiveType;
     collect(t, decl.typeParams);
-    if (seen.add(typeSource(t))) types.add(t);
+    if (seen.add(typeSource(t))) types.add((t, v.functor));
   }
-  return _AddedTypes(ask, handle, params, types);
+  return _AddedTypes(ask, handle, question, params, types);
 }
 
 // ---------------------------------------------------------------------------
@@ -809,11 +884,11 @@ ProcDecl _askingDeclaration(
 
 /// The asking clause
 ///
-///     q(S1, ..., Sn, [ask(T, X, W?) | D?]) :- q1(S1', ..., Sn', X?, W, D).
+///     q(S1, ..., Sn, [ask(T, t(X), W?) | D?]) :- q1(S1', ..., Sn', X?, W, D).
 ///
 /// S'_l the reader of S_l at an input position and the writer at an output
 /// position, the head carrying the pair's other end; X and X? exchanged where
-/// T is in writer mode.
+/// T is in writer mode; t the functor of T in Question.
 Procedure _askingClause(ProcDecl decl, VolitionalProcedure v) {
   final l = decl.line, c = decl.column;
   final head = <Term>[];
@@ -826,7 +901,7 @@ Procedure _askingClause(ProcDecl decl, VolitionalProcedure v) {
   }
   final ask = StructTerm(askFunctor, [
     ConstTerm(v.typeConstant, l, c),
-    VarTerm('X', !v.readerMode, l, c),
+    StructTerm(v.functor, [VarTerm('X', !v.readerMode, l, c)], l, c),
     VarTerm('W', true, l, c),
   ], l, c);
   final clause = Clause(

@@ -9,9 +9,9 @@
 %% The paper elides the agent's other arguments and its other requests; here
 %% the agent carries its identifier, its network input and a stream of the
 %% texts it posts, and a request is to post a text or to quit.  The program
-%% has two interactive types, so the asks' union has two alternatives of the
-%% functor ask/3, which TGLP refuses ("Two alternatives with the same functor
-%% are not allowed", TGLP typed-glp.tex): the compiled program does not load.
+%% has two interactive types: each asks inside its own functor in Question,
+%% request_r and card_w, under one ask/3 (vGLP #4 Cowork, 2026-10-02 08:26
+%% UTC, Q1), and the compiled program loads.
 
 Peer     ::= Constant.
 Request  ::= post(String) ; quit.
