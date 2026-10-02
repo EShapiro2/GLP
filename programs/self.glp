@@ -78,8 +78,19 @@ Compiled ::= module(Module) ; error(Stream(String)).
 % guards.
 Content ::= String ; Module.
 
-% Arithmetic expressions
-Exp ::= Number ; +(Exp, Exp) ; -(Exp, Exp) ; *(Exp, Exp) ; /(Exp, Exp) ; //(Exp, Exp) ; mod(Exp, Exp) ; neg(Exp).
+% Arithmetic expressions: the union of Number with the arithmetic operators and
+% functions of the catalogue, each over Exp (TGLP appendix-root-self.tex) --- the
+% binary +, -, *, /, //, mod and pow, unary negation (neg, as -X parses), and the
+% unary abs, sqrt, sin, cos, tan, asin, acos, atan, exp, ln, log, integer, real,
+% round, floor and ceil.  := evaluates an Exp, one clause per operator or
+% function, below.
+Exp ::= Number
+      ; +(Exp, Exp) ; -(Exp, Exp) ; *(Exp, Exp) ; /(Exp, Exp) ; //(Exp, Exp)
+      ; mod(Exp, Exp) ; pow(Exp, Exp)
+      ; neg(Exp)
+      ; abs(Exp) ; sqrt(Exp) ; sin(Exp) ; cos(Exp) ; tan(Exp)
+      ; asin(Exp) ; acos(Exp) ; atan(Exp) ; exp(Exp) ; ln(Exp) ; log(Exp)
+      ; integer(Exp) ; real(Exp) ; round(Exp) ; floor(Exp) ; ceil(Exp).
 
 % Multiway merge (mwm/2 below).  Its input is a stream of merge(Stream(X))
 % terms, each carrying one stream to be merged into the output.
