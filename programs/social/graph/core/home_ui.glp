@@ -29,7 +29,7 @@ superapp_ui(alice, Answers, _) :-
     tee_out(Outs?, Shown, Seen),
     send_to_user(Shown?),
     home # home(ch([], Asks), alice, Seen?, Cmds, none, none, none, none),
-    home # med(ch(Answers?, Cards), ch(Asks?, []), [], 0),
+    home # med(ch(Answers?, Cards), ch(Asks?, _), [], 0),
     send_to_user(Cards?),
     agent # agent(bob, BobIn?, BobNetIn?, [user_output(BobOut), net_output(BobNetOut)]),
     bob_answers(BobOut?, BobIn).
